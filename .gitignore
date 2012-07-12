@@ -1,0 +1,13 @@
+*.vo
+*.glob
+*~
+*.v.d
+*.annot
+*.cma
+*.cmi
+*.cmx
+*.o
+*.cmo
+*#
+.depend
+html
