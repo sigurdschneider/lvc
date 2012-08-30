@@ -395,7 +395,7 @@ Qed.
 Ltac get_functional :=
   match goal with
     | [ H : get ?XL ?n _, H' : get ?XL ?n _ |- _ ] =>
-      injection (get_functional H H'); intros; clear H
+      simplify_eq (get_functional H H'); intros; clear H
     | _ => fail "no matching get assumptions"
   end.
 
@@ -519,6 +519,20 @@ Proof.
   eapply IHL. omega.
 Qed.
 
+Lemma drop_nil X k
+  : drop k nil = (@nil X). 
+Proof.
+  induction k; eauto.
+Qed.
+
+Lemma length_drop_minus X (L:list X) k
+  : length (drop k L) = length L - k.
+Proof.
+  general induction k; simpl; try omega.
+  destruct L; simpl. rewrite drop_nil. eauto.
+  rewrite IHk; eauto.
+Qed.
+
 Lemma drop_app X (L L':list X) n
   : drop (length L + n) (L++L') = drop n L'.
 Proof.
@@ -555,11 +569,6 @@ Proof.
   rewrite drop_tl. eauto.
 Qed.  
 
-Lemma drop_nil X k
-  : drop k nil = (@nil X). 
-Proof.
-  induction k; eauto.
-Qed.
 
 Lemma drop_nth X k L (x:X) L' d
   : drop k L = x::L' -> nth k L d = x.
@@ -888,3 +897,31 @@ Ltac inv_eqs :=
               | [ H : @eq _ ?x ?y |- _ ] => inversion H; subst
             end).
 
+Inductive length_eq X Y : list X -> list Y -> Type :=
+  | LenEq_nil : length_eq nil nil
+  | LenEq_cons x XL y YL : length_eq XL YL -> length_eq (x::XL) (y::YL).
+
+
+Lemma length_eq_sym X Y (XL:list X) (YL:list Y)
+  : length_eq XL YL -> length_eq YL XL.
+Proof.
+  intros. general induction X0; eauto using length_eq.
+Qed.
+
+Lemma length_eq_trans X Y Z (XL:list X) (YL:list Y) (ZL:list Z)
+  : length_eq XL YL -> length_eq YL ZL -> length_eq XL ZL.
+Proof.
+  intros. general induction X0; inv X1; eauto using length_eq.
+Qed.
+
+Lemma length_length_eq X Y (L:list X) (L':list Y)
+  : length L = length L' -> length_eq L L'.
+Proof.
+  intros H; general induction L; destruct L'; inv H; eauto using length_eq.
+Qed.
+
+Lemma length_eq_length X Y (L:list X) (L':list Y)
+  : length_eq L L' -> length L = length L'.
+Proof.
+  intros H; general induction L; destruct L'; inv H; simpl; eauto.
+Qed.

@@ -1,0 +1,9 @@
+#!/bin/bash
+
+FILES=$(find . -type f | grep -v '^./\.')
+
+for FILE in $FILES;
+do
+  echo cp $1/$FILE $FILE
+
+done

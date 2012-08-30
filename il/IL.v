@@ -10,19 +10,9 @@ Open Scope map_scope.
 (** ** Syntax *)
 
 (** [args] is the type of the list of variables passed at a goto ... *)
-Definition args := list var.
+Definition args := env var.
 (** ... while [params] is the type of the list of formal parameters *)
-Definition params := list var.
-Definition param_decls := list (var*ty).
-
-Definition paramNames (Z:param_decls) := List.map fst Z.
-Lemma paramNames_length Z 
-  : length Z = length (paramNames Z).
-Proof.
-  induction Z; simpl; eauto.
-Qed.
-
-
+Definition params := cset var.
 
 Inductive stmt : Type :=
 | stmtExp    (x : var) (e: exp) (b : stmt) : stmt
@@ -39,6 +29,14 @@ Inductive ann (A:Type) : stmt -> A -> Type :=
 | annReturn x a : ann (stmtReturn x) a
 | annLet s Z b a1 a2 a : ann s a1 -> ann b a2 -> ann (stmtLet s Z b) a.
 
+Fixpoint ann_map A B (f:A->B) s a (ans:ann s a) : ann s (f a) :=
+ match ans in (ann s0 y) return (ann s0 (f y)) with
+   | annExp x e b a0 ab ans0 => @annExp B x e b _ _ (ann_map f ans0)
+   | annIf x b1 b2 a1 a2 a0 ans1 ans2 => @annIf _ _ _ _ _ _ _ (ann_map f ans1) (ann_map f ans2)
+   | annGoto l Y a0 => annGoto l Y (f a0)
+   | annReturn x a0 => annReturn x (f a0)
+   | annLet s0 Z b a1 a2 a0 ans1 ans2 => @annLet _ _ _ _ _ _ _ (ann_map f ans1) (ann_map f ans2)
+ end.
 
 (** ** Semantics *)
 
@@ -52,15 +50,17 @@ Inductive block : Type :=
 Definition labenv := list block.
 Definition state : Type := (env val * labenv * stmt)%type.
 
-Fixpoint updE X `{Defaulted X} (Ecallee : env X) (Ecaller : env X) (Z : params) (Y : args)
+(*
+Fixpoint updE X `{Defaulted X} (Ecallee : env X) (Ecaller : env X) (Z : params) (Y:env var)
   : env X := 
-  match Z, Y with
-  | nil, nil  => Ecallee
-  | y::Z', a :: Y' => 
-      (updE Ecallee Ecaller Z' Y')[y <- Ecaller[a]]
-  | _, _ => Ecallee
-  end.
+  update_with_list (elements Z) (lookup_list Ecaller (lookup_list Y (elements Z))) Ecallee.
+*)
 
+Fixpoint updE X `{Defaulted X} (Ecallee : env X) (Ecaller : env X) (Z : params) (Y:env var)
+  : env X := 
+  mapjoin (Y ∘ Ecaller) Ecallee Z.
+
+(*
 Fixpoint updE' X `{Defaulted X} (Ecallee : env X) (Ecaller : env X) (Z : params) (Y : args)
   : env X := 
   match Z, Y with
@@ -69,6 +69,7 @@ Fixpoint updE' X `{Defaulted X} (Ecallee : env X) (Ecaller : env X) (Z : params)
       (updE' (Ecallee[y <- Ecaller[a]]) Ecaller Z' Y')
   | _, _ => Ecallee
   end.
+
 
 Definition args_for_params (Y:args) (Z:params) :=
   ((length Y = length Z) * unique Z)%type.
@@ -141,7 +142,7 @@ Lemma updE_Y_nil E E' Z
 Proof.
   revert E E'; induction Z; intros; simpl; try destruct a; eauto.
 Qed.  
-
+*)
 (** *** Functional Semantics *)
 
 Section FunctionalSemantics.
@@ -163,7 +164,7 @@ Section FunctionalSemantics.
     
   | fstepGoto E L l Y
     blk (Ldef:get L (counted l) blk) E'
-    (updOk:updE (block_E blk) E (block_Z blk) Y = E')
+    (updOk:updE (block_E blk) E (block_Z blk) Y  = E')
     : fstep  (E,   L, stmtGoto l Y)
             (E', drop (counted l) L, block_s blk)
 
@@ -268,3 +269,4 @@ End ImperativeSemantics.
 *** coq-load-path: ("../infra" "../constr" "../il" "../isa" "../") ***
 *** End: ***
 *)
+

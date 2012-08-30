@@ -6,16 +6,16 @@ Export BMap.
 
 (** ** Type Environments *)
 (** Value environments are functions from var to a value type X. *)
-Definition onv (X:Type) := map (@None X).
+Definition onv (X:Type) := map (option X).
 Definition ompty X : onv X := @empty _ (@None X).
 
 (** ** Value Environments *)
 (** Type environments are functions from var to option X for some type type X *)
-Definition env (X:Type) `{Defaulted X} := map default_el.
-Definition empty (V:Type) `{Defaulted V} : env _ := empty _.
+Definition env (X:Type) `{Defaulted X} := map X.
+Definition empty (V:Type) `{Defaulted V} : env V := empty default_el.
 
 (* 
 *** Local Variables: ***
-*** coq-load-path: ("../infra" "../constr") ***
+*** coq-load-path: ("../infra" "../constr" "../il" "../isa") ***
 *** End: ***
 *)
