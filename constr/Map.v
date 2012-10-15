@@ -718,6 +718,21 @@ Module BMap <: Map.
       | x::L => m[x]::lookup_list m L
     end.
 
+  Lemma update_with_list_app X A A' (B B' : list X) E
+    : length_eq A B 
+    -> update_with_list (A++A') (B++B') E = update_with_list A B (update_with_list A' B' E).
+  Proof.
+    intros. general induction X0; simpl; eauto.
+    rewrite IHX0; eauto.
+  Qed.
+  
+  Lemma lookup_list_app X A A' (E:map X)
+    : lookup_list E (A ++ A') = lookup_list E A ++ lookup_list E A'.
+  Proof.
+    general induction A; simpl; eauto.
+    rewrite IHA; eauto.
+  Qed.
+
 
   Lemma lookup_list_length X (m:map X) (L:list var) 
     : length (lookup_list m L) = length L.
@@ -793,11 +808,28 @@ Module BMap <: Map.
     eauto.
   Qed.
 
+  Lemma update_lists_lookup_lists X (m:map X) Z
+    : update_lists m Z (lookup_list m Z) = m.
+  Proof.
+    general induction Z; simpl; eauto.
+    rewrite IHZ, update_id; eauto.
+  Qed.  
+
   Fixpoint update_list X (m:map X) (f:var -> X) (L:list var) := 
     match L with
       | nil => m
       | x::L => update_list m f L [x <- f x]
     end.
+
+  Lemma update_list_agree_self X lv (E:map X) L f
+    : agree_on (lv\fromList L) (update_list E f L) E.
+  Proof.
+    general induction L; simpl. rewrite minus_empty. eapply agree_on_refl.
+    rewrite union_comm. rewrite <- minus_union. eapply agree_on_update_dead.
+    cset_tac; firstorder.
+    eapply agree_on_incl. eapply IHL; eauto.
+    instantiate (1:=lv). eapply incl_minus.
+  Qed.
 
   Lemma update_list_no_upd X (m:map X) f L x
     : x ∉ fromList L

@@ -1,4 +1,4 @@
-Require Export Util Var Val Exp Env CSet Map AutoIndTac.
+Require Export Util Var Val Exp Env Map CSet AutoIndTac.
 Require Import List.
 
 Set Implicit Arguments.
@@ -10,9 +10,9 @@ Open Scope map_scope.
 (** ** Syntax *)
 
 (** [args] is the type of the list of variables passed at a goto ... *)
-Definition args := env var.
+Definition args := list var.
 (** ... while [params] is the type of the list of formal parameters *)
-Definition params := cset var.
+Definition params := list var.
 
 Inductive stmt : Type :=
 | stmtExp    (x : var) (e: exp) (b : stmt) : stmt
@@ -21,6 +21,29 @@ Inductive stmt : Type :=
 | stmtReturn (x : var) : stmt
 (* block f Z : rt = s in b *)
 | stmtLet    (s : stmt) (Z:params) (b : stmt) : stmt.
+
+Inductive notOccur G : stmt -> Type :=
+  | ncExp x e s : x ∉ G -> notOccur G s -> notOccur G (stmtExp x e s)
+  | ncIf x s t : x ∉ G -> notOccur G s -> notOccur G t -> notOccur G (stmtIf x s t)
+  | ncRet x : notOccur G (stmtReturn x)
+  | ncGoto l Y : fromList Y ∩ G = empty -> notOccur G (stmtGoto l Y)
+  | ncLet s Z t : fromList Z ∩ G = empty -> notOccur G s -> notOccur G t 
+    -> notOccur G (stmtLet s Z t).
+
+Fixpoint freeVars (s:stmt) : cset var :=
+  match s with
+    | stmtExp x e s0 => freeVars s0 \ {{x}}
+    | stmtIf x s1 s2 => freeVars s1 ∪ freeVars s2 ∪ {{x}}
+    | stmtGoto l Y => fromList Y
+    | stmtReturn x => {{x}}
+    | stmtLet s1 Z s2 => (freeVars s1 \ fromList Z) ∪ freeVars s2
+  end.
+
+Lemma notOccur_incl G G' s
+  : G' ⊆ G -> notOccur G s -> notOccur G' s.
+Proof.
+  intros A B. general induction B; eauto using notOccur, incl_not_member, incl_meet_empty.
+Qed.
 
 Inductive ann (A:Type) : stmt -> A -> Type :=
 | annExp x e b a ab : ann b ab -> ann (stmtExp x e b) a
@@ -50,99 +73,10 @@ Inductive block : Type :=
 Definition labenv := list block.
 Definition state : Type := (env val * labenv * stmt)%type.
 
-(*
-Fixpoint updE X `{Defaulted X} (Ecallee : env X) (Ecaller : env X) (Z : params) (Y:env var)
+Definition updE X `{Defaulted X} (Ecallee : env X) (Ecaller : env X) (Z : params) (Y:args)
   : env X := 
-  update_with_list (elements Z) (lookup_list Ecaller (lookup_list Y (elements Z))) Ecallee.
-*)
+  update_with_list Z (lookup_list Ecaller Y) Ecallee.
 
-Fixpoint updE X `{Defaulted X} (Ecallee : env X) (Ecaller : env X) (Z : params) (Y:env var)
-  : env X := 
-  mapjoin (Y ∘ Ecaller) Ecallee Z.
-
-(*
-Fixpoint updE' X `{Defaulted X} (Ecallee : env X) (Ecaller : env X) (Z : params) (Y : args)
-  : env X := 
-  match Z, Y with
-  | nil, nil  => Ecallee
-  | y::Z', a :: Y' => 
-      (updE' (Ecallee[y <- Ecaller[a]]) Ecaller Z' Y')
-  | _, _ => Ecallee
-  end.
-
-
-Definition args_for_params (Y:args) (Z:params) :=
-  ((length Y = length Z) * unique Z)%type.
-
-Definition arg_for_param (x y:var) Y Z :=
-  { n : nat & (get Y n y * get Z n x)%type }.
-
-Lemma args_for_params_each Y Z (AFP: args_for_params Y Z) x
-  : x ∈ fromList Z -> { y : var & ((y ∈ fromList Y) * arg_for_param x y Y Z)%type}.
-Proof.
-Admitted.
-
-Lemma updE_param' E E' Z Y x y n
-  : get Z n x 
-  -> get Y n y
-  -> unique Z
-  -> updE E E' Z Y [x] = (E'[y]).
-Proof.
-  intros X. revert Y. induction X; intros. inv X; simpl; simplify lookup; eauto.
-  inv X0. assert (x<>x'). simpl in X1; destruct X1. 
-  intro. eapply f. subst. eapply get_in; eauto. eapply inst_eq_dec_var.
-  simpl. simplify lookup. eapply IHX; eauto. firstorder.
-Qed.
-
-Lemma updE_param E E' Z Y x y 
-  : args_for_params Y Z
-  -> arg_for_param x y Y Z
-  -> updE E E' Z Y [x] = (E'[y]).
-Proof.
-Admitted.
-
-Lemma updE_no_param E E' Y Z x
-  : x ∉ fromList Z
-  -> updE E E' Z Y [x] = E [x].
-Proof.
-  intros. general induction Z; simpl; destruct Y; eauto.
-  destruct_prop (a=x); subst; simplify lookup.
-  exfalso. eapply H. simpl; cset_tac; firstorder.
-  assert (~x ∈ fromList Z) by (simpl in H; cset_tac; firstorder).
-  eauto.
-Qed.
-
-
-Lemma updE_fresh E E' Z Y x v
-  : fresh x Z 
-  -> updE (E [x <- v]) E' Z Y = (updE E E' Z Y [x <- v]).
-Proof.
-  intros. 
-  revert x v E E' Z X.
-  induction Y; intros; destruct Z; simpl; eauto.
-  rewrite IHY.
-  destruct_prop (x=v0).
-  exfalso; subst; firstorder.
-  eapply map_extensionality; intros.
-  eapply update_commute; eauto.
-  firstorder.
-Qed.
-
-Lemma updE_updE' E Z Y E'
-  : unique Z -> updE' E E' Z Y = updE E E' Z Y.
-Proof.
-  intros.
-  revert E E' Z X.
-  induction Y; intros; destruct Z; simpl; eauto.
-  rewrite IHY; try eapply updE_fresh; firstorder.
-Qed.
-
-Lemma updE_Y_nil E E' Z
-  : updE E E' Z nil = E.
-Proof.
-  revert E E'; induction Z; intros; simpl; try destruct a; eauto.
-Qed.  
-*)
 (** *** Functional Semantics *)
 
 Section FunctionalSemantics.

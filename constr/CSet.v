@@ -1073,8 +1073,38 @@ Module BSet <: CSet.
     cset_tac; firstorder.
   Qed.
 
+  Lemma minus_dist_union X (s t u:cset X)
+    : (s ∪ t) \ u = (s \ u) ∪ (t \ u).
+  Proof.
+    cset_tac; firstorder.
+  Qed.
+
+  Lemma minus_dist_intersection X (s t u:cset X)
+    : (s ∩ t) \ u = (s \ u) ∩ (t \ u).
+  Proof.
+    cset_tac; firstorder.
+  Qed.
 
 
+  Lemma incl_not_member X (s t:cset X) x
+    : s ⊆ t -> ~x ∈ t -> ~x ∈ s.
+  Proof.
+    cset_tac; firstorder.
+  Qed.
+  
+  Lemma incl_meet_empty X (s t u:cset X)
+    : s ⊆ t -> u ∩ t = empty -> u ∩ s = empty.
+  Proof.
+    cset_tac; firstorder. change (Is_true false). rewrite <- (empty_spec x).
+    rewrite <- H0. rewrite intersection_spec. cset_tac; firstorder.
+  Qed.
+
+  Lemma union_incl_split X (s t u : cset X)
+    : s ⊆ u -> t ⊆ u -> s ∪ t ⊆ u.
+  Proof.
+    intros. hnf in *; intros. cset_tac; firstorder.
+  Qed.
+    
 End BSet.
 
                   
