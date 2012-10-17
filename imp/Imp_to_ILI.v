@@ -37,19 +37,18 @@ Proof.
 
   econstructor. instantiate (1:=ET'). firstorder.  firstorder.
   simpl.  eapply stmtOfType_raiseL with (LT':=nil). simpl. 
-  instantiate (1:=rt). admit.
+  instantiate (1:=rt). cbv; eauto.
   econstructor; eauto; try instantiate (1:=ET); firstorder. 
-  eapply IHcd1. econstructor. constructor. simpl. admit.
+  eapply IHcd1. econstructor. constructor. simpl. econstructor.
   reflexivity. hnf; firstorder. 
-  eapply IHcd2. econstructor. constructor. simpl. admit.
+  eapply IHcd2. econstructor. constructor. simpl. econstructor.
   reflexivity. hnf; firstorder.
   econstructor. instantiate (1:=ET). firstorder. firstorder. 
-  econstructor. instantiate (1:=t). instantiate (1:=nil). admit.
-  instantiate (1:=rt). admit.
-  admit.
-(*  eapply IHcd. econstructor. constructor. constructor. reflexivity. hnf; firstorder.
-  eapply stmtOfType_raiseL with (LT':=nil); eauto.*)
-  econstructor. constructor. simpl. admit. reflexivity. simpl. hnf. intros. eassumption.
+  econstructor. instantiate (1:=t). instantiate (1:=nil). cbv; eauto.
+  instantiate (1:=rt).
+  eapply IHcd. econstructor. constructor. constructor. reflexivity. hnf; firstorder.
+  eapply stmtOfType_raiseL with (LT':=nil); eauto.
+  econstructor. constructor. simpl. econstructor. reflexivity. simpl. hnf. intros. eassumption.
 Qed.
 
 Lemma raiseL_through a k c cont
@@ -103,9 +102,9 @@ Proof.
   econstructor. econstructor. simpl. eapply get_shift; constructor.
   reflexivity. simpl.
   instantiate (1:= blockI E0 (raiseL 0 1 cont) nil::nil). simpl.
-  rewrite drop_app; simpl. (* eapply star_refl. *) admit.
+  rewrite drop_app; simpl. eapply star_refl.
 
-  (* if true *)
+  (* if false *)
   edestruct H1 as [L1 HL1]; eauto.
   instantiate (1:=(stmtGoto (LabI 0) nil)) in HL1.
   simpl. eexists. econstructor. constructor.
@@ -114,7 +113,7 @@ Proof.
   econstructor. econstructor. simpl. eapply get_shift; constructor.
   reflexivity. simpl.
   instantiate (1:= blockI E0 (raiseL 0 1 cont) nil::nil). simpl.
-  rewrite drop_app; simpl. (* eapply star_refl. *) admit.
+  rewrite drop_app; simpl. eapply star_refl. 
   
   (* while case *)
   edestruct H0. simpl. 
@@ -122,7 +121,7 @@ Proof.
   constructor. constructor. reflexivity. simpl.
   instantiate (1:=x0). 
   instantiate (1:=cont) in H1. instantiate (1:=L) in H1. 
-  (* eapply H1. *) instantiate (1:=E0) in H1. admit.
+  eapply H1.  
 
   (* while true *)
   edestruct H1; eauto. 
@@ -133,8 +132,8 @@ Proof.
   simpl. reflexivity.
   simpl. rewrite drop_app. simpl. instantiate (1:=cont) in H5. 
   instantiate (1:=L) in H5. instantiate (1:=EB) in H5. 
-  instantiate (1:=x1).
-  admit.
+  instantiate (1:=x1). simpl. eapply H5.
+
 
   (* while false *)
   eexists (blockI EB _ nil::nil). 

@@ -19,7 +19,7 @@ Inductive stmt : Type :=
 | stmtIf     (x : var) (b1 : stmt) (b2 : stmt) : stmt
 | stmtGoto   (l : lab) (Y:args) : stmt
 | stmtReturn (x : var) : stmt
-(* block f Z : rt = s in b *)
+(* block f Z = s in b *)
 | stmtLet    (s : stmt) (Z:params) (b : stmt) : stmt.
 
 Inductive notOccur G : stmt -> Type :=
@@ -62,7 +62,6 @@ Fixpoint ann_map A B (f:A->B) s a (ans:ann s a) : ann s (f a) :=
  end.
 
 (** ** Semantics *)
-
 Inductive block : Type :=
   blockI {
     block_E : env val;
