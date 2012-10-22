@@ -21,7 +21,6 @@ Module Type CSet.
   Parameter join    : forall X:Type, cset X -> cset X -> cset X.
   Parameter meet    : forall X:Type, cset X -> cset X -> cset X.
   Parameter member  : forall X:Type, X -> cset X -> bool.
-  Parameter complement  : forall X:Type, cset X -> cset X.
   Parameter forallb : forall X:Type, cset X -> (X -> bool) -> bool.
   Parameter fold : forall X Y:Type, cset X -> (X -> Y -> Y) -> Y.
   Parameter elements : forall X:Type, cset X -> list X.
@@ -35,9 +34,6 @@ Module Type CSet.
     forall X s t (x:X), member x (join s t) = orb  (member x s) (member x t).
   Parameter intersection_spec :
     forall X s t (x:X), member x (meet s t) = andb (member x s) (member x t).
-
-  Parameter complement_spec :
-    forall X s (x:X), member x (complement s) = negb (member x s).
 
   Definition add X (x : X) (s : cset X) := join (single x) s.
 
@@ -171,11 +167,6 @@ Module BSet <: CSet.
     forall X s t (x:X), member x (minus s t) = andb (member x s) (negb (member x t)).
 
   Infix "\" := minus (at level 50) : cset_scope.
-
-  Parameter complement  : forall X:Type, cset X -> cset X.
-
-  Parameter complement_spec :
-    forall X s (x:X), member x (complement s) = negb (member x s).
 
   Parameter fold : forall X Y:Type, cset X -> (X -> Y -> Y) -> Y.
   Parameter elements : forall X:Type, cset X -> list X.
