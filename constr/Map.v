@@ -1,5 +1,5 @@
 Require Import List Setoid.
-Require Import EqDec DecidableTactics Var Util AutoIndTac.
+Require Import EqDec DecidableTactics Util AutoIndTac.
 
 Lemma Not_Is_true_eq_false : forall x:bool, ~Is_true x -> x = false.
 Proof.
@@ -28,46 +28,42 @@ Qed.
 
 Module Type Map.
   (* An abstract type for environments. *)
-  Parameter map        : forall X:Type, Type.
-  Parameter empty      : forall X (def:X), map X.
-  Parameter lookup     : forall X, map X -> var -> X.
-  Parameter default    : forall X, map X -> X.
-  Parameter update     : forall X, map X -> var -> X -> map X.
-  Parameter domain     : forall X, map X -> cset var.
-  Parameter lookup_set : forall X (m:map X) (s:cset var), cset X.
-
-  Implicit Arguments empty  [X].
-  Implicit Arguments lookup [X].
-  Implicit Arguments update [X].
-  Implicit Arguments domain [X].
+  Parameter map        : forall (W X:Type), Type.
+  Parameter empty      : forall {W} {X} (def:X), map W X.
+  Parameter lookup     : forall {W} `{EqDec W eq} {X}, map W X -> W -> X.
+  Parameter default    : forall {W} {X}, map W X -> X.
+  Parameter update     : forall {W} `{EqDec W eq} {X}, map W X -> W -> X -> map W X.
+  Parameter domain     : forall {W} `{EqDec W eq} {X}, map W X -> cset W.
+  Parameter lookup_set : forall {W} `{EqDec W eq} {X} (m:map W X) (s:cset W), cset X.
 
   (* Behaviour of empty. *)
   Parameter empty_spec :
-    forall (X : Type) (def:X) (k : var),
+    forall W `{EqDec W eq} X (def:X) (k : W),
       lookup (empty def) k = def.
 
   Parameter default_spec :
-    forall (X : Type) (def:X),
-      default (empty def) = def.
+    forall (W X : Type) (def:X),
+      default (@empty W X def) = def.
 
   (* The following two lemmas are enough to abstract the behaviour
      of lookup and update. *)
   Parameter lookup_eq :
-    forall (X : Type) (m : map X) (k : var) (x : X),
+    forall (W : Type) `{EqDec W eq} X (m : map W X) (k : W) (x : X),
       lookup (update m k x) k = x.
+
   Parameter lookup_neq :
-    forall (X : Type) (m : map X) (k l : var) (x : X),
+    forall (W : Type) `{EqDec W eq} X (m : map W X) (k l : W) (x : X),
       k <> l -> lookup (update m k x) l = lookup m l.
 
   Parameter domain_spec :
-    forall (X : Type) (m : map X) (x : var),
-      ~x ∈ (domain m) -> lookup m x = default m.
+    forall (W : Type) `{EqDec W eq} X (m : map W X) (x : W),
+      ~x ∈ (domain m) <-> lookup m x = default m.
 
-  Parameter lookup_set_spec : forall X (m:map X) s y,
+  Parameter lookup_set_spec : forall W `{EqDec W eq} X (m:map W X) s y,
     y ∈ lookup_set m s <-> exists x, x ∈ s /\ lookup m x = y.
 
   Parameter map_extensionality :
-    forall (X : Type) (f g : map X), 
+    forall (W : Type) `{EqDec W eq} X (f g : map W X), 
       (forall x, lookup f x = lookup g x)
       -> f = g.
 End Map.
@@ -90,42 +86,42 @@ Module Type MapEquality (Import M : Map').
   (*Open Scope map_scope.*)
 
   (** * Extensional equality of maps. *)
-  Definition eq_map X (f g : map X) : Prop :=
+  Definition eq_map {W} `{EqDec W eq} {X} (f g : map W X) : Prop :=
     forall x, lookup f x = lookup g x.
-  Implicit Arguments eq_map [X].
+
   Hint Unfold eq_map.
 
   Notation "s === t" :=  (eq_map s t) (at level 70, no associativity).
   Notation "s =/= t" := (~eq_map s t) (at level 70, no associativity).
 
   (** Proof that this is indeed an equivalence relation. *)
-  Lemma eq_map_reflexivity X (f : map X) :
+  Lemma eq_map_reflexivity W `{EqDec W eq} X (f : map W X) :
     f === f.
   Proof. auto. Qed.
 
-  Lemma eq_map_symmetry X (f g : map X) :
+  Lemma eq_map_symmetry W `{EqDec W eq} X (f g : map W X) :
     f === g -> g === f.
   Proof. auto. Qed.
 
-  Lemma eq_map_transitivity X (f g h : map X) :
+  Lemma eq_map_transitivity W `{EqDec W eq} X (f g h : map W X) :
     f === g -> g === h -> f === h.
-  Proof. unfold eq_map. intros. rewrite H. rewrite <- H0. auto. Qed.
+  Proof. unfold eq_map. intros. rewrite H0. rewrite <- H1. auto. Qed.
 
   (** Register it as a setoid and proof that update/lookup are proper morphisms. *)
-  Add Parametric Relation (X : Type) : (map X) (@eq_map X)
-    reflexivity  proved by (@eq_map_reflexivity  X)
-    symmetry     proved by (@eq_map_symmetry     X)
-    transitivity proved by (@eq_map_transitivity X)
+  Add Parametric Relation (W X : Type) `{EqDec W eq} : (map W X) (@eq_map W _ _ X)
+    reflexivity  proved by (@eq_map_reflexivity W _ _ X)
+    symmetry     proved by (@eq_map_symmetry    W _ _ X)
+    transitivity proved by (@eq_map_transitivity W _ _ X)
     as map_setoid.
 
-  Add Parametric Morphism (X : Type) : (@lookup X) with
-    signature (@eq_map X) ==> (@eq var) ==> (@eq X) as lookup_morphism.
+  Add Parametric Morphism (W X : Type) `{EqDec W eq} : (@lookup W _ _ X) with
+    signature (@eq_map W _ _ X) ==> (@eq W) ==> (@eq X) as lookup_morphism.
   Proof.
     intros x y A v. rewrite A. reflexivity.
   Qed.
 
-  Add Parametric Morphism (X : Type) : (@update X) with
-    signature (@eq_map X) ==> (@eq var) ==> (@eq X) ==> (@eq_map X)
+  Add Parametric Morphism (W X : Type) `{EqDec W eq} : (@update W _ _ X ) with
+    signature (@eq_map W _ _ X) ==> (@eq W) ==> (@eq X) ==> (@eq_map W _ _ X)
     as update_morphism.
   Proof.
     intros x y B w t z. destruct_prop (w = z).
@@ -135,8 +131,8 @@ Module Type MapEquality (Import M : Map').
 End MapEquality.
 
 Module Type MapEqualityDec (Import M : Map') (Import E : MapEquality M).
-  Parameter eq_map_dec : forall (X : Type) (def: X),
-    forall (f g:@map X), {f === g} + {f =/= g}.
+  Parameter eq_map_dec : forall (W : Type) `{EqDec W eq} X (def: X),
+    forall (f g:@map W X), {f === g} + {f =/= g}.
 End MapEqualityDec.
 
 Module Type MapTactics (Import M : Map') (Import E : MapEquality M).
@@ -144,44 +140,44 @@ Module Type MapTactics (Import M : Map') (Import E : MapEquality M).
 
   Ltac lookup_neq_tac :=
     match goal with
-      | [H : not (eq ?k ?l) |- context[@lookup _ (@update _ ?m ?k _) ?l]]
-        => rewrite (@lookup_neq _ _ _ _ _ H)
-      | [H : not (eq ?l ?k)  |- context[@lookup _ (@update _ ?m ?k _) ?l]]
-        => rewrite (@lookup_neq _ _ _ _ _ (neq_symmetry H))
+      | [H : not (eq ?k ?l) |- context[@lookup _ _ _ _ (@update _ _ _ _ _ ?k _) ?l]]
+        => rewrite (@lookup_neq _ _ _ _ _ _ _ _ H)
+      | [H : not (eq ?l ?k)  |- context[@lookup _ _ _ _ (@update _ _ _ _ _ ?k _) ?l]]
+        => rewrite (@lookup_neq _ _ _ _ _ _ _ _ (neq_symmetry H))
     end.
 
   Ltac lookup_neq_tac' :=
     match goal with
-      | [H : not (eq ?k ?l), I : context[@lookup _ (@update _ ?m ?k _) ?l] |- _ ]
-        => rewrite (@lookup_neq _ _ _ _ _ H) in I
-      | [H : not (eq ?l ?k), I : context[@lookup _ (@update _ ?m ?k _) ?l] |- _ ]
-        => rewrite (@lookup_neq _ _ _ _ _ (neq_symmetry H)) in I
+      | [H : not (eq ?k ?l), I : context[@lookup _ _ _ _ (@update _ _ _ _ ?m ?k _) ?l] |- _ ]
+        => rewrite (@lookup_neq _ _ _ _ _ _ _ _ H) in I
+      | [H : not (eq ?l ?k), I : context[@lookup _ _ _ _ (@update _ _ _ _ ?m ?k _) ?l] |- _ ]
+        => rewrite (@lookup_neq _ _ _ _ _ _ _ _ (neq_symmetry H)) in I
     end.
 
 
   Tactic Notation "simplify" "lookup'" :=
     repeat (subst || rewrite lookup_eq in * || lookup_neq_tac || lookup_neq_tac').
 
-  Lemma update_commute X (m : map X) (k l : var) (x y : X) :
+  Lemma update_commute W `{EqDec W eq} X (m : map W X) (k l : W) (x y : X) :
     k <> l -> (m[k <- x][l <- y]) === (m[l <- y][k <- x]).
   Proof.
     intros ? j. destruct_prop (j = k); destruct_prop (j = l); simplify lookup'; auto.
     exfalso; auto. 
   Qed.
 
-  Lemma update_shadow X (m : map X) (k : var) (x y : X) :
+  Lemma update_shadow W `{EqDec W eq} X (m : map W X) (k : W) (x y : X) :
     (m[k <- x][k <- y]) === (m[k <- y]).
   Proof.
     intro l. destruct_prop (k = l); simplify lookup'; auto.
   Qed.
 
-  Lemma update_repeat X (m : map X) (k l : var) (x : X) :
+  Lemma update_repeat W `{EqDec W eq} X (m : map W X) (k l : W) (x : X) :
     m[l] = x -> m[k <- x][l] = x.
   Proof.
     intros. destruct_prop (l = k); simplify lookup'; auto.
   Qed.
 
-  Lemma update_repeat' X (m : map X) (k l : var) :
+  Lemma update_repeat' W `{EqDec W eq} X (m : map W X) (k l : W) :
     m[k <- m[k]][l] = m[l].
   Proof.
     intros. destruct_prop (l = k); simplify lookup'; auto.
@@ -198,20 +194,18 @@ Module Type MapMorphism (Import M : Map') (Import E : MapEquality M).
   Open Scope map_scope.
 
   Parameter map_lift :
-    forall X Y Z,
-    (X -> Y -> Z) -> map X -> map Y -> map Z.
-
-  Implicit Arguments map_lift [X Y Z].
+    forall {W} `{EqDec W eq} {X} {Y} {Z},
+    (X -> Y -> Z) -> map W X -> map W Y -> map W Z.
 
   Parameter map_lift_spec :
-    forall X Y Z (f : X -> Y -> Z) (m : map X) (m' : map Y) (k : var),
-      (@map_lift _ _ _ f m m')[k] = f (m[k]) (m'[k]).
+    forall W `{EqDec W eq} X Y Z (f : X -> Y -> Z) (m : map W X) (m' : map W Y) (k : W),
+      (@map_lift _ _ _ _ _ _ f m m')[k] = f (m[k]) (m'[k]).
 
   Add Parametric Morphism (X Y Z : Type)
     (defX : X) (defY : Y) (defZ : Z) :
-    (@map_lift X Y Z) with
+    (@map_lift _ _ _ X Y Z) with
     signature (@eq (X -> Y -> Z)) ==>
-              (@eq_map X) ==> (@eq_map Y) ==> (@eq_map Z)
+              (@eq_map _ _ _ X) ==> (@eq_map _ _ _ Y) ==> (@eq_map _ _ _ Z)
     as map_lift_morphism.
   Proof.
     intros f m m' H n n' H' x. repeat rewrite map_lift_spec.
@@ -337,25 +331,25 @@ Module Type MapAgreement (Import M' : Map') (Import ME : MapEquality M') (Import
 (*  Definition subMap X (def:X) (m m':map def) :=
     forall x, m[x] <> def -> m[x] = m'[x]. *)
   
-  Definition agree_on X (D:cset var) (E E':map X) := 
+  Definition agree_on W `{EqDec W eq} X (D:cset W) (E E':map W X) := 
     forall x, x ∈ D -> E[x] = (E'[x]).
 
-  Lemma agree_on_refl X L (E:map X) 
+  Lemma agree_on_refl W `{EqDec W eq} X L (E:map W X) 
     : agree_on L E E.
   Proof.
     firstorder.
   Qed.
 
-  Lemma agree_on_sym X L (E E':map X) 
+  Lemma agree_on_sym W `{EqDec W eq} X L (E E':map W X) 
     : agree_on L E E' -> agree_on L E' E.
   Proof.
     firstorder.
   Qed.
 
-  Lemma agree_on_trans X L (E E' E'':map X) 
+  Lemma agree_on_trans W `{EqDec W eq} X L (E E' E'':map W X) 
     : agree_on L E E' -> agree_on L E' E'' -> agree_on L E E''.
   Proof.
-    intros; hnf; intros. rewrite H; eauto. 
+    intros; hnf; intros. rewrite H0; eauto. 
   Qed.
 
 (*  Lemma subMap_agree X (def:X) (m m':map def)
@@ -377,7 +371,7 @@ Module Type MapAgreement (Import M' : Map') (Import ME : MapEquality M') (Import
   Qed.
 *)
 
-  Lemma agree_on_incl X (bv lv:cset var) (E E':map X)
+  Lemma agree_on_incl W `{EqDec W eq} X (bv lv:cset W) (E E':map W X)
     : agree_on lv E E'
     -> incl bv lv
     -> agree_on bv E E'.
@@ -385,7 +379,7 @@ Module Type MapAgreement (Import M' : Map') (Import ME : MapEquality M') (Import
     firstorder.
   Qed.
 
-  Lemma agree_on_update_same X (lv:cset var) (E E':map X) x v
+  Lemma agree_on_update_same W `{EqDec W eq} X (lv:cset W) (E E':map W X) x v
     : agree_on (lv\{{x}}) E E'
     -> agree_on lv (E [x <- v]) (E' [x <- v]).
   Proof.
@@ -394,18 +388,18 @@ Module Type MapAgreement (Import M' : Map') (Import ME : MapEquality M') (Import
       eauto using in_in_minus, neq_not_in_single.
   Qed.
 
-  Lemma agree_on_update_any_same X (lv:cset var) (E E':map X) x v
+  Lemma agree_on_update_any_same W `{EqDec W eq} X (lv:cset W) (E E':map W X) x v
     : agree_on lv E E'
     -> agree_on (lv ∪ {{x}}) (E [x <- v]) (E' [x <- v]).
   Proof.
     intros A. hnf; intros.
     destruct_prop (x=x0); subst; simplify lookup;
       eauto using in_in_minus, neq_not_in_single.
-    eapply union_cases in H; destruct H; eauto.
-    eapply single_spec_neq in H; congruence.
+    eapply union_cases in H0; destruct H0; eauto.
+    eapply single_spec_neq in H0; congruence.
   Qed.
 
-  Lemma agree_on_update_dead X (lv:cset var) (E E':map X) x v
+  Lemma agree_on_update_dead W `{EqDec W eq} X (lv:cset W) (E E':map W X) x v
     : ~x ∈ lv
     -> agree_on lv E E'
     -> agree_on lv (E [x <- v]) E'.
@@ -416,7 +410,7 @@ Module Type MapAgreement (Import M' : Map') (Import ME : MapEquality M') (Import
     simplify lookup; eauto.
   Qed.
 
-  Lemma agree_on_update_dead_both X (lv:cset var) (E E':map X) x v v'
+  Lemma agree_on_update_dead_both W `{EqDec W eq} X (lv:cset W) (E E':map W X) x v v'
     : ~x ∈ lv
     -> agree_on lv E E'
     -> agree_on lv (E [x <- v]) (E'[x <- v']).
@@ -424,32 +418,32 @@ Module Type MapAgreement (Import M' : Map') (Import ME : MapEquality M') (Import
     intros A B. eauto using agree_on_trans, agree_on_update_dead, agree_on_sym.
   Qed.
 
-  Lemma lookup_set_helper : forall X (m:map X) s x,
+  Lemma lookup_set_helper : forall W `{EqDec W eq} X (m:map W X) s x,
     x ∈ s -> lookup m x ∈ lookup_set m s.
   Proof.
     intros. eapply lookup_set_spec. eexists x; eauto.
   Qed.
 
-  Lemma lookup_set_incl X s t (m:map X)
+  Lemma lookup_set_incl W `{EqDec W eq} X s t (m:map W X)
     : incl s t -> incl (lookup_set m s) (lookup_set m t).
   Proof.
     intros; hnf; intros.
-    eapply lookup_set_spec in H0. destruct H0 as [x' [A B]].
+    eapply lookup_set_spec in H1. destruct H1 as [x' [A B]].
     eapply lookup_set_spec. eexists x'; eauto.
   Qed.
 
-  Lemma lookup_set_union X s t (m:map X)
+  Lemma lookup_set_union W `{EqDec W eq} X s t (m:map W X)
     : lookup_set m (s ∪ t) = lookup_set m s ∪ lookup_set m t.
   Proof.
   Admitted.
 
-  Lemma lookup_set_minus X s t (m:map X)
+  Lemma lookup_set_minus W `{EqDec W eq} X s t (m:map W X)
     : lookup_set m (s \ t) = lookup_set m s \ (lookup_set m t).
   Proof.
   Admitted.
 
 
-  Lemma agree_on_domain X `(EqDec X eq) (m m':map X)
+  Lemma agree_on_domain W `{EqDec W eq} X `(EqDec X eq) (m m':map W X)
     : agree_on (domain m ∪ domain m') m m'
     -> default m = default m'
     -> m = m'.
@@ -457,21 +451,21 @@ Module Type MapAgreement (Import M' : Map') (Import ME : MapEquality M') (Import
     intros. eapply map_extensionality; intros.
     destruct_prop (x ∈ domain m ∪ domain m'); intros; eauto.
     eapply not_in_union_decomp in n; destruct n.
-    eapply domain_spec in H2. eapply domain_spec in H3. congruence.
+    eapply domain_spec in H3. eapply domain_spec in H4. simpl in *; congruence.
   Qed.
 
-  Lemma lookup_set_agree X s (m m':map X)
+  Lemma lookup_set_agree W `{EqDec W eq} X s (m m':map W X)
     : agree_on s m m' -> lookup_set m s = lookup_set m' s.
   Proof.
     intros.
     eapply set_extensionality; intros.
     eapply bool_extensionality; intros.
     eapply lookup_set_spec; eauto.
-    eapply lookup_set_spec in H0. edestruct H0 as [x' [A B]].
-    eexists x'. split; eauto. rewrite <- H; eauto. 
+    eapply lookup_set_spec in H1. edestruct H1 as [x' [A B]].
+    eexists x'. split; eauto. rewrite <- H0; eauto. 
     eapply lookup_set_spec; eauto.
-    eapply lookup_set_spec in H0. edestruct H0 as [x' [A B]].
-    eexists x'. split; eauto. rewrite H; eauto. 
+    eapply lookup_set_spec in H1. edestruct H1 as [x' [A B]].
+    eexists x'. split; eauto. rewrite H0; eauto. 
   Qed.
 
 End MapAgreement.
@@ -480,16 +474,16 @@ Module Type MapInjectivity (Import M' : Map') (Import ME : MapEquality M') (Impo
   Open Scope map_scope.
 
 
-  Definition injective_on X L (ra:map X) :=
+  Definition injective_on W `{EqDec W eq} X L (ra:map W X) :=
     forall x y, x ∈ L -> y ∈ L -> ra[x] = ra[y] -> x = y.
 
-  Lemma injective_on_incl X lv bv (ra:map X) (SM:incl bv lv)
+  Lemma injective_on_incl W `{EqDec W eq} X lv bv (ra:map W X) (SM:incl bv lv)
     : injective_on lv ra -> injective_on bv ra.
   Proof.
     firstorder.
   Qed.
 
-  Lemma injective_on_dead X lv (ra:map X) x v
+  Lemma injective_on_dead W `{EqDec W eq} X lv (ra:map W X) x v
     : injective_on (lv\{{x}}) ra
     -> injective_on (lv\{{x}}) (ra[x<-v]).
   Proof.
@@ -500,7 +494,7 @@ Module Type MapInjectivity (Import M' : Map') (Import ME : MapEquality M') (Impo
     exfalso; cset_tac; firstorder.
   Qed.
 
-  Lemma injective_on_fresh X lv (ra:map X) x xr 
+  Lemma injective_on_fresh W `{EqDec W eq} X lv (ra:map W X) x xr 
     : injective_on (lv\{{x}}) ra
       -> ~xr ∈ lookup_set ra (lv\{{x}})
       -> injective_on ({{x}} ∪ lv) (ra[x <- xr]).
@@ -508,52 +502,52 @@ Module Type MapInjectivity (Import M' : Map') (Import ME : MapEquality M') (Impo
     intros. hnf; intros.
     destruct_prop (x0=x); subst;
       destruct_prop (x=y); subst; simplify lookup; eauto.
-    exfalso. eapply H0. eapply lookup_set_spec. eexists y. 
+    exfalso. eapply H1. eapply lookup_set_spec. eexists y. 
     split; cset_tac; firstorder.
-    exfalso. eapply H0. eapply lookup_set_spec. eexists x0. 
+    exfalso. eapply H1. eapply lookup_set_spec. eexists x0. 
     split; cset_tac; firstorder.
-    eapply H; try cset_tac; firstorder.
+    eapply H0; try cset_tac; firstorder.
   Qed.
 
-  Lemma injective_on_forget X s (f:map X) y
+  Lemma injective_on_forget W `{EqDec W eq} X s (f:map W X) y
     :injective_on s f
     -> injective_on (s\{{y}}) f.
   Proof.
     intros. hnf; intros.
     assert (y<>y0). intro; subst. cset_tac; firstorder.
     assert (x<>y). intro; subst. cset_tac; firstorder.
-    eapply H. cset_tac; firstorder. cset_tac; firstorder.
+    eapply H0. cset_tac; firstorder. cset_tac; firstorder.
     simplify lookup; eauto.
   Qed.
 
-  Fixpoint update_with_list X XL YL (m:map X) :=
+  Fixpoint update_with_list W `{EqDec W eq} X XL YL (m:map W X) :=
     match XL, YL with
       | x::XL, y::YL => update_with_list XL YL m[x <- y]
       | _, _ => m
     end.
 
-  Lemma update_with_list_agree X lv (E E':map X) XL YL
+  Lemma update_with_list_agree W `{EqDec W eq} X lv (E E':map W X) XL YL
     : agree_on (lv\fromList XL) E E'
     -> length_eq XL YL
     -> agree_on lv (update_with_list XL YL E) (update_with_list XL YL E').
   Proof.
-    general induction XL; simpl in * |- *. rewrite minus_empty in H; eauto.
+    general induction XL; simpl in * |- *. rewrite minus_empty in H0; eauto.
     inv X0. eapply agree_on_update_same. 
     eapply IHXL; eauto. rewrite minus_union; eauto.
   Qed.
 
-  Lemma update_with_list_no_update X (E:map X) Y Z x
+  Lemma update_with_list_no_update W `{EqDec W eq} X (E:map W X) Y Z x
     : x ∉ fromList Z
     -> update_with_list Z Y E [x] = E [x].
   Proof.
     intros. general induction Z; simpl; destruct Y; eauto.
     destruct_prop (a=x); subst; simplify lookup.
-    exfalso. eapply H. simpl; cset_tac; firstorder.
-    assert (~x ∈ fromList Z) by (simpl in H; cset_tac; firstorder).
+    exfalso. eapply H0. simpl; cset_tac; firstorder.
+    assert (~x ∈ fromList Z) by (simpl in H0; cset_tac; firstorder).
     eauto.
   Qed.
 
-  Lemma update_with_list_agree_minus X lv (E E':map X) XL YL 
+  Lemma update_with_list_agree_minus W `{EqDec W eq} X lv (E E':map W X) XL YL 
     : length_eq XL YL
     -> agree_on lv E' E 
     -> agree_on (lv\fromList XL) (update_with_list XL YL E') E.
@@ -564,7 +558,7 @@ Module Type MapInjectivity (Import M' : Map') (Import ME : MapEquality M') (Impo
     eauto using agree_on_incl, incl_minus.
   Qed.
 
-  Lemma update_with_list_agree_self X lv (E:map X) XL YL
+  Lemma update_with_list_agree_self W `{EqDec W eq} X lv (E:map W X) XL YL
     : agree_on (lv\fromList XL) (update_with_list XL YL E) E.
   Proof.
     general induction XL; simpl. rewrite minus_empty. eapply agree_on_refl.
@@ -577,55 +571,55 @@ Module Type MapInjectivity (Import M' : Map') (Import ME : MapEquality M') (Impo
 
 
 
-  Inductive inj_mapping X (LV:cset X) : list var -> list X -> Type :=
+  Inductive inj_mapping {W} {X} (LV:cset X) : list W -> list X -> Type :=
   | im_nil : inj_mapping LV nil nil
   | im_cons x y XL YL : inj_mapping LV XL YL 
     -> fresh x XL -> fresh y YL -> (~ y ∈ LV) 
     -> inj_mapping LV (x::XL) (y::YL).
 
-  Lemma inj_mapping_length X (LV:cset X) Y Z
-    : inj_mapping LV Y Z -> length Y = length Z.
+  Lemma inj_mapping_length W X (LV:cset X) Y Z
+    : @inj_mapping W X LV Y Z -> length Y = length Z.
   Proof.
     intros. general induction X0; simpl; eauto.
   Qed.
 
-  Lemma inj_mapping_incl X (L L':cset X) Y Z
-    : incl L' L -> inj_mapping L Y Z -> inj_mapping L' Y Z.
+  Lemma inj_mapping_incl W X (L L':cset X) Y Z
+    : incl L' L -> @inj_mapping W X L Y Z -> inj_mapping L' Y Z.
   Proof.
     intros. general induction X0; constructor; eauto.
   Qed.
 
-  Lemma ra_insert_allocs_correct' X (m:map X) lv XL YL x
+  Lemma ra_insert_allocs_correct' W `{EqDec W eq} X (m:map W X) lv XL YL x
     : In x XL
     -> inj_mapping (lookup_set m lv) XL YL
     -> In (update_with_list XL YL m [x]) YL.
   Proof.
     intros.
     general induction X0; simpl in *; intros.
-    inv H.
+    inv H0.
     destruct_prop (x=x0); subst; simplify lookup; eauto.
-    right. eapply IHX0; eauto. destruct H; subst; eauto; congruence.
+    right. eapply IHX0; eauto. destruct H0; subst; eauto; congruence.
   Qed.
 
-  Lemma ra_insert_allocs_no_param X XL YL (m:map X) x
+  Lemma ra_insert_allocs_no_param W `{EqDec W eq} X XL YL (m:map W X) x
     : ~x ∈ fromList XL
     -> update_with_list XL YL m [x] = m[x].
   Proof.
     general induction XL; simpl; intros; eauto.
     destruct YL; eauto.
-    assert (x<>a). intro; subst; cset_tac. eapply H. simpl. cset_tac; firstorder.
+    assert (x<>a). intro; subst; cset_tac. eapply H0. simpl. cset_tac; firstorder.
     simplify lookup. eapply IHXL; cset_tac; eauto. 
-    eapply H. simpl. eapply union_right; eauto.
+    eapply H0. simpl. eapply union_right; eauto.
   Qed.
 
-  Lemma ra_insert_allocs_cases X XL YL (m:map X) bv y 
+  Lemma ra_insert_allocs_cases W `{EqDec W eq} X XL YL (m:map W X) bv y 
     : inj_mapping (lookup_set m bv) XL YL
     -> y ∈ lookup_set (update_with_list XL YL m) ((fromList XL ∪ bv))
     -> y ∈ lookup_set m bv \/ y ∈ fromList YL.
   Proof.
     intros.
-    eapply lookup_set_spec in H; eauto.
-    destruct H as [x [A B]].
+    eapply lookup_set_spec in H0; eauto.
+    destruct H0 as [x [A B]].
     destruct_prop (x ∈ fromList XL).
     right. eapply in_fromList. rewrite <- B. eapply ra_insert_allocs_correct'; eauto.
     eapply in_fromList. assumption. 
@@ -635,7 +629,7 @@ Module Type MapInjectivity (Import M' : Map') (Import ME : MapEquality M') (Impo
   Qed.
 
 
-  Lemma injective_on_mapping X (lv:cset var) (m:map X) (Z:list var) YL
+  Lemma injective_on_mapping W `{EqDec W eq} X (lv:cset W) (m:map W X) (Z:list W) YL
     (rk:injective_on lv m)
     (IM:inj_mapping (lookup_set m lv) Z YL)
     : injective_on (fromList Z ∪ lv) (update_with_list Z YL m).
@@ -645,7 +639,7 @@ Module Type MapInjectivity (Import M' : Map') (Import ME : MapEquality M') (Impo
     rewrite union_assoc.
     eapply injective_on_fresh.
     eapply injective_on_forget; eauto.
-    intro. eapply lookup_set_incl in H; eauto using incl_minus.
+    intro. eapply lookup_set_incl in H0; eauto using incl_minus.
     edestruct ra_insert_allocs_cases; eauto. eapply f0; eapply in_fromList; eauto.
   Qed.
 
@@ -653,48 +647,44 @@ End MapInjectivity.
 
 Module BMap <: Map.
 
-  (* An abstract type for environments. *)
-  Parameter map        : forall X:Type, Type.
-  Parameter empty      : forall X (def:X), map X.
-  Parameter lookup     : forall X, map X -> var -> X.
-  Parameter default    : forall X, map X -> X.
-  Parameter update     : forall X, map X -> var -> X -> map X.
-  Parameter domain     : forall X, map X -> cset var.
-  Parameter lookup_set : forall X (m:map X) (s:cset var), cset X.
-
-  Implicit Arguments empty  [X].
-  Implicit Arguments lookup [X].
-  Implicit Arguments update [X].
-  Implicit Arguments domain [X].
+  Parameter map        : forall (W X:Type), Type.
+  Parameter empty      : forall {W} {X} (def:X), map W X.
+  Parameter lookup     : forall {W} `{EqDec W eq} {X}, map W X -> W -> X.
+  Parameter default    : forall {W} {X}, map W X -> X.
+  Parameter update     : forall {W} `{EqDec W eq} {X}, map W X -> W -> X -> map W X.
+  Parameter domain     : forall {W} `{EqDec W eq} {X}, map W X -> cset W.
+  Parameter lookup_set : forall {W} `{EqDec W eq} {X} (m:map W X) (s:cset W), cset X.
 
   (* Behaviour of empty. *)
   Parameter empty_spec :
-    forall (X : Type) (def:X) (k : var),
+    forall W `{EqDec W eq} X (def:X) (k : W),
       lookup (empty def) k = def.
+
+  Parameter default_spec :
+    forall (W X : Type) (def:X),
+      default (@empty W X def) = def.
+
   (* The following two lemmas are enough to abstract the behaviour
      of lookup and update. *)
   Parameter lookup_eq :
-    forall (X : Type) (m : map X) (k : var) (x : X),
+    forall (W : Type) `{EqDec W eq} X (m : map W X) (k : W) (x : X),
       lookup (update m k x) k = x.
+
   Parameter lookup_neq :
-    forall (X : Type) (m : map X) (k l : var) (x : X),
+    forall (W : Type) `{EqDec W eq} X (m : map W X) (k l : W) (x : X),
       k <> l -> lookup (update m k x) l = lookup m l.
 
   Parameter domain_spec :
-    forall (X : Type) (m : map X) (x : var),
-      ~x ∈ (domain m) -> lookup m x = default m.
+    forall (W : Type) `{EqDec W eq} X (m : map W X) (x : W),
+      ~x ∈ (domain m) <-> lookup m x = default m.
 
-  Parameter lookup_set_spec : forall X (m:map X) s y,
+  Parameter lookup_set_spec : forall W `{EqDec W eq} X (m:map W X) s y,
     y ∈ lookup_set m s <-> exists x, x ∈ s /\ lookup m x = y.
 
   Parameter map_extensionality :
-    forall (X : Type) (f g : map X), 
+    forall (W : Type) `{EqDec W eq} X (f g : map W X), 
       (forall x, lookup f x = lookup g x)
       -> f = g.
-
-  Parameter default_spec :
-    forall (X : Type) (def:X),
-      default (empty def) = def.
 (*
   Lemma domain_empty X (def:X)
     : domain (empty def) = ∅.
@@ -712,7 +702,7 @@ Module BMap <: Map.
   Include MapAgreement.
   Include MapInjectivity.
 
-  Fixpoint lookup_list X (m:map X) (L:list var) : list X :=
+  Fixpoint lookup_list W `{EqDec W eq} X (m:map W X) (L:list W) : list X :=
     match L with
       | nil => nil
       | x::L => m[x]::lookup_list m L
@@ -726,7 +716,7 @@ Module BMap <: Map.
     rewrite IHX0; eauto.
   Qed.
   
-  Lemma lookup_list_app X A A' (E:map X)
+  Lemma lookup_list_app W `{EqDec W eq} X A A' (E:map W X)
     : lookup_list E (A ++ A') = lookup_list E A ++ lookup_list E A'.
   Proof.
     general induction A; simpl; eauto.
@@ -734,42 +724,42 @@ Module BMap <: Map.
   Qed.
 
 
-  Lemma lookup_list_length X (m:map X) (L:list var) 
+  Lemma lookup_list_length W `{EqDec W eq} X (m:map W X) (L:list W) 
     : length (lookup_list m L) = length L.
   Proof.
     induction L; simpl; eauto.
   Qed.
 
-  Lemma lookup_list_agree X (m m':map X) (L:list var)
+  Lemma lookup_list_agree W `{EqDec W eq} X (m m':map W X) (L:list W)
     : agree_on (fromList L) m m'
     -> lookup_list m L = lookup_list m' L.
   Proof.
     general induction L; simpl in * |- *; eauto.
-    rewrite H. f_equal; eauto using agree_on_incl, incl_union.
+    rewrite H0. f_equal; eauto using agree_on_incl, incl_union.
     cset_tac; firstorder.
   Qed.
 
-  Lemma fromList_lookup_list X (m:map X) L
+  Lemma fromList_lookup_list W `{EqDec W eq} X (m:map W X) L
     : fromList (lookup_list m L) = lookup_set m (fromList L).
   Proof.
     general induction L; simpl. 
     eapply set_extensionality; intros. eapply bool_extensionality; intros.
     cset_tac; firstorder.
-    eapply lookup_set_spec in H. decompose records; cset_tac; firstorder.
+    eapply lookup_set_spec in H0. decompose records; cset_tac; firstorder.
     rewrite IHL. eapply set_extensionality; intros.
     eapply bool_extensionality; intros.
-    eapply lookup_set_spec. eapply union_cases in H; destruct H.
+    eapply lookup_set_spec. eapply union_cases in H0; destruct H0.
     eexists a; split; eauto. cset_tac; firstorder. cset_tac; firstorder.
-    eapply lookup_set_spec in H. firstorder.
+    eapply lookup_set_spec in H0. firstorder.
     eexists x0; firstorder. eapply union_right; eauto.
-    eapply lookup_set_spec in H. firstorder.
-    edestruct union_cases; eauto. eapply single_spec_neq in H1; subst.
+    eapply lookup_set_spec in H0. firstorder.
+    edestruct union_cases; eauto. eapply single_spec_neq in H2; subst.
     cset_tac; firstorder.
     eapply union_right. eapply lookup_set_spec. firstorder.
   Qed.
 
 
-  Lemma update_id X (m:map X) x
+  Lemma update_id W `{EqDec W eq} X (m:map W X) x
     : m [x <- m[x]] = m.
   Proof.
     eapply map_extensionality.
@@ -777,7 +767,7 @@ Module BMap <: Map.
     destruct_prop (x0=x); subst; simplify lookup; eauto. 
   Qed.
 
-  Lemma update_with_list_lookup_list X (E:map X) Z
+  Lemma update_with_list_lookup_list W `{EqDec W eq} X (E:map W X) Z
     : update_with_list Z (lookup_list E Z) E = E.
   Proof.
     general induction Z; simpl; eauto.
@@ -785,43 +775,43 @@ Module BMap <: Map.
   Qed.
 
 
-  Fixpoint idOn (def:var) (D:list var) : map var :=
+  Fixpoint idOn W `{EqDec W eq} (def:W) (D:list W) : map W W:=
     match D with 
       | nil => empty def
       | x::D => idOn def D [x<-x]
     end.
 
-  Fixpoint update_lists X (m:map X) (Z:list var) (ZT:list X) := 
+  Fixpoint update_lists W `{EqDec W eq} X (m:map W X) (Z:list W) (ZT:list X) := 
     match Z, ZT with 
       | x::Z, t::ZT => (update_lists m Z ZT)[x<-t]
       | _, _ => m
     end.
   
-  Lemma update_lists_no_param X (m:map X) Z ZT x
+  Lemma update_lists_no_param W `{EqDec W eq} X (m:map W X) Z ZT x
     : x ∉ fromList Z
     -> update_lists m Z ZT [x] = m[x].
   Proof.
     intros. general induction Z; destruct ZT; simpl; eauto. 
     destruct_prop (a=x); subst; simplify lookup.
-    exfalso; eapply H. simpl; cset_tac; firstorder.
-    simpl in H. assert (~x ∈ fromList Z) by (cset_tac; firstorder).
+    exfalso; eapply H0. simpl; cset_tac; firstorder.
+    simpl in H0. assert (~x ∈ fromList Z) by (cset_tac; firstorder).
     eauto.
   Qed.
 
-  Lemma update_lists_lookup_lists X (m:map X) Z
+  Lemma update_lists_lookup_lists W `{EqDec W eq} X (m:map W X) Z
     : update_lists m Z (lookup_list m Z) = m.
   Proof.
     general induction Z; simpl; eauto.
     rewrite IHZ, update_id; eauto.
   Qed.  
 
-  Fixpoint update_list X (m:map X) (f:var -> X) (L:list var) := 
+  Fixpoint update_list W `{EqDec W eq} X (m:map W X) (f:W -> X) (L:list W) := 
     match L with
       | nil => m
       | x::L => update_list m f L [x <- f x]
     end.
 
-  Lemma update_list_agree_self X lv (E:map X) L f
+  Lemma update_list_agree_self W `{EqDec W eq} X lv (E:map W X) L f
     : agree_on (lv\fromList L) (update_list E f L) E.
   Proof.
     general induction L; simpl. rewrite minus_empty. eapply agree_on_refl.
@@ -831,35 +821,35 @@ Module BMap <: Map.
     instantiate (1:=lv). eapply incl_minus.
   Qed.
 
-  Lemma update_list_no_upd X (m:map X) f L x
+  Lemma update_list_no_upd W `{EqDec W eq} X (m:map W X) f L x
     : x ∉ fromList L
     -> update_list m f L [x] = m [x].
   Proof.
     intros. general induction L; simpl; eauto.
     destruct_prop (a=x); subst; simplify lookup.
-    exfalso. eapply H. simpl; cset_tac; firstorder.
-    assert (~x ∈ fromList L) by (simpl in H; cset_tac; firstorder).
+    exfalso. eapply H0. simpl; cset_tac; firstorder.
+    assert (~x ∈ fromList L) by (simpl in H0; cset_tac; firstorder).
     eauto.
   Qed.
 
-  Lemma update_list_upd X (m:map X) f L x
+  Lemma update_list_upd W `{EqDec W eq} X (m:map W X) f L x
     : x ∈ fromList L
     -> update_list m f L [x] = f x.
   Proof.
     intros. general induction L; simpl; eauto.
     simpl in *; cset_tac; firstorder.
     destruct_prop (a=x); subst; simplify lookup; eauto.
-    assert (x ∈ fromList L) by (simpl in H; cset_tac; firstorder).
+    assert (x ∈ fromList L) by (simpl in H0; cset_tac; firstorder).
     eauto.
   Qed.
 
-  Definition comp X (rho:map var) (m:map X) 
-    : map X :=
+  Definition comp W `{EqDec W eq} Y `{EqDec Y eq} X (rho:map W Y) (m:map Y X) 
+    : map W X :=
     update_list (empty (m[default rho])) (fun x => m [rho [x]]) (elements (domain rho)).
 
   Notation "m '∘' m'" := (comp m m') (at level 40, left associativity) : map_scope.
 
-  Lemma comp_lookup X (rho:map var) (m:map X) x
+  Lemma comp_lookup W `{EqDec W eq} Y `{EqDec Y eq} X (rho:map W Y) (m:map Y X) x
     : comp rho m [x] = m [rho [x]].
   Proof.
     unfold comp. 
@@ -870,7 +860,7 @@ Module BMap <: Map.
     eapply domain_spec in n. congruence. eauto.
   Qed.
 
-  Lemma comp_update X (rho:map var) (m:map X) x y z
+  Lemma comp_update W `{EqDec W eq} Y `{EqDec Y eq} X (rho:map W Y) (m:map Y X) x y z
     : comp (rho[x<-y]) (m[y<-z]) = comp rho m [x <- z].
   Proof.
     eapply map_extensionality; intros.
@@ -881,41 +871,41 @@ Module BMap <: Map.
     admit.
   Qed.
 
-Parameter agree_set : forall X (lv:cset var) (m m':map X), cset var.
+Parameter agree_set : forall W `{EqDec W eq} X (lv:cset W) (m m':map W X), cset W.
 
 Parameter agree_set_spec
-  : forall X (lv:cset var) (m m':map X) x,
+  : forall W `{EqDec W eq} X (lv:cset W) (m m':map W X) x,
     x ∈ agree_set lv m m' <-> x ∈ lv /\ m[x] = m'[x].
 
 
 
 Lemma agree_set_agree_on 
-  : forall X Y (lv:cset var) (D D':map X) (E E':map Y),
+  : forall W `{EqDec W eq} X Y (lv:cset W) (D D':map W X) (E E':map W Y),
     agree_on lv D D' -> agree_on (agree_set lv D D') E E' 
     -> agree_on lv E E'.
 Proof.
   intros. hnf; intros.
-  eapply H0. eapply agree_set_spec; eauto.
+  eapply H1. eapply agree_set_spec; eauto.
 Qed.
 
-Lemma agree_on_agree_set X (lv:cset var) (D D' D'':map X)
+Lemma agree_on_agree_set W `{EqDec W eq} X (lv:cset W) (D D' D'':map W X)
   : agree_on lv D D' -> agree_set lv D D'' ⊆ agree_set lv D' D''.
 Proof.
   intros. hnf; intros. rewrite agree_set_spec in *. 
-  rewrite <- H; firstorder.
+  rewrite <- H0; firstorder.
 Qed.
 
 
 Lemma agree_set_incl 
-  : forall X (lv:cset var) (D D':map X),
+  : forall W `{EqDec W eq} X (lv:cset W) (D D':map W X),
     (agree_set lv D D') ⊆ lv.
 Proof.
-  intros. hnf; intros. eapply agree_set_spec in H; firstorder.
+  intros. hnf; intros. eapply agree_set_spec in H0; firstorder.
 Qed.
 
 
 Lemma agree_set_incl_both 
-  : forall X (lv' lv:cset var) (D D':map X),
+  : forall W `{EqDec W eq} X (lv' lv:cset W) (D D':map W X),
     lv' ⊆ lv -> agree_set lv' D D' ⊆ agree_set lv D D'.
 Proof.
   intros. hnf; intros. rewrite agree_set_spec in *; firstorder.
@@ -947,19 +937,19 @@ Qed.
   Admitted.
 *)
 
-Definition image X (Df:Defaulted X) (f:map X) := lookup_set f (domain f).
+Definition image W `{EqDec W eq} X (Df:Defaulted X) (f:map W X) := lookup_set f (domain f).
 
-Hypothesis mapjoin : forall X (m m':map X) (s:cset var), map X.
+Hypothesis mapjoin : forall W X (m m':map W X) (s:cset W), map W X.
 
 Hypothesis mapjoin_spec 
-  : forall X (m m':map X) (s:cset var) x, 
+  : forall W `{EqDec W eq} X (m m':map W X) (s:cset W) x, 
     ((x ∈ s -> mapjoin m m' s [x] = m [x]) /\
     (x ∉ s -> mapjoin m m' s [x] = m' [x])).
 
-Hypothesis neq_domain : forall (m:map var), cset var.
+Hypothesis neq_domain : forall W `{EqDec W eq} (m:map W W), cset W.
 
 Hypothesis neq_domain_spec 
-  : forall (m:map var) x, x ∈ neq_domain m <-> m [x] <> x /\ x ∈ domain m.
+  : forall W `{EqDec W eq} (m:map W W) x, x ∈ neq_domain m <-> m [x] <> x /\ x ∈ domain m.
 
 End BMap.
 
