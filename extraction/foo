@@ -1,0 +1,25 @@
+type exp =
+| Sexp of Big.big_int (* AXIOM TO BE REALIZED *)
+
+(** val exp_eval : val0 env -> exp -> val0 option **)
+
+let exp_eval env e =
+  match e with
+    Sexp v -> Some v
+
+type val0 = Big.big_int 
+
+(** val default_val : val0 **)
+
+let default_val = zero
+
+(** val inst_val_defaulted : val0 defaulted **)
+
+let inst_val_defaulted =
+  default_val
+
+(** val val2bool : val0 -> bool **)
+
+let val2bool v = if v = zero then False else True
+
+

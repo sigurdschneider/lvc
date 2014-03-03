@@ -1,0 +1,56 @@
+(* 
+
+Adapted from: 
+
+Rideau, L., Serpette, B.P., Leroy, X.: Tilting at windmills with Coq: formal veriﬁcation
+of a compilation algorithm for parallel moves. Journal of Automated Reasoning 40(4),
+307–326 (2008)
+
+*)
+
+open String
+
+type status = To_move | Being_moved | Moved
+
+let rec zip lst1 lst2 = match lst1,lst2 with
+  | [],_ -> []
+  | _, []-> []
+  | (x::xs),(y::ys) -> (x,y) :: (zip xs ys);;
+
+let print_pair op (src,dst) = Big.to_string (List.hd src) ^ op ^ (Big.to_string (List.hd dst))
+;;
+
+
+let print_moves srcl dstl =
+  concat "\n" (List.map (print_pair " <- ") (List.map (fun (a,b) -> ([a], [b])) (zip srcl dstl))) ^ ";"
+;;
+
+let parallel_move tmp srcl dstl =
+  let src = Array.of_list srcl in
+  let dst = Array.of_list dstl in
+  let _ = Printf.printf "moves:\n%s\n" (print_moves srcl dstl) in
+  let n = Array.length src in
+  let status = Array.make n To_move in
+  let res = ref [] in
+  let rec move_one i =
+    if not (Big.eq src.(i) dst.(i)) then begin
+      status.(i) <- Being_moved;
+      for j = 0 to n - 1 do
+	if Big.eq src.(j) dst.(i) then
+	  match status.(j) with
+	    | To_move ->
+		move_one j
+	    | Being_moved ->
+		 res :=  ([src.(j)], [tmp]) :: !res;
+	    src.(j) <- tmp
+	    | Moved ->
+		()
+      done;
+      res := ([src.(i)], [dst.(i)]) :: !res;
+      status.(i) <- Moved
+    end in
+  for i = 0 to n - 1 do
+    if status.(i) = To_move then move_one i
+  done;
+  let _ = Printf.printf "res:\n%s\n" (concat "\n" (List.map (print_pair " = ") !res)) in
+  (* List.rev *) !res
