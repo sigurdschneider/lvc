@@ -2,3 +2,7 @@ LYN Compiler Project
 IL - IL/I, IL/F and Coherence
 Translation validation for register assignment and SSA construction
 http://www.ps.uni-saarland.de/~sdschn/master
+
+You need to have the containers library installed:
+http://coq.inria.fr/pylons/contribs/view/Containers/v8.4
+All sources compiled with Coq version 8.4pl3 (February 2014)
