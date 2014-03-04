@@ -1,7 +1,7 @@
 Require Import CSet Le.
 
 Require Import Plus Util AllInRel Map.
-Require Import Val Var Env EnvTy IL Liveness ParamsMatch Sim.
+Require Import Val Var Env EnvTy IL Liveness ParamsMatch Restrict Sim.
 
 Set Implicit Arguments.
 
@@ -143,103 +143,6 @@ Inductive shadowing_free : set var -> stmt -> Prop :=
     -> shadowing_free (of_list Z ∪ D) s
     -> shadowing_free D t
     -> shadowing_free D (stmtLet Z s t).
-
-Definition restr (G:set var) (o:option (set var)) :=
-  match o with
-    | None => None
-    | Some G' => if [G' ⊆ G] then Some G' else None
-  end.
-
-Lemma restr_iff G o G'
-  : restr G o = Some G' <-> G' ⊆ G /\ o = Some G'.
-Proof.
-  unfold restr; destruct o; intros. 
-  destruct if; intuition; try inv H; try inv H1; eauto; isabsurd.
-  split; intros; dcr; congruence.
-Qed.
-
-Lemma restr_idem G o G'
-  : G' ⊆ G -> restr G' (restr G o) = restr G' o.
-Proof.
-  unfold restr; destruct o. repeat destruct if; eauto; isabsurd. 
-  intros. exfalso. eapply n; cset_tac; intuition.
-  eauto.
-Qed.
-
-Lemma restr_comm o G G'
-  : restr G' (restr G o) = restr G (restr G' o).
-Proof.
-  destruct o; unfold restr; repeat destruct if; eauto; isabsurd.
-Qed.
-
-Instance restr_morphism
-  : Proper (Equal ==> option_eq Equal ==> option_eq Equal) restr.
-Proof.
-  unfold Proper, respectful; intros.
-  destruct x0,y0; unfold restr; 
-  repeat destruct if; try econstructor;
-  inv H0; eauto. 
-  exfalso. eapply n. rewrite <- H3, <- H; eauto.
-  exfalso. eapply n. rewrite H3, H; eauto.
-Qed.
-
-Instance restr_morphism_eq
-  : Proper (Equal ==> eq ==> eq) restr.
-Proof.
-  unfold Proper, respectful; intros.
-  destruct x0,y0; unfold restr; 
-  repeat destruct if; try econstructor;
-  inv H0; eauto. 
-  exfalso. eapply n. rewrite <- H; eauto.
-  exfalso. eapply n. rewrite H; eauto.
-Qed.
-
-Definition restrict (DL:list (option (set var))) (G:set var)
-  := List.map (restr G) DL.
-
-Lemma restrict_idem DL G G'
-  : G ⊆ G' -> restrict (restrict DL G') G = restrict DL G.
-Proof.
-  general induction DL; simpl; eauto.
-  f_equal; eauto using restr_idem.
-Qed.
-
-Lemma restrict_incl G G' DL
- : G' ⊆ G -> restrict (Some G'::DL) G = Some G'::restrict DL G.
-Proof.
-  intros. unfold restrict, List.map; f_equal.
-  eapply restr_iff; eauto.
-Qed.
-
-Lemma restrict_not_incl G G' DL
- : ~G' ⊆ G -> restrict (Some G'::DL) G = None::restrict DL G.
-Proof.
-  intros. unfold restrict, List.map; f_equal.
-  unfold restr. destruct if; firstorder.
-Qed.
-
-Lemma restrict_comm DL G G'
-: restrict (restrict DL G) G' = restrict (restrict DL G') G.
-Proof.
-  general induction DL; simpl; eauto. f_equal; eauto using restr_comm.
-Qed.
-
-Instance restrict_morphism
-  : Proper (list_eq (option_eq Equal) ==> 
-                    Equal ==> list_eq (option_eq Equal)) restrict.
-Proof.
-  unfold Proper, respectful; intros.
-  general induction H; simpl; try econstructor; eauto.
-  rewrite H1, H. reflexivity.
-Qed.
-
-Instance restrict_morphism_eq
-  : Proper (eq ==> Equal ==> eq) restrict.
-Proof.
-  unfold Proper, respectful; intros; subst. 
-  general induction y; simpl; try econstructor; eauto.
-  f_equal. rewrite H0; reflexivity. eauto.
-Qed.
 
 Inductive srd : list (option (set var)) -> stmt -> ann live -> Prop :=
  | srdExp DL x e s lv al
@@ -448,100 +351,41 @@ Proof.
   intros. general induction H; eauto using shadowing_free.
 Qed.
 
-Fixpoint bounded (DL:list (option (set var))) (G:set var) :=
-  match DL with
-    | nil => True
-    | Some G'::DL => G' ⊆ G /\ bounded DL G
-    | None::DL => bounded DL G
-  end.
-
-Instance bounded_morphism_subset
-  : Proper (eq ==> Subset ==> impl) bounded.
-Proof.
-  unfold Proper, respectful, impl; intros.
-  subst. general induction y; simpl; eauto.
-  destruct a; simpl in *; cset_tac; intuition. 
-  eapply IHy; eauto. eapply IHy; eauto.
-Qed.
-
-Instance bounded_morphism 
-  : Proper (eq ==> Equal ==> iff) bounded.
-Proof.
-  unfold Proper, respectful, impl; intros; split; intros; subst;
-  eapply double_inclusion in H0; dcr. 
-  rewrite <- H; eauto.
-  rewrite <- H2; eauto.
-Qed.
-
-Lemma bounded_get DL G G' n
-  : bounded DL G -> get DL n (Some G') -> G' ⊆ G.
-Proof.
-  intros. general induction H0; simpl in *; intuition.
-  destruct x'; eapply IHget; intuition.
-Qed.
-
-Lemma bounded_restrict DL G' G 
-  : G' ⊆ G -> bounded (restrict DL G') G. 
-Proof. 
-  general induction DL; simpl; eauto.
-  case_eq (restr G' a); intros; try split; eauto.
-  eapply restr_iff in H0; intuition.
-  transitivity G'; eauto.
-Qed.
-
-Lemma bounded_restrict_eq DL G' G 
-  : G ⊆ G' -> bounded DL G -> restrict DL G' = DL. 
-Proof. 
-  general induction DL; simpl; eauto.
-  case_eq (restr G' a); intros; try split; eauto.
-  eapply restr_iff in H1; intuition. 
-  subst; simpl in *; dcr.
-  f_equal. eapply (IHDL _ _ H H3).
-  destruct a; unfold restr in H1; dcr.
-  destruct if in H1; isabsurd. simpl in H0.
-  exfalso. eapply n. dcr. rewrite H2; eauto.
-  f_equal. eapply IHDL; eauto.
-Qed.
-
-
-
-Inductive fstNoneOrR {X Y:Type} (R:X->Y->Prop)
-  : option X -> option Y -> Prop :=
-| fstNone (x:option Y) : fstNoneOrR R None x
-| bothR (x:X) (y:Y) : R x y -> fstNoneOrR R (Some x) (Some y)
-.
-
-
-Lemma restrict_subset DL DL' G G'
-: list_eq (fstNoneOrR eq) DL DL' 
-  -> G ⊆ G'
-  -> list_eq (fstNoneOrR eq) (restrict DL G) (restrict DL' G').
-Proof.
-  intros. induction H; simpl; econstructor; eauto.
-  inv H. simpl. econstructor.
-  unfold restr. repeat destruct if; try econstructor; eauto.
-  exfalso. eapply n. transitivity G; eauto.
-Qed.
-
-
 Lemma srd_monotone (DL DL' : list (option (set var))) s a
  : srd DL s a 
-   -> list_eq (fstNoneOrR eq) DL DL'
+   -> list_eq (fstNoneOrR Equal) DL DL'
    -> srd DL' s a.
 Proof.
   intros. general induction H; eauto using srd.
   + econstructor. 
     eapply IHsrd; eauto. eapply restrict_subset; eauto. cset_tac; intuition.
   + destruct (list_eq_get H1 H); eauto; dcr. inv H4.
-    econstructor; eauto. 
+    econstructor; eauto. rewrite <- H5; eauto.
   + econstructor; eauto. 
-    eapply IHsrd1. constructor; eauto. eapply bothR.
-    constructor. reflexivity. eauto. rewrite H. eapply incl_minus_lr; intuition.
-    eapply IHsrd1; eauto. repeat rewrite restrict_incl; try reflexivity.
-    econstructor. econstructor; reflexivity. 
-    eapply restrict_subset; intuition. reflexivity.
+    eapply IHsrd1. repeat rewrite restrict_incl; try reflexivity.
+    constructor; eauto. reflexivity.
+    eapply restrict_subset; eauto. reflexivity.
+    eapply IHsrd2. constructor; eauto. reflexivity.
 Qed.
 
+Lemma srd_monotone2 (DL DL' : list (option (set var))) s a
+ : srd DL s a 
+   -> list_eq (fstNoneOrR (flip Subset)) DL DL'
+   -> srd DL' s a.
+Proof.
+  intros. general induction H; eauto using srd.
+  + econstructor. 
+    eapply IHsrd; eauto. eapply restrict_subset2; eauto. reflexivity.
+  + destruct (list_eq_get H1 H); eauto; dcr. inv H4.
+    econstructor; eauto. rewrite <- H5; eauto.
+  + econstructor; eauto. 
+    eapply IHsrd1. repeat rewrite restrict_incl; try reflexivity.
+    constructor; eauto. reflexivity.
+    eapply restrict_subset2; eauto. reflexivity.
+    eapply IHsrd2. constructor; eauto. reflexivity.
+Qed.
+
+(*
 Lemma shadowing_free_srd G s DL
    (A:labl DL s)
    (B:bounded DL G)
@@ -575,7 +419,7 @@ Proof.
       simpl; split; eauto using minus_incl.
       intros. inv H3; eauto; congruence.
 Qed.
-
+*)
 
 Definition invariant (s:stmt) :=
   forall (E:env var), sim (nil:list F.block,E,s) (nil:list I.block,E,s).
@@ -618,9 +462,11 @@ Qed.
 
 Inductive approx' 
   : list (option (set var)) -> F.block -> Prop :=
-  approxI' DL o Z E s
-  :  (forall G, o = Some G -> srd (restrict (Some G::DL) G) (G ∪ of_list Z) s 
-                              /\ of_list Z ∩ G [=] ∅ )
+  approxI' DL o Z E s DL'
+  :  (forall G, o = Some G -> of_list Z ∩ G [=] ∅ /\
+           exists a, getAnn a [=] (G ∪ of_list Z) 
+                /\ srd (restrict (Some G::DL) G) s a
+                /\ live_sound DL' s a)
      -> approx' (o::DL) (F.blockI E Z s).
 
 Lemma approx_restrict DL L G
@@ -635,20 +481,22 @@ Proof.
   eapply restr_iff in H0; dcr; subst.
   specialize (H4 _ H1); dcr. 
   rewrite restrict_incl, restrict_idem, <- restrict_incl; eauto; try reflexivity.   
-  inv pf. econstructor. isabsurd. eapply IHAIR2; eauto.
+  inv pf. econstructor. isabsurd. eapply IHAIR2; eauto. 
+  Grab Existential Variables. eassumption.
 Qed.
 
 Unset Printing Records.
 
-Lemma srd_preservation (E E':env val) L L' s s' (DL DL':list (option (set var))) (G:set var)
-  (SRD:srd DL G s)
-  (RA:rd_agree DL L E)
-  (A: AIR2 approx' DL L)
+Lemma srd_preservation (E E':env val) L L' s s' DL (G:set var) DA a
+  (SRD:srd DA s a)
+  (RA:rd_agree DA L E)
+  (A: AIR2 approx' DA L)
+  (LV:live_sound DL s a)
   (PM:params_match L s)
   (S:F.step (L, E, s) (L',E',s'))
-  : exists DL' G', srd DL' G' s' 
-                   /\ rd_agree DL' L' E' 
-                   /\ AIR2 approx' DL' L'. 
+  : exists DA' DL' a', srd DA' s' a' 
+                   /\ rd_agree DA' L' E' 
+                   /\ AIR2 approx' DL' L'.
 Proof.
   destruct SRD; try inv S; try params_match_tac.
 
@@ -658,22 +506,25 @@ Proof.
   + do 2 eexists; eauto.
   + do 2 eexists; eauto.
 
-  + provide_invariants_2. specialize (H6 _ H7); dcr.
-    rewrite H5 in H8. simpl in *.
-    do 2 eexists; repeat split; simpl; eauto.
-    eapply rd_agree_update_list; eauto. eapply (RA _ _ _ H4 H0).
-    eauto using approx_restrict.
-    
+  + provide_invariants_2. specialize (H5 _ H6); dcr.
+    rewrite H4 in H9. simpl in *.
+    do 3 eexists; repeat split; simpl; eauto.
+    eapply rd_agree_update_list; eauto. eapply (RA _ _ _ H3 H).
 
-  + do 2 eexists; repeat split; eauto.
+  + inv LV. do 3 eexists; repeat split; eauto.
     hnf; intros.
-    destruct n; inv H1; inv H2. simpl.
+    destruct n; inv H0; inv H1. simpl.
     eapply agree_on_refl. 
     eapply RA; eauto.
 
-    econstructor; eauto using agree_on_incl. econstructor; eauto.
-    intros. inv H1. split. eauto.
-    split; cset_tac; isabsurd; eauto. eapply H in H4. cset_tac; intuition.
+    econstructor; eauto using agree_on_incl. 
+    instantiate (1:=Some (getAnn als \ of_list Z)).
+    econstructor; eauto.
+    split. inv H0.
+    split; cset_tac; isabsurd; eauto. inv H0.
+    eexists; eauto. split; [| split;eauto].
+    inv H0.
+    cset_tac; intuition. destruct_prop (a ∈ of_list Z); intuition.
 Qed.
 
 Definition stripB (b:F.block) : I.block.
@@ -689,56 +540,52 @@ Proof.
 Qed.
 
 Inductive srdSim : F.state -> I.state -> Prop :=
-  | srdSimI (E EI:env val) L s (DL:list (option (set var))) (G:set var)
-  (SRD:srd DL G s)
-  (RA:rd_agree DL L E)
-  (A: AIR2 approx' DL L)
+  | srdSimI (E EI:env val) L s AL DL a
+  (SRD:srd AL s a)
+  (RA:rd_agree AL L E)
+  (A: AIR2 approx' AL L)
   (PM:params_match L s)
-  (AG:agree_on G E EI)
+  (AG:agree_on (getAnn a) E EI)
+  (LV:live_sound DL s a)
   : srdSim (L, E, s) (strip L, EI,s).
 
 Lemma srdSim_sim σ1 σ2
   : srdSim σ1 σ2 -> sim σ1 σ2.
 Proof.
   revert σ1 σ2. cofix; intros.
-  destruct H; inv SRD; simpl; try provide_invariants_2; try params_match_tac.
+  destruct H; inv SRD; inv LV; simpl in *; try provide_invariants_2; try params_match_tac.
   + case_eq (exp_eval E e); intros.
-    eapply simS; try eapply plusO.
-    econstructor; eauto. econstructor; eauto.
-    instantiate (1:=v). erewrite <- exp_eval_live; eauto. eapply live_exp_sound_incl; eauto.
-    eapply live_freeVars.
+    one_step.
+    instantiate (1:=v). erewrite <- exp_eval_live; eauto.
     eapply srdSim_sim; econstructor; 
-    eauto using agree_on_update_any_same, approx_restrict, rd_agree_update.
+    eauto using approx_restrict, rd_agree_update.
+    eapply agree_on_update_same; eapply agree_on_incl; eauto.
     eapply simE; try eapply star_refl; eauto; stuck.
     erewrite <- exp_eval_live in def; eauto. congruence.
-    eapply live_exp_sound_incl; eauto using live_freeVars.
   + case_eq (val2bool (E x)); intros.
     eapply simS; try eapply plusO. 
     econstructor; eauto. 
     econstructor. rewrite <- AG; eauto.
-    eapply srdSim_sim; econstructor; eauto.
-    eapply simS; try eapply plusO.
-    eapply F.stepIfF; eauto. 
-    rewrite AG in H4; eauto.
-    eapply I.stepIfF; eauto. 
-    eapply srdSim_sim; econstructor; eauto.
+    eapply srdSim_sim; econstructor; eauto using agree_on_incl.
+    one_step.
+    eapply srdSim_sim; econstructor; eauto using agree_on_incl.
   + eapply simE; try eapply star_refl; simpl; eauto; try stuck.
-    rewrite AG; eauto.
   + eapply simS; try eapply plusO.
     econstructor; eauto.
-    pose proof (map_get_1 stripB H2).
+    pose proof (map_get_1 stripB H1).
     econstructor; eauto. eauto.
     eapply srdSim_sim. rewrite drop_strip.  
     simpl. simpl counted in *.
-    specialize (H4 _ H5); dcr. rewrite H3 in H8.
+    specialize (H3 _ H5); dcr. rewrite H2 in A1,H13.
     econstructor; simpl; eauto using approx_restrict.
     eapply rd_agree_update_list; eauto.
-    eapply (RA _ _ _ H2 H0).
+    eapply (RA _ _ _ H1 H).
 
     simpl; unfold updE. 
     erewrite lookup_list_agree; eauto using agree_on_incl.
-    eapply update_with_list_agree. rewrite union_comm. rewrite union_minus_remove.
-    pose proof (RA _ _ G' H2 H0); dcr. simpl in *.
+    eapply update_with_list_agree. rewrite H12.
+    rewrite union_comm. rewrite union_minus_remove.
+    pose proof (RA _ _ G' H1 H); dcr. simpl in *.
     eapply agree_on_sym. eapply agree_on_incl; eauto using incl_minus.
     eapply agree_on_trans; eauto. eapply agree_on_sym. hnf in RA.
     eapply agree_on_incl; eauto.
@@ -747,17 +594,20 @@ Proof.
   + eapply simS; try (eapply plusO; econstructor).
     eapply srdSim_sim; econstructor; eauto.
     hnf; intros.
-    destruct n; inv H3; inv H4. simpl.
+    destruct n; inv H2; inv H3. simpl.
     eapply agree_on_refl. 
     eapply RA; eauto. 
 
     econstructor; eauto using agree_on_incl. econstructor; eauto.
-    intros. inv H3. split. eauto.
-    split; cset_tac; isabsurd; eauto. eapply H in H6. cset_tac; intuition.
+    intros. inv H2. split. 
+    split; cset_tac; isabsurd; eauto. 
+    eexists. split; eauto. cset_tac; intuition.
+    destruct_prop (a ∈ of_list Z); intuition.
+    eapply agree_on_incl; eauto.
 Qed.
 
-Lemma srd_implies_invariance G s
-: params_match nil s -> srd nil G s -> invariant s.
+Lemma srd_implies_invariance DL s a
+: live_sound DL s a -> params_match nil s -> srd nil s a -> invariant s.
 Proof.
   intros. hnf; intros. eapply srdSim_sim. 
   econstructor; eauto using AIR2; isabsurd; reflexivity.
