@@ -1,9 +1,35 @@
-Require Import CSet Le.
+Require Import CSet Le Arith.Compare_dec.
 
 Require Import Plus Util Map.
 Require Import Env EnvTy IL.
  
 Set Implicit Arguments.
+
+Instance le_comp (a b: nat) : Computable (a < b).
+constructor. eapply lt_dec.
+Defined.
+
+(*Definition max a b := if [ a < b ] then b else a.
+Definition min a b := if [ a < b ] then a else b.*)
+
+Section PolyIter.
+  Variable A : Type.
+
+  Fixpoint iter n (s:A) (f: nat -> A-> A) :=
+    match n with 
+        | 0 => s
+        | S n => iter n (f n s) f
+    end.
+
+End PolyIter.
+
+Definition least_fresh (lv:set var) : var :=
+  let mx := fold max lv 0 in 
+  let vx := iter (cardinal lv + 1) 
+                 mx 
+                 (fun n x => if [n ∈ lv] then x else n) in
+  vx.
+
 
 Definition fresh (s : set var) : var :=
   S(fold max s 0).
