@@ -18,7 +18,7 @@ Definition killExcept f (AP:list (set var)) :=
 
 Fixpoint computeParameters (DL: list (set var * params)) (AP:list (set var)) 
          (s:stmt) (an:ann (set var)) {struct s}
-: ann (list (list var)) * list (set var) :=
+: ann (list var) * list (set var) :=
   match s, an with
     | stmtExp x e s, annExp _ an => 
       let (ar, r) := computeParameters DL (addParam x DL AP) s an in
@@ -40,7 +40,7 @@ Fixpoint computeParameters (DL: list (set var * params)) (AP:list (set var))
                                         t 
                                         ant in
       let ur := zip union rs rt in
-      (annLet (List.map to_list ur) ars art, tl ur)
+      (annLet (to_list (hd (∅:set var) ur)) ars art, tl ur)
     | s, a => (annReturn nil, nil)
   end.
 
