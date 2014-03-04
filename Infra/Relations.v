@@ -288,6 +288,19 @@ Proof.
 Defined.
 
 
+Inductive fstNoneOrR {X Y:Type} (R:X->Y->Prop)
+  : option X -> option Y -> Prop :=
+| fstNone (x:option Y) : fstNoneOrR R None x
+| bothR (x:X) (y:Y) : R x y -> fstNoneOrR R (Some x) (Some y)
+.
+
+Instance fstNoneOrR_Reflexive {A : Type} {R : relation A} {Rrefl: Reflexive R} 
+: Reflexive (fstNoneOrR R).
+Proof.
+  hnf; intros. destruct x; econstructor; eauto.
+Qed.
+
+
 (* 
 *** Local Variables: ***
 *** coq-load-path: (("../" "Lyn")) ***
