@@ -136,18 +136,15 @@ Lemma rename_ssa_srd C C' s ϱ (alv:ann (set var)) Lv
   -> locally_inj ϱ s alv
   -> bounded (live_globals Lv) C
   -> srd (map_lookup ϱ (restrict (live_globals Lv) (getAnn alv)))
-         (lookup_set ϱ (getAnn alv))
-         (rename ϱ s).
+        (rename ϱ s)
+        (mapAnn (lookup_set ϱ) alv).
 Proof. 
   intros SSA INCL LS RI.
   general induction RI; inv LS; subst; inv SSA; simpl.
   + econstructor. 
-    - simpl in *. eapply Subset_trans. 
-      eapply rename_exp_freeVars. intuition. 
-      eapply lookup_set_incl. intuition. eauto.
     - eapply srd_monotone. 
-      * eapply IHRI; eauto. simpl in *. cset_tac; intuition.
-        destruct_prop (a === x); intuition. left. eapply INCL.
+      * eapply IHRI; eauto. simpl in *. 
+        cset_tac; intuition. destruct_prop (a === x); intuition. left. eapply INCL.
         eapply H10. cset_tac; intuition.
         assert (C ⊆ C ∪ {{x}}). cset_tac; intuition.
         rewrite H2 in H1; eauto.
@@ -160,19 +157,13 @@ Proof.
         reflexivity. rewrite lookup_set_singleton; intuition. 
         rewrite meet_comm. eapply meet_minus. intuition. eauto.
         cset_tac; intuition. inversion 1; subst. intuition.
-      * rewrite <- lookup_set_singleton; intuition.
-        rewrite <- lookup_set_union; intuition. eapply lookup_set_incl; intuition.
-        cset_tac; intuition. destruct_prop(a===x); intuition. left.
-        eapply H10. cset_tac; intuition.
-  + econstructor. simpl in *. eapply lookup_set_spec; eauto. intuition.
-    simpl in *.
+  + econstructor. simpl in *. 
     - eapply srd_monotone. eapply IHRI1; eauto using Subset_trans, lookup_set_incl; eauto;
                            try (now eapply Subset_trans; eauto).
-      eapply list_eq_fstNoneOrR_incl; eauto. eapply lookup_set_incl; intuition.
+      eapply list_eq_fstNoneOrR_incl; eauto. 
     - eapply srd_monotone. eapply IHRI2; eauto; try (now eapply Subset_trans; eauto).
-      eapply list_eq_fstNoneOrR_incl; eauto. eapply lookup_set_incl; intuition.
-  + econstructor. rewrite of_list_lookup_list; intuition.
-    eapply lookup_set_incl; intuition. intuition.
+      eapply list_eq_fstNoneOrR_incl; eauto. 
+  + econstructor. 
     instantiate (1:= lookup_set ϱ (blv \ of_list Z)).
     unfold live_globals. 
     pose proof (map_get_1 live_global H4).  
@@ -181,37 +172,33 @@ Proof.
     assert (restr lv (live_global (blv, Z)) = Some (blv \ of_list Z)).
     eapply restr_iff; intuition. rewrite H9 in H3. eapply H3.
     eapply lookup_set_incl; intuition.
-  + econstructor. eapply lookup_set_spec; eauto. intuition.
+  + econstructor.
 
-  + econstructor; eauto. instantiate (1:=lookup_set ϱ (getAnn alvs \ of_list Z)). 
-    rewrite lookup_set_minus_incl_inj; eauto. 
-    rewrite <- minus_inane_set. eapply incl_minus_lr; try reflexivity.
-    rewrite lookup_set_minus_incl; intuition. eapply lookup_set_incl; intuition.
-    rewrite meet_comm. rewrite of_list_lookup_list. eapply meet_minus. intuition.
-    intuition.
+  + econstructor; eauto.
     eapply srd_monotone. eapply IHRI1; eauto. simpl in *.
     rewrite <- INCL. rewrite <- H13. eapply incl_union_minus.
     simpl. split. rewrite H13. cset_tac; intuition. 
     assert (C ⊆ of_list Z ∪ C) by (cset_tac; intuition). rewrite <- H3; eauto.
-    Opaque restrict. simpl.  unfold live_global. rewrite restrict_incl. simpl. 
-    simpl. rewrite restrict_incl. constructor. constructor. reflexivity.
+    Opaque restrict. simpl. unfold live_global. rewrite restrict_incl. simpl. 
+    simpl. rewrite restrict_incl. constructor. constructor.
+    rewrite getAnn_mapAnn. admit.
     erewrite (@restrict_incl_ext _ (getAnn alvs)); eauto.
     instantiate (1:=getAnn alvs \ of_list Z).
-    eapply list_eq_special; eauto. reflexivity.
+    eapply list_eq_special; eauto.
+    rewrite getAnn_mapAnn. admit. 
     cset_tac; intuition. eapply H4; eauto. reflexivity.
-    eapply incl_minus. rewrite of_list_lookup_list.
-    rewrite <- lookup_set_union. eapply lookup_set_incl; intuition.
-    rewrite union_comm. eapply incl_union_minus. intuition. intuition.
+    eapply incl_minus. 
+    
     eapply srd_monotone. eapply IHRI2; eauto. transitivity lv; eauto.
     simpl. split; eauto. eapply Subset_trans; eauto.
     simpl. 
     simpl. destruct_prop (getAnn alvs \ of_list Z ⊆ getAnn alvb). 
     unfold live_global. simpl.
     rewrite restrict_incl; eauto. simpl. econstructor. econstructor; eauto.
+    rewrite getAnn_mapAnn. admit.
     eapply list_eq_fstNoneOrR_incl; eauto.
     unfold live_global. simpl. rewrite restrict_not_incl; eauto. simpl.
     econstructor. econstructor. eapply list_eq_fstNoneOrR_incl; eauto.
-    eapply lookup_set_incl; intuition.
 Qed.
 
 Open Scope set_scope.
@@ -226,7 +213,7 @@ Proof.
   intros. general induction H; simpl. 
   inv H2. inv H3.
   econstructor. simpl in *. eapply alpha_exp_rename_injective. 
-  eapply inverse_on_incl; eauto.
+  eapply inverse_on_incl. eapply Exp.freeVars_live; eauto. eauto.
   assert (rename ϱ s = rename (update ϱ x (ϱ x)) s). { 
     rewrite update_id; eauto. intuition. 
   } 
