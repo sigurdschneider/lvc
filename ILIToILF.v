@@ -1,4 +1,4 @@
-Require Import AllInRel Util Map Env EnvTy Exp IL ParamsMatch Coherence Sim DecSolve Liveness.
+Require Import AllInRel Util Map Env EnvTy Exp IL ParamsMatch Coherence Sim DecSolve Liveness Restrict.
 
 (*  IL_Types. *)
 
@@ -158,48 +158,63 @@ Proof.
     intros. inv H2. eauto. 
 Qed.
 
+
 Lemma compile_typed DL AL ZL s ans_lv ans
   (RD:trs AL ZL s ans_lv ans)
   (LV:live_sound DL s ans_lv)
   : srd (restrict AL (getAnn ans_lv)) (compile ZL s ans) ans_lv.
 Proof. 
-  general induction RD; simpl; eauto using srd.
+  general induction RD; inv LV; simpl; eauto using srd.
   + econstructor; eauto.
-    rewrite restrict_comm in IHRD. rewrite restrict_idem in IHRD; cset_tac; intuition.
-    rewrite restrict_idem; eauto; cset_tac; intuition.
-  + econstructor; eauto. unfold restrict. 
-    pose proof (map_get_1 (restr G) H0). 
+    eapply srd_monotone. eapply IHRD; eauto.
+    repeat rewrite restrict_comp_meet.
+    eapply restrict_subset. reflexivity.
+    cset_tac; intuition.
+  + econstructor; eauto.
+    eapply srd_monotone. eapply IHRD1; eauto.
+    eapply restrict_subset; eauto. reflexivity.
+    eapply srd_monotone. eapply IHRD2; eauto.
+    eapply restrict_subset; eauto. reflexivity.
+  + (*econstructor. unfold restrict. 
+    pose proof (map_get_1 (restr lv) H).
     assert (restr G (Some G') = Some G'). eapply restr_iff; intuition.
-    rewrite <- H4; eauto.
-  
-  + assert (G' ⊆ G). { cset_tac. eapply H in H0. cset_tac; intuition. }
-    econstructor; eauto. 
-    - rewrite <- restrict_incl; eauto. rewrite restrict_idem; eauto.
-      rewrite restrict_comm in IHRD1. rewrite restrict_idem in IHRD1; eauto.
-      cset_tac; intuition.
-    - rewrite <- restrict_incl; eauto.
+-    rewrite <- H4; eauto.
+   *)
+    admit.
+  + econstructor; eauto. 
+    - eapply srd_monotone2. eapply IHRD1; eauto.
+      rewrite restrict_incl; [|reflexivity].
+      rewrite restrict_incl; [|eapply minus_incl].
+      rewrite restrict_incl; [|reflexivity].
+      econstructor. constructor; unfold flip.
+      admit.
+      repeat rewrite restrict_comp_meet.
+      eapply restrict_subset2. reflexivity. admit.
+    - eapply srd_monotone2. eapply IHRD2; eauto.
+      admit.
 Qed.
 
-Lemma compile_params_match DL ZL L G s ans_lv ans
-  : trs DL ZL G s ans_lv ans 
+Lemma compile_params_match DL ZL L s ans_lv ans
+  : trs DL ZL s ans_lv ans 
     -> ParamsMatch.parameters_match L s
     -> ParamsMatch.parameters_match (List.map (fun p => snd p + length (fst p)) 
-                                             (zip (fun s t => (s,t)) ZL L))  (compile s ans).
+                                             (zip (fun s t => (s,t)) ZL L))  (compile ZL s ans).
 Proof.
   intros. general induction H; simpl.
+  + inv H0. econstructor; eauto.
   + inv H1. econstructor; eauto.
-  + inv H2. econstructor; eauto.
   + constructor.
   + inv H3.
     econstructor; eauto. 
     rewrite app_length.  
     simpl in *. 
-    pose proof (zip_get (fun s t => (s,t)) H1 H7).
-    refine (map_get_1 (fun p => snd p + length (fst p)) H4).
-  + inv H2.
+    pose proof (zip_get (fun s t => (s,t)) H0 H7).
+    erewrite get_nth_default; eauto.
+    eapply (map_get_1 (fun p => snd p + length (fst p)) H4).
+  + inv H1.
     constructor; simpl in *; rewrite app_length.
-    eapply (IHtrs1 _ H6); eauto. 
-    eapply (IHtrs2 _ H8); eauto. 
+    eapply (IHtrs1 _ H5); eauto. 
+    eapply (IHtrs2 _ H7); eauto. 
 Qed.
 
 
