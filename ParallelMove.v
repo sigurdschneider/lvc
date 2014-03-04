@@ -1,5 +1,5 @@
 Require Import List Compare_dec.
-Require Import AllInRel Option Util Var IL EnvTy EqDec AutoIndTac Sim Fresh Liveness.
+Require Import AllInRel Option Util Var IL EnvTy EqDec AutoIndTac Sim Fresh Liveness Status.
 
 Set Implicit Arguments.
 
@@ -97,16 +97,16 @@ Section GlueCode.
     general induction p. firstorder using star.
     pose proof (H a). assert (List.In a (a :: p)). crush.
     specialize (H0 H1). destruct H0. destruct H0.
-    subst. simpl. econstructor 2.
+    subst. simpl. refine (S_star _ _ _ ).
     constructor. eapply var_to_exp_correct. eapply IHp. intros. apply H. crush.
   Qed.
 
   Definition max a b := if le_dec a b then b else a.
   
-  Hypothesis parallel_move : var -> list var -> list var -> option (list(list var * list var)).
+  Hypothesis parallel_move : var -> list var -> list var -> (list(list var * list var)).
 
   Definition linearize_parallel_assignment (vars:set var) (l1 l2:list var) := 
-    parallel_move (fresh vars) l1 l2.
+    parallel_move (least_fresh vars) l1 l2.
 
   Function check_is_simple_ass (p : list(list var * list var)) {struct p} : bool :=
     match p with
@@ -139,22 +139,23 @@ Section GlueCode.
   Qed.
 
   Definition compile_parallel_assignment
-    (vars:set var)  (l1 l2 : list var) (s : stmt) : option stmt :=
-    mdo p <- linearize_parallel_assignment vars l1 l2;
+    (vars:set var)  (l1 l2 : list var) (s : stmt) : status stmt :=
+    let p := linearize_parallel_assignment vars l1 l2 in
     if [validate_parallel_assignment vars p l1 l2] then
-      Some (list_to_stmt p s) else
-        None. 
+      Success (list_to_stmt p s) else
+        Error "compile parallel assignment failed". 
 
   Lemma compile_parallel_assignment_correct 
     : forall vars l1 l2 s s',
-      compile_parallel_assignment vars l1 l2 s = Some s' ->
+      compile_parallel_assignment vars l1 l2 s = Success s' ->
       forall M K, exists M',
         star I.step (K, M, s') (K, M', s) /\
         agree_on vars M' (updE M M l1 l2).
   Proof.
     unfold compile_parallel_assignment; intros.
-    monad_inv H. destruct if in *; inv EQ0.
+    destruct if in *. inv H.
     eapply validate_parallel_assignment_correct; eauto.
+    discriminate.
   Qed.
 
 End GlueCode.
@@ -162,44 +163,46 @@ End GlueCode.
 End Parallel_Move.
 
 Section Implementation.
-  Hypothesis parallel_move : var -> list var -> list var -> option (list(list var * list var)).
+  Hypothesis parallel_move : var -> list var -> list var -> (list(list var * list var)).
 
 Fixpoint lower DL s (an:ann (set var))
-  : option stmt := 
+  : status stmt := 
   match s, an with
     | stmtExp x e s, annExp lv ans =>
-      mdo sl <- lower DL s ans; 
-        Some (stmtExp x e sl)
+      sdo sl <- lower DL s ans;
+        Success (stmtExp x e sl)
     | stmtIf x s t, annIf lv ans ant => 
-      mdo sl <- lower DL s ans;
-        mdo tl <- lower DL t ant;
-            Some (stmtIf x sl tl)
+      sdo sl <- lower DL s ans;
+        sdo tl <- lower DL t ant;
+            Success (stmtIf x sl tl)
     | stmtGoto l Y, annGoto lv  =>
-      mdo Lve <- nth_error DL (counted l);
-        let '(lv, Z) := Lve in
-          compile_parallel_assignment parallel_move lv Z Y (stmtGoto l nil)
-    | stmtReturn x, annReturn lv => Some (stmtReturn x)
+       sdo Lve <- option2status (nth_error DL (counted l)) "lower: No annotation for function";  
+        let '(lv', Z) := Lve in
+        compile_parallel_assignment parallel_move lv' Z Y (stmtGoto l nil)
+
+    | stmtReturn x, annReturn lv => Success (stmtReturn x)
     | stmtLet Z s t, annLet lv ans ant => 
-      mdo sl <- lower ((getAnn ans,Z)::DL) s ans;
-        mdo tl <- lower ((getAnn ans,Z)::DL) t ant;
-          Some (stmtLet nil sl tl)
-    | s, _ => None
+      let DL' := (getAnn ans,Z) in
+      sdo s' <- lower (DL' :: DL)%list s ans;
+        sdo t' <- lower (DL' :: DL)%list t ant;
+        Success (stmtLet nil s' t')
+    | s, _ => Error "lower: Annotation mismatch"
   end.
 
 Inductive approx 
 : list (live * list var) -> I.block -> I.block -> Prop :=
-  approxI Lv s Z lv s' 
+  approxI Lv s Z lv s'
   (al:ann live)
   (LS:live_sound ((lv,Z)::Lv) s al)
   (AL:(of_list Z) ⊆ lv)
   (EQ:getAnn al \ of_list Z ⊆ lv)
-  (spm:lower ((lv,Z)::Lv) s al = Some s')
+  (spm:lower ((lv,Z)::Lv) s al = Success s')
   : approx ((lv,Z)::Lv) (I.blockI Z s) (I.blockI nil s').
 
 Inductive pmSim : I.state -> I.state -> Prop :=
   pmSimI Lv s (E E':env var) L L' s'
   (al: ann (set var))
-  (LS:live_sound Lv s al) (pmlowerOk:lower Lv s al = Some s')
+  (LS:live_sound Lv s al) (pmlowerOk:lower Lv s al = Success s')
   (LA:AIR3 approx Lv L L')
   (EEQ:agree_on (getAnn al) E E')
   : pmSim (L,E,s) (L', E', s').
@@ -208,18 +211,19 @@ Lemma pmSim_sim σ1 σ2
 : pmSim σ1 σ2 -> sim σ1 σ2.
 Proof.
   revert σ1 σ2. cofix; intros. 
-  inv H; inv LS; simpl in *; monad_inv pmlowerOk.
+  inv H; inv LS; simpl in *; try monadS_inv pmlowerOk.
   + case_eq (exp_eval E e); intros.
     eapply simS; try eapply plusO.
     econstructor; eauto.
     econstructor; eauto. 
     erewrite exp_eval_live; eauto. 
-    eapply live_freeVars. eapply agree_on_incl; eauto using agree_on_sym.
+    eapply agree_on_incl; eauto using agree_on_sym. reflexivity.
     eapply pmSim_sim; econstructor; eauto.
     eapply agree_on_update_same; eauto using agree_on_incl.
     eapply simE; try eapply star_refl; eauto; stuck. 
     erewrite <- exp_eval_live in H3; eauto using live_freeVars; simpl in *.
     erewrite H3 in def. congruence. eapply agree_on_incl; eauto using agree_on_sym.
+    reflexivity.
   + case_eq (val2bool (E x)); intros.
     eapply simS; try eapply plusO. 
     econstructor; eauto.
@@ -229,28 +233,30 @@ Proof.
     eapply I.stepIfF; eauto.
     eapply I.stepIfF; eauto. rewrite <- EEQ; eauto.
     eapply pmSim_sim; econstructor; eauto using agree_on_incl.
-  + eapply nth_error_get in EQ.
+  + eapply option2status_inv in EQ. eapply nth_error_get in EQ.
+    get_functional; subst.
     provide_invariants_3.
     edestruct (compile_parallel_assignment_correct _ _ _ _ _ EQ0 E' L') 
       as [M' [X' X'']].
     eapply simS.
     econstructor. econstructor; eauto. simpl; eauto.
     eapply star_plus_plus; eauto. eapply plusO. econstructor; eauto.
-    eauto.
-    eapply pmSim_sim; econstructor; eauto.
+    eauto. 
+    eapply pmSim_sim; econstructor; try eapply LA1; eauto.
     unfold updE. simpl.
     erewrite lookup_list_agree; eauto using agree_on_incl.
     eapply agree_on_trans. eapply update_with_list_agree. 
     eapply agree_on_incl; eauto. cset_tac; intuition.
-    rewrite lookup_list_length; eauto.
+    rewrite lookup_list_length; eauto. 
     unfold updE in X''. eapply agree_on_sym.
     eapply agree_on_incl. eapply X''. cset_tac; intuition.
     destruct_prop (a ∈ of_list Z0); cset_tac; intuition.
+
   + eapply simE; try eapply star_refl; simpl; try stuck.
     rewrite EEQ; eauto.
   + eapply simS; try eapply plusO.
     econstructor; eauto.
-    econstructor; eauto.
+    econstructor; eauto. 
     eapply pmSim_sim. econstructor; eauto.
     econstructor; eauto. econstructor; eauto using minus_incl.
     eapply agree_on_incl; eauto.
