@@ -30,7 +30,7 @@ let main () =
           let _ = Printf.printf "Liveness\n%s\n\n" (print_ann (print_set !ids) 0 lv) in
           let aa = Lyn.additionalArguments ili lv in
           let _ = Printf.printf "AdditionalArguments\n%s\n\n" 
-	    (print_ann (print_list (fun s -> "[" ^ (print_list (fun x -> print_var x !ids) ", " s) ^ "]") " ") 0 aa) in
+	    (print_ann (print_list (fun s -> "[" ^ (print_var s !ids) ^ "]") " ") 0 aa) in
           let v = Lyn.toILF ili lv in
           let _ = match v with 
 	    | Lyn.Success ilf -> Printf.printf "Compilate:\n%s\n\n" (print_expr 0 ilf !ids);
@@ -42,8 +42,8 @@ let main () =
 		| Lyn.Success renaming -> 
 		  let alloc = Lyn.rename renaming ren in
 		  let _ = Printf.printf "Allocated\n%s\n\n" (print_expr 0 alloc (BigMap.empty)) in
-		  let lv3 = Lyn.live_rename renaming lv2 in
-		  let _ = Printf.printf "Liveness\n%s\n\n" (print_ann (print_set (BigMap.empty)) 0 lv3) in
+(*		  let lv3 = Lyn.live_rename renaming lv2 in
+		  let _ = Printf.printf "Liveness\n%s\n\n" (print_ann (print_set (BigMap.empty)) 0 lv3) in*)
 		  
 		  (let v = Lyn.fromILF Lyn.linear_scan parallel_move generic_first ilf in
 		   match v with
