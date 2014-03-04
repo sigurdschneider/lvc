@@ -1,7 +1,7 @@
 Require Import CSet Le.
 
 Require Import Plus Util Map DecSolve.
-Require Import Env EnvTy IL Liveness Coherence Alpha ParamsMatch.
+Require Import Env EnvTy IL Liveness Coherence Alpha ParamsMatch Restrict.
  
 Set Implicit Arguments.
 
@@ -127,69 +127,6 @@ Lemma locally_injective s (slv:ann (set var)) ϱ
   -> injective_on (getAnn slv) ϱ.
 Proof.
   intros. general induction H; eauto.
-Qed.
-
-Definition lookup_set_option (ϱ:var->var) (x:option (set var)) : option (set var):= 
-  match x with 
-    | None => None 
-    | Some x => Some (lookup_set ϱ x) 
-  end.
-
-Definition map_lookup (ϱ:var -> var) := List.map (lookup_set_option ϱ).
-
-Definition live_global (p:set var * list var) := Some (fst p \ of_list (snd p)).
-Definition live_globals (Lv:list (set var * list var)) := List.map live_global Lv.
-
-Lemma bounded_map_lookup G (ϱ: var -> var) DL 
-  : bounded DL G -> bounded (map_lookup ϱ DL) (lookup_set ϱ G).
-Proof.
-  general induction DL; simpl; eauto.
-  destruct a; simpl in *; dcr. split. eapply lookup_set_incl; eauto. intuition.
-  eapply IHDL; eauto.
-  eapply IHDL; eauto.
-Qed.
-
-Lemma restrict_incl_ext DL G G' D
-:  bounded DL D
-   -> G ∩ D [=] G' ∩ D
-   -> restrict DL G = restrict DL G'.
-Proof.
-  intros.
-  general induction DL; simpl in *; try destruct a; dcr; eauto.
-  f_equal; eauto.
-  unfold restr. repeat destruct if; eauto.
-  exfalso. eapply n. eapply meet_incl_eq in H0; eauto.
-  rewrite meet_comm in H0. rewrite <- incl_meet in H0; eauto.
-  rewrite H0. eapply meet_incl; reflexivity.
-  exfalso. eapply n. eapply meet_incl_eq in H0; eauto. symmetry in H0.
-  rewrite meet_comm in H0. rewrite <- incl_meet in H0; eauto.
-  rewrite H0. eapply meet_incl; reflexivity.
-  f_equal; eauto.
-Qed.
-
-Lemma list_eq_special DL ϱ A B A'
-: A ⊆ B 
-  -> lookup_set ϱ A ⊆ A'
-  -> list_eq (fstNoneOrR eq)
-             (map_lookup ϱ (restrict DL A))
-             (restrict (map_lookup ϱ (restrict DL B)) A').
-Proof.
-  intros. general induction DL; simpl. econstructor.
-  unfold restr. unfold lookup_set_option.  
-  destruct a; repeat destruct if;econstructor; eauto; try econstructor; eauto.
-  exfalso. eapply n. cset_tac; intuition. eapply H0. eapply lookup_set_incl; eauto. intuition.
-  exfalso. eapply n. cset_tac; intuition.
-Qed.
-
-Lemma list_eq_fstNoneOrR_incl DL ϱ A B
-: A ⊆ B ->
-  list_eq (fstNoneOrR eq)
-          (map_lookup ϱ (restrict DL A))
-          (map_lookup ϱ (restrict DL B)).
-Proof.
-  intros. general induction DL; simpl.  econstructor.
-  unfold restr; destruct a; repeat destruct if; simpl; econstructor; eauto; try econstructor; eauto.
-  exfalso. eapply n. rewrite <- H; eauto.
 Qed.
 
 Lemma rename_ssa_srd C C' s ϱ (alv:ann (set var)) Lv 
