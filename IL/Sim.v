@@ -662,6 +662,31 @@ Proof.
 Qed.
 
 
+Ltac single_step :=
+  match goal with
+    | [ H : agree_on _ ?E ?E', I : val2bool (?E ?x) = true |- step (_, ?E', stmtIf ?x _ _) _ ] =>
+      econstructor; eauto; rewrite <- H; eauto; cset_tac; intuition
+    | [ H : agree_on _ ?E ?E', I : val2bool (?E ?x) = false |- step (_, ?E', stmtIf ?x _ _) _ ] =>
+      econstructor 3; eauto; rewrite <- H; eauto; cset_tac; intuition
+    | [ H : val2bool _ = false |- _ ] => econstructor 3 ; try eassumption; try reflexivity
+    | [ H : step (?L, _ , stmtGoto ?l _) _, H': get ?L (counted ?l) _ |- _] =>
+      econstructor; try eapply H'; eauto
+    | [ H': get ?L (counted ?l) _ |- step (?L, _ , stmtGoto ?l _) _] =>
+      econstructor; try eapply H'; eauto
+    | _ => constructor; eauto
+  end.
+
+
+Ltac one_step := eapply simS; [ eapply plusO; single_step
+                              | eapply plusO; single_step
+                              | ].
+
+Ltac no_step := eapply simE; try eapply star_refl; try get_functional; try subst;
+                [ try reflexivity
+                | stuck
+                | stuck  ].
+
+
 (* 
 *** Local Variables: ***
 *** coq-load-path: (("../" "Lyn")) ***
