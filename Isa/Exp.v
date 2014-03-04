@@ -1,4 +1,4 @@
-Require Import Util Val CSet Map Env EnvTy Option.
+Require Import Util DecSolve Val CSet Map Env EnvTy Option.
 Require Import Arith.
 
 Set Implicit Arguments.
@@ -67,6 +67,13 @@ Set Implicit Arguments.
       live_exp_sound e2 lv -> 
       live_exp_sound (BinOp o e1 e2) lv.
 
+  Instance live_exp_sound_dec e lv
+  : Computable (live_exp_sound e lv).
+  Proof.
+    constructor. induction e; try dec_solve.
+    - destruct_prop (v ∈ lv); try dec_solve.
+    - edestruct IHe1, IHe2; dec_solve.
+  Defined.
 
   Lemma live_exp_sound_incl 
     : forall e lv lv', lv' ⊆ lv -> live_exp_sound e lv' -> live_exp_sound e lv.
@@ -87,6 +94,12 @@ Set Implicit Arguments.
     intros. general induction e; simpl; econstructor. cset_tac; eauto. 
     eapply live_exp_sound_incl; eauto. cset_tac; intuition.
     eapply live_exp_sound_incl; eauto. cset_tac; intuition.
+  Qed.
+
+  Lemma freeVars_live e lv
+     : live_exp_sound e lv -> freeVars e ⊆ lv.
+  Proof.
+    intros. general induction H; simpl; cset_tac; intuition.
   Qed.
 
   Lemma exp_eval_live 
