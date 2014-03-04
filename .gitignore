@@ -15,3 +15,5 @@ extraction/lvc
 extraction/parser.ml
 extraction/parser.mli
 extraction/lexer.ml
+extraction/lvc.ml
+extraction/lvc.mli

@@ -97,7 +97,7 @@ Print Assumptions fromILF_correct.
  
 Extraction Inline bind Option.bind.
 
-Extraction "extraction/lyn.ml" toILF fromILF ILN.labIndices.
+Extraction "extraction/lvc.ml" toILF fromILF ILN.labIndices RegAllocAlgo.linear_scan.
 
 
 (* 
