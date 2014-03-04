@@ -121,6 +121,20 @@ Fixpoint setAnn A (s:stmt) (a:A) : ann A :=
    | stmtLet Z s1 s2 => annLet a (setAnn s1 a) (setAnn s2 a)
    end.
 
+Fixpoint mapAnn X Y (f:X->Y) (a:ann X) : ann Y := 
+  match a with
+    | annExp a an => annExp (f a) (mapAnn f an)
+    | annIf a an1 an2 => annIf (f a) (mapAnn f an1) (mapAnn f an2) 
+    | annGoto a => annGoto (f a)
+    | annReturn a => annReturn (f a)
+    | annLet a an1 an2 => annLet (f a) (mapAnn f an1) (mapAnn f an2)
+  end.
+
+Lemma getAnn_mapAnn A A' (a:ann A) (f:A->A')
+  : getAnn (mapAnn f a) = f (getAnn a).
+Proof.
+  general induction a; simpl; eauto.
+Qed.
 
 Inductive annotation {A:Type} : stmt -> ann A -> Prop :=
 | antExp x e s a sa 
