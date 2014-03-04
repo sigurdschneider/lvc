@@ -66,17 +66,6 @@ Section MapInverse.
     lud. exfalso. eapply H6. eauto. exfalso; eauto.
     eapply IHZ. intuition. intuition. eauto.
   Qed.
-
-  Lemma agree_on_inverse_on (ϱ1 ϱ1':X->Y) (ϱ2:Y->X) G
-        `{Proper _ (_eq ==> _eq) ϱ1}
-  : inverse_on G ϱ1 ϱ2
-    -> agree_on G ϱ1 ϱ1'
-    -> inverse_on G ϱ1 ϱ2.
-  Proof.
-    intros. hnf; intros.
-    rewrite H2; eauto.
-  Qed.
-
 End MapInverse.
  
 Arguments inverse_on {X} {H} {Y} D E E'.
@@ -256,7 +245,6 @@ Lemma inverse_on_id {X} `{OrderedType X} (G:set X)
 Proof.
   intros. hnf; intros. reflexivity.
 Qed.
-
 
 (* 
 *** Local Variables: ***
