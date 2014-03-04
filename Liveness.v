@@ -104,7 +104,7 @@ Qed.
 Inductive live_sound : list (live*params) -> stmt -> ann live -> Prop :=
 | LOpr x Lv b lv e (al:ann live)
   :  live_sound Lv b al
-  -> (Exp.freeVars e) ⊆ lv
+  -> live_exp_sound e lv
   -> (getAnn al\{{x}}) ⊆ lv
   -> live_sound Lv (stmtExp x e b) (annExp lv al)
 | LIf Lv x b1 b2 lv (al1 al2:ann live)
@@ -146,7 +146,7 @@ Proof.
   general induction s; destruct slv; try isabsurd.
   + edestruct IHs; eauto; try inv an; eauto;
     destruct_prop (getAnn slv\{{x}} ⊆ a);
-    destruct_prop (freeVars e ⊆ a); try dec_solve. 
+    destruct_prop (live_exp_sound e a); try dec_solve.
   + edestruct IHs1; try inv an; eauto;
     edestruct IHs2; try inv an; eauto;
     destruct_prop (x ∈ a); 
@@ -185,29 +185,12 @@ Lemma freeVars_live s lv Lv
 Proof.
   intros. general induction H; simpl; eauto. 
   + cset_tac; intuition. eapply H1. cset_tac; eauto. 
+    eapply freeVars_live; eauto.
   + cset_tac; intuition. rewrite H5; eauto. 
   + cset_tac; eauto.
   + eapply union_subset_3.
     rewrite IHlive_sound1; eauto.
     rewrite IHlive_sound2; eauto.
-Qed.
-
-
-Fixpoint live_rename (ϱ:env var) (an:ann live) : ann live :=
-  match an with
-    | annExp a an => annExp (lookup_set ϱ a) (live_rename ϱ an)
-    | annIf a ans ant => 
-      annIf (lookup_set ϱ a) (live_rename ϱ ans) (live_rename ϱ ant)
-    | annGoto a => annGoto (lookup_set ϱ a)
-    | annReturn a => annReturn (lookup_set ϱ a)
-    | annLet a ans ant => 
-      annLet (lookup_set ϱ a) (live_rename ϱ ans) (live_rename ϱ ant)
-  end.
-
-Lemma getAnn_live_rename ϱ al
-: getAnn (live_rename ϱ al) = lookup_set ϱ (getAnn al).
-Proof.
-  destruct al; eauto.
 Qed.
 
 Definition live_rename_L_entry (ϱ:env var) (x:live * params)
@@ -218,20 +201,25 @@ Definition live_rename_L (ϱ:env var) DL
 
 Lemma live_rename_sound DL s an (ϱ:env var)
 : live_sound DL s an 
-  -> live_sound (live_rename_L ϱ DL) (rename ϱ s) (live_rename ϱ an).
+  -> live_sound (live_rename_L ϱ DL) (rename ϱ s) (mapAnn (lookup_set ϱ) an).
 Proof.
   intros. general induction H; simpl.
-  + econstructor; eauto. rewrite rename_exp_freeVars; eauto.
-    eapply lookup_set_incl; eauto. intuition. intuition.
-    rewrite getAnn_live_rename. 
+  + econstructor; eauto.
+    eapply live_exp_sound_incl. Focus 2.
+    eapply Exp.live_freeVars. 
+    eapply Subset_trans.
+    eapply rename_exp_freeVars; eauto. intuition.
+    eapply lookup_set_incl; eauto. intuition. 
+    eapply Exp.freeVars_live; eauto.
+    rewrite getAnn_mapAnn. 
     cset_tac; eqs; simpl; eauto. eapply lookup_set_incl; eauto. intuition.
     eapply lookup_set_spec; eauto. intuition. 
     eapply lookup_set_spec in H3; eauto. destruct H3; dcr; eauto.
     eexists x0; intuition. cset_tac; eauto. intro. eapply H2. 
     rewrite <- H3; eauto. intuition.
   + econstructor; eauto. eapply lookup_set_spec; eauto. intuition.
-    rewrite getAnn_live_rename. eapply lookup_set_incl; eauto. intuition.
-    rewrite getAnn_live_rename. eapply lookup_set_incl; eauto. intuition.
+    rewrite getAnn_mapAnn. eapply lookup_set_incl; eauto. intuition.
+    rewrite getAnn_mapAnn. eapply lookup_set_incl; eauto. intuition.
   + pose proof (map_get_1 (live_rename_L_entry ϱ) H). 
     econstructor; eauto. rewrite of_list_lookup_list. 
     simpl. eapply Subset_trans. eapply lookup_set_minus_incl. intuition.
@@ -239,7 +227,7 @@ Proof.
     repeat rewrite lookup_list_length; eauto.
     rewrite of_list_lookup_list; try eapply lookup_set_incl; intuition.
   + econstructor. eapply lookup_set_spec. intuition. eexists; intuition; eauto.
-  + econstructor; eauto; try rewrite getAnn_live_rename.
+  + econstructor; eauto; try rewrite getAnn_mapAnn.
     eapply IHlive_sound1. eapply IHlive_sound2.
     rewrite of_list_lookup_list. eapply lookup_set_incl; eauto. intuition.
     intuition.
@@ -252,7 +240,7 @@ Qed.
 Inductive true_live_sound : list (live*params) -> stmt -> ann live -> Prop :=
 | TLOpr x Lv b lv e (al:ann live)
   :  true_live_sound Lv b al
-  -> (Exp.freeVars e) ⊆ lv
+  -> (x ∈ getAnn al -> live_exp_sound e lv)
   -> (getAnn al\{{x}}) ⊆ lv
   -> true_live_sound Lv (stmtExp x e b) (annExp lv al)
 | TLIf Lv x b1 b2 lv (al1 al2:ann live)
@@ -285,7 +273,7 @@ Proof.
   general induction s; destruct slv; try isabsurd.
   + edestruct IHs; eauto; try inv an; eauto;
     destruct_prop (getAnn slv\{{x}} ⊆ a);
-    destruct_prop (freeVars e ⊆ a); try dec_solve. 
+    destruct_prop (x ∈ getAnn slv -> live_exp_sound e a); try dec_solve. 
   + edestruct IHs1; try inv an; eauto;
     edestruct IHs2; try inv an; eauto;
     destruct_prop (x ∈ a); 
@@ -423,7 +411,8 @@ Proof.
   eapply IHLA; eauto.
   eapply agree_on_incl; eauto. eapply freeVars_live; eauto.
 Qed.
-
+(*
+We are going to prove a simapx result about dve instead.
 Inductive approxI 
   : list (live*params) -> I.block -> I.block -> Prop :=
   approxII DL Z s lv
@@ -438,19 +427,29 @@ Inductive liveSimI : I.state -> I.state -> Prop :=
   (AG:agree_on (getAnn lv) E E')
   : liveSimI (L, E, s) (L, E', s).
 
+Require Import SimApx.
+
 Lemma liveSimI_sim σ1 σ2
-  : liveSimI σ1 σ2 -> sim σ1 σ2.
+  : liveSimI σ1 σ2 -> simapx σ1 σ2.
 Proof.
   revert σ1 σ2. cofix; intros. 
   destruct H; inv LS; simpl; simpl in *; 
           try params_match_tac.
   + case_eq (exp_eval E e); intros.
-    eapply simS; try eapply plusO.
-    econstructor; eauto. econstructor; eauto.
-    instantiate (1:=v). erewrite <- exp_eval_live; eauto. 
-    eapply live_exp_sound_incl; try eapply live_freeVars. cset_tac; eauto.
+    destruct_prop(x ∈ getAnn al).
+    eapply simS; try eapply plusO. 
+    econstructor; eauto.     econstructor; eauto.
+    instantiate (1:=v). erewrite <- exp_eval_live; eauto.
     eapply liveSimI_sim. econstructor; eauto.
     eapply agree_on_update_same; eauto using agree_on_incl.
+    case_eq (exp_eval E' e); intros.
+    eapply simS; try eapply plusO. 
+    econstructor; eauto.     econstructor; eauto.
+    eapply liveSimI_sim. econstructor; eauto.
+    assert (getAnn al [=] getAnn al \ {{x}}). 
+    split; cset_tac; intuition. rewrite H5.
+    eapply agree_on_update_dead_both. cset_tac; intuition. 
+    eapply agree_on_incl; eauto.
     eapply simE; try eapply star_refl; eauto; stuck.
     erewrite <- exp_eval_live in def; eauto. congruence.
     eapply live_exp_sound_incl;try eapply live_freeVars; eauto.
@@ -537,7 +536,7 @@ Proof.
     econstructor; eauto using agree_on_incl. 
     eapply agree_on_incl; eauto.
 Qed.
-
+*)
 (* 
 *** Local Variables: ***
 *** coq-load-path: (("." "Lyn")) ***
