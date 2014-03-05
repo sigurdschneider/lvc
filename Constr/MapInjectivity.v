@@ -333,7 +333,13 @@ Proof.
   eapply injective_on_incl; eauto. cset_tac; intuition.
 Defined.
 
-
+Lemma lookup_set_minus_eq X `{OrderedType X} Y `{OrderedType Y} s t (m:X -> Y) `{Proper _ (_eq ==> _eq) m}
+: injective_on (s ∪ t) m
+  -> lookup_set m (s \ t) [=] lookup_set m s \ (lookup_set m t).
+Proof.
+  split; intros. eapply lookup_set_minus_incl_inj; eauto.
+  apply lookup_set_minus_incl; eauto.
+Qed.
 
 
 (* 
