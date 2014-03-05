@@ -193,8 +193,11 @@ Tactic Notation "goto_invs" tactic(tac) :=
 Inductive labIndicesSim : I.state -> IL.I.state -> Prop :=
   | labIndicesSimI (L:env (option I.block)) L' E s s' symb
     (EQ:labIndices s symb = Some s')
-    (LEQ: forall f Lb Z s, L (counted f) = Some (I.blockI Lb (f,Z,s))
-                 -> exists i s', pos symb f 0 = Some i /\ get L' i (IL.I.blockI Z s'))
+    (LEQ2: forall f i Z s', get L' i (IL.I.blockI Z s') /\ pos symb f 0 = Some i
+                   -> exists s Lb,   
+                       L (counted f) = Some (I.blockI Lb (f,Z,s))
+                       /\ labIndices s (drop (counted f) symb) = Some s')
+  
   : labIndicesSim (L, E, s) (L', E, s').
 
 Lemma labIndicesSim_sim σ1 σ2
@@ -205,22 +208,30 @@ Proof.
   - case_eq (exp_eval E e); intros. 
     + one_step. eapply labIndicesSim_sim; econstructor; eauto.
     + no_step.
-  - case_eq (val2bool (E x)); intros; one_step; eapply labIndicesSim_sim; econstructor; eauto.
-  - case_eq (L (counted l)); intros.
-    + destruct b as [? [[? ?] ?]].
-      destruct_prop (l = l0); subst.
-      edestruct LEQ as [? [? []]]; eauto.
-      assert (x = x0) by congruence; subst.
-      eapply simS. eapply plusO. econstructor; try eapply H; try reflexivity.
-      admit. 
-      eapply plusO. constructor; eauto. simpl. admit.
+  - case_eq (val2bool (E x)); intros; one_step; eapply labIndicesSim_sim; econstructor; eauto. 
+  - destruct (get_dec L' x) as [[?]|?].
+    + destruct x0.
+      edestruct LEQ2 as [? [? ?]]; dcr; eauto.
+      eapply simS; try eapply plusO. 
+      econstructor; try eapply H0; try reflexivity.
       admit.
+      econstructor; eauto. simpl.
       admit.
-    + no_step. admit.
+      eapply labIndicesSim_sim.
+      econstructor; eauto. simpl.
+      intros; dcr. eapply get_drop in H2.
+      rewrite drop_drop. eapply LEQ2.
+    + admit.
   - no_step.
   - one_step. eapply labIndicesSim_sim. econstructor; eauto.
     admit.
-Admitted.
+    intros. dcr. destruct i. inv H0.
+    eexists. eexists. split.
+    exfalso; admit.
+    intros. econstructor; eauto.
+    
+    
+Qed.
 
 
 (* 
