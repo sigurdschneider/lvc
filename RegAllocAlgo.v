@@ -49,14 +49,14 @@ Fixpoint oracle_list (L:list var) (lv:live) (ϱ:var -> var)
 -  pose proof (oracle_sound' EQ).
 -  destruct H. subst. eapply H1. eapply lookup_set_spec.
 -  intuition. 
--  eexists a0. cset_tac; intuition. admit.
+-  eexists a0. cset_tac; intuition. 
 -(*  eapply (IHL a0). eapply minus_in_in in H0. destruct H0.
 -  eapply in_in_minus.
 -  cset_tac. firstorder. intro. eapply H2. cset_tac; eauto.
 -  assert (a0 <> a). intro; subst. eapply minus_in_in in H0.
 -  destruct H0. eapply H2. cset_tac; firstorder.
 -  simplify lookup. eauto. *)
--Admitted.
+-Qed.
 -
 -Lemma oracle_list_inj Z (bv:live) (ra:env var) YL
 -  :  unique Z
