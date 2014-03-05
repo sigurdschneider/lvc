@@ -31,13 +31,13 @@ Inductive trs
     -> of_list Za ⊆ lv
     -> trs DL ZL (stmtGoto f Y) (annGoto lv) (annGoto nil)
   | trsLet DL ZL s t Z Za ans ant lv ans_lv ant_lv
-    : trs (restrict (Some (getAnn ans_lv \ of_list Z)::DL) (getAnn ans_lv \ of_list Z)) (Za::ZL) s ans_lv ans
-    -> trs (Some (getAnn ans_lv \ of_list Z)::DL) (Za::ZL) t ant_lv ant
+    : trs (restrict (Some (getAnn ans_lv \ of_list (Z++Za))::DL) (getAnn ans_lv \ of_list (Z++Za))) (Za::ZL) s ans_lv ans
+    -> trs (Some (getAnn ans_lv \ of_list (Z++Za))::DL) (Za::ZL) t ant_lv ant
     -> trs DL ZL (stmtLet Z s t) (annLet lv ans_lv ant_lv) (annLet Za ans ant).
 
 Lemma trs_dec DL ZL s ans_lv ans (* (an_lv:annotation s ans_lv) (an:annotation s ans) *)
   : {trs DL ZL s ans_lv ans} + 
-    {~ trs DL ZL s ans_lv ans}.
+    {~ trs DL ZL s ans_lv ans}. 
 Proof.
   general induction s; destruct ans; destruct ans_lv; isabsurd; try dec_solve.
   + destruct a; edestruct (IHs (restrict DL (a0\{{x}})) ZL ans_lv ans); try dec_solve.
@@ -51,9 +51,9 @@ Proof.
     try destruct_prop (of_list (Za) ⊆ a0);
     subst; try dec_solve; try inv an; try inv an_lv; eauto. 
   + destruct_prop (a = nil);
-    subst; try dec_solve; try inv an; try inv an_lv; eauto.
-  + edestruct (IHs1 (restrict (Some (getAnn ans_lv1 \ of_list Z)::DL) (getAnn ans_lv1 \ of_list Z)) (a::ZL) ans_lv1 ans1); eauto;
-    edestruct (IHs2 (Some (getAnn ans_lv1 \ of_list Z) :: DL) (a :: ZL) ans_lv2 ans2); 
+    subst; try dec_solve; try inv an; try inv an_lv; eauto. 
+  + edestruct (IHs1 (restrict (Some (getAnn ans_lv1 \ of_list (Z++a))::DL) (getAnn ans_lv1 \ of_list (Z++a))) (a::ZL) ans_lv1 ans1); eauto;
+    edestruct (IHs2 (Some (getAnn ans_lv1 \ of_list (Z++a)) :: DL) (a :: ZL) ans_lv2 ans2); 
     eauto; try dec_solve.
 Defined.
 
@@ -158,15 +158,43 @@ Proof.
     intros. inv H2. eauto. 
 Qed.
 
+Inductive fstNoneOrR' {X Y:Type} (R:X->Y->Prop)
+  : option X -> Y -> Prop :=
+| fstNone' (y:Y) : fstNoneOrR' R None y
+| bothR' (x:X) (y:Y) : R x y -> fstNoneOrR' R (Some x) y
+.
 
+Lemma of_list_app X `{OrderedType X} (A B: list X)
+  : of_list (A ++ B) [=] of_list A ∪ of_list B.
+Proof.
+  split; intros.
+  - rewrite of_list_1 in H0. cset_tac. eapply InA_app in H0.
+    repeat rewrite of_list_1. intuition. destruct H; eauto.
+  - rewrite of_list_1. eapply InA_app_iff. destruct H; eauto.
+    cset_tac. repeat rewrite of_list_1 in H0. intuition.
+Qed.
+(*
+Lemma restrict_subset2 DL DL' G G'
+: list_eq (fstNoneOrR (flip Subset)) DL DL' 
+  -> G' ⊆ G
+  -> list_eq (fstNoneOrR (flip Subset)) (restrict DL G) (restrict DL' G').
+Proof.
+  intros. induction H; simpl; econstructor; eauto.
+  inv H. simpl. econstructor.
+  unfold restr. repeat destruct if; try econstructor; eauto.
+  exfalso. eapply n. transitivity G; eauto. rewrite <- H2; eauto.
+Qed.
+*)
 Lemma compile_typed DL AL ZL s ans_lv ans
   (RD:trs AL ZL s ans_lv ans)
   (LV:live_sound DL s ans_lv)
+  (EQ:PIR2 (fstNoneOrR' (fun s t => s = fst t)) AL DL)
   : srd (restrict AL (getAnn ans_lv)) (compile ZL s ans) ans_lv.
 Proof. 
   general induction RD; inv LV; simpl; eauto using srd.
   + econstructor; eauto.
     eapply srd_monotone. eapply IHRD; eauto.
+    admit.
     repeat rewrite restrict_comp_meet.
     eapply restrict_subset. reflexivity.
     cset_tac; intuition.
@@ -175,22 +203,26 @@ Proof.
     eapply restrict_subset; eauto. reflexivity.
     eapply srd_monotone. eapply IHRD2; eauto.
     eapply restrict_subset; eauto. reflexivity.
-  + (*econstructor. unfold restrict. 
-    pose proof (map_get_1 (restr lv) H).
-    assert (restr G (Some G') = Some G'). eapply restr_iff; intuition.
--    rewrite <- H4; eauto.
-   *)
-    admit.
+  + edestruct PIR2_nth_2; eauto; dcr.
+    inv H5; get_functional; subst.
+    econstructor; eauto. unfold restrict. 
+    pose proof (map_get_1 (restr lv) H4). unfold fst in H.
+    assert (restr lv (Some blv) = Some blv). eapply restr_iff; eauto.
+    rewrite <- H3; eauto.
   + econstructor; eauto. 
     - eapply srd_monotone2. eapply IHRD1; eauto.
+      admit.
       rewrite restrict_incl; [|reflexivity].
       rewrite restrict_incl; [|eapply minus_incl].
       rewrite restrict_incl; [|reflexivity].
       econstructor. constructor; unfold flip.
-      admit.
+      rewrite of_list_app. cset_tac; intuition.
       repeat rewrite restrict_comp_meet.
-      eapply restrict_subset2. reflexivity. admit.
+      eapply restrict_subset2. reflexivity. 
+      rewrite of_list_app.
+      hnf; intros. cset_tac; intuition. 
     - eapply srd_monotone2. eapply IHRD2; eauto.
+      admit.
       admit.
 Qed.
 
