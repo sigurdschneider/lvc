@@ -129,6 +129,14 @@ Proof.
   intros. general induction H; eauto.
 Qed.
 
+Lemma lookup_set_minus_eq X `{OrderedType X} Y `{OrderedType Y} s t (m:X -> Y) `{Proper _ (_eq ==> _eq) m}
+: injective_on (s ∪ t) m
+  -> lookup_set m (s \ t) [=] lookup_set m s \ (lookup_set m t).
+Proof.
+  split; intros. eapply lookup_set_minus_incl_inj; eauto.
+  apply lookup_set_minus_incl; eauto.
+Qed.
+
 Lemma rename_ssa_srd C C' s ϱ (alv:ann (set var)) Lv 
   : ssa C s C'
   -> (getAnn alv) ⊆ C 
@@ -181,11 +189,13 @@ Proof.
     assert (C ⊆ of_list Z ∪ C) by (cset_tac; intuition). rewrite <- H3; eauto.
     Opaque restrict. simpl. unfold live_global. rewrite restrict_incl. simpl. 
     simpl. rewrite restrict_incl. constructor. constructor.
-    rewrite getAnn_mapAnn. admit.
+    rewrite getAnn_mapAnn. rewrite of_list_lookup_list.
+    eapply lookup_set_minus_eq; eauto; intuition. intuition.
     erewrite (@restrict_incl_ext _ (getAnn alvs)); eauto.
     instantiate (1:=getAnn alvs \ of_list Z).
     eapply list_eq_special; eauto.
-    rewrite getAnn_mapAnn. admit. 
+    rewrite getAnn_mapAnn. rewrite of_list_lookup_list.
+    eapply lookup_set_minus_incl_inj; eauto; intuition. intuition.
     cset_tac; intuition. eapply H4; eauto. reflexivity.
     eapply incl_minus. 
     
@@ -195,7 +205,8 @@ Proof.
     simpl. destruct_prop (getAnn alvs \ of_list Z ⊆ getAnn alvb). 
     unfold live_global. simpl.
     rewrite restrict_incl; eauto. simpl. econstructor. econstructor; eauto.
-    rewrite getAnn_mapAnn. admit.
+    rewrite getAnn_mapAnn. rewrite of_list_lookup_list.
+    eapply lookup_set_minus_eq; eauto; intuition. intuition.
     eapply list_eq_fstNoneOrR_incl; eauto.
     unfold live_global. simpl. rewrite restrict_not_incl; eauto. simpl.
     econstructor. econstructor. eapply list_eq_fstNoneOrR_incl; eauto.
