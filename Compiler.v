@@ -85,7 +85,9 @@ Proof.
   eapply ssa_locally_inj_alpha; eauto.
   eapply rename_apart_ssa; eauto; eapply lookup_set_on_id; try reflexivity.
   eapply a.
-  instantiate (1:=id). admit.
+  instantiate (1:=id). destruct a. 
+  eapply (@inverse_on_agree_on _ _ _ _ id x id id); try intuition.
+  eapply inverse_on_id. 
   split. simpl. eapply (rename_apart_parameters_match (L:=nil)); isabsurd; eauto.
   simpl. eapply H. isabsurd.
   hnf; intros. cbv in H3; subst. rewrite H3; eauto.
