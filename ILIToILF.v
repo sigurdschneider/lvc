@@ -31,7 +31,12 @@ Inductive trs
     -> of_list Za ⊆ lv
     -> trs DL ZL (stmtGoto f Y) (annGoto lv) (annGoto nil)
   | trsLet DL ZL s t Z Za ans ant lv ans_lv ant_lv
-    : trs (restrict (Some (getAnn ans_lv \ of_list (Z++Za))::DL) (getAnn ans_lv \ of_list (Z++Za))) (Za::ZL) s ans_lv ans
+    : of_list Za ⊆ getAnn ans_lv 
+      (* for now, require all additionals Za to be live in the function;
+         this makes the proof that liveness information is valid even after
+         the insertion of the arguments easier (otherwise, liveness needs to
+         be recomputed) *) 
+    -> trs (restrict (Some (getAnn ans_lv \ of_list (Z++Za))::DL) (getAnn ans_lv \ of_list (Z++Za))) (Za::ZL) s ans_lv ans
     -> trs (Some (getAnn ans_lv \ of_list (Z++Za))::DL) (Za::ZL) t ant_lv ant
     -> trs DL ZL (stmtLet Z s t) (annLet lv ans_lv ant_lv) (annLet Za ans ant).
 
@@ -53,7 +58,7 @@ Proof.
   + destruct_prop (a = nil);
     subst; try dec_solve; try inv an; try inv an_lv; eauto. 
   + edestruct (IHs1 (restrict (Some (getAnn ans_lv1 \ of_list (Z++a))::DL) (getAnn ans_lv1 \ of_list (Z++a))) (a::ZL) ans_lv1 ans1); eauto;
-    edestruct (IHs2 (Some (getAnn ans_lv1 \ of_list (Z++a)) :: DL) (a :: ZL) ans_lv2 ans2); 
+    edestruct (IHs2 (Some (getAnn ans_lv1 \ of_list (Z++a)) :: DL) (a :: ZL) ans_lv2 ans2); destruct_prop (of_list a ⊆ getAnn ans_lv1);
     eauto; try dec_solve.
 Defined.
 
@@ -155,7 +160,7 @@ Proof.
     econstructor; eauto.
     eapply trsR_sim; econstructor; eauto.
     econstructor; eauto. econstructor. 
-    intros. inv H2. eauto. 
+    intros. inv H3. eauto. 
 Qed.
 
 Inductive fstNoneOrR' {X Y:Type} (R:X->Y->Prop)
@@ -226,6 +231,24 @@ Proof.
       admit.
 Qed.
 
+Lemma live_sound_compile DL ZL AL s ans_lv ans
+  (RD:trs AL ZL s ans_lv ans)
+  (LV:live_sound DL s ans_lv)
+(*  (EQ:PIR2 (fstNoneOrR' (fun s t => s = fst t)) AL DL) *)
+  : live_sound (zip (fun s t => (fst s, snd s ++ t)) DL ZL) (compile ZL s ans) ans_lv.
+Proof.
+  general induction LV; inv RD; eauto using live_sound.
+  + pose proof (zip_get  (fun (s : live * list var) (t : list var) => (fst s, snd s ++ t)) H H9).
+    econstructor. eapply H3. simpl. rewrite of_list_app. cset_tac; intuition.
+    simpl. erewrite get_nth; eauto. repeat rewrite app_length. congruence.
+    erewrite get_nth; eauto. rewrite of_list_app. cset_tac; intuition.
+  + simpl. econstructor; eauto.
+    specialize (IHLV1 (Za::ZL)). eapply IHLV1; eauto.
+    specialize (IHLV2 (Za::ZL)). eapply IHLV2; eauto.
+    rewrite of_list_app. cset_tac; intuition.
+    rewrite of_list_app. cset_tac; intuition.
+Qed.
+
 Lemma compile_params_match DL ZL L s ans_lv ans
   : trs DL ZL s ans_lv ans 
     -> ParamsMatch.parameters_match L s
@@ -243,10 +266,10 @@ Proof.
     pose proof (zip_get (fun s t => (s,t)) H0 H7).
     erewrite get_nth_default; eauto.
     eapply (map_get_1 (fun p => snd p + length (fst p)) H4).
-  + inv H1.
+  + inv H2.
     constructor; simpl in *; rewrite app_length.
-    eapply (IHtrs1 _ H5); eauto. 
-    eapply (IHtrs2 _ H7); eauto. 
+    eapply (IHtrs1 _ H6); eauto. 
+    eapply (IHtrs2 _ H8); eauto. 
 Qed.
 
 

@@ -59,11 +59,11 @@ Proof.
   destruct if in H0; isabsurd. inv H0.
   refine (sim_trans (ILIToILF.trsR_sim _) (sim_sym (Coherence.srdSim_sim _))).
   econstructor; eauto using AIR4; eauto; try reflexivity; isabsurd.
-  econstructor; eauto 30 using ILIToILF.compile_typed, agree_on_refl, AIR2; isabsurd.
+  econstructor; eauto 30 using ILIToILF.compile_typed, agree_on_refl, AIR2, PIR2; isabsurd.
   split; isabsurd.
   destruct H; eauto using (ILIToILF.compile_params_match t H).
   instantiate (1:=nil).
-  admit.
+  eapply (@ILIToILF.live_sound_compile nil); eauto.
   isabsurd.
 Qed.
 
