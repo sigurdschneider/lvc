@@ -168,16 +168,6 @@ Inductive fstNoneOrR' {X Y:Type} (R:X->Y->Prop)
 | fstNone' (y:Y) : fstNoneOrR' R None y
 | bothR' (x:X) (y:Y) : R x y -> fstNoneOrR' R (Some x) y
 .
-
-Lemma of_list_app X `{OrderedType X} (A B: list X)
-  : of_list (A ++ B) [=] of_list A ∪ of_list B.
-Proof.
-  split; intros.
-  - rewrite of_list_1 in H0. cset_tac. eapply InA_app in H0.
-    repeat rewrite of_list_1. intuition. destruct H; eauto.
-  - rewrite of_list_1. eapply InA_app_iff. destruct H; eauto.
-    cset_tac. repeat rewrite of_list_1 in H0. intuition.
-Qed.
 (*
 Lemma restrict_subset2 DL DL' G G'
 : list_eq (fstNoneOrR (flip Subset)) DL DL' 

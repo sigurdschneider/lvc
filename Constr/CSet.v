@@ -780,6 +780,15 @@ Proof.
     - eapply list_union_start; cset_tac; intuition.
 Qed.
 
+Lemma of_list_app X `{OrderedType X} (A B: list X)
+  : of_list (A ++ B) [=] of_list A ∪ of_list B.
+Proof.
+  split; intros.
+  - rewrite of_list_1 in H0. cset_tac. eapply InA_app in H0.
+    repeat rewrite of_list_1. intuition. destruct H; eauto.
+  - rewrite of_list_1. eapply InA_app_iff. destruct H; eauto.
+    cset_tac. repeat rewrite of_list_1 in H0. intuition.
+Qed.
 
 
 
