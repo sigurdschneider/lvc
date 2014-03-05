@@ -26,16 +26,16 @@ let print_var v ids = try (BigMap.find v ids) with Not_found -> "?" ^ (Big_int.s
 
 let rec print_binop op =
   match op with
-    | Lyn.Add -> "+"
-    | Lyn.Sub -> "-"
-    | Lyn.Mul -> "*"
+    | Lvc.Add -> "+"
+    | Lvc.Sub -> "-"
+    | Lvc.Mul -> "*"
 
  
 let rec print_sexpr e ids =
   match e with
-    | Lyn.Con x -> Big_int.string_of_big_int x
-    | Lyn.Var x -> print_var x ids
-    | Lyn.BinOp (op, e1, e2) -> print_sexpr e1 ids ^ " " ^ (print_binop op) ^ " " ^ (print_sexpr e2 ids)
+    | Lvc.Con x -> Big_int.string_of_big_int x
+    | Lvc.Var x -> print_var x ids
+    | Lvc.BinOp (op, e1, e2) -> print_sexpr e1 ids ^ " " ^ (print_binop op) ^ " " ^ (print_sexpr e2 ids)
 
 let rec print_args args ids = 
   match args with
@@ -47,15 +47,15 @@ let rec print_ident i = if i = 0 then "" else " " ^ print_ident (i-1)
 
 let rec print_nexpr ident s ids =
   match s with
-    | Lyn.NstmtReturn x -> print_var x ids
-    | Lyn.NstmtGoto (f, y) -> print_var f ids ^ "(" ^ (print_args y ids) ^ ")"
-    | Lyn.NstmtExp (x, e, s) -> "let " ^ (print_var x ids) ^ " = " ^
+    | Lvc.NstmtReturn x -> print_var x ids
+    | Lvc.NstmtGoto (f, y) -> print_var f ids ^ "(" ^ (print_args y ids) ^ ")"
+    | Lvc.NstmtExp (x, e, s) -> "let " ^ (print_var x ids) ^ " = " ^
       (print_sexpr e ids) ^ " in\n" ^ print_ident ident ^ 
        (print_nexpr ident s ids)
-    | Lyn.NstmtIf (v, s, t) -> "if " ^ (print_var v ids) ^ " then\n" ^
+    | Lvc.NstmtIf (v, s, t) -> "if " ^ (print_var v ids) ^ " then\n" ^
       (print_ident (ident+2)) ^ (print_nexpr (ident+2) s ids)
       ^ "\n" ^ print_ident ident ^ "else\n" ^ print_ident (ident+2) ^ (print_nexpr (ident+2) t ids) ^ "\n"
-    | Lyn.NstmtLet (f, y, s, t) -> "fun " ^
+    | Lvc.NstmtLet (f, y, s, t) -> "fun " ^
 	  (print_var f ids) ^ "(" ^ (print_args y ids) ^ ") = \n"
 	  ^ print_ident (ident+2) ^ (print_nexpr (ident+2) s ids) ^ "\n" ^ print_ident ident 
       ^ "in \n"
@@ -63,24 +63,24 @@ let rec print_nexpr ident s ids =
 
 let rec print_expr ident s ids =
   match s with
-    | Lyn.StmtReturn x -> print_var x ids
-    | Lyn.StmtGoto (f, y) -> "λ" ^ (Big_int.string_of_big_int f) ^ "(" ^ (print_args y ids) ^ ")"
-    | Lyn.StmtExp (x, e, s) -> "let " ^ (print_var x ids) ^ " = " ^
+    | Lvc.StmtReturn x -> print_var x ids
+    | Lvc.StmtGoto (f, y) -> "λ" ^ (Big_int.string_of_big_int f) ^ "(" ^ (print_args y ids) ^ ")"
+    | Lvc.StmtExp (x, e, s) -> "let " ^ (print_var x ids) ^ " = " ^
       (print_sexpr e ids) ^ " in\n" ^ print_ident ident ^
       (print_expr ident s ids)
-    | Lyn.StmtIf (v, s, t) -> "if " ^ (print_var v ids) ^ " then\n" ^
+    | Lvc.StmtIf (v, s, t) -> "if " ^ (print_var v ids) ^ " then\n" ^
       (print_ident (ident+2)) ^ (print_expr (ident+2) s ids)
       ^ "\n" ^ print_ident ident ^ "else\n" ^ print_ident (ident+2) ^ (print_expr (ident+2) t ids) ^ "\n"
-    | Lyn.StmtLet (y, s, t) -> "fun " ^
+    | Lvc.StmtLet (y, s, t) -> "fun " ^
 	  "_ " ^ "(" ^ (print_args y ids) ^ ") = \n"
 	  ^ print_ident (ident+2) ^ (print_expr (ident+2) s ids) ^ "\n" ^ print_ident ident
       ^ "in \n" 
       ^ print_ident (ident+2) ^ (print_expr (ident+2) t ids)
 
 let rec print_set ids x = 
-Lyn.fold 
-  (Lyn.sOT_as_OT Lyn.nat_OrderedType)
-  (Lyn.setAVL_FSet (Lyn.sOT_as_OT Lyn.nat_OrderedType))
+Lvc.fold 
+  (Lvc.sOT_as_OT Lvc.nat_OrderedType)
+  (Lvc.setAVL_FSet (Lvc.sOT_as_OT Lvc.nat_OrderedType))
 (fun x s -> s ^ (print_var x ids) ^ " ") x " "
 
 let rec print_list f sep l =
@@ -91,16 +91,16 @@ let rec print_list f sep l =
 
 let rec print_ann p ident s =
   match s with
-    | Lyn.AnnReturn x -> "{" ^ p x ^ "}"
-    | Lyn.AnnGoto x -> "{" ^ p x ^ "}"
-    | Lyn.AnnExp (a, s) -> "let {" ^ (p a)
+    | Lvc.AnnReturn x -> "{" ^ p x ^ "}"
+    | Lvc.AnnGoto x -> "{" ^ p x ^ "}"
+    | Lvc.AnnExp (a, s) -> "let {" ^ (p a)
       ^ "}" ^ " in\n" ^
       print_ident ident ^ (print_ann p ident s)
-    | Lyn.AnnIf (a, s, t) -> "if {" ^ (p a) ^ "} then\n" ^
+    | Lvc.AnnIf (a, s, t) -> "if {" ^ (p a) ^ "} then\n" ^
       print_ident (ident+2) ^
       (print_ann p (ident+2) s)
       ^ "\n" ^ print_ident ident ^  "else\n" ^ print_ident (ident+2) ^ (print_ann p (ident+2) t) ^ "\n"
-    | Lyn.AnnLet (a, s, t) -> "fun {" ^ (p a) ^ "} \n"
+    | Lvc.AnnLet (a, s, t) -> "fun {" ^ (p a) ^ "} \n"
       ^ print_ident (ident+2) ^ "\n"
 	     ^ print_ident (ident+2) ^ (print_ann p (ident+2) s) ^ "\n" ^ print_ident ident
       ^ "\n" ^ print_ident ident ^ "in \n" 

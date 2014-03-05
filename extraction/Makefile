@@ -11,7 +11,7 @@ OCAMLYACCFLAGS=
 
 YACC_OBJS = lexer.ml parser.ml
 
-PROG_OBJS= big.cmx names.cmx lyn.cmx util.cmx lexer.cmx parser.cmx pmove.cmx main.cmx 
+PROG_OBJS= big.cmx names.cmx lvc.cmx util.cmx lexer.cmx parser.cmx pmove.cmx main.cmx 
 prog: $(PROG_OBJS)
 	$(OCAMLOPT) -o lvc nums.cmxa $(OCAMLFLAGS) $(PROG_OBJS)
 

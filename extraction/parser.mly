@@ -30,7 +30,7 @@
 %token <Big.big_int> IL_ident
 %token IL_eof
 
-%type <Lyn.nstmt> expr
+%type <Lvc.nstmt> expr
 %start expr
 
 %%
@@ -38,27 +38,27 @@
 /* Integer literals, can be integer_literal or - integer_literal */
 
 integer_constant:
-  | IL_integer_constant { Lyn.Con (Big.of_string "1") }
-  | IL_minus IL_integer_constant { Lyn.Con (parse_neg_integer $2) }
+  | IL_integer_constant { Lvc.Con (Big.of_string "1") }
+  | IL_minus IL_integer_constant { Lvc.Con (parse_neg_integer $2) }
 
 primary_expression:
-  | IL_ident { Lyn.Var $1}
+  | IL_ident { Lvc.Var $1}
   | integer_constant {$1}
 
   | IL_lparen expression IL_rparen { $2 }
 
 multiplicative_expression:
-  | multiplicative_expression IL_star primary_expression { Lyn.BinOp (Lyn.Mul, $1, $3) }
-  | multiplicative_expression IL_div primary_expression { Lyn.BinOp (Lyn.Mul, $1, $3) }
+  | multiplicative_expression IL_star primary_expression { Lvc.BinOp (Lvc.Mul, $1, $3) }
+  | multiplicative_expression IL_div primary_expression { Lvc.BinOp (Lvc.Mul, $1, $3) }
   | primary_expression { $1 }
 
 additive_expression:
-  | additive_expression IL_plus multiplicative_expression { Lyn.BinOp (Lyn.Add,$1, $3) }
-  | additive_expression IL_minus multiplicative_expression { Lyn.BinOp (Lyn.Sub,$1,$3) }
+  | additive_expression IL_plus multiplicative_expression { Lvc.BinOp (Lvc.Add,$1, $3) }
+  | additive_expression IL_minus multiplicative_expression { Lvc.BinOp (Lvc.Sub,$1,$3) }
   | multiplicative_expression { $1 }
 
 expression:
-  | expression IL_less_than additive_expression { Lyn.BinOp (Lyn.Mul,$1,$3)}
+  | expression IL_less_than additive_expression { Lvc.BinOp (Lvc.Mul,$1,$3)}
   | additive_expression { $1 }
 
 
@@ -81,9 +81,9 @@ fun_list:
 | fun_def IL_and fun_list { $1::$3 }
 
 expr :
-| IL_let IL_ident IL_equal expression IL_in expr { Lyn.NstmtExp ($2, $4, $6) }
-| IL_letrec fun_def IL_in expr { match $2 with | (f, z), s -> Lyn.NstmtLet (f, z, s, $4) }
-| IL_if IL_ident IL_then expr IL_else expr { Lyn.NstmtIf ($2,$4,$6) }
-| IL_ident option_arglist { Lyn.NstmtGoto ($1,$2) }
-| IL_ident { Lyn.NstmtReturn ($1) }
+| IL_let IL_ident IL_equal expression IL_in expr { Lvc.NstmtExp ($2, $4, $6) }
+| IL_letrec fun_def IL_in expr { match $2 with | (f, z), s -> Lvc.NstmtLet (f, z, s, $4) }
+| IL_if IL_ident IL_then expr IL_else expr { Lvc.NstmtIf ($2,$4,$6) }
+| IL_ident option_arglist { Lvc.NstmtGoto ($1,$2) }
+| IL_ident { Lvc.NstmtReturn ($1) }
 

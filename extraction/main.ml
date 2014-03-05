@@ -22,36 +22,36 @@ let main () =
       let lexbuf = Lexing.from_channel  file_chan in
       let result = Parser.expr Lexer.token lexbuf in
       let _ = Printf.printf "Normalized Input:\n%s\n\n" (print_nexpr 0 result !ids) in
-      match (Lyn.labIndices result []) with
+      match (Lvc.labIndices result []) with
         | None -> let _ = Printf.printf "Ill-formed program (probably undeclared
           function)" in ()
         | Some ili -> 
-          let lv = Lyn.livenessAnalysis generic_first ili in
+          let lv = Lvc.livenessAnalysis generic_first ili in
           let _ = Printf.printf "Liveness\n%s\n\n" (print_ann (print_set !ids) 0 lv) in
-          let aa = Lyn.additionalArguments ili lv in
+          let aa = Lvc.additionalArguments ili lv in
           let _ = Printf.printf "AdditionalArguments\n%s\n\n" 
 	    (print_ann (print_list (fun s -> "[" ^ (print_var s !ids) ^ "]") " ") 0 aa) in
-          let v = Lyn.toILF ili lv in
+          let v = Lvc.toILF ili lv in
           let _ = match v with 
-	    | Lyn.Success ilf -> Printf.printf "Compilate:\n%s\n\n" (print_expr 0 ilf !ids);
-	      let ren = Lyn.rename_apart ilf in
+	    | Lvc.Success ilf -> Printf.printf "Compilate:\n%s\n\n" (print_expr 0 ilf !ids);
+	      let ren = Lvc.rename_apart ilf in
               let _ = Printf.printf "Renamed apart\n%s\n\n" (print_expr 0 ren (BigMap.empty)) in
-	      let lv2 = Lyn.livenessAnalysis generic_first ren in
+	      let lv2 = Lvc.livenessAnalysis generic_first ren in
               let _ = Printf.printf "Liveness\n%s\n\n" (print_ann (print_set BigMap.empty) 0 lv2) in
-	      (match (Lyn.linear_scan ren lv2 (fun x -> x)) with
-		| Lyn.Success renaming -> 
-		  let alloc = Lyn.rename renaming ren in
+	      (match (Lvc.linear_scan ren lv2 (fun x -> x)) with
+		| Lvc.Success renaming -> 
+		  let alloc = Lvc.rename renaming ren in
 		  let _ = Printf.printf "Allocated\n%s\n\n" (print_expr 0 alloc (BigMap.empty)) in
-(*		  let lv3 = Lyn.live_rename renaming lv2 in
+(*		  let lv3 = Lvc.live_rename renaming lv2 in
 		  let _ = Printf.printf "Liveness\n%s\n\n" (print_ann (print_set (BigMap.empty)) 0 lv3) in*)
 		  
-		  (let v = Lyn.fromILF Lyn.linear_scan parallel_move generic_first ilf in
+		  (let v = Lvc.fromILF Lvc.linear_scan parallel_move generic_first ilf in
 		   match v with
-		     | Lyn.Success s -> Printf.printf "Compilate:\n%s\n\n" 
+		     | Lvc.Success s -> Printf.printf "Compilate:\n%s\n\n" 
 		       (print_expr 0 s (BigMap.empty));
-                     | Lyn.Error e -> Printf.printf "Compilation failed:%s\n\n" (implode e) )
-                | Lyn.Error e -> Printf.printf "Compilation failed:\n%s" (implode e))
-            | Lyn.Error e -> Printf.printf "Compilation failed:\n%s" (implode e) in
+                     | Lvc.Error e -> Printf.printf "Compilation failed:%s\n\n" (implode e) )
+                | Lvc.Error e -> Printf.printf "Compilation failed:\n%s" (implode e))
+            | Lvc.Error e -> Printf.printf "Compilation failed:\n%s" (implode e) in
           ()
     with Parsing.Parse_error ->
         Printf.eprintf "A parsing error occured \n"
