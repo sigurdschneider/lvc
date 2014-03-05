@@ -180,16 +180,28 @@ Proof.
   exfalso. eapply n. transitivity G; eauto. rewrite <- H2; eauto.
 Qed.
 *)
+
+Definition lessReq := (fstNoneOrR' (fun (s : set var) (t : set var * params) => s ⊆ fst t)).
+
+Lemma restrict_lessReq DL DL' G
+: PIR2 lessReq DL DL' 
+  -> PIR2 lessReq (restrict DL G) DL'.
+Proof.
+  intros. induction H; simpl; econstructor; eauto.
+  unfold restr. destruct pf. constructor.
+  destruct if; eauto. subst. constructor; eauto. constructor.
+Qed.
+
 Lemma compile_typed DL AL ZL s ans_lv ans
   (RD:trs AL ZL s ans_lv ans)
   (LV:live_sound DL s ans_lv)
-  (EQ:PIR2 (fstNoneOrR' (fun s t => s = fst t)) AL DL)
+  (EQ:PIR2 lessReq AL DL)
   : srd (restrict AL (getAnn ans_lv)) (compile ZL s ans) ans_lv.
 Proof. 
   general induction RD; inv LV; simpl; eauto using srd.
   + econstructor; eauto.
     eapply srd_monotone. eapply IHRD; eauto.
-    admit.
+    eapply restrict_lessReq; eauto.
     repeat rewrite restrict_comp_meet.
     eapply restrict_subset. reflexivity.
     cset_tac; intuition.
@@ -199,14 +211,16 @@ Proof.
     eapply srd_monotone. eapply IHRD2; eauto.
     eapply restrict_subset; eauto. reflexivity.
   + edestruct PIR2_nth_2; eauto; dcr.
-    inv H5; get_functional; subst.
+    inv H5; get_functional; subst. simpl in *.
     econstructor; eauto. unfold restrict. 
     pose proof (map_get_1 (restr lv) H4). unfold fst in H.
-    assert (restr lv (Some blv) = Some blv). eapply restr_iff; eauto.
-    rewrite <- H3; eauto.
+    assert (restr lv (Some x0) = Some x0). eapply restr_iff; split; eauto.
+    cset_tac; eauto.
+    rewrite <- H7; eauto.
   + econstructor; eauto. 
     - eapply srd_monotone2. eapply IHRD1; eauto.
-      admit.
+      eapply restrict_lessReq. econstructor; eauto.
+      constructor. simpl. cset_tac; intuition. 
       rewrite restrict_incl; [|reflexivity].
       rewrite restrict_incl; [|eapply minus_incl].
       rewrite restrict_incl; [|reflexivity].
@@ -217,8 +231,14 @@ Proof.
       rewrite of_list_app.
       hnf; intros. cset_tac; intuition. 
     - eapply srd_monotone2. eapply IHRD2; eauto.
-      admit.
-      admit.
+      constructor. constructor. simpl. cset_tac; intuition. eauto.
+      destruct_prop (getAnn ans_lv \ of_list (Z ++ Za) ⊆ getAnn ant_lv).
+      rewrite restrict_incl; eauto.
+      econstructor. reflexivity. 
+      eapply restrict_subset2. reflexivity. eauto.
+      rewrite restrict_not_incl; eauto.
+      econstructor. constructor.
+      eapply restrict_subset2. reflexivity. eauto.
 Qed.
 
 Lemma live_sound_compile DL ZL AL s ans_lv ans
