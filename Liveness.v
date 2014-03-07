@@ -427,10 +427,8 @@ Inductive liveSimI : I.state -> I.state -> Prop :=
   (AG:agree_on (getAnn lv) E E')
   : liveSimI (L, E, s) (L, E', s).
 
-Require Import SimApx.
-
 Lemma liveSimI_sim σ1 σ2
-  : liveSimI σ1 σ2 -> simapx σ1 σ2.
+  : liveSimI σ1 σ2 -> sim σ1 σ2.
 Proof.
   revert σ1 σ2. cofix; intros. 
   destruct H; inv LS; simpl; simpl in *.
