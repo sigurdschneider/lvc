@@ -22,7 +22,8 @@ Definition livenessAnalysis (s:stmt) :=
 Definition additionalArguments s lv :=
   fst (CoherenceAlgo.computeParameters nil nil s lv).
 
-Definition toILF (ili:stmt) (lv:ann (set var)) : status IL.stmt :=
+Definition toILF (ilin:ILN.nstmt) (lv:ann (set var)) : status IL.stmt :=
+  sdo ili <- ILN.labIndices ilin nil; 
   if [Liveness.live_sound nil ili lv] then
     let additional_arguments := additionalArguments ili lv
     in if [ILIToILF.trs nil nil ili lv additional_arguments] then
@@ -46,22 +47,25 @@ Definition fromILF (s:stmt) : status stmt :=
          Error "Register allocation not injective."
      else
        Error "Liveness unsound.".
-
-Lemma toILF_correct ili alv s E
-  : params_match (nil: list I.block) ili
-   -> toILF ili alv = Success s
-   -> sim (nil:list I.block, E, ili) (nil:list F.block, E, s).
+Lemma toILF_correct ilin alv s (E:env val)
+  : (*params_match (nil: list I.block) ili 
+   -> *) toILF ilin alv = Success s
+   -> @sim _ ILN.statetype_I _ _ (ILN.I.labenv_empty, E, ilin) 
+          (nil:list F.block, E, s).
 Proof.
- intros. unfold toILF in H0; simpl in *.
+  intros. unfold toILF in H; simpl in *.
   Opaque Liveness.live_sound_dec.
   Opaque ILIToILF.trs_dec.
-  destruct if in H0.
-  destruct if in H0; isabsurd. inv H0.
-  refine (sim_trans (ILIToILF.trsR_sim _) (sim_sym (Coherence.srdSim_sim _))).
+  monadS_inv H.
+  destruct if in EQ0.
+  destruct if in EQ0; isabsurd. inv EQ0.
+  refine (sim_trans (ILN.labIndicesSim_sim _) (sim_trans (ILIToILF.trsR_sim _) (sim_sym (Coherence.srdSim_sim _)))).
+  econstructor; eauto; isabsurd. econstructor; isabsurd.
   econstructor; eauto using AIR4; eauto; try reflexivity; isabsurd.
+  admit.
   econstructor; eauto 30 using ILIToILF.compile_typed, agree_on_refl, AIR2, PIR2; isabsurd.
   split; isabsurd.
-  destruct H; eauto using (ILIToILF.compile_params_match t H).
+  (* destruct H; eauto using (ILIToILF.compile_params_match t H). *) admit.
   instantiate (1:=nil).
   eapply (@ILIToILF.live_sound_compile nil); eauto.
   isabsurd.

@@ -23,15 +23,15 @@ let main () =
       let result = Parser.expr Lexer.token lexbuf in
       let _ = Printf.printf "Normalized Input:\n%s\n\n" (print_nexpr 0 result !ids) in
       match (Lvc.labIndices result []) with
-        | None -> let _ = Printf.printf "Ill-formed program (probably undeclared
+        | Lvc.Error s -> let _ = Printf.printf "Ill-formed program (probably undeclared
           function)" in ()
-        | Some ili -> 
+        | Lvc.Success ili -> 
           let lv = Lvc.livenessAnalysis generic_first ili in
           let _ = Printf.printf "Liveness\n%s\n\n" (print_ann (print_set !ids) 0 lv) in
           let aa = Lvc.additionalArguments ili lv in
           let _ = Printf.printf "AdditionalArguments\n%s\n\n" 
 	    (print_ann (print_list (fun s -> "[" ^ (print_var s !ids) ^ "]") " ") 0 aa) in
-          let v = Lvc.toILF ili lv in
+          let v = Lvc.toILF result lv in
           let _ = match v with 
 	    | Lvc.Success ilf -> Printf.printf "Compilate:\n%s\n\n" (print_expr 0 ilf !ids);
 	      let ren = Lvc.rename_apart ilf in
