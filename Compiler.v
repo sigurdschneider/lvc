@@ -114,6 +114,6 @@ Extraction "extraction/lvc.ml" toILF fromILF ILN.labIndices RegAllocAlgo.linear_
 
 (* 
 *** Local Variables: ***
-*** coq-load-path: (("." "Lyn")) ***
+*** coq-load-path: (("." "Lvc")) ***
 *** End: ***
 *)

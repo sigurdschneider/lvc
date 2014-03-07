@@ -689,7 +689,7 @@ Ltac no_step := eapply simE; try eapply star_refl; try get_functional; try subst
 
 (* 
 *** Local Variables: ***
-*** coq-load-path: (("../" "Lyn")) ***
+*** coq-load-path: (("../" "Lvc")) ***
 *** End: ***
 *)
 

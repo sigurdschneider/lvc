@@ -617,6 +617,6 @@ Qed.
 
 (* 
 *** Local Variables: ***
-*** coq-load-path: (("." "Lyn")) ***
+*** coq-load-path: (("." "Lvc")) ***
 *** End: ***
 *)

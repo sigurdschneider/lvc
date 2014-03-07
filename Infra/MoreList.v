@@ -180,6 +180,6 @@ Ltac inv_map H :=
 
 (* 
 *** Local Variables: ***
-*** coq-load-path: (("../" "Lyn")) ***
+*** coq-load-path: (("../" "Lvc")) ***
 *** End: ***
 *)

@@ -35,6 +35,6 @@ Instance liveness_analysis : AbstractInterpretation (set var) (set var) := {
 
 (* 
 *** Local Variables: ***
-*** coq-load-path: (("." "Lyn")) ***
+*** coq-load-path: (("." "Lvc")) ***
 *** End: ***
 *)

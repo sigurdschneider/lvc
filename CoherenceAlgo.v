@@ -48,7 +48,7 @@ Fixpoint computeParameters (DL: list (set var * params)) (AP:list (set var))
 
 (* 
 *** Local Variables: ***
-*** coq-load-path: (("." "Lyn")) ***
+*** coq-load-path: (("." "Lvc")) ***
 *** End: ***
 *)
 

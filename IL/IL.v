@@ -354,7 +354,7 @@ Fixpoint labenvRmE (L:F.labenv) : I.labenv
 
 (* 
 *** Local Variables: ***
-*** coq-load-path: (("../" "Lyn")) ***
+*** coq-load-path: (("../" "Lvc")) ***
 *** End: ***
 *)
 
