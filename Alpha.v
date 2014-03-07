@@ -252,26 +252,30 @@ Inductive alphaSim : F.state -> F.state -> Prop :=
  | alphaSimI ra ira s s' L L' E E' Ral
   (AE:alpha ra ira s s')
   (EA:AIR3 approx Ral L L')
-  (PM:params_match L s)
   (EC:envCorr ra ira E E')
    : alphaSim (L, E, s) (L', E', s').
+
 
 Lemma alphaSim_sim σ1 σ2
 : alphaSim σ1 σ2 -> sim σ1 σ2.
 Proof. 
   revert σ1 σ2; cofix; intros.
   destruct H; inversion AE; subst ra0 ira0; simpl in * |- *;
-  try subst s s'; try params_match_tac; simpl in * |- *.
+  try subst s s'; simpl in * |- *.
   + eapply simE; try eapply star_refl; simpl; try stuck.
     erewrite EC; eauto.
-  + provide_invariants_3. subst x1 x x0 x2 x3; simpl in *.
-    eapply simS; try eapply plusO.
-    econstructor; eauto. simpl; eauto.
-    econstructor; eauto. simpl. rewrite <- H. rewrite lookup_list_length.
-    congruence.
-    simpl. eapply alphaSim_sim; econstructor; eauto.
-    eapply envCorr_update_lists; eauto. 
-    rewrite <- H. rewrite lookup_list_length. congruence.
+  + assert (length X = length Y). {
+      rewrite <- H. rewrite lookup_list_length; eauto.
+    }
+    destruct (get_dec L (counted l)) as [[[Eb Zb sb]]|]; [| try no_step].
+    destruct_prop (length Zb = length Y); [| try no_step].
+    provide_invariants_3. subst x1 x x0 x2 ; simpl in *.
+    one_step; simpl; try congruence; eauto.
+    simpl. eapply alphaSim_sim; econstructor; eauto. 
+    eapply envCorr_update_lists; eauto; congruence.
+    clear H H0; no_step. get_functional; subst; simpl in *; congruence.
+    provide_invariants_3; simpl in *; congruence.
+    clear H H0; no_step; provide_invariants_3; eauto.
   + case_eq (exp_eval E e); intros.
     eapply simS; try eapply plusO. 
     econstructor; eauto. 
@@ -279,7 +283,7 @@ Proof.
     erewrite <- alpha_exp_eval; eauto.
     eapply alphaSim_sim; econstructor; eauto using envCorr_update.
     eapply simE; try eapply star_refl; eauto; stuck.
-    erewrite alpha_exp_eval in H2; eauto. congruence.
+    erewrite alpha_exp_eval in H1; eauto. congruence.
   + case_eq (val2bool (E x)); intros. 
     eapply simS; try eapply plusO.
     econstructor; eauto.

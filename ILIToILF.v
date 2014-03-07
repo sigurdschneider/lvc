@@ -108,7 +108,6 @@ Inductive trsR : I.state -> I.state -> Prop :=
   trsRI (E E':env val) L L' s ans ans_lv DL ZL 
   (RD: trs DL ZL s ans_lv ans)
   (EA: AIR4 approx DL ZL L L') 
-  (PM: params_match L s)
   (EQ: E ≡ E')
   : trsR (L, E, s) (L', E', compile ZL s ans).
 
@@ -116,14 +115,14 @@ Lemma trsR_sim σ1 σ2
   : trsR σ1 σ2 -> sim σ1 σ2.
 Proof.
   revert σ1 σ2. cofix; intros.
-  intros. destruct H; inv RD; simpl; try provide_invariants_4; try params_match_tac.
+  intros. destruct H; inv RD; simpl; try provide_invariants_4.
   + case_eq (exp_eval E e); intros.
     eapply simS; try eapply plusO.
     econstructor; eauto using I.step, plus.
-    rewrite EQ in H1; econstructor; eauto using I.step, plus.
+    rewrite EQ in H0; econstructor; eauto using I.step, plus.
     eapply trsR_sim. econstructor; eauto using approx_restrict. 
     rewrite EQ; reflexivity.
-    eapply simE; try eapply star_refl; eauto; stuck. rewrite EQ in H1; congruence.
+    eapply simE; try eapply star_refl; eauto; stuck. rewrite EQ in H0; congruence.
 
   + case_eq (val2bool (E x)); intros.
     eapply simS; try eapply plusO. 
@@ -138,12 +137,11 @@ Proof.
   + eapply simE; try eapply star_refl; simpl; eauto; try stuck. rewrite EQ; eauto.
 
   + simpl counted in *.
-    eapply simS; try eapply plusO.
-    econstructor; eauto.
-    econstructor; eauto. simpl.
+    destruct_prop (length Z' = length Y).
+    one_step. simpl in *; eauto.
     repeat rewrite app_length.
-    eapply get_drop_eq in H7; eauto. inv H7; subst. f_equal; eauto.
-    erewrite get_nth_default; eauto.
+    eapply get_drop_eq in H7; eauto. inv H7; subst. simpl.
+    rewrite app_length. erewrite get_nth_default; eauto.
     rewrite <- H6, <- H7 in EA1. 
     eapply trsR_sim; econstructor; eauto using approx_restrict.
     unfold updE. simpl.
@@ -154,13 +152,17 @@ Proof.
     intuition.
     edestruct (AIR4_length); eauto; dcr.
     rewrite lookup_list_length; eauto.
-        
+    no_step. get_functional; subst. simpl in *. congruence.
+    get_functional; subst. simpl in *. 
+    eapply n. repeat rewrite app_length in len.
+    eapply get_drop_eq in H7; eauto. subst Za0.
+    erewrite get_nth_default in len; eauto. omega.
   + eapply simS; try eapply plusO.
     econstructor; eauto.
     econstructor; eauto.
     eapply trsR_sim; econstructor; eauto.
     econstructor; eauto. econstructor. 
-    intros. inv H3. eauto. 
+    intros. inv H2. eauto. 
 Qed.
 
 Inductive fstNoneOrR' {X Y:Type} (R:X->Y->Prop)

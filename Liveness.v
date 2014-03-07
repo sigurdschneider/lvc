@@ -332,7 +332,6 @@ Unset Printing Records.
 Inductive freeVarSimF : F.state -> F.state -> Prop :=
   freeVarSimFI (E E':env val) L L' s 
   (LA: PIR2 approxF L L')
-  (PM:params_match L s)
   (AG:agree_on (IL.freeVars s) E E')
   : freeVarSimF (L, E, s) (L', E', s).
 
@@ -340,8 +339,7 @@ Lemma freeVarSimF_sim σ1 σ2
   : freeVarSimF σ1 σ2 -> sim σ1 σ2.
 Proof.
   revert σ1 σ2. cofix; intros. 
-  destruct H; destruct s; simpl; simpl in *; 
-          try params_match_tac.
+  destruct H; destruct s; simpl; simpl in *.
   + case_eq (exp_eval E e); intros.
     eapply simS; try eapply plusO.
     econstructor; eauto. econstructor; eauto.
@@ -362,19 +360,23 @@ Proof.
     eapply agree_on_incl; eauto. cset_tac; intuition.
     eapply simS; try eapply plusO.
     eapply F.stepIfF; eauto. 
-    rewrite AG in H1; eauto.
+    rewrite AG in H; eauto.
     eapply F.stepIfF; eauto. cset_tac; intuition.
     eapply freeVarSimF_sim; econstructor; eauto using agree_on_incl.
     eapply agree_on_incl; eauto. cset_tac; intuition.
-  + provide_invariants_P2.
-    eapply simS; try eapply plusO.
-    econstructor; eauto.
-    econstructor; try eapply H2; eauto.
+  + destruct (get_dec L (counted l)) as [[[Eb Zb sb]]|].
+    provide_invariants_P2.
+    destruct_prop (length Zb = length Y).
+    one_step.
     simpl. eapply freeVarSimF_sim. econstructor; eauto.
     unfold updE. 
     erewrite lookup_list_agree; eauto using agree_on_incl.
     eapply update_with_list_agree. eapply agree_on_incl; eauto.
     cset_tac; eauto. rewrite lookup_list_length; simpl in *; congruence.
+    no_step; get_functional; subst. simpl in *; congruence.
+    simpl in *; congruence.
+    no_step. provide_invariants_P2.
+    edestruct PIR2_nth_2; eauto; dcr; eauto.
   + eapply simE; try eapply star_refl; simpl; eauto; try stuck.
     rewrite AG; eauto; cset_tac; intuition.
   + eapply simS; try (eapply plusO; econstructor).
@@ -394,7 +396,6 @@ Inductive approxF' : list (live*params) -> F.block -> F.block -> Prop :=
 Inductive liveSimF : F.state -> F.state -> Prop :=
   liveSimFI (E E':env val) L L' s Lv lv 
             (LS:live_sound Lv s lv)
-            (PM:params_match L s)
             (LA:AIR3 approxF' Lv L L')
             (AG:agree_on (getAnn lv) E E')
   : liveSimF (L, E, s) (L', E', s).
@@ -403,7 +404,7 @@ Lemma liveSim_freeVarSim σ1 σ2
   : liveSimF σ1 σ2 -> freeVarSimF σ1 σ2.
 Proof.
   intros. general induction H; econstructor; eauto.
-  clear LS PM. 
+  clear LS. 
   general induction LA; eauto using PIR2.
   econstructor. inv pf. econstructor.
   eapply agree_on_incl; eauto. eapply incl_minus_lr; try reflexivity.
@@ -422,7 +423,6 @@ Inductive approxI
 Inductive liveSimI : I.state -> I.state -> Prop :=
   liveSimII (E E':env val) L s Lv lv 
   (LS:true_live_sound Lv s lv)
-  (PM:params_match L s)
   (LA:AIR3 approxI Lv L L)
   (AG:agree_on (getAnn lv) E E')
   : liveSimI (L, E, s) (L, E', s).
@@ -433,8 +433,7 @@ Lemma liveSimI_sim σ1 σ2
   : liveSimI σ1 σ2 -> simapx σ1 σ2.
 Proof.
   revert σ1 σ2. cofix; intros. 
-  destruct H; inv LS; simpl; simpl in *; 
-          try params_match_tac.
+  destruct H; inv LS; simpl; simpl in *.
   + case_eq (exp_eval E e); intros.
     destruct_prop(x ∈ getAnn al).
     eapply simS; try eapply plusO. 
@@ -489,7 +488,6 @@ Inductive approxFT
 Inductive liveSimFT : I.state -> I.state -> Prop :=
   liveSimIFT (E E':env val) L s Lv lv 
   (LS:true_live_sound Lv s lv)
-  (PM:params_match L s)
   (LA:AIR3 approxFT Lv L L)
   (AG:agree_on (getAnn lv) E E')
   : liveSimFT (L, E, s) (L, E', s).
@@ -498,8 +496,7 @@ Lemma liveSimFT_sim σ1 σ2
   : liveSimFT σ1 σ2 -> sim σ1 σ2.
 Proof.
   revert σ1 σ2. cofix; intros. 
-  destruct H; inv LS; simpl; simpl in *; 
-          try params_match_tac.
+  destruct H; inv LS; simpl; simpl in *.
   + case_eq (exp_eval E e); intros.
     eapply simS; try eapply plusO.
     econstructor; eauto. econstructor; eauto.

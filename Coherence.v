@@ -492,13 +492,12 @@ Lemma srd_preservation (E E':env val) L L' s s' DL (G:set var) DA a
   (RA:rd_agree DA L E)
   (A: AIR2 approx' DA L)
   (LV:live_sound DL s a)
-  (PM:params_match L s)
   (S:F.step (L, E, s) (L',E',s'))
   : exists DA' DL' a', srd DA' s' a' 
                    /\ rd_agree DA' L' E' 
                    /\ AIR2 approx' DL' L'.
 Proof.
-  destruct SRD; try inv S; try params_match_tac.
+  destruct SRD; try inv S.
 
   + do 2 eexists; repeat split; try eassumption;
     eauto using agree_on_update_any_same, approx_restrict, rd_agree_update.
@@ -506,24 +505,23 @@ Proof.
   + do 2 eexists; eauto.
   + do 2 eexists; eauto.
 
-  + provide_invariants_2. specialize (H5 _ H6); dcr.
-    rewrite H4 in H9. simpl in *.
+  + provide_invariants_2. specialize (H3 _ H4); dcr.
+    rewrite H2 in H7. simpl in *.
     do 3 eexists; repeat split; simpl; eauto.
-    eapply rd_agree_update_list; eauto. eapply (RA _ _ _ H3 H).
+    eapply rd_agree_update_list; eauto. eapply (RA _ _ _ H1 H).
 
   + inv LV. do 3 eexists; repeat split; eauto.
     hnf; intros.
-    destruct n; inv H0; inv H1. simpl.
+    destruct n; inv H; inv H0. simpl.
     eapply agree_on_refl. 
     eapply RA; eauto.
 
     econstructor; eauto using agree_on_incl. 
     instantiate (1:=Some (getAnn als \ of_list Z)).
     econstructor; eauto.
-    split. inv H0.
-    split; cset_tac; isabsurd; eauto. inv H0.
+    split. inv H.
+    split; cset_tac; isabsurd; eauto. inv H.
     eexists; eauto. split; [| split;eauto].
-    inv H0.
     cset_tac; intuition. destruct_prop (a ∈ of_list Z); intuition.
 Qed.
 
@@ -544,7 +542,6 @@ Inductive srdSim : F.state -> I.state -> Prop :=
   (SRD:srd AL s a)
   (RA:rd_agree AL L E)
   (A: AIR2 approx' AL L)
-  (PM:params_match L s)
   (AG:agree_on (getAnn a) E EI)
   (LV:live_sound DL s a)
   : srdSim (L, E, s) (strip L, EI,s).
@@ -553,7 +550,7 @@ Lemma srdSim_sim σ1 σ2
   : srdSim σ1 σ2 -> sim σ1 σ2.
 Proof.
   revert σ1 σ2. cofix; intros.
-  destruct H; inv SRD; inv LV; simpl in *; try provide_invariants_2; try params_match_tac.
+  destruct H; inv SRD; inv LV; simpl in *; try provide_invariants_2.
   + case_eq (exp_eval E e); intros.
     one_step.
     instantiate (1:=v). erewrite <- exp_eval_live; eauto.
@@ -570,36 +567,40 @@ Proof.
     one_step.
     eapply srdSim_sim; econstructor; eauto using agree_on_incl.
   + eapply simE; try eapply star_refl; simpl; eauto; try stuck.
-  + eapply simS; try eapply plusO.
-    econstructor; eauto.
+  + destruct_prop (length Z0 = length Y).
+    eapply simS; try eapply plusO.
+    econstructor; simpl; eauto. simpl; eauto.
     pose proof (map_get_1 stripB H1).
     econstructor; eauto. eauto.
     eapply srdSim_sim. rewrite drop_strip.  
     simpl. simpl counted in *.
-    specialize (H3 _ H5); dcr. rewrite H2 in A1,H13.
+    specialize (H3 _ H5); dcr. rewrite H2 in A1,H11.
     econstructor; simpl; eauto using approx_restrict.
     eapply rd_agree_update_list; eauto.
     eapply (RA _ _ _ H1 H).
 
     simpl; unfold updE. 
     erewrite lookup_list_agree; eauto using agree_on_incl.
-    eapply update_with_list_agree. rewrite H12.
+    eapply update_with_list_agree. rewrite H10.
     rewrite union_comm. rewrite union_minus_remove.
     pose proof (RA _ _ G' H1 H); dcr. simpl in *.
     eapply agree_on_sym. eapply agree_on_incl; eauto using incl_minus.
     eapply agree_on_trans; eauto. eapply agree_on_sym. hnf in RA.
     eapply agree_on_incl; eauto.
     rewrite lookup_list_length; eauto.
-
+    no_step. get_functional; subst; simpl in *; congruence.
+    unfold strip in *.
+    edestruct map_get_4; eauto; dcr; get_functional; subst; simpl in *. 
+    congruence.
   + eapply simS; try (eapply plusO; econstructor).
     eapply srdSim_sim; econstructor; eauto.
     hnf; intros.
-    destruct n; inv H2; inv H3. simpl.
+    destruct n; inv H1; inv H2. simpl.
     eapply agree_on_refl. 
     eapply RA; eauto. 
 
     econstructor; eauto using agree_on_incl. econstructor; eauto.
-    intros. inv H2. split. 
+    intros. inv H1. split. 
     split; cset_tac; isabsurd; eauto. 
     eexists. split; eauto. cset_tac; intuition.
     destruct_prop (a ∈ of_list Z); intuition.

@@ -48,8 +48,7 @@ Definition fromILF (s:stmt) : status stmt :=
      else
        Error "Liveness unsound.".
 Lemma toILF_correct ilin alv s (E:env val)
-  : (*params_match (nil: list I.block) ili 
-   -> *) toILF ilin alv = Success s
+  : toILF ilin alv = Success s
    -> @sim _ ILN.statetype_I _ _ (ILN.I.labenv_empty, E, ilin) 
           (nil:list F.block, E, s).
 Proof.
@@ -62,23 +61,19 @@ Proof.
   refine (sim_trans (ILN.labIndicesSim_sim _) (sim_trans (ILIToILF.trsR_sim _) (sim_sym (Coherence.srdSim_sim _)))).
   econstructor; eauto; isabsurd. econstructor; isabsurd.
   econstructor; eauto using AIR4; eauto; try reflexivity; isabsurd.
-  admit.
+
   econstructor; eauto 30 using ILIToILF.compile_typed, agree_on_refl, AIR2, PIR2; isabsurd.
-  split; isabsurd.
-  (* destruct H; eauto using (ILIToILF.compile_params_match t H). *) admit.
-  instantiate (1:=nil).
   eapply (@ILIToILF.live_sound_compile nil); eauto.
   isabsurd.
 Qed.
 
 Lemma fromILF_correct (s s':stmt) E
-  : params_match nil s
-  -> fromILF s = Success s' 
+  : fromILF s = Success s' 
   -> sim (nil:list F.block, E, s) (nil:list I.block, E, s').
 Proof.
   unfold fromILF; intros.
-  destruct if in H0; dcr; isabsurd.
-  monadS_inv H0; dcr. destruct if in EQ0.
+  destruct if in H; dcr; isabsurd.
+  monadS_inv H; dcr. destruct if in EQ0.
   eapply sim_trans with (σ2:=(nil:list F.block, E, rename_apart s)). 
   eapply (@Alpha.alphaSim_sim (nil, E, s) (nil, E, rename_apart s)).
   econstructor; eauto using AIR3, Alpha.envCorr_idOn_refl. 
@@ -91,15 +86,12 @@ Proof.
   eapply a.
   instantiate (1:=id). destruct a. 
   eapply (@inverse_on_agree_on _ _ _ _ id x id id); try intuition.
-  eapply inverse_on_id. 
-  split. simpl. eapply (rename_apart_parameters_match (L:=nil)); isabsurd; eauto.
-  simpl. eapply H. isabsurd.
-  hnf; intros. cbv in H3; subst. rewrite H3; eauto.
+  eapply inverse_on_id.
+  hnf; intros. cbv in H2; subst. rewrite H2; eauto.
   refine (sim_trans (Coherence.srdSim_sim _) (ParallelMove.pmSim_sim _)).
   econstructor; isabsurd. eapply rename_ssa_srd; eauto.
   eapply rename_apart_ssa; eauto. eapply a.
-  eapply I. econstructor. eapply rename_params_match with (L:=nil).
-  eapply rename_apart_params_match; eauto.
+  eapply I. econstructor. 
   eapply agree_on_refl.
   eapply (@Liveness.live_rename_sound nil); eauto.
   instantiate (1:=parallel_move). 
