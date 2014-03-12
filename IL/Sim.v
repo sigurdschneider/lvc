@@ -645,6 +645,22 @@ Proof.
   eapply terminatesWith_star_2; eauto. eapply H4. eapply terminatesWith_star; eauto.
 Qed.
 
+Lemma sim_expansion_closed {S} `{StateType S} {S'} `{StateType S'} 
+      (σ1 σ1':S) (σ2 σ2':S')
+  : sim σ1' σ2'
+    -> star step σ1 σ1' 
+    -> star step σ2 σ2'
+    -> sim σ1 σ2.
+Proof.
+  intros.
+  eapply sim_cobehave in H1. eapply sim_cobehave.
+  destruct H1. split; split; intros.
+  eapply star_diverges; eauto. eapply H1. eapply diverges_star; eauto.
+  eapply star_diverges; eauto. eapply H1. eapply diverges_star; eauto.
+  eapply terminatesWith_star; eauto. eapply H4. eapply terminatesWith_star_2; eauto.
+  eapply terminatesWith_star; eauto. eapply H4. eapply terminatesWith_star_2; eauto.
+Qed.
+
 Lemma ctxeq_simeq s s':
   ctxeq s s' <-> simeq s s'.
 Proof.
@@ -685,6 +701,229 @@ Ltac no_step := eapply simE; try eapply star_refl; try get_functional; try subst
                 [ try reflexivity
                 | stuck
                 | stuck  ].
+
+
+Inductive simB : F.labenv -> F.labenv -> F.block -> F.block -> Prop :=
+| simBI L L' E E' Z Z' s s'
+  : length Z = length Z'
+    -> (forall VL, length VL = length Z -> length Z = length Z' ->
+          sim (L, E[Z <-- VL], s) 
+              (L', E'[Z' <-- VL], s'))
+    -> simB L L' (F.blockI E Z s) (F.blockI E' Z' s').
+
+Definition simL L L' := AIR4 simB L L' L L'.
+
+Lemma simL_refl L : simL L L.
+Proof.
+  general induction L. econstructor.
+  econstructor; eauto. destruct a; econstructor; eauto. intros. eapply sim_refl.
+Qed.
+
+Lemma simL_sym L1 L2 L3 L4 : AIR4 simB L1 L2 L3 L4 -> AIR4 simB L2 L1 L4 L3.
+Proof.
+  intros. general induction H; eauto using AIR4.
+  econstructor; eauto.
+  destruct pf. 
+  econstructor; eauto. intros. refine (sim_sym _). eapply H1; eauto. congruence. 
+Qed.
+
+Lemma simL_trans LA1 LA2 LB1 LB2 LC1 LC2 
+ : AIR4 simB LA1 LB1 LA2 LB2 -> AIR4 simB LB1 LC1 LB2 LC2
+-> AIR4 simB LA1 LC1 LA2 LC2.
+Proof.
+  intros. general induction H; inv H0; eauto using AIR4.
+  econstructor; eauto. inv pf. inv pf0.
+  econstructor. congruence.
+  intros. refine (sim_trans (H2 _ _ _) (H11 _ _ _)); congruence.
+Qed.
+
+Lemma simB_refl L L' blk 
+: simL L L'
+  -> simB L L' blk blk.
+Proof.
+  intros. destruct blk. econstructor; eauto. intros. admit.
+Qed.
+
+Definition fexteq E Z s E' Z' s' := 
+  forall VL L L', length VL = length Z -> length Z = length Z' -> simL L L' -> 
+                   sim (L, E[Z <-- VL], s) 
+                       (L', E'[Z' <-- VL], s').
+
+Lemma fexteq_sym E Z s E' Z' s' 
+: fexteq E Z s E' Z' s' <-> fexteq E' Z' s' E Z s.
+Proof.
+  unfold fexteq; intuition.
+  - eapply sim_sym, H, simL_sym; eauto; congruence.
+  - eapply sim_sym, H, simL_sym; eauto; congruence.
+Qed.
+
+Lemma AIR4_nth' W X Y Z (R:list W -> list X -> Y -> Z -> Prop) WL LT L L' l blkw : 
+  AIR4 R WL LT L L' 
+  -> get WL l blkw
+  -> exists blkt, exists blk:Y, exists blk':Z,
+   get LT l blkt /\ get L l blk /\ get L' l blk' /\ R (drop l WL) (drop l LT) blk blk'.
+Proof.
+  intros. general induction H; isabsurd.
+  inv H0. do 3 eexists; intuition.
+  edestruct IHAIR4 as [blk [blk' [A [B C]]]]; dcr; eauto.
+  do 4 eexists; intuition (eauto using get).
+Qed.
+
+
+Lemma subst_lemma_div_L L L1 L2 s s' E E1 E2 Z Z' t
+: fexteq E1 Z s E2 Z' s'
+  -> length Z = length Z'
+  -> simL L1 L2
+  -> diverges step ((L ++ F.blockI E1 Z s :: L1)%list, E, t)
+  -> diverges step ((L ++ F.blockI E2 Z' s' :: L2)%list, E, t).
+Proof.
+  revert L L1 L2 s s' E E1 E2 Z Z' t. cofix; intros.
+  inv H2; inv H3.
+  + econstructor. constructor; eauto. eauto.
+  + econstructor. econstructor; eauto. eauto.
+  + econstructor. eapply F.stepIfF; eauto. eauto. 
+  + destruct (get_subst _ _ _ Ldef) as [?|[?|?]]; subst; simpl in *; dcr.
+    - econstructor. econstructor. eapply len. eapply get_app; eauto. reflexivity.
+      pose proof (get_range H5). rewrite drop_length; eauto.
+      rewrite drop_length in H4; eauto.
+    - subst; simpl in *. 
+      econstructor. constructor. instantiate (1:= F.blockI E2 Z' s').
+      simpl. congruence. simpl. rewrite H7. eapply get_length_app.
+      reflexivity. simpl. rewrite H7. rewrite drop_length_eq.
+      eapply (subst_lemma_div_L nil); eauto. simpl. 
+      rewrite H7 in H4. rewrite drop_length_eq in H4. unfold updE.
+      specialize (H (lookup_list E Y)).
+      pose proof (@sim_codiverge F.state _ F.state _).
+      eapply H5; eauto. eapply H. 
+      rewrite lookup_list_length. congruence. congruence.
+      eapply simL_refl.
+    - edestruct (AIR4_length H1); dcr.
+      destruct (AIR4_nth' H1 H6) as [? [? [?]]]; dcr.
+      inv H15. repeat (get_functional; subst). simpl in *.
+      econstructor. econstructor. Focus 2.
+      rewrite cons_app. rewrite app_assoc. 
+      eapply get_app_right; eauto. simpl.
+      repeat rewrite app_length; simpl. omega. simpl. congruence.
+      reflexivity. simpl. rewrite drop_length_gr; eauto.
+      rewrite drop_length_gr in H4; eauto.
+      pose proof (@sim_codiverge F.state _ F.state _).
+      eapply H6. eapply H14. rewrite lookup_list_length. congruence. congruence.
+      eauto. 
+  + econstructor. econstructor.
+    rewrite cons_app. rewrite app_assoc.
+    eapply (subst_lemma_div_L (F.blockI E Z0 s0::nil ++ L)%list); eauto.
+Qed.
+
+Lemma subst_lemma_trm_L L L1 L2 s s' E E1 E2 Z Z' t v
+: fexteq E1 Z s E2 Z' s'
+  -> length Z = length Z'
+  -> simL L1 L2
+  -> terminatesWith ((L ++ F.blockI E1 Z s :: L1)%list, E, t) v
+  -> terminatesWith ((L ++ F.blockI E2 Z' s' :: L2)%list, E, t) v.
+Proof.
+  intros LEQ H LEN H0.
+  general induction H0.
+  + constructor. eauto. hnf; intros. eapply H0.
+    destruct H; inv H.
+    - eexists; econstructor; eauto.
+    - eexists; econstructor; eauto.
+    - eexists; eapply F.stepIfF; eauto.
+    - edestruct (get_subst) as [|[]]; eauto.
+      * econstructor; econstructor; eauto. eapply get_app; eauto.
+      * dcr; subst. 
+        econstructor. econstructor; try (rewrite H4; eapply get_length_app); eauto.
+        simpl in * |- *; congruence.
+      * dcr; subst.
+        edestruct AIR4_length; try eassumption; dcr.
+        edestruct (get_length_eq _ H3 (eq_sym H2)); eauto.
+        unfold simL in *. edestruct AIR4_nth as [blk1 [blk2]]; eauto; dcr.
+        inv H12; repeat get_functional; subst.
+        econstructor; econstructor.
+        Focus 2.
+        eapply get_app_right. instantiate (1:=S (counted l - S (length L))).
+        omega. econstructor; eauto. simpl in * |- *; congruence.
+        reflexivity.
+    - econstructor; econstructor; eauto. 
+  + inv H.
+    - eapply trmWithStep. econstructor; eauto.
+      eapply IHterminatesWith; eauto.
+    - eapply trmWithStep. econstructor; eauto.
+      eapply IHterminatesWith; eauto.
+    - eapply trmWithStep. eapply F.stepIfF; eauto.
+      eapply IHterminatesWith; eauto.
+    - destruct (get_subst _ _ _ Ldef) as [|[|]].
+      * eapply trmWithStep. econstructor. eapply len.
+        eapply get_app; eauto. reflexivity.
+        rewrite drop_length; eauto using get_range.
+        eapply IHterminatesWith; eauto.
+        rewrite drop_length; eauto using get_range.
+      * dcr; subst.
+        edestruct AIR4_length; eauto; dcr.
+        eapply trmWithStep. econstructor.
+        Focus 2.
+        rewrite H4. eapply get_length_app. 
+        simpl in * |- *. congruence. reflexivity.
+        simpl.
+        rewrite H4 in *. erewrite drop_length_eq in *. 
+        simpl in *. rewrite H4. erewrite drop_length_eq. 
+        unfold updE.
+        refine (sim_coterminatesWith (LEQ (lookup_list E Y) _ _ 
+                                               _ _ (simL_refl _)) _).
+        rewrite lookup_list_length. congruence. congruence.
+        eapply (IHterminatesWith nil); eauto. 
+      * dcr.
+        edestruct AIR4_length; try eassumption; dcr.
+        edestruct get_length_eq; try eassumption.
+        edestruct AIR4_nth as [blk1 [blk2]]; dcr; eauto.
+        inv H12; repeat get_functional; subst. simpl in *.
+        eapply trmWithStep. econstructor.
+        Focus 2.
+        rewrite cons_app; rewrite app_assoc.
+        eapply get_app_right; eauto. rewrite app_length; simpl in *. omega.
+        simpl in * |- *; congruence. reflexivity.
+        rewrite drop_length_gr; eauto.
+        rewrite drop_length_gr in H0; eauto.
+        unfold updE.
+        simpl. 
+        refine (sim_coterminatesWith (H10 _ _ _) _). 
+        rewrite lookup_list_length. simpl in *. congruence. congruence.
+        eapply H0.
+    - eapply trmWithStep. econstructor; eauto.
+      rewrite cons_app. rewrite app_assoc.
+      eapply IHterminatesWith; eauto.
+Qed.
+
+
+Lemma subst_lemma_L L s s' V E E' Z Z' L1 L2 t
+: fexteq E Z s E' Z' s'
+  -> length Z = length Z'
+  -> simL L1 L2
+  -> sim ((L ++ (F.blockI E Z s :: L1))%list, V, t)
+         ((L ++ (F.blockI E' Z' s' :: L2))%list, V, t).
+Proof.
+  intros. rewrite sim_cobehave. 
+  split; split; intros.
+  - eapply subst_lemma_div_L; eauto. 
+  - eapply subst_lemma_div_L. eapply fexteq_sym; eauto. congruence. 
+    eapply simL_sym; eauto. eauto.
+  - eapply (subst_lemma_trm_L); eauto.
+  - eapply (subst_lemma_trm_L). eapply fexteq_sym; eauto. congruence. 
+    eapply simL_sym; eauto. eauto.
+Qed.
+
+
+Lemma simL_extension s s' E E' Z Z' L L'
+: simL L L' 
+  -> fexteq E Z s E' Z' s'
+  -> length Z = length Z'
+  -> simL (F.blockI E Z s :: L) (F.blockI E' Z' s' :: L').
+Proof.
+  intros.
+  hnf; intros. econstructor; eauto. econstructor; eauto; intros.
+  + eapply (@sim_trans F.state _ F.state _ F.state).
+    eapply (subst_lemma_L nil); eauto.
+    eapply H0; eauto using simL_refl.
+Qed.
 
 
 (* 
