@@ -757,19 +757,6 @@ Proof.
   - eapply sim_sym, H, simL_sym; eauto; congruence.
 Qed.
 
-Lemma AIR4_nth' W X Y Z (R:list W -> list X -> Y -> Z -> Prop) WL LT L L' l blkw : 
-  AIR4 R WL LT L L' 
-  -> get WL l blkw
-  -> exists blkt, exists blk:Y, exists blk':Z,
-   get LT l blkt /\ get L l blk /\ get L' l blk' /\ R (drop l WL) (drop l LT) blk blk'.
-Proof.
-  intros. general induction H; isabsurd.
-  inv H0. do 3 eexists; intuition.
-  edestruct IHAIR4 as [blk [blk' [A [B C]]]]; dcr; eauto.
-  do 4 eexists; intuition (eauto using get).
-Qed.
-
-
 Lemma subst_lemma_div_L L L1 L2 s s' E E1 E2 Z Z' t
 : fexteq E1 Z s E2 Z' s'
   -> length Z = length Z'

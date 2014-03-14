@@ -203,6 +203,30 @@ Section AIR4.
 End AIR4.
 
 
+Lemma AIR4_nth' W X Y Z (R:list W -> list X -> Y -> Z -> Prop) WL LT L L' l blkw : 
+  AIR4 R WL LT L L' 
+  -> get WL l blkw
+  -> exists blkt, exists blk:Y, exists blk':Z,
+   get LT l blkt /\ get L l blk /\ get L' l blk' /\ R (drop l WL) (drop l LT) blk blk'.
+Proof.
+  intros. general induction H; isabsurd.
+  inv H0. do 3 eexists; intuition.
+  edestruct IHAIR4 as [blk [blk' [A [B C]]]]; dcr; eauto.
+  do 4 eexists; intuition (eauto using get).
+Qed.
+
+Lemma AIR4_nth_2 W X Y Z (R:list W -> list X -> Y -> Z -> Prop) WL LT L L' l blkw : 
+  AIR4 R WL LT L L' 
+  -> get LT l blkw
+  -> exists blkt, exists blk:Y, exists blk':Z,
+   get WL l blkt /\ get L l blk /\ get L' l blk' /\ R (drop l WL) (drop l LT) blk blk'.
+Proof.
+  intros. general induction H; isabsurd.
+  inv H0. do 3 eexists; intuition.
+  edestruct IHAIR4 as [blk [blk' [A [B C]]]]; dcr; eauto.
+  do 4 eexists; intuition (eauto using get).
+Qed.
+
 Ltac provide_invariants_4 :=
     match goal with 
       | [ H : AIR4 ?R ?A ?A' ?B ?C, H' : get ?A ?n ?b, I : get ?A' ?n ?b' |- _ ] => 
