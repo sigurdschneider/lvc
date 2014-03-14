@@ -199,7 +199,7 @@ beautify: $(VFILES:=.beautified)
 #                 #
 ###################
 
-./extraction:
+./extraction: Compiler.vo
 	cd ./extraction ; $(MAKE) all
 
 ####################
