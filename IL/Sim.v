@@ -746,12 +746,8 @@ Proof.
   intros. refine (sim_trans (H2 _ _ _) (H11 _ _ _)); congruence.
 Qed.
 
-Lemma simB_refl L L' blk 
-: simL L L'
-  -> simB L L' blk blk.
-Proof.
-  intros. destruct blk. econstructor; eauto. intros. admit.
-Qed.
+Definition simeq2 (s s':stmt)
+  := forall (L L':F.labenv) E, simL L L' -> sim (L, E, s) (L', E, s').
 
 Definition fexteq E Z s E' Z' s' := 
   forall VL L L', length VL = length Z -> length Z = length Z' -> simL L L' -> 
@@ -920,6 +916,53 @@ Proof.
     eapply (subst_lemma_L nil); eauto.
     eapply H0; eauto using simL_refl.
 Qed.
+
+Lemma simeq2_refl s
+  : simeq2 s s.
+Proof.
+  hnf; general induction s; simpl.
+  + case_eq (exp_eval E e); intros.
+    - one_step; eauto.
+    - no_step; eauto.
+  + case_eq(val2bool(E x)); intros; one_step; eauto. 
+  + destruct (get_dec L (counted l)). destruct s as [[]].
+    destruct_prop (length block_Z = length Y).
+    - edestruct AIR4_nth' as [? [? [? ]]]; dcr; try eassumption.
+      repeat get_functional; subst. inv H5.
+      one_step; simpl in *; eauto. congruence. simpl.
+      eapply H10; eauto. rewrite lookup_list_length; eauto. 
+    - edestruct AIR4_nth' as [? [? [? ]]]; dcr; try eassumption.
+      repeat get_functional; subst. inv H5.
+      no_step. repeat get_functional; subst. simpl in *. congruence.
+      get_functional; subst. simpl in *. congruence.
+    - no_step; eauto.
+      exfalso; clear_all; admit.
+  + no_step.
+  + one_step. eapply IHs2. eapply simL_extension; eauto.
+    hnf; intros. eapply IHs1; eauto.
+Qed.
+
+Lemma simeq2_simeq s s'
+  : simeq s s' <-> simeq2 s s'.
+Proof.
+  split; unfold simeq2, simeq; intros.
+  eapply (sim_trans (H L E) (simeq2_refl _ _ H0)).
+  eapply H; eauto using simL_refl.
+Qed.
+
+Lemma fexteq_refl E Z s
+  : fexteq E Z s E Z s.
+Proof.
+  hnf; intros. eapply simeq2_refl; eauto. 
+Qed.
+
+Lemma simB_refl L L' blk 
+: simL L L'
+  -> simB L L' blk blk.
+Proof.
+  intros. destruct blk. econstructor; eauto. intros. eapply simeq2_refl; eauto.
+Qed.
+
 
 
 (* 
