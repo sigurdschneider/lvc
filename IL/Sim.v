@@ -677,6 +677,15 @@ Proof.
   eapply sim_cobehave. eapply simeq_contextual; eauto.
 Qed.
 
+Instance ctxeq_equivalence : Equivalence ctxeq.
+Proof.
+  hnf; intros. constructor.
+  hnf; intros. eapply ctxeq_simeq; reflexivity.
+  hnf; intros. eapply ctxeq_simeq; eapply ctxeq_simeq in H; symmetry; eauto.
+  hnf; intros. eapply ctxeq_simeq. eapply ctxeq_simeq in H; eapply ctxeq_simeq in H0;
+                                   transitivity y; eauto.
+Qed.
+
 
 Ltac single_step :=
   match goal with

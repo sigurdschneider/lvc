@@ -34,15 +34,6 @@ Fixpoint copyPropagate (ϱ:var -> var) (s:stmt) : stmt :=
 
 Notation "f '[' L ']'" := (lookup_list f L) (at level 70).
 
-Instance ctxeq_equivalence : Equivalence ctxeq.
-Proof.
-  hnf; intros. constructor.
-  hnf; intros. eapply ctxeq_simeq; reflexivity.
-  hnf; intros. eapply ctxeq_simeq; eapply ctxeq_simeq in H; symmetry; eauto.
-  hnf; intros. eapply ctxeq_simeq. eapply ctxeq_simeq in H; eapply ctxeq_simeq in H0;
-                                   transitivity y; eauto.
-Qed.
-
 Lemma comp_update (ϱ1: var -> var) x (v:val) (E:var -> val) D
  : x ∈ D ->
    injective_on D ϱ1
