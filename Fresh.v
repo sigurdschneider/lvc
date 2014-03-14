@@ -114,9 +114,14 @@ Qed.
 Fixpoint fresh_stable_list (G:set var) (Z:list var) : list var :=
   match Z with
     | nil => nil
-    | x::Z' => let x' := fresh_stable G x in x'::fresh_stable_list (G ∪ {{x'}}) Z'
+    | x::Z' => let x' := fresh_stable (G ∪ of_list Z') x in x'::fresh_stable_list (G ∪ {{x'}}) Z'
   end.
 
+Lemma fresh_stable_list_length (G:set var) Z
+  : length (fresh_stable_list G Z) = length Z.
+Proof.
+  general induction Z; eauto. simpl. f_equal; eauto.
+Qed.
 
 Lemma fresh_stable_list_spec 
 : forall (G:set var) Z, (of_list (fresh_stable_list G Z)) ∩ G [=] ∅.
@@ -125,8 +130,13 @@ Proof.
   - cset_tac; eauto. 
   - exfalso; cset_tac; eauto.  
   - cset_tac; intuition.
-    + hnf in H; subst. eapply fresh_stable_spec; eauto.
-    + specialize (IHZ (G ∪ {{fresh_stable G a}})). intuition (cset_tac; eauto).
+    + hnf in H; subst.
+      assert (fresh_stable (G ∪ of_list Z) a ∈ G ∪ of_list Z).
+      cset_tac; intuition.
+      eapply fresh_stable_spec; eauto.
+    + eapply (not_in_empty a0). rewrite <- IHZ.
+      intuition (cset_tac; eauto).
+      intuition (cset_tac; eauto).
   - exfalso; cset_tac; auto.
 Qed.
 
@@ -135,7 +145,7 @@ Lemma fresh_stable_list_unique (G: set var) n
 Proof.
   general induction n; simpl; eauto.
   split; eauto. intro.
-  eapply (not_in_empty (fresh_stable G a)).
+  eapply (not_in_empty (fresh_stable (G ∪ of_list n) a)).
   eapply fresh_stable_list_spec.
   cset_tac. eapply InA_in; eauto. 
   cset_tac; eauto.
