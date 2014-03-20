@@ -262,6 +262,17 @@ Ltac stuck :=
   let σ := fresh "σ" in let A := fresh "A" in let v := fresh "v" in intros [v A]; inv A; isabsurd.
 
 
+Lemma modus_ponens P Q
+: P -> (P -> Q) -> Q.
+tauto.
+Qed.
+
+Tactic Notation "exploiT" tactic(tac) :=
+  eapply modus_ponens;[ tac | intros].
+
+Ltac exploit H :=
+  eapply modus_ponens;[ eapply H | intros].
+
 
 (* 
 *** Local Variables: ***

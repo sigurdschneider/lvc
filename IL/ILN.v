@@ -215,19 +215,6 @@ Inductive labIndicesSim : I.state -> IL.I.state -> Prop :=
     (LL:forall l b, L (counted l) = Some b -> fst (fst (I.block_F b)) = l)
     (EX:forall f i k, pos symb f k = Some i -> L (counted f) <> None)
   : labIndicesSim (L, E, s) (L', E, s').
-
-
-Lemma modus_ponens P Q
-: P -> (P -> Q) -> Q.
-tauto.
-Qed.
-
-Tactic Notation "exploiT" tactic(tac) :=
-  eapply modus_ponens;[ tac | intros].
-
-Ltac exploit H :=
-  eapply modus_ponens;[ eapply H | intros].
-
       
 Lemma pos_add k' symb (f:lab) k i
 : pos symb f k = Some i -> pos symb f (k' + k) = Some (k' + i).
