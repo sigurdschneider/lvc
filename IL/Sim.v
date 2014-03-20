@@ -917,6 +917,8 @@ Proof.
     eapply H0; eauto using simL_refl.
 Qed.
 
+
+
 Lemma simeq2_refl s
   : simeq2 s s.
 Proof.
@@ -936,7 +938,7 @@ Proof.
       no_step. repeat get_functional; subst. simpl in *. congruence.
       get_functional; subst. simpl in *. congruence.
     - no_step; eauto.
-      exfalso; clear_all; admit.
+      edestruct AIR4_nth_2 as [? [? [? ?]]]; dcr; eauto.
   + no_step.
   + one_step. eapply IHs2. eapply simL_extension; eauto.
     hnf; intros. eapply IHs1; eauto.
