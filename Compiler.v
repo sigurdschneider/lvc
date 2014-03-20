@@ -1,6 +1,6 @@
 Require Import List CSet.
 Require Import Util AllInRel IL ILRaise EnvTy ParamsMatch RegAlloc RenameApart Sim Status.
-Require Coherence ILIToILF Liveness ParallelMove ILN LivenessAnalysis CoherenceAlgo RegAllocAlgo.
+Require Coherence ILIToILF Liveness ParallelMove ILN LivenessAnalysis CoherenceAlgo RegAllocAlgo CopyPropagation.
 
 Require Import ExtrOcamlBasic.
 Require Import ExtrOcamlZBigInt.
@@ -20,7 +20,7 @@ Definition livenessAnalysis (s:stmt) :=
 @AbsInt.analysis (set var) Subset (@Subset_computable _ _ ) first _ _ _ LivenessAnalysis.liveness_analysis s.
 
 Definition additionalArguments s lv :=
-  fst (CoherenceAlgo.computeParameters nil nil s lv).
+  fst (CoherenceAlgo.computeParameters nil nil nil s lv).
 
 Definition toILF (ilin:ILN.nstmt) (lv:ann (set var)) : status IL.stmt :=
   sdo ili <- ILN.labIndices ilin nil; 
@@ -30,6 +30,8 @@ Definition toILF (ilin:ILN.nstmt) (lv:ann (set var)) : status IL.stmt :=
          Success (ILIToILF.compile nil ili additional_arguments)
        else Error ("Additional Arguments insufficient")
     else Error ("Liveness unsound").
+
+Definition optimize (s:stmt) : stmt := CopyPropagation.copyPropagate id s.
 
 
 Definition fromILF (s:stmt) : status stmt :=
@@ -102,6 +104,16 @@ Proof.
   congruence.
 Qed.
 
+Lemma optimize_correct E s
+ : sim (nil:list F.block, E, s) (nil:list F.block, E, optimize s).
+Proof.
+  unfold optimize.
+  eapply (@sim_trans F.state _ F.state _). 
+  eapply CopyPropagation.subst_id.
+  eapply sim_sym.
+  eapply CopyPropagation.sim_CP. 
+Qed.
+
 End Compiler.
 
 Print Assumptions toILF_correct. 
@@ -109,7 +121,8 @@ Print Assumptions fromILF_correct.
  
 Extraction Inline bind Option.bind.
 
-Extraction "extraction/lvc.ml" toILF fromILF ILN.labIndices RegAllocAlgo.linear_scan.
+Extraction "extraction/lvc.ml" toILF fromILF RegAllocAlgo.linear_scan CopyPropagation.copyPropagate.
+
 
 
 (* 

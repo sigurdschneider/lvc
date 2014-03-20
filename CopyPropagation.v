@@ -10,25 +10,25 @@ Unset Printing Records.
 
 Fixpoint subst (ϱ:env var) (s:stmt) : stmt :=
   match s with
-    | stmtExp x e s => let x' := fresh (lookup_set ϱ (freeVars s)) in
+    | stmtExp x e s => let x' := fresh_stable (lookup_set ϱ (freeVars s \ {{x}})) x in
                        stmtExp x' (rename_exp ϱ e) (subst (ϱ[x <- x']) s)
     | stmtIf x s t => stmtIf (ϱ x) (subst ϱ s) (subst ϱ t)
     | stmtGoto l Y => stmtGoto l (lookup_list ϱ Y)
     | stmtReturn x => stmtReturn (ϱ x)
-    | stmtLet Z s t => let Z' := fresh_list (lookup_set ϱ (freeVars s)) (length Z) in
+    | stmtLet Z s t => let Z' := fresh_stable_list (lookup_set ϱ (freeVars s \ of_list Z)) Z in
                        stmtLet Z' (subst (ϱ[Z <-- Z']) s) (subst ϱ t)
-  end.  
+  end.
 
 Fixpoint copyPropagate (ϱ:var -> var) (s:stmt) : stmt :=
   match s with
    | stmtExp x (Var y) s => copyPropagate (ϱ[x <- ϱ y]) s
-   | stmtExp x e s => let x' := fresh (lookup_set ϱ (freeVars s)) in
-                        stmtExp x' e (copyPropagate (ϱ[x <- x']) s)
+   | stmtExp x e s => let x' := fresh_stable (lookup_set ϱ (freeVars s \ {{x}})) x in
+                        stmtExp x' (rename_exp ϱ e) (copyPropagate (ϱ[x <- x']) s)
    | stmtIf x s1 s2 => stmtIf (ϱ x) (copyPropagate ϱ s1) (copyPropagate ϱ s2)
    | stmtGoto l Y => stmtGoto l (lookup_list ϱ Y)
    | stmtReturn x => stmtReturn (ϱ x)
    | stmtLet Z s1 s2 => 
-     let Z' := fresh_list (lookup_set ϱ (freeVars s1)) (length Z) in
+     let Z' := fresh_stable_list (lookup_set ϱ (freeVars s1 \ of_list Z)) Z in
      stmtLet Z' (copyPropagate (ϱ[Z <-- Z']) s1) (copyPropagate ϱ s2)
    end.
 
@@ -88,28 +88,38 @@ Qed.
 
 
 Lemma agree_on_comp_fresh (ϱ:var -> var) (E: var -> var) x x' y (D: set var)
-  : x' ∉ lookup_set ϱ D 
+  : x' ∉ lookup_set ϱ (D \ {{x}}) 
     -> agree_on D (ϱ [x <- y] ∘ E)
                 (ϱ [x <- x'] ∘ E [x' <- E y]).
 Proof.
   intros. hnf; intros. unfold comp.
   lud. exfalso; eauto.
-  exfalso. eapply H. eapply lookup_set_spec. intuition. eexists x0; intuition.
+  exfalso. eapply H. eapply lookup_set_spec. intuition. 
+  eexists x0; cset_tac; intuition.
+Qed.
+
+Lemma agree_on_comp_fresh_shift (ϱ:var -> var) (E E': var -> var) x y (v:val) (D: set var)
+ : y ∉ lookup_set ϱ (D\{{x}})
+   -> agree_on (D\{{x}}) (ϱ ∘ E) E'
+   -> agree_on D (ϱ [x <- y] ∘ E [y <- v]) (E' [x <- v]).
+Proof.
+  intros. hnf; intros. simpl. unfold comp.
+  lud. 
+  - exfalso. eapply H. eapply lookup_set_spec; intuition. 
+    eexists x0; intuition. cset_tac; intuition.
+  - exfalso. hnf in H4; congruence.
+  - eapply H0; eauto. cset_tac; intuition.
 Qed.
 
 Lemma agree_on_comp_fresh_both (ϱ ϱ':var -> var) (E E': var -> var) x y y' (v:val) (D: set var)
- : y ∉ lookup_set ϱ D
-   -> y' ∉ lookup_set ϱ' D
+ : y ∉ lookup_set ϱ (D\{{x}})
+   -> y' ∉ lookup_set ϱ' (D\{{x}})
    -> agree_on (D\{{x}}) (ϱ ∘ E) (ϱ' ∘ E')
    -> agree_on D (ϱ [x <- y] ∘ E [y <- v]) (ϱ' [x <- y'] ∘ E' [y' <- v]).
 Proof.
-  intros. hnf; intros. simpl. unfold comp.
-  lud. hnf in H4; congruence.
-  exfalso. eapply H. eapply lookup_set_spec; intuition. eexists x0; intuition.
-  exfalso. hnf in H4; congruence.
-  exfalso. hnf in H4; congruence.
-  exfalso. eapply H0. eapply lookup_set_spec; intuition. eexists x0; intuition.
-  eapply H1; eauto. cset_tac; intuition.
+  intros. 
+  eapply agree_on_transitive. eapply agree_on_comp_fresh_shift; eauto.
+  symmetry. eapply agree_on_comp_fresh_shift; eauto using agree_on_refl.
 Qed.
 
 Lemma agree_on_comp_fresh_both_list (ϱ ϱ':var -> var) (E E': var -> var) Z Y Y' (VL: list val) (D: set var)
@@ -120,8 +130,8 @@ Lemma agree_on_comp_fresh_both_list (ϱ ϱ':var -> var) (E E': var -> var) Z Y Y
    -> unique Y'
    -> (of_list Y) ∩ lookup_set ϱ D [=] ∅
    -> (of_list Y') ∩ lookup_set ϱ' D [=] ∅
-   -> agree_on (D\of_list Z) (ϱ ∘ E) (ϱ' ∘ E')
-   -> agree_on D (ϱ [Z <-- Y] ∘ E [Y <-- VL]) (ϱ' [Z <-- Y'] ∘ E' [Y' <-- VL]).
+   -> agree_on D (ϱ ∘ E) (ϱ' ∘ E')
+   -> agree_on (D ∪ of_list Z) (ϱ [Z <-- Y] ∘ E [Y <-- VL]) (ϱ' [Z <-- Y'] ∘ E' [Y' <-- VL]).
 Proof.
   intros.
   eapply length_length_eq in H.
@@ -152,23 +162,79 @@ Proof.
   eapply update_with_list_lookup_not_in; eauto. 
   refine (not_in_empty y0 _). rewrite <- H5. cset_tac; intuition.
   eapply (IHlength_eq _ _ _ _ _ _ D); eauto. intuition. intuition.
-  cset_tac; intuition. eapply H4; split; eauto. cset_tac; intuition.
-  cset_tac; intuition. eapply H5; split; eauto. cset_tac; intuition.
-  cset_tac; intuition.
-  assert ((ϱ [Z <-- Y]) x = ϱ x). 
-  erewrite (update_with_list_lookup_not_in ϱ); eauto.
-  assert ((ϱ' [Z <-- Y']) x = ϱ' x). 
-  erewrite (update_with_list_lookup_not_in ϱ'); eauto.
-  rewrite H8, H9.
-  assert ((E [Y <-- VL]) (ϱ x) = E (ϱ x)). 
-  erewrite (update_with_list_lookup_not_in E); eauto.
-  cset_tac; intuition. eapply H4; split; eauto. 
-  eapply lookup_set_spec. intuition. eexists; eauto.
-  assert ((E' [Y' <-- VL]) (ϱ' x) = E' (ϱ' x)). 
-  erewrite (update_with_list_lookup_not_in E'); eauto.
-  cset_tac; intuition. eapply H5; split; eauto. 
-  eapply lookup_set_spec. intuition. eexists; eauto.
-  rewrite H10, H11. eapply H6. cset_tac; intuition.
+  - rewrite <- H4. cset_tac; intuition.
+    hnf in H16; subst a. exfalso.
+    eapply (H4 y). split; cset_tac; intuition.
+    hnf in H2; subst a. exfalso.
+    eapply (H4 y). split; cset_tac; intuition.
+  - rewrite <- H5. cset_tac; intuition.
+    hnf in H16; subst a. exfalso.
+    eapply (H5 y0). split; cset_tac; intuition.
+    hnf in H2; subst a. exfalso.
+    eapply (H5 y0). split; cset_tac; intuition.
+  - cset_tac; intuition.
+  - cset_tac; intuition.
+  - assert ((ϱ [Z <-- Y]) x = ϱ x). 
+    erewrite (update_with_list_lookup_not_in ϱ); eauto.
+    assert ((ϱ' [Z <-- Y']) x = ϱ' x). 
+    erewrite (update_with_list_lookup_not_in ϱ'); eauto.
+    rewrite H8, H9.
+    assert ((E [Y <-- VL]) (ϱ x) = E (ϱ x)). 
+    erewrite (update_with_list_lookup_not_in E); eauto.
+    cset_tac; intuition. eapply H4; split; eauto. 
+    eapply lookup_set_spec. intuition. eexists; eauto.
+    assert ((E' [Y' <-- VL]) (ϱ' x) = E' (ϱ' x)). 
+    erewrite (update_with_list_lookup_not_in E'); eauto.
+    cset_tac; intuition. eapply H5; split; eauto. 
+    eapply lookup_set_spec. intuition. eexists; eauto.
+    rewrite H10, H11. eapply H6. cset_tac; intuition.
+Qed.
+
+Lemma agree_on_comp_fresh_shift_list (ϱ:var -> var) (E E': var -> var) Z Y (VL: list val) (D: set var)
+ : length Z = length Y
+   -> length Y = length VL
+   -> unique Y
+   -> (of_list Y) ∩ lookup_set ϱ D [=] ∅
+   -> agree_on D (ϱ ∘ E) E'
+   -> agree_on (D ∪ of_list Z) (ϱ [Z <-- Y] ∘ E [Y <-- VL]) (E' [Z <-- VL]).
+Proof.
+  intros.
+  eapply length_length_eq in H.
+  eapply length_length_eq in H0.
+  hnf; intros. simpl. unfold comp. destruct_prop (x ∈ of_list Z).
+  clear H3.
+  general induction H; inv H0; simpl in * |- *.
+  - exfalso. eapply (not_in_empty x); eauto.
+  - lud.
+    + exfalso. destruct_prop (x0 ∈ of_list XL).
+      * assert (y ∈ of_list YL).
+        { rewrite e.
+          eapply update_with_list_lookup_in; eauto using length_eq_length.
+        }
+        eapply H1. eapply InA_in in H7. eauto.
+      * assert (ϱ x0 = y).
+        eapply update_with_list_lookup_not_in; eauto. 
+        refine (not_in_empty y _). rewrite <- H2. cset_tac; intuition.
+    + exfalso. eapply H3; reflexivity.
+    + eapply (IHlength_eq _ _ _ _ D); eauto. intuition.
+      * rewrite <- H2. cset_tac; intuition.
+        hnf in H10; subst a. exfalso.
+        eapply (H2 y). split; cset_tac; intuition.
+        hnf in H1; subst a. exfalso.
+        eapply (H2 y). split; cset_tac; intuition.
+      * cset_tac; intuition.
+      * cset_tac; intuition.
+  - assert ((ϱ [Z <-- Y]) x = ϱ x). 
+    erewrite (update_with_list_lookup_not_in ϱ); eauto.
+    rewrite H5.
+    assert ((E [Y <-- VL]) (ϱ x) = E (ϱ x)). 
+    erewrite (update_with_list_lookup_not_in E); eauto.
+    cset_tac; intuition. eapply H2; split; eauto. 
+    eapply lookup_set_spec. intuition. eexists; eauto.
+    assert ((E' [Z <-- VL]) x = E' x). 
+    erewrite (update_with_list_lookup_not_in E'); eauto.
+    cset_tac; intuition. rewrite H6. rewrite H7.
+    eapply H3. eauto.
 Qed.
 
 
@@ -179,18 +245,17 @@ Lemma subst_fresh L L' (E E':var -> val) s (ϱ ϱ':var->var)
           (L', E' , subst ϱ' s).
 Proof.
   general induction s; simpl in * |- *.
-  case_eq (exp_eval E (rename_exp ϱ e)); intros.
-  eapply simS; try eapply plusO.
-  constructor; eauto.
-  econstructor. erewrite <- exp_subst_agree; eauto. 
-  eapply agree_on_incl; eauto. cset_tac; intuition.
-  eapply IHs; eauto. 
-  eapply agree_on_comp_fresh_both; eauto using fresh_spec.
-  eapply agree_on_incl; eauto. cset_tac; intuition.
-  eapply simE; try eapply star_refl; simpl; eauto. stuck. stuck.
-  erewrite exp_subst_agree in def; eauto. rewrite def in H1. congruence.
-  eapply agree_on_incl. eapply agree_on_sym. eauto. cset_tac; intuition.
-  + case_eq (val2bool (E (ϱ x))); intros.
+  - case_eq (exp_eval E (rename_exp ϱ e)); intros.
+    one_step.
+    erewrite <- exp_subst_agree; eauto. 
+    eapply agree_on_incl; eauto. cset_tac; intuition.
+    eapply IHs; eauto.
+    eapply agree_on_comp_fresh_both; eauto using fresh_stable_spec.
+    eapply agree_on_incl; eauto. cset_tac; intuition.
+    eapply simE; try eapply star_refl; simpl; eauto. stuck. stuck.
+    erewrite exp_subst_agree in def; eauto. rewrite def in H1. congruence.
+    eapply agree_on_incl. eapply agree_on_sym. eauto. cset_tac; intuition.
+  - case_eq (val2bool (E (ϱ x))); intros.
     eapply simS; try eapply plusO.
     econstructor; eauto.
     econstructor; eauto. specialize (H0 x). unfold comp in H0.
@@ -201,7 +266,7 @@ Proof.
     econstructor 3; eauto. specialize (H0 x). unfold comp in H0.
     rewrite <- H0; eauto. cset_tac; intuition.
     eapply IHs2; eauto. eapply agree_on_incl; eauto. cset_tac; intuition.
-  + destruct (get_dec L (counted l)). destruct s as [[]].
+  - destruct (get_dec L (counted l)). destruct s as [[]].
     destruct_prop (length block_Z = length Y). 
     unfold simL in H.
     edestruct AIR4_length; try eassumption; dcr.
@@ -227,29 +292,118 @@ Proof.
     eapply simE; try eapply star_refl; eauto; stuck; eauto.
     edestruct AIR4_length; try eassumption; dcr.
     edestruct get_length_eq; try eassumption. eauto.
-  + eapply simE; try eapply star_refl; simpl; eauto; try stuck. 
+  - eapply simE; try eapply star_refl; simpl; eauto; try stuck. 
     f_equal. eapply H0; simpl; cset_tac; eauto.
-  + simpl in * |- *.
+  - simpl in * |- *.
     eapply simS; try eapply plusO.
     econstructor. econstructor.
     eapply IHs2; eauto. eapply simL_extension; eauto. 
-    hnf; intros. eapply IHs1; eauto. 
-    eapply agree_on_comp_fresh_both_list;
-      repeat rewrite fresh_list_length; eauto;
-      eauto using fresh_list_unique, fresh_list_spec.
-    repeat rewrite fresh_list_length in *. congruence. 
-    repeat rewrite fresh_list_length in *. 
-    
+    hnf; intros. eapply IHs1; eauto.
+    assert (freeVars s1 ⊆ (freeVars s1 \ of_list Z) ∪ of_list Z). {
+      cset_tac; intuition. destruct_prop (a ∈ of_list Z); intuition.
+    }
+    eapply agree_on_incl; eauto.                                                        eapply agree_on_comp_fresh_both_list;
+      repeat rewrite fresh_stable_list_length; eauto;
+      eauto using fresh_stable_list_unique, fresh_stable_list_spec.
+    repeat rewrite fresh_stable_list_length in *. congruence. 
+
+    repeat rewrite fresh_stable_list_length in *. 
     eapply agree_on_incl; eauto. cset_tac; intuition.
-    rewrite fresh_list_length; eauto.
-    rewrite fresh_list_length; eauto. 
+    repeat rewrite fresh_stable_list_length; eauto.
     eapply agree_on_incl; eauto. cset_tac; intuition.
 Qed.
+
+Lemma rename_exp_id e
+  : rename_exp id e = e.
+Proof.
+  induction e; simpl; eauto.
+  -  rewrite IHe1, IHe2; eauto.
+Qed.
+
+Lemma subst_shift L L' (E E':var -> val) s (ϱ:var->var)
+ : simL L L'
+   -> agree_on (freeVars s) E (ϱ ∘ E')
+   -> sim (L, E, s)
+          (L', E' , subst ϱ s).
+Proof.
+  general induction s; simpl in * |- *.
+  - case_eq (exp_eval E e); intros.
+    one_step.
+    erewrite exp_subst_agree; eauto. 
+    rewrite rename_exp_id; eauto.
+    eapply agree_on_incl; eauto. symmetry. eauto. cset_tac; intuition.
+    eapply IHs; eauto.
+    (* Why is Coq not doing the right instantiations here? *)
+    pose proof (@agree_on_symmetric var _ val _ (freeVars s)).
+    eapply H2. eapply agree_on_comp_fresh_shift.
+    eapply fresh_stable_spec. symmetry. eapply agree_on_incl; eauto.
+    cset_tac; intuition.
+    eapply simE; try eapply star_refl; simpl; eauto. stuck. stuck.
+    erewrite <- exp_subst_agree with (ϱ:=id) in def; eauto. 
+    rewrite rename_exp_id in def. 
+    rewrite def in H1. congruence.
+    eapply agree_on_incl. eauto. cset_tac; intuition.
+  - case_eq (val2bool (E x)); intros.
+    one_step.
+    specialize (H0 x). unfold comp in H0.
+    rewrite <- H0; eauto. cset_tac; intuition.
+    eapply IHs1; eauto. eapply agree_on_incl; eauto. cset_tac; intuition.
+    one_step.
+    specialize (H0 x). unfold comp in H0.
+    rewrite <- H0; eauto. cset_tac; intuition.
+    eapply IHs2; eauto. eapply agree_on_incl; eauto. cset_tac; intuition.
+  - destruct (get_dec L (counted l)). destruct s as [[]].
+    destruct_prop (length block_Z = length Y). 
+    unfold simL in H.
+    edestruct AIR4_length; try eassumption; dcr.
+    edestruct get_length_eq; try eassumption.
+    edestruct AIR4_nth as [?[?]]; try eassumption; dcr. 
+    simpl in *. repeat get_functional; subst.
+    inv H9. eapply simS; try eapply plusO.
+    econstructor; eauto. simpl. congruence. 
+    econstructor; eauto. simpl. rewrite lookup_list_length. congruence.
+    simpl. unfold updE. 
+    assert (lookup_list E Y = lookup_list E' (lookup_list ϱ Y)).
+    repeat rewrite <- comp_lookup_list.
+    eauto using lookup_list_agree.
+    rewrite H2. eapply H14. repeat rewrite lookup_list_length. congruence. congruence.
+    eapply simE; try eapply star_refl; eauto; stuck.
+    get_functional; subst. eapply n. simpl in *. congruence.
+    edestruct AIR4_length; try eassumption; dcr.
+    edestruct get_length_eq; try eassumption.
+    edestruct AIR4_nth as [?[?]]; try eassumption; dcr. 
+    simpl in *. repeat get_functional; subst.
+    inv H9; simpl in *. eapply n. rewrite lookup_list_length in len. congruence.
+    eapply simE; try eapply star_refl; eauto; stuck; eauto.
+    edestruct AIR4_length; try eassumption; dcr.
+    edestruct get_length_eq; try eassumption. eauto.
+  - eapply simE; try eapply star_refl; simpl; eauto; try stuck. 
+    f_equal. eapply H0; simpl; cset_tac; eauto.
+  - simpl in * |- *.
+    eapply simS; try eapply plusO.
+    econstructor. econstructor.
+    eapply IHs2; eauto. eapply simL_extension; eauto. 
+    hnf; intros. eapply IHs1; eauto.
+    assert (freeVars s1 ⊆ (freeVars s1 \ of_list Z) ∪ of_list Z). {
+      cset_tac; intuition. destruct_prop (a ∈ of_list Z); intuition.
+    }
+    eapply agree_on_incl; eauto.         
+    (* Why is Coq not doing the right instantiations here? *)
+    pose proof (@agree_on_symmetric var _ val _).
+    eapply H5. 
+    eapply agree_on_comp_fresh_shift_list;
+      repeat rewrite fresh_stable_list_length; eauto;
+      eauto using fresh_stable_list_unique, fresh_stable_list_spec.
+    symmetry. eapply agree_on_incl; eauto. cset_tac; intuition.
+    repeat rewrite fresh_stable_list_length in *. congruence.
+    eapply agree_on_incl; eauto. cset_tac; intuition.
+Qed.
+
 
 Lemma sim_CP s ϱ 
 : simeq (copyPropagate ϱ s) (subst ϱ s).
 Proof. 
-  general induction s; simpl in * |- *. 
+  general induction s; simpl in * |- *.
   + destruct e; hnf; intros.
     - one_step. reflexivity. reflexivity. 
       unfold simeq in IHs. eapply IHs; eauto.
@@ -259,9 +413,10 @@ Proof.
       simpl in * |- *.
       refine (sim_trans (IHs _ _ _) _ ); eauto.
       eapply subst_fresh. eapply simL_refl. eapply agree_on_comp_fresh.
-      eapply fresh_spec.
-    - 
-      exfalso; clear_all; admit.
+      eapply fresh_stable_spec.
+    - case_eq (exp_eval E (rename_exp ϱ (BinOp b e1 e2))); intros.
+      one_step. eapply IHs; eauto.
+      no_step; simpl in *; congruence.
   + transitivity (stmtIf (ϱ x) (copyPropagate ϱ s1) (subst ϱ s2)). 
     eapply (simeq_contextual (ctxIfT (ϱ x) _ ctxHole)); eauto.
     eapply (simeq_contextual (ctxIfS (ϱ x) ctxHole _)); eauto.
@@ -280,20 +435,56 @@ Proof.
   eexists a; intuition. destruct H0; cset_tac.
 Qed.
 
-Instance fresh_morph
-: Proper (Equal ==> eq) fresh.
+
+Lemma fresh_stable_stable G x
+  : x ∉ G -> fresh_stable G x = x.
 Proof.
-  unfold Proper, respectful; intros.
-  admit.
+  unfold fresh_stable. destruct if; cset_tac; intuition.
+Qed.
+
+Lemma fresh_stable_list_stable G Z
+  : of_list Z ∩ G [=] ∅ -> unique Z -> fresh_stable_list G Z = Z.
+Proof.
+  general induction Z; simpl; eauto.
+  f_equal.
+  + eapply fresh_stable_stable. 
+    simpl in *; cset_tac; intuition.
+    - eapply H; cset_tac; intuition.
+    - eapply H1. eapply InA_in in H3. eauto.
+  + simpl in *; dcr. 
+    rewrite fresh_stable_stable.
+    eapply IHZ; eauto. 
+    cset_tac; intuition. eapply (H a0); cset_tac; intuition.
+    eapply H1; hnf in H0; subst. eapply InA_in in H3. eauto.
+    cset_tac; intuition. eapply (H a); cset_tac; intuition.
+    eapply H1; eapply InA_in in H3; eauto.
+Qed.
+
+Instance rename_exp_morphism
+  : Proper (feq ==> eq ==> eq) rename_exp.
+Proof.
+  unfold Proper, respectful; intros; subst.
+  general induction y0; simpl; eauto.
+  - rewrite H; eauto.
+  - erewrite IHy0_1, IHy0_2; eauto.
+Qed.
+
+
+Instance subst_morphism
+  : Proper (feq ==> eq ==> simeq) subst.
+Proof.
+  unfold Proper, respectful; intros; subst.
+  hnf; intros. eapply subst_fresh. eapply simL_refl.
+  hnf; intros. cbv; rewrite H; eauto.
 Qed.
 
 Lemma subst_id s
   : simeq s (subst id s).
 Proof.
-  general induction s; simpl;
-  repeat rewrite <- lookup_set_id.
-  
-Admitted.
+  hnf; intros. eapply subst_shift.
+  eapply simL_refl.
+  reflexivity.
+Qed.
 
 Lemma CP_tv s s' C C' D D'
   : ssa C s C' -> ssa D s' D'
