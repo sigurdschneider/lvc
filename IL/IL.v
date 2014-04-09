@@ -10,9 +10,9 @@ Open Scope map_scope.
 (** ** Syntax *)
 
 (** [args] is the type of the list of variables passed at a goto ... *)
-Definition args := list var.
+Notation "'args'" := (list var) (at level 0).
 (** ... while [params] is the type of the list of formal parameters *)
-Definition params := list var.
+Notation "'params'" := (list var) (at level 0).
 
 Inductive stmt : Type :=
 | stmtExp    (x : var) (e: exp) (s : stmt) : stmt

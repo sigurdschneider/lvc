@@ -79,7 +79,7 @@ Module F.
     - case_eq (L (counted l)); intros. 
       + destruct b as [? ? [[? ?] ?]].
         destruct_prop (l = l0); subst; try now (right; stuck).
-        destruct_prop (length p = length Y); try now (right; stuck).
+        destruct_prop (length l1 = length Y); try now (right; stuck).
         left. eexists. econstructor; eauto.
       + right; stuck.
     - right; stuck.
@@ -145,7 +145,7 @@ Module I.
     - case_eq (L (counted l)); intros. 
       + destruct b as [? [[? ?] ?]].
         destruct_prop (l = l0); subst; try now (right; stuck).
-        destruct_prop (length p = length Y); try now (right; stuck).
+        destruct_prop (length l1 = length Y); try now (right; stuck).
         left. eexists. econstructor; eauto.
       + right; stuck.
     - right; stuck.

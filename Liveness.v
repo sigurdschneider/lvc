@@ -3,7 +3,7 @@ Require Export ParamsMatch DecSolve.
 
 Set Implicit Arguments.
 
-Definition live := set var.
+Notation "'live'" := (set var) (at level 0).
 
 Inductive argsLive (Caller Callee:live) : args -> params -> Prop :=
 | AL_nil : argsLive Caller Callee nil nil
@@ -18,10 +18,10 @@ Proof.
 Qed.
 
 
-Instance argsLive_dec Caller Callee args params
-      : Computable (argsLive Caller Callee args params).
+Instance argsLive_dec Caller Callee Y Z
+      : Computable (argsLive Caller Callee Y Z).
 Proof.
-  constructor. destruct_prop(length args = length params).
+  constructor. destruct_prop(length Y = length Z).
   eapply length_length_eq in e. general induction e.
   left; econstructor. 
   destruct_prop(x ∈ Caller); destruct_prop(y ∈ Callee);

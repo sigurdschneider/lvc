@@ -62,14 +62,14 @@ Proof.
     eauto; try dec_solve.
 Defined.
 
-Lemma trs_annotation DL ZL s lv args
-      : trs DL ZL s lv args -> annotation s lv /\ annotation s args.
+Lemma trs_annotation DL ZL s lv Y
+      : trs DL ZL s lv Y -> annotation s lv /\ annotation s Y.
 Proof.
   intros. general induction H; split; dcr; econstructor; eauto.
 Qed.
 
-Instance trs_dec_inst DL ZL s lv args
-: Computable (trs DL ZL s lv args).
+Instance trs_dec_inst DL ZL s lv Y
+: Computable (trs DL ZL s lv Y).
 Proof.
   try (now constructor; right; intro A; eapply trs_annotation in A; dcr; eauto).
   constructor. eauto using trs_dec.
