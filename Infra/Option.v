@@ -2,6 +2,9 @@ Require Import List.
 
 (** Cast option in the framework of Monad. The code in this file is taken from CompCert. *)
 
+Notation "⎣ x ⎦" := (Some x) (at level 0, x at level 200).
+Notation "⎣⎦" := (None) (at level 0, x at level 200).
+
 Set Implicit Arguments.
 
 Definition bind (A B : Type) (f : option A) (g : A -> option B) : option B :=
