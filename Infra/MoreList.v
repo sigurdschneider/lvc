@@ -47,6 +47,13 @@ Section ParametricZip.
     - eexists a; eexists y. inv H; eauto using get.
     - edestruct IHL as [x' [y' ?]]; dcr; try inv H; eauto 20 using get.
   Qed.
+  
+  Lemma zip_tl L L'
+    : tl (zip L L') = zip (tl L) (tl L').
+  Proof.
+    general induction L; destruct L'; simpl; eauto. 
+    destruct L; simpl; eauto.
+  Qed.
 
 End ParametricZip.
 
