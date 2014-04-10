@@ -11,9 +11,10 @@
 *#
 .depend
 html
-extraction/lvc
+extraction/lvc.native
 extraction/parser.ml
 extraction/parser.mli
 extraction/lexer.ml
 extraction/lvc.ml
 extraction/lvc.mli
+extraction/_build
