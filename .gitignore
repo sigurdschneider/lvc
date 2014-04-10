@@ -11,7 +11,7 @@
 *#
 .depend
 html
-extraction/lvc.native
+extraction/lvcc.native
 extraction/parser.ml
 extraction/parser.mli
 extraction/lexer.ml

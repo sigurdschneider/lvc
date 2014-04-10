@@ -8,7 +8,7 @@ open Pmove
 
 let main () =
   let infile = ref "" in
-  let outfile = ref "a.out" in
+  let outfile = ref "a.s" in
   let optimize = ref true in
   let set_optimize b = optimize := b in
   let set_infile s = infile:=s in
@@ -33,8 +33,11 @@ let main () =
 	    (print_ann (print_list (fun s -> "[" ^ (print_var s !ids) ^ "]") " ") 0 aa) in
           let v = Lvc.toILF result lv in
           let _ = match v with 
-	    | Lvc.Success ilf -> Printf.printf "Compilate:\n%s\n\n" (print_expr 0 ilf !ids);
-	      let ren = Lvc.rename_apart ilf in
+	    | Lvc.Success ilf -> Printf.printf "toILF compilate:\n%s\n\n" (print_expr 0 ilf !ids);
+	      let copyProp = Lvc.copyPropagate (fun x -> x) ilf in
+	      let _ = Printf.printf "Copy Propagated\n%s\n\n" (print_expr 0 copyProp !ids) in	  
+
+	      let ren = Lvc.rename_apart copyProp in
               let _ = Printf.printf "Renamed apart\n%s\n\n" (print_expr 0 ren (BigMap.empty)) in
 	      let lv2 = Lvc.livenessAnalysis generic_first ren in
               let _ = Printf.printf "Liveness\n%s\n\n" (print_ann (print_set BigMap.empty) 0 lv2) in
@@ -44,8 +47,7 @@ let main () =
 		  let _ = Printf.printf "Allocated\n%s\n\n" (print_expr 0 alloc (BigMap.empty)) in
 (*		  let lv3 = Lvc.live_rename renaming lv2 in
 		  let _ = Printf.printf "Liveness\n%s\n\n" (print_ann (print_set (BigMap.empty)) 0 lv3) in*)
-		  
-		  (let v = Lvc.fromILF Lvc.linear_scan parallel_move generic_first ilf in
+		  (let v = Lvc.fromILF Lvc.linear_scan parallel_move generic_first copyProp in
 		   match v with
 		     | Lvc.Success s -> Printf.printf "Compilate:\n%s\n\n" 
 		       (print_expr 0 s (BigMap.empty));
