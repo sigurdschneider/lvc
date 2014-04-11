@@ -28,15 +28,15 @@ Inductive trs
     :  get DL (counted f) (Some G')
     -> get ZL (counted f) (Za)
     -> G' ⊆ lv
-    -> of_list Za ⊆ lv
+(*    -> of_list Za ⊆ lv *)
     -> trs DL ZL (stmtGoto f Y) (annGoto lv) (annGoto nil)
   | trsLet DL ZL s t Z Za ans ant lv ans_lv ant_lv
-    : of_list Za ⊆ getAnn ans_lv 
+    : (* of_list Za ⊆ getAnn ans_lv *)
       (* for now, require all additionals Za to be live in the function;
          this makes the proof that liveness information is valid even after
          the insertion of the arguments easier (otherwise, liveness needs to
          be recomputed) *) 
-    -> trs (restrict (Some (getAnn ans_lv \ of_list (Z++Za))::DL) (getAnn ans_lv \ of_list (Z++Za))) (Za::ZL) s ans_lv ans
+      trs (restrict (Some (getAnn ans_lv \ of_list (Z++Za))::DL) (getAnn ans_lv \ of_list (Z++Za))) (Za::ZL) s ans_lv ans
     -> trs (Some (getAnn ans_lv \ of_list (Z++Za))::DL) (Za::ZL) t ant_lv ant
     -> trs DL ZL (stmtLet Z s t) (annLet lv ans_lv ant_lv) (annLet Za ans ant).
 
@@ -140,12 +140,12 @@ Proof.
     destruct_prop (length Z' = length Y).
     one_step. simpl in *; eauto.
     repeat rewrite app_length.
-    eapply get_drop_eq in H7; eauto. inv H7; subst. simpl.
+    eapply get_drop_eq in H6; eauto. inv H6; subst. simpl.
     rewrite app_length. erewrite get_nth_default; eauto.
-    rewrite <- H6, <- H7 in EA1. 
+    rewrite <- H5, <- H6 in EA1. 
     eapply trsR_sim; econstructor; eauto using approx_restrict.
     unfold updE. simpl.
-    eapply get_drop_eq in H7; eauto. inv H7. subst.
+    eapply get_drop_eq in H6; eauto. inv H6. subst.
     rewrite lookup_list_app. rewrite update_with_list_app.
     erewrite get_nth_default; eauto.
     rewrite update_with_list_lookup_list. rewrite EQ. reflexivity.
@@ -155,14 +155,14 @@ Proof.
     no_step. get_functional; subst. simpl in *. congruence.
     get_functional; subst. simpl in *. 
     eapply n. repeat rewrite app_length in len.
-    eapply get_drop_eq in H7; eauto. subst Za0.
+    eapply get_drop_eq in H6; eauto. subst Za0.
     erewrite get_nth_default in len; eauto. omega.
   + eapply simS; try eapply plusO.
     econstructor; eauto.
     econstructor; eauto.
     eapply trsR_sim; econstructor; eauto.
     econstructor; eauto. econstructor. 
-    intros. inv H2. eauto. 
+    intros. inv H1. eauto.
 Qed.
 
 Inductive fstNoneOrR' {X Y:Type} (R:X->Y->Prop)
@@ -213,12 +213,12 @@ Proof.
     eapply srd_monotone. eapply IHRD2; eauto.
     eapply restrict_subset; eauto. reflexivity.
   + edestruct PIR2_nth_2; eauto; dcr.
-    inv H5; get_functional; subst. simpl in *.
+    inv H4; get_functional; subst. simpl in *.
     econstructor; eauto. unfold restrict. 
-    pose proof (map_get_1 (restr lv) H4). unfold fst in H.
+    pose proof (map_get_1 (restr lv) H3). unfold fst in H.
     assert (restr lv (Some x0) = Some x0). eapply restr_iff; split; eauto.
     cset_tac; eauto.
-    rewrite <- H7; eauto.
+    rewrite <- H6; eauto.
   + econstructor; eauto. 
     - eapply srd_monotone2. eapply IHRD1; eauto.
       eapply restrict_lessReq. econstructor; eauto.
@@ -253,11 +253,11 @@ Proof.
   + pose proof (zip_get  (fun (s : live * list var) (t : list var) => (fst s, snd s ++ t)) H H9).
     econstructor. eapply H3. simpl. rewrite of_list_app. cset_tac; intuition.
     simpl. erewrite get_nth; eauto. repeat rewrite app_length. congruence.
-    erewrite get_nth; eauto. rewrite of_list_app. cset_tac; intuition.
+    erewrite get_nth; eauto. rewrite of_list_app. cset_tac; intuition. admit.
   + simpl. econstructor; eauto.
     specialize (IHLV1 (Za::ZL)). eapply IHLV1; eauto.
     specialize (IHLV2 (Za::ZL)). eapply IHLV2; eauto.
-    rewrite of_list_app. cset_tac; intuition.
+    rewrite of_list_app. cset_tac; intuition. admit.
     rewrite of_list_app. cset_tac; intuition.
 Qed.
 
@@ -271,17 +271,17 @@ Proof.
   + inv H0. econstructor; eauto.
   + inv H1. econstructor; eauto.
   + constructor.
-  + inv H3.
+  + inv H2.
     econstructor; eauto. 
     rewrite app_length.  
     simpl in *. 
-    pose proof (zip_get (fun s t => (s,t)) H0 H7).
+    pose proof (zip_get (fun s t => (s,t)) H0 H6).
     erewrite get_nth_default; eauto.
-    eapply (map_get_1 (fun p => snd p + length (fst p)) H4).
-  + inv H2.
+    eapply (map_get_1 (fun p => snd p + length (fst p)) H3).
+  + inv H1.
     constructor; simpl in *; rewrite app_length.
-    eapply (IHtrs1 _ H6); eauto. 
-    eapply (IHtrs2 _ H8); eauto. 
+    eapply (IHtrs1 _ H5); eauto. 
+    eapply (IHtrs2 _ H7); eauto. 
 Qed.
 
 
