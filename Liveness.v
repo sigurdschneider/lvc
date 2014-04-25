@@ -7,7 +7,7 @@ Notation "'live'" := (set var) (at level 0).
 
 Inductive argsLive (Caller Callee:live) : args -> params -> Prop :=
 | AL_nil : argsLive Caller Callee nil nil
-| AL_cons y z Y Z : argsLive Caller Callee Y Z -> (z ∈ Callee -> y ∈ Caller) -> 
+| AL_cons y z Y Z : argsLive Caller Callee Y Z -> (z ∈ Callee <-> y ∈ Caller) -> 
   argsLive Caller Callee (y::Y) (z::Z).
 
 Lemma argsLive_length lv bv Y Z
@@ -24,9 +24,8 @@ Proof.
   constructor. destruct_prop(length Y = length Z).
   eapply length_length_eq in e. general induction e.
   left; econstructor. 
-  destruct_prop(x ∈ Caller); destruct_prop(y ∈ Callee);
-  edestruct (IHe Caller Callee); try dec_solve; try eassumption; try inv an; eauto.
-  left. econstructor; eauto. intro. exfalso; firstorder.
+  destruct_prop(y ∈ Callee <-> x ∈ Caller);
+  edestruct (IHe Caller Callee); try dec_solve; try eassumption; try inv an; eauto; try tauto.
   right; intro. eapply argsLive_length in H. congruence.
 Qed.
 
@@ -62,7 +61,7 @@ Proof.
   intros X. revert Y y.
   induction X; intros. 
   inv X.
-  inv H; eauto. 
+  inv H; intuition.
   inv X0; inv H; eauto.
 Qed.
 
@@ -309,16 +308,25 @@ Defined.
 
 
 Lemma live_relation Lv s lv
-  : live_sound Lv s lv -> true_live_sound Lv s lv.
+: (forall n lvZ, get Lv n lvZ -> of_list (snd lvZ) ⊆ fst lvZ)
+  -> live_sound Lv s lv 
+  -> true_live_sound Lv s lv.
 Proof.
-  induction 1; eauto using true_live_sound.
-  econstructor; eauto. 
-  clear H H0.
-  eapply length_length_eq in H1.
-  general induction H1; eauto using argsLive.
-  econstructor. eapply IHlength_eq; eauto.
-  simpl in *; cset_tac. eapply H2; cset_tac. right; eauto.
-  simpl in *; intros; eapply H2; cset_tac; intuition.
+  intros. general induction H0; eauto using true_live_sound.
+  - econstructor; eauto. 
+    exploit H3; eauto.
+    clear H H0 H3. simpl in *.
+    eapply length_length_eq in H1.
+    general induction H1; simpl in * |- *; eauto using argsLive.
+    econstructor. 
+    + eapply IHlength_eq; eauto. cset_tac; intuition.
+      cset_tac; intuition.
+    + cset_tac; intuition.
+  - econstructor; eauto. 
+    eapply IHlive_sound1; eauto; intros.
+    inv H3; eauto using get.
+    eapply IHlive_sound2; eauto; intros.
+    inv H3; eauto using get.
 Qed.
 
 
