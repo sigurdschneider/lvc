@@ -172,6 +172,9 @@ Proof.
     eapply agree_on_incl; eauto using agree_on_sym.
     eapply filter_incl; eauto.
     congruence.
+    rewrite lookup_list_length; congruence.
+    subst. rewrite lookup_list_length.
+    eapply argsLive_filter_length; eauto.
     eapply simE; try eapply star_refl; eauto; stuck.
     eapply simE; try eapply star_refl; eauto; stuck; eauto.
     edestruct AIR5_length; try eassumption; dcr.

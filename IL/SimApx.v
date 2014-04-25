@@ -168,12 +168,22 @@ Admitted.
 Definition ParamRel A := A-> list var -> list var -> Prop.
 Definition ArgRel A := A-> list val -> list val -> Prop.
 
-Inductive simB {A} (R:ArgRel A) (R':ParamRel A) : F.labenv -> F.labenv -> A -> F.block -> F.block -> Prop :=
+(*Inductive simB {A} (R:ArgRel A) (R':ParamRel A) : F.labenv -> F.labenv -> A -> F.block -> F.block -> Prop :=
 | simBI a L L' E E' Z Z' s s'
   : R' a Z Z'
     -> (forall VL VL', R a VL VL' -> length Z = length VL -> length Z' = length VL'
                  -> simapx (L, E[Z <-- VL], s) 
                           (L', E'[Z' <-- VL'], s'))
+    -> simB R R' L L' a (F.blockI E Z s) (F.blockI E' Z' s').*)
+
+Inductive simB {A} (R:ArgRel A) (R':ParamRel A) : F.labenv -> F.labenv -> A -> F.block -> F.block -> Prop :=
+| simBI a L L' E E' Z Z' s s'
+  : R' a Z Z'
+    -> (forall E E' Y Y', R a (lookup_list E Y) (lookup_list E' Y') 
+               -> length Z = length Y
+               -> length Z' = length Y'
+               -> simapx (L, E, stmtGoto (LabI 0) Y) 
+                        (L', E', stmtGoto (LabI 0) Y'))
     -> simB R R' L L' a (F.blockI E Z s) (F.blockI E' Z' s').
 
 Definition simL {A} R R' (AL:list A) L L' := AIR5 (simB R R') L L' AL L L'.
@@ -372,7 +382,13 @@ Proof.
   revert_all; cofix; intros.
   eapply H2. econstructor; eauto.
   constructor; try eassumption. intros.
-  eapply H; try eassumption.
+  eapply simS; try eapply plusO. 
+  econstructor; eauto using get; simpl. eauto. 
+  econstructor; eauto using get; simpl. eauto. 
+  simpl. eapply subst_lemma; eauto. 
+  intros; eapply H; eauto. 
+  rewrite lookup_list_length; eauto.
+  rewrite lookup_list_length; eauto.
 Admitted.
 
 
@@ -385,8 +401,8 @@ Lemma simL_extension A R R' (a:A) AL s s' E E' Z Z' L L'
 Proof.
   intros.
   hnf; intros. econstructor; eauto. econstructor; eauto; intros.
-  + hnf in H0.
-    eapply subst_lemma; eauto. 
+  + eapply subst_lemma; eauto. 
+    intros. inv H5. inv pf. eapply H7; eauto. admit. admit.
 Qed.
 
 
