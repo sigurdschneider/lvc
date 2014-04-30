@@ -552,12 +552,16 @@ Proof.
 Qed.
 
 (*
+If we could prove this lemma, we could jail paco in this file.
+As long as we have no proof, every transformation must be generalized
+by the relation that appears in the definition of psimapxd.
+
 Lemma fexteq_def A R R' (a:A) AL E Z s E' Z' s'
  : fexteq R R' a (a::AL) E Z s E' Z' s'
    -> fexteq' R R' a (a::AL) E Z s E' Z' s'.
 Proof.
   unfold fexteq, fexteq'; intros.
-  assert (exists L L', simL' bot2 R R' (a::AL) L L') by admit.
+  assert (exists L L', simL' bot2 R R' (a::AL) L L').
   destruct H4 as [L1 [L2 ]]. specialize (H _ _ _ _ H0 H4 H2 H3).
   pinversion H. subst.
   
