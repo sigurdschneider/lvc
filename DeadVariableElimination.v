@@ -34,7 +34,8 @@ Fixpoint compile (s:stmt) (a:ann live) :=
   end.
 
 Definition ArgRel (G:(live * params)) (VL VL': list val) : Prop := 
-  VL' = (filter_by (fun x => B[x ∈ (fst G)]) (snd G) VL).
+  VL' = (filter_by (fun x => B[x ∈ (fst G)]) (snd G) VL) /\
+  length (snd G) = length VL.
 
 Definition ParamRel (G:(live * params)) (Z Z' : list var) : Prop := 
   Z' = (List.filter (fun x => B[x ∈ (fst G)]) Z) /\ snd G = Z.
@@ -120,12 +121,213 @@ Proof.
   eapply agree_on_update_filter. eauto.
 Qed.
 
+Lemma filter_filter_by_length {X} {Y} (Z:list X) (VL:list Y) 
+: length Z = length VL
+  -> forall p, length (List.filter p Z) =
+    length (filter_by p Z VL).
+Proof.
+  intros. eapply length_length_eq in H.
+  general induction H; simpl; eauto.
+  destruct if; simpl. rewrite IHlength_eq; eauto. eauto.
+Qed.
+
 Definition blockRel (AL:list (live*params)) L (L':F.labenv) := (forall n blk lvZ, get AL n lvZ -> get L n blk -> block_Z blk = snd lvZ).
+
+Fixpoint lowerL (d:nat) (k:nat) (s:stmt) :=
+  match s with
+    | stmtExp x e s => stmtExp x e (lowerL d k s)
+    | stmtIf x s t => stmtIf x (lowerL d k s) (lowerL d k t)
+    | stmtGoto l Y => 
+      if [(counted l) < d]
+        then stmtGoto l Y
+        else stmtGoto (LabI (counted l - k)) Y
+    | stmtReturn x => stmtReturn x
+    | stmtLet Z s t => stmtLet Z (lowerL (S d) k s) (lowerL (S d) k t) 
+  end.
+
+(*
+Lemma sim_drop_shift r (L:F.labenv) E s n
+: length L >= n
+  -> paco2 (@psimapx F.state _ F.state _) r (drop n L, E, lowerL 0 n s)
+        (L, E, s).
+Proof.
+  revert_all; pcofix CIH; intros. destruct s; simpl.
+  - pfold. case_eq (exp_eval E e); intros.
+    econstructor; try eapply plusO.
+    econstructor; eauto.
+    econstructor; eauto.
+    right. eapply CIH; eauto.
+    econstructor 2; try eapply star_refl; eauto. stuck. stuck.
+  - pfold. case_eq (val2bool (E x)); intros.
+    econstructor; try eapply plusO.
+    econstructor; eauto.
+    econstructor; eauto.
+    right; eauto.
+    econstructor; try eapply plusO.
+    econstructor 3; eauto.
+    econstructor 3; eauto.
+    eauto.
+  - destruct if. exfalso. omega.
+    destruct (get_dec L (counted l)) as [[[bE bZ bs]]|].
+    destruct_prop (length (F.block_Z (F.blockI bE bZ bs)) = length Y).
+    pfold. econstructor; try eapply plusO.
+    econstructor; eauto. simpl. admit.
+    econstructor; eauto. simpl.
+    right. rewrite drop_drop. orewrite (labN l - n 
+Admitted.
+*)
+
+Lemma plus_is_step_star (X : Type) (R : rel X) x y
+: plus R x y -> exists z, R x z /\ star R z y.
+Proof.
+  intros. general induction H; eauto using star_refl.
+  - destruct IHplus; eauto using plus_star.
+Qed.
+
+Lemma get_drop_lab0 (L:F.labenv) l blk
+:  get L (counted l) blk
+   -> get (drop (labN l) L) (counted (LabI 0)) blk.
+Proof.
+  intros. eapply drop_get; simpl. orewrite (labN l + 0 = labN l); eauto.
+Qed.
+
+Lemma drop_get_lab0 (L:F.labenv) l blk
+: get (drop (labN l) L) (counted (LabI 0)) blk
+  -> get L (counted l) blk.
+Proof.
+  intros. eapply get_drop in H; simpl in *. orewrite (labN l + 0 = labN l) in H; eauto.
+Qed.
+
+Lemma sim_drop_shift r l L E Y L' E' Y'
+: paco2 (@psimapx F.state _ F.state _) r (drop (labN l) L, E, stmtGoto (LabI 0) Y)
+        (drop (labN l) L', E', stmtGoto (LabI 0) Y')
+  -> paco2 (@psimapx F.state _ F.state _) r (L, E, stmtGoto l Y)
+          (L', E', stmtGoto l Y').
+Proof.
+  intros. pinversion H; subst.
+  eapply plus_is_step_star in H0.
+  eapply plus_is_step_star in H1.
+  destruct H0; destruct H1; dcr. inv H3.
+  simpl in *. inv H1; simpl in *.
+  pfold. econstructor; try eapply star_plus.
+  econstructor; eauto using get_drop_lab0, drop_get_lab0. eauto.
+  econstructor; eauto using get_drop_lab0, drop_get_lab0. eauto.
+  eauto.
+  inv H1; inv H2; simpl in *.
+  pfold. econstructor 2; try eapply star_refl; eauto. stuck.
+  eapply H3. econstructor. 
+  econstructor; eauto using get_drop_lab0, drop_get_lab0. 
+  stuck. eapply H4. econstructor.
+  econstructor; eauto using get_drop_lab0, drop_get_lab0. 
+  pfold. inv H5. econstructor 2. 
+  Focus 2. eapply star_refl.
+  Focus 2. econstructor 2. 
+  econstructor; eauto using get_drop_lab0, drop_get_lab0. 
+  eauto. simpl; eauto. stuck.
+  eapply H3. econstructor.
+  econstructor; eauto using get_drop_lab0, drop_get_lab0. 
+  eauto.
+  pfold. inv H5. econstructor 2. 
+  Focus 2. econstructor 2. 
+  econstructor; eauto using get_drop_lab0, drop_get_lab0. 
+  eauto. 
+  Focus 2. eapply star_refl.
+  simpl; eauto. eauto. stuck.
+  eapply H4. econstructor.
+  econstructor; eauto using get_drop_lab0, drop_get_lab0. 
+  pfold. inv H5. inv H7. econstructor 2. 
+  Focus 2. econstructor 2. 
+  econstructor; eauto using get_drop_lab0, drop_get_lab0. 
+  eauto. 
+  Focus 2. econstructor 2. 
+  econstructor; eauto using get_drop_lab0, drop_get_lab0. 
+  eauto. eauto. eauto. eauto.
+  inv H1. pfold. econstructor 3; try eapply star_refl; eauto.
+  stuck. destruct H2. econstructor. econstructor.
+  Focus 2. eapply drop_get. simpl. orewrite (labN l + 0 = labN l).
+  eauto. eauto. reflexivity. 
+  pfold. econstructor 3; eauto.
+  inv H3; simpl in *.
+  econstructor.
+  econstructor. Focus 2. eapply get_drop in Ldef.
+  orewrite (labN l + 0 = labN l) in Ldef. eauto. eauto. reflexivity.
+  eauto.
+  eapply psimapxd_mon.
+Qed.
+
+Lemma sim_DVE r L L' V V' s LV lv
+: agree_on (getAnn lv) V V'
+-> true_live_sound LV s lv
+-> simL' r ArgRel ParamRel LV L L'
+-> paco2 (@psimapx F.state _ F.state _) r (L,V, s) (L',V', compile s lv).
+Proof.
+  general induction s; simpl; inv H0; simpl in * |- *.
+  + case_eq (exp_eval V e); intros. destruct if. 
+    - pfold. econstructor; try eapply plusO.
+      econstructor; eauto.
+      econstructor; eauto. instantiate (1:=v).
+      erewrite exp_eval_live; eauto using agree_on_sym.
+      left. eapply IHs; eauto. eapply agree_on_update_same. 
+      eapply agree_on_incl; eauto.
+    - eapply simapx_expansion_closed; 
+      [ | eapply S_star; [ econstructor; eauto | eapply star_refl ]
+        | eapply star_refl]. 
+      eapply IHs; eauto. eapply agree_on_update_dead; eauto.
+      eapply agree_on_incl; eauto. rewrite <- H9. cset_tac; intuition.
+    - pfold. econstructor 3; [| eapply star_refl|]; eauto. stuck.
+  + case_eq (val2bool (V x)); intros.
+    pfold; econstructor; try eapply plusO.
+    econstructor; eauto. econstructor; eauto. 
+    rewrite <- H; eauto. left. eapply IHs1; eauto using agree_on_incl.
+    pfold; econstructor; try eapply plusO.
+    econstructor 3; eauto. econstructor 3; eauto.
+    rewrite <- H; eauto. left; eapply IHs2; eauto using agree_on_incl. 
+  + destruct (get_dec L (counted l)) as [[[bE bZ bs]]|].
+    (* hnf in H2. exploit H2; eauto. simpl in *. subst bZ. *)
+(*    destruct_prop (length Z = length Y). *)
+    unfold simL in H1.
+    edestruct AIR5_length; try eassumption; dcr.
+    edestruct get_length_eq; try eassumption.
+    edestruct AIR5_nth as [?[? [?]]]; try eassumption; dcr. 
+    simpl in *. repeat get_functional; subst.
+    inv H16. hnf in H20. dcr; simpl in *. subst bZ.
+    eapply sim_drop_shift. eapply H21.
+    hnf; intros; simpl. subst. split.
+    rewrite <- lookup_list_filter_by_commute.
+    exploit argsLive_filter_filter_by; eauto.
+    rewrite <- X. eapply lookup_list_agree.
+    eapply agree_on_incl; eauto using agree_on_sym.
+    eapply filter_incl; eauto. congruence.
+    rewrite lookup_list_length; eauto.
+    pfold; eapply psimE; try eapply star_refl; eauto; stuck. eauto.
+    hnf in H1.
+    edestruct AIR5_nth2 as [? [? [? []]]]; eauto; dcr.
+    eauto.
+  + pfold. econstructor 2; try eapply star_refl.
+    simpl. rewrite H; eauto. simpl. 
+    stuck. stuck.
+  + pfold. econstructor; try eapply plusO.
+    econstructor; eauto.
+    econstructor; eauto.
+    simpl. left. eapply IHs2; eauto. 
+    - simpl in *; eapply agree_on_incl; eauto.
+    - eapply simL_mon; eauto. eapply simL_extension'; eauto.
+      hnf; intros. hnf in H3. hnf in H2. dcr; subst.
+      split; eauto. eapply filter_filter_by_length; eauto.
+      hnf; intros.
+      eapply IHs1; eauto.
+      * hnf in H2. dcr; subst. simpl.
+        eapply agree_on_update_filter'. eauto.
+        eapply agree_on_incl; eauto.
+      * split; reflexivity.
+Qed.
+
+Print Assumptions sim_DVE.
            
 Lemma sim_DVE L L' V V' s LV lv
 : agree_on (getAnn lv) V V'
 -> true_live_sound LV s lv
--> simL ArgRel ParamRel LV L L'
+-> simL' r ArgRel ParamRel LV L L'
 -> @simapx F.state _ F.state _ (L,V, s) (L',V', compile s lv).
 Proof.
   general induction s; simpl; inv H0; simpl in * |- *.
