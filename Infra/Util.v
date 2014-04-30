@@ -265,7 +265,7 @@ Ltac stuck :=
 Lemma modus_ponens P Q
 : P -> (P -> Q) -> Q.
 tauto.
-Qed.
+Defined.
 
 Tactic Notation "exploiT" tactic(tac) :=
   eapply modus_ponens;[ tac | intros].
