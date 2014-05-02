@@ -130,54 +130,11 @@ Inductive live_sound : list (live*params) -> stmt -> ann live -> Prop :=
   -> getAnn alb ⊆ lv
   -> live_sound Lv (stmtLet Z s b)(annLet lv als alb).
 
-Lemma length_eq_dec {X} (L L' : list X)
-  : length_eq L L' + (length_eq L L' -> False).
-Proof.
-  destruct_prop(length L = length L').
-  left. eapply length_length_eq; eauto.
-  right. intro. eapply length_eq_length in X0. congruence.
-Defined.
- 
-Definition live_sound_dec Lv s slv (an:annotation s slv)
-      : Computable (live_sound Lv s slv).
-Proof. 
-  constructor.
-  general induction s; destruct slv; try isabsurd.
-  + edestruct IHs; eauto; try inv an; eauto;
-    destruct_prop (getAnn slv\{{x}} ⊆ a);
-    destruct_prop (live_exp_sound e a); try dec_solve.
-  + edestruct IHs1; try inv an; eauto;
-    edestruct IHs2; try inv an; eauto;
-    destruct_prop (x ∈ a); 
-    destruct_prop (getAnn slv1 ⊆ a); 
-    destruct_prop (getAnn slv2 ⊆ a);
-    try dec_solve; try eassumption; try inv an; eauto.
-  + destruct (get_dec Lv (counted l)) as [[[blv Z] ?]|?];
-    try destruct_prop ((blv \ of_list Z) ⊆ a);
-    destruct_prop (of_list Y ⊆ a);
-    try destruct_prop (length Y = length Z); try dec_solve.
-  +  destruct_prop(x ∈ a); try dec_solve.
-  + edestruct IHs1; eauto; try inv an; eauto;
-    edestruct IHs2; eauto; try inv an; eauto;
-    destruct_prop ((of_list Z) ⊆ getAnn slv1); 
-    destruct_prop ((getAnn slv1 \ of_list Z) ⊆ a);
-    destruct_prop (getAnn slv2 ⊆ a); try dec_solve.
-    Grab Existential Variables. eassumption. eassumption.
-Defined.
-
 Lemma live_sound_annotation Lv s slv
 : live_sound Lv s slv -> annotation s slv.
 Proof.
   intros. general induction H; econstructor; eauto.
 Qed.
-
-Instance live_sound_dec_inst Lv s slv `{Computable(annotation s slv)}
-: Computable (live_sound Lv s slv).
-Proof.
-  destruct H as [[]].
-  eapply live_sound_dec; eauto.
-  constructor. right; intro. eauto using live_sound_annotation.
-Defined.
 
 Lemma freeVars_live s lv Lv
   : live_sound Lv s lv -> IL.freeVars s ⊆ getAnn lv.
@@ -236,76 +193,41 @@ Proof.
     eapply lookup_set_incl; eauto. intuition. 
 Qed.
 
-Inductive true_live_sound : list (live*params) -> stmt -> ann live -> Prop :=
-| TLOpr x Lv b lv e (al:ann live)
+Inductive true_live_sound : list (set var *params) -> stmt -> ann (set var) -> Prop :=
+| TLOpr x Lv b lv e al
   :  true_live_sound Lv b al
   -> (x ∈ getAnn al -> live_exp_sound e lv)
   -> (getAnn al\{{x}}) ⊆ lv
+(*  -> (x ∉ getAnn al -> lv ⊆ getAnn al \ {{x}}) *)
   -> true_live_sound Lv (stmtExp x e b) (annExp lv al)
-| TLIf Lv x b1 b2 lv (al1 al2:ann live)
+| TLIf Lv x b1 b2 lv al1 al2
   :  true_live_sound Lv b1 al1
   -> true_live_sound Lv b2 al2
   -> x ∈ lv
   -> getAnn al1 ⊆ lv
   -> getAnn al2 ⊆ lv
   -> true_live_sound Lv (stmtIf x b1 b2) (annIf lv al1 al2)
-| TLGoto l Y Lv (lv:live) blv Z
+| TLGoto l Y Lv lv blv Z
   : get Lv (counted l) (blv,Z)
   -> (blv \ of_list Z) ⊆ lv
   -> argsLive lv blv Y Z
   -> length Y = length Z
   -> true_live_sound Lv (stmtGoto l Y) (annGoto lv)
-| TLReturn Lv x (lv:live)
+| TLReturn Lv x lv
   : x ∈ lv
   -> true_live_sound Lv (stmtReturn x) (annReturn lv)
-| TLLet Lv s Z b lv (als alb: ann live)
+| TLLet Lv s Z b lv als alb
   : true_live_sound ((getAnn als,Z)::Lv) s als
   -> true_live_sound ((getAnn als,Z)::Lv) b alb
   -> (getAnn als \ of_list Z) ⊆ lv
   -> getAnn alb ⊆ lv
   -> true_live_sound Lv (stmtLet Z s b)(annLet lv als alb).
 
-Definition true_live_sound_dec Lv s slv (an:annotation s slv)
-      : Computable (true_live_sound Lv s slv).
-Proof. 
-  constructor.
-  general induction s; destruct slv; try isabsurd.
-  + edestruct IHs; eauto; try inv an; eauto;
-    destruct_prop (getAnn slv\{{x}} ⊆ a);
-    destruct_prop (x ∈ getAnn slv -> live_exp_sound e a); try dec_solve. 
-  + edestruct IHs1; try inv an; eauto;
-    edestruct IHs2; try inv an; eauto;
-    destruct_prop (x ∈ a); 
-    destruct_prop (getAnn slv1 ⊆ a); 
-    destruct_prop (getAnn slv2 ⊆ a);
-    try dec_solve; try eassumption; try inv an; eauto.
-  + destruct (get_dec Lv (counted l)) as [[[blv Z] ?]|?];
-    try destruct_prop ((blv \ of_list Z) ⊆ a);
-    try destruct_prop (argsLive a blv Y Z); try dec_solve.
-    left. econstructor; eauto using argsLive_length.
-  + destruct_prop(x ∈ a); try dec_solve.
-  + edestruct IHs1; eauto; try inv an; eauto;
-    edestruct IHs2; eauto; try inv an; eauto;
-    destruct_prop ((of_list Z) ⊆ getAnn slv1); 
-    destruct_prop ((getAnn slv1 \ of_list Z) ⊆ a);
-    destruct_prop (getAnn slv2 ⊆ a); try dec_solve.
-    Grab Existential Variables. eassumption. eassumption.
-Defined.
-
 Lemma true_live_sound_annotation Lv s slv
 : true_live_sound Lv s slv -> annotation s slv.
 Proof.
   intros. general induction H; econstructor; eauto.
 Qed.
-
-Instance true_live_sound_dec_inst Lv s slv `{Computable(annotation s slv)}
-: Computable (true_live_sound Lv s slv).
-Proof.
-  destruct H as [[]].
-  eapply true_live_sound_dec; eauto.
-  constructor. right; intro. eauto using true_live_sound_annotation.
-Defined.
-
 
 Lemma live_relation Lv s lv
 : (forall n lvZ, get Lv n lvZ -> of_list (snd lvZ) ⊆ fst lvZ)
