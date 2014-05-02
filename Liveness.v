@@ -340,17 +340,16 @@ Proof.
   eapply IHLA; eauto.
   eapply agree_on_incl; eauto. eapply freeVars_live; eauto.
 Qed.
-(*
-We are going to prove a simapx result about dve instead.
+
 Inductive approxI 
-  : list (live*params) -> I.block -> I.block -> Prop :=
+  : list (set var * params) -> I.block -> I.block -> Prop :=
   approxII DL Z s lv
-  : true_live_sound ((getAnn lv, Z)::DL) s lv
+  : live_sound ((getAnn lv, Z)::DL) s lv
     ->  approxI ((getAnn lv,Z)::DL) (I.blockI Z s) (I.blockI Z s).
 
 Inductive liveSimI : I.state -> I.state -> Prop :=
   liveSimII (E E':env val) L s Lv lv 
-  (LS:true_live_sound Lv s lv)
+  (LS:live_sound Lv s lv)
   (LA:AIR3 approxI Lv L L)
   (AG:agree_on (getAnn lv) E E')
   : liveSimI (L, E, s) (L, E', s).
@@ -361,105 +360,33 @@ Proof.
   revert σ1 σ2. cofix; intros. 
   destruct H; inv LS; simpl; simpl in *.
   + case_eq (exp_eval E e); intros.
-    destruct_prop(x ∈ getAnn al).
     eapply simS; try eapply plusO. 
     econstructor; eauto.     econstructor; eauto.
     instantiate (1:=v). erewrite <- exp_eval_live; eauto.
     eapply liveSimI_sim. econstructor; eauto.
     eapply agree_on_update_same; eauto using agree_on_incl.
-    case_eq (exp_eval E' e); intros.
-    eapply simS; try eapply plusO. 
-    econstructor; eauto.     econstructor; eauto.
-    eapply liveSimI_sim. econstructor; eauto.
-    assert (getAnn al [=] getAnn al \ {{x}}). 
-    split; cset_tac; intuition. rewrite H5.
-    eapply agree_on_update_dead_both. cset_tac; intuition. 
-    eapply agree_on_incl; eauto.
     eapply simE; try eapply star_refl; eauto; stuck.
     erewrite <- exp_eval_live in def; eauto. congruence.
-    eapply live_exp_sound_incl;try eapply live_freeVars; eauto.
   + case_eq (val2bool (E x)); intros.
-    eapply simS; try eapply plusO. 
-    econstructor; eauto. 
-    econstructor. rewrite <- AG; eauto.
+    one_step.
     eapply liveSimI_sim; econstructor; eauto using agree_on_incl.
-    eapply simS; try eapply plusO.
-    eapply I.stepIfF; eauto. 
-    rewrite AG in H6; eauto.
-    eapply I.stepIfF; eauto. 
+    one_step.
     eapply liveSimI_sim; econstructor; eauto using agree_on_incl.
   + provide_invariants_3.
-    eapply simS; try eapply plusO.
-    econstructor; eauto.
-    econstructor; try eapply H7; eauto.
-    simpl. eapply liveSimI_sim. econstructor; eauto.
+    one_step; simpl; try congruence.
+    eapply liveSimI_sim. econstructor; eauto.
     unfold updE.
-    eapply argsLive_agree_on; eauto using agree_on_incl.
-
+    erewrite lookup_list_agree; eauto using agree_on_incl.
+    eapply update_with_list_agree. eapply agree_on_incl; eauto.
+    simpl. rewrite lookup_list_length; simpl in *; congruence.
   + eapply simE; try eapply star_refl; simpl; eauto; try stuck.
-
-  + eapply simS; try (eapply plusO; econstructor).
+  + one_step.
     eapply liveSimI_sim; econstructor; eauto.
     econstructor; eauto using agree_on_incl. 
     econstructor; eauto using agree_on_incl. 
     eapply agree_on_incl; eauto.
 Qed.
 
-Inductive approxFT 
-  : list (live*params) -> I.block -> I.block -> Prop :=
-  approxIFT DL Z s lv
-  : true_live_sound ((getAnn lv, Z)::DL) s lv
-    ->  approxFT ((getAnn lv,Z)::DL) (I.blockI Z s) (I.blockI Z s).
-
-Inductive liveSimFT : I.state -> I.state -> Prop :=
-  liveSimIFT (E E':env val) L s Lv lv 
-  (LS:true_live_sound Lv s lv)
-  (LA:AIR3 approxFT Lv L L)
-  (AG:agree_on (getAnn lv) E E')
-  : liveSimFT (L, E, s) (L, E', s).
-
-Lemma liveSimFT_sim σ1 σ2
-  : liveSimFT σ1 σ2 -> sim σ1 σ2.
-Proof.
-  revert σ1 σ2. cofix; intros. 
-  destruct H; inv LS; simpl; simpl in *.
-  + case_eq (exp_eval E e); intros.
-    eapply simS; try eapply plusO.
-    econstructor; eauto. econstructor; eauto.
-    instantiate (1:=v). erewrite <- exp_eval_live; eauto. 
-    eapply live_exp_sound_incl; try eapply live_freeVars. cset_tac; eauto.
-    eapply liveSimFT_sim. econstructor; eauto.
-    eapply agree_on_update_same; eauto using agree_on_incl.
-    eapply simE; try eapply star_refl; eauto; stuck.
-    erewrite <- exp_eval_live in def; eauto. congruence.
-    eapply live_exp_sound_incl;try eapply live_freeVars; eauto.
-  + case_eq (val2bool (E x)); intros.
-    eapply simS; try eapply plusO. 
-    econstructor; eauto. 
-    econstructor. rewrite <- AG; eauto.
-    eapply liveSimFT_sim; econstructor; eauto using agree_on_incl.
-    eapply simS; try eapply plusO.
-    eapply I.stepIfF; eauto. 
-    rewrite AG in H6; eauto.
-    eapply I.stepIfF; eauto. 
-    eapply liveSimFT_sim; econstructor; eauto using agree_on_incl.
-  + provide_invariants_3.
-    eapply simS; try eapply plusO.
-    econstructor; eauto.
-    econstructor; try eapply H7; eauto.
-    simpl. eapply liveSimFT_sim. econstructor; eauto.
-    unfold updE.
-    eapply argsLive_agree_on; eauto using agree_on_incl.
-
-  + eapply simE; try eapply star_refl; simpl; eauto; try stuck.
-
-  + eapply simS; try (eapply plusO; econstructor).
-    eapply liveSimFT_sim; econstructor; eauto.
-    econstructor; eauto using agree_on_incl. 
-    econstructor; eauto using agree_on_incl. 
-    eapply agree_on_incl; eauto.
-Qed.
-*)
 (* 
 *** Local Variables: ***
 *** coq-load-path: (("." "Lvc")) ***
