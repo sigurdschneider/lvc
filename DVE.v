@@ -1,7 +1,7 @@
 Require Import CSet Le.
 
 Require Import Plus Util AllInRel Map.
-Require Import Val Var Env EnvTy IL ParamsMatch Sim SimApx Alpha Coherence Fresh.
+Require Import Val Var Env EnvTy IL ParamsMatch Sim SimApx Alpha Coherence Fresh Filter.
 
 Require Import Liveness.
 
@@ -270,7 +270,7 @@ Proof.
       * split; reflexivity.
 Qed.
 
-Print Assumptions sim_DVE.
+Print Assumptions sim_DVE'.
 
 (*           
 Lemma sim_DVE L L' V V' s LV lv
