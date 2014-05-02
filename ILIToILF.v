@@ -1,4 +1,4 @@
-Require Import AllInRel Util Map Env EnvTy Exp IL ParamsMatch Coherence Sim DecSolve Liveness Restrict.
+Require Import AllInRel Util Map Env EnvTy Exp IL Annotation ParamsMatch Coherence Sim DecSolve Liveness Restrict.
 
 (*  IL_Types. *)
 
@@ -17,19 +17,19 @@ Inductive trs
     -> Prop :=
  | trsExp DL ZL x e s an an_lv lv
     : trs (restrict DL (lv\{{x}})) ZL  s an_lv an
-    -> trs DL ZL (stmtExp x e s) (annExp lv an_lv) (annExp nil an)
+    -> trs DL ZL (stmtExp x e s) (ann1 lv an_lv) (ann1 nil an)
   | trsIf DL ZL x s t ans ant ans_lv ant_lv lv
     :  trs DL ZL s ans_lv ans
     -> trs DL ZL t ant_lv ant
-    -> trs DL ZL (stmtIf x s t) (annIf lv ans_lv ant_lv) (annIf nil ans ant)
+    -> trs DL ZL (stmtIf x s t) (ann2 lv ans_lv ant_lv) (ann2 nil ans ant)
   | trsRet x DL ZL lv
-    :  trs DL ZL (stmtReturn x) (annReturn lv) (annReturn nil)
+    :  trs DL ZL (stmtReturn x) (ann0 lv) (ann0 nil)
   | trsGoto DL ZL G' f Za Y lv
     :  get DL (counted f) (Some G')
     -> get ZL (counted f) (Za)
     -> G' ⊆ lv
 (*    -> of_list Za ⊆ lv *)
-    -> trs DL ZL (stmtGoto f Y) (annGoto lv) (annGoto nil)
+    -> trs DL ZL (stmtGoto f Y) (ann0 lv) (ann0 nil)
   | trsLet DL ZL s t Z Za ans ant lv ans_lv ant_lv
     : (* of_list Za ⊆ getAnn ans_lv *)
       (* for now, require all additionals Za to be live in the function;
@@ -38,7 +38,7 @@ Inductive trs
          be recomputed) *) 
       trs (restrict (Some (getAnn ans_lv \ of_list (Z++Za))::DL) (getAnn ans_lv \ of_list (Z++Za))) (Za::ZL) s ans_lv ans
     -> trs (Some (getAnn ans_lv \ of_list (Z++Za))::DL) (Za::ZL) t ant_lv ant
-    -> trs DL ZL (stmtLet Z s t) (annLet lv ans_lv ant_lv) (annLet Za ans ant).
+    -> trs DL ZL (stmtLet Z s t) (ann2 lv ans_lv ant_lv) (ann2 Za ans ant).
 
 Lemma trs_dec DL ZL s ans_lv ans (* (an_lv:annotation s ans_lv) (an:annotation s ans) *)
   : {trs DL ZL s ans_lv ans} + 
@@ -77,11 +77,11 @@ Defined.
 
 Fixpoint compile (ZL:list (list var)) (s:stmt) (an:ann (list var)) : stmt :=
   match s, an with
-    | stmtExp x e s, annExp _ an => stmtExp x e (compile ZL s an)
-    | stmtIf x s t, annIf _ ans ant => stmtIf x (compile ZL s ans) (compile ZL t ant)
-    | stmtGoto f Y, annGoto _ => stmtGoto f (Y++nth (counted f) ZL nil)
-    | stmtReturn x, annReturn _ => stmtReturn x
-    | stmtLet Z s t, annLet Za ans ant => 
+    | stmtExp x e s, ann1 _ an => stmtExp x e (compile ZL s an)
+    | stmtIf x s t, ann2 _ ans ant => stmtIf x (compile ZL s ans) (compile ZL t ant)
+    | stmtGoto f Y, ann0 _ => stmtGoto f (Y++nth (counted f) ZL nil)
+    | stmtReturn x, ann0 _ => stmtReturn x
+    | stmtLet Z s t, ann2 Za ans ant => 
       stmtLet (Z++Za) (compile (Za::ZL) s ans) (compile (Za::ZL) t ant)
     | s, _ => s  
   end.

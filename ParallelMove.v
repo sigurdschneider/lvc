@@ -1,5 +1,5 @@
 Require Import List Compare_dec.
-Require Import AllInRel Option Util Var IL EnvTy EqDec AutoIndTac Sim Fresh Liveness Status.
+Require Import AllInRel Option Util Var IL Annotation EnvTy EqDec AutoIndTac Sim Fresh Liveness Status.
 
 Set Implicit Arguments.
 
@@ -168,20 +168,20 @@ Section Implementation.
 Fixpoint lower DL s (an:ann (set var))
   : status stmt := 
   match s, an with
-    | stmtExp x e s, annExp lv ans =>
+    | stmtExp x e s, ann1 lv ans =>
       sdo sl <- lower DL s ans;
         Success (stmtExp x e sl)
-    | stmtIf x s t, annIf lv ans ant => 
+    | stmtIf x s t, ann2 lv ans ant => 
       sdo sl <- lower DL s ans;
         sdo tl <- lower DL t ant;
             Success (stmtIf x sl tl)
-    | stmtGoto l Y, annGoto lv  =>
+    | stmtGoto l Y, ann0 lv  =>
        sdo Lve <- option2status (nth_error DL (counted l)) "lower: No annotation for function";  
         let '(lv', Z) := Lve in
         compile_parallel_assignment parallel_move lv' Z Y (stmtGoto l nil)
 
-    | stmtReturn x, annReturn lv => Success (stmtReturn x)
-    | stmtLet Z s t, annLet lv ans ant => 
+    | stmtReturn x, ann0 lv => Success (stmtReturn x)
+    | stmtLet Z s t, ann2 lv ans ant => 
       let DL' := (getAnn ans,Z) in
       sdo s' <- lower (DL' :: DL)%list s ans;
         sdo t' <- lower (DL' :: DL)%list t ant;

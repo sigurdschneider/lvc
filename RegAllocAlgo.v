@@ -1,7 +1,7 @@
 Require Import CSet Le Arith.Compare_dec.
 
 Require Import Plus Util Map Status.
-Require Import Val Var Env EnvTy IL Liveness Fresh Sim MoreList.
+Require Import Val Var Env EnvTy IL Annotation Liveness Fresh Sim MoreList.
 
 Set Implicit Arguments.
 
@@ -86,15 +86,15 @@ Fixpoint oracle_list (L:list var) (lv:set var) (ϱ:var -> var)
 Fixpoint linear_scan (st:stmt) (an: ann (set var)) (ϱ:var -> var)
   : status (var -> var) :=
  match st, an with
-    | stmtExp x e s, annExp lv ans =>
+    | stmtExp x e s, ann1 lv ans =>
       let xv := least_fresh (lookup_set ϱ (getAnn ans\{{x}})) in
         linear_scan s ans (ϱ[x<- xv])
-    | stmtIf _ s t, annIf lv ans ant =>
+    | stmtIf _ s t, ann2 lv ans ant =>
       sdo ϱ' <- linear_scan s ans ϱ;
         linear_scan t ant ϱ'
-    | stmtGoto _ _, annGoto _ => Success ϱ
-    | stmtReturn _, annReturn _ => Success ϱ
-    | stmtLet Z s t, annLet _ ans ant =>
+    | stmtGoto _ _, ann0 _ => Success ϱ
+    | stmtReturn _, ann0 _ => Success ϱ
+    | stmtLet Z s t, ann2 _ ans ant =>
       let Z' := oracle_list Z (getAnn ans\of_list Z) ϱ in
       sdo ϱ' <- linear_scan s ans (ϱ[Z <-- Z']);
         linear_scan t ant ϱ'

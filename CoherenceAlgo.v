@@ -1,7 +1,7 @@
 Require Import CSet Le.
 
 Require Import Plus Util AllInRel Map.
-Require Import Val Var Env EnvTy IL Liveness Coherence ParamsMatch Sim MoreList Restrict ILIToILF.
+Require Import Val Var Env EnvTy IL Annotation Liveness Coherence ParamsMatch Sim MoreList Restrict ILIToILF.
 
 Set Implicit Arguments.
 
@@ -60,16 +60,16 @@ Fixpoint computeParameters (DL: list (set var)) (ZL:list (list var)) (AP:list (s
          (s:stmt) (an:ann (set var)) {struct s}
 : ann (list var) * list (option (set var)) :=
   match s, an with
-    | stmtExp x e s, annExp _ an => 
+    | stmtExp x e s, ann1 _ an => 
       let (ar, r) := computeParameters DL ZL (addParam x DL AP) s an in
-      (annExp nil ar, r) 
-    | stmtIf x s t, annIf _ ans ant => 
+      (ann1 nil ar, r) 
+    | stmtIf x s t, ann2 _ ans ant => 
       let (ars, rs) := computeParameters DL ZL AP s ans in
       let (art, rt) := computeParameters DL ZL AP t ant in
-      (annIf nil ars art, zip ounion rs rt)
-    | stmtGoto f Y, annGoto lv => (annGoto nil, killExcept f AP)
-    | stmtReturn x, annReturn _ => (annReturn nil, (mapi (fun _ _ => None) AP))
-    | stmtLet Z s t, annLet lv ans ant =>
+      (ann2 nil ars art, zip ounion rs rt)
+    | stmtGoto f Y, ann0 lv => (ann0 nil, killExcept f AP)
+    | stmtReturn x, ann0 _ => (ann0 nil, (mapi (fun _ _ => None) AP))
+    | stmtLet Z s t, ann2 lv ans ant =>
       let DL' := getAnn ans \ of_list Z in
       let (ars, rs) := computeParameters (DL' :: DL) 
                                         (Z :: ZL)
@@ -85,8 +85,8 @@ Fixpoint computeParameters (DL: list (set var)) (ZL:list (list var)) (AP:list (s
       let ur' := (addAdds 
                   (oget (hd None ur))
                   (DL) (tl ur)) in 
-      (annLet (oto_list (hd None ur)) ars art, ur')
-    | s, a => (annReturn nil, nil)
+      (ann2 (oto_list (hd None ur)) ars art, ur')
+    | s, a => (ann0 nil, nil)
   end.
 
 Local Notation "≽" := (fstNoneOrR (flip Subset)).

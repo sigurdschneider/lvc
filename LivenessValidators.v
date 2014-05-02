@@ -1,4 +1,4 @@
-Require Import DecSolve IL Liveness LengthEq.
+Require Import DecSolve IL Annotation Liveness LengthEq.
 
 Definition live_sound_dec Lv s slv (an:annotation s slv)
       : Computable (live_sound Lv s slv).

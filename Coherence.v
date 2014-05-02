@@ -1,7 +1,7 @@
 Require Import CSet Le.
 
 Require Import Plus Util AllInRel Map.
-Require Import Val Var Env EnvTy IL Liveness ParamsMatch Restrict Sim.
+Require Import Val Var Env EnvTy IL Annotation Liveness ParamsMatch Restrict Sim.
 
 Set Implicit Arguments.
 
@@ -147,22 +147,22 @@ Inductive shadowing_free : set var -> stmt -> Prop :=
 Inductive srd : list (option (set var)) -> stmt -> ann (set var) -> Prop :=
  | srdExp DL x e s lv al
     : srd (restrict DL (lv\{{x}})) s al
-    -> srd DL (stmtExp x e s) (annExp lv al)
+    -> srd DL (stmtExp x e s) (ann1 lv al)
   | srdIf DL x s t lv als alt
     :  srd DL s als
     -> srd DL t alt
-    -> srd DL (stmtIf x s t) (annIf lv als alt)
+    -> srd DL (stmtIf x s t) (ann2 lv als alt)
   | srdRet x DL lv
-    : srd DL (stmtReturn x) (annReturn lv)
+    : srd DL (stmtReturn x) (ann0 lv)
   | srdGoto DL lv G' f Y
     : get DL (counted f) (Some G')
     -> G' ⊆ lv
-    -> srd DL (stmtGoto f Y) (annGoto lv)
+    -> srd DL (stmtGoto f Y) (ann0 lv)
   | srdLet DL s t Z lv als alt
     : srd (restrict (Some (getAnn als \ of_list Z)::DL) (getAnn als \ of_list Z))
           s als
     -> srd (Some (getAnn als \ of_list Z)::DL) t alt
-    -> srd DL (stmtLet Z s t) (annLet lv als alt).
+    -> srd DL (stmtLet Z s t) (ann2 lv als alt).
 
 Definition peq := prod_eq (@feq var var _ _) (@Equal var _ _).
 
@@ -314,11 +314,11 @@ Transparent restrict.
 
 Fixpoint freeVar_live (s:stmt) : ann (set var) :=
   match s with
-    | stmtExp x e s0 => annExp (freeVars s) (freeVar_live s0)
-    | stmtIf x s1 s2 => annIf (freeVars s) (freeVar_live s1) (freeVar_live s2)
-    | stmtGoto l Y => annGoto (freeVars s)
-    | stmtReturn x => annReturn (freeVars s)
-    | stmtLet Z s1 s2 => annLet (freeVars s) (freeVar_live s1) (freeVar_live s2)
+    | stmtExp x e s0 => ann1 (freeVars s) (freeVar_live s0)
+    | stmtIf x s1 s2 => ann2 (freeVars s) (freeVar_live s1) (freeVar_live s2)
+    | stmtGoto l Y => ann0 (freeVars s)
+    | stmtReturn x => ann0 (freeVars s)
+    | stmtLet Z s1 s2 => ann2 (freeVars s) (freeVar_live s1) (freeVar_live s2)
   end.
 
 Lemma  getAnn_freeVar_live (s:stmt)

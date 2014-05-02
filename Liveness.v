@@ -1,5 +1,5 @@
-Require Import AllInRel List Map Env IL AutoIndTac Sim Exp.
-Require Export ParamsMatch DecSolve.
+Require Import AllInRel List Map Env ParamsMatch DecSolve.
+Require Import IL Annotation AutoIndTac Sim Exp.
 
 Set Implicit Arguments.
 
@@ -103,30 +103,30 @@ Inductive live_sound : list (set var*params) -> stmt -> ann (set var) -> Prop :=
   :  live_sound Lv b al
   -> live_exp_sound e lv
   -> (getAnn al\{{x}}) ⊆ lv
-  -> live_sound Lv (stmtExp x e b) (annExp lv al)
+  -> live_sound Lv (stmtExp x e b) (ann1 lv al)
 | LIf Lv x b1 b2 lv al1 al2
   :  live_sound Lv b1 al1
   -> live_sound Lv b2 al2
   -> x ∈ lv
   -> getAnn al1 ⊆ lv
   -> getAnn al2 ⊆ lv
-  -> live_sound Lv (stmtIf x b1 b2) (annIf lv al1 al2)
+  -> live_sound Lv (stmtIf x b1 b2) (ann2 lv al1 al2)
 | LGoto l Y Lv lv blv Z
   : get Lv (counted l) (blv,Z)
   -> (blv \ of_list Z) ⊆ lv
   -> length Y = length Z
   -> of_list Y ⊆ lv 
-  -> live_sound Lv (stmtGoto l Y) (annGoto lv)
+  -> live_sound Lv (stmtGoto l Y) (ann0 lv)
 | LReturn Lv x lv
   : x ∈ lv
-  -> live_sound Lv (stmtReturn x) (annReturn lv)
+  -> live_sound Lv (stmtReturn x) (ann0 lv)
 | LLet Lv s Z b lv als alb
   : live_sound ((getAnn als,Z)::Lv) s als
   -> live_sound ((getAnn als,Z)::Lv) b alb
   -> (of_list Z) ⊆ getAnn als
   -> (getAnn als \ of_list Z) ⊆ lv
   -> getAnn alb ⊆ lv
-  -> live_sound Lv (stmtLet Z s b)(annLet lv als alb).
+  -> live_sound Lv (stmtLet Z s b)(ann2 lv als alb).
 
 Lemma live_sound_annotation Lv s slv
 : live_sound Lv s slv -> annotation s slv.
@@ -197,29 +197,29 @@ Inductive true_live_sound : list (set var *params) -> stmt -> ann (set var) -> P
   -> (x ∈ getAnn al -> live_exp_sound e lv)
   -> (getAnn al\{{x}}) ⊆ lv
 (*  -> (x ∉ getAnn al -> lv ⊆ getAnn al \ {{x}}) *)
-  -> true_live_sound Lv (stmtExp x e b) (annExp lv al)
+  -> true_live_sound Lv (stmtExp x e b) (ann1 lv al)
 | TLIf Lv x b1 b2 lv al1 al2
   :  true_live_sound Lv b1 al1
   -> true_live_sound Lv b2 al2
   -> x ∈ lv
   -> getAnn al1 ⊆ lv
   -> getAnn al2 ⊆ lv
-  -> true_live_sound Lv (stmtIf x b1 b2) (annIf lv al1 al2)
+  -> true_live_sound Lv (stmtIf x b1 b2) (ann2 lv al1 al2)
 | TLGoto l Y Lv lv blv Z
   : get Lv (counted l) (blv,Z)
   -> (blv \ of_list Z) ⊆ lv
   -> argsLive lv blv Y Z
   -> length Y = length Z
-  -> true_live_sound Lv (stmtGoto l Y) (annGoto lv)
+  -> true_live_sound Lv (stmtGoto l Y) (ann0 lv)
 | TLReturn Lv x lv
   : x ∈ lv
-  -> true_live_sound Lv (stmtReturn x) (annReturn lv)
+  -> true_live_sound Lv (stmtReturn x) (ann0 lv)
 | TLLet Lv s Z b lv als alb
   : true_live_sound ((getAnn als,Z)::Lv) s als
   -> true_live_sound ((getAnn als,Z)::Lv) b alb
   -> (getAnn als \ of_list Z) ⊆ lv
   -> getAnn alb ⊆ lv
-  -> true_live_sound Lv (stmtLet Z s b)(annLet lv als alb).
+  -> true_live_sound Lv (stmtLet Z s b)(ann2 lv als alb).
 
 Lemma true_live_sound_annotation Lv s slv
 : true_live_sound Lv s slv -> annotation s slv.

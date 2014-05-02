@@ -1,9 +1,8 @@
 Require Import CSet Le.
-
 Require Import Plus Util AllInRel Map.
-Require Import Val Var Env EnvTy IL ParamsMatch Sim SimApx Alpha Coherence Fresh Filter.
 
-Require Import Liveness.
+Require Import Val Var Env EnvTy IL Annotation ParamsMatch
+Require Import Sim SimApx Fresh Filter.
 
 Set Implicit Arguments.
 Unset Printing Records.
@@ -12,14 +11,14 @@ Opaque compute_prop.
 
 Fixpoint compile (s:stmt) (a:ann (set var)) :=
   match s, a with
-    | stmtExp x e s, annExp lv an => 
+    | stmtExp x e s, ann1 lv an => 
       if [x ∈ getAnn an] then stmtExp x e (compile s an)
                          else compile s an
-    | stmtIf x s t, annIf _ ans ant => stmtIf x (compile s ans) (compile t ant)
-    | stmtGoto f Y, annGoto lv => 
+    | stmtIf x s t, ann2 _ ans ant => stmtIf x (compile s ans) (compile t ant)
+    | stmtGoto f Y, ann0 lv => 
       stmtGoto f (List.filter (fun y => B[y ∈ lv]) Y) 
-    | stmtReturn x, annReturn _ => stmtReturn x
-    | stmtLet Z s t, annLet lv ans ant => 
+    | stmtReturn x, ann0 _ => stmtReturn x
+    | stmtLet Z s t, ann2 lv ans ant => 
       stmtLet (List.filter (fun x => B[x ∈ getAnn ans]) Z)
               (compile s ans) (compile t ant)
     | s, _ => s

@@ -1,7 +1,7 @@
 Require Import CSet Le.
 
 Require Import Plus Util Map DecSolve.
-Require Import Env EnvTy IL Liveness Coherence Alpha ParamsMatch Restrict.
+Require Import Env EnvTy IL Annotation Liveness Coherence Alpha ParamsMatch Restrict.
  
 Set Implicit Arguments.
 
@@ -47,25 +47,25 @@ Inductive locally_inj (rho:env var) : stmt -> ann (set var) -> Prop :=
   :  locally_inj rho b al
   -> injective_on lv rho
   -> injective_on (getAnn al ∪ {{x}}) rho
-  -> locally_inj rho (stmtExp x e b) (annExp lv al)
+  -> locally_inj rho (stmtExp x e b) (ann1 lv al)
 | RNIf x b1 b2 lv (alv1 alv2:ann (set var))
   :  injective_on lv rho
   -> locally_inj rho b1 alv1
   -> locally_inj rho b2 alv2
-  -> locally_inj rho (stmtIf x b1 b2) (annIf lv alv1 alv2)
+  -> locally_inj rho (stmtIf x b1 b2) (ann2 lv alv1 alv2)
 | RNGoto l Y lv 
   : injective_on lv rho
-  -> locally_inj rho (stmtGoto l Y) (annGoto lv)
+  -> locally_inj rho (stmtGoto l Y) (ann0 lv)
 | RNReturn x lv
   : injective_on lv rho
-  -> locally_inj rho (stmtReturn x) (annReturn lv)
+  -> locally_inj rho (stmtReturn x) (ann0 lv)
 | RNLet s Z b lv (alvs alvb:ann (set var))
   : locally_inj rho s alvs
   -> locally_inj rho b alvb
   -> injective_on lv rho
   -> injective_on (getAnn alvs ∪ of_list Z) rho
   -> inj_mapping (lookup_set rho (getAnn alvs\of_list Z)) Z (lookup_list rho Z)
-  -> locally_inj rho (stmtLet Z s b) (annLet lv alvs alvb).
+  -> locally_inj rho (stmtLet Z s b) (ann2 lv alvs alvb).
 
 (** local injectivity is decidable *)
 
