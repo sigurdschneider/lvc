@@ -18,3 +18,4 @@ extraction/lexer.ml
 extraction/lvc.ml
 extraction/lvc.mli
 extraction/_build
+*.time
