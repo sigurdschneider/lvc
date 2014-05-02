@@ -269,7 +269,126 @@ Proof.
       * split; reflexivity.
 Qed.
 
-Print Assumptions sim_DVE'.
+Lemma sim_DVE V V' s lv
+: agree_on (getAnn lv) V V'
+-> true_live_sound nil s lv
+-> @simapx F.state _ F.state _ (nil,V, s) (nil,V', compile s lv).
+Proof.
+  intros. eapply psimapxd_simapx.
+  eapply sim_DVE'; eauto. hnf. econstructor.
+Qed.
+
+Print Assumptions sim_DVE.
+
+Fixpoint compile_live (s:stmt) (a:ann (set var)) : ann (set var) := 
+  match s, a with
+    | stmtExp x e s, ann1 lv an as a => 
+      if [x ∈ getAnn an] then ann1 lv (compile_live s an)
+                         else compile_live s an
+    | stmtIf x s t, ann2 lv ans ant => 
+      ann2 lv (compile_live s ans) (compile_live t ant)
+    | stmtGoto f Y, ann0 lv as a => a
+    | stmtReturn x, ann0 lv as a => a
+    | stmtLet Z s t, ann2 lv ans ant => 
+      let ans' := compile_live s ans in
+      ann2 lv (setTopAnn (ans') 
+                           (getAnn ans' ∪ 
+                                   of_list (List.filter (fun x => B[x ∈ getAnn ans]) Z)))
+                           (compile_live t ant)
+    | _, a => a
+  end.
+
+
+Lemma compile_live_incl LV s lv
+  : true_live_sound LV s lv
+    -> getAnn (compile_live s lv) ⊆ getAnn lv.
+Proof.
+  intros. general induction H; simpl; eauto; try reflexivity.
+  - destruct if; simpl; try reflexivity.
+    rewrite IHtrue_live_sound. rewrite <- H1. cset_tac; intuition.
+Qed.
+
+Definition compile_LV (LV:list (set var *params)) := 
+  List.map (fun lvZ => let Z' := List.filter (fun x => B[x ∈ fst lvZ]) (snd lvZ) in
+                      (fst lvZ, Z')) LV.
+
+Lemma live_sound_monotone LV LV' s lv
+: live_sound LV s lv
+  -> PIR2 (fun lvZ lvZ' => fst lvZ' ⊆ fst lvZ /\ snd lvZ = snd lvZ') LV LV'
+  -> live_sound LV' s lv.
+Proof.
+  intros. general induction H; simpl; eauto using live_sound.
+  - edestruct PIR2_nth; eauto; dcr; simpl in *. 
+    destruct x; subst; simpl in *.
+    econstructor; eauto. cset_tac; intuition.
+  - econstructor; eauto 20 using PIR2.
+    eapply IHlive_sound1. econstructor; intuition. 
+    eapply IHlive_sound2. econstructor; intuition.
+Qed.
+
+Lemma live_sound_monotone2 LV s lv a
+: live_sound LV s lv
+  -> getAnn lv ⊆ a
+  -> live_sound LV s (setTopAnn lv a).
+Proof.
+  intros. general induction H; simpl in * |- *; eauto using live_sound.
+  - econstructor; eauto using live_exp_sound_incl.
+    etransitivity; eauto.
+  - econstructor; eauto; etransitivity; eauto.
+  - econstructor; eauto. cset_tac; intuition. cset_tac; intuition.
+  - econstructor; eauto. cset_tac; intuition. cset_tac; intuition.
+Qed.
+
+Lemma filter_incl2 X `{OrderedType X} (p:X->bool) Z
+: of_list (List.filter p Z) ⊆ of_list Z.
+Proof.
+  general induction Z; simpl.
+  - reflexivity.
+  - destruct if; simpl. rewrite IHZ; reflexivity.
+    rewrite IHZ. cset_tac; intuition.
+Qed.
+
+Instance PIR2_refl X (R:relation X) `{Reflexive _ R} : Reflexive (PIR2 R).
+Proof.
+  hnf; intros. general induction x; eauto using PIR2.
+Qed.
+
+Lemma getAnn_setTopAnn A (an:ann A) a
+ : getAnn (setTopAnn an a) = a.
+Proof.
+  destruct an; eauto.
+Qed.
+
+Lemma dve_live LV s lv
+  : true_live_sound LV s lv
+    -> live_sound (compile_LV LV) (compile s lv) (compile_live s lv).
+Proof.
+  intros. general induction H; simpl; eauto using live_sound, compile_live_incl.
+  - destruct if; eauto. econstructor; eauto.
+    rewrite compile_live_incl; eauto.
+  - econstructor; eauto; rewrite compile_live_incl; eauto.
+  - econstructor. eapply (map_get_1 (fun lvZ => let Z' := List.filter (fun x => B[x ∈ fst lvZ]) (snd lvZ) in
+                      (fst lvZ, Z')) H); eauto.
+    simpl. admit.
+    simpl. admit. admit.
+  - econstructor; simpl in *.
+    eapply live_sound_monotone. eapply live_sound_monotone2.
+    eapply IHtrue_live_sound1. cset_tac; intuition.
+    econstructor; simpl.
+    simpl. rewrite getAnn_setTopAnn, compile_live_incl. 
+    split; eauto. rewrite filter_incl. cset_tac; intuition.
+    eauto. eapply PIR2_refl. hnf; intuition.
+    eapply live_sound_monotone. eapply IHtrue_live_sound2.
+    econstructor; simpl. 
+    rewrite getAnn_setTopAnn, compile_live_incl.
+    split; eauto. rewrite filter_incl. cset_tac; intuition. eauto.
+    eapply PIR2_refl. hnf; intuition.
+    rewrite getAnn_setTopAnn. cset_tac; intuition.
+    rewrite getAnn_setTopAnn.
+    rewrite compile_live_incl; eauto.
+    admit.
+    rewrite compile_live_incl; eauto.
+Qed.
 
 (*           
 Lemma sim_DVE L L' V V' s LV lv
