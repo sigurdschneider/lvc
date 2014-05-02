@@ -3,9 +3,7 @@ Require Export ParamsMatch DecSolve.
 
 Set Implicit Arguments.
 
-Notation "'live'" := (set var) (at level 0).
-
-Inductive argsLive (Caller Callee:live) : args -> params -> Prop :=
+Inductive argsLive (Caller Callee:set var) : args -> params -> Prop :=
 | AL_nil : argsLive Caller Callee nil nil
 | AL_cons y z Y Z : argsLive Caller Callee Y Z -> (z ∈ Callee <-> y ∈ Caller) -> 
   argsLive Caller Callee (y::Y) (z::Z).
@@ -52,7 +50,7 @@ Proof.
   eapply IHargsLive; eauto. cset_tac; intuition.
 Qed.
 
-Lemma argsLive_get_live (bv lv:live) Z Y x y n
+Lemma argsLive_get_live (bv lv:set var) Z Y x y n
   : getT Z n x -> getT Y n y
   -> argsLive lv bv Y Z
   -> x ∈ bv 
@@ -100,29 +98,29 @@ Proof.
   cset_tac; eauto.
 Qed.
 
-Inductive live_sound : list (live*params) -> stmt -> ann live -> Prop :=
-| LOpr x Lv b lv e (al:ann live)
+Inductive live_sound : list (set var*params) -> stmt -> ann (set var) -> Prop :=
+| LOpr x Lv b lv e (al:ann (set var))
   :  live_sound Lv b al
   -> live_exp_sound e lv
   -> (getAnn al\{{x}}) ⊆ lv
   -> live_sound Lv (stmtExp x e b) (annExp lv al)
-| LIf Lv x b1 b2 lv (al1 al2:ann live)
+| LIf Lv x b1 b2 lv al1 al2
   :  live_sound Lv b1 al1
   -> live_sound Lv b2 al2
   -> x ∈ lv
   -> getAnn al1 ⊆ lv
   -> getAnn al2 ⊆ lv
   -> live_sound Lv (stmtIf x b1 b2) (annIf lv al1 al2)
-| LGoto l Y Lv (lv:live) blv Z
+| LGoto l Y Lv lv blv Z
   : get Lv (counted l) (blv,Z)
   -> (blv \ of_list Z) ⊆ lv
   -> length Y = length Z
   -> of_list Y ⊆ lv 
   -> live_sound Lv (stmtGoto l Y) (annGoto lv)
-| LReturn Lv x (lv:live)
+| LReturn Lv x lv
   : x ∈ lv
   -> live_sound Lv (stmtReturn x) (annReturn lv)
-| LLet Lv s Z b lv (als alb: ann live)
+| LLet Lv s Z b lv als alb
   : live_sound ((getAnn als,Z)::Lv) s als
   -> live_sound ((getAnn als,Z)::Lv) b alb
   -> (of_list Z) ⊆ getAnn als
@@ -149,7 +147,7 @@ Proof.
     rewrite IHlive_sound2; eauto.
 Qed.
 
-Definition live_rename_L_entry (ϱ:env var) (x:live * params)
+Definition live_rename_L_entry (ϱ:env var) (x:set var * params)
  := (lookup_set ϱ (fst x), lookup_list ϱ (snd x)).
 
 Definition live_rename_L (ϱ:env var) DL
@@ -317,7 +315,7 @@ Proof.
     eapply agree_on_incl; eauto. cset_tac; intuition.
 Qed.
 
-Inductive approxF' : list (live*params) -> F.block -> F.block -> Prop :=
+Inductive approxF' : list (set var * params) -> F.block -> F.block -> Prop :=
   approxFI' DL E E' Z s lv
   : live_sound ((getAnn lv, Z)::DL) s lv
     -> agree_on (getAnn lv \ of_list Z) E E'

@@ -206,7 +206,7 @@ Qed.
 
 Open Scope set_scope.
 
-Lemma ssa_locally_inj_alpha G G' s ϱ ϱ' DL (slv:ann live)
+Lemma ssa_locally_inj_alpha G G' s ϱ ϱ' DL (slv:ann (set var))
   : ssa G s G'
   -> locally_inj ϱ s slv
   -> live_sound DL s slv

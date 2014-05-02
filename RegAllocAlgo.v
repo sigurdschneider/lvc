@@ -27,7 +27,7 @@ Hypothesis oracle_sound'
   : forall lv ra x xr, oracle x lv ra = Some xr -> ~xr ∈ lookup_set ra lv.
 *)
 
-Fixpoint oracle_list (L:list var) (lv:live) (ϱ:var -> var)
+Fixpoint oracle_list (L:list var) (lv:set var) (ϱ:var -> var)
   : list var :=
   match L with
     | nil => nil
@@ -83,7 +83,7 @@ Fixpoint oracle_list (L:list var) (lv:live) (ϱ:var -> var)
 -Qed.
 *)
 
-Fixpoint linear_scan (st:stmt) (an: ann (live)) (ϱ:var -> var)
+Fixpoint linear_scan (st:stmt) (an: ann (set var)) (ϱ:var -> var)
   : status (var -> var) :=
  match st, an with
     | stmtExp x e s, annExp lv ans =>

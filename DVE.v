@@ -10,15 +10,7 @@ Unset Printing Records.
 
 Opaque compute_prop.
 
-Notation "B[ x ]" := (if [ x ] then true else false).
-
-Fixpoint filter_by {A B} (f:A -> bool) (L:list A) (L':list B) : list B :=
-  match L, L' with
-    | x :: L, y::L' => if f x then y :: filter_by f L L' else filter_by f L L' 
-    | _, _ => nil
-  end.
-
-Fixpoint compile (s:stmt) (a:ann live) :=
+Fixpoint compile (s:stmt) (a:ann (set var)) :=
   match s, a with
     | stmtExp x e s, annExp lv an => 
       if [x ∈ getAnn an] then stmtExp x e (compile s an)
@@ -33,11 +25,11 @@ Fixpoint compile (s:stmt) (a:ann live) :=
     | s, _ => s
   end.
 
-Definition ArgRel (G:(live * params)) (VL VL': list val) : Prop := 
+Definition ArgRel (G:(set var * params)) (VL VL': list val) : Prop := 
   VL' = (filter_by (fun x => B[x ∈ (fst G)]) (snd G) VL) /\
   length (snd G) = length VL.
 
-Definition ParamRel (G:(live * params)) (Z Z' : list var) : Prop := 
+Definition ParamRel (G:(set var * params)) (Z Z' : list var) : Prop := 
   Z' = (List.filter (fun x => B[x ∈ (fst G)]) Z) /\ snd G = Z.
 
 Lemma lookup_list_filter_by_commute A B C (V:A->B) (Z:list C) Y p
@@ -131,7 +123,7 @@ Proof.
   destruct if; simpl. rewrite IHlength_eq; eauto. eauto.
 Qed.
 
-Definition blockRel (AL:list (live*params)) L (L':F.labenv) := (forall n blk lvZ, get AL n lvZ -> get L n blk -> block_Z blk = snd lvZ).
+Definition blockRel (AL:list (set var*params)) L (L':F.labenv) := (forall n blk lvZ, get AL n lvZ -> get L n blk -> block_Z blk = snd lvZ).
 
 Lemma plus_is_step_star (X : Type) (R : rel X) x y
 : plus R x y -> exists z, R x z /\ star R z y.
@@ -211,7 +203,7 @@ Proof.
   eapply psimapxd_mon.
 Qed.
 
-Lemma sim_DVE r L L' V V' s LV lv
+Lemma sim_DVE' r L L' V V' s LV lv
 : agree_on (getAnn lv) V V'
 -> true_live_sound LV s lv
 -> simL' r ArgRel ParamRel LV L L'

@@ -250,7 +250,7 @@ Lemma live_sound_compile DL ZL AL s ans_lv ans
   : live_sound (zip (fun s t => (fst s, snd s ++ t)) DL ZL) (compile ZL s ans) ans_lv.
 Proof.
   general induction LV; inv RD; eauto using live_sound.
-  + pose proof (zip_get  (fun (s : live * list var) (t : list var) => (fst s, snd s ++ t)) H H9).
+  + pose proof (zip_get  (fun (s : set var * list var) (t : list var) => (fst s, snd s ++ t)) H H9).
     econstructor. eapply H3. simpl. rewrite of_list_app. cset_tac; intuition.
     simpl. erewrite get_nth; eauto. repeat rewrite app_length. congruence.
     erewrite get_nth; eauto. rewrite of_list_app. cset_tac; intuition. admit.

@@ -144,7 +144,7 @@ Inductive shadowing_free : set var -> stmt -> Prop :=
     -> shadowing_free D t
     -> shadowing_free D (stmtLet Z s t).
 
-Inductive srd : list (option (set var)) -> stmt -> ann live -> Prop :=
+Inductive srd : list (option (set var)) -> stmt -> ann (set var) -> Prop :=
  | srdExp DL x e s lv al
     : srd (restrict DL (lv\{{x}})) s al
     -> srd DL (stmtExp x e s) (annExp lv al)
@@ -312,7 +312,7 @@ Qed.
 Transparent restrict.
 
 
-Fixpoint freeVar_live (s:stmt) : ann live :=
+Fixpoint freeVar_live (s:stmt) : ann (set var) :=
   match s with
     | stmtExp x e s0 => annExp (freeVars s) (freeVar_live s0)
     | stmtIf x s1 s2 => annIf (freeVars s) (freeVar_live s1) (freeVar_live s2)

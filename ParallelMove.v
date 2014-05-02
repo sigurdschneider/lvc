@@ -190,9 +190,9 @@ Fixpoint lower DL s (an:ann (set var))
   end.
 
 Inductive approx 
-: list (live * list var) -> I.block -> I.block -> Prop :=
+: list (set var * list var) -> I.block -> I.block -> Prop :=
   approxI Lv s Z lv s'
-  (al:ann live)
+  (al:ann (set var))
   (LS:live_sound ((lv,Z)::Lv) s al)
   (AL:(of_list Z) ⊆ lv)
   (EQ:getAnn al \ of_list Z ⊆ lv)

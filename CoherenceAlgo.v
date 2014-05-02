@@ -880,7 +880,7 @@ Lemma killExcept_get l AP s
 : get AP (counted l) s -> 
   get (killExcept l AP) (counted l) (Some s).
 Proof.
-  intros. exploit (get_mapi (fun (n : nat) (x : live) => if [n = counted l] then ⎣x ⎦ else ⎣⎦) H); eauto.
+  intros. exploit (get_mapi (fun (n : nat) (x : set var) => if [n = counted l] then ⎣x ⎦ else ⎣⎦) H); eauto.
   destruct if in X; eauto.
   exfalso; eauto.
 Qed.
