@@ -78,8 +78,8 @@ Module F.
     - left; case_eq (val2bool (V x)); eexists; intros; eauto using step.
     - case_eq (L (counted l)); intros. 
       + destruct b as [? ? [[? ?] ?]].
-        destruct_prop (l = l0); subst; try now (right; stuck).
-        destruct_prop (length l1 = length Y); try now (right; stuck).
+        decide (l = l0); subst; try now (right; stuck).
+        decide (length l1 = length Y); try now (right; stuck).
         left. eexists. econstructor; eauto.
       + right; stuck.
     - right; stuck.
@@ -144,8 +144,8 @@ Module I.
     - left; case_eq (val2bool (V x)); eexists; intros; eauto using step.
     - case_eq (L (counted l)); intros. 
       + destruct b as [? [[? ?] ?]].
-        destruct_prop (l = l0); subst; try now (right; stuck).
-        destruct_prop (length l1 = length Y); try now (right; stuck).
+        decide (l = l0); subst; try now (right; stuck).
+        decide (length l1 = length Y); try now (right; stuck).
         left. eexists. econstructor; eauto.
       + right; stuck.
     - right; stuck.
@@ -188,9 +188,9 @@ Tactic Notation "goto_invs" tactic(tac) :=
     | [ |- sim (?L, _, nstmtGoto ?l ?Y) (_, _, _) ] =>
       let b := fresh "blk" in
       destruct (get_dec L (counted l)) as [[b ?]|];
-        [ first [ destruct_prop (length (F.block_Z b) = length Y);
+        [ first [ decide (length (F.block_Z b) = length Y);
                   [ tac | no_step ]
-                | destruct_prop (length (I.block_Z b) = length Y);
+                | decide (length (I.block_Z b) = length Y);
                   [ tac | no_step ] ]
         | no_step; tac; simpl in *; eauto ]
   end.
@@ -283,7 +283,7 @@ Proof.
       inv LA.
       edestruct LEQ as [? [? ?]]; dcr; eauto.
       assert (x0 = x) by congruence; subst x0.
-      destruct_prop (length Z' = length Y).
+      decide (length Z' = length Y).
       eapply simS; try eapply plusO.
       econstructor. try eapply H1; eauto; try reflexivity.
       symmetry. eapply LL; eauto. eapply H. reflexivity.

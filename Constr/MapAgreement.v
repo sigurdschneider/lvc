@@ -1,5 +1,5 @@
 Require Export Setoid Coq.Classes.Morphisms.  
-Require Import EqDec DecidableTactics Util AutoIndTac.
+Require Import EqDec Computable Util AutoIndTac.
 Require Export CSet Containers.SetDecide.
 Require Export MapBasics MapLookup.
 
@@ -163,12 +163,14 @@ Global Instance agree_on_computable {X} `{OrderedType X} {Y} `{OrderedType Y}
  (f g:X->Y) D `{Proper _ (_eq ==> _eq) f} `{Proper _ (_eq ==> _eq) g}
   : Computable (agree_on D f g).
 Proof.
-  constructor. 
-  case_eq (for_all (fun x => @compute_prop (f x === g x) _) D); intros.
-  eapply for_all_iff in H3. left. hnf; intros.  
+  case_eq (for_all (fun x => @decision_procedure (f x === g x) _) D); intros.
+  eapply for_all_iff in H3. left. hnf; intros.
   specialize (H3 _ H4). simpl in H3.
+  unfold decision_procedure in H3; simpl in H3.
+  unfold inst_equiv_cm in H3.
   destruct (inst_eq_dec_ordered_type Y H0 (f x) (g x)); eauto; isabsurd.
-  hnf; intros. simpl. 
+  hnf; intros. simpl.
+  unfold decision_procedure, inst_equiv_cm.
   destruct (inst_eq_dec_ordered_type Y H0 (f x) (g x));
   destruct (inst_eq_dec_ordered_type Y H0 (f y) (g y)); try constructor.
   exfalso. eapply c. rewrite <- H4. eauto.
@@ -177,8 +179,10 @@ Proof.
   change False with (Is_true false). rewrite <- H3.
   eapply Is_true_eq_left. rewrite <- for_all_iff.
   hnf; intros. simpl. specialize (H4 _ H5).
+  unfold decision_procedure, inst_equiv_cm.
   destruct (inst_eq_dec_ordered_type Y H0 (f x) (g x)); simpl; eauto.
   hnf; intros. simpl.
+  unfold decision_procedure, inst_equiv_cm.
   destruct (inst_eq_dec_ordered_type Y H0 (f x) (g x));
   destruct (inst_eq_dec_ordered_type Y H0 (f y) (g y)); try constructor.
   exfalso. eapply c. rewrite <- H5. eauto.
@@ -189,6 +193,6 @@ Extraction Inline agree_on_computable.
 
 (* 
  *** Local Variables: ***
- *** coq-load-path: ("../infra" "../constr" "../il"  "..") ***
+ *** coq-load-path: (("../" "Lvc")) ***
  *** End: ***
  *)

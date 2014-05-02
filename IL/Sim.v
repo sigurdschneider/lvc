@@ -582,7 +582,7 @@ Proof.
     simpl in *. eapply sim_freeVars; eauto. 
     eapply agree_on_incl; eauto. cset_tac; intuition.
   + destruct (get_dec L (counted l)). destruct s as [[]].
-    destruct_prop (length block_Z = length Y).
+    decide (length block_Z = length Y).
     edestruct PIR2_nth; try eassumption; dcr; destruct x.
     inv H3.
     econstructor; try eapply plusO.
@@ -928,7 +928,7 @@ Proof.
     - no_step; eauto.
   + case_eq(val2bool(E x)); intros; one_step; eauto. 
   + destruct (get_dec L (counted l)). destruct s as [[]].
-    destruct_prop (length block_Z = length Y).
+    decide (length block_Z = length Y).
     - edestruct AIR4_nth' as [? [? [? ]]]; dcr; try eassumption.
       repeat get_functional; subst. inv H5.
       one_step; simpl in *; eauto. congruence. simpl.

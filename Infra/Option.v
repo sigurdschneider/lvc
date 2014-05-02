@@ -89,3 +89,9 @@ Ltac monad_inv H :=
   | (@eq _ (@bind _ _ _ _ _ ?G) (?X)) => 
     let X := fresh in remember G as X; simpl in H; subst X; monad_inv1 H
   end.
+
+(* 
+*** Local Variables: ***
+*** coq-load-path: (("../" "Lvc")) ***
+*** End: ***
+*)

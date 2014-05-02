@@ -48,8 +48,8 @@ Section Translate.
     -> forall y : var, updE M2 MC Z Y y = (M1 (par_move f fC Z Y y)).
   Proof.
     general induction Z; destruct Y; isabsurd; eauto.
-
-    unfold updE. simpl. destruct if; lud; eauto.
+    unfold updE. simpl. destruct if; lud; intuition.
+    eapply IHZ; eauto.
   Qed.
 
   Lemma symb_eval p (M1 M2 : env val) f 
@@ -250,7 +250,7 @@ Proof.
     rewrite lookup_list_length; eauto. 
     unfold updE in X''. eapply agree_on_sym.
     eapply agree_on_incl. eapply X''. cset_tac; intuition.
-    destruct_prop (a ∈ of_list Z0); cset_tac; intuition.
+    decide (a ∈ of_list Z0); cset_tac; intuition.
 
   + eapply simE; try eapply star_refl; simpl; try stuck.
     rewrite EEQ; eauto.

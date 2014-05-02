@@ -1,5 +1,5 @@
 Require Export Setoid Coq.Classes.Morphisms.  
-Require Import EqDec DecidableTactics Util LengthEq AutoIndTac.
+Require Import EqDec Computable Util LengthEq AutoIndTac.
 Require Export CSet Containers.SetDecide.
 Require Export MapBasics MapLookup MapUpdate.
 

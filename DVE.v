@@ -1,13 +1,11 @@
 Require Import CSet Le.
 Require Import Plus Util AllInRel Map.
 
-Require Import Val Var Env EnvTy IL Annotation ParamsMatch
-Require Import Sim SimApx Fresh Filter.
+Require Import Val Var Env EnvTy IL Annotation ParamsMatch.
+Require Import Sim SimApx Fresh Filter Liveness.
 
 Set Implicit Arguments.
 Unset Printing Records.
-
-Opaque compute_prop.
 
 Fixpoint compile (s:stmt) (a:ann (set var)) :=
   match s, a with
@@ -47,7 +45,7 @@ Lemma argsLive_filter_length lv blv Z Y
     length (List.filter (fun y : var => B[y ∈ lv]) Y).
 Proof.
   intros. general induction H; simpl; eauto.
-  destruct_prop (z ∈ blv); destruct_prop (y ∈ lv); try tauto; simpl.
+  decide (z ∈ blv); decide (y ∈ lv); try tauto; simpl.
   - rewrite IHargsLive; eauto.
 Qed.
 
@@ -56,7 +54,7 @@ Lemma filter_incl lv Y
 Proof.
   general induction Y; simpl. 
   - cset_tac; intuition.
-  - destruct_prop (a ∈ lv); simpl. cset_tac; intuition. rewrite <- H0; eauto.
+  - decide (a ∈ lv); simpl. cset_tac; intuition. rewrite <- H0; eauto.
     rewrite <- IHY; eauto.
     eauto.
 Qed.
@@ -231,7 +229,7 @@ Proof.
     rewrite <- H; eauto. left; eapply IHs2; eauto using agree_on_incl. 
   + destruct (get_dec L (counted l)) as [[[bE bZ bs]]|].
     (* hnf in H2. exploit H2; eauto. simpl in *. subst bZ. *)
-(*    destruct_prop (length Z = length Y). *)
+(*    decide (length Z = length Y). *)
     unfold simL in H1.
     edestruct AIR5_length; try eassumption; dcr.
     edestruct get_length_eq; try eassumption.
@@ -420,7 +418,7 @@ Proof.
     rewrite <- H; eauto. eapply IHs2; eauto using agree_on_incl.
   + destruct (get_dec L (counted l)) as [[[bE bZ bs]]|].
 (*    hnf in H2. exploit H2; eauto. simpl in *. subst bZ. *)
-    destruct_prop (length Z = length Y). 
+    decide (length Z = length Y). 
     unfold simL in H1.
     edestruct AIR5_length; try eassumption; dcr.
     edestruct get_length_eq; try eassumption.

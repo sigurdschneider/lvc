@@ -17,7 +17,7 @@ Defined.
 
 Instance inst_computable_In X `(OrderedType X) x s
   : Computable(x ∈ s).
-constructor. case_eq (mem x s); intros.
+case_eq (mem x s); intros.
 left. eapply mem_iff; eauto.
 right. eapply not_mem_iff; eauto.
 Defined.
@@ -25,13 +25,13 @@ Defined.
 Instance Subset_computable {X} `{OrderedType X} {s t:set X}
   : Computable (Subset s t).
 Proof.
-  constructor. case_eq (subset s t); intro A.
-  + eapply subset_iff in A. intuition.
+  case_eq (subset s t); intro A.
+  + eapply subset_iff in A. firstorder.
   + right; intro B. rewrite subset_iff in B. congruence.
 Defined.
 
 Instance Equal_computable X `{OrderedType X} (s t:set X) : Computable (s [=] t).
-constructor. case_eq (equal s t); intros.
+case_eq (equal s t); intros.
 left. eapply equal_iff in H0. eauto.
 right. intro. eapply equal_iff in H1. congruence.
 Defined.

@@ -1,5 +1,5 @@
 Require Export Setoid Coq.Classes.Morphisms.  
-Require Import EqDec DecidableTactics Util LengthEq AutoIndTac.
+Require Import EqDec Computable Util LengthEq AutoIndTac.
 Require Export CSet Containers.SetDecide.
 Require Export MapBasics MapLookup MapLookupList MapInverse.
 
@@ -69,7 +69,7 @@ Proof.
   general induction H6. reflexivity. 
   inv H7; simpl in *.
   specialize (IHlength_eq _ _ _ _ _ _ _ _ _ _ _ _ YL0 (D\{{x}}) X0). 
-  assert (D ⊆ (D \ {{x}}) ∪ {{x}}). cset_tac. destruct_prop(a === x); intuition.
+  assert (D ⊆ (D \ {{x}}) ∪ {{x}}). cset_tac. decide(a === x); intuition.
   eapply agree_on_incl; eauto. eapply agree_on_union.
   hnf; intros. cset_tac; eqs. lud.  
   unfold agree_on in IHlength_eq. symmetry. rewrite <- IHlength_eq.

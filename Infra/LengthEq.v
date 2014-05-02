@@ -40,7 +40,7 @@ Qed.
 Lemma length_eq_dec {X} (L L' : list X)
   : length_eq L L' + (length_eq L L' -> False).
 Proof.
-  destruct_prop(length L = length L').
+  decide(length L = length L').
   left. eapply length_length_eq; eauto.
   right. intro. eapply length_eq_length in X0. congruence.
 Defined.

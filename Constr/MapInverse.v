@@ -1,5 +1,5 @@
 Require Export Setoid Coq.Classes.Morphisms.  
-Require Import EqDec DecidableTactics Util LengthEq AutoIndTac.
+Require Import EqDec Computable Util LengthEq AutoIndTac.
 Require Export CSet Containers.SetDecide.
 
 Set Implicit Arguments.
@@ -139,12 +139,12 @@ Lemma inverse_on_update_with_list {X} `{OrderedType X} {Y} `{OrderedType Y}
 Proof. 
   intros.
   hnf; intros.
-  destruct_prop (x ∈ of_list Z). clear H4. 
+  decide (x ∈ of_list Z). clear H4. 
   induction Z. exfalso.  simpl in i. eapply not_in_empty in i; eauto. 
   simpl. lud. eapply H3; eauto. simpl. eapply union_3. intuition.
   eapply union_2; eauto. eapply IHZ. eapply injective_on_incl; eauto.
   eapply incl_union_lr; eauto. reflexivity. simpl. intuition. simpl in i.
-  eapply add_3; eauto. destruct_prop (a === x); eauto. exfalso. eapply H4.
+  eapply add_3; eauto. decide (a === x); eauto. exfalso. eapply H4.
   rewrite e; reflexivity.
   
   assert (ϱ x ∉ of_list(lookup_list ϱ Z)).

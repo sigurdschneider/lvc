@@ -1,5 +1,5 @@
 Require Export Setoid Coq.Classes.Morphisms.  
-Require Import EqDec DecidableTactics Util AutoIndTac.
+Require Import EqDec Computable Util AutoIndTac.
 Require Export CSet Containers.SetDecide.
 
 Set Implicit Arguments.
@@ -151,7 +151,7 @@ Section Map.
 
   Ltac eqdec :=
     match goal with
-      | [ |- context[@compute_prop ?P _ ] ] => destruct_prop(P); try eqs
+      | [ |- context[@decision_procedure ?P _ ] ] => decide(P); try eqs
       end.
   
   Lemma lookup_equiv f x y x'
@@ -227,14 +227,14 @@ Ltac lud :=
           | [H' : x === x' |- _ ] => fail 1
           | [H' : ~x === x' |- _ ] => fail 1
           | [H' : x =/= x' |- _ ] => fail 1
-          | [ |- _ ] => destruct_prop(x === x')
+          | [ |- _ ] => decide(x === x')
           end
     | [ x: _, x': _, H : context[update ?f ?x ?y ?x'] |- _ ]
       => match goal with
           | [H' : x === x' |- _ ] => fail 1
           | [H' : ~x === x' |- _ ] => fail 1
           | [H' : x =/= x' |- _ ] => fail 1
-          | [ |- _ ] => destruct_prop(x === x')
+          | [ |- _ ] => decide(x === x')
           end
   end).
 
@@ -315,7 +315,7 @@ Section UpdateFacts.
   Lemma update_repeat' W `{OrderedType W} X `{Defaulted X} (m : Map[W, X]) (k l : W) :
     m[k <- m[.k.]][.l.] = m[.l.].
   Proof.
-    intros. destruct_prop (l === k). repeat lookup_def_eq_tac.
+    intros. decide (l === k). repeat lookup_def_eq_tac.
     lookup_def_neq_tac; eauto.
   Qed.
     

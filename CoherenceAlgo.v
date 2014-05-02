@@ -5,8 +5,6 @@ Require Import Val Var Env EnvTy IL Annotation Liveness Coherence ParamsMatch Si
 
 Set Implicit Arguments.
 
-Opaque compute_prop.
-
 Definition addParam x (DL:list (set var)) (AP:list (set var)) := 
   zip (fun (DL:set var) AP => if [x ∈ DL] 
                    then {{x}} ∪ AP else AP) DL AP.
@@ -801,7 +799,7 @@ Proof.
   general induction H; simpl; eauto.
   destruct y; simpl in * |- *. 
   + split.
-    - destruct_prop (x0 ∈ s). 
+    - decide (x0 ∈ s). 
       * cset_tac; intuition. intro; intuition.
       * exploit H1; eauto using get. cset_tac; intuition.
     - destruct H0; eapply IHlength_eq; eauto.
@@ -824,8 +822,8 @@ Proof.
     + destruct y; intros; simpl.
       repeat destruct if; try now econstructor.
       * econstructor. reflexivity.
-      * destruct_prop (x0 ∈ s). exfalso. eapply n.
-        hnf; intros. destruct_prop (a === x0). rewrite e in H2.
+      * decide (x0 ∈ s). exfalso. eapply n.
+        hnf; intros. decide (a === x0). rewrite e in H2.
         exfalso; cset_tac; intuition.
         rewrite <- H1.
         cset_tac; intuition. 
@@ -849,8 +847,8 @@ Proof.
     + destruct y; intros; simpl.
       repeat destruct if; try now econstructor.
       * econstructor. reflexivity.
-      * destruct_prop (x0 ∈ s). exfalso. eapply n.
-        hnf; intros. destruct_prop (a === x0). rewrite e in H2.
+      * decide (x0 ∈ s). exfalso. eapply n.
+        hnf; intros. decide (a === x0). rewrite e in H2.
         exfalso; cset_tac; intuition.
         rewrite <- H1.
         cset_tac; intuition. 

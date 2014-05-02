@@ -113,7 +113,7 @@ Proof.
       
       hnf; intros. cset_tac. left; eauto. intro.
       eapply lookup_set_spec in H1.
-      destruct H1; dcr. destruct_prop(x ∈ of_list Z).
+      destruct H1; dcr. decide(x ∈ of_list Z).
       eapply (update_with_list_lookup_in ϱ) with (Z':=fresh_list G' (length Z)) in i; eauto.
       rewrite <- H5 in i. apply (not_in_empty a).
       eapply fresh_set_spec. cset_tac; eauto.

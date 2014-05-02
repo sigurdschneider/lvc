@@ -13,17 +13,12 @@
 
 Require Export CoreTactics Bool.
 
-Class Computable (P : Prop) := {
-  compute_prop : { P } + { ~P }
-}.
-Opaque compute_prop.
+Class Computable (P : Prop) := decision_procedure : { P } + { ~P }.
+Opaque decision_procedure.
 
-Class Decidable (P : Prop) := {
-  decide_prop : P \/ ~P
-}.
-Opaque decide_prop.
+Arguments decision_procedure P {Computable}.
 
-Local Obligation Tactic := decompose records; tauto.
+Local Obligation Tactic := decompose records; firstorder.
 
 (** Propositional formulas over computable atoms are computable. *)
 Section ComputableInstances.
@@ -49,54 +44,27 @@ Extraction Inline inst_true_cm_obligation_1 inst_false_cm_obligation_1
   inst_impl_cm_obligation_1 inst_iff_cm_obligation_1 
   inst_and_cm inst_or_cm inst_impl_cm inst_iff_cm.
 
-(** The same thing for decidable formulas. *)
-Section DecidableInstances.
-  Global Program Instance inst_true_xm  : Decidable True.
-  Global Program Instance inst_false_xm : Decidable False.
-
-  Variable P : Prop.
-  Variable H : Decidable P.
-
-  Global Program Instance inst_not_xm : Decidable (~P).
-
-  Variable Q  : Prop.
-  Variable H' : Decidable Q.
-
-  Global Program Instance inst_and_xm  : Decidable (P /\ Q).
-  Global Program Instance inst_or_xm   : Decidable (P \/ Q).
-  Global Program Instance inst_impl_xm : Decidable (P -> Q).
-  Global Program Instance inst_iff_xm  : Decidable (P <-> Q).
-End DecidableInstances.
-
 (** Lift boolean predicates to computable Props. *)
 
 Coercion Is_true : bool >-> Sortclass.
 
 Global Instance inst_Is_true_cm (b : bool) : Computable (Is_true b).
-  constructor. destruct b; simpl; tauto.
+  destruct b; simpl; firstorder.
 Defined.
 
 Extraction Inline inst_Is_true_cm.
 
-
-(** Given a computable property, we also have a decidable property. *)
-Global Instance inst_cm_xm P `(Computable P) : Decidable P.
-  constructor. destruct H. tauto.
-Qed.
-
-Extraction Inline inst_cm_xm.
-
 (** Classical axioms for decidable predicates. *)
-Lemma decidable_xm P `(Decidable P) : P \/ ~P.  destruct H; tauto. Qed.
-Lemma decidable_dn P `(Decidable P) : ~~P -> P. destruct H; tauto. Qed.
+Lemma decidable_xm P `(Computable P) : P \/ ~P.  destruct H; tauto. Qed.
+Lemma decidable_dn P `(Computable P) : ~~P -> P. destruct H; tauto. Qed.
 
-Lemma dleft (P Q : Prop) `(Decidable Q) :
+Lemma dleft (P Q : Prop) `(Computable Q) :
   (~Q -> P) -> P \/ Q.
 Proof.
   destruct H; tauto.
 Qed.
 
-Lemma dright (P Q : Prop) `(Decidable P) :
+Lemma dright (P Q : Prop) `(Computable P) :
   (~P -> Q) -> P \/ Q.
 Proof.
   destruct H; tauto.
@@ -125,35 +93,25 @@ Ltac dright :=
 (** destruct [P] does case analysis on decidable propositions. *)
 (* More concretely, if the goal is in Prop then P has to be decidable,
    otherwise P should be computable. *)
-Ltac destruct_prop P :=
+Ltac decide_tac P :=
   match goal with
     | |- ?H =>
       match type of H with
-        | Prop => destruct (@compute_prop P _) ||
-                  destruct (@decide_prop  P _) || fail 2 "not a decidable proposition."
-        | _    => destruct (@compute_prop P _) || fail 2 "not a computable proposition."
+        | _    => destruct (@decision_procedure P _) || fail 2 "not a computable proposition."
       end
   end.
 
+Tactic Notation "decide" constr(P) := decide_tac P.
+
 (** Programming with computable Props. *)
 Notation "'if' [ P ] 'then' s 'else' t" :=
-  (if (@compute_prop P _) then s else t) (at level 200, right associativity, format
+  (if (@decision_procedure P _) then s else t) (at level 200, right associativity, format
   "'if'  [ P ]  'then'  s  'else'  t").
 
-Extraction Inline compute_prop.
+Extraction Inline decision_procedure.
 
-(* Examples *)
-
-(* Define a computational function that tests whether a proposition is true *)
-Definition test1 X Y Z `{Computable X} `{Computable Y} `{Computable Z} 
-  : bool :=
-  if [X /\ Y \/ Z] then true else false.
-
-
-Lemma test1_correct X Y Z `{Computable X} `{Computable Y} `{Computable Z} 
-  : test1 X Y Z <-> X /\ Y \/ Z.
-Proof.
-  unfold test1; destruct_prop(X /\ Y \/ Z).
-  now firstorder.
-  split; eauto. inversion 1.
-Qed.
+(* 
+*** Local Variables: ***
+*** coq-load-path: (("../" "Lvc")) ***
+*** End: ***
+*)

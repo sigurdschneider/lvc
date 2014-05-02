@@ -70,8 +70,8 @@ Set Implicit Arguments.
   Instance live_exp_sound_dec e lv
   : Computable (live_exp_sound e lv).
   Proof.
-    constructor. induction e; try dec_solve.
-    - destruct_prop (v ∈ lv); try dec_solve.
+    induction e; try dec_solve.
+    - decide (v ∈ lv); try dec_solve.
     - edestruct IHe1, IHe2; dec_solve.
   Defined.
 

@@ -1,5 +1,5 @@
 Require Export Setoid Coq.Classes.Morphisms.  
-Require Import EqDec DecidableTactics Util AutoIndTac.
+Require Import EqDec Computable Util AutoIndTac.
 Require Export CSet Containers.SetDecide.
 
 Require Export MapBasics MapLookup MapLookupList MapAgreement MapInjectivity MapUpdate MapAgreeSet InjectiveMapping MapInverse MapComposition.
@@ -50,7 +50,7 @@ Lemma lookup_set_update_with_list_in_union {X} `{OrderedType X} {Y} `{OrderedTyp
   : lookup_set (update_with_list Z Z' f) D ⊆ lookup_set f D ∪ of_list Z'.
 Proof.
   intros; hnf; intros. eapply lookup_set_spec in H2.
-  destruct H2; dcr. destruct_prop (a ∈ of_list Z').
+  destruct H2; dcr. decide (a ∈ of_list Z').
   cset_tac; eauto.
   rewrite H4 in n.
   eapply lookup_set_update_not_in_Z' in n. rewrite n in H4.
@@ -77,9 +77,9 @@ Lemma lookup_set_update_with_list_in_union_length {X} `{OrderedType X} {Y} `{Ord
     -> lookup_set (update_with_list Z Z' f) D ⊆ (lookup_set f (D \ of_list Z)) ∪ of_list Z'.
 Proof.
   intros; hnf; intros. eapply lookup_set_spec in H3.
-  destruct H3; dcr. destruct_prop (a ∈ of_list Z').
+  destruct H3; dcr. decide (a ∈ of_list Z').
   cset_tac; eauto.
-  destruct_prop(x ∈ of_list Z).
+  decide(x ∈ of_list Z).
   exfalso. rewrite H5 in n. eapply n. 
   eapply update_with_list_lookup_in; eauto.
   rewrite update_with_list_no_update in H5; eauto.

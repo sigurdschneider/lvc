@@ -30,7 +30,7 @@ Inductive loc : Type :=
   | LocI : nat -> loc.
 Definition default_loc : loc := LocI 0.
 Global Instance inst_eq_dec_loc : EqDec loc eq.
-hnf; intros. destruct x,y. destruct_prop (n=n0). 
+hnf; intros. destruct x,y. decide (n=n0). 
 subst; left; reflexivity.
 right. intro. inversion H. eauto.
 Defined.

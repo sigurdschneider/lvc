@@ -63,7 +63,6 @@ Inductive annotation {A:Type} : stmt -> ann A -> Prop :=
 
 Instance annotation_dec_inst {A} {s} {a} : Computable (@annotation A s a).
 Proof. 
-  constructor.
   revert a. induction s; destruct a; try destruct IHs;
   try (now left; econstructor; eauto);
   try (now right; inversion 1; eauto).

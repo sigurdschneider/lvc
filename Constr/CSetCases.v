@@ -9,7 +9,7 @@ Section theorems.
   Lemma in_add_case s (x y:X)
     : y ∈ {{x}} ∪ s -> x===y \/ (x =/= y /\ y ∈ s).
   Proof.
-    destruct_prop (x===y); cset_tac; firstorder.
+    decide (x===y); cset_tac; firstorder.
   Qed.
 
   Lemma in_in_neq s (x y:X)
@@ -48,7 +48,7 @@ Section theorems.
     -> {{x}} ∪ (s \ ({{x}} ∪ t)) ≅ {{x}} ∪ s \ t.
   Proof.
     intros. cset_tac; firstorder. cset_tac. 
-    destruct_prop (a===x); firstorder. 
+    decide (a===x); firstorder. 
   Qed.
 
   Lemma incl_not_in (x:X) s t
@@ -63,7 +63,7 @@ Section theorems.
     -> c ∪ (c' \ (c \ d)) ≅ c'.
   Proof.
     cset_tac.
-    destruct_prop(a ∈ c). firstorder.
+    decide(a ∈ c). firstorder.
     set (b:=c\d). assert (a ∉ b). subst b. cset_tac; firstorder.
     cset_tac; firstorder.
   Qed.
@@ -74,7 +74,7 @@ Section theorems.
     -> c ∩ (c' \ (c \ d)) ≅ d.
   Proof.
     cset_tac; firstorder.
-    destruct_prop(a ∈ d); firstorder.
+    decide(a ∈ d); firstorder.
   Qed.
 
   Lemma minus_minus_id (s t: set X)

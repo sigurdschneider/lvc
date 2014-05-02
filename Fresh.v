@@ -6,7 +6,7 @@ Require Import Env EnvTy IL.
 Set Implicit Arguments.
 
 Instance le_comp (a b: nat) : Computable (a < b).
-constructor. eapply lt_dec.
+eapply lt_dec.
 Defined.
 
 (*Definition max a b := if [ a < b ] then b else a.
@@ -162,7 +162,7 @@ Lemma inverse_on_update_fresh (D:set var) (Z Z':list var) (ϱ ϱ' : var -> var)
                  (update_with_list Z' Z ϱ').
 Proof.
   intros. eapply length_length_eq in H1.
-  hnf; intros. lud. destruct_prop(x ∈ of_list Z).
+  hnf; intros. lud. decide(x ∈ of_list Z).
   general induction H1; simpl in *; eauto; dcr. cset_tac; exfalso; eauto.
   lud. eapply add_iff in i. destruct i; eauto.
   assert (y ∈ of_list YL). rewrite e.

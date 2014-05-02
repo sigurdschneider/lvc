@@ -168,7 +168,7 @@ Module F.
     right. intros [A B]; inv B; congruence.
     left. case_eq (val2bool (V x)); intros; eauto using step.
     destruct (get_dec L (counted l)) as [[blk A]|?].
-    destruct_prop (length (block_Z blk) = length Y).
+    decide (length (block_Z blk) = length Y).
     left. econstructor. econstructor; eauto.
     right; intros [? B]; inv B; eauto; get_functional; subst; eauto.
     right; intros [? B]; inv B; eauto; get_functional; subst; eauto.
@@ -231,7 +231,7 @@ Module I.
     right. intros [A B]; inv B; congruence.
     left. case_eq (val2bool (V x)); intros; eauto using step.
     destruct (get_dec L (counted l)) as [[blk A]|?].
-    destruct_prop (length (block_Z blk) = length Y).
+    decide (length (block_Z blk) = length Y).
     left. econstructor. econstructor; eauto.
     right; intros [? B]; inv B; eauto; get_functional; subst; eauto.
     right; intros [? B]; inv B; eauto; get_functional; subst; eauto.

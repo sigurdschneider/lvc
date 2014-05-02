@@ -73,17 +73,17 @@ Definition locally_inj_dec (ϱ:env var) (s:stmt) (lv:ann (set var)) (an:annotati
   : {locally_inj ϱ s lv} + {~ locally_inj ϱ s lv}.
 Proof.
   general induction s; destruct lv; try (now exfalso; inv an). 
-  + destruct_prop(injective_on a ϱ);
-    destruct_prop(injective_on (getAnn lv ∪ {{x}}) ϱ); try dec_solve;
+  + decide(injective_on a ϱ);
+    decide(injective_on (getAnn lv ∪ {{x}}) ϱ); try dec_solve;
     edestruct IHs; eauto; try dec_solve; inv an; eauto.
-  + destruct_prop(injective_on a ϱ); try dec_solve;
+  + decide(injective_on a ϱ); try dec_solve;
     edestruct IHs1; eauto; try inv an; eauto; try dec_solve;
     edestruct IHs2; eauto; try inv an; eauto; try dec_solve.
-  + destruct_prop(injective_on a ϱ); try dec_solve.
-  + destruct_prop(injective_on a ϱ); try dec_solve.
-  + destruct_prop(injective_on a ϱ);
-    destruct_prop (injective_on (getAnn lv1 ∪ of_list Z) ϱ);
-    destruct_prop (inj_mapping (lookup_set ϱ (getAnn lv1 \ of_list Z)) Z (lookup_list ϱ Z)); try dec_solve;
+  + decide(injective_on a ϱ); try dec_solve.
+  + decide(injective_on a ϱ); try dec_solve.
+  + decide(injective_on a ϱ);
+    decide (injective_on (getAnn lv1 ∪ of_list Z) ϱ);
+    decide (inj_mapping (lookup_set ϱ (getAnn lv1 \ of_list Z)) Z (lookup_list ϱ Z)); try dec_solve;
     edestruct IHs1; eauto; try inv an; eauto; try dec_solve;
     edestruct IHs2; eauto; try inv an; eauto; try dec_solve.
 Defined.
@@ -102,9 +102,9 @@ Instance locally_inj_dec_inst (ϱ:env var) (s:stmt) (lv:ann (set var))
          `{Computable (annotation s lv)}
   : Computable (locally_inj ϱ s lv).
 Proof.
-  destruct H as [[]].
-  econstructor; eauto using locally_inj_dec.
-  constructor; right; intro; eauto using locally_inj_annotation.
+  destruct H as [].
+  hnf; eauto using locally_inj_dec.
+  right; intro; eauto using locally_inj_annotation.
 Defined.
 
 (** local injectivity respects functional equivalence (if the function itself is injective wrt. the underlying equivalence) *)
@@ -144,7 +144,7 @@ Proof.
   + econstructor. 
     - eapply srd_monotone. 
       * eapply IHRI; eauto. simpl in *. 
-        cset_tac; intuition. destruct_prop (a === x); intuition. left. eapply INCL.
+        cset_tac; intuition. decide (a === x); intuition. left. eapply INCL.
         eapply H10. cset_tac; intuition.
         assert (C ⊆ C ∪ {{x}}). cset_tac; intuition.
         rewrite H2 in H1; eauto.
@@ -194,7 +194,7 @@ Proof.
     eapply srd_monotone. eapply IHRI2; eauto. transitivity lv; eauto.
     simpl. split; eauto. eapply Subset_trans; eauto.
     simpl. 
-    simpl. destruct_prop (getAnn alvs \ of_list Z ⊆ getAnn alvb). 
+    simpl. decide (getAnn alvs \ of_list Z ⊆ getAnn alvb). 
     unfold live_global. simpl.
     rewrite restrict_incl; eauto. simpl. econstructor. econstructor; eauto.
     rewrite getAnn_mapAnn. rewrite of_list_lookup_list.

@@ -52,13 +52,13 @@ Proof.
   + destruct (get_dec DL (counted l)) as [[[G'|]]|];
     destruct (get_dec ZL (counted l)) as [[Za ?]|];
     try destruct a;
-    try destruct_prop (G' ⊆ a0);
-    try destruct_prop (of_list (Za) ⊆ a0);
+    try decide (G' ⊆ a0);
+    try decide (of_list (Za) ⊆ a0);
     subst; try dec_solve; try inv an; try inv an_lv; eauto. 
-  + destruct_prop (a = nil);
+  + decide (a = nil);
     subst; try dec_solve; try inv an; try inv an_lv; eauto. 
   + edestruct (IHs1 (restrict (Some (getAnn ans_lv1 \ of_list (Z++a))::DL) (getAnn ans_lv1 \ of_list (Z++a))) (a::ZL) ans_lv1 ans1); eauto;
-    edestruct (IHs2 (Some (getAnn ans_lv1 \ of_list (Z++a)) :: DL) (a :: ZL) ans_lv2 ans2); destruct_prop (of_list a ⊆ getAnn ans_lv1);
+    edestruct (IHs2 (Some (getAnn ans_lv1 \ of_list (Z++a)) :: DL) (a :: ZL) ans_lv2 ans2); decide (of_list a ⊆ getAnn ans_lv1);
     eauto; try dec_solve.
 Defined.
 
@@ -71,8 +71,8 @@ Qed.
 Instance trs_dec_inst DL ZL s lv Y
 : Computable (trs DL ZL s lv Y).
 Proof.
-  try (now constructor; right; intro A; eapply trs_annotation in A; dcr; eauto).
-  constructor. eauto using trs_dec.
+  try (now right; intro A; eapply trs_annotation in A; dcr; eauto).
+  hnf; eauto using trs_dec.
 Defined.
 
 Fixpoint compile (ZL:list (list var)) (s:stmt) (an:ann (list var)) : stmt :=
@@ -137,7 +137,7 @@ Proof.
   + eapply simE; try eapply star_refl; simpl; eauto; try stuck. rewrite EQ; eauto.
 
   + simpl counted in *.
-    destruct_prop (length Z' = length Y).
+    decide (length Z' = length Y).
     one_step. simpl in *; eauto.
     repeat rewrite app_length.
     eapply get_drop_eq in H6; eauto. inv H6; subst. simpl.
@@ -234,7 +234,7 @@ Proof.
       hnf; intros. cset_tac; intuition. 
     - eapply srd_monotone2. eapply IHRD2; eauto.
       constructor. constructor. simpl. cset_tac; intuition. eauto.
-      destruct_prop (getAnn ans_lv \ of_list (Z ++ Za) ⊆ getAnn ant_lv).
+      decide (getAnn ans_lv \ of_list (Z ++ Za) ⊆ getAnn ant_lv).
       rewrite restrict_incl; eauto.
       econstructor. reflexivity. 
       eapply restrict_subset2. reflexivity. eauto.
