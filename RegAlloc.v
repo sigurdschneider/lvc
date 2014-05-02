@@ -246,23 +246,29 @@ Proof.
   eapply IHssa2; eauto using inverse_on_incl.
 Qed.
 
+Fixpoint norm_rho ra s s' : env var :=
+  match s, s' with
+    | stmtExp x e s, stmtExp x' e' s' => norm_rho (ra[x<- x']) s s'
+    | stmtIf _ s t, stmtIf _ s' t' => norm_rho (norm_rho ra s s') t t'
+    | stmtLet Z s t, stmtLet Z' s' t' => norm_rho (norm_rho (ra [Z <-- Z']) s s') t t'
+    | _, _ => ra
+  end.
+
 (*
+
 Lemma ssa_rename_alpha C C' s s' ra ira 
   : ssa C s C' -> alpha ra ira s s' -> 
-    rename (norm_rho ra s) s = s'.
+    rename (norm_rho ra s s') s = s'.
 Proof.
   intros. general induction H0; simpl in *.
-  + rewrite H. eauto.
+  + rewrite H; eauto.
   + f_equal. eauto.
-  + inversion H1. subst C C' x0 e0 s0.
-    f_equal. 
-    eexists (x0 [x <- y]). simpl. 
-    f_equal. lud. exfalso; eauto.
-    assert (agree_on (Exp.freeVars e) (x0[x<-y]) x0).
-    eapply agree_on_update_dead; eauto. reflexivity.
 
-    assert (agree_on (freeVars s) (x0[x<-y]) x0).
-    eapply agree_on_update_dead. eapply ssa_freeVars in H9.
+
+Lemma ssa_rename_alpha C C' s s' ra ira 
+  : ssa C s C' -> alpha ra ira s s' -> 
+    locally_inj (norm_rho ra s s') s .
+Proof.
 *)
 
 (* 
