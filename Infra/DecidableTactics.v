@@ -16,10 +16,12 @@ Require Export CoreTactics Bool.
 Class Computable (P : Prop) := {
   compute_prop : { P } + { ~P }
 }.
+Opaque compute_prop.
 
 Class Decidable (P : Prop) := {
   decide_prop : P \/ ~P
 }.
+Opaque decide_prop.
 
 Local Obligation Tactic := decompose records; tauto.
 
