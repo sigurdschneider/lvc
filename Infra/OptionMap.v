@@ -58,6 +58,16 @@ Proof.
   erewrite <- H; eauto using get. erewrite IHL; eauto using get.
 Qed.
 
+Lemma omap_agree_2 X X' Y (f: X -> option Y) (g: X' -> option Y) L L'
+: (forall n x y, get L n x -> get L' n y -> f x = g y)
+  -> length L = length L'
+  -> omap f L = omap g L'.
+Proof.
+  intros. eapply length_length_eq in H0.
+  general induction H0; simpl; eauto.
+  erewrite <- H; eauto using get. erewrite IHlength_eq; eauto using get.
+Qed.
+
 Lemma omap_length X Y L' (f: X -> option Y) L 
 : omap f L = Some L'
   -> length L = length L'.
