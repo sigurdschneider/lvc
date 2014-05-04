@@ -1,5 +1,5 @@
 Require Import List.
-Require Export Util Relations Get Drop Var Val Exp Env Map CSet AutoIndTac MoreList.
+Require Export Util Relations Get Drop Var Val Exp Env Map CSet AutoIndTac MoreList OptionMap.
 
 Set Implicit Arguments.
 
@@ -10,80 +10,90 @@ Open Scope map_scope.
 (** ** Syntax *)
 
 (** [args] is the type of the list of variables passed at a goto ... *)
-Notation "'args'" := (list var) (at level 0).
+Notation "'args'" := (list exp) (at level 0).
 (** ... while [params] is the type of the list of formal parameters *)
 Notation "'params'" := (list var) (at level 0).
 
 Inductive stmt : Type :=
 | stmtExp    (x : var) (e: exp) (s : stmt) : stmt
-| stmtIf     (x : var) (s : stmt) (t : stmt) : stmt
+| stmtIf     (e : exp) (s : stmt) (t : stmt) : stmt
 | stmtGoto   (l : lab) (Y:args) : stmt
-| stmtReturn (x : var) : stmt 
+| stmtReturn (e : exp) : stmt 
 (* block f Z : rt = s in b *)    
 | stmtLet    (Z:params) (s : stmt) (t : stmt) : stmt.
 
 Inductive notOccur (G:set var) : stmt -> Prop :=
-  | ncExp x e s : x ∉ G -> notOccur G s -> Exp.notOccur G e -> notOccur G (stmtExp x e s)
-  | ncIf x s t : x ∉ G -> notOccur G s -> notOccur G t -> notOccur G (stmtIf x s t)
-  | ncRet x : x ∉ G -> notOccur G (stmtReturn x)
-  | ncGoto l (Y:list var) : of_list Y ∩ G [=] ∅ -> notOccur G (stmtGoto l Y)
-  | ncLet s Z t : of_list Z ∩ G [=] ∅ -> notOccur G s -> notOccur G t 
-    -> notOccur G (stmtLet Z s t).
+  | ncExp x e s 
+    : x ∉ G 
+      -> notOccur G s 
+      -> Exp.notOccur G e 
+      -> notOccur G (stmtExp x e s)
+  | ncIf e s t 
+    : Exp.notOccur G e 
+      -> notOccur G s 
+      -> notOccur G t 
+      -> notOccur G (stmtIf e s t)
+  | ncRet e : Exp.notOccur G e -> notOccur G (stmtReturn e)
+  | ncGoto l (Y:list exp) 
+    : (forall n e, get Y n e -> Exp.notOccur G e) 
+      -> notOccur G (stmtGoto l Y)
+  | ncLet s Z t 
+    : of_list Z ∩ G [=] ∅ 
+      -> notOccur G s 
+      -> notOccur G t 
+      -> notOccur G (stmtLet Z s t).
 
 Fixpoint freeVars (s:stmt) : set var :=
   match s with
     | stmtExp x e s0 => (freeVars s0 \ {{x}}) ∪ Exp.freeVars e
-    | stmtIf x s1 s2 => freeVars s1 ∪ freeVars s2 ∪ {{x}}
-    | stmtGoto l Y => of_list Y
-    | stmtReturn x => {{x}}
+    | stmtIf e s1 s2 => freeVars s1 ∪ freeVars s2 ∪ Exp.freeVars e
+    | stmtGoto l Y => list_union (List.map Exp.freeVars Y)
+    | stmtReturn e => Exp.freeVars e
     | stmtLet Z s1 s2 => (freeVars s1 \ of_list Z) ∪ freeVars s2
   end.
 
 Fixpoint occurVars (s:stmt) : set var :=
   match s with
     | stmtExp x e s0 => occurVars s0 ∪ {{x}}
-    | stmtIf x s1 s2 => occurVars s1 ∪ occurVars s2 ∪ {{x}}
-    | stmtGoto l Y => of_list Y
-    | stmtReturn x => {{x}}
+    | stmtIf e s1 s2 => occurVars s1 ∪ occurVars s2 ∪ Exp.freeVars e
+    | stmtGoto l Y => list_union (List.map Exp.freeVars Y)
+    | stmtReturn e => Exp.freeVars e
     | stmtLet Z s1 s2 => freeVars s1 ∪ freeVars s2 ∪ of_list Z
   end.
 
 Fixpoint rename (ϱ:env var) (s:stmt) : stmt :=
   match s with
     | stmtExp x e s => stmtExp (ϱ x) (rename_exp ϱ e) (rename ϱ s)
-    | stmtIf x s t => stmtIf (ϱ x) (rename ϱ s) (rename ϱ t)
-    | stmtGoto l Y => stmtGoto l (lookup_list ϱ Y)
-    | stmtReturn x => stmtReturn (ϱ x)
+    | stmtIf e s t => stmtIf (rename_exp ϱ e) (rename ϱ s) (rename ϱ t)
+    | stmtGoto l Y => stmtGoto l (List.map (rename_exp ϱ) Y)
+    | stmtReturn e => stmtReturn (rename_exp ϱ e)
     | stmtLet Z s t => stmtLet (lookup_list ϱ Z) (rename ϱ s) (rename ϱ t)
   end.  
 
 Fixpoint label_closed (n:nat) (s:stmt) : Prop :=
   match s with
-    | stmtExp x e s => label_closed n s
-    | stmtIf x s t => label_closed n s /\ label_closed n t
-    | stmtGoto l Y => counted l < n
-    | stmtReturn x => True
-    | stmtLet Z s t => label_closed (S n) s /\ label_closed (S n) t
+    | stmtExp _ e s => label_closed n s
+    | stmtIf _ s t => label_closed n s /\ label_closed n t
+    | stmtGoto l _ => counted l < n
+    | stmtReturn _ => True
+    | stmtLet _ s t => label_closed (S n) s /\ label_closed (S n) t
   end.
 
 Lemma notOccur_incl G G' s
   : G' ⊆ G -> notOccur G s -> notOccur G' s.
 Proof.
-  intros A B. general induction B; eauto using notOccur, incl_not_member, incl_meet_empty.
-  econstructor; auto. eapply Exp.notOccur_antitone; eauto.
+  intros A B. general induction B; 
+              eauto using notOccur, incl_not_member, incl_meet_empty,
+              Exp.notOccur_antitone.
 Qed.
 
 Add Parametric Morphism : notOccur with
   signature Subset ==> eq ==> flip impl as incl_notOccur_morphism.
 Proof.
-  intros; hnf; intros. general induction H0; eauto 20 using notOccur.
-  econstructor; eauto using Exp.notOccur_antitone. 
-  econstructor; eauto.
-  eapply incl_eq; eauto using incl_empty. rewrite <- H.
-  eapply incl_meet_lr; intuition.
-  econstructor; eauto.
-  eapply incl_eq; eauto using incl_empty. rewrite <- H.
-  eapply incl_meet_lr; intuition.
+  intros; hnf; intros. general induction H0; eauto 20 using notOccur, Exp.notOccur_antitone.
+  - econstructor; eauto.
+    eapply incl_eq; eauto using incl_empty. rewrite <- H.
+    eapply incl_meet_lr; intuition.
 Qed.
 
 Add Parametric Morphism : notOccur with
@@ -96,23 +106,7 @@ Proof.
   rewrite H1; eauto.
 Qed.
 
-
-
-(*
-Fixpoint ann_map A B (f:A->B) s a (ans:ann s a) : ann s (f a) :=
- match ans in (ann s0 y) return (ann s0 (f y)) with
-   | annExp x e b a0 ab ans0 => @annExp B x e b _ _ (ann_map f ans0)
-   | annIf x b1 b2 a1 a2 a0 ans1 ans2 => @annIf _ _ _ _ _ _ _ (ann_map f ans1) (ann_map f ans2)
-   | annGoto l Y a0 => annGoto l Y (f a0)
-   | annReturn x a0 => annReturn x (f a0)
-   | annLet s0 Z b a1 a2 a0 ans1 ans2 => @annLet _ _ _ _ _ _ _ (ann_map f ans1) (ann_map f ans2)
- end.
-*)
-
 (** ** Semantics *)
-Definition updE X `{OrderedType X} (Ecallee : env X) (Ecaller : env X) (Z : params) (Y:args)
-  : env X := 
-  update_with_list Z (lookup_list Ecaller Y) Ecallee.
 
 (** *** Functional Semantics *)
 Module F.
@@ -132,21 +126,23 @@ Module F.
     (def:exp_eval E e = Some v)
     : step (L, E, stmtExp x e b) (L, E[x<-v], b)
 
-  | stepIfT L E
-    (x:var) (b1 b2 : stmt)
-    (condTrue: val2bool (E x) = true)
-    : step (L, E, stmtIf x b1 b2) (L, E, b1)
+  | stepIfT L E 
+    e (b1 b2 : stmt) v
+    (def:exp_eval E e = Some v)
+    (condTrue: val2bool v = true)
+    : step (L, E, stmtIf e b1 b2) (L, E, b1)
     
   | stepIfF L E
-    (x:var) (b1 b2:stmt)
-    (condFalse:val2bool (E x) = false)
-    : step (L, E, stmtIf x b1 b2) (L, E, b2)
+    e (b1 b2:stmt) v
+    (def:exp_eval E e = Some v)
+    (condFalse: val2bool v = false)
+    : step (L, E, stmtIf e b1 b2) (L, E, b2)
     
-  | stepGoto L E l Y
-    blk 
+  | stepGoto L E l Y blk vl
+    (Ldef:get L (counted l) blk)
     (len:length (block_Z blk) = length Y)
-    (Ldef:get L (counted l) blk) E'
-    (updOk:updE (block_E blk) E (block_Z blk) Y  = E')
+    (def:omap (exp_eval E) Y = Some vl) E'
+    (updOk:(block_E blk) [block_Z blk  <-- vl] = E')
     : step  (L, E, stmtGoto l Y)
             (drop (counted l) L, E', block_s blk)
 
@@ -164,16 +160,19 @@ Module F.
   : reddec step.
   Proof.
     hnf; intros. destruct x as [[L V] []].
-    case_eq (exp_eval V e); intros. left. eauto using step.
-    right. intros [A B]; inv B; congruence.
-    left. case_eq (val2bool (V x)); intros; eauto using step.
-    destruct (get_dec L (counted l)) as [[blk A]|?].
-    destruct_prop (length (block_Z blk) = length Y).
-    left. econstructor. econstructor; eauto.
-    right; intros [? B]; inv B; eauto; get_functional; subst; eauto.
-    right; intros [? B]; inv B; eauto; get_functional; subst; eauto.
-    right; intros [? B]; inv B; eauto.
-    left. eexists. econstructor.
+    - case_eq (exp_eval V e); intros. left. eauto using step.
+      right. stuck.
+    - case_eq (exp_eval V e); intros. 
+      left. case_eq (val2bool v); intros; eauto using step.
+      right. stuck.
+    - destruct (get_dec L (counted l)) as [[blk A]|?].
+      destruct_prop (length (block_Z blk) = length Y).
+      case_eq (omap (exp_eval V) Y); intros; try now (right; stuck).
+      + left. econstructor. econstructor; eauto.
+      + right. stuck. get_functional; subst; eauto.
+      + right. stuck. eauto.
+    - right. stuck.
+    - left. eauto using step.
   Qed.
 
 End F.
@@ -195,22 +194,24 @@ Module I.
     (def:exp_eval E e = Some v)
     : step (L, E, stmtExp x e b) (L, E[x<-v], b)
 
-  | stepIfT L E
-    (x:var) (b1 b2 : stmt)
-    (condTrue: val2bool (E x) = true)
-    : step (L, E, stmtIf x b1 b2) (L, E, b1)
+  | stepIfT L E 
+    e (b1 b2 : stmt) v
+    (def:exp_eval E e = Some v)
+    (condTrue: val2bool v = true)
+    : step (L, E, stmtIf e b1 b2) (L, E, b1)
     
   | stepIfF L E
-    (x:var) (b1 b2:stmt)
-    (condFalse:val2bool (E x) = false)
-    : step (L, E, stmtIf x b1 b2) (L, E, b2)
+    e (b1 b2:stmt) v
+    (def:exp_eval E e = Some v)
+    (condFalse: val2bool v = false)
+    : step (L, E, stmtIf e b1 b2) (L, E, b2)
     
-  | stepGoto L E l Y
-    blk 
+  | stepGoto L E l Y blk vl
+    (Ldef:get L (counted l) blk)
     (len:length (block_Z blk) = length Y)
-    (Ldef:get L (counted l) blk) E'
-    (updOk:updE E E (block_Z blk) Y = E')
-    : step (L, E, stmtGoto l Y)
+    (def:omap (exp_eval E) Y = Some vl) E'
+    (updOk:E[block_Z blk  <-- vl] = E')
+    : step  (L, E, stmtGoto l Y)
             (drop (counted l) L, E', block_s blk)
 
   | stepLet L E
@@ -227,17 +228,21 @@ Module I.
   : reddec step.
   Proof.
     hnf; intros. destruct x as [[L V] []].
-    case_eq (exp_eval V e); intros. left. eauto using step.
-    right. intros [A B]; inv B; congruence.
-    left. case_eq (val2bool (V x)); intros; eauto using step.
-    destruct (get_dec L (counted l)) as [[blk A]|?].
-    destruct_prop (length (block_Z blk) = length Y).
-    left. econstructor. econstructor; eauto.
-    right; intros [? B]; inv B; eauto; get_functional; subst; eauto.
-    right; intros [? B]; inv B; eauto; get_functional; subst; eauto.
-    right; intros [? B]; inv B; eauto.
-    left. eexists. econstructor.
+    - case_eq (exp_eval V e); intros. left. eauto using step.
+      right. stuck.
+    - case_eq (exp_eval V e); intros. 
+      left. case_eq (val2bool v); intros; eauto using step.
+      right. stuck.
+    - destruct (get_dec L (counted l)) as [[blk A]|?].
+      destruct_prop (length (block_Z blk) = length Y).
+      case_eq (omap (exp_eval V) Y); intros; try now (right; stuck).
+      + left. econstructor. econstructor; eauto.
+      + right. stuck. get_functional; subst; eauto.
+      + right. stuck. eauto.
+    - right. stuck.
+    - left. eauto using step.
   Qed.
+
 End I.
 
 Class StateType S := {
@@ -252,7 +257,7 @@ Definition state_result X (s:X*env val*stmt) : option val :=
     | (_, stmtExp _ _ _) => None
     | (_, stmtIf _ _ _) => None
     | (_, stmtGoto _ _) => None
-    | (_, E, stmtReturn x) => Some (E x)
+    | (_, E, stmtReturn e) => exp_eval E e
     | (_, stmtLet _ _ _) => None
   end.
 

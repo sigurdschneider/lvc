@@ -296,8 +296,8 @@ Qed.
 
 Inductive stmtCtx : Type :=
 | ctxExp    (x : var) (e: exp) (C : stmtCtx) : stmtCtx
-| ctxIfS     (x : var) (C : stmtCtx) (t : stmt) : stmtCtx
-| ctxIfT     (x : var) (s : stmt) (C : stmtCtx) : stmtCtx
+| ctxIfS     (e : exp) (C : stmtCtx) (t : stmt) : stmtCtx
+| ctxIfT     (e : exp) (s : stmt) (C : stmtCtx) : stmtCtx
 (* block f Z : rt = s in b  *)
 | ctxLetS    (Z:params) (C : stmtCtx) (t : stmt) : stmtCtx 
 | ctxLetT    (Z:params) (s : stmt) (C : stmtCtx) : stmtCtx
@@ -306,8 +306,8 @@ Inductive stmtCtx : Type :=
 Fixpoint fill (ctx:stmtCtx) (s':stmt) : stmt :=
   match ctx with
     | ctxExp x e ctx => stmtExp x e (fill ctx s')
-    | ctxIfS x ctx t => stmtIf x (fill ctx s') t
-    | ctxIfT x s ctx => stmtIf x s (fill ctx s')
+    | ctxIfS e ctx t => stmtIf e (fill ctx s') t
+    | ctxIfT e s ctx => stmtIf e s (fill ctx s')
     | ctxLetS Z ctx t => stmtLet Z (fill ctx s') t 
     | ctxLetT Z s ctx => stmtLet Z s (fill ctx s')
     | ctxHole => s'
@@ -316,8 +316,8 @@ Fixpoint fill (ctx:stmtCtx) (s':stmt) : stmt :=
 Fixpoint fillC (ctx:stmtCtx) (s':stmtCtx) : stmtCtx :=
   match ctx with
     | ctxExp x e ctx => ctxExp x e (fillC ctx s')
-    | ctxIfS x ctx t => ctxIfS x (fillC ctx s') t
-    | ctxIfT x s ctx => ctxIfT x s (fillC ctx s')
+    | ctxIfS e ctx t => ctxIfS e (fillC ctx s') t
+    | ctxIfT e s ctx => ctxIfT e s (fillC ctx s')
     | ctxLetS Z ctx t => ctxLetS Z (fillC ctx s') t 
     | ctxLetT Z s ctx => ctxLetT Z s (fillC ctx s')
     | ctxHole => s'
@@ -354,23 +354,23 @@ Proof.
   + econstructor. constructor; eauto. eauto.
   + econstructor. econstructor; eauto. eauto.
   + econstructor. eapply F.stepIfF; eauto. eauto.
-  + destruct (get_subst _ _ _ Ldef). 
-    econstructor. econstructor. eapply len. eapply get_app; eauto. reflexivity.
-    pose proof (get_range H3). rewrite drop_length; eauto.
-    rewrite drop_length in H2; eauto.
-    destruct H3; dcr; subst; simpl in *.
-    econstructor. constructor. instantiate (1:= F.blockI E' Z s').
-    simpl. eauto. simpl. rewrite H5. eapply get_length_app.
-    reflexivity. simpl. rewrite H5. rewrite drop_length_eq.
-    eapply (subst_lemma_div nil); eauto. simpl. 
-    rewrite H5 in H2. rewrite drop_length_eq in H2.
-    edestruct (H (F.blockI E' Z s :: L) (updE E' E Z Y)). erewrite <- H3. eauto.
-    econstructor. econstructor. eapply len.
-    rewrite cons_app. rewrite app_assoc. 
-    eapply get_app_right; eauto. simpl.
-    repeat rewrite app_length; simpl. omega.
-    reflexivity. simpl. rewrite drop_length_gr; eauto.
-    rewrite drop_length_gr in H2; eauto.
+  + destruct (get_subst _ _ _ Ldef).
+    - econstructor. econstructor; eauto using get_app. 
+      pose proof (get_range H3). rewrite drop_length; eauto.
+      rewrite drop_length in H2; eauto.
+    - destruct H3; dcr; subst; simpl in *.
+      * econstructor. econstructor; simpl; eauto. rewrite H5. 
+        eauto using get_length_app. simpl; eauto. 
+        simpl. rewrite H5. rewrite drop_length_eq.
+        eapply (subst_lemma_div nil); eauto. simpl. 
+        rewrite H5 in H2. rewrite drop_length_eq in H2.
+        edestruct (H (F.blockI E' Z s :: L) (E'[Z <-- vl])). erewrite <- H3. eauto.
+      * econstructor. econstructor; eauto.
+        rewrite cons_app. rewrite app_assoc. 
+        eapply get_app_right; eauto. simpl.
+        repeat rewrite app_length; simpl. omega.
+        simpl. rewrite drop_length_gr; eauto.
+        rewrite drop_length_gr in H2; eauto.
   + econstructor. econstructor.
     rewrite cons_app. rewrite app_assoc.
     eapply (subst_lemma_div (F.blockI E Z0 s0::nil ++ L')%list). eauto.
@@ -405,28 +405,26 @@ Proof.
     eapply trmWithStep. eapply F.stepIfF; eauto.
     eapply IHterminatesWith; eauto.
     destruct (get_subst _ _ _ Ldef).
-    eapply trmWithStep. econstructor. eapply len.
-    eapply get_app; eauto. reflexivity.
+    eapply trmWithStep. econstructor; eauto using get_app. 
     rewrite drop_length; eauto using get_range.
     eapply IHterminatesWith; eauto.
     rewrite drop_length; eauto using get_range.
     destruct H2; dcr. subst. 
-    eapply trmWithStep. econstructor. instantiate (1:=F.blockI E' Z s'). eauto.
-    rewrite H4. eapply get_length_app. reflexivity.
-    simpl in *. 
+    eapply trmWithStep. eapply F.stepGoto with (blk:= F.blockI E' Z s'); eauto.
+    rewrite H4. eapply get_length_app. simpl. simpl in *. 
     assert (drop (length L') (L' ++ F.blockI E' Z s :: L)
             = (F.blockI E' Z s :: L) % list).
     eapply drop_length_eq.
-    pose proof (IHterminatesWith nil _ _ (updE E' E Z Y) E' Z L s H1 eq_refl).
+    pose proof (IHterminatesWith nil _ _ (E'[Z <-- vl]) E' Z L s H1 eq_refl).
     rewrite H4 in H3. rewrite H2 in H3.
     simpl in *. specialize (H3 eq_refl).
     hnf in H1.
-    pose proof (H1 (drop (labN l) (L' ++ F.blockI E' Z s' :: L)) (updE E' E Z Y)).
+    pose proof (H1 (drop (labN l) (L' ++ F.blockI E' Z s' :: L)) (E'[Z <-- vl])).
     eapply H5; rewrite H4. rewrite drop_length_eq. eauto.
-    eapply trmWithStep. econstructor. instantiate  (1:=blk); eauto.
+    eapply trmWithStep. 
+    eapply F.stepGoto with (blk:=blk); eauto.
     rewrite cons_app; rewrite app_assoc.
     eapply get_app_right; eauto. rewrite app_length; simpl in *. omega.
-    reflexivity.
     rewrite drop_length_gr; eauto.
     rewrite drop_length_gr in H0; eauto.
     eapply trmWithStep. econstructor.
@@ -457,7 +455,8 @@ Proof.
     eapply simE; try eapply star_refl. eauto. eauto.
     simpl. destruct 1. inv H1. eapply H0. 
     econstructor. econstructor; eauto.
-  + case_eq (val2bool (E x)); intros.
+  + case_eq (exp_eval E e); intros.
+    case_eq (val2bool v); intros.
     eapply simS.
     econstructor. econstructor; eauto.
     econstructor; econstructor; eauto. eapply IHctx; eauto.
@@ -465,7 +464,9 @@ Proof.
     econstructor. eapply F.stepIfF; eauto.
     econstructor; eapply F.stepIfF; eauto.
     eapply sim_refl.
-  + case_eq (val2bool (E x)); intros.
+    eapply simE; try eapply star_refl; eauto; stuck.
+  + case_eq (exp_eval E e); intros.
+    case_eq (val2bool v); intros.
     eapply simS; auto.
     econstructor. econstructor; eauto.
     econstructor; econstructor; eauto.
@@ -473,6 +474,7 @@ Proof.
     eapply simS.
     econstructor. eapply F.stepIfF; eauto.
     econstructor; eapply F.stepIfF; eauto. eapply IHctx; eauto.
+    eapply simE; try eapply star_refl; eauto; stuck.
   + eapply simS.
     eapply plusO. econstructor.
     eapply plusO. econstructor.
@@ -570,30 +572,55 @@ Proof.
     erewrite exp_eval_live in H1; eauto. congruence.
     simpl. eapply live_exp_sound_incl; simpl; eauto using live_freeVars.
     cset_tac; intuition.
-  + case_eq (val2bool (E x)); intros.
+  + case_eq (exp_eval E e); intros.
+    case_eq (val2bool v); intros.
     eapply simS; try eapply plusO.
     econstructor; eauto.
-    econstructor; eauto. rewrite <- H; simpl; eauto. cset_tac; intuition.
+    econstructor; eauto. simpl in *. 
+    erewrite <- exp_eval_live; eauto.
+    simpl. eapply live_exp_sound_incl; simpl; eauto using live_freeVars.
+    cset_tac; intuition.
     simpl in *. eapply sim_freeVars; eauto. 
     eapply agree_on_incl; eauto. cset_tac; intuition.
     eapply simS; try eapply plusO.
     eapply F.stepIfF; eauto.
-    eapply F.stepIfF; eauto. rewrite <- H; simpl; eauto. cset_tac; intuition.
+    eapply F.stepIfF; eauto. 
+    erewrite <- exp_eval_live; eauto.
+    simpl. eapply live_exp_sound_incl; simpl; eauto using live_freeVars.
+    cset_tac; intuition.
     simpl in *. eapply sim_freeVars; eauto. 
     eapply agree_on_incl; eauto. cset_tac; intuition.
+    eapply simE; try eapply star_refl; eauto; stuck.
+    erewrite <- exp_eval_live in def; eauto. congruence.
+    simpl. eapply live_exp_sound_incl; simpl; eauto using live_freeVars.
+    cset_tac; intuition.
+    erewrite <- exp_eval_live in def; eauto. congruence.
+    simpl. eapply live_exp_sound_incl; simpl; eauto using live_freeVars.
+    cset_tac; intuition.
   + destruct (get_dec L (counted l)). destruct s as [[]].
     destruct_prop (length block_Z = length Y).
+    case_eq (omap (exp_eval E) Y); intros.
     edestruct PIR2_nth; try eassumption; dcr; destruct x.
-    inv H3.
+    inv H4.
     econstructor; try eapply plusO.
-    econstructor; eauto. simpl. eauto.
-    econstructor; eauto. simpl. eauto.
+    econstructor; eauto. 
+    econstructor; eauto. simpl in *. instantiate (1:= l0).
+    intros. erewrite <- omap_agree; eauto.
+    intros. eapply exp_eval_live; eauto.
+    eapply live_exp_sound_incl; simpl; eauto using live_freeVars. 
+    eapply incl_list_union; eauto using map_get_1; try reflexivity.
     simpl. eapply sim_freeVars.
-    unfold updE. erewrite lookup_list_agree; eauto.
     eapply update_with_list_agree. eapply agree_on_incl; eauto.
-    cset_tac; intuition. rewrite lookup_list_length. eauto.
+    cset_tac; intuition.
+    intros. erewrite <- (@omap_length _ _ l0); eauto.
     eapply PIR2_drop; eauto.
-    eapply simE; try eapply star_refl; eauto; stuck; eauto.
+    eapply simE; try eapply star_refl; eauto; stuck; eauto. 
+    intros. assert (omap (exp_eval E') Y = None).
+    erewrite <- omap_agree; eauto.
+    intros. eapply exp_eval_live; eauto.
+    eapply live_exp_sound_incl; simpl; eauto using live_freeVars. 
+    eapply incl_list_union; eauto using map_get_1; try reflexivity. congruence.
+    eapply simE; try eapply star_refl; eauto; stuck; eauto. 
     get_functional; subst; simpl in *; congruence.
     edestruct PIR2_nth_2; try eassumption; dcr; eauto.
     repeat get_functional; subst; simpl in *; try congruence. inv H3. 
@@ -601,10 +628,11 @@ Proof.
     eapply simE; try eapply star_refl; auto; stuck; eauto.
     edestruct PIR2_nth_2; try eassumption; dcr; eauto.
   + eapply simE; try eapply star_refl; simpl; try stuck; eauto.
-    rewrite H; eauto. simpl; cset_tac; eauto.
+    eapply exp_eval_live; eauto.
+    eapply live_exp_sound_incl; simpl; eauto using live_freeVars. reflexivity.
   + eapply simS; try eapply plusO.
     econstructor.
-    econstructor. Guarded.
+    econstructor. 
     eapply sim_freeVars. eapply agree_on_incl; eauto.
     simpl. cset_tac; intuition.
     econstructor. econstructor; eauto. 
@@ -698,7 +726,7 @@ Ltac single_step :=
       econstructor; try eapply H'; eauto
     | [ H': get ?L (counted ?l) _ |- step (?L, _ , stmtGoto ?l _) _] =>
       econstructor; try eapply H'; eauto
-    | _ => constructor; eauto
+    | _ => econstructor; eauto
   end.
 
 
@@ -775,31 +803,32 @@ Proof.
   + econstructor. econstructor; eauto. eauto.
   + econstructor. eapply F.stepIfF; eauto. eauto. 
   + destruct (get_subst _ _ _ Ldef) as [?|[?|?]]; subst; simpl in *; dcr.
-    - econstructor. econstructor. eapply len. eapply get_app; eauto. reflexivity.
+    - econstructor. econstructor; eauto using get_app. 
       pose proof (get_range H5). rewrite drop_length; eauto.
       rewrite drop_length in H4; eauto.
     - subst; simpl in *. 
-      econstructor. constructor. instantiate (1:= F.blockI E2 Z' s').
-      simpl. congruence. simpl. rewrite H7. eapply get_length_app.
+      econstructor. econstructor. instantiate (1:= F.blockI E2 Z' s').
+      simpl. rewrite H7. eapply get_length_app. simpl; congruence. eauto.
       reflexivity. simpl. rewrite H7. rewrite drop_length_eq.
       eapply (subst_lemma_div_L nil); eauto. simpl. 
-      rewrite H7 in H4. rewrite drop_length_eq in H4. unfold updE.
-      specialize (H (lookup_list E Y)).
+      rewrite H7 in H4. rewrite drop_length_eq in H4.
+      specialize (H vl).
       pose proof (@sim_codiverge F.state _ F.state _).
-      eapply H5; eauto. eapply H. 
-      rewrite lookup_list_length. congruence. congruence.
+      eapply H5; eauto. eapply H. symmetry in len.
+      erewrite <- omap_length; eauto. congruence.
       eapply simL_refl.
     - edestruct (AIR4_length H1); dcr.
       destruct (AIR4_nth' H1 H6) as [? [? [?]]]; dcr.
       inv H15. repeat (get_functional; subst). simpl in *.
-      econstructor. econstructor. Focus 2.
+      econstructor. econstructor.
       rewrite cons_app. rewrite app_assoc. 
       eapply get_app_right; eauto. simpl.
-      repeat rewrite app_length; simpl. omega. simpl. congruence.
+      repeat rewrite app_length; simpl. omega. simpl. congruence. eauto.
       reflexivity. simpl. rewrite drop_length_gr; eauto.
       rewrite drop_length_gr in H4; eauto.
       pose proof (@sim_codiverge F.state _ F.state _).
-      eapply H6. eapply H14. rewrite lookup_list_length. congruence. congruence.
+      eapply H6. eapply H14. symmetry in len. 
+      erewrite <- omap_length; try eapply def. congruence. congruence.
       eauto. 
   + econstructor. econstructor.
     rewrite cons_app. rewrite app_assoc.
@@ -831,9 +860,8 @@ Proof.
         unfold simL in *. edestruct AIR4_nth as [blk1 [blk2]]; eauto; dcr.
         inv H12; repeat get_functional; subst.
         econstructor; econstructor.
-        Focus 2.
         eapply get_app_right. instantiate (1:=S (counted l - S (length L))).
-        omega. econstructor; eauto. simpl in * |- *; congruence.
+        omega. econstructor; eauto. simpl in * |- *; congruence. eauto.
         reflexivity.
     - econstructor; econstructor; eauto. 
   + inv H.
@@ -844,24 +872,22 @@ Proof.
     - eapply trmWithStep. eapply F.stepIfF; eauto.
       eapply IHterminatesWith; eauto.
     - destruct (get_subst _ _ _ Ldef) as [|[|]].
-      * eapply trmWithStep. econstructor. eapply len.
-        eapply get_app; eauto. reflexivity.
+      * eapply trmWithStep. econstructor. 
+        eapply get_app; eauto. eapply len. eauto. reflexivity.
         rewrite drop_length; eauto using get_range.
         eapply IHterminatesWith; eauto.
         rewrite drop_length; eauto using get_range.
       * dcr; subst.
         edestruct AIR4_length; eauto; dcr.
         eapply trmWithStep. econstructor.
-        Focus 2.
         rewrite H4. eapply get_length_app. 
-        simpl in * |- *. congruence. reflexivity.
+        simpl in * |- *. congruence. eauto. reflexivity.
         simpl.
         rewrite H4 in *. erewrite drop_length_eq in *. 
         simpl in *. rewrite H4. erewrite drop_length_eq. 
-        unfold updE.
-        refine (sim_coterminatesWith (LEQ (lookup_list E Y) _ _ 
+        refine (sim_coterminatesWith (LEQ vl _ _ 
                                                _ _ (simL_refl _)) _).
-        rewrite lookup_list_length. congruence. congruence.
+        erewrite <- omap_length; try eapply def. congruence. congruence.
         eapply (IHterminatesWith nil); eauto. 
       * dcr.
         edestruct AIR4_length; try eassumption; dcr.
@@ -869,16 +895,14 @@ Proof.
         edestruct AIR4_nth as [blk1 [blk2]]; dcr; eauto.
         inv H12; repeat get_functional; subst. simpl in *.
         eapply trmWithStep. econstructor.
-        Focus 2.
         rewrite cons_app; rewrite app_assoc.
         eapply get_app_right; eauto. rewrite app_length; simpl in *. omega.
-        simpl in * |- *; congruence. reflexivity.
+        simpl in * |- *; congruence. eauto. reflexivity.
         rewrite drop_length_gr; eauto.
         rewrite drop_length_gr in H0; eauto.
-        unfold updE.
         simpl. 
         refine (sim_coterminatesWith (H10 _ _ _) _). 
-        rewrite lookup_list_length. simpl in *. congruence. congruence.
+        erewrite <- omap_length; try eapply def. congruence. congruence.
         eapply H0.
     - eapply trmWithStep. econstructor; eauto.
       rewrite cons_app. rewrite app_assoc.
@@ -926,13 +950,17 @@ Proof.
   + case_eq (exp_eval E e); intros.
     - one_step; eauto.
     - no_step; eauto.
-  + case_eq(val2bool(E x)); intros; one_step; eauto. 
+  + case_eq (exp_eval E e); intros. 
+    case_eq(val2bool v); intros; one_step; eauto.
+    eapply simE; try eapply star_refl; eauto; stuck.
   + destruct (get_dec L (counted l)). destruct s as [[]].
     destruct_prop (length block_Z = length Y).
+    case_eq (omap (exp_eval E) Y); intros.
     - edestruct AIR4_nth' as [? [? [? ]]]; dcr; try eassumption.
-      repeat get_functional; subst. inv H5.
+      repeat get_functional; subst. inv H6.
       one_step; simpl in *; eauto. congruence. simpl.
-      eapply H10; eauto. rewrite lookup_list_length; eauto. 
+      eapply H11; eauto. erewrite <- omap_length; try eapply H0; eauto.
+    - no_step.
     - edestruct AIR4_nth' as [? [? [? ]]]; dcr; try eassumption.
       repeat get_functional; subst. inv H5.
       no_step. repeat get_functional; subst. simpl in *. congruence.
