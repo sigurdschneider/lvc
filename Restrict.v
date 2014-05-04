@@ -214,9 +214,8 @@ Lemma bounded_map_lookup G (ϱ: var -> var) DL
   : bounded DL G -> bounded (map_lookup ϱ DL) (lookup_set ϱ G).
 Proof.
   general induction DL; simpl; eauto.
-  destruct a; simpl in *; dcr. split. eapply lookup_set_incl; eauto. intuition.
-  eapply IHDL; eauto.
-  eapply IHDL; eauto.
+  destruct a; simpl in *; dcr; intuition. 
+  eapply lookup_set_incl; eauto. 
 Qed.
 
 Lemma restrict_incl_ext DL G G' D

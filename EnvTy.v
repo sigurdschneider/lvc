@@ -133,13 +133,12 @@ Lemma updD_param D Z x
   -> (updD D Z) x === S (D x).
 Proof.
   intros. unfold updD. rewrite update_list_upd; intros; eauto.
-  hnf; intros. rewrite H0; reflexivity.
 Qed.
 
 
 
 (* 
 *** Local Variables: ***
-*** coq-load-path: ("infra" "constr" "il" "isa" ".") ***
+*** coq-load-path: (("." "Lvc")) ***
 *** End: ***
 *)

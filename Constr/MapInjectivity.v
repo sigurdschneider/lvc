@@ -60,13 +60,12 @@ Section MapInjectivity.
     -> lookup_set m (s \ t) ⊆ lookup_set m s \ (lookup_set m t).
   Proof.
     intros; hnf; intros.
-    eapply lookup_set_spec in H3; decompose records.
+    eapply lookup_set_spec in H3; decompose records; eauto.
     edestruct (minus_in_in _ _ _ _ H5); eauto.
     eapply in_in_minus; eauto. eapply lookup_set_spec; eauto.
-    intro. eapply lookup_set_spec in H7; decompose records. 
+    intro. eapply lookup_set_spec in H7; decompose records; eauto.
     subst. eapply H4. rewrite H2; eauto. eapply union_left; eauto.
     eapply union_right; eauto. rewrite <- H6. rewrite <- H10. reflexivity.
-    intuition. intuition.
   Qed.
 
     
@@ -92,7 +91,7 @@ Lemma injective_on_update_not_in {X} `{OrderedType X} {Y} `{OrderedType Y}
 Proof.
   intros; hnf; intros. 
   decide(x0 === x); decide (x0 === y); eauto.
-  exfalso. eapply H3. eapply lookup_set_spec. intuition.
+  exfalso. eapply H3. eapply lookup_set_spec. eauto.
   eexists y. cset_tac; eqs; eauto. rewrite e in H6; eauto.
   eapply H2; cset_tac; eauto. intro. 
   eapply H3. do 2 set_tac; intuition.  eexists x0. cset_tac; intuition.
@@ -106,9 +105,9 @@ Lemma injective_on_update_fresh {X} `{OrderedType X} {Y} `{OrderedType Y}
   -> injective_on D (update f x y).
 Proof.
   intros; hnf; intros. lud. 
-  exfalso. eapply H3. eapply lookup_set_spec. intuition.
+  exfalso. eapply H3. eapply lookup_set_spec; eauto.
   eexists x0. cset_tac; eauto.
-  exfalso. eapply H3. eapply lookup_set_spec. intuition.
+  exfalso. eapply H3. eapply lookup_set_spec; eauto. 
   eexists y0. cset_tac; eauto.
   eapply H2; cset_tac; eauto.
 Qed.
@@ -131,7 +130,7 @@ Proof.
   intros. cset_tac; split; intros; dcr. eapply lookup_set_spec; eauto.
   + eapply lookup_set_spec in H4. destruct H4; dcr; eauto. eexists x0; cset_tac; eauto.
     intro. eapply H2. eapply lookup_set_spec; eauto. eexists x.  rewrite H3 in H4; eauto.
-    intuition. 
+    eauto.
   + eapply lookup_set_spec in H3; eauto. destruct H3; dcr. cset_tac.
     eapply lookup_set_spec; eauto.
     intro. eapply H2. eapply lookup_set_spec; eauto. eexists x0; split; eqs; eauto.
@@ -284,8 +283,10 @@ Proof.
   rewrite <- H10 in i. rewrite <- H6 in i. rewrite <- lookup_set_union in i.
   eapply lookup_set_spec in i. destruct i; dcr.
   eapply H11 in H15. cset_tac. rewrite H15 in n,H3. destruct H14; eauto.
-  rewrite H4; cset_tac; intuition.
-  rewrite H4; cset_tac; intuition. intuition. intuition.
+  rewrite H4; revert H14 H9; clear_all; intros. cset_tac; intuition.
+  rewrite H4.
+  revert H14 H9; clear_all; intros.
+  cset_tac; intuition. eassumption. eassumption.
   
   destruct b, b0; try now (simpl in *; inv H8; isabsurd). 
   simpl; split; intros; eauto.
@@ -296,8 +297,8 @@ Proof.
   clear H8.
   rewrite <- H10 in n0. 
   rewrite <- H6 in n0. rewrite <- lookup_set_union in n0.
-  assert (s ∪ D' [=] (s' ∪ D') \ {{x}}). 
-  rewrite H4. cset_tac; intuition. 
+  assert (s ∪ D' [=] (s' ∪ D') \ {{x}}).
+  rewrite H4; cset_tac; intuition. 
   intro A; rewrite A in H13; eauto.
   intro A; rewrite A in H13; eauto.
   rewrite H8 in n0. rewrite H8 in H2.
