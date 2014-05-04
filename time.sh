@@ -4,6 +4,7 @@ require 'open3'
 
 include Term::ANSIColor
 
+begin
 parallel = false
 
 if ARGV[0] == "--parallel" then
@@ -46,4 +47,8 @@ if parallel then
   print "#{Time.now.strftime("%H:%M:%S")} ", color.call("<<<"), " #{cmd} \t\t ", color.call("#{cpu.round(2)} / #{time.round(2)}"), "\n"
 end
 
-exit success 
+exit success
+
+rescue SignalException => e
+  exit false 
+end
