@@ -255,7 +255,10 @@ Definition RelsOk A (R:ArgRel A) (R':ParamRel A) :=
 Inductive simB (r:rel2 F.state (fun _ : F.state => F.state)) {A} (R:ArgRel A) (R':ParamRel A) : F.labenv -> F.labenv -> A -> F.block -> F.block -> Prop :=
 | simBI a L L' E E' Z Z' s s'
   : R' a Z Z'
-    -> (forall E E' Y Y', R a (lookup_list E Y) (lookup_list E' Y') 
+    -> (forall E E' Y Y' Yv Y'v, 
+         omap (exp_eval E) Y = Some Yv
+         -> omap (exp_eval E') Y' = Some Y'v
+         -> R a Yv Y'v
 (*               -> length Z = length Y
                -> length Z' = length Y' *)
                -> paco2 (@psimapx F.state _ F.state _) r (L, E, stmtGoto (LabI 0) Y) 
@@ -497,9 +500,9 @@ Proof.
   intros. pfold.
   econstructor; try eapply plusO. 
   econstructor; eauto using get; simpl. edestruct ROK; eauto.
-  rewrite lookup_list_length in *. eauto.
+  eapply omap_length in H. congruence.
   econstructor; eauto using get; simpl. edestruct ROK; eauto.
-  rewrite lookup_list_length in *. eauto.
+  eapply omap_length in H4. congruence.
   simpl. 
   right. eapply CIH; eauto.
   intros. eapply H0; eauto.
@@ -524,9 +527,9 @@ Proof.
   intros. pfold.
   econstructor; try eapply plusO. 
   econstructor; eauto using get; simpl. edestruct ROK; eauto.
-  rewrite lookup_list_length in *. eauto.
+  eapply omap_length in H. congruence.
   econstructor; eauto using get; simpl. edestruct ROK; eauto.
-  rewrite lookup_list_length in *. eauto.
+  eapply omap_length in H4. congruence.
   simpl. 
   right. eapply CIH; eauto.
   intros. eapply H0; eauto.
@@ -536,9 +539,11 @@ Proof.
 Qed.
 
 
-Lemma simL_def A (R:ArgRel A) R' a (AL:list A) E0 E'0 Y Y'
+Lemma simL_def A (R:ArgRel A) R' a (AL:list A) E0 E'0 Y Y' Yv Y'v
   : 
-    R a (lookup_list E0 Y) (lookup_list E'0 Y')
+    omap (exp_eval E0) Y = Some Yv
+    -> omap (exp_eval E'0) Y' = Some Y'v
+    -> R a Yv Y'v
     -> forall (r : rel2 F.state (fun _ : F.state => F.state))
         (L0 L'0 : list F.block),
         simL' r R R' (a :: AL) L0 L'0 ->
@@ -546,9 +551,9 @@ Lemma simL_def A (R:ArgRel A) R' a (AL:list A) E0 E'0 Y Y'
               (L'0, E'0, stmtGoto (LabI 0) Y').
 
 Proof.
-  intros. inv H0.
+  intros. inv H2.
   inv pf.
-  eapply H2; eauto.
+  eapply H4; eauto.
 Qed.
 
 (*
