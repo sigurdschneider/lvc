@@ -41,7 +41,8 @@ if !parallel then
 end
 
 sout = cstdout.read
-print sout
+indent = "  "
+print sout.gsub!(/^/, '  ')
 
 if parallel then
   print "#{Time.now.strftime("%H:%M:%S")} ", color.call("<<<"), " #{cmd} \t\t ", color.call("#{cpu.round(2)} / #{time.round(2)}"), "\n"
