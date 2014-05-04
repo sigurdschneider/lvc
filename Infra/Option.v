@@ -30,27 +30,6 @@ Proof.
   destruct f. firstorder. discriminate.
 Qed.
 
-
-Section ParametricOptionMapIndex.
-  Variables X Y : Type.
-  Hypothesis f : nat -> X -> option Y : Type.
-
-  Fixpoint omapi_impl (n:nat) (L:list X) : option (list Y) :=
-    match L with
-      | x::L => 
-        mdo v <- f n x; 
-          mdo vl <- omapi_impl (S n) L;
-          Some (v::vl)
-      | _ => Some nil
-    end.
-  
-  Definition omapi := omapi_impl 0.
-
-End ParametricOptionMapIndex.
-
-Arguments omapi [X] [Y] f L.
-
-
 (** * Reasoning over monadic computations *)
 
 (** The [monadInv H] tactic below simplifies hypotheses of the form
