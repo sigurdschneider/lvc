@@ -7,9 +7,9 @@ Open Scope map_scope.
 
 Inductive nstmt : Type :=
 | nstmtExp    (x : var) (e: exp) (s : nstmt)
-| nstmtIf     (x : var) (s : nstmt) (t : nstmt)
+| nstmtIf     (e : exp) (s : nstmt) (t : nstmt)
 | nstmtGoto   (l : lab) (Y:args) 
-| nstmtReturn (x : var) 
+| nstmtReturn (e : exp) 
 (* block f Z : rt = s in b *)    
 | nstmtLet    (l : lab) (Z:params) (s : nstmt) (t : nstmt).
 
@@ -40,22 +40,26 @@ Module F.
     : step (L, E, nstmtExp x e b) (L, E[x<-v], b)
 
   | nstepIfT L E
-    (x:var) b1 b2
-    (condTrue: val2bool (E x) = true)
-    : step (L, E, nstmtIf x b1 b2) (L, E, b1)
+    (e:exp) b1 b2 v
+    (def:exp_eval E e = Some v)
+    (condTrue: val2bool v = true)
+    : step (L, E, nstmtIf e b1 b2) (L, E, b1)
     
   | nstepIfF L E
-    (x:var) b1 b2
-    (condFalse:val2bool (E x) = false)
-    : step (L, E, nstmtIf x b1 b2) (L, E, b2)
+    (e:exp) b1 b2 v
+    (def:exp_eval E e = Some v)
+    (condFalse:val2bool v = false)
+    : step (L, E, nstmtIf e b1 b2) (L, E, b2)
 
     
   | nstepGoto (L:labenv) (E:env val) (l l':lab) Y Z (s:nstmt) L' E'
     (len:length Z = length Y)
     (lEQ:l = l') (* hack: otherwise inversions confuse guardedness checker in 
                   simulation proofs*)
-    (Ldef:L (counted l) = Some (blockI L' E' (l',Z,s))) E''
-    (updOk:updE E' E Z Y  = E'')
+    
+    (Ldef:L (counted l) = Some (blockI L' E' (l',Z,s))) E'' vl
+    (def:omap (exp_eval E) Y = Some vl)
+    (updOk:E'[Z <-- vl]  = E'')
     : step (L, E, nstmtGoto l Y)
            (L'[(counted l) <- Some (blockI L' E' (l,Z,s))], E'', s)
 
@@ -72,18 +76,20 @@ Module F.
   : reddec step.
   Proof.
     hnf; intros. destruct x as [[L V] []].
+    - case_eq (exp_eval V e); intros. left. eauto using step.
+      right. stuck.
     - case_eq (exp_eval V e); intros. 
-      + left; eauto 20 using step.
-      + right. stuck.
-    - left; case_eq (val2bool (V x)); eexists; intros; eauto using step.
+      left. case_eq (val2bool v); intros; eauto using step.
+      right. stuck.
     - case_eq (L (counted l)); intros. 
       + destruct b as [? ? [[? ?] ?]].
         decide (l = l0); subst; try now (right; stuck).
         decide (length l1 = length Y); try now (right; stuck).
-        left. eexists. econstructor; eauto.
-      + right; stuck.
-    - right; stuck.
-    - left; eexists; eauto using step.
+        case_eq (omap (exp_eval V) Y); intros; try now (right; stuck).
+        left. econstructor. econstructor; eauto.
+      + right. stuck. 
+    - right. stuck.
+    - left. eauto using step.
   Qed.
 
 End F.
@@ -108,22 +114,25 @@ Module I.
     : step (L, E, nstmtExp x e b) (L, E[x<-v], b)
 
   | nstepIfT L E
-    (x:var) b1 b2
-    (condTrue: val2bool (E x) = true)
-    : step (L, E, nstmtIf x b1 b2) (L, E, b1)
+    (e:exp) b1 b2 v
+    (def:exp_eval E e = Some v)
+    (condTrue: val2bool v = true)
+    : step (L, E, nstmtIf e b1 b2) (L, E, b1)
     
   | nstepIfF L E
-    (x:var) b1 b2
-    (condFalse:val2bool (E x) = false)
-    : step (L, E, nstmtIf x b1 b2) (L, E, b2)
+    (e:exp) b1 b2 v
+    (def:exp_eval E e = Some v)
+    (condFalse:val2bool v = false)
+    : step (L, E, nstmtIf e b1 b2) (L, E, b2)
 
-  | nstepGoto (L:labenv) (E:env val) (l l':lab) Y Z (s:nstmt) L'
+  | nstepGoto (L:labenv) (E:env val) (l l':lab) Y Z (s:nstmt) L' vl
     (len:length Z = length Y)
     (lEQ: l = l')
     (Ldef:L (counted l) = Some (blockI L' (l',Z,s))) E''
-    (updOk:updE E E Z Y  = E'')
+    (def:omap (exp_eval E) Y = Some vl)
+    (updOk:E [Z <-- vl]  = E'')
     : step (L, E, nstmtGoto l Y)
-           (L'[(counted l) <- Some (blockI L' (l',Z,s))], E'', s)
+           (L'[(counted l) <- Some (blockI L' (l,Z,s))], E'', s)
 
   | stepLet L E f s Z t 
     : step (L, E, nstmtLet f Z s t) (L[counted f <- Some (blockI L (f,Z,s))], E, t).
@@ -134,22 +143,25 @@ Module I.
     induction 1; inversion 1; intros; subst; repeat get_functional; try congruence. 
   Qed.
 
+
   Lemma step_dec 
   : reddec step.
   Proof.
     hnf; intros. destruct x as [[L V] []].
+    - case_eq (exp_eval V e); intros. left. eauto using step.
+      right. stuck.
     - case_eq (exp_eval V e); intros. 
-      + left; eauto 20 using step.
-      + right. stuck.
-    - left; case_eq (val2bool (V x)); eexists; intros; eauto using step.
+      left. case_eq (val2bool v); intros; eauto using step.
+      right. stuck.
     - case_eq (L (counted l)); intros. 
-      + destruct b as [? [[? ?] ?]].
+      + destruct b as [ ? [[? ?] ?]].
         decide (l = l0); subst; try now (right; stuck).
         decide (length l1 = length Y); try now (right; stuck).
-        left. eexists. econstructor; eauto.
-      + right; stuck.
-    - right; stuck.
-    - left; eexists; eauto using step.
+        case_eq (omap (exp_eval V) Y); intros; try now (right; stuck).
+        left. econstructor. econstructor; eauto.
+      + right. stuck. 
+    - right. stuck.
+    - left. eauto using step.
   Qed.
 
 End I.
@@ -172,7 +184,7 @@ Fixpoint labIndices (s:nstmt) (symb: list lab) : status stmt :=
 
 Definition state_result X (s:X*env val*nstmt) : option val :=
   match s with
-    | (_, E, nstmtReturn x) => Some (E x)
+    | (_, E, nstmtReturn e) => exp_eval E e
     | _ => None
   end.
 
@@ -276,7 +288,9 @@ Proof.
   - case_eq (exp_eval E e); intros. 
     + one_step. eapply labIndicesSim_sim; econstructor; eauto.
     + no_step.
-  - case_eq (val2bool (E x)); intros; one_step; eapply labIndicesSim_sim; econstructor; eauto. 
+  - case_eq (exp_eval E e); intros.
+    case_eq (val2bool v); intros; one_step; eapply labIndicesSim_sim; econstructor; eauto. 
+    no_step.
   - case_eq (L (counted l)); intros.
     + destruct b as [? [[l0 Z'] s']].
       eapply option2status_inv in EQ0.
@@ -284,24 +298,22 @@ Proof.
       edestruct LEQ as [? [? ?]]; dcr; eauto.
       assert (x0 = x) by congruence; subst x0.
       decide (length Z' = length Y).
-      eapply simS; try eapply plusO.
-      econstructor. try eapply H1; eauto; try reflexivity.
-      symmetry. eapply LL; eauto. eapply H. reflexivity.
-      econstructor; eauto. simpl. eauto.
+      case_eq (omap (exp_eval E) Y); intros.
+      one_step. simpl.
       eapply labIndicesSim_sim.
       econstructor; eauto. subst l0.
       * simpl.
         econstructor. simpl; intros; dcr.
-        lud. inv H0.         
+        lud. inv H7.         
         assert (f = f') by (destruct f, f'; simpl in *; congruence); subst.
         do 2 eexists. split.
         eapply drop_get with (n:=0). orewrite (x + 0 = x). eauto.
         intuition. 
         eapply pos_plus. orewrite (x + 0 = x); eauto.
         simpl in *. repeat rewrite drop_tl. auto.
-        eapply H6. simpl in H8. rewrite drop_tl in H8. eapply H8. eauto.
+        eapply H6. simpl in H9. rewrite drop_tl in H9. eapply H9. eauto.
         inv H4.
-        edestruct (LEQ0); eauto. destruct H9; dcr.
+        edestruct (LEQ0); eauto. destruct H10; dcr.
         eexists (S x0), x2. split; eauto using get. 
         eapply drop_get. orewrite (x + S x0 = S x + x0). eapply get_drop. eauto.
         repeat rewrite drop_tl in *. repeat rewrite drop_drop in *.
@@ -309,17 +321,19 @@ Proof.
         repeat (split; eauto). 
         exploit pos_drop_eq; [eapply H2|].
         rewrite X. unfold pos; fold pos. destruct if. congruence.
-        rewrite drop_tl. eapply (pos_add 1); eauto.       
-      * subst l0. intros. lud. inv H0.
+        rewrite drop_tl. eapply (pos_add 1); eauto.
+      * subst l0. intros. lud. inv H7.
         assert (l = l0) by (destruct l, l0; simpl in *; congruence); subst.                 simpl; eauto.
         eapply H5; eauto.
       * subst l. intros. lud. congruence. eapply H6; eauto. 
-        exploit pos_drop_eq; [eapply H2|].
-        rewrite X in H0. unfold pos in H0; fold pos in H0.
-        destruct if in H0. congruence.
+        exploit pos_drop_eq; [eapply H2|]. 
+        rewrite X in H7. unfold pos in H7; fold pos in H7.
+        destruct if in H7. destruct f, l0; simpl in *; congruence.
         simpl. rewrite <- drop_tl. eauto.
-      * subst l. no_step. simpl in *. (*rewrite H in Ldef. inv Ldef. congruence. *)
-        simpl in *. get_functional; subst. simpl in *. congruence.
+      * subst l. no_step. 
+      * subst. no_step.
+        edestruct LEQ as [? [? ?]]; eauto; dcr.
+        get_functional; subst; simpl in *. congruence.
     + eapply option2status_inv in EQ0. exfalso. eapply EX; eauto.
   - no_step.
   - one_step. eapply labIndicesSim_sim. econstructor; eauto.
