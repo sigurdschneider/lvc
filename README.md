@@ -1,23 +1,38 @@
-LVC Compiler Project
+# LVC Compiler Project
 IL - IL/I, IL/F and Coherence
 Translation validation for register assignment and SSA construction
 http://www.ps.uni-saarland.de/~sdschn/master
 
+## Dependencies 
+
+### Containers
 You need to have the containers library installed:
 http://coq.inria.fr/pylons/contribs/view/Containers/v8.4
 All sources compiled with Coq version 8.4pl3 (February 2014)
 
-After installing the containers library, type 
+### ocamlbuild
+Should come with your OCAML distribution
 
-  make -j
+### Optional: ruby
+If you want build times to be output, you need ruby
 
-to build the compiler LVC. This will generate a binary
+## Building LVC
+
+After installing the dependencies, use 
+
+	configure.sh
+
+to generate a Makefile (use `configure.sh --vanilla` if you don't have ruby installed). Then build LVC using 
+
+	make
+
+This will generate a binary
   
-	extraction/lvc
+	extraction/lvcc.native
 
-There are some example files in extraction/examples. 
+There are some example files in extraction/examples.
 Run one by issuing the following command:
 
-  cd extraction
-	lvc examples/foo.il
+	cd extraction
+	lvcc.native examples/foo.il
 
