@@ -14,7 +14,7 @@ end
 cmd = ARGV.join(' ')
 pad = "".ljust(40 - cmd.length)
 
-print "#{green('>>>')} #{cmd}#{parallel ? "\n" : pad}"
+print "#{Time.now.strftime("%H:%M:%S")} #{blue('>>>')} #{cmd}#{parallel ? "\n" : pad}"
 
 start = Time.now
 #system(cmd)
@@ -43,7 +43,7 @@ sout = cstdout.read
 print sout
 
 if parallel then
-  print color.call("<<<"), " #{cmd} \t\t ", color.call("#{cpu.round(2)} / #{time.round(2)}"), "\n"
+  print "#{Time.now.strftime("%H:%M:%S")} ", color.call("<<<"), " #{cmd} \t\t ", color.call("#{cpu.round(2)} / #{time.round(2)}"), "\n"
 end
 
 exit success 
