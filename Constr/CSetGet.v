@@ -2,8 +2,10 @@ Require Export Setoid Coq.Classes.Morphisms.
 Require Export Sets SetInterface SetConstructs SetProperties.
 Require Import EqDec Get CSetNotation CSetTac.
 
-Definition list_union {X} `{OrderedType X} (L:list (set X)) := 
+Definition list_union X `{OrderedType X} (L:list (set X)) := 
   fold_left union L ∅.
+
+Arguments list_union [X] {H} L.
 
 Lemma list_union_start {X} `{OrderedType X} (s: set X) L t
 : s ⊆ t
