@@ -1,4 +1,4 @@
-Require Import Util DecidableTactics Get.
+Require Import Util Computable Get.
 
 
 Ltac dec_solve := solve [ left; econstructor; eauto 

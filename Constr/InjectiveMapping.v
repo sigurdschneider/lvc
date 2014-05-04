@@ -1,5 +1,5 @@
 Require Export Setoid Coq.Classes.Morphisms.  
-Require Import EqDec DecidableTactics Util AutoIndTac.
+Require Import EqDec Computable Util AutoIndTac.
 Require Export CSet Containers.SetDecide.
 Require Export MapBasics MapLookup MapUpdate MapUpdateList.
 
@@ -62,7 +62,7 @@ Section InjectiveMapping.
     intros.
     eapply lookup_set_spec in H2; eauto.
     destruct H2 as [x [A B]].
-    destruct_prop (x ∈ fromList XL).
+    decide (x ∈ fromList XL).
     right. eapply in_fromList. rewrite <- B. eapply ra_insert_allocs_correct'; eauto.
     eapply in_fromList. assumption. 
     left. rewrite <- B. rewrite ra_insert_allocs_no_param; eauto. 
@@ -102,9 +102,9 @@ Qed.
 Global Instance fresh_computable {X} `{OrderedType X} (x:X) L
   : Computable (fresh x L).
 Proof.
-  constructor.
+  hnf.
   general induction L. left; intro A; inv A.
-  destruct (IHL _ x); eauto. destruct_prop(x===a); eauto; eqs.
+  destruct (IHL _ x); eauto. decide(x===a); eauto; eqs.
   left; intro A; inv A; eauto.
   right. intro A. eapply n. intro. eapply A. eauto.
 Defined.
@@ -112,7 +112,7 @@ Defined.
 Global Instance inj_mapping_computable {X Y : Type} `{OrderedType X} `{OrderedType Y} (LV:set Y) (L: list X)  L'
    : Computable (inj_mapping LV L L').
 Proof.
-  constructor.
+  hnf.
   general induction L.
   + destruct L'. 
     - left; econstructor.
@@ -120,9 +120,9 @@ Proof.
   + destruct L'. 
     - right; intro A; inv A.
     - destruct (IHL _ _ _ LV L'); eauto.
-      destruct_prop (fresh a L). 
-      destruct_prop (fresh y L'). 
-      destruct_prop (y ∈ LV).
+      decide (fresh a L). 
+      decide (fresh y L'). 
+      decide (y ∈ LV).
       right; intro A; inv A; eauto.
       left; econstructor; eauto. 
       right; intro A; inv A; eauto.
@@ -136,6 +136,6 @@ Defined.
 
 (* 
 *** Local Variables: ***
-*** coq-load-path: ("../infra" "../constr" "../il"  "..") ***
+*** coq-load-path: (("../" "Lvc")) ***
 *** End: ***
 *)

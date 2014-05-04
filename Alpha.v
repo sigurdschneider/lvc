@@ -268,7 +268,7 @@ Proof.
       rewrite <- H. rewrite lookup_list_length; eauto.
     }
     destruct (get_dec L (counted l)) as [[[Eb Zb sb]]|]; [| try no_step].
-    destruct_prop (length Zb = length Y); [| try no_step].
+    decide (length Zb = length Y); [| try no_step].
     provide_invariants_3. subst x1 x x0 x2 ; simpl in *.
     one_step; simpl; try congruence; eauto.
     simpl. eapply alphaSim_sim; econstructor; eauto. 

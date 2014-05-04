@@ -1,4 +1,4 @@
-Require Import EqDec DecidableTactics Util AutoIndTac.
+Require Import EqDec Computable Util AutoIndTac.
 Require Export CSet Containers.SetDecide.
 Require Export MapBasics MapLookup OrderedTypeEx.
  
@@ -91,7 +91,7 @@ Lemma injective_on_update_not_in {X} `{OrderedType X} {Y} `{OrderedType Y}
   -> injective_on D f.
 Proof.
   intros; hnf; intros. 
-  destruct_prop(x0 === x); destruct_prop (x0 === y); eauto.
+  decide(x0 === x); decide (x0 === y); eauto.
   exfalso. eapply H3. eapply lookup_set_spec. intuition.
   eexists y. cset_tac; eqs; eauto. rewrite e in H6; eauto.
   eapply H2; cset_tac; eauto. intro. 
@@ -141,7 +141,7 @@ Qed.
 Definition injective_on_step {X} {Y} `{OrderedType Y}
 f (x : X) (p : set Y * bool) :=
       ({f x; fst p}, if snd p then 
-        negb (sumbool_bool (@compute_prop (f x ∈ fst p) _))
+        negb (sumbool_bool (@decision_procedure (f x ∈ fst p) _))
        else false).
 
 Lemma injective_on_step_transpose {X} {Y} `{OrderedType Y}
@@ -153,8 +153,8 @@ Proof.
   destruct z; simpl. econstructor; cset_tac; intuition.
   destruct z. unfold snd. destruct b. 
   unfold fst, snd;
-  destruct_prop (f y ∈ s); destruct_prop (f x ∈ {f y; s});
-  destruct_prop (f x ∈ s); destruct_prop (f y ∈ {f x; s}); simpl; 
+  decide (f y ∈ s); decide (f x ∈ {f y; s});
+  decide (f x ∈ s); decide (f y ∈ {f x; s}); simpl; 
   eauto; cset_tac; intuition.
   econstructor.
 Qed.
@@ -179,7 +179,7 @@ Proof.
   destruct x0, y0. unfold injective_on_step. unfold snd.
   destruct b, b0. unfold fst. econstructor.
   inv H3. rewrite H7. rewrite H2. reflexivity.
-  destruct_prop (f x ∈ s); destruct_prop (f y ∈ s0).
+  decide (f x ∈ s); decide (f y ∈ s0).
   econstructor. exfalso. eapply n. rewrite <- H2.
   inv H3. rewrite <- H7. eauto.
   exfalso. eapply n. rewrite H2.
@@ -198,7 +198,7 @@ Proof.
   destruct x0, y0. unfold injective_on_step. unfold snd.
   destruct b, b0. unfold fst. f_equal.
   inv H3. rewrite H2. reflexivity.
-  destruct_prop (f x ∈ s); destruct_prop (f y ∈ s0).
+  decide (f x ∈ s); decide (f y ∈ s0).
   econstructor. exfalso. eapply n. rewrite <- H2.
   inv H3. eauto.
   exfalso. eapply n. rewrite H2.
@@ -263,7 +263,7 @@ Proof.
   destruct (fold (injective_on_step f) s' (LD', true)). 
   rewrite (@fold_add X _ _ _ _ _ _ (injective_on_step f) (injective_on_step_proper f) (injective_on_step_transpose f) (LD', true) _ _ H3) in H8.
 
-  destruct_prop (x ∈ D'). exfalso. destruct (FOO x).
+  decide (x ∈ D'). exfalso. destruct (FOO x).
   cset_tac; intuition. eapply (H5 x). intuition cset_tac. 
   eapply H11; reflexivity.
   assert (D' ∩ s [=] ∅). cset_tac; intuition. destruct (FOO a).
@@ -274,7 +274,7 @@ Proof.
   specialize (H2 D' _ H9 H6 H7).
   case_eq (fold (injective_on_step f) s (LD', true)); intros; rewrite H10 in *.
   unfold injective_on_step in H8. unfold fst in H8.
-  destruct_prop (f x ∈ s1).
+  decide (f x ∈ s1).
   destruct b. try now (destruct b0; simpl in *; inv H8; isabsurd). 
   simpl; split; intros; isabsurd.
 
@@ -312,7 +312,6 @@ Global Instance injective_on_computable {X} `{OrderedType X} {Y} `{OrderedType Y
   (D:set X) (f: X-> Y) `{Proper _ (_eq ==> _eq) f} `{Proper _ (_eq ==> eq) f}
 : Computable (injective_on D f).
 Proof.
-  econstructor.    
   case_eq (@injective_on_compute X _ Y _ D f _); eauto; intros.
   left. pose proof (@injective_on_iff X _ Y _ f _ D ∅ ∅).
   destruct H4; eauto. cset_tac; intuition. set_tac; intuition.

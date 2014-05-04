@@ -113,7 +113,7 @@ Proof.
     eauto 10 using ra_sound, injective_on_incl.
   econstructor; eauto using oracle_sound'. 
   eapply IHLS; eauto.
-  destruct_prop (x ∈ bv). 
+  decide (x ∈ bv). 
   rewrite (add_inane _ _ i0). 
   eauto using injective_on_fresh, injective_on_incl, oracle_sound'.
   rewrite (minus_inane _ _ n).

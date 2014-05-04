@@ -210,15 +210,15 @@ Proof.
   constructor.
   general induction s; simpl.
   + edestruct IHs;
-    destruct_prop(Exp.freeVars e ⊆ G);
+    decide(Exp.freeVars e ⊆ G);
       solve [ left; econstructor; eauto | right; intro A; inv A; eauto ].
-  + edestruct IHs1, IHs2; destruct_prop(x ∈ G);
+  + edestruct IHs1, IHs2; decide(x ∈ G);
       solve [ left; econstructor; eauto | right; intro A; inv A; eauto ].
-  + destruct_prop (of_list Y ⊆ G);
+  + decide (of_list Y ⊆ G);
     destruct (get_dec DL (counted l)) as [[[G'|] ?]|?];
-    (try destruct_prop (G' ⊆ G));
+    (try decide (G' ⊆ G));
       solve [ left; econstructor; eauto | right; intro A; inv A; try (get_functional; subst); eauto ].
-  + destruct_prop (x ∈ G).
+  + decide (x ∈ G).
     left; econstructor; eauto.
     right; intro A; inv A; eauto.
   + pose
@@ -522,7 +522,7 @@ Proof.
     split. inv H.
     split; cset_tac; isabsurd; eauto. inv H.
     eexists; eauto. split; [| split;eauto].
-    cset_tac; intuition. destruct_prop (a ∈ of_list Z); intuition.
+    cset_tac; intuition. decide (a ∈ of_list Z); intuition.
 Qed.
 
 Definition stripB (b:F.block) : I.block.
@@ -567,7 +567,7 @@ Proof.
     one_step.
     eapply srdSim_sim; econstructor; eauto using agree_on_incl.
   + eapply simE; try eapply star_refl; simpl; eauto; try stuck.
-  + destruct_prop (length Z0 = length Y).
+  + decide (length Z0 = length Y).
     eapply simS; try eapply plusO.
     econstructor; simpl; eauto. simpl; eauto.
     pose proof (map_get_1 stripB H1).
@@ -603,7 +603,7 @@ Proof.
     intros. inv H1. split. 
     split; cset_tac; isabsurd; eauto. 
     eexists. split; eauto. cset_tac; intuition.
-    destruct_prop (a ∈ of_list Z); intuition.
+    decide (a ∈ of_list Z); intuition.
     eapply agree_on_incl; eauto.
 Qed.
 

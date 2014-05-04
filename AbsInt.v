@@ -71,7 +71,6 @@ Inductive ann_lt {A} (R:A->A->Prop) : ann A -> ann A -> Prop :=
 
 Instance ordered_type_lt_dec A `{OrderedType A} (a b: A) 
 : Computable (_lt a b).
-econstructor. 
 pose proof (_compare_spec a b).
 destruct (_cmp a b).
 right; inv H0. hnf; intros. eapply (lt_not_eq H2 H1).
@@ -83,12 +82,11 @@ Instance list_R_dec A (R:A->A->Prop)
          `{forall a b, Computable (R a b)} (L:list A) (L':list A) : 
   Computable (forall n a b, get L n a -> get L' n b -> R a b).
 Proof.
-  constructor.
   general induction L; destruct L'. 
   + left; isabsurd.
   + left; isabsurd.
   + left; isabsurd.
-  + destruct_prop (R a a0). edestruct IHL; eauto.
+  + decide (R a a0). edestruct IHL; eauto.
     left. intros. inv H0; inv H1; eauto. 
     right. intro. eapply n; intros. eapply H0; eauto using get.
     right. intro. eapply n. eauto using get.
@@ -98,15 +96,14 @@ Instance ann_lt_dec A (R:A->A->Prop)
          `{forall a b, Computable (R a b)} (a b:ann A) : 
   Computable (ann_lt R a b).
 Proof.
-  constructor.
   revert a b.
   fix 1.
   destruct a; destruct b; try dec_solve.
-  + destruct_prop (R a a0); dec_solve. 
-  + destruct_prop (R a a1); try dec_solve;
+  + decide (R a a0); dec_solve. 
+  + decide (R a a1); try dec_solve;
     edestruct ann_lt_dec with (a:=a0) (b:=b); hnf in *; 
     try eassumption; try dec_solve. 
-  + destruct_prop (R a1 a); try dec_solve.
+  + decide (R a1 a); try dec_solve.
     destruct (ann_lt_dec a2 b1); try dec_solve.
     destruct (ann_lt_dec a3 b2); try dec_solve.
 Defined.

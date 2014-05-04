@@ -137,14 +137,14 @@ Proof.
   eapply length_length_eq in H.
   eapply length_length_eq in H0.
   eapply length_length_eq in H1.
-  hnf; intros. simpl. unfold comp. destruct_prop (x ∈ of_list Z).
+  hnf; intros. simpl. unfold comp. decide (x ∈ of_list Z).
   clear H6.
   general induction H; inv H0; inv H1; simpl in * |- *.
   exfalso. eapply (not_in_empty x); eauto.
   hnf; intros. unfold comp. lud.
   exfalso. eapply H9; reflexivity.
   exfalso. 
-  destruct_prop (x0 ∈ of_list XL).
+  decide (x0 ∈ of_list XL).
   assert (y ∈ of_list YL). rewrite e.
   eapply update_with_list_lookup_in; eauto using length_eq_length.
   eapply H2. eapply InA_in in H12. eauto.
@@ -154,7 +154,7 @@ Proof.
   exfalso. eapply H8; reflexivity.
   exfalso. eapply H8; reflexivity.
   exfalso. 
-  destruct_prop (x0 ∈ of_list XL).
+  decide (x0 ∈ of_list XL).
   assert (y0 ∈ of_list YL0). rewrite e.
   eapply update_with_list_lookup_in; eauto using length_eq_length,length_eq_trans.
   eapply H3. eapply InA_in in H12. eauto.
@@ -201,12 +201,12 @@ Proof.
   intros.
   eapply length_length_eq in H.
   eapply length_length_eq in H0.
-  hnf; intros. simpl. unfold comp. destruct_prop (x ∈ of_list Z).
+  hnf; intros. simpl. unfold comp. decide (x ∈ of_list Z).
   clear H3.
   general induction H; inv H0; simpl in * |- *.
   - exfalso. eapply (not_in_empty x); eauto.
   - lud.
-    + exfalso. destruct_prop (x0 ∈ of_list XL).
+    + exfalso. decide (x0 ∈ of_list XL).
       * assert (y ∈ of_list YL).
         { rewrite e.
           eapply update_with_list_lookup_in; eauto using length_eq_length.
@@ -267,7 +267,7 @@ Proof.
     rewrite <- H0; eauto. cset_tac; intuition.
     eapply IHs2; eauto. eapply agree_on_incl; eauto. cset_tac; intuition.
   - destruct (get_dec L (counted l)). destruct s as [[]].
-    destruct_prop (length block_Z = length Y). 
+    decide (length block_Z = length Y). 
     unfold simL in H.
     edestruct AIR4_length; try eassumption; dcr.
     edestruct get_length_eq; try eassumption.
@@ -300,7 +300,7 @@ Proof.
     eapply IHs2; eauto. eapply simL_extension; eauto. 
     hnf; intros. eapply IHs1; eauto.
     assert (freeVars s1 ⊆ (freeVars s1 \ of_list Z) ∪ of_list Z). {
-      cset_tac; intuition. destruct_prop (a ∈ of_list Z); intuition.
+      cset_tac; intuition. decide (a ∈ of_list Z); intuition.
     }
     eapply agree_on_incl; eauto.                                                        eapply agree_on_comp_fresh_both_list;
       repeat rewrite fresh_stable_list_length; eauto;
@@ -353,7 +353,7 @@ Proof.
     rewrite <- H0; eauto. cset_tac; intuition.
     eapply IHs2; eauto. eapply agree_on_incl; eauto. cset_tac; intuition.
   - destruct (get_dec L (counted l)). destruct s as [[]].
-    destruct_prop (length block_Z = length Y). 
+    decide (length block_Z = length Y). 
     unfold simL in H.
     edestruct AIR4_length; try eassumption; dcr.
     edestruct get_length_eq; try eassumption.
@@ -385,7 +385,7 @@ Proof.
     eapply IHs2; eauto. eapply simL_extension; eauto. 
     hnf; intros. eapply IHs1; eauto.
     assert (freeVars s1 ⊆ (freeVars s1 \ of_list Z) ∪ of_list Z). {
-      cset_tac; intuition. destruct_prop (a ∈ of_list Z); intuition.
+      cset_tac; intuition. decide (a ∈ of_list Z); intuition.
     }
     eapply agree_on_incl; eauto.         
     (* Why is Coq not doing the right instantiations here? *)

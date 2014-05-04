@@ -19,10 +19,10 @@ Qed.
 Instance argsLive_dec Caller Callee Y Z
       : Computable (argsLive Caller Callee Y Z).
 Proof.
-  constructor. destruct_prop(length Y = length Z).
+  decide(length Y = length Z).
   eapply length_length_eq in e. general induction e.
   left; econstructor. 
-  destruct_prop(y ∈ Callee <-> x ∈ Caller);
+  decide(y ∈ Callee <-> x ∈ Caller);
   edestruct (IHe Caller Callee); try dec_solve; try eassumption; try inv an; eauto; try tauto.
   right; intro. eapply argsLive_length in H. congruence.
 Qed.
@@ -89,7 +89,7 @@ Proof.
   intros. 
   hnf; intros; simpl.
   eapply length_length_eq in H2.
-  destruct_prop (x ∈ of_list Z).
+  decide (x ∈ of_list Z).
   clear H.
   general induction H2. unfold of_list in i; simpl in i; exfalso; cset_tac; eauto.
   simpl. lud. eapply H0. inv H1. eapply H9. rewrite e. eauto.
@@ -294,7 +294,7 @@ Proof.
     eapply agree_on_incl; eauto. cset_tac; intuition.
   + destruct (get_dec L (counted l)) as [[[Eb Zb sb]]|].
     provide_invariants_P2.
-    destruct_prop (length Zb = length Y).
+    decide (length Zb = length Y).
     one_step.
     simpl. eapply freeVarSimF_sim. econstructor; eauto.
     unfold updE. 

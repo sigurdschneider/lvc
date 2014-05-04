@@ -2,34 +2,22 @@
   
    The actual infrarstructure for equivalence relations is already implemented
    in coq. In this file we simply lift it to instances of Computable/Decidable,
-   to make the features from DecidableTactics available for equalities.
+   to make the features from Computable available for equalities.
    In particular this allows you to write if [x = y] then ... and use classical
    reasoning in proofs. *)
 
 Require Export Coq.Classes.EquivDec.
-Require Export DecidableTactics.
+Require Export Computable.
 Require Import Option.
 
 Global Instance inst_equiv_cm A R `(EqDec A R) (x y : A) :
   Computable (x === y).
 Proof.
-  constructor. apply H.
+  eapply H.
 Defined.
 
-Global Instance inst_equiv_xm A R `(DecidableEquivalence A R) (x y : A) :
-  Decidable (x === y).
-Proof.
-  constructor. apply H.
-Qed.
-
 Global Instance inst_eq_cm A `(EqDec A eq) (x y : A) : Computable (x = y)
-  := {| compute_prop := H x y |}.
-
-Global Instance inst_eq_xm A `(DecidableEquivalence A eq) (x y : A) :
-  Decidable (x = y).
-Proof.
-  constructor. apply H.
-Qed.
+  := H x y.
 
 (* Additional instances for EqDec. *)
 Definition option_eq_dec A `(EqDec A eq) (x y : option A) :
@@ -72,7 +60,7 @@ Defined.
 
 Extraction Inline sum_option.
 
-Notation "'mdo' X <= A ; B" := (bind (sumbool_option (@compute_prop A _)) (fun X => B))
+Notation "'mdo' X <= A ; B" := (bind (sumbool_option (@decision_procedure A _)) (fun X => B))
  (at level 200, X ident, A at level 100, B at level 200).
 
 
@@ -168,12 +156,17 @@ Tactic Notation "eqsubst" :=
 Require Import List.
 
 Global Instance inst_in_cm X (a:X) (L:list X) `(EqDec X eq) : Computable (In a L). 
-econstructor. eapply In_dec. eapply equiv_dec.
+eapply In_dec. eapply equiv_dec.
 Defined.
   
 Lemma dneg_eq A `(EqDec A eq) (a b:A)
   : (~ a <> b) -> a = b.
 Proof.
-  intros. destruct_prop (a=b); firstorder.
+  intros. decide (a=b); firstorder.
 Qed.
 
+(* 
+*** Local Variables: ***
+*** coq-load-path: (("../" "Lvc")) ***
+*** End: ***
+*)

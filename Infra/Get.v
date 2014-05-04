@@ -221,7 +221,7 @@ Lemma in_get X `{EqDec X eq} (xl : list X) (x : X) :
   In x xl -> { n : nat & get xl n x }.
 Proof.
   induction xl; simpl; intros. inv H0. 
-  destruct_prop (x=a); subst.
+  decide (x=a); subst.
   exists 0. constructor.
   edestruct (IHxl). destruct H0; eauto; congruence. 
   exists (S x0). constructor. assumption.

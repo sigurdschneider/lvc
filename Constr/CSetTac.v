@@ -25,13 +25,13 @@ Qed.
 Lemma de_morgan_dec {A} `{Computable A} {B} `{Computable B}
 : not (A /\ B) <-> (not A \/ not B).
 Proof.
-  destruct_prop A; destruct_prop B; intuition.
+  decide A; decide B; intuition.
 Qed.
 
 Lemma dneg_dec {A} `{Computable A}
 : not (not A) <-> A.
 Proof.
-  destruct_prop A; intuition.
+  decide A; intuition.
 Qed.
 
 
@@ -57,7 +57,7 @@ Qed.
           | [ H'' : ~y === x |- _ ] => fail 1
           | [ H'' : y =/= x |- _ ] => fail 1
           | [ H'' : y === x |- _ ] => fail 1
-          | [ |- _ ] => destruct_prop(x === y)
+          | [ |- _ ] => decide(x === y)
         end
       | [ H : context [ In ?x empty ] |- _ ] => 
         rewrite (empty_iff x) in H
@@ -139,7 +139,7 @@ Qed.
         lazymatch goal with 
           | [ H : a ∈ s |- _ ] => fail 
           | [ H : a ∉ s |- _ ] => fail 
-          | _ => destruct_prop (a ∈ s)
+          | _ => decide (a ∈ s)
         end
       | [ H: (not ?A) -> False |- ?A ] => try now (eapply dneg_dec; intuition)
     end.

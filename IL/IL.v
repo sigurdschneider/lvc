@@ -166,7 +166,7 @@ Module F.
       left. case_eq (val2bool v); intros; eauto using step.
       right. stuck.
     - destruct (get_dec L (counted l)) as [[blk A]|?].
-      destruct_prop (length (block_Z blk) = length Y).
+      decide (length (block_Z blk) = length Y).
       case_eq (omap (exp_eval V) Y); intros; try now (right; stuck).
       + left. econstructor. econstructor; eauto.
       + right. stuck. get_functional; subst; eauto.
@@ -234,7 +234,7 @@ Module I.
       left. case_eq (val2bool v); intros; eauto using step.
       right. stuck.
     - destruct (get_dec L (counted l)) as [[blk A]|?].
-      destruct_prop (length (block_Z blk) = length Y).
+      decide (length (block_Z blk) = length Y).
       case_eq (omap (exp_eval V) Y); intros; try now (right; stuck).
       + left. econstructor. econstructor; eauto.
       + right. stuck. get_functional; subst; eauto.

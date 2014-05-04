@@ -598,7 +598,7 @@ Proof.
     simpl. eapply live_exp_sound_incl; simpl; eauto using live_freeVars.
     cset_tac; intuition.
   + destruct (get_dec L (counted l)). destruct s as [[]].
-    destruct_prop (length block_Z = length Y).
+    decide (length block_Z = length Y).
     case_eq (omap (exp_eval E) Y); intros.
     edestruct PIR2_nth; try eassumption; dcr; destruct x.
     inv H4.
@@ -954,7 +954,7 @@ Proof.
     case_eq(val2bool v); intros; one_step; eauto.
     eapply simE; try eapply star_refl; eauto; stuck.
   + destruct (get_dec L (counted l)). destruct s as [[]].
-    destruct_prop (length block_Z = length Y).
+    decide (length block_Z = length Y).
     case_eq (omap (exp_eval E) Y); intros.
     - edestruct AIR4_nth' as [? [? [? ]]]; dcr; try eassumption.
       repeat get_functional; subst. inv H6.
