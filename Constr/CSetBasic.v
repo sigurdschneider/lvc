@@ -109,7 +109,13 @@ Section theorems.
     cset_tac; firstorder.
   Qed.
 
-  Lemma incl_union (s t:set X)
+  Lemma incl_refl (s:set X)
+  : s ⊆ s. 
+  Proof.
+    reflexivity.
+  Qed.
+
+  Lemma incl_right (s t:set X)
     :  s ⊆ (t ∪ s).
   Proof.
     cset_tac; firstorder.

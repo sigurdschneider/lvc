@@ -101,7 +101,7 @@ Qed.
 Global Instance inverse_on_morphism_full {X} `{OrderedType X} {Y} `{OrderedType Y}
   : Proper (Equal ==> (@fpeq X _ Y _)==> (@fpeq Y _ X _) ==> iff) inverse_on.
 Proof.
-  unfold Proper, respectful, flip, impl; intros. 
+  unfold Proper, respectful, flip, impl; intros.
   split; intros; eapply inverse_on_morphism; eauto.
   rewrite H1; reflexivity.
   destruct H2; split; eauto. symmetry; eauto. intuition.

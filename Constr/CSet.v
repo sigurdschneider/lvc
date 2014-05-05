@@ -3,7 +3,6 @@ Require Export Sets SetInterface SetConstructs SetProperties.
 Require Import EqDec Computable Util.
 Require Export CSetNotation CSetTac CSetBasic CSetCases CSetGet CSetComputable.
 
-
 Lemma Proper_eq_fun X H0 (f:X->X)
 :  @Proper (X -> X)
            (@respectful X X
@@ -15,6 +14,7 @@ Qed.
 
 Hint Resolve Proper_eq_fun.
 
+Hint Resolve incl_empty minus_incl incl_right incl_left : auto.
 
 (* 
 *** Local Variables: ***

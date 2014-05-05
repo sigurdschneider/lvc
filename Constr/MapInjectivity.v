@@ -14,8 +14,8 @@ Section MapInjectivity.
   Definition injective_on D (f:X->Y) :=
     forall x y, x ∈ D -> y ∈ D -> f x === f y -> x === y.
 
-  Lemma injective_on_incl (D D':set X) (f:X -> Y) (SM:D' ⊆ D)
-    : injective_on D f -> injective_on D' f.
+  Lemma injective_on_incl (D D':set X) (f:X -> Y)
+    : injective_on D f -> D' ⊆ D -> injective_on D' f.
   Proof.
     firstorder.
   Qed.
@@ -305,7 +305,7 @@ Proof.
   pose proof (injective_on_update_not_in H2 n0); eauto. intuition.
 
   simpl. split; intros; isabsurd.
-  simpl in H2. eapply H2. eapply injective_on_incl; eauto.
+  simpl in H2. eapply H2. eapply (injective_on_incl H11).
   rewrite H4. cset_tac; intuition.
 Qed.
 
