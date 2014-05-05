@@ -11,8 +11,8 @@ Global Instance rename_morphism
   : Proper (feq ==> eq ==> eq) rename.
 Proof.
   unfold Proper, respectful; intros; subst.
-  general induction y0; simpl; f_equal; eauto; try (now rewrite H; eauto).
-  eapply rename_exp_ext; eauto.
+  general induction y0; simpl; f_equal; eauto; try (now rewrite H; eauto);
+  eauto using rename_exp_ext, map_ext_get_eq; eauto.
 Qed.
 
 (* renaming preserves correspondence of parameters and arguments *)
@@ -23,7 +23,7 @@ Lemma rename_parameters_match {B} `{BlockType B} (L:list B) ϱ s
  -> parameters_match (labenvZ L) (rename ϱ s).
 Proof.
   intros. general induction s; simpl; inv H1; eauto using parameters_match.
-  + econstructor; eauto. rewrite lookup_list_length; eauto.
+  + econstructor; eauto. rewrite map_length; eauto.
   + edestruct (block_ctor s1 Z); dcr; subst.
     assert (labenv_parameters_match (x::L)).
     hnf; intros. inv H2; eauto.
@@ -218,7 +218,7 @@ Proof.
   econstructor. simpl in *. eapply alpha_exp_rename_injective. 
   eapply inverse_on_incl. eapply Exp.freeVars_live; eauto. eauto.
   assert (rename ϱ s = rename (update ϱ x (ϱ x)) s). { 
-    rewrite update_id; eauto. intuition. 
+    rewrite update_id; eauto. 
   } 
   rewrite H5. eapply IHssa; eauto. assert (fpeq ϱ (update ϱ x (ϱ x))).
   split; intuition. rewrite update_id. reflexivity. intuition.
@@ -226,15 +226,21 @@ Proof.
   eapply inverse_on_update_minus; eauto using inverse_on_incl, locally_injective.
 
   inv H5. inv H4.
-  econstructor; eauto. eapply H6; eauto.
+  econstructor; eauto. eapply alpha_exp_rename_injective. 
+  eapply inverse_on_incl. eapply Exp.freeVars_live; eauto. eauto.
   now eapply IHssa1; eauto using inverse_on_incl.
   now eapply IHssa2; eauto using inverse_on_incl.
 
-  econstructor; eauto. eapply H3. now inv H2; eauto.
-  econstructor; eauto. inv H2. inv H1.
-  pose proof (inverse_on_lookup_list Y H3 H11); eauto.
-  eapply list_eq_eq. eapply H4.
-  
+  inv H2. econstructor; eauto. eapply alpha_exp_rename_injective.
+  eapply inverse_on_incl. eapply Exp.freeVars_live; eauto. eauto.
+
+  inv H2. inv H1.
+  econstructor; eauto. rewrite map_length. eauto.
+  intros. edestruct map_get_4; eauto; dcr; subst.
+  get_functional; eauto; subst.
+  eapply alpha_exp_rename_injective. 
+  eapply inverse_on_incl. eapply Exp.freeVars_live; eauto. eauto.
+    
   inv H5; inv H4.
   constructor. rewrite lookup_list_length; eauto.
   rewrite update_with_list_lookup_list.
