@@ -156,14 +156,13 @@ Proof.
   f_equal; eauto.
 Qed.
 
-(*
-Lemma map_ext_get X Y L (f:X->Y) (g:X->Y)
+Lemma map_ext_get_eq X Y L (f:X->Y) (g:X->Y)
  : (forall x n, get L n x -> g x = f x)
    -> List.map g L = List.map f L.
 Proof.
   intros. general induction L; unfold mapi; simpl; eauto.
   f_equal; eauto using get.
-Qed. *)
+Qed.
 
 Lemma map_ext_get X Y (R:Y -> Y -> Prop) L (f:X->Y) (g:X->Y)
  : (forall x n, get L n x -> R (g x) (f x))
