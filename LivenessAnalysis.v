@@ -16,12 +16,12 @@ Definition liveness_transform (DL:list (set var * params)) st a :=
   match st, a with
     | stmtExp x e s as st, ann1 d ans => 
       (getAnn ans \ {{x}}) ∪ (if [x ∈ getAnn ans] then Exp.freeVars e else ∅)
-    | stmtIf x s t as st, ann2 d ans ant =>
-      {{x}} ∪ getAnn ans ∪ getAnn ant
+    | stmtIf e s t as st, ann2 d ans ant =>
+      Exp.freeVars e ∪ getAnn ans ∪ getAnn ant
     | stmtGoto f Y as st, ann0 d as an => 
       let (lv,Z) := nth (counted f) DL (∅,nil) in
-      lv \ of_list Z ∪ of_list (filter_by (fun x => B[x ∈ lv]) Z Y)
-    | stmtReturn x as st, ann0 d as an => {{x}}
+      lv \ of_list Z ∪ list_union (List.map Exp.freeVars (filter_by (fun x => B[x ∈ lv]) Z Y))
+    | stmtReturn e as st, ann0 d as an => Exp.freeVars e
     | stmtLet Z s t as st, ann2 d ans ant => 
        (getAnn ans \ of_list Z) ∪ getAnn ant
     | _, an => ∅
