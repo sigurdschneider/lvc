@@ -1,5 +1,5 @@
 Require Import List Compare_dec.
-Require Import AllInRel Option Util Var IL Annotation EnvTy EqDec AutoIndTac Sim Fresh Liveness Status.
+Require Import AllInRel Option Util Var IL Annotation EnvTy EqDec AutoIndTac Sim Fresh Liveness Status MoreExp.
 
 Set Implicit Arguments.
 
@@ -15,10 +15,10 @@ Section Parallel_Move.
   Fixpoint upd_list p M : env val := 
     match p with
       | nil => M
-      | (l1, l2) :: p' => upd_list p' (updE M M l1 l2) 
+      | (l1, l2) :: p' => upd_list p' (M[ l1 <-- lookup_list M l2]) 
     end.
 
-  Fixpoint par_move (E E': var -> var) (Z : params) (Y : args)
+  Fixpoint par_move (E E': var -> var) (Z : params) (Y : params)
     : var -> var := 
     match Z, Y with
       | nil, nil  => E
@@ -45,11 +45,10 @@ Section Translate.
   Lemma par_move_eq (M1 M2 MC:env val) f fC Z Y
     :  (forall y : var, MC y = M1 (fC y))
     -> (forall y : var, M2 y = M1 (f y))
-    -> forall y : var, updE M2 MC Z Y y = (M1 (par_move f fC Z Y y)).
+    -> forall y : var, M2 [ Z <-- (lookup_list MC Y) ] y = (M1 (par_move f fC Z Y y)).
   Proof.
     general induction Z; destruct Y; isabsurd; eauto.
-    unfold updE. simpl. destruct if; lud; intuition.
-    eapply IHZ; eauto.
+    simpl. destruct if; lud; intuition.
   Qed.
 
   Lemma symb_eval p (M1 M2 : env val) f 
@@ -59,7 +58,8 @@ Section Translate.
     general induction p; simpl; eauto.
     destruct a; simpl; eauto; intros. 
     erewrite IHp. reflexivity. 
-    eapply par_move_eq; simpl in *; firstorder. 
+    intros. erewrite <- par_move_eq; simpl in *; eauto.
+    
   Qed.
 
   Corollary symb_eval_id : forall p (M : env val) x,
@@ -130,7 +130,7 @@ Section GlueCode.
     (VOK:validate_parallel_assignment vars p l1 l2)
     : forall M K cont, exists M',
         star I.step (K, M, list_to_stmt p cont) (K, M', cont) /\
-        agree_on vars M' (updE M M l1 l2).
+        agree_on vars M' (M[ l1 <-- lookup_list M l2]).
   Proof.
     unfold validate_parallel_assignment in *; destruct VOK; intros.
     eexists; split.
@@ -150,7 +150,7 @@ Section GlueCode.
       compile_parallel_assignment vars l1 l2 s = Success s' ->
       forall M K, exists M',
         star I.step (K, M, s') (K, M', s) /\
-        agree_on vars M' (updE M M l1 l2).
+        agree_on vars M' (M[ l1 <-- lookup_list M l2]).
   Proof.
     unfold compile_parallel_assignment; intros.
     destruct if in *. inv H.
@@ -165,6 +165,32 @@ End Parallel_Move.
 Section Implementation.
   Hypothesis parallel_move : var -> list var -> list var -> (list(list var * list var)).
 
+Fixpoint onlyVars (Y:args) : status params :=
+  match Y with
+    | nil => Success nil
+    | (Var x)::Y => sdo Y' <- onlyVars Y; Success (x::Y')
+    | _ => Error "onlyVars: argument list contains expressions"
+  end.
+
+Lemma onlyVars_success (E:env var) Y Y'
+  : onlyVars Y = Success Y'
+    -> { v | omap (exp_eval E) Y = Some v }.
+Proof.
+  intros. general induction Y; simpl in * |- *; eauto.
+  destruct a; isabsurd. monadS_inv H. simpl. 
+  edestruct IHY; eauto. rewrite e. simpl; eauto.
+Qed.
+
+Lemma onlyVars_lookup (E:env var) Y Y' v
+  : onlyVars Y = Success Y'
+    -> omap (exp_eval E) Y = Some v
+    -> lookup_list E Y' = v.
+Proof.
+  intros. general induction Y; simpl in * |- *; eauto.
+  destruct a; isabsurd. monadS_inv H. monad_inv H0.
+  simpl in * |- *. inv EQ0. f_equal; eauto.
+Qed.
+
 Fixpoint lower DL s (an:ann (set var))
   : status stmt := 
   match s, an with
@@ -177,6 +203,7 @@ Fixpoint lower DL s (an:ann (set var))
             Success (stmtIf x sl tl)
     | stmtGoto l Y, ann0 lv  =>
        sdo Lve <- option2status (nth_error DL (counted l)) "lower: No annotation for function";  
+        sdo Y <- onlyVars Y;
         let '(lv', Z) := Lve in
         compile_parallel_assignment parallel_move lv' Z Y (stmtGoto l nil)
 
@@ -224,39 +251,38 @@ Proof.
     erewrite <- exp_eval_live in H3; eauto using live_freeVars; simpl in *.
     erewrite H3 in def. congruence. eapply agree_on_incl; eauto using agree_on_sym.
     reflexivity.
-  + case_eq (val2bool (E x)); intros.
-    eapply simS; try eapply plusO. 
-    econstructor; eauto.
-    econstructor; eauto. rewrite <- EEQ; eauto.
-    eapply pmSim_sim; econstructor; eauto using agree_on_incl.
-    eapply simS; try eapply plusO. 
-    eapply I.stepIfF; eauto.
-    eapply I.stepIfF; eauto. rewrite <- EEQ; eauto.
-    eapply pmSim_sim; econstructor; eauto using agree_on_incl.
+  + case_eq (exp_eval E e); intros.
+    exploit exp_eval_live_agree; try eassumption.
+    case_eq (val2bool v); intros.
+    - one_step.
+      eapply pmSim_sim; econstructor; eauto using agree_on_incl.
+    - one_step.
+      eapply pmSim_sim; econstructor; eauto using agree_on_incl.
+    - exploit exp_eval_live_agree; try eassumption.
+      no_step. 
   + eapply option2status_inv in EQ. eapply nth_error_get in EQ.
     get_functional; subst.
+    edestruct onlyVars_success; try eassumption.
+    exploit omap_exp_eval_live_agree; try eassumption.
     provide_invariants_3.
-    edestruct (compile_parallel_assignment_correct _ _ _ _ _ EQ0 E' L') 
+    edestruct (compile_parallel_assignment_correct _ _ _ _ _ EQ2 E' L') 
       as [M' [X' X'']].
     eapply simS.
     econstructor. econstructor; eauto. simpl; eauto.
     eapply star_plus_plus; eauto. eapply plusO. econstructor; eauto.
-    eauto. 
+    reflexivity.
     eapply pmSim_sim; econstructor; try eapply LA1; eauto.
-    unfold updE. simpl.
-    erewrite lookup_list_agree; eauto using agree_on_incl.
+    simpl.
     eapply agree_on_trans. eapply update_with_list_agree. 
     eapply agree_on_incl; eauto. cset_tac; intuition.
-    rewrite lookup_list_length; eauto. 
-    unfold updE in X''. eapply agree_on_sym.
-    eapply agree_on_incl. eapply X''. cset_tac; intuition.
+    exploit omap_length; eauto. congruence.
+    eapply agree_on_sym.
+    eapply agree_on_incl.
+    erewrite <- onlyVars_lookup with (v:=x); eauto.
+    cset_tac; intuition.
     decide (a ∈ of_list Z0); cset_tac; intuition.
-
-  + eapply simE; try eapply star_refl; simpl; try stuck.
-    rewrite EEQ; eauto.
-  + eapply simS; try eapply plusO.
-    econstructor; eauto.
-    econstructor; eauto. 
+  + no_step. simpl. eauto using exp_eval_live.
+  + one_step.
     eapply pmSim_sim. econstructor; eauto.
     econstructor; eauto. econstructor; eauto using minus_incl.
     eapply agree_on_incl; eauto.
