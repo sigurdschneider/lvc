@@ -1,4 +1,4 @@
-Require Import Util List Get.
+Require Import OrderedTypeEx Util List Get Computable.
 
 Set Implicit Arguments.
 (** * Lemmas and tactics for lists *)
@@ -156,12 +156,21 @@ Proof.
   f_equal; eauto.
 Qed.
 
+(*
 Lemma map_ext_get X Y L (f:X->Y) (g:X->Y)
  : (forall x n, get L n x -> g x = f x)
    -> List.map g L = List.map f L.
 Proof.
   intros. general induction L; unfold mapi; simpl; eauto.
   f_equal; eauto using get.
+Qed. *)
+
+Lemma map_ext_get X Y (R:Y -> Y -> Prop) L (f:X->Y) (g:X->Y)
+ : (forall x n, get L n x -> R (g x) (f x))
+   -> list_eq R (List.map g L) (List.map f L).
+Proof.
+  intros. general induction L; simpl. econstructor.
+  econstructor; eauto using get.
 Qed.
 
 Ltac list_eqs :=
@@ -184,6 +193,15 @@ Ltac inv_map H :=
               pose proof (map_get_4 _ f H) as X; destruct X as [? [? EQ]]; invc EQ
       end
   end.
+
+Lemma list_eq_get {X:Type} (L L':list X) eqA n x
+  : list_eq eqA L L' -> get L n x -> exists x', get L' n x' /\ eqA x x'.
+Proof.
+  intros. general induction H.
+  inv H0. 
+  inv H1. eauto using get. 
+  edestruct IHlist_eq; eauto. firstorder using get.
+Qed.
 
 (* 
 *** Local Variables: ***

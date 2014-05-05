@@ -166,15 +166,6 @@ Inductive srd : list (option (set var)) -> stmt -> ann (set var) -> Prop :=
 
 Definition peq := prod_eq (@feq var var _ _) (@Equal var _ _).
 
-Lemma list_eq_get {X:Type} (L L':list X) eqA n x
-  : list_eq eqA L L' -> get L n x -> exists x', get L' n x' /\ eqA x x'.
-Proof.
-  intros. general induction H.
-  inv H0. 
-  inv H1. eauto using get. 
-  edestruct IHlist_eq; eauto. firstorder using get.
-Qed.
-
 (*
 Instance srd_morphism 
   : Proper (list_eq (option_eq Equal) ==> Equal ==> eq ==> impl) srd.
