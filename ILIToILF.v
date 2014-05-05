@@ -18,12 +18,12 @@ Inductive trs
  | trsExp DL ZL x e s an an_lv lv
     : trs (restrict DL (lv\{{x}})) ZL  s an_lv an
     -> trs DL ZL (stmtExp x e s) (ann1 lv an_lv) (ann1 nil an)
-  | trsIf DL ZL x s t ans ant ans_lv ant_lv lv
+  | trsIf DL ZL e s t ans ant ans_lv ant_lv lv
     :  trs DL ZL s ans_lv ans
     -> trs DL ZL t ant_lv ant
-    -> trs DL ZL (stmtIf x s t) (ann2 lv ans_lv ant_lv) (ann2 nil ans ant)
-  | trsRet x DL ZL lv
-    :  trs DL ZL (stmtReturn x) (ann0 lv) (ann0 nil)
+    -> trs DL ZL (stmtIf e s t) (ann2 lv ans_lv ant_lv) (ann2 nil ans ant)
+  | trsRet e DL ZL lv
+    :  trs DL ZL (stmtReturn e) (ann0 lv) (ann0 nil)
   | trsGoto DL ZL G' f Za Y lv
     :  get DL (counted f) (Some G')
     -> get ZL (counted f) (Za)
@@ -78,9 +78,9 @@ Defined.
 Fixpoint compile (ZL:list (list var)) (s:stmt) (an:ann (list var)) : stmt :=
   match s, an with
     | stmtExp x e s, ann1 _ an => stmtExp x e (compile ZL s an)
-    | stmtIf x s t, ann2 _ ans ant => stmtIf x (compile ZL s ans) (compile ZL t ant)
-    | stmtGoto f Y, ann0 _ => stmtGoto f (Y++nth (counted f) ZL nil)
-    | stmtReturn x, ann0 _ => stmtReturn x
+    | stmtIf e s t, ann2 _ ans ant => stmtIf e (compile ZL s ans) (compile ZL t ant)
+    | stmtGoto f Y, ann0 _ => stmtGoto f (Y++List.map Var (nth (counted f) ZL nil))
+    | stmtReturn e, ann0 _ => stmtReturn e
     | stmtLet Z s t, ann2 Za ans ant => 
       stmtLet (Z++Za) (compile (Za::ZL) s ans) (compile (Za::ZL) t ant)
     | s, _ => s  
@@ -111,6 +111,32 @@ Inductive trsR : I.state -> I.state -> Prop :=
   (EQ: E ≡ E')
   : trsR (L, E, s) (L', E', compile ZL s ans).
 
+Lemma omap_app X Y (f:X->option Y) L L'
+: omap f (L ++ L') = 
+  mdo v <- omap f L;
+  mdo v' <- omap f L';
+  Some (v ++ v').
+Proof.
+  general induction L; simpl in * |- *.
+  - destruct (omap f L'); eauto.
+  - destruct (f a); simpl; eauto.
+    rewrite IHL; eauto.
+    destruct (omap f L); simpl; eauto.
+    destruct (omap f L'); simpl; eauto.
+Qed.
+
+Lemma omap_exp_eval_app (E: env val) Y l Z
+: omap (exp_eval E) Y = ⎣l ⎦
+ -> omap (exp_eval E) (Y ++ List.map Var Z) = ⎣ l ++ lookup_list E Z ⎦.
+Proof.
+  general induction Y; simpl in * |- *.
+  - clear H. general induction Z; simpl; eauto.
+    rewrite IHZ; eauto.
+  - monad_inv H. rewrite EQ. simpl.
+    erewrite IHY; simpl; eauto.
+Qed.
+
+
 Lemma trsR_sim σ1 σ2
   : trsR σ1 σ2 -> sim σ1 σ2.
 Proof.
@@ -124,42 +150,46 @@ Proof.
     rewrite EQ; reflexivity.
     eapply simE; try eapply star_refl; eauto; stuck. rewrite EQ in H0; congruence.
 
-  + case_eq (val2bool (E x)); intros.
-    eapply simS; try eapply plusO. 
-    econstructor; eauto. 
-    econstructor. rewrite <- EQ; eauto.
+  + case_eq (exp_eval E e); intros.
+    case_eq (val2bool v); intros.
+    one_step. rewrite <- EQ; eauto.
     eapply trsR_sim; econstructor; eauto.
-    eapply simS; try eapply plusO. 
-    eapply I.stepIfF; eauto. 
-    eapply I.stepIfF; eauto. rewrite <- EQ; eauto.
+    one_step. rewrite <- EQ; eauto.
     eapply trsR_sim; econstructor; eauto.
-
-  + eapply simE; try eapply star_refl; simpl; eauto; try stuck. rewrite EQ; eauto.
-
+    no_step; rewrite <- EQ in def; congruence.
+  + no_step. simpl. rewrite EQ; eauto.
   + simpl counted in *.
     decide (length Z' = length Y).
+    case_eq (omap (exp_eval E) Y); intros.
     one_step. simpl in *; eauto.
     repeat rewrite app_length.
     eapply get_drop_eq in H6; eauto. inv H6; subst. simpl.
-    rewrite app_length. erewrite get_nth_default; eauto.
+    rewrite map_length. 
+    erewrite get_nth_default; eauto.
     rewrite <- H5, <- H6 in EA1. 
+    eapply omap_exp_eval_app. erewrite omap_agree; eauto.
+    intros. rewrite EQ. reflexivity.
     eapply trsR_sim; econstructor; eauto using approx_restrict.
-    unfold updE. simpl.
-    eapply get_drop_eq in H6; eauto. inv H6. subst.
-    rewrite lookup_list_app. rewrite update_with_list_app.
+    eapply approx_restrict. rewrite H6, H5. eauto.
+
+    eapply get_drop_eq in H6; eauto. inv H6. simpl.
+    rewrite update_with_list_app.
     erewrite get_nth_default; eauto.
     rewrite update_with_list_lookup_list. rewrite EQ. reflexivity.
     intuition.
     edestruct (AIR4_length); eauto; dcr.
-    rewrite lookup_list_length; eauto.
-    no_step. get_functional; subst. simpl in *. congruence.
+    exploit omap_length; eauto. congruence.
+    no_step. get_functional; subst. simpl in *. 
+    rewrite omap_app in def. 
+    erewrite omap_agree in H7. Focus 2.
+    intros. rewrite EQ. reflexivity. rewrite H7 in def. simpl in *. congruence.
+    no_step.
+    get_functional; subst. simpl in *. congruence.
     get_functional; subst. simpl in *. 
-    eapply n. repeat rewrite app_length in len.
+    apply n. repeat rewrite app_length in len.
     eapply get_drop_eq in H6; eauto. subst Za0.
-    erewrite get_nth_default in len; eauto. omega.
-  + eapply simS; try eapply plusO.
-    econstructor; eauto.
-    econstructor; eauto.
+    erewrite get_nth_default in len; eauto. rewrite map_length in len. omega.
+  + one_step.
     eapply trsR_sim; econstructor; eauto.
     econstructor; eauto. econstructor. 
     intros. inv H1. eauto.
@@ -252,8 +282,8 @@ Proof.
   general induction LV; inv RD; eauto using live_sound.
   + pose proof (zip_get  (fun (s : set var * list var) (t : list var) => (fst s, snd s ++ t)) H H9).
     econstructor. eapply H3. simpl. rewrite of_list_app. cset_tac; intuition.
-    simpl. erewrite get_nth; eauto. repeat rewrite app_length. congruence.
-    erewrite get_nth; eauto. rewrite of_list_app. cset_tac; intuition. admit.
+    simpl. erewrite get_nth; eauto. repeat rewrite app_length, map_length, app_length. congruence.
+    erewrite get_nth; eauto. admit.
   + simpl. econstructor; eauto.
     specialize (IHLV1 (Za::ZL)). eapply IHLV1; eauto.
     specialize (IHLV2 (Za::ZL)). eapply IHLV2; eauto.
@@ -275,8 +305,9 @@ Proof.
     econstructor; eauto. 
     rewrite app_length.  
     simpl in *. 
-    pose proof (zip_get (fun s t => (s,t)) H0 H6).
     erewrite get_nth_default; eauto.
+    rewrite map_length.
+    pose proof (zip_get (fun s t => (s,t)) H0 H6).
     eapply (map_get_1 (fun p => snd p + length (fst p)) H3).
   + inv H1.
     constructor; simpl in *; rewrite app_length.
