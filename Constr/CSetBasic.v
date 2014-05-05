@@ -505,6 +505,12 @@ Proof.
     cset_tac. repeat rewrite of_list_1 in H0. intuition.
 Qed.
 
+Lemma incl_set_left X `{OrderedType X} (s t : set X)
+: s [=] t -> s [<=] t.
+Proof.
+  cset_tac; firstorder.
+Qed.
+
 (* 
 *** Local Variables: ***
 *** coq-load-path: (("../" "Lvc")) ***
