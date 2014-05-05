@@ -13,7 +13,7 @@ if ARGV[0] == "--parallel" then
 end
 
 cmd = ARGV.join(' ')
-pad = "".ljust(40 - cmd.length)
+pad = "".ljust(50 - cmd.length)
 
 print "#{Time.now.strftime("%H:%M:%S")} #{blue('>>>')} #{cmd}#{parallel ? "\n" : pad}"
 
@@ -42,10 +42,13 @@ end
 
 sout = cstdout.read
 indent = "  "
-print sout.gsub!(/^/, '  ')
+
+if !sout.strip.empty? then
+ print sout.gsub!(/^/, '  ')
+end
 
 if parallel then
-  print "#{Time.now.strftime("%H:%M:%S")} ", color.call("<<<"), " #{cmd} \t\t ", color.call("#{cpu.round(2)} / #{time.round(2)}"), "\n"
+  print "#{Time.now.strftime("%H:%M:%S")} ", color.call("<<<"), " #{cmd}#{pad} ", color.call("#{cpu.round(2)} / #{time.round(2)}"), "\n"
 end
 
 exit success
