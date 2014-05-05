@@ -157,6 +157,14 @@ Set Implicit Arguments.
     eapply Subset_trans; try eapply IHe2; eauto. eapply lookup_set_incl; intuition.
   Qed.
 
+  Lemma live_exp_rename_sound e lv (ϱ:env var)
+  : live_exp_sound e lv
+    -> live_exp_sound (rename_exp ϱ e) (lookup_set ϱ lv).
+  Proof.
+    intros. general induction H; simpl; eauto using live_exp_sound.
+    + econstructor. eapply lookup_set_spec; eauto.
+  Qed.
+
   Inductive alpha_exp : env var -> env var -> exp -> exp -> Prop :=
   | alphaCon ϱ ϱ' v : alpha_exp ϱ ϱ' (Con v) (Con v)
   | alphaVar ϱ ϱ' x y : ϱ x = y -> ϱ' y = x -> alpha_exp ϱ ϱ' (Var x) (Var y)
