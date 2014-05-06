@@ -1,5 +1,5 @@
 Require Import AllInRel List Map Env ParamsMatch DecSolve.
-Require Import IL Annotation AutoIndTac Sim Exp MoreExp.
+Require Import IL Annotation AutoIndTac Sim Exp MoreExp Filter.
 
 Set Implicit Arguments.
 
@@ -18,6 +18,28 @@ Lemma argsLive_length lv bv Y Z
   -> length Y = length Z.
 Proof.
   intros. general induction H; simpl; eauto.
+Qed.
+
+Lemma argsLive_liveSound lv blv Y Z
+: argsLive lv blv Y Z
+  -> forall (n : nat) (y : exp),
+      get (filter_by (fun y : var => B[y ∈ blv]) Z Y) n y ->
+      live_exp_sound y lv.
+Proof.
+      intros. general induction H; simpl in * |- *.
+      - isabsurd.
+      - decide (z ∈ blv); eauto. 
+        inv H1; eauto. eapply H0; eauto.
+Qed.
+
+Lemma argsLive_live_exp_sound lv blv Y Z y z n
+: argsLive lv blv Y Z
+  -> get Y n y
+  -> get Z n z
+  -> z ∈ blv
+  -> live_exp_sound y lv.
+Proof.
+  intros. general induction n; inv H0; inv H1; inv H; intuition; eauto.
 Qed.
 
 Lemma argsLive_agree_on' (V E E':env val) lv blv Y Z v v'
@@ -85,6 +107,35 @@ Lemma live_sound_annotation Lv s slv
 : live_sound Lv s slv -> annotation s slv.
 Proof.
   intros. general induction H; econstructor; eauto.
+Qed.
+
+Lemma live_sound_monotone LV LV' s lv
+: live_sound LV s lv
+  -> PIR2 (fun lvZ lvZ' => fst lvZ' ⊆ fst lvZ /\ snd lvZ = snd lvZ') LV LV'
+  -> live_sound LV' s lv.
+Proof.
+  intros. general induction H; simpl; eauto using live_sound.
+  - edestruct PIR2_nth; eauto; dcr; simpl in *. 
+    destruct x; subst; simpl in *.
+    econstructor; eauto. cset_tac; intuition.
+  - econstructor; eauto 20 using PIR2.
+    eapply IHlive_sound1. econstructor; intuition. 
+    eapply IHlive_sound2. econstructor; intuition.
+Qed.
+
+Lemma live_sound_monotone2 LV s lv a
+: live_sound LV s lv
+  -> getAnn lv ⊆ a
+  -> live_sound LV s (setTopAnn lv a).
+Proof.
+  intros. general induction H; simpl in * |- *; eauto using live_sound, live_exp_sound, Subset_trans.
+  - econstructor; eauto using live_exp_sound_incl.
+    etransitivity; eauto.
+  - econstructor; eauto using live_exp_sound_incl; etransitivity; eauto.
+  - econstructor; eauto. cset_tac; intuition. 
+    intros; eauto using live_exp_sound_incl.
+  - econstructor; eauto using live_exp_sound_incl; etransitivity; eauto.
+  - econstructor; eauto. cset_tac; intuition. cset_tac; intuition.
 Qed.
 
 Lemma freeVars_live s lv Lv

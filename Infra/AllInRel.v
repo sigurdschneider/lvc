@@ -368,6 +368,23 @@ Proof.
   general induction H0; eauto 20 using PIR2, get.
 Qed.
 
+
+Instance PIR2_refl X (R:X -> X -> Prop) `{Reflexive _ R} : Reflexive (PIR2 R).
+Proof.
+  hnf; intros. general induction x; eauto using PIR2.
+Qed.
+
+Instance PIR2_trans {X} (R:X -> X -> Prop) `{Transitive _ R} 
+: Transitive (PIR2 R).
+Proof.
+  hnf; intros.
+  general induction H0; simpl in *.
+  + inv H1. econstructor.
+  + inv H1.
+    - econstructor; eauto.
+Qed.
+
+
 Ltac provide_invariants_P2 := 
 match goal with 
   | [ H : PIR2 ?R ?A ?B, H' : get ?A ?n ?b |- _ ] =>

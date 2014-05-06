@@ -29,58 +29,6 @@ Definition ArgRel (G:(set var * params)) (VL VL': list val) : Prop :=
 Definition ParamRel (G:(set var * params)) (Z Z' : list var) : Prop := 
   Z' = (List.filter (fun x => B[x ∈ (fst G)]) Z) /\ snd G = Z.
 
-Lemma lookup_list_filter_by_commute A B C (V:A->B) (Z:list C) Y p
-: length Z = length Y 
-  -> lookup_list V (filter_by p Z Y) =
-    filter_by p Z (lookup_list V Y).
-Proof.
-  intros. eapply length_length_eq in H. 
-  general induction H; simpl; eauto.
-  + destruct if; simpl; rewrite IHlength_eq; eauto.
-Qed.
-
-Lemma argsLive_filter_length lv blv Z Y
-: argsLive lv blv Y Z
-  -> length (List.filter (fun x : var => B[x ∈ blv]) Z) =
-    length (List.filter (fun y : var => B[y ∈ lv]) Y).
-Proof.
-  intros. general induction H; simpl; eauto.
-  decide (z ∈ blv); decide (y ∈ lv); try tauto; simpl.
-  - rewrite IHargsLive; eauto.
-Qed.
-
-Lemma filter_incl lv Y
-  : of_list (List.filter (fun y : var => B[y ∈ lv]) Y) ⊆ lv.
-Proof.
-  general induction Y; simpl. 
-  - cset_tac; intuition.
-  - decide (a ∈ lv); simpl. cset_tac; intuition. rewrite <- H0; eauto.
-    rewrite <- IHY; eauto.
-    eauto.
-Qed.
-
-Tactic Notation "destruct-if" "in" hyp(H) :=
-  match goal with 
-    | H : context [if sumbool_bool ?P then _ else _] |- _ => destruct P
-    | H : context [if ?P then _ else _] |- _ => destruct P
-  end.
-
-Tactic Notation "destruct-if" :=
-  match goal with
-    | |- context [if (if ?P then true else false) then _ else _] => destruct P
-    | |- context [if ?P then _ else _] => destruct P
-  end.
-
-Lemma argsLive_filter_filter_by lv blv Y Z
-: argsLive lv blv Y Z
-  -> List.filter (fun y : var => B[y ∈ lv]) Y
-    = filter_by (fun x : var => B[x ∈ blv]) Z Y.
-Proof.
-  intros. general induction H; simpl; eauto.
-  repeat destruct-if; try tauto.
-  rewrite IHargsLive; eauto.
-Qed.
-
 Lemma agree_on_update_filter lv (V:var -> val) Z VL 
 : length Z = length VL
   -> agree_on lv 
@@ -91,7 +39,7 @@ Proof.
   intros. eapply length_length_eq in H.
   general induction H.
   - eapply agree_on_refl.
-  - simpl. repeat destruct-if. simpl. eapply agree_on_update_same.
+  - simpl. destruct if. simpl. eapply agree_on_update_same.
     eapply agree_on_incl. eapply IHlength_eq. cset_tac; intuition.
     eapply agree_on_update_dead; eauto.
 Qed.
@@ -108,16 +56,6 @@ Proof.
   pose proof (update_with_list_agree _ VL H0 H).
   eapply agree_on_trans. eapply H1.
   eapply agree_on_update_filter. eauto.
-Qed.
-
-Lemma filter_filter_by_length {X} {Y} (Z:list X) (VL:list Y) 
-: length Z = length VL
-  -> forall p, length (List.filter p Z) =
-    length (filter_by p Z VL).
-Proof.
-  intros. eapply length_length_eq in H.
-  general induction H; simpl; eauto.
-  destruct if; simpl. rewrite IHlength_eq; eauto. eauto.
 Qed.
 
 Definition blockRel (AL:list (set var*params)) L (L':F.labenv) := (forall n blk lvZ, get AL n lvZ -> get L n blk -> block_Z blk = snd lvZ).
@@ -231,53 +169,6 @@ Qed.
 Definition compile_LV (LV:list (set var *params)) := 
   List.map (fun lvZ => let Z' := List.filter (fun x => B[x ∈ fst lvZ]) (snd lvZ) in
                       (fst lvZ, Z')) LV.
-
-Lemma live_sound_monotone LV LV' s lv
-: live_sound LV s lv
-  -> PIR2 (fun lvZ lvZ' => fst lvZ' ⊆ fst lvZ /\ snd lvZ = snd lvZ') LV LV'
-  -> live_sound LV' s lv.
-Proof.
-  intros. general induction H; simpl; eauto using live_sound.
-  - edestruct PIR2_nth; eauto; dcr; simpl in *. 
-    destruct x; subst; simpl in *.
-    econstructor; eauto. cset_tac; intuition.
-  - econstructor; eauto 20 using PIR2.
-    eapply IHlive_sound1. econstructor; intuition. 
-    eapply IHlive_sound2. econstructor; intuition.
-Qed.
-
-Lemma live_sound_monotone2 LV s lv a
-: live_sound LV s lv
-  -> getAnn lv ⊆ a
-  -> live_sound LV s (setTopAnn lv a).
-Proof.
-  intros. general induction H; simpl in * |- *; eauto using live_sound.
-  - econstructor; eauto using live_exp_sound_incl.
-    etransitivity; eauto.
-  - econstructor; eauto; etransitivity; eauto.
-  - econstructor; eauto. cset_tac; intuition. cset_tac; intuition.
-  - econstructor; eauto. cset_tac; intuition. cset_tac; intuition.
-Qed.
-
-Lemma filter_incl2 X `{OrderedType X} (p:X->bool) Z
-: of_list (List.filter p Z) ⊆ of_list Z.
-Proof.
-  general induction Z; simpl.
-  - reflexivity.
-  - destruct if; simpl. rewrite IHZ; reflexivity.
-    rewrite IHZ. cset_tac; intuition.
-Qed.
-
-Instance PIR2_refl X (R:relation X) `{Reflexive _ R} : Reflexive (PIR2 R).
-Proof.
-  hnf; intros. general induction x; eauto using PIR2.
-Qed.
-
-Lemma getAnn_setTopAnn A (an:ann A) a
- : getAnn (setTopAnn an a) = a.
-Proof.
-  destruct an; eauto.
-Qed.
 
 Lemma dve_live LV s lv
   : true_live_sound LV s lv

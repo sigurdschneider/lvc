@@ -31,6 +31,13 @@ Fixpoint setTopAnn A (s:ann A) (a:A) : ann A :=
    | ann2 _ s1 s2 => ann2 a s1 s2
    end.
 
+Lemma getAnn_setTopAnn A (an:ann A) a
+ : getAnn (setTopAnn an a) = a.
+Proof.
+  destruct an; eauto.
+Qed.
+
+
 Fixpoint mapAnn X Y (f:X->Y) (a:ann X) : ann Y := 
   match a with
     | ann1 a an => ann1 (f a) (mapAnn f an)

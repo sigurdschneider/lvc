@@ -576,16 +576,6 @@ Proof.
     eapply addParams_Subset. rewrite zip_length2; eauto.
 Qed.
 
-Instance PIR2_trans {X} (R:relation X) `{Transitive _ R} 
-: Transitive (PIR2 R).
-Proof.
-  hnf; intros.
-  general induction H0; simpl in *.
-  + inv H1. econstructor.
-  + inv H1.
-    - econstructor; eauto.
-Qed.
-
 Inductive ifFstR {X Y} (R:X -> Y -> Prop) : option X -> Y -> Prop :=
   | IfFstR_None y : ifFstR R None y
   | IfFstR_R x y : R x y -> ifFstR R (Some x) y.
