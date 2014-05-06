@@ -1,6 +1,6 @@
 Require Import List CSet.
-Require Import Util AllInRel IL ILRaise EnvTy ParamsMatch RegAlloc RenameApart Sim Status.
-Require Coherence ILIToILF Liveness ParallelMove ILN LivenessAnalysis CoherenceAlgo RegAllocAlgo CopyPropagation DVE.
+Require Import Util AllInRel IL ILRaise EnvTy ParamsMatch RegAlloc RenameApart Sim Status Annotation.
+Require Coherence ILIToILF Liveness LivenessValidators ParallelMove ILN LivenessAnalysis CoherenceAlgo RegAllocAlgo CopyPropagation DVE.
 
 Require Import ExtrOcamlBasic.
 Require Import ExtrOcamlZBigInt.
@@ -54,15 +54,15 @@ Definition toILF (ilin:ILN.nstmt) (S:Dummy) : status IL.stmt * Dummy :=
   match ILN.labIndices ilin nil with
     | Success ili => 
       /// S /// "Normalized Input " /// ili ;
-        let lv := livenessAnalysis ili in
-        /// S /// "Liveness Information " /// lv ; 
-        ensure "Liveness information sound" by Liveness.true_live_sound nil ili lv fail S;
-          let ilid := DVE.compile ili lv in
+        let lv := livenessAnalysis ili in 
+        /// S /// "Liveness Information " /// lv ;
+        ensure "Liveness information sound" by Liveness.true_live_sound nil ili lv fail S; 
+          let ilid := DVE.compile nil ili lv in
           /// S /// "DVE" /// ilid ; 
           let additional_params := additionalArguments ilid lv in
           /// S /// "Additional Params" /// additional_params ; 
           ensure "Additional parameters sufficient" 
-            by ILIToILF.trs nil nil ili (DVE.compile_live ili lv) additional_params fail S;
+            by ILIToILF.trs nil nil ili (DVE.compile_live ili lv) additional_params fail S; 
             (Success (ILIToILF.compile nil ilid additional_params), S)
     | x => (x,S)
   end.
@@ -86,7 +86,7 @@ Definition fromILF (s:stmt) : status stmt :=
      else
        Error "Liveness unsound.".
 
-Opaque Liveness.live_sound_dec.
+Opaque LivenessValidators.live_sound_dec.
 Opaque ILIToILF.trs_dec.
 (*
 Lemma toILF_correct ilin alv s (E:env val) e
