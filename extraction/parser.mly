@@ -38,7 +38,7 @@
 /* Integer literals, can be integer_literal or - integer_literal */
 
 integer_constant:
-  | IL_integer_constant { Lvc.Con (Big.of_string "1") }
+  | IL_integer_constant { Lvc.Con (Big.of_string $1) }
   | IL_minus IL_integer_constant { Lvc.Con (parse_neg_integer $2) }
 
 primary_expression:
