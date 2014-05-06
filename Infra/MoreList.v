@@ -209,6 +209,20 @@ Proof.
   edestruct IHlist_eq; eauto. firstorder using get.
 Qed.
 
+Instance list_R_dec A (R:A->A->Prop) 
+         `{forall a b, Computable (R a b)} (L:list A) (L':list A) : 
+  Computable (forall n a b, get L n a -> get L' n b -> R a b).
+Proof.
+  general induction L; destruct L'. 
+  + left; isabsurd.
+  + left; isabsurd.
+  + left; isabsurd.
+  + decide (R a a0). edestruct IHL; eauto.
+    left. intros. inv H0; inv H1; eauto. 
+    right. intro. eapply n; intros. eapply H0; eauto using get.
+    right. intro. eapply n. eauto using get.
+Qed.
+
 (* 
 *** Local Variables: ***
 *** coq-load-path: (("../" "Lvc")) ***

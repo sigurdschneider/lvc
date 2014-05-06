@@ -1,5 +1,5 @@
 Require Import List.
-Require Import Util Relations Get Drop Var Val Exp Env Map CSet AutoIndTac MoreList IL.
+Require Import Util Relations Get Drop Var Val Exp Env Map CSet AutoIndTac MoreList IL DecSolve.
 
 Set Implicit Arguments.
 
@@ -81,6 +81,47 @@ Proof.
   destruct (IHs1 a2), (IHs2 a3);
     try (now left; econstructor; eauto);
     try (now right; inversion 1; eauto).
+Defined.
+
+Inductive ann_R {A B} (R:A->B->Prop) : ann A -> ann B -> Prop :=
+  | annLt1 a b an bn 
+    : R a b 
+      -> ann_R R an bn 
+      -> ann_R R (ann1 a an) (ann1 b bn)
+  | annLt2 a ans ant b bns bnt
+    : R a b
+      -> ann_R R ans bns 
+      -> ann_R R ant bnt 
+      -> ann_R R (ann2 a ans ant) (ann2 b bns bnt)
+  | annLt0 a b
+      : R a b
+      -> ann_R R (ann0 a) (ann0 b).
+
+
+
+Instance ordered_type_lt_dec A `{OrderedType A} (a b: A) 
+: Computable (_lt a b).
+pose proof (_compare_spec a b).
+destruct (_cmp a b).
+right; inv H0. hnf; intros. eapply (lt_not_eq H2 H1).
+left. inv H0; eauto.
+right; inv H0. intro. eapply (lt_not_gt H1 H2).
+Defined.
+
+Instance ann_lt_dec A B (R:A->B->Prop) 
+         `{forall a b, Computable (R a b)} (a:ann A) (b:ann B) : 
+  Computable (ann_R R a b).
+Proof.
+  revert a b.
+  fix 1.
+  destruct a; destruct b; try dec_solve.
+  + decide (R a a0); dec_solve. 
+  + decide (R a a1); try dec_solve;
+    edestruct ann_lt_dec with (a:=a0) (b:=b); hnf in *; 
+    try eassumption; try dec_solve. 
+  + decide (R a1 a); try dec_solve.
+    destruct (ann_lt_dec a2 b1); try dec_solve.
+    destruct (ann_lt_dec a3 b2); try dec_solve.
 Defined.
 
 
