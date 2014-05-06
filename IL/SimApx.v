@@ -599,6 +599,77 @@ Proof.
 Qed.
 *)
 
+Lemma get_drop_lab0 (L:F.labenv) l blk
+:  get L (counted l) blk
+   -> get (drop (labN l) L) (counted (LabI 0)) blk.
+Proof.
+  intros. eapply drop_get; simpl. orewrite (labN l + 0 = labN l); eauto.
+Qed.
+
+Lemma drop_get_lab0 (L:F.labenv) l blk
+: get (drop (labN l) L) (counted (LabI 0)) blk
+  -> get L (counted l) blk.
+Proof.
+  intros. eapply get_drop in H; simpl in *. orewrite (labN l + 0 = labN l) in H; eauto.
+Qed.
+
+Lemma sim_drop_shift r l L E Y L' E' Y'
+: paco2 (@psimapx F.state _ F.state _) r (drop (labN l) L, E, stmtGoto (LabI 0) Y)
+        (drop (labN l) L', E', stmtGoto (LabI 0) Y')
+  -> paco2 (@psimapx F.state _ F.state _) r (L, E, stmtGoto l Y)
+          (L', E', stmtGoto l Y').
+Proof.
+  intros. pinversion H; subst.
+  eapply plus_destr in H0.
+  eapply plus_destr in H1.
+  destruct H0; destruct H1; dcr. inv H3.
+  simpl in *. inv H1; simpl in *.
+  pfold. econstructor; try eapply star_plus.
+  econstructor; eauto using get_drop_lab0, drop_get_lab0. eauto.
+  econstructor; eauto using get_drop_lab0, drop_get_lab0. eauto.
+  eauto.
+  inv H1; inv H2; simpl in *.
+  pfold. econstructor 2; try eapply star_refl; eauto. stuck.
+  eapply H3. econstructor. 
+  econstructor; eauto using get_drop_lab0, drop_get_lab0. 
+  stuck. eapply H4. econstructor.
+  econstructor; eauto using get_drop_lab0, drop_get_lab0. 
+  pfold. inv H5. econstructor 2. 
+  Focus 2. eapply star_refl.
+  Focus 2. econstructor 2. 
+  econstructor; eauto using get_drop_lab0, drop_get_lab0. 
+  eauto. simpl; eauto. stuck.
+  eapply H3. econstructor.
+  econstructor; eauto using get_drop_lab0, drop_get_lab0. 
+  eauto.
+  pfold. inv H5. econstructor 2. 
+  Focus 2. econstructor 2. 
+  econstructor; eauto using get_drop_lab0, drop_get_lab0. 
+  eauto. 
+  Focus 2. eapply star_refl.
+  simpl; eauto. eauto. stuck.
+  eapply H4. econstructor.
+  econstructor; eauto using get_drop_lab0, drop_get_lab0. 
+  pfold. inv H5. inv H7. econstructor 2. 
+  Focus 2. econstructor 2. 
+  econstructor; eauto using get_drop_lab0, drop_get_lab0. 
+  eauto. 
+  Focus 2. econstructor 2. 
+  econstructor; eauto using get_drop_lab0, drop_get_lab0. 
+  eauto. eauto. eauto. eauto.
+  inv H1. pfold. econstructor 3; try eapply star_refl; eauto.
+  stuck. destruct H2. econstructor. econstructor.
+  eapply drop_get. simpl. orewrite (labN l + 0 = labN l).
+  eauto. eauto. eauto. reflexivity. 
+  pfold. econstructor 3; eauto.
+  inv H3; simpl in *.
+  econstructor.
+  econstructor. eapply get_drop in Ldef.
+  orewrite (labN l + 0 = labN l) in Ldef. eauto. eauto. eauto. reflexivity.
+  eauto.
+  eapply psimapxd_mon.
+Qed.
+
 
 
 
