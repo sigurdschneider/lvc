@@ -7,6 +7,15 @@ include Term::ANSIColor
 begin
 parallel = false
 
+if ARGV.length == 0 || ARGV[0] == "--help" then
+	puts "time.sh - command timing script"
+	puts "This script reports cpu and real time consumed by the command"
+	puts "Usage:"
+	puts "\t./time.sh [command]\t\t for usage in single-threaded context"
+	puts "\t./time.sh --parallel [command]\t if multiple commands are run concurrently"
+	exit false
+end
+
 if ARGV[0] == "--parallel" then
 	parallel = true
 	ARGV.shift
