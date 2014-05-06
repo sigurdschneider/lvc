@@ -319,13 +319,6 @@ Proof.
     - eauto.
 Qed.
 
-Lemma zip_length2 {X Y Z} {f:X->Y->Z} DL ZL
-: length DL = length ZL
-  -> length (zip f DL ZL) = length DL.
-Proof.
-  intros. rewrite zip_length. rewrite H. rewrite Min.min_idempotent. eauto.
-Qed.
-
 Lemma addParams_length Z DL AP
  : length DL = length AP
    -> length (addParams Z DL AP) = length DL.

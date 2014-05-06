@@ -90,7 +90,14 @@ Lemma zip_length X Y Z (f:X->Y->Z) L L'
 Proof.
   general induction L; destruct L'; simpl; eauto.
 Qed.
-  
+
+Lemma zip_length2 {X Y Z} {f:X->Y->Z} DL ZL
+: length DL = length ZL
+  -> length (zip f DL ZL) = length DL.
+Proof.
+  intros. rewrite zip_length. rewrite H. rewrite Min.min_idempotent. eauto.
+Qed.
+
 
 
 Section ParametricMapIndex.
