@@ -153,7 +153,7 @@ Section GlueCode.
         agree_on vars M' (M[ l1 <-- lookup_list M l2]).
   Proof.
     unfold compile_parallel_assignment; intros.
-    destruct if in *. inv H.
+    destruct if in H. inv H.
     eapply validate_parallel_assignment_correct; eauto.
     discriminate.
   Qed.
