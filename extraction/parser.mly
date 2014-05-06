@@ -62,19 +62,30 @@ expression:
   | additive_expression { $1 }
 
 
+expression_list :
+| expression { $1::[] } 
+| expression IL_comma expression_list { $1::$3 }  
+
 arguments :
 | /* empty */ { [] }
-| ident_list { $1 }
+| expression_list { $1 }
+
+option_arglist :
+| IL_lparen arguments IL_rparen { $2 }
 
 ident_list :
 | IL_ident { $1::[] } 
 | IL_ident IL_comma ident_list { $1::$3 }  
 
-option_arglist :
-| IL_lparen arguments IL_rparen { $2 }
+parameters :
+| /* empty */ { [] }
+| ident_list { $1 }
+
+option_paramlist :
+| IL_lparen parameters IL_rparen { $2 }
 
 fun_def:
-| IL_ident option_arglist IL_equal expr  { (($1, $2), $4) }
+| IL_ident option_paramlist IL_equal expr  { (($1, $2), $4) }
 
 fun_list:
 | fun_def { $1::[] }
@@ -83,7 +94,7 @@ fun_list:
 expr :
 | IL_let IL_ident IL_equal expression IL_in expr { Lvc.NstmtExp ($2, $4, $6) }
 | IL_letrec fun_def IL_in expr { match $2 with | (f, z), s -> Lvc.NstmtLet (f, z, s, $4) }
-| IL_if IL_ident IL_then expr IL_else expr { Lvc.NstmtIf ($2,$4,$6) }
+| IL_if expression IL_then expr IL_else expr { Lvc.NstmtIf ($2,$4,$6) }
 | IL_ident option_arglist { Lvc.NstmtGoto ($1,$2) }
-| IL_ident { Lvc.NstmtReturn ($1) }
+| expression { Lvc.NstmtReturn ($1) }
 
