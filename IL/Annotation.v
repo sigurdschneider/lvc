@@ -1,5 +1,5 @@
 Require Import List.
-Require Export Util Relations Get Drop Var Val Exp Env Map CSet AutoIndTac MoreList IL.
+Require Import Util Relations Get Drop Var Val Exp Env Map CSet AutoIndTac MoreList IL.
 
 Set Implicit Arguments.
 
@@ -9,11 +9,11 @@ Inductive ann (A:Type) : Type :=
 | ann2 (a:A) (sa:ann A) (ta:ann A) : ann A.
  
 Definition getAnn {A} (a:ann A) : A :=
-match a with
-| ann0 a => a
-| ann1 a _ => a
-| ann2 a _ _ => a
-end.
+  match a with
+    | ann0 a => a
+    | ann1 a _ => a
+    | ann2 a _ _ => a
+  end.
 
 Fixpoint setAnn A (s:stmt) (a:A) : ann A :=
   match s with
@@ -36,7 +36,6 @@ Lemma getAnn_setTopAnn A (an:ann A) a
 Proof.
   destruct an; eauto.
 Qed.
-
 
 Fixpoint mapAnn X Y (f:X->Y) (a:ann X) : ann Y := 
   match a with
