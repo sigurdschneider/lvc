@@ -81,6 +81,30 @@ Proof.
   do 2 eexists; eauto using get.
 Qed.
 
+
+Lemma filter_p X p (Z:list X)
+: forall n x, get (List.filter p Z) n x -> p x.
+Proof.
+  intros.
+  general induction Z; simpl. 
+  - isabsurd.
+  - simpl in H. destruct if in H. inv H. rewrite <- Heq. eapply I.
+    eapply IHZ; eauto.                            
+    eapply IHZ; eauto.                            
+Qed.
+
+Lemma filter_in X `{OrderedType X} (p:X->bool) `{Proper _ (_eq ==> eq) p} a Z
+ :  p a
+    -> a \In of_list Z
+    -> a \In of_list (List.filter p Z).
+Proof.
+  general induction Z; simpl in * |- *; eauto.
+  - cset_tac. destruct H2. rewrite <- H2 in H1.
+    destruct if; isabsurd. rewrite <- H2. simpl. cset_tac; intuition.
+    destruct if. simpl. exploit IHZ; eauto. cset_tac; intuition.
+    eauto. 
+Qed.
+
 (* 
 *** Local Variables: ***
 *** coq-load-path: (("." "Lvc")) ***

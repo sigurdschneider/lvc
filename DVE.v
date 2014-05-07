@@ -176,6 +176,28 @@ Definition compile_LV (LV:list (set var *params)) :=
   List.map (fun lvZ => let Z' := List.filter (fun x => B[x ∈ fst lvZ]) (snd lvZ) in
                       (fst lvZ, Z')) LV.
 
+(* TODO: move to CSetGet *)
+Lemma get_in_incl X `{OrderedType X} (L:list X) s
+: (forall n x, get L n x -> x ∈ s)
+  -> of_list L ⊆ s.
+Proof.
+  intros. general induction L; simpl. 
+  - cset_tac; intuition.
+  - exploit H0; eauto using get.
+    exploit IHL; intros; eauto using get.
+    cset_tac; intuition. rewrite <- H2; eauto.
+Qed.
+
+(*TODO move to CSetBasic *)
+Lemma minus_inter_empty X `{OrderedType X} s t u
+: s ∩ t [=] s ∩ u
+  -> s \ t [=] s \ u.
+Proof.
+  intros. cset_tac; intuition.
+  hnf in H0. eapply H3. eapply H0; eauto.
+  eapply H3. eapply H0. eauto.
+Qed.
+
 Lemma dve_live LV s lv
   : true_live_sound LV s lv
     -> live_sound (compile_LV LV) (compile LV s lv) (compile_live s lv).
@@ -186,7 +208,9 @@ Proof.
   - econstructor; eauto; rewrite compile_live_incl; eauto.
   - econstructor. eapply (map_get_1 (fun lvZ => let Z' := List.filter (fun x => B[x ∈ fst lvZ]) (snd lvZ) in
                       (fst lvZ, Z')) H); eauto.
-    simpl. admit.
+    simpl. rewrite <- H0. rewrite minus_inter_empty. reflexivity.
+    cset_tac; intuition. eapply filter_incl2; eauto.
+    eapply filter_in; eauto. intuition. hnf. destruct if; eauto.
     simpl. eapply get_nth in H. erewrite H. simpl.
     erewrite filter_filter_by_length. reflexivity. congruence. 
     intros. eapply get_nth in H. erewrite H in H3. simpl in *.
@@ -208,7 +232,11 @@ Proof.
     rewrite getAnn_setTopAnn. cset_tac; intuition.
     rewrite getAnn_setTopAnn.
     rewrite compile_live_incl; eauto.
-    admit.
+    rewrite union_comm. rewrite union_minus_remove.
+    rewrite <- H1. 
+    rewrite minus_inter_empty. reflexivity.
+    cset_tac; intuition. eapply filter_incl2; eauto.
+    eapply filter_in; eauto. intuition. hnf. destruct if; eauto.
     rewrite compile_live_incl; eauto.
 Qed.
 
