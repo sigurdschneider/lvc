@@ -273,22 +273,61 @@ Proof.
       eapply restrict_subset2. reflexivity. eauto.
 Qed.
 
+Inductive additionalParameters_live : list (set var)   (* additional params *)
+                                      -> stmt           (* the program *)
+                                      -> ann (set var)  (* liveness *)
+                                      -> ann (list var) (* additional params *)
+                                      -> Prop :=
+ | additionalParameters_liveExp ZL x e s an an_lv lv
+    : additionalParameters_live ZL s an_lv an
+    -> additionalParameters_live ZL (stmtExp x e s) (ann1 lv an_lv) (ann1 nil an)
+  | additionalParameters_liveIf ZL e s t ans ant ans_lv ant_lv lv
+    : additionalParameters_live ZL s ans_lv ans
+    -> additionalParameters_live ZL t ant_lv ant
+    -> additionalParameters_live ZL (stmtIf e s t) (ann2 lv ans_lv ant_lv) (ann2 nil ans ant)
+  | additionalParameters_liveRet ZL e lv
+    :  additionalParameters_live ZL (stmtReturn e) (ann0 lv) (ann0 nil)
+  | additionalParameters_liveGoto ZL Za f Y lv
+    : get ZL (counted f) Za
+      -> Za ⊆ lv
+      -> additionalParameters_live ZL (stmtGoto f Y) (ann0 lv) (ann0 nil)
+  | additionalParameters_liveLet ZL s t Z Za ans ant lv ans_lv ant_lv
+    : of_list Za ⊆ getAnn ans_lv \ of_list Z
+    -> additionalParameters_live (of_list Za::ZL) s ans_lv ans
+    -> additionalParameters_live (of_list Za::ZL) t ant_lv ant
+    -> additionalParameters_live ZL (stmtLet Z s t) (ann2 lv ans_lv ant_lv) (ann2 Za ans ant).
+
+Lemma get_in_of_list X `{OrderedType X} L n x
+    : get L n x 
+      -> x ∈ of_list L.
+Proof.
+  intros. general induction H0; simpl; cset_tac; intuition.
+Qed.
+
+
 Lemma live_sound_compile DL ZL AL s ans_lv ans
   (RD:trs AL ZL s ans_lv ans)
   (LV:live_sound DL s ans_lv)
-(*  (EQ:PIR2 (fstNoneOrR' (fun s t => s = fst t)) AL DL) *)
+  (APL: additionalParameters_live (List.map of_list ZL) s ans_lv ans)
   : live_sound (zip (fun s t => (fst s, snd s ++ t)) DL ZL) (compile ZL s ans) ans_lv.
 Proof.
-  general induction LV; inv RD; eauto using live_sound.
-  + pose proof (zip_get  (fun (s : set var * list var) (t : list var) => (fst s, snd s ++ t)) H H9).
+  general induction LV; inv RD; inv APL; eauto using live_sound.
+  + pose proof (zip_get  (fun (s : set var * list var) (t : list var) => (fst s, snd s ++ t)) H H9). 
+    edestruct (map_get_4); eauto; dcr; subst.
+    get_functional; subst x.
     econstructor. eapply H3. simpl. rewrite of_list_app. cset_tac; intuition.
     simpl. erewrite get_nth; eauto. repeat rewrite app_length, map_length, app_length. congruence.
-    erewrite get_nth; eauto. admit.
+    erewrite get_nth; eauto.
+    intros. eapply get_app_cases in H5. destruct H5; dcr; eauto.
+    edestruct map_get_4; eauto; dcr; subst. econstructor.
+    rewrite <- H10. eauto using get_in_of_list.
   + simpl. econstructor; eauto.
     specialize (IHLV1 (Za::ZL)). eapply IHLV1; eauto.
     specialize (IHLV2 (Za::ZL)). eapply IHLV2; eauto.
-    rewrite of_list_app. cset_tac; intuition. admit.
-    rewrite of_list_app. cset_tac; intuition.
+    rewrite of_list_app. rewrite H7.
+    cset_tac; intuition.
+    rewrite of_list_app.
+    rewrite <- H0. cset_tac; intuition.
 Qed.
 
 Lemma compile_params_match DL ZL L s ans_lv ans
