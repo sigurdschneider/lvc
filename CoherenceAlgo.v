@@ -1093,9 +1093,127 @@ Qed.
 
 Print Assumptions computeParameters_trs.
 
+Ltac invt ty :=
+  match goal with 
+      | h: ty |- _ => inv h
+      | h: ty _ |- _ => inv h
+      | h: ty _ _ |- _ => inv h
+      | h: ty _ _ _ |- _ => inv h
+      | h: ty _ _ _ _ |- _ => inv h
+      | h: ty _ _ _ _ _ |- _ => inv h
+  end.
+
+Definition oemp X `{OrderedType X} (s : option (set X)) :=
+  match s with
+    | ⎣s0 ⎦ => s0
+    | ⎣⎦ => ∅
+  end.
+
+Arguments oemp [X] {H} s.
+
+Lemma additionalParameters_live_monotone (LV':list (option (set var))) DL ZL s an' LV lv
+: length DL = length ZL
+  -> live_sound (zip pair DL ZL) s lv
+  -> additionalParameters_live LV s lv an'
+  -> PIR2 (ifFstR Subset) LV' (zip lminus DL ZL)
+  -> additionalParameters_live (List.map (@oemp var _) LV') s lv an'.
+Proof.
+  intros. general induction H1; invt live_sound; eauto using additionalParameters_live.
+  - edestruct get_zip as [? [? []]]; dcr; subst; eauto. invc H8.
+    edestruct PIR2_nth_2; eauto. eapply zip_get; eauto.
+    dcr.
+    econstructor.
+    eapply map_get_1; eauto. rewrite <- H9.
+    inv H12; simpl. cset_tac; intuition. eapply H5.
+  - econstructor; eauto.
+    exploit (IHadditionalParameters_live1 (Some (of_list Za)::LV') (getAnn ans_lv::DL) (Z::ZL0)); simpl; try congruence. 
+    econstructor; eauto. econstructor. unfold lminus.
+    rewrite H. reflexivity.
+    eapply X.
+    exploit (IHadditionalParameters_live2 (Some (of_list Za)::LV') (getAnn ans_lv::DL) (Z::ZL0)); simpl; try congruence. 
+    econstructor; eauto. econstructor. rewrite H; reflexivity.
+    eauto.
+Qed.
+
+Lemma computeParameters_live DL ZL AP s an' LV lv
+: length DL = length ZL
+  -> length ZL = length AP
+  -> live_sound (zip pair DL ZL) s lv
+  -> computeParameters (zip lminus DL ZL) ZL AP s lv = (an', LV)
+  -> PIR2 Subset AP (zip lminus DL ZL)
+  -> additionalParameters_live (List.map (@oemp _ _) LV) s lv an'.
+Proof.
+  intros.
+  general induction H1; simpl in *.
+  - let_case_eq; inv H4.
+    econstructor. eapply IHlive_sound; try eapply eq; eauto using addParam_Subset.
+    rewrite addParam_length; rewrite zip_length2; eauto; congruence.
+  - repeat let_case_eq; invc H4. 
+    exploit computeParameters_LV_DL; try eapply eq0; eauto. congruence.
+    exploit computeParameters_LV_DL; try eapply eq; eauto. congruence.
+    econstructor; eauto.
+    eapply additionalParameters_live_monotone; eauto.
+    eapply ifFstR_zip_ounion; eauto.
+    eapply additionalParameters_live_monotone; eauto.
+    eapply ifFstR_zip_ounion; eauto.
+  - edestruct get_zip as [? [? []]]; dcr; subst; eauto. invc H10.
+    edestruct PIR2_nth_2; eauto. eapply zip_get; eauto. dcr.
+    econstructor. eapply map_get_1; eauto. eapply killExcept_get; eauto. 
+    simpl. rewrite <- H0. eapply H11.
+  - econstructor.
+  - repeat let_case_eq. invc H4.
+    exploit (computeParameters_LV_DL (getAnn als::DL) (Z::ZL)); try eapply eq; eauto; simpl; try congruence. rewrite addParams_length, zip_length2; try congruence. 
+    rewrite zip_length2; congruence.
+    econstructor; eauto. cset_tac; intuition. eapply addParams_Subset2. eauto.
+    exploit (computeParameters_LV_DL (getAnn als::DL) (Z::ZL)); try eapply eq0; eauto; simpl; try congruence. 
+    econstructor; eauto. cset_tac; intuition. 
+    econstructor. simpl in X,X0.
+    inv X; inv X0. simpl. inv pf; inv pf0; simpl.
+    eapply incl_empty.
+    rewrite of_list_3; eauto.
+    rewrite of_list_3; eauto.
+    rewrite of_list_3. rewrite H4, H6. rewrite union_idem. reflexivity.
+    exploit (IHlive_sound1 (getAnn als::DL) (Z::ZL)); 
+      simpl; eauto.
+    simpl. rewrite addParams_length, zip_length2; eauto.
+    rewrite zip_length2; congruence. 
+    constructor. cset_tac; intuition.
+    eapply addParams_Subset2; eauto.
+    eapply (@additionalParameters_live_monotone (Some (of_list (oto_list (hd ⎣⎦ (zip ounion b0 b1))))::addAdds (oget (hd ⎣⎦ (zip ounion b0 b1))) 
+              (zip lminus DL ZL) (tl (zip ounion b0 b1))) (getAnn als::DL) (Z::ZL)).
+    simpl. congruence. eauto. eauto. simpl.
+    econstructor. constructor. unfold lminus. unfold oto_list.
+    simpl in X, X0. inv X; inv X0; simpl.
+    inv pf; inv pf0; simpl.
+    eapply incl_empty.
+    rewrite of_list_3. eauto.
+    rewrite of_list_3. eauto.
+    rewrite of_list_3. rewrite H6. rewrite H4. rewrite union_idem. reflexivity.
+    eapply ifFstR_addAdds.
+    simpl in X, X0. inv X; inv X0; simpl.
+    eapply ifFstR_zip_ounion; eauto.
+    
+    exploit (IHlive_sound2 (getAnn als::DL) (Z::ZL)); simpl; eauto.
+    simpl. congruence. 
+    constructor. cset_tac; intuition. eauto.
+    eapply (@additionalParameters_live_monotone (Some (of_list (oto_list (hd ⎣⎦ (zip ounion b0 b1))))::addAdds (oget (hd ⎣⎦ (zip ounion b0 b1))) 
+              (zip lminus DL ZL) (tl (zip ounion b0 b1))) (getAnn als::DL) (Z::ZL)).
+    simpl. congruence. eauto. eauto. simpl.
+    econstructor. constructor. unfold lminus. unfold oto_list.
+    simpl in X, X0. inv X; inv X0; simpl.
+    inv pf; inv pf0; simpl.
+    eapply incl_empty.
+    rewrite of_list_3. eauto.
+    rewrite of_list_3. eauto.
+    rewrite of_list_3. rewrite H6. rewrite H4. rewrite union_idem. reflexivity.
+    eapply ifFstR_addAdds.
+    simpl in X, X0. inv X; inv X0; simpl.
+    eapply ifFstR_zip_ounion; eauto.
+Qed.
+
+  
 (* 
 *** Local Variables: ***
 *** coq-load-path: (("." "Lvc")) ***
 *** End: ***
 *)
-
