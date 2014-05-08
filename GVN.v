@@ -1,7 +1,7 @@
 Require Import CSet Le.
 
 Require Import Plus Util AllInRel Map.
-Require Import Val Var Env EnvTy IL ParamsMatch Sim SimApx Alpha Coherence Fresh.
+Require Import Val Var Env EnvTy IL ParamsMatch Sim SimApx Alpha Coherence Fresh Annotation.
 
 Require Import Liveness Filter.
 
@@ -14,288 +14,172 @@ Definition eqn := (exp * exp)%type.
 Instance OrderedType eqn : OrderedType eqn.
 Admitted.
 
-Definition satisfies (E:var -> val) (gamma:eqn) := 
+Definition satisfies (E:onv val) (gamma:eqn) := 
   exp_eval E (fst gamma) = exp_eval E (snd gamma).
 
-Definition satisfiesAll (E:var -> val) (Gamma:set eqn) := 
+Inductive moreDef {X} : option X -> option X -> Prop :=
+  | moreDefSome v v' : moreDef (Some v) (Some v')
+  | moreDefNone x : moreDef None x.
+
+Definition satisfiesAll (E:onv val) (Gamma:set eqn) := 
   forall gamma, gamma ∈ Gamma -> satisfies E gamma.
 
 Definition entails Gamma Γ' := forall E, satisfiesAll E Gamma -> satisfiesAll E Γ'. 
 
+Definition moreDefined Gamma e e' := 
+  forall E E', satisfiesAll E Gamma -> satisfiesAll E' Gamma -> fstNoneOrR eq (exp_eval E e) (exp_eval E' e').
+
+Definition moreDefinedArgs Gamma Y Y' := 
+  forall E E', satisfiesAll E Gamma -> satisfiesAll E' Gamma -> 
+          fstNoneOrR eq (omap (exp_eval E) Y) (omap (exp_eval E') Y').
+
+(*Definition moreDefined Gamma Γ' e e' := 
+  forall E, satisfies E Gamma -> forall E', satisfies E' Γ' -> moreDef (exp_eval E e) (exp_eval E' e').*)
+
 Definition freeVars (gamma:exp * exp) := 
   Exp.freeVars (fst gamma) ∪ Exp.freeVars (snd gamma).
 
-
-
-Definition remove (Gamma:set eqn) (G:set var) :=
+Definition remove (Gamma:set eqn) G :=
   filter (fun gamma => B[freeVars gamma ∩ G [=] ∅]) Gamma.
 
-Inductive eqn_sound : list (live*params) -> stmt -> ann (set eqn) -> Prop :=
-| EqnOpr x Lv b e al Gamma 
-  : eqn_sound Lv b al
-    -> entails (remove Gamma x ∪ {{ (Var x,e) }}) (getAnn al)
-    -> eqn_sound Lv (stmtExp x e b) (annExp Gamma al)
-| EqnIf Lv x b1 b2 Gamma al1 al2
-  : eqn_sound Lv b1 al1
-  -> eqn_sound Lv b2 al2
+Definition subst_eqn (ϱ : env exp) (e: eqn) :=
+  (subst_exp ϱ (fst e), subst_exp ϱ (snd e)).
+
+Definition subst_eqns (ϱ : env exp) (G:set eqn) :=
+  map (subst_eqn ϱ) G.
+
+Definition sid := fun x => Var x.
+
+Definition eqns_freeVars (Gamma:set eqn) := fold union (map freeVars Gamma) ∅.
+
+Inductive eqn_sound : list (params*set eqn) 
+                      -> stmt 
+                      -> ann (set eqn) 
+                      -> ann (list exp) 
+                      -> Prop :=
+| EqnOpr x Lv b e al Gamma e' al' 
+  : eqn_sound Lv b al al'
+    (* make sure the rest conforms to the new assignment *)
+    -> entails (Gamma ∪ {{ (Var x,e) }}) (getAnn al)
+    -> moreDefined Gamma e e'
+    -> eqns_freeVars (getAnn al) [<=] eqns_freeVars Gamma ++ {x; {}}
+    -> eqn_sound Lv (stmtExp x e b) (ann1 Gamma al) (ann1 (e'::nil) al')
+| EqnIf Lv e e' b1 b2 Gamma al1 al2 al1' al2'
+  : eqn_sound Lv b1 al1 al1'
+  -> eqn_sound Lv b2 al2 al2'
   -> entails Gamma (getAnn al1)
   -> entails Gamma (getAnn al2)
-  -> eqn_sound Lv (stmtIf x b1 b2) (annIf Gamma al1 al2)
-| EqnGoto l Y Lv (lv:live) blv Z
-  : get Lv (counted l) (blv,Z)
-  -> eqn_sound Lv (stmtGoto l Y) (annGoto ∅)
-| EqnReturn Lv x Gamma
-  : eqn_sound Lv (stmtReturn x) (annReturn Gamma)
-| EqnLet Lv s Z b Gamma EqS als alb
-  : eqn_sound (EqS::Lv) s als
-  -> eqn_sound (EqS::Lv) b alb
-  -> 
+  -> eqns_freeVars (getAnn al1)[<=]eqns_freeVars Gamma
+  -> eqns_freeVars (getAnn al2)[<=]eqns_freeVars Gamma
+  -> moreDefined Gamma e e'
+  -> eqn_sound Lv (stmtIf e b1 b2) (ann2 Gamma al1 al2) (ann2 (e'::nil) al1' al2')
+| EqnGoto l Y Y' Lv Gamma Z EqS
+  : get Lv (counted l) (Z,EqS)
+    -> length Y = length Y'
+    -> entails Gamma (subst_eqns (sid [Z <-- Y']) EqS)
+    -> moreDefinedArgs Gamma Y Y'
+    -> eqn_sound Lv (stmtGoto l Y) (ann0 Gamma) (ann0 Y')
+| EqnReturn Lv e e' Gamma
+  : entails Gamma {{(e,e')}}
+    -> eqn_sound Lv (stmtReturn e') (ann0 Gamma) (ann0 (e::nil))
+| EqnLet Lv s Z b Gamma EqS als alb als' alb'
+  : eqn_sound ((Z,EqS)::Lv) s als als'
+  -> eqn_sound ((Z,EqS)::Lv) b alb alb'
+  -> entails (Gamma ∪ EqS) (getAnn alb)
   -> entails Gamma (getAnn alb)
-  -> eqn_sound Lv (stmtLet Z s b)(annLet Gamma als alb).
+  -> eqn_sound Lv (stmtLet Z s b) (ann2 Gamma als alb) (ann2 nil als' alb').
 
-Fixpoint compile (s:stmt) (a:ann live) :=
+Fixpoint compile (s:stmt) (a:ann (list exp)) :=
   match s, a with
-    | stmtExp x e s, annExp lv an => 
-      if [x ∈ getAnn an] then stmtExp x e (compile s an)
-                         else compile s an
-    | stmtIf x s t, annIf _ ans ant => stmtIf x (compile s ans) (compile t ant)
-    | stmtGoto f Y, annGoto lv => 
-      stmtGoto f (List.filter (fun y => B[y ∈ lv]) Y) 
-    | stmtReturn x, annReturn _ => stmtReturn x
-    | stmtLet Z s t, annLet lv ans ant => 
-      stmtLet (List.filter (fun x => B[x ∈ getAnn ans]) Z)
-              (compile s ans) (compile t ant)
+    | stmtExp x _ s, ann1 (e'::nil) an => 
+      stmtExp x e' (compile s an)
+    | stmtIf _ s t, ann2 (e'::nil) ans ant => 
+      stmtIf e' (compile s ans) (compile t ant)
+    | stmtGoto f _, ann0 Y' => 
+      stmtGoto f Y'
+    | stmtReturn _, ann0 (e'::nil) => stmtReturn e'
+    | stmtLet Z s t, ann2 nil ans ant => 
+      stmtLet Z (compile s ans) (compile t ant)
     | s, _ => s
   end.
 
-Definition ArgRel (G:(live * params)) (VL VL': list val) : Prop := 
-  VL' = (filter_by (fun x => B[x ∈ (fst G)]) (snd G) VL) /\
-  length (snd G) = length VL.
+Definition ArgRel (G:(params * set eqn)) (VL VL': list val) : Prop := 
+  True.
 
-Definition ParamRel (G:(live * params)) (Z Z' : list var) : Prop := 
-  Z' = (List.filter (fun x => B[x ∈ (fst G)]) Z) /\ snd G = Z.
+Definition ParamRel (G:(params * set eqn)) (Z Z' : list var) : Prop := 
+  Z = Z'.
 
-Lemma lookup_list_filter_by_commute A B C (V:A->B) (Z:list C) Y p
-: length Z = length Y 
-  -> lookup_list V (filter_by p Z Y) =
-    filter_by p Z (lookup_list V Y).
+
+Definition blockRel (AL:list (params*set eqn)) (L:F.labenv) (L':F.labenv) := 
+  forall n blk lvZ, get AL n lvZ -> get L n blk -> True.
+
+
+(* problem is Gamma that satisfies nothing 
+Lemma entails_freeVars Gamma Γ'
+ : entails Gamma Γ' -> eqns_freeVars Γ' ⊆ eqns_freeVars Gamma.
 Proof.
-  intros. eapply length_length_eq in H. 
-  general induction H; simpl; eauto.
-  + destruct if; simpl; rewrite IHlength_eq; eauto.
+  intros. hnf in H.
+  unfold eqns_freeVars in *.
+  hnf. intros. 
+  assert (exists l, l ∈ (map freeVars Γ') /\ a ∈ l) by admit.
+  destruct H1. dcr. eapply map_2 in H2.
+  destruct H2. dcr. decide (a \In fold union (map freeVars Gamma) {}); eauto.
+  exfalso. hnf in n.
+  (* construct E that maps x to None *).
+  
+  
+  
 Qed.
+*)
 
-Lemma argsLive_filter_length lv blv Z Y
-: argsLive lv blv Y Z
-  -> length (List.filter (fun x : var => B[x ∈ blv]) Z) =
-    length (List.filter (fun y : var => B[y ∈ lv]) Y).
-Proof.
-  intros. general induction H; simpl; eauto.
-  decide (z ∈ blv); decide (y ∈ lv); try tauto; simpl.
-  - rewrite IHargsLive; eauto.
-Qed.
-
-Lemma filter_incl lv Y
-  : of_list (List.filter (fun y : var => B[y ∈ lv]) Y) ⊆ lv.
-Proof.
-  general induction Y; simpl. 
-  - cset_tac; intuition.
-  - decide (a ∈ lv); simpl. cset_tac; intuition. rewrite <- H0; eauto.
-    rewrite <- IHY; eauto.
-    eauto.
-Qed.
-
-Tactic Notation "destruct-if" "in" hyp(H) :=
-  match goal with 
-    | H : context [if sumbool_bool ?P then _ else _] |- _ => destruct P
-    | H : context [if ?P then _ else _] |- _ => destruct P
-  end.
-
-Tactic Notation "destruct-if" :=
-  match goal with
-    | |- context [if (if ?P then true else false) then _ else _] => destruct P
-    | |- context [if ?P then _ else _] => destruct P
-  end.
-
-Lemma argsLive_filter_filter_by lv blv Y Z
-: argsLive lv blv Y Z
-  -> List.filter (fun y : var => B[y ∈ lv]) Y
-    = filter_by (fun x : var => B[x ∈ blv]) Z Y.
-Proof.
-  intros. general induction H; simpl; eauto.
-  repeat destruct-if; try tauto.
-  rewrite IHargsLive; eauto.
-Qed.
-
-Lemma agree_on_update_filter lv (V:var -> val) Z VL 
-: length Z = length VL
-  -> agree_on lv 
-             (V [Z <-- VL])
-             (V [List.filter (fun x => B[x ∈ lv]) Z <--
-                             filter_by (fun x => B[x ∈ lv]) Z VL]).
-Proof.
-  intros. eapply length_length_eq in H.
-  general induction H.
-  - eapply agree_on_refl.
-  - simpl. repeat destruct-if. simpl. eapply agree_on_update_same.
-    eapply agree_on_incl. eapply IHlength_eq. cset_tac; intuition.
-    eapply agree_on_update_dead; eauto.
-Qed.
-
-Lemma agree_on_update_filter' (lv:set var) (V V':var -> val) Z VL 
-: length Z = length VL
-  -> agree_on (lv \ of_list Z) V V'
-  -> agree_on lv 
-             (V [Z <-- VL])
-             (V' [List.filter (fun x => B[x ∈ lv]) Z <--
-                             filter_by (fun x => B[x ∈ lv]) Z VL]).
-Proof.
-  intros.
-  pose proof (update_with_list_agree _ VL H0 H).
-  eapply agree_on_trans. eapply H1.
-  eapply agree_on_update_filter. eauto.
-Qed.
-
-Lemma filter_filter_by_length {X} {Y} (Z:list X) (VL:list Y) 
-: length Z = length VL
-  -> forall p, length (List.filter p Z) =
-    length (filter_by p Z VL).
-Proof.
-  intros. eapply length_length_eq in H.
-  general induction H; simpl; eauto.
-  destruct if; simpl. rewrite IHlength_eq; eauto. eauto.
-Qed.
-
-Definition blockRel (AL:list (live*params)) L (L':F.labenv) := (forall n blk lvZ, get AL n lvZ -> get L n blk -> block_Z blk = snd lvZ).
-
-Lemma plus_is_step_star (X : Type) (R : rel X) x y
-: plus R x y -> exists z, R x z /\ star R z y.
-Proof.
-  intros. general induction H; eauto using star_refl.
-  - destruct IHplus; eauto using plus_star.
-Qed.
-
-Lemma get_drop_lab0 (L:F.labenv) l blk
-:  get L (counted l) blk
-   -> get (drop (labN l) L) (counted (LabI 0)) blk.
-Proof.
-  intros. eapply drop_get; simpl. orewrite (labN l + 0 = labN l); eauto.
-Qed.
-
-Lemma drop_get_lab0 (L:F.labenv) l blk
-: get (drop (labN l) L) (counted (LabI 0)) blk
-  -> get L (counted l) blk.
-Proof.
-  intros. eapply get_drop in H; simpl in *. orewrite (labN l + 0 = labN l) in H; eauto.
-Qed.
-
-Lemma sim_drop_shift r l L E Y L' E' Y'
-: paco2 (@psimapx F.state _ F.state _) r (drop (labN l) L, E, stmtGoto (LabI 0) Y)
-        (drop (labN l) L', E', stmtGoto (LabI 0) Y')
-  -> paco2 (@psimapx F.state _ F.state _) r (L, E, stmtGoto l Y)
-          (L', E', stmtGoto l Y').
-Proof.
-  intros. pinversion H; subst.
-  eapply plus_is_step_star in H0.
-  eapply plus_is_step_star in H1.
-  destruct H0; destruct H1; dcr. inv H3.
-  simpl in *. inv H1; simpl in *.
-  pfold. econstructor; try eapply star_plus.
-  econstructor; eauto using get_drop_lab0, drop_get_lab0. eauto.
-  econstructor; eauto using get_drop_lab0, drop_get_lab0. eauto.
-  eauto.
-  inv H1; inv H2; simpl in *.
-  pfold. econstructor 2; try eapply star_refl; eauto. stuck.
-  eapply H3. econstructor. 
-  econstructor; eauto using get_drop_lab0, drop_get_lab0. 
-  stuck. eapply H4. econstructor.
-  econstructor; eauto using get_drop_lab0, drop_get_lab0. 
-  pfold. inv H5. econstructor 2. 
-  Focus 2. eapply star_refl.
-  Focus 2. econstructor 2. 
-  econstructor; eauto using get_drop_lab0, drop_get_lab0. 
-  eauto. simpl; eauto. stuck.
-  eapply H3. econstructor.
-  econstructor; eauto using get_drop_lab0, drop_get_lab0. 
-  eauto.
-  pfold. inv H5. econstructor 2. 
-  Focus 2. econstructor 2. 
-  econstructor; eauto using get_drop_lab0, drop_get_lab0. 
-  eauto. 
-  Focus 2. eapply star_refl.
-  simpl; eauto. eauto. stuck.
-  eapply H4. econstructor.
-  econstructor; eauto using get_drop_lab0, drop_get_lab0. 
-  pfold. inv H5. inv H7. econstructor 2. 
-  Focus 2. econstructor 2. 
-  econstructor; eauto using get_drop_lab0, drop_get_lab0. 
-  eauto. 
-  Focus 2. econstructor 2. 
-  econstructor; eauto using get_drop_lab0, drop_get_lab0. 
-  eauto. eauto. eauto. eauto.
-  inv H1. pfold. econstructor 3; try eapply star_refl; eauto.
-  stuck. destruct H2. econstructor. econstructor.
-  Focus 2. eapply drop_get. simpl. orewrite (labN l + 0 = labN l).
-  eauto. eauto. reflexivity. 
-  pfold. econstructor 3; eauto.
-  inv H3; simpl in *.
-  econstructor.
-  econstructor. Focus 2. eapply get_drop in Ldef.
-  orewrite (labN l + 0 = labN l) in Ldef. eauto. eauto. reflexivity.
-  eauto.
-  eapply psimapxd_mon.
-Qed.
-
-Lemma sim_DVE r L L' V V' s LV lv
-: agree_on (getAnn lv) V V'
--> true_live_sound LV s lv
+Lemma sim_DVE r L L' V V' s LV eqns repl G G'
+:
+  satisfiesAll V (getAnn eqns) 
+-> satisfiesAll V' (getAnn eqns)
+-> eqn_sound LV s eqns repl
 -> simL' r ArgRel ParamRel LV L L'
--> paco2 (@psimapx F.state _ F.state _) r (L,V, s) (L',V', compile s lv).
+-> ssa G s G'
+-> eqns_freeVars (getAnn eqns) ⊆ G
+-> paco2 (@psimapx F.state _ F.state _) r (L,V, s) (L',V', compile s repl).
 Proof.
-  general induction s; simpl; inv H0; simpl in * |- *.
-  + case_eq (exp_eval V e); intros. destruct if. 
+  general induction s; simpl; invt eqn_sound; invt ssa; simpl in * |- *.
+  + specialize (H13 V V'). exploit H13; eauto. inv X.
+    - pfold. econstructor 3; try eapply star_refl; eauto. stuck.
     - pfold. econstructor; try eapply plusO.
-      econstructor; eauto.
-      econstructor; eauto. instantiate (1:=v).
-      erewrite exp_eval_live; eauto using agree_on_sym.
-      left. eapply IHs; eauto. eapply agree_on_update_same. 
-      eapply agree_on_incl; eauto.
-    - eapply simapx_expansion_closed; 
-      [ | eapply S_star; [ econstructor; eauto | eapply star_refl ]
-        | eapply star_refl]. 
-      eapply IHs; eauto. eapply agree_on_update_dead; eauto.
-      eapply agree_on_incl; eauto. rewrite <- H9. cset_tac; intuition.
-    - pfold. econstructor 3; [| eapply star_refl|]; eauto. stuck.
-  + case_eq (val2bool (V x)); intros.
-    pfold; econstructor; try eapply plusO.
-    econstructor; eauto. econstructor; eauto. 
-    rewrite <- H; eauto. left. eapply IHs1; eauto using agree_on_incl.
-    pfold; econstructor; try eapply plusO.
-    econstructor 3; eauto. econstructor 3; eauto.
-    rewrite <- H; eauto. left; eapply IHs2; eauto using agree_on_incl. 
+      econstructor; eauto using eq_sym.
+      econstructor; eauto using eq_sym.
+      left. eapply IHs; eauto.
+      eapply H10. admit. eapply H10. admit. 
+      rewrite <- H4. eauto.
+  + specialize (H17 V V'). exploit H17; eauto. inv X.
+    - pfold. econstructor 3; try eapply star_refl; eauto. stuck.
+    - pfold. case_eq (val2bool y); intros. 
+      econstructor; try eapply plusO.
+      econstructor; eauto using eq_sym.
+      econstructor; eauto using eq_sym.
+      left. eapply IHs1; eauto.
+      rewrite <- H4; eauto. 
+      econstructor; try eapply plusO.
+      econstructor 3; eauto using eq_sym.
+      econstructor 3; eauto using eq_sym.
+      left. eapply IHs2; try eapply H9; eauto.
+      rewrite <- H4; eauto. 
   + destruct (get_dec L (counted l)) as [[[bE bZ bs]]|].
     (* hnf in H2. exploit H2; eauto. simpl in *. subst bZ. *)
-(*    decide (length Z = length Y). *)
-    unfold simL in H1.
-    edestruct AIR5_length; try eassumption; dcr.
-    edestruct get_length_eq; try eassumption.
-    edestruct AIR5_nth as [?[? [?]]]; try eassumption; dcr. 
-    simpl in *. repeat get_functional; subst.
-    inv H16. hnf in H20. dcr; simpl in *. subst bZ.
-    eapply sim_drop_shift. eapply H21.
-    hnf; intros; simpl. subst. split.
-    rewrite <- lookup_list_filter_by_commute.
-    exploit argsLive_filter_filter_by; eauto.
-    rewrite <- X. eapply lookup_list_agree.
-    eapply agree_on_incl; eauto using agree_on_sym.
-    eapply filter_incl; eauto. congruence.
-    rewrite lookup_list_length; eauto.
-    pfold; eapply psimE; try eapply star_refl; eauto; stuck. eauto.
-    hnf in H1.
-    edestruct AIR5_nth2 as [? [? [? []]]]; eauto; dcr.
-    eauto.
+    (*    decide (length Z = length Y). *)
+    specialize (H13 V V'). exploit H13; eauto. inv X.
+    - pfold. econstructor 3; try eapply star_refl. eauto. stuck.
+    - unfold simL in H1.
+      edestruct AIR5_length; try eassumption; dcr.
+      edestruct get_length_eq; try eassumption.
+      edestruct AIR5_nth as [?[? [?]]]; try eassumption; dcr. 
+      simpl in *. repeat get_functional; subst.
+      inv H23. hnf in H27. subst bZ.
+      eapply sim_drop_shift. eapply H28; eauto. eapply I.
+    - pfold. econstructor 3; try eapply star_refl. eauto. stuck; eauto.
   + pfold. econstructor 2; try eapply star_refl.
-    simpl. rewrite H; eauto. simpl. 
+    simpl. eapply H7 in H.
+    eapply H7. rewrite H; eauto. simpl. 
     stuck. stuck.
   + pfold. econstructor; try eapply plusO.
     econstructor; eauto.
