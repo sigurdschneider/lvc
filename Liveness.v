@@ -42,35 +42,52 @@ Proof.
   intros. general induction n; inv H0; inv H1; inv H; intuition; eauto.
 Qed.
 
-Lemma argsLive_agree_on' (V E E':env val) lv blv Y Z v v'
+Lemma argsLive_agree_on' (V E E':onv val) lv blv Y Z v v'
 :  argsLive lv blv Y Z
  -> agree_on lv E E'
  -> omap (exp_eval E) Y = Some v
  -> omap (exp_eval E') Y = Some v'
- -> agree_on blv (V [Z <-- v]) (V [Z <-- v']).
+ -> agree_on blv (V [Z <-- List.map Some v]) (V [Z <-- List.map Some v']).
 Proof.
   intros. general induction H; simpl in * |- *; eauto using agree_on_refl.
   monad_inv H2. monad_inv H3.
   decide (z ∈ blv).
   - erewrite <- exp_eval_live in EQ0; eauto. 
     + assert (x1 = x) by congruence.
-      subst. 
+      subst. simpl. 
       eauto using agree_on_update_same, agree_on_incl.
     + eapply H0; eauto.
   - eapply agree_on_update_dead_both; eauto.
 Qed.
 
-Lemma argsLive_agree_on (V V' E E':env val) lv blv Y Z v v'
+(* TODO: replace lemma in lib with this *)
+Lemma update_with_list_agree X Y `{OrderedType X} `{Equivalence Y} lv (E E':X -> Y) XL YL
+: agree_on (lv\of_list XL) E E'
+  -> length XL = length YL
+  -> agree_on lv (E [ XL <-- YL]) (E' [ XL <-- YL ]).
+Proof.
+  intros. eapply length_length_eq in H2.
+  general induction XL; simpl in * |- *.
+  - rewrite (@minus_empty _ _ lv) in H1; eauto.
+  - inv H2. eapply agree_on_update_same.
+    eapply IHXL; eauto. rewrite minus_union; eauto.
+    rewrite add_union_singleton. rewrite (empty_union_2 (s:=∅)); eauto.
+    rewrite <- add_union_singleton; eauto.
+    eapply SetInterface.empty_1.
+Qed.
+
+Lemma argsLive_agree_on (V V' E E':onv val) lv blv Y Z v v'
 : agree_on (blv \ of_list Z) V V'
   -> argsLive lv blv Y Z
   -> agree_on lv E E'
   -> omap (exp_eval E) Y = Some v
   -> omap (exp_eval E') Y = Some v'
-  -> agree_on blv (V [Z <-- v]) (V' [Z <-- v']).
+  -> agree_on blv (V [Z <-- List.map Some v]) (V' [Z <-- List.map Some v']).
 Proof.
   intros. etransitivity; eauto using argsLive_agree_on'. 
   eapply update_with_list_agree; eauto.
-  exploit omap_length; eauto. exploit argsLive_length; eauto. congruence.
+  exploit omap_length; eauto. exploit argsLive_length; eauto. 
+  rewrite map_length; congruence.
 Qed.
 
 Inductive live_sound : list (set var*params) -> stmt -> ann (set var) -> Prop :=
@@ -259,7 +276,7 @@ Inductive approxF :  F.block -> F.block -> Prop :=
 Unset Printing Records.
 
 Inductive freeVarSimF : F.state -> F.state -> Prop :=
-  freeVarSimFI (E E':env val) L L' s 
+  freeVarSimFI (E E':onv val) L L' s 
   (LA: PIR2 approxF L L')
   (AG:agree_on (IL.freeVars s) E E')
   : freeVarSimF (L, E, s) (L', E', s).
@@ -293,7 +310,7 @@ Proof.
       one_step.
       simpl. eapply freeVarSimF_sim. econstructor; eauto. 
       eapply update_with_list_agree; eauto. 
-      exploit omap_length; eauto. congruence.
+      exploit omap_length; eauto. rewrite map_length; congruence.
     + exploit omap_exp_eval_agree; eauto.
       no_step; get_functional; subst. 
     + no_step; get_functional; subst; simpl in *; congruence.
@@ -314,7 +331,7 @@ Inductive approxF' : list (set var * params) -> F.block -> F.block -> Prop :=
     ->  approxF' ((getAnn lv,Z)::DL) (F.blockI E Z s) (F.blockI E' Z s).
 
 Inductive liveSimF : F.state -> F.state -> Prop :=
-  liveSimFI (E E':env val) L L' s Lv lv 
+  liveSimFI (E E':onv val) L L' s Lv lv 
             (LS:live_sound Lv s lv)
             (LA:AIR3 approxF' Lv L L')
             (AG:agree_on (getAnn lv) E E')
@@ -340,7 +357,7 @@ Inductive approxI
     ->  approxI ((getAnn lv,Z)::DL) (I.blockI Z s) (I.blockI Z s).
 
 Inductive liveSimI : I.state -> I.state -> Prop :=
-  liveSimII (E E':env val) L s Lv lv 
+  liveSimII (E E':onv val) L s Lv lv 
   (LS:live_sound Lv s lv)
   (LA:AIR3 approxI Lv L L)
   (AG:agree_on (getAnn lv) E E')
@@ -373,7 +390,7 @@ Proof.
       one_step; simpl; try congruence.
       simpl. eapply liveSimI_sim. econstructor; eauto.
       eapply update_with_list_agree; eauto using agree_on_incl.
-      exploit omap_length; eauto. congruence.
+      exploit omap_length; eauto. rewrite map_length. congruence.
     + exploit omap_exp_eval_live_agree; eauto.
       no_step.
   - no_step. simpl. eapply exp_eval_live; eauto.

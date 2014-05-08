@@ -5,14 +5,14 @@ Set Implicit Arguments.
 Open Scope map_scope.
 (** * Types for Environments *)
 
-Definition envOfType (E:env val) (ET:onv ty) : Prop := 
-  forall x t, ET x = Some t -> valOfType (E x) t.
+Definition envOfType (E:onv val) (ET:onv ty) : Prop := 
+  forall x t, ET x = Some t -> exists v, E x = Some v /\ valOfType v t.
 
 Definition ompty X : onv X := fun _ => None.
 
 (** Stability under typed update *)
 Lemma envOfType_update E (ET:onv ty) (ETd:envOfType E ET) v t (vtd:valOfType v t) x
-  : envOfType (E[x<-v]) (ET[x<-Some t]).
+  : envOfType (E[x<-Some v]) (ET[x<-Some t]).
 Proof.
   intros y t'. lud.
   + inversion 1; subst; eauto.

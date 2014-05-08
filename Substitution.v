@@ -61,11 +61,13 @@ Proof.
   intros. rewrite rename_exp_comp. reflexivity.
 Qed.
 
-Lemma exp_subst_agree (ϱ ϱ':var->var) (E E' : var -> val) (e:exp)
+Lemma exp_subst_agree (ϱ ϱ':var->var) (E E' : onv val) (e:exp)
 : agree_on (Exp.freeVars e) (ϱ ∘ E) (ϱ' ∘ E')
   -> exp_eval E (rename_exp ϱ e) = exp_eval E' (rename_exp ϱ' e).
 Proof.
-  general induction e; simpl; eauto. f_equal; eapply H. simpl; cset_tac; eauto.
+  general induction e; simpl; eauto. 
+  exploit (H v); simpl. cset_tac; intuition.
+  unfold comp in X. simpl in X. inv X; eauto.
   - simpl in *. erewrite IHe1, IHe2; try reflexivity; eapply agree_on_incl; eauto;
                 cset_tac; intuition.
 Qed.
@@ -82,31 +84,32 @@ Proof.
   eexists x0; cset_tac; intuition.
 Qed.
 
-Lemma agree_on_comp_fresh_shift (ϱ:var -> var) (E E': var -> var) x y (v:val) (D: set var)
+Lemma agree_on_comp_fresh_shift X `{Equivalence X} (ϱ:var -> var) (E E': env X) x y (v:X) (D: set var)
  : y ∉ lookup_set ϱ (D\{{x}})
    -> agree_on (D\{{x}}) (ϱ ∘ E) E'
    -> agree_on D (ϱ [x <- y] ∘ E [y <- v]) (E' [x <- v]).
 Proof.
   intros. hnf; intros. simpl. unfold comp.
   lud. 
-  - exfalso. eapply H. eapply lookup_set_spec; intuition. 
+  - exfalso. eapply H0. eapply lookup_set_spec; intuition. 
     eexists x0; intuition. cset_tac; intuition.
   - exfalso. hnf in H4; congruence.
-  - eapply H0; eauto. cset_tac; intuition.
+  - eapply H1; eauto. cset_tac; intuition.
 Qed.
 
-Lemma agree_on_comp_fresh_both (ϱ ϱ':var -> var) (E E': var -> var) x y y' (v:val) (D: set var)
+
+Lemma agree_on_comp_fresh_both X `{Equivalence X} (ϱ ϱ':env var) (E E': env X) (x y:var) (y':var) (v:X) (D: set var)
  : y ∉ lookup_set ϱ (D\{{x}})
    -> y' ∉ lookup_set ϱ' (D\{{x}})
    -> agree_on (D\{{x}}) (ϱ ∘ E) (ϱ' ∘ E')
    -> agree_on D (ϱ [x <- y] ∘ E [y <- v]) (ϱ' [x <- y'] ∘ E' [y' <- v]).
 Proof.
   intros. 
-  eapply agree_on_transitive. eapply agree_on_comp_fresh_shift; eauto.
-  symmetry. eapply agree_on_comp_fresh_shift; eauto using agree_on_refl.
+  eapply agree_on_trans. eapply agree_on_comp_fresh_shift; eauto.
+  eapply agree_on_sym. eapply agree_on_comp_fresh_shift; eauto using agree_on_refl.
 Qed.
 
-Lemma agree_on_comp_fresh_both_list (ϱ ϱ':var -> var) (E E': var -> var) Z Y Y' (VL: list val) (D: set var)
+Lemma agree_on_comp_fresh_both_list X `{Equivalence X} (ϱ ϱ':var -> var) (E E': env X) Z Y Y' (VL: list X) (D: set var)
  : length Z = length Y
    -> length Y = length Y'
    -> length Y' = length VL
@@ -118,63 +121,74 @@ Lemma agree_on_comp_fresh_both_list (ϱ ϱ':var -> var) (E E': var -> var) Z Y Y
    -> agree_on (D ∪ of_list Z) (ϱ [Z <-- Y] ∘ E [Y <-- VL]) (ϱ' [Z <-- Y'] ∘ E' [Y' <-- VL]).
 Proof.
   intros.
-  eapply length_length_eq in H.
   eapply length_length_eq in H0.
   eapply length_length_eq in H1.
+  eapply length_length_eq in H2.
   hnf; intros. simpl. unfold comp. decide (x ∈ of_list Z).
-  clear H6.
-  general induction H; inv H0; inv H1; simpl in * |- *.
+  clear H7.
+  general induction H0; inv H1; inv H2; simpl in * |- *.
   exfalso. eapply (not_in_empty x); eauto.
   hnf; intros. unfold comp. lud.
-  exfalso. eapply H9; reflexivity.
+  exfalso. eapply H10; reflexivity.
   exfalso. 
   decide (x0 ∈ of_list XL).
   assert (y ∈ of_list YL). rewrite e.
   eapply update_with_list_lookup_in; eauto using length_eq_length.
-  eapply H2. eapply InA_in in H12. eauto.
+  eapply H3. eapply InA_in in H13. eauto.
   assert (ϱ x0 = y).
   eapply update_with_list_lookup_not_in; eauto. 
-  refine (not_in_empty y _). rewrite <- H4. cset_tac; intuition.
-  exfalso. eapply H8; reflexivity.
-  exfalso. eapply H8; reflexivity.
+  refine (not_in_empty y _). rewrite <- H5. cset_tac; intuition.
+  exfalso. eapply H9; reflexivity.
+  exfalso. eapply H9; reflexivity.
   exfalso. 
   decide (x0 ∈ of_list XL).
   assert (y0 ∈ of_list YL0). rewrite e.
   eapply update_with_list_lookup_in; eauto using length_eq_length,length_eq_trans.
-  eapply H3. eapply InA_in in H12. eauto.
+  eapply H4. eapply InA_in in H13. eauto.
   assert (ϱ' x0 = y0).
   eapply update_with_list_lookup_not_in; eauto. 
-  refine (not_in_empty y0 _). rewrite <- H5. cset_tac; intuition.
-  eapply (IHlength_eq _ _ _ _ _ _ D); eauto. intuition. intuition.
-  - rewrite <- H4. cset_tac; intuition.
-    hnf in H16; subst a. exfalso.
-    eapply (H4 y). split; cset_tac; intuition.
-    hnf in H2; subst a. exfalso.
-    eapply (H4 y). split; cset_tac; intuition.
+  refine (not_in_empty y0 _). rewrite <- H6. cset_tac; intuition.
+  eapply (IHlength_eq _ _ _ _ _ _ _ _ _ D); eauto. intuition. intuition.
   - rewrite <- H5. cset_tac; intuition.
-    hnf in H16; subst a. exfalso.
-    eapply (H5 y0). split; cset_tac; intuition.
-    hnf in H2; subst a. exfalso.
-    eapply (H5 y0). split; cset_tac; intuition.
+    hnf in H18; hnf in H8; subst a. exfalso.
+    eapply (H5 y). split; cset_tac; intuition.
+    hnf in H3; hnf in H; subst a. exfalso.
+    eapply (H5 y). split; cset_tac; intuition.
+  - rewrite <- H6. cset_tac; intuition.
+    hnf in H8; subst a. exfalso.
+    eapply (H3 y0). split; cset_tac; intuition.
+    hnf in H; subst a. exfalso.
+    eapply (H3 y0). split; cset_tac; intuition.
   - cset_tac; intuition.
   - cset_tac; intuition.
   - assert ((ϱ [Z <-- Y]) x = ϱ x). 
     erewrite (update_with_list_lookup_not_in ϱ); eauto.
     assert ((ϱ' [Z <-- Y']) x = ϱ' x). 
     erewrite (update_with_list_lookup_not_in ϱ'); eauto.
-    rewrite H8, H9.
+    rewrite H9, H10.
     assert ((E [Y <-- VL]) (ϱ x) = E (ϱ x)). 
-    erewrite (update_with_list_lookup_not_in E); eauto.
-    cset_tac; intuition. eapply H4; split; eauto. 
+    Lemma update_with_list_lookup_not_in {X} `{OrderedType X} {Y} (f:X->Y) (Z:list X) (Z':list Y) x y
+    : x ∉ of_list Z
+      -> f [ Z <-- Z' ] x = y
+      -> f x = y.
+    Proof.
+      general induction Z; simpl in * |- *; eauto. 
+      destruct Z'; eauto. lud. rewrite add_iff in H0.
+      exfalso; firstorder.
+      eapply IHZ; eauto. intro. eapply H0. eapply add_2; eauto.
+    Qed.
+    erewrite (update_with_list_lookup_not_in E); eauto. 
+    cset_tac; intuition. eapply H5; split; eauto. 
     eapply lookup_set_spec. intuition. eexists; eauto.
     assert ((E' [Y' <-- VL]) (ϱ' x) = E' (ϱ' x)). 
     erewrite (update_with_list_lookup_not_in E'); eauto.
-    cset_tac; intuition. eapply H5; split; eauto. 
+    cset_tac; intuition. eapply H6; split; eauto. 
     eapply lookup_set_spec. intuition. eexists; eauto.
-    rewrite H10, H11. eapply H6. cset_tac; intuition.
+    rewrite H11, H12. eapply H7. cset_tac; intuition.
 Qed.
 
-Lemma agree_on_comp_fresh_shift_list (ϱ:var -> var) (E E': var -> var) Z Y (VL: list val) (D: set var)
+Lemma agree_on_comp_fresh_shift_list X `{Equivalence X} (ϱ:env var) 
+      (E E': env X) Z Y (VL: list X) (D: set var)
  : length Z = length Y
    -> length Y = length VL
    -> unique Y
@@ -183,11 +197,11 @@ Lemma agree_on_comp_fresh_shift_list (ϱ:var -> var) (E E': var -> var) Z Y (VL:
    -> agree_on (D ∪ of_list Z) (ϱ [Z <-- Y] ∘ E [Y <-- VL]) (E' [Z <-- VL]).
 Proof.
   intros.
-  eapply length_length_eq in H.
   eapply length_length_eq in H0.
+  eapply length_length_eq in H1.
   hnf; intros. simpl. unfold comp. decide (x ∈ of_list Z).
-  clear H3.
-  general induction H; inv H0; simpl in * |- *.
+  clear H4.
+  general induction H0; inv H1; simpl in * |- *.
   - exfalso. eapply (not_in_empty x); eauto.
   - lud.
     + exfalso. decide (x0 ∈ of_list XL).
@@ -195,30 +209,30 @@ Proof.
         { rewrite e.
           eapply update_with_list_lookup_in; eauto using length_eq_length.
         }
-        eapply H1. eapply InA_in in H7. eauto.
+        eapply H2. eapply InA_in in H8. eauto.
       * assert (ϱ x0 = y).
         eapply update_with_list_lookup_not_in; eauto. 
-        refine (not_in_empty y _). rewrite <- H2. cset_tac; intuition.
-    + exfalso. eapply H3; reflexivity.
-    + eapply (IHlength_eq _ _ _ _ D); eauto. intuition.
-      * rewrite <- H2. cset_tac; intuition.
-        hnf in H10; subst a. exfalso.
+        refine (not_in_empty y _). rewrite <- H3. cset_tac; intuition.
+    + exfalso. eapply H4; reflexivity.
+    + eapply (IHlength_eq _ _ _ _ _ _ _ D); eauto. intuition.
+      * rewrite <- H3. cset_tac; intuition.
+        hnf in H5; subst a. exfalso.
         eapply (H2 y). split; cset_tac; intuition.
-        hnf in H1; subst a. exfalso.
+        hnf in H; subst a. exfalso.
         eapply (H2 y). split; cset_tac; intuition.
       * cset_tac; intuition.
       * cset_tac; intuition.
   - assert ((ϱ [Z <-- Y]) x = ϱ x). 
     erewrite (update_with_list_lookup_not_in ϱ); eauto.
-    rewrite H5.
+    rewrite H6.
     assert ((E [Y <-- VL]) (ϱ x) = E (ϱ x)). 
     erewrite (update_with_list_lookup_not_in E); eauto.
-    cset_tac; intuition. eapply H2; split; eauto. 
+    cset_tac; intuition. eapply H3; split; eauto. 
     eapply lookup_set_spec. intuition. eexists; eauto.
     assert ((E' [Z <-- VL]) x = E' x). 
     erewrite (update_with_list_lookup_not_in E'); eauto.
-    cset_tac; intuition. rewrite H6. rewrite H7.
-    eapply H3. eauto.
+    cset_tac; intuition. rewrite H7. rewrite H8.
+    eapply H4. eauto.
 Qed.
 
 Lemma exp_subst_agree_list E E' Y ϱ ϱ'
@@ -234,7 +248,7 @@ Proof.
   eapply incl_list_union. eapply map_get_1; eauto. reflexivity.
 Qed.
 
-Lemma subst_fresh L L' (E E':var -> val) s (ϱ ϱ':var->var)
+Lemma subst_fresh L L' (E E':onv val) s (ϱ ϱ':var->var)
  : simL L L'
    -> agree_on (freeVars s) (ϱ ∘ E) (ϱ' ∘ E')
    -> sim (L, E, subst ϱ s)
@@ -277,7 +291,7 @@ Proof.
       one_step. simpl. rewrite map_length; congruence.
       simpl. rewrite map_length; congruence.
       exploit (omap_length); eauto. rewrite map_length in X.
-      simpl. eapply H16; eauto. congruence.
+      simpl. eapply H16; eauto. rewrite map_length. congruence.
     + no_step.
       erewrite <- omap_agree_2 in def; eauto using exp_subst_agree_list. 
       erewrite def in H1. congruence.
@@ -321,7 +335,7 @@ Proof.
   -  rewrite IHe1, IHe2; eauto.
 Qed.
 
-Lemma omap_exp_rename_shift_list (E E':env val) ϱ Y 
+Lemma omap_exp_rename_shift_list (E E':onv val) ϱ Y 
 : agree_on (list_union (List.map Exp.freeVars Y)) E (ϱ ∘ E')
   ->  forall (n : nat) (x y : exp),
        get Y n x -> get (List.map (rename_exp ϱ) Y) n y -> 
@@ -335,7 +349,7 @@ Proof.
   eapply incl_list_union. eapply map_get_1; eauto. reflexivity.
 Qed.
 
-Lemma subst_shift L L' (E E':var -> val) s (ϱ:var->var)
+Lemma subst_shift L L' (E E':onv val) s (ϱ:var->var)
  : simL L L'
    -> agree_on (freeVars s) E (ϱ ∘ E')
    -> sim (L, E, s)
@@ -348,10 +362,9 @@ Proof.
     rewrite rename_exp_id; eauto.
     eapply agree_on_incl; eauto. symmetry. eauto. cset_tac; intuition.
     eapply IHs; eauto.
-    (* Why is Coq not doing the right instantiations here? *)
-    pose proof (@agree_on_symmetric var _ val _ (freeVars s)).
-    eapply H2. eapply agree_on_comp_fresh_shift.
-    eapply fresh_stable_spec. symmetry. eapply agree_on_incl; eauto.
+    eapply agree_on_sym.
+    eapply agree_on_comp_fresh_shift.
+    eapply fresh_stable_spec. eapply agree_on_sym. eapply agree_on_incl; eauto.
     cset_tac; intuition.
     eapply simE; try eapply star_refl; simpl; eauto. stuck. stuck.
     erewrite <- exp_subst_agree with (ϱ:=id) in def; eauto. 
@@ -383,7 +396,8 @@ Proof.
       inv H10. 
       one_step. rewrite map_length; simpl; congruence.
       simpl. eapply H15; eauto.
-      exploit omap_length; eauto. rewrite map_length in X. congruence.
+      exploit omap_length; eauto. rewrite map_length in X. 
+      rewrite map_length; congruence.
     + no_step.
     + no_step.
       get_functional; subst. eapply n. simpl in *. congruence.
@@ -409,12 +423,12 @@ Proof.
     }
     eapply agree_on_incl; eauto.         
     (* Why is Coq not doing the right instantiations here? *)
-    pose proof (@agree_on_symmetric var _ val _).
-    eapply H5. 
+    eapply agree_on_sym.
     eapply agree_on_comp_fresh_shift_list;
       repeat rewrite fresh_stable_list_length; eauto;
       eauto using fresh_stable_list_unique, fresh_stable_list_spec.
-    symmetry. eapply agree_on_incl; eauto. cset_tac; intuition.
+    eapply agree_on_sym.
+    eapply agree_on_incl; eauto. cset_tac; intuition.
     repeat rewrite fresh_stable_list_length in *. congruence.
     eapply agree_on_incl; eauto. cset_tac; intuition.
 Qed.
@@ -468,7 +482,7 @@ Instance subst_morphism
 Proof.
   unfold Proper, respectful; intros; subst.
   hnf; intros. eapply subst_fresh. eapply simL_refl.
-  hnf; intros. cbv; rewrite H; eauto.
+  hnf; intros. cbv; rewrite H; eauto using option_eq. reflexivity.
 Qed.
 
 Lemma subst_id s

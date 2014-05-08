@@ -31,32 +31,33 @@ Definition ArgRel (G:(set var * params)) (VL VL': list val) : Prop :=
 Definition ParamRel (G:(set var * params)) (Z Z' : list var) : Prop := 
   Z' = (List.filter (fun x => B[x ∈ (fst G)]) Z) /\ snd G = Z.
 
-Lemma agree_on_update_filter lv (V:var -> val) Z VL 
+Lemma agree_on_update_filter X `{OrderedType X} Y `{Equivalence (option Y)} 
+      (lv:set X) (V: X -> option Y) Z VL 
 : length Z = length VL
   -> agree_on lv 
-             (V [Z <-- VL])
+             (V [Z <-- List.map Some VL])
              (V [List.filter (fun x => B[x ∈ lv]) Z <--
-                             filter_by (fun x => B[x ∈ lv]) Z VL]).
+                             List.map Some (filter_by (fun x => B[x ∈ lv]) Z VL)]).
 Proof.
-  intros. eapply length_length_eq in H.
-  general induction H.
+  intros. eapply length_length_eq in H1.
+  general induction H1.
   - eapply agree_on_refl.
   - simpl. destruct if. simpl. eapply agree_on_update_same.
     eapply agree_on_incl. eapply IHlength_eq. cset_tac; intuition.
     eapply agree_on_update_dead; eauto.
 Qed.
 
-Lemma agree_on_update_filter' (lv:set var) (V V':var -> val) Z VL 
+Lemma agree_on_update_filter' X `{OrderedType X} Y `{Equivalence (option Y)} (lv:set X) (V V':X -> option Y) Z VL 
 : length Z = length VL
   -> agree_on (lv \ of_list Z) V V'
   -> agree_on lv 
-             (V [Z <-- VL])
-             (V' [List.filter (fun x => B[x ∈ lv]) Z <--
-                             filter_by (fun x => B[x ∈ lv]) Z VL]).
+             (V [Z <-- List.map Some VL])
+             (V' [(List.filter (fun x => B[x ∈ lv]) Z) <-- (List.map Some 
+                             (filter_by (fun x => B[x ∈ lv]) Z VL))]).
 Proof.
   intros.
-  pose proof (update_with_list_agree _ VL H0 H).
-  eapply agree_on_trans. eapply H1.
+  eapply agree_on_trans. 
+  eapply update_with_list_agree; eauto. rewrite map_length; eauto.
   eapply agree_on_update_filter. eauto.
 Qed.
 
@@ -128,7 +129,7 @@ Proof.
       hnf; intros.
       eapply IHs1; eauto.
       * hnf in H2. dcr; subst. simpl.
-        eapply agree_on_update_filter'. eauto.
+        eapply agree_on_update_filter'; eauto. 
         eapply agree_on_incl; eauto.
       * split; reflexivity.
 Qed.

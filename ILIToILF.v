@@ -105,7 +105,7 @@ Proof.
 Qed.
 
 Inductive trsR : I.state -> I.state -> Prop :=
-  trsRI (E E':env val) L L' s ans ans_lv DL ZL 
+  trsRI (E E':onv val) L L' s ans ans_lv DL ZL 
   (RD: trs DL ZL s ans_lv ans)
   (EA: AIR4 approx DL ZL L L') 
   (EQ: E ≡ E')
@@ -124,8 +124,8 @@ Proof.
     destruct (omap f L); simpl; eauto.
     destruct (omap f L'); simpl; eauto.
 Qed.
-
-Lemma omap_exp_eval_app (E: env val) Y l Z
+(*
+Lemma omap_exp_eval_app (E:onv val) Y l Z
 : omap (exp_eval E) Y = ⎣l ⎦
  -> omap (exp_eval E) (Y ++ List.map Var Z) = ⎣ l ++ lookup_list E Z ⎦.
 Proof.
@@ -135,7 +135,7 @@ Proof.
   - monad_inv H. rewrite EQ. simpl.
     erewrite IHY; simpl; eauto.
 Qed.
-
+*)
 
 Lemma trsR_sim σ1 σ2
   : trsR σ1 σ2 -> sim σ1 σ2.

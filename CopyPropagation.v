@@ -30,13 +30,16 @@ Proof.
   + destruct e; hnf; intros.
     - one_step. reflexivity. reflexivity. 
       unfold simeq in IHs. eapply IHs; eauto.
-    - eapply sim_expansion_closed.
+    - case_eq (E (ϱ v)); intros.
+      eapply sim_expansion_closed.
       Focus 2. eapply star_refl.
-      Focus 2. eapply S_star. econstructor. simpl. reflexivity. eapply star_refl.
+      Focus 2. eapply S_star. econstructor. simpl. eauto.
+      eapply star_refl.
       simpl in * |- *.
       refine (sim_trans (IHs _ _ _) _ ); eauto.
-      eapply subst_fresh. eapply simL_refl. eapply agree_on_comp_fresh.
-      eapply fresh_stable_spec.
+      eapply subst_fresh. eapply simL_refl. (* eapply agree_on_comp_fresh.
+      eapply fresh_stable_spec. *) admit.
+      no_step.
     - case_eq (exp_eval E (rename_exp ϱ (BinOp b e1 e2))); intros.
       one_step. eapply IHs; eauto.
       no_step; simpl in *; congruence.

@@ -207,10 +207,10 @@ Proof.
     instantiate (1:=ϱ2'). eapply alpha_inverse_on; eauto.
 Qed.
 
-Definition envCorr ra ira (E E':env val) :=
+Definition envCorr ra ira (E E':onv val) :=
   forall x y, ra x = y -> ira y = x -> E x = E' y.
 
-Lemma envCorr_idOn_refl (E:env val)
+Lemma envCorr_idOn_refl (E:onv val)
   : envCorr id id E E.
 Proof.
   hnf; intros; firstorder. 
@@ -312,7 +312,8 @@ Proof.
       erewrite omap_agree_2; eauto. intros. symmetry.
       eapply alpha_exp_eval. eapply H0; eauto; eauto. hnf; intros; eauto.
       simpl. eapply alphaSim_sim; econstructor; eauto. 
-      eapply envCorr_update_list; eauto. exploit omap_length; eauto. congruence.
+      eapply envCorr_update_list; eauto. exploit omap_length; eauto. 
+      rewrite map_length. congruence.
     - no_step. erewrite omap_agree_2 in H1; try eapply H.
       erewrite H1 in def. congruence.
       intros. eapply alpha_exp_eval. eapply H0; eauto. eauto.

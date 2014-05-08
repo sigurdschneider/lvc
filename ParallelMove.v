@@ -10,9 +10,14 @@ Set Implicit Arguments.
 *)
 
 Definition pmov := list (list var * list var).
+Definition pmov_source_set (p:pmov) : set var
+  := list_union (List.map (snd ∘ of_list) p).
 
 Section Parallel_Move.
-  Fixpoint upd_list p M : env val := 
+  Variable X:Type.
+  Context `{OrderedType X}.
+
+  Fixpoint upd_list p M : env X := 
     match p with
       | nil => M
       | (l1, l2) :: p' => upd_list p' (M[ l1 <-- lookup_list M l2]) 
@@ -42,7 +47,7 @@ Section Translate.
         (fun x => if [M1 x = M2 x] then true else false) vars.
   Hint Unfold check_pmove.
 
-  Lemma par_move_eq (M1 M2 MC:env val) f fC Z Y
+  Lemma par_move_eq (M1 M2 MC:env X) f fC Z Y
     :  (forall y : var, MC y = M1 (fC y))
     -> (forall y : var, M2 y = M1 (f y))
     -> forall y : var, M2 [ Z <-- (lookup_list MC Y) ] y = (M1 (par_move f fC Z Y y)).
@@ -51,36 +56,40 @@ Section Translate.
     simpl. destruct if; lud; intuition.
   Qed.
 
-  Lemma symb_eval p (M1 M2 : env val) f 
+  Lemma symb_eval p (M1 M2 : env X) f 
     :  (forall y, M2 y = (M1 (f y))) 
     -> forall x, upd_list p M2 x = (M1 (par_list p f x)).
   Proof.
     general induction p; simpl; eauto.
     destruct a; simpl; eauto; intros. 
-    erewrite IHp. reflexivity. 
+    erewrite IHp; eauto.
     intros. erewrite <- par_move_eq; simpl in *; eauto.
-    
   Qed.
 
-  Corollary symb_eval_id : forall p (M : env val) x,
+  Corollary symb_eval_id : forall p (M : env X) x,
     upd_list p M x = (M (par_list p (fun x => x) x)).
   Proof.
     intros. eapply symb_eval; eauto. 
   Qed.
 
   Lemma check_pmove_correct {vars} {p1} {p2}
-    (COK:check_pmove vars p1 p2) (M : env val)
+    (COK:check_pmove vars p1 p2) (M : env X)
     : agree_on vars (upd_list p1 M) (upd_list p2 M).
   Proof.
     assert (check_pmove vars p1 p2 = true) by cbool. clear COK.
     unfold agree_on,check_pmove in *; intros.
-    rewrite <- for_all_iff in H; auto; try intuition.
-    specialize (H x H0); simpl in *. destruct if in H; firstorder.
+    eapply (@for_all_2 var _ _ _ vars) in H0.
+    specialize (H0 x H1); simpl in *. destruct if in H; simpl in *. 
     erewrite symb_eval with (M1:=M) (f:=fun x => x); eauto.
     erewrite symb_eval with (M1:=M) (f:=fun x => x); eauto.
+    rewrite e. reflexivity.
+    firstorder.
+    intuition.
   Qed.
 
 End Translate.
+
+End Parallel_Move.
 
 Section GlueCode.
   Function list_to_stmt (p : list (list var * list var)) (s : stmt) {struct p} : stmt :=
@@ -92,13 +101,22 @@ Section GlueCode.
 
   Lemma list_to_stmt_correct p s :
     (forall ass, List.In ass p -> exists x, exists y, ass = (x :: nil, y :: nil)) ->
-    forall M K, star I.step (K, M, list_to_stmt p s) (K, upd_list p M, s).
+    forall M,
+    (forall x, x ∈ pmov_source_set p -> M x <> None) ->
+    forall K, star I.step (K, M, list_to_stmt p s) (K, upd_list p M, s).
   Proof.
     general induction p. firstorder using star.
     pose proof (H a). assert (List.In a (a :: p)). crush.
-    specialize (H0 H1). destruct H0. destruct H0.
-    subst. simpl. refine (S_star _ _ _ ).
-    constructor. eapply var_to_exp_correct. eapply IHp. intros. apply H. crush.
+    destruct (H1 H2) as [? [? ?]]. 
+    subst. simpl. 
+    exploit (var_to_exp_correct M x0).
+    exploit (H0 x0); eauto. unfold pmov_source_set. unfold comp. simpl.
+    eapply incl_list_union. econstructor. reflexivity. cset_tac; intuition.
+    destruct (M x0); isabsurd.
+    refine (S_star _ _ _ ).
+    constructor; eauto. eapply IHp. intros. apply H. crush.
+    intros. lud. eauto. eapply H0; try reflexivity.
+    admit.
   Qed.
 
   Definition max a b := if le_dec a b then b else a.
@@ -128,14 +146,15 @@ Section GlueCode.
 
   Lemma validate_parallel_assignment_correct vars p l1 l2
     (VOK:validate_parallel_assignment vars p l1 l2)
-    : forall M K cont, exists M',
+    : forall M K cont (Src:forall x : var, x \In pmov_source_set p -> M x <> ⎣⎦), exists M',
         star I.step (K, M, list_to_stmt p cont) (K, M', cont) /\
         agree_on vars M' (M[ l1 <-- lookup_list M l2]).
   Proof.
     unfold validate_parallel_assignment in *; destruct VOK; intros.
     eexists; split.
-    eauto using list_to_stmt_correct, check_is_simple_ass_correct.
-    eapply (check_pmove_correct H0).
+    eapply list_to_stmt_correct; eauto.
+    eapply check_is_simple_ass_correct; eauto.
+    exploit (check_pmove_correct H0 M). eauto.
   Qed.
 
   Definition compile_parallel_assignment
@@ -148,19 +167,17 @@ Section GlueCode.
   Lemma compile_parallel_assignment_correct 
     : forall vars l1 l2 s s',
       compile_parallel_assignment vars l1 l2 s = Success s' ->
-      forall M K, exists M',
+      forall M K (Src:forall x : var, x \In (of_list l2) -> M x <> ⎣⎦), exists M',
         star I.step (K, M, s') (K, M', s) /\
         agree_on vars M' (M[ l1 <-- lookup_list M l2]).
   Proof.
     unfold compile_parallel_assignment; intros.
-    destruct if in H. inv H.
+    destruct if in H; try discriminate. inv H.
     eapply validate_parallel_assignment_correct; eauto.
-    discriminate.
+    intros. eapply Src. admit.
   Qed.
 
 End GlueCode.
-
-End Parallel_Move.
 
 Section Implementation.
   Hypothesis parallel_move : var -> list var -> list var -> (list(list var * list var)).
@@ -172,7 +189,8 @@ Fixpoint onlyVars (Y:args) : status params :=
     | _ => Error "onlyVars: argument list contains expressions"
   end.
 
-Lemma onlyVars_success (E:env var) Y Y'
+(*
+Lemma onlyVars_success (E:onv var) Y Y'
   : onlyVars Y = Success Y'
     -> { v | omap (exp_eval E) Y = Some v }.
 Proof.
@@ -180,11 +198,12 @@ Proof.
   destruct a; isabsurd. monadS_inv H. simpl. 
   edestruct IHY; eauto. rewrite e. simpl; eauto.
 Qed.
+*)
 
-Lemma onlyVars_lookup (E:env var) Y Y' v
+Lemma onlyVars_lookup (E:onv var) Y Y' v
   : onlyVars Y = Success Y'
     -> omap (exp_eval E) Y = Some v
-    -> lookup_list E Y' = v.
+    -> lookup_list E Y' = List.map Some v.
 Proof.
   intros. general induction Y; simpl in * |- *; eauto.
   destruct a; isabsurd. monadS_inv H. monad_inv H0.
@@ -227,9 +246,10 @@ Inductive approx
   : approx ((lv,Z)::Lv) (I.blockI Z s) (I.blockI nil s').
 
 Inductive pmSim : I.state -> I.state -> Prop :=
-  pmSimI Lv s (E E':env var) L L' s'
+  pmSimI Lv s (E E':onv var) L L' s'
   (al: ann (set var))
-  (LS:live_sound Lv s al) (pmlowerOk:lower Lv s al = Success s')
+  (LS:live_sound Lv s al)
+  (pmlowerOk:lower Lv s al = Success s')
   (LA:AIR3 approx Lv L L')
   (EEQ:agree_on (getAnn al) E E')
   : pmSim (L,E,s) (L', E', s').
@@ -262,11 +282,11 @@ Proof.
       no_step. 
   + eapply option2status_inv in EQ. eapply nth_error_get in EQ.
     get_functional; subst.
-    edestruct onlyVars_success; try eassumption.
+    case_eq (omap (exp_eval E) Y); intros.
     exploit omap_exp_eval_live_agree; try eassumption.
     provide_invariants_3.
     edestruct (compile_parallel_assignment_correct _ _ _ _ _ EQ2 E' L') 
-      as [M' [X' X'']].
+      as [M' [X' X'']]. exfalso; clear_all; admit.
     eapply simS.
     econstructor. econstructor; eauto. simpl; eauto.
     eapply star_plus_plus; eauto. eapply plusO. econstructor; eauto.
@@ -275,12 +295,13 @@ Proof.
     simpl.
     eapply agree_on_trans. eapply update_with_list_agree. 
     eapply agree_on_incl; eauto. cset_tac; intuition.
-    exploit omap_length; eauto. congruence.
+    exploit omap_length; eauto. rewrite map_length. congruence.
     eapply agree_on_sym.
     eapply agree_on_incl.
-    erewrite <- onlyVars_lookup with (v:=x); eauto.
+    erewrite <- onlyVars_lookup with (v:=l0); eauto.
     cset_tac; intuition.
     decide (a ∈ of_list Z0); cset_tac; intuition.
+    exfalso; clear_all; admit.
   + no_step. simpl. eauto using exp_eval_live.
   + one_step.
     eapply pmSim_sim. econstructor; eauto.

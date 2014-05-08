@@ -438,10 +438,10 @@ Qed.
 *)
 
 Definition invariant (s:stmt) :=
-  forall (E:env var), sim (nil:list F.block,E,s) (nil:list I.block,E,s).
+  forall (E:onv var), sim (nil:list F.block,E,s) (nil:list I.block,E,s).
 
 Definition rd_agree (DL:list (option (set var)))
-           L (E:env val)
+           L (E:onv val)
   := forall n blk G', get L n blk -> get DL n (Some G') ->
                       agree_on G' E (F.block_E blk).
 
@@ -455,6 +455,31 @@ Proof.
   unfold restr in H2. destruct x0; isabsurd. destruct if in H2; isabsurd.
   inv H2. eapply agree_on_update_dead. rewrite s0. cset_tac; intuition.
   eapply RA; eauto.
+Qed.
+
+Lemma update_list_agree_minus X `{OrderedType X} Y `{Equivalence Y} lv (E E' f:X -> Y) XL
+:  agree_on lv E' E 
+   -> agree_on (lv\of_list XL) (update_list E' f XL) E.
+Proof.
+  intros. general induction XL; simpl. rewrite minus_empty. eassumption.
+  rewrite add_union_singleton. rewrite union_comm. rewrite <- minus_union. 
+  eapply agree_on_update_dead.
+  cset_tac. intro; decompose records; eauto. 
+  eauto using agree_on_incl, incl_minus.
+Qed.
+
+Lemma update_with_list_agree_minus X `{OrderedType X} Y `{Equivalence Y}
+      lv (E E':X -> Y) XL YL 
+: length XL = length YL
+  -> agree_on lv E' E 
+  -> agree_on (lv\of_list XL) (E' [ XL <-- YL ]) E.
+Proof.
+  intros. eapply length_length_eq in H1. 
+  general induction H1; simpl. rewrite minus_empty. eassumption.
+  rewrite add_union_singleton. rewrite union_comm. rewrite <- minus_union. 
+  eapply agree_on_update_dead.
+  cset_tac. intro; decompose records; eauto. 
+  eauto using agree_on_incl, incl_minus.
 Qed.
 
 Lemma rd_agree_update_list DL L E E' (G G':set var) Z n vl
@@ -507,7 +532,7 @@ Qed.
 
 Unset Printing Records.
 
-Lemma srd_preservation (E E':env val) L L' s s' DL (G:set var) DA a
+Lemma srd_preservation (E E':onv val) L L' s s' DL (G:set var) DA a
   (SRD:srd DA s a)
   (RA:rd_agree DA L E)
   (A: AIR2 approx' DA L)
@@ -530,7 +555,7 @@ Proof.
     do 3 eexists; repeat split; simpl; eauto.
     pose proof (RA _ _ _ H1 H). simpl in *.
     eapply rd_agree_update_list; eauto. 
-    exploit omap_length; eauto. congruence.
+    exploit omap_length; eauto. rewrite map_length. congruence.
 
   + inv LV. do 3 eexists; repeat split; eauto.
     hnf; intros.
@@ -560,7 +585,7 @@ Proof.
 Qed.
 
 Inductive srdSim : F.state -> I.state -> Prop :=
-  | srdSimI (E EI:env val) L s AL DL a
+  | srdSimI (E EI:onv val) L s AL DL a
   (SRD:srd AL s a)
   (RA:rd_agree AL L E)
   (A: AIR2 approx' AL L)
@@ -601,7 +626,7 @@ Proof.
       specialize (H3 _ H5); dcr. rewrite H2 in A1,H13.
       econstructor; simpl; eauto using approx_restrict.
       eapply rd_agree_update_list; eauto.
-      exploit omap_length; eauto. congruence.
+      exploit omap_length; eauto. rewrite map_length. congruence.
       eapply (RA _ _ _ H1 H).
       eapply update_with_list_agree. rewrite H12.
       rewrite union_comm. rewrite union_minus_remove.
@@ -609,7 +634,7 @@ Proof.
       eapply agree_on_sym. eapply agree_on_incl; eauto using incl_minus.
       eapply agree_on_trans; eauto. eapply agree_on_sym. hnf in RA.
       eapply agree_on_incl; eauto.
-      exploit omap_length; eauto. congruence.
+      exploit omap_length; eauto. rewrite map_length. congruence.
     - exploit omap_exp_eval_live_agree; eauto.
       no_step. 
     - no_step. get_functional; subst; simpl in *; congruence.

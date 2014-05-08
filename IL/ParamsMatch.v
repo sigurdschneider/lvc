@@ -57,7 +57,7 @@ Global Instance block_type_F : BlockType (F.block) := {
   block_Z := F.block_Z }.
 (*  rename_block := rename_block_F
 }. *) 
-+ intros. eexists (F.blockI id Z s); eauto. (*
++ intros. eexists (F.blockI (ompty _) Z s); eauto. (*
 + intros; destruct b; eauto.
 + intros; destruct b; eauto. *)
 Defined.

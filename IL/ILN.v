@@ -26,18 +26,18 @@ Module F.
 
   Inductive block : Type :=
     blockI {
-        block_L : env (option block);
-        block_E : env val;
+        block_L : onv block;
+        block_E : onv val;
         block_F : lab * params * nstmt
       }.
   
-  Definition labenv := env (option block).
-  Definition state : Type := (labenv * env val * nstmt)%type.
+  Definition labenv := onv block.
+  Definition state : Type := (labenv * onv val * nstmt)%type.
 
   Inductive step : state -> state -> Prop :=
   | nstepExp L E x e b v
     (def:exp_eval E e = Some v)
-    : step (L, E, nstmtExp x e b) (L, E[x<-v], b)
+    : step (L, E, nstmtExp x e b) (L, E[x<-Some v], b)
 
   | nstepIfT L E
     (e:exp) b1 b2 v
@@ -52,14 +52,14 @@ Module F.
     : step (L, E, nstmtIf e b1 b2) (L, E, b2)
 
     
-  | nstepGoto (L:labenv) (E:env val) (l l':lab) Y Z (s:nstmt) L' E'
+  | nstepGoto (L:labenv) (E:onv val) (l l':lab) Y Z (s:nstmt) L' E'
     (len:length Z = length Y)
     (lEQ:l = l') (* hack: otherwise inversions confuse guardedness checker in 
                   simulation proofs*)
     
     (Ldef:L (counted l) = Some (blockI L' E' (l',Z,s))) E'' vl
     (def:omap (exp_eval E) Y = Some vl)
-    (updOk:E'[Z <-- vl]  = E'')
+    (updOk:E'[Z <-- List.map Some vl]  = E'')
     : step (L, E, nstmtGoto l Y)
            (L'[(counted l) <- Some (blockI L' E' (l,Z,s))], E'', s)
 
@@ -100,18 +100,18 @@ Module I.
 
   Inductive block : Type :=
     blockI {
-        block_L : env (option block);
+        block_L : onv block;
         block_F : lab * params * nstmt
       }.
   
-  Definition labenv := env (option block).
-  Definition state : Type := (labenv * env val * nstmt)%type.
+  Definition labenv := onv block.
+  Definition state : Type := (labenv * onv val * nstmt)%type.
   Definition labenv_empty : labenv := fun _ => None.
 
   Inductive step : state -> state -> Prop :=
   | nstepExp L E x e b v
     (def:exp_eval E e = Some v)
-    : step (L, E, nstmtExp x e b) (L, E[x<-v], b)
+    : step (L, E, nstmtExp x e b) (L, E[x<-Some v], b)
 
   | nstepIfT L E
     (e:exp) b1 b2 v
@@ -125,12 +125,12 @@ Module I.
     (condFalse:val2bool v = false)
     : step (L, E, nstmtIf e b1 b2) (L, E, b2)
 
-  | nstepGoto (L:labenv) (E:env val) (l l':lab) Y Z (s:nstmt) L' vl
+  | nstepGoto (L:labenv) (E:onv val) (l l':lab) Y Z (s:nstmt) L' vl
     (len:length Z = length Y)
     (lEQ: l = l')
     (Ldef:L (counted l) = Some (blockI L' (l',Z,s))) E''
     (def:omap (exp_eval E) Y = Some vl)
-    (updOk:E [Z <-- vl]  = E'')
+    (updOk:E [Z <-- List.map Some vl]  = E'')
     : step (L, E, nstmtGoto l Y)
            (L'[(counted l) <- Some (blockI L' (l,Z,s))], E'', s)
 
@@ -182,7 +182,7 @@ Fixpoint labIndices (s:nstmt) (symb: list lab) : status stmt :=
       Success (stmtLet Z s1' s2')
   end.
 
-Definition state_result X (s:X*env val*nstmt) : option val :=
+Definition state_result X (s:X*onv val*nstmt) : option val :=
   match s with
     | (_, E, nstmtReturn e) => exp_eval E e
     | _ => None

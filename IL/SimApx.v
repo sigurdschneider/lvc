@@ -313,8 +313,8 @@ Definition fexteq'
     -> simL' r R R' AL L L' 
     -> length Z = length VL
     -> length Z' = length VL'
-    -> paco2 (@psimapx F.state _ F.state _) r (L, E[Z <-- VL], s) 
-            (L', E'[Z' <-- VL'], s').
+    -> paco2 (@psimapx F.state _ F.state _) r (L, E[Z <-- List.map Some VL], s) 
+            (L', E'[Z' <-- List.map Some VL'], s').
 
 Definition fexteq
            {A} (R:ArgRel A) R' (a:A) (AL:list A) E Z s E' Z' s' := 
@@ -323,8 +323,8 @@ Definition fexteq
     -> simL' bot2 R R' AL L L' 
     -> length Z = length VL
     -> length Z' = length VL'
-    -> paco2 (@psimapx F.state _ F.state _) bot2 (L, E[Z <-- VL], s) 
-            (L', E'[Z' <-- VL'], s').
+    -> paco2 (@psimapx F.state _ F.state _) bot2 (L, E[Z <-- List.map Some VL], s) 
+            (L', E'[Z' <-- List.map Some VL'], s').
 
 (*
 Lemma fexteq_sym E Z s E' Z' s' 

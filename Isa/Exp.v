@@ -24,10 +24,10 @@ Set Implicit Arguments.
    | Var : var -> exp
    | BinOp : binop -> exp -> exp -> exp.
 
-  Fixpoint exp_eval (E:env val) (e:exp) : option val :=
+  Fixpoint exp_eval (E:onv val) (e:exp) : option val :=
     match e with
       | Con v => Some v
-      | Var x => Some (E x)
+      | Var x => E x
       | BinOp o e1 e2 => mdo v1 <- exp_eval E e1; 
                          mdo v2 <- exp_eval E e2;
                              Some (binop_eval o v1 v2)
@@ -102,11 +102,27 @@ Set Implicit Arguments.
     intros. general induction H; simpl; cset_tac; intuition.
   Qed.
 
+(*
+  Inductive option_R (A B : Type) (eqA : A -> B -> Prop)
+  : option A -> option B -> Prop :=
+  | option_R_Some a b : eqA a b -> option_R eqA ⎣a⎦ ⎣b⎦.
+
+  Instance option_R_eqivalence X (R:X->X->Prop)
+  : Equivalence (option_R R).
+  Proof.
+    econstructor.
+    - hnf; intros. 
+  Admitted.
+            
+  Definition agreed_on X `{OrderedType X} Y R `{Equivalence _ R} := 
+    @agree_on X _ (option Y) (option_R R) _.
+*)
   Lemma exp_eval_live 
     : forall e lv E E', live_exp_sound e lv -> agree_on lv E E' -> 
       exp_eval E e = exp_eval E' e.
   Proof.
-    intros. general induction e; inv H; simpl; eauto. f_equal; eapply H0; eauto.
+    intros. general induction e; inv H; simpl; eauto.
+    specialize (H0 v H2). destruct H0; eauto.
     erewrite IHe1, IHe2; eauto. 
   Qed.
 
@@ -114,13 +130,13 @@ Set Implicit Arguments.
   : Proper (feq ==> eq ==> eq) exp_eval.
   Proof.
     unfold Proper, respectful; intros; subst.
-    general induction y0; simpl; eauto. rewrite H; eauto.
+    general induction y0; simpl; eauto. specialize (H v). inv H; eauto.
     erewrite IHy0_1, IHy0_2; eauto. 
   Qed.
 
   Definition var_to_exp : forall x:var, exp := Var.
   Lemma var_to_exp_correct : forall M x,
-     exp_eval M (var_to_exp x) = Some (M x).
+     exp_eval M (var_to_exp x) = M x.
   Proof.
     reflexivity.
   Qed.  

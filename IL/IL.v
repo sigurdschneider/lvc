@@ -113,18 +113,18 @@ Module F.
 
   Inductive block : Type :=
     blockI {
-      block_E : env val;
+      block_E : onv val;
       block_Z : params;
       block_s : stmt
     }.
 
   Definition labenv := list block.
-  Definition state : Type := (labenv * env val * stmt)%type.
+  Definition state : Type := (labenv * onv val * stmt)%type.
 
   Inductive step : state -> state -> Prop :=
   | stepExp L E x e b v
     (def:exp_eval E e = Some v)
-    : step (L, E, stmtExp x e b) (L, E[x<-v], b)
+    : step (L, E, stmtExp x e b) (L, E[x<-Some v], b)
 
   | stepIfT L E 
     e (b1 b2 : stmt) v
@@ -142,7 +142,7 @@ Module F.
     (Ldef:get L (counted l) blk)
     (len:length (block_Z blk) = length Y)
     (def:omap (exp_eval E) Y = Some vl) E'
-    (updOk:(block_E blk) [block_Z blk  <-- vl] = E')
+    (updOk:(block_E blk) [block_Z blk <-- List.map Some vl] = E')
     : step  (L, E, stmtGoto l Y)
             (drop (counted l) L, E', block_s blk)
 
@@ -187,12 +187,12 @@ Module I.
     }.
 
   Definition labenv := list block.
-  Definition state : Type := (labenv * env val * stmt)%type.
+  Definition state : Type := (labenv * onv val * stmt)%type.
 
   Inductive step : state -> state -> Prop :=
   | stepExp L E x e b v
     (def:exp_eval E e = Some v)
-    : step (L, E, stmtExp x e b) (L, E[x<-v], b)
+    : step (L, E, stmtExp x e b) (L, E[x<-Some v], b)
 
   | stepIfT L E 
     e (b1 b2 : stmt) v
@@ -210,7 +210,7 @@ Module I.
     (Ldef:get L (counted l) blk)
     (len:length (block_Z blk) = length Y)
     (def:omap (exp_eval E) Y = Some vl) E'
-    (updOk:E[block_Z blk  <-- vl] = E')
+    (updOk:E[block_Z blk  <-- List.map Some vl] = E')
     : step  (L, E, stmtGoto l Y)
             (drop (counted l) L, E', block_s blk)
 
@@ -252,7 +252,7 @@ Class StateType S := {
   step_functional : functional step
 }.
 
-Definition state_result X (s:X*env val*stmt) : option val :=
+Definition state_result X (s:X*onv val*stmt) : option val :=
   match s with
     | (_, stmtExp _ _ _) => None
     | (_, stmtIf _ _ _) => None
