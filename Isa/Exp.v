@@ -181,6 +181,27 @@ Set Implicit Arguments.
     + econstructor. eapply lookup_set_spec; eauto.
   Qed.
 
+
+  Fixpoint subst_exp (ϱ:env exp) (s:exp) : exp :=
+    match s with
+      | Con v => Con v
+      | Var v => (ϱ v)
+      | BinOp o e1 e2 => BinOp o (subst_exp ϱ e1) (subst_exp ϱ e2)
+    end.
+
+  Lemma subst_exp_comp e ϱ ϱ' 
+  : subst_exp ϱ (subst_exp ϱ' e) = subst_exp (fun x => subst_exp ϱ (ϱ' x)) e.
+  Proof.
+    general induction e; simpl; eauto.
+    f_equal; eauto.
+  Qed.
+
+  Lemma subst_exp_ext 
+    : forall e (ϱ ϱ':env exp), feq (R:=eq) ϱ ϱ' -> subst_exp ϱ e = subst_exp ϱ' e.
+  Proof.
+    intros. general induction e; simpl; eauto. f_equal; eauto.
+  Qed.
+
   Inductive alpha_exp : env var -> env var -> exp -> exp -> Prop :=
   | alphaCon ϱ ϱ' v : alpha_exp ϱ ϱ' (Con v) (Con v)
   | alphaVar ϱ ϱ' x y : ϱ x = y -> ϱ' y = x -> alpha_exp ϱ ϱ' (Var x) (Var y)
