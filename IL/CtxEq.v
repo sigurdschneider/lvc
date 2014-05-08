@@ -1,5 +1,5 @@
 Require Import List.
-Require Export Util Var Val Exp Env Map CSet AutoIndTac IL AllInRel.
+Require Export Util Var Val Exp Env Map CSet AutoIndTac IL AllInRel Sim.
 
 Set Implicit Arguments.
 Unset Printing Records.
