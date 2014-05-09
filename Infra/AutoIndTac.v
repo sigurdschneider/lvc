@@ -54,6 +54,11 @@ Ltac is_ftype H :=
 Ltac remember_arguments E :=
   let tac x := (try (is_var x; fail 1); (*try (is_ftype x; fail 1);*) remember (x)) in
   repeat (match type of E with
+    | ?t ?x _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ => tac x
+    | ?t ?x _ _ _ _ _ _ _ _ _ _ _ _ _ _ => tac x
+    | ?t ?x _ _ _ _ _ _ _ _ _ _ _ _ _ => tac x
+    | ?t ?x _ _ _ _ _ _ _ _ _ _ _ _ => tac x
+    | ?t ?x _ _ _ _ _ _ _ _ _ _ _ => tac x
     | ?t ?x _ _ _ _ _ _ _ _ _ _ => tac x
     | ?t ?x _ _ _ _ _ _ _ _ _ => tac x
     | ?t ?x _ _ _ _ _ _ _ _ => tac x
