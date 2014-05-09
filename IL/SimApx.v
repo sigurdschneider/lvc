@@ -238,12 +238,15 @@ Proof.
   - eapply psimapxd_mon.
 Qed.
 
-Definition ParamRel A := A-> list var -> list var -> Prop.
-Definition ArgRel A := onv val -> onv val -> A-> list val -> list val -> Prop.
-Definition BlockRel A := A-> F.block -> F.block -> Prop.
+Class ApxRelation (A:Type) := {
+    ParamRel : A-> list var -> list var -> Prop;
+    ArgRel : onv val -> onv val -> A-> list val -> list val -> Prop;
+    BlockRel : A-> F.block -> F.block -> Prop;
+    RelsOK : forall E E' a Z Z' VL VL', ParamRel a Z Z' -> ArgRel E E' a VL VL' -> length Z = length VL /\ length Z' = length VL'
+}.
 
-Definition RelsOk A (R:ArgRel A) (R':ParamRel A) :=
-  forall E E' a Z Z' VL VL', R' a Z Z' -> R E E' a VL VL' -> length Z = length VL /\ length Z' = length VL'.
+
+
 
 (*Inductive simB {A} (R:ArgRel A) (R':ParamRel A) : F.labenv -> F.labenv -> A -> F.block -> F.block -> Prop :=
 | simBI a L L' E E' Z Z' s s'
@@ -253,14 +256,14 @@ Definition RelsOk A (R:ArgRel A) (R':ParamRel A) :=
                           (L', E'[Z' <-- VL'], s'))
     -> simB R R' L L' a (F.blockI E Z s) (F.blockI E' Z' s').*)
 
-Inductive simB (r:rel2 F.state (fun _ : F.state => F.state)) {A} (R:ArgRel A) (R':ParamRel A) (RB:BlockRel A)  : F.labenv -> F.labenv -> A -> F.block -> F.block -> Prop :=
+Inductive simB (r:rel2 F.state (fun _ : F.state => F.state)) {A} (AR:ApxRelation A)  : F.labenv -> F.labenv -> A -> F.block -> F.block -> Prop :=
 | simBI a L L' V V' Z Z' s s'
-  : R' a Z Z'
-    -> RB a (F.blockI V Z s) (F.blockI V' Z' s')
+  : ParamRel a Z Z'
+    -> BlockRel a (F.blockI V Z s) (F.blockI V' Z' s')
     -> (forall E E' Y Y' Yv Y'v, 
          omap (exp_eval E) Y = Some Yv
          -> omap (exp_eval E') Y' = Some Y'v
-         -> R V V' a Yv Y'v
+         -> ArgRel V V' a Yv Y'v
 (*               -> length Z = length Y
                -> length Z' = length Y' *)
                -> paco2 (@psimapx F.state _ F.state _) r (L, E, stmtGoto (LabI 0) Y) 
@@ -271,10 +274,10 @@ Inductive simB (r:rel2 F.state (fun _ : F.state => F.state)) {A} (R:ArgRel A) (R
          -> length Z' = length VL'
          -> paco2 (@psimapx F.state _ F.state _) r (L, E[Z <-- VL], s) 
                  (L', E'[Z' <-- VL'], s'))*)
-    -> simB r R R' RB L L' a (F.blockI V Z s) (F.blockI V' Z' s').
+    -> simB r AR L L' a (F.blockI V Z s) (F.blockI V' Z' s').
 
 Definition simL' (r:rel2 F.state (fun _ : F.state => F.state))
-           {A} R R' RB (AL:list A) L L' := AIR5 (simB r R R' RB) L L' AL L L'.
+           {A} AR (AL:list A) L L' := AIR5 (simB r AR) L L' AL L L'.
 
 (*
 Lemma simL_refl {A} R (AL:list A) L : 
@@ -305,24 +308,24 @@ Proof.
 Qed.
 *)
 
-Definition simeq2 r {A} R R' RB (AL:list A) (s s':stmt)
-  := forall (L L':F.labenv) E, simL' r R R' RB AL L L' -> sim (L, E, s) (L', E, s').
+Definition simeq2 r {A} AR (AL:list A) (s s':stmt)
+  := forall (L L':F.labenv) E, simL' r AR AL L L' -> sim (L, E, s) (L', E, s').
 
 Definition fexteq'
-           {A} (R:ArgRel A) R' RB (a:A) (AL:list A) E Z s E' Z' s' := 
+           {A} AR (a:A) (AL:list A) E Z s E' Z' s' := 
   forall VL VL' L L' (r:rel2 F.state (fun _ : F.state => F.state)),
-    R E E' a VL VL' 
-    -> simL' r R R' RB AL L L' 
+    ArgRel E E' a VL VL' 
+    -> simL' r AR AL L L' 
     -> length Z = length VL
     -> length Z' = length VL'
     -> paco2 (@psimapx F.state _ F.state _) r (L, E[Z <-- List.map Some VL], s) 
             (L', E'[Z' <-- List.map Some VL'], s').
 
 Definition fexteq
-           {A} (R:ArgRel A) R' RB (a:A) (AL:list A) E Z s E' Z' s' := 
+           {A} AR (a:A) (AL:list A) E Z s E' Z' s' := 
   forall VL VL' L L',
-    R E E' a VL VL' 
-    -> simL' bot2 R R' RB AL L L' 
+    ArgRel E E' a VL VL' 
+    -> simL' bot2 AR AL L L' 
     -> length Z = length VL
     -> length Z' = length VL'
     -> paco2 (@psimapx F.state _ F.state _) bot2 (L, E[Z <-- List.map Some VL], s) 
@@ -471,12 +474,12 @@ Lemma subst_lemma_L A R (a:A) AL s s' V E E' Z Z' L1 L2 t
          (F.blockI E' Z' s' :: L2, V, t').
 *)
 
-Lemma simL_mon (r r0:rel2 F.state (fun _ : F.state => F.state)) A R R' RB L1 L2 (AL:list A) L1' L2'
-:  AIR5 (simB r R R' RB) L1 L2 AL L1' L2'
+Lemma simL_mon (r r0:rel2 F.state (fun _ : F.state => F.state)) A AR L1 L2 (AL:list A) L1' L2'
+:  AIR5 (simB r AR) L1 L2 AL L1' L2'
   -> (forall x0 x1 : F.state, r x0 x1 -> r0 x0 x1)
   -> L1 = L1'  
   -> L2 = L2' 
-  ->  AIR5 (simB r0 R R' RB) L1 L2 AL L1' L2'.
+  ->  AIR5 (simB r0 AR) L1 L2 AL L1' L2'.
 Proof.
   intros. general induction H; eauto using AIR5.
   econstructor; eauto.
@@ -486,13 +489,13 @@ Qed.
 
 
 
-Lemma subst_lemma A R R' RB (ROK:RelsOk R R') (a:A) AL s s' V V' E E' Z Z' L1 L2 t t' 
-: fexteq' R R' RB a (a::AL) E Z s E' Z' s'
-  -> R' a Z Z'
-  -> RB a (F.blockI E Z s) (F.blockI E' Z' s')
-  -> simL' bot2 R R' RB AL L1 L2
+Lemma subst_lemma A AR (a:A) AL s s' V V' E E' Z Z' L1 L2 t t' 
+: fexteq' AR a (a::AL) E Z s E' Z' s'
+  -> ParamRel a Z Z'
+  -> BlockRel a (F.blockI E Z s) (F.blockI E' Z' s')
+  -> simL' bot2 AR AL L1 L2
   -> (forall r (L L' : list F.block),
-       simL' r R R' RB (a :: AL) L L' ->
+       simL' r AR (a :: AL) L L' ->
        paco2 (@psimapx F.state _ F.state _) r (L, V, t) (L', V', t'))
   -> paco2 (@psimapx F.state _ F.state _) bot2 (F.blockI E Z s :: L1, V, t)
          (F.blockI E' Z' s' :: L2, V', t').
@@ -502,15 +505,16 @@ Proof.
   econstructor. econstructor; eauto.
   intros. pfold.
   econstructor; try eapply plusO. 
-  econstructor; eauto using get; simpl. edestruct ROK; eauto.
+  econstructor; eauto using get; simpl. 
+  edestruct RelsOK; eauto.
   eapply omap_length in H. congruence.
-  econstructor; eauto using get; simpl. edestruct ROK; eauto.
+  econstructor; eauto using get; simpl. edestruct RelsOK; eauto.
   eapply omap_length in H5. congruence.
   simpl. 
   right. eapply CIH; eauto.
   intros. eapply H0; eauto.
-  edestruct ROK; eauto.
-  edestruct ROK; eauto.
+  edestruct RelsOK; eauto.
+  edestruct RelsOK; eauto.
   eapply simL_mon; eauto. intros; isabsurd.
 Qed.
 
@@ -549,35 +553,35 @@ Proof.
   eapply paco2_mon. eapply H; eauto. eapply simL_mon; eauto.
 *)
 
-Lemma simL_extension' r A R R' RB (ROK:RelsOk R R') (a:A) AL s s' E E' Z Z' L L'
-: simL' r R R' RB AL L L' 
-  -> fexteq' R R' RB a (a::AL) E Z s E' Z' s'
-  -> R' a Z Z' 
-  -> RB a (F.blockI E Z s) (F.blockI E' Z' s')
-  -> simL' r R R' RB (a::AL) (F.blockI E Z s :: L) (F.blockI E' Z' s' :: L').
+Lemma simL_extension' r A AR (a:A) AL s s' E E' Z Z' L L'
+: simL' r AR AL L L' 
+  -> fexteq' AR a (a::AL) E Z s E' Z' s'
+  -> ParamRel a Z Z' 
+  -> BlockRel a (F.blockI E Z s) (F.blockI E' Z' s')
+  -> simL' r AR (a::AL) (F.blockI E Z s :: L) (F.blockI E' Z' s' :: L').
 Proof.
   intros.
   hnf; intros. econstructor; eauto. econstructor; eauto; intros.
   + pfold. econstructor; try eapply plusO.
     econstructor; eauto using get. simpl. 
-    edestruct ROK; eauto. exploit omap_length; try eapply H3; eauto. 
+    edestruct RelsOK; eauto. exploit omap_length; try eapply H3; eauto. 
     congruence.
     econstructor; eauto using get. simpl. 
-    edestruct ROK; eauto. exploit omap_length; try eapply H4; eauto. 
+    edestruct RelsOK; eauto. exploit omap_length; try eapply H4; eauto. 
     congruence.
     simpl. left. revert_all; pcofix CIH; intros.
     eapply H1; eauto.
     hnf; intros. econstructor; eauto. econstructor; eauto; intros.
     pfold. econstructor; try eapply plusO.
     econstructor; eauto using get. simpl. 
-    edestruct ROK; eauto. exploit omap_length; try eapply H; eauto. 
+    edestruct RelsOK; eauto. exploit omap_length; try eapply H; eauto. 
     congruence.
     econstructor; eauto using get. simpl. 
-    edestruct ROK; eauto. exploit omap_length; try eapply H6; eauto. 
+    edestruct RelsOK; eauto. exploit omap_length; try eapply H6; eauto. 
     congruence.
     simpl. right. eapply CIH; eauto. eapply simL_mon; eauto.
-    edestruct ROK; eauto. 
-    edestruct ROK; eauto. 
+    edestruct RelsOK; eauto. 
+    edestruct RelsOK; eauto. 
 Qed.
 
 (*
