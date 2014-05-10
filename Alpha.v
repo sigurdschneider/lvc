@@ -169,16 +169,6 @@ Proof.
   eapply inverse_on_agree_on_2; eauto; try intuition.
 Qed.
 
-Ltac invt ty :=
-  match goal with 
-      | h: ty |- _ => inv h
-      | h: ty _ |- _ => inv h
-      | h: ty _ _ |- _ => inv h
-      | h: ty _ _ _ |- _ => inv h
-      | h: ty _ _ _ _ |- _ => inv h
-      | h: ty _ _ _ _ _ |- _ => inv h
-  end.
-
 Lemma alpha_trans ϱ1 ϱ1' ϱ2 ϱ2' s s' s''
   : alpha ϱ1 ϱ1' s s' -> alpha ϱ2 ϱ2' s' s'' -> alpha (ϱ1 ∘ ϱ2) (ϱ2' ∘ ϱ1') s s''.
 Proof.

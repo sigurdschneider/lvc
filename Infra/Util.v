@@ -6,6 +6,20 @@ Set Implicit Arguments.
 Tactic Notation "inv" hyp(A) := inversion A ; subst.
 Tactic Notation "invc" hyp(A) := inversion A ; subst ; clear A.
 
+Ltac invt ty :=
+  match goal with 
+      | h: ty |- _ => inv h
+      | h: ty _ |- _ => inv h
+      | h: ty _ _ |- _ => inv h
+      | h: ty _ _ _ |- _ => inv h
+      | h: ty _ _ _ _ |- _ => inv h
+      | h: ty _ _ _ _ _ |- _ => inv h
+      | h: ty _ _ _ _ _ _ |- _ => inv h
+      | h: ty _ _ _ _ _ _ _ |- _ => inv h
+      | h: ty _ _ _ _ _ _ _ _ |- _ => inv h
+      | h: ty _ _ _ _ _ _ _ _ _ |- _ => inv h
+  end.
+
 Definition iffT (A B : Type) := ((A -> B) * (B -> A))%type.
 
 Notation "A <=> B" := (iffT A B) (at level 95, no associativity) : type_scope.
@@ -270,9 +284,38 @@ Defined.
 Tactic Notation "exploiT" tactic(tac) :=
   eapply modus_ponens;[ tac | intros].
 
-Ltac exploit H :=
-  eapply modus_ponens;[ eapply H | intros].
+Tactic Notation "exploit" hyp(H) :=
+  eapply modus_ponens;
+  [ 
+    let H' := fresh "exploitH" in
+    pose proof H as H'; hnf in H';
+      eapply H'; clear H' 
+  | intros].
 
+Tactic Notation "exploiT" constr(ty) :=
+  match goal with 
+      | H: ty |- _ => exploit H
+      | H: ty _ |- _ => exploit H
+      | H: ty _ _ |- _ => exploit H
+      | H: ty _ _ _ |- _ => exploit H
+      | H: ty _ _ _ _ |- _ => exploit H
+      | H: ty _ _ _ _ _ |- _ => exploit H
+      | H: ty _ _ _ _ _ _ |- _ => exploit H
+      | H: ty _ _ _ _ _ _ _ |- _ => exploit H
+      | H: ty _ _ _ _ _ _ _ _ |- _ => exploit H
+      | H: ty _ _ _ _ _ _ _ _ _ |- _ => exploit H
+  end.
+
+Definition foo A B C := (A -> ~ B \/ C).
+
+Lemma test (A B C D : Prop) (a:A) (b:B)
+
+: foo A B C
+  -> (C -> D)
+  ->  D.
+Proof.
+  intros. exploiT foo. eauto. exploit H. eauto. firstorder.
+Qed.
 
 (* 
 *** Local Variables: ***

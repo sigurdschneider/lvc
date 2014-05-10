@@ -1093,16 +1093,6 @@ Qed.
 
 Print Assumptions computeParameters_trs.
 
-Ltac invt ty :=
-  match goal with 
-      | h: ty |- _ => inv h
-      | h: ty _ |- _ => inv h
-      | h: ty _ _ |- _ => inv h
-      | h: ty _ _ _ |- _ => inv h
-      | h: ty _ _ _ _ |- _ => inv h
-      | h: ty _ _ _ _ _ |- _ => inv h
-  end.
-
 Definition oemp X `{OrderedType X} (s : option (set X)) :=
   match s with
     | ⎣s0 ⎦ => s0
