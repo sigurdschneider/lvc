@@ -10,7 +10,6 @@ Section MapUpdate.
   Variable X : Type.
   Context `{OrderedType X}.
   Variable Y : Type.
-  Context `{OrderedType Y}.
 
   Fixpoint update_list (m:X -> Y) (f:X -> Y) (L:list X) := 
     match L with
@@ -18,37 +17,38 @@ Section MapUpdate.
       | x::L => (update_list m f L) [x <- f x]
     end.
 
-  Lemma update_list_agree_minus lv (E E' f:X -> Y) XL
-    :  agree_on lv E' E 
-    -> agree_on (lv\of_list XL) (update_list E' f XL) E.
+  Lemma update_list_agree_minus {R} `{Symmetric Y R} `{Transitive Y R} lv (E E' f:X -> Y) XL
+  :  agree_on R lv E' E 
+     -> agree_on R (lv\of_list XL) (update_list E' f XL) E.
   Proof.
-    intros. general induction XL; simpl. rewrite minus_empty. eassumption.
+    intros. general induction XL; simpl. 
+    rewrite minus_empty. eassumption.
     rewrite add_union_singleton. rewrite union_comm. rewrite <- minus_union. 
     eapply agree_on_update_dead.
     cset_tac. intro; decompose records; eauto. 
     eauto using agree_on_incl, incl_minus.
   Qed.
 
-  Corollary update_list_agree_self lv (E:X -> Y) L f
-    : agree_on (lv\of_list L) (update_list E f L) E.
+  Corollary update_list_agree_self {R} `{Equivalence Y R} lv (E:X -> Y) L f
+    : agree_on R (lv\of_list L) (update_list E f L) E.
   Proof. 
     eapply update_list_agree_minus. reflexivity.
   Qed.
 
-  Lemma update_list_no_upd  (m:X -> Y) f L x
+  Lemma update_list_no_upd (m:X -> Y) f L x
     : x ∉ of_list L
     -> (update_list m f L) x === m x.
   Proof.
     intros. general induction L; simpl; eauto. lud.
-    + exfalso. eapply H1. simpl in * |- *. rewrite e. eapply add_1; eauto.
+    + exfalso. eapply H0. simpl in * |- *. rewrite e. eapply add_1; eauto.
     + assert (~x ∈ of_list L). 
-      - intro. eapply H1. simpl. eapply add_2; eauto.
+      - intro. eapply H0. simpl. eapply add_2; eauto.
       - eauto. 
   Qed.
 
-  Lemma update_list_upd  (m:X -> Y) f L x
+  Lemma update_list_upd R `{Equivalence Y R} (m:X -> Y) f L x
     : x ∈ of_list L
-    -> Proper (_eq ==> _eq) f
+    -> Proper (_eq ==> R) f
     -> (update_list m f L) x === f x.
   Proof.
     intros. general induction L; simpl; eauto.
@@ -65,6 +65,7 @@ Section MapUpdateList.
   Variable X : Type.
   Context `{OrderedType X}.
   Variable Y : Type.
+  Context `{Equivalence Y}.
 
   Open Scope map_scope.
 
@@ -77,14 +78,31 @@ Section MapUpdateList.
   Notation "f [ w <-- x ]" := (update_with_list w x f) (at level 29, left associativity).
 
 
+(*
+Lemma update_with_list_agree_minus X `{OrderedType X} Y `{Equivalence Y}
+      lv (E E':X -> Y) XL YL 
+: length XL = length YL
+  -> agree_on lv E' E 
+  -> agree_on (lv\of_list XL) (E' [ XL <-- YL ]) E.
+Proof.
+  intros. eapply length_length_eq in H1. 
+  general induction H1; simpl. rewrite minus_empty. eassumption.
+  rewrite add_union_singleton. rewrite union_comm. rewrite <- minus_union. 
+  eapply agree_on_update_dead.
+  cset_tac. intro; decompose records; eauto. 
+  eauto using agree_on_incl, incl_minus.
+Qed.
+*)
+
   Lemma update_with_list_agree lv (E E':X -> Y) XL YL
-    : agree_on (lv\of_list XL) E E'
+    : agree_on R (lv\of_list XL) E E'
     -> length XL = length YL
-    -> agree_on lv (E [ XL <-- YL]) (E' [ XL <-- YL ]).
+    -> agree_on R lv (E [ XL <-- YL]) (E' [ XL <-- YL ]).
   Proof.
-    intros. eapply length_length_eq in H1.
-    general induction XL; simpl in * |- *. rewrite (@minus_empty _ _ lv) in H0; eauto.
-    inv H1. eapply agree_on_update_same.
+    intros. eapply length_length_eq in H2.
+    general induction XL; simpl in * |- *. 
+    rewrite (@minus_empty _ _ lv) in H1; eauto.
+    inv H2. eapply agree_on_update_same. eapply H0; eauto.
     eapply IHXL; eauto. rewrite minus_union; eauto.
     rewrite add_union_singleton. rewrite (empty_union_2 (s:=∅)); eauto.
     rewrite <- add_union_singleton; eauto.
@@ -97,32 +115,29 @@ Section MapUpdateList.
   Proof.
     intros. general induction Z; simpl; destruct Y'; eauto.
     lud.
-    + exfalso. eapply H0. simpl; cset_tac; intuition. 
-    + simpl in H0. assert (x ∉ of_list Z).
+    + exfalso. eapply H1. simpl; cset_tac; intuition. 
+    + simpl in H1. assert (x ∉ of_list Z); eauto.
       - cset_tac; intuition. 
-      - eapply IHZ; eauto.
   Qed.
 
   Lemma update_with_list_agree_minus lv (E E':X -> Y) XL YL 
     : length XL = length YL
-    -> agree_on lv E' E 
-    -> agree_on (lv\of_list XL) (E' [ XL <-- YL ]) E.
+    -> agree_on R lv E' E 
+    -> agree_on R (lv\of_list XL) (E' [ XL <-- YL ]) E.
   Proof.
-    intros. eapply length_length_eq in H0. 
-    general induction H0; simpl. rewrite minus_empty. eassumption.
+    intros. eapply length_length_eq in H1. 
+    general induction H1; simpl. rewrite minus_empty. eassumption.
     rewrite add_union_singleton. rewrite union_comm. rewrite <- minus_union. 
     eapply agree_on_update_dead.
-    cset_tac. intro; decompose records; eauto. 
+    cset_tac. intro; decompose records; eauto.
     eauto using agree_on_incl, incl_minus.
   Qed.
 
-
-
   Lemma update_with_list_agree_self  `{Defaulted X} lv (E:X -> Y) XL YL
-    : agree_on (lv\of_list XL) (E [ XL <-- YL]) E.
+    : agree_on R (lv\of_list XL) (E [ XL <-- YL]) E.
   Proof.
-    general induction XL; simpl. rewrite minus_empty. eapply agree_on_refl.
-    destruct YL. apply agree_on_refl.
+    general induction XL; simpl. rewrite minus_empty. reflexivity. 
+    destruct YL. reflexivity.
     rewrite add_union_singleton. 
     rewrite union_comm. rewrite <- minus_union. eapply agree_on_update_dead.
     cset_tac. intro; decompose records; eauto. 
@@ -131,7 +146,7 @@ Section MapUpdateList.
   Qed.
 
   Lemma update_id `{OrderedType Y} (m:X -> Y) x `{Proper _ (_eq ==> _eq) m}
-    : feq (m [x <- m x])  m.
+    : @feq _ _ _eq (m [x <- m x])  m.
   Proof.
     intros y. lud. rewrite e; eauto.
   Qed. 
@@ -141,7 +156,7 @@ End MapUpdateList.
 Notation "f [ w <-- x ]" := (update_with_list w x f) (at level 29, left associativity). 
 
 Instance update_inst X `{OrderedType X} Y `{OrderedType Y} :
-  Proper ((@feq X Y _ _) ==> _eq ==> _eq ==> feq) (@update X Y _).
+  Proper ((@feq _ _ _eq) ==> _eq ==> _eq ==> (@feq _ _ _eq)) (@update X Y _).
 Proof.
   unfold respectful, Proper, update, feq; intros. 
   repeat destruct if; eqs; eauto. 
@@ -150,7 +165,7 @@ Proof.
 Qed.
 
 Lemma update_with_list_id X `{OrderedType X} (l:list X) 
-  : feq (update_with_list l l id) id.
+  : efeq (update_with_list l l id) id.
 Proof.
   general induction l; simpl. reflexivity.
   rewrite IHl. change a with (id a) at 2. 
@@ -208,7 +223,7 @@ Proof.
 Qed.
 
 Instance update_list_morphism {X} `{OrderedType X} {Y} `{OrderedType Y}
-  : Proper (@feq X _ _ _ ==> @feq X _ _ _ ==> eq ==> feq) (@update_list X _ Y).
+  : Proper (@feq X _ _eq ==> @feq X _ _eq ==> eq ==> (@feq _ _ _eq)) (@update_list X _ Y).
 Proof.
   unfold Proper, respectful; intros. subst.
   general induction y1. simpl. eauto. simpl.

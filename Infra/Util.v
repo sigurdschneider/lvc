@@ -284,7 +284,7 @@ Defined.
 Tactic Notation "exploiT" tactic(tac) :=
   eapply modus_ponens;[ tac | intros].
 
-Tactic Notation "exploit" hyp(H) :=
+Ltac exploit H :=
   eapply modus_ponens;
   [ 
     let H' := fresh "exploitH" in

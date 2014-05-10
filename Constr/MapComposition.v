@@ -21,7 +21,7 @@ Lemma lookup_set_agree_on_comp {X} `{OrderedType X} {Y} `{OrderedType Y} Z (f:X 
       `{Proper _ (_eq ==> _eq) f}
       x y z D
 : y ∉ lookup_set f (D\{{x}})
-  -> agree_on D ((f[x<-y]) ∘ (g[y<-z])) ((f ∘ g) [x <- z]).
+  -> agree_on eq D ((f[x<-y]) ∘ (g[y<-z])) ((f ∘ g) [x <- z]).
 Proof.
   intros. hnf; intros; unfold comp.
   lud. exfalso. eapply H2. eapply lookup_set_spec; eauto. eexists x0; intuition. 
@@ -35,7 +35,7 @@ Lemma inverse_on_comp {X} `{OrderedType X} {Y} `{OrderedType Y} {Z} `{OrderedTyp
   -> inverse_on D ((f ∘ g) [x <- z]) ((g' ∘ f') [z <- x]).
 Proof.
   intros. hnf; intros; unfold comp in *. 
-  lud; try (now exfalso; eauto).
+  lud; try (now exfalso; eauto). 
   simpl in *. specialize (H2 x0 H3). simpl in H2. 
   lud; try (now exfalso; eauto).
   specialize (H2 x0 H3). simpl in H2. lud.
@@ -45,7 +45,7 @@ Qed.
 Lemma inverse_on_comp_agree {X} `{OrderedType X} {Y} `{OrderedType Y} {Z} `{OrderedType Z}
   (f:X -> Y) f' (g:Y -> Z) g' x y z D
 : inverse_on D ((f[x<-y]) ∘ (g[y<-z])) ((g'[z<-y]) ∘ (f'[y<-x])) 
-  -> agree_on D ((f[x<-y]) ∘ (g[y<-z])) ((f ∘ g) [x <- z]).
+  -> agree_on _eq D ((f[x<-y]) ∘ (g[y<-z])) ((f ∘ g) [x <- z]).
 Proof.   
   intros. hnf; intros; unfold comp in *.
   lud; try (now exfalso; eauto).
@@ -63,7 +63,7 @@ XL YL ZL D :
               
   -> inverse_on D ((update_with_list XL YL f) ∘ (update_with_list YL ZL g))
                ((update_with_list ZL YL g') ∘ (update_with_list YL XL f')) 
-  -> agree_on D ((update_with_list XL YL f) ∘ (update_with_list YL ZL g)) (update_with_list XL ZL (f ∘ g)).
+  -> agree_on _eq D ((update_with_list XL YL f) ∘ (update_with_list YL ZL g)) (update_with_list XL ZL (f ∘ g)).
 Proof.
   intros. eapply length_length_eq in H6. eapply length_length_eq in H7.
   general induction H6. reflexivity. 
@@ -85,6 +85,6 @@ Qed.
 
 (* 
  *** Local Variables: ***
- *** coq-load-path: ("../infra" "../constr" "../il"  "..") ***
+ *** coq-load-path: ((".." "Lvc")) ***
  *** End: ***
  *)

@@ -82,7 +82,7 @@ Proof.
   decide(x ∈ of_list Z).
   exfalso. rewrite H5 in n. eapply n. 
   eapply update_with_list_lookup_in; eauto.
-  rewrite update_with_list_no_update in H5; eauto.
+  erewrite update_with_list_no_update in H5; eauto.
   eapply union_2. eapply lookup_set_spec; eauto. eexists x. 
   split; eauto. cset_tac; eauto.
   eapply update_with_list_proper.

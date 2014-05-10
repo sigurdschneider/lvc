@@ -4,33 +4,37 @@ Require Export CSet Containers.SetDecide.
 
 Set Implicit Arguments.
 
-Definition feq {X : Type} {Y : Type} `{Equivalence Y} (f g:X -> Y) 
-  := forall x, R (f x) (g x).
+Section feq.
+  Variable X : Type.
+  Variable Y : Type.
+  Variable R : relation Y.
 
-Global Instance feq_reflexive {X : Type} {Y : Type} `{Equivalence Y} 
- : Reflexive (@feq X Y _ _).
-hnf; intros. hnf; intros. reflexivity.
-Qed.
 
-Global Instance feq_symmetric {X : Type} {Y : Type} `{Equivalence Y} 
-: Symmetric (@feq X Y _ _ ).
-hnf; intros. hnf; intros. symmetry. eapply H0; eauto.
-Qed.
+  Definition feq (f g:X -> Y) 
+    := forall x, R (f x) (g x).
 
-Global Instance feq_transitive {X : Type} {Y : Type} `{Equivalence Y} 
-: Transitive (@feq X Y _ _).
-hnf; intros. hnf; intros. transitivity (y x0); eauto.
-Qed.
+  Global Instance feq_reflexive `{Reflexive _ R} 
+  : Reflexive feq.
+  hnf; intros. hnf; intros. reflexivity.
+  Qed.
 
-Global Instance feq_equivalence {X : Type} {Y : Type} `{Equivalence Y} 
-       : Equivalence (@feq X Y _ _).
-constructor; eauto using feq_reflexive, feq_symmetric, feq_transitive.
-Qed.
+  Global Instance feq_symmetric `{Symmetric _ R} 
+  : Symmetric feq.
+  hnf; intros. hnf; intros. symmetry. eapply H0; eauto.
+  Qed.
+  
+  Global Instance feq_transitive `{Transitive Y R} 
+  : Transitive feq.
+  hnf; intros. hnf; intros. transitivity (y x0); eauto.
+  Qed.
 
-Notation "f ≡ g" := (feq f g) (no associativity, at level 70) : map_scope.
-
-Definition fpeq  {X} `{OrderedType X} {Y} `{OrderedType Y} (f g:X -> Y) 
-  := feq f g /\ Proper (_eq ==> _eq) f /\ Proper (_eq ==> _eq) g.
+  Global Instance feq_equivalence `{Equivalence Y R} 
+  : Equivalence feq.
+  constructor; eauto using feq_reflexive, feq_symmetric, feq_transitive.
+  Qed.
+  
+  Definition fpeq `{OrderedType X} `{OrderedType Y} (f g:X -> Y) 
+    := feq f g /\ Proper (_eq ==> _eq) f /\ Proper (_eq ==> _eq) g.
 
 (*
 Global Instance fpeq_symmetric {X : Type} {Y : Type} `{Equivalence Y} 
@@ -48,6 +52,15 @@ Global Instance feq_equivalence {X : Type} {Y : Type} `{Equivalence Y}
 constructor; eauto using feq_reflexive, feq_symmetric, feq_transitive.
 Qed.
 *)
+
+End feq.
+
+Arguments feq {X} {Y} {R} f g.
+
+Definition efeq X Y R `{Equivalence Y R} := @feq X Y R.
+
+Notation "f ≡ g" := (efeq f g) (no associativity, at level 70) : map_scope.
+
 
 Lemma equiv_nequiv_combine W `{OrderedType W} (x y z:W)
   : x === y -> y =/= z -> x =/= z.
@@ -330,8 +343,9 @@ Section UpdateFacts.
   
 End UpdateFacts.
 
+
 (* 
-*** Local Variables: ***
-*** coq-load-path: ("../infra" "../constr" "../il"  "..") ***
-*** End: ***
-*)
+ *** Local Variables: ***
+ *** coq-load-path: (("../" "Lvc")) ***
+ *** End: ***
+ *)

@@ -72,7 +72,7 @@ Section MapInjectivity.
 End MapInjectivity.
     
 Global Instance injective_on_morphism {X} `{OrderedType X} {Y} {HY:OrderedType Y}
-  : Proper (Equal ==> (@feq X Y (@_eq Y HY) (@OT_Equivalence Y HY)) ==> iff) (@injective_on X H Y HY).
+  : Proper (Equal ==> (@feq X Y (@_eq Y HY)) ==> iff) (@injective_on X H Y HY).
 Proof.
   unfold Proper, respectful; intros.
   split; intros; hnf; intros. 

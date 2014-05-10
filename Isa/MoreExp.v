@@ -4,7 +4,7 @@ Require Import Arith Exp OptionMap.
 Set Implicit Arguments.
 
 Lemma exp_eval_agree E E' e v
-: agree_on (Exp.freeVars e) E E'
+: agree_on eq (Exp.freeVars e) E E'
   -> exp_eval E e = v
   -> exp_eval E' e = v.
 Proof.
@@ -14,7 +14,7 @@ Proof.
 Qed.
 
 Lemma omap_exp_eval_agree E E' Y v
-: agree_on (list_union (List.map freeVars Y)) E E'
+: agree_on eq (list_union (List.map freeVars Y)) E E'
   -> omap (exp_eval E) Y = v
   -> omap (exp_eval E') Y = v.
 Proof.
@@ -27,7 +27,7 @@ Qed.
 
 Lemma exp_eval_live_agree E E' e lv v
 : live_exp_sound e lv
-  -> agree_on lv E E'
+  -> agree_on eq lv E E'
   -> exp_eval E e = v
   -> exp_eval E' e = v.
 Proof.
@@ -36,7 +36,7 @@ Qed.
 
 Lemma omap_exp_eval_live_agree E E' lv Y v
 : (forall n y, get Y n y -> live_exp_sound y lv)
-  -> agree_on lv E E'
+  -> agree_on eq lv E E'
   -> omap (exp_eval E) Y = v
   -> omap (exp_eval E') Y = v.
 Proof.

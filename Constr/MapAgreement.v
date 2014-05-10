@@ -13,112 +13,90 @@ Section MapAgreement.
 
   Variable Y : Type.
 
-  Definition agree_on `{Equivalence Y} (D:set X) (E E':X -> Y) := 
+  Definition agree_on (R:relation Y) (D:set X) (E E':X -> Y) := 
     forall x, x ∈ D -> R (E x) (E' x).
 
-  Lemma agree_on_refl `{Equivalence Y} L (E:X -> Y) 
-    : agree_on L E E.
+  Global Instance agree_on_refl `{Reflexive Y} L
+    : Reflexive (agree_on R L).
   Proof.
     firstorder.
   Qed.
 
-  Lemma agree_on_sym `{Equivalence Y} L (E E':X -> Y) 
-    : agree_on L E E' -> agree_on L E' E.
+  Global Instance agree_on_sym `{Symmetric Y} L
+    : Symmetric (agree_on R L).
   Proof.
     intros; hnf; firstorder.
   Qed.
 
-  Lemma agree_on_trans `{Equivalence Y} L (E E' E'':X -> Y) 
-    : agree_on L E E' -> agree_on L E' E'' -> agree_on L E E''.
+  Lemma agree_on_trans `{Transitive Y} L 
+    : Transitive (agree_on R L).
   Proof.
-    intros; hnf; intros. transitivity (E' x); eauto.
+    hnf; intros; hnf; intros. transitivity (y x0); eauto.
   Qed.
 
-  Lemma agree_on_update `{Equivalence Y} L (E E':X->Y) (x:X) (v:Y)
-    : agree_on L E E' -> agree_on L (E[x<-v]) (E'[x<-v]).
+  Global Instance agree_on_equivalence `{Equivalence Y} {s:set X}
+  : Equivalence (agree_on R s).
+  Proof.
+    econstructor; eauto using agree_on_refl, agree_on_sym, agree_on_trans.
+  Qed.
+
+  Lemma agree_on_update (R:relation Y) L (E E':X->Y) (x:X) (v v':Y)
+    : R v v' -> agree_on R L E E' -> agree_on R L (E[x<-v]) (E'[x<-v']).
   Proof.
     intros. hnf; intros; lud; eauto.
   Qed.
 
-  Lemma agree_on_incl `{Equivalence Y} (bv lv:set X) (E E': X -> Y)
-    : agree_on lv E E'
+  Lemma agree_on_incl R (bv lv:set X) (E E': X -> Y)
+    : agree_on R lv E E'
     -> bv ⊆ lv
-    -> agree_on bv E E'.
+    -> agree_on R bv E E'.
   Proof.
     firstorder.
   Qed.
 
-  Lemma agree_on_update_same `{Equivalence Y} (lv:set X) (E E':X -> Y) x v
-    : agree_on (lv\{{x}}) E E'
-    -> agree_on lv (E [x <- v]) (E' [x <- v]).
+  Lemma agree_on_update_same (R:relation Y) (lv:set X) (E E':X -> Y) x v v'
+  : R v v'
+    -> agree_on R (lv\{{x}}) E E'
+    -> agree_on R lv (E [x <- v]) (E' [x <- v']).
   Proof.
-    intros A. hnf; intros; lud;
+    intros ? A. hnf; intros; lud; eauto; 
     eapply A. eapply in_in_minus; eauto. eapply neq_not_in_single. eqs.
   Qed.
 
-  Lemma agree_on_update_any_same `{Equivalence Y} (lv:set X) (E E':X -> Y) x v
-    : agree_on lv E E'
-    -> agree_on (lv ∪ {{x}}) (E [x <- v]) (E' [x <- v]).
+  Lemma agree_on_update_any_same (R:relation Y) (lv:set X) (E E':X -> Y) x v v'
+  : R v v'
+    -> agree_on R lv E E'
+    -> agree_on R (lv ∪ {{x}}) (E [x <- v]) (E' [x <- v']).
   Proof.
-    intros A. hnf; intros; lud; eapply A.
-    eapply union_cases in H1; destruct H1; eauto.
-    eapply single_spec_neq in H1. exfalso; eauto.
+    intros inR A. hnf; intros; lud; eauto; eapply A.
+    eapply union_cases in H0; destruct H0; eauto.
+    eapply single_spec_neq in H0. exfalso; eauto.
   Qed.
 
-  Lemma agree_on_update_dead `{Equivalence Y} (lv:set X) (E E':X -> Y) x v
+  Lemma agree_on_update_dead R (lv:set X) (E E':X -> Y) x v
     : ~x ∈ lv
-    -> agree_on lv E E'
-    -> agree_on lv (E [x <- v]) E'.
+    -> agree_on R lv E E'
+    -> agree_on R lv (E [x <- v]) E'.
   Proof.
     intros A B.
     hnf; intros; lud. cset_tac.
     eapply B; eauto.
   Qed.
 
-  Lemma agree_on_update_dead_both `{Equivalence Y} (lv:set X) (E E':X -> Y) x v v'
+  Lemma agree_on_update_dead_both R (lv:set X) (E E':X -> Y) x v v'
     : ~x ∈ lv
-    -> agree_on lv E E'
-    -> agree_on lv (E [x <- v]) (E'[x <- v']).
+    -> agree_on R lv E E'
+    -> agree_on R lv (E [x <- v]) (E'[x <- v']).
   Proof.
-    intros A B. eauto using agree_on_trans, agree_on_update_dead, agree_on_sym.
+    intros A B.
+    hnf; intros. lud; eauto. exfalso; eapply A; rewrite e; intuition.
   Qed.
-
-
-(*
-  Global Instance lookup_fun_inst `{OrderedType Y} {m:X -> Y}
-    : Proper (_eq ==> _eq) m.
-  Proof.
-    hnf; intros; simpl. rewrite H2. eauto.
-  Qed.
-*)
 
 End MapAgreement.
-
-Arguments agree_on {X} {H} {Y} {R} {_} D E E'.
-
-Global Instance agree_on_reflexive X `{OrderedType X} Y `{OrderedType Y} {s:set X}
- : Reflexive (@agree_on X _ Y _ _ s).
-firstorder using agree_on_refl.
-Qed.
-
-Global Instance agree_on_symmetric X `{OrderedType X} Y `{OrderedType Y} {s:set X}
- : Symmetric (@agree_on X _ Y _ _ s).
-firstorder using agree_on_sym.
-Qed.
-
-Global Instance agree_on_transitive X `{OrderedType X} Y `{OrderedType Y} {s:set X}
- : Transitive (@agree_on X _ Y _ _ s).
-hnf; intros. eauto using agree_on_trans.
-Qed.
-
-Global Instance agree_on_equivalence X `{OrderedType X} Y `{OrderedType Y} {s:set X}
- : Equivalence (@agree_on X _ Y _ _ s).
-econstructor; eauto using agree_on_reflexive, agree_on_symmetric, agree_on_transitive.
-Qed.
-
+ 
 Lemma lookup_set_agree X `{OrderedType X} Y `{OrderedType Y} s (m m':X -> Y)
 `{Proper _ (respectful _eq _eq) m} `{Proper _ (respectful _eq  _eq) m'}
-: agree_on s m m' -> lookup_set m s [=] lookup_set m' s.
+: @agree_on _ _ _ _eq s m m' -> lookup_set m s [=] lookup_set m' s.
 Proof.
   intros; split; intros. 
   - eapply lookup_set_spec; eauto. eapply lookup_set_spec in H4; dcr; eauto.
@@ -127,41 +105,48 @@ Proof.
     eexists x; split; eauto. rewrite H7; symmetry; eapply H3; eauto. 
 Qed.
 
+Definition eagree_on X `{OrderedType X} Y R `{Equivalence Y R} D E E' 
+           := @agree_on X _ Y R D E E'.
+
+Arguments eagree_on {X} {H} {Y} {R} {H0} D E E'.
 
 
 (*Global Instance test X `{OrderedType X} Y `{Equivalence Y}
 : Proper ((@feq X _ _ Y _ _) ==> (@feq X _ _ Y _ _) ==> iff) R.
 *)
-Global Instance eq_cset_agree_on_morphism X `{OrderedType X} Y `{Equivalence Y}
-: Proper (SetInterface.Equal ==> (@feq X Y _ _) ==> feq ==> iff) agree_on.
+Global Instance eq_cset_agree_on_morphism X `{OrderedType X} Y R `{Transitive Y R} `{Symmetric Y R}
+: Proper (SetInterface.Equal ==> (@feq X Y R) ==> (@feq X Y R) ==> iff) (agree_on R).
 Proof.
-  intros. split; intros; hnf; intros. 
-  + rewrite <- (H2 x2); try reflexivity. erewrite <- (H3 x2); try reflexivity. 
-    eapply H4. eapply H1; eauto.
-  + erewrite (H2 _ ); try reflexivity. erewrite (H3 _); try reflexivity.
-    eapply H4. eapply H1; eauto.
+  unfold Proper, respectful, agree_on; split; intros.
+  + rewrite <- H2 in H6. eauto.
+  + rewrite H2 in H6. eauto.
 Qed.
 
-Global Instance incl_agree_on_morphism X `{OrderedType X} Y `{OrderedType Y}
-: Proper (SetInterface.Equal ==> (@feq X Y _ _) ==> feq ==> flip impl) agree_on.
+Global Instance incl_agree_on_morphism X `{OrderedType X} Y R `{Transitive Y R} `{Symmetric Y R}
+: Proper (SetInterface.Equal ==> (@feq X Y R) ==> (@feq X Y R) ==> flip impl) (agree_on R).
 Proof.
-  unfold respectful, impl; hnf; intros; hnf; intros.
-  hnf in H2. unfold equiv in H2.
-  hnf; intros. erewrite (H2 _ ); try reflexivity. erewrite (H3 _); try reflexivity.
-  apply H4. eapply H1; eauto.
+  unfold Proper, respectful, agree_on, flip, impl; intros.
+  rewrite H2 in H6; eauto.
+Qed.
+
+Global Instance incl_agree_on_morphism_eq X `{OrderedType X} Y R `{Transitive Y R} `{Symmetric Y R}
+: Proper (SetInterface.Equal ==> eq ==> eq ==> flip impl) (agree_on R).
+Proof.
+  unfold Proper, respectful, agree_on, flip, impl; intros; subst.
+  rewrite H2 in H6; eauto.
 Qed.
 
 Lemma agree_on_union {X} `{OrderedType X} {Y} `{OrderedType Y} (f:X->Y) g D D'
-  : agree_on D f g
-  -> agree_on D' f g
-  -> agree_on (D ∪ D') f g.
+  : eagree_on D f g
+  -> eagree_on D' f g
+  -> eagree_on (D ∪ D') f g.
 Proof.
   intros. hnf; intros. cset_tac. destruct H3; eauto.
 Qed.
 
 Global Instance agree_on_computable {X} `{OrderedType X} {Y} `{OrderedType Y}
  (f g:X->Y) D `{Proper _ (_eq ==> _eq) f} `{Proper _ (_eq ==> _eq) g}
-  : Computable (agree_on D f g).
+  : Computable (eagree_on D f g).
 Proof.
   case_eq (for_all (fun x => @decision_procedure (f x === g x) _) D); intros.
   eapply for_all_iff in H3. left. hnf; intros.

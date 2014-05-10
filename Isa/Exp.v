@@ -120,19 +120,18 @@ Set Implicit Arguments.
     @agree_on X _ (option Y) (option_R R) _.
 *)
   Lemma exp_eval_live 
-    : forall e lv E E', live_exp_sound e lv -> agree_on lv E E' -> 
+    : forall e lv E E', live_exp_sound e lv -> agree_on eq lv E E' -> 
       exp_eval E e = exp_eval E' e.
   Proof.
     intros. general induction e; inv H; simpl; eauto.
-    specialize (H0 v H2). destruct H0; eauto.
     erewrite IHe1, IHe2; eauto. 
   Qed.
 
   Global Instance eval_exp_ext 
-  : Proper (feq ==> eq ==> eq) exp_eval.
+  : Proper (@feq _ _ eq ==> eq ==> eq) exp_eval.
   Proof.
     unfold Proper, respectful; intros; subst.
-    general induction y0; simpl; eauto. specialize (H v). inv H; eauto.
+    general induction y0; simpl; eauto.
     erewrite IHy0_1, IHy0_2; eauto. 
   Qed.
 
@@ -258,8 +257,8 @@ Set Implicit Arguments.
   Lemma alpha_exp_agree_on_morph 
   : forall f g ϱ ϱ' s t,
       alpha_exp ϱ ϱ' s t
-      -> agree_on (lookup_set ϱ (freeVars s)) g ϱ'
-      -> agree_on (freeVars s) f ϱ
+      -> agree_on _eq (lookup_set ϱ (freeVars s)) g ϱ'
+      -> agree_on _eq (freeVars s) f ϱ
       -> alpha_exp f g s t.
   Proof.
     intros. general induction H; eauto using alpha_exp.
@@ -308,7 +307,10 @@ Set Implicit Arguments.
   
   Lemma alpha_exp_morph 
   : forall (ϱ1 ϱ1' ϱ2 ϱ2':env var) e e',
-      feq ϱ1  ϱ1' -> feq ϱ2 ϱ2' -> alpha_exp ϱ1 ϱ2 e e' -> alpha_exp ϱ1' ϱ2' e e'.
+      @feq _ _ eq ϱ1  ϱ1' 
+      -> @feq _ _ eq ϱ2 ϱ2' 
+      -> alpha_exp ϱ1 ϱ2 e e' 
+      -> alpha_exp ϱ1' ϱ2' e e'.
   Proof.
     intros. general induction H1; eauto using alpha_exp.
     econstructor. 

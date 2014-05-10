@@ -189,7 +189,7 @@ Inductive srd : list (option (set var)) -> stmt -> ann (set var) -> Prop :=
     -> srd (Some (getAnn als \ of_list Z)::DL) t alt
     -> srd DL (stmtLet Z s t) (ann2 lv als alt).
 
-Definition peq := prod_eq (@feq var var _ _) (@Equal var _ _).
+Definition peq := prod_eq (@feq var var eq) (@Equal var _ _).
 
 (*
 Instance srd_morphism 
@@ -443,7 +443,7 @@ Definition invariant (s:stmt) :=
 Definition rd_agree (DL:list (option (set var)))
            L (E:onv val)
   := forall n blk G', get L n blk -> get DL n (Some G') ->
-                      agree_on G' E (F.block_E blk).
+                      agree_on eq G' E (F.block_E blk).
 
 
 Lemma rd_agree_update DL L E G x v
@@ -457,36 +457,11 @@ Proof.
   eapply RA; eauto.
 Qed.
 
-Lemma update_list_agree_minus X `{OrderedType X} Y `{Equivalence Y} lv (E E' f:X -> Y) XL
-:  agree_on lv E' E 
-   -> agree_on (lv\of_list XL) (update_list E' f XL) E.
-Proof.
-  intros. general induction XL; simpl. rewrite minus_empty. eassumption.
-  rewrite add_union_singleton. rewrite union_comm. rewrite <- minus_union. 
-  eapply agree_on_update_dead.
-  cset_tac. intro; decompose records; eauto. 
-  eauto using agree_on_incl, incl_minus.
-Qed.
-
-Lemma update_with_list_agree_minus X `{OrderedType X} Y `{Equivalence Y}
-      lv (E E':X -> Y) XL YL 
-: length XL = length YL
-  -> agree_on lv E' E 
-  -> agree_on (lv\of_list XL) (E' [ XL <-- YL ]) E.
-Proof.
-  intros. eapply length_length_eq in H1. 
-  general induction H1; simpl. rewrite minus_empty. eassumption.
-  rewrite add_union_singleton. rewrite union_comm. rewrite <- minus_union. 
-  eapply agree_on_update_dead.
-  cset_tac. intro; decompose records; eauto. 
-  eauto using agree_on_incl, incl_minus.
-Qed.
-
 Lemma rd_agree_update_list DL L E E' (G G':set var) Z n vl
  (RA:rd_agree DL L E)
  (ZD:of_list Z ∩ G' [=] ∅)
  (LEQ:length Z = length vl)
- (AG:agree_on G' E E')
+ (AG:agree_on eq G' E E')
 : rd_agree (restrict (drop n DL) G') (drop n L) (E'[Z <-- vl]).
 Proof.
   hnf; intros.
@@ -500,8 +475,9 @@ Proof.
   eapply get_drop in H. eapply get_drop in H0.
   eapply map_get_4 in H0; dcr.
   hnf in RA.
-  eapply agree_on_trans. eapply agree_on_sym; eauto using agree_on_incl.
-  eapply RA; eauto. eapply restr_iff in H4; dcr; subst; eauto.
+  etransitivity; try eapply RA; eauto.
+  symmetry. eauto using agree_on_incl.
+  eapply restr_iff in H4; dcr; subst; eauto.
 Qed.
 
 
@@ -560,7 +536,7 @@ Proof.
   + inv LV. do 3 eexists; repeat split; eauto.
     hnf; intros.
     destruct n; inv H; inv H0. simpl.
-    eapply agree_on_refl. 
+    reflexivity.
     eapply RA; eauto.
 
     econstructor; eauto using agree_on_incl. 
@@ -589,7 +565,7 @@ Inductive srdSim : F.state -> I.state -> Prop :=
   (SRD:srd AL s a)
   (RA:rd_agree AL L E)
   (A: AIR2 approx' AL L)
-  (AG:agree_on (getAnn a) E EI)
+  (AG:agree_on eq (getAnn a) E EI)
   (LV:live_sound DL s a)
   : srdSim (L, E, s) (strip L, EI,s).
 
@@ -603,7 +579,8 @@ Proof.
     instantiate (1:=v). erewrite <- exp_eval_live; eauto.
     eapply srdSim_sim; econstructor; 
     eauto using approx_restrict, rd_agree_update.
-    eapply agree_on_update_same; eapply agree_on_incl; eauto.
+    eapply agree_on_update_same. reflexivity. 
+    eapply agree_on_incl; eauto.
     eapply simE; try eapply star_refl; eauto; stuck.
     erewrite <- exp_eval_live in def; eauto. congruence.
   + case_eq (exp_eval E e); intros.
@@ -628,11 +605,11 @@ Proof.
       eapply rd_agree_update_list; eauto.
       exploit omap_length; eauto. rewrite map_length. congruence.
       eapply (RA _ _ _ H1 H).
-      eapply update_with_list_agree. rewrite H12.
+      eapply update_with_list_agree; eauto. rewrite H12.
       rewrite union_comm. rewrite union_minus_remove.
       pose proof (RA _ _ G' H1 H); dcr. simpl in *.
-      eapply agree_on_sym. eapply agree_on_incl; eauto using incl_minus.
-      eapply agree_on_trans; eauto. eapply agree_on_sym. hnf in RA.
+      eapply agree_on_sym; eauto. eapply agree_on_incl; eauto using incl_minus.
+      etransitivity; eauto. symmetry. hnf in RA.
       eapply agree_on_incl; eauto.
       exploit omap_length; eauto. rewrite map_length. congruence.
     - exploit omap_exp_eval_live_agree; eauto.
@@ -645,7 +622,7 @@ Proof.
     eapply srdSim_sim; econstructor; eauto.
     hnf; intros.
     destruct n; inv H1; inv H2. simpl.
-    eapply agree_on_refl. 
+    reflexivity.
     eapply RA; eauto. 
 
     econstructor; eauto using agree_on_incl. econstructor; eauto.

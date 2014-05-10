@@ -44,32 +44,33 @@ Qed.
 
 Lemma argsLive_agree_on' (V E E':onv val) lv blv Y Z v v'
 :  argsLive lv blv Y Z
- -> agree_on lv E E'
+ -> agree_on eq lv E E'
  -> omap (exp_eval E) Y = Some v
  -> omap (exp_eval E') Y = Some v'
- -> agree_on blv (V [Z <-- List.map Some v]) (V [Z <-- List.map Some v']).
+ -> agree_on eq blv (V [Z <-- List.map Some v]) (V [Z <-- List.map Some v']).
 Proof.
-  intros. general induction H; simpl in * |- *; eauto using agree_on_refl.
-  monad_inv H2. monad_inv H3.
-  decide (z ∈ blv).
-  - erewrite <- exp_eval_live in EQ0; eauto. 
-    + assert (x1 = x) by congruence.
-      subst. simpl. 
-      eauto using agree_on_update_same, agree_on_incl.
-    + eapply H0; eauto.
-  - eapply agree_on_update_dead_both; eauto.
+  intros. general induction H; simpl in * |- *; eauto.
+  - reflexivity.
+  - monad_inv H2. monad_inv H3.
+    decide (z ∈ blv).
+    +erewrite <- exp_eval_live in EQ0; eauto. 
+     *  assert (x1 = x) by congruence.
+        subst. simpl. 
+        eauto using agree_on_update_same, agree_on_incl.
+     * eapply H0; eauto.
+    + eapply agree_on_update_dead_both; eauto.
 Qed.
 
 (* TODO: replace lemma in lib with this *)
 Lemma update_with_list_agree X Y `{OrderedType X} `{Equivalence Y} lv (E E':X -> Y) XL YL
-: agree_on (lv\of_list XL) E E'
+: agree_on eq (lv\of_list XL) E E'
   -> length XL = length YL
-  -> agree_on lv (E [ XL <-- YL]) (E' [ XL <-- YL ]).
+  -> agree_on eq lv (E [ XL <-- YL]) (E' [ XL <-- YL ]).
 Proof.
   intros. eapply length_length_eq in H2.
   general induction XL; simpl in * |- *.
   - rewrite (@minus_empty _ _ lv) in H1; eauto.
-  - inv H2. eapply agree_on_update_same.
+  - inv H2. eapply agree_on_update_same; eauto.
     eapply IHXL; eauto. rewrite minus_union; eauto.
     rewrite add_union_singleton. rewrite (empty_union_2 (s:=∅)); eauto.
     rewrite <- add_union_singleton; eauto.
@@ -77,12 +78,12 @@ Proof.
 Qed.
 
 Lemma argsLive_agree_on (V V' E E':onv val) lv blv Y Z v v'
-: agree_on (blv \ of_list Z) V V'
+: agree_on eq (blv \ of_list Z) V V'
   -> argsLive lv blv Y Z
-  -> agree_on lv E E'
+  -> agree_on eq lv E E'
   -> omap (exp_eval E) Y = Some v
   -> omap (exp_eval E') Y = Some v'
-  -> agree_on blv (V [Z <-- List.map Some v]) (V' [Z <-- List.map Some v']).
+  -> agree_on eq blv (V [Z <-- List.map Some v]) (V' [Z <-- List.map Some v']).
 Proof.
   intros. etransitivity; eauto using argsLive_agree_on'. 
   eapply update_with_list_agree; eauto.
@@ -270,7 +271,7 @@ Qed.
 
 Inductive approxF :  F.block -> F.block -> Prop :=
  | approxFI E E' Z s
-    : agree_on (IL.freeVars s \ of_list Z) E E'
+    : agree_on eq (IL.freeVars s \ of_list Z) E E'
     ->  approxF (F.blockI E Z s) (F.blockI E' Z s).
 
 Unset Printing Records.
@@ -278,7 +279,7 @@ Unset Printing Records.
 Inductive freeVarSimF : F.state -> F.state -> Prop :=
   freeVarSimFI (E E':onv val) L L' s 
   (LA: PIR2 approxF L L')
-  (AG:agree_on (IL.freeVars s) E E')
+  (AG:agree_on eq (IL.freeVars s) E E')
   : freeVarSimF (L, E, s) (L', E', s).
 
 
@@ -316,7 +317,7 @@ Proof.
     + no_step; get_functional; subst; simpl in *; congruence.
     + no_step; eauto. 
       edestruct PIR2_nth_2; eauto; dcr; eauto.
-  - no_step. simpl. erewrite exp_eval_agree; eauto using agree_on_sym.
+  - no_step. simpl. erewrite exp_eval_agree; eauto. symmetry; eauto.
   - one_step.
     eapply freeVarSimF_sim; econstructor; eauto.
     econstructor; eauto using agree_on_incl. 
@@ -327,14 +328,14 @@ Qed.
 Inductive approxF' : list (set var * params) -> F.block -> F.block -> Prop :=
   approxFI' DL E E' Z s lv
   : live_sound ((getAnn lv, Z)::DL) s lv
-    -> agree_on (getAnn lv \ of_list Z) E E'
+    -> agree_on eq (getAnn lv \ of_list Z) E E'
     ->  approxF' ((getAnn lv,Z)::DL) (F.blockI E Z s) (F.blockI E' Z s).
 
 Inductive liveSimF : F.state -> F.state -> Prop :=
   liveSimFI (E E':onv val) L L' s Lv lv 
             (LS:live_sound Lv s lv)
             (LA:AIR3 approxF' Lv L L')
-            (AG:agree_on (getAnn lv) E E')
+            (AG:agree_on eq (getAnn lv) E E')
   : liveSimF (L, E, s) (L', E', s).
 
 Lemma liveSim_freeVarSim σ1 σ2
@@ -360,7 +361,7 @@ Inductive liveSimI : I.state -> I.state -> Prop :=
   liveSimII (E E':onv val) L s Lv lv 
   (LS:live_sound Lv s lv)
   (LA:AIR3 approxI Lv L L)
-  (AG:agree_on (getAnn lv) E E')
+  (AG:agree_on eq (getAnn lv) E E')
   : liveSimI (L, E, s) (L, E', s).
 
 Lemma liveSimI_sim σ1 σ2

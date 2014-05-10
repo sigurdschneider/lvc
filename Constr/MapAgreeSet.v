@@ -37,7 +37,7 @@ Section MapAgreeSet.
   Lemma agree_on_agree_set_eq
         (lv:set X) (D D':X -> Y)
         `{Proper _ (respectful _eq _eq) D} `{Proper _ (respectful _eq _eq) D'}
-  : agree_on lv D D' -> agree_set lv D D' [=] lv.
+  : agree_on _eq lv D D' -> agree_set lv D D' [=] lv.
   Proof.
     intros. hnf; intros. split; intros.
     + eapply agree_set_spec in H4; decompose records; eauto.
@@ -48,8 +48,8 @@ Section MapAgreeSet.
   Lemma agree_set_agree_on  Z `{OrderedType Z}
         (lv:set X) (D D':X -> Y) (E E': X -> Z)
         `{Proper _ (respectful _eq _eq) D} `{Proper _ (respectful _eq _eq) D'}
-  : agree_on lv D D' -> agree_on (agree_set lv D D') E E' 
-    -> agree_on lv E E'.
+  : agree_on _eq lv D D' -> agree_on _eq (agree_set lv D D') E E' 
+    -> agree_on _eq lv E E'.
   Proof.
     intros. hnf; intros.
     eapply H5. eapply agree_set_spec; eauto. split; eauto.
@@ -60,7 +60,7 @@ Section MapAgreeSet.
         `{Proper _ (respectful _eq _eq) D} 
         `{Proper _ (respectful _eq _eq) D'}
         `{Proper _ (respectful _eq _eq) D''}
-  : agree_on lv D D' -> agree_set lv D D'' ⊆ agree_set lv D' D''.
+  : agree_on _eq lv D D' -> agree_set lv D D'' ⊆ agree_set lv D' D''.
   Proof.
     intros. hnf; intros. rewrite agree_set_spec in *; eauto.
     intuition. transitivity (D a); eauto. symmetry. eapply H4; eauto.
@@ -90,7 +90,7 @@ Arguments agree_set {X} {H} {Y} {H0} lv m m' .
 Arguments agree_set_spec {X} {H} {Y} {H0} lv m m' x {H1} {H2}.
 
 Global Instance eq_cset_agree_set_morphism X `{OrderedType X} Y `{OrderedType Y}
-  : Proper (SetInterface.Equal ==> (@fpeq X H Y H0) ==> fpeq ==> SetInterface.Equal) (@agree_set X _ Y _ ).
+  : Proper (SetInterface.Equal ==> (@fpeq X Y _eq H H0) ==> (@fpeq X Y _eq _ _) ==> SetInterface.Equal) (@agree_set X _ Y _ ).
 Proof.
   unfold respectful; unfold fpeq.
   hnf;intros; decompose records. hnf.
@@ -106,7 +106,7 @@ Proof.
 Qed.
 
 Add Parametric Morphism {X} `{OrderedType X} {Y} `{OrderedType Y} : (@lookup_set X _ Y _)
-  with signature fpeq ==> SetInterface.Equal ==> SetInterface.Equal
+  with signature (@fpeq X Y _eq _ _) ==> SetInterface.Equal ==> SetInterface.Equal
     as eq_cset_lookup_set_morphism.
 Proof.
   intros. intro. unfold fpeq in *; decompose records.
@@ -119,7 +119,7 @@ Qed.
 
 Add Parametric Morphism {X} `{OrderedType X} {Y} `{OrderedType Y}
   : (@lookup_set  X _ Y _) 
-  with signature fpeq ==> Subset ==> Subset
+  with signature (@fpeq X Y _eq _ _) ==> Subset ==> Subset
     as incl_lookup_set_morphism.
 Proof.
   intros. hnf; intros. 
@@ -148,6 +148,6 @@ Qed.
 
 (* 
  *** Local Variables: ***
- *** coq-load-path: ("../infra" "../constr" "../il"  "..") ***
+ *** coq-load-path: ((".." "Lvc")) ***
  *** End: ***
  *)

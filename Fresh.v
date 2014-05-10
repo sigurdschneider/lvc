@@ -175,12 +175,13 @@ Proof.
   hnf; intros. intro. eapply lookup_set_spec in H11.
   destruct H11; cset_tac; eauto. intuition.
 
-  rewrite update_with_list_no_update. rewrite update_with_list_no_update; eauto.
+  erewrite update_with_list_no_update; eauto. 
+  erewrite update_with_list_no_update; eauto.
   eapply H; eauto. cset_tac ; eauto.
-  rewrite update_with_list_no_update. intro.
+  erewrite update_with_list_no_update; eauto. intro.
   eapply H2; eauto.
   eapply lookup_set_spec; cset_tac; intuition. 
-  eexists x; eauto. cset_tac; eauto. eauto.
+  eexists x; eauto. cset_tac; eauto.
 Qed.
 
 Lemma inverse_on_update_fresh_list (D:set var) (Z:list var) (ϱ ϱ' : var -> var)

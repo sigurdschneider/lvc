@@ -74,7 +74,7 @@ Lemma inverse_on_lookup_list_eq {X} `{OrderedType X} {Y} `{OrderedType Y}
   lv (ϱ:X->Y) (ϱ':Y->X) Z `{Proper _ (_eq ==> _eq) ϱ} `{Proper _ (_eq ==> _eq) ϱ'}
 : inverse_on lv ϱ ϱ'
   -> of_list Z ⊆ lv 
-  -> fpeq (update_with_list (lookup_list ϱ Z) Z ϱ') ϱ'.
+  -> @fpeq _ _ _eq _ _ (update_with_list (lookup_list ϱ Z) Z ϱ') ϱ'.
 Proof.
   general induction Z; simpl; eauto. split. reflexivity. eauto.
   split. edestruct IHZ; eauto. 
@@ -90,7 +90,7 @@ Qed.
 
 
 Global Instance inverse_on_morphism {X} `{OrderedType X} {Y} `{OrderedType Y}
-  : Proper (Subset ==> (@fpeq X _ Y _)==> (@fpeq Y _ X _) ==> flip impl) inverse_on.
+  : Proper (Subset ==> (@fpeq X Y _eq _ _)==> (@fpeq Y X _eq _ _) ==> flip impl) inverse_on.
 Proof.
   unfold Proper, respectful, flip, impl; intros; hnf; intros.
   destruct H2 as [A [B C]]. destruct H3 as [A' [B' C']].
@@ -99,7 +99,7 @@ Proof.
 Qed.
 
 Global Instance inverse_on_morphism_full {X} `{OrderedType X} {Y} `{OrderedType Y}
-  : Proper (Equal ==> (@fpeq X _ Y _)==> (@fpeq Y _ X _) ==> iff) inverse_on.
+  : Proper (Equal ==> (@fpeq X Y _eq _ _)==> (@fpeq Y X _eq _ _) ==> iff) inverse_on.
 Proof.
   unfold Proper, respectful, flip, impl; intros.
   split; intros; eapply inverse_on_morphism; eauto.
@@ -151,7 +151,7 @@ Proof.
   rewrite of_list_lookup_list. rewrite lookup_set_spec. intro; dcr.
   eapply H3 in H9; eauto. eapply n. rewrite H9; eauto. eapply union_2; eauto.
   eapply union_3; eauto. eauto. eauto.
-  rewrite update_with_list_no_update. eapply H4; eauto using in_in_minus. eauto.
+  erewrite update_with_list_no_update; eauto. eapply H4; eauto using in_in_minus. 
 Qed.
 
 Lemma inverse_on_union {X} `{OrderedType X} {Y} (f:X->Y) (g:Y->X) D D'
@@ -184,9 +184,9 @@ Proof.
   intros.
   hnf; intros. cset_tac.
   pose proof (H2 _ H4).
-  rewrite update_with_list_no_update in H3.
-  rewrite update_with_list_no_update in H3; eauto.
-  intro. rewrite update_with_list_no_update in H6; eauto.
+  erewrite update_with_list_no_update in H3; eauto.
+  erewrite update_with_list_no_update in H3; eauto.
+  intro. erewrite update_with_list_no_update in H6; eauto.
   rewrite (update_with_list_no_update _ _ _ H5) in H3; eauto.
   eapply H5. rewrite <- H3. eapply update_with_list_lookup_in; eauto using length_eq_sym.
 Qed.
@@ -206,8 +206,8 @@ Lemma inverse_on_agree_on_2 {X} `{OrderedType X} {Y} `{OrderedType Y}
 `{Proper _ (_eq ==> _eq) f'}  `{Proper _ (_eq ==> _eq) g'}
  : inverse_on D f g
    -> inverse_on D f' g'
-   -> agree_on D f f'
-   -> agree_on (lookup_set f D) g g'.
+   -> agree_on _eq D f f'
+   -> agree_on _eq (lookup_set f D) g g'.
 Proof. 
   intros. unfold agree_on. intros.
   eapply lookup_set_spec in H8; eauto. destruct H8; dcr.
@@ -221,8 +221,8 @@ Lemma inverse_on_agree_on {X} `{OrderedType X} {Y} `{OrderedType Y}
  `{Proper _ (_eq ==> _eq) f}  `{Proper _ (_eq ==> _eq) f'}
  `{Proper _ (_eq ==> _eq) g}  `{Proper _ (_eq ==> _eq) g'}
   : inverse_on G f g 
-    -> agree_on G f f'
-    -> agree_on (lookup_set f G) g g'
+    -> agree_on _eq G f f'
+    -> agree_on _eq (lookup_set f G) g g'
     -> inverse_on G f' g'.
 Proof.
   intros; hnf; intros. 

@@ -33,7 +33,7 @@ Section MapLookupList.
   Qed.
 
   Lemma lookup_list_agree (m m':X -> Y) (L:list X)
-    : agree_on (of_list L) m m'
+    : agree_on eq (of_list L) m m'
     -> lookup_list m L = lookup_list m' L.
   Proof.
     general induction L; simpl in * |- *; eauto.
@@ -71,7 +71,7 @@ Qed.
 
 
 Global Instance update_with_list_inst X `{OrderedType X} Y `{OrderedType Y} :
-  Proper (eq ==> eq ==> (@feq X Y _ _) ==> feq) (@update_with_list X _ Y).
+  Proper (eq ==> eq ==> (@feq X Y  _eq ) ==> (@feq _ _ _eq)) (@update_with_list X _ Y).
 Proof.
   unfold respectful, Proper; intros. subst.
   general induction y; simpl; eauto.
@@ -81,7 +81,7 @@ Proof.
 Qed.
 
 Global Instance lookup_list_inst X `{OrderedType X} Y:
-  Proper ((@feq X Y _ _) ==> eq ==> eq) (@lookup_list X Y).
+  Proper ((@feq X Y eq) ==> eq ==> eq) (@lookup_list X Y).
 Proof.
   unfold respectful, Proper, update, feq; intros; subst. 
   general induction y0; eauto.
@@ -91,7 +91,7 @@ Qed.
 
 Lemma update_with_list_lookup_list X `{OrderedType X} Y `{OrderedType Y} (E:X -> Y) 
      `{Proper _ (_eq ==> _eq) E} (Z : list X)
-: feq (update_with_list Z (lookup_list E Z) E) E.
+: @feq _ _ _eq (update_with_list Z (lookup_list E Z) E) E.
 Proof.
   general induction Z; simpl.
   + reflexivity.

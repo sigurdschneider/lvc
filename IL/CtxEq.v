@@ -90,8 +90,8 @@ Qed.
 
 Lemma ctx_constr_E E' G G' 
   : exists C, forall E, exists EC, forall (L:list F.block) s, star step (L, E, fill C s) (L, EC, s) 
-                    /\ agree_on G EC E'
-                    /\ agree_on (G'\G) EC E.
+                    /\ agree_on eq G EC E'
+                    /\ agree_on eq (G'\G) EC E.
 Proof.
   pattern G. eapply set_induction.
   intros. eexists ctxHole. intros. eexists E. 
