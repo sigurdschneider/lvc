@@ -10,12 +10,14 @@ Set Implicit Arguments.
    this would not buy as anything. Packing things in module types only is interesting
    if the module types are instantiated; and expression are not in this development *)
 
-  Inductive binop : Set := Add | Sub | Mul.
+  Definition binop : Set := nat.
+  Definition option_lift A B C (f:A -> B -> C) := fun x y => Some (f x y).
   Definition binop_eval (o:binop) := 
     match o with
-      | Add => Peano.plus
-      | Sub => minus
-      | Mul => mult
+      | 0 => option_lift Peano.plus
+      | 1 => option_lift minus
+      | 2 => option_lift mult
+      | _ => fun _ _ => None
     end.
   
 
@@ -29,8 +31,8 @@ Set Implicit Arguments.
       | Con v => Some v
       | Var x => E x
       | BinOp o e1 e2 => mdo v1 <- exp_eval E e1; 
-                         mdo v2 <- exp_eval E e2;
-                             Some (binop_eval o v1 v2)
+                        mdo v2 <- exp_eval E e2;
+                        binop_eval o v1 v2
     end.
 
   Inductive expOfType : onv ty -> exp -> ty -> Prop :=
