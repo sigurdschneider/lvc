@@ -80,6 +80,23 @@ Definition cp_eqns (E:onv aval) (lv:set var) : eqns :=
                  | _ =>  L
                   end) lv nil.
 
+: cp_eqns E lv 
+
+Instance entails_refl 
+: Reflexive (entails).
+Proof.
+  hnf; intros. unfold entails; intros; split; eauto; try reflexivity.
+Qed.
+
+Lemma entails_monotonic_add Gamma Γ' gamma 
+: entails Gamma Γ' -> entails (gamma::Gamma) Γ'.
+Proof.
+  unfold entails; intros; dcr; split.
+  - intros. eapply H0. hnf; intros. eapply H; eauto using get.
+  - rewrite H1. rewrite eqns_freeVars_add. cset_tac; intuition.
+Qed.
+
+
 Inductive same_shape (A B:Type) : ann B -> ann A -> Prop :=
 | SameShape0 a b
   : same_shape (ann0 a) (ann0 b)
@@ -161,7 +178,7 @@ Proof.
   intros. general induction H; simpl; eauto.
 Qed.
 
-Lemma cp_sound_eqn Lv Cp Es s al alv
+Lemma cp_sound_eqn Lv Cp Es s al alv ang
 : let Gamma := (zip2Ann cp_eqns al alv (ann0 nil)) in
 live_sound Lv s alv
 -> cp_sound Cp s al alv
@@ -169,22 +186,24 @@ live_sound Lv s alv
 -> (forall (x0 : var) (v0 : val),
    (getAnn al) x0 = ⎣⎣v0 ⎦ ⎦ ->
    moreDefined (cp_eqns (getAnn al) (getAnn alv)) (cp_eqns (getAnn al) (getAnn alv)) (Var x0) (Con v0))
--> eqn_sound Es s Gamma Gamma (cp_choose s al).
+-> ssa s ang
+-> eqn_sound Es s Gamma Gamma ang (cp_choose s al).
 Proof.
-  intros. subst Gamma. general induction H0; invt live_sound; invt same_shape; simpl.
+  intros. subst Gamma. 
+  general induction H0; invt live_sound; invt same_shape; invt ssa; simpl.
   - econstructor.
     eapply IHcp_sound; eauto. simpl in * |- *.
-    + admit. 
-    + rewrite zip2Ann_get; eauto. admit.
+    + admit.
+    + rewrite zip2Ann_get; eauto.
+      
     + rewrite zip2Ann_get; eauto. admit.
     + unfold cp_choose_exp. case_eq (exp_eval Gamma e); intros.
       case_eq a; intros; subst.
       * eapply exp_eval_moreDefined; eauto.
-      * hnf; intros. 
-      
-    admit.
-    admit.
-    admit.
+      * reflexivity.
+      * reflexivity.
+    + unfold cp_choose_exp. case_eq (exp_eval Gamma e); intros; eauto.
+      case_eq a; intros; subst; simpl. eapply incl_empty. eassumption.
   - econstructor.
     
 
