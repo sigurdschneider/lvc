@@ -5,86 +5,138 @@ Require Import Val Var Env EnvTy IL Annotation Liveness ParamsMatch Restrict Sim
 
 Set Implicit Arguments.
 
-(* renamed apart, coincides with classic SSA condition *)
-Inductive ssa : set var -> stmt -> set var -> Prop :=
-  | ssaExp x e s D D'
+
+Instance prod_eq_fst_morphism X Y R R'
+: Proper (@prod_eq X Y R R' ==> R) fst.
+Proof.
+  unfold Proper, respectful; intros.
+  inv H; simpl; eauto.
+Qed.
+
+Instance prod_eq_snd_morphism X Y R R'
+: Proper (@prod_eq X Y R R' ==> R') snd.
+Proof.
+  unfold Proper, respectful; intros.
+  inv H; simpl; eauto.
+Qed.
+
+Definition pe := prod_eq (@Equal var _ _) (@Equal var _ _).
+
+
+Instance pe_morphism
+ : Proper (Equal ==> Equal ==> pe) pair.
+Proof.
+  unfold Proper, respectful.
+  intros. econstructor; eauto.
+Qed.
+
+Inductive ssa : stmt -> ann (set var * set var) -> Prop :=
+  | ssaExp x e s D D' an
     : x ∉ D 
       -> Exp.freeVars e ⊆ D
-      -> ssa (D ∪ {{x}}) s D'
-      -> ssa D (stmtExp x e s) D'
-  | ssaIf  D D' Ds Dt e s t
+      -> ssa s an
+      -> pe (getAnn an) (D ∪ {{x}}, D') 
+      -> ssa (stmtExp x e s) (ann1 (D, D') an)
+  | ssaIf  D D' Ds Dt e s t ans ant
     : Exp.freeVars e ⊆ D
       -> Ds ∩ Dt [=] D
       -> Ds ∪ Dt [=] D'
-      -> ssa D s Ds 
-      -> ssa D t Dt
-      -> ssa D (stmtIf e s t) D'
+      -> ssa s ans
+      -> ssa t ant
+      -> pe (getAnn ans) (D, Ds)
+      -> pe (getAnn ant) (D, Dt)
+      -> ssa (stmtIf e s t) (ann2 (D, D') ans ant)
   | ssaRet D D' e
     : Exp.freeVars e ⊆ D
       -> D [=] D'
-      -> ssa D (stmtReturn e) D'
+      -> ssa (stmtReturn e) (ann0 (D, D'))
   | ssaGoto D D' f Y
     : list_union (List.map Exp.freeVars Y) ⊆ D 
       -> D [=] D'
-      -> ssa D (stmtGoto f Y) D'
-  | ssaLet D D' s t Ds Dt Z
+      -> ssa (stmtGoto f Y) (ann0 (D, D'))
+  | ssaLet D D' s t Ds Dt Z ans ant
     : of_list Z ∩ D [=] ∅
       -> Ds ∩ Dt [=] D
       -> Ds ∪ Dt [=] D'
-      -> ssa (of_list Z ∪ D) s Ds 
-      -> ssa D t Dt
-      -> ssa D (stmtLet Z s t) D'.
+      -> ssa s ans 
+      -> pe (getAnn ans) (of_list Z ∪ D, Ds)
+      -> ssa t ant
+      -> pe (getAnn ant) (D, Dt)
+      -> ssa (stmtLet Z s t) (ann2 (D,D') ans ant).
 
-Lemma ssa_ext D1 D1' s D2 D2' 
-  : D1 [=] D1' -> D2 [=] D2'
-  -> ssa D1 s D2
-  -> ssa D1' s D2'.
-Proof. 
-  intros. general induction H1; simpl; eauto using ssa.
-  - econstructor. rewrite <- H2; eauto. rewrite <- H2; eauto.
-    eapply IHssa; eauto. rewrite H2; reflexivity. 
-  
-  - econstructor. rewrite <- H2; eauto. rewrite <- H2; eauto. rewrite <- H3; eauto. 
-    eapply IHssa1; eauto; reflexivity.
-    eapply IHssa2; eauto; reflexivity.
-  
-  - econstructor. rewrite <- H1; eauto. rewrite <- H1, H0; eauto.
-  - econstructor. rewrite <- H1; eauto. rewrite <- H1, H0; eauto.
-
-  - econstructor. rewrite <- H2; eauto.
-    rewrite <- H2; eauto.
-    rewrite <- H3; eauto.
-    eapply IHssa1. rewrite <- H2; reflexivity. reflexivity.
-    eapply IHssa2; eauto. reflexivity.  
+Lemma ann_R_get A B (R: A-> B-> Prop) a b
+: ann_R R a b
+  -> R (getAnn a) (getAnn b).
+Proof.
+  intros. inv H; eauto.
 Qed.
 
-Add Parametric Morphism : ssa
-  with signature SetInterface.Equal ==> 
-    eq ==> SetInterface.Equal ==> iff as ssa_morphism.
+Instance ann_R_sym {A} {R} `{Symmetric A R} : Symmetric (ann_R R).
 Proof.
-  intros x s t A. intros. split; intros.
+  hnf in H.
+  hnf; intros. general induction H0; eauto using ann_R.
+  - econstructor; eauto.
+  - econstructor; eauto.
+  - econstructor; eauto.
+Qed.
+
+Lemma ssa_ext s an an'
+  : ann_R pe an an'
+  -> ssa s an
+  -> ssa s an'.
+Proof. 
+  intros. general induction H0; simpl; invt (ann_R pe); invt pe; eauto using ssa.
+  - econstructor. rewrite <- H7; eauto. rewrite <- H7; eauto.
+    eapply IHssa; eauto. rewrite <- H7. rewrite (ann_R_get H8) in H2. 
+    rewrite <- H10. eauto.
+  
+  - econstructor. rewrite <- H7; eauto. rewrite <- H7; eauto. rewrite H1; eauto. 
+    eapply IHssa1; eauto; reflexivity.
+    eapply IHssa2; eauto; reflexivity.
+    rewrite <- (ann_R_get H10). rewrite <- H7. eauto.
+    rewrite <- (ann_R_get H11). rewrite <- H7. eauto.
+  
+  - econstructor. rewrite <- H5; eauto. rewrite <- H5, <- H7; eauto.
+  - econstructor. rewrite <- H5; eauto. rewrite <- H5, <- H7; eauto.
+
+  - econstructor. rewrite <- H7; eauto.
+    rewrite <- H7; eauto.
+    rewrite <- H12; eauto.
+    eapply IHssa1; eauto. rewrite <- H7. rewrite <- (ann_R_get H10); eauto.
+    eapply IHssa2; eauto. rewrite <- H7. rewrite <- (ann_R_get H11); eauto.
+Qed.
+
+Instance ssa_morphism
+: Proper (eq ==> (ann_R pe) ==> iff) ssa.
+Proof.
+  intros x s t A; subst. intros. split; intros.
   eapply ssa_ext; eauto.
   eapply ssa_ext; try symmetry; eauto.
 Qed.
  
-Lemma ssa_incl D D' s
-  : ssa D s D' -> D ⊆ D'.
+Lemma ssa_incl s an
+  : ssa s an -> fst (getAnn an) ⊆ snd (getAnn an).
 Proof. 
-  intros. general induction H; eauto using ssa; cset_tac.
-  eapply IHssa. cset_tac; intuition.
-  rewrite <- H1. cset_tac; intuition.
-  rewrite <- H0; intuition.
-  rewrite <- H0; intuition.
-  rewrite <- H1. cset_tac; intuition.
+  intros. general induction H; eauto using ssa; simpl; cset_tac; eauto.
+  - destruct (getAnn an); simpl in *. inv H2. rewrite <- H9. 
+    eapply IHssa. rewrite H7. cset_tac; eauto.
+  - destruct (getAnn ans); destruct (getAnn ant); simpl in *.
+    inv H4; inv H5. eapply H1. eapply H0 in H6. intuition.
+  - eapply H0; eauto.
+  - eapply H0; eauto.
+  - eapply H1. eapply H0 in H6. left; eapply H6.
 Qed.
 
-Lemma ssa_freeVars D D' s
-  : ssa D s D' -> freeVars s ⊆ D.
+Lemma ssa_freeVars s an
+  : ssa s an -> freeVars s ⊆ fst (getAnn an).
 Proof.
   intros. general induction H; simpl; eauto.
-  - rewrite H0, IHssa. cset_tac; intuition.
-  - rewrite H, IHssa1, IHssa2. cset_tac; intuition.
-  - rewrite IHssa1, IHssa2. cset_tac; intuition.
+  - rewrite H0, IHssa. inv H2; simpl. rewrite H6. 
+    clear_all; cset_tac; intuition.
+  - rewrite H, IHssa1, IHssa2. inv H4; inv H5; simpl.
+    rewrite H9, H12. cset_tac; intuition.
+  - rewrite IHssa1, IHssa2. inv H3; inv H5; simpl. 
+    rewrite H9, H12. cset_tac; intuition.
 Qed.
 
 Lemma list_union_minus_dist Y D'' s s'
@@ -107,42 +159,55 @@ Proof.
     rewrite H0, H2. reflexivity.
 Qed.
 
-Lemma ssa_minus D D' D'' s
-  : notOccur D'' s -> ssa D s D' -> ssa (D \ D'') s (D' \ D'').
+Definition pminus (D'':set var) s := 
+  match s with 
+    | pair s s' => (s \ D'', s' \ D'')
+  end.
+
+Lemma ssa_minus D an s
+  : notOccur D s -> ssa s an -> ssa s (mapAnn (pminus D) an).
 Proof.
-  intros. general induction H0. 
-  - inv H2. econstructor. intro. cset_tac; eauto.
-    eapply Exp.notOccur_freeVars in H8; eauto. rewrite meet_comm in H8.
-    rewrite <- H0. rewrite minus_inane_set; eauto. reflexivity.
-    assert ((D \ D'') ∪ {{x}} [=] (D ∪ {{x}}) \ D''). cset_tac. 
-    unfold Equivalence.equiv, _eq; simpl. 
-    split; intuition. subst; eauto. rewrite H3. eapply IHssa; eauto.
-  - inv H2. eapply Exp.notOccur_freeVars in H6.
-    econstructor; eauto. rewrite <- H. cset_tac; intuition; eauto.
+  intros. general induction H0; invt notOccur; simpl.
+  - econstructor.
+    + intro. cset_tac; eauto.
+    + eapply Exp.notOccur_freeVars in H9; eauto. rewrite meet_comm in H9.
+      rewrite <- H0. rewrite minus_inane_set; eauto. reflexivity.
+    + eapply IHssa; eauto.
+    + rewrite getAnn_mapAnn. inv H2; simpl. 
+      rewrite H10, H11. econstructor. cset_tac; intuition.
+      eapply H7. rewrite <- H6; eauto.
+      reflexivity.
+  - eapply Exp.notOccur_freeVars in H8.
+    econstructor; eauto. rewrite meet_comm in H8.
+    rewrite <- H. rewrite minus_inane_set; eauto. reflexivity.
     rewrite <- minus_dist_intersection. rewrite H0. reflexivity.
     rewrite <- minus_dist_union. rewrite H1. reflexivity.
-  - inv H1. eapply Exp.notOccur_freeVars in H3. econstructor.
-    cset_tac; intuition; eauto. rewrite H0; reflexivity.
-  - inv H1. 
-    econstructor. rewrite <- H. unfold list_union.
-    rewrite list_union_minus_dist; eauto;try reflexivity.
-    eapply incl_set_left.
-    eapply fold_left_union_morphism.
-    eapply map_ext_get.
-    intros; simpl. exploit H3; eauto. eapply Exp.notOccur_freeVars in X.
-    revert X; clear_all. cset_tac; intuition; eauto.
-    cset_tac; intuition.
+    rewrite getAnn_mapAnn. inv H2; simpl. rewrite H11, H12.
+    reflexivity.
+    rewrite getAnn_mapAnn. inv H3; simpl. rewrite H11, H12.
+    reflexivity.
+  - econstructor. 
+    eapply Exp.notOccur_freeVars in H3. 
+    rewrite meet_comm in H3.
+    rewrite <- H. rewrite minus_inane_set; eauto. reflexivity.
     rewrite H0. reflexivity.
-  - inv H2. 
-    rewrite <- H0, <- H1. rewrite minus_dist_union. rewrite minus_dist_intersection. 
-    econstructor. rewrite <- minus_dist_intersection. rewrite H0.
-    eapply incl_eq. eapply incl_empty. rewrite <- H. 
-    eapply incl_meet_lr; eauto. reflexivity. eapply minus_incl.
-    reflexivity. reflexivity.  
-    rewrite <- minus_dist_intersection. 
-    rewrite <- (minus_inane_set _ _ _ H6). rewrite <- minus_dist_union.
-    rewrite H0. eapply IHssa1; eauto.
-    rewrite <- minus_dist_intersection. rewrite H0. eapply IHssa2; eauto.
+  - econstructor. unfold list_union.
+    hnf; intros. eapply list_union_get in H2.
+    destruct H2 as [[? []]|]; dcr. edestruct map_get_4; eauto; dcr; subst.
+    exploit H3; eauto. 
+    eapply Exp.notOccur_freeVars in H3; eauto. rewrite meet_comm in H3.
+    cset_tac; intuition.
+    rewrite <- H. eapply incl_list_union; eauto. reflexivity.
+    eauto. cset_tac; intuition. rewrite H0; reflexivity.
+  - econstructor; eauto. 
+    revert H H8; clear_all; cset_tac; intuition; eauto.
+    rewrite <- H0. rewrite minus_dist_intersection. reflexivity.
+    rewrite <- H1. rewrite minus_dist_union. reflexivity.
+    rewrite getAnn_mapAnn; simpl. inv H2; simpl.
+    rewrite H11, H12. constructor; try reflexivity. 
+    revert H8; clear_all; cset_tac; intuition; eauto.
+    rewrite getAnn_mapAnn; simpl. inv H3; simpl.
+    rewrite H11, H12. reflexivity. 
 Qed.
 
 (* shadowing free *)
@@ -168,6 +233,36 @@ Inductive shadowing_free : set var -> stmt -> Prop :=
     -> shadowing_free (of_list Z ∪ D) s
     -> shadowing_free D t
     -> shadowing_free D (stmtLet Z s t).
+
+Lemma shadowing_free_ext s D D'
+  : D' [=] D
+  -> shadowing_free D s
+  -> shadowing_free D' s.
+Proof. 
+  intros EQ SF. general induction SF; simpl; econstructor; try rewrite EQ; eauto.
+  - eapply IHSF; eauto. 
+    rewrite EQ; reflexivity.
+  - eapply IHSF1; eauto. rewrite EQ. reflexivity.
+Qed.
+
+Instance shadowing_free_morphism
+: Proper (Equal ==> eq ==> iff) shadowing_free.
+Proof.
+  unfold Proper, respectful; intros; subst.
+  split; eapply shadowing_free_ext; eauto. symmetry; eauto.
+Qed.
+
+Lemma ssa_shadowing_free s an
+  : ssa s an -> shadowing_free (fst (getAnn an)) s.
+Proof.
+  intros. general induction H; simpl; try invt pe; eauto using shadowing_free.
+  - econstructor; eauto. rewrite H2 in IHssa. eauto.
+  - rewrite H4 in IHssa1. rewrite H5 in IHssa2. 
+    econstructor; eauto.
+  - rewrite H3 in IHssa1. rewrite H5 in IHssa2. 
+    econstructor; eauto.
+Qed.
+
 
 Inductive srd : list (option (set var)) -> stmt -> ann (set var) -> Prop :=
  | srdExp DL x e s lv al
@@ -360,12 +455,6 @@ Proof.
   econstructor. (* here is the counterexample *)
 Abort.
 *)
-
-Lemma ssa_shadowing_free D D' s
-  : ssa  D s D' -> shadowing_free D s.
-Proof.
-  intros. general induction H; eauto using shadowing_free.
-Qed.
 
 Lemma srd_monotone (DL DL' : list (option (set var))) s a
  : srd DL s a 
