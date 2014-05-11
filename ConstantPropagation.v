@@ -4,7 +4,7 @@ Require Import CSet Le.
 Require Import Plus Util AllInRel Map.
 Require Import CSet Val Var Env EnvTy IL ParamsMatch Sim SimApx Fresh Annotation MoreExp Coherence.
 
-Require Import Liveness Filter ValueOpts.
+Require Import Liveness Filter SetOperations ValueOpts.
 
 Set Implicit Arguments.
 Unset Printing Records.
@@ -74,13 +74,44 @@ Inductive cp_sound : list (params*list (option aval))
   -> agree_on eq lv Gamma (getAnn alb)
   -> cp_sound Cp (stmtLet Z s b) (ann2 Gamma als alb) (ann2 lv alvs alvb).
 
-Definition cp_eqns (E:onv aval) (lv:set var) : eqns :=
-  fold (fun x L => match E x with 
-                 | Some (Some c) => (Var x, Con c)::L
-                 | _ =>  L
-                  end) lv nil.
+Definition cp_eqn E x := 
+  match E x with 
+    | Some (Some c) => {{(Var x, Con c)}}
+    | _ => ∅
+  end.
 
-: cp_eqns E lv 
+Definition cp_eqns (E:onv aval) (lv:set var) : eqns :=
+  fold union (map (cp_eqn E) lv) ∅.
+
+Instance cp_eqns_morphism_equal E
+: Proper (Equal ==> Equal) (cp_eqns E).
+Proof.
+  unfold Proper, respectful, cp_eqns; intros.
+  rewrite H. reflexivity.
+Qed.
+
+Instance cp_eqns_morphism_subset E
+: Proper (Subset ==> Subset) (cp_eqns E).
+Proof.
+  unfold Proper, respectful, cp_eqns; intros.
+  rewrite H. reflexivity.
+Qed.
+
+Instance cp_eqns_morphism_flip_subset E
+: Proper (flip Subset ==> flip Subset) (cp_eqns E).
+Proof.
+  unfold Proper, respectful, cp_eqns; intros.
+  rewrite <- H. reflexivity.
+Qed.
+
+Lemma cp_eqns_union E lv lv'
+: cp_eqns E (lv ∪ lv') [=] cp_eqns E lv ∪ cp_eqns E lv'.
+Proof.
+  unfold Proper, respectful, cp_eqns; intros.
+  rewrite map_app.
+  rewrite fold_union_app. reflexivity.
+  intuition.
+Qed.
 
 Instance entails_refl 
 : Reflexive (entails).
@@ -89,14 +120,42 @@ Proof.
 Qed.
 
 Lemma entails_monotonic_add Gamma Γ' gamma 
-: entails Gamma Γ' -> entails (gamma::Gamma) Γ'.
+: entails Gamma Γ' -> entails (gamma ∪ Gamma) Γ'.
 Proof.
   unfold entails; intros; dcr; split.
-  - intros. eapply H0. hnf; intros. eapply H; eauto using get.
-  - rewrite H1. rewrite eqns_freeVars_add. cset_tac; intuition.
+  - intros. eapply H0. hnf; intros. eapply H; eauto. cset_tac; intuition.
+  - rewrite H1. rewrite eqns_freeVars_union. cset_tac; intuition.
 Qed.
 
+Lemma map_agree X `{OrderedType X} Y `{OrderedType Y} 
+      lv (f:X->Y) `{Proper _ (_eq ==> _eq) f} (g:X->Y) `{Proper _ (_eq ==> _eq) g}
+: agree_on _eq lv f g
+  -> map f lv [=] map g lv.
+Proof.
+  intros. intro.
+  repeat rewrite map_iff; eauto.
+  split; intros []; intros; dcr; eexists x; split; eauto.
+  + specialize (H3 x H5). rewrite <- H3; eauto.
+  + specialize (H3 x H5). rewrite H3; eauto.
+Qed.
 
+Lemma cp_eqn_agree lv E E'
+: agree_on eq lv E E'
+-> agree_on _eq lv (cp_eqn E) (cp_eqn E').
+Proof.
+  unfold agree_on, cp_eqn; intros.
+  rewrite H; eauto.
+Qed.
+
+Lemma cp_eqns_agree lv E E'
+: agree_on eq lv E E'
+  -> cp_eqns E lv [=] cp_eqns E' lv.
+Proof.
+  intros. hnf; intro. unfold cp_eqns.
+  rewrite map_agree; eauto using cp_eqn_agree. reflexivity.
+  intuition. intuition.
+Qed.
+    
 Inductive same_shape (A B:Type) : ann B -> ann A -> Prop :=
 | SameShape0 a b
   : same_shape (ann0 a) (ann0 b)
@@ -125,7 +184,7 @@ Lemma zip2Ann_get X Y Z f a b
 *)
 
 Definition cp_eqns_ann (a:ann (onv aval)) (b:ann (set var)) : ann eqns :=
-  zip2Ann cp_eqns a b (ann0 nil).
+  zip2Ann cp_eqns a b (ann0 ∅).
 
 Definition cp_choose_exp E e :=
   match exp_eval E e with 
@@ -178,14 +237,128 @@ Proof.
   intros. general induction H; simpl; eauto.
 Qed.
 
+Lemma in_or_not X `{OrderedType X} x s
+:   { x ∈ s /\ s [=] s \ {{x}} ∪ {{x}} }
+  + { x ∉ s /\ s [=] s \ {{x}} }.
+Proof.
+  decide (x ∈ s); [left|right]; split; eauto.
+  - cset_tac; intuition. decide (_eq a x); eauto.
+    rewrite H1; eauto.
+  - cset_tac; intuition. intro. rewrite H1 in H0; eauto.
+Qed.
+
+Lemma entails_union_split Gamma Γ' Γ''
+: entails Gamma (Γ' ∪ Γ'')
+-> entails Gamma (Γ')
+/\ entails Gamma (Γ'').
+Proof.
+  unfold entails, satisfiesAll.
+  split; intros; dcr.
+    + split; intros. eapply H0; eauto. cset_tac; intuition.
+      rewrite <- H1. rewrite eqns_freeVars_union. eapply incl_left.
+    + split; intros. eapply H0; eauto. cset_tac; intuition.
+      rewrite <- H1. rewrite eqns_freeVars_union. eapply incl_right.
+Qed.
+
+Lemma entails_union Gamma Γ' Γ''
+: entails Gamma (Γ')
+/\ entails Gamma (Γ'')
+-> entails Gamma (Γ' ∪ Γ'').
+Proof.
+  unfold entails, satisfiesAll.
+  split; intros; dcr.
+  + intros. cset_tac. destruct H1; eauto.
+  + rewrite eqns_freeVars_union. cset_tac; intuition.
+Qed.
+
+Instance option_R_trans `{Transitive} : Transitive (option_R R).
+Proof.
+  hnf; intros. inv H0; inv H1. econstructor; eauto.
+Qed.
+
+Lemma cp_eqns_in AE x lv v
+  : x \In lv
+    -> AE x = ⎣⎣v ⎦ ⎦
+    -> (Var x, Con v) ∈ cp_eqns AE lv.
+Proof.
+  intros. unfold cp_eqns.
+  eapply fold_union_incl.
+  instantiate (1:={{ (Var x, Con v) }}). cset_tac; intuition.
+  assert (cp_eqn AE x = {{ (Var x, Con v) }}).
+  unfold cp_eqn. rewrite H0. reflexivity.
+  rewrite <- H1. eapply map_1; eauto.
+  intuition.
+Qed.
+
+Lemma cp_eqns_satisfies_env AE E x v lv
+: x ∈ lv
+  -> AE x = ⎣⎣v ⎦ ⎦
+  -> satisfiesAll E (cp_eqns AE lv)
+  -> E x = ⎣v ⎦.
+Proof.
+  intros. exploit H1; eauto.
+  instantiate (1:=(Var x, Con v)). 
+  eapply cp_eqns_in; eauto.
+  hnf in X; simpl in *. inv X; eauto.
+Qed.
+
+Lemma exp_eval_same e lv AE E v v'
+:   live_exp_sound e lv
+    -> exp_eval AE e = ⎣⎣v ⎦ ⎦
+    -> satisfiesAll E (cp_eqns AE lv)
+    -> Exp.exp_eval E e = Some v'
+    -> option_R eq ⎣v' ⎦ ⎣v ⎦.
+Proof.
+  intros. general induction H; simpl in * |- *; eauto using option_R.
+  - exploit cp_eqns_satisfies_env; eauto.
+    rewrite X; eauto using option_R.
+  - monad_inv H1. monad_inv H3.
+    destruct x, x0; isabsurd.
+    exploit IHlive_exp_sound1; eauto.
+    exploit IHlive_exp_sound2; eauto.
+    rewrite EQ0, EQ4; simpl. rewrite EQ5.
+    inv X. inv X0. simpl in *. rewrite EQ5 in EQ2.
+    inv EQ2. constructor; eauto.
+Qed.
+  
+Lemma exp_eval_entails AE e v x lv
+: live_exp_sound e lv
+  -> exp_eval AE e = ⎣⎣v ⎦ ⎦
+  -> entails ({{ (Var x, e) }} ∪ cp_eqns AE lv) {{(Var x, Con v)}}.
+Proof.
+  intros.
+  unfold entails; split; intros. unfold satisfiesAll, satisfies; intros.
+  exploit (H1 (Var x, e)); eauto. 
+  cset_tac; intuition. cset_tac. invc H2; simpl in *; subst; simpl. 
+  inv X.
+  eapply satisfiesAll_union in H1; dcr.
+  exploit exp_eval_same; try eapply H1; eauto.
+  etransitivity. instantiate (1:=(eqns_freeVars {{(Var x, e)}})).
+  unfold eqns_freeVars.
+  repeat rewrite map_single; eauto using freeVars_Proper.
+  repeat rewrite (@fold_single _ _ _ Equal). 
+  simpl. cset_tac; intuition.
+  eapply Equal_ST. eapply union_m. eapply transpose_union.
+  eapply Equal_ST. eapply union_m. eapply transpose_union.
+  assert ( {(Var x, e); {}} ⊆ {(Var x, e); {}} ∪ cp_eqns AE lv).
+  cset_tac; intuition.
+  rewrite <- H1. reflexivity.
+Qed. 
+
+Lemma entails_empty s
+: entails s ∅.
+Proof.
+  hnf; intros. split; intros.
+  - hnf; intros. cset_tac; intuition.
+  - rewrite (incl_empty _ s). reflexivity.
+Qed.
+  
+
 Lemma cp_sound_eqn Lv Cp Es s al alv ang
-: let Gamma := (zip2Ann cp_eqns al alv (ann0 nil)) in
+: let Gamma := (zip2Ann cp_eqns al alv (ann0 ∅)) in
 live_sound Lv s alv
 -> cp_sound Cp s al alv
 -> same_shape al alv
--> (forall (x0 : var) (v0 : val),
-   (getAnn al) x0 = ⎣⎣v0 ⎦ ⎦ ->
-   moreDefined (cp_eqns (getAnn al) (getAnn alv)) (cp_eqns (getAnn al) (getAnn alv)) (Var x0) (Con v0))
 -> ssa s ang
 -> eqn_sound Es s Gamma Gamma ang (cp_choose s al).
 Proof.
@@ -193,18 +366,52 @@ Proof.
   general induction H0; invt live_sound; invt same_shape; invt ssa; simpl.
   - econstructor.
     eapply IHcp_sound; eauto. simpl in * |- *.
-    + admit.
     + rewrite zip2Ann_get; eauto.
-      
+      destruct (in_or_not x (getAnn alv)); dcr.
+      * rewrite H7. rewrite cp_eqns_union. eapply entails_union; split.
+        { 
+          rewrite <- (cp_eqns_agree H); eauto.
+          eapply entails_monotonic_add.
+          rewrite <- H13. reflexivity.
+        } 
+        { 
+          unfold cp_eqns. rewrite map_single; [| intuition].
+          rewrite (@fold_single _ _ _ Equal).
+          unfold cp_eqn at 2. case_eq (getAnn al x); intros.
+          destruct a. rewrite H8 in H1.
+          intros. rewrite union_comm, empty_neutral_union.
+          eapply exp_eval_entails; eauto. 
+          rewrite empty_neutral_union.
+          eapply entails_empty.
+          rewrite empty_neutral_union.
+          eapply entails_empty.
+          eapply Equal_ST.
+          eapply union_m.
+          eapply transpose_union.
+        }
+        
+      * rewrite H7. rewrite <- (cp_eqns_agree H); eauto.
+        eapply entails_monotonic_add.
+        rewrite <- H13. reflexivity.
     + rewrite zip2Ann_get; eauto. admit.
-    + unfold cp_choose_exp. case_eq (exp_eval Gamma e); intros.
+    +
+      Lemma 
+        : moreDefined (cp_eqns Gamma lv) (cp_eqns Gamma lv) e (cp_choose_exp Gamma e)
+      unfold cp_choose_exp. case_eq (exp_eval Gamma e); intros.
       case_eq a; intros; subst.
-      * eapply exp_eval_moreDefined; eauto.
+      * hnf; intros.
+        case_eq (Exp.exp_eval E e); intros.
+        exploit exp_eval_same; try eapply H17; eauto.
+        simpl; eauto. inv X; econstructor; eauto.
+        econstructor.
       * reflexivity.
       * reflexivity.
     + unfold cp_choose_exp. case_eq (exp_eval Gamma e); intros; eauto.
       case_eq a; intros; subst; simpl. eapply incl_empty. eassumption.
-  - econstructor.
+  - admit.
+  - admit.
+  - econstructor. 
+    
     
 
 
