@@ -318,6 +318,90 @@ Set Implicit Arguments.
     + rewrite <- H2; eauto.
   Qed.
 
+Inductive expLt : exp -> exp -> Prop :=
+| expLtCon c c' 
+  : _lt c c'
+    -> expLt (Con c) (Con c')
+| expLtConVar c v
+  : expLt (Con c) (Var v)
+| expLtConBinop c o e1 e2
+  : expLt (Con c) (BinOp o e1 e2)
+| expLtVar v v'
+  : _lt v v'
+    -> expLt (Var v) (Var v')
+| expLtVarBinop v o e1 e2
+  : expLt (Var v) (BinOp o e1 e2)
+| expLtBinOp1 o o' e1 e1' e2 e2'
+  : _lt o o'
+    -> expLt (BinOp o e1 e2) (BinOp o' e1' e2')
+| expLtBinOp2 o e1 e1' e2 e2'
+  : expLt e1 e1'
+    -> expLt (BinOp o e1 e2) (BinOp o e1' e2')
+| expLtBinOp3 o e1 e2 e2'
+  : expLt e2 e2'
+    -> expLt (BinOp o e1 e2) (BinOp o e1 e2').
+
+
+Instance expLt_irr : Irreflexive expLt.
+hnf; intros; unfold complement.
+- induction x; inversion 1; subst; eauto using StrictOrder_Irreflexive. 
+  + eapply (StrictOrder_Irreflexive _ H2).
+  + eapply (StrictOrder_Irreflexive _ H2).
+  + eapply (StrictOrder_Irreflexive _ H1).
+Qed.
+
+Instance expLt_trans : Transitive expLt.
+hnf; intros. 
+general induction H; invt expLt; eauto using expLt. 
+- econstructor. eapply StrictOrder_Transitive; eauto.
+- econstructor. eapply StrictOrder_Transitive; eauto.
+- econstructor; eauto. transitivity o'; eauto.
+Qed.
+
+Notation "'Compare' x 'next' y" :=
+  (match x with
+    | Eq => y
+    | z => z
+  end) (at level 100).
+
+Fixpoint exp_cmp (e e':exp) :=
+  match e, e' with 
+    | Con c, Con c' => _cmp c c'
+    | Con _, _ => Lt
+    | Var v, Var v' => _cmp v v'
+    | Var v, BinOp _ _ _ => Lt
+    | BinOp o e1 e2, BinOp o' e1' e2' => 
+      Compare _cmp o o' next 
+      Compare exp_cmp e1 e1' next 
+      Compare exp_cmp e2 e2' next Eq
+    | _, _ => Gt
+  end.
+
+Instance StrictOrder_expLt : OrderedType.StrictOrder expLt eq.
+econstructor.
+eapply expLt_trans. 
+intros. intro. eapply expLt_irr. rewrite H0 in H.
+eapply H.
+Qed.
+
+Instance OrderedType_exp : OrderedType exp :=
+ { _eq := eq;
+  _lt := expLt;
+  _cmp := exp_cmp}.
+intros. 
+general induction x; destruct y; simpl; try now (econstructor; eauto using expLt).
+pose proof (_compare_spec v v0). 
+inv H; now (econstructor; eauto using expLt).
+pose proof (_compare_spec v v0). 
+inv H; now (econstructor; eauto using expLt).
+pose proof (_compare_spec b b0).
+specialize (IHx1 y1). specialize (IHx2 y2).
+inv H; try now (econstructor; eauto using expLt).
+inv H1.
+inv IHx1; try now (econstructor; eauto using expLt).
+inv IHx2; try now (econstructor; eauto using expLt).
+Defined.
+
 
 (* End Expressions. *)
 
