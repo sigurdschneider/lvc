@@ -114,10 +114,10 @@ Inductive moreDef {X} : option X -> option X -> Prop :=
   | moreDefSome v v' : moreDef (Some v) (Some v')
   | moreDefNone x : moreDef None x.
 
-Definition eqns := list eqn.
+Definition eqns := set eqn.
 
 Definition satisfiesAll (E:onv val) (Gamma:eqns) := 
-  forall n gamma, get Gamma n gamma -> satisfies E gamma.
+  forall gamma, gamma ∈ Gamma -> satisfies E gamma.
 
 Definition sem_entails Gamma Γ' := forall E, satisfiesAll E Gamma -> satisfiesAll E Γ'. 
 
@@ -127,7 +127,7 @@ Definition freeVars (gamma:exp * exp) :=
 Definition domain (gamma:exp * exp) := 
   let (e,e'):= gamma in Exp.freeVars e.
 
-Definition eqns_freeVars (Gamma:eqns) := list_union (List.map freeVars Gamma).
+Definition eqns_freeVars (Gamma:eqns) := fold union (map freeVars Gamma) ∅.
 
 Definition entails Gamma Γ' := (forall E, satisfiesAll E Gamma -> satisfiesAll E Γ') 
 /\ eqns_freeVars Γ' ⊆ eqns_freeVars Gamma. 
@@ -172,16 +172,15 @@ Definition moreDefinedArgs Gamma Γ' Y Y' :=
 
 
 Definition remove (Gamma:eqns) G :=
-  List.filter (fun gamma => B[freeVars gamma ∩ G [=] ∅]) Gamma.
+  filter (fun gamma => B[freeVars gamma ∩ G [=] ∅]) Gamma.
 
 Definition subst_eqn (ϱ : env exp) (e: eqn) :=
   (subst_exp ϱ (fst e), subst_exp ϱ (snd e)).
 
-Definition subst_eqns (ϱ : env exp) (G:list eqn) :=
-  List.map (subst_eqn ϱ) G.
+Definition subst_eqns (ϱ : env exp) (G:eqns) :=
+  map (subst_eqn ϱ) G.
 
 Definition sid := fun x => Var x.
-
 
 Inductive eqn_sound : list (params*set var*eqns*eqns*eqns*eqns) 
                       -> stmt 
@@ -193,8 +192,8 @@ Inductive eqn_sound : list (params*set var*eqns*eqns*eqns*eqns)
 | EqnOpr x Lv b e Gamma al Γ' (al':ann (eqns)) e' cl G G' ang
   : eqn_sound Lv b al al' ang cl 
     (* make sure the rest conforms to the new assignment *)
-    -> entails ((Var x,e)::Gamma) (getAnn al)
-    -> entails ((Var x,e')::Γ') (getAnn al')
+    -> entails ({{(Var x,e)}} ∪ Gamma) (getAnn al)
+    -> entails ({{(Var x,e')}} ∪ Γ') (getAnn al')
     -> moreDefined Gamma Γ' e e'
     -> Exp.freeVars e' ⊆ G
     -> eqn_sound Lv (stmtExp x e b) (ann1 Gamma al) (ann1 Γ' al')
@@ -223,9 +222,9 @@ Inductive eqn_sound : list (params*set var*eqns*eqns*eqns*eqns)
 | EqnLet Lv s Z b Gamma Γ' EqS EqS' als alb als' alb' cls clb G G' angs angb
   : eqn_sound ((Z, G, Gamma, EqS, Γ', EqS')::Lv) s als als' angs cls
   -> eqn_sound ((Z, G ,Gamma, EqS, Γ', EqS')::Lv) b alb alb' angb clb
-  -> entails (EqS ++ Gamma) (getAnn als)
+  -> entails (EqS ∪ Gamma) (getAnn als)
   -> entails Gamma (getAnn alb)
-  -> entails (EqS' ++ Γ') (getAnn als')
+  -> entails (EqS' ∪ Γ') (getAnn als')
   -> entails Γ' (getAnn alb')
   -> eqns_freeVars EqS ⊆ G ++ of_list Z
   -> eqns_freeVars EqS' ⊆ G ++ of_list Z
@@ -252,8 +251,8 @@ Definition ArgRel E E' (a:list var*set var*eqns*eqns*eqns*eqns) (VL VL': list va
   let '(Z, G, Gamma, EqS, Γ', EqS') := a in
   length Z = length VL 
   /\ VL = VL' 
-  /\ satisfiesAll (E[Z <-- List.map Some VL]) (EqS ++ Gamma)
-  /\ satisfiesAll (E'[Z <-- List.map Some VL']) (EqS' ++ Γ').
+  /\ satisfiesAll (E[Z <-- List.map Some VL]) (EqS ∪ Gamma)
+  /\ satisfiesAll (E'[Z <-- List.map Some VL']) (EqS' ∪ Γ').
 
 Definition ParamRel (a:params*set var*eqns*eqns*eqns*eqns) (Z Z' : list var) : Prop := 
   let '(Zb, G, Gamma, EqS, Γ', EqS') := a in  
@@ -299,7 +298,6 @@ Proof.
 Qed.
 *)
 
-
 Lemma fold_union_incl X `{OrderedType.OrderedType X} s u (x:X) y
   : x ∈ y
     -> y ∈ s
@@ -315,12 +313,120 @@ Proof.
     hnf; intros. cset_tac; intuition.
 Qed.
 
-Lemma eqns_freeVars_incl (Gamma:eqns) gamma n
-  : get Gamma n gamma
-    -> freeVars gamma ⊆ eqns_freeVars Gamma.
+Lemma transpose_union X `{OrderedType X}
+      : transpose Equal union.
 Proof.
-  intros. unfold eqns_freeVars. 
-  eapply incl_list_union. eapply map_get_1; eauto. reflexivity.
+  hnf; intros. cset_tac; intuition.
+Qed.
+
+Lemma transpose_union_subset X `{OrderedType X}
+      : transpose Subset union.
+Proof.
+  hnf; intros. cset_tac; intuition.
+Qed.
+
+Lemma fold_union_incl_start X `{OrderedType.OrderedType X} s u (x:X)
+  : x ∈ u
+    -> x ∈ fold union s u.
+Proof.
+  revert_except s.
+  pattern s. eapply set_induction; intros.
+  - rewrite fold_1; eauto using Equal_ST.
+  - rewrite fold_2; eauto using Equal_ST, transpose_union. 
+    cset_tac. right. eapply H0; eauto.
+    eapply union_m.
+Qed.
+
+Lemma map_app X `{OrderedType X} Y `{OrderedType Y} (f:X->Y) 
+      `{Proper _ (_eq ==> _eq) f} s t 
+: map f (s ∪ t) [=] map f s ∪ map f t.
+Proof. 
+  cset_tac. repeat rewrite map_iff; eauto. 
+  split; intros. destruct H2.
+  dcr.
+  eapply union_cases in H3. firstorder.
+  intuition. destruct H3; dcr. eexists; split; eauto. cset_tac; eauto.
+  intuition. destruct H3; dcr. eexists; split; eauto. cset_tac; eauto.
+Qed.
+
+Lemma map_empty X `{OrderedType X} Y `{OrderedType Y} (f:X->Y) 
+      `{Proper _ (_eq ==> _eq) f}
+: map f ∅ [=] ∅.
+Proof. 
+  cset_tac.
+  rewrite map_iff; eauto. 
+  firstorder. cset_tac; eauto.
+Qed.
+
+Instance map_Proper X `{OrderedType X} Y `{OrderedType Y}
+  : Proper (@fpeq X Y _eq _ _ ==> _eq ==> _eq) map.
+Proof.
+  unfold Proper, respectful; intros. inv H1; dcr.
+  hnf; intros. repeat rewrite map_iff; eauto.
+  intuition. 
+  destruct H4; dcr; eexists; split; eauto.
+  rewrite <- H2; eauto. rewrite H8. eapply H3.
+  destruct H4; dcr; eexists; split; eauto.
+  rewrite H2; eauto. rewrite H8. symmetry. eapply H3.
+Qed.
+
+
+Instance subst_exp_Proper Z Y
+  : Proper (_eq ==> _eq) (subst_exp (sid [Z <-- Y])).
+Proof.
+  hnf; intros. inv H. clear H.
+  simpl. general induction y; simpl; eauto.
+Qed.
+
+Instance subst_eqn_Proper ϱ
+  : Proper (_eq ==> _eq) (subst_eqn ϱ).
+Proof.
+  hnf; intros. invc H. simpl in *; subst. reflexivity.
+Qed.
+
+Instance subst_eqns_morphism 
+: Proper (eq ==> Equal ==> Equal) subst_eqns.
+Proof.
+  unfold Proper, respectful, subst_eqns; intros; subst.
+  eapply map_Proper; eauto.
+  hnf; intros; split.
+  reflexivity.
+  split; eauto using subst_eqn_Proper.
+Qed.
+
+Instance subst_eqns_morphism_subset
+: Proper (eq ==> Subset ==> Subset) subst_eqns.
+Proof.
+  unfold Proper, respectful, subst_eqns; intros; subst.
+  rewrite H0. reflexivity.
+Qed.
+
+Instance subst_eqns_morphism_subset_flip 
+: Proper (eq ==> flip Subset ==> flip Subset) subst_eqns.
+Proof.
+  unfold Proper, respectful, subst_eqns; intros; subst.
+  rewrite H0. reflexivity.
+Qed.
+
+
+
+Instance fold_union_Proper X `{OrderedType X}
+  : Proper (_eq ==> _eq ==> _eq) (fold union).
+Proof.
+  unfold Proper, respectful.
+  intros. revert_except x. pattern x.
+  eapply set_induction; intros.
+  - repeat rewrite fold_1; eauto.
+    rewrite <- H1; eauto.
+  - rewrite fold_2; eauto using union_m.
+    eapply Add_Equal in H2.
+    rewrite H3 in H2.
+    eapply Add_Equal in H2.
+    symmetry.
+    rewrite fold_2; eauto using union_m. 
+    rewrite H0; try reflexivity. symmetry; eauto.
+    hnf; intros. hnf. cset_tac; intuition.
+    hnf; intros. hnf. cset_tac; intuition.    
 Qed.
 
 Instance exp_freeVars_Proper
@@ -334,6 +440,15 @@ Instance freeVars_Proper
   :  Proper (_eq ==> _eq) freeVars.
 Proof.
   hnf; intros. inv H. inv H0. inv H1. reflexivity.
+Qed.
+
+Lemma eqns_freeVars_incl (Gamma:eqns) gamma
+  : gamma ∈ Gamma
+    -> freeVars gamma ⊆ eqns_freeVars Gamma.
+Proof.
+  intros. unfold eqns_freeVars. 
+  hnf; intros. eapply fold_union_incl; eauto. 
+  eapply map_1; eauto. eapply freeVars_Proper.
 Qed.
 
 Lemma list_union_start_swap X `{OrderedType X} (L : list (set X)) s
@@ -350,20 +465,99 @@ Proof.
   general induction L; simpl; eauto using list_union_start_swap.
 Qed.
 
+(*
+Lemma fold_union_con X `{OrderedType X} x s
+ : fold union {x; s} {} [=] x ∪ fold union s {}.
+Proof.
+  revert x.
+  pattern s. eapply set_induction.
+  - intros. rewrite fold_add; eauto.
+    reflexivity. eapply Equal_ST. eapply union_m.
+    hnf; intros. cset_tac; intuition.
+  - intros.
+    rewrite fold_2; eauto.
+    eapply Add_Equal in H2. rewrite H2.
+    rewrite H0.
+Qed.
+*)
+
+
+Lemma fold_union_app X `{OrderedType X} Gamma Γ'
+: fold union (Gamma ∪ Γ') {}[=]
+  fold union Gamma {} ∪ fold union Γ' {}.
+Proof.
+  revert Γ'. pattern Gamma. eapply set_induction.
+  - intros. eapply empty_is_empty_1 in H0. 
+    rewrite H0. rewrite empty_neutral_union.
+    rewrite fold_empty.
+    rewrite empty_neutral_union. reflexivity.
+  - intros. 
+    eapply Add_Equal in H2. rewrite H2.
+    assert ({x; s} ++ Γ' [=] (s ++ {x; Γ'})).
+    clear_all; cset_tac; intuition.
+    rewrite H3. rewrite H0. 
+    decide (x ∈ Γ').
+    rewrite add_fold; eauto using Equal_ST, union_m, transpose_union.
+    rewrite fold_add; eauto using Equal_ST, union_m, transpose_union.
+    symmetry. 
+    rewrite union_comm. rewrite <- union_assoc.
+    rewrite <- (union_comm _ x).
+    rewrite (incl_union_absorption _ x). rewrite union_comm. reflexivity.
+    hnf; intros. eapply fold_union_incl; eauto. 
+    rewrite fold_add; eauto using Equal_ST, union_m, transpose_union.
+    rewrite fold_add; eauto using Equal_ST, union_m, transpose_union.
+    symmetry. rewrite (union_comm _ x). rewrite union_assoc. reflexivity.
+Qed.
+
 Lemma eqns_freeVars_union Gamma Γ'
-  : eqns_freeVars (Gamma ++ Γ') [=] eqns_freeVars (Gamma) ∪ eqns_freeVars Γ'.
+  : eqns_freeVars (Gamma ∪ Γ') [=] eqns_freeVars (Gamma) ∪ eqns_freeVars Γ'.
 Proof.
   unfold eqns_freeVars.
-  rewrite List.map_app.
-  unfold list_union. rewrite list_union_app. reflexivity.
+  rewrite map_app; eauto using freeVars_Proper.
+  rewrite fold_union_app. reflexivity.
+Qed.
+
+Lemma map_single {X} `{OrderedType X} Y `{OrderedType Y} (f:X->Y) 
+      `{Proper _ (_eq ==> _eq) f} x
+      : map f {{x}} [=] {{f x}}.
+Proof.
+  hnf; intros. rewrite map_iff; eauto.
+  split; intros.
+  - destruct H2; dcr. cset_tac. rewrite H4, H3; eauto.
+  - cset_tac. eexists x; split; eauto. cset_tac; intuition.
+Qed.
+
+Lemma fold_single {X} `{OrderedType X} Y `{Equivalence Y} (f:X->Y->Y) 
+      `{Proper _ (_eq ==> R ==> R) f} (x:X) (s:Y)
+      : transpose R f
+        -> R (fold f {{x}} s) (f x s).
+Proof.
+  hnf; intros.
+  rewrite fold_2; eauto. rewrite fold_empty. reflexivity.
+  cset_tac; intuition.
 Qed.
 
 Lemma eqns_freeVars_add Gamma e 
-  : eqns_freeVars (e::Gamma) [=] eqns_freeVars (Gamma) ∪ freeVars e.
+  : eqns_freeVars ({{e}} ∪ Gamma) [=] eqns_freeVars (Gamma) ∪ freeVars e.
 Proof.
-  intros. unfold eqns_freeVars. simpl. unfold list_union. simpl. 
-  rewrite list_union_start_swap. 
+  intros. unfold eqns_freeVars. 
+  rewrite map_app; eauto using freeVars_Proper.
+  rewrite fold_union_app. rewrite map_single.
+  rewrite fold_single. 
   cset_tac; intuition.
+  eapply Equal_ST.
+  eapply union_m.
+  eapply transpose_union.
+  eapply freeVars_Proper.
+Qed.
+
+Lemma eqns_freeVars_add' Gamma e 
+  : eqns_freeVars ({e ; Gamma}) [=] eqns_freeVars (Gamma) ∪ freeVars e.
+Proof.
+  intros. unfold eqns_freeVars. 
+  assert ({e; Gamma} [=] {{e}} ∪ Gamma).
+  cset_tac; intuition.
+  rewrite H. eapply eqns_freeVars_add.
 Qed.
 
 Ltac dowith c t :=
@@ -372,12 +566,12 @@ Ltac dowith c t :=
   end.
 
 Lemma satisfiesAll_union E Gamma Γ'
-: satisfiesAll E (Gamma ++ Γ')
+: satisfiesAll E (Gamma ∪ Γ')
   <-> satisfiesAll E Gamma /\ satisfiesAll E Γ'.
 Proof.
   split.
-  intros H; split; hnf; intros; eapply H; eauto using get_app, get_shift.
-  intros [A B]; hnf; intros. eapply get_app_cases in H.
+  intros H; split; hnf; intros; eapply H; cset_tac; intuition.
+  intros [A B]; hnf; intros. cset_tac. 
   destruct H; dcr; eauto.
 Qed.
 
@@ -468,7 +662,7 @@ Proof.
 Qed.
 
 Lemma entails_freeVars_incl Gamma Γ' G x e
-: entails ((Var x, e)::Gamma) Γ'
+: entails ({{(Var x, e)}} ∪ Gamma) Γ'
   -> Exp.freeVars e ⊆ G
   -> eqns_freeVars Gamma ⊆ G
   -> eqns_freeVars Γ' ⊆ G ∪ {{x}}.
@@ -479,28 +673,107 @@ Proof.
   clear_all; cset_tac; intuition.
 Qed.
 
-Instance subst_exp_Proper Z Y
-  : Proper (_eq ==> _eq) (subst_exp (sid [Z <-- Y])).
-Proof.
-  hnf; intros. inv H. clear H.
-  simpl. general induction y; simpl; eauto.
-Qed.
-
-Instance subst_eqn_Proper Z Y
-  : Proper (_eq ==> _eq) (subst_eqn (sid [Z <-- Y])).
-Proof.
-  hnf; intros. inv H. hnf in H0, H1. subst. clear H.
-  simpl. unfold subst_eqn; simpl. 
-  rewrite subst_exp_Proper; try reflexivity.
-Qed.
-
 Lemma entails_add Gamma gamma Γ'
-: entails Gamma (gamma::Γ')
+: entails Gamma ({{gamma}} ∪ Γ')
   -> entails Gamma Γ'.
 Proof.
   unfold entails; intros; dcr; split; intros.
-  - hnf; intros. eapply H0; eauto using get.
+  - hnf; intros. eapply H0; eauto. cset_tac; intuition.
   - rewrite <- H1. rewrite eqns_freeVars_add. cset_tac; intuition.
+Qed.
+
+Instance map_freeVars_morphism 
+: Proper (Subset ==> Subset) (map freeVars).
+Proof.
+  unfold Proper, respectful; intros.
+  hnf; intros. eapply map_iff; eauto using freeVars_Proper.
+  eapply map_iff in H0; eauto using freeVars_Proper.
+  destruct H0; dcr. eexists x0; split; eauto.
+Qed.
+
+Lemma incl_fold_union X `{OrderedType X} s t x
+  :  x \In fold union s t
+     -> (exists s', s' ∈ s /\ x ∈ s') \/ x ∈ t.
+Proof.
+  revert_except s. pattern s. eapply set_induction; intros.
+  - assert (fold union s0 t [=] t) by
+        (rewrite fold_1; eauto using Equal_ST; reflexivity).
+    rewrite H2 in H1; eauto.
+  - eapply Add_Equal in H2. rewrite H2 in H3.
+    decide (x ∈ s0).
+    + rewrite fold_add in H3; eauto using union_m, transpose_union_subset.
+      cset_tac. destruct H3.
+      left. eexists x. split. eapply H2. cset_tac; intuition. eauto.
+      edestruct H0; eauto. destruct H4; dcr.
+      left; eexists x1; split; eauto. eapply H2. cset_tac; intuition.
+      exfalso; eauto.
+    + rewrite fold_add with (eqA:=Equal) in H3; eauto using union_m, transpose_union, Equal_ST.
+      cset_tac. destruct H3. left; eexists x; split; eauto.
+      eapply H2. cset_tac; intuition.
+      eapply H0 in H3. destruct H3; eauto.
+      destruct H3; dcr. left; eexists x1; split; eauto.
+      eapply H2. cset_tac; intuition.
+Qed.
+
+Instance fold_union_morphism X `{OrderedType X}
+: Proper (Subset ==> Subset ==> Subset) (fold union).
+Proof.
+  unfold Proper, respectful; intros.
+  hnf; intros.
+  eapply incl_fold_union in H2. destruct H2. 
+  - destruct H2; dcr.
+    eapply fold_union_incl; eauto.
+  - eapply fold_union_incl_start; eauto.
+Qed.
+
+Instance eqns_freeVars_morphism 
+: Proper (Subset ==> Subset) eqns_freeVars.
+Proof.
+  unfold Proper, respectful, eqns_freeVars; intros.
+  rewrite H. reflexivity.
+Qed.
+
+Instance eqns_freeVars_morphism_flip 
+: Proper (flip Subset ==> flip Subset) eqns_freeVars.
+Proof.
+  unfold Proper, respectful, eqns_freeVars, flip; intros.
+  rewrite H. reflexivity.  
+Qed.
+
+Instance eqns_freeVars_morphism_equal 
+: Proper (Equal ==> Equal) eqns_freeVars.
+Proof.
+  unfold Proper, respectful, eqns_freeVars, flip; intros.
+  rewrite H. reflexivity.  
+Qed.
+
+Instance entails_morphism_impl
+: Proper (Subset ==> flip Subset ==> impl) entails.
+Proof.
+  unfold Proper, respectful, flip, impl, entails, satisfiesAll; intros; dcr; split; intros.
+  eapply H2; eauto. 
+  rewrite H0, <- H. eauto.
+Qed.
+
+Instance entails_morphism_flip_impl
+: Proper (flip Subset ==> Subset ==> flip impl) entails.
+Proof.
+  unfold Proper, respectful, flip, impl, entails, satisfiesAll; intros; dcr; split; intros.
+  eapply H2; eauto. 
+  rewrite H0, <- H. eauto.
+Qed.
+
+
+Instance entails_morphism_impl_iff
+: Proper (Equal ==> Equal ==> iff) entails.
+Proof.
+  unfold Proper, respectful, flip; intros; dcr; split; intros. 
+  - eapply entails_morphism_impl; eauto. 
+    + rewrite H; reflexivity.
+    + rewrite H0; reflexivity.
+  - eapply entails_morphism_impl; eauto. 
+    + rewrite H; reflexivity.
+    + rewrite H0; reflexivity.
 Qed.
 
 Lemma satisfiesAll_subst V Gamma Γf Z EqS Y y bE G
@@ -514,46 +787,56 @@ Lemma satisfiesAll_subst V Gamma Γf Z EqS Y y bE G
    -> satisfiesAll bE Γf
    -> satisfiesAll (bE [Z <-- List.map Some y]) EqS.
 Proof.
-  general induction EqS.
-  - hnf; intros. isabsurd.
-  - hnf; intros. inv H7.
-    + destruct gamma.
-      hnf in H2; dcr.
-      specialize (H8 V H3 0 (subst_eqn (sid [Z <-- Y]) (e,e0))). exploit H8.
-      econstructor.
+  revert_except EqS. pattern EqS. eapply set_induction; intros.
+  - hnf; intros. eapply empty_is_empty_1 in H. 
+    exfalso. rewrite H in H8. cset_tac; intuition.
+  - hnf; intros. eapply Add_Equal in H1. rewrite H1 in H10.
+    eapply add_iff in H10. destruct H10.
+    + invc H10.
+      hnf in H5; dcr. simpl in *. subst.
+      specialize (H10 V H6 (subst_eqn (sid [Z <-- Y]) (c,d))). exploit H10.
+      admit.
       hnf in X. simpl in X.
       do 2 erewrite <- eval_exp_subst in X; eauto.
       hnf. simpl.
       erewrite exp_eval_agree; [| |reflexivity].
-      erewrite exp_eval_agree with (e:=e0); [| |reflexivity].
+      erewrite exp_eval_agree with (e:=d); [| |reflexivity].
       eapply X.
       eapply update_with_list_agree; eauto.
       eapply agree_on_incl; eauto. 
-      exploit eqns_freeVars_incl; eauto. 
-      rewrite H0 in X0. simpl in X0.
-      rewrite <- (minus_union_set _ _ _ H1); eauto.
+      assert ((c, d) ∈ s'). rewrite H1.
+      cset_tac; intuition.
+      exploit eqns_freeVars_incl; eauto. simpl in *.
+      rewrite H3 in X0. 
+      rewrite <- (minus_union_set _ _ _ H4); eauto.
       rewrite <- X0. eapply incl_minus_lr; cset_tac; intuition.
       rewrite map_length. simpl in *.
       exploit omap_length; eauto. congruence.
       eapply update_with_list_agree; eauto.
-      eapply agree_on_incl; eauto. 
+      eapply agree_on_incl; eauto.
+      assert ((c, d) ∈ s'). rewrite H1.
+      cset_tac; intuition.
       exploit eqns_freeVars_incl; eauto. 
-      rewrite H0 in X0. simpl in X0.
-      rewrite <- (minus_union_set _ _ _ H1); eauto.
+      rewrite H3 in X0. simpl in X0.
+      rewrite <- (minus_union_set _ _ _ H4); eauto.
       rewrite <- X0. eapply incl_minus_lr; cset_tac; intuition.
       rewrite map_length. simpl in *.
       exploit omap_length; eauto. congruence.
-    + eapply IHEqS; try eapply H5; eauto using entails_add.
-      rewrite <- H0. rewrite eqns_freeVars_add. cset_tac; intuition.
+    + rewrite H1 in H5.
+      eapply H; try eapply H7; eauto.
+      rewrite <- H3. rewrite H1. 
+      rewrite eqns_freeVars_add'. cset_tac; intuition.
+      eapply entails_morphism_impl; eauto. reflexivity.
+      unfold flip. eapply subst_eqns_morphism_subset; eauto.
+      cset_tac; intuition.
 Qed.
 
-Lemma in_eqns_freeVars x gamma Gamma n
+Lemma in_eqns_freeVars x gamma Gamma
   : x \In freeVars gamma
-    -> get Gamma n gamma
+    -> gamma ∈ Gamma
     -> x \In eqns_freeVars Gamma.
 Proof.
-  intros. eapply incl_list_union; eauto.
-  eapply map_get_1; eauto. reflexivity.
+  intros. eapply eqns_freeVars_incl; eauto. 
 Qed.
 
 Lemma satisfiesAll_update x Gamma V e y
@@ -561,14 +844,14 @@ Lemma satisfiesAll_update x Gamma V e y
   -> x ∉ Exp.freeVars e
   -> satisfiesAll V Gamma
   -> ⎣y ⎦ = exp_eval V e
-  -> satisfiesAll (V [x <- ⎣y ⎦]) ((Var x, e)::Gamma).
+  -> satisfiesAll (V [x <- ⎣y ⎦]) ({{(Var x, e)}} ∪ Gamma).
 Proof.
-  intros. hnf; intros. inv H3.
-  - hnf; intros. simpl. lud. 
+  intros. hnf; intros. cset_tac. destruct H3.
+  - hnf; intros. invc H3; simpl in * |- *; subst.
     + erewrite <- exp_eval_agree; eauto. instantiate (1:=V).
-      rewrite <- H2. constructor; reflexivity.
+      rewrite <- H2. simpl. lud. constructor; reflexivity.
+      exfalso; eauto.
       eapply agree_on_update_dead; eauto. reflexivity.
-    + exfalso; eauto.
   - hnf in H1. exploit H1; eauto. hnf in X.
     hnf. 
     erewrite <- exp_eval_agree; eauto.
@@ -613,7 +896,7 @@ Proof.
         symmetry. eapply agree_on_update_dead.
         intro. eapply H15. eauto. 
         symmetry; eauto.
-        clear_all; firstorder.
+        clear_all; reflexivity.
       * rewrite H21. simpl. eauto using entails_freeVars_incl.
       * rewrite H21. eapply entails_freeVars_incl; eauto.
       * hnf; intros. lud; eauto.
@@ -631,7 +914,7 @@ Proof.
         destruct x as [[[[[] ?] ?] ?] ?]; simpl; intros; dcr. 
         repeat (split; eauto).
         rewrite H26; eauto.
-        clear_all; firstorder.
+        clear_all; reflexivity.
       * inv H12. rewrite H26; eauto; simpl. rewrite H16; eauto. 
       * inv H15. rewrite H26; eauto; simpl. rewrite H16; eauto. 
       * econstructor; try eapply plusO.
@@ -645,7 +928,7 @@ Proof.
         destruct x as [[[[[] ?] ?] ?] ?]; simpl; intros; dcr. 
         repeat (split; eauto).
         rewrite H27; eauto.
-        clear_all; firstorder.
+        clear_all; reflexivity.
         inv H13. rewrite H16; eauto. rewrite H27; eauto.
         inv H20. rewrite H16; eauto. rewrite H27; eauto.
   + destruct (get_dec L (counted l)) as [[[bE bZ bs]]|].
@@ -704,7 +987,7 @@ Proof.
         destruct x as [[[[[] ?] ?] ?] ?]; simpl; intros; dcr. 
         repeat (split; eauto).
         rewrite H28; eauto.
-        clear_all; firstorder.
+        clear_all; reflexivity.
       * hnf; intros. hnf in H7; dcr.
         eapply IHs1; eauto.
         eapply H12. eauto. 
