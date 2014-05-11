@@ -36,6 +36,17 @@ left. eapply equal_iff in H0. eauto.
 right. intro. eapply equal_iff in H1. congruence.
 Defined.
 
+Instance equiv_computable X `{OrderedType X} (x y: X) : Computable (_eq x y).
+hnf. 
+pose proof (_compare_spec x y).
+destruct (_cmp x y); intros. 
+- left. inversion H0; eauto.
+- right. inversion H0. intro. rewrite H2 in H1.
+  eapply (StrictOrder_Irreflexive _ _ H1). reflexivity.
+- right. inversion H0. intro. rewrite H2 in H1.
+  eapply (StrictOrder_Irreflexive _ _ H1). reflexivity.
+Defined.
+
 Extraction Inline inst_computable_In Subset_computable Equal_computable.
 
 

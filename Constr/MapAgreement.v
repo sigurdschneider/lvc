@@ -152,26 +152,23 @@ Proof.
   eapply for_all_iff in H3. left. hnf; intros.
   specialize (H3 _ H4). simpl in H3.
   unfold decision_procedure in H3; simpl in H3.
-  unfold inst_equiv_cm in H3.
-  destruct (inst_eq_dec_ordered_type Y H0 (f x) (g x)); eauto; isabsurd.
+  destruct (equiv_computable Y (f x) (g x)); isabsurd; eauto.
   hnf; intros. simpl.
-  unfold decision_procedure, inst_equiv_cm.
-  destruct (inst_eq_dec_ordered_type Y H0 (f x) (g x));
-  destruct (inst_eq_dec_ordered_type Y H0 (f y) (g y)); try constructor.
-  exfalso. eapply c. rewrite <- H4. eauto.
-  exfalso. eapply c. rewrite H4. eauto.
+  destruct (decision_procedure (f x === g x)); 
+  destruct (decision_procedure (f y === g y)); try reflexivity.
+  exfalso. eapply n. rewrite <- H4; eauto.
+  exfalso. eapply n. rewrite H4; eauto.
+
   right. intro.
   change False with (Is_true false). rewrite <- H3.
   eapply Is_true_eq_left. rewrite <- for_all_iff.
   hnf; intros. simpl. specialize (H4 _ H5).
-  unfold decision_procedure, inst_equiv_cm.
-  destruct (inst_eq_dec_ordered_type Y H0 (f x) (g x)); simpl; eauto.
+  destruct (equiv_computable Y (f x) (g x)); isabsurd; eauto.
   hnf; intros. simpl.
-  unfold decision_procedure, inst_equiv_cm.
-  destruct (inst_eq_dec_ordered_type Y H0 (f x) (g x));
-  destruct (inst_eq_dec_ordered_type Y H0 (f y) (g y)); try constructor.
-  exfalso. eapply c. rewrite <- H5. eauto.
-  exfalso. eapply c. rewrite H5. eauto.
+  destruct (decision_procedure (f x === g x)); 
+  destruct (decision_procedure (f y === g y)); try reflexivity.
+  exfalso. eapply n. rewrite <- H5; eauto.
+  exfalso. eapply n. rewrite H5; eauto.
 Defined.
 
 Extraction Inline agree_on_computable.
