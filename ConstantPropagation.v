@@ -17,9 +17,9 @@ Definition aval := option val.
 
 
 
-Definition binop_eval (o:binop) (v1 v2:aval) : option aval := 
-  match v1, v2 with 
-    | Some v1, Some v2 => 
+Definition binop_eval (o:binop) (v1 v2:aval) : option aval :=
+  match v1, v2 with
+    | Some v1, Some v2 =>
       match Exp.binop_eval o v1 v2 with
         | None => None (* if binop_eval says None, it's undefined, so we yield bottom, not top *)
         | Some x => Some (Some x)
@@ -31,7 +31,7 @@ Fixpoint exp_eval (E:onv aval) (e:exp) : option aval :=
   match e with
     | Con v => Some (Some v)
     | Var x => E x
-    | BinOp o e1 e2 => mdo v1 <- exp_eval E e1; 
+    | BinOp o e1 e2 => mdo v1 <- exp_eval E e1;
                       mdo v2 <- exp_eval E e2;
                       binop_eval o v1 v2
   end.
@@ -44,17 +44,17 @@ Inductive le : option aval -> option aval -> Prop :=
 
 
 
-Inductive cp_sound : list (params*list (option aval)) 
-                      -> stmt 
-                      -> ann (onv aval) 
-                      -> ann (set var) 
+Inductive cp_sound : list (params*list (option aval))
+                      -> stmt
+                      -> ann (onv aval)
+                      -> ann (set var)
                       -> Prop :=
 | CPOpr (x:var) Cp b e (Gamma:onv aval) al lv alv
   : cp_sound Cp b al alv
     -> agree_on eq (getAnn alv \ {{x}}) Gamma (getAnn al)
     -> exp_eval Gamma e = getAnn al x
     -> cp_sound Cp (stmtExp x e b) (ann1 Gamma al) (ann1 lv alv)
-| CPIf Cp e b1 b2 Gamma lv al1 al2 alv1 alv2 
+| CPIf Cp e b1 b2 Gamma lv al1 al2 alv1 alv2
   : agree_on eq lv Gamma (getAnn al1)
     -> agree_on eq lv Gamma (getAnn al2)
     (* these conditions make it conditional constant propagation *)
@@ -74,8 +74,8 @@ Inductive cp_sound : list (params*list (option aval))
   -> agree_on eq lv Gamma (getAnn alb)
   -> cp_sound Cp (stmtLet Z s b) (ann2 Gamma als alb) (ann2 lv alvs alvb).
 
-Definition cp_eqn E x := 
-  match E x with 
+Definition cp_eqn E x :=
+  match E x with
     | Some (Some c) => {{(Var x, Con c)}}
     | _ => ∅
   end.
@@ -113,13 +113,13 @@ Proof.
   intuition.
 Qed.
 
-Instance entails_refl 
+Instance entails_refl
 : Reflexive (entails).
 Proof.
   hnf; intros. unfold entails; intros; split; eauto; try reflexivity.
 Qed.
 
-Lemma entails_monotonic_add Gamma Γ' gamma 
+Lemma entails_monotonic_add Gamma Γ' gamma
 : entails Gamma Γ' -> entails (gamma ∪ Gamma) Γ'.
 Proof.
   unfold entails; intros; dcr; split.
@@ -127,7 +127,7 @@ Proof.
   - rewrite H1. rewrite eqns_freeVars_union. cset_tac; intuition.
 Qed.
 
-Lemma map_agree X `{OrderedType X} Y `{OrderedType Y} 
+Lemma map_agree X `{OrderedType X} Y `{OrderedType Y}
       lv (f:X->Y) `{Proper _ (_eq ==> _eq) f} (g:X->Y) `{Proper _ (_eq ==> _eq) g}
 : agree_on _eq lv f g
   -> map f lv [=] map g lv.
@@ -155,12 +155,12 @@ Proof.
   rewrite map_agree; eauto using cp_eqn_agree. reflexivity.
   intuition. intuition.
 Qed.
-    
+
 Inductive same_shape (A B:Type) : ann B -> ann A -> Prop :=
 | SameShape0 a b
   : same_shape (ann0 a) (ann0 b)
-| SameShape1 a b an bn 
-  : same_shape an bn 
+| SameShape1 a b an bn
+  : same_shape an bn
     -> same_shape (ann1 a an) (ann1 b bn)
 | SameShape2 a b an bn an' bn'
   : same_shape an bn
@@ -168,12 +168,12 @@ Inductive same_shape (A B:Type) : ann B -> ann A -> Prop :=
     -> same_shape (ann2 a an an') (ann2 b bn bn').
 
 
-Fixpoint zip2Ann X Y Z (f:X->Y->Z) (a:ann X) (b:ann Y) z : ann Z := 
+Fixpoint zip2Ann X Y Z (f:X->Y->Z) (a:ann X) (b:ann Y) z : ann Z :=
   match a, b with
     | ann1 a an, ann1 a' an' => ann1 (f a a') (zip2Ann f an an' z)
-    | ann2 a an1 an2, ann2 a' an1' an2' => ann2 (f a a') 
+    | ann2 a an1 an2, ann2 a' an1' an2' => ann2 (f a a')
                                                (zip2Ann f an1 an1' z)
-                                               (zip2Ann f an2 an2' z) 
+                                               (zip2Ann f an2 an2' z)
     | ann0 a, ann0 b => ann0 (f a b)
     | _, _ => z
   end.
@@ -187,7 +187,7 @@ Definition cp_eqns_ann (a:ann (onv aval)) (b:ann (set var)) : ann eqns :=
   zip2Ann cp_eqns a b (ann0 ∅).
 
 Definition cp_choose_exp E e :=
-  match exp_eval E e with 
+  match exp_eval E e with
     | Some (Some c) => Con c
     | _ => e
   end.
@@ -195,16 +195,16 @@ Definition cp_choose_exp E e :=
 
 Fixpoint cp_choose s (a:ann (onv aval)) : ann args :=
   match s, a with
-    | stmtExp x e s, ann1 E an => 
+    | stmtExp x e s, ann1 E an =>
       ann1 (cp_choose_exp E e::nil) (cp_choose s an)
-    | stmtIf e s t, ann2 E ans ant => 
+    | stmtIf e s t, ann2 E ans ant =>
         ann2 (cp_choose_exp E e::nil) (cp_choose s ans) (cp_choose t ant)
-    | stmtGoto f Y, ann0 E => 
+    | stmtGoto f Y, ann0 E =>
       ann0 (List.map (cp_choose_exp E) Y)
     | stmtReturn e, ann0 E => ann0 (cp_choose_exp E e::nil)
-    | stmtLet Z s t, ann2 E ans ant => 
+    | stmtLet Z s t, ann2 E ans ant =>
       ann2 nil (cp_choose s ans) (cp_choose t ant)
-    | _, _ => ann0 nil 
+    | _, _ => ann0 nil
   end.
 
 Lemma exp_eval_moreDefined e lv Gamma v
@@ -213,7 +213,7 @@ Lemma exp_eval_moreDefined e lv Gamma v
    -> exp_eval Gamma e = ⎣⎣v ⎦ ⎦
    -> moreDefined (cp_eqns Gamma lv) (cp_eqns Gamma lv) e (Con v).
 Proof.
-  intros. general induction H0; simpl in * |- *; hnf; intros; simpl; eauto using fstNoneOrR. 
+  intros. general induction H0; simpl in * |- *; hnf; intros; simpl; eauto using fstNoneOrR.
   - econstructor; eauto.
   - eapply H0; eauto.
   - monad_inv H1.
@@ -230,7 +230,7 @@ Proof.
 Qed.
 
 Lemma zip2Ann_get X Y Z (f:X->Y->Z) a b z
-: 
+:
   same_shape a b
   -> getAnn (zip2Ann f a b z) = f (getAnn a) (getAnn b).
 Proof.
@@ -297,7 +297,7 @@ Lemma cp_eqns_satisfies_env AE E x v lv
   -> E x = ⎣v ⎦.
 Proof.
   intros. exploit H1; eauto.
-  instantiate (1:=(Var x, Con v)). 
+  instantiate (1:=(Var x, Con v)).
   eapply cp_eqns_in; eauto.
   hnf in X; simpl in *. inv X; eauto.
 Qed.
@@ -320,7 +320,7 @@ Proof.
     inv X. inv X0. simpl in *. rewrite EQ5 in EQ2.
     inv EQ2. constructor; eauto.
 Qed.
-  
+
 Lemma exp_eval_entails AE e v x lv
 : live_exp_sound e lv
   -> exp_eval AE e = ⎣⎣v ⎦ ⎦
@@ -328,22 +328,22 @@ Lemma exp_eval_entails AE e v x lv
 Proof.
   intros.
   unfold entails; split; intros. unfold satisfiesAll, satisfies; intros.
-  exploit (H1 (Var x, e)); eauto. 
-  cset_tac; intuition. cset_tac. invc H2; simpl in *; subst; simpl. 
+  exploit (H1 (Var x, e)); eauto.
+  cset_tac; intuition. cset_tac. invc H2; simpl in *; subst; simpl.
   inv X.
   eapply satisfiesAll_union in H1; dcr.
   exploit exp_eval_same; try eapply H1; eauto.
   etransitivity. instantiate (1:=(eqns_freeVars {{(Var x, e)}})).
   unfold eqns_freeVars.
   repeat rewrite map_single; eauto using freeVars_Proper.
-  repeat rewrite (@fold_single _ _ _ Equal). 
+  repeat rewrite (@fold_single _ _ _ Equal).
   simpl. cset_tac; intuition.
   eapply Equal_ST. eapply union_m. eapply transpose_union.
   eapply Equal_ST. eapply union_m. eapply transpose_union.
   assert ( {(Var x, e); {}} ⊆ {(Var x, e); {}} ∪ cp_eqns AE lv).
   cset_tac; intuition.
   rewrite <- H1. reflexivity.
-Qed. 
+Qed.
 
 Lemma entails_empty s
 : entails s ∅.
@@ -352,7 +352,7 @@ Proof.
   - hnf; intros. cset_tac; intuition.
   - rewrite (incl_empty _ s). reflexivity.
 Qed.
-  
+
 
 Lemma cp_sound_eqn Lv Cp Es s al alv ang
 : let Gamma := (zip2Ann cp_eqns al alv (ann0 ∅)) in
@@ -362,25 +362,25 @@ live_sound Lv s alv
 -> ssa s ang
 -> eqn_sound Es s Gamma Gamma ang (cp_choose s al).
 Proof.
-  intros. subst Gamma. 
+  intros. subst Gamma.
   general induction H0; invt live_sound; invt same_shape; invt ssa; simpl.
   - econstructor.
     eapply IHcp_sound; eauto. simpl in * |- *.
     + rewrite zip2Ann_get; eauto.
       destruct (in_or_not x (getAnn alv)); dcr.
       * rewrite H7. rewrite cp_eqns_union. eapply entails_union; split.
-        { 
+        {
           rewrite <- (cp_eqns_agree H); eauto.
           eapply entails_monotonic_add.
           rewrite <- H13. reflexivity.
-        } 
-        { 
+        }
+        {
           unfold cp_eqns. rewrite map_single; [| intuition].
           rewrite (@fold_single _ _ _ Equal).
           unfold cp_eqn at 2. case_eq (getAnn al x); intros.
           destruct a. rewrite H8 in H1.
           intros. rewrite union_comm, empty_neutral_union.
-          eapply exp_eval_entails; eauto. 
+          eapply exp_eval_entails; eauto.
           rewrite empty_neutral_union.
           eapply entails_empty.
           rewrite empty_neutral_union.
@@ -389,14 +389,12 @@ Proof.
           eapply union_m.
           eapply transpose_union.
         }
-        
+
       * rewrite H7. rewrite <- (cp_eqns_agree H); eauto.
         eapply entails_monotonic_add.
         rewrite <- H13. reflexivity.
     + rewrite zip2Ann_get; eauto. admit.
     +
-      Lemma 
-        : moreDefined (cp_eqns Gamma lv) (cp_eqns Gamma lv) e (cp_choose_exp Gamma e)
       unfold cp_choose_exp. case_eq (exp_eval Gamma e); intros.
       case_eq a; intros; subst.
       * hnf; intros.
@@ -409,15 +407,22 @@ Proof.
     + unfold cp_choose_exp. case_eq (exp_eval Gamma e); intros; eauto.
       case_eq a; intros; subst; simpl. eapply incl_empty. eassumption.
   - admit.
-  - admit.
-  - econstructor. 
-    
-    
+  - assert (exists a, get Es (counted l) a). admit.
+    destruct H4. destruct x as [[[[[Zb G] Γf] EqS] Γf'] EqS'].
+    econstructor; eauto.
+    rewrite map_length; eauto.
+
+
+  - econstructor. admit.
+
+
+
+
 
 
 Qed.
 
-(* 
+(*
 *** Local Variables: ***
 *** coq-load-path: (("." "Lvc")) ***
 *** End: ***
