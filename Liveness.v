@@ -335,6 +335,15 @@ Ltac no_step := eapply bisimTerm;
                 | stuck2  ].
 
 
+Ltac extern_step :=
+  let STEP := fresh "STEP" in
+  eapply bisimExtern;
+    [ eapply star2_refl
+    | eapply star2_refl
+    | intros ? ? STEP; inv STEP
+    | intros ? ? STEP; inv STEP
+    ].
+
 
 Lemma freeVarSimF_sim σ1 σ2
   : freeVarSimF σ1 σ2 -> bisim σ1 σ2.
@@ -370,14 +379,14 @@ Proof.
     + no_step; eauto.
       edestruct PIR2_nth_2; eauto; dcr; eauto.
   - no_step. simpl. erewrite exp_eval_agree; eauto. symmetry; eauto.
-  - eapply bisimExtern; try eapply star2_refl.
-    + intros. inv H. exploit omap_exp_eval_agree; eauto.
+  - extern_step.
+    + exploit omap_exp_eval_agree; eauto.
       eapply agree_on_incl; eauto.
       eexists; split.
       * econstructor; eauto.
       * eapply freeVarSimF_sim. econstructor; eauto.
         eapply agree_on_update_same; eauto using agree_on_incl.
-    + intros. inv H. exploit omap_exp_eval_agree; eauto. symmetry.
+    + exploit omap_exp_eval_agree; eauto. symmetry.
       eapply agree_on_incl; eauto.
       eexists; split.
       * econstructor; eauto.
@@ -460,15 +469,13 @@ Proof.
     + exploit omap_exp_eval_live_agree; eauto.
       no_step.
   - no_step. simpl. eapply exp_eval_live; eauto.
-  - eapply bisimExtern; try eapply star2_refl.
-    + intros. inv H2.
-      exploit omap_exp_eval_live_agree; eauto.
+  - extern_step.
+    + exploit omap_exp_eval_live_agree; eauto.
       eexists; split.
       * econstructor; eauto.
       * eapply liveSimI_sim; econstructor; eauto.
         eapply agree_on_update_same; eauto using agree_on_incl.
-    + intros. inv H2.
-      symmetry in AG.
+    + symmetry in AG.
       exploit omap_exp_eval_live_agree; eauto.
       eexists; split.
       * econstructor; eauto.
