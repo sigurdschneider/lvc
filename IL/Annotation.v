@@ -7,7 +7,7 @@ Inductive ann (A:Type) : Type :=
 | ann0 (a:A) : ann A
 | ann1 (a:A) (sa:ann A) : ann A
 | ann2 (a:A) (sa:ann A) (ta:ann A) : ann A.
- 
+
 Definition getAnn {A} (a:ann A) : A :=
   match a with
     | ann0 a => a
@@ -21,6 +21,7 @@ Fixpoint setAnn A (s:stmt) (a:A) : ann A :=
    | stmtIf x s1 s2 => ann2 a (setAnn s1 a) (setAnn s2 a)
    | stmtGoto l Y => ann0 a
    | stmtReturn x => ann0 a
+   | stmtExtern x f Y s => ann1 a (setAnn s a)
    | stmtLet Z s1 s2 => ann2 a (setAnn s1 a) (setAnn s2 a)
    end.
 
@@ -37,10 +38,10 @@ Proof.
   destruct an; eauto.
 Qed.
 
-Fixpoint mapAnn X Y (f:X->Y) (a:ann X) : ann Y := 
+Fixpoint mapAnn X Y (f:X->Y) (a:ann X) : ann Y :=
   match a with
     | ann1 a an => ann1 (f a) (mapAnn f an)
-    | ann2 a an1 an2 => ann2 (f a) (mapAnn f an1) (mapAnn f an2) 
+    | ann2 a an1 an2 => ann2 (f a) (mapAnn f an1) (mapAnn f an2)
     | ann0 a => ann0 (f a)
   end.
 
@@ -51,31 +52,37 @@ Proof.
 Qed.
 
 Inductive annotation {A:Type} : stmt -> ann A -> Prop :=
-| antExp x e s a sa 
-  : annotation s sa 
+| antExp x e s a sa
+  : annotation s sa
     -> annotation (stmtExp x e s) (ann1 a sa)
-| antIf x s t a sa ta 
-  : annotation s sa 
-    -> annotation t ta 
+| antIf x s t a sa ta
+  : annotation s sa
+    -> annotation t ta
     -> annotation (stmtIf x s t) (ann2 a sa ta)
-| antGoto l Y a 
+| antGoto l Y a
   : annotation (stmtGoto l Y) (ann0 a)
-| antReturn x a 
+| antReturn x a
   : annotation (stmtReturn x) (ann0 a)
-| antLet Z s t a sa ta 
-  : annotation s sa 
-    -> annotation t ta 
+| antExtern x f Y s a sa
+  : annotation s sa
+    -> annotation (stmtExtern x f Y s) (ann1 a sa)
+| antLet Z s t a sa ta
+  : annotation s sa
+    -> annotation t ta
     -> annotation (stmtLet Z s t) (ann2 a sa ta).
 
 Instance annotation_dec_inst {A} {s} {a} : Computable (@annotation A s a).
-Proof. 
+Proof.
   revert a. induction s; destruct a; try destruct IHs;
   try (now left; econstructor; eauto);
   try (now right; inversion 1; eauto).
-  destruct (IHs a0); 
+  destruct (IHs a0);
     try (now left; econstructor; eauto);
     try (now right; inversion 1; eauto).
   destruct (IHs1 a2), (IHs2 a3);
+    try (now left; econstructor; eauto);
+    try (now right; inversion 1; eauto).
+  destruct (IHs a0);
     try (now left; econstructor; eauto);
     try (now right; inversion 1; eauto).
   destruct (IHs1 a2), (IHs2 a3);
@@ -84,14 +91,14 @@ Proof.
 Defined.
 
 Inductive ann_R {A B} (R:A->B->Prop) : ann A -> ann B -> Prop :=
-  | annLt1 a b an bn 
-    : R a b 
-      -> ann_R R an bn 
+  | annLt1 a b an bn
+    : R a b
+      -> ann_R R an bn
       -> ann_R R (ann1 a an) (ann1 b bn)
   | annLt2 a ans ant b bns bnt
     : R a b
-      -> ann_R R ans bns 
-      -> ann_R R ant bnt 
+      -> ann_R R ans bns
+      -> ann_R R ant bnt
       -> ann_R R (ann2 a ans ant) (ann2 b bns bnt)
   | annLt0 a b
       : R a b
@@ -99,7 +106,7 @@ Inductive ann_R {A B} (R:A->B->Prop) : ann A -> ann B -> Prop :=
 
 
 
-Instance ordered_type_lt_dec A `{OrderedType A} (a b: A) 
+Instance ordered_type_lt_dec A `{OrderedType A} (a b: A)
 : Computable (_lt a b).
 pose proof (_compare_spec a b).
 destruct (_cmp a b).
@@ -108,26 +115,25 @@ left. inv H0; eauto.
 right; inv H0. intro. eapply (lt_not_gt H1 H2).
 Defined.
 
-Instance ann_lt_dec A B (R:A->B->Prop) 
-         `{forall a b, Computable (R a b)} (a:ann A) (b:ann B) : 
+Instance ann_lt_dec A B (R:A->B->Prop)
+         `{forall a b, Computable (R a b)} (a:ann A) (b:ann B) :
   Computable (ann_R R a b).
 Proof.
   revert a b.
   fix 1.
   destruct a; destruct b; try dec_solve.
-  + decide (R a a0); dec_solve. 
+  + decide (R a a0); dec_solve.
   + decide (R a a1); try dec_solve;
-    edestruct ann_lt_dec with (a:=a0) (b:=b); hnf in *; 
-    try eassumption; try dec_solve. 
+    edestruct ann_lt_dec with (a:=a0) (b:=b); hnf in *;
+    try eassumption; try dec_solve.
   + decide (R a1 a); try dec_solve.
     destruct (ann_lt_dec a2 b1); try dec_solve.
     destruct (ann_lt_dec a3 b2); try dec_solve.
 Defined.
 
 
-(* 
+(*
 *** Local Variables: ***
 *** coq-load-path: (("../" "Lvc")) ***
 *** End: ***
 *)
-
