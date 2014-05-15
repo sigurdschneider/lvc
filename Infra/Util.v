@@ -1,4 +1,4 @@
-Require Import Arith Coq.Lists.List Setoid Coq.Lists.SetoidList Omega.
+Require Import Arith Coq.Lists.List Setoid Coq.Lists.SetoidList Omega Containers.OrderedTypeEx.
 Require Export Infra.Option EqDec AutoIndTac.
 
 Set Implicit Arguments.
@@ -7,7 +7,7 @@ Tactic Notation "inv" hyp(A) := inversion A ; subst.
 Tactic Notation "invc" hyp(A) := inversion A ; subst ; clear A.
 
 Ltac invt ty :=
-  match goal with 
+  match goal with
       | h: ty |- _ => inv h
       | h: ty _ |- _ => inv h
       | h: ty _ _ |- _ => inv h
@@ -32,7 +32,7 @@ Ltac eq e := assert e; eauto; subst; trivial.
 
 Ltac crush := intros; subst; simpl in *; solve [
     eauto
-  | contradiction 
+  | contradiction
   | match goal with [H : ?s |- _] => now(inversion H; eauto) end
   | (constructor; eauto)
   | (constructor 2; eauto)
@@ -52,7 +52,7 @@ Proof.
   destruct x,y; intros; eauto. destruct H; eapply I.  destruct H0; eapply I.
 Qed.
 
-Lemma toImpl (A B: Prop) 
+Lemma toImpl (A B: Prop)
   : (A -> B) -> impl A B.
 Proof.
   eauto.
@@ -60,9 +60,9 @@ Qed.
 
 Ltac bool_to_prop_assumption H :=
   match goal with
-    | [ H : context [Is_true (?x && ?y)] |- _ ] 
+    | [ H : context [Is_true (?x && ?y)] |- _ ]
       => rewrite (toImpl (@andb_prop_elim x y)) in H
-    | [ H : context [Is_true (?x || ?y)] |- _ ] 
+    | [ H : context [Is_true (?x || ?y)] |- _ ]
       => rewrite (toImpl (@orb_prop_elim x y)) in H
     | [ H : Is_true (false) |- _ ] => inv H
     | [ H : context [not (?t)] |- _ ] =>
@@ -71,35 +71,35 @@ Ltac bool_to_prop_assumption H :=
           rewrite <- (toImpl (@andb_prop_intro x y)) in H
         | context [Is_true (?x || ?y)] =>
           rewrite <- (toImpl (@orb_prop_intro x y)) in H
-        | context [Is_true (negb ?x)] => 
+        | context [Is_true (negb ?x)] =>
           rewrite <- (toImpl (@negb_prop_intro x)) in H
       end
-    | [ H : context [Is_true (negb ?x)] |- _ ] 
+    | [ H : context [Is_true (negb ?x)] |- _ ]
       => rewrite (toImpl (@negb_prop_elim x)) in H
     | _ => fail
   end.
 
-Lemma true_prop_intro 
+Lemma true_prop_intro
   : Is_true (true) = True.
-Proof. 
+Proof.
   eauto.
 Qed.
 
-Lemma false_prop_intro 
+Lemma false_prop_intro
   : Is_true (false) = False.
-Proof. 
+Proof.
   eauto.
 Qed.
-  
+
 Ltac bool_to_prop_goal :=
   match goal with
-   | [ _ : _ |- context [Is_true (?x && ?y)] ] 
+   | [ _ : _ |- context [Is_true (?x && ?y)] ]
      => rewrite <- (toImpl (@andb_prop_intro x y))
-   | [ _ : _ |- context [not (Is_true (?x && ?y))] ] 
+   | [ _ : _ |- context [not (Is_true (?x && ?y))] ]
      => rewrite (toImpl (@andb_prop_elim x y))
    | [ _ : _ |- context [Is_true (?x || ?y)] ]
      => rewrite <- (toImpl (@orb_prop_intro x y))
-   | [ _ : _ |- context [not (Is_true (?x || ?y))] ] 
+   | [ _ : _ |- context [not (Is_true (?x || ?y))] ]
      => rewrite (toImpl (@orb_prop_elim x y))
    | [  _ : _ |- context [Is_true (negb ?x)] ]
      => rewrite <- (toImpl (@negb_prop_intro x))
@@ -121,12 +121,12 @@ Tactic Notation "bool_to_prop" "in" "*" :=
     | [ H : _ |- _ ] => bool_to_prop in H
   end).
 
-Ltac isabsurd := 
+Ltac isabsurd :=
   try now (hnf; intros; match goal with
                  [ H : _ |- _ ] => exfalso; inversion H; try congruence
                end).
 
-Ltac destr_assumption H := 
+Ltac destr_assumption H :=
   repeat match goal with
            | [ H : _ /\ _  |- _ ] => destruct H
          end.
@@ -145,18 +145,18 @@ Tactic Notation "destr" "in" "*" :=
   end).
 
 Tactic Notation "beq_to_prop" :=
-  match goal with 
+  match goal with
     | [ H : ?Q = true |- Is_true ?Q] => rewrite H; eapply I
     | [ H : Is_true ?Q |- ?Q = true] => destruct Q; try destruct H; reflexivity
     | [ H : Is_true ?Q, H' : ?Q = false |- _ ] => rewrite H' in H; destruct H
-    | [ H : Is_true ?Q |- not ((?Q) = false) ] => let X:= fresh "H" in 
+    | [ H : Is_true ?Q |- not ((?Q) = false) ] => let X:= fresh "H" in
       intro X; rewrite X in H; destruct H
     | [ H : ?Q = false |- not (Is_true (?Q)) ] => rewrite H; cbv; trivial
     | [ H : ?Q, H' : not (?Q) |- _ ] => exfalso; apply H'; apply H
-    | [ H : not (?Q = false) |- Is_true (?Q) ] => 
+    | [ H : not (?Q = false) |- Is_true (?Q) ] =>
       destruct Q; solve [ apply I | exfalso; eapply H; trivial ]
     | |- Is_true true => eapply I
-    | [ H : not (Is_true (?Q)) |- ?Q = false ] => 
+    | [ H : not (Is_true (?Q)) |- ?Q = false ] =>
       destruct Q; solve [ exfalso; eapply H; eapply I | reflexivity ]
   end.
 
@@ -172,10 +172,10 @@ Defined.
 (** * Omega Rewrite *)
 
 Tactic Notation "orewrite" constr(A) :=
-  let X := fresh "OX" in assert A as X by omega; rewrite X; clear X. 
+  let X := fresh "OX" in assert A as X by omega; rewrite X; clear X.
 
 Tactic Notation "orewrite" constr(A) "in" hyp(H) :=
-  let X := fresh "OX" in assert A as X by omega; rewrite X in H; clear X. 
+  let X := fresh "OX" in assert A as X by omega; rewrite X in H; clear X.
 
 
 (** * Misc. Tactics *)
@@ -192,48 +192,48 @@ Ltac revert_until id :=
 
 Tactic Notation "simplify" "if" :=
   match goal with
-    | [ H : Is_true (?P) |- context [if ?P then _ else _]] => 
+    | [ H : Is_true (?P) |- context [if ?P then _ else _]] =>
       let X := fresh in assert (P = true) as X by cbool; rewrite X; clear X
-    | [ H : not (Is_true (?P)) |- context [if ?P then _ else _]] => 
+    | [ H : not (Is_true (?P)) |- context [if ?P then _ else _]] =>
       let X := fresh in assert (P = false) as X by cbool; rewrite X; clear X
   end.
 
 Tactic Notation "simplify" "if" "in" "*" :=
-  match goal with 
-    | [ H : Is_true (?P), H' : context [if ?P then _ else _] |- _ ] => 
+  match goal with
+    | [ H : Is_true (?P), H' : context [if ?P then _ else _] |- _ ] =>
       let X := fresh in assert (P = true) as X by cbool; rewrite X in H'; clear X
-    | [ H : not (Is_true (?P)), H' : context [if ?P then _ else _] |- _ ] => 
+    | [ H : not (Is_true (?P)), H' : context [if ?P then _ else _] |- _ ] =>
       let X := fresh in assert (P = false) as X by cbool; rewrite X in H'; clear X
   end.
 
 
 Ltac eqassumption :=
-  match goal with 
-    | [ H : ?C ?t |- ?C ?t' ] => 
+  match goal with
+    | [ H : ?C ?t |- ?C ?t' ] =>
       let X := fresh in
-        cut (C t' = C t); 
+        cut (C t' = C t);
           [ rewrite X; apply H |
             f_equal; try congruence ]
-    | [ H : ?C ?t1 ?t2 |- ?C ?t1' ?t2' ] => 
+    | [ H : ?C ?t1 ?t2 |- ?C ?t1' ?t2' ] =>
       let X := fresh in
-        cut (C t1' t2' = C t1 t2); 
+        cut (C t1' t2' = C t1 t2);
           [ intros X; rewrite X; apply H |
             f_equal; try congruence ]
-    | [ H : ?C ?t1 ?t2 ?t3 |- ?C ?t1' ?t2' ?t3'  ] => 
+    | [ H : ?C ?t1 ?t2 ?t3 |- ?C ?t1' ?t2' ?t3'  ] =>
       let X := fresh in
-        cut (C t1' t2' t3' = C t1 t2 t3); 
+        cut (C t1' t2' t3' = C t1 t2 t3);
           [ intros X; rewrite X; apply H |
             f_equal; try congruence ]
-    | [ H : ?C ?t1 ?t2 ?t3 ?t4 |- ?C ?t1' ?t2' ?t3' ?t4' ] => 
+    | [ H : ?C ?t1 ?t2 ?t3 ?t4 |- ?C ?t1' ?t2' ?t3' ?t4' ] =>
       let X := fresh in
-        cut (C t1' t2' t3' t4' = C t1 t2 t3 t4); 
+        cut (C t1' t2' t3' t4' = C t1 t2 t3 t4);
           [ intros X; rewrite X; apply H |
             f_equal; try congruence ]
   end.
 
 
 Definition fresh {X} `{Equivalence X} (x:X) (Y:list X) : Prop :=
-  ~InA R x Y. 
+  ~InA R x Y.
 
 Fixpoint unique X `{Equivalence X} (Y:list X) : Prop :=
   match Y with
@@ -244,7 +244,7 @@ Fixpoint unique X `{Equivalence X} (Y:list X) : Prop :=
 
 Ltac let_case_eq :=
   match goal with
-    | [ H : context [let (_, _) := ?e in _] |- _ ] => 
+    | [ H : context [let (_, _) := ?e in _] |- _ ] =>
       let a := fresh "a" in let b := fresh "b" in let eq := fresh "eq" in
         case_eq e; intros a b eq; rewrite eq in H
   end.
@@ -252,7 +252,7 @@ Ltac let_case_eq :=
 Ltac let_pair_case_eq :=
   match goal with
     | [ |- context [let (_, _) := ?e in _] ] => case_eq e; intros
-    | [ H : ?x = (?s, ?t) |- _ ] => 
+    | [ H : ?x = (?s, ?t) |- _ ] =>
       assert (fst x = s) by (rewrite H; eauto);
       assert (snd x = t) by (rewrite H; eauto); clear H
   end.
@@ -266,10 +266,10 @@ Ltac simpl_pair_eqs :=
 
 Ltac scofix :=
 repeat match goal with
-           [H : _ |- _] => 
+           [H : _ |- _] =>
            match H with
              | _ => revert H
-           end 
+           end
        end; cofix; intros.
 
 Ltac stuck :=
@@ -286,14 +286,14 @@ Tactic Notation "exploiT" tactic(tac) :=
 
 Ltac exploit H :=
   eapply modus_ponens;
-  [ 
+  [
     let H' := fresh "exploitH" in
     pose proof H as H'; hnf in H';
-      eapply H'; clear H' 
+      eapply H'; clear H'
   | intros].
 
 Tactic Notation "exploiT" constr(ty) :=
-  match goal with 
+  match goal with
       | H: ty |- _ => exploit H
       | H: ty _ |- _ => exploit H
       | H: ty _ _ |- _ => exploit H
@@ -317,7 +317,21 @@ Proof.
   intros. exploiT foo. eauto. exploit H. eauto. firstorder.
 Qed.
 
-(* 
+Instance prod_eq_fst_morphism X Y R R'
+: Proper (@prod_eq X Y R R' ==> R) fst.
+Proof.
+  unfold Proper, respectful; intros.
+  inv H; simpl; eauto.
+Qed.
+
+Instance prod_eq_snd_morphism X Y R R'
+: Proper (@prod_eq X Y R R' ==> R') snd.
+Proof.
+  unfold Proper, respectful; intros.
+  inv H; simpl; eauto.
+Qed.
+
+(*
 *** Local Variables: ***
 *** coq-load-path: (("../" "Lvc")) ***
 *** End: ***

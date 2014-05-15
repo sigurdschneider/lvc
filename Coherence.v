@@ -5,31 +5,6 @@ Require Import Val Var Env EnvTy IL Annotation Liveness Restrict Bisim MoreExp.
 
 Set Implicit Arguments.
 
-
-Instance prod_eq_fst_morphism X Y R R'
-: Proper (@prod_eq X Y R R' ==> R) fst.
-Proof.
-  unfold Proper, respectful; intros.
-  inv H; simpl; eauto.
-Qed.
-
-Instance prod_eq_snd_morphism X Y R R'
-: Proper (@prod_eq X Y R R' ==> R') snd.
-Proof.
-  unfold Proper, respectful; intros.
-  inv H; simpl; eauto.
-Qed.
-
-Definition pe := prod_eq (@Equal var _ _) (@Equal var _ _).
-
-
-Instance pe_morphism
- : Proper (Equal ==> Equal ==> pe) pair.
-Proof.
-  unfold Proper, respectful.
-  intros. econstructor; eauto.
-Qed.
-
 Inductive ssa : stmt -> ann (set var * set var) -> Prop :=
   | ssaExp x e s D D' an
     : x ∉ D
@@ -87,11 +62,11 @@ Proof.
 Qed.
 
 Lemma ssa_ext s an an'
-  : ann_R pe an an'
+  : ann_R (@pe _ _) an an'
   -> ssa s an
   -> ssa s an'.
 Proof.
-  intros. general induction H0; simpl; invt (ann_R pe); invt pe; eauto using ssa.
+  intros. general induction H0; simpl; invt (ann_R (@pe var _)); invt (@pe var _); eauto using ssa.
   - econstructor. rewrite <- H7; eauto. rewrite <- H7; eauto.
     eapply IHssa; eauto. rewrite <- H7. rewrite (ann_R_get H8) in H2.
     rewrite <- H10. eauto.
@@ -117,7 +92,7 @@ Proof.
 Qed.
 
 Instance ssa_morphism
-: Proper (eq ==> (ann_R pe) ==> iff) ssa.
+: Proper (eq ==> (ann_R (@pe _ _)) ==> iff) ssa.
 Proof.
   intros x s t A; subst. intros. split; intros.
   eapply ssa_ext; eauto.
