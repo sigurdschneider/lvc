@@ -359,15 +359,6 @@ Qed.
 
 *)
 
-Lemma star2_plus2_plus2
-     : forall (X : Type) R (x y z : X) A B,
-       star2 R x A y -> plus2 R y B z -> plus2 R x (A++B) z.
-Admitted.
-
-Lemma star2_trans
- :  forall (X : Type) R (x y z : X) A B,
-       star2 R x A y -> star2 R y B z -> star2 R x (A++B) z.
-Admitted.
 
 
 Lemma bisim'_trans {S1} `{StateType S1}
@@ -538,16 +529,6 @@ Lemma drop_get_lab0 (L:F.labenv) l blk
 Proof.
   intros. eapply get_drop in H; simpl in *. orewrite (labN l + 0 = labN l) in H; eauto.
 Qed.
-
-Lemma plus2_destr_nil
-: forall (X : Type) R  (x z : X),
-    plus2 R x nil z -> exists y : X, R x EvtTau y /\ star2 R y nil z.
-Admitted.
-
-Lemma star2_plus2
-: forall (X : Type) (R: X -> event -> X -> Prop) (x y z : X),
-    R x EvtTau y -> star2 R y nil z -> plus2 R x nil z.
-Admitted.
 
 Lemma bisim_drop_shift r l L E Y L' E' Y'
 : paco2 (@bisim_gen F.state _ F.state _) r (drop (labN l) L, E, stmtGoto (LabI 0) Y)
