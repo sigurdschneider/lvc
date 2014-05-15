@@ -104,7 +104,30 @@ Inductive ann_R {A B} (R:A->B->Prop) : ann A -> ann B -> Prop :=
       : R a b
       -> ann_R R (ann0 a) (ann0 b).
 
+Lemma ann_R_get A B (R: A-> B-> Prop) a b
+: ann_R R a b
+  -> R (getAnn a) (getAnn b).
+Proof.
+  intros. inv H; eauto.
+Qed.
 
+Instance ann_R_refl {A} {R} `{Reflexive A R} : Reflexive (ann_R R).
+Proof.
+  hnf in H.
+  hnf; intros. general induction x; eauto using ann_R.
+  - econstructor; eauto.
+  - econstructor; eauto.
+  - econstructor; eauto.
+Qed.
+
+Instance ann_R_sym {A} {R} `{Symmetric A R} : Symmetric (ann_R R).
+Proof.
+  hnf in H.
+  hnf; intros. general induction H0; eauto using ann_R.
+  - econstructor; eauto.
+  - econstructor; eauto.
+  - econstructor; eauto.
+Qed.
 
 Instance ordered_type_lt_dec A `{OrderedType A} (a b: A)
 : Computable (_lt a b).

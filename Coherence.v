@@ -45,22 +45,6 @@ Inductive ssa : stmt -> ann (set var * set var) -> Prop :=
       -> pe (getAnn ant) (D, Dt)
       -> ssa (stmtLet Z s t) (ann2 (D,D') ans ant).
 
-Lemma ann_R_get A B (R: A-> B-> Prop) a b
-: ann_R R a b
-  -> R (getAnn a) (getAnn b).
-Proof.
-  intros. inv H; eauto.
-Qed.
-
-Instance ann_R_sym {A} {R} `{Symmetric A R} : Symmetric (ann_R R).
-Proof.
-  hnf in H.
-  hnf; intros. general induction H0; eauto using ann_R.
-  - econstructor; eauto.
-  - econstructor; eauto.
-  - econstructor; eauto.
-Qed.
-
 Lemma ssa_ext s an an'
   : ann_R (@pe _ _) an an'
   -> ssa s an
