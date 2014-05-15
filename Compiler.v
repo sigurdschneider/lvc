@@ -1,5 +1,5 @@
 Require Import List CSet.
-Require Import Util AllInRel IL ILRaise EnvTy ParamsMatch RegAlloc RenameApart Sim Status Annotation.
+Require Import Util AllInRel IL EnvTy ParamsMatch RegAlloc RenameApart Sim Status Annotation.
 Require Coherence ILIToILF Liveness LivenessValidators ParallelMove ILN LivenessAnalysis CoherenceAlgo RegAllocAlgo CopyPropagation DVE.
 
 Require Import ExtrOcamlBasic.
@@ -35,39 +35,39 @@ Hypothesis toString_stmt : stmt -> string.
 Instance ToString_stmt : ToString stmt := toString_stmt.
 
 Hypothesis toString_ann : forall A, (A -> string) -> ann A -> string.
-Instance ToString_ann {A} `{ToString A} : ToString (ann A) := 
+Instance ToString_ann {A} `{ToString A} : ToString (ann A) :=
   toString_ann (@toString A _).
 
-Hypothesis toString_live : set var -> string. 
+Hypothesis toString_live : set var -> string.
 Instance ToString_live : ToString (set var) := toString_live.
 
-Hypothesis toString_list : list var -> string. 
+Hypothesis toString_list : list var -> string.
 Instance ToString_list : ToString (list var) := toString_list.
 
 Notation "'///' S '///' x '///' y ';' s" := (let S := print_string S (x ++ "\n" ++ toString y ++ "\n\n") in s) (at level 200).
 
-Notation "'ensure' x 'by' y 'fail' S ; s" := 
+Notation "'ensure' x 'by' y 'fail' S ; s" :=
   (if [ y ] then s else (Error ("Error: " ++ x),S)) (at level 200).
 
 Definition toILF (ilin:ILN.nstmt) (S:Dummy) : status IL.stmt * Dummy :=
   /// S /// "Input " /// ilin ;
   match ILN.labIndices ilin nil with
-    | Success ili => 
+    | Success ili =>
       /// S /// "Normalized Input " /// ili ;
-        let lv := livenessAnalysis ili in 
+        let lv := livenessAnalysis ili in
         /// S /// "Liveness Information " /// lv ;
-        ensure "Liveness information sound" by Liveness.true_live_sound nil ili lv fail S; 
+        ensure "Liveness information sound" by Liveness.true_live_sound nil ili lv fail S;
           let ilid := DVE.compile nil ili lv in
-          /// S /// "DVE" /// ilid ; 
+          /// S /// "DVE" /// ilid ;
           let additional_params := additionalArguments ilid lv in
-          /// S /// "Additional Params" /// additional_params ; 
-          ensure "Additional parameters sufficient" 
-            by ILIToILF.trs nil nil ili (DVE.compile_live ili lv) additional_params fail S; 
+          /// S /// "Additional Params" /// additional_params ;
+          ensure "Additional parameters sufficient"
+            by ILIToILF.trs nil nil ili (DVE.compile_live ili lv) additional_params fail S;
             (Success (ILIToILF.compile nil ilid additional_params), S)
     | x => (x,S)
   end.
 
-Definition optimize (s:stmt) : stmt := 
+Definition optimize (s:stmt) : stmt :=
   CopyPropagation.copyPropagate id s.
 
 Definition fromILF (s:stmt) : status stmt :=
@@ -91,7 +91,7 @@ Opaque ILIToILF.trs_dec.
 (*
 Lemma toILF_correct ilin alv s (E:env val) e
   : toILF ilin alv = (Success s, e)
-   -> @sim _ ILN.statetype_I _ _ (ILN.I.labenv_empty, E, ilin) 
+   -> @sim _ ILN.statetype_I _ _ (ILN.I.labenv_empty, E, ilin)
           (nil:list F.block, E, s).
 Proof.
   intros. unfold toILF in H. simpl in *.
@@ -102,39 +102,39 @@ Proof.
   econstructor; eauto; isabsurd. econstructor; isabsurd.
   econstructor; eauto using AIR4; eauto; try reflexivity; isabsurd.
 
-  econstructor; eauto 30 using ILIToILF.compile_typed, agree_on_refl, AIR2, PIR2; isabsurd. 
+  econstructor; eauto 30 using ILIToILF.compile_typed, agree_on_refl, AIR2, PIR2; isabsurd.
   eapply (@ILIToILF.live_sound_compile nil); eauto.
   isabsurd.
 Qed.
 
 Lemma fromILF_correct (s s':stmt) E
-  : fromILF s = Success s' 
+  : fromILF s = Success s'
   -> sim (nil:list F.block, E, s) (nil:list I.block, E, s').
 Proof.
   unfold fromILF; intros.
   destruct if in H; dcr; isabsurd.
   monadS_inv H; dcr. destruct if in EQ0.
-  eapply sim_trans with (σ2:=(nil:list F.block, E, rename_apart s)). 
+  eapply sim_trans with (σ2:=(nil:list F.block, E, rename_apart s)).
   eapply (@Alpha.alphaSim_sim (nil, E, s) (nil, E, rename_apart s)).
-  econstructor; eauto using AIR3, Alpha.envCorr_idOn_refl. 
+  econstructor; eauto using AIR3, Alpha.envCorr_idOn_refl.
   eapply Alpha.alpha_sym. eapply rename_apart_alpha.
-  eapply sim_trans with (σ2:=(nil:list F.block, E, 
+  eapply sim_trans with (σ2:=(nil:list F.block, E,
     rename x (rename_apart s))).
   eapply Alpha.alphaSim_sim. econstructor; eauto using AIR3.
   eapply ssa_locally_inj_alpha; eauto.
   eapply rename_apart_ssa; eauto; eapply lookup_set_on_id; try reflexivity.
   eapply a.
-  instantiate (1:=id). destruct a. 
+  instantiate (1:=id). destruct a.
   eapply (@inverse_on_agree_on _ _ _ _ id x id id); try intuition.
   eapply inverse_on_id.
   hnf; intros. cbv in H2; subst. rewrite H2; eauto.
   refine (sim_trans (Coherence.srdSim_sim _) (ParallelMove.pmSim_sim _)).
   econstructor; isabsurd. eapply rename_ssa_srd; eauto.
   eapply rename_apart_ssa; eauto. eapply a.
-  eapply I. econstructor. 
+  eapply I. econstructor.
   eapply agree_on_refl.
   eapply (@Liveness.live_rename_sound nil); eauto.
-  instantiate (1:=parallel_move). 
+  instantiate (1:=parallel_move).
   econstructor; try eapply EQ0.
   eapply (@Liveness.live_rename_sound nil); eauto.
   constructor.
@@ -146,27 +146,27 @@ Lemma optimize_correct E s lv
  : sim (nil:list F.block, E, s) (nil:list F.block, E, optimize s lv).
 Proof.
   unfold optimize.
-  eapply (@sim_trans F.state _ F.state _). 
+  eapply (@sim_trans F.state _ F.state _).
   instantiate (1:= (nil, E, DVE.compile s lv)).
   admit.
-  eapply (@sim_trans F.state _ F.state _). 
+  eapply (@sim_trans F.state _ F.state _).
   eapply CopyPropagation.subst_id.
   eapply sim_sym.
-  eapply CopyPropagation.sim_CP. 
+  eapply CopyPropagation.sim_CP.
 Qed.
 *)
 End Compiler.
 
-(*Print Assumptions toILF_correct. 
+(*Print Assumptions toILF_correct.
 Print Assumptions fromILF_correct.*)
- 
+
 Extraction Inline bind Option.bind toString.
 
 Extraction "extraction/lvc.ml" toILF fromILF RegAllocAlgo.linear_scan optimize.
 
 
 
-(* 
+(*
 *** Local Variables: ***
 *** coq-load-path: (("." "Lvc")) ***
 *** End: ***
