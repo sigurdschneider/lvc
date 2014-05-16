@@ -746,18 +746,23 @@ Ltac no_step := eapply bisimTerm;
                 | stuck2  ].
 
 
+Ltac step_activated :=
+  match goal with
+    | [ H : omap (exp_eval ?E) ?Y = Some ?vl
+        |- activated (_, ?E, stmtExtern ?x ?f ?Y ?s) ] =>
+      eexists (ExternI f vl 0); eexists; try (now (econstructor; eauto))
+  end.
+
 Ltac extern_step :=
   let STEP := fresh "STEP" in
   eapply bisimExtern;
     [ eapply star2_refl
     | eapply star2_refl
+    | try step_activated
+    | try step_activated
     | intros ? ? STEP; inv STEP
     | intros ? ? STEP; inv STEP
     ].
-
-
-
-
 
 (*
 *** Local Variables: ***
