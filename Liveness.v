@@ -309,42 +309,6 @@ Inductive freeVarSimF : F.state -> F.state -> Prop :=
   (AG:agree_on eq (IL.freeVars s) E E')
   : freeVarSimF (L, E, s) (L', E', s).
 
-
-Ltac single_step :=
-  match goal with
-    | [ H : agree_on _ ?E ?E', I : val2bool (?E ?x) = true |- step (_, ?E', stmtIf ?x _ _) _ ] =>
-      econstructor; eauto; rewrite <- H; eauto; cset_tac; intuition
-    | [ H : agree_on _ ?E ?E', I : val2bool (?E ?x) = false |- step (_, ?E', stmtIf ?x _ _) _ ] =>
-      econstructor 3; eauto; rewrite <- H; eauto; cset_tac; intuition
-    | [ H : val2bool _ = false |- _ ] => econstructor 3 ; try eassumption; try reflexivity
-    | [ H : step (?L, _ , stmtGoto ?l _) _, H': get ?L (counted ?l) _ |- _] =>
-      econstructor; try eapply H'; eauto
-    | [ H': get ?L (counted ?l) _ |- step (?L, _ , stmtGoto ?l _) _] =>
-      econstructor; try eapply H'; eauto
-    | _ => econstructor; eauto
-  end.
-
-Ltac one_step := eapply bisimSilent; [ eapply plus2O; single_step
-                              | eapply plus2O; single_step
-                              | ].
-
-Ltac no_step := eapply bisimTerm;
-               try eapply star2_refl; try get_functional; try subst;
-                [ try reflexivity
-                | stuck2
-                | stuck2  ].
-
-
-Ltac extern_step :=
-  let STEP := fresh "STEP" in
-  eapply bisimExtern;
-    [ eapply star2_refl
-    | eapply star2_refl
-    | intros ? ? STEP; inv STEP
-    | intros ? ? STEP; inv STEP
-    ].
-
-
 Lemma freeVarSimF_sim σ1 σ2
   : freeVarSimF σ1 σ2 -> bisim σ1 σ2.
 Proof.
