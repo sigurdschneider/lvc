@@ -179,21 +179,6 @@ Proof.
 Qed.
 
 
-Lemma bisim'_reduction_closed {S} `{StateType S}
-      (σ1 σ1':S) {S'} `{StateType S'} (σ2 σ2':S') r
-  : bisim'r r σ1 σ2
-    -> star2 step σ1 nil σ1'
-    -> star2 step σ2 nil σ2'
-    -> bisim'r r σ1' σ2'.
-Proof.
-  intros.
-  pinversion H1; subst; pfold.
-  - econstructor; eauto.
-    + admit.
-    + admit.
-  -
-Admitted.
-
 Lemma star2_reach X (R:X -> event -> X -> Prop) σ1 σ2a σ2b
 : star2 R σ1 nil σ2a
   -> star2 R σ1 nil σ2b
@@ -239,6 +224,124 @@ Proof.
   edestruct (star2_reach H4 H3); eauto using star2_trans.
 Qed.
 
+
+Inductive star2n (X : Type) (R : X -> event -> X -> Prop) : nat -> X -> list event -> X -> Prop :=
+    star2n_refl : forall x : X, star2n R 0 x nil x
+  | S_star2n n : forall y x x' yl z,
+                   R x y x'
+                   -> star2n R n x' yl z
+                   -> star2n R (S n) x (filter_tau y yl) z.
+
+Inductive plus2n (X : Type) (R : X -> event -> X -> Prop)
+: nat -> X -> list event -> X -> Prop :=
+  plus2nO x y x' el
+  : R x y x'
+    -> el = (filter_tau y nil)
+    -> plus2n R 0 x el x'
+| plus2nS n x y x' yl z el
+  : R x y x'
+    -> el = (filter_tau y yl)
+    -> plus2n R n x' yl z
+    -> plus2n R (S n)  x el z.
+
+Lemma plus2_plus2n X (R: X -> event -> X -> Prop) x A y
+: plus2 R x A y
+  -> exists n, plus2n R n x A y.
+Proof.
+  intros. general induction H.
+  - eexists; eauto using plus2n.
+  - destruct IHplus2; eexists; eauto using plus2n.
+Qed.
+
+Lemma star2n_star2 X (R: X -> event -> X -> Prop) x A y n
+: star2n R n x A y
+  -> star2 R x A y.
+Proof.
+  intros. general induction H; eauto using star2.
+Qed.
+
+Lemma plus2n_star2n X (R: X -> event -> X -> Prop) x A y n
+: plus2n R n x A y
+  -> star2n R (S n) x A y.
+Proof.
+  intros. general induction H; eauto using star2n.
+Qed.
+
+Lemma star2_star2n X (R: X -> event -> X -> Prop) x A y
+: star2 R x A y
+  -> exists n, star2n R n x A y.
+Proof.
+  intros. general induction H; eauto using star2n.
+  - destruct IHstar2; eexists; econstructor; eauto.
+Qed.
+
+Lemma star2n_reach X (R:X -> event -> X -> Prop) σ1 σ2a σ2b n n'
+: star2n R n σ1 nil σ2a
+  -> star2n R n' σ1 nil σ2b
+  -> internally_deterministic R
+  -> (star2n R (n'-n) σ2a nil σ2b \/ star2n R (n-n') σ2b nil σ2a).
+Proof.
+  intros.
+  general induction H; eauto.
+  - left. orewrite (n' - 0 = n'). eauto.
+  - destruct y, yl; isabsurd; eauto.
+    inv H1.
+    + right. orewrite (S n - 0 = S n). econstructor; eauto.
+    + destruct y, yl; isabsurd.
+      assert (x'0 = x'). eapply H2; eauto. subst.
+      eapply IHstar2n; eauto.
+Qed.
+
+
+Lemma plus2_star2 X R (x y:X) A
+: plus2 R x A y
+  -> star2 R x A y.
+Proof.
+  intros. general induction H; simpl; eauto using star2.
+Qed.
+
+Lemma activated_star_reach S `{StateType S} (σ σ' σ'':S)
+: activated σ''
+  -> star2 step σ nil σ''
+  -> star2 step σ nil σ'
+  -> star2 step σ' nil σ''.
+Proof.
+  intros. general induction H2; eauto.
+  - destruct y, yl; isabsurd. inv H3.
+    + exfalso. destruct H1.
+      assert (EvtExtern x = EvtTau).
+      edestruct H1.
+      eapply step_internally_deterministic; eauto. congruence.
+    + rewrite H4. destruct y,yl;isabsurd.
+      assert (x'0 = x').
+      eapply step_internally_deterministic; eauto. subst.
+      eauto.
+Qed.
+
+Lemma bisim'_reduction_closed {S} `{StateType S}
+      (σ1 σ1':S) {S'} `{StateType S'} (σ2:S')
+  : bisim' σ1 σ2
+    -> star2 step σ1 nil σ1'
+    -> bisim' σ1' σ2.
+Proof.
+  intros. eapply star2_star2n in H2. destruct H2 as [n ?].
+  revert σ1 σ1' σ2 H1 H2.
+  pattern n.
+  eapply size_induction with (f:=id); intros; unfold id in *; simpl in *.
+  pinversion H2; subst.
+  - inv H3; eauto.
+    eapply plus2_plus2n in H4. destruct H4. eapply plus2n_star2n in H4.
+    edestruct (star2n_reach H3 H4); eauto. eapply H.
+    + eapply bisim'_expansion_closed. eapply H6.
+      eauto using star2n_star2. eauto using plus2_star2.
+    + eapply H1; try eapply H9. omega.
+      eapply bisim'_expansion_closed. eapply H6. eapply star2_refl.
+      eauto using plus2_star2.
+  - eapply star2n_star2 in H3. eapply activated_star_reach in H3; eauto.
+  - pfold. eapply star2n_star2 in H3.
+    eapply star2_reach_normal in H3; eauto. eapply H.
+Qed.
+
 Lemma star2_normal X R (x y:X)
   : star2 R x nil y
     -> normal2 R x
@@ -280,30 +383,7 @@ Proof.
 Qed.
 
 
-Lemma plus2_star2 X R (x y:X) A
-: plus2 R x A y
-  -> star2 R x A y.
-Proof.
-  intros. general induction H; simpl; eauto using star2.
-Qed.
 
-Lemma activated_star_reach S `{StateType S} (σ σ' σ'':S)
-: activated σ''
-  -> star2 step σ nil σ''
-  -> star2 step σ nil σ'
-  -> star2 step σ' nil σ''.
-Proof.
-  intros. general induction H2; eauto.
-  - destruct y, yl; isabsurd. inv H3.
-    + exfalso. destruct H1.
-      assert (EvtExtern x = EvtTau).
-      edestruct H1.
-      eapply step_internally_deterministic; eauto. congruence.
-    + rewrite H4. destruct y,yl;isabsurd.
-      assert (x'0 = x').
-      eapply step_internally_deterministic; eauto. subst.
-      eauto.
-Qed.
 
 Lemma both_activated S `{StateType S} (σ1 σ2 σ3:S)
 : star2 step σ1 nil σ2
@@ -356,14 +436,13 @@ Proof.
   - eapply H3. do 2 eexists; eauto.
 Qed.
 
-Lemma bisim'_activated {S1} `{StateType S1} (σ1 σ1':S1)
+Lemma bisim'_activated {S1} `{StateType S1} (σ1:S1)
       {S2} `{StateType S2} (σ2:S2)
-: star2 step σ1 nil σ1'
-  -> activated σ1'
+: activated σ1
   -> bisim' σ1 σ2
   -> exists σ2', star2 step σ2 nil σ2' /\ activated σ2' /\
            ( forall (evt : event) (σ1'' : S1),
-               step σ1' evt σ1'' ->
+               step σ1 evt σ1'' ->
                exists σ2'' : S2,
                  step σ2' evt σ2'' /\
                  (paco2 (bisim_gen (S':=S2)) bot2 σ1'' σ2''))
@@ -374,27 +453,18 @@ Lemma bisim'_activated {S1} `{StateType S1} (σ1 σ1':S1)
                  step σ1 evt σ1' /\
                  (paco2 (bisim_gen (S':=S2)) bot2 σ1' σ2'')).
 Proof.
-  intros. general induction H1.
-  - pinversion H3; subst.
-    + exfalso. edestruct (plus2_destr_nil H1); dcr.
-      destruct H2 as [? []].
-      exploit (step_internally_deterministic _ _ _ _ H7 H2); dcr; congruence.
-    + assert (x = σ1). eapply activated_star_eq; eauto. subst x.
-      eexists σ0; split; eauto. split; eauto. split.
-      intros. edestruct H7; eauto; dcr. destruct H12; isabsurd.
-      eexists; split; eauto.
-      intros. edestruct H8; eauto; dcr. destruct H12; isabsurd.
-      eexists; split; eauto.
-    + exfalso. refine (activated_normal_star _ H2 _ _); eauto using star2.
-  - destruct y, yl; isabsurd. simpl in * |- *.
-    edestruct IHstar2; eauto.
-    eapply bisim'_reduction_closed; eauto using star2.
-    eapply (S_star2 _ _ H); eauto using star2_refl.
-    dcr.
-    eexists; split; eauto. split; eauto. split; intros.
-    eapply H7; eauto. edestruct H10; eauto. destruct H9.
-    eexists x1; split; eauto.
-
+  intros.
+  pinversion H2; subst.
+  -  exfalso. edestruct (plus2_destr_nil H3); dcr.
+     destruct H1 as [? []].
+     exploit (step_internally_deterministic _ _ _ _ H7 H1); dcr; congruence.
+  - assert (σ1 = σ0). eapply activated_star_eq; eauto. subst σ1.
+    eexists σ3; split; eauto. split; eauto. split.
+    intros. edestruct H7; eauto; dcr. destruct H12; isabsurd.
+    eexists; split; eauto.
+    intros. edestruct H8; eauto; dcr. destruct H12; isabsurd.
+    eexists; split; eauto.
+  - exfalso. refine (activated_normal_star _ H1 _ _); eauto using star2.
 Qed.
 
 
@@ -417,10 +487,24 @@ Proof.
         eapply star2_trans in H10; eauto. clear H2; simpl in *.
         eapply plus2_star2 in H6.
         exploit (activated_star_reach H12 H10 H6); eauto.
-        destruct (bisim'_activated X H12 (bisim'_sym H7)); dcr.
+        eapply bisim'_sym in H7.
+        eapply bisim'_reduction_closed in H7; eauto.
+        destruct (bisim'_activated H12 H7); dcr.
         econstructor 2.
-
-
+        eapply plus2_star2 in H4.
+        eapply (star2_trans H4 H8). eapply H11.
+        eauto. eauto.
+        + intros. edestruct H18; eauto. destruct H17.
+          edestruct H14; eauto. dcr.
+          eexists; split; eauto. destruct H22; isabsurd.
+          right. eapply CIH. eapply bisim'_sym in H19. eauto.
+          left. eapply star2_refl. eauto.
+        + intros. edestruct H15; eauto; dcr.
+          edestruct H9; eauto; dcr. destruct H17.
+          eexists; split; eauto. destruct H20; isabsurd.
+          right. eapply CIH. eapply bisim'_sym. eapply H21.
+          left; eapply star2_refl.
+          eauto.
       - (* plus step <-> term *)
         eapply star2_trans in H11; eauto. clear H2; simpl in *.
         eapply plus2_star2 in H6.
