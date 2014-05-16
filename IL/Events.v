@@ -1,21 +1,7 @@
 Require Import List.
-Require Export Util Relations Val Exp AutoIndTac.
+Require Export Util Relations Relations2 Val Exp AutoIndTac.
 
 Set Implicit Arguments.
-
-
-Definition functional2 :=
-fun (X Y : Type) (R : X -> Y -> X -> Prop)
-=> forall x (y:Y) x1 x2, R x y x1 -> R x y x2 -> x1 = x2.
-
-Definition reducible2 :=
-fun (X Y : Type) (R : X->Y->X->Prop) (x : X) => exists y x', R x y x'.
-
-Definition normal2 :=
-fun (X Y : Type) (R : X->Y->X->Prop) (x : X) => ~ reducible2 R x.
-
-Definition reddec :=
-fun (X Y : Type) (R : X->Y->X->Prop) => forall x : X, reducible2 R x \/ normal2 R x.
 
 Definition external := nat.
 
@@ -107,6 +93,139 @@ Proof.
   - destruct y,yl; isabsurd.
     exploit IHstar2; eauto.
     econstructor 2; eauto.
+Qed.
+
+Lemma star2_reach X (R:X -> event -> X -> Prop) σ1 σ2a σ2b
+: star2 R σ1 nil σ2a
+  -> star2 R σ1 nil σ2b
+  -> internally_deterministic R
+  -> (star2 R σ2a nil σ2b \/ star2 R σ2b nil σ2a).
+Proof.
+  intros.
+  general induction H; eauto.
+  - destruct y, yl; isabsurd; eauto.
+    inv H1.
+    + right. econstructor 2; eauto.
+    + destruct y, yl; isabsurd.
+      assert (x'0 = x'). eapply H2; eauto. subst.
+      edestruct (IHstar2 _ eq_refl H6); eauto.
+Qed.
+
+Lemma star2_reach_normal X (R:X -> event -> X -> Prop) σ1 σ2a σ2b
+: star2 R σ1 nil σ2a
+  -> star2 R σ1 nil σ2b
+  -> internally_deterministic R
+  -> normal2 R σ2a
+  -> star2 R σ2b nil σ2a.
+Proof.
+  intros.
+  general induction H0; eauto.
+  - destruct y, yl; isabsurd; eauto.
+    inv H1.
+    + exfalso. eapply H3. do 2 eexists. eauto.
+    + destruct y, yl; isabsurd.
+      assert (x'0 = x'). eapply H2; eauto. subst.
+      eapply IHstar2; eauto.
+Qed.
+
+Lemma plus2_reach X (R:X -> event -> X -> Prop) σ1 σ2a σ2b
+: plus2 R σ1 nil σ2a
+  -> plus2 R σ1 nil σ2b
+  -> internally_deterministic R
+  -> (star2 R σ2a nil σ2b \/ star2 R σ2b nil σ2a).
+Proof.
+  intros. eapply plus2_destr_nil in H. eapply plus2_destr_nil in H0.
+  destruct H, H0; dcr.
+  assert (x0 = x). eapply H1; eauto. subst.
+  edestruct (star2_reach H4 H3); eauto using star2_trans.
+Qed.
+
+
+Inductive star2n (X : Type) (R : X -> event -> X -> Prop) : nat -> X -> list event -> X -> Prop :=
+    star2n_refl : forall x : X, star2n R 0 x nil x
+  | S_star2n n : forall y x x' yl z,
+                   R x y x'
+                   -> star2n R n x' yl z
+                   -> star2n R (S n) x (filter_tau y yl) z.
+
+Inductive plus2n (X : Type) (R : X -> event -> X -> Prop)
+: nat -> X -> list event -> X -> Prop :=
+  plus2nO x y x' el
+  : R x y x'
+    -> el = (filter_tau y nil)
+    -> plus2n R 0 x el x'
+| plus2nS n x y x' yl z el
+  : R x y x'
+    -> el = (filter_tau y yl)
+    -> plus2n R n x' yl z
+    -> plus2n R (S n)  x el z.
+
+Lemma plus2_plus2n X (R: X -> event -> X -> Prop) x A y
+: plus2 R x A y
+  -> exists n, plus2n R n x A y.
+Proof.
+  intros. general induction H.
+  - eexists; eauto using plus2n.
+  - destruct IHplus2; eexists; eauto using plus2n.
+Qed.
+
+Lemma star2n_star2 X (R: X -> event -> X -> Prop) x A y n
+: star2n R n x A y
+  -> star2 R x A y.
+Proof.
+  intros. general induction H; eauto using star2.
+Qed.
+
+Lemma plus2n_star2n X (R: X -> event -> X -> Prop) x A y n
+: plus2n R n x A y
+  -> star2n R (S n) x A y.
+Proof.
+  intros. general induction H; eauto using star2n.
+Qed.
+
+Lemma star2_star2n X (R: X -> event -> X -> Prop) x A y
+: star2 R x A y
+  -> exists n, star2n R n x A y.
+Proof.
+  intros. general induction H; eauto using star2n.
+  - destruct IHstar2; eexists; econstructor; eauto.
+Qed.
+
+Lemma star2n_reach X (R:X -> event -> X -> Prop) σ1 σ2a σ2b n n'
+: star2n R n σ1 nil σ2a
+  -> star2n R n' σ1 nil σ2b
+  -> internally_deterministic R
+  -> (star2n R (n'-n) σ2a nil σ2b \/ star2n R (n-n') σ2b nil σ2a).
+Proof.
+  intros.
+  general induction H; eauto.
+  - left. orewrite (n' - 0 = n'). eauto.
+  - destruct y, yl; isabsurd; eauto.
+    inv H1.
+    + right. orewrite (S n - 0 = S n). econstructor; eauto.
+    + destruct y, yl; isabsurd.
+      assert (x'0 = x'). eapply H2; eauto. subst.
+      eapply IHstar2n; eauto.
+Qed.
+
+
+Lemma plus2_star2 X R (x y:X) A
+: plus2 R x A y
+  -> star2 R x A y.
+Proof.
+  intros. general induction H; simpl; eauto using star2.
+Qed.
+
+
+
+
+Lemma star2_normal X R (x y:X)
+  : star2 R x nil y
+    -> normal2 R x
+    -> x = y.
+Proof.
+  intros. inv H; eauto.
+  exfalso. firstorder.
 Qed.
 
 (*

@@ -1,6 +1,6 @@
 Require Import List.
 Require Export Util Var Val Exp Env Map CSet AutoIndTac IL AllInRel.
-Require Export Events StateType paco.
+Require Export EventsActivated StateType paco.
 
 Set Implicit Arguments.
 Unset Printing Records.
@@ -8,10 +8,6 @@ Unset Printing Records.
 Open Scope map_scope.
 (** * Simulation *)
 (** A characterization of simulation equivalence on states; works only for deterministic semantics *)
-
-Definition activated {S} `{StateType S} (σ:S) :=
-  exists ext σ', step σ (EvtExtern ext) σ'.
-
 
 CoInductive bisim {S} `{StateType S} {S'} `{StateType S'}  : S -> S' -> Prop :=
   | bisimSilent (σ1 σ1':S) (σ2 σ2':S') : (* result σ1 = result σ2 -> *)
@@ -179,146 +175,8 @@ Proof.
 Qed.
 
 
-Lemma star2_reach X (R:X -> event -> X -> Prop) σ1 σ2a σ2b
-: star2 R σ1 nil σ2a
-  -> star2 R σ1 nil σ2b
-  -> internally_deterministic R
-  -> (star2 R σ2a nil σ2b \/ star2 R σ2b nil σ2a).
-Proof.
-  intros.
-  general induction H; eauto.
-  - destruct y, yl; isabsurd; eauto.
-    inv H1.
-    + right. econstructor 2; eauto.
-    + destruct y, yl; isabsurd.
-      assert (x'0 = x'). eapply H2; eauto. subst.
-      edestruct (IHstar2 _ eq_refl H6); eauto.
-Qed.
 
-Lemma star2_reach_normal X (R:X -> event -> X -> Prop) σ1 σ2a σ2b
-: star2 R σ1 nil σ2a
-  -> star2 R σ1 nil σ2b
-  -> internally_deterministic R
-  -> normal2 R σ2a
-  -> star2 R σ2b nil σ2a.
-Proof.
-  intros.
-  general induction H0; eauto.
-  - destruct y, yl; isabsurd; eauto.
-    inv H1.
-    + exfalso. eapply H3. do 2 eexists. eauto.
-    + destruct y, yl; isabsurd.
-      assert (x'0 = x'). eapply H2; eauto. subst.
-      eapply IHstar2; eauto.
-Qed.
-
-Lemma plus2_reach X (R:X -> event -> X -> Prop) σ1 σ2a σ2b
-: plus2 R σ1 nil σ2a
-  -> plus2 R σ1 nil σ2b
-  -> internally_deterministic R
-  -> (star2 R σ2a nil σ2b \/ star2 R σ2b nil σ2a).
-Proof.
-  intros. eapply plus2_destr_nil in H. eapply plus2_destr_nil in H0.
-  destruct H, H0; dcr.
-  assert (x0 = x). eapply H1; eauto. subst.
-  edestruct (star2_reach H4 H3); eauto using star2_trans.
-Qed.
-
-
-Inductive star2n (X : Type) (R : X -> event -> X -> Prop) : nat -> X -> list event -> X -> Prop :=
-    star2n_refl : forall x : X, star2n R 0 x nil x
-  | S_star2n n : forall y x x' yl z,
-                   R x y x'
-                   -> star2n R n x' yl z
-                   -> star2n R (S n) x (filter_tau y yl) z.
-
-Inductive plus2n (X : Type) (R : X -> event -> X -> Prop)
-: nat -> X -> list event -> X -> Prop :=
-  plus2nO x y x' el
-  : R x y x'
-    -> el = (filter_tau y nil)
-    -> plus2n R 0 x el x'
-| plus2nS n x y x' yl z el
-  : R x y x'
-    -> el = (filter_tau y yl)
-    -> plus2n R n x' yl z
-    -> plus2n R (S n)  x el z.
-
-Lemma plus2_plus2n X (R: X -> event -> X -> Prop) x A y
-: plus2 R x A y
-  -> exists n, plus2n R n x A y.
-Proof.
-  intros. general induction H.
-  - eexists; eauto using plus2n.
-  - destruct IHplus2; eexists; eauto using plus2n.
-Qed.
-
-Lemma star2n_star2 X (R: X -> event -> X -> Prop) x A y n
-: star2n R n x A y
-  -> star2 R x A y.
-Proof.
-  intros. general induction H; eauto using star2.
-Qed.
-
-Lemma plus2n_star2n X (R: X -> event -> X -> Prop) x A y n
-: plus2n R n x A y
-  -> star2n R (S n) x A y.
-Proof.
-  intros. general induction H; eauto using star2n.
-Qed.
-
-Lemma star2_star2n X (R: X -> event -> X -> Prop) x A y
-: star2 R x A y
-  -> exists n, star2n R n x A y.
-Proof.
-  intros. general induction H; eauto using star2n.
-  - destruct IHstar2; eexists; econstructor; eauto.
-Qed.
-
-Lemma star2n_reach X (R:X -> event -> X -> Prop) σ1 σ2a σ2b n n'
-: star2n R n σ1 nil σ2a
-  -> star2n R n' σ1 nil σ2b
-  -> internally_deterministic R
-  -> (star2n R (n'-n) σ2a nil σ2b \/ star2n R (n-n') σ2b nil σ2a).
-Proof.
-  intros.
-  general induction H; eauto.
-  - left. orewrite (n' - 0 = n'). eauto.
-  - destruct y, yl; isabsurd; eauto.
-    inv H1.
-    + right. orewrite (S n - 0 = S n). econstructor; eauto.
-    + destruct y, yl; isabsurd.
-      assert (x'0 = x'). eapply H2; eauto. subst.
-      eapply IHstar2n; eauto.
-Qed.
-
-
-Lemma plus2_star2 X R (x y:X) A
-: plus2 R x A y
-  -> star2 R x A y.
-Proof.
-  intros. general induction H; simpl; eauto using star2.
-Qed.
-
-Lemma activated_star_reach S `{StateType S} (σ σ' σ'':S)
-: activated σ''
-  -> star2 step σ nil σ''
-  -> star2 step σ nil σ'
-  -> star2 step σ' nil σ''.
-Proof.
-  intros. general induction H2; eauto.
-  - destruct y, yl; isabsurd. inv H3.
-    + exfalso. destruct H1.
-      assert (EvtExtern x = EvtTau).
-      edestruct H1.
-      eapply step_internally_deterministic; eauto. congruence.
-    + rewrite H4. destruct y,yl;isabsurd.
-      assert (x'0 = x').
-      eapply step_internally_deterministic; eauto. subst.
-      eauto.
-Qed.
-
-Lemma bisim'_reduction_closed {S} `{StateType S}
+Lemma bisim'_reduction_closed_1 {S} `{StateType S}
       (σ1 σ1':S) {S'} `{StateType S'} (σ2:S')
   : bisim' σ1 σ2
     -> star2 step σ1 nil σ1'
@@ -342,26 +200,6 @@ Proof.
     eapply star2_reach_normal in H3; eauto. eapply H.
 Qed.
 
-Lemma star2_normal X R (x y:X)
-  : star2 R x nil y
-    -> normal2 R x
-    -> x = y.
-Proof.
-  intros. inv H; eauto.
-  exfalso. firstorder.
-Qed.
-
-Lemma activated_normal S `{StateType S} (σ:S)
-  : activated σ
-    -> normal2 step σ
-    -> False.
-Proof.
-  intros. inv H0. eapply H1. eexists. eapply H2.
-Qed.
-
-
-Arguments activated_normal [S] [H] σ _ _.
-
 Lemma bisim'_terminate {S1} `{StateType S1} (σ1 σ1':S1)
       {S2} `{StateType S2} (σ2:S2)
 : star2 step σ1 nil σ1'
@@ -378,63 +216,10 @@ Proof.
       eexists; split; eauto.
   - destruct y; isabsurd. simpl.
     eapply IHstar2; eauto.
-    eapply bisim'_reduction_closed; eauto using star2.
+    eapply bisim'_reduction_closed_1; eauto using star2.
     eapply (S_star2 _ _ H); eauto using star2_refl.
 Qed.
 
-
-
-
-Lemma both_activated S `{StateType S} (σ1 σ2 σ3:S)
-: star2 step σ1 nil σ2
-  -> star2 step σ1 nil σ3
-  -> activated σ2
-  -> activated σ3
-  -> σ2 = σ3.
-Proof.
-  intros. general induction H0.
-  - inv H1; eauto.
-    + exfalso. destruct H2 as [? []].
-      destruct y; isabsurd.
-      exploit step_internally_deterministic.
-      eapply H4. eapply H2. dcr; congruence.
-  - inv H2.
-    + exfalso. destruct H4 as [? []].
-      destruct y; isabsurd.
-      exploit step_internally_deterministic.
-      eapply H. eapply H4. dcr; congruence.
-    + destruct y,y0,yl,yl0; isabsurd.
-      eapply IHstar2; eauto.
-      assert (x'0 = x').
-      eapply step_internally_deterministic; eauto.
-      subst; eauto.
-Qed.
-
-Lemma activated_star_eq S `{StateType S} (σ1 σ2:S)
-: star2 step σ1 nil σ2
-  -> activated σ1
-  -> σ1 = σ2.
-Proof.
-  intros. general induction H0; eauto.
-  - exfalso. destruct H2 as [? []].
-    destruct y; isabsurd.
-    exploit step_internally_deterministic.
-    eapply H. eapply H2. dcr; congruence.
-Qed.
-
-
-Lemma activated_normal_star S `{StateType S} (σ σ' σ'':S)
-  : star2 step σ nil σ'
-    -> activated σ'
-    -> star2 step σ nil σ''
-    -> normal2 step σ''
-    -> False.
-Proof.
-  intros.
-  exploit activated_star_reach; eauto. inv X.
-  - eauto using activated_normal.
-  - eapply H3. do 2 eexists; eauto.
-Qed.
 
 Lemma bisim'_activated {S1} `{StateType S1} (σ1:S1)
       {S2} `{StateType S2} (σ2:S2)
@@ -467,56 +252,56 @@ Proof.
   - exfalso. refine (activated_normal_star _ H1 _ _); eauto using star2.
 Qed.
 
-        Lemma plus_step_activated {S1} `{StateType S1} (σ1 σ1':S1)
-              {S2} `{StateType S2} (σ2a σ2' σ2b σ4:S2)
-              {S3} `{StateType S3} (σ3 σ5:S3)  (r : S1 -> S3 -> Prop)
-          (H6:plus2 step σ2a nil σ2')
-          (H2:star2 step σ2a nil σ2b)
-          (H10:star2 step σ2b nil σ4)
-          (H11 : star2 step σ3 nil σ5)
-          (H4 : plus2 step σ1 nil σ1')
-          (H13 : activated σ5)
-          (H12 : activated σ4)
-          (H7 : paco2 (bisim_gen (S':=S2)) bot2 σ1' σ2')
-          (H14 : forall (evt : event) (σ1' : S2),
-        step σ4 evt σ1' ->
-        exists σ2' : S3,
+Lemma plus_step_activated {S1} `{StateType S1} (σ1 σ1':S1)
+      {S2} `{StateType S2} (σ2a σ2' σ2b σ4:S2)
+      {S3} `{StateType S3} (σ3 σ5:S3)  (r : S1 -> S3 -> Prop)
+      (H6:plus2 step σ2a nil σ2')
+      (H2:star2 step σ2a nil σ2b)
+      (H10:star2 step σ2b nil σ4)
+      (H11 : star2 step σ3 nil σ5)
+      (H4 : plus2 step σ1 nil σ1')
+      (H13 : activated σ5)
+      (H12 : activated σ4)
+      (H7 : paco2 (bisim_gen (S':=S2)) bot2 σ1' σ2')
+      (H14 : forall (evt : event) (σ1' : S2),
+               step σ4 evt σ1' ->
+               exists σ2' : S3,
           step σ5 evt σ2' /\
           (paco2 (bisim_gen (S':=S3)) bot2 σ1' σ2' \/ bot2 σ1' σ2'))
-          (H15 : forall (evt : event) (σ2' : S3),
-        step σ5 evt σ2' ->
-        exists σ1' : S2,
-          step σ4 evt σ1' /\
-          (paco2 (bisim_gen (S':=S3)) bot2 σ1' σ2' \/ bot2 σ1' σ2'))
-          (CIH : forall (σ1 : S1) (σ2a σ2b : S2) (σ3 : S3),
-                   bisim' σ1 σ2a ->
-                   star2 step σ2a nil σ2b \/ star2 step σ2b nil σ2a ->
-                   bisim' σ2b σ3 -> r σ1 σ3)
-          : paco2 (bisim_gen (S':=S3)) r σ1 σ3.
-        Proof.
-          pfold.
-          eapply star2_trans in H10; eauto. clear H2; simpl in *.
-          eapply plus2_star2 in H6.
-          exploit (activated_star_reach H12 H10 H6); eauto.
-          eapply bisim'_sym in H7.
-          eapply bisim'_reduction_closed in H7; eauto.
-          destruct (bisim'_activated H12 H7); dcr.
-          econstructor 2.
-          eapply plus2_star2 in H4.
-          eapply (star2_trans H4 H3). eapply H11.
-          eauto. eauto.
-          + intros. edestruct H16; eauto. destruct H9.
-            edestruct H14; eauto. dcr.
-            eexists; split; eauto. destruct H20; isabsurd.
-            right. eapply CIH. eapply bisim'_sym in H17. eauto.
-            left. eapply star2_refl. eauto.
-          + intros. edestruct H15; eauto; dcr.
-            edestruct H5; eauto; dcr. destruct H9.
-            eexists; split; eauto. destruct H18; isabsurd.
-            right. eapply CIH. eapply bisim'_sym. eapply H19.
-            left; eapply star2_refl.
-            eauto.
-        Qed.
+      (H15 : forall (evt : event) (σ2' : S3),
+               step σ5 evt σ2' ->
+               exists σ1' : S2,
+                 step σ4 evt σ1' /\
+                 (paco2 (bisim_gen (S':=S3)) bot2 σ1' σ2' \/ bot2 σ1' σ2'))
+      (CIH : forall (σ1 : S1) (σ2a σ2b : S2) (σ3 : S3),
+               bisim' σ1 σ2a ->
+               star2 step σ2a nil σ2b \/ star2 step σ2b nil σ2a ->
+               bisim' σ2b σ3 -> r σ1 σ3)
+: paco2 (bisim_gen (S':=S3)) r σ1 σ3.
+Proof.
+  pfold.
+  eapply star2_trans in H10; eauto. clear H2; simpl in *.
+  eapply plus2_star2 in H6.
+  exploit (activated_star_reach H12 H10 H6); eauto.
+  eapply bisim'_sym in H7.
+  eapply bisim'_reduction_closed_1 in H7; eauto.
+  destruct (bisim'_activated H12 H7); dcr.
+  econstructor 2.
+  eapply plus2_star2 in H4.
+  eapply (star2_trans H4 H3). eapply H11.
+  eauto. eauto.
+  + intros. edestruct H16; eauto. destruct H9.
+    edestruct H14; eauto. dcr.
+    eexists; split; eauto. destruct H20; isabsurd.
+    right. eapply CIH. eapply bisim'_sym in H17. eauto.
+    left. eapply star2_refl. eauto.
+  + intros. edestruct H15; eauto; dcr.
+    edestruct H5; eauto; dcr. destruct H9.
+    eexists; split; eauto. destruct H18; isabsurd.
+    right. eapply CIH. eapply bisim'_sym. eapply H19.
+    left; eapply star2_refl.
+    eauto.
+Qed.
 
 Lemma bisim'_zigzag {S1} `{StateType S1}
       (σ1:S1) {S2} `{StateType S2} (σ2a σ2b:S2) {S3} `{StateType S3} (σ3:S3)
@@ -549,7 +334,7 @@ Proof.
           eapply plus2_star2 in H13.
           eapply star2_trans in H13; eauto. clear H2; simpl in *.
           exploit (activated_star_reach H8 H6 H13); eauto.
-          eapply bisim'_reduction_closed in H15; eauto.
+          eapply bisim'_reduction_closed_1 in H15; eauto.
           destruct (bisim'_activated H8 H15); dcr.
           econstructor 2. eauto.
           eapply plus2_star2 in H14.
@@ -620,7 +405,7 @@ Proof.
           eapply star2_trans in H6; eauto. clear H2; simpl in *.
           exploit (activated_star_reach H12 H10 H6); eauto.
           eapply bisim'_sym in H7.
-          eapply bisim'_reduction_closed in H7; eauto.
+          eapply bisim'_reduction_closed_1 in H7; eauto.
           destruct (bisim'_activated H12 H7); dcr.
           econstructor 2.
           eapply plus2_star2 in H4.
@@ -653,7 +438,7 @@ Proof.
           eapply star2_trans in H6; eauto. clear H2; simpl in *.
           eapply plus2_star2 in H13.
           exploit (activated_star_reach H8 H6 H13); eauto.
-          eapply bisim'_reduction_closed in H15; eauto.
+          eapply bisim'_reduction_closed_1 in H15; eauto.
           destruct (bisim'_activated H8 H15); dcr.
           econstructor 2. eauto.
           eapply plus2_star2 in H14.
@@ -719,6 +504,21 @@ Lemma bisim'_trans {S1} `{StateType S1}
     -> bisim' σ1 σ3.
 Proof.
   intros. eauto using (bisim'_zigzag (S1:=S1) (S2:=S2) (S3:=S3)), star2_refl.
+Qed.
+
+Lemma bisim'_reduction_closed {S} `{StateType S}
+      (σ1 σ1':S) {S'} `{StateType S'} (σ2 σ2':S')
+  : bisim' σ1 σ2
+    -> star2 step σ1 nil σ1'
+    -> star2 step σ2 nil σ2'
+    -> bisim' σ1' σ2'.
+Proof.
+  intros. eapply bisim'_trans.
+  eapply bisim'_reduction_closed_1; eauto.
+  eapply bisim'_sym.
+  eapply bisim'_sym in H1.
+  eapply bisim'_reduction_closed_1; eauto.
+  eapply bisim'_refl.
 Qed.
 
 Class BisimRelation (A:Type) := {
@@ -919,6 +719,41 @@ Proof.
       econstructor; eauto using get_drop_lab0, drop_get_lab0. eapply H11.
       left. pfold. econstructor 3; try eapply star2_refl; eauto.
 Qed.
+
+
+Ltac single_step :=
+  match goal with
+    | [ H : agree_on _ ?E ?E', I : val2bool (?E ?x) = true |- step (_, ?E', stmtIf ?x _ _) _ ] =>
+      econstructor; eauto; rewrite <- H; eauto; cset_tac; intuition
+    | [ H : agree_on _ ?E ?E', I : val2bool (?E ?x) = false |- step (_, ?E', stmtIf ?x _ _) _ ] =>
+      econstructor 3; eauto; rewrite <- H; eauto; cset_tac; intuition
+    | [ H : val2bool _ = false |- _ ] => econstructor 3 ; try eassumption; try reflexivity
+    | [ H : step (?L, _ , stmtGoto ?l _) _, H': get ?L (counted ?l) _ |- _] =>
+      econstructor; try eapply H'; eauto
+    | [ H': get ?L (counted ?l) _ |- step (?L, _ , stmtGoto ?l _) _] =>
+      econstructor; try eapply H'; eauto
+    | _ => econstructor; eauto
+  end.
+
+Ltac one_step := eapply bisimSilent; [ eapply plus2O; single_step
+                              | eapply plus2O; single_step
+                              | ].
+
+Ltac no_step := eapply bisimTerm;
+               try eapply star2_refl; try get_functional; try subst;
+                [ try reflexivity
+                | stuck2
+                | stuck2  ].
+
+
+Ltac extern_step :=
+  let STEP := fresh "STEP" in
+  eapply bisimExtern;
+    [ eapply star2_refl
+    | eapply star2_refl
+    | intros ? ? STEP; inv STEP
+    | intros ? ? STEP; inv STEP
+    ].
 
 
 
