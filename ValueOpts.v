@@ -1,7 +1,7 @@
 Require Import CSet Le.
 
 Require Import Plus Util AllInRel Map.
-Require Import CSet Val Var Env EnvTy IL Bisim SimApx Fresh Annotation MoreExp Coherence.
+Require Import CSet Val Var Env EnvTy Equiv.Sim IL Fresh Annotation MoreExp Coherence.
 
 Require Import SetOperations Liveness Filter.
 
@@ -183,7 +183,7 @@ Definition BlockRel (G':set var) (V V':onv val) (a:params*set var*eqns*eqns*eqns
   /\ eqns_freeVars Gamma ⊆ G
   /\ eqns_freeVars Γ' ⊆ G.
 
-Instance AR lv V V' : ApxRelation (params*set var*eqns*eqns*eqns*eqns) := {
+Instance AR lv V V' : SimRelation (params*set var*eqns*eqns*eqns*eqns) := {
   ArgRel := ArgRel;
   ParamRel := ParamRel;
   BlockRel := BlockRel lv V V'
@@ -367,11 +367,11 @@ Proof.
 Qed.
 
 
-Lemma simL'_update r A (AR AR':ApxRelation A) LV L L' L1 L2
+Lemma simL'_update r A (AR AR':SimRelation A) LV L L' L1 L2
 : AIR5 (simB r AR) L L' LV L1 L2
-  -> (forall x b b', @SimApx.BlockRel _ AR x b b' -> @SimApx.BlockRel _ AR' x b b')
-  -> (forall a Z Z', @SimApx.ParamRel _ AR a Z Z' -> @SimApx.ParamRel _ AR' a Z Z')
-  -> (forall V V' a VL VL', @SimApx.ArgRel _ AR V V' a VL VL' <-> @SimApx.ArgRel _ AR' V V' a VL VL')
+  -> (forall x b b', @Sim.BlockRel _ AR x b b' -> @Sim.BlockRel _ AR' x b b')
+  -> (forall a Z Z', @Sim.ParamRel _ AR a Z Z' -> @Sim.ParamRel _ AR' a Z Z')
+  -> (forall V V' a VL VL', @Sim.ArgRel _ AR V V' a VL VL' <-> @Sim.ArgRel _ AR' V V' a VL VL')
   -> L = L1
   -> L' = L2
   -> AIR5 (simB r AR') L L' LV L1 L2.
@@ -563,14 +563,14 @@ Lemma sim_DVE r L L' V V' s LV eqns eqns' repl ang
 -> eqns_freeVars (getAnn eqns) ⊆ fst (getAnn ang)
 -> eqns_freeVars (getAnn eqns') ⊆ fst (getAnn ang)
 -> onvLe V V'
--> paco2 (@psimapx F.state _ F.state _) r (L,V, s) (L',V', compile s repl).
+-> sim'r r (L,V, s) (L',V', compile s repl).
 Proof.
   general induction s; simpl; invt eqn_sound; invt ssa; simpl in * |- *.
   + exploiT moreDefined; eauto. inv X.
-    - pfold. econstructor 3; try eapply star_refl; eauto. stuck.
-    - pfold. econstructor; try eapply plusO.
-      econstructor; eauto using eq_sym.
-      econstructor; eauto using eq_sym.
+    - pfold. econstructor 3; try eapply star2_refl; eauto. stuck2.
+    - pfold. econstructor; try eapply plus2O.
+      econstructor; eauto using eq_sym. reflexivity.
+      econstructor; eauto using eq_sym. reflexivity.
       left. eapply IHs; eauto.
       * eapply H11. eapply satisfiesAll_update; eauto.
       * eapply H13. eapply satisfiesAll_update; eauto.
@@ -589,30 +589,30 @@ Proof.
       * rewrite H21. eapply entails_freeVars_incl; eauto.
       * hnf; intros. lud; eauto.
   + exploiT moreDefined; eauto. inv X.
-    - pfold. econstructor 3; try eapply star_refl; eauto. stuck.
+    - pfold. econstructor 3; try eapply star2_refl; eauto. stuck2.
     - pfold. case_eq (val2bool y); intros.
-      econstructor; try eapply plusO.
-      econstructor; eauto using eq_sym.
-      econstructor; eauto using eq_sym.
+      econstructor; try eapply plus2O.
+      econstructor; eauto using eq_sym. reflexivity.
+      econstructor; eauto using eq_sym. reflexivity.
       left. eapply IHs1; eauto.
       * eapply H12; eauto.
       * eapply H15; eauto.
       * eapply simL'_update; eauto.
-        unfold SimApx.BlockRel.
+        unfold Sim.BlockRel.
         destruct x as [[[[[] ?] ?] ?] ?]; simpl; intros; dcr.
         repeat (split; eauto).
         rewrite H26; eauto.
         clear_all; reflexivity.
       * inv H12. rewrite H26; eauto; simpl. rewrite H16; eauto.
       * inv H15. rewrite H26; eauto; simpl. rewrite H16; eauto.
-      * econstructor; try eapply plusO.
-        econstructor 3; eauto using eq_sym.
-        econstructor 3; eauto using eq_sym.
+      * econstructor; try eapply plus2O.
+        econstructor 3; eauto using eq_sym. reflexivity.
+        econstructor 3; eauto using eq_sym. reflexivity.
         left. eapply IHs2; try eapply H10; eauto.
         eapply H13; eauto.
         eapply H20; eauto.
         eapply simL'_update; eauto.
-        unfold SimApx.BlockRel.
+        unfold Sim.BlockRel.
         destruct x as [[[[[] ?] ?] ?] ?]; simpl; intros; dcr.
         repeat (split; eauto).
         rewrite H27; eauto.
@@ -623,7 +623,7 @@ Proof.
     (* hnf in H2. exploit H2; eauto. simpl in *. subst bZ. *)
     decide (length bZ = length Y).
     exploiT moreDefinedArgs; eauto. inv X.
-    - pfold. econstructor 3; try eapply star_refl. eauto. stuck.
+    - pfold. econstructor 3; try eapply star2_refl. eauto. stuck2.
     - edestruct AIR5_length; try eassumption; dcr.
       edestruct get_length_eq; try eassumption.
       edestruct AIR5_nth as [?[? [?]]]; try eassumption; dcr.
@@ -655,23 +655,23 @@ Proof.
       exploit omap_length; eauto. congruence.
       rewrite <- H19.
       revert H19 H37; clear_all; cset_tac; intuition; exfalso; eauto.
-    - pfold. econstructor 3; try eapply star_refl. eauto. stuck; eauto.
+    - pfold. econstructor 3; try eapply star2_refl. eauto. stuck2; eauto.
       get_functional; subst. simpl in *. congruence.
-    - pfold. econstructor 3; try eapply star_refl. eauto. stuck; eauto.
+    - pfold. econstructor 3; try eapply star2_refl. eauto. stuck2; eauto.
   + simpl. exploiT moreDefined; eauto. inv X; eauto.
-    - pfold. econstructor 3; try eapply star_refl. simpl. congruence.
-      stuck.
-    - pfold. econstructor 2; try eapply star_refl. simpl. congruence.
-      stuck. stuck.
-  + pfold. econstructor; try eapply plusO.
-    econstructor; eauto.
-    econstructor; eauto.
+    - pfold. econstructor 3; try eapply star2_refl. simpl. congruence.
+      stuck2.
+    - pfold. econstructor 4; try eapply star2_refl. simpl. congruence.
+      stuck2. stuck2.
+  + pfold. econstructor; try eapply plus2O.
+    econstructor; eauto. reflexivity.
+    econstructor; eauto. reflexivity.
     simpl. left. eapply IHs2; eauto.
     - eapply H13; eauto.
     - eapply H16; eauto.
     - eapply simL_mon; eauto. eapply simL_extension'; eauto.
       * eapply simL'_update; eauto.
-        unfold SimApx.BlockRel.
+        unfold Sim.BlockRel.
         destruct x as [[[[[] ?] ?] ?] ?]; simpl; intros; dcr.
         repeat (split; eauto).
         rewrite H28; eauto.
@@ -681,7 +681,7 @@ Proof.
         eapply H12. eauto.
         eapply H14. eauto.
         eapply simL'_update; eauto.
-        unfold SimApx.BlockRel. intros.
+        unfold Sim.BlockRel. intros.
         destruct x as [[[[[] ?] ?] ?] ?]; dcr. simpl in H7.
         simpl. dcr.
         assert (sEQ: s [=] s \ of_list Z). {
