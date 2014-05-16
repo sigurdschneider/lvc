@@ -875,49 +875,50 @@ Proof.
     econstructor; eauto using get_drop_lab0, drop_get_lab0. eauto.
     econstructor; eauto using get_drop_lab0, drop_get_lab0. eauto.
     eauto.
-  -  (*
-  inv H1; inv H2; simpl in *.
-  pfold. econstructor 2; try eapply star_refl; eauto. stuck.
-  eapply H3. econstructor.
-  econstructor; eauto using get_drop_lab0, drop_get_lab0.
-  stuck. eapply H4. econstructor.
-  econstructor; eauto using get_drop_lab0, drop_get_lab0.
-  pfold. inv H5. econstructor 2.
-  Focus 2. eapply star_refl.
-  Focus 2. econstructor 2.
-  econstructor; eauto using get_drop_lab0, drop_get_lab0.
-  eauto. simpl; eauto. stuck.
-  eapply H3. econstructor.
-  econstructor; eauto using get_drop_lab0, drop_get_lab0.
-  eauto.
-  pfold. inv H5. econstructor 2.
-  Focus 2. econstructor 2.
-  econstructor; eauto using get_drop_lab0, drop_get_lab0.
-  eauto.
-  Focus 2. eapply star_refl.
-  simpl; eauto. eauto. stuck.
-  eapply H4. econstructor.
-  econstructor; eauto using get_drop_lab0, drop_get_lab0.
-  pfold. inv H5. inv H7. econstructor 2.
-  Focus 2. econstructor 2.
-  econstructor; eauto using get_drop_lab0, drop_get_lab0.
-  eauto.
-  Focus 2. econstructor 2.
-  econstructor; eauto using get_drop_lab0, drop_get_lab0.
-  eauto. eauto. eauto. eauto.
-  inv H1. pfold. econstructor 3; try eapply star_refl; eauto.
-  stuck. destruct H2. econstructor. econstructor.
-  eapply drop_get. simpl. orewrite (labN l + 0 = labN l).
-  eauto. eauto. eauto. reflexivity.
-  pfold. econstructor 3; eauto.
-  inv H3; simpl in *.
-  econstructor.
-  econstructor. eapply get_drop in Ldef.
-  orewrite (labN l + 0 = labN l) in Ldef. eauto. eauto. eauto. reflexivity.
-  eauto.
-  eapply psimapxd_mon. *)
-Admitted.
-
+  - inv H0.
+    + exfalso. destruct H2 as [? [? ?]]. inv H2.
+    + inv H1.
+      * exfalso. destruct H3 as [? [? ?]]. inv H3.
+      * inv H7; inv H10; simpl in *.
+        pfold. subst yl yl0.
+        econstructor; try eapply star2_plus2.
+        econstructor; eauto using get_drop_lab0, drop_get_lab0. eapply H9.
+        econstructor; eauto using get_drop_lab0, drop_get_lab0. eapply H12.
+        left. pfold. econstructor 2; try eapply star2_refl; eauto.
+  - inv H1; inv H2; simpl in *.
+    + pfold. econstructor 3; try eapply star2_refl. reflexivity.
+      * stuck2. eapply H3. do 2 eexists.
+        econstructor; eauto using get_drop_lab0, drop_get_lab0.
+      * stuck2. eapply H4. do 2 eexists.
+        econstructor; eauto using get_drop_lab0, drop_get_lab0.
+    + inv H6.
+      pfold. econstructor 3; [
+             | eapply star2_refl
+             |
+             |
+             |].
+      Focus 2. rewrite <- H5. eapply S_star2.
+      econstructor; eauto using get_drop_lab0, drop_get_lab0. eauto.
+      simpl; eauto.
+      stuck2. eapply H3. do 2 eexists.
+      econstructor; eauto using get_drop_lab0, drop_get_lab0. eauto.
+    + inv H6.
+      pfold. econstructor 3; [
+             |
+             |eapply star2_refl
+             |
+             |].
+      Focus 2. rewrite <- H5. eapply S_star2.
+      econstructor; eauto using get_drop_lab0, drop_get_lab0. eauto.
+      simpl; eauto. eauto.
+      stuck2. eapply H4. do 2 eexists.
+      econstructor; eauto using get_drop_lab0, drop_get_lab0.
+    + inv H6; inv H9. pfold. simpl in *. subst yl yl0.
+      econstructor 1; try eapply star2_plus2.
+      econstructor; eauto using get_drop_lab0, drop_get_lab0. eapply H8.
+      econstructor; eauto using get_drop_lab0, drop_get_lab0. eapply H11.
+      left. pfold. econstructor 3; try eapply star2_refl; eauto.
+Qed.
 
 
 
