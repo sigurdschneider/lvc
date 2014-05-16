@@ -467,8 +467,58 @@ Proof.
   - exfalso. refine (activated_normal_star _ H1 _ _); eauto using star2.
 Qed.
 
+        Lemma plus_step_activated {S1} `{StateType S1} (σ1 σ1':S1)
+              {S2} `{StateType S2} (σ2a σ2' σ2b σ4:S2)
+              {S3} `{StateType S3} (σ3 σ5:S3)  (r : S1 -> S3 -> Prop)
+          (H6:plus2 step σ2a nil σ2')
+          (H2:star2 step σ2a nil σ2b)
+          (H10:star2 step σ2b nil σ4)
+          (H11 : star2 step σ3 nil σ5)
+          (H4 : plus2 step σ1 nil σ1')
+          (H13 : activated σ5)
+          (H12 : activated σ4)
+          (H7 : paco2 (bisim_gen (S':=S2)) bot2 σ1' σ2')
+          (H14 : forall (evt : event) (σ1' : S2),
+        step σ4 evt σ1' ->
+        exists σ2' : S3,
+          step σ5 evt σ2' /\
+          (paco2 (bisim_gen (S':=S3)) bot2 σ1' σ2' \/ bot2 σ1' σ2'))
+          (H15 : forall (evt : event) (σ2' : S3),
+        step σ5 evt σ2' ->
+        exists σ1' : S2,
+          step σ4 evt σ1' /\
+          (paco2 (bisim_gen (S':=S3)) bot2 σ1' σ2' \/ bot2 σ1' σ2'))
+          (CIH : forall (σ1 : S1) (σ2a σ2b : S2) (σ3 : S3),
+                   bisim' σ1 σ2a ->
+                   star2 step σ2a nil σ2b \/ star2 step σ2b nil σ2a ->
+                   bisim' σ2b σ3 -> r σ1 σ3)
+          : paco2 (bisim_gen (S':=S3)) r σ1 σ3.
+        Proof.
+          pfold.
+          eapply star2_trans in H10; eauto. clear H2; simpl in *.
+          eapply plus2_star2 in H6.
+          exploit (activated_star_reach H12 H10 H6); eauto.
+          eapply bisim'_sym in H7.
+          eapply bisim'_reduction_closed in H7; eauto.
+          destruct (bisim'_activated H12 H7); dcr.
+          econstructor 2.
+          eapply plus2_star2 in H4.
+          eapply (star2_trans H4 H3). eapply H11.
+          eauto. eauto.
+          + intros. edestruct H16; eauto. destruct H9.
+            edestruct H14; eauto. dcr.
+            eexists; split; eauto. destruct H20; isabsurd.
+            right. eapply CIH. eapply bisim'_sym in H17. eauto.
+            left. eapply star2_refl. eauto.
+          + intros. edestruct H15; eauto; dcr.
+            edestruct H5; eauto; dcr. destruct H9.
+            eexists; split; eauto. destruct H18; isabsurd.
+            right. eapply CIH. eapply bisim'_sym. eapply H19.
+            left; eapply star2_refl.
+            eauto.
+        Qed.
 
-Lemma bisim'_trans {S1} `{StateType S1}
+Lemma bisim'_zigzag {S1} `{StateType S1}
       (σ1:S1) {S2} `{StateType S2} (σ2a σ2b:S2) {S3} `{StateType S3} (σ3:S3)
   : bisim' σ1 σ2a
     -> (star2 step σ2a nil σ2b \/ star2 step σ2b nil σ2a)
@@ -483,28 +533,7 @@ Proof.
         edestruct (plus2_reach H6 H10); eauto.
         eapply H0.
       - (* plus step <-> activated *)
-        pfold.
-        eapply star2_trans in H10; eauto. clear H2; simpl in *.
-        eapply plus2_star2 in H6.
-        exploit (activated_star_reach H12 H10 H6); eauto.
-        eapply bisim'_sym in H7.
-        eapply bisim'_reduction_closed in H7; eauto.
-        destruct (bisim'_activated H12 H7); dcr.
-        econstructor 2.
-        eapply plus2_star2 in H4.
-        eapply (star2_trans H4 H8). eapply H11.
-        eauto. eauto.
-        + intros. edestruct H18; eauto. destruct H17.
-          edestruct H14; eauto. dcr.
-          eexists; split; eauto. destruct H22; isabsurd.
-          right. eapply CIH. eapply bisim'_sym in H19. eauto.
-          left. eapply star2_refl. eauto.
-        + intros. edestruct H15; eauto; dcr.
-          edestruct H9; eauto; dcr. destruct H17.
-          eexists; split; eauto. destruct H20; isabsurd.
-          right. eapply CIH. eapply bisim'_sym. eapply H21.
-          left; eapply star2_refl.
-          eauto.
+        eapply (@plus_step_activated S1 _ _ _ S2 _ _ _ _ _ S3); eauto.
       - (* plus step <-> term *)
         eapply star2_trans in H11; eauto. clear H2; simpl in *.
         eapply plus2_star2 in H6.
@@ -515,7 +544,28 @@ Proof.
         eapply plus2_star2 in H4.
         eapply (star2_trans H4 H8); eauto.
         eauto. eauto. eauto.
-      - (* plus step <-> activated *) admit.
+      - (* plus step <-> activated *)
+          pfold.
+          eapply plus2_star2 in H13.
+          eapply star2_trans in H13; eauto. clear H2; simpl in *.
+          exploit (activated_star_reach H8 H6 H13); eauto.
+          eapply bisim'_reduction_closed in H15; eauto.
+          destruct (bisim'_activated H8 H15); dcr.
+          econstructor 2. eauto.
+          eapply plus2_star2 in H14.
+          eapply (star2_trans H14 H11). eauto.
+          eauto.
+          + intros.
+            edestruct H9 as [? [? [?|?]]]; eauto; isabsurd.
+            edestruct H12 as [? [? ?]]; eauto; isabsurd.
+            eexists; split; eauto.
+            right. eapply CIH; eauto. left. eapply star2_refl.
+          + intros.
+            edestruct H18 as [? [? ?]]; eauto; isabsurd.
+            edestruct H10 as [? [? [?|?]]]; eauto; isabsurd.
+            eexists; split; eauto.
+            right. eapply CIH; eauto.
+            left; eapply star2_refl.
       - (* activated <-> activated *)
         eapply star2_trans in H13; eauto. clear H2; simpl in *.
         exploit (both_activated H6 H13); eauto. subst.
@@ -535,7 +585,17 @@ Proof.
       - (* activated <-> term *)
         eapply star2_trans in H14; eauto. clear H2; simpl in *.
         exfalso; eapply (activated_normal_star H6); eauto.
-      - (* term <-> plus step *) admit.
+      - (* term <-> plus step *)
+        eapply plus2_star2 in H12.
+        eapply star2_trans in H12; eauto. clear H2; simpl in *.
+        exploit (star2_reach_normal H7 H12); eauto. eapply H0.
+        edestruct (bisim'_terminate X H9 H14); eauto; dcr.
+        pfold.
+        econstructor 3. rewrite H16 in H4. eapply H4.
+        eauto.
+        eapply plus2_star2 in H13.
+        eapply (star2_trans H13 H10); eauto.
+        eauto. eauto.
       - eapply star2_trans in H12; eauto. clear H2; simpl in *.
         exfalso; eapply (activated_normal_star H12 H14 H7); eauto.
       - (* term <-> term *)
@@ -549,7 +609,116 @@ Proof.
           * econstructor 3; eauto. congruence.
           * exfalso. eapply H15. do 2 eexists; eauto.
     }
-  - admit.
+  -{
+      pinversion H3; pinversion H5; subst.
+      - pfold. eapply star2_plus2_plus2 in H6; eauto. clear H2; simpl in *.
+        edestruct (plus2_reach H6 H10); eauto.
+        eapply H0.
+      - (* plus step <-> activated *)
+          pfold.
+          eapply plus2_star2 in H6.
+          eapply star2_trans in H6; eauto. clear H2; simpl in *.
+          exploit (activated_star_reach H12 H10 H6); eauto.
+          eapply bisim'_sym in H7.
+          eapply bisim'_reduction_closed in H7; eauto.
+          destruct (bisim'_activated H12 H7); dcr.
+          econstructor 2.
+          eapply plus2_star2 in H4.
+          eapply (star2_trans H4 H8). eapply H11.
+          eauto. eauto.
+          + intros.
+            edestruct H18 as [? [? ?]]; eauto; isabsurd.
+            edestruct H14 as [? [? [?|?]]]; eauto; isabsurd.
+            eexists; split; eauto.
+            right. eapply CIH. eapply bisim'_sym in H19; eauto.
+            left. eapply star2_refl. eauto.
+          + intros.
+            edestruct H15 as [? [? [?|?]]]; eauto; isabsurd.
+            edestruct H9 as [? [? ?]]; eauto; isabsurd.
+            eexists; split; eauto.
+            right. eapply CIH. eapply bisim'_sym in H21; eauto.
+            left; eapply star2_refl. eauto.
+      - (* plus step <-> term *)
+        eapply plus2_star2 in H6.
+        eapply star2_trans in H6; eauto. clear H2; simpl in *.
+        exploit (star2_reach_normal H11 H6); eauto. eapply H0.
+        edestruct (bisim'_terminate X H13 (bisim'_sym H7)); eauto; dcr.
+        pfold.
+        econstructor 3. rewrite H16 in H10. eapply H10.
+        eapply plus2_star2 in H4.
+        eapply (star2_trans H4 H8); eauto.
+        eauto. eauto. eauto.
+      - (* plus step <-> activated *)
+          pfold.
+          eapply star2_trans in H6; eauto. clear H2; simpl in *.
+          eapply plus2_star2 in H13.
+          exploit (activated_star_reach H8 H6 H13); eauto.
+          eapply bisim'_reduction_closed in H15; eauto.
+          destruct (bisim'_activated H8 H15); dcr.
+          econstructor 2. eauto.
+          eapply plus2_star2 in H14.
+          eapply (star2_trans H14 H11). eauto.
+          eauto.
+          + intros.
+            edestruct H9 as [? [? [?|?]]]; eauto; isabsurd.
+            edestruct H12 as [? [? ?]]; eauto; isabsurd.
+            eexists; split; eauto.
+            right. eapply CIH; eauto. left. eapply star2_refl.
+          + intros.
+            edestruct H18 as [? [? ?]]; eauto; isabsurd.
+            edestruct H10 as [? [? [?|?]]]; eauto; isabsurd.
+            eexists; split; eauto.
+            right. eapply CIH; eauto.
+            left; eapply star2_refl.
+      - (* activated <-> activated *)
+        eapply star2_trans in H6; eauto. clear H2; simpl in *.
+        exploit (both_activated H6 H13); eauto. subst.
+        pfold. econstructor 2; eauto; intros.
+        + edestruct H9 as [? [? [?|?]]]; eauto; isabsurd.
+          edestruct H17 as [? [? [?|?]]]; eauto; isabsurd.
+          eexists; split; eauto.
+          right. eapply CIH; eauto. left. eapply star2_refl.
+        + edestruct H18 as [? [? [?|?]]]; eauto; isabsurd.
+          edestruct H10 as [? [? [?|?]]]; eauto; isabsurd.
+          eexists; split; eauto.
+          right. eapply CIH; eauto. left. eapply star2_refl.
+      - (* activated <-> term *)
+        eapply star2_trans in H6; eauto. clear H2; simpl in *.
+        exfalso; eapply (activated_normal_star H6 H8 H14); eauto.
+      - (* term <-> plus step *)
+        eapply star2_trans in H7; eauto. clear H2; simpl in *.
+        eapply plus2_star2 in H12.
+        exploit (star2_reach_normal H7 H12); eauto. eapply H0.
+        edestruct (bisim'_terminate X H9 H14); eauto; dcr.
+        pfold.
+        econstructor 3. rewrite H16 in H4. eapply H4.
+        eauto.
+        eapply plus2_star2 in H13.
+        eapply (star2_trans H13 H10); eauto.
+        eauto. eauto.
+      - eapply star2_trans in H7; eauto. clear H2; simpl in *.
+        exfalso; eapply (activated_normal_star H12 H14 H7); eauto.
+      - (* term <-> term *)
+        pfold.
+        eapply star2_trans in H7; eauto. clear H2; simpl in *.
+        edestruct (star2_reach H7 H13); eauto. eapply H0.
+        + inv H2.
+          * econstructor 3; eauto. congruence.
+          * exfalso. eapply H9. do 2 eexists; eauto.
+        + inv H2.
+          * econstructor 3; eauto. congruence.
+          * exfalso. eapply H15. do 2 eexists; eauto.
+    }
+
+Qed.
+
+Lemma bisim'_trans {S1} `{StateType S1}
+      (σ1:S1) {S2} `{StateType S2} (σ2:S2) {S3} `{StateType S3} (σ3:S3)
+  : bisim' σ1 σ2
+    -> bisim' σ2 σ3
+    -> bisim' σ1 σ3.
+Proof.
+  intros. eauto using (bisim'_zigzag (S1:=S1) (S2:=S2) (S3:=S3)), star2_refl.
 Qed.
 
 Class BisimRelation (A:Type) := {
