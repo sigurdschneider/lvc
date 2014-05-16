@@ -1,7 +1,7 @@
 Require Import CSet Le.
 
 Require Import Plus Util AllInRel Map.
-Require Import Val Var Env EnvTy IL ParamsMatch Sim Alpha Coherence Fresh.
+Require Import Val Var Env EnvTy IL Sim Alpha Coherence Fresh.
 
 Require Import Liveness Substitution.
 
@@ -18,17 +18,17 @@ Fixpoint copyPropagate (ϱ:var -> var) (s:stmt) : stmt :=
                              (copyPropagate ϱ s2)
    | stmtGoto l Y => stmtGoto l (List.map (rename_exp ϱ) Y)
    | stmtReturn e => stmtReturn (rename_exp ϱ e)
-   | stmtLet Z s1 s2 => 
+   | stmtLet Z s1 s2 =>
      let Z' := fresh_stable_list (lookup_set ϱ (freeVars s1 \ of_list Z)) Z in
      stmtLet Z' (copyPropagate (ϱ[Z <-- Z']) s1) (copyPropagate ϱ s2)
    end.
 
-Lemma sim_CP s ϱ 
+Lemma sim_CP s ϱ
 : simeq (copyPropagate ϱ s) (subst ϱ s).
-Proof. 
+Proof.
   general induction s; simpl in * |- *.
   + destruct e; hnf; intros.
-    - one_step. reflexivity. reflexivity. 
+    - one_step. reflexivity. reflexivity.
       unfold simeq in IHs. eapply IHs; eauto.
     - case_eq (E (ϱ v)); intros.
       eapply sim_expansion_closed.
@@ -58,14 +58,14 @@ Lemma CP_tv s s' C C' D D'
   -> copyPropagate id s = copyPropagate id s'
   -> simeq s s'.
 Proof.
-  intros. 
+  intros.
   pose proof (simeq_trans (subst_id _) (simeq_sym (sim_CP s _ ))); eauto.
   pose proof (simeq_trans (subst_id _) (simeq_sym (sim_CP s' _ ))); eauto.
   eapply simeq_sym in H3. rewrite <- H1 in H3.
-  eapply simeq_trans; eauto.  
+  eapply simeq_trans; eauto.
 Qed.
 
-(* 
+(*
 *** Local Variables: ***
 *** coq-load-path: (("." "Lvc")) ***
 *** End: ***

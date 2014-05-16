@@ -1,43 +1,18 @@
 Require Import CSet Le.
 
 Require Import Plus Util Map DecSolve.
-Require Import Env EnvTy IL Annotation Liveness Coherence Alpha ParamsMatch Restrict.
- 
+Require Import Env EnvTy IL Annotation Liveness Coherence Alpha Restrict.
+
 Set Implicit Arguments.
 
-(** Renaming respects function equivalence *) 
+(** Renaming respects function equivalence *)
 
-Global Instance rename_morphism 
+Global Instance rename_morphism
   : Proper (feq ==> eq ==> eq) rename.
 Proof.
   unfold Proper, respectful; intros; subst.
   general induction y0; simpl; f_equal; eauto; try (now rewrite H; eauto);
   eauto using rename_exp_ext, map_ext_get_eq; eauto.
-Qed.
-
-(* renaming preserves correspondence of parameters and arguments *)
-
-Lemma rename_parameters_match {B} `{BlockType B} (L:list B) ϱ s
-  : labenv_parameters_match L
- -> parameters_match (labenvZ L) s
- -> parameters_match (labenvZ L) (rename ϱ s).
-Proof.
-  intros. general induction s; simpl; inv H1; eauto using parameters_match.
-  + econstructor; eauto. rewrite map_length; eauto.
-  + edestruct (block_ctor s1 Z); dcr; subst.
-    assert (labenv_parameters_match (x::L)).
-    hnf; intros. inv H2; eauto.
-    econstructor; rewrite lookup_list_length.
-    eapply (IHs1 _ _ _ _ H2); eauto.
-    eapply (IHs2 _ _ _ _ H2); eauto.
-Qed.
-
-Lemma rename_params_match {B} `{BlockType B} (L:list B) ϱ s
-  : params_match L s 
-    -> params_match L (rename ϱ s).
-Proof.
-  intros [A A']; split; eauto. 
-  eapply rename_parameters_match; eauto.
 Qed.
 
 (** Inductive definition of local injectivity of a renaming rho *)
@@ -53,7 +28,7 @@ Inductive locally_inj (rho:env var) : stmt -> ann (set var) -> Prop :=
   -> locally_inj rho b1 alv1
   -> locally_inj rho b2 alv2
   -> locally_inj rho (stmtIf x b1 b2) (ann2 lv alv1 alv2)
-| RNGoto l Y lv 
+| RNGoto l Y lv
   : injective_on lv rho
   -> locally_inj rho (stmtGoto l Y) (ann0 lv)
 | RNReturn x lv
@@ -72,7 +47,7 @@ Inductive locally_inj (rho:env var) : stmt -> ann (set var) -> Prop :=
 Definition locally_inj_dec (ϱ:env var) (s:stmt) (lv:ann (set var)) (an:annotation s lv)
   : {locally_inj ϱ s lv} + {~ locally_inj ϱ s lv}.
 Proof.
-  general induction s; destruct lv; try (now exfalso; inv an). 
+  general induction s; destruct lv; try (now exfalso; inv an).
   + decide(injective_on a ϱ);
     decide(injective_on (getAnn lv ∪ {{x}}) ϱ); try dec_solve;
     edestruct IHs; eauto; try dec_solve; inv an; eauto.
@@ -90,7 +65,7 @@ Defined.
 
 (** local injectivity can only hold if [lv] is a valid annotation *)
 
-Lemma locally_inj_annotation (ϱ:env var) (s:stmt) (lv:ann (set var)) 
+Lemma locally_inj_annotation (ϱ:env var) (s:stmt) (lv:ann (set var))
 : locally_inj ϱ s lv -> annotation s lv.
 Proof.
   intros. general induction H; econstructor; eauto.
@@ -98,7 +73,7 @@ Qed.
 
 (** local injectivity is decidable *)
 
-Instance locally_inj_dec_inst (ϱ:env var) (s:stmt) (lv:ann (set var)) 
+Instance locally_inj_dec_inst (ϱ:env var) (s:stmt) (lv:ann (set var))
          `{Computable (annotation s lv)}
   : Computable (locally_inj ϱ s lv).
 Proof.
@@ -111,10 +86,10 @@ Defined.
 
 Global Instance locally_inj_morphism
   : Proper (fpeq ==> eq ==> eq ==> impl) locally_inj.
-Proof.    
+Proof.
   unfold Proper, respectful, impl; intros; subst.
   general induction H2; assert (FEQ:x ≡ y) by first [eapply H0 | eapply H1 | eapply H2];  econstructor; eauto;
-  try rewrite <- FEQ; eauto. 
+  try rewrite <- FEQ; eauto.
   assert (lookup_set y (getAnn alvs \ of_list Z) [=] lookup_set x (getAnn alvs \ of_list Z)).
   rewrite H2. reflexivity.
   rewrite H3. assert (lookup_list y Z = lookup_list x Z).
@@ -129,21 +104,21 @@ Proof.
   intros. general induction H; eauto.
 Qed.
 
-Lemma rename_ssa_srd C C' s ϱ (alv:ann (set var)) Lv 
+Lemma rename_ssa_srd C C' s ϱ (alv:ann (set var)) Lv
   : ssa C s C'
-  -> (getAnn alv) ⊆ C 
+  -> (getAnn alv) ⊆ C
   -> live_sound Lv s alv
   -> locally_inj ϱ s alv
   -> bounded (live_globals Lv) C
   -> srd (map_lookup ϱ (restrict (live_globals Lv) (getAnn alv)))
         (rename ϱ s)
         (mapAnn (lookup_set ϱ) alv).
-Proof. 
+Proof.
   intros SSA INCL LS RI.
   general induction RI; inv LS; subst; inv SSA; simpl.
-  + econstructor. 
-    - eapply srd_monotone. 
-      * eapply IHRI; eauto. simpl in *. 
+  + econstructor.
+    - eapply srd_monotone.
+      * eapply IHRI; eauto. simpl in *.
         cset_tac; intuition. decide (a === x); intuition. left. eapply INCL.
         eapply H10. cset_tac; intuition.
         assert (C ⊆ C ∪ {{x}}). cset_tac; intuition.
@@ -154,19 +129,19 @@ Proof.
         rewrite lookup_set_minus_incl_inj. rewrite <- minus_inane_set.
         instantiate (1:={{ϱ x}}). eapply incl_minus_lr; eauto.
         rewrite lookup_set_minus_incl; intuition. eapply lookup_set_incl; intuition.
-        reflexivity. rewrite lookup_set_singleton; intuition. 
+        reflexivity. rewrite lookup_set_singleton; intuition.
         rewrite meet_comm. eapply meet_minus. intuition. eauto.
         cset_tac; intuition. inversion 1; subst. intuition.
-  + econstructor. simpl in *. 
+  + econstructor. simpl in *.
     - eapply srd_monotone. eapply IHRI1; eauto using Subset_trans, lookup_set_incl; eauto;
                            try (now eapply Subset_trans; eauto).
-      eapply list_eq_fstNoneOrR_incl; eauto. 
+      eapply list_eq_fstNoneOrR_incl; eauto.
     - eapply srd_monotone. eapply IHRI2; eauto; try (now eapply Subset_trans; eauto).
-      eapply list_eq_fstNoneOrR_incl; eauto. 
-  + econstructor. 
+      eapply list_eq_fstNoneOrR_incl; eauto.
+  + econstructor.
     instantiate (1:= lookup_set ϱ (blv \ of_list Z)).
-    unfold live_globals. 
-    pose proof (map_get_1 live_global H4).  
+    unfold live_globals.
+    pose proof (map_get_1 live_global H4).
     pose proof (map_get_1 (restr lv) H1).
     pose proof (map_get_1 (lookup_set_option ϱ) H2).
     assert (restr lv (live_global (blv, Z)) = Some (blv \ of_list Z)).
@@ -177,9 +152,9 @@ Proof.
   + econstructor; eauto.
     eapply srd_monotone. eapply IHRI1; eauto. simpl in *.
     rewrite <- INCL. rewrite <- H13. eapply incl_union_minus.
-    simpl. split. rewrite H13. cset_tac; intuition. 
+    simpl. split. rewrite H13. cset_tac; intuition.
     assert (C ⊆ of_list Z ∪ C) by (cset_tac; intuition). rewrite <- H3; eauto.
-    Opaque restrict. simpl. unfold live_global. rewrite restrict_incl. simpl. 
+    Opaque restrict. simpl. unfold live_global. rewrite restrict_incl. simpl.
     simpl. rewrite restrict_incl. constructor. constructor.
     rewrite getAnn_mapAnn. rewrite of_list_lookup_list.
     eapply lookup_set_minus_eq; eauto; intuition. intuition.
@@ -189,12 +164,12 @@ Proof.
     rewrite getAnn_mapAnn. rewrite of_list_lookup_list.
     eapply lookup_set_minus_incl_inj; eauto; intuition. intuition.
     cset_tac; intuition. eapply H4; eauto. reflexivity.
-    eapply incl_minus. 
-    
+    eapply incl_minus.
+
     eapply srd_monotone. eapply IHRI2; eauto. transitivity lv; eauto.
     simpl. split; eauto. eapply Subset_trans; eauto.
-    simpl. 
-    simpl. decide (getAnn alvs \ of_list Z ⊆ getAnn alvb). 
+    simpl.
+    simpl. decide (getAnn alvs \ of_list Z ⊆ getAnn alvb).
     unfold live_global. simpl.
     rewrite restrict_incl; eauto. simpl. econstructor. econstructor; eauto.
     rewrite getAnn_mapAnn. rewrite of_list_lookup_list.
@@ -213,20 +188,20 @@ Lemma ssa_locally_inj_alpha G G' s ϱ ϱ' DL (slv:ann (set var))
   -> inverse_on (getAnn slv) ϱ ϱ'
   -> alpha ϱ ϱ' s (rename ϱ s).
 Proof.
-  intros. general induction H; simpl. 
+  intros. general induction H; simpl.
   inv H2. inv H3.
-  econstructor. simpl in *. eapply alpha_exp_rename_injective. 
+  econstructor. simpl in *. eapply alpha_exp_rename_injective.
   eapply inverse_on_incl. eapply Exp.freeVars_live; eauto. eauto.
-  assert (rename ϱ s = rename (update ϱ x (ϱ x)) s). { 
-    rewrite update_id; eauto. 
-  } 
+  assert (rename ϱ s = rename (update ϱ x (ϱ x)) s). {
+    rewrite update_id; eauto.
+  }
   rewrite H5. eapply IHssa; eauto. assert (fpeq ϱ (update ϱ x (ϱ x))).
   split; intuition. rewrite update_id. reflexivity. intuition.
   eapply locally_inj_morphism; eauto.
   eapply inverse_on_update_minus; eauto using inverse_on_incl, locally_injective.
 
   inv H5. inv H4.
-  econstructor; eauto. eapply alpha_exp_rename_injective. 
+  econstructor; eauto. eapply alpha_exp_rename_injective.
   eapply inverse_on_incl. eapply Exp.freeVars_live; eauto. eauto.
   now eapply IHssa1; eauto using inverse_on_incl.
   now eapply IHssa2; eauto using inverse_on_incl.
@@ -238,15 +213,15 @@ Proof.
   econstructor; eauto. rewrite map_length. eauto.
   intros. edestruct map_get_4; eauto; dcr; subst.
   get_functional; eauto; subst.
-  eapply alpha_exp_rename_injective. 
+  eapply alpha_exp_rename_injective.
   eapply inverse_on_incl. eapply Exp.freeVars_live; eauto. eauto.
-    
+
   inv H5; inv H4.
   constructor. rewrite lookup_list_length; eauto.
   rewrite update_with_list_lookup_list.
   eapply IHssa1; eauto.
   assert (fpeq ϱ ϱ). split. reflexivity. split; intuition.
-  simpl in H6. 
+  simpl in H6.
   eapply inverse_on_update_with_list; try intuition.
   eapply inverse_on_incl; eauto; intuition. intuition.
   eapply IHssa2; eauto using inverse_on_incl.
@@ -262,8 +237,8 @@ Fixpoint norm_rho ra s s' : env var :=
 
 (*
 
-Lemma ssa_rename_alpha C C' s s' ra ira 
-  : ssa C s C' -> alpha ra ira s s' -> 
+Lemma ssa_rename_alpha C C' s s' ra ira
+  : ssa C s C' -> alpha ra ira s s' ->
     rename (norm_rho ra s s') s = s'.
 Proof.
   intros. general induction H0; simpl in *.
@@ -271,15 +246,14 @@ Proof.
   + f_equal. eauto.
 
 
-Lemma ssa_rename_alpha C C' s s' ra ira 
-  : ssa C s C' -> alpha ra ira s s' -> 
+Lemma ssa_rename_alpha C C' s s' ra ira
+  : ssa C s C' -> alpha ra ira s s' ->
     locally_inj (norm_rho ra s s') s .
 Proof.
 *)
 
-(* 
+(*
 *** Local Variables: ***
 *** coq-load-path: (("." "Lvc")) ***
 *** End: ***
-*) 
-
+*)

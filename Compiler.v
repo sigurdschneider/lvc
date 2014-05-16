@@ -1,5 +1,5 @@
 Require Import List CSet.
-Require Import Util AllInRel IL EnvTy ParamsMatch RegAlloc RenameApart Sim Status Annotation.
+Require Import Util AllInRel IL EnvTy RegAlloc RenameApart Sim Status Annotation.
 Require Coherence ILIToILF Liveness LivenessValidators ParallelMove ILN LivenessAnalysis CoherenceAlgo RegAllocAlgo CopyPropagation DVE.
 
 Require Import ExtrOcamlBasic.

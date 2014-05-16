@@ -2,7 +2,7 @@
 Require Import CSet Le.
 
 Require Import Plus Util AllInRel Map.
-Require Import CSet Val Var Env EnvTy IL ParamsMatch Sim SimApx Fresh Annotation MoreExp Coherence.
+Require Import CSet Val Var Env EnvTy IL Sim SimApx Fresh Annotation MoreExp Coherence.
 
 Require Import Liveness Filter SetOperations ValueOpts.
 
