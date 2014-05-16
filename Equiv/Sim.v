@@ -1,6 +1,6 @@
 Require Import List.
 Require Export Util Var Val Exp Env Map CSet AutoIndTac IL AllInRel.
-Require Export Events StateType paco.
+Require Export EventsActivated StateType paco.
 
 Set Implicit Arguments.
 Unset Printing Records.
@@ -18,6 +18,8 @@ CoInductive sim {S} `{StateType S} {S'} `{StateType S'}  : S -> S' -> Prop :=
   | simExtern (pσ1 σ1:S) (pσ2 σ2:S') : (* result σ1 = result σ2 -> *)
       star2 step pσ1 nil σ1
       -> star2 step pσ2 nil σ2
+      -> activated σ1
+      -> activated σ2
       -> (forall evt σ1', step σ1 evt σ1' -> exists σ2', step σ2 evt σ2' /\ sim σ1' σ2')
       -> (forall evt σ2', step σ2 evt σ2' -> exists σ1', step σ1 evt σ1' /\ sim σ1' σ2')
       -> sim pσ1 pσ2
@@ -57,6 +59,8 @@ Inductive sim_gen
   | sim'Extern (pσ1 σ1:S) (pσ2 σ2:S') : (* result σ1 = result σ2 -> *)
       star2 step pσ1 nil σ1
       -> star2 step pσ2 nil σ2
+      -> activated σ1
+      -> activated σ2
       -> (forall evt σ1', step σ1 evt σ1' -> exists σ2', step σ2 evt σ2' /\ r σ1' σ2')
       -> (forall evt σ2', step σ2 evt σ2' -> exists σ1', step σ1 evt σ1' /\ r σ1' σ2')
       -> sim_gen r pσ1 pσ2
@@ -91,8 +95,9 @@ Proof.
   hnf; intros. inv IN.
   - econstructor 1; eauto.
   - econstructor 2; eauto; intros.
-    edestruct H3; eauto; dcr. eexists; eauto.
-    edestruct H4; eauto; dcr. eexists; eauto.
+    edestruct H5; eauto; dcr. eexists; eauto.
+    edestruct H6; eauto; dcr. eexists; eauto.
+
   - econstructor 3; eauto.
   - econstructor 4; eauto.
 Qed.
@@ -110,8 +115,8 @@ Proof.
   inv H2.
   - econstructor; eauto.
   - econstructor 2; eauto; intros.
-    + edestruct H4; eauto; dcr. eexists; eauto.
-    + edestruct H5; eauto; dcr. eexists; eauto.
+    + edestruct H6; eauto; dcr. eexists; eauto.
+    + edestruct H7; eauto; dcr. eexists; eauto.
   - econstructor 3; eauto.
   - econstructor 4; eauto.
 Qed.
@@ -128,249 +133,20 @@ Proof.
   - econstructor; eauto.
   - exfalso; intuition.
   - econstructor 2; eauto; intros.
-    + edestruct H4; eauto; dcr. destruct H9. eexists; eauto. exfalso; intuition.
-    + edestruct H5; eauto; dcr. destruct H9. eexists; eauto. exfalso; intuition.
+    + edestruct H6; eauto; dcr. destruct H11. eexists; eauto. exfalso; intuition.
+    + edestruct H7; eauto; dcr. destruct H11. eexists; eauto. exfalso; intuition.
   - econstructor 3; eauto.
   - econstructor 4; eauto.
 Qed.
 
-(** Transitivity is not obvious *)
-(*
-Inductive terminatesWith {S} `{StateType S} : S -> option val -> Prop :=
-| trmWith σ r
-  : r = result σ -> normal step σ  -> terminatesWith σ r
-| trmWithStep σ σ' v
-  : step σ σ' -> terminatesWith σ' v -> terminatesWith σ v.
 
-Lemma terminatesWith_star_normal {S} `{StateType S} s v
-  : terminatesWith s v -> exists s', star step s s' /\ normal step s' /\ result s' = v.
+Lemma sim'_refl {S} `{StateType S} (σ:S)
+      : sim' σ σ.
 Proof.
-  intros. general induction H0.
-  eexists σ; eauto using star.
-  destruct IHterminatesWith; dcr. eexists x; split; eauto using star.
+  eapply sim_sim'. eapply sim_refl.
 Qed.
 
-Lemma star_normal_terminatesWith {S} `{StateType S} s s' v
-  : star step s s'
-    -> normal step s'
-    -> result s' = v
-    -> terminatesWith s v.
-Proof.
-  intros. general induction H0.
-  econstructor; eauto.
-  eapply trmWithStep; eauto.
-Qed.
-
-Lemma terminatesWith_star {S} `{StateType S} s s' v
-  : star step s' s -> terminatesWith s v -> terminatesWith s' v.
-Proof.
-  intros. general induction H0; eauto.
-  eapply trmWithStep; eauto.
-Qed.
-
-Lemma terminatesWith_star_2 {S} `{StateType S} s s' v
-  : star step s' s -> terminatesWith s' v -> terminatesWith s v.
-Proof.
-  intros. general induction H0; eauto.
-  inv H2. exfalso. eapply H4; firstorder.
-  pose proof (step_functional _ _ _ H H3); subst.
-  eapply IHstar; eauto.
-Qed.
-
-Lemma terminatesWith_functional {S} `{StateType S} s v v'
-  : terminatesWith s v -> terminatesWith s v' -> v = v'.
-Proof.
-  intros. general induction H0.
-  inv H2. eauto.
-  exfalso. firstorder.
-  inv H2.
-  exfalso; firstorder.
-  rewrite step_functional in H4; eauto.
-Qed.
-
-Lemma terminatesWith_terminates {S} `{StateType S} s
-  : (exists v, terminatesWith s v) <-> terminates step s.
-Proof.
-  split; intros. destruct H0.
-  general induction H0. constructor; intros. exfalso; firstorder.
-  econstructor; intros. rewrite step_functional; eauto.
-  general induction H0.
-  destruct (step_dec x). destruct H2. edestruct H0; eauto.
-  exists x1. eapply trmWithStep; eauto.
-  eexists (result x). econstructor; eauto.
-Qed.
-
-(* Termination *)
-
-Lemma divergence_or_termination X (R: X -> X -> Prop) s
-  : diverges R s -> terminates R s -> False.
-Proof.
-  intros. general induction H0.
-  inv H1. eauto.
-Qed.
-
-Lemma not_terminates_is_divergence S `{StateType S} s
-  : ~terminates step s -> diverges step s.
-Proof.
-  revert s. cofix; intros.
-  destruct (step_dec s).
-  + inv H1. econstructor. eauto.
-    eapply not_terminates_is_divergence. intro. eapply H0.
-    econstructor; intros; eauto. rewrite step_functional; eauto.
-  + exfalso. eapply H0. econstructor; intros. exfalso. firstorder.
-Qed.
-
-Definition cobehave {S} `{StateType S} {S'} `{StateType S'} (σ1:S) (σ2:S') :=
-  (diverges step σ1 <-> diverges step σ2)
-  /\ (forall v, terminatesWith σ1 v <-> terminatesWith σ2 v).
-
-Lemma diverges_star {S} `{StateType S} (σ1 σ1':S)
-  : diverges step σ1 -> star step σ1 σ1' -> diverges step σ1'.
-Proof.
-  intros. general induction H1; simpl; eauto using star.
-  inv H2. pose proof (step_functional _ _ _ H H3); subst; eauto using diverges.
-Qed.
-
-Lemma star_diverges {S} `{StateType S} (σ1 σ1':S)
-  : diverges step σ1' -> star step σ1 σ1' -> diverges step σ1.
-Proof.
-  intros. general induction H1; simpl; eauto using star, diverges.
-Qed.
-
-Lemma cobehave_reduction_closed {S} `{StateType S} {S'} `{StateType S'}
-      (σ1 σ1':S) (σ2 σ2':S')
-  : cobehave σ1 σ2
-    -> star step σ1 σ1'
-    -> star step σ2 σ2'
-    -> cobehave σ1' σ2'.
-Proof.
-  intros.
-  destruct H1. split; split; intros.
-  eapply diverges_star; eauto. eapply H1. eapply star_diverges; eauto.
-  eapply diverges_star; eauto. eapply H1. eapply star_diverges; eauto.
-  eapply terminatesWith_star_2; eauto. eapply H4. eapply terminatesWith_star; eauto.
-  eapply terminatesWith_star_2; eauto. eapply H4. eapply terminatesWith_star; eauto.
-Qed.
-
-Definition obseq (s s':stmt) :=
-  forall (L:F.labenv) E, cobehave (L, E, s) (L, E, s').
-
-Lemma sim_codiverge' {S} `{StateType S} {S'} `{StateType S'} (σ1:S) (σ2:S')
-: sim σ1 σ2 -> diverges step σ1 -> diverges (plus step) σ2.
-Proof.
-  revert σ1 σ2. cofix; intros.
-  intros.
-  inv H1. eapply DivergesI; eauto. eapply sim_codiverge'; eauto.
-  eapply div_ext_plus; eauto. eapply step_functional.
-  exfalso. eapply normal_terminates in H6.
-  eapply div_ext_star_2 in H2; eauto.
-  eapply divergence_or_termination; eassumption. eapply step_functional.
-Qed.
-
-Lemma sim_codiverge {S} `{StateType S} {S'} `{StateType S'} (σ1:S) (σ2:S')
-: sim σ1 σ2 -> diverges step σ1 -> diverges step σ2.
-Proof.
-  intros. eapply div_plus. eapply (sim_codiverge' H1 H2).
-Qed.
-
-Lemma codiverge_sim {S} `{StateType S} {S'} `{StateType S'} (σ1:S) (σ2:S')
-: diverges step σ1 -> diverges step σ2 -> sim σ1 σ2.
-Proof.
-  revert σ1 σ2. cofix; intros.
-  inv H1; inv H2.
-  eapply simS; eauto using plus.
-Qed.
-
-Lemma sim_step_closed {S} `{StateType S} {S'} `{StateType S'} (σ1 σ1':S) (σ2:S')
- : sim σ1 σ2 -> step σ1 σ1' -> sim σ1' σ2.
-Proof.
-  revert σ1 σ1' σ2. cofix; intros.
-  inv H1. destruct H3. inv H5.
-  eapply simS. rewrite step_functional; eauto.
-  eapply plus_trans; eauto. eassumption.
-  eapply simE. eauto. rewrite step_functional; eauto.
-  eapply star_trans; eauto using plus_star.
-  eauto. eauto.
-  eapply simS. rewrite step_functional; eauto. eassumption. eauto.
-  eapply simE. eauto. destruct H4. exfalso; firstorder.
-  rewrite step_functional; eauto. eauto. eauto. eauto.
-Qed.
-
-Lemma sim_coterminatesWith {S} `{StateType S} {S'} `{StateType S'} (σ1:S) (σ2:S')
-: sim σ1 σ2 -> forall v, terminatesWith σ1 v -> terminatesWith σ2 v.
-Proof.
-  intros. general induction H2.
-  + inv H3. exfalso. eapply H1. destruct H0; firstorder.
-    destruct H4. eapply terminatesWith_star; eauto. econstructor; eauto.
-    exfalso. firstorder.
-  + eapply IHterminatesWith.
-    pose proof (sim_step_closed _ H3 H0). eauto.
-Qed.
-
-Lemma coterminatesWith_sim {S} `{StateType S} {S'} `{StateType S'} (σ1:S) (σ2:S') v
-: terminatesWith σ1 v -> terminatesWith σ2 v -> sim σ1 σ2.
-Proof.
-  intros.
-  eapply terminatesWith_star_normal in H1.
-  eapply terminatesWith_star_normal in H2.
-  destruct H1, H2; dcr.
-  eapply simE; eauto using star. congruence.
-Qed.
-
-Lemma sim_cobehave {S} `{StateType S} {S'} `{StateType S'} (σ1:S) (σ2:S')
-: sim σ1 σ2 <-> cobehave σ1 σ2.
-Proof.
-  split. unfold cobehave; split; split; intros.
-  + pose proof (sim_codiverge H1 H2); eauto.
-  + pose proof (sim_codiverge (sim_sym H1) H2); eauto.
-  + eapply (sim_coterminatesWith H1); eassumption.
-  + eapply (sim_coterminatesWith (sim_sym H1) H2); eassumption.
-  + revert_all. cofix; intros.
-    destruct (step_dec σ1) as [[]|]; destruct (step_dec σ2) as [[]|].
-    - eapply simS; try eapply plusO; try eassumption.
-      eapply sim_cobehave. eapply cobehave_reduction_closed; eauto using star.
-    - pose proof (normal_terminates H3). eapply terminatesWith_terminates in H4; destruct H4.
-      assert (terminatesWith σ1 x0). eapply H1; eauto.
-      eapply coterminatesWith_sim; eauto.
-    - pose proof (normal_terminates H2). eapply terminatesWith_terminates in H4; destruct H4.
-      assert (terminatesWith σ2 x0). eapply H1; eauto.
-      eapply coterminatesWith_sim; eauto.
-    - pose proof (normal_terminates H2). eapply terminatesWith_terminates in H4; destruct H4.
-      assert (terminatesWith σ2 x). eapply H1; eauto.
-      eapply coterminatesWith_sim; eauto.
-Qed.
-
-Lemma cobehave_trans {S} `{StateType S} {S'} `{StateType S'} {S''} `{StateType S''}
-(σ1:S) (σ2:S') (σ3:S'')
-: cobehave σ1 σ2 -> cobehave σ2 σ3 -> cobehave σ1 σ3.
-Proof.
-  unfold cobehave; intros. destruct H2, H3; firstorder.
-Qed.
-
-Lemma sim_trans {S1} `{StateType S1} {S2} `{StateType S2} {S3} `{StateType S3}
-      (σ1:S1) (σ2:S2) (σ3:S3)
-  : sim σ1 σ2 -> sim σ2 σ3 -> sim σ1 σ3.
-Proof.
-  intros.
-  rewrite sim_cobehave in H2.
-  rewrite sim_cobehave in H3.
-  rewrite sim_cobehave.
-  pose proof (cobehave_trans H2 H3); eauto.
-Qed.
-
-*)
-
-
-
-Lemma sim'_trans {S1} `{StateType S1}
-      (σ1:S1) {S2} `{StateType S2} (σ2:S2) {S3} `{StateType S3} (σ3:S3)
-  : sim' σ1 σ2 -> sim' σ2 σ3 -> sim' σ1 σ3.
-Proof.
-  revert σ1 σ2 σ3. pcofix CIH; intros.
-  pdestruct H3. pdestruct H4.
-Admitted.
-
-Lemma bisim'_expansion_closed {S} `{StateType S}
+Lemma sim'_expansion_closed {S} `{StateType S}
       (σ1 σ1':S) {S'} `{StateType S'} (σ2 σ2':S') r
   : sim'r r σ1' σ2'
     -> star2 step σ1 nil σ1'
@@ -384,14 +160,90 @@ Proof.
   - econstructor 2.
     + eapply (star2_trans H2 H4).
     + eapply (star2_trans H3 H5).
-    + intros. edestruct H6; eauto.
-    + intros. edestruct H7; eauto.
+    + eauto.
+    + eauto.
+    + intros. edestruct H8; eauto.
+    + intros. edestruct H9; eauto.
   - econstructor 3; eauto using star2_trans.
     + eapply (star2_trans H2 H5).
   - econstructor 4; eauto using star2_trans.
     + eapply (star2_trans H2 H5).
     + eapply (star2_trans H3 H6).
 Qed.
+
+Lemma sim'_reduction_closed_1 {S} `{StateType S}
+      (σ1 σ1':S) {S'} `{StateType S'} (σ2:S')
+  : sim' σ1 σ2
+    -> star2 step σ1 nil σ1'
+    -> sim' σ1' σ2.
+Proof.
+  intros. eapply star2_star2n in H2. destruct H2 as [n ?].
+  revert σ1 σ1' σ2 H1 H2.
+  pattern n.
+  eapply size_induction with (f:=id); intros; unfold id in *; simpl in *.
+  pinversion H2; subst.
+  - inv H3; eauto.
+    eapply plus2_plus2n in H4. destruct H4. eapply plus2n_star2n in H4.
+    edestruct (star2n_reach H3 H4); eauto. eapply H.
+    + eapply sim'_expansion_closed. eapply H6.
+      eauto using star2n_star2. eauto using plus2_star2.
+    + eapply H1; try eapply H9. omega.
+      eapply sim'_expansion_closed. eapply H6. eapply star2_refl.
+      eauto using plus2_star2.
+  - eapply star2n_star2 in H3. eapply activated_star_reach in H3; eauto.
+  - pfold. eapply star2n_star2 in H3. eapply star2_reach_normal in H3; eauto.
+    eapply H.
+  - pfold. eapply star2n_star2 in H3.
+    eapply star2_reach_normal in H3; eauto. eapply H.
+Qed.
+
+
+Lemma sim'_reduction_closed_2 {S} `{StateType S}
+      (σ1:S) {S'} `{StateType S'} (σ2 σ2':S')
+  : sim' σ1 σ2
+    -> star2 step σ2 nil σ2'
+    -> sim' σ1 σ2'.
+Proof.
+  intros. eapply star2_star2n in H2. destruct H2 as [n ?].
+  revert σ1 σ2' σ2 H1 H2.
+  pattern n.
+  eapply size_induction with (f:=id); intros; unfold id in *; simpl in *.
+  pinversion H2; subst.
+  - inv H3; eauto.
+    eapply plus2_plus2n in H5. destruct H5. eapply plus2n_star2n in H5.
+    edestruct (star2n_reach H3 H5); eauto. eapply H0.
+    + eapply sim'_expansion_closed. eapply H6.
+      eauto using plus2_star2. eauto using star2n_star2.
+    + eapply H1; try eapply H9. omega.
+      eapply sim'_expansion_closed. eapply H6.
+      eauto using plus2_star2. eapply star2_refl.
+  - eapply star2n_star2 in H3. eapply activated_star_reach in H3; eauto.
+  - pfold. eauto.
+  - pfold. eapply star2n_star2 in H3.
+    eapply star2_reach_normal in H3; eauto. eapply H0.
+Qed.
+
+Lemma sim'_trans {S1} `{StateType S1}
+      (σ1:S1) {S2} `{StateType S2} (σ2:S2) {S3} `{StateType S3} (σ3:S3)
+  : sim' σ1 σ2 -> sim' σ2 σ3 -> sim' σ1 σ3.
+Proof.
+  revert σ1 σ2 σ3. pcofix CIH; intros.
+  pdestruct H3. pdestruct H4.
+Admitted.
+
+Lemma sim'_reduction_closed {S} `{StateType S}
+      (σ1 σ1':S) {S'} `{StateType S'} (σ2 σ2':S')
+  : sim' σ1 σ2
+    -> star2 step σ1 nil σ1'
+    -> star2 step σ2 nil σ2'
+    -> sim' σ1' σ2'.
+Proof.
+  intros.
+  eapply sim'_trans. eapply sim'_reduction_closed_1; eauto.
+  eapply sim'_reduction_closed_2; eauto.
+  eapply sim'_refl.
+Qed.
+
 
 Class SimRelation (A:Type) := {
     ParamRel : A-> list var -> list var -> Prop;
@@ -542,57 +394,103 @@ Proof.
   - eapply plus2_destr_nil in H0.
     eapply plus2_destr_nil in H1.
     destruct H0; destruct H1; dcr. inv H3.
-    simpl in *. inv H1.
+    simpl in *. inv H1; simpl in *.
     pfold. econstructor; try eapply star2_plus2.
-(*
     econstructor; eauto using get_drop_lab0, drop_get_lab0. eauto.
     econstructor; eauto using get_drop_lab0, drop_get_lab0. eauto.
     eauto.
-  -
-  inv H1; inv H2; simpl in *.
-  pfold. econstructor 2; try eapply star_refl; eauto. stuck.
-  eapply H3. econstructor.
-  econstructor; eauto using get_drop_lab0, drop_get_lab0.
-  stuck. eapply H4. econstructor.
-  econstructor; eauto using get_drop_lab0, drop_get_lab0.
-  pfold. inv H5. econstructor 2.
-  Focus 2. eapply star_refl.
-  Focus 2. econstructor 2.
-  econstructor; eauto using get_drop_lab0, drop_get_lab0.
-  eauto. simpl; eauto. stuck.
-  eapply H3. econstructor.
-  econstructor; eauto using get_drop_lab0, drop_get_lab0.
-  eauto.
-  pfold. inv H5. econstructor 2.
-  Focus 2. econstructor 2.
-  econstructor; eauto using get_drop_lab0, drop_get_lab0.
-  eauto.
-  Focus 2. eapply star_refl.
-  simpl; eauto. eauto. stuck.
-  eapply H4. econstructor.
-  econstructor; eauto using get_drop_lab0, drop_get_lab0.
-  pfold. inv H5. inv H7. econstructor 2.
-  Focus 2. econstructor 2.
-  econstructor; eauto using get_drop_lab0, drop_get_lab0.
-  eauto.
-  Focus 2. econstructor 2.
-  econstructor; eauto using get_drop_lab0, drop_get_lab0.
-  eauto. eauto. eauto. eauto.
-  inv H1. pfold. econstructor 3; try eapply star_refl; eauto.
-  stuck. destruct H2. econstructor. econstructor.
-  eapply drop_get. simpl. orewrite (labN l + 0 = labN l).
-  eauto. eauto. eauto. reflexivity.
-  pfold. econstructor 3; eauto.
-  inv H3; simpl in *.
-  econstructor.
-  econstructor. eapply get_drop in Ldef.
-  orewrite (labN l + 0 = labN l) in Ldef. eauto. eauto. eauto. reflexivity.
-  eauto.
-  eapply psimapxd_mon. *)
-Admitted.
+  - inv H0.
+    + exfalso. destruct H2 as [? [? ?]]. inv H2.
+    + inv H1.
+      * exfalso. destruct H3 as [? [? ?]]. inv H3.
+      * inv H7; inv H10; simpl in *.
+        pfold. subst yl yl0.
+        econstructor; try eapply star2_plus2.
+        econstructor; eauto using get_drop_lab0, drop_get_lab0. eapply H9.
+        econstructor; eauto using get_drop_lab0, drop_get_lab0. eapply H12.
+        left. pfold. econstructor 2; try eapply star2_refl; eauto.
+  - inv H1.
+    + pfold. econstructor 3; try eapply star2_refl. reflexivity.
+      stuck2. eapply H2. do 2 eexists.
+      econstructor; eauto using get_drop_lab0, drop_get_lab0.
+    + inv H4.
+      pfold. econstructor 3.
+      Focus 2. rewrite <- H3. eapply S_star2.
+      econstructor; eauto using get_drop_lab0, drop_get_lab0.
+      eauto. eauto. eauto.
+  - inv H1; inv H2; simpl in *.
+    + pfold. econstructor 3; try eapply star2_refl. reflexivity.
+      * stuck2. eapply H3. do 2 eexists.
+        econstructor; eauto using get_drop_lab0, drop_get_lab0.
+    + inv H6.
+      pfold. econstructor 4; [
+             | eapply star2_refl
+             |
+             |
+             |].
+      Focus 2. rewrite <- H5. eapply S_star2.
+      econstructor; eauto using get_drop_lab0, drop_get_lab0. eauto.
+      simpl; eauto.
+      stuck2. eapply H3. do 2 eexists.
+      econstructor; eauto using get_drop_lab0, drop_get_lab0. eauto.
+    + inv H6.
+      pfold. econstructor 4; [
+             |
+             |eapply star2_refl
+             |
+             |].
+      Focus 2. rewrite <- H5. eapply S_star2.
+      econstructor; eauto using get_drop_lab0, drop_get_lab0. eauto.
+      simpl; eauto. eauto.
+      stuck2. eapply H4. do 2 eexists.
+      econstructor; eauto using get_drop_lab0, drop_get_lab0.
+    + inv H6; inv H9. pfold. simpl in *. subst yl yl0.
+      econstructor 1; try eapply star2_plus2.
+      econstructor; eauto using get_drop_lab0, drop_get_lab0. eapply H8.
+      econstructor; eauto using get_drop_lab0, drop_get_lab0. eapply H11.
+      left. pfold. econstructor 4; try eapply star2_refl; eauto.
+Qed.
 
 
 
+Ltac single_step :=
+  match goal with
+    | [ H : agree_on _ ?E ?E', I : val2bool (?E ?x) = true |- step (_, ?E', stmtIf ?x _ _) _ ] =>
+      econstructor; eauto; rewrite <- H; eauto; cset_tac; intuition
+    | [ H : agree_on _ ?E ?E', I : val2bool (?E ?x) = false |- step (_, ?E', stmtIf ?x _ _) _ ] =>
+      econstructor 3; eauto; rewrite <- H; eauto; cset_tac; intuition
+    | [ H : val2bool _ = false |- _ ] => econstructor 3 ; try eassumption; try reflexivity
+    | [ H : step (?L, _ , stmtGoto ?l _) _, H': get ?L (counted ?l) _ |- _] =>
+      econstructor; try eapply H'; eauto
+    | [ H': get ?L (counted ?l) _ |- step (?L, _ , stmtGoto ?l _) _] =>
+      econstructor; try eapply H'; eauto
+    | _ => econstructor; eauto
+  end.
+
+Ltac one_step := eapply simSilent; [ eapply plus2O; single_step
+                              | eapply plus2O; single_step
+                              | ].
+
+Ltac no_step := eapply simTerm;
+               try eapply star2_refl; try get_functional; try subst;
+                [ try reflexivity
+                | stuck2
+                | stuck2  ].
+
+Ltac err_step := eapply simErr;
+               try eapply star2_refl; try get_functional; try subst;
+                [ try reflexivity
+                | stuck2
+                | stuck2  ].
+
+Ltac extern_step :=
+  let STEP := fresh "STEP" in
+  eapply simExtern;
+    [ eapply star2_refl
+    | eapply star2_refl
+    | intros ? ? STEP; inv STEP
+    | intros ? ? STEP; inv STEP
+    ].
 
 
 
