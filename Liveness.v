@@ -343,7 +343,10 @@ Proof.
     + no_step; eauto.
       edestruct PIR2_nth_2; eauto; dcr; eauto.
   - no_step. simpl. erewrite exp_eval_agree; eauto. symmetry; eauto.
-  - extern_step.
+  - case_eq (omap (exp_eval E) Y); intros.
+    exploit omap_exp_eval_agree; eauto.
+    eapply agree_on_incl; eauto.
+    extern_step.
     + exploit omap_exp_eval_agree; eauto.
       eapply agree_on_incl; eauto.
       eexists; split.
@@ -356,6 +359,10 @@ Proof.
       * econstructor; eauto.
       * eapply freeVarSimF_sim. econstructor; eauto.
         eapply agree_on_update_same; eauto using agree_on_incl.
+    + no_step.
+      exploit omap_exp_eval_agree; eauto.
+      symmetry in AG.
+      eapply agree_on_incl; eauto. congruence.
   - one_step.
     eapply freeVarSimF_sim; econstructor; eauto.
     econstructor; eauto using agree_on_incl.
@@ -433,7 +440,9 @@ Proof.
     + exploit omap_exp_eval_live_agree; eauto.
       no_step.
   - no_step. simpl. eapply exp_eval_live; eauto.
-  - extern_step.
+  - case_eq (omap (exp_eval E) Y); intros;
+    exploit omap_exp_eval_live_agree; eauto.
+    extern_step.
     + exploit omap_exp_eval_live_agree; eauto.
       eexists; split.
       * econstructor; eauto.
@@ -446,6 +455,7 @@ Proof.
       * eapply liveSimI_sim; econstructor; eauto.
         symmetry in AG.
         eapply agree_on_update_same; eauto using agree_on_incl.
+    + no_step.
   - one_step.
     eapply liveSimI_sim; econstructor; eauto.
     econstructor; eauto using agree_on_incl.
