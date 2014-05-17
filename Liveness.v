@@ -61,22 +61,6 @@ Proof.
     + eapply agree_on_update_dead_both; eauto.
 Qed.
 
-(* TODO: replace lemma in lib with this *)
-Lemma update_with_list_agree X Y `{OrderedType X} `{Equivalence Y} lv (E E':X -> Y) XL YL
-: agree_on eq (lv\of_list XL) E E'
-  -> length XL = length YL
-  -> agree_on eq lv (E [ XL <-- YL]) (E' [ XL <-- YL ]).
-Proof.
-  intros. eapply length_length_eq in H2.
-  general induction XL; simpl in * |- *.
-  - rewrite (@minus_empty _ _ lv) in H1; eauto.
-  - inv H2. eapply agree_on_update_same; eauto.
-    eapply IHXL; eauto. rewrite minus_union; eauto.
-    rewrite add_union_singleton. rewrite (empty_union_2 (s:=∅)); eauto.
-    rewrite <- add_union_singleton; eauto.
-    eapply SetInterface.empty_1.
-Qed.
-
 Lemma argsLive_agree_on (V V' E E':onv val) lv blv Y Z v v'
 : agree_on eq (blv \ of_list Z) V V'
   -> argsLive lv blv Y Z
