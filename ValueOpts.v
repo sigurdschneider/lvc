@@ -131,6 +131,14 @@ Inductive eqn_sound : list (params*set var*eqns*eqns*eqns*eqns)
 | EqnReturn Lv e e' Gamma Γ' G G'
   : moreDefined Gamma Γ' e e'
     -> eqn_sound Lv (stmtReturn e) (ann0 Gamma) (ann0 Γ') (ann0 (G,G')) (ann0 (e'::nil))
+| EqnExtern x f Lv b Y Y' Gamma al Γ' (al':ann (eqns)) cl G G' ang
+  : eqn_sound Lv b al al' ang cl
+    -> entails Gamma (getAnn al)
+    -> entails Γ' (getAnn al')
+    -> moreDefinedArgs Gamma Γ' Y Y'
+    -> list_union (List.map Exp.freeVars Y') ⊆ G
+    -> eqn_sound Lv (stmtExtern x f Y b) (ann1 Gamma al) (ann1 Γ' al')
+                (ann1 (G,G') ang) (ann1 Y' cl)
 | EqnLet Lv s Z b Gamma Γ' EqS EqS' als alb als' alb' cls clb G G' angs angb
   : eqn_sound ((Z, G, Gamma, EqS, Γ', EqS')::Lv) s als als' angs cls
   -> eqn_sound ((Z, G ,Gamma, EqS, Γ', EqS')::Lv) b alb alb' angb clb
@@ -152,6 +160,8 @@ Fixpoint compile (s:stmt) (a:ann (list exp)) :=
     | stmtGoto f _, ann0 Y' =>
       stmtGoto f Y'
     | stmtReturn _, ann0 (e'::nil) => stmtReturn e'
+    | stmtExtern x f _ s, ann1 Y' an =>
+      stmtExtern x f Y' (compile s an)
     | stmtLet Z s t, ann2 nil ans ant =>
       stmtLet Z (compile s ans) (compile t ant)
     | s, _ => s
@@ -566,9 +576,9 @@ Lemma sim_DVE r L L' V V' s LV eqns eqns' repl ang
 -> sim'r r (L,V, s) (L',V', compile s repl).
 Proof.
   general induction s; simpl; invt eqn_sound; invt ssa; simpl in * |- *.
-  + exploiT moreDefined; eauto. inv X.
-    - pfold. econstructor 3; try eapply star2_refl; eauto. stuck2.
-    - pfold. econstructor; try eapply plus2O.
+  - exploiT moreDefined; eauto. inv X.
+    + pfold. econstructor 3; try eapply star2_refl; eauto. stuck2.
+    + pfold. econstructor; try eapply plus2O.
       econstructor; eauto using eq_sym. reflexivity.
       econstructor; eauto using eq_sym. reflexivity.
       left. eapply IHs; eauto.
@@ -588,9 +598,9 @@ Proof.
       * rewrite H21. simpl. eauto using entails_freeVars_incl.
       * rewrite H21. eapply entails_freeVars_incl; eauto.
       * hnf; intros. lud; eauto.
-  + exploiT moreDefined; eauto. inv X.
-    - pfold. econstructor 3; try eapply star2_refl; eauto. stuck2.
-    - pfold. case_eq (val2bool y); intros.
+  - exploiT moreDefined; eauto. inv X.
+    + pfold. econstructor 3; try eapply star2_refl; eauto. stuck2.
+    + pfold. case_eq (val2bool y); intros.
       econstructor; try eapply plus2O.
       econstructor; eauto using eq_sym. reflexivity.
       econstructor; eauto using eq_sym. reflexivity.
@@ -619,12 +629,12 @@ Proof.
         clear_all; reflexivity.
         inv H13. rewrite H16; eauto. rewrite H27; eauto.
         inv H20. rewrite H16; eauto. rewrite H27; eauto.
-  + destruct (get_dec L (counted l)) as [[[bE bZ bs]]|].
+  - destruct (get_dec L (counted l)) as [[[bE bZ bs]]|].
     (* hnf in H2. exploit H2; eauto. simpl in *. subst bZ. *)
     decide (length bZ = length Y).
     exploiT moreDefinedArgs; eauto. inv X.
-    - pfold. econstructor 3; try eapply star2_refl. eauto. stuck2.
-    - edestruct AIR5_length; try eassumption; dcr.
+    + pfold. econstructor 3; try eapply star2_refl. eauto. stuck2.
+    + edestruct AIR5_length; try eassumption; dcr.
       edestruct get_length_eq; try eassumption.
       edestruct AIR5_nth as [?[? [?]]]; try eassumption; dcr.
       simpl in *. repeat get_functional; subst.
@@ -655,21 +665,59 @@ Proof.
       exploit omap_length; eauto. congruence.
       rewrite <- H19.
       revert H19 H37; clear_all; cset_tac; intuition; exfalso; eauto.
-    - pfold. econstructor 3; try eapply star2_refl. eauto. stuck2; eauto.
+    + pfold. econstructor 3; try eapply star2_refl. eauto. stuck2; eauto.
       get_functional; subst. simpl in *. congruence.
-    - pfold. econstructor 3; try eapply star2_refl. eauto. stuck2; eauto.
-  + simpl. exploiT moreDefined; eauto. inv X; eauto.
-    - pfold. econstructor 3; try eapply star2_refl. simpl. congruence.
+    + pfold. econstructor 3; try eapply star2_refl. eauto. stuck2; eauto.
+  - simpl. exploiT moreDefined; eauto. inv X; eauto.
+    + pfold. econstructor 3; try eapply star2_refl. simpl. congruence.
       stuck2.
-    - pfold. econstructor 4; try eapply star2_refl. simpl. congruence.
+    + pfold. econstructor 4; try eapply star2_refl. simpl. congruence.
       stuck2. stuck2.
-  + pfold. econstructor; try eapply plus2O.
+  - exploiT moreDefinedArgs; eauto. inv X.
+    + pfold. econstructor 3; try eapply star2_refl. eauto.
+      stuck2.
+    + pfold. eapply sim'Extern; try eapply star2_refl.
+      * eexists (ExternI f y 0); eexists; econstructor; eauto.
+      * eexists (ExternI f y 0); eexists; econstructor; eauto.
+      * { intros. inv H9.
+          eexists. econstructor; eauto.
+          - econstructor; eauto.
+            + congruence.
+          - left. eapply IHs; eauto.
+            + admit.
+            + admit.
+            + eapply simL'_update; eauto.
+              * admit.
+              * admit.
+            + inv H13. rewrite H12, H4, H22.
+              simpl; clear_all; cset_tac; intuition.
+            + inv H18. rewrite H12, H5, H22.
+              simpl; clear_all; cset_tac; intuition.
+            + hnf; intros; lud; eauto.
+        }
+      * { intros. inv H9.
+          eexists. econstructor; eauto.
+          - econstructor; eauto.
+            + congruence.
+          - left. eapply IHs; eauto.
+            + admit.
+            + admit.
+            + eapply simL'_update; eauto.
+              * admit.
+              * admit.
+            + inv H13. rewrite H12, H4, H22.
+              simpl; clear_all; cset_tac; intuition.
+            + inv H18. rewrite H12, H5, H22.
+              simpl; clear_all; cset_tac; intuition.
+            + hnf; intros; lud; eauto.
+        }
+  - pfold. econstructor; try eapply plus2O.
     econstructor; eauto. reflexivity.
     econstructor; eauto. reflexivity.
     simpl. left. eapply IHs2; eauto.
-    - eapply H13; eauto.
-    - eapply H16; eauto.
-    - eapply simL_mon; eauto. eapply simL_extension'; eauto.
+    + eapply H13; eauto.
+    + eapply H16; eauto.
+    + eapply simL_mon; eauto. eapply simL_extension'; eauto.
       * eapply simL'_update; eauto.
         unfold Sim.BlockRel.
         destruct x as [[[[[] ?] ?] ?] ?]; simpl; intros; dcr.
@@ -712,8 +760,8 @@ Proof.
         split.
         rewrite H28; reflexivity.
         repeat (split; eauto; try reflexivity).
-    - inv H13. rewrite H8, H28; eauto.
-    - invc H16. rewrite H8, H28; eauto.
+    + inv H13. rewrite H8, H28; eauto.
+    + invc H16. rewrite H8, H28; eauto.
 Qed.
 
 
