@@ -1,22 +1,22 @@
-Require Export Setoid Coq.Classes.Morphisms.  
+Require Export Setoid Coq.Classes.Morphisms.
 Require Export Sets SetInterface SetConstructs SetProperties.
 Require Import EqDec CSetNotation Util CSetTac.
 
 Section theorems.
   Variable X : Type.
   Context `{OrderedType X}.
-  
+
   Lemma single_spec_neq (x y:X)
     : x ∈ {{ y }} -> x === y.
   Proof.
-    cset_tac; firstorder. 
+    cset_tac; firstorder.
   Qed.
 
   Lemma neq_not_in_single (x y:X)
     :  x =/= y -> ~x ∈ {{y}}.
   Proof.
     cset_tac; firstorder.
-  Qed. 
+  Qed.
 
   Lemma minus_empty (s:set X)
     : s \ ∅ ≅ s.
@@ -44,16 +44,16 @@ Section theorems.
 
   Lemma minus_inane_set (s t:set X)
     : s ∩ t ≅ ∅ -> (s \ t) ≅ s.
-  Proof. 
+  Proof.
     intros.   cset_tac.
-    
-        
+
+
  cset_tac. specialize (H0 a). cset_tac; firstorder.
   Qed.
 
   Lemma minus_union_set (s t:set X)
     : s ∩ t ≅ ∅ -> ((s ∪ t) \ t) ≅ s.
-  Proof. 
+  Proof.
     cset_tac. specialize (H0 a). cset_tac; firstorder.
   Qed.
 
@@ -65,7 +65,7 @@ Section theorems.
     repeat (cset_tac; firstorder).
   Qed.
 
-  Lemma add_inane s (x:X) 
+  Lemma add_inane s (x:X)
     : x ∈ s
     -> s ≅ ({{x}} ∪ s).
   Proof.
@@ -110,7 +110,7 @@ Section theorems.
   Qed.
 
   Lemma incl_refl (s:set X)
-  : s ⊆ s. 
+  : s ⊆ s.
   Proof.
     reflexivity.
   Qed.
@@ -168,7 +168,7 @@ Section theorems.
   Lemma minus_in s t (x:X)
     : x ∉ s -> x ∉ t -> x ∉ (s ∪ t).
   Proof.
-    repeat (cset_tac; firstorder). 
+    repeat (cset_tac; firstorder).
   Qed.
 
   Lemma union_cases s t (x:X)
@@ -238,7 +238,7 @@ Section theorems.
     cset_tac; firstorder.
   Qed.
 
-  Lemma meet_incl (s t u:set X) 
+  Lemma meet_incl (s t u:set X)
     : s ⊆ u -> s ∩ t ⊆ u.
   Proof.
     cset_tac; firstorder.
@@ -276,11 +276,11 @@ Section theorems.
     split; intros.
     remember (elements s). destruct l; eauto.
     assert (x ∈ s). eapply elements_iff.
-    rewrite <- Heql. firstorder. 
+    rewrite <- Heql. firstorder.
     exfalso. rewrite H0 in H1. eapply not_in_empty; eauto.
 
     specialize (elements_iff s); intros.
-    rewrite H0 in H1. 
+    rewrite H0 in H1.
     cset_tac. specialize (H1 a). firstorder. inv H1.
   Qed.
 
@@ -320,7 +320,7 @@ Section theorems.
     cset_tac; firstorder.
   Qed.
 
-  Lemma meet_in_union (s t : set X) 
+  Lemma meet_in_union (s t : set X)
     : s ∩ t ⊆ s ∪ t.
   Proof.
     cset_tac; firstorder.
@@ -344,11 +344,11 @@ Section theorems.
   Proof.
     cset_tac; firstorder.
   Qed.
-  
+
   Lemma incl_meet_empty (s t u:set X)
     : s ⊆ t -> u ∩ t ≅ empty -> u ∩ s ≅ empty.
   Proof.
-    cset_tac. specialize (H1 a); cset_tac; firstorder. 
+    cset_tac. specialize (H1 a); cset_tac; firstorder.
   Qed.
 
   Lemma union_incl_split (s t u : set X)
@@ -370,7 +370,7 @@ Section theorems.
   Proof.
     cset_tac; firstorder.
   Qed.
-  
+
   Lemma meet_minus (s t : set X)
     : s ∩ (t \ s) ≅ ∅.
   Proof.
@@ -390,13 +390,13 @@ Section theorems.
     cset_tac; firstorder. cset_tac.
   Qed.
 
-  Lemma incl_eq (s t:set X) 
+  Lemma incl_eq (s t:set X)
     : s ⊆ t -> t ⊆ s -> t ≅ s.
   Proof.
     cset_tac; firstorder.
   Qed.
 
-  Lemma eq_incl (s t:set X) 
+  Lemma eq_incl (s t:set X)
     : t ≅ s -> s ⊆ t /\ t ⊆ s.
   Proof.
     cset_tac; firstorder.
@@ -405,8 +405,8 @@ Section theorems.
   End theorems.
 
   Section moretheorems.
-   
-  Require Import List. 
+
+  Require Import List.
   Variable X : Type.
   Context `{OrderedType X}.
 
@@ -421,7 +421,7 @@ Definition addf {X} `{OrderedType X} {Y} `{OrderedType Y} (f:X->Y) :=
 Add Parametric Morphism {X} `{OrderedType X} {Y} `{OrderedType Y} (f:X->Y)
   `{Proper _ (_eq ==> _eq) f}
   : (addf f)
-  with signature 
+  with signature
     _eq ==> Equal ==> Equal as addf_morphism.
 Proof.
   intros. unfold addf. rewrite H2. rewrite H3. reflexivity.
@@ -429,7 +429,7 @@ Qed.
 
 Add Parametric Morphism {X} `{OrderedType X} {Y} `{OrderedType Y} (f:X->Y)
   : (addf f)
-  with signature 
+  with signature
     eq ==> Equal ==> Equal as addf_morphism2.
 Proof.
   intros. unfold addf. rewrite H1. reflexivity.
@@ -471,7 +471,7 @@ Qed.
 Lemma InA_in {X} `{OrderedType X} x L
  : InA _eq x L <-> x ∈ of_list L.
 Proof.
-  split; intros. 
+  split; intros.
   general induction L. inv H0.
   simpl. inv H0. rewrite H2. eapply add_iff; intuition.
   eapply add_iff; intuition.
@@ -482,7 +482,7 @@ Proof.
 Qed.
 
 
-Lemma minus_minus_eq {X} `{OrderedType X} (s t : set X) 
+Lemma minus_minus_eq {X} `{OrderedType X} (s t : set X)
   : s [=] s \ (t \ s).
 Proof.
   cset_tac; firstorder.
@@ -511,11 +511,17 @@ Proof.
   cset_tac; firstorder.
 Qed.
 
-(* 
+Lemma minus_inter_empty X `{OrderedType X} s t u
+: s ∩ t [=] s ∩ u
+  -> s \ t [=] s \ u.
+Proof.
+  intros. cset_tac; intuition.
+  hnf in H0. eapply H3. eapply H0; eauto.
+  eapply H3. eapply H0. eauto.
+Qed.
+
+(*
 *** Local Variables: ***
 *** coq-load-path: (("../" "Lvc")) ***
 *** End: ***
 *)
-
-
-
