@@ -71,6 +71,13 @@ Proof.
     cset_tac; intuition. rewrite <- H2; eauto.
 Qed.
 
+Lemma get_in_of_list X `{OrderedType X} L n x
+    : get L n x
+      -> x ∈ of_list L.
+Proof.
+  intros. general induction H0; simpl; cset_tac; intuition.
+Qed.
+
 
 (*
 *** Local Variables: ***

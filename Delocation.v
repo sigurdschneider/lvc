@@ -268,14 +268,6 @@ Inductive additionalParameters_live : list (set var)   (* additional params *)
     -> additionalParameters_live (of_list Za::ZL) t ant_lv ant
     -> additionalParameters_live ZL (stmtLet Z s t) (ann2 lv ans_lv ant_lv) (ann2 Za ans ant).
 
-Lemma get_in_of_list X `{OrderedType X} L n x
-    : get L n x
-      -> x ∈ of_list L.
-Proof.
-  intros. general induction H0; simpl; cset_tac; intuition.
-Qed.
-
-
 Lemma live_sound_compile DL ZL AL s ans_lv ans
   (RD:trs AL ZL s ans_lv ans)
   (LV:live_sound DL s ans_lv)
