@@ -30,6 +30,9 @@ Inductive trs
     -> G' ⊆ lv
 (*    -> of_list Za ⊆ lv *)
     -> trs DL ZL (stmtGoto f Y) (ann0 lv) (ann0 nil)
+  | trsExtern DL ZL x f Y s lv an_lv an
+    : trs (restrict DL (lv\{{x}})) ZL s an_lv an
+    -> trs DL ZL (stmtExtern x f Y s) (ann1 lv an_lv) (ann1 nil an)
   | trsLet DL ZL s t Z Za ans ant lv ans_lv ant_lv
     : (* of_list Za ⊆ getAnn ans_lv *)
       (* for now, require all additionals Za to be live in the function;
@@ -53,6 +56,8 @@ Fixpoint compile (ZL:list (list var)) (s:stmt) (an:ann (list var)) : stmt :=
     | stmtIf e s t, ann2 _ ans ant => stmtIf e (compile ZL s ans) (compile ZL t ant)
     | stmtGoto f Y, ann0 _ => stmtGoto f (Y++List.map Var (nth (counted f) ZL nil))
     | stmtReturn e, ann0 _ => stmtReturn e
+    | stmtExtern x f Y s, ann1 _ an =>
+      stmtExtern x f Y (compile ZL s an)
     | stmtLet Z s t, ann2 Za ans ant =>
       stmtLet (Z++Za) (compile (Za::ZL) s ans) (compile (Za::ZL) t ant)
     | s, _ => s
@@ -210,6 +215,20 @@ Proof.
       apply n. repeat rewrite app_length in len.
       eapply get_drop_eq in H12; eauto. subst Za0.
       erewrite get_nth_default in len; eauto. rewrite map_length in len. omega.
+  - remember (omap (exp_eval E) Y); intros. symmetry in Heqo.
+    pose proof Heqo. erewrite omap_agree in H0. Focus 2.
+    intros. rewrite EQ. reflexivity.
+    destruct o.
+    extern_step.
+    + eexists; split. econstructor; eauto. congruence.
+      eapply trsR_sim; econstructor; eauto using approx_restrict.
+      hnf; intros. lud; eauto.
+      eauto using defined_on_update_some, defined_on_incl.
+    + eexists; split. econstructor; eauto. congruence.
+      eapply trsR_sim; econstructor; eauto using approx_restrict.
+      hnf; intros. lud; eauto.
+      eauto using defined_on_update_some, defined_on_incl.
+    + no_step.
   - one_step.
     eapply trsR_sim; econstructor; eauto.
     econstructor; eauto. econstructor.
@@ -253,26 +272,34 @@ Lemma trs_srd DL AL ZL s ans_lv ans
   : srd (restrict AL (getAnn ans_lv)) (compile ZL s ans) ans_lv.
 Proof.
   general induction RD; inv LV; simpl; eauto using srd.
-  + econstructor; eauto.
+  - econstructor; eauto.
     eapply srd_monotone. eapply IHRD; eauto.
     eapply restrict_lessReq; eauto.
     repeat rewrite restrict_comp_meet.
     eapply restrict_subset. reflexivity.
     cset_tac; intuition.
-  + econstructor; eauto.
+  - econstructor; eauto.
     eapply srd_monotone. eapply IHRD1; eauto.
     eapply restrict_subset; eauto. reflexivity.
     eapply srd_monotone. eapply IHRD2; eauto.
     eapply restrict_subset; eauto. reflexivity.
-  + edestruct PIR2_nth_2; eauto; dcr.
+  - edestruct PIR2_nth_2; eauto; dcr.
     inv H4; get_functional; subst. simpl in *.
     econstructor; eauto. unfold restrict.
     pose proof (map_get_1 (restr lv) H3). unfold fst in H.
     assert (restr lv (Some x0) = Some x0). eapply restr_iff; split; eauto.
     cset_tac; eauto.
     rewrite <- H6; eauto.
-  + econstructor; eauto.
-    - eapply srd_monotone2. eapply IHRD1; eauto.
+  - econstructor; eauto.
+    eapply srd_monotone.
+    + eapply IHRD; eauto.
+      eapply restrict_lessReq; eauto.
+    + repeat rewrite restrict_comp_meet.
+      eapply restrict_subset.
+      * reflexivity.
+      * cset_tac; intuition.
+  - econstructor; eauto.
+    + eapply srd_monotone2. eapply IHRD1; eauto.
       eapply restrict_lessReq. econstructor; eauto.
       constructor. simpl. cset_tac; intuition.
       rewrite restrict_incl; [|reflexivity].
@@ -284,7 +311,7 @@ Proof.
       eapply restrict_subset2. reflexivity.
       rewrite of_list_app.
       hnf; intros. cset_tac; intuition.
-    - eapply srd_monotone2. eapply IHRD2; eauto.
+    + eapply srd_monotone2. eapply IHRD2; eauto.
       constructor. constructor. simpl. cset_tac; intuition. eauto.
       decide (getAnn ans_lv \ of_list (Z ++ Za) ⊆ getAnn ant_lv).
       rewrite restrict_incl; eauto.
@@ -300,21 +327,27 @@ Inductive additionalParameters_live : list (set var)   (* additional params *)
                                       -> ann (set var)  (* liveness *)
                                       -> ann (list var) (* additional params *)
                                       -> Prop :=
- | additionalParameters_liveExp ZL x e s an an_lv lv
-    : additionalParameters_live ZL s an_lv an
+| additionalParameters_liveExp ZL x e s an an_lv lv
+  : additionalParameters_live ZL s an_lv an
     -> additionalParameters_live ZL (stmtExp x e s) (ann1 lv an_lv) (ann1 nil an)
-  | additionalParameters_liveIf ZL e s t ans ant ans_lv ant_lv lv
-    : additionalParameters_live ZL s ans_lv ans
+| additionalParameters_liveIf ZL e s t ans ant ans_lv ant_lv lv
+  : additionalParameters_live ZL s ans_lv ans
     -> additionalParameters_live ZL t ant_lv ant
     -> additionalParameters_live ZL (stmtIf e s t) (ann2 lv ans_lv ant_lv) (ann2 nil ans ant)
-  | additionalParameters_liveRet ZL e lv
+| additionalParameters_liveRet ZL e lv
     :  additionalParameters_live ZL (stmtReturn e) (ann0 lv) (ann0 nil)
-  | additionalParameters_liveGoto ZL Za f Y lv
-    : get ZL (counted f) Za
-      -> Za ⊆ lv
-      -> additionalParameters_live ZL (stmtGoto f Y) (ann0 lv) (ann0 nil)
-  | additionalParameters_liveLet ZL s t Z Za ans ant lv ans_lv ant_lv
-    : of_list Za ⊆ getAnn ans_lv \ of_list Z
+| additionalParameters_liveGoto ZL Za f Y lv
+  : get ZL (counted f) Za
+    -> Za ⊆ lv
+    -> additionalParameters_live ZL (stmtGoto f Y) (ann0 lv) (ann0 nil)
+| additionalParameters_liveExtern ZL x f Y s an an_lv lv
+  : additionalParameters_live ZL s an_lv an
+    -> additionalParameters_live ZL
+                                (stmtExtern x f Y s)
+                                (ann1 lv an_lv)
+                                (ann1 nil an)
+| additionalParameters_liveLet ZL s t Z Za ans ant lv ans_lv ant_lv
+  : of_list Za ⊆ getAnn ans_lv \ of_list Z
     -> additionalParameters_live (of_list Za::ZL) s ans_lv ans
     -> additionalParameters_live (of_list Za::ZL) t ant_lv ant
     -> additionalParameters_live ZL (stmtLet Z s t) (ann2 lv ans_lv ant_lv) (ann2 Za ans ant).
