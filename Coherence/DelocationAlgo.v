@@ -1,7 +1,7 @@
 Require Import CSet Le.
 
 Require Import Plus Util AllInRel Map.
-Require Import Val Var Env EnvTy IL Annotation Liveness Coherence Sim MoreList Restrict ILIToILF.
+Require Import Val Var Env EnvTy IL Annotation Liveness Coherence Sim MoreList Restrict Delocation.
 
 Set Implicit Arguments.
 
