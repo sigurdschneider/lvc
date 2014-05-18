@@ -1,4 +1,4 @@
-Require Import AllInRel Util Map Env EnvTy Exp IL Annotation Coherence Bisim DecSolve Liveness Restrict.
+Require Import AllInRel Util Map Env EnvTy Exp IL Annotation Coherence Bisim DecSolve Liveness Restrict MoreExp.
 
 (*  IL_Types. *)
 
@@ -59,15 +59,18 @@ Fixpoint compile (ZL:list (list var)) (s:stmt) (an:ann (list var)) : stmt :=
   end.
 
 Inductive approx
-  : list (option (set var)) -> list (params) -> I.block -> I.block -> Prop :=
-  blk_approxI o (Za Z':list var) DL ZL s ans ans_lv
-  (RD:forall G, o = Some G ->
-                trs (restrict (Some G::DL) G) (Za::ZL) s ans_lv ans)
-  : approx (o::DL) (Za::ZL)(I.blockI Z' s) (I.blockI (Z'++Za) (compile (Za::ZL) s ans)).
+  : list (set var * list var)
+    -> list (option (set var))
+    -> list (params) -> I.block -> I.block -> Prop :=
+  blk_approxI o (Za Z':list var) DL ZL Lv s ans ans_lv ans_lv'
+              (RD:forall G, o = Some G ->
+                       live_sound ((getAnn ans_lv',Z'++Za)::Lv) (compile (Za :: ZL) s ans) ans_lv'
+                       /\ trs (restrict (Some G::DL) G) (Za::ZL) s ans_lv ans)
+  : approx ((getAnn ans_lv',Z'++Za)::Lv) (o::DL) (Za::ZL) (I.blockI Z' s) (I.blockI (Z'++Za) (compile (Za::ZL) s ans)).
 
-Lemma approx_restrict DL ZL L L' G
-: AIR4 approx DL ZL L L'
-  -> AIR4 approx (restrict DL G) ZL L L'.
+Lemma approx_restrict Lv DL ZL L L' G
+: AIR53 approx Lv DL ZL L L'
+  -> AIR53 approx Lv (restrict DL G) ZL L L'.
 Proof.
   intros. general induction H.
   + econstructor.
@@ -76,68 +79,142 @@ Proof.
       rewrite <- restrict_incl; eauto. rewrite restrict_idem; eauto.
 Qed.
 
+Definition appsnd {X} {Y} (s:X * list Y) (t: list Y) := (fst s, snd s ++ t).
+
+Definition defined_on {X} `{OrderedType X} {Y} (G:set X) (E:X -> option Y)
+  := forall x, x ∈ G -> exists y, E x = Some y.
+
+Lemma defined_on_update_some X `{OrderedType X} Y (G:set X) (E:X -> option Y) x v
+  : defined_on (G \ {{x}}) E
+    -> defined_on G (E [x <- Some v]).
+Proof.
+  unfold defined_on; intros. lud.
+  - eauto.
+  - eapply H0; eauto. cset_tac; intuition.
+Qed.
+
+Lemma defined_on_incl X `{OrderedType X} Y (G G':set X) (E:X -> option Y)
+  : defined_on G E
+    -> G' ⊆ G
+    -> defined_on G' E.
+Proof.
+  unfold defined_on; intros; eauto.
+Qed.
+
 Inductive trsR : I.state -> I.state -> Prop :=
-  trsRI (E E':onv val) L L' s ans ans_lv DL ZL
+  trsRI (E E':onv val) L L' s ans Lv' ans_lv ans_lv' DL ZL
   (RD: trs DL ZL s ans_lv ans)
-  (EA: AIR4 approx DL ZL L L')
-  (EQ: E ≡ E')
+  (EA: AIR53 approx Lv' DL ZL L L')
+  (EQ: (@feq _ _ eq) E E')
+  (LV': live_sound Lv' (compile ZL s ans) ans_lv')
+  (EDEF: defined_on (getAnn ans_lv') E')
   : trsR (L, E, s) (L', E', compile ZL s ans).
 
+Lemma omap_var_defined_on Za lv E
+: of_list Za ⊆ lv
+  -> defined_on lv E
+  -> exists l, omap (exp_eval E) (List.map Var Za) = Some l.
+Proof.
+  intros. general induction Za; simpl.
+  - eauto.
+  - simpl in *.
+    edestruct H0.
+    + instantiate (1:=a). cset_tac; intuition.
+    + rewrite H1; simpl. edestruct IHZa; eauto.
+      cset_tac; intuition.
+      rewrite H2; simpl. eauto.
+Qed.
+
+Lemma defined_on_update_list lv (E:onv val) Z vl
+: length vl = length Z
+  -> defined_on (lv \ of_list Z) E
+  -> defined_on lv (E [Z <-- List.map Some vl]).
+Proof.
+  unfold defined_on; intros.
+  decide (x ∈ of_list Z).
+  - eapply length_length_eq in H. clear H0.
+    general induction H; simpl in * |- *.
+    + exfalso. cset_tac; intuition.
+    + lud; eauto. edestruct IHlength_eq; eauto. cset_tac; intuition.
+  - edestruct H0; eauto. instantiate (1:=x). cset_tac; intuition.
+    exists x0. rewrite <- H2.
+    eapply update_with_list_no_update; eauto.
+Qed.
+
+
+
 Lemma trsR_sim σ1 σ2
-  : trsR σ1 σ2 -> sim σ1 σ2.
+  : trsR σ1 σ2 -> bisim σ1 σ2.
 Proof.
   revert σ1 σ2. cofix; intros.
-  intros. destruct H; inv RD; simpl; try provide_invariants_4.
-  + case_eq (exp_eval E e); intros.
-    econstructor; eauto using I.step, plus.
-    rewrite EQ in H0; econstructor; eauto using I.step, plus.
-    eapply trsR_sim. econstructor; eauto using approx_restrict.
-    rewrite EQ; reflexivity.
-    eapply simE; try eapply star_refl; eauto; stuck. rewrite EQ in H0; congruence.
-
-  + case_eq (exp_eval E e); intros.
+  intros. destruct H; inv RD; invt live_sound; simpl; try provide_invariants_53.
+  - remember (exp_eval E e). symmetry in Heqo.
+    pose proof Heqo. rewrite EQ in H0.
+    destruct o.
+    + one_step. simpl in *.
+      eapply trsR_sim.
+      econstructor; eauto using approx_restrict.
+      rewrite EQ; reflexivity.
+      eapply defined_on_update_some. eapply defined_on_incl; eauto.
+    + no_step.
+  - remember (exp_eval E e). symmetry in Heqo.
+    pose proof Heqo. rewrite EQ in H1.
+    destruct o.
     case_eq (val2bool v); intros.
-    one_step. rewrite <- EQ; eauto.
-    eapply trsR_sim; econstructor; eauto.
-    one_step. rewrite <- EQ; eauto.
-    eapply trsR_sim; econstructor; eauto.
-    no_step; rewrite <- EQ in def; congruence.
-  + no_step. simpl. rewrite EQ; eauto.
-  + simpl counted in *.
+    + one_step. eapply trsR_sim; econstructor; eauto using defined_on_incl.
+    + one_step. eapply trsR_sim; econstructor; eauto using defined_on_incl.
+    + no_step.
+  - no_step. simpl. rewrite EQ; eauto.
+  - simpl counted in *.
     decide (length Z' = length Y).
     case_eq (omap (exp_eval E) Y); intros.
-    one_step. simpl in *; eauto.
-    repeat rewrite app_length.
-    eapply get_drop_eq in H6; eauto. inv H6; subst. simpl.
-    rewrite map_length.
-    erewrite get_nth_default; eauto.
-    rewrite <- H5, <- H6 in EA1.
-    eapply omap_exp_eval_app. erewrite omap_agree; eauto.
-    intros. rewrite EQ. reflexivity.
-    eapply trsR_sim; econstructor; eauto using approx_restrict.
-    eapply approx_restrict. rewrite H6, H5. eauto.
-
-    eapply get_drop_eq in H6; eauto. inv H6. simpl.
-    rewrite update_with_list_app.
-    erewrite get_nth_default; eauto.
-    rewrite update_with_list_lookup_list. rewrite EQ. reflexivity.
-    intuition.
-    edestruct (AIR4_length); eauto; dcr.
-    exploit omap_length; eauto. congruence.
-    no_step. get_functional; subst. simpl in *.
-    rewrite omap_app in def.
-    erewrite omap_agree in H7. Focus 2.
-    intros. rewrite EQ. reflexivity. rewrite H7 in def. simpl in *. congruence.
-    no_step.
-    get_functional; subst. simpl in *. congruence.
-    get_functional; subst. simpl in *.
-    apply n. repeat rewrite app_length in len.
-    eapply get_drop_eq in H6; eauto. subst Za0.
-    erewrite get_nth_default in len; eauto. rewrite map_length in len. omega.
-  + one_step.
+    simpl in *.
+    erewrite get_nth_default in H9; eauto.
+    edestruct (omap_var_defined_on x); eauto.
+    eapply get_in_incl; intros.
+    exploit H9. eapply get_app_right. Focus 2.
+    eapply map_get_1; eauto. reflexivity. inv X. eauto.
+    + exploit get_drop_eq; try eapply H11; eauto. subst o.
+      exploit get_drop_eq; try eapply H12; eauto. subst x.
+      erewrite get_nth_default; eauto.
+      one_step.
+      * simpl; eauto.
+        repeat rewrite app_length.
+        rewrite map_length; eauto.
+      * instantiate (1:=l ++ x0).
+        rewrite omap_app.
+        erewrite omap_agree. Focus 2.
+        intros. rewrite <- EQ. reflexivity.
+        rewrite H0; simpl. rewrite H8; simpl. reflexivity.
+      * exploit RD0; eauto; dcr. simpl.
+        eapply trsR_sim; econstructor; eauto.
+        rewrite <- H11, <- H10, <- H12 in EA1.
+        eapply (approx_restrict G' EA1).
+        simpl. rewrite map_app.
+        rewrite update_with_list_app.
+        rewrite (omap_self_update E' Za0). rewrite EQ. reflexivity. eauto.
+        rewrite map_length.
+        exploit omap_length; try eapply H0; eauto. congruence.
+        eapply defined_on_update_list; eauto using defined_on_incl.
+        exploit omap_length; try eapply H0; eauto.
+        exploit omap_length; try eapply H8; eauto.
+        rewrite map_length in X0.
+        repeat rewrite app_length. omega.
+    + no_step. get_functional; subst. simpl in *.
+      rewrite omap_app in def.
+      erewrite omap_agree in H0. Focus 2.
+      intros. rewrite EQ. reflexivity. rewrite H0 in def. simpl in *. congruence.
+    + no_step.
+      get_functional; subst. simpl in *. congruence.
+      get_functional; subst. simpl in *.
+      apply n. repeat rewrite app_length in len.
+      eapply get_drop_eq in H12; eauto. subst Za0.
+      erewrite get_nth_default in len; eauto. rewrite map_length in len. omega.
+  - one_step.
     eapply trsR_sim; econstructor; eauto.
     econstructor; eauto. econstructor.
-    intros. inv H1. eauto.
+    intros. split; eauto. inv H1. eauto.
+    eauto using defined_on_incl.
 Qed.
 
 Inductive fstNoneOrR' {X Y:Type} (R:X->Y->Prop)
@@ -169,7 +246,7 @@ Proof.
   destruct if; eauto. subst. constructor; eauto. constructor.
 Qed.
 
-Lemma compile_typed DL AL ZL s ans_lv ans
+Lemma trs_srd DL AL ZL s ans_lv ans
   (RD:trs AL ZL s ans_lv ans)
   (LV:live_sound DL s ans_lv)
   (EQ:PIR2 lessReq AL DL)
