@@ -1,4 +1,4 @@
-Require Import AllInRel Util Map Env EnvTy Exp IL Annotation Coherence Sim DecSolve Liveness Restrict.
+Require Import AllInRel Util Map Env EnvTy Exp IL Annotation Coherence Bisim DecSolve Liveness Restrict.
 
 (*  IL_Types. *)
 
@@ -40,40 +40,12 @@ Inductive trs
     -> trs (Some (getAnn ans_lv \ of_list (Z++Za))::DL) (Za::ZL) t ant_lv ant
     -> trs DL ZL (stmtLet Z s t) (ann2 lv ans_lv ant_lv) (ann2 Za ans ant).
 
-Lemma trs_dec DL ZL s ans_lv ans (* (an_lv:annotation s ans_lv) (an:annotation s ans) *)
-  : {trs DL ZL s ans_lv ans} +
-    {~ trs DL ZL s ans_lv ans}.
-Proof.
-  general induction s; destruct ans; destruct ans_lv; isabsurd; try dec_solve.
-  + destruct a; edestruct (IHs (restrict DL (a0\{{x}})) ZL ans_lv ans); try dec_solve.
-  + destruct a; subst; try dec_solve;
-    destruct (IHs1 DL ZL ans_lv1 ans1); try dec_solve;
-    destruct (IHs2 DL ZL ans_lv2 ans2); try dec_solve.
-  + destruct (get_dec DL (counted l)) as [[[G'|]]|];
-    destruct (get_dec ZL (counted l)) as [[Za ?]|];
-    try destruct a;
-    try decide (G' ⊆ a0);
-    try decide (of_list (Za) ⊆ a0);
-    subst; try dec_solve; try inv an; try inv an_lv; eauto.
-  + decide (a = nil);
-    subst; try dec_solve; try inv an; try inv an_lv; eauto.
-  + edestruct (IHs1 (restrict (Some (getAnn ans_lv1 \ of_list (Z++a))::DL) (getAnn ans_lv1 \ of_list (Z++a))) (a::ZL) ans_lv1 ans1); eauto;
-    edestruct (IHs2 (Some (getAnn ans_lv1 \ of_list (Z++a)) :: DL) (a :: ZL) ans_lv2 ans2); decide (of_list a ⊆ getAnn ans_lv1);
-    eauto; try dec_solve.
-Defined.
 
 Lemma trs_annotation DL ZL s lv Y
       : trs DL ZL s lv Y -> annotation s lv /\ annotation s Y.
 Proof.
   intros. general induction H; split; dcr; econstructor; eauto.
 Qed.
-
-Instance trs_dec_inst DL ZL s lv Y
-: Computable (trs DL ZL s lv Y).
-Proof.
-  try (now right; intro A; eapply trs_annotation in A; dcr; eauto).
-  hnf; eauto using trs_dec.
-Defined.
 
 Fixpoint compile (ZL:list (list var)) (s:stmt) (an:ann (list var)) : stmt :=
   match s, an with
@@ -143,7 +115,6 @@ Proof.
   revert σ1 σ2. cofix; intros.
   intros. destruct H; inv RD; simpl; try provide_invariants_4.
   + case_eq (exp_eval E e); intros.
-    eapply simS; try eapply plusO.
     econstructor; eauto using I.step, plus.
     rewrite EQ in H0; econstructor; eauto using I.step, plus.
     eapply trsR_sim. econstructor; eauto using approx_restrict.
