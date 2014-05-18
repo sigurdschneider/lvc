@@ -1,4 +1,4 @@
-Require Export Setoid Coq.Classes.Morphisms.  
+Require Export Setoid Coq.Classes.Morphisms.
 Require Import EqDec Computable Util LengthEq AutoIndTac.
 Require Export CSet Containers.SetDecide.
 Require Export MapBasics MapLookup MapAgreement.
@@ -11,27 +11,27 @@ Section MapUpdate.
   Context `{OrderedType X}.
   Variable Y : Type.
 
-  Fixpoint update_list (m:X -> Y) (f:X -> Y) (L:list X) := 
+  Fixpoint update_list (m:X -> Y) (f:X -> Y) (L:list X) :=
     match L with
       | nil => m
       | x::L => (update_list m f L) [x <- f x]
     end.
 
   Lemma update_list_agree_minus {R} `{Symmetric Y R} `{Transitive Y R} lv (E E' f:X -> Y) XL
-  :  agree_on R lv E' E 
+  :  agree_on R lv E' E
      -> agree_on R (lv\of_list XL) (update_list E' f XL) E.
   Proof.
-    intros. general induction XL; simpl. 
+    intros. general induction XL; simpl.
     rewrite minus_empty. eassumption.
-    rewrite add_union_singleton. rewrite union_comm. rewrite <- minus_union. 
+    rewrite add_union_singleton. rewrite union_comm. rewrite <- minus_union.
     eapply agree_on_update_dead.
-    cset_tac. intro; decompose records; eauto. 
+    cset_tac. intro; decompose records; eauto.
     eauto using agree_on_incl, incl_minus.
   Qed.
 
   Corollary update_list_agree_self {R} `{Equivalence Y R} lv (E:X -> Y) L f
     : agree_on R (lv\of_list L) (update_list E f L) E.
-  Proof. 
+  Proof.
     eapply update_list_agree_minus. reflexivity.
   Qed.
 
@@ -41,9 +41,9 @@ Section MapUpdate.
   Proof.
     intros. general induction L; simpl; eauto. lud.
     + exfalso. eapply H0. simpl in * |- *. rewrite e. eapply add_1; eauto.
-    + assert (~x ∈ of_list L). 
+    + assert (~x ∈ of_list L).
       - intro. eapply H0. simpl. eapply add_2; eauto.
-      - eauto. 
+      - eauto.
   Qed.
 
   Lemma update_list_upd R `{Equivalence Y R} (m:X -> Y) f L x
@@ -53,7 +53,7 @@ Section MapUpdate.
   Proof.
     intros. general induction L; simpl; eauto.
     + simpl in *; cset_tac; firstorder.
-    + lud. 
+    + lud.
       - rewrite e; eauto.
       - eapply IHL; eauto. eapply zadd_3; eauto.
   Qed.
@@ -80,16 +80,16 @@ Section MapUpdateList.
 
 (*
 Lemma update_with_list_agree_minus X `{OrderedType X} Y `{Equivalence Y}
-      lv (E E':X -> Y) XL YL 
+      lv (E E':X -> Y) XL YL
 : length XL = length YL
-  -> agree_on lv E' E 
+  -> agree_on lv E' E
   -> agree_on (lv\of_list XL) (E' [ XL <-- YL ]) E.
 Proof.
-  intros. eapply length_length_eq in H1. 
+  intros. eapply length_length_eq in H1.
   general induction H1; simpl. rewrite minus_empty. eassumption.
-  rewrite add_union_singleton. rewrite union_comm. rewrite <- minus_union. 
+  rewrite add_union_singleton. rewrite union_comm. rewrite <- minus_union.
   eapply agree_on_update_dead.
-  cset_tac. intro; decompose records; eauto. 
+  cset_tac. intro; decompose records; eauto.
   eauto using agree_on_incl, incl_minus.
 Qed.
 *)
@@ -100,7 +100,7 @@ Qed.
     -> agree_on R lv (E [ XL <-- YL]) (E' [ XL <-- YL ]).
   Proof.
     intros. eapply length_length_eq in H2.
-    general induction XL; simpl in * |- *. 
+    general induction XL; simpl in * |- *.
     rewrite (@minus_empty _ _ lv) in H1; eauto.
     inv H2. eapply agree_on_update_same. eapply H0; eauto.
     eapply IHXL; eauto. rewrite minus_union; eauto.
@@ -115,19 +115,19 @@ Qed.
   Proof.
     intros. general induction Z; simpl; destruct Y'; eauto.
     lud.
-    + exfalso. eapply H1. simpl; cset_tac; intuition. 
+    + exfalso. eapply H1. simpl; cset_tac; intuition.
     + simpl in H1. assert (x ∉ of_list Z); eauto.
-      - cset_tac; intuition. 
+      - cset_tac; intuition.
   Qed.
 
-  Lemma update_with_list_agree_minus lv (E E':X -> Y) XL YL 
+  Lemma update_with_list_agree_minus lv (E E':X -> Y) XL YL
     : length XL = length YL
-    -> agree_on R lv E' E 
+    -> agree_on R lv E' E
     -> agree_on R (lv\of_list XL) (E' [ XL <-- YL ]) E.
   Proof.
-    intros. eapply length_length_eq in H1. 
+    intros. eapply length_length_eq in H1.
     general induction H1; simpl. rewrite minus_empty. eassumption.
-    rewrite add_union_singleton. rewrite union_comm. rewrite <- minus_union. 
+    rewrite add_union_singleton. rewrite union_comm. rewrite <- minus_union.
     eapply agree_on_update_dead.
     cset_tac. intro; decompose records; eauto.
     eauto using agree_on_incl, incl_minus.
@@ -136,11 +136,11 @@ Qed.
   Lemma update_with_list_agree_self  `{Defaulted X} lv (E:X -> Y) XL YL
     : agree_on R (lv\of_list XL) (E [ XL <-- YL]) E.
   Proof.
-    general induction XL; simpl. rewrite minus_empty. reflexivity. 
+    general induction XL; simpl. rewrite minus_empty. reflexivity.
     destruct YL. reflexivity.
-    rewrite add_union_singleton. 
+    rewrite add_union_singleton.
     rewrite union_comm. rewrite <- minus_union. eapply agree_on_update_dead.
-    cset_tac. intro; decompose records; eauto. 
+    cset_tac. intro; decompose records; eauto.
     eapply agree_on_incl. eapply IHXL; eauto.
     instantiate (1:=lv). eapply incl_minus.
   Qed.
@@ -149,26 +149,26 @@ Qed.
     : @feq _ _ _eq (m [x <- m x])  m.
   Proof.
     intros y. lud. rewrite e; eauto.
-  Qed. 
+  Qed.
 
 End MapUpdateList.
 
-Notation "f [ w <-- x ]" := (update_with_list w x f) (at level 29, left associativity). 
+Notation "f [ w <-- x ]" := (update_with_list w x f) (at level 29, left associativity).
 
 Instance update_inst X `{OrderedType X} Y `{OrderedType Y} :
   Proper ((@feq _ _ _eq) ==> _eq ==> _eq ==> (@feq _ _ _eq)) (@update X Y _).
 Proof.
-  unfold respectful, Proper, update, feq; intros. 
-  repeat destruct if; eqs; eauto. 
+  unfold respectful, Proper, update, feq; intros.
+  repeat destruct if; eqs; eauto.
   exfalso. eapply H7. eapply H2.
   exfalso. eapply H8. eapply H2.
 Qed.
 
-Lemma update_with_list_id X `{OrderedType X} (l:list X) 
-  : efeq (update_with_list l l id) id.
+Lemma update_with_list_id X `{OrderedType X} (l:list X)
+  : @feq _ _ _eq (update_with_list l l id) id.
 Proof.
   general induction l; simpl. reflexivity.
-  rewrite IHl. change a with (id a) at 2. 
+  rewrite IHl. change a with (id a) at 2.
   pose proof update_id. specialize (H0 X _ X _ id a).
   eapply H0. firstorder.
 Qed.
@@ -178,7 +178,7 @@ Lemma update_with_list_lookup_in {X} `{OrderedType X} {Y} `{OrderedType Y} (f:X-
   -> x ∈ of_list Z
   -> f [ Z <-- Z' ] x ∈ of_list Z'.
 Proof.
-  intros L. eapply length_length_eq in L. 
+  intros L. eapply length_length_eq in L.
   general induction L; simpl in * |- *. exfalso; cset_tac; firstorder.
   eapply add_iff in H1. destruct H1.
   lud; try eapply add_1; eauto.
@@ -191,33 +191,33 @@ Lemma update_with_list_lookup_not_in {X} `{OrderedType X} {Y} `{OrderedType Y} (
     -> f [ Z <-- Z' ] x = y
     -> f x = y.
 Proof.
-  general induction Z; simpl in * |- *; eauto. 
+  general induction Z; simpl in * |- *; eauto.
   destruct Z'; eauto. lud. rewrite add_iff in H1.
   exfalso; firstorder.
   eapply IHZ; eauto. intro. eapply H1. eapply add_2; eauto.
 Qed.
 
-Instance proper_update_with_list {X} `{OrderedType X} {Y} `{OrderedType Y} (f:X->Y) Z Z' 
+Instance proper_update_with_list {X} `{OrderedType X} {Y} `{OrderedType Y} (f:X->Y) Z Z'
 : length Z = length Z'
   -> Proper (_eq ==> _eq) f
   -> Proper (_eq ==> _eq) (f [Z <-- Z']).
 Proof.
   intros. eapply length_length_eq in H1.
   general induction H1; intuition.
-  simpl. hnf; intros. unfold update. 
+  simpl. hnf; intros. unfold update.
   repeat destruct if; try (now exfalso; eqs; intuition).
   reflexivity.
   eapply IHlength_eq; intuition.
 Qed.
-                   
 
-Lemma update_with_list_lookup_set_incl {X} `{OrderedType X} {Y} `{OrderedType Y} 
+
+Lemma update_with_list_lookup_set_incl {X} `{OrderedType X} {Y} `{OrderedType Y}
 (f:X->Y) Z Z' `{Proper _ (_eq ==> _eq) f} D
   : length Z = length Z'
   -> D ⊆ of_list Z
   -> lookup_set (f [ Z <-- Z' ]) D ⊆ of_list Z'.
 Proof.
-  intros. hnf; intros. 
+  intros. hnf; intros.
   eapply lookup_set_spec in H4; try eapply proper_update_with_list; eauto.
   destruct H4; dcr. rewrite H6. eapply update_with_list_lookup_in; eauto.
 Qed.
@@ -230,7 +230,7 @@ Proof.
   rewrite IHy1; eauto. hnf; intros; lud. eapply H2.
 Qed.
 
-(* 
+(*
 *** Local Variables: ***
 *** coq-load-path: (("../" "Lvc")) ***
 *** End: ***
