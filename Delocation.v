@@ -83,32 +83,6 @@ Inductive trsR : I.state -> I.state -> Prop :=
   (EQ: E ≡ E')
   : trsR (L, E, s) (L', E', compile ZL s ans).
 
-Lemma omap_app X Y (f:X->option Y) L L'
-: omap f (L ++ L') =
-  mdo v <- omap f L;
-  mdo v' <- omap f L';
-  Some (v ++ v').
-Proof.
-  general induction L; simpl in * |- *.
-  - destruct (omap f L'); eauto.
-  - destruct (f a); simpl; eauto.
-    rewrite IHL; eauto.
-    destruct (omap f L); simpl; eauto.
-    destruct (omap f L'); simpl; eauto.
-Qed.
-(*
-Lemma omap_exp_eval_app (E:onv val) Y l Z
-: omap (exp_eval E) Y = ⎣l ⎦
- -> omap (exp_eval E) (Y ++ List.map Var Z) = ⎣ l ++ lookup_list E Z ⎦.
-Proof.
-  general induction Y; simpl in * |- *.
-  - clear H. general induction Z; simpl; eauto.
-    rewrite IHZ; eauto.
-  - monad_inv H. rewrite EQ. simpl.
-    erewrite IHY; simpl; eauto.
-Qed.
-*)
-
 Lemma trsR_sim σ1 σ2
   : trsR σ1 σ2 -> sim σ1 σ2.
 Proof.

@@ -6,13 +6,13 @@ Section ParametricOptionMapIndex.
 
   Fixpoint omapi_impl (n:nat) (L:list X) : option (list Y) :=
     match L with
-      | x::L => 
-        mdo v <- f n x; 
+      | x::L =>
+        mdo v <- f n x;
           mdo vl <- omapi_impl (S n) L;
           Some (v::vl)
       | _ => Some nil
     end.
-  
+
   Definition omapi := omapi_impl 0.
 
 End ParametricOptionMapIndex.
@@ -34,7 +34,7 @@ Section ParametricOptionMap.
     end.
 
   Lemma omap_inversion (L:list X) (L':list Y)
-  : omap L = Some L' 
+  : omap L = Some L'
     -> forall n x, get L n x -> { y : Y | get L' n y /\ f x = Some y }.
   Proof.
     intros. general induction L.
@@ -68,7 +68,7 @@ Proof.
   erewrite <- H; eauto using get. erewrite IHlength_eq; eauto using get.
 Qed.
 
-Lemma omap_length X Y L' (f: X -> option Y) L 
+Lemma omap_length X Y L' (f: X -> option Y) L
 : omap f L = Some L'
   -> length L = length L'.
 Proof.
@@ -76,8 +76,22 @@ Proof.
   monad_inv H; simpl; eauto.
 Qed.
 
+Lemma omap_app X Y (f:X->option Y) L L'
+: omap f (L ++ L') =
+  mdo v <- omap f L;
+  mdo v' <- omap f L';
+  Some (v ++ v').
+Proof.
+  general induction L; simpl in * |- *.
+  - destruct (omap f L'); eauto.
+  - destruct (f a); simpl; eauto.
+    rewrite IHL; eauto.
+    destruct (omap f L); simpl; eauto.
+    destruct (omap f L'); simpl; eauto.
+Qed.
 
-(* 
+
+(*
 *** Local Variables: ***
 *** coq-load-path: (("../" "Lvc")) ***
 *** End: ***
