@@ -1,4 +1,4 @@
-Require Export Setoid Coq.Classes.Morphisms.  
+Require Export Setoid Coq.Classes.Morphisms.
 Require Export Sets SetInterface SetConstructs SetProperties.
 Require Import EqDec Get CSet Map.
 
@@ -36,16 +36,16 @@ Proof.
   revert_except s.
   pattern s. eapply set_induction; intros.
   - rewrite fold_1; eauto using Equal_ST.
-  - rewrite fold_2; eauto using Equal_ST, transpose_union. 
+  - rewrite fold_2; eauto using Equal_ST, transpose_union.
     cset_tac. right. eapply H0; eauto.
     eapply union_m.
 Qed.
 
-Lemma map_app X `{OrderedType X} Y `{OrderedType Y} (f:X->Y) 
-      `{Proper _ (_eq ==> _eq) f} s t 
+Lemma map_app X `{OrderedType X} Y `{OrderedType Y} (f:X->Y)
+      `{Proper _ (_eq ==> _eq) f} s t
 : map f (s ∪ t) [=] map f s ∪ map f t.
-Proof. 
-  cset_tac. repeat rewrite map_iff; eauto. 
+Proof.
+  cset_tac. repeat rewrite map_iff; eauto.
   split; intros. destruct H2.
   dcr.
   eapply union_cases in H3. firstorder.
@@ -53,12 +53,12 @@ Proof.
   intuition. destruct H3; dcr. eexists; split; eauto. cset_tac; eauto.
 Qed.
 
-Lemma map_empty X `{OrderedType X} Y `{OrderedType Y} (f:X->Y) 
+Lemma map_empty X `{OrderedType X} Y `{OrderedType Y} (f:X->Y)
       `{Proper _ (_eq ==> _eq) f}
 : map f ∅ [=] ∅.
-Proof. 
+Proof.
   cset_tac.
-  rewrite map_iff; eauto. 
+  rewrite map_iff; eauto.
   firstorder. cset_tac; eauto.
 Qed.
 
@@ -67,7 +67,7 @@ Instance map_Proper X `{OrderedType X} Y `{OrderedType Y}
 Proof.
   unfold Proper, respectful; intros. inv H1; dcr.
   hnf; intros. repeat rewrite map_iff; eauto.
-  intuition. 
+  intuition.
   destruct H4; dcr; eexists; split; eauto.
   rewrite <- H2; eauto. rewrite H8. eapply H3.
   destruct H4; dcr; eexists; split; eauto.
@@ -88,10 +88,10 @@ Proof.
     rewrite H3 in H2.
     eapply Add_Equal in H2.
     symmetry.
-    rewrite fold_2; eauto using union_m. 
+    rewrite fold_2; eauto using union_m.
     rewrite H0; try reflexivity. symmetry; eauto.
     hnf; intros. hnf. cset_tac; intuition.
-    hnf; intros. hnf. cset_tac; intuition.    
+    hnf; intros. hnf. cset_tac; intuition.
 Qed.
 
 Lemma list_union_start_swap X `{OrderedType X} (L : list (set X)) s
@@ -114,30 +114,30 @@ Lemma fold_union_app X `{OrderedType X} Gamma Γ'
   fold union Gamma {} ∪ fold union Γ' {}.
 Proof.
   revert Γ'. pattern Gamma. eapply set_induction.
-  - intros. eapply empty_is_empty_1 in H0. 
+  - intros. eapply empty_is_empty_1 in H0.
     rewrite H0. rewrite empty_neutral_union.
     rewrite fold_empty.
     rewrite empty_neutral_union. reflexivity.
-  - intros. 
+  - intros.
     eapply Add_Equal in H2. rewrite H2.
     assert ({x; s} ++ Γ' [=] (s ++ {x; Γ'})).
     clear_all; cset_tac; intuition.
-    rewrite H3. rewrite H0. 
+    rewrite H3. rewrite H0.
     decide (x ∈ Γ').
     rewrite add_fold; eauto using Equal_ST, union_m, transpose_union.
     rewrite fold_add; eauto using Equal_ST, union_m, transpose_union.
-    symmetry. 
+    symmetry.
     rewrite union_comm. rewrite <- union_assoc.
     rewrite <- (union_comm _ x).
     rewrite (incl_union_absorption _ x). rewrite union_comm. reflexivity.
-    hnf; intros. eapply fold_union_incl; eauto. 
+    hnf; intros. eapply fold_union_incl; eauto.
     rewrite fold_add; eauto using Equal_ST, union_m, transpose_union.
     rewrite fold_add; eauto using Equal_ST, union_m, transpose_union.
     symmetry. rewrite (union_comm _ x). rewrite union_assoc. reflexivity.
 Qed.
 
 
-Lemma map_single {X} `{OrderedType X} Y `{OrderedType Y} (f:X->Y) 
+Lemma map_single {X} `{OrderedType X} Y `{OrderedType Y} (f:X->Y)
       `{Proper _ (_eq ==> _eq) f} x
       : map f {{x}} [=] {{f x}}.
 Proof.
@@ -147,7 +147,7 @@ Proof.
   - cset_tac. eexists x; split; eauto. cset_tac; intuition.
 Qed.
 
-Lemma fold_single {X} `{OrderedType X} Y `{Equivalence Y} (f:X->Y->Y) 
+Lemma fold_single {X} `{OrderedType X} Y `{Equivalence Y} (f:X->Y->Y)
       `{Proper _ (_eq ==> R ==> R) f} (x:X) (s:Y)
       : transpose R f
         -> R (fold f {{x}} s) (f x s).
@@ -187,14 +187,34 @@ Instance fold_union_morphism X `{OrderedType X}
 Proof.
   unfold Proper, respectful; intros.
   hnf; intros.
-  eapply incl_fold_union in H2. destruct H2. 
+  eapply incl_fold_union in H2. destruct H2.
   - destruct H2; dcr.
     eapply fold_union_incl; eauto.
   - eapply fold_union_incl_start; eauto.
 Qed.
 
+Lemma list_union_minus_dist X `{OrderedType X} D'' s s' L
+  :
+    s \ D'' [=] s'
+ ->  fold_left union L s \ D''
+[=] fold_left union (List.map (fun s => s \ D'') L) s'.
+Proof.
+  general induction L; simpl; eauto.
+  - eapply IHL. rewrite <- H0.
+    clear_all; cset_tac; intuition.
+Qed.
 
-(* 
+Instance fold_left_union_morphism X `{OrderedType X}:
+  Proper (list_eq Equal ==> Equal ==> Equal) (fold_left union).
+Proof.
+  unfold Proper, respectful; intros.
+  general induction H0; simpl; eauto.
+  - rewrite IHlist_eq; eauto. reflexivity.
+    rewrite H0, H2. reflexivity.
+Qed.
+
+
+(*
 *** Local Variables: ***
 *** coq-load-path: (("../" "Lvc")) ***
 *** End: ***

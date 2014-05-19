@@ -1,7 +1,7 @@
 Require Import CSet Le.
 
 Require Import Plus Util AllInRel Map.
-Require Import Val Var Env EnvTy IL Annotation Liveness Restrict Bisim MoreExp.
+Require Import Val Var Env EnvTy IL Annotation Liveness Restrict Bisim MoreExp SetOperations.
 
 Set Implicit Arguments.
 
@@ -108,26 +108,6 @@ Proof.
   - rewrite H0, IHssa, H2; simpl. cset_tac; intuition.
   - rewrite IHssa1, IHssa2. inv H3; inv H5; simpl.
     rewrite H9, H12. cset_tac; intuition.
-Qed.
-
-Lemma list_union_minus_dist Y D'' s s'
-  :
-    s \ D'' [=] s'
- ->  fold_left union (List.map Exp.freeVars Y) s \ D''
-[=] fold_left union (List.map (fun y : exp => Exp.freeVars y \ D'') Y) s'.
-Proof.
-  general induction Y; simpl; eauto.
-  - eapply IHY. rewrite <- H. clear_all.
-    cset_tac; intuition.
-Qed.
-
-Instance fold_left_union_morphism X `{OrderedType X}:
-  Proper (list_eq Equal ==> Equal ==> Equal) (fold_left union).
-Proof.
-  unfold Proper, respectful; intros.
-  general induction H0; simpl; eauto.
-  - rewrite IHlist_eq; eauto. reflexivity.
-    rewrite H0, H2. reflexivity.
 Qed.
 
 Definition pminus (D'':set var) s :=
