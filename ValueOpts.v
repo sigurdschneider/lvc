@@ -15,6 +15,7 @@ Inductive option_R (A B : Type) (eqA : A -> B -> Prop)
 : option A -> option B -> Prop :=
 | option_R_Some a b : eqA a b -> option_R eqA ⎣a⎦ ⎣b⎦.
 
+
 Lemma option_R_refl A R `{Reflexive A R} : forall x, option_R R ⎣x⎦ ⎣x⎦.
 intros; eauto using option_R.
 Qed.
@@ -24,7 +25,7 @@ hnf; intros ? [] []; eauto using option_R.
 Qed.
 
 Definition satisfies (E:onv val) (gamma:eqn) :=
-  option_R eq (exp_eval E (fst gamma)) (exp_eval E (snd gamma)).
+  option_eq eq (exp_eval E (fst gamma)) (exp_eval E (snd gamma)).
 
 Inductive moreDef {X} : option X -> option X -> Prop :=
   | moreDefSome v v' : moreDef (Some v) (Some v')
@@ -46,7 +47,7 @@ Definition domain (gamma:exp * exp) :=
 Definition eqns_freeVars (Gamma:eqns) := fold union (map freeVars Gamma) ∅.
 
 Definition entails Gamma Γ' := (forall E, satisfiesAll E Gamma -> satisfiesAll E Γ')
-/\ eqns_freeVars Γ' ⊆ eqns_freeVars Gamma.
+(* /\ eqns_freeVars Γ' ⊆ eqns_freeVars Gamma *).
 
 Definition onvLe X (E E':onv X)
 := forall x v, E x = Some v -> E' x = Some v.
@@ -386,6 +387,7 @@ Proof.
     eapply H5; eauto. eapply H2; eauto.
 Qed.
 
+(*
 Lemma entails_freeVars_incl Gamma Γ' G x e
 : entails ({{(Var x, e)}} ∪ Gamma) Γ'
   -> Exp.freeVars e ⊆ G
@@ -397,14 +399,14 @@ Proof.
   rewrite H2. unfold freeVars; simpl. rewrite H0. rewrite H1.
   clear_all; cset_tac; intuition.
 Qed.
+*)
 
 Lemma entails_add Gamma gamma Γ'
 : entails Gamma ({{gamma}} ∪ Γ')
   -> entails Gamma Γ'.
 Proof.
-  unfold entails; intros; dcr; split; intros.
-  - hnf; intros. eapply H0; eauto. cset_tac; intuition.
-  - rewrite <- H1. rewrite eqns_freeVars_add. cset_tac; intuition.
+  unfold entails; intros; dcr; intros.
+  - hnf; intros. eapply H; eauto. cset_tac; intuition.
 Qed.
 
 Instance map_freeVars_morphism
@@ -440,17 +442,15 @@ Qed.
 Instance entails_morphism_impl
 : Proper (Subset ==> flip Subset ==> impl) entails.
 Proof.
-  unfold Proper, respectful, flip, impl, entails, satisfiesAll; intros; dcr; split; intros.
-  eapply H2; eauto.
-  rewrite H0, <- H. eauto.
+  unfold Proper, respectful, flip, impl, entails, satisfiesAll; intros; dcr; intros.
+  eapply H1; eauto.
 Qed.
 
 Instance entails_morphism_flip_impl
 : Proper (flip Subset ==> Subset ==> flip impl) entails.
 Proof.
-  unfold Proper, respectful, flip, impl, entails, satisfiesAll; intros; dcr; split; intros.
-  eapply H2; eauto.
-  rewrite H0, <- H. eauto.
+  unfold Proper, respectful, flip, impl, entails, satisfiesAll; intros; dcr; intros.
+  eapply H1; eauto.
 Qed.
 
 
@@ -483,8 +483,8 @@ Proof.
   - hnf; intros. eapply Add_Equal in H1. rewrite H1 in H10.
     eapply add_iff in H10. destruct H10.
     + invc H10.
-      hnf in H5; dcr. simpl in *. subst.
-      specialize (H10 V H6 (subst_eqn (sid [Z <-- Y]) (c,d))). exploit H10.
+      hnf in H5; simpl in *. subst.
+      specialize (H5 V H6 (subst_eqn (sid [Z <-- Y]) (c,d))). exploit H5.
       admit.
       hnf in X. simpl in X.
       do 2 erewrite <- eval_exp_subst in X; eauto.
@@ -539,7 +539,7 @@ Proof.
   intros. hnf; intros. cset_tac. destruct H3.
   - hnf; intros. invc H3; simpl in * |- *; subst.
     + erewrite <- exp_eval_agree; eauto. instantiate (1:=V).
-      rewrite <- H2. simpl. lud. constructor; reflexivity.
+      rewrite <- H2. simpl. lud.
       exfalso; eauto.
       eapply agree_on_update_dead; eauto. reflexivity.
   - hnf in H1. exploit H1; eauto. hnf in X.
@@ -606,9 +606,8 @@ Lemma entails_monotone Γ1 Γ2 Γ1'
   -> Γ1 ⊆ Γ1'
   -> entails Γ1' Γ2.
 Proof.
-  unfold entails; intros; dcr; split.
-  - intros. eapply H1. hnf; intros. eapply H; eauto.
-  - rewrite H2. rewrite H0. reflexivity.
+  unfold entails; intros; dcr.
+  - intros. eapply H. hnf; intros. eapply H1; eauto.
 Qed.
 
 Lemma eqn_sound_monotone Es Γ1 Γ2 Γ1' Γ2' s ang an
@@ -637,27 +636,23 @@ Qed.
 Instance entails_entails_morphism_impl
 : Proper (flip entails ==> entails ==> impl) entails.
 Proof.
-  unfold Proper, respectful, flip, impl, entails; intros; dcr; split; intros; eauto.
-  rewrite H4, H3; eauto.
+  unfold Proper, respectful, flip, impl, entails; intros; dcr; intros; eauto.
 Qed.
 
 Instance entails_entails_morphism_flip_impl
 : Proper (entails ==> flip entails ==> flip impl) entails.
 Proof.
-  unfold Proper, respectful, flip, impl, entails; intros; dcr; split; intros; eauto.
-  rewrite H4, H3; eauto.
+  unfold Proper, respectful, flip, impl, entails; intros; dcr; intros; eauto.
 Qed.
 
 Lemma entails_union Γ1 Γ2 Γ2'
 : entails Γ2 Γ2'
   -> entails (Γ1 ∪ Γ2) (Γ1 ∪ Γ2').
 Proof.
-  unfold entails; split; intros; dcr.
+  unfold entails; intros; dcr.
   - eapply satisfiesAll_union.
     eapply satisfiesAll_union in H0.
     dcr; split; eauto.
-  - repeat rewrite eqns_freeVars_union.
-    rewrite H1. reflexivity.
 Qed.
 
 Lemma moreDefined_entails_monotone Γ1 Γ2 Γ1' Γ2' e e'
@@ -666,7 +661,7 @@ Lemma moreDefined_entails_monotone Γ1 Γ2 Γ1' Γ2' e e'
     -> entails Γ2' Γ2
     -> moreDefined Γ1' Γ2' e e'.
 Proof.
-  intros. hnf; intros. eapply H; eauto. eapply H0; eauto. eapply H1; eauto.
+  intros. hnf; intros. eapply H; eauto.
 Qed.
 
 Lemma moreDefinedArgs_entails_monotone Γ1 Γ2 Γ1' Γ2' Y Y'
@@ -675,15 +670,14 @@ Lemma moreDefinedArgs_entails_monotone Γ1 Γ2 Γ1' Γ2' Y Y'
     -> entails Γ2' Γ2
     -> moreDefinedArgs Γ1' Γ2' Y Y'.
 Proof.
-  intros. hnf; intros. eapply H; eauto. eapply H0; eauto. eapply H1; eauto.
+  intros. hnf; intros. eapply H; eauto.
 Qed.
 
 Lemma entails_transitive Γ Γ' Γ''
 : entails Γ Γ' -> entails Γ' Γ'' -> entails Γ Γ''.
 Proof.
-  intros; hnf; split; intros.
-  - eapply H0; eauto. eapply H; eauto.
-  - destruct H, H0; dcr. rewrite <- H1; eauto.
+  intros; hnf; intros.
+  - eapply H0; eauto.
 Qed.
 
 Instance entails_trans : Transitive entails.
@@ -793,7 +787,7 @@ Proof.
       inv H26. hnf in H29; simpl in H29; dcr; subst.
       eapply sim_drop_shift. eapply H32; eauto. hnf. simpl; repeat split.
       exploit omap_length; eauto. unfold var in *. rewrite e. congruence.
-      intros. inv H11.
+      intros.
       intros.
       hnf in H31; dcr.
       eapply satisfiesAll_union; split; eauto.
@@ -801,12 +795,10 @@ Proof.
       symmetry; eauto.
       eapply satisfiesAll_update_dead; eauto. rewrite map_length.
       exploit omap_length; eauto. congruence.
-      rewrite <- H19.
-      revert H19 H35; clear_all; cset_tac; intuition; exfalso; eauto.
-      simpl in *.
-      intros. inv H13.
+      rewrite <- H9.
+      revert H9 H33; clear_all; cset_tac; intuition; exfalso; eauto.
+      simpl in *. dcr.
       intros.
-      hnf in H31; dcr.
       eapply satisfiesAll_union; split; eauto.
       simpl in *.
       eapply (@satisfiesAll_subst V' Γ' Γf');
@@ -815,8 +807,8 @@ Proof.
       symmetry; eauto.
       eapply satisfiesAll_update_dead; eauto. rewrite map_length.
       exploit omap_length; eauto. congruence.
-      rewrite <- H19.
-      revert H19 H37; clear_all; cset_tac; intuition; exfalso; eauto.
+      rewrite <- H9.
+      revert H9 H35; clear_all; cset_tac; intuition; exfalso; eauto.
     + pfold. econstructor 3; try eapply star2_refl. eauto. stuck2; eauto.
       get_functional; subst. simpl in *. congruence.
     + pfold. econstructor 3; try eapply star2_refl. eauto. stuck2; eauto.
@@ -904,8 +896,6 @@ Proof.
         split.
         rewrite H28; reflexivity.
         repeat (split; eauto using satisfiesAll_monotone; try reflexivity).
-        eapply H21; eauto.
-        eapply H22; eauto.
     + rewrite H4, H28; reflexivity.
     + rewrite H5, H28; reflexivity.
 Qed.
