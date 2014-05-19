@@ -101,7 +101,7 @@ Inductive eqn_sound : list (params*set var*eqns*eqns*eqns*eqns)
                       -> ann (set var * set var)
                       -> ann (list exp)
                       -> Prop :=
-| EqnOpr x Lv b e Gamma Γ' (al':ann (eqns)) e' cl G G' ang
+| EqnOpr x Lv b e Gamma Γ' e' cl G G' ang
   : eqn_sound Lv b ({{(Var x,e)}} ∪ Gamma) ({{(Var x,e')}} ∪ Γ') ang cl
     (* make sure the rest conforms to the new assignment *)
     -> moreDefined Gamma Γ' e e'
@@ -125,17 +125,21 @@ Inductive eqn_sound : list (params*set var*eqns*eqns*eqns*eqns)
 | EqnReturn Lv e e' Gamma Γ' G G'
   : moreDefined Gamma Γ' e e'
     -> eqn_sound Lv (stmtReturn e) Gamma Γ' (ann0 (G,G')) (ann0 (e'::nil))
-| EqnExtern x f Lv b Y Y' Gamma Γ' (al':ann (eqns)) cl G G' ang
+| EqnExtern x f Lv b Y Y' Gamma Γ' cl G G' ang
   : eqn_sound Lv b Gamma Γ' ang cl
     -> moreDefinedArgs Gamma Γ' Y Y'
     -> list_union (List.map Exp.freeVars Y') ⊆ G
     -> eqn_sound Lv (stmtExtern x f Y b) Gamma Γ'
                 (ann1 (G,G') ang) (ann1 Y' cl)
-| EqnLet Lv s Z b Gamma Γ' EqS EqS' cls clb G G' angs angb
-  : eqn_sound ((Z, G, Gamma, EqS, Γ', EqS')::Lv) s (EqS ∪ Gamma) (EqS' ∪ Γ') angs cls
-  -> eqn_sound ((Z, G ,Gamma, EqS, Γ', EqS')::Lv) b Gamma Γ' angb clb
+| EqnLet Lv s Z b Gamma Γ' Γ2 Γ2' EqS EqS' cls clb G G' angs angb
+  : eqn_sound ((Z, G, Γ2, EqS, Γ2', EqS')::Lv) s (EqS ∪ Γ2) (EqS' ∪ Γ2') angs cls
+  -> eqn_sound ((Z, G ,Γ2, EqS, Γ2', EqS')::Lv) b Gamma Γ' angb clb
   -> eqns_freeVars EqS ⊆ G ++ of_list Z
-  -> eqns_freeVars EqS' ⊆ G ++ of_list Z
+  -> eqns_freeVars EqS'⊆ G ++ of_list Z
+  -> eqns_freeVars Γ2  ⊆ G
+  -> eqns_freeVars Γ2' ⊆ G
+  -> entails Gamma Γ2
+  -> entails Γ' Γ2'
   -> eqn_sound Lv (stmtLet Z s b) Gamma Γ'
               (ann2 (G,G') angs angb) (ann2 nil cls clb).
 
@@ -579,6 +583,136 @@ Proof.
   intros. hnf; intros. eapply H; eauto.
 Qed.
 
+Lemma moreDefined_monotone Γ1 Γ2 Γ1' Γ2' e e'
+  : moreDefined Γ1 Γ2 e e'
+    -> Γ1 ⊆ Γ1'
+    -> Γ2 ⊆ Γ2'
+    -> moreDefined Γ1' Γ2' e e'.
+Proof.
+  intros. hnf; intros. eapply H; eauto using satisfiesAll_monotone.
+Qed.
+
+Lemma moreDefinedArgs_monotone Γ1 Γ2 Γ1' Γ2' Y Y'
+  : moreDefinedArgs Γ1 Γ2 Y Y'
+    -> Γ1 ⊆ Γ1'
+    -> Γ2 ⊆ Γ2'
+    -> moreDefinedArgs Γ1' Γ2' Y Y'.
+Proof.
+  intros. hnf; intros. eapply H; eauto using satisfiesAll_monotone.
+Qed.
+
+Lemma entails_monotone Γ1 Γ2 Γ1'
+: entails Γ1 Γ2
+  -> Γ1 ⊆ Γ1'
+  -> entails Γ1' Γ2.
+Proof.
+  unfold entails; intros; dcr; split.
+  - intros. eapply H1. hnf; intros. eapply H; eauto.
+  - rewrite H2. rewrite H0. reflexivity.
+Qed.
+
+Lemma eqn_sound_monotone Es Γ1 Γ2 Γ1' Γ2' s ang an
+: ssa s ang
+  -> eqn_sound Es s Γ1 Γ2 ang an
+  -> Γ1 ⊆ Γ1'
+  -> Γ2 ⊆ Γ2'
+  -> eqn_sound Es s Γ1' Γ2' ang an.
+Proof.
+  intros. general induction H0; invt ssa; eauto.
+  - econstructor; eauto.
+    eapply IHeqn_sound; eauto.
+    + rewrite H3; reflexivity.
+    + rewrite H4; reflexivity.
+    + eapply moreDefined_monotone; eauto.
+  - econstructor; eauto using moreDefined_monotone.
+  - econstructor; eauto using entails_monotone, moreDefinedArgs_monotone.
+  - econstructor; eauto using moreDefined_monotone.
+  - econstructor; eauto using moreDefinedArgs_monotone.
+  - econstructor; eauto.
+    + rewrite <- H6; eauto.
+    + rewrite <- H7; eauto.
+Qed.
+
+
+Instance entails_entails_morphism_impl
+: Proper (flip entails ==> entails ==> impl) entails.
+Proof.
+  unfold Proper, respectful, flip, impl, entails; intros; dcr; split; intros; eauto.
+  rewrite H4, H3; eauto.
+Qed.
+
+Instance entails_entails_morphism_flip_impl
+: Proper (entails ==> flip entails ==> flip impl) entails.
+Proof.
+  unfold Proper, respectful, flip, impl, entails; intros; dcr; split; intros; eauto.
+  rewrite H4, H3; eauto.
+Qed.
+
+Lemma entails_union Γ1 Γ2 Γ2'
+: entails Γ2 Γ2'
+  -> entails (Γ1 ∪ Γ2) (Γ1 ∪ Γ2').
+Proof.
+  unfold entails; split; intros; dcr.
+  - eapply satisfiesAll_union.
+    eapply satisfiesAll_union in H0.
+    dcr; split; eauto.
+  - repeat rewrite eqns_freeVars_union.
+    rewrite H1. reflexivity.
+Qed.
+
+Lemma moreDefined_entails_monotone Γ1 Γ2 Γ1' Γ2' e e'
+  : moreDefined Γ1 Γ2 e e'
+    -> entails Γ1' Γ1
+    -> entails Γ2' Γ2
+    -> moreDefined Γ1' Γ2' e e'.
+Proof.
+  intros. hnf; intros. eapply H; eauto. eapply H0; eauto. eapply H1; eauto.
+Qed.
+
+Lemma moreDefinedArgs_entails_monotone Γ1 Γ2 Γ1' Γ2' Y Y'
+  : moreDefinedArgs Γ1 Γ2 Y Y'
+    -> entails Γ1' Γ1
+    -> entails Γ2' Γ2
+    -> moreDefinedArgs Γ1' Γ2' Y Y'.
+Proof.
+  intros. hnf; intros. eapply H; eauto. eapply H0; eauto. eapply H1; eauto.
+Qed.
+
+Lemma entails_transitive Γ Γ' Γ''
+: entails Γ Γ' -> entails Γ' Γ'' -> entails Γ Γ''.
+Proof.
+  intros; hnf; split; intros.
+  - eapply H0; eauto. eapply H; eauto.
+  - destruct H, H0; dcr. rewrite <- H1; eauto.
+Qed.
+
+Instance entails_trans : Transitive entails.
+Proof.
+  hnf.
+  eapply entails_transitive.
+Qed.
+
+Lemma eqn_sound_entails_monotone Es Γ1 Γ2 Γ1' Γ2' s ang an
+: ssa s ang
+  -> eqn_sound Es s Γ1 Γ2 ang an
+  -> entails Γ1' Γ1
+  -> entails Γ2' Γ2
+  -> eqn_sound Es s Γ1' Γ2' ang an.
+Proof.
+  intros. general induction H0; invt ssa; eauto.
+  - econstructor; eauto.
+    eapply IHeqn_sound; eauto using entails_union.
+    + eapply moreDefined_entails_monotone; eauto.
+  - econstructor; eauto using moreDefined_entails_monotone.
+  - econstructor; eauto using entails_transitive, moreDefinedArgs_entails_monotone.
+  - econstructor; eauto using moreDefined_entails_monotone.
+  - econstructor; eauto using moreDefinedArgs_entails_monotone.
+  - econstructor; eauto.
+    + etransitivity; eauto.
+    + etransitivity; eauto.
+Qed.
+
+
 
 Lemma sim_DVE r L L' V V' s LV Gamma Γ' repl ang
 : satisfiesAll V Gamma
@@ -734,23 +868,23 @@ Proof.
         unfold Sim.BlockRel.
         destruct x as [[[[[] ?] ?] ?] ?]; simpl; intros; dcr.
         repeat (split; eauto).
-        rewrite H11, H24; reflexivity.
+        rewrite H15, H28; reflexivity.
         clear_all; reflexivity.
       * hnf; intros. hnf in H7; dcr.
-        eapply IHs1; eauto.
+        eapply IHs1; try eapply H10; eauto.
         eapply simL'_update; eauto.
         unfold Sim.BlockRel. intros.
         destruct x as [[[[[] ?] ?] ?] ?]; dcr. simpl in H7.
         simpl. dcr.
         assert (sEQ: s [=] s \ of_list Z). {
           assert (s ∩ of_list Z [=] ∅).
-          rewrite <- H16. rewrite H24 in H28.
-          revert H28 H16; simpl; clear_all; cset_tac; intuition; exfalso; eauto.
+          rewrite <- H20. rewrite H28 in H32.
+          revert H32 H20; simpl; clear_all; cset_tac; intuition; exfalso; eauto.
           rewrite <- (minus_union_set _ _ _ H7).
           clear_all; cset_tac; intuition.
         }
         repeat (split; eauto).
-        rewrite H28. rewrite H22,H24; simpl. eapply incl_right.
+        rewrite H32. rewrite H26,H28; simpl. eapply incl_right.
         rewrite sEQ. symmetry.
         eapply update_with_list_agree_minus; eauto. rewrite map_length; eauto.
         symmetry; eauto.
@@ -758,20 +892,22 @@ Proof.
         eapply update_with_list_agree_minus; eauto. rewrite map_length; eauto.
         symmetry; eauto.
         reflexivity.
-        rewrite H22; simpl. rewrite eqns_freeVars_union.
-        rewrite H4, H17. clear_all; cset_tac; intuition.
-        rewrite H22; simpl. rewrite eqns_freeVars_union.
-        rewrite H5, H18. clear_all; cset_tac; intuition.
+        rewrite H26; simpl. rewrite eqns_freeVars_union.
+        rewrite H12, H14. clear_all; cset_tac; intuition.
+        rewrite H26; simpl. rewrite eqns_freeVars_union.
+        rewrite H13, H16. clear_all; cset_tac; intuition.
         subst. eapply agree_on_onvLe; eauto.
       * hnf; split; eauto.
       * hnf; intros.
         simpl. split.
-        rewrite <- H16. clear_all; cset_tac; intuition.
+        rewrite <- H20. clear_all; cset_tac; intuition.
         split.
-        rewrite H24; reflexivity.
-        repeat (split; eauto; try reflexivity).
-    + rewrite H4, H24; reflexivity.
-    + rewrite H5, H24; reflexivity.
+        rewrite H28; reflexivity.
+        repeat (split; eauto using satisfiesAll_monotone; try reflexivity).
+        eapply H21; eauto.
+        eapply H22; eauto.
+    + rewrite H4, H28; reflexivity.
+    + rewrite H5, H28; reflexivity.
 Qed.
 
 
