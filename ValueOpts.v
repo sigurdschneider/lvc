@@ -232,6 +232,14 @@ Proof.
   rewrite H0. reflexivity.
 Qed.
 
+Lemma in_subst_eqns (Gamma:eqns) ϱ gamma
+  : gamma ∈ Gamma
+    -> subst_eqn ϱ gamma ∈ subst_eqns ϱ Gamma.
+Proof.
+  intros. unfold subst_eqns.
+  eapply map_1; eauto. intuition.
+Qed.
+
 
 Instance exp_freeVars_Proper
   :  Proper (eq ==> Equal) Exp.freeVars.
@@ -485,7 +493,7 @@ Proof.
     + invc H10.
       hnf in H5; simpl in *. subst.
       specialize (H5 V H6 (subst_eqn (sid [Z <-- Y]) (c,d))). exploit H5.
-      admit.
+      eapply in_subst_eqns; eauto. rewrite H1. cset_tac; intuition.
       hnf in X. simpl in X.
       do 2 erewrite <- eval_exp_subst in X; eauto.
       hnf. simpl.
@@ -831,7 +839,15 @@ Proof.
             + eapply satisfiesAll_update_dead_single; eauto.
             + eapply satisfiesAll_update_dead_single; eauto.
             + eapply simL'_update; eauto.
-              * admit.
+              * unfold Sim.BlockRel. intros. simpl in *.
+                unfold BlockRel in *.
+                destruct x0 as [[[[[] ?] ?] ?] ?]; simpl; intros; dcr.
+                repeat (split; eauto).
+                rewrite H20. rewrite H14. simpl. clear_all; cset_tac; intuition.
+                symmetry. eapply agree_on_update_dead. rewrite H14. eauto.
+                symmetry; eauto.
+                symmetry. eapply agree_on_update_dead. rewrite H14. eauto.
+                symmetry; eauto.
               * intros; reflexivity.
             + rewrite H4, H20; simpl. clear_all; cset_tac; intuition.
             + rewrite H5, H20; simpl. clear_all; cset_tac; intuition.
@@ -845,7 +861,15 @@ Proof.
             + eapply satisfiesAll_update_dead_single; eauto.
             + eapply satisfiesAll_update_dead_single; eauto.
             + eapply simL'_update; eauto.
-              * admit.
+              * unfold Sim.BlockRel. intros. simpl in *.
+                unfold BlockRel in *.
+                destruct x0 as [[[[[] ?] ?] ?] ?]; simpl; intros; dcr.
+                repeat (split; eauto).
+                rewrite H20. rewrite H14. simpl. clear_all; cset_tac; intuition.
+                symmetry. eapply agree_on_update_dead. rewrite H14. eauto.
+                symmetry; eauto.
+                symmetry. eapply agree_on_update_dead. rewrite H14. eauto.
+                symmetry; eauto.
               * intros; reflexivity.
             + rewrite H4, H20; simpl. clear_all; cset_tac; intuition.
             + rewrite H5, H20; simpl. clear_all; cset_tac; intuition.
