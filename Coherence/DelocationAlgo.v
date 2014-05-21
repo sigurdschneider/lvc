@@ -67,6 +67,9 @@ Fixpoint computeParameters (DL: list (set var)) (ZL:list (list var)) (AP:list (s
       (ann2 nil ars art, zip ounion rs rt)
     | stmtGoto f Y, ann0 lv => (ann0 nil, killExcept f AP)
     | stmtReturn x, ann0 _ => (ann0 nil, (mapi (fun _ _ => None) AP))
+    | stmtExtern x f e s, ann1 _ an =>
+      let (ar, r) := computeParameters DL ZL (addParam x DL AP) s an in
+      (ann1 nil ar, r)
     | stmtLet Z s t, ann2 lv ans ant =>
       let DL' := getAnn ans \ of_list Z in
       let (ars, rs) := computeParameters (DL' :: DL)
@@ -124,11 +127,14 @@ Lemma trs_monotone (DL DL' : list (option (set var))) ZL s lv a
    -> DL ≿ DL'
    -> trs DL' ZL s lv a.
 Proof.
-  intros. general induction H; eauto using trs.
+  intros. general induction H; eauto 30 using trs, restrict_subset2, Subset_refl.
   + econstructor.
     eapply IHtrs; eauto. eapply restrict_subset2; eauto. reflexivity.
   + destruct (list_eq_get H2 H); eauto; dcr. inv H5.
     econstructor; eauto. rewrite <- H1; eauto.
+  + econstructor.
+    eapply IHtrs; eauto.
+    eapply restrict_subset2; eauto. reflexivity.
   + econstructor; eauto.
     eapply IHtrs1. repeat rewrite restrict_incl; try reflexivity.
     constructor; eauto. reflexivity.
@@ -410,15 +416,17 @@ Lemma computeParameters_length DL ZL AP s lv an' LV
   -> length DL = length ZL
   -> length LV = length DL.
 Proof.
-  intros LS CPEQ LEQ LEQ2. general induction LS; simpl in *; try let_case_eq; inv CPEQ.
+  intros LS CPEQ LEQ LEQ2.
+  general induction LS; simpl in *; try let_case_eq; inv CPEQ.
   - rewrite LEQ. eapply IHLS; eauto. rewrite addParam_zip_lminus_length; eauto.
   - repeat let_case_eq; inv CPEQ.
     exploit IHLS1; eauto.
     exploit IHLS2; eauto.
     repeat rewrite zip_length. rewrite X, X0. rewrite <- LEQ.
     rewrite Min.min_idempotent. eauto.
-  - eapply mapi_length.
-  - eapply mapi_length.
+  - unfold killExcept, mapi. rewrite mapi_length. eauto.
+  - unfold mapi. rewrite mapi_length; eauto.
+  - rewrite LEQ. eapply IHLS; eauto. rewrite addParam_zip_lminus_length; eauto.
   - repeat let_case_eq; inv CPEQ.
     exploit IHLS2. Focus 2. instantiate (6:=getAnn als::DL).
     instantiate (5:=Z::ZL). eapply eq0. reflexivity. simpl. congruence.
@@ -562,6 +570,10 @@ Proof.
   - clear_all. unfold mapi. generalize 0.
     general induction AP; simpl. econstructor.
     econstructor. econstructor. eauto.
+  - exploit IHLS; eauto using addParam_zip_lminus_length.
+    eapply list_eq_ifSndR_right. eapply X.
+    eapply list_eq_addParam; eauto.
+    rewrite zip_length2; eauto.
   - exploit IHLS1. Focus 2. instantiate (6:=getAnn als::DL).
     instantiate (5:=Z::ZL). eapply eq. reflexivity. simpl.
     rewrite addParams_zip_lminus_length; eauto. simpl; eauto.
@@ -657,6 +669,8 @@ Proof.
     general induction LEQ; inv H0; simpl.
     econstructor.
     econstructor; try econstructor; eauto.
+  - exploit IHLS; eauto using addParam_zip_lminus_length.
+    eapply addParam_Subset; eauto.
   - exploit IHLS1. Focus 2. instantiate (6:=getAnn als::DL).
     instantiate (5:=Z::ZL). eapply eq. reflexivity. simpl.
     rewrite addParams_zip_lminus_length; eauto. simpl; eauto. simpl.
@@ -961,6 +975,22 @@ Proof.
     eapply restrict_get. eapply X1. unfold lminus. cset_tac; intuition.
     eapply X2. unfold lminus. cset_tac; intuition.
   - econstructor.
+  - let_case_eq. inv H4.
+    eapply trsExtern.
+    eapply trs_monotone.
+    eapply IHlive_sound; try eapply eq; eauto using addParam_Subset.
+    rewrite addParam_length. rewrite zip_length.
+    rewrite <- H2. rewrite Min.min_idempotent. eauto.
+    rewrite zip_length2; congruence.
+    exploit computeParameters_AP_LV; eauto; try congruence.
+    eapply addParam_zip_lminus_length; congruence.
+    exploit computeParameters_length; eauto; try congruence.
+    eapply addParam_zip_lminus_length; congruence.
+    rewrite restrict_comp_meet.
+    assert (SEQ:lv ∩ (lv \ {{x}}) [=] lv \ {{x}}) by (cset_tac; intuition).
+    rewrite SEQ. eapply restrict_zip_ominus; eauto.
+    rewrite zip_length2; eauto.
+    eapply list_eq_not_in; try eapply X. rewrite zip_length2; congruence.
   - repeat let_case_eq. invc H4.
     exploit (computeParameters_length (getAnn als::DL) (Z::ZL)); try eapply eq0; simpl; eauto; try congruence.
     exploit (computeParameters_length (getAnn als::DL) (Z::ZL)); try eapply eq; simpl; eauto; try congruence.
@@ -1151,6 +1181,9 @@ Proof.
     econstructor. eapply map_get_1; eauto. eapply killExcept_get; eauto.
     simpl. rewrite <- H0. eapply H11.
   - econstructor.
+  - let_case_eq; inv H4.
+    econstructor. eapply IHlive_sound; try eapply eq; eauto using addParam_Subset.
+    rewrite addParam_length; rewrite zip_length2; eauto; congruence.
   - repeat let_case_eq. invc H4.
     exploit (computeParameters_LV_DL (getAnn als::DL) (Z::ZL)); try eapply eq; eauto; simpl; try congruence. rewrite addParams_length, zip_length2; try congruence.
     rewrite zip_length2; congruence.
@@ -1204,6 +1237,6 @@ Qed.
 
 (*
 *** Local Variables: ***
-*** coq-load-path: (("." "Lvc")) ***
+*** coq-load-path: ((".." "Lvc")) ***
 *** End: ***
 *)
