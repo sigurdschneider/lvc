@@ -46,6 +46,11 @@ Inductive notOccur (G:set var) : stmt -> Prop :=
   | ncGoto l (Y:list exp)
     : (forall n e, get Y n e -> Exp.notOccur G e)
       -> notOccur G (stmtGoto l Y)
+  | ncExtern x f Y s
+    : (forall n e, get Y n e -> Exp.notOccur G e)
+      -> x ∉ G
+      -> notOccur G s
+      -> notOccur G (stmtExtern x f Y s)
   | ncLet s Z t
     : of_list Z ∩ G [=] ∅
       -> notOccur G s
@@ -96,7 +101,7 @@ Lemma notOccur_incl G G' s
   : G' ⊆ G -> notOccur G s -> notOccur G' s.
 Proof.
   intros A B. general induction B;
-              eauto using notOccur, incl_not_member, incl_meet_empty,
+              eauto 20 using notOccur, incl_not_member, incl_meet_empty,
               Exp.notOccur_antitone.
 Qed.
 

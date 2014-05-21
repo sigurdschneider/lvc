@@ -115,15 +115,18 @@ Definition pminus (D'':set var) s :=
     | pair s s' => (s \ D'', s' \ D'')
   end.
 
-Lemma ssa_minus D an s
-  : notOccur D s -> ssa s an -> ssa s (mapAnn (pminus D) an).
+Lemma ssa_minus D an an' s
+  : notOccur D s
+    -> ssa s an
+    -> ann_R (@pe _ _) an' (mapAnn (pminus D) an)
+    -> ssa s an'.
 Proof.
-  intros. general induction H0; invt notOccur; simpl.
+  intros ? ? PE. general induction H0; invt notOccur; try rewrite PE; simpl.
   - econstructor.
     + intro. cset_tac; eauto.
     + eapply Exp.notOccur_freeVars in H9; eauto. rewrite meet_comm in H9.
       rewrite <- H0. rewrite minus_inane_set; eauto. reflexivity.
-    + eapply IHssa; eauto.
+    + eapply IHssa; eauto. reflexivity.
     + rewrite getAnn_mapAnn. inv H2; simpl.
       rewrite H10, H11. econstructor. cset_tac; intuition.
       eapply H7. rewrite <- H6; eauto.
@@ -133,6 +136,8 @@ Proof.
     rewrite <- H. rewrite minus_inane_set; eauto. reflexivity.
     rewrite <- minus_dist_intersection. rewrite H0. reflexivity.
     rewrite <- minus_dist_union. rewrite H1. reflexivity.
+    eapply IHssa1; eauto; reflexivity.
+    eapply IHssa2; eauto; reflexivity.
     rewrite getAnn_mapAnn. inv H2; simpl. rewrite H11, H12.
     reflexivity.
     rewrite getAnn_mapAnn. inv H3; simpl. rewrite H11, H12.
@@ -151,12 +156,29 @@ Proof.
     rewrite <- H. eapply incl_list_union; eauto. reflexivity.
     eauto. cset_tac; intuition. rewrite H0; reflexivity.
   - econstructor; eauto.
+    + cset_tac; intuition.
+    + unfold list_union.
+      hnf; intros. eapply list_union_get in H4.
+      destruct H4 as [[? []]|]; dcr. edestruct map_get_4; eauto; dcr; subst.
+      exploit H7; eauto.
+      eapply Exp.notOccur_freeVars in H7; eauto. rewrite meet_comm in H7.
+      cset_tac; intuition; eauto.
+      rewrite <- H0. eapply incl_list_union; eauto. reflexivity.
+      eauto. cset_tac; intuition.
+    + eapply IHssa; eauto; reflexivity.
+    + rewrite getAnn_mapAnn.
+      inv H2; simpl. constructor. rewrite H8. revert H9.
+      clear_all; cset_tac; intuition; eauto. eapply H9. rewrite <- H0; eauto.
+      rewrite H11; reflexivity.
+  - econstructor; eauto.
     revert H H8; clear_all; cset_tac; intuition; eauto.
     rewrite <- H0. rewrite minus_dist_intersection. reflexivity.
     rewrite <- H1. rewrite minus_dist_union. reflexivity.
+    eapply IHssa1; eauto; reflexivity.
     rewrite getAnn_mapAnn; simpl. inv H2; simpl.
     rewrite H11, H12. constructor; try reflexivity.
     revert H8; clear_all; cset_tac; intuition; eauto.
+    eapply IHssa2; eauto; reflexivity.
     rewrite getAnn_mapAnn; simpl. inv H3; simpl.
     rewrite H11, H12. reflexivity.
 Qed.
