@@ -149,21 +149,6 @@ Proof.
       inv X2; try econstructor; eauto.
 Qed.
 
-Lemma entails_union Gamma Γ' Γ''
-: entails Gamma (Γ')
-  /\ entails Gamma (Γ'')
-  -> entails Gamma (Γ' ∪ Γ'').
-Proof.
-  unfold entails, satisfiesAll; intros; dcr.
-  + intros. cset_tac. destruct H1; eauto.
-Qed.
-
-Instance entails_refl
-: Reflexive (entails).
-Proof.
-  hnf; intros. unfold entails; intros; eauto; try reflexivity.
-Qed.
-
 Lemma cp_eqns_add_update ϱ D x y
 : x ∉ D
   -> cp_eqns (ϱ [x <- y]) (D ++ {x; {}})
@@ -195,55 +180,8 @@ Proof.
   rewrite <- H0, <- H. eapply lookup_set_spec; eauto.
 Qed.
 
-Lemma entails_empty s
-: entails s ∅.
-Proof.
-  hnf; intros. intros.
-  - hnf; intros. cset_tac; intuition.
-Qed.
-
-
-Instance lookup_set_morphism X `{OrderedType X} Y `{OrderedType Y} (f:X->Y)
- `{Proper _ (_eq ==> _eq) f}
-  : Proper (Subset ==> Subset) (lookup_set f).
-Proof.
-  unfold Proper, respectful, Subset; intros.
-  eapply lookup_set_spec. firstorder. eapply lookup_set_spec in H3.
-  decompose records. eexists x0. split. eauto. rewrite H6. eapply H1.
-  firstorder. eauto.
-Qed.
-
 Print Instances Proper.
 
-Instance Subset_morphism_2 X `{OrderedType X}
-  : Proper (flip Subset ==> Subset ==> impl) (Subset).
-Proof.
-  unfold Proper, respectful, impl; intros.
-  firstorder.
-Qed.
-
-Instance Subset_morphism_3 X `{OrderedType X}
-  : Proper (Subset ==> flip Subset ==> flip impl) (Subset).
-Proof.
-  unfold Proper, respectful, impl; intros.
-  firstorder.
-Qed.
-
-Lemma lookup_set_add_update X `{OrderedType X} (ϱ:X->X) D x y
-      `{Proper _ (_eq ==> _eq) ϱ}
-      `{Proper _ (_eq ==> _eq) (ϱ [x <- y])}
-: x ∉ D
-  -> lookup_set (ϱ [x <- y]) (D ++ {x; {}}) [=] lookup_set ϱ D ∪ {{ y }}.
-Proof.
-  intros. hnf; intros. cset_tac.
-  repeat rewrite lookup_set_spec; try (now intuition).
-  split; intros; cset_tac.
-  lud; intuition.
-  left. eauto.
-  destruct H3. destruct H3; dcr. eexists x0.
-  intuition. lud. exfalso. eapply H2. cset_tac.
-  eexists x. intuition. lud. intuition.
-Qed.
 
 Inductive labelsDefined (A:Type) : stmt -> list A -> Prop :=
   | labelsDefinedExp x e s L
@@ -283,17 +221,6 @@ Proof.
     econstructor; eauto.
 Qed.
 
-Lemma lookup_set_single X `{OrderedType X} Y `{OrderedType Y} (ϱ:X->Y)
-      `{Proper _ (_eq ==> _eq) ϱ} D D' v
-: v ∈ D
-  -> lookup_set ϱ D ⊆ D'
-  -> {{ ϱ v }} ⊆ D'.
-Proof.
-  intros. hnf; intros.
-  eapply H3. cset_tac.
-  rewrite H4.
-  eapply lookup_set_spec; eauto.
-Qed.
 
 Lemma single_in_cp_eqns x ϱ D
 : x ∈ D
@@ -305,37 +232,7 @@ Proof.
   unfold cp_eqn. cset_tac; eauto.
 Qed.
 
-Lemma entails_eqns_trans Gamma e e' e''
-: (e, e') ∈ Gamma
-  -> (e', e'') ∈ Gamma
-  -> entails Gamma {(e, e''); {}}.
-Proof.
-  intros. hnf; intros.
-  hnf; intros. cset_tac. hnf; intros. rewrite H2.
-  simpl. exploit (H1 _ H); eauto.
-  exploit (H1 _ H0); eauto.
-  simpl in *. inv X; inv X0.
-  - econstructor.
-  - exfalso. congruence.
-  - exfalso. congruence.
-  - econstructor. congruence.
-Qed.
 
-Lemma entails_eqns_refl e Gamma
-: entails Gamma {{ (e, e) }}.
-Proof.
-  hnf; intros. hnf; intros. hnf; intros. cset_tac. rewrite H0.
-  simpl. reflexivity.
-Qed.
-
-Lemma lookup_update_same X `{OrderedType X} x Z (ϱ:X->X)
-: x ∈ of_list Z
-  -> ϱ [Z <-- Z] x === x.
-Proof.
-  general induction Z; simpl; isabsurd.
-  lud; eauto.
-  eapply IHZ. simpl in *. cset_tac; intuition.
-Qed.
 
 Lemma entails_cp_eqns_trivial ϱ Z
 : entails {} (cp_eqns (ϱ [Z <-- Z]) (of_list Z)).
@@ -348,7 +245,6 @@ Proof.
   rewrite lookup_update_same in H2; eauto. cset_tac. rewrite H2.
   reflexivity.
 Qed.
-
 
 Lemma copyPropagate_sound_eqn s ang Es ϱ
 : ssa s ang
