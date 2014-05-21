@@ -1,6 +1,8 @@
 Require Import List CSet.
-Require Import Util AllInRel IL EnvTy RegAlloc RenameApart Sim Status Annotation.
-Require Coherence ILIToILF Liveness LivenessValidators ParallelMove ILN LivenessAnalysis CoherenceAlgo RegAllocAlgo CopyPropagation DVE.
+Require Import Util AllInRel IL EnvTy RenameApart Sim Status Annotation.
+Require Liveness LivenessValidators ParallelMove ILN LivenessAnalysis.
+Require Coherence Delocation DelocationAlgo DelocationValidator Allocation AllocationAlgo.
+Require CopyPropagation DVE.
 
 Require Import ExtrOcamlBasic.
 Require Import ExtrOcamlZBigInt.
@@ -21,7 +23,7 @@ Definition livenessAnalysis (s:stmt) :=
 @AbsInt.analysis (set var) Subset (@Subset_computable _ _ ) first _ _ _ LivenessAnalysis.liveness_analysis s.
 
 Definition additionalArguments s lv :=
-  fst (CoherenceAlgo.computeParameters nil nil nil s lv).
+  fst (DelocationAlgo.computeParameters nil nil nil s lv).
 
 Class ToString (T:Type) := toString : T -> string.
 
@@ -62,13 +64,13 @@ Definition toILF (ilin:ILN.nstmt) (S:Dummy) : status IL.stmt * Dummy :=
           let additional_params := additionalArguments ilid lv in
           /// S /// "Additional Params" /// additional_params ;
           ensure "Additional parameters sufficient"
-            by ILIToILF.trs nil nil ili (DVE.compile_live ili lv) additional_params fail S;
-            (Success (ILIToILF.compile nil ilid additional_params), S)
+            by Delocation.trs nil nil ili (DVE.compile_live ili lv) additional_params fail S;
+            (Success (Delocation.compile nil ilid additional_params), S)
     | x => (x,S)
   end.
 
 Definition optimize (s:stmt) : stmt :=
-  CopyPropagation.copyPropagate id s.
+  ValueOpts.compile s (CopyPropagation.copyPropagate id s).
 
 Definition fromILF (s:stmt) : status stmt :=
   let s_renamed_apart := rename_apart s
@@ -76,8 +78,8 @@ Definition fromILF (s:stmt) : status stmt :=
      if [Liveness.live_sound nil s_renamed_apart lv
          /\ getAnn lv ⊆ freeVars s] then
        sdo ϱ <- allocation_oracle s_renamed_apart lv id;
-       if [agree_on (getAnn lv) ϱ id
-           /\ locally_inj ϱ s_renamed_apart lv ] then
+       if [agree_on _eq (getAnn lv) ϱ id
+           /\ Allocation.locally_inj ϱ s_renamed_apart lv ] then
          let s_allocated := rename ϱ s_renamed_apart in
          let s_lowered := ParallelMove.lower parallel_move nil s_allocated (mapAnn (lookup_set ϱ) lv) in
          s_lowered
@@ -87,7 +89,7 @@ Definition fromILF (s:stmt) : status stmt :=
        Error "Liveness unsound.".
 
 Opaque LivenessValidators.live_sound_dec.
-Opaque ILIToILF.trs_dec.
+Opaque DelocationValidator.trs_dec.
 (*
 Lemma toILF_correct ilin alv s (E:env val) e
   : toILF ilin alv = (Success s, e)
@@ -162,7 +164,7 @@ Print Assumptions fromILF_correct.*)
 
 Extraction Inline bind Option.bind toString.
 
-Extraction "extraction/lvc.ml" toILF fromILF RegAllocAlgo.linear_scan optimize.
+Extraction "extraction/lvc.ml" toILF fromILF AllocationAlgo.linear_scan optimize.
 
 
 
