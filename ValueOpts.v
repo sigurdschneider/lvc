@@ -474,6 +474,52 @@ Proof.
     + rewrite H0; reflexivity.
 Qed.
 
+Lemma entails_union Gamma Γ' Γ''
+: entails Gamma (Γ')
+  /\ entails Gamma (Γ'')
+  -> entails Gamma (Γ' ∪ Γ'').
+Proof.
+  unfold entails, satisfiesAll; intros; dcr.
+  + intros. cset_tac. destruct H1; eauto.
+Qed.
+
+Instance entails_refl
+: Reflexive (entails).
+Proof.
+  hnf; intros. unfold entails; intros; eauto; try reflexivity.
+Qed.
+
+Lemma entails_empty s
+: entails s ∅.
+Proof.
+  hnf; intros. intros.
+  - hnf; intros. cset_tac; intuition.
+Qed.
+
+Lemma entails_eqns_trans Gamma e e' e''
+: (e, e') ∈ Gamma
+  -> (e', e'') ∈ Gamma
+  -> entails Gamma {(e, e''); {}}.
+Proof.
+  intros. hnf; intros.
+  hnf; intros. cset_tac. hnf; intros. rewrite H2.
+  simpl. exploit (H1 _ H); eauto.
+  exploit (H1 _ H0); eauto.
+  simpl in *. inv X; inv X0.
+  - econstructor.
+  - exfalso. congruence.
+  - exfalso. congruence.
+  - econstructor. congruence.
+Qed.
+
+Lemma entails_eqns_refl e Gamma
+: entails Gamma {{ (e, e) }}.
+Proof.
+  hnf; intros. hnf; intros. hnf; intros. cset_tac. rewrite H0.
+  simpl. reflexivity.
+Qed.
+
+
 Lemma satisfiesAll_subst V Gamma Γf Z EqS Y y bE G
 :  length Z = length Y
    -> eqns_freeVars EqS ⊆ G ∪ of_list Z
