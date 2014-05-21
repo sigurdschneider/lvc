@@ -8,20 +8,6 @@ Require Import Liveness ValueOpts.
 Set Implicit Arguments.
 Unset Printing Records.
 
-Inductive isVar : exp -> Prop :=
-  IisVar v : isVar (Var v).
-
-Instance isVar_dec e : Computable (isVar e).
-Proof.
-  destruct e; try dec_solve.
-Qed.
-
-Definition getVar (e:exp) :=
-  match e with
-    | Var y => y
-    | _ => 0
-  end.
-
 Fixpoint copyPropagate (ϱ:var -> var) (s:stmt) : ann (list exp) :=
   match s with
    | stmtExp x e s =>
