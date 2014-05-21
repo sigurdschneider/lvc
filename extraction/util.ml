@@ -10,7 +10,7 @@ let implode l =
   let rec imp i = function
     | [] -> res
     | '\\' :: 'n' :: l -> res.[i] <- '\n'; imp (i + 2) l
-    | c :: l -> res.[i] <- c; imp (i + 1) l 
+    | c :: l -> res.[i] <- c; imp (i + 1) l
     in imp 0 l
 
 
@@ -32,19 +32,20 @@ let rec first f x =
 let print_var ids v = try (BigMap.find v ids) with Not_found -> "?" ^ (Big_int.string_of_big_int v)
 
 let rec print_binop op =
-  match op with
-    | Lvc.Add -> "+"
-    | Lvc.Sub -> "-"
-    | Lvc.Mul -> "*"
+  match (Big_int.string_of_big_int op) with
+    | "0" -> "+"
+    | "1" -> "-"
+    | "2" -> "*"
+    | _ -> "unknown"
 
- 
+
 let rec print_sexpr ids e =
   match e with
     | Lvc.Con x -> Big_int.string_of_big_int x
     | Lvc.Var x -> print_var ids x
     | Lvc.BinOp (op, e1, e2) -> print_sexpr ids e1 ^ " " ^ (print_binop op) ^ " " ^ (print_sexpr ids e2)
 
-let rec print_list p l = 
+let rec print_list p l =
   match l with
     | [] -> ""
     | x::[] -> p x
@@ -60,15 +61,18 @@ let rec print_nstmt ids ident s =
     | Lvc.NstmtReturn e -> print_sexpr e
     | Lvc.NstmtGoto (f, y) -> print_var f ^ "(" ^ (print_list print_sexpr y) ^ ")"
     | Lvc.NstmtExp (x, e, s) -> "let " ^ (print_var x) ^ " = " ^
-      (print_sexpr e) ^ " in\n" ^ print_ident ident ^ 
+      (print_sexpr e) ^ " in\n" ^ print_ident ident ^
        (print_nstmt ident s)
-    | Lvc.NstmtIf (v, s, t) -> 
+    | Lvc.NstmtExtern (x, f, y, s) -> "let " ^ (print_var x) ^ " = extern " ^
+       (print_var f) ^ " (" ^ (print_list print_sexpr y) ^ ") in\n" ^ print_ident ident ^
+       (print_nstmt ident s)
+    | Lvc.NstmtIf (v, s, t) ->
        "if " ^ (print_sexpr v) ^ " then\n" ^
        (print_ident (ident+2)) ^ (print_nstmt (ident+2) s)
       ^ "\n" ^ print_ident ident ^ "else\n" ^ print_ident (ident+2) ^ (print_nstmt (ident+2) t) ^ "\n"
     | Lvc.NstmtLet (f, y, s, t) -> "fun " ^
 	  (print_var f) ^ "(" ^ (print_list (print_var) y) ^ ") = \n"
-	  ^ print_ident (ident+2) ^ (print_nstmt (ident+2) s) ^ "\n" ^ print_ident ident 
+	  ^ print_ident (ident+2) ^ (print_nstmt (ident+2) s) ^ "\n" ^ print_ident ident
       ^ "in \n"
       ^ print_ident (ident+2) ^ (print_nstmt (ident+2) t)
 
@@ -82,17 +86,20 @@ let rec print_stmt ids ident s =
     | Lvc.StmtExp (x, e, s) -> "let " ^ (print_var x) ^ " = " ^
       (print_sexpr e) ^ " in\n" ^ print_ident ident ^
       (print_stmt ident s)
+    | Lvc.StmtExtern (x, f, y, s) -> "let " ^ (print_var x) ^ " = extern " ^
+       (print_var f) ^ " (" ^  (print_list print_sexpr y) ^ ") in\n" ^ print_ident ident ^
+       (print_stmt ident s)
     | Lvc.StmtIf (e, s, t) -> "if " ^ (print_sexpr e) ^ " then\n" ^
       (print_ident (ident+2)) ^ (print_stmt (ident+2) s)
       ^ "\n" ^ print_ident ident ^ "else\n" ^ print_ident (ident+2) ^ (print_stmt (ident+2) t) ^ "\n"
     | Lvc.StmtLet (y, s, t) -> "fun " ^
 	  "_ " ^ "(" ^ (print_list print_var y) ^ ") = \n"
 	  ^ print_ident (ident+2) ^ (print_stmt (ident+2) s) ^ "\n" ^ print_ident ident
-      ^ "in \n" 
+      ^ "in \n"
       ^ print_ident (ident+2) ^ (print_stmt (ident+2) t)
 
-let rec print_set ids x = 
-Lvc.fold 
+let rec print_set ids x =
+Lvc.fold
   (Lvc.sOT_as_OT Lvc.nat_OrderedType)
   (Lvc.setAVL_FSet (Lvc.sOT_as_OT Lvc.nat_OrderedType))
 (fun x s -> s ^ (print_var ids x) ^ " ") x " "
@@ -114,7 +121,7 @@ let rec print_ann p ident s =
       (print_ann p (ident+2) s)
       ^ "\n" ^ print_ident ident ^  "\n" ^ print_ident (ident+2) ^ (print_ann p (ident+2) t) ^ "\n"
 
-let rec generic_first d f = 
-    match (f d) with 
+let rec generic_first d f =
+    match (f d) with
       | dd, true -> Printf.printf "."; generic_first dd f
       | dd, false -> dd
