@@ -22,19 +22,17 @@ if ARGV[0] == "--parallel" then
 end
 
 cmd = ARGV.join(' ')
+mod = ARGV.last
 pad = "".ljust(50 - cmd.length)
 
-print "#{Time.now.strftime("%H:%M:%S")} #{blue('>>>')} #{cmd}#{parallel ? "\n" : pad}"
+print "#{Time.now.strftime("%H:%M:%S")} #{blue('>>>')} #{mod}#{parallel ? "\n" : pad}"
 
 start = Time.now
-#system(cmd)
 cstdin, cstdout, cstderr, waitthr = Open3.popen3("bash -c \"time #{cmd}\"")
-path = #{ARGV.last}.split('/')
-#Process.wait(waitthr.pid)
 waitthr.join
 time = Time.now - start
 
-File.open("#{ARGV.last}.time", 'w') do |file|
+File.open("#{mod}.time", 'w') do |file|
   file.puts "#{time}"
 end
 
@@ -47,7 +45,7 @@ user = serr.match(/.*user[ \t]*([0123456789]+)m([0123456789\.]+)s.*/m)
 sys = serr.match(/.*sys[ \t]*([0123456789]+)m([0123456789\.]+)s.*/m)
 cpu = user[1].to_f * 60 + user[2].to_f + sys[1].to_f * 60 + sys[2].to_f
 
-File.open("#{ARGV.last}.time", 'w') do |file|
+File.open("#{mod}.time", 'w') do |file|
   file.puts "#{cpu}"
 end
 
@@ -59,12 +57,12 @@ sout = cstdout.read
 indent = "  "
 
 if !sout.strip.empty? then
-	print "#{Time.now.strftime("%H:%M:%S")} ", color.call("==="), " #{cmd}#{pad} ", "OUTPUT FOLLOWS" , "\n"
+	print "#{Time.now.strftime("%H:%M:%S")} ", color.call("==="), " #{mod}#{pad} ", "OUTPUT FOLLOWS" , "\n"
   print sout.gsub!(/^/, '  ')
 end
 
 if parallel then
-  print "#{Time.now.strftime("%H:%M:%S")} ", color.call("<<<"), " #{cmd}#{pad} ", color.call("#{cpu.round(2)} / #{time.round(2)}"), "\n"
+  print "#{Time.now.strftime("%H:%M:%S")} ", color.call("<<<"), " #{mod}#{pad} ", color.call("#{cpu.round(2)} / #{time.round(2)}"), "\n"
 end
 
 exit success
