@@ -26,9 +26,9 @@ let main () =
     try
       let file_chan = open_in !infile in
       let lexbuf = Lexing.from_channel  file_chan in
-      let ilin = Parser.expr Lexer.token lexbuf in
+      let ilin = Parser.program Lexer.token lexbuf in
       match Lvc.toILF generic_first print_string toString_nstmt toString_stmt toString_ann toString_set toString_list ilin 0 with
-      | (Lvc.Success ilf, _) -> 
+      | (Lvc.Success ilf, _) ->
 	 Printf.printf "toILF compilate:\n%s\n\n" (print_stmt !ids 0 ilf);
       | (Lvc.Error e, _) -> Printf.printf "Compilation failed:\n%s" (implode e);
     with Parsing.Parse_error ->
@@ -38,4 +38,3 @@ let main () =
       | Range_error e -> Printf.eprintf "The integer %s is not in range\n" e;;
 
 main ();
-
