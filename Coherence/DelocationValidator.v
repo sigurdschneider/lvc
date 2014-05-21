@@ -20,6 +20,7 @@ Proof.
     subst; try dec_solve; try inv an; try inv an_lv; eauto.
   + decide (a = nil);
     subst; try dec_solve; try inv an; try inv an_lv; eauto.
+  + destruct a; edestruct (IHs (restrict DL (a0\{{x}})) ZL ans_lv ans); try dec_solve.
   + edestruct (IHs1 (restrict (Some (getAnn ans_lv1 \ of_list (Z++a))::DL) (getAnn ans_lv1 \ of_list (Z++a))) (a::ZL) ans_lv1 ans1); eauto;
     edestruct (IHs2 (Some (getAnn ans_lv1 \ of_list (Z++a)) :: DL) (a :: ZL) ans_lv2 ans2); decide (of_list a ⊆ getAnn ans_lv1);
     eauto; try dec_solve.
@@ -35,6 +36,6 @@ Defined.
 
 (*
 *** Local Variables: ***
-*** coq-load-path: (("." "Lvc")) ***
+*** coq-load-path: ((".." "Lvc")) ***
 *** End: ***
 *)
