@@ -1,4 +1,4 @@
-Require Export Setoid Coq.Classes.Morphisms.  
+Require Export Setoid Coq.Classes.Morphisms.
 Require Import EqDec Computable Util AutoIndTac.
 Require Export CSet Containers.SetDecide.
 Require Export MapBasics.
@@ -20,8 +20,8 @@ Section MapLookup.
 
   Lemma lookup_set_spec `{OrderedType Y} (m:X -> Y) s y `{Proper _ (_eq ==> _eq) m}
   : y ∈ lookup_set m s <-> exists x, x ∈ s /\ y === m x.
-  Proof. 
-    intros. unfold lookup_set. eapply SetConstructs.map_spec; eauto. 
+  Proof.
+    intros. unfold lookup_set. eapply SetConstructs.map_spec; eauto.
   Qed.
 
   Lemma lookup_set_helper `{OrderedType Y} (m:X -> Y) s x `{Proper _ (_eq ==> _eq) m}
@@ -42,25 +42,25 @@ Section MapLookup.
   : (lookup_set m (s ∪ t)) [=] (lookup_set m s ∪ lookup_set m t).
   Proof.
     intro. split; intros.
-    - eapply lookup_set_spec in H2; eauto. 
+    - eapply lookup_set_spec in H2; eauto.
       cset_tac. destruct H4; eauto.
       + left. eapply lookup_set_spec; firstorder.
       + right; eapply lookup_set_spec; firstorder.
     - cset_tac. destruct H2; eapply lookup_set_spec in H2; dcr; eauto.
       + eapply lookup_set_spec; eauto. eexists x; cset_tac; firstorder.
-      + eapply lookup_set_spec; eauto. eexists x; cset_tac; firstorder.  
+      + eapply lookup_set_spec; eauto. eexists x; cset_tac; firstorder.
   Qed.
-  
-  Lemma lookup_set_minus_incl `{OrderedType Y} 
+
+  Lemma lookup_set_minus_incl `{OrderedType Y}
         (s t:set X) (m:X -> Y) `{Proper _ (_eq ==> _eq) m}
   : lookup_set m s \ (lookup_set m t) ⊆ lookup_set m (s \ t).
   Proof.
-    intros; hnf; intros. 
+    intros; hnf; intros.
     edestruct minus_in_in; eauto. eapply lookup_set_spec; eauto.
     eapply lookup_set_spec in H3; decompose records.
     eexists x; split; eauto. eapply in_in_minus; eauto.
-    intro. eapply H4. eapply lookup_set_spec. intuition. 
-    eexists x; eauto. intuition. 
+    intro. eapply H4. eapply lookup_set_spec. intuition.
+    eexists x; eauto. intuition.
   Qed.
 
 End MapLookup.
@@ -70,13 +70,13 @@ Arguments lookup_set {X} {H} {Y} {H0} m s.
 Lemma lookup_set_on_id {X} `{OrderedType X} (s t : set X)
   : s ⊆ t -> (lookup_set (fun x => x) s) ⊆ t.
 Proof.
-  intros. hnf; intros. 
+  intros. hnf; intros.
   eapply lookup_set_spec in H1; intuition. firstorder. rewrite H2; auto.
 Qed.
 
 
 Global Instance lookup_set_morphism {X} `{OrderedType X} {Y} `{OrderedType Y} {f:X->Y}
- `{Proper _ (_eq ==> _eq) f} 
+ `{Proper _ (_eq ==> _eq) f}
   : Proper (Subset ==> Subset) (lookup_set f).
 Proof.
   unfold Proper, respectful, Subset; intros.
@@ -86,14 +86,14 @@ Proof.
 Qed.
 
 Global Instance lookup_set_morphism_eq {X} `{OrderedType X} {Y} `{OrderedType Y} {f:X->Y}
- `{Proper _ (_eq ==> _eq) f} 
+ `{Proper _ (_eq ==> _eq) f}
   : Proper (Equal ==> Equal) (lookup_set f).
 Proof.
   unfold Proper, respectful, Subset; intros. eapply double_inclusion in H2; dcr.
   split; intros. rewrite <- H3; eauto. rewrite <- H4; eauto.
 Qed.
 
-Lemma lookup_set_singleton {X} `{OrderedType X} {Y} `{OrderedType Y} (f:X->Y)  
+Lemma lookup_set_singleton {X} `{OrderedType X} {Y} `{OrderedType Y} (f:X->Y)
   `{Proper _ (_eq ==> _eq) f} x
   : lookup_set f {{x}} [=] {{f x}}.
 Proof.
@@ -101,7 +101,7 @@ Proof.
   cset_tac. rewrite <- H2; eauto.
 Qed.
 
-Lemma lookup_set_singleton' {X} `{OrderedType X} {Y} `{OrderedType Y} (f:X->Y)  
+Lemma lookup_set_singleton' {X} `{OrderedType X} {Y} `{OrderedType Y} (f:X->Y)
   `{Proper _ (_eq ==> _eq) f} x
   : lookup_set f (singleton x) [=] singleton (f x).
 Proof.
@@ -110,8 +110,45 @@ Proof.
   eexists x; cset_tac; eauto.
 Qed.
 
+Lemma lookup_set_add_update X `{OrderedType X} (ϱ:X->X) D x y
+      `{Proper _ (_eq ==> _eq) ϱ}
+      `{Proper _ (_eq ==> _eq) (ϱ [x <- y])}
+: x ∉ D
+  -> lookup_set (ϱ [x <- y]) (D ++ {x; {}}) [=] lookup_set ϱ D ∪ {{ y }}.
+Proof.
+  intros. hnf; intros. cset_tac.
+  repeat rewrite lookup_set_spec; try (now intuition).
+  split; intros; cset_tac.
+  lud; intuition.
+  left. eauto.
+  destruct H3. destruct H3; dcr. eexists x0.
+  intuition. lud. exfalso. eapply H2. cset_tac.
+  eexists x. intuition. lud. intuition.
+Qed.
+
+Lemma lookup_set_single X `{OrderedType X} Y `{OrderedType Y} (ϱ:X->Y)
+      `{Proper _ (_eq ==> _eq) ϱ} D D' v
+: v ∈ D
+  -> lookup_set ϱ D ⊆ D'
+  -> {{ ϱ v }} ⊆ D'.
+Proof.
+  intros. hnf; intros.
+  eapply H3. cset_tac.
+  rewrite H4.
+  eapply lookup_set_spec; eauto.
+Qed.
+
+Lemma lookup_update_same X `{OrderedType X} x Z (ϱ:X->X)
+: x ∈ of_list Z
+  -> ϱ [Z <-- Z] x === x.
+Proof.
+  general induction Z; simpl; isabsurd.
+  lud; eauto.
+  eapply IHZ. simpl in *. cset_tac; intuition.
+Qed.
+
 Ltac set_tac :=
-  repeat cset_tac; 
+  repeat cset_tac;
   match goal with
     | [ H : context [ In ?y (lookup_set ?f ?s) ] |- _ ] =>
       rewrite (@lookup_set_spec _ _ _ _ f s y) in H
@@ -119,7 +156,7 @@ Ltac set_tac :=
       rewrite (@lookup_set_spec _ _ _ _ f s y)
   end.
 
-(* 
+(*
  *** Local Variables: ***
  *** coq-load-path: ("../infra" "../constr" "../il"  "..") ***
  *** End: ***
