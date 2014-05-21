@@ -230,6 +230,31 @@ Proof.
   rewrite IHy1; eauto. hnf; intros; lud. eapply H2.
 Qed.
 
+Lemma lookup_set_add_update X `{OrderedType X} (ϱ:X->X) D x y
+      `{Proper _ (_eq ==> _eq) ϱ}
+      `{Proper _ (_eq ==> _eq) (update ϱ x y)}
+: x ∉ D
+  -> lookup_set (update ϱ x y) (D ++ {x; {}}) [=] lookup_set ϱ D ∪ {{ y }}.
+Proof.
+  intros. hnf; intros. cset_tac.
+  repeat rewrite lookup_set_spec; try (now intuition).
+  split; intros; cset_tac.
+  lud; intuition.
+  left. eauto.
+  destruct H3. destruct H3; dcr. eexists x0.
+  intuition. lud. exfalso. eapply H2. cset_tac.
+  eexists x. intuition. lud. intuition.
+Qed.
+
+Lemma lookup_update_same X `{OrderedType X} x Z (ϱ:X->X)
+: x ∈ of_list Z
+  -> ϱ [Z <-- Z] x === x.
+Proof.
+  general induction Z; simpl; isabsurd.
+  lud; eauto.
+  eapply IHZ. simpl in *. cset_tac; intuition.
+Qed.
+
 (*
 *** Local Variables: ***
 *** coq-load-path: (("../" "Lvc")) ***
