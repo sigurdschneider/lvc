@@ -34,6 +34,7 @@
             | "else" -> IL_else
             | "let" -> IL_let
             | "fun" -> IL_letrec
+            | "extern" -> IL_extern
             | "in" -> IL_in
             | "and" -> IL_and
             | _ -> try
