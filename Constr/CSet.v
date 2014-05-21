@@ -27,6 +27,20 @@ Proof.
   intros. econstructor; eauto.
 Qed.
 
+Instance Subset_morphism_2 X `{OrderedType X}
+  : Proper (flip Subset ==> Subset ==> impl) (Subset).
+Proof.
+  unfold Proper, respectful, impl; intros.
+  firstorder.
+Qed.
+
+Instance Subset_morphism_3 X `{OrderedType X}
+  : Proper (Subset ==> flip Subset ==> flip impl) (Subset).
+Proof.
+  unfold Proper, respectful, impl; intros.
+  firstorder.
+Qed.
+
 (*
 *** Local Variables: ***
 *** coq-load-path: (("../" "Lvc")) ***
