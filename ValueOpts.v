@@ -699,7 +699,7 @@ Proof.
   unfold Proper, respectful, flip, impl, entails; intros; dcr; intros; eauto.
 Qed.
 
-Lemma entails_union Γ1 Γ2 Γ2'
+Lemma entails_inert Γ1 Γ2 Γ2'
 : entails Γ2 Γ2'
   -> entails (Γ1 ∪ Γ2) (Γ1 ∪ Γ2').
 Proof.
@@ -749,7 +749,7 @@ Lemma eqn_sound_entails_monotone Es Γ1 Γ2 Γ1' Γ2' s ang an
 Proof.
   intros. general induction H0; invt ssa; eauto.
   - econstructor; eauto.
-    eapply IHeqn_sound; eauto using entails_union.
+    eapply IHeqn_sound; eauto using entails_inert.
     + eapply moreDefined_entails_monotone; eauto.
   - econstructor; eauto using moreDefined_entails_monotone.
   - econstructor; eauto using entails_transitive, moreDefinedArgs_entails_monotone.
