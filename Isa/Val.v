@@ -1,4 +1,4 @@
-Require Import Util EqDec. 
+Require Import Util EqDec.
 Require Import OrderedTypeEx.
 
 Set Implicit Arguments.
@@ -12,6 +12,10 @@ Definition default_val : val := 0.
 Opaque val.
 Opaque default_val.
 
+Definition val_true := 1.
+Definition val_false := 0.
+
+
 Global Instance inst_val_defaulted : Defaulted val := {
   default_el := default_val
 }.
@@ -23,6 +27,18 @@ Defined.
 
 (** ** There must be an injection into the booleans *)
 Definition val2bool : val -> bool := fun v => match v with 0 => false | _ => true end.
+
+Lemma val2bool_true
+: val2bool val_true = true.
+Proof.
+  reflexivity.
+Qed.
+
+Lemma val2bool_false
+: val2bool val_false = false.
+Proof.
+  reflexivity.
+Qed.
 
 Opaque val2bool.
 
@@ -38,8 +54,8 @@ Defined.
 Inductive valOfType : val -> ty -> Prop :=
   naturalOfType n : valOfType n Natural.
 
-(* 
+(*
 *** Local Variables: ***
-*** coq-load-path: ("../infra" "../constr") ***
+*** coq-load-path: ((".." "Lvc")) ***
 *** End: ***
 *)
