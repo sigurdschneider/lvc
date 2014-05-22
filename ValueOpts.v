@@ -49,6 +49,8 @@ Definition eqns_freeVars (Gamma:eqns) := fold union (map freeVars Gamma) ∅.
 Definition entails Gamma Γ' := (forall E, satisfiesAll E Gamma -> satisfiesAll E Γ')
 (* /\ eqns_freeVars Γ' ⊆ eqns_freeVars Gamma *).
 
+Definition not_entails Gamma gamma := (exists E, satisfiesAll E Gamma /\ ~ satisfies E gamma).
+
 Definition onvLe X (E E':onv X)
 := forall x v, E x = Some v -> E' x = Some v.
 
@@ -110,9 +112,8 @@ Inductive eqn_sound : list (params*set var*eqns*eqns*eqns*eqns)
     -> eqn_sound Lv (stmtExp x e b) Gamma Γ'
                 (ann1 (G,G') ang) (ann1 (e'::nil) cl)
 | EqnIf Lv e e' b1 b2 Gamma Γ' cl1 cl2 G G' ang1 ang2
-  : eqn_sound Lv b1 Gamma Γ' ang1 cl1
-  -> eqn_sound Lv b2 Gamma Γ' ang2 cl2
- (* TODO: include information about condition *)
+  : (not_entails Gamma (e, Con val_false) -> eqn_sound Lv b1 Gamma Γ' ang1 cl1)
+  -> (not_entails Gamma (e, Con val_true) -> eqn_sound Lv b2 Gamma Γ' ang2 cl2)
   -> moreDefined Gamma Γ' e e'
   -> eqn_sound Lv (stmtIf e b1 b2) Gamma Γ'
               (ann2 (G,G') ang1 ang2) (ann2 (e'::nil) cl1 cl2)
@@ -664,6 +665,16 @@ Proof.
   - intros. eapply H. hnf; intros. eapply H1; eauto.
 Qed.
 
+Lemma not_entails_antitone Gamma Γ' gamma
+: not_entails Γ' gamma
+  -> Gamma ⊆ Γ'
+  -> not_entails Gamma gamma.
+Proof.
+  intros. hnf; intros.
+  edestruct H as [E ?]; dcr.
+  eexists E; intros; split; eauto using satisfiesAll_monotone; eauto.
+Qed.
+
 Lemma eqn_sound_monotone Es Γ1 Γ2 Γ1' Γ2' s ang an
 : ssa s ang
   -> eqn_sound Es s Γ1 Γ2 ang an
@@ -677,7 +688,7 @@ Proof.
     + rewrite H3; reflexivity.
     + rewrite H4; reflexivity.
     + eapply moreDefined_monotone; eauto.
-  - econstructor; eauto using moreDefined_monotone.
+  - econstructor; intros; eauto using moreDefined_monotone, not_entails_antitone.
   - econstructor; eauto using entails_monotone, moreDefinedArgs_monotone.
   - econstructor; eauto using moreDefined_monotone.
   - econstructor; eauto using moreDefinedArgs_monotone.
@@ -740,6 +751,16 @@ Proof.
   eapply entails_transitive.
 Qed.
 
+Lemma not_entails_entails_antitone Gamma Γ' gamma
+: not_entails Γ' gamma
+  -> entails Γ' Gamma
+  -> not_entails Gamma gamma.
+Proof.
+  intros. hnf; intros.
+  edestruct H as [E ?]; dcr.
+  eexists E; intros; split; eauto.
+Qed.
+
 Lemma eqn_sound_entails_monotone Es Γ1 Γ2 Γ1' Γ2' s ang an
 : ssa s ang
   -> eqn_sound Es s Γ1 Γ2 ang an
@@ -751,7 +772,8 @@ Proof.
   - econstructor; eauto.
     eapply IHeqn_sound; eauto using entails_inert.
     + eapply moreDefined_entails_monotone; eauto.
-  - econstructor; eauto using moreDefined_entails_monotone.
+  - econstructor; eauto using moreDefined_entails_monotone,
+    not_entails_entails_antitone.
   - econstructor; eauto using entails_transitive, moreDefinedArgs_entails_monotone.
   - econstructor; eauto using moreDefined_entails_monotone.
   - econstructor; eauto using moreDefinedArgs_entails_monotone.
@@ -803,6 +825,12 @@ Proof.
   - exploiT moreDefined; eauto. inv X.
     + pfold. econstructor 3; try eapply star2_refl; eauto. stuck2.
     + pfold. case_eq (val2bool y); intros.
+      assert (not_entails Gamma (e, Con val_false)). {
+        hnf; intros. eexists V; split; eauto.
+        intro. hnf in H10. simpl in *.
+        rewrite <- H7 in H10. inv H10.
+        rewrite val2bool_false in H9. congruence.
+      }
       econstructor; try eapply plus2O.
       econstructor; eauto using eq_sym. reflexivity.
       econstructor; eauto using eq_sym. reflexivity.
@@ -815,7 +843,13 @@ Proof.
         clear_all; reflexivity.
       * rewrite H22, H4; reflexivity.
       * rewrite H5, H22; reflexivity.
-      * econstructor; try eapply plus2O.
+      * assert (not_entails Gamma (e, Con val_true)). {
+          hnf; intros. eexists V; split; eauto.
+          intro. hnf in H10. simpl in *.
+          rewrite <- H7 in H10. inv H10.
+          rewrite val2bool_true in H9; congruence.
+        }
+        econstructor; try eapply plus2O.
         econstructor 3; eauto using eq_sym. reflexivity.
         econstructor 3; eauto using eq_sym. reflexivity.
         {
