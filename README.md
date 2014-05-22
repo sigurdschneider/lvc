@@ -1,26 +1,33 @@
 # LVC Compiler Project
 IL - IL/I, IL/F and Coherence
+
 Translation validation for register assignment and SSA construction
+
 This is an advancement of http://www.ps.uni-saarland.de/~sdschn/master
-    
+
 
 ## Dependencies
 
-- Coq 
-    All sources compiled with Coq version 8.4pl4 (May 2014).
+- **Coq**
 
-- Containers
+    Sources compile with Coq version 8.4pl4 (May 2014).
+
+- **Coq Containers Plugin**
+
     You need to have the containers library installed:
     http://coq.inria.fr/pylons/contribs/view/Containers/v8.4
 
-- ocamlbuild
-    Should come with your OCAML distribution.
+- **OCaml** (including ocamlbuild)
 
-- menhir
+    Sources compile with ocaml version 3.12.1. OCaml should include ocamlbuild.
+
+- **menhir**
+
     A parser generator mostly compatible with ocamlyacc (but better at explaining conflicts):
     http://gallium.inria.fr/~fpottier/menhir/
 
-- ruby [optional]
+- **ruby** [optional]
+
     If you want build times to be output, you need ruby.
 
 ## Building LVC
