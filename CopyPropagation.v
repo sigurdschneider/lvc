@@ -266,7 +266,7 @@ Proof.
         cset_tac; intuition.
       * eapply cp_moreDefined; eauto.
       * rewrite rename_exp_freeVars; eauto. rewrite H0; eauto.
-  - econstructor; eauto.
+  - econstructor; intros. eauto.
     + eapply eqn_sound_entails_monotone; eauto.
       eapply IHssa1; eauto.
       * rewrite H4; simpl; eauto.
