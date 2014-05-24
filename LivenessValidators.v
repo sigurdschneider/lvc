@@ -4,12 +4,13 @@ Instance argsLive_dec Caller Callee Y Z
       : Computable (argsLive Caller Callee Y Z).
 Proof.
   decide(length Y = length Z).
-  eapply length_length_eq in e. general induction e.
-  left; econstructor.
-  decide(y ∈ Callee <-> live_exp_sound x Caller);
-  edestruct (IHe Caller Callee); try dec_solve; try eassumption; try inv an; eauto; try tauto.
-  right; intro. eapply argsLive_length in H. congruence.
-Qed.
+  - general induction Y; destruct Z; isabsurd.
+    + left; econstructor.
+    + decide (v ∈ Callee <-> live_exp_sound a Caller);
+      edestruct (IHY Caller Callee); try dec_solve; try eassumption;
+      try inv an; eauto; try tauto.
+  - right; intro. eapply argsLive_length in H. congruence.
+Defined.
 
 (*TODO: generalize this, it might be useful *)
 Instance list_get_live_computable Y lv
@@ -22,7 +23,7 @@ Proof.
       * left; intros. inv H; eauto using get.
       * right; intros; eauto using get.
     + right; eauto using get.
-Qed.
+Defined.
 
 Definition live_sound_dec Lv s slv (an:annotation s slv)
       : Computable (live_sound Lv s slv).
