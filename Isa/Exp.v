@@ -32,7 +32,7 @@ Set Implicit Arguments.
   Instance isVar_dec e : Computable (isVar e).
   Proof.
     destruct e; try dec_solve.
-  Qed.
+  Defined.
 
   Definition getVar (e:exp) :=
     match e with
