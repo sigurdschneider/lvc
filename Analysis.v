@@ -5,8 +5,29 @@ Require Import Val Var Env EnvTy IL Annotation Lattice DecSolve LengthEq MoreLis
 
 Set Implicit Arguments.
 
-Inductive direction :=
-  Forward | Backward.
+(** Specification of an analysis and generic fixpoint iteration algorithm *)
+
+Record Analysis (Dom: Type) := makeAnalysis {
+  dom_po :> PartialOrder Dom;
+  analysis_step : stmt -> Dom -> Dom;
+  initial_value : stmt -> Dom
+}.
+
+Arguments Analysis Dom.
+
+Section AnalysisAlgorithm.
+  Variable Dom : Type.
+  Variable analysis : Analysis Dom.
+  Hypothesis first : Dom -> (Dom -> Dom * bool) -> Dom.
+
+  Definition step s (d:Dom) :=
+    let d' := analysis_step analysis s d in
+    (d', if [@poLt_dec _ (dom_po analysis) d' d] then false else true).
+
+  Definition fixpoint (s:stmt) :=
+    first (initial_value analysis s) (step s).
+
+End AnalysisAlgorithm.
 
 Inductive anni (A:Type) : Type :=
 | anni0 : anni A
@@ -102,13 +123,6 @@ Instance PartialOrder_ann Dom `{PartialOrder Dom}
   poEq_dec := @ann_lt_dec _ _ poEq poEq_dec
 }.
 
-Record Analysis (Dom: Type) := makeAnalysis {
-  dom_po :> PartialOrder Dom;
-  analysis_step : stmt -> Dom -> Dom;
-  initial_value : stmt -> Dom
-}.
-
-Arguments Analysis Dom.
 
 Definition makeForwardAnalysis Dom FunDom (BSL:BoundedSemiLattice Dom)
          (ftransform : stmt -> (list FunDom * Dom) -> (list FunDom * anni Dom))
@@ -123,21 +137,100 @@ Definition makeBackwardAnalysis Dom FunDom (BSL:BoundedSemiLattice Dom)
 makeAnalysis _
              (fun s d => backward btransform bmkFunDom s nil d)
              (fun s => setAnn s bottom).
+Module SSA.
 
-Section AnalysisAlgorithm.
-  Variable Dom : Type.
-  Variable analysis : Analysis Dom.
-  Hypothesis first : Dom -> (Dom -> Dom * bool) -> Dom.
+Definition forward Dom {BSL:BoundedSemiLattice Dom} FunDom
+         (ftransform : stmt -> (list FunDom * Dom) -> (list FunDom * anni Dom))
+         (fmkFunDom : params -> Dom -> FunDom) :=
+  fix forward
+      (st:stmt) (a:list FunDom * Dom) {struct st}
+: list FunDom * Dom :=
+  match st, a with
+    | stmtExp x e s as st, (AL, d) =>
+      match ftransform st (AL, d) with
+        | (AL, anni1 a) => forward s (AL, a)
+        | _ => (AL, d)
+      end
+    | stmtIf x s t as st, (AL, d) =>
+      match ftransform st (AL, d) with
+        | (AL, anni2 a1 a2) =>
+          let (AL', a1') := forward s (AL, a1) in
+          let (AL'', a2') := forward t (AL', a2) in
+          (AL'', join a1' a2')
+        | _ => (AL, d)
+      end
+    | stmtGoto f Y as st, (AL, d) =>
+      match ftransform st (AL, d) with
+        | (AL, anni1 a) => (AL, a)
+        | _ => (AL, d)
+      end
+    | stmtReturn x as st, (AL, d) =>
+      match ftransform st (AL, d) with
+        | (AL, anni1 a) => (AL, a)
+        | _ => (AL, d)
+      end
+    | stmtExtern x f Y s as st, (AL, d) =>
+      match ftransform st (AL, d) with
+        | (AL, anni1 a) => forward s (AL, a)
+        | _ => (AL, d)
+      end
+    | stmtLet Z s t as st, (AL, d) =>
+      match ftransform st (fmkFunDom Z d::AL, d) with
+        | (AL, anni2 a1 a2) =>
+          let (AL', a1') := forward s (fmkFunDom Z d::AL, a1) in
+          let (AL'', a2') := forward t (fmkFunDom Z d::AL', a2) in
+          (AL'', join a1' a2')
+        | _ => (AL, d)
+      end
+  end.
+(*
+Definition forward Dom FunDom
+         (ftransform : stmt -> (list FunDom * Dom) -> (list FunDom * Dom))
+         (fmkFunDom : params -> Dom -> FunDom) :=
+  fix forward
+      (st:stmt) (a:list FunDom * Dom) {struct st}
+: list FunDom * Dom :=
+  match st, a with
+    | stmtExp x e s as st, (AL, d) =>
+      forward s (ftransform st (AL, d))
+    | stmtIf x s t as st, (AL, d) =>
+      forward t (forward s (ftransform st (AL, d)))
+    | stmtGoto f Y as st, (AL, d) =>
+      ftransform st (AL, d)
+    | stmtReturn x as st, (AL, d) =>
+      ftransform st (AL, d)
+    | stmtExtern x f Y s as st, (AL, d) =>
+      forward s (ftransform st (AL, d))
+    | stmtLet Z s t as st, (AL, d) =>
+      forward t (forward s( ftransform st (fmkFunDom Z d::AL, d)))
+  end.
+*)
+Record Analysis (Dom: Type) := makeAnalysis {
+  dom_po :> PartialOrder Dom;
+  analysis_step : stmt -> Dom -> Dom;
+  initial_value : stmt -> Dom
+}.
 
-  Definition step s (d:Dom) :=
-    let d' := analysis_step analysis s d in
-    (d', if [@poLt_dec _ (dom_po analysis) d' d] then false else true).
+Arguments Analysis Dom.
 
-  Definition fixpoint (s:stmt) :=
-    first (initial_value analysis s) (step s).
+Definition makeForwardAnalysis Dom FunDom (BSL:BoundedSemiLattice Dom)
+         (ftransform : stmt -> (list FunDom * Dom) -> (list FunDom * anni Dom))
+         (fmkFunDom : params -> Dom -> FunDom)
+: Analysis Dom :=
+makeAnalysis _ (fun s d => snd (forward ftransform fmkFunDom s (nil, d))) (fun s => bottom).
 
-End AnalysisAlgorithm.
 
+(*
+Definition makeBackwardAnalysis Dom FunDom (BSL:BoundedSemiLattice Dom)
+           (btransform : list FunDom -> stmt -> anni Dom -> Dom)
+           (bmkFunDom : params -> ann Dom -> FunDom)
+: Analysis Dom :=
+makeAnalysis _
+             (fun s d => backward btransform bmkFunDom s nil d)
+             (fun s => setAnn s bottom).
+*)
+
+End SSA.
 
 (*
 *** Local Variables: ***
