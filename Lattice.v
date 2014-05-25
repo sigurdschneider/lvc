@@ -6,27 +6,28 @@ http://www.cs.ox.ac.uk/people/daniel.james/lattice.html
 Updated to accomodate non-extensional equalities
 *)
 
-Require Export Containers.OrderedType Setoid Coq.Classes.Morphisms.
+Require Export Containers.OrderedType Setoid Coq.Classes.Morphisms Computable.
 
-(**
-TODO: make Order a prerequite of Lattice; then
-then things become simpler(?). The problem of
-going round in a circle does not show up (derive
-Order from Lattice and then Lattice from order;
-is the order the same?).
-*)
+Class PartialOrder (Dom:Type) := {
+  poLt : Dom -> Dom -> Prop;
+  poLt_dec : forall d d', Computable (poLt d d');
+  poEq : Dom -> Dom -> Prop;
+  poEq_dec : forall d d', Computable (poEq d d')
+}.
 
-Class SemiLattice (A : Type) `{OrderedType A} := {
+
+Class BoundedSemiLattice (A : Type) := {
+  bsl_partial_order :> PartialOrder A;
+
   bottom : A;
   join : A -> A -> A;
 
-  join_idempotent : forall a, join a a === a;
-  join_commutative : forall a b, join a b === join b a;
-  join_associative : forall a b c, join (join a b) c === join a (join b c)
+  join_idempotent : forall a, poEq (join a a) a;
+  join_commutative : forall a b, poEq (join a b) (join b a);
+  join_associative : forall a b c, poEq (join (join a b) c) (join a (join b c));
 
-(* todo: add those back (A needs _eq and _lt defs then)  
-  join_respects_eq :> Proper (_eq ==> _eq ==> _eq) join;
-  join_respects_le :> Proper (_lt ==> _lt ==> _lt) join*)
+  join_respects_eq :> Proper (poEq ==> poEq ==> poEq) join;
+  join_respects_le :> Proper (poLt ==> poLt ==> poLt) join
 }.
 
 (*
@@ -38,10 +39,10 @@ Class Lattice (A : Type) `{OrderedType A} := {
   meet_commutative : forall a b, meet a b === meet b a;
   meet_associative : forall a b c, meet (meet a b) c === meet a (meet b c);
   meet_absorptive : forall a b : A, meet a (join a b) === a;
- 
+
   meet_respects_eq :> Proper (equal ==> _eq ==> _eq) meet;
   meet_respects_le :> Proper (_le ==> _le ==> _le) meet;
-  
+
   join_idempotent : forall a, join a a === a;
   join_commutative : forall a b, join a b === join b a;
   join_associative : forall a b c, join (join a b) c === join a (join b c);
@@ -60,7 +61,7 @@ Local Open Scope lattice_scope.
 
 
 Section SemiLatticeTheory.
-  Context `{l : SemiLattice A}.
+  Context `{l : BoundedSemiLattice A}.
   Hint Immediate join_idempotent join_commutative join_associative.
 
   (** *)
@@ -187,8 +188,8 @@ End LatticeTheory.
 *)
 
 
-(* 
+(*
 *** Local Variables: ***
 *** coq-load-path: (("." "Lvc")) ***
 *** End: ***
-*) 
+*)
