@@ -57,7 +57,7 @@ End feq.
 
 Arguments feq {X} {Y} {R} f g.
 
-Notation "f ≡ g" := (@feq _ _ eq f g) (no associativity, at level 70) : map_scope.
+Notation "f ≡ g" := (@feq _ _ eq f g) (no associativity, at level 70) : fmap_scope.
 
 
 Lemma equiv_nequiv_combine W `{OrderedType W} (x y z:W)
@@ -153,7 +153,7 @@ Lemma foo3 W `{OrderedType W} (x y:W)
 intros. eqs.
 *)
 
-Section Map.
+Section MapUpdate.
   Variable X Y : Type.
   Context `{OrderedType X}.
 
@@ -176,9 +176,9 @@ Section Map.
   Proof.
     intros. unfold update. eqdec.
   Qed.
-End Map.
+End MapUpdate.
 
-Notation "f [ w <- x ]" := (update f w x) (at level 29, left associativity) : map_scope.
+Notation "f [ w <- x ]" := (update f w x) (at level 29, left associativity) : fmap_scope.
 
 Ltac lookup_eq_tac :=
   match goal with
@@ -250,7 +250,7 @@ Ltac lud :=
   end).
 
 Section UpdateFacts.
-  Open Scope map_scope.
+  Open Scope fmap_scope.
 
   Variable X Y : Type.
   Context `{OrderedType X}.

@@ -6,7 +6,7 @@ Require Export MapBasics MapLookup MapAgreement.
 Set Implicit Arguments.
 
 Section MapUpdate.
-  Open Scope map_scope.
+  Open Scope fmap_scope.
   Variable X : Type.
   Context `{OrderedType X}.
   Variable Y : Type.
@@ -67,13 +67,14 @@ Section MapUpdateList.
   Variable Y : Type.
   Context `{Equivalence Y}.
 
-  Open Scope map_scope.
+  Open Scope fmap_scope.
 
   Fixpoint update_with_list XL YL (m:X -> Y) :=
     match XL, YL with
       | x::XL, y::YL => (update_with_list XL YL m)[x <- y]
       | _, _ => m
     end.
+
 
   Notation "f [ w <-- x ]" := (update_with_list w x f) (at level 29, left associativity).
 
@@ -154,6 +155,7 @@ Qed.
 End MapUpdateList.
 
 Notation "f [ w <-- x ]" := (update_with_list w x f) (at level 29, left associativity).
+
 
 Instance update_inst X `{OrderedType X} Y `{OrderedType Y} :
   Proper ((@feq _ _ _eq) ==> _eq ==> _eq ==> (@feq _ _ _eq)) (@update X Y _).

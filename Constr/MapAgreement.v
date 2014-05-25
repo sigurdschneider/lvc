@@ -1,4 +1,4 @@
-Require Export Setoid Coq.Classes.Morphisms.  
+Require Export Setoid Coq.Classes.Morphisms.
 Require Import EqDec Computable Util AutoIndTac.
 Require Export CSet Containers.SetDecide.
 Require Export MapBasics MapLookup.
@@ -6,14 +6,14 @@ Require Export MapBasics MapLookup.
 Set Implicit Arguments.
 
 Section MapAgreement.
-  Open Scope map_scope.
+  Open Scope fmap_scope.
 
   Variable X : Type.
   Context `{OrderedType X}.
 
   Variable Y : Type.
 
-  Definition agree_on (R:relation Y) (D:set X) (E E':X -> Y) := 
+  Definition agree_on (R:relation Y) (D:set X) (E E':X -> Y) :=
     forall x, x ∈ D -> R (E x) (E' x).
 
   Global Instance agree_on_refl `{Reflexive Y} L
@@ -28,7 +28,7 @@ Section MapAgreement.
     intros; hnf; firstorder.
   Qed.
 
-  Lemma agree_on_trans `{Transitive Y} L 
+  Lemma agree_on_trans `{Transitive Y} L
     : Transitive (agree_on R L).
   Proof.
     hnf; intros; hnf; intros. transitivity (y x0); eauto.
@@ -59,7 +59,7 @@ Section MapAgreement.
     -> agree_on R (lv\{{x}}) E E'
     -> agree_on R lv (E [x <- v]) (E' [x <- v']).
   Proof.
-    intros ? A. hnf; intros; lud; eauto; 
+    intros ? A. hnf; intros; lud; eauto;
     eapply A. eapply in_in_minus; eauto. eapply neq_not_in_single. eqs.
   Qed.
 
@@ -93,19 +93,19 @@ Section MapAgreement.
   Qed.
 
 End MapAgreement.
- 
+
 Lemma lookup_set_agree X `{OrderedType X} Y `{OrderedType Y} s (m m':X -> Y)
 `{Proper _ (respectful _eq _eq) m} `{Proper _ (respectful _eq  _eq) m'}
 : @agree_on _ _ _ _eq s m m' -> lookup_set m s [=] lookup_set m' s.
 Proof.
-  intros; split; intros. 
+  intros; split; intros.
   - eapply lookup_set_spec; eauto. eapply lookup_set_spec in H4; dcr; eauto.
     eexists x; split; eauto. rewrite H7; eauto. eapply H3; eauto.
   - eapply lookup_set_spec; eauto. eapply lookup_set_spec in H4; dcr; eauto.
-    eexists x; split; eauto. rewrite H7; symmetry; eapply H3; eauto. 
+    eexists x; split; eauto. rewrite H7; symmetry; eapply H3; eauto.
 Qed.
 
-Definition eagree_on X `{OrderedType X} Y R `{Equivalence Y R} D E E' 
+Definition eagree_on X `{OrderedType X} Y R `{Equivalence Y R} D E E'
            := @agree_on X _ Y R D E E'.
 
 Arguments eagree_on {X} {H} {Y} {R} {H0} D E E'.
@@ -154,7 +154,7 @@ Proof.
   unfold decision_procedure in H3; simpl in H3.
   destruct (equiv_computable Y (f x) (g x)); isabsurd; eauto.
   hnf; intros. simpl.
-  destruct (decision_procedure (f x === g x)); 
+  destruct (decision_procedure (f x === g x));
   destruct (decision_procedure (f y === g y)); try reflexivity.
   exfalso. eapply n. rewrite <- H4; eauto.
   exfalso. eapply n. rewrite H4; eauto.
@@ -165,7 +165,7 @@ Proof.
   hnf; intros. simpl. specialize (H4 _ H5).
   destruct (equiv_computable Y (f x) (g x)); isabsurd; eauto.
   hnf; intros. simpl.
-  destruct (decision_procedure (f x === g x)); 
+  destruct (decision_procedure (f x === g x));
   destruct (decision_procedure (f y === g y)); try reflexivity.
   exfalso. eapply n. rewrite <- H5; eauto.
   exfalso. eapply n. rewrite H5; eauto.
@@ -173,7 +173,7 @@ Defined.
 
 Extraction Inline agree_on_computable.
 
-(* 
+(*
  *** Local Variables: ***
  *** coq-load-path: (("../" "Lvc")) ***
  *** End: ***

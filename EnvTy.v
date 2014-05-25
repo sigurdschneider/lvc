@@ -2,10 +2,9 @@ Require Import Var Val Env CSet Map.
 
 Set Implicit Arguments.
 
-Open Scope map_scope.
 (** * Types for Environments *)
 
-Definition envOfType (E:onv val) (ET:onv ty) : Prop := 
+Definition envOfType (E:onv val) (ET:onv ty) : Prop :=
   forall x t, ET x = Some t -> exists v, E x = Some v /\ valOfType v t.
 
 Definition ompty X : onv X := fun _ => None.
@@ -22,11 +21,11 @@ Qed.
 (** Anything is well typed under the empty environment *)
 Lemma envOfType_empty E
   : envOfType E (ompty ty).
-Proof. 
+Proof.
   intros x t neq. inv neq.
 Qed.
 
-(** ** A relation characterizing sub-environment *) 
+(** ** A relation characterizing sub-environment *)
 
 Definition subEnv Y (E E':onv Y)
   := forall x y, E x = Some y -> E' x = Some y.
@@ -36,7 +35,7 @@ Lemma subEnv_refl Y (E:onv Y)
 Proof.
   firstorder.
 Qed.
- 
+
 Lemma subEnv_empty Y (E:onv Y)
   : subEnv (ompty Y) E.
 Proof.
@@ -80,19 +79,19 @@ Lemma typed_eq_sym X Y ET : forall E E', @typed_eq X Y ET E E' -> typed_eq ET E'
   hnf. unfold typed_eq. intros. symmetry; eauto.
 Qed.
 
-Global Instance typed_eq_Sym {X Y ET} `{Defaulted X} : Symmetric (typed_eq ET) := 
+Global Instance typed_eq_Sym {X Y ET} `{Defaulted X} : Symmetric (typed_eq ET) :=
   @typed_eq_sym X Y ET.
 
 Lemma typed_eq_trans X Y ET : forall E E' E'',
   @typed_eq X Y ET E E' -> typed_eq ET E' E'' -> typed_eq ET E E''.
   hnf. unfold typed_eq. intros. erewrite H; eauto.
 Qed.
-  
-Global Instance typed_eq_Trans {X Y ET} `{Defaulted X} : Transitive (typed_eq ET) := 
+
+Global Instance typed_eq_Trans {X Y ET} `{Defaulted X} : Transitive (typed_eq ET) :=
   @typed_eq_trans X Y ET.
 
 
-Lemma typed_eq_update Y (ET:onv Y) (E E':env val) (y:Y) (x:var) (z:val) 
+Lemma typed_eq_update Y (ET:onv Y) (E E':env val) (y:Y) (x:var) (z:val)
   : typed_eq ET E E' -> typed_eq (ET [x <- Some y]) (E [x <- z]) (E' [x <- z]).
 Proof.
   intros A a t eq. lud. eauto.
@@ -118,13 +117,13 @@ Qed.
 
 (* some orphaned definitions *)
 
-Definition updD (D:env nat) (Z:list var) := 
+Definition updD (D:env nat) (Z:list var) :=
   update_list D (fun x => S(D x)) Z.
 
 Lemma updD_no_param D Z x
   : x ∉ of_list Z
   -> (updD D Z) x === D x.
-Proof. 
+Proof.
   intros; unfold updD. eapply update_list_no_upd; eauto.
 Qed.
 
@@ -137,7 +136,7 @@ Qed.
 
 
 
-(* 
+(*
 *** Local Variables: ***
 *** coq-load-path: (("." "Lvc")) ***
 *** End: ***

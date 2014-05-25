@@ -6,7 +6,7 @@ Require Export MapBasics.
 Set Implicit Arguments.
 
 Section MapLookup.
-  Open Scope map_scope.
+  Open Scope fmap_scope.
   Variable X : Type.
   Context `{OrderedType X}.
   Variable Y : Type.

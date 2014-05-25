@@ -3,8 +3,6 @@ Require Export Util Relations Get Drop Var Val Exp Env Map CSet AutoIndTac MoreL
 
 Set Implicit Arguments.
 
-Open Scope map_scope.
-
 Ltac stuck2 :=
   let σ := fresh "σ" in
   let A := fresh "A" in

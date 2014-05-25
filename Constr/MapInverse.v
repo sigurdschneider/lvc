@@ -1,4 +1,4 @@
-Require Export Setoid Coq.Classes.Morphisms.  
+Require Export Setoid Coq.Classes.Morphisms.
 Require Import EqDec Computable Util LengthEq AutoIndTac.
 Require Export CSet Containers.SetDecide.
 
@@ -13,7 +13,7 @@ Section MapInverse.
   Variable Y : Type.
   Context `{OrderedType Y}.
 
-  Open Scope map_scope.
+  Open Scope fmap_scope.
 
   Definition inverse_on (D:set X) (E:X -> Y) (E': Y -> X)
     := forall x, x ∈ D -> E' (E x) === x.
@@ -26,7 +26,7 @@ Section MapInverse.
 
   Lemma inverse_on_update (D:set X) (E:X -> Y) (E': Y -> X) x
     : inverse_on D E E'
-    -> injective_on D E 
+    -> injective_on D E
     -> x ∈ D
     -> inverse_on D (E [x <- E x]) (E' [E x <- x]).
   Proof.
@@ -38,11 +38,11 @@ Section MapInverse.
 
   Lemma inverse_on_update_minus (D:set X) (E:X -> Y) (E': Y -> X) x
     : inverse_on (D\{{x}}) E E'
-    -> injective_on (D ∪ {{x}}) E 
+    -> injective_on (D ∪ {{x}}) E
     -> inverse_on D (E [x <- E x]) (E' [E x <- x]).
   Proof.
     intros. hnf. intros. lud.
-    eapply H2; eauto; cset_tac; intuition. 
+    eapply H2; eauto; cset_tac; intuition.
     rewrite <- e. eapply H1. cset_tac; intuition.
     eapply H1. cset_tac; intuition.
   Qed.
@@ -57,7 +57,7 @@ Section MapInverse.
     eapply IHL; eauto. hnf; intros. eapply H2. simpl. eapply add_2; eauto.
   Qed.
 
-  Lemma update_with_list_proper (ϱ:X->Y) (ϱ':Y->X) Z 
+  Lemma update_with_list_proper (ϱ:X->Y) (ϱ':Y->X) Z
     : Proper (_eq ==> _eq) ϱ -> Proper (_eq ==> _eq) ϱ' ->
       Proper (_eq ==> _eq) (update_with_list (lookup_list ϱ Z) Z ϱ').
   Proof.
@@ -67,26 +67,26 @@ Section MapInverse.
     eapply IHZ. intuition. intuition. eauto.
   Qed.
 End MapInverse.
- 
+
 Arguments inverse_on {X} {H} {Y} D E E'.
 
-Lemma inverse_on_lookup_list_eq {X} `{OrderedType X} {Y} `{OrderedType Y} 
+Lemma inverse_on_lookup_list_eq {X} `{OrderedType X} {Y} `{OrderedType Y}
   lv (ϱ:X->Y) (ϱ':Y->X) Z `{Proper _ (_eq ==> _eq) ϱ} `{Proper _ (_eq ==> _eq) ϱ'}
 : inverse_on lv ϱ ϱ'
-  -> of_list Z ⊆ lv 
+  -> of_list Z ⊆ lv
   -> @fpeq _ _ _eq _ _ (update_with_list (lookup_list ϱ Z) Z ϱ') ϱ'.
 Proof.
   general induction Z; simpl; eauto. split. reflexivity. eauto.
-  split. edestruct IHZ; eauto. 
+  split. edestruct IHZ; eauto.
   + hnf; intros. eapply H4; simpl; eapply add_2; eauto.
   + decompose records. erewrite H5; eauto. intro.
     lud. rewrite <- H3. rewrite e. reflexivity.
     eapply H4; simpl; eapply add_1; eauto.
-  + split. hnf; intros. 
-    lud; isabsurd. 
+  + split. hnf; intros.
+    lud; isabsurd.
     eapply update_with_list_proper; intuition.
     intuition.
-Qed.  
+Qed.
 
 
 Global Instance inverse_on_morphism {X} `{OrderedType X} {Y} `{OrderedType Y}
@@ -131,27 +131,27 @@ Proof.
   - rewrite H1 in H5; eauto.
 Qed.
 
-Lemma inverse_on_update_with_list {X} `{OrderedType X} {Y} `{OrderedType Y} 
+Lemma inverse_on_update_with_list {X} `{OrderedType X} {Y} `{OrderedType Y}
   (ϱ:X->Y) (ϱ':Y->X) Z lv `{Proper _ (_eq ==> _eq) ϱ} `{Proper _ (_eq ==> _eq) ϱ'}
-: injective_on (lv ∪ of_list Z) ϱ 
+: injective_on (lv ∪ of_list Z) ϱ
   -> inverse_on (lv \ of_list Z) ϱ ϱ'
   -> inverse_on (lv) ϱ (update_with_list (lookup_list ϱ Z) Z ϱ').
-Proof. 
+Proof.
   intros.
   hnf; intros.
-  decide (x ∈ of_list Z). clear H4. 
-  induction Z. exfalso.  simpl in i. eapply not_in_empty in i; eauto. 
+  decide (x ∈ of_list Z). clear H4.
+  induction Z. exfalso.  simpl in i. eapply not_in_empty in i; eauto.
   simpl. lud. eapply H3; eauto. simpl. eapply union_3. intuition.
   eapply union_2; eauto. eapply IHZ. eapply injective_on_incl; eauto.
   eapply incl_union_lr; eauto. reflexivity. simpl. intuition. simpl in i.
   eapply add_3; eauto. decide (a === x); eauto. exfalso. eapply H4.
   rewrite e; reflexivity.
-  
+
   assert (ϱ x ∉ of_list(lookup_list ϱ Z)).
   rewrite of_list_lookup_list. rewrite lookup_set_spec. intro; dcr.
   eapply H3 in H9; eauto. eapply n. rewrite H9; eauto. eapply union_2; eauto.
   eapply union_3; eauto. eauto. eauto.
-  erewrite update_with_list_no_update; eauto. eapply H4; eauto using in_in_minus. 
+  erewrite update_with_list_no_update; eauto. eapply H4; eauto using in_in_minus.
 Qed.
 
 Lemma inverse_on_union {X} `{OrderedType X} {Y} (f:X->Y) (g:Y->X) D D'
@@ -162,13 +162,13 @@ Proof.
   intros. hnf; intros. cset_tac. destruct H2; eauto.
 Qed.
 
-Lemma lookup_list_inverse_on {X} `{OrderedType X} {Y} `{OrderedType Y} f g 
+Lemma lookup_list_inverse_on {X} `{OrderedType X} {Y} `{OrderedType Y} f g
   `{Proper _ (_eq ==> _eq) f} `{Proper _ (_eq ==> _eq) g} L L'
   : lookup_list f L === L'
   -> lookup_list g L' === L
   -> inverse_on (of_list L) f g.
 Proof.
-  intros. general induction L; simpl in *. 
+  intros. general induction L; simpl in *.
   hnf; intros. exfalso; cset_tac; eauto.
   hnf; intros. eapply add_iff in H5. destruct H5.
   destruct L'; simpl in *; inv H3; inv H4.
@@ -208,34 +208,34 @@ Lemma inverse_on_agree_on_2 {X} `{OrderedType X} {Y} `{OrderedType Y}
    -> inverse_on D f' g'
    -> agree_on _eq D f f'
    -> agree_on _eq (lookup_set f D) g g'.
-Proof. 
+Proof.
   intros. unfold agree_on. intros.
   eapply lookup_set_spec in H8; eauto. destruct H8; dcr.
   rewrite H10 at 1. assert (f x0 === f' x0).  eapply H7; eauto.
   rewrite H8 in H10.
-  rewrite H10. rewrite H5; eauto. rewrite H6; eauto. 
+  rewrite H10. rewrite H5; eauto. rewrite H6; eauto.
 Qed.
 
-Lemma inverse_on_agree_on {X} `{OrderedType X} {Y} `{OrderedType Y} 
+Lemma inverse_on_agree_on {X} `{OrderedType X} {Y} `{OrderedType Y}
       (f f': X -> Y) (g g': Y -> X) (G:set X)
  `{Proper _ (_eq ==> _eq) f}  `{Proper _ (_eq ==> _eq) f'}
  `{Proper _ (_eq ==> _eq) g}  `{Proper _ (_eq ==> _eq) g'}
-  : inverse_on G f g 
+  : inverse_on G f g
     -> agree_on _eq G f f'
     -> agree_on _eq (lookup_set f G) g g'
     -> inverse_on G f' g'.
 Proof.
-  intros; hnf; intros. 
+  intros; hnf; intros.
   hnf in H6. rewrite <- H6; eauto.
   hnf in H7. rewrite <- H7; eauto.
   eapply lookup_set_spec; eauto.
 Qed.
 
-Lemma inverse_on_injective_on {X} `{OrderedType X} {Y} `{OrderedType Y} 
+Lemma inverse_on_injective_on {X} `{OrderedType X} {Y} `{OrderedType Y}
       (f: X -> Y) (g: Y -> X) `{Proper _ (_eq ==> _eq) g}  G
   : inverse_on G f g -> injective_on G f.
 Proof.
-  intros; hnf; intros. hnf in H1. rewrite <- H2. 
+  intros; hnf; intros. hnf in H1. rewrite <- H2.
   rewrite H1; eauto. eauto.
 Qed.
 
@@ -246,7 +246,7 @@ Proof.
   intros. hnf; intros. reflexivity.
 Qed.
 
-(* 
+(*
 *** Local Variables: ***
 *** coq-load-path: (("../" "Lvc")) ***
 *** End: ***

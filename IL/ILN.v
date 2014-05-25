@@ -3,8 +3,6 @@ Require Export Util Var Val Exp Env Map CSet AutoIndTac IL Bisim Infra.Status.
 
 Set Implicit Arguments.
 
-Open Scope map_scope.
-
 Inductive nstmt : Type :=
 | nstmtExp    (x : var) (e: exp) (s : nstmt)
 | nstmtIf     (e : exp) (s : nstmt) (t : nstmt)

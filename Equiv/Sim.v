@@ -5,7 +5,6 @@ Require Export EventsActivated StateType paco.
 Set Implicit Arguments.
 Unset Printing Records.
 
-Open Scope map_scope.
 (** * Simulation *)
 (** A characterization of simulation equivalence on states; works only for deterministic semantics *)
 
