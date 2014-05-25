@@ -205,13 +205,6 @@ Definition forward Dom FunDom
       forward t (forward s( ftransform st (fmkFunDom Z d::AL, d)))
   end.
 *)
-Record Analysis (Dom: Type) := makeAnalysis {
-  dom_po :> PartialOrder Dom;
-  analysis_step : stmt -> Dom -> Dom;
-  initial_value : stmt -> Dom
-}.
-
-Arguments Analysis Dom.
 
 Definition makeForwardAnalysis Dom FunDom (BSL:BoundedSemiLattice Dom)
          (ftransform : stmt -> (list FunDom * Dom) -> (list FunDom * anni Dom))
