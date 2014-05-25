@@ -71,7 +71,7 @@ Definition forward Dom FunDom
   match st, a with
     | stmtExp x e s as st, (AL, ann1 d ans) =>
       let (AL', ai) := (ftransform st (AL, d)) in
-      forward s (AL, setAnni ans ai)
+      forward s (AL', setAnni ans ai)
     | stmtIf x s t as st, (AL, ann2 d ans ant) =>
       let (AL, ai) := (ftransform st (AL, d)) in
       let (AL', ans') := forward s (AL, setAnni ans ai) in
