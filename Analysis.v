@@ -23,11 +23,6 @@ Fixpoint setAnni {A} (a:ann A) (ai:anni A) : ann A :=
     | an, _ => an
   end.
 
-Class BackwardAnalysis Dom FunDom `{BoundedSemiLattice Dom} := {
-  btransform : list FunDom -> stmt -> anni Dom -> Dom;
-  bmkFunDom : params -> ann Dom -> FunDom
-}.
-
 Definition backward Dom FunDom
            (btransform : list FunDom -> stmt -> anni Dom -> Dom)
            (bmkFunDom : params -> ann Dom -> FunDom) :=
