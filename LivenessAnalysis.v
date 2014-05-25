@@ -1,9 +1,18 @@
 Require Import CSet Le.
 
 Require Import Plus Util AllInRel Map CSet.
-Require Import Val Var Env EnvTy IL Annotation Lattice DecSolve AbsInt Filter.
+Require Import Val Var Env EnvTy IL Annotation Lattice DecSolve Analysis Filter.
 
-Instance set_var_semilattice : SemiLattice (set var) := {
+Instance PartialOrder_Subset_Equal X `{OrderedType X} : PartialOrder (set X) :=
+{
+  poLt := Subset;
+  poLt_dec := @Subset_computable _ _;
+  poEq := Equal;
+  poEq_dec := @Equal_computable _ _
+}.
+
+Instance set_var_semilattice : BoundedSemiLattice (set var) := {
+  bsl_partial_order := PartialOrder_Subset_Equal _;
   bottom := ∅;
   join := union
 }.
@@ -14,26 +23,24 @@ Defined.
 
 Definition liveness_transform (DL:list (set var * params)) st a :=
   match st, a with
-    | stmtExp x e s as st, ann1 d ans =>
-      (getAnn ans \ {{x}}) ∪ (if [x ∈ getAnn ans] then Exp.freeVars e else ∅)
-    | stmtIf e s t as st, ann2 d ans ant =>
-      Exp.freeVars e ∪ getAnn ans ∪ getAnn ant
-    | stmtGoto f Y as st, ann0 d as an =>
+    | stmtExp x e s as st, anni1 d =>
+      (d \ {{x}}) ∪ (if [x ∈ d] then Exp.freeVars e else ∅)
+    | stmtIf e s t as st, anni2 ds dt =>
+      Exp.freeVars e ∪ ds ∪ dt
+    | stmtGoto f Y as st, anni0 =>
       let (lv,Z) := nth (counted f) DL (∅,nil) in
       lv \ of_list Z ∪ list_union (List.map Exp.freeVars (filter_by (fun x => B[x ∈ lv]) Z Y))
-    | stmtReturn e as st, ann0 d as an => Exp.freeVars e
-    | stmtExtern x f Y s as st, ann1 d ans as an =>
-      (getAnn ans \ {{x}}) ∪ list_union (List.map Exp.freeVars Y)
-    | stmtLet Z s t as st, ann2 d ans ant =>
-       (getAnn ans \ of_list Z) ∪ getAnn ant
+    | stmtReturn e as st, anni0 => Exp.freeVars e
+    | stmtExtern x f Y s as st, anni1 d=>
+      (d \ {{x}}) ∪ list_union (List.map Exp.freeVars Y)
+    | stmtLet Z s t as st, anni2 ds dt =>
+       (ds \ of_list Z) ∪ dt
     | _, an => ∅
   end.
 
 
-Instance liveness_analysis : AbstractInterpretation (set var) (set var * params) := {
-  transform := liveness_transform;
-  mkFunDom := fun Z an => (getAnn an, Z)
-}.
+Definition liveness_analysis := makeBackwardAnalysis _ liveness_transform (fun Z an => (getAnn an, Z)).
+
 
 
 (*
