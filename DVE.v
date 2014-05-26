@@ -1,7 +1,7 @@
 Require Import CSet Le.
 Require Import Plus Util AllInRel Map.
 
-Require Import Val Var Env EnvTy IL Annotation.
+Require Import Val EqDec Computable Var Env EnvTy IL Annotation.
 Require Import Sim Fresh Filter Liveness Filter MoreExp.
 
 Set Implicit Arguments.
@@ -12,7 +12,13 @@ Fixpoint compile (LV:list (set var * params)) (s:stmt) (a:ann (set var)) :=
     | stmtExp x e s, ann1 lv an =>
       if [x ∈ getAnn an] then stmtExp x e (compile LV s an)
                          else compile LV s an
-    | stmtIf e s t, ann2 _ ans ant => stmtIf e (compile LV s ans) (compile LV t ant)
+    | stmtIf e s t, ann2 _ ans ant =>
+      if [e = Con val_true] then
+        (compile LV s ans)
+      else if [e = Con val_false ] then
+        (compile LV t ant)
+      else
+        stmtIf e (compile LV s ans) (compile LV t ant)
     | stmtGoto f Y, ann0 lv =>
       let lvZ := nth (counted f) LV (∅,nil) in
       stmtGoto f (filter_by (fun y => B[y ∈ fst lvZ]) (snd lvZ) Y)
@@ -95,19 +101,32 @@ Proof.
       eapply IHs; eauto. eapply agree_on_update_dead; eauto.
       eapply agree_on_incl; eauto. rewrite <- H9. cset_tac; intuition.
     + pfold. econstructor 3; [| eapply star2_refl|]; eauto. stuck.
-  - remember (exp_eval V e). symmetry in Heqo.
-    exploit exp_eval_live_agree; eauto.
-    destruct o. case_eq (val2bool v); intros.
-    pfold; econstructor; try eapply plus2O.
-    econstructor; eauto. reflexivity.
-    econstructor; eauto. reflexivity.
-    left; eapply IHs1; eauto using agree_on_incl.
-    pfold; econstructor; try eapply plus2O.
-    econstructor 3; eauto. reflexivity.
-    econstructor 3; eauto. reflexivity.
-    left; eapply IHs2; eauto using agree_on_incl.
-    pfold. econstructor 3; try eapply star2_refl; eauto.
-    stuck.
+  - repeat destruct if.
+    + subst e.
+      eapply sim'_expansion_closed.
+      eapply IHs1; eauto. eapply agree_on_incl; eauto.
+      eapply S_star2 with (y:=EvtTau) (yl:=nil).
+      econstructor. reflexivity. eapply val2bool_true. eapply star2_refl.
+      eapply star2_refl.
+    + subst e.
+      eapply sim'_expansion_closed.
+      eapply IHs2; eauto. eapply agree_on_incl; eauto.
+      eapply S_star2 with (y:=EvtTau) (yl:=nil).
+      econstructor 3. reflexivity. eapply val2bool_false. eapply star2_refl.
+      eapply star2_refl.
+    + remember (exp_eval V e). symmetry in Heqo.
+      exploit exp_eval_live_agree; eauto.
+      destruct o. case_eq (val2bool v); intros.
+      pfold; econstructor; try eapply plus2O.
+      econstructor; eauto. reflexivity.
+      econstructor; eauto. reflexivity.
+      left; eapply IHs1; eauto using agree_on_incl.
+      pfold; econstructor; try eapply plus2O.
+      econstructor 3; eauto. reflexivity.
+      econstructor 3; eauto. reflexivity.
+      left; eapply IHs2; eauto using agree_on_incl.
+      pfold. econstructor 3; try eapply star2_refl; eauto.
+      stuck.
   - destruct (get_dec L (counted l)) as [[[bE bZ bs]]|].
     remember (omap (exp_eval V) Y). symmetry in Heqo.
     exploit (get_nth); try eapply H4; eauto. rewrite X; simpl.
@@ -179,8 +198,13 @@ Fixpoint compile_live (s:stmt) (a:ann (set var)) : ann (set var) :=
     | stmtExp x e s, ann1 lv an as a =>
       if [x ∈ getAnn an] then ann1 lv (compile_live s an)
                          else compile_live s an
-    | stmtIf x s t, ann2 lv ans ant =>
-      ann2 lv (compile_live s ans) (compile_live t ant)
+    | stmtIf e s t, ann2 lv ans ant =>
+      if [e = Con val_true] then
+        compile_live s ans
+      else if [e = Con val_false ] then
+        compile_live t ant
+      else
+        ann2 lv (compile_live s ans) (compile_live t ant)
     | stmtGoto f Y, ann0 lv as a => a
     | stmtReturn x, ann0 lv as a => a
     | stmtExtern x f Y s, ann1 lv an as a =>
@@ -202,6 +226,9 @@ Proof.
   intros. general induction H; simpl; eauto; try reflexivity.
   - destruct if; simpl; try reflexivity.
     rewrite IHtrue_live_sound. rewrite <- H1. cset_tac; intuition.
+  - repeat destruct if; simpl; try reflexivity.
+    + etransitivity; eauto.
+    + etransitivity; eauto.
 Qed.
 
 Definition compile_LV (LV:list (set var *params)) :=
@@ -215,7 +242,8 @@ Proof.
   intros. general induction H; simpl; eauto using live_sound, compile_live_incl.
   - destruct if; eauto. econstructor; eauto.
     rewrite compile_live_incl; eauto.
-  - econstructor; eauto; rewrite compile_live_incl; eauto.
+  - repeat destruct if; eauto.
+    + econstructor; eauto; rewrite compile_live_incl; eauto.
   - econstructor. eapply (map_get_1 (fun lvZ => let Z' := List.filter (fun x => B[x ∈ fst lvZ]) (snd lvZ) in
                       (fst lvZ, Z')) H); eauto.
     simpl. rewrite <- H0. rewrite minus_inter_empty. reflexivity.
