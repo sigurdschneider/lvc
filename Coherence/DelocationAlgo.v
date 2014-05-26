@@ -170,12 +170,6 @@ Proof.
   cset_tac; intuition.
 Qed.
 
-Lemma list_eq_length A R l l'
-  : @list_eq A R l l' -> length l = length l'.
-Proof.
-  intros. general induction H; simpl; eauto.
-Qed.
-
 Lemma trs_monotone3 (DL : list (option (set var))) AP AP' ZL s lv a
  : trs DL (zip (fun Z a => match a with Some a => Z++to_list a | None => Z end) ZL AP) s lv a
    -> list_eq (fstNoneOrR Subset) AP AP'
