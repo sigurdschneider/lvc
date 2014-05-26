@@ -1,4 +1,4 @@
-Require Import Util DecSolve Val CSet Map Env EnvTy Option.
+Require Import Util EqDec DecSolve Val CSet Map Env EnvTy Option.
 Require Import Arith.
 
 Set Implicit Arguments.
@@ -39,6 +39,13 @@ Set Implicit Arguments.
       | Var y => y
       | _ => 0
     end.
+
+  Global Instance inst_eq_dec_exp : EqDec exp eq.
+  hnf; intros. change ({x = y} + {x <> y}).
+  decide equality. eapply inst_eq_dec_val.
+  eapply inst_eq_dec_val.
+  eapply nat_eq_eqdec.
+  Defined.
 
   Fixpoint exp_eval (E:onv val) (e:exp) : option val :=
     match e with
