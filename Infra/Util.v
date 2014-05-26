@@ -331,6 +331,12 @@ Proof.
   inv H; simpl; eauto.
 Qed.
 
+Lemma list_eq_length A R l l'
+  : @list_eq A R l l' -> length l = length l'.
+Proof.
+  intros. general induction H; simpl; eauto.
+Qed.
+
 (*
 *** Local Variables: ***
 *** coq-load-path: (("../" "Lvc")) ***
