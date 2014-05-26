@@ -8,20 +8,25 @@ Unset Printing Records.
 
 Fixpoint subst (ϱ:env var) (s:stmt) : stmt :=
   match s with
-    | stmtExp x e s => let x' := fresh_stable (lookup_set ϱ (freeVars s \ {{x}})) x in
-                       stmtExp x' (rename_exp ϱ e) (subst (ϱ[x <- x']) s)
+    | stmtExp x e s =>
+      let x' := fresh_stable (lookup_set ϱ (freeVars s \ {{x}})) x in
+      stmtExp x' (rename_exp ϱ e) (subst (ϱ[x <- x']) s)
     | stmtIf e s t => stmtIf (rename_exp ϱ e) (subst ϱ s) (subst ϱ t)
     | stmtGoto l Y => stmtGoto l (List.map (rename_exp ϱ) Y)
     | stmtReturn e => stmtReturn (rename_exp ϱ e)
+    | stmtExtern x f Y s =>
+      let x' := fresh_stable (lookup_set ϱ (freeVars s \ {{x}})) x in
+      stmtExtern x' f (List.map (rename_exp ϱ) Y) (subst (ϱ[x <- x']) s)
     | stmtLet Z s t => let Z' := fresh_stable_list (lookup_set ϱ (freeVars s \ of_list Z)) Z in
                        stmtLet Z' (subst (ϱ[Z <-- Z']) s) (subst ϱ t)
   end.
+
 Notation "f '[' L ']'" := (lookup_list f L) (at level 70).
 
 Lemma comp_update (ϱ1: var -> var) x (v:val) (E:var -> val) D
  : x ∈ D ->
    injective_on D ϱ1
-   -> agree_on D ((ϱ1 ∘ E) [x <- v]) ((ϱ1 ∘ E[ϱ1 x <- v])).
+   -> agree_on eq D ((ϱ1 ∘ E) [x <- v]) ((ϱ1 ∘ E[ϱ1 x <- v])).
 Proof.
   intros. unfold comp.  hnf; intros. lud.
   rewrite e in H4. exfalso. eapply H4. reflexivity.
@@ -29,7 +34,7 @@ Proof.
 Qed.
 
 Lemma comp_update_2 (ϱ1: var -> var) x (v:var) (E:var -> val) D
- : agree_on D ((ϱ1 ∘ E) [x <- E v]) ((ϱ1[x <- v] ∘ E)).
+ : agree_on eq D ((ϱ1 ∘ E) [x <- E v]) ((ϱ1[x <- v] ∘ E)).
 Proof.
   intros. unfold comp.  hnf; intros. lud.
 Qed.
@@ -37,7 +42,7 @@ Qed.
 Lemma comp_update_3 (ϱ1: var -> var) x (v:val) (E:var -> val) D
  : ϱ1 x = x
    -> x ∉ lookup_set ϱ1 (D\{{x}})
-   -> agree_on D ((ϱ1 ∘ E) [x <- v]) ((ϱ1 ∘ E[x <- v])).
+   -> agree_on eq D ((ϱ1 ∘ E) [x <- v]) ((ϱ1 ∘ E[x <- v])).
 Proof.
   intros. unfold comp.  hnf; intros. lud.
   rewrite <- H in e. exfalso. eapply H5. rewrite H2. eauto.
@@ -57,12 +62,14 @@ Lemma rename_contr s ϱ ϱ'
 Proof.
   unfold comp.
   general induction s; simpl;  f_equal; eauto using rename_exp_comp, comp_lookup_list.
-  rewrite map_map. eapply map_ext_get_eq.
-  intros. rewrite rename_exp_comp. reflexivity.
+  - rewrite map_map. eapply map_ext_get_eq.
+    intros. rewrite rename_exp_comp. reflexivity.
+  - rewrite map_map. eapply map_ext_get_eq.
+    intros. rewrite rename_exp_comp. reflexivity.
 Qed.
 
 Lemma exp_subst_agree (ϱ ϱ':var->var) (E E' : onv val) (e:exp)
-: agree_on (Exp.freeVars e) (ϱ ∘ E) (ϱ' ∘ E')
+: agree_on eq (Exp.freeVars e) (ϱ ∘ E) (ϱ' ∘ E')
   -> exp_eval E (rename_exp ϱ e) = exp_eval E' (rename_exp ϱ' e).
 Proof.
   general induction e; simpl; eauto.
@@ -75,7 +82,7 @@ Qed.
 
 Lemma agree_on_comp_fresh (ϱ:var -> var) (E: var -> var) x x' y (D: set var)
   : x' ∉ lookup_set ϱ (D \ {{x}})
-    -> agree_on D (ϱ [x <- y] ∘ E)
+    -> agree_on eq D (ϱ [x <- y] ∘ E)
                 (ϱ [x <- x'] ∘ E [x' <- E y]).
 Proof.
   intros. hnf; intros. unfold comp.
@@ -86,8 +93,8 @@ Qed.
 
 Lemma agree_on_comp_fresh_shift X `{Equivalence X} (ϱ:var -> var) (E E': env X) x y (v:X) (D: set var)
  : y ∉ lookup_set ϱ (D\{{x}})
-   -> agree_on (D\{{x}}) (ϱ ∘ E) E'
-   -> agree_on D (ϱ [x <- y] ∘ E [y <- v]) (E' [x <- v]).
+   -> agree_on R (D\{{x}}) (ϱ ∘ E) E'
+   -> agree_on R D (ϱ [x <- y] ∘ E [y <- v]) (E' [x <- v]).
 Proof.
   intros. hnf; intros. simpl. unfold comp.
   lud.
@@ -101,12 +108,13 @@ Qed.
 Lemma agree_on_comp_fresh_both X `{Equivalence X} (ϱ ϱ':env var) (E E': env X) (x y:var) (y':var) (v:X) (D: set var)
  : y ∉ lookup_set ϱ (D\{{x}})
    -> y' ∉ lookup_set ϱ' (D\{{x}})
-   -> agree_on (D\{{x}}) (ϱ ∘ E) (ϱ' ∘ E')
-   -> agree_on D (ϱ [x <- y] ∘ E [y <- v]) (ϱ' [x <- y'] ∘ E' [y' <- v]).
+   -> agree_on R (D\{{x}}) (ϱ ∘ E) (ϱ' ∘ E')
+   -> agree_on R D (ϱ [x <- y] ∘ E [y <- v]) (ϱ' [x <- y'] ∘ E' [y' <- v]).
 Proof.
   intros.
-  eapply agree_on_trans. eapply agree_on_comp_fresh_shift; eauto.
-  eapply agree_on_sym. eapply agree_on_comp_fresh_shift; eauto using agree_on_refl.
+  eapply agree_on_trans. eapply H. eapply agree_on_comp_fresh_shift; eauto.
+  eapply agree_on_sym. eapply H. eapply agree_on_comp_fresh_shift; eauto.
+  eapply agree_on_refl; eauto. eapply H.
 Qed.
 
 Lemma agree_on_comp_fresh_both_list X `{Equivalence X} (ϱ ϱ':var -> var) (E E': env X) Z Y Y' (VL: list X) (D: set var)
@@ -117,8 +125,8 @@ Lemma agree_on_comp_fresh_both_list X `{Equivalence X} (ϱ ϱ':var -> var) (E E'
    -> unique Y'
    -> (of_list Y) ∩ lookup_set ϱ D [=] ∅
    -> (of_list Y') ∩ lookup_set ϱ' D [=] ∅
-   -> agree_on D (ϱ ∘ E) (ϱ' ∘ E')
-   -> agree_on (D ∪ of_list Z) (ϱ [Z <-- Y] ∘ E [Y <-- VL]) (ϱ' [Z <-- Y'] ∘ E' [Y' <-- VL]).
+   -> agree_on R D (ϱ ∘ E) (ϱ' ∘ E')
+   -> agree_on R (D ∪ of_list Z) (ϱ [Z <-- Y] ∘ E [Y <-- VL]) (ϱ' [Z <-- Y'] ∘ E' [Y' <-- VL]).
 Proof.
   intros.
   eapply length_length_eq in H0.
@@ -193,8 +201,8 @@ Lemma agree_on_comp_fresh_shift_list X `{Equivalence X} (ϱ:env var)
    -> length Y = length VL
    -> unique Y
    -> (of_list Y) ∩ lookup_set ϱ D [=] ∅
-   -> agree_on D (ϱ ∘ E) E'
-   -> agree_on (D ∪ of_list Z) (ϱ [Z <-- Y] ∘ E [Y <-- VL]) (E' [Z <-- VL]).
+   -> agree_on R D (ϱ ∘ E) E'
+   -> agree_on R (D ∪ of_list Z) (ϱ [Z <-- Y] ∘ E [Y <-- VL]) (E' [Z <-- VL]).
 Proof.
   intros.
   eapply length_length_eq in H0.
@@ -236,7 +244,7 @@ Proof.
 Qed.
 
 Lemma exp_subst_agree_list E E' Y ϱ ϱ'
-:  agree_on (list_union (List.map Exp.freeVars Y)) (ϱ ∘ E) (ϱ' ∘ E')
+:  agree_on eq (list_union (List.map Exp.freeVars Y)) (ϱ ∘ E) (ϱ' ∘ E')
    -> forall (n : nat) (x y : exp),
        get (List.map (rename_exp ϱ) Y) n x ->
        get (List.map (rename_exp ϱ') Y) n y -> exp_eval E x = exp_eval E' y.
@@ -248,10 +256,10 @@ Proof.
   eapply incl_list_union. eapply map_get_1; eauto. reflexivity.
 Qed.
 
-Lemma subst_fresh L L' (E E':onv val) s (ϱ ϱ':var->var)
- : simL L L'
+Lemma subst_fresh L L' (E E':onv val) s (ϱ ϱ':var->var) r
+ : simL'  L L'
    -> agree_on (freeVars s) (ϱ ∘ E) (ϱ' ∘ E')
-   -> sim (L, E, subst ϱ s)
+   -> sim'r r (L, E, subst ϱ s)
           (L', E' , subst ϱ' s).
 Proof.
   general induction s; simpl in * |- *.
