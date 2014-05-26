@@ -1,4 +1,4 @@
-Require Import OrderedTypeEx Util List Get Computable.
+Require Import OrderedTypeEx Util List Get Computable DecSolve.
 
 Set Implicit Arguments.
 (** * Lemmas and tactics for lists *)
@@ -16,7 +16,7 @@ Qed.
 
 
 Fixpoint tabulate X (x:X) n : list X :=
-  match n with 
+  match n with
     | 0 => nil
     | S n => x::tabulate x n
   end.
@@ -31,7 +31,7 @@ Section ParametricZip.
       | x::L, y::L' => f x y::zip L L'
       | _, _ => nil
     end.
-  
+
   Lemma zip_get L L' n (x:X) (y:Y)
   : get L n x -> get L' n y -> get (zip L L') n (f x y).
   Proof.
@@ -39,19 +39,19 @@ Section ParametricZip.
   Qed.
 
   Lemma get_zip L L' n (z:Z)
-  : get (zip L L') n z 
+  : get (zip L L') n z
     -> { x : X & {y : Y | get L n x /\ get L' n y /\ f x y = z } } .
   Proof.
     intros. general induction L; destruct L'; isabsurd.
-    simpl in H. destruct n. 
+    simpl in H. destruct n.
     - eexists a; eexists y. inv H; eauto using get.
     - edestruct IHL as [x' [y' ?]]; dcr; try inv H; eauto 20 using get.
   Qed.
-  
+
   Lemma zip_tl L L'
     : tl (zip L L') = zip (tl L) (tl L').
   Proof.
-    general induction L; destruct L'; simpl; eauto. 
+    general induction L; destruct L'; simpl; eauto.
     destruct L; simpl; eauto.
   Qed.
 
@@ -109,17 +109,17 @@ Section ParametricMapIndex.
       | x::L => f n x::mapi_impl (S n) L
       | _ => nil
     end.
-  
+
   Definition mapi := mapi_impl 0.
 
   Lemma mapi_get_impl L i y n
   : getT (mapi_impl i L) n y -> { x : X & (getT L n x * (f (n+i) x = y))%type }.
   Proof.
-    intros. general induction X0; simpl in *; 
+    intros. general induction X0; simpl in *;
             destruct L; simpl in *; inv Heql;
           try now (econstructor; eauto using getT).
     edestruct IHX0; dcr; eauto using getT.
-    eexists x1; split; eauto using getT. 
+    eexists x1; split; eauto using getT.
     rewrite <- b. f_equal; omega.
   Qed.
 
@@ -192,8 +192,8 @@ Ltac list_eqs :=
 Ltac inv_map H :=
   match type of H with
     | get (List.map ?f ?L) ?n ?x =>
-      match goal with 
-        | [H' : get ?L ?n ?y |- _ ] => 
+      match goal with
+        | [H' : get ?L ?n ?y |- _ ] =>
           let EQ := fresh "EQ" in pose proof (map_get f H' H) as EQ; invc EQ
         | _ => let X := fresh "X" in let EQ := fresh "EQ" in
               pose proof (map_get_4 _ f H) as X; destruct X as [? [? EQ]]; invc EQ
@@ -204,26 +204,36 @@ Lemma list_eq_get {X:Type} (L L':list X) eqA n x
   : list_eq eqA L L' -> get L n x -> exists x', get L' n x' /\ eqA x x'.
 Proof.
   intros. general induction H.
-  inv H0. 
-  inv H1. eauto using get. 
+  inv H0.
+  inv H1. eauto using get.
   edestruct IHlist_eq; eauto. firstorder using get.
 Qed.
 
-Instance list_R_dec A (R:A->A->Prop) 
-         `{forall a b, Computable (R a b)} (L:list A) (L':list A) : 
+Instance list_R_dec A (R:A->A->Prop)
+         `{forall a b, Computable (R a b)} (L:list A) (L':list A) :
   Computable (forall n a b, get L n a -> get L' n b -> R a b).
 Proof.
-  general induction L; destruct L'. 
+  general induction L; destruct L'.
   + left; isabsurd.
   + left; isabsurd.
   + left; isabsurd.
   + decide (R a a0). edestruct IHL; eauto.
-    left. intros. inv H0; inv H1; eauto. 
+    left. intros. inv H0; inv H1; eauto.
     right. intro. eapply n; intros. eapply H0; eauto using get.
     right. intro. eapply n. eauto using get.
 Qed.
 
-(* 
+Instance list_eq_computable X (R:X -> X-> Prop) `{forall x y, Computable (R x y)}
+: forall (L L':list X), Computable (list_eq R L L').
+Proof.
+  intros. decide (length L = length L').
+  - general induction L; destruct L'; isabsurd; try dec_solve.
+    decide (R a x); try dec_solve.
+    edestruct IHL with (L':=L'); eauto; try dec_solve.
+  - right; intro. exploit list_eq_length; eauto.
+Qed.
+
+(*
 *** Local Variables: ***
 *** coq-load-path: (("../" "Lvc")) ***
 *** End: ***
