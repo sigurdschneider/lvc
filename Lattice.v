@@ -7,13 +7,7 @@ Updated to accomodate non-extensional equalities
 *)
 
 Require Export Containers.OrderedType Setoid Coq.Classes.Morphisms Computable.
-
-Class PartialOrder (Dom:Type) := {
-  poLt : Dom -> Dom -> Prop;
-  poLt_dec : forall d d', Computable (poLt d d');
-  poEq : Dom -> Dom -> Prop;
-  poEq_dec : forall d d', Computable (poEq d d')
-}.
+Require Export Libs.PartialOrder.
 
 
 Class BoundedSemiLattice (A : Type) := {

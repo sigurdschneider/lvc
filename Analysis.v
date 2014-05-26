@@ -1,7 +1,7 @@
 Require Import CSet Le.
 
 Require Import Plus Util AllInRel Map.
-Require Import Val Var Env EnvTy IL Annotation Lattice DecSolve LengthEq MoreList.
+Require Import Val Var Env EnvTy IL Annotation Lattice DecSolve LengthEq MoreList Status AllInRel.
 
 Set Implicit Arguments.
 
@@ -9,7 +9,7 @@ Set Implicit Arguments.
 
 Record Analysis (Dom: Type) := makeAnalysis {
   dom_po :> PartialOrder Dom;
-  analysis_step : stmt -> Dom -> Dom;
+  analysis_step : stmt -> Dom -> status Dom;
   initial_value : stmt -> Dom
 }.
 
@@ -18,11 +18,11 @@ Arguments Analysis Dom.
 Section AnalysisAlgorithm.
   Variable Dom : Type.
   Variable analysis : Analysis Dom.
-  Hypothesis first : Dom -> (Dom -> Dom * bool) -> Dom.
+  Hypothesis first : Dom -> (Dom -> status (Dom * bool)) -> status Dom.
 
   Definition step s (d:Dom) :=
-    let d' := analysis_step analysis s d in
-    (d', if [@poLt_dec _ (dom_po analysis) d' d] then false else true).
+    sdo d' <- analysis_step analysis s d;
+    Success (d', if [@poLt _ (dom_po analysis) d' d] then false else true).
 
   Definition fixpoint (s:stmt) :=
     first (initial_value analysis s) (step s).
@@ -32,10 +32,12 @@ End AnalysisAlgorithm.
 Inductive anni (A:Type) : Type :=
 | anni0 : anni A
 | anni1 (a1:A) : anni A
-| anni2 (a1:A) (a2:A) : anni A.
+| anni2 (a1:A) (a2:A) : anni A
+| anni2opt (a1:option A) (a2:option A) : anni A.
 
 Arguments anni A.
 Arguments anni0 [A].
+
 
 Fixpoint setAnni {A} (a:ann A) (ai:anni A) : ann A :=
   match a, ai with
@@ -115,74 +117,85 @@ Definition forward Dom FunDom
     | _, an => an
   end.
 
-Instance PartialOrder_ann Dom `{PartialOrder Dom}
-: PartialOrder (ann Dom) := {
-  poLt := ann_R poLt;
-  poLt_dec := @ann_lt_dec _ _ poLt poLt_dec;
-  poEq := ann_R poEq;
-  poEq_dec := @ann_lt_dec _ _ poEq poEq_dec
-}.
-
-
 Definition makeForwardAnalysis Dom FunDom (BSL:BoundedSemiLattice Dom)
          (ftransform : stmt -> (list FunDom * Dom) -> (list FunDom * anni Dom))
          (fmkFunDom : params -> ann Dom -> FunDom)
 : Analysis (ann Dom) :=
-makeAnalysis _ (fun s d => snd (forward ftransform fmkFunDom s (nil, d))) (fun s => setAnn s bottom).
+makeAnalysis _ (fun s d => Success (snd (forward ftransform fmkFunDom s (nil, d)))) (fun s => setAnn s bottom).
 
 Definition makeBackwardAnalysis Dom FunDom (BSL:BoundedSemiLattice Dom)
            (btransform : list FunDom -> stmt -> anni Dom -> Dom)
            (bmkFunDom : params -> ann Dom -> FunDom)
 : Analysis (ann Dom) :=
 makeAnalysis _
-             (fun s d => backward btransform bmkFunDom s nil d)
+             (fun s d => Success (backward btransform bmkFunDom s nil d))
              (fun s => setAnn s bottom).
 Module SSA.
 
 Definition forward Dom {BSL:BoundedSemiLattice Dom} FunDom
          (ftransform : stmt -> (list FunDom * Dom) -> (list FunDom * anni Dom))
-         (fmkFunDom : params -> Dom -> FunDom) :=
+         (fmkFunDom : params -> Dom -> FunDom)
+         (fgetDom : FunDom -> Dom) :=
   fix forward
       (st:stmt) (a:list FunDom * Dom) {struct st}
-: list FunDom * Dom :=
+  : status (list FunDom * Dom) :=
   match st, a with
     | stmtExp x e s as st, (AL, d) =>
       match ftransform st (AL, d) with
         | (AL, anni1 a) => forward s (AL, a)
-        | _ => (AL, d)
+        | _ => Error "expression transformer failed"
       end
     | stmtIf x s t as st, (AL, d) =>
       match ftransform st (AL, d) with
-        | (AL, anni2 a1 a2) =>
-          let (AL', a1') := forward s (AL, a1) in
-          let (AL'', a2') := forward t (AL', a2) in
-          (AL'', join a1' a2')
-        | _ => (AL, d)
+        | (AL, anni2opt (Some a1) (Some a2)) =>
+          sdo ALds <- forward s (AL, a1);
+          sdo ALdt <- forward t (fst ALds, a2);
+          Success (fst ALdt, join (snd ALds) (snd ALdt))
+        | (AL, anni2opt None (Some a2)) =>
+          forward t (AL, a2)
+        | (AL, anni2opt (Some a1) None) =>
+          forward s (AL, a1)
+        | _ => Error "condition transformer failed"
       end
     | stmtGoto f Y as st, (AL, d) =>
       match ftransform st (AL, d) with
-        | (AL, anni1 a) => (AL, a)
-        | _ => (AL, d)
+        | (AL, anni1 a) => Success (AL, a)
+        | _ => Error "tailcall transformer failed"
       end
     | stmtReturn x as st, (AL, d) =>
       match ftransform st (AL, d) with
-        | (AL, anni1 a) => (AL, a)
-        | _ => (AL, d)
+        | (AL, anni1 a) => Success (AL, a)
+        | _ => Error "return transformer failed"
       end
     | stmtExtern x f Y s as st, (AL, d) =>
       match ftransform st (AL, d) with
         | (AL, anni1 a) => forward s (AL, a)
-        | _ => (AL, d)
+        | _ => Error "syscall transformer failed"
       end
     | stmtLet Z s t as st, (AL, d) =>
-      match ftransform st (fmkFunDom Z d::AL, d) with
-        | (AL, anni2 a1 a2) =>
-          let (AL', a1') := forward s (fmkFunDom Z d::AL, a1) in
-          let (AL'', a2') := forward t (fmkFunDom Z d::AL', a2) in
-          (AL'', join a1' a2')
-        | _ => (AL, d)
+      match ftransform st (fmkFunDom Z bottom::AL, d) with
+        | (AL', anni2 a1 a2) =>
+          sdo ALdt <- forward t (AL', a2);
+          sdo a1' <- option2status (hd_error (fst ALdt)) "FunDom undefined" ;
+          sdo ALds <- forward s (fst ALdt, fgetDom a1');
+          Success (tl (fst ALdt), join (snd ALds) (snd ALdt))
+        | _ => Error "function binding transformer failed"
       end
   end.
+
+(*
+Lemma forward_FunDom_length Dom {BSL:BoundedSemiLattice Dom} FunDom
+         (ftransform : stmt -> (list FunDom * Dom) -> (list FunDom * anni Dom))
+         (fmkFunDom : params -> Dom -> FunDom)
+         s (AL:list FunDom) (a:Dom) r
+ : forward ftransform fmkFunDom s (AL, a) = Success r
+   -> length AL = length (fst r).
+Proof.
+  general induction s; simpl in H.
+  let_case_eq.
+Qed.
+*)
+
 (*
 Definition forward Dom FunDom
          (ftransform : stmt -> (list FunDom * Dom) -> (list FunDom * Dom))
@@ -206,11 +219,12 @@ Definition forward Dom FunDom
   end.
 *)
 
-Definition makeForwardAnalysis Dom FunDom (BSL:BoundedSemiLattice Dom)
+Definition makeForwardAnalysis Dom FunDom (BSL:BoundedSemiLattice Dom) (PO:PartialOrder FunDom)
          (ftransform : stmt -> (list FunDom * Dom) -> (list FunDom * anni Dom))
          (fmkFunDom : params -> Dom -> FunDom)
-: Analysis Dom :=
-makeAnalysis _ (fun s d => snd (forward ftransform fmkFunDom s (nil, d))) (fun s => bottom).
+         fgetDom
+: Analysis (list FunDom * Dom) :=
+makeAnalysis _ (fun s d => forward ftransform fmkFunDom fgetDom s d) (fun s => (nil, bottom)).
 
 
 (*
