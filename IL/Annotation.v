@@ -1,5 +1,6 @@
 Require Import List.
 Require Import Util Relations Get Drop Var Val Exp Env Map CSet AutoIndTac MoreList IL DecSolve.
+Require Import Libs.PartialOrder.
 
 Set Implicit Arguments.
 
@@ -153,6 +154,14 @@ Proof.
     destruct (ann_lt_dec a2 b1); try dec_solve.
     destruct (ann_lt_dec a3 b2); try dec_solve.
 Defined.
+
+Instance PartialOrder_ann Dom `{PartialOrder Dom}
+: PartialOrder (ann Dom) := {
+  poLt := ann_R poLt;
+  poLt_dec := @ann_lt_dec _ _ poLt poLt_dec;
+  poEq := ann_R poEq;
+  poEq_dec := @ann_lt_dec _ _ poEq poEq_dec
+}.
 
 
 (*
