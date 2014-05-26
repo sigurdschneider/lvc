@@ -121,7 +121,9 @@ let rec print_ann p ident s =
       (print_ann p (ident+2) s)
       ^ "\n" ^ print_ident ident ^  "\n" ^ print_ident (ident+2) ^ (print_ann p (ident+2) t) ^ "\n"
 
-let rec generic_first d f =
+(* First argument is discarded. It is the type argument that extraction makes explicit *)
+let rec generic_first dummy d f =
     match (f d) with
-      | dd, true -> Printf.printf "."; generic_first dd f
-      | dd, false -> dd
+      | Lvc.Success (dd, true) -> (* Printf.printf "."; *) generic_first dummy dd f
+      | Lvc.Success (dd, false) -> Lvc.Success dd
+      | Lvc.Error s -> Lvc.Error s

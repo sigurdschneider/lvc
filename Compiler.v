@@ -3,6 +3,7 @@ Require Import Util AllInRel IL EnvTy RenameApart Sim Status Annotation.
 Require Liveness LivenessValidators ParallelMove ILN LivenessAnalysis.
 Require Coherence Delocation DelocationAlgo DelocationValidator Allocation AllocationAlgo.
 Require CopyPropagation DVE.
+Require ConstantPropagation ConstantPropagationAnalysis.
 
 Require Import ExtrOcamlBasic.
 Require Import ExtrOcamlZBigInt.
@@ -16,19 +17,24 @@ Section Compiler.
 Hypothesis allocation_oracle : stmt -> ann (set var) -> (var -> var) -> status (var -> var).
 Hypothesis ssa_construction : stmt -> ann (option (set var)) * ann (list var).
 Hypothesis parallel_move : var -> list var -> list var -> (list(list var * list var)).
-Hypothesis first : ann (set var) -> ( ann (set var) -> ann (set var) * bool) -> ann (set var).
+Hypothesis first : forall (A:Type), A -> ( A -> status (A * bool)) -> status A.
 
+Arguments first {A} _ _.
 
-Definition livenessAnalysis (s:stmt) :=
-@AbsInt.analysis (set var) Subset (@Subset_computable _ _ ) first _ _ _ LivenessAnalysis.liveness_analysis s.
+Definition livenessAnalysis :=
+Analysis.fixpoint LivenessAnalysis.liveness_analysis first.
+
+Definition constantPropagationAnalysis :=
+Analysis.fixpoint ConstantPropagationAnalysis.constant_propagation_analysis first.
+
 
 Definition additionalArguments s lv :=
   fst (DelocationAlgo.computeParameters nil nil nil s lv).
 
 Class ToString (T:Type) := toString : T -> string.
 
-Hypothesis Dummy : Type.
-Hypothesis print_string : Dummy -> string -> Dummy.
+Hypothesis OutputStream : Type.
+Hypothesis print_string : OutputStream -> string -> OutputStream.
 
 Hypothesis toString_nstmt : ILN.nstmt -> string.
 Instance ToString_nstmt : ToString ILN.nstmt := toString_nstmt.
@@ -46,32 +52,37 @@ Instance ToString_live : ToString (set var) := toString_live.
 Hypothesis toString_list : list var -> string.
 Instance ToString_list : ToString (list var) := toString_list.
 
-Notation "'///' S '///' x '///' y ';' s" := (let S := print_string S (x ++ "\n" ++ toString y ++ "\n\n") in s) (at level 200).
+Notation "S '<<' x '<<' y ';' s" := (let S := print_string S (x ++ "\n" ++ toString y ++ "\n\n") in s) (at level 1, left associativity).
 
-Notation "'ensure' x 'by' y 'fail' S ; s" :=
-  (if [ y ] then s else (Error ("Error: " ++ x),S)) (at level 200).
+Definition ensure P `{Computable P} (s: string) : status unit :=
+if [P] then Success tt else Error s.
 
-Definition toILF (ilin:ILN.nstmt) (S:Dummy) : status IL.stmt * Dummy :=
-  /// S /// "Input " /// ilin ;
-  match ILN.labIndices ilin nil with
-    | Success ili =>
-      /// S /// "Normalized Input " /// ili ;
-        let lv := livenessAnalysis ili in
-        /// S /// "Liveness Information " /// lv ;
-        ensure "Liveness information sound" by Liveness.true_live_sound nil ili lv fail S;
-          let ilid := DVE.compile nil ili lv in
-          /// S /// "DVE" /// ilid ;
-          let additional_params := additionalArguments ilid lv in
-          /// S /// "Additional Params" /// additional_params ;
-          ensure "Additional parameters sufficient"
-            by Delocation.trs nil nil ili (DVE.compile_live ili lv) additional_params fail S;
-            (Success (Delocation.compile nil ilid additional_params), S)
-    | x => (x,S)
+Arguments ensure P [H] s.
+
+Definition toILF (ilin:ILN.nstmt) : status IL.stmt :=
+  sdo ili <- ILN.labIndices ilin nil;
+  sdo lv <- livenessAnalysis ili;
+  sdo _ <- ensure (Liveness.true_live_sound nil ili lv) "Liveness unsound";
+  let ilid := DVE.compile nil ili lv in
+  let additional_params := additionalArguments ilid (DVE.compile_live ili lv) in
+  sdo _ <- ensure (Delocation.trs nil nil ilid (DVE.compile_live ili lv) additional_params) "Liveness unsound";
+    Success (Delocation.compile nil ilid additional_params).
+
+
+Definition optimize (s:stmt) : status stmt :=
+  let s := rename_apart s in
+  sdo ALAE <- constantPropagationAnalysis s;
+  match ALAE with
+    | (AL, Some AE) =>
+      let s := ValueOpts.compile s
+                                (ConstantPropagation.cp_choose
+                                   (fun x => MapInterface.find x AE) s)
+      in
+      sdo lv <- livenessAnalysis s;
+        Success (DVE.compile nil s lv)
+    | _ => Error "Constant propagation returned bottom"
   end.
-
-Definition optimize (s:stmt) : stmt :=
-  ValueOpts.compile s (CopyPropagation.copyPropagate id s).
-
+(*
 Definition fromILF (s:stmt) : status stmt :=
   let s_renamed_apart := rename_apart s
   in let lv := livenessAnalysis s_renamed_apart in
@@ -87,28 +98,70 @@ Definition fromILF (s:stmt) : status stmt :=
          Error "Register allocation not injective."
      else
        Error "Liveness unsound.".
-
+*)
 Opaque LivenessValidators.live_sound_dec.
 Opaque DelocationValidator.trs_dec.
-(*
-Lemma toILF_correct ilin alv s (E:env val) e
-  : toILF ilin alv = (Success s, e)
+
+Lemma sim_trans {S1} `{StateType S1}
+      (σ1:S1) {S2} `{StateType S2} (σ2:S2) {S3} `{StateType S3} (σ3:S3)
+  : sim σ1 σ2 -> sim σ2 σ3 -> sim σ1 σ3.
+Proof.
+  intros. eapply sim'_sim.
+  refine (sim'_trans (sim_sim' H2) (sim_sim' H3)).
+Qed.
+
+Arguments sim_trans [S1] {H} σ1 [S2] {H0} σ2 [S3] {H1} σ3 _ _.
+
+Lemma bisim_sim {S1} `{StateType S1}
+      (σ1:S1) {S2} `{StateType S2} (σ2:S2)
+  : Bisim.bisim σ1 σ2 -> Sim.sim σ1 σ2.
+Proof.
+  revert σ1 σ2. cofix; intros.
+  inv H1.
+  - econstructor; eauto.
+  - econstructor 2; eauto.
+    + intros. edestruct H6; eauto; dcr. eexists; eauto.
+    + intros. edestruct H7; eauto; dcr. eexists; eauto.
+  - econstructor 4; eauto.
+Qed.
+
+
+Lemma toILF_correct ilin s (E:onv val)
+  : toILF ilin = Success s
    -> @sim _ ILN.statetype_I _ _ (ILN.I.labenv_empty, E, ilin)
           (nil:list F.block, E, s).
 Proof.
-  intros. unfold toILF in H. simpl in *.
+  intros. unfold toILF in H. simpl in *; unfold ensure, additionalArguments in *.
   monadS_inv H.
-  destruct if in EQ0.
-  destruct if in EQ0; isabsurd. inv EQ0.
-  refine (sim_trans (ILN.labIndicesSim_sim _) (sim_trans (ILIToILF.trsR_sim _) (sim_sym (Coherence.srdSim_sim _)))).
-  econstructor; eauto; isabsurd. econstructor; isabsurd.
-  econstructor; eauto using AIR4; eauto; try reflexivity; isabsurd.
+  destruct if in EQ2; isabsurd.
+  destruct if in EQ0; isabsurd. clear x1 EQ0 EQ2 x2.
+  eapply sim_trans with (S2:=I.state).
+  - eapply bisim_sim. eapply ILN.labIndicesSim_sim.
+    econstructor; eauto; isabsurd. econstructor; isabsurd.
+  - case_eq (DelocationAlgo.computeParameters nil nil nil
+              (DVE.compile nil x x0) (DVE.compile_live x x0)); intros.
+    assert (l = nil). admit. subst. eauto.
+    exploit (@DVE.dve_live nil); eauto.
+    exploit Delocation.trs_srd; eauto using PIR2.
+    exploit (@DelocationAlgo.computeParameters_live nil nil nil); eauto using PIR2.
+    eapply sim_trans with (S2:=I.state). Focus 2.
+    eapply bisim_sim. eapply Bisim.bisim_sym.
+    rewrite H in X0.
+    eapply Coherence.srdSim_sim; eauto.
+    econstructor; eauto using AIR2. isabsurd. reflexivity.
+    simpl. rewrite H in t.
+    eapply (@Delocation.live_sound_compile nil nil nil); eauto.
 
-  econstructor; eauto 30 using ILIToILF.compile_typed, agree_on_refl, AIR2, PIR2; isabsurd.
-  eapply (@ILIToILF.live_sound_compile nil); eauto.
-  isabsurd.
-Qed.
+    eapply sim_trans with (S2:=I.state).
+    Focus 2.
+    eapply bisim_sim. eapply Delocation.trsR_sim.
+    rewrite H in t.
+    econstructor; eauto using AIR53. reflexivity.
+    eapply (@Delocation.live_sound_compile nil); eauto. admit.
+    exfalso; admit.
+Admitted.
 
+(*
 Lemma fromILF_correct (s s':stmt) E
   : fromILF s = Success s'
   -> sim (nil:list F.block, E, s) (nil:list I.block, E, s').
@@ -143,11 +196,15 @@ Proof.
   reflexivity.
   congruence.
 Qed.
+*)
 
-Lemma optimize_correct E s lv
- : sim (nil:list F.block, E, s) (nil:list F.block, E, optimize s lv).
+Lemma optimize_correct (E:onv val) s s'
+: optimize s = Success s'
+  -> sim (nil:list F.block, E, s) (nil:list F.block, E, s').
 Proof.
-  unfold optimize.
+  intros.
+  unfold optimize in H.
+  (*
   eapply (@sim_trans F.state _ F.state _).
   instantiate (1:= (nil, E, DVE.compile s lv)).
   admit.
@@ -157,14 +214,18 @@ Proof.
   eapply CopyPropagation.sim_CP.
 Qed.
 *)
+Admitted.
+
 End Compiler.
 
 (*Print Assumptions toILF_correct.
 Print Assumptions fromILF_correct.*)
 
+(* Unset Extraction AccessOpaque. *)
+
 Extraction Inline bind Option.bind toString.
 
-Extraction "extraction/lvc.ml" toILF fromILF AllocationAlgo.linear_scan optimize.
+Extraction "extraction/lvc.ml" toILF AllocationAlgo.linear_scan optimize.
 
 
 

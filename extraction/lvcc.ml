@@ -24,13 +24,20 @@ let main () =
   let toString_list s = explode (print_list (fun x -> print_var !ids x) "," s) in
     Arg.parse speclist set_infile ("usage: lvc [options]");
     try
+      (* Printf.printf "Compiling"; *)
       let file_chan = open_in !infile in
       let lexbuf = Lexing.from_channel  file_chan in
       let ilin = Parser.program Lexer.token lexbuf in
-      match Lvc.toILF generic_first print_string toString_nstmt toString_stmt toString_ann toString_set toString_list ilin 0 with
-      | (Lvc.Success ilf, _) ->
-	 Printf.printf "toILF compilate:\n%s\n\n" (print_stmt !ids 0 ilf);
-      | (Lvc.Error e, _) -> Printf.printf "Compilation failed:\n%s" (implode e);
+      match Lvc.toILF generic_first (* print_string toString_nstmt toString_stmt toString_ann toString_set toString_list *) ilin (* 0 *) with
+      | Lvc.Success ilf ->
+	 (* Printf.printf "toILF compilate:\n%s\n\n" (print_stmt !ids 0 ilf); *)
+	 (match Lvc.optimize generic_first ilf with
+	 | Lvc.Success sopt ->
+	    Printf.printf "Input:\n%s\n\n" (print_nstmt !ids 0 ilin);
+	    Printf.printf "\noptimized compilate:\n%s\n\n" (print_stmt !ids 0 sopt);
+	 | Lvc.Error e -> Printf.printf "Compilation failed:\n%s" (implode e);
+	 )
+      | Lvc.Error e -> Printf.printf "Compilation failed:\n%s" (implode e);
     with Parsing.Parse_error ->
         Printf.eprintf "A parsing error occured \n"
       | Sys_error s-> Printf.eprintf "%s\n" s
