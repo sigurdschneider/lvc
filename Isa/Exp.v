@@ -125,21 +125,6 @@ Set Implicit Arguments.
     intros. general induction H; simpl; cset_tac; intuition.
   Qed.
 
-(*
-  Inductive option_R (A B : Type) (eqA : A -> B -> Prop)
-  : option A -> option B -> Prop :=
-  | option_R_Some a b : eqA a b -> option_R eqA ⎣a⎦ ⎣b⎦.
-
-  Instance option_R_eqivalence X (R:X->X->Prop)
-  : Equivalence (option_R R).
-  Proof.
-    econstructor.
-    - hnf; intros.
-  Admitted.
-
-  Definition agreed_on X `{OrderedType X} Y R `{Equivalence _ R} :=
-    @agree_on X _ (option Y) (option_R R) _.
-*)
   Lemma exp_eval_live
     : forall e lv E E', live_exp_sound e lv -> agree_on eq lv E E' ->
       exp_eval E e = exp_eval E' e.
