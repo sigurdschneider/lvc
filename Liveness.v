@@ -10,7 +10,7 @@ Inductive argsLive (Caller Callee:set var) : args -> params -> Prop :=
 | AL_nil : argsLive Caller Callee nil nil
 | AL_cons y z Y Z
   : argsLive Caller Callee Y Z
-    -> (z ∈ Callee <-> live_exp_sound y Caller)
+    -> (z ∈ Callee -> live_exp_sound y Caller)
     -> argsLive Caller Callee (y::Y) (z::Z).
 
 Lemma argsLive_length lv bv Y Z
@@ -29,7 +29,7 @@ Proof.
       intros. general induction H; simpl in * |- *.
       - isabsurd.
       - decide (z ∈ blv); eauto.
-        inv H1; eauto. eapply H0; eauto.
+        inv H1; eauto.
 Qed.
 
 Lemma argsLive_live_exp_sound lv blv Y Z y z n
@@ -57,7 +57,6 @@ Proof.
      *  assert (x1 = x) by congruence.
         subst. simpl.
         eauto using agree_on_update_same, agree_on_incl.
-     * eapply H0; eauto.
     + eapply agree_on_update_dead_both; eauto.
 Qed.
 

@@ -6,7 +6,7 @@ Proof.
   decide(length Y = length Z).
   - general induction Y; destruct Z; isabsurd.
     + left; econstructor.
-    + decide (v ∈ Callee <-> live_exp_sound a Caller);
+    + decide (v ∈ Callee -> live_exp_sound a Caller);
       edestruct (IHY Caller Callee); try dec_solve; try eassumption;
       try inv an; eauto; try tauto.
   - right; intro. eapply argsLive_length in H. congruence.
