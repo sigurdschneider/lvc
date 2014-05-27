@@ -1,7 +1,7 @@
 Require Import CSet Le.
 
 Require Import Plus Util AllInRel Map.
-Require Import CSet Val Var Env EnvTy IL Sim Fresh Annotation MoreExp Coherence LabelsDefined.
+Require Import CSet Val Var Env EnvTy IL Sim Fresh Annotation MoreExp Coherence LabelsDefined DecSolve.
 
 Require Import Liveness Filter SetOperations ValueOpts.
 
@@ -28,7 +28,26 @@ Inductive le_precise : option aval -> option aval -> Prop :=
   | leValVal y : le_precise (Some y) (Some y)
   | leBot  : le_precise None None.
 
+Instance le_precise_computable a b : Computable (le_precise a b).
+destruct a, b; try dec_solve.
+decide (a = a0); subst; try dec_solve.
+Defined.
 
+Lemma PIR2_length X Y (R:X->Y->Prop) L L'
+: PIR2 R L L' -> length L = length L'.
+Proof.
+  intros. general induction H; simpl; eauto.
+Qed.
+
+Instance PIR2_computable X Y (R:X->Y->Prop) `{forall x y, Computable (R x y)}
+: forall (L:list X) (L':list Y), Computable (PIR2 R L L').
+Proof.
+  intros. decide (length L = length L').
+  - general induction L; destruct L'; isabsurd; try dec_solve.
+    decide (R a y); try dec_solve.
+    edestruct IHL with (L':=L'); eauto; subst; try dec_solve.
+  - right; intro; subst. exploit PIR2_length; eauto.
+Defined.
 
 Inductive cp_sound (AE:onv aval) : list (params)
                       -> stmt
@@ -53,6 +72,24 @@ Inductive cp_sound (AE:onv aval) : list (params)
   : cp_sound AE (Z::Cp) s
   -> cp_sound AE (Z::Cp) b
   -> cp_sound AE Cp (stmtLet Z s b).
+
+Instance cp_sound_dec AE ZL s : Computable (cp_sound AE ZL s).
+Proof.
+  hnf. general induction s; try dec_solve.
+  - edestruct IHs; decide (exp_eval AE e = AE x); dec_solve.
+  - decide (exp_eval AE e = Some val_false); decide (exp_eval AE e = Some val_true).
+    + unfold val_false, val_true in *. congruence.
+    + edestruct IHs2; try dec_solve.
+      left; econstructor; intros. rewrite e0 in H; congruence. eauto.
+    + edestruct IHs1; try dec_solve.
+      left; econstructor; intros. eauto.  rewrite e0 in H; congruence.
+    + edestruct IHs1; edestruct IHs2; try dec_solve.
+  - destruct (get_dec ZL (counted l)) as [[]|]; try dec_solve.
+    decide (length x = length Y); try dec_solve.
+    decide (PIR2 le_precise (lookup_list AE x) (List.map (exp_eval AE) Y));
+      try dec_solve.
+  - edestruct (IHs1 AE (Z::ZL)); edestruct (IHs2 AE (Z::ZL)); try dec_solve.
+Defined.
 
 Definition cp_eqn E x :=
   match E x with
@@ -325,19 +362,26 @@ Proof.
     + case_eq (Exp.exp_eval E a); intros.
       * simpl.
         exploit (IHY AE lv); eauto using get.
-        admit.
+        eapply list_union_incl; intros.
+        rewrite <- H. edestruct map_get_4; eauto; dcr; subst.
+        eapply get_list_union_map; eauto using get.
+        eapply incl_empty.
         exploit X; eauto. inv X0; simpl.
         econstructor.
+        exploit (get_list_union_map _ _ Exp.freeVars (a::Y)).
+        econstructor. rewrite H in X1.
         edestruct exp_eval_same; try eapply H1; eauto using get; dcr.
         edestruct exp_eval_same; try eapply H2; try eapply H4; eauto using get; dcr.
-        admit. admit.
         inv H8; inv H9.
         econstructor; eauto. congruence.
       * simpl. econstructor.
     + case_eq (Exp.exp_eval E a); intros; simpl; try econstructor; eauto.
       erewrite exp_eval_onvLe; eauto. simpl.
       exploit (IHY AE lv); eauto using get.
-      admit.
+      eapply list_union_incl; intros.
+      rewrite <- H. edestruct map_get_4; eauto; dcr; subst.
+      eapply get_list_union_map; eauto using get.
+      eapply incl_empty.
       exploit X; eauto. inv X0; simpl.
       * econstructor.
       * econstructor; eauto.
@@ -432,6 +476,75 @@ Proof.
   rewrite H in H3. isabsurd.
 Qed.
 
+Lemma in_subst_eqns gamma Z Y AE
+: length Z = length Y
+  -> gamma \In subst_eqns (sid [Z <-- Y]) (cp_eqns AE (of_list Z))
+  -> exists n x c,
+      gamma = subst_eqn (sid [Z <-- Y]) (Var x, Con c)
+      /\ AE x = Some c
+      /\ get Z n x
+      /\ get Y n ((sid [Z <-- Y]) x).
+Proof.
+  intros.
+  edestruct subst_eqns_in as [γ' ?]; eauto; dcr; subst.
+  edestruct cp_eqns_in as [x ?]; eauto; dcr.
+  unfold cp_eqn in H4. case_eq (AE x); intros.
+  - cset_tac. assert (γ' = (Var x, Con a)).
+    destruct γ'. rewrite H1 in H4. cset_tac. inv H4.
+    hnf in H8, H10. subst. eauto.
+    subst. unfold subst_eqn; simpl.
+    edestruct (update_with_list_lookup_in_list sid Z Y) as [? [? ]]; eauto; dcr.
+    subst.
+    do 2 eexists; eauto.
+  - exfalso. rewrite H1 in H4; isabsurd.
+Qed.
+
+Lemma entails_cp_eqns_subst AE D Z Y
+: length Z = length Y
+  -> PIR2 le_precise (lookup_list AE Z) (List.map (exp_eval AE) Y)
+  -> list_union (List.map Exp.freeVars Y)[<=]D
+  -> entails (cp_eqns AE D)
+            (subst_eqns (sid [Z <-- Y]) (cp_eqns AE (of_list Z))).
+Proof.
+  intros LEQ le_prec INCL.
+  hnf. intros. hnf. intros.
+
+  edestruct in_subst_eqns as [? [? []]]; eauto; dcr.
+  edestruct PIR2_nth_2; eauto. eapply map_get_1; eauto. dcr.
+  exploit lookup_list_get; eauto. subst.
+  inversion H7; try congruence.
+  edestruct exp_eval_same; eauto; dcr.
+  rewrite <- INCL.
+  eapply incl_list_union. eapply map_get_1; eauto. reflexivity.
+  hnf; simpl. rewrite H9.
+  econstructor. inv H10. congruence.
+Qed.
+
+
+Lemma entails_cp_eqns_subst_choose AE D Z Y
+: length Z = length Y
+  -> PIR2 le_precise (lookup_list AE Z) (List.map (exp_eval AE) Y)
+  -> list_union (List.map Exp.freeVars Y)[<=]D
+  -> entails (cp_eqns AE D)
+            (subst_eqns (sid [Z <-- List.map (cp_choose_exp AE) Y]) (cp_eqns AE (of_list Z))).
+Proof.
+  intros LEQ le_prec INCL.
+  hnf. intros. hnf. intros.
+
+  edestruct in_subst_eqns as [? [? []]]; try eapply H0; eauto; dcr.
+  rewrite map_length; eauto.
+  edestruct map_get_4; eauto; dcr.
+  edestruct PIR2_nth_2; eauto. eapply map_get_1; eauto. dcr.
+  exploit lookup_list_get; eauto. subst.
+  inversion H9; try congruence.
+  edestruct exp_eval_same; eauto; dcr.
+  rewrite <- INCL.
+  eapply incl_list_union. eapply map_get_1; eauto. reflexivity.
+  hnf; simpl.
+  rewrite <- H5. unfold cp_choose_exp. rewrite <- H10. simpl.
+  constructor. inv H12. congruence.
+Qed.
+
 Lemma cp_sound_eqn AE Cp Es s (ang:ann (set var * set var))
 : let Gamma := (cp_eqns AE (fst (getAnn ang))) in
 cp_sound AE Cp s
@@ -491,28 +604,9 @@ Proof.
     econstructor; eauto.
     + rewrite map_length; eauto.
     + rewrite H5.
-      hnf. intros. hnf. intros.
-      edestruct subst_eqns_in as [γ' ?]; eauto; dcr; subst.
-      edestruct cp_eqns_in as [x ?]; eauto; dcr.
-      unfold cp_eqn in H12. case_eq (AE x); intros.
-      cset_tac. assert (γ' = (Var x, Con a)).
-      destruct γ'. rewrite H9 in H12. cset_tac. inv H12.
-      hnf in H16, H18. subst. eauto.
-      subst. unfold subst_eqn; simpl.
-      edestruct (update_with_list_lookup_in_list sid Z Y) as [? [? ]]; eauto; dcr.
-
-      edestruct PIR2_nth_2; eauto. eapply map_get_1; eauto.
-      dcr.
-      exploit lookup_list_get; eauto.
-      inversion H18; try congruence. subst.
-      edestruct exp_eval_same; eauto; dcr.
-      rewrite <- H4.
-      eapply incl_list_union. eapply map_get_1; eauto. reflexivity.
-      hnf; simpl. rewrite H19.
-      econstructor. inv H21. congruence.
-      exfalso. rewrite H9 in H12. isabsurd.
-    +
-      admit.
+      eapply entails_cp_eqns_subst; eauto.
+    + rewrite H2.
+      eapply entails_cp_eqns_subst_choose; eauto.
     + eapply cp_choose_moreDefinedArgs; eauto.
   - econstructor; eauto using cp_choose_moreDefined.
   - eapply EqnLet with (Γ2:=cp_eqns AE D) (Γ2':=cp_eqns AE D) (EqS:=cp_eqns AE (of_list Z)) (EqS':=cp_eqns AE (of_list Z)).
