@@ -147,7 +147,7 @@ Proof.
     pfold; econstructor 3; try eapply star2_refl; eauto; stuck2.
     pfold; econstructor 3; try eapply star2_refl; eauto; stuck2.
     hnf in H1.
-    edestruct AIR5_nth2 as [? [? [? []]]]; eauto; dcr.
+    edestruct AIR5_nth3 as [? [? [? []]]]; eauto; dcr.
   - pfold. econstructor 4; try eapply star2_refl.
     simpl. erewrite <- exp_eval_live_agree; eauto. eapply agree_on_sym; eauto.
     stuck2. stuck2.
@@ -280,7 +280,7 @@ Proof.
     pfold; econstructor 3; try eapply star2_refl; eauto; stuck2.
     pfold; econstructor 3; try eapply star2_refl; eauto; stuck2.
     hnf in H1.
-    edestruct AIR5_nth2 as [? [? [? []]]]; eauto; dcr.
+    edestruct AIR5_nth3 as [? [? [? []]]]; eauto; dcr.
   - pfold. econstructor 4; try eapply star2_refl.
     simpl. erewrite <- exp_eval_live_agree; eauto. eapply agree_on_sym; eauto.
     stuck2. stuck2.

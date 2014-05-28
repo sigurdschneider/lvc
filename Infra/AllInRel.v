@@ -272,12 +272,38 @@ Section AIR5.
     do 3 eexists; repeat split; eauto using get.
   Qed.
 
-  Lemma AIR5_nth2 UL WL LT L L' l lt :
+  Lemma AIR5_nth3 UL WL LT L L' l lt :
     AIR5 UL WL LT L L'
     -> get LT l lt
     -> exists (blkw:U) (blkt:W) (blk:Y), exists (blk':Z),
       get UL l blkw /\ get WL l blkt /\ get L l blk /\ get L' l blk'
       /\ R (drop l UL) (drop l WL) lt blk blk'.
+  Proof.
+    intros. general induction H; isabsurd.
+    inv H0. do 4 eexists; eauto using get.
+    edestruct IHAIR5 as [lt' [blk [blk' [A [B [C D]]]]]]; eauto; dcr.
+    do 4 eexists; repeat split; eauto using get.
+  Qed.
+
+  Lemma AIR5_nth2 UL WL LT L L' l lt :
+    AIR5 UL WL LT L L'
+    -> get WL l lt
+    -> exists (blkw:U) (blkt:X) (blk:Y), exists (blk':Z),
+      get UL l blkw /\ get LT l blkt /\ get L l blk /\ get L' l blk'
+      /\ R (drop l UL) (drop l WL)  blkt blk blk'.
+  Proof.
+    intros. general induction H; isabsurd.
+    inv H0. do 4 eexists; eauto using get.
+    edestruct IHAIR5 as [lt' [blk [blk' [A [B [C D]]]]]]; eauto; dcr.
+    do 4 eexists; repeat split; eauto using get.
+  Qed.
+
+  Lemma AIR5_nth1 UL WL LT L L' l lt :
+    AIR5 UL WL LT L L'
+    -> get UL l lt
+    -> exists (blkt:W) (blkx:X) (blk:Y), exists (blk':Z),
+      get WL l blkt /\ get LT l blkx /\ get L l blk /\ get L' l blk'
+      /\ R (drop l UL) (drop l WL) blkx blk blk'.
   Proof.
     intros. general induction H; isabsurd.
     inv H0. do 4 eexists; eauto using get.
