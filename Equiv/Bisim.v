@@ -505,6 +505,18 @@ Proof.
   intros. eauto using (bisim'_zigzag (S1:=S1) (S2:=S2) (S3:=S3)), star2_refl.
 Qed.
 
+Lemma bisim_trans {S1} `{StateType S1}
+      (σ1:S1) {S2} `{StateType S2} (σ2:S2) {S3} `{StateType S3} (σ3:S3)
+  : bisim σ1 σ2
+    -> bisim σ2 σ3
+    -> bisim σ1 σ3.
+Proof.
+  intros. eapply bisim'_bisim.
+  eapply bisim_bisim' in H2.
+  eapply bisim_bisim' in H3.
+  eapply (bisim'_trans H2 H3).
+Qed.
+
 Lemma bisim'_reduction_closed {S} `{StateType S}
       (σ1 σ1':S) {S'} `{StateType S'} (σ2 σ2':S')
   : bisim' σ1 σ2
