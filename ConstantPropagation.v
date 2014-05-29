@@ -311,7 +311,7 @@ Qed.
 Lemma exp_eval_entails AE e v x lv
 : Exp.freeVars e ⊆ lv
   -> exp_eval AE e = ⎣v ⎦
-  -> entails ({{ (Var x, e) }} ∪ cp_eqns AE lv) {{(Var x, Con v)}}.
+  -> entails ({{ (Var x, e) }} ∪ {{ (Var x, cp_choose_exp AE e) }} ∪ cp_eqns AE lv) {{(Var x, Con v)}}.
 Proof.
   intros.
   unfold entails; intros. unfold satisfiesAll, satisfies; intros.
@@ -338,20 +338,20 @@ Qed.
 
 Lemma cp_choose_moreDefined AE e lv
 : Exp.freeVars e ⊆ lv
-  -> moreDefined (cp_eqns AE lv) (cp_eqns AE lv) e (cp_choose_exp AE e).
+  -> moreDefined (cp_eqns AE lv) e (cp_choose_exp AE e).
 Proof.
   unfold cp_choose_exp. case_eq (exp_eval AE e); intros.
   - hnf; intros.
       case_eq (Exp.exp_eval E e); intros.
-      * edestruct exp_eval_same; try eapply H2; eauto; dcr.
-        simpl. inv H7. econstructor. congruence.
+      * edestruct exp_eval_same; try eapply H1; eauto; dcr.
+        simpl. inv H5. econstructor. congruence.
       * econstructor.
   - reflexivity.
 Qed.
 
 Lemma cp_choose_moreDefinedArgs AE Y lv
 : list_union (List.map Exp.freeVars Y) ⊆ lv
-  -> moreDefinedArgs (cp_eqns AE lv) (cp_eqns AE lv) Y
+  -> moreDefinedArgs (cp_eqns AE lv) Y
                     (List.map (cp_choose_exp AE) Y).
 Proof.
   intros. general induction Y; simpl.
@@ -371,12 +371,11 @@ Proof.
         exploit (get_list_union_map _ _ Exp.freeVars (a::Y)).
         econstructor. rewrite H in X1.
         edestruct exp_eval_same; try eapply H1; eauto using get; dcr.
-        edestruct exp_eval_same; try eapply H2; try eapply H4; eauto using get; dcr.
+        edestruct exp_eval_same; try eapply H1; try eapply H3; eauto using get; dcr.
         inv H8; inv H9.
         econstructor; eauto. congruence.
       * simpl. econstructor.
     + case_eq (Exp.exp_eval E a); intros; simpl; try econstructor; eauto.
-      erewrite exp_eval_onvLe; eauto. simpl.
       exploit (IHY AE lv); eauto using get.
       eapply list_union_incl; intros.
       rewrite <- H. edestruct map_get_4; eauto; dcr; subst.
@@ -553,9 +552,8 @@ cp_sound AE Cp s
 -> (forall n a Z, get Es n a
               -> get Cp n Z
               -> snd a [=] cp_eqns AE (of_list Z)
-                /\ snd (fst (fst a)) [=] cp_eqns AE (of_list Z)
-                /\ fst (fst (fst (fst (fst a)))) = Z)
--> eqn_sound Es s Gamma Gamma ang (cp_choose AE s).
+                /\ (fst (fst (fst a))) = Z)
+-> eqn_sound Es s Gamma ang (cp_choose AE s).
 Proof.
   intro. subst Gamma.
   intros CP SSA LD LINV.
@@ -569,16 +567,6 @@ Proof.
       rewrite cp_eqns_single.
       unfold cp_eqn. case_eq (AE x); intros; eauto using entails_empty.
       eapply exp_eval_entails; eauto. congruence.
-    + rewrite H7; simpl.
-      rewrite cp_eqns_union. eapply entails_union; split.
-      eapply entails_monotonic_add. reflexivity.
-
-      rewrite cp_eqns_single.
-      unfold cp_eqn. case_eq (AE x); intros; eauto using entails_empty.
-      eapply exp_eval_entails; eauto.
-      eapply cp_choose_exp_live_sound_exp; eauto.
-      eapply cp_choose_exp_eval_exp; eauto.
-      congruence.
     + eapply cp_choose_moreDefined; eauto.
     + eapply cp_choose_exp_freeVars; eauto.
   - econstructor; intros; eauto.
@@ -589,7 +577,6 @@ Proof.
       edestruct exp_eval_same; eauto; dcr.
       rewrite H17. eauto.
       * rewrite H12; eauto; reflexivity.
-      * rewrite H12; eauto; reflexivity.
     + eapply eqn_sound_entails_monotone; eauto.
       eapply H2; eauto. intro.
       exfalso. edestruct H3; dcr.
@@ -597,28 +584,23 @@ Proof.
       edestruct exp_eval_same; eauto; dcr.
       rewrite H17. eauto.
       * rewrite H13; eauto; reflexivity.
-      * rewrite H13; eauto; reflexivity.
     + eapply cp_choose_moreDefined; eauto.
-  - destruct a as [[[[[Zb G] Γf] EqS] Γf'] EqS'].
+  - destruct a as [[[Zb G] Γf] EqS].
     exploit LINV; eauto; dcr; simpl in *. subst Zb.
     econstructor; eauto.
     + rewrite map_length; eauto.
-    + rewrite H5.
-      eapply entails_cp_eqns_subst; eauto.
     + rewrite H2.
-      eapply entails_cp_eqns_subst_choose; eauto.
+      eapply entails_cp_eqns_subst; eauto.
     + eapply cp_choose_moreDefinedArgs; eauto.
   - econstructor; eauto using cp_choose_moreDefined.
-  - eapply EqnLet with (Γ2:=cp_eqns AE D) (Γ2':=cp_eqns AE D) (EqS:=cp_eqns AE (of_list Z)) (EqS':=cp_eqns AE (of_list Z)).
+  - eapply EqnLet with (Γ2:=cp_eqns AE D) (EqS:=cp_eqns AE (of_list Z)).
     + eapply eqn_sound_entails_monotone; eauto.
       eapply IHCP1; eauto.
       * eapply labelsDefined_any; try eapply H10; eauto.
       * intros; simpl.
         inv H; inv H0; simpl.
-        split. reflexivity. split. reflexivity. split; eauto.
+        split. reflexivity. reflexivity.
         eapply LINV; eauto.
-      * rewrite H6. simpl.
-        rewrite cp_eqns_union. reflexivity.
       * rewrite H6. simpl.
         rewrite cp_eqns_union. reflexivity.
     + eapply eqn_sound_entails_monotone; eauto.
@@ -626,15 +608,11 @@ Proof.
       * eapply labelsDefined_any; try eapply H11; eauto.
       * intros; simpl.
         inv H; inv H0; simpl.
-        split. reflexivity. split. reflexivity. split; eauto.
+        split. reflexivity. reflexivity.
         eapply LINV; eauto.
       * rewrite H9; reflexivity.
-      * rewrite H9; reflexivity.
-    + rewrite cp_eqns_freeVars. eapply incl_right.
     + rewrite cp_eqns_freeVars. eapply incl_right.
     + rewrite cp_eqns_freeVars. reflexivity.
-    + rewrite cp_eqns_freeVars. reflexivity.
-    + reflexivity.
     + reflexivity.
 Qed.
 
