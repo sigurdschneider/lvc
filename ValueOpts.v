@@ -65,8 +65,10 @@ Lemma exp_eval_onvLe e E E' v
 Proof.
   intros. general induction e; simpl in * |- *; eauto.
   simpl in H0. rewrite H0. eapply H in H0. eauto.
-  monad_inv H0. rewrite EQ, EQ1.
-  erewrite IHe1, IHe2; eauto.
+  - monad_inv H0. rewrite EQ.
+    erewrite IHe; eauto.
+  - monad_inv H0. rewrite EQ, EQ1.
+    erewrite IHe1, IHe2; eauto.
 Qed.
 
 Instance moreDefined_refl Gamma
@@ -109,15 +111,15 @@ Inductive eqn_sound : list (params*set var*eqns*eqns)
     -> eqn_sound Lv (stmtExp x e b) Gamma
                 (ann1 (G,G') ang) (ann1 (e'::nil) cl)
 | EqnIf Lv e e' b1 b2 Gamma cl1 cl2 G G' ang1 ang2
-  : (not_entails Gamma (e, Con val_false) -> eqn_sound Lv b1 Gamma ang1 cl1)
-  -> (not_entails Gamma (e, Con val_true) -> eqn_sound Lv b2 Gamma ang2 cl2)
+  : (not_entails Gamma (UnOp 0 e, Con val_false) -> eqn_sound Lv b1 ({{(UnOp 0 e,Con val_true)}} ∪ Gamma) ang1 cl1)
+  -> (not_entails Gamma (UnOp 0 e, Con val_true) -> eqn_sound Lv b2 ({{(UnOp 0 e,Con val_false)}} ∪ Gamma) ang2 cl2)
   -> moreDefined Gamma e e'
   -> eqn_sound Lv (stmtIf e b1 b2) Gamma
               (ann2 (G,G') ang1 ang2) (ann2 (e'::nil) cl1 cl2)
 | EqnGoto l Y Y' Lv Gamma Z Γf EqS Gf G G'
   : get Lv (counted l) (Z,Gf,Γf, EqS)
     -> length Y = length Y'
-    -> entails Gamma (subst_eqns (sid [Z <-- Y]) EqS)
+    -> entails Gamma (subst_eqns (sid [Z <-- Y']) EqS)
     -> moreDefinedArgs Gamma Y Y'
     -> eqn_sound Lv (stmtGoto l Y) Gamma (ann0 (G,G')) (ann0 Y')
 | EqnReturn Lv e e' Gamma G G'
@@ -362,6 +364,7 @@ Proof.
   symmetry in Heqy1.
   eapply update_with_list_lookup_not_in in Heqy1; eauto.
   subst; simpl; eauto. eauto.
+  erewrite IHe; eauto.
   erewrite IHe1; eauto.
   erewrite IHe2; eauto.
 Qed.
@@ -699,6 +702,8 @@ Proof.
     + rewrite H3; reflexivity.
     + eapply moreDefined_monotone; eauto.
   - econstructor; intros; eauto using moreDefined_monotone, not_entails_antitone.
+    eapply H0; eauto using not_entails_antitone. rewrite H5; reflexivity.
+    eapply H2; eauto using not_entails_antitone. rewrite H5. reflexivity.
   - econstructor; eauto using entails_monotone, moreDefinedArgs_monotone.
   - econstructor; eauto using moreDefined_monotone.
   - econstructor; eauto using moreDefinedArgs_monotone.
@@ -778,8 +783,16 @@ Proof.
   - econstructor; eauto.
     eapply IHeqn_sound; eauto using entails_inert.
     + eapply moreDefined_entails_monotone; eauto.
-  - econstructor; eauto using moreDefined_entails_monotone,
+  - econstructor; intros; eauto using moreDefined_entails_monotone,
     not_entails_entails_antitone.
+    + eapply H0; eauto using not_entails_entails_antitone.
+      eapply entails_union; split.
+      eapply entails_monotone. reflexivity. cset_tac; intuition.
+      eapply entails_monotone. eauto. cset_tac; intuition.
+    + eapply H2; eauto using not_entails_entails_antitone.
+      eapply entails_union; split.
+      eapply entails_monotone. reflexivity. cset_tac; intuition.
+      eapply entails_monotone. eauto. cset_tac; intuition.
   - econstructor; eauto using entails_transitive, moreDefinedArgs_entails_monotone.
   - econstructor; eauto using moreDefined_entails_monotone.
   - econstructor; eauto using moreDefinedArgs_entails_monotone.
@@ -840,41 +853,56 @@ Proof.
     + pfold. econstructor 3; try eapply star2_refl; eauto. stuck2.
     + pose proof H6. symmetry in H7. eapply exp_eval_onvLe in H7; eauto.
       pfold. case_eq (val2bool y); intros.
-      assert (not_entails Gamma (e, Con val_false)). {
+      assert (not_entails Gamma (UnOp 0 e, Con val_false)). {
         hnf; intros. eexists V; split; eauto.
         intro. hnf in H10. simpl in *.
         rewrite <- H5 in H10. inv H10.
-        rewrite val2bool_false in H8. congruence.
+        cbv in H8. destruct y. congruence.
+        destruct if in H22. congruence. cbv in H22. congruence.
       }
       econstructor; try eapply plus2O.
       econstructor; eauto using eq_sym. reflexivity.
       econstructor; eauto using eq_sym. reflexivity.
-      left. eapply IHs1; eauto.
+      left. eapply IHs1; try eapply H9; eauto.
+      * eapply satisfiesAll_union; split; eauto.
+        hnf; intros. cset_tac. inv H11. inv H24. inv H25.
+        hnf. simpl. rewrite <- H5. unfold option_lift1. simpl.
+        unfold val2bool in H8. destruct y; try congruence.
+        destruct if; try congruence. constructor. reflexivity.
       * eapply simL'_update; eauto.
         unfold Sim.BlockRel.
         destruct x as [[[ ?] ?] ?]; simpl; intros; dcr.
         repeat (split; eauto).
         rewrite H20; eauto.
         clear_all; reflexivity.
-      * rewrite H20, H3; reflexivity.
-      * assert (not_entails Gamma (e, Con val_true)). {
+      * rewrite eqns_freeVars_add. rewrite H20, H3.
+        simpl. rewrite H15. cset_tac; intuition.
+      * assert (not_entails Gamma (UnOp 0 e, Con val_true)). {
           hnf; intros. eexists V; split; eauto.
           intro. hnf in H10. simpl in *.
           rewrite <- H5 in H10. inv H10.
-          rewrite val2bool_true in H8; congruence.
+          cbv in H8. destruct y.
+          destruct if in H22. cbv in H22. congruence.
+          congruence. congruence.
         }
         econstructor; try eapply plus2O.
         econstructor 3; eauto using eq_sym. reflexivity.
         econstructor 3; eauto using eq_sym. reflexivity.
         {
-          left. eapply IHs2; try eapply H10; eauto.
+          left. eapply IHs2; try eapply H13; eauto.
+          - eapply satisfiesAll_union; split; eauto.
+            hnf; intros. cset_tac. inv H11. inv H24. inv H25.
+            hnf. simpl. rewrite <- H5. unfold option_lift1. simpl.
+            unfold val2bool in H8. destruct y; try congruence.
+            destruct if; try congruence. constructor. reflexivity.
           - eapply simL'_update; eauto.
             unfold Sim.BlockRel.
             destruct x as [[[ ?] ?] ?]; simpl; intros; dcr.
             repeat (split; eauto).
             rewrite H21; eauto.
             clear_all; reflexivity.
-          - rewrite H3, H21; reflexivity.
+          - rewrite eqns_freeVars_add; simpl.
+            rewrite H15, H3, H21. simpl. cset_tac; intuition.
         }
   - destruct (get_dec L (counted l)) as [[[bE bZ bs]]|].
     (* hnf in H2. exploit H2; eauto. simpl in *. subst bZ. *)
@@ -891,7 +919,8 @@ Proof.
       exploit omap_length; eauto. unfold var in *. congruence.
       hnf in H29; dcr.
       eapply satisfiesAll_union; split; eauto.
-      eapply (@satisfiesAll_subst V Gamma Γf); eauto.
+      eapply (@satisfiesAll_subst V Gamma Γf); try eapply H6; eauto.
+      congruence.
       symmetry; eauto.
       eapply satisfiesAll_update_dead; eauto. rewrite map_length.
       exploit omap_length; eauto. congruence.
