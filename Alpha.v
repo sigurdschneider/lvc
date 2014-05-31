@@ -300,6 +300,7 @@ Lemma alpha_exp_eval : forall ra ira e e' E E',
   exp_eval E e = exp_eval E' e'.
 Proof.
   intros. general induction H; simpl in *; eauto.
+  - erewrite IHalpha_exp; eauto.
   - erewrite IHalpha_exp1, IHalpha_exp2; eauto.
 Qed.
 

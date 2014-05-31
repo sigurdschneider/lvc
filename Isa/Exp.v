@@ -11,19 +11,30 @@ Set Implicit Arguments.
    if the module types are instantiated; and expression are not in this development *)
 
   Definition binop : Set := nat.
-  Definition option_lift A B C (f:A -> B -> C) := fun x y => Some (f x y).
+  Definition option_lift2 A B C (f:A -> B -> C) := fun x y => Some (f x y).
   Definition binop_eval (o:binop) :=
     match o with
-      | 0 => option_lift Peano.plus
-      | 1 => option_lift minus
-      | 2 => option_lift mult
+      | 0 => option_lift2 Peano.plus
+      | 1 => option_lift2 minus
+      | 2 => option_lift2 mult
+      | 3 => option_lift2 (fun x y => if [x = y] then 1 else 0)
+      | 4 => option_lift2 (fun x y => if [x <> y] then 1 else 0)
       | _ => fun _ _ => None
     end.
 
+  Definition unop : Set := nat.
+  Definition option_lift1 A B (f:A -> B) := fun x => Some (f x).
+
+  Definition unop_eval (o:unop) :=
+    match o with
+      | 0 => option_lift1 (fun x => if [x = 0] then 0 else 1)
+      | _ => fun _ => None
+    end.
 
   Inductive exp :=
      Con : val -> exp
    | Var : var -> exp
+   | UnOp : unop -> exp -> exp
    | BinOp : binop -> exp -> exp -> exp.
 
   Inductive isVar : exp -> Prop :=
@@ -45,12 +56,15 @@ Set Implicit Arguments.
   decide equality. eapply inst_eq_dec_val.
   eapply inst_eq_dec_val.
   eapply nat_eq_eqdec.
+  eapply nat_eq_eqdec.
   Defined.
 
   Fixpoint exp_eval (E:onv val) (e:exp) : option val :=
     match e with
       | Con v => Some v
       | Var x => E x
+      | UnOp o e => mdo v <- exp_eval E e;
+                   unop_eval o v
       | BinOp o e1 e2 => mdo v1 <- exp_eval E e1;
                         mdo v2 <- exp_eval E e2;
                         binop_eval o v1 v2
@@ -83,8 +97,11 @@ Set Implicit Arguments.
   Qed.
 
   Inductive live_exp_sound : exp -> set var -> Prop :=
-  | conLiveSound v lv : live_exp_sound (Con v) lv
-  | varLiveSound x lv : x ∈ lv -> live_exp_sound (Var x) lv
+  | ConLiveSound v lv : live_exp_sound (Con v) lv
+  | VarLiveSound x lv : x ∈ lv -> live_exp_sound (Var x) lv
+  | UnopLiveSound o e lv :
+      live_exp_sound e lv
+      -> live_exp_sound (UnOp o e) lv
   | binopLiveSound o e1 e2 lv :
       live_exp_sound e1 lv ->
       live_exp_sound e2 lv ->
@@ -95,6 +112,7 @@ Set Implicit Arguments.
   Proof.
     induction e; try dec_solve.
     - decide (v ∈ lv); try dec_solve.
+    - edestruct IHe; dec_solve.
     - edestruct IHe1, IHe2; dec_solve.
   Defined.
 
@@ -108,6 +126,7 @@ Set Implicit Arguments.
     match e with
       | Con _ => ∅
       | Var v => {v}
+      | UnOp o e => freeVars e
       | BinOp o e1 e2 => freeVars e1 ∪ freeVars e2
     end.
 
@@ -115,8 +134,9 @@ Set Implicit Arguments.
     : forall e, live_exp_sound e (freeVars e).
   Proof.
     intros. general induction e; simpl; econstructor. cset_tac; eauto.
-    eapply live_exp_sound_incl; eauto. cset_tac; intuition.
-    eapply live_exp_sound_incl; eauto. cset_tac; intuition.
+    - eapply live_exp_sound_incl; eauto. cset_tac; intuition.
+    - eapply live_exp_sound_incl; eauto. cset_tac; intuition.
+    - eapply live_exp_sound_incl; eauto. cset_tac; intuition.
   Qed.
 
   Lemma freeVars_live e lv
@@ -130,7 +150,8 @@ Set Implicit Arguments.
       exp_eval E e = exp_eval E' e.
   Proof.
     intros. general induction e; inv H; simpl; eauto.
-    erewrite IHe1, IHe2; eauto.
+    - erewrite IHe; eauto.
+    - erewrite IHe1, IHe2; eauto.
   Qed.
 
   Global Instance eval_exp_ext
@@ -138,7 +159,8 @@ Set Implicit Arguments.
   Proof.
     unfold Proper, respectful; intros; subst.
     general induction y0; simpl; eauto.
-    erewrite IHy0_1, IHy0_2; eauto.
+    - erewrite IHy0; eauto.
+    - erewrite IHy0_1, IHy0_2; eauto.
   Qed.
 
   Definition var_to_exp : forall x:var, exp := Var.
@@ -152,6 +174,7 @@ Set Implicit Arguments.
     match s with
       | Con v => Con v
       | Var v => Var (ϱ v)
+      | UnOp o e => UnOp o (rename_exp ϱ e)
       | BinOp o e1 e2 => BinOp o (rename_exp ϱ e1) (rename_exp ϱ e2)
     end.
 
@@ -159,13 +182,16 @@ Set Implicit Arguments.
   : rename_exp ϱ (rename_exp ϱ' e) = rename_exp (ϱ' ∘ ϱ) e.
   Proof.
     unfold comp. general induction e; simpl; eauto.
-    f_equal; eauto.
+    - f_equal; eauto.
+    - f_equal; eauto.
   Qed.
 
   Lemma rename_exp_ext
     : forall e (ϱ ϱ':env var), feq (R:=eq) ϱ ϱ' -> rename_exp ϱ e = rename_exp ϱ' e.
   Proof.
-    intros. general induction e; simpl; eauto. f_equal; eauto.
+    intros. general induction e; simpl; eauto.
+    - f_equal; eauto.
+    - f_equal; eauto.
   Qed.
 
 
@@ -176,8 +202,10 @@ Set Implicit Arguments.
     intros. general induction e; simpl; cset_tac; intuition.
     hnf in H.
     eapply lookup_set_spec; eauto. eexists v; cset_tac; eauto.
-    eapply Subset_trans; eauto. eapply lookup_set_incl; intuition.
-    eapply Subset_trans; try eapply IHe2; eauto. eapply lookup_set_incl; intuition.
+    - eapply Subset_trans; eauto. eapply lookup_set_incl; intuition.
+    - eapply Subset_trans; eauto. eapply lookup_set_incl; intuition.
+    - eapply Subset_trans; try eapply IHe2; eauto.
+      eapply lookup_set_incl; intuition.
   Qed.
 
   Lemma live_exp_rename_sound e lv (ϱ:env var)
@@ -193,6 +221,7 @@ Set Implicit Arguments.
     match s with
       | Con v => Con v
       | Var v => (ϱ v)
+      | UnOp o e => UnOp o (subst_exp ϱ e)
       | BinOp o e1 e2 => BinOp o (subst_exp ϱ e1) (subst_exp ϱ e2)
     end.
 
@@ -200,19 +229,25 @@ Set Implicit Arguments.
   : subst_exp ϱ (subst_exp ϱ' e) = subst_exp (fun x => subst_exp ϱ (ϱ' x)) e.
   Proof.
     general induction e; simpl; eauto.
-    f_equal; eauto.
+    - f_equal; eauto.
+    - f_equal; eauto.
   Qed.
 
   Lemma subst_exp_ext
     : forall e (ϱ ϱ':env exp), feq (R:=eq) ϱ ϱ' -> subst_exp ϱ e = subst_exp ϱ' e.
   Proof.
-    intros. general induction e; simpl; eauto. f_equal; eauto.
+    intros. general induction e; simpl; eauto.
+    - f_equal; eauto.
+    - f_equal; eauto.
   Qed.
 
   Inductive alpha_exp : env var -> env var -> exp -> exp -> Prop :=
-  | alphaCon ϱ ϱ' v : alpha_exp ϱ ϱ' (Con v) (Con v)
-  | alphaVar ϱ ϱ' x y : ϱ x = y -> ϱ' y = x -> alpha_exp ϱ ϱ' (Var x) (Var y)
-  | alphaBinOp ϱ ϱ' o e1 e1' e2 e2' :
+  | AlphaCon ϱ ϱ' v : alpha_exp ϱ ϱ' (Con v) (Con v)
+  | AlphaVar ϱ ϱ' x y : ϱ x = y -> ϱ' y = x -> alpha_exp ϱ ϱ' (Var x) (Var y)
+  | AlphaUnOp ϱ ϱ' o e e' :
+      alpha_exp ϱ ϱ' e e'
+      -> alpha_exp ϱ ϱ' (UnOp o e) (UnOp o e')
+  | AlphaBinOp ϱ ϱ' o e1 e1' e2 e2' :
       alpha_exp ϱ ϱ' e1 e1' ->
       alpha_exp ϱ ϱ' e2 e2' ->
       alpha_exp ϱ ϱ' (BinOp o e1 e2) (BinOp o e1' e2').
@@ -248,7 +283,8 @@ Set Implicit Arguments.
     intros. general induction H.
     + inversion H0. subst v0 ϱ0 ϱ'0 s''. econstructor.
     + inversion H1. subst x0 ϱ0 ϱ'0 s''. econstructor; unfold comp; congruence.
-    + inversion H1. subst ϱ0 ϱ'0 o0 e0 e3 s''. econstructor; eauto.
+    + inversion H0. subst. econstructor; eauto.
+    + inversion H1. subst. econstructor; eauto.
   Qed.
 
   Lemma alpha_exp_inverse_on
@@ -256,7 +292,9 @@ Set Implicit Arguments.
   Proof.
     intros. general induction H.
     + isabsurd.
-    + simpl. hnf; intros; cset_tac. rewrite <- H1. rewrite H. rewrite H0. reflexivity.
+    + simpl. hnf; intros; cset_tac.
+      rewrite <- H1. rewrite H. rewrite H0. reflexivity.
+    + simpl; eauto.
     + simpl. eapply inverse_on_union; eauto.
   Qed.
 
@@ -284,9 +322,12 @@ Set Implicit Arguments.
 
 
   Inductive notOccur : set var -> exp -> Prop :=
-  | conNotOccur D v : notOccur D (Con v)
-  | varNotOccur D x : x ∉ D -> notOccur D (Var x)
-  | binopNotOccur D o e1 e2 :
+  | ConNotOccur D v : notOccur D (Con v)
+  | VarNotOccur D x : x ∉ D -> notOccur D (Var x)
+  | UnOpNotOccur D o e
+    : notOccur D e
+      -> notOccur D (UnOp o e)
+  | BinopNotOccur D o e1 e2 :
       notOccur D e1 ->
       notOccur D e2 ->
       notOccur D (BinOp o e1 e2).
@@ -298,6 +339,8 @@ Set Implicit Arguments.
     + cset_tac; intuition.
     + inv H; cset_tac; intuition. rewrite <- H3 in H1; eauto.
     + econstructor. cset_tac; intuition. eapply (H v); cset_tac; intuition.
+    + inv H. eapply IHe; eauto.
+    + econstructor. eapply IHe; eauto.
     + inv H. eapply IHe1 in H3. eapply IHe2 in H5. cset_tac; intuition.
       eapply H2; eauto. eapply H1; eauto.
     + econstructor. eapply IHe1. cset_tac; intuition. eapply H; eauto.
@@ -325,25 +368,37 @@ Set Implicit Arguments.
   Qed.
 
 Inductive expLt : exp -> exp -> Prop :=
-| expLtCon c c'
+| ExpLtCon c c'
   : _lt c c'
     -> expLt (Con c) (Con c')
-| expLtConVar c v
+| ExpLtConVar c v
   : expLt (Con c) (Var v)
-| expLtConBinop c o e1 e2
+| ExpLtConUnOp c o e
+  : expLt (Con c) (UnOp o e)
+| ExpLtConBinop c o e1 e2
   : expLt (Con c) (BinOp o e1 e2)
-| expLtVar v v'
+| ExpLtVar v v'
   : _lt v v'
     -> expLt (Var v) (Var v')
-| expLtVarBinop v o e1 e2
+| ExpLtVarUnOp v o e
+  : expLt (Var v) (UnOp o e)
+| ExpLtVarBinop v o e1 e2
   : expLt (Var v) (BinOp o e1 e2)
-| expLtBinOp1 o o' e1 e1' e2 e2'
+| ExpLtUnOpBinOp o e o' e1 e2
+  : expLt (UnOp o e) (BinOp o' e1 e2)
+| ExpLtUnOp1 o o' e e'
+  : _lt o o'
+    -> expLt (UnOp o e) (UnOp o' e')
+| ExpLtUnOp2 o e e'
+  : expLt e e'
+    -> expLt (UnOp o e) (UnOp o e')
+| ExpLtBinOp1 o o' e1 e1' e2 e2'
   : _lt o o'
     -> expLt (BinOp o e1 e2) (BinOp o' e1' e2')
-| expLtBinOp2 o e1 e1' e2 e2'
+| ExpLtBinOp2 o e1 e1' e2 e2'
   : expLt e1 e1'
     -> expLt (BinOp o e1 e2) (BinOp o e1' e2')
-| expLtBinOp3 o e1 e2 e2'
+| ExpLtBinOp3 o e1 e2 e2'
   : expLt e2 e2'
     -> expLt (BinOp o e1 e2) (BinOp o e1 e2').
 
@@ -354,6 +409,7 @@ hnf; intros; unfold complement.
   + eapply (StrictOrder_Irreflexive _ H2).
   + eapply (StrictOrder_Irreflexive _ H2).
   + eapply (StrictOrder_Irreflexive _ H1).
+  + eapply (StrictOrder_Irreflexive _ H1).
 Qed.
 
 Instance expLt_trans : Transitive expLt.
@@ -361,6 +417,7 @@ hnf; intros.
 general induction H; invt expLt; eauto using expLt.
 - econstructor. eapply StrictOrder_Transitive; eauto.
 - econstructor. eapply StrictOrder_Transitive; eauto.
+- econstructor; eauto. transitivity o'; eauto.
 - econstructor; eauto. transitivity o'; eauto.
 Qed.
 
@@ -375,7 +432,12 @@ Fixpoint exp_cmp (e e':exp) :=
     | Con c, Con c' => _cmp c c'
     | Con _, _ => Lt
     | Var v, Var v' => _cmp v v'
+    | Var v, UnOp _ _ => Lt
     | Var v, BinOp _ _ _ => Lt
+    | UnOp _ _, BinOp _ _ _ => Lt
+    | UnOp o e, UnOp o' e' =>
+      Compare _cmp o o' next
+      Compare exp_cmp e e' next Eq
     | BinOp o e1 e2, BinOp o' e1' e2' =>
       Compare _cmp o o' next
       Compare exp_cmp e1 e1' next
@@ -400,6 +462,10 @@ pose proof (_compare_spec v v0).
 inv H; now (econstructor; eauto using expLt).
 pose proof (_compare_spec v v0).
 inv H; now (econstructor; eauto using expLt).
+pose proof (_compare_spec u u0).
+specialize (IHx y).
+inv H; try now (econstructor; eauto using expLt).
+inv H1. inv IHx; now (econstructor; eauto using expLt).
 pose proof (_compare_spec b b0).
 specialize (IHx1 y1). specialize (IHx2 y2).
 inv H; try now (econstructor; eauto using expLt).
