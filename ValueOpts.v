@@ -114,8 +114,8 @@ Inductive eqn_sound : list (params*set var*eqns*eqns)
     -> eqn_sound Lv (stmtExp x e b) Gamma
                 (ann1 (G,G') ang) (ann1 (e'::nil) cl)
 | EqnIf Lv e e' b1 b2 Gamma cl1 cl2 G G' ang1 ang2
-  : (not_entails Gamma (UnOp 0 e, Con val_false) -> eqn_sound Lv b1 ({{(UnOp 0 e,Con val_true)}} ∪ Gamma) ang1 cl1)
-  -> (not_entails Gamma (UnOp 0 e, Con val_true) -> eqn_sound Lv b2 ({{(UnOp 0 e,Con val_false)}} ∪ Gamma) ang2 cl2)
+  : eqn_sound Lv b1 ({{(UnOp 0 e,Con val_true)}} ∪ Gamma) ang1 cl1
+  -> eqn_sound Lv b2 ({{(UnOp 0 e,Con val_false)}} ∪ Gamma) ang2 cl2
   -> moreDefined Gamma e e'
   -> eqn_sound Lv (stmtIf e b1 b2) Gamma
               (ann2 (G,G') ang1 ang2) (ann2 (e'::nil) cl1 cl2)
@@ -718,8 +718,8 @@ Proof.
     + eapply moreDefined_monotone; eauto.
   - invt ssa.
     econstructor; intros; eauto using moreDefined_monotone, not_entails_antitone.
-    eapply H0; eauto using not_entails_antitone. rewrite H5; reflexivity.
-    eapply H2; eauto using not_entails_antitone. rewrite H5. reflexivity.
+    eapply IHeqn_sound1; eauto using not_entails_antitone. rewrite H1; reflexivity.
+    eapply IHeqn_sound2; eauto using not_entails_antitone. rewrite H1. reflexivity.
   - invt ssa.
     econstructor; eauto using entails_monotone, moreDefinedArgs_monotone.
   - invt ssa.
@@ -814,11 +814,11 @@ Proof.
     + eapply moreDefined_entails_monotone; eauto.
   - invt ssa. econstructor; intros; eauto using moreDefined_entails_monotone,
     not_entails_entails_antitone.
-    + eapply H0; eauto using not_entails_entails_antitone.
+    + eapply IHeqn_sound1; eauto using not_entails_entails_antitone.
       eapply entails_union; split.
       eapply entails_monotone. reflexivity. cset_tac; intuition.
       eapply entails_monotone. eauto. cset_tac; intuition.
-    + eapply H2; eauto using not_entails_entails_antitone.
+    + eapply IHeqn_sound2; eauto using not_entails_entails_antitone.
       eapply entails_union; split.
       eapply entails_monotone. reflexivity. cset_tac; intuition.
       eapply entails_monotone. eauto. cset_tac; intuition.
@@ -885,58 +885,58 @@ Proof.
       * hnf; intros. lud; eauto.
   - exploiT moreDefined; eauto. inv X.
     + pfold. econstructor 3; try eapply star2_refl; eauto. stuck2.
-    + pose proof H5. symmetry in H6. eapply exp_eval_onvLe in H6; eauto.
+    + pose proof H1. symmetry in H2. eapply exp_eval_onvLe in H2; eauto.
       pfold. case_eq (val2bool y); intros.
-      assert (not_entails Gamma (UnOp 0 e, Con val_false)). {
+(*      assert (not_entails Gamma (UnOp 0 e, Con val_false)). {
         hnf; intros. eexists V; split; eauto.
         intro. hnf in H8. simpl in *.
         rewrite <- H4 in H8. inv H8.
         cbv in H7. destruct y. congruence.
         destruct if in H18. congruence. cbv in H18. congruence.
-      }
+      } *)
       econstructor; try eapply plus2O.
       econstructor; eauto using eq_sym. reflexivity.
       econstructor; eauto using eq_sym. reflexivity.
-      left. eapply H0; try eapply H9; eauto.
+      left. eapply IHEQN1; try eapply H9; eauto.
       * eapply satisfiesAll_union; split; eauto.
-        hnf; intros. cset_tac. inv H9. inv H20; inv H21.
-        hnf. simpl. rewrite <- H4. unfold option_lift1. simpl.
-        unfold val2bool in H7. destruct y; try congruence.
+        hnf; intros. cset_tac. inv H4. inv H15; inv H16.
+        hnf. simpl. rewrite <- H0. unfold option_lift1. simpl.
+        unfold val2bool in H3. destruct y; try congruence.
         destruct if; try congruence. constructor. reflexivity.
       * eapply simL'_update; eauto.
         unfold Sim.BlockRel.
         destruct x as [[[ ?] ?] ?]; simpl; intros; dcr.
         repeat (split; eauto).
-        rewrite H16; eauto.
+        rewrite H12; eauto.
         clear_all; reflexivity.
-      * rewrite eqns_freeVars_add. rewrite FV, H16.
-        simpl. rewrite H11. cset_tac; intuition.
-      * assert (not_entails Gamma (UnOp 0 e, Con val_true)). {
+      * rewrite eqns_freeVars_add. rewrite FV, H12.
+        simpl. rewrite H7. cset_tac; intuition.
+      * (* assert (not_entails Gamma (UnOp 0 e, Con val_true)). {
           hnf; intros. eexists V; split; eauto.
           intro. hnf in H8. simpl in *.
           rewrite <- H4 in H8. inv H8.
           cbv in H7. destruct y.
           destruct if in H18. cbv in H18. congruence.
           congruence. congruence.
-        }
+        } *)
         econstructor; try eapply plus2O.
         econstructor 3; eauto using eq_sym. reflexivity.
         econstructor 3; eauto using eq_sym. reflexivity.
         {
-          left. eapply H2; try eapply H13; eauto.
+          left. eapply IHEQN2; try eapply H13; eauto.
           - eapply satisfiesAll_union; split; eauto.
-            hnf; intros. cset_tac. inv H9. inv H20; inv H21.
-            hnf. simpl. rewrite <- H4. unfold option_lift1. simpl.
-            unfold val2bool in H7. destruct y; try congruence.
+            hnf; intros. cset_tac. inv H4. inv H15; inv H16.
+            hnf. simpl. rewrite <- H0. unfold option_lift1. simpl.
+            unfold val2bool in H3. destruct y; try congruence.
             destruct if; try congruence. constructor. reflexivity.
           - eapply simL'_update; eauto.
             unfold Sim.BlockRel.
             destruct x as [[[ ?] ?] ?]; simpl; intros; dcr.
             repeat (split; eauto).
-            rewrite H17; eauto.
+            rewrite H13; eauto.
             clear_all; reflexivity.
           - rewrite eqns_freeVars_add; simpl.
-            rewrite FV, H11, H17. simpl. cset_tac; intuition.
+            rewrite FV, H7, H13. simpl. cset_tac; intuition.
         }
   - destruct (get_dec L (counted l)) as [[[bE bZ bs]]|].
     (* hnf in H2. exploit H2; eauto. simpl in *. subst bZ. *)
