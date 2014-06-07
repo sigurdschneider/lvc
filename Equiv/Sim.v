@@ -222,13 +222,430 @@ Proof.
     eapply star2_reach_normal in H3; eauto. eapply H0.
 Qed.
 
+
+Lemma sim'_terminate {S1} `{StateType S1} (σ1 σ1':S1)
+      {S2} `{StateType S2} (σ2:S2)
+: star2 step σ1 nil σ1'
+  -> normal2 step σ1'
+  -> result σ1' <> None
+  -> sim' σ1 σ2
+  -> exists σ2', star2 step σ2 nil σ2' /\ normal2 step σ2' /\ result σ1' = result σ2'.
+Proof.
+  intros. general induction H1.
+  - pinversion H4; subst.
+    + exfalso. eapply H2. inv H1; do 2 eexists; eauto.
+    + exfalso. eapply star2_normal in H1; eauto. subst.
+      eapply (activated_normal _ H6); eauto.
+    + eapply star2_normal in H5; eauto; subst.
+      congruence.
+    + eapply star2_normal in H5; eauto; subst.
+      eexists; split; eauto.
+  - destruct y; isabsurd. simpl.
+    eapply IHstar2; eauto.
+    eapply sim'_reduction_closed_1; eauto using star2.
+    eapply (S_star2 _ _ H); eauto using star2_refl.
+Qed.
+
+
+Lemma sim'_terminate_2 {S1} `{StateType S1} (σ2 σ2':S1)
+      {S2} `{StateType S2} (σ1:S2)
+: star2 step σ2 nil σ2'
+  -> normal2 step σ2'
+  -> sim' σ1 σ2
+  -> exists σ1', star2 step σ1 nil σ1' /\ normal2 step σ1' /\
+           (result σ1' = result σ2' \/ result σ1' = None).
+Proof.
+  intros. general induction H1.
+  - pinversion H3; subst.
+    + exfalso. eapply H2. inv H4; do 2 eexists; eauto.
+    + exfalso. eapply star2_normal in H4; eauto. subst.
+      eapply (activated_normal _ H6); eauto.
+    + eexists σ1'; split; eauto.
+    + inv H5.
+      * eexists; split; eauto.
+      * exfalso. eapply H2. eexists; eauto.
+  - destruct y; isabsurd. simpl.
+    eapply IHstar2; eauto.
+    eapply sim'_reduction_closed_2; eauto using star2.
+    eapply S_star2 with (y:=EvtTau) (yl:=nil); eauto using star2.
+Qed.
+
+Lemma sim'_activated {S1} `{StateType S1} (σ1:S1)
+      {S2} `{StateType S2} (σ2:S2)
+: activated σ1
+  -> sim' σ1 σ2
+  -> exists σ2', star2 step σ2 nil σ2' /\ activated σ2' /\
+           ( forall (evt : event) (σ1'' : S1),
+               step σ1 evt σ1'' ->
+               exists σ2'' : S2,
+                 step σ2' evt σ2'' /\
+                 (paco2 (sim_gen (S':=S2)) bot2 σ1'' σ2''))
+           /\
+           ( forall (evt : event) (σ2'' : S2),
+               step σ2' evt σ2'' ->
+               exists σ1' : S1,
+                 step σ1 evt σ1' /\
+                 (paco2 (sim_gen (S':=S2)) bot2 σ1' σ2'')).
+Proof.
+  intros.
+  pinversion H2; subst.
+  -  exfalso. edestruct (plus2_destr_nil H3); dcr.
+     destruct H1 as [? []].
+     exploit (step_internally_deterministic _ _ _ _ H7 H1); dcr; congruence.
+  - assert (σ1 = σ0). eapply activated_star_eq; eauto. subst σ1.
+    eexists σ3; split; eauto. split; eauto. split.
+    intros. edestruct H7; eauto; dcr. destruct H12; isabsurd.
+    eexists; split; eauto.
+    intros. edestruct H8; eauto; dcr. destruct H12; isabsurd.
+    eexists; split; eauto.
+  - exfalso. refine (activated_normal_star _ H1 _ _); eauto using star2.
+  - exfalso. refine (activated_normal_star _ H1 _ _); eauto using star2.
+Qed.
+
+Lemma sim'_activated_2 {S1} `{StateType S1} (σ1:S1)
+      {S2} `{StateType S2} (σ2:S2)
+: activated σ1
+  -> sim' σ2 σ1
+  -> exists σ2', star2 step σ2 nil σ2' /\
+           (activated σ2' /\
+           ( forall (evt : event) (σ1'' : S1),
+               step σ1 evt σ1'' ->
+               exists σ2'' : S2,
+                 step σ2' evt σ2'' /\
+                 (paco2 (sim_gen (S':=S1)) bot2 σ2'' σ1''))
+           /\
+           ( forall (evt : event) (σ2'' : S2),
+               step σ2' evt σ2'' ->
+               exists σ1' : S1,
+                 step σ1 evt σ1' /\
+                 (paco2 (sim_gen (S':=S1)) bot2 σ2'' σ1'))
+           \/ (normal2 step σ2' /\ result σ2' = None)).
+Proof.
+  intros.
+  pinversion H2; subst.
+  -  exfalso. edestruct (plus2_destr_nil H4); dcr.
+     destruct H1 as [? []].
+     exploit (step_internally_deterministic _ _ _ _ H7 H1); dcr. congruence.
+  - assert (σ1 = σ3). eapply activated_star_eq; eauto. subst σ1.
+    eexists σ0; split; eauto. left. split; eauto. split.
+    + intros. edestruct H8; eauto; dcr. destruct H12; isabsurd.
+      eexists; split; eauto.
+    + intros. edestruct H7; eauto; dcr. destruct H12; isabsurd.
+      eexists; split; eauto.
+  - eexists σ1'. split; eauto.
+  - exfalso. refine (activated_normal_star _ H1 _ _); eauto using star2.
+Qed.
+
+
+Lemma sim'_zigzag {S1} `{StateType S1}
+      (σ1:S1) {S2} `{StateType S2} (σ2a σ2b:S2) {S3} `{StateType S3} (σ3:S3)
+  : sim' σ1 σ2a
+    -> (star2 step σ2a nil σ2b \/ star2 step σ2b nil σ2a)
+    -> sim' σ2b σ3
+    -> sim' σ1 σ3.
+Proof.
+  revert σ1 σ2a σ2b σ3. pcofix CIH; intros.
+  destruct H4.
+  - {
+      pinversion H3; pinversion H5; subst.
+      - (* plus <-> plus *)
+        pfold. eapply star2_plus2_plus2 in H10; eauto. clear H2; simpl in *.
+        edestruct (plus2_reach H6 H10); eauto.
+        eapply H0.
+      - (* plus step <-> activated *)
+        pfold.
+        eapply star2_trans in H10; eauto. clear H2; simpl in *.
+        eapply plus2_star2 in H6.
+        exploit (activated_star_reach H12 H10 H6); eauto.
+        eapply sim'_reduction_closed_2 in H7; eauto.
+        destruct (sim'_activated_2 H12 H7); dcr.
+        destruct H9; dcr.
+        + econstructor 2.
+          eapply plus2_star2 in H4.
+          eapply (star2_trans H4 H8). eapply H11.
+          eauto. eauto.
+          * intros. edestruct H18; eauto. destruct H16.
+            edestruct H14; eauto. dcr.
+            eexists; split; eauto. destruct H22; isabsurd.
+            right. eapply CIH. eauto.
+            left. eapply star2_refl. eauto.
+          * intros. edestruct H15; eauto; dcr.
+            destruct H20; isabsurd.
+            edestruct H17; eauto; dcr. destruct H20.
+            eexists; split; eauto.
+            right. eapply CIH. eauto.
+            left; eapply star2_refl.
+            eauto.
+        + econstructor 3; eauto.
+          eapply plus2_star2 in H4.
+          eapply (star2_trans H4 H8); eauto.
+      - (* plus step <-> err *)
+        eapply star2_trans in H11; eauto. clear H2; simpl in *.
+        eapply plus2_star2 in H6.
+        exploit (star2_reach_normal H11 H6); eauto. eapply H0.
+        edestruct (sim'_terminate_2 X H12 H7); eauto; dcr.
+        destruct H14.
+        + pfold.
+          eapply plus2_star2 in H4.
+          exploit (star2_trans H4 H8); eauto.
+          rewrite H10 in H2.
+          econstructor 3; eauto.
+        + eapply plus2_star2 in H4.
+          exploit (star2_trans H4 H8); eauto.
+      - (*  plus step <-> term *)
+        eapply star2_trans in H11; eauto. clear H2; simpl in *.
+        eapply plus2_star2 in H6.
+        exploit (star2_reach_normal H11 H6); eauto. eapply H0.
+        edestruct (sim'_terminate_2 X H13 H7); eauto; dcr.
+        destruct H16.
+        + pfold.
+          eapply plus2_star2 in H4.
+          exploit (star2_trans H4 H8); eauto.
+          rewrite H10 in H2.
+          econstructor 4; eauto.
+        + eapply plus2_star2 in H4.
+          exploit (star2_trans H4 H8); eauto.
+      - (* activated <-> plus step *)
+          pfold.
+          eapply plus2_star2 in H13.
+          eapply star2_trans in H13; eauto. clear H2; simpl in *.
+          exploit (activated_star_reach H8 H6 H13); eauto.
+          eapply sim'_reduction_closed_1 in H15; eauto.
+          destruct (sim'_activated H8 H15); dcr.
+          econstructor 2. eauto.
+          eapply plus2_star2 in H14.
+          eapply (star2_trans H14 H11). eauto.
+          eauto.
+          + intros.
+            edestruct H9 as [? [? [?|?]]]; eauto; isabsurd.
+            edestruct H12 as [? [? ?]]; eauto; isabsurd.
+            eexists; split; eauto.
+            right. eapply CIH; eauto. left. eapply star2_refl.
+          + intros.
+            edestruct H18 as [? [? ?]]; eauto; isabsurd.
+            edestruct H10 as [? [? [?|?]]]; eauto; isabsurd.
+            eexists; split; eauto.
+            right. eapply CIH; eauto.
+            left; eapply star2_refl.
+      - (* activated <-> activated *)
+        eapply star2_trans in H13; eauto. clear H2; simpl in *.
+        exploit (both_activated H6 H13); eauto. subst.
+        pfold. econstructor 2; eauto; intros.
+        + edestruct H9; eauto. dcr.
+          edestruct H17; eauto; dcr.
+          eexists. split; eauto.
+          destruct H19, H21; isabsurd.
+          right. eapply CIH; try eapply H11; try eapply H19.
+          left. eapply star2_refl.
+        + edestruct H18; eauto. dcr.
+          edestruct H10; eauto; dcr.
+          eexists. split; eauto.
+          destruct H19, H21; isabsurd.
+          right. eapply CIH; try eapply H11; try eapply H19.
+          left. eapply star2_refl.
+      - (* activated <-> err *)
+        eapply star2_trans in H14; eauto. clear H2; simpl in *.
+        exfalso; eapply (activated_normal_star H6); eauto.
+      - (* activated <-> term *)
+        eapply star2_trans in H14; eauto. clear H2; simpl in *.
+        exfalso; eapply (activated_normal_star H6); eauto.
+      - (* term <-> plus step *)
+        case_eq (result σ1'); intros.
+        + eapply plus2_star2 in H12.
+          eapply star2_trans in H12; eauto. clear H2; simpl in *.
+          exploit (star2_reach_normal H7 H12); eauto. eapply H0.
+          assert (result σ2' <> None) by congruence.
+          edestruct (sim'_terminate X H9 H2 H14); eauto; dcr.
+          pfold.
+          econstructor 4. rewrite H18 in H4. eapply H4.
+          eauto.
+          eapply plus2_star2 in H13.
+          eapply (star2_trans H13 H15); eauto.
+          eauto. eauto.
+        + pfold. econstructor 3; eauto.
+      - eapply star2_trans in H12; eauto. clear H2; simpl in *.
+        exfalso; eapply (activated_normal_star H12 H14 H7); eauto.
+      - (* term <-> err *)
+        pfold.
+        eapply star2_trans in H13; eauto. clear H2; simpl in *.
+        edestruct (star2_reach H7 H13); eauto. eapply H0.
+        + inv H2.
+          * econstructor 3; eauto. congruence.
+          * exfalso. eapply H9. do 2 eexists; eauto.
+        + inv H2.
+          * econstructor 3; eauto. congruence.
+          * exfalso. eapply H14. do 2 eexists; eauto.
+      - (* term <-> term *)
+        pfold.
+        eapply star2_trans in H13; eauto. clear H2; simpl in *.
+        edestruct (star2_reach H7 H13); eauto. eapply H0.
+        + inv H2.
+          * econstructor 4; eauto. congruence.
+          * exfalso. eapply H9. do 2 eexists; eauto.
+        + inv H2.
+          * econstructor 4; eauto. congruence.
+          * exfalso. eapply H15. do 2 eexists; eauto.
+    }
+  - {
+      pinversion H3; pinversion H5; subst.
+      - (* plus <-> plus *)
+        pfold. eapply star2_plus2_plus2 in H6; eauto. clear H2; simpl in *.
+        edestruct (plus2_reach H10 H6); eauto.
+        eapply H0.
+      - (* plus step <-> activated *)
+        pfold.
+        eapply plus2_star2 in H6.
+        eapply star2_trans in H6; eauto. clear H2; simpl in *.
+        exploit (activated_star_reach H12 H10 H6); eauto.
+        eapply sim'_reduction_closed_2 in H7; eauto.
+        destruct (sim'_activated_2 H12 H7); dcr.
+        destruct H9; dcr.
+        + econstructor 2.
+          eapply plus2_star2 in H4.
+          eapply (star2_trans H4 H8). eapply H11.
+          eauto. eauto.
+          * intros. edestruct H18; eauto. destruct H16.
+            edestruct H14; eauto. dcr.
+            eexists; split; eauto. destruct H22; isabsurd.
+            right. eapply CIH. eauto.
+            left. eapply star2_refl. eauto.
+          * intros. edestruct H15; eauto; dcr.
+            destruct H20; isabsurd.
+            edestruct H17; eauto; dcr. destruct H20.
+            eexists; split; eauto.
+            right. eapply CIH. eauto.
+            left; eapply star2_refl.
+            eauto.
+        + econstructor 3; eauto.
+          eapply plus2_star2 in H4.
+          eapply (star2_trans H4 H8); eauto.
+      - (* plus step <-> err *)
+        eapply plus2_star2 in H6.
+        eapply star2_trans in H6; eauto. clear H2; simpl in *.
+        exploit (star2_reach_normal H11 H6); eauto. eapply H0.
+        edestruct (sim'_terminate_2 X H12 H7); eauto; dcr.
+        destruct H14.
+        + pfold.
+          eapply plus2_star2 in H4.
+          exploit (star2_trans H4 H8); eauto.
+          rewrite H10 in H2.
+          econstructor 3; eauto.
+        + eapply plus2_star2 in H4.
+          exploit (star2_trans H4 H8); eauto.
+      - (*  plus step <-> term *)
+        eapply plus2_star2 in H6.
+        eapply star2_trans in H6; eauto. clear H2; simpl in *.
+        exploit (star2_reach_normal H11 H6); eauto. eapply H0.
+        edestruct (sim'_terminate_2 X H13 H7); eauto; dcr.
+        destruct H16.
+        + pfold.
+          eapply plus2_star2 in H4.
+          exploit (star2_trans H4 H8); eauto.
+          rewrite H10 in H2.
+          econstructor 4; eauto.
+        + eapply plus2_star2 in H4.
+          exploit (star2_trans H4 H8); eauto.
+      - (* activated <-> plus step *)
+          pfold.
+          eapply star2_trans in H6; eauto. clear H2; simpl in *.
+          eapply plus2_star2 in H13.
+          exploit (activated_star_reach H8 H6 H13); eauto.
+          eapply sim'_reduction_closed_1 in H15; eauto.
+          destruct (sim'_activated H8 H15); dcr.
+          econstructor 2. eauto.
+          eapply plus2_star2 in H14.
+          eapply (star2_trans H14 H11). eauto.
+          eauto.
+          + intros.
+            edestruct H9 as [? [? [?|?]]]; eauto; isabsurd.
+            edestruct H12 as [? [? ?]]; eauto; isabsurd.
+            eexists; split; eauto.
+            right. eapply CIH; eauto. left. eapply star2_refl.
+          + intros.
+            edestruct H18 as [? [? ?]]; eauto; isabsurd.
+            edestruct H10 as [? [? [?|?]]]; eauto; isabsurd.
+            eexists; split; eauto.
+            right. eapply CIH; eauto.
+            left; eapply star2_refl.
+      - (* activated <-> activated *)
+        eapply star2_trans in H6; eauto. clear H2; simpl in *.
+        exploit (both_activated H6 H13); eauto. subst.
+        pfold. econstructor 2; eauto; intros.
+        + edestruct H9; eauto. dcr.
+          edestruct H17; eauto; dcr.
+          eexists. split; eauto.
+          destruct H19, H21; isabsurd.
+          right. eapply CIH; try eapply H11; try eapply H19.
+          left. eapply star2_refl.
+        + edestruct H18; eauto. dcr.
+          edestruct H10; eauto; dcr.
+          eexists. split; eauto.
+          destruct H19, H21; isabsurd.
+          right. eapply CIH; try eapply H11; try eapply H19.
+          left. eapply star2_refl.
+      - (* activated <-> err *)
+        eapply star2_trans in H6; eauto. clear H2; simpl in *.
+        exfalso; eapply (activated_normal_star H6 H8 H14); eauto.
+      - (* activated <-> term *)
+        eapply star2_trans in H6; eauto. clear H2; simpl in *.
+        exfalso; eapply (activated_normal_star H6 H8 H14); eauto.
+      - (* term <-> plus step *)
+        case_eq (result σ1'); intros.
+        + eapply plus2_star2 in H12.
+          eapply star2_trans in H7; eauto. clear H2; simpl in *.
+          exploit (star2_reach_normal H7 H12); eauto. eapply H0.
+          assert (result σ2' <> None) by congruence.
+          edestruct (sim'_terminate X H9 H2 H14); eauto; dcr.
+          pfold.
+          econstructor 4. rewrite H18 in H4. eapply H4.
+          eauto.
+          eapply plus2_star2 in H13.
+          eapply (star2_trans H13 H15); eauto.
+          eauto. eauto.
+        + pfold. econstructor 3; eauto.
+      - eapply star2_trans in H7; eauto. clear H2; simpl in *.
+        exfalso; eapply (activated_normal_star H12 H14 H7); eauto.
+      - (* term <-> err *)
+        pfold.
+        eapply star2_trans in H7; eauto. clear H2; simpl in *.
+        edestruct (star2_reach H7 H13); eauto. eapply H0.
+        + inv H2.
+          * econstructor 3; eauto. congruence.
+          * exfalso. eapply H9. do 2 eexists; eauto.
+        + inv H2.
+          * econstructor 3; eauto. congruence.
+          * exfalso. eapply H14. do 2 eexists; eauto.
+      - (* term <-> term *)
+        pfold.
+        eapply star2_trans in H7; eauto. clear H2; simpl in *.
+        edestruct (star2_reach H7 H13); eauto. eapply H0.
+        + inv H2.
+          * econstructor 4; eauto. congruence.
+          * exfalso. eapply H9. do 2 eexists; eauto.
+        + inv H2.
+          * econstructor 4; eauto. congruence.
+          * exfalso. eapply H15. do 2 eexists; eauto.
+    }
+Qed.
+
 Lemma sim'_trans {S1} `{StateType S1}
       (σ1:S1) {S2} `{StateType S2} (σ2:S2) {S3} `{StateType S3} (σ3:S3)
   : sim' σ1 σ2 -> sim' σ2 σ3 -> sim' σ1 σ3.
 Proof.
-  revert σ1 σ2 σ3. pcofix CIH; intros.
-  pdestruct H3. pdestruct H4.
-Admitted.
+  intros. eauto using (sim'_zigzag (S1:=S1) (S2:=S2) (S3:=S3)), star2_refl.
+Qed.
+
+Lemma sim_trans {S1} `{StateType S1}
+      (σ1:S1) {S2} `{StateType S2} (σ2:S2) {S3} `{StateType S3} (σ3:S3)
+  : sim σ1 σ2
+    -> sim σ2 σ3
+    -> sim σ1 σ3.
+Proof.
+  intros. eapply sim'_sim.
+  eapply sim_sim' in H2.
+  eapply sim_sim' in H3.
+  eapply (sim'_trans H2 H3).
+Qed.
 
 Lemma sim'_reduction_closed {S} `{StateType S}
       (σ1 σ1':S) {S'} `{StateType S'} (σ2 σ2':S')
