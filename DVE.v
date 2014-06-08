@@ -7,15 +7,29 @@ Require Import Sim Fresh Filter Liveness Filter MoreExp.
 Set Implicit Arguments.
 Unset Printing Records.
 
+Definition exp2bool (e:exp) : option bool :=
+  match e with
+    | Con c => Some (val2bool c)
+    | _ => None
+  end.
+
+Lemma exp2bool_val2bool E e b
+: exp2bool e = Some b
+  -> exists v, exp_eval E e = Some v /\ val2bool v = b.
+Proof.
+  destruct e; simpl; intros; try congruence.
+  inv H; eauto.
+Qed.
+
 Fixpoint compile (LV:list (set var * params)) (s:stmt) (a:ann (set var)) :=
   match s, a with
     | stmtExp x e s, ann1 lv an =>
       if [x ∈ getAnn an] then stmtExp x e (compile LV s an)
                          else compile LV s an
     | stmtIf e s t, ann2 _ ans ant =>
-      if [e = Con val_true] then
+      if [exp2bool e = Some true] then
         (compile LV s ans)
-      else if [e = Con val_false ] then
+      else if [ exp2bool e = Some false ] then
         (compile LV t ant)
       else
         stmtIf e (compile LV s ans) (compile LV t ant)
@@ -102,17 +116,17 @@ Proof.
       eapply agree_on_incl; eauto. rewrite <- H9. cset_tac; intuition.
     + pfold. econstructor 3; [| eapply star2_refl|]; eauto. stuck.
   - repeat destruct if.
-    + subst e.
+    + edestruct (exp2bool_val2bool V); eauto; dcr.
       eapply sim'_expansion_closed.
       eapply IHs1; eauto. eapply agree_on_incl; eauto.
       eapply S_star2 with (y:=EvtTau) (yl:=nil).
-      econstructor. reflexivity. eapply val2bool_true. eapply star2_refl.
+      econstructor; eauto. eapply star2_refl.
       eapply star2_refl.
-    + subst e.
+    + edestruct (exp2bool_val2bool V); eauto; dcr.
       eapply sim'_expansion_closed.
       eapply IHs2; eauto. eapply agree_on_incl; eauto.
       eapply S_star2 with (y:=EvtTau) (yl:=nil).
-      econstructor 3. reflexivity. eapply val2bool_false. eapply star2_refl.
+      econstructor 3; eauto. eapply star2_refl.
       eapply star2_refl.
     + remember (exp_eval V e). symmetry in Heqo.
       exploit exp_eval_live_agree; eauto.
@@ -234,17 +248,17 @@ Proof.
       eapply agree_on_incl; eauto. rewrite <- H9. cset_tac; intuition.
     + pfold. econstructor 3; [| eapply star2_refl|]; eauto. stuck.
   - repeat destruct if.
-    + subst e.
+    + edestruct (exp2bool_val2bool V); eauto; dcr.
       eapply sim'_expansion_closed.
       eapply IHs1; eauto. eapply agree_on_incl; eauto.
       eapply S_star2 with (y:=EvtTau) (yl:=nil).
-      econstructor. reflexivity. eapply val2bool_true. eapply star2_refl.
+      econstructor; eauto. eapply star2_refl.
       eapply star2_refl.
-    + subst e.
+    + edestruct (exp2bool_val2bool V); eauto; dcr.
       eapply sim'_expansion_closed.
       eapply IHs2; eauto. eapply agree_on_incl; eauto.
       eapply S_star2 with (y:=EvtTau) (yl:=nil).
-      econstructor 3. reflexivity. eapply val2bool_false. eapply star2_refl.
+      econstructor 3; eauto. eapply star2_refl.
       eapply star2_refl.
     + remember (exp_eval V e). symmetry in Heqo.
       exploit exp_eval_live_agree; eauto.
@@ -333,9 +347,9 @@ Fixpoint compile_live (s:stmt) (a:ann (set var)) : ann (set var) :=
       if [x ∈ getAnn an] then ann1 lv (compile_live s an)
                          else compile_live s an
     | stmtIf e s t, ann2 lv ans ant =>
-      if [e = Con val_true] then
+      if [exp2bool e = Some true] then
         compile_live s ans
-      else if [e = Con val_false ] then
+      else if [exp2bool e = Some false ] then
         compile_live t ant
       else
         ann2 lv (compile_live s ans) (compile_live t ant)
