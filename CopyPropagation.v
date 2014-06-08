@@ -1,7 +1,7 @@
 Require Import CSet Le.
 
 Require Import Plus Util AllInRel Map.
-Require Import Val Var Env EnvTy IL Sim Alpha Coherence Fresh Annotation DecSolve SetOperations LabelsDefined.
+Require Import Val Var Env EnvTy IL Sim Coherence Fresh Annotation DecSolve SetOperations LabelsDefined.
 
 Require Import Liveness ValueOpts.
 
@@ -114,12 +114,18 @@ Proof.
     unfold satisfies in *; simpl in *.
     inv X; econstructor; eauto.
   - simpl in H.
+    exploit (IHe ϱ); eauto.
+    hnf; intros. exploit X; eauto.
+    simpl. inv X0; simpl.
+    + econstructor.
+    + reflexivity.
+  - simpl in H.
     exploit (IHe1 ϱ); eauto. instantiate (1:=D). rewrite <- H. cset_tac; intuition.
     exploit (IHe2 ϱ); eauto. instantiate (1:=D). rewrite <- H. cset_tac; intuition.
     hnf; intros.
     exploit X; eauto. exploit X0; eauto.
     simpl. inv X1; inv X2; simpl; try econstructor.
-    destruct (binop_eval b y y0); econstructor; eauto.
+    reflexivity.
 Qed.
 
 Lemma cp_moreDefinedArgs ϱ D Y
@@ -252,11 +258,13 @@ Proof.
     + eapply eqn_sound_entails_monotone; eauto.
       eapply IHssa1; eauto.
       * rewrite H4; simpl; eauto.
-      * rewrite H4; simpl. reflexivity.
+      * rewrite H4; simpl.
+        eapply entails_monotone; try reflexivity; try eapply incl_right.
     + eapply eqn_sound_entails_monotone; eauto.
       eapply IHssa2; eauto.
       * rewrite H5; simpl; eauto.
-      * rewrite H5; simpl. reflexivity.
+      * rewrite H5; simpl.
+        eapply entails_monotone; try reflexivity; try eapply incl_right.
     + eapply cp_moreDefined; eauto.
   - econstructor; eauto using cp_moreDefined.
   - destruct a as [[[]]].
