@@ -1,6 +1,6 @@
 Require Import List.
 Require Export Util Var Val Exp Env Map CSet AutoIndTac IL AllInRel.
-Require Export EventsActivated StateType paco.
+Require Export EventsActivated StateType paco Equiv.
 
 Set Implicit Arguments.
 Unset Printing Records.
@@ -531,7 +531,7 @@ Proof.
   eapply bisim'_reduction_closed_1; eauto.
   eapply bisim'_refl.
 Qed.
-
+(*
 Class BisimRelation (A:Type) := {
     ParamRel : A-> list var -> list var -> Prop;
     ArgRel : onv val -> onv val -> A-> list val -> list val -> Prop;
@@ -563,28 +563,32 @@ Definition fexteq'
     -> length Z' = length VL'
     -> paco2 (@bisim_gen F.state _ F.state _) r (L, E[Z <-- List.map Some VL], s)
             (L', E'[Z' <-- List.map Some VL'], s').
+*)
 
+Instance bisim_progeq : ProgramEquivalence F.state F.state.
+constructor. eapply (paco2 (@bisim_gen F.state _ F.state _)).
+Defined.
 
 Lemma simL_mon (r r0:rel2 F.state (fun _ : F.state => F.state)) A AR L1 L2 (AL:list A) L1' L2'
-:  AIR5 (simB r AR) L1 L2 AL L1' L2'
+:  AIR5 (simB bisim_progeq r AR) L1 L2 AL L1' L2'
   -> (forall x0 x1 : F.state, r x0 x1 -> r0 x0 x1)
   -> L1 = L1'
   -> L2 = L2'
-  ->  AIR5 (simB r0 AR) L1 L2 AL L1' L2'.
+  ->  AIR5 (simB bisim_progeq r0 AR) L1 L2 AL L1' L2'.
 Proof.
   intros. general induction H; eauto using AIR5.
   econstructor; eauto.
   inv pf. econstructor; eauto.
-  intros. eapply paco2_mon; eauto.
+  intros. eapply paco2_mon; eauto. eapply H3; eauto.
 Qed.
 
 Lemma subst_lemma A AR (a:A) AL s s' V V' E E' Z Z' L1 L2 t t'
-: fexteq' AR a (a::AL) E Z s E' Z' s'
+: fexteq' bisim_progeq AR a (a::AL) E Z s E' Z' s'
   -> ParamRel a Z Z'
   -> BlockRel a (F.blockI E Z s) (F.blockI E' Z' s')
-  -> simL' bot2 AR AL L1 L2
+  -> simL' bisim_progeq bot2 AR AL L1 L2
   -> (forall r (L L' : list F.block),
-       simL' r AR (a :: AL) L L' ->
+       simL' bisim_progeq r AR (a :: AL) L L' ->
        paco2 (@bisim_gen F.state _ F.state _) r (L, V, t) (L', V', t'))
   -> paco2 (@bisim_gen F.state _ F.state _) bot2 (F.blockI E Z s :: L1, V, t)
          (F.blockI E' Z' s' :: L2, V', t').
@@ -609,8 +613,8 @@ Qed.
 
 
 Lemma fix_compatible r A AR (a:A) AL s s' E E' Z Z' L L' Yv Y'v
-: simL' r AR AL L L'
-  -> fexteq' AR a (a::AL) E Z s E' Z' s'
+: simL' bisim_progeq r AR AL L L'
+  -> fexteq' bisim_progeq AR a (a::AL) E Z s E' Z' s'
   -> ParamRel a Z Z'
   -> BlockRel a (F.blockI E Z s) (F.blockI E' Z' s')
   -> ArgRel E E' a Yv Y'v
@@ -638,11 +642,11 @@ Proof.
 Qed.
 
 Lemma simL_extension' r A AR (a:A) AL s s' E E' Z Z' L L'
-: simL' r AR AL L L'
-  -> fexteq' AR a (a::AL) E Z s E' Z' s'
+: simL' bisim_progeq r AR AL L L'
+  -> fexteq' bisim_progeq AR a (a::AL) E Z s E' Z' s'
   -> ParamRel a Z Z'
   -> BlockRel a (F.blockI E Z s) (F.blockI E' Z' s')
-  -> simL' r AR (a::AL) (F.blockI E Z s :: L) (F.blockI E' Z' s' :: L').
+  -> simL' bisim_progeq r AR (a::AL) (F.blockI E Z s :: L) (F.blockI E' Z' s' :: L').
 Proof.
   intros.
   hnf; intros. econstructor; eauto. econstructor; eauto; intros.
