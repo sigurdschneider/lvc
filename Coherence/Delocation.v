@@ -380,6 +380,6 @@ Qed.
 
 (*
 *** Local Variables: ***
-*** coq-load-path: (("." "Lvc")) ***
+*** coq-load-path: ((".." "Lvc")) ***
 *** End: ***
 *)
