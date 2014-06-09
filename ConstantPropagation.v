@@ -601,6 +601,28 @@ Proof.
   constructor. inv H12. congruence.
 Qed.
 
+Lemma cp_eqns_update D x c AE
+: x ∈ D
+  -> cp_eqns (AE [x <- ⎣c ⎦]) D [=] {{(Var x, Con c)}} ∪ cp_eqns AE (D \ {{x}}).
+Proof.
+  intros.
+  assert (D [=] {{x}} ∪ (D \ {{x}})). {
+    cset_tac; intuition. decide (a = x); subst; intuition. inv H2; eauto.
+  }
+  rewrite H0 at 1. rewrite cp_eqns_union. rewrite cp_eqns_single.
+  unfold cp_eqn. lud; isabsurd.
+  rewrite cp_eqns_agree. reflexivity.
+  hnf; intros. lud. inv e0; subst. exfalso; cset_tac; intuition.
+Qed.
+
+Instance satisfiesAll_Equal_morphism
+  : Proper (eq ==> Equal ==> iff) satisfiesAll.
+Proof.
+  unfold Proper, respectful; intros; subst.
+  intuition. hnf; intros. eapply H. eapply H0; eauto.
+  hnf; intros. eapply H. eapply H0; eauto.
+Qed.
+
 Lemma cp_sound_eqn AE Cp Es s (ang:ann (set var * set var))
 : let Gamma := (cp_eqns AE (fst (getAnn ang))) in
 cp_sound AE Cp s
@@ -646,7 +668,17 @@ Proof.
           rewrite H12; eauto. simpl.
           hnf. intros. destruct if.
           + inv i; simpl in *.
-            admit.
+            rewrite cp_eqns_update.
+            eapply satisfiesAll_union; split.
+            hnf; intros. cset_tac. inv H4. cbv in H18,H17; subst. clear H4.
+            hnf; simpl. exploit H3. eapply incl_left. cset_tac. reflexivity.
+            inv X. case_eq (E x); intros.
+            rewrite H5 in H4. simpl in *. destruct if in H4; subst; try reflexivity.
+            cbv in H4. congruence.
+            rewrite H5 in H4. isabsurd.
+            hnf; intros. eapply H3. eapply incl_right.
+            eapply cp_eqns_morphism_subset; try eapply H4. eapply minus_incl.
+            revert H6; clear_all; intros; cset_tac; intuition.
           + hnf; intros. eapply H3. eapply incl_right; eauto.
       }
     + {
@@ -664,7 +696,22 @@ Proof.
           rewrite H4 in e0; simpl in *; congruence.
         - eapply eqn_sound_entails_monotone; eauto.
           + rewrite H13; eauto. simpl.
-            admit.
+            destruct if.
+            * inv i; simpl in *.
+              rewrite cp_eqns_update.
+              hnf; intros.
+              eapply satisfiesAll_union; split.
+              hnf; intros. cset_tac. inv H4. cbv in H18,H17; subst. clear H4.
+              hnf; simpl. exploit H3. eapply incl_left. cset_tac. reflexivity.
+              inv X. case_eq (E v); intros.
+              rewrite H5 in H4. simpl in *.
+              unfold option_lift1 in H4. destruct if in H4; subst. constructor; eauto.
+              isabsurd.
+              rewrite H5 in H4. isabsurd.
+              hnf; intros. eapply H3. eapply incl_right.
+              eapply cp_eqns_morphism_subset; try eapply H4. eapply minus_incl.
+              revert H6; clear_all; intros; cset_tac; intuition.
+            * hnf; intros. hnf; intros. eapply H3. eapply incl_right; eauto.
       }
     + eapply cp_choose_moreDefined; eauto.
   - edestruct get_in_range as [a ?]; eauto.
