@@ -215,7 +215,7 @@ Qed.
 Lemma copyPropagate_sound_eqn s ang Es ϱ
 : ssa s ang
   -> lookup_set ϱ (fst (getAnn ang)) ⊆ (fst (getAnn ang))
-  -> labelsDefined s Es
+  -> labelsDefined s (length Es)
   -> (forall n a, get Es n a -> snd a [=] ∅)
   -> eqn_sound Es
               s
@@ -267,7 +267,8 @@ Proof.
         eapply entails_monotone; try reflexivity; try eapply incl_right.
     + eapply cp_moreDefined; eauto.
   - econstructor; eauto using cp_moreDefined.
-  - destruct a as [[[]]].
+  - edestruct get_in_range as [a ?]; eauto.
+    destruct a as [[[]]].
     exploit H3; eauto. simpl in *; dcr.
     econstructor; eauto.
     + rewrite map_length; eauto.
@@ -300,7 +301,6 @@ Proof.
         rewrite update_with_list_lookup_set_incl; eauto; try reflexivity.
         rewrite lookup_set_update_with_list_in_union; eauto.
         simpl in *. rewrite H6. clear_all; cset_tac; intuition.
-      * eapply labelsDefined_any; try eapply H13; reflexivity.
       * intros. inv H9; simpl in *. reflexivity.
         eapply H8; eauto.
       * rewrite H3; simpl.
@@ -314,9 +314,8 @@ Proof.
         clear_all; cset_tac; intuition; eauto.
         rewrite H9. eapply update_with_list_agree_minus; eauto. reflexivity.
     + eapply eqn_sound_entails_monotone; eauto.
-      eapply IHssa2.
+      eapply IHssa2; simpl; eauto.
       * rewrite H5. simpl. eauto.
-      * eapply labelsDefined_any; try eapply H14; reflexivity.
       * intros. inv H9; simpl in *. reflexivity.
         eapply H8; eauto.
       * rewrite H5. simpl. reflexivity.
