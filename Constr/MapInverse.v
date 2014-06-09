@@ -218,16 +218,16 @@ Qed.
 
 Lemma inverse_on_agree_on {X} `{OrderedType X} {Y} `{OrderedType Y}
       (f f': X -> Y) (g g': Y -> X) (G:set X)
- `{Proper _ (_eq ==> _eq) f}  `{Proper _ (_eq ==> _eq) f'}
- `{Proper _ (_eq ==> _eq) g}  `{Proper _ (_eq ==> _eq) g'}
+ `{Proper _ (_eq ==> _eq) f}
+ `{Proper _ (_eq ==> _eq) g'}
   : inverse_on G f g
     -> agree_on _eq G f f'
     -> agree_on _eq (lookup_set f G) g g'
     -> inverse_on G f' g'.
 Proof.
   intros; hnf; intros.
-  hnf in H6. rewrite <- H6; eauto.
-  hnf in H7. rewrite <- H7; eauto.
+  hnf in H4. rewrite <- H4; eauto.
+  hnf in H5. rewrite <- H5; eauto.
   eapply lookup_set_spec; eauto.
 Qed.
 
