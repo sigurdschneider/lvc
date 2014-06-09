@@ -12,6 +12,16 @@ Inductive nstmt : Type :=
 (* block f Z : rt = s in b *)
 | nstmtLet    (l : lab) (Z:params) (s : nstmt) (t : nstmt).
 
+Fixpoint freeVars (s:nstmt) : set var :=
+  match s with
+    | nstmtExp x e s0 => (freeVars s0 \ {{x}}) ∪ Exp.freeVars e
+    | nstmtIf e s1 s2 => freeVars s1 ∪ freeVars s2 ∪ Exp.freeVars e
+    | nstmtGoto l Y => list_union (List.map Exp.freeVars Y)
+    | nstmtReturn e => Exp.freeVars e
+    | nstmtExtern x f Y s => (freeVars s \ {{x}}) ∪ list_union (List.map Exp.freeVars Y)
+    | nstmtLet l Z s1 s2 => (freeVars s1 \ of_list Z) ∪ freeVars s2
+  end.
+
 
 Fixpoint pos X `{OrderedType X} (l:list X) (x:X) (n:nat) : option nat :=
   match l with
