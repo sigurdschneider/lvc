@@ -53,7 +53,7 @@ Definition ArgRel (V V:onv val) (G:(set var * params)) (VL VL': list val) : Prop
 Definition ParamRel (G:(set var * params)) (Z Z' : list var) : Prop :=
   Z' = (List.filter (fun x => B[x ∈ (fst G)]) Z) /\ snd G = Z.
 
-Instance SR : SimRelation (set var * params) := {
+Instance SR : ProofRelation (set var * params) := {
    ParamRel := ParamRel;
    ArgRel := ArgRel;
    BlockRel := fun lvZ b b' => F.block_Z b = snd lvZ
@@ -97,7 +97,7 @@ Qed.
 Lemma sim_DVE' r L L' V V' s LV lv
 : agree_on eq (getAnn lv) V V'
 -> true_live_sound LV s lv
--> simL' r SR LV L L'
+-> simL' sim_progeq r SR LV L L'
 -> sim'r r (L,V, s) (L',V', compile LV s lv).
 Proof.
   general induction s; simpl; inv H0; simpl in * |- *.
