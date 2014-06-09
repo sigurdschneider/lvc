@@ -156,16 +156,37 @@ Instance set_var_semilattice : BoundedSemiLattice Dom := {
 }.
 - intros. hnf. unfold joinDom.
   destruct a; eauto using @option_eq.
-  admit.
+  econstructor. hnf; intros.
+  rewrite MapFacts.map2_1bis; unfold join.
+  destruct (find y d); try destruct if; eauto; congruence.
+  congruence.
 - hnf; intros. unfold joinDom.
   destruct a, b; simpl; eauto using @option_eq; try reflexivity.
-  admit.
-- intros; hnf; intros. admit.
+  econstructor.
+  hnf; intros.
+  repeat rewrite MapFacts.map2_1bis; try reflexivity.
+  destruct (find y d), (find y d0); simpl; repeat destruct if; congruence.
+- intros; hnf; intros.
+  destruct a,b,c; simpl; try econstructor; eauto; try reflexivity.
+  hnf; intro.
+  repeat rewrite MapFacts.map2_1bis; try reflexivity.
+  destruct (find y d), (find y d0), (find y d1); simpl; repeat destruct if; subst; simpl; try congruence.
+  destruct if; congruence.
+  destruct if; congruence.
 - unfold Proper, respectful; intros.
   simpl in *.
   destruct x, y, x0, y0; simpl; eauto using @option_eq; try reflexivity; try eassumption; isabsurd.
-  inv H; inv H0. admit.
-- admit.
+  inv H; inv H0.
+  econstructor.
+  intro. repeat rewrite MapFacts.map2_1bis; try reflexivity.
+  unfold join. rewrite H3. rewrite H4.
+  reflexivity.
+- unfold Proper, respectful; intros.
+  simpl in *.
+  intro.
+  hnf in H, H0.
+  unfold joinDom in H1.
+  admit.
 Qed.
 
 
@@ -237,11 +258,18 @@ Definition constant_propagation_transform st (a:list (Dom * params)*Dom) :=
       let d := defdom d in
       let ai :=
           if [exp_eval (fun x => find x d) e = Some val_true] then
-              anni2opt (Some (Some d)) None
-            else if [exp_eval (fun x => find x d) e = Some val_false] then
-              anni2opt None (Some (Some d))
-            else
-              anni2opt (Some (Some d)) (Some (Some d))
+              match e with
+                | BinOp 3 (Var x) (Con c) => anni2opt (Some (Some (d[x <- c]))) None
+                | _ => anni2opt (Some (Some d)) None
+              end
+          else if [exp_eval (fun x => find x d) e = Some val_false] then
+            match e with
+              | Var x => anni2opt None (Some (Some (d[x <- 0])))
+(*            | BinOp 4 (Var x) (Con c) => anni2opt None (Some (Some (d[x <- c]))) *)
+              | _ => anni2opt None (Some (Some d))
+            end
+          else
+            anni2opt (Some (Some d)) (Some (Some d))
       in
       (AL, ai)
     | stmtGoto f Y as st, (AL, d) =>
