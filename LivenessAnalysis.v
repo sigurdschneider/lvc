@@ -5,8 +5,8 @@ Require Import Val Var Env EnvTy IL Annotation Lattice DecSolve Analysis Filter.
 
 Instance PartialOrder_Subset_Equal X `{OrderedType X} : PartialOrder (set X) :=
 {
-  poLt := Subset;
-  poLt_dec := @Subset_computable _ _;
+  poLe := Subset;
+  poLe_dec := @Subset_computable _ _;
   poEq := Equal;
   poEq_dec := @Equal_computable _ _
 }.

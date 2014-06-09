@@ -22,7 +22,7 @@ Section AnalysisAlgorithm.
 
   Definition step s (d:Dom) :=
     sdo d' <- analysis_step analysis s d;
-    Success (d', if [@poLt _ (dom_po analysis) d' d] then false else true).
+    Success (d', if [@poLe _ (dom_po analysis) d' d] then false else true).
 
   Definition fixpoint (s:stmt) :=
     first (initial_value analysis s) (step s).

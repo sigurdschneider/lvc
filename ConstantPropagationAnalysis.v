@@ -16,8 +16,8 @@ Definition join (v v' : option (withTop val)) : option (withTop val) :=
     | Some (wTA v), Some (wTA v') => if [v = v'] then Some (wTA v) else Some Top
     | Some (Top), _ => Some Top
     | _, Some Top => Some Top
-    | Some (wTA v), _ => Some (wTA v)
-    | _, Some (wTA v) => Some (wTA v)
+    | Some (wTA v), None => Some (wTA v)
+    | None, Some (wTA v) => Some (wTA v)
     | None, None => None
   end.
 
@@ -26,30 +26,47 @@ Definition joinDom (d d':Dom) : Dom := map2 join d d'.
 Definition domain {X} `{OrderedType X} {Y} (d:Map [X, Y])
 : set X := of_list (List.map fst (elements d)).
 
+(*
 Lemma domain_join (d d':Dom)
 : domain (map2 join d d') [=] domain d ∪ domain d'.
 Proof.
   unfold domain. split; intros.
   - eapply of_list_1 in H.
-Admitted.
+*)
 
 
-Inductive lt : option (withTop val) -> option (withTop val) -> Prop :=
-  | ltTop v : lt (Some v) (Some Top)
-  | ltBot w : lt None (Some w).
+Inductive le : option (withTop val) -> option (withTop val) -> Prop :=
+  | leTop v : le (Some (wTA v)) (Some Top)
+  | leBot w : le None (Some w)
+  | leRefl v : le v v.
 
-Instance lt_dec x y : Computable (lt x y).
+Instance le_dec x y : Computable (le x y).
 destruct x, y; try dec_solve.
-destruct w, w0; dec_solve.
+destruct w, w0; try dec_solve.
+decide (a = a0); subst; try dec_solve.
 Defined.
 
-Instance lt_find_dec d d' x : Computable ((fun x0 : var => lt (find x0 d) (find x0 d')) x).
+Lemma not_le_irreflexive x y
+: ~le x y -> x <> y.
 Proof.
-  hnf; intros. eapply lt_dec.
+  intros. intro. eapply H. subst. eapply leRefl.
+Qed.
+
+Instance le_find_dec d d' x : Computable ((fun x0 : var => le (find x0 d) (find x0 d')) x).
+Proof.
+  hnf; intros. eapply le_dec.
 Defined.
 
-Definition ltDom (d d': Dom) : Prop :=
- (forall x, x ∈ domain d ∪ domain d' -> lt (find x d) (find x d')).
+Definition leDom (d d': Dom) : Prop :=
+ (forall x, x ∈ domain d ∪ domain d' -> le (find x d) (find x d')).
+
+Lemma leDom_irreflexive x y
+: ~leDom x y -> ~Equal x y.
+Proof.
+  intros. intro. eapply H.
+  hnf; intros. rewrite H0. eapply leRefl; eauto.
+Qed.
+
 
 Definition set_quant_dec X `{OrderedType X} s P `{Proper _ (_eq ==> iff) P}  `{forall x, Computable (P x) } : bool :=
   SetInterface.fold (fun x b => if [P x] then b else false) s true.
@@ -102,15 +119,15 @@ Defined.
 
 Arguments set_quant_computable [X] {H} s P {H0} {H1}.
 
-Instance ltDom_dec
-  :  forall d d' : Dom, Computable (ltDom d d').
+Instance leDom_dec
+  :  forall d d' : Dom, Computable (leDom d d').
 Proof.
   intros; hnf; intros.
-  edestruct (@set_quant_computable _ _ (domain d ∪ domain d') (fun x => lt (find x d) (find x d'))).
+  edestruct (@set_quant_computable _ _ (domain d ∪ domain d') (fun x => le (find x d) (find x d'))).
   - unfold Proper, respectful; intros.
     hnf in H; subst; intuition.
-  - intros; eapply lt_dec.
-  - eauto.
+  - intros; eapply le_dec.
+  - left; eauto.
   - right; eauto.
 Defined.
 
@@ -158,27 +175,42 @@ Proof.
   eapply get_in_of_list. change x0 with (fst (x0, y)). eapply map_get_1; eauto.
 Qed.
 
+Lemma InA_map X Y (R:X->X->Prop) (R':Y->Y->Prop) `{Reflexive _ R'} (f:Y->X) L x
+: InA R x (List.map f L)
+  -> exists y, InA R' y L /\ R x (f y).
+Proof.
+  intros. general induction H0; destruct L; simpl in *; inv Heql.
+  - eexists y0; split; eauto using InA.
+  - edestruct IHInA; try reflexivity; eauto; dcr. eexists; split; eauto.
+Qed.
+
 Lemma domain_find {X} `{OrderedType X} {Y} (d:Map [X, Y]) x
 : x ∈ domain d -> exists v, find x d = Some v.
 Proof.
   unfold domain.
   case_eq (find x d); intros; eauto.
   exfalso.
-  admit.
+  eapply InA_in in H1.
+  edestruct InA_map; eauto.
+  instantiate (1:=eq_key_elt). hnf; eauto.
+  destruct x0.
+  dcr.
+  eapply MF.elements_mapsto_iff in H3.
+  simpl in *. eapply MF.find_mapsto_iff in H3. rewrite <- H4 in H3.
+  congruence.
 Qed.
-
 
 Lemma lt_join x y x' y'
-: lt y x
-  -> lt y' x'
-  -> lt (join y y') (join x x').
+: le y x
+  -> le y' x'
+  -> le (join y y') (join x x').
 Proof.
   intros.
-  inv H; inv H0; simpl; eauto using lt;
-  try destruct v; try destruct v0; try destruct w; eauto using lt.
-  - destruct if; eauto using lt.
-  - destruct w0; eauto. destruct if; eauto using lt.
+  inv H; inv H0; simpl; eauto using le;
+  try destruct x'; try destruct x; simpl; try destruct w; try destruct if; try destruct w0;
+    try destruct if; subst; eauto using le.
 Qed.
+
 
 Lemma join_bot_right (y:Dom) x0
   : join (find x0 y) ⎣⎦ = find x0 y.
@@ -194,12 +226,13 @@ Proof.
   destruct w; eauto.
 Qed.
 
-Lemma ltDom_join x y x' y'
-: ltDom y x
-  -> ltDom y' x'
-  -> ltDom (joinDom y y') (joinDom x x').
+
+Lemma leDom_join x y x' y'
+: leDom y x
+  -> leDom y' x'
+  -> leDom (joinDom y y') (joinDom x x').
 Proof.
-  unfold ltDom, joinDom.
+  unfold leDom, joinDom.
   intros.
   repeat rewrite MapFacts.map2_1bis; eauto.
   repeat rewrite domain_join in H1.
@@ -226,15 +259,18 @@ Proof.
   repeat match goal with
     | [H : lt ?x ?y, H' : ?y = None |- _ ] => rewrite H' in H; inv H
   end.
-  rewrite H2. econstructor.
-  rewrite H2. econstructor.
+  rewrite H2, n0 in X. inv X.
+  rewrite H2, n1 in X; inv X.
+  rewrite H2; constructor.
+  rewrite H2; econstructor.
+  constructor.
 Qed.
 
 Set Implicit Arguments.
 
 Instance Dom_semilattice_ltDom : PartialOrder Dom := {
-  poLt := ltDom;
-  poLt_dec := ltDom_dec;
+  poLe := leDom;
+  poLe_dec := leDom_dec;
   poEq := Equal;
   poEq_dec := _
 }.
@@ -266,8 +302,8 @@ Instance set_var_semilattice : BoundedSemiLattice Dom := {
   intro. unfold joinDom. repeat rewrite MapFacts.map2_1bis; try reflexivity.
   unfold join. rewrite H. rewrite H0.
   reflexivity.
-- unfold Proper, respectful; intros.
-  eapply ltDom_join; eauto.
+ - unfold Proper, respectful; intros.
+   eapply leDom_join; eauto.
 Qed.
 
 
@@ -383,12 +419,12 @@ Qed.
 
 
 Instance Dom_params_semilattice : PartialOrder (Dom * params) := {
-  poLt p p' := poLt (fst p) (fst p') /\ snd p = snd p';
-  poLt_dec := _;
+  poLe p p' := poLe (fst p) (fst p') /\ snd p = snd p';
+  poLe_dec := _;
   poEq p p' := poEq (fst p) (fst p') /\ snd p = snd p';
   poEq_dec := _
 }.
-- intros. decide (poLt (fst d) (fst d')); decide (snd d = snd d'); try dec_solve.
+- intros. decide (poLe (fst d) (fst d')); decide (snd d = snd d'); try dec_solve.
 - intros. decide (poEq (fst d) (fst d')); decide (snd d = snd d'); try dec_solve.
 Defined.
 

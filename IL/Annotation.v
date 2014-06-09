@@ -139,7 +139,7 @@ left. inv H0; eauto.
 right; inv H0. intro. eapply (lt_not_gt H1 H2).
 Defined.
 
-Instance ann_lt_dec A B (R:A->B->Prop)
+Instance ann_R_dec A B (R:A->B->Prop)
          `{forall a b, Computable (R a b)} (a:ann A) (b:ann B) :
   Computable (ann_R R a b).
 Proof.
@@ -148,19 +148,19 @@ Proof.
   destruct a; destruct b; try dec_solve.
   + decide (R a a0); dec_solve.
   + decide (R a a1); try dec_solve;
-    edestruct ann_lt_dec with (a:=a0) (b:=b); hnf in *;
+    edestruct ann_R_dec with (a:=a0) (b:=b); hnf in *;
     try eassumption; try dec_solve.
   + decide (R a1 a); try dec_solve.
-    destruct (ann_lt_dec a2 b1); try dec_solve.
-    destruct (ann_lt_dec a3 b2); try dec_solve.
+    destruct (ann_R_dec a2 b1); try dec_solve.
+    destruct (ann_R_dec a3 b2); try dec_solve.
 Defined.
 
 Instance PartialOrder_ann Dom `{PartialOrder Dom}
 : PartialOrder (ann Dom) := {
-  poLt := ann_R poLt;
-  poLt_dec := @ann_lt_dec _ _ poLt poLt_dec;
+  poLe := ann_R poLe;
+  poLe_dec := @ann_R_dec _ _ poLe poLe_dec;
   poEq := ann_R poEq;
-  poEq_dec := @ann_lt_dec _ _ poEq poEq_dec
+  poEq_dec := @ann_R_dec _ _ poEq poEq_dec
 }.
 
 
