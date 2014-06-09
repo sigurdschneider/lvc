@@ -25,7 +25,9 @@ cmd = ARGV.join(' ')
 mod = ARGV.last
 pad = "".ljust(50 - cmd.length)
 
-print "#{Time.now.strftime("%H:%M:%S")} #{blue('>>>')} #{mod}#{parallel ? "\n" : pad}"
+est = File.readable?("#{mod}.time") ? File.read("#{mod}.time") : ""
+
+print "#{Time.now.strftime("%H:%M:%S")} #{blue('>>>')} #{mod}#{pad}(#{blue(est.strip)})#{parallel ? "\n" : " "}"
 
 start = Time.now
 cstdin, cstdout, cstderr, waitthr = Open3.popen3("bash -c \"time #{cmd}\"")
@@ -46,7 +48,7 @@ sys = serr.match(/.*sys[ \t]*([0123456789]+)m([0123456789\.]+)s.*/m)
 cpu = user[1].to_f * 60 + user[2].to_f + sys[1].to_f * 60 + sys[2].to_f
 
 File.open("#{mod}.time", 'w') do |file|
-  file.puts "#{cpu}"
+  file.puts "#{cpu.round(2)}"
 end
 
 if !parallel then
