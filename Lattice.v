@@ -8,6 +8,7 @@ Updated to accomodate non-extensional equalities
 
 Require Export Containers.OrderedType Setoid Coq.Classes.Morphisms Computable.
 Require Export Libs.PartialOrder.
+Require Import EqDec DecSolve.
 
 
 Class BoundedSemiLattice (A : Type) := {
@@ -61,6 +62,20 @@ Section SemiLatticeTheory.
   (** *)
 
 End SemiLatticeTheory.
+
+Inductive withTop (A:Type) :=
+| Top : withTop A
+| wTA (a:A) : withTop A.
+
+Arguments Top [A].
+Arguments wTA [A] a.
+
+Instance withTop_eq_dec A `{EqDec A eq} : EqDec (withTop A) eq.
+Proof.
+  hnf. destruct x,y; eauto; try dec_solve.
+  destruct (H a a0); try dec_solve.
+  hnf in e. subst. left; eauto.
+Qed.
 
 (*
 
