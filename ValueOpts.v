@@ -164,17 +164,17 @@ Fixpoint compile (s:stmt) (a:ann (list exp)) :=
 
 
 
-Definition ArgRel (E E':onv val) (a:list var*set var*eqns*eqns) (VL VL': list val) : Prop :=
+Definition ArgRel' (E E':onv val) (a:list var*set var*eqns*eqns) (VL VL': list val) : Prop :=
   let '(Z, G, Gamma, EqS) := a in
   length Z = length VL
   /\ VL = VL'
   /\ satisfiesAll (E[Z <-- List.map Some VL]) (EqS ∪ Gamma).
 
-Definition ParamRel (a:params*set var*eqns*eqns) (Z Z' : list var) : Prop :=
+Definition ParamRel' (a:params*set var*eqns*eqns) (Z Z' : list var) : Prop :=
   let '(Zb, G, Gamma, EqS) := a in
   Z = Z' /\ Zb = Z.
 
-Definition BlockRel (G':set var) (V V':onv val) (a:params*set var*eqns*eqns) (b b':F.block) : Prop :=
+Definition BlockRel' (G':set var) (V V':onv val) (a:params*set var*eqns*eqns) (b b':F.block) : Prop :=
   let '(Zb, G, Gamma, EqS) := a in
   G ∩ of_list Zb [=] {}
   /\ G ⊆ G'
@@ -184,10 +184,10 @@ Definition BlockRel (G':set var) (V V':onv val) (a:params*set var*eqns*eqns) (b 
   /\ agree_on eq G (F.block_E b') V'
   /\ eqns_freeVars Gamma ⊆ G.
 
-Instance AR lv V V' : SimRelation (params*set var*eqns*eqns) := {
-  ArgRel := ArgRel;
-  ParamRel := ParamRel;
-  BlockRel := BlockRel lv V V'
+Instance AR lv V V' : ProofRelation (params*set var*eqns*eqns) := {
+  ArgRel := ArgRel';
+  ParamRel := ParamRel';
+  BlockRel := BlockRel' lv V V'
 }.
 intros. hnf in H. hnf in H0.
 destruct a as [[[]]]; dcr; split; congruence.
@@ -394,14 +394,14 @@ Proof.
 Qed.
 
 
-Lemma simL'_update r A (AR AR':SimRelation A) LV L L' L1 L2
-: AIR5 (simB r AR) L L' LV L1 L2
-  -> (forall x b b', @Sim.BlockRel _ AR x b b' -> @Sim.BlockRel _ AR' x b b')
-  -> (forall a Z Z', @Sim.ParamRel _ AR a Z Z' -> @Sim.ParamRel _ AR' a Z Z')
-  -> (forall V V' a VL VL', @Sim.ArgRel _ AR V V' a VL VL' <-> @Sim.ArgRel _ AR' V V' a VL VL')
+Lemma simL'_update r A (AR AR':ProofRelation A) LV L L' L1 L2
+: AIR5 (simB sim_progeq r AR) L L' LV L1 L2
+  -> (forall x b b', @BlockRel _ AR x b b' -> @BlockRel _ AR' x b b')
+  -> (forall a Z Z', @ParamRel _ AR a Z Z' -> @ParamRel _ AR' a Z Z')
+  -> (forall V V' a VL VL', @ArgRel _ AR V V' a VL VL' <-> @ArgRel _ AR' V V' a VL VL')
   -> L = L1
   -> L' = L2
-  -> AIR5 (simB r AR') L L' LV L1 L2.
+  -> AIR5 (simB sim_progeq r AR') L L' LV L1 L2.
 Proof.
   intros. revert_until H. remember AR. induction H; intros.
   - econstructor.
@@ -846,10 +846,10 @@ Qed.
 
 
 
-Lemma sim_DVE r L L' V V' s LV Gamma repl ang
+Lemma sim_vopt r L L' V V' s LV Gamma repl ang
 : satisfiesAll V Gamma
 -> eqn_sound LV s Gamma ang repl
--> simL' r (AR (fst (getAnn ang)) V V') LV L L'
+-> simL' sim_progeq r (AR (fst (getAnn ang)) V V') LV L L'
 -> ssa s ang
 -> eqns_freeVars Gamma ⊆ fst (getAnn ang)
 -> onvLe V V'
@@ -904,7 +904,7 @@ Proof.
         unfold val2bool in H3. destruct y; try congruence.
         destruct if; try congruence. constructor. reflexivity.
       * eapply simL'_update; eauto.
-        unfold Sim.BlockRel.
+        unfold BlockRel.
         destruct x as [[[ ?] ?] ?]; simpl; intros; dcr.
         repeat (split; eauto).
         rewrite H12; eauto.
@@ -930,7 +930,7 @@ Proof.
             unfold val2bool in H3. destruct y; try congruence.
             destruct if; try congruence. constructor. reflexivity.
           - eapply simL'_update; eauto.
-            unfold Sim.BlockRel.
+            unfold BlockRel.
             destruct x as [[[ ?] ?] ?]; simpl; intros; dcr.
             repeat (split; eauto).
             rewrite H13; eauto.
@@ -983,8 +983,8 @@ Proof.
           - left. eapply IHEQN; eauto.
             + eapply satisfiesAll_update_dead_single; eauto.
             + eapply simL'_update; eauto.
-              * unfold Sim.BlockRel. intros. simpl in *.
-                unfold BlockRel in *.
+              * unfold BlockRel'. intros. simpl in *.
+                unfold BlockRel' in *.
                 destruct x0 as [[[ ?] ?] ?]; simpl; intros; dcr.
                 repeat (split; eauto).
                 rewrite H11. rewrite H8. simpl. clear_all; cset_tac; intuition.
@@ -1004,8 +1004,8 @@ Proof.
           - left. eapply IHEQN; eauto.
             + eapply satisfiesAll_update_dead_single; eauto.
             + eapply simL'_update; eauto.
-              * unfold Sim.BlockRel. intros. simpl in *.
-                unfold BlockRel in *.
+              * unfold BlockRel. intros. simpl in *.
+                unfold BlockRel' in *.
                 destruct x0 as [[[ ?] ?] ?]; simpl; intros; dcr.
                 repeat (split; eauto).
                 rewrite H8, H11. simpl. clear_all; cset_tac; intuition.
@@ -1023,7 +1023,7 @@ Proof.
     simpl. left. eapply IHEQN2; eauto.
     + eapply simL_mon; eauto. eapply simL_extension'; eauto.
       * eapply simL'_update; eauto.
-        unfold Sim.BlockRel.
+        unfold BlockRel.
         destruct x as [[[ ?] ?] ?]; simpl; intros; dcr.
         repeat (split; eauto).
         rewrite H5, H15; reflexivity.
@@ -1031,7 +1031,7 @@ Proof.
       * hnf; intros. hnf in H2; dcr.
         eapply IHEQN1; try eapply H10; eauto.
         eapply simL'_update; eauto.
-        unfold Sim.BlockRel. intros.
+        unfold BlockRel. intros.
         destruct x as [[[ ?] ?] ?]; dcr. simpl in H2.
         simpl. dcr.
         assert (sEQ: s0 [=] s0 \ of_list Z). {
@@ -1063,7 +1063,7 @@ Proof.
     + rewrite FV, H15; reflexivity.
 Qed.
 
-Print Assumptions sim_DVE.
+Print Assumptions sim_vopt.
 
 (*
 *** Local Variables: ***
