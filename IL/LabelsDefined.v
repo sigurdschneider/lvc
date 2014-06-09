@@ -3,7 +3,7 @@ Require Import Util Relations Get Drop Var Val Exp Env Map CSet AutoIndTac MoreL
 
 Set Implicit Arguments.
 
-Inductive labelsDefined (A:Type) : stmt -> list A -> Prop :=
+Inductive labelsDefined : stmt -> nat -> Prop :=
   | labelsDefinedExp x e s L
     : labelsDefined s L
       -> labelsDefined (stmtExp x e s) L
@@ -13,33 +13,16 @@ Inductive labelsDefined (A:Type) : stmt -> list A -> Prop :=
       -> labelsDefined (stmtIf e s t) L
   | labelsDefinedRet e L
     : labelsDefined (stmtReturn e) L
-  | labelsDefinedGoto f Y a L
-    : get L (counted f) a
+  | labelsDefinedGoto f Y L
+    : L > counted f
       -> labelsDefined (stmtGoto f Y) L
   | labelsDefinedExtern x f Y s L
     : labelsDefined s L
       -> labelsDefined (stmtExtern x f Y s) L
-  | labelsDefinedLet s t Z L a
-    :  labelsDefined s (a::L)
-      -> labelsDefined t (a::L)
+  | labelsDefinedLet s t Z L
+    :  labelsDefined s (S L)
+      -> labelsDefined t (S L)
       -> labelsDefined (stmtLet Z s t) L.
-
-Lemma labelsDefined_any A (L:list A) (L':list A) s
-: length L = length L'
-  -> labelsDefined s L
-  -> labelsDefined s L'.
-Proof.
-  intros. eapply length_length_eq in H.
-  general induction H0; eauto using labelsDefined.
-  - edestruct get_length_eq.
-    eauto. eapply length_eq_length; eauto.
-    econstructor; eauto.
-  - econstructor.
-    eapply IHlabelsDefined1; eauto.
-    instantiate (1:=a). econstructor; eauto.
-    eapply IHlabelsDefined2; eauto.
-    econstructor; eauto.
-Qed.
 
 
 (*
