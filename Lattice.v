@@ -22,7 +22,7 @@ Class BoundedSemiLattice (A : Type) := {
   join_associative : forall a b c, poEq (join (join a b) c) (join a (join b c));
 
   join_respects_eq :> Proper (poEq ==> poEq ==> poEq) join;
-  join_respects_le :> Proper (poLt ==> poLt ==> poLt) join
+  join_respects_le :> Proper (poLe ==> poLe ==> poLe) join
 }.
 
 (*
