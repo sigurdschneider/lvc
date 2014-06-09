@@ -183,11 +183,6 @@ Proof.
   rewrite <- H0, <- H. eapply lookup_set_spec; eauto.
 Qed.
 
-Print Instances Proper.
-
-
-
-
 Lemma single_in_cp_eqns x ϱ D
 : x ∈ D
   -> {{ (Var x, Var (ϱ x)) }} ⊆ cp_eqns ϱ D.
