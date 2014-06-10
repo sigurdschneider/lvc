@@ -1,4 +1,4 @@
-#!/bin/bash
+#! /bin/sh
 
 function display_help {
   echo "configure.sh - Generate a Coq Makefile for this directory"
@@ -23,16 +23,15 @@ if ! [[ $(ruby -v) =~ ^ruby\ 1.9 ]]; then
 	VANILLA=yes
 fi
 
-SOURCES=`find -type f -iname '*.v' -printf '%P\n'`
+SOURCES=$(find . -name \*.v -print | sed -e 's%^\./%%g')
 coq_makefile -R . Lvc extraction $SOURCES > Makefile
 echo "Makefile generated."
 
 echo "Patching Makefile to include target 'extraction'."
-sed -i '/.\/extraction:/c\.\/extraction: Compiler.vo' Makefile
+# sed -i -e  '/.\/extraction:/c\.\/extraction: Compiler.vo' Makefile
+sed -i -e  's%\./extraction:%\./extraction: Compiler.vo%' Makefile
 
 if [ -z "$VANILLA" ]; then
 	echo "Patching Makefile to use ruby-based timing scripts (use --vanilla if undesired)."
-  sed -i 's/$(COQC) $(COQDEBUG) $(COQFLAGS)/@.\/time.sh $(if $(findstring j,$(MAKEFLAGS)),--parallel,) $(COQC) $(COQDEBUG) $(COQFLAGS)/' Makefile
+	sed -i -e 's/$(COQC) $(COQDEBUG) $(COQFLAGS)/@.\/time.sh $(if $(findstring j,$(MAKEFLAGS)),--parallel,) $(COQC) $(COQDEBUG) $(COQFLAGS)/' Makefile
 fi
-
-
