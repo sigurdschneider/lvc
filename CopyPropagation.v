@@ -25,10 +25,11 @@ Fixpoint copyPropagate (ϱ:var -> var) (s:stmt) : ann (list exp) :=
      ann2 nil (copyPropagate (ϱ[Z <-- Z]) s1) (copyPropagate ϱ s2)
    end.
 
-Definition cp_eqn (ϱ:var->var) x := {{(Var x, Var (ϱ x))}}.
+Definition cp_eqn (ϱ:var->var) x :=
+  Eqn EqnApx (Var x) (Var (ϱ x)).
 
 Definition cp_eqns (ϱ:var -> var) (lv:set var) : eqns :=
-  fold union (map (cp_eqn ϱ) lv) ∅.
+  map (cp_eqn ϱ) lv.
 
 Instance cp_eqns_morphism_equal E
 : Proper (Equal ==> Equal) (cp_eqns E).
@@ -55,27 +56,24 @@ Lemma cp_eqns_union E lv lv'
 : cp_eqns E (lv ∪ lv') [=] cp_eqns E lv ∪ cp_eqns E lv'.
 Proof.
   unfold Proper, respectful, cp_eqns; intros.
-  rewrite map_app.
-  rewrite fold_union_app. reflexivity.
+  rewrite map_app. reflexivity.
+  (* rewrite fold_union_app. reflexivity. *)
   intuition.
 Qed.
 
 Lemma cp_eqns_in ϱ D x
  : x ∈ cp_eqns ϱ D
-   -> exists x', x' ∈ D /\ x ∈ cp_eqn ϱ x'.
+   -> exists x', x' ∈ D /\ x = cp_eqn ϱ x'.
 Proof.
   intros. unfold cp_eqns in H.
-  eapply incl_fold_union in H. destruct H as [[? [? ?]]|]; isabsurd.
   eapply map_iff in H; intuition.
-  destruct H as [? [? ?]]. eexists x1; split; eauto. rewrite H1 in H0. eauto.
 Qed.
 
 Lemma in_cp_eqns ϱ D x
- : (exists x', x' ∈ D /\ x ∈ cp_eqn ϱ x')
+ : (exists x', x' ∈ D /\ x = cp_eqn ϱ x')
    -> x ∈ cp_eqns ϱ D.
 Proof.
   intros. destruct H; dcr.
-  eapply fold_union_incl; eauto.
   eapply map_iff; eauto. intuition.
 Qed.
 
@@ -105,14 +103,12 @@ Proof.
   general induction e; simpl.
   - reflexivity.
   - hnf; intros.
-    assert ((Var v, Var (ϱ v)) ∈ cp_eqns ϱ D). {
+    assert (Eqn EqnApx (Var v) (Var (ϱ v)) ∈ cp_eqns ϱ D). {
       eapply in_cp_eqns; eexists v; split; eauto.
       - rewrite <- H; simpl; cset_tac; eauto.
-      - unfold cp_eqn; simpl. cset_tac; eauto.
     }
     exploit H0; eauto.
-    unfold satisfies in *; simpl in *.
-    inv X; econstructor; eauto.
+    inv X; simpl in *; eauto.
   - simpl in H.
     exploit (IHe ϱ); eauto.
     hnf; intros. exploit X; eauto.
@@ -155,16 +151,15 @@ Qed.
 Lemma cp_eqns_add_update ϱ D x y
 : x ∉ D
   -> cp_eqns (ϱ [x <- y]) (D ++ {x; {}})
-            [=] {{(Var x, Var y)}} ∪ cp_eqns ϱ D.
+            [=] {{Eqn EqnApx (Var x) (Var y)}} ∪ cp_eqns ϱ D.
 Proof.
   intros. rewrite cp_eqns_union.
   rewrite cp_eqns_agree. Focus 2.
   instantiate (1:=ϱ). hnf; intros. lud. cset_tac.
   rewrite union_comm. unfold cp_eqns.
-  rewrite map_single. rewrite fold_single.
+  rewrite map_single.
   unfold cp_eqn. lud. cset_tac; intuition.
-  exfalso. intuition. eapply Equal_ST. eapply union_m.
-  eapply transpose_union. intuition.
+  intuition.
 Qed.
 
 Lemma cp_eqns_freeVars ϱ D
@@ -178,19 +173,18 @@ Proof.
   destruct H0; dcr.
   eapply cp_eqns_in in H2. destruct H2; dcr.
   unfold cp_eqn in *. cset_tac.
-  rewrite H4 in H3. simpl in *. rewrite H3 in H1. cset_tac.
+  rewrite H3 in H1. simpl in *. cset_tac.
   destruct H1. rewrite <- H0; eauto.
   rewrite <- H0, <- H. eapply lookup_set_spec; eauto.
 Qed.
 
 Lemma single_in_cp_eqns x ϱ D
 : x ∈ D
-  -> {{ (Var x, Var (ϱ x)) }} ⊆ cp_eqns ϱ D.
+  -> {{ Eqn EqnApx (Var x) (Var (ϱ x)) }} ⊆ cp_eqns ϱ D.
 Proof.
   intros. hnf; intros.
   eapply in_cp_eqns. cset_tac.
   eexists x; split; eauto.
-  unfold cp_eqn. cset_tac; eauto.
 Qed.
 
 
@@ -203,9 +197,26 @@ Proof.
   eapply cp_eqns_in in H0.
   destruct H0; dcr. unfold cp_eqn in H2.
   intros.
-  rewrite lookup_update_same in H2; eauto. cset_tac. rewrite H2.
+  rewrite lookup_update_same in H2; eauto. cset_tac.
+  econstructor.
   reflexivity.
 Qed.
+
+
+Lemma entails_eqns_trans' Gamma e e' e''
+: Eqn EqnEq e e' ∈ Gamma
+  -> Eqn EqnApx e' e'' ∈ Gamma
+  -> entails Gamma {Eqn EqnApx e e''; {}}.
+Proof.
+  intros. hnf; intros.
+  hnf; intros. cset_tac. hnf; intros. rewrite H2.
+  simpl. exploit (H1 _ H); eauto.
+  exploit (H1 _ H0); eauto.
+  simpl in *. inv X; inv X0.
+  - econstructor. inv H4; inv H5; try econstructor; eauto. congruence.
+    congruence.
+Qed.
+
 
 Lemma copyPropagate_sound_eqn s ang Es ϱ
 : ssa s ang
@@ -229,12 +240,13 @@ Proof.
           - rewrite H2; simpl.
             rewrite cp_eqns_add_update; eauto.
             eapply entails_union; split.
-            + eapply entails_eqns_trans with (e':=Var v).
+            + eapply entails_eqns_trans' with (e':=Var v).
               cset_tac; intuition.
-              rewrite <- (@single_in_cp_eqns v). cset_tac; intuition.
+              rewrite <- (@single_in_cp_eqns v).
+              eapply incl_right; cset_tac; intuition.
               cset_tac; intuition.
             + eapply entails_monotone. reflexivity.
-              cset_tac; intuition.
+              eapply incl_right.
         }
       * reflexivity.
     + econstructor; eauto.
@@ -244,7 +256,7 @@ Proof.
         rewrite lookup_set_add_update; eauto. rewrite H3. reflexivity.
       * rewrite H2; simpl. rewrite cp_eqns_add_update; eauto.
         eapply entails_union; split.
-        eapply entails_eqns_refl.
+        (* eapply entails_eqns_refl. *) admit.
         eapply entails_monotone. reflexivity.
         cset_tac; intuition.
       * eapply cp_moreDefined; eauto.
@@ -279,7 +291,7 @@ Proof.
         rewrite cp_eqns_add_update; eauto.
         eapply entails_union; split; try reflexivity.
         hnf; intros. hnf; intros. hnf; intros.
-        cset_tac. rewrite H7. reflexivity.
+        cset_tac. rewrite H7. (* reflexivity. *) admit.
     + eauto using cp_moreDefinedArgs.
     + hnf; intros ? A.
       unfold list_union in A.
