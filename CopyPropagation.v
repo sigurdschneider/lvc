@@ -256,7 +256,7 @@ Proof.
         rewrite lookup_set_add_update; eauto. rewrite H3. reflexivity.
       * rewrite H2; simpl. rewrite cp_eqns_add_update; eauto.
         eapply entails_union; split.
-        (* eapply entails_eqns_refl. *) admit.
+        eapply entails_eqns_apx_refl.
         eapply entails_monotone. reflexivity.
         cset_tac; intuition.
       * eapply cp_moreDefined; eauto.
@@ -291,7 +291,7 @@ Proof.
         rewrite cp_eqns_add_update; eauto.
         eapply entails_union; split; try reflexivity.
         hnf; intros. hnf; intros. hnf; intros.
-        cset_tac. rewrite H7. (* reflexivity. *) admit.
+        cset_tac. rewrite H7. econstructor. reflexivity.
     + eauto using cp_moreDefinedArgs.
     + hnf; intros ? A.
       unfold list_union in A.
