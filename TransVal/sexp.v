@@ -63,8 +63,79 @@ intros. general induction b.
 - exists 0; reflexivity.
 - destruct IHb.  destruct a.
   + exists (2*x).  simpl. rewrite H. omega.
-  + exists ((2*x)+1). simpl. rewrite H. omega.
+  + exists ((2*x)+1). simpl. rewrite H. omega. 
 Qed.
+
+Fixpoint incr (b:bitvec) :=
+match b with
+| nil => I::nil
+| O::nil => I::nil
+| O::b' => I::b'
+| I::b' => O:: incr b'
+end .
+
+Compute (incr (incr nil)). 
+
+(* min = a-(a-b)  *)
+
+Definition min a b :=
+a-(a-b).
+
+Fixpoint div2 n :=
+match n with
+|0 => 0
+|S (0) => 0
+|S (S n') => S(div2 (n'))
+end.
+
+(** TODO: Induction case of this proof. Maybe an additional Lemma is needed... *)
+Lemma always_smaller:
+forall n, min (S n) (S (div2 n)) = S (div2 n).
+
+Proof.
+intros.
+general induction n.
+- reflexivity.
+- simpl. admit. (* TODO!!! *)
+Qed.
+
+Fixpoint natToBitvec (n:nat) :=
+  match n with
+    |0 => nil
+    |S n' => let b' := natToBitvec (min n' (div2 n))  
+             in
+              match n mod 2 with
+                  | 0 => O::b'
+                  | _ => I::b'
+              end
+end.
+
+Lemma exists_bitvec_number:
+forall n:nat, exists b:bitvec, natToBitvec n = b.
+
+Proof.
+intros. destruct n.
+- exists (nil). reflexivity.
+- simpl. destruct n. 
+  + destruct (snd (divmod 0 1 0 0)).
+    * simpl. exists (I::nil). reflexivity.
+    * simpl. exists (O::nil). reflexivity.
+  + destruct (snd (divmod (S n) 1 0 0)).
+    * rewrite always_smaller. exists (I:: (natToBitvec (S (div2 n)))). reflexivity.
+    * rewrite always_smaller. exists (O:: (natToBitvec (S (div2 n)))). reflexivity.
+Qed.
+
+Lemma bijective_numbers:
+forall n:nat,
+bitvecToNat(natToBitvec n ) = n.
+
+Proof.
+intros. general induction n.
+- reflexivity.
+- assert (X: exists b, natToBitvec (S n) = b) by (exact (exists_bitvec_number (S n))).
+  destruct X. rewrite H.
+  assert (Y: exists n, bitvecToNat x = n) by (exact (exists_number_bitvec (x))).
+  destruct Y.
 
 Definition bitAnd (b1:bit) (b2:bit) :=
 match b1, b2 with
@@ -106,8 +177,7 @@ end.
 
 Fixpoint bvAdd (a:bitvec) (b:bitvec) (c:bit) :bitvec :=
 match a with
-|a1::a' => let fix bvAddn (b:bitvec) (c:bit) :bitvec :=
-               match b with
+|a1::a' =>  match b with
                |b1::b' 
                   => let c' := (bitOr (bitAnd b1 c)(bitOr (bitAnd a1 c)(bitAnd a1 b1))) in
                      let r  := (bitXor a1 (bitXor b1 c)) in
@@ -117,19 +187,14 @@ match a with
                      let c':= bitAnd a1 c in
                      r::(bvAdd a' nil c') 
                end
-           in
-           bvAddn b c
-|nil => let fix bvAddn (b:bitvec) (c:bit) :bitvec :=
-            match b with
+|nil => match b with
             |b1::b'
                => let r := bitXor b1 c in
                   let c':= bitAnd b1 c in
-                      r::(bvAddn b' c' )
+                      r::(bvAdd nil b' c' )
             |nil
                => c::nil
-            end
-        in
-        bvAddn b c
+       end
 end.
 
 Lemma bit_bvAdd_lO:
