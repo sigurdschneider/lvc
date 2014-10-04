@@ -410,11 +410,14 @@ destruct H.
 - unfold bvGeq. rewrite H. rewrite H0. simpl. rewrite number_greaterequal_zero. reflexivity. 
 Qed.
 
-Definition isZero b :=
+Fixpoint isZero b :=
 match b with
 |nil => true
 |O::nil => true
-|a::b => false
+|a::b => match a with
+             | I => false
+             | O => isZero b
+         end
 end.
 
 Lemma zero_decidable:
@@ -422,13 +425,70 @@ forall b, decidable(isZero b).
 
 Proof.
 intros.
-destruct b.
+general induction b.
 - unfold decidable. left. simpl. intuition.
--  destruct b,b0.
-   + unfold decidable. left. simpl. intuition.
+-  destruct IHb, a.
+   + unfold decidable. left. simpl.  destruct b; eauto.
    + unfold decidable. right. intuition.
+   + unfold decidable. right. intuition.  simpl in H0.  destruct b; eauto.
    + unfold decidable. right. intuition.
-   + unfold decidable. right. intuition.
+Qed.
+
+Fixpoint bvTrue b :bool :=
+match b with
+| nil => false
+| O::nil => false
+| a::b => match a with
+              | I => true
+              | O => bvTrue b
+          end
+end.
+
+Lemma true_decidable:
+forall b, decidable (bvTrue b).
+
+Proof.
+intros. unfold decidable. general induction b.
+-  right.  intuition.
+-  destruct IHb, a.
+   + left. simpl. destruct b; eauto.
+   + left. simpl. intuition.
+   + right. unfold bvTrue.  destruct b; intuition. 
+   + left.  unfold bvTrue. intuition.
+Qed.
+
+Definition bitEq b1 b2 :=
+match b1, b2 with 
+| I, I => true
+| O, O => true
+| _, _ => false
+end.
+
+Fixpoint bvEq b1 b2 :=
+match b1, b2 with
+| nil, nil => true
+| nil, _ => false
+| _, nil => false
+| a1::b1', a2::b2' => match bitEq a1 a2 with
+                        |true => bvEq b1' b2'
+                        |false => false
+                      end
+
+end.
+
+Lemma equality_decidable:
+forall b1 b2, decidable (bvEq b1 b2).
+
+Proof.
+intros.  general induction  b1. 
+- destruct b2. 
+  + left.  intuition.
+  +  right. intuition.
+- destruct b2. 
+  + right.  intuition.
+  +   simpl.  destruct (bitEq a b).
+   * destruct (IHb1 b2); eauto.
+   * right; intuition.
 Qed.
 
 (*
