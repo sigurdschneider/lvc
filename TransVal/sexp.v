@@ -711,7 +711,6 @@ match s with
      end
 end.
 
-
 (*
 *** Local Variables: ***
 *** coq-load-path: (("../" "Lvc")) ***

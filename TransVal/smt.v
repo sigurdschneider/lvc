@@ -163,8 +163,44 @@ match s, p with
      end
 end.
 
+(* TODO *)
+Definition evalSpred (f:lab) (e:arglst) :=
+true.
+
+Fixpoint models (E:senv) (s:smt) :Prop :=
+match s with
+|smtAnd a b => (models E a) /\ (models E b)
+|smtOr a b => (models E a) \/ (models E b)
+|smtNeg a => (models E a) -> False
+| ite c t f 
+  => match evalSexp E c with
+       | Some v => if bvTrue v then (models E t) else (models E f)
+       | None => False
+     end
+|smtImp a b => (models E a) -> (models E b)
+|constr s1 s2 => match evalSexp E s1,  evalSexp E s2 with
+                   |Some b1, Some b2 => bvEq b1 b2
+                   |_, _ => False
+                 end
+|funcApp f a => evalSpred f a
+|smtReturn e 
+ => match evalSexp E e with
+        | Some v => True
+        | None => False
+    end
+|smtFalse => False
+end.
+
 (*
-*** Local Variables: ***
-*** coq-load-path: (("../" "Lvc")) ***
-*** End: ***
+Lemma models_decidable:
+forall E s, decidable (models E s).
+
+Proof.
+general induction s.
 *)
+
+  (*
+  *** Local Variables: ***
+  *** coq-load-path: (("../" "Lvc")) ***
+  *** End: ***
+  *)
