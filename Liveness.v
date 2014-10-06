@@ -5,6 +5,8 @@ Set Implicit Arguments.
 
 Local Hint Resolve incl_empty minus_incl incl_right incl_left.
 
+Inductive interpretation : Set
+ := Functional | Imperative.
 
 Inductive argsLive (Caller Callee:set var) : args -> params -> Prop :=
 | AL_nil : argsLive Caller Callee nil nil
@@ -74,51 +76,57 @@ Proof.
   rewrite map_length; congruence.
 Qed.
 
-Inductive live_sound : list (set var*params) -> stmt -> ann (set var) -> Prop :=
+Inductive live_sound (i:interpretation) : list (set var*params) -> stmt -> ann (set var) -> Prop :=
 | LOpr x Lv b lv e (al:ann (set var))
-  :  live_sound Lv b al
+  :  live_sound i Lv b al
   -> live_exp_sound e lv
   -> (getAnn al\{{x}}) ⊆ lv
-  -> live_sound Lv (stmtExp x e b) (ann1 lv al)
+  -> live_sound i Lv (stmtExp x e b) (ann1 lv al)
 | LIf Lv e b1 b2 lv al1 al2
-  :  live_sound Lv b1 al1
-  -> live_sound Lv b2 al2
+  :  live_sound i Lv b1 al1
+  -> live_sound i Lv b2 al2
   -> live_exp_sound e lv
   -> getAnn al1 ⊆ lv
   -> getAnn al2 ⊆ lv
-  -> live_sound Lv (stmtIf e b1 b2) (ann2 lv al1 al2)
+  -> live_sound i Lv (stmtIf e b1 b2) (ann2 lv al1 al2)
 | LGoto l Y Lv lv blv Z
   : get Lv (counted l) (blv,Z)
   -> (blv \ of_list Z) ⊆ lv
   -> length Y = length Z
   -> (forall n y, get Y n y -> live_exp_sound y lv)
-  -> live_sound Lv (stmtGoto l Y) (ann0 lv)
+  -> live_sound i Lv (stmtGoto l Y) (ann0 lv)
 | LReturn Lv e lv
   : live_exp_sound e lv
-  -> live_sound Lv (stmtReturn e) (ann0 lv)
+  -> live_sound i Lv (stmtReturn e) (ann0 lv)
 | LExtern x Lv b lv Y al f
-  :  live_sound Lv b al
+  :  live_sound i Lv b al
   -> (forall n y, get Y n y -> live_exp_sound y lv)
   -> (getAnn al\{{x}}) ⊆ lv
-  -> live_sound Lv (stmtExtern x f Y b) (ann1 lv al)
+  -> live_sound i Lv (stmtExtern x f Y b) (ann1 lv al)
 | LLet Lv s Z b lv als alb
-  : live_sound ((getAnn als,Z)::Lv) s als
-  -> live_sound ((getAnn als,Z)::Lv) b alb
+  : live_sound i ((getAnn als,Z)::Lv) s als
+  -> live_sound i ((getAnn als,Z)::Lv) b alb
   -> (of_list Z) ⊆ getAnn als
-  -> (getAnn als \ of_list Z) ⊆ lv
+  -> (if i then (getAnn als \ of_list Z) ⊆ lv else True)
   -> getAnn alb ⊆ lv
-  -> live_sound Lv (stmtLet Z s b)(ann2 lv als alb).
+  -> live_sound i Lv (stmtLet Z s b)(ann2 lv als alb).
 
-Lemma live_sound_annotation Lv s slv
-: live_sound Lv s slv -> annotation s slv.
+Lemma live_sound_interpretation Lv s slv
+: live_sound Functional Lv s slv -> live_sound Functional Lv s slv.
 Proof.
   intros. general induction H; econstructor; eauto.
 Qed.
 
-Lemma live_sound_monotone LV LV' s lv
-: live_sound LV s lv
+Lemma live_sound_annotation i Lv s slv
+: live_sound i Lv s slv -> annotation s slv.
+Proof.
+  intros. general induction H; econstructor; eauto.
+Qed.
+
+Lemma live_sound_monotone i LV LV' s lv
+: live_sound i LV s lv
   -> PIR2 (fun lvZ lvZ' => fst lvZ' ⊆ fst lvZ /\ snd lvZ = snd lvZ') LV LV'
-  -> live_sound LV' s lv.
+  -> live_sound i LV' s lv.
 Proof.
   intros. general induction H; simpl; eauto using live_sound.
   - edestruct PIR2_nth; eauto; dcr; simpl in *.
@@ -129,10 +137,10 @@ Proof.
     eapply IHlive_sound2. econstructor; intuition.
 Qed.
 
-Lemma live_sound_monotone2 LV s lv a
-: live_sound LV s lv
+Lemma live_sound_monotone2 i LV s lv a
+: live_sound i LV s lv
   -> getAnn lv ⊆ a
-  -> live_sound LV s (setTopAnn lv a).
+  -> live_sound i LV s (setTopAnn lv a).
 Proof.
   intros. general induction H; simpl in * |- *; eauto using live_sound, live_exp_sound, Subset_trans.
   - econstructor; eauto using live_exp_sound_incl.
@@ -143,11 +151,11 @@ Proof.
   - econstructor; eauto using live_exp_sound_incl; etransitivity; eauto.
   - econstructor; eauto using live_exp_sound_incl.
     etransitivity; eauto.
-  - econstructor; eauto. cset_tac; intuition. cset_tac; intuition.
+  - econstructor; eauto. destruct i; eauto. cset_tac; intuition. cset_tac; intuition.
 Qed.
 
 Lemma freeVars_live s lv Lv
-  : live_sound Lv s lv -> IL.freeVars s ⊆ getAnn lv.
+  : live_sound Functional Lv s lv -> IL.freeVars s ⊆ getAnn lv.
 Proof.
   intros. general induction H; simpl; eauto using Exp.freeVars_live.
   + exploit Exp.freeVars_live; eauto.
@@ -160,7 +168,7 @@ Proof.
     exploit Exp.freeVars_live; eauto.
   + unfold list_union. rewrite list_union_incl; eauto.
     instantiate (1:=lv). rewrite IHlive_sound. rewrite H1. cset_tac; intuition.
-    intros.
+    eauto. intros.
     edestruct map_get_4; eauto; dcr; subst.
     exploit Exp.freeVars_live; eauto.
   + eapply union_subset_3.
@@ -174,9 +182,9 @@ Definition live_rename_L_entry (ϱ:env var) (x:set var * params)
 Definition live_rename_L (ϱ:env var) DL
  := List.map (live_rename_L_entry ϱ) DL.
 
-Lemma live_rename_sound DL s an (ϱ:env var)
-: live_sound DL s an
-  -> live_sound (live_rename_L ϱ DL) (rename ϱ s) (mapAnn (lookup_set ϱ) an).
+Lemma live_rename_sound i DL s an (ϱ:env var)
+: live_sound i DL s an
+  -> live_sound i (live_rename_L ϱ DL) (rename ϱ s) (mapAnn (lookup_set ϱ) an).
 Proof.
   intros. general induction H; simpl.
   + econstructor; eauto using live_exp_rename_sound.
@@ -210,57 +218,65 @@ Proof.
   + econstructor; eauto; try rewrite getAnn_mapAnn; eauto.
     eapply IHlive_sound1. eapply IHlive_sound2.
     rewrite of_list_lookup_list; eauto. eapply lookup_set_incl; eauto.
+    destruct i; eauto.
     rewrite of_list_lookup_list; eauto.
     eapply Subset_trans. eapply lookup_set_minus_incl; eauto.
     eapply lookup_set_incl; eauto.
     eapply lookup_set_incl; eauto.
 Qed.
 
-Inductive true_live_sound : list (set var *params) -> stmt -> ann (set var) -> Prop :=
+Inductive true_live_sound (i:interpretation)
+  : list (set var *params) -> stmt -> ann (set var) -> Prop :=
 | TLOpr x Lv b lv e al
-  :  true_live_sound Lv b al
+  :  true_live_sound i Lv b al
   -> (x ∈ getAnn al -> live_exp_sound e lv)
   -> (getAnn al\{{x}}) ⊆ lv
 (*  -> (x ∉ getAnn al -> lv ⊆ getAnn al \ {{x}}) *)
-  -> true_live_sound Lv (stmtExp x e b) (ann1 lv al)
+  -> true_live_sound i Lv (stmtExp x e b) (ann1 lv al)
 | TLIf Lv e b1 b2 lv al1 al2
-  :  true_live_sound Lv b1 al1
-  -> true_live_sound Lv b2 al2
+  :  true_live_sound i Lv b1 al1
+  -> true_live_sound i Lv b2 al2
   -> live_exp_sound e lv
   -> getAnn al1 ⊆ lv
   -> getAnn al2 ⊆ lv
-  -> true_live_sound Lv (stmtIf e b1 b2) (ann2 lv al1 al2)
+  -> true_live_sound i Lv (stmtIf e b1 b2) (ann2 lv al1 al2)
 | TLGoto l Y Lv lv blv Z
   : get Lv (counted l) (blv,Z)
   -> (blv \ of_list Z) ⊆ lv
   -> argsLive lv blv Y Z
   -> length Y = length Z
-  -> true_live_sound Lv (stmtGoto l Y) (ann0 lv)
+  -> true_live_sound i Lv (stmtGoto l Y) (ann0 lv)
 | TLReturn Lv e lv
   : live_exp_sound e lv
-  -> true_live_sound Lv (stmtReturn e) (ann0 lv)
+  -> true_live_sound i Lv (stmtReturn e) (ann0 lv)
 | TLExtern x Lv b lv Y al f
-  : true_live_sound Lv b al
+  : true_live_sound i Lv b al
   -> (forall n y, get Y n y -> live_exp_sound y lv)
   -> (getAnn al\{{x}}) ⊆ lv
-  -> true_live_sound Lv (stmtExtern x f Y b) (ann1 lv al)
+  -> true_live_sound i Lv (stmtExtern x f Y b) (ann1 lv al)
 | TLLet Lv s Z b lv als alb
-  : true_live_sound ((getAnn als,Z)::Lv) s als
-  -> true_live_sound ((getAnn als,Z)::Lv) b alb
-  -> (getAnn als \ of_list Z) ⊆ lv
+  : true_live_sound i ((getAnn als,Z)::Lv) s als
+  -> true_live_sound i ((getAnn als,Z)::Lv) b alb
+  -> (if i then (getAnn als \ of_list Z) ⊆ lv else True)
   -> getAnn alb ⊆ lv
-  -> true_live_sound Lv (stmtLet Z s b)(ann2 lv als alb).
+  -> true_live_sound i Lv (stmtLet Z s b)(ann2 lv als alb).
 
-Lemma true_live_sound_annotation Lv s slv
-: true_live_sound Lv s slv -> annotation s slv.
+Lemma true_live_sound_interpretation Lv s slv
+: true_live_sound Functional Lv s slv -> true_live_sound Functional Lv s slv.
 Proof.
   intros. general induction H; econstructor; eauto.
 Qed.
 
-Lemma live_relation Lv s lv
+Lemma true_live_sound_annotation i Lv s slv
+: true_live_sound i Lv s slv -> annotation s slv.
+Proof.
+  intros. general induction H; econstructor; eauto.
+Qed.
+
+Lemma live_relation i Lv s lv
 : (forall n lvZ, get Lv n lvZ -> of_list (snd lvZ) ⊆ fst lvZ)
-  -> live_sound Lv s lv
-  -> true_live_sound Lv s lv.
+  -> live_sound i Lv s lv
+  -> true_live_sound i Lv s lv.
 Proof.
   intros. general induction H0; eauto using true_live_sound.
   - econstructor; eauto.
@@ -355,16 +371,17 @@ Qed.
 
 Inductive approxF' : list (set var * params) -> F.block -> F.block -> Prop :=
   approxFI' DL E E' Z s lv
-  : live_sound ((getAnn lv, Z)::DL) s lv
+  : live_sound Functional ((getAnn lv, Z)::DL) s lv
     -> agree_on eq (getAnn lv \ of_list Z) E E'
     ->  approxF' ((getAnn lv,Z)::DL) (F.blockI E Z s) (F.blockI E' Z s).
 
 Inductive liveSimF : F.state -> F.state -> Prop :=
   liveSimFI (E E':onv val) L L' s Lv lv
-            (LS:live_sound Lv s lv)
+            (LS:live_sound Functional Lv s lv)
             (LA:AIR3 approxF' Lv L L')
             (AG:agree_on eq (getAnn lv) E E')
   : liveSimF (L, E, s) (L', E', s).
+
 
 Lemma liveSim_freeVarSim σ1 σ2
   : liveSimF σ1 σ2 -> freeVarSimF σ1 σ2.
@@ -379,15 +396,16 @@ Proof.
   eapply agree_on_incl; eauto. eapply freeVars_live; eauto.
 Qed.
 
+
 Inductive approxI
   : list (set var * params) -> I.block -> I.block -> Prop :=
   approxII DL Z s lv
-  : live_sound ((getAnn lv, Z)::DL) s lv
+  : live_sound Imperative ((getAnn lv, Z)::DL) s lv
     ->  approxI ((getAnn lv,Z)::DL) (I.blockI Z s) (I.blockI Z s).
 
 Inductive liveSimI : I.state -> I.state -> Prop :=
   liveSimII (E E':onv val) L s Lv lv
-  (LS:live_sound Lv s lv)
+  (LS:live_sound Imperative Lv s lv)
   (LA:AIR3 approxI Lv L L)
   (AG:agree_on eq (getAnn lv) E E')
   : liveSimI (L, E, s) (L, E', s).

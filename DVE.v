@@ -96,7 +96,7 @@ Qed.
 
 Lemma sim_DVE' r L L' V V' s LV lv
 : agree_on eq (getAnn lv) V V'
--> true_live_sound LV s lv
+-> true_live_sound Functional LV s lv
 -> simL' sim_progeq r SR LV L L'
 -> sim'r r (L,V, s) (L',V', compile LV s lv).
 Proof.
@@ -198,7 +198,7 @@ Qed.
 
 Lemma sim_DVE V V' s lv
 : agree_on eq (getAnn lv) V V'
--> true_live_sound nil s lv
+-> true_live_sound Functional nil s lv
 -> @sim F.state _ F.state _ (nil,V, s) (nil,V', compile nil s lv).
 Proof.
   intros. eapply sim'_sim.
@@ -228,7 +228,7 @@ Defined.
 
 Lemma sim_I r L L' V V' s LV lv
 : agree_on eq (getAnn lv) V V'
--> true_live_sound LV s lv
+-> true_live_sound Imperative LV s lv
 -> simL' r SR LV L L'
 -> sim'r r (L,V, s) (L',V', compile LV s lv).
 Proof.
@@ -330,7 +330,7 @@ Qed.
 
 Lemma sim_DVE V V' s lv
 : agree_on eq (getAnn lv) V V'
--> true_live_sound nil s lv
+-> true_live_sound Imperative nil s lv
 -> @sim I.state _ I.state _ (nil,V, s) (nil,V', compile nil s lv).
 Proof.
   intros. eapply sim'_sim.
@@ -338,8 +338,6 @@ Proof.
 Qed.
 
 End I.
-
-Print Assumptions sim_DVE.
 
 Fixpoint compile_live (s:stmt) (a:ann (set var)) : ann (set var) :=
   match s, a with
@@ -367,8 +365,8 @@ Fixpoint compile_live (s:stmt) (a:ann (set var)) : ann (set var) :=
   end.
 
 
-Lemma compile_live_incl LV s lv
-  : true_live_sound LV s lv
+Lemma compile_live_incl i LV s lv
+  : true_live_sound i LV s lv
     -> getAnn (compile_live s lv) ⊆ getAnn lv.
 Proof.
   intros. general induction H; simpl; eauto; try reflexivity.
@@ -383,9 +381,9 @@ Definition compile_LV (LV:list (set var *params)) :=
   List.map (fun lvZ => let Z' := List.filter (fun x => B[x ∈ fst lvZ]) (snd lvZ) in
                       (fst lvZ, Z')) LV.
 
-Lemma dve_live LV s lv
-  : true_live_sound LV s lv
-    -> live_sound (compile_LV LV) (compile LV s lv) (compile_live s lv).
+Lemma dve_live i LV s lv
+  : true_live_sound i LV s lv
+    -> live_sound i (compile_LV LV) (compile LV s lv) (compile_live s lv).
 Proof.
   intros. general induction H; simpl; eauto using live_sound, compile_live_incl.
   - destruct if; eauto. econstructor; eauto.
@@ -418,7 +416,7 @@ Proof.
     split; eauto. rewrite filter_incl. cset_tac; intuition. eauto.
     eapply PIR2_refl. hnf; intuition.
     rewrite getAnn_setTopAnn. cset_tac; intuition.
-    rewrite getAnn_setTopAnn.
+    destruct i; eauto. rewrite getAnn_setTopAnn.
     rewrite compile_live_incl; eauto.
     rewrite union_comm. rewrite union_minus_remove.
     rewrite <- H1.

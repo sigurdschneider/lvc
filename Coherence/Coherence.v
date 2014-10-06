@@ -558,11 +558,11 @@ Qed.
 
 Inductive approx'
   : list (option (set var)) -> F.block -> Prop :=
-  approxI' DL o Z E s DL'
+  approxI' DL o Z E s DL' i
   :  (forall G, o = Some G -> of_list Z ∩ G [=] ∅ /\
            exists a, getAnn a [=] (G ∪ of_list Z)
                 /\ srd (restrict (Some G::DL) G) s a
-                /\ live_sound DL' s a)
+                /\ live_sound i DL' s a)
      -> approx' (o::DL) (F.blockI E Z s).
 
 Lemma approx_restrict DL L G
@@ -578,16 +578,16 @@ Proof.
   specialize (H4 _ H1); dcr.
   rewrite restrict_incl, restrict_idem, <- restrict_incl; eauto; try reflexivity.
   inv pf. econstructor. isabsurd. eapply IHAIR2; eauto.
-  Grab Existential Variables. eassumption.
+  Grab Existential Variables. eapply i. eassumption.
 Qed.
 
 Unset Printing Records.
 
-Lemma srd_preservation (E E':onv val) L L' s s' DL (G:set var) DA a e
+Lemma srd_preservation (E E':onv val) L L' s s' DL (G:set var) DA a e i
   (SRD:srd DA s a)
   (RA:rd_agree DA L E)
   (A: AIR2 approx' DA L)
-  (LV:live_sound DL s a)
+  (LV:live_sound i DL s a)
   (S:F.step (L, E, s) e (L',E',s'))
   : exists DA' DL' a', srd DA' s' a'
                    /\ rd_agree DA' L' E'
@@ -639,12 +639,12 @@ Proof.
 Qed.
 
 Inductive srdSim : F.state -> I.state -> Prop :=
-  | srdSimI (E EI:onv val) L s AL DL a
+  | srdSimI (E EI:onv val) L s AL DL a i
   (SRD:srd AL s a)
   (RA:rd_agree AL L E)
   (A: AIR2 approx' AL L)
   (AG:agree_on eq (getAnn a) E EI)
-  (LV:live_sound DL s a)
+  (LV:live_sound i DL s a)
   : srdSim (L, E, s) (strip L, EI,s).
 
 Lemma srdSim_sim σ1 σ2
@@ -726,8 +726,8 @@ Proof.
     eapply agree_on_incl; eauto.
 Qed.
 
-Lemma srd_implies_invariance DL s a
-: live_sound DL s a -> srd nil s a -> invariant s.
+Lemma srd_implies_invariance DL s a i
+: live_sound i DL s a -> srd nil s a -> invariant s.
 Proof.
   intros. hnf; intros. eapply srdSim_sim.
   econstructor; eauto using AIR2; isabsurd; reflexivity.
