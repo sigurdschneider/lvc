@@ -115,7 +115,7 @@ Qed.
 Lemma rename_ssa_srd s ang ϱ (alv:ann (set var)) Lv
   : ssa s ang
   -> (getAnn alv) ⊆ fst (getAnn ang)
-  -> live_sound Lv s alv
+  -> live_sound Functional Lv s alv
   -> locally_inj ϱ s alv
   -> bounded (live_globals Lv) (fst (getAnn ang))
   -> srd (map_lookup ϱ (restrict (live_globals Lv) (getAnn alv)))
@@ -162,7 +162,6 @@ Proof.
     assert (restr lv (live_global (blv, Z)) = Some (blv \ of_list Z)).
     eapply restr_iff; intuition. rewrite H10 in H5.
     eapply H5.
-    eapply lookup_set_incl; intuition.
   - econstructor.
   - econstructor.
     + eapply srd_monotone.
@@ -219,7 +218,7 @@ Open Scope set_scope.
 Lemma ssa_locally_inj_alpha s ϱ ϱ' DL (slv:ann (set var)) ang
   : ssa s ang
   -> locally_inj ϱ s slv
-  -> live_sound DL s slv
+  -> live_sound Functional DL s slv
   -> inverse_on (getAnn slv) ϱ ϱ'
   -> alpha ϱ ϱ' s (rename ϱ s).
 Proof.
