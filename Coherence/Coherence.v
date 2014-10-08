@@ -1,7 +1,7 @@
 Require Import CSet Le.
 
 Require Import Plus Util AllInRel Map.
-Require Import Val Var Env EnvTy IL Annotation Liveness Restrict Bisim MoreExp SetOperations.
+Require Import Val Var Env EnvTy IL Annotation Liveness Restrict Bisim MoreExp SetOperations DecSolve.
 
 Set Implicit Arguments.
 
@@ -256,7 +256,6 @@ Inductive srd : list (option (set var)) -> stmt -> ann (set var) -> Prop :=
     : srd DL (stmtReturn e) (ann0 lv)
   | srdGoto DL lv G' f Y
     : get DL (counted f) (Some G')
-    -> G' ⊆ lv
     -> srd DL (stmtGoto f Y) (ann0 lv)
  | srdExtern DL x f Y s lv al
     : srd (restrict DL (lv\{{x}})) s al
@@ -296,114 +295,25 @@ Proof.
 Qed.
 *)
 
-(* srd decidability is more complicated *)
-(*
-Definition srd_dec DL G s
-  : Computable (srd DL G s).
+Definition srd_dec DL s a
+  : Computable (srd DL s a).
 Proof.
-  constructor.
+  hnf.
   general induction s; simpl.
-  + edestruct IHs;
-    decide(Exp.freeVars e ⊆ G);
-      solve [ left; econstructor; eauto | right; intro A; inv A; eauto ].
-  + edestruct IHs1, IHs2; decide(x ∈ G);
-      solve [ left; econstructor; eauto | right; intro A; inv A; eauto ].
-  + decide (of_list Y ⊆ G);
+  + edestruct a as [|lv a'|]; try dec_solve.
+    edestruct (IHs (restrict DL (lv\{{x}})) a'); try dec_solve.
+  + edestruct a as [?|?|lv als alt]; try dec_solve.
+    edestruct (IHs1 DL als), (IHs2 DL alt); try dec_solve.
+  + destruct a;
     destruct (get_dec DL (counted l)) as [[[G'|] ?]|?];
-    (try decide (G' ⊆ G));
-      solve [ left; econstructor; eauto | right; intro A; inv A; try (get_functional; subst); eauto ].
-  + decide (x ∈ G).
-    left; econstructor; eauto.
-    right; intro A; inv A; eauto.
-  + pose
-      ((filter
-         (fun G' =>
-            andb (sumbool_bool (IHs2 ((Some G')::DL) G))
-                       (sumbool_bool (IHs1 (restrict ((Some G')::DL) G') (G' ∪ of_list Z)))
-         )
-         (powerset (G \ of_list Z)))).
-    case_eq (is_empty s); intros.
-    right; intro A; inv A. assert (G' ∈ s). unfold s.
-    rewrite filter_iff. split. eapply powerset_spec; eauto.
-    eapply andb_true_iff; split.
-    destruct (IHs2 ((Some G') :: DL) G); simpl; eauto.
-    destruct (IHs1 (restrict ((Some G') :: DL) G') (G' ∪ of_list Z)); simpl; eauto.
-
-    Opaque restrict.
-    hnf; intros. simpl.
-    clear H. clear s.
-    destruct (IHs2 ((Some x) :: DL) G),
-             (IHs1 (restrict ((Some x) :: DL) x) (x ∪ of_list Z)),
-             (IHs2 ((Some y) :: DL) G),
-             (IHs1 (restrict ((Some y) :: DL) y) (y ∪ of_list Z));
-      simpl; eauto.
-    eapply srd_morphism in s0; eauto.
-    exfalso; eauto.
-    repeat (rewrite restrict_incl; try reflexivity).
-    econstructor; eauto. econstructor; eauto. rewrite H0. reflexivity.
-    rewrite <- H0. reflexivity.
-    eapply srd_morphism in s; eauto.
-    exfalso; eauto. econstructor; eauto. econstructor; eauto.
-    reflexivity. reflexivity.
-    eapply srd_morphism in s; eauto.
-    exfalso; eauto. econstructor; eauto. econstructor; eauto.
-    reflexivity. reflexivity.
-    eapply srd_morphism in s3; eauto.
-    repeat (rewrite restrict_incl; try reflexivity).
-    econstructor; eauto. econstructor; eauto. symmetry; eauto.
-    rewrite H0; reflexivity. rewrite H0; reflexivity.
-    eapply srd_morphism in s0; eauto.
-    econstructor; eauto. econstructor; eauto. symmetry; eauto.
-    reflexivity. reflexivity.
-    eapply srd_morphism in s; eauto.
-    econstructor; eauto. econstructor; eauto. symmetry; eauto.
-    reflexivity. reflexivity.
-
-    eapply is_empty_iff in H. eapply empty_is_empty_1 in H.  cset_tac; eauto.
-    case_eq (choose s). intros G' ?.
-    eapply choose_1 in H0. unfold s in H0.
-    eapply filter_iff in H0. rewrite andb_true_iff in H0. dcr.
-    Opaque restrict.
-    destruct (IHs2 ((Some G') :: DL) G); simpl in *; eauto; try congruence.
-    destruct (IHs1 (restrict ((Some G') :: DL) G') (G' ∪ of_list Z));
-      simpl in *; eauto; try congruence.
-    eapply powerset_spec in H1.
-    left. econstructor; eauto.
-
-    hnf; intros. simpl.
-    clear H. clear s.
-    destruct (IHs2 ((Some x) :: DL) G),
-             (IHs1 (restrict ((Some x) :: DL) x) (x ∪ of_list Z)),
-             (IHs2 ((Some y) :: DL) G),
-             (IHs1 (restrict ((Some y) :: DL) y) (y ∪ of_list Z));
-      simpl; eauto.
-    eapply srd_morphism in s0; eauto.
-    exfalso; eauto.
-    repeat (rewrite restrict_incl; try reflexivity).
-    econstructor; eauto. econstructor; eauto.
-    rewrite <- H1. reflexivity. rewrite H1; reflexivity.
-    eapply srd_morphism in s; eauto.
-    exfalso; eauto. econstructor; eauto. econstructor; eauto.
-    reflexivity. reflexivity.
-    eapply srd_morphism in s; eauto.
-    exfalso; eauto. econstructor; eauto. econstructor; eauto.
-    reflexivity. reflexivity.
-    eapply srd_morphism in s3; eauto.
-    repeat (rewrite restrict_incl; try reflexivity).
-    econstructor; eauto. econstructor; eauto; try reflexivity.
-    rewrite H1; reflexivity. rewrite H1; reflexivity.
-    rewrite H1; reflexivity.
-    eapply srd_morphism in s0; eauto.
-    econstructor; eauto. econstructor; eauto. symmetry; eauto.
-    reflexivity. reflexivity.
-    eapply srd_morphism in s; eauto.
-    econstructor; eauto. econstructor; eauto. symmetry; eauto.
-    reflexivity. reflexivity.
-    intros. exfalso. eapply zchoose_2 in H0; eauto. eapply is_empty_iff in H0.
-    rewrite H in H0; eauto; congruence.
-Qed.
-*)
-Transparent restrict.
+    try dec_solve.
+  + destruct a; try dec_solve.
+  + edestruct a as [|lv a'|]; try dec_solve.
+    edestruct (IHs (restrict DL (lv\{{x}})) a'); try dec_solve.
+  + destruct a as [?|?|lv als alt]; try dec_solve.
+    edestruct (IHs1 (restrict (Some (getAnn als \ of_list Z)::DL) (getAnn als \ of_list Z)) als);
+    edestruct (IHs2 (Some (getAnn als \ of_list Z)::DL) alt); try dec_solve.
+Defined.
 
 (*
 Fixpoint freeVar_live (s:stmt) : ann (set var) :=
@@ -447,8 +357,8 @@ Proof.
   intros. general induction H; eauto using srd.
   + econstructor.
     eapply IHsrd; eauto. eapply restrict_subset; eauto. reflexivity.
-  + destruct (list_eq_get H1 H); eauto; dcr. inv H4.
-    econstructor; eauto. rewrite <- H5; eauto.
+  + destruct (list_eq_get H0 H); eauto; dcr. inv H3.
+    econstructor; eauto.
   + econstructor. eapply IHsrd; eauto.
     eapply restrict_subset; eauto. reflexivity.
   + econstructor; eauto.
@@ -466,8 +376,8 @@ Proof.
   intros. general induction H; eauto using srd.
   + econstructor.
     eapply IHsrd; eauto. eapply restrict_subset2; eauto. reflexivity.
-  + destruct (list_eq_get H1 H); eauto; dcr. inv H4.
-    econstructor; eauto. rewrite <- H5; eauto.
+  + destruct (list_eq_get H0 H); eauto; dcr. inv H3.
+    econstructor; eauto.
   + econstructor. eapply IHsrd, restrict_subset2; eauto. reflexivity.
   + econstructor; eauto.
     eapply IHsrd1. repeat rewrite restrict_incl; try reflexivity.
@@ -557,28 +467,75 @@ Qed.
 
 
 Inductive approx'
-  : list (option (set var)) -> F.block -> Prop :=
-  approxI' DL o Z E s DL' i
+  : list (option (set var)) -> list (set var * list var) -> F.block -> Prop :=
+  approxI' AL DL o Z E s i
   :  (forall G, o = Some G -> of_list Z ∩ G [=] ∅ /\
            exists a, getAnn a [=] (G ∪ of_list Z)
-                /\ srd (restrict (Some G::DL) G) s a
-                /\ live_sound i DL' s a)
-     -> approx' (o::DL) (F.blockI E Z s).
+                /\ srd (restrict (Some G::AL) G) s a
+                /\ live_sound i DL s a)
+     -> approx' (o::AL) DL (F.blockI E Z s).
 
-Lemma approx_restrict DL L G
-: AIR2 approx' DL L
-  -> AIR2 approx' (restrict DL G) L.
+Section AIR21.
+  Variable X Y Z : Type.
+  Variable R : list X -> list Y -> Z -> Prop.
+
+  Inductive AIR21
+    : list X -> list Y -> list Z -> Prop :=
+  | AIR21_nil : AIR21 nil nil nil
+  | AIR21_cons x XL y (YL:list Y) z (ZL:list Z) (pf:R (x::XL) (y::YL) z)
+    : AIR21 XL YL ZL ->
+      AIR21 (x::XL) (y::YL) (z::ZL).
+
+  Lemma AIR21_nth XL YL ZL l blkx :
+    AIR21 XL YL ZL
+    -> get XL l blkx
+    -> exists (blky:Y) (blkz:Z),
+      get YL l blky /\ get ZL l blkz /\ R (drop l XL) (drop l YL) blkz.
+  Proof.
+    intros. general induction H; isabsurd.
+    inv H0. eexists; eauto using get.
+    edestruct IHAIR21 as [blk [A B]]; eauto; dcr.
+    do 2 eexists; repeat split; eauto using get.
+  Qed.
+
+  Lemma AIR21_drop XL YL ZL n
+    : AIR21 XL YL ZL -> AIR21 (drop n XL) (drop n YL) (drop n ZL).
+  Proof.
+    general induction n; simpl; eauto.
+    inv H; simpl; eauto using AIR2.
+  Qed.
+
+End AIR21.
+
+Ltac provide_invariants_21 :=
+match goal with
+  | [ H : AIR21 ?R ?A ?B ?C, H' : get ?A ?n ?b |- _ ] =>
+    let X := fresh H in
+    destruct (AIR21_nth H H') as [? [? [? [? X]]]]; eauto; inv X;
+    repeat get_functional; (try subst);
+    let X'' := fresh H in pose proof (AIR21_drop n H) as X'';
+    match goal with
+      | [ H'' : ?x :: ?DL = drop ?n ?Lv |- _ ] =>
+        (try rewrite <- H'' in X'');
+          let X' := fresh H in
+          pose proof (get_drop_eq H' H'') as X'; inv X'; try clear X'
+    end
+end.
+
+Lemma approx_restrict AL DL L G
+: AIR21 approx' AL DL L
+  -> AIR21 approx' (restrict AL G) DL L.
 Proof.
   intros.
-  general induction H; simpl; eauto using AIR2.
+  general induction H; simpl; eauto using AIR21.
   econstructor. case_eq (restr G x); intros.
   inv pf. econstructor.
   intros. inv H1.
   eapply restr_iff in H0; dcr; subst.
-  specialize (H4 _ H1); dcr.
+  specialize (H5 _ H1); dcr.
   rewrite restrict_incl, restrict_idem, <- restrict_incl; eauto; try reflexivity.
-  inv pf. econstructor. isabsurd. eapply IHAIR2; eauto.
-  Grab Existential Variables. eapply i. eassumption.
+  inv pf. econstructor. isabsurd. eapply IHAIR21; eauto.
+  Grab Existential Variables. eapply i.
 Qed.
 
 Unset Printing Records.
@@ -586,29 +543,29 @@ Unset Printing Records.
 Lemma srd_preservation (E E':onv val) L L' s s' DL (G:set var) DA a e i
   (SRD:srd DA s a)
   (RA:rd_agree DA L E)
-  (A: AIR2 approx' DA L)
+  (A: AIR21 approx' DA DL L)
   (LV:live_sound i DL s a)
   (S:F.step (L, E, s) e (L',E',s'))
   : exists DA' DL' a', srd DA' s' a'
                    /\ rd_agree DA' L' E'
-                   /\ AIR2 approx' DL' L'.
+                   /\ AIR21 approx' DA' DL' L'.
 Proof.
   destruct SRD; try inv S.
 
-  + do 2 eexists; repeat split; try eassumption;
+  + do 3 eexists; repeat split; try eassumption;
     eauto using agree_on_update_any_same, approx_restrict, rd_agree_update.
 
-  + do 2 eexists; eauto.
-  + do 2 eexists; eauto.
+  + do 3 eexists; eauto.
+  + do 3 eexists; eauto.
 
-  + provide_invariants_2. specialize (H3 _ H4); dcr.
+  + provide_invariants_21. specialize (H3 _ H4); dcr.
     rewrite H2 in H7. simpl in *.
     do 3 eexists; repeat split; simpl; eauto.
     pose proof (RA _ _ _ H1 H). simpl in *.
     eapply rd_agree_update_list; eauto.
     exploit omap_length; eauto. rewrite map_length. congruence.
-
-  + do 2 eexists; repeat split; try eassumption;
+    eapply approx_restrict; eauto.
+  + do 3 eexists; repeat split; try eassumption;
     eauto using agree_on_update_any_same, approx_restrict, rd_agree_update.
 
   + inv LV. do 3 eexists; repeat split; eauto.
@@ -618,12 +575,67 @@ Proof.
     eapply RA; eauto.
 
     econstructor; eauto using agree_on_incl.
-    instantiate (1:=Some (getAnn als \ of_list Z)).
     econstructor; eauto.
     split. inv H.
     split; cset_tac; isabsurd; eauto. inv H.
     eexists; eauto. split; [| split;eauto].
     cset_tac; intuition. decide (a ∈ of_list Z); intuition.
+Qed.
+
+Inductive approxI
+  : list (option (set var)) -> list (set var * list var) -> I.block -> Prop :=
+  approxII' AL DL o Z s i
+  :  (forall G, o = Some G -> of_list Z ∩ G [=] ∅ /\
+           exists a, getAnn a [=] (G ∪ of_list Z)
+                /\ srd (restrict (Some G::AL) G) s a
+                /\ live_sound i DL s a)
+     -> approxI (o::AL) DL (I.blockI Z s).
+
+Lemma approxI_restrict AL DL L G
+: AIR21 approxI AL DL L
+  -> AIR21 approxI (restrict AL G) DL L.
+Proof.
+  intros.
+  general induction H; simpl; eauto using AIR21.
+  econstructor. case_eq (restr G x); intros.
+  inv pf. econstructor.
+  intros. inv H1.
+  eapply restr_iff in H0; dcr; subst.
+  specialize (H5 _ H1); dcr.
+  rewrite restrict_incl, restrict_idem, <- restrict_incl; eauto; try reflexivity.
+  inv pf. econstructor. isabsurd. eapply IHAIR21; eauto.
+  Grab Existential Variables. eapply i.
+Qed.
+
+Lemma srd_preservation_I (E E':onv val) L L' s s' DL (G:set var) DA a e i
+  (SRD:srd DA s a)
+  (A: AIR21 approxI DA DL L)
+  (LV:live_sound i DL s a)
+  (S:I.step (L, E, s) e (L',E',s'))
+  : exists DL' DA' a', srd DA' s' a' /\ AIR21 approxI DA' DL' L'.
+Proof.
+  destruct SRD; try inv S.
+
+  - do 3 eexists; repeat split; try eassumption;
+    eauto using agree_on_update_any_same, approxI_restrict, rd_agree_update.
+
+  - eexists; eauto.
+  - eexists; eauto.
+
+  - provide_invariants_21.
+    specialize (H3 _ H4); dcr.
+    rewrite H2 in H7. simpl in *.
+    do 3 eexists; repeat split; simpl; eauto using approxI_restrict.
+  - eexists; repeat split; try eassumption;
+    eauto using agree_on_update_any_same, approxI_restrict, rd_agree_update.
+
+  - inv LV. do 3 eexists; repeat split; eauto.
+    econstructor; eauto.
+    econstructor; eauto.
+    split; inv H.
+    + cset_tac; intuition.
+    + eexists; eauto. split; [| split;eauto].
+      * cset_tac; intuition. decide (a ∈ of_list Z); intuition.
 Qed.
 
 Definition stripB (b:F.block) : I.block.
@@ -638,20 +650,40 @@ Proof.
   unfold strip. rewrite drop_map; eauto.
 Qed.
 
+
+Inductive fstNoneOrR' {X Y:Type} (R:X->Y->Prop)
+  : option X -> Y -> Prop :=
+| fstNone' (y:Y) : fstNoneOrR' R None y
+| bothR' (x:X) (y:Y) : R x y -> fstNoneOrR' R (Some x) y
+.
+
+Definition eqReq := (fstNoneOrR' (fun (s : set var) (t : set var * params) =>
+                                   s [=] fst t \ of_list (snd t))).
+
+Lemma restrict_eqReq DL DL' G
+: PIR2 eqReq DL DL'
+  -> PIR2 eqReq (restrict DL G) DL'.
+Proof.
+  intros. induction H; simpl; econstructor; eauto.
+  unfold restr. destruct pf. constructor.
+  destruct if; eauto. subst. constructor; eauto. constructor.
+Qed.
+
 Inductive srdSim : F.state -> I.state -> Prop :=
   | srdSimI (E EI:onv val) L s AL DL a i
   (SRD:srd AL s a)
   (RA:rd_agree AL L E)
-  (A: AIR2 approx' AL L)
+  (A: AIR21 approx' AL DL L)
   (AG:agree_on eq (getAnn a) E EI)
   (LV:live_sound i DL s a)
+  (ER:PIR2 eqReq AL DL)
   : srdSim (L, E, s) (strip L, EI,s).
 
 Lemma srdSim_sim σ1 σ2
   : srdSim σ1 σ2 -> bisim σ1 σ2.
 Proof.
   revert σ1 σ2. cofix; intros.
-  destruct H; inv SRD; inv LV; simpl in *; try provide_invariants_2.
+  destruct H; inv SRD; inv LV; simpl in *; try provide_invariants_21.
   - case_eq (exp_eval E e); intros.
     one_step.
     instantiate (1:=v). erewrite <- exp_eval_live; eauto.
@@ -659,6 +691,7 @@ Proof.
     eauto using approx_restrict, rd_agree_update.
     eapply agree_on_update_same. reflexivity.
     eapply agree_on_incl; eauto.
+    eauto using restrict_eqReq.
     no_step.
     erewrite <- exp_eval_live in def; eauto. congruence.
   - case_eq (exp_eval E e); intros.
@@ -678,18 +711,21 @@ Proof.
       one_step.
       eapply srdSim_sim. rewrite drop_strip.
       simpl. simpl counted in *.
-      specialize (H3 _ H5); dcr. rewrite H2 in A1,H13.
+      specialize (H4 _ H3); dcr. rewrite H2 in A1,H12.
       econstructor; simpl; eauto using approx_restrict.
       eapply rd_agree_update_list; eauto.
       exploit omap_length; eauto. rewrite map_length. congruence.
       eapply (RA _ _ _ H1 H).
-      eapply update_with_list_agree; eauto. rewrite H12.
+      eapply update_with_list_agree; eauto. rewrite H11.
       rewrite union_comm. rewrite union_minus_remove.
       pose proof (RA _ _ G' H1 H); dcr. simpl in *.
       eapply agree_on_sym; eauto. eapply agree_on_incl; eauto using incl_minus.
       etransitivity; eauto. symmetry. hnf in RA.
       eapply agree_on_incl; eauto.
+      edestruct PIR2_nth_2; eauto; dcr. get_functional; eauto; subst.
+      inv H16. rewrite H13. simpl. eauto.
       exploit omap_length; eauto. rewrite map_length. congruence.
+      eapply restrict_eqReq. eapply PIR2_drop; eauto.
     + exploit omap_exp_eval_live_agree; eauto.
       no_step.
     + no_step. get_functional; subst; simpl in *; congruence.
@@ -703,6 +739,7 @@ Proof.
       eapply srdSim_sim; econstructor; eauto using approx_restrict, rd_agree_update.
       eapply agree_on_update_same. reflexivity.
       eapply agree_on_incl; eauto.
+      eauto using restrict_eqReq; eauto.
     + symmetry in AG.
       exploit omap_exp_eval_live_agree; eauto.
       eexists; split. econstructor; eauto.
@@ -710,6 +747,7 @@ Proof.
       eapply agree_on_update_same. reflexivity.
       symmetry in AG.
       eapply agree_on_incl; eauto.
+      eauto using restrict_eqReq; eauto.
     + no_step.
   - one_step.
     eapply srdSim_sim; econstructor; eauto.
@@ -724,13 +762,14 @@ Proof.
     eexists. split; eauto. cset_tac; intuition.
     decide (a ∈ of_list Z); intuition.
     eapply agree_on_incl; eauto.
+    econstructor; eauto. econstructor; reflexivity.
 Qed.
 
-Lemma srd_implies_invariance DL s a i
-: live_sound i DL s a -> srd nil s a -> invariant s.
+Lemma srd_implies_invariance s a i
+: live_sound i nil s a -> srd nil s a -> invariant s.
 Proof.
   intros. hnf; intros. eapply srdSim_sim.
-  econstructor; eauto using AIR2; isabsurd; reflexivity.
+  econstructor; eauto using AIR21, PIR2; isabsurd. reflexivity.
 Qed.
 
 
