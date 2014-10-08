@@ -69,7 +69,7 @@ Inductive approx
     -> list (params) -> I.block -> I.block -> Prop :=
   blk_approxI o (Za Z':list var) DL ZL Lv s ans ans_lv ans_lv'
               (RD:forall G, o = Some G ->
-                       live_sound ((getAnn ans_lv',Z'++Za)::Lv) (compile (Za :: ZL) s ans) ans_lv'
+                       live_sound Functional ((getAnn ans_lv',Z'++Za)::Lv) (compile (Za :: ZL) s ans) ans_lv'
                        /\ trs (restrict (Some G::DL) G) (Za::ZL) s ans_lv ans)
   : approx ((getAnn ans_lv',Z'++Za)::Lv) (o::DL) (Za::ZL) (I.blockI Z' s) (I.blockI (Z'++Za) (compile (Za::ZL) s ans)).
 
@@ -111,7 +111,7 @@ Inductive trsR : I.state -> I.state -> Prop :=
   (RD: trs DL ZL s ans_lv ans)
   (EA: AIR53 approx Lv' DL ZL L L')
   (EQ: (@feq _ _ eq) E E')
-  (LV': live_sound Lv' (compile ZL s ans) ans_lv')
+  (LV': live_sound Functional Lv' (compile ZL s ans) ans_lv')
   (EDEF: defined_on (getAnn ans_lv') E')
   : trsR (L, E, s) (L', E', compile ZL s ans).
 
@@ -267,7 +267,7 @@ Qed.
 
 Lemma trs_srd DL AL ZL s ans_lv ans
   (RD:trs AL ZL s ans_lv ans)
-  (LV:live_sound DL s ans_lv)
+  (LV:live_sound Functional DL s ans_lv)
   (EQ:PIR2 lessReq AL DL)
   : srd (restrict AL (getAnn ans_lv)) (compile ZL s ans) ans_lv.
 Proof.
@@ -286,10 +286,9 @@ Proof.
   - edestruct PIR2_nth_2; eauto; dcr.
     inv H4; get_functional; subst. simpl in *.
     econstructor; eauto. unfold restrict.
-    pose proof (map_get_1 (restr lv) H3). unfold fst in H.
+    pose proof (map_get_1 (restr lv) H3).
     assert (restr lv (Some x0) = Some x0). eapply restr_iff; split; eauto.
-    cset_tac; eauto.
-    rewrite <- H6; eauto.
+    rewrite H6 in H; eauto.
   - econstructor; eauto.
     eapply srd_monotone.
     + eapply IHRD; eauto.
@@ -354,9 +353,9 @@ Inductive additionalParameters_live : list (set var)   (* additional params *)
 
 Lemma live_sound_compile DL ZL AL s ans_lv ans
   (RD:trs AL ZL s ans_lv ans)
-  (LV:live_sound DL s ans_lv)
+  (LV:live_sound Functional DL s ans_lv)
   (APL: additionalParameters_live (List.map of_list ZL) s ans_lv ans)
-  : live_sound (zip (fun s t => (fst s, snd s ++ t)) DL ZL) (compile ZL s ans) ans_lv.
+  : live_sound Functional (zip (fun s t => (fst s, snd s ++ t)) DL ZL) (compile ZL s ans) ans_lv.
 Proof.
   general induction LV; inv RD; inv APL; eauto using live_sound.
   + pose proof (zip_get  (fun (s : set var * list var) (t : list var) => (fst s, snd s ++ t)) H H9).
