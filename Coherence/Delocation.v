@@ -27,7 +27,7 @@ Inductive trs
   | trsGoto DL ZL G' f Za Y lv
     :  get DL (counted f) (Some G')
     -> get ZL (counted f) (Za)
-    -> G' ⊆ lv
+(*    -> G' ⊆ lv *)
 (*    -> of_list Za ⊆ lv *)
     -> trs DL ZL (stmtGoto f Y) (ann0 lv) (ann0 nil)
   | trsExtern DL ZL x f Y s lv an_lv an
@@ -174,13 +174,13 @@ Proof.
     decide (length Z' = length Y).
     case_eq (omap (exp_eval E) Y); intros.
     simpl in *.
-    erewrite get_nth_default in H9; eauto.
+    erewrite get_nth_default in H8; eauto.
     edestruct (omap_var_defined_on x); eauto.
     eapply get_in_incl; intros.
-    exploit H9. eapply get_app_right. Focus 2.
+    exploit H8. eapply get_app_right. Focus 2.
     eapply map_get_1; eauto. reflexivity. inv X. eauto.
-    + exploit get_drop_eq; try eapply H11; eauto. subst o.
-      exploit get_drop_eq; try eapply H12; eauto. subst x.
+    + exploit get_drop_eq; try eapply H10; eauto. subst o.
+      exploit get_drop_eq; try eapply H11; eauto. subst x.
       erewrite get_nth_default; eauto.
       one_step.
       * simpl; eauto.
@@ -190,10 +190,10 @@ Proof.
         rewrite omap_app.
         erewrite omap_agree. Focus 2.
         intros. rewrite <- EQ. reflexivity.
-        rewrite H0; simpl. rewrite H8; simpl. reflexivity.
+        rewrite H0; simpl. rewrite H7; simpl. reflexivity.
       * exploit RD0; eauto; dcr. simpl.
         eapply trsR_sim; econstructor; eauto.
-        rewrite <- H11, <- H10, <- H12 in EA1.
+        rewrite <- H10, <- H9, <- H11 in EA1.
         eapply (approx_restrict G' EA1).
         simpl. rewrite map_app.
         rewrite update_with_list_app.
@@ -213,7 +213,7 @@ Proof.
       get_functional; subst. simpl in *. congruence.
       get_functional; subst. simpl in *.
       apply n. repeat rewrite app_length in len.
-      eapply get_drop_eq in H12; eauto. subst Za0.
+      eapply get_drop_eq in H11; eauto. subst Za0.
       erewrite get_nth_default in len; eauto. rewrite map_length in len. omega.
   - remember (omap (exp_eval E) Y); intros. symmetry in Heqo.
     pose proof Heqo. erewrite omap_agree in H0. Focus 2.
@@ -254,7 +254,7 @@ Proof.
 Qed.
 *)
 
-Definition lessReq := (fstNoneOrR' (fun (s : set var) (t : set var * params) => s ⊆ fst t)).
+Definition lessReq := (fstNoneOrR' (fun (s : set var) (t : set var * params) => s ⊆ fst t \ of_list (snd t))).
 
 Lemma restrict_lessReq DL DL' G
 : PIR2 lessReq DL DL'
@@ -284,11 +284,12 @@ Proof.
     eapply srd_monotone. eapply IHRD2; eauto.
     eapply restrict_subset; eauto. reflexivity.
   - edestruct PIR2_nth_2; eauto; dcr.
-    inv H4; get_functional; subst. simpl in *.
+    inv H3; get_functional; subst. simpl in *.
     econstructor; eauto. unfold restrict.
-    pose proof (map_get_1 (restr lv) H3).
+    pose proof (map_get_1 (restr lv) H2).
     assert (restr lv (Some x0) = Some x0). eapply restr_iff; split; eauto.
-    rewrite H6 in H; eauto.
+    rewrite H1; eauto.
+    rewrite H5 in H; eauto.
   - econstructor; eauto.
     eapply srd_monotone.
     + eapply IHRD; eauto.
@@ -300,7 +301,7 @@ Proof.
   - econstructor; eauto.
     + eapply srd_monotone2. eapply IHRD1; eauto.
       eapply restrict_lessReq. econstructor; eauto.
-      constructor. simpl. cset_tac; intuition.
+      constructor. simpl. rewrite of_list_app. cset_tac; intuition.
       rewrite restrict_incl; [|reflexivity].
       rewrite restrict_incl; [|eapply minus_incl].
       rewrite restrict_incl; [|reflexivity].
@@ -311,7 +312,7 @@ Proof.
       rewrite of_list_app.
       hnf; intros. cset_tac; intuition.
     + eapply srd_monotone2. eapply IHRD2; eauto.
-      constructor. constructor. simpl. cset_tac; intuition. eauto.
+      constructor. constructor. simpl. rewrite of_list_app. cset_tac; intuition. eauto.
       decide (getAnn ans_lv \ of_list (Z ++ Za) ⊆ getAnn ant_lv).
       rewrite restrict_incl; eauto.
       econstructor. reflexivity.
@@ -358,7 +359,7 @@ Lemma live_sound_compile DL ZL AL s ans_lv ans
   : live_sound Functional (zip (fun s t => (fst s, snd s ++ t)) DL ZL) (compile ZL s ans) ans_lv.
 Proof.
   general induction LV; inv RD; inv APL; eauto using live_sound.
-  + pose proof (zip_get  (fun (s : set var * list var) (t : list var) => (fst s, snd s ++ t)) H H9).
+  + pose proof (zip_get  (fun (s : set var * list var) (t : list var) => (fst s, snd s ++ t)) H H10).
     edestruct (map_get_4); eauto; dcr; subst.
     get_functional; subst x.
     econstructor. eapply H3. simpl. rewrite of_list_app. cset_tac; intuition.
@@ -366,14 +367,13 @@ Proof.
     erewrite get_nth; eauto.
     intros. eapply get_app_cases in H5. destruct H5; dcr; eauto.
     edestruct map_get_4; eauto; dcr; subst. econstructor.
-    rewrite <- H10. eauto using get_in_of_list.
+    rewrite <- H9. eauto using get_in_of_list.
   + simpl. econstructor; eauto.
     specialize (IHLV1 (Za::ZL)). eapply IHLV1; eauto.
     specialize (IHLV2 (Za::ZL)). eapply IHLV2; eauto.
     rewrite of_list_app. rewrite H7.
     cset_tac; intuition.
-    rewrite of_list_app.
-    rewrite <- H0. cset_tac; intuition.
+    rewrite of_list_app. cset_tac; intuition.
 Qed.
 
 

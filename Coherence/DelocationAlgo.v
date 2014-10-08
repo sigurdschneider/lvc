@@ -404,7 +404,7 @@ Proof.
 Qed.
 
 Lemma computeParameters_length DL ZL AP s lv an' LV
-:live_sound (zip pair DL ZL) s lv
+:live_sound Functional (zip pair DL ZL) s lv
   -> computeParameters (zip lminus DL ZL) ZL AP s lv = (an', LV)
   -> length AP = length DL
   -> length DL = length ZL
@@ -422,10 +422,10 @@ Proof.
   - unfold mapi. rewrite mapi_length; eauto.
   - rewrite LEQ. eapply IHLS; eauto. rewrite addParam_zip_lminus_length; eauto.
   - repeat let_case_eq; inv CPEQ.
-    exploit IHLS2. Focus 2. instantiate (6:=getAnn als::DL).
+    exploit IHLS2. reflexivity. Focus 2. instantiate (6:=getAnn als::DL).
     instantiate (5:=Z::ZL). eapply eq0. reflexivity. simpl. congruence.
     simpl; congruence.
-    exploit IHLS1. Focus 2. instantiate (6:=getAnn als::DL).
+    exploit IHLS1. reflexivity. Focus 2. instantiate (6:=getAnn als::DL).
     instantiate (5:=Z::ZL). eapply eq. reflexivity. simpl.
     rewrite addParams_zip_lminus_length. reflexivity. eauto. eauto.
     simpl; eauto.
@@ -540,7 +540,7 @@ Qed.
 
 
 Lemma computeParameters_AP_LV DL ZL AP s lv an' LV
-:live_sound (zip pair DL ZL) s lv
+:live_sound Functional (zip pair DL ZL) s lv
   -> computeParameters (zip lminus DL ZL) ZL AP s lv = (an', LV)
   -> length AP = length DL
   -> length DL = length ZL
@@ -568,10 +568,10 @@ Proof.
     eapply list_eq_ifSndR_right. eapply X.
     eapply list_eq_addParam; eauto.
     rewrite zip_length2; eauto.
-  - exploit IHLS1. Focus 2. instantiate (6:=getAnn als::DL).
+  - exploit IHLS1. reflexivity. Focus 2. instantiate (6:=getAnn als::DL).
     instantiate (5:=Z::ZL). eapply eq. reflexivity. simpl.
     rewrite addParams_zip_lminus_length; eauto. simpl; eauto.
-    exploit IHLS2. Focus 2. instantiate (6:=getAnn als::DL).
+    exploit IHLS2. reflexivity. Focus 2. instantiate (6:=getAnn als::DL).
     instantiate (5:=Z::ZL). eapply eq0. reflexivity. simpl. congruence.
     simpl; eauto.
     inv X; inv X0. simpl.
@@ -636,7 +636,7 @@ Qed.
 
 
 Lemma computeParameters_LV_DL DL ZL AP s lv an' LV
-:live_sound (zip pair DL ZL) s lv
+:live_sound Functional (zip pair DL ZL) s lv
   -> computeParameters (zip lminus DL ZL) ZL AP s lv = (an', LV)
   -> length AP = length DL
   -> length DL = length ZL

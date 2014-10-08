@@ -25,8 +25,8 @@ Proof.
     + right; eauto using get.
 Defined.
 
-Definition live_sound_dec Lv s slv (an:annotation s slv)
-      : Computable (live_sound Lv s slv).
+Definition live_sound_dec i Lv s slv (an:annotation s slv)
+      : Computable (live_sound i Lv s slv).
 Proof.
   general induction s; destruct slv; try isabsurd.
   + edestruct IHs; eauto; try inv an; eauto;
@@ -50,21 +50,22 @@ Proof.
   + edestruct IHs1; eauto; try inv an; eauto;
     edestruct IHs2; eauto; try inv an; eauto;
     decide ((of_list Z) ⊆ getAnn slv1);
+    destruct i;
     decide ((getAnn slv1 \ of_list Z) ⊆ a);
     decide (getAnn slv2 ⊆ a); try dec_solve.
-    Grab Existential Variables. eassumption. eassumption.
+    Grab Existential Variables. eassumption. eassumption. eassumption. eassumption.
 Defined.
 
-Instance live_sound_dec_inst Lv s slv `{Computable(annotation s slv)}
-: Computable (live_sound Lv s slv).
+Instance live_sound_dec_inst i Lv s slv `{Computable(annotation s slv)}
+: Computable (live_sound i Lv s slv).
 Proof.
   edestruct H.
   eapply live_sound_dec; eauto.
   right; intro. eauto using live_sound_annotation.
 Defined.
 
-Definition true_live_sound_dec Lv s slv (an:annotation s slv)
-      : Computable (true_live_sound Lv s slv).
+Definition true_live_sound_dec i Lv s slv (an:annotation s slv)
+      : Computable (true_live_sound i Lv s slv).
 Proof.
   general induction s; destruct slv; try isabsurd.
   + edestruct IHs; eauto; try inv an; eauto;
@@ -89,12 +90,13 @@ Proof.
   + edestruct IHs1; eauto; try inv an; eauto;
     edestruct IHs2; eauto; try inv an; eauto;
     decide ((getAnn slv1 \ of_list Z) ⊆ a);
+    destruct i;
     decide (getAnn slv2 ⊆ a); try dec_solve.
-    Grab Existential Variables. eassumption. eassumption.
+    Grab Existential Variables. eassumption. eassumption. eassumption. eassumption.
 Defined.
 
-Instance true_live_sound_dec_inst Lv s slv `{Computable(annotation s slv)}
-: Computable (true_live_sound Lv s slv).
+Instance true_live_sound_dec_inst i Lv s slv `{Computable(annotation s slv)}
+: Computable (true_live_sound i Lv s slv).
 Proof.
   edestruct H.
   eapply true_live_sound_dec; eauto.
