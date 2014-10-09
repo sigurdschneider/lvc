@@ -67,7 +67,7 @@ Notation "'ensure' P s ; cont " := (ensure_f P s cont)
 Definition toILF (ilin:ILN.nstmt) : status IL.stmt :=
   sdo ili <- ILN.labIndices ilin nil;
   sdo lv <- livenessAnalysis ili;
-  ensure (Liveness.true_live_sound nil ili lv /\ getAnn lv ⊆ freeVars ili) ("Liveness unsound (1)") ;
+  ensure (Liveness.true_live_sound Liveness.Functional nil ili lv /\ getAnn lv ⊆ freeVars ili) ("Liveness unsound (1)") ;
   let ilid := DVE.compile nil ili lv in
   let additional_params := additionalArguments ilid (DVE.compile_live ili lv) in
   ensure (Delocation.trs nil nil ilid (DVE.compile_live ili lv) additional_params)
@@ -88,7 +88,7 @@ Definition optimize (s':stmt) : status stmt :=
              "Constant propagation makes no assumptions on free vars";
       let s := ValueOpts.compile s (ConstantPropagation.cp_choose AE s) in
       sdo lv <- livenessAnalysis s;
-      ensure (Liveness.true_live_sound nil s lv) "Liveness unsound (2)";
+      ensure (Liveness.true_live_sound Liveness.Functional nil s lv) "Liveness unsound (2)";
       Success (DVE.compile nil s lv)
   end.
 
@@ -96,7 +96,7 @@ Definition optimize (s':stmt) : status stmt :=
 Definition fromILF (s:stmt) : status stmt :=
   let s_renamed_apart := rename_apart s in
   sdo lv <- livenessAnalysis s_renamed_apart;
-     if [Liveness.live_sound nil s_renamed_apart lv
+     if [Liveness.live_sound Liveness.Functional nil s_renamed_apart lv
          /\ getAnn lv ⊆ freeVars s] then
        sdo ϱ <- allocation_oracle s_renamed_apart lv id;
        if [agree_on _eq (getAnn lv) ϱ id
@@ -153,19 +153,20 @@ Proof.
               (DVE.compile nil x x0) (DVE.compile_live x x0)); intros.
     assert (l = nil). {
     exploit (DelocationAlgo.computeParameters_length nil nil); eauto.
-    eapply (@DVE.dve_live nil); eauto. destruct l; simpl in *; congruence.
+    eapply (@DVE.dve_live Liveness.Functional nil); eauto. destruct l; simpl in *; congruence.
     }
     subst.
-    exploit (@DVE.dve_live nil); eauto.
+    exploit (@DVE.dve_live Liveness.Functional nil); eauto.
     exploit Delocation.trs_srd; eauto using PIR2.
     exploit (@DelocationAlgo.computeParameters_live nil nil nil); eauto using PIR2.
     eapply sim_trans with (S2:=I.state). Focus 2.
     eapply bisim_sim. eapply Bisim.bisim_sym.
     rewrite H2 in X0.
     eapply Coherence.srdSim_sim; eauto.
-    econstructor; eauto using AIR2. isabsurd. reflexivity.
+    econstructor; eauto using AIR2. isabsurd. econstructor. reflexivity.
     simpl. rewrite H2 in t.
     eapply (@Delocation.live_sound_compile nil nil nil); eauto.
+    econstructor.
 
     eapply sim_trans with (S2:=I.state).
     Focus 2.
@@ -188,7 +189,7 @@ Proof.
     Qed.
     intros. erewrite labIndices_freeVars; eauto.
     eauto.
-    eapply DVE.I.sim_DVE. reflexivity. eauto.
+    eapply DVE.I.sim_DVE. reflexivity. eauto using Liveness.true_live_sound_interpretation.
 Qed.
 
 
@@ -228,10 +229,12 @@ Proof.
   eapply rename_apart_ssa; eauto. rewrite fst_ssa_ann; eauto.
   rewrite fst_ssa_ann; eauto.
   eapply I. econstructor. reflexivity.
-  eapply (@Liveness.live_rename_sound nil); eauto.
+  eapply (@Liveness.live_rename_sound _ nil); eauto.
+  econstructor.
   eapply (ParallelMove.pmSim_sim).
   econstructor; try now econstructor; eauto.
-  eapply (@Liveness.live_rename_sound nil); eauto. eauto.
+  eapply (@Liveness.live_rename_sound _ nil); eauto. eauto using Liveness.live_sound_interpretation.
+  eauto.
   congruence.
 Qed.
 

@@ -112,7 +112,7 @@ Inductive live_sound (i:interpretation) : list (set var*params) -> stmt -> ann (
   -> live_sound i Lv (stmtLet Z s b)(ann2 lv als alb).
 
 Lemma live_sound_interpretation Lv s slv
-: live_sound Functional Lv s slv -> live_sound Functional Lv s slv.
+: live_sound Functional Lv s slv -> live_sound Imperative Lv s slv.
 Proof.
   intros. general induction H; econstructor; eauto.
 Qed.
@@ -262,7 +262,7 @@ Inductive true_live_sound (i:interpretation)
   -> true_live_sound i Lv (stmtLet Z s b)(ann2 lv als alb).
 
 Lemma true_live_sound_interpretation Lv s slv
-: true_live_sound Functional Lv s slv -> true_live_sound Functional Lv s slv.
+: true_live_sound Functional Lv s slv -> true_live_sound Imperative Lv s slv.
 Proof.
   intros. general induction H; econstructor; eauto.
 Qed.

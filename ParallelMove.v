@@ -259,7 +259,7 @@ Inductive approx
 : list (set var * list var) -> I.block -> I.block -> Prop :=
   approxI Lv s Z lv s'
   (al:ann (set var))
-  (LS:live_sound ((lv,Z)::Lv) s al)
+  (LS:live_sound Imperative ((lv,Z)::Lv) s al)
   (AL:(of_list Z) ⊆ lv)
   (EQ:getAnn al \ of_list Z ⊆ lv)
   (spm:lower ((lv,Z)::Lv) s al = Success s')
@@ -268,7 +268,7 @@ Inductive approx
 Inductive pmSim : I.state -> I.state -> Prop :=
   pmSimI Lv s (E E':onv val) L L' s'
   (al: ann (set var))
-  (LS:live_sound Lv s al)
+  (LS:live_sound Imperative Lv s al)
   (pmlowerOk:lower Lv s al = Success s')
   (LA:AIR3 approx Lv L L')
   (EEQ:agree_on eq (getAnn al) E E')

@@ -130,8 +130,8 @@ Proof.
   intros. general induction H; eauto 30 using trs, restrict_subset2, Subset_refl.
   + econstructor.
     eapply IHtrs; eauto. eapply restrict_subset2; eauto. reflexivity.
-  + destruct (list_eq_get H2 H); eauto; dcr. inv H5.
-    econstructor; eauto. rewrite <- H1; eauto.
+  + destruct (list_eq_get H1 H); eauto; dcr. inv H4.
+    econstructor; eauto.
   + econstructor.
     eapply IHtrs; eauto.
     eapply restrict_subset2; eauto. reflexivity.
@@ -180,9 +180,9 @@ Proof.
     eapply IHtrs; eauto. eapply list_eq_restrict; eauto.*)
   + edestruct get_zip as  [? []]; eauto; dcr.
 (*    destruct (list_eq_get2 H3 H7); eauto; dcr.*)
-    destruct (list_eq_get H2 H5); eauto; dcr.
-    exploit zip_get. eapply H3. eapply H7.
-    econstructor. eauto. eapply X. eauto.
+    destruct (list_eq_get H1 H4); eauto; dcr.
+    exploit zip_get. eapply H2. eapply H6.
+    econstructor. eauto. eapply X.
   + econstructor; eauto.
     pose proof (IHtrs1 (Some ∅::AP) (Some ∅::AP') (Za::ZL0)) as A.
     Opaque to_list.
@@ -212,7 +212,7 @@ Lemma trs_AP_seteq (DL : list (option (set var))) AP AP' s lv a
    -> trs DL AP' s lv a.
 Proof.
   intros. general induction H; eauto using trs.
-  + destruct (list_eq_get H2 H0); eauto; dcr.
+  + destruct (list_eq_get H1 H0); eauto; dcr.
     econstructor; eauto.
   + econstructor.
     - eapply IHtrs1. econstructor; eauto; reflexivity.
@@ -226,7 +226,7 @@ Lemma trs_AP_incl (DL : list (option (set var))) AP AP' s lv a
    -> trs DL AP' s lv a.
 Proof.
   intros. general induction H; eauto using trs.
-  + destruct (list_eq_get H2 H0); eauto; dcr.
+  + destruct (list_eq_get H1 H0); eauto; dcr.
     econstructor; eauto.
   + econstructor.
     - eapply IHtrs1. econstructor; eauto; reflexivity.
@@ -239,7 +239,7 @@ Lemma trs_AP_incl' (DL : list (option (set var))) AP AP' s lv a
    -> trs DL AP' s lv a.
 Proof.
   intros. general induction H; eauto using trs.
-  + destruct (list_eq_get H2 H0); eauto; dcr.
+  + destruct (list_eq_get H1 H0); eauto; dcr.
     econstructor; eauto.
   + econstructor.
     - eapply IHtrs1. econstructor; eauto; reflexivity.
@@ -665,12 +665,12 @@ Proof.
     econstructor; try econstructor; eauto.
   - exploit IHLS; eauto using addParam_zip_lminus_length.
     eapply addParam_Subset; eauto.
-  - exploit IHLS1. Focus 2. instantiate (6:=getAnn als::DL).
+  - exploit IHLS1. reflexivity. Focus 2. instantiate (6:=getAnn als::DL).
     instantiate (5:=Z::ZL). eapply eq. reflexivity. simpl.
     rewrite addParams_zip_lminus_length; eauto. simpl; eauto. simpl.
     econstructor; eauto. cset_tac; intuition.
     eapply addParams_Subset2; eauto.
-    exploit IHLS2. Focus 2. instantiate (6:=getAnn als::DL).
+    exploit IHLS2. reflexivity. Focus 2. instantiate (6:=getAnn als::DL).
     instantiate (5:=Z::ZL). eapply eq0. reflexivity. simpl. congruence.
     simpl; eauto. econstructor; eauto. cset_tac; intuition.
     inv X; inv X0. simpl.
@@ -913,7 +913,7 @@ Ltac length_equify :=
 Lemma computeParameters_trs DL ZL AP s an' LV lv
 : length DL = length ZL
   -> length ZL = length AP
-  -> live_sound (zip pair DL ZL) s lv
+  -> live_sound Functional (zip pair DL ZL) s lv
   -> computeParameters (zip lminus DL ZL) ZL AP s lv = (an', LV)
   -> PIR2 Subset AP (zip lminus DL ZL)
   -> trs (restrict (zip ominus (zip lminus DL ZL) LV) (getAnn lv))
@@ -967,7 +967,7 @@ Proof.
     exploit map_get_1. eapply X.
     econstructor.
     eapply restrict_get. eapply X1. unfold lminus. cset_tac; intuition.
-    eapply X2. unfold lminus. cset_tac; intuition.
+    eapply X2.
   - econstructor.
   - let_case_eq. inv H4.
     eapply trsExtern.
@@ -1127,7 +1127,7 @@ Arguments oemp [X] {H} s.
 
 Lemma additionalParameters_live_monotone (LV':list (option (set var))) DL ZL s an' LV lv
 : length DL = length ZL
-  -> live_sound (zip pair DL ZL) s lv
+  -> live_sound Functional (zip pair DL ZL) s lv
   -> additionalParameters_live LV s lv an'
   -> PIR2 (ifFstR Subset) LV' (zip lminus DL ZL)
   -> additionalParameters_live (List.map (@oemp var _) LV') s lv an'.
@@ -1152,7 +1152,7 @@ Qed.
 Lemma computeParameters_live DL ZL AP s an' LV lv
 : length DL = length ZL
   -> length ZL = length AP
-  -> live_sound (zip pair DL ZL) s lv
+  -> live_sound Functional (zip pair DL ZL) s lv
   -> computeParameters (zip lminus DL ZL) ZL AP s lv = (an', LV)
   -> PIR2 Subset AP (zip lminus DL ZL)
   -> additionalParameters_live (List.map (@oemp _ _) LV) s lv an'.
