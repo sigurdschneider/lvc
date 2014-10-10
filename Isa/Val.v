@@ -24,8 +24,13 @@ Global Instance inst_val_defaulted : Defaulted val := {
 
 Global Instance inst_eq_dec_val : EqDec val eq.
 hnf; intros. change ({x = y} + {x <> y}).
-admit.
-(* eapply nat_eq_eqdec. *)
+assert (X:forall b1 b2:bit, {b1 = b2} + {b1 <> b2}).
+- intros. destruct b1, b2.
+  + left; reflexivity.
+  + right; firstorder.
+  + right; firstorder.
+  + left; reflexivity.
+- exact (list_eq_dec X x y).
 Defined.
 
 (** ** There must be an injection into the booleans *)
@@ -49,7 +54,7 @@ Inductive ty : Set :=
   Natural : ty.
 
 Global Instance inst_eq_dec_ty : EqDec ty eq.
-2hnf; intros. change ({x = y} + {x <> y}).
+hnf; intros. change ({x = y} + {x <> y}).
 decide equality.
 Defined.
 
