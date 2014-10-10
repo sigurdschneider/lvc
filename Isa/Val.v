@@ -1,4 +1,4 @@
-Require Import Util EqDec.
+Require Import Util EqDec List bitvec.
 Require Import OrderedTypeEx.
 
 Set Implicit Arguments.
@@ -6,14 +6,16 @@ Set Implicit Arguments.
 (** * More or less abstract values *)
 (** A file that abstacts over values and (should) provide all necessary operations. Although we concretely instantiate val to int, we maintain this file as interface between our proofs and Integer library. *)
 
-Definition val := nat.
-Definition default_val : val := 0.
+(** Make the value type bitvectors and the default value 0 as a bitvector **)
+Definition val := bitvec.
+Definition default_val : val := (zext k (O::nil)).
 
 Opaque val.
 Opaque default_val.
 
-Definition val_true := 1.
-Definition val_false := 0.
+(** Default value for true = 1 = 2^1 , false = 0 = 2^0 **)
+Definition val_true := (zext k (I::nil)).
+Definition val_false := (zext k (O::nil)).
 
 
 Global Instance inst_val_defaulted : Defaulted val := {
@@ -22,11 +24,12 @@ Global Instance inst_val_defaulted : Defaulted val := {
 
 Global Instance inst_eq_dec_val : EqDec val eq.
 hnf; intros. change ({x = y} + {x <> y}).
-eapply nat_eq_eqdec.
+admit.
+(* eapply nat_eq_eqdec. *)
 Defined.
 
 (** ** There must be an injection into the booleans *)
-Definition val2bool : val -> bool := fun v => match v with 0 => false | _ => true end.
+Definition val2bool : val -> bool := fun v => toBool v. (*  match v with 0 => false | _ => true end. *)
 
 Lemma val2bool_true
 : val2bool val_true = true.
@@ -46,7 +49,7 @@ Inductive ty : Set :=
   Natural : ty.
 
 Global Instance inst_eq_dec_ty : EqDec ty eq.
-hnf; intros. change ({x = y} + {x <> y}).
+2hnf; intros. change ({x = y} + {x <> y}).
 decide equality.
 Defined.
 
