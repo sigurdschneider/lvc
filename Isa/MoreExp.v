@@ -52,10 +52,10 @@ Lemma omap_self_update E Z l
 Proof.
   general induction Z; simpl in * |- *.
   - reflexivity.
-  - monad_inv H; simpl. rewrite IHZ; eauto.
-    hnf; intros. lud; congruence.
+  - monad_inv H; simpl.  specialize (IHZ E x0 EQ1).  hnf.  intros.  lud. 
+    +  congruence. 
+    +  rewrite IHZ.  reflexivity.
 Qed.
-
 
 (*
 *** Local Variables: ***
