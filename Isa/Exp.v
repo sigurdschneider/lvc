@@ -460,7 +460,9 @@ Instance OrderedType_exp : OrderedType exp :=
 intros.
 general induction x; destruct y; simpl; try now (econstructor; eauto using expLt).
 pose proof (_compare_spec v v0).
-- inv H; try  now (econstructor; eauto using expLt).   admit.
+- inv H.
+  + econstructor. eauto using expLt. 
+  + econstructor.   using  try  now (econstructor; eauto using expLt).
 - pose proof (_compare_spec v v0).
 inv H; now (econstructor; eauto using expLt).
 - pose proof (_compare_spec u u0).
