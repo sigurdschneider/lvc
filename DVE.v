@@ -170,8 +170,8 @@ Proof.
     exploit omap_exp_eval_live_agree; eauto.
     destruct o.
     econstructor 2; try eapply star2_refl.
-    + eexists (ExternI f l 0); eexists; try (now (econstructor; eauto)).
-    + eexists (ExternI f l 0); eexists; try (now (econstructor; eauto)).
+    + eexists (ExternI f l default_val); eexists; try (now (econstructor; eauto)).
+    + eexists (ExternI f l default_val); eexists; try (now (econstructor; eauto)).
     + intros. inv H2. eexists. split.
       * econstructor; eauto. congruence.
       * left. eapply IHs; eauto. eapply agree_on_update_same; eauto.
@@ -303,8 +303,8 @@ Proof.
     exploit omap_exp_eval_live_agree; eauto.
     destruct o.
     econstructor 2; try eapply star2_refl.
-    + eexists (ExternI f l 0); eexists; try (now (econstructor; eauto)).
-    + eexists (ExternI f l 0); eexists; try (now (econstructor; eauto)).
+    + eexists (ExternI f l default_val); eexists; try (now (econstructor; eauto)).
+    + eexists (ExternI f l default_val); eexists; try (now (econstructor; eauto)).
     + intros. inv H2. eexists. split.
       * econstructor; eauto. congruence.
       * left. eapply IHs; eauto. eapply agree_on_update_same; eauto.

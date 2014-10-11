@@ -513,7 +513,7 @@ Qed.
 *)
 
 Definition invariant (s:stmt) :=
-  forall (E:onv var), bisim (nil:list F.block,E,s) (nil:list I.block,E,s).
+  forall (E:onv val), bisim (nil:list F.block,E,s) (nil:list I.block,E,s).
 
 Definition rd_agree (DL:list (option (set var)))
            L (E:onv val)

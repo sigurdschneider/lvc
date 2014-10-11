@@ -54,7 +54,7 @@ Instance eqnLt_irr : Irreflexive eqnLt.
 hnf; intros; unfold complement.
 - induction x; inversion 1; subst; eauto;
   try now eapply expLt_irr; eauto.
-  eapply StrictOrder_Irreflexive; eauto.
+  eapply (@StrictOrder_Irreflexive nat); eauto.
 Qed.
 
 Instance eqnLt_trans : Transitive eqnLt.
@@ -1045,8 +1045,7 @@ Proof.
       * eapply satisfiesAll_union; split; eauto.
         hnf; intros. cset_tac. invc H4.
         econstructor. simpl. rewrite <- H0. unfold option_lift1. simpl.
-        unfold val2bool in H3. destruct y; try congruence.
-        destruct if; try congruence. constructor. reflexivity.
+        unfold val2bool in H3. rewrite H3. econstructor. reflexivity.
       * eapply simL'_update; eauto.
         unfold BlockRel.
         destruct x as [[[ ?] ?] ?]; simpl; intros; dcr.
@@ -1071,8 +1070,8 @@ Proof.
           - eapply satisfiesAll_union; split; eauto.
             hnf; intros. cset_tac. invc H4.
             econstructor. simpl. rewrite <- H0. unfold option_lift1. simpl.
-            unfold val2bool in H3. destruct y; try congruence.
-            destruct if; try congruence. constructor. reflexivity.
+            unfold val2bool in H3.
+            rewrite H3. constructor. reflexivity.
           - eapply simL'_update; eauto.
             unfold BlockRel.
             destruct x as [[[ ?] ?] ?]; simpl; intros; dcr.
@@ -1117,9 +1116,9 @@ Proof.
     + pfold. econstructor 3; try eapply star2_refl. eauto.
       stuck2.
     + pfold. eapply sim'Extern; try eapply star2_refl.
-      * eexists (ExternI f y 0); eexists; econstructor; eauto.
+      * eexists (ExternI f y default_val); eexists; econstructor; eauto.
       * pose proof H2. symmetry in H2. eapply omap_exp_eval_onvLe in H2; eauto.
-        eexists (ExternI f y 0); eexists; econstructor; eauto.
+        eexists (ExternI f y default_val); eexists; econstructor; eauto.
       * { intros. inv H3.
           eexists. econstructor; eauto.
           - econstructor; eauto.

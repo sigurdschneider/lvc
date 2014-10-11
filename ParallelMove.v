@@ -203,7 +203,7 @@ Fixpoint onlyVars (Y:args) : status params :=
     | _ => Error "onlyVars: argument list contains expressions"
   end.
 
-Lemma onlyVars_defined (E:onv var) Y Y' v
+Lemma onlyVars_defined (E:onv val) Y Y' v
   : onlyVars Y = Success Y'
     -> omap (exp_eval E) Y = Some v
     -> forall x, x ∈ of_list Y' -> E x <> None.
@@ -217,7 +217,7 @@ Proof.
     + eapply IHY; eauto.
 Qed.
 
-Lemma onlyVars_lookup (E:onv var) Y Y' v
+Lemma onlyVars_lookup (E:onv val) Y Y' v
   : onlyVars Y = Success Y'
     -> omap (exp_eval E) Y = Some v
     -> lookup_list E Y' = List.map Some v.

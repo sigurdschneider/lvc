@@ -27,7 +27,7 @@ Set Implicit Arguments.
 
   Definition unop_eval (o:unop) :=
     match o with
-      | 0 => option_lift1 neg
+      | 0 => option_lift1 (fun a => if toBool a then val_true else val_false)
       | _ => fun _ => None
     end.
 

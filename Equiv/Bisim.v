@@ -765,7 +765,7 @@ Ltac step_activated :=
   match goal with
     | [ H : omap (exp_eval ?E) ?Y = Some ?vl
         |- activated (_, ?E, stmtExtern ?x ?f ?Y ?s) ] =>
-      eexists (ExternI f vl 0); eexists; try (now (econstructor; eauto))
+      eexists (ExternI f vl default_val); eexists; try (now (econstructor; eauto))
   end.
 
 Ltac extern_step :=
