@@ -67,6 +67,13 @@ match s with
 | S s' => O::b
 end.
 
+Fixpoint bvToBool b :=
+match b with
+|nil => false
+|O::b' => bvToBool b'
+| I::b' => true
+end.
+
 (** Increment function based on the size of an argument**)
 Fixpoint incr' (k:nat) (b:bitvec) :=
 match k with

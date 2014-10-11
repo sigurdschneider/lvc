@@ -1,10 +1,12 @@
 Require Import List.
-Require Import IL Exp sexp.
+Require Import IL Exp sexp bitvec.
 
 Set Implicit Arguments.
 
 (** Define what an argument list is **)
 Definition arglst := list sexp.
+
+Definition vallst := list bitvec.
 
 (** Define what uninterpreted function symbols are **)
 Definition pred := lab (*arglst -> bool*).
@@ -38,22 +40,24 @@ end.
 (** Function to generate the guard expression for one expression **)
 Fixpoint undef (e:sexp) :=
 match e with
-|plus a b 
+|splus a b 
  => combine (undef a) (undef b)
-|sub a b
+|ssub a b
  => combine (undef a) (undef b)
-|mult a b
+|smult a b
  => combine (undef a) (undef b)
-|div a b
+|sdiv a b
  => let o1 := undef a in
     let o2 := undef b in
       match combine o1 o2 with
-          | Some v => Some (smtAnd v (smtNeg (constr b (const (O::nil)))))
-          | None => Some (smtNeg (constr b (const (O::nil))))
+          | Some v => Some (smtAnd v (smtNeg (constr b (sconst (O::nil)))))
+          | None => Some (smtNeg (constr b (sconst (O::nil))))
     end
 | sneg a
- => None
-|const c
+ => undef a
+| seq a b
+  => combine (undef a) (undef b)
+|sconst c
  => None
 |svar v
  => None
@@ -72,6 +76,7 @@ match p, undef e with
  => cont
 end.
 
+
 Fixpoint guardList (p:pol) (l:arglst) (cont:smt) :=
 match l with
 | nil => cont
@@ -82,7 +87,7 @@ end.
 Fixpoint translateExp (e:exp) :option sexp :=
 match e with
 |Con v 
- => Some ( const (natToBitvec(v)))
+ => Some ( sconst v)
 |Var v
  =>  Some (svar v)
 | UnOp op e
@@ -94,11 +99,11 @@ match e with
  =>  match translateExp e1, translateExp e2 with
            | Some v1, Some v2 
              => match op with
-                    | 0 => Some (plus v1 v2)
-                    | 1 => Some (sub v1 v2)
-                    | 2 => Some (mult v1 v2)
-                    | 3 => None (* TODO *)
-                    | 4 => None (* TODO *)
+                    | 0 => Some (splus v1 v2)
+                    | 1 => Some (ssub v1 v2)
+                    | 2 => Some (smult v1 v2)
+                    | 3 => Some  (seq v1 v2)
+                    | 4 => Some (sneg (seq v1 v2))
                     | _ => None
                 end
            |_, _ => None
@@ -109,11 +114,12 @@ Fixpoint translateArgs (e:args) : option arglst :=
 match e with
 | nil => Some nil
 | x::e' 
-  => match translateExp x, translateArgs e'  with
-         | Some v, Some l => Some (v::l)
-         | _, _ => None
+  => match   translateExp x, translateArgs e'  with
+         |  Some  e, Some l => Some (e::l)
+         |  _, _ => None
      end
 end.
+
 
 Fixpoint translateStmt (s:stmt) (p:pol) :smt :=
 match s, p with
@@ -142,7 +148,7 @@ match s, p with
 (* f e, s*)
 | stmtGoto f e, source 
   => match translateArgs e with
-         |Some l => guardList  source  l ( funcApp f l )
+         |Some l =>  guardList source l (funcApp f l)
          | None => smtFalse
      end
 (* f e, t *)
@@ -163,26 +169,39 @@ match s, p with
      end
 end.
 
-(* TODO *)
-Definition evalSpred (f:lab) (e:arglst) :=
-true.
+Fixpoint evalList (E:senv) (e:arglst) :option vallst :=
+match e with
+|nil => Some nil
+|x::e' => match evalSexp E x, evalList E e' with
+              | Some v, Some l => Some (v::l)
+              | _, _ => None
+          end
+end.
 
-Fixpoint models (E:senv) (s:smt) :Prop :=
+(* TODO *)
+Definition evalSpred (F :lab->  vallst -> bitvec) (f:lab) (e:vallst) :=
+ bvToBool (F f e).
+
+(* forall E, ~ models E s <=> ~ exists E, models E s *)
+Fixpoint models (F:lab ->vallst->bitvec (* functionsumgebung *))(E:senv) (s:smt) :Prop :=
 match s with
-|smtAnd a b => (models E a) /\ (models E b)
-|smtOr a b => (models E a) \/ (models E b)
-|smtNeg a => (models E a) -> False
+|smtAnd a b => (models F E a) /\ (models F E b)
+|smtOr a b => (models F E a) \/ (models F E b)
+|smtNeg a => (models F E a) -> False
 | ite c t f 
   => match evalSexp E c with
-       | Some v => if bvTrue v then (models E t) else (models E f)
+       | Some v => if bvToBool v then (models F E t) else (models F E f)
        | None => False
      end
-|smtImp a b => (models E a) -> (models E b)
+|smtImp a b => (models F E a) -> (models F E b)
 |constr s1 s2 => match evalSexp E s1,  evalSexp E s2 with
-                   |Some b1, Some b2 => bvEq b1 b2
+                   |Some b1, Some b2 => bvToBool( bvEq b1 b2)
                    |_, _ => False
                  end
-|funcApp f a => evalSpred f a
+|funcApp f a => match evalList E a with
+                  |Some l => evalSpred F f l (* Prüfe: f in F und a rein bitvec == 0 -> False |sonst -> True *)
+                  |None => False
+                end
 |smtReturn e 
  => match evalSexp E e with
         | Some v => True
@@ -190,14 +209,6 @@ match s with
     end
 |smtFalse => False
 end.
-
-(*
-Lemma models_decidable:
-forall E s, decidable (models E s).
-
-Proof.
-general induction s.
-*)
 
   (*
   *** Local Variables: ***
