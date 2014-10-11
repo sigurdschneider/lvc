@@ -85,8 +85,8 @@ Qed.
 (** Inductive lt predicate for bitvectors **)
 Inductive ltBitvec : bitvec -> bitvec -> Prop :=
 |ltBitvecNil a b: ltBitvec nil (a::b)
-|ltBitvecCons a b c d : _lt a c -> ltBitvec b d -> ltBitvec (a::b) (c::d).
-(*|ltBitvecEq a b c d: _eq a c -> ltBitvec b d -> ltBitvec (a::b) (c::d) *)
+|ltBitvecCons a b c d : _lt a c ->  ltBitvec (a::b) (c::d)
+|ltBitvecEq a b c d: _eq a c -> ltBitvec b d -> ltBitvec (a::b) (c::d).
 
 (** Equality predicate for bitvectors **)
 Inductive eqBitvec:  bitvec -> bitvec -> Prop :=
@@ -163,27 +163,31 @@ Proof.
 unfold Transitive. intros. general induction H.
 - general induction H0. 
   + econstructor.
--  general induction H1.
+  + econstructor.
+-  general induction H0.
    +  econstructor. 
       * eapply transitivity with c0; eauto. 
-      * apply (IHltBitvec0 d). assumption.
+   + econstructor.
+     * rewrite <- H. assumption.
+  -  general induction H1.
+     + econstructor.
+       * rewrite H0. assumption.
+     + specialize (IHltBitvec0 d). rewrite H in H0. exact (ltBitvecEq a0 b0 c d H0 (IHltBitvec0 H1)).
 Qed.
 
 Lemma ltBitvec_irrefl:
 Irreflexive ltBitvec.
 
 Proof.
-hnf; intros. unfold RelationClasses.complement.  induction x.
-- intros. inversion H.
-- intros. inversion H. eapply IHx. assumption.
+hnf; intros. unfold RelationClasses.complement.  induction x; inversion 1; subst; eauto using StrictOrder_Irreflexive.  
+eapply (StrictOrder_Irreflexive a a H1). intuition.
 Qed.
 
  Instance rewrite_equal_bitvec: forall x, Proper (equiv ==> impl) (ltBitvec x) .
 unfold Proper, respectful. intros.  unfold impl. intros. general induction H0.
 - general induction H. econstructor.
-- general induction H1. econstructor.
-  +  rewrite <-  H. assumption.
-  + apply (IHltBitvec d).  hnf. assumption.
+- general induction H0. econstructor. rewrite H in H1; assumption.
+- general induction H1. rewrite H in H0. exact (ltBitvecEq a0 b0 c d H0 (IHltBitvec d H1)).
 Defined.
 
 Instance lt_eq_strict : OrderedType.StrictOrder ltBitvec eqBitvec.
@@ -199,24 +203,11 @@ Instance OrderedType_bitvec : OrderedType bitvec :=
 intros. general induction x; destruct y; simpl; try now (econstructor; eauto using ltBitvec).
 pose proof (_compare_spec a b); destruct (IHx y);
 inv H;  try now (econstructor; eauto using ltBitvec).
-- econstructor; econstructor.
-
-- assert (X: ltBitvec (a::x) (b::y)) by (econstructor; eauto; admit); now (econstructor; eauto using ltBitvec). 
-- assert (X: ltBitvec (b::y) (a::x)) by (econstructor; eauto; admit); now (econstructor; eauto using ltBitvec). 
-- admit.
-- admit.
-- admit.
-- admit.
-- admit.
-- admit.
-
-- assert (X: ltBitvec nil (b::y)) by (exact (ltBitvecNil b y)). exact (compare_spec_lt eqBitvec ltBitvec nil (b::y) X).
-- assert (X: ltBitvec nil (a::x)) by (exact (ltBitvecNil a x)). exact (compare_spec_gt eqBitvec ltBitvec (a::x) nil X).
--  destruct (IHx y).
-   + 
+-  econstructor.  econstructor; assumption.
+Defined. 
 
 (*
 *** Local Variables: ***
 *** coq-load-path: (("../" "Lvc")) ***
 *** End: ***
-*)1
+*)
