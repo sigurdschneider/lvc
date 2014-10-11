@@ -1,4 +1,4 @@
-Require Import Util EqDec DecSolve Val CSet Map Env EnvTy Option List OrderedType.
+Require Import Util EqDec DecSolve Val CSet Map Env EnvTy Option List OrderedType Setoid.
 Require Import Arith bitvec orderedBitvec.
 
 Set Implicit Arguments.
@@ -403,20 +403,22 @@ Inductive expLt : exp -> exp -> Prop :=
   : expLt e2 e2'
     -> expLt (BinOp o e1 e2) (BinOp o e1 e2').
 
-
 Instance expLt_irr : Irreflexive expLt.
 hnf; intros; unfold complement.
-- induction x; inversion 1; subst; eauto using StrictOrder_Irreflexive.
-  + eapply (StrictOrder_Irreflexive _ _ H2); eauto.
-  + eapply (StrictOrder_Irreflexive _ _ H2); eauto.
-  + eapply (StrictOrder_Irreflexive _ _ H1); eauto.
-  + eapply (StrictOrder_Irreflexive _ _ H1); eauto.
+- induction x; inversion 1; subst; try now eauto using StrictOrder_Irreflexive.
+  +  eapply (StrictOrder_Irreflexive v H2); eauto.
+  + eapply (StrictOrder_Irreflexive v H2); eauto.
+  + eapply (StrictOrder_Irreflexive u  H1); eauto.
+  + eapply (StrictOrder_Irreflexive b  H1).  
+Grab Existential Variables. econstructor.
+     * exact ltBitvec_irrefl.
+     * exact ltBitvec_trans.
 Qed.
 
 Instance expLt_trans : Transitive expLt.
 hnf; intros.
 general induction H; invt expLt; eauto using expLt.
-- econstructor. eapply StrictOrder_Transitive; eauto.
+- econstructor. eapply StrictOrder_Transitive ; eauto.
 - econstructor. eapply StrictOrder_Transitive; eauto.
 - econstructor; eauto. transitivity o'; eauto.
 - econstructor; eauto. transitivity o'; eauto.
@@ -462,7 +464,8 @@ general induction x; destruct y; simpl; try now (econstructor; eauto using expLt
 pose proof (_compare_spec v v0).
 - inv H.
   + econstructor. eauto using expLt. 
-  + econstructor.   using  try  now (econstructor; eauto using expLt).
+  + econstructor. f_equal.    (* try  now (econstructor; eauto using expLt). *)
+  + econstructor; eauto using expLt.
 - pose proof (_compare_spec v v0).
 inv H; now (econstructor; eauto using expLt).
 - pose proof (_compare_spec u u0).
