@@ -1,5 +1,5 @@
-Require Import Util EqDec DecSolve Val CSet Map Env EnvTy Option.
-Require Import Arith.
+Require Import Util EqDec DecSolve Val CSet Map Env EnvTy Option List OrderedType.
+Require Import Arith bitvec orderedBitvec.
 
 Set Implicit Arguments.
 
@@ -14,11 +14,11 @@ Set Implicit Arguments.
   Definition option_lift2 A B C (f:A -> B -> C) := fun x y => Some (f x y).
   Definition binop_eval (o:binop) :=
     match o with
-      | 0 => option_lift2 Peano.plus
-      | 1 => option_lift2 minus
-      | 2 => option_lift2 mult
-      | 3 => option_lift2 (fun x y => if [x = y] then 1 else 0)
-      | 4 => option_lift2 (fun x y => if [x <> y] then 1 else 0)
+      | 0 => option_lift2 bvAdd
+      | 1 => option_lift2 bvSub
+      | 2 => option_lift2 bvMult
+      | 3 => option_lift2 bvEq
+      | 4 => option_lift2 (fun a b => neg (bvEq a b))
       | _ => fun _ _ => None
     end.
 
@@ -27,7 +27,7 @@ Set Implicit Arguments.
 
   Definition unop_eval (o:unop) :=
     match o with
-      | 0 => option_lift1 (fun x => if [x = 0] then 0 else 1)
+      | 0 => option_lift1 neg
       | _ => fun _ => None
     end.
 
@@ -53,11 +53,12 @@ Set Implicit Arguments.
 
   Global Instance inst_eq_dec_exp : EqDec exp eq.
   hnf; intros. change ({x = y} + {x <> y}).
-  decide equality. eapply inst_eq_dec_val.
-  eapply inst_eq_dec_val.
-  eapply nat_eq_eqdec.
-  eapply nat_eq_eqdec.
-  Defined.
+  decide equality. 
+- eapply inst_eq_dec_val.
+-  destruct v, v0;firstorder. 
+- eapply nat_eq_eqdec. 
+-  eapply nat_eq_eqdec. 
+Defined. 
 
   Fixpoint exp_eval (E:onv val) (e:exp) : option val :=
     match e with
@@ -406,10 +407,10 @@ Inductive expLt : exp -> exp -> Prop :=
 Instance expLt_irr : Irreflexive expLt.
 hnf; intros; unfold complement.
 - induction x; inversion 1; subst; eauto using StrictOrder_Irreflexive.
-  + eapply (StrictOrder_Irreflexive _ H2).
-  + eapply (StrictOrder_Irreflexive _ H2).
-  + eapply (StrictOrder_Irreflexive _ H1).
-  + eapply (StrictOrder_Irreflexive _ H1).
+  + eapply (StrictOrder_Irreflexive _ _ H2); eauto.
+  + eapply (StrictOrder_Irreflexive _ _ H2); eauto.
+  + eapply (StrictOrder_Irreflexive _ _ H1); eauto.
+  + eapply (StrictOrder_Irreflexive _ _ H1); eauto.
 Qed.
 
 Instance expLt_trans : Transitive expLt.
@@ -459,14 +460,14 @@ Instance OrderedType_exp : OrderedType exp :=
 intros.
 general induction x; destruct y; simpl; try now (econstructor; eauto using expLt).
 pose proof (_compare_spec v v0).
+- inv H; try  now (econstructor; eauto using expLt).   admit.
+- pose proof (_compare_spec v v0).
 inv H; now (econstructor; eauto using expLt).
-pose proof (_compare_spec v v0).
-inv H; now (econstructor; eauto using expLt).
-pose proof (_compare_spec u u0).
+- pose proof (_compare_spec u u0).
 specialize (IHx y).
 inv H; try now (econstructor; eauto using expLt).
 inv H1. inv IHx; now (econstructor; eauto using expLt).
-pose proof (_compare_spec b b0).
+- pose proof (_compare_spec b b0).
 specialize (IHx1 y1). specialize (IHx2 y2).
 inv H; try now (econstructor; eauto using expLt).
 inv H1.

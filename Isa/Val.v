@@ -58,10 +58,8 @@ hnf; intros. change ({x = y} + {x <> y}).
 decide equality.
 Defined.
 
-
 Inductive valOfType : val -> ty -> Prop :=
   naturalOfType n : valOfType n Natural.
-
 (*
 *** Local Variables: ***
 *** coq-load-path: ((".." "Lvc")) ***
