@@ -17,6 +17,12 @@ Opaque default_val.
 Definition val_true := (zext k (I::nil)).
 Definition val_false := (zext k (O::nil)).
 
+Fixpoint eqValList (l1:list bitvec) (l2:list bitvec) :=
+match l1, l2 with
+| nil, _ => val_false
+| _, nil => val_false
+| a::l1', b::l2' => bvAnd (eqValList l1' l2') (bvEq a b)
+end.
 
 Global Instance inst_val_defaulted : Defaulted val := {
   default_el := default_val

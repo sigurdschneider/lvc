@@ -1,5 +1,5 @@
-Require Import List.
-Require Import IL Exp sexp bitvec.
+Require Import List EqNat.
+Require Import IL Exp Val  sexp bitvec.
 
 Set Implicit Arguments.
 
@@ -9,7 +9,7 @@ Definition arglst := list sexp.
 Definition vallst := list bitvec.
 
 (** Define what uninterpreted function symbols are **)
-Definition pred := lab (*arglst -> bool*).
+Definition pred := nat (*arglst -> bool*).
 
 (** First define what an smt statement is **)
 Inductive smt :Type :=
@@ -75,7 +75,6 @@ match p, undef e with
 |target, None 
  => cont
 end.
-
 
 Fixpoint guardList (p:pol) (l:arglst) (cont:smt) :=
 match l with
@@ -147,15 +146,15 @@ match s, p with
 |  stmtExtern x f Y s, _ => smtFalse (* TODO *)
 (* f e, s*)
 | stmtGoto f e, source 
-  => match translateArgs e with
-         |Some l =>  guardList source l (funcApp f l)
-         | None => smtFalse
+  => match translateArgs e, f with
+         |Some l, LabI n =>  guardList source l (funcApp n l)
+         | None, _ => smtFalse
      end
 (* f e, t *)
 | stmtGoto f e, target  
-  => match translateArgs e with
-         | Some l => guardList target  l  ( smtNeg (funcApp f l ))
-         | None => smtFalse
+  => match translateArgs e, f with
+         | Some l, LabI n => guardList target  l  ( smtNeg (funcApp n l ))
+         | None, _ => smtFalse
      end
 | stmtReturn e, source 
   => match translateExp e with
@@ -179,8 +178,17 @@ match e with
 end.
 
 (* TODO *)
-Definition evalSpred (F :lab->  vallst -> bitvec) (f:lab) (e:vallst) :=
- bvToBool (F f e).
+Definition evalSpred (F :pred->  vallst -> option bitvec) (f:nat) (e:vallst)  :=
+match F f e with
+| Some b => (F, bvToBool b)
+| None => ((fun F l1 vl1 l2 vl2 => match beq_nat l1  l2 with
+                           |true => match bvToBool(eqValList vl1 vl2) with 
+                                        |true => Some (zext k (I::nil))
+                                        |false => Some (zext k (O::nil))
+                                    end
+                           | false => F l2 vl2
+                       end)F f e, true)
+end.
 
 (* forall E, ~ models E s <=> ~ exists E, models E s *)
 Fixpoint models (F:lab ->vallst->bitvec (* functionsumgebung *))(E:senv) (s:smt) :Prop :=

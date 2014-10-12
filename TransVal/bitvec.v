@@ -117,6 +117,19 @@ match b1, b2 with
 |_,_ => I
 end.
 
+Fixpoint bvAndBounded k b1 b2 :=
+match k with
+| 0 => nil
+| S k' => match b1,b2 with
+              | nil, _ => nil
+              | _, nil => nil
+              |a::b1', b::b2' => bitAnd a b :: bvAndBounded k' b1' b2'
+          end
+end.
+
+Definition bvAnd b1 b2 :=
+bvAndBounded k (sext k b1 O) (sext k b2 O).
+
 Fixpoint bvAndBit k bv b :bitvec :=
 match k with
 | 0 => nil
