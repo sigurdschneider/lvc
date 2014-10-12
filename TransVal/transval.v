@@ -1,13 +1,6 @@
 Require Import List.
 Require Import IL Annotation AutoIndTac Bisim Exp MoreExp Coherence Fresh sexp smt nofun.
 
-(* Definition wrapEnv E :=
-fun (x:var) =>
- match E x with
-|Some v => Some (natToBitvec v)
-|None => None
-end. *)
-
 (** TODO: Add constraint that s' must be an expression or a function call **)
 Lemma models_if_eval :
 forall s D E s' E' F, 
@@ -20,8 +13,47 @@ ssa  s D
 
 Proof.
 intros.
-general induction H2. 
+general induction H2.
 - general induction s'; simpl.
+  + destruct (translateExp e). (* case distinction over wether the exp is translatable or not, maybe induction over exp here *)
+    *  destruct (undef s); simpl.  (* case eq wether the expression contains undefined behavior or not , this case follows from induction over exp*)
+       {  (* Assumption is now: guard expression can be modelled /\ the values of the constraint are equal /\ by induction the rest can be modeled *)
+         admit. }
+       { (* Same assumption as before, but no guard expression *)
+         admit. }
+    * (*the expression could not be translated --> lemma needed for this case that either it cannot occur or that we can get a proof of false from this *)
+      admit.
+  + destruct (translateExp e). (* same as before *)
+    * destruct (undef s); simpl. (* same as before *)
+      { (*same as before, additional lemma needed that: then branch in IL <-> then branch in SMT and same for else *)
+        admit. }
+      { (* and the same  again *) 
+      admit. }
+    * (* same case as + before *)
+      admit.
+  + destruct (translateArgs Y). (* case eq wether the arglist can be translatet --> should go through with lemma *)
+    * (* special case: function call in IL/F where we do not know what it will return. Is there a Lemma needed for this, what about the guarding list?
+           the list should be handleable with the lemma about guard expressions *)
+      admit.
+    * (* same case as + before *)
+      admit.
+  + (* TODO: Add the return function to the predicate list and evaluate it here, then the case becomes a copy of the one before *)
+    admit.
+  + inversion H1. 
+  + inversion H1.
+- (* induction case. I believe that it is necessary here, to have a stronger evaluation/ simulation relation for the IL/F program. It should be able to give information that
+       the program was evaluated to a cf join point (f e or e) *)
+  general induction s; simpl. (* every induction case works analog to the non inductive cases before as we can get the result from the IH *)
+  + admit.
+  + admit.
+  + admit.
+  + admit.
+  + inversion  H1.
+  + inversion H1.
+Qed.
+       
+
+general induction s'; simpl.
   + general induction e.
      * simpl. destruct (E' x). (*TODO: Add assumption that every value is defined *)
        { split.

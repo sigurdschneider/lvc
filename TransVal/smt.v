@@ -1,4 +1,4 @@
-Require Import List EqNat.
+Require Import List EqNat Bool.
 Require Import IL Exp Val  sexp bitvec.
 
 Set Implicit Arguments.
@@ -191,31 +191,53 @@ match F f e with
 end.
 
 (* forall E, ~ models E s <=> ~ exists E, models E s *)
-Fixpoint models (F:lab ->vallst->bitvec (* functionsumgebung *))(E:senv) (s:smt) :Prop :=
+Fixpoint models' (F:pred ->vallst->option bitvec (* functionsumgebung *))(E:senv) (s:smt) :( (pred->vallst->option bitvec) * Prop):=
 match s with
-|smtAnd a b => (models F E a) /\ (models F E b)
-|smtOr a b => (models F E a) \/ (models F E b)
-|smtNeg a => (models F E a) -> False
+  |smtAnd a b 
+   => let (F1,P1) := (models' F E a) in
+        let  (F2, P2) :=(models' F1 E b) in
+        (F2, P1 /\ P2)
+  |smtOr a b 
+   => let (F1, P1) := (models' F E a) in 
+         let (F2, P2) := (models' F1 E b) in
+         (F2, P1 \/ P2)
+  |smtNeg a 
+   => let (F1, P1) := (models' F E a) in
+        (F1, P1 -> False)
 | ite c t f 
   => match evalSexp E c with
-       | Some v => if bvToBool v then (models F E t) else (models F E f)
-       | None => False
+       | Some v 
+         => if bvToBool v 
+            then let (F1, P1) := (models' F E t) in
+                    (F1, P1) 
+            else let (F1, P1) := (models' F E f) in
+                    (F1, P1)
+       | None => (F, False)
      end
-|smtImp a b => (models F E a) -> (models F E b)
+|smtImp a b 
+ => let (F1, P1) := (models' F E a) in
+      let (F2, P2) := (models' F1 E b) in
+      (F2, P1 -> P2)
 |constr s1 s2 => match evalSexp E s1,  evalSexp E s2 with
-                   |Some b1, Some b2 => bvToBool( bvEq b1 b2)
-                   |_, _ => False
+                   |Some b1, Some b2 => (F, Is_true(bvToBool( bvEq b1 b2)))
+                   |_, _ => (F, False)
                  end
 |funcApp f a => match evalList E a with
-                  |Some l => evalSpred F f l (* Prüfe: f in F und a rein bitvec == 0 -> False |sonst -> True *)
-                  |None => False
+                  |Some l => let (F, P) := evalSpred F f l (* Prüfe: f in F und a rein bitvec == 0 -> False |sonst -> True *) in
+                             (F, Is_true P)
+                  |None => (F, False)
                 end
 |smtReturn e 
  => match evalSexp E e with
-        | Some v => True
-        | None => False
+        | Some v => (F, True)
+        | None => (F, False)
     end
-|smtFalse => False
+|smtFalse => (F, False)
+end.
+
+Definition models F E s :=
+match models' F E s with
+| (F, P) => P
 end.
 
   (*
