@@ -48,7 +48,7 @@ match s with
 |smult a b 
   => evalOn (evalSexp E a) ( evalSexp E b) (fun a b => Some (bvMult a b))
 |sdiv a b  
-  => evalOn ( evalSexp E a) ( evalSexp E b)  bvDiv
+  => evalOn ( evalSexp E a) ( evalSexp E b) (fun a b => Some  (bvDiv a b))
 |seq a b
      => evalOn  (evalSexp E a) ( evalSexp E b) (fun a b => Some (bvEq a b))
 | sneg v
