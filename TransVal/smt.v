@@ -9,7 +9,7 @@ Definition arglst := list sexp.
 Definition vallst := list bitvec.
 
 (** Define what uninterpreted function symbols are **)
-Definition pred := nat (*arglst -> bool*).
+Definition pred := lab (*arglst -> bool*).
 
 (** First define what an smt statement is **)
 Inductive smt :Type :=
@@ -146,15 +146,15 @@ match s, p with
 |  stmtExtern x f Y s, _ => smtFalse (* TODO *)
 (* f e, s*)
 | stmtGoto f e, source 
-  => match translateArgs e, f with
-         |Some l, LabI n =>  guardList source l (funcApp n l)
-         | None, _ => smtFalse
+  => match translateArgs e with
+         |Some l =>  guardList source l (funcApp f l)
+         | None => smtFalse
      end
 (* f e, t *)
 | stmtGoto f e, target  
-  => match translateArgs e, f with
-         | Some l, LabI n => guardList target  l  ( smtNeg (funcApp n l ))
-         | None, _ => smtFalse
+  => match translateArgs e with
+         | Some l => guardList target  l  ( smtNeg (funcApp f l ))
+         | None => smtFalse
      end
 | stmtReturn e, source 
   => match translateExp e with
@@ -178,68 +178,45 @@ match e with
 end.
 
 (* TODO *)
-Definition evalSpred (F :pred->  vallst -> option bitvec) (f:nat) (e:vallst)  :=
-match F f e with
-| Some b => (F, bvToBool b)
-| None => ((fun F l1 vl1 l2 vl2 => match beq_nat l1  l2 with
-                           |true => match bvToBool(eqValList vl1 vl2) with 
-                                        |true => Some (zext k (I::nil))
-                                        |false => Some (zext k (O::nil))
-                                    end
-                           | false => F l2 vl2
-                       end)F f e, true)
-end.
+Definition evalSpred (F :pred->  vallst -> bool) (f:lab) (e:vallst)  :=
+F f e.
 
-(* forall E, ~ models E s <=> ~ exists E, models E s *)
-Fixpoint models' (F:pred ->vallst->option bitvec (* functionsumgebung *))(E:senv) (s:smt) :( (pred->vallst->option bitvec) * Prop):=
+Fixpoint models (F:pred ->vallst->bool)(E:senv) (s:smt) : Prop:=
 match s with
   |smtAnd a b 
-   => let (F1,P1) := (models' F E a) in
-        let  (F2, P2) :=(models' F1 E b) in
-        (F2, P1 /\ P2)
+   => (models F E a) /\ (models F E b)
   |smtOr a b 
-   => let (F1, P1) := (models' F E a) in 
-         let (F2, P2) := (models' F1 E b) in
-         (F2, P1 \/ P2)
+   => (models F E a) \/  (models F E b)
   |smtNeg a 
-   => let (F1, P1) := (models' F E a) in
-        (F1, P1 -> False)
+   =>  (models F E a) -> False
 | ite c t f 
   => match evalSexp E c with
        | Some v 
          => if bvToBool v 
-            then let (F1, P1) := (models' F E t) in
-                    (F1, P1) 
-            else let (F1, P1) := (models' F E f) in
-                    (F1, P1)
-       | None => (F, False)
+            then models F E t
+            else models F E f
+       | None => False
      end
 |smtImp a b 
- => let (F1, P1) := (models' F E a) in
-      let (F2, P2) := (models' F1 E b) in
-      (F2, P1 -> P2)
+ => (models F E a) ->(models F E b) 
 |constr s1 s2 => match evalSexp E s1,  evalSexp E s2 with
-                   |Some b1, Some b2 => (F, Is_true(bvToBool( bvEq b1 b2)))
-                   |_, _ => (F, False)
+                   |Some b1, Some b2 => bvToBool( bvEq b1 b2)
+                   |_, _ => False
                  end
 |funcApp f a => match evalList E a with
-                  |Some l => let (F, P) := evalSpred F f l (* Prüfe: f in F und a rein bitvec == 0 -> False |sonst -> True *) in
-                             (F, Is_true P)
-                  |None => (F, False)
+                  |Some l => evalSpred F f l 
+                  |None => False
                 end
 |smtReturn e 
  => match evalSexp E e with
-        | Some v => (F, True)
-        | None => (F, False)
+        | Some v => True
+        | None => False
     end
-|smtFalse => (F, False)
+|smtFalse => False
 end.
 
-Definition models F E s :=
-match models' F E s with
-| (F, P) => P
-end.
-
+Axiom smt_solvable :
+forall s ,(forall F E, ~ models F E s ) \/ (exists F E, models F E s).
   (*
   *** Local Variables: ***
   *** coq-load-path: (("../" "Lvc")) ***

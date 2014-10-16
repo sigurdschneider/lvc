@@ -1,19 +1,30 @@
 Require Import List.
-Require Import IL Annotation AutoIndTac Bisim Exp MoreExp Coherence Fresh sexp smt nofun.
+Require Import IL Annotation AutoIndTac Bisim Exp MoreExp Coherence Fresh sexp smt nofun terminates.
 
-(** TODO: Add constraint that s' must be an expression or a function call **)
 Lemma models_if_eval :
 forall s D E s' E' F, 
 ssa  s D
 -> noFun s
 -> noFun s'
--> star2 step (nil, E,s) nil (nil, E',s')
-(*-> s' = f e \/ s' = e *)
+-> (forall e, exists v, translateExp e = Some v)
+-> terminates E s E' s'
 ->  models F  E'  (translateStmt s source).
 
 Proof.
 intros.
-general induction H2.
+general induction H3; simpl.
+- destruct (H2 e). rewrite H3.  destruct (undef x).  (* TODO: Wenn eine expression undef ist --> /  in e enthalten --> divisor wert = 0 -> false sonst true *)
+  + simpl.  admit.
+  +  simpl.  (* terminates braucht als annahme für die Basisfälle, dass E auf allen Variablen definiert ist *)  admit.
+-  destruct e. (* Das gleiche Prädikat wie für die Übersetzung der Expression wird auch für translateArgs benötigt  
+--> mache eine Unterscheidung zwischen "stuck" in IL und "undef" Programm in IL. *)
+   + simpl.  (* TODO: Das Prädikat muss hier ausgewertet werden, wobei irgendwie forciert werden muss, dass sein Wert nur True sein kann. *)
+     admit.
+- simpl. destruct (translateArgs e); simpl.
+  + destruct f. unfold guardList. admit.
+  + admit.
+- simpl. destruct (exp_eval E c).
+  + simpl.
 - general induction s'; simpl.
   + destruct (translateExp e). (* case distinction over wether the exp is translatable or not, maybe induction over exp here *)
     *  destruct (undef s); simpl.  (* case eq wether the expression contains undefined behavior or not , this case follows from induction over exp*)
