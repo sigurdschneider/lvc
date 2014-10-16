@@ -19,7 +19,7 @@ Set Implicit Arguments.
       | 2 => option_lift2 bvMult
       | 3 => option_lift2 bvEq
       | 4 => option_lift2 (fun a b => neg (bvEq a b))
-      | 5 => bvDiv
+      | 5 => option_lift2 bvDiv
       | _ => fun _ _ => None
     end.
 

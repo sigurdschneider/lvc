@@ -67,11 +67,17 @@ match s with
 | S s' => O::b
 end.
 
-Fixpoint bvToBool b :=
+Fixpoint toBool b :=
 match b with
-|nil => false
-|O::b' => bvToBool b'
+| nil => false
 | I::b' => true
+| O::b' => toBool b'
+end.
+
+Definition msb b :=
+match List.rev b with
+| nil => O
+| a::b' => a
 end.
 
 (** Increment function based on the size of an argument**)
@@ -199,11 +205,16 @@ match b1, b2 with
 
 end.
 
-Fixpoint toBool b :=
+Fixpoint bvLessZero b1 :=
+match msb b1 with
+| I => true
+| O => false
+end.
+
+Fixpoint bvZero b :=
 match b with
-| nil => false
-| I::b' => true
-| O::b' => toBool b'
+| nil => true
+| a::b' =>match  a with |  O =>  bvZero b' |_ => false end
 end.
 
 (** Define a function to map a single bit to a natural number **)
@@ -242,22 +253,33 @@ intros.  general induction b.
   + exists ((2*x)+1). simpl. rewrite H. omega. 
 Qed. 
 
-Definition min a b :=
-a-(a-b).
-
 (** TODO: Find better division algorithm **)
-(** a / b = None, b = 0, Some ( S (a -b)/b) **)
-Fixpoint bvDiv' (a:nat) (b:nat) (akk:bitvec) :=
+Fixpoint bvDiv' a b1 b2 :=
 match a with
-| 0 => Some akk
-| S n' => match b with
-           | 0 => None
-           | _ => bvDiv' (min  n' (a - b)) b (incr akk)
+| 0 =>  O::nil
+| S n' => match  toBool (bvEq b1 b2) with
+           | true =>  (zext k (I::nil))
+           | false => incr( bvDiv' n' (bvSub b1 b2) b2)
           end
 end.
 
-Definition bvDiv (b1:bitvec) (b2:bitvec) :option bitvec:=
-bvDiv' (bitvecToNat b1) (bitvecToNat b2) (O::nil).
+(** Division wrapper function. Starts the bvDiv' function with the size argument b1. 
+Because b1 is the biggest amount of steps needed to compute b1 / b2 (in the case where b2 
+is 1. As a bitvector can also be mapped to it's natural number counterpart we take this number as
+the amount of steps. In the worst case this will only produce more steps then needed as 2^k is 
+the maximum number for natural numbers and 2^(k-1) for 2s complement.
+There is also special threatening needed for signs. 
+Function is defined also for x/y where y = 0 because the smt solver always has total functions **)
+Definition bvDiv (b1:bitvec) (b2:bitvec) :bitvec:=
+if bvZero b2 
+then zext k (O::nil)
+else
+match bvLessZero b1, bvLessZero b2 with
+| true, true => (bvDiv' (bitvecToNat b1) (neg b1) (neg b2))
+| true, false => neg ( bvDiv' (bitvecToNat b1) (neg b1) b2)
+| false, true => neg (bvDiv' (bitvecToNat b1) b1 (neg b2))
+| false, false => bvDiv' (bitvecToNat b1) b1 b2
+end.
 
 (*
 *** Local Variables: ***
