@@ -1,93 +1,69 @@
 Require Import List.
-Require Import IL Annotation AutoIndTac Bisim Exp MoreExp Coherence Fresh sexp smt nofun terminates.
+Require Import IL Annotation AutoIndTac Bisim Exp MoreExp Coherence Fresh sexp smt nofun terminates Subsmt.
+
+(*
+Axiom always_true:
+forall s F f x e, (~ subsmt (smtNeg (funcApp f x) ) s) -> evalSpred F f e = true.
+
+Lemma not_occur_neg_call:
+forall s f e,   ~ subsmt (smtNeg (funcApp f e)) (translateStmt s source).
+
+Proof.
+intros.  general induction s; simpl.
+- hnf. intros. apply (IHs  f e0). destruct (translateExp e).
+  +  destruct (undef s0).
+     *  inversion H.
+        { econstructor. exfalso. discriminate H0. }
+        { destruct H2.
+          -
+  + reflexivity.
+  + destruct (translateExp e).
+    * destruct (undef s0).
+      { inversion H.
+        - econstructor.
+*)
 
 Lemma models_if_eval :
 forall s D E s' E' F, 
 ssa  s D
--> noFun s
--> noFun s'
+(* -> noFun s *)
+(* -> noFun s' *)
+-> (forall e, exists v, exp_eval E e = Some v)
 -> (forall e, exists v, translateExp e = Some v)
+-> (forall l, exists arg, translateArgs l = Some arg)
 -> terminates E s E' s'
-->  models F  E'  (translateStmt s source).
+-> exists E'',  models F  E''  (translateStmt s source).
 
 Proof.
 intros.
 general induction H3; simpl.
-- destruct (H2 e). rewrite H3.  destruct (undef x).  (* TODO: Wenn eine expression undef ist --> /  in e enthalten --> divisor wert = 0 -> false sonst true *)
-  + simpl.  admit.
-  +  simpl.  (* terminates braucht als annahme für die Basisfälle, dass E auf allen Variablen definiert ist *)  admit.
--  destruct e. (* Das gleiche Prädikat wie für die Übersetzung der Expression wird auch für translateArgs benötigt  
---> mache eine Unterscheidung zwischen "stuck" in IL und "undef" Programm in IL. *)
-   + simpl.  (* TODO: Das Prädikat muss hier ausgewertet werden, wobei irgendwie forciert werden muss, dass sein Wert nur True sein kann. *)
-     admit.
-- simpl. destruct (translateArgs e); simpl.
-  + destruct f. unfold guardList. admit.
-  + admit.
-- simpl. destruct (exp_eval E c).
-  + simpl.
-- general induction s'; simpl.
-  + destruct (translateExp e). (* case distinction over wether the exp is translatable or not, maybe induction over exp here *)
-    *  destruct (undef s); simpl.  (* case eq wether the expression contains undefined behavior or not , this case follows from induction over exp*)
-       {  (* Assumption is now: guard expression can be modelled /\ the values of the constraint are equal /\ by induction the rest can be modeled *)
-         admit. }
-       { (* Same assumption as before, but no guard expression *)
-         admit. }
-    * (*the expression could not be translated --> lemma needed for this case that either it cannot occur or that we can get a proof of false from this *)
-      admit.
-  + destruct (translateExp e). (* same as before *)
-    * destruct (undef s); simpl. (* same as before *)
-      { (*same as before, additional lemma needed that: then branch in IL <-> then branch in SMT and same for else *)
-        admit. }
-      { (* and the same  again *) 
-      admit. }
-    * (* same case as + before *)
-      admit.
-  + destruct (translateArgs Y). (* case eq wether the arglist can be translatet --> should go through with lemma *)
-    * (* special case: function call in IL/F where we do not know what it will return. Is there a Lemma needed for this, what about the guarding list?
-           the list should be handleable with the lemma about guard expressions *)
-      admit.
-    * (* same case as + before *)
-      admit.
-  + (* TODO: Add the return function to the predicate list and evaluate it here, then the case becomes a copy of the one before *)
+- destruct (H1 e). rewrite H3. 
+  assert (A: forall E s E' s', terminates E s E' s' -> undef x = ⎣⎦ ) by admit.  
+  rewrite (A E (stmtReturn e) E (stmtReturn e)). 
+  + exists (fun x => match E x with |Some v => v | None => default_val end); simpl. econstructor.
+  + econstructor. 
+-  destruct (H2 e). rewrite H3. 
+   assert (A: forall E s E' s' x, terminates E s E' s' -> guardList source x (funcApp f x) = funcApp f x) by admit. 
+  rewrite (A E (stmtGoto f e) E (stmtGoto f e)).
+  + exists (fun x => match E x with |Some v => v | None => default_val end); simpl. admit.
+  + econstructor. 
+- destruct (H4 c). rewrite H6. 
+    assert (A: undef x = ⎣⎦ ) by admit.  
+    rewrite A. simpl. exists (fun x => match E x with |Some v => v |None => default_val end); simpl.
+    (* TODO: Ersetze überall evalSexp mit exp_eval ?? *)  admit.
+- (* analog zu vorher *) admit.
+- destruct (H2 e). rewrite H. assert (A: undef x0 = None) by admit. rewrite A. 
+  exists (fun x => match E'  x with | Some v => v |None => default_val end). simpl. split.
+  + (* Jetzt muss mit ssa konstruiert werden, dass E' x nun genau den Wert hat den evalSexp E e gibt. *)
+    assert (B: E' x =  exp_eval E e) by admit.
+    rewrite B. destruct  (H1 e). rewrite H5. 
     admit.
-  + inversion H1. 
-  + inversion H1.
-- (* induction case. I believe that it is necessary here, to have a stronger evaluation/ simulation relation for the IL/F program. It should be able to give information that
-       the program was evaluated to a cf join point (f e or e) *)
-  general induction s; simpl. (* every induction case works analog to the non inductive cases before as we can get the result from the IH *)
-  + admit.
-  + admit.
-  + admit.
-  + admit.
-  + inversion  H1.
-  + inversion H1.
-Qed.
-       
-
-general induction s'; simpl.
-  + general induction e.
-     * simpl. destruct (E' x). (*TODO: Add assumption that every value is defined *)
-       { split.
-         -  destruct (bitvec.bvEq b v); simpl. (* Broken Case due to the fact of the value definition assumption lacking *) admit.
-         destruct b0.
-         + destruct (bitvec.bvToBool l).
-           * econstructor.
-           * (* Contradiction to ?? *) exfalso. admit.
-         + econstructor.
-         - apply (IHs' D E' F).
-           + inversion H1. assumption.
-           + inversion H. rewrite H6. (* TODO: Construct ssa from assumptions *) admit.
-             }
-     { split.
-       - (* TODO Does not work *) admit.
-       - apply (IHs' D E' F).
-         + inversion H1; assumption.
-         + inversion H.  admit. (* see case before *)
-     }
-       * destruct (translateExp (Var v)); simpl.  (* TODO: Same assumption as last case *)
-         {  destruct (undef s).
-            - simpl.
-  +  destruct (E' x).
+  +  inv H0.  
+     assert (C: forall e0, exists v, exp_eval (E[x <- exp_eval E e]) e0 = Some v) by admit.
+     specialize (IHterminates an F H11 C H2 H4). 
+     destruct IHterminates.
+     assert (D: x1 = (fun x2 => match E' x2 with | Some v => v |None => default_val end)) by admit.
+     rewrite D in H5. assumption.
 Qed.
 
 Definition smtCheck (s:stmt) (t:stmt) :=

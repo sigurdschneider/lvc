@@ -23,7 +23,6 @@ Inductive smt :Type :=
 |smtReturn: sexp -> smt
 |smtFalse: smt.
 
-
 (** Now define the parameters for the translation function **)
 Inductive pol:Type :=
 | source :pol
@@ -168,19 +167,17 @@ match s, p with
      end
 end.
 
-Fixpoint evalList (E:senv) (e:arglst) :option vallst :=
+Fixpoint evalList (E:senv) (e:arglst) : vallst :=
 match e with
-|nil => Some nil
-|x::e' => match evalSexp E x, evalList E e' with
-              | Some v, Some l => Some (v::l)
-              | _, _ => None
-          end
+|nil =>  nil
+|x::e' => (evalSexp E x) :: ( evalList E e')
 end.
 
-(* TODO *)
 Definition evalSpred (F :pred->  vallst -> bool) (f:lab) (e:vallst)  :=
 F f e.
 
+(** models relation for smt. No need for options here too, because if models can be evaluated by an environment,
+every variable must have been defined. **)
 Fixpoint models (F:pred ->vallst->bool)(E:senv) (s:smt) : Prop:=
 match s with
   |smtAnd a b 
@@ -191,32 +188,29 @@ match s with
    =>  (models F E a) -> False
 | ite c t f 
   => match evalSexp E c with
-       | Some v 
-         => if bvToBool v 
+       |  v 
+         => if toBool v 
             then models F E t
             else models F E f
-       | None => False
      end
 |smtImp a b 
  => (models F E a) ->(models F E b) 
 |constr s1 s2 => match evalSexp E s1,  evalSexp E s2 with
-                   |Some b1, Some b2 => bvToBool( bvEq b1 b2)
-                   |_, _ => False
+                   |b1, b2 => toBool( bvEq b1 b2)
                  end
 |funcApp f a => match evalList E a with
-                  |Some l => evalSpred F f l 
-                  |None => False
+                  | l => evalSpred F f l 
                 end
 |smtReturn e 
  => match evalSexp E e with
-        | Some v => True
-        | None => False
+        |  v => True
     end
 |smtFalse => False
 end.
 
-Axiom smt_solvable :
+Axiom smt_decidable :
 forall s ,(forall F E, ~ models F E s ) \/ (exists F E, models F E s).
+
   (*
   *** Local Variables: ***
   *** coq-load-path: (("../" "Lvc")) ***

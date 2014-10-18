@@ -3,7 +3,9 @@ Require Import IL bitvec.
 
 Set Implicit Arguments.
 
-Definition senv:Type := var -> option bitvec.
+(* An smt environment must be defined on every variable that occurs in the formula.
+Hence it is safe to not use options here *)
+Definition senv:Type := var -> bitvec.
 
 (** Define SMT expressions on bitvectors. **)
 Inductive sexp :=
@@ -24,46 +26,32 @@ Inductive sexp :=
 (** variables **)
 |svar: var -> sexp.
 
-Definition evalOn (o1:option bitvec) (o2:option bitvec) (f:bitvec->bitvec->option bitvec):=
-match o1, o2 with
-|Some v1, Some v2 =>  f v1 v2
-| _, _ => None
-end.
-
 (**
-evalSexp evaluates an SMT expression given an environment with the variable bindings already 
-introduced and the expression to evaluate. It's returntype is a bitvector option as it is
-possible that
-a) a variable occurs free
-b) a variable has not been defined
-c) evaluation can become stuck
+evalSexp evaluates an SMT expression given an environment that must! be total on 
+every variable that may occur in a formula. 
 **)
 
-Fixpoint evalSexp (E: senv)(s:sexp):option bitvec :=
+Fixpoint evalSexp (E: senv)(s:sexp): bitvec :=
 match s with
 |splus a b 
-  => evalOn ( evalSexp E a) (evalSexp E b) (fun a b => Some (bvAdd a b))
+  => bvAdd ( evalSexp E a) (evalSexp E b) 
 |ssub a b
-  => evalOn  (evalSexp E a) (evalSexp E b) (fun a b => Some (bvSub a b))
+  => bvSub  (evalSexp E a) (evalSexp E b)
 |smult a b 
-  => evalOn (evalSexp E a) ( evalSexp E b) (fun a b => Some (bvMult a b))
+  => bvMult (evalSexp E a) ( evalSexp E b)
 |sdiv a b  
-  => evalOn ( evalSexp E a) ( evalSexp E b) (fun a b => Some  (bvDiv a b))
+  => (fun a b => match bvDiv a b with
+                   | Some v =>  v
+                   | None =>  (zext k (O::nil))
+                 end) ( evalSexp E a) ( evalSexp E b)
 |seq a b
-     => evalOn  (evalSexp E a) ( evalSexp E b) (fun a b => Some (bvEq a b))
+     => bvEq  (evalSexp E a) ( evalSexp E b)
 | sneg v
- => let v' := evalSexp E v in
-    match v' with
-      | Some v => Some (neg v)
-      | None => None
-    end
+ => neg ( evalSexp E v)
 | sconst c
-  => Some c
+  => c
 | svar v
-  => match (E v) with
-         | Some b => Some b
-         | None => None
-     end
+  => E v
 end.
 
 (* Not needed stuff begins here *)

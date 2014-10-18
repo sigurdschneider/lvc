@@ -270,16 +270,16 @@ the amount of steps. In the worst case this will only produce more steps then ne
 the maximum number for natural numbers and 2^(k-1) for 2s complement.
 There is also special threatening needed for signs. 
 Function is defined also for x/y where y = 0 because the smt solver always has total functions **)
-Definition bvDiv (b1:bitvec) (b2:bitvec) :bitvec:=
+Definition bvDiv (b1:bitvec) (b2:bitvec) :option bitvec:=
 if bvZero b2 
-then zext k (O::nil)
+then None
 else
-match bvLessZero b1, bvLessZero b2 with
+Some (match bvLessZero b1, bvLessZero b2 with
 | true, true => (bvDiv' (bitvecToNat b1) (neg b1) (neg b2))
 | true, false => neg ( bvDiv' (bitvecToNat b1) (neg b1) b2)
 | false, true => neg (bvDiv' (bitvecToNat b1) b1 (neg b2))
 | false, false => bvDiv' (bitvecToNat b1) b1 b2
-end.
+end).
 
 (*
 *** Local Variables: ***
