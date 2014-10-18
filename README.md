@@ -3,8 +3,7 @@ IL - IL/I, IL/F and Coherence
 
 Translation validation for register assignment and SSA construction
 
-This is an advancement of http://www.ps.uni-saarland.de/~sdschn/master
-
+LVC stands for Linear Verified Compiler.
 
 ## Dependencies
 
