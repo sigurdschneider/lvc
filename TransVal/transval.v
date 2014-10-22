@@ -8,81 +8,102 @@ fun x => match E x with
 end.
 
 (*
- Lemma guard_truet_if_eval:
-forall F E e x s v,  translateExp e = Some x -> undef x = Some s -> exp_eval E e = Some v ->  models F (lift_env E) s.
+Lemma evals_impl_subexp_eval:
+forall E e o e1 e2 v ,
+e = BinOp o e1 e2
+-> exp_eval E e = Some v
+-> exists v1 v2, exp_eval E e1 = Some v1/\ exp_eval E e2 = Some v2.
+
+Proof.
+intros. rewrite H in H0. simpl in H0.  case_eq (exp_eval E e1); case_eq (exp_eval E e2); intros.
+- exists v1; exists v0; eauto.
+-  rewrite H2 in H0. rewrite H1 in H0. simpl in H0. exfalso; discriminate H0.
+-  *)
+
+ Lemma guard_true_if_eval:
+forall F E e x s v,  
+ translateExp e = Some x 
+-> undef x = Some s 
+->  exp_eval E e = Some v 
+->  models F (lift_env E) s.
 
 Proof.
 intros. general induction e; simpl in *.
-- destruct u.
+-  destruct u.
   + destruct( translateExp e).
-    * inversion H. rewrite <- H3 in H0.  case_eq (exp_eval E e); intros.
-      {  eapply IHe; eauto. }
-      { eapply IHe; eauto. *)
+    * inversion H. rewrite <- H3 in H0. monad_inv H1. simpl in H0.  eapply IHe; eauto.
+    * exfalso; discriminate H.
+  + exfalso. discriminate H.
+-  monad_inv H1. destruct  (translateExp e1); destruct (translateExp e2).
+   + destruct b. 
+     * inversion H. rewrite <- H2 in H0.  simpl in H0.  case_eq (undef s0); case_eq (undef s1); intros; simpl.
+       { unfold combine in H0.   rewrite H1 in H0; rewrite H3 in H0. inversion H0; simpl; split.
+         - eapply IHe1; eauto.
+         - eapply IHe2; eauto.
+       }
+       { unfold combine in H0; rewrite H1 in H0; rewrite H3 in H0; inversion H0. eapply IHe1; eauto. rewrite <- H5; eauto. }
+       { unfold combine in H0; rewrite H1 in H0; rewrite H3 in H0; inversion H0. eapply IHe2; eauto. rewrite <- H5; eauto. }
+       { unfold combine in H0; rewrite H1 in H0; rewrite H3 in H0; inversion H0. }
+     *  destruct b.
+        { inversion H; rewrite <- H2 in H0. simpl in H0; case_eq(undef s0); case_eq (undef s1); intros; simpl.
+          - unfold combine in H0. rewrite H1 in H0; rewrite H3 in H0. inversion H0; simpl; split.
+            + eapply IHe1; eauto.
+            + eapply IHe2; eauto.
+          - unfold combine in H0; rewrite H1 in H0; rewrite H3 in H0; inversion H0. eapply IHe1; eauto. rewrite <- H5; eauto. 
+          - unfold combine in H0; rewrite H1 in H0; rewrite H3 in H0; inversion H0. eapply IHe2; eauto. rewrite <- H5; eauto. 
+          - unfold combine in H0; rewrite H1 in H0; rewrite H3 in H0; inversion H0. 
+        }
+        { destruct b. 
+          -  inversion H; rewrite <- H2 in H0. simpl in H0; case_eq(undef s0); case_eq (undef s1); intros; simpl.
+             + unfold combine in H0. rewrite H1 in H0; rewrite H3 in H0. inversion H0; simpl; split.
+               * eapply IHe1; eauto.
+               * eapply IHe2; eauto.
+             + unfold combine in H0; rewrite H1 in H0; rewrite H3 in H0; inversion H0. eapply IHe1; eauto. rewrite <- H5; eauto. 
+             + unfold combine in H0; rewrite H1 in H0; rewrite H3 in H0; inversion H0. eapply IHe2; eauto. rewrite <- H5; eauto. 
+             + unfold combine in H0; rewrite H1 in H0; rewrite H3 in H0; inversion H0. 
+          - destruct b.
+            + inversion H; rewrite <- H2 in H0. simpl in H0; case_eq(undef s0); case_eq (undef s1); intros; simpl.
+              * unfold combine in H0. rewrite H1 in H0; rewrite H3 in H0. inversion H0; simpl; split.
+              {  eapply IHe1; eauto. }
+              { eapply IHe2; eauto. }
+              * unfold combine in H0; rewrite H1 in H0; rewrite H3 in H0; inversion H0. eapply IHe1; eauto. rewrite <- H5; eauto. 
+              * unfold combine in H0; rewrite H1 in H0; rewrite H3 in H0; inversion H0. eapply IHe2; eauto. rewrite <- H5; eauto. 
+              * unfold combine in H0; rewrite H1 in H0; rewrite H3 in H0; inversion H0. 
+            + destruct b.
+              * inversion H; rewrite <- H2 in H0. simpl in H0; case_eq(undef s0); case_eq (undef s1); intros; simpl.
+                { unfold combine in H0. rewrite H1 in H0; rewrite H3 in H0. inversion H0; simpl; split. 
+                  - eapply IHe1; eauto.
+                  - eapply IHe2; eauto. }
+                { unfold combine in H0; rewrite H1 in H0; rewrite H3 in H0; inversion H0. eapply IHe1; eauto. rewrite <- H5; eauto. }
+                { unfold combine in H0; rewrite H1 in H0; rewrite H3 in H0; inversion H0. eapply IHe2; eauto. rewrite <- H5; eauto. }
+                { unfold combine in H0; rewrite H1 in H0; rewrite H3 in H0; inversion H0. }
+              * exfalso; discriminate H.
+          }
+   + exfalso; discriminate H.
+   + exfalso; discriminate H.
+   + exfalso; discriminate H.
+Qed.
 
 Lemma models_if_eval :
 forall s D E s' E', 
 ssa  s D
--> (forall x, x ∈ snd (getAnn D) ->E x <> None)
+-> (forall x, x ∈ fst (getAnn D) -> E x <> None)
 -> (forall e, exists v, translateExp e = ⎣v⎦)
 -> noFun s 
 -> terminates (nil,E, s) (nil, E', s')
--> exists F, models F  (lift_env E')  (translateStmt s source).
+->  models (fun (f:pred) (x:vallst) => true)  (lift_env E')  (translateStmt s source).
 
 Proof.
 intros.
-(* inversion F.step *)
-general induction H2; simpl.
-- exists (fun (f:pred) (x:vallst)=> true). 
-   destruct (H1 e).  rewrite H4. case_eq (undef x0); intros.
-   + simpl. split.
-     * general induction e; simpl in *. 
-       { destruct u.  
-         - destruct (H1 e). rewrite H6 in H4.  inversion H4. rewrite <- H8 in H5. simpl in *.  eapply IHe; eauto.  
-           + inversion H. econstructor; eauto. 
-           + inversion H3. econstructor; eauto. inversion H6.   general induction e.
-       { simpl in *.  destruct (H1 e).  rewrite H6 in *.  destruct u. 
-        -  inversion H4. rewrite <- H8 in H5. simpl in H5.  specialize (IHe x s H2 IHnoFun D E s' E' ). eapply IHe; eauto.
-           + inversion H. econstructor; eauto.
-           + inversion H3. econstructor; eauto. inversion H7. 
-}
-     * split.
-       { inversion H. inversion H3. inversion H14.
-         assert (X: ⎣evalSexp (lift_env E'') x0⎦ = exp_eval E e).
-         - rewrite def. f_equal. unfold lift_env. 
-         assert ((lift_env E'' x) = exp_eval E x).
-  pose (E' := fun x => match E x with | Some v => v | None => default_val end).
-  + exists E'. simpl; split; eauto. unfold E'. rewrite H0.
-
-  destruct (undef x).
-  + apply (guard_ret_sat_if_terminates F E E' e x); simpl; eauto.
-    * econstructor.
-    * rewrite H3.  
-  assert (A: forall E s E' s', terminates E s E' s' -> undef x =  ) by admit.  
-  rewrite (A E (stmtReturn e) E (stmtReturn e)). 
-  + exists (fun x => match E x with |Some v => v | None => default_val end); simpl. econstructor.
-  + econstructor. 
--  destruct (H2 e). rewrite H3. 
-   assert (A: forall E s E' s' x, terminates E s E' s' -> guardList source x (funcApp f x) = funcApp f x) by admit. 
-  rewrite (A E (stmtGoto f e) E (stmtGoto f e)).
-  + exists (fun x => match E x with |Some v => v | None => default_val end); simpl. admit.
-  + econstructor. 
-- destruct (H4 c). rewrite H6. 
-    assert (A: undef x = ⎣⎦ ) by admit.  
-    rewrite A. simpl. exists (fun x => match E x with |Some v => v |None => default_val end); simpl.
-    (* TODO: Ersetze überall evalSexp mit exp_eval ?? *)  admit.
-- (* analog zu vorher *) admit.
-- destruct (H2 e). rewrite H. assert (A: undef x0 = None) by admit. rewrite A. 
-  exists (fun x => match E'  x with | Some v => v |None => default_val end). simpl. split.
-  + (* Jetzt muss mit ssa konstruiert werden, dass E' x nun genau den Wert hat den evalSexp E e gibt. *)
-    assert (B: E' x =  exp_eval E e) by admit.
-    rewrite B. destruct  (H1 e). rewrite H5. 
-    admit.
-  +  inv H0.  
-     assert (C: forall e0, exists v, exp_eval (E[x <- exp_eval E e]) e0 = Some v) by admit.
-     specialize (IHterminates an F H11 C H2 H4). 
-     destruct IHterminates.
-     assert (D: x1 = (fun x2 => match E' x2 with | Some v => v |None => default_val end)) by admit.
-     rewrite D in H5. assumption.
+general induction H3; simpl. (*pose (F := (fun (f:pred) (x:vallst)=> true)); exists F.*)
+-  rewrite H.   case_eq (undef b); intros; simpl; eauto. 
+         + split; eauto. eapply (guard_true_if_eval); eauto.
+- case_eq (s); intros; simpl. 
+  + simpl.  destruct (H2 e).  rewrite H6.  case_eq (undef x0); intros; simpl; split.
+    *  rewrite H5 in H. rewrite H5 in H0.  eapply(guard_true_if_eval); eauto.
+    * split.
+      {  unfold lift_env.  inversion }
+      { eapply IHterminates; eauto.
 Qed.
 
 Definition smtCheck (s:stmt) (t:stmt) :=
