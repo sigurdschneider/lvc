@@ -1,22 +1,15 @@
-Require Import IL.
+Require Import IL smt.
 
 Set Implicit Arguments.
 
-Inductive terminates :onv val ->stmt -> onv val -> stmt -> Prop :=
-|terminatesReturn E e 
- : terminates E (stmtReturn e) E (stmtReturn e)
-|terminatesCall E f e 
- : terminates E (stmtGoto f e) E (stmtGoto f e)
-|terminatesCondT E c v t f E' s 
- : terminates E t E' s 
--> exp_eval E c = Some v 
--> val2bool v = true -> terminates E (stmtIf c t f) E' s
-|terminatesCondF E c v t f E' s
-: terminates E f E' s 
-  -> exp_eval E c = Some v
-  -> val2bool v = false -> terminates E (stmtIf c t f) E' s
-|terminatesLet E x e v s E' s'
- : exp_eval E e = v -> terminates (E[x<- v]) s E' s' -> terminates E (stmtExp x e s) E' s'.
+Inductive terminates :F.state -> F.state -> Prop :=
+|terminatesReturn L E e b:
+   translateExp e = ⎣b⎦ 
+   -> terminates (L, E, stmtReturn e)   (L  , E , stmtReturn e)
+|terminatesStep sigma sigma' sigma'' a:
+   F.step sigma a sigma'
+   -> terminates sigma' sigma''
+   -> terminates sigma sigma''.
 
 (*
 *** Local Variables: ***

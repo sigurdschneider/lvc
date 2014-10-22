@@ -1,44 +1,63 @@
 Require Import List.
 Require Import IL Annotation AutoIndTac Bisim Exp MoreExp Coherence Fresh sexp smt nofun terminates Subsmt.
 
-(*
-Axiom always_true:
-forall s F f x e, (~ subsmt (smtNeg (funcApp f x) ) s) -> evalSpred F f e = true.
+Definition lift_env (E:onv val)  :=
+fun x => match E x with 
+|Some v => v
+| _ => default_val
+end.
 
-Lemma not_occur_neg_call:
-forall s f e,   ~ subsmt (smtNeg (funcApp f e)) (translateStmt s source).
+(*
+ Lemma guard_truet_if_eval:
+forall F E e x s v,  translateExp e = Some x -> undef x = Some s -> exp_eval E e = Some v ->  models F (lift_env E) s.
 
 Proof.
-intros.  general induction s; simpl.
-- hnf. intros. apply (IHs  f e0). destruct (translateExp e).
-  +  destruct (undef s0).
-     *  inversion H.
-        { econstructor. exfalso. discriminate H0. }
-        { destruct H2.
-          -
-  + reflexivity.
-  + destruct (translateExp e).
-    * destruct (undef s0).
-      { inversion H.
-        - econstructor.
-*)
+intros. general induction e; simpl in *.
+- destruct u.
+  + destruct( translateExp e).
+    * inversion H. rewrite <- H3 in H0.  case_eq (exp_eval E e); intros.
+      {  eapply IHe; eauto. }
+      { eapply IHe; eauto. *)
 
 Lemma models_if_eval :
-forall s D E s' E' F, 
+forall s D E s' E', 
 ssa  s D
-(* -> noFun s *)
-(* -> noFun s' *)
--> (forall e, exists v, exp_eval E e = Some v)
--> (forall e, exists v, translateExp e = Some v)
--> (forall l, exists arg, translateArgs l = Some arg)
--> terminates E s E' s'
--> exists E'',  models F  E''  (translateStmt s source).
+-> (forall x, x ∈ snd (getAnn D) ->E x <> None)
+-> (forall e, exists v, translateExp e = ⎣v⎦)
+-> noFun s 
+-> terminates (nil,E, s) (nil, E', s')
+-> exists F, models F  (lift_env E')  (translateStmt s source).
 
 Proof.
 intros.
-general induction H3; simpl.
-- destruct (H1 e). rewrite H3. 
-  assert (A: forall E s E' s', terminates E s E' s' -> undef x = ⎣⎦ ) by admit.  
+(* inversion F.step *)
+general induction H2; simpl.
+- exists (fun (f:pred) (x:vallst)=> true). 
+   destruct (H1 e).  rewrite H4. case_eq (undef x0); intros.
+   + simpl. split.
+     * general induction e; simpl in *. 
+       { destruct u.  
+         - destruct (H1 e). rewrite H6 in H4.  inversion H4. rewrite <- H8 in H5. simpl in *.  eapply IHe; eauto.  
+           + inversion H. econstructor; eauto. 
+           + inversion H3. econstructor; eauto. inversion H6.   general induction e.
+       { simpl in *.  destruct (H1 e).  rewrite H6 in *.  destruct u. 
+        -  inversion H4. rewrite <- H8 in H5. simpl in H5.  specialize (IHe x s H2 IHnoFun D E s' E' ). eapply IHe; eauto.
+           + inversion H. econstructor; eauto.
+           + inversion H3. econstructor; eauto. inversion H7. 
+}
+     * split.
+       { inversion H. inversion H3. inversion H14.
+         assert (X: ⎣evalSexp (lift_env E'') x0⎦ = exp_eval E e).
+         - rewrite def. f_equal. unfold lift_env. 
+         assert ((lift_env E'' x) = exp_eval E x).
+  pose (E' := fun x => match E x with | Some v => v | None => default_val end).
+  + exists E'. simpl; split; eauto. unfold E'. rewrite H0.
+
+  destruct (undef x).
+  + apply (guard_ret_sat_if_terminates F E E' e x); simpl; eauto.
+    * econstructor.
+    * rewrite H3.  
+  assert (A: forall E s E' s', terminates E s E' s' -> undef x =  ) by admit.  
   rewrite (A E (stmtReturn e) E (stmtReturn e)). 
   + exists (fun x => match E x with |Some v => v | None => default_val end); simpl. econstructor.
   + econstructor. 
