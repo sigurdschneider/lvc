@@ -1,5 +1,5 @@
 Require Import List.
-Require Import IL Annotation AutoIndTac Bisim Exp MoreExp Coherence Fresh sexp smt nofun terminates Subsmt.
+Require Import IL Annotation AutoIndTac Bisim Exp MoreExp Coherence Fresh sexp smt nofun terminates bitvec.
 
 Definition lift_env (E:onv val)  :=
 fun x => match E x with 
@@ -84,26 +84,54 @@ intros. general induction e; simpl in *.
    + exfalso; discriminate H.
 Qed.
 
+Lemma toBool_if_val2bool:
+forall E e v c x,  exp_eval E e = Some v -> val2bool v = c -> translateExp e = Some x -> toBool(evalSexp (lift_env E) x) = c.
+
+Proof. 
+intros. induction e; simpl in *.
+- inversion H1. simpl. inversion H.  
+
 Lemma models_if_eval :
 forall s D E s' E', 
 ssa  s D
 -> (forall x, x ∈ fst (getAnn D) -> E x <> None)
 -> (forall e, exists v, translateExp e = ⎣v⎦)
+-> agree_on eq (fst (getAnn D)) E E'
 -> noFun s 
 -> terminates (nil,E, s) (nil, E', s')
 ->  models (fun (f:pred) (x:vallst) => true)  (lift_env E')  (translateStmt s source).
 
 Proof.
 intros.
-general induction H3; simpl. (*pose (F := (fun (f:pred) (x:vallst)=> true)); exists F.*)
--  rewrite H.   case_eq (undef b); intros; simpl; eauto. 
-         + split; eauto. eapply (guard_true_if_eval); eauto.
-- case_eq (s); intros; simpl. 
-  + simpl.  destruct (H2 e).  rewrite H6.  case_eq (undef x0); intros; simpl; split.
-    *  rewrite H5 in H. rewrite H5 in H0.  eapply(guard_true_if_eval); eauto.
-    * split.
-      {  unfold lift_env.  inversion }
-      { eapply IHterminates; eauto.
+general induction H4; simpl.
+-  destruct (H3 e). rewrite H6. case_eq (undef x).
+   + simpl; split.
+     * eapply (guard_true_if_eval); eauto.
+     * econstructor.
+   + intros. simpl. econstructor.
+- inversion H. 
+  + simpl. destruct (H2 e). rewrite H11. case_eq (undef x0); intros; simpl; split.
+    *  eapply(guard_true_if_eval (fun (_:pred) (_:vallst) => true) E' e x0 s0 v); eauto.  assert (freeVars e ⊆ (fst (getAnn D))).
+      {  rewrite <- H9 in H0. inversion H0. simpl.  assumption. }
+      { eapply (exp_eval_agree (E:= E)); eauto.  cset_tac. hnf in H3. hnf in H13. hnf. intros. specialize (H3 x1). specialize (H13 x1). exact (H3 (H13 H6)). }
+    * split; simpl.
+     { unfold lift_env at 1. inversion H4. inversion H7. assert (E' x = Some v).
+       -  admit.
+       - rewrite H20.  assert (evalSexp (lift_env E') x0 = v) by admit.
+        rewrite H21.  erewrite (bvEq_true_eq). econstructor.
+       - (* same as * before *) admit.
+       }
+  { rewrite <- H9 in H0. inversion H0. rewrite <- H9 in H5.  inversion H5.  eapply IHterminates; eauto.
+    - admit.
+    - admit. }
+    * (* same as * before *) admit.
+    * (* same as { before *) admit.
+  + simpl. destruct (H2 e). rewrite H11. case_eq (undef x); intros; simpl; try split.
+    * eapply(guard_true_if_eval (fun (_:pred) (_:vallst) => true) E' e x s0 v); eauto.  assert (freeVars e ⊆ (fst (getAnn D))).
+      {  rewrite <- H9 in H0. inversion H0. simpl.  assumption. }
+      { eapply (exp_eval_agree (E:= E)); eauto.  cset_tac. hnf in H3. hnf in H13. hnf. intros. specialize (H3 x0). specialize (H13 x0). exact (H3 (H13 H6)). }
+    *  
+
 Qed.
 
 Definition smtCheck (s:stmt) (t:stmt) :=

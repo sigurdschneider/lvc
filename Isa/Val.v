@@ -40,7 +40,7 @@ assert (X:forall b1 b2:bit, {b1 = b2} + {b1 <> b2}).
 Defined.
 
 (** ** There must be an injection into the booleans *)
-Definition val2bool : val -> bool := fun v => toBool v. (*  match v with 0 => false | _ => true end. *)
+Definition val2bool : val -> bool := fun v => toBool  v. (*  match v with 0 => false | _ => true end. *)
 
 Lemma val2bool_true
 : val2bool val_true = true.

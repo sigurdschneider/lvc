@@ -193,17 +193,33 @@ bvMult' (2*k) 0 (sext (2*k) a O) (sext (2*k) b O).
 Definition neg b :=
 bvAdd (complement b) (zext k (I::nil)).
 
+Definition bitEq b1 b2 :=
+match b1, b2 with
+|I,I => I
+|O,O => I
+|_,_ => O
+end.
+
 Fixpoint bvEq b1 b2 :=
 match b1, b2 with
 | nil, nil => sext k (nil) I
 | nil, _ => sext k nil O
 | _, nil => sext k nil O
-| a1::b1', a2::b2' => match bitAnd a1 a2 with
+| a1::b1', a2::b2' => match bitEq a1 a2 with
                         |I => bvEq b1' b2'
                         |O => sext k (nil) O
                       end
 
 end.
+
+Lemma bvEq_true_eq:
+forall v, toBool (bvEq v v) = true.
+
+Proof.
+intros.
+ induction v; eauto.
+simpl. destruct a;  simpl; assumption.
+Qed. 
 
 Fixpoint bvLessZero b1 :=
 match msb b1 with

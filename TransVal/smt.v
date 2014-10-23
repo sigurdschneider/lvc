@@ -189,14 +189,14 @@ match s with
 | ite c t f 
   => match evalSexp E c with
        |  v 
-         => if toBool v 
+         => if val2bool v 
             then models F E t
             else models F E f
      end
 |smtImp a b 
  => (models F E a) ->(models F E b) 
 |constr s1 s2 => match evalSexp E s1,  evalSexp E s2 with
-                   |b1, b2 => toBool( bvEq b1 b2)
+                   |b1, b2 => val2bool( bvEq b1 b2)
                  end
 |funcApp f a => match evalList E a with
                   | l => evalSpred F f l 
