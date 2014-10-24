@@ -228,9 +228,10 @@ match msb b1 with
 end.
 
 Fixpoint bvZero b :=
-match b with
+  match b with 
 | nil => true
-| a::b' =>match  a with |  O =>  bvZero b' |_ => false end
+| I::b' => false
+| O::b' => bvZero b'
 end.
 
 (** Define a function to map a single bit to a natural number **)
