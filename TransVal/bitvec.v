@@ -212,15 +212,6 @@ match b1, b2 with
 
 end.
 
-Lemma bvEq_true_eq:
-forall v, toBool (bvEq v v) = true.
-
-Proof.
-intros.
- induction v; eauto.
-simpl. destruct a;  simpl; assumption.
-Qed. 
-
 Fixpoint bvLessZero b1 :=
 match msb b1 with
 | I => true
@@ -297,6 +288,48 @@ Some (match bvLessZero b1, bvLessZero b2 with
 | false, true => neg (bvDiv' (bitvecToNat b1) b1 (neg b2))
 | false, false => bvDiv' (bitvecToNat b1) b1 b2
 end).
+
+(** Lemmas about the functions **)
+
+Lemma bvEq_equiv_eq:
+forall b1 b2, toBool(bvEq b1 b2) <-> eq b1 b2.
+
+Proof.
+intros; split; intros.
+- general induction b1; destruct b2.
+  + reflexivity.
+  + simpl in H. exfalso; assumption.
+  + simpl in H. exfalso; assumption.
+  + destruct a,b.
+    * simpl. simpl in H. f_equal. eapply IHb1. assumption.
+    * simpl in H; exfalso; assumption.
+    * simpl in H; exfalso; assumption.
+    * f_equal. simpl in H; eapply IHb1; assumption.
+- general induction b1.
+  + simpl. econstructor.
+  + destruct a.
+    * simpl. eapply (IHb1 b1). reflexivity.
+    * simpl. eapply (IHb1 b1); reflexivity.
+Qed.
+
+Lemma not_zero:
+ forall b, bvZero b = false ->  b  <> zext k (O::nil).
+
+Proof.
+ intros. general induction b.
+ destruct a; simpl; hnf; intros. 
+ - rewrite H0 in H. simpl in H. discriminate H.
+- rewrite H0 in H.  simpl in H; discriminate H.
+Qed.
+ 
+Lemma zext_nil_eq_sext:
+  forall n, sext n nil O = zext n nil.
+
+Proof.
+  intros; general induction n.
+  - simpl. reflexivity.
+  - simpl. f_equal; eauto; assumption.
+Qed.
 
 (*
 *** Local Variables: ***
