@@ -1,5 +1,5 @@
 Require Import List.
-Require Import IL Annotation AutoIndTac Bisim Exp MoreExp Coherence Fresh sexp smt nofun terminates bitvec.
+Require Import IL Annotation AutoIndTac Bisim Exp MoreExp Coherence Fresh sexp smt nofun terminates bitvec OutVars.
 
 Lemma ssa_impl_eq_val:
 forall x (e:exp) s E E' s' D v,
@@ -9,12 +9,13 @@ terminates (nil, E, stmtExp x e s) (nil, E', s')
 -> E' x = Some v.
 
 Proof.
-intros. general induction s. 
+admit.
+(*intros. general induction s. 
 inversion H. inversion H2. rewrite <-  H12 in *. clear H12.
 - unfold update. rewrite H1 in def. rewrite def. decide (x===x).
   + reflexivity.
   + exfalso; eapply n; reflexivity.
-- 
+- *)
 
 Lemma not_zero_implies_uneq:
 forall a b, bvZero a = false ->b = zext k (O::nil) ->  val2bool(bvEq a b) -> False.
@@ -146,59 +147,58 @@ general induction H2; simpl.
          eapply (exp_eval_agree (E:=E) (E' := E')) in def; eauto.
          - rewrite def. rewrite <- H7 in *. clear H7. rewrite <- H8 in *. clear H8.  simpl.
            assert (X1:E' x = Some v).
-           +
-           eapply (agree_on_update_dead (R:=eq) (lv:=freeVars e) (E:=E) (E':=E')(x:=x) (Some v))in H10; eauto. 
+           + admit.
+(*           eapply (agree_on_update_dead (R:=eq) (lv:=freeVars e) (E:=E) (E':=E')(x:=x) (Some v))in H10; eauto. 
            
            assert ( X1: exp_eval E'  (Var x) = Some v). 
            + eapply (exp_eval_agree (E:=E[x <-Some v]) (E':=E')).
              * eapply agree_on_update_dead. hnf.  cset_tac. simpl in H11.  
              * simpl. unfold update. decide (x === x).
                { reflexivity. }
-               { exfalso; apply n; reflexivity. }
-           +
-           +  eapply ( agree_on_update_any_same (R:=eq) (lv:=freeVars e)(E:=E) (E':= E') (x:= x)) in H10; eauto. hnf in H10.  specialize (H10 x).  
-              assert (X2: x ∈ freeVars e ++ {x;{}}) by (cset_tac; right; reflexivity). 
-              specialize (H10 X2). 
-unfold update in H10.  hnf in H10.  rewrite <- H7 in H0.  inversion H0.  eapply (exp_eval_agree (E:=E[x<-Some v])).
-              * simpl. hnf. cset_tac.  eapply ( hnf in H9.  simpl in H1.
-              * hnf. cset_tac. assert ( x ∈ snd (getAnn D)).
-                { inversion H0. simpl.
-           +
-      { rewrite <- H7 in H0.  inversion H0.  eapply (IHterminates b an); eauto.
-        - admit.
-        - rewrite <-  H7 in H3. inversion H3.  assumption. }
-
- case_eq (undef e); intros; simpl; split.
-    *  eapply(guard_true_if_eval (fun (_:pred) (_:vallst) => true) E' e s0 v); eauto.  assert (freeVars e ⊆ (fst (getAnn D))).
-      {  rewrite <- H7 in H0. inversion H0. simpl.  assumption. }
-      { eapply (exp_eval_agree (E:= E)); eauto.  cset_tac. hnf in H1. hnf in H10. hnf. intros. specialize (H1 x0). specialize (H10 x0). exact (H1 (H10 H4)). }
-    * split; simpl.
-      {  unfold evalSexp.  
-         assert (freeVars e ⊆ fst (getAnn D)) by  (rewrite <- H7 in H0; inversion H0; simpl; assumption).  
-         eapply (exp_eval_agree (E:=E) (E' := E')) in def.
-         - rewrite def.  simpl. (* Wert aus E' für x konstruieren *) admit.
-         - cset_tac. hnf; hnf in H1; hnf in H10. hnf; intros; specialize(H1 x0); specialize (H10 x0); exact (H1 (H10 H4)).  }
-      { rewrite <- H7 in H0.  inversion H0.  eapply (IHterminates b an); eauto.
-        - admit.
-        - rewrite <-  H7 in H3. inversion H3.  assumption. }
-    * unfold evalSexp.
+               { exfalso; apply n; reflexivity. } *)
+           + rewrite X1.  unfold val2bool. eapply bvEq_equiv_eq. reflexivity. }
+      { rewrite <- H7 in *. inversion H0.  inversion H3. eapply IHterminates; eauto.
+        - hnf. cset_tac. admit. }
+    * case_eq (undef e); intros; eauto.
+      { simpl; split; eauto.
+        - eapply (guard_true_if_eval  (fun (_:pred) (_:vallst) => true) E' e s0 v); eauto.
+          + assert (freeVars e ⊆ fst (getAnn D)) by  (rewrite <- H7 in H0; inversion H0; simpl; assumption).  
+            assert (agree_on eq (freeVars e) E E') by (cset_tac; hnf; hnf in H1;  hnf in H10;  intros; specialize(H1 x0); specialize (H10 x0); exact (H1 (H10 H4))).
+            eapply (exp_eval_agree (E:=E) (E':=E')); eauto.
+          }
+  + assert (X: models  (fun (_:pred) (_:vallst) => true) E'( ite e (translateStmt b1 source) (translateStmt b2 source))).
+    * simpl. unfold evalSexp.   
       assert (freeVars e ⊆ fst (getAnn D)) by  (rewrite <- H7 in H0; inversion H0; simpl; assumption).  
-      eapply (exp_eval_agree (E:=E) (E' := E')) in def.
-      { rewrite def.  simpl. (* Wert aus E' für x konstruieren *) admit. }
-      { cset_tac. hnf; hnf in H1; hnf in H10. hnf; intros; specialize(H1 x0); specialize (H10 x0); exact (H1 (H10 H4)). }
-    *  rewrite <- H7 in H0.  inversion H0.  eapply (IHterminates b an); eauto.
-       { admit. }
-       { rewrite <-  H7 in H3. inversion H3.  assumption. }
-  + simpl.
-    assert (X: models (fun (_: pred) (_ : vallst) => true) E' (ite e (translateStmt b1 source) (translateStmt b2 source))). 
-    * simpl.
-      assert (freeVars e ⊆ fst (getAnn D)) by  (rewrite <- H7 in H0; inversion H0; simpl; assumption).
-      assert (agree_on eq (freeVars e) E E').
-      { cset_tac. hnf. hnf in H1; hnf in H9; hnf; intros; specialize(H1 x); specialize (H9 x); exact (H1 (H9 H4)). }
-      { eapply (exp_eval_agree (E:=E) (E' := E') ) in def; eauto. unfold evalSexp. rewrite def. rewrite condTrue. admit. }
-    * admit.
-  + admit. 
-  + simpl. admit.
+      assert (agree_on eq (freeVars e) E E') by (cset_tac; hnf; hnf in H1;  hnf in H9;  intros; specialize(H1 x); specialize (H9 x); exact (H1 (H9 H4))).
+      erewrite (exp_eval_agree (E:=E) (E':=E')); eauto. simpl. rewrite condTrue.
+      rewrite <- H7 in *.
+      inversion H0; inversion H3.
+      eapply IHterminates; eauto.
+      admit.
+    * case_eq (undef e); intros; eauto.
+      { simpl; split; eauto.
+        - eapply (guard_true_if_eval  (fun (_:pred) (_:vallst) => true) E' e s0 v); eauto.
+          + assert (freeVars e ⊆ fst (getAnn D)) by  (rewrite <- H7 in H0; inversion H0; simpl; assumption).  
+            assert (agree_on eq (freeVars e) E E') by (cset_tac; hnf; hnf in H1;  hnf in H10;  intros; specialize(H1 x); specialize (H10 x); exact (H1 (H10 H4))).
+            eapply (exp_eval_agree (E:=E) (E':=E')); eauto.  }
+  +  assert (X: models  (fun (_:pred) (_:vallst) => true) E'( ite e (translateStmt b1 source) (translateStmt b2 source))).
+    * simpl. unfold evalSexp.   
+      assert (freeVars e ⊆ fst (getAnn D)) by  (rewrite <- H7 in H0; inversion H0; simpl; assumption).  
+      assert (agree_on eq (freeVars e) E E') by (cset_tac; hnf; hnf in H1;  hnf in H9;  intros; specialize(H1 x); specialize (H9 x); exact (H1 (H9 H4))).
+      erewrite (exp_eval_agree (E:=E) (E':=E')); eauto. simpl. rewrite condFalse.
+      rewrite <- H7 in *.
+      inversion H0; inversion H3.
+      eapply IHterminates; eauto.
+      admit.
+    * case_eq (undef e); intros; eauto.
+      { simpl; split; eauto.
+        - eapply (guard_true_if_eval  (fun (_:pred) (_:vallst) => true) E' e s0 v); eauto.
+          + assert (freeVars e ⊆ fst (getAnn D)) by  (rewrite <- H7 in H0; inversion H0; simpl; assumption).  
+            assert (agree_on eq (freeVars e) E E') by (cset_tac; hnf; hnf in H1;  hnf in H10;  intros; specialize(H1 x); specialize (H10 x); exact (H1 (H10 H4))).
+            eapply (exp_eval_agree (E:=E) (E':=E')); eauto.  }
+  + general induction Y; intros.
+    * simpl. econstructor.
+    * admit. (* TODO: Build List Lemma from guard_true_if_eval *)
   + rewrite <-  H7 in H3. exfalso. inversion H3.
   + rewrite <- H7 in H3. exfalso. inversion H3.
 Qed.
@@ -206,35 +206,51 @@ Qed.
 Definition smtCheck (s:stmt) (t:stmt) :=
 smtAnd (translateStmt s source) (translateStmt t target).
 
-(** TODO: Why doesn't this work? **)
-Fixpoint agreeOnList (E:senv) (XL:list var) (YL:list var):=
-match XL, YL with
-|nil , nil => True
-| nil, _ => False
-| _, nil => False
-| a::XL', b::YL' => match E a, E b with
-                        | Some v1, Some v2 => v1 = v2 /\ (agreeOnList E XL' YL')
-                        | None, None =>  (agreeOnList E XL' YL')
-                        | _,_ => False
-                    end.
+(** Checks wether two lists agree on their values. But the environment needs to be defined on every
+variable. Otherwise the result is false **)
+Fixpoint agreeOnList (E:onv val) (k:nat) XL YL:=
+match k with
+| 0 => True
+| S k' =>  match XL, YL with
+             |nil , nil => True
+             | nil, _ => False
+             | _, nil => False
+             | a::XL', b::YL' => match (exp_eval E a), (exp_eval E b) with
+                                   | Some v1, Some v2 => v1 = v2 /\ (agreeOnList E k' XL' YL')
+                                   | None, None =>  False
+                                   | _,_ => False
+                                 end
+           end
+end.
 
-(** TODO: Add constraint that XL and YL are the lists of the output variables of the corresponding programs **)
 Lemma not_smtCheck_entails_sat:
-forall s t E XL YL,
-~ (models E (smtCheck s t))
--> (forall p V,  models V (translateStmt s p) -> models V (translateStmt s p))
--> agree_on E XL YL.
+forall s t F E XL YL,
+~ (models F E (smtCheck s t))
+-> noFun s
+-> noFun t
+-> OutVars XL s
+-> OutVars YL t
+->List.length XL = List.length YL
+-> (forall F V,  models F V (translateStmt s source) -> models F V (translateStmt t source))
+-> agreeOnList E (List.length XL) XL YL.
+
+Proof.
+intros. 
+Qed.
+
+Lemma unsat_is_semeq :
+forall s t s' t' E E1 E2 XL YL,
+terminates (nil, E , s) (nil, E1, s')
+-> terminates (nil, E, t) (nil, E2, t')
+-> OutVars XL s
+-> OutVars YL t
+-> noFun s
+-> noFun t
+-> agreeOnList E (List.length XL) XL YL.
 
 Proof.
 admit.
 Qed.
-
-(** TODO: make lemma definition work and add constraints **)
-Lemma unsat_is_semeq :
-forall s t s' t' E E1 E2 x y,
-(star2 step (nil, E , s) nil (nil, E1, s'))
--> (star2 step (nil, E, t) nil (nil, E2, t'))
--> E1 x = E2 y.
 
 (*
 *** Local Variables: ***
