@@ -17,15 +17,32 @@ inversion H. inversion H2. rewrite <-  H12 in *. clear H12.
   + exfalso; eapply n; reflexivity.
 - *)
 
+Lemma zext_nil_eq_O:
+forall k, zext k nil = zext k (O::nil).
+
+Proof.
+induction k.
+- simpl. reflexivity.
+- simpl. reflexivity.
+Qed.
+
+Lemma minus_n_0: forall n, n-0 = n.
+
+Proof.
+intros; general induction n; eauto.
+Qed.
+
 Lemma not_zero_implies_uneq:
-forall a b, bvZero a = false ->b = zext k (O::nil) ->  val2bool(bvEq a b) -> False.
+forall a b k, bvZero a = false ->b = zext k (O::nil) ->  val2bool(bvEq a b) -> False.
 
 Proof. 
-intros.  induction a.
-- simpl.  rewrite H0 in H1. simpl in H1. assumption.
--  destruct a. 
-  + simpl in H. specialize (IHa H). unfold val2bool in *. rewrite bvEq_equiv_eq in *.  admit.
-  + simpl in H. rewrite H0 in H1. simpl in H1. assumption.
+intros. general induction a.
+-  destruct a.
+   + specialize (IHa (tl (zext k (O::nil))) (k-1)).   simpl in H. specialize (IHa H).  eapply IHa.
+     * destruct k; eauto.
+       simpl. rewrite zext_nil_eq_O.   erewrite minus_n_0. reflexivity. 
+     * destruct k; eauto. simpl in H1.  exfalso. assumption. 
+   +  simpl in H1.destruct k;  assumption. 
 Qed.
 
  Lemma guard_true_if_eval:
@@ -83,11 +100,11 @@ intros. general induction e; simpl.
              * rewrite H in H0; rewrite H1 in H0; simpl in H0;  simpl. exfalso; discriminate H0.
           + destruct b.
             * case_eq (undef e1); case_eq (undef e2); intros.
-              {  rewrite H in H0; rewrite H1 in H0. simpl in H0. inversion H0.   unfold binop_eval in EQ2.  clear H0. unfold bvDiv in EQ2. simpl. split.
+              {  rewrite H in H0; rewrite H1 in H0. simpl in H0. inversion H0.  unfold binop_eval in EQ2.  clear H0. unfold bvDiv in EQ2. simpl. split.
                  - case_eq(bvZero x0).
                    + intros.  rewrite H0 in EQ2.  exfalso; discriminate EQ2. 
                    + intros A.   unfold evalSexp. intros. clear H3. clear EQ2.  hnf in H0.  rewrite EQ1 in H0.  simpl in H0. simpl  in A.  
-                     eapply  not_zero_implies_uneq in H0;  eauto.   
+                     eapply  (not_zero_implies_uneq _ _  k) in H0;  eauto.   
                  - split.
                    + eapply IHe1; eauto.
                    + eapply IHe2; eauto.  }
@@ -95,19 +112,19 @@ intros. general induction e; simpl.
                  - case_eq(bvZero x0).
                    + intros.  rewrite H0 in EQ2.  exfalso; discriminate EQ2. 
                    + intros A.   unfold evalSexp. intros. clear H3. clear EQ2.  hnf in H0. rewrite EQ1 in H0.  simpl in H0. simpl  in A.  
-                     eapply  not_zero_implies_uneq in H0; eauto.   
+                     eapply ( not_zero_implies_uneq _ _ k) in H0; eauto.   
                  -  eapply IHe1; eauto. }
                  { rewrite H in H0; rewrite H1 in H0; simpl in H0. inversion H0. unfold binop_eval in EQ2. clear H0. unfold bvDiv in EQ2. simpl. split.
                  - case_eq(bvZero x0).
                    + intros.  rewrite H0 in EQ2.  exfalso; discriminate EQ2. 
                    + intros A.   unfold evalSexp. intros. clear H3. clear EQ2.  hnf in H0.  rewrite EQ1 in H0.  simpl in H0. simpl  in A.  
-                     eapply  not_zero_implies_uneq in H0; eauto.   
+                     eapply  (not_zero_implies_uneq _ _ k) in H0; eauto.   
                  -  eapply IHe2; eauto. }
                  { rewrite H in H0; rewrite H1 in H0; simpl in H0. inversion H0. unfold binop_eval in EQ2. clear H0. unfold bvDiv in EQ2. simpl.
                    case_eq(bvZero x0).
                    - intros.  rewrite H0 in EQ2.  exfalso; discriminate EQ2. 
                    - intros A.   unfold evalSexp. intros. clear H3. clear EQ2.  hnf in H0. rewrite EQ1 in H0.  simpl in H0. simpl  in A.  
-                     eapply  not_zero_implies_uneq in H0; eauto.    }
+                     eapply  (not_zero_implies_uneq _ _ k) in H0; eauto.    }
                  * case_eq (undef e1); case_eq (undef e2); intros; simpl.
                    { rewrite H in H0; rewrite H1 in H0; simpl in H0. inversion H0. simpl; split.
                      - eapply IHe1; eauto.
@@ -235,7 +252,9 @@ forall s t F E XL YL,
 -> agreeOnList E (List.length XL) XL YL.
 
 Proof.
-intros. 
+intros. general induction s.
+- general induction t.
+  + 
 Qed.
 
 Lemma unsat_is_semeq :
