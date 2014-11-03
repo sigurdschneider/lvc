@@ -59,6 +59,12 @@ match e with
  => None
 end. 
 
+Fixpoint undefLift (el: list exp) :=
+match el with
+|nil => None
+| e::el' => combine (undef e) (undefLift el')
+end.
+
 (** Now the function that generates the guarding expressions for the smt translation function **)
 Fixpoint guard (p:pol) (e:exp) (cont:smt) :=
 match p, undef e with
@@ -75,96 +81,49 @@ end.
 Fixpoint guardList (p:pol) (l:arglst) (cont:smt) :=
 match l with
 | nil => cont
-| x:: l' => guardList p l' (guard p x cont)
+| x:: l' => let c := guardList p l' cont in
+            match p, undef x with
+              | source, Some v =>  smtAnd v c
+              | target, Some v => smtImp v cont
+              | _, None => c
+            end
 end.
 
-(*
-(** Define expression translation **)
-Fixpoint translateExp (e:exp) :option exp :=
-match e with
-|Con v 
- => Some ( sconst v)
-|Var v
- =>  Some (svar v)
-| UnOp op e
- => match op, translateExp e with
-        | 0, Some v => Some (sneg v)
-        | _, _ =>  None
-    end
-|BinOp op e1 e2
- =>  match translateExp e1, translateExp e2 with
-           | Some v1, Some v2 
-             => match op with
-                    | 0 => Some (splus v1 v2)
-                    | 1 => Some (ssub v1 v2)
-                    | 2 => Some (smult v1 v2)
-                    | 3 => Some  (seq v1 v2)
-                    | 4 => Some (sneg (seq v1 v2))
-                    | _ => None
-                end
-           |_, _ => None
-       end
+Definition guardGen s p cont :=
+match s, p with
+| Some v, source => smtAnd v cont
+| Some v, target => smtImp v cont
+| None, _ => cont
 end.
-*)
-
-(*
-Fixpoint translateArgs (e:args) : option arglst :=
-match e with
-| nil => Some nil
-| x::e' 
-  => match   translateExp x, translateArgs e'  with
-         |  Some  e, Some l => Some (e::l)
-         |  _, _ => None
-     end
-end.
-*)
 
 Fixpoint translateStmt (s:stmt) (p:pol) :smt :=
 match s, p with
 (*let x = e in s' *)
 | stmtExp x e s', _ 
-  => (*let e' := translateExp e in
-        let x' := translateExp (Var x) in (* TODO: is this ok ? Hack from var to exp*) *)
-        let smt' := translateStmt s' p in
-        guard  p  e   (smtAnd ( constr (Var x) e) smt')
-(*          | _, _ => smtFalse *)
-(*        end *)
+  =>  let smt' := translateStmt s' p in
+        let res := smtAnd (constr (Var x) e) smt'  in
+        guardGen (undef e) p res
 (* if e then s else t *)
 | stmtIf e s t, _
   => let s' := translateStmt s p in
         let t' := translateStmt t p in
-       (* let e' := translateExp e in *)
-       (* match e' with 
-            | Some v =>*) guard  p  e ( ite e s' t')
-(*            | _ => smtFalse *)
-(*        end *)
+        let res := ite e s' t' in
+        guardGen (undef e) p res
 (* fun f x = t in s *)
 |  stmtLet x  t s, _ => smtFalse (* TODO *)
 (* extern ?? *)
 |  stmtExtern x f Y s, _ => smtFalse (* TODO *)
 (* f e, s*)
 | stmtGoto f e, source 
-  => (* match translateArgs e with 
-         |Some l =>  *) guardList source e (funcApp f e)
-(*         | None => smtFalse 
-     end *)
+  =>  guardGen (undefLift e) p (funcApp f e)
 (* f e, t *)
 | stmtGoto f e, target  
-  => (* match translateArgs e with
-         | Some l => *) guardList target  e  ( smtNeg (funcApp f e ))
-(*         | None => smtFalse
-     end *)
+  =>  guardGen (undefLift e) p ( smtNeg (funcApp f e ))
 | stmtReturn e, source 
-  => (* match translateExp e with
-       |Some v =>*) guard source  e  (smtReturn e)
-(*       | None => smtFalse 
-     end *)
+  =>  guardGen (undef e) p (smtReturn e)
 | stmtReturn e, target 
-  => (*match translateExp e with
-         | Some v =>*) guard  target  e ( smtNeg (smtReturn e))
-(*         | None => smtFalse
-     end*)
-end.
+  =>  guardGen  (undef e) p  ( smtNeg (smtReturn e))
+end. 
 
 Fixpoint evalList E (e:arglst) : vallst :=
 match e with
