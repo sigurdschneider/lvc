@@ -337,6 +337,8 @@ Proof.
   intros. general induction H; simpl; eauto.
 Qed.
 
+Tactic Notation "isTrue" := simpl; econstructor.
+
 (*
 *** Local Variables: ***
 *** coq-load-path: (("../" "Lvc")) ***
