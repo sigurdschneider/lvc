@@ -1,5 +1,6 @@
 Require Import List.
-Require Import IL Annotation AutoIndTac Bisim Exp MoreExp Coherence Fresh sexp smt nofun Terminates bitvec OutVars SetOperations Sim.
+Require Import IL Annotation AutoIndTac Bisim Exp MoreExp Coherence Fresh Util SetOperations Sim.
+Require Import sexp smt nofun Terminates bitvec Crash.
 
 Lemma zext_nil_eq_O:
 forall k, zext k nil = zext k (O::nil).
@@ -123,16 +124,25 @@ Qed.
 
 Lemma ssa_eval_agree s D s' (E:onv val) (E':onv val) 
  : ssa s D
+   -> noFun s
    -> Terminates (nil,E, s) (nil, E', s')
    -> agree_on eq (fst (getAnn D)) E E'.
 
 Proof.
   intros.
-  general induction H0; invt ssa; try invt F.step; simpl.
+  general induction H1; invt ssa; try invt F.step; simpl.
   - reflexivity.
-  - exploit IHTerminates; [ | reflexivity | reflexivity |]; eauto.
-    rewrite H5 in X; simpl in *.
-Admitted.
+-  inversion H2. exploit IHTerminates; [ | | reflexivity | reflexivity |]; eauto.
+    rewrite H6 in X; simpl in *.
+    admit.
+- inversion H2; exploit IHTerminates; [| | reflexivity | reflexivity |]; eauto.
+  rewrite H8 in X; simpl in *. assumption.
+- inversion H2; exploit IHTerminates; [| | reflexivity | reflexivity |]; eauto.
+  rewrite H9 in X; simpl in *; assumption.
+- admit.
+- inversion H2.
+- inversion H2.
+Qed.
 
 Lemma guardList_true_if_eval:
 forall F E el s vl,
@@ -188,7 +198,6 @@ end.
 Lemma models_if_eval :
 forall s D E s' E', 
 ssa  s D
-(*-> agree_on eq (fst (getAnn D)) E E' *)
 -> noFun s 
 -> Terminates (nil,E, s) (nil, E', s')
 ->  models (fun (f:pred) (x:vallst) => true)  E'  (translateStmt s source).
@@ -474,52 +483,100 @@ match k with
            end
 end.
 
-Lemma not_smtCheck_entails_sat:
-forall s t F E XL YL,
-~ (models F E (smtCheck s t))
--> noFun s
--> noFun t
--> (forall F V,  models F V (translateStmt s source) -> models F V (translateStmt t source))
--> sim s t
+Lemma noFun_impl_term_crash :
+forall E  s, noFun s
+->  exists E'   s', Terminates (nil,E,s) (nil,E',s') \/ Crash (nil,E,s) (nil,E',s').
 
 Proof.
+intros.
+general induction H.
+- admit.
+- admit.
+- admit.
+- admit.
+Qed.
+
+Lemma unsat_extension:
+forall F E E' s s' pol P Q,
+(forall E, models F E Q -> ~ models F E (smtAnd (translateStmt s pol) P))
+->Terminates (nil, E, s) (nil, E', s')
+-> exists Q', models F E'  Q' /\
+              (forall E, models F E (smtAnd Q Q') -> ~ models F E (smtAnd (translateStmt s' pol) P)).
+
+Proof.
+intros.
+Admitted.
+
+Lemma smtand_comm:
+forall a b F E,
+models F E (smtAnd a b)
+-> models F E (smtAnd b a).
+
+Proof.
+intros.
+hnf in H. simpl. destruct H as [A B]. eauto.
+Qed.
+
+Lemma smtand_neg_comm:
+forall a b F E,
+~ models F E (smtAnd a b)
+-> ~ models F E (smtAnd b a).
+
+Proof.
+intros.
+hnf. intros. eapply smtand_comm in H0. eapply H. assumption.
+Qed.
+
+Definition combineEnv (E1:onv val) E2 :=
+fun x => match E1 x with
+             |Some v => Some v
+             | None => E2 x
+         end.
+
+Lemma extend_not_models:
+forall F  s Q, 
+(forall E, ~ models F E s)
+-> (forall E, models F E Q -> ~ models F E s).
+
+Proof.
+intros.
 admit.
-(*intros. general induction s.
-- general induction t.
-  +  *)
 Qed.
 
-(** Checks wether two lists agree on their values. But the environment needs to be defined on every
-variable. Otherwise the result is false **)
-Fixpoint agreeOnList' (k:nat)E1 E2 XL YL:=
-match k with
-| 0 => True
-| S k' =>  match XL, YL with
-             |nil , nil => True
-             | nil, _ => False
-             | _, nil => False
-             | a::XL', b::YL' => match (exp_eval E1 a), (exp_eval E2 b) with
-                                   | Some v1, Some v2 => v1 = v2 /\ (agreeOnList' k'  E1 E2 XL' YL')
-                                   | None, None =>  False
-                                   | _,_ => False
-                                 end
-           end
-end.
-Lemma unsat_is_semeq :
-forall s t s' t' E E1 E2 XL YL,
-terminates (nil, E , s) (nil, E1, s')
--> terminates (nil, E, t) (nil, E2, t')
--> OutVars XL s
--> OutVars YL t
+Lemma unsat_impl_sim:
+forall F E s t, 
+(forall E, ~ models F E (smtCheck s t))
 -> noFun s
 -> noFun t
--> (forall F E, ~ models F E (smtCheck s t))
--> agreeOnList'  (List.length XL) E1 E2 XL YL.
+-> sim (nil, E, s) (nil, E, t).
 
 Proof.
-intros. unfold smtCheck in H5. simpl in H5.  admit.
+intros.
+unfold smtCheck in H.
+eapply (noFun_impl_term_crash E s) in H0.
+eapply (noFun_impl_term_crash E t) in H1.
+destruct H0 as [ Es  [s' [ sterm| scrash ]]]; destruct H1 as [Et [t' [ tterm | tcrash ]]]. 
+- pose proof (extend_not_models _ _ (constr (Con (O::nil)) (Con (O::nil))) H) .
+  pose proof (unsat_extension _ E Es _ s' source _ _ H0 ). 
+  specialize (H1 sterm).
+  destruct H1 as [Q [M H1]].
+  assert (H2: forall E0:onv val,    models F E0 (smtAnd (constr (Con (O :: nil)) (Con (O :: nil))) Q) ->
+       ~  models F E0 (smtAnd (translateStmt t target) (translateStmt s' source) )).
+  + intros. eapply (smtand_neg_comm). apply (H1 E0 H2). 
+  +  pose proof (unsat_extension _ E Et _ t' target _ (smtAnd (constr (Con (O::nil)) (Con (O::nil))) Q) H2).
+     specialize (H3 tterm).
+     destruct H3 as [Q' [M2 H3]].
+     specialize (H3 (combineEnv Es Et)).
+     (* jetzt Lemma, dass combineEnv Es Et ~ Es / Et für jeweiliges models wgn Annahme von terminates *)
+     admit.
+- (* target crasht --> nicht semantisch äquivalent --> muss E geben. *)
+  admit.
+- (* source crasht --> egal was Ergebnis is, weil env immer! unsat sein wird, da zwei widersprücliche Constraints enthalten sind *)
+  admit.
+- (* s. Fall davor *)
+  admit.
 Qed.
-
+  
 (*
 *** Local Variables: ***
 *** coq-load-path: (("../" "Lvc")) ***
