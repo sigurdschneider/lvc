@@ -133,13 +133,13 @@ Proof.
   general induction H1; invt ssa; try invt F.step; simpl.
   - reflexivity.
 -  inversion H2. exploit IHTerminates; [ | | reflexivity | reflexivity |]; eauto.
-    rewrite H6 in X; simpl in *.
-    admit.
+    rewrite H6 in X; simpl in *. inversion H0. admit.
+(*    hnf in X.  eapply agree_on_update_dead in X;  admit. *)
 - inversion H2; exploit IHTerminates; [| | reflexivity | reflexivity |]; eauto.
   rewrite H8 in X; simpl in *. assumption.
 - inversion H2; exploit IHTerminates; [| | reflexivity | reflexivity |]; eauto.
   rewrite H9 in X; simpl in *; assumption.
-- admit.
+- inversion H.  inversion Ldef0. 
 - inversion H2.
 - inversion H2.
 Qed.
@@ -287,181 +287,16 @@ general induction H1; simpl.
             eapply (exp_eval_agree (E:=E) (E':=E')); eauto.
             eapply (agree_on_incl (bv:= Exp.freeVars e) (lv:= fst (getAnn (ann2 (D0, D') ans ant)))); eauto.
       }
- + admit.
-(*
-+ case_eq (undefLift Y); intros; simpl; eauto.
-    *  split; eauto.  eapply (guardList_true_if_eval); eauto.
-       assert ( list_union (List.map freeVars  Y)  ⊆ fst (getAnn D)) by ( rewrite <- H7 in H0; inversion H0; simpl; assumption).
-       assert (agree_on eq (list_union (List.map freeVars Y)) E E') by (cset_tac; hnf; hnf in H1;  hnf in H10;  intros; specialize(H1 x); specialize (H10 x); exact (H1 (H10 H4))).
-       erewrite omap_agree; eauto.
-       intros. 
-       destruct Y. 
-       { inversion H12. }
-       { assert (X: exists v, (exp_eval E x) = Some v).
-         - eapply exp_eval_if_list_eval; eauto. eapply in_if_get; eauto. 
-         - destruct X.  rewrite H13.
-         assert (freeVars x ⊆ fst (getAnn D)).
-           +  cset_tac. hnf in H10. specialize (H10 a). eapply H10.  unfold list_union.  simpl.  eapply list_union_start_swap.  cset_tac. left; right; assumption. 
-         - assert (agree_on eq (freeVars x) E E'). 
-           + cset_tac. hnf.  hnf in H11.  intros. eapply (H11 x2). unfold list_union. simpl. eapply list_union_start_swap. cset_tac.  left;right; assumption.
-           + eapply exp_eval_agree; eauto. }
-*)
+ + assert (X: models (fun (_:pred) (_:vallst) => true) E' (funcApp l Y)) by isTrue.
+   case_eq(undefLift Y); intros; simpl; eauto.
+   split; eauto.
+   eapply (guardList_true_if_eval _ E' Y s vl); eauto.
+   eapply (omap_exp_eval_agree (E:= E) (E':=E')); eauto.
+   eapply (agree_on_incl (lv:=D0)); eauto.
+   change (agree_on eq (fst (getAnn (ann0 (D0, D')))) E E').
+   eapply (ssa_eval_agree (stmtGoto l Y) (ann0 (D0, D')) (s')); eauto. 
+   econstructor; eauto.
 Qed.
-
-(*
-  +  assert (X: models  (fun (_:pred) (_:vallst) => true) E'( ite e (translateStmt b1 source) (translateStmt b2 source))).
-    * simpl. unfold evalSexp.
-      assert (freeVars e ⊆ fst (getAnn D)) by  (rewrite <- H7 in H0; inversion H0; simpl; assumption).
-      assert (agree_on eq (freeVars e) E E') by (cset_tac; hnf; hnf in H1;  hnf in H9;  intros; specialize(H1 x); specialize (H9 x); exact (H1 (H9 H4))).
-      erewrite (exp_eval_agree (E:=E) (E':=E')); eauto. simpl. rewrite condFalse.
-      rewrite <- H7 in *.
-      inversion H0; inversion H3.
-      eapply IHterminates; eauto.
-      admit.
-    * case_eq (undef e); intros; eauto.
-      { simpl; split; eauto.
-        - eapply (guard_true_if_eval  (fun (_:pred) (_:vallst) => true) E' e s0 v); eauto.
-          + assert (freeVars e ⊆ fst (getAnn D)) by  (rewrite <- H7 in H0; inversion H0; simpl; assumption).
-            assert (agree_on eq (freeVars e) E E') by (cset_tac; hnf; hnf in H1;  hnf in H10;  intros; specialize(H1 x); specialize (H10 x); exact (H1 (H10 H4))).
-            eapply (exp_eval_agree (E:=E) (E':=E')); eauto.  }
-(* exploit IHTerminates; [ | |reflexivity | reflexivity |   ]; eauto.
-    exploit ssa_eval_agree; try eapply H1; eauto.
-    case_eq (undef e); intros; simpl; split; eauto.
-    * eapply guard_true_if_eval; eauto.
-      eapply (exp_eval_agree (E:=E) (E':=E') _ (v:=Some v) ).
-      { eapply (agree_on_incl (lv:= fst(getAnn an)) ); eauto. 
-        eapply ssa_eval_agree; eauto.
-        - eapply agree_on_incl; eauto.
-      rewrite H10. simpl. rewrite H7. cset_tac; intuition.
-      (* E [x <- Some v] and E agree on freeVars e *) exfalso; admit.
-    * split.
-      unfold evalSexp.
-      erewrite exp_eval_agree; eauto.
-      instantiate (1:=E[x <- Some v]).
-      setoid_rewrite exp_eval_agree at 2.
-      Focus 2. instantiate (1:=E[x <- Some v]). admit.
-      Focus 2. instantiate (1:=exp_eval E e). admit.
-      simpl. lud. rewrite def. eapply bvEq_equiv_eq; reflexivity.
-      isabsurd. admit.
-      eauto.
-   * admit. *)
-(*  + assert (X: models (fun (_:pred) (_:vallst) => true) E' (smtAnd (constr (Var x) e) (translateStmt b source))).
-    * split; simpl.
-      {  unfold evalSexp.
-         assert (freeVars e ⊆ fst (getAnn D)) by  (rewrite <- H7 in H0; inversion H0; simpl; assumption).
-         assert (agree_on eq (freeVars e) E E') by (cset_tac; hnf; hnf in H1;  hnf in H9;  intros; specialize(H1 x0); specialize (H9 x0); exact (H1 (H9 H4))).
-         eapply (exp_eval_agree (E:=E) (E' := E')) in def; eauto.
-         - rewrite def. rewrite <- H7 in *. clear H7. rewrite <- H8 in *. clear H8.  simpl.
-           assert (X1:E' x = Some v).
-           + admit.
-(*           eapply (agree_on_update_dead (R:=eq) (lv:=freeVars e) (E:=E) (E':=E')(x:=x) (Some v))in H10; eauto.
-
-           assert ( X1: exp_eval E'  (Var x) = Some v).
-           + eapply (exp_eval_agree (E:=E[x <-Some v]) (E':=E')).
-             * eapply agree_on_update_dead. hnf.  cset_tac. simpl in H11.
-             * simpl. unfold update. decide (x === x).
-               { reflexivity. }
-               { exfalso; apply n; reflexivity. } *)
-           + rewrite X1.  unfold val2bool. eapply bvEq_equiv_eq. reflexivity. }
-      { rewrite <- H7 in *. inversion H0.  inversion H3. eapply IHterminates; eauto.
-        - hnf. cset_tac. admit. }
-    * case_eq (undef e); intros; eauto.
-      { simpl; split; eauto.
-        - eapply (guard_true_if_eval  (fun (_:pred) (_:vallst) => true) E' e s0 v); eauto.
-          + assert (freeVars e ⊆ fst (getAnn D)) by  (rewrite <- H7 in H0; inversion H0; simpl; assumption).
-            assert (agree_on eq (freeVars e) E E') by (cset_tac; hnf; hnf in H1;  hnf in H10;  intros; specialize(H1 x0); specialize (H10 x0); exact (H1 (H10 H4))).
-            eapply (exp_eval_agree (E:=E) (E':=E')); eauto.
-          } *)
-  + assert (X: models  (fun (_:pred) (_:vallst) => true) E'( ite e (translateStmt b1 source) (translateStmt b2 source))).
-    * simpl. unfold evalSexp.
-      assert (Exp.freeVars e ⊆ fst (getAnn (ann2 (D0, D') ans ant))) by  (rewrite <- H7 in H0; inversion H0; simpl; assumption). 
-      assert (agree_on eq (freeVars e) E E') by (cset_tac; hnf; hnf in H1;  hnf in H9;  intros; specialize(H1 x); specialize (H9 x); exact (H1 (H9 H4))).
-      erewrite (exp_eval_agree (E:=E) (E':=E')); eauto. simpl. rewrite condTrue.
-      rewrite <- H7 in *.
-      inversion H0; inversion H3.
-      eapply IHterminates; eauto.
-      admit.
-    * case_eq (undef e); intros; eauto.
-      { simpl; split; eauto.
-        - eapply (guard_true_if_eval  (fun (_:pred) (_:vallst) => true) E' e s0 v); eauto.
-          + assert (freeVars e ⊆ fst (getAnn D)) by  (rewrite <- H7 in H0; inversion H0; simpl; assumption).
-            assert (agree_on eq (freeVars e) E E') by (cset_tac; hnf; hnf in H1;  hnf in H10;  intros; specialize(H1 x); specialize (H10 x); exact (H1 (H10 H4))).
-            eapply (exp_eval_agree (E:=E) (E':=E')); eauto.  }
-  +  assert (X: models  (fun (_:pred) (_:vallst) => true) E'( ite e (translateStmt b1 source) (translateStmt b2 source))).
-    * simpl. unfold evalSexp.
-      assert (freeVars e ⊆ fst (getAnn D)) by  (rewrite <- H7 in H0; inversion H0; simpl; assumption).
-      assert (agree_on eq (freeVars e) E E') by (cset_tac; hnf; hnf in H1;  hnf in H9;  intros; specialize(H1 x); specialize (H9 x); exact (H1 (H9 H4))).
-      erewrite (exp_eval_agree (E:=E) (E':=E')); eauto. simpl. rewrite condFalse.
-      rewrite <- H7 in *.
-      inversion H0; inversion H3.
-      eapply IHterminates; eauto.
-      admit.
-    * case_eq (undef e); intros; eauto.
-      { simpl; split; eauto.
-        - eapply (guard_true_if_eval  (fun (_:pred) (_:vallst) => true) E' e s0 v); eauto.
-          + assert (freeVars e ⊆ fst (getAnn D)) by  (rewrite <- H7 in H0; inversion H0; simpl; assumption).
-            assert (agree_on eq (freeVars e) E E') by (cset_tac; hnf; hnf in H1;  hnf in H10;  intros; specialize(H1 x); specialize (H10 x); exact (H1 (H10 H4))).
-            eapply (exp_eval_agree (E:=E) (E':=E')); eauto.  }
-+ case_eq (undefLift Y); intros; simpl; eauto.
-    *  split; eauto.  eapply (guardList_true_if_eval); eauto.
-       assert ( list_union (List.map freeVars  Y)  ⊆ fst (getAnn D)) by ( rewrite <- H7 in H0; inversion H0; simpl; assumption).
-       assert (agree_on eq (list_union (List.map freeVars Y)) E E') by (cset_tac; hnf; hnf in H1;  hnf in H10;  intros; specialize(H1 x); specialize (H10 x); exact (H1 (H10 H4))).
-       erewrite omap_agree; eauto.
-       intros. 
-       destruct Y. 
-       { inversion H12. }
-       { assert (X: exists v, (exp_eval E x) = Some v).
-         - eapply exp_eval_if_list_eval; eauto. eapply in_if_get; eauto. 
-         - destruct X.  rewrite H13.
-         assert (freeVars x ⊆ fst (getAnn D)).
-           +  cset_tac. hnf in H10. specialize (H10 a). eapply H10.  unfold list_union.  simpl.  eapply list_union_start_swap.  cset_tac. left; right; assumption. 
-         - assert (agree_on eq (freeVars x) E E'). 
-           + cset_tac. hnf.  hnf in H11.  intros. eapply (H11 x2). unfold list_union. simpl. eapply list_union_start_swap. cset_tac.  left;right; assumption.
-           + eapply exp_eval_agree; eauto. }
-
- destruct H12.
-       { unfold omap in def. monad_inv def. rewrite EQ.
-         assert (freeVars x ⊆ fst (getAnn D)).
-         -  cset_tac. hnf in H10. specialize (H10 a). eapply H10.  unfold list_union.  simpl.  eapply list_union_start_swap.  cset_tac. left; right; assumption. 
-         - assert (agree_on eq (freeVars x) E E'). 
-           + cset_tac. hnf.  hnf in H11.  intros. eapply (H11 x2). unfold list_union. simpl. eapply list_union_start_swap. cset_tac.  left;right; assumption.
-           + eapply exp_eval_agree; eauto. }
-       { assert (X: exists v, (exp_eval E x) = Some v).
-         - eapply  exp_eval_if_list_eval; eauto. 
-           + cset_tac. hnf. right. hnf. left; reflexivity.
-           + decide (x = x'0).
-             * hnf. left; eauto.
-             * hnf. right. eapply IHget; eauto.
-           
-         - eapply exp_eval_if_list_eval.   }
-(*intros. 
-       unfold omap in def. eapply (omap_inversion _ _ (exp_eval E) Y) . assumption.
-        { inversion H12.  }
-        { inversion H12.  rewrite <- H16.  monad_inv def.  rewrite EQ. 
-         assert (freeVars x ⊆ fst (getAnn D)).
-         -  cset_tac. hnf in H10. specialize (H10 a). eapply H10.  unfold list_union.  simpl.  eapply list_union_start_swap.  cset_tac. left; right; assumption. 
-         - assert (agree_on eq (freeVars x) E E'). 
-           + cset_tac. hnf.  hnf in H11.  intros. eapply (H11 x0). unfold list_union. simpl. eapply list_union_start_swap. cset_tac.  left;right; assumption.
-           + eapply exp_eval_agree; eauto. 
-         - eapply exp_eval_if_list_eval.   }
-             
-           cset_tac; hnf; hnf in H1;  hnf in H10;  intros; specialize(H1 x); specialize (H10 x); exact (H1 (H10 H4)).
-         eapply (exp_eval_agree (E:=E) (E':=E')); eauto.
-eapply exp_eval_agree.
-         
-       { simpl in def. monad_inv def.  
-}
-       { simpl in H9.  case_eq (undef a); intros; simpl.
-         - eapply IHY; eauto.
-       { simpl  in H9. unfold omap in def. monad_inv def.  case_eq (undef a0); intros.
-         - 
-    * simpl. econstructor.
-    * simpl. case_eq (undefLift (a
-      { simpl. split; eapply IHY;  admit. (* TODO: Build List Lemma from guard_true_if_eval *) *) admit.
-  + rewrite <-  H7 in H3. exfalso. inversion H3.
-  + rewrite <- H7 in H3. exfalso. inversion H3.
-Qed.
-*)
 
 Definition smtCheck (s:stmt) (t:stmt) :=
 smtAnd (translateStmt s source) (translateStmt t target).
