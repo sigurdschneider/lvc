@@ -39,9 +39,9 @@ end.
 (** Function to generate the guard expression for one expression **)
 Fixpoint undef e :=
 match e with
-|BinOp n a b 
- => match n with 
-        | 5 => match combine (undef a) (undef b) with 
+|BinOp n a b
+ => match n with
+        | 5 => match combine (undef a) (undef b) with
                  | Some c => Some (smtAnd (smtNeg (constr b (Con (zext k (O::nil))))) c )
                  | None =>  Some (smtNeg (constr b (Con (zext k (O::nil)))))
                end
@@ -57,7 +57,7 @@ match e with
  => None
 |Var v
  => None
-end. 
+end.
 
 Fixpoint undefLift (el: list exp) :=
 match el with
@@ -74,7 +74,7 @@ match p, undef e with
  => cont
 |target, Some g
  => smtImp g cont
-|target, None 
+|target, None
  => cont
 end.
 
@@ -99,7 +99,7 @@ end.
 Fixpoint translateStmt (s:stmt) (p:pol) :smt :=
 match s, p with
 (*let x = e in s' *)
-| stmtExp x e s', _ 
+| stmtExp x e s', _
   =>  let smt' := translateStmt s' p in
         let res := smtAnd (constr (Var x) e) smt'  in
         guardGen (undef e) p res
@@ -114,16 +114,16 @@ match s, p with
 (* extern ?? *)
 |  stmtExtern x f Y s, _ => smtFalse (* TODO *)
 (* f e, s*)
-| stmtGoto f e, source 
+| stmtGoto f e, source
   =>  guardGen (undefLift e) p (funcApp f e)
 (* f e, t *)
-| stmtGoto f e, target  
+| stmtGoto f e, target
   =>  guardGen (undefLift e) p ( smtNeg (funcApp f e ))
-| stmtReturn e, source 
+| stmtReturn e, source
   =>  guardGen (undef e) p (smtReturn e)
-| stmtReturn e, target 
+| stmtReturn e, target
   =>  guardGen  (undef e) p  ( smtNeg (smtReturn e))
-end. 
+end.
 
 Fixpoint evalList E (e:arglst) : vallst :=
 match e with
@@ -138,30 +138,30 @@ F f e.
 every variable must have been defined. **)
 Fixpoint models (F:pred ->vallst->bool) E (s:smt) : Prop:=
 match s with
-  |smtAnd a b 
+  |smtAnd a b
    => (models F E a) /\ (models F E b)
-  |smtOr a b 
+  |smtOr a b
    => (models F E a) \/  (models F E b)
-  |smtNeg a 
+  |smtNeg a
    =>  (models F E a) -> False
-| ite c t f 
+| ite c t f
   => match evalSexp E c with
-       |  v 
-         => if val2bool v 
+       |  v
+         => if val2bool v
             then models F E t
             else models F E f
      end
-|smtImp a b 
- => (models F E a) ->(models F E b) 
+|smtImp a b
+ => (models F E a) ->(models F E b)
 |constr s1 s2 => match evalSexp E s1,  evalSexp E s2 with
                    |b1, b2 => val2bool( bvEq b1 b2)
                  end
 |funcApp f a => match evalList E a with
-                  | l => evalSpred F f l 
+                  | l  => evalSpred F (labInc f 1) l
                 end
-|smtReturn e 
+|smtReturn e
  => match evalSexp E e with
-        |  v => True
+        |  v => evalSpred F (LabI 0) (v::nil)
     end
 |smtFalse => False
 end.
