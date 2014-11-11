@@ -13,6 +13,9 @@ match s with
 |constr e1 e2 => Exp.freeVars e1 ∪ Exp.freeVars e2
 end.
 
+Definition freeVarsList el :=
+list_union (List.map freeVars el).
+
 (*
 *** Local Variables: ***
 *** coq-load-path: (("../" "Lvc")) ***
