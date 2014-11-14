@@ -301,17 +301,76 @@ general induction H.
 Qed.
 
 Lemma unsat_extension:
-forall D F E E' s s' pol P Q,
+forall D E E' s s' pol P Q,
 (forall F E, models F E Q -> ~ models F E (smtAnd (translateStmt s pol) P))
 -> ssa s D
+-> noFun s
 ->Terminates (nil, E, s) (nil, E', s')
--> exists Q', models F E'  Q' /\
-              freeVars Q' ⊆  fst(getAnn D) /\
+-> exists Q', (forall F, models F E'  Q' ) /\
+              freeVars Q' ⊆  snd(getAnn D) /\
               (forall F E, models F E (smtAnd Q Q') -> ~ models F E (smtAnd (translateStmt s' pol) P)).
 
 Proof.
-intros.
-Admitted.
+intros. general induction H2.
+- simpl in *. destruct pol.
+  + inversion H1. simpl in *.  exists (smtTrue). simpl. split; eauto; split; cset_tac.
+    * exfalso; assumption.
+    * specialize (H0 F E H3). assumption.
+  + inversion H1. simpl in *; exists (smtTrue). simpl. split; eauto; split; cset_tac.
+    * exfalso; assumption.
+    * specialize (H0 F E H3); assumption.
+- simpl in *. destruct sigma' . destruct p.  inv H.
+  + simpl in *. inv H1.
+    specialize (IHTerminates an (E[x <- Some v]) (E') s0 s').
+    inv H3. destruct pol; simpl in *.
+    * specialize (IHTerminates source P (smtAnd Q (guardGen (undef e) source (constr (Var x) e)))).
+      destruct IHTerminates as [Q' IHT]; intros; eauto; simpl in *.
+      { specialize (H0 F E0). destruct H4 as [H4 H4']. specialize (H0 H4).  hnf in H0; hnf; intros.
+        eapply H0. destruct H6. split; simpl; eauto. destruct (undef e); simpl in *; eauto. destruct H4'.
+        split; eauto. }
+      { exists (smtAnd Q' (guardGen (undef e) source (constr (Var x) e))).
+        simpl in *. intros.
+        destruct IHT as [IHT1 [ IHT2 IHT3 ]].
+        split; eauto; split.
+        - exact (IHT1 F).
+        - case_eq (undef e); intros; simpl.
+          + split.
+            * eapply (guard_true_if_eval _ _ e); eauto.
+              eapply (exp_eval_agree (E:=E)); eauto. hnf; intros. eapply (ssa_eval_agree); eauto.
+              econstructor; eauto.
+            * admit.
+          + admit.
+        - hnf. intros. hnf in H8. specialize (H8 a). (* ssa_inc applyen??*)
+          (* SSA fst subset snd als eigenschaft (Lemma suchen *) admit.
+        - intros. eapply IHT3. destruct H4 as [H4 [H4' H4'']]; split; eauto; split; eauto.
+      }
+    * (*analog zu * *) admit.
+  + simpl in *; inv H1. inv H3; destruct pol; simpl in *.
+    * specialize (IHTerminates ans o E' s0 s' source P (smtAnd Q (guardGen (undef e) source (ite e (translateStmt s0 source) (translateStmt b2 source))))).
+      destruct IHTerminates as [Q' IHT]; intros; eauto.
+      { specialize (H0 F E). destruct  H4 as [H4 H4']. specialize (H0 H4).  hnf.  intros.  eapply H0.
+           destruct H5.  simpl. split; eauto. }
+      { exists (smtAnd Q' (guardGen (undef e) source (ite e (translateStmt s0 source) (translateStmt b2 source)))).
+        simpl in *; intros.
+        destruct IHT as [IHT1 [IHT2 IHT3]].
+        split; eauto; split.
+        - exact (IHT1 F).
+        - case_eq (undef e); intros; simpl.
+          + split.
+            * eapply (guard_true_if_eval _ _ e); eauto.
+              eapply (exp_eval_agree (E:=o)); eauto. hnf; intros. eapply (ssa_eval_agree); eauto.
+              econstructor; eauto.
+            * admit.
+          + admit.
+        - admit.
+        - intros; eapply IHT3. destruct H4 as [H4 [H4' H4'']]; split; eauto; split; eauto.
+      }
+    * admit.
+  + (* analog zu vorherigem If *) admit.
+  + admit.
+  + exfalso. inv H3.
+  + exfalso; inv H3.
+Qed.
 
 Lemma smtand_comm:
 forall a b F E,
@@ -439,6 +498,7 @@ intros.  general induction s.
 - admit.
 - admit.
 - simpl; intuition.
+- simpl; intuition.
 Qed.
 
 Lemma crash_impl_sim:
@@ -487,6 +547,7 @@ eapply (noFun_impl_term_crash E s) in H5.
 eapply (noFun_impl_term_crash E t) in H6.
 destruct H5 as [ Es  [s' [ sterm| scrash ]]]. destruct H6 as [Et [t' [ tterm | tcrash ]]].
 - pose proof (extend_not_models _ (constr (Con (O::nil)) (Con (O::nil))) H) .
+assert (X: forall P, (forall (A:pred->vallst->bool) (B:onv val), P A B <-> forall B A, P A B)) by admit.
   pose proof (unsat_extension D F E Es _ s' source _ _ H5 ).
   specialize (H6 H2 sterm).
   destruct H6 as [Q [M H6]].

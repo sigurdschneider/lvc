@@ -10,6 +10,7 @@ match s with
 | ite c t f => freeVars t ∪ freeVars f ∪ Exp.freeVars c
 | smtImp a b => freeVars a ∪ freeVars b
 | smtFalse => {}
+| smtTrue =>  {}
 |constr e1 e2 => Exp.freeVars e1 ∪ Exp.freeVars e2
 end.
 

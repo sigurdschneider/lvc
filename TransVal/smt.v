@@ -21,7 +21,8 @@ Inductive smt :Type :=
 | constr: exp -> exp -> smt
 | funcApp: pred -> arglst -> smt
 |smtReturn:  exp -> smt
-|smtFalse: smt.
+|smtFalse: smt
+|smtTrue:smt.
 
 (** Now define the parameters for the translation function **)
 Inductive pol:Type :=
@@ -164,10 +165,11 @@ match s with
         |  v => evalSpred F (LabI 0) (v::nil)
     end
 |smtFalse => False
+|smtTrue => True
 end.
 
 Axiom smt_decidable :
-forall s ,(forall F E, ~ models F E s ) \/ (exists F E, models F E s).
+forall s ,(forall F E, ~  models F E s ) \/ (exists F E,models  F E  s).
 
   (*
   *** Local Variables: ***
