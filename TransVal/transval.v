@@ -300,6 +300,16 @@ general induction H.
 - admit.
 Qed.
 
+Lemma freeVars_undef :
+forall a e s,
+undef e = Some s
+-> a ∈ freeVars s
+-> a ∈ Exp.freeVars e.
+
+Proof.
+admit.
+Qed.
+
 Lemma unsat_extension:
 forall D E E' s s' pol P Q,
 (forall F E, models F E Q -> ~ models F E (smtAnd (translateStmt s pol) P))
@@ -333,41 +343,112 @@ intros. general induction H2.
         destruct IHT as [IHT1 [ IHT2 IHT3 ]].
         split; eauto; split.
         - exact (IHT1 F).
-        - case_eq (undef e); intros; simpl.
-          + split.
-            * eapply (guard_true_if_eval _ _ e); eauto.
-              eapply (exp_eval_agree (E:=E)); eauto. hnf; intros. eapply (ssa_eval_agree); eauto.
-              econstructor; eauto.
-            * admit.
-          + admit.
-        - hnf. intros. hnf in H8. specialize (H8 a). (* ssa_inc applyen??*)
-          (* SSA fst subset snd als eigenschaft (Lemma suchen *) admit.
+        -  assert (models F E' (constr (Var x) e)).
+           + simpl. unfold evalSexp.
+              assert (exp_eval E' (Var x) = Some v).
+             * eapply (exp_eval_agree (E:= E[x <- Some v])).
+               { simpl. hnf. intros. inv H3. eapply (ssa_eval_agree s0); eauto. rewrite H11.
+                 simpl. cset_tac. right; eauto. }
+               { simpl. unfold update. decide (x === x).
+                 - reflexivity.
+                 - exfalso; eapply n; reflexivity. }
+             * assert (exp_eval E' e = Some v).
+              { eapply (exp_eval_agree (E:=E)); eauto; hnf; intros; eapply (ssa_eval_agree); eauto.
+                econstructor; eauto. }
+              rewrite H4; rewrite H6; simpl.  eapply bvEq_equiv_eq. reflexivity.
+           + case_eq (undef e); intros; simpl.
+             * split; eauto.
+               eapply (guard_true_if_eval _ _ e); eauto.
+               eapply (exp_eval_agree (E:=E)); eauto. hnf; intros. eapply (ssa_eval_agree); eauto.
+               econstructor; eauto.
+             * simpl in H4. assumption.
+        - hnf. intros. hnf in H8. specialize (H8 a).  eapply ssa_incl in H1. hnf in H1. specialize (H1 a).
+          simpl in H1. hnf in IHT2. specialize (IHT2 a). cset_tac. destruct H4.
+          +  rewrite H11 in IHT2. exact (IHT2 H4).
+          + apply H1.  eapply H8. case_eq (undef e); intros.
+            * rewrite H6 in H4. simpl in H4. cset_tac. destruct H4; eauto.
+              { eapply (freeVars_undef _ _ _ H6 H4). }
+            * rewrite H6 in H4. simpl in H; eauto.
         - intros. eapply IHT3. destruct H4 as [H4 [H4' H4'']]; split; eauto; split; eauto.
       }
-    * (*analog zu * *) admit.
-  + simpl in *; inv H1. inv H3; destruct pol; simpl in *.
-    * specialize (IHTerminates ans o E' s0 s' source P (smtAnd Q (guardGen (undef e) source (ite e (translateStmt s0 source) (translateStmt b2 source))))).
+    * specialize (IHTerminates target P (smtAnd Q (guardGen (undef e) target (constr (Var x) e)))).
+      destruct IHTerminates as [Q' IHT]; intros; eauto; simpl in *.
+      { specialize (H0 F E0). destruct H4 as [H4 H4']. specialize (H0 H4).  hnf in H0; hnf; intros.
+        eapply H0. destruct H6. split; simpl; eauto. destruct (undef e); simpl in *; eauto. }
+      { exists (smtAnd Q' (guardGen (undef e) target (constr (Var x) e))).
+        simpl in *. intros.
+        destruct IHT as [IHT1 [ IHT2 IHT3 ]].
+        split; eauto; split.
+        - exact (IHT1 F).
+        -  assert (models F E' (constr (Var x) e)).
+           + simpl. unfold evalSexp.
+              assert (exp_eval E' (Var x) = Some v).
+             * eapply (exp_eval_agree (E:= E[x <- Some v])).
+               { simpl. hnf. intros. inv H3. eapply (ssa_eval_agree s0); eauto. rewrite H11.
+                 simpl. cset_tac. right; eauto. }
+               { simpl. unfold update. decide (x === x).
+                 - reflexivity.
+                 - exfalso; eapply n; reflexivity. }
+             * assert (exp_eval E' e = Some v).
+              { eapply (exp_eval_agree (E:=E)); eauto; hnf; intros; eapply (ssa_eval_agree); eauto.
+                econstructor; eauto. }
+              rewrite H4; rewrite H6; simpl.  eapply bvEq_equiv_eq. reflexivity.
+           + case_eq (undef e); intros; simpl.
+             * intros; eauto.
+             * simpl in H4. assumption.
+        - hnf. intros. hnf in H8. specialize (H8 a).  eapply ssa_incl in H1. hnf in H1. specialize (H1 a).
+          simpl in H1. hnf in IHT2. specialize (IHT2 a). cset_tac. destruct H4.
+          +  rewrite H11 in IHT2. exact (IHT2 H4).
+          + apply H1.  eapply H8. case_eq (undef e); intros.
+            * rewrite H6 in H4. simpl in H4. cset_tac. destruct H4; eauto.
+              { eapply (freeVars_undef _ _ _ H6 H4). }
+            * rewrite H6 in H4. simpl in H; eauto.
+        - intros. eapply IHT3. destruct H4 as [H4 [H4' H4'']]; split; eauto; split; eauto.
+      }
+  + simpl in *; inv H1. inv H3.
+    specialize (IHTerminates ans o E' s0 s').
+    destruct pol; simpl in *.
+    * specialize (IHTerminates  source P (smtAnd Q (guardGen (undef e) source (ite e (smtTrue) (smtFalse))))).
       destruct IHTerminates as [Q' IHT]; intros; eauto.
-      { specialize (H0 F E). destruct  H4 as [H4 H4']. specialize (H0 H4).  hnf.  intros.  eapply H0.
-           destruct H5.  simpl. split; eauto. }
-      { exists (smtAnd Q' (guardGen (undef e) source (ite e (translateStmt s0 source) (translateStmt b2 source)))).
+      { specialize (H0 F E). destruct H4. specialize (H0 H4). hnf. intros. eapply H0.
+        destruct H12. split; eauto.
+        case_eq (undef e); intros; simpl in *.
+        - rewrite H17 in H5. simpl in H5. destruct H5. split; eauto. case_eq (val2bool (evalSexp E e)); intros.
+          + assumption.
+          + exfalso. rewrite H19 in H18. assumption.
+        - rewrite H17 in H5. simpl in H5. case_eq (val2bool (evalSexp E e)); intros.
+          + assumption.
+          + rewrite H18 in H5. exfalso; assumption.
+      }
+      { exists (smtAnd Q' (guardGen (undef e) source (ite e smtTrue smtFalse))).
         simpl in *; intros.
         destruct IHT as [IHT1 [IHT2 IHT3]].
         split; eauto; split.
         - exact (IHT1 F).
-        - case_eq (undef e); intros; simpl.
-          + split.
-            * eapply (guard_true_if_eval _ _ e); eauto.
-              eapply (exp_eval_agree (E:=o)); eauto. hnf; intros. eapply (ssa_eval_agree); eauto.
-              econstructor; eauto.
-            * admit.
-          + admit.
-        - admit.
-        - intros; eapply IHT3. destruct H4 as [H4 [H4' H4'']]; split; eauto; split; eauto.
-      }
-    * admit.
+        - case_eq (undef e); intros.
+          + simpl. (* Obvious construction needed *) admit.
+          + (* same as before *) admit.
+        - rewrite H13 in IHT2.  cset_tac. hnf in IHT2. simpl in IHT2.  destruct H4.
+          +  eapply H9. left; apply IHT2; assumption.
+          +  case_eq (undef e); intros; simpl in *.
+             * rewrite H5 in H4. simpl in H4. cset_tac. destruct H4 as [ H4 | [[H4 | H4] | H4]]; intuition.
+               { eapply (freeVars_undef a) in H5; eauto. eapply H9. hnf in H7. specialize (H7 a H5).
+                 rewrite <- (H8 a) in  H7. destruct H7; eauto. }
+               { hnf in H7. specialize (H7 a H4). eapply H9; erewrite <- H8 in H7. destruct H7; eauto. }
+             * rewrite H5 in H4. simpl in *. cset_tac. destruct H4 as [[H4 | H4] | H4]; intuition.
+               hnf in H7. specialize (H7 a H4).  eapply H9; erewrite <- H8 in H7. destruct H7; eauto.
+        - intros. destruct H4 as [H4 [H4' H4'']].
+          hnf. intros.  eapply (IHT3 F E); eauto.
+        }
+    * (* analog *) admit.
   + (* analog zu vorherigem If *) admit.
-  + admit.
+  + simpl in *. inv H1. destruct pol; simpl in *.
+    * specialize (IHTerminates (ann0 (D0, D')) E E' (stmtGoto l0 Y) s' source P Q).
+      destruct IHTerminates as [Q' IHT]; intros; eauto.
+      { admit. (*TODO:???*) }
+    * specialize (IHTerminates (ann0 (D0, D')) E E' (stmtGoto l0 Y) s' target P Q).
+      destruct IHTerminates as [Q' IHT]; intros; eauto.
+      { admit. (* TODO *) }
   + exfalso. inv H3.
   + exfalso; inv H3.
 Qed.
