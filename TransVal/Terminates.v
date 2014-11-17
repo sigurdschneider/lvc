@@ -10,9 +10,9 @@ Inductive Terminates :F.state -> F.state -> Prop :=
    omap (exp_eval E) x = ⎣vl⎦
    -> Terminates (L, E, stmtGoto f x) (L, E, stmtGoto f x)
 |TerminatesStep L E s L'  E' s'  L'' E'' s''  a:
-  noGoto s
-  -> F.step (L, E, s) a (L', E', s')
+   F.step (L, E, s) a (L', E', s')
    -> Terminates (L', E', s') (L'', E'', s'')
+   ->  noGoto s
    -> Terminates (L,E,s) (L'', E'', s'') .
 
 (*
