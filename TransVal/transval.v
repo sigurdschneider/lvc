@@ -1,6 +1,6 @@
 Require Import List.
 Require Import IL Annotation AutoIndTac Bisim Exp MoreExp Coherence Fresh Util SetOperations Sim.
-Require Import sexp smt nofun Terminates bitvec Crash freeVars.
+Require Import sexp smt nofun noGoto Terminates bitvec Crash freeVars.
 
 Lemma zext_nil_eq_O:
 forall k, zext k nil = zext k (O::nil).
@@ -130,21 +130,20 @@ Lemma ssa_eval_agree s D s' (E:onv val) (E':onv val)
 
 Proof.
   intros.
-  general induction H1; invt ssa; try invt F.step; simpl.
+  general induction H1; invt ssa; try invt F.step;try invt noFun; simpl.
+  - reflexivity.
   - reflexivity.
 -  inversion H2. exploit IHTerminates; [ | | reflexivity | reflexivity |]; eauto.
-    rewrite H6 in X; simpl in *. cset_tac; intuition.  hnf. hnf in X. intros.
+   rewrite H18 in X; simpl in *. cset_tac; intuition.  hnf. hnf in X. intros.
     unfold update in X. specialize (X x0).  assert (x0 ∈ D0 ++ {x; {}}) by (cset_tac; left; assumption).
-    specialize (X H9). decide (x === x0).
-    + rewrite <- e0 in H7; exfalso; apply H3; assumption.
+    specialize (X H10). decide (x === x0).
+    + rewrite  e0 in H14; exfalso; apply H14; assumption.
     + assumption.
 - inversion H2; exploit IHTerminates; [| | reflexivity | reflexivity |]; eauto.
-  rewrite H8 in X; simpl in *. assumption.
+  rewrite H25 in X; simpl in *. assumption.
 - inversion H2; exploit IHTerminates; [| | reflexivity | reflexivity |]; eauto.
-  rewrite H9 in X; simpl in *; assumption.
-- inversion H.  inversion Ldef0.
-- inversion H2.
-- inversion H2.
+  rewrite H26 in X; simpl in *; assumption.
+- inversion H.
 Qed.
 
 Lemma guardList_true_if_eval:
@@ -196,27 +195,30 @@ general induction H1; simpl.
   + case_eq (undef e); eauto; intros.
     * simpl; split; eauto.
       eapply (guard_true_if_eval); eauto.
-- inv H; invt ssa; invt noFun; simpl in * |- *.
-  + case_eq(undef e); intros; simpl; split; eauto.
-    * eapply (guard_true_if_eval _ E' e s v ); eauto.
+- case_eq (undefLift x); intros; simpl; eauto.
+  + split; eauto.
+       eapply (guardList_true_if_eval _ E0); eauto.
+- inv H; invt ssa; invt noFun; simpl in * |- *; subst.
+  + inversion H0. case_eq(undef e); intros; simpl; split; eauto.
+    * eapply (guard_true_if_eval _ E'0 e s0 v ); eauto.
       eapply exp_eval_agree; eauto.
-      assert (A: agree_on eq (fst (getAnn (ann1 (D0, D') an))) E E').
-      { eapply (ssa_eval_agree  (stmtExp x e b) _ s'); eauto.
+      assert (A: agree_on eq (fst (getAnn (ann1 (D0, D') an))) E0 E'0).
+      { eapply (ssa_eval_agree  (stmtExp x e s) _ s'0); eauto.
         econstructor; eauto. }
       { eapply (agree_on_incl  (bv:=Exp.freeVars e) (lv:=fst (getAnn (ann1 (D0, D') an)))); eauto. }
-    * split; eauto.
-      assert (X1: exp_eval E' (Var x) = Some v).
-      { eapply (exp_eval_agree (E:= E[x <- Some v])) ; eauto.
+    * split; eauto; subst.
+      assert (X1: exp_eval E'0 (Var x) = Some v).
+      { eapply (exp_eval_agree (E:= E0[x <- Some v])) ; eauto.
         - simpl. eapply (agree_on_incl (bv:={x} ) (lv:= fst (getAnn an))).
-          + eapply (ssa_eval_agree b _ s'); eauto.
-          + rewrite H10. unfold fst. cset_tac. right; rewrite H5; reflexivity.
+          + subst.  eapply (ssa_eval_agree s' _ s'0 _ E'0); eauto.
+          + rewrite H12. unfold fst. cset_tac. right; rewrite H5; reflexivity.
         - unfold exp_eval. unfold update. decide (x===x).
           + reflexivity.
           + exfalso.  apply n; reflexivity. }
-      assert (X2: exp_eval E' e = Some v).
+      assert (X2: exp_eval E'0 e = Some v).
       { eapply exp_eval_agree; eauto.
-      assert (A: agree_on eq (fst (getAnn (ann1 (D0, D') an))) E E').
-        - eapply (ssa_eval_agree  (stmtExp x e b) _ s'); eauto.
+      assert (A: agree_on eq (fst (getAnn (ann1 (D0, D') an))) E0 E'0).
+        - eapply (ssa_eval_agree  (stmtExp x e s') _ s'0); eauto.
         econstructor; eauto.
         - eapply (agree_on_incl  (bv:=Exp.freeVars e) (lv:=fst (getAnn (ann1 (D0, D') an)))); eauto. }
       {  unfold evalSexp. rewrite X1; rewrite X2.
