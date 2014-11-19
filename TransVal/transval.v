@@ -732,6 +732,56 @@ Proof.
 intros; admit.
 Qed.
 
+Lemma guardTrue_if_terminates:
+forall E s E' e g,
+undef e = Some g
+-> Terminates (nil, E, s)(nil, E', stmtReturn e)
+-> forall F, models F E g.
+
+Proof.
+intros.
+admit.
+Qed.
+
+Lemma propSwap:
+forall A B,
+(((True -> A -> False ) /\  True /\ B)-> False)
+-> (((A->False) /\ B) -> False).
+
+Proof.
+intros. eapply H.
+split.
+- intros.  destruct H0. exact (H0 X).
+- split; eauto. destruct H0. eauto.
+Qed.
+
+Lemma unsat_impl_eqret:
+  forall et es g1 g2 (A:Prop) D,
+(  Exp.freeVars es) ⊆ D
+-> (forall x, x ∈ Exp.freeVars et -> ~ x ∈  D)
+  ->  undef et = g1
+  ->undef es = g2
+  -> A
+  -> (forall F E, A -> ~ (models F E (smtAnd (guardGen g1 target (smtNeg (smtReturn et)))
+                                             (guardGen g2 source (smtReturn es)))))
+  ->forall (F: pred->vallst->bool) E E', exp_eval E et = exp_eval E' es.
+
+Proof.
+intros. destruct g1; destruct g2.
+- specialize (H4 F (combineEnv D E E') H3 ).
+  simpl in H4. hnf in H4.
+  assert (models F (combineEnv D E E') s = True) by admit.
+  assert (models F (combineEnv D E E') s0 = True) by admit.
+  rewrite H5 in H4. rewrite H6 in H4. apply propSwap in H4.
+  + exfalso. assumption.
+  + split; intros.
+    * eapply H4. split.
+      { intros. admit.}
+      { split; eauto.
+
+
+
+
 Lemma unsat_impl_sim:
 forall D D' Ds Ds' Dt Dt'  E s t,
 (forall F E, ~ models F E (smtCheck s t))
@@ -761,19 +811,21 @@ destruct H7 as [ Es  [s' [ sterm| scrash ]]]. destruct H8 as [Et [t' [ tterm | t
   + clear modS. clear H7.
     pose proof (unsat_extension D' E Et t t' target _ (smtAnd (constr (Con (O::nil)) (Con (O::nil))) Q) smodS)
       as modTS.
+    clear smodS. clear H.
     specialize (modTS H3 H6 tterm).
     destruct modTS as [Q' [modQ' [fvQ' modTS]]].
-
-    specialize (modTS (combineEnv Ds Es Et)).
     exploit (terminates_impl_star2 nil E s nil Es s' sterm).
     exploit (terminates_impl_star2 nil E t nil Et t' tterm).
-    clear H. clear H5. destruct H6. clear H5.
+(*    specialize (modTS (combineEnv Ds Es Et)). *)
     destruct X as [ [a sstep]  X]; destruct X0 as [ [b tstep]  X0].
     destruct X as [ [es sRet] | [fs [Xs sFun]]]; destruct X0 as [ [et tRet] | [ft [Xt tFun]]].
     * subst. eapply simTerm.
-       {  instantiate (1:=(nil, Es, stmtReturn es)). instantiate (1:=(nil, Et, stmtReturn et)).
-         simpl. case_eq (undef es); case_eq (undef et); intros; simpl.
-         - simpl in H9. rewrite H5 in H9; rewrite H6 in H9; simpl in H9. unfold evalSexp in H9.
+      { instantiate (1:=(nil, Et, stmtReturn et)). instantiate (1:=(nil, Es, stmtReturn es)).
+        unfold translateStmt in modTS.
+         simpl. case_eq (undef es); case_eq (undef et); intros.
+         - rewrite H in modTS. rewrite H7 in modTS. simpl in modTS.
+
+ simpl in H9. rewrite H5 in H9; rewrite H6 in H9; simpl in H9. unfold evalSexp in H9.
            assert ( X: (True /\ models F (combineEnv Ds Es Et) Q) /\ models F (combineEnv Ds Es Et) Q').
            +  split; try split; try eauto.
               *  rewrite agree_on_impl_models; eauto. admit.
