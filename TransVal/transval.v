@@ -618,10 +618,13 @@ general induction H; eauto.
 -split.
  + exists nil. econstructor.
  + left. exists e. reflexivity.
--  destruct sigma'; destruct p; exploit IHTerminates; try reflexivity.
-   destruct X  as [ [a' step ]  H1 ]. split.
+- split.
+  + exists nil; econstructor.
+  + right; exists f ; exists x. reflexivity.
+- exploit IHTerminates; try reflexivity.
+   destruct X  as [ [a' step ]  H2 ]. split.
   + pose (evts:= filter_tau a a').  exists evts. econstructor; eauto.
-  +  destruct H1 as [ [e stmtRet] | [f [ Y stmtGo]] ].
+  +  destruct H2 as [ [e stmtRet] | [f [ Y stmtGo]] ].
      * left; exists e. rewrite stmtRet. reflexivity.
      * right; exists f, Y; rewrite stmtGo; reflexivity.
 Qed.
@@ -744,28 +747,30 @@ forall D D' Ds Ds' Dt Dt'  E s t,
 Proof.
 intros.
 unfold smtCheck in H.
-eapply (noFun_impl_term_crash E s) in H5.
-eapply (noFun_impl_term_crash E t) in H6.
-destruct H5 as [ Es  [s' [ sterm| scrash ]]]. destruct H6 as [Et [t' [ tterm | tcrash ]]].
+pose proof  (noFun_impl_term_crash E s H5).
+pose proof  (noFun_impl_term_crash E t H6).
+destruct H7 as [ Es  [s' [ sterm| scrash ]]]. destruct H8 as [Et [t' [ tterm | tcrash ]]].
+(* s terminiert & t terminiert *)
 - pose proof (extend_not_models _ (constr (Con (O::nil)) (Con (O::nil))) H) .
-assert (X: forall P, (forall (A:pred->vallst->bool) (B:onv val), P A B <-> forall B A, P A B)) by admit.
-  pose proof (unsat_extension D F E Es _ s' source _ _ H5 ).
-  specialize (H6 H2 sterm).
-  destruct H6 as [Q [M H6]].
-  assert (H7: forall E0:onv val, models F E0 (smtAnd (constr (Con (O :: nil)) (Con (O :: nil))) Q) ->
+  pose proof (unsat_extension D E Es s s' source _ _ H7 ).
+  specialize (H8 H2 H5 sterm).
+  destruct H8 as [Q [M [ fvQ modS]]].
+  assert (smodS: forall F, forall E0:onv val, models F E0 (smtAnd (constr (Con (O :: nil)) (Con (O :: nil))) Q) ->
        ~  models F E0 (smtAnd (translateStmt t target) (translateStmt s' source) )).
-  + intros. eapply (smtand_neg_comm). destruct H6. apply (H8 E0 H7).
-  +  pose proof (unsat_extension D' _ E Et _ t' target _ (smtAnd (constr (Con (O::nil)) (Con (O::nil))) Q) H7).
-     specialize (H8 H3 tterm).
-     destruct H8 as [Q' [M2 H8]].
-     destruct H8.
-     specialize (H9 (combineEnv Ds Es Et)).
-     exploit (terminates_impl_star2 nil E s nil Es s' sterm).
-     exploit (terminates_impl_star2 nil E t nil Et t' tterm).
-     clear H. clear H5. destruct H6. clear H5.
-     destruct X as [ [a sstep]  X]; destruct X0 as [ [b tstep]  X0].
-     destruct X as [ [es sRet] | [fs [Xs sFun]]]; destruct X0 as [ [et tRet] | [ft [Xt tFun]]].
-     * subst. eapply simTerm.
+  + intros. eapply (smtand_neg_comm).  apply (modS F E0 H8).
+  + clear modS. clear H7.
+    pose proof (unsat_extension D' E Et t t' target _ (smtAnd (constr (Con (O::nil)) (Con (O::nil))) Q) smodS)
+      as modTS.
+    specialize (modTS H3 H6 tterm).
+    destruct modTS as [Q' [modQ' [fvQ' modTS]]].
+
+    specialize (modTS (combineEnv Ds Es Et)).
+    exploit (terminates_impl_star2 nil E s nil Es s' sterm).
+    exploit (terminates_impl_star2 nil E t nil Et t' tterm).
+    clear H. clear H5. destruct H6. clear H5.
+    destruct X as [ [a sstep]  X]; destruct X0 as [ [b tstep]  X0].
+    destruct X as [ [es sRet] | [fs [Xs sFun]]]; destruct X0 as [ [et tRet] | [ft [Xt tFun]]].
+    * subst. eapply simTerm.
        {  instantiate (1:=(nil, Es, stmtReturn es)). instantiate (1:=(nil, Et, stmtReturn et)).
          simpl. case_eq (undef es); case_eq (undef et); intros; simpl.
          - simpl in H9. rewrite H5 in H9; rewrite H6 in H9; simpl in H9. unfold evalSexp in H9.
