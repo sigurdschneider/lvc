@@ -629,31 +629,6 @@ general induction H; eauto.
      * right; exists f, Y; rewrite stmtGo; reflexivity.
 Qed.
 
-Lemma combineenv_eq_subset_exp:
-forall e D E v,
-Exp.freeVars e ⊆ D
--> forall E', (evalSexp E e = v <-> evalSexp (combineEnv D E E') e = v).
-
-Proof.
-intros. general induction e.
-- split; intros; unfold evalSexp in *; simpl in *; assumption.
-- split; intros; unfold evalSexp in *.
-  + hnf in H. simpl in H. specialize (H v). unfold combineEnv.  simpl. decide (v ∈ D).
-    * simpl in H0. destruct (E v); eauto.
-    * exfalso. eapply n. eapply H. cset_tac. reflexivity.
-  + hnf in H; simpl in H. specialize (H v). unfold combineEnv in H0. simpl in *. decide (v ∈ D).
-    * destruct (E v); eauto.
-    * exfalso. eapply n. eapply H. cset_tac; reflexivity.
-- simpl in *. split; intros.
-  + (* specialize (IHe D E). unfold evalSexp in H0. simpl in *.
-    case_eq (exp_eval E e); intros.
-    * unfold evalSexp at 1 in IHe.  specialize (IHe v0 H E').  destruct IHe. unfold evalSexp in *.
-      unfold exp_eval. rewrite H1 in H2. eapply H2.   simpl in H0.  exploit IHe; eauto. *)
-    admit.
-  + admit.
-- admit.
-Qed.
-
 Lemma forall_move_and:
 forall F s1 s2,
 (forall E, models F E (smtAnd s1 s2)) <-> ((forall E, models F E s1) /\ (forall E, models F E s2)).
@@ -677,34 +652,6 @@ Proof.
 admit.
 Qed.
 
-Lemma combineenv_eq_subset:
-forall s D F E',
- freeVars s ⊆ D
-->(  (forall E, models F E s)  <-> (forall E,  models F (combineEnv D E E') s)).
-
-Proof.
-intros.  general induction s.
-- rewrite forall_move_and.  rewrite (IHs1 D ).  rewrite (IHs2 D).
-  + instantiate (1:=E'). instantiate (1:=E'). split; intros.
-    * destruct H0. simpl.  specialize (H0 E); specialize (H1 E). econstructor; eauto.
-    *  split;  intros; specialize (H0 E); destruct H0; eauto.
-  + cset_tac. hnf in H. apply (H a); cset_tac. simpl. cset_tac. right; assumption.
-  + cset_tac. hnf in H. apply (H a); cset_tac. simpl; cset_tac. left; assumption.
-- simpl in *. split; intros.
-  + specialize (H0 E).  destruct H0.
-    * (* rewrite (IHs1 D) in H0.  rewrite (IHs2 D). *) admit.
-    * admit.
-  + admit. (*instantiate (1:=E'). instantiate (1:=E'). intuition.*)
-- simpl in *. admit. (*rewrite (IHs D). instantiate (1:=E'). split; intros; eauto.*)
-- admit.
-- admit.
-- admit.
-- admit.
-- admit.
-- simpl; intuition.
-- simpl; intuition.
-Qed.
-
 Lemma crash_impl_sim:
 forall (E:onv val) s Es s' E t,
 Crash (nil, E, s) (nil, Es, s')
@@ -722,16 +669,6 @@ general induction crash.
   + admit.
 Qed.
 
-Lemma combineenv_eq_subset_move:
-forall F s D E',
-freeVars s ⊆ D
--> ((forall E, models F E s)  <-> (forall E, models F (combineEnv D E E') s))
--> (forall E, ((models F E s) <-> (models F (combineEnv D E E') s))).
-
-Proof.
-intros; admit.
-Qed.
-
 Lemma guardTrue_if_terminates:
 forall E s E' e g,
 undef e = Some g
@@ -743,37 +680,18 @@ intros.
 admit.
 Qed.
 
-Lemma propSwap:
-forall A B,
-(((True -> A -> False ) /\  True /\ B)-> False)
--> (((A->False) /\ B) -> False).
-
-Proof.
-intros. eapply H.
-split.
-- intros.  destruct H0. exact (H0 X).
-- split; eauto. destruct H0. eauto.
-Qed.
-
-Lemma calleq_argeq:
-forall (l:lab) e e',
-(forall (F:lab->vallst->bool) , (F l (e::nil)) = (F l (e'::nil))) <-> (e = e').
-
-Proof.
-intros; split; intros.
-- specialize (H (fun _ => fun (x:list bitvec) => toBool ( bvEq e  (hd (O::nil) x)))).
-  simpl in H. erewrite <- bvEq_equiv_eq.  rewrite <- H. exact (bvEq_refl e).
-- rewrite H. f_equal.
-Qed.
-
 Lemma predeval_uneq:
 forall  l e e',
 (forall (F:lab->vallst->bool), (~(~ ((F l (e::nil)) = ( F l (e'::nil)))))) -> (e = e').
 
 Proof.
 intros. hnf in H.
-decide (forall (F:pred->vallst->bool), F l (e::nil) = F l (e'::nil)).
--  pose proof (calleq_argeq l e e').
+decide (e = e').
+- assumption.
+- specialize (H (fun _ => fun x => toBool (bvEq e (hd (O::nil) x)))).
+ exfalso. eapply H. hnf. intros. eapply n. eapply bvEq_equiv_eq. simpl in H0.
+ rewrite <- H0. eapply bvEq_refl.
+Qed.
 
 Lemma unsat_impl_sim:
 forall D D' Ds Ds' Dt Dt'  E s t,
@@ -815,65 +733,95 @@ destruct H7 as [ Es  [s' [ sterm| scrash ]]]. destruct H8 as [Et [t' [ tterm | t
     * subst. eapply simTerm; eauto.
       { instantiate (1:= (nil, Es, stmtReturn es)); admit. }
       { admit. }
-      admit. admit.
-    * admit.
-    * admit.
-    * admit.
-- admit.
-- admit.
-Qed.
-
-      { instantiate (1:=(nil, Et, stmtReturn et)). instantiate (1:=(nil, Es, stmtReturn es)).
-        unfold translateStmt in modTS.
-         simpl. case_eq (undef es); case_eq (undef et); intros.
-         - rewrite H in modTS. rewrite H7 in modTS. simpl in modTS.
-           eapply (unsat_impl_eqret et es); eauto.
-           + hnf. intros. instantiate (1:= Dt). admit.
-           + intros. admit.
-           + simpl. intros.  eapply (modTS F E0).  admit.
-           + intros. econstructor.
-         - admit.
-         - admit.
-         - admit.
+      { unfold normal2.  unfold reducible2. hnf.  intros.  destruct H as [evt [σ step]].  inversion step.
       }
-    { assumption
-
- simpl in H9. rewrite H5 in H9; rewrite H6 in H9; simpl in H9. unfold evalSexp in H9.
-           assert ( X: (True /\ models F (combineEnv Ds Es Et) Q) /\ models F (combineEnv Ds Es Et) Q').
-           +  split; try split; try eauto.
-              *  rewrite agree_on_impl_models; eauto. admit.
-              * rewrite agree_on_impl_models; eauto. admit.
-           + specialize (H9 X). clear X. hnf in H9.
-             (* Nun aus H9 konstruieren, dass die Werte gleich sein müssen, mit Lemma? *)
-             admit.
-           - (* analog zu Fall davor, ohne guard *) admit.
-           - admit.
-           - admit. }
-       { (* Dieser Fall scheint kaputt zu sein! *) admit. }
-       { (* Dito *) admit. }
-       { simpl. hnf. intros. inversion H5. inversion H6. inversion H10. }
-       { simpl; hnf; intros. inversion H5; inversion H6. inversion H10. }
-     * admit.
-     * admit.
-     * admit.
-- (* target crasht --> nicht semantisch äquivalent --> muss E geben. *)
-  admit.
--
-
- general induction scrash.
-  +  eapply simErr; eauto.
-     * econstructor.
-     * hnf. admit. (* TODO: normal2 konstruieren *)
-  +
-
-(* source crasht --> egal was Ergebnis is, weil env immer! unsat sein wird, da zwei widersprücliche Constraints enthalten sind *)
-  (* Induktion Crash *)
-  (* beweis Crahs -> star 2 step + result = None  dann simErr Constr.*)
-  admit.
+      { unfold normal2.  unfold reducible2. hnf.  intros. destruct H as [evt [σ step]]. inversion step. }
+    *  subst. simpl in modTS. exfalso. admit.
+    * subst. simpl in modTS. exfalso. admit.
+    * subst. simpl in modTS.  decide (fs = ft).
+      { eapply simTerm; eauto.
+        - instantiate (1:= (nil, Es, stmtGoto fs Xs)). admit.
+        - admit.
+        - unfold normal2. unfold reducible2. hnf; intros. destruct H as [evt [σ step]]. destruct σ. destruct p.
+          inversion step. inversion Ldef.
+        - unfold normal2; unfold reducible2; hnf; intros. destruct H as [evt [σ step]]; destruct σ; destruct p.
+          inversion step. inversion Ldef.
+          }
+      { exfalso. admit. }
+(* s terminiert & t crasht *)
+-  admit.
+(* s crasht --> sim zu allem! *)
+- eapply crash_impl_sim; eauto.
 Qed.
 
 (*
 *** Local Variables: ***
 *** coq-load-path: (("../" "Lvc")) ***
 *** End: ***
+*)
+
+
+(*
+Lemma combineenv_eq_subset_exp:
+forall e D E v,
+Exp.freeVars e ⊆ D
+-> forall E', (evalSexp E e = v <-> evalSexp (combineEnv D E E') e = v).
+
+Proof.
+intros. general induction e.
+- split; intros; unfold evalSexp in *; simpl in *; assumption.
+- split; intros; unfold evalSexp in *.
+  + hnf in H. simpl in H. specialize (H v). unfold combineEnv.  simpl. decide (v ∈ D).
+    * simpl in H0. destruct (E v); eauto.
+    * exfalso. eapply n. eapply H. cset_tac. reflexivity.
+  + hnf in H; simpl in H. specialize (H v). unfold combineEnv in H0. simpl in *. decide (v ∈ D).
+    * destruct (E v); eauto.
+    * exfalso. eapply n. eapply H. cset_tac; reflexivity.
+- simpl in *. split; intros.
+  + (* specialize (IHe D E). unfold evalSexp in H0. simpl in *.
+    case_eq (exp_eval E e); intros.
+    * unfold evalSexp at 1 in IHe.  specialize (IHe v0 H E').  destruct IHe. unfold evalSexp in *.
+      unfold exp_eval. rewrite H1 in H2. eapply H2.   simpl in H0.  exploit IHe; eauto. *)
+    admit.
+  + admit.
+- admit.
+Qed.
+
+Lemma combineenv_eq_subset_move:
+forall F s D E',
+freeVars s ⊆ D
+-> ((forall E, models F E s)  <-> (forall E, models F (combineEnv D E E') s))
+-> (forall E, ((models F E s) <-> (models F (combineEnv D E E') s))).
+
+Proof.
+intros; admit.
+Qed.
+
+Lemma combineenv_eq_subset:
+forall s D F E',
+ freeVars s ⊆ D
+->(  (forall E, models F E s)  <-> (forall E,  models F (combineEnv D E E') s)).
+
+Proof.
+intros.  general induction s.
+- rewrite forall_move_and.  rewrite (IHs1 D ).  rewrite (IHs2 D).
+  + instantiate (1:=E'). instantiate (1:=E'). split; intros.
+    * destruct H0. simpl.  specialize (H0 E); specialize (H1 E). econstructor; eauto.
+    *  split;  intros; specialize (H0 E); destruct H0; eauto.
+  + cset_tac. hnf in H. apply (H a); cset_tac. simpl. cset_tac. right; assumption.
+  + cset_tac. hnf in H. apply (H a); cset_tac. simpl; cset_tac. left; assumption.
+- simpl in *. split; intros.
+  + specialize (H0 E).  destruct H0.
+    * (* rewrite (IHs1 D) in H0.  rewrite (IHs2 D). *) admit.
+    * admit.
+  + admit. (*instantiate (1:=E'). instantiate (1:=E'). intuition.*)
+- simpl in *. admit. (*rewrite (IHs D). instantiate (1:=E'). split; intros; eauto.*)
+- admit.
+- admit.
+- admit.
+- admit.
+- admit.
+- simpl; intuition.
+- simpl; intuition.
+Qed.
 *)
