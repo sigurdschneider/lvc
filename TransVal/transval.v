@@ -681,22 +681,16 @@ intros. general induction H1.
 - eapply (guard_true_if_eval); eauto.
 - specialize (IHTerminates E' s' E'0 e g).
   inversion H2.
-  + rewrite <- H5 in *. inversion H.
+  + rewrite <- H5 in *. inversion H; subst.
     eapply IHTerminates; eauto.
-    * rewrite <- H15; eauto.
-    * rewrite H13; reflexivity.
-  + rewrite <- H6 in *; inversion H.
+  + rewrite <- H6 in *; inversion H; subst.
     * eapply IHTerminates; eauto.
-      { rewrite <- H16; eauto. }
-      { rewrite H14; reflexivity. }
     * eapply IHTerminates; eauto.
-      { rewrite <- H16; eauto. }
-      { rewrite H14; reflexivity. }
   + rewrite <- H4 in H0. exfalso; inversion H0.
   + rewrite <- H4 in *.  exfalso. inversion H.
 Qed.
 
-(*Lemma guardTrue_if_Terminates_goto:
+Lemma guardTrue_if_Terminates_goto:
 forall E s E' f x g,
 noFun s
 -> undefLift x = Some g
@@ -704,7 +698,18 @@ noFun s
 -> forall F, models F E' g.
 
 Proof.
-intros. *)
+intros. general induction H1.
+- eapply guardList_true_if_eval; eauto.
+- specialize (IHTerminates E' s' E'0 f x g).
+  inversion H2.
+  + rewrite <- H5 in *. inversion H; subst.
+    eapply IHTerminates; eauto.
+  + rewrite <- H6 in *. inversion H; subst.
+    * eapply IHTerminates; eauto.
+    * eapply IHTerminates; eauto.
+  + rewrite <- H4 in *; inversion H0.
+  + rewrite <- H4 in *; inversion H.
+Qed.
 
 Lemma predeval_uneq:
 forall  l e e',
