@@ -1,5 +1,5 @@
-Require Import List.
-Require Import IL Annotation AutoIndTac Bisim Exp MoreExp Coherence Fresh Util SetOperations Sim.
+Require Import List Arith.
+Require Import IL Annotation AutoIndTac Bisim Exp MoreExp Coherence Fresh Util SetOperations Sim Var.
 Require Import sexp smt nofun noGoto Terminates bitvec Crash freeVars.
 
 Lemma zext_nil_eq_O:
@@ -727,7 +727,6 @@ destruct H7 as [ Es  [s' [ sterm| scrash ]]]. destruct H8 as [Et [t' [ tterm | t
     destruct modTS as [Q' [modQ' [fvQ' modTS]]].
     exploit (terminates_impl_star2 nil E s nil Es s' sterm).
     exploit (terminates_impl_star2 nil E t nil Et t' tterm).
-(*    specialize (modTS (combineEnv Ds Es Et)). *)
     destruct X as [ [a sstep]  X]; destruct X0 as [ [b tstep]  X0].
     destruct X as [ [es sRet] | [fs [Xs sFun]]]; destruct X0 as [ [et tRet] | [ft [Xt tFun]]].
     * subst. eapply simTerm; eauto.
@@ -736,8 +735,38 @@ destruct H7 as [ Es  [s' [ sterm| scrash ]]]. destruct H8 as [Et [t' [ tterm | t
       { unfold normal2.  unfold reducible2. hnf.  intros.  destruct H as [evt [σ step]].  inversion step.
       }
       { unfold normal2.  unfold reducible2. hnf.  intros. destruct H as [evt [σ step]]. inversion step. }
-    *  subst. simpl in modTS. exfalso. admit.
-    * subst. simpl in modTS. exfalso. admit.
+    *  subst. simpl in modTS. exfalso.
+       pose (F:= (fun (l:lab) => if (beq_nat (labN l) (labN (labInc ft 1)))
+                                   then (fun (x:vallst) =>  false)
+                                   else (fun (x:vallst) => true))).
+       pose (E' := combineEnv Ds Es Et).
+       specialize (modTS F E' ).
+       eapply modTS.
+       { split; try split; eauto.
+         - admit.
+         - admit. }
+       { case_eq (undef es); case_eq (undefLift Xt); intros.
+         - simpl.
+           (* assert that guards are true *)
+           assert (models F E' s0 = True /\ models F E' s1 = True) by admit.
+           destruct H8. rewrite H8.  rewrite H9. unfold F. destruct ft. simpl. split; eauto.
+           intros. unfold evalSpred in H11. simpl  in H11.  rewrite <- (beq_nat_refl n) in H11. hnf in H11.
+           assumption.
+         - admit. (* analog *)
+         - admit. (* analog *)
+         - admit. (* analog *) }
+    * subst. simpl in modTS. exfalso.
+      pose (F:= (fun (l:lab) => if (beq_nat (labN l) 0)
+                                   then (fun (x:vallst) =>  false)
+                                   else (fun (x:vallst) => true))).
+       pose (E' := combineEnv Ds Es Et).
+       specialize (modTS F E').
+       eapply modTS.
+       { split; try split; eauto.
+         - admit.
+         - admit.
+       }
+       { (* destructen und analog *) admit. }
     * subst. simpl in modTS.  decide (fs = ft).
       { eapply simTerm; eauto.
         - instantiate (1:= (nil, Es, stmtGoto fs Xs)). admit.
@@ -747,7 +776,17 @@ destruct H7 as [ Es  [s' [ sterm| scrash ]]]. destruct H8 as [Et [t' [ tterm | t
         - unfold normal2; unfold reducible2; hnf; intros. destruct H as [evt [σ step]]; destruct σ; destruct p.
           inversion step. inversion Ldef.
           }
-      { exfalso. admit. }
+      { exfalso.
+        pose (F:= (fun (l:lab) => if (beq_nat (labN l) (labN (labInc ft 1)))
+                                   then (fun (x:vallst) =>  false)
+                                   else (fun (x:vallst) => true))).
+       pose (E' := combineEnv Ds Es Et).
+       specialize (modTS F E').
+       eapply modTS.
+       - split; try split; eauto.
+         + admit.
+         + admit.
+       - (* destructen, dann wieder analog *) admit. }
 (* s terminiert & t crasht *)
 -  admit.
 (* s crasht --> sim zu allem! *)
