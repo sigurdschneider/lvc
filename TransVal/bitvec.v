@@ -11,7 +11,7 @@ Inductive bit:Type :=
 |I:bit.
 
 (**
-A bitvector is now simply a list of bits. Convention: The LSB is always the first bit to ease 
+A bitvector is now simply a list of bits. Convention: The LSB is always the first bit to ease
 recursive function definitions.
 **)
 Definition bitvec := list bit.
@@ -62,7 +62,7 @@ complement' k b.
 
 (** Left shift **)
 Fixpoint shl s b :=
-match s with 
+match s with
 |0 => b
 | S s' => O::b
 end.
@@ -88,7 +88,7 @@ match k with
             | nil => I::(sext k' nil I)
             | O::b' => I:: (sext k' b' I)
             | I::b' => O:: incr' k' b'
-          end 
+          end
 end.
 
 (** increment function that uses the defined size **)
@@ -151,17 +151,17 @@ match k with
 | 0 => nil
 | S k'=> match a with
              |a1::a' => match b with
-                            |b1::b' 
-                             => let c' := (bitOr (bitAnd b1 c)(bitOr (bitAnd a1 c)(bitAnd a1 b1))) in 
+                            |b1::b'
+                             => let c' := (bitOr (bitAnd b1 c)(bitOr (bitAnd a1 c)(bitAnd a1 b1))) in
                                 let r  := (bitXor a1 (bitXor b1 c)) in
                                 r ::(bvAddBounded k' a' b' c' )
-                            |nil 
+                            |nil
                              => let r := bitXor a1 c in
                                  let c':= bitAnd a1 c in
                                  r:: (bvAddBounded k' a' nil c')
                         end
              |nil => match b with
-                         |b1::b' 
+                         |b1::b'
                           => let r := bitXor b1 c in
                              let c' := bitAnd b1 c in
                              r:: (bvAddBounded k' nil b' c')
@@ -219,7 +219,7 @@ match msb b1 with
 end.
 
 Fixpoint bvZero b :=
-  match b with 
+  match b with
 | nil => true
 | I::b' => false
 | O::b' => bvZero b'
@@ -258,8 +258,8 @@ intros.  general induction b.
 - exists 0; reflexivity.
 - destruct IHb.  destruct a.
   + exists (2*x).  simpl. rewrite H. omega.
-  + exists ((2*x)+1). simpl. rewrite H. omega. 
-Qed. 
+  + exists ((2*x)+1). simpl. rewrite H. omega.
+Qed.
 
 (** TODO: Find better division algorithm **)
 Fixpoint bvDiv' a b1 b2 :=
@@ -271,15 +271,15 @@ match a with
           end
 end.
 
-(** Division wrapper function. Starts the bvDiv' function with the size argument b1. 
-Because b1 is the biggest amount of steps needed to compute b1 / b2 (in the case where b2 
+(** Division wrapper function. Starts the bvDiv' function with the size argument b1.
+Because b1 is the biggest amount of steps needed to compute b1 / b2 (in the case where b2
 is 1. As a bitvector can also be mapped to it's natural number counterpart we take this number as
-the amount of steps. In the worst case this will only produce more steps then needed as 2^k is 
+the amount of steps. In the worst case this will only produce more steps then needed as 2^k is
 the maximum number for natural numbers and 2^(k-1) for 2s complement.
-There is also special threatening needed for signs. 
+There is also special threatening needed for signs.
 Function is defined also for x/y where y = 0 because the smt solver always has total functions **)
 Definition bvDiv (b1:bitvec) (b2:bitvec) :option bitvec:=
-if bvZero b2 
+if bvZero b2
 then None
 else
 Some (match bvLessZero b1, bvLessZero b2 with
@@ -312,16 +312,26 @@ intros; split; intros.
     * simpl. eapply (IHb1 b1); reflexivity.
 Qed.
 
+Lemma bvEq_refl:
+forall b,
+toBool (bvEq b b).
+
+Proof.
+intros. general induction b.
++ simpl. econstructor.
++ destruct a; simpl; assumption.
+Qed.
+
 Lemma not_zero:
  forall b, bvZero b = false ->  b  <> zext k (O::nil).
 
 Proof.
  intros. general induction b.
- destruct a; simpl; hnf; intros. 
+ destruct a; simpl; hnf; intros.
  - rewrite H0 in H. simpl in H. discriminate H.
 - rewrite H0 in H.  simpl in H; discriminate H.
 Qed.
- 
+
 Lemma zext_nil_eq_sext:
   forall n, sext n nil O = zext n nil.
 
