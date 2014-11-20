@@ -669,7 +669,7 @@ general induction crash.
   + admit.
 Qed.
 
-Lemma guardTrue_if_terminates_ret:
+Lemma guardTrue_if_Terminates_ret:
 forall E s E' e g,
 noFun s
 -> undef e = Some g
@@ -724,6 +724,34 @@ decide (e = e').
  rewrite <- H0. eapply bvEq_refl.
 Qed.
 
+Lemma combineenv_eq_subset:
+forall s D F E E',
+ freeVars s ⊆ D
+->(  models F E s  <-> models F (combineEnv D E E') s).
+
+Proof.
+intros.  admit. (* general induction s.
+- rewrite forall_move_and.  rewrite (IHs1 D ).  rewrite (IHs2 D).
+  + instantiate (1:=E'). instantiate (1:=E'). split; intros.
+    * destruct H0. simpl.  specialize (H0 E); specialize (H1 E). econstructor; eauto.
+    *  split;  intros; specialize (H0 E); destruct H0; eauto.
+  + cset_tac. hnf in H. apply (H a); cset_tac. simpl. cset_tac. right; assumption.
+  + cset_tac. hnf in H. apply (H a); cset_tac. simpl; cset_tac. left; assumption.
+- simpl in *. split; intros.
+  + specialize (H0 E).  destruct H0.
+    * (* rewrite (IHs1 D) in H0.  rewrite (IHs2 D). *) admit.
+    * admit.
+  + admit. (*instantiate (1:=E'). instantiate (1:=E'). intuition.*)
+- simpl in *. admit. (*rewrite (IHs D). instantiate (1:=E'). split; intros; eauto.*)
+- admit.
+- admit.
+- admit.
+- admit.
+- admit.
+- simpl; intuition.
+- simpl; intuition.*)
+Qed.
+
 Lemma unsat_impl_sim:
 forall D D' Ds Ds' Dt Dt'  E s t,
 (forall F E, ~ models F E (smtCheck s t))
@@ -770,32 +798,62 @@ destruct H7 as [ Es  [s' [ sterm| scrash ]]]. destruct H8 as [Et [t' [ tterm | t
        pose (F:= (fun (l:lab) => if (beq_nat (labN l) (labN (labInc ft 1)))
                                    then (fun (x:vallst) =>  false)
                                    else (fun (x:vallst) => true))).
-       pose (E' := combineEnv Ds Es Et).
+       pose (E' := combineEnv Ds' Es Et).
        specialize (modTS F E' ).
        eapply modTS.
        { split; try split; eauto.
-         - admit.
-         - admit. }
-       { case_eq (undef es); case_eq (undefLift Xt); intros.
-         - simpl.
-           (* assert that guards are true *)
-           assert (models F E' s0  /\ models F E' s1).
-           destruct H8. rewrite H8.  rewrite H9. unfold F. destruct ft. simpl. split; eauto.
-           intros. unfold evalSpred in H11. simpl  in H11.  rewrite <- (beq_nat_refl n) in H11. hnf in H11.
-           assumption.
-         - admit. (* analog *)
-         - admit. (* analog *)
-         - admit. (* analog *) }
+         - specialize (M F).
+           unfold E'.   rewrite <- (combineenv_eq_subset); eauto.
+           rewrite H0 in fvQ. simpl in fvQ. assumption.
+         - specialize (modQ' F).
+           unfold E'. admit.
+       }
+       { case_eq (undef es); case_eq (undefLift Xt); intros; simpl.
+         - (* assert that guards are true *)
+           assert (models F E' s1).
+           + eapply (guardTrue_if_Terminates_ret _ s); eauto.
+             instantiate (1:= E).
+             (* analoges rewrite Lemma *)
+             admit.
+           + split.
+             *  intros. unfold evalSpred in H10.  unfold F in H10.
+                rewrite <- (beq_nat_refl (labN (labInc ft 1))) in H10.
+                hnf in H10. assumption.
+             * split; eauto. unfold evalSpred. unfold F. simpl; destruct ft; simpl; econstructor.
+         - assert (models F E' s0).
+           +  eapply (guardTrue_if_Terminates_ret _ s); eauto.
+             instantiate (1:= E).
+             (* analoges rewrite Lemma *)
+             admit.
+           + split; try split; eauto; intros.
+             * unfold evalSpred in H9; unfold F in H9.
+               rewrite <- (beq_nat_refl (labN(labInc ft 1))) in H9. hnf in H9.
+               assumption.
+             * unfold evalSpred; unfold F; simpl; destruct ft; simpl; econstructor.
+         - split; try split; eauto; intros.
+           + unfold evalSpred in H9; unfold F in H9.
+               rewrite <- (beq_nat_refl (labN(labInc ft 1))) in H9. hnf in H9.
+               assumption.
+           + unfold evalSpred; unfold F; simpl; destruct ft; simpl; econstructor.
+         - split; try split; eauto; intros.
+           + unfold evalSpred in H8; unfold F in H8.
+               rewrite <- (beq_nat_refl (labN(labInc ft 1))) in H8. hnf in H8.
+               assumption.
+           + unfold evalSpred; unfold F; simpl; destruct ft; simpl; econstructor.
+       }
     * subst. simpl in modTS. exfalso.
       pose (F:= (fun (l:lab) => if (beq_nat (labN l) 0)
                                    then (fun (x:vallst) =>  false)
                                    else (fun (x:vallst) => true))).
-       pose (E' := combineEnv Ds Es Et).
+       pose (E' := combineEnv Ds' Es Et).
        specialize (modTS F E').
        eapply modTS.
        { split; try split; eauto.
-         - admit.
-         - admit.
+         - specialize (M F).
+           unfold E'.   rewrite <- (combineenv_eq_subset); eauto.
+           rewrite H0 in fvQ. simpl in fvQ. assumption.
+         - specialize (modQ' F).
+           unfold E'. admit.
        }
        { (* destructen und analog *) admit. }
     * subst. simpl in modTS.  decide (fs = ft).
@@ -865,33 +923,5 @@ freeVars s ⊆ D
 
 Proof.
 intros; admit.
-Qed.
-
-Lemma combineenv_eq_subset:
-forall s D F E',
- freeVars s ⊆ D
-->(  (forall E, models F E s)  <-> (forall E,  models F (combineEnv D E E') s)).
-
-Proof.
-intros.  general induction s.
-- rewrite forall_move_and.  rewrite (IHs1 D ).  rewrite (IHs2 D).
-  + instantiate (1:=E'). instantiate (1:=E'). split; intros.
-    * destruct H0. simpl.  specialize (H0 E); specialize (H1 E). econstructor; eauto.
-    *  split;  intros; specialize (H0 E); destruct H0; eauto.
-  + cset_tac. hnf in H. apply (H a); cset_tac. simpl. cset_tac. right; assumption.
-  + cset_tac. hnf in H. apply (H a); cset_tac. simpl; cset_tac. left; assumption.
-- simpl in *. split; intros.
-  + specialize (H0 E).  destruct H0.
-    * (* rewrite (IHs1 D) in H0.  rewrite (IHs2 D). *) admit.
-    * admit.
-  + admit. (*instantiate (1:=E'). instantiate (1:=E'). intuition.*)
-- simpl in *. admit. (*rewrite (IHs D). instantiate (1:=E'). split; intros; eauto.*)
-- admit.
-- admit.
-- admit.
-- admit.
-- admit.
-- simpl; intuition.
-- simpl; intuition.
 Qed.
 *)
