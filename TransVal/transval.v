@@ -669,16 +669,42 @@ general induction crash.
   + admit.
 Qed.
 
-Lemma guardTrue_if_terminates:
+Lemma guardTrue_if_terminates_ret:
 forall E s E' e g,
-undef e = Some g
+noFun s
+-> undef e = Some g
 -> Terminates (nil, E, s)(nil, E', stmtReturn e)
--> forall F, models F E g.
+-> forall F, models F E' g.
 
 Proof.
-intros.
-admit.
+intros. general induction H1.
+- eapply (guard_true_if_eval); eauto.
+- specialize (IHTerminates E' s' E'0 e g).
+  inversion H2.
+  + rewrite <- H5 in *. inversion H.
+    eapply IHTerminates; eauto.
+    * rewrite <- H15; eauto.
+    * rewrite H13; reflexivity.
+  + rewrite <- H6 in *; inversion H.
+    * eapply IHTerminates; eauto.
+      { rewrite <- H16; eauto. }
+      { rewrite H14; reflexivity. }
+    * eapply IHTerminates; eauto.
+      { rewrite <- H16; eauto. }
+      { rewrite H14; reflexivity. }
+  + rewrite <- H4 in H0. exfalso; inversion H0.
+  + rewrite <- H4 in *.  exfalso. inversion H.
 Qed.
+
+(*Lemma guardTrue_if_Terminates_goto:
+forall E s E' f x g,
+noFun s
+-> undefLift x = Some g
+-> Terminates (nil, E, s) (nil, E' , stmtGoto f x)
+-> forall F, models F E' g.
+
+Proof.
+intros. *)
 
 Lemma predeval_uneq:
 forall  l e e',
@@ -748,7 +774,7 @@ destruct H7 as [ Es  [s' [ sterm| scrash ]]]. destruct H8 as [Et [t' [ tterm | t
        { case_eq (undef es); case_eq (undefLift Xt); intros.
          - simpl.
            (* assert that guards are true *)
-           assert (models F E' s0 = True /\ models F E' s1 = True) by admit.
+           assert (models F E' s0  /\ models F E' s1).
            destruct H8. rewrite H8.  rewrite H9. unfold F. destruct ft. simpl. split; eauto.
            intros. unfold evalSpred in H11. simpl  in H11.  rewrite <- (beq_nat_refl n) in H11. hnf in H11.
            assumption.
