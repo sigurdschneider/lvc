@@ -755,32 +755,25 @@ split.
 - split; eauto. destruct H0. eauto.
 Qed.
 
-Lemma unsat_impl_eqret:
-  forall et es g1 g2 (A:Prop) D,
-(  Exp.freeVars es) ⊆ D
--> (forall x, x ∈ Exp.freeVars et -> ~ x ∈  D)
-  ->  undef et = g1
-  ->undef es = g2
-  -> A
-  -> (forall F E, A -> ~ (models F E (smtAnd (guardGen g1 target (smtNeg (smtReturn et)))
-                                             (guardGen g2 source (smtReturn es)))))
-  ->forall (F: pred->vallst->bool) E E', exp_eval E et = exp_eval E' es.
+Lemma calleq_argeq:
+forall (l:lab) e e',
+(forall (F:lab->vallst->bool) , (F l (e::nil)) = (F l (e'::nil))) <-> (e = e').
 
 Proof.
-intros. destruct g1; destruct g2.
-- specialize (H4 F (combineEnv D E E') H3 ).
-  simpl in H4. hnf in H4.
-  assert (models F (combineEnv D E E') s = True) by admit.
-  assert (models F (combineEnv D E E') s0 = True) by admit.
-  rewrite H5 in H4. rewrite H6 in H4. apply propSwap in H4.
-  + exfalso. assumption.
-  + split; intros.
-    * eapply H4. split.
-      { intros. admit.}
-      { split; eauto.
+intros; split; intros.
+- specialize (H (fun _ => fun (x:list bitvec) => toBool ( bvEq e  (hd (O::nil) x)))).
+  simpl in H. erewrite <- bvEq_equiv_eq.  rewrite <- H. exact (bvEq_refl e).
+- rewrite H. f_equal.
+Qed.
 
+Lemma predeval_uneq:
+forall  l e e',
+(forall (F:lab->vallst->bool), (~(~ ((F l (e::nil)) = ( F l (e'::nil)))))) -> (e = e').
 
-
+Proof.
+intros. hnf in H.
+decide (forall (F:pred->vallst->bool), F l (e::nil) = F l (e'::nil)).
+-  pose proof (calleq_argeq l e e').
 
 Lemma unsat_impl_sim:
 forall D D' Ds Ds' Dt Dt'  E s t,
@@ -819,11 +812,31 @@ destruct H7 as [ Es  [s' [ sterm| scrash ]]]. destruct H8 as [Et [t' [ tterm | t
 (*    specialize (modTS (combineEnv Ds Es Et)). *)
     destruct X as [ [a sstep]  X]; destruct X0 as [ [b tstep]  X0].
     destruct X as [ [es sRet] | [fs [Xs sFun]]]; destruct X0 as [ [et tRet] | [ft [Xt tFun]]].
-    * subst. eapply simTerm.
+    * subst. eapply simTerm; eauto.
+      { instantiate (1:= (nil, Es, stmtReturn es)); admit. }
+      { admit. }
+      admit. admit.
+    * admit.
+    * admit.
+    * admit.
+- admit.
+- admit.
+Qed.
+
       { instantiate (1:=(nil, Et, stmtReturn et)). instantiate (1:=(nil, Es, stmtReturn es)).
         unfold translateStmt in modTS.
          simpl. case_eq (undef es); case_eq (undef et); intros.
          - rewrite H in modTS. rewrite H7 in modTS. simpl in modTS.
+           eapply (unsat_impl_eqret et es); eauto.
+           + hnf. intros. instantiate (1:= Dt). admit.
+           + intros. admit.
+           + simpl. intros.  eapply (modTS F E0).  admit.
+           + intros. econstructor.
+         - admit.
+         - admit.
+         - admit.
+      }
+    { assumption
 
  simpl in H9. rewrite H5 in H9; rewrite H6 in H9; simpl in H9. unfold evalSexp in H9.
            assert ( X: (True /\ models F (combineEnv Ds Es Et) Q) /\ models F (combineEnv Ds Es Et) Q').
