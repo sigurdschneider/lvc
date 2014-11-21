@@ -375,7 +375,7 @@ intros. general induction H2.
                 - rewrite H5. right; reflexivity.
                 - left; eapply H9. assumption. }
             * rewrite H7 in H5. simpl in H5.  cset_tac. destruct H5.
-              { rewrite H5. right; reflexivity.}
+              { rewrite H5. right; reflexivity. }
               { left; eapply H9; eauto. }
         - intros. eapply IHT3. destruct H5 as [H5 [H5' H5'']]; split; eauto; split; eauto.
       }
@@ -819,28 +819,35 @@ intros.  general induction s; simpl; try reflexivity.
 Qed.
 
 Lemma exp_combineenv_eqr:
-forall e D Ds Dt Es Et v,
-~ (((Exp.freeVars e)\ (Ds ∩ Dt)) ⊆ D)
--> Ds ∩ Dt ⊆ D
+forall e D Es Et v,
+agree_on eq (Exp.freeVars e ∩ D) Es Et
 -> exp_eval (combineEnv D Es Et) e= v
 -> exp_eval Et e = v.
 
 Proof.
-  intros.  eapply (exp_eval_agree (E:=(combineEnv D Es Et))); eauto.
-  hnf. cset_tac. unfold combineEnv. hnf in H.  decide (x ∈ D).
-  - exfalso.  eapply H.  hnf.  intros. hnf in H0.  eapply H0.  reflexivity.
-  - exfalso. eapply n; assumption.
+ intros. eapply (exp_eval_agree (E:=(combineEnv D Es Et))); eauto.
+ hnf. cset_tac. unfold combineEnv. destruct if; eauto.
+ eapply H. cset_tac; intuition.
 Qed.
 
 Lemma combineenv_eq_right:
-forall  Q D Ds Dt Es Et,
-( forall v, v ∈  (Q \ (Ds ∩ Dt)) -> ~ v ∈ D)
--> agree_on _eq (Q \ (Ds ∩ Dt)) Et (combineEnv D Es Et).
+forall  F s D Es Et,
+agree_on eq (freeVars s ∩ D) Es Et
+-> (models F Et s <-> models F (combineEnv D Es Et) s).
 
 Proof.
-intros. hnf; intros. unfold combineEnv.  decide (x ∈ D).
-- exfalso; apply (H x H0). assumption.
-- reflexivity.
+intros.  general induction s; try reflexivity; simpl.
+- rewrite (IHs1 F D Es Et). rewrite (IHs2 F D Es Et).
+  + reflexivity.
+  + setSubst2 H.
+  + setSubst2 H.
+- admit.
+- admit.
+- admit.
+- admit.
+- admit.
+- admit.
+-  admit.
 Qed.
 
 Lemma unsat_impl_sim:
@@ -875,13 +882,15 @@ destruct H7 as [ Es  [s' [ sterm| scrash ]]]. destruct H8 as [Et [t' [ tterm | t
     clear smodS. clear H.
     specialize (modTS H3 H6 tterm).
     destruct modTS as [Q' [modQ' [fvQ' modTS]]].
-    exploit (terminates_impl_star2 nil E s nil Es s' sterm).
-    exploit (terminates_impl_star2 nil E t nil Et t' tterm).
-    destruct X as [ [a sstep]  X]; destruct X0 as [ [b tstep]  X0].
+    exploit (star2_nofun  E s Es s' H5 sterm).
+    exploit (star2_nofun E t Et t' H6 tterm).
+    destruct X as [ sstep X]; destruct X0 as [ tstep  X0].
     destruct X as [ [es sRet] | [fs [Xs sFun]]]; destruct X0 as [ [et tRet] | [ft [Xt tFun]]].
-    * subst. eapply simTerm; eauto.
-      { instantiate (1:= (nil, Es, stmtReturn es)); admit. }
-      { admit. }
+    * subst. eapply simTerm.
+      instantiate (1:=(nil, Et, stmtReturn et)). instantiate (1:= (nil, Es, stmtReturn es)).
+      { simpl. admit. }
+      { assumption. }
+      { assumption. }
       { unfold normal2.  unfold reducible2. hnf.  intros.  destruct H as [evt [σ step]].  inversion step.
       }
       { unfold normal2.  unfold reducible2. hnf.  intros. destruct H as [evt [σ step]]. inversion step. }
@@ -895,15 +904,18 @@ destruct H7 as [ Es  [s' [ sterm| scrash ]]]. destruct H8 as [Et [t' [ tterm | t
        { split; try split; eauto.
          - specialize (M F).
            unfold E'.
-           pose proof (combineenv_eq_left (freeVars Q) Ds' Es Et).
+           pose proof (combineenv_eq_left F Q Ds' Es Et).
            assert (forall v, v ∈ freeVars Q -> v ∈ Ds').
            + intros. hnf in fvQ. rewrite H0 in fvQ. simpl in fvQ. exact (fvQ v H7).
            + specialize (H H7).
-           rewrite <- H.
-rewrite <- (combineenv_eq_subset); eauto.
-           rewrite H0 in fvQ. simpl in fvQ. assumption.
+           rewrite <- H; eauto.
          - specialize (modQ' F).
-           unfold E'. admit.
+           unfold E'.  pose proof (combineenv_eq_right F Q' Ds'  Es Et).
+           assert (agree_on eq (freeVars Q' ∩ Ds') Es Et).
+           + hnf. intros. cset_tac. hnf in fvQ'. rewrite H1 in fvQ'.
+             specialize (fvQ' x); simpl in fvQ'.
+             assert (x ∈ Ds' ∩ Dt') by (cset_tac; eauto).
+
        }
        { case_eq (undef es); case_eq (undefLift Xt); intros; simpl.
          - (* assert that guards are true *)
@@ -921,8 +933,7 @@ rewrite <- (combineenv_eq_subset); eauto.
          - assert (models F E' s0).
            +  eapply (guardTrue_if_Terminates_ret _ s); eauto.
              instantiate (1:= E).
-             (* analoges rewrite Lemma *)
-             admit.
+             (* analoges rewrite Lemma *)             admit.
            + split; try split; eauto; intros.
              * unfold evalSpred in H9; unfold F in H9.
                rewrite <- (beq_nat_refl (labN(labInc ft 1))) in H9. hnf in H9.
