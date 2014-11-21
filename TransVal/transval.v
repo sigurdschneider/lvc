@@ -888,7 +888,28 @@ destruct H7 as [ Es  [s' [ sterm| scrash ]]]. destruct H8 as [Et [t' [ tterm | t
     destruct X as [ [es sRet] | [fs [Xs sFun]]]; destruct X0 as [ [et tRet] | [ft [Xt tFun]]].
     * subst. eapply simTerm.
       instantiate (1:=(nil, Et, stmtReturn et)). instantiate (1:= (nil, Es, stmtReturn es)).
-      { simpl. admit. }
+      { simpl. pose proof predeval_uneq. simpl in modTS.
+        case_eq (undef es); case_eq(undef et); intros; simpl in *.
+        - rewrite H7 in modTS; rewrite H8 in modTS. simpl in modTS.
+          specialize (H (LabI 0)).
+          assert (exists evs, exp_eval Es es = Some evs) by admit.
+          assert (exists evt, exp_eval Et et = Some evt) by admit.
+          destruct H9; destruct H10.
+          rewrite H9; rewrite H10; specialize (H x x0).
+          f_equal. apply H.
+          intros. specialize (modTS F (combineEnv Ds' Es Et)).
+          assert ((True /\ models F (combineEnv Ds' Es Et) Q) /\ models F (combineEnv Ds' Es Et) Q') by admit.
+          specialize (modTS H11).
+          assert (models F (combineEnv Ds' Es Et) s0 = True) by admit.
+          assert (models F (combineEnv Ds' Es Et) s1 = True) by admit.
+          rewrite H12 in modTS; rewrite H13 in modTS. hnf. intros. eapply modTS.
+          assert (evalSexp (combineEnv Ds' Es Et) et =  x0) by admit.
+          assert (evalSexp (combineEnv Ds' Es Et) es =  x) by admit.
+          rewrite H15. rewrite H16. unfold evalSpred.
+          case_eq ( F (LabI 0) (x0 :: nil)); case_eq (F (LabI 0) (x::nil)); intros.
+          + rewrite H17.  hnf in H14. rewrite  H18 in H14.
+
+      }
       { assumption. }
       { assumption. }
       { unfold normal2.  unfold reducible2. hnf.  intros.  destruct H as [evt [σ step]].  inversion step.
@@ -915,7 +936,13 @@ destruct H7 as [ Es  [s' [ sterm| scrash ]]]. destruct H8 as [Et [t' [ tterm | t
            + hnf. intros. cset_tac. hnf in fvQ'. rewrite H1 in fvQ'.
              specialize (fvQ' x); simpl in fvQ'.
              assert (x ∈ Ds' ∩ Dt') by (cset_tac; eauto).
-
+             eapply (ssa_eval_agree) in H2; eauto.
+             eapply (ssa_eval_agree) in H3; eauto.
+             hnf in H2. hnf in H3. rewrite H0 in H2. rewrite H1 in H3.
+             specialize (H2 x); specialize (H3 x). simpl in H2; simpl in H3.
+             rewrite H4 in H7. cset_tac.
+             rewrite <- H2; eauto.
+           + rewrite <- (H H7); eauto.
        }
        { case_eq (undef es); case_eq (undefLift Xt); intros; simpl.
          - (* assert that guards are true *)
