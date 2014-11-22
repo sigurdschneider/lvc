@@ -1,126 +1,14 @@
 Require Import List Arith.
-Require Import IL Annotation AutoIndTac Bisim Exp MoreExp Coherence Fresh Util SetOperations Sim Var.
-Require Import sexp smt nofun noGoto Terminates bitvec Crash freeVars tvalTactics.
+Require Import IL Annotation AutoIndTac Bisim Exp MoreExp Coherence Fresh Util.
+Require Import SetOperations Sim Var.
+Require Import sexp smt nofun noGoto Terminates bitvec Crash freeVars.
+Require Import tvalTactics TUtil Guards.
 
-Lemma zext_nil_eq_O:
-forall k, zext k nil = zext k (O::nil).
+Definition smtCheck (s:stmt) (t:stmt) :=
+smtAnd (translateStmt s source) (translateStmt t target).
 
-Proof.
-induction k.
-- simpl. reflexivity.
-- simpl. reflexivity.
-Qed.
-
-Lemma minus_n_0: forall n, n-0 = n.
-
-Proof.
-intros; general induction n; eauto.
-Qed.
-
-Lemma not_zero_implies_uneq:
-forall a b k, bvZero a = false ->b = zext k (O::nil) ->  val2bool(bvEq a b) -> False.
-
-Proof.
-intros. general induction a.
--  destruct a.
-   + specialize (IHa (tl (zext k (O::nil))) (k-1)).   simpl in H. specialize (IHa H).  eapply IHa.
-     * destruct k; eauto.
-       simpl. rewrite zext_nil_eq_O.   erewrite minus_n_0. reflexivity.
-     * destruct k; eauto. simpl in H1.  exfalso. assumption.
-   +  simpl in H1. destruct k;  assumption.
-Qed.
-
- Lemma guard_true_if_eval:
-forall F E e s v,
- exp_eval E e = Some v
-->  undef e = Some s
-->  models F E s.
-
-Proof.
-intros. general induction e; simpl.
-- simpl in *. monad_inv H. destruct u.
-  + apply (IHe F E s x); eauto.
-  + destruct u.
-    *  apply (IHe F E s x); eauto.
-    * exfalso; discriminate H0.
-- simpl in H.  monad_inv H.  simpl in H0. destruct b.
-  +  case_eq (undef e1); case_eq (undef e2); intros.
-     *  rewrite H in H0; rewrite H1 in H0. simpl in H0. inversion H0. simpl; split.
-        { eapply IHe1; eauto. }
-        { eapply IHe2; eauto. }
-     * rewrite H in H0; rewrite H1 in H0; simpl in H0; inversion H0; simpl. eapply IHe1; eauto. rewrite <- H0; eauto.
-     *rewrite H in H0; rewrite H1 in H0; simpl in H0; inversion H0; simpl. eapply IHe2; eauto. rewrite <- H0; eauto.
-     * rewrite H in H0; rewrite H1 in H0; simpl in H0;  simpl. exfalso; discriminate H0.
-  + destruct b.
-    *  case_eq (undef e1); case_eq (undef e2); intros.
-     {  rewrite H in H0; rewrite H1 in H0. simpl in H0. inversion H0. simpl; split.
-        - eapply IHe1; eauto.
-        - eapply IHe2; eauto. }
-     { rewrite H in H0; rewrite H1 in H0; simpl in H0; inversion H0; simpl. eapply IHe1; eauto. rewrite <- H0; eauto. }
-     { rewrite H in H0; rewrite H1 in H0; simpl in H0; inversion H0; simpl. eapply IHe2; eauto. rewrite <- H0; eauto. }
-     { rewrite H in H0; rewrite H1 in H0; simpl in H0;  simpl. exfalso; discriminate H0. }
-    * destruct b.
-      { case_eq (undef e1); case_eq (undef e2); intros.
-        -  rewrite H in H0; rewrite H1 in H0. simpl in H0. inversion H0. simpl; split.
-           + eapply IHe1; eauto.
-           + eapply IHe2; eauto.
-        - rewrite H in H0; rewrite H1 in H0; simpl in H0; inversion H0; simpl. eapply IHe1; eauto. rewrite <- H0; eauto.
-        - rewrite H in H0; rewrite H1 in H0; simpl in H0; inversion H0; simpl. eapply IHe2; eauto. rewrite <- H0; eauto.
-        - rewrite H in H0; rewrite H1 in H0; simpl in H0;  simpl. exfalso; discriminate H0. }
-      { destruct b.
-        -  case_eq (undef e1); case_eq (undef e2); intros.
-           +  rewrite H in H0; rewrite H1 in H0. simpl in H0. inversion H0. simpl; split.
-              * eapply IHe1; eauto.
-              * eapply IHe2; eauto.
-           + rewrite H in H0; rewrite H1 in H0; simpl in H0; inversion H0; simpl. eapply IHe1; eauto. rewrite <- H0; eauto.
-           + rewrite H in H0; rewrite H1 in H0; simpl in H0; inversion H0; simpl. eapply IHe2; eauto. rewrite <- H0; eauto.
-            +rewrite H in H0; rewrite H1 in H0; simpl in H0;  simpl. exfalso; discriminate H0.
-        - destruct b.
-          +  case_eq (undef e1); case_eq (undef e2); intros.
-             *  rewrite H in H0; rewrite H1 in H0. simpl in H0. inversion H0. simpl; split.
-                { eapply IHe1; eauto. }
-                { eapply IHe2; eauto. }
-             * rewrite H in H0; rewrite H1 in H0; simpl in H0; inversion H0; simpl. eapply IHe1; eauto. rewrite <- H0; eauto.
-             *rewrite H in H0; rewrite H1 in H0; simpl in H0; inversion H0; simpl. eapply IHe2; eauto. rewrite <- H0; eauto.
-             * rewrite H in H0; rewrite H1 in H0; simpl in H0;  simpl. exfalso; discriminate H0.
-          + destruct b.
-            * case_eq (undef e1); case_eq (undef e2); intros.
-              {  rewrite H in H0; rewrite H1 in H0. simpl in H0. inversion H0.  unfold binop_eval in EQ2.  clear H0. unfold bvDiv in EQ2. simpl. split.
-                 - case_eq(bvZero x0).
-                   + intros.  rewrite H0 in EQ2.  exfalso; discriminate EQ2.
-                   + intros A.   unfold evalSexp. intros. clear H3. clear EQ2.  hnf in H0.  rewrite EQ1 in H0.  simpl in H0. simpl  in A.
-                     eapply  (not_zero_implies_uneq _ _  k) in H0;  eauto.
-                 - split.
-                   + eapply IHe1; eauto.
-                   + eapply IHe2; eauto.  }
-                 { rewrite H in H0; rewrite H1 in H0; simpl in H0. inversion H0. unfold binop_eval in EQ2. clear H0. unfold bvDiv in EQ2. simpl. split.
-                 - case_eq(bvZero x0).
-                   + intros.  rewrite H0 in EQ2.  exfalso; discriminate EQ2.
-                   + intros A.   unfold evalSexp. intros. clear H3. clear EQ2.  hnf in H0. rewrite EQ1 in H0.  simpl in H0. simpl  in A.
-                     eapply ( not_zero_implies_uneq _ _ k) in H0; eauto.
-                 -  eapply IHe1; eauto. }
-                 { rewrite H in H0; rewrite H1 in H0; simpl in H0. inversion H0. unfold binop_eval in EQ2. clear H0. unfold bvDiv in EQ2. simpl. split.
-                 - case_eq(bvZero x0).
-                   + intros.  rewrite H0 in EQ2.  exfalso; discriminate EQ2.
-                   + intros A.   unfold evalSexp. intros. clear H3. clear EQ2.  hnf in H0.  rewrite EQ1 in H0.  simpl in H0. simpl  in A.
-                     eapply  (not_zero_implies_uneq _ _ k) in H0; eauto.
-                 -  eapply IHe2; eauto. }
-                 { rewrite H in H0; rewrite H1 in H0; simpl in H0. inversion H0. unfold binop_eval in EQ2. clear H0. unfold bvDiv in EQ2. simpl.
-                   case_eq(bvZero x0).
-                   - intros.  rewrite H0 in EQ2.  exfalso; discriminate EQ2.
-                   - intros A.   unfold evalSexp. intros. clear H3. clear EQ2.  hnf in H0. rewrite EQ1 in H0.  simpl in H0. simpl  in A.
-                     eapply  (not_zero_implies_uneq _ _ k) in H0; eauto.    }
-                 * case_eq (undef e1); case_eq (undef e2); intros; simpl.
-                   { rewrite H in H0; rewrite H1 in H0; simpl in H0. inversion H0. simpl; split.
-                     - eapply IHe1; eauto.
-                     - eapply IHe2; eauto. }
-                   { rewrite H in H0; rewrite H1 in H0; simpl in H0. inversion H0. simpl.
-                     - eapply IHe1; eauto. rewrite <- H3. assumption. }
-                   { rewrite H in H0; rewrite H1 in H0; simpl in H0. inversion H0. simpl.
-                     - eapply IHe2; eauto. rewrite <- H3. assumption. }
-                   {  rewrite H in H0; rewrite H1 in H0; simpl in H0. inversion H0. }
-      }
-Qed.
+Definition combineEnv D (E1:onv val) E2 :=
+fun x => if [x ∈ D] then E1 x else E2 x.
 
 Lemma ssa_eval_agree s D s' (E:onv val) (E':onv val)
  : ssa s D
@@ -133,9 +21,11 @@ Proof.
   general induction H1; invt ssa; try invt F.step;try invt noFun; simpl.
   - reflexivity.
   - reflexivity.
--  inversion H2. exploit IHTerminates; [ | | reflexivity | reflexivity |]; eauto.
+-  inversion H2.
+   exploit IHTerminates; [ | | reflexivity | reflexivity |]; eauto.
    rewrite H18 in X; simpl in *. cset_tac; intuition.  hnf. hnf in X. intros.
-    unfold update in X. specialize (X x0).  assert (x0 ∈ D0 ++ {x; {}}) by (cset_tac; left; assumption).
+    unfold update in X. specialize (X x0).
+    assert (x0 ∈ D0 ++ {x; {}}) by (cset_tac; left; assumption).
     specialize (X H10). decide (x === x0).
     + rewrite  e0 in H14; exfalso; apply H14; assumption.
     + assumption.
@@ -144,40 +34,6 @@ Proof.
 - inversion H2; exploit IHTerminates; [| | reflexivity | reflexivity |]; eauto.
   rewrite H26 in X; simpl in *; assumption.
 - inversion H0.
-Qed.
-
-Lemma guardList_true_if_eval:
-forall F E el s vl,
-omap (exp_eval E) el = Some vl
--> undefLift el = Some s
--> models F E s.
-
-Proof.
-intros. general induction el.
-- simpl in *.  case_eq (undef a); intros.
-  + rewrite H1 in H0. simpl in H0.  case_eq (undefLift el); intros; simpl.
-    * rewrite H2 in H0. inversion H0. simpl. split.
-      { monad_inv H. eapply (guard_true_if_eval); eauto. }
-      { monad_inv H. eapply IHel; eauto. }
-    * rewrite H2 in H0. inversion H0. monad_inv H. eapply (guard_true_if_eval); eauto.
-  + rewrite H1 in H0; monad_inv H. eapply IHel; eauto.
-Qed.
-
-Lemma exp_eval_if_list_eval:
-  forall el E vl,
-    omap (exp_eval E) el = Some vl
-    -> forall e, List.In e el -> exists v, exp_eval E e = Some v.
-
-Proof.
-intros.
-general induction el.
-- simpl in H. exists (O::nil). intros. inversion H0.
-- unfold omap in H. monad_inv H. decide (e=a).
-  + exists x. intros. rewrite e0. assumption.
-   + specialize (IHel E x0 EQ1). specialize (IHel e).  simpl in H0.  destruct H0.
-     * exfalso. apply n. rewrite H; reflexivity.
-     * destruct (IHel H).  exists x1.
-       rewrite H0. reflexivity.
 Qed.
 
 Lemma models_if_eval :
@@ -279,9 +135,6 @@ general induction H1; simpl.
       }
  + inversion H0.
 Qed.
-
-Definition smtCheck (s:stmt) (t:stmt) :=
-smtAnd (translateStmt s source) (translateStmt t target).
 
 Lemma noFun_impl_term_crash :
 forall E  s, noFun s
@@ -583,29 +436,6 @@ intros. general induction H2.
   + exfalso; inv H4.
 Qed.
 
-Lemma smtand_comm:
-forall a b F E,
-models F E (smtAnd a b)
--> models F E (smtAnd b a).
-
-Proof.
-intros.
-hnf in H. simpl. destruct H as [A B]. eauto.
-Qed.
-
-Lemma smtand_neg_comm:
-forall a b F E,
-~ models F E (smtAnd a b)
--> ~ models F E (smtAnd b a).
-
-Proof.
-intros.
-hnf. intros. eapply smtand_comm in H0. eapply H. assumption.
-Qed.
-
-Definition combineEnv D (E1:onv val) E2 :=
-fun x => if [x ∈ D] then E1 x else E2 x.
-
 Lemma extend_not_models:
 forall s Q,
 (forall F E, ~ models F E s)
@@ -667,15 +497,15 @@ intros. general induction H0; eauto.
 Qed.
 
 Lemma crash_impl_sim:
-forall (E:onv val) s Es s' E t,
+forall (E:onv val) s Es s' t,
 Crash (nil, E, s) (nil, Es, s')
 -> @sim _ statetype_F _ statetype_F (nil, E, s) (nil, E, t).
 
 Proof.
-intros E s Es s' E' t crash.
+intros E s Es s'  t crash.
 general induction crash.
 - eapply simErr.
-  + instantiate (1:=(nil,E',s0)). assumption.
+  + instantiate (1:=(nil,E0,s0)). assumption.
   + econstructor.
   + hnf. intros. inversion H1.  inversion H0.  admit.
 - destruct sigma'. destruct p. inversion crash.
@@ -725,17 +555,30 @@ intros. general induction H1.
   + rewrite <- H4 in *; inversion H.
 Qed.
 
+
 Lemma predeval_uneq:
-forall  l e e',
-(forall (F:lab->vallst->bool), (~(~ ((F l (e::nil)) = ( F l (e'::nil)))))) -> (e = e').
+forall  E et es e e' P,
+evalSexp E et = e
+-> evalSexp E es = e'
+-> (forall F E, models F E P)
+-> (forall (F:lab->vallst->bool) E,
+      models F E P ->
+      ~ ((True -> F (LabI 0) (evalSexp E et :: nil) -> False) /\
+        True /\ F (LabI 0) (evalSexp E es :: nil)))
+-> (e = e').
 
 Proof.
-intros. hnf in H.
-decide (e = e').
+intros. decide (e = e').
 - assumption.
-- specialize (H (fun _ => fun x => toBool (bvEq e (hd (O::nil) x)))).
- exfalso. eapply H. hnf. intros. eapply n. eapply bvEq_equiv_eq. simpl in H0.
- rewrite <- H0. eapply bvEq_refl.
+- specialize (H1 (fun _ => fun x => toBool (bvEq e' (hd (O::nil) x))) E).
+  specialize (H2 (fun _ => fun x => toBool (bvEq e' (hd (O::nil) x))) E).
+  specialize (H2 H1).
+  rewrite H in H2.  rewrite H0 in H2. exfalso.
+  eapply H2. simpl.
+  pose proof (bvEq_equiv_eq e' e).
+  rewrite H3.
+  split; try split; eauto.
+  eapply bvEq_refl.
 Qed.
 
 Lemma exp_combineenv_eq:
@@ -750,6 +593,24 @@ Proof.
   decide (x ∈ D).
   - reflexivity.
   - exfalso. eapply n; assumption.
+Qed.
+
+  Lemma explist_combineenv_eq:
+forall el D Es Et rl,
+list_union (List.map Exp.freeVars el) ⊆ D
+-> evalList (combineEnv D Es Et) el = rl
+-> evalList Es el = rl.
+
+Proof.
+intros.  general induction el.
+- simpl. reflexivity.
+- simpl. simpl in H. hnf in H. unfold evalSexp.
+  rewrite (exp_combineenv_eq a D Es Et (exp_eval (combineEnv D Es Et) a)); eauto.
+  + f_equal. eapply IHel; eauto.
+    hnf. intros. eapply H. unfold list_union. simpl. eapply list_union_start_swap.
+    cset_tac. right; assumption.
+  + hnf. intros. eapply H. unfold list_union; simpl.
+    eapply list_union_start_swap. cset_tac. left; right; eauto.
 Qed.
 
 Lemma combineenv_eq_left:
@@ -814,8 +675,15 @@ intros.  general induction s; simpl; try reflexivity.
     pose proof (exp_combineenv_eq e D Es Et None H2 H0);
     pose proof (exp_combineenv_eq e0 D Es Et None H3 H1).
     rewrite H4; rewrite H5; reflexivity.
-- admit.
-- admit.
+- unfold evalSpred.
+  pose proof (explist_combineenv_eq a D Es Et (evalList (combineEnv D Es Et) a)).
+  rewrite H0; eauto. reflexivity.
+- unfold evalSexp.  simpl in H.
+  case_eq (exp_eval (combineEnv D Es Et) e); intros.
+  + pose proof (exp_combineenv_eq e D Es Et (Some v) H H0).
+    rewrite H1. reflexivity.
+  + pose proof (exp_combineenv_eq e D Es Et None H H0).
+    rewrite H1. reflexivity.
 Qed.
 
 Lemma exp_combineenv_eqr:
@@ -850,6 +718,15 @@ intros.  general induction s; try reflexivity; simpl.
 -  admit.
 Qed.
 
+Lemma terminates_impl_eval:
+forall E s E' e,
+Terminates (nil, E, s) (nil, E',stmtReturn  e)
+-> exists v, exp_eval E' e = Some v.
+
+Proof.
+admit.
+Qed.
+
 Lemma unsat_impl_sim:
 forall D D' Ds Ds' Dt Dt'  E s t,
 (forall F E, ~ models F E (smtCheck s t))
@@ -869,15 +746,15 @@ pose proof  (noFun_impl_term_crash E s H5).
 pose proof  (noFun_impl_term_crash E t H6).
 destruct H7 as [ Es  [s' [ sterm| scrash ]]]. destruct H8 as [Et [t' [ tterm | tcrash ]]].
 (* s terminiert & t terminiert *)
-- pose proof (extend_not_models _ (constr (Con (O::nil)) (Con (O::nil))) H) .
+- pose proof (extend_not_models _ smtTrue H).
   pose proof (unsat_extension D E Es s s' source _ _ H7 ).
   specialize (H8 H2 H5 sterm).
   destruct H8 as [Q [M [ fvQ modS]]].
-  assert (smodS: forall F, forall E0:onv val, models F E0 (smtAnd (constr (Con (O :: nil)) (Con (O :: nil))) Q) ->
+  assert (smodS: forall F, forall E0:onv val, models F E0 (smtAnd smtTrue Q) ->
        ~  models F E0 (smtAnd (translateStmt t target) (translateStmt s' source) )).
   + intros. eapply (smtand_neg_comm).  apply (modS F E0 H8).
   + clear modS. clear H7.
-    pose proof (unsat_extension D' E Et t t' target _ (smtAnd (constr (Con (O::nil)) (Con (O::nil))) Q) smodS)
+    pose proof (unsat_extension D' E Et t t' target _ (smtAnd smtTrue Q) smodS)
       as modTS.
     clear smodS. clear H.
     specialize (modTS H3 H6 tterm).
@@ -885,30 +762,33 @@ destruct H7 as [ Es  [s' [ sterm| scrash ]]]. destruct H8 as [Et [t' [ tterm | t
     exploit (star2_nofun  E s Es s' H5 sterm).
     exploit (star2_nofun E t Et t' H6 tterm).
     destruct X as [ sstep X]; destruct X0 as [ tstep  X0].
-    destruct X as [ [es sRet] | [fs [Xs sFun]]]; destruct X0 as [ [et tRet] | [ft [Xt tFun]]].
+    destruct X as [ [es sRet] | [fs [Xs sFun]]];
+    destruct X0 as [ [et tRet] | [ft [Xt tFun]]].
     * subst. eapply simTerm.
-      instantiate (1:=(nil, Et, stmtReturn et)). instantiate (1:= (nil, Es, stmtReturn es)).
-      { simpl. pose proof predeval_uneq. simpl in modTS.
-        case_eq (undef es); case_eq(undef et); intros; simpl in *.
-        - rewrite H7 in modTS; rewrite H8 in modTS. simpl in modTS.
-          specialize (H (LabI 0)).
-          assert (exists evs, exp_eval Es es = Some evs) by admit.
-          assert (exists evt, exp_eval Et et = Some evt) by admit.
-          destruct H9; destruct H10.
-          rewrite H9; rewrite H10; specialize (H x x0).
-          f_equal. apply H.
-          intros. specialize (modTS F (combineEnv Ds' Es Et)).
-          assert ((True /\ models F (combineEnv Ds' Es Et) Q) /\ models F (combineEnv Ds' Es Et) Q') by admit.
-          specialize (modTS H11).
-          assert (models F (combineEnv Ds' Es Et) s0 = True) by admit.
-          assert (models F (combineEnv Ds' Es Et) s1 = True) by admit.
-          rewrite H12 in modTS; rewrite H13 in modTS. hnf. intros. eapply modTS.
-          assert (evalSexp (combineEnv Ds' Es Et) et =  x0) by admit.
-          assert (evalSexp (combineEnv Ds' Es Et) es =  x) by admit.
-          rewrite H15. rewrite H16. unfold evalSpred.
-          case_eq ( F (LabI 0) (x0 :: nil)); case_eq (F (LabI 0) (x::nil)); intros.
-          + rewrite H17.  hnf in H14. rewrite  H18 in H14.
-
+      instantiate (1:=(nil, Et, stmtReturn et)).
+      instantiate (1:= (nil, Es, stmtReturn es)).
+      { simpl.
+        assert (exists evs, exp_eval Es es = Some evs)
+          by (eapply terminates_impl_eval; eauto).
+        assert (exists evt, exp_eval Et et = Some evt)
+          by (eapply terminates_impl_eval; eauto).
+        destruct H as [evs evalEs].
+        destruct H7 as [evt evalEt].
+        rewrite evalEs, evalEt in *.
+        f_equal.
+        pose (P := smtAnd (smtAnd smtTrue Q) Q').
+        pose proof (predeval_uneq (combineEnv Ds' Es Et) et es evt evs P).
+        symmetry. eapply H.
+        - admit.
+        - admit.
+        - intros. unfold P. admit.
+        - intros.specialize (modTS F E0 H7). simpl in modTS.
+          case_eq (undef es); case_eq (undef et); intros.
+          + rewrite H8 in modTS; rewrite H9 in modTS. simpl in modTS.
+            admit.
+          + admit.
+          + admit.
+          + admit.
       }
       { assumption. }
       { assumption. }

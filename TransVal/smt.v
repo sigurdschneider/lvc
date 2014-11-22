@@ -168,8 +168,25 @@ match s with
 |smtTrue => True
 end.
 
-Axiom smt_decidable :
-forall s ,(forall F E, ~  models F E s ) \/ (exists F E,models  F E  s).
+Lemma smtand_comm:
+forall a b F E,
+models F E (smtAnd a b)
+-> models F E (smtAnd b a).
+
+Proof.
+intros.
+hnf in H. simpl. destruct H as [A B]. eauto.
+Qed.
+
+Lemma smtand_neg_comm:
+forall a b F E,
+~ models F E (smtAnd a b)
+-> ~ models F E (smtAnd b a).
+
+Proof.
+intros.
+hnf. intros. eapply smtand_comm in H0. eapply H. assumption.
+Qed.
 
   (*
   *** Local Variables: ***

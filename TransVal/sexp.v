@@ -1,5 +1,5 @@
 Require Import List NPeano Decidable.
-Require Import IL Val bitvec.
+Require Import IL Val bitvec TUtil.
 
 Set Implicit Arguments.
 
@@ -26,8 +26,8 @@ Inductive sexp :=
 |svar: var -> sexp.
 
 (**
-evalSexp evaluates an SMT expression given an environment that must! be total on 
-every variable that may occur in a formula. 
+evalSexp evaluates an SMT expression given an environment that must! be total on
+every variable that may occur in a formula.
 **)
 
 Definition evalSexp E s : bitvec :=
@@ -35,29 +35,52 @@ match exp_eval E s with
 |Some v => v
 |None => default_val
 end.
-(*
-match s with
-|splus a b 
-  => bvAdd ( evalSexp E a) (evalSexp E b) 
-|ssub a b
-  => bvSub  (evalSexp E a) (evalSexp E b)
-|smult a b 
-  => bvMult (evalSexp E a) ( evalSexp E b)
-|sdiv a b  
-  => (fun a b => match bvDiv a b with
-                   | Some v =>  v
-                   | None =>  (zext k (O::nil))
-                 end) ( evalSexp E a) ( evalSexp E b)
-|seq a b
-     => bvEq  (evalSexp E a) ( evalSexp E b)
-| sneg v
- => neg ( evalSexp E v)
-| sconst c
-  => c
-| svar v
-  => E v
-end.
-*)
+
+(** Lemmas **)
+
+Lemma zext_nil_eq_O:
+forall k, zext k nil = zext k (O::nil).
+
+Proof.
+induction k.
+- simpl. reflexivity.
+- simpl. reflexivity.
+Qed.
+
+Lemma not_zero_implies_uneq:
+forall a b k,
+bvZero a = false
+->b = zext k (O::nil)
+->  ~ val2bool(bvEq a b).
+
+Proof.
+intros. general induction a.
+-  destruct a.
+   + specialize (IHa (tl (zext k (O::nil))) (k-1)).   simpl in H. specialize (IHa H).
+     hnf.  intros. eapply IHa.
+     * destruct k; eauto.
+       simpl. rewrite zext_nil_eq_O.   erewrite minus_n_0. reflexivity.
+     * destruct k; eauto. simpl in H0.  exfalso. assumption.
+   +  hnf. intros. simpl in H0. destruct k;  assumption.
+Qed.
+
+Lemma exp_eval_if_list_eval:
+  forall el E vl,
+    omap (exp_eval E) el = Some vl
+    -> forall e, List.In e el -> exists v, exp_eval E e = Some v.
+
+Proof.
+intros.
+general induction el.
+- simpl in H. exists (O::nil). intros. inversion H0.
+- unfold omap in H. monad_inv H. decide (e=a).
+  + exists x. intros. rewrite e0. assumption.
+   + specialize (IHel E x0 EQ1). specialize (IHel e).
+     simpl in H0.  destruct H0.
+     * exfalso. apply n. rewrite H; reflexivity.
+     * destruct (IHel H).  exists x1.
+       rewrite H0. reflexivity.
+Qed.
 
 (* Not needed stuff begins here *)
 (*
@@ -84,10 +107,10 @@ general induction n.
 - reflexivity.
 - simpl. destruct n.
   + unfold min. omega.
-  +  unfold min. simpl. 
+  +  unfold min. simpl.
 Qed.
 
-(** Define a min function for the recursion of the natToBitvec function. 
+(** Define a min function for the recursion of the natToBitvec function.
 It must be computed with min = a-(a-b)  **)
 Definition min a b :=
 a-(a-b).
@@ -105,7 +128,7 @@ end.
 Fixpoint natToBitvec (n:nat) :=
   match n with
     |0 => nil
-    |S n' => let b' := natToBitvec (min n' (div2 n))  
+    |S n' => let b' := natToBitvec (min n' (div2 n))
              in
               match n mod 2 with
                   | 0 => O::b'
@@ -120,7 +143,7 @@ forall n:nat, exists b:bitvec, natToBitvec n = b.
 Proof.
 intros. destruct n.
 - exists (nil). reflexivity.
-- simpl. destruct n. 
+- simpl. destruct n.
   + destruct (snd (divmod 0 1 0 0)).
     * simpl. exists (I::nil). reflexivity.
     * simpl. exists (O::nil). reflexivity.
@@ -131,10 +154,10 @@ Qed.
 
 Lemma bijective_numbers:
 forall (n:nat) (b:bitvec),
-natToBitvec n = b 
+natToBitvec n = b
 <-> bitvecToNat b = n.
 
-Definition bvGeq (a:bitvec) (b:bitvec) :bool := 
+Definition bvGeq (a:bitvec) (b:bitvec) :bool :=
 let l := bitvecToNat a in
 let r := bitvecToNat b in
 nGeqBool l r.
@@ -143,10 +166,10 @@ Lemma bitvec_greaterequal_zero a b:
 b = nil \/ b = O::nil -> bvGeq a b = true.
 
 Proof.
-intros. assert (X:exists n1, bitvecToNat a = n1) by (exact (exists_number_bitvec a)). destruct X. 
+intros. assert (X:exists n1, bitvecToNat a = n1) by (exact (exists_number_bitvec a)). destruct X.
 destruct H.
 - unfold bvGeq. rewrite H. rewrite H0. simpl. rewrite number_greaterequal_zero. reflexivity.
-- unfold bvGeq. rewrite H. rewrite H0. simpl. rewrite number_greaterequal_zero. reflexivity. 
+- unfold bvGeq. rewrite H. rewrite H0. simpl. rewrite number_greaterequal_zero. reflexivity.
 Qed.
 
 Proof.
@@ -206,11 +229,11 @@ Lemma bit_bvAdd_rO:
 forall (v:bit) (b:bitvec), bvAdd nil (v::b) O = v:: bvAdd nil b O.
 
 Proof.
-intros. simpl. unfold bitAnd. unfold bitXor. destruct v. 
-- destruct b. 
+intros. simpl. unfold bitAnd. unfold bitXor. destruct v.
+- destruct b.
   + reflexivity.
   + destruct b; reflexivity.
-- destruct b. 
+- destruct b.
   + reflexivity.
   + destruct b; reflexivity.
 Qed.
@@ -219,8 +242,8 @@ Lemma bit_bvAdd_rI:
 forall (v:bit) (b:bitvec), bvAdd nil (v::b) I = (bitXor v I)::bvAdd nil b v.
 
 Proof.
-intros. simpl. unfold bitAnd. unfold bitXor. destruct v. 
-- destruct b. 
+intros. simpl. unfold bitAnd. unfold bitXor. destruct v.
+- destruct b.
   + reflexivity.
   + destruct b; reflexivity.
 - destruct b.
@@ -228,7 +251,7 @@ intros. simpl. unfold bitAnd. unfold bitXor. destruct v.
   + destruct b; reflexivity.
 Qed.
 
-Lemma bit_to_nat: 
+Lemma bit_to_nat:
 forall (c:bit) (b:bitvec), bitvecToNat (c::b) = bitToNat c +  2 *bitvecToNat(b).
 
 Proof.
@@ -236,7 +259,7 @@ intros. reflexivity.
 Qed.
 
 Definition bvAdd b1 b2 :=
-natToBitvec ((bitvecToNat b1) + (bitvecToNat b2)). 
+natToBitvec ((bitvecToNat b1) + (bitvecToNat b2)).
 
 Lemma agree_on_add b1 b2 n1 n2:
 bitvecToNat b1 = n1
@@ -261,14 +284,14 @@ Qed.
 
 Lemma agree_on_add b1 b2 n1 n2 c v:
 bitToNat c = v
--> bitvecToNat b1 = n1 
--> bitvecToNat b2 = n2 
+-> bitvecToNat b1 = n1
+-> bitvecToNat b2 = n2
 -> bitvecToNat (bvAdd b1 b2 c) = v + (n1 + n2).
 
 Proof.
 general induction b1.
 - destruct b2.
-  + destruct c. 
+  + destruct c.
     * reflexivity.
     * reflexivity.
   + destruct b,c.
@@ -279,10 +302,10 @@ general induction b1.
       destruct A. rewrite H in *.  rewrite (incr_eq_plus_one b2 H) in *. omega.
 - general induction b2.
   + destruct a,c.
-    * rewrite (bit_bvAdd_lO O b1). rewrite (bit_to_nat O (bvAdd b1 nil O)). 
+    * rewrite (bit_bvAdd_lO O b1). rewrite (bit_to_nat O (bvAdd b1 nil O)).
       assert( A: exists n1,bitvecToNat b1 = n1) by (exact (exists_number_bitvec b1)).
       { destruct A. rewrite (IHb1 nil x 0 O 0); eauto.
-        - simpl. rewrite H. omega. 
+        - simpl. rewrite H. omega.
       }
     * rewrite (bit_bvAdd_lI O b1). rewrite (bit_to_nat (bitXor O I) (bvAdd b1 nil O)).
       assert(A: exists n1, bitvecToNat b1 = n1) by (exact (exists_number_bitvec b1)).
@@ -322,8 +345,8 @@ intros. destruct b.
 - destruct H. exfalso. apply H. reflexivity.
 - destruct b0.
   + destruct b.
-    * destruct H. exfalso. apply H0. reflexivity. 
-    * reflexivity. 
+    * destruct H. exfalso. apply H0. reflexivity.
+    * reflexivity.
   + simpl. destruct b; reflexivity.
 Qed.
 
@@ -335,25 +358,25 @@ bitvecToNat b1 = n1
 Proof.
 intros. general induction b1.
 - reflexivity.
-- simpl.  destruct a. 
-  + simpl. unfold bvMult. 
+- simpl.  destruct a.
+  + simpl. unfold bvMult.
   +  destruct b2.
   + simpl. unfold bvMult. destruct b1.
     * destruct a.
       { reflexivity. }
       { reflexivity. }
-    * assert (H: (a::b::b1) <> nil /\ (a::b::b1) <> O::nil) by (split; hnf; intros; discriminate). 
+    * assert (H: (a::b::b1) <> nil /\ (a::b::b1) <> O::nil) by (split; hnf; intros; discriminate).
       { rewrite (is_not_zero H). simpl. omega. }
   + simpl. destruct a, b1, b, b2.
     * reflexivity.
     * reflexivity.
     * reflexivity.
     * reflexivity.
-    * simpl. omega. 
+    * simpl. omega.
     * assert (H: (O::b0::b1) <> nil /\ (O::b0::b1) <> O::nil) by (split; hnf; intros; discriminate).
-       { unfold bvMult. rewrite (is_not_zero H). 
+       { unfold bvMult. rewrite (is_not_zero H).
          assert (H1: (O::b::b2) <> nil /\ (O::b::b2) <> O::nil) by (split; hnf; intros; discriminate).
-         rewrite (is_not_zero H1). 
+         rewrite (is_not_zero H1).
 
 Lemma nbvSub_decrease b c :
 bitvecToNat (nbvSub b c) = bitvecToNat b - bitToNat c.
@@ -366,11 +389,11 @@ general induction b.
     { rewrite bit_to_nat. simpl. omega.}
     { rewrite bit_to_nat. simpl. omega.}
   + simpl. destruct b.
-    {  destruct a. 
+    {  destruct a.
        - rewrite bit_to_nat. simpl. destruct a.
     { simpl. rewrite (IHb I) in *. simpl.
       assert (X: exists n1, bitvecToNat b = n1) by (exact (exists_number_bitvec b)).
-      destruct X. rewrite H. 
+      destruct X. rewrite H.
 
 Lemma sub_nil_c :
 forall (b1:bitvec) (c:bit),bitvecToNat (bvSub b1 nil c) =  (bitvecToNat b1) - (bitToNat c).
@@ -378,11 +401,11 @@ forall (b1:bitvec) (c:bit),bitvecToNat (bvSub b1 nil c) =  (bitvecToNat b1) - (b
 Proof.
 intros. general induction b1.
 - reflexivity.
-- simpl. rewrite bitvec_greaterequal_zero. 
+- simpl. rewrite bitvec_greaterequal_zero.
   + destruct c.
     * destruct a; rewrite bit_to_nat; simpl; omega.
     * destruct a; rewrite bit_to_nat.
-      { simpl.  
+      { simpl.
 
 Lemma agree_on_sub b1 b2 n1 n2 c v :
 bitToNat c = v
@@ -409,8 +432,8 @@ intros. general induction b1.
         - rewrite bit_to_nat. destruct b1.
           + admit.
           + simpl.
-    
-  
+
+
   + admit.
 *)
 
