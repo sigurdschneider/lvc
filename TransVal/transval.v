@@ -560,25 +560,31 @@ Lemma predeval_uneq:
 forall  E et es e e' P,
 evalSexp E et = e
 -> evalSexp E es = e'
--> (forall F E, models F E P)
--> (forall (F:lab->vallst->bool) E,
+-> (forall F, models F E P)
+-> (forall (F:lab->vallst->bool),
       models F E P ->
-      ~ ((True -> F (LabI 0) (evalSexp E et :: nil) -> False) /\
-        True /\ F (LabI 0) (evalSexp E es :: nil)))
+      ~ ((models F E (guardGen (undef et) target (smtNeg (smtReturn et))) /\
+    models F E (guardGen (undef es) source (smtReturn es)))))
 -> (e = e').
 
 Proof.
 intros. decide (e = e').
 - assumption.
-- specialize (H1 (fun _ => fun x => toBool (bvEq e' (hd (O::nil) x))) E).
-  specialize (H2 (fun _ => fun x => toBool (bvEq e' (hd (O::nil) x))) E).
+- specialize (H1 (fun _ => fun x => toBool (bvEq e' (hd (O::nil) x)))).
+  specialize (H2 (fun _ => fun x => toBool (bvEq e' (hd (O::nil) x)))).
   specialize (H2 H1).
-  rewrite H in H2.  rewrite H0 in H2. exfalso.
-  eapply H2. simpl.
-  pose proof (bvEq_equiv_eq e' e).
-  rewrite H3.
-  split; try split; eauto.
-  eapply bvEq_refl.
+  case_eq (undef es); case_eq (undef et); intros.
+  + rewrite H3 in H2. rewrite H4 in H2. simpl in H2.
+    rewrite H in H2.  rewrite H0 in H2. exfalso.
+    eapply H2.
+    pose proof (bvEq_equiv_eq e' e).
+    rewrite H5.
+    split; try split; eauto.
+    * admit.
+    * unfold evalSpred. simpl. eapply bvEq_refl.
+  + admit.
+  + admit.
+  + admit.
 Qed.
 
 Lemma exp_combineenv_eq:
@@ -781,20 +787,30 @@ destruct H7 as [ Es  [s' [ sterm| scrash ]]]. destruct H8 as [Et [t' [ tterm | t
         symmetry. eapply H.
         - admit.
         - admit.
-        - intros. unfold P. admit.
-        - intros.specialize (modTS F E0 H7). simpl in modTS.
-          case_eq (undef es); case_eq (undef et); intros.
-          + rewrite H8 in modTS; rewrite H9 in modTS. simpl in modTS.
-            admit.
-          + admit.
-          + admit.
-          + admit.
-      }
+        - intros. unfold P. specialize (M F). specialize (modQ' F).
+          simpl. split; try split; eauto.
+          + rewrite H0 in fvQ. simpl in fvQ.
+            erewrite <- combineenv_eq_left; eauto.
+          + rewrite H1 in fvQ'. simpl in fvQ'.
+            erewrite <- combineenv_eq_right; eauto.
+            cut (agree_on eq (Ds' ∩ Dt') Es Et).
+            * intros. hnf in H7. hnf. intros. cset_tac. eapply H7. split; eauto.
+            * rewrite H4.
+              assert (agree_on eq (Ds ∩ Dt) E Es).
+              { eapply (agree_on_incl (lv:=Ds)); cset_tac; eauto.
+                change (agree_on eq (fst (Ds, Ds')) E Es). rewrite <-H0.
+                eapply ssa_eval_agree; eauto. }
+              { rewrite <- H7. eapply (agree_on_incl (lv:=Dt)); cset_tac; eauto.
+                change (agree_on eq (fst (Dt,Dt')) E Et). rewrite <- H1.
+                eapply ssa_eval_agree; eauto. }
+        - intros. specialize (modTS F (combineEnv Ds' Es Et) H7);
+          eauto. }
       { assumption. }
       { assumption. }
-      { unfold normal2.  unfold reducible2. hnf.  intros.  destruct H as [evt [σ step]].  inversion step.
-      }
-      { unfold normal2.  unfold reducible2. hnf.  intros. destruct H as [evt [σ step]]. inversion step. }
+      { unfold normal2.  unfold reducible2. hnf.  intros.
+        destruct H as [evt [σ step]].  inversion step. }
+      { unfold normal2.  unfold reducible2. hnf.  intros.
+        destruct H as [evt [σ step]]. inversion step. }
     *  subst. simpl in modTS. exfalso.
        pose (F:= (fun (l:lab) => if (beq_nat (labN l) (labN (labInc ft 1)))
                                    then (fun (x:vallst) =>  false)
