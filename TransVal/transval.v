@@ -469,6 +469,16 @@ general induction H; eauto.
      * right; exists f, Y; rewrite stmtGo; reflexivity.
 Qed.
 
+Lemma noFun_nil s E σ a:
+  noFun s
+  -> star2 F.step (nil,E,s) a σ
+  -> a = nil.
+
+Proof.
+  intros; general induction H0; invt noFun; eauto; isabsurd;
+  inv H; simpl; exploit IHstar2; try reflexivity; eauto.
+Qed.
+
 Lemma star2_nofun:
 forall E s Es s',
 noFun s
@@ -477,37 +487,33 @@ noFun s
    ((exists e, s' = stmtReturn e) \/ (exists f X, s' = stmtGoto f X)).
 
 Proof.
-intros. general induction H0; eauto.
-- split.
-  + econstructor.
-  + left. exists e. reflexivity.
-- split.
-  + econstructor.
-  + right; exists f; exists x; reflexivity.
-- inversion H2.
-  + rewrite <- H4 in *.  inversion H2.
-    exploit IHTerminates; try reflexivity.  instantiate (1:=s); eauto. instantiate (1:= E').
-    inversion H; eauto.
-    destruct X; split.
-    * admit. (*eapply S_star2.*)
-    * admit.
-  + admit.
-  + admit.
-  + admit.
+  intros.
+  exploit terminates_impl_star2; eauto.
+  dcr; exploit noFun_nil; eauto. subst. split; eauto.
 Qed.
 
-Lemma crash_impl_sim:
-forall (E:onv val) s Es s' t,
-Crash (nil, E, s) (nil, Es, s')
--> @sim _ statetype_F _ statetype_F (nil, E, s) (nil, E, t).
+Lemma crash_impl_err:
+  forall (E:onv val) s Es s',
+    Crash (nil, E, s) (nil, Es, s')
+    -> (exists a, star2 F.step (nil,E,s) a (nil, Es, s'))
+       /\ normal2 step (nil, Es, s') /\ result (nil, Es, s') = None.
 
 Proof.
-intros E s Es s'  t crash.
+intros E s Es s' crash.
 general induction crash.
-- eapply simErr.
+- eapply simErr. instantiate (1:=(nil, E0,s0)).
+  + eauto.
+  + econstructor.
+  + hnf. intros. unfold reducible2 in H1.
+    destruct H1. destruct H1. destruct x0.
+    destruct p. inversion H1.
+    * rewrite <- H5 in *. simpl in *.
   + instantiate (1:=(nil,E0,s0)). assumption.
   + econstructor.
-  + hnf. intros. inversion H1.  inversion H0.  admit.
+  + hnf. intros. no_step. inversion H1.  inversion H0.
+    inversion H1. destruct H3. destruct x1. destruct p.
+
+    * rewrite H3 in H4.
 - destruct sigma'. destruct p. inversion crash.
   + admit.
   + admit.
@@ -811,7 +817,7 @@ destruct H7 as [ Es  [s' [ sterm| scrash ]]]. destruct H8 as [Et [t' [ tterm | t
         destruct H as [evt [σ step]].  inversion step. }
       { unfold normal2.  unfold reducible2. hnf.  intros.
         destruct H as [evt [σ step]]. inversion step. }
-    *  subst. simpl in modTS. exfalso.
+    * subst. simpl in modTS. exfalso.
        pose (F:= (fun (l:lab) => if (beq_nat (labN l) (labN (labInc ft 1)))
                                    then (fun (x:vallst) =>  false)
                                    else (fun (x:vallst) => true))).
@@ -838,25 +844,25 @@ destruct H7 as [ Es  [s' [ sterm| scrash ]]]. destruct H8 as [Et [t' [ tterm | t
              specialize (H2 x); specialize (H3 x). simpl in H2; simpl in H3.
              rewrite H4 in H7. cset_tac.
              rewrite <- H2; eauto.
-           + rewrite <- (H H7); eauto.
-       }
+           + rewrite <- (H H7); eauto. }
        { case_eq (undef es); case_eq (undefLift Xt); intros; simpl.
          - (* assert that guards are true *)
            assert (models F E' s1).
-           + eapply (guardTrue_if_Terminates_ret _ s); eauto.
-             instantiate (1:= E).
-             (* Lemma dass wenn freeVars Q ⊆ D \ (Ds ∩ Dt) --> Es sonst Et *)
-             (* analoges rewrite Lemma *)
-             admit.
+           + unfold E'. rewrite <- combineenv_eq_left.
+             * eapply (guardTrue_if_Terminates_ret _ s); eauto.
+             *  hnf; intros. eapply (freeVars_undef a es s1 H7) in H8.
+                admit.
            + split.
              *  intros. unfold evalSpred in H10.  unfold F in H10.
                 rewrite <- (beq_nat_refl (labN (labInc ft 1))) in H10.
                 hnf in H10. assumption.
-             * split; eauto. unfold evalSpred. unfold F. simpl; destruct ft; simpl; econstructor.
+             * split; eauto. unfold evalSpred. unfold F.
+               simpl; destruct ft; simpl; econstructor.
          - assert (models F E' s0).
-           +  eapply (guardTrue_if_Terminates_ret _ s); eauto.
-             instantiate (1:= E).
-             (* analoges rewrite Lemma *)             admit.
+           + unfold E'. rewrite <- combineenv_eq_left.
+             * eapply (guardTrue_if_Terminates_ret _ s); eauto.
+             * hnf; intros. eapply (freeVars_undef a es s0 H7) in H8.
+               admit.
            + split; try split; eauto; intros.
              * unfold evalSpred in H9; unfold F in H9.
                rewrite <- (beq_nat_refl (labN(labInc ft 1))) in H9. hnf in H9.
@@ -882,14 +888,49 @@ destruct H7 as [ Es  [s' [ sterm| scrash ]]]. destruct H8 as [Et [t' [ tterm | t
        eapply modTS.
        { split; try split; eauto.
          - specialize (M F).
-           unfold E'.   rewrite <- (combineenv_eq_subset); eauto.
+           unfold E'.   rewrite <- (combineenv_eq_left); eauto.
            rewrite H0 in fvQ. simpl in fvQ. assumption.
          - specialize (modQ' F).
-           unfold E'. admit.
-       }
-       { (* destructen und analog *) admit. }
+           unfold E'.
+           unfold E'.  pose proof (combineenv_eq_right F Q' Ds'  Es Et).
+           assert (agree_on eq (freeVars Q' ∩ Ds') Es Et).
+           + hnf. intros. cset_tac. hnf in fvQ'. rewrite H1 in fvQ'.
+             specialize (fvQ' x); simpl in fvQ'.
+             assert (x ∈ Ds' ∩ Dt') by (cset_tac; eauto).
+             eapply (ssa_eval_agree) in H2; eauto.
+             eapply (ssa_eval_agree) in H3; eauto.
+             hnf in H2. hnf in H3. rewrite H0 in H2. rewrite H1 in H3.
+             specialize (H2 x); specialize (H3 x). simpl in H2; simpl in H3.
+             rewrite H4 in H7. cset_tac.
+             rewrite <- H2; eauto.
+           + rewrite <- (H H7); eauto. }
+       { case_eq (undef et); case_eq (undefLift Xs); intros; simpl.
+         - (* assert that guards are true *)
+           assert (models F E' s0).
+           + unfold E'. rewrite <- combineenv_eq_left.
+             * eapply (guardTrue_if_Terminates_goto _ s); eauto.
+             * admit.
+           + split.
+             *  intros. unfold evalSpred in H10.  unfold F in H10.
+                exfalso; assumption.
+             * split; eauto. unfold evalSpred. unfold F.
+               simpl; destruct fs; simpl; econstructor.
+         - assert (models F E' s0).
+           + unfold E'. rewrite <- combineenv_eq_right.
+             *  eapply (guardTrue_if_Terminates_ret _ t); eauto.
+             * admit.
+           + split; try split; eauto; intros.
+             * unfold F; destruct fs; unfold labInc; simpl; eauto.
+         - split; try split; eauto; intros.
+           + unfold E'.  rewrite <- combineenv_eq_left.
+             * eapply (guardTrue_if_Terminates_goto _ s); eauto.
+             * admit.
+           + unfold F; destruct fs; unfold labInc; simpl; eauto.
+         - unfold evalSpred; unfold F; simpl; destruct fs;
+           simpl; econstructor; eauto. }
     * subst. simpl in modTS.  decide (fs = ft).
-      { eapply simTerm; eauto.
+      { admit. (* eapply simTerm.
+        instantiate (1:=(nil, Es, stmtGoto fs XS)).
         - instantiate (1:= (nil, Es, stmtGoto fs Xs)). admit.
         - admit.
         - unfold normal2. unfold reducible2. hnf; intros. destruct H as [evt [σ step]]. destruct σ. destruct p.
@@ -907,9 +948,11 @@ destruct H7 as [ Es  [s' [ sterm| scrash ]]]. destruct H8 as [Et [t' [ tterm | t
        - split; try split; eauto.
          + admit.
          + admit.
-       - (* destructen, dann wieder analog *) admit. }
+       - (* destructen, dann wieder analog *) admit.  *) }
+      { admit. }
 (* s terminiert & t crasht *)
--  admit.
+-  (* Widerspruch konstruieren aus guard = False und ~ models *)
+ admit.
 (* s crasht --> sim zu allem! *)
 - eapply crash_impl_sim; eauto.
 Qed.
