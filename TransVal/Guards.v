@@ -14,9 +14,7 @@ Proof.
 intros. general induction e; simpl.
 - simpl in *. monad_inv H. destruct u.
   + apply (IHe F E s x); eauto.
-  + destruct u.
-    *  apply (IHe F E s x); eauto.
-    * exfalso; discriminate H0.
+  +  apply (IHe F E s x); eauto.
 - simpl in H.  monad_inv H.  simpl in H0. destruct b.
   +  case_eq (undef e1); case_eq (undef e2); intros.
      *  rewrite H in H0; rewrite H1 in H0. simpl in H0.
@@ -148,6 +146,31 @@ intros. general induction el.
       eapply (guard_true_if_eval); eauto.
   + rewrite H1 in H0; monad_inv H. eapply IHel; eauto.
 Qed.
+
+Lemma noguard_impl_eval:
+forall E e,
+(forall x, x ∈ Exp.freeVars e -> exists v,  E x = Some v)
+-> undef e = None
+-> exists v, exp_eval E e = Some v.
+
+Proof.
+  intros. general induction e.
+  - exists v. unfold exp_eval. reflexivity.
+   - destruct (H v); simpl; cset_tac; eauto.
+   - simpl in H. specialize (IHe E H). simpl in H0.
+     destruct IHe; eauto.
+     simpl. rewrite H1. simpl. destruct u; simpl.
+     + case_eq (val2bool x); intros.
+       * exists val_true; unfold option_lift1; simpl.
+                rewrite H2; eauto.
+       * exists val_false; unfold option_lift1; simpl.
+                rewrite H2; eauto.
+      + exists (neg x); unfold option_lift1.
+               destruct u; eauto.
+
+
+
+
 
 (*
 *** Local Variables: ***

@@ -49,11 +49,7 @@ match e with
         | _ => combine (undef a) (undef b)
     end
 |UnOp n a
- => match n with
-        | 0 => undef a
-        | 1 => undef a
-        | _ => None
-    end
+ => undef a
 |Con v
  => None
 |Var v
