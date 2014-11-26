@@ -36,7 +36,7 @@ Proof.
 - inversion H0.
 Qed.
 
-Lemma models_if_eval :
+Lemma terminates_impl_models :
 forall s D E s' E',
 ssa  s D
 -> noFun s
@@ -127,7 +127,7 @@ general induction H1; simpl.
       { simpl; split; eauto.
         - eapply (guard_true_if_eval  (fun (_:pred) (_:vallst) => true) E'0 e _ v); eauto.
           + assert (Exp.freeVars e ⊆ fst (getAnn (ann2 (D0, D') ans ant)))
-                   by (hnf; intros; hnf in H7; specialize (H7 a); hnf; cset_tac; simpl;  exact (H7 H5)).
+              by (hnf; intros; hnf in H7; specialize (H7 a); hnf; cset_tac; simpl;  exact (H7 H5)).
             assert (agree_on eq (fst (getAnn (ann2 (D0, D') ans ant))) E' E'0)
               by ( eapply (ssa_eval_agree (stmtIf e b1 s') _ s'0); eauto; econstructor; eauto).
             eapply (exp_eval_agree (E:=E') (E':=E'0)); eauto.
@@ -135,6 +135,52 @@ general induction H1; simpl.
       }
  + inversion H0.
 Qed.
+
+Lemma not_exp_eval:
+        forall E x e s v,
+          normal2 F.step (nil, E, stmtExp x e s)
+          -> undef e = Some v
+          -> ~  (forall F, models F E v).
+
+Proof.
+  intros. unfold normal2 in H. unfold reducible2 in H. hnf. intros.
+  eapply H. admit.
+Qed.
+
+Lemma crash_impl_models:
+  forall D s E Es s',
+    ssa s D
+    -> noFun s
+    -> Crash ( nil, E, s) (nil, Es, s')
+    -> models (fun _ => fun _ => true) Es (translateStmt s target).
+
+Proof.
+  intros. general induction H1.
+  - case_eq (s0); intros; subst; simpl in*.
+    + pose proof not_exp_eval.
+      admit.
+    + admit.
+    + admit.
+    + admit.
+    + inversion H2.
+    + inversion H2.
+  - destruct sigma' as  [[L E'] sc].
+    case_eq s; intros; subst; simpl in*; invt ssa; invt noFun.
+    + exploit (IHCrash an  s0 E' Es s'); eauto. inversion H. eauto.
+      case_eq (undef e); intros.
+      * simpl; split; eauto;  admit.
+      * simpl; split; eauto; admit.
+    + inversion H.
+      * exploit (IHCrash ans s0 E' Es s'); eauto.
+        { rewrite H19; rewrite H21; eauto. }
+        { case_eq (undef e); intros; simpl; unfold evalSexp; admit. }
+      * exploit (IHCrash ant t E' Es s'); eauto.
+        { rewrite H19; rewrite H21; eauto. }
+        {  case_eq (undef e); intros; simpl; unfold evalSexp; admit. }
+    + inversion H. inversion Ldef.
+    + inversion H.
+Qed.
+
 
 Lemma noFun_impl_term_crash :
 forall E  s, noFun s
@@ -158,6 +204,38 @@ undef e = Some s
 Proof.
 admit.
 Qed.
+
+(*
+Lemma sat_extension:
+  forall D E E' s s' P Q,
+    (exists F E, models F E Q -> models F E (smtAnd (translateStmt s target) P))
+    -> ssa s D
+    -> noFun s
+    -> Crash (nil, E, s) (nil, E', s')
+    -> exists Q', (exists F, models F E' Q') /\
+                  freeVars Q' ⊆ snd (getAnn D) /\
+                  (exists F E, models F E (smtAnd Q Q')
+                               -> models F E (smtAnd (translateStmt s'  target) P)).
+
+Proof.
+  intros.
+  general induction H2.
+  - destruct H1 as [F [E H1]]. exists (smtTrue).
+    split.
+    + exists F; simpl; econstructor.
+    + split; simpl; cset_tac.
+      * exfalso; eauto.
+      *
+
+Lemma crash_impl_guardmodels:
+forall E s E' s',
+Crash (nil, E, s) (nil, E', s')
+-> exists e, undef e = s /\
+
+
+exists F.
+admit.
+Qed. *)
 
 Lemma unsat_extension:
 forall D E E' s s' pol P Q,
@@ -479,7 +557,7 @@ Proof.
   inv H; simpl; exploit IHstar2; try reflexivity; eauto.
 Qed.
 
-Lemma star2_nofun:
+Lemma star2_noFun_Term:
 forall E s Es s',
 noFun s
 -> Terminates (nil, E, s) (nil, Es, s')
@@ -492,31 +570,39 @@ Proof.
   dcr; exploit noFun_nil; eauto. subst. split; eauto.
 Qed.
 
+Definition failed (σ:F.state)  := result (σ ) = None.
+
 Lemma crash_impl_err:
-  forall (E:onv val) s Es s',
-    Crash (nil, E, s) (nil, Es, s')
-    -> (exists a, star2 F.step (nil,E,s) a (nil, Es, s'))
-       /\ normal2 step (nil, Es, s') /\ result (nil, Es, s') = None.
+  forall (E:onv val) s Es s' L L',
+    Crash (L, E, s) (L', Es, s')
+    -> (exists a, star2 F.step (L,E,s) a (L', Es, s'))
+       /\ normal2 F.step (L', Es, s') /\ failed (L', Es, s').
 
 Proof.
-intros E s Es s' crash.
-general induction crash.
-- eapply simErr. instantiate (1:=(nil, E0,s0)).
-  + eauto.
-  + econstructor.
-  + hnf. intros. unfold reducible2 in H1.
-    destruct H1. destruct H1. destruct x0.
-    destruct p. inversion H1.
-    * rewrite <- H5 in *. simpl in *.
-  + instantiate (1:=(nil,E0,s0)). assumption.
-  + econstructor.
-  + hnf. intros. no_step. inversion H1.  inversion H0.
-    inversion H1. destruct H3. destruct x1. destruct p.
+  intros E s Es s' L L' Crash.
+  general induction Crash.
+  - split.
+    + exists nil; econstructor.
+    + split; eauto.
+  - destruct sigma'. destruct p. exploit (IHCrash o s0 Es s' l L') ; try reflexivity.
+    destruct X as [ [al sstep] X].
+    destruct X; split; try split; eauto.
+    + destruct a.
+      * exists (filter_tau (EvtExtern call) al). econstructor; eauto.
+      * exists (filter_tau EvtTau al); econstructor; eauto.
+Qed.
 
-    * rewrite H3 in H4.
-- destruct sigma'. destruct p. inversion crash.
-  + admit.
-  + admit.
+Lemma star2_noFun_Crash:
+forall E s Es s',
+noFun s
+-> Crash (nil, E, s) (nil, Es, s')
+-> star2 F.step (nil, E, s) nil (nil, Es, s') /\
+   (normal2 F.step (nil, Es, s') /\ failed (nil, Es, s')).
+
+Proof.
+  intros.
+  exploit crash_impl_err; eauto.
+  dcr; exploit noFun_nil; eauto. subst. split; eauto.
 Qed.
 
 Lemma guardTrue_if_Terminates_ret:
@@ -711,23 +797,23 @@ Proof.
 Qed.
 
 Lemma combineenv_eq_right:
-forall  F s D Es Et,
-agree_on eq (freeVars s ∩ D) Es Et
--> (models F Et s <-> models F (combineEnv D Es Et) s).
+  forall  F s D Es Et,
+    agree_on eq (freeVars s ∩ D) Es Et
+    -> (models F Et s <-> models F (combineEnv D Es Et) s).
 
 Proof.
-intros.  general induction s; try reflexivity; simpl.
-- rewrite (IHs1 F D Es Et). rewrite (IHs2 F D Es Et).
-  + reflexivity.
-  + setSubst2 H.
-  + setSubst2 H.
-- admit.
-- admit.
-- admit.
-- admit.
-- admit.
-- admit.
--  admit.
+  intros.  general induction s; try reflexivity; simpl.
+  - rewrite (IHs1 F D Es Et). rewrite (IHs2 F D Es Et).
+    + reflexivity.
+    + setSubst2 H.
+    + setSubst2 H.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
 Qed.
 
 Lemma terminates_impl_eval:
@@ -771,8 +857,8 @@ destruct H7 as [ Es  [s' [ sterm| scrash ]]]. destruct H8 as [Et [t' [ tterm | t
     clear smodS. clear H.
     specialize (modTS H3 H6 tterm).
     destruct modTS as [Q' [modQ' [fvQ' modTS]]].
-    exploit (star2_nofun  E s Es s' H5 sterm).
-    exploit (star2_nofun E t Et t' H6 tterm).
+    exploit (star2_noFun_Term  E s Es s' H5 sterm).
+    exploit (star2_noFun_Term E t Et t' H6 tterm).
     destruct X as [ sstep X]; destruct X0 as [ tstep  X0].
     destruct X as [ [es sRet] | [fs [Xs sFun]]];
     destruct X0 as [ [et tRet] | [ft [Xt tFun]]].
@@ -951,10 +1037,20 @@ destruct H7 as [ Es  [s' [ sterm| scrash ]]]. destruct H8 as [Et [t' [ tterm | t
        - (* destructen, dann wieder analog *) admit.  *) }
       { admit. }
 (* s terminiert & t crasht *)
--  (* Widerspruch konstruieren aus guard = False und ~ models *)
- admit.
-(* s crasht --> sim zu allem! *)
-- eapply crash_impl_sim; eauto.
+- pose proof (terminates_impl_models s D E s' Es H2 H5 sterm).
+  pose proof (crash_impl_models D' t E Et t' H3 H6 tcrash).
+  specialize (H (fun _ => fun _ => true) (combineEnv Ds' Es Et)).
+  exfalso. apply H. simpl. split.
+  + erewrite <- combineenv_eq_left; eauto.
+    * admit.
+  + erewrite <- combineenv_eq_right; eauto.
+    * admit.
+  (* Widerspruch konstruieren aus guard = False und ~ models
+    apply Lemma dass wenn es gibt i was models s und crash t --> models s /\ t
+    konstruieren mit sat_extension und Lemma terminates_impl_sim*)
+(* s crasht --> sim zu allem!  *)
+- pose proof (star2_noFun_Crash E s Es s' H5 scrash ).
+  destruct H7; destruct H9. unfold failed in H10. eapply simErr; eauto.
 Qed.
 
 (*
