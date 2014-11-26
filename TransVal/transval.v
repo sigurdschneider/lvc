@@ -136,46 +136,133 @@ general induction H1; simpl.
  + inversion H0.
 Qed.
 
-Lemma not_exp_eval:
-        forall E x e s v,
-          normal2 F.step (nil, E, stmtExp x e s)
-          -> undef e = Some v
-          -> ~  (forall F, models F E v).
+Lemma not_exp_eval_let:
+  forall F E x e s v,
+    normal2 F.step (nil, E, stmtExp x e s)
+    -> undef e = Some v
+    -> ~  (models F E v).
 
 Proof.
   intros. unfold normal2 in H. unfold reducible2 in H. hnf. intros.
   eapply H. admit.
 Qed.
 
+Lemma not_exp_eval_if:
+  forall F E e t f v,
+    normal2 F.step (nil, E, stmtIf e t f)
+    -> undef e = Some v
+    -> ~ (models F E v).
+
+Proof.
+intros. admit.
+Qed.
+
+Lemma not_exp_eval_ret:
+  forall F E e v,
+    exp_eval E e = None
+    -> undef e = Some v
+    -> ~ (models F E v).
+
+Proof.
+admit.
+Qed.
+
 Lemma crash_impl_models:
   forall D s E Es s',
     ssa s D
+    -> (forall x, x ∈ fst(getAnn D) -> exists v, E x = Some v)
     -> noFun s
     -> Crash ( nil, E, s) (nil, Es, s')
     -> models (fun _ => fun _ => true) Es (translateStmt s target).
 
 Proof.
-  intros. general induction H1.
-  - case_eq (s0); intros; subst; simpl in*.
-    + pose proof not_exp_eval.
+  intros. general induction H2; simpl.
+  - case_eq (undef e); simpl; intros.
+    + pose proof (not_exp_eval_ret (fun _ => fun _ => true) E0 e s).
+      specialize (H6 H H0 H4); isabsurd.
+    + intros. pose proof (noguard_impl_eval E0 e).
+      assert (forall x, x ∈ Exp.freeVars e -> exists v, E0 x = Some v).
+      * intros. inversion H1. specialize (H2 x). hnf in H8. cset_tac.
+        simpl in H2. specialize (H8 x H6). specialize (H2 H8).
+        destruct H2. exists x0. rewrite H2; eauto.
+      * specialize (H5 H6 H0). destruct H5; rewrite H5 in *.
+        isabsurd.
+  - case_eq (s0); intros; subst; simpl in *.
+    + case_eq (undef e); simpl; intros.
+      * pose proof (not_exp_eval_let (fun _ => fun _ => true) E0 x e s s0 H0 H5 H6) ; isabsurd.
+      * pose proof (noguard_impl_eval E0 e).
+        assert (forall x, x ∈ Exp.freeVars e -> exists v, E0 x = Some v).
+        { intros. inversion H2. specialize (H3 x0). subst. hnf in H12.
+          specialize (H12 x0 H7). simpl in H3. destruct (H3 H12).
+          exists x1. rewrite H8; eauto. }
+        specialize (H6  H7 H5). destruct H6.
+        assert (exists y σ, F.step (nil, E0, stmtExp x e s) y σ )
+          by (exists EvtTau; exists (nil, E0[x<-Some x0], s); econstructor; eauto).
+       hnf in H.  unfold reducible2 in H. specialize (H0 H8); isabsurd.
+    + case_eq (undef e); simpl; intros.
+      * pose proof (not_exp_eval_if (fun _ => fun _ => true) E0 e s t s0 H0 H5 H6).
+        isabsurd.
+      * pose proof (noguard_impl_eval E0 e).
+        assert (forall x, x ∈ Exp.freeVars e -> exists v, E0 x = Some v).
+        { intros; invt ssa. specialize (H3 x); subst; simpl in *. cset_tac.
+          hnf in H11. destruct (H3 (H11 x H7)).
+          exists x0. rewrite H8; eauto. }
+        { specialize (H6 H7 H5).
+        assert (exists y σ, F.step (nil, E0 , stmtIf e s t) y σ).
+        { exists EvtTau. destruct H6. case_eq (val2bool x); intros.
+          - exists (nil, E0, s). econstructor; eauto.
+          - exists (nil, E0, t). econstructor; eauto. }
+        { specialize (H0 H8); isabsurd. } }
+    + case_eq (undefLift Y); intros.
       admit.
-    + admit.
-    + admit.
-    + admit.
-    + inversion H2.
-    + inversion H2.
+      admit.
+    + specialize (H e). isabsurd.
+    + inversion H4.
+    + inversion H4.
   - destruct sigma' as  [[L E'] sc].
     case_eq s; intros; subst; simpl in*; invt ssa; invt noFun.
-    + exploit (IHCrash an  s0 E' Es s'); eauto. inversion H. eauto.
-      case_eq (undef e); intros.
-      * simpl; split; eauto;  admit.
-      * simpl; split; eauto; admit.
+    + exploit (IHCrash an  s0 E' Es s'); eauto; intros.
+      * admit.
+      * inversion H; eauto.
+      * case_eq (undef e); intros.
+        { simpl; split; eauto.
+          inversion H.
+          unfold evalSexp.
+          assert ( exp_eval Es e = Some v).
+          - eapply (exp_eval_agree (E:= E)); eauto.
+            hnf. intros.  hnf in H8. specialize (H8 x1 H17).
+            admit.
+          - assert (exp_eval Es (Var x) =Some v).
+            + eapply (exp_eval_agree (E:= E[x<-Some v])).
+              * hnf. intros. simpl in H21. cset_tac.
+                admit.
+              * simpl. unfold update. decide (x === x).
+                { reflexivity. }
+                { isabsurd. }
+            + rewrite H21. rewrite H17. eapply bvEq_equiv_eq.
+              reflexivity. }
+        { simpl; split; eauto. unfold evalSexp. inversion H.
+          assert ( exp_eval Es e = Some v).
+          - eapply (exp_eval_agree (E:= E)); eauto.
+            hnf. intros.  hnf in H8. specialize (H8 x1 H16).
+            admit.
+          - assert (exp_eval Es (Var x) =Some v).
+            + eapply (exp_eval_agree (E:= E[x<-Some v])).
+              * hnf. intros. simpl in H20. cset_tac.
+                admit.
+              * simpl. unfold update. decide (x === x).
+                { reflexivity. }
+                { isabsurd. }
+            + rewrite H20. rewrite H16. eapply bvEq_equiv_eq.
+              reflexivity. }
     + inversion H.
       * exploit (IHCrash ans s0 E' Es s'); eauto.
-        { rewrite H19; rewrite H21; eauto. }
+        { admit. }
+        { subst; eauto. }
         { case_eq (undef e); intros; simpl; unfold evalSexp; admit. }
       * exploit (IHCrash ant t E' Es s'); eauto.
-        { rewrite H19; rewrite H21; eauto. }
+        { admit. }
+        { subst; eauto. }
         {  case_eq (undef e); intros; simpl; unfold evalSexp; admit. }
     + inversion H. inversion Ldef.
     + inversion H.
@@ -183,13 +270,15 @@ Qed.
 
 
 Lemma noFun_impl_term_crash :
-forall E  s, noFun s
-->  exists E'   s', Terminates (nil,E,s) (nil,E',s') \/ Crash (nil,E,s) (nil,E',s').
+forall s, noFun s
+-> forall E ,  exists E' s', Terminates (nil,E,s)(nil,E',s') \/ Crash (nil,E,s)(nil,E',s').
 
 Proof.
 intros.
 general induction H.
-- admit.
+- admit. (*case_eq (exp_eval E e); intros.
+  + specialize (IHnoFun (E[x <- Some v])). destruct IHnoFun as [E' [s' [noterm | nocrash]]].
+    * exists (E[x<- Some v]). exists s. left. eapply (TerminatesStep nil E econstructor; eauto. *)
 - admit.
 - admit.
 - admit.
@@ -202,40 +291,77 @@ undef e = Some s
 -> a ∈ Exp.freeVars e.
 
 Proof.
-admit.
+  intros. general induction e.
+  - simpl in *. exploit IHe; eauto.
+  - simpl in *.
+    destruct b; try destruct b; try destruct b; try destruct b; try destruct b;
+    try destruct b; simpl in *.
+    + case_eq (undef e1); case_eq (undef e2); intros;
+      rewrite H1 in H; rewrite H2 in H; simpl in H;
+      inversion H; rewrite <- H4 in *.
+      * simpl in H0; cset_tac. destruct H0.
+        { left; exploit IHe1; eauto. }
+        { right; exploit IHe2; eauto. }
+      * cset_tac. left; exploit IHe1; eauto.
+      * cset_tac. right; exploit IHe2; eauto.
+    + case_eq (undef e1); case_eq (undef e2); intros;
+      rewrite H1 in H; rewrite H2 in H; simpl in H;
+      inversion H; rewrite <- H4 in *.
+      * simpl in H0; cset_tac. destruct H0.
+        { left; exploit IHe1; eauto. }
+        { right; exploit IHe2; eauto. }
+      * cset_tac. left; exploit IHe1; eauto.
+      * cset_tac. right; exploit IHe2; eauto.
+    + case_eq (undef e1); case_eq (undef e2); intros;
+      rewrite H1 in H; rewrite H2 in H; simpl in H;
+      inversion H; rewrite <- H4 in *.
+      * simpl in H0; cset_tac. destruct H0.
+        { left; exploit IHe1; eauto. }
+        { right; exploit IHe2; eauto. }
+      * cset_tac. left; exploit IHe1; eauto.
+      * cset_tac. right; exploit IHe2; eauto.
+    + case_eq (undef e1); case_eq (undef e2); intros;
+      rewrite H1 in H; rewrite H2 in H; simpl in H;
+      inversion H; rewrite <- H4 in *.
+      * simpl in H0; cset_tac. destruct H0.
+        { left; exploit IHe1; eauto. }
+        { right; exploit IHe2; eauto. }
+      * cset_tac. left; exploit IHe1; eauto.
+      * cset_tac. right; exploit IHe2; eauto.
+    + case_eq (undef e1); case_eq (undef e2); intros;
+      rewrite H1 in H; rewrite H2 in H; simpl in H;
+      inversion H; rewrite <- H4 in *.
+      * simpl in H0; cset_tac. destruct H0.
+        { left; exploit IHe1; eauto. }
+        { right; exploit IHe2; eauto. }
+      * cset_tac. left; exploit IHe1; eauto.
+      * cset_tac. right; exploit IHe2; eauto.
+    +case_eq (undef e1); case_eq (undef e2); intros;
+      rewrite H1 in H; rewrite H2 in H; simpl in H;
+      inversion H; rewrite <- H4 in *.
+      * simpl in H0; cset_tac. destruct H0.
+        destruct H0; try isabsurd.
+        { right; eauto. }
+        { destruct H0.
+          -  left; exploit IHe1; eauto.
+          - right; exploit IHe2; eauto. }
+      *  simpl in H0. cset_tac. destruct H0. destruct H0; try isabsurd.
+         right; eauto.
+         { left; exploit IHe1; eauto. }
+      * simpl in H0. cset_tac. destruct H0. destruct H0; try isabsurd.
+        { right; eauto. }
+        { right; exploit IHe2; eauto. }
+      * simpl in H0. cset_tac. destruct H0; try isabsurd.
+        right; eauto.
+    + case_eq (undef e1); case_eq (undef e2); intros;
+      rewrite H1 in H; rewrite H2 in H; simpl in H;
+      inversion H; rewrite <- H4 in *.
+      * simpl in H0; cset_tac. destruct H0.
+        { left; exploit IHe1; eauto. }
+        { right; exploit IHe2; eauto. }
+      * cset_tac. left; exploit IHe1; eauto.
+      * cset_tac. right; exploit IHe2; eauto.
 Qed.
-
-(*
-Lemma sat_extension:
-  forall D E E' s s' P Q,
-    (exists F E, models F E Q -> models F E (smtAnd (translateStmt s target) P))
-    -> ssa s D
-    -> noFun s
-    -> Crash (nil, E, s) (nil, E', s')
-    -> exists Q', (exists F, models F E' Q') /\
-                  freeVars Q' ⊆ snd (getAnn D) /\
-                  (exists F E, models F E (smtAnd Q Q')
-                               -> models F E (smtAnd (translateStmt s'  target) P)).
-
-Proof.
-  intros.
-  general induction H2.
-  - destruct H1 as [F [E H1]]. exists (smtTrue).
-    split.
-    + exists F; simpl; econstructor.
-    + split; simpl; cset_tac.
-      * exfalso; eauto.
-      *
-
-Lemma crash_impl_guardmodels:
-forall E s E' s',
-Crash (nil, E, s) (nil, E', s')
--> exists e, undef e = s /\
-
-
-exists F.
-admit.
-Qed. *)
 
 Lemma unsat_extension:
 forall D E E' s s' pol P Q,

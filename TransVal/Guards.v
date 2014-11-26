@@ -156,21 +156,50 @@ forall E e,
 Proof.
   intros. general induction e.
   - exists v. unfold exp_eval. reflexivity.
-   - destruct (H v); simpl; cset_tac; eauto.
-   - simpl in H. specialize (IHe E H). simpl in H0.
+  - destruct (H v); simpl; cset_tac; eauto.
+  - simpl in H. specialize (IHe E H). simpl in H0.
      destruct IHe; eauto.
      simpl. rewrite H1. simpl. destruct u; simpl.
-     + case_eq (val2bool x); intros.
-       * exists val_true; unfold option_lift1; simpl.
-                rewrite H2; eauto.
-       * exists val_false; unfold option_lift1; simpl.
-                rewrite H2; eauto.
+    + case_eq (val2bool x); intros.
+      * exists val_true; unfold option_lift1; simpl.
+          rewrite H2; eauto.
+      * exists val_false; unfold option_lift1; simpl.
+         rewrite H2; eauto.
       + exists (neg x); unfold option_lift1.
-               destruct u; eauto.
-
-
-
-
+          destruct u; eauto.
+          admit.
+  - specialize (IHe1 E); specialize (IHe2 E). simpl in H. cset_tac.
+    assert (forall x, x ∈ Exp.freeVars e1 -> exists v, E x = Some v)
+      by (cset_tac; eauto).
+    assert (forall x, x ∈ Exp.freeVars e2 -> exists v, E x  = Some v)
+      by (cset_tac; eauto).
+    specialize (IHe1 H1); specialize (IHe2 H2).
+    destruct b; try destruct b; try destruct b; try destruct b; try destruct b;
+     try destruct b; simpl in *.
+    + eapply combine_keep_undef in H0. destruct H0.
+      destruct IHe1; destruct IHe2; eauto.
+      rewrite H4; rewrite H5. simpl. exists (bvAdd x x0).
+      unfold option_lift2; eauto.
+    + eapply combine_keep_undef in H0; destruct H0.
+      destruct IHe1, IHe2; eauto.
+      rewrite H4; rewrite H5; simpl; exists (bvSub x x0).
+      unfold option_lift2; eauto.
+    + eapply combine_keep_undef in H0; destruct H0.
+      destruct IHe1, IHe2; eauto.
+      rewrite H4, H5; simpl; exists (bvMult x x0).
+      unfold option_lift2; eauto.
+    + eapply combine_keep_undef in H0; destruct H0.
+      destruct IHe1, IHe2; eauto.
+      rewrite H4, H5; simpl; exists (bvEq x x0).
+      unfold option_lift2; eauto.
+    + eapply combine_keep_undef in H0; destruct H0.
+      destruct IHe1, IHe2; eauto.
+      rewrite H4, H5; simpl; exists (neg (bvEq x x0)).
+      unfold option_lift2; eauto.
+    + case_eq (undef e1); case_eq(undef e2); intros;
+      rewrite H3 in *; rewrite H4 in *; discriminate H0.
+    + admit.
+Qed.
 
 (*
 *** Local Variables: ***

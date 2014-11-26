@@ -184,6 +184,17 @@ intros.
 hnf. intros. eapply smtand_comm in H0. eapply H. assumption.
 Qed.
 
+Lemma combine_keep_undef:
+forall e1 e2,
+combine (undef e1) (undef e2) = None
+-> undef e1 = None /\ undef e2 = None.
+
+Proof.
+intros.
+case_eq (undef e1); case_eq (undef e2); intros;
+rewrite H0 in H; rewrite H1 in H; try isabsurd; eauto.
+Qed.
+
   (*
   *** Local Variables: ***
   *** coq-load-path: (("../" "Lvc")) ***
