@@ -31,6 +31,8 @@ match k with
           end
 end.
 
+Definition zero := zext k (O::nil).
+
 (** sign extension **)
 Fixpoint sext (k:nat) (bv:bitvec) (b:bit) :=
 match k with
@@ -218,12 +220,14 @@ match msb b1 with
 | O => false
 end.
 
-Fixpoint bvZero b :=
+Definition bvZero b :=
+toBool (bvEq b zero).
+(*
   match b with
 | nil => true
 | I::b' => false
 | O::b' => bvZero b'
-end.
+end.*)
 
 (** Define a function to map a single bit to a natural number **)
 Definition bitToNat (b1:bit) :nat :=
@@ -323,13 +327,14 @@ intros. general induction b.
 Qed.
 
 Lemma not_zero:
- forall b, bvZero b = false ->  b  <> zext k (O::nil).
+ forall b, bvZero b = false ->  b  <> zero.
 
 Proof.
  intros. general induction b.
- destruct a; simpl; hnf; intros.
- - rewrite H0 in H. simpl in H. discriminate H.
-- rewrite H0 in H.  simpl in H; discriminate H.
+- unfold bvZero in H. unfold zero. hnf; intros.
+  rewrite H0 in H. unfold zero in H. simpl in H; isabsurd.
+- unfold bvZero in *; unfold zero in *. hnf; intros. rewrite H0 in H.
+   simpl in H; isabsurd.
 Qed.
 
 Lemma zext_nil_eq_sext:

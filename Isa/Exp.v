@@ -19,8 +19,8 @@ Set Implicit Arguments.
       | 2 => option_lift2 bvMult
       | 3 => option_lift2 bvEq
       | 4 => option_lift2 (fun a b => neg (bvEq a b))
-      | 5 => bvDiv
-      | _ => fun _ _ => None
+      | _ => bvDiv
+(*      | _ => option_lift2 bvAdd (*fun _ _ => None *) *)
     end.
 
   Definition unop : Set := nat.
@@ -29,8 +29,8 @@ Set Implicit Arguments.
   Definition unop_eval (o:unop) :=
     match o with
       | 0 => option_lift1 (fun a => if val2bool  a then val_true else val_false)
-      | 1 => option_lift1 neg
-      | _ => fun _ => None
+      | _ => option_lift1 neg
+(*      | _ => fun _ => None *)
     end.
 
   Inductive exp :=
