@@ -12,7 +12,7 @@ Inductive Terminates :F.state -> F.state -> Prop :=
 |TerminatesStep L E s L'  E' s'  L'' E'' s''  a:
    F.step (L, E, s) a (L', E', s')
    -> Terminates (L', E', s') (L'', E'', s'')
-   ->  noGoto s
+   ->  (forall f xl, s <> stmtGoto f xl)
    -> Terminates (L,E,s) (L'', E'', s'') .
 
 (*
