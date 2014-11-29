@@ -33,7 +33,7 @@ Proof.
   rewrite H25 in X; simpl in *. assumption.
 - inversion H2; exploit IHTerminates; [| | reflexivity | reflexivity |]; eauto.
   rewrite H26 in X; simpl in *; assumption.
-- inversion H0.
+- specialize (H0 f Y); isabsurd.
 Qed.
 
 Lemma terminates_impl_models :
@@ -133,7 +133,7 @@ general induction H1; simpl.
             eapply (exp_eval_agree (E:=E') (E':=E'0)); eauto.
             eapply (agree_on_incl (bv:= Exp.freeVars e) (lv:= fst (getAnn (ann2 (D0, D') ans ant)))); eauto.
       }
- + inversion H0.
+ + specialize (H0 l Y); isabsurd.
 Qed.
 
 Lemma undef_models:
@@ -177,7 +177,6 @@ general induction e; simpl in *; try isabsurd.
        intros; cset_tac. destruct (H x); eauto.
      * eapply (IHe1 F E s); eauto.
        intros; cset_tac; destruct (H x); eauto.
-
      * pose proof (noundef  E e1 H4).
        destruct H5; isabsurd.
        intros; cset_tac; destruct (H x); eauto.
@@ -329,9 +328,6 @@ case_eq (val2bool v); intros.
 - exists (L, E, f); econstructor; eauto.
 Qed.
 
-(*Lemma nostep_goto:
-forall L E x, *)
-
 Lemma crash_impl_models:
   forall D s E Es s',
     ssa s D
@@ -343,8 +339,11 @@ Lemma crash_impl_models:
 Proof.
   intros. general induction H2; simpl.
   - case_eq (undef e); simpl; intros.
-    + pose proof (undef_models (fun _ => fun _ => true) E0 e s H0 H H4).
-      isabsurd.
+    + pose proof (undef_models (fun _ => fun _ => true) E0 e s).
+      assert (forall x, x ∈ Exp.freeVars e -> exists v, E0 x = Some v).
+      * intros; inversion H1; cset_tac.  simpl in H2. specialize (H2 x).
+        destruct H2; eauto.
+      *  specialize (H6 H7 H0 H H4); isabsurd.
     + pose proof (noguard_impl_eval E0 e).
       assert (forall x, x ∈ Exp.freeVars e -> exists v, E0 x = Some v).
       * intros. inversion H1. specialize (H2 x). hnf in H8. cset_tac.
@@ -355,8 +354,11 @@ Proof.
   - case_eq (s0); intros; subst; simpl in *.
     + case_eq (undef e); simpl; intros.
       * pose proof (nostep_let nil E0 x e s H0).
-        pose proof (undef_models (fun _ => fun _ => true) E0 e s0 H5 H7).
-        isabsurd.
+        pose proof (undef_models (fun _ => fun _ => true) E0 e s0).
+        assert (forall x, x ∈ Exp.freeVars e -> exists v, E0 x = Some v).
+        { intros; invt ssa. specialize (H3 x0). eapply H3.
+          simpl; cset_tac; eauto. }
+        { specialize (H8 H9 H5 H7 H6); isabsurd. }
       * pose proof (noguard_impl_eval E0 e).
         assert (forall x, x ∈ Exp.freeVars e -> exists v, E0 x = Some v).
         { intros. inversion H2. specialize (H3 x0). subst. hnf in H12.
@@ -368,8 +370,10 @@ Proof.
        hnf in H.  unfold reducible2 in H. specialize (H0 H8); isabsurd.
     + case_eq (undef e); simpl; intros.
       * pose proof (nostep_if nil E0 e s t H0).
-        pose proof (undef_models (fun _ => fun _ => true) E0 e s0 H5 H7 H6).
-        isabsurd.
+        pose proof (undef_models (fun _ => fun _ => true) E0 e s0).
+        assert (forall x, x ∈ Exp.freeVars e -> exists v, E0 x = Some v).
+        { intros; invt ssa. eapply (H3 x). simpl; cset_tac; eauto. }
+        { specialize (H8 H9 H5 H7 H6); isabsurd. }
       * pose proof (noguard_impl_eval E0 e).
         assert (forall x, x ∈ Exp.freeVars e -> exists v, E0 x = Some v).
         { intros; invt ssa. specialize (H3 x); subst; simpl in *. cset_tac.
@@ -447,18 +451,56 @@ Qed.
 
 
 Lemma noFun_impl_term_crash :
-forall E s, noFun s
+forall E s,
+noFun s
 ->  exists E' s', Terminates (nil,E,s)(nil,E',s') \/ Crash (nil,E,s)(nil,E',s').
 
 Proof.
 intros.
 general induction H.
-- admit. (*case_eq (exp_eval E e); intros.
-  + specialize (IHnoFun (E[x <- Some v])). destruct IHnoFun as [E' [s' [noterm | nocrash]]].
-    * exists (E[x<- Some v]). exists s. left. eapply (TerminatesStep nil E econstructor; eauto. *)
-- admit.
-- admit.
-- admit.
+-  case_eq (exp_eval E e); intros.
+   + destruct (IHnoFun (E[x<- Some v])) as [E' [s' [term|crash]]].
+     * exists E' ; exists s'. left. econstructor; eauto.
+              { econstructor; eauto. }
+              { intros. hnf; isabsurd. }
+     * exists E'; exists s'. right. econstructor; eauto. econstructor; eauto.
+   + exists E; exists (stmtExp x e s).
+       right. econstructor; eauto; intros; try hnf; try isabsurd.
+       intros. unfold reducible2 in H1.  destruct H1. destruct H1.
+       isabsurd.
+- case_eq (exp_eval E e); intros.
+  + case_eq (val2bool v); intros.
+    * destruct (IHnoFun1 E) as [E' [s' [term | crash ]]].
+      {exists E'; exists s'; left.
+       econstructor; eauto.
+       - econstructor; eauto.
+       - hnf; intros; isabsurd. }
+      { exists E'; exists s'; right.
+        econstructor; eauto.
+        econstructor; eauto. }
+    * destruct (IHnoFun2 E) as [E' [s' [term | crash ]]].
+      {exists E'; exists s'; left.
+       econstructor; eauto.
+       - econstructor; eauto.
+       - hnf; intros; isabsurd. }
+      { exists E'; exists s'; right.
+        econstructor; eauto.
+        econstructor; eauto. }
+  +  exists E; exists (stmtIf e s t).
+            right. econstructor; eauto; intros; try hnf; try isabsurd.
+            intros. unfold reducible2 in H2. destruct H2. destruct H2.
+            isabsurd.
+- case_eq (omap (exp_eval E) Y); intros.
+  + exists E; exists (stmtGoto l Y); left; econstructor; eauto.
+  + exists E; exists (stmtGoto l Y); right.
+           econstructor; eauto; intros; try hnf; try isabsurd.
+           intros. unfold reducible2 in H0; destruct H0.
+           destruct H0. isabsurd.
+- case_eq (exp_eval E e).
+  + exists E; exists (stmtReturn e).
+           left; econstructor; eauto.
+  + exists E; exists (stmtReturn e). right.
+           econstructor; eauto; intros; try hnf; try isabsurd.
 Qed.
 
 Lemma freeVars_undef :
