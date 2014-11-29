@@ -1035,6 +1035,24 @@ Proof.
  eapply H. cset_tac; intuition.
 Qed.
 
+Lemma explist_combineenv_eqr:
+forall el D Es Et vl,
+agree_on eq (list_union (List.map Exp.freeVars el) ∩ D) Es Et
+-> evalList (combineEnv D Es Et) el = vl
+-> evalList Et el = vl.
+
+Proof.
+intros. general induction el.
+- reflexivity.
+- simpl in *; hnf in H. unfold evalSexp.
+  rewrite (exp_combineenv_eqr a D Es Et (exp_eval (combineEnv D Es Et) a)); eauto.
+  + f_equal. rewrite (IHel D Es Et (evalList (combineEnv D Es Et) el)); eauto.
+    hnf. intros. cset_tac. eapply H. split; eauto.
+    unfold list_union. simpl. eapply list_union_start_swap. cset_tac; eauto.
+  + hnf; intros; cset_tac. eapply H. split; eauto.
+    unfold list_union; simpl. eapply list_union_start_swap; cset_tac; eauto.
+Qed.
+
 Lemma combineenv_eq_right:
   forall  F s D Es Et,
     agree_on eq (freeVars s ∩ D) Es Et
@@ -1122,7 +1140,9 @@ Proof.
         { setSubst2 H. }
         { specialize (H4 H5 H1). rewrite H4.
           split; intros; eauto. }
-  - admit.
+  -unfold evalSpred; simpl. unfold labInc. destruct p.
+   pose proof (explist_combineenv_eqr a D Es Et (evalList(combineEnv D Es Et) a)).
+   rewrite H0; eauto. reflexivity.
   - unfold evalSpred. unfold evalSexp.
     case_eq (exp_eval (combineEnv D Es Et) e); intros.
     + pose proof (exp_combineenv_eqr e D Es Et (Some v)).

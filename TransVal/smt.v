@@ -42,11 +42,15 @@ Fixpoint undef e :=
 match e with
 |BinOp n a b
  => match n with
-        | 5 => match combine (undef a) (undef b) with
+        | 0 =>  combine (undef a) (undef b)
+        | 1 =>  combine (undef a) (undef b)
+        | 2 =>  combine (undef a) (undef b)
+        | 3 =>  combine (undef a) (undef b)
+        | 4 =>  combine (undef a) (undef b)
+        | _ => match combine (undef a) (undef b) with
                  | Some c => Some (smtAnd (smtNeg (constr b (Con (zext k (O::nil))))) c )
                  | None =>  Some (smtNeg (constr b (Con (zext k (O::nil)))))
                end
-        | _ => combine (undef a) (undef b)
     end
 |UnOp n a
  => undef a
