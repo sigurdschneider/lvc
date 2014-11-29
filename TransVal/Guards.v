@@ -276,15 +276,78 @@ intros. general induction e; try isabsurd; simpl.
        destruct (IHe1 F E g); cset_tac; eauto.
        rewrite H4, H5; simpl; unfold option_lift2.
        exists (bvAdd x0 x); eauto.
-    * admit.
-  + admit.
-  + admit.
-  + admit.
-  + admit.
+    * pose proof (noundef E e1 H3).
+      destruct H4; cset_tac; eauto.
+      destruct (IHe2 F E g); cset_tac; eauto.
+      rewrite H4, H5. simpl. exists (bvAdd x x0); eauto.
   + case_eq (undef e1); case_eq (undef e2); intros; simpl in *;
-    rewrite H2, H3 in H; simpl in H; inversion H;
-    rewrite <- H5 in H0; destruct H0.
-    * clear H5. clear H. simpl in H0. unfold evalSexp in H0; simpl in H0.
+    rewrite H2, H3 in H; inversion H.
+    * rewrite <- H5 in H0; simpl in H0.
+      destruct H0.
+      destruct (IHe1 F E s0 H3 H0); cset_tac; eauto.
+      destruct (IHe2 F E s H2 H4); cset_tac; eauto.
+      rewrite H6, H5; simpl. exists (bvSub x x0); eauto.
+    *  pose proof (noundef E e2 H2).
+       destruct H4; cset_tac; eauto.
+       destruct (IHe1 F E g); cset_tac; eauto.
+       rewrite H4, H5; simpl; unfold option_lift2.
+       exists (bvSub x0 x); eauto.
+    * pose proof (noundef E e1 H3).
+      destruct H4; cset_tac; eauto.
+      destruct (IHe2 F E g); cset_tac; eauto.
+      rewrite H4, H5. simpl. exists (bvSub x x0); eauto.
+  + case_eq (undef e1); case_eq (undef e2); intros; simpl in *;
+    rewrite H2, H3 in H; inversion H.
+    * rewrite <- H5 in H0; simpl in H0.
+      destruct H0.
+      destruct (IHe1 F E s0 H3 H0); cset_tac; eauto.
+      destruct (IHe2 F E s H2 H4); cset_tac; eauto.
+      rewrite H6, H5; simpl. exists (bvMult x x0); eauto.
+    *  pose proof (noundef E e2 H2).
+       destruct H4; cset_tac; eauto.
+       destruct (IHe1 F E g); cset_tac; eauto.
+       rewrite H4, H5; simpl; unfold option_lift2.
+       exists (bvMult x0 x); eauto.
+    * pose proof (noundef E e1 H3).
+      destruct H4; cset_tac; eauto.
+      destruct (IHe2 F E g); cset_tac; eauto.
+      rewrite H4, H5. simpl. exists (bvMult x x0); eauto.
+  + case_eq (undef e1); case_eq (undef e2); intros; simpl in *;
+    rewrite H2, H3 in H; inversion H.
+    * rewrite <- H5 in H0; simpl in H0.
+      destruct H0.
+      destruct (IHe1 F E s0 H3 H0); cset_tac; eauto.
+      destruct (IHe2 F E s H2 H4); cset_tac; eauto.
+      rewrite H6, H5; simpl. exists (bvEq x x0); eauto.
+    *  pose proof (noundef E e2 H2).
+       destruct H4; cset_tac; eauto.
+       destruct (IHe1 F E g); cset_tac; eauto.
+       rewrite H4, H5; simpl; unfold option_lift2.
+       exists (bvEq x0 x); eauto.
+    * pose proof (noundef E e1 H3).
+      destruct H4; cset_tac; eauto.
+      destruct (IHe2 F E g); cset_tac; eauto.
+      rewrite H4, H5. simpl. exists (bvEq x x0); eauto.
+  + case_eq (undef e1); case_eq (undef e2); intros; simpl in *;
+    rewrite H2, H3 in H; inversion H.
+    * rewrite <- H5 in H0; simpl in H0.
+      destruct H0.
+      destruct (IHe1 F E s0 H3 H0); cset_tac; eauto.
+      destruct (IHe2 F E s H2 H4); cset_tac; eauto.
+      rewrite H6, H5; simpl. exists (neg (bvEq x x0)); eauto.
+    *  pose proof (noundef E e2 H2).
+       destruct H4; cset_tac; eauto.
+       destruct (IHe1 F E g); cset_tac; eauto.
+       rewrite H4, H5; simpl; unfold option_lift2.
+       exists (neg (bvEq x0 x)); eauto.
+    * pose proof (noundef E e1 H3).
+      destruct H4; cset_tac; eauto.
+      destruct (IHe2 F E g); cset_tac; eauto.
+      rewrite H4, H5. simpl. exists (neg (bvEq x x0)); eauto.
+  + case_eq (undef e1); case_eq (undef e2); intros; simpl in *;
+    rewrite H2, H3 in H; simpl in H; inversion H.
+    rewrite <- H5 in H0.
+    * destruct H0.  clear H5. clear H. simpl in H0. unfold evalSexp in H0; simpl in H0.
       destruct H4.
       destruct (IHe1 F E s0); cset_tac; eauto.
       destruct (IHe2  F E s); cset_tac; eauto.
@@ -296,9 +359,41 @@ intros. general induction e; try isabsurd; simpl.
       { eapply (zero_implies_eq x0) in H1. specialize (H0 H1); isabsurd.
         unfold zext. simpl; eauto. }
       { eauto. }
-    * admit.
-    * admit.
-    * admit.
+    * rewrite <- H5 in H0.  destruct H0.
+      clear H5; clear H. simpl in H0. unfold evalSexp in H0; simpl in H0.
+      pose proof (noundef E e2 H2).
+      destruct H; cset_tac; eauto.
+      destruct (IHe1 F E s); eauto.
+      rewrite H, H5; simpl.
+      rewrite H in H0. clear H. clear H5. clear H1.
+      unfold bvDiv. simpl.
+      case_eq (bvZero x); intros.
+      { eapply (zero_implies_eq x (b:=(zext k (O::nil)))) in H.
+        simpl in H. specialize (H0 H); isabsurd.  f_equal; eauto. }
+      { eauto. }
+    * rewrite <- H5 in H0; destruct H0; clear H5; clear H.
+      simpl in H0. unfold evalSexp in H0; simpl in H0.
+      pose proof (noundef E e1 H3).
+      destruct H; cset_tac; eauto.
+      destruct (IHe2 F E s); eauto.
+      rewrite H, H5; simpl.
+      rewrite H5 in H0. clear H. clear H5. clear H1.
+      unfold bvDiv.
+      case_eq (bvZero x0); intros.
+      { eapply (zero_implies_eq x0 (b:=(zext k (O::nil)))) in H.
+        simpl in H. specialize (H0 H); isabsurd.  f_equal; eauto. }
+      { eauto. }
+    * rewrite <- H5 in H0. clear H5. simpl in H0.
+      pose proof (noundef E e1 H3).
+      pose proof (noundef E e2 H2).
+      destruct H4; cset_tac;  eauto.
+      destruct H5; cset_tac; eauto.
+      rewrite H4, H5. simpl.
+      unfold evalSexp in *; rewrite H5 in H0. simpl in H0.
+      unfold bvDiv. case_eq (bvZero x0); intros; eauto.
+      eapply (zero_implies_eq x0 (b:=zext k (O::nil))) in H6.
+      specialize (H0 H6); isabsurd.
+      f_equal; eauto.
 Qed.
 
 (*
