@@ -56,7 +56,7 @@ Definition ParamRel (G:(set var * params)) (Z Z' : list var) : Prop :=
 Instance SR : ProofRelation (set var * params) := {
    ParamRel := ParamRel;
    ArgRel := ArgRel;
-   BlockRel := fun lvZ b b' => F.block_Z b = snd lvZ
+   BlockRel := fun lvZ b b' => True (* F.block_Z b = snd lvZ *)
 }.
 intros. inv H; inv H0; simpl in *.
 erewrite filter_filter_by_length; eauto.
@@ -142,26 +142,27 @@ Proof.
       pfold. econstructor 3; try eapply star2_refl; eauto.
       stuck.
   - destruct (get_dec L (counted l)) as [[[bE bZ bs]]|].
-    remember (omap (exp_eval V) Y). symmetry in Heqo.
-    exploit (get_nth); try eapply H4; eauto. rewrite X; simpl.
-    destruct o.
-    exploit omap_filter_by; eauto.
-    unfold simL' in H1.
-    edestruct AIR5_length; try eassumption; dcr.
-    edestruct get_length_eq; try eassumption.
-    edestruct AIR5_nth as [?[? [?]]]; try eassumption; dcr.
-    simpl in *. repeat get_functional; subst.
-    inv H16. hnf in H21. dcr; simpl in *. subst bZ.
-    eapply sim_drop_shift. eapply H22; eauto.
-    eapply omap_exp_eval_live_agree; eauto.
-    inv H0.
-    eapply argsLive_liveSound; eauto.
-    hnf; split; eauto. simpl. exploit omap_length; try eapply Heqo; eauto.
-    congruence.
-    pfold; econstructor 3; try eapply star2_refl; eauto; stuck2.
-    pfold; econstructor 3; try eapply star2_refl; eauto; stuck2.
-    hnf in H1.
-    edestruct AIR5_nth3 as [? [? [? []]]]; eauto; dcr.
+    + remember (omap (exp_eval V) Y). symmetry in Heqo.
+      exploit (get_nth); try eapply H4; eauto. rewrite X; simpl.
+      destruct o.
+      * exploit omap_filter_by; eauto.
+        unfold simL' in H1.
+        edestruct AIR5_length; try eassumption; dcr.
+        edestruct get_length_eq; try eassumption.
+        edestruct AIR5_nth as [?[? [?]]]; try eassumption; dcr.
+        simpl in *. repeat get_functional; subst.
+        inv H16. hnf in H21. hnf in H19. simpl in *.
+        dcr; simpl in *. subst bZ.
+        eapply sim_drop_shift. eapply H22; eauto.
+        eapply omap_exp_eval_live_agree; eauto.
+        inv H0.
+        eapply argsLive_liveSound; eauto.
+        hnf; split; eauto. simpl. exploit omap_length; try eapply Heqo; eauto.
+        congruence.
+      * pfold; econstructor 3; try eapply star2_refl; eauto; stuck2.
+    + pfold; econstructor 3; try eapply star2_refl; eauto; stuck2.
+      hnf in H1.
+      edestruct AIR5_nth3 as [? [? [? []]]]; eauto; dcr.
   - pfold. econstructor 4; try eapply star2_refl.
     simpl. erewrite <- exp_eval_live_agree; eauto. eapply agree_on_sym; eauto.
     stuck2. stuck2.
@@ -188,7 +189,8 @@ Proof.
     simpl. left. eapply IHs2; eauto.
     + simpl in *; eapply agree_on_incl; eauto.
     + eapply simL_mon; eauto. eapply simL_extension'; eauto.
-      * hnf; intros. hnf in H3. hnf in H2. dcr; subst.
+      * hnf; intros. split. simpl. hnf. simpl; intuition.
+        hnf; intros. hnf in H3. hnf in H2. dcr; simpl in *. subst.
         eapply IHs1; eauto.
         eapply agree_on_update_filter'; eauto.
         eapply agree_on_incl; eauto.
