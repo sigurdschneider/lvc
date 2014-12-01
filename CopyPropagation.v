@@ -131,27 +131,25 @@ Qed.
 
 Lemma cp_moreDefinedArgs ϱ D Y
   : list_union (List.map Exp.freeVars Y) [<=]D
-    -> moreDefinedArgs (cp_eqns ϱ D) Y (List.map (rename_exp ϱ) Y).
+    -> entails (cp_eqns ϱ D) (list_EqnApx Y (List.map (rename_exp ϱ) Y)).
 Proof.
   general induction Y; simpl.
-  - econstructor; eauto.
-  - hnf; intros. simpl.
-    assert (Exp.freeVars a ⊆ D). {
+  - eapply entails_empty.
+  - assert (Exp.freeVars a ⊆ D). {
       rewrite <- H. eapply incl_list_union.
       - simpl; econstructor.
       - reflexivity.
     }
     exploit (cp_moreDefined ϱ); eauto.
-    exploit X; eauto. exploit X0. cset_tac; reflexivity. inv X1.
-    inv H3.
-    + econstructor.
-    + simpl. exploit (IHY ϱ D); eauto.
-      rewrite <- H. simpl.
-      unfold list_union. simpl.
-      rewrite (list_union_start_swap _ _ ({} ++ Exp.freeVars a)).
-      cset_tac; intuition.
-      exploit X2; eauto.
-      inv X3; try econstructor; eauto.
+    unfold list_EqnApx; simpl.
+    eapply entails_union.
+    rewrite add_union_singleton; reflexivity.
+    eauto.
+    eapply IHY.
+    rewrite <- H.
+    unfold list_union. simpl.
+    rewrite (list_union_start_swap _ _ ({} ++ Exp.freeVars a)).
+    cset_tac; intuition.
 Qed.
 
 Lemma cp_eqns_add_update ϱ D x y
@@ -310,6 +308,7 @@ Proof.
       exploit (get_list_union_map _ _ Exp.freeVars); try eapply H9; eauto.
       rewrite H0 in X.
       rewrite rename_exp_freeVars in H7; eauto. rewrite X in H7. eauto.
+    + rewrite map_length; reflexivity.
   - econstructor. instantiate (1:=cp_eqns ϱ D). instantiate (1:=∅).
     + eapply eqn_sound_entails_monotone; eauto.
       eapply IHssa1; eauto. rewrite H3; simpl.
