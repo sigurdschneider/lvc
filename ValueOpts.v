@@ -640,13 +640,16 @@ Proof.
     + rewrite H0; reflexivity.
 Qed.
 
-Lemma entails_union Gamma Γ' Γ''
-: entails Gamma (Γ')
-  /\ entails Gamma (Γ'')
-  -> entails Gamma (Γ' ∪ Γ'').
+Lemma entails_union Gamma Γ' Γ'' Γ'''
+: Γ''' ⊆ Γ' ∪ Γ''
+  -> entails Gamma (Γ')
+  -> entails Gamma (Γ'')
+  -> entails Gamma (Γ''').
 Proof.
-  unfold entails, satisfiesAll; intros; dcr.
-  + intros. cset_tac. destruct H1; eauto.
+  intros; hnf; intros; hnf; intros.
+  rewrite H in H3. cset_tac. destruct H3.
+  eapply H0; eauto.
+  eapply H1; eauto.
 Qed.
 
 Instance entails_refl
@@ -961,11 +964,11 @@ Proof.
   - invt ssa. econstructor; intros; eauto using entails_transitive,
     not_entails_entails_antitone.
     + eapply IHeqn_sound1; eauto using not_entails_entails_antitone.
-      eapply entails_union; split.
+      eapply entails_union; try reflexivity.
       eapply entails_monotone. reflexivity. cset_tac; intuition.
       eapply entails_monotone. eauto. cset_tac; intuition.
     + eapply IHeqn_sound2; eauto using not_entails_entails_antitone.
-      eapply entails_union; split.
+      eapply entails_union; try reflexivity.
       eapply entails_monotone. reflexivity. cset_tac; intuition.
       eapply entails_monotone. eauto. cset_tac; intuition.
   - invt ssa. econstructor; eauto using entails_transitive,
