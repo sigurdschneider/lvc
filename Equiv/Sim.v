@@ -689,8 +689,7 @@ Definition fexteq'
   forall E E' VL VL' L L' (r:rel2 I.state (fun _ : I.state => I.state)),
     ArgRel E E' a VL VL'
     -> simL' r AR AL L L'
-    -> length Z = length VL
-    -> length Z' = length VL'
+    -> ParamRel a Z Z'
     -> paco2 (@sim_gen I.state _ I.state _) r (L, E[Z <-- List.map Some VL], s)
             (L', E'[Z' <-- List.map Some VL'], s').
 
@@ -731,9 +730,6 @@ Proof.
   eapply omap_length in H5. congruence. reflexivity.
   simpl.
   right. eapply CIH; eauto.
-  intros. eapply H0; eauto.
-  edestruct RelsOK; eauto.
-  edestruct RelsOK; eauto.
   eapply simL_mon; eauto. intros; isabsurd.
 Qed.
 
@@ -763,8 +759,6 @@ Proof.
   - reflexivity.
   - simpl. right. eapply CIH; eauto.
   - eapply simL_mon; eauto.
-  - edestruct RelsOK; eauto.
-  - edestruct RelsOK; eauto.
 Qed.
 
 Lemma simL_extension' r A AR (a:A) AL s s' Z Z' L L'
@@ -939,8 +933,6 @@ Proof.
   simpl.
   right. eapply CIH; eauto.
   intros. eapply H0; eauto.
-  edestruct RelsOK; eauto.
-  edestruct RelsOK; eauto.
   eapply simL_mon; eauto. intros; isabsurd.
 Qed.
 
@@ -970,8 +962,6 @@ Proof.
   - reflexivity.
   - simpl. right. eapply CIH; eauto.
   - eapply simL_mon; eauto.
-  - edestruct RelsOK; eauto.
-  - edestruct RelsOK; eauto.
 Qed.
 
 Lemma simL_extension' r A AR (a:A) AL s s' E E' Z Z' L L'

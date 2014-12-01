@@ -606,11 +606,8 @@ Proof.
   simpl.
   right. eapply CIH; eauto.
   intros. eapply H0; eauto.
-  edestruct RelsOK; eauto.
-  edestruct RelsOK; eauto.
   eapply simL_mon; eauto. intros; isabsurd.
 Qed.
-
 
 Lemma fix_compatible r A AR (a:A) AL s s' E E' Z Z' L L' Yv Y'v
 : simL' bisim_progeq r AR AL L L'
@@ -637,18 +634,15 @@ Proof.
   - reflexivity.
   - simpl. right. eapply CIH; eauto.
   - eapply simL_mon; eauto.
-  - edestruct RelsOK; eauto.
-  - edestruct RelsOK; eauto.
 Qed.
 
 Lemma simL_extension' r A AR (a:A) AL s s' E E' Z Z' L L'
 : simL' bisim_progeq r AR AL L L'
   -> fexteq' bisim_progeq AR a (a::AL) E Z s E' Z' s'
-  -> ParamRel a Z Z'
   -> BlockRel a (F.blockI E Z s) (F.blockI E' Z' s')
   -> simL' bisim_progeq r AR (a::AL) (F.blockI E Z s :: L) (F.blockI E' Z' s' :: L').
 Proof.
-  intros.
+  intros. destruct H0.
   hnf; intros. econstructor; eauto. econstructor; eauto; intros.
   + pfold. econstructor; try eapply plus2O.
     econstructor; eauto using get. simpl.
@@ -658,7 +652,7 @@ Proof.
     edestruct RelsOK; eauto. exploit omap_length; try eapply H4; eauto.
     congruence. reflexivity.
     simpl. left.
-    eapply fix_compatible; eauto.
+    eapply fix_compatible; eauto. split; eauto.
 Qed.
 
 Lemma get_drop_lab0 (L:F.labenv) l blk
@@ -778,6 +772,7 @@ Ltac extern_step :=
     | intros ? ? STEP; inv STEP
     | intros ? ? STEP; inv STEP
     ].
+
 
 (*
 *** Local Variables: ***
