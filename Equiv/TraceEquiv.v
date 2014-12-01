@@ -26,6 +26,44 @@ Inductive produces {S} `{StateType S} : S -> list extevent -> Prop :=
       -> normal2 step σ'
       -> produces σ (EvtTerminate r::nil).
 
+Inductive produces_prefix {S} `{StateType S} : S -> list extevent -> Prop :=
+  | producesPrefixSilent (σ:S) (σ':S) L :
+      step σ EvtTau σ'
+      -> produces_prefix σ' L
+      -> produces_prefix σ  L
+  | producesPrefixExtern (σ:S) (σ':S) evt L :
+      activated σ
+      -> step σ evt σ'
+      -> produces_prefix σ' L
+      -> produces_prefix σ (EEvt evt::L)
+  | producesPrefixTerm (σ:S) (σ':S) v
+    : result σ' = Some v
+      -> star2 step σ nil σ'
+      -> normal2 step σ'
+      -> produces_prefix σ (EvtTerminate (Some v)::nil)
+  | producesPrefixPrefix (σ:S)
+    : produces_prefix σ nil.
+
+Inductive produces_nondet {S} `{StateType S} : S -> list extevent -> Prop :=
+  | producesNondetSilent (σ:S) (σ':S) L :
+      step σ EvtTau σ'
+      -> produces_nondet σ' L
+      -> produces_nondet σ  L
+  | producesNondetExtern (σ:S) (σ':S) evt L :
+      activated σ
+      -> step σ evt σ'
+      -> produces_nondet σ' L
+      -> produces_nondet σ (EEvt evt::L)
+  | producesNondetTerm (σ:S) (σ':S) v
+    : result σ' = Some v
+      -> star2 step σ nil σ'
+      -> normal2 step σ'
+      -> produces_nondet σ (EvtTerminate (Some v)::nil)
+  | producesNondetPrefix (σ:S) (σ':S) L
+    : result σ' = None
+      -> star2 step σ nil σ'
+      -> normal2 step σ'
+      -> produces_nondet σ L.
 
 Lemma produces_star2_silent {S} `{StateType S} (σ σ':S) L
  : star2 step σ nil σ' ->
@@ -35,6 +73,25 @@ Proof.
   - destruct yl, y; simpl in *; try congruence.
     econstructor 1; eauto.
 Qed.
+
+Lemma produces_prefix_star2_silent {S} `{StateType S} (σ σ':S) L
+ : star2 step σ nil σ' ->
+   produces_prefix σ' L -> produces_prefix σ L.
+Proof.
+  intros. general induction H0; eauto.
+  - destruct yl, y; simpl in *; try congruence.
+    econstructor 1; eauto.
+Qed.
+
+Lemma produces_nondet_star2_silent {S} `{StateType S} (σ σ':S) L
+ : star2 step σ nil σ' ->
+   produces_nondet σ' L -> produces_nondet σ L.
+Proof.
+  intros. general induction H0; eauto.
+  - destruct yl, y; simpl in *; try congruence.
+    econstructor 1; eauto.
+Qed.
+
 
 Lemma no_activated_tau_step {S} `{StateType S} (σ σ':S)
  :  activated σ
@@ -75,9 +132,34 @@ Proof.
   eapply bisim_sym; eauto.
 Qed.
 
-(*
+
 Lemma sim_produces {S} `{StateType S} {S'} `{StateType S'} (σ:S) (σ':S')
-  : sim σ σ' -> forall L, produces σ' L -> produces σ L.
+  : sim σ σ' -> forall L, produces_prefix σ L -> produces_prefix σ' L.
+Proof.
+  intros. general induction H2.
+  - eapply sim_sim' in H3.
+    eapply IHproduces_prefix; eauto.
+    eapply sim'_sim. eapply sim'_reduction_closed_1; eauto.
+    eapply (S_star2 _ _ H0). eapply star2_refl.
+  - eapply sim_sim' in H4.
+    exploit (sim'_activated H0 H4); eauto.
+    destruct X as [? [? [? [?]]]].
+    + destruct evt.
+      * eapply produces_prefix_star2_silent; eauto.
+        edestruct H7; eauto. destruct H9.
+        econstructor 2. eauto. eapply H9.
+        eapply IHproduces_prefix; eauto.
+        eapply sim'_sim. eapply H10.
+      * exfalso; eapply (no_activated_tau_step _ H0 H1); eauto.
+  - eapply sim_sim' in H4. eapply sim'_terminate in H4; eauto.
+    destruct H4 as [? [? []]]. rewrite H0. econstructor 3; [ | eauto | eauto]. congruence.
+    congruence.
+  - eapply producesPrefixPrefix.
+Qed.
+
+
+Lemma sim_produces' {S} `{StateType S} {S'} `{StateType S'} (σ:S) (σ':S')
+  : sim σ σ' -> forall L, produces σ' L -> produces_nondet σ L.
 Proof.
   intros. general induction H2.
   - eapply sim_sim' in H3.
@@ -88,18 +170,21 @@ Proof.
     exploit (sim'_activated_2 H H4); eauto.
     destruct X as [? [? [[? []]|]]].
     + destruct evt.
-      * eapply produces_star2_silent; eauto.
+      * eapply produces_nondet_star2_silent; eauto.
         edestruct H7; eauto. destruct H9.
         econstructor 2. eauto. eapply H9.
         eapply IHproduces; eauto.
         eapply sim'_sim. eapply H10.
       * exfalso; eapply (no_activated_tau_step _ H H1); eauto.
-    +
-  - eapply sim_sim' in H4. eapply sim'_terminate in H4; eauto.
-    destruct H4 as [? [? []]]. econstructor 3; [ | eauto | eauto].
-    rewrite <- H6; eauto.
+    + dcr. econstructor 4; eauto.
+  - eapply sim_sim' in H4. eapply sim'_terminate_2 in H4; eauto; try congruence.
+    destruct H4 as [? [? [? [|]]]].
+    + case_eq (result σ'); intros.
+      * econstructor 3; [ | eauto | eauto]. congruence.
+      * eapply producesNondetPrefix; eauto. congruence.
+    + eapply producesNondetPrefix; eauto.
 Qed.
-*)
+
 
 
 
