@@ -1063,18 +1063,20 @@ intros. decide (e = e').
     * eapply bvEq_refl.
 Qed.
 
+(*
 Lemma omap_impl_eval:
 forall E al el,
-omap (exp_eval E) al = Some el
+(omap (exp_eval E) al = Some el)
 -> evalList E al  = el.
 
 Proof.
 intros; general induction al.
 - simpl; eauto.
 - simpl. inversion H. monad_inv H1.
-  unfold evalSexp. rewrite EQ. f_equal.
+  unfold evalSexp. unfold evalList.  simpl.
+  rewrite EQ. simpl.  f_equal.
   eapply IHal; eauto.
-Qed.
+Qed. *)
 
 Lemma labeq_incr:
 forall n1 n2,
@@ -1105,36 +1107,34 @@ Proof.
     specialize (H2 F). specialize (H1 F). specialize (H2 H1). clear H1.
     case_eq (undefLift et); case_eq (undefLift es); intros;
     rewrite H1 in H2; rewrite H3 in H2; simpl in H2; unfold evalSpred in H2;
-    rewrite e in H2; destruct l2; simpl in H2.
-      * pose proof  (omap_impl_eval E et el H).
-        pose proof (omap_impl_eval E es el' H0).
-        rewrite H5 in H2; rewrite H4 in H2.
+    rewrite e in H2; destruct l2; simpl in H2;
+    unfold evalList in H2; rewrite H in H2; rewrite H0 in H2; simpl in H2.
+      *  (* pose proof  (omap_impl_eval E et el H).
+        pose proof (omap_impl_eval E es el' H0). *)
         exfalso. eapply H2.
         split; intros; simpl; try split.
-        { unfold F in H7. decide (el = el'); isabsurd. }
+        { unfold F in H5. decide (el = el'); isabsurd. }
         { eapply (guardList_true_if_eval); eauto. }
         { unfold F. decide (el' = el'); try isabsurd; econstructor; eauto. }
-      * pose proof  (omap_impl_eval E et el H).
-        pose proof (omap_impl_eval E es el' H0).
-        rewrite H5 in H2; rewrite H4 in H2.
+      *  (* pose proof  (omap_impl_eval E et el H).
+        pose proof (omap_impl_eval E es el' H0). *)
         exfalso. eapply H2.
         split; intros; simpl; try split.
-        { unfold F in H7. decide (el = el'); isabsurd. }
+        { unfold F in H5. decide (el = el'); isabsurd. }
         { unfold F. decide (el' = el'); try isabsurd; econstructor; eauto. }
-      * pose proof  (omap_impl_eval E et el H).
-        pose proof (omap_impl_eval E es el' H0).
-        rewrite H5 in H2; rewrite H4 in H2.
+      * (* pose proof  (omap_impl_eval E et el H).
+        pose proof (omap_impl_eval E es el' H0). *)
         exfalso. eapply H2.
         split; intros; simpl; try split.
-        { unfold F in H6. decide (el = el'); isabsurd. }
+        { unfold F in H4. decide (el = el'); isabsurd. }
         { eapply (guardList_true_if_eval); eauto. }
         { unfold F. decide (el' = el'); try isabsurd; econstructor; eauto. }
-      * pose proof  (omap_impl_eval E et el H).
+      *(* pose proof  (omap_impl_eval E et el H).
         pose proof (omap_impl_eval E es el' H0).
-        rewrite H5 in H2; rewrite H4 in H2.
+        rewrite H5 in H2; rewrite H4 in H2. *)
         exfalso. eapply H2.
         split; intros; simpl; try split.
-        { unfold F in H6. decide (el = el'); isabsurd. }
+        { unfold F in H4. decide (el = el'); isabsurd. }
         { unfold F. decide (el' = el'); try isabsurd; econstructor; eauto. }
     + pose (F:= fun l => fun (_:vallst) => if [l = labInc l2 1] then true else false).
       specialize (H1 F); specialize (H2 F).
@@ -1189,18 +1189,18 @@ Qed.
   Lemma explist_combineenv_eq_left:
 forall el D Es Et rl,
 list_union (List.map Exp.freeVars el) ⊆ D
--> ( evalList (combineEnv D Es Et) el = rl <-> evalList Es el = rl).
+-> ( omap (exp_eval (combineEnv D Es Et)) el = rl <-> omap (exp_eval Es) el = rl).
 
 Proof.
   intros; split; intros.
   - general induction el.
     + simpl. reflexivity.
-    + simpl. simpl in H. hnf in H. unfold evalSexp.
+    + simpl. simpl in H. hnf in H.
       pose proof (exp_combineenv_eq_left a D Es Et (exp_eval (combineEnv D Es Et) a)); eauto.
       destruct H0.
       * hnf. intros. eapply H. unfold list_union; simpl.
         eapply list_union_start_swap. cset_tac. left; right; eauto.
-      * rewrite H0; eauto.  f_equal. eapply IHel; eauto.
+      * rewrite H0; eauto.  erewrite IHel ; eauto.
         hnf. intros. eapply H. unfold list_union. simpl. eapply list_union_start_swap.
         cset_tac. right; assumption.
   - general induction el.
@@ -1210,7 +1210,7 @@ Proof.
       destruct H0.
       * hnf; intros; eapply H; unfold list_union; simpl.
         eapply list_union_start_swap; cset_tac. left; right; eauto.
-      * rewrite H0; eauto. f_equal; eapply IHel; eauto.
+      * rewrite H0; eauto. erewrite IHel; eauto.
         hnf. intros. eapply H. unfold list_union. simpl. eapply list_union_start_swap.
         cset_tac. right; assumption.
 Qed.
@@ -1281,9 +1281,9 @@ intros.  general induction s; simpl; try reflexivity.
     pose proof (exp_combineenv_eq_left e0 D Es Et None H3).
     destruct H4, H5.
     rewrite H4; eauto; rewrite H5; eauto; reflexivity.
-- unfold evalSpred.
-  pose proof (explist_combineenv_eq_left a D Es Et (evalList (combineEnv D Es Et) a)).
-  destruct H0; eauto. rewrite H0; eauto. reflexivity.
+- unfold evalSpred. unfold evalList.
+  pose proof (explist_combineenv_eq_left a D Es Et (omap(exp_eval Es) a)).
+  destruct H0; eauto. rewrite H1; eauto. reflexivity.
 - unfold evalSexp.  simpl in H.
   case_eq (exp_eval (combineEnv D Es Et) e); intros.
   + pose proof (exp_combineenv_eq_left e D Es Et (Some v) H ).
@@ -1310,19 +1310,19 @@ Qed.
 Lemma explist_combineenv_eqr:
 forall el D Es Et vl,
 agree_on eq (list_union (List.map Exp.freeVars el) ∩ D) Es Et
--> (evalList (combineEnv D Es Et) el = vl <-> evalList Et el = vl).
+-> (omap (exp_eval (combineEnv D Es Et)) el = vl <-> omap (exp_eval Et) el = vl).
 
 Proof.
   intros; split; intros.
   - general induction el.
     + reflexivity.
-    + simpl in *; hnf in H. unfold evalSexp.
+    + simpl in *; hnf in H.
       pose proof (exp_combineenv_eqr a D Es Et (exp_eval (combineEnv D Es Et) a)).
       destruct H0.
       * hnf; intros; cset_tac. eapply H. split; eauto.
         unfold list_union; simpl. eapply list_union_start_swap; cset_tac; eauto.
       * rewrite H0; eauto. f_equal.
-        rewrite (IHel D Es Et (evalList (combineEnv D Es Et) el)); eauto.
+        rewrite (IHel D Es Et (omap (exp_eval (combineEnv D Es Et)) el)); eauto.
         hnf. intros. cset_tac. eapply H. split; eauto.
         unfold list_union. simpl. eapply list_union_start_swap. cset_tac; eauto.
   - general induction el.
@@ -1333,7 +1333,7 @@ Proof.
       * hnf; intros; cset_tac. eapply H. split; eauto.
         unfold list_union; simpl. eapply list_union_start_swap; cset_tac; eauto.
       * rewrite H1; eauto. f_equal.
-        symmetry. rewrite (IHel D Es Et (evalList Et el)); eauto.
+        symmetry. rewrite (IHel D Es Et (omap (exp_eval  Et) el)); eauto.
         hnf. intros. cset_tac. eapply H. split; eauto.
         unfold list_union. simpl. eapply list_union_start_swap. cset_tac; eauto.
 Qed.
@@ -1427,7 +1427,8 @@ Proof.
         { destruct H5; eauto.  specialize (H5 H1). rewrite H5.
           split; intros; eauto. }
   -unfold evalSpred; simpl. unfold labInc. destruct p.
-   pose proof (explist_combineenv_eqr a D Es Et (evalList(combineEnv D Es Et) a)).
+   unfold evalList.
+   pose proof (explist_combineenv_eqr a D Es Et (omap (exp_eval (combineEnv D Es Et)) a)).
    destruct H0; eauto.
    rewrite H0; eauto. reflexivity.
   - unfold evalSpred. unfold evalSexp.
@@ -1675,15 +1676,39 @@ destruct H8 as [ Es  [s' [ sterm| scrash ]]]. destruct H9 as [Et [t' [ tterm | t
            + unfold F; destruct fs; unfold labInc; simpl; eauto.
          - unfold evalSpred; unfold F; simpl; destruct fs;
            simpl; econstructor; eauto. }
-    * subst. simpl in modTS.
-      pose proof (terminates_impl_evalList E s Es fs Xs H5 sterm).
+    * subst. eapply simTerm.
+      instantiate (1:=(nil, Et, stmtGoto ft Xt)).
+      instantiate (1:= (nil, Es, stmtGoto fs Xs)).
+      { simpl in modTS; simpl; eauto.
+(*      pose proof (terminates_impl_evalList E s Es fs Xs H5 sterm).
       pose proof (terminates_impl_evalList E t Et ft Xt H6 tterm).
       destruct H as [es seval]; destruct H8 as [et teval].
-      pose proof (predeval_uneq_goto (combineEnv Ds' Es Et) ft fs Xt Xs es et).
-      specialize (H (smtAnd smtTrue  (smtAnd Q Q')) seval teval).
+      pose proof (predeval_uneq_goto (combineEnv Ds' Es Et) ft fs Xt Xs x0 x).
+      pose proof (explist_combineenv_eq_left Xs Ds' Es Et (Some x)).
+      destruct H10.
+      { admit. }
+      { pose proof (explist_combineenv_eqr Xt Ds' Es Et (Some x0)).
+        destruct H12.
+        - admit.
+        - specialize (H9 (smtAnd smtTrue  (smtAnd Q Q'))).
+          specialize (H9 (H13 H8) (H11 H)).
+          simpl in H.
+          assert (forall F, models F (combineEnv Ds' Es Et) (smtAnd smtTrue (smtAnd Q Q'))).
+          + admit.
+          + specialize (H9 H14).
+            simpl in H14. specialize
+
 
       {  admit. }
       { admit. }
+
+ } *)
+      { eauto. }
+      { eauto. }
+      { hnf. intros. unfold reducible2 in H. destruct H. destruct H.
+        inversion H. inversion Ldef. }
+      { hnf. intros. unfold reducible2 in H. destruct H. destruct H.
+        inversion H. inversion Ldef. }
 (* s terminiert & t crasht *)
 - pose proof (terminates_impl_models s D E s' Es H2 H5 sterm).
   assert (forall x, x ∈ fst(getAnn D') -> exists v, E x = Some v) by admit.

@@ -126,11 +126,21 @@ match s, p with
   =>  guardGen  (undef e) p  ( smtNeg (smtReturn e))
 end.
 
-Fixpoint evalList E (e:arglst) : vallst :=
-match e with
+Fixpoint listGen (el:arglst) :=
+match el with
+|nil => nil
+|_:: el' => default_val :: listGen el'
+end.
+
+Definition evalList E (e:arglst) : vallst :=
+match (omap (exp_eval E) e) with
+|Some el => el
+| None => listGen e
+end.
+(*match e with
 |nil =>  nil
 |x::e' => (evalSexp E x) :: ( evalList E e')
-end.
+end.*)
 
 Definition evalSpred (F :pred->  vallst -> bool) (f:lab) (e:vallst)  :=
 F f e.
