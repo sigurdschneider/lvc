@@ -98,29 +98,37 @@ Qed.
 
 Lemma cp_moreDefined ϱ D e
   : Exp.freeVars e[<=]D
-    -> moreDefined (cp_eqns ϱ D) e (rename_exp ϱ e).
+    -> entails (cp_eqns ϱ D) {Eqn EqnApx e (rename_exp ϱ e)}.
 Proof.
   general induction e; simpl.
-  - reflexivity.
+  - hnf; intros; hnf; intros. cset_tac; intuition. rewrite <- H1.
+    constructor. reflexivity.
   - hnf; intros.
     assert (Eqn EqnApx (Var v) (Var (ϱ v)) ∈ cp_eqns ϱ D). {
       eapply in_cp_eqns; eexists v; split; eauto.
       - rewrite <- H; simpl; cset_tac; eauto.
     }
     exploit H0; eauto.
-    inv X; simpl in *; eauto.
+    hnf; intros. cset_tac; intuition. rewrite <- H2; eauto.
   - simpl in H.
     exploit (IHe ϱ); eauto.
-    hnf; intros. exploit X; eauto.
-    simpl. inv X0; simpl.
-    + econstructor.
-    + reflexivity.
+    hnf; intros; hnf; intros. cset_tac. rewrite <- H1. exploit X; eauto.
+    exploit X0. cset_tac; reflexivity.
+    simpl. inv X1; simpl. inv H3.
+    + econstructor. simpl. rewrite <- H4. simpl. constructor.
+    + econstructor; simpl. rewrite <- H2, <- H4; simpl.
+      destruct (unop_eval u y); econstructor; eauto.
   - simpl in H.
     exploit (IHe1 ϱ); eauto. instantiate (1:=D). rewrite <- H. cset_tac; intuition.
     exploit (IHe2 ϱ); eauto. instantiate (1:=D). rewrite <- H. cset_tac; intuition.
     hnf; intros.
     exploit X; eauto. exploit X0; eauto.
-    simpl. inv X1; inv X2; simpl; try econstructor.
+    simpl.
+    exploit X1; eauto. cset_tac; reflexivity. inv X3.
+    exploit X2; eauto. cset_tac; reflexivity. inv X4.
+    hnf; intros. cset_tac. rewrite <- H1. econstructor.
+    simpl.
+    inv H2; inv H3; simpl; try econstructor.
     reflexivity.
 Qed.
 
@@ -137,15 +145,16 @@ Proof.
       - reflexivity.
     }
     exploit (cp_moreDefined ϱ); eauto.
-    exploit X; eauto. inv X0.
+    exploit X; eauto. exploit X0. cset_tac; reflexivity. inv X1.
+    inv H3.
     + econstructor.
     + simpl. exploit (IHY ϱ D); eauto.
       rewrite <- H. simpl.
       unfold list_union. simpl.
       rewrite (list_union_start_swap _ _ ({} ++ Exp.freeVars a)).
       cset_tac; intuition.
-      exploit X1; eauto.
-      inv X2; try econstructor; eauto.
+      exploit X2; eauto.
+      inv X3; try econstructor; eauto.
 Qed.
 
 Lemma cp_eqns_add_update ϱ D x y
@@ -248,7 +257,8 @@ Proof.
             + eapply entails_monotone. reflexivity.
               eapply incl_right.
         }
-      * reflexivity.
+      * hnf; intros; hnf; intros. cset_tac; intuition. rewrite <- H7.
+        econstructor. reflexivity.
     + econstructor; eauto.
       eapply eqn_sound_entails_monotone; eauto.
       * eapply IHssa; eauto. rewrite H2; simpl.
