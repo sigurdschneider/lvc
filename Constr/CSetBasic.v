@@ -90,6 +90,12 @@ Section theorems.
     cset_tac; firstorder.
   Qed.
 
+  Lemma incl_singleton (x:X) (s:set X)
+    : x ∈ s -> singleton x ⊆ s.
+  Proof.
+    intros. hnf; intros. cset_tac; intuition.
+  Qed.
+
   Lemma minus_incl (s t:set X)
     : (s\t) ⊆ s.
   Proof.

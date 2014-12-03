@@ -104,7 +104,7 @@ Fixpoint eqn_cmp (e e':eqn) :=
     | EqnApx _ _, _ => Gt
   end.
 
-Instance OrderedType_exp : OrderedType eqn :=
+Instance OrderedType_eqn : OrderedType eqn :=
  { _eq := eq;
   _lt := eqnLt;
   _cmp := eqn_cmp}.
@@ -572,6 +572,15 @@ Proof.
   clear_all; cset_tac; intuition.
 Qed.
 *)
+
+
+Lemma entails_subset Γ Γ'
+  : Γ' ⊆ Γ
+    -> entails Γ Γ'.
+Proof.
+  unfold entails, satisfiesAll; intuition.
+Qed.
+
 
 Lemma entails_add Gamma gamma Γ'
 : entails Gamma ({{gamma}} ∪ Γ')
