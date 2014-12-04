@@ -10,28 +10,50 @@ smtAnd (translateStmt s source) (translateStmt t target).
 Definition combineEnv D (E1:onv val) E2 :=
 fun x => if [x ∈ D] then E1 x else E2 x.
 
-Lemma ssa_eval_agree s D s' (E:onv val) (E':onv val) a
+Lemma term_ssa_eval_agree L L' s D s' (E:onv val) (E':onv val)
  : ssa s D
    -> noFun s
-   -> star2 F.step (nil,E, s) a (nil, E', s')
+   -> Terminates (L, E, s) (L', E', s')
    -> agree_on eq (fst (getAnn D)) E E'.
 
 Proof.
   intros.
   general induction H1; invt ssa; try invt F.step;try invt noFun; simpl;
   try reflexivity; isabsurd.
-  - exploit IHstar2; [ | | | reflexivity | reflexivity |]; eauto.
-   rewrite H6 in X; simpl in *. cset_tac; intuition.
+  - exploit IHTerminates; [ | | reflexivity | reflexivity |]; eauto.
+   rewrite H7 in X; simpl in *. cset_tac; intuition.
    hnf. hnf in X. intros.
    unfold update in X. specialize (X x0).
    assert (x0 ∈ D0 ++ {x; {}}) by (cset_tac; left; assumption).
-   specialize (X H9). decide (x === x0).
-    + rewrite  e0 in H3; exfalso; apply H3; assumption.
-    + assumption.
-  - exploit IHstar2; [| | | reflexivity | reflexivity |]; eauto.
-    rewrite H8 in X; simpl in *. assumption.
-  - exploit IHstar2; [| | | reflexivity | reflexivity |]; eauto.
-    rewrite H9 in X; simpl in *; assumption.
+   specialize (X H10). decide (x === x0); eauto.
+    + rewrite  <- e0 in H8; exfalso; apply H4 ; assumption.
+  - exploit IHTerminates; [ | | reflexivity | reflexivity |]; eauto.
+    rewrite H9 in X; simpl in *. assumption.
+  - exploit IHTerminates; [| | reflexivity | reflexivity |]; eauto.
+    rewrite H10 in X; simpl in *; assumption.
+Qed.
+
+Lemma crash_ssa_eval_agree L L' s D s' (E:onv val) (E':onv val)
+: ssa s D
+  ->noFun s
+  -> Crash (L, E, s) (L', E', s')
+  -> agree_on eq (fst (getAnn (D))) E E'.
+
+Proof.
+  intros.
+  general induction H1; invt ssa; try invt F.step; try invt noFun; simpl;
+  try reflexivity; isabsurd.
+  - exploit IHCrash; [ | | reflexivity | reflexivity |]; eauto.
+    rewrite H7 in X; simpl in *; cset_tac; intuition.
+    hnf; hnf in X; intros.
+    unfold update in X; specialize (X x0).
+    assert (x0 ∈ D0 ++ {x; {}}) by (cset_tac; left; assumption).
+    specialize (X H10); decide (x === x0); eauto.
+    + rewrite <- e0 in H8; exfalso; eapply H4; assumption.
+  - exploit IHCrash; [ | | reflexivity | reflexivity |]; eauto.
+    rewrite H9 in X; eauto.
+  - exploit IHCrash; [ | | reflexivity | reflexivity |]; eauto.
+    rewrite H10 in X; eauto.
 Qed.
 
 Lemma terminates_impl_star2:
@@ -58,10 +80,10 @@ general induction H; eauto.
 Qed.
 
 Lemma terminates_impl_models :
-forall s D E s' E',
+forall L s D E s' E',
 ssa  s D
 -> noFun s
--> Terminates (nil,E, s) (nil, E', s')
+-> Terminates (L,E, s) (L, E', s')
 ->  models (fun (f:pred) (x:vallst) => true)  E'  (translateStmt s source).
 
 Proof.
@@ -80,46 +102,35 @@ general induction H1; simpl.
     * eapply (guard_true_if_eval _ E'0 e s v ); eauto.
       eapply exp_eval_agree; eauto.
       assert (A: agree_on eq (fst (getAnn (ann1 (D0, D') an))) E0 E'0).
-      { pose proof (terminates_impl_star2 nil E0 (stmtExp x e s') nil E'0 s'0).
-        destruct H6; try econstructor; eauto. destruct H6.
-        eapply (ssa_eval_agree  (stmtExp x e s') _ s'0 _ _ x0); eauto. }
+      { eapply (term_ssa_eval_agree L' L' (stmtExp x e s') _ s'0 _ _);
+        econstructor; eauto. }
       { eapply (agree_on_incl  (bv:=Exp.freeVars e) (lv:=fst (getAnn (ann1 (D0, D') an)))); eauto. }
     * split; eauto; subst.
       assert (X1: exp_eval E'0 (Var x) = Some v).
       { eapply (exp_eval_agree (E:= E0[x <- Some v])) ; eauto.
         - simpl. eapply (agree_on_incl (bv:={x} ) (lv:= fst (getAnn an))); subst.
-          + pose proof (terminates_impl_star2 nil (E0[x <- Some v]) s' nil E'0 s'0).
-            destruct H6; eauto. destruct H6.
-            eapply (ssa_eval_agree s' _ s'0 _ E'0 x0); eauto.
+          + eapply (term_ssa_eval_agree L' L' s' _ s'0 _ E'0); eauto.
           + rewrite H11. unfold fst. cset_tac. right; rewrite H6; reflexivity.
-        - unfold exp_eval. unfold update. decide (x===x).
-          + reflexivity.
-          + exfalso.  apply n; reflexivity. }
+        - unfold exp_eval. unfold update. decide (x===x); eauto; isabsurd. }
       assert (X2: exp_eval E'0 e = Some v).
       { eapply exp_eval_agree; eauto.
       assert (A: agree_on eq (fst (getAnn (ann1 (D0, D') an))) E0 E'0).
-        - pose proof (terminates_impl_star2 nil E0 (stmtExp x e s') nil E'0 s'0).
-          destruct H6; try econstructor; eauto; destruct H6.
-          eapply (ssa_eval_agree  (stmtExp x e s') _ s'0 _ _ x0); eauto.
+        - eapply (term_ssa_eval_agree L' L' (stmtExp x e s') _ s'0 _ _);
+          econstructor; eauto.
         - eapply (agree_on_incl  (bv:=Exp.freeVars e) (lv:=fst (getAnn (ann1 (D0, D') an)))); eauto. }
       {  unfold evalSexp. rewrite X1; rewrite X2.
-         eapply  bvEq_equiv_eq. reflexivity.  }
+         eapply  bvEq_equiv_eq. reflexivity. }
     * assert (X1: exp_eval E'0 (Var x) = Some v).
       { eapply (exp_eval_agree (E:= E0 [x <- Some v])) ; eauto.
         - simpl. eapply (agree_on_incl (bv:={x} ) (lv:= fst (getAnn an))).
-          + pose proof (terminates_impl_star2 nil (E0[x <- Some v]) s' nil E'0 s'0).
-            destruct H6; eauto. destruct H6.
-            eapply (ssa_eval_agree s' _ s'0 _ _ x0); eauto.
+          + eapply (term_ssa_eval_agree L' L' s' _ s'0 _ _); eauto.
           + rewrite H11. unfold fst. cset_tac. right; rewrite H6; reflexivity.
-        - unfold exp_eval. unfold update. decide (x===x).
-          + reflexivity.
-          + exfalso.  apply n; reflexivity. }
+        - unfold exp_eval. unfold update. decide (x===x); eauto; isabsurd. }
       assert (X2: exp_eval E'0 e = Some v).
       { eapply exp_eval_agree; eauto.
       assert (A: agree_on eq (fst (getAnn (ann1 (D0, D') an))) E0 E'0).
-        - pose proof (terminates_impl_star2 nil E0 (stmtExp x e s') nil E'0 s'0).
-          destruct H6; try econstructor; eauto; destruct H6.
-          eapply (ssa_eval_agree  (stmtExp x e s') _ s'0); eauto.
+        - eapply (term_ssa_eval_agree  L' L' (stmtExp x e s') _ s'0);
+          econstructor; eauto.
         - eapply (agree_on_incl  (bv:=Exp.freeVars e) (lv:=fst (getAnn (ann1 (D0, D') an)))); eauto. }
       {  unfold evalSexp. rewrite X1; rewrite X2.
          eapply  bvEq_equiv_eq. reflexivity.  }
@@ -128,9 +139,7 @@ general induction H1; simpl.
       assert (Exp.freeVars e ⊆ fst (getAnn (ann2 (D0, D') ans ant)))
         by (hnf; intros; hnf in H7; specialize (H7 a); exact (H7 H4)).
       assert (agree_on eq (fst (getAnn (ann2 (D0, D') ans ant))) E' E'0)
-        by (pose proof (terminates_impl_star2 nil E' (stmtIf e s' b2) nil E'0 s'0);
-        destruct H5; try econstructor; eauto; destruct H5;
-        eapply (ssa_eval_agree (stmtIf e s' b2) _ s'0 _ _ x); eauto).
+        by ( eapply (term_ssa_eval_agree L' L' (stmtIf e s' b2) _ s'0 _ _); econstructor; eauto).
       erewrite (exp_eval_agree (E:=E') (E':=E'0)); eauto. simpl. rewrite condTrue.
       eapply IHTerminates; eauto.
       eapply (agree_on_incl (bv:= Exp.freeVars e) (lv:= fst (getAnn (ann2 (D0, D') ans ant)))); eauto.
@@ -140,9 +149,7 @@ general induction H1; simpl.
           assert (Exp.freeVars e ⊆ fst (getAnn (ann2 (D0, D') ans ant)))
             by (hnf; intros; hnf in H7; specialize (H7 a); hnf; cset_tac; simpl;  exact (H7 H5)).
           assert (agree_on eq (fst (getAnn (ann2 (D0, D') ans ant))) E' E'0)
-            by (pose proof (terminates_impl_star2 nil E' (stmtIf e s' b2) nil E'0 s'0);
-                destruct H12; try econstructor; eauto; destruct H12;
-                eapply (ssa_eval_agree (stmtIf e s' b2) _ s'0 _ _ x); eauto).
+            by ( eapply (term_ssa_eval_agree L' L' (stmtIf e s' b2) _ s'0 _ _); econstructor; eauto).
           eapply (exp_eval_agree (E:=E') (E':=E'0)); eauto.
           eapply (agree_on_incl (bv:= Exp.freeVars e) (lv:= fst (getAnn (ann2 (D0, D') ans ant)))); eauto.
       }
@@ -151,9 +158,7 @@ general induction H1; simpl.
       assert (Exp.freeVars e ⊆ fst (getAnn (ann2 (D0, D') ans ant)))
         by (hnf; intros; hnf in H7; specialize (H7 a); exact (H7 H4)).
       assert (agree_on eq (fst (getAnn (ann2 (D0, D') ans ant))) E' E'0)
-      by (pose proof (terminates_impl_star2 nil E' (stmtIf e b1 s') nil E'0 s'0);
-        destruct H5; try econstructor; eauto; destruct H5;
-            eapply (ssa_eval_agree (stmtIf e b1 s') _ s'0 _ _ x); eauto).
+      by ( eapply (term_ssa_eval_agree L' L' (stmtIf e b1 s') _ s'0 _ _);econstructor;  eauto).
       erewrite (exp_eval_agree (E:=E') (E':=E'0)); eauto. simpl. rewrite condFalse.
       eapply IHTerminates; eauto.
       eapply (agree_on_incl (bv:= Exp.freeVars e) (lv:= fst (getAnn (ann2 (D0, D') ans ant)))); eauto.
@@ -163,9 +168,7 @@ general induction H1; simpl.
           + assert (Exp.freeVars e ⊆ fst (getAnn (ann2 (D0, D') ans ant)))
               by (hnf; intros; hnf in H7; specialize (H7 a); hnf; cset_tac; simpl;  exact (H7 H5)).
             assert (agree_on eq (fst (getAnn (ann2 (D0, D') ans ant))) E' E'0)
-              by (pose proof (terminates_impl_star2 nil E' (stmtIf e b1 s') nil E'0 s'0);
-              destruct H12; try econstructor; eauto; destruct H12;
-              eapply (ssa_eval_agree (stmtIf e b1 s') _ s'0 _ _ x); eauto).
+              by ( eapply (term_ssa_eval_agree L' L' (stmtIf e b1 s') _ s'0 _ _); econstructor; eauto).
             eapply (exp_eval_agree (E:=E') (E':=E'0)); eauto.
             eapply (agree_on_incl (bv:= Exp.freeVars e) (lv:= fst (getAnn (ann2 (D0, D') ans ant)))); eauto.
       }
@@ -193,16 +196,16 @@ general induction e; simpl in *; try isabsurd.
       intros. cset_tac. specialize (H x). destruct H; eauto.
     * eapply (IHe1 F E s); eauto.
       intros; cset_tac; specialize (H x); destruct H; eauto.
-    * pose proof (noundef  E e1 H4).
-      destruct H5; isabsurd.
+    * pose proof (noguard_impl_eval  E e1).
+      destruct H5; isabsurd; eauto.
       intros; cset_tac; destruct (H x); eauto.
   + case_eq (undef e1); case_eq (undef e2); intros;
     rewrite H4 in H0; rewrite H3 in H0; simpl in H0; inversion H0;
     rewrite <- H6 in H2; simpl in H2; try destruct H2.
     * eapply (IHe2 F E s); eauto.
       intros; cset_tac. destruct (H x0); eauto.
-    * pose proof (noundef E e2 H3).
-      destruct H5; isabsurd.
+    * pose proof (noguard_impl_eval E e2).
+      destruct H5; isabsurd; eauto.
       intros; cset_tac. destruct (H x0); eauto.
     * eapply (IHe2 F E s); eauto.
       intros; cset_tac. destruct (H x0); eauto.
@@ -213,16 +216,16 @@ general induction e; simpl in *; try isabsurd.
        intros; cset_tac. destruct (H x); eauto.
      * eapply (IHe1 F E s); eauto.
        intros; cset_tac; destruct (H x); eauto.
-     * pose proof (noundef  E e1 H4).
-       destruct H5; isabsurd.
+     * pose proof (noguard_impl_eval E e1).
+       destruct H5; eauto; isabsurd.
        intros; cset_tac; destruct (H x); eauto.
   + case_eq (undef e1); case_eq (undef e2); intros;
     rewrite H4 in H0; rewrite H3 in H0; simpl in H0; inversion H0;
     rewrite <- H6 in H2; simpl in H2; try destruct H2.
     * eapply (IHe2 F E s); eauto.
       intros; cset_tac. destruct (H x0); eauto.
-    * pose proof (noundef E e2 H3).
-      destruct H5; isabsurd.
+    * pose proof (noguard_impl_eval E e2).
+      destruct H5; eauto; isabsurd.
       intros; cset_tac. destruct (H x0); eauto.
     * eapply (IHe2 F E s); eauto.
       intros; cset_tac. destruct (H x0); eauto.
@@ -233,16 +236,16 @@ general induction e; simpl in *; try isabsurd.
        intros; cset_tac. destruct (H x); eauto.
      * eapply (IHe1 F E s); eauto.
        intros; cset_tac; destruct (H x); eauto.
-     * pose proof (noundef  E e1 H4).
-       destruct H5; isabsurd.
+     * pose proof (noguard_impl_eval  E e1).
+       destruct H5; eauto; isabsurd.
        intros; cset_tac; destruct (H x); eauto.
   + case_eq (undef e1); case_eq (undef e2); intros;
     rewrite H4 in H0; rewrite H3 in H0; simpl in H0; inversion H0;
     rewrite <- H6 in H2; simpl in H2; try destruct H2.
     * eapply (IHe2 F E s); eauto.
       intros; cset_tac. destruct (H x0); eauto.
-    * pose proof (noundef E e2 H3).
-      destruct H5; isabsurd.
+    * pose proof (noguard_impl_eval E e2).
+      destruct H5; eauto; isabsurd.
       intros; cset_tac. destruct (H x0); eauto.
     * eapply (IHe2 F E s); eauto.
       intros; cset_tac. destruct (H x0); eauto.
@@ -253,16 +256,16 @@ general induction e; simpl in *; try isabsurd.
        intros; cset_tac. destruct (H x); eauto.
      * eapply (IHe1 F E s); eauto.
        intros; cset_tac; destruct (H x); eauto.
-     * pose proof (noundef  E e1 H4).
-       destruct H5; isabsurd.
+     * pose proof (noguard_impl_eval E e1).
+       destruct H5; eauto; isabsurd.
        intros; cset_tac; destruct (H x); eauto.
   +  case_eq (undef e1); case_eq (undef e2); intros;
     rewrite H4 in H0; rewrite H3 in H0; simpl in H0; inversion H0;
     rewrite <- H6 in H2; simpl in H2; try destruct H2.
      * eapply (IHe2 F E s); eauto.
        intros; cset_tac. destruct (H x0); eauto.
-     * pose proof (noundef E e2 H3).
-       destruct H5; isabsurd.
+     * pose proof (noguard_impl_eval E e2).
+       destruct H5; eauto; isabsurd.
        intros; cset_tac. destruct (H x0); eauto.
      * eapply (IHe2 F E s); eauto.
        intros; cset_tac. destruct (H x0); eauto.
@@ -273,16 +276,16 @@ general induction e; simpl in *; try isabsurd.
       intros; cset_tac. destruct (H x); eauto.
     * eapply (IHe1 F E s); eauto.
       intros; cset_tac; destruct (H x); eauto.
-    * pose proof (noundef  E e1 H4).
-      destruct H5; isabsurd.
+    * pose proof (noguard_impl_eval E e1).
+      destruct H5; eauto; isabsurd.
       intros; cset_tac; destruct (H x); eauto.
   +  case_eq (undef e1); case_eq (undef e2); intros;
     rewrite H4 in H0; rewrite H3 in H0; simpl in H0; inversion H0;
     rewrite <- H6 in H2; simpl in H2; try destruct H2.
      * eapply (IHe2 F E s); eauto.
        intros; cset_tac. destruct (H x0); eauto.
-     * pose proof (noundef E e2 H3).
-       destruct H5; isabsurd.
+     * pose proof (noguard_impl_eval E e2).
+       destruct H5; eauto; isabsurd.
        intros; cset_tac. destruct (H x0); eauto.
      * eapply (IHe2 F E s); eauto.
        intros; cset_tac. destruct (H x0); eauto.
@@ -294,11 +297,11 @@ general induction e; simpl in *; try isabsurd.
       intros; cset_tac. destruct (H x); eauto.
     * destruct H2.  eapply (IHe1 F E s); eauto.
       intros; cset_tac. destruct (H x); eauto.
-    * destruct H2. pose proof (noundef E e1 H4); eauto.
-      destruct H5; isabsurd.
+    * destruct H2. pose proof (noguard_impl_eval E e1); eauto.
+      destruct H5; eauto; isabsurd.
       intros; cset_tac. destruct (H x); eauto.
-    * pose proof (noundef E e1 H4).
-      destruct H0; isabsurd.
+    * pose proof (noguard_impl_eval E e1).
+      destruct H0; eauto; isabsurd.
       intros; cset_tac. destruct (H x); eauto.
   +  case_eq (undef e1); case_eq (undef e2); intros;
     rewrite H3, H4 in H0; simpl in H0; inversion H0; clear H0;
@@ -306,13 +309,13 @@ general induction e; simpl in *; try isabsurd.
     simpl in H2; destruct H2; try destruct H2.
      * eapply (IHe2 F E s); eauto.
        intros; cset_tac. destruct (H x0); eauto.
-     * pose proof (noundef E e2 H3).
-       destruct H5; isabsurd.
+     * pose proof (noguard_impl_eval E e2).
+       destruct H5; eauto; isabsurd.
        intros; cset_tac. destruct (H x0); eauto.
      * eapply (IHe2 F E s); eauto.
        intros; cset_tac. destruct (H x0); eauto.
-     * pose proof (noundef E e2 H3).
-       destruct H0; isabsurd.
+     * pose proof (noguard_impl_eval E e2).
+       destruct H0; eauto; isabsurd.
        intros; cset_tac. destruct (H x0); eauto.
   + case_eq (undef e1); case_eq (undef e2); intros;
     rewrite H1, H3 in H0; simpl in H; inversion H0; clear H0;
@@ -337,6 +340,40 @@ general induction e; simpl in *; try isabsurd.
       Focus 2. rewrite H0 in EQ2. destruct (bvLessZero x); destruct (bvLessZero x0); isabsurd.
       unfold evalSexp. rewrite EQ1. simpl.
       change (val2bool (bvEq x0 (zext k (O::nil)))).  eapply zero_implies_eq; eauto.
+Qed.
+
+Lemma undefList_models:
+  forall F E el gl,
+    (forall x, x ∈ list_union (List.map Exp.freeVars el) -> exists v, E x = Some v)
+    -> undefLift el = Some gl
+    -> omap (exp_eval E) el = None
+    -> ~ models F E gl.
+
+Proof.
+  intros.
+  general induction el; simpl in *.
+  - case_eq (undef a); case_eq (undefLift el); intros;
+    rewrite H2, H3 in H0; simpl in H0; inversion H0; simpl; hnf; intros.
+    + destruct H4.
+      monad_inv (H1); isabsurd.
+      * pose proof (undef_models F E a s0).
+        eapply H1; eauto. setSubstUnion H.
+      * exploit (IHel F E s); eauto.
+        setSubstUnion H.
+    +  rewrite <- H5 in H4.
+      monad_inv H1; isabsurd.
+      * pose proof (undef_models F E a s).
+        eapply H1; eauto.
+        setSubstUnion H.
+      * pose proof (noguardlist_impl_eval E el).
+        destruct H6; eauto; isabsurd.
+        setSubstUnion H.
+    + monad_inv H1; isabsurd.
+      * pose proof (noguard_impl_eval E a).
+        destruct H1; eauto; isabsurd.
+        setSubstUnion H.
+      * exploit (IHel F E s); eauto; isabsurd.
+        setSubstUnion H.
 Qed.
 
 Lemma nostep_let:
@@ -364,7 +401,7 @@ case_eq (val2bool v); intros.
 - exists (L, E, f); econstructor; eauto.
 Qed.
 
-Lemma noFun_nil s E σ a:
+Lemma noFun_nil E s σ a:
   noFun s
   -> star2 F.step (nil,E,s) a σ
   -> a = nil.
@@ -374,10 +411,11 @@ Proof.
   inv H; simpl; exploit IHstar2; try reflexivity; eauto.
 Qed.
 
+(* TODO: Vll fixbar mit Lemma das sagt Terminates (L, E, s) (L', E', s') -> Terminates (nil, E, s) (nil, E', s') *)
 Lemma star2_noFun_Term:
 forall E s Es s',
 noFun s
--> Terminates (nil, E, s) (nil, Es, s')
+-> Terminates (nil , E, s) (nil , Es, s')
 -> star2 F.step  (nil, E, s) nil (nil, Es, s') /\
    ((exists e, s' = stmtReturn e) \/ (exists f X, s' = stmtGoto f X)).
 
@@ -400,8 +438,13 @@ Proof.
   general induction Crash.
   - split.
     + exists nil; econstructor.
-    + split; eauto.
-- destruct sigma'. destruct p. exploit (IHCrash o s0 Es s' l L') ; try reflexivity.
+    + split.
+      * hnf. intros. destruct H0. destruct H0. inversion H0.
+        rewrite H in def; isabsurd.
+      * unfold failed; eauto.
+   - split; eauto.
+     exists nil; econstructor.
+- destruct sigma'. destruct p. exploit (IHCrash o s Es s' l L') ; try reflexivity.
     destruct X as [ [al sstep] X].
     destruct X; split; try split; eauto.
     + destruct a.
@@ -423,177 +466,142 @@ Proof.
 Qed.
 
 Lemma crash_impl_models:
-  forall D s E Es s',
+  forall L L' D s E Es s',
     ssa s D
     -> (forall x, x ∈ fst(getAnn D) -> exists v, E x = Some v)
     -> noFun s
-    -> Crash ( nil, E, s) (nil, Es, s')
+    -> Crash (L, E, s) (L', Es, s')
     -> models (fun _ => fun _ => true) Es (translateStmt s target).
 
 Proof.
   intros. general induction H2; simpl.
-  (*- case_eq (undef e); simpl; intros.
-    + pose proof (undef_models (fun _ => fun _ => true) E0 e s).
-      assert (forall x, x ∈ Exp.freeVars e -> exists v, E0 x = Some v).
-      * intros; inversion H1; cset_tac.  simpl in H2. specialize (H2 x).
-        destruct H2; eauto.
-      *  specialize (H6 H7 H0 H H4); isabsurd.
-    + pose proof (noguard_impl_eval E0 e).
-      assert (forall x, x ∈ Exp.freeVars e -> exists v, E0 x = Some v).
-      * intros. inversion H1. specialize (H2 x). hnf in H8. cset_tac.
-        simpl in H2. specialize (H8 x H6). specialize (H2 H8).
-        destruct H2. exists x0. rewrite H2; eauto.
-      * specialize (H5 H6 H0). destruct H5; rewrite H5 in *.
-        isabsurd. *)
-  - inversion H3; subst.
-    (* case_eq (s0); intros; subst. *)
+  - case_eq (undefLift Y); intros; simpl; intros; eauto.
+    + pose proof (undefList_models (fun _ => fun _ => true) E0 Y s).
+      eapply H6; eauto.
+      intros. eapply H1. inversion H0.
+      simpl. eauto.
+    + pose proof (noguardlist_impl_eval E0 Y).
+      destruct H5; eauto; isabsurd.
+      intros; eapply H1. inversion H0; simpl; eauto.
+  - inversion H4; subst.
     + case_eq (undef e); simpl; intros.
-      * pose proof (nostep_let nil E0 x e s H).
+      * pose proof (nostep_let L0 E0 x e s H0).
         pose proof (undef_models (fun _ => fun _ => true) E0 e s0).
         assert (forall x, x ∈ Exp.freeVars e -> exists v, E0 x = Some v).
-        { intros; invt ssa. specialize (H2 x0). eapply H2.
+        { intros; invt ssa. specialize (H3 x0). eapply H3.
           simpl; cset_tac; eauto. }
-        { rewrite H5.  simpl.  intros. specialize (H7 H8 H5 H6 H9); isabsurd. }
+        { rewrite H6.  simpl.  intros. specialize (H8 H9 H6 H7 H10); isabsurd. }
       * pose proof (noguard_impl_eval E0 e).
         assert (forall x, x ∈ Exp.freeVars e -> exists v, E0 x = Some v).
-        { intros. inversion H1. specialize (H2 x0). subst. simpl in H2.
-          hnf in H12.  specialize (H12 x0 H7).  destruct (H2 H12).
+        { intros. inversion H2. specialize (H3 x0). subst. simpl in H3.
+          hnf in H13.  specialize (H13 x0 H8).  destruct (H3 H13).
           exists x1; eauto. }
-        { specialize (H6  H7 H5). destruct H6.
-        assert (exists y σ, F.step (nil, E0, stmtExp x e s) y σ )
-          by (exists EvtTau; exists (nil, E0[x<-Some x0], s); econstructor; eauto).
-        hnf in H.  unfold reducible2 in H. specialize (H H8); isabsurd. }
+        { specialize (H7 H8 H6). destruct H7.
+        assert (exists y σ, F.step (L0, E0, stmtExp x e s) y σ )
+            by (exists EvtTau; exists (L0, E0[x<-Some x0], s); econstructor; eauto ).
+          hnf in H0.  unfold reducible2 in H0. specialize (H0 H9); isabsurd. }
     + case_eq (undef e); simpl; intros.
-      * pose proof (nostep_if nil E0 e s t H).
+      * pose proof (nostep_if L0 E0 e s t H0).
         pose proof (undef_models (fun _ => fun _ => true) E0 e s0).
         assert (forall x, x ∈ Exp.freeVars e -> exists v, E0 x = Some v).
-        { intros; invt ssa. eapply (H2 x). simpl; cset_tac; eauto. }
-        { rewrite H6; simpl; intros. specialize (H8 H9 H6 H7 H10); isabsurd. }
+        { intros; invt ssa. eapply (H3 x). simpl; cset_tac; eauto. }
+        { rewrite H7; simpl; intros. specialize (H9 H10 H7 H8 H11); isabsurd. }
       * pose proof (noguard_impl_eval E0 e).
         assert (forall x, x ∈ Exp.freeVars e -> exists v, E0 x = Some v).
-        { intros; invt ssa. specialize (H2 x); subst; simpl in *. cset_tac.
-          hnf in H12. destruct (H2 (H12 x H8)).
-          exists x0. rewrite H9; eauto. }
-        { specialize (H7 H8 H6).
-        assert (exists y σ, F.step (nil, E0 , stmtIf e s t) y σ).
-        { exists EvtTau. destruct H7. case_eq (val2bool x); intros.
-          - exists (nil, E0, s). econstructor; eauto.
-          - exists (nil, E0, t). econstructor; eauto. }
-        { specialize (H H9); isabsurd. } }
-    + case_eq (undefLift Y); intros.
-      * admit.
-      * admit.
+        { intros; invt ssa. specialize (H3 x); subst; simpl in *. cset_tac.
+          hnf in H13. destruct (H3 (H13 x H9)).
+          exists x0. rewrite H10; eauto. }
+        { specialize (H8 H9 H7).
+        assert (exists y σ, F.step (L0, E0 , stmtIf e s t) y σ).
+        { exists EvtTau. destruct H8. case_eq (val2bool x); intros.
+          - exists (L0, E0, s). econstructor; eauto.
+          - exists (L0, E0, t). econstructor; eauto. }
+        { specialize (H0 H10); isabsurd. } }
+    + isabsurd.
     +  case_eq (undef e); simpl; intros.
        * pose proof (undef_models (fun _ => fun _ => true) E0 e s).
          assert (forall x, x ∈ Exp.freeVars e -> exists v, E0 x = Some v).
-        { intros; inversion H1; cset_tac.  simpl in H2. specialize (H2 x).
+        { intros; inversion H2; cset_tac.  simpl in H3. specialize (H3 x).
         destruct H1; eauto. }
-       { rewrite H4; simpl. specialize (H5 H6 H4 H0); isabsurd. }
+       { rewrite H5; simpl. specialize (H6 H7 H5 H1); isabsurd. }
        * pose proof (noguard_impl_eval E0 e).
          assert (forall x, x ∈ Exp.freeVars e -> exists v, E0 x = Some v).
-         { intros. inversion H1. simpl in H2. specialize (H2 x).
-           hnf in H8. cset_tac. destruct H2; eauto. }
-         { simpl in H2. specialize (H5 H6). specialize (H5 H4).
-           destruct H5. rewrite H4; simpl; intros. simpl in H0.
-           rewrite H5 in H0; isabsurd. }
+         { intros. inversion H2. simpl in H3. specialize (H3 x).
+           hnf in H9. cset_tac. destruct H3; eauto. }
+         { simpl in H3. specialize (H6 H7). specialize (H6 H5).
+           destruct H6. rewrite H5; simpl; intros. simpl in H1.
+           rewrite H6 in H1; isabsurd. }
   - destruct sigma' as  [[L E'] sc].
-    case_eq s; intros; subst; simpl in*; invt ssa; invt noFun; invt F.step; subst.
-    + exploit (IHCrash an sc (E[x<-Some v]) Es s'); eauto; intros.
-      * rewrite H11 in H4.  simpl in H4.  cset_tac.  destruct H4.
-        { inversion H; subst.  simpl in H1; specialize (H1 x0 H4).
-          destruct H1. exists x1. unfold update.
-          decide (x === x0).
-          - rewrite <- e0 in H4. isabsurd.
-          - rewrite H1; eauto. }
-        { rewrite H4. unfold update.
+    case_eq s0; intros; subst; simpl in*; invt ssa; invt noFun; invt F.step; subst.
+    + exploit (IHCrash L L' an sc (E0 [x<-Some v]) Es s'); eauto; intros.
+      * rewrite H12 in H5.  simpl in H5.  cset_tac.  destruct H5.
+        { inversion H; subst.  simpl in H3; specialize (H3 x0 H5).
+          destruct H3. exists x1. unfold update.
+          decide (x === x0); eauto; isabsurd. }
+        { rewrite H5. unfold update.
           decide (x === x); isabsurd.
           exists v; eauto. }
       * case_eq (undef e); intros.
         { simpl; split; eauto. unfold evalSexp.
           assert ( exp_eval Es e = Some v /\ exp_eval Es (Var x) = Some v).
           - split.
-            + eapply (exp_eval_agree (E:= E)); eauto.
-            hnf. intros.  hnf in H8. specialize (H8 x0 H9).
-            pose proof (crash_impl_err E (stmtExp x e sc) Es s' nil nil).
-            destruct H12; try econstructor; eauto.
-            destruct H12.
-            pose proof (ssa_eval_agree (stmtExp x e sc) (ann1 (D0, D') an) s' E Es x1).
-            eapply H14; eauto.
-            +  eapply (exp_eval_agree (E:= E[x<-Some v])).
-              * hnf. intros; simpl in H9.
-                pose proof (crash_impl_err (E[x<-Some v]) sc Es s' nil nil).
-                destruct H12; eauto. destruct H12.
-                eapply (ssa_eval_agree sc an s' (E[x<-Some v]) Es x1); eauto.
-                rewrite H11; simpl. cset_tac. right. rewrite H9; eauto.
-              * simpl. unfold update. decide (x === x).
-                { reflexivity. }
-                { isabsurd. }
-          - destruct H9.  rewrite H9, H12.  eapply bvEq_equiv_eq.
-              reflexivity. }
+            + eapply (exp_eval_agree (E:=E0)); eauto.
+            hnf. intros.  hnf in H9. specialize (H9 x0 H10).
+            pose proof (crash_ssa_eval_agree L L' (stmtExp x e sc) (ann1 (D0, D') an) s' E0 Es).
+            eapply H13; eauto; econstructor; eauto.
+            +  eapply (exp_eval_agree (E:= E0[x<-Some v])).
+              * hnf. intros; simpl in H10.
+                eapply (crash_ssa_eval_agree L L' sc an s' (E0[x<-Some v]) Es); eauto.
+                rewrite H12; simpl. cset_tac. right. rewrite H10; eauto.
+              * simpl. unfold update. decide (x === x); eauto; isabsurd.
+          - destruct H10.  rewrite H10, H13.  eapply bvEq_equiv_eq; eauto. }
         { simpl; split; eauto. unfold evalSexp. inversion H.
           assert ( exp_eval Es e = Some v).
-          - eapply (exp_eval_agree (E:= E)); eauto.
-            hnf. intros.  hnf in H8. specialize (H8 x1 H6).
-            pose proof (crash_impl_err E (stmtExp x e sc) Es s' nil nil).
-            destruct H17; try econstructor; eauto.
-            destruct H17.
-            pose proof (ssa_eval_agree (stmtExp x e sc) (ann1 (D0, D') an) s' E Es x2).
-            eapply H19; eauto.
+          - eapply (exp_eval_agree (E:= E0)); eauto.
+            hnf. intros.  hnf in H9. specialize (H9 x1 H7).
+            pose proof (crash_ssa_eval_agree L L' (stmtExp x e sc) (ann1 (D0, D') an) s' E0 Es).
+            eapply H18; eauto; econstructor;  eauto.
           - assert (exp_eval Es (Var x) =Some v).
-            + eapply (exp_eval_agree (E:= E[x<-Some v])).
-              * hnf. intros. simpl in H17. cset_tac.
-                pose proof (crash_impl_err (E[x<-Some v]) sc Es s' nil nil).
-                destruct H9; eauto. destruct H9.
-                eapply (ssa_eval_agree sc an s' (E[x<-Some v]) Es x0); eauto.
-                rewrite H11; simpl. cset_tac. right. rewrite H17; eauto.
+            + eapply (exp_eval_agree (E:= E0[x<-Some v])).
+              * hnf. intros. simpl in H18. cset_tac.
+                eapply (crash_ssa_eval_agree L L' sc an s' (E0[x<-Some v]) Es); eauto.
+                rewrite H12; simpl. cset_tac. right. rewrite H18; eauto.
               * simpl. unfold update. decide (x === x).
                 { reflexivity. }
                 { isabsurd. }
-            + rewrite H17, H6. eapply bvEq_equiv_eq.
+            + rewrite H18, H7. eapply bvEq_equiv_eq.
               reflexivity. }
-    +  exploit (IHCrash ans sc E' Es s'); eauto.
-       * intros. rewrite H13 in H4. simpl in *; eauto.
+    +  exploit (IHCrash L L' ans sc E' Es s'); eauto.
+       * intros. rewrite H14 in H5. simpl in *; eauto.
        * case_eq (undef e); intros; simpl; unfold evalSexp.
          { assert (exp_eval Es e = Some v).
            - eapply (exp_eval_agree (E:= E')); eauto.
-             hnf; intros.  hnf in H7.  specialize (H7 x H5).
-             pose proof (crash_impl_err E' (stmtIf e sc t) Es s' nil nil).
-             destruct H12; try econstructor; eauto.
-             destruct H12.
-             pose proof (ssa_eval_agree (stmtIf e sc t) (ann2 (D0, D') ans ant) s'  E' Es x0).
-             eapply H17; eauto.
-           - rewrite H5.  rewrite condTrue.  intros; subst; eauto. }
+             hnf; intros.  hnf in H8.  specialize (H8 x H6).
+             pose proof (crash_ssa_eval_agree L L' (stmtIf e sc t) (ann2 (D0, D') ans ant) s'  E' Es).
+             eapply H13; eauto; econstructor; eauto.
+           - rewrite H6.  rewrite condTrue.  intros; subst; eauto. }
          { assert (exp_eval Es e = Some v).
            - eapply (exp_eval_agree (E:= E')); eauto.
-             hnf; intros.  hnf in H7.  specialize (H7 x H5).
-             pose proof (crash_impl_err E' (stmtIf e sc t) Es s' nil nil).
-             destruct H12; try econstructor; eauto.
-             destruct H12.
-             pose proof (ssa_eval_agree (stmtIf e sc t) (ann2 (D0, D') ans ant) s'  E' Es x0).
-             eapply H17; eauto.
-           - rewrite H5.  rewrite condTrue.  intros; subst; eauto. }
-    + exploit (IHCrash ant sc E' Es s'); eauto.
-      * intros. rewrite H14 in H4; simpl in *; eauto.
+             hnf; intros.  hnf in H8.  specialize (H8 x H6).
+             pose proof (crash_ssa_eval_agree L L' (stmtIf e sc t) (ann2 (D0, D') ans ant) s'  E' Es).
+             eapply H13; eauto; econstructor; eauto.
+           - rewrite H6.  rewrite condTrue.  intros; subst; eauto. }
+    + exploit (IHCrash L L' ant sc E' Es s'); eauto.
+      * intros. rewrite H15 in H5; simpl in *; eauto.
       *  case_eq (undef e); intros; simpl; unfold evalSexp.
          {  assert (exp_eval Es e = Some v).
             - eapply (exp_eval_agree (E:= E')); eauto.
-              hnf; intros.  hnf in H7.  specialize (H7 x H5).
-              pose proof (crash_impl_err E' (stmtIf e s0 sc) Es s' nil nil).
-              destruct H12; try econstructor; eauto.
-              destruct H12.
-              pose proof (ssa_eval_agree (stmtIf e s0 sc) (ann2 (D0, D') ans ant) s'  E' Es x0).
-              eapply H17; eauto.
-            -  rewrite H5.  rewrite condFalse. intros; subst; eauto. }
+              hnf; intros.  hnf in H8.  specialize (H8 x H6).
+              pose proof (crash_ssa_eval_agree L L' (stmtIf e s sc) (ann2 (D0, D') ans ant) s'  E' Es).
+              eapply H13; eauto; econstructor; eauto.
+            - rewrite H6.  rewrite condFalse. intros; subst; eauto. }
          { assert (exp_eval Es e = Some v).
            - eapply (exp_eval_agree (E:= E')); eauto.
-             hnf; intros.  hnf in H7.  specialize (H7 x H5).
-             pose proof (crash_impl_err E' (stmtIf e s0 sc) Es s' nil nil).
-              destruct H12; try econstructor; eauto.
-              destruct H12.
-              pose proof (ssa_eval_agree (stmtIf e s0 sc) (ann2 (D0, D') ans ant) s'  E' Es x0).
-              eapply H17; eauto.
-           - rewrite H5.  rewrite condFalse.  intros; subst; eauto. }
-    + inversion H; inversion Ldef0.
+             hnf; intros.  hnf in H8.  specialize (H8 x H6).
+              pose proof (crash_ssa_eval_agree L L' (stmtIf e s sc) (ann2 (D0, D') ans ant) s'  E' Es).
+              eapply H13; eauto; econstructor; eauto.
+           - rewrite H6.  rewrite condFalse.  intros; subst; eauto. }
+    + isabsurd.
 Qed.
 
 Lemma noFun_impl_term_crash :
@@ -612,7 +620,7 @@ general induction H.
      * left. econstructor; eauto.
               { econstructor; eauto. }
               { intros. hnf; isabsurd. }
-     * right. econstructor; eauto. econstructor; eauto.
+     * right. econstructor; eauto; try  econstructor; eauto; intros; isabsurd.
    + exists E; exists (stmtExp x e s).
        right. econstructor; eauto; intros; try hnf; try isabsurd.
        intros. unfold reducible2 in H1.  destruct H1. destruct H1.
@@ -625,14 +633,16 @@ general induction H.
       { left. econstructor; eauto.
        - econstructor; eauto.
        - hnf; intros; isabsurd. }
-      { right. econstructor; eauto. econstructor; eauto. }
+      { right. econstructor; eauto. econstructor; eauto.
+      intros; isabsurd. }
     * destruct (IHnoFun2 E) as [E' [s' termcrash]];
       exists E'; exists s'; intros.
       destruct (termcrash L) as [ term | crash ].
       { left. econstructor; eauto.
        - econstructor; eauto.
        - hnf; intros; isabsurd. }
-      { right. econstructor; eauto. econstructor; eauto. }
+      { right. econstructor; eauto. econstructor; eauto.
+      intros; isabsurd. }
   +  exists E; exists (stmtIf e s t).
             right. econstructor; eauto; intros; try hnf; try isabsurd.
             intros. unfold reducible2 in H2. destruct H2. destruct H2.
@@ -641,8 +651,6 @@ general induction H.
   + exists E; exists (stmtGoto l Y); left; econstructor; eauto.
   + exists E; exists (stmtGoto l Y); right.
            econstructor; eauto; intros; try hnf; try isabsurd.
-           intros. unfold reducible2 in H0; destruct H0.
-           destruct H0. isabsurd.
 - case_eq (exp_eval E e).
   + exists E; exists (stmtReturn e).
            left; econstructor; eauto.
@@ -739,11 +747,11 @@ Proof.
 Qed.
 
 Lemma unsat_extension:
-forall D E E' s s' pol P Q,
+forall L D E E' s s' pol P Q,
 (forall F E, models F E Q -> ~ models F E (smtAnd (translateStmt s pol) P))
 -> ssa s D
 -> noFun s
-->Terminates (nil, E, s) (nil, E', s')
+->Terminates (L, E, s) (L, E', s')
 -> exists Q', (forall F, models F E'  Q' ) /\
               freeVars Q' ⊆  snd(getAnn D) /\
               (forall F E, models F E (smtAnd Q Q') -> ~ models F E (smtAnd (translateStmt s' pol) P)).
@@ -766,12 +774,14 @@ intros. general induction H2.
      * specialize (H0 F E H3); assumption.
 - simpl in *.  inv H.
   + simpl in *. inv H3.
-    specialize (IHTerminates an (E0[x <- Some v]) E'0 s' s'0).
+    specialize (IHTerminates L' an (E0[x <- Some v]) E'0 s' s'0).
     inv H4. destruct pol; simpl in *.
     * specialize (IHTerminates source P (smtAnd Q (guardGen (undef e) source (constr (Var x) e)))).
       destruct IHTerminates as [Q' IHT]; intros; eauto; simpl in *.
-      { specialize (H1 F E). destruct H5 as [H5 H5']. specialize (H1 H5).  hnf in H0; hnf; intros.
-        eapply H1. destruct H7. split; simpl; eauto. destruct (undef e); simpl in *; eauto. destruct H5'.
+      { specialize (H1 F E). destruct H5 as [H5 H5'].
+        specialize (H1 H5).  hnf in H0; hnf; intros.
+        eapply H1. destruct H7. split; simpl; eauto.
+        destruct (undef e); simpl in *; eauto. destruct H5'.
         split; eauto. }
       { exists (smtAnd Q' (guardGen (undef e) source (constr (Var x) e))).
         simpl in *. intros.
@@ -783,28 +793,20 @@ intros. general induction H2.
               assert (exp_eval E'0 (Var x) = Some v).
              * eapply (exp_eval_agree (E:= E0[x <- Some v])).
                { simpl. hnf. intros. inv H3; subst.
-                 pose proof (terminates_impl_star2 nil (E0[x <- Some v]) s' nil E'0 s'0).
-                 destruct H7; eauto. destruct H7.
-                 eapply (ssa_eval_agree s'); eauto. rewrite H12.
+                 eapply (term_ssa_eval_agree L' L' s'); eauto. rewrite H12.
                  simpl. cset_tac. right; eauto. }
                { simpl. unfold update. decide (x === x).
                  - reflexivity.
                  - exfalso; eapply n; reflexivity. }
              * assert (exp_eval E'0 e = Some v).
               { eapply (exp_eval_agree (E:=E0)); eauto; hnf; intros.
-                 pose proof (terminates_impl_star2 nil E0(stmtExp x e s') nil E'0 s'0).
-                 destruct H10; try econstructor; eauto.
-                 destruct H10.
-                eapply (ssa_eval_agree); eauto. }
+                eapply (term_ssa_eval_agree); eauto; econstructor; eauto. }
               rewrite H5; rewrite H7; simpl.  eapply bvEq_equiv_eq. reflexivity.
            + case_eq (undef e); intros; simpl.
              * split; eauto.
                eapply (guard_true_if_eval _ _ e); eauto.
                eapply (exp_eval_agree (E:=E0)); eauto. hnf; intros.
-               pose proof (terminates_impl_star2 nil E0(stmtExp x e s') nil E'0 s'0).
-               destruct H13; try econstructor; eauto.
-               destruct H13.
-               eapply (ssa_eval_agree); eauto.
+               eapply (term_ssa_eval_agree); eauto; econstructor; eauto.
              * simpl in *; assumption.
         - hnf. intros. hnf in H9. specialize (H9 a).  eapply ssa_incl in H11. hnf in H11. specialize (H11 a).
           simpl in H11. hnf in IHT2. specialize (IHT2 a). cset_tac. destruct H5.
@@ -834,19 +836,14 @@ intros. general induction H2.
               assert (exp_eval E'0 (Var x) = Some v).
              * eapply (exp_eval_agree (E:= E0 [x <- Some v])).
                { simpl. hnf. intros. inv H4.
-                 pose proof (terminates_impl_star2 nil (E0[x <- Some v]) s' nil E'0 s'0).
-                 destruct H7; eauto. destruct H7.
-                 eapply (ssa_eval_agree s'); eauto. rewrite H12.
+                 eapply (term_ssa_eval_agree L' L' s'); eauto. rewrite H12.
                  simpl. cset_tac. right; eauto. }
                { simpl. unfold update. decide (x === x).
                  - reflexivity.
                  - exfalso; eapply n; reflexivity. }
              * assert (exp_eval E'0  e = Some v).
               { eapply (exp_eval_agree (E:=E0)); eauto; hnf; intros.
-                pose proof (terminates_impl_star2 nil E0(stmtExp x e s') nil E'0 s'0).
-                destruct H10; try econstructor; eauto.
-               destruct H10.
-                eapply (ssa_eval_agree); eauto. }
+                eapply (term_ssa_eval_agree); eauto; econstructor; eauto. }
               rewrite H5; rewrite H7; simpl.  eapply bvEq_equiv_eq. reflexivity.
            + case_eq (undef e); intros; simpl.
              * intros; eauto.
@@ -868,7 +865,7 @@ intros. general induction H2.
         - intros. eapply IHT3. destruct H5 as [H5 [H5' H5'']]; split; eauto; split; eauto.
       }
   + simpl in *; inv H3; inv H4.
-    specialize (IHTerminates ans E' E'0 s' s'0).
+    specialize (IHTerminates L' ans E' E'0 s' s'0).
     destruct pol; simpl in *.
     * specialize (IHTerminates  source P (smtAnd Q (guardGen (undef e) source (ite e (smtTrue) (smtFalse))))).
       destruct IHTerminates as [Q' IHT]; intros; eauto.
@@ -889,10 +886,7 @@ intros. general induction H2.
         - assert (X': exp_eval E'0 e = Some v).
           + eapply (exp_eval_agree (E:=E') (E':=E'0)); eauto.
               hnf. intros.
-              pose proof (terminates_impl_star2 nil E' s' nil E'0 s'0).
-              destruct H6; eauto.
-              destruct H6.
-              eapply (ssa_eval_agree s' _ s'0 E' E'0); eauto.
+              eapply (term_ssa_eval_agree L' L' s' _ s'0 E' E'0); eauto.
               rewrite H14. simpl. eapply H8; eauto.
           + assert (X: models F E'0 (ite e smtTrue smtFalse))
             by ( simpl; unfold evalSexp; rewrite X'; rewrite condTrue; econstructor).
@@ -932,10 +926,7 @@ intros. general induction H2.
         - assert (X': exp_eval E'0 e = Some v).
           + eapply (exp_eval_agree (E:=E') (E':=E'0)); eauto.
             hnf. intros.
-            pose proof (terminates_impl_star2 nil E' s' nil E'0 s'0).
-            destruct H6; eauto.
-            destruct H6.
-            eapply (ssa_eval_agree s' _ s'0 E' E'0); eauto.
+            eapply (term_ssa_eval_agree L' L' s' _ s'0 E' E'0); eauto.
             rewrite H14. simpl. eapply H8; eauto.
           + assert (X: models F E'0 (ite e smtTrue smtFalse))
             by ( simpl; unfold evalSexp; rewrite X'; rewrite condTrue; econstructor).
@@ -955,7 +946,7 @@ intros. general induction H2.
           hnf. intros.  eapply (IHT3 F E); eauto.
         }
   + simpl in *; inv H3; inv H4.
-    specialize (IHTerminates ant E' E'0 s' s'0).
+    specialize (IHTerminates L' ant E' E'0 s' s'0).
     destruct pol; simpl in *.
     * specialize (IHTerminates  source P (smtAnd Q (guardGen (undef e) source (ite e (smtFalse) (smtTrue))))).
       destruct IHTerminates as [Q' IHT]; intros; eauto.
@@ -975,10 +966,7 @@ intros. general induction H2.
         - exact (IHT1 F).
         - assert (X': exp_eval E'0 e = Some v).
           + eapply (exp_eval_agree (E:=E') (E':=E'0)); eauto.
-            pose proof (terminates_impl_star2 nil E' s' nil E'0 s'0).
-            destruct H5; eauto.
-            destruct H5.
-            hnf. intros. eapply (ssa_eval_agree s' _ s'0 E' E'0); eauto.
+            hnf. intros. eapply (term_ssa_eval_agree L' L' s' _ s'0 E' E'0); eauto.
             rewrite H15. simpl. eapply H8; eauto.
           + assert (X: models F E'0 (ite e smtFalse smtTrue))
             by ( simpl; unfold evalSexp; rewrite X'; rewrite condFalse; econstructor).
@@ -1017,10 +1005,7 @@ intros. general induction H2.
         - exact (IHT1 F).
         - assert (X': exp_eval E'0 e = Some v).
           + eapply (exp_eval_agree (E:=E') (E':=E'0)); eauto.
-            pose proof (terminates_impl_star2 nil E' s' nil E'0 s'0).
-            destruct H5; eauto.
-            destruct H5.
-            hnf. intros. eapply (ssa_eval_agree s' _ s'0 E' E'0); eauto.
+            hnf. intros. eapply (term_ssa_eval_agree L' L' s' _ s'0 E' E'0); eauto.
             rewrite H15. simpl. eapply H8; eauto.
           + assert (X: models F E'0 (ite e smtFalse smtTrue))
             by ( simpl; unfold evalSexp; rewrite X'; rewrite condFalse; econstructor).
@@ -1055,16 +1040,16 @@ specialize (H F E). assumption.
 Qed.
 
 Lemma guardTrue_if_Terminates_ret:
-forall E s E' e g,
+forall L L' E s E' e g,
 noFun s
 -> undef e = Some g
--> Terminates (nil, E, s)(nil, E', stmtReturn e)
+-> Terminates (L, E, s)(L', E', stmtReturn e)
 -> forall F, models F E' g.
 
 Proof.
 intros. general induction H1.
 - eapply (guard_true_if_eval); eauto.
-- specialize (IHTerminates E' s' E'0 e g).
+- specialize (IHTerminates L0 L'0 E' s' E'0 e g).
   inversion H2.
   + rewrite <- H5 in *. inversion H; subst.
     eapply IHTerminates; eauto.
@@ -1076,16 +1061,16 @@ intros. general induction H1.
 Qed.
 
 Lemma guardTrue_if_Terminates_goto:
-forall E s E' f x g,
+forall L L' E s E' f x g,
 noFun s
 -> undefLift x = Some g
--> Terminates (nil, E, s) (nil, E' , stmtGoto f x)
+-> Terminates (L, E, s) (L', E' , stmtGoto f x)
 -> forall F, models F E' g.
 
 Proof.
 intros. general induction H1.
 - eapply guardList_true_if_eval; eauto.
-- specialize (IHTerminates E' s' E'0 f x g).
+- specialize (IHTerminates L0 L'0  E' s' E'0 f x g).
   inversion H2.
   + rewrite <- H5 in *. inversion H; subst.
     eapply IHTerminates; eauto.
@@ -1095,7 +1080,6 @@ intros. general induction H1.
   + rewrite <- H4 in *; specialize (H0 l Y); isabsurd.
   + rewrite <- H4 in *; inversion H.
 Qed.
-
 
 Lemma predeval_uneq_ret:
 forall  E et es e e' P,
@@ -1251,7 +1235,7 @@ Proof.
                   try isabsurd; econstructor; eauto.
 Qed.
 
-Lemma exp_combineenv_eq_left:
+Lemma exp_combineenv_eql:
 forall e D Es Et v,
 Exp.freeVars e ⊆ D
 -> (exp_eval (combineEnv D Es Et) e= v <-> exp_eval Es e = v).
@@ -1270,7 +1254,7 @@ Proof.
     + exfalso; eapply n; assumption.
 Qed.
 
-  Lemma explist_combineenv_eq_left:
+  Lemma explist_combineenv_eql:
 forall el D Es Et rl,
 list_union (List.map Exp.freeVars el) ⊆ D
 -> ( omap (exp_eval (combineEnv D Es Et)) el = rl <-> omap (exp_eval Es) el = rl).
@@ -1280,7 +1264,7 @@ Proof.
   - general induction el.
     + simpl. reflexivity.
     + simpl. simpl in H. hnf in H.
-      pose proof (exp_combineenv_eq_left a D Es Et (exp_eval (combineEnv D Es Et) a)); eauto.
+      pose proof (exp_combineenv_eql a D Es Et (exp_eval (combineEnv D Es Et) a)); eauto.
       destruct H0.
       * hnf. intros. eapply H. unfold list_union; simpl.
         eapply list_union_start_swap. cset_tac. left; right; eauto.
@@ -1290,7 +1274,7 @@ Proof.
   - general induction el.
     + simpl; reflexivity.
     + simpl; simpl in H; hnf in H;  unfold evalSexp.
-      pose proof (exp_combineenv_eq_left a D Es Et (exp_eval (combineEnv D Es Et) a)); eauto.
+      pose proof (exp_combineenv_eql a D Es Et (exp_eval (combineEnv D Es Et) a)); eauto.
       destruct H0.
       * hnf; intros; eapply H; unfold list_union; simpl.
         eapply list_union_start_swap; cset_tac. left; right; eauto.
@@ -1299,7 +1283,7 @@ Proof.
         cset_tac. right; assumption.
 Qed.
 
-Lemma combineenv_eq_left:
+Lemma combineenv_eql:
 forall F s D Es Et,
  freeVars s ⊆  D
 ->(  models F Es s  <-> models F (combineEnv D Es Et) s).
@@ -1320,7 +1304,7 @@ intros.  general induction s; simpl; try reflexivity.
 - unfold evalSexp. case_eq  (exp_eval (combineEnv D Es Et) e); intros.
   + assert (Exp.freeVars e ⊆ D).
     * setSubst H; right; assumption.
-    * pose proof (exp_combineenv_eq_left e D Es Et (Some v) H1).
+    * pose proof (exp_combineenv_eql e D Es Et (Some v) H1).
       destruct H2.
       rewrite H2; eauto.  destruct (val2bool v).
       { rewrite (IHs1 F D Es Et).
@@ -1331,7 +1315,7 @@ intros.  general induction s; simpl; try reflexivity.
         + setSubst H; left; right; assumption. }
   + assert (Exp.freeVars e ⊆ D).
     * setSubst H; right; assumption.
-    * pose proof (exp_combineenv_eq_left e D Es Et None H1).
+    * pose proof (exp_combineenv_eql e D Es Et None H1).
       destruct H2.
       rewrite H2; eauto.  unfold default_val. simpl.
       rewrite (IHs2 F D Es Et).
@@ -1345,34 +1329,34 @@ intros.  general induction s; simpl; try reflexivity.
   case_eq (exp_eval (combineEnv D Es Et) e0); intros;
  assert (Exp.freeVars e ⊆ D /\ Exp.freeVars e0 ⊆ D) by (split; setSubst H; eauto).
   + destruct H2;
-      pose proof (exp_combineenv_eq_left e D Es Et (Some v) H2);
-      pose proof (exp_combineenv_eq_left e0 D Es Et (Some v0) H3).
+      pose proof (exp_combineenv_eql e D Es Et (Some v) H2);
+      pose proof (exp_combineenv_eql e0 D Es Et (Some v0) H3).
     destruct H4; destruct H5.
       rewrite H4; eauto. rewrite H5; eauto;
       reflexivity.
   + destruct H2.
-    pose proof (exp_combineenv_eq_left e D Es Et (Some v) H2);
-    pose proof (exp_combineenv_eq_left e0 D Es Et None H3).
+    pose proof (exp_combineenv_eql e D Es Et (Some v) H2);
+    pose proof (exp_combineenv_eql e0 D Es Et None H3).
     destruct H4, H5.
     rewrite H4; eauto; rewrite H5; eauto; reflexivity.
   + destruct H2.
-    pose proof (exp_combineenv_eq_left e D Es Et None H2);
-    pose proof (exp_combineenv_eq_left e0 D Es Et (Some v) H3).
+    pose proof (exp_combineenv_eql e D Es Et None H2);
+    pose proof (exp_combineenv_eql e0 D Es Et (Some v) H3).
     destruct H4, H5.
     rewrite H4; eauto; rewrite H5; eauto; reflexivity.
   + destruct H2.
-    pose proof (exp_combineenv_eq_left e D Es Et None H2);
-    pose proof (exp_combineenv_eq_left e0 D Es Et None H3).
+    pose proof (exp_combineenv_eql e D Es Et None H2);
+    pose proof (exp_combineenv_eql e0 D Es Et None H3).
     destruct H4, H5.
     rewrite H4; eauto; rewrite H5; eauto; reflexivity.
 - unfold evalSpred. unfold evalList.
-  pose proof (explist_combineenv_eq_left a D Es Et (omap(exp_eval Es) a)).
+  pose proof (explist_combineenv_eql a D Es Et (omap(exp_eval Es) a)).
   destruct H0; eauto. rewrite H1; eauto. reflexivity.
 - unfold evalSexp.  simpl in H.
   case_eq (exp_eval (combineEnv D Es Et) e); intros.
-  + pose proof (exp_combineenv_eq_left e D Es Et (Some v) H ).
+  + pose proof (exp_combineenv_eql e D Es Et (Some v) H ).
     destruct H1. rewrite H1; eauto; reflexivity.
-  + pose proof (exp_combineenv_eq_left e D Es Et None H).
+  + pose proof (exp_combineenv_eql e D Es Et None H).
     destruct H1; rewrite H1; eauto; reflexivity.
 Qed.
 
@@ -1422,7 +1406,7 @@ Proof.
         unfold list_union. simpl. eapply list_union_start_swap. cset_tac; eauto.
 Qed.
 
-Lemma combineenv_eq_right:
+Lemma combineenv_eqr:
   forall  F s D Es Et,
     agree_on eq (freeVars s ∩ D) Es Et
     -> (models F Et s <-> models F (combineEnv D Es Et) s).
@@ -1530,43 +1514,37 @@ Proof.
 Qed.
 
 Lemma terminates_impl_eval:
-forall E s E' e,
+forall L L' E s E' e,
 noFun s
--> Terminates (nil, E, s) (nil, E',stmtReturn  e)
+-> Terminates (L, E, s) (L', E',stmtReturn  e)
 -> exists v, exp_eval E' e = Some v.
 
 Proof.
 intros. general induction H0.
 - exists v; eauto.
-- exploit (IHTerminates E' s' E'0 e); eauto.
-  + inversion H2; subst.
+- exploit (IHTerminates L0 L'0 E' s' E'0 e); eauto.
+  + inversion H2; subst; try isabsurd.
     * inversion H. rewrite <- H13; eauto.
     * inversion H;  rewrite <- H14; eauto.
-    * inversion H. inversion Ldef.
-    * inversion H.
-  + inversion H; eauto.
-    *  rewrite <- H6 in H1; specialize (H1 l Y); isabsurd.
-    *  rewrite <- H6 in H2; inversion H2.
+  + inversion H; subst; eauto; isabsurd.
 Qed.
 
 Lemma terminates_impl_evalList:
-forall E s E' f el,
+forall L  L' E s E' f el,
 noFun s
--> Terminates (nil, E, s) (nil, E', stmtGoto f el)
+-> Terminates (L, E, s) (L', E', stmtGoto f el)
 -> exists v, omap (exp_eval E') el = Some v.
 
 Proof.
 intros. general induction H0.
 - exists vl; eauto.
-- exploit (IHTerminates E' s' E'0 f el); eauto.
-  + inversion H2; subst; inversion H; subst; eauto.
-    inversion H. inversion  Ldef0.
-  + inversion H; eauto; isabsurd.
-    rewrite <- H6 in H2; isabsurd.
+- exploit (IHTerminates L0 L'0 E' s' E'0 f el); eauto.
+  + inversion H2; subst; inversion H; subst; eauto; isabsurd.
+  + inversion H; subst; eauto; isabsurd.
 Qed.
 
 Lemma unsat_impl_sim:
-forall D D' Ds Ds' Dt Dt'  E s t,
+forall L D D' Ds Ds' Dt Dt'  E s t,
 (forall F E, ~ models F E (smtCheck s t))
 -> getAnn D = (Ds, Ds') (*To acces the environments from ssa *)
 -> getAnn D' = (Dt, Dt') (* Same *)
@@ -1576,7 +1554,7 @@ forall D D' Ds Ds' Dt Dt'  E s t,
 -> noFun s (* disallow function definitions and external function calls *)
 -> noFun t (* same*)
 -> (forall x, x ∈ (Ds ∩ Dt) -> exists v, E x = Some v) (* Free Variables must be defined *)
--> @sim _ statetype_F _ statetype_F  (nil, E, s) (nil, E, t).
+-> @sim _ statetype_F _ statetype_F  (L, E, s) (L, E, t).
 
 Proof.
 intros.
@@ -1585,8 +1563,8 @@ pose proof  (noFun_impl_term_crash E s H5).
 pose proof  (noFun_impl_term_crash E t H6).
 destruct H8 as [ Es  [s' termcrash ]]. destruct H9 as [Et [t' termcrash2 ]].
 (** TODO **)
-destruct (termcrash nil) as [sterm | scrash].
-destruct (termcrash2 nil) as [tterm | tcrash].
+destruct (termcrash L) as [sterm | scrash].
+destruct (termcrash2 L) as [tterm | tcrash].
 (* s terminiert & t terminiert *)
 - pose proof (extend_not_models _ smtTrue H).
   pose proof (unsat_extension D E Es s s' source _ _ H8 ).

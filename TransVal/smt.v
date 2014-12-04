@@ -209,6 +209,18 @@ case_eq (undef e1); case_eq (undef e2); intros;
 rewrite H0 in H; rewrite H1 in H; try isabsurd; eauto.
 Qed.
 
+Lemma combine_keep_undef_list:
+forall e el,
+combine (undef e) (undefLift el) =  None
+-> undef e = None /\ undefLift el = None.
+
+Proof.
+  intros.
+  case_eq (undef e); case_eq (undefLift el); intros;
+  rewrite H0 in H; rewrite H1 in H; try isabsurd; eauto.
+Qed.
+
+
   (*
   *** Local Variables: ***
   *** coq-load-path: (("../" "Lvc")) ***

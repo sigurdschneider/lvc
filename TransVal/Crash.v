@@ -5,15 +5,19 @@ Inductive Crash : F.state -> F.state -> Prop :=
 exp_eval E e = None
 -> state_result (L,E, stmtReturn e) = None
 -> Crash (L,E,stmtReturn e) (L, E, stmtReturn e) *)
+|CrashGoto L E f Y:
+omap (exp_eval E) Y = None
+-> Crash (L, E, stmtGoto f Y) (L, E, stmtGoto f Y)
 |CrashBase L E s :
-(* forall e, s <> stmtReturn e) *)
-(*->*)  normal2 F.step (L, E, s)
+( forall f el, s <> stmtGoto f el)
+->  normal2 F.step (L, E, s)
 -> state_result (L,E,s) = None
 -> Crash (L, E,s) (L,E,s)
-|CrashStep sigma sigma' sigma'' a:
-   F.step sigma a sigma'
+|CrashStep L E s sigma' sigma'' a:
+   F.step (L, E, s) a sigma'
+   ->  (forall f xl, s <> stmtGoto f xl)
    -> Crash sigma' sigma''
-   -> Crash sigma sigma''.
+   -> Crash (L,E,s) sigma''.
 
 (*
 *** Local Variables: ***

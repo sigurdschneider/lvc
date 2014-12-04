@@ -202,49 +202,28 @@ Proof.
       unfold option_lift2; eauto. *)
 Qed.
 
-Lemma noundef:
-forall E e,
-undef e = None
--> (forall x, x ∈ Exp.freeVars e -> exists v, E x = Some v)
--> exists v, exp_eval E e = Some v .
+Lemma noguardlist_impl_eval:
+  forall E el,
+    (forall x, x ∈ list_union (List.map Exp.freeVars el) -> exists v,  E x = Some v)
+    -> undefLift el = None
+    -> exists v, omap (exp_eval E) el = Some v.
 
 Proof.
   intros.
-  general induction e; simpl in *.
-  - exists v; eauto.
-  - specialize (H0 v). destruct H0; cset_tac; eauto.
-  - specialize (IHe E H H0). destruct IHe.
-    rewrite H1; simpl. destruct u; simpl; unfold option_lift1.
-  + destruct (val2bool x); eauto.
-  + exists (neg x); eauto.
-- destructBin b; simpl in *.
-  + case_eq(undef e1); case_eq(undef e2); intros;
-    rewrite H1, H2 in H; try isabsurd.
-    destruct (IHe1 E) as [v1 eval1]; eauto; cset_tac; eauto.
-    destruct (IHe2 E) as [v2 eval2]; eauto; cset_tac; eauto.
-    rewrite eval1, eval2; simpl. exists (bvAdd v1 v2); eauto.
-  + case_eq(undef e1); case_eq(undef e2); intros;
-    rewrite H1, H2 in H; try isabsurd.
-    destruct (IHe1 E) as [v1 eval1]; eauto; cset_tac; eauto.
-    destruct (IHe2 E) as [v2 eval2]; eauto; cset_tac; eauto.
-    rewrite eval1, eval2; simpl. exists (bvSub v1 v2); eauto.
-  + case_eq(undef e1); case_eq(undef e2); intros;
-    rewrite H1, H2 in H; try isabsurd.
-    destruct (IHe1 E) as [v1 eval1]; eauto; cset_tac; eauto.
-    destruct (IHe2 E) as [v2 eval2]; eauto; cset_tac; eauto.
-    rewrite eval1, eval2; simpl. exists (bvMult v1 v2); eauto.
-  + case_eq(undef e1); case_eq(undef e2); intros;
-    rewrite H1, H2 in H; try isabsurd.
-    destruct (IHe1 E) as [v1 eval1]; eauto; cset_tac; eauto.
-    destruct (IHe2 E) as [v2 eval2]; eauto; cset_tac; eauto.
-    rewrite eval1, eval2; simpl. exists (bvEq v1 v2); eauto.
-  + case_eq(undef e1); case_eq(undef e2); intros;
-    rewrite H1, H2 in H; try isabsurd.
-    destruct (IHe1 E) as [v1 eval1]; eauto; cset_tac; eauto.
-    destruct (IHe2 E) as [v2 eval2]; eauto; cset_tac; eauto.
-    rewrite eval1, eval2; simpl. exists (neg (bvEq v1 v2)); eauto.
-  + case_eq(undef e1); case_eq(undef e2); intros;
-    rewrite H1, H2 in H; try isabsurd.
+  general induction el; simpl; eauto.
+  - eapply (combine_keep_undef_list) in H0.
+    destruct H0.
+    case_eq (exp_eval E a); intros; simpl.
+    + simpl in H0.  exploit (IHel E); eauto.
+      Focus 2.  destruct X. rewrite H3. exists (v::x); eauto.
+      intros; eapply H. unfold list_union; simpl.
+      eapply list_union_start_swap. cset_tac.
+      right; eauto.
+    + pose proof (noguard_impl_eval E a).
+      destruct H3; eauto; isabsurd.
+      intros; eapply H. unfold list_union; simpl.
+      eapply list_union_start_swap; cset_tac.
+      left; right; eauto.
 Qed.
 
 Lemma guard_impl_eval:
@@ -271,12 +250,12 @@ intros. general induction e; try isabsurd; simpl.
       destruct (IHe1 F E s0 H3 H0); cset_tac; eauto.
       destruct (IHe2 F E s H2 H4); cset_tac; eauto.
       rewrite H6, H5; simpl. exists (bvAdd x x0); eauto.
-    *  pose proof (noundef E e2 H2).
+    *  pose proof (noguard_impl_eval E e2).
        destruct H4; cset_tac; eauto.
        destruct (IHe1 F E g); cset_tac; eauto.
        rewrite H4, H5; simpl; unfold option_lift2.
        exists (bvAdd x0 x); eauto.
-    * pose proof (noundef E e1 H3).
+    * pose proof (noguard_impl_eval E e1).
       destruct H4; cset_tac; eauto.
       destruct (IHe2 F E g); cset_tac; eauto.
       rewrite H4, H5. simpl. exists (bvAdd x x0); eauto.
@@ -287,12 +266,12 @@ intros. general induction e; try isabsurd; simpl.
       destruct (IHe1 F E s0 H3 H0); cset_tac; eauto.
       destruct (IHe2 F E s H2 H4); cset_tac; eauto.
       rewrite H6, H5; simpl. exists (bvSub x x0); eauto.
-    *  pose proof (noundef E e2 H2).
+    *  pose proof (noguard_impl_eval E e2 ).
        destruct H4; cset_tac; eauto.
        destruct (IHe1 F E g); cset_tac; eauto.
        rewrite H4, H5; simpl; unfold option_lift2.
        exists (bvSub x0 x); eauto.
-    * pose proof (noundef E e1 H3).
+    * pose proof (noguard_impl_eval E e1).
       destruct H4; cset_tac; eauto.
       destruct (IHe2 F E g); cset_tac; eauto.
       rewrite H4, H5. simpl. exists (bvSub x x0); eauto.
@@ -303,12 +282,12 @@ intros. general induction e; try isabsurd; simpl.
       destruct (IHe1 F E s0 H3 H0); cset_tac; eauto.
       destruct (IHe2 F E s H2 H4); cset_tac; eauto.
       rewrite H6, H5; simpl. exists (bvMult x x0); eauto.
-    *  pose proof (noundef E e2 H2).
+    *  pose proof (noguard_impl_eval E e2 ).
        destruct H4; cset_tac; eauto.
        destruct (IHe1 F E g); cset_tac; eauto.
        rewrite H4, H5; simpl; unfold option_lift2.
        exists (bvMult x0 x); eauto.
-    * pose proof (noundef E e1 H3).
+    * pose proof (noguard_impl_eval E e1).
       destruct H4; cset_tac; eauto.
       destruct (IHe2 F E g); cset_tac; eauto.
       rewrite H4, H5. simpl. exists (bvMult x x0); eauto.
@@ -319,12 +298,12 @@ intros. general induction e; try isabsurd; simpl.
       destruct (IHe1 F E s0 H3 H0); cset_tac; eauto.
       destruct (IHe2 F E s H2 H4); cset_tac; eauto.
       rewrite H6, H5; simpl. exists (bvEq x x0); eauto.
-    *  pose proof (noundef E e2 H2).
+    *  pose proof (noguard_impl_eval E e2 ).
        destruct H4; cset_tac; eauto.
        destruct (IHe1 F E g); cset_tac; eauto.
        rewrite H4, H5; simpl; unfold option_lift2.
        exists (bvEq x0 x); eauto.
-    * pose proof (noundef E e1 H3).
+    * pose proof (noguard_impl_eval E e1).
       destruct H4; cset_tac; eauto.
       destruct (IHe2 F E g); cset_tac; eauto.
       rewrite H4, H5. simpl. exists (bvEq x x0); eauto.
@@ -335,12 +314,12 @@ intros. general induction e; try isabsurd; simpl.
       destruct (IHe1 F E s0 H3 H0); cset_tac; eauto.
       destruct (IHe2 F E s H2 H4); cset_tac; eauto.
       rewrite H6, H5; simpl. exists (neg (bvEq x x0)); eauto.
-    *  pose proof (noundef E e2 H2).
+    *  pose proof (noguard_impl_eval E e2).
        destruct H4; cset_tac; eauto.
        destruct (IHe1 F E g); cset_tac; eauto.
        rewrite H4, H5; simpl; unfold option_lift2.
        exists (neg (bvEq x0 x)); eauto.
-    * pose proof (noundef E e1 H3).
+    * pose proof (noguard_impl_eval E e1).
       destruct H4; cset_tac; eauto.
       destruct (IHe2 F E g); cset_tac; eauto.
       rewrite H4, H5. simpl. exists (neg (bvEq x x0)); eauto.
@@ -361,7 +340,7 @@ intros. general induction e; try isabsurd; simpl.
       { eauto. }
     * rewrite <- H5 in H0.  destruct H0.
       clear H5; clear H. simpl in H0. unfold evalSexp in H0; simpl in H0.
-      pose proof (noundef E e2 H2).
+      pose proof (noguard_impl_eval E e2).
       destruct H; cset_tac; eauto.
       destruct (IHe1 F E s); eauto.
       rewrite H, H5; simpl.
@@ -373,7 +352,7 @@ intros. general induction e; try isabsurd; simpl.
       { eauto. }
     * rewrite <- H5 in H0; destruct H0; clear H5; clear H.
       simpl in H0. unfold evalSexp in H0; simpl in H0.
-      pose proof (noundef E e1 H3).
+      pose proof (noguard_impl_eval  E e1).
       destruct H; cset_tac; eauto.
       destruct (IHe2 F E s); eauto.
       rewrite H, H5; simpl.
@@ -384,8 +363,8 @@ intros. general induction e; try isabsurd; simpl.
         simpl in H. specialize (H0 H); isabsurd.  f_equal; eauto. }
       { eauto. }
     * rewrite <- H5 in H0. clear H5. simpl in H0.
-      pose proof (noundef E e1 H3).
-      pose proof (noundef E e2 H2).
+      pose proof (noguard_impl_eval E e1).
+      pose proof (noguard_impl_eval E e2).
       destruct H4; cset_tac;  eauto.
       destruct H5; cset_tac; eauto.
       rewrite H4, H5. simpl.
