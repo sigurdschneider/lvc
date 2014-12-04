@@ -401,9 +401,36 @@ case_eq (val2bool v); intros.
 - exists (L, E, f); econstructor; eauto.
 Qed.
 
-Lemma noFun_nil E s σ a:
+Lemma noFun_terminates_tonil:
+forall L E s L' E' s',
+noFun s
+-> Terminates (L, E, s) (L', E', s')
+-> Terminates (nil, E, s) (nil, E', s').
+
+Proof.
+  intros L E s L' E' s' nf term.
+  general induction term.
+  - econstructor; eauto.
+  - econstructor; eauto.
+  - inversion nf;  subst;  invt F.step; try isabsurd.
+    + exploit (IHterm L' (E0[x<- Some v])  s'); eauto.
+      econstructor; eauto. instantiate (1:=EvtTau).
+      inversion H; econstructor; eauto.
+    + exploit (IHterm L' E' s'); eauto.
+      econstructor; eauto. instantiate (1:= EvtTau).
+      inversion H.
+      * econstructor; eauto.
+      * eapply F.stepIfF; eauto.
+    + exploit (IHterm L' E' s'); eauto.
+      econstructor; eauto. instantiate (1:=EvtTau).
+      inversion H.
+      * econstructor; eauto.
+      * eapply F.stepIfF; eauto.
+Qed.
+
+Lemma noFun_nil L E s σ a:
   noFun s
-  -> star2 F.step (nil,E,s) a σ
+  -> star2 F.step (nil, E,s) a σ
   -> a = nil.
 
 Proof.
@@ -411,7 +438,6 @@ Proof.
   inv H; simpl; exploit IHstar2; try reflexivity; eauto.
 Qed.
 
-(* TODO: Vll fixbar mit Lemma das sagt Terminates (L, E, s) (L', E', s') -> Terminates (nil, E, s) (nil, E', s') *)
 Lemma star2_noFun_Term:
 forall E s Es s',
 noFun s
@@ -1562,34 +1588,33 @@ unfold smtCheck in H.
 pose proof  (noFun_impl_term_crash E s H5).
 pose proof  (noFun_impl_term_crash E t H6).
 destruct H8 as [ Es  [s' termcrash ]]. destruct H9 as [Et [t' termcrash2 ]].
-(** TODO **)
 destruct (termcrash L) as [sterm | scrash].
 destruct (termcrash2 L) as [tterm | tcrash].
 (* s terminiert & t terminiert *)
 - pose proof (extend_not_models _ smtTrue H).
-  pose proof (unsat_extension D E Es s s' source _ _ H8 ).
+  pose proof (unsat_extension L D E Es s s' source _ _ H8 ).
   specialize (H9 H2 H5 sterm).
   destruct H9 as [Q [M [ fvQ modS]]].
   assert (smodS: forall F, forall E0:onv val, models F E0 (smtAnd smtTrue Q) ->
        ~  models F E0 (smtAnd (translateStmt t target) (translateStmt s' source) )).
   + intros. eapply (smtand_neg_comm).  apply (modS F E0 H9).
   + clear modS. clear H8.
-    pose proof (unsat_extension D' E Et t t' target _ (smtAnd smtTrue Q) smodS)
+    pose proof (unsat_extension L D' E Et t t' target _ (smtAnd smtTrue Q) smodS)
       as modTS.
     clear smodS. clear H.
     specialize (modTS H3 H6 tterm).
     destruct modTS as [Q' [modQ' [fvQ' modTS]]].
-    exploit (star2_noFun_Term  E s Es s' H5 sterm).
-    exploit (star2_noFun_Term E t Et t' H6 tterm).
+    exploit (terminates_impl_star2  L E s L Es s' sterm).
+    exploit (terminates_impl_star2 L E  t L Et t' tterm).
     destruct X as [ sstep X]; destruct X0 as [ tstep  X0].
     destruct X as [ [es sRet] | [fs [Xs sFun]]];
     destruct X0 as [ [et tRet] | [ft [Xt tFun]]].
     * subst. eapply simTerm.
-      instantiate (1:=(nil, Et, stmtReturn et)).
-      instantiate (1:= (nil, Es, stmtReturn es)).
+      instantiate (1:=(L, Et, stmtReturn et)).
+      instantiate (1:= (L, Es, stmtReturn es)).
       { simpl.
         assert (exists evs, exp_eval Es es = Some evs)
-          by (eapply (terminates_impl_eval E s Es es H5 sterm)).
+          by (eapply (terminates_impl_eval L L E s Es es H5 sterm)).
         assert (exists evt, exp_eval Et et = Some evt)
           by (eapply terminates_impl_eval; eauto).
         destruct H as [evs evalEs].
@@ -1604,28 +1629,29 @@ destruct (termcrash2 L) as [tterm | tcrash].
           hnf. intros. cset_tac.
           admit.
         - clear H; clear modTS.
-          pose proof (exp_combineenv_eq_left es Ds' Es Et (Some evs)).
+          pose proof (exp_combineenv_eql es Ds' Es Et (Some evs)).
           destruct H; eauto.
           + admit.
         - intros. unfold P. specialize (M F). specialize (modQ' F).
           simpl. split; try split; eauto.
           + rewrite H0 in fvQ. simpl in fvQ.
-            erewrite <- combineenv_eq_left; eauto.
+            erewrite <- combineenv_eql; eauto.
           + rewrite H1 in fvQ'. simpl in fvQ'.
-            erewrite <- combineenv_eq_right; eauto.
+            erewrite <- combineenv_eqr; eauto.
             cut (agree_on eq (Ds' ∩ Dt') Es Et).
             * intros. hnf in H8. hnf. intros. cset_tac. eapply H8. split; eauto.
             * rewrite H4.
               assert (agree_on eq (Ds ∩ Dt) E Es).
               { eapply (agree_on_incl (lv:=Ds)); cset_tac; eauto.
                 change (agree_on eq (fst (Ds, Ds')) E Es). rewrite <-H0.
-                eapply ssa_eval_agree; eauto. }
+                eapply term_ssa_eval_agree; eauto. }
               { rewrite <- H8. eapply (agree_on_incl (lv:=Dt)); cset_tac; eauto.
                 change (agree_on eq (fst (Dt,Dt')) E Et). rewrite <- H1.
-                eapply ssa_eval_agree; eauto. }
+                eapply term_ssa_eval_agree; eauto. }
         - intros. specialize (modTS F (combineEnv Ds' Es Et) H8);
           eauto. }
-      { assumption. }
+      { destruct sstep.  pose proof (noFun_nil E s (L,Es,stmtReturn es) x H5 H).
+        assumption. }
       { assumption. }
       { unfold normal2.  unfold reducible2. hnf.  intros.
         destruct H as [evt [σ step]].  inversion step. }
@@ -1641,7 +1667,7 @@ destruct (termcrash2 L) as [tterm | tcrash].
        { split; try split; eauto.
          - specialize (M F).
            unfold E'.
-           pose proof (combineenv_eq_left F Q Ds' Es Et).
+           pose proof (combineenv_eql F Q Ds' Es Et).
            assert (forall v, v ∈ freeVars Q -> v ∈ Ds').
            + intros. hnf in fvQ. rewrite H0 in fvQ. simpl in fvQ. exact (fvQ v H8).
            + specialize (H H8).
