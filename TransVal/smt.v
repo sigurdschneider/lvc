@@ -220,7 +220,6 @@ Proof.
   rewrite H0 in H; rewrite H1 in H; try isabsurd; eauto.
 Qed.
 
-
   (*
   *** Local Variables: ***
   *** coq-load-path: (("../" "Lvc")) ***
