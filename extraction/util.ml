@@ -2,7 +2,7 @@ open List
 open Names
 
 exception Range_error of string
-exception Compiler_error
+exception Compiler_error of string
 exception FailThroughFalsehood
 
 let implode l =
