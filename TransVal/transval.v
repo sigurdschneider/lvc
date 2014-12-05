@@ -161,7 +161,14 @@ undefLift el = Some ul
 Proof.
   intros a el ul udef inclFV.
   general induction el.
-  - simpl in *. admit.
+  - unfold list_union. simpl in *.
+    eapply list_union_start_swap.
+    case_eq (undef a); case_eq (undefLift el); intros;
+    rewrite H, H0 in udef; inversion udef;
+    rwsimplB H2 inclFV; cset_tac; eauto.
+    +destruct inclFV; eauto.
+       left; right; eapply (freeVars_undef) in H1; eauto.
+    + left; right; eapply (freeVars_undef) in inclFV; eauto.
 Qed.
 
 Lemma unsat_extension:
