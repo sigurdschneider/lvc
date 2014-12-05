@@ -90,7 +90,7 @@ Section Translate.
   Qed.
 
   Definition check_source_set (p1 p2 : pmov) :=
-    if [ pmov_source_set p1 [=] pmov_source_set p2 ] then true else false.
+    if [ pmov_source_set p1 ⊆ pmov_source_set p2 ] then true else false.
 
   Lemma check_source_set_correct p1 l1 l2
     (COK:check_source_set p1 ((l1,l2)::nil)) (M : onv X)
@@ -99,7 +99,7 @@ Section Translate.
   Proof.
     unfold check_source_set in COK. destruct if in COK; isabsurd.
     simpl in *.
-    intros. eapply Src. rewrite e in H0. cset_tac; intuition.
+    intros. eapply Src. rewrite s in H0. cset_tac; intuition.
   Qed.
 
   End Translate.
