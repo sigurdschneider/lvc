@@ -2,7 +2,7 @@ Require Import List CSet.
 Require Import Util AllInRel IL EnvTy RenameApart Sim Status Annotation.
 Require Liveness LivenessValidators ParallelMove ILN LivenessAnalysis.
 Require Coherence Delocation DelocationAlgo DelocationValidator Allocation AllocationAlgo.
-Require CopyPropagation DVE.
+Require CopyPropagation DVE EAE.
 Require ConstantPropagation ConstantPropagationAnalysis.
 
 Require Import ExtrOcamlBasic.
@@ -64,8 +64,11 @@ Notation "'ensure' P s ; cont " := (ensure_f P s cont)
 
 (* Print Grammar operconstr. *)
 
-Definition toILF (ilin:ILN.nstmt) : status IL.stmt :=
-  sdo ili <- ILN.labIndices ilin nil;
+Definition toDeBruijn (ilin:ILN.nstmt) : status IL.stmt :=
+  ILN.labIndices ilin nil.
+
+
+Definition toILF (ili:IL.stmt) : status IL.stmt :=
   sdo lv <- livenessAnalysis ili;
   ensure (Liveness.true_live_sound Liveness.Functional nil ili lv /\ getAnn lv ⊆ freeVars ili) ("Liveness unsound (1)") ;
   let ilid := DVE.compile nil ili lv in
@@ -73,7 +76,6 @@ Definition toILF (ilin:ILN.nstmt) : status IL.stmt :=
   ensure (Delocation.trs nil nil ilid (DVE.compile_live ili lv) additional_params)
          "Additional arguments insufficient";
     Success (Delocation.compile nil ilid additional_params).
-
 
 
 Definition optimize (s':stmt) : status stmt :=
@@ -94,10 +96,11 @@ Definition optimize (s':stmt) : status stmt :=
 
 
 Definition fromILF (s:stmt) : status stmt :=
-  let s_renamed_apart := rename_apart s in
+  let s_hoisted := EAE.compile s in
+  let s_renamed_apart := rename_apart s_hoisted in
   sdo lv <- livenessAnalysis s_renamed_apart;
      if [Liveness.live_sound Liveness.Functional nil s_renamed_apart lv
-         /\ getAnn lv ⊆ freeVars s] then
+         /\ getAnn lv ⊆ freeVars s_hoisted] then
        sdo ϱ <- allocation_oracle s_renamed_apart lv id;
        if [agree_on _eq (getAnn lv) ϱ id
            /\ Allocation.locally_inj ϱ s_renamed_apart lv ] then
@@ -135,22 +138,43 @@ Proof.
   - econstructor 4; eauto.
 Qed.
 
+Lemma toDeBruijn_correct (ilin:ILN.nstmt) s (E:onv val)
+ : toDeBruijn ilin = Success s
+   ->  @sim _ ILN.statetype_I _ _
+           (ILN.I.labenv_empty, E, ilin)
+           (nil:list I.block, E, s).
+Proof.
+  intros. unfold toDeBruijn in H. simpl in *.
+  eapply bisim_sim.
+  eapply ILN.labIndicesSim_sim.
+  econstructor; eauto; isabsurd. econstructor; isabsurd.
+Qed.
 
-Lemma toILF_correct (ilin:ILN.nstmt) s (E:onv val)
-  : toILF ilin = Success s
-    -> Delocation.defined_on (ILN.freeVars ilin) E
-    -> @sim _ ILN.statetype_I _ _ (ILN.I.labenv_empty, E, ilin)
+Lemma labIndices_freeVars ilin s L
+: ILN.labIndices ilin L = Success s
+  -> ILN.freeVars ilin = freeVars s.
+Proof.
+  intros. general induction ilin; simpl in *; monadS_inv H; simpl.
+  - erewrite IHilin; eauto.
+  - erewrite IHilin1, IHilin2; eauto.
+  - reflexivity.
+  - reflexivity.
+  - erewrite IHilin; eauto.
+  - erewrite IHilin1, IHilin2; try eapply EQ, EQ1; eauto.
+Qed.
+
+Lemma toILF_correct (ili:IL.stmt) s (E:onv val)
+  : toILF ili = Success s
+    -> Delocation.defined_on (IL.freeVars ili) E
+    -> @sim _ statetype_I _ _ (nil, E, ili)
           (nil:list F.block, E, s).
 Proof.
   intros. unfold toILF in H. simpl in *; unfold ensure_f, additionalArguments in *.
   monadS_inv H.
-  repeat (destruct if in EQ2; [|isabsurd]).
-  invc EQ2. dcr.
-  eapply sim_trans with (S2:=I.state).
-  - eapply bisim_sim. eapply ILN.labIndicesSim_sim.
-    econstructor; eauto; isabsurd. econstructor; isabsurd.
+  repeat (destruct if in EQ0; [|isabsurd]).
+  invc EQ0. dcr.
   - case_eq (DelocationAlgo.computeParameters nil nil nil
-              (DVE.compile nil x x0) (DVE.compile_live x x0)); intros.
+              (DVE.compile nil ili x) (DVE.compile_live ili x)); intros.
     assert (l = nil). {
     exploit (DelocationAlgo.computeParameters_length nil nil); eauto.
     eapply (@DVE.dve_live Liveness.Functional nil); eauto. destruct l; simpl in *; congruence.
@@ -175,21 +199,9 @@ Proof.
     econstructor; eauto using AIR53. reflexivity.
     eapply (@Delocation.live_sound_compile nil); eauto.
     hnf; intros. rewrite DVE.compile_live_incl in H3. eapply H0; eauto.
-    Lemma labIndices_freeVars ilin s L
-    : ILN.labIndices ilin L = Success s
-      -> ILN.freeVars ilin = freeVars s.
-    Proof.
-      intros. general induction ilin; simpl in *; monadS_inv H; simpl.
-      - erewrite IHilin; eauto.
-      - erewrite IHilin1, IHilin2; eauto.
-      - reflexivity.
-      - reflexivity.
-      - erewrite IHilin; eauto.
-      - erewrite IHilin1, IHilin2; try eapply EQ, EQ1; eauto.
-    Qed.
-    intros. erewrite labIndices_freeVars; eauto.
-    eauto.
-    eapply DVE.I.sim_DVE. reflexivity. eauto using Liveness.true_live_sound_interpretation.
+    eauto using Liveness.true_live_sound_interpretation.
+    eapply DVE.I.sim_DVE. reflexivity.
+    eauto using Liveness.true_live_sound_interpretation.
 Qed.
 
 
@@ -206,14 +218,17 @@ Proof.
   unfold fromILF; intros.
   monadS_inv H.
   destruct if in EQ0; dcr; isabsurd.
-  monadS_inv EQ0; dcr. destruct if in EQ2; dcr.
-  eapply sim_trans with (σ2:=(nil:list F.block, E, rename_apart s)).
+  monadS_inv EQ0; dcr. destruct if in EQ2; dcr; isabsurd.
+  eapply sim_trans with (σ2:=(nil:list F.block, E, rename_apart (EAE.compile s))).
+  eapply sim_trans with (σ2:=(nil:list F.block, E, EAE.compile s)).
+  eapply bisim_sim. eapply EAE.sim_EAE.
   eapply bisim_sim.
-  eapply (@Alpha.alphaSim_sim (nil, E, s) (nil, E, rename_apart s)).
+  eapply (@Alpha.alphaSim_sim (nil, E, _) (nil, E, _)).
   econstructor; eauto using AIR3, Alpha.envCorr_idOn_refl.
   eapply Alpha.alpha_sym. eapply rename_apart_alpha.
   eapply sim_trans with (σ2:=(nil:list F.block, E,
-    rename x0 (rename_apart s))).
+                               rename x0
+             (rename_apart (EAE.compile s)))).
   eapply bisim_sim.
   eapply Alpha.alphaSim_sim. econstructor; eauto using AIR3.
   eapply Allocation.ssa_locally_inj_alpha; eauto.
@@ -235,7 +250,6 @@ Proof.
   econstructor; try now econstructor; eauto.
   eapply (@Liveness.live_rename_sound _ nil); eauto. eauto using Liveness.live_sound_interpretation.
   eauto.
-  congruence.
 Qed.
 
 Lemma labelsDefined_rename_apart L s ϱ G
@@ -320,7 +334,7 @@ Print Assumptions optimize_correct.
 
 Extraction Inline bind Option.bind toString.
 
-Extraction "extraction/lvc.ml" toILF AllocationAlgo.linear_scan optimize.
+Extraction "extraction/lvc.ml" toILF fromILF AllocationAlgo.linear_scan optimize toDeBruijn.
 
 
 
