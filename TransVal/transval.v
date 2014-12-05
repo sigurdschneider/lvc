@@ -1255,47 +1255,54 @@ clear termcrash2.
            + unfold F; destruct fs; unfold labInc; simpl; eauto.
          - unfold evalSpred; unfold F; simpl; destruct fs;
            simpl; econstructor; eauto. }
-    * subst. eapply simTerm.
-      instantiate (1:=(L, Et, stmtGoto ft Xt)).
-      instantiate (1:= (L, Es, stmtGoto fs Xs)).
-      { simpl in modTS; simpl; eauto.
-(*      pose proof (terminates_impl_evalList E s Es fs Xs H5 sterm).
-      pose proof (terminates_impl_evalList E t Et ft Xt H6 tterm).
-      destruct H as [es seval]; destruct H8 as [et teval].
-      pose proof (predeval_uneq_goto (combineEnv Ds' Es Et) ft fs Xt Xs x0 x).
-      pose proof (explist_combineenv_eq_left Xs Ds' Es Et (Some x)).
-      destruct H10.
+    * subst; eapply sim'_sim.
+      eapply sim'_expansion_closed; eauto.
+      eapply sim_sim'.
+      decide (fs = ft).
+      { subst.
+        destruct (get_dec L (counted ft)) as [[[bE bZ bs]]|].
+        - assert (exists vl, omap (exp_eval Es) Xs = Some vl)
+            by admit.
+          destruct H. decide (length Xs = length bZ).
+          + pose proof (terminates_impl_evalList L L E s Es ft Xs H5 sterm).
+            pose proof (terminates_impl_evalList L L E t Et ft Xt H6 tterm).
+            destruct H4 as [es seval]; destruct H8 as [et teval].
+            pose proof (predeval_uneq_goto (combineEnv Ds' Es Et) ft ft Xt Xs et es).
+            specialize (H4 (smtAnd (smtAnd smtTrue Q) Q')).
+            pose proof (explist_combineenv_eql Xs Ds' Es Et (Some es)).
+            destruct H8.
+            { admit. }
+            { pose proof (explist_combineenv_eqr Xt Ds' Es Et (Some et)).
+              destruct H10.
+              - admit.
+              - specialize (H4 (H11 teval) (H9 seval)).
+                simpl in H4.
+                assert (forall F, models F (combineEnv Ds' Es Et) (smtAnd smtTrue (smtAnd Q Q'))).
+                + admit.
+                + simpl  in H12. rewrite H4 in teval.
+                  Focus 2. intros. specialize (H12 F). destruct H12. destruct H13.
+                  split; eauto; split; eauto.
+                  Focus 2. intros. specialize (modTS F (combineEnv Ds' Es Et)).
+                  simpl in modTS. specialize (modTS H13); eauto.
+                  one_step.
+                  * simpl. rewrite <- e. admit.
+                  * eapply sim_refl. }
+          +no_step. get_functional.
+            * subst. simpl in *; congruence.
+            * (* omap_length *) admit.
+        - no_step; eauto.
+      }
       { admit. }
-      { pose proof (explist_combineenv_eqr Xt Ds' Es Et (Some x0)).
-        destruct H12.
-        - admit.
-        - specialize (H9 (smtAnd smtTrue  (smtAnd Q Q'))).
-          specialize (H9 (H13 H8) (H11 H)).
-          simpl in H.
-          assert (forall F, models F (combineEnv Ds' Es Et) (smtAnd smtTrue (smtAnd Q Q'))).
-          + admit.
-          + specialize (H9 H14).
-            simpl in H14. specialize
-
-
-      {  admit. }
-      { admit. }
- } *) }
-     { eauto. }
-      { eauto. }
-      { admit. (* hnf. intros. unfold reducible2 in H. destruct H. destruct H.
-        inversion H. inversion Ldef. *) }
-      { admit. (* hnf. intros. unfold reducible2 in H. destruct H. destruct H.
-        inversion H. inversion Ldef.*) }
 (* s terminiert & t crasht *)
 - pose proof (terminates_impl_models L  s D E s' Es H2 H5 sterm).
   assert (forall x, x ∈ fst(getAnn D') -> exists v, E x = Some v).
   + intros. destruct (H7 x); eauto. rewrite H1 in H9; eauto.
   + pose proof (crash_impl_models L L D' t E Et t' H3 H9 H6 tcrash).
-  specialize (H (fun _ => fun _ => true) (combineEnv Ds' Es Et)).
-  exfalso. apply H. simpl. split.
-    * assert (agree_on eq (freeVars (translateStmt s source)) Es (combineEnv Ds' Es Et)).
-      { hnf; intros. unfold combineEnv.
+    specialize (H (fun _ => fun _ => true) (combineEnv Ds' Es Et)).
+    exfalso. apply H. simpl. split.
+    * assert (agree_on eq (freeVars (translateStmt s source)) Es (combineEnv Ds' Es Et))
+             by admit.
+(*      { hnf; intros. unfold combineEnv.
         destruct if; try isabsurd; eauto.
         pose proof (ssa_freeVars H2).
         pose proof (ssa_incl H2).
@@ -1310,18 +1317,17 @@ forall s D,
 
 Proof.
   intros s D nfS ssaS.
-  general induction ssaS.
-  -  simpl in *. case_eq (undef e); intros; simpl.
+  general induction s.
+  - cset_tac.  simpl.   simpl in *. case_eq (undef e); intros; simpl.
     +  inversion nfS; rewrite <- IHssaS;  eauto; subst.
        cset_tac. destruct H3 as [H3 | [ [H3 | H3] | H3]].
        * eapply (freeVars_undef) in H3; eauto.
        * left.  split; isabsurd.  inversion H. right. exfalso. eapply H5. specialize
-         { destruct H0.
-
-      { eapply models_agree; eauto.
-
-  + erewrite <- combineenv_eqr; eauto.
-    * admit.
+         { destruct H0. *)
+      eapply models_agree; eauto. symmetry; eauto.
+    * assert (agree_on eq (freeVars (translateStmt t target)) Et (combineEnv Ds' Es Et))
+             by admit.
+      eapply models_agree; eauto. symmetry; eauto.
   (* Widerspruch konstruieren aus guard = False und ~ models
     apply Lemma dass wenn es gibt i was models s und crash t --> models s /\ t
     konstruieren mit sat_extension und Lemma terminates_impl_sim*)
