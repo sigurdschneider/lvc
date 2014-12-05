@@ -1261,33 +1261,41 @@ clear termcrash2.
       decide (fs = ft).
       { subst.
         destruct (get_dec L (counted ft)) as [[[bE bZ bs]]|].
-        - assert (exists vl, omap (exp_eval Es) Xs = Some vl)
-            by admit.
-          destruct H. decide (length Xs = length bZ).
+        - decide (length Xs = length bZ).
           + pose proof (terminates_impl_evalList L L E s Es ft Xs H5 sterm).
             pose proof (terminates_impl_evalList L L E t Et ft Xt H6 tterm).
-            destruct H4 as [es seval]; destruct H8 as [et teval].
+            destruct H as [es seval]; destruct H4 as [et teval].
             pose proof (predeval_uneq_goto (combineEnv Ds' Es Et) ft ft Xt Xs et es).
-            specialize (H4 (smtAnd (smtAnd smtTrue Q) Q')).
+            specialize (H (smtAnd (smtAnd smtTrue Q) Q')).
             pose proof (explist_combineenv_eql Xs Ds' Es Et (Some es)).
-            destruct H8.
-            { admit. }
-            { pose proof (explist_combineenv_eqr Xt Ds' Es Et (Some et)).
-              destruct H10.
-              - admit.
-              - specialize (H4 (H11 teval) (H9 seval)).
-                simpl in H4.
-                assert (forall F, models F (combineEnv Ds' Es Et) (smtAnd smtTrue (smtAnd Q Q'))).
-                + admit.
-                + simpl  in H12. rewrite H4 in teval.
-                  Focus 2. intros. specialize (H12 F). destruct H12. destruct H13.
-                  split; eauto; split; eauto.
-                  Focus 2. intros. specialize (modTS F (combineEnv Ds' Es Et)).
-                  simpl in modTS. specialize (modTS H13); eauto.
+            destruct H4.
+            * admit.
+            *  pose proof (explist_combineenv_eqr Xt Ds' Es Et (Some et)).
+              destruct H9.
+              {  admit. }
+              { specialize (H (H10 teval) (H8 seval)).
+                simpl in H. rewrite H in teval.
                   one_step.
-                  * simpl. rewrite <- e. admit.
-                  * eapply sim_refl. }
-          +no_step. get_functional.
+                  - simpl. rewrite <- e. admit.
+                  - eapply sim_refl.
+                  - intros.  split.  split; eauto.
+                    + specialize (M F).
+                      assert (agree_on eq (snd (getAnn D)) Es (combineEnv Ds' Es Et)).
+                      * hnf; intros. rewrite H0 in H11.
+                        unfold combineEnv; destruct if; eauto; isabsurd.
+                      * eapply models_agree; eauto. hnf; intros.  symmetry.
+                        eapply H11; cset_tac. hnf in fvQ. eapply fvQ; eauto.
+                     + specialize (modQ' F).
+                       assert (agree_on eq (snd(getAnn D')) Et (combineEnv Ds' Es Et)).
+                       * hnf; intros; rewrite H1 in H11.
+                         unfold combineEnv; destruct if; eauto.
+                         simpl in H11. destruct (H7 x); cset_tac; eauto.
+                         admit.
+                      * eapply models_agree; eauto. hnf; intros. symmetry.
+                        eapply H11. eapply fvQ'; eauto.
+                 - intros. specialize (modTS F (combineEnv Ds' Es Et)).
+                   simpl in modTS. specialize (modTS H11); eauto. }
+          + no_step. get_functional.
             * subst. simpl in *; congruence.
             * (* omap_length *) admit.
         - no_step; eauto.
