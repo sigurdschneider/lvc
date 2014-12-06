@@ -1033,6 +1033,89 @@ Proof.
     eapply sndSubset; eauto.
 Qed.
 
+Lemma freeVars_incl:
+  forall s D Ds Ds' p,
+    ssa s D
+    -> noFun s
+    -> pe (getAnn D) (Ds, Ds')
+    -> freeVars (translateStmt s p) ⊆ Ds'.
+
+Proof.
+  intros s D Ds Ds' p ssaS nfS getD.
+  general induction nfS; inv ssaS; inv getD; subst; simpl.
+  - pose proof (ssa_incl ssaS); simpl in *.
+    rewrite H4, H8 in H6.
+    specialize (IHnfS an (Ds ++ {x; {}}) (Ds') p H5 H6).
+    cset_tac.
+    case_eq (undef e); intros; rwsimpl H1 H0;
+    cset_tac.
+    + destruct p; simpl in *; cset_tac.
+      * destruct H0 as [guardVars | [ [ varx | expVars ] | ind]]; eauto.
+        { eapply (freeVars_undef) in guardVars; eauto.
+        eapply H8. eapply H; eauto. }
+        { rewrite <- varx.
+         pose proof (ssa_incl H5). rwsimpl H6 H0.
+         eapply H0; cset_tac; eauto. }
+        { eapply H8. eapply H; eauto. }
+      * destruct H0 as [guardVars | [ [ varx | expVars ] | ind]]; eauto.
+        { eapply (freeVars_undef) in guardVars; eauto.
+        eapply H8. eapply H; eauto. }
+        { rewrite <- varx.
+         pose proof (ssa_incl H5). rwsimpl H6 H0.
+         eapply H0; cset_tac; eauto. }
+        { eapply H8. eapply H; eauto. }
+    + destruct H0 as [ [varx | expVars] | ind]; eauto.
+       * rewrite <- varx.
+         pose proof (ssa_incl H5). rwsimpl H6 H0.
+         eapply H0; cset_tac; eauto.
+       * eapply H8; eapply H; eauto.
+  -  pose proof (ssa_incl ssaS); simpl in *.
+     rewrite <- H3 in *.
+     specialize (IHnfS1 ans (Ds0 ∩ Dt) Ds0 p H5 H8).
+     specialize (IHnfS2 ant (Ds0 ∩ Dt) Dt p H6 H9).
+     cset_tac.
+     case_eq (undef e); intros; simpl; rewrite H1 in *; simpl in *;
+     cset_tac.
+     + destruct p; simpl in *; cset_tac.
+       * destruct H0 as [ guardVars | [[indS | indT ] |  expVars ]].
+         { eapply (freeVars_undef) in guardVars; eauto.
+         eapply H11; eapply H; eapply H2; eauto. }
+         { eapply H11; eapply H4; left; eapply IHnfS1; eauto. }
+         { eapply H11; eapply H4; right; eapply IHnfS2; eauto. }
+         { eapply H11; eapply H; eapply H2; eauto. }
+       * destruct H0 as [ guardVars | [[indS | indT ] |  expVars ]].
+         { eapply (freeVars_undef) in guardVars; eauto.
+         eapply H11; eapply H; eapply H2; eauto. }
+         { eapply H11; eapply H4; left; eapply IHnfS1; eauto. }
+         { eapply H11; eapply H4; right; eapply IHnfS2; eauto. }
+         { eapply H11; eapply H; eapply H2; eauto. }
+     + destruct H0 as [ [indS | indT] | expVars].
+       * eapply H11; eapply H4; left; eapply IHnfS1; eauto.
+       * eapply H11; eapply H4; right; eapply IHnfS2; eauto.
+       * eapply H11; eapply H; eapply H2; eauto.
+  - pose proof (ssa_incl ssaS);  simpl in *.
+    cset_tac.
+    eapply H6; eapply H; eapply H1.
+    destruct p; simpl in *; cset_tac.
+    + case_eq (undefLift Y); intros; rewrite H2 in *;
+      simpl in *; eauto.
+      cset_tac.
+      destruct H0; eauto using freeVars_undefLift.
+    + case_eq (undefLift Y); intros; rewrite H2 in *;
+      simpl in *; eauto; cset_tac.
+      destruct H0; eauto using freeVars_undefLift.
+  - pose proof (ssa_incl ssaS); simpl in *.
+    cset_tac.
+    eapply H6; eapply H; eapply H0.
+    case_eq (undef e); intros; rewrite H3 in *;
+    destruct p;
+    simpl in *; eauto.
+    + cset_tac.
+      destruct H2; eauto using freeVars_undef.
+    + cset_tac.
+      destruct H2; eauto using freeVars_undef.
+Qed.
+
 Lemma unsat_impl_sim:
 forall L D D' Df  Ds' Dt'  E s t,
 (forall F E, ~ models F E (smtCheck s t))
@@ -1313,36 +1396,28 @@ clear termcrash2.
   assert (forall x, x ∈ fst(getAnn D') -> exists v, E x = Some v).
   + intros. destruct (H7 x); eauto. rewrite H1 in H9; eauto.
   + pose proof (crash_impl_models L L D' t E Et t' H3 H9 H6 tcrash).
+    pose proof (combineenv_agree Ds' Es Et).
     specialize (H (fun _ => fun _ => true) (combineEnv Ds' Es Et)).
     exfalso. apply H. simpl. split.
-    * assert (agree_on eq (freeVars (translateStmt s source)) Es (combineEnv Ds' Es Et))
-             by admit.
-(*      { hnf; intros. unfold combineEnv.
-        destruct if; try isabsurd; eauto.
-        pose proof (ssa_freeVars H2).
-        pose proof (ssa_incl H2).
-        rewrite H0 in *. simpl in *.
-        exfalso; eapply n; eapply H13; eapply H12; eauto.
-
-Lemma freeVars_eq:
-forall s D,
-  noFun s
-  ->ssa s D
-  -> freeVars (translateStmt s source) ⊆  IL.freeVars s.
-
-Proof.
-  intros s D nfS ssaS.
-  general induction s.
-  - cset_tac.  simpl.   simpl in *. case_eq (undef e); intros; simpl.
-    +  inversion nfS; rewrite <- IHssaS;  eauto; subst.
-       cset_tac. destruct H3 as [H3 | [ [H3 | H3] | H3]].
-       * eapply (freeVars_undef) in H3; eauto.
-       * left.  split; isabsurd.  inversion H. right. exfalso. eapply H5. specialize
-         { destruct H0. *)
-      eapply models_agree; eauto. symmetry; eauto.
-    * assert (agree_on eq (freeVars (translateStmt t target)) Et (combineEnv Ds' Es Et))
-             by admit.
-      eapply models_agree; eauto. symmetry; eauto.
+    * eapply models_agree; eauto.
+      eapply (agree_on_incl (lv:= Ds' )); eauto.
+      eapply (freeVars_incl s D Df Ds'); eauto.
+      rewrite H0; reflexivity.
+    * pose proof (freeVars_incl t D' Df Dt' target H3 H6).
+      rewrite <- combineenv_eqr; eauto.
+      eapply (agree_on_incl (lv:= Dt' ∩ Ds')).
+      { hnf; intros. rewrite <- H4 in H7.
+        destruct (H7 x )  as [v  Ex];
+          cset_tac; eauto.
+        assert (Es x = Some v).
+        - pose proof (term_ssa_eval_agree L L s D s' E Es).
+          rewrite <- H13; eauto. rewrite H0; simpl; cset_tac; eauto.
+        - assert (Et x = Some v).
+          + pose proof (crash_ssa_eval_agree L L t D' t' E Et).
+            rewrite <- H15; eauto; rewrite H1; simpl; cset_tac; eauto.
+          + rewrite H13, H15; eauto. }
+      { cset_tac; eauto.
+         eapply H12; eauto. rewrite H1; reflexivity. }
   (* Widerspruch konstruieren aus guard = False und ~ models
     apply Lemma dass wenn es gibt i was models s und crash t --> models s /\ t
     konstruieren mit sat_extension und Lemma terminates_impl_sim*)
