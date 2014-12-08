@@ -1351,8 +1351,7 @@ clear termcrash2.
       decide (fs = ft).
       { subst.
         destruct (get_dec L (counted ft)) as [[[bE bZ bs]]|].
-        - decide (length Xs = length bZ).
-          + pose proof (terminates_impl_evalList L L E s Es ft Xs H5 sterm).
+        - pose proof (terminates_impl_evalList L L E s Es ft Xs H5 sterm).
             pose proof (terminates_impl_evalList L L E t Et ft Xt H6 tterm).
             destruct H as [es seval]; destruct H4 as [et teval].
             pose proof (predeval_uneq_goto (combineEnv Ds' Es Et) ft ft Xt Xs et es).
@@ -1388,41 +1387,52 @@ clear termcrash2.
                  - cset_tac; eauto.
                    eapply sndSubset; eapply H13; eauto. }
                { specialize (H (H10 teval) (H8 seval)).
-                 simpl in H. rewrite H in teval.
-                 one_step.
-                 - simpl. rewrite <- e.
-                   pose proof (omap_length exp val es (exp_eval Es) Xs seval).
-                   pose proof (omap_length exp val es (exp_eval Et) Xt teval).
-                   rewrite H11, H12; eauto.
-                 - eapply sim_refl.
+                 simpl in H.
+                 (* Clean up now *)
+                 clear H4. clear H9.
+                 specialize (H8 seval); specialize (H10 teval).
+                 (* Now make the result value the same everywhere *)
+                 rewrite H in teval.
+                 Focus 2.
                  - intros.  split.  split; eauto.
                    + specialize (M F).
                      assert (agree_on eq (snd (getAnn D)) Es (combineEnv Ds' Es Et)).
-                     * hnf; intros. rewrite H0 in H11.
+                     * hnf; intros. rewrite H0 in H4.
                        unfold combineEnv; destruct if; eauto; isabsurd.
                      * eapply models_agree; eauto. hnf; intros.  symmetry.
-                       eapply H11; cset_tac. hnf in fvQ. eapply fvQ; eauto.
+                       eapply H4; cset_tac. hnf in fvQ. eapply fvQ; eauto.
                    + specialize (modQ' F).
                      assert (agree_on eq (snd(getAnn D')) Et (combineEnv Ds' Es Et)).
-                     * hnf; intros; rewrite H1 in H11.
+                     * hnf; intros; rewrite H1 in H4.
                        unfold combineEnv; destruct if; eauto.
-                       simpl in H11. destruct (H7 x); cset_tac; eauto.
+                       simpl in H4. destruct (H7 x); cset_tac; eauto.
                        (* Es and Et agree on the free variables *)
                        assert ( Es x = Some x0 /\ Et x = Some x0).
                        { split.
                          - pose proof (term_ssa_eval_agree L L s D (stmtGoto ft Xs) E Es).
-                           rwsimpl H0 H13; rewrite <- H13; cset_tac; eauto.
+                           rwsimpl H0 H11; rewrite <- H11; cset_tac; eauto.
                          - pose proof (term_ssa_eval_agree L L t D' (stmtGoto ft Xt) E Et).
-                           rwsimpl H1 H13; rewrite <- H13; cset_tac; eauto. }
-                       { destruct H13 as [Esx Etx]; rewrite Esx, Etx; eauto. }
+                           rwsimpl H1 H11; rewrite <- H11; cset_tac; eauto. }
+                       { destruct H11 as [Esx Etx]; rewrite Esx, Etx; eauto. }
                      * eapply models_agree; eauto. hnf; intros. symmetry.
-                       eapply H11. eapply fvQ'; eauto.
-                 - intros. specialize (modTS F (combineEnv Ds' Es Et)).
-                   simpl in modTS. specialize (modTS H11); eauto. }
+                       eapply H4. eapply fvQ'; eauto.
+                       Focus 2.
+                       intros. specialize (modTS F (combineEnv Ds' Es Et)).
+                       simpl in modTS. specialize (modTS H4); eauto.
+          - pose proof (omap_length exp val es (exp_eval Es) Xs seval).
+            pose proof (omap_length exp val es (exp_eval Et) Xt teval).
+           decide (length Xs = length bZ).
+          + one_step.
+            * simpl. rewrite <- e.
+                   rewrite H4, H9; eauto.
+            * eapply sim_refl.
           + no_step. get_functional.
             * subst. simpl in *; congruence.
-            * pose proof (omap_length exp val vl (exp_eval Et) Xt def).
-              eapply n.   (* omap_length *) admit.
+            * (* Construct a contradiction as both argument lists are equal
+                    and len contains the assumption that the lengths are equal *)
+              eapply n.  pose proof (get_functional g Ldef).
+              rwsimplB H11 len.
+              rewrite len. rewrite H4, H9; eauto.  }
         - no_step; eauto. }
       { exfalso.
       pose (F := (fun l => fun (_:vallst) => if [labInc fs 1 = l] then true else false)).
@@ -1492,7 +1502,7 @@ clear termcrash2.
            * decide (labInc fs 1 = labInc ft 1); eauto.
             eapply n. destruct fs,ft. simpl in *.
             pose proof (labeq_incr). specialize (H9 n0 n1 e); eauto.
-          * destruct if; isabsurd; econstructor; eauto.  }
+          * destruct if; isabsurd; econstructor; eauto. }
 (* s terminiert & t crasht *)
 - pose proof (terminates_impl_models L  s D E s' Es H2 H5 sterm).
   assert (forall x, x ∈ fst(getAnn D') -> exists v, E x = Some v).
