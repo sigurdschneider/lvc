@@ -1359,38 +1359,140 @@ clear termcrash2.
             specialize (H (smtAnd (smtAnd smtTrue Q) Q')).
             pose proof (explist_combineenv_eql Xs Ds' Es Et (Some es)).
             destruct H4.
-            * admit.
+            * pose proof (ssa_move_goto D L E s Es ft Xs).
+              destruct H4 as [D'' [ssaGoto [fstSubset sndSubset]]]; eauto.
+              inversion ssaGoto.
+              hnf; intros.
+              rwsimpl H0 sndSubset.
+              rwsimplB H10 sndSubset.
+              eapply sndSubset; eapply H11; eapply H9; eauto.
             *  pose proof (explist_combineenv_eqr Xt Ds' Es Et (Some et)).
-              destruct H9.
-              {  admit. }
-              { specialize (H (H10 teval) (H8 seval)).
-                simpl in H. rewrite H in teval.
-                  one_step.
-                  - simpl. rewrite <- e. admit.
-                  - eapply sim_refl.
-                  - intros.  split.  split; eauto.
-                    + specialize (M F).
-                      assert (agree_on eq (snd (getAnn D)) Es (combineEnv Ds' Es Et)).
-                      * hnf; intros. rewrite H0 in H11.
-                        unfold combineEnv; destruct if; eauto; isabsurd.
-                      * eapply models_agree; eauto. hnf; intros.  symmetry.
-                        eapply H11; cset_tac. hnf in fvQ. eapply fvQ; eauto.
-                     + specialize (modQ' F).
-                       assert (agree_on eq (snd(getAnn D')) Et (combineEnv Ds' Es Et)).
-                       * hnf; intros; rewrite H1 in H11.
-                         unfold combineEnv; destruct if; eauto.
-                         simpl in H11. destruct (H7 x); cset_tac; eauto.
-                         admit.
-                      * eapply models_agree; eauto. hnf; intros. symmetry.
-                        eapply H11. eapply fvQ'; eauto.
+               destruct H9.
+               { (* freeVars ∩ Ds' agree *)
+                 pose proof (ssa_move_goto D' L E t Et ft Xt H6 H3 tterm).
+                 destruct H9 as [D'' [ ssaGoto [ fstSubset sndSubset ]]].
+                 inversion ssaGoto.
+                 eapply (agree_on_incl (lv:=D0 ∩ Ds')); cset_tac; eauto.
+                 rwsimpl H1 fstSubset; rwsimpl H1 sndSubset.
+                 eapply (agree_on_incl (lv:= Ds' ∩ Dt')).
+                 - hnf; intros.
+                   (* Es and Et agree on the free variables. *)
+                   destruct (H7 x) as [ v Exv]; cset_tac; eauto.
+                   assert ( Es x = Some v /\ Et x = Some v).
+                   + split.
+                     * pose proof (term_ssa_eval_agree L L s D (stmtGoto ft Xs) E Es).
+                       rwsimpl H0 H9; rewrite <- H9; cset_tac; eauto.
+                     * pose proof (term_ssa_eval_agree L L t D' (stmtGoto ft Xt) E Et).
+                       rwsimpl H1 H9; rewrite <- H9; cset_tac; eauto.
+                   + destruct H9 as [Esx Etx]; rewrite Esx, Etx; eauto.
+                 - cset_tac; eauto.
+                   eapply sndSubset; eapply H13; eauto. }
+               { specialize (H (H10 teval) (H8 seval)).
+                 simpl in H. rewrite H in teval.
+                 one_step.
+                 - simpl. rewrite <- e.
+                   pose proof (omap_length exp val es (exp_eval Es) Xs seval).
+                   pose proof (omap_length exp val es (exp_eval Et) Xt teval).
+                   rewrite H11, H12; eauto.
+                 - eapply sim_refl.
+                 - intros.  split.  split; eauto.
+                   + specialize (M F).
+                     assert (agree_on eq (snd (getAnn D)) Es (combineEnv Ds' Es Et)).
+                     * hnf; intros. rewrite H0 in H11.
+                       unfold combineEnv; destruct if; eauto; isabsurd.
+                     * eapply models_agree; eauto. hnf; intros.  symmetry.
+                       eapply H11; cset_tac. hnf in fvQ. eapply fvQ; eauto.
+                   + specialize (modQ' F).
+                     assert (agree_on eq (snd(getAnn D')) Et (combineEnv Ds' Es Et)).
+                     * hnf; intros; rewrite H1 in H11.
+                       unfold combineEnv; destruct if; eauto.
+                       simpl in H11. destruct (H7 x); cset_tac; eauto.
+                       (* Es and Et agree on the free variables *)
+                       assert ( Es x = Some x0 /\ Et x = Some x0).
+                       { split.
+                         - pose proof (term_ssa_eval_agree L L s D (stmtGoto ft Xs) E Es).
+                           rwsimpl H0 H13; rewrite <- H13; cset_tac; eauto.
+                         - pose proof (term_ssa_eval_agree L L t D' (stmtGoto ft Xt) E Et).
+                           rwsimpl H1 H13; rewrite <- H13; cset_tac; eauto. }
+                       { destruct H13 as [Esx Etx]; rewrite Esx, Etx; eauto. }
+                     * eapply models_agree; eauto. hnf; intros. symmetry.
+                       eapply H11. eapply fvQ'; eauto.
                  - intros. specialize (modTS F (combineEnv Ds' Es Et)).
                    simpl in modTS. specialize (modTS H11); eauto. }
           + no_step. get_functional.
             * subst. simpl in *; congruence.
-            * (* omap_length *) admit.
-        - no_step; eauto.
-      }
-      { admit. }
+            * pose proof (omap_length exp val vl (exp_eval Et) Xt def).
+              eapply n.   (* omap_length *) admit.
+        - no_step; eauto. }
+      { exfalso.
+      pose (F := (fun l => fun (_:vallst) => if [labInc fs 1 = l] then true else false)).
+      specialize (modTS F (combineEnv Ds' Es Et)).
+      eapply modTS.
+      - simpl; split; try split; eauto.
+        + pose proof (combineenv_agree Ds' Es Et).
+          eapply (models_agree F (combineEnv Ds' Es Et) Es Q); eauto.
+          rwsimpl H0 fvQ.
+          eapply (agree_on_incl (lv:= Ds')); cset_tac; eauto.
+        + pose proof (combineenv_eqr F Q' Ds' Es Et).
+          rewrite <- H; eauto.
+          rwsimpl H1 fvQ'.
+          eapply (agree_on_incl (lv:= Ds' ∩ Dt')); cset_tac; eauto.
+          hnf; intros.
+          destruct (H7 x) as [v Exv]; cset_tac; eauto.
+          (* Es and Et agree on free variables *)
+          assert ( Es x = Some v /\ Et x = Some v).
+          * split.
+            { pose proof (term_ssa_eval_agree L L s D (stmtGoto fs Xs) E Es).
+              rwsimpl H0 H4; rewrite <- H4; cset_tac; eauto. }
+            { pose proof (term_ssa_eval_agree L L t D' (stmtGoto ft Xt) E Et).
+              rwsimpl H1 H4; rewrite <- H4; cset_tac; eauto. }
+          * destruct H4 as [Esx Etx]; rewrite Esx, Etx; eauto.
+      - unfold F;  simpl.
+        (* Case_eq over guards *)
+        case_eq (undefLift Xt); case_eq (undefLift Xs); simpl;
+        unfold evalSpred; intros; simpl.
+        + split; intros.
+          * decide (labInc fs 1 = labInc ft 1); eauto.
+            eapply n. destruct fs,ft. simpl in *.
+            pose proof (labeq_incr). specialize (H10 n0 n1 e); eauto.
+          * split.
+            { pose proof (terminates_impl_evalList L L E s Es fs Xs ).
+              destruct H8; eauto.
+              eapply guardList_true_if_eval; eauto.
+              pose proof (explist_combineenv_eql Xs Ds' Es Et (Some x)).
+              destruct H9; cset_tac; eauto.
+              pose proof (ssa_move_goto D L E s Es fs Xs).
+              destruct H10 as [D'' [ssaRet [fstSubset sndSubset]]]; eauto;
+              inversion ssaRet.
+              rewrite H0 in fstSubset, sndSubset; cset_tac; simpl in *.
+              eapply sndSubset. rewrite <- H14. eapply H12; eauto. }
+            { destruct if; isabsurd; econstructor; eauto. }
+        + split; intros.
+          * decide (labInc fs 1 = labInc ft 1); eauto.
+            eapply n. destruct fs,ft. simpl in *.
+            pose proof (labeq_incr). specialize (H10 n0 n1 e); eauto.
+          * destruct if; isabsurd; econstructor; eauto.
+         + split; intros.
+          * decide (labInc fs 1 = labInc ft 1); eauto.
+            eapply n. destruct fs,ft. simpl in *.
+            pose proof (labeq_incr). specialize (H9 n0 n1 e); eauto.
+          * split.
+            { pose proof (terminates_impl_evalList L L E s Es fs Xs ).
+              destruct H8; eauto.
+              eapply guardList_true_if_eval; eauto.
+              pose proof (explist_combineenv_eql Xs Ds' Es Et (Some x)).
+              destruct H9; cset_tac; eauto.
+              pose proof (ssa_move_goto D L E s Es fs Xs).
+              destruct H10 as [D'' [ssaRet [fstSubset sndSubset]]]; eauto;
+              inversion ssaRet.
+              rewrite H0 in fstSubset, sndSubset; cset_tac; simpl in *.
+              eapply sndSubset. rewrite <- H14. eapply H12; eauto. }
+            { destruct if; isabsurd; econstructor; eauto. }
+         + split; intros.
+           * decide (labInc fs 1 = labInc ft 1); eauto.
+            eapply n. destruct fs,ft. simpl in *.
+            pose proof (labeq_incr). specialize (H9 n0 n1 e); eauto.
+          * destruct if; isabsurd; econstructor; eauto.  }
 (* s terminiert & t crasht *)
 - pose proof (terminates_impl_models L  s D E s' Es H2 H5 sterm).
   assert (forall x, x ∈ fst(getAnn D') -> exists v, E x = Some v).
@@ -1408,7 +1510,7 @@ clear termcrash2.
       eapply (agree_on_incl (lv:= Dt' ∩ Ds')).
       { hnf; intros. rewrite <- H4 in H7.
         destruct (H7 x )  as [v  Ex];
-          cset_tac; eauto.
+         cset_tac; eauto.
         assert (Es x = Some v).
         - pose proof (term_ssa_eval_agree L L s D s' E Es).
           rewrite <- H13; eauto. rewrite H0; simpl; cset_tac; eauto.
