@@ -1,8 +1,8 @@
 Require Import List Arith.
 Require Import IL Annotation AutoIndTac Bisim Exp MoreExp Coherence Fresh Util.
 Require Import SetOperations Sim Var.
-Require Import sexp smt nofun noGoto Terminates bitvec Crash freeVars.
-Require Import tvalTactics TUtil.
+Require Import sexp smt nofun noGoto bitvec freeVars.
+Require Import Compute Guards ILFtoSMT tvalTactics TUtil.
 
  Lemma guard_true_if_eval:
 forall F E e s v,

@@ -2,7 +2,7 @@ Require Import List Arith.
 Require Import IL Annotation AutoIndTac Bisim Exp MoreExp Coherence Fresh Util.
 Require Import SetOperations Sim Var.
 Require Import bitvec sexp smt nofun noGoto freeVars.
-Require Import Compute tvalTactics TUtil GuardProps.
+Require Import Compute Guards ILFtoSMT tvalTactics TUtil GuardProps.
 
 Lemma term_ssa_eval_agree L L' s D s' (E:onv val) (E':onv val)
  : ssa s D

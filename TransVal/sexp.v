@@ -25,17 +25,6 @@ Inductive sexp :=
 (** variables **)
 |svar: var -> sexp.
 
-(**
-evalSexp evaluates an SMT expression given an environment that must! be total on
-every variable that may occur in a formula.
-**)
-
-Definition evalSexp E s : bitvec :=
-match exp_eval E s with
-|Some v => v
-|None => default_val
-end.
-
 (** Lemmas **)
 
 Lemma zext_nil_eq_O:
