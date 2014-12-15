@@ -1,10 +1,22 @@
 Require Import IL StateType.
+Require Import smt noGoto.
+
+Set Implicit Arguments.
+
+Inductive Terminates :F.state -> F.state -> Prop :=
+|TerminatesReturn L E e v:
+   exp_eval E e = ⎣v⎦
+   -> Terminates (L, E, stmtReturn e)   (L  , E , stmtReturn e)
+|TerminatesGoto L E f x vl:
+   omap (exp_eval E) x = ⎣vl⎦
+   -> Terminates (L, E, stmtGoto f x) (L, E, stmtGoto f x)
+|TerminatesStep L E s L'  E' s'  L'' E'' s''  a:
+   F.step (L, E, s) a (L', E', s')
+   -> Terminates (L', E', s') (L'', E'', s'')
+   ->  (forall f xl, s <> stmtGoto f xl)
+   -> Terminates (L,E,s) (L'', E'', s'') .
 
 Inductive Crash : F.state -> F.state -> Prop :=
-(*|CrashReturn L E e:
-exp_eval E e = None
--> state_result (L,E, stmtReturn e) = None
--> Crash (L,E,stmtReturn e) (L, E, stmtReturn e) *)
 |CrashGoto L E f Y:
 omap (exp_eval E) Y = None
 -> Crash (L, E, stmtGoto f Y) (L, E, stmtGoto f Y)

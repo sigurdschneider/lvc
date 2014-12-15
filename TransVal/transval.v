@@ -1,8 +1,8 @@
 Require Import List Arith.
 Require Import IL Annotation AutoIndTac Bisim Exp MoreExp Coherence Fresh Util.
 Require Import SetOperations Sim Var.
-Require Import sexp smt nofun noGoto Terminates bitvec Crash freeVars.
-Require Import tvalTactics TUtil Guards crashProps termProps.
+Require Import bitvec sexp smt nofun noGoto freeVars.
+Require Import Compute tvalTactics TUtil GuardProps ComputeProps.
 
 Definition smtCheck (s:stmt) (t:stmt) :=
 smtAnd (translateStmt s source) (translateStmt t target).
