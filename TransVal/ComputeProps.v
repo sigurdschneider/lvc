@@ -150,6 +150,36 @@ general induction H1; simpl.
  + specialize (H0 l Y); isabsurd.
 Qed.
 
+Lemma terminates_impl_eval:
+forall L L' E s E' e,
+noFun s
+-> Terminates (L, E, s) (L', E',stmtReturn  e)
+-> exists v, exp_eval E' e = Some v.
+
+Proof.
+intros. general induction H0.
+- exists v; eauto.
+- exploit (IHTerminates L0 L'0 E' s' E'0 e); eauto.
+  + inversion H2; subst; try isabsurd.
+    * inversion H. rewrite <- H13; eauto.
+    * inversion H;  rewrite <- H14; eauto.
+  + inversion H; subst; eauto; isabsurd.
+Qed.
+
+Lemma terminates_impl_evalList:
+forall L  L' E s E' f el,
+noFun s
+-> Terminates (L, E, s) (L', E', stmtGoto f el)
+-> exists v, omap (exp_eval E') el = Some v.
+
+Proof.
+intros. general induction H0.
+- exists vl; eauto.
+- exploit (IHTerminates L0 L'0 E' s' E'0 f el); eauto.
+  + inversion H2; subst; inversion H; subst; eauto; isabsurd.
+  + inversion H; subst; eauto; isabsurd.
+Qed.
+
 (** Lemmata for Crash **)
 
 Definition failed (σ:F.state)  := result (σ ) = None.

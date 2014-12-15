@@ -375,6 +375,48 @@ intros. general induction e; try isabsurd; simpl.
       f_equal; eauto.
 Qed.
 
+Lemma guardTrue_if_Terminates_ret:
+forall L L' E s E' e g,
+noFun s
+-> undef e = Some g
+-> Terminates (L, E, s)(L', E', stmtReturn e)
+-> forall F, models F E' g.
+
+Proof.
+intros. general induction H1.
+- eapply (guard_true_if_eval); eauto.
+- specialize (IHTerminates L0 L'0 E' s' E'0 e g).
+  inversion H2.
+  + rewrite <- H5 in *. inversion H; subst.
+    eapply IHTerminates; eauto.
+  + rewrite <- H6 in *; inversion H; subst.
+    * eapply IHTerminates; eauto.
+    * eapply IHTerminates; eauto.
+  + rewrite <- H4 in H0. exfalso; specialize (H0 l Y); isabsurd .
+  + rewrite <- H4 in *.  exfalso. inversion H.
+Qed.
+
+Lemma guardTrue_if_Terminates_goto:
+forall L L' E s E' f x g,
+noFun s
+-> undefLift x = Some g
+-> Terminates (L, E, s) (L', E' , stmtGoto f x)
+-> forall F, models F E' g.
+
+Proof.
+intros. general induction H1.
+- eapply guardList_true_if_eval; eauto.
+- specialize (IHTerminates L0 L'0  E' s' E'0 f x g).
+  inversion H2.
+  + rewrite <- H5 in *. inversion H; subst.
+    eapply IHTerminates; eauto.
+  + rewrite <- H6 in *. inversion H; subst.
+    * eapply IHTerminates; eauto.
+    * eapply IHTerminates; eauto.
+  + rewrite <- H4 in *; specialize (H0 l Y); isabsurd.
+  + rewrite <- H4 in *; inversion H.
+Qed.
+
 (*
 *** Local Variables: ***
 *** coq-load-path: (("../" "Lvc")) ***

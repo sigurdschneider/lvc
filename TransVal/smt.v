@@ -112,6 +112,16 @@ intros.
 hnf. intros. eapply smtand_comm in H0. eapply H. assumption.
 Qed.
 
+Lemma extend_not_models:
+forall s Q,
+(forall F E, ~ models F E s)
+-> (forall F E, models F E Q -> ~ models F E s).
+
+Proof.
+intros.
+specialize (H F E). assumption.
+Qed.
+
   (*
   *** Local Variables: ***
   *** coq-load-path: (("../" "Lvc")) ***

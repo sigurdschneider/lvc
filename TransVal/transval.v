@@ -10,111 +10,6 @@ smtAnd (translateStmt s source) (translateStmt t target).
 Definition combineEnv D (E1:onv val) E2 :=
 fun x => if [x ∈ D] then E1 x else E2 x.
 
-Lemma freeVars_undef :
-forall a e s,
-undef e = Some s
--> a ∈ freeVars s
--> a ∈ Exp.freeVars e.
-
-Proof.
-  intros. general induction e.
-  - simpl in *. exploit IHe; eauto.
-  - simpl in *.
-    destruct b; try destruct b; try destruct b; try destruct b; try destruct b;
-    try destruct b; simpl in *.
-    + case_eq (undef e1); case_eq (undef e2); intros;
-      rewrite H1 in H; rewrite H2 in H; simpl in H;
-      inversion H; rewrite <- H4 in *.
-      * simpl in H0; cset_tac. destruct H0.
-        { left; exploit IHe1; eauto. }
-        { right; exploit IHe2; eauto. }
-      * cset_tac. left; exploit IHe1; eauto.
-      * cset_tac. right; exploit IHe2; eauto.
-    + case_eq (undef e1); case_eq (undef e2); intros;
-      rewrite H1 in H; rewrite H2 in H; simpl in H;
-      inversion H; rewrite <- H4 in *.
-      * simpl in H0; cset_tac. destruct H0.
-        { left; exploit IHe1; eauto. }
-        { right; exploit IHe2; eauto. }
-      * cset_tac. left; exploit IHe1; eauto.
-      * cset_tac. right; exploit IHe2; eauto.
-    + case_eq (undef e1); case_eq (undef e2); intros;
-      rewrite H1 in H; rewrite H2 in H; simpl in H;
-      inversion H; rewrite <- H4 in *.
-      * simpl in H0; cset_tac. destruct H0.
-        { left; exploit IHe1; eauto. }
-        { right; exploit IHe2; eauto. }
-      * cset_tac. left; exploit IHe1; eauto.
-      * cset_tac. right; exploit IHe2; eauto.
-    + case_eq (undef e1); case_eq (undef e2); intros;
-      rewrite H1 in H; rewrite H2 in H; simpl in H;
-      inversion H; rewrite <- H4 in *.
-      * simpl in H0; cset_tac. destruct H0.
-        { left; exploit IHe1; eauto. }
-        { right; exploit IHe2; eauto. }
-      * cset_tac. left; exploit IHe1; eauto.
-      * cset_tac. right; exploit IHe2; eauto.
-    + case_eq (undef e1); case_eq (undef e2); intros;
-      rewrite H1 in H; rewrite H2 in H; simpl in H;
-      inversion H; rewrite <- H4 in *.
-      * simpl in H0; cset_tac. destruct H0.
-        { left; exploit IHe1; eauto. }
-        { right; exploit IHe2; eauto. }
-      * cset_tac. left; exploit IHe1; eauto.
-      * cset_tac. right; exploit IHe2; eauto.
-    +case_eq (undef e1); case_eq (undef e2); intros;
-      rewrite H1 in H; rewrite H2 in H; simpl in H;
-      inversion H; rewrite <- H4 in *.
-      * simpl in H0; cset_tac. destruct H0.
-        destruct H0; try isabsurd.
-        { right; eauto. }
-        { destruct H0.
-          -  left; exploit IHe1; eauto.
-          - right; exploit IHe2; eauto. }
-      *  simpl in H0. cset_tac. destruct H0. destruct H0; try isabsurd.
-         right; eauto.
-         { left; exploit IHe1; eauto. }
-      * simpl in H0. cset_tac. destruct H0. destruct H0; try isabsurd.
-        { right; eauto. }
-        { right; exploit IHe2; eauto. }
-      * simpl in H0. cset_tac. destruct H0; try isabsurd.
-        right; eauto.
-    + case_eq (undef e1); case_eq (undef e2); intros;
-      rewrite H1 in H; rewrite H2 in H; simpl in H;
-      inversion H; rewrite <- H4 in *.
-      * simpl in H0; cset_tac. destruct H0.
-        { destruct H0; isabsurd. right; eauto. }
-        {  destruct H0.
-           - left; exploit IHe1; eauto.
-           - right; exploit IHe2; eauto.  }
-      * simpl in H0. clear H4. cset_tac. destruct H0.
-        { destruct H0; eauto; isabsurd. }
-        { left; exploit IHe1; eauto. }
-      * simpl in H0. clear H4. cset_tac. destruct H0.
-        { destruct H0; eauto; isabsurd. }
-        { right; exploit IHe2; eauto. }
-      * simpl in *.  cset_tac; destruct H0; eauto; isabsurd.
-Qed.
-
-Lemma freeVars_undefLift:
-forall a el ul,
-undefLift el = Some ul
--> a ∈  freeVars ul
--> a ∈ list_union (List.map Exp.freeVars el).
-
-Proof.
-  intros a el ul udef inclFV.
-  general induction el.
-  - unfold list_union. simpl in *.
-    eapply list_union_start_swap.
-    case_eq (undef a); case_eq (undefLift el); intros;
-    rewrite H, H0 in udef; inversion udef;
-    rwsimplB H2 inclFV; cset_tac; eauto.
-    +destruct inclFV; eauto.
-       left; right; eapply (freeVars_undef) in H1; eauto.
-    + left; right; eapply (freeVars_undef) in inclFV; eauto.
-Qed.
-
 Lemma unsat_extension:
 forall L D E E' s s' pol P Q,
 (forall F E, models F E Q -> ~ models F E (smtAnd (translateStmt s pol) P))
@@ -396,58 +291,6 @@ intros. general induction H2.
   + specialize (H0 l Y); isabsurd.
   + exfalso; inv H4.
   + exfalso; inv H4.
-Qed.
-
-Lemma extend_not_models:
-forall s Q,
-(forall F E, ~ models F E s)
--> (forall F E, models F E Q -> ~ models F E s).
-
-Proof.
-intros.
-specialize (H F E). assumption.
-Qed.
-
-Lemma guardTrue_if_Terminates_ret:
-forall L L' E s E' e g,
-noFun s
--> undef e = Some g
--> Terminates (L, E, s)(L', E', stmtReturn e)
--> forall F, models F E' g.
-
-Proof.
-intros. general induction H1.
-- eapply (guard_true_if_eval); eauto.
-- specialize (IHTerminates L0 L'0 E' s' E'0 e g).
-  inversion H2.
-  + rewrite <- H5 in *. inversion H; subst.
-    eapply IHTerminates; eauto.
-  + rewrite <- H6 in *; inversion H; subst.
-    * eapply IHTerminates; eauto.
-    * eapply IHTerminates; eauto.
-  + rewrite <- H4 in H0. exfalso; specialize (H0 l Y); isabsurd .
-  + rewrite <- H4 in *.  exfalso. inversion H.
-Qed.
-
-Lemma guardTrue_if_Terminates_goto:
-forall L L' E s E' f x g,
-noFun s
--> undefLift x = Some g
--> Terminates (L, E, s) (L', E' , stmtGoto f x)
--> forall F, models F E' g.
-
-Proof.
-intros. general induction H1.
-- eapply guardList_true_if_eval; eauto.
-- specialize (IHTerminates L0 L'0  E' s' E'0 f x g).
-  inversion H2.
-  + rewrite <- H5 in *. inversion H; subst.
-    eapply IHTerminates; eauto.
-  + rewrite <- H6 in *. inversion H; subst.
-    * eapply IHTerminates; eauto.
-    * eapply IHTerminates; eauto.
-  + rewrite <- H4 in *; specialize (H0 l Y); isabsurd.
-  + rewrite <- H4 in *; inversion H.
 Qed.
 
 Lemma predeval_uneq_ret:
@@ -831,36 +674,6 @@ Proof.
       * setSubst2 H.
       * destruct H1; eauto. specialize (H1 H0). rewrite H1.
         split; intros; eauto.
-Qed.
-
-Lemma terminates_impl_eval:
-forall L L' E s E' e,
-noFun s
--> Terminates (L, E, s) (L', E',stmtReturn  e)
--> exists v, exp_eval E' e = Some v.
-
-Proof.
-intros. general induction H0.
-- exists v; eauto.
-- exploit (IHTerminates L0 L'0 E' s' E'0 e); eauto.
-  + inversion H2; subst; try isabsurd.
-    * inversion H. rewrite <- H13; eauto.
-    * inversion H;  rewrite <- H14; eauto.
-  + inversion H; subst; eauto; isabsurd.
-Qed.
-
-Lemma terminates_impl_evalList:
-forall L  L' E s E' f el,
-noFun s
--> Terminates (L, E, s) (L', E', stmtGoto f el)
--> exists v, omap (exp_eval E') el = Some v.
-
-Proof.
-intros. general induction H0.
-- exists vl; eauto.
-- exploit (IHTerminates L0 L'0 E' s' E'0 f el); eauto.
-  + inversion H2; subst; inversion H; subst; eauto; isabsurd.
-  + inversion H; subst; eauto; isabsurd.
 Qed.
 
 Lemma ssa_move_return:
