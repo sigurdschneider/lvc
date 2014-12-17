@@ -180,6 +180,79 @@ intros. general induction H0.
   + inversion H; subst; eauto; isabsurd.
 Qed.
 
+(** Lemma cannot be proven with star2 step because in the
+goto case, ssa is not proven! **)
+Lemma ssa_move_return:
+  forall D (L:F.labenv) E s E' e,
+    noFun s
+    -> ssa s D
+    -> Terminates (L, E, s) (L, E', stmtReturn e)
+    -> exists D', ssa (stmtReturn e) D'
+                  /\ fst (getAnn D) ⊆ fst (getAnn D')
+                  /\ snd (getAnn D') ⊆ snd (getAnn D).
+
+Proof.
+  intros. general induction H1.
+  - exists D. split; eauto. split; cset_tac; eauto.
+ -  inversion H3; subst; isabsurd.
+    + inversion H; inversion H2; subst. exploit (IHTerminates an L' (E0[x<-Some v]) s' ); eauto.
+      destruct X. exists x0.
+      destruct H8 as [H8 [H9 H10]].
+      split; eauto; split;  simpl; cset_tac; rewrite H7 in *;
+      simpl in *; hnf in *; eauto. eapply H9; cset_tac; eauto.
+    + inversion H; inversion H2; subst.
+      * exploit (IHTerminates ans); eauto.
+        destruct X. exists x.
+        destruct H11 as [ H11 [ H12 H13]].
+        split; eauto; split; simpl; cset_tac; rewrite H9 in *;
+        simpl in *; hnf in *; eauto. eapply H6.
+        left; eapply H13; eauto.
+      * exploit (IHTerminates ant); eauto.
+        destruct X; exists x.
+        destruct H11 as [ H11 [ H12 H13]].
+        split; eauto; split; simpl; cset_tac; rewrite H10 in *;
+        simpl in *; hnf in *; eauto; eapply H6.
+        right; eapply H13; eauto.
+Qed.
+
+(** See Lemma before **)
+Lemma ssa_move_goto:
+  forall D (L:F.labenv) E s E' f el,
+    noFun s
+    -> ssa s D
+    -> Terminates (L, E, s) (L, E', stmtGoto f el)
+    -> exists D', ssa (stmtGoto f el) D'
+                  /\ fst (getAnn D) ⊆ fst (getAnn D')
+                  /\ snd (getAnn D') ⊆ snd (getAnn D).
+
+Proof.
+  intros D L E s E' f el nfS ssaS sterm.
+  general induction sterm.
+  - exists D; eauto. split; eauto; split; cset_tac; eauto.
+  - inversion ssaS; subst; try isabsurd.
+    + inversion nfS; inversion ssaS; inversion H;
+      subst; exploit (IHsterm an L' (E0 [ x<- Some v]) s'); eauto.
+      destruct X as [D'' [ssaGoto [fstSubset sndSubset]]].
+      exists D''; simpl.
+      split; eauto; split; cset_tac; rewrite H18 in *;
+      simpl in *; hnf in *; eauto.
+      eapply fstSubset. cset_tac; eauto.
+    +  inversion nfS; inversion ssaS; inversion H; subst.
+       * exploit (IHsterm ans); eauto.
+         destruct X as [D'' [ssaGoto [fstSubset sndSubset]]].
+         exists D''; simpl.
+         split; eauto. split; simpl; cset_tac; rewrite H25 in *;
+         simpl in *; hnf in *; eauto.
+         eapply H22. left; eapply sndSubset; eauto.
+       * exploit (IHsterm ant); eauto.
+         destruct X as [D'' [ssaGoto [fstSubset sndSubset]]].
+         exists D''; simpl.
+         split; eauto.
+         split; cset_tac; rewrite H26 in *; simpl in *;
+         hnf in *; eauto.
+         eapply H22. right; eapply sndSubset; eauto.
+Qed.
+
 (** Lemmata for Crash **)
 
 Definition failed (σ:F.state)  := result (σ ) = None.
@@ -205,174 +278,6 @@ Proof.
     rewrite H9 in X; eauto.
   - exploit IHCrash; [ | | reflexivity | reflexivity |]; eauto.
     rewrite H10 in X; eauto.
-Qed.
-
-(** TODO MOVE **)
-Lemma undef_models:
-forall F E e g,
-(forall x, x ∈ Exp.freeVars e -> exists v, E x = Some v)
--> undef e =Some g
--> exp_eval E e = None
--> ~ models F E g.
-
-Proof.
-intros;  hnf;  intros.
-general induction e; simpl in *; try isabsurd.
-- monad_inv H1.
-  + specialize (IHe F E g H H0 H3 H2); eauto.
-  + destruct u; isabsurd.
-- destructBin b; monad_inv H1; try isabsurd.
-  + case_eq (undef e1); case_eq (undef e2); intros;
-    rewrite H4 in H0; rewrite H1 in H0; simpl in H0; inversion H0;
-    rewrite <- H6 in H2; simpl in H2; try destruct H2.
-    * eapply (IHe1 F E s0); eauto.
-      intros. cset_tac. specialize (H x). destruct H; eauto.
-    * eapply (IHe1 F E s); eauto.
-      intros; cset_tac; specialize (H x); destruct H; eauto.
-    * pose proof (noguard_impl_eval  E e1).
-      destruct H5; isabsurd; eauto.
-      intros; cset_tac; destruct (H x); eauto.
-  + case_eq (undef e1); case_eq (undef e2); intros;
-    rewrite H4 in H0; rewrite H3 in H0; simpl in H0; inversion H0;
-    rewrite <- H6 in H2; simpl in H2; try destruct H2.
-    * eapply (IHe2 F E s); eauto.
-      intros; cset_tac. destruct (H x0); eauto.
-    * pose proof (noguard_impl_eval E e2).
-      destruct H5; isabsurd; eauto.
-      intros; cset_tac. destruct (H x0); eauto.
-    * eapply (IHe2 F E s); eauto.
-      intros; cset_tac. destruct (H x0); eauto.
-  +  case_eq (undef e1); case_eq (undef e2); intros;
-    rewrite H4 in H0; rewrite H1 in H0; simpl in H0; inversion H0;
-    rewrite <- H6 in H2; simpl in H2; try destruct H2.
-     * eapply (IHe1 F E s0); eauto.
-       intros; cset_tac. destruct (H x); eauto.
-     * eapply (IHe1 F E s); eauto.
-       intros; cset_tac; destruct (H x); eauto.
-     * pose proof (noguard_impl_eval E e1).
-       destruct H5; eauto; isabsurd.
-       intros; cset_tac; destruct (H x); eauto.
-  + case_eq (undef e1); case_eq (undef e2); intros;
-    rewrite H4 in H0; rewrite H3 in H0; simpl in H0; inversion H0;
-    rewrite <- H6 in H2; simpl in H2; try destruct H2.
-    * eapply (IHe2 F E s); eauto.
-      intros; cset_tac. destruct (H x0); eauto.
-    * pose proof (noguard_impl_eval E e2).
-      destruct H5; eauto; isabsurd.
-      intros; cset_tac. destruct (H x0); eauto.
-    * eapply (IHe2 F E s); eauto.
-      intros; cset_tac. destruct (H x0); eauto.
-  + case_eq (undef e1); case_eq (undef e2); intros;
-    rewrite H4 in H0; rewrite H1 in H0; simpl in H0; inversion H0;
-    rewrite <- H6 in H2; simpl in H2; try destruct H2.
-     * eapply (IHe1 F E s0); eauto.
-       intros; cset_tac. destruct (H x); eauto.
-     * eapply (IHe1 F E s); eauto.
-       intros; cset_tac; destruct (H x); eauto.
-     * pose proof (noguard_impl_eval  E e1).
-       destruct H5; eauto; isabsurd.
-       intros; cset_tac; destruct (H x); eauto.
-  + case_eq (undef e1); case_eq (undef e2); intros;
-    rewrite H4 in H0; rewrite H3 in H0; simpl in H0; inversion H0;
-    rewrite <- H6 in H2; simpl in H2; try destruct H2.
-    * eapply (IHe2 F E s); eauto.
-      intros; cset_tac. destruct (H x0); eauto.
-    * pose proof (noguard_impl_eval E e2).
-      destruct H5; eauto; isabsurd.
-      intros; cset_tac. destruct (H x0); eauto.
-    * eapply (IHe2 F E s); eauto.
-      intros; cset_tac. destruct (H x0); eauto.
-  + case_eq (undef e1); case_eq (undef e2); intros;
-    rewrite H4 in H0; rewrite H1 in H0; simpl in H0; inversion H0;
-    rewrite <- H6 in H2; simpl in H2; try destruct H2.
-     * eapply (IHe1 F E s0); eauto.
-       intros; cset_tac. destruct (H x); eauto.
-     * eapply (IHe1 F E s); eauto.
-       intros; cset_tac; destruct (H x); eauto.
-     * pose proof (noguard_impl_eval E e1).
-       destruct H5; eauto; isabsurd.
-       intros; cset_tac; destruct (H x); eauto.
-  +  case_eq (undef e1); case_eq (undef e2); intros;
-    rewrite H4 in H0; rewrite H3 in H0; simpl in H0; inversion H0;
-    rewrite <- H6 in H2; simpl in H2; try destruct H2.
-     * eapply (IHe2 F E s); eauto.
-       intros; cset_tac. destruct (H x0); eauto.
-     * pose proof (noguard_impl_eval E e2).
-       destruct H5; eauto; isabsurd.
-       intros; cset_tac. destruct (H x0); eauto.
-     * eapply (IHe2 F E s); eauto.
-       intros; cset_tac. destruct (H x0); eauto.
-  + case_eq (undef e1); case_eq (undef e2); intros;
-    rewrite H4 in H0; rewrite H1 in H0; simpl in H0; inversion H0;
-    rewrite <- H6 in H2; simpl in H2; try destruct H2.
-    * eapply (IHe1 F E s0); eauto.
-      intros; cset_tac. destruct (H x); eauto.
-    * eapply (IHe1 F E s); eauto.
-      intros; cset_tac; destruct (H x); eauto.
-    * pose proof (noguard_impl_eval E e1).
-      destruct H5; eauto; isabsurd.
-      intros; cset_tac; destruct (H x); eauto.
-  +  case_eq (undef e1); case_eq (undef e2); intros;
-    rewrite H4 in H0; rewrite H3 in H0; simpl in H0; inversion H0;
-    rewrite <- H6 in H2; simpl in H2; try destruct H2.
-     * eapply (IHe2 F E s); eauto.
-       intros; cset_tac. destruct (H x0); eauto.
-     * pose proof (noguard_impl_eval E e2).
-       destruct H5; eauto; isabsurd.
-       intros; cset_tac. destruct (H x0); eauto.
-     * eapply (IHe2 F E s); eauto.
-       intros; cset_tac. destruct (H x0); eauto.
-  + case_eq (undef e1); case_eq (undef e2); intros;
-    rewrite H1, H4 in H0; simpl in H0; inversion H0; clear H0;
-    rewrite <- H6 in H2; clear H6;
-    simpl in H2.
-    * destruct H2; destruct H2.  eapply (IHe1 F E s0); eauto.
-      intros; cset_tac. destruct (H x); eauto.
-    * destruct H2.  eapply (IHe1 F E s); eauto.
-      intros; cset_tac. destruct (H x); eauto.
-    * destruct H2. pose proof (noguard_impl_eval E e1); eauto.
-      destruct H5; eauto; isabsurd.
-      intros; cset_tac. destruct (H x); eauto.
-    * pose proof (noguard_impl_eval E e1).
-      destruct H0; eauto; isabsurd.
-      intros; cset_tac. destruct (H x); eauto.
-  +  case_eq (undef e1); case_eq (undef e2); intros;
-    rewrite H3, H4 in H0; simpl in H0; inversion H0; clear H0;
-    rewrite <- H6 in H2; clear H6;
-    simpl in H2; destruct H2; try destruct H2.
-     * eapply (IHe2 F E s); eauto.
-       intros; cset_tac. destruct (H x0); eauto.
-     * pose proof (noguard_impl_eval E e2).
-       destruct H5; eauto; isabsurd.
-       intros; cset_tac. destruct (H x0); eauto.
-     * eapply (IHe2 F E s); eauto.
-       intros; cset_tac. destruct (H x0); eauto.
-     * pose proof (noguard_impl_eval E e2).
-       destruct H0; eauto; isabsurd.
-       intros; cset_tac. destruct (H x0); eauto.
-  + case_eq (undef e1); case_eq (undef e2); intros;
-    rewrite H1, H3 in H0; simpl in H; inversion H0; clear H0;
-    rewrite <- H5 in H2; destruct H2; try destruct H2; clear H5.
-    * simpl in H1. destruct H1. simpl in EQ2. unfold bvDiv in EQ2.
-      apply H0.  case_eq(bvZero x0); intros.
-      Focus 2. rewrite H1 in EQ2. destruct (bvLessZero x); destruct (bvLessZero x0); isabsurd.
-      unfold evalSexp. rewrite EQ1. simpl.
-      change (val2bool (bvEq x0 (zext k (O::nil)))). clear H.  eapply zero_implies_eq; eauto.
-    * simpl in H1. destruct H1. simpl in EQ2. unfold bvDiv in EQ2.
-      apply H0.  case_eq(bvZero x0); intros.
-      Focus 2. rewrite H1 in EQ2. destruct (bvLessZero x); destruct (bvLessZero x0); isabsurd.
-      unfold evalSexp. rewrite EQ1. simpl.
-      change (val2bool (bvEq x0 (zext k (O::nil)))). clear H.  eapply zero_implies_eq; eauto.
-    * simpl in H1. destruct H1. simpl in EQ2. unfold bvDiv in EQ2.
-      apply H0.  case_eq(bvZero x0); intros.
-      Focus 2. rewrite H1 in EQ2. destruct (bvLessZero x); destruct (bvLessZero x0); isabsurd.
-      unfold evalSexp. rewrite EQ1. simpl.
-      change (val2bool (bvEq x0 (zext k (O::nil)))). clear H.  eapply zero_implies_eq; eauto.
-    * simpl in H1. destruct H1. simpl in EQ2. unfold bvDiv in EQ2.
-      case_eq(bvZero x0); intros.
-      Focus 2. rewrite H0 in EQ2. destruct (bvLessZero x); destruct (bvLessZero x0); isabsurd.
-      unfold evalSexp. rewrite EQ1. simpl.
-      change (val2bool (bvEq x0 (zext k (O::nil)))).  eapply zero_implies_eq; eauto.
 Qed.
 
 Lemma undefList_models:

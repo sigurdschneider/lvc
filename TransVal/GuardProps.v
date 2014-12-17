@@ -417,6 +417,173 @@ intros. general induction H1.
   + rewrite <- H4 in *; inversion H.
 Qed.
 
+Lemma undef_models:
+forall F E e g,
+(forall x, x ∈ Exp.freeVars e -> exists v, E x = Some v)
+-> undef e =Some g
+-> exp_eval E e = None
+-> ~ models F E g.
+
+Proof.
+intros;  hnf;  intros.
+general induction e; simpl in *; try isabsurd.
+- monad_inv H1.
+  + specialize (IHe F E g H H0 H3 H2); eauto.
+  + destruct u; isabsurd.
+- destructBin b; monad_inv H1; try isabsurd.
+  + case_eq (undef e1); case_eq (undef e2); intros;
+    rewrite H4 in H0; rewrite H1 in H0; simpl in H0; inversion H0;
+    rewrite <- H6 in H2; simpl in H2; try destruct H2.
+    * eapply (IHe1 F E s0); eauto.
+      intros. cset_tac. specialize (H x). destruct H; eauto.
+    * eapply (IHe1 F E s); eauto.
+      intros; cset_tac; specialize (H x); destruct H; eauto.
+    * pose proof (noguard_impl_eval  E e1).
+      destruct H5; isabsurd; eauto.
+      intros; cset_tac; destruct (H x); eauto.
+  + case_eq (undef e1); case_eq (undef e2); intros;
+    rewrite H4 in H0; rewrite H3 in H0; simpl in H0; inversion H0;
+    rewrite <- H6 in H2; simpl in H2; try destruct H2.
+    * eapply (IHe2 F E s); eauto.
+      intros; cset_tac. destruct (H x0); eauto.
+    * pose proof (noguard_impl_eval E e2).
+      destruct H5; isabsurd; eauto.
+      intros; cset_tac. destruct (H x0); eauto.
+    * eapply (IHe2 F E s); eauto.
+      intros; cset_tac. destruct (H x0); eauto.
+  +  case_eq (undef e1); case_eq (undef e2); intros;
+    rewrite H4 in H0; rewrite H1 in H0; simpl in H0; inversion H0;
+    rewrite <- H6 in H2; simpl in H2; try destruct H2.
+     * eapply (IHe1 F E s0); eauto.
+       intros; cset_tac. destruct (H x); eauto.
+     * eapply (IHe1 F E s); eauto.
+       intros; cset_tac; destruct (H x); eauto.
+     * pose proof (noguard_impl_eval E e1).
+       destruct H5; eauto; isabsurd.
+       intros; cset_tac; destruct (H x); eauto.
+  + case_eq (undef e1); case_eq (undef e2); intros;
+    rewrite H4 in H0; rewrite H3 in H0; simpl in H0; inversion H0;
+    rewrite <- H6 in H2; simpl in H2; try destruct H2.
+    * eapply (IHe2 F E s); eauto.
+      intros; cset_tac. destruct (H x0); eauto.
+    * pose proof (noguard_impl_eval E e2).
+      destruct H5; eauto; isabsurd.
+      intros; cset_tac. destruct (H x0); eauto.
+    * eapply (IHe2 F E s); eauto.
+      intros; cset_tac. destruct (H x0); eauto.
+  + case_eq (undef e1); case_eq (undef e2); intros;
+    rewrite H4 in H0; rewrite H1 in H0; simpl in H0; inversion H0;
+    rewrite <- H6 in H2; simpl in H2; try destruct H2.
+     * eapply (IHe1 F E s0); eauto.
+       intros; cset_tac. destruct (H x); eauto.
+     * eapply (IHe1 F E s); eauto.
+       intros; cset_tac; destruct (H x); eauto.
+     * pose proof (noguard_impl_eval  E e1).
+       destruct H5; eauto; isabsurd.
+       intros; cset_tac; destruct (H x); eauto.
+  + case_eq (undef e1); case_eq (undef e2); intros;
+    rewrite H4 in H0; rewrite H3 in H0; simpl in H0; inversion H0;
+    rewrite <- H6 in H2; simpl in H2; try destruct H2.
+    * eapply (IHe2 F E s); eauto.
+      intros; cset_tac. destruct (H x0); eauto.
+    * pose proof (noguard_impl_eval E e2).
+      destruct H5; eauto; isabsurd.
+      intros; cset_tac. destruct (H x0); eauto.
+    * eapply (IHe2 F E s); eauto.
+      intros; cset_tac. destruct (H x0); eauto.
+  + case_eq (undef e1); case_eq (undef e2); intros;
+    rewrite H4 in H0; rewrite H1 in H0; simpl in H0; inversion H0;
+    rewrite <- H6 in H2; simpl in H2; try destruct H2.
+     * eapply (IHe1 F E s0); eauto.
+       intros; cset_tac. destruct (H x); eauto.
+     * eapply (IHe1 F E s); eauto.
+       intros; cset_tac; destruct (H x); eauto.
+     * pose proof (noguard_impl_eval E e1).
+       destruct H5; eauto; isabsurd.
+       intros; cset_tac; destruct (H x); eauto.
+  +  case_eq (undef e1); case_eq (undef e2); intros;
+    rewrite H4 in H0; rewrite H3 in H0; simpl in H0; inversion H0;
+    rewrite <- H6 in H2; simpl in H2; try destruct H2.
+     * eapply (IHe2 F E s); eauto.
+       intros; cset_tac. destruct (H x0); eauto.
+     * pose proof (noguard_impl_eval E e2).
+       destruct H5; eauto; isabsurd.
+       intros; cset_tac. destruct (H x0); eauto.
+     * eapply (IHe2 F E s); eauto.
+       intros; cset_tac. destruct (H x0); eauto.
+  + case_eq (undef e1); case_eq (undef e2); intros;
+    rewrite H4 in H0; rewrite H1 in H0; simpl in H0; inversion H0;
+    rewrite <- H6 in H2; simpl in H2; try destruct H2.
+    * eapply (IHe1 F E s0); eauto.
+      intros; cset_tac. destruct (H x); eauto.
+    * eapply (IHe1 F E s); eauto.
+      intros; cset_tac; destruct (H x); eauto.
+    * pose proof (noguard_impl_eval E e1).
+      destruct H5; eauto; isabsurd.
+      intros; cset_tac; destruct (H x); eauto.
+  +  case_eq (undef e1); case_eq (undef e2); intros;
+    rewrite H4 in H0; rewrite H3 in H0; simpl in H0; inversion H0;
+    rewrite <- H6 in H2; simpl in H2; try destruct H2.
+     * eapply (IHe2 F E s); eauto.
+       intros; cset_tac. destruct (H x0); eauto.
+     * pose proof (noguard_impl_eval E e2).
+       destruct H5; eauto; isabsurd.
+       intros; cset_tac. destruct (H x0); eauto.
+     * eapply (IHe2 F E s); eauto.
+       intros; cset_tac. destruct (H x0); eauto.
+  + case_eq (undef e1); case_eq (undef e2); intros;
+    rewrite H1, H4 in H0; simpl in H0; inversion H0; clear H0;
+    rewrite <- H6 in H2; clear H6;
+    simpl in H2.
+    * destruct H2; destruct H2.  eapply (IHe1 F E s0); eauto.
+      intros; cset_tac. destruct (H x); eauto.
+    * destruct H2.  eapply (IHe1 F E s); eauto.
+      intros; cset_tac. destruct (H x); eauto.
+    * destruct H2. pose proof (noguard_impl_eval E e1); eauto.
+      destruct H5; eauto; isabsurd.
+      intros; cset_tac. destruct (H x); eauto.
+    * pose proof (noguard_impl_eval E e1).
+      destruct H0; eauto; isabsurd.
+      intros; cset_tac. destruct (H x); eauto.
+  +  case_eq (undef e1); case_eq (undef e2); intros;
+    rewrite H3, H4 in H0; simpl in H0; inversion H0; clear H0;
+    rewrite <- H6 in H2; clear H6;
+    simpl in H2; destruct H2; try destruct H2.
+     * eapply (IHe2 F E s); eauto.
+       intros; cset_tac. destruct (H x0); eauto.
+     * pose proof (noguard_impl_eval E e2).
+       destruct H5; eauto; isabsurd.
+       intros; cset_tac. destruct (H x0); eauto.
+     * eapply (IHe2 F E s); eauto.
+       intros; cset_tac. destruct (H x0); eauto.
+     * pose proof (noguard_impl_eval E e2).
+       destruct H0; eauto; isabsurd.
+       intros; cset_tac. destruct (H x0); eauto.
+  + case_eq (undef e1); case_eq (undef e2); intros;
+    rewrite H1, H3 in H0; simpl in H; inversion H0; clear H0;
+    rewrite <- H5 in H2; destruct H2; try destruct H2; clear H5.
+    * simpl in H1. destruct H1. simpl in EQ2. unfold bvDiv in EQ2.
+      apply H0.  case_eq(bvZero x0); intros.
+      Focus 2. rewrite H1 in EQ2. destruct (bvLessZero x); destruct (bvLessZero x0); isabsurd.
+      unfold evalSexp. rewrite EQ1. simpl.
+      change (val2bool (bvEq x0 (zext k (O::nil)))). clear H.  eapply zero_implies_eq; eauto.
+    * simpl in H1. destruct H1. simpl in EQ2. unfold bvDiv in EQ2.
+      apply H0.  case_eq(bvZero x0); intros.
+      Focus 2. rewrite H1 in EQ2. destruct (bvLessZero x); destruct (bvLessZero x0); isabsurd.
+      unfold evalSexp. rewrite EQ1. simpl.
+      change (val2bool (bvEq x0 (zext k (O::nil)))). clear H.  eapply zero_implies_eq; eauto.
+    * simpl in H1. destruct H1. simpl in EQ2. unfold bvDiv in EQ2.
+      apply H0.  case_eq(bvZero x0); intros.
+      Focus 2. rewrite H1 in EQ2. destruct (bvLessZero x); destruct (bvLessZero x0); isabsurd.
+      unfold evalSexp. rewrite EQ1. simpl.
+      change (val2bool (bvEq x0 (zext k (O::nil)))). clear H.  eapply zero_implies_eq; eauto.
+    * simpl in H1. destruct H1. simpl in EQ2. unfold bvDiv in EQ2.
+      case_eq(bvZero x0); intros.
+      Focus 2. rewrite H0 in EQ2. destruct (bvLessZero x); destruct (bvLessZero x0); isabsurd.
+      unfold evalSexp. rewrite EQ1. simpl.
+      change (val2bool (bvEq x0 (zext k (O::nil)))).  eapply zero_implies_eq; eauto.
+Qed.
+
 (*
 *** Local Variables: ***
 *** coq-load-path: (("../" "Lvc")) ***

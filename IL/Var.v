@@ -1,5 +1,5 @@
 Require Import List.
-Require Import Util EqDec. 
+Require Import Util EqDec.
 Require Import OrderedTypeEx.
 
 Set Implicit Arguments.
@@ -20,27 +20,27 @@ Definition var : Type := nat.
 Definition default_var : var := 0%nat.
 
 Global Instance inst_defaulted_var : Defaulted var := Build_Defaulted default_var.
-Global Instance inst_eq_dec_var : EqDec var eq := nat_eq_eqdec. 
+Global Instance inst_eq_dec_var : EqDec var eq := nat_eq_eqdec.
 Global Program Instance inst_counted_var : Counted var :=
   Build_Counted (fun x => x) _ (fun x => fun y => x + y).
 
 (** ** Locations *)
 
-Inductive loc : Type := 
+Inductive loc : Type :=
   | LocI : nat -> loc.
 Definition default_loc : loc := LocI 0.
 Global Instance inst_eq_dec_loc : EqDec loc eq.
-hnf; intros. destruct x,y. decide (n=n0). 
+hnf; intros. destruct x,y. decide (n=n0).
 subst; left; reflexivity.
 right. intro. inversion H. eauto.
 Defined.
 
-Definition locN l := 
+Definition locN l :=
   match l with
     | LocI n => n
   end.
 
-Lemma locN_inj (x y : loc) 
+Lemma locN_inj (x y : loc)
   : locN x = locN y -> x = y.
 Proof.
   destruct x,y; eauto.
@@ -60,8 +60,8 @@ Definition default_lab := LabI 0.
 
 Lemma eq_dec_lab (x y : lab) :
   {x=y} + {x<>y}.
-Proof. 
-  repeat decide equality. 
+Proof.
+  repeat decide equality.
 Defined.
 
 (** *** equality of labels is decidable *)
@@ -75,7 +75,7 @@ Definition labN (x : lab) : nat :=
   | LabI x => x
   end.
 
-Lemma labN_inj (x y : lab) 
+Lemma labN_inj (x y : lab)
   : labN x = labN y -> x = y.
 Proof.
   destruct x,y; eauto.
@@ -92,13 +92,23 @@ Proof.
   eauto.
 Qed.
 
+(** incremented equality implies equality *)
+Lemma labeq_incr:
+forall n1 n2,
+LabI (1 + n1) = LabI (1 + n2)
+-> LabI n1  = LabI n2.
+
+Proof.
+intros; general induction n1; eauto.
+Qed.
+
 Definition lt (l l':lab) :=
-  match l, l' with 
+  match l, l' with
     LabI n, LabI m => lt n m
   end.
 
 (** ** [lab] *)
-Instance lab_StrictOrder : StrictOrder lt (@eq lab). 
+Instance lab_StrictOrder : StrictOrder lt (@eq lab).
 econstructor. hnf; intros. destruct x,y,z; simpl in *. omega.
 intros. destruct x,y; simpl in *. assert (n <> n0) by omega.
 hnf; intros. inv H1. congruence.
@@ -121,7 +131,7 @@ Next Obligation.
   apply nat_compare_gt in Hcomp; assumption.
 Qed.
 
-(* 
+(*
 *** Local Variables: ***
 *** coq-load-path: ("../infra" "../constr") ***
 *** End: ***
