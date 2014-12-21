@@ -38,30 +38,6 @@ match el with
 | e::el' => combine (undef e) (undefLift el')
 end.
 
-(** Now the function that generates the guarding expressions for the smt translation function **)
-Fixpoint guard (p:pol) (e:exp) (cont:smt) :=
-match p, undef e with
-|source, Some g
- => smtAnd g cont
-|source, None
- => cont
-|target, Some g
- => smtImp g cont
-|target, None
- => cont
-end.
-
-Fixpoint guardList (p:pol) (l:arglst) (cont:smt) :=
-match l with
-| nil => cont
-| x:: l' => let c := guardList p l' cont in
-            match p, undef x with
-              | source, Some v =>  smtAnd v c
-              | target, Some v => smtImp v cont
-              | _, None => c
-            end
-end.
-
 Definition guardGen s p cont :=
 match s, p with
 | Some v, source => smtAnd v cont
