@@ -14,9 +14,9 @@ match s, p with
         let res := ite e s' t' in
         guardGen (undef e) p res
 (* fun f x = t in s *)
-|  stmtLet x  t s, _ => smtFalse (* TODO *)
+|  stmtLet x  t s, _ => smtFalse
 (* extern ?? *)
-|  stmtExtern x f Y s, _ => smtFalse (* TODO *)
+|  stmtExtern x f Y s, _ => smtFalse
 (* f e, s*)
 | stmtGoto f e, source
   =>  guardGen (undefLift e) p (funcApp f e)

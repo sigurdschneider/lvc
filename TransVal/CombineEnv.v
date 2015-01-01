@@ -224,7 +224,7 @@ Lemma agree_on_ssa_combine:
     -> ssa t D'
     -> noFun s
     -> noFun t
-    -> (forall x, x ∈ (Ds' ∩ Dt') -> exists v, E x = Some v)
+(*    -> (forall x, x ∈ (Ds' ∩ Dt') -> exists v, E x = Some v)*)
     ->Terminates (L, E, s) (L, Es, stmtReturn es)
     -> Terminates (L, E, t) (L, Et, stmtReturn et)
     -> (agree_on eq (Exp.freeVars et) Et (combineEnv Ds' Es Et)
@@ -232,7 +232,7 @@ Lemma agree_on_ssa_combine:
 
 Proof.
   intros D D' Ds' Dt' L E s t Es Et es et.
-  intros getD getD' ssaS ssaT nfS nfT liveness sterm tterm.
+  intros getD getD' ssaS ssaT nfS nfT (*liveness*) sterm tterm.
   split.
   - pose proof (ssa_move_return D' L E t Et et nfT ssaT tterm).
     destruct H as [D'' [ ssaRet [fstSubset sndSubset]]].
@@ -244,11 +244,11 @@ Proof.
    + assert (x ∈ Ds' ∩ Dt').
      * hnf in fstSubset. hnf in H0.  specialize (H0 x H).
        cset_tac; eauto.
-     * specialize (liveness x  H2); destruct liveness.
+     *(* specialize (liveness x  H2); destruct liveness.*)
        pose proof (term_ssa_eval_agree L L s D (stmtReturn es) E Es ssaS nfS sterm).
        pose proof (term_ssa_eval_agree L L t D' (stmtReturn et) E Et ssaT nfT tterm).
-       rewrite getD  in H4. rewrite getD'  in H5. simpl in *.
-       rewrite <- H4; eauto. rewrite <- H5; eauto.
+       rewrite getD  in H3. rewrite getD'  in H4. simpl in *.
+       rewrite <- H3; eauto. rewrite <- H4; eauto.
   - pose proof (ssa_move_return D L E s Es es nfS ssaS sterm).
     destruct H as [D'' [ssaRet [fstSubset sndSubset]]].
     inv ssaRet. rewrite getD in *; simpl in *.
