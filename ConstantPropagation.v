@@ -167,7 +167,7 @@ Defined.
 
 Definition cp_eqn (E:onv aval) x :=
   match E x with
-    | Some (wTA c) => {{ Eqn EqnEq (Var x) (Con c)}}
+    | Some (wTA c) => {{ EqnEq (Var x) (Con c)}}
     | _ => ∅
   end.
 
@@ -202,13 +202,6 @@ Proof.
   rewrite map_app.
   rewrite fold_union_app. reflexivity.
   intuition.
-Qed.
-
-Lemma entails_monotonic_add Gamma Γ' gamma
-: entails Gamma Γ' -> entails (gamma ∪ Gamma) Γ'.
-Proof.
-  unfold entails; intros; dcr.
-  - hnf; intros. eapply H. hnf; intros. eapply H0. cset_tac; intuition. eauto.
 Qed.
 
 Lemma map_agree X `{OrderedType X} Y `{OrderedType Y}
@@ -311,27 +304,6 @@ Proof.
   - cset_tac; intuition. eapply n; rewrite H1; eauto.
 Qed.
 
-Lemma entails_union_split Gamma Γ' Γ''
-: entails Gamma (Γ' ∪ Γ'')
--> entails Gamma (Γ')
-/\ entails Gamma (Γ'').
-Proof.
-  unfold entails, satisfiesAll.
-  split; intros; dcr.
-    + eapply H; eauto. cset_tac; intuition.
-    + eapply H; eauto. cset_tac; intuition.
-Qed.
-
-Lemma entails_union Gamma Γ' Γ''
-: entails Gamma (Γ')
-/\ entails Gamma (Γ'')
--> entails Gamma (Γ' ∪ Γ'').
-Proof.
-  unfold entails, satisfiesAll.
-  intros; dcr.
-  + intros. cset_tac. destruct H1; eauto.
-Qed.
-
 Instance option_R_trans `{Transitive} : Transitive (option_R R).
 Proof.
   hnf; intros. inv H0; inv H1. econstructor; eauto.
@@ -340,12 +312,12 @@ Qed.
 Lemma in_cp_eqns AE x lv v
   : x \In lv
     -> AE x = ⎣wTA v ⎦
-    -> Eqn EqnEq (Var x) (Con v) ∈ cp_eqns AE lv.
+    -> EqnEq (Var x) (Con v) ∈ cp_eqns AE lv.
 Proof.
   intros. unfold cp_eqns.
   eapply fold_union_incl.
-  instantiate (1:={{ Eqn EqnEq (Var x) (Con v) }}). cset_tac; intuition.
-  assert (cp_eqn AE x = {{ Eqn EqnEq (Var x) (Con v) }}).
+  instantiate (1:={{EqnEq (Var x) (Con v) }}). cset_tac; intuition.
+  assert (cp_eqn AE x = {{ EqnEq (Var x) (Con v) }}).
   unfold cp_eqn. rewrite H0. reflexivity.
   rewrite <- H1. eapply map_1; eauto.
   intuition.
@@ -358,10 +330,9 @@ Lemma cp_eqns_satisfies_env AE E x v lv
   -> E x = ⎣v ⎦.
 Proof.
   intros. exploit H1; eauto.
-  instantiate (1:=Eqn EqnEq (Var x) (Con v)).
+  instantiate (1:=EqnEq (Var x) (Con v)).
   eapply in_cp_eqns; eauto.
   hnf in X; simpl in *. inv X; eauto.
-  inv H3; eauto.
 Qed.
 
 Ltac smatch :=
@@ -410,12 +381,12 @@ Qed.
 Lemma exp_eval_entails AE e v x lv
 : Exp.freeVars e ⊆ lv
   -> exp_eval AE e = wTA v
-  -> entails ({Eqn EqnEq (Var x) e ; { Eqn EqnEq (Var x) (cp_choose_exp AE e) ;
-                                     cp_eqns AE lv } }) {{ Eqn EqnEq (Var x) (Con v)}}.
+  -> entails ({EqnEq (Var x) e ; { EqnEq (Var x) (cp_choose_exp AE e) ;
+                                     cp_eqns AE lv } }) {{ EqnEq (Var x) (Con v)}}.
 Proof.
   intros.
   unfold entails; intros. unfold satisfiesAll; intros.
-  exploit (H1 (Eqn EqnEq (Var x) e)); eauto.
+  exploit (H1 (EqnEq (Var x) e)); eauto.
   cset_tac; intuition. cset_tac. invc H2; simpl in *; subst; simpl.
   eapply satisfiesAll_add in H1; dcr.
   eapply satisfiesAll_add in H3; dcr.
@@ -436,56 +407,36 @@ Proof.
   eapply transpose_union.
 Qed.
 
-Lemma cp_choose_moreDefined AE e lv
+
+Lemma cp_choose_approx AE e lv
 : Exp.freeVars e ⊆ lv
-  -> moreDefined (cp_eqns AE lv) e (cp_choose_exp AE e).
+  -> entails (cp_eqns AE lv) {EqnApx e (cp_choose_exp AE e)}.
 Proof.
   unfold cp_choose_exp. case_eq (exp_eval AE e); intros.
-  - reflexivity.
+  - eapply entails_eqns_apx_refl.
   - hnf; intros.
     case_eq (Exp.exp_eval E e); intros; simpl.
     + edestruct exp_eval_same; try eapply H1; eauto; dcr.
-      simpl. inv H5. econstructor. congruence.
-    + econstructor.
+      hnf; intros. cset_tac. rewrite <- H3; simpl.
+      rewrite H4. inv H5. reflexivity.
+    + edestruct exp_eval_same; try eapply H1; eauto; dcr. congruence.
 Qed.
 
-Lemma cp_choose_moreDefinedArgs AE Y lv
+Lemma cp_choose_approx_list AE Y lv
 : list_union (List.map Exp.freeVars Y) ⊆ lv
-  -> moreDefinedArgs (cp_eqns AE lv) Y
-                    (List.map (cp_choose_exp AE) Y).
+  ->  entails (cp_eqns AE lv) (list_EqnApx Y (List.map (cp_choose_exp AE) Y)).
 Proof.
   intros. general induction Y; simpl.
-  - econstructor; eauto.
-  - hnf; intros; simpl.
-    unfold cp_choose_exp at 1.
-    case_eq (exp_eval AE a); intros.
-    + case_eq (Exp.exp_eval E a); intros; simpl; try econstructor; eauto.
-      exploit (IHY AE lv); eauto using get.
-      eapply list_union_incl; intros.
-      rewrite <- H. edestruct map_get_4; eauto; dcr; subst.
-      eapply get_list_union_map; eauto using get.
-      eapply incl_empty.
-      exploit X; eauto. inv X0; simpl.
-      * econstructor.
-      * econstructor; eauto.
-    + case_eq (Exp.exp_eval E a); intros.
-      * simpl.
-        exploit (IHY AE lv); eauto using get.
-        eapply list_union_incl; intros.
-        rewrite <- H. edestruct map_get_4; eauto; dcr; subst.
-        eapply get_list_union_map; eauto using get.
-        eapply incl_empty.
-        exploit X; eauto. inv X0; simpl.
-        econstructor.
-        exploit (get_list_union_map _ _ Exp.freeVars (a::Y)).
-        econstructor. rewrite H in X1.
-        edestruct exp_eval_same; try eapply H1; eauto using get; dcr.
-        edestruct exp_eval_same; try eapply H1; try eapply H3; eauto using get; dcr.
-        inv H8; inv H9.
-        econstructor; eauto. congruence.
-      * simpl. econstructor.
+  - unfold list_EqnApx. simpl. eapply entails_empty.
+  - unfold list_EqnApx. simpl. eapply entails_add_single.
+    eapply IHY.
+    eapply list_union_incl; intros.
+    rewrite <- H. edestruct map_get_4; eauto; dcr; subst.
+    eapply get_list_union_map; eauto using get. cset_tac; intuition.
+    eapply cp_choose_approx.
+    rewrite <- H.
+    eapply get_list_union_map; eauto using get.
 Qed.
-
 
 Lemma cp_choose_exp_freeVars AE e D
 : Exp.freeVars e ⊆ D
@@ -579,7 +530,7 @@ Lemma in_subst_eqns gamma Z Y AE
 : length Z = length Y
   -> gamma \In subst_eqns (sid [Z <-- Y]) (cp_eqns AE (of_list Z))
   -> exists n x c,
-      gamma = subst_eqn (sid [Z <-- Y]) (Eqn EqnEq (Var x) (Con c))
+      gamma = subst_eqn (sid [Z <-- Y]) (EqnEq (Var x) (Con c))
       /\ AE x = Some (wTA c)
       /\ get Z n x
       /\ get Y n ((sid [Z <-- Y]) x).
@@ -614,7 +565,7 @@ Proof.
   edestruct exp_eval_same; eauto; dcr.
   rewrite <- INCL.
   eapply incl_list_union. eapply map_get_1; eauto. reflexivity.
-  econstructor; simpl. rewrite H9.
+  simpl. rewrite H9.
   econstructor. inv H10. congruence.
 Qed.
 
@@ -640,12 +591,12 @@ Proof.
   eapply incl_list_union. eapply map_get_1; eauto. reflexivity.
   hnf; simpl.
   rewrite <- H5. unfold cp_choose_exp. rewrite <- H10. simpl.
-  constructor. inv H12. econstructor. congruence.
+  constructor. inv H12. congruence.
 Qed.
 
 Lemma cp_eqns_update D x c AE
 : x ∈ D
-  -> cp_eqns (AE [x <- ⎣ wTA c ⎦]) D [=] {{Eqn EqnEq (Var x) (Con c)}} ∪ cp_eqns AE (D \ {{x}}).
+  -> cp_eqns (AE [x <- ⎣ wTA c ⎦]) D [=] {{EqnEq (Var x) (Con c)}} ∪ cp_eqns AE (D \ {{x}}).
 Proof.
   intros.
   assert (D [=] {{x}} ∪ (D \ {{x}})). {
@@ -657,13 +608,6 @@ Proof.
   hnf; intros. lud. inv e0; subst. exfalso; cset_tac; intuition.
 Qed.
 
-Instance satisfiesAll_Equal_morphism
-  : Proper (eq ==> Equal ==> iff) satisfiesAll.
-Proof.
-  unfold Proper, respectful; intros; subst.
-  intuition. hnf; intros. eapply H. eapply H0; eauto.
-  hnf; intros. eapply H. eapply H0; eauto.
-Qed.
 
 Lemma cp_sound_eqn AE Cp Es s (ang:ann (set var * set var))
 : let Gamma := (cp_eqns AE (fst (getAnn ang))) in
@@ -690,7 +634,7 @@ Proof.
       unfold cp_eqn. case_eq (AE x); intros;
                      try destruct a; eauto using entails_empty.
       eapply exp_eval_entails; eauto. congruence.
-    + eapply cp_choose_moreDefined; eauto.
+    + eapply cp_choose_approx; eauto.
     + eapply cp_choose_exp_freeVars; eauto.
   - econstructor; intros; eauto.
     + {
@@ -703,11 +647,11 @@ Proof.
           + rewrite H4 in e0; simpl in *; congruence.
           + edestruct exp_eval_same; eauto; dcr.
             hnf; intros. eapply H3. cset_tac. right; eauto.
-            inv X; simpl in *.
-            rewrite H11 in H17. inv H17. rewrite H4 in e0.
-            inv H16. destruct if in H19. subst.
-            inv H19. cbv in e0.
-            destruct a; simpl in *; congruence.
+            inv H16.
+            rewrite H11 in X. rewrite H4 in e0. inv e0.
+            simpl in *.
+            unfold option_lift1, comp in X. rewrite H17 in X.
+            inv X. isabsurd.
         - eapply eqn_sound_entails_monotone; eauto.
           rewrite H12; eauto. simpl.
           hnf. intros. destruct if.
@@ -715,13 +659,14 @@ Proof.
             rewrite cp_eqns_update.
             * eapply satisfiesAll_union; split.
               hnf; intros. cset_tac. invc H4.
-              econstructor; simpl.
+              simpl.
               exploit H3. cset_tac. left; reflexivity.
-              inv X. case_eq (E x); intros. simpl in *.
-              rewrite H4 in H5. simpl in *. destruct if in H5;
-                subst; try reflexivity. econstructor; eauto.
-              cbv in H5. inv H5. congruence.
-              simpl in *. rewrite H4 in H5. isabsurd.
+              case_eq (E x); intros. simpl in *.
+              rewrite H4 in X. simpl in *.
+              unfold option_lift1, comp in X.
+              destruct if in X; subst; try econstructor; eauto.
+              simpl in *. inv X. inv H16.
+              simpl in *. rewrite H4 in X. isabsurd.
               hnf; intros. eapply H3. cset_tac; right; eauto.
               eapply cp_eqns_morphism_subset; try eapply H4. eapply minus_incl.
             * revert H6; clear_all; intros; cset_tac; intuition.
@@ -732,15 +677,15 @@ Proof.
         - eapply EqnUnsat.
           hnf. intros. intro.
           exploit H3. cset_tac. left; reflexivity.
-          inv X. simpl in *.
+          simpl in *.
           case_eq (exp_eval AE e); intros.
           + rewrite H4 in e0; simpl in *; congruence.
           + edestruct exp_eval_same; eauto; dcr.
             hnf; intros. eapply H3. cset_tac; right; eauto.
-            inv X; simpl in *. rewrite H16 in H18. inv H18.
-            rewrite H4 in e0.
-            inv H17. destruct if in H20. subst.
-            inv e0. inv H20.
+            rewrite H11 in X. inv H16.
+            rewrite H4 in e0. simpl in *. inv e0.
+            unfold option_lift1, comp in X. rewrite H17 in X.
+            inv X. isabsurd.
         - eapply eqn_sound_entails_monotone; eauto.
           + rewrite H13; eauto. simpl.
             destruct if.
@@ -749,19 +694,18 @@ Proof.
               hnf; intros.
               eapply satisfiesAll_union; split.
               hnf; intros. cset_tac. invc H4.
-              econstructor. exploit H3. cset_tac. left; reflexivity.
-              inv X. simpl in *. case_eq (E v); intros.
-              rewrite H4 in H5. simpl in *.
-              unfold option_lift1 in H5.
-              destruct if in H5; subst. constructor; eauto.
-              inv H5; isabsurd.
-              rewrite H4 in H5. isabsurd.
+              simpl. exploit H3. cset_tac. left; reflexivity.
+              simpl in *. case_eq (E v); intros.
+              rewrite H4 in X. simpl in *.
+              unfold option_lift1, comp in X.
+              destruct v0; simpl in *. constructor; eauto. inv X; isabsurd.
+              rewrite H4 in X. isabsurd.
               hnf; intros. eapply H3. cset_tac; right; eauto.
               eapply cp_eqns_morphism_subset; try eapply H4. eapply minus_incl.
               revert H6; clear_all; intros; cset_tac; intuition.
             * hnf; intros. hnf; intros. eapply H3. cset_tac; right; eauto.
       }
-    + eapply cp_choose_moreDefined; eauto.
+    + eapply cp_choose_approx; eauto.
   - edestruct get_in_range as [a ?]; eauto.
     destruct a as [[[Zb G] Γf] EqS].
     exploit LINV; eauto; dcr; simpl in *. subst Zb.
@@ -769,8 +713,8 @@ Proof.
     + rewrite map_length; eauto.
     + subst. rewrite H8.
       eapply entails_cp_eqns_subst_choose; eauto.
-    + eapply cp_choose_moreDefinedArgs; eauto.
-  - econstructor; eauto using cp_choose_moreDefined.
+    + eapply cp_choose_approx_list; eauto.
+  - econstructor; eauto using cp_choose_approx.
   - eapply EqnLet with (Γ2:=cp_eqns AE D) (EqS:=cp_eqns AE (of_list Z)).
     + eapply eqn_sound_entails_monotone; eauto.
       eapply IHCP1; eauto.

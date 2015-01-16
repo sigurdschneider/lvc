@@ -25,9 +25,15 @@ Set Implicit Arguments.
   Definition unop : Set := nat.
   Definition option_lift1 A B (f:A -> B) := fun x => Some (f x).
 
+  Definition bool2val (b:bool) :=
+    match b with
+      | true => 1
+      | false => 0
+    end.
+
   Definition unop_eval (o:unop) :=
     match o with
-      | 0 => option_lift1 (fun x => if [x = 0] then 0 else 1)
+      | 0 => option_lift1 (val2bool ∘ bool2val)
       | _ => fun _ => None
     end.
 

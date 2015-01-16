@@ -608,6 +608,54 @@ Proof.
 Qed.
 
 
+Lemma entails_monotonic_add Gamma Γ' gamma
+: entails Gamma Γ' -> entails (gamma ∪ Gamma) Γ'.
+Proof.
+  unfold entails; intros; dcr.
+  - hnf; intros. eapply H. hnf; intros. eapply H0. cset_tac; intuition. eauto.
+Qed.
+
+Lemma entails_union_split Gamma Γ' Γ''
+: entails Gamma (Γ' ∪ Γ'')
+-> entails Gamma (Γ')
+/\ entails Gamma (Γ'').
+Proof.
+  unfold entails, satisfiesAll.
+  split; intros; dcr.
+    + eapply H; eauto. cset_tac; intuition.
+    + eapply H; eauto. cset_tac; intuition.
+Qed.
+
+Lemma entails_union Gamma Γ' Γ''
+: entails Gamma (Γ')
+/\ entails Gamma (Γ'')
+-> entails Gamma (Γ' ∪ Γ'').
+Proof.
+  unfold entails, satisfiesAll.
+  intros; dcr.
+  + intros. cset_tac. destruct H1; eauto.
+Qed.
+
+Lemma entails_add_single Gamma gamma Γ'
+: entails Gamma Γ'
+  -> entails Gamma {gamma}
+  -> entails Gamma {gamma; Γ'}.
+Proof.
+  unfold entails; intros; dcr; intros.
+  - hnf; intros. cset_tac; intuition.
+    + eapply H0; cset_tac; intuition.
+    + eapply H; eauto.
+Qed.
+
+Instance satisfiesAll_Equal_morphism
+  : Proper (eq ==> Equal ==> iff) satisfiesAll.
+Proof.
+  unfold Proper, respectful; intros; subst.
+  intuition. hnf; intros. eapply H. eapply H0; eauto.
+  hnf; intros. eapply H. eapply H0; eauto.
+Qed.
+
+
 Lemma entails_monotone Γ1 Γ2 Γ1'
 : entails Γ1 Γ2
   -> Γ1 ⊆ Γ1'
@@ -685,7 +733,7 @@ Proof.
     + rewrite H0; reflexivity.
 Qed.
 
-Lemma entails_union Gamma Γ' Γ'' Γ'''
+Lemma entails_union' Gamma Γ' Γ'' Γ'''
 : Γ''' ⊆ Γ' ∪ Γ''
   -> entails Gamma (Γ')
   -> entails Gamma (Γ'')
@@ -1091,9 +1139,8 @@ Proof.
       left. eapply IHEQN1; try eapply H9; eauto.
       * eapply satisfiesAll_add; split; eauto.
         hnf; intros.
-        simpl. rewrite <- H0. unfold option_lift1. simpl.
-        unfold val2bool in H3. destruct y; try congruence.
-        destruct if; try congruence. constructor. reflexivity.
+        simpl. rewrite <- H0. unfold option_lift1. unfold comp; simpl.
+        rewrite H3; constructor. reflexivity.
       * eapply simL'_update; eauto.
         unfold BlockRel.
         destruct x as [[[ ?] ?] ?]; simpl; intros; dcr.
@@ -1116,9 +1163,8 @@ Proof.
         {
           left. eapply IHEQN2; try eapply H13; eauto.
           - eapply satisfiesAll_add; split; eauto.
-            hnf; intros. simpl. rewrite <- H0. unfold option_lift1. simpl.
-            unfold val2bool in H3. destruct y; try congruence.
-            destruct if; try congruence. constructor. reflexivity.
+            hnf; intros. simpl. rewrite <- H0. unfold option_lift1.
+            unfold comp; simpl. rewrite H3. constructor. reflexivity.
           - eapply simL'_update; eauto.
             unfold BlockRel.
             destruct x as [[[ ?] ?] ?]; simpl; intros; dcr.
