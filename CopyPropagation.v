@@ -73,7 +73,7 @@ Proof.
     }
     exploit (cp_moreDefined ϱ); eauto.
     unfold list_EqnApx; simpl.
-    eapply entails_union.
+    eapply entails_union'.
     rewrite add_union_singleton; reflexivity.
     eauto.
     eapply IHY.
@@ -195,7 +195,7 @@ Proof.
           - rewrite H2; simpl.
             rewrite cp_eqns_add_update; eauto.
             rewrite add_union_singleton.
-            eapply entails_union.
+            eapply entails_union'.
             + rewrite add_union_singleton; reflexivity.
             + eapply entails_eqns_trans' with (e':=Var v).
               cset_tac; intuition.
@@ -213,7 +213,7 @@ Proof.
         intros.
         rewrite lookup_set_add_update; eauto. rewrite H3. reflexivity.
       * rewrite H2; simpl. rewrite cp_eqns_add_update; eauto.
-        eapply entails_union.
+        eapply entails_union'.
         rewrite add_union_singleton; reflexivity.
         eapply entails_eqns_apx_refl.
         eapply entails_monotone. reflexivity.
@@ -248,7 +248,7 @@ Proof.
         rewrite H3; reflexivity.
       * rewrite H2; simpl.
         rewrite cp_eqns_add_update; eauto.
-        eapply entails_union.
+        eapply entails_union'.
         rewrite add_union_singleton; reflexivity.
         eapply entails_eqns_apx_refl.
         reflexivity.
@@ -274,7 +274,7 @@ Proof.
       * rewrite H3; simpl.
         rewrite map_app; [| clear_all; intuition].
         rewrite (@cp_eqns_agree (ϱ [Z <-- Z]) ϱ D).
-        eapply entails_union.
+        eapply entails_union'.
         reflexivity.
         eapply entails_monotone.
         eapply entails_cp_eqns_trivial. eapply incl_left.
