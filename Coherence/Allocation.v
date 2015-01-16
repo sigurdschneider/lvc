@@ -140,7 +140,7 @@ Proof.
         rewrite lookup_set_minus_incl; intuition. eapply lookup_set_incl; intuition.
         reflexivity. rewrite lookup_set_singleton; intuition.
         rewrite meet_comm. eapply meet_minus. intuition. eauto.
-        cset_tac; intuition. inversion 1; subst. intuition.
+        cset_tac; intuition. simpl in *. eapply H5; rewrite H2; eauto.
   - econstructor. simpl in *.
     + eapply srd_monotone.
       eapply IHRI1; eauto using Subset_trans, lookup_set_incl; eauto;
@@ -179,7 +179,7 @@ Proof.
         rewrite lookup_set_minus_incl; intuition. eapply lookup_set_incl; intuition.
         reflexivity. rewrite lookup_set_singleton; intuition.
         rewrite meet_comm. eapply meet_minus. intuition. eauto.
-        cset_tac; intuition. inversion 1; subst. intuition.
+        cset_tac; intuition. simpl in *. eapply H7; rewrite H2; eauto.
   - econstructor; eauto.
     + eapply srd_monotone.
       * eapply IHRI1; eauto. simpl in *. rewrite H15; simpl.

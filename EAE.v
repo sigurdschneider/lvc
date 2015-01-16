@@ -236,10 +236,9 @@ Proof.
     econstructor; eauto. reflexivity.
     simpl. left. eapply IHs2; eauto.
     + eapply simL_mon; eauto. eapply simL_extension'; eauto.
-      * hnf; intros. hnf in H0. dcr; subst.
-        eapply IHs1; eauto.
+      * hnf; intros. split. hnf; split. reflexivity. reflexivity.
+        intros. inv H0. eapply IHs1; eauto.
       * split; reflexivity.
-      * hnf; intros; eauto.
 Qed.
 
 Lemma sim_EAE V s

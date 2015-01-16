@@ -53,6 +53,19 @@ Proof.
   intuition. destruct H3; dcr. eexists; split; eauto. cset_tac; eauto.
 Qed.
 
+Lemma map_add X `{OrderedType X} Y `{OrderedType Y} (f:X->Y)
+      `{Proper _ (_eq ==> _eq) f} x t
+: map f ({x; t}) [=] {f x; map f t}.
+Proof.
+  cset_tac. repeat rewrite map_iff; eauto.
+  split; intros; cset_tac.
+  firstorder.
+  - left. rewrite H2; eauto.
+  - intuition; cset_tac.
+    + eexists x; eauto.
+    + eexists x0; eauto.
+Qed.
+
 Lemma map_empty X `{OrderedType X} Y `{OrderedType Y} (f:X->Y)
       `{Proper _ (_eq ==> _eq) f}
 : map f ∅ [=] ∅.
@@ -143,8 +156,8 @@ Lemma map_single {X} `{OrderedType X} Y `{OrderedType Y} (f:X->Y)
 Proof.
   hnf; intros. rewrite map_iff; eauto.
   split; intros.
-  - destruct H2; dcr. cset_tac. rewrite H4, H3; eauto.
-  - cset_tac. eexists x; split; eauto. cset_tac; intuition.
+  - destruct H2; dcr. cset_tac; intuition. rewrite H4, H3; eauto.
+  - cset_tac; intuition. eexists x; split; eauto.
 Qed.
 
 Lemma fold_single {X} `{OrderedType X} Y `{Equivalence Y} (f:X->Y->Y)

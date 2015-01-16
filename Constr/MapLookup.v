@@ -97,8 +97,7 @@ Lemma lookup_set_singleton {X} `{OrderedType X} {Y} `{OrderedType Y} (f:X->Y)
   `{Proper _ (_eq ==> _eq) f} x
   : lookup_set f {{x}} [=] {{f x}}.
 Proof.
-  cset_tac; intros. rewrite lookup_set_spec; eauto. split; intros; firstorder.
-  cset_tac. rewrite <- H2; eauto.
+  cset_tac; intuition.
 Qed.
 
 Lemma lookup_set_singleton' {X} `{OrderedType X} {Y} `{OrderedType Y} (f:X->Y)
@@ -118,8 +117,7 @@ Lemma lookup_set_single X `{OrderedType X} Y `{OrderedType Y} (ϱ:X->Y)
   -> {{ ϱ v }} ⊆ D'.
 Proof.
   intros. hnf; intros.
-  eapply H3. cset_tac.
-  rewrite H4.
+  eapply H3. cset_tac; intuition.
   eapply lookup_set_spec; eauto.
 Qed.
 

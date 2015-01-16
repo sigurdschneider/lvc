@@ -192,8 +192,8 @@ Proof.
     cset_tac; eqs; simpl; eauto. eapply lookup_set_incl; eauto.
     eapply lookup_set_spec; eauto.
     eapply lookup_set_spec in H3; eauto. destruct H3; dcr; eauto.
-    eexists x0; intuition. cset_tac; eauto. intro. eapply H2.
-    rewrite <- H3; eauto.
+    eexists x0; intuition. cset_tac; eauto.
+    intro. eapply H2. rewrite H7, <- H3; eauto.
   + econstructor; eauto using live_exp_rename_sound.
     rewrite getAnn_mapAnn. eapply lookup_set_incl; eauto.
     rewrite getAnn_mapAnn. eapply lookup_set_incl; eauto.
@@ -213,8 +213,8 @@ Proof.
     cset_tac; eqs; simpl; eauto. eapply lookup_set_incl; eauto.
     eapply lookup_set_spec; eauto.
     eapply lookup_set_spec in H3; eauto. destruct H3; dcr; eauto.
-    eexists x0; intuition. cset_tac; eauto. intro. eapply H2.
-    rewrite <- H3; eauto.
+    eexists x0; intuition. cset_tac; eauto.
+    intro. eapply H2. rewrite H7, <- H3; eauto.
   + econstructor; eauto; try rewrite getAnn_mapAnn; eauto.
     eapply IHlive_sound1. eapply IHlive_sound2.
     rewrite of_list_lookup_list; eauto. eapply lookup_set_incl; eauto.

@@ -148,9 +148,9 @@ Proof.
   rewrite e; reflexivity.
 
   assert (ϱ x ∉ of_list(lookup_list ϱ Z)).
-  rewrite of_list_lookup_list. rewrite lookup_set_spec. intro; dcr.
-  eapply H3 in H9; eauto. eapply n. rewrite H9; eauto. eapply union_2; eauto.
-  eapply union_3; eauto. eauto. eauto.
+  rewrite of_list_lookup_list; eauto. rewrite lookup_set_spec; eauto.
+  intro; dcr.
+  eapply H3 in H9; eauto; cset_tac; intuition.
   erewrite update_with_list_no_update; eauto. eapply H4; eauto using in_in_minus.
 Qed.
 

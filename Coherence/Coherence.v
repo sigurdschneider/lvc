@@ -129,7 +129,7 @@ Proof.
     + eapply IHssa; eauto. reflexivity.
     + rewrite getAnn_mapAnn. inv H2; simpl.
       rewrite H10, H11. econstructor. cset_tac; intuition.
-      eapply H7. rewrite <- H6; eauto.
+      eapply H7. rewrite H6; eauto.
       reflexivity.
   - eapply Exp.notOccur_freeVars in H8.
     econstructor; eauto. rewrite meet_comm in H8.
@@ -168,7 +168,7 @@ Proof.
     + eapply IHssa; eauto; reflexivity.
     + rewrite getAnn_mapAnn.
       inv H2; simpl. constructor. rewrite H8. revert H9.
-      clear_all; cset_tac; intuition; eauto. eapply H9. rewrite <- H0; eauto.
+      clear_all; cset_tac; intuition; eauto. eapply H9. rewrite H0; eauto.
       rewrite H11; reflexivity.
   - econstructor; eauto.
     revert H H8; clear_all; cset_tac; intuition; eauto.

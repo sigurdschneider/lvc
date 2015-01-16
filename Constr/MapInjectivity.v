@@ -37,7 +37,7 @@ Section MapInjectivity.
     intros. hnf; intros. lud.
     + exfalso. eapply H3. eapply lookup_set_spec; eauto.
       exists x0. split.
-      - cset_tac. intuition.
+      - cset_tac; intuition.
       - eqs.
     + exfalso. eapply H3. eapply lookup_set_spec; eauto.
       eexists y. split; cset_tac; intuition; eauto.
@@ -91,11 +91,15 @@ Lemma injective_on_update_not_in {X} `{OrderedType X} {Y} `{OrderedType Y}
 Proof.
   intros; hnf; intros.
   decide(x0 === x); decide (x0 === y); eauto.
-  exfalso. eapply H3. eapply lookup_set_spec. eauto.
-  eexists y. cset_tac; eqs; eauto. rewrite e in H6; eauto.
-  eapply H2; cset_tac; eauto. intro.
-  eapply H3. do 2 set_tac; intuition.  eexists x0. cset_tac; intuition.
-  rewrite <- H7. eqs.
+  - exfalso. eapply H3. eapply lookup_set_spec. eauto.
+    eexists y. cset_tac; eqs; eauto. rewrite e in H6; eauto.
+  - eapply H2; cset_tac; eauto.
+    intro. eapply H3.
+    eapply lookup_set_spec; intuition.
+    cset_tac.
+    intuition.
+    eexists x0; eauto. intuition.
+    rewrite H6, H7; eauto.
 Qed.
 
 Lemma injective_on_update_fresh {X} `{OrderedType X} {Y} `{OrderedType Y}
@@ -128,8 +132,10 @@ Lemma lookup_set_not_in  {X} `{OrderedType X} {Y} `{OrderedType Y} f D x
     -> lookup_set f D \ {{f x}} [=] lookup_set f (D\{{x}}).
 Proof.
   intros. cset_tac; split; intros; dcr. eapply lookup_set_spec; eauto.
-  + eapply lookup_set_spec in H4. destruct H4; dcr; eauto. eexists x0; cset_tac; eauto.
-    intro. eapply H2. eapply lookup_set_spec; eauto. eexists x.  rewrite H3 in H4; eauto.
+  + eapply lookup_set_spec in H4. destruct H4; dcr; eauto.
+    eexists x0; cset_tac; intuition.
+    eapply H2. eapply lookup_set_spec; eauto.
+    eexists x. rewrite <- H3 in H4; eauto.
     eauto.
   + eapply lookup_set_spec in H3; eauto. destruct H3; dcr. cset_tac.
     eapply lookup_set_spec; eauto.
@@ -299,8 +305,8 @@ Proof.
   rewrite <- H6 in n0. rewrite <- lookup_set_union in n0.
   assert (s ∪ D' [=] (s' ∪ D') \ {{x}}).
   rewrite H4; cset_tac; intuition.
-  intro A; rewrite A in H13; eauto.
-  intro A; rewrite A in H13; eauto.
+  rewrite <- H12 in H13; eauto.
+  rewrite <- H12 in H13; eauto.
   rewrite H8 in n0. rewrite H8 in H2.
   pose proof (injective_on_update_not_in H2 n0); eauto. intuition.
 

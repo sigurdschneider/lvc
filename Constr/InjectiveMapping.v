@@ -1,4 +1,4 @@
-Require Export Setoid Coq.Classes.Morphisms.  
+Require Export Setoid Coq.Classes.Morphisms.
 Require Import EqDec Computable Util AutoIndTac.
 Require Export CSet Containers.SetDecide.
 Require Export MapBasics MapLookup MapUpdate MapUpdateList.
@@ -9,24 +9,24 @@ Section InjectiveMapping.
 
   Inductive inj_mapping {X} `{OrderedType X} {Y} `{OrderedType Y} (LV:set Y) : list X -> list Y -> Prop :=
   | im_nil : inj_mapping LV nil nil
-  | im_cons x y XL YL : inj_mapping LV XL YL 
-    -> fresh x XL -> fresh y YL -> (~ y ∈ LV) 
+  | im_cons x y XL YL : inj_mapping LV XL YL
+    -> fresh x XL -> fresh y YL -> (~ y ∈ LV)
     -> inj_mapping LV (x::XL) (y::YL).
 
   Lemma inj_mapping_length W `{OrderedType W} X `{OrderedType X} (LV:set X) Y Z
     : @inj_mapping W _ X _ LV Y Z -> length Y = length Z.
   Proof.
-    intros. general induction H1; simpl; eauto. 
+    intros. general induction H1; simpl; eauto.
   Qed.
 
   Lemma inj_mapping_incl W `{OrderedType W} X `{OrderedType X} (L L':set X) Y Z
     : L' ⊆ L -> @inj_mapping W _ X _ L Y Z -> inj_mapping L' Y Z.
   Proof.
-    intros. general induction H2; constructor; eauto.  
+    intros. general induction H2; constructor; eauto.
   Qed.
 
   Lemma ra_insert_allocs_correct' X `{OrderedType X} Y `{OrderedType Y}
-    (m:X -> Y) 
+    (m:X -> Y)
     (lv:set X) XL YL x
     : InA _eq x XL
     -> inj_mapping (lookup_set m lv) XL YL
@@ -36,7 +36,7 @@ Section InjectiveMapping.
     general induction H1; simpl in *; intros; eauto. inv H2.
     lud. econstructor; eauto. exfalso. eapply H4. eauto.
     inv H2. lud. constructor; eauto.
-    right. eapply IHInA; eauto. 
+    right. eapply IHInA; eauto.
   Qed.
 
   Lemma ra_insert_allocs_no_param X `{OrderedType X} Y `{OrderedType Y}
@@ -46,15 +46,14 @@ Section InjectiveMapping.
   Proof.
     general induction XL; simpl; intros; eauto.
     destruct YL; eauto.
-    assert (x=/=a). intro; subst; cset_tac. eapply H1. simpl. 
+    assert (x=/=a). intro; subst; cset_tac. eapply H1. simpl.
     eapply add_1; eauto.
-    lud. eapply IHXL; cset_tac; eauto. simpl in H1; cset_tac. intro.
-    eapply H1; eauto.
+    lud. eapply IHXL; cset_tac; eauto. simpl in H1; cset_tac; eauto.
   Qed.
 
 (*
-  Lemma ra_insert_allocs_cases W `{OrderedType W} X `{OrderedType X} `{Defaulted X} XL YL 
-    (m:Map[W, X]) bv y 
+  Lemma ra_insert_allocs_cases W `{OrderedType W} X `{OrderedType X} `{Defaulted X} XL YL
+    (m:Map[W, X]) bv y
     : inj_mapping (lookup_set m bv) XL YL
     -> y ∈ lookup_set (update_with_list XL YL m) ((fromList XL ∪ bv))
     -> y ∈ lookup_set m bv \/ y ∈ fromList YL.
@@ -64,8 +63,8 @@ Section InjectiveMapping.
     destruct H2 as [x [A B]].
     decide (x ∈ fromList XL).
     right. eapply in_fromList. rewrite <- B. eapply ra_insert_allocs_correct'; eauto.
-    eapply in_fromList. assumption. 
-    left. rewrite <- B. rewrite ra_insert_allocs_no_param; eauto. 
+    eapply in_fromList. assumption.
+    left. rewrite <- B. rewrite ra_insert_allocs_no_param; eauto.
     eapply lookup_set_spec; eauto.
     destruct (union_cases _ _ _ _ A); firstorder.
   Qed.
@@ -82,8 +81,8 @@ Section InjectiveMapping.
     eapply injective_on_fresh.
     eapply injective_on_forget; eauto.
     intro. eapply lookup_set_incl in H; eauto using incl_minus.
-    edestruct (@ra_insert_allocs_cases _ _ _ _ _ _ _ _ y IM); eauto. 
-    eapply f0; eapply in_fromList; eauto. 
+    edestruct (@ra_insert_allocs_cases _ _ _ _ _ _ _ _ y IM); eauto.
+    eapply f0; eapply in_fromList; eauto.
   Qed.
 *)
 End InjectiveMapping.
@@ -114,27 +113,27 @@ Global Instance inj_mapping_computable {X Y : Type} `{OrderedType X} `{OrderedTy
 Proof.
   hnf.
   general induction L.
-  + destruct L'. 
+  + destruct L'.
     - left; econstructor.
     - right. intro A; inv A.
-  + destruct L'. 
+  + destruct L'.
     - right; intro A; inv A.
     - destruct (IHL _ _ _ LV L'); eauto.
-      decide (fresh a L). 
-      decide (fresh y L'). 
+      decide (fresh a L).
+      decide (fresh y L').
       decide (y ∈ LV).
       right; intro A; inv A; eauto.
-      left; econstructor; eauto. 
+      left; econstructor; eauto.
       right; intro A; inv A; eauto.
       right; intro A; inv A; eauto.
       right; intro A; inv A; eauto.
 Defined.
 
-  
-  
-  
 
-(* 
+
+
+
+(*
 *** Local Variables: ***
 *** coq-load-path: (("../" "Lvc")) ***
 *** End: ***

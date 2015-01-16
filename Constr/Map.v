@@ -1,4 +1,4 @@
-Require Export Setoid Coq.Classes.Morphisms.  
+Require Export Setoid Coq.Classes.Morphisms.
 Require Import EqDec Computable Util AutoIndTac.
 Require Export CSet Containers.SetDecide.
 
@@ -8,24 +8,23 @@ Lemma fresh_of_list {X} `{OrderedType X} (L:list X) (y:X)
   : Util.fresh y L -> y ∉ of_list L.
 Proof.
   general induction L; simpl in *. intro; cset_tac; eauto.
-  intro. eapply add_iff in H1. destruct H1.
-  eapply H0. constructor. rewrite H1. eauto.
+  intro. cset_tac; intuition.
   eapply IHL; eauto. intro. eapply H0. constructor 2. eauto.
 Qed.
 
-Lemma inverse_on_update_lookup_set {X} `{OrderedType X} {Y} `{OrderedType Y} (D:set X) (f:X->Y) g 
+Lemma inverse_on_update_lookup_set {X} `{OrderedType X} {Y} `{OrderedType Y} (D:set X) (f:X->Y) g
    `{Proper _ (_eq ==> _eq) f}   x y
   : inverse_on D (f [x <- y]) (g [y <- x])
   -> y ∉ lookup_set f (D\{{x}}).
 Proof.
   intros A B. eapply lookup_set_spec in B.
-  destruct B as [z]; dcr. cset_tac; eqs.
-  specialize (A _ H2). lud. intuition. 
+  destruct B as [z]; dcr. cset_tac; eqs; intuition.
+  specialize (A _ H2). lud; intuition. intuition.
 Qed.
 
 
 Global Instance update_with_list_proper {X} `{OrderedType X} {Y} `{OrderedType Y}
-  {Z : list X} {Z' : list Y} {f : X -> Y} `{Proper _ (_eq ==> _eq) f} 
+  {Z : list X} {Z' : list Y} {f : X -> Y} `{Proper _ (_eq ==> _eq) f}
   : Proper (_eq ==> _eq) (update_with_list Z Z' f).
 Proof.
   hnf; intros.
@@ -65,7 +64,7 @@ Lemma lookup_set_update_in_union {X} `{OrderedType X} {Y} `{OrderedType Y}
 Proof.
   hnf; intros. eapply lookup_set_spec in H2; destruct H2; dcr.
   lud. cset_tac; eauto. cset_tac; left. eapply lookup_set_spec; eauto.
-  eexists x0; cset_tac; eauto. 
+  eexists x0; cset_tac; eauto.
   hnf; intros; lud; isabsurd. rewrite H3; eauto.
   hnf; intros; lud; isabsurd. rewrite H3; eauto.
   hnf; intros; lud; isabsurd. rewrite H3; eauto.
@@ -80,10 +79,10 @@ Proof.
   destruct H3; dcr. decide (a ∈ of_list Z').
   cset_tac; eauto.
   decide(x ∈ of_list Z).
-  exfalso. rewrite H5 in n. eapply n. 
+  exfalso. rewrite H5 in n. eapply n.
   eapply update_with_list_lookup_in; eauto.
   erewrite update_with_list_no_update in H5; eauto.
-  eapply union_2. eapply lookup_set_spec; eauto. eexists x. 
+  eapply union_2. eapply lookup_set_spec; eauto. eexists x.
   split; eauto. cset_tac; eauto.
   eapply update_with_list_proper.
 Qed.
@@ -103,7 +102,7 @@ Qed.
 
 
 
-(* 
+(*
 *** Local Variables: ***
 *** coq-load-path: (("../" "Lvc")) ***
 *** End: ***

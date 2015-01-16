@@ -194,15 +194,16 @@ Proof.
             rewrite lookup_set_single; eauto; cset_tac; intuition.
           - rewrite H2; simpl.
             rewrite cp_eqns_add_update; eauto.
+            rewrite add_union_singleton.
             eapply entails_union.
             + rewrite add_union_singleton; reflexivity.
             + eapply entails_eqns_trans' with (e':=Var v).
               cset_tac; intuition.
               rewrite <- (@single_in_cp_eqns v).
-              eapply incl_right; cset_tac; intuition.
               cset_tac; intuition.
-            + eapply entails_monotone. reflexivity.
-              eapply incl_right.
+              cset_tac; intuition.
+            + eapply entails_monotone; [ reflexivity | ].
+              cset_tac; intuition.
         }
       * hnf; intros; hnf; intros. cset_tac; intuition. rewrite <- H7.
         simpl. reflexivity.
@@ -224,12 +225,12 @@ Proof.
       eapply IHssa1; eauto.
       * rewrite H4; simpl; eauto.
       * rewrite H4; simpl.
-        eapply entails_monotone; try reflexivity; try eapply incl_right.
+        eapply entails_monotone; try reflexivity; cset_tac; intuition.
     + eapply eqn_sound_entails_monotone; eauto.
       eapply IHssa2; eauto.
       * rewrite H5; simpl; eauto.
       * rewrite H5; simpl.
-        eapply entails_monotone; try reflexivity; try eapply incl_right.
+        eapply entails_monotone; try reflexivity; cset_tac; intuition.
     + eapply cp_moreDefined; eauto.
   - econstructor; eauto using cp_moreDefined.
   - edestruct get_in_range as [a ?]; eauto.

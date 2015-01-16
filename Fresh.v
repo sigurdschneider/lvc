@@ -2,7 +2,7 @@ Require Import CSet Le Arith.Compare_dec.
 
 Require Import Plus Util Map.
 Require Import Env EnvTy IL.
- 
+
 Set Implicit Arguments.
 
 Instance le_comp (a b: nat) : Computable (a < b).
@@ -16,7 +16,7 @@ Section PolyIter.
   Variable A : Type.
 
   Fixpoint iter n (s:A) (f: nat -> A-> A) :=
-    match n with 
+    match n with
         | 0 => s
         | S n => iter n (f n s) f
     end.
@@ -24,9 +24,9 @@ Section PolyIter.
 End PolyIter.
 
 Definition least_fresh (lv:set var) : var :=
-  let mx := fold max lv 0 in 
-  let vx := iter (cardinal lv + 1) 
-                 mx 
+  let mx := fold max lv 0 in
+  let vx := iter (cardinal lv + 1)
+                 mx
                  (fun n x => if [n ∈ lv] then x else n) in
   vx.
 
@@ -36,17 +36,17 @@ Definition fresh (s : set var) : var :=
 Lemma fresh_spec' (G:set var)
   : forall (x:var), x ∈ G -> x <= fold max G 0.
 Proof.
-  pattern G. pattern (fold max G 0). eapply fold_rec; intros. 
+  pattern G. pattern (fold max G 0). eapply fold_rec; intros.
   fsetdec.
-  eapply H1 in H3. destruct H3. 
+  eapply H1 in H3. destruct H3.
   pattern (fold max s'' 0). rewrite fold_2; eauto.
-  rewrite H3. pose proof (Max.le_max_l x0 (fold max s' 0)). 
+  rewrite H3. pose proof (Max.le_max_l x0 (fold max s' 0)).
   eapply H4.
   intuition.
   hnf; intros. rewrite Max.max_assoc. rewrite (Max.max_comm x1).
   rewrite Max.max_assoc. reflexivity.
   pattern (fold max s'' 0). rewrite fold_2; eauto; try intuition.
-  pose proof (Max.le_max_r x (fold max s' 0)). 
+  pose proof (Max.le_max_r x (fold max s' 0)).
   specialize (H2 _ H3). unfold max in H2. rewrite <- H4. eapply H2.
   hnf; intros. rewrite Max.max_assoc. rewrite (Max.max_comm x1).
   rewrite Max.max_assoc. reflexivity.
@@ -75,15 +75,15 @@ Fixpoint fresh_list (G:set var) (n:nat) : list var :=
     | S n => let x := fresh G in x::fresh_list (G ∪ {{x}}) n
   end.
 
-Definition fresh_set (G:set var) (n:nat) : set var := 
+Definition fresh_set (G:set var) (n:nat) : set var :=
   of_list (fresh_list G n).
 
 Lemma fresh_list_spec : forall (G:set var) n, (of_list (fresh_list G n)) ∩ G [=] ∅.
 Proof.
   intros. general induction n; simpl; split; intros.
-  cset_tac; eauto. exfalso; cset_tac; eauto.  
+  cset_tac; eauto. exfalso; cset_tac; eauto.
   cset_tac; intuition.
-  rewrite <- H in H1. eapply fresh_spec; eauto. 
+  rewrite <- H in H1. eapply fresh_spec; eauto.
   specialize (IHn (G ∪ {{fresh G}})). intuition (cset_tac; eauto).
   exfalso; cset_tac; eauto.
 Qed.
@@ -94,7 +94,7 @@ Proof.
   general induction n; eauto. simpl. f_equal; eauto.
 Qed.
 
-Lemma fresh_set_spec 
+Lemma fresh_set_spec
 : forall (G:set var) n, (fresh_set G n) ∩ G [=] ∅.
 Proof.
   unfold fresh_set. eapply fresh_list_spec.
@@ -123,12 +123,12 @@ Proof.
   general induction Z; eauto. simpl. f_equal; eauto.
 Qed.
 
-Lemma fresh_stable_list_spec 
+Lemma fresh_stable_list_spec
 : forall (G:set var) Z, (of_list (fresh_stable_list G Z)) ∩ G [=] ∅.
 Proof.
   intros. general induction Z; simpl; split; intros.
-  - cset_tac; eauto. 
-  - exfalso; cset_tac; eauto.  
+  - cset_tac; eauto.
+  - exfalso; cset_tac; eauto.
   - cset_tac; intuition.
     + hnf in H; subst.
       assert (fresh_stable (G ∪ of_list Z) a ∈ G ∪ of_list Z).
@@ -147,7 +147,7 @@ Proof.
   split; eauto. intro.
   eapply (not_in_empty (fresh_stable (G ∪ of_list n) a)).
   eapply fresh_stable_list_spec.
-  cset_tac. eapply InA_in; eauto. 
+  cset_tac. eapply InA_in; eauto.
   cset_tac; eauto.
 Qed.
 
@@ -167,7 +167,7 @@ Proof.
   lud. eapply add_iff in i. destruct i; eauto.
   assert (y ∈ of_list YL). rewrite e.
   eapply update_with_list_lookup_in; eauto using length_eq_length.
-  exfalso. eapply (@fresh_of_list _ _ YL y H4 H9). 
+  exfalso. eapply (@fresh_of_list _ _ YL y H4 H9).
   exfalso; eauto.
   eapply add_iff in i; destruct i; isabsurd.
   eapply IHlength_eq; try eassumption.
@@ -175,13 +175,13 @@ Proof.
   hnf; intros. intro. eapply lookup_set_spec in H11.
   destruct H11; cset_tac; eauto. intuition.
 
-  erewrite update_with_list_no_update; eauto. 
+  erewrite update_with_list_no_update; eauto.
   erewrite update_with_list_no_update; eauto.
   eapply H; eauto. cset_tac ; eauto.
   erewrite update_with_list_no_update; eauto. intro.
   eapply H2; eauto.
-  eapply lookup_set_spec; cset_tac; intuition. 
-  eexists x; eauto. cset_tac; eauto.
+  eapply lookup_set_spec; cset_tac; intuition.
+  eexists x; eauto.
 Qed.
 
 Lemma inverse_on_update_fresh_list (D:set var) (Z:list var) (ϱ ϱ' : var -> var)
@@ -198,7 +198,7 @@ Qed.
 
 
 
-(* 
+(*
 *** Local Variables: ***
 *** coq-load-path: (("." "Lvc")) ***
 *** End: ***

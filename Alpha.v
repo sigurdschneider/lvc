@@ -72,7 +72,7 @@ Lemma inverse_on_dead_update X `{OrderedType X} Y `{OrderedType Y} (ra:X->Y) ira
   -> inverse_on (s \ {{x}}) ra ira.
 Proof.
   intros. hnf; intros. cset_tac; dcr.
-  specialize (H1 _ H3). lud.
+  specialize (H1 _ H3). lud; intuition.
 Qed.
 
 Lemma alpha_inverse_on  ϱ ϱ' s t

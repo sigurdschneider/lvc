@@ -818,7 +818,7 @@ Proof.
   destruct y; simpl in * |- *.
   + split.
     - decide (x0 ∈ s).
-      * cset_tac; intuition. intro; intuition.
+      * cset_tac; intuition.
       * exploit H1; eauto using get. cset_tac; intuition.
     - destruct H0; eapply IHlength_eq; eauto.
       intros. eauto using get.

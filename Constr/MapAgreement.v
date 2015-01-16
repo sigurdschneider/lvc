@@ -89,7 +89,7 @@ Section MapAgreement.
     -> agree_on R lv (E [x <- v]) (E'[x <- v']).
   Proof.
     intros A B.
-    hnf; intros. lud; eauto. exfalso; eapply A; rewrite e; intuition.
+    hnf; intros. lud; eauto.
   Qed.
 
 End MapAgreement.

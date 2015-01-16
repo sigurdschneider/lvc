@@ -326,7 +326,7 @@ Proof.
   general induction s; simpl; repeat let_pair_case_eq; simpl; subst; eauto; try reflexivity.
   - rewrite IHs at 1. cset_tac; intuition.
     eapply H0; intros. intuition.
-    eapply fresh_spec. instantiate (1:=G'). rewrite <- H6. eauto.
+    eapply fresh_spec. instantiate (1:=G'). rewrite H2. eauto.
     rewrite H. reflexivity.
   - rewrite IHs1. rewrite IHs2.
     rewrite rename_apart_fst_incl_app at 3.
@@ -338,14 +338,13 @@ Proof.
   - cset_tac; intuition. decide (a ∈ G); intuition.
   - rewrite IHs; try reflexivity. cset_tac; intuition.
     eapply H0; intros; intuition.
-    eapply fresh_spec. instantiate (1:=G'). rewrite <- H6. eauto.
+    eapply fresh_spec. instantiate (1:=G'). rewrite H2. eauto.
     rewrite H. reflexivity.
   - rewrite IHs2. rewrite IHs1.
     cset_tac; intuition.
     + eapply rename_apart_fst_incl; eauto.
-    + eapply H1; intros. destruct H2; eauto.
-      exploit (fresh_list_spec G' (length Z) a); dcr.
-      exploit H6; eauto. cset_tac; intuition. cset_tac; intuition.
+    + eapply H1; intros. destruct H3; eauto; split; eauto.
+      exploit (fresh_list_spec G' (length Z) a); dcr. cset_tac; intuition.
     + eapply H1; intros.
       eapply rename_apart_fst_incl; eauto. cset_tac; intuition. eauto.
     + decide ( a \In
@@ -474,7 +473,7 @@ Proof.
       * rewrite H3. cset_tac. right; eauto.
       * rewrite union_comm. eapply incl_right. rewrite H3. eapply H.
         eapply lookup_set_spec; eauto. eexists x0. split; eauto.
-        eapply union_2. eapply in_in_minus; eauto. cset_tac.
+        eapply union_2. eapply in_in_minus; eauto. cset_tac; intuition.
   - subst s0 s4. simpl in H. simpl. rename s3 into Gs2. rename s into Gs1.
     eapply ssaIf with (Ds := Gs1) (Dt := (Gs2 \ (Gs1 \ G))).
     + rewrite <- H. rewrite Exp.rename_exp_freeVars; eauto.
@@ -579,7 +578,7 @@ Proof.
       * rewrite H3. cset_tac. right; eauto.
       * rewrite union_comm. eapply incl_right. rewrite H3. eapply H.
         eapply lookup_set_spec; eauto. eexists x0. split; eauto.
-        eapply union_2. eapply in_in_minus; eauto. cset_tac.
+        eapply union_2. eapply in_in_minus; eauto. cset_tac; intuition.
 
   - simpl. subst s0 s4. simpl in H. simpl. rename s3 into Gs2. rename s into Gs1.
     eapply ssaLet with (Ds:=Gs1) (Dt:=Gs2 \ (Gs1 \ G)).
