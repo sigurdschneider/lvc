@@ -3,28 +3,27 @@ Require Import CSet Le.
 Require Import Plus Util AllInRel Map.
 Require Import Val Var Env EnvTy IL Sim Coherence Fresh Annotation DecSolve SetOperations LabelsDefined.
 
-Require Import Liveness ValueOpts.
+Require Import Liveness Eqn ValueOpts.
 
 Set Implicit Arguments.
 Unset Printing Records.
 
-Fixpoint copyPropagate (ϱ:var -> var) (s:stmt) : ann (list exp) :=
+Fixpoint copyPropagate (ϱ:var -> var) (s:stmt) : stmt :=
   match s with
    | stmtExp x e s =>
      if [ isVar e] then
-         ann1 (e::nil) (copyPropagate (ϱ[x <- ϱ (getVar e)]) s)
+       stmtExp x e (copyPropagate (ϱ[x <- ϱ (getVar e)]) s)
      else
-       ann1 (rename_exp ϱ e::nil) (copyPropagate (ϱ[x <- x]) s)
-   | stmtIf e s1 s2 => ann2 (rename_exp ϱ e::nil)
-                           (copyPropagate ϱ s1)
-                           (copyPropagate ϱ s2)
-   | stmtGoto l Y => ann0 (List.map (rename_exp ϱ) Y)
-   | stmtReturn e => ann0 (rename_exp ϱ e::nil)
-   | stmtExtern x f Y s => ann1 (List.map (rename_exp ϱ) Y) (copyPropagate (ϱ[x <- x]) s)
+       stmtExp x (rename_exp ϱ e) (copyPropagate (ϱ[x <- x]) s)
+   | stmtIf e s1 s2 => stmtIf (rename_exp ϱ e)
+                             (copyPropagate ϱ s1)
+                             (copyPropagate ϱ s2)
+   | stmtGoto l Y => stmtGoto l (List.map (rename_exp ϱ) Y)
+   | stmtReturn e => stmtReturn (rename_exp ϱ e)
+   | stmtExtern x f Y s => stmtExtern x f (List.map (rename_exp ϱ) Y) (copyPropagate (ϱ[x <- x]) s)
    | stmtLet Z s1 s2 =>
-     ann2 nil (copyPropagate (ϱ[Z <-- Z]) s1) (copyPropagate ϱ s2)
+     stmtLet Z (copyPropagate (ϱ[Z <-- Z]) s1) (copyPropagate ϱ s2)
    end.
-
 
 Definition cp_eqn (ϱ:var -> var) (x:var) := EqnApx (Var x) (Var (ϱ x)).
 
@@ -179,10 +178,9 @@ Lemma copyPropagate_sound_eqn s ang Es ϱ
   -> labelsDefined s (length Es)
   -> (forall n a, get Es n a -> snd a [=] ∅)
   -> eqn_sound Es
-              s
+              s (copyPropagate ϱ s)
               (map (cp_eqn ϱ) (fst (getAnn ang)))
-              ang
-              (copyPropagate ϱ s).
+              ang.
 Proof.
   intros. general induction H; invt labelsDefined; simpl.
   - destruct if.

@@ -3,239 +3,12 @@ Require Import CSet Le.
 Require Import Plus Util AllInRel Map.
 Require Import CSet Val Var Env EnvTy Equiv.Sim IL Fresh Annotation MoreExp Coherence.
 
-Require Import SetOperations Liveness Filter.
+Require Import SetOperations Liveness Filter Eqn.
 
 Set Implicit Arguments.
 Unset Printing Records.
 
-Inductive eqn :=
-  | EqnEq (e e':exp)
-  | EqnApx (e e':exp)
-  | EqnBot.
-
-Inductive option_R (A B : Type) (eqA : A -> B -> Prop)
-: option A -> option B -> Prop :=
-| option_R_Some a b : eqA a b -> option_R eqA ⎣a⎦ ⎣b⎦.
-
-
-Lemma option_R_refl A R `{Reflexive A R} : forall x, option_R R ⎣x⎦ ⎣x⎦.
-intros; eauto using option_R.
-Qed.
-
-Instance option_R_sym A R `{Symmetric A R} : Symmetric (option_R R).
-hnf; intros ? [] []; eauto using option_R.
-Qed.
-
-Instance option_R_trans A R `{Transitive A R} : Transitive (option_R R).
-hnf; intros. inv H0; inv H1; econstructor; eauto.
-Qed.
-
 (*
-Inductive satisfies (E:onv val) : eqn -> Prop :=
-| SatisfiesEq e e'
-  : option_R eq (exp_eval E e) (exp_eval E e')
-    -> satisfies E (Eqn 0 e e')
-| SatisfiesApx e e'
-  : fstNoneOrR eq (exp_eval E e) (exp_eval E e')
-    -> satisfies E (Eqn 1 e e').
-*)
-
-Definition satisfies (E:onv val) (gamma:eqn) : Prop :=
-match gamma with
-| EqnEq e e' => option_R eq (exp_eval E e) (exp_eval E e')
-| EqnApx e e' => fstNoneOrR eq (exp_eval E e) (exp_eval E e')
-| EqnBot => False
-end.
-
-Inductive eqnLt : eqn -> eqn -> Prop :=
-| EqnLtBotEq e e'
-  : eqnLt EqnBot (EqnEq e e')
-| EqnLtBotApx e e'
-  : eqnLt EqnBot (EqnApx e e')
-| EqnLtEqApx e1 e1' e2 e2'
-  : eqnLt (EqnEq e1 e2) (EqnApx e1' e2')
-| EqnLtEqEq1 e1 e1' e2 e2'
-  : expLt e1 e1'
-    -> eqnLt (EqnEq e1 e2) (EqnEq e1' e2')
-| EqnLtEqEq2 e1 e2 e2'
-  : expLt e2 e2'
-    -> eqnLt (EqnEq e1 e2) (EqnEq e1 e2')
-| EqnLtApxApx1 e1 e1' e2 e2'
-  : expLt e1 e1'
-    -> eqnLt (EqnApx e1 e2) (EqnApx e1' e2')
-| EqnLtApxApx2 e1 e2 e2'
-  : expLt e2 e2'
-    -> eqnLt (EqnApx e1 e2) (EqnApx e1 e2').
-
-Instance eqnLt_irr : Irreflexive eqnLt.
-hnf; intros; unfold complement.
-- induction x; inversion 1; subst; eauto;
-  try now eapply expLt_irr; eauto.
-Qed.
-
-Instance eqnLt_trans : Transitive eqnLt.
-hnf; intros.
-inv H; inv H0; eauto using eqnLt, expLt_trans.
-Qed.
-
-Instance StrictOrder_eqnLt : OrderedType.StrictOrder eqnLt eq.
-econstructor; intros; eauto using eqnLt_trans.
-- intro. rewrite H0 in H. eapply eqnLt_irr; eauto.
-Qed.
-
-Notation "'Compare' x 'next' y" :=
-  (match x with
-    | Eq => y
-    | z => z
-  end) (at level 100).
-
-Fixpoint eqn_cmp (e e':eqn) :=
-  match e, e' with
-    | EqnBot, EqnBot => Eq
-    | EqnBot, _ => Lt
-    | EqnEq _ _, EqnBot => Gt
-    | EqnEq _ _, EqnApx _ _ => Lt
-    | EqnEq e1 e2, EqnEq e1' e2' =>
-      Compare _cmp e1 e1' next
-      Compare _cmp e2 e2' next Eq
-    | EqnApx e1 e2, EqnApx e1' e2' =>
-      Compare _cmp e1 e1' next
-      Compare _cmp e2 e2' next Eq
-    | EqnApx _ _, _ => Gt
-  end.
-
-Instance OrderedType_eqn : OrderedType eqn :=
- { _eq := eq;
-  _lt := eqnLt;
-  _cmp := eqn_cmp}.
-intros.
-destruct x,y; simpl eqn_cmp; try now (econstructor; eauto using eqnLt).
-pose proof (_compare_spec e e0); unfold _cmp in *; simpl in *.
-inv H; try now (econstructor; eauto using eqnLt).
-pose proof (_compare_spec e' e'0); unfold _cmp in *; simpl in *.
-inv H1; try now (econstructor; eauto 20 using eqnLt).
-pose proof (_compare_spec e e0); unfold _cmp in *; simpl in *.
-inv H; try now (econstructor; eauto using eqnLt).
-pose proof (_compare_spec e' e'0); unfold _cmp in *; simpl in *.
-inv H1; try now (econstructor; eauto 20 using eqnLt).
-Defined.
-
-Definition eqns := set eqn.
-
-Definition satisfiesAll (E:onv val) (Gamma:eqns) :=
-  forall gamma, gamma ∈ Gamma -> satisfies E gamma.
-
-Definition freeVars (gamma:eqn) :=
-  match gamma with
-    | EqnEq e e' => Exp.freeVars e ∪ Exp.freeVars e'
-    | EqnApx e e' => Exp.freeVars e ∪ Exp.freeVars e'
-    | EqnBot => ∅
-  end.
-
-Definition eqns_freeVars (Gamma:eqns) := fold union (map freeVars Gamma) ∅.
-
-Definition entails Gamma Γ' := (forall E, satisfiesAll E Gamma -> satisfiesAll E Γ')
-(* /\ eqns_freeVars Γ' ⊆ eqns_freeVars Gamma *).
-
-Definition not_entails Gamma gamma := (exists E, satisfiesAll E Gamma /\ ~ satisfies E gamma).
-
-Definition onvLe X (E E':onv X)
-:= forall x v, E x = Some v -> E' x = Some v.
-
-(*Definition models Gamma gamma := forall E, satisfiesAll E Gamma -> satisfies E gamma.*)
-
-Lemma exp_eval_onvLe e E E' v
-: onvLe E E'
-  -> exp_eval E e = Some v
-  -> exp_eval E' e = Some v.
-Proof.
-  intros. general induction e; simpl in * |- *; eauto.
-  simpl in H0. rewrite H0. eapply H in H0. eauto.
-  - monad_inv H0. rewrite EQ.
-    erewrite IHe; eauto.
-  - monad_inv H0. rewrite EQ, EQ1.
-    erewrite IHe1, IHe2; eauto.
-Qed.
-
-(*
-Instance moreDefined_refl Gamma
-: Reflexive (moreDefined Gamma).
-Proof.
-  hnf; intros; hnf; intros.
-  case_eq (exp_eval E x); intros.
-  constructor; eauto.
-  constructor.
-Qed.
-*)
-
-Definition list_EqnApx Y Y' :=
-  of_list (zip (fun e e' => EqnApx e e') Y Y').
-
-Definition remove (Gamma:eqns) G :=
-  filter (fun gamma => B[freeVars gamma ∩ G [=] ∅]) Gamma.
-
-Definition subst_eqn (ϱ : env exp) (gamma: eqn) :=
-  match gamma with
-    | EqnEq e e' => EqnEq (subst_exp ϱ e) (subst_exp ϱ e')
-    | EqnApx e e' => EqnApx (subst_exp ϱ e) (subst_exp ϱ e')
-    | EqnBot => EqnBot
-  end.
-
-Definition subst_eqns (ϱ : env exp) (G:eqns) : eqns :=
-  map (subst_eqn ϱ) G.
-
-Definition sid := fun x => Var x.
-
-Definition unsatisfiable (Gamma:eqns) :=
-  forall E, ~ satisfiesAll E Gamma.
-
-Inductive eqn_sound : list (params*set var*eqns*eqns)
-                      -> stmt
-                      -> eqns
-                      -> ann (set var * set var)
-                      -> ann (list exp)
-                      -> Prop :=
-| EqnOpr x Lv b e Gamma e' cl G G' ang
-  : eqn_sound Lv b {EqnEq (Var x) e ; { EqnEq (Var x) e' ; Gamma } } ang cl
-    (* make sure the rest conforms to the new assignment *)
-    -> entails Gamma {EqnApx e e'}
-    -> Exp.freeVars e' ⊆ G
-    -> eqn_sound Lv (stmtExp x e b) Gamma
-                (ann1 (G,G') ang) (ann1 (e'::nil) cl)
-| EqnIf Lv e e' b1 b2 Gamma cl1 cl2 G G' ang1 ang2
-  : eqn_sound Lv b1 {EqnEq (UnOp 0 e) (Con val_true); Gamma} ang1 cl1
-  -> eqn_sound Lv b2 {EqnEq (UnOp 0 e) (Con val_false); Gamma} ang2 cl2
-  -> entails Gamma {(EqnApx e e')}
-  -> eqn_sound Lv (stmtIf e b1 b2) Gamma
-              (ann2 (G,G') ang1 ang2) (ann2 (e'::nil) cl1 cl2)
-| EqnGoto l Y Y' Lv Gamma Z Γf EqS Gf G G'
-  : get Lv (counted l) (Z,Gf,Γf, EqS)
-    -> length Y = length Y'
-    -> entails Gamma (subst_eqns (sid [Z <-- Y']) EqS)
-    -> entails Gamma (list_EqnApx Y Y')
-    -> eqn_sound Lv (stmtGoto l Y) Gamma (ann0 (G,G')) (ann0 Y')
-| EqnReturn Lv e e' Gamma G G'
-  : entails Gamma {(EqnApx e e')}
-    -> eqn_sound Lv (stmtReturn e) Gamma (ann0 (G,G')) (ann0 (e'::nil))
-| EqnExtern x f Lv b Y Y' Gamma cl G G' ang
-  : eqn_sound Lv b Gamma ang cl
-    -> entails Gamma (list_EqnApx Y Y')
-    -> list_union (List.map Exp.freeVars Y') ⊆ G
-    -> length Y = length Y'
-    -> eqn_sound Lv (stmtExtern x f Y b) Gamma
-                (ann1 (G,G') ang) (ann1 Y' cl)
-| EqnLet Lv s Z b Gamma Γ2 EqS cls clb G G' angs angb
-  : eqn_sound ((Z, G, Γ2, EqS)::Lv) s (EqS ∪ Γ2) angs cls
-  -> eqn_sound ((Z, G ,Γ2, EqS)::Lv) b Gamma angb clb
-  -> eqns_freeVars EqS ⊆ G ++ of_list Z
-  -> eqns_freeVars Γ2  ⊆ G
-  -> entails Gamma Γ2
-  -> eqn_sound Lv (stmtLet Z s b) Gamma
-              (ann2 (G,G') angs angb) (ann2 nil cls clb)
-| EqnUnsat Lv s Gamma ang cl
-  : unsatisfiable Gamma
-    -> eqn_sound Lv s Gamma ang cl.
-
 Fixpoint compile (s:stmt) (a:ann (list exp)) :=
   match s, a with
     | stmtExp x _ s, ann1 (e'::nil) an =>
@@ -251,7 +24,53 @@ Fixpoint compile (s:stmt) (a:ann (list exp)) :=
       stmtLet Z (compile s ans) (compile t ant)
     | s, _ => s
   end.
+ *)
 
+Inductive eqn_sound : list (params*set var*eqns*eqns)
+                      -> stmt -> stmt
+                      -> eqns
+                      -> ann (set var * set var)
+                      -> Prop :=
+| EqnOpr x Lv s s' e Gamma e' G G' ang
+  : eqn_sound Lv s s' {EqnEq (Var x) e ; { EqnEq (Var x) e' ; Gamma } } ang
+    (* make sure the rest conforms to the new assignment *)
+    -> entails Gamma {EqnApx e e'}
+    -> Exp.freeVars e' ⊆ G
+    -> eqn_sound Lv (stmtExp x e s) (stmtExp x e' s') Gamma
+                (ann1 (G,G') ang)
+| EqnIf Lv e e' s s' t t' Gamma G G' ang1 ang2
+  : eqn_sound Lv s s' {EqnEq (UnOp 0 e) (Con val_true); Gamma} ang1
+  -> eqn_sound Lv t t' {EqnEq (UnOp 0 e) (Con val_false); Gamma} ang2
+  -> entails Gamma {(EqnApx e e')}
+  -> eqn_sound Lv (stmtIf e s t) (stmtIf e' s' t') Gamma
+              (ann2 (G,G') ang1 ang2)
+| EqnGoto l Y Y' Lv Gamma Z Γf EqS Gf G G'
+  : get Lv (counted l) (Z,Gf,Γf, EqS)
+    -> length Y = length Y'
+    -> entails Gamma (subst_eqns (sid [Z <-- Y']) EqS)
+    -> entails Gamma (list_EqnApx Y Y')
+    -> eqn_sound Lv (stmtGoto l Y) (stmtGoto l Y') Gamma (ann0 (G,G'))
+| EqnReturn Lv e e' Gamma G G'
+  : entails Gamma {(EqnApx e e')}
+    -> eqn_sound Lv (stmtReturn e) (stmtReturn e') Gamma (ann0 (G,G'))
+| EqnExtern x f Lv s s' Y Y' Gamma G G' ang
+  : eqn_sound Lv s s' Gamma ang
+    -> entails Gamma (list_EqnApx Y Y')
+    -> list_union (List.map Exp.freeVars Y') ⊆ G
+    -> length Y = length Y'
+    -> eqn_sound Lv (stmtExtern x f Y s) (stmtExtern x f Y' s') Gamma
+                (ann1 (G,G') ang)
+| EqnLet Lv Z s s' t t'  Gamma Γ2 EqS G G' angs angb
+  : eqn_sound ((Z, G, Γ2, EqS)::Lv) s s' (EqS ∪ Γ2) angs
+  -> eqn_sound ((Z, G ,Γ2, EqS)::Lv) t t' Gamma angb
+  -> eqns_freeVars EqS ⊆ G ++ of_list Z
+  -> eqns_freeVars Γ2  ⊆ G
+  -> entails Gamma Γ2
+  -> eqn_sound Lv (stmtLet Z s t) (stmtLet Z s' t') Gamma
+              (ann2 (G,G') angs angb)
+| EqnUnsat Lv s s' Gamma ang
+  : unsatisfiable Gamma
+    -> eqn_sound Lv s s' Gamma ang.
 
 
 Definition ArgRel' (E E':onv val) (a:list var*set var*eqns*eqns) (VL VL': list val) : Prop :=
@@ -931,11 +750,11 @@ Proof.
   eapply satisfiesAll_monotone; eauto.
 Qed.
 
-Lemma eqn_sound_monotone Es Γ1 Γ1' s ang an
+Lemma eqn_sound_monotone Es Γ1 Γ1' s s' ang
 : ssa s ang
-  -> eqn_sound Es s Γ1 ang an
+  -> eqn_sound Es s s' Γ1 ang
   -> Γ1 ⊆ Γ1'
-  -> eqn_sound Es s Γ1' ang an.
+  -> eqn_sound Es s s' Γ1' ang.
 Proof.
   intros. general induction H0; eauto.
   - invt ssa. econstructor; eauto.
@@ -1022,11 +841,11 @@ Proof.
   intros. hnf; intros. intro. exploit (H E); eauto.
 Qed.
 
-Lemma eqn_sound_entails_monotone Es Γ1 Γ1' s ang an
+Lemma eqn_sound_entails_monotone Es Γ1 Γ1' s s' ang
 : ssa s ang
-  -> eqn_sound Es s Γ1 ang an
+  -> eqn_sound Es s s' Γ1 ang
   -> entails Γ1' Γ1
-  -> eqn_sound Es s Γ1' ang an.
+  -> eqn_sound Es s s' Γ1' ang.
 Proof.
   intros. general induction H0; eauto.
   - invt ssa. econstructor; eauto.
@@ -1082,14 +901,14 @@ Proof.
 Qed.
 
 
-Lemma sim_vopt r L L' V V' s LV Gamma repl ang
+Lemma sim_vopt r L L' V V' s s' LV Gamma ang
 : satisfiesAll V Gamma
--> eqn_sound LV s Gamma ang repl
+-> eqn_sound LV s s' Gamma ang
 -> simL' sim_progeq r (AR (fst (getAnn ang)) V V') LV L L'
 -> ssa s ang
 -> eqns_freeVars Gamma ⊆ fst (getAnn ang)
 -> onvLe V V'
--> sim'r r (L,V, s) (L',V', compile s repl).
+-> sim'r r (L,V, s) (L',V', s').
 Proof.
   intros SAT EQN SIML SSA FV OLE.
   general induction EQN; (try (now exfalso; eapply H; eauto))

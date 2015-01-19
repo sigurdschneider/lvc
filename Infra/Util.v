@@ -337,6 +337,23 @@ Proof.
   intros. general induction H; simpl; eauto.
 Qed.
 
+Inductive option_R (A B : Type) (eqA : A -> B -> Prop)
+: option A -> option B -> Prop :=
+| option_R_Some a b : eqA a b -> option_R eqA ⎣a⎦ ⎣b⎦.
+
+
+Lemma option_R_refl A R `{Reflexive A R} : forall x, option_R R ⎣x⎦ ⎣x⎦.
+intros; eauto using option_R.
+Qed.
+
+Instance option_R_sym A R `{Symmetric A R} : Symmetric (option_R R).
+hnf; intros ? [] []; eauto using option_R.
+Qed.
+
+Instance option_R_trans A R `{Transitive A R} : Transitive (option_R R).
+hnf; intros. inv H0; inv H1; econstructor; eauto.
+Qed.
+
 (*
 *** Local Variables: ***
 *** coq-load-path: (("../" "Lvc")) ***

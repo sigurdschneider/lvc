@@ -3,7 +3,7 @@ Require Import CSet Le.
 Require Import Plus Util AllInRel Map.
 Require Import CSet Val Var Env EnvTy IL Sim Fresh Annotation MoreExp Coherence LabelsDefined DecSolve.
 
-Require Import Liveness Filter SetOperations ValueOpts Lattice.
+Require Import Liveness Filter SetOperations Eqn ValueOpts Lattice.
 
 Set Implicit Arguments.
 Unset Printing Records.
@@ -270,20 +270,22 @@ Definition cp_choose_exp E e :=
   end.
 
 
-Fixpoint cp_choose (AE:onv aval) s : ann args :=
+Fixpoint constantPropagate (AE:onv aval) s : stmt :=
   match s with
     | stmtExp x e s =>
-      ann1 (cp_choose_exp AE e::nil) (cp_choose AE s)
+      stmtExp x (cp_choose_exp AE e) (constantPropagate AE s)
     | stmtIf e s t =>
-        ann2 (cp_choose_exp AE e::nil)
-             (cp_choose (update_cond AE e true) s)
-             (cp_choose (update_cond AE e false) t)
+      stmtIf (cp_choose_exp AE e)
+             (constantPropagate (update_cond AE e true) s)
+             (constantPropagate (update_cond AE e false) t)
     | stmtGoto f Y =>
-      ann0 (List.map (cp_choose_exp AE) Y)
-    | stmtReturn e => ann0 (cp_choose_exp AE e::nil)
+      stmtGoto f (List.map (cp_choose_exp AE) Y)
+    | stmtReturn e => stmtReturn (cp_choose_exp AE e)
+    | stmtExtern x f Y s =>
+      stmtExtern x f (List.map (cp_choose_exp AE) Y)
+                 (constantPropagate AE s)
     | stmtLet Z s t =>
-      ann2 nil (cp_choose AE s) (cp_choose AE t)
-    | _ => ann0 nil
+      stmtLet Z (constantPropagate AE s) (constantPropagate AE t)
   end.
 
 Lemma zip2Ann_get X Y Z (f:X->Y->Z) a b z
@@ -619,7 +621,7 @@ cp_sound AE Cp s
               -> (exists AE', aY = lookup_list AE' Z
                        /\ snd a [=] cp_eqns AE' (of_list Z))
                 /\ (fst (fst (fst a))) = Z)
--> eqn_sound Es s Gamma ang (cp_choose AE s).
+-> eqn_sound Es s (constantPropagate AE s) Gamma ang.
 Proof.
   intro. subst Gamma.
   intros CP SSA LD LINV.

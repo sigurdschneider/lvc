@@ -88,7 +88,7 @@ Definition optimize (s':stmt) : status stmt :=
              "Constant propagation unsound";
       ensure (forall x, x ∈ freeVars s' -> AE x = None)
              "Constant propagation makes no assumptions on free vars";
-      let s := ValueOpts.compile s (ConstantPropagation.cp_choose AE s) in
+      let s := ConstantPropagation.constantPropagate AE s in
       sdo lv <- livenessAnalysis s;
       ensure (Liveness.true_live_sound Liveness.Functional nil s lv) "Liveness unsound (2)";
       Success (DVE.compile nil s lv)
