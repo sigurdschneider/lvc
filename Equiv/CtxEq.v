@@ -94,7 +94,8 @@ Proof.
   - pone_step.
     eapply IHs2; eauto.
     eapply simL_extension'; hnf; intros; eauto.
-    hnf in H0; dcr; subst.
+    hnf in H; dcr; subst.
+    split; simpl; eauto. intros; dcr; subst.
     eapply IHs1; eauto.
 Qed.
 
