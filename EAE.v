@@ -116,7 +116,7 @@ Fixpoint compile s
     | stmtExp x e s => stmtExp x e (compile s)
     | stmtIf x s t => stmtIf x (compile s) (compile t)
     | stmtGoto l Y  =>
-      let xl := fresh_list (list_union (List.map Exp.freeVars Y)) (length Y) in
+      let xl := fresh_list fresh (list_union (List.map Exp.freeVars Y)) (length Y) in
       list_to_stmt xl Y (stmtGoto l (List.map Var xl))
     | stmtReturn x => stmtReturn x
     | stmtExtern x f Y s => stmtExtern x f Y (compile s)
@@ -178,9 +178,9 @@ Proof.
     pfold. econstructor 3; try eapply star2_refl; eauto; stuck.
   - case_eq (omap (exp_eval V) Y); intros.
     + exploit (list_to_stmt_correct L' V (stmtGoto l (List.map Var
-            (fresh_list (list_union (List.map Exp.freeVars Y)) (length Y))))).
+            (fresh_list fresh (list_union (List.map Exp.freeVars Y)) (length Y))))).
       rewrite fresh_list_length; eauto. eauto.
-      eapply fresh_list_unique. eapply fresh_list_spec.
+      eapply fresh_list_unique. eapply fresh_spec. eapply fresh_list_spec. eapply fresh_spec.
       destruct (get_dec L (counted l)) as [[[bE bZ bs]]|].
       * edestruct AIR5_length; try eassumption; dcr.
         edestruct get_length_eq; try eassumption.
@@ -196,9 +196,9 @@ Proof.
         eapply omap_exp_eval_agree. Focus 2.
         eapply omap_lookup_vars.
         rewrite fresh_list_length. eapply omap_length; eauto.
-        eapply fresh_list_unique.
+        eapply fresh_list_unique. eapply fresh_spec.
         eapply update_with_list_agree'. rewrite fresh_list_length, map_length.
-        eapply omap_length; eauto. eapply fresh_list_unique.
+        eapply omap_length; eauto. eapply fresh_list_unique. eapply fresh_spec.
         eapply X.
         hnf in H15. hnf in H17. dcr; simpl in *. pfold.
         econstructor 3; try eapply X; try eapply star2_refl. subst.
@@ -211,8 +211,8 @@ Proof.
         stuck2; eauto.
         edestruct AIR5_nth2 as [? [?[? [?]]]]; try eassumption; dcr. eauto.
     + edestruct list_to_stmt_crash; eauto.
-      eapply fresh_list_length. eapply fresh_list_unique.
-      eapply fresh_list_spec. dcr.
+      eapply fresh_list_length. eapply fresh_list_unique. eapply fresh_spec.
+      eapply fresh_list_spec. eapply fresh_spec. dcr.
       pfold. econstructor 3; try eapply H2; try eapply star2_refl.
       simpl in *. congruence. stuck2. eapply H5.
   - pfold. econstructor 3; try eapply star2_refl.

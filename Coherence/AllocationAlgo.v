@@ -2,6 +2,7 @@ Require Import CSet Le Arith.Compare_dec.
 
 Require Import Plus Util Map Status.
 Require Import Val Var Env EnvTy IL Annotation Liveness Fresh Sim MoreList.
+Require Import Coherence Allocation.
 
 Set Implicit Arguments.
 
@@ -20,69 +21,6 @@ End ParametricDualFold.
 
 Arguments dfold [A] [X] [Y] f a L L'.
 
-(*
-Variable oracle : var -> live -> env var -> option var.
-
-Hypothesis oracle_sound' 
-  : forall lv ra x xr, oracle x lv ra = Some xr -> ~xr ∈ lookup_set ra lv.
-*)
-
-Fixpoint oracle_list (L:list var) (lv:set var) (ϱ:var -> var)
-  : list var :=
-  match L with
-    | nil => nil
-    | x::L => 
-      let xr := least_fresh (lookup_set ϱ (lv\{{x}})) in
-        let xl := oracle_list L ({{x}} ∪ lv) (ϱ[x<-xr]) in
-          xr::xl
-  end.
-(*
--Lemma oracle_list_unique L lv ra L'
--  :  oracle_list L lv ra = Some L'
--  -> forall (a:var), a ∈ (lv\of_list L) -> Util.fresh (ra a) L'.
--Proof.
--  general induction L; isabsurd; simpl in *.
--  monad_inv H.
--  specialize (IHL _ _ _ EQ1); eauto. 
--  intro. simpl in H.  
--
--  pose proof (oracle_sound' EQ).
--  destruct H. subst. eapply H1. eapply lookup_set_spec.
--  intuition. 
--  eexists a0. cset_tac; intuition. 
--(*  eapply (IHL a0). eapply minus_in_in in H0. destruct H0.
--  eapply in_in_minus.
--  cset_tac. firstorder. intro. eapply H2. cset_tac; eauto.
--  assert (a0 <> a). intro; subst. eapply minus_in_in in H0.
--  destruct H0. eapply H2. cset_tac; firstorder.
--  simplify lookup. eauto. *)
--Qed.
--
--Lemma oracle_list_inj Z (bv:live) (ra:env var) YL
--  :  unique Z
--  -> oracle_list Z (bv\fromList Z) ra = Some YL
--  -> inj_mapping (lookup_set ra (bv\fromList Z)) Z YL.
--Proof.
--  general induction Z; simpl in *; eauto using inj_mapping.
--  monad_inv H. destruct X.  
--  erewrite set_fact_1 in EQ1; eauto using inst_eq_dec_var, fresh_fromList.
--  pose proof (IHZ _ _ _ u EQ1); eauto.
--  econstructor; eauto. 
--  eapply inj_mapping_incl; eauto.
--  erewrite lookup_set_agree. eapply lookup_set_incl.
--  hnf; cset_tac; firstorder.
--  apply agree_on_sym. rewrite union_comm, <- minus_union. eapply agree_on_update_dead.
--  cset_tac; firstorder. eapply agree_on_refl.
--  pose proof (oracle_list_unique _ _ _ EQ1 a).
--  simplify lookup. eapply X0.
--  cset_tac. left; left; firstorder.
--  eapply f. eapply in_fromList. eauto. 
--  eapply f. eapply in_fromList. eauto.
--  rewrite set_fact_2 in EQ.
--  eauto using oracle_sound'.
--Qed.
-*)
-
 Fixpoint linear_scan (st:stmt) (an: ann (set var)) (ϱ:var -> var)
   : status (var -> var) :=
  match st, an with
@@ -94,43 +32,332 @@ Fixpoint linear_scan (st:stmt) (an: ann (set var)) (ϱ:var -> var)
         linear_scan t ant ϱ'
     | stmtGoto _ _, ann0 _ => Success ϱ
     | stmtReturn _, ann0 _ => Success ϱ
+    | stmtExtern x f Y s, ann1 lv ans =>
+      let xv := least_fresh (lookup_set ϱ (getAnn ans\{{x}})) in
+      linear_scan s ans (ϱ[x<- xv])
     | stmtLet Z s t, ann2 _ ans ant =>
-      let Z' := oracle_list Z (getAnn ans\of_list Z) ϱ in
+      let Z' := fresh_list least_fresh (lookup_set ϱ (getAnn ans\of_list Z)) (length Z) in
       sdo ϱ' <- linear_scan s ans (ϱ[Z <-- Z']);
         linear_scan t ant ϱ'
     | _, _ => Error "linear_scan: Annotation mismatch"
   end.
 
-(*
-Lemma ralloc_ra_correct LT ET rt s Lv lv (alv:ann s lv) (LS:live_sound Lv alv) ra 
-  (rk:injective_on lv ra)
-  (sd:FunTS.stmtOfType LT ET s rt)
-  alr (rallocOK:ralloc_ra LS ra = Some alr)
-  : ra_sound alv alr.
+
+Hint Extern 10 (agree_on _ _?a ?a) => reflexivity.
+
+Lemma linear_scan_ssa_agree' i s al ϱ ϱ' LV alv G
+      (sd:ssa s al)
+      (LS:live_sound i LV s alv)
+      (allocOK:linear_scan s alv ϱ = Success ϱ')
+: agree_on eq (G \ (snd (getAnn al) \ fst (getAnn al))) ϱ ϱ'.
+Proof.
+  general induction LS; inv sd; simpl in * |- *; try monadS_inv allocOK; eauto.
+  - exploit IHLS; eauto.
+    rewrite H8 in X; simpl in *.
+    eapply agree_on_incl.
+    eapply agree_on_update_inv. eapply X.
+    instantiate (1:=G).
+    pose proof (ssa_incl H7); eauto. rewrite H8 in H1. simpl in *.
+    revert H4 H1; clear_all; cset_tac; intuition.
+    invc H. specialize (H1 a). cset_tac; intuition.
+  - exploit IHLS1; eauto.
+    exploit IHLS2; eauto.
+    rewrite H11 in X. rewrite H12 in X0. simpl in *.
+    etransitivity; eapply agree_on_incl; eauto.
+    instantiate (1:=G). rewrite <- H7. clear_all; intro; cset_tac; intuition.
+    instantiate (1:=G). rewrite <- H7. clear_all; intro; cset_tac; intuition.
+  - exploit IHLS; eauto.
+    rewrite H9 in X; simpl in *.
+    eapply agree_on_incl.
+    eapply agree_on_update_inv. eapply X.
+    instantiate (1:=G).
+    pose proof (ssa_incl H8); eauto. rewrite H9 in H1. simpl in *.
+    revert H5 H1; clear_all; cset_tac; intuition.
+    invc H. specialize (H1 a). cset_tac; intuition.
+  - exploit IHLS1; eauto.
+    exploit IHLS2; eauto.
+    rewrite H9 in X. rewrite H12 in X0. simpl in *.
+    etransitivity; try eapply X0.
+    eapply agree_on_incl. eapply update_with_list_agree_inv; try eapply X; eauto.
+    rewrite fresh_list_length; eauto.
+    instantiate (1:=G). rewrite <- H7.
+    pose proof (ssa_incl H8); eauto. rewrite H9 in H2. simpl in *.
+    revert H5 H2; clear_all; cset_tac; intuition; eauto.
+    specialize (H2 a). specialize (H3 a). cset_tac; intuition.
+    eapply agree_on_incl; eauto. instantiate (1:=G).
+    rewrite <- H7. clear_all; cset_tac; intuition; eauto.
+Qed.
+
+Lemma linear_scan_ssa_agree i s al ϱ ϱ' LV alv
+      (sd:ssa s al)
+      (LS:live_sound i LV s alv)
+      (allocOK:linear_scan s alv ϱ = Success ϱ')
+: agree_on eq (fst (getAnn al)) ϱ ϱ'.
+Proof.
+  general induction LS; inv sd; simpl in * |- *; try monadS_inv allocOK; eauto.
+  - exploit IHLS; eauto.
+    rewrite H8 in X; simpl in *.
+    eapply agree_on_incl.
+    eapply agree_on_update_inv; eauto. cset_tac; intuition.
+  - exploit IHLS1; eauto.
+    exploit IHLS2; eauto.
+    rewrite H11 in X. rewrite H12 in X0. simpl in *.
+    etransitivity; eauto.
+  - exploit IHLS; eauto.
+    rewrite H9 in X; simpl in *.
+    eapply agree_on_incl.
+    eapply agree_on_update_inv; eauto. cset_tac; intuition.
+  - exploit IHLS1; eauto.
+    exploit IHLS2; eauto.
+    rewrite H9 in X. rewrite H12 in X0. simpl in *.
+    etransitivity; try eapply X0.
+    eapply agree_on_incl. eapply update_with_list_agree_inv; try eapply X; eauto.
+    rewrite fresh_list_length; eauto.
+    revert H5; clear_all; cset_tac; intuition; eauto.
+Qed.
+
+Hint Extern 10 (Subset ?a (_ ∪ ?a)) => eapply incl_right.
+
+Lemma locally_inj_live_agree s ϱ ϱ' ara alv LV
+      (LS:live_sound Functional LV s alv)
+      (sd: ssa s ara)
+      (inj: locally_inj ϱ s alv)
+      (agr: agree_on eq (snd (getAnn ara)) ϱ ϱ')
+      (incl:getAnn alv ⊆ fst (getAnn ara))
+: locally_inj ϱ' s alv.
 Proof.
   intros.
-  general induction LS; simpl in *; monad_inv rallocOK; inv sd;
-    eauto 10 using ra_sound, injective_on_incl.
-  econstructor; eauto using oracle_sound'. 
-  eapply IHLS; eauto.
-  decide (x ∈ bv). 
-  rewrite (add_inane _ _ i0). 
-  eauto using injective_on_fresh, injective_on_incl, oracle_sound'.
-  rewrite (minus_inane _ _ n).
-  eauto using injective_on_dead, injective_on_incl.
-  econstructor; eauto.
-  eapply IHLS1; eauto. 
-  eapply injective_on_incl. eapply incl_union_minus.
-  eapply injective_on_mapping. eauto using injective_on_incl.
-  eapply oracle_list_inj; eauto.
-  eapply IHLS2; eauto using injective_on_incl.
-  eauto using oracle_list_inj.
+  general induction inj; invt ssa; invt live_sound; simpl in *.
+  - econstructor; eauto.
+    + eapply IHinj; eauto. rewrite H8; simpl; eauto.
+      rewrite H8; simpl.
+      revert H13 incl; clear_all; cset_tac; intuition.
+      specialize (H13 a). decide (x === a); cset_tac; intuition.
+    + eapply injective_on_agree; eauto.
+      eapply agree_on_incl; eauto.
+      exploit ssa_incl; eauto. simpl in *. etransitivity; eauto.
+    + eapply injective_on_agree; eauto.
+      eapply agree_on_incl; eauto.
+      exploit ssa_incl; try eapply H7; eauto.
+      rewrite H8 in *.
+      simpl in *. rewrite incl in H13.
+      revert H13 X; clear_all; cset_tac; intuition.
+      specialize (X a); specialize (H13 a); cset_tac; intuition; eauto.
+      decide (x === a); eauto.
+  - econstructor; eauto.
+    eapply injective_on_agree; eauto.
+    eapply agree_on_incl; eauto.
+    exploit ssa_incl; eauto. simpl in *. etransitivity; eauto.
+    + eapply IHinj1; eauto.
+      rewrite H9; simpl. eapply agree_on_incl; eauto. rewrite <- H5; cset_tac; intuition.
+      rewrite H9; simpl. rewrite <- incl; eauto.
+    + eapply IHinj2; eauto.
+      rewrite H10; simpl. eapply agree_on_incl; eauto. rewrite <- H5; cset_tac; intuition.
+      rewrite H10; simpl. rewrite <- incl; eauto.
+  - econstructor; eauto.
+    eapply injective_on_agree; eauto.
+    eapply agree_on_incl; eauto.
+    exploit ssa_incl; eauto. simpl in *. etransitivity; eauto.
+  - econstructor; eauto.
+    eapply injective_on_agree; eauto.
+    eapply agree_on_incl; eauto.
+    exploit ssa_incl; eauto. simpl in *. etransitivity; eauto.
+  - econstructor; eauto.
+    + eapply IHinj; eauto. rewrite H9; simpl; eauto.
+      rewrite H9; simpl.
+      revert H14 incl; clear_all; cset_tac; intuition.
+      specialize (H14 a). decide (x === a); cset_tac; intuition.
+    + eapply injective_on_agree; eauto.
+      eapply agree_on_incl; eauto.
+      exploit ssa_incl; eauto. simpl in *. etransitivity; eauto.
+    + eapply injective_on_agree; eauto.
+      eapply agree_on_incl; eauto.
+      exploit ssa_incl; try eapply H8; eauto.
+      rewrite H9 in *.
+      simpl in *. rewrite incl in H14.
+      revert H14 X; clear_all; cset_tac; intuition.
+      specialize (X a); specialize (H14 a); cset_tac; intuition; eauto.
+      decide (x === a); eauto.
+  - econstructor; eauto.
+    eapply IHinj1; eauto.
+    eapply agree_on_incl; eauto.
+    exploit ssa_incl; try eapply H7; eauto. rewrite H8 in X. simpl in *.
+    rewrite H8; simpl. rewrite <- H6. cset_tac; intuition.
+    rewrite H8; simpl. rewrite <- incl. rewrite <- H19.
+    clear_all; cset_tac; intuition.
+    eapply IHinj2; eauto.
+    eapply agree_on_incl; eauto.
+    rewrite H11. simpl. rewrite <- H6. cset_tac; intuition.
+    rewrite H11; simpl. rewrite <- incl. rewrite <- H20. reflexivity.
+    + eapply injective_on_agree; eauto.
+      eapply agree_on_incl; eauto.
+      exploit ssa_incl; eauto. simpl in *. etransitivity; eauto.
+    + eapply injective_on_agree; eauto.
+      eapply agree_on_incl; eauto.
+      exploit ssa_incl; try eapply H7; eauto. rewrite H8 in X. simpl in *.
+      rewrite <- H6. rewrite <- X, <- incl, <- H19.
+      clear_all; cset_tac; intuition.
+      decide (a ∈ of_list Z); eauto.
 Qed.
-*)
 
-(* 
+Lemma linear_scan_correct (ϱ:var->var) LV s alv ϱ' al
+      (LS:live_sound Functional LV s alv)
+      (inj:injective_on (getAnn alv) ϱ)
+      (allocOK:linear_scan s alv ϱ = Success ϱ')
+      (incl:getAnn alv ⊆ fst (getAnn al))
+      (sd:ssa s al)
+: locally_inj ϱ' s alv.
+Proof.
+  intros.
+  general induction LS; simpl in *; try monadS_inv allocOK; invt ssa;
+    eauto 10 using locally_inj, injective_on_incl.
+  - exploit IHLS; try eapply allocOK; eauto.
+    + eapply injective_on_incl.
+      eapply injective_on_fresh; eauto using injective_on_incl, least_fresh_spec.
+      eauto.
+    + rewrite H8. simpl in *. rewrite <- incl.
+      revert H0; clear_all; cset_tac; intuition.
+      decide (x === a); eauto. left; eapply H0; cset_tac; intuition.
+    + exploit linear_scan_ssa_agree; try eapply allocOK; simpl; eauto using live_sound.
+      rewrite H8 in *.
+      simpl in *.
+      econstructor. eauto using injective_on_incl.
+      eapply injective_on_agree; try eapply inj.
+      eapply agree_on_incl.
+      eapply agree_on_update_inv. eapply X0.
+      revert H4 incl; clear_all; cset_tac; intuition. invc H0. eauto.
+      exploit locally_injective; eauto.
+      eapply injective_on_agree; try eapply X0.
+      Focus 2.
+      eapply agree_on_incl; eauto. rewrite <- incl.
+      revert H0; clear_all; cset_tac; intuition.
+      decide (x === a). intuition.
+      left. eapply H0; eauto. cset_tac; intuition.
+      eapply injective_on_incl.
+      eapply injective_on_fresh; eauto.
+      Focus 2.
+      eapply least_fresh_spec.
+      eapply injective_on_incl; eauto.
+      cset_tac; intuition.
+  - exploit linear_scan_ssa_agree; try eapply EQ; simpl; eauto using live_sound.
+    exploit linear_scan_ssa_agree; try eapply EQ0; simpl; eauto using live_sound.
+    rewrite H11 in X. rewrite H12 in X0.
+    simpl in *.
+    exploit IHLS1; eauto using injective_on_incl.
+    rewrite H11; simpl. rewrite <- incl; eauto.
+    exploit IHLS2; try eapply EQ0; eauto using injective_on_incl.
+    eapply injective_on_incl; eauto.
+    eapply injective_on_agree; eauto using agree_on_incl.
+    rewrite H12; simpl. rewrite <- incl; eauto.
+    econstructor; eauto.
+    assert (agree_on eq D ϱ ϱ'). etransitivity; eauto.
+    eapply injective_on_agree; eauto. eauto using agree_on_incl.
+    eapply locally_inj_live_agree. eauto. eauto. eauto.
+    rewrite H11; simpl; eauto.
+    exploit linear_scan_ssa_agree'; try eapply EQ0; simpl; eauto using live_sound.
+    rewrite H12 in X3. simpl in *. instantiate (1:=Ds) in X3.
+    eapply agree_on_incl. eapply X3.
+    revert H6; clear_all; cset_tac; intuition. specialize (H6 a). intuition.
+    rewrite H11; simpl. rewrite <- incl; eauto.
+  - exploit IHLS; try eapply allocOK; eauto.
+    + eapply injective_on_incl.
+      eapply injective_on_fresh; eauto using injective_on_incl, least_fresh_spec.
+      eauto.
+    + rewrite H9. simpl in *. rewrite <- incl.
+      revert H0; clear_all; cset_tac; intuition.
+      decide (x === a); eauto. left; eapply H0; cset_tac; intuition.
+    + exploit linear_scan_ssa_agree; try eapply allocOK; simpl; eauto using live_sound.
+      rewrite H9 in *.
+      simpl in *.
+      econstructor. eauto using injective_on_incl.
+      eapply injective_on_agree; try eapply inj.
+      eapply agree_on_incl.
+      eapply agree_on_update_inv. eapply X0.
+      revert H5 incl; clear_all; cset_tac; intuition. invc H0. eauto.
+      exploit locally_injective; eauto.
+      eapply injective_on_agree; try eapply X0.
+      Focus 2.
+      eapply agree_on_incl; eauto. rewrite <- incl.
+      revert H0; clear_all; cset_tac; intuition.
+      decide (x === a). intuition.
+      left. eapply H0; eauto. cset_tac; intuition.
+      eapply injective_on_incl.
+      eapply injective_on_fresh; eauto.
+      Focus 2.
+      eapply least_fresh_spec.
+      eapply injective_on_incl; eauto.
+      cset_tac; intuition.
+  - simpl in *.
+    exploit linear_scan_ssa_agree; try eapply EQ; simpl; eauto using live_sound.
+    exploit linear_scan_ssa_agree; try eapply EQ0; simpl; eauto using live_sound.
+    exploit IHLS1; eauto.
+    + eapply injective_on_incl.
+      instantiate (1:=getAnn als \ of_list Z ++ of_list Z).
+      eapply injective_on_fresh_list; eauto.
+      eapply injective_on_incl; eauto.
+      rewrite fresh_list_length; eauto.
+      eapply fresh_list_spec. eapply least_fresh_spec.
+      eapply fresh_list_unique, least_fresh_spec.
+      clear_all; cset_tac; intuition.
+      decide (a ∈ of_list Z); intuition.
+    + rewrite H9. simpl. rewrite <- incl.
+      revert H0; clear_all; cset_tac; intuition.
+      specialize (H0 a). cset_tac; intuition.
+      decide (a ∈ of_list Z); intuition.
+    + assert (injective_on lv ϱ').
+      eapply injective_on_incl.
+      eapply injective_on_agree; try eapply inj; eauto.
+      etransitivity.
+      eapply agree_on_incl.
+      eapply update_with_list_agree_inv; try eapply X; eauto.
+      rewrite fresh_list_length; eauto.
+      rewrite H9; simpl. rewrite incl.
+      revert H5; clear_all; cset_tac; intuition; eauto.
+      eapply agree_on_incl; eauto. rewrite H12; simpl; eauto. reflexivity.
+      exploit IHLS2; try eapply EQ0; eauto using injective_on_incl.
+      * eapply injective_on_incl.
+        eapply injective_on_agree; try eapply inj; eauto.
+        eapply agree_on_incl.
+        eapply update_with_list_agree_inv; try eapply X; eauto.
+        rewrite fresh_list_length; eauto.
+        rewrite H9; simpl. rewrite incl.
+        revert H5; clear_all; cset_tac; intuition; eauto. eauto.
+      * rewrite H12. simpl. simpl in *. rewrite <- incl. eauto.
+      * econstructor; eauto.
+        eapply locally_inj_live_agree; eauto.
+        rewrite H9. simpl.
+        eapply agree_on_incl.
+        eapply linear_scan_ssa_agree'; try eapply EQ0; eauto.
+        rewrite H12; simpl. instantiate (1:=Ds).
+        revert H6; clear_all; cset_tac; intuition eauto.
+        specialize (H6 a); intuition.
+        rewrite H9. simpl. rewrite <- incl.
+        revert H0; clear_all; cset_tac; intuition.
+        specialize (H0 a). cset_tac; intuition.
+        decide (a ∈ of_list Z); intuition.
+        eapply injective_on_incl. instantiate (1:=(getAnn als \ of_list Z) ∪ of_list Z).
+        eapply injective_on_agree with (ϱ:=(ϱ [Z <--
+         fresh_list least_fresh (lookup_set ϱ (getAnn als \ of_list Z))
+           (length Z)])).
+        eapply injective_on_fresh_list; eauto using injective_on_incl.
+        rewrite fresh_list_length; eauto.
+        eapply fresh_list_spec. eapply least_fresh_spec.
+        eapply fresh_list_unique. eapply least_fresh_spec.
+        etransitivity. eapply agree_on_incl; eauto.
+        rewrite H9; simpl. rewrite H0, incl. cset_tac; intuition.
+        eapply agree_on_incl.
+        exploit linear_scan_ssa_agree'; try eapply EQ0; simpl; eauto using live_sound.
+        rewrite H12; simpl. instantiate (1:=D ++ of_list Z).
+        exploit ssa_incl; try eapply H8. rewrite H9 in X3; simpl in *.
+        rewrite H0. rewrite incl.
+        revert X3 H6; clear_all; cset_tac; intuition.
+        specialize (X3 a); specialize (H6 a); cset_tac; intuition.
+        clear_all; cset_tac; intuition. decide (a ∈ of_list Z); eauto.
+Qed.
+
+
+(*
 *** Local Variables: ***
-*** coq-load-path: (("." "Lvc")) ***
+*** coq-load-path: ((".." "Lvc")) ***
 *** End: ***
 *)
-

@@ -83,6 +83,15 @@ Section MapAgreement.
     eapply B; eauto.
   Qed.
 
+  Lemma agree_on_update_inv R (lv:set X) (E E':X -> Y) x v
+  : agree_on R lv (E [x <- v]) E'
+    -> agree_on R (lv \ {{ x }}) E E'.
+  Proof.
+    intros A B.
+    hnf; intros. cset_tac.
+    exploit A; eauto. lud; eauto.
+  Qed.
+
   Lemma agree_on_update_dead_both R (lv:set X) (E E':X -> Y) x v v'
     : ~x ∈ lv
     -> agree_on R lv E E'

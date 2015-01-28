@@ -134,6 +134,20 @@ Qed.
     eauto using agree_on_incl, incl_minus.
   Qed.
 
+  Lemma update_with_list_agree_inv lv (E E':X -> Y) XL YL
+  : length XL = length YL
+    -> agree_on R lv (E' [ XL <-- YL ]) E
+    -> agree_on R (lv\of_list XL) E' E.
+  Proof.
+    intros. eapply length_length_eq in H1.
+    general induction H1; simpl in * |- *.
+    - eapply agree_on_incl; eauto. cset_tac; intuition.
+    - rewrite add_union_singleton. rewrite <- minus_union.
+      eapply IHlength_eq; eauto.
+      eapply agree_on_incl. eapply agree_on_update_inv; eauto.
+      cset_tac; intuition.
+  Qed.
+
   Lemma update_with_list_agree_self  `{Defaulted X} lv (E:X -> Y) XL YL
     : agree_on R (lv\of_list XL) (E [ XL <-- YL]) E.
   Proof.

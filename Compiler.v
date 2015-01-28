@@ -14,7 +14,6 @@ Set Implicit Arguments.
 
 Section Compiler.
 
-Hypothesis allocation_oracle : stmt -> ann (set var) -> (var -> var) -> status (var -> var).
 Hypothesis ssa_construction : stmt -> ann (option (set var)) * ann (list var).
 Hypothesis parallel_move : var -> list var -> list var -> (list(list var * list var)).
 Hypothesis first : forall (A:Type), A -> ( A -> status (A * bool)) -> status A.
@@ -101,9 +100,8 @@ Definition fromILF (s:stmt) : status stmt :=
   sdo lv <- livenessAnalysis s_renamed_apart;
      if [Liveness.live_sound Liveness.Functional nil s_renamed_apart lv
          /\ getAnn lv ⊆ freeVars s_hoisted] then
-       sdo ϱ <- allocation_oracle s_renamed_apart lv id;
-       if [agree_on _eq (getAnn lv) ϱ id
-           /\ Allocation.locally_inj ϱ s_renamed_apart lv ] then
+       sdo ϱ <- AllocationAlgo.linear_scan s_renamed_apart lv id;
+       if [agree_on _eq (getAnn lv) ϱ id /\ getAnn lv ⊆ freeVars s_hoisted] then
          let s_allocated := rename ϱ s_renamed_apart in
          let s_lowered := ParallelMove.lower parallel_move nil s_allocated (mapAnn (lookup_set ϱ) lv) in
          s_lowered
@@ -233,6 +231,10 @@ Proof.
   eapply Alpha.alphaSim_sim. econstructor; eauto using AIR3.
   eapply Allocation.ssa_locally_inj_alpha; eauto.
   eapply rename_apart_ssa; eauto; eapply lookup_set_on_id; try reflexivity.
+  eapply AllocationAlgo.linear_scan_correct; eauto.
+  hnf; intros. cbv in H5. subst. reflexivity.
+  Focus 2.
+  eapply rename_apart_ssa; eauto. rewrite fst_ssa_ann. eauto.
   instantiate (1:=id).
   eapply (inverse_on_agree_on (inverse_on_id (G:=getAnn x))).
   symmetry; eauto. reflexivity.
@@ -242,6 +244,11 @@ Proof.
   eapply Coherence.srdSim_sim.
   econstructor; isabsurd. eapply Allocation.rename_ssa_srd; eauto.
   eapply rename_apart_ssa; eauto. rewrite fst_ssa_ann; eauto.
+  eapply AllocationAlgo.linear_scan_correct; eauto.
+  hnf; intros. cbv in H5. subst. reflexivity.
+  Focus 2.
+  eapply rename_apart_ssa; eauto.
+  rewrite fst_ssa_ann. eauto.
   rewrite fst_ssa_ann; eauto.
   eapply I. econstructor. reflexivity.
   eapply (@Liveness.live_rename_sound _ nil); eauto.

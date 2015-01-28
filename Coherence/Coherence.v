@@ -43,6 +43,7 @@ Inductive ssa : stmt -> ann (set var * set var) -> Prop :=
       -> pe (getAnn ans) (of_list Z ∪ D, Ds)
       -> ssa t ant
       -> pe (getAnn ant) (D, Dt)
+      -> unique Z
       -> ssa (stmtLet Z s t) (ann2 (D,D') ans ant).
 
 Lemma ssa_ext s an an'
@@ -68,11 +69,12 @@ Proof.
     eapply IHssa; eauto. rewrite <- H7, <- H10.
     rewrite <- (ann_R_get H8). eauto.
 
-  - econstructor. rewrite <- H7; eauto.
-    rewrite <- H7; eauto.
-    rewrite <- H12; eauto.
-    eapply IHssa1; eauto. rewrite <- H7. rewrite <- (ann_R_get H10); eauto.
-    eapply IHssa2; eauto. rewrite <- H7. rewrite <- (ann_R_get H11); eauto.
+  - econstructor. rewrite <- H8; eauto.
+    rewrite <- H8; eauto.
+    rewrite <- H13; eauto.
+    eapply IHssa1; eauto. rewrite <- H8. rewrite <- (ann_R_get H11); eauto.
+    eapply IHssa2; eauto. rewrite <- H8. rewrite <- (ann_R_get H12); eauto.
+    eauto.
 Qed.
 
 Instance ssa_morphism
@@ -94,7 +96,7 @@ Proof.
   - eapply H0; eauto.
   - rewrite H2 in IHssa; simpl in *.
     eapply IHssa. cset_tac; intuition.
-  - eapply H1. eapply H0 in H6. left; eapply H6.
+  - eapply H1. eapply H0 in H7. left; eapply H7.
 Qed.
 
 Lemma ssa_freeVars s an
@@ -107,7 +109,7 @@ Proof.
     cset_tac; intuition.
   - rewrite H0, IHssa, H2; simpl. cset_tac; intuition.
   - rewrite IHssa1, IHssa2. inv H3; inv H5; simpl.
-    rewrite H9, H12. cset_tac; intuition.
+    rewrite H10, H13. cset_tac; intuition.
 Qed.
 
 Definition pminus (D'':set var) s :=
@@ -171,16 +173,16 @@ Proof.
       clear_all; cset_tac; intuition; eauto. eapply H9. rewrite H0; eauto.
       rewrite H11; reflexivity.
   - econstructor; eauto.
-    revert H H8; clear_all; cset_tac; intuition; eauto.
+    revert H H9; clear_all; cset_tac; intuition; eauto.
     rewrite <- H0. rewrite minus_dist_intersection. reflexivity.
     rewrite <- H1. rewrite minus_dist_union. reflexivity.
     eapply IHssa1; eauto; reflexivity.
     rewrite getAnn_mapAnn; simpl. inv H2; simpl.
-    rewrite H11, H12. constructor; try reflexivity.
-    revert H8; clear_all; cset_tac; intuition; eauto.
+    rewrite H12, H13. constructor; try reflexivity.
+    revert H9; clear_all; cset_tac; intuition; eauto.
     eapply IHssa2; eauto; reflexivity.
     rewrite getAnn_mapAnn; simpl. inv H3; simpl.
-    rewrite H11, H12. reflexivity.
+    rewrite H12, H13. reflexivity.
 Qed.
 
 (* shadowing free *)

@@ -44,7 +44,6 @@ Inductive locally_inj (rho:env var) : stmt -> ann (set var) -> Prop :=
   -> locally_inj rho b alvb
   -> injective_on lv rho
   -> injective_on (getAnn alvs ∪ of_list Z) rho
-  -> inj_mapping (lookup_set rho (getAnn alvs\of_list Z)) Z (lookup_list rho Z)
   -> locally_inj rho (stmtLet Z s b) (ann2 lv alvs alvb).
 
 (** local injectivity is decidable *)
@@ -98,10 +97,10 @@ Proof.
   unfold Proper, respectful, impl; intros; subst.
   general induction H2; assert (FEQ:x ≡ y) by first [eapply H0 | eapply H1 | eapply H2];  econstructor; eauto;
   try rewrite <- FEQ; eauto.
-  assert (lookup_set y (getAnn alvs \ of_list Z) [=] lookup_set x (getAnn alvs \ of_list Z)).
+(*  assert (lookup_set y (getAnn alvs \ of_list Z) [=] lookup_set x (getAnn alvs \ of_list Z)).
   rewrite H2. reflexivity.
   rewrite H3. assert (lookup_list y Z = lookup_list x Z).
-  rewrite FEQ; eauto. rewrite H4. eauto.
+  rewrite FEQ; eauto. rewrite H4. eauto.*)
 Qed.
 
 (** local injectivity means injectivity on the live variables *)
@@ -182,11 +181,11 @@ Proof.
         cset_tac; intuition. simpl in *. eapply H7; rewrite H2; eauto.
   - econstructor; eauto.
     + eapply srd_monotone.
-      * eapply IHRI1; eauto. simpl in *. rewrite H15; simpl.
-        rewrite <- INCL. rewrite <- H13. eapply incl_union_minus.
-        simpl. split. rewrite H13, H15; simpl. cset_tac; intuition.
+      * eapply IHRI1; eauto. simpl in *. rewrite H14; simpl.
+        rewrite <- INCL. rewrite <- H12. eapply incl_union_minus.
+        simpl. split. rewrite H12, H14; simpl. cset_tac; intuition.
         assert (D ⊆ of_list Z ∪ D) by (cset_tac; intuition).
-        rewrite H15. simpl. rewrite <- H3; eauto.
+        rewrite H14. simpl. rewrite <- H2; eauto.
       * Opaque restrict. simpl. unfold live_global. rewrite restrict_incl. simpl.
         simpl. rewrite restrict_incl. constructor. constructor.
         rewrite getAnn_mapAnn. rewrite of_list_lookup_list.
@@ -196,13 +195,13 @@ Proof.
         eapply list_eq_special; eauto.
         rewrite getAnn_mapAnn. rewrite of_list_lookup_list.
         eapply lookup_set_minus_incl_inj; eauto; intuition. intuition.
-        cset_tac; intuition. eapply H4; eauto. reflexivity.
+        cset_tac; intuition. eapply H3; eauto. reflexivity.
         eapply incl_minus.
 
     + eapply srd_monotone. eapply IHRI2; eauto. transitivity lv; eauto.
-      rewrite H18; simpl. eauto.
-      split; eauto. eapply Subset_trans; eauto. rewrite H18; eauto.
-      rewrite H18; simpl; eauto.
+      rewrite H17; simpl. eauto.
+      split; eauto. eapply Subset_trans; eauto. rewrite H17; eauto.
+      rewrite H17; simpl; eauto.
       simpl. decide (getAnn alvs \ of_list Z ⊆ getAnn alvb).
       unfold live_global. simpl.
       rewrite restrict_incl; eauto. simpl. econstructor. econstructor; eauto.

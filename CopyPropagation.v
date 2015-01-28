@@ -266,9 +266,9 @@ Proof.
       * rewrite lookup_set_union; eauto.
         rewrite update_with_list_lookup_set_incl; eauto; try reflexivity.
         rewrite lookup_set_update_with_list_in_union; eauto.
-        simpl in *. rewrite H6. clear_all; cset_tac; intuition.
-      * intros. inv H9; simpl in *. reflexivity.
-        eapply H8; eauto.
+        simpl in *. rewrite H7. clear_all; cset_tac; intuition.
+      * intros. inv H10; simpl in *. reflexivity.
+        eapply H9; eauto.
       * rewrite H3; simpl.
         rewrite map_app; [| clear_all; intuition].
         rewrite (@cp_eqns_agree (ϱ [Z <-- Z]) ϱ D).
@@ -279,12 +279,12 @@ Proof.
         eapply entails_monotone. reflexivity. eapply incl_right.
         assert (D [=] D \ of_list Z). revert H.
         clear_all; cset_tac; intuition; eauto.
-        rewrite H9. eapply update_with_list_agree_minus; eauto. reflexivity.
+        rewrite H10. eapply update_with_list_agree_minus; eauto. reflexivity.
     + eapply eqn_sound_entails_monotone; eauto.
       eapply IHssa2; simpl; eauto.
       * rewrite H5. simpl. eauto.
-      * intros. inv H9; simpl in *. reflexivity.
-        eapply H8; eauto.
+      * intros. inv H10; simpl in *. reflexivity.
+        eapply H9; eauto.
       * rewrite H5. simpl. reflexivity.
     + eapply incl_empty.
     + rewrite cp_eqns_freeVars; eauto; reflexivity.

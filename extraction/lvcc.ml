@@ -66,7 +66,7 @@ let main () =
       in
       let res =
 	if !toILI then
-	  (match Lvc.fromILF Lvc.linear_scan parallel_move generic_first sopt with
+	  (match Lvc.fromILF parallel_move generic_first sopt with
 	   | Lvc.Success ili ->
 	      Printf.printf "\nto IL/I compilate:\n%s\n\n" (print_stmt !ids 0 ili);
 	      ili

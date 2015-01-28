@@ -47,7 +47,7 @@ match s with
      let (G', s') := rename_apart' ϱ' (G ∪ {{y}}) s in
        (G', stmtExtern y f (List.map (rename_exp ϱ) Y) s')
    | stmtLet Z s1 s2 =>
-     let Y := fresh_list G (length Z) in
+     let Y := fresh_list fresh G (length Z) in
      let ϱZ := ϱ [ Z <-- Y ] in
      let (G', s1') := rename_apart' ϱZ (G ∪ of_list Y) s1 in
      let (G'', s2') := rename_apart' ϱ G' s2 in
@@ -68,7 +68,7 @@ match s with
      let ϱ' := ϱ[x <- y] in
      rename_apart_rho ϱ' s
    | stmtLet Z s1 s2 =>
-     let Y := fresh_list (freeVars s1) (length Z) in
+     let Y := fresh_list fresh (freeVars s1) (length Z) in
      let ϱZ := ϱ [ Z <-- Y ]  in
      let ϱ' := rename_apart_rho ϱZ s1 in rename_apart_rho ϱ' s2
    end.
@@ -169,7 +169,7 @@ Proof.
       exists x0. cset_tac; intuition.
   - econstructor.
     + cset_tac; intuition. rewrite H in H1.
-      eapply (not_in_empty a). rewrite <- (fresh_set_spec G' (length Z)).
+      eapply (not_in_empty a). rewrite <- (fresh_set_spec fresh fresh_spec G' (length Z)).
       cset_tac; eauto.
     + eapply notOccur_incl. Focus 2. eapply IHs1. reflexivity.
       rewrite lookup_set_update_with_list_in_union_length.
@@ -180,9 +180,9 @@ Proof.
       hnf; intros. cset_tac. left; eauto. intro.
       eapply lookup_set_spec in H1.
       destruct H1; dcr. decide(x ∈ of_list Z).
-      eapply (update_with_list_lookup_in ϱ) with (Z':=fresh_list G' (length Z)) in i; eauto.
+      eapply (update_with_list_lookup_in ϱ) with (Z':=fresh_list fresh G' (length Z)) in i; eauto.
       rewrite <- H5 in i. apply (not_in_empty a).
-      eapply fresh_set_spec. cset_tac; eauto.
+      eapply fresh_set_spec. eapply fresh_spec. cset_tac; eauto.
       rewrite fresh_list_length; eauto.
       eapply H3. eapply lookup_set_spec. intuition.
       erewrite update_with_list_no_update in H5; eauto. eexists x.
@@ -344,13 +344,13 @@ Proof.
     cset_tac; intuition.
     + eapply rename_apart_fst_incl; eauto.
     + eapply H1; intros. destruct H3; eauto; split; eauto.
-      exploit (fresh_list_spec G' (length Z) a); dcr. cset_tac; intuition.
+      exploit (fresh_list_spec fresh fresh_spec G' (length Z) a); dcr. cset_tac; intuition.
     + eapply H1; intros.
       eapply rename_apart_fst_incl; eauto. cset_tac; intuition. eauto.
     + decide ( a \In
                  fst
-                 (rename_apart' (ϱ [Z <-- fresh_list G' (length Z)])
-                                (G' ++ of_list (fresh_list G' (length Z))) s1)); intuition.
+                 (rename_apart' (ϱ [Z <-- fresh_list fresh G' (length Z)])
+                                (G' ++ of_list (fresh_list fresh G' (length Z))) s1)); intuition.
     + rewrite H. reflexivity.
     + rewrite <- rename_apart_fst_incl. rewrite H. eapply incl_left.
 Qed.
@@ -582,7 +582,7 @@ Proof.
 
   - simpl. subst s0 s4. simpl in H. simpl. rename s3 into Gs2. rename s into Gs1.
     eapply ssaLet with (Ds:=Gs1) (Dt:=Gs2 \ (Gs1 \ G)).
-    + eapply fresh_set_spec.
+    + eapply fresh_set_spec. eapply fresh_spec.
     + eapply  minus_incl_meet_special; eauto using rename_apart_incl_eq, incl_refl.
       subst. eapply rename_apart_incl. eapply incl_left.
       subst. eapply rename_apart_incl. eapply Subset_refl.
@@ -653,6 +653,7 @@ Proof.
       rewrite ssa_ann_rename_apart'. rewrite H2. reflexivity.
       rewrite <- H1. rewrite <- rename_apart_fst_incl.
       eapply incl_left.
+    + eapply fresh_list_unique. eapply fresh_spec.
 Qed.
 
 Lemma rename_apart_alpha' G ϱ ϱ' s
@@ -721,16 +722,16 @@ Proof.
         intuition. rewrite fresh_list_length; eauto.
       * eapply inverse_on_update_fresh.
         eapply inverse_on_incl; eauto; cset_tac; eauto.
-        eapply fresh_list_unique.
+        eapply fresh_list_unique. eapply fresh_spec.
         rewrite fresh_list_length; eauto.
         hnf; intros. intro. eapply lookup_set_spec in H2.
         destruct H2; dcr; cset_tac.
-        pose proof (fresh_list_spec G (length Z)).
+        pose proof (fresh_list_spec fresh fresh_spec G (length Z)).
         assert (x ∈ G). rewrite <- H.
         eapply lookup_set_spec. intuition.
         eexists x0. cset_tac; intuition.
         eapply (not_in_empty x).
-        eapply fresh_list_spec. cset_tac; eauto. intuition.
+        eapply fresh_list_spec. eapply fresh_spec. cset_tac; eauto. intuition.
     + eapply IHs2.
       * eapply rename_apart_incl. eapply Subset_trans; [| eapply  union_subset_1].
         eapply Subset_trans; eauto. eapply lookup_set_incl;[intuition| eapply incl_right].

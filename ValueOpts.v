@@ -1102,13 +1102,13 @@ Proof.
         simpl. dcr.
         assert (sEQ: s0 [=] s0 \ of_list Z). {
           assert (s0 ∩ of_list Z [=] ∅).
-          rewrite <- H9. rewrite H15 in H16.
-          revert H9 H16; simpl; clear_all; cset_tac; intuition; exfalso; eauto.
+          rewrite <- H9. rewrite H15 in H17.
+          revert H9 H17; simpl; clear_all; cset_tac; intuition; exfalso; eauto.
           rewrite <- (minus_union_set _ _ _ H2).
           clear_all; cset_tac; intuition.
         }
         repeat (split; eauto).
-        rewrite H13. rewrite H16, H15; simpl. eapply incl_right.
+        rewrite H13. rewrite H17, H15; simpl. eapply incl_right.
         rewrite sEQ. symmetry.
         eapply update_with_list_agree_minus; eauto. rewrite map_length; eauto.
         symmetry; eauto.
