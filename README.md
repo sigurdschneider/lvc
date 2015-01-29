@@ -14,7 +14,7 @@ LVC stands for Linear Verified Compiler.
 - **Coq Containers Plugin**
 
     You need to have the containers library installed:
-    http://coq.inria.fr/pylons/contribs/view/Containers/v8.4
+		http://www.lix.polytechnique.fr/coq/pylons/contribs/view/Containers/v8.4
 
 - **OCaml** (including ocamlbuild)
 
