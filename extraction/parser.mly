@@ -1,9 +1,9 @@
 %{
   open Names
 
-  let parse_integer a =
-    let big_int_of_a = Big.of_string a in
-    big_int_of_a
+  let parse_integer a = int_of_string a
+(*    let big_int_of_a = Big.of_string a in
+    big_int_of_a *)
 
   let parse_neg_integer a = parse_integer ("-"^a)
 
@@ -28,7 +28,7 @@
 %token IL_and
 %token IL_in
 %token IL_comma
-%token <Big.big_int> IL_ident
+%token <int> IL_ident
 %token IL_eof
 
 %type <Lvc.nstmt> expr
@@ -40,7 +40,7 @@
 /* Integer literals, can be integer_literal or - integer_literal */
 
 integer_constant:
-  | IL_integer_constant { Lvc.Con (Big.of_string $1) }
+  | IL_integer_constant { Lvc.Con (int_of_string $1) }
   | IL_minus IL_integer_constant { Lvc.Con (parse_neg_integer $2) }
 
 primary_expression:
@@ -50,17 +50,17 @@ primary_expression:
   | IL_lparen expression IL_rparen { $2 }
 
 multiplicative_expression:
-  | multiplicative_expression IL_star primary_expression { Lvc.BinOp (Big.of_int 2, $1, $3) }
-  | multiplicative_expression IL_div primary_expression { Lvc.BinOp (Big.of_int 2, $1, $3) }
+  | multiplicative_expression IL_star primary_expression { Lvc.BinOp (2, $1, $3) }
+  | multiplicative_expression IL_div primary_expression { Lvc.BinOp (2, $1, $3) }
   | primary_expression { $1 }
 
 additive_expression:
-  | additive_expression IL_plus multiplicative_expression { Lvc.BinOp (Big.of_int 0,$1, $3) }
-  | additive_expression IL_minus multiplicative_expression { Lvc.BinOp (Big.of_int 1,$1,$3) }
+  | additive_expression IL_plus multiplicative_expression { Lvc.BinOp (0,$1, $3) }
+  | additive_expression IL_minus multiplicative_expression { Lvc.BinOp (1,$1,$3) }
   | multiplicative_expression { $1 }
 
 expression:
-  | expression IL_less_than additive_expression { Lvc.BinOp (Big.of_int 2,$1,$3)}
+  | expression IL_less_than additive_expression { Lvc.BinOp (2,$1,$3)}
   | additive_expression { $1 }
 
 

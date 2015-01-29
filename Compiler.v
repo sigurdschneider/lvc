@@ -7,7 +7,7 @@ Require ConstantPropagation ConstantPropagationAnalysis.
 
 Require Import ExtrOcamlBasic.
 Require Import ExtrOcamlZBigInt.
-Require Import ExtrOcamlNatBigInt.
+Require Import ExtrOcamlNatInt.
 Require Import String ExtrOcamlString.
 
 Set Implicit Arguments.

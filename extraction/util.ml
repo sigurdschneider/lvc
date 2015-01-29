@@ -27,12 +27,12 @@ let rec discard_dead lv m =
     | _, _ -> []
 
 let rec first f x =
-  if f x then x else first f (Big.succ x)
+  if f x then x else first f (x + 1)
 
-let print_var ids v = try (BigMap.find v ids) with Not_found -> "?" ^ (Big_int.string_of_big_int v)
+let print_var ids v = try (IntMap.find v ids) with Not_found -> "?" ^ (string_of_int v)
 
 let rec print_binop op =
-  match (Big_int.string_of_big_int op) with
+  match (string_of_int op) with
     | "0" -> "+"
     | "1" -> "-"
     | "2" -> "*"
@@ -41,7 +41,7 @@ let rec print_binop op =
 
 let rec print_sexpr ids e =
   match e with
-    | Lvc.Con x -> Big_int.string_of_big_int x
+    | Lvc.Con x -> string_of_int x
     | Lvc.Var x -> print_var ids x
     | Lvc.BinOp (op, e1, e2) -> print_sexpr ids e1 ^ " " ^ (print_binop op) ^ " " ^ (print_sexpr ids e2)
 
@@ -82,7 +82,7 @@ let rec print_stmt ids ident s =
   let print_stmt = print_stmt ids in
   match s with
     | Lvc.StmtReturn e -> print_sexpr e
-    | Lvc.StmtGoto (f, y) -> "λ" ^ (Big_int.string_of_big_int f) ^ "(" ^ (print_list print_sexpr y) ^ ")"
+    | Lvc.StmtGoto (f, y) -> "λ" ^ (string_of_int f) ^ "(" ^ (print_list print_sexpr y) ^ ")"
     | Lvc.StmtExp (x, e, s) -> "let " ^ (print_var x) ^ " = " ^
       (print_sexpr e) ^ " in\n" ^ print_ident ident ^
       (print_stmt ident s)
