@@ -1,5 +1,5 @@
 Require Import Coq.Arith.Lt Coq.Arith.Plus Coq.Classes.RelationClasses List.
-Require Import Util Get Drop.
+Require Import Util Get Drop DecSolve.
 
 (** * AllInRel: Inductive characterization of lists which are element-wise in relation *)
 
@@ -502,6 +502,22 @@ Proof.
   + inv H1.
     - econstructor; eauto.
 Qed.
+
+Lemma PIR2_length X Y (R:X->Y->Prop) L L'
+: PIR2 R L L' -> length L = length L'.
+Proof.
+  intros. general induction H; simpl; eauto.
+Qed.
+
+Instance PIR2_computable X Y (R:X->Y->Prop) `{forall x y, Computable (R x y)}
+: forall (L:list X) (L':list Y), Computable (PIR2 R L L').
+Proof.
+  intros. decide (length L = length L').
+  - general induction L; destruct L'; isabsurd; try dec_solve.
+    decide (R a y); try dec_solve.
+    edestruct IHL with (L':=L'); eauto; subst; try dec_solve.
+  - right; intro; subst. exploit PIR2_length; eauto.
+Defined.
 
 
 Ltac provide_invariants_P2 :=

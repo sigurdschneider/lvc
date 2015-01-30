@@ -64,8 +64,7 @@ Proof.
     decide(injective_on (getAnn lv ∪ {{x}}) ϱ); try dec_solve;
     edestruct IHs; eauto; try dec_solve; inv an; eauto.
   + decide(injective_on a ϱ);
-    decide (injective_on (getAnn lv1 ∪ of_list Z) ϱ);
-    decide (inj_mapping (lookup_set ϱ (getAnn lv1 \ of_list Z)) Z (lookup_list ϱ Z)); try dec_solve;
+    decide (injective_on (getAnn lv1 ∪ of_list Z) ϱ); try dec_solve;
     edestruct IHs1; eauto; try inv an; eauto; try dec_solve;
     edestruct IHs2; eauto; try inv an; eauto; try dec_solve.
 Defined.

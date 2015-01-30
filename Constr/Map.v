@@ -2,15 +2,7 @@ Require Export Setoid Coq.Classes.Morphisms.
 Require Import EqDec Computable Util AutoIndTac.
 Require Export CSet Containers.SetDecide.
 
-Require Export MapBasics MapLookup MapLookupList MapAgreement MapInjectivity MapUpdate MapAgreeSet InjectiveMapping MapInverse MapComposition.
-
-Lemma fresh_of_list {X} `{OrderedType X} (L:list X) (y:X)
-  : Util.fresh y L -> y ∉ of_list L.
-Proof.
-  general induction L; simpl in *. intro; cset_tac; eauto.
-  intro. cset_tac; intuition.
-  eapply IHL; eauto. intro. eapply H0. constructor 2. eauto.
-Qed.
+Require Export MapBasics MapLookup MapLookupList MapAgreement MapInjectivity MapUpdate MapAgreeSet MapInverse MapComposition.
 
 Lemma inverse_on_update_lookup_set {X} `{OrderedType X} {Y} `{OrderedType Y} (D:set X) (f:X->Y) g
    `{Proper _ (_eq ==> _eq) f}   x y

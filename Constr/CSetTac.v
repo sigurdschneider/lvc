@@ -224,7 +224,6 @@ Hint Extern 9 =>
          now (exfalso; rewrite <- H in H'; eauto)
      end.
 
-
 (*
 *** Local Variables: ***
 *** coq-load-path: (("../" "Lvc")) ***

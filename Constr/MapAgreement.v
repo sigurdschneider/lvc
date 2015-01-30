@@ -180,6 +180,20 @@ Proof.
   exfalso. eapply n. rewrite H5; eauto.
 Defined.
 
+Lemma map_agree X `{OrderedType X} Y `{OrderedType Y}
+      lv (f:X->Y) `{Proper _ (_eq ==> _eq) f} (g:X->Y) `{Proper _ (_eq ==> _eq) g}
+: agree_on _eq lv f g
+  -> map f lv [=] map g lv.
+Proof.
+  intros. intro.
+  repeat rewrite map_iff; eauto.
+  split; intros []; intros; dcr; eexists x; split; eauto.
+  + specialize (H3 x H5). rewrite <- H3; eauto.
+  + specialize (H3 x H5). rewrite H3; eauto.
+Qed.
+
+Hint Extern 10 (agree_on _ _?a ?a) => reflexivity.
+
 Extraction Inline agree_on_computable.
 
 (*

@@ -114,7 +114,7 @@ Proof.
   rewrite map_single; intuition. unfold cp_eqn at 2.
   lud; isabsurd. rewrite cp_eqns_agree with (E':=ϱ).
   cset_tac; intuition.
-  eapply agree_on_update_dead; eauto. reflexivity.
+  eapply agree_on_update_dead; eauto.
 Qed.
 
 
@@ -279,7 +279,7 @@ Proof.
         eapply entails_monotone. reflexivity. eapply incl_right.
         assert (D [=] D \ of_list Z). revert H.
         clear_all; cset_tac; intuition; eauto.
-        rewrite H10. eapply update_with_list_agree_minus; eauto. reflexivity.
+        rewrite H10. eapply update_with_list_agree_minus; eauto.
     + eapply eqn_sound_entails_monotone; eauto.
       eapply IHssa2; simpl; eauto.
       * rewrite H5. simpl. eauto.

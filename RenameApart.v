@@ -466,7 +466,7 @@ Proof.
   - subst. econstructor; eauto using fresh_spec, ssa_ann_decomp.
     + simpl in H.
       rewrite rename_exp_freeVars; eauto. etransitivity; eauto.
-      eapply lookup_set_incl; eauto. intuition.
+      eapply lookup_set_incl; eauto.
     + eapply IHs. simpl in *.
       hnf; intros. eapply lookup_set_spec in H0; eauto; dcr.
       lud.
@@ -477,7 +477,7 @@ Proof.
   - subst s0 s4. simpl in H. simpl. rename s3 into Gs2. rename s into Gs1.
     eapply ssaIf with (Ds := Gs1) (Dt := (Gs2 \ (Gs1 \ G))).
     + rewrite <- H. rewrite Exp.rename_exp_freeVars; eauto.
-      eapply lookup_set_incl; eauto. eapply incl_right.
+      eapply lookup_set_incl; eauto.
     + eapply minus_incl_meet_special. subst; eapply rename_apart_incl. reflexivity.
       subst. eapply rename_apart_incl; reflexivity.
     + rewrite minus_incl_special. subst.
@@ -562,7 +562,7 @@ Proof.
       assert  (lookup_set ϱ
         (list_union (List.map Exp.freeVars Y)) [<=]G).
       rewrite <- H.
-      eapply lookup_set_incl; eauto. eapply incl_right.
+      eapply lookup_set_incl; eauto.
       rewrite <- H0.
       unfold list_union. rewrite lookup_set_list_union.
       instantiate (1:={}).
@@ -610,16 +610,13 @@ Proof.
             * rewrite minus_idem. reflexivity.
             * eapply incl_minus_lr; try reflexivity.
               eapply Subset_trans; eauto. eapply lookup_set_incl; eauto.
-              eapply incl_right.
           + eapply incl_minus.
           + eapply Subset_trans.
             * eapply Subset_trans; eauto. eapply lookup_set_incl; eauto.
-              eapply incl_right.
             * subst. eapply rename_apart_incl. eapply incl_left.
         - eapply IHs2.
           + eapply Subset_trans.
             * eapply Subset_trans; eauto. eapply lookup_set_incl; eauto.
-              eapply incl_right.
             * subst. eapply rename_apart_incl. eapply incl_left.
         -
           intros. rewrite <- H0.
@@ -641,11 +638,9 @@ Proof.
             * rewrite minus_idem. reflexivity.
             * eapply incl_minus_lr; try reflexivity.
               eapply Subset_trans; eauto. eapply lookup_set_incl; eauto.
-              eapply incl_right.
           + eapply incl_minus.
           + eapply Subset_trans.
             * eapply Subset_trans; eauto. eapply lookup_set_incl; eauto.
-              eapply incl_right.
             * subst. eapply rename_apart_incl. eapply incl_left.
           + rewrite <- minus_idem. reflexivity.
       }
@@ -720,7 +715,7 @@ Proof.
         eapply incl_union_lr. rewrite <- H.
         eapply lookup_set_incl; intuition. reflexivity.
         intuition. rewrite fresh_list_length; eauto.
-      * eapply inverse_on_update_fresh.
+      * eapply inverse_on_update_fresh; eauto.
         eapply inverse_on_incl; eauto; cset_tac; eauto.
         eapply fresh_list_unique. eapply fresh_spec.
         rewrite fresh_list_length; eauto.

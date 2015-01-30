@@ -41,6 +41,49 @@ Proof.
   firstorder.
 Qed.
 
+Lemma minus_single_singleton X `{OrderedType X} (s : set X) (x:X)
+: s \ singleton x [=] s \ {x; {}}.
+Proof.
+  cset_tac; intuition.
+Qed.
+
+Lemma minus_single_singleton' X `{OrderedType X} (s : set X) (x:X)
+: s \ singleton x ⊆ s \ {x; {}}.
+Proof.
+  cset_tac; intuition.
+Qed.
+
+Lemma minus_single_singleton'' X `{OrderedType X} (s : set X) (x:X)
+: s \ {x; {}} ⊆ s \ singleton x.
+Proof.
+  cset_tac; intuition.
+Qed.
+
+Lemma fresh_of_list {X} `{OrderedType X} (L:list X) (y:X)
+  : Util.fresh y L -> y ∉ of_list L.
+Proof.
+  general induction L; simpl in *. intro; cset_tac; eauto.
+  intro. cset_tac; intuition.
+  eapply IHL; eauto. intro. eapply H0. constructor 2. eauto.
+Qed.
+
+Hint Extern 20 (?s \ {?x; {}} ⊆ ?s \ singleton ?x) => eapply minus_single_singleton''.
+Hint Extern 20 (?s \ singleton ?x ⊆ ?s \ {?x; {}}) => eapply minus_single_singleton'.
+
+Hint Extern 20 (?s \ {?x; {}} [=] ?s \ singleton ?x) => rewrite minus_single_singleton; reflexivity.
+Hint Extern 20 (?s \ singleton ?x [=] ?s \ {?x; {}}) => rewrite minus_single_singleton; reflexivity.
+
+
+Hint Extern 20 (Subset (?a \ _) ?a) => eapply minus_incl.
+Hint Extern 20 (Subset (?a \ _) ?a') => (is_evar a ; fail 1)
+                                        || (has_evar a ; fail 1)
+                                        || (is_evar a' ; fail 1)
+                                        || (has_evar a'; fail 1)
+                                        || eapply minus_incl.
+
+
+Hint Extern 10 (Subset ?a (_ ∪ ?a)) => eapply incl_right.
+
 (*
 *** Local Variables: ***
 *** coq-load-path: (("../" "Lvc")) ***

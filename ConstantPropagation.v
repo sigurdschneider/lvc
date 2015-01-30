@@ -56,22 +56,6 @@ decide (a = a0); subst; try dec_solve.
 destruct a; try dec_solve.
 Defined.
 
-Lemma PIR2_length X Y (R:X->Y->Prop) L L'
-: PIR2 R L L' -> length L = length L'.
-Proof.
-  intros. general induction H; simpl; eauto.
-Qed.
-
-Instance PIR2_computable X Y (R:X->Y->Prop) `{forall x y, Computable (R x y)}
-: forall (L:list X) (L':list Y), Computable (PIR2 R L L').
-Proof.
-  intros. decide (length L = length L').
-  - general induction L; destruct L'; isabsurd; try dec_solve.
-    decide (R a y); try dec_solve.
-    edestruct IHL with (L':=L'); eauto; subst; try dec_solve.
-  - right; intro; subst. exploit PIR2_length; eauto.
-Defined.
-
 Inductive isEqCmp : exp -> Prop :=
   IisEqCmp x c : isEqCmp (BinOp 3 (Var x) (Con c)).
 
@@ -204,18 +188,6 @@ Proof.
   intuition.
 Qed.
 
-Lemma map_agree X `{OrderedType X} Y `{OrderedType Y}
-      lv (f:X->Y) `{Proper _ (_eq ==> _eq) f} (g:X->Y) `{Proper _ (_eq ==> _eq) g}
-: agree_on _eq lv f g
-  -> map f lv [=] map g lv.
-Proof.
-  intros. intro.
-  repeat rewrite map_iff; eauto.
-  split; intros []; intros; dcr; eexists x; split; eauto.
-  + specialize (H3 x H5). rewrite <- H3; eauto.
-  + specialize (H3 x H5). rewrite H3; eauto.
-Qed.
-
 Lemma cp_eqn_agree lv E E'
 : agree_on eq lv E E'
 -> agree_on _eq lv (cp_eqn E) (cp_eqn E').
@@ -304,11 +276,6 @@ Proof.
   - cset_tac; intuition. decide (_eq a x); eauto.
     rewrite <- H1; eauto.
   - cset_tac; intuition. eapply n; rewrite H1; eauto.
-Qed.
-
-Instance option_R_trans `{Transitive} : Transitive (option_R R).
-Proof.
-  hnf; intros. inv H0; inv H1. econstructor; eauto.
 Qed.
 
 Lemma in_cp_eqns AE x lv v
@@ -464,22 +431,6 @@ Proof.
   intros. unfold cp_choose_exp. rewrite H; eauto.
 Qed.
 
-Lemma update_with_list_lookup_in_list B E
-      (Z:list var) (Y:list B) z
-: length Z = length Y
-  -> z ∈ of_list Z
-  -> exists n y, get Z n z /\ get Y n y /\ E [Z <-- Y] z = y.
-Proof.
-  intros. eapply length_length_eq in H.
-  general induction H; simpl in *; isabsurd.
-  decide (z = x); subst.
-  exists 0, y; repeat split; eauto using get. lud. intuition.
-  edestruct (IHlength_eq E z) as [? [? ]]; eauto; dcr.
-  cset_tac; intuition. lud; intuition.
-  do 2 eexists; repeat split; eauto using get.
-Qed.
-
-
 Lemma subst_eqns_in gamma ϱ Gamma
 : gamma \In subst_eqns ϱ Gamma
   -> exists γ', γ' ∈ Gamma /\ gamma = subst_eqn ϱ γ'.
@@ -545,8 +496,8 @@ Proof.
     cset_tac. invc H4.
     unfold subst_eqn; simpl.
     edestruct (update_with_list_lookup_in_list sid Z Y) as [? [? ]]; eauto; dcr.
-    subst.
-    do 2 eexists; eauto.
+    invc H9. invc H7.
+    eexists x0, x2, a; repeat split; eauto.
   - exfalso. rewrite H1 in H4; isabsurd.
 Qed.
 

@@ -2,6 +2,8 @@ Require Export Setoid Coq.Classes.Morphisms.
 Require Export Sets SetInterface SetConstructs SetProperties.
 Require Import EqDec CSetNotation Util CSetTac.
 
+Definition notincl {X} `{OrderedType X} (s t: set X) := forall x, x ∈ s -> x ∉ t.
+
 Section theorems.
   Variable X : Type.
   Context `{OrderedType X}.

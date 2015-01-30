@@ -1,5 +1,5 @@
 Require Export Setoid Coq.Classes.Morphisms.
-Require Import EqDec Computable Util LengthEq AutoIndTac.
+Require Import EqDec Computable Util LengthEq AutoIndTac Get LengthEq.
 Require Export CSet Containers.SetDecide.
 Require Export MapBasics MapLookup MapAgreement.
 
@@ -65,7 +65,6 @@ Section MapUpdateList.
   Variable X : Type.
   Context `{OrderedType X}.
   Variable Y : Type.
-  Context `{Equivalence Y}.
 
   Open Scope fmap_scope.
 
@@ -75,8 +74,25 @@ Section MapUpdateList.
       | _, _ => m
     end.
 
-
   Notation "f [ w <-- x ]" := (update_with_list w x f) (at level 29, left associativity).
+
+  Lemma update_unique_commute `{OrderedType Y} (XL:list X) (VL:list Y) E D x y
+  : length XL = length VL
+    -> unique (x::XL)
+    -> agree_on _eq D (E [x <- y] [XL <-- VL]) (E [XL <-- VL] [x <- y]).
+  Proof.
+    intros. eapply length_length_eq in H1.
+    general induction H1; simpl. reflexivity.
+    hnf; intros. lud. hnf in H2; simpl in *.
+    dcr. exfalso. eapply H8. econstructor. eapply H5.
+    exploit (IHlength_eq H0 E {x1} x0 y0). simpl in *; intuition.
+    hnf; intros. eapply H9. econstructor 2; eauto.
+    exploit X0. cset_tac; reflexivity. rewrite X1. lud.
+    exploit (IHlength_eq H0 E {x1} x0 y0). simpl in *; intuition.
+    hnf; intros. eapply H8. econstructor 2; eauto.
+    exploit X0. cset_tac; reflexivity. rewrite X1. lud.
+  Qed.
+
 
 
 (*
@@ -94,6 +110,8 @@ Proof.
   eauto using agree_on_incl, incl_minus.
 Qed.
 *)
+
+  Context `{Equivalence Y}.
 
   Lemma update_with_list_agree lv (E E':X -> Y) XL YL
     : agree_on R (lv\of_list XL) E E'
@@ -134,6 +152,8 @@ Qed.
     eauto using agree_on_incl, incl_minus.
   Qed.
 
+  Hint Resolve minus_single_singleton minus_single_singleton' minus_single_singleton''.
+
   Lemma update_with_list_agree_inv lv (E E':X -> Y) XL YL
   : length XL = length YL
     -> agree_on R lv (E' [ XL <-- YL ]) E
@@ -141,11 +161,10 @@ Qed.
   Proof.
     intros. eapply length_length_eq in H1.
     general induction H1; simpl in * |- *.
-    - eapply agree_on_incl; eauto. cset_tac; intuition.
+    - eapply agree_on_incl; eauto.
     - rewrite add_union_singleton. rewrite <- minus_union.
       eapply IHlength_eq; eauto.
-      eapply agree_on_incl. eapply agree_on_update_inv; eauto.
-      cset_tac; intuition.
+      eapply agree_on_incl; eauto. eapply agree_on_update_inv; eauto.
   Qed.
 
   Lemma update_with_list_agree_self  `{Defaulted X} lv (E:X -> Y) XL YL
@@ -169,6 +188,23 @@ Qed.
 End MapUpdateList.
 
 Notation "f [ w <-- x ]" := (update_with_list w x f) (at level 29, left associativity).
+
+
+Lemma update_with_list_lookup_in_list X `{OrderedType X} B E
+      (Z:list X) (Y:list B) z
+: length Z = length Y
+  -> z ∈ of_list Z
+  -> exists n y z', get Z n z' /\ get Y n y /\ E [Z <-- Y] z === y /\ z === z'.
+Proof.
+  intros. eapply length_length_eq in H0.
+  general induction H0; simpl in *; isabsurd.
+  decide (z === x).
+  - exists 0, y, x; repeat split; eauto using get. lud.
+  - cset_tac; intuition.
+    edestruct (IHlength_eq _ E z) as [? [? ]]; eauto; dcr.
+    exists (S x0), x1, x2. eexists; repeat split; eauto using get.
+    lud. exfalso; eauto.
+Qed.
 
 
 Instance update_inst X `{OrderedType X} Y `{OrderedType Y} :

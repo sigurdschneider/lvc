@@ -1,8 +1,9 @@
 Require Import List CSet.
 Require Import Util AllInRel IL EnvTy RenameApart Sim Status Annotation.
+Require CMap.
 Require Liveness LivenessValidators ParallelMove ILN LivenessAnalysis.
 Require Coherence Delocation DelocationAlgo DelocationValidator Allocation AllocationAlgo.
-Require CopyPropagation DVE EAE.
+Require CopyPropagation DVE EAE Alpha.
 Require ConstantPropagation ConstantPropagationAnalysis.
 
 Require Import ExtrOcamlBasic.
@@ -97,16 +98,19 @@ Definition optimize (s':stmt) : status stmt :=
 Definition fromILF (s:stmt) : status stmt :=
   let s_hoisted := EAE.compile s in
   let s_renamed_apart := rename_apart s_hoisted in
+  let fv := freeVars s_renamed_apart in
   sdo lv <- livenessAnalysis s_renamed_apart;
-     if [Liveness.live_sound Liveness.Functional nil s_renamed_apart lv
-         /\ getAnn lv ⊆ freeVars s_hoisted] then
-       sdo ϱ <- AllocationAlgo.linear_scan s_renamed_apart lv id;
-       if [agree_on _eq (getAnn lv) ϱ id /\ getAnn lv ⊆ freeVars s_hoisted] then
-         let s_allocated := rename ϱ s_renamed_apart in
-         let s_lowered := ParallelMove.lower parallel_move nil s_allocated (mapAnn (lookup_set ϱ) lv) in
-         s_lowered
-       else
-         Error "Register allocation not injective."
+    if [Liveness.live_sound Liveness.Functional nil s_renamed_apart lv
+        /\ getAnn lv ⊆ freeVars s_hoisted] then
+       let fvl := to_list (getAnn lv) in
+       let ϱ := CMap.update_with_list fvl fvl (@MapInterface.empty var _ _ _) in
+       sdo ϱ' <- AllocationAlgo.linear_scan s_renamed_apart lv ϱ;
+       let s_allocated := rename (CMap.findt ϱ' 0) s_renamed_apart in
+       let s_lowered := ParallelMove.lower parallel_move
+                                            nil
+                                            s_allocated
+                                            (mapAnn (map (CMap.findt ϱ' 0)) lv) in
+       s_lowered
      else
        Error "Liveness unsound.".
 
@@ -216,7 +220,7 @@ Proof.
   unfold fromILF; intros.
   monadS_inv H.
   destruct if in EQ0; dcr; isabsurd.
-  monadS_inv EQ0; dcr. destruct if in EQ2; dcr; isabsurd.
+  monadS_inv EQ0; dcr.
   eapply sim_trans with (σ2:=(nil:list F.block, E, rename_apart (EAE.compile s))).
   eapply sim_trans with (σ2:=(nil:list F.block, E, EAE.compile s)).
   eapply bisim_sim. eapply EAE.sim_EAE.
@@ -224,31 +228,33 @@ Proof.
   eapply (@Alpha.alphaSim_sim (nil, E, _) (nil, E, _)).
   econstructor; eauto using AIR3, Alpha.envCorr_idOn_refl.
   eapply Alpha.alpha_sym. eapply rename_apart_alpha.
+  exploit rename_apart_ssa; eauto.
+  exploit AllocationAlgo.linear_scan_correct; eauto.
+  eapply injective_on_agree; [| eapply CMap.map_update_list_update_agree].
+  hnf; intros.
+  rewrite lookup_update_same in H3.
+  rewrite H3. rewrite lookup_update_same. reflexivity.
+  rewrite of_list_3; eauto.
+  rewrite of_list_3; eauto. reflexivity.
+  rewrite fst_ssa_ann. eauto.
   eapply sim_trans with (σ2:=(nil:list F.block, E,
-                               rename x0
+                               rename (CMap.findt x0 0)
              (rename_apart (EAE.compile s)))).
   eapply bisim_sim.
   eapply Alpha.alphaSim_sim. econstructor; eauto using AIR3.
   eapply Allocation.ssa_locally_inj_alpha; eauto.
-  eapply rename_apart_ssa; eauto; eapply lookup_set_on_id; try reflexivity.
-  eapply AllocationAlgo.linear_scan_correct; eauto.
-  hnf; intros. cbv in H5. subst. reflexivity.
-  Focus 2.
-  eapply rename_apart_ssa; eauto. rewrite fst_ssa_ann. eauto.
   instantiate (1:=id).
-  eapply (inverse_on_agree_on (inverse_on_id (G:=getAnn x))).
-  symmetry; eauto. reflexivity.
-  hnf; intros. cbv in H4; subst. rewrite H4; eauto.
+  eapply AllocationAlgo.linear_scan_ssa_agree in EQ1; eauto.
+  rewrite fst_ssa_ann in EQ1.
+  rewrite <- CMap.map_update_list_update_agree in EQ1.
+  hnf; intros. rewrite <- EQ1; eauto.
+  rewrite lookup_update_same; eauto. rewrite of_list_3; eauto.
+  reflexivity.
+  hnf; intros. cbv in H2; subst. rewrite H2; eauto.
   eapply sim_trans with (S2:=I.state).
   eapply bisim_sim.
   eapply Coherence.srdSim_sim.
   econstructor; isabsurd. eapply Allocation.rename_ssa_srd; eauto.
-  eapply rename_apart_ssa; eauto. rewrite fst_ssa_ann; eauto.
-  eapply AllocationAlgo.linear_scan_correct; eauto.
-  hnf; intros. cbv in H5. subst. reflexivity.
-  Focus 2.
-  eapply rename_apart_ssa; eauto.
-  rewrite fst_ssa_ann. eauto.
   rewrite fst_ssa_ann; eauto.
   eapply I. econstructor. reflexivity.
   eapply (@Liveness.live_rename_sound _ nil); eauto.

@@ -243,22 +243,22 @@ Proof.
     erewrite exp_eval_agree; try eapply H2.
     econstructor; reflexivity.
     symmetry. eapply agree_on_update_dead; eauto.
-    cset_tac; intuition. reflexivity.
+    cset_tac; intuition.
     symmetry. eapply agree_on_update_dead; eauto.
-    cset_tac; intuition. reflexivity.
+    cset_tac; intuition.
   - inv H.
     + symmetry in H2.
       erewrite exp_eval_agree; try eapply H2. econstructor.
       symmetry. eapply agree_on_update_dead; eauto.
-      cset_tac; intuition. reflexivity.
+      cset_tac; intuition.
     + symmetry in H1. symmetry in H2.
       erewrite exp_eval_agree; try eapply H1.
       erewrite exp_eval_agree; try eapply H2.
       econstructor; reflexivity.
       symmetry. eapply agree_on_update_dead; eauto.
-      cset_tac; intuition. reflexivity.
+      cset_tac; intuition.
       symmetry. eapply agree_on_update_dead; eauto.
-      cset_tac; intuition. reflexivity.
+      cset_tac; intuition.
   - eauto.
 Qed.
 
@@ -285,26 +285,26 @@ Proof.
     erewrite exp_eval_agree; try eapply H3.
     econstructor; reflexivity.
     erewrite <- minus_inane_set. symmetry.
-    eapply update_with_list_agree_minus; eauto. reflexivity.
+    eapply update_with_list_agree_minus; eauto.
     cset_tac; intuition. eapply (H1 a); cset_tac; intuition.
     erewrite <- minus_inane_set. symmetry.
-    eapply update_with_list_agree_minus; eauto. reflexivity.
+    eapply update_with_list_agree_minus; eauto.
     cset_tac; intuition. eapply (H1 a); cset_tac; intuition.
   - inv H0.
     + symmetry in H3.
       erewrite exp_eval_agree; try eapply H3. econstructor.
       erewrite <- minus_inane_set. symmetry.
-      eapply update_with_list_agree_minus; eauto. reflexivity.
+      eapply update_with_list_agree_minus; eauto.
       cset_tac; intuition. eapply (H1 a); cset_tac; intuition.
     + symmetry in H3. symmetry in H2.
       erewrite exp_eval_agree; try eapply H2.
       erewrite exp_eval_agree; try eapply H3.
       econstructor; reflexivity.
       erewrite <- minus_inane_set. symmetry.
-      eapply update_with_list_agree_minus; eauto. reflexivity.
+      eapply update_with_list_agree_minus; eauto.
       cset_tac; intuition. eapply (H1 a); cset_tac; intuition.
       erewrite <- minus_inane_set. symmetry.
-      eapply update_with_list_agree_minus; eauto. reflexivity.
+      eapply update_with_list_agree_minus; eauto.
       cset_tac; intuition. eapply (H1 a); cset_tac; intuition.
   - eauto.
 Qed.
@@ -701,12 +701,12 @@ Proof.
     + erewrite <- exp_eval_agree; eauto. instantiate (1:=V).
       rewrite <- H3. simpl. lud. econstructor; eauto.
       exfalso; eauto.
-      eapply agree_on_update_dead; eauto. reflexivity.
+      eapply agree_on_update_dead; eauto.
   - invc H5; simpl in * |- *; subst.
     + erewrite <- exp_eval_agree; eauto. instantiate (1:=V).
       rewrite <- H4. simpl. lud. econstructor; eauto.
       exfalso; eauto.
-      eapply agree_on_update_dead; eauto. reflexivity.
+      eapply agree_on_update_dead; eauto.
   - hnf in H1. exploit H2; eauto.
     eapply satisfies_update_dead; eauto.
     intro. eapply in_eqns_freeVars in H6; eauto.

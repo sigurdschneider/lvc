@@ -771,7 +771,7 @@ Lemma srd_implies_invariance s a i
 : live_sound i nil s a -> srd nil s a -> invariant s.
 Proof.
   intros. hnf; intros. eapply srdSim_sim.
-  econstructor; eauto using AIR21, PIR2; isabsurd. reflexivity.
+  econstructor; eauto using AIR21, PIR2; isabsurd.
 Qed.
 
 

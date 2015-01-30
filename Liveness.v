@@ -52,7 +52,6 @@ Lemma argsLive_agree_on' (V E E':onv val) lv blv Y Z v v'
  -> agree_on eq blv (V [Z <-- List.map Some v]) (V [Z <-- List.map Some v']).
 Proof.
   intros. general induction H; simpl in * |- *; eauto.
-  - reflexivity.
   - monad_inv H2. monad_inv H3.
     decide (z ∈ blv).
     +erewrite <- exp_eval_live in EQ0; eauto.

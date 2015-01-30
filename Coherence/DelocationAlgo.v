@@ -562,7 +562,6 @@ Proof.
   general induction H; simpl.
   + econstructor.
   + econstructor; eauto.
-    cset_tac; intuition.
 Qed.
 
 
@@ -822,7 +821,7 @@ Proof.
       * exploit H1; eauto using get. cset_tac; intuition.
     - destruct H0; eapply IHlength_eq; eauto.
       intros. eauto using get.
-  + eapply IHlength_eq; eauto using get. intuition.
+  + eapply IHlength_eq; eauto using get.
 Qed.
 
 

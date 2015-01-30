@@ -1,5 +1,5 @@
 Require Import Arith Coq.Lists.List Setoid Coq.Lists.SetoidList Omega Containers.OrderedTypeEx.
-Require Export Infra.Option EqDec AutoIndTac.
+Require Export Infra.Option EqDec AutoIndTac Computable.
 
 Set Implicit Arguments.
 
@@ -241,7 +241,6 @@ Fixpoint unique X `{Equivalence X} (Y:list X) : Prop :=
     | cons x Y' => fresh x Y' /\ unique Y'
   end.
 
-
 Ltac let_case_eq :=
   match goal with
     | [ H : context [let (_, _) := ?e in _] |- _ ] =>
@@ -353,6 +352,28 @@ Qed.
 Instance option_R_trans A R `{Transitive A R} : Transitive (option_R R).
 hnf; intros. inv H0; inv H1; econstructor; eauto.
 Qed.
+
+Section PolyIter.
+  Variable A : Type.
+
+  Fixpoint iter n (s:A) (f: nat -> A-> A) :=
+    match n with
+        | 0 => s
+        | S n => iter n (f n s) f
+    end.
+
+End PolyIter.
+
+Require Le Arith.Compare_dec.
+
+Instance le_comp (a b: nat) : Computable (lt a b).
+eapply Arith.Compare_dec.lt_dec.
+Defined.
+
+Hint Extern 20 => match goal with
+                   | [ H: ?a /\ ?b |- ?b ] => eapply H
+                   | [ H: ?a /\ ?b |- ?a ] => eapply H
+                 end.
 
 (*
 *** Local Variables: ***

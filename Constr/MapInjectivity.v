@@ -1,6 +1,6 @@
-Require Import EqDec Computable Util AutoIndTac.
+Require Import EqDec Computable Util AutoIndTac LengthEq.
 Require Export CSet Containers.SetDecide.
-Require Export MapBasics MapLookup OrderedTypeEx.
+Require Export MapBasics MapUpdate MapLookup OrderedTypeEx.
 
 Set Implicit Arguments.
 
@@ -347,6 +347,46 @@ Proof.
   apply lookup_set_minus_incl; eauto.
 Qed.
 
+Lemma injective_on_agree X `{OrderedType X} Y `{OrderedType Y} D (ϱ ϱ': X -> Y)
+: injective_on D ϱ
+  -> agree_on _eq D ϱ ϱ'
+  -> injective_on D ϱ'.
+Proof.
+  intros. hnf; intros. eapply H1; eauto.
+  exploit H2; eauto. rewrite X0.
+  exploit H2; try eapply H3. rewrite X1. eauto.
+Qed.
+
+Lemma injective_on_fresh_list X `{OrderedType X} Y `{OrderedType Y} XL YL (ϱ: X -> Y) `{Proper _ (_eq ==> _eq) ϱ} lv
+: injective_on lv ϱ
+  -> length XL = length YL
+  -> (of_list YL) ∩ (lookup_set ϱ lv) [=] ∅
+  -> unique XL
+  -> unique YL
+  -> injective_on (lv ∪ of_list XL) (ϱ [XL <-- YL]).
+Proof.
+  intros. eapply length_length_eq in H3.
+  general induction H3; simpl in * |- * ; eauto.
+  - eapply injective_on_incl; eauto. cset_tac; intuition.
+  - eapply injective_on_agree.
+    assert (lv ∪ { x; of_list XL} [=] {{x}} ∪ lv ∪ of_list XL) by (cset_tac; intuition; eauto).
+    rewrite H7. eapply IHlength_eq; auto.
+    Focus 2.
+    eapply injective_on_fresh. instantiate (1:=ϱ); eauto.
+    eapply injective_on_incl; eauto. instantiate (1:=y).
+    intro. eapply lookup_set_spec in H8. dcr.
+    eapply (not_in_empty (ϱ x0)). rewrite <- H4. cset_tac; intuition.
+    eapply lookup_set_spec; eauto. eapply H1.
+    hnf; intros. lud; eauto; try now exfalso; eauto.
+    dcr. cset_tac; intuition.
+    eapply lookup_set_spec in H12; dcr. lud.
+    eapply H8. rewrite <- H14; eauto. eapply InA_in; eauto.
+    cset_tac; intuition.
+    eapply H4. split. right; eauto.
+    eapply lookup_set_spec. eauto. eexists; eauto.
+    hnf; intros. lud; eauto; try now exfalso; eauto.
+    eapply update_unique_commute; eauto using length_eq_length.
+Qed.
 
 (*
 *** Local Variables: ***
