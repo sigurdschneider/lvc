@@ -1,7 +1,7 @@
 Require Import CSet Le Arith.Compare_dec.
 
-Require Import Plus Util Map.
-Require Import Env EnvTy IL.
+Require Import Plus Util Map Var Get.
+
 
 Set Implicit Arguments.
 
@@ -33,32 +33,155 @@ Proof.
   pose proof (fresh_spec' H). omega.
 Qed.
 
-Definition least_fresh (lv:set var) : var :=
-  let mx := S (fold max lv 0) in
-  let vx := iter (1 + cardinal lv)
-                 mx
-                 (fun n x => if [n ∈ lv] then x else n) in
-  vx.
+Section SafeFirst.
 
-Lemma least_fresh_spec' G k mx
-: mx ∉ G
-  -> iter k mx (fun n x => if [n ∈ G] then x else n) ∉ G.
+  Hypothesis P : nat -> Prop.
+
+  Inductive safe : nat -> Prop :=
+  | safe_here n : P n -> safe n
+  | safe_after n : safe (S n) -> safe n.
+
+  Lemma safe_antitone m n
+  : safe n
+    -> m < n
+    -> safe m.
+  Proof.
+    intros. general induction H0; eauto using safe.
+  Qed.
+
+  Lemma exists_is_safe
+  : (exists x, P x) -> exists n, safe n.
+  Proof.
+    intros. destruct H; eexists; eauto using safe.
+  Qed.
+
+  Hypothesis comp  : forall n, Computable (P n).
+
+  Fixpoint safe_first n (s:safe n) : nat.
+  refine (if [ P n ] then n else safe_first (S n) _).
+  inv s; eauto; isabsurd.
+  Defined.
+
+  Fixpoint safe_first_spec n s
+  : P (@safe_first n s).
+  Proof.
+    unfold safe_first.
+    destruct s.
+    - simpl. destruct (decision_procedure (P n)); eauto.
+    - destruct if; eauto.
+  Qed.
+
+End SafeFirst.
+
+Lemma safe_impl (P Q: nat -> Prop) n
+: safe P n -> (forall x, P x -> Q x) -> safe Q n.
 Proof.
-  intros; intro.
-  general induction k; simpl in *.
-  - cset_tac; intuition.
-  - eapply IHk; try eapply H0; eauto.
-    destruct if; eauto.
+  intros. general induction H; eauto using safe.
+Qed.
+
+Lemma fresh_variable_always_exists (lv:set nat) n
+: safe (fun x => x ∉ lv) n.
+Proof.
+  - decide (n > fold max lv 0).
+    + econstructor; intro.
+      exploit fresh_spec'; eauto. unfold var in *.
+      omega.
+    + eapply safe_antitone. instantiate (1:=S (fold max lv 0)).
+      econstructor. intro.
+      exploit fresh_spec'; eauto. unfold var in *. omega.
+      omega.
+Qed.
+
+Lemma all_in_lv_cardinal (lv:set nat) n
+: (forall m : nat, m < n -> m \In lv) -> cardinal lv >= n.
+Proof.
+  general induction n; simpl.
+  - omega.
+  - exploit (IHn (lv \ {{n}})).
+    intros. cset_tac; intuition. invc H1. omega.
+    assert (lv [=] {n; lv \ {{n}} }).
+    exploit (H (n)); eauto.
+    cset_tac; intuition. decide (n = a); subst; intuition.
+    invc H1; eauto.
+    rewrite H0. erewrite cardinal_2; eauto. omega. cset_tac; intuition.
+Qed.
+
+
+Lemma neg_pidgeon_hole (lv:set nat)
+: (forall m : nat, m <= cardinal lv -> m \In lv) -> False.
+Proof.
+  intros. exploit (@all_in_lv_cardinal lv (S (cardinal lv))).
+  intros; eapply H; eauto. omega. omega.
+Qed.
+
+
+(* This definition is handy in the folling proof *)
+Inductive le (n : nat) : nat -> Prop :=
+  le_n : le n n | le_S : forall m : nat, le (S n) m -> le n m.
+
+Lemma le_is_le n m
+: le n m <-> n <= m.
+Proof.
+  split; intros.
+  - general induction H; eauto.
+    inv H; omega.
+  - general induction H; eauto using le.
+    inv IHle; eauto using le.
+    clear H0 H.
+    general induction IHle; eauto using le.
+Qed.
+
+Lemma small_fresh_variable_exists (lv:set nat) n
+: (forall m, m < n -> m ∈ lv)
+  -> le n (cardinal lv)
+  -> safe (fun x => x ∉ lv /\ x <= cardinal lv) n.
+Proof.
+  intros. general induction H0.
+  - decide (cardinal lv ∈ lv).
+    + exfalso; eapply neg_pidgeon_hole; eauto.
+      intros. decide (m = cardinal lv).
+      * subst; eauto.
+      * eapply H; intros. omega.
+    + econstructor 1; eauto.
+  - decide (n ∈ lv).
+    * exploit (IHle).
+      intros. decide (m = n).
+      subst; eauto.
+      eapply H; eauto. omega. eauto.
+      econstructor 2; eauto.
+    * econstructor 1. split; eauto.
+      eapply le_is_le in H0. omega.
+Qed.
+
+Instance le_dec x y : Computable (x <= y).
+eapply le_dec.
+Defined.
+
+Definition least_fresh (lv:set var) : var.
+  refine (@safe_first (fun x => x ∉ lv /\ x <= cardinal lv) _ _ _).
+  - intros; eauto. hnf. decide (n ∉ lv /\ n <= cardinal lv); eauto.
+  - instantiate (1:=0). eapply small_fresh_variable_exists.
+    intros. omega. eapply le_is_le; omega.
+Defined.
+
+Lemma least_fresh_full_spec G
+: least_fresh G ∉ G /\ least_fresh G <= cardinal G.
+Proof.
+  unfold least_fresh.
+  eapply safe_first_spec.
 Qed.
 
 Lemma least_fresh_spec G
 : least_fresh G ∉ G.
 Proof.
-  eapply least_fresh_spec'.
-  intro.
-  pose proof (fresh_spec' H). omega.
+  eapply least_fresh_full_spec.
 Qed.
 
+Lemma least_fresh_small G
+: least_fresh G <= cardinal G.
+Proof.
+  eapply least_fresh_full_spec.
+Qed.
 
 Definition fresh_stable (lv:set var) (x:var) : var :=
   if [x ∉ lv] then x else
@@ -117,6 +240,65 @@ Section FreshList.
     cset_tac; eauto.
   Qed.
 End FreshList.
+
+
+Lemma least_fresh_list_small G n
+: forall i x, get (fresh_list least_fresh G n) i x -> x < cardinal G + n.
+Proof.
+  general induction n; simpl in *; isabsurd.
+  - inv H. exploit (least_fresh_small G). omega.
+    exploit IHn; eauto.
+    erewrite cardinal_2 with (s:=G) in X. omega.
+    eapply least_fresh_spec.
+    hnf; cset_tac; intuition.
+Qed.
+
+Fixpoint vars_up_to (n:nat) :=
+  match n with
+    | S n => {n; vars_up_to n}
+    | 0 => ∅
+  end.
+
+Lemma in_vars_up_to n m
+: n < m -> n ∈ vars_up_to m.
+Proof.
+  intros. general induction H.
+  - simpl. cset_tac; intuition.
+  - inv H; simpl in * |- *; cset_tac; intuition.
+Qed.
+
+Lemma in_vars_up_to' n m
+: n <= m -> n ∈ vars_up_to (m + 1).
+Proof.
+  intros. eapply in_vars_up_to. omega.
+Qed.
+
+Lemma least_fresh_list_small_vars_up_to G n
+: of_list (fresh_list least_fresh G n) ⊆ vars_up_to (cardinal G + n).
+Proof.
+  eapply get_in_incl; intros.
+  eapply in_vars_up_to.
+  eapply least_fresh_list_small; eauto.
+Qed.
+
+Lemma vars_up_to_max n m
+: vars_up_to (max n m) [=] vars_up_to n ∪ vars_up_to m.
+Proof.
+  general induction n; simpl.
+  - cset_tac; intuition.
+  - destruct m; simpl.
+    + cset_tac; intuition.
+    + rewrite IHn.
+      decide (n < m).
+      * rewrite max_r; eauto; try omega.
+        assert (n ∈ vars_up_to m); eauto using in_vars_up_to.
+        cset_tac; intuition.
+        cset_tac; intuition.
+      * rewrite max_l; eauto. assert (m <= n) by omega.
+        cset_tac; intuition; eauto. cset_tac; intuition.
+        decide (n = a); subst; intuition.
+        right. left. eapply in_vars_up_to. omega. omega.
+Qed.
 
 Lemma inverse_on_update_fresh_list (D:set var) (Z:list var) (ϱ ϱ' : var -> var)
  : inverse_on (D \ of_list Z) ϱ ϱ'

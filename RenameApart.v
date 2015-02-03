@@ -409,11 +409,11 @@ Proof.
       eapply H2 in H; intuition.
       rewrite <- H2.
       revert H; clear_all; cset_tac; intuition.
-      eapply H; cset_tac.
+      eapply H; cset_tac; eauto.
     + rewrite H3.
       eapply IHnotOccur.
       rewrite <- H2. revert H; clear_all; cset_tac; intuition.
-      eapply H. cset_tac.
+      eapply H. cset_tac; eauto.
   - econstructor; eauto.
     rewrite IHnotOccur1, IHnotOccur2; eauto.
     repeat rewrite getAnn_mapAnn.
@@ -434,11 +434,11 @@ Proof.
       econstructor; try reflexivity.
       rewrite <- H2; clear_all; cset_tac; intuition.
       rewrite <- H2; revert H0; clear_all; cset_tac; intuition.
-      eapply H0; cset_tac.
+      eapply H0; cset_tac; eauto.
     + rewrite H3.
       eapply IHnotOccur.
       rewrite <- H2; revert H0; clear_all; cset_tac; intuition.
-      eapply H0; cset_tac.
+      eapply H0; cset_tac; eauto.
   - assert ((G ++ G') ++ of_list Z [=] (G ++ of_list Z) ++ G'). {
       cset_tac; intuition.
     }

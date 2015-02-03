@@ -92,6 +92,7 @@ Qed.
         rewrite (empty_spec _ x) in H *)
 (*      | [ H : context [ member ?x empty ] |- _ ] =>
         rewrite (not_In_add_empty _ x) in H *)
+      | [ H : In ?x ?s, H' : ~In ?x ?s |- _ ] => exfalso; eapply H'; eapply H
       | [ H : In ?x ?s, H' : ~In ?y ?s |- _ ] =>
         match goal with
           | [ H'' : x =/= y |- _ ] => fail 1
@@ -207,11 +208,21 @@ Qed.
           | _ => decide (a ∈ s)
         end
       | [ H: (not ?A) -> False |- ?A ] => try now (eapply dneg_dec; intuition)
-    end.
+  end.
+
+  Ltac mycleartrivial :=
+    try (progress (clear_trivial_eqs;
+              match goal with
+                | [ H : @Equivalence.equiv _
+                                           (@_eq _ (@SOT_as_OT _ (@eq _) nat_OrderedType))
+                                           (@OT_Equivalence _ (@SOT_as_OT _ (@eq _) nat_OrderedType))
+                                           ?a ?b |- _ ] =>
+                  is_var a; is_var b; invc H; clear_trivial_eqs
+              end)).
 
   Ltac cset_tac_step :=
-    intros; (try subst); decompose records; destr; cset_assumption ||
-      bool_to_prop || bool_to_prop in *.
+    intros; (try subst); decompose records; destr; mycleartrivial; (cset_assumption ||
+      bool_to_prop || bool_to_prop in * || mycleartrivial); mycleartrivial.
 
   Ltac cset_tac :=
       repeat (cset_tac_step).

@@ -88,7 +88,7 @@ Qed.
 Lemma ssa_incl s an
   : ssa s an -> fst (getAnn an) ⊆ snd (getAnn an).
 Proof.
-  intros. general induction H; eauto using ssa; simpl; cset_tac; eauto.
+  intros. general induction H; eauto using ssa; simpl; cset_tac; intuition.
   - rewrite H2 in IHssa; simpl in *. rewrite <- IHssa. cset_tac; intuition.
   - rewrite H4 in IHssa1. rewrite H5 in IHssa2. simpl in *.
     eapply H1; eauto.
@@ -117,6 +117,8 @@ Definition pminus (D'':set var) s :=
     | pair s s' => (s \ D'', s' \ D'')
   end.
 
+Require Import Coq.Program.Tactics.
+
 Lemma ssa_minus D an an' s
   : notOccur D s
     -> ssa s an
@@ -125,7 +127,7 @@ Lemma ssa_minus D an an' s
 Proof.
   intros ? ? PE. general induction H0; invt notOccur; try rewrite PE; simpl.
   - econstructor.
-    + intro. cset_tac; eauto.
+    + cset_tac; intuition.
     + eapply Exp.notOccur_freeVars in H9; eauto. rewrite meet_comm in H9.
       rewrite <- H0. rewrite minus_inane_set; eauto. reflexivity.
     + eapply IHssa; eauto. reflexivity.

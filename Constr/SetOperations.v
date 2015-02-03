@@ -182,11 +182,7 @@ Proof.
   - eapply Add_Equal in H2. rewrite H2 in H3.
     decide (x ∈ s0).
     + rewrite fold_add in H3; eauto using union_m, transpose_union_subset.
-      cset_tac. destruct H3.
-      left. eexists x. split. eapply H2. cset_tac; intuition. eauto.
-      edestruct H0; eauto. destruct H4; dcr.
-      left; eexists x1; split; eauto. eapply H2. cset_tac; intuition.
-      exfalso; eauto.
+      cset_tac.
     + rewrite fold_add with (eqA:=Equal) in H3; eauto using union_m, transpose_union, Equal_ST.
       cset_tac. destruct H3. left; eexists x; split; eauto.
       eapply H2. cset_tac; intuition.
