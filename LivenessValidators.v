@@ -39,9 +39,13 @@ Proof.
     decide (getAnn slv2 ⊆ a);
     try dec_solve; try eassumption; try inv an; eauto.
   + destruct (get_dec Lv (counted l)) as [[[blv Z] ?]|?];
-    try decide ((blv \ of_list Z) ⊆ a);
+    (try (decide (isImperative i); [decide ((blv \ of_list Z) ⊆ a)|]));
     try decide (forall n y, get Y n y -> live_exp_sound y a);
     try decide (length Y = length Z); try dec_solve.
+    - left; econstructor; eauto. destruct if; eauto.
+    - right; intro. inv H; eauto. destruct if in H5; eauto.
+      get_functional; subst. eauto.
+    - left; econstructor; eauto. destruct if; eauto. intuition.
   + decide(live_exp_sound e a); try dec_solve.
   + edestruct IHs; eauto; try inv an; eauto;
     decide (getAnn slv \ {{x}} ⊆ a);
@@ -50,9 +54,12 @@ Proof.
   + edestruct IHs1; eauto; try inv an; eauto;
     edestruct IHs2; eauto; try inv an; eauto;
     decide ((of_list Z) ⊆ getAnn slv1);
-    destruct i;
-    decide ((getAnn slv1 \ of_list Z) ⊆ a);
     decide (getAnn slv2 ⊆ a); try dec_solve.
+    decide (isFunctional i).
+    decide ((getAnn slv1 \ of_list Z) ⊆ a).
+    - left; econstructor; eauto. destruct if; eauto.
+    - right; intro. inv H; eauto. destruct if in H10; eauto.
+    - left; econstructor; eauto. destruct if; eauto. intuition.
     Grab Existential Variables. eassumption. eassumption. eassumption. eassumption.
 Defined.
 
@@ -71,7 +78,7 @@ Proof.
   + edestruct IHs; eauto; try inv an; eauto;
     decide (getAnn slv\{{x}} ⊆ a);
     decide (x ∈ getAnn slv -> live_exp_sound e a);
-(*    decide (x ∉ getAnn slv -> a ⊆ getAnn slv\{{x}});*) try dec_solve.
+    try dec_solve.
   + edestruct IHs1; try inv an; eauto;
     edestruct IHs2; try inv an; eauto;
     decide (live_exp_sound e a);
@@ -79,9 +86,14 @@ Proof.
     decide (getAnn slv2 ⊆ a);
     try dec_solve; try eassumption; try inv an; eauto.
   + destruct (get_dec Lv (counted l)) as [[[blv Z] ?]|?];
-    try decide ((blv \ of_list Z) ⊆ a);
     try decide (argsLive a blv Y Z); try dec_solve.
-    left. econstructor; eauto using argsLive_length.
+    exploit argsLive_length; eauto.
+    decide (isImperative i); try dec_solve.
+    decide ((blv \ of_list Z) ⊆ a).
+    - left; econstructor; eauto. destruct if; eauto.
+    - right; intro. inv H; eauto. destruct if in H5; eauto.
+      get_functional; subst; eauto.
+    - left; econstructor; eauto. destruct if; eauto. intuition.
   + decide(live_exp_sound e a); try dec_solve.
   + edestruct IHs; eauto; try inv an; eauto;
     decide (getAnn slv \ {{x}} ⊆ a);
@@ -89,9 +101,12 @@ Proof.
     try dec_solve.
   + edestruct IHs1; eauto; try inv an; eauto;
     edestruct IHs2; eauto; try inv an; eauto;
-    decide ((getAnn slv1 \ of_list Z) ⊆ a);
-    destruct i;
     decide (getAnn slv2 ⊆ a); try dec_solve.
+    decide (isFunctional i).
+    decide ((getAnn slv1 \ of_list Z) ⊆ a).
+    - left; econstructor; eauto. destruct if; eauto.
+    - right; intro. inv H; eauto. destruct if in H10; eauto.
+    - left; econstructor; eauto. destruct if; eauto. intuition.
     Grab Existential Variables. eassumption. eassumption. eassumption. eassumption.
 Defined.
 

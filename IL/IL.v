@@ -1,5 +1,6 @@
 Require Import List.
 Require Export Util Relations Get Drop Var Val Exp Env Map CSet AutoIndTac MoreList OptionMap Events.
+Require Import SetOperations.
 
 Set Implicit Arguments.
 
@@ -50,7 +51,7 @@ Inductive notOccur (G:set var) : stmt -> Prop :=
       -> notOccur G s
       -> notOccur G (stmtExtern x f Y s)
   | ncLet s Z t
-    : of_list Z ∩ G [=] ∅
+    : disj G (of_list Z)
       -> notOccur G s
       -> notOccur G t
       -> notOccur G (stmtLet Z s t).
@@ -65,15 +66,70 @@ Fixpoint freeVars (s:stmt) : set var :=
     | stmtLet Z s1 s2 => (freeVars s1 \ of_list Z) ∪ freeVars s2
   end.
 
+Fixpoint definedVars (s:stmt) : set var :=
+  match s with
+    | stmtExp x e s0 => {x; definedVars s0}
+    | stmtIf e s1 s2 => definedVars s1 ∪ definedVars s2
+    | stmtGoto l Y => ∅
+    | stmtReturn e => ∅
+    | stmtExtern x f Y s => {x; definedVars s}
+    | stmtLet Z s1 s2 => definedVars s1 ∪ definedVars s2 ∪ of_list Z
+  end.
+
 Fixpoint occurVars (s:stmt) : set var :=
   match s with
-    | stmtExp x e s0 => occurVars s0 ∪ {{x}}
+    | stmtExp x e s0 => {x; occurVars s0} ∪ Exp.freeVars e
     | stmtIf e s1 s2 => occurVars s1 ∪ occurVars s2 ∪ Exp.freeVars e
     | stmtGoto l Y => list_union (List.map Exp.freeVars Y)
     | stmtReturn e => Exp.freeVars e
-    | stmtExtern x f Y s => freeVars s ∪ {{x}} ∪ list_union (List.map Exp.freeVars Y)
-    | stmtLet Z s1 s2 => freeVars s1 ∪ freeVars s2 ∪ of_list Z
+    | stmtExtern x f Y s => {x; occurVars s} ∪ list_union (List.map Exp.freeVars Y)
+    | stmtLet Z s1 s2 => occurVars s1 ∪ occurVars s2 ∪ of_list Z
   end.
+
+Lemma freeVars_occurVars s
+: freeVars s ⊆ occurVars s.
+Proof.
+  general induction s; simpl; cset_tac; intuition.
+Qed.
+
+Lemma definedVars_occurVars s
+: definedVars s ⊆ occurVars s.
+Proof.
+  general induction s; simpl; try now (cset_tac; intuition).
+Qed.
+
+Lemma occurVars_freeVars_definedVars s
+: occurVars s [=] freeVars s ∪ definedVars s.
+Proof.
+  general induction s; simpl.
+  - rewrite IHs. clear_all; cset_tac; intuition; eauto.
+    decide (x === a); intuition; eauto.
+  - rewrite IHs1, IHs2. clear_all; cset_tac; intuition; eauto.
+  - cset_tac; intuition.
+  - cset_tac; intuition.
+  - rewrite IHs. clear_all; cset_tac; intuition; eauto.
+    decide (x === a); intuition; eauto.
+  - rewrite IHs1, IHs2. clear_all; cset_tac; intuition; eauto.
+    decide (a ∈ of_list Z); intuition; eauto.
+Qed.
+
+Lemma notOccur_disj_occurVars G s
+: notOccur G s -> disj G (occurVars s).
+Proof.
+  intros.
+  general induction H; simpl; repeat (rewrite disj_app || rewrite disj_add);
+  eauto using Exp.notOccur_disj_freeVars, list_union_notOccur.
+Qed.
+
+Lemma occurVars_disj_notOccur G s
+: disj G (occurVars s) -> notOccur G s.
+Proof.
+  intros.
+  - general induction s; simpl in * |- *;
+    repeat (rewrite disj_app in H || rewrite disj_add in H); dcr;
+    eauto using notOccur, Exp.freeVars_disj_notOccur, list_union_notOccur'.
+Qed.
+
 
 Fixpoint rename (ϱ:env var) (s:stmt) : stmt :=
   match s with
@@ -99,28 +155,27 @@ Lemma notOccur_incl G G' s
   : G' ⊆ G -> notOccur G s -> notOccur G' s.
 Proof.
   intros A B. general induction B;
-              eauto 20 using notOccur, incl_not_member, incl_meet_empty,
+              eauto 20 using notOccur, incl_not_member, disj_1_incl,
               Exp.notOccur_antitone.
 Qed.
 
-Add Parametric Morphism : notOccur with
-  signature Subset ==> eq ==> flip impl as incl_notOccur_morphism.
+Instance notOccur_subset
+: Proper (Subset ==> eq ==> flip impl) notOccur.
 Proof.
-  intros; hnf; intros. general induction H0; eauto 20 using notOccur, Exp.notOccur_antitone.
-  - econstructor; eauto.
-    eapply incl_eq; eauto using incl_empty. rewrite <- H.
-    eapply incl_meet_lr; intuition.
+  unfold Proper, respectful, flip, impl; intros; subst.
+  general induction H1; eauto 20 using notOccur, Exp.notOccur_antitone, disj_1_incl.
 Qed.
 
-Add Parametric Morphism : notOccur with
-  signature Equal ==> eq ==> iff as eq_cset_notOccur_morphism.
+Instance notOccur_equal
+: Proper (Equal ==> eq ==> iff) notOccur.
 Proof.
-  intros. split; intros.
+  split; intros; subst.
   assert (Subset y x); intuition.
-  rewrite H1; eauto.
+  rewrite H0; eauto.
   assert (Subset x y); intuition.
-  rewrite H1; eauto.
+  rewrite H0; eauto.
 Qed.
+
 
 (** ** Semantics *)
 

@@ -3,7 +3,7 @@ Require Import CSet Le.
 Require Import Plus Util AllInRel Map.
 Require Import Val Var Env EnvTy IL Sim Coherence Fresh Annotation DecSolve SetOperations LabelsDefined.
 
-Require Import Liveness Eqn ValueOpts.
+Require Import Liveness Eqn ValueOpts RenamedApart.
 
 Set Implicit Arguments.
 Unset Printing Records.
@@ -106,14 +106,14 @@ Qed.
 
 Lemma cp_eqns_add_update ϱ D x y
 : x ∉ D
-  -> map (cp_eqn (ϱ [x <- y])) (D ++ {x; {}})
+  -> map (cp_eqn (ϱ [x <- y])) ({x; D })
             [=] {EqnApx (Var x) (Var y); map (cp_eqn ϱ) D}.
 Proof.
   intros.
-  rewrite map_app; intuition.
-  rewrite map_single; intuition. unfold cp_eqn at 2.
+  rewrite map_add; intuition.
+  unfold cp_eqn at 1.
   lud; isabsurd. rewrite cp_eqns_agree with (E':=ϱ).
-  cset_tac; intuition.
+  reflexivity.
   eapply agree_on_update_dead; eauto.
 Qed.
 
@@ -173,7 +173,7 @@ Qed.
 
 
 Lemma copyPropagate_sound_eqn s ang Es ϱ
-: ssa s ang
+: renamedApart s ang
   -> lookup_set ϱ (fst (getAnn ang)) ⊆ (fst (getAnn ang))
   -> labelsDefined s (length Es)
   -> (forall n a, get Es n a -> snd a [=] ∅)
@@ -186,10 +186,12 @@ Proof.
   - destruct if.
     + inv i; simpl in *. econstructor; eauto.
       * { eapply eqn_sound_entails_monotone; eauto.
-          - eapply IHssa; eauto.
+          - eapply IHrenamedApart; eauto.
             rewrite H2; simpl.
-            rewrite lookup_set_add_update, H3; eauto.
-            rewrite lookup_set_single; eauto; cset_tac; intuition.
+            rewrite lookup_set_add_update; eauto.
+            assert (v ∈ D) by (cset_tac; intuition).
+            pose proof (lookup_set_single H7 H4); eauto.
+            revert H4 H8; clear_all; cset_tac; intuition.
           - rewrite H2; simpl.
             rewrite cp_eqns_add_update; eauto.
             rewrite add_union_singleton.
@@ -203,13 +205,14 @@ Proof.
             + eapply entails_monotone; [ reflexivity | ].
               cset_tac; intuition.
         }
-      * hnf; intros; hnf; intros. cset_tac; intuition. rewrite <- H7.
+      * hnf; intros; hnf; intros. cset_tac; intuition. rewrite <- H8.
         simpl. reflexivity.
     + econstructor; eauto.
       eapply eqn_sound_entails_monotone; eauto.
-      * eapply IHssa; eauto. rewrite H2; simpl.
+      * eapply IHrenamedApart; eauto. rewrite H2; simpl.
         intros.
-        rewrite lookup_set_add_update; eauto. rewrite H3. reflexivity.
+        rewrite lookup_set_add_update; eauto. simpl in *.
+        rewrite H4. reflexivity.
       * rewrite H2; simpl. rewrite cp_eqns_add_update; eauto.
         eapply entails_union'.
         rewrite add_union_singleton; reflexivity.
@@ -220,12 +223,12 @@ Proof.
       * rewrite rename_exp_freeVars; eauto. rewrite H0; eauto.
   - econstructor; intros. eauto.
     + eapply eqn_sound_entails_monotone; eauto.
-      eapply IHssa1; eauto.
+      eapply IHrenamedApart1; eauto.
       * rewrite H4; simpl; eauto.
       * rewrite H4; simpl.
         eapply entails_monotone; try reflexivity; cset_tac; intuition.
     + eapply eqn_sound_entails_monotone; eauto.
-      eapply IHssa2; eauto.
+      eapply IHrenamedApart2; eauto.
       * rewrite H5; simpl; eauto.
       * rewrite H5; simpl.
         eapply entails_monotone; try reflexivity; cset_tac; intuition.
@@ -240,10 +243,10 @@ Proof.
     + eapply cp_moreDefinedArgs; eauto.
   - econstructor.
     + eapply eqn_sound_entails_monotone; eauto.
-      eapply IHssa; eauto.
+      eapply IHrenamedApart; eauto.
       * rewrite H2; simpl.
         rewrite lookup_set_add_update; eauto.
-        rewrite H3; reflexivity.
+        simpl in *. rewrite H4; reflexivity.
       * rewrite H2; simpl.
         rewrite cp_eqns_add_update; eauto.
         eapply entails_union'.
@@ -251,18 +254,19 @@ Proof.
         eapply entails_eqns_apx_refl.
         reflexivity.
     + eauto using cp_moreDefinedArgs.
-    + hnf; intros ? A.
+    + simpl in *.
+      hnf; intros ? A.
       unfold list_union in A.
       eapply list_union_get in A. destruct A as [[n [t []]]|]; isabsurd.
       edestruct map_get_4; eauto; dcr. subst.
-      edestruct map_get_4; try eapply H8; eauto; dcr; subst.
-      exploit (get_list_union_map _ _ Exp.freeVars); try eapply H9; eauto.
+      edestruct map_get_4; try eapply H9; eauto; dcr; subst.
+      exploit (get_list_union_map _ _ Exp.freeVars); try eapply H10; eauto.
       rewrite H0 in X.
-      rewrite rename_exp_freeVars in H7; eauto. rewrite X in H7. eauto.
+      rewrite rename_exp_freeVars in H8; eauto. rewrite X in H8. eauto.
     + rewrite map_length; reflexivity.
   - econstructor. instantiate (1:=map (cp_eqn ϱ) D). instantiate (1:=∅).
     + eapply eqn_sound_entails_monotone; eauto.
-      eapply IHssa1; eauto. rewrite H3; simpl.
+      eapply IHrenamedApart1; eauto. rewrite H3; simpl.
       * rewrite lookup_set_union; eauto.
         rewrite update_with_list_lookup_set_incl; eauto; try reflexivity.
         rewrite lookup_set_update_with_list_in_union; eauto.
@@ -281,7 +285,7 @@ Proof.
         clear_all; cset_tac; intuition; eauto.
         rewrite H10. eapply update_with_list_agree_minus; eauto.
     + eapply eqn_sound_entails_monotone; eauto.
-      eapply IHssa2; simpl; eauto.
+      eapply IHrenamedApart2; simpl; eauto.
       * rewrite H5. simpl. eauto.
       * intros. inv H10; simpl in *. reflexivity.
         eapply H9; eauto.

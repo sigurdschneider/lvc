@@ -70,7 +70,7 @@ Definition toDeBruijn (ilin:ILN.nstmt) : status IL.stmt :=
 
 Definition toILF (ili:IL.stmt) : status IL.stmt :=
   sdo lv <- livenessAnalysis ili;
-  ensure (Liveness.true_live_sound Liveness.Functional nil ili lv /\ getAnn lv ⊆ freeVars ili) ("Liveness unsound (1)") ;
+  ensure (Liveness.true_live_sound Liveness.FunctionalAndImperative nil ili lv /\ getAnn lv ⊆ freeVars ili) ("Liveness unsound (1)") ;
   let ilid := DVE.compile nil ili lv in
   let additional_params := additionalArguments ilid (DVE.compile_live ili lv) in
   ensure (Delocation.trs nil nil ilid (DVE.compile_live ili lv) additional_params)
@@ -100,7 +100,7 @@ Definition fromILF (s:stmt) : status stmt :=
   let s_renamed_apart := rename_apart s_hoisted in
   let fv := freeVars s_renamed_apart in
   sdo lv <- livenessAnalysis s_renamed_apart;
-    if [Liveness.live_sound Liveness.Functional nil s_renamed_apart lv
+    if [Liveness.live_sound Liveness.FunctionalAndImperative nil s_renamed_apart lv
         /\ getAnn lv ⊆ freeVars s_hoisted] then
        let fvl := to_list (getAnn lv) in
        let ϱ := CMap.update_with_list fvl fvl (@MapInterface.empty var _ _ _) in
@@ -179,10 +179,10 @@ Proof.
               (DVE.compile nil ili x) (DVE.compile_live ili x)); intros.
     assert (l = nil). {
     exploit (DelocationAlgo.computeParameters_length nil nil); eauto.
-    eapply (@DVE.dve_live Liveness.Functional nil); eauto. destruct l; simpl in *; congruence.
+    eapply (@DVE.dve_live Liveness.FunctionalAndImperative nil); eauto. destruct l; simpl in *; congruence.
     }
     subst.
-    exploit (@DVE.dve_live Liveness.Functional nil); eauto.
+    exploit (@DVE.dve_live Liveness.FunctionalAndImperative nil); eauto.
     exploit Delocation.trs_srd; eauto using PIR2.
     exploit (@DelocationAlgo.computeParameters_live nil nil nil); eauto using PIR2.
     eapply sim_trans with (S2:=I.state). Focus 2.
@@ -192,25 +192,19 @@ Proof.
     econstructor; eauto using AIR2. isabsurd. econstructor. reflexivity.
     simpl. rewrite H2 in t.
     eapply (@Delocation.live_sound_compile nil nil nil); eauto.
+    eapply Liveness.live_sound_overapproximation_I; eauto.
     econstructor.
-
     eapply sim_trans with (S2:=I.state).
     Focus 2.
     eapply bisim_sim. eapply Delocation.trsR_sim.
     rewrite H2 in t.
     econstructor; eauto using AIR53. reflexivity.
     eapply (@Delocation.live_sound_compile nil); eauto.
+    eapply Liveness.live_sound_overapproximation_I; eauto.
     hnf; intros. rewrite DVE.compile_live_incl in H3. eapply H0; eauto.
-    eauto using Liveness.true_live_sound_interpretation.
+    eapply H.
     eapply DVE.I.sim_DVE. reflexivity.
-    eauto using Liveness.true_live_sound_interpretation.
-Qed.
-
-
-Lemma fst_ssa_ann s G
- : fst (getAnn (ssa_ann s G)) = G.
-Proof.
-  general induction s; eauto.
+    eapply Liveness.true_live_sound_overapproximation_I; eauto.
 Qed.
 
 Lemma fromILF_correct (s s':stmt) E
@@ -228,7 +222,7 @@ Proof.
   eapply (@Alpha.alphaSim_sim (nil, E, _) (nil, E, _)).
   econstructor; eauto using AIR3, Alpha.envCorr_idOn_refl.
   eapply Alpha.alpha_sym. eapply rename_apart_alpha.
-  exploit rename_apart_ssa; eauto.
+  exploit rename_apart_renamedApart; eauto.
   exploit AllocationAlgo.linear_scan_correct; eauto.
   eapply injective_on_agree; [| eapply CMap.map_update_list_update_agree].
   hnf; intros.
@@ -236,38 +230,42 @@ Proof.
   rewrite H3. rewrite lookup_update_same. reflexivity.
   rewrite of_list_3; eauto.
   rewrite of_list_3; eauto. reflexivity.
-  rewrite fst_ssa_ann. eauto.
+  rewrite fst_renamedApartAnn. eauto.
   eapply sim_trans with (σ2:=(nil:list F.block, E,
                                rename (CMap.findt x0 0)
              (rename_apart (EAE.compile s)))).
   eapply bisim_sim.
   eapply Alpha.alphaSim_sim. econstructor; eauto using AIR3.
-  eapply Allocation.ssa_locally_inj_alpha; eauto.
   instantiate (1:=id).
-  eapply AllocationAlgo.linear_scan_ssa_agree in EQ1; eauto.
-  rewrite fst_ssa_ann in EQ1.
+  eapply Allocation.ssa_locally_inj_alpha; eauto.
+  eapply Liveness.live_sound_overapproximation_F; eauto.
+  eapply AllocationAlgo.linear_scan_renamedApart_agree in EQ1; eauto.
+  rewrite fst_renamedApartAnn in EQ1.
   rewrite <- CMap.map_update_list_update_agree in EQ1.
-  hnf; intros. rewrite <- EQ1; eauto.
-  rewrite lookup_update_same; eauto. rewrite of_list_3; eauto.
+  hnf; intros. repeat rewrite <- EQ1; eauto;
+  repeat rewrite lookup_update_same; eauto;
+  rewrite of_list_3; eauto.
   reflexivity.
-  hnf; intros. cbv in H2; subst. rewrite H2; eauto.
+  hnf; intros. cbv in H2; subst. rewrite H2. reflexivity.
   eapply sim_trans with (S2:=I.state).
   eapply bisim_sim.
   eapply Coherence.srdSim_sim.
-  econstructor; isabsurd. eapply Allocation.rename_ssa_srd; eauto.
-  rewrite fst_ssa_ann; eauto.
+  econstructor; isabsurd. eapply Allocation.rename_renamedApart_srd; eauto.
+  rewrite fst_renamedApartAnn; eauto.
   eapply I. econstructor. reflexivity.
   eapply (@Liveness.live_rename_sound _ nil); eauto.
+  eapply Liveness.live_sound_overapproximation_I; eauto.
   econstructor.
   eapply (ParallelMove.pmSim_sim).
   econstructor; try now econstructor; eauto.
-  eapply (@Liveness.live_rename_sound _ nil); eauto. eauto using Liveness.live_sound_interpretation.
+  eapply (@Liveness.live_rename_sound _ nil); eauto.
+  eapply Liveness.live_sound_overapproximation_I; eauto.
   eauto.
 Qed.
 
 Lemma labelsDefined_rename_apart L s ϱ G
 : LabelsDefined.labelsDefined s L
-  -> LabelsDefined.labelsDefined (snd (rename_apart' ϱ G s)) L.
+  -> LabelsDefined.labelsDefined (snd (renameApart' ϱ G s)) L.
 Proof.
   intros.
   general induction H; simpl; repeat (let_pair_case_eq; simpl); try now econstructor; eauto; simpl_pair_eqs; instantiate; subst; eauto; subst.
@@ -306,10 +304,10 @@ Proof.
   eapply ValueOpts.sim_vopt; eauto.
   Focus 2.
   eapply ConstantPropagation.cp_sound_eqn; eauto.
-  eapply rename_apart_ssa. instantiate (1:=nil). simpl.
+  eapply rename_apart_renamedApart. instantiate (1:=nil). simpl.
   eapply labelsDefined_rename_apart; eauto.
   intros; isabsurd.
-  rewrite fst_ssa_ann.
+  rewrite fst_renamedApartAnn.
   Lemma cp_eqns_no_assumption d G
   : (forall x : var,
       x \In G -> MapInterface.find x d = ⎣⎦)
@@ -329,8 +327,8 @@ Proof.
   intros. hnf; intros.
   rewrite cp_eqns_no_assumption in H. cset_tac; intuition. eassumption.
   constructor.
-  eapply rename_apart_ssa.
-  rewrite fst_ssa_ann.
+  eapply rename_apart_renamedApart.
+  rewrite fst_renamedApartAnn.
   rewrite cp_eqns_no_assumption. eapply incl_empty. eauto.
   hnf; intuition.
 Qed.

@@ -3,7 +3,7 @@ Require Import CSet Le.
 Require Import Plus Util AllInRel Map.
 Require Import CSet Val Var Env EnvTy IL Sim Fresh Annotation MoreExp Coherence LabelsDefined DecSolve.
 
-Require Import Liveness Filter SetOperations Eqn ValueOpts Lattice.
+Require Import RenamedApart Filter SetOperations Eqn ValueOpts Lattice.
 
 Set Implicit Arguments.
 Unset Printing Records.
@@ -151,7 +151,7 @@ Defined.
 
 Definition cp_eqn (E:onv aval) x :=
   match E x with
-    | Some (wTA c) => {{ EqnEq (Var x) (Con c)}}
+    | Some (wTA c) => singleton (EqnEq (Var x) (Con c))
     | _ => ∅
   end.
 
@@ -177,6 +177,15 @@ Instance cp_eqns_morphism_flip_subset E
 Proof.
   unfold Proper, respectful, cp_eqns; intros.
   rewrite <- H. reflexivity.
+Qed.
+
+Lemma cp_eqns_add E x lv
+: cp_eqns E ({x; lv}) [=] cp_eqn E x ∪ cp_eqns E lv.
+Proof.
+  unfold Proper, respectful, cp_eqns; intros.
+  rewrite map_add.
+  rewrite fold_union_add. reflexivity.
+  intuition.
 Qed.
 
 Lemma cp_eqns_union E lv lv'
@@ -275,7 +284,7 @@ Proof.
   decide (x ∈ s); [left|right]; split; eauto.
   - cset_tac; intuition. decide (_eq a x); eauto.
     rewrite <- H1; eauto.
-  - cset_tac; intuition. eapply n; rewrite H1; eauto.
+  - cset_tac; intuition.
 Qed.
 
 Lemma in_cp_eqns AE x lv v
@@ -285,8 +294,9 @@ Lemma in_cp_eqns AE x lv v
 Proof.
   intros. unfold cp_eqns.
   eapply fold_union_incl.
-  instantiate (1:={{EqnEq (Var x) (Con v) }}). cset_tac; intuition.
-  assert (cp_eqn AE x = {{ EqnEq (Var x) (Con v) }}).
+  instantiate (1:=singleton (EqnEq (Var x) (Con v))).
+  cset_tac; intuition.
+  assert (cp_eqn AE x = singleton (EqnEq (Var x) (Con v))).
   unfold cp_eqn. rewrite H0. reflexivity.
   rewrite <- H1. eapply map_1; eauto.
   intuition.
@@ -351,7 +361,7 @@ Lemma exp_eval_entails AE e v x lv
 : Exp.freeVars e ⊆ lv
   -> exp_eval AE e = wTA v
   -> entails ({EqnEq (Var x) e ; { EqnEq (Var x) (cp_choose_exp AE e) ;
-                                     cp_eqns AE lv } }) {{ EqnEq (Var x) (Con v)}}.
+                                     cp_eqns AE lv } }) (singleton (EqnEq (Var x) (Con v))).
 Proof.
   intros.
   unfold entails; intros. unfold satisfiesAll; intros.
@@ -549,7 +559,7 @@ Qed.
 
 Lemma cp_eqns_update D x c AE
 : x ∈ D
-  -> cp_eqns (AE [x <- ⎣ wTA c ⎦]) D [=] {{EqnEq (Var x) (Con c)}} ∪ cp_eqns AE (D \ {{x}}).
+  -> cp_eqns (AE [x <- ⎣ wTA c ⎦]) D [=] singleton (EqnEq (Var x) (Con c)) ∪ cp_eqns AE (D \ {{x}}).
 Proof.
   intros.
   assert (D [=] {{x}} ∪ (D \ {{x}})). {
@@ -565,7 +575,7 @@ Qed.
 Lemma cp_sound_eqn AE Cp Es s (ang:ann (set var * set var))
 : let Gamma := (cp_eqns AE (fst (getAnn ang))) in
 cp_sound AE Cp s
--> ssa s ang
+-> renamedApart s ang
 -> labelsDefined s (length Es)
 -> (forall n a aY Z, get Es n a
               -> get Cp n (Z,aY)
@@ -576,17 +586,17 @@ cp_sound AE Cp s
 Proof.
   intro. subst Gamma.
   intros CP SSA LD LINV.
-  general induction CP; invt ssa; invt labelsDefined; simpl.
+  general induction CP; invt renamedApart; invt labelsDefined; simpl.
   - econstructor.
     eapply eqn_sound_entails_monotone; eauto.
-    + rewrite H7; simpl. rewrite cp_eqns_union.
+    + rewrite H7; simpl. rewrite cp_eqns_add.
       eapply entails_union; split.
+      unfold cp_eqn. case_eq (AE x); intros; eauto using entails_empty.
+      rewrite H0 in H.
+      destruct a; eauto using entails_empty.
+      eapply exp_eval_entails; eauto. congruence.
       eapply entails_monotone. reflexivity.
       cset_tac; intuition.
-      rewrite cp_eqns_single.
-      unfold cp_eqn. case_eq (AE x); intros;
-                     try destruct a; eauto using entails_empty.
-      eapply exp_eval_entails; eauto. congruence.
     + eapply cp_choose_approx; eauto.
     + eapply cp_choose_exp_freeVars; eauto.
   - econstructor; intros; eauto.

@@ -235,6 +235,11 @@ Hint Extern 9 =>
          now (exfalso; rewrite <- H in H'; eauto)
      end.
 
+Hint Extern 10 => match goal with
+                   | [ H : ?x ∈ ?s, H' : ?y ∈ ?s -> False, H'' : ?y === ?x |- _ ] => exfalso; eapply H'; rewrite H''; eapply H
+                   | [ H : ?x ∈ ?s, H' : ?y ∈ ?s -> False, H'' : ?x === ?y |- _ ] => exfalso; eapply H'; rewrite <- H''; eapply H
+                 end.
+
 (*
 *** Local Variables: ***
 *** coq-load-path: (("../" "Lvc")) ***

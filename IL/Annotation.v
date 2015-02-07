@@ -130,6 +130,19 @@ Proof.
   - econstructor; eauto.
 Qed.
 
+Instance ann_R_trans A R `{Transitive A R} : Transitive (ann_R R).
+Proof.
+  hnf; intros ? ? ? B C.
+  general induction B; inv C; econstructor; eauto.
+Qed.
+
+Instance ann_R_ann1_pe_morphism X `{OrderedType X}
+: Proper (@pe X _ ==> ann_R (@pe X _) ==> ann_R (@pe X _)) (@ann1 _).
+Proof.
+  unfold Proper, respectful; intros.
+  econstructor; eauto.
+Qed.
+
 Instance ordered_type_lt_dec A `{OrderedType A} (a b: A)
 : Computable (_lt a b).
 pose proof (_compare_spec a b).
@@ -163,6 +176,18 @@ Instance PartialOrder_ann Dom `{PartialOrder Dom}
   poEq_dec := @ann_R_dec _ _ poEq poEq_dec
 }.
 
+Instance getAnn_ann_R_morphism A (R:A->A->Prop)
+: Proper (ann_R R ==> R) (getAnn).
+Proof.
+  unfold Proper, respectful; intros.
+  inv H; simpl; eauto.
+Qed.
+
+Hint Extern 20 (ann_R _ ?a ?a') => (is_evar a ; fail 1)
+                                    || (has_evar a ; fail 1)
+                                    || (is_evar a' ; fail 1)
+                                    || (has_evar a'; fail 1)
+                                    || reflexivity.
 
 (*
 *** Local Variables: ***

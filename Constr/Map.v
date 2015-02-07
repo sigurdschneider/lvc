@@ -14,28 +14,6 @@ Proof.
   specialize (A _ H2). lud; intuition. intuition.
 Qed.
 
-
-Global Instance update_with_list_proper {X} `{OrderedType X} {Y} `{OrderedType Y}
-  {Z : list X} {Z' : list Y} {f : X -> Y} `{Proper _ (_eq ==> _eq) f}
-  : Proper (_eq ==> _eq) (update_with_list Z Z' f).
-Proof.
-  hnf; intros.
-  general induction Z; simpl. rewrite H2; eauto.
-  destruct Z'. rewrite H2. eauto.
-  lud; rewrite H2 in *; try (now exfalso; eauto).
-  eapply IHZ; eauto.
-Qed.
-
-Lemma lookup_set_update_not_in_Z' {X} `{OrderedType X} {Y} `{OrderedType Y}
-  Z Z' f `{Proper _ (_eq ==> _eq) f} x
-  : update_with_list Z Z' f x ∉ of_list Z' -> update_with_list Z Z' f x === f x.
-Proof.
-  general induction Z; simpl in *; eauto.
-  destruct Z'; eauto.
-  lud. simpl in *; exfalso. eapply H2. eapply add_iff. intuition.
-  eapply IHZ; eauto. intro. eapply H2. simpl. eapply add_2; eauto.
-Qed.
-
 Lemma lookup_set_update_with_list_in_union {X} `{OrderedType X} {Y} `{OrderedType Y}
   Z Z' f D `{Proper _ (_eq ==> _eq) f}
   : lookup_set (update_with_list Z Z' f) D ⊆ lookup_set f D ∪ of_list Z'.
@@ -47,19 +25,15 @@ Proof.
   eapply lookup_set_update_not_in_Z' in n. rewrite n in H4.
   eapply union_2. eapply lookup_set_spec; eauto.
   eauto.
-  eapply update_with_list_proper.
 Qed.
 
 Lemma lookup_set_update_in_union {X} `{OrderedType X} {Y} `{OrderedType Y}
  f D x y `{Proper _ (_eq ==> _eq) f}
   : lookup_set (f[x <- y]) D ⊆ lookup_set f (D \ {{x}}) ∪ {{y}}.
 Proof.
-  hnf; intros. eapply lookup_set_spec in H2; destruct H2; dcr.
+  hnf; intros. eapply lookup_set_spec in H2; destruct H2; dcr; eauto.
   lud. cset_tac; eauto. cset_tac; left. eapply lookup_set_spec; eauto.
   eexists x0; cset_tac; eauto.
-  hnf; intros; lud; isabsurd. rewrite H3; eauto.
-  hnf; intros; lud; isabsurd. rewrite H3; eauto.
-  hnf; intros; lud; isabsurd. rewrite H3; eauto.
 Qed.
 
 Lemma lookup_set_update_with_list_in_union_length {X} `{OrderedType X} {Y} `{OrderedType Y}
@@ -75,8 +49,7 @@ Proof.
   eapply update_with_list_lookup_in; eauto.
   erewrite update_with_list_no_update in H5; eauto.
   eapply union_2. eapply lookup_set_spec; eauto. eexists x.
-  split; eauto. cset_tac; eauto.
-  eapply update_with_list_proper.
+  split; eauto. cset_tac; eauto. eauto.
 Qed.
 
 Lemma inverse_on_update_inverse {X} `{OrderedType X} {Y} `{OrderedType Y}

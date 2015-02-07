@@ -392,17 +392,22 @@ Proof.
     rewrite compile_live_incl; eauto.
   - repeat destruct if; eauto.
     + econstructor; eauto; rewrite compile_live_incl; eauto.
-  - econstructor. eapply (map_get_1 (fun lvZ => let Z' := List.filter (fun x => B[x ∈ fst lvZ]) (snd lvZ) in
-                      (fst lvZ, Z')) H); eauto.
-    simpl. rewrite <- H0. rewrite minus_inter_empty. reflexivity.
-    cset_tac; intuition. eapply filter_incl2; eauto.
-    eapply filter_in; eauto. intuition. hnf. destruct if; eauto.
-    simpl. eapply get_nth in H. erewrite H. simpl.
-    erewrite filter_filter_by_length. reflexivity. congruence.
-    intros. eapply get_nth in H. erewrite H in H3. simpl in *.
-    edestruct filter_by_get as [? [? [? []]]]; eauto; dcr.
-    eapply argsLive_live_exp_sound; eauto. simpl in *.
-    decide (x0 ∈ blv); intuition.
+  - econstructor.
+    + eapply (map_get_1 (fun lvZ => let Z' := List.filter (fun x => B[x ∈ fst lvZ]) (snd lvZ) in
+                                   (fst lvZ, Z')) H); eauto.
+    + simpl. destruct i; simpl in * |- *; eauto.
+      rewrite <- H0. rewrite minus_inter_empty. reflexivity.
+      cset_tac; intuition. eapply filter_incl2; eauto.
+      eapply filter_in; eauto. intuition. hnf. destruct if; eauto.
+      rewrite <- H0. rewrite minus_inter_empty. reflexivity.
+      cset_tac; intuition. eapply filter_incl2; eauto.
+      eapply filter_in; eauto. intuition. hnf. destruct if; eauto.
+    + simpl. eapply get_nth in H. erewrite H. simpl.
+      erewrite filter_filter_by_length. reflexivity. congruence.
+    + intros. eapply get_nth in H. erewrite H in H3. simpl in *.
+      edestruct filter_by_get as [? [? [? []]]]; eauto; dcr.
+      eapply argsLive_live_exp_sound; eauto. simpl in *.
+      decide (x0 ∈ blv); intuition.
   - econstructor; eauto.
     rewrite compile_live_incl; eauto.
   - econstructor; simpl in *.
@@ -418,7 +423,8 @@ Proof.
     split; eauto. rewrite filter_incl. cset_tac; intuition. eauto.
     eapply PIR2_refl. hnf; intuition.
     rewrite getAnn_setTopAnn. cset_tac; intuition.
-    destruct i; eauto. rewrite getAnn_setTopAnn.
+    rewrite getAnn_setTopAnn.
+    destruct if; simpl in * |- *; eauto.
     rewrite compile_live_incl; eauto.
     rewrite union_comm. rewrite union_minus_remove.
     rewrite <- H1.

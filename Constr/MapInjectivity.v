@@ -305,8 +305,6 @@ Proof.
   rewrite <- H6 in n0. rewrite <- lookup_set_union in n0.
   assert (s ∪ D' [=] (s' ∪ D') \ {{x}}).
   rewrite H4; cset_tac; intuition.
-  rewrite <- H12 in H13; eauto.
-  rewrite <- H12 in H13; eauto.
   rewrite H8 in n0. rewrite H8 in H2.
   pose proof (injective_on_update_not_in H2 n0); eauto. intuition.
 
@@ -321,8 +319,7 @@ Global Instance injective_on_computable {X} `{OrderedType X} {Y} `{OrderedType Y
 Proof.
   case_eq (@injective_on_compute X _ Y _ D f _); eauto; intros.
   left. pose proof (@injective_on_iff X _ Y _ f _ D ∅ ∅).
-  destruct H4; eauto. cset_tac; intuition. set_tac; intuition.
-  edestruct H4; cset_tac; intuition. isabsurd.
+  destruct H4; eauto. cset_tac; intuition. isabsurd.
   unfold injective_on_compute in H3.
   rewrite H3 in H4. specialize (H4 I). eapply injective_on_incl ;eauto.
   cset_tac; eauto.

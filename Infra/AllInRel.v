@@ -519,6 +519,22 @@ Proof.
   - right; intro; subst. exploit PIR2_length; eauto.
 Defined.
 
+Instance PIR2_sym {A} (R : A -> A-> Prop) `{Symmetric _ R} :
+  Symmetric (PIR2 R).
+Proof.
+  intros; hnf; intros. general induction H0.
+  - econstructor.
+  - econstructor; eauto.
+Qed.
+
+Lemma PIR2_flip {X} (R:X->X->Prop) l l'
+      : PIR2 R l l'
+        -> PIR2 (flip R) l' l.
+Proof.
+  intros. general induction H.
+  - econstructor.
+  - econstructor; eauto.
+Qed.
 
 Ltac provide_invariants_P2 :=
 match goal with

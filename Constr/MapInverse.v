@@ -250,7 +250,7 @@ Lemma inverse_on_update_fresh X `{OrderedType X} (D:set X) (Z Z':list X) (ϱ ϱ'
  : inverse_on (D \ of_list Z) ϱ ϱ'
   -> unique Z'
   -> length Z = length Z'
-  -> notincl (of_list Z') (lookup_set ϱ (D \ of_list Z))
+  -> disj (of_list Z') (lookup_set ϱ (D \ of_list Z))
   -> inverse_on D (update_with_list Z Z' ϱ)
                  (update_with_list Z' Z ϱ').
 Proof.
@@ -265,14 +265,15 @@ Proof.
   eapply add_iff in i; destruct i; isabsurd.
   eapply IHlength_eq; try eassumption.
   hnf; intros. exfalso; cset_tac; eauto.
-  hnf; intros. intro. eapply lookup_set_spec in H13.
-  destruct H13; cset_tac; eauto. intuition.
+  hnf; intros. split; intros. cset_tac. eapply lookup_set_spec in H14; dcr.
+  cset_tac; intuition. intuition. cset_tac; intuition.
 
   erewrite update_with_list_no_update; eauto.
   erewrite update_with_list_no_update; eauto.
   eapply H1; eauto. cset_tac ; eauto.
   erewrite update_with_list_no_update; eauto. intro.
-  eapply H4; eauto.
+  specialize (H4 (ϱ x)). cset_tac; intuition; eauto.
+  eapply H7.
   eapply lookup_set_spec; cset_tac; intuition.
   eexists x; eauto.
 Qed.

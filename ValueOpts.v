@@ -1,7 +1,7 @@
 Require Import CSet Le.
 
 Require Import Plus Util AllInRel Map.
-Require Import CSet Val Var Env EnvTy Equiv.Sim IL Fresh Annotation MoreExp Coherence.
+Require Import CSet Val Var Env EnvTy Equiv.Sim IL Fresh Annotation MoreExp Coherence RenamedApart.
 
 Require Import SetOperations Liveness Filter Eqn.
 
@@ -337,12 +337,7 @@ Proof.
   symmetry in H0. monad_inv H0. simpl.
   lud; eauto. eapply IHlength_eq; eauto.
   cset_tac; intuition.
-  remember (sid [Z <-- Y] v); intros. symmetry in Heqy0; eauto.
-  eapply update_with_list_lookup_not_in in Heqy0.
-  remember (E [Z <-- List.map Some y] v); intros.
-  symmetry in Heqy1.
-  eapply update_with_list_lookup_not_in in Heqy1; eauto.
-  subst; simpl; eauto. eauto.
+  repeat rewrite lookup_set_update_not_in_Z; eauto.
   erewrite IHe; eauto.
   erewrite IHe1; eauto.
   erewrite IHe2; eauto.
@@ -360,10 +355,8 @@ Proof.
     + destruct vl.
       * rewrite H1. eapply H0 in H1. eauto.
       * lud. erewrite IHZ; eauto. cset_tac; intuition.
-  - eapply update_with_list_lookup_not_in in H1; eauto.
-    remember (V' [Z <-- vl] x). eapply eq_sym in Heqy.
-    eapply update_with_list_lookup_not_in in Heqy; eauto.
-    eapply H0 in H1. congruence.
+  - rewrite lookup_set_update_not_in_Z; eauto.
+    rewrite lookup_set_update_not_in_Z in H1; eauto.
 Qed.
 
 
@@ -751,30 +744,25 @@ Proof.
 Qed.
 
 Lemma eqn_sound_monotone Es Γ1 Γ1' s s' ang
-: ssa s ang
+: renamedApart s ang
   -> eqn_sound Es s s' Γ1 ang
   -> Γ1 ⊆ Γ1'
   -> eqn_sound Es s s' Γ1' ang.
 Proof.
-  intros. general induction H0; eauto.
-  - invt ssa. econstructor; eauto.
+  intros. general induction H0;
+    (try now (eapply EqnUnsat; eauto using unsatisfiable_monotone)); invt renamedApart; eauto.
+  - constructor; eauto.
     eapply IHeqn_sound; eauto.
     + rewrite H3; reflexivity.
     + eapply entails_monotone; eauto.
-  - invt ssa.
-    econstructor; intros; eauto using entails_monotone, not_entails_antitone.
+  - econstructor; intros; eauto using entails_monotone, not_entails_antitone.
     eapply IHeqn_sound1; eauto using not_entails_antitone. rewrite H1; reflexivity.
     eapply IHeqn_sound2; eauto using not_entails_antitone. rewrite H1. reflexivity.
-  - invt ssa.
-    econstructor; eauto using entails_monotone.
-  - invt ssa.
-    econstructor; eauto using entails_monotone.
-  - invt ssa.
-    econstructor; eauto using entails_monotone.
-  - invt ssa.
-    econstructor; eauto.
+  - econstructor; eauto using entails_monotone.
+  - econstructor; eauto using entails_monotone.
+  - econstructor; eauto using entails_monotone.
+  - econstructor; eauto.
     + rewrite <- H3; eauto.
-  - eapply EqnUnsat. eauto using unsatisfiable_monotone.
 Qed.
 
 
@@ -842,27 +830,28 @@ Proof.
 Qed.
 
 Lemma eqn_sound_entails_monotone Es Γ1 Γ1' s s' ang
-: ssa s ang
+: renamedApart s ang
   -> eqn_sound Es s s' Γ1 ang
   -> entails Γ1' Γ1
   -> eqn_sound Es s s' Γ1' ang.
 Proof.
-  intros. general induction H0; eauto.
-  - invt ssa. econstructor; eauto.
+  intros. general induction H0;
+    (try now (eapply EqnUnsat; eauto using unsatisfiable_entails_monotone));
+    invt renamedApart; eauto.
+  - econstructor; eauto.
     eapply IHeqn_sound; eauto. rewrite <- H3. reflexivity.
     + etransitivity; eauto.
-  - invt ssa. econstructor; intros; eauto using entails_transitive,
+  - econstructor; intros; eauto using entails_transitive,
     not_entails_entails_antitone.
     + eapply IHeqn_sound1; eauto using not_entails_entails_antitone.
       rewrite H1. reflexivity.
     + eapply IHeqn_sound2; eauto using not_entails_entails_antitone.
       rewrite H1. reflexivity.
-  - invt ssa. econstructor; eauto using entails_transitive.
-  - invt ssa. econstructor; eauto using entails_transitive.
-  - invt ssa. econstructor; eauto using entails_transitive, entails_monotone.
-  - invt ssa. econstructor; eauto.
+  - econstructor; eauto using entails_transitive.
+  - econstructor; eauto using entails_transitive.
+  - econstructor; eauto using entails_transitive, entails_monotone.
+  - econstructor; eauto.
     + etransitivity; eauto.
-  - eapply EqnUnsat. eauto using unsatisfiable_entails_monotone.
 Qed.
 
 
@@ -905,14 +894,14 @@ Lemma sim_vopt r L L' V V' s s' LV Gamma ang
 : satisfiesAll V Gamma
 -> eqn_sound LV s s' Gamma ang
 -> simL' sim_progeq r (AR (fst (getAnn ang)) V V') LV L L'
--> ssa s ang
+-> renamedApart s ang
 -> eqns_freeVars Gamma ⊆ fst (getAnn ang)
 -> onvLe V V'
 -> sim'r r (L,V, s) (L',V', s').
 Proof.
-  intros SAT EQN SIML SSA FV OLE.
+  intros SAT EQN SIML REAPT FV OLE.
   general induction EQN; (try (now exfalso; eapply H; eauto))
-  ; simpl; invt ssa; simpl in * |- *.
+  ; simpl; invt renamedApart; simpl in * |- *.
   - exploit H; eauto. exploit X; eauto. cset_tac; reflexivity. inv X0.
     inv H2.
     + pfold. econstructor 3; try eapply star2_refl; eauto. stuck2.
@@ -927,12 +916,12 @@ Proof.
           - intros. hnf in H4.
             hnf. destruct x0 as [[[ ?] ?] ?]. dcr.
             repeat (split; eauto).
-            rewrite H10, H11. simpl. clear_all; cset_tac; intuition.
+            rewrite H10, H12. simpl. clear_all; cset_tac; intuition.
             symmetry. eapply agree_on_update_dead.
-            intro. eapply H6. eauto.
+            intro. eapply H7. eauto.
             symmetry; eauto.
             symmetry. eapply agree_on_update_dead.
-            intro. eapply H6. eauto.
+            intro. eapply H7. eauto.
             symmetry; eauto.
           - intros; reflexivity.
         }

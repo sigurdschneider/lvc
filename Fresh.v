@@ -273,6 +273,13 @@ Proof.
   intros. eapply in_vars_up_to. omega.
 Qed.
 
+Lemma vars_up_to_incl n m
+: n <= m -> vars_up_to n ⊆ vars_up_to m.
+Proof.
+  intros. general induction H; eauto. reflexivity.
+  simpl. rewrite IHle. cset_tac; intuition.
+Qed.
+
 Lemma least_fresh_list_small_vars_up_to G n
 : of_list (fresh_list least_fresh G n) ⊆ vars_up_to (cardinal G + n).
 Proof.
@@ -308,8 +315,7 @@ Proof.
   intros. eapply inverse_on_update_fresh; eauto.
   eapply fresh_list_unique, fresh_spec.
   rewrite fresh_list_length; eauto.
-  hnf; intros. intro. eapply (not_in_empty x).
-  eapply fresh_list_spec; eauto using fresh_spec. cset_tac; eauto.
+  eapply fresh_list_spec, fresh_spec.
 Qed.
 
 (*

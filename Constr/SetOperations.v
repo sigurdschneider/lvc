@@ -1,6 +1,6 @@
 Require Export Setoid Coq.Classes.Morphisms.
 Require Export Sets SetInterface SetConstructs SetProperties.
-Require Import EqDec Get CSet Map.
+Require Import EqDec Get CSet Map AllInRel.
 
 Lemma fold_union_incl X `{OrderedType.OrderedType X} s u (x:X) y
   : x ∈ y
@@ -214,12 +214,52 @@ Proof.
 Qed.
 
 Instance fold_left_union_morphism X `{OrderedType X}:
-  Proper (list_eq Equal ==> Equal ==> Equal) (fold_left union).
+  Proper (PIR2 Equal ==> Equal ==> Equal) (fold_left union).
 Proof.
   unfold Proper, respectful; intros.
   general induction H0; simpl; eauto.
-  - rewrite IHlist_eq; eauto. reflexivity.
-    rewrite H0, H2. reflexivity.
+  - rewrite IHPIR2; eauto. reflexivity.
+    rewrite H1, pf. reflexivity.
+Qed.
+
+Instance fold_left_subset_morphism X `{OrderedType X}:
+  Proper (PIR2 Subset ==> Subset ==> Subset) (fold_left union).
+Proof.
+  unfold Proper, respectful; intros.
+  general induction H0; simpl; eauto.
+  - rewrite IHPIR2; eauto. reflexivity.
+    rewrite H1, pf. reflexivity.
+Qed.
+
+Lemma lookup_set_list_union
+      X `{OrderedType X } Y `{OrderedType Y} (ϱ:X->Y) `{Proper _ (_eq ==> _eq) ϱ} l s s'
+: lookup_set ϱ s[=]s' ->
+  lookup_set ϱ (fold_left union l s)
+             [=]  fold_left union (List.map (lookup_set ϱ) l) s'.
+Proof.
+  general induction l; simpl; eauto.
+  eapply IHl; eauto. rewrite lookup_set_union; eauto.
+  rewrite H2. reflexivity.
+Qed.
+
+Lemma list_union_disjunct {X} `{OrderedType X} Y D
+:  (forall (n : nat) (e : set X), get Y n e -> e ∩ D[=]{})
+   <-> disj (list_union Y) D.
+Proof.
+  split; intros.
+  - eapply set_incl; try now (cset_tac; intuition).
+    unfold list_union; hnf; intros.
+    general induction Y; simpl in * |- *; intuition.
+    exploit H0; eauto using get.
+    exploit IHY; intros; eauto using get.
+    rewrite list_union_start_swap.
+    rewrite list_union_start_swap in H1.
+    revert H1 X0; clear_all; cset_tac; intuition; eauto.
+  - unfold list_union, disj in H0.
+    rewrite meet_comm in H0.
+    eapply incl_meet_empty in H0.
+    rewrite meet_comm. eapply H0.
+    eapply incl_list_union; eauto. reflexivity.
 Qed.
 
 

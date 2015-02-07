@@ -375,6 +375,7 @@ Hint Extern 20 => match goal with
                    | [ H: ?a /\ ?b |- ?a ] => eapply H
                  end.
 
+
 (*
 *** Local Variables: ***
 *** coq-load-path: (("../" "Lvc")) ***

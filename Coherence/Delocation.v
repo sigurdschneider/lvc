@@ -69,7 +69,7 @@ Inductive approx
     -> list (params) -> I.block -> I.block -> Prop :=
   blk_approxI o (Za Z':list var) DL ZL Lv s ans ans_lv ans_lv'
               (RD:forall G, o = Some G ->
-                       live_sound Functional ((getAnn ans_lv',Z'++Za)::Lv) (compile (Za :: ZL) s ans) ans_lv'
+                       live_sound Imperative ((getAnn ans_lv',Z'++Za)::Lv) (compile (Za :: ZL) s ans) ans_lv'
                        /\ trs (restrict (Some G::DL) G) (Za::ZL) s ans_lv ans)
   : approx ((getAnn ans_lv',Z'++Za)::Lv) (o::DL) (Za::ZL) (I.blockI Z' s) (I.blockI (Z'++Za) (compile (Za::ZL) s ans)).
 
@@ -111,7 +111,7 @@ Inductive trsR : I.state -> I.state -> Prop :=
   (RD: trs DL ZL s ans_lv ans)
   (EA: AIR53 approx Lv' DL ZL L L')
   (EQ: (@feq _ _ eq) E E')
-  (LV': live_sound Functional Lv' (compile ZL s ans) ans_lv')
+  (LV': live_sound Imperative Lv' (compile ZL s ans) ans_lv')
   (EDEF: defined_on (getAnn ans_lv') E')
   : trsR (L, E, s) (L', E', compile ZL s ans).
 
@@ -205,6 +205,7 @@ Proof.
         exploit omap_length; try eapply H8; eauto.
         rewrite map_length in X0.
         repeat rewrite app_length. omega.
+
     + no_step. get_functional; subst. simpl in *.
       rewrite omap_app in def.
       erewrite omap_agree in H0. Focus 2.
@@ -236,90 +237,11 @@ Proof.
     eauto using defined_on_incl.
 Qed.
 
-Inductive fstNoneOrR' {X Y:Type} (R:X->Y->Prop)
-  : option X -> Y -> Prop :=
-| fstNone' (y:Y) : fstNoneOrR' R None y
-| bothR' (x:X) (y:Y) : R x y -> fstNoneOrR' R (Some x) y
-.
-(*
-Lemma restrict_subset2 DL DL' G G'
-: list_eq (fstNoneOrR (flip Subset)) DL DL'
-  -> G' ⊆ G
-  -> list_eq (fstNoneOrR (flip Subset)) (restrict DL G) (restrict DL' G').
-Proof.
-  intros. induction H; simpl; econstructor; eauto.
-  inv H. simpl. econstructor.
-  unfold restr. repeat destruct if; try econstructor; eauto.
-  exfalso. eapply n. transitivity G; eauto. rewrite <- H2; eauto.
-Qed.
-*)
-
-Definition lessReq := (fstNoneOrR' (fun (s : set var) (t : set var * params) => s ⊆ fst t \ of_list (snd t))).
-
-Lemma restrict_lessReq DL DL' G
-: PIR2 lessReq DL DL'
-  -> PIR2 lessReq (restrict DL G) DL'.
-Proof.
-  intros. induction H; simpl; econstructor; eauto.
-  unfold restr. destruct pf. constructor.
-  destruct if; eauto. subst. constructor; eauto. constructor.
-Qed.
-
-Lemma trs_srd DL AL ZL s ans_lv ans
+Lemma trs_srd AL ZL s ans_lv ans
   (RD:trs AL ZL s ans_lv ans)
-  (LV:live_sound Functional DL s ans_lv)
-  (EQ:PIR2 lessReq AL DL)
-  : srd (restrict AL (getAnn ans_lv)) (compile ZL s ans) ans_lv.
+  : srd AL (compile ZL s ans) ans_lv.
 Proof.
-  general induction RD; inv LV; simpl; eauto using srd.
-  - econstructor; eauto.
-    eapply srd_monotone. eapply IHRD; eauto.
-    eapply restrict_lessReq; eauto.
-    repeat rewrite restrict_comp_meet.
-    eapply restrict_subset. reflexivity.
-    cset_tac; intuition.
-  - econstructor; eauto.
-    eapply srd_monotone. eapply IHRD1; eauto.
-    eapply restrict_subset; eauto. reflexivity.
-    eapply srd_monotone. eapply IHRD2; eauto.
-    eapply restrict_subset; eauto. reflexivity.
-  - edestruct PIR2_nth_2; eauto; dcr.
-    inv H3; get_functional; subst. simpl in *.
-    econstructor; eauto. unfold restrict.
-    pose proof (map_get_1 (restr lv) H2).
-    assert (restr lv (Some x0) = Some x0). eapply restr_iff; split; eauto.
-    rewrite H1; eauto.
-    rewrite H5 in H; eauto.
-  - econstructor; eauto.
-    eapply srd_monotone.
-    + eapply IHRD; eauto.
-      eapply restrict_lessReq; eauto.
-    + repeat rewrite restrict_comp_meet.
-      eapply restrict_subset.
-      * reflexivity.
-      * cset_tac; intuition.
-  - econstructor; eauto.
-    + eapply srd_monotone2. eapply IHRD1; eauto.
-      eapply restrict_lessReq. econstructor; eauto.
-      constructor. simpl. rewrite of_list_app. cset_tac; intuition.
-      rewrite restrict_incl; [|reflexivity].
-      rewrite restrict_incl; [|eapply minus_incl].
-      rewrite restrict_incl; [|reflexivity].
-      econstructor. constructor; unfold flip.
-      rewrite of_list_app. cset_tac; intuition.
-      repeat rewrite restrict_comp_meet.
-      eapply restrict_subset2. reflexivity.
-      rewrite of_list_app.
-      hnf; intros. cset_tac; intuition.
-    + eapply srd_monotone2. eapply IHRD2; eauto.
-      constructor. constructor. simpl. rewrite of_list_app. cset_tac; intuition. eauto.
-      decide (getAnn ans_lv \ of_list (Z ++ Za) ⊆ getAnn ant_lv).
-      rewrite restrict_incl; eauto.
-      econstructor. reflexivity.
-      eapply restrict_subset2. reflexivity. eauto.
-      rewrite restrict_not_incl; eauto.
-      econstructor. constructor.
-      eapply restrict_subset2. reflexivity. eauto.
+  general induction RD; simpl; eauto using srd.
 Qed.
 
 Inductive additionalParameters_live : list (set var)   (* additional params *)
@@ -352,18 +274,19 @@ Inductive additionalParameters_live : list (set var)   (* additional params *)
     -> additionalParameters_live (of_list Za::ZL) t ant_lv ant
     -> additionalParameters_live ZL (stmtLet Z s t) (ann2 lv ans_lv ant_lv) (ann2 Za ans ant).
 
-Lemma live_sound_compile DL ZL AL s ans_lv ans
+Lemma live_sound_compile DL ZL AL s ans_lv ans o
   (RD:trs AL ZL s ans_lv ans)
-  (LV:live_sound Functional DL s ans_lv)
+  (LV:live_sound o DL s ans_lv)
   (APL: additionalParameters_live (List.map of_list ZL) s ans_lv ans)
-  : live_sound Functional (zip (fun s t => (fst s, snd s ++ t)) DL ZL) (compile ZL s ans) ans_lv.
+  : live_sound o (zip (fun s t => (fst s, snd s ++ t)) DL ZL) (compile ZL s ans) ans_lv.
 Proof.
   general induction LV; inv RD; inv APL; eauto using live_sound.
   + pose proof (zip_get  (fun (s : set var * list var) (t : list var) => (fst s, snd s ++ t)) H H10).
     edestruct (map_get_4); eauto; dcr; subst.
     get_functional; subst x.
-    econstructor. eapply H3. simpl. rewrite of_list_app. cset_tac; intuition.
-    simpl. erewrite get_nth; eauto. repeat rewrite app_length, map_length, app_length. congruence.
+    econstructor. eapply H3; eauto. simpl.
+    destruct if. simpl in * |- *; intuition. rewrite of_list_app. cset_tac; intuition. eauto.
+    erewrite get_nth; eauto. repeat rewrite app_length, map_length, app_length. simpl. congruence.
     erewrite get_nth; eauto.
     intros. eapply get_app_cases in H5. destruct H5; dcr; eauto.
     edestruct map_get_4; eauto; dcr; subst. econstructor.
@@ -373,7 +296,8 @@ Proof.
     specialize (IHLV2 (Za::ZL)). eapply IHLV2; eauto.
     rewrite of_list_app. rewrite H7.
     cset_tac; intuition.
-    rewrite of_list_app. cset_tac; intuition.
+    destruct if; simpl in * |- *; intuition; eauto.
+    rewrite of_list_app. simpl. cset_tac; intuition.
 Qed.
 
 

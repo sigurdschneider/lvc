@@ -1,7 +1,7 @@
 Require Export Setoid Coq.Classes.Morphisms.
 Require Export Sets SetInterface SetConstructs SetProperties.
 Require Import EqDec Computable Util.
-Require Export CSetNotation CSetTac CSetBasic CSetCases CSetGet CSetComputable.
+Require Export CSetNotation CSetTac CSetBasic CSetCases CSetGet CSetComputable CSetDisjoint.
 
 Set Implicit Arguments.
 
@@ -26,6 +26,27 @@ Proof.
   unfold Proper, respectful.
   intros. econstructor; eauto.
 Qed.
+
+Instance pe_refl X `{OrderedType X} : Symmetric (@pe _ _).
+Proof.
+  hnf; intros. inv H0; econstructor; eauto.
+  + rewrite H1; eauto; reflexivity.
+  + rewrite H2; eauto; reflexivity.
+Qed.
+
+Instance pe_sym X `{OrderedType X} : Symmetric (@pe _ _).
+Proof.
+  hnf; intros. inv H0; econstructor; eauto.
+  + rewrite H1; eauto; reflexivity.
+  + rewrite H2; eauto; reflexivity.
+Qed.
+
+Instance pe_trans X `{OrderedType X} : Transitive (@pe _ _).
+Proof.
+  hnf; intros ? ? ? B C.
+  eapply prod_Equivalence_obligation_3; eauto using Equal_ST.
+Qed.
+
 
 Instance Subset_morphism_2 X `{OrderedType X}
   : Proper (flip Subset ==> Subset ==> impl) (Subset).
@@ -83,6 +104,7 @@ Hint Extern 20 (Subset (?a \ _) ?a') => (is_evar a ; fail 1)
 
 
 Hint Extern 10 (Subset ?a (_ ∪ ?a)) => eapply incl_right.
+
 
 (*
 *** Local Variables: ***

@@ -2,7 +2,7 @@ Require Import CSet Le Arith.Compare_dec.
 
 Require Import Plus Util Map CMap Status.
 Require Import Val Var Env EnvTy IL Annotation Liveness Fresh Sim MoreList.
-Require Import Coherence Allocation.
+Require Import Coherence Allocation RenamedApart.
 
 Set Implicit Arguments.
 
@@ -28,11 +28,11 @@ Fixpoint linear_scan (st:stmt) (an: ann (set var)) (ϱ:Map [var, var])
     | _, _ => Error "linear_scan: Annotation mismatch"
  end.
 
-Lemma linear_scan_ssa_agree' i s al ϱ ϱ' LV alv G
-      (sd:ssa s al)
+Lemma linear_scan_renamedApart_agree' i s al ϱ ϱ' LV alv G
+      (sd:renamedApart s al)
       (LS:live_sound i LV s alv)
       (allocOK:linear_scan s alv ϱ = Success ϱ')
-: agree_on eq (G \ (snd (getAnn al) \ fst (getAnn al))) (findt ϱ 0) (findt ϱ' 0).
+: agree_on eq (G \ snd (getAnn al)) (findt ϱ 0) (findt ϱ' 0).
 Proof.
   general induction LS; inv sd; simpl in * |- *; try monadS_inv allocOK; eauto.
   - exploit IHLS; eauto.
@@ -41,10 +41,8 @@ Proof.
     eapply agree_on_incl.
     eapply agree_on_update_inv.
     eapply X.
-    instantiate (1:=G).
-    pose proof (ssa_incl H7); eauto. rewrite H8 in H1. simpl in *.
-    revert H4 H1; clear_all; cset_tac; intuition.
-    invc H. specialize (H1 a). cset_tac; intuition.
+    instantiate (1:=G). rewrite H9.
+    revert H4; clear_all; cset_tac; intuition; eauto.
   - exploit IHLS1; eauto.
     exploit IHLS2; eauto.
     rewrite H11 in X. rewrite H12 in X0. simpl in *.
@@ -57,9 +55,8 @@ Proof.
     eapply agree_on_incl.
     eapply agree_on_update_inv. eapply X.
     instantiate (1:=G).
-    pose proof (ssa_incl H8); eauto. rewrite H9 in H1. simpl in *.
-    revert H5 H1; clear_all; cset_tac; intuition.
-    invc H. specialize (H1 a). cset_tac; intuition.
+    rewrite H10. simpl in *.
+    revert H5; clear_all; cset_tac; intuition.
   - exploit IHLS1; eauto.
     exploit IHLS2; eauto.
     rewrite <- map_update_list_update_agree in X.
@@ -68,56 +65,75 @@ Proof.
     eapply agree_on_incl. eapply update_with_list_agree_inv; try eapply X; eauto.
     rewrite fresh_list_length; eauto.
     instantiate (1:=G). rewrite <- H7.
-    pose proof (ssa_incl H8); eauto. rewrite H9 in H2. simpl in *.
-    revert H5 H2; clear_all; cset_tac; intuition; eauto.
-    specialize (H2 a). specialize (H3 a). cset_tac; intuition.
+    revert H5; clear_all; cset_tac; intuition; eauto.
     eapply agree_on_incl; eauto. instantiate (1:=G).
     rewrite <- H7. clear_all; cset_tac; intuition; eauto.
     rewrite fresh_list_length; eauto.
 Qed.
 
-Lemma linear_scan_ssa_agree i s al ϱ ϱ' LV alv
-      (sd:ssa s al)
+Lemma renamedApart_disj s G
+: renamedApart s G
+  -> disj (fst (getAnn G)) (snd (getAnn G)).
+Proof.
+  intros. general induction H; simpl.
+  - rewrite H3. rewrite H2 in *. simpl in *.
+    revert IHrenamedApart H. unfold disj.
+    clear_all; cset_tac; intuition; cset_tac; eauto.
+  - rewrite H4 in *. rewrite H5 in *. simpl in *.
+    rewrite <- H1. rewrite disj_app; eauto.
+  - rewrite H0. eauto using disj_empty.
+  - rewrite H0. eauto using disj_empty.
+  - rewrite H3. rewrite H2 in *. simpl in *.
+    revert IHrenamedApart H. unfold disj.
+    clear_all; cset_tac; intuition; cset_tac; eauto.
+  - rewrite <- H1. repeat rewrite disj_app.
+    rewrite H3,H5 in *; simpl in *; eauto.
+    split. split; eauto. rewrite incl_right; eauto.
+    symmetry; eauto.
+Qed.
+
+Lemma linear_scan_renamedApart_agree i s al ϱ ϱ' LV alv
+      (sd:renamedApart s al)
       (LS:live_sound i LV s alv)
       (allocOK:linear_scan s alv ϱ = Success ϱ')
 : agree_on eq (fst (getAnn al)) (findt ϱ 0) (findt ϱ' 0).
 Proof.
   eapply agree_on_incl.
-  eapply linear_scan_ssa_agree'; eauto.
+  eapply linear_scan_renamedApart_agree'; eauto.
   instantiate (1:=fst (getAnn al)).
-  cset_tac; intuition.
+  exploit renamedApart_disj; eauto.
+  revert X. unfold disj.
+  clear_all; cset_tac; intuition; eauto.
 Qed.
 
 Lemma locally_inj_live_agree s ϱ ϱ' ara alv LV
-      (LS:live_sound Functional LV s alv)
-      (sd: ssa s ara)
+      (LS:live_sound FunctionalAndImperative LV s alv)
+      (sd: renamedApart s ara)
       (inj: locally_inj ϱ s alv)
-      (agr: agree_on eq (snd (getAnn ara)) ϱ ϱ')
+      (agr: agree_on eq (fst (getAnn ara) ∪ snd (getAnn ara)) ϱ ϱ')
       (incl:getAnn alv ⊆ fst (getAnn ara))
 : locally_inj ϱ' s alv.
 Proof.
   intros.
-  general induction inj; invt ssa; invt live_sound; simpl in *.
+  general induction inj; invt renamedApart; invt live_sound; simpl in *.
   - econstructor; eauto.
-    + eapply IHinj; eauto. rewrite H8; simpl; eauto.
+    + eapply IHinj; eauto.
+      rewrite H9 in agr.
+      rewrite H8; simpl. eapply agree_on_incl; eauto. cset_tac; intuition.
       rewrite H8; simpl.
-      revert H13 incl; clear_all; cset_tac; intuition.
-      specialize (H13 a). decide (x === a); cset_tac; intuition.
+      revert H14 incl; clear_all; cset_tac; intuition.
+      specialize (H14 a). decide (x === a); cset_tac; intuition.
+    + eapply injective_on_agree; eauto.
+      eapply agree_on_incl; try eapply agr.
+      rewrite H9. rewrite incl. eapply incl_left.
     + eapply injective_on_agree; eauto.
       eapply agree_on_incl; eauto.
-      exploit ssa_incl; eauto. simpl in *. etransitivity; eauto.
-    + eapply injective_on_agree; eauto.
-      eapply agree_on_incl; eauto.
-      exploit ssa_incl; try eapply H7; eauto.
-      rewrite H8 in *.
-      simpl in *. rewrite incl in H13.
-      revert H13 X; clear_all; cset_tac; intuition.
-      specialize (X a); specialize (H13 a); cset_tac; intuition; eauto.
+      rewrite H9. rewrite <- incl. rewrite <- H14.
+      clear_all; cset_tac; intuition.
       decide (x === a); eauto.
   - econstructor; eauto.
     eapply injective_on_agree; eauto.
-    eapply agree_on_incl; eauto.
-    exploit ssa_incl; eauto. simpl in *. etransitivity; eauto.
+    eapply agree_on_incl; eauto. rewrite incl. eapply incl_left.
     + eapply IHinj1; eauto.
       rewrite H9; simpl. eapply agree_on_incl; eauto. rewrite <- H5; cset_tac; intuition.
       rewrite H9; simpl. rewrite <- incl; eauto.
@@ -127,32 +143,30 @@ Proof.
   - econstructor; eauto.
     eapply injective_on_agree; eauto.
     eapply agree_on_incl; eauto.
-    exploit ssa_incl; eauto. simpl in *. etransitivity; eauto.
+    rewrite incl. eapply incl_left.
   - econstructor; eauto.
     eapply injective_on_agree; eauto.
     eapply agree_on_incl; eauto.
-    exploit ssa_incl; eauto. simpl in *. etransitivity; eauto.
+    rewrite incl. eapply incl_left.
   - econstructor; eauto.
     + eapply IHinj; eauto. rewrite H9; simpl; eauto.
-      rewrite H9; simpl.
-      revert H14 incl; clear_all; cset_tac; intuition.
-      specialize (H14 a). decide (x === a); cset_tac; intuition.
+      eapply agree_on_incl; eauto. rewrite H10.
+      clear_all; cset_tac; intuition.
+      rewrite H9. simpl. rewrite <- incl, <- H15.
+      clear_all; cset_tac; intuition.
+      decide (x === a); intuition.
     + eapply injective_on_agree; eauto.
       eapply agree_on_incl; eauto.
-      exploit ssa_incl; eauto. simpl in *. etransitivity; eauto.
+      rewrite incl. eapply incl_left.
     + eapply injective_on_agree; eauto.
       eapply agree_on_incl; eauto.
-      exploit ssa_incl; try eapply H8; eauto.
-      rewrite H9 in *.
-      simpl in *. rewrite incl in H14.
-      revert H14 X; clear_all; cset_tac; intuition.
-      specialize (X a); specialize (H14 a); cset_tac; intuition; eauto.
+      rewrite H10. rewrite <- incl. rewrite <- H15.
+      clear_all; cset_tac; intuition.
       decide (x === a); eauto.
   - econstructor; eauto.
     eapply IHinj1; eauto.
     eapply agree_on_incl; eauto.
-    exploit ssa_incl; try eapply H7; eauto. rewrite H8 in X. simpl in *.
-    rewrite H8; simpl. rewrite <- H6. cset_tac; intuition.
+    rewrite H8; simpl. rewrite <- H6. clear_all; cset_tac; intuition.
     rewrite H8; simpl. rewrite <- incl. rewrite <- H19.
     clear_all; cset_tac; intuition.
     eapply IHinj2; eauto.
@@ -161,35 +175,34 @@ Proof.
     rewrite H11; simpl. rewrite <- incl. rewrite <- H20. reflexivity.
     + eapply injective_on_agree; eauto.
       eapply agree_on_incl; eauto.
-      exploit ssa_incl; eauto. simpl in *. etransitivity; eauto.
+      rewrite incl. eapply incl_left.
     + eapply injective_on_agree; eauto.
       eapply agree_on_incl; eauto.
-      exploit ssa_incl; try eapply H7; eauto. rewrite H8 in X. simpl in *.
-      rewrite <- H6. rewrite <- X, <- incl, <- H19.
+      rewrite <- incl. rewrite <- H6, <- H19.
       clear_all; cset_tac; intuition.
       decide (a ∈ of_list Z); eauto.
 Qed.
 
 Lemma linear_scan_correct (ϱ:Map [var,var]) LV s alv ϱ' al
-      (LS:live_sound Functional LV s alv)
+      (LS:live_sound FunctionalAndImperative LV s alv)
       (inj:injective_on (getAnn alv) (findt ϱ 0))
       (allocOK:linear_scan s alv ϱ = Success ϱ')
       (incl:getAnn alv ⊆ fst (getAnn al))
-      (sd:ssa s al)
+      (sd:renamedApart s al)
 : locally_inj (findt ϱ' 0) s alv.
 Proof.
   intros.
-  general induction LS; simpl in *; try monadS_inv allocOK; invt ssa;
+  general induction LS; simpl in *; try monadS_inv allocOK; invt renamedApart;
     eauto 10 using locally_inj, injective_on_incl.
   - exploit IHLS; try eapply allocOK; eauto.
     + eapply injective_on_agree; [| eapply map_update_update_agree].
       eapply injective_on_incl.
       eapply injective_on_fresh; eauto using injective_on_incl, least_fresh_spec.
       eauto.
-    + rewrite H8. simpl in *. rewrite <- incl.
-      revert H0; clear_all; cset_tac; intuition.
-      decide (x === a); eauto. left; eapply H0; cset_tac; intuition.
-    + exploit linear_scan_ssa_agree; try eapply allocOK; simpl; eauto using live_sound.
+    + rewrite H8. simpl in *. rewrite <- incl, <- H0.
+      clear_all; cset_tac; intuition.
+      decide (x === a); eauto.
+    + exploit linear_scan_renamedApart_agree; try eapply allocOK; simpl; eauto using live_sound.
       rewrite H8 in *.
       simpl in *.
       econstructor. eauto using injective_on_incl.
@@ -202,10 +215,9 @@ Proof.
       exploit locally_injective; eauto.
       eapply injective_on_agree; try eapply X0.
       Focus 2.
-      eapply agree_on_incl; eauto. rewrite <- incl.
-      revert H0; clear_all; cset_tac; intuition.
-      decide (x === a). intuition.
-      left. eapply H0; eauto. cset_tac; intuition.
+      eapply agree_on_incl; eauto. rewrite <- incl, <- H0.
+      clear_all; cset_tac; intuition.
+      decide (x === a); intuition.
       eapply injective_on_incl.
       eapply injective_on_agree; [| eapply map_update_update_agree].
       eapply injective_on_fresh; eauto.
@@ -213,8 +225,8 @@ Proof.
       eapply least_fresh_spec.
       eapply injective_on_incl; eauto.
       cset_tac; intuition.
-  - exploit linear_scan_ssa_agree; try eapply EQ; simpl; eauto using live_sound.
-    exploit linear_scan_ssa_agree; try eapply EQ0; simpl; eauto using live_sound.
+  - exploit linear_scan_renamedApart_agree; try eapply EQ; simpl; eauto using live_sound.
+    exploit linear_scan_renamedApart_agree; try eapply EQ0; simpl; eauto using live_sound.
     rewrite H11 in X. rewrite H12 in X0.
     simpl in *.
     exploit IHLS1; eauto using injective_on_incl.
@@ -228,10 +240,12 @@ Proof.
     eapply injective_on_agree; eauto. eauto using agree_on_incl.
     eapply locally_inj_live_agree. eauto. eauto. eauto.
     rewrite H11; simpl; eauto.
-    exploit linear_scan_ssa_agree'; try eapply EQ0; simpl; eauto using live_sound.
-    rewrite H12 in X3. simpl in *. instantiate (1:=Ds) in X3.
-    eapply agree_on_incl. eapply X3.
-    revert H6; clear_all; cset_tac; intuition. specialize (H6 a). intuition.
+    exploit linear_scan_renamedApart_agree'; try eapply EQ0; simpl; eauto using live_sound.
+    rewrite H12 in X3. simpl in *.
+    eapply agree_on_incl. eapply X3. instantiate (1:=D ++ Ds).
+    pose proof (renamedApart_disj H9). unfold disj in H2.
+    rewrite H12 in H2. simpl in *.
+    revert H6 H2; clear_all; cset_tac; intuition; eauto.
     rewrite H11; simpl. rewrite <- incl; eauto.
   - exploit IHLS; try eapply allocOK; eauto.
     + eapply injective_on_incl.
@@ -240,8 +254,8 @@ Proof.
       eauto.
     + rewrite H9. simpl in *. rewrite <- incl.
       revert H0; clear_all; cset_tac; intuition.
-      decide (x === a); eauto. left; eapply H0; cset_tac; intuition.
-    + exploit linear_scan_ssa_agree; try eapply allocOK; simpl; eauto using live_sound.
+      decide (x === a); eauto. right; eapply H0; cset_tac; intuition.
+    + exploit linear_scan_renamedApart_agree; try eapply allocOK; simpl; eauto using live_sound.
       rewrite H9 in *.
       simpl in *.
       econstructor. eauto using injective_on_incl.
@@ -257,7 +271,7 @@ Proof.
       eapply agree_on_incl; eauto. rewrite <- incl.
       revert H0; clear_all; cset_tac; intuition.
       decide (x === a). intuition.
-      left. eapply H0; eauto. cset_tac; intuition.
+      right. eapply H0; eauto. cset_tac; intuition.
       eapply injective_on_incl.
       eapply injective_on_agree; [| eapply map_update_update_agree].
       eapply injective_on_fresh; eauto.
@@ -266,8 +280,8 @@ Proof.
       eapply injective_on_incl; eauto.
       cset_tac; intuition.
   - simpl in *.
-    exploit linear_scan_ssa_agree; try eapply EQ; simpl; eauto using live_sound.
-    exploit linear_scan_ssa_agree; try eapply EQ0; simpl; eauto using live_sound.
+    exploit linear_scan_renamedApart_agree; try eapply EQ; simpl; eauto using live_sound.
+    exploit linear_scan_renamedApart_agree; try eapply EQ0; simpl; eauto using live_sound.
     rewrite <- map_update_list_update_agree in X.
     exploit IHLS1; eauto.
     + eapply injective_on_agree; [| eapply map_update_list_update_agree].
@@ -308,10 +322,11 @@ Proof.
         eapply locally_inj_live_agree; eauto.
         rewrite H9. simpl.
         eapply agree_on_incl.
-        eapply linear_scan_ssa_agree'; try eapply EQ0; eauto.
-        rewrite H12; simpl. instantiate (1:=Ds).
-        revert H6; clear_all; cset_tac; intuition eauto.
-        specialize (H6 a); intuition.
+        eapply linear_scan_renamedApart_agree'; try eapply EQ0; eauto.
+        rewrite H12; simpl. instantiate (1:=(of_list Z ++ D) ++ Ds).
+        pose proof (renamedApart_disj sd). unfold disj in H3.
+        simpl in *. rewrite <- H7 in H3.
+        revert H5 H6 H3; clear_all; cset_tac; intuition eauto; eauto.
         rewrite H9. simpl. rewrite <- incl.
         revert H0; clear_all; cset_tac; intuition.
         specialize (H0 a). cset_tac; intuition.
@@ -329,12 +344,11 @@ Proof.
         etransitivity. eapply agree_on_incl; eauto.
         rewrite H9; simpl. rewrite H0, incl. cset_tac; intuition.
         eapply agree_on_incl.
-        exploit linear_scan_ssa_agree'; try eapply EQ0; simpl; eauto using live_sound.
+        exploit linear_scan_renamedApart_agree'; try eapply EQ0; simpl; eauto using live_sound.
         rewrite H12; simpl. instantiate (1:=D ++ of_list Z).
-        exploit ssa_incl; try eapply H8. rewrite H9 in X3; simpl in *.
-        rewrite H0. rewrite incl.
-        revert X3 H6; clear_all; cset_tac; intuition.
-        specialize (X3 a); specialize (H6 a); cset_tac; intuition.
+        pose proof (renamedApart_disj H10). rewrite H12 in H3; simpl in *.
+        unfold disj in H3. rewrite H0, incl.
+        revert H3 H6; clear_all; cset_tac; intuition; eauto.
         clear_all; cset_tac; intuition. decide (a ∈ of_list Z); eauto.
     + rewrite fresh_list_length; eauto.
 Qed.
@@ -395,6 +409,16 @@ Proof.
   eapply subset_cardinal; eauto.
 Qed.
 
+Lemma cardinal_of_list_unique {X} `{OrderedType X} (Z:list X)
+: unique Z -> SetInterface.cardinal (of_list Z) = length Z.
+Proof.
+  general induction Z; simpl in * |- *.
+  - eapply empty_cardinal.
+  - dcr. erewrite cardinal_2. rewrite IHZ; eauto.
+    intro. eapply H1. eapply InA_in; eauto.
+    hnf; cset_tac; intuition.
+Qed.
+
 Lemma cardinal_map {X} `{OrderedType X} {Y} `{OrderedType Y} (s: set X) (f:X -> Y) `{Proper _ (_eq ==> _eq) f}
 : SetInterface.cardinal (SetConstructs.map f s) <= SetInterface.cardinal s.
 Proof.
@@ -432,119 +456,112 @@ Proof.
       eapply H4. eauto.
 Qed.
 
-Lemma cardinal_of_list_unique {X} `{OrderedType X} (Z:list X)
-: unique Z -> SetInterface.cardinal (of_list Z) = length Z.
-Proof.
-  general induction Z; simpl in * |- *.
-  - eapply empty_cardinal.
-  - dcr. erewrite cardinal_2. rewrite IHZ; eauto.
-    intro. eapply H1. eapply InA_in; eauto.
-    hnf; cset_tac; intuition.
-Qed.
-
-Lemma vars_up_to_incl n m
-: n <= m -> vars_up_to n ⊆ vars_up_to m.
-Proof.
-  intros. general induction H; eauto. reflexivity.
-  simpl. rewrite IHle. cset_tac; intuition.
-Qed.
-
 Lemma linear_scan_assignment_small (ϱ:Map [var,var]) LV s alv ϱ' al n
       (LS:live_sound Functional LV s alv)
       (allocOK:linear_scan s alv ϱ = Success ϱ')
       (incl:getAnn alv ⊆ fst (getAnn al))
-      (sd:ssa s al)
+      (sd:renamedApart s al)
       (up:lookup_set (findt ϱ' 0) (fst (getAnn al)) ⊆ vars_up_to n)
 : lookup_set (findt ϱ' 0) (snd (getAnn al)) ⊆ vars_up_to (max (size_of_largest_live_set alv + 1) n).
 Proof.
-  general induction LS; invt ssa; simpl in * |- *.
-  - exploit IHLS; eauto.
-    + rewrite H8. simpl.
-      rewrite <- incl. revert H0. clear_all; cset_tac; intuition.
-      specialize (H0 a). cset_tac; intuition. decide (x === a); intuition.
-    + rewrite H8. simpl in *.
-      instantiate (1:=(max (size_of_largest_live_set al + 1) n)).
-      rewrite lookup_set_union; try now (unfold findt; intuition).
-      rewrite up. rewrite lookup_set_singleton; try now (unfold findt; intuition).
-      eapply linear_scan_ssa_agree in allocOK; eauto.
+  general induction LS; invt renamedApart; simpl in * |- *.
+  - assert ( singleton (findt ϱ' 0 x)
+                       ⊆ vars_up_to (size_of_largest_live_set al + 1)). {
+      eapply linear_scan_renamedApart_agree in allocOK; eauto.
       rewrite <- allocOK. unfold findt at 1.
       rewrite MapFacts.add_eq_o; eauto.
-      assert ({least_fresh (SetConstructs.map (findt ϱ 0) (getAnn al \ {x; {}})); {} }
-                ⊆ vars_up_to (size_of_largest_live_set al + 1)).
       cset_tac. invc H1. eapply in_vars_up_to'.
       etransitivity; [eapply least_fresh_small|].
       etransitivity; [eapply cardinal_map|]. unfold findt; intuition.
       etransitivity; [eapply cardinal_difference|].
       eapply size_of_largest_live_set_live_set.
-      rewrite vars_up_to_max, H1. cset_tac; intuition.
       rewrite H8; simpl. cset_tac; intuition.
-    + rewrite H8 in X. simpl in *.
-      rewrite X.
+    }
+    exploit IHLS; eauto.
+    + rewrite H8. simpl.
+      rewrite <- incl. revert H0. clear_all; cset_tac; intuition.
+      specialize (H0 a). cset_tac; intuition. decide (x === a); intuition.
+    + rewrite H8. simpl in *.
+      instantiate (1:=(max (size_of_largest_live_set al + 1) n)).
+      rewrite lookup_set_add; eauto.
+      rewrite up.
+      rewrite vars_up_to_max. cset_tac; intuition.
+    + rewrite H8 in X. simpl in *. rewrite H9.
+      rewrite lookup_set_add; eauto. rewrite X.
       rewrite <- NPeano.Nat.add_max_distr_r.
       repeat rewrite vars_up_to_max.
-      cset_tac; intuition.
+      cset_tac; intuition; eauto.
   - monadS_inv allocOK.
     exploit IHLS1; eauto.
     rewrite H11; eauto. simpl. rewrite <- incl; eauto.
     rewrite H11; simpl.
     rewrite lookup_set_agree; eauto.
-    eapply agree_on_incl; try eapply linear_scan_ssa_agree; try eapply EQ0; eauto using live_sound.
+    eapply agree_on_incl; try eapply linear_scan_renamedApart_agree;
+    try eapply EQ0; eauto using live_sound.
     rewrite H12; simpl; eauto. reflexivity.
     exploit IHLS2; try eapply EQ0; eauto.
     rewrite H12; simpl. rewrite <- incl; eauto.
     rewrite H12. simpl. eauto.
     rewrite H11 in X; rewrite H12 in X0. simpl in *.
     rewrite <- H7.
-    rewrite lookup_set_union.
+    rewrite lookup_set_union; eauto.
     rewrite X0.
-    rewrite lookup_set_agree. rewrite X.
+    rewrite lookup_set_agree; eauto. rewrite X.
     repeat (try rewrite <- NPeano.Nat.add_max_distr_r; rewrite vars_up_to_max).
     clear_all; cset_tac; intuition.
     unfold findt; intuition.
     unfold findt; intuition.
     eapply agree_on_incl.
     symmetry.
-    eapply linear_scan_ssa_agree'; try eapply EQ0; eauto. rewrite H12; simpl.
-    instantiate (1:=Ds). revert H6; clear_all; cset_tac; intuition.
-    specialize (H6 a). intuition.
-    unfold findt; intuition.
-  - rewrite <- H7. rewrite up. rewrite vars_up_to_max.
-    cset_tac; intuition.
-  - rewrite <- H2. rewrite up. rewrite vars_up_to_max.
-    cset_tac; intuition.
-  - exploit IHLS; eauto.
-    + rewrite H9. simpl.
-      rewrite <- incl. revert H0. clear_all; cset_tac; intuition.
-      specialize (H0 a). cset_tac; intuition. decide (x === a); intuition.
-    + rewrite H9. simpl in *.
-      instantiate (1:=(max (size_of_largest_live_set al + 1) n)).
-      rewrite lookup_set_union; try now (unfold findt; intuition).
-      rewrite up. rewrite lookup_set_singleton; try now (unfold findt; intuition).
-      eapply linear_scan_ssa_agree in allocOK; eauto.
+    eapply linear_scan_renamedApart_agree'; try eapply EQ0; eauto. rewrite H12; simpl.
+    instantiate (1:=Ds). revert H6; clear_all; cset_tac; intuition; eauto.
+  - rewrite H7. rewrite lookup_set_empty; cset_tac; intuition; eauto.
+  - rewrite H2. rewrite lookup_set_empty; cset_tac; intuition; eauto.
+  - assert (singleton (findt ϱ' 0 x) ⊆ vars_up_to (size_of_largest_live_set al + 1)). {
+      eapply linear_scan_renamedApart_agree in allocOK; eauto.
       rewrite <- allocOK. unfold findt at 1.
       rewrite MapFacts.add_eq_o; eauto.
-      assert ({least_fresh (SetConstructs.map (findt ϱ 0) (getAnn al \ {x; {}})); {} }
-                ⊆ vars_up_to (size_of_largest_live_set al + 1)).
       cset_tac. invc H1. eapply in_vars_up_to'.
       etransitivity; [eapply least_fresh_small|].
       etransitivity; [eapply cardinal_map|]. unfold findt; intuition.
       etransitivity; [eapply cardinal_difference|].
       eapply size_of_largest_live_set_live_set.
-      rewrite vars_up_to_max, H1. cset_tac; intuition.
       rewrite H9; simpl. cset_tac; intuition.
+    }
+    exploit IHLS; eauto.
+    + rewrite H9. simpl.
+      rewrite <- incl. revert H0. clear_all; cset_tac; intuition.
+      specialize (H0 a). cset_tac; intuition. decide (x === a); intuition.
+    + rewrite H9. simpl in *.
+      instantiate (1:=(max (size_of_largest_live_set al + 1) n)).
+      rewrite lookup_set_add; eauto.
+      rewrite up.
+      rewrite vars_up_to_max. cset_tac; intuition.
     + rewrite H9 in X. simpl in *.
-      rewrite X.
+      rewrite H10. rewrite lookup_set_add, X; eauto.
       rewrite <- NPeano.Nat.add_max_distr_r.
       repeat rewrite vars_up_to_max.
       cset_tac; intuition.
   - monadS_inv allocOK.
     simpl in *.
-    exploit linear_scan_ssa_agree; try eapply EQ; simpl; eauto using live_sound.
-    exploit linear_scan_ssa_agree; try eapply EQ0; simpl; eauto using live_sound.
+    exploit linear_scan_renamedApart_agree; try eapply EQ; simpl; eauto using live_sound.
+    exploit linear_scan_renamedApart_agree; try eapply EQ0; simpl; eauto using live_sound.
     rewrite H9 in *. rewrite H12 in *. simpl in *.
     assert (D [=] (of_list Z ++ D) \ of_list Z). {
       revert H5. clear_all; cset_tac; intuition.
       specialize (H0 a). intuition.
+    }
+   assert (SetInterface.cardinal
+             (SetConstructs.map (findt ϱ 0) (getAnn als \ of_list Z)) +
+           length Z <= size_of_largest_live_set als + 1). {
+      rewrite cardinal_map.
+      rewrite <- size_of_largest_live_set_live_set.
+      exploit (diff_inter_cardinal (getAnn als) (of_list Z)).
+      assert (getAnn als ∩ of_list Z [=] of_list Z).
+      revert H; clear_all; cset_tac; intuition.
+      rewrite H3 in X1. simpl in *.
+      rewrite <- X1.
+      rewrite cardinal_of_list_unique. omega. eauto. eauto.
     }
     rewrite <- map_update_list_update_agree in X.
     assert (agree_on eq D (findt ϱ 0) (findt ϱ' 0)). etransitivity; eauto.
@@ -555,38 +572,19 @@ Proof.
       revert H0; clear_all; cset_tac; intuition.
       specialize (H0 a). cset_tac; intuition.
       decide (a ∈ of_list Z); intuition.
-    + assert (Proper (_eq ==> _eq) (findt ϱ 0)) by intuition.
-      rewrite H9. simpl.
+    + rewrite H9. simpl.
       instantiate (1:=(max (size_of_largest_live_set als + 1) n)).
-      rewrite <- lookup_set_agree; try eapply X.
-      rewrite lookup_set_update_with_list_in_union_length.
+      rewrite <- lookup_set_agree; try eapply X; eauto.
+      rewrite lookup_set_update_with_list_in_union_length; eauto.
       rewrite <- H2.
-      rewrite lookup_set_agree; try eapply H3.
+      rewrite lookup_set_agree; try eapply H3; eauto.
       rewrite up.
       repeat (try rewrite <- NPeano.Nat.add_max_distr_r; rewrite vars_up_to_max).
       rewrite least_fresh_list_small_vars_up_to.
       intros.
-      assert (SetInterface.cardinal
-        (SetConstructs.map (findt ϱ 0) (getAnn als \ of_list Z)) +
-              length Z <= size_of_largest_live_set als + 1). {
-        rewrite cardinal_map.
-        rewrite <- size_of_largest_live_set_live_set.
-        exploit (diff_inter_cardinal (getAnn als) (of_list Z)).
-        assert (getAnn als ∩ of_list Z [=] of_list Z).
-        revert H; clear_all; cset_tac; intuition.
-        rewrite H11 in X1. simpl in *.
-        rewrite <- X1.
-        rewrite cardinal_of_list_unique. omega. eauto.
-        unfold findt; intuition.
-      }
-      rewrite (vars_up_to_incl H11).
+      rewrite (vars_up_to_incl H3).
       cset_tac; intuition.
-      unfold findt; intuition.
-      unfold findt; intuition.
-      unfold findt; intuition.
       rewrite fresh_list_length; eauto.
-      intuition.
-      unfold findt; intuition.
     + exploit IHLS2; eauto.
       * rewrite H12. simpl. simpl in *. rewrite <- incl. eauto.
       * instantiate (1:=(max (size_of_largest_live_set alb + 1) n)).
@@ -597,17 +595,38 @@ Proof.
         eauto.
       * rewrite H9 in X1. rewrite H12 in X2.
         simpl in *.
-        rewrite <- H7. rewrite lookup_set_union.
-        rewrite X2. rewrite lookup_set_agree. rewrite X1.
+        rewrite <- H7. repeat rewrite lookup_set_union; eauto.
+        rewrite X2. rewrite lookup_set_agree; eauto. rewrite X1.
         repeat (try rewrite <- NPeano.Nat.add_max_distr_r; rewrite vars_up_to_max).
-        clear_all; cset_tac; intuition.
-        unfold findt; intuition.
-        unfold findt; intuition.
-        eapply agree_on_incl. symmetry.
-        eapply linear_scan_ssa_agree'; try eapply EQ0; eauto.
-        instantiate (1:=Ds). rewrite H12; simpl.
-        revert H6; clear_all; cset_tac; intuition. specialize (H6 a); intuition.
-        unfold findt; intuition.
+        erewrite lookup_set_agree with (m':=
+          MapUpdate.update_with_list Z (fresh_list least_fresh
+                                       (SetConstructs.map (findt ϱ 0) (getAnn als \ of_list Z))
+                                       (length Z))
+                                     (findt ϱ 0)); eauto.
+        rewrite update_with_list_lookup_set_incl; eauto.
+        rewrite least_fresh_list_small_vars_up_to.
+        rewrite (vars_up_to_incl H3).
+        cset_tac; intuition.
+        rewrite fresh_list_length; eauto.
+        reflexivity.
+        symmetry.
+        etransitivity.
+        eapply agree_on_incl.
+        rewrite map_update_list_update_agree.
+        eapply linear_scan_renamedApart_agree'; try eapply EQ; eauto.
+        rewrite fresh_list_length; eauto.
+        instantiate (1:=of_list Z). rewrite H9. simpl.
+        generalize (renamedApart_disj H8).
+        rewrite H9. simpl. unfold disj. clear_all; cset_tac; intuition; eauto.
+        eapply agree_on_incl.
+        eapply linear_scan_renamedApart_agree'; try eapply EQ0; eauto.
+        instantiate (1:=of_list Z). rewrite H12. simpl.
+        revert H6. clear_all; cset_tac; intuition; eauto.
+        symmetry.
+        eapply agree_on_incl.
+        eapply linear_scan_renamedApart_agree'; try eapply EQ0; eauto.
+        instantiate (1:=Ds). rewrite H12. simpl.
+        revert H6; clear_all; cset_tac; intuition; eauto.
     + rewrite fresh_list_length; eauto.
 Qed.
 

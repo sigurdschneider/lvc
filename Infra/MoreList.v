@@ -1,4 +1,4 @@
-Require Import OrderedTypeEx Util List Get Computable DecSolve.
+Require Import OrderedTypeEx Util List Get Computable DecSolve AllInRel.
 
 Set Implicit Arguments.
 (** * Lemmas and tactics for lists *)
@@ -173,7 +173,7 @@ Qed.
 
 Lemma map_ext_get X Y (R:Y -> Y -> Prop) L (f:X->Y) (g:X->Y)
  : (forall x n, get L n x -> R (g x) (f x))
-   -> list_eq R (List.map g L) (List.map f L).
+   -> PIR2 R (List.map g L) (List.map f L).
 Proof.
   intros. general induction L; simpl. econstructor.
   econstructor; eauto using get.

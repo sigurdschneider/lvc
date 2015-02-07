@@ -5,8 +5,23 @@ Set Implicit Arguments.
 
 Local Hint Resolve incl_empty minus_incl incl_right incl_left.
 
-Inductive interpretation : Set
- := Functional | Imperative.
+
+Inductive overapproximation : Set
+  := Functional | Imperative | FunctionalAndImperative.
+
+Definition isFunctional (o:overapproximation) :=
+  match o with
+    | Functional => true
+    | FunctionalAndImperative => true
+    | _ => false
+  end.
+
+Definition isImperative (o:overapproximation) :=
+  match o with
+    | Imperative => true
+    | FunctionalAndImperative => true
+    | _ => false
+  end.
 
 Inductive argsLive (Caller Callee:set var) : args -> params -> Prop :=
 | AL_nil : argsLive Caller Callee nil nil
@@ -75,7 +90,7 @@ Proof.
   rewrite map_length; congruence.
 Qed.
 
-Inductive live_sound (i:interpretation) : list (set var*params) -> stmt -> ann (set var) -> Prop :=
+Inductive live_sound (i:overapproximation) : list (set var*params) -> stmt -> ann (set var) -> Prop :=
 | LOpr x Lv b lv e (al:ann (set var))
   :  live_sound i Lv b al
   -> live_exp_sound e lv
@@ -90,7 +105,7 @@ Inductive live_sound (i:interpretation) : list (set var*params) -> stmt -> ann (
   -> live_sound i Lv (stmtIf e b1 b2) (ann2 lv al1 al2)
 | LGoto l Y Lv lv blv Z
   : get Lv (counted l) (blv,Z)
-  -> (blv \ of_list Z) ⊆ lv
+  -> (if isImperative i then ((blv \ of_list Z) ⊆ lv) else True)
   -> length Y = length Z
   -> (forall n y, get Y n y -> live_exp_sound y lv)
   -> live_sound i Lv (stmtGoto l Y) (ann0 lv)
@@ -106,14 +121,21 @@ Inductive live_sound (i:interpretation) : list (set var*params) -> stmt -> ann (
   : live_sound i ((getAnn als,Z)::Lv) s als
   -> live_sound i ((getAnn als,Z)::Lv) b alb
   -> (of_list Z) ⊆ getAnn als
-  -> (if i then (getAnn als \ of_list Z) ⊆ lv else True)
+  -> (if isFunctional i then (getAnn als \ of_list Z ⊆ lv) else True)
   -> getAnn alb ⊆ lv
   -> live_sound i Lv (stmtLet Z s b)(ann2 lv als alb).
 
-Lemma live_sound_interpretation Lv s slv
-: live_sound Functional Lv s slv -> live_sound Imperative Lv s slv.
+
+Lemma live_sound_overapproximation_I Lv s slv
+: live_sound FunctionalAndImperative Lv s slv -> live_sound Imperative Lv s slv.
 Proof.
-  intros. general induction H; econstructor; eauto.
+  intros. general induction H; simpl in * |- *; econstructor; simpl; eauto.
+Qed.
+
+Lemma live_sound_overapproximation_F Lv s slv
+: live_sound FunctionalAndImperative Lv s slv -> live_sound Functional Lv s slv.
+Proof.
+  intros. general induction H; simpl in * |- *; econstructor; simpl; eauto.
 Qed.
 
 Lemma live_sound_annotation i Lv s slv
@@ -130,7 +152,8 @@ Proof.
   intros. general induction H; simpl; eauto using live_sound.
   - edestruct PIR2_nth; eauto; dcr; simpl in *.
     destruct x; subst; simpl in *.
-    econstructor; eauto. cset_tac; intuition.
+    econstructor; eauto.
+    destruct i; simpl; eauto; rewrite H7; eauto.
   - econstructor; eauto 20 using PIR2.
     eapply IHlive_sound1. econstructor; intuition.
     eapply IHlive_sound2. econstructor; intuition.
@@ -145,12 +168,13 @@ Proof.
   - econstructor; eauto using live_exp_sound_incl.
     etransitivity; eauto.
   - econstructor; eauto using live_exp_sound_incl; etransitivity; eauto.
-  - econstructor; eauto. cset_tac; intuition.
-    intros; eauto using live_exp_sound_incl.
+  - econstructor; eauto using live_exp_sound_incl.
+    destruct i; simpl; eauto; rewrite <- H3; eauto.
   - econstructor; eauto using live_exp_sound_incl; etransitivity; eauto.
   - econstructor; eauto using live_exp_sound_incl.
     etransitivity; eauto.
-  - econstructor; eauto. destruct i; eauto. cset_tac; intuition. cset_tac; intuition.
+  - econstructor; eauto. destruct i; simpl; eauto; cset_tac; intuition.
+    cset_tac; intuition.
 Qed.
 
 Lemma freeVars_live s lv Lv
@@ -197,8 +221,12 @@ Proof.
     rewrite getAnn_mapAnn. eapply lookup_set_incl; eauto.
     rewrite getAnn_mapAnn. eapply lookup_set_incl; eauto.
   + pose proof (map_get_1 (live_rename_L_entry ϱ) H).
-    econstructor; eauto. rewrite of_list_lookup_list; eauto.
-    simpl. eapply Subset_trans. eapply lookup_set_minus_incl; eauto.
+    econstructor; eauto. destruct i; simpl in * |- *; eauto.
+    rewrite of_list_lookup_list; eauto.
+    eapply Subset_trans. eapply lookup_set_minus_incl; eauto.
+    eapply lookup_set_incl; eauto. simpl.
+    rewrite of_list_lookup_list; eauto.
+    eapply Subset_trans. eapply lookup_set_minus_incl; eauto.
     eapply lookup_set_incl; eauto. simpl.
     repeat rewrite lookup_list_length; eauto. rewrite map_length; eauto.
     intros. edestruct map_get_4; eauto; dcr; subst.
@@ -217,14 +245,14 @@ Proof.
   + econstructor; eauto; try rewrite getAnn_mapAnn; eauto.
     eapply IHlive_sound1. eapply IHlive_sound2.
     rewrite of_list_lookup_list; eauto. eapply lookup_set_incl; eauto.
-    destruct i; eauto.
+    destruct if; eauto.
     rewrite of_list_lookup_list; eauto.
-    eapply Subset_trans. eapply lookup_set_minus_incl; eauto.
-    eapply lookup_set_incl; eauto.
+    rewrite lookup_set_minus_incl; eauto.
+    destruct i; simpl; eauto; eapply lookup_set_incl; eauto.
     eapply lookup_set_incl; eauto.
 Qed.
 
-Inductive true_live_sound (i:interpretation)
+Inductive true_live_sound (i:overapproximation)
   : list (set var *params) -> stmt -> ann (set var) -> Prop :=
 | TLOpr x Lv b lv e al
   :  true_live_sound i Lv b al
@@ -241,7 +269,7 @@ Inductive true_live_sound (i:interpretation)
   -> true_live_sound i Lv (stmtIf e b1 b2) (ann2 lv al1 al2)
 | TLGoto l Y Lv lv blv Z
   : get Lv (counted l) (blv,Z)
-  -> (blv \ of_list Z) ⊆ lv
+  -> (if isImperative i then  (blv \ of_list Z ⊆ lv) else True)
   -> argsLive lv blv Y Z
   -> length Y = length Z
   -> true_live_sound i Lv (stmtGoto l Y) (ann0 lv)
@@ -256,15 +284,23 @@ Inductive true_live_sound (i:interpretation)
 | TLLet Lv s Z b lv als alb
   : true_live_sound i ((getAnn als,Z)::Lv) s als
   -> true_live_sound i ((getAnn als,Z)::Lv) b alb
-  -> (if i then (getAnn als \ of_list Z) ⊆ lv else True)
+  -> (if isFunctional i then (getAnn als \ of_list Z ⊆ lv) else True)
   -> getAnn alb ⊆ lv
   -> true_live_sound i Lv (stmtLet Z s b)(ann2 lv als alb).
 
-Lemma true_live_sound_interpretation Lv s slv
-: true_live_sound Functional Lv s slv -> true_live_sound Imperative Lv s slv.
+
+Lemma true_live_sound_overapproximation_I Lv s slv
+: true_live_sound FunctionalAndImperative Lv s slv -> true_live_sound Imperative Lv s slv.
 Proof.
-  intros. general induction H; econstructor; eauto.
+  intros. general induction H; simpl in * |- *; econstructor; simpl; eauto.
 Qed.
+
+Lemma true_live_sound_overapproximation_F Lv s slv
+: true_live_sound FunctionalAndImperative Lv s slv -> true_live_sound Functional Lv s slv.
+Proof.
+  intros. general induction H; simpl in * |- *; econstructor; simpl; eauto.
+Qed.
+
 
 Lemma true_live_sound_annotation i Lv s slv
 : true_live_sound i Lv s slv -> annotation s slv.
