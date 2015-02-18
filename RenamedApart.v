@@ -12,7 +12,7 @@ Inductive renamedApart : stmt -> ann (set var * set var) -> Prop :=
       -> renamedApart s an
       -> pe (getAnn an) ({x; D}, D')
       -> D'' [=] {x; D'}
-      -> renamedApart (stmtExp x e s) (ann1 (D, D'') an)
+      -> renamedApart (stmtLet x e s) (ann1 (D, D'') an)
   | renamedApartIf  D D' Ds Dt e s t ans ant
     : Exp.freeVars e ⊆ D
       -> Ds ∩ Dt [=] ∅

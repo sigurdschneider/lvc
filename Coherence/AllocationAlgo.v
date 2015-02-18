@@ -10,7 +10,7 @@ Set Implicit Arguments.
 Fixpoint linear_scan (st:stmt) (an: ann (set var)) (ϱ:Map [var, var])
   : status (Map [var, var]) :=
  match st, an with
-    | stmtExp x e s, ann1 lv ans =>
+    | stmtLet x e s, ann1 lv ans =>
       let xv := least_fresh (SetConstructs.map (findt ϱ 0) (getAnn ans\{{x}})) in
         linear_scan s ans (ϱ[x<- xv])
     | stmtIf _ s t, ann2 lv ans ant =>

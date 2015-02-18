@@ -111,7 +111,7 @@ Inductive cp_sound : onv aval
 | CPOpr AE (x:var) Cp b e
   : cp_sound AE Cp b
     -> Some (exp_eval AE e) = AE x
-    -> cp_sound AE Cp (stmtExp x e b)
+    -> cp_sound AE Cp (stmtLet x e b)
 | CPIf AE Cp e b1 b2
   : (* these conditions make it conditional constant propagation *)
     (aval2bool (exp_eval AE e) <> (Some false) -> cp_sound (update_cond AE e true) Cp b1)
@@ -253,8 +253,8 @@ Definition cp_choose_exp E e :=
 
 Fixpoint constantPropagate (AE:onv aval) s : stmt :=
   match s with
-    | stmtExp x e s =>
-      stmtExp x (cp_choose_exp AE e) (constantPropagate AE s)
+    | stmtLet x e s =>
+      stmtLet x (cp_choose_exp AE e) (constantPropagate AE s)
     | stmtIf e s t =>
       stmtIf (cp_choose_exp AE e)
              (constantPropagate (update_cond AE e true) s)

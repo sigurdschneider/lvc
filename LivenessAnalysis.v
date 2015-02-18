@@ -23,7 +23,7 @@ Defined.
 
 Definition liveness_transform (DL:list (set var * params)) st a :=
   match st, a with
-    | stmtExp x e s as st, anni1 d =>
+    | stmtLet x e s as st, anni1 d =>
       (d \ {{x}}) ∪ (if [x ∈ d] then Exp.freeVars e else ∅)
     | stmtIf e s t as st, anni2 ds dt =>
       Exp.freeVars e ∪ ds ∪ dt

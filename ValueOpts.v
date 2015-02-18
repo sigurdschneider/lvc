@@ -11,8 +11,8 @@ Unset Printing Records.
 (*
 Fixpoint compile (s:stmt) (a:ann (list exp)) :=
   match s, a with
-    | stmtExp x _ s, ann1 (e'::nil) an =>
-      stmtExp x e' (compile s an)
+    | stmtLet x _ s, ann1 (e'::nil) an =>
+      stmtLet x e' (compile s an)
     | stmtIf _ s t, ann2 (e'::nil) ans ant =>
       stmtIf e' (compile s ans) (compile t ant)
     | stmtApp f _, ann0 Y' =>
@@ -36,7 +36,7 @@ Inductive eqn_sound : list (params*set var*eqns*eqns)
     (* make sure the rest conforms to the new assignment *)
     -> entails Gamma {EqnApx e e'}
     -> Exp.freeVars e' ⊆ G
-    -> eqn_sound Lv (stmtExp x e s) (stmtExp x e' s') Gamma
+    -> eqn_sound Lv (stmtLet x e s) (stmtLet x e' s') Gamma
                 (ann1 (G,G') ang)
 | EqnIf Lv e e' s s' t t' Gamma G G' ang1 ang2
   : eqn_sound Lv s s' {EqnEq (UnOp 0 e) (Con val_true); Gamma} ang1

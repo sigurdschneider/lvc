@@ -9,7 +9,7 @@ Unset Printing Records.
 
 Function list_to_stmt (xl: list var) (Y : list exp) (s : stmt) : stmt :=
   match xl, Y with
-    | x::xl, e :: Y => stmtExp x e (list_to_stmt xl Y s)
+    | x::xl, e :: Y => stmtLet x e (list_to_stmt xl Y s)
     | _, _ => s
   end.
 
@@ -113,7 +113,7 @@ Qed.
 Fixpoint compile s
   : stmt :=
   match s with
-    | stmtExp x e s => stmtExp x e (compile s)
+    | stmtLet x e s => stmtLet x e (compile s)
     | stmtIf x s t => stmtIf x (compile s) (compile t)
     | stmtApp l Y  =>
       let xl := fresh_list fresh (list_union (List.map Exp.freeVars Y)) (length Y) in

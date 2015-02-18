@@ -366,7 +366,7 @@ Definition domenv (d:Dom) (x:var) : option val :=
 
 Definition constant_propagation_transform st (a:list (Dom * params)*Dom) :=
   match st, a with
-    | stmtExp x e s as st, (AL, d) =>
+    | stmtLet x e s as st, (AL, d) =>
       let d' := d in
       let d'' := domupd d' x (exp_eval (domenv d') e) in
       (AL, anni1 d'')

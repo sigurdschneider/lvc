@@ -110,7 +110,7 @@ Section GlueCode.
   Function list_to_stmt (p : list (list var * list var)) (s : stmt) {struct p} : stmt :=
     match p with
       | nil => s
-      | (x :: nil, y:: nil) :: p' => stmtExp x (var_to_exp y) (list_to_stmt p' s)
+      | (x :: nil, y:: nil) :: p' => stmtLet x (var_to_exp y) (list_to_stmt p' s)
       | _ => s
     end.
 
@@ -230,9 +230,9 @@ Qed.
 Fixpoint lower DL s (an:ann (set var))
   : status stmt :=
   match s, an with
-    | stmtExp x e s, ann1 lv ans =>
+    | stmtLet x e s, ann1 lv ans =>
       sdo sl <- lower DL s ans;
-        Success (stmtExp x e sl)
+        Success (stmtLet x e sl)
     | stmtIf x s t, ann2 lv ans ant =>
       sdo sl <- lower DL s ans;
         sdo tl <- lower DL t ant;

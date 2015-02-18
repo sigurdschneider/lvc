@@ -6,7 +6,7 @@ Set Implicit Arguments.
 Inductive labelsDefined : stmt -> nat -> Prop :=
   | labelsDefinedExp x e s L
     : labelsDefined s L
-      -> labelsDefined (stmtExp x e s) L
+      -> labelsDefined (stmtLet x e s) L
   | labelsDefinedIf e s t L
     : labelsDefined s L
       -> labelsDefined t L

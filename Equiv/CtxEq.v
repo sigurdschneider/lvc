@@ -147,7 +147,7 @@ Inductive stmtCtx : Type :=
 
 Fixpoint fill (ctx:stmtCtx) (s':stmt) : stmt :=
   match ctx with
-    | ctxExp x e ctx => stmtExp x e (fill ctx s')
+    | ctxExp x e ctx => stmtLet x e (fill ctx s')
     | ctxIfS e ctx t => stmtIf e (fill ctx s') t
     | ctxIfT e s ctx => stmtIf e s (fill ctx s')
     | ctxLetS Z ctx t => stmtFun Z (fill ctx s') t

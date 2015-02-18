@@ -52,7 +52,7 @@ Definition backward Dom FunDom
   fix backward
          (st:stmt) (AL:list FunDom) (a:ann Dom) {struct st} : ann Dom :=
   match st, a with
-    | stmtExp x e s as st, ann1 d ans =>
+    | stmtLet x e s as st, ann1 d ans =>
       let ans' := backward s AL ans in
       let ai := anni1 (getAnn ans') in
       let d := (btransform AL st ai) in
@@ -92,7 +92,7 @@ Definition forward Dom FunDom
       (st:stmt) (a:list FunDom * ann Dom) {struct st}
 : list FunDom * ann Dom :=
   match st, a with
-    | stmtExp x e s as st, (AL, ann1 d ans) =>
+    | stmtLet x e s as st, (AL, ann1 d ans) =>
       let (AL', ai) := (ftransform st (AL, d)) in
       forward s (AL', setAnni ans ai)
     | stmtIf x s t as st, (AL, ann2 d ans ant) =>
@@ -140,7 +140,7 @@ Definition forward Dom {BSL:BoundedSemiLattice Dom} FunDom
       (st:stmt) (a:list FunDom * Dom) {struct st}
   : status (list FunDom * Dom) :=
   match st, a with
-    | stmtExp x e s as st, (AL, d) =>
+    | stmtLet x e s as st, (AL, d) =>
       match ftransform st (AL, d) with
         | (AL, anni1 a) => forward s (AL, a)
         | _ => Error "expression transformer failed"
@@ -204,7 +204,7 @@ Definition forward Dom FunDom
       (st:stmt) (a:list FunDom * Dom) {struct st}
 : list FunDom * Dom :=
   match st, a with
-    | stmtExp x e s as st, (AL, d) =>
+    | stmtLet x e s as st, (AL, d) =>
       forward s (ftransform st (AL, d))
     | stmtIf x s t as st, (AL, d) =>
       forward t (forward s (ftransform st (AL, d)))

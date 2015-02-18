@@ -14,7 +14,7 @@ Inductive alpha : env var -> env var -> stmt -> stmt -> Prop :=
     -> alpha ra ira (stmtApp l X) (stmtApp l Y)
 | alpha_assign ra ira x y e e' s s'
   : alpha_exp ra ira e e'
-  -> alpha (ra[x<-y]) (ira[y <- x]) s s' -> alpha ra ira (stmtExp x e s) (stmtExp y e' s')
+  -> alpha (ra[x<-y]) (ira[y <- x]) s s' -> alpha ra ira (stmtLet x e s) (stmtLet y e' s')
 | alpha_if ra ira e e' s s' t t'
   : alpha_exp ra ira e e'
   -> alpha ra ira s s'

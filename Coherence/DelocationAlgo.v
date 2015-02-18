@@ -64,7 +64,7 @@ Fixpoint computeParameters (DL: list (set var)) (ZL:list (list var)) (AP:list (s
          (s:stmt) (an:ann (set var)) {struct s}
 : ann (list var) * list (option (set var)) :=
   match s, an with
-    | stmtExp x e s, ann1 _ an =>
+    | stmtLet x e s, ann1 _ an =>
       let (ar, r) := computeParameters DL ZL (addParam x DL AP) s an in
       (ann1 nil ar, r)
     | stmtIf x s t, ann2 _ ans ant =>

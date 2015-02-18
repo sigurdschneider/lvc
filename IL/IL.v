@@ -22,7 +22,7 @@ Notation "'params'" := (list var) (at level 0).
 
 
 Inductive stmt : Type :=
-| stmtExp    (x : var) (e: exp) (s : stmt) : stmt
+| stmtLet    (x : var) (e: exp) (s : stmt) : stmt
 | stmtIf     (e : exp) (s : stmt) (t : stmt) : stmt
 | stmtApp   (l : lab) (Y:args) : stmt
 | stmtReturn (e : exp) : stmt
@@ -35,7 +35,7 @@ Inductive notOccur (G:set var) : stmt -> Prop :=
     : x ∉ G
       -> notOccur G s
       -> Exp.notOccur G e
-      -> notOccur G (stmtExp x e s)
+      -> notOccur G (stmtLet x e s)
   | ncIf e s t
     : Exp.notOccur G e
       -> notOccur G s
@@ -58,7 +58,7 @@ Inductive notOccur (G:set var) : stmt -> Prop :=
 
 Fixpoint freeVars (s:stmt) : set var :=
   match s with
-    | stmtExp x e s0 => (freeVars s0 \ {{x}}) ∪ Exp.freeVars e
+    | stmtLet x e s0 => (freeVars s0 \ {{x}}) ∪ Exp.freeVars e
     | stmtIf e s1 s2 => freeVars s1 ∪ freeVars s2 ∪ Exp.freeVars e
     | stmtApp l Y => list_union (List.map Exp.freeVars Y)
     | stmtReturn e => Exp.freeVars e
@@ -68,7 +68,7 @@ Fixpoint freeVars (s:stmt) : set var :=
 
 Fixpoint definedVars (s:stmt) : set var :=
   match s with
-    | stmtExp x e s0 => {x; definedVars s0}
+    | stmtLet x e s0 => {x; definedVars s0}
     | stmtIf e s1 s2 => definedVars s1 ∪ definedVars s2
     | stmtApp l Y => ∅
     | stmtReturn e => ∅
@@ -78,7 +78,7 @@ Fixpoint definedVars (s:stmt) : set var :=
 
 Fixpoint occurVars (s:stmt) : set var :=
   match s with
-    | stmtExp x e s0 => {x; occurVars s0} ∪ Exp.freeVars e
+    | stmtLet x e s0 => {x; occurVars s0} ∪ Exp.freeVars e
     | stmtIf e s1 s2 => occurVars s1 ∪ occurVars s2 ∪ Exp.freeVars e
     | stmtApp l Y => list_union (List.map Exp.freeVars Y)
     | stmtReturn e => Exp.freeVars e
@@ -133,7 +133,7 @@ Qed.
 
 Fixpoint rename (ϱ:env var) (s:stmt) : stmt :=
   match s with
-    | stmtExp x e s => stmtExp (ϱ x) (rename_exp ϱ e) (rename ϱ s)
+    | stmtLet x e s => stmtLet (ϱ x) (rename_exp ϱ e) (rename ϱ s)
     | stmtIf e s t => stmtIf (rename_exp ϱ e) (rename ϱ s) (rename ϱ t)
     | stmtApp l Y => stmtApp l (List.map (rename_exp ϱ) Y)
     | stmtReturn e => stmtReturn (rename_exp ϱ e)
@@ -143,7 +143,7 @@ Fixpoint rename (ϱ:env var) (s:stmt) : stmt :=
 
 Fixpoint label_closed (n:nat) (s:stmt) : Prop :=
   match s with
-    | stmtExp _ _ s => label_closed n s
+    | stmtLet _ _ s => label_closed n s
     | stmtIf _ s t => label_closed n s /\ label_closed n t
     | stmtApp l _ => counted l < n
     | stmtReturn _ => True
@@ -195,7 +195,7 @@ Module F.
   Inductive step : state -> event -> state -> Prop :=
   | stepExp L E x e b v
     (def:exp_eval E e = Some v)
-    : step (L, E, stmtExp x e b) EvtTau (L, E[x<-Some v], b)
+    : step (L, E, stmtLet x e b) EvtTau (L, E[x<-Some v], b)
 
   | stepIfT L E
     e (b1 b2 : stmt) v
@@ -273,7 +273,7 @@ Module I.
   Inductive step : state -> event -> state -> Prop :=
   | stepExp L E x e b v
     (def:exp_eval E e = Some v)
-    : step (L, E, stmtExp x e b) EvtTau (L, E[x<-Some v], b)
+    : step (L, E, stmtLet x e b) EvtTau (L, E[x<-Some v], b)
 
   | stepIfT L E
     e (b1 b2 : stmt) v

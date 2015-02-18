@@ -11,11 +11,11 @@ Set Implicit Arguments.
 
 Fixpoint renameApart' (ϱ:env var) (G:set var) (s:stmt) : set var * stmt:=
 match s with
-   | stmtExp x e s0 =>
+   | stmtLet x e s0 =>
      let y := fresh G in
      let ϱ' := ϱ[x <- y] in
      let (G', s') := renameApart' ϱ' {y; G} s0 in
-       ({y; G'}, stmtExp y (rename_exp ϱ e) s')
+       ({y; G'}, stmtLet y (rename_exp ϱ e) s')
    | stmtIf e s1 s2 =>
      let (G', s1') := renameApart' ϱ G s1 in
      let (G'', s2') := renameApart' ϱ (G ∪ G') s2 in
@@ -58,7 +58,7 @@ Qed.
 
 Fixpoint renamedApartAnn (s:stmt) (G:set var) : ann (set var * set var) :=
   match s with
-    | stmtExp x e s =>
+    | stmtLet x e s =>
       let an := renamedApartAnn s {x; G} in
       ann1 (G, {x; snd (getAnn an) }) an
     | stmtIf e s t =>

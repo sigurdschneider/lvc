@@ -18,7 +18,7 @@ Definition getAnn {A} (a:ann A) : A :=
 
 Fixpoint setAnn A (s:stmt) (a:A) : ann A :=
   match s with
-   | stmtExp x e s' => ann1 a (setAnn s' a)
+   | stmtLet x e s' => ann1 a (setAnn s' a)
    | stmtIf x s1 s2 => ann2 a (setAnn s1 a) (setAnn s2 a)
    | stmtApp l Y => ann0 a
    | stmtReturn x => ann0 a
@@ -55,7 +55,7 @@ Qed.
 Inductive annotation {A:Type} : stmt -> ann A -> Prop :=
 | antExp x e s a sa
   : annotation s sa
-    -> annotation (stmtExp x e s) (ann1 a sa)
+    -> annotation (stmtLet x e s) (ann1 a sa)
 | antIf x s t a sa ta
   : annotation s sa
     -> annotation t ta

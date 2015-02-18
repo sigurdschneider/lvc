@@ -95,7 +95,7 @@ Inductive live_sound (i:overapproximation) : list (set var*params) -> stmt -> an
   :  live_sound i Lv b al
   -> live_exp_sound e lv
   -> (getAnn al\{{x}}) ⊆ lv
-  -> live_sound i Lv (stmtExp x e b) (ann1 lv al)
+  -> live_sound i Lv (stmtLet x e b) (ann1 lv al)
 | LIf Lv e b1 b2 lv al1 al2
   :  live_sound i Lv b1 al1
   -> live_sound i Lv b2 al2
@@ -259,7 +259,7 @@ Inductive true_live_sound (i:overapproximation)
   -> (x ∈ getAnn al -> live_exp_sound e lv)
   -> (getAnn al\{{x}}) ⊆ lv
 (*  -> (x ∉ getAnn al -> lv ⊆ getAnn al \ {{x}}) *)
-  -> true_live_sound i Lv (stmtExp x e b) (ann1 lv al)
+  -> true_live_sound i Lv (stmtLet x e b) (ann1 lv al)
 | TLIf Lv e b1 b2 lv al1 al2
   :  true_live_sound i Lv b1 al1
   -> true_live_sound i Lv b2 al2

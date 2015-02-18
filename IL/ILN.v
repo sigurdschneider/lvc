@@ -4,7 +4,7 @@ Require Export Util Var Val Exp Env Map CSet AutoIndTac IL Bisim Infra.Status.
 Set Implicit Arguments.
 
 Inductive nstmt : Type :=
-| nstmtExp    (x : var) (e: exp) (s : nstmt)
+| nstmtLet    (x : var) (e: exp) (s : nstmt)
 | nstmtIf     (e : exp) (s : nstmt) (t : nstmt)
 | nstmtApp   (l : lab) (Y:args)
 | nstmtReturn (e : exp)
@@ -14,7 +14,7 @@ Inductive nstmt : Type :=
 
 Fixpoint freeVars (s:nstmt) : set var :=
   match s with
-    | nstmtExp x e s0 => (freeVars s0 \ {{x}}) ∪ Exp.freeVars e
+    | nstmtLet x e s0 => (freeVars s0 \ {{x}}) ∪ Exp.freeVars e
     | nstmtIf e s1 s2 => freeVars s1 ∪ freeVars s2 ∪ Exp.freeVars e
     | nstmtApp l Y => list_union (List.map Exp.freeVars Y)
     | nstmtReturn e => Exp.freeVars e
@@ -46,7 +46,7 @@ Module F.
   Inductive step : state -> event -> state -> Prop :=
   | nstepExp L E x e b v
     (def:exp_eval E e = Some v)
-    : step (L, E, nstmtExp x e b) EvtTau (L, E[x<-Some v], b)
+    : step (L, E, nstmtLet x e b) EvtTau (L, E[x<-Some v], b)
 
   | nstepIfT L E
     (e:exp) b1 b2 v
@@ -130,7 +130,7 @@ Module I.
   Inductive step : state -> event -> state -> Prop :=
   | nstepExp L E x e b v
     (def:exp_eval E e = Some v)
-    : step (L, E, nstmtExp x e b) EvtTau (L, E[x<-Some v], b)
+    : step (L, E, nstmtLet x e b) EvtTau (L, E[x<-Some v], b)
 
   | nstepIfT L E
     (e:exp) b1 b2 v
@@ -198,7 +198,7 @@ End I.
 
 Fixpoint labIndices (s:nstmt) (symb: list lab) : status stmt :=
   match s with
-    | nstmtExp x e s => sdo s' <- (labIndices s symb); Success (stmtExp x e s')
+    | nstmtLet x e s => sdo s' <- (labIndices s symb); Success (stmtLet x e s')
     | nstmtIf x s1 s2 =>
       sdo s1' <- (labIndices s1 symb);
       sdo s2' <- (labIndices s2 symb);

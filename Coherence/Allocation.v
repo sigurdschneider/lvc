@@ -22,7 +22,7 @@ Inductive locally_inj (rho:env var) : stmt -> ann (set var) -> Prop :=
   :  locally_inj rho b al
   -> injective_on lv rho
   -> injective_on (getAnn al ∪ {{x}}) rho
-  -> locally_inj rho (stmtExp x e b) (ann1 lv al)
+  -> locally_inj rho (stmtLet x e b) (ann1 lv al)
 | RNIf x b1 b2 lv (alv1 alv2:ann (set var))
   :  injective_on lv rho
   -> locally_inj rho b1 alv1
@@ -277,7 +277,7 @@ Qed.
 
 Fixpoint norm_rho ra s s' : env var :=
   match s, s' with
-    | stmtExp x e s, stmtExp x' e' s' => norm_rho (ra[x<- x']) s s'
+    | stmtLet x e s, stmtLet x' e' s' => norm_rho (ra[x<- x']) s s'
     | stmtIf _ s t, stmtIf _ s' t' => norm_rho (norm_rho ra s s') t t'
     | stmtFun Z s t, stmtFun Z' s' t' => norm_rho (norm_rho (ra [Z <-- Z']) s s') t t'
     | _, _ => ra

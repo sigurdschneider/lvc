@@ -23,8 +23,8 @@ Qed.
 
 Fixpoint compile (LV:list (set var * params)) (s:stmt) (a:ann (set var)) :=
   match s, a with
-    | stmtExp x e s, ann1 lv an =>
-      if [x ∈ getAnn an] then stmtExp x e (compile LV s an)
+    | stmtLet x e s, ann1 lv an =>
+      if [x ∈ getAnn an] then stmtLet x e (compile LV s an)
                          else compile LV s an
     | stmtIf e s t, ann2 _ ans ant =>
       if [exp2bool e = Some true] then
@@ -343,7 +343,7 @@ End I.
 
 Fixpoint compile_live (s:stmt) (a:ann (set var)) : ann (set var) :=
   match s, a with
-    | stmtExp x e s, ann1 lv an as a =>
+    | stmtLet x e s, ann1 lv an as a =>
       if [x ∈ getAnn an] then ann1 lv (compile_live s an)
                          else compile_live s an
     | stmtIf e s t, ann2 lv ans ant =>

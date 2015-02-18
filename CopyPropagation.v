@@ -10,11 +10,11 @@ Unset Printing Records.
 
 Fixpoint copyPropagate (ϱ:var -> var) (s:stmt) : stmt :=
   match s with
-   | stmtExp x e s =>
+   | stmtLet x e s =>
      if [ isVar e] then
-       stmtExp x e (copyPropagate (ϱ[x <- ϱ (getVar e)]) s)
+       stmtLet x e (copyPropagate (ϱ[x <- ϱ (getVar e)]) s)
      else
-       stmtExp x (rename_exp ϱ e) (copyPropagate (ϱ[x <- x]) s)
+       stmtLet x (rename_exp ϱ e) (copyPropagate (ϱ[x <- x]) s)
    | stmtIf e s1 s2 => stmtIf (rename_exp ϱ e)
                              (copyPropagate ϱ s1)
                              (copyPropagate ϱ s2)

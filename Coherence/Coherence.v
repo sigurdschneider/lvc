@@ -11,7 +11,7 @@ Inductive shadowing_free : set var -> stmt -> Prop :=
     : x ∉ D
       -> Exp.freeVars e ⊆ D
       -> shadowing_free {x; D} s
-      -> shadowing_free D (stmtExp x e s)
+      -> shadowing_free D (stmtLet x e s)
   | shadowing_freeIf D e s t
     : Exp.freeVars e ⊆ D
     -> shadowing_free D s
@@ -69,7 +69,7 @@ Qed.
 Inductive srd : list (option (set var)) -> stmt -> ann (set var) -> Prop :=
  | srdExp DL x e s lv al
     : srd (restrict DL (lv\{{x}})) s al
-    -> srd DL (stmtExp x e s) (ann1 lv al)
+    -> srd DL (stmtLet x e s) (ann1 lv al)
   | srdIf DL e s t lv als alt
     : srd DL s als
     -> srd DL t alt
@@ -140,7 +140,7 @@ Defined.
 (*
 Fixpoint freeVar_live (s:stmt) : ann (set var) :=
   match s with
-    | stmtExp x e s0 => ann1 (freeVars s) (freeVar_live s0)
+    | stmtLet x e s0 => ann1 (freeVars s) (freeVar_live s0)
     | stmtIf x s1 s2 => ann2 (freeVars s) (freeVar_live s1) (freeVar_live s2)
     | stmtApp l Y => ann0 (freeVars s)
     | stmtReturn x => ann0 (freeVars s)

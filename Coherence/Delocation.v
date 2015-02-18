@@ -17,7 +17,7 @@ Inductive trs
     -> Prop :=
  | trsExp DL ZL x e s an an_lv lv
     : trs (restrict DL (lv\{{x}})) ZL  s an_lv an
-    -> trs DL ZL (stmtExp x e s) (ann1 lv an_lv) (ann1 nil an)
+    -> trs DL ZL (stmtLet x e s) (ann1 lv an_lv) (ann1 nil an)
   | trsIf DL ZL e s t ans ant ans_lv ant_lv lv
     :  trs DL ZL s ans_lv ans
     -> trs DL ZL t ant_lv ant
@@ -52,7 +52,7 @@ Qed.
 
 Fixpoint compile (ZL:list (list var)) (s:stmt) (an:ann (list var)) : stmt :=
   match s, an with
-    | stmtExp x e s, ann1 _ an => stmtExp x e (compile ZL s an)
+    | stmtLet x e s, ann1 _ an => stmtLet x e (compile ZL s an)
     | stmtIf e s t, ann2 _ ans ant => stmtIf e (compile ZL s ans) (compile ZL t ant)
     | stmtApp f Y, ann0 _ => stmtApp f (Y++List.map Var (nth (counted f) ZL nil))
     | stmtReturn e, ann0 _ => stmtReturn e
@@ -251,7 +251,7 @@ Inductive additionalParameters_live : list (set var)   (* additional params *)
                                       -> Prop :=
 | additionalParameters_liveExp ZL x e s an an_lv lv
   : additionalParameters_live ZL s an_lv an
-    -> additionalParameters_live ZL (stmtExp x e s) (ann1 lv an_lv) (ann1 nil an)
+    -> additionalParameters_live ZL (stmtLet x e s) (ann1 lv an_lv) (ann1 nil an)
 | additionalParameters_liveIf ZL e s t ans ant ans_lv ant_lv lv
   : additionalParameters_live ZL s ans_lv ans
     -> additionalParameters_live ZL t ant_lv ant
