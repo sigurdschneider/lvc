@@ -121,7 +121,7 @@ Inductive cp_sound : onv aval
   : get Cp (counted l) (Z,aY)
     -> length Z = length Y
     -> PIR2 le_precise aY (List.map (exp_eval AE ∘ Some) Y)
-    -> cp_sound AE Cp (stmtGoto l Y)
+    -> cp_sound AE Cp (stmtApp l Y)
 | CPReturn AE Cp e
   : cp_sound AE Cp (stmtReturn e)
 | CPLet AE Cp s Z b
@@ -259,8 +259,8 @@ Fixpoint constantPropagate (AE:onv aval) s : stmt :=
       stmtIf (cp_choose_exp AE e)
              (constantPropagate (update_cond AE e true) s)
              (constantPropagate (update_cond AE e false) t)
-    | stmtGoto f Y =>
-      stmtGoto f (List.map (cp_choose_exp AE) Y)
+    | stmtApp f Y =>
+      stmtApp f (List.map (cp_choose_exp AE) Y)
     | stmtReturn e => stmtReturn (cp_choose_exp AE e)
     | stmtExtern x f Y s =>
       stmtExtern x f (List.map (cp_choose_exp AE) Y)

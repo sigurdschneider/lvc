@@ -18,7 +18,7 @@ Fixpoint copyPropagate (ϱ:var -> var) (s:stmt) : stmt :=
    | stmtIf e s1 s2 => stmtIf (rename_exp ϱ e)
                              (copyPropagate ϱ s1)
                              (copyPropagate ϱ s2)
-   | stmtGoto l Y => stmtGoto l (List.map (rename_exp ϱ) Y)
+   | stmtApp l Y => stmtApp l (List.map (rename_exp ϱ) Y)
    | stmtReturn e => stmtReturn (rename_exp ϱ e)
    | stmtExtern x f Y s => stmtExtern x f (List.map (rename_exp ϱ) Y) (copyPropagate (ϱ[x <- x]) s)
    | stmtFun Z s1 s2 =>

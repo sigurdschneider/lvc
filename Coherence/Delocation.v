@@ -29,7 +29,7 @@ Inductive trs
     -> get ZL (counted f) (Za)
 (*    -> G' ⊆ lv *)
 (*    -> of_list Za ⊆ lv *)
-    -> trs DL ZL (stmtGoto f Y) (ann0 lv) (ann0 nil)
+    -> trs DL ZL (stmtApp f Y) (ann0 lv) (ann0 nil)
   | trsExtern DL ZL x f Y s lv an_lv an
     : trs (restrict DL (lv\{{x}})) ZL s an_lv an
     -> trs DL ZL (stmtExtern x f Y s) (ann1 lv an_lv) (ann1 nil an)
@@ -54,7 +54,7 @@ Fixpoint compile (ZL:list (list var)) (s:stmt) (an:ann (list var)) : stmt :=
   match s, an with
     | stmtExp x e s, ann1 _ an => stmtExp x e (compile ZL s an)
     | stmtIf e s t, ann2 _ ans ant => stmtIf e (compile ZL s ans) (compile ZL t ant)
-    | stmtGoto f Y, ann0 _ => stmtGoto f (Y++List.map Var (nth (counted f) ZL nil))
+    | stmtApp f Y, ann0 _ => stmtApp f (Y++List.map Var (nth (counted f) ZL nil))
     | stmtReturn e, ann0 _ => stmtReturn e
     | stmtExtern x f Y s, ann1 _ an =>
       stmtExtern x f Y (compile ZL s an)
@@ -261,7 +261,7 @@ Inductive additionalParameters_live : list (set var)   (* additional params *)
 | additionalParameters_liveGoto ZL Za f Y lv
   : get ZL (counted f) Za
     -> Za ⊆ lv
-    -> additionalParameters_live ZL (stmtGoto f Y) (ann0 lv) (ann0 nil)
+    -> additionalParameters_live ZL (stmtApp f Y) (ann0 lv) (ann0 nil)
 | additionalParameters_liveExtern ZL x f Y s an an_lv lv
   : additionalParameters_live ZL s an_lv an
     -> additionalParameters_live ZL

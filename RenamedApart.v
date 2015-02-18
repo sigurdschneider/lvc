@@ -29,7 +29,7 @@ Inductive renamedApart : stmt -> ann (set var * set var) -> Prop :=
   | renamedApartGoto D D' f Y
     : list_union (List.map Exp.freeVars Y) ⊆ D
       -> D' [=] ∅
-      -> renamedApart (stmtGoto f Y) (ann0 (D, D'))
+      -> renamedApart (stmtApp f Y) (ann0 (D, D'))
   | renamedApartExtern x f Y s D D' D'' an
     : x ∉ D
       -> list_union (List.map Exp.freeVars Y) ⊆ D

@@ -237,11 +237,11 @@ Fixpoint lower DL s (an:ann (set var))
       sdo sl <- lower DL s ans;
         sdo tl <- lower DL t ant;
             Success (stmtIf x sl tl)
-    | stmtGoto l Y, ann0 lv  =>
+    | stmtApp l Y, ann0 lv  =>
        sdo Lve <- option2status (nth_error DL (counted l)) "lower: No annotation for function";
         sdo Y <- onlyVars Y;
         let '(lv', Z) := Lve in
-        compile_parallel_assignment parallel_move lv' Z Y (stmtGoto l nil)
+        compile_parallel_assignment parallel_move lv' Z Y (stmtApp l nil)
 
     | stmtReturn x, ann0 lv => Success (stmtReturn x)
     | stmtExtern x f Y s, ann1 _ ans =>

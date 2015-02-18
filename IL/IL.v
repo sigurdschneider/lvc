@@ -24,7 +24,7 @@ Notation "'params'" := (list var) (at level 0).
 Inductive stmt : Type :=
 | stmtExp    (x : var) (e: exp) (s : stmt) : stmt
 | stmtIf     (e : exp) (s : stmt) (t : stmt) : stmt
-| stmtGoto   (l : lab) (Y:args) : stmt
+| stmtApp   (l : lab) (Y:args) : stmt
 | stmtReturn (e : exp) : stmt
 | stmtExtern (x : var) (f:external) (Y:args) (s:stmt)
 (* block f Z : rt = s in b *)
@@ -44,7 +44,7 @@ Inductive notOccur (G:set var) : stmt -> Prop :=
   | ncRet e : Exp.notOccur G e -> notOccur G (stmtReturn e)
   | ncGoto l (Y:list exp)
     : (forall n e, get Y n e -> Exp.notOccur G e)
-      -> notOccur G (stmtGoto l Y)
+      -> notOccur G (stmtApp l Y)
   | ncExtern x f Y s
     : (forall n e, get Y n e -> Exp.notOccur G e)
       -> x ∉ G
@@ -60,7 +60,7 @@ Fixpoint freeVars (s:stmt) : set var :=
   match s with
     | stmtExp x e s0 => (freeVars s0 \ {{x}}) ∪ Exp.freeVars e
     | stmtIf e s1 s2 => freeVars s1 ∪ freeVars s2 ∪ Exp.freeVars e
-    | stmtGoto l Y => list_union (List.map Exp.freeVars Y)
+    | stmtApp l Y => list_union (List.map Exp.freeVars Y)
     | stmtReturn e => Exp.freeVars e
     | stmtExtern x f Y s => (freeVars s \ {{x}}) ∪ list_union (List.map Exp.freeVars Y)
     | stmtFun Z s1 s2 => (freeVars s1 \ of_list Z) ∪ freeVars s2
@@ -70,7 +70,7 @@ Fixpoint definedVars (s:stmt) : set var :=
   match s with
     | stmtExp x e s0 => {x; definedVars s0}
     | stmtIf e s1 s2 => definedVars s1 ∪ definedVars s2
-    | stmtGoto l Y => ∅
+    | stmtApp l Y => ∅
     | stmtReturn e => ∅
     | stmtExtern x f Y s => {x; definedVars s}
     | stmtFun Z s1 s2 => definedVars s1 ∪ definedVars s2 ∪ of_list Z
@@ -80,7 +80,7 @@ Fixpoint occurVars (s:stmt) : set var :=
   match s with
     | stmtExp x e s0 => {x; occurVars s0} ∪ Exp.freeVars e
     | stmtIf e s1 s2 => occurVars s1 ∪ occurVars s2 ∪ Exp.freeVars e
-    | stmtGoto l Y => list_union (List.map Exp.freeVars Y)
+    | stmtApp l Y => list_union (List.map Exp.freeVars Y)
     | stmtReturn e => Exp.freeVars e
     | stmtExtern x f Y s => {x; occurVars s} ∪ list_union (List.map Exp.freeVars Y)
     | stmtFun Z s1 s2 => occurVars s1 ∪ occurVars s2 ∪ of_list Z
@@ -135,7 +135,7 @@ Fixpoint rename (ϱ:env var) (s:stmt) : stmt :=
   match s with
     | stmtExp x e s => stmtExp (ϱ x) (rename_exp ϱ e) (rename ϱ s)
     | stmtIf e s t => stmtIf (rename_exp ϱ e) (rename ϱ s) (rename ϱ t)
-    | stmtGoto l Y => stmtGoto l (List.map (rename_exp ϱ) Y)
+    | stmtApp l Y => stmtApp l (List.map (rename_exp ϱ) Y)
     | stmtReturn e => stmtReturn (rename_exp ϱ e)
     | stmtExtern x f e s => stmtExtern (ϱ x) f (List.map (rename_exp ϱ) e) (rename ϱ s)
     | stmtFun Z s t => stmtFun (lookup_list ϱ Z) (rename ϱ s) (rename ϱ t)
@@ -145,7 +145,7 @@ Fixpoint label_closed (n:nat) (s:stmt) : Prop :=
   match s with
     | stmtExp _ _ s => label_closed n s
     | stmtIf _ s t => label_closed n s /\ label_closed n t
-    | stmtGoto l _ => counted l < n
+    | stmtApp l _ => counted l < n
     | stmtReturn _ => True
     | stmtExtern _ _ _ s => label_closed n s
     | stmtFun _ s t => label_closed (S n) s /\ label_closed (S n) t
@@ -214,7 +214,7 @@ Module F.
     (len:length (block_Z blk) = length Y)
     (def:omap (exp_eval E) Y = Some vl) E'
     (updOk:(block_E blk) [block_Z blk <-- List.map Some vl] = E')
-    : step  (L, E, stmtGoto l Y)
+    : step  (L, E, stmtApp l Y)
             EvtTau
             (drop (counted l) L, E', block_s blk)
 
@@ -292,7 +292,7 @@ Module I.
     (len:length (block_Z blk) = length Y)
     (def:omap (exp_eval E) Y = Some vl) E'
     (updOk:E[block_Z blk  <-- List.map Some vl] = E')
-    : step  (L, E, stmtGoto l Y)
+    : step  (L, E, stmtApp l Y)
             EvtTau
             (drop (counted l) L, E', block_s blk)
 

@@ -33,9 +33,9 @@ Fixpoint compile (LV:list (set var * params)) (s:stmt) (a:ann (set var)) :=
         (compile LV t ant)
       else
         stmtIf e (compile LV s ans) (compile LV t ant)
-    | stmtGoto f Y, ann0 lv =>
+    | stmtApp f Y, ann0 lv =>
       let lvZ := nth (counted f) LV (∅,nil) in
-      stmtGoto f (filter_by (fun y => B[y ∈ fst lvZ]) (snd lvZ) Y)
+      stmtApp f (filter_by (fun y => B[y ∈ fst lvZ]) (snd lvZ) Y)
     | stmtReturn x, ann0 _ => stmtReturn x
     | stmtExtern x f e s, ann1 lv an =>
       stmtExtern x f e (compile LV s an)
@@ -353,7 +353,7 @@ Fixpoint compile_live (s:stmt) (a:ann (set var)) : ann (set var) :=
         compile_live t ant
       else
         ann2 lv (compile_live s ans) (compile_live t ant)
-    | stmtGoto f Y, ann0 lv as a => a
+    | stmtApp f Y, ann0 lv as a => a
     | stmtReturn x, ann0 lv as a => a
     | stmtExtern x f Y s, ann1 lv an as a =>
       ann1 lv (compile_live s an)

@@ -59,7 +59,7 @@ let rec print_nstmt ids ident s =
   let print_nstmt = print_nstmt ids in
   match s with
     | Lvc.NstmtReturn e -> print_sexpr e
-    | Lvc.NstmtGoto (f, y) -> print_var f ^ "(" ^ (print_list print_sexpr y) ^ ")"
+    | Lvc.NstmtApp (f, y) -> print_var f ^ "(" ^ (print_list print_sexpr y) ^ ")"
     | Lvc.NstmtExp (x, e, s) -> "let " ^ (print_var x) ^ " = " ^
       (print_sexpr e) ^ " in\n" ^ print_ident ident ^
        (print_nstmt ident s)

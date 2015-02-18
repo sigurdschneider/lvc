@@ -32,8 +32,8 @@ Inductive simB (SIM:ProgramEquivalence F.state F.state) (r:F.state -> F.state ->
          omap (exp_eval E) Y = Some Yv
          -> omap (exp_eval E') Y' = Some Y'v
          -> ArgRel V V' a Yv Y'v
-         -> progeq r (L, E, stmtGoto (LabI 0) Y)
-                        (L', E', stmtGoto (LabI 0) Y'))
+         -> progeq r (L, E, stmtApp (LabI 0) Y)
+                        (L', E', stmtApp (LabI 0) Y'))
     -> simB SIM r AR L L' a (F.blockI V Z s) (F.blockI V' Z' s').
 
 Definition simL' (SIM:ProgramEquivalence F.state F.state) r

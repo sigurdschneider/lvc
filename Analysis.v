@@ -64,7 +64,7 @@ Definition backward Dom FunDom
       let d' := (btransform AL st ai) in
       ann2 d' ans' ant'
 
-    | stmtGoto f Y as st, ann0 d as an =>
+    | stmtApp f Y as st, ann0 d as an =>
       ann0 (btransform AL st anni0)
 
     | stmtReturn x as st, ann0 d as an =>
@@ -100,7 +100,7 @@ Definition forward Dom FunDom
       let (AL', ans') := forward s (AL, setAnni ans ai) in
       let (AL'', ant') := forward t (AL', setAnni ant ai) in
       (AL'', ann2 d ans' ant')
-    | stmtGoto f Y as st, (AL, ann0 d as an) =>
+    | stmtApp f Y as st, (AL, ann0 d as an) =>
       let (AL', ai) := ftransform st (AL, d) in
       (AL', an)
     | stmtReturn x as st, (AL, ann0 d as an) =>
@@ -157,7 +157,7 @@ Definition forward Dom {BSL:BoundedSemiLattice Dom} FunDom
           forward s (AL, a1)
         | _ => Error "condition transformer failed"
       end
-    | stmtGoto f Y as st, (AL, d) =>
+    | stmtApp f Y as st, (AL, d) =>
       match ftransform st (AL, d) with
         | (AL, anni1 a) => Success (AL, a)
         | _ => Error "tailcall transformer failed"
@@ -208,7 +208,7 @@ Definition forward Dom FunDom
       forward s (ftransform st (AL, d))
     | stmtIf x s t as st, (AL, d) =>
       forward t (forward s (ftransform st (AL, d)))
-    | stmtGoto f Y as st, (AL, d) =>
+    | stmtApp f Y as st, (AL, d) =>
       ftransform st (AL, d)
     | stmtReturn x as st, (AL, d) =>
       ftransform st (AL, d)

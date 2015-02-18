@@ -15,8 +15,8 @@ Fixpoint compile (s:stmt) (a:ann (list exp)) :=
       stmtExp x e' (compile s an)
     | stmtIf _ s t, ann2 (e'::nil) ans ant =>
       stmtIf e' (compile s ans) (compile t ant)
-    | stmtGoto f _, ann0 Y' =>
-      stmtGoto f Y'
+    | stmtApp f _, ann0 Y' =>
+      stmtApp f Y'
     | stmtReturn _, ann0 (e'::nil) => stmtReturn e'
     | stmtExtern x f _ s, ann1 Y' an =>
       stmtExtern x f Y' (compile s an)
@@ -49,7 +49,7 @@ Inductive eqn_sound : list (params*set var*eqns*eqns)
     -> length Y = length Y'
     -> entails Gamma (subst_eqns (sid [Z <-- Y']) EqS)
     -> entails Gamma (list_EqnApx Y Y')
-    -> eqn_sound Lv (stmtGoto l Y) (stmtGoto l Y') Gamma (ann0 (G,G'))
+    -> eqn_sound Lv (stmtApp l Y) (stmtApp l Y') Gamma (ann0 (G,G'))
 | EqnReturn Lv e e' Gamma G G'
   : entails Gamma {(EqnApx e e')}
     -> eqn_sound Lv (stmtReturn e) (stmtReturn e') Gamma (ann0 (G,G'))

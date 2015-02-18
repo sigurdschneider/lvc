@@ -6,7 +6,7 @@ Set Implicit Arguments.
 Inductive nstmt : Type :=
 | nstmtExp    (x : var) (e: exp) (s : nstmt)
 | nstmtIf     (e : exp) (s : nstmt) (t : nstmt)
-| nstmtGoto   (l : lab) (Y:args)
+| nstmtApp   (l : lab) (Y:args)
 | nstmtReturn (e : exp)
 | nstmtExtern (x : var) (f:external) (Y:args) (s:nstmt)
 (* block f Z : rt = s in b *)
@@ -16,7 +16,7 @@ Fixpoint freeVars (s:nstmt) : set var :=
   match s with
     | nstmtExp x e s0 => (freeVars s0 \ {{x}}) ∪ Exp.freeVars e
     | nstmtIf e s1 s2 => freeVars s1 ∪ freeVars s2 ∪ Exp.freeVars e
-    | nstmtGoto l Y => list_union (List.map Exp.freeVars Y)
+    | nstmtApp l Y => list_union (List.map Exp.freeVars Y)
     | nstmtReturn e => Exp.freeVars e
     | nstmtExtern x f Y s => (freeVars s \ {{x}}) ∪ list_union (List.map Exp.freeVars Y)
     | nstmtFun l Z s1 s2 => (freeVars s1 \ of_list Z) ∪ freeVars s2
@@ -69,7 +69,7 @@ Module F.
     (Ldef:L (counted l) = Some (blockI L' E' (l',Z,s))) E'' vl
     (def:omap (exp_eval E) Y = Some vl)
     (updOk:E'[Z <-- List.map Some vl]  = E'')
-    : step (L, E, nstmtGoto l Y)
+    : step (L, E, nstmtApp l Y)
            EvtTau
            (L'[(counted l) <- Some (blockI L' E' (l,Z,s))], E'', s)
 
@@ -150,7 +150,7 @@ Module I.
     (Ldef:L (counted l) = Some (blockI L' (l',Z,s))) E''
     (def:omap (exp_eval E) Y = Some vl)
     (updOk:E [Z <-- List.map Some vl]  = E'')
-    : step (L, E, nstmtGoto l Y)
+    : step (L, E, nstmtApp l Y)
            EvtTau
            (L'[(counted l) <- Some (blockI L' (l,Z,s))], E'', s)
 
@@ -203,8 +203,8 @@ Fixpoint labIndices (s:nstmt) (symb: list lab) : status stmt :=
       sdo s1' <- (labIndices s1 symb);
       sdo s2' <- (labIndices s2 symb);
       Success (stmtIf x s1' s2')
-    | nstmtGoto l Y =>
-      sdo f <- option2status (pos symb l 0) "labIndices: Undeclared function" ; Success (stmtGoto (LabI f) Y)
+    | nstmtApp l Y =>
+      sdo f <- option2status (pos symb l 0) "labIndices: Undeclared function" ; Success (stmtApp (LabI f) Y)
     | nstmtReturn x => Success (stmtReturn x)
     | nstmtExtern x f Y s =>
       sdo s' <- (labIndices s symb); Success (stmtExtern x f Y s')
@@ -229,7 +229,7 @@ Instance statetype_I : StateType I.state := {
 
 (*Tactic Notation "goto_invs" tactic(tac) :=
   match goal with
-    | [ |- sim (?L, _, nstmtGoto ?l ?Y) (_, _, _) ] =>
+    | [ |- sim (?L, _, nstmtApp ?l ?Y) (_, _, _) ] =>
       let b := fresh "blk" in
       destruct (get_dec L (counted l)) as [[b ?]|];
         [ first [ decide (length (F.block_Z b) = length Y);

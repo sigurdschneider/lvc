@@ -115,9 +115,9 @@ Fixpoint compile s
   match s with
     | stmtExp x e s => stmtExp x e (compile s)
     | stmtIf x s t => stmtIf x (compile s) (compile t)
-    | stmtGoto l Y  =>
+    | stmtApp l Y  =>
       let xl := fresh_list fresh (list_union (List.map Exp.freeVars Y)) (length Y) in
-      list_to_stmt xl Y (stmtGoto l (List.map Var xl))
+      list_to_stmt xl Y (stmtApp l (List.map Var xl))
     | stmtReturn x => stmtReturn x
     | stmtExtern x f Y s => stmtExtern x f Y (compile s)
     | stmtFun Z s t => stmtFun Z (compile s) (compile t)
@@ -177,7 +177,7 @@ Proof.
     left; eapply IHs2; eauto.
     pfold. econstructor 3; try eapply star2_refl; eauto; stuck.
   - case_eq (omap (exp_eval V) Y); intros.
-    + exploit (list_to_stmt_correct L' V (stmtGoto l (List.map Var
+    + exploit (list_to_stmt_correct L' V (stmtApp l (List.map Var
             (fresh_list fresh (list_union (List.map Exp.freeVars Y)) (length Y))))).
       rewrite fresh_list_length; eauto. eauto.
       eapply fresh_list_unique. eapply fresh_spec. eapply fresh_list_spec. eapply fresh_spec.

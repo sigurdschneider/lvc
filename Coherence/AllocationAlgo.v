@@ -16,7 +16,7 @@ Fixpoint linear_scan (st:stmt) (an: ann (set var)) (ϱ:Map [var, var])
     | stmtIf _ s t, ann2 lv ans ant =>
       sdo ϱ' <- linear_scan s ans ϱ;
         linear_scan t ant ϱ'
-    | stmtGoto _ _, ann0 _ => Success ϱ
+    | stmtApp _ _, ann0 _ => Success ϱ
     | stmtReturn _, ann0 _ => Success ϱ
     | stmtExtern x f Y s, ann1 lv ans =>
       let xv := least_fresh (SetConstructs.map (findt ϱ 0) (getAnn ans\{{x}})) in

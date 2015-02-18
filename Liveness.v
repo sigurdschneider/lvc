@@ -108,7 +108,7 @@ Inductive live_sound (i:overapproximation) : list (set var*params) -> stmt -> an
   -> (if isImperative i then ((blv \ of_list Z) ⊆ lv) else True)
   -> length Y = length Z
   -> (forall n y, get Y n y -> live_exp_sound y lv)
-  -> live_sound i Lv (stmtGoto l Y) (ann0 lv)
+  -> live_sound i Lv (stmtApp l Y) (ann0 lv)
 | LReturn Lv e lv
   : live_exp_sound e lv
   -> live_sound i Lv (stmtReturn e) (ann0 lv)
@@ -272,7 +272,7 @@ Inductive true_live_sound (i:overapproximation)
   -> (if isImperative i then  (blv \ of_list Z ⊆ lv) else True)
   -> argsLive lv blv Y Z
   -> length Y = length Z
-  -> true_live_sound i Lv (stmtGoto l Y) (ann0 lv)
+  -> true_live_sound i Lv (stmtApp l Y) (ann0 lv)
 | TLReturn Lv e lv
   : live_exp_sound e lv
   -> true_live_sound i Lv (stmtReturn e) (ann0 lv)

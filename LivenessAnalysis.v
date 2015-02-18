@@ -27,7 +27,7 @@ Definition liveness_transform (DL:list (set var * params)) st a :=
       (d \ {{x}}) ∪ (if [x ∈ d] then Exp.freeVars e else ∅)
     | stmtIf e s t as st, anni2 ds dt =>
       Exp.freeVars e ∪ ds ∪ dt
-    | stmtGoto f Y as st, anni0 =>
+    | stmtApp f Y as st, anni0 =>
       let (lv,Z) := nth (counted f) DL (∅,nil) in
       lv \ of_list Z ∪ list_union (List.map Exp.freeVars (filter_by (fun x => B[x ∈ lv]) Z Y))
     | stmtReturn e as st, anni0 => Exp.freeVars e

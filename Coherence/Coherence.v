@@ -22,7 +22,7 @@ Inductive shadowing_free : set var -> stmt -> Prop :=
     -> shadowing_free D (stmtReturn e)
   | shadowing_freeGoto D f Y
     : list_union (List.map Exp.freeVars Y) ⊆ D
-    -> shadowing_free D (stmtGoto f Y)
+    -> shadowing_free D (stmtApp f Y)
   | shadowing_freeExtern x f Y s D
     : x ∉ D
       -> list_union (List.map Exp.freeVars Y) ⊆ D
@@ -78,7 +78,7 @@ Inductive srd : list (option (set var)) -> stmt -> ann (set var) -> Prop :=
     : srd DL (stmtReturn e) (ann0 lv)
   | srdGoto DL lv G' f Y
     : get DL (counted f) (Some G')
-    -> srd DL (stmtGoto f Y) (ann0 lv)
+    -> srd DL (stmtApp f Y) (ann0 lv)
  | srdExtern DL x f Y s lv al
     : srd (restrict DL (lv\{{x}})) s al
     -> srd DL (stmtExtern x f Y s) (ann1 lv al)
@@ -142,7 +142,7 @@ Fixpoint freeVar_live (s:stmt) : ann (set var) :=
   match s with
     | stmtExp x e s0 => ann1 (freeVars s) (freeVar_live s0)
     | stmtIf x s1 s2 => ann2 (freeVars s) (freeVar_live s1) (freeVar_live s2)
-    | stmtGoto l Y => ann0 (freeVars s)
+    | stmtApp l Y => ann0 (freeVars s)
     | stmtReturn x => ann0 (freeVars s)
     | stmtFun Z s1 s2 => ann2 (freeVars s) (freeVar_live s1) (freeVar_live s2)
   end.

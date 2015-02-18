@@ -15,7 +15,7 @@ Inductive labelsDefined : stmt -> nat -> Prop :=
     : labelsDefined (stmtReturn e) L
   | labelsDefinedGoto f Y L
     : L > counted f
-      -> labelsDefined (stmtGoto f Y) L
+      -> labelsDefined (stmtApp f Y) L
   | labelsDefinedExtern x f Y s L
     : labelsDefined s L
       -> labelsDefined (stmtExtern x f Y s) L

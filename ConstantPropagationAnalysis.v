@@ -387,7 +387,7 @@ Definition constant_propagation_transform st (a:list (Dom * params)*Dom) :=
             anni2opt (Some d) (Some d)
       in
       (AL, ai)
-    | stmtGoto f Y as st, (AL, d) =>
+    | stmtApp f Y as st, (AL, d) =>
       let df := nth (counted f) AL (bottom, nil) in
       let Yc := List.map (fun e => match exp_eval (domenv d) e with
                         | Some v => wTA v

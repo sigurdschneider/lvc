@@ -20,7 +20,7 @@ match s with
      let (G', s1') := renameApart' ϱ G s1 in
      let (G'', s2') := renameApart' ϱ (G ∪ G') s2 in
       (G' ∪ G'', stmtIf (rename_exp ϱ e) s1' s2')
-   | stmtGoto l Y => (∅, stmtGoto l (List.map (rename_exp ϱ) Y))
+   | stmtApp l Y => (∅, stmtApp l (List.map (rename_exp ϱ) Y))
    | stmtReturn e => (∅, stmtReturn (rename_exp ϱ e))
    | stmtExtern x f Y s =>
      let y := fresh G in
@@ -67,7 +67,7 @@ Fixpoint renamedApartAnn (s:stmt) (G:set var) : ann (set var * set var) :=
       ann2 (G, snd (getAnn ans) ∪ snd (getAnn ant)) ans ant
     | stmtReturn e =>
       ann0 (G, ∅)
-    | stmtGoto f Y =>
+    | stmtApp f Y =>
       ann0 (G, ∅)
     | stmtExtern x f Y s =>
       let an := renamedApartAnn s {x; G} in

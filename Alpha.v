@@ -11,7 +11,7 @@ Inductive alpha : env var -> env var -> stmt -> stmt -> Prop :=
 | alpha_goto ra ira l X Y
   : length X = length Y
     -> (forall n x y, get X n x -> get Y n y -> alpha_exp ra ira x y)
-    -> alpha ra ira (stmtGoto l X) (stmtGoto l Y)
+    -> alpha ra ira (stmtApp l X) (stmtApp l Y)
 | alpha_assign ra ira x y e e' s s'
   : alpha_exp ra ira e e'
   -> alpha (ra[x<-y]) (ira[y <- x]) s s' -> alpha ra ira (stmtExp x e s) (stmtExp y e' s')

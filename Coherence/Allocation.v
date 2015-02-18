@@ -30,7 +30,7 @@ Inductive locally_inj (rho:env var) : stmt -> ann (set var) -> Prop :=
   -> locally_inj rho (stmtIf x b1 b2) (ann2 lv alv1 alv2)
 | RNGoto l Y lv
   : injective_on lv rho
-  -> locally_inj rho (stmtGoto l Y) (ann0 lv)
+  -> locally_inj rho (stmtApp l Y) (ann0 lv)
 | RNReturn x lv
   : injective_on lv rho
   -> locally_inj rho (stmtReturn x) (ann0 lv)

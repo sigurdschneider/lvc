@@ -547,8 +547,8 @@ Inductive simB (r:rel2 F.state (fun _ : F.state => F.state)) {A} (AR:BisimRelati
          omap (exp_eval E) Y = Some Yv
          -> omap (exp_eval E') Y' = Some Y'v
          -> ArgRel V V' a Yv Y'v
-         -> paco2 (@bisim_gen F.state _ F.state _) r (L, E, stmtGoto (LabI 0) Y)
-                        (L', E', stmtGoto (LabI 0) Y'))
+         -> paco2 (@bisim_gen F.state _ F.state _) r (L, E, stmtApp (LabI 0) Y)
+                        (L', E', stmtApp (LabI 0) Y'))
     -> simB r AR L L' a (F.blockI V Z s) (F.blockI V' Z' s').
 
 Definition simL' (r:rel2 F.state (fun _ : F.state => F.state))
@@ -670,10 +670,10 @@ Proof.
 Qed.
 
 Lemma bisim_drop_shift r l L E Y L' E' Y'
-: paco2 (@bisim_gen F.state _ F.state _) r (drop (labN l) L, E, stmtGoto (LabI 0) Y)
-        (drop (labN l) L', E', stmtGoto (LabI 0) Y')
-  -> paco2 (@bisim_gen F.state _ F.state _) r (L, E, stmtGoto l Y)
-          (L', E', stmtGoto l Y').
+: paco2 (@bisim_gen F.state _ F.state _) r (drop (labN l) L, E, stmtApp (LabI 0) Y)
+        (drop (labN l) L', E', stmtApp (LabI 0) Y')
+  -> paco2 (@bisim_gen F.state _ F.state _) r (L, E, stmtApp l Y)
+          (L', E', stmtApp l Y').
 Proof.
   intros. pinversion H; subst.
   - eapply plus2_destr_nil in H0.
@@ -737,9 +737,9 @@ Ltac single_step :=
     | [ H : agree_on _ ?E ?E', I : val2bool (?E ?x) = false |- step (_, ?E', stmtIf ?x _ _) _ ] =>
       econstructor 3; eauto; rewrite <- H; eauto; cset_tac; intuition
     | [ H : val2bool _ = false |- _ ] => econstructor 3 ; try eassumption; try reflexivity
-    | [ H : step (?L, _ , stmtGoto ?l _) _, H': get ?L (counted ?l) _ |- _] =>
+    | [ H : step (?L, _ , stmtApp ?l _) _, H': get ?L (counted ?l) _ |- _] =>
       econstructor; try eapply H'; eauto
-    | [ H': get ?L (counted ?l) _ |- step (?L, _ , stmtGoto ?l _) _] =>
+    | [ H': get ?L (counted ?l) _ |- step (?L, _ , stmtApp ?l _) _] =>
       econstructor; try eapply H'; eauto
     | _ => econstructor; eauto
   end.

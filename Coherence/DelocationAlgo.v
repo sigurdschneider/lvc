@@ -71,7 +71,7 @@ Fixpoint computeParameters (DL: list (set var)) (ZL:list (list var)) (AP:list (s
       let (ars, rs) := computeParameters DL ZL AP s ans in
       let (art, rt) := computeParameters DL ZL AP t ant in
       (ann2 nil ars art, zip ounion rs rt)
-    | stmtGoto f Y, ann0 lv => (ann0 nil, killExcept f AP)
+    | stmtApp f Y, ann0 lv => (ann0 nil, killExcept f AP)
     | stmtReturn x, ann0 _ => (ann0 nil, (mapi (fun _ _ => None) AP))
     | stmtExtern x f e s, ann1 _ an =>
       let (ar, r) := computeParameters DL ZL (addParam x DL AP) s an in
