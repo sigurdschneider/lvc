@@ -897,7 +897,7 @@ clear termcrash2.
 - pose proof (terminates_impl_models L  s D E s' Es H2 H5 sterm).
   assert (forall x, x ∈ fst(getAnn D') -> exists v, E x = Some v).
   + intros. destruct (H7 x); eauto. rewrite H1 in H9; eauto.
-  + pose proof (crash_impl_models L L D' t E Et t' H3 H9 H6 tcrash).
+  + pose proof (crash_impl_models L L D' t E Et t' H3 H9 H6 tcrash (fun _ => fun _ => true)).
     pose proof (combineenv_agree Ds' Es Et).
     specialize (H (fun _ => fun _ => true) (combineEnv Ds' Es Et)).
     exfalso. apply H. simpl. split.

@@ -391,12 +391,12 @@ Lemma crash_impl_models:
     -> (forall x, x ∈ fst(getAnn D) -> exists v, E x = Some v)
     -> noFun s
     -> Crash (L, E, s) (L', Es, s')
-    -> models (fun _ => fun _ => true) Es (translateStmt s target).
+    -> forall F, models F(*(fun _ => fun _ => true)*) Es (translateStmt s target).
 
 Proof.
   intros. general induction H2; simpl.
   - case_eq (undefLift Y); intros; simpl; intros; eauto.
-    + pose proof (undefList_models (fun _ => fun _ => true) E0 Y s).
+    + pose proof (undefList_models F(*(fun _ => fun _ => true)*) E0 Y s).
       eapply H6; eauto.
       intros. eapply H1. inversion H0.
       simpl. eauto.
@@ -406,7 +406,7 @@ Proof.
   - inversion H4; subst.
     + case_eq (undef e); simpl; intros.
       * pose proof (nostep_let L0 E0 x e s H0).
-        pose proof (undef_models (fun _ => fun _ => true) E0 e s0).
+        pose proof (undef_models F (*(fun _ => fun _ => true)*) E0 e s0).
         assert (forall x, x ∈ Exp.freeVars e -> exists v, E0 x = Some v).
         { intros; invt ssa. specialize (H3 x0). eapply H3.
           simpl; cset_tac; eauto. }
@@ -422,7 +422,7 @@ Proof.
           hnf in H0.  unfold reducible2 in H0. specialize (H0 H9); isabsurd. }
     + case_eq (undef e); simpl; intros.
       * pose proof (nostep_if L0 E0 e s t H0).
-        pose proof (undef_models (fun _ => fun _ => true) E0 e s0).
+        pose proof (undef_models F (*(fun _ => fun _ => true)*) E0 e s0).
         assert (forall x, x ∈ Exp.freeVars e -> exists v, E0 x = Some v).
         { intros; invt ssa. eapply (H3 x). simpl; cset_tac; eauto. }
         { rewrite H7; simpl; intros. specialize (H9 H10 H7 H8 H11); isabsurd. }
@@ -439,7 +439,7 @@ Proof.
         { specialize (H0 H10); isabsurd. } }
     + isabsurd.
     +  case_eq (undef e); simpl; intros.
-       * pose proof (undef_models (fun _ => fun _ => true) E0 e s).
+       * pose proof (undef_models F (*(fun _ => fun _ => true)*) E0 e s).
          assert (forall x, x ∈ Exp.freeVars e -> exists v, E0 x = Some v).
         { intros; inversion H2; cset_tac.  simpl in H3. specialize (H3 x).
         destruct H1; eauto. }
