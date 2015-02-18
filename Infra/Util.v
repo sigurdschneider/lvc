@@ -272,7 +272,13 @@ repeat match goal with
        end; cofix; intros.
 
 Ltac stuck :=
-  let σ := fresh "σ" in let A := fresh "A" in let v := fresh "v" in intros [v A]; inv A; isabsurd.
+  let A := fresh "A" in let v := fresh "v" in intros [v A]; inv A; isabsurd.
+
+Ltac stuck2 :=
+  let A := fresh "A" in
+  let v := fresh "v" in
+  let evt := fresh "evt" in
+  intros [v [evt A]]; inv A; isabsurd.
 
 
 Lemma modus_ponens P Q
@@ -374,7 +380,6 @@ Hint Extern 20 => match goal with
                    | [ H: ?a /\ ?b |- ?b ] => eapply H
                    | [ H: ?a /\ ?b |- ?a ] => eapply H
                  end.
-
 
 (*
 *** Local Variables: ***

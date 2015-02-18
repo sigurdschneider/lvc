@@ -4,13 +4,6 @@ Require Import SetOperations.
 
 Set Implicit Arguments.
 
-Ltac stuck2 :=
-  let σ := fresh "σ" in
-  let A := fresh "A" in
-  let v := fresh "v" in
-  let evt := fresh "evt" in
-  intros [v [evt A]]; inv A; isabsurd.
-
 (** * Intermediate Language IL *)
 
 (** ** Syntax *)
