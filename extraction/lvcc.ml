@@ -17,10 +17,10 @@ let main () =
   let set_toILI b = toILI := b in
   let set_infile s = infile:=s in
   let speclist = [
-    ("-o",Arg.Set_string outfile, "Place the output into <file>");
-    ("-1", Arg.Bool set_toILF, "Enable IL/I to IL/F phase (default is off)");
-    ("-2", Arg.Bool set_optimize, "Enable optimization (default is off)");
-    ("-3", Arg.Bool set_toILI, "Enable IL/F to IL/I phase (default is off)")
+    ("-o",Arg.Set_string outfile, "<file> Place the output into <file>");
+    ("-1", Arg.Bool set_toILF, "<bool> Enable IL/I to IL/F phase (default is false)");
+    ("-2", Arg.Bool set_optimize, "<bool> Enable optimization (default is false)");
+    ("-3", Arg.Bool set_toILI, "<bool> Enable IL/F to IL/I phase (default is false)")
   ] in
   let print_string a s = Printf.eprintf "%s" (implode s); a in
   let toString_nstmt s = explode (print_nstmt !ids 0 s) in
