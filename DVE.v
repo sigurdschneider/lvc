@@ -39,9 +39,9 @@ Fixpoint compile (LV:list (set var * params)) (s:stmt) (a:ann (set var)) :=
     | stmtReturn x, ann0 _ => stmtReturn x
     | stmtExtern x f e s, ann1 lv an =>
       stmtExtern x f e (compile LV s an)
-    | stmtLet Z s t, ann2 lv ans ant =>
+    | stmtFun Z s t, ann2 lv ans ant =>
       let LV' := (getAnn ans,Z)::LV in
-      stmtLet (List.filter (fun x => B[x ∈ getAnn ans]) Z)
+      stmtFun (List.filter (fun x => B[x ∈ getAnn ans]) Z)
               (compile LV' s ans) (compile LV' t ant)
     | s, _ => s
   end.
@@ -357,7 +357,7 @@ Fixpoint compile_live (s:stmt) (a:ann (set var)) : ann (set var) :=
     | stmtReturn x, ann0 lv as a => a
     | stmtExtern x f Y s, ann1 lv an as a =>
       ann1 lv (compile_live s an)
-    | stmtLet Z s t, ann2 lv ans ant =>
+    | stmtFun Z s t, ann2 lv ans ant =>
       let ans' := compile_live s ans in
       ann2 lv (setTopAnn (ans')
                            (getAnn ans' ∪

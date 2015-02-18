@@ -127,7 +127,7 @@ Inductive cp_sound : onv aval
 | CPLet AE Cp s Z b
   : cp_sound AE ((Z,lookup_list AE Z)::Cp) s
   -> cp_sound AE ((Z,lookup_list AE Z)::Cp) b
-  -> cp_sound AE Cp (stmtLet Z s b).
+  -> cp_sound AE Cp (stmtFun Z s b).
 
 Instance cp_sound_dec AE ZL s : Computable (cp_sound AE ZL s).
 Proof.
@@ -265,8 +265,8 @@ Fixpoint constantPropagate (AE:onv aval) s : stmt :=
     | stmtExtern x f Y s =>
       stmtExtern x f (List.map (cp_choose_exp AE) Y)
                  (constantPropagate AE s)
-    | stmtLet Z s t =>
-      stmtLet Z (constantPropagate AE s) (constantPropagate AE t)
+    | stmtFun Z s t =>
+      stmtFun Z (constantPropagate AE s) (constantPropagate AE t)
   end.
 
 Lemma zip2Ann_get X Y Z (f:X->Y->Z) a b z

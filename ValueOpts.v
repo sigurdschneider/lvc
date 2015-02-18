@@ -20,8 +20,8 @@ Fixpoint compile (s:stmt) (a:ann (list exp)) :=
     | stmtReturn _, ann0 (e'::nil) => stmtReturn e'
     | stmtExtern x f _ s, ann1 Y' an =>
       stmtExtern x f Y' (compile s an)
-    | stmtLet Z s t, ann2 nil ans ant =>
-      stmtLet Z (compile s ans) (compile t ant)
+    | stmtFun Z s t, ann2 nil ans ant =>
+      stmtFun Z (compile s ans) (compile t ant)
     | s, _ => s
   end.
  *)
@@ -66,7 +66,7 @@ Inductive eqn_sound : list (params*set var*eqns*eqns)
   -> eqns_freeVars EqS ⊆ G ++ of_list Z
   -> eqns_freeVars Γ2  ⊆ G
   -> entails Gamma Γ2
-  -> eqn_sound Lv (stmtLet Z s t) (stmtLet Z s' t') Gamma
+  -> eqn_sound Lv (stmtFun Z s t) (stmtFun Z s' t') Gamma
               (ann2 (G,G') angs angb)
 | EqnUnsat Lv s s' Gamma ang
   : unsatisfiable Gamma

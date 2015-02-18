@@ -33,7 +33,7 @@ Definition liveness_transform (DL:list (set var * params)) st a :=
     | stmtReturn e as st, anni0 => Exp.freeVars e
     | stmtExtern x f Y s as st, anni1 d=>
       (d \ {{x}}) ∪ list_union (List.map Exp.freeVars Y)
-    | stmtLet Z s t as st, anni2 ds dt =>
+    | stmtFun Z s t as st, anni2 ds dt =>
        (ds \ of_list Z) ∪ dt
     | _, an => ∅
   end.

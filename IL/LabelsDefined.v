@@ -22,7 +22,7 @@ Inductive labelsDefined : stmt -> nat -> Prop :=
   | labelsDefinedLet s t Z L
     :  labelsDefined s (S L)
       -> labelsDefined t (S L)
-      -> labelsDefined (stmtLet Z s t) L.
+      -> labelsDefined (stmtFun Z s t) L.
 
 
 (*

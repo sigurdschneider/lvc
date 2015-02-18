@@ -150,8 +150,8 @@ Fixpoint fill (ctx:stmtCtx) (s':stmt) : stmt :=
     | ctxExp x e ctx => stmtExp x e (fill ctx s')
     | ctxIfS e ctx t => stmtIf e (fill ctx s') t
     | ctxIfT e s ctx => stmtIf e s (fill ctx s')
-    | ctxLetS Z ctx t => stmtLet Z (fill ctx s') t
-    | ctxLetT Z s ctx => stmtLet Z s (fill ctx s')
+    | ctxLetS Z ctx t => stmtFun Z (fill ctx s') t
+    | ctxLetT Z s ctx => stmtFun Z s (fill ctx s')
     | ctxExtern x f e ctx => stmtExtern x f e (fill ctx s')
     | ctxHole => s'
   end.

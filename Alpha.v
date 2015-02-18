@@ -28,7 +28,7 @@ Inductive alpha : env var -> env var -> stmt -> stmt -> Prop :=
 | alpha_let ra ira s s' Z Z' t t'
   : length Z = length Z'
   -> alpha (ra [ Z <-- Z']) (ira [ Z' <-- Z ]) s s'
-  -> alpha ra ira t t' -> alpha ra ira (stmtLet Z s t) (stmtLet Z' s' t').
+  -> alpha ra ira t t' -> alpha ra ira (stmtFun Z s t) (stmtFun Z' s' t').
 
 Global Instance alpha_morph
  : Proper ((@feq _ _ _eq) ==> (@feq _ _ _eq) ==> eq ==> eq ==> impl) alpha.

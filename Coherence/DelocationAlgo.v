@@ -76,7 +76,7 @@ Fixpoint computeParameters (DL: list (set var)) (ZL:list (list var)) (AP:list (s
     | stmtExtern x f e s, ann1 _ an =>
       let (ar, r) := computeParameters DL ZL (addParam x DL AP) s an in
       (ann1 nil ar, r)
-    | stmtLet Z s t, ann2 lv ans ant =>
+    | stmtFun Z s t, ann2 lv ans ant =>
       let DL' := getAnn ans \ of_list Z in
       let (ars, rs) := computeParameters (DL' :: DL)
                                         (Z :: ZL)

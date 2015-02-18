@@ -96,7 +96,7 @@ fun_list:
 expr :
 | IL_let IL_ident IL_equal expression IL_in expr { Lvc.NstmtExp ($2, $4, $6) }
 | IL_let IL_ident IL_equal IL_extern IL_ident option_arglist IL_in expr { Lvc.NstmtExtern ($2, $5, $6, $8) }
-| IL_letrec fun_def IL_in expr { match $2 with | (f, z), s -> Lvc.NstmtLet (f, z, s, $4) }
+| IL_letrec fun_def IL_in expr { match $2 with | (f, z), s -> Lvc.NstmtFun (f, z, s, $4) }
 | IL_if expression IL_then expr IL_else expr { Lvc.NstmtIf ($2,$4,$6) }
 | IL_ident option_arglist { Lvc.NstmtGoto ($1,$2) }
 | expression { Lvc.NstmtReturn ($1) }

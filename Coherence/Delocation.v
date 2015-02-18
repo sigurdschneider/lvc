@@ -41,7 +41,7 @@ Inductive trs
          be recomputed) *)
       trs (restrict (Some (getAnn ans_lv \ of_list (Z++Za))::DL) (getAnn ans_lv \ of_list (Z++Za))) (Za::ZL) s ans_lv ans
     -> trs (Some (getAnn ans_lv \ of_list (Z++Za))::DL) (Za::ZL) t ant_lv ant
-    -> trs DL ZL (stmtLet Z s t) (ann2 lv ans_lv ant_lv) (ann2 Za ans ant).
+    -> trs DL ZL (stmtFun Z s t) (ann2 lv ans_lv ant_lv) (ann2 Za ans ant).
 
 
 Lemma trs_annotation DL ZL s lv Y
@@ -58,8 +58,8 @@ Fixpoint compile (ZL:list (list var)) (s:stmt) (an:ann (list var)) : stmt :=
     | stmtReturn e, ann0 _ => stmtReturn e
     | stmtExtern x f Y s, ann1 _ an =>
       stmtExtern x f Y (compile ZL s an)
-    | stmtLet Z s t, ann2 Za ans ant =>
-      stmtLet (Z++Za) (compile (Za::ZL) s ans) (compile (Za::ZL) t ant)
+    | stmtFun Z s t, ann2 Za ans ant =>
+      stmtFun (Z++Za) (compile (Za::ZL) s ans) (compile (Za::ZL) t ant)
     | s, _ => s
   end.
 
@@ -272,7 +272,7 @@ Inductive additionalParameters_live : list (set var)   (* additional params *)
   : of_list Za ⊆ getAnn ans_lv \ of_list Z
     -> additionalParameters_live (of_list Za::ZL) s ans_lv ans
     -> additionalParameters_live (of_list Za::ZL) t ant_lv ant
-    -> additionalParameters_live ZL (stmtLet Z s t) (ann2 lv ans_lv ant_lv) (ann2 Za ans ant).
+    -> additionalParameters_live ZL (stmtFun Z s t) (ann2 lv ans_lv ant_lv) (ann2 Za ans ant).
 
 Lemma live_sound_compile DL ZL AL s ans_lv ans o
   (RD:trs AL ZL s ans_lv ans)

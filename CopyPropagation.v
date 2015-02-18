@@ -21,8 +21,8 @@ Fixpoint copyPropagate (ϱ:var -> var) (s:stmt) : stmt :=
    | stmtGoto l Y => stmtGoto l (List.map (rename_exp ϱ) Y)
    | stmtReturn e => stmtReturn (rename_exp ϱ e)
    | stmtExtern x f Y s => stmtExtern x f (List.map (rename_exp ϱ) Y) (copyPropagate (ϱ[x <- x]) s)
-   | stmtLet Z s1 s2 =>
-     stmtLet Z (copyPropagate (ϱ[Z <-- Z]) s1) (copyPropagate ϱ s2)
+   | stmtFun Z s1 s2 =>
+     stmtFun Z (copyPropagate (ϱ[Z <-- Z]) s1) (copyPropagate ϱ s2)
    end.
 
 Definition cp_eqn (ϱ:var -> var) (x:var) := EqnApx (Var x) (Var (ϱ x)).

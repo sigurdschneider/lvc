@@ -75,7 +75,7 @@ Definition backward Dom FunDom
       let ai := anni1 (getAnn ans') in
       let d' := (btransform AL st ai) in
       ann1 d' ans'
-    | stmtLet Z s t as st, ann2 d ans ant =>
+    | stmtFun Z s t as st, ann2 d ans ant =>
       let ans' := backward s (bmkFunDom Z ans::AL) ans in
       let ant' := backward t (bmkFunDom Z ans'::AL) ant in
       let ai := anni2 (getAnn ans') (getAnn ant') in
@@ -109,7 +109,7 @@ Definition forward Dom FunDom
     | stmtExtern x f Y s as st, (AL, ann1 d ans) =>
       let (AL, ai) := (ftransform st (AL, d)) in
       forward s (AL, setAnni ans ai)
-    | stmtLet Z s t as st, (AL, ann2 d ans ant) =>
+    | stmtFun Z s t as st, (AL, ann2 d ans ant) =>
       let (AL, ai) := ftransform st (fmkFunDom Z ans::AL, d) in
       let (AL', ans') := forward s (fmkFunDom Z (setAnni ans ai)::AL, setAnni ans ai) in
       let (AL'', ant') := forward t (fmkFunDom Z ans'::AL', setAnni ant ai) in
@@ -172,7 +172,7 @@ Definition forward Dom {BSL:BoundedSemiLattice Dom} FunDom
         | (AL, anni1 a) => forward s (AL, a)
         | _ => Error "syscall transformer failed"
       end
-    | stmtLet Z s t as st, (AL, d) =>
+    | stmtFun Z s t as st, (AL, d) =>
       match ftransform st (fmkFunDom Z bottom::AL, d) with
         | (AL', anni2 a1 a2) =>
           sdo ALdt <- forward t (AL', a2);
@@ -214,7 +214,7 @@ Definition forward Dom FunDom
       ftransform st (AL, d)
     | stmtExtern x f Y s as st, (AL, d) =>
       forward s (ftransform st (AL, d))
-    | stmtLet Z s t as st, (AL, d) =>
+    | stmtFun Z s t as st, (AL, d) =>
       forward t (forward s( ftransform st (fmkFunDom Z d::AL, d)))
   end.
 *)

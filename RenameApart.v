@@ -27,12 +27,12 @@ match s with
      let ϱ' := ϱ[x <- y] in
      let (G', s') := renameApart' ϱ' {y; G} s in
        ({y; G'}, stmtExtern y f (List.map (rename_exp ϱ) Y) s')
-   | stmtLet Z s1 s2 =>
+   | stmtFun Z s1 s2 =>
      let Y := fresh_list fresh G (length Z) in
      let ϱZ := ϱ [ Z <-- Y ] in
      let (G', s1') := renameApart' ϱZ (G ∪ of_list Y) s1 in
      let (G'', s2') := renameApart' ϱ (G ∪ (G' ∪ of_list Y)) s2 in
-     (G' ∪ (G'' ∪ of_list Y), stmtLet Y s1'  s2')
+     (G' ∪ (G'' ∪ of_list Y), stmtFun Y s1'  s2')
    end.
 
 Lemma renameApart'_disj ϱ G s
@@ -72,7 +72,7 @@ Fixpoint renamedApartAnn (s:stmt) (G:set var) : ann (set var * set var) :=
     | stmtExtern x f Y s =>
       let an := renamedApartAnn s {x; G} in
       ann1 (G, {x; snd (getAnn an)}) an
-    | stmtLet Z s t =>
+    | stmtFun Z s t =>
       let ans := renamedApartAnn s (G ∪ of_list Z) in
       let ant := renamedApartAnn t G in
       ann2 (G, snd (getAnn ans) ∪ (snd (getAnn ant) ∪ of_list Z)) ans ant

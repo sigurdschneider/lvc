@@ -70,7 +70,7 @@ let rec print_nstmt ids ident s =
        "if " ^ (print_sexpr v) ^ " then\n" ^
        (print_ident (ident+2)) ^ (print_nstmt (ident+2) s)
       ^ "\n" ^ print_ident ident ^ "else\n" ^ print_ident (ident+2) ^ (print_nstmt (ident+2) t) ^ "\n"
-    | Lvc.NstmtLet (f, y, s, t) -> "fun " ^
+    | Lvc.NstmtFun (f, y, s, t) -> "fun " ^
 	  (print_var f) ^ "(" ^ (print_list (print_var) y) ^ ") = \n"
 	  ^ print_ident (ident+2) ^ (print_nstmt (ident+2) s) ^ "\n" ^ print_ident ident
       ^ "in \n"

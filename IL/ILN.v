@@ -10,7 +10,7 @@ Inductive nstmt : Type :=
 | nstmtReturn (e : exp)
 | nstmtExtern (x : var) (f:external) (Y:args) (s:nstmt)
 (* block f Z : rt = s in b *)
-| nstmtLet    (l : lab) (Z:params) (s : nstmt) (t : nstmt).
+| nstmtFun    (l : lab) (Z:params) (s : nstmt) (t : nstmt).
 
 Fixpoint freeVars (s:nstmt) : set var :=
   match s with
@@ -19,7 +19,7 @@ Fixpoint freeVars (s:nstmt) : set var :=
     | nstmtGoto l Y => list_union (List.map Exp.freeVars Y)
     | nstmtReturn e => Exp.freeVars e
     | nstmtExtern x f Y s => (freeVars s \ {{x}}) ∪ list_union (List.map Exp.freeVars Y)
-    | nstmtLet l Z s1 s2 => (freeVars s1 \ of_list Z) ∪ freeVars s2
+    | nstmtFun l Z s1 s2 => (freeVars s1 \ of_list Z) ∪ freeVars s2
   end.
 
 
@@ -74,7 +74,7 @@ Module F.
            (L'[(counted l) <- Some (blockI L' E' (l,Z,s))], E'', s)
 
   | stepLet L E f s Z t
-    : step (L, E, nstmtLet f Z s t) EvtTau (L[counted f <- Some (blockI L E (f,Z,s))], E, t)
+    : step (L, E, nstmtFun f Z s t) EvtTau (L[counted f <- Some (blockI L E (f,Z,s))], E, t)
 
   | stepExtern L E x f Y s vl v
     (def:omap (exp_eval E) Y = Some vl)
@@ -155,7 +155,7 @@ Module I.
            (L'[(counted l) <- Some (blockI L' (l,Z,s))], E'', s)
 
   | stepLet L E f s Z t
-    : step (L, E, nstmtLet f Z s t)
+    : step (L, E, nstmtFun f Z s t)
            EvtTau
            (L[counted f <- Some (blockI L (f,Z,s))], E, t)
 
@@ -208,10 +208,10 @@ Fixpoint labIndices (s:nstmt) (symb: list lab) : status stmt :=
     | nstmtReturn x => Success (stmtReturn x)
     | nstmtExtern x f Y s =>
       sdo s' <- (labIndices s symb); Success (stmtExtern x f Y s')
-    | nstmtLet l Z s1 s2 =>
+    | nstmtFun l Z s1 s2 =>
       sdo s1' <- labIndices s1 (l::symb);
       sdo s2' <- labIndices s2 (l::symb);
-      Success (stmtLet Z s1' s2')
+      Success (stmtFun Z s1' s2')
   end.
 
 Definition state_result X (s:X*onv val*nstmt) : option val :=

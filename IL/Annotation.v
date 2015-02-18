@@ -23,7 +23,7 @@ Fixpoint setAnn A (s:stmt) (a:A) : ann A :=
    | stmtGoto l Y => ann0 a
    | stmtReturn x => ann0 a
    | stmtExtern x f Y s => ann1 a (setAnn s a)
-   | stmtLet Z s1 s2 => ann2 a (setAnn s1 a) (setAnn s2 a)
+   | stmtFun Z s1 s2 => ann2 a (setAnn s1 a) (setAnn s2 a)
    end.
 
 Fixpoint setTopAnn A (s:ann A) (a:A) : ann A :=
@@ -70,7 +70,7 @@ Inductive annotation {A:Type} : stmt -> ann A -> Prop :=
 | antLet Z s t a sa ta
   : annotation s sa
     -> annotation t ta
-    -> annotation (stmtLet Z s t) (ann2 a sa ta).
+    -> annotation (stmtFun Z s t) (ann2 a sa ta).
 
 Instance annotation_dec_inst {A} {s} {a} : Computable (@annotation A s a).
 Proof.

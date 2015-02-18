@@ -120,7 +120,7 @@ Fixpoint compile s
       list_to_stmt xl Y (stmtGoto l (List.map Var xl))
     | stmtReturn x => stmtReturn x
     | stmtExtern x f Y s => stmtExtern x f Y (compile s)
-    | stmtLet Z s t => stmtLet Z (compile s) (compile t)
+    | stmtFun Z s t => stmtFun Z (compile s) (compile t)
   end.
 
 Definition ArgRel (V V:onv val) (G:params) (VL VL': list val) : Prop :=

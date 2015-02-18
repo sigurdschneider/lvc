@@ -32,7 +32,7 @@ Inductive shadowing_free : set var -> stmt -> Prop :=
     : of_list Z ∩ D [=] ∅
     -> shadowing_free (of_list Z ∪ D) s
     -> shadowing_free D t
-    -> shadowing_free D (stmtLet Z s t).
+    -> shadowing_free D (stmtFun Z s t).
 
 Lemma shadowing_free_ext s D D'
   : D' [=] D
@@ -86,7 +86,7 @@ Inductive srd : list (option (set var)) -> stmt -> ann (set var) -> Prop :=
     : srd (restrict (Some (getAnn als \ of_list Z)::DL) (getAnn als \ of_list Z))
           s als
     -> srd (Some (getAnn als \ of_list Z)::DL) t alt
-    -> srd DL (stmtLet Z s t) (ann2 lv als alt).
+    -> srd DL (stmtFun Z s t) (ann2 lv als alt).
 
 Definition peq := prod_eq (@feq var var eq) (@Equal var _ _).
 
@@ -144,7 +144,7 @@ Fixpoint freeVar_live (s:stmt) : ann (set var) :=
     | stmtIf x s1 s2 => ann2 (freeVars s) (freeVar_live s1) (freeVar_live s2)
     | stmtGoto l Y => ann0 (freeVars s)
     | stmtReturn x => ann0 (freeVars s)
-    | stmtLet Z s1 s2 => ann2 (freeVars s) (freeVar_live s1) (freeVar_live s2)
+    | stmtFun Z s1 s2 => ann2 (freeVars s) (freeVar_live s1) (freeVar_live s2)
   end.
 
 Lemma  getAnn_freeVar_live (s:stmt)

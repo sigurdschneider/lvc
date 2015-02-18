@@ -28,7 +28,7 @@ Inductive stmt : Type :=
 | stmtReturn (e : exp) : stmt
 | stmtExtern (x : var) (f:external) (Y:args) (s:stmt)
 (* block f Z : rt = s in b *)
-| stmtLet    (Z:params) (s : stmt) (t : stmt) : stmt.
+| stmtFun    (Z:params) (s : stmt) (t : stmt) : stmt.
 
 Inductive notOccur (G:set var) : stmt -> Prop :=
   | ncExp x e s
@@ -54,7 +54,7 @@ Inductive notOccur (G:set var) : stmt -> Prop :=
     : disj G (of_list Z)
       -> notOccur G s
       -> notOccur G t
-      -> notOccur G (stmtLet Z s t).
+      -> notOccur G (stmtFun Z s t).
 
 Fixpoint freeVars (s:stmt) : set var :=
   match s with
@@ -63,7 +63,7 @@ Fixpoint freeVars (s:stmt) : set var :=
     | stmtGoto l Y => list_union (List.map Exp.freeVars Y)
     | stmtReturn e => Exp.freeVars e
     | stmtExtern x f Y s => (freeVars s \ {{x}}) ∪ list_union (List.map Exp.freeVars Y)
-    | stmtLet Z s1 s2 => (freeVars s1 \ of_list Z) ∪ freeVars s2
+    | stmtFun Z s1 s2 => (freeVars s1 \ of_list Z) ∪ freeVars s2
   end.
 
 Fixpoint definedVars (s:stmt) : set var :=
@@ -73,7 +73,7 @@ Fixpoint definedVars (s:stmt) : set var :=
     | stmtGoto l Y => ∅
     | stmtReturn e => ∅
     | stmtExtern x f Y s => {x; definedVars s}
-    | stmtLet Z s1 s2 => definedVars s1 ∪ definedVars s2 ∪ of_list Z
+    | stmtFun Z s1 s2 => definedVars s1 ∪ definedVars s2 ∪ of_list Z
   end.
 
 Fixpoint occurVars (s:stmt) : set var :=
@@ -83,7 +83,7 @@ Fixpoint occurVars (s:stmt) : set var :=
     | stmtGoto l Y => list_union (List.map Exp.freeVars Y)
     | stmtReturn e => Exp.freeVars e
     | stmtExtern x f Y s => {x; occurVars s} ∪ list_union (List.map Exp.freeVars Y)
-    | stmtLet Z s1 s2 => occurVars s1 ∪ occurVars s2 ∪ of_list Z
+    | stmtFun Z s1 s2 => occurVars s1 ∪ occurVars s2 ∪ of_list Z
   end.
 
 Lemma freeVars_occurVars s
@@ -138,7 +138,7 @@ Fixpoint rename (ϱ:env var) (s:stmt) : stmt :=
     | stmtGoto l Y => stmtGoto l (List.map (rename_exp ϱ) Y)
     | stmtReturn e => stmtReturn (rename_exp ϱ e)
     | stmtExtern x f e s => stmtExtern (ϱ x) f (List.map (rename_exp ϱ) e) (rename ϱ s)
-    | stmtLet Z s t => stmtLet (lookup_list ϱ Z) (rename ϱ s) (rename ϱ t)
+    | stmtFun Z s t => stmtFun (lookup_list ϱ Z) (rename ϱ s) (rename ϱ t)
   end.
 
 Fixpoint label_closed (n:nat) (s:stmt) : Prop :=
@@ -148,7 +148,7 @@ Fixpoint label_closed (n:nat) (s:stmt) : Prop :=
     | stmtGoto l _ => counted l < n
     | stmtReturn _ => True
     | stmtExtern _ _ _ s => label_closed n s
-    | stmtLet _ s t => label_closed (S n) s /\ label_closed (S n) t
+    | stmtFun _ s t => label_closed (S n) s /\ label_closed (S n) t
   end.
 
 Lemma notOccur_incl G G' s
@@ -220,7 +220,7 @@ Module F.
 
   | stepLet L E
     s Z (t:stmt)
-    : step (L, E, stmtLet Z s t) EvtTau (blockI E Z s::L, E, t)
+    : step (L, E, stmtFun Z s t) EvtTau (blockI E Z s::L, E, t)
 
   | stepExtern L E x f Y s vl v
     (def:omap (exp_eval E) Y = Some vl)
@@ -299,7 +299,7 @@ Module I.
 
   | stepLet L E
     s Z (b:stmt)
-    : step (L, E, stmtLet Z s b) EvtTau (blockI Z s::L, E, b)
+    : step (L, E, stmtFun Z s b) EvtTau (blockI Z s::L, E, b)
 
   | stepExtern L E x f Y s vl v
     (def:omap (exp_eval E) Y = Some vl)

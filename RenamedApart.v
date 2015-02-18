@@ -46,7 +46,7 @@ Inductive renamedApart : stmt -> ann (set var * set var) -> Prop :=
       -> renamedApart t ant
       -> pe (getAnn ant) (D, Dt)
       -> unique Z
-      -> renamedApart (stmtLet Z s t) (ann2 (D,D') ans ant).
+      -> renamedApart (stmtFun Z s t) (ann2 (D,D') ans ant).
 
 Lemma renamedApart_ext s an an'
   : ann_R (@pe _ _) an an'

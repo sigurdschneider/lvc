@@ -247,11 +247,11 @@ Fixpoint lower DL s (an:ann (set var))
     | stmtExtern x f Y s, ann1 _ ans =>
       sdo sl <- lower DL s ans;
         Success (stmtExtern x f Y sl)
-    | stmtLet Z s t, ann2 lv ans ant =>
+    | stmtFun Z s t, ann2 lv ans ant =>
       let DL' := (getAnn ans,Z) in
       sdo s' <- lower (DL' :: DL)%list s ans;
         sdo t' <- lower (DL' :: DL)%list t ant;
-        Success (stmtLet nil s' t')
+        Success (stmtFun nil s' t')
     | s, _ => Error "lower: Annotation mismatch"
   end.
 

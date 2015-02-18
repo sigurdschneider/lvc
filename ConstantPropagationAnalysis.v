@@ -402,7 +402,7 @@ Definition constant_propagation_transform st (a:list (Dom * params)*Dom) :=
     | stmtExtern x f Y s as st, (AL, d) =>
       (* we assume renamed apart here, and dont zero x *)
       (AL, anni1 d)
-    | stmtLet Z s t as st, (AL, d) =>
+    | stmtFun Z s t as st, (AL, d) =>
       (* we assume renamed apart here, and dont zero Z *)
       (AL, anni2 d d)
   end.

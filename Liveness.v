@@ -123,7 +123,7 @@ Inductive live_sound (i:overapproximation) : list (set var*params) -> stmt -> an
   -> (of_list Z) ⊆ getAnn als
   -> (if isFunctional i then (getAnn als \ of_list Z ⊆ lv) else True)
   -> getAnn alb ⊆ lv
-  -> live_sound i Lv (stmtLet Z s b)(ann2 lv als alb).
+  -> live_sound i Lv (stmtFun Z s b)(ann2 lv als alb).
 
 
 Lemma live_sound_overapproximation_I Lv s slv
@@ -286,7 +286,7 @@ Inductive true_live_sound (i:overapproximation)
   -> true_live_sound i ((getAnn als,Z)::Lv) b alb
   -> (if isFunctional i then (getAnn als \ of_list Z ⊆ lv) else True)
   -> getAnn alb ⊆ lv
-  -> true_live_sound i Lv (stmtLet Z s b)(ann2 lv als alb).
+  -> true_live_sound i Lv (stmtFun Z s b)(ann2 lv als alb).
 
 
 Lemma true_live_sound_overapproximation_I Lv s slv
