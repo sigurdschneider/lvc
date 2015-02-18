@@ -4,6 +4,14 @@ Require Import SetOperations Sim Var.
 Require Import bitvec sexp smt nofun noGoto freeVars.
 Require Import Compute Guards ILFtoSMT tvalTactics TUtil GuardProps.
 
+Lemma term_swap_fun L L'  V V' s s':
+Terminates (L,V,s) (L',V',s')
+-> exists L'', Terminates (L'', V, s) (L', V', s').
+
+Proof.
+intros term. general induction term; eexists; econstructor; eauto.
+Qed.
+
 Lemma term_ssa_eval_agree L L' s D s' (E:onv val) (E':onv val)
  : ssa s D
    -> noFun s
@@ -255,7 +263,15 @@ Qed.
 
 (** Lemmata for Crash **)
 
-Definition failed (σ:F.state)  := result (σ ) = None.
+Definition failed (s:F.state)  := result (s ) = None.
+
+Lemma crash_swap_fun L L' V V' s s':
+Crash (L, V, s) (L', V', s')
+-> exists L'', Crash (L'', V, s) (L', V', s').
+
+Proof.
+  intros crash; general induction crash; eexists; econstructor; eauto.
+Qed.
 
 Lemma crash_ssa_eval_agree L L' s D s' (E:onv val) (E':onv val)
 : ssa s D

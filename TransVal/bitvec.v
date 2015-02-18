@@ -97,15 +97,6 @@ end.
 Definition incr (b:bitvec) :=
 incr' k (sext k b O).
 
-(** Decrement function TODO: Maybe remove it **)
-Fixpoint decr (b:bitvec) :=
-match b with
-| nil => nil
-| O::nil => O::nil
-| I::b' => O::b'
-| O::b' => I::decr b'
-end.
-
 Definition bitAnd (b1:bit) (b2:bit) :=
 match b1, b2 with
 |I,I => I
