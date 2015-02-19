@@ -24,26 +24,26 @@ Inductive stmt : Type :=
 | stmtFun    (Z:params) (s : stmt) (t : stmt) : stmt.
 
 Inductive notOccur (G:set var) : stmt -> Prop :=
-  | ncExp x e s
+  | noExp x e s
     : x ∉ G
       -> notOccur G s
       -> Exp.notOccur G e
       -> notOccur G (stmtLet x e s)
-  | ncIf e s t
+  | noIf e s t
     : Exp.notOccur G e
       -> notOccur G s
       -> notOccur G t
       -> notOccur G (stmtIf e s t)
-  | ncRet e : Exp.notOccur G e -> notOccur G (stmtReturn e)
-  | ncGoto l (Y:list exp)
+  | noRet e : Exp.notOccur G e -> notOccur G (stmtReturn e)
+  | noGoto l (Y:list exp)
     : (forall n e, get Y n e -> Exp.notOccur G e)
       -> notOccur G (stmtApp l Y)
-  | ncExtern x f Y s
+  | noExtern x f Y s
     : (forall n e, get Y n e -> Exp.notOccur G e)
       -> x ∉ G
       -> notOccur G s
       -> notOccur G (stmtExtern x f Y s)
-  | ncLet s Z t
+  | noLet s Z t
     : disj G (of_list Z)
       -> notOccur G s
       -> notOccur G t
@@ -221,11 +221,18 @@ Module F.
             (EvtExtern (ExternI f vl v))
             (L, E[x <- Some v], s).
 
-  Lemma step_internally_deterministic :
-    internally_deterministic step.
+  Lemma step_internally_deterministic
+  : internally_deterministic step.
   Proof.
     hnf; intros.
     inv H; inv H0; split; eauto; try get_functional; try congruence.
+  Qed.
+
+  Lemma step_externally_determined
+  : externally_determined step.
+  Proof.
+    hnf; intros.
+    inv H; inv H0; eauto; try get_functional; try congruence.
   Qed.
 
   Lemma step_dec
@@ -301,11 +308,18 @@ Module I.
             (L, E[x <- Some v], s).
 
 
-  Lemma step_internally_deterministic :
-    internally_deterministic step.
+  Lemma step_internally_deterministic
+  : internally_deterministic step.
   Proof.
     hnf; intros.
     inv H; inv H0; split; eauto; try get_functional; try congruence.
+  Qed.
+
+  Lemma step_externally_determined
+  : externally_determined step.
+  Proof.
+    hnf; intros.
+    inv H; inv H0; eauto; try get_functional; try congruence.
   Qed.
 
   Lemma step_dec

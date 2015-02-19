@@ -20,6 +20,9 @@ Inductive event :=
 Definition internally_deterministic {X : Type} (R : X -> event -> X -> Prop)
 := forall x y x1 x2, R x EvtTau x1 -> R x y x2 -> x1 = x2 /\ y = EvtTau.
 
+Definition externally_determined {X : Type} (R : X -> event -> X -> Prop)
+:= forall x e x1 x2, R x e x1 -> R x e x2 -> x1 = x2.
+
 Definition filter_tau (o:event) (L:list event) : list event :=
   match o with
       | EvtTau => L
