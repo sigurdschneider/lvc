@@ -172,6 +172,14 @@ Module I.
     hnf; intros. inv H; inv H0; split; eauto; try congruence.
   Qed.
 
+  Lemma step_externally_determined
+  : externally_determined step.
+  Proof.
+    hnf; intros.
+    inv H; inv H0; eauto; try get_functional; try congruence.
+  Qed.
+
+
   Lemma step_dec
   : reddec step.
   Proof.
@@ -224,7 +232,8 @@ Instance statetype_I : StateType I.state := {
   step := I.step;
   result := (@state_result I.labenv);
   step_dec := I.step_dec;
-  step_internally_deterministic := I.step_internally_deterministic
+  step_internally_deterministic := I.step_internally_deterministic;
+  step_externally_determined := I.step_externally_determined
 }.
 
 (*Tactic Notation "goto_invs" tactic(tac) :=
