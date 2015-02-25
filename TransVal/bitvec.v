@@ -272,7 +272,7 @@ is 1. As a bitvector can also be mapped to it's natural number counterpart we ta
 the amount of steps. In the worst case this will only produce more steps then needed as 2^k is
 the maximum number for natural numbers and 2^(k-1) for 2s complement.
 There is also special threatening needed for signs.
-Function is defined also for x/y where y = 0 because the smt solver always has total functions **)
+Function is undefined for x/y where y = 0 **)
 Definition bvDiv (b1:bitvec) (b2:bitvec) :option bitvec:=
 if bvZero b2
 then None
