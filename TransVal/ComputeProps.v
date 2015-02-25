@@ -4,12 +4,45 @@ Require Import SetOperations Sim Var.
 Require Import bitvec sexp smt nofun noGoto freeVars.
 Require Import Compute Guards ILFtoSMT tvalTactics TUtil GuardProps.
 
-Lemma term_swap_fun L L'  V V' s s':
-Terminates (L,V,s) (L',V',s')
--> exists L'', Terminates (L'', V, s) (L', V', s').
+Lemma term_swap_fun L1 L2 L1'  V V' s s':
+Terminates (L1,V,s) (L1',V',s')
+-> exists L2', Terminates (L2, V, s) (L2', V', s').
 
 Proof.
-intros term. general induction term; eexists; econstructor; eauto.
+intros term. general induction term.
+- eexists; econstructor;  eauto.
+- eexists; econstructor; eauto.
+- inversion H.
+  + specialize (IHterm L' L2 L1' E' V' s' s'0).
+  destruct IHterm as [L2'  IHterm]; eauto.
+  eexists; econstructor; eauto. instantiate (1:=a).
+    * rewrite <- H7.  subst. econstructor; eauto.
+    * intros; isabsurd.
+  + specialize (IHterm L' L2 L1' E' V' s' s'0).
+  destruct IHterm as [L2'  IHterm]; eauto.
+ eexists; econstructor; eauto.
+    instantiate (1:=EvtTau); subst.
+    * econstructor; eauto.
+    * intros; isabsurd.
+  + specialize (IHterm L' L2 L1' E' V' s' s'0).
+  destruct IHterm as [L2'  IHterm]; eauto.
+  eexists; econstructor; eauto.
+  instantiate(1:=EvtTau); subst.
+    * econstructor; eauto.
+    * intros; isabsurd.
+  + subst; isabsurd.
+  +  pose( L2' := {| F.block_E := E'; F.block_Z := Z; F.block_s := s |} :: L2).
+     specialize (IHterm L' L2' L1' E' V' s' s'0).
+     destruct IHterm; eauto; subst.
+     exists x. econstructor; eauto.
+    instantiate (1:=EvtTau); subst.
+     econstructor; eauto.
+  + specialize (IHterm L' L2 L1' E' V' s' s'0).
+    destruct IHterm as [L2'  IHterm]; eauto.
+    eexists; econstructor; eauto.
+    instantiate (1:= a); subst.
+    * econstructor; eauto.
+    * intros; isabsurd.
 Qed.
 
 Lemma term_ssa_eval_agree L L' s D s' (E:onv val) (E':onv val)
@@ -265,12 +298,56 @@ Qed.
 
 Definition failed (s:F.state)  := result (s ) = None.
 
-Lemma crash_swap_fun L L' V V' s s':
-Crash (L, V, s) (L', V', s')
--> exists L'', Crash (L'', V, s) (L', V', s').
+Lemma crash_swap_fun L1 L2 L1' V V' s s':
+Crash (L1, V, s) (L1', V', s')
+-> exists L2', Crash (L2, V, s) (L2', V', s').
 
 Proof.
-  intros crash; general induction crash; eexists; econstructor; eauto.
+  intros crash; general induction crash.
+  - eexists; econstructor; eauto.
+  - eexists; econstructor; eauto.
+    unfold normal2 in *.
+    hnf. intros. eapply H0.
+    unfold reducible2 in *.
+    destruct H2; destruct H2.
+    inversion H2; try isabsurd.
+    + exists EvtTau. exists ( L1, V[x1 <- Some v], b). econstructor; eauto.
+    + exists EvtTau; exists (L1, V, b1); econstructor; eauto.
+    + exists EvtTau; exists (L1, V, b2); econstructor; eauto.
+    + exists EvtTau.
+        exists ({| F.block_E := V; F.block_Z := Z; F.block_s := s |}::L1, V, t).
+        econstructor; eauto.
+    + exists x; subst.
+        exists (L1, V[x1 <- Some v], s).
+        econstructor; eauto.
+   - inversion H.
+     + specialize (IHcrash L1 L2 L1' (V[x<-Some v]) V' b s').
+       destruct IHcrash; eauto.
+       eexists; econstructor; eauto.
+       * instantiate (1:= EvtTau); econstructor; eauto.
+       * intros; isabsurd.
+     + specialize (IHcrash L1 L2 L1' V V' b1 s').
+       destruct IHcrash; eauto.
+       eexists; econstructor; eauto.
+       * instantiate (1:=EvtTau); econstructor; eauto.
+       * intros; isabsurd.
+     + specialize (IHcrash L1 L2 L1' V V' b2 s').
+       destruct IHcrash; eauto.
+       eexists; econstructor; eauto.
+       * instantiate (1:=EvtTau); econstructor; eauto.
+       * intros; isabsurd.
+     + isabsurd.
+     + pose (L2' := {| F.block_E := V; F.block_Z := Z; F.block_s := s |}::L2).
+       specialize (IHcrash ({| F.block_E := V; F.block_Z := Z; F.block_s := s |}::L1) L2' L1' V V' t s').
+       destruct IHcrash; eauto.
+       eexists; econstructor; eauto.
+       * instantiate (1:= EvtTau); econstructor; eauto.
+       * intros; isabsurd.
+     + specialize (IHcrash  L1 L2 L1' (V[x<-Some v]) V' s s').
+       destruct IHcrash; eauto.
+       eexists; econstructor; eauto.
+       * instantiate (1:=a); subst; econstructor; eauto.
+       * intros; isabsurd.
 Qed.
 
 Lemma crash_ssa_eval_agree L L' s D s' (E:onv val) (E':onv val)
