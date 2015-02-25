@@ -928,6 +928,12 @@ clear termcrash2.
   destruct H8. destruct H9. unfold failed in H10. eapply simErr; eauto.
 Qed.
 
+Require Import ExtrOcamlBasic.
+Require Import ExtrOcamlNatInt.
+Require Import String ExtrOcamlString.
+
+Extraction "tval.ml" smtCheck.
+
 (*
 *** Local Variables: ***
 *** coq-load-path: (("../" "Lvc")) ***
