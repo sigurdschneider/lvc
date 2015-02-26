@@ -16,6 +16,19 @@ Proof.
     rewrite EQ, EQ1; simpl; eauto.
 Qed.
 
+Lemma exp_eval_partial_total_list E el vl
+:  omap (exp_eval E) el = Some vl
+-> omap (exp_eval (to_partial (to_total  E))) el = Some vl.
+
+Proof.
+  intros. general induction el; eauto using exp_eval_partial_total.
+  - simpl in H. monad_inv H.
+    specialize (IHel E x0 EQ1).
+    rewrite EQ. rewrite EQ1.
+    simpl; erewrite exp_eval_partial_total; eauto.
+    rewrite IHel; eauto.
+Qed.
+
  Lemma guard_true_if_eval:
 forall F E e s v,
  exp_eval E e = Some v

@@ -50,7 +50,7 @@ intros agree; general  induction s; simpl in *; try reflexivity.
   unfold val2bool.
   case_eq (exp_eval (to_partial E) e); case_eq (exp_eval (to_partial E) e0); intros;
   try rewrite bvEq_equiv_eq; reflexivity.
-- destruct p.  unfold evalList.
+- destruct p.
   assert (omap (exp_eval (to_partial E)) a = omap (exp_eval (to_partial E'))  a).
   + eapply omap_exp_eval_agree; symmetry; eauto using agree_on_partial.
   + rewrite <- H. destruct (omap (exp_eval (to_partial E)) a); reflexivity.
