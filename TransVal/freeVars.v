@@ -28,31 +28,36 @@ intros agree; general  induction s; simpl in *; try reflexivity.
 - rewrite (IHs1 F E E'), (IHs2 F E E'); try reflexivity; setSubst2 agree.
 - rewrite (IHs F E E'); try reflexivity; setSubst2 agree.
 - assert (agree_on eq (Exp.freeVars e) E E') by setSubst2 agree.
-  assert (exp_eval E e = exp_eval E' e)
-  by( eapply exp_eval_agree; symmetry; eauto).
-  case_eq (exp_eval E e); intros; unfold evalSexp.
+  assert (exp_eval (to_partial E) e = exp_eval (to_partial E') e). {
+    eapply exp_eval_agree; symmetry; eauto.
+    eapply agree_on_partial; eauto.
+  }
+  case_eq (exp_eval (to_partial E) e); intros.
   +  rewrite <- H0. rewrite H1. case_eq(val2bool v); intros.
      * rewrite (IHs1 F E E'); try reflexivity; setSubst2 agree.
      * rewrite (IHs2 F E E'); try reflexivity; setSubst2 agree.
-  + rewrite <- H0; rewrite H1; simpl.
-    rewrite (IHs2 F E E'); try reflexivity; setSubst2 agree.
+  + rewrite <- H0; rewrite H1; simpl. intuition.
 - rewrite (IHs1 F E E'), (IHs2 F E E'); try reflexivity; setSubst2 agree.
--  assert (exp_eval E e = exp_eval E' e)
-    by ( eapply exp_eval_agree; symmetry; eauto; setSubst2 agree).
-  assert (exp_eval E e0 = exp_eval E' e0)
-    by (eapply exp_eval_agree; symmetry; eauto; setSubst2 agree).
-  unfold evalSexp; rewrite <- H; rewrite <- H0.
+- assert (exp_eval (to_partial E) e = exp_eval (to_partial E') e). {
+    eapply exp_eval_agree; symmetry; eauto.
+    eapply agree_on_partial. eapply agree_on_incl; eauto. cset_tac; intuition.
+  }
+  assert (exp_eval (to_partial E) e0 = exp_eval (to_partial E') e0). {
+    eapply exp_eval_agree; symmetry; eauto.
+    eapply agree_on_partial. eapply agree_on_incl; eauto. cset_tac; intuition.
+  }
+  rewrite <- H; rewrite <- H0.
   unfold val2bool.
-  case_eq (exp_eval E e); case_eq (exp_eval E e0); intros;
-  rewrite bvEq_equiv_eq; reflexivity.
-- unfold evalSpred. destruct p.  unfold evalList.
-  assert (omap (exp_eval E) a = omap (exp_eval E')  a).
-  + eapply omap_exp_eval_agree; symmetry; eauto.
-  + rewrite <- H. destruct (omap (exp_eval E) a); reflexivity.
-- unfold evalSexp.
-  assert (exp_eval E e = exp_eval E' e)
-    by (eapply  exp_eval_agree; symmetry; eauto; setSubst2 agree).
-  rewrite <- H. case_eq (exp_eval E e); intros; reflexivity.
+  case_eq (exp_eval (to_partial E) e); case_eq (exp_eval (to_partial E) e0); intros;
+  try rewrite bvEq_equiv_eq; reflexivity.
+- destruct p.  unfold evalList.
+  assert (omap (exp_eval (to_partial E)) a = omap (exp_eval (to_partial E'))  a).
+  + eapply omap_exp_eval_agree; symmetry; eauto using agree_on_partial.
+  + rewrite <- H. destruct (omap (exp_eval (to_partial E)) a); reflexivity.
+- assert (exp_eval (to_partial E) e = exp_eval (to_partial E') e). {
+    eapply  exp_eval_agree; symmetry; eauto using agree_on_partial.
+  }
+  rewrite <- H. case_eq (exp_eval (to_partial E) e); intros; reflexivity.
 Qed.
 
 (*

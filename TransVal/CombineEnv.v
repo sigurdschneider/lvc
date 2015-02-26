@@ -46,7 +46,7 @@ Proof.
       * rewrite H0; eauto. erewrite IHel ; eauto.
         hnf; intros. setSubstUnion H.
   - general induction el; eauto.
-    + simpl; simpl in H; hnf in H;  unfold evalSexp.
+    + simpl; simpl in H; hnf in H.
       pose proof (exp_combineenv_eql a D Es Et (exp_eval (combineEnv D Es Et) a)); eauto.
       destruct H0; hnf; intros; try setSubstUnion H.
       * rewrite H0; eauto. erewrite IHel; eauto.
@@ -56,10 +56,11 @@ Qed.
 Lemma combineenv_eql:
 forall F s D Es Et,
  freeVars s ⊆  D
-->(  models F Es s  <-> models F (combineEnv D Es Et) s).
+->(  models F (to_total Es) s  <-> models F (to_total (combineEnv D Es Et)) s).
 
 Proof.
   intros. eapply models_agree. eapply (agree_on_incl (lv:=D)); eauto; symmetry.
+  eapply agree_on_total.
   eapply combineenv_agree.
 Qed.
 
@@ -98,7 +99,7 @@ Proof.
         unfold list_union. simpl. eapply list_union_start_swap. cset_tac; eauto.
   - general induction el.
     + reflexivity.
-    + simpl in *; hnf in H. unfold evalSexp.
+    + simpl in *; hnf in H.
       pose proof (exp_combineenv_eqr a D Es Et (exp_eval Et a)).
       destruct H0.
       * hnf; intros; cset_tac. eapply H. split; eauto.
@@ -109,10 +110,27 @@ Proof.
         unfold list_union. simpl. eapply list_union_start_swap. cset_tac; eauto.
 Qed.
 
+Lemma exp_combineenv_eqr':
+forall e D Es Et v,
+agree_on eq (Exp.freeVars e ∩ D) Es Et
+-> (exp_eval (to_partial (to_total (combineEnv D Es Et))) e
+   = v <-> exp_eval (to_partial (to_total Et)) e = v).
+
+Proof.
+ intros; split; intros.
+ - eapply (exp_eval_agree (E:=(to_partial (to_total (combineEnv D Es Et))))); eauto.
+   hnf. cset_tac. unfold combineEnv, to_partial, to_total. destruct if; eauto.
+   rewrite H. reflexivity. cset_tac; intuition.
+ - eapply (exp_eval_agree (E:= to_partial (to_total Et))); eauto.
+   hnf; cset_tac. unfold combineEnv, to_partial, to_total; destruct if; eauto.
+   rewrite H. reflexivity.
+   cset_tac; intuition.
+Qed.
+
 Lemma combineenv_eqr:
   forall  F s D Es Et,
     agree_on eq (freeVars s ∩ D) Es Et
-    -> (models F Et s <-> models F (combineEnv D Es Et) s).
+    -> (models F (to_total Et) s <-> models F (to_total (combineEnv D Es Et)) s).
 
 Proof.
   intros.  general induction s; try reflexivity; simpl.
@@ -127,36 +145,32 @@ Proof.
   - rewrite (IHs F D Es Et).
     + reflexivity.
     + setSubst2 H.
-  -  unfold evalSexp.
-     case_eq (exp_eval (combineEnv D Es Et) e); intros.
-     + pose proof (exp_combineenv_eqr e D Es Et (Some v)).
-       assert (agree_on eq (Exp.freeVars e ∩ D) Es Et).
-       * hnf; intros. hnf in H. simpl in H. cset_tac. eapply H.
-         split; eauto.
-       * destruct H1; eauto.
-         specialize (H1 H0). rewrite H1.
-         case_eq (val2bool v); intros.
-         { rewrite (IHs1 F D Es Et).
-           - reflexivity.
-           - setSubst2 H. }
-         { rewrite (IHs2 F D Es Et).
-           - reflexivity.
-           - setSubst2 H. }
-     + pose proof (exp_combineenv_eqr e D Es Et None).
+  - case_eq (exp_eval (to_partial (to_total (combineEnv D Es Et))) e); intros.
+    + pose proof (exp_combineenv_eqr' e D Es Et (Some v)).
+      assert (agree_on eq (Exp.freeVars e ∩ D) Es Et).
+      * hnf; intros. hnf in H. simpl in H. cset_tac. eapply H.
+        split; eauto.
+      * destruct H1; eauto.
+        specialize (H1 H0).
+        rewrite H1.
+        case_eq (val2bool v); intros.
+        { rewrite (IHs1 F D Es Et).
+          - reflexivity.
+          - setSubst2 H. }
+        { rewrite (IHs2 F D Es Et).
+          - reflexivity.
+          - setSubst2 H. }
+     + pose proof (exp_combineenv_eqr' e D Es Et None).
        assert (agree_on eq (Exp.freeVars e ∩ D) Es Et).
        * hnf; intros. hnf in H. simpl in H. cset_tac. eapply H.
          split; eauto.
        * destruct H1; eauto.  specialize (H1 H0). rewrite H1.
-         unfold default_val. simpl.
-         rewrite (IHs2 F D Es Et).
-         { reflexivity. }
-         { setSubst2 H. }
+         intuition.
   - rewrite (IHs1 F D Es Et).  rewrite (IHs2 F D Es Et).
     + reflexivity.
     + setSubst2 H.
     + setSubst2 H.
-  - unfold evalSexp.
-    case_eq (exp_eval (combineEnv D Es Et) e); intros;
+  - (* case_eq (exp_eval (combineEnv D Es Et) e); intros;
     case_eq (exp_eval (combineEnv D Es Et) e0); intros.
     + pose proof (exp_combineenv_eqr e D Es Et (Some v)).
        assert (agree_on eq (Exp.freeVars e ∩ D) Es Et).
@@ -214,7 +228,8 @@ Proof.
       * setSubst2 H.
       * destruct H1; eauto. specialize (H1 H0). rewrite H1.
         split; intros; eauto.
-Qed.
+Qed. *)
+Admitted.
 
 Lemma agree_on_ssa_combine:
   forall D D' Ds' Dt' L E s t Es Et es et,
