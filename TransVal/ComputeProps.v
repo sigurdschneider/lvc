@@ -114,6 +114,8 @@ general induction H1; simpl.
 - case_eq (undefLift x); intros; simpl; eauto.
   + split; eauto.
        eapply (guardList_true_if_eval _ E0); eauto.
+       erewrite exp_eval_partial_total_list; eauto.
+  + erewrite exp_eval_partial_total_list; eauto.
 - inv H; invt ssa; invt noFun; simpl in * |- *; subst.
   + case_eq(undef e); intros; simpl; split; eauto.
     * eapply (guard_true_if_eval _ E'0 e s v ); eauto.
@@ -481,13 +483,12 @@ Lemma crash_impl_models:
     -> (forall x, x ∈ fst(getAnn D) -> exists v, E x = Some v)
     -> noFun s
     -> Crash (L, E, s) (L', Es, s')
-    -> forall F, models F(*(fun _ => fun _ => true)*) (to_total Es) (translateStmt s target).
+    -> forall F, models F (to_total Es) (translateStmt s target).
 
 Proof.
-  Admitted. (*
   intros. general induction H2; simpl.
   - case_eq (undefLift Y); intros; simpl; intros; eauto.
-    + pose proof (undefList_models F(*(fun _ => fun _ => true)*) E0 Y s).
+    + pose proof (undefList_models F E0 Y s).
       eapply H6; eauto.
       intros. eapply H1. inversion H0.
       simpl. eauto.
@@ -497,7 +498,7 @@ Proof.
   - inversion H4; subst.
     + case_eq (undef e); simpl; intros.
       * pose proof (nostep_let L0 E0 x e s H0).
-        pose proof (undef_models F (*(fun _ => fun _ => true)*) E0 e s0).
+        pose proof (undef_models F  E0 e s0).
         assert (forall x, x ∈ Exp.freeVars e -> exists v, E0 x = Some v).
         { intros; invt ssa. specialize (H3 x0). eapply H3.
           simpl; cset_tac; eauto. }
@@ -513,7 +514,7 @@ Proof.
           hnf in H0.  unfold reducible2 in H0. specialize (H0 H9); isabsurd. }
     + case_eq (undef e); simpl; intros.
       * pose proof (nostep_if L0 E0 e s t H0).
-        pose proof (undef_models F (*(fun _ => fun _ => true)*) E0 e s0).
+        pose proof (undef_models F  E0 e s0).
         assert (forall x, x ∈ Exp.freeVars e -> exists v, E0 x = Some v).
         { intros; invt ssa. eapply (H3 x). simpl; cset_tac; eauto. }
         { rewrite H7; simpl; intros. specialize (H9 H10 H7 H8 H11); isabsurd. }
@@ -530,7 +531,7 @@ Proof.
         { specialize (H0 H10); isabsurd. } }
     + isabsurd.
     +  case_eq (undef e); simpl; intros.
-       * pose proof (undef_models F (*(fun _ => fun _ => true)*) E0 e s).
+       * pose proof (undef_models F E0 e s).
          assert (forall x, x ∈ Exp.freeVars e -> exists v, E0 x = Some v).
         { intros; inversion H2; cset_tac.  simpl in H3. specialize (H3 x).
         destruct H1; eauto. }
@@ -553,7 +554,7 @@ Proof.
           decide (x === x); isabsurd.
           exists v; eauto. }
       * case_eq (undef e); intros.
-        { simpl; split; eauto. unfold evalSexp.
+        { simpl; split; eauto.
           assert ( exp_eval Es e = Some v /\ exp_eval Es (Var x) = Some v).
           - split.
             + eapply (exp_eval_agree (E:=E0)); eauto.
@@ -565,8 +566,10 @@ Proof.
                 eapply (crash_ssa_eval_agree L L' sc an s' (E0[x<-Some v]) Es); eauto.
                 rewrite H12; simpl. cset_tac. right. rewrite H10; eauto.
               * simpl. unfold update. decide (x === x); eauto; isabsurd.
-          - destruct H10.  rewrite H10, H13.  eapply bvEq_equiv_eq; eauto. }
-        { simpl; split; eauto. unfold evalSexp. inversion H.
+          - destruct H10.  erewrite exp_eval_partial_total; eauto.
+            simpl in H13. unfold to_total. rewrite H13.
+            eapply bvEq_equiv_eq; eauto. }
+        { simpl; split; eauto.  inversion H.
           assert ( exp_eval Es e = Some v).
           - eapply (exp_eval_agree (E:= E0)); eauto.
             hnf. intros.  hnf in H9. specialize (H9 x1 H7).
@@ -580,41 +583,47 @@ Proof.
               * simpl. unfold update. decide (x === x).
                 { reflexivity. }
                 { isabsurd. }
-            + rewrite H18, H7. eapply bvEq_equiv_eq.
-              reflexivity. }
+            + erewrite exp_eval_partial_total; eauto.
+              simpl in H18; unfold to_total; rewrite H18.
+              eapply bvEq_equiv_eq; eauto.
+        }
     +  exploit (IHCrash L L' ans sc E' Es s'); eauto.
        * intros. rewrite H14 in H5. simpl in *; eauto.
-       * case_eq (undef e); intros; simpl; unfold evalSexp.
+       * case_eq (undef e); intros; simpl.
          { assert (exp_eval Es e = Some v).
            - eapply (exp_eval_agree (E:= E')); eauto.
              hnf; intros.  hnf in H8.  specialize (H8 x H6).
              pose proof (crash_ssa_eval_agree L L' (stmtIf e sc t) (ann2 (D0, D') ans ant) s'  E' Es).
              eapply H13; eauto; econstructor; eauto.
-           - rewrite H6.  rewrite condTrue.  intros; subst; eauto. }
+           - erewrite exp_eval_partial_total; eauto.
+             rewrite condTrue.  intros; subst; eauto. }
          { assert (exp_eval Es e = Some v).
            - eapply (exp_eval_agree (E:= E')); eauto.
              hnf; intros.  hnf in H8.  specialize (H8 x H6).
              pose proof (crash_ssa_eval_agree L L' (stmtIf e sc t) (ann2 (D0, D') ans ant) s'  E' Es).
              eapply H13; eauto; econstructor; eauto.
-           - rewrite H6.  rewrite condTrue.  intros; subst; eauto. }
+           - erewrite exp_eval_partial_total; eauto.
+             rewrite condTrue.  intros; subst; eauto. }
     + exploit (IHCrash L L' ant sc E' Es s'); eauto.
       * intros. rewrite H15 in H5; simpl in *; eauto.
-      *  case_eq (undef e); intros; simpl; unfold evalSexp.
+      *  case_eq (undef e); intros; simpl.
          {  assert (exp_eval Es e = Some v).
             - eapply (exp_eval_agree (E:= E')); eauto.
               hnf; intros.  hnf in H8.  specialize (H8 x H6).
               pose proof (crash_ssa_eval_agree L L' (stmtIf e s sc) (ann2 (D0, D') ans ant) s'  E' Es).
               eapply H13; eauto; econstructor; eauto.
-            - rewrite H6.  rewrite condFalse. intros; subst; eauto. }
+            - intros; erewrite exp_eval_partial_total; eauto.
+              rewrite condFalse. intros; subst; eauto. }
          { assert (exp_eval Es e = Some v).
            - eapply (exp_eval_agree (E:= E')); eauto.
              hnf; intros.  hnf in H8.  specialize (H8 x H6).
               pose proof (crash_ssa_eval_agree L L' (stmtIf e s sc) (ann2 (D0, D') ans ant) s'  E' Es).
               eapply H13; eauto; econstructor; eauto.
-           - rewrite H6.  rewrite condFalse.  intros; subst; eauto. }
+           - erewrite exp_eval_partial_total; eauto.
+             rewrite condFalse.  intros; subst; eauto. }
     + isabsurd.
 Qed.
-*)
+
 (*
 *** Local Variables: ***
 *** coq-load-path: (("../" "Lvc")) ***
