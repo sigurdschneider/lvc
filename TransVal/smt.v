@@ -63,6 +63,14 @@ match el with
 |_:: el' => default_val :: listGen el'
 end.
 
+Parameter undef_substitute : val.
+
+Definition smt_eval (E:env val) (e:exp) :=
+  match exp_eval (to_partial E) e with
+    | Some v => v
+    | None => undef_substitute
+  end.
+
 (** models relation for smt. No need for options here too, because if models can be evaluated by an environment,
 every variable must have been defined. **)
 Fixpoint models (F:pred ->vallst->bool) (E:env val) (s:smt) : Prop:=
@@ -74,28 +82,14 @@ match s with
   |smtNeg a
    =>  (models F E a) -> False
 | ite c t f
-  => match exp_eval (to_partial E) c with
-       |  Some v
-          => if val2bool v
+  =>  if val2bool (smt_eval E c)
             then models F E t
             else models F E f
-       | _ => False
-     end
 |smtImp a b
  => (models F E a) ->(models F E b)
-|constr s1 s2 => match exp_eval (to_partial E) s1,  exp_eval (to_partial E) s2 with
-                  |Some b1, Some b2 => val2bool( bvEq b1 b2)
-                  | _, _ => False
-                 end
-|funcApp f a => match omap (exp_eval (to_partial E)) a with
-                  | Some l  => F (labInc f 1) l
-                  | None => False
-                end
-|smtReturn e
- => match exp_eval (to_partial E) e with
-     | Some v => F (LabI 0) (v::nil)
-     | _ => False
-    end
+|constr s1 s2 => val2bool( bvEq (smt_eval E s1) (smt_eval E s2))
+|funcApp f a => F f (List.map (smt_eval E) a)
+|smtReturn e => F (LabI 0) (smt_eval E e::nil)
 |smtFalse => False
 |smtTrue => True
 end.
