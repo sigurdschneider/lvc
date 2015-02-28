@@ -165,6 +165,24 @@ Proof.
     erewrite (IHel E x0); eauto.
 Qed.
 
+Lemma list_length_agree E el v:
+  omap (exp_eval E) el = v
+  ->(exists vl, List.map (smt_eval (to_total E)) el = vl
+               /\ List.length el = List.length vl).
+
+Proof.
+  intros.
+  general induction el.
+  - simpl.
+    exists nil; split; eauto.
+  - simpl in *.
+    specialize (IHel E (omap (exp_eval E) el)).
+    destruct IHel; eauto.
+    destruct H.
+    exists ( (smt_eval (to_total E) a):: x).
+    simpl. rewrite H. split; eauto.
+Qed.
+
   (*
   *** Local Variables: ***
   *** coq-load-path: (("../" "Lvc")) ***
