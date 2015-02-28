@@ -4,31 +4,6 @@ Require Import SetOperations Sim Var.
 Require Import sexp smt nofun noGoto bitvec freeVars.
 Require Import Compute Guards ILFtoSMT tvalTactics TUtil.
 
-Lemma exp_eval_partial_total E e v
- : exp_eval E e = Some v ->
-   exp_eval (to_partial (to_total E)) e = Some v.
-Proof.
-  intros. general induction e; simpl in * |- *; eauto.
-  - unfold to_partial, to_total; simpl. rewrite H; eauto.
-  - monad_inv H; simpl. rewrite EQ. erewrite IHe; eauto.
-  - monad_inv H; simpl.
-    erewrite IHe1; eauto. erewrite IHe2; eauto.
-    rewrite EQ, EQ1; simpl; eauto.
-Qed.
-
-Lemma exp_eval_partial_total_list E el vl
-:  omap (exp_eval E) el = Some vl
--> omap (exp_eval (to_partial (to_total  E))) el = Some vl.
-
-Proof.
-  intros. general induction el; eauto using exp_eval_partial_total.
-  - simpl in H. monad_inv H.
-    specialize (IHel E x0 EQ1).
-    rewrite EQ. rewrite EQ1.
-    simpl; erewrite exp_eval_partial_total; eauto.
-    rewrite IHel; eauto.
-Qed.
-
  Lemma guard_true_if_eval:
 forall F E e s v,
  exp_eval E e = Some v
@@ -108,7 +83,8 @@ simpl; split.
                  - case_eq(bvZero x0).
                    + intros.  rewrite H0 in EQ2.  exfalso; discriminate EQ2.
                    + intros A.   intros. clear H3. clear EQ2.
-                     hnf in H0. erewrite exp_eval_partial_total in H0; eauto.
+                     hnf in H0. unfold smt_eval in H0.
+                     erewrite exp_eval_partial_total in H0; eauto.
                      simpl in H0. simpl  in A.
                      eapply  (not_zero_implies_uneq _  A) in H0;  eauto.
                  - split.
@@ -120,7 +96,9 @@ simpl; split.
                  - case_eq(bvZero x0).
                    + intros.  rewrite H0 in EQ2.  exfalso; discriminate EQ2.
                    + intros A.   intros. clear H3. clear EQ2.
-                     hnf in H0.  erewrite exp_eval_partial_total in H0; eauto.
+                     hnf in H0.
+                     unfold smt_eval in H0;
+                       erewrite exp_eval_partial_total in H0; eauto.
                      simpl in H0. simpl  in A.
                      eapply ( not_zero_implies_uneq _) in H0; eauto.
                  -  eapply IHe1; eauto. }
@@ -131,7 +109,8 @@ simpl; split.
                    + intros.  rewrite H0 in EQ2.  exfalso; discriminate EQ2.
                    + intros A.  intros. clear H3. clear EQ2.
                      hnf in H0.
-                     erewrite exp_eval_partial_total in H0; eauto.
+                     unfold smt_eval in *;
+                       erewrite exp_eval_partial_total in H0; eauto.
                      simpl in H0. simpl  in A.
                      eapply  (not_zero_implies_uneq _) in H0; eauto.
                  -  eapply IHe2; eauto. }
@@ -142,22 +121,10 @@ simpl; split.
                    - intros.  rewrite H0 in EQ2.  exfalso; discriminate EQ2.
                    - intros A. intros. clear H3. clear EQ2.
                      hnf in H0.
+                     unfold smt_eval in *;
                      erewrite exp_eval_partial_total in H0; eauto.
                      simpl in H0. simpl  in A.
                      eapply  (not_zero_implies_uneq _ ) in H0; eauto. } }
-(*                 * case_eq (undef e1); case_eq (undef e2); intros; simpl.
-                   { rewrite H in H0; rewrite H1 in H0; simpl in H0.
-                     inversion H0. simpl; split.
-                     - eapply IHe1; eauto.
-                     - eapply IHe2; eauto. }
-                   { rewrite H in H0; rewrite H1 in H0; simpl in H0.
-                     inversion H0. simpl.
-                     - eapply IHe1; eauto. rewrite <- H3. assumption. }
-                   { rewrite H in H0; rewrite H1 in H0; simpl in H0.
-                     inversion H0. simpl.
-                     - eapply IHe2; eauto. rewrite <- H3. assumption. }
-                   {  rewrite H in H0; rewrite H1 in H0; simpl in H0.
-                      inversion H0. } } *)
 Qed.
 
 Lemma guardList_true_if_eval:
@@ -362,6 +329,7 @@ intros. general induction e; try isabsurd; simpl.
       destruct (IHe1 F E s0); cset_tac; eauto.
       destruct (IHe2  F E s); cset_tac; eauto.
       rewrite H5, H6; simpl.
+      unfold smt_eval in H0;
       erewrite exp_eval_partial_total in H0; eauto.
       clear H5. clear H6. clear H1.
       unfold bvDiv.
@@ -375,6 +343,7 @@ intros. general induction e; try isabsurd; simpl.
       destruct H; cset_tac; eauto.
       destruct (IHe1 F E s); eauto.
       rewrite H, H5; simpl.
+      unfold smt_eval in H0;
       erewrite exp_eval_partial_total in H0; eauto.
       clear H. clear H5. clear H1.
       unfold bvDiv. simpl.
@@ -388,6 +357,7 @@ intros. general induction e; try isabsurd; simpl.
       destruct H; cset_tac; eauto.
       destruct (IHe2 F E s); eauto.
       rewrite H, H5; simpl.
+      unfold smt_eval in H0;
       erewrite exp_eval_partial_total in H0; eauto.
       clear H. clear H5. clear H1.
       unfold bvDiv.
@@ -401,6 +371,7 @@ intros. general induction e; try isabsurd; simpl.
       destruct H4; cset_tac;  eauto.
       destruct H5; cset_tac; eauto.
       rewrite H4, H5. simpl.
+      unfold smt_eval in H0;
       erewrite exp_eval_partial_total in H0; eauto.
       simpl in H0.
       unfold bvDiv. case_eq (bvZero x0); intros; eauto.
@@ -599,22 +570,26 @@ general induction e; simpl in *; try isabsurd.
     * simpl in H1. destruct H1. simpl in EQ2. unfold bvDiv in EQ2.
       apply H0.  case_eq(bvZero x0); intros.
       Focus 2. rewrite H1 in EQ2. destruct (bvLessZero x); destruct (bvLessZero x0); isabsurd.
+      unfold smt_eval;
       erewrite exp_eval_partial_total; eauto.
       simpl.
       change (val2bool (bvEq x0 (zext k (O::nil)))). clear H.  eapply zero_implies_eq; eauto.
     * simpl in H1. destruct H1. simpl in EQ2. unfold bvDiv in EQ2.
       apply H0.  case_eq(bvZero x0); intros.
       Focus 2. rewrite H1 in EQ2. destruct (bvLessZero x); destruct (bvLessZero x0); isabsurd.
+      unfold smt_eval;
       erewrite exp_eval_partial_total; eauto.
       change (val2bool (bvEq x0 (zext k (O::nil)))). clear H.  eapply zero_implies_eq; eauto.
     * simpl in H1. destruct H1. simpl in EQ2. unfold bvDiv in EQ2.
       apply H0.  case_eq(bvZero x0); intros.
       Focus 2. rewrite H1 in EQ2. destruct (bvLessZero x); destruct (bvLessZero x0); isabsurd.
+      unfold smt_eval;
       erewrite exp_eval_partial_total; eauto.
       change (val2bool (bvEq x0 (zext k (O::nil)))). clear H.  eapply zero_implies_eq; eauto.
     * simpl in H1. destruct H1. simpl in EQ2. unfold bvDiv in EQ2.
       case_eq(bvZero x0); intros.
       Focus 2. rewrite H0 in EQ2. destruct (bvLessZero x); destruct (bvLessZero x0); isabsurd.
+      unfold smt_eval;
       erewrite exp_eval_partial_total; eauto.
       change (val2bool (bvEq x0 (zext k (O::nil)))).  eapply zero_implies_eq; eauto.
 Qed.

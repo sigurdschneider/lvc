@@ -106,16 +106,13 @@ Proof.
 intros.
 general induction H1; simpl.
 - assert (X: models (fun (_:pred) (_:vallst) => true) (to_total E0) (smtReturn e)).
-  + simpl.
-    erewrite exp_eval_partial_total; eauto.
+  + simpl; intuition.
   + case_eq (undef e); eauto; intros.
     * simpl; split; eauto.
       eapply (guard_true_if_eval); eauto.
 - case_eq (undefLift x); intros; simpl; eauto.
   + split; eauto.
        eapply (guardList_true_if_eval _ E0); eauto.
-       erewrite exp_eval_partial_total_list; eauto.
-  + erewrite exp_eval_partial_total_list; eauto.
 - inv H; invt ssa; invt noFun; simpl in * |- *; subst.
   + case_eq(undef e); intros; simpl; split; eauto.
     * eapply (guard_true_if_eval _ E'0 e s v ); eauto.
@@ -137,10 +134,9 @@ general induction H1; simpl.
         - eapply (term_ssa_eval_agree L' L' (stmtExp x e s') _ s'0 _ _);
           econstructor; eauto.
         - eapply (agree_on_incl  (bv:=Exp.freeVars e) (lv:=fst (getAnn (ann1 (D0, D') an)))); eauto. }
-      {  erewrite exp_eval_partial_total; eauto.
-         simpl in X1. unfold to_total.
-         rewrite X1.
-         eapply  bvEq_equiv_eq. reflexivity. }
+      {  unfold smt_eval;
+        repeat erewrite exp_eval_partial_total; eauto.
+         eapply  bvEq_equiv_eq; reflexivity. }
     * assert (X1: exp_eval E'0 (Var x) = Some v).
       { eapply (exp_eval_agree (E:= E0 [x <- Some v])) ; eauto.
         - simpl. eapply (agree_on_incl (bv:={x} ) (lv:= fst (getAnn an))).
@@ -153,9 +149,8 @@ general induction H1; simpl.
         - eapply (term_ssa_eval_agree  L' L' (stmtExp x e s') _ s'0);
           econstructor; eauto.
         - eapply (agree_on_incl  (bv:=Exp.freeVars e) (lv:=fst (getAnn (ann1 (D0, D') an)))); eauto. }
-      { erewrite exp_eval_partial_total; eauto.
-        unfold to_total; simpl in *.
-        rewrite X1.
+      { unfold smt_eval;
+        repeat erewrite exp_eval_partial_total; eauto.
          eapply  bvEq_equiv_eq. reflexivity.  }
  + assert (X: models  (fun (_:pred) (_:vallst) => true) (to_total E'0) ( ite e (translateStmt s' source) (translateStmt b2 source))).
     * simpl.
@@ -163,6 +158,7 @@ general induction H1; simpl.
         by (hnf; intros; hnf in H7; specialize (H7 a); exact (H7 H4)).
       assert (agree_on eq (fst (getAnn (ann2 (D0, D') ans ant))) E' E'0)
         by ( eapply (term_ssa_eval_agree L' L' (stmtIf e s' b2) _ s'0 _ _); econstructor; eauto).
+      unfold smt_eval.
       erewrite (exp_eval_agree (E:=to_partial (to_total E')) (E':=to_partial (to_total E'0))); eauto. simpl.
       erewrite exp_eval_partial_total; eauto.
       rewrite condTrue.
@@ -187,6 +183,7 @@ general induction H1; simpl.
         by (hnf; intros; hnf in H7; specialize (H7 a); exact (H7 H4)).
       assert (agree_on eq (fst (getAnn (ann2 (D0, D') ans ant))) E' E'0)
       by ( eapply (term_ssa_eval_agree L' L' (stmtIf e b1 s') _ s'0 _ _);econstructor;  eauto).
+      unfold smt_eval.
       erewrite (exp_eval_agree (E:=to_partial (to_total E')) (E':=to_partial (to_total E'0))); eauto. simpl.
       erewrite exp_eval_partial_total; eauto.
       rewrite condFalse.
@@ -566,8 +563,9 @@ Proof.
                 eapply (crash_ssa_eval_agree L L' sc an s' (E0[x<-Some v]) Es); eauto.
                 rewrite H12; simpl. cset_tac. right. rewrite H10; eauto.
               * simpl. unfold update. decide (x === x); eauto; isabsurd.
-          - destruct H10.  erewrite exp_eval_partial_total; eauto.
-            simpl in H13. unfold to_total. rewrite H13.
+          - destruct H10.
+            unfold smt_eval.
+            repeat erewrite exp_eval_partial_total; eauto.
             eapply bvEq_equiv_eq; eauto. }
         { simpl; split; eauto.  inversion H.
           assert ( exp_eval Es e = Some v).
@@ -583,8 +581,7 @@ Proof.
               * simpl. unfold update. decide (x === x).
                 { reflexivity. }
                 { isabsurd. }
-            + erewrite exp_eval_partial_total; eauto.
-              simpl in H18; unfold to_total; rewrite H18.
+            + unfold smt_eval.  repeat erewrite exp_eval_partial_total; eauto.
               eapply bvEq_equiv_eq; eauto.
         }
     +  exploit (IHCrash L L' ans sc E' Es s'); eauto.
@@ -595,14 +592,14 @@ Proof.
              hnf; intros.  hnf in H8.  specialize (H8 x H6).
              pose proof (crash_ssa_eval_agree L L' (stmtIf e sc t) (ann2 (D0, D') ans ant) s'  E' Es).
              eapply H13; eauto; econstructor; eauto.
-           - erewrite exp_eval_partial_total; eauto.
+           - unfold smt_eval; erewrite exp_eval_partial_total; eauto.
              rewrite condTrue.  intros; subst; eauto. }
          { assert (exp_eval Es e = Some v).
            - eapply (exp_eval_agree (E:= E')); eauto.
              hnf; intros.  hnf in H8.  specialize (H8 x H6).
              pose proof (crash_ssa_eval_agree L L' (stmtIf e sc t) (ann2 (D0, D') ans ant) s'  E' Es).
              eapply H13; eauto; econstructor; eauto.
-           - erewrite exp_eval_partial_total; eauto.
+           - unfold smt_eval; erewrite exp_eval_partial_total; eauto.
              rewrite condTrue.  intros; subst; eauto. }
     + exploit (IHCrash L L' ant sc E' Es s'); eauto.
       * intros. rewrite H15 in H5; simpl in *; eauto.
@@ -612,14 +609,14 @@ Proof.
               hnf; intros.  hnf in H8.  specialize (H8 x H6).
               pose proof (crash_ssa_eval_agree L L' (stmtIf e s sc) (ann2 (D0, D') ans ant) s'  E' Es).
               eapply H13; eauto; econstructor; eauto.
-            - intros; erewrite exp_eval_partial_total; eauto.
+            - intros; unfold smt_eval; erewrite exp_eval_partial_total; eauto.
               rewrite condFalse. intros; subst; eauto. }
          { assert (exp_eval Es e = Some v).
            - eapply (exp_eval_agree (E:= E')); eauto.
              hnf; intros.  hnf in H8.  specialize (H8 x H6).
               pose proof (crash_ssa_eval_agree L L' (stmtIf e s sc) (ann2 (D0, D') ans ant) s'  E' Es).
               eapply H13; eauto; econstructor; eauto.
-           - erewrite exp_eval_partial_total; eauto.
+           - unfold smt_eval; erewrite exp_eval_partial_total; eauto.
              rewrite condFalse.  intros; subst; eauto. }
     + isabsurd.
 Qed.

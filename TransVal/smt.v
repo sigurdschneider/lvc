@@ -88,7 +88,7 @@ match s with
 |smtImp a b
  => (models F E a) ->(models F E b)
 |constr s1 s2 => val2bool( bvEq (smt_eval E s1) (smt_eval E s2))
-|funcApp f a => F f (List.map (smt_eval E) a)
+|funcApp f a => F (labInc f 1) (List.map (smt_eval E) a)
 |smtReturn e => F (LabI 0) (smt_eval E e::nil)
 |smtFalse => False
 |smtTrue => True
@@ -122,6 +122,47 @@ forall s Q,
 Proof.
 intros.
 specialize (H F E). assumption.
+Qed.
+
+Lemma exp_eval_partial_total E e v
+ : exp_eval E e = Some v ->
+   exp_eval (to_partial (to_total E)) e = Some v.
+Proof.
+  intros. general induction e; simpl in * |- *; eauto.
+  - unfold to_partial, to_total; simpl. rewrite H; eauto.
+  - monad_inv H; simpl. rewrite EQ. erewrite IHe; eauto.
+  - monad_inv H; simpl.
+    erewrite IHe1; eauto. erewrite IHe2; eauto.
+    rewrite EQ, EQ1; simpl; eauto.
+Qed.
+
+Lemma exp_eval_partial_total_list E el vl
+:  omap (exp_eval E) el = Some vl
+-> omap (exp_eval (to_partial (to_total  E))) el = Some vl.
+
+Proof.
+  intros. general induction el; eauto using exp_eval_partial_total.
+  - simpl in H. monad_inv H.
+    specialize (IHel E x0 EQ1).
+    rewrite EQ. rewrite EQ1.
+    simpl; erewrite exp_eval_partial_total; eauto.
+    rewrite IHel; eauto.
+Qed.
+
+Lemma list_eval_agree E el v:
+  omap(exp_eval E) el = Some v
+  -> List.map (smt_eval (to_total E) ) el = v.
+
+Proof.
+  intros. general induction el.
+  - eauto.
+  - simpl in *.
+    monad_inv H.
+    eapply exp_eval_partial_total in EQ.
+    unfold smt_eval at 1.
+    rewrite EQ.
+    f_equal.
+    erewrite (IHel E x0); eauto.
 Qed.
 
   (*
