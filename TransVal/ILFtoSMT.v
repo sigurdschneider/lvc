@@ -29,6 +29,54 @@ match s, p with
   =>  guardGen  (undef e) p  ( smtNeg (smtReturn e))
 end.
 
+Fixpoint getVars (f:smt) : (set var) :=
+  match f with
+      | smtAnd f1 f2
+        => getVars f1 ∪ getVars f2
+      | smtOr f1 f2
+        => getVars f1 ∪ getVars f2
+      | smtNeg f'
+        => getVars f'
+      | ite e f1 f2
+        => Exp.freeVars e ∪ getVars f1 ∪ getVars f2
+      | smtImp f1 f2
+        => getVars f1 ∪ getVars f2
+      | constr e1 e2
+        => Exp.freeVars e1 ∪ Exp.freeVars e2
+      | funcApp f el
+        => list_union (List.map Exp.freeVars el)
+      | smtReturn e
+        => Exp.freeVars e
+      | smtFalse
+        => {}
+      | smtTrue
+        => {}
+  end.
+
+Fixpoint getNames (f:smt) : (set pred) :=
+  match f with
+    | smtAnd f1 f2
+      => getNames f1 ∪ getNames f2
+    | smtOr f1 f2
+      => getNames f1 ∪ getNames f2
+    | smtNeg f'
+      => getNames f'
+    | ite e f1 f2
+      => getNames f1 ∪ getNames f2
+    | smtImp f1 f2
+      => getNames f1 ∪ getNames f2
+    | constr e1 e2
+      => {}
+    | funcApp f el
+      => {f}
+    | smtReturn e
+      => {(LabI 0)}
+    | smtFalse
+      => {}
+    | smtTrue
+      => {}
+  end.
+
   (*
   *** Local Variables: ***
   *** coq-load-path: (("../" "Lvc")) ***
