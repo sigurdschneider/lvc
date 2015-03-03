@@ -1,7 +1,7 @@
 Require Import List Arith.
 Require Import IL Annotation AutoIndTac Bisim Exp MoreExp Coherence Fresh Util.
 Require Import SetOperations Sim Var.
-Require Import bitvec sexp smt nofun noGoto freeVars CombineEnv.
+Require Import bitvec smt nofun noGoto freeVars CombineEnv.
 Require Import Compute Guards ILFtoSMT tvalTactics TUtil GuardProps ComputeProps.
 
 (** Function Definitions **)
@@ -407,8 +407,8 @@ exp_eval E et = Some e
 -> (forall F, models F (to_total E) P)
 -> (forall (F:lab->vallst->bool),
       models F (to_total E) P ->
-      ~ ((models F (to_total E) (guardGen (undef et) target (smtNeg (smtReturn et))) /\
-    models F (to_total E) (guardGen (undef es) source (smtReturn es)))))
+      ~ ((models F (to_total E) (translateStmt (stmtReturn et) target)) /\
+    models F (to_total E) (translateStmt (stmtReturn es) source)))
 -> (e = e').
 
 Proof.
@@ -417,7 +417,7 @@ intros. decide (e = e').
 - specialize (H1 (fun _ => fun x =>toBool (bvEq e' (hd (O::nil) x)))).
   specialize (H2 (fun _ => fun x => toBool (bvEq e' (hd (O::nil) x)))).
   specialize (H2 H1).
-  case_eq (undef es); case_eq (undef et); intros.
+  case_eq (undef es); case_eq (undef et); intros; simpl in H2.
   + rewrite H3 in H2. rewrite H4 in H2. simpl in H2.
     pose proof (exp_eval_partial_total E et H).
     pose proof (exp_eval_partial_total E es H0).
@@ -474,8 +474,8 @@ omap (exp_eval E) et = Some el
 ->(forall F, models F (to_total E) P)
 -> (forall (F:lab->vallst->bool),
       models F (to_total E) P ->
-      ~ (models F (to_total E) (guardGen (undefLift et) target (smtNeg (funcApp l1 et))) /\
-         models F (to_total E) (guardGen (undefLift es) source (funcApp l2 es))))
+      ~ ((models F (to_total E) (translateStmt (stmtGoto l1 et) target)) /\
+         models F (to_total E) (translateStmt (stmtGoto l2 es) source)))
 -> (el = el').
 
 Proof.
@@ -484,6 +484,7 @@ Proof.
   - decide (l1 = l2).
     + pose (F:= (fun (_:lab) => fun x => if [ x = el' ] then true else false )).
     specialize (H2 F). specialize (H1 F). specialize (H2 H1). clear H1.
+    simpl in H2;
     case_eq (undefLift et); case_eq (undefLift es); intros;
     rewrite H1 in H2; rewrite H3 in H2; simpl in H2;
     rewrite e in H2; destruct l2; simpl in H2;

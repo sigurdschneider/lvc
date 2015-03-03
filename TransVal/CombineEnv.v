@@ -1,7 +1,7 @@
 Require Import List Arith.
 Require Import IL Annotation AutoIndTac Bisim Exp MoreExp Coherence Fresh Util.
 Require Import SetOperations Sim Var.
-Require Import bitvec sexp smt nofun noGoto freeVars.
+Require Import bitvec smt nofun noGoto freeVars.
 Require Import Compute Guards ILFtoSMT tvalTactics TUtil GuardProps ComputeProps.
 
 (** Definitons **)
@@ -292,13 +292,6 @@ Proof.
                cset_tac; eauto.
          }
      + rewrite H0; intuition.
-  - pose proof (exp_combineenv_eqr' e D Es Et (exp_eval (to_partial (to_total Et)) e)).
-    destruct H0; eauto.
-    unfold smt_eval.
-    rewrite <- H1; eauto.
-    destruct (exp_eval (to_partial (to_total (combineEnv D Es Et))) e); eauto.
-    intuition.
-    intuition.
     Grab Existential Variables.
     econstructor.
     econstructor.

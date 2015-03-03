@@ -3,7 +3,6 @@ Require Import OptionMap MoreExp SetOperations.
 
 Fixpoint freeVars (s:smt) :=
 match s with
-| smtReturn e => Exp.freeVars e
 | funcApp f x => list_union (List.map (Exp.freeVars) x)
 | smtAnd a b => freeVars a ∪ freeVars b
 | smtOr a b => freeVars a ∪ freeVars b
@@ -77,13 +76,6 @@ intros agree; general  induction s; simpl in *; try reflexivity.
         unfold list_union.
         eapply union_right; eauto. }
   + rewrite H.  split; eauto.
-- assert (smt_eval E e = smt_eval E' e). {
-    unfold smt_eval.
-    pose proof (exp_eval_agree (E:= to_partial E) (E':= to_partial E') e (v:= exp_eval (to_partial E) e)).
-    rewrite H; eauto.
-    eauto using agree_on_partial.
-  }
-  rewrite <- H. case_eq (exp_eval (to_partial E) e); intros; reflexivity.
 Qed.
 
 (*

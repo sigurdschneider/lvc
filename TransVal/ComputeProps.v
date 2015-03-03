@@ -1,7 +1,7 @@
 Require Import List Arith.
 Require Import IL Annotation AutoIndTac Bisim Exp MoreExp Coherence Fresh Util.
 Require Import SetOperations Sim Var.
-Require Import bitvec sexp smt nofun noGoto freeVars.
+Require Import bitvec smt nofun noGoto freeVars.
 Require Import Compute Guards ILFtoSMT tvalTactics TUtil GuardProps.
 
 Lemma exp_eval_if_list_eval:
@@ -123,7 +123,7 @@ ssa  s D
 Proof.
 intros.
 general induction H1; simpl.
-- assert (X: models (fun (_:pred) (_:vallst) => true) (to_total E0) (smtReturn e)).
+- assert (X: models (fun (_:pred) (_:vallst) => true) (to_total E0) (funcApp (LabI 0) (e::nil))).
   + simpl; intuition.
   + case_eq (undef e); eauto; intros.
     * simpl; split; eauto.

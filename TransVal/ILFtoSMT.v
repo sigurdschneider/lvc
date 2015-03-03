@@ -19,14 +19,15 @@ match s, p with
 |  stmtExtern x f Y s, _ => smtFalse
 (* f e, s*)
 | stmtGoto f e, source
-  =>  guardGen (undefLift e) p (funcApp f e)
+  =>  guardGen (undefLift e) p (funcApp (labInc f 1) e)
 (* f e, t *)
 | stmtGoto f e, target
-  =>  guardGen (undefLift e) p ( smtNeg (funcApp f e ))
+  =>  guardGen (undefLift e) p ( smtNeg (funcApp (labInc f 1) e ))
+(* value statement *)
 | stmtReturn e, source
-  =>  guardGen (undef e) p (smtReturn e)
+  =>  guardGen (undef e) p (funcApp (LabI 0) (e::nil))
 | stmtReturn e, target
-  =>  guardGen  (undef e) p  ( smtNeg (smtReturn e))
+  =>  guardGen  (undef e) p  ( smtNeg (funcApp (LabI 0) (e::nil)))
 end.
 
 Fixpoint getVars (f:smt) : (set var) :=
@@ -45,8 +46,6 @@ Fixpoint getVars (f:smt) : (set var) :=
         => Exp.freeVars e1 ∪ Exp.freeVars e2
       | funcApp f el
         => list_union (List.map Exp.freeVars el)
-      | smtReturn e
-        => Exp.freeVars e
       | smtFalse
         => {}
       | smtTrue
@@ -69,8 +68,6 @@ Fixpoint getNames (f:smt) : (set pred) :=
       => {}
     | funcApp f el
       => {f}
-    | smtReturn e
-      => {(LabI 0)}
     | smtFalse
       => {}
     | smtTrue

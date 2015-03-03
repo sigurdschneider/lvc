@@ -20,7 +20,6 @@ Set Implicit Arguments.
       | 3 => option_lift2 bvEq
       | 4 => option_lift2 (fun a b => neg (bvEq a b))
       | _ => bvDiv
-(*      | _ => option_lift2 bvAdd (*fun _ _ => None *) *)
     end.
 
   Definition unop : Set := nat.
