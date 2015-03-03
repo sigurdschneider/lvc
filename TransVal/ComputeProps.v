@@ -4,6 +4,24 @@ Require Import SetOperations Sim Var.
 Require Import bitvec sexp smt nofun noGoto freeVars.
 Require Import Compute Guards ILFtoSMT tvalTactics TUtil GuardProps.
 
+Lemma exp_eval_if_list_eval:
+  forall el E vl,
+    omap (exp_eval E) el = Some vl
+    -> forall e, List.In e el -> exists v, exp_eval E e = Some v.
+
+Proof.
+intros.
+general induction el.
+- simpl in H. exists (bitvec.O::nil). intros. inversion H0.
+- unfold omap in H. monad_inv H. decide (e=a).
+  + exists x. intros. rewrite e0. assumption.
+   + specialize (IHel E x0 EQ1). specialize (IHel e).
+     simpl in H0.  destruct H0.
+     * exfalso. apply n. rewrite H; reflexivity.
+     * destruct (IHel H).  exists x1.
+       rewrite H0. reflexivity.
+Qed.
+
 Lemma term_swap_fun L1 L2 L1'  V V' s s':
 Terminates (L1,V,s) (L1',V',s')
 -> exists L2', Terminates (L2, V, s) (L2', V', s').

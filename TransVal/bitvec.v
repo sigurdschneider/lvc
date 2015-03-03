@@ -337,6 +337,40 @@ Proof.
   - simpl. f_equal; eauto; assumption.
 Qed.
 
+(** Lemmas **)
+
+Lemma zext_nil_eq_O:
+forall k, zext k nil = zext k (O::nil).
+
+Proof.
+ intros.
+induction k0.
+- simpl. reflexivity.
+- simpl. reflexivity.
+Qed.
+
+Lemma not_zero_implies_uneq:
+forall a b,
+bvZero a = false
+->b = zext k (O::nil)
+->  ~ toBool(bvEq a b).
+
+Proof.
+intros. hnf.  intros. hnf in H1.  unfold bvZero in H.
+rewrite H0 in H1. unfold zero in H. rewrite H in H1; eauto.
+Qed.
+
+Lemma zero_implies_eq:
+forall a b,
+bvZero a = true
+-> b = zext k (O::nil)
+-> toBool(bvEq a b).
+
+Proof.
+intros.  rewrite H0. unfold bvZero in H. unfold zero in H.
+rewrite H; eauto. econstructor.
+Qed.
+
 (*
 *** Local Variables: ***
 *** coq-load-path: (("../" "Lvc")) ***
