@@ -2,12 +2,10 @@ Require Import List.
 Require Export Util Var Val Exp Env Map CSet AutoIndTac IL AllInRel.
 Require Export EventsActivated StateType paco Equiv Bisim Sim.
 
+Require Import TraceEquiv.
+
 Set Implicit Arguments.
 Unset Printing Records.
-
-Inductive extevent :=
-  | EEvtExtern (ext:extern)
-  | EEvtTerminate (res:val).
 
 Inductive produces_prefix {S} `{StateType S} : S -> list extevent -> Prop :=
   | producesPrefixSilent (σ:S) (σ':S) L :
@@ -18,12 +16,12 @@ Inductive produces_prefix {S} `{StateType S} : S -> list extevent -> Prop :=
       activated σ
       -> step σ (EvtExtern ext) σ'
       -> produces_prefix σ' L
-      -> produces_prefix σ (EEvtExtern ext::L)
+      -> produces_prefix σ (EEvtExtern (EvtExtern ext)::L)
   | producesPrefixTerm (σ:S) (σ':S) r
     : result σ' = Some r
       -> star2 step σ nil σ'
       -> normal2 step σ'
-      -> produces_prefix σ (EEvtTerminate r::nil)
+      -> produces_prefix σ (EEvtTerminate (Some r)::nil)
   | producesPrefixCrash (σ:S) (σ':S) L
     : result σ' = None
       -> star2 step σ nil σ'
@@ -100,7 +98,7 @@ Proof.
       eapply IHproduces_prefix; eauto.
       eapply bisim'_bisim. eapply H9.
   - eapply bisim_bisim' in H4. eapply bisim'_terminate in H4; eauto.
-    destruct H4 as [? [? []]].
+    destruct H4 as [? [? []]]. rewrite H0.
     econstructor 3; [ | eauto | eauto]. congruence.
   - eapply bisim_bisim' in H4. eapply bisim'_terminate in H4; eauto.
     destruct H4 as [? [? []]]. econstructor 4; [ | eauto | eauto]. congruence.
@@ -301,7 +299,7 @@ Lemma produces_prefix_extevent S `{StateType S} (σ:S) evt L
   -> ~ crashes σ
   -> exists σ', star2 step σ nil σ'
           /\ activated σ'
-          /\ exists σ'', step σ' (EvtExtern evt) σ'' /\ produces_prefix σ'' L.
+          /\ exists σ'', step σ' evt σ'' /\ produces_prefix σ'' L.
 Proof.
   intros. general induction H0.
   - edestruct IHproduces_prefix. reflexivity.
@@ -315,7 +313,7 @@ Qed.
 Lemma produces_prefix_terminates S `{StateType S} (σ:S) r L
 :  produces_prefix σ (EEvtTerminate r::L)
    -> ~ crashes σ
-   -> exists σ', star2 step σ nil σ' /\ normal2 step σ' /\ result σ' = Some r /\ L = nil.
+   -> exists σ', star2 step σ nil σ' /\ normal2 step σ' /\ result σ' = r /\ L = nil.
 Proof.
   intros. general induction H0.
   - edestruct IHproduces_prefix. reflexivity.
@@ -357,7 +355,7 @@ Proof.
   - exfalso. case_eq (result σ); intros.
     + exploit H0. econstructor 3; eauto. constructor. congruence.
     + exploit H0. econstructor 4; eauto. constructor.
-      instantiate (1:=EEvtExtern (ExternI 0 nil 0)::nil) in X.
+      instantiate (1:=EEvtExtern (EvtExtern (ExternI 0 nil 0))::nil) in X.
       congruence.
 Qed.
 
@@ -388,7 +386,7 @@ Proof.
       congruence.
     + exploit (diverges_produces_only_nil H2).
       eapply H1. econstructor 4; eauto. constructor.
-      instantiate (1:=EEvtExtern (ExternI 0 nil 0)::nil) in X.
+      instantiate (1:=EEvtExtern (EvtExtern (ExternI 0 nil 0))::nil) in X.
       congruence.
 Qed.
 
