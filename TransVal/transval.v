@@ -93,6 +93,10 @@ Proof.
       destruct H2; eauto using freeVars_undef.
 Qed.
 
+(** Lemma 12 in the thesis
+Formulas can be extended by a Q that represents the effects of
+the program history
+**)
 Lemma unsat_extension:
 forall L D E E' s s' pol P Q,
 (forall F E, models F E Q -> ~ models F E (smtAnd (translateStmt s pol) P))
@@ -541,6 +545,7 @@ Proof.
                   try isabsurd; econstructor.
 Qed.
 
+(** Theorem 2 in the thesis **)
 Lemma unsat_impl_sim:
 forall L D D' Df  Ds' Dt'  E s t,
 (forall F E, ~ models F E (smtCheck s t))

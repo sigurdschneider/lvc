@@ -3,17 +3,21 @@ Require Import IL Exp Val bitvec.
 
 Set Implicit Arguments.
 
-(** Define what an argument list is **)
+(** Arguments are lists of expressions **)
 Definition arglst := list exp.
 
+(** Lists of values **)
 Definition vallst := list val. (*bitvec.*)
 
 (**
-evalSexp evaluates an SMT expression given an environment that must! be total on
+evalSexp evaluates an SMT expression given an environment that must be total on
 every variable that may occur in a formula.
 **)
 
-Definition to_partial (E:env val) x : option val (*bitvec*) := Some (E x).
+(* "Lower" an environment back to returning option types **)
+Definition to_partial (E:env val) x : option val := Some (E x).
+
+(* Make an environment total *)
 Definition to_total (E:onv val) x : val :=
   match E x with
     |Some v => v
@@ -143,6 +147,9 @@ Proof.
     rewrite EQ, EQ1; simpl; eauto.
 Qed.
 
+(** Next 2 Lemmata belong to Lemma 4 in subsection 3.4 in the thesis
+They prove that evaluation without a total environment is equal
+to evaluation under a total environment **)
 Lemma exp_eval_partial_total_list E el vl
 :  omap (exp_eval E) el = Some vl
 -> omap (exp_eval (to_partial (to_total  E))) el = Some vl.

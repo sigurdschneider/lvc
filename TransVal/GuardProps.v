@@ -4,6 +4,23 @@ Require Import SetOperations Sim Var.
 Require Import smt nofun noGoto bitvec freeVars.
 Require Import Compute Guards ILFtoSMT tvalTactics TUtil.
 
+(* TODO Move *)
+Lemma exp_freeVars_list_agree (E: onv val) e el:
+    (forall x, x ∈ list_union (Exp.freeVars e:: List.map Exp.freeVars el) -> exists v, E x = Some v)
+    ->(forall x, x ∈ Exp.freeVars e -> (exists v, E x = Some v)) /\
+      (forall x, x ∈ list_union (List.map Exp.freeVars el) -> exists v, E x = Some v).
+
+Proof.
+  intros. split;
+  intros; specialize (H x); destruct H; eauto;
+    unfold list_union; simpl;
+    eapply list_union_start_swap;
+    cset_tac; eauto.
+Qed.
+
+(** Lemma 5 in the thesis.
+Proves that whenever an expression evaluates under
+a partial environment, then it's guard must be satisfiable **)
  Lemma guard_true_if_eval:
 forall F E e s v,
  exp_eval E e = Some v
@@ -127,6 +144,7 @@ simpl; split.
                      eapply  (not_zero_implies_uneq _ ) in H0; eauto. } }
 Qed.
 
+(** Lemma 5 in the thesis, lifted to lists **)
 Lemma guardList_true_if_eval:
 forall F E el s vl,
 omap (exp_eval E) el = Some vl
@@ -145,6 +163,9 @@ intros. general induction el.
   + rewrite H1 in H0; monad_inv H. eapply IHel; eauto.
 Qed.
 
+(** Not in thesis due to simplification fo guards as booleans without
+options
+--> approx. Lema 6 **)
 Lemma noguard_impl_eval:
 forall E e,
 (forall x, x ∈ Exp.freeVars e -> exists v,  E x = Some v)
@@ -194,12 +215,10 @@ Proof.
       unfold option_lift2; eauto.
     + case_eq (undef e1); case_eq(undef e2); intros;
       rewrite H3 in *; rewrite H4 in *; discriminate H0.
-(*    + eapply combine_keep_undef in H0; destruct H0.
-      destruct IHe1; destruct IHe2; eauto.
-      rewrite H4, H5; simpl. exists (bvAdd x x0).
-      unfold option_lift2; eauto. *)
 Qed.
 
+(* Not in thesis as simplified by guards = no option
+-->approx Lemma 6**)
 Lemma noguardlist_impl_eval:
   forall E el,
     (forall x, x ∈ list_union (List.map Exp.freeVars el) -> exists v,  E x = Some v)
@@ -224,6 +243,7 @@ Proof.
       left; right; eauto.
 Qed.
 
+(** Lemma 6 in the thesis **)
 Lemma guard_impl_eval:
 forall F E e g,
  undef e = Some g
@@ -380,6 +400,38 @@ intros. general induction e; try isabsurd; simpl.
       f_equal; eauto.
 Qed.
 
+(** Lifted version of Lemma 6 **)
+Lemma guardList_impl_eval :
+forall F E el g,
+ undefLift el = Some g
+-> models F (to_total E) g
+-> (forall x, x ∈ list_union (List.map Exp.freeVars el) -> exists v, E x = Some v)
+-> exists v, (omap (exp_eval E) el) = Some v.
+
+Proof.
+  intros.
+  general induction el; eauto.
+  pose proof (exp_freeVars_list_agree E a el H1).
+  destruct H2.
+  - simpl in *.
+    case_eq (undef a); case_eq (undefLift el); intros;
+    rewrite H4, H5 in *; simpl in *;
+    inversion H; subst; simpl in *; try destruct H0.
+    + destruct (guard_impl_eval F E a s0); eauto.
+      rewrite H7; simpl.
+      destruct (IHel F E s); eauto.
+      exists (x::x0); rewrite H8; simpl; eauto.
+    + destruct (guard_impl_eval F E a g); eauto.
+      rewrite H6; simpl.
+      destruct (noguardlist_impl_eval E el); eauto.
+      exists (x::x0); rewrite H7; simpl; eauto.
+    + destruct (noguard_impl_eval E a); eauto.
+      rewrite H6.
+      destruct (IHel F E g); eauto.
+      exists (x::x0); rewrite H7; simpl; eauto.
+Qed.
+
+(** Lemma 7 in thesis **)
 Lemma guardTrue_if_Terminates_ret:
 forall L L' E s E' e g,
 noFun s
@@ -422,6 +474,7 @@ intros. general induction H1.
   + rewrite <- H4 in *; inversion H.
 Qed.
 
+(** Lemma 9 in the Thesis **)
 Lemma undef_models:
 forall F E e g,
 (forall x, x ∈ Exp.freeVars e -> exists v, E x = Some v)

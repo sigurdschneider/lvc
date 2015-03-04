@@ -22,6 +22,8 @@ general induction el.
        rewrite H0. reflexivity.
 Qed.
 
+(** Lemma 2 in Thesis
+Proves that Terminates ignores the label environment **)
 Lemma term_swap_fun L1 L2 L1'  V V' s s':
 Terminates (L1,V,s) (L1',V',s')
 -> exists L2', Terminates (L2, V, s) (L2', V', s').
@@ -114,6 +116,9 @@ general induction H0; eauto.
       {destruct X; eauto. }
 Qed.
 
+(** Lemma 10 in Thesis
+Proves that all terminating source translations can be modeled
+with the end environment **)
 Lemma terminates_impl_models :
 forall L s D E s' E',
 ssa  s D
@@ -329,6 +334,8 @@ Qed.
 
 Definition failed (s:F.state)  := result (s ) = None.
 
+(** Lemma 3 in the thesis
+Proves that Crashing is independent from the function environment **)
 Lemma crash_swap_fun L1 L2 L1' V V' s s':
 Crash (L1, V, s) (L1', V', s')
 -> exists L2', Crash (L2, V, s) (L2', V', s').
@@ -494,6 +501,9 @@ case_eq (val2bool v); intros.
 - exists (L, E, f); econstructor; eauto.
 Qed.
 
+(** Lemma 11 in the thesis
+Proves that crashing target programs can be modeled by any
+predicate environment and the environment in which they crash **)
 Lemma crash_impl_models:
   forall L L' D s E Es s',
     ssa s D
