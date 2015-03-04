@@ -38,11 +38,17 @@ let rec print_binop op =
     | "2" -> "*"
     | _ -> "unknown"
 
+let rec print_unop op =
+  match (string_of_int op) with
+    | "0" -> "?"
+    | _ -> "unknown"
+
 
 let rec print_sexpr ids e =
   match e with
     | Lvc.Con x -> string_of_int x
     | Lvc.Var x -> print_var ids x
+    | Lvc.UnOp (op, e1) -> print_unop op ^ " " ^ print_sexpr ids e1
     | Lvc.BinOp (op, e1, e2) -> print_sexpr ids e1 ^ " " ^ (print_binop op) ^ " " ^ (print_sexpr ids e2)
 
 let rec print_list p l =
@@ -82,8 +88,8 @@ let rec print_stmt ids ident s =
   let print_stmt = print_stmt ids in
   match s with
     | Lvc.StmtReturn e -> print_sexpr e
-    | Lvc.StmtGoto (f, y) -> "λ" ^ (string_of_int f) ^ "(" ^ (print_list print_sexpr y) ^ ")"
-    | Lvc.StmtExp (x, e, s) -> "let " ^ (print_var x) ^ " = " ^
+    | Lvc.StmtApp (f, y) -> "λ" ^ (string_of_int f) ^ "(" ^ (print_list print_sexpr y) ^ ")"
+    | Lvc.StmtLet (x, e, s) -> "let " ^ (print_var x) ^ " = " ^
       (print_sexpr e) ^ " in\n" ^ print_ident ident ^
       (print_stmt ident s)
     | Lvc.StmtExtern (x, f, y, s) -> "let " ^ (print_var x) ^ " = extern " ^
@@ -92,7 +98,7 @@ let rec print_stmt ids ident s =
     | Lvc.StmtIf (e, s, t) -> "if " ^ (print_sexpr e) ^ " then\n" ^
       (print_ident (ident+2)) ^ (print_stmt (ident+2) s)
       ^ "\n" ^ print_ident ident ^ "else\n" ^ print_ident (ident+2) ^ (print_stmt (ident+2) t) ^ "\n"
-    | Lvc.StmtLet (y, s, t) -> "fun " ^
+    | Lvc.StmtFun (y, s, t) -> "fun " ^
 	  "_ " ^ "(" ^ (print_list print_var y) ^ ") = \n"
 	  ^ print_ident (ident+2) ^ (print_stmt (ident+2) s) ^ "\n" ^ print_ident ident
       ^ "in \n"
