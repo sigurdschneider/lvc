@@ -63,6 +63,7 @@ intros term. general induction term.
     * intros; isabsurd.
 Qed.
 
+(** Part 1 of Lemma 1 in the Thesis **)
 Lemma term_ssa_eval_agree L L' s D s' (E:onv val) (E':onv val)
  : ssa s D
    -> noFun s
@@ -380,6 +381,7 @@ Proof.
        * intros; isabsurd.
 Qed.
 
+(** Part 2 of Lemma 1 in the Thesis *)
 Lemma crash_ssa_eval_agree L L' s D s' (E:onv val) (E':onv val)
 : ssa s D
   ->noFun s
