@@ -1,4 +1,20 @@
-Require Import Util List OrderedType bitvec.
+Require Import Util List OrderedType.
+
+(**
+First define bits to be a binary type with the two constructors O and I.
+**)
+Inductive bit:Type :=
+|O:bit
+|I:bit.
+
+(**
+A bitvector is now simply a list of bits. Convention: The LSB is always the first bit to ease
+recursive function definitions.
+**)
+Definition bitvec := list bit.
+
+(** Define the length of a bitvector k **)
+Definition k:= 32.
 
 (** Inductive lt predicate for bits **)
 Inductive ltBit :bit-> bit -> Prop :=
@@ -77,12 +93,12 @@ Instance ltBitvec_trans:
 Transitive ltBitvec.
 
 unfold Transitive. intros. general induction H.
-- general induction H0. 
+- general induction H0.
   + econstructor.
   + econstructor.
 -  general induction H0.
-   +  econstructor. 
-      * eapply transitivity with c0; eauto. 
+   +  econstructor.
+      * eapply transitivity with c0; eauto.
    + econstructor.
      * rewrite <- H. assumption.
   -  general induction H1.
@@ -93,7 +109,7 @@ Defined.
 
 Instance ltBitvec_irrefl:
 Irreflexive ltBitvec.
-hnf; intros. unfold RelationClasses.complement.  induction x; inversion 1; subst; eauto using StrictOrder_Irreflexive.  
+hnf; intros. unfold RelationClasses.complement.  induction x; inversion 1; subst; eauto using StrictOrder_Irreflexive.
 eapply (StrictOrder_Irreflexive a a H1). intuition.
 Defined.
 
@@ -107,10 +123,10 @@ Defined.
 Instance lt_eq_strict : OrderedType.StrictOrder ltBitvec eq.
 econstructor.
 - exact ltBitvec_trans.
-- intros. intro. apply (ltBitvec_irrefl x).   rewrite <-  H0 in H.  assumption. 
+- intros. intro. apply (ltBitvec_irrefl x).   rewrite <-  H0 in H.  assumption.
 Defined.
 
-Instance OrderedType_bitvec : OrderedType bitvec := 
+Instance OrderedType_bitvec : OrderedType bitvec :=
   { _eq := eq;
      _lt := ltBitvec;
       _cmp := bvCmp}.
@@ -118,7 +134,19 @@ intros. general induction x; destruct y; simpl; try now (econstructor; eauto usi
 pose proof (_compare_spec a b); destruct (IHx y);
 inv H;  try now (econstructor; eauto using ltBitvec).
 -  econstructor. f_equal. rewrite H2. reflexivity.
-Defined. 
+Defined.
+
+
+Instance bitvec_eq_computable (s t : bitvec) : Computable (s = t).
+pose proof (_compare_spec s t).
+destruct (_cmp s t); simpl in *.
+- left. inv H. eauto.
+- right. inv H. intro; subst.
+  eapply ltBitvec_irrefl. eapply H0.
+- right. inv H. intro; subst.
+  eapply ltBitvec_irrefl. eapply H0.
+Defined.
+
 
 (*
 *** Local Variables: ***

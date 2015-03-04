@@ -1,23 +1,9 @@
 Require Import List.
 Require Import AutoIndTac Util.
 
+Require Export orderedBitvec.
+
 Set Implicit Arguments.
-
-(**
-First define bits to be a binary type with the two constructors O and I.
-**)
-Inductive bit:Type :=
-|O:bit
-|I:bit.
-
-(**
-A bitvector is now simply a list of bits. Convention: The LSB is always the first bit to ease
-recursive function definitions.
-**)
-Definition bitvec := list bit.
-
-(** Define the length of a bitvector k **)
-Definition k:= 32.
 
 (** HELPER FUNCTIONS for bitvector functions **)
 
@@ -96,6 +82,15 @@ end.
 (** increment function that uses the defined size **)
 Definition incr (b:bitvec) :=
 incr' k (sext k b O).
+
+(** Decrement function TODO: Maybe remove it **)
+Fixpoint decr (b:bitvec) :=
+match b with
+| nil => nil
+| O::nil => O::nil
+| I::b' => O::b'
+| O::b' => I::decr b'
+end.
 
 Definition bitAnd (b1:bit) (b2:bit) :=
 match b1, b2 with
@@ -266,24 +261,6 @@ match a with
           end
 end.
 
-(** Division wrapper function. Starts the bvDiv' function with the size argument b1.
-Because b1 is the biggest amount of steps needed to compute b1 / b2 (in the case where b2
-is 1. As a bitvector can also be mapped to it's natural number counterpart we take this number as
-the amount of steps. In the worst case this will only produce more steps then needed as 2^k is
-the maximum number for natural numbers and 2^(k-1) for 2s complement.
-There is also special threatening needed for signs.
-Function is undefined for x/y where y = 0 **)
-Definition bvDiv (b1:bitvec) (b2:bitvec) :option bitvec:=
-if bvZero b2
-then None
-else
-Some (match bvLessZero b1, bvLessZero b2 with
-| true, true => (bvDiv' (bitvecToNat b1) (neg b1) (neg b2))
-| true, false => neg ( bvDiv' (bitvecToNat b1) (neg b1) b2)
-| false, true => neg (bvDiv' (bitvecToNat b1) b1 (neg b2))
-| false, false => bvDiv' (bitvecToNat b1) b1 b2
-end).
-
 (** Lemmas about the functions **)
 
 Lemma bvEq_equiv_eq:
@@ -307,6 +284,7 @@ intros; split; intros.
     * simpl. eapply (IHb1 b1); reflexivity.
 Qed.
 
+
 Lemma bvEq_refl:
 forall b,
 toBool (bvEq b b).
@@ -316,6 +294,24 @@ intros. general induction b.
 + simpl. econstructor.
 + destruct a; simpl; assumption.
 Qed.
+
+(** Division wrapper function. Starts the bvDiv' function with the size argument b1.
+Because b1 is the biggest amount of steps needed to compute b1 / b2 (in the case where b2
+is 1. As a bitvector can also be mapped to it's natural number counterpart we take this number as
+the amount of steps. In the worst case this will only produce more steps then needed as 2^k is
+the maximum number for natural numbers and 2^(k-1) for 2s complement.
+There is also special threatening needed for signs.
+Function is defined also for x/y where y = 0 because the smt solver always has total functions **)
+Definition bvDiv (b1:bitvec) (b2:bitvec) :option bitvec:=
+if [ b2 = zero ]
+then None
+else
+Some (match bvLessZero b1, bvLessZero b2 with
+| true, true => (bvDiv' (bitvecToNat b1) (neg b1) (neg b2))
+| true, false => neg ( bvDiv' (bitvecToNat b1) (neg b1) b2)
+| false, true => neg (bvDiv' (bitvecToNat b1) b1 (neg b2))
+| false, false => bvDiv' (bitvecToNat b1) b1 b2
+end).
 
 Lemma not_zero:
  forall b, bvZero b = false ->  b  <> zero.
@@ -335,40 +331,6 @@ Proof.
   intros; general induction n.
   - simpl. reflexivity.
   - simpl. f_equal; eauto; assumption.
-Qed.
-
-(** Lemmas **)
-
-Lemma zext_nil_eq_O:
-forall k, zext k nil = zext k (O::nil).
-
-Proof.
- intros.
-induction k0.
-- simpl. reflexivity.
-- simpl. reflexivity.
-Qed.
-
-Lemma not_zero_implies_uneq:
-forall a b,
-bvZero a = false
-->b = zext k (O::nil)
-->  ~ toBool(bvEq a b).
-
-Proof.
-intros. hnf.  intros. hnf in H1.  unfold bvZero in H.
-rewrite H0 in H1. unfold zero in H. rewrite H in H1; eauto.
-Qed.
-
-Lemma zero_implies_eq:
-forall a b,
-bvZero a = true
--> b = zext k (O::nil)
--> toBool(bvEq a b).
-
-Proof.
-intros.  rewrite H0. unfold bvZero in H. unfold zero in H.
-rewrite H; eauto. econstructor.
 Qed.
 
 (*

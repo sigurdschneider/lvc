@@ -1,175 +1,81 @@
 Require Import List EqNat Bool SetOperations.
 Require Import IL Exp Val bitvec smt freeVars tvalTactics.
 
+Opaque zext.
+
 (** Helper function to merge SMT options **)
-Definition combine (o1:option smt) (o2:option smt) :option smt :=
-match o1, o2 with
-| Some v1, Some v2 => Some (smtAnd v1 v2)
-| Some v1, _ => o1
-| _, _  => o2
-end.
+Definition combine (o1:smt) (o2: smt) :smt :=
+   if [o1 = smtTrue] then o2 else
+    if [o2 = smtTrue] then o1 else smtAnd o1 o2.
+
+Lemma models_combine F E a b
+: models F E (combine a b) <-> models F E (smtAnd a b).
+
+Proof.
+  unfold combine. repeat (destruct if; subst); simpl; intuition.
+Qed.
 
 (** Function to generate the guard expression for one expression **)
 Fixpoint undef e :=
 match e with
 |BinOp n a b
- => match n with
-        | 0 =>  combine (undef a) (undef b)
-        | 1 =>  combine (undef a) (undef b)
-        | 2 =>  combine (undef a) (undef b)
-        | 3 =>  combine (undef a) (undef b)
-        | 4 =>  combine (undef a) (undef b)
-        | _ => match combine (undef a) (undef b) with
-                 | Some c => Some (smtAnd (smtNeg (constr b (Con (zext k (O::nil))))) c )
-                 | None =>  Some (smtNeg (constr b (Con (zext k (O::nil)))))
-               end
-    end
-|UnOp n a
- => undef a
-|Con v
- => None
-|Var v
- => None
+ => combine (combine (undef a) (undef b))
+           (if [n = 5]
+            then smtNeg (constr b (Con (zext k (O::nil))))
+            else smtTrue)
+|UnOp n a => undef a
+|Con v => smtTrue
+|Var v => smtTrue
 end.
 
 Fixpoint undefLift (el: list exp) :=
 match el with
-|nil => None
+|nil => smtTrue
 | e::el' => combine (undef e) (undefLift el')
 end.
 
 Definition guardGen s p cont :=
-match s, p with
-| Some v, source => smtAnd v cont
-| Some v, target => smtImp v cont
-| None, _ => cont
-end.
+  if [s = smtTrue] then cont else
+  match p with
+    | source => smtAnd s cont
+    | target => smtImp s cont
+  end.
 
-Lemma combine_keep_undef:
-forall e1 e2,
-combine (undef e1) (undef e2) = None
--> undef e1 = None /\ undef e2 = None.
+Lemma models_guardGen_source F E s cont
+: models F E (guardGen s source cont) <-> models F E (smtAnd s cont).
 
 Proof.
-intros.
-case_eq (undef e1); case_eq (undef e2); intros;
-rewrite H0 in H; rewrite H1 in H; try isabsurd; eauto.
+ unfold guardGen; destruct if; subst; simpl; intuition.
 Qed.
 
-Lemma combine_keep_undef_list:
-forall e el,
-combine (undef e) (undefLift el) =  None
--> undef e = None /\ undefLift el = None.
-
+Lemma models_guardGen_target F E s cont
+: models F E (guardGen s target cont) <-> models F E (smtImp s cont).
 Proof.
-  intros.
-  case_eq (undef e); case_eq (undefLift el); intros;
-  rewrite H0 in H; rewrite H1 in H; try isabsurd; eauto.
+ unfold guardGen; destruct if; subst; simpl; intuition.
 Qed.
 
 Lemma freeVars_undef :
-forall a e s,
-undef e = Some s
--> a ∈ freeVars s
+forall a e,
+a ∈ freeVars (undef e)
 -> a ∈ Exp.freeVars e.
 
 Proof.
-  intros. general induction e.
-  - simpl in *. exploit IHe; eauto.
-  - simpl in *.
-    destruct b; try destruct b; try destruct b; try destruct b; try destruct b;
-    try destruct b; simpl in *.
-    + case_eq (undef e1); case_eq (undef e2); intros;
-      rewrite H1 in H; rewrite H2 in H; simpl in H;
-      inversion H; rewrite <- H4 in *.
-      * simpl in H0; cset_tac. destruct H0.
-        { left; exploit IHe1; eauto. }
-        { right; exploit IHe2; eauto. }
-      * cset_tac. left; exploit IHe1; eauto.
-      * cset_tac. right; exploit IHe2; eauto.
-    + case_eq (undef e1); case_eq (undef e2); intros;
-      rewrite H1 in H; rewrite H2 in H; simpl in H;
-      inversion H; rewrite <- H4 in *.
-      * simpl in H0; cset_tac. destruct H0.
-        { left; exploit IHe1; eauto. }
-        { right; exploit IHe2; eauto. }
-      * cset_tac. left; exploit IHe1; eauto.
-      * cset_tac. right; exploit IHe2; eauto.
-    + case_eq (undef e1); case_eq (undef e2); intros;
-      rewrite H1 in H; rewrite H2 in H; simpl in H;
-      inversion H; rewrite <- H4 in *.
-      * simpl in H0; cset_tac. destruct H0.
-        { left; exploit IHe1; eauto. }
-        { right; exploit IHe2; eauto. }
-      * cset_tac. left; exploit IHe1; eauto.
-      * cset_tac. right; exploit IHe2; eauto.
-    + case_eq (undef e1); case_eq (undef e2); intros;
-      rewrite H1 in H; rewrite H2 in H; simpl in H;
-      inversion H; rewrite <- H4 in *.
-      * simpl in H0; cset_tac. destruct H0.
-        { left; exploit IHe1; eauto. }
-        { right; exploit IHe2; eauto. }
-      * cset_tac. left; exploit IHe1; eauto.
-      * cset_tac. right; exploit IHe2; eauto.
-    + case_eq (undef e1); case_eq (undef e2); intros;
-      rewrite H1 in H; rewrite H2 in H; simpl in H;
-      inversion H; rewrite <- H4 in *.
-      * simpl in H0; cset_tac. destruct H0.
-        { left; exploit IHe1; eauto. }
-        { right; exploit IHe2; eauto. }
-      * cset_tac. left; exploit IHe1; eauto.
-      * cset_tac. right; exploit IHe2; eauto.
-    +case_eq (undef e1); case_eq (undef e2); intros;
-      rewrite H1 in H; rewrite H2 in H; simpl in H;
-      inversion H; rewrite <- H4 in *.
-      * simpl in H0; cset_tac. destruct H0.
-        destruct H0; try isabsurd.
-        { right; eauto. }
-        { destruct H0.
-          -  left; exploit IHe1; eauto.
-          - right; exploit IHe2; eauto. }
-      *  simpl in H0. cset_tac. destruct H0. destruct H0; try isabsurd.
-         right; eauto.
-         { left; exploit IHe1; eauto. }
-      * simpl in H0. cset_tac. destruct H0. destruct H0; try isabsurd.
-        { right; eauto. }
-        { right; exploit IHe2; eauto. }
-      * simpl in H0. cset_tac. destruct H0; try isabsurd.
-        right; eauto.
-    + case_eq (undef e1); case_eq (undef e2); intros;
-      rewrite H1 in H; rewrite H2 in H; simpl in H;
-      inversion H; rewrite <- H4 in *.
-      * simpl in H0; cset_tac. destruct H0.
-        { destruct H0; isabsurd. right; eauto. }
-        {  destruct H0.
-           - left; exploit IHe1; eauto.
-           - right; exploit IHe2; eauto.  }
-      * simpl in H0. clear H4. cset_tac. destruct H0.
-        { destruct H0; eauto; isabsurd. }
-        { left; exploit IHe1; eauto. }
-      * simpl in H0. clear H4. cset_tac. destruct H0.
-        { destruct H0; eauto; isabsurd. }
-        { right; exploit IHe2; eauto. }
-      * simpl in *.  cset_tac; destruct H0; eauto; isabsurd.
+  intros. general induction e; simpl in * |- *; cset_tac; intuition.
+  - repeat (destruct if in H; unfold combine in *; simpl in *; cset_tac); eauto; intuition.
 Qed.
 
 Lemma freeVars_undefLift:
-forall a el ul,
-undefLift el = Some ul
--> a ∈  freeVars ul
+forall a el,
+  a ∈ freeVars (undefLift el)
 -> a ∈ list_union (List.map Exp.freeVars el).
 
 Proof.
-  intros a el ul udef inclFV.
-  general induction el.
+  intros a el inclFV.
+  general induction el; simpl in * |- *; eauto.
   - unfold list_union. simpl in *.
     eapply list_union_start_swap.
-    case_eq (undef a); case_eq (undefLift el); intros;
-    rewrite H, H0 in udef; inversion udef;
-    rwsimplB H2 inclFV; cset_tac; eauto.
-    +destruct inclFV; eauto.
-       left; right; eapply (freeVars_undef) in H1; eauto.
-    + left; right; eapply (freeVars_undef) in inclFV; eauto.
+    unfold combine in *.
+    repeat (destruct if in inclFV); simpl in *; cset_tac; intuition (eauto using freeVars_undef).
 Qed.
 
   (*

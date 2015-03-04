@@ -1,5 +1,5 @@
 Require Import List EqNat Bool.
-Require Import IL Exp Val bitvec.
+Require Import IL Exp Val bitvec DecSolve.
 
 Set Implicit Arguments.
 
@@ -63,6 +63,17 @@ Inductive smt :Type :=
 | smtFalse: smt
 (** Constant true **)
 | smtTrue:smt.
+
+Instance smt_eq_dec (s t:smt) : Computable (s = t).
+Proof.
+  general induction s; destruct t; try dec_solve;
+  try (decide (s1 = t1); decide (s2 = t2); subst; eauto; try dec_solve);
+  try (decide (s = t); subst; eauto; try dec_solve).
+  - decide (e = e0); subst; dec_solve.
+  - decide (e = e1); decide (e0 = e2); subst; dec_solve.
+  - decide (p = p0); decide (a = a0); subst; dec_solve.
+Qed.
+
 
 (** Now define the parameters for the translation function **)
 Inductive pol:Type :=
