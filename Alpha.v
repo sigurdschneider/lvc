@@ -232,15 +232,15 @@ Proof.
   hnf; intros; firstorder.
 Qed.
 
-Inductive approx : list (env var * env var) -> F.block -> F.block ->  Prop :=
-| EA2_cons Ral ra ira E E' s s' Z Z'
+Inductive approx : F.block -> F.block ->  Prop :=
+| EA2_cons ra ira E E' s s' Z Z'
   : length Z = length Z'
   -> alpha (ra [ Z <-- Z']) (ira [ Z' <-- Z ]) s s'
   -> envCorr ra ira E E'
-  -> approx ((ra, ira)::Ral) (F.blockI E Z s) (F.blockI E' Z' s').
+  -> approx (F.blockI E Z s) (F.blockI E' Z' s').
 
-Lemma approx_refl Ral b
-  : approx ((id,id)::Ral) b b.
+Lemma approx_refl b
+  : approx b b.
 Proof.
   destruct b. econstructor; eauto.
   rewrite update_with_list_id. eapply alpha_refl.
@@ -307,9 +307,9 @@ Qed.
 
 
 Inductive alphaSim : F.state -> F.state -> Prop :=
- | alphaSimI ra ira s s' L L' E E' Ral
+ | alphaSimI ra ira s s' L L' E E'
   (AE:alpha ra ira s s')
-  (EA:AIR3 approx Ral L L')
+  (EA:PIR2 approx L L')
   (EC:envCorr ra ira E E')
    : alphaSim (L, E, s) (L', E', s').
 
@@ -324,20 +324,22 @@ Proof.
   - destruct (get_dec L (counted l)) as [[[Eb Zb sb]]|].
     decide (length Zb = length Y).
     case_eq (omap (exp_eval E) X); intros.
-    + provide_invariants_3. simpl in *.
+    + edestruct PIR2_nth; eauto; dcr. inv H4.
+      simpl in *.
       one_step; simpl; try congruence; eauto.
       erewrite omap_agree_2; eauto. intros. symmetry.
       eapply alpha_exp_eval. eapply H0; eauto; eauto. hnf; intros; eauto.
-      simpl. eapply alphaSim_sim; econstructor; eauto.
+      simpl. eapply alphaSim_sim; econstructor; eauto using PIR2_drop.
       eapply envCorr_update_list; eauto. exploit omap_length; eauto.
       rewrite map_length. congruence.
     + no_step. erewrite omap_agree_2 in H1; try eapply H.
       erewrite H1 in def. congruence.
       intros. eapply alpha_exp_eval. eapply H0; eauto. eauto.
-    + provide_invariants_3; simpl in *. no_step. simpl in *.
+    + edestruct PIR2_nth; eauto; dcr. inv H3.
+      no_step. simpl in *.
       get_functional; subst. simpl in *. congruence.
       get_functional; subst. simpl in *. congruence.
-    + no_step; eauto. provide_invariants_3; eauto.
+    + no_step; eauto. edestruct PIR2_nth_2; eauto; dcr. eauto.
   - case_eq (exp_eval E e); intros.
     one_step. erewrite <- alpha_exp_eval; eauto.
     eapply alphaSim_sim; econstructor; eauto using envCorr_update.
