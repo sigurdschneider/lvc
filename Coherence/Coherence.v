@@ -1,7 +1,8 @@
 Require Import CSet Le.
 
 Require Import Plus Util AllInRel Map.
-Require Import Val Var Env EnvTy IL Annotation Liveness Restrict Bisim MoreExp SetOperations DecSolve RenamedApart.
+Require Import Val Var Env EnvTy IL Annotation Liveness Restrict Bisim MoreExp SetOperations.
+Require Import DecSolve RenamedApart LabelsDefined.
 
 Set Implicit Arguments.
 
@@ -270,6 +271,82 @@ Proof.
     + econstructor. econstructor. eauto.
   - econstructor; eauto. econstructor.
 Qed.
+
+Lemma renamedApart_live s ang DL
+: renamedApart s ang
+  -> paramsMatch s (List.map (snd ∘ @length _) DL)
+  -> live_sound Functional DL s (mapAnn fst ang).
+Proof.
+  intros. general induction H; invt paramsMatch; simpl.
+  - econstructor; eauto using live_exp_sound_incl, live_freeVars.
+    rewrite getAnn_mapAnn, H2. simpl; cset_tac; intuition.
+  - econstructor; eauto using live_exp_sound_incl, live_freeVars.
+    rewrite getAnn_mapAnn, H4. simpl; cset_tac; intuition.
+    rewrite getAnn_mapAnn, H5. simpl; cset_tac; intuition.
+  - econstructor; eauto using live_exp_sound_incl, live_freeVars.
+  - inv_map H4. destruct x; unfold comp in H5; simpl in *.
+    econstructor; simpl; eauto.
+    + intros. eapply live_exp_sound_incl, live_freeVars.
+      rewrite <- H. eapply get_list_union_map; eauto.
+  - econstructor; eauto.
+    intros. eapply live_exp_sound_incl, live_freeVars.
+    rewrite <- H0. eapply get_list_union_map; eauto.
+    rewrite getAnn_mapAnn, H2. simpl; cset_tac; intuition.
+  - econstructor; eauto.
+    + rewrite getAnn_mapAnn, H3; simpl. cset_tac; intuition.
+    + destruct if; eauto. rewrite getAnn_mapAnn, H3; simpl. cset_tac; intuition.
+    + rewrite getAnn_mapAnn, H5; simpl. reflexivity.
+Qed.
+
+Lemma renamedApart_coherent s ang DL
+: renamedApart s ang
+  -> labelsDefined s (length DL)
+  -> bounded (List.map Some DL) (fst (getAnn ang))
+  -> srd (List.map Some DL) s (mapAnn fst ang).
+Proof.
+  intros. general induction H; invt labelsDefined; simpl.
+  - econstructor; eauto.
+    eapply srd_monotone.
+    eapply IHrenamedApart; eauto.
+    rewrite H2. simpl in *. rewrite <- incl_add'; eauto.
+    erewrite bounded_restrict_eq; simpl; eauto. reflexivity.
+    simpl. cset_tac; intuition.
+  - econstructor; eauto.
+    + eapply IHrenamedApart1; eauto.
+      rewrite H4; eauto.
+    + eapply IHrenamedApart2; eauto.
+      rewrite H5; eauto.
+  - econstructor.
+  - edestruct get_in_range as [a ?]; eauto.
+    econstructor. eapply map_get_1; eauto.
+  - econstructor; eauto.
+    eapply srd_monotone.
+    eapply IHrenamedApart; eauto.
+    rewrite H2. simpl in *. rewrite <- incl_add'; eauto.
+    erewrite bounded_restrict_eq; simpl; eauto. reflexivity.
+    simpl. cset_tac; intuition.
+  - econstructor.
+    + eapply srd_monotone.
+      eapply (IHrenamedApart1 (D::DL)); eauto using labelsDefined.
+      rewrite H3. simpl in *. rewrite <- incl_right.
+      split; eauto; reflexivity.
+      rewrite getAnn_mapAnn; simpl.
+      destruct if.
+      * econstructor. econstructor. rewrite H3; simpl.
+        cset_tac; intuition; eauto.
+        simpl in *. rewrite H3; simpl.
+        erewrite bounded_restrict_eq; simpl; eauto. reflexivity.
+        simpl. cset_tac; intuition; eauto.
+      * exfalso. eapply n. rewrite H3; simpl. reflexivity.
+    + eapply srd_monotone.
+      eapply (IHrenamedApart2 (D::DL)); eauto using labelsDefined.
+      rewrite H5. simpl; intuition.
+      rewrite getAnn_mapAnn; simpl.
+      econstructor. econstructor. rewrite H3; simpl.
+      cset_tac; intuition; eauto.
+      reflexivity.
+Qed.
+
 
 Definition invariant (s:stmt) :=
   forall (E:onv var), bisim (nil:list F.block,E,s) (nil:list I.block,E,s).
