@@ -24,6 +24,27 @@ Inductive labelsDefined : stmt -> nat -> Prop :=
       -> labelsDefined t (S L)
       -> labelsDefined (stmtFun Z s t) L.
 
+Inductive paramsMatch : stmt -> list nat -> Prop :=
+  | paramsMatchExp x e s L
+    : paramsMatch s L
+      -> paramsMatch (stmtLet x e s) L
+  | paramsMatchIf e s t L
+    : paramsMatch s L
+      -> paramsMatch t L
+      -> paramsMatch (stmtIf e s t) L
+  | paramsMatchRet e L
+    : paramsMatch (stmtReturn e) L
+  | paramsMatchGoto f Y L n
+    : get L (counted f) n
+      -> length Y = n
+      -> paramsMatch (stmtApp f Y) L
+  | paramsMatchExtern x f Y s L
+    : paramsMatch s L
+      -> paramsMatch (stmtExtern x f Y s) L
+  | paramsMatchLet s t Z L
+    :  paramsMatch s (length Z::L)
+      -> paramsMatch t (length Z::L)
+      -> paramsMatch (stmtFun Z s t) L.
 
 (*
 *** Local Variables: ***
