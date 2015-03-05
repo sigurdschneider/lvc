@@ -24,73 +24,78 @@ Proof.
     rewrite H4, H8 in H6.
     specialize (IHnfS an (Ds ++ {x; {}}) (Ds') p H5 H6).
     cset_tac.
-    case_eq (undef e); intros; rwsimpl H1 H0;
-    cset_tac.
-    + destruct p; simpl in *; cset_tac.
-      * destruct H0 as [guardVars | [ [ varx | expVars ] | ind]]; eauto.
+    destruct p.
+    + unfold guardGen in H0.
+      destruct if in H0; simpl in H0; cset_tac.
+       * destruct H0 as [ [varx | expVars] | ind]; eauto.
+         { rewrite <- varx.
+           pose proof (ssa_incl H5). rwsimpl H6 H0.
+           eapply H0; cset_tac; eauto. }
+         { eapply H8; eapply H; eauto. }
+       * destruct H0 as [guardVars | [ [ varx | expVars ] | ind]]; eauto.
         { eapply (freeVars_undef) in guardVars; eauto.
         eapply H8. eapply H; eauto. }
         { rewrite <- varx.
          pose proof (ssa_incl H5). rwsimpl H6 H0.
          eapply H0; cset_tac; eauto. }
         { eapply H8. eapply H; eauto. }
-      * destruct H0 as [guardVars | [ [ varx | expVars ] | ind]]; eauto.
+     + unfold guardGen in H0; destruct if in H0; simpl in H0; cset_tac.
+         * destruct H0 as [ [varx | expVars] | ind]; eauto.
+           { rewrite <- varx.
+             pose proof (ssa_incl H5). rwsimpl H6 H0.
+             eapply H0; cset_tac; eauto. }
+           { eapply H8; eapply H; eauto. }
+         * destruct H0 as [guardVars | [ [ varx | expVars ] | ind]]; eauto.
         { eapply (freeVars_undef) in guardVars; eauto.
         eapply H8. eapply H; eauto. }
         { rewrite <- varx.
          pose proof (ssa_incl H5). rwsimpl H6 H0.
          eapply H0; cset_tac; eauto. }
         { eapply H8. eapply H; eauto. }
-    + destruct H0 as [ [varx | expVars] | ind]; eauto.
-       * rewrite <- varx.
-         pose proof (ssa_incl H5). rwsimpl H6 H0.
-         eapply H0; cset_tac; eauto.
-       * eapply H8; eapply H; eauto.
-  -  pose proof (ssa_incl ssaS); simpl in *.
+    -  pose proof (ssa_incl ssaS); simpl in *.
      rewrite <- H3 in *.
      specialize (IHnfS1 ans (Ds0 ∩ Dt) Ds0 p H5 H8).
      specialize (IHnfS2 ant (Ds0 ∩ Dt) Dt p H6 H9).
      cset_tac.
-     case_eq (undef e); intros; simpl; rewrite H1 in *; simpl in *;
-     cset_tac.
-     + destruct p; simpl in *; cset_tac.
-       * destruct H0 as [ guardVars | [[indS | indT ] |  expVars ]].
-         { eapply (freeVars_undef) in guardVars; eauto.
-         eapply H11; eapply H; eapply H2; eauto. }
-         { eapply H11; eapply H4; left; eapply IHnfS1; eauto. }
-         { eapply H11; eapply H4; right; eapply IHnfS2; eauto. }
-         { eapply H11; eapply H; eapply H2; eauto. }
-       * destruct H0 as [ guardVars | [[indS | indT ] |  expVars ]].
-         { eapply (freeVars_undef) in guardVars; eauto.
-         eapply H11; eapply H; eapply H2; eauto. }
-         { eapply H11; eapply H4; left; eapply IHnfS1; eauto. }
-         { eapply H11; eapply H4; right; eapply IHnfS2; eauto. }
-         { eapply H11; eapply H; eapply H2; eauto. }
-     + destruct H0 as [ [indS | indT] | expVars].
-       * eapply H11; eapply H4; left; eapply IHnfS1; eauto.
-       * eapply H11; eapply H4; right; eapply IHnfS2; eauto.
-       * eapply H11; eapply H; eapply H2; eauto.
+     destruct p.
+     + unfold guardGen in H0; destruct if in H0; simpl in H0; cset_tac.
+         * destruct H0 as [ [indS | indT] | expVars].
+           { eapply H11; eapply H4; left; eapply IHnfS1; eauto. }
+           { eapply H11; eapply H4; right; eapply IHnfS2; eauto. }
+           { eapply H11; eapply H; eapply H2; eauto. }
+         * destruct H0 as [ guardVars | [[indS | indT ] |  expVars ]].
+           { eapply (freeVars_undef) in guardVars; eauto.
+             eapply H11; eapply H; eapply H2; eauto. }
+           { eapply H11; eapply H4; left; eapply IHnfS1; eauto. }
+           { eapply H11; eapply H4; right; eapply IHnfS2; eauto. }
+           { eapply H11; eapply H; eapply H2; eauto. }
+      +  unfold guardGen in H0; destruct if in H0; simpl in H0; cset_tac.
+         * destruct H0 as [ [indS | indT] | expVars].
+           { eapply H11; eapply H4; left; eapply IHnfS1; eauto. }
+           { eapply H11; eapply H4; right; eapply IHnfS2; eauto. }
+           { eapply H11; eapply H; eapply H2; eauto. }
+         * destruct H0 as [ guardVars | [[indS | indT ] |  expVars ]].
+           { eapply (freeVars_undef) in guardVars; eauto.
+             eapply H11; eapply H; eapply H2; eauto. }
+           { eapply H11; eapply H4; left; eapply IHnfS1; eauto. }
+           { eapply H11; eapply H4; right; eapply IHnfS2; eauto. }
+           { eapply H11; eapply H; eapply H2; eauto. }
   - pose proof (ssa_incl ssaS);  simpl in *.
     cset_tac.
     eapply H6; eapply H; eapply H1.
     destruct p; simpl in *; cset_tac.
-    + case_eq (undefLift Y); intros; rewrite H2 in *;
-      simpl in *; eauto.
-      cset_tac.
-      destruct H0; eauto using freeVars_undefLift.
-    + case_eq (undefLift Y); intros; rewrite H2 in *;
-      simpl in *; eauto; cset_tac.
-      destruct H0; eauto using freeVars_undefLift.
+    + unfold guardGen in H0; destruct if in H0; simpl in H0; cset_tac; eauto.
+       * destruct H0; eauto using freeVars_undefLift.
+    + unfold guardGen in H0; destruct if in H0; simpl in H0; cset_tac; eauto.
+       * destruct H0; eauto using freeVars_undefLift.
   - pose proof (ssa_incl ssaS); simpl in *.
     cset_tac.
     eapply H6; eapply H; eapply H0.
-    case_eq (undef e); intros; rewrite H3 in *;
-    destruct p;
-    simpl in *; eauto.
-    + cset_tac.
-      destruct H2; eauto using freeVars_undef.
-    + cset_tac.
-      destruct H2; eauto using freeVars_undef.
+    destruct p; simpl in *; cset_tac.
+   +  unfold guardGen in H2; destruct if in H2; simpl in H2; cset_tac; eauto.
+        destruct H2; eauto using freeVars_undef.
+   +  unfold guardGen in H2; destruct if in H2; simpl in H2; cset_tac; eauto.
+        destruct H2; eauto using freeVars_undef.
 Qed.
 
 (** Lemma 12 in the thesis
@@ -105,24 +110,25 @@ forall L D E E' s s' pol P Q,
 ->Terminates (L, E, s) (L, E', s')
 -> exists Q', (forall F, models F (to_total E')  Q' ) /\
               freeVars Q' ⊆  snd(getAnn D) /\
-              (forall F E, models F E (smtAnd Q Q') -> ~ models F E (smtAnd (translateStmt s' pol) P)).
+              (forall F E, models F (to_total E) (smtAnd Q Q')
+                           -> ~ models F (to_total E) (smtAnd (translateStmt s' pol) P)).
 
 Proof.
 intros. general induction H2.
 - simpl in *. destruct pol.
   + inversion H1. simpl in *.  exists (smtTrue). simpl. split; eauto; split; cset_tac.
     * exfalso; assumption.
-    * specialize (H0 F E H3). assumption.
+    * specialize (H0 F (to_total E) H3). assumption.
   + inversion H1. simpl in *; exists (smtTrue). simpl. split; eauto; split; cset_tac.
     * exfalso; assumption.
-    * specialize (H0 F E H3); assumption.
+    * specialize (H0 F (to_total E) H3); assumption.
 -  simpl in *; destruct pol.
    + inversion H1. simpl in *. exists (smtTrue). simpl; split; eauto; split; cset_tac.
      * exfalso; assumption.
-     * specialize (H0 F E H3). assumption.
+     * specialize (H0 F (to_total E) H3). assumption.
    + inversion H1; simpl in *; exists (smtTrue). simpl; split; eauto; split; cset_tac.
      * exfalso; assumption.
-     * specialize (H0 F E H3); assumption.
+     * specialize (H0 F (to_total E) H3); assumption.
 - simpl in *.  inv H.
   + simpl in *. inv H3.
     specialize (IHTerminates L' an (E0[x <- Some v]) E'0 s' s'0).
@@ -132,7 +138,9 @@ intros. general induction H2.
       { specialize (H1 F E). destruct H5 as [H5 H5'].
         specialize (H1 H5).  hnf in H0; hnf; intros.
         eapply H1. destruct H7. split; simpl; eauto.
-        destruct (undef e); simpl in *; eauto. destruct H5'.
+        eapply models_guardGen_source; simpl.
+        eapply models_guardGen_source in H5'.
+        simpl in H5'; destruct H5'.
         split; eauto. }
       { exists (smtAnd Q' (guardGen (undef e) source (constr (Var x) e))).
         simpl in *. intros.
@@ -156,32 +164,30 @@ intros. general induction H2.
               erewrite exp_eval_partial_total; eauto.
               erewrite exp_eval_partial_total; eauto.
               eapply bvEq_equiv_eq. reflexivity.
-           + case_eq (undef e); intros; simpl.
-             * split; eauto.
+           + eapply models_guardGen_source; simpl; split; eauto.
                eapply (guard_true_if_eval _ _ e); eauto.
                eapply (exp_eval_agree (E:=E0)); eauto. hnf; intros.
                eapply (term_ssa_eval_agree); eauto; econstructor; eauto.
-             * simpl in *; assumption.
         - hnf. intros. hnf in H9. specialize (H9 a).  eapply ssa_incl in H11. hnf in H11. specialize (H11 a).
           simpl in H11. hnf in IHT2. specialize (IHT2 a). cset_tac. destruct H5.
           +  rewrite H12 in IHT2. exact (IHT2 H5).
-          + rewrite H12 in H11. apply H11.  simpl.  cset_tac.  case_eq (undef e); intros.
-            * rewrite H7 in H5. simpl in H5. cset_tac. destruct H5; eauto.
-              { left; eapply H9. eapply (freeVars_undef _ _ _ H7 H5). }
-              { destruct H5.
-                - rewrite H5. right; reflexivity.
-                - left; eapply H9. assumption. }
-            * rewrite H7 in H5. simpl in H5.  cset_tac. destruct H5.
-              { rewrite H5. right; reflexivity. }
-              { left; eapply H9; eauto. }
+          + rewrite H12 in H11. apply H11.  simpl.  cset_tac.
+              unfold guardGen in H5. destruct if in H5.
+              * simpl in H5. cset_tac. destruct H5; eauto.
+              * simpl in H5; cset_tac; destruct H5; eauto.
+                { left; eapply H9. eapply (freeVars_undef); eauto. }
+                { destruct H5.
+                  - rewrite H5. right; reflexivity.
+                   - left; eapply H9. assumption. }
         - intros. eapply IHT3. destruct H5 as [H5 [H5' H5'']]; split; eauto; split; eauto.
       }
     * specialize (IHTerminates target P (smtAnd Q (guardGen (undef e) target (constr (Var x) e)))).
       destruct IHTerminates as [Q' IHT]; intros; eauto; simpl in *.
       { specialize (H1 F E). destruct H5 as [H5 H5']. specialize (H1 H5).  hnf in H1; hnf; intros.
         eapply H1. destruct H7. split; simpl; eauto.
-        destruct (undef e); simpl in *; dcr; intuition.
-      }
+        eapply models_guardGen_target; simpl; intros; simpl in *.
+        eapply models_guardGen_target in H5'; simpl in *.
+        split; eauto. }
       { exists (smtAnd Q' (guardGen (undef e) target (constr (Var x) e))).
         simpl in *. intros.
         destruct IHT as [IHT1 [ IHT2 IHT3 ]].
@@ -203,25 +209,27 @@ intros. general induction H2.
               unfold smt_eval.
               repeat erewrite exp_eval_partial_total; eauto.
               eapply bvEq_equiv_eq. reflexivity.
-           + case_eq (undef e); intros; simpl.
-             * intros; eauto.
-             * simpl in H5. assumption.
-        - hnf. intros. hnf in H9. specialize (H9 a).  eapply ssa_incl in H11. hnf in H11. specialize (H11 a).
-          simpl in H11. hnf in IHT2. specialize (IHT2 a). cset_tac. destruct H5.
+           + eapply models_guardGen_target; simpl in *; intros; eauto.
+        - hnf. intros. hnf in H9. specialize (H9 a).
+          eapply ssa_incl in H11. hnf in H11. specialize (H11 a).
+          simpl in H11. hnf in IHT2. specialize (IHT2 a).
+          cset_tac. destruct H5.
           +  rewrite H12 in IHT2. exact (IHT2 H5).
-          +  case_eq (undef e); intros.
-            * rewrite H7 in H5. simpl in H5. cset_tac. rewrite H12 in H11.  simpl in H11. apply H11.
-              simpl. cset_tac. destruct H5; eauto.
-              { left. eapply H9. eapply (freeVars_undef _ _ _ H7 H5). }
-              { destruct H5.
-                - rewrite H5; right; reflexivity.
-                - left; eapply H9; eauto. }
-            * rewrite H7 in H5. simpl in H5. cset_tac. rewrite H12 in H11; apply H11.
-              simpl; cset_tac; destruct H5.
-              { rewrite H5; right; reflexivity. }
-              { left; eapply H9; eauto. }
-        - intros. eapply IHT3. destruct H5 as [H5 [H5' H5'']]; split; eauto; split; eauto.
-      }
+          + unfold guardGen in H5.
+            destruct if in H5; simpl in H5; cset_tac;
+            rewrite H12 in H11; simpl in H11.
+           * destruct H5; eapply H11; cset_tac.
+             { right; intuition. }
+             {left; eapply H9; eauto. }
+           *  destruct H5 as [ H5 | [H5 | H5]]; eapply H11; cset_tac.
+               { left; eapply H9. eapply freeVars_undef; eauto. }
+               { right; intuition. }
+               { left; eapply H9; eauto. }
+         - intros; hnf; intros.
+           destruct H5 as [H5 [H5'  H5'']].
+           destruct H7 as [H7 H7'].
+           eapply (IHT3 F E); eauto.
+         }
   + simpl in *; inv H3; inv H4.
     specialize (IHTerminates L' ans E' E'0 s' s'0).
     destruct pol; simpl in *.
@@ -229,13 +237,10 @@ intros. general induction H2.
       destruct IHTerminates as [Q' IHT]; intros; eauto.
       { specialize (H1 F E). destruct H5. specialize (H1 H5). hnf. intros. eapply H1.
         destruct H13; split; eauto.
-        case_eq (undef e); intros; simpl in *.
-        - rewrite H18 in H6; simpl in H6. destruct H6. split; eauto.
-          case_eq (val2bool (smt_eval E e)); intros; eauto.
-          rewrite H20 in H19; intuition.
-        - rewrite H18 in H6. simpl in H6.
-          case_eq (val2bool (smt_eval E e)); intros; eauto.
-          rewrite H19 in H6; intuition.
+        eapply models_guardGen_source; simpl in *; split; eauto.
+        - eapply models_guardGen_source in H6. simpl in H6. destruct H6; eauto.
+        -  eapply models_guardGen_source in H6. simpl in H6. destruct H6.
+           destruct (val2bool (smt_eval E e)); intros; eauto; isabsurd.
       }
       { exists (smtAnd Q' (guardGen (undef e) source (ite e smtTrue smtFalse))).
         simpl in *; intros.
@@ -252,23 +257,21 @@ intros. general induction H2.
               unfold smt_eval.
               erewrite exp_eval_partial_total; eauto.
               rewrite condTrue; econstructor. }
-            case_eq (undef e); intros; eauto.
-            simpl; split; eauto.
+       { eapply models_guardGen_source; simpl; split; eauto.
             eapply (guard_true_if_eval); eauto.
+       }
         - rewrite H14 in IHT2.  cset_tac. hnf in IHT2; simpl in IHT2.  destruct H5.
-          +  eapply H10. left; apply IHT2; assumption.
-          +  case_eq (undef e); intros; simpl in *.
-             * rewrite H6 in H5. simpl in H5. cset_tac.
-               destruct H5 as [ H5 | [[H5 | H5] | H5]]; intuition.
+          + eapply H10. left; apply IHT2; assumption.
+          + unfold guardGen in H5; destruct if in H5; simpl in *; cset_tac;
+              eapply (H10 a).
+             * destruct H5 as [ [H5 | H5] | H5]; try isabsurd.
+               specialize (H8 a H5); rewrite <- H9 in H8; destruct H8; eauto.
+             * destruct H5 as [ H5 | [[H5 | H5] | H5]]; try isabsurd.
                { eapply (freeVars_undef a) in H5; eauto.
                  eapply H10. hnf in H8. specialize (H8 a H5).
-                 rewrite <- (H9 a) in  H8. destruct H8; eauto. }
+                 rewrite <- (H9 a) in  H8. destruct H8; rewrite <- H10; eauto. }
                { hnf in H8. specialize (H8 a H5).
-                 eapply H10; erewrite <- H9 in H8. destruct H8; eauto. }
-             * rewrite H6 in H5. simpl in *. cset_tac.
-               destruct H5 as [[H5 | H5] | H5]; intuition.
-               hnf in H8. specialize (H8 a H5).
-               eapply H10; erewrite <- H9 in H8. destruct H8; eauto.
+                 eapply H10; erewrite <- H9 in H8. destruct H8; rewrite <- H10; eauto. }
         - intros. destruct H5 as [H5 [H5' H5'']].
           hnf. intros.  eapply (IHT3 F E); eauto.
         }
@@ -276,13 +279,10 @@ intros. general induction H2.
       destruct IHTerminates as [Q' IHT]; intros; eauto.
       { specialize (H1 F E). destruct H5. specialize (H1 H5). hnf. intros. eapply H1.
         destruct H13; split; eauto.
-        case_eq (undef e); intros; simpl in *.
-        - rewrite H18 in H6; simpl in H6. destruct H6. intros.
-          case_eq (val2bool (smt_eval E e)); intros; eauto.
-          rewrite H21 in H19; intuition.
-        - rewrite H18 in H6; simpl in H6.
-          case_eq (val2bool (smt_eval E e)); intros; eauto.
-          rewrite H19 in H6; intuition.
+        eapply models_guardGen_target; simpl; intros.
+        eapply models_guardGen_source in H6; simpl in H6.
+        destruct H6.
+        destruct (val2bool (smt_eval E e)); intros; eauto; isabsurd.
       }
       { exists (smtAnd Q' (guardGen (undef e) source (ite e smtTrue smtFalse))).
         simpl in *; intros.
@@ -299,18 +299,20 @@ intros. general induction H2.
               erewrite exp_eval_partial_total; eauto.
               rewrite condTrue; econstructor.
             }
-            case_eq (undef e); intros; eauto.
-            simpl; split; eauto.
-            eapply (guard_true_if_eval); eauto.
+            { eapply models_guardGen_source; simpl; split; eauto.
+            eapply (guard_true_if_eval); eauto. }
         - rewrite H14 in IHT2.  cset_tac. hnf in IHT2; simpl in IHT2.  destruct H5.
           +  eapply H10. left; apply IHT2; assumption.
-          +  case_eq (undef e); intros; simpl in *.
-             * rewrite H6 in H5. simpl in H5. cset_tac. destruct H5 as [ H5 | [[H5 | H5] | H5]]; intuition.
-               { eapply (freeVars_undef a) in H5; eauto. eapply H10. hnf in H8. specialize (H8 a H5).
-                 rewrite <- (H9 a) in  H8. destruct H8; eauto. }
-               { hnf in H8. specialize (H8 a H5). eapply H10; erewrite <- H9 in H8. destruct H8; eauto. }
-             * rewrite H6 in H5. simpl in *. cset_tac. destruct H5 as [[H5 | H5] | H5]; intuition.
-               hnf in H8. specialize (H8 a H5).  eapply H10; erewrite <- H9 in H8. destruct H8; eauto.
+          + unfold guardGen in H5; destruct if in H5; simpl in H5; cset_tac;
+              eapply (H10 a).
+             * destruct H5 as [ [H5 | H5] | H5]; try isabsurd.
+               specialize (H8 a H5); rewrite <- H9 in H8; destruct H8; eauto.
+             * destruct H5 as [ H5 | [[H5 | H5] | H5]]; try isabsurd.
+               { eapply (freeVars_undef a) in H5; eauto.
+                 eapply H10. hnf in H8. specialize (H8 a H5).
+                 rewrite <- (H9 a) in  H8. destruct H8; rewrite <- H10; eauto. }
+               { hnf in H8. specialize (H8 a H5).
+                 eapply H10; erewrite <- H9 in H8. destruct H8; rewrite <- H10; eauto. }
         - intros. destruct H5 as [H5 [H5' H5'']].
           hnf. intros.  eapply (IHT3 F E); eauto.
         }
@@ -321,13 +323,9 @@ intros. general induction H2.
       destruct IHTerminates as [Q' IHT]; intros; eauto.
       { specialize (H1 F E). destruct H5. specialize (H1 H5). hnf. intros. eapply H1.
         destruct H13; split; eauto.
-        case_eq (undef e); intros; simpl in *.
-        - rewrite H18 in H6; simpl in H6. destruct H6. split; eauto.
-          case_eq (val2bool (smt_eval E e)); intros; eauto.
-          rewrite H20 in H19; intuition.
-        - rewrite H18 in H6. simpl in H6.
-          case_eq (val2bool (smt_eval E e)); intros; eauto.
-          rewrite H19 in H6; intuition.
+        eapply models_guardGen_source in H6. simpl in H6; destruct H6.
+        eapply models_guardGen_source; simpl; split; eauto.
+        destruct (val2bool (smt_eval E e)); intros; eauto; isabsurd.
       }
       { exists (smtAnd Q' (guardGen (undef e) source (ite e smtFalse smtTrue))).
         simpl in *; intros.
@@ -343,18 +341,20 @@ intros. general induction H2.
                      erewrite exp_eval_partial_total; eauto.
               rewrite condFalse; econstructor.
             }
-            case_eq (undef e); intros; eauto.
-            simpl; split; eauto.
-            eapply (guard_true_if_eval); eauto.
+            { eapply models_guardGen_source; simpl; split; eauto.
+              eapply (guard_true_if_eval); eauto. }
         - rewrite H15 in IHT2.  cset_tac. hnf in IHT2; simpl in IHT2.  destruct H5.
           +  eapply H10. right; apply IHT2; assumption.
-          +  case_eq (undef e); intros; simpl in *.
-             * rewrite H6 in H5. simpl in H5. cset_tac. destruct H5 as [ H5 | [[H5 | H5] | H5]]; intuition.
-               { eapply (freeVars_undef a) in H5; eauto. eapply H10. hnf in H8. specialize (H8 a H5).
-                 rewrite <- (H9 a) in  H8. destruct H8; eauto. }
-               { hnf in H8. specialize (H8 a H5). eapply H10; erewrite <- H9 in H8. destruct H8; eauto. }
-             * rewrite H6 in H5. simpl in *. cset_tac. destruct H5 as [[H5 | H5] | H5]; intuition.
-               hnf in H8. specialize (H8 a H5).  eapply H10; erewrite <- H9 in H8. destruct H8; eauto.
+          + unfold guardGen in H5; destruct if in H5; simpl in H5; cset_tac;
+              eapply (H10 a).
+             * destruct H5 as [ [H5 | H5] | H5]; try isabsurd.
+               specialize (H8 a H5); rewrite <- H9 in H8; destruct H8; eauto.
+             * destruct H5 as [ H5 | [[H5 | H5] | H5]]; try isabsurd.
+               { eapply (freeVars_undef a) in H5; eauto.
+                 eapply H10. hnf in H8. specialize (H8 a H5).
+                 rewrite <- (H9 a) in  H8. destruct H8; rewrite <- H10; eauto. }
+               { hnf in H8. specialize (H8 a H5).
+                 eapply H10; erewrite <- H9 in H8. destruct H8; rewrite <- H10; eauto. }
         - intros. destruct H5 as [H5 [H5' H5'']].
           hnf. intros.  eapply (IHT3 F E); eauto.
         }
@@ -362,13 +362,9 @@ intros. general induction H2.
       destruct IHTerminates as [Q' IHT]; intros; eauto.
       { specialize (H1 F E). destruct H5. specialize (H1 H5). hnf. intros. eapply H1.
         destruct H13; split; eauto.
-        case_eq (undef e); intros; simpl in *.
-        - rewrite H18 in H6; simpl in H6. destruct H6. intros.
-          case_eq (val2bool (smt_eval E e)); intros; eauto.
-          rewrite H21 in H19; intuition.
-        - rewrite H18 in H6; simpl in H6.
-          case_eq (val2bool (smt_eval E e)); intros; eauto.
-          rewrite H19 in H6; intuition.
+        eapply models_guardGen_source in H6; simpl in H6; destruct H6.
+        eapply models_guardGen_target; simpl; intros.
+        destruct (val2bool (smt_eval E e)); intros; eauto; isabsurd.
       }
       { exists (smtAnd Q' (guardGen (undef e) source (ite e smtFalse smtTrue))).
         simpl in *; intros.
@@ -384,18 +380,21 @@ intros. general induction H2.
               erewrite exp_eval_partial_total; eauto.
               rewrite condFalse; econstructor.
             }
-            case_eq (undef e); intros; eauto.
-            simpl; split; eauto.
+        { eapply models_guardGen_source; simpl; split; eauto.
             eapply (guard_true_if_eval); eauto.
+        }
         - rewrite H15 in IHT2.  cset_tac. hnf in IHT2; simpl in IHT2.  destruct H5.
           +  eapply H10. right; apply IHT2; assumption.
-          +  case_eq (undef e); intros; simpl in *.
-             * rewrite H6 in H5. simpl in H5. cset_tac. destruct H5 as [ H5 | [[H5 | H5] | H5]]; intuition.
-               { eapply (freeVars_undef a) in H5; eauto. eapply H10. hnf in H8. specialize (H8 a H5).
-                 rewrite <- (H9 a) in  H8. destruct H8; eauto. }
-               { hnf in H8. specialize (H8 a H5). eapply H10; erewrite <- H9 in H8. destruct H8; eauto. }
-             * rewrite H6 in H5. simpl in *. cset_tac. destruct H5 as [[H5 | H5] | H5]; intuition.
-               hnf in H8. specialize (H8 a H5).  eapply H10; erewrite <- H9 in H8. destruct H8; eauto.
+          +  unfold guardGen in H5; destruct if in H5; simpl in H5; cset_tac;
+              eapply (H10 a).
+             * destruct H5 as [ [H5 | H5] | H5]; try isabsurd.
+               specialize (H8 a H5); rewrite <- H9 in H8; destruct H8; eauto.
+             * destruct H5 as [ H5 | [[H5 | H5] | H5]]; try isabsurd.
+               { eapply (freeVars_undef a) in H5; eauto.
+                 eapply H10. hnf in H8. specialize (H8 a H5).
+                 rewrite <- (H9 a) in  H8. destruct H8; rewrite <- H10; eauto. }
+               { hnf in H8. specialize (H8 a H5).
+                 eapply H10; erewrite <- H9 in H8. destruct H8; rewrite <- H10; eauto. }
         - intros. destruct H5 as [H5 [H5' H5'']].
           hnf. intros.  eapply (IHT3 F E); eauto.
         }
@@ -420,54 +419,22 @@ intros. decide (e = e').
 - assumption.
 - specialize (H1 (fun _ => fun x =>toBool (bvEq e' (hd (O::nil) x)))).
   specialize (H2 (fun _ => fun x => toBool (bvEq e' (hd (O::nil) x)))).
-  specialize (H2 H1).
-  case_eq (undef es); case_eq (undef et); intros; simpl in H2.
-  + rewrite H3 in H2. rewrite H4 in H2. simpl in H2.
-    pose proof (exp_eval_partial_total E et H).
-    pose proof (exp_eval_partial_total E es H0).
-    exfalso.
-    eapply H2.
-    split; intros; simpl; try split.
-    * unfold smt_eval in H8.
-      rewrite H5 in H8.
-      eapply n.
-      symmetry.
-      eapply (bvEq_equiv_eq e' e); eauto.
-    * eapply guard_true_if_eval; eauto.
-    * unfold smt_eval.  rewrite H6.
+  specialize (H2 H1); simpl in H2.
+  pose proof (exp_eval_partial_total E et H).
+  pose proof (exp_eval_partial_total E es H0).
+  exfalso.
+  eapply H2.
+  erewrite models_guardGen_target at 1.
+  erewrite models_guardGen_source.
+  simpl; split; intros; try split.
+  +unfold smt_eval in H6.
+   rewrite H3 in H6.
+   eapply n.
+   symmetry.
+   eapply (bvEq_equiv_eq e' e); eauto.
+  + eapply guard_true_if_eval; eauto.
+  + unfold smt_eval.  rewrite H4.
       eapply bvEq_refl.
-  + rewrite H3 in H2; rewrite H4 in H2; simpl in H2.
-    unfold smt_eval in H2.
-    erewrite exp_eval_partial_total in H2; eauto.
-    erewrite exp_eval_partial_total in H2; eauto.
-    exfalso.
-    eapply H2.
-    pose proof (bvEq_equiv_eq e' e).
-    split; intros; simpl; try split.
-    * simpl in H6. destruct H5. specialize (H5 H6). eapply n.
-      rewrite H5; eauto.
-    * eapply guard_true_if_eval; eauto.
-    * eapply bvEq_refl.
-  + rewrite H3 in H2; rewrite H4 in H2; simpl in H2.
-    unfold smt_eval in H2.
-    erewrite exp_eval_partial_total in H2; eauto.
-    erewrite exp_eval_partial_total in H2; eauto.
-    exfalso.
-    eapply H2.
-    pose proof (bvEq_equiv_eq e' e).
-    split; intros; simpl; try split.
-    * simpl  in H7. destruct H5. eapply n. rewrite (H5 H7); eauto.
-    * eapply bvEq_refl.
-  + rewrite H3 in H2; rewrite H4 in H2; simpl in H2.
-    unfold smt_eval in H2.
-    erewrite exp_eval_partial_total in H2; eauto.
-    erewrite exp_eval_partial_total in H2; eauto.
-    exfalso.
-    eapply H2.
-    pose proof (bvEq_equiv_eq e' e).
-    split; intros; simpl; try split.
-    * simpl  in H6. destruct H5. eapply n. rewrite (H5 H6); eauto.
-    * eapply bvEq_refl.
 Qed.
 
 Lemma predeval_uneq_goto:
@@ -487,62 +454,25 @@ Proof.
   - assumption.
   - decide (l1 = l2).
     + pose (F:= (fun (_:lab) => fun x => if [ x = el' ] then true else false )).
-    specialize (H2 F). specialize (H1 F). specialize (H2 H1). clear H1.
-    simpl in H2;
-    case_eq (undefLift et); case_eq (undefLift es); intros;
-    rewrite H1 in H2; rewrite H3 in H2; simpl in H2;
-    rewrite e in H2; destruct l2; simpl in H2;
-    erewrite (list_eval_agree _ _ H) in H2;
-    erewrite (list_eval_agree _ _ H0) in H2;
-    simpl in H2.
-      * exfalso. eapply H2.
-        split; intros; simpl; try split.
-        { unfold F in H5. decide (el = el'); isabsurd. }
-        { eapply (guardList_true_if_eval); eauto. }
-        { unfold F. decide (el' = el'); try isabsurd; econstructor; eauto. }
-      * exfalso. eapply H2.
-        split; intros; simpl; try split.
-        { unfold F in H5. decide (el = el'); isabsurd. }
-        { unfold F. decide (el' = el'); try isabsurd; econstructor; eauto. }
-      *exfalso. eapply H2.
-        split; intros; simpl; try split.
-        { unfold F in H4. decide (el = el'); isabsurd. }
-        { eapply (guardList_true_if_eval); eauto. }
-        { unfold F. decide (el' = el'); try isabsurd; econstructor; eauto. }
-      *exfalso. eapply H2.
-        split; intros; simpl; try split.
-        { unfold F in H4. decide (el = el'); isabsurd. }
-        { unfold F. decide (el' = el'); try isabsurd; econstructor; eauto. }
-    + pose (F:= fun l => fun (_:vallst) => if [l = labInc l2 1] then true else false).
+      specialize (H2 F). specialize (H1 F). specialize (H2 H1). clear H1.
+      simpl in H2; exfalso; eapply H2.
+      erewrite models_guardGen_source; erewrite models_guardGen_target.
+      simpl; split; intros; try split.
+      * erewrite (list_eval_agree _ _ H) in H3.
+        unfold F in H3. destruct if in H3; isabsurd.
+      * eapply guardList_true_if_eval; eauto.
+      * unfold F. erewrite (list_eval_agree _ _ H0).
+        destruct if; intuition.
+   + pose (F:= fun l => fun (_:vallst) => if [l = labInc l2 1] then true else false).
       specialize (H1 F); specialize (H2 F).
       specialize (H2 H1).
-      case_eq (undefLift es); case_eq (undefLift et); intros; simpl in H2;
-      rewrite H3 in H2; rewrite H4 in H2; simpl in H2;
-     exfalso; apply H2;
-      split; intros; simpl; try split.
-      * unfold F in H6. decide (labInc l1 1 = labInc l2 1); try isabsurd.
-        { unfold labInc in e. destruct l1; destruct l2; eauto.
-          eapply n0.
-          eapply labeq_incr; eauto. }
-      * eapply (guardList_true_if_eval); eauto.
-      * unfold F.  decide (labInc l2 1 = labInc l2 1);
-                  try isabsurd. econstructor.
-      * unfold F in H5. decide (labInc l1 1 = labInc l2 1); try isabsurd.
-        eapply n0. unfold labInc in e.  destruct l1; destruct l2; eauto.
-        eapply labeq_incr; eauto.
-      * eapply (guardList_true_if_eval); eauto.
-      * unfold F.  decide (labInc l2 1 = labInc l2 1);
-                  try isabsurd; econstructor.
-      * unfold F in H6. decide (labInc l1 1 = labInc l2 1); try isabsurd.
-        eapply n0. unfold labInc in e.  destruct l1; destruct l2; eauto.
-        eapply labeq_incr; eauto.
-      * unfold F.  decide (labInc l2 1 = labInc l2 1);
-                  try isabsurd; econstructor.
-      * unfold F in H5. decide (labInc l1 1 = labInc l2 1); try isabsurd.
-        eapply n0. unfold labInc in e.  destruct l1; destruct l2; eauto.
-        eapply labeq_incr; eauto.
-      * unfold F.  decide (labInc l2 1 = labInc l2 1);
-                  try isabsurd; econstructor.
+      simpl in H2; exfalso; eapply H2.
+      erewrite models_guardGen_source; erewrite models_guardGen_target.
+      simpl; split; intros; try split.
+      * unfold F in H4. destruct if in H4; try isabsurd.
+         eapply n0. destruct l1, l2. eapply labeq_incr; simpl; eauto.
+      * eapply guardList_true_if_eval; eauto.
+      * unfold F. destruct if; intuition.
 Qed.
 
 (** Theorem 2 in the thesis **)
@@ -576,7 +506,7 @@ clear termcrash2.
   destruct H9 as [Q [M [ fvQ modS]]].
   assert (smodS: forall F, forall E0:env val, models F E0 (smtAnd smtTrue Q) ->
        ~  models F E0 (smtAnd (translateStmt t target) (translateStmt s' source) )).
-  + intros. eapply (smtand_neg_comm).  apply (modS F E0 H9).
+  + intros. eapply (smtand_neg_comm).  apply (modS F (to_partial E0) H9).
   + clear modS. clear H8.
     pose proof (unsat_extension L D' E Et t t' target _ (smtAnd smtTrue Q) smodS)
       as modTS.
@@ -636,7 +566,7 @@ clear termcrash2.
                                    then (fun (x:vallst) =>  false)
                                    else (fun (x:vallst) => true))).
        pose (E' := combineEnv Ds' Es Et).
-       specialize (modTS F (to_total E') ).
+       specialize (modTS F E' ).
        eapply modTS.
        { split; try split; eauto.
          - specialize (M F).
@@ -659,64 +589,28 @@ clear termcrash2.
              specialize (H2 x); specialize (H3 x). simpl in H2; simpl in H3.
              rewrite <- H2; eauto; rewrite <- H3; eauto.
            + rewrite <- (H H4); eauto. }
-       { case_eq (undef es); case_eq (undefLift Xt); intros; simpl.
-         - (* assert that guards are true *)
-           assert (models F (to_total E') s1).
-           + unfold E'. rewrite <- combineenv_eql.
+       { erewrite models_guardGen_target.
+         erewrite models_guardGen_source.
+         simpl; split; intros; try split.
+         - unfold F in H4.
+           rewrite <- (beq_nat_refl (labN(labInc ft 1))) in H4; intuition.
+         -  unfold E'. rewrite <- combineenv_eql.
              * eapply (guardTrue_if_Terminates_ret L L _ s); eauto.
-             *  hnf; intros. eapply (freeVars_undef a es s1 H4) in H8.
-                (* freeVars -> Ds' *)
-                pose proof (ssa_move_return D L E s Es es).
-                destruct H9 as [D'' [ssaRet [fstSubset sndSubset]]]; eauto;
-                inversion ssaRet.
-                rewrite H0 in fstSubset, sndSubset; cset_tac; simpl in *.
-                eapply sndSubset. rewrite <- H11. eapply H10; eauto.
-           + split.
-             *  intros.  unfold F in H10.
-                rewrite <- (beq_nat_refl (labN (labInc ft 1))) in H10; isabsurd.
-             * split; eauto. unfold F.
-               simpl; destruct ft; simpl.
-               (* Construct value *)
-               pose proof (terminates_impl_eval L L E s Es es).
-               destruct H9; eauto.
-           -  assert (models F (to_total E') s0).
-           + unfold E'. rewrite <- combineenv_eql.
-             * eapply (guardTrue_if_Terminates_ret L L _ s); eauto.
-             * hnf; intros. eapply (freeVars_undef a es s0 H4) in H8.
+             * hnf; intros. eapply (freeVars_undef a es) in H.
                (* freeVars -> Ds' *)
                pose proof (ssa_move_return D L E s Es es).
-                destruct H9 as [D'' [ssaRet [fstSubset sndSubset]]]; eauto;
+                destruct H4 as [D'' [ssaRet [fstSubset sndSubset]]]; eauto;
                 inversion ssaRet.
                 rewrite H0 in fstSubset, sndSubset; cset_tac; simpl in *.
-                eapply sndSubset. rewrite <- H11. eapply H10; eauto.
-           + split; try split; eauto; intros.
-             * unfold F in H9.
-               rewrite <- (beq_nat_refl (labN(labInc ft 1))) in H9; intuition.
-             * unfold F; simpl; destruct ft; simpl.
-                              (* Construct value *)
-               pose proof (terminates_impl_eval L L E s Es es).
-               destruct H9; eauto.
-         - split; try split; eauto; intros.
-           + unfold F in H9.
-               rewrite <- (beq_nat_refl (labN(labInc ft 1))) in H9; intuition.
-           + unfold F; simpl; destruct ft; simpl.
-                            (* Construct value *)
-               pose proof (terminates_impl_eval L L E s Es es).
-               destruct H8; eauto.
-         - split; try split; eauto; intros.
-           + unfold F in H8.
-               rewrite <- (beq_nat_refl (labN(labInc ft 1))) in H8; intuition.
-           + unfold F; simpl; destruct ft; simpl.
-             (* Construct value *)
-             pose proof (terminates_impl_eval L L E s Es es).
-             destruct H8; eauto.
+                eapply sndSubset. rewrite <- H9. eapply H8; eauto.
+         - unfold F. destruct ft; simpl; eauto.
        }
     * subst. simpl in modTS. exfalso.
       pose (F:= (fun (l:lab) => if (beq_nat (labN l) 0)
                                    then (fun (x:vallst) =>  false)
                                    else (fun (x:vallst) => true))).
        pose (E' := combineEnv Ds' Es Et).
-       specialize (modTS F (to_total E')).
+       specialize (modTS F E').
        eapply modTS.
        { split; try split; eauto.
          - specialize (M F).
@@ -734,61 +628,21 @@ clear termcrash2.
              hnf in H2. hnf in H3. rewrite H0 in H2. rewrite H1 in H3.
              specialize (H2 x); specialize (H3 x). simpl in H2; simpl in H3.
              rewrite <- H2, H3; eauto.
-           +  eapply (H H4); eauto.  }
-       { case_eq (undef et); case_eq (undefLift Xs); intros; simpl.
-         - (* assert that guards are true *)
-           assert (models F (to_total E') s0).
-           + unfold E'. rewrite <- combineenv_eql.
+           +  eapply (H H4); eauto. }
+       { erewrite models_guardGen_target.
+         erewrite models_guardGen_source.
+         simpl; split; intros; try split.
+         - unfold F in H4; eauto.
+         -  unfold E'. rewrite <- combineenv_eql.
              * eapply (guardTrue_if_Terminates_goto L L _ s); eauto.
-             * hnf; intros. eapply (freeVars_undefLift a Xs s0 H) in H8.
+             * hnf; intros. eapply (freeVars_undefLift a Xs) in H.
                (* freeVars -> Ds' *)
                pose proof (ssa_move_goto D L E s Es fs Xs).
-                destruct H9 as [D'' [ssaRet [fstSubset sndSubset]]]; eauto;
+                destruct H4 as [D'' [ssaRet [fstSubset sndSubset]]]; eauto;
                 inversion ssaRet.
                 rewrite H0 in fstSubset, sndSubset; cset_tac; simpl in *.
-                eapply sndSubset. rewrite <- H13. eapply H11; eauto.
-           + split.
-             *  intros. unfold F in H10.
-                intuition.
-             * split; eauto. unfold F.
-               simpl; destruct fs; simpl; econstructor.
-         - assert (models F (to_total E') s0).
-           + unfold E'. rewrite <- combineenv_eqr.
-             * eapply (guardTrue_if_Terminates_ret  L L _ t); eauto.
-             * hnf; intros. cset_tac. eapply (freeVars_undef x et s0 H4) in H9.
-               (* freeVars -> Ds' *)
-               pose proof (ssa_move_return D' L E t Et et H6 H3).
-                destruct H8 as [D'' [ssaRet [fstSubset sndSubset]]]; eauto;
-                inversion ssaRet.
-                rewrite H1 in *. simpl in *.
-                rewrite <- H13 in fstSubset,sndSubset; simpl in fstSubset, sndSubset.
-                assert (x ∈ Dt')
-                  by (eapply sndSubset; rewrite <- H12; eapply H11; eauto).
-                destruct (H7 x); eauto.
-                assert (agree_on eq (fst (getAnn D)) E Es)
-                   by (eapply term_ssa_eval_agree; eauto).
-                assert (agree_on eq (fst (getAnn D')) E Et)
-                  by (eapply term_ssa_eval_agree; eauto).
-                rewrite <- H16, <- H17; eauto.
-                { rewrite H1; simpl. cset_tac; eauto. }
-                { rewrite H0; simpl. cset_tac; eauto. }
-           + split; try split; eauto; intros.
-             unfold F; destruct fs; unfold labInc; simpl; econstructor.
-         - split; try split; eauto; intros.
-           + pose proof (guardTrue_if_Terminates_goto L L E s Es fs ); eauto.
-             unfold E'.
-             rewrite <- combineenv_eql.
-             eapply H8; eauto.
-             (* freeVars -> Ds' *)
-             * pose proof (ssa_move_goto D L E s Es fs Xs).
-                destruct H9 as [D'' [ssaRet [fstSubset sndSubset]]]; eauto;
-                inversion ssaRet.
-                rewrite H0 in fstSubset, sndSubset; cset_tac; simpl in *.
-                eapply sndSubset. rewrite <- H13. eapply H11; eauto.
-                eapply (freeVars_undefLift); eauto.
-           + unfold F; destruct fs; unfold labInc; simpl; eauto.
-         - unfold F; simpl; destruct fs;
-           simpl; econstructor; eauto.
+                eapply sndSubset. rewrite <- H11. eapply H9; eauto.
+         - unfold F. destruct fs; simpl; eauto.
        }
     * subst; eapply sim'_sim.
       eapply sim'_expansion_closed; eauto.
@@ -866,7 +720,7 @@ clear termcrash2.
                        eapply (agree_on_incl (lv:= freeVars Q')); cset_tac; eauto.
                        eapply (agree_on_incl (lv:= snd(getAnn D'))); cset_tac; eauto.
                        Focus 2.
-                       intros. specialize (modTS F (to_total (combineEnv Ds' Es Et))).
+                       intros. specialize (modTS F (combineEnv Ds' Es Et)).
                        simpl in modTS. specialize (modTS H4); eauto.
           - pose proof (omap_length exp val es (exp_eval Es) Xs seval).
             pose proof (omap_length exp val es (exp_eval Et) Xt teval).
@@ -885,7 +739,7 @@ clear termcrash2.
         - no_step; eauto. }
       { exfalso.
       pose (F := (fun l => fun (_:vallst) => if [labInc fs 1 = l] then true else false)).
-      specialize (modTS F (to_total(combineEnv Ds' Es Et))).
+      specialize (modTS F (combineEnv Ds' Es Et)).
       eapply modTS.
       - simpl; split; try split; eauto.
         + pose proof (combineenv_agree Ds' Es Et).
@@ -908,74 +762,22 @@ clear termcrash2.
               rwsimpl H1 H4; rewrite <- H4; cset_tac; eauto. }
           * destruct H4 as [Esx Etx]; rewrite Esx, Etx; eauto.
       - unfold F;  simpl.
-        (* Case_eq over guards *)
-        case_eq (undefLift Xt); case_eq (undefLift Xs); simpl;
-        intros; simpl.
-        + split; intros.
-          * decide (labInc fs 1 = labInc ft 1); eauto.
-            eapply n. destruct fs,ft. simpl in *.
-            pose proof (labeq_incr). specialize (H10 n0 n1 e); eauto.
-          * split.
-            { pose proof (terminates_impl_evalList L L E s Es fs Xs ).
-              destruct H8; eauto.
+        erewrite models_guardGen_source; erewrite models_guardGen_target.
+        simpl. split; intros; simpl; try split.
+        + destruct if in H4; eauto.
+            eapply n. destruct fs,ft. simpl in *; eapply labeq_incr. simpl; eauto.
+        +  pose proof (terminates_impl_evalList L L E s Es fs Xs ).
+              destruct H; eauto.
               eapply guardList_true_if_eval; eauto.
               pose proof (explist_combineenv_eql Xs Ds' Es Et (Some x)).
-              destruct H9; cset_tac; eauto.
+              destruct H4; cset_tac; eauto.
               pose proof (ssa_move_goto D L E s Es fs Xs).
-              destruct H10 as [D'' [ssaRet [fstSubset sndSubset]]]; eauto;
+              destruct H8 as [D'' [ssaRet [fstSubset sndSubset]]]; eauto;
               inversion ssaRet.
               rewrite H0 in fstSubset, sndSubset; cset_tac; simpl in *.
-              eapply sndSubset. rewrite <- H14. eapply H12; eauto. }
-            { (* Construct value *)
-               pose proof (terminates_impl_evalList L L E s Es fs Xs).
-               destruct H8; eauto.
-               pose proof (explist_combineenv_eql Xs  Ds' Es Et (Some x)).
-               destruct H9.
-               - pose proof (ssa_move_goto D L E s Es fs Xs ).
-                  destruct H9 as [D'' [ssaGoto [fstSubset sndSubset]]]; eauto;
-                  inversion ssaGoto.
-                  rewrite H0 in fstSubset, sndSubset; cset_tac; simpl in *.
-                   eapply sndSubset, H13, H11; eauto.
-               - destruct if; isabsurd; econstructor.
-              }
-        + split; intros.
-          * decide (labInc fs 1 = labInc ft 1); eauto.
-            eapply n. destruct fs,ft. simpl in *.
-            pose proof (labeq_incr). specialize (H10 n0 n1 e); eauto.
-          * destruct if; isabsurd; econstructor.
-         + split; intros.
-          * decide (labInc fs 1 = labInc ft 1); eauto.
-            eapply n. destruct fs,ft. simpl in *.
-            pose proof (labeq_incr). specialize (H9 n0 n1 e); eauto.
-          * split.
-            { pose proof (terminates_impl_evalList L L E s Es fs Xs ).
-              destruct H8; eauto.
-              eapply guardList_true_if_eval; eauto.
-              pose proof (explist_combineenv_eql Xs Ds' Es Et (Some x)).
-              destruct H9; cset_tac; eauto.
-              pose proof (ssa_move_goto D L E s Es fs Xs).
-              destruct H10 as [D'' [ssaRet [fstSubset sndSubset]]]; eauto;
-              inversion ssaRet.
-              rewrite H0 in fstSubset, sndSubset; cset_tac; simpl in *.
-              eapply sndSubset. rewrite <- H14. eapply H12; eauto. }
-            {  (* Construct value *)
-               pose proof (terminates_impl_evalList L L E s Es fs Xs).
-               destruct H8; eauto.
-               pose proof (explist_combineenv_eql Xs  Ds' Es Et (Some x)).
-               destruct H9.
-               - pose proof (ssa_move_goto D L E s Es fs Xs ).
-                  destruct H9 as [D'' [ssaGoto [fstSubset sndSubset]]]; eauto;
-                  inversion ssaGoto.
-                  rewrite H0 in fstSubset, sndSubset; cset_tac; simpl in *.
-                   eapply sndSubset, H13, H11; eauto.
-               - destruct if; isabsurd; econstructor.
-            }
-         + split; intros.
-           * decide (labInc fs 1 = labInc ft 1); eauto.
-            eapply n. destruct fs,ft. simpl in *.
-            pose proof (labeq_incr). specialize (H9 n0 n1 e); eauto.
-           * destruct if; isabsurd; econstructor; eauto.
-            }
+              eapply sndSubset. rewrite <- H12. eapply H10; eauto.
+        + destruct if; isabsurd; econstructor.
+      }
 (* s terminiert & t crasht *)
 - pose proof (terminates_impl_models L  s D E s' Es H2 H5 sterm).
   assert (forall x, x ∈ fst(getAnn D') -> exists v, E x = Some v).
@@ -1012,12 +814,13 @@ clear termcrash2.
   destruct H8. destruct H9. unfold failed in H10. eapply simErr; eauto.
 Qed.
 
+(*
 Require Import ExtrOcamlBasic.
 Require Import ExtrOcamlNatInt.
 Require Import String ExtrOcamlString.
 
 Extraction "tval.ml" smtCheck.
-
+*)
 (*
 *** Local Variables: ***
 *** coq-load-path: (("../" "Lvc")) ***
