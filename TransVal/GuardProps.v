@@ -179,6 +179,25 @@ Proof.
          { destructBin b; subst; isabsurd. }
 Qed.
 
+Lemma undefList_models:
+  forall F E el,
+    (forall x, x ∈ list_union (List.map Exp.freeVars el) -> exists v, E x = Some v)
+    -> omap (exp_eval E) el = None
+    -> ~ models F (to_total E) (undefLift el).
+
+Proof.
+  intros.
+  general induction el; simpl in *.
+  - hnf; intros.
+    repeat(rewrite models_combine in H1; simpl in H1).
+    destruct H1.
+    pose proof (undef_models F E a).
+    monad_inv H0; try isabsurd.
+    + eapply H3; eauto.
+      eapply exp_freeVars_list_agree; eauto.
+    + eapply IHel; eauto.
+      eapply exp_freeVars_list_agree; eauto.
+Qed.
 (*
 *** Local Variables: ***
 *** coq-load-path: (("../" "Lvc")) ***
