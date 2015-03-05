@@ -272,7 +272,7 @@ Proof.
   - econstructor; eauto. econstructor.
 Qed.
 
-Lemma renamedApart_live s ang DL
+Lemma renamedApart_live_functional s ang DL
 : renamedApart s ang
   -> paramsMatch s (List.map (snd ∘ @length _) DL)
   -> live_sound Functional DL s (mapAnn fst ang).
@@ -293,6 +293,50 @@ Proof.
     rewrite <- H0. eapply get_list_union_map; eauto.
     rewrite getAnn_mapAnn, H2. simpl; cset_tac; intuition.
   - econstructor; eauto.
+    + rewrite getAnn_mapAnn, H3; simpl. cset_tac; intuition.
+    + destruct if; eauto. rewrite getAnn_mapAnn, H3; simpl. cset_tac; intuition.
+    + rewrite getAnn_mapAnn, H5; simpl. reflexivity.
+Qed.
+
+Lemma renamedApart_live s ang DL i
+: renamedApart s ang
+  -> paramsMatch s (List.map (snd ∘ @length _) DL)
+  -> bounded (List.map (fun x => Some (fst x \ of_list (snd x))) DL) (fst (getAnn ang))
+  -> live_sound i DL s (mapAnn fst ang).
+Proof.
+  intros. general induction H; invt paramsMatch; simpl.
+  - econstructor; eauto using live_exp_sound_incl, live_freeVars.
+    eapply IHrenamedApart; eauto.
+    rewrite H2; simpl. rewrite <- incl_add'; eauto.
+    rewrite getAnn_mapAnn, H2. simpl; cset_tac; intuition.
+  - econstructor; eauto using live_exp_sound_incl, live_freeVars.
+    + eapply IHrenamedApart1; eauto.
+      rewrite H4; simpl; eauto.
+    + eapply IHrenamedApart2; eauto.
+      rewrite H5; simpl; eauto.
+    + rewrite getAnn_mapAnn, H4. simpl; cset_tac; intuition.
+    + rewrite getAnn_mapAnn, H5. simpl; cset_tac; intuition.
+  - econstructor; eauto using live_exp_sound_incl, live_freeVars.
+  - inv_map H5. destruct x; unfold comp in *; simpl in *.
+    econstructor; simpl; eauto.
+    + destruct if; eauto.
+      eapply map_get_1 with (f:=fun x : set var * params => ⎣fst x \ of_list (snd x) ⎦) in H3.
+      eapply bounded_get; eauto.
+    + intros. eapply live_exp_sound_incl, live_freeVars.
+      rewrite <- H. eapply get_list_union_map; eauto.
+  - econstructor; eauto using live_exp_sound_incl, live_freeVars.
+    eapply IHrenamedApart; eauto.
+    rewrite H2; simpl. rewrite <- incl_add'; eauto.
+    intros. eapply live_exp_sound_incl, live_freeVars.
+    rewrite <- H0. eapply get_list_union_map; eauto.
+    rewrite getAnn_mapAnn, H2. simpl; cset_tac; intuition.
+  - econstructor; eauto.
+    + eapply IHrenamedApart1; eauto; simpl.
+      rewrite getAnn_mapAnn, H3; simpl in *.
+      split. cset_tac; intuition. rewrite <- incl_right; eauto.
+    + eapply IHrenamedApart2; eauto; simpl.
+      rewrite getAnn_mapAnn, H3, H5; simpl in *.
+      split. cset_tac; intuition. eauto.
     + rewrite getAnn_mapAnn, H3; simpl. cset_tac; intuition.
     + destruct if; eauto. rewrite getAnn_mapAnn, H3; simpl. cset_tac; intuition.
     + rewrite getAnn_mapAnn, H5; simpl. reflexivity.
@@ -347,6 +391,97 @@ Proof.
       reflexivity.
 Qed.
 
+
+Inductive fstNoneOrR' {X Y:Type} (R:X->Y->Prop)
+  : option X -> Y -> Prop :=
+| fstNone' (y:Y) : fstNoneOrR' R None y
+| bothR' (x:X) (y:Y) : R x y -> fstNoneOrR' R (Some x) y
+.
+
+Definition eqReq := (fstNoneOrR' (fun (s : set var) (t : set var * params) =>
+                                   s [=] fst t \ of_list (snd t))).
+
+Lemma restrict_eqReq DL DL' G
+: PIR2 eqReq DL DL'
+  -> PIR2 eqReq (restrict DL G) DL'.
+Proof.
+  intros. induction H; simpl; econstructor; eauto.
+  unfold restr. destruct pf. constructor.
+  destruct if; eauto. subst. constructor; eauto. constructor.
+Qed.
+
+Lemma restrict_get DL lv n s
+: get (restrict DL lv) n ⎣ s ⎦
+  -> get DL n (Some s) /\ s ⊆ lv.
+Proof.
+  intros. general induction H.
+  - destruct DL; simpl in *; isabsurd.
+    inv Heql. unfold restr in H0. destruct o.
+    destruct if in H0. inv H0.
+    eauto using get. congruence. congruence.
+  - destruct DL; simpl in *; isabsurd.
+    inv Heql. edestruct IHget; eauto.
+    eauto using get.
+Qed.
+
+Lemma srd_globals_live s DL AL alv f
+: live_sound Imperative AL s alv
+  -> srd DL s alv
+  -> PIR2 eqReq DL AL
+  -> isCalled s f
+  -> exists lv, get DL (counted f) (Some lv) /\ lv ⊆ getAnn alv.
+Proof.
+  intros. general induction H0; invt live_sound; invt isCalled; simpl in * |- *.
+  - edestruct IHsrd; eauto using restrict_eqReq.
+    dcr. edestruct restrict_get; eauto.
+    eexists; split; eauto. revert H6; clear_all; cset_tac; intuition; eauto.
+    specialize (H6 a); cset_tac; intuition.
+  - edestruct IHsrd1; eauto. dcr.
+    eexists; split; eauto. rewrite <- H12; eauto.
+  - edestruct IHsrd2; eauto. dcr.
+    eexists; split; eauto. rewrite <- H13; eauto.
+  - eexists; split; eauto.
+    edestruct PIR2_nth; eauto; dcr. get_functional; subst.
+    inv H5; simpl in *. rewrite H6; eauto.
+  - edestruct IHsrd; eauto using restrict_eqReq.
+    dcr. edestruct restrict_get; eauto.
+    eexists; split; eauto. revert H6; clear_all; cset_tac; intuition; eauto.
+    specialize (H6 a); cset_tac; intuition.
+  - edestruct IHsrd1; eauto. econstructor; eauto using restrict_eqReq.
+    destruct if; simpl. econstructor. simpl. reflexivity. econstructor.
+    destruct f; simpl in *. dcr.
+    inv H3.
+    edestruct restrict_get; eauto.
+    edestruct IHsrd2; eauto. econstructor; eauto using restrict_eqReq.
+    econstructor. simpl. reflexivity.
+    simpl in *; dcr. inv H14.
+    eexists; split; eauto. rewrite <- H13, <- H16; eauto.
+  - edestruct IHsrd2; eauto. econstructor; eauto using restrict_eqReq.
+    econstructor. reflexivity.
+    destruct f; simpl in *; dcr.
+    inv H3.
+    eexists; split; eauto. rewrite H4; eauto.
+Qed.
+
+
+(*
+Lemma srd_live s DL AL alv
+: live_sound Imperative AL s alv
+  -> srd DL s alv
+  -> PIR2 eqReq DL AL
+  -> live_sound FunctionalAndImperative AL s alv.
+Proof.
+  intros. general induction H0; invt live_sound; eauto using live_sound, restrict_eqReq.
+  - econstructor; eauto using restrict_eqReq.
+    + eapply IHsrd1; eauto; simpl.
+      econstructor. destruct if; econstructor; simpl; reflexivity.
+      eauto using restrict_eqReq.
+    + eapply IHsrd2; eauto.
+      econstructor; eauto. econstructor; simpl; reflexivity.
+    + simpl. simpl in *.
+
+Qed.
+*)
 
 Definition invariant (s:stmt) :=
   forall (E:onv var), bisim (nil:list F.block,E,s) (nil:list I.block,E,s).
@@ -573,25 +708,6 @@ Lemma drop_strip n L
   : drop n (strip L) = strip (drop n L).
 Proof.
   unfold strip. rewrite drop_map; eauto.
-Qed.
-
-
-Inductive fstNoneOrR' {X Y:Type} (R:X->Y->Prop)
-  : option X -> Y -> Prop :=
-| fstNone' (y:Y) : fstNoneOrR' R None y
-| bothR' (x:X) (y:Y) : R x y -> fstNoneOrR' R (Some x) y
-.
-
-Definition eqReq := (fstNoneOrR' (fun (s : set var) (t : set var * params) =>
-                                   s [=] fst t \ of_list (snd t))).
-
-Lemma restrict_eqReq DL DL' G
-: PIR2 eqReq DL DL'
-  -> PIR2 eqReq (restrict DL G) DL'.
-Proof.
-  intros. induction H; simpl; econstructor; eauto.
-  unfold restr. destruct pf. constructor.
-  destruct if; eauto. subst. constructor; eauto. constructor.
 Qed.
 
 Inductive srdSim : F.state -> I.state -> Prop :=
