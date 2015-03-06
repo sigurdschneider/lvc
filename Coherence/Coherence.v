@@ -463,25 +463,26 @@ Proof.
     eexists; split; eauto. rewrite H4; eauto.
 Qed.
 
-
-(*
-Lemma srd_live s DL AL alv
+Lemma srd_live_functional s DL AL alv
 : live_sound Imperative AL s alv
   -> srd DL s alv
   -> PIR2 eqReq DL AL
+  -> noUnreachableCode s
   -> live_sound FunctionalAndImperative AL s alv.
 Proof.
-  intros. general induction H0; invt live_sound; eauto using live_sound, restrict_eqReq.
-  - econstructor; eauto using restrict_eqReq.
-    + eapply IHsrd1; eauto; simpl.
-      econstructor. destruct if; econstructor; simpl; reflexivity.
-      eauto using restrict_eqReq.
+  intros. general induction H0; invt live_sound; invt noUnreachableCode; simpl in * |- *;
+          eauto using live_sound, restrict_eqReq.
+  - econstructor; eauto.
+    + eapply IHsrd1; eauto.
+      econstructor; eauto using restrict_eqReq.
+      destruct if; econstructor; reflexivity.
     + eapply IHsrd2; eauto.
-      econstructor; eauto. econstructor; simpl; reflexivity.
-    + simpl. simpl in *.
-
+      econstructor; eauto using restrict_eqReq.
+      econstructor; reflexivity.
+    + simpl. edestruct srd_globals_live; eauto.
+      econstructor; eauto. econstructor; reflexivity.
+      dcr. inv H3. rewrite H4; eauto.
 Qed.
-*)
 
 Definition invariant (s:stmt) :=
   forall (E:onv var), bisim (nil:list F.block,E,s) (nil:list I.block,E,s).

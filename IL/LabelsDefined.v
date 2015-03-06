@@ -73,6 +73,26 @@ Inductive isCalled : stmt -> lab -> Prop :=
       -> isCalled (stmtFun Z s t) l.
 
 
+Inductive noUnreachableCode : stmt -> Prop :=
+  | NoUnrechableCodeExp x e s
+    : noUnreachableCode s
+      -> noUnreachableCode (stmtLet x e s)
+  | NoUnrechableCodeIf1 e s t
+    : noUnreachableCode s
+      -> noUnreachableCode t
+      -> noUnreachableCode (stmtIf e s t)
+  | NoUnrechableCodeGoto f Y
+    : noUnreachableCode (stmtApp f Y)
+  | NoUnrechableCodeExtern x f Y s
+    : noUnreachableCode s
+      -> noUnreachableCode (stmtExtern x f Y s)
+  | NoUnrechableCodeLet1 s t Z
+    : noUnreachableCode s
+      -> noUnreachableCode t
+      -> isCalled t (LabI 0)
+      -> noUnreachableCode (stmtFun Z s t).
+
+
 Inductive isFreeLab : stmt -> lab -> Prop :=
   | IsFreeLabExp x e s l
     : isFreeLab s l
