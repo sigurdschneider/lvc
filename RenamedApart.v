@@ -191,7 +191,6 @@ Proof.
       rewrite H12, H13. reflexivity.
 Qed.
 
-
 (*
 *** Local Variables: ***
 *** coq-load-path: (("." "Lvc")) ***
