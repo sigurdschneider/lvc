@@ -220,7 +220,7 @@ Proof.
   eapply bisim_sim. eapply EAE.sim_EAE.
   eapply bisim_sim.
   eapply (@Alpha.alphaSim_sim (nil, E, _) (nil, E, _)).
-  econstructor; eauto using AIR3, Alpha.envCorr_idOn_refl.
+  econstructor; eauto using PIR2, Alpha.envCorr_idOn_refl.
   eapply Alpha.alpha_sym. eapply rename_apart_alpha.
   exploit rename_apart_renamedApart; eauto.
   exploit AllocationAlgo.linear_scan_correct; eauto.
@@ -235,7 +235,7 @@ Proof.
                                rename (CMap.findt x0 0)
              (rename_apart (EAE.compile s)))).
   eapply bisim_sim.
-  eapply Alpha.alphaSim_sim. econstructor; eauto using AIR3.
+  eapply Alpha.alphaSim_sim. econstructor; eauto using PIR2.
   instantiate (1:=id).
   eapply Allocation.ssa_locally_inj_alpha; eauto.
   eapply Liveness.live_sound_overapproximation_F; eauto.
@@ -294,7 +294,7 @@ Proof.
 
   eapply sim_trans with (S2:=F.state).
   eapply bisim_sim.
-  eapply Alpha.alphaSim_sim. econstructor; eauto using rename_apart_alpha, AIR3.
+  eapply Alpha.alphaSim_sim. econstructor; eauto using rename_apart_alpha, PIR2.
   eapply Alpha.alpha_sym. eapply rename_apart_alpha. hnf; intros.
   cbv in H, H1. instantiate (1:=E). congruence.
   eapply sim_trans with (S2:=F.state).
