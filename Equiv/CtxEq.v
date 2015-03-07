@@ -168,80 +168,9 @@ Fixpoint fillC (ctx:stmtCtx) (s':stmtCtx) : stmtCtx :=
   end.
 
 
-Lemma subst_lemma a s s' V E E' Z Z' L1 L2 t
-:
-  ParamRel a Z Z'
-  -> BlockRel a (F.blockI E Z s) (F.blockI E' Z' s')
-  -> paco2 (@bisim_gen F.state _ F.state _) bot2 ((L2 ++ F.blockI E Z s :: L1)%list, V, t)
-         ((L2 ++ F.blockI E' Z' s' :: L1)%list, V, t).
-Proof.
-  revert_all; pcofix CIH; intros.
-  destruct t.
-  - case_eq (exp_eval V e); intros.
-    + pone_step'. eapply CIH; eauto.
-    + pno_step.
-  - case_eq (exp_eval V e); intros.
-    case_eq (val2bool v); intros.
-    + pone_step'; eapply CIH; eauto.
-    + pone_step'; eapply CIH; eauto.
-    + pno_step.
-  - edestruct (get_dec (L2 ++ F.blockI E Z s :: L1) (counted l)) as [[]|].
-    admit. admit.
-  - pno_step.
-  - case_eq (omap (exp_eval V) Y); intros.
-    + pextern_step.
-      * eexists; split.
-        econstructor; eauto.
-        right. eapply CIH; eauto.
-      * eexists; split.
-        econstructor; eauto.
-        right. eapply CIH; eauto.
-    + pno_step.
-  - pone_step'.
-    rewrite cons_app. rewrite (cons_app _ (L2 ++ F.blockI E' Z' s' :: L1)).
-    repeat rewrite app_assoc.
-    eapply CIH; eauto.
-Qed.
-
-
-Lemma simeq_contextual' s s' ctx
-: bisimeqid s s'
-  -> bisimeqid (fill ctx s) (fill ctx s').
-Proof.
-  intros. general induction ctx; simpl; hnf; intros; eauto.
-  - case_eq (exp_eval E e); intros.
-    + one_step. eapply IHctx; eauto.
-    + no_step.
-  - case_eq (exp_eval E e); intros.
-    case_eq (val2bool v); intros.
-    + one_step; eapply IHctx; eauto.
-    + one_step.
-      eapply bisim_refl; eauto.
-    + no_step.
-  - case_eq (exp_eval E e); intros.
-    case_eq (val2bool v); intros.
-    + one_step. eapply bisim_refl; eauto.
-    + one_step; eapply IHctx; eauto.
-    + no_step.
-  - one_step.
-    + admit.
-  - one_step.
-    eapply IHctx; eauto.
-  - case_eq (omap (exp_eval E) e); intros.
-    + extern_step.
-      * eexists; split.
-        econstructor; eauto.
-        eapply IHctx; eauto.
-      * eexists; split.
-        econstructor; eauto.
-        eapply IHctx; eauto.
-    + no_step.
-Qed.
-
-(*
-Lemma simeq_contextual'' s s' ctx
-: bisimeq' bot2 s s'
-  -> bisimeq' bot2 (fill ctx s) (fill ctx s').
+Lemma simeq_contextual' s s' ctx r
+: (forall r, bisimeq' r s s')
+  -> bisimeq' r (fill ctx s) (fill ctx s').
 Proof.
   intros. general induction ctx; simpl; hnf; intros; eauto.
   - case_eq (exp_eval E e); intros.
@@ -255,27 +184,24 @@ Proof.
     + pno_step.
   - case_eq (exp_eval E e); intros.
     case_eq (val2bool v); intros.
-    + pone_step. eapply bisimeq'_refl; eauto.
+    + pone_step.
+      eapply bisimeq'_refl; eauto.
     + pone_step; eapply IHctx; eauto.
     + pno_step.
   - pone_step.
-    + eapply subst_lemma; hnf; intros; eauto.
-      * admit.
-      * eapply bisimeq'_refl; eauto.
-      hnf in H1; dcr; subst.
-      eapply IHctx; eauto.
-      hnf; intros.
-      eapply bisimeq'_refl; eauto.
-      eapply simL_extension'; hnf; intros; eauto.
-      hnf in H1; dcr; subst.
-      eapply IHctx; eauto.
-      hnf; intros. eapply paco2_mon; eauto.
-      eapply H.
+    eapply bisimeq'_refl.
+    eapply simL_extension'; eauto.  Focus 2.
+    instantiate (1:=Z). hnf; intros; simpl; eauto.
+    hnf; intros. split. hnf; intros; eauto.
+    intros. simpl. hnf in H1; dcr; subst.
+    eapply IHctx. eapply H. eauto.
   - pone_step.
-    eapply IHctx; eauto.
-    eapply simL_extension'; hnf; intros; eauto.
-    hnf in H2; dcr; subst.
-    eapply bisimeq'_refl; eauto.
+    eapply IHctx. eauto.
+    eapply simL_extension'; eauto. instantiate (1:=Z).
+    hnf; intros. split. hnf; intros; eauto.
+    intros. simpl. hnf in H1; dcr; subst.
+    eapply bisimeq'_refl. eauto.
+    hnf; simpl; eauto.
   - case_eq (omap (exp_eval E) e); intros.
     + pextern_step.
       * eexists; split.
@@ -285,9 +211,9 @@ Proof.
         econstructor; eauto.
         left. eapply IHctx; eauto.
     + pno_step.
-  - eapply paco2_mon. eapply H; eauto.
+  - eapply H; eauto.
 Qed.
-*)
+
 Lemma fill_fillC C C' s
   :  fill (fillC C C') s = fill C (fill C' s).
 Proof.
