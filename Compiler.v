@@ -237,7 +237,7 @@ Proof.
   eapply bisim_sim.
   eapply Alpha.alphaSim_sim. econstructor; eauto using PIR2.
   instantiate (1:=id).
-  eapply Allocation.ssa_locally_inj_alpha; eauto.
+  eapply Allocation.renamedApart_locally_inj_alpha; eauto.
   eapply Liveness.live_sound_overapproximation_F; eauto.
   eapply AllocationAlgo.linear_scan_renamedApart_agree in EQ1; eauto.
   rewrite fst_renamedApartAnn in EQ1.
