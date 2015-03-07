@@ -6,32 +6,7 @@ Require Import Compute Guards ILFtoSMT tvalTactics TUtil.
 
 Opaque zext.
 
-(* TODO Move *)
-Lemma exp_freeVars_list_agree (E: onv val) e el:
-    (forall x, x ∈ list_union (Exp.freeVars e:: List.map Exp.freeVars el) -> exists v, E x = Some v)
-    ->(forall x, x ∈ Exp.freeVars e -> (exists v, E x = Some v)) /\
-      (forall x, x ∈ list_union (List.map Exp.freeVars el) -> exists v, E x = Some v).
-
-Proof.
-  intros. split;
-  intros; specialize (H x); destruct H; eauto;
-    unfold list_union; simpl;
-    eapply list_union_start_swap;
-    cset_tac; eauto.
-Qed.
-
-
-Lemma exp_freeVars_bin_agree (E:onv val) a b:
-  (forall x, x ∈ (Exp.freeVars a ++ Exp.freeVars b) -> exists v, E x = Some v)
-    ->(forall x, x ∈ Exp.freeVars a -> (exists v, E x = Some v)) /\
-      (forall x, x ∈ Exp.freeVars b -> exists v, E x = Some v).
-
-Proof.
-  intros.
-  split; intros; specialize (H x); destruct H; cset_tac; eauto.
-Qed.
-
-(** Lemma 5 in the thesis.
+(** Lemma 7 in the thesis.
 Proves that whenever an expression evaluates under
 a partial environment, then it's guard must be satisfiable **)
  Lemma guard_true_if_eval:
@@ -43,11 +18,9 @@ Proof.
 intros. general induction e; simpl in *; eauto.
 - monad_inv H.
   eapply IHe; eauto.
-- monad_inv H.
-  destruct if.
-   + erewrite models_combine; simpl; erewrite models_combine; simpl.
-     split; try split; eauto.
-     intros.
+- monad_inv H; destruct if.
+   + repeat( erewrite models_combine; simpl).
+     split; try split; intros; eauto.
      unfold val2bool in H.
      eapply bvEq_equiv_eq in H.
      unfold smt_eval in H.
@@ -58,7 +31,7 @@ intros. general induction e; simpl in *; eauto.
      split; try split; eauto.
 Qed.
 
-(** Lemma 5 in the thesis, lifted to lists **)
+(** Lemma7 in the thesis, lifted to lists **)
 Lemma guardList_true_if_eval:
 forall F E el vl,
 omap (exp_eval E) el = Some vl
@@ -70,7 +43,7 @@ monad_inv H.
 erewrite models_combine; simpl; split; eauto using guard_true_if_eval.
 Qed.
 
-(** Lemma 6 **)
+(** Lemma 8 **)
 Lemma guard_models_impl_eval:
 forall F E e,
 (forall x, x ∈ Exp.freeVars e -> exists v,  E x = Some v)
@@ -104,7 +77,7 @@ Proof.
      case_eq n4; intros; [ isabsurd | eexists; eauto].
 Qed.
 
-(*  Lemma 6**)
+(*  Lemma 8 lifted to lists**)
 Lemma guardlist_impl_eval:
   forall F E el,
     (forall x, x ∈ list_union (List.map Exp.freeVars el) -> exists v,  E x = Some v)
@@ -123,7 +96,7 @@ Proof.
     + rewrite H3; eexists; simpl; eauto.
 Qed.
 
-(** Lemma 7 in thesis **)
+(** Lemma 9 in thesis **)
 Lemma guardTrue_if_Terminates_ret:
 forall L L' E s E' e,
 noFun s
@@ -137,6 +110,7 @@ Proof.
   isabsurd.
 Qed.
 
+(** Lemma 10 **)
 Lemma guardTrue_if_Terminates_goto:
 forall L L' E s E' f el,
 noFun s
@@ -150,7 +124,7 @@ Proof.
   isabsurd.
 Qed.
 
-(** Lemma 9 in the Thesis **)
+(** Lemma 11 in the Thesis **)
 Lemma undef_models:
 forall F E e,
 (forall x, x ∈ Exp.freeVars e -> exists v, E x = Some v)

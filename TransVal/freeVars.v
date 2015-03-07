@@ -1,4 +1,4 @@
-Require Import List smt Exp Util CSet MapAgreement bitvec tvalTactics Val.
+Require Import List smt IL Exp MoreExp Util CSet MapAgreement bitvec tvalTactics Val.
 Require Import OptionMap MoreExp SetOperations.
 
 Fixpoint freeVars (s:smt) :=
@@ -76,6 +76,32 @@ intros agree; general  induction s; simpl in *; try reflexivity.
         unfold list_union.
         eapply union_right; eauto. }
   + rewrite H.  split; eauto.
+Qed.
+
+
+(* TODO Move *)
+Lemma exp_freeVars_list_agree (E: onv val) e el:
+    (forall x, x ∈ list_union (Exp.freeVars e:: List.map Exp.freeVars el) -> exists v, E x = Some v)
+    ->(forall x, x ∈ Exp.freeVars e -> (exists v, E x = Some v)) /\
+      (forall x, x ∈ list_union (List.map Exp.freeVars el) -> exists v, E x = Some v).
+
+Proof.
+  intros. split;
+  intros; specialize (H x); destruct H; eauto;
+    unfold list_union; simpl;
+    eapply list_union_start_swap;
+    cset_tac; eauto.
+Qed.
+
+
+Lemma exp_freeVars_bin_agree (E:onv val) a b:
+  (forall x, x ∈ (Exp.freeVars a ++ Exp.freeVars b) -> exists v, E x = Some v)
+    ->(forall x, x ∈ Exp.freeVars a -> (exists v, E x = Some v)) /\
+      (forall x, x ∈ Exp.freeVars b -> exists v, E x = Some v).
+
+Proof.
+  intros.
+  split; intros; specialize (H x); destruct H; cset_tac; eauto.
 Qed.
 
 (*

@@ -117,7 +117,7 @@ general induction H0; eauto.
       {destruct X; eauto. }
 Qed.
 
-(** Lemma 10 in Thesis
+(** Lemma 13 in Thesis
 Proves that all terminating source translations can be modeled
 with the end environment **)
 Lemma terminates_impl_models :
@@ -465,33 +465,43 @@ Lemma crash_impl_models:
     -> forall F, models F (to_total Es) (translateStmt s target).
 
 Proof.
+  (** induction over Crash **)
   intros. general induction H2; simpl.
+  (** C-Goto **)
   - eapply models_guardGen_target.
     simpl; intros.
     pose proof (undefList_models F E0 Y).
     eapply H5; eauto.
     intros. eapply H1.
     inversion H0; simpl; eauto.
+    (** C-Base **)
   - inversion H4; subst; simpl; eapply models_guardGen_target; simpl; intros; try isabsurd.
+    (** let Statement **)
     +pose proof (nostep_let L0 E0 x e s H0).
         pose proof (undef_models F  E0 e).
         assert (forall x, x ∈ Exp.freeVars e -> exists v, E0 x = Some v).
      * intros; invt ssa. specialize (H3 x0). eapply H3.
        simpl; cset_tac; eauto.
-     * exfalso; eapply H8; eauto.
-    +pose proof (nostep_if L0 E0 e s t H0).
-        pose proof (undef_models F  E0 e).
-        assert (forall x, x ∈ Exp.freeVars e -> exists v, E0 x = Some v).
+      (** Contradiction: The expression does not evaluate, but the guard
+       is satisfiable --> undef_models as contradiction **)
+     * specialize(H8 H9 H7 H6); isabsurd.
+       (** conditional **)
+    + pose proof (nostep_if L0 E0 e s t H0).
+      pose proof (undef_models F  E0 e).
+     assert (forall x, x ∈ Exp.freeVars e -> exists v, E0 x = Some v).
      * intros; invt ssa. eapply (H3 x). simpl; cset_tac; eauto.
-     * exfalso; eapply H9; eauto.
+       (** Same contradiction **)
+     * specialize (H9 H10 H8 H7); isabsurd.
     + pose proof (undef_models F E0 e).
          assert (forall x, x ∈ Exp.freeVars e -> exists v, E0 x = Some v).
         { intros; inversion H2; cset_tac.  simpl in H3. specialize (H3 x).
         destruct H1; eauto. }
        { eapply H7; eauto. }
+       (** C-Step **)
   - destruct sigma' as  [[L E'] sc].
-    destruct s0; intros; subst; simpl in*; invt ssa; invt noFun; invt F.step;
-    subst; simpl; eapply models_guardGen_target; simpl; intros; try isabsurd.
+    inversion H; intros; subst; try isabsurd;
+    invt ssa; invt noFun; subst; simpl;
+    eapply models_guardGen_target; simpl; intros.
     + split.
      Focus 2.
      exploit (IHCrash L L' an sc (E0 [x<-Some v]) Es s'); eauto; intros.

@@ -13,7 +13,7 @@ Inductive noFun : stmt->Prop :=
 |noFunExp e :
  noFun (stmtReturn e).
 
-(** Theorem 1 of the thesis
+(** Lemma 2 of the thesis
 It is decidable wether program leaf crashes or leaf terminates **)
 Lemma noFun_impl_term_crash :
 forall E s,
