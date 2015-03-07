@@ -144,16 +144,34 @@ Proof.
   intros. general induction H; econstructor; eauto.
 Qed.
 
+Definition live_ann_subset (lvZ lvZ' : set var * list var) :=
+  match lvZ, lvZ' with
+    | (lv,Z), (lv',Z') => lv' ⊆ lv /\ Z = Z'
+  end.
+
+Instance live_ann_subset_refl : Reflexive live_ann_subset.
+hnf; intros. destruct x; firstorder.
+Qed.
+
+Instance diff_proper_impl X `{OrderedType X}
+: Proper (flip Subset ==> Subset ==> flip Subset) diff.
+Proof.
+  unfold Proper, respectful, flip; intros.
+  cset_tac; intuition.
+Qed.
+
 Lemma live_sound_monotone i LV LV' s lv
 : live_sound i LV s lv
-  -> PIR2 (fun lvZ lvZ' => fst lvZ' ⊆ fst lvZ /\ snd lvZ = snd lvZ') LV LV'
+  -> PIR2 live_ann_subset LV LV'
   -> live_sound i LV' s lv.
 Proof.
   intros. general induction H; simpl; eauto using live_sound.
   - edestruct PIR2_nth; eauto; dcr; simpl in *.
     destruct x; subst; simpl in *.
     econstructor; eauto.
-    destruct i; simpl; eauto; rewrite H7; eauto.
+    destruct if; simpl in *; eauto; dcr; subst.
+    rewrite <- H0. rewrite <- H4. reflexivity.
+    cset_tac; intuition; eauto.
   - econstructor; eauto 20 using PIR2.
     eapply IHlive_sound1. econstructor; intuition.
     eapply IHlive_sound2. econstructor; intuition.

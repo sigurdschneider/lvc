@@ -2,6 +2,7 @@ Require Import CSet Le.
 
 Require Import Plus Util Map DecSolve.
 Require Import Env EnvTy IL Annotation Liveness Coherence Alpha Restrict RenamedApart.
+Require Import RenamedApart_Liveness.
 
 Set Implicit Arguments.
 
@@ -209,6 +210,55 @@ Proof.
       unfold live_global. simpl. rewrite restrict_not_incl; eauto. simpl.
       econstructor. econstructor. eapply list_eq_fstNoneOrR_incl; eauto.
 Qed.
+
+Lemma locally_inj_subset ϱ s alv alv'
+: locally_inj ϱ s alv
+  -> ann_R Subset alv' alv
+  -> locally_inj ϱ s alv'.
+Proof.
+  intros.
+  general induction H; invt @ann_R; simpl in *; eauto 20 using locally_inj, injective_on_incl.
+  - econstructor; eauto using injective_on_incl.
+    eapply ann_R_get in H7. eapply injective_on_incl; eauto. cset_tac; intuition.
+  - econstructor; eauto using injective_on_incl.
+    eapply ann_R_get in H7. eapply injective_on_incl; eauto. cset_tac; intuition.
+  - econstructor; eauto using injective_on_incl.
+    eapply ann_R_get in H9. eapply injective_on_incl; eauto. rewrite H9; reflexivity.
+Qed.
+
+Lemma bounded_disj Lv u v
+: bounded (live_globals Lv) u
+  -> disj u v
+  -> disjoint (List.map fst Lv) v.
+Proof.
+  general induction Lv; simpl in * |- *; eauto; isabsurd; dcr.
+  - hnf; intros. inv H.
+Admitted.
+
+
+Lemma rename_renamedApart_srd' s ang ϱ (alv:ann (set var)) Lv
+  : renamedApart s ang
+  -> live_sound Imperative Lv s alv
+  -> locally_inj ϱ s alv
+  -> bounded (live_globals Lv) (fst (getAnn ang))
+  -> LabelsDefined.noUnreachableCode s
+  -> srd (map_lookup ϱ (restrict (live_globals Lv) (getAnn alv)))
+        (rename ϱ s)
+        (mapAnn (lookup_set ϱ) alv).
+Proof.
+  intros.
+  exploit live_sound_renamedApart_minus; eauto.
+  eapply renamedApart_live_imperative_is_functional in X; eauto.
+  eapply rename_renamedApart_srd in X; eauto.
+  erewrite getAnn_mapAnn2 in X; eauto using live_sound_annotation, renamedApart_annotation.
+  Focus 2.
+  erewrite getAnn_mapAnn2; eauto using live_sound_annotation, renamedApart_annotation.
+  cset_tac; intuition.
+  Focus 2.
+  eapply locally_inj_subset; eauto. admit.
+  Focus 2. admit.
+  Focus 2. admit.
+Admitted.
 
 
 Open Scope set_scope.

@@ -71,27 +71,6 @@ Proof.
     rewrite fresh_list_length; eauto.
 Qed.
 
-Lemma renamedApart_disj s G
-: renamedApart s G
-  -> disj (fst (getAnn G)) (snd (getAnn G)).
-Proof.
-  intros. general induction H; simpl.
-  - rewrite H3. rewrite H2 in *. simpl in *.
-    revert IHrenamedApart H. unfold disj.
-    clear_all; cset_tac; intuition; cset_tac; eauto.
-  - rewrite H4 in *. rewrite H5 in *. simpl in *.
-    rewrite <- H1. rewrite disj_app; eauto.
-  - rewrite H0. eauto using disj_empty.
-  - rewrite H0. eauto using disj_empty.
-  - rewrite H3. rewrite H2 in *. simpl in *.
-    revert IHrenamedApart H. unfold disj.
-    clear_all; cset_tac; intuition; cset_tac; eauto.
-  - rewrite <- H1. repeat rewrite disj_app.
-    rewrite H3,H5 in *; simpl in *; eauto.
-    split. split; eauto. rewrite incl_right; eauto.
-    symmetry; eauto.
-Qed.
-
 Lemma linear_scan_renamedApart_agree i s al ϱ ϱ' LV alv
       (sd:renamedApart s al)
       (LS:live_sound i LV s alv)

@@ -191,6 +191,27 @@ Proof.
       rewrite H12, H13. reflexivity.
 Qed.
 
+Lemma renamedApart_disj s G
+: renamedApart s G
+  -> disj (fst (getAnn G)) (snd (getAnn G)).
+Proof.
+  intros. general induction H; simpl.
+  - rewrite H3. rewrite H2 in *. simpl in *.
+    revert IHrenamedApart H. unfold disj.
+    clear_all; cset_tac; intuition; cset_tac; eauto.
+  - rewrite H4 in *. rewrite H5 in *. simpl in *.
+    rewrite <- H1. rewrite disj_app; eauto.
+  - rewrite H0. eauto using disj_empty.
+  - rewrite H0. eauto using disj_empty.
+  - rewrite H3. rewrite H2 in *. simpl in *.
+    revert IHrenamedApart H. unfold disj.
+    clear_all; cset_tac; intuition; cset_tac; eauto.
+  - rewrite <- H1. repeat rewrite disj_app.
+    rewrite H3,H5 in *; simpl in *; eauto.
+    split. split; eauto. rewrite incl_right; eauto.
+    symmetry; eauto.
+Qed.
+
 (*
 *** Local Variables: ***
 *** coq-load-path: (("." "Lvc")) ***
