@@ -85,8 +85,8 @@ Qed.
     | G'::DL => disj G' G /\ list_disjoint DL G
   end.*)
 
-Definition disjoint (DL:list (set var)) (G:set var) :=
-  forall n s, get DL n s -> disj s G.
+Definition disjoint (DL:list (option (set var))) (G:set var) :=
+  forall n s, get DL n (Some s) -> disj s G.
 
 Instance disjoint_morphism_subset
   : Proper (eq ==> Subset ==> flip impl) disjoint.
@@ -107,44 +107,59 @@ Definition disj1 (x:set var) (y: set var * set var) := disj x (snd y).
 
 Lemma disjoint_let D D' D'' x (DL:list (set var * list var)) an
 : D''[=]{x; D'}
-  -> disjoint (List.map fst DL) (D'')
+  -> disjoint (live_globals DL) (D'')
   -> pe (getAnn an) ({x; D}, D')
-  -> disjoint (List.map fst DL) (snd (getAnn an)).
+  -> disjoint (live_globals DL) (snd (getAnn an)).
 Proof.
   intros. rewrite H1. rewrite H in *. simpl. rewrite incl_add'; eauto.
 Qed.
 
 Lemma disjoint_if1 D D' Ds Dt (DL:list (set var * list var)) an
 :  Ds ++ Dt[=]D'
-  -> disjoint (List.map fst DL) D'
+  -> disjoint (live_globals DL) D'
   -> pe (getAnn an) (D, Ds)
-  -> disjoint (List.map fst DL) (snd (getAnn an)).
+  -> disjoint (live_globals DL) (snd (getAnn an)).
 Proof.
   intros. rewrite H1. rewrite <- H in *. simpl. rewrite incl_left; eauto.
 Qed.
 
 Lemma disjoint_if2 D D' Ds Dt (DL:list (set var * list var)) an
 :  Ds ++ Dt[=]D'
-  -> disjoint (List.map fst DL) D'
+  -> disjoint (live_globals DL) D'
   -> pe (getAnn an) (D, Dt)
-  -> disjoint (List.map fst DL) (snd (getAnn an)).
+  -> disjoint (live_globals DL) (snd (getAnn an)).
 Proof.
   intros. rewrite H1. rewrite <- H in *. simpl. rewrite incl_right; eauto.
 Qed.
 
+
+Definition Subset1 (x : set var) (y : set var * set var) :=
+  match y with
+    | (y, _) => x[<=] y
+  end.
+
+Instance Subset1_morph
+: Proper (Equal ==> @pe _ _ ==> iff) Subset1.
+Proof.
+  unfold Proper, respectful; intros.
+  inv H0; simpl. rewrite H, H1. reflexivity.
+Qed.
+
 Lemma disjoint_fun1 D D' Ds Dt (DL:list (set var * list var)) ans als Z s
 :   (Ds ++ Dt) ++ of_list Z[=]D'
-    -> disjoint (List.map fst DL) D'
+    -> disjoint (live_globals DL) D'
     -> pe (getAnn ans) ((of_list Z ++ D)%set, Ds)
-    -> ann_R (fun (x : set var) (y : set var * set var) => x[<=]fst y) als ans
+    -> ann_R Subset1 als ans
     -> renamedApart s ans
-    -> disjoint (List.map fst ((getAnn als, Z) :: DL)) (snd (getAnn ans)).
+    -> disjoint (live_globals ((getAnn als, Z) :: DL)) (snd (getAnn ans)).
 Proof.
   intros. rewrite H1. rewrite <- H in *. simpl in *.
   hnf; intros. inv H4.
-  * eapply ann_R_get in H2. rewrite H1 in H2.
+  * eapply ann_R_get in H2.
+    rewrite H1 in H2. simpl in H2.
     rewrite H2; simpl.
-    eapply renamedApart_disj in H3. rewrite H1 in H3. simpl in *. eauto.
+    eapply renamedApart_disj in H3. rewrite H1 in H3. simpl in *.
+    rewrite minus_incl; eauto.
   * exploit H0; eauto using map_get_1.
     eapply disj_2_incl; eauto. cset_tac; intuition.
 Qed.
@@ -152,20 +167,20 @@ Qed.
 
 Lemma disjoint_fun2 D D' Ds Dt (DL:list (set var * list var)) ant als Z s ans
 :   (Ds ++ Dt) ++ of_list Z[=]D'
-    -> disjoint (List.map fst DL) D'
+    -> disjoint (live_globals DL) D'
     -> pe (getAnn ant) (D, Dt)
-    -> ann_R (fun (x : set var) (y : set var * set var) => x[<=]fst y) als ans
+    -> ann_R Subset1 als ans
     -> renamedApart s ant
     -> pe (getAnn ans) ((of_list Z ++ D)%set, Ds)
     -> (Ds ++ of_list Z) ∩ Dt[=]{}
-    -> disjoint (List.map fst ((getAnn als, Z) :: DL)) (snd (getAnn ant)).
+    -> disjoint (live_globals ((getAnn als, Z) :: DL)) (snd (getAnn ant)).
 Proof.
   intros. rewrite H1. rewrite <- H in *. simpl in *.
   hnf; intros. inv H6.
-  - eapply ann_R_get in H2. rewrite H4 in H2.
+  - eapply ann_R_get in H2. rewrite H4 in H2. simpl in H2.
     rewrite H2; simpl.
     eapply renamedApart_disj in H3. rewrite H1 in H3. simpl in *.
-    symmetry. eapply disj_app. split.
+    symmetry. rewrite minus_incl. eapply disj_app. split.
     + symmetry. rewrite incl_right; eauto.
     + symmetry; eauto.
   - exploit H0; eauto using map_get_1.
@@ -176,28 +191,34 @@ Lemma renamedApart_globals_live s AL alv f ang
 : live_sound Imperative AL s alv
   -> renamedApart s ang
   -> isCalled s f
-  -> ann_R (fun x y => x ⊆ fst y) alv ang
-  -> disjoint (List.map fst AL) (snd (getAnn ang))
+  -> ann_R Subset1 alv ang
+  -> disjoint (live_globals AL) (snd (getAnn ang))
   -> exists lvZ, get AL (counted f) lvZ /\ (fst lvZ \ of_list (snd lvZ)) ⊆ getAnn alv.
 Proof.
   intros LS RA IC AR.
   general induction IC; invt live_sound; invt renamedApart; invt (@ann_R); simpl in * |- *; eauto.
   - edestruct IHIC; dcr; eauto using disjoint_let.
     + eexists; split; eauto.
-      exploit H; eauto using map_get_1. rewrite H11 in X.
-      rewrite <- H7. revert H2 X; clear_all; cset_tac; intuition.
-      invc H. hnf in X. cset_tac; intuition.
-      eapply X; intuition. eauto.
+      exploit H; eauto. eapply map_get_1 with (f:=live_global); eauto. rewrite H11 in X.
+      rewrite <- H7.
+      assert (x ∉ fst x0 \ of_list (snd x0)).
+      revert X; clear_all; cset_tac; intuition.
+      eapply in_disj_absurd in X; eauto; cset_tac; intuition; eauto.
+      revert H0 H2; clear_all; cset_tac; intuition.
+      invc H. cset_tac; intuition; eauto.
   - edestruct IHIC; dcr; eauto using disjoint_if1.
     eexists; split; eauto. rewrite H2; eauto.
   - edestruct IHIC; dcr; eauto using disjoint_if2.
     eexists; split; eauto. rewrite H2; eauto.
   - edestruct IHIC; dcr; eauto using disjoint_let.
     + eexists; split; eauto.
-      exploit H; eauto using map_get_1. rewrite H12 in X.
-      rewrite <- H8. revert H2 X; clear_all; cset_tac; intuition.
-      invc H. hnf in X. cset_tac; intuition.
-      eapply X; intuition. eauto.
+      exploit H; eauto. eapply map_get_1 with (f:=live_global); eauto.
+      rewrite H12 in X. rewrite <- H8.
+      assert (x ∉ fst x0 \ of_list (snd x0)).
+      revert X; clear_all; cset_tac; intuition.
+      eapply in_disj_absurd in X; eauto; cset_tac; intuition; eauto.
+      revert H0 H2; clear_all; cset_tac; intuition.
+      invc H. cset_tac; intuition; eauto.
   - edestruct IHIC1; eauto; dcr; eauto using disjoint_fun1.
     destruct l; simpl in *. inv H1.
     edestruct IHIC2; eauto using disjoint_fun2; dcr. inv H14; simpl in *.
@@ -206,10 +227,11 @@ Proof.
     eapply ann_R_get in H21.
     rewrite H12 in *. rewrite H15 in *. simpl in *.
     rewrite <- H2 in H18.
-    rewrite <- H10 in H. exploit H; eauto using map_get_1.
+    rewrite <- H10 in H. exploit H; eauto. eapply map_get_1 with (f:=live_global); eauto.
     rewrite <- H9, <- H18.
     revert X; clear_all; intros; cset_tac; intuition.
-    eapply in_disj_absurd in X; eauto. cset_tac; intuition.
+    eapply in_disj_absurd in X; eauto. cset_tac; intuition; eauto.
+    cset_tac; intuition.
   - edestruct IHIC; eauto using disjoint_fun2; dcr.
     destruct l; simpl in *. inv H1.
     eexists; split; eauto.
@@ -220,8 +242,8 @@ Lemma renamedApart_live_imperative_is_functional s ang DL alv
 : renamedApart s ang
   -> noUnreachableCode s
   -> live_sound Imperative DL s alv
-  -> ann_R (fun x y => x ⊆ fst y) alv ang
-  -> disjoint (List.map fst DL) (snd (getAnn ang))
+  -> ann_R Subset1 alv ang
+  -> disjoint (live_globals DL) (snd (getAnn ang))
   -> live_sound FunctionalAndImperative DL s alv.
 Proof.
   intros RA NUC LS AR DISJ.
@@ -235,8 +257,6 @@ Proof.
       inv H6. simpl in *. rewrite H7. eauto.
 Qed.
 
-
-
 Fixpoint mapAnn2 X X' Y (f:X -> X' -> Y) (a:ann X) (b:ann X') : ann Y :=
   match a, b with
     | ann1 a an, ann1 b bn => ann1 (f a b) (mapAnn2 f an bn)
@@ -244,7 +264,6 @@ Fixpoint mapAnn2 X X' Y (f:X -> X' -> Y) (a:ann X) (b:ann X') : ann Y :=
     | ann0 a, ann0 b => ann0 (f a b)
     | a, b => ann0 (f (getAnn a) (getAnn b))
   end.
-
 
 Lemma getAnn_mapAnn2 A A' A'' (a:ann A) (b:ann A') (f:A->A'->A'') s
 : annotation s a
@@ -273,11 +292,45 @@ Proof.
   rewrite <- H, <- H0. cset_tac; intuition.
 Qed.
 
+Definition meet1 (x:set var) (y:set var * set var) :=
+  match y with
+    | (y, _) => x ∩ y
+  end.
+
+Lemma meet1_incl a b
+: meet1 a b ⊆ a.
+Proof.
+  destruct b; simpl. cset_tac; intuition.
+Qed.
+
+Lemma meet1_Subset s alv ang
+: annotation s alv
+  -> annotation s ang
+  -> ann_R Subset (mapAnn2 meet1 alv ang) alv.
+Proof.
+  intros AN1 AN2; general induction AN1; inv AN2; simpl; eauto using @ann_R, meet1_incl.
+Qed.
+
+Instance meet1_morphism
+: Proper (Subset ==> @pe _ _ ==> Subset) meet1.
+Proof.
+  unfold Proper, respectful; intros.
+  inv H0; simpl. rewrite H, H1. reflexivity.
+Qed.
+
+Instance meet1_morphism'
+: Proper (Equal ==> @pe _ _ ==> Equal) meet1.
+Proof.
+  unfold Proper, respectful; intros.
+  inv H0; simpl. rewrite H, H1. reflexivity.
+Qed.
+
+
 Lemma live_sound_renamedApart_minus s ang DL alv i
 : renamedApart s ang
   -> live_sound i DL s alv
   -> bounded (live_globals DL) (fst (getAnn ang))
-  -> live_sound i DL s (mapAnn2 (fun x y => x ∩ fst y) alv ang).
+  -> live_sound i DL s (mapAnn2 meet1 alv ang).
 Proof.
   intros RA LS. general induction RA; invt live_sound; simpl;
                 eauto using live_sound, live_exp_sound_meet.

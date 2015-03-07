@@ -226,15 +226,30 @@ Proof.
     eapply ann_R_get in H9. eapply injective_on_incl; eauto. rewrite H9; reflexivity.
 Qed.
 
-Lemma bounded_disj Lv u v
+Lemma bounded_disjoint Lv u v
 : bounded (live_globals Lv) u
   -> disj u v
-  -> disjoint (List.map fst Lv) v.
+  -> disjoint (live_globals Lv) v.
 Proof.
   general induction Lv; simpl in * |- *; eauto; isabsurd; dcr.
-  - hnf; intros. inv H.
-Admitted.
+  - hnf; intros. inv H. rewrite H1; eauto.
+    exploit IHLv; eauto.
+Qed.
 
+
+Lemma meet1_incl2 a b
+: Subset1 (meet1 a b) b.
+Proof.
+  destruct b; simpl. cset_tac; intuition.
+Qed.
+
+Lemma meet1_Subset1 s alv ang
+: annotation s alv
+  -> annotation s ang
+  -> ann_R Subset1 (mapAnn2 meet1 alv ang) ang.
+Proof.
+  intros AN1 AN2; general induction AN1; inv AN2; simpl; eauto using @ann_R, meet1_incl2.
+Qed.
 
 Lemma rename_renamedApart_srd' s ang ϱ (alv:ann (set var)) Lv
   : renamedApart s ang
@@ -242,28 +257,22 @@ Lemma rename_renamedApart_srd' s ang ϱ (alv:ann (set var)) Lv
   -> locally_inj ϱ s alv
   -> bounded (live_globals Lv) (fst (getAnn ang))
   -> LabelsDefined.noUnreachableCode s
-  -> srd (map_lookup ϱ (restrict (live_globals Lv) (getAnn alv)))
-        (rename ϱ s)
-        (mapAnn (lookup_set ϱ) alv).
+  -> srd
+        (map_lookup ϱ
+           (restrict (live_globals Lv) (getAnn (mapAnn2 meet1 alv ang))))
+        (rename ϱ s) (mapAnn (lookup_set ϱ) (mapAnn2 meet1 alv ang)).
 Proof.
   intros.
   exploit live_sound_renamedApart_minus; eauto.
-  eapply renamedApart_live_imperative_is_functional in X; eauto.
-  eapply rename_renamedApart_srd in X; eauto.
-  erewrite getAnn_mapAnn2 in X; eauto using live_sound_annotation, renamedApart_annotation.
-  Focus 2.
+  eapply renamedApart_live_imperative_is_functional in X; eauto using bounded_disjoint, renamedApart_disj, meet1_Subset1, live_sound_annotation, renamedApart_annotation.
+  eapply rename_renamedApart_srd in X; eauto using locally_inj_subset, meet1_Subset, live_sound_annotation, renamedApart_annotation.
   erewrite getAnn_mapAnn2; eauto using live_sound_annotation, renamedApart_annotation.
-  cset_tac; intuition.
-  Focus 2.
-  eapply locally_inj_subset; eauto. admit.
-  Focus 2. admit.
-  Focus 2. admit.
-Admitted.
-
+  destruct (getAnn ang); simpl; cset_tac; intuition.
+Qed.
 
 Open Scope set_scope.
 
-Lemma ssa_locally_inj_alpha s ϱ ϱ' DL (slv:ann (set var)) ang
+Lemma renamedApart_locally_inj_alpha s ϱ ϱ' DL (slv:ann (set var)) ang
   : renamedApart s ang
   -> locally_inj ϱ s slv
   -> live_sound Functional DL s slv
@@ -324,6 +333,26 @@ Proof.
       eapply inverse_on_incl; eauto; intuition. intuition.
     + eapply IHrenamedApart2; eauto using inverse_on_incl.
 Qed.
+
+Lemma renamedApart_locally_inj_alpha' s ϱ ϱ' Lv alv ang
+  : renamedApart s ang
+  -> live_sound Imperative Lv s alv
+  -> locally_inj ϱ s alv
+  -> bounded (live_globals Lv) (fst (getAnn ang))
+  -> LabelsDefined.noUnreachableCode s
+  -> inverse_on (getAnn alv) ϱ ϱ'
+  -> alpha ϱ ϱ' s (rename ϱ s).
+Proof.
+  intros.
+  exploit live_sound_renamedApart_minus; eauto.
+  eapply renamedApart_live_imperative_is_functional in X; eauto using bounded_disjoint, renamedApart_disj, meet1_Subset1, live_sound_annotation, renamedApart_annotation.
+  eapply live_sound_overapproximation_F in X.
+  eapply renamedApart_locally_inj_alpha in X; eauto using locally_inj_subset, meet1_Subset, live_sound_annotation, renamedApart_annotation.
+  eapply inverse_on_incl; eauto.
+  erewrite getAnn_mapAnn2; eauto using live_sound_annotation, renamedApart_annotation.
+  destruct (getAnn ang); simpl; cset_tac; intuition.
+Qed.
+
 
 Fixpoint norm_rho ra s s' : env var :=
   match s, s' with
