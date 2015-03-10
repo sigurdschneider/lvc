@@ -1,3 +1,31 @@
+This is the development for the Bachelor's Thesis of
+
+Heiko Becker
+2537100
+
+with the title: Verified Translation Validation in the LVC Framework
+
+The development contains the LVC Compiler Project developed by Sigurd Schneider.
+Dependencies can be found below.
+
+The actual development done by Heiko Becker is in the folder TransVal.
+The commit history stored in the .git folder documents the development process.
+
+To build the Translation Validation Interface, the makefile must be generated
+as explained below by Sigurd Schneider.
+
+The interface can then be compiled with
+
+    make TransVal/transval.v
+
+
+Below is the original content of the README file from Sigurd Schneider that 
+explains the necessary steps to build the full LVC project.
+
+###############################################################################
+#			Original README.md of Schneider			      #
+###############################################################################
+
 # LVC Compiler Project
 IL - IL/I, IL/F and Coherence
 
