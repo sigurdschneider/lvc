@@ -18,6 +18,7 @@ The interface can then be compiled with
 
     make TransVal/transval.v
 
+This file contains the proof of the main theorem of the thesis.
 
 Below is the original content of the README file from Sigurd Schneider that 
 explains the necessary steps to build the full LVC project.
