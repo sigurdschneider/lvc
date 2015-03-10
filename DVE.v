@@ -2,24 +2,10 @@ Require Import CSet Le.
 Require Import Plus Util AllInRel Map.
 
 Require Import Val EqDec Computable Var Env EnvTy IL Annotation.
-Require Import Sim Fresh Filter Liveness Filter MoreExp.
+Require Import Sim Fresh Filter Liveness TrueLiveness Filter MoreExp.
 
 Set Implicit Arguments.
 Unset Printing Records.
-
-Definition exp2bool (e:exp) : option bool :=
-  match e with
-    | Con c => Some (val2bool c)
-    | _ => None
-  end.
-
-Lemma exp2bool_val2bool E e b
-: exp2bool e = Some b
-  -> exists v, exp_eval E e = Some v /\ val2bool v = b.
-Proof.
-  destruct e; simpl; intros; try congruence.
-  inv H; eauto.
-Qed.
 
 Fixpoint compile (LV:list (set var * params)) (s:stmt) (a:ann (set var)) :=
   match s, a with
@@ -119,6 +105,7 @@ Proof.
     + edestruct (exp2bool_val2bool V); eauto; dcr.
       eapply sim'_expansion_closed.
       eapply IHs1; eauto. eapply agree_on_incl; eauto.
+      eapply H8; congruence.
       eapply S_star2 with (y:=EvtTau) (yl:=nil).
       econstructor; eauto. eapply star2_refl.
       eapply star2_refl.
@@ -130,6 +117,7 @@ Proof.
       eapply star2_refl.
     + remember (exp_eval V e). symmetry in Heqo.
       exploit exp_eval_live_agree; eauto.
+      eapply H7. case_eq (exp2bool e); intros; try destruct b; congruence.
       destruct o. case_eq (val2bool v); intros.
       pfold; econstructor; try eapply plus2O.
       econstructor; eauto. reflexivity.
@@ -253,6 +241,7 @@ Proof.
     + edestruct (exp2bool_val2bool V); eauto; dcr.
       eapply sim'_expansion_closed.
       eapply IHs1; eauto. eapply agree_on_incl; eauto.
+      eapply H8; congruence.
       eapply S_star2 with (y:=EvtTau) (yl:=nil).
       econstructor; eauto. eapply star2_refl.
       eapply star2_refl.
@@ -264,6 +253,7 @@ Proof.
       eapply star2_refl.
     + remember (exp_eval V e). symmetry in Heqo.
       exploit exp_eval_live_agree; eauto.
+      eapply H7. case_eq (exp2bool e); intros; try destruct b; congruence.
       destruct o. case_eq (val2bool v); intros.
       pfold; econstructor; try eapply plus2O.
       econstructor; eauto. reflexivity.
@@ -375,6 +365,21 @@ Proof.
   - destruct if; simpl; try reflexivity.
     rewrite IHtrue_live_sound. rewrite <- H1. cset_tac; intuition.
   - repeat destruct if; simpl; try reflexivity.
+    + etransitivity; eauto. eapply H2; congruence.
+    + etransitivity; eauto.
+Qed.
+
+
+
+Lemma compile_live_incl' i LV s lv
+  : true_live_sound i LV s lv
+    -> getAnn lv ⊆ getAnn (compile_live s lv).
+Proof.
+  intros. general induction H; simpl; eauto; try reflexivity.
+  - destruct if; simpl; try reflexivity.
+    rewrite <- IHtrue_live_sound.
+    rewrite H2; eauto.
+  - repeat destruct if; simpl; try reflexivity.
     + etransitivity; eauto.
     + etransitivity; eauto.
 Qed.
@@ -389,9 +394,11 @@ Lemma dve_live i LV s lv
 Proof.
   intros. general induction H; simpl; eauto using live_sound, compile_live_incl.
   - destruct if; eauto. econstructor; eauto.
-    rewrite compile_live_incl; eauto.
+    + rewrite compile_live_incl; eauto.
+    + eapply compile_live_incl'; eauto.
   - repeat destruct if; eauto.
-    + econstructor; eauto; rewrite compile_live_incl; eauto.
+    + econstructor; eauto; try rewrite compile_live_incl; eauto.
+      eapply H1. case_eq (exp2bool e); intros; try destruct b; congruence.
   - econstructor.
     + eapply (map_get_1 (fun lvZ => let Z' := List.filter (fun x => B[x ∈ fst lvZ]) (snd lvZ) in
                                    (fst lvZ, Z')) H); eauto.
@@ -410,6 +417,7 @@ Proof.
       decide (x0 ∈ blv); intuition.
   - econstructor; eauto.
     rewrite compile_live_incl; eauto.
+    eapply compile_live_incl'; eauto.
   - econstructor; simpl in *.
     eapply live_sound_monotone. eapply live_sound_monotone2.
     eapply IHtrue_live_sound1. cset_tac; intuition.

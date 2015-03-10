@@ -514,6 +514,20 @@ Proof.
     unfold disj in *; cset_tac; intuition; eauto.
 Qed.
 
+Definition exp2bool (e:exp) : option bool :=
+  match e with
+    | Con c => Some (val2bool c)
+    | _ => None
+  end.
+
+Lemma exp2bool_val2bool E e b
+: exp2bool e = Some b
+  -> exists v, exp_eval E e = Some v /\ val2bool v = b.
+Proof.
+  destruct e; simpl; intros; try congruence.
+  inv H; eauto.
+Qed.
+
 
 (* End Expressions. *)
 

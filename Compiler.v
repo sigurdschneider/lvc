@@ -1,7 +1,7 @@
 Require Import List CSet.
 Require Import Util AllInRel IL EnvTy RenameApart Sim Status Annotation.
 Require CMap.
-Require Liveness LivenessValidators ParallelMove ILN LivenessAnalysis.
+Require Liveness TrueLiveness LivenessValidators ParallelMove ILN LivenessAnalysis.
 Require Coherence Delocation DelocationAlgo DelocationValidator Allocation AllocationAlgo.
 Require CopyPropagation DVE EAE Alpha.
 Require ConstantPropagation ConstantPropagationAnalysis.
@@ -70,7 +70,7 @@ Definition toDeBruijn (ilin:ILN.nstmt) : status IL.stmt :=
 
 Definition toILF (ili:IL.stmt) : status IL.stmt :=
   sdo lv <- livenessAnalysis ili;
-  ensure (Liveness.true_live_sound Liveness.FunctionalAndImperative nil ili lv /\ getAnn lv ⊆ freeVars ili) ("Liveness unsound (1)") ;
+  ensure (TrueLiveness.true_live_sound Liveness.FunctionalAndImperative nil ili lv /\ getAnn lv ⊆ freeVars ili) ("Liveness unsound (1)") ;
   let ilid := DVE.compile nil ili lv in
   let additional_params := additionalArguments ilid (DVE.compile_live ili lv) in
   ensure (Delocation.trs nil nil ilid (DVE.compile_live ili lv) additional_params)
@@ -90,7 +90,7 @@ Definition optimize (s':stmt) : status stmt :=
              "Constant propagation makes no assumptions on free vars";
       let s := ConstantPropagation.constantPropagate AE s in
       sdo lv <- livenessAnalysis s;
-      ensure (Liveness.true_live_sound Liveness.Functional nil s lv) "Liveness unsound (2)";
+      ensure (TrueLiveness.true_live_sound Liveness.Functional nil s lv) "Liveness unsound (2)";
       Success (DVE.compile nil s lv)
   end.
 
@@ -204,7 +204,7 @@ Proof.
     hnf; intros. rewrite DVE.compile_live_incl in H3. eapply H0; eauto.
     eapply H.
     eapply DVE.I.sim_DVE. reflexivity.
-    eapply Liveness.true_live_sound_overapproximation_I; eauto.
+    eapply TrueLiveness.true_live_sound_overapproximation_I; eauto.
 Qed.
 
 Lemma fromILF_correct (s s':stmt) E

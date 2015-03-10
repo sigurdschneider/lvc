@@ -22,7 +22,7 @@ Inductive locally_inj (rho:env var) : stmt -> ann (set var) -> Prop :=
 | RNOpr x b lv e (al:ann (set var))
   :  locally_inj rho b al
   -> injective_on lv rho
-  -> injective_on (getAnn al ∪ {{x}}) rho
+(*  -> injective_on (getAnn al ∪ {{x}}) rho *)
   -> locally_inj rho (stmtLet x e b) (ann1 lv al)
 | RNIf x b1 b2 lv (alv1 alv2:ann (set var))
   :  injective_on lv rho
@@ -38,13 +38,13 @@ Inductive locally_inj (rho:env var) : stmt -> ann (set var) -> Prop :=
 | RNExtern x f Y b lv (al:ann (set var))
   : locally_inj rho b al
   -> injective_on lv rho
-  -> injective_on (getAnn al ∪ {{x}}) rho
+(*  -> injective_on (getAnn al ∪ {{x}}) rho *)
   -> locally_inj rho (stmtExtern x f Y b) (ann1 lv al)
 | RNLet s Z b lv (alvs alvb:ann (set var))
   : locally_inj rho s alvs
   -> locally_inj rho b alvb
   -> injective_on lv rho
-  -> injective_on (getAnn alvs ∪ of_list Z) rho
+(*  -> injective_on (getAnn alvs ∪ of_list Z) rho *)
   -> locally_inj rho (stmtFun Z s b) (ann2 lv alvs alvb).
 
 (** local injectivity is decidable *)
@@ -54,7 +54,7 @@ Definition locally_inj_dec (ϱ:env var) (s:stmt) (lv:ann (set var)) (an:annotati
 Proof.
   general induction s; destruct lv; try (now exfalso; inv an).
   + decide(injective_on a ϱ);
-    decide(injective_on (getAnn lv ∪ {{x}}) ϱ); try dec_solve;
+    (*decide(injective_on (getAnn lv ∪ {{x}}) ϱ);*) try dec_solve;
     edestruct IHs; eauto; try dec_solve; inv an; eauto.
   + decide(injective_on a ϱ); try dec_solve;
     edestruct IHs1; eauto; try inv an; eauto; try dec_solve;
@@ -62,10 +62,10 @@ Proof.
   + decide(injective_on a ϱ); try dec_solve.
   + decide(injective_on a ϱ); try dec_solve.
   + decide(injective_on a ϱ);
-    decide(injective_on (getAnn lv ∪ {{x}}) ϱ); try dec_solve;
+    (* decide(injective_on (getAnn lv ∪ {{x}}) ϱ); *) try dec_solve;
     edestruct IHs; eauto; try dec_solve; inv an; eauto.
   + decide(injective_on a ϱ);
-    decide (injective_on (getAnn lv1 ∪ of_list Z) ϱ); try dec_solve;
+    (* decide (injective_on (getAnn lv1 ∪ of_list Z) ϱ); *) try dec_solve;
     edestruct IHs1; eauto; try inv an; eauto; try dec_solve;
     edestruct IHs2; eauto; try inv an; eauto; try dec_solve.
 Defined.
@@ -123,19 +123,20 @@ Proof.
   - econstructor.
     + eapply srd_monotone.
       * eapply IHRI; eauto. simpl in *. rewrite H12; simpl.
-        cset_tac; intuition. decide (a === x); intuition. right. eapply INCL.
-        eapply H10. cset_tac; intuition.
+        cset_tac; intuition. decide (x === a); intuition. right. eapply INCL.
+        eapply H9. cset_tac; intuition.
         rewrite H12. simpl in *.
-        assert (D ⊆ {x; D}) by (cset_tac; intuition).
-        rewrite H2 in H1; eauto.
+        rewrite <- incl_add'; eauto.
       * erewrite (@restrict_incl_ext _ (getAnn al)); eauto.
         instantiate (1:=getAnn al \ {{x}}).
-        eapply list_eq_special. rewrite <- H10. cset_tac; intuition.
+        eapply list_eq_special. rewrite <- H9. cset_tac; intuition.
         rewrite lookup_set_minus_incl_inj. rewrite <- minus_inane_set.
         instantiate (1:={{ϱ x}}). eapply incl_minus_lr; eauto.
         rewrite lookup_set_minus_incl; intuition. eapply lookup_set_incl; intuition.
         reflexivity. rewrite lookup_set_singleton; intuition.
-        rewrite meet_comm. eapply meet_minus. intuition. eauto.
+        rewrite meet_comm. eapply meet_minus. intuition.
+        assert (getAnn al [=] getAnn al ++ {x; {}}). cset_tac; intuition.
+        invc H2; eauto. rewrite <- H1. eauto using locally_injective.
         cset_tac; intuition.
   - econstructor. simpl in *.
     + eapply srd_monotone.
@@ -163,43 +164,47 @@ Proof.
     + eapply srd_monotone.
       * eapply IHRI; eauto. simpl in *. rewrite H13; simpl.
         cset_tac; intuition. decide (a === x); intuition. right. eapply INCL.
-        eapply H11. cset_tac; intuition.
+        eapply H10. cset_tac; intuition.
         rewrite H13. simpl in *.
-        assert (D ⊆ {x; D}). cset_tac; intuition.
-        rewrite H2 in H1; eauto.
+        rewrite <- incl_add'; eauto.
       * erewrite (@restrict_incl_ext _ (getAnn al)); eauto.
         instantiate (1:=getAnn al \ {{x}}).
-        eapply list_eq_special. rewrite <- H11. cset_tac; intuition.
+        eapply list_eq_special. rewrite <- H10. cset_tac; intuition.
         rewrite lookup_set_minus_incl_inj. rewrite <- minus_inane_set.
         instantiate (1:={{ϱ x}}). eapply incl_minus_lr; eauto.
         rewrite lookup_set_minus_incl; intuition. eapply lookup_set_incl; intuition.
         reflexivity. rewrite lookup_set_singleton; intuition.
-        rewrite meet_comm. eapply meet_minus. intuition. eauto.
+        rewrite meet_comm. eapply meet_minus. intuition.
+        assert (getAnn al [=] getAnn al ++ {x; {}}). cset_tac; intuition.
+        invc H2; eauto. rewrite <- H1. eauto using locally_injective.
         cset_tac; intuition.
-  - econstructor; eauto.
+  - assert (injective_on (getAnn alvs ++ of_list Z) ϱ). {
+      eapply injective_on_incl. eapply locally_injective. eapply RI1.
+      cset_tac; intuition.
+    }
+    econstructor; eauto.
     + eapply srd_monotone.
-      * eapply IHRI1; eauto. simpl in *. rewrite H14; simpl.
-        rewrite <- INCL. rewrite <- H12. eapply incl_union_minus.
-        simpl. split. simpl in *. rewrite H12, H14; simpl. cset_tac; intuition.
-        assert (D ⊆ of_list Z ∪ D) by (cset_tac; intuition).
-        rewrite H14. simpl. rewrite <- H2; eauto.
+      * eapply IHRI1; eauto. simpl in *. rewrite H13; simpl.
+        rewrite <- INCL. rewrite <- H11. eapply incl_union_minus.
+        simpl. split. simpl in *. rewrite H11, H13; simpl. cset_tac; intuition.
+        rewrite H13; simpl. rewrite <- incl_right; eauto.
       * Opaque restrict. simpl. unfold live_global. rewrite restrict_incl. simpl.
         simpl. rewrite restrict_incl. constructor. constructor.
         rewrite getAnn_mapAnn. rewrite of_list_lookup_list.
-        eapply lookup_set_minus_eq; eauto; intuition. intuition.
+        eapply lookup_set_minus_eq; eauto; intuition.
+        intuition.
         erewrite (@restrict_incl_ext _ (getAnn alvs)); eauto.
         instantiate (1:=getAnn alvs \ of_list Z).
         eapply list_eq_special; eauto.
         rewrite getAnn_mapAnn. rewrite of_list_lookup_list.
         eapply lookup_set_minus_incl_inj; eauto; intuition. intuition.
         simpl. simpl in *.
-        cset_tac; intuition. eauto. reflexivity.
+        cset_tac; intuition; eauto. reflexivity.
         eapply incl_minus.
-
     + eapply srd_monotone. simpl in * |- *.
       eapply IHRI2; eauto.
-      rewrite H17; simpl in * |- *; eauto. transitivity lv; eauto.
-      rewrite H17; simpl.
+      rewrite H16; simpl in * |- *; eauto. transitivity lv; eauto.
+      rewrite H16; simpl.
       split; eauto. eapply Subset_trans; eauto.
       simpl. decide (getAnn alvs \ of_list Z ⊆ getAnn alvb).
       unfold live_global. simpl.
@@ -218,12 +223,6 @@ Lemma locally_inj_subset ϱ s alv alv'
 Proof.
   intros.
   general induction H; invt @ann_R; simpl in *; eauto 20 using locally_inj, injective_on_incl.
-  - econstructor; eauto using injective_on_incl.
-    eapply ann_R_get in H7. eapply injective_on_incl; eauto. cset_tac; intuition.
-  - econstructor; eauto using injective_on_incl.
-    eapply ann_R_get in H7. eapply injective_on_incl; eauto. cset_tac; intuition.
-  - econstructor; eauto using injective_on_incl.
-    eapply ann_R_get in H9. eapply injective_on_incl; eauto. rewrite H9; reflexivity.
 Qed.
 
 Lemma bounded_disjoint Lv u v
@@ -291,7 +290,8 @@ Proof.
     }
     eapply locally_inj_morphism; eauto.
     eapply inverse_on_update_minus; eauto using inverse_on_incl, locally_injective.
-
+    eapply injective_on_incl. eapply locally_injective, H11.
+    cset_tac; intuition. invc H9; eauto.
   - econstructor; eauto. eapply alpha_exp_rename_injective.
     eapply inverse_on_incl. eapply Exp.freeVars_live; eauto. eauto.
     now eapply IHrenamedApart1; eauto using inverse_on_incl.
@@ -323,6 +323,8 @@ Proof.
       eapply locally_inj_morphism; eauto.
       eapply inverse_on_update_minus; eauto using inverse_on_incl,
                                       locally_injective.
+      eapply injective_on_incl. eapply locally_injective, H12.
+      cset_tac; intuition. invc H9; eauto.
   - constructor.
     + rewrite lookup_list_length; eauto.
     + rewrite update_with_list_lookup_list.
@@ -330,6 +332,8 @@ Proof.
       assert (fpeq _eq ϱ ϱ). split. reflexivity. split; intuition.
       simpl in H6.
       eapply inverse_on_update_with_list; try intuition.
+      eapply injective_on_incl. eapply locally_injective, H13.
+      cset_tac; intuition.
       eapply inverse_on_incl; eauto; intuition. intuition.
     + eapply IHrenamedApart2; eauto using inverse_on_incl.
 Qed.

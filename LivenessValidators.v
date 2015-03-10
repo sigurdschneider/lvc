@@ -31,7 +31,9 @@ Proof.
   general induction s; destruct slv; try isabsurd.
   + edestruct IHs; eauto; try inv an; eauto;
     decide (getAnn slv\{{x}} ⊆ a);
-    decide (live_exp_sound e a); try dec_solve.
+    decide (live_exp_sound e a);
+    decide (x ∈ getAnn slv);
+    try dec_solve.
   + edestruct IHs1; try inv an; eauto;
     edestruct IHs2; try inv an; eauto;
     decide (live_exp_sound e a);
@@ -49,6 +51,7 @@ Proof.
   + decide(live_exp_sound e a); try dec_solve.
   + edestruct IHs; eauto; try inv an; eauto;
     decide (getAnn slv \ {{x}} ⊆ a);
+    decide (x ∈ getAnn slv);
     try decide (forall n y, get Y n y -> live_exp_sound y a);
     try dec_solve.
   + edestruct IHs1; eauto; try inv an; eauto;
@@ -71,6 +74,8 @@ Proof.
   right; intro. eauto using live_sound_annotation.
 Defined.
 
+Require Import TrueLiveness.
+
 Definition true_live_sound_dec i Lv s slv (an:annotation s slv)
       : Computable (true_live_sound i Lv s slv).
 Proof.
@@ -78,12 +83,15 @@ Proof.
   + edestruct IHs; eauto; try inv an; eauto;
     decide (getAnn slv\{{x}} ⊆ a);
     decide (x ∈ getAnn slv -> live_exp_sound e a);
+    decide (x ∉ getAnn slv -> a ⊆ getAnn slv\{{x}});
     try dec_solve.
   + edestruct IHs1; try inv an; eauto;
     edestruct IHs2; try inv an; eauto;
-    decide (live_exp_sound e a);
-    decide (getAnn slv1 ⊆ a);
-    decide (getAnn slv2 ⊆ a);
+    decide (exp2bool e = None -> live_exp_sound e a);
+    decide (exp2bool e <> Some false -> getAnn slv1 ⊆ a);
+    decide (exp2bool e = Some true -> a ⊆ getAnn slv1);
+    decide (exp2bool e <> Some true -> getAnn slv2 ⊆ a);
+    decide (exp2bool e = Some false -> a ⊆ getAnn slv2);
     try dec_solve; try eassumption; try inv an; eauto.
   + destruct (get_dec Lv (counted l)) as [[[blv Z] ?]|?];
     try decide (argsLive a blv Y Z); try dec_solve.
@@ -97,6 +105,7 @@ Proof.
   + decide(live_exp_sound e a); try dec_solve.
   + edestruct IHs; eauto; try inv an; eauto;
     decide (getAnn slv \ {{x}} ⊆ a);
+    decide (x ∈ getAnn slv);
     try decide (forall n y, get Y n y -> live_exp_sound y a);
     try dec_solve.
   + edestruct IHs1; eauto; try inv an; eauto;

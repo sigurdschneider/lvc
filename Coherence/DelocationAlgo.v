@@ -920,12 +920,12 @@ Lemma computeParameters_trs DL ZL AP s an' LV lv
         (List.map oto_list LV)  s lv an'.
 Proof.
   intros. general induction H1; simpl in *.
-  - let_case_eq. inv H4.
+  - let_case_eq. inv H5.
     eapply trsExp.
     eapply trs_monotone.
     eapply IHlive_sound; try eapply eq; eauto using addParam_Subset.
     rewrite addParam_length. rewrite zip_length.
-    rewrite <- H2. rewrite Min.min_idempotent. eauto.
+    rewrite <- H3. rewrite Min.min_idempotent. eauto.
     rewrite zip_length2; congruence.
     exploit computeParameters_AP_LV; eauto; try congruence.
     eapply addParam_zip_lminus_length; congruence.
@@ -970,12 +970,12 @@ Proof.
     simpl in *. cset_tac; intuition.
     eapply X2.
   - econstructor.
-  - let_case_eq. inv H4.
+  - let_case_eq. inv H5.
     eapply trsExtern.
     eapply trs_monotone.
     eapply IHlive_sound; try eapply eq; eauto using addParam_Subset.
     rewrite addParam_length. rewrite zip_length.
-    rewrite <- H2. rewrite Min.min_idempotent. eauto.
+    rewrite <- H3. rewrite Min.min_idempotent. eauto.
     rewrite zip_length2; congruence.
     exploit computeParameters_AP_LV; eauto; try congruence.
     eapply addParam_zip_lminus_length; congruence.
@@ -1166,7 +1166,7 @@ Lemma computeParameters_live DL ZL AP s an' LV lv
 Proof.
   intros.
   general induction H1; simpl in *.
-  - let_case_eq; inv H4.
+  - let_case_eq; inv H5.
     econstructor. eapply IHlive_sound; try eapply eq; eauto using addParam_Subset.
     rewrite addParam_length; rewrite zip_length2; eauto; congruence.
   - repeat let_case_eq; invc H4.
@@ -1182,7 +1182,7 @@ Proof.
     econstructor. eapply map_get_1; eauto. eapply killExcept_get; eauto.
     simpl. rewrite <- H0. eapply H11.
   - econstructor.
-  - let_case_eq; inv H4.
+  - let_case_eq; inv H5.
     econstructor. eapply IHlive_sound; try eapply eq; eauto using addParam_Subset.
     rewrite addParam_length; rewrite zip_length2; eauto; congruence.
   - repeat let_case_eq. invc H4.

@@ -15,7 +15,8 @@ Lemma renamedApart_live_functional s ang DL
 Proof.
   intros. general induction H; invt paramsMatch; simpl.
   - econstructor; eauto using live_exp_sound_incl, live_freeVars.
-    rewrite getAnn_mapAnn, H2. simpl; cset_tac; intuition.
+    + rewrite getAnn_mapAnn, H2. simpl; cset_tac; intuition.
+    + rewrite getAnn_mapAnn, H2. simpl; cset_tac; intuition.
   - econstructor; eauto using live_exp_sound_incl, live_freeVars.
     rewrite getAnn_mapAnn, H4. simpl; cset_tac; intuition.
     rewrite getAnn_mapAnn, H5. simpl; cset_tac; intuition.
@@ -25,9 +26,10 @@ Proof.
     + intros. eapply live_exp_sound_incl, live_freeVars.
       rewrite <- H. eapply get_list_union_map; eauto.
   - econstructor; eauto.
-    intros. eapply live_exp_sound_incl, live_freeVars.
-    rewrite <- H0. eapply get_list_union_map; eauto.
-    rewrite getAnn_mapAnn, H2. simpl; cset_tac; intuition.
+    + intros. eapply live_exp_sound_incl, live_freeVars.
+      rewrite <- H0. eapply get_list_union_map; eauto.
+    + rewrite getAnn_mapAnn, H2. simpl; cset_tac; intuition.
+    + rewrite getAnn_mapAnn, H2. simpl; cset_tac; intuition.
   - econstructor; eauto.
     + rewrite getAnn_mapAnn, H3; simpl. cset_tac; intuition.
     + destruct if; eauto. rewrite getAnn_mapAnn, H3; simpl. cset_tac; intuition.
@@ -43,8 +45,9 @@ Proof.
   intros. general induction H; invt paramsMatch; simpl.
   - econstructor; eauto using live_exp_sound_incl, live_freeVars.
     eapply IHrenamedApart; eauto.
-    rewrite H2; simpl. rewrite <- incl_add'; eauto.
-    rewrite getAnn_mapAnn, H2. simpl; cset_tac; intuition.
+    + rewrite H2; simpl. rewrite <- incl_add'; eauto.
+    + rewrite getAnn_mapAnn, H2. simpl; cset_tac; intuition.
+    + rewrite getAnn_mapAnn, H2. simpl; cset_tac; intuition.
   - econstructor; eauto using live_exp_sound_incl, live_freeVars.
     + eapply IHrenamedApart1; eauto.
       rewrite H4; simpl; eauto.
@@ -61,11 +64,12 @@ Proof.
     + intros. eapply live_exp_sound_incl, live_freeVars.
       rewrite <- H. eapply get_list_union_map; eauto.
   - econstructor; eauto using live_exp_sound_incl, live_freeVars.
-    eapply IHrenamedApart; eauto.
-    rewrite H2; simpl. rewrite <- incl_add'; eauto.
-    intros. eapply live_exp_sound_incl, live_freeVars.
-    rewrite <- H0. eapply get_list_union_map; eauto.
-    rewrite getAnn_mapAnn, H2. simpl; cset_tac; intuition.
+    + eapply IHrenamedApart; eauto.
+      rewrite H2; simpl. rewrite <- incl_add'; eauto.
+    + intros. eapply live_exp_sound_incl, live_freeVars.
+      rewrite <- H0. eapply get_list_union_map; eauto.
+    + rewrite getAnn_mapAnn, H2. simpl; cset_tac; intuition.
+    + rewrite getAnn_mapAnn, H2. simpl; cset_tac; intuition.
   - econstructor; eauto.
     + eapply IHrenamedApart1; eauto; simpl.
       rewrite getAnn_mapAnn, H3; simpl in *.
@@ -199,7 +203,7 @@ Proof.
   general induction IC; invt live_sound; invt renamedApart; invt (@ann_R); simpl in * |- *; eauto.
   - edestruct IHIC; dcr; eauto using disjoint_let.
     + eexists; split; eauto.
-      exploit H; eauto. eapply map_get_1 with (f:=live_global); eauto. rewrite H11 in X.
+      exploit H; eauto. eapply map_get_1 with (f:=live_global); eauto. rewrite H12 in X.
       rewrite <- H7.
       assert (x ∉ fst x0 \ of_list (snd x0)).
       revert X; clear_all; cset_tac; intuition.
@@ -213,7 +217,7 @@ Proof.
   - edestruct IHIC; dcr; eauto using disjoint_let.
     + eexists; split; eauto.
       exploit H; eauto. eapply map_get_1 with (f:=live_global); eauto.
-      rewrite H12 in X. rewrite <- H8.
+      rewrite H13 in X. rewrite <- H8.
       assert (x ∉ fst x0 \ of_list (snd x0)).
       revert X; clear_all; cset_tac; intuition.
       eapply in_disj_absurd in X; eauto; cset_tac; intuition; eauto.
@@ -341,6 +345,8 @@ Proof.
       rewrite H1; simpl. rewrite <- minus_meet.
       revert H11; clear_all; cset_tac; intuition.
       eapply H11; cset_tac; intuition.
+    + erewrite getAnn_mapAnn2; eauto using live_sound_annotation, renamedApart_annotation.
+      rewrite H1; simpl; cset_tac; eauto.
   - econstructor; eauto using live_exp_sound_meet.
     + eapply IHRA1; eauto. rewrite H2; eauto.
     + eapply IHRA2; eauto. rewrite H3; eauto.
@@ -366,6 +372,8 @@ Proof.
       rewrite H1; simpl. rewrite <- minus_meet.
       revert H12; clear_all; cset_tac; intuition.
       eapply H12; cset_tac; intuition.
+    + erewrite getAnn_mapAnn2; eauto using live_sound_annotation, renamedApart_annotation.
+      rewrite H1; simpl; cset_tac; eauto.
   - constructor; eauto.
     + erewrite getAnn_mapAnn2; eauto using live_sound_annotation, renamedApart_annotation.
       eapply IHRA1; eauto.

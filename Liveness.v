@@ -94,7 +94,8 @@ Inductive live_sound (i:overapproximation) : list (set var*params) -> stmt -> an
 | LOpr x Lv b lv e (al:ann (set var))
   :  live_sound i Lv b al
   -> live_exp_sound e lv
-  -> (getAnn al\{{x}}) ⊆ lv
+  -> (getAnn al\ singleton x) ⊆ lv
+  -> x ∈ getAnn al
   -> live_sound i Lv (stmtLet x e b) (ann1 lv al)
 | LIf Lv e b1 b2 lv al1 al2
   :  live_sound i Lv b1 al1
@@ -116,6 +117,7 @@ Inductive live_sound (i:overapproximation) : list (set var*params) -> stmt -> an
   :  live_sound i Lv b al
   -> (forall n y, get Y n y -> live_exp_sound y lv)
   -> (getAnn al\{{x}}) ⊆ lv
+  -> x ∈ getAnn al
   -> live_sound i Lv (stmtExtern x f Y b) (ann1 lv al)
 | LLet Lv s Z b lv als alb
   : live_sound i ((getAnn als,Z)::Lv) s als
@@ -228,39 +230,44 @@ Lemma live_rename_sound i DL s an (ϱ:env var)
   -> live_sound i (live_rename_L ϱ DL) (rename ϱ s) (mapAnn (lookup_set ϱ) an).
 Proof.
   intros. general induction H; simpl.
-  + econstructor; eauto using live_exp_rename_sound.
-    rewrite getAnn_mapAnn.
-    cset_tac; eqs; simpl; eauto. eapply lookup_set_incl; eauto.
-    eapply lookup_set_spec; eauto.
-    eapply lookup_set_spec in H3; eauto. destruct H3; dcr; eauto.
-    eexists x0; intuition. cset_tac; eauto.
-    intro. eapply H2. rewrite H7, <- H3; eauto.
-  + econstructor; eauto using live_exp_rename_sound.
-    rewrite getAnn_mapAnn. eapply lookup_set_incl; eauto.
-    rewrite getAnn_mapAnn. eapply lookup_set_incl; eauto.
-  + pose proof (map_get_1 (live_rename_L_entry ϱ) H).
-    econstructor; eauto. destruct i; simpl in * |- *; eauto.
-    rewrite of_list_lookup_list; eauto.
-    eapply Subset_trans. eapply lookup_set_minus_incl; eauto.
-    eapply lookup_set_incl; eauto. simpl.
-    rewrite of_list_lookup_list; eauto.
-    eapply Subset_trans. eapply lookup_set_minus_incl; eauto.
-    eapply lookup_set_incl; eauto. simpl.
-    repeat rewrite lookup_list_length; eauto. rewrite map_length; eauto.
-    intros. edestruct map_get_4; eauto; dcr; subst.
-    eapply live_exp_rename_sound; eauto.
-  + econstructor; eauto using live_exp_rename_sound.
-  + econstructor; intros; eauto using live_exp_rename_sound.
-    edestruct map_get_4; eauto; dcr; subst.
-    eapply live_exp_rename_sound; eauto.
-    rewrite getAnn_mapAnn.
-    (* TODO extract lemma here (its occuring in first case also) *)
-    cset_tac; eqs; simpl; eauto. eapply lookup_set_incl; eauto.
-    eapply lookup_set_spec; eauto.
-    eapply lookup_set_spec in H3; eauto. destruct H3; dcr; eauto.
-    eexists x0; intuition. cset_tac; eauto.
-    intro. eapply H2. rewrite H7, <- H3; eauto.
-  + econstructor; eauto; try rewrite getAnn_mapAnn; eauto.
+  - econstructor; eauto using live_exp_rename_sound.
+    + rewrite getAnn_mapAnn.
+      cset_tac; eqs; simpl; eauto. eapply lookup_set_incl; eauto.
+      eapply lookup_set_spec; eauto.
+      eapply lookup_set_spec in H4; eauto. destruct H4; dcr; eauto.
+      eexists x0; intuition. cset_tac; eauto.
+      intro. eapply H3. rewrite H7, <- H4; eauto.
+    + rewrite getAnn_mapAnn.
+      eapply lookup_set_spec; eauto.
+  - econstructor; eauto using live_exp_rename_sound.
+    + rewrite getAnn_mapAnn. eapply lookup_set_incl; eauto.
+    + rewrite getAnn_mapAnn. eapply lookup_set_incl; eauto.
+  - pose proof (map_get_1 (live_rename_L_entry ϱ) H).
+    econstructor; eauto.
+    + destruct i; simpl in * |- *; eauto.
+      rewrite of_list_lookup_list; eauto.
+      eapply Subset_trans. eapply lookup_set_minus_incl; eauto.
+      eapply lookup_set_incl; eauto. simpl.
+      rewrite of_list_lookup_list; eauto.
+      eapply Subset_trans. eapply lookup_set_minus_incl; eauto.
+      eapply lookup_set_incl; eauto.
+    + simpl.
+      repeat rewrite lookup_list_length; eauto. rewrite map_length; eauto.
+    + intros. edestruct map_get_4; eauto; dcr; subst.
+      eapply live_exp_rename_sound; eauto.
+  - econstructor; eauto using live_exp_rename_sound.
+  - econstructor; intros; eauto using live_exp_rename_sound.
+    + edestruct map_get_4; eauto; dcr; subst.
+      eapply live_exp_rename_sound; eauto.
+    + rewrite getAnn_mapAnn.
+      (* TODO extract lemma here (its occuring in first case also) *)
+      cset_tac; eqs; simpl; eauto. eapply lookup_set_incl; eauto.
+      eapply lookup_set_spec; eauto.
+      eapply lookup_set_spec in H4; eauto. destruct H4; dcr; eauto.
+      eexists x0; intuition. cset_tac; eauto.
+      intro. eapply H3. rewrite H8, <- H4; eauto.
+    + rewrite getAnn_mapAnn; eauto. eapply lookup_set_spec; eauto.
+  - econstructor; eauto; try rewrite getAnn_mapAnn; eauto.
     eapply IHlive_sound1. eapply IHlive_sound2.
     rewrite of_list_lookup_list; eauto. eapply lookup_set_incl; eauto.
     destruct if; eauto.
@@ -269,84 +276,6 @@ Proof.
     destruct i; simpl; eauto; eapply lookup_set_incl; eauto.
     eapply lookup_set_incl; eauto.
 Qed.
-
-Inductive true_live_sound (i:overapproximation)
-  : list (set var *params) -> stmt -> ann (set var) -> Prop :=
-| TLOpr x Lv b lv e al
-  :  true_live_sound i Lv b al
-  -> (x ∈ getAnn al -> live_exp_sound e lv)
-  -> (getAnn al\{{x}}) ⊆ lv
-(*  -> (x ∉ getAnn al -> lv ⊆ getAnn al \ {{x}}) *)
-  -> true_live_sound i Lv (stmtLet x e b) (ann1 lv al)
-| TLIf Lv e b1 b2 lv al1 al2
-  :  true_live_sound i Lv b1 al1
-  -> true_live_sound i Lv b2 al2
-  -> live_exp_sound e lv
-  -> getAnn al1 ⊆ lv
-  -> getAnn al2 ⊆ lv
-  -> true_live_sound i Lv (stmtIf e b1 b2) (ann2 lv al1 al2)
-| TLGoto l Y Lv lv blv Z
-  : get Lv (counted l) (blv,Z)
-  -> (if isImperative i then  (blv \ of_list Z ⊆ lv) else True)
-  -> argsLive lv blv Y Z
-  -> length Y = length Z
-  -> true_live_sound i Lv (stmtApp l Y) (ann0 lv)
-| TLReturn Lv e lv
-  : live_exp_sound e lv
-  -> true_live_sound i Lv (stmtReturn e) (ann0 lv)
-| TLExtern x Lv b lv Y al f
-  : true_live_sound i Lv b al
-  -> (forall n y, get Y n y -> live_exp_sound y lv)
-  -> (getAnn al\{{x}}) ⊆ lv
-  -> true_live_sound i Lv (stmtExtern x f Y b) (ann1 lv al)
-| TLLet Lv s Z b lv als alb
-  : true_live_sound i ((getAnn als,Z)::Lv) s als
-  -> true_live_sound i ((getAnn als,Z)::Lv) b alb
-  -> (if isFunctional i then (getAnn als \ of_list Z ⊆ lv) else True)
-  -> getAnn alb ⊆ lv
-  -> true_live_sound i Lv (stmtFun Z s b)(ann2 lv als alb).
-
-
-Lemma true_live_sound_overapproximation_I Lv s slv
-: true_live_sound FunctionalAndImperative Lv s slv -> true_live_sound Imperative Lv s slv.
-Proof.
-  intros. general induction H; simpl in * |- *; econstructor; simpl; eauto.
-Qed.
-
-Lemma true_live_sound_overapproximation_F Lv s slv
-: true_live_sound FunctionalAndImperative Lv s slv -> true_live_sound Functional Lv s slv.
-Proof.
-  intros. general induction H; simpl in * |- *; econstructor; simpl; eauto.
-Qed.
-
-
-Lemma true_live_sound_annotation i Lv s slv
-: true_live_sound i Lv s slv -> annotation s slv.
-Proof.
-  intros. general induction H; econstructor; eauto.
-Qed.
-
-Lemma live_relation i Lv s lv
-: (forall n lvZ, get Lv n lvZ -> of_list (snd lvZ) ⊆ fst lvZ)
-  -> live_sound i Lv s lv
-  -> true_live_sound i Lv s lv.
-Proof.
-  intros. general induction H0; eauto using true_live_sound.
-  - econstructor; eauto.
-    exploit H3; eauto.
-    clear H H0 H3. simpl in *.
-    eapply length_length_eq in H1.
-    general induction H1; simpl in * |- *; eauto using argsLive.
-    econstructor.
-    + eapply IHlength_eq; eauto using get. cset_tac; intuition.
-    + cset_tac; intuition. eauto using get.
-  - econstructor; eauto.
-    eapply IHlive_sound1; eauto; intros.
-    inv H3; eauto using get.
-    eapply IHlive_sound2; eauto; intros.
-    inv H3; eauto using get.
-Qed.
-
 
 Inductive approxF :  F.block -> F.block -> Prop :=
  | approxFI E E' Z s

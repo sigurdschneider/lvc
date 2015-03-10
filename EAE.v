@@ -110,14 +110,31 @@ Proof.
       eauto.
 Qed.
 
+
+(*TODO: generalize this, it might be useful *)
+Instance list_get_computable X (Y:list X) (R:X->Prop) `{forall (x:X), Computable (R x)}
+: Computable (forall n y, get Y n y -> R y).
+Proof.
+  hnf. general induction Y.
+  - left; isabsurd.
+  - decide (R a).
+    + edestruct IHY; eauto.
+      * left; intros. inv H0; eauto using get.
+      * right; intros; eauto using get.
+    + right; eauto using get.
+Defined.
+
 Fixpoint compile s
   : stmt :=
   match s with
     | stmtLet x e s => stmtLet x e (compile s)
     | stmtIf x s t => stmtIf x (compile s) (compile t)
     | stmtApp l Y  =>
-      let xl := fresh_list fresh (list_union (List.map Exp.freeVars Y)) (length Y) in
-      list_to_stmt xl Y (stmtApp l (List.map Var xl))
+      if [ forall n e, get Y n e -> isVar e] then
+        stmtApp l Y
+      else
+        let xl := fresh_list fresh (list_union (List.map Exp.freeVars Y)) (length Y) in
+        list_to_stmt xl Y (stmtApp l (List.map Var xl))
     | stmtReturn x => stmtReturn x
     | stmtExtern x f Y s => stmtExtern x f Y (compile s)
     | stmtFun Z s t => stmtFun Z (compile s) (compile t)
@@ -187,7 +204,9 @@ Proof.
         edestruct AIR5_nth as [?[? [?]]]; try eassumption; dcr.
         simpl in *. repeat get_functional; subst.
         inv H11.
-        decide (length Y = length bZ).
+        decide (length Y = length bZ). {
+          - destruct if. eapply bisim_drop_shift; eapply H18; eauto. hnf; intros; intuition.
+        eapply omap_length in H0. hnf in H15; dcr; subst. congruence.
         eapply bisim'_expansion_closed; [eapply bisim_drop_shift; eapply H18| eapply star2_refl |].
         eauto.
         Focus 2. hnf; split. reflexivity. simpl. hnf in H15. hnf in H17.
@@ -200,17 +219,33 @@ Proof.
         eapply update_with_list_agree'. rewrite fresh_list_length, map_length.
         eapply omap_length; eauto. eapply fresh_list_unique. eapply fresh_spec.
         eapply X.
-        hnf in H15. hnf in H17. dcr; simpl in *. pfold.
-        econstructor 3; try eapply X; try eapply star2_refl. subst.
-        simpl in *. congruence. stuck2. get_functional; subst; simpl in *; congruence.
+        }
+        hnf in H15. hnf in H17. dcr; simpl in *. subst. pfold.
+        destruct if.
+        econstructor 3; try eapply X; try eapply star2_refl.
+        reflexivity.
+        edestruct AIR5_nth2 as [? [?[? [?]]]]; try eassumption; dcr.
+        stuck2. repeat get_functional; subst. simpl in *. congruence.
+        edestruct AIR5_nth2 as [? [?[? [?]]]]; try eassumption; dcr.
+        stuck2. repeat get_functional; subst. simpl in *. congruence.
+        econstructor 3; try eapply X; try eapply star2_refl.
+        reflexivity.
+        stuck2. get_functional; subst; simpl in *; congruence.
         edestruct AIR5_nth2 as [? [?[? [?]]]]; try eassumption; dcr.
         stuck2. repeat get_functional; subst. simpl in *.
         rewrite map_length in len. rewrite fresh_list_length in len. congruence.
-      * pfold. econstructor 3; try eapply X; try eapply star2_refl.
+      * destruct if. pfold. econstructor 3; try eapply X; try eapply star2_refl.
         simpl in *. congruence. stuck2; eauto.
         stuck2; eauto.
         edestruct AIR5_nth2 as [? [?[? [?]]]]; try eassumption; dcr. eauto.
-    + edestruct list_to_stmt_crash; eauto.
+        pfold. econstructor 3; try eapply X; try eapply star2_refl.
+        simpl in *. congruence. stuck2; eauto.
+        stuck2; eauto.
+        edestruct AIR5_nth2 as [? [?[? [?]]]]; try eassumption; dcr. eauto.
+    + destruct if.
+      pfold. econstructor 3; try eapply H2; try eapply star2_refl.
+      simpl in *. congruence. stuck2. stuck2.
+      edestruct list_to_stmt_crash; eauto.
       eapply fresh_list_length. eapply fresh_list_unique. eapply fresh_spec.
       eapply fresh_list_spec. eapply fresh_spec. dcr.
       pfold. econstructor 3; try eapply H2; try eapply star2_refl.
