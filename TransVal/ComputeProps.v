@@ -528,7 +528,7 @@ Proof.
        assert (exp_eval Es e = Some v).
        * eapply (exp_eval_agree (E:= E')); eauto.
          hnf; intros.  hnf in H8.  specialize (H8 x H6).
-         pose proof (crash_ssa_eval_agree L L' (stmtIf e sc s0_2) (ann2 (D0, D') ans ant) s'  E' Es).
+         pose proof (crash_ssa_eval_agree L L' (stmtIf e sc b2) (ann2 (D0, D') ans ant) s'  E' Es).
          eapply H13; eauto; econstructor; eauto.
        * unfold smt_eval; erewrite exp_eval_partial_total; eauto.
          rewrite condTrue.
@@ -538,7 +538,7 @@ Proof.
        assert (exp_eval Es e = Some v).
        * eapply (exp_eval_agree (E:= E')); eauto.
          hnf; intros.  hnf in H8.  specialize (H8 x H6).
-         pose proof (crash_ssa_eval_agree L L' (stmtIf e s0_1 sc) (ann2 (D0, D') ans ant) s'  E' Es).
+         pose proof (crash_ssa_eval_agree L L' (stmtIf e b1 sc) (ann2 (D0, D') ans ant) s'  E' Es).
          eapply H13; eauto; econstructor; eauto.
        * unfold smt_eval; erewrite exp_eval_partial_total; eauto.
          rewrite condFalse.
