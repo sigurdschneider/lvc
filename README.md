@@ -5,11 +5,12 @@ Heiko Becker
 
 with the title: Verified Translation Validation in the LVC Framework
 
-The development contains the LVC Compiler Project developed by Sigurd Schneider.
+The development contains the LVC Compiler Project developed by Sigurd Schneider[1].
 Dependencies can be found below.
 
 The actual development done by Heiko Becker is in the folder TransVal.
 The commit history stored in the .git folder documents the development process.
+All other files are taken from the development of Schneider.
 
 To build the Translation Validation Interface, the makefile must be generated
 as explained below by Sigurd Schneider.
@@ -77,3 +78,6 @@ There are some example files in extraction/examples. Run one by issuing the foll
 
 	cd extraction
 	./lvcc.native examples/foo.il
+
+[1] Sigurd Schneider. 'Semantics of an Intermediate Language for Program
+    Transformation'. Master's Thesis. Saarland University, 2013.
