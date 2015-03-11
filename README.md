@@ -17,7 +17,7 @@ as explained below by Sigurd Schneider.
 
 The interface can then be compiled with
 
-    make TransVal/transval.v
+    make TransVal/transval.vo
 
 This file contains the proof of the main theorem of the thesis.
 
