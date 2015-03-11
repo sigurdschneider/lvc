@@ -72,8 +72,8 @@ Definition toILF (ili:IL.stmt) : status IL.stmt :=
   sdo lv <- livenessAnalysis ili;
   ensure (TrueLiveness.true_live_sound Liveness.FunctionalAndImperative nil ili lv /\ getAnn lv ⊆ freeVars ili) ("Liveness unsound (1)") ;
   let ilid := DVE.compile nil ili lv in
-  let additional_params := additionalArguments ilid (DVE.compile_live ili lv) in
-  ensure (Delocation.trs nil nil ilid (DVE.compile_live ili lv) additional_params)
+  let additional_params := additionalArguments ilid (DVE.compile_live ili lv ∅) in
+  ensure (Delocation.trs nil nil ilid (DVE.compile_live ili lv ∅) additional_params)
          "Additional arguments insufficient";
     Success (Delocation.compile nil ilid additional_params).
 
@@ -176,7 +176,7 @@ Proof.
   repeat (destruct if in EQ0; [|isabsurd]).
   invc EQ0. dcr.
   - case_eq (DelocationAlgo.computeParameters nil nil nil
-              (DVE.compile nil ili x) (DVE.compile_live ili x)); intros.
+              (DVE.compile nil ili x) (DVE.compile_live ili x ∅)); intros.
     assert (l = nil). {
     exploit (DelocationAlgo.computeParameters_length nil nil); eauto.
     eapply (@DVE.dve_live Liveness.FunctionalAndImperative nil); eauto. destruct l; simpl in *; congruence.

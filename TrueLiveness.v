@@ -13,16 +13,13 @@ Inductive true_live_sound (i:overapproximation)
   :  true_live_sound i Lv b al
   -> (x ∈ getAnn al -> live_exp_sound e lv)
   -> (getAnn al\{{x}}) ⊆ lv
-  -> (x ∉ getAnn al -> lv ⊆ getAnn al \ {{x}})
   -> true_live_sound i Lv (stmtLet x e b) (ann1 lv al)
 | TLIf Lv e b1 b2 lv al1 al2
   :  true_live_sound i Lv b1 al1
   -> true_live_sound i Lv b2 al2
   -> (exp2bool e = None -> live_exp_sound e lv)
   -> (exp2bool e <> Some false -> getAnn al1 ⊆ lv)
-  -> (exp2bool e = Some true -> lv ⊆ getAnn al1)
   -> (exp2bool e <> Some true -> getAnn al2 ⊆ lv)
-  -> (exp2bool e = Some false -> lv ⊆ getAnn al2)
   -> true_live_sound i Lv (stmtIf e b1 b2) (ann2 lv al1 al2)
 | TLGoto l Y Lv lv blv Z
   : get Lv (counted l) (blv,Z)
@@ -37,7 +34,6 @@ Inductive true_live_sound (i:overapproximation)
   : true_live_sound i Lv b al
   -> (forall n y, get Y n y -> live_exp_sound y lv)
   -> (getAnn al\{{x}}) ⊆ lv
-  -> x ∈ getAnn al
   -> true_live_sound i Lv (stmtExtern x f Y b) (ann1 lv al)
 | TLLet Lv s Z b lv als alb
   : true_live_sound i ((getAnn als,Z)::Lv) s als

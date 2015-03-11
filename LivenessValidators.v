@@ -89,9 +89,7 @@ Proof.
     edestruct IHs2; try inv an; eauto;
     decide (exp2bool e = None -> live_exp_sound e a);
     decide (exp2bool e <> Some false -> getAnn slv1 ⊆ a);
-    decide (exp2bool e = Some true -> a ⊆ getAnn slv1);
     decide (exp2bool e <> Some true -> getAnn slv2 ⊆ a);
-    decide (exp2bool e = Some false -> a ⊆ getAnn slv2);
     try dec_solve; try eassumption; try inv an; eauto.
   + destruct (get_dec Lv (counted l)) as [[[blv Z] ?]|?];
     try decide (argsLive a blv Y Z); try dec_solve.
@@ -105,7 +103,6 @@ Proof.
   + decide(live_exp_sound e a); try dec_solve.
   + edestruct IHs; eauto; try inv an; eauto;
     decide (getAnn slv \ {{x}} ⊆ a);
-    decide (x ∈ getAnn slv);
     try decide (forall n y, get Y n y -> live_exp_sound y a);
     try dec_solve.
   + edestruct IHs1; eauto; try inv an; eauto;
