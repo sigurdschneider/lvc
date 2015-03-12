@@ -774,6 +774,42 @@ Ltac extern_step :=
     ].
 
 
+Definition same_call (e e':extern) := extern_fnc e = extern_fnc e' /\ extern_args e = extern_args e'.
+
+Definition receptive S `{StateType S} :=
+  forall σ σ' ext, step σ (EvtExtern ext) σ'
+              -> forall ext', same_call ext ext' -> exists σ'', step σ (EvtExtern ext') σ''.
+
+Arguments receptive S [H].
+
+Definition determinate S `{StateType S} :=
+  forall σ σ' σ'' ext ext', step σ (EvtExtern ext) σ'
+              -> step σ (EvtExtern ext') σ'' -> same_call ext ext'.
+
+Arguments determinate S [H].
+
+Lemma bisimExternDet {S} `{StateType S} {S'} `{StateType S'} (pσ1:S) (pσ2:S') (σ1:S) (σ2:S')
+      (RCPT:receptive S) (DET:determinate S')
+: star2 step pσ1 nil σ1
+  -> star2 step pσ2 nil σ2
+  -> activated σ1
+  -> (forall evt σ1', step σ1 evt σ1' -> exists σ2', step σ2 evt σ2' /\ bisim σ1' σ2')
+  -> bisim pσ1 pσ2.
+Proof.
+  intros.
+  econstructor 2; eauto.
+  - inv H3. dcr. edestruct H4; eauto. firstorder.
+  - intros. inv H3. dcr. exploit H4; eauto; dcr.
+    destruct evt.
+    + exploit DET. eauto. eapply H5.
+      exploit RCPT; eauto. dcr.
+      exploit H4. eapply H6. dcr.
+      eexists; split. eapply H6.
+      exploit step_externally_determined. eapply H11. eapply H5. subst. eauto.
+    + exfalso. exploit step_internally_deterministic; eauto; dcr. congruence.
+Qed.
+
+
 (*
 *** Local Variables: ***
 *** coq-load-path: (("../" "Lvc")) ***
