@@ -6,16 +6,6 @@ Require Import RenamedApart_Liveness.
 
 Set Implicit Arguments.
 
-(** Renaming respects function equivalence *)
-
-Global Instance rename_morphism
-  : Proper (@feq _ _ _eq ==> eq ==> eq) rename.
-Proof.
-  unfold Proper, respectful; intros; subst.
-  general induction y0; simpl; f_equal; eauto; try (now rewrite H; eauto);
-  eauto using rename_exp_ext, map_ext_get_eq; eauto.
-Qed.
-
 (** Inductive definition of local injectivity of a renaming rho *)
 
 Inductive locally_inj (rho:env var) : stmt -> ann (set var) -> Prop :=
@@ -133,7 +123,7 @@ Proof.
         rewrite lookup_set_minus_incl_inj. rewrite <- minus_inane_set.
         instantiate (1:={{ϱ x}}). eapply incl_minus_lr; eauto.
         rewrite lookup_set_minus_incl; intuition. eapply lookup_set_incl; intuition.
-        reflexivity. rewrite lookup_set_singleton; intuition.
+        rewrite lookup_set_singleton; intuition.
         rewrite meet_comm. eapply meet_minus. intuition.
         assert (getAnn al [=] getAnn al ++ {x; {}}). cset_tac; intuition.
         invc H2; eauto. rewrite <- H1. eauto using locally_injective.
@@ -173,7 +163,7 @@ Proof.
         rewrite lookup_set_minus_incl_inj. rewrite <- minus_inane_set.
         instantiate (1:={{ϱ x}}). eapply incl_minus_lr; eauto.
         rewrite lookup_set_minus_incl; intuition. eapply lookup_set_incl; intuition.
-        reflexivity. rewrite lookup_set_singleton; intuition.
+        rewrite lookup_set_singleton; intuition.
         rewrite meet_comm. eapply meet_minus. intuition.
         assert (getAnn al [=] getAnn al ++ {x; {}}). cset_tac; intuition.
         invc H2; eauto. rewrite <- H1. eauto using locally_injective.

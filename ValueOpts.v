@@ -867,12 +867,6 @@ Proof.
   erewrite IHY; eauto; simpl; eauto.
 Qed.
 
-Ltac length_equify :=
-  repeat (match goal with
-            | [ H : length ?A = length ?B |- _ ] =>
-              eapply length_length_eq in H
-          end).
-
 Lemma omap_satisfies_list_EqnApx V Y Y' v
  : length Y = length Y'
    -> satisfiesAll V (list_EqnApx Y Y')

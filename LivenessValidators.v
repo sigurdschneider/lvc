@@ -12,19 +12,6 @@ Proof.
   - right; intro. eapply argsLive_length in H. congruence.
 Defined.
 
-(*TODO: generalize this, it might be useful *)
-Instance list_get_live_computable Y lv
-: Computable (forall n y, get Y n y -> live_exp_sound y lv).
-Proof.
-  hnf. general induction Y.
-  - left; isabsurd.
-  - decide (live_exp_sound a lv).
-    + edestruct IHY.
-      * left; intros. inv H; eauto using get.
-      * right; intros; eauto using get.
-    + right; eauto using get.
-Defined.
-
 Definition live_sound_dec i Lv s slv (an:annotation s slv)
       : Computable (live_sound i Lv s slv).
 Proof.

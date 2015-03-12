@@ -22,7 +22,7 @@ Proof.
   erewrite omap_agree; eauto.
   intros. eapply exp_eval_agree; eauto.
   eapply agree_on_incl; eauto.
-  eapply incl_list_union; eauto using map_get_1. reflexivity.
+  eapply incl_list_union; eauto using map_get_1.
 Qed.
 
 Lemma exp_eval_live_agree E E' e lv v

@@ -259,7 +259,7 @@ Proof.
     rewrite meet_comm in H0.
     eapply incl_meet_empty in H0.
     rewrite meet_comm. eapply H0.
-    eapply incl_list_union; eauto. reflexivity.
+    eapply incl_list_union; eauto.
 Qed.
 
 

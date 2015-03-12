@@ -276,7 +276,7 @@ Qed.
 Lemma vars_up_to_incl n m
 : n <= m -> vars_up_to n ⊆ vars_up_to m.
 Proof.
-  intros. general induction H; eauto. reflexivity.
+  intros. general induction H; eauto.
   simpl. rewrite IHle. cset_tac; intuition.
 Qed.
 

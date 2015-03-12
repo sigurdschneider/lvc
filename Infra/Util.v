@@ -381,6 +381,63 @@ Hint Extern 20 => match goal with
                    | [ H: ?a /\ ?b |- ?a ] => eapply H
                  end.
 
+Instance instance_option_eq_trans_R X {R: relation X} `{Transitive _ R}
+ : Transitive (option_eq R).
+Proof.
+  hnf; intros. inv H0; inv H1.
+  + econstructor.
+  + econstructor; eauto.
+Qed.
+
+Instance instance_option_eq_refl_R X {R: relation X} `{Reflexive _ R}
+ : Reflexive (option_eq R).
+Proof.
+  hnf; intros. destruct x.
+  + econstructor; eauto.
+  + econstructor.
+Qed.
+
+Instance instance_option_eq_sym_R X {R: relation X} `{Symmetric _ R}
+ : Symmetric (option_eq R).
+Proof.
+  hnf; intros. inv H0.
+  + econstructor.
+  + econstructor; eauto.
+Qed.
+
+Instance plus_le_morpism
+: Proper (Peano.le ==> Peano.le ==> Peano.le) Peano.plus.
+Proof.
+  unfold Proper, respectful.
+  intros. omega.
+Qed.
+
+Instance plus_S_morpism
+: Proper (Peano.le ==> Peano.le) S.
+Proof.
+  unfold Proper, respectful.
+  intros. omega.
+Qed.
+
+Instance le_lt_morph
+: Proper (Peano.ge ==> Peano.le ==> impl) Peano.lt.
+Proof.
+  unfold Proper, respectful, impl; intros; try omega.
+Qed.
+
+Instance le_lt_morph'
+: Proper (eq ==> Peano.le ==> impl) Peano.lt.
+Proof.
+  unfold Proper, respectful, flip, impl; intros; try omega.
+Qed.
+
+Instance le_lt_morph''
+: Proper (Peano.le ==> eq ==> flip impl) Peano.lt.
+Proof.
+  unfold Proper, respectful, flip, impl; intros; try omega.
+Qed.
+
+
 (*
 *** Local Variables: ***
 *** coq-load-path: (("../" "Lvc")) ***

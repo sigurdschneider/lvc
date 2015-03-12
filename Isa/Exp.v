@@ -208,7 +208,7 @@ Set Implicit Arguments.
     intros. general induction e; simpl; cset_tac; intuition.
     hnf in H.
     eapply lookup_set_spec; eauto. eexists v; cset_tac; eauto.
-    - eapply Subset_trans; eauto. eapply lookup_set_incl; intuition.
+    - eapply Subset_trans; eauto.
     - eapply Subset_trans; eauto. eapply lookup_set_incl; intuition.
     - eapply Subset_trans; try eapply IHe2; eauto.
       eapply lookup_set_incl; intuition.

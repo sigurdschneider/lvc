@@ -24,7 +24,6 @@ Proof.
   assert (a ⊆ s'). eapply H0; eauto using get.
   eapply IHL; eauto. intros. rewrite H0; eauto using get.
   cset_tac; intuition.
-  cset_tac; intuition.
 Qed.
 
 Lemma incl_list_union {X} `{OrderedType X} (s: set X) L n t u

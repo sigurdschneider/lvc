@@ -248,7 +248,7 @@ Lemma list_eq_special DL ϱ A B A'
 Proof.
   intros. general induction DL; simpl. econstructor.
   unfold restr. unfold lookup_set_option.
-  destruct a; repeat destruct if;econstructor; eauto; try econstructor; eauto. reflexivity.
+  destruct a; repeat destruct if;econstructor; eauto; try econstructor; eauto.
   exfalso. eapply n. cset_tac; intuition. eapply H0. eapply lookup_set_incl; eauto. intuition.
   exfalso. eapply n. cset_tac; intuition.
 Qed.
@@ -260,7 +260,7 @@ Lemma list_eq_fstNoneOrR_incl DL ϱ A B
        (map_lookup ϱ (restrict DL B)).
 Proof.
   intros. general induction DL; simpl.  econstructor.
-  unfold restr; destruct a; repeat destruct if; simpl; econstructor; eauto; try econstructor; eauto. reflexivity.
+  unfold restr; destruct a; repeat destruct if; simpl; econstructor; eauto; try econstructor; eauto.
   exfalso. eapply n. rewrite <- H; eauto.
 Qed.
 
@@ -282,6 +282,39 @@ Proof.
   general induction L; simpl; (try destruct a); (try edestruct IHL); eauto; intuition.
   eapply H; eauto. eapply H; eauto.
   Grab Existential Variables. eapply s. eapply L'.
+Qed.
+
+
+Inductive fstNoneOrR' {X Y:Type} (R:X->Y->Prop)
+  : option X -> Y -> Prop :=
+| fstNone' (y:Y) : fstNoneOrR' R None y
+| bothR' (x:X) (y:Y) : R x y -> fstNoneOrR' R (Some x) y
+.
+
+Definition eqReq := (fstNoneOrR' (fun (s : set var) (t : set var * list var) =>
+                                   s [=] fst t \ of_list (snd t))).
+
+Lemma restrict_eqReq DL DL' G
+: PIR2 eqReq DL DL'
+  -> PIR2 eqReq (restrict DL G) DL'.
+Proof.
+  intros. induction H; simpl; econstructor; eauto.
+  unfold restr. destruct pf. constructor.
+  destruct if; eauto. subst. constructor; eauto. constructor.
+Qed.
+
+Lemma restrict_get DL lv n s
+: get (restrict DL lv) n ⎣ s ⎦
+  -> get DL n (Some s) /\ s ⊆ lv.
+Proof.
+  intros. general induction H.
+  - destruct DL; simpl in *; isabsurd.
+    inv Heql. unfold restr in H0. destruct o.
+    destruct if in H0. inv H0.
+    eauto using get. congruence. congruence.
+  - destruct DL; simpl in *; isabsurd.
+    inv Heql. edestruct IHget; eauto.
+    eauto using get.
 Qed.
 
 

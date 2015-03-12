@@ -5,12 +5,6 @@ Require Import Val Var Env EnvTy IL Annotation Liveness Coherence Sim MoreList R
 
 Set Implicit Arguments.
 
-Ltac length_equify :=
-  repeat (match goal with
-            | [ H : length ?A = length ?B |- _ ] =>
-              eapply length_length_eq in H
-          end).
-
 Definition addParam x (DL:list (set var)) (AP:list (set var)) :=
   zip (fun (DL:set var) AP => if [x ∈ DL]
                    then {{x}} ∪ AP else AP) DL AP.
@@ -116,18 +110,13 @@ Lemma trs_monotone (DL DL' : list (option (set var))) ZL s lv a
    -> DL ≿ DL'
    -> trs DL' ZL s lv a.
 Proof.
-  intros. general induction H; eauto 30 using trs, restrict_subset2, Subset_refl.
-  + econstructor.
-    eapply IHtrs; eauto. eapply restrict_subset2; eauto. reflexivity.
+  intros. general induction H; eauto 30 using trs, restrict_subset2.
   + destruct (PIR2_nth H1 H); eauto; dcr. inv H4.
     econstructor; eauto.
-  + econstructor.
-    eapply IHtrs; eauto.
-    eapply restrict_subset2; eauto. reflexivity.
   + econstructor; eauto.
     eapply IHtrs1. repeat rewrite restrict_incl; try reflexivity.
     constructor; eauto. reflexivity.
-    eapply restrict_subset2; eauto. reflexivity.
+    eapply restrict_subset2; eauto.
     eapply IHtrs2. constructor; eauto. reflexivity.
 Qed.
 
@@ -461,30 +450,6 @@ Proof.
     + eauto.
 Qed.
 *)
-
-Instance instance_option_eq_trans_R X {R: relation X} `{Transitive _ R}
- : Transitive (option_eq R).
-Proof.
-  hnf; intros. inv H0; inv H1.
-  + econstructor.
-  + econstructor; eauto.
-Qed.
-
-Instance instance_option_eq_refl_R X {R: relation X} `{Reflexive _ R}
- : Reflexive (option_eq R).
-Proof.
-  hnf; intros. destruct x.
-  + econstructor; eauto.
-  + econstructor.
-Qed.
-
-Instance instance_option_eq_sym_R X {R: relation X} `{Symmetric _ R}
- : Symmetric (option_eq R).
-Proof.
-  hnf; intros. inv H0.
-  + econstructor.
-  + econstructor; eauto.
-Qed.
 
 Inductive ifSndR {X Y} (R:X -> Y -> Prop) : X -> option Y -> Prop :=
   | ifsndR_None x : ifSndR R x None

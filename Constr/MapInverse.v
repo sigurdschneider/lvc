@@ -142,7 +142,7 @@ Proof.
   induction Z. exfalso.  simpl in i. eapply not_in_empty in i; eauto.
   simpl. lud. eapply H3; eauto. simpl. eapply union_3. intuition.
   eapply union_2; eauto. eapply IHZ. eapply injective_on_incl; eauto.
-  eapply incl_union_lr; eauto. reflexivity. simpl. intuition. simpl in i.
+  eapply incl_union_lr; eauto. simpl. intuition. simpl in i.
   eapply add_3; eauto. decide (a === x); eauto. exfalso. eapply H4.
   rewrite e; reflexivity.
 

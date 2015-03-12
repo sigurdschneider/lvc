@@ -134,6 +134,17 @@ Fixpoint rename (ϱ:env var) (s:stmt) : stmt :=
     | stmtFun Z s t => stmtFun (lookup_list ϱ Z) (rename ϱ s) (rename ϱ t)
   end.
 
+(** Renaming respects function equivalence *)
+
+Global Instance rename_morphism
+  : Proper (@feq _ _ _eq ==> eq ==> eq) rename.
+Proof.
+  unfold Proper, respectful; intros; subst.
+  general induction y0; simpl; f_equal; eauto; try (now rewrite H; eauto);
+  eauto using rename_exp_ext, map_ext_get_eq; eauto.
+Qed.
+
+
 Fixpoint label_closed (n:nat) (s:stmt) : Prop :=
   match s with
     | stmtLet _ _ s => label_closed n s

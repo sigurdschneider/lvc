@@ -683,14 +683,12 @@ Proof.
       eapply IHCP1; eauto.
       * intros; simpl.
         inv H; inv H0; simpl; eauto.
-        split. eexists; split; reflexivity. reflexivity.
       * rewrite H6. simpl.
         rewrite cp_eqns_union. reflexivity.
     + eapply eqn_sound_entails_monotone; eauto.
       eapply IHCP2; eauto.
       * intros; simpl.
         inv H; inv H0; simpl; eauto.
-        split. eexists; split; reflexivity. reflexivity.
       * rewrite H9; reflexivity.
     + rewrite cp_eqns_freeVars. eapply incl_right.
     + rewrite cp_eqns_freeVars. reflexivity.

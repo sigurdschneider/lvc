@@ -179,15 +179,15 @@ Lemma srd_monotone (DL DL' : list (option (set var))) s a
 Proof.
   intros. general induction H; eauto using srd.
   + econstructor.
-    eapply IHsrd; eauto. eapply restrict_subset; eauto. reflexivity.
+    eapply IHsrd; eauto. eapply restrict_subset; eauto.
   + destruct (PIR2_nth H0 H); eauto; dcr. inv H3.
     econstructor; eauto.
   + econstructor. eapply IHsrd; eauto.
-    eapply restrict_subset; eauto. reflexivity.
+    eapply restrict_subset; eauto.
   + econstructor; eauto.
     eapply IHsrd1. repeat rewrite restrict_incl; try reflexivity.
     constructor; eauto. reflexivity.
-    eapply restrict_subset; eauto. reflexivity.
+    eapply restrict_subset; eauto.
     eapply IHsrd2. constructor; eauto. reflexivity.
 Qed.
 
@@ -198,14 +198,14 @@ Lemma srd_monotone2 (DL DL' : list (option (set var))) s a
 Proof.
   intros. general induction H; eauto using srd.
   + econstructor.
-    eapply IHsrd; eauto. eapply restrict_subset2; eauto. reflexivity.
+    eapply IHsrd; eauto. eapply restrict_subset2; eauto.
   + destruct (PIR2_nth H0 H); eauto; dcr. inv H3.
     econstructor; eauto.
-  + econstructor. eapply IHsrd, restrict_subset2; eauto. reflexivity.
+  + econstructor. eapply IHsrd, restrict_subset2; eauto.
   + econstructor; eauto.
     eapply IHsrd1. repeat rewrite restrict_incl; try reflexivity.
     constructor; eauto. reflexivity.
-    eapply restrict_subset2; eauto. reflexivity.
+    eapply restrict_subset2; eauto.
     eapply IHsrd2. constructor; eauto. reflexivity.
 Qed.
 
@@ -220,7 +220,7 @@ Proof.
     eapply srd_monotone.
     eapply IHrenamedApart; eauto.
     rewrite H2. simpl in *. rewrite <- incl_add'; eauto.
-    erewrite bounded_restrict_eq; simpl; eauto. reflexivity.
+    erewrite bounded_restrict_eq; simpl; eauto.
     simpl. cset_tac; intuition.
   - econstructor; eauto.
     + eapply IHrenamedApart1; eauto.
@@ -234,7 +234,7 @@ Proof.
     eapply srd_monotone.
     eapply IHrenamedApart; eauto.
     rewrite H2. simpl in *. rewrite <- incl_add'; eauto.
-    erewrite bounded_restrict_eq; simpl; eauto. reflexivity.
+    erewrite bounded_restrict_eq; simpl; eauto.
     simpl. cset_tac; intuition.
   - econstructor.
     + eapply srd_monotone.
@@ -246,7 +246,7 @@ Proof.
       * econstructor. econstructor. rewrite H3; simpl.
         cset_tac; intuition; eauto.
         simpl in *. rewrite H3; simpl.
-        erewrite bounded_restrict_eq; simpl; eauto. reflexivity.
+        erewrite bounded_restrict_eq; simpl; eauto.
         simpl. cset_tac; intuition; eauto.
       * exfalso. eapply n. rewrite H3; simpl. reflexivity.
     + eapply srd_monotone.
@@ -256,39 +256,6 @@ Proof.
       econstructor. econstructor. rewrite H3; simpl.
       cset_tac; intuition; eauto.
       reflexivity.
-Qed.
-
-
-Inductive fstNoneOrR' {X Y:Type} (R:X->Y->Prop)
-  : option X -> Y -> Prop :=
-| fstNone' (y:Y) : fstNoneOrR' R None y
-| bothR' (x:X) (y:Y) : R x y -> fstNoneOrR' R (Some x) y
-.
-
-Definition eqReq := (fstNoneOrR' (fun (s : set var) (t : set var * params) =>
-                                   s [=] fst t \ of_list (snd t))).
-
-Lemma restrict_eqReq DL DL' G
-: PIR2 eqReq DL DL'
-  -> PIR2 eqReq (restrict DL G) DL'.
-Proof.
-  intros. induction H; simpl; econstructor; eauto.
-  unfold restr. destruct pf. constructor.
-  destruct if; eauto. subst. constructor; eauto. constructor.
-Qed.
-
-Lemma restrict_get DL lv n s
-: get (restrict DL lv) n ⎣ s ⎦
-  -> get DL n (Some s) /\ s ⊆ lv.
-Proof.
-  intros. general induction H.
-  - destruct DL; simpl in *; isabsurd.
-    inv Heql. unfold restr in H0. destruct o.
-    destruct if in H0. inv H0.
-    eauto using get. congruence. congruence.
-  - destruct DL; simpl in *; isabsurd.
-    inv Heql. edestruct IHget; eauto.
-    eauto using get.
 Qed.
 
 Lemma srd_globals_live s DL AL alv f

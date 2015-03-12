@@ -155,13 +155,6 @@ Instance live_ann_subset_refl : Reflexive live_ann_subset.
 hnf; intros. destruct x; firstorder.
 Qed.
 
-Instance diff_proper_impl X `{OrderedType X}
-: Proper (flip Subset ==> Subset ==> flip Subset) diff.
-Proof.
-  unfold Proper, respectful, flip; intros.
-  cset_tac; intuition.
-Qed.
-
 Lemma live_sound_monotone i LV LV' s lv
 : live_sound i LV s lv
   -> PIR2 live_ann_subset LV LV'

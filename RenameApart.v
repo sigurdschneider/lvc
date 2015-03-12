@@ -97,7 +97,7 @@ Proof.
     rewrite H0 at 1.
     rewrite IHy1, IHy2; eauto. reflexivity.
     rewrite H0; reflexivity.
-    eapply IHy1. rewrite H0. reflexivity.
+    eapply IHy1. rewrite H0; eauto.
 Qed.
 
 Lemma fst_renamedApartAnn s G
@@ -176,8 +176,8 @@ Proof.
       rewrite getAnn_mapAnn. unfold pminus.
       let_pair_case_eq; simpl.
       econstructor. rewrite <- H2; clear_all; cset_tac; intuition.
-      rewrite IHnotOccur2, getAnn_mapAnn.
-      unfold pminus. let_pair_case_eq; simpl; eauto. reflexivity. eauto.
+      rewrite IHnotOccur2, getAnn_mapAnn; eauto.
+      unfold pminus. let_pair_case_eq; simpl; eauto.
       rewrite <- H2. revert H; clear_all; cset_tac; intuition; eauto.
     + rewrite H3.
       eapply IHnotOccur1.
@@ -269,7 +269,6 @@ Proof.
       * cset_tac; intuition. right. rewrite H3. eapply H.
         eapply lookup_set_spec; eauto. eexists x0. split; eauto.
         eapply union_2. eapply in_in_minus; eauto. cset_tac; intuition.
-    + reflexivity.
   - subst s0 s4. simpl in H. simpl. rename s3 into Gs2. rename s into Gs1.
     eapply renamedApartIf with (Ds := Gs1) (Dt := Gs2).
     + rewrite <- H. rewrite Exp.rename_exp_freeVars; eauto.
@@ -309,10 +308,8 @@ Proof.
     eapply map_ext_get; intros.
     rewrite <- Exp.rename_exp_freeVars; eauto; reflexivity.
     eapply lookup_set_empty; eauto.
-  - econstructor. simpl in H. rewrite <- H.
+  - econstructor; eauto. simpl in H. rewrite <- H.
     rewrite Exp.rename_exp_freeVars; eauto.
-    eapply lookup_set_incl; eauto.
-    reflexivity. reflexivity.
   - subst. econstructor; eauto using fresh_spec, renameApartAnn_decomp.
     + simpl in H.
       assert  (lookup_set ϱ
@@ -334,7 +331,6 @@ Proof.
       * cset_tac. right. rewrite H3. eapply H.
         eapply lookup_set_spec; eauto. eexists x0. split; eauto.
         eapply union_2. eapply in_in_minus; eauto. cset_tac; intuition.
-    + reflexivity.
   - simpl. subst s0 s4. simpl in H. simpl. rename s3 into Gs2. rename s into Gs1.
     eapply renamedApartLet with (Ds:=Gs1) (Dt:=Gs2).
     + eapply fresh_set_spec. eapply fresh_spec.
@@ -351,7 +347,7 @@ Proof.
     + eapply IHs1.
       rewrite lookup_set_update_with_list_in_union_length; eauto.
       eapply incl_union_lr; eauto. rewrite <- H.
-      eapply lookup_set_incl; eauto. intuition. reflexivity.
+      eapply lookup_set_incl; eauto. intuition.
       rewrite fresh_list_length; eauto.
     + rewrite renameApartAnn_decomp.
       econstructor. rewrite union_comm. reflexivity.

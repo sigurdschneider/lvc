@@ -233,6 +233,32 @@ Proof.
   - right; intro. exploit list_eq_length; eauto.
 Qed.
 
+
+Ltac inv_mapi H :=
+  match type of H with
+    | get (mapi ?f ?L) ?n ?x =>
+      match goal with
+        | [H' : get ?L ?n ?y |- _ ] =>
+          let EQ := fresh "EQ" in pose proof (mapi_get f H' H) as EQ; invc EQ
+        | _ => let X := fresh "X" in let EQ := fresh "EQ" in
+              pose proof (mapi_get f _ H) as X; destruct X as [? [? EQ]]; invc EQ;
+             clear_trivial_eqs
+      end
+  end.
+
+Instance list_get_computable X (Y:list X) (R:X->Prop) `{forall (x:X), Computable (R x)}
+: Computable (forall n y, get Y n y -> R y).
+Proof.
+  hnf. general induction Y.
+  - left; isabsurd.
+  - decide (R a).
+    + edestruct IHY; eauto.
+      * left; intros. inv H0; eauto using get.
+      * right; intros; eauto using get.
+    + right; eauto using get.
+Defined.
+
+
 (*
 *** Local Variables: ***
 *** coq-load-path: (("../" "Lvc")) ***

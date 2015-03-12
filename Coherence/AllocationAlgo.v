@@ -272,13 +272,6 @@ Proof.
     + rewrite fresh_list_length; eauto.
 Qed.
 
-
-Definition max_set {X} `{OrderedType X} (a:set X) (b:set X) :=
-  if [SetInterface.cardinal a < SetInterface.cardinal b] then
-    b
-  else
-    a.
-
 Fixpoint largest_live_set (a:ann (set var)) : set var :=
   match a with
     | ann0 gamma => gamma
@@ -298,109 +291,6 @@ Lemma size_of_largest_live_set_live_set al
 : SetInterface.cardinal (getAnn al) <= size_of_largest_live_set al.
 Proof.
   destruct al; simpl; eauto using Max.le_max_l.
-Qed.
-
-Lemma cardinal_difference {X} `{OrderedType X} (s t: set X)
-: SetInterface.cardinal (s \ t) <= SetInterface.cardinal s.
-Proof.
-  erewrite <- (diff_inter_cardinal s t).
-  omega.
-Qed.
-
-Lemma cardinal_difference' {X} `{OrderedType X} (s t: set X)
-: t ⊆ s
-  -> SetInterface.cardinal (s \ t) = SetInterface.cardinal s - SetInterface.cardinal t.
-Proof.
-  intros.
-  erewrite <- (diff_inter_cardinal s t).
-  assert (s ∩ t [=] t). (cset_tac; intuition; eauto).
-  rewrite H1. omega.
-Qed.
-
-Instance plus_le_morpism
-: Proper (Peano.le ==> Peano.le ==> Peano.le) Peano.plus.
-Proof.
-  unfold Proper, respectful.
-  intros. omega.
-Qed.
-
-Instance plus_S_morpism
-: Proper (Peano.le ==> Peano.le) S.
-Proof.
-  unfold Proper, respectful.
-  intros. omega.
-Qed.
-
-Instance cardinal_morph {X} `{OrderedType X}
-: Proper (@Subset X _ _ ==> Peano.le)  SetInterface.cardinal.
-Proof.
-  unfold Proper, respectful; intros.
-  eapply subset_cardinal; eauto.
-Qed.
-
-Lemma cardinal_of_list_unique {X} `{OrderedType X} (Z:list X)
-: unique Z -> SetInterface.cardinal (of_list Z) = length Z.
-Proof.
-  general induction Z; simpl in * |- *.
-  - eapply empty_cardinal.
-  - dcr. erewrite cardinal_2. rewrite IHZ; eauto.
-    intro. eapply H1. eapply InA_in; eauto.
-    hnf; cset_tac; intuition.
-Qed.
-
-Lemma cardinal_map {X} `{OrderedType X} {Y} `{OrderedType Y} (s: set X) (f:X -> Y) `{Proper _ (_eq ==> _eq) f}
-: SetInterface.cardinal (SetConstructs.map f s) <= SetInterface.cardinal s.
-Proof.
-  pattern s. eapply set_induction.
-  - intros. repeat rewrite SetProperties.cardinal_1; eauto.
-    hnf. intros; intro. eapply map_iff in H3. dcr.
-    eapply H2; eauto. eauto.
-  - intros.
-    erewrite (SetProperties.cardinal_2 H3 H4); eauto.
-    decide (f x ∈ SetConstructs.map f s0).
-    + assert (SetConstructs.map f s0 [=] {f x; SetConstructs.map f s0}).
-      cset_tac; intuition. rewrite <- H6; eauto.
-      rewrite <- H2. rewrite H5.
-      assert (SetConstructs.map f s' ⊆ {f x; SetConstructs.map f s0}).
-      hnf; intros.
-      eapply map_iff in H6.
-      cset_tac; intuition; eauto.
-      specialize (H4 x0). eapply H4 in H8. destruct H8.
-      left. rewrite H6; eauto.
-      right. eapply map_iff; eauto. eauto.
-      rewrite <- H6. omega.
-    + rewrite <- H2. erewrite <- cardinal_2; eauto.
-      split; intros.
-      decide (f x === y); eauto.
-      eapply map_iff in H5; dcr.
-      right. eapply map_iff; eauto.
-      decide (x0 === x). exfalso. eapply n0. rewrite <- e. eauto.
-      eexists x0. split; eauto. specialize (H4 x0).
-      rewrite H4 in H7. destruct H7; eauto. exfalso. eapply n1; eauto.
-      eauto. eapply map_iff; eauto.
-      destruct H5.
-      eexists x; split; eauto. eapply H4. eauto.
-      eapply map_iff in H5; eauto. dcr.
-      eexists x0; split; eauto.
-      eapply H4. eauto.
-Qed.
-
-Instance le_lt_morph
-: Proper (Peano.ge ==> Peano.le ==> impl) Peano.lt.
-Proof.
-  unfold Proper, respectful, impl; intros; try omega.
-Qed.
-
-Instance le_lt_morph'
-: Proper (eq ==> Peano.le ==> impl) Peano.lt.
-Proof.
-  unfold Proper, respectful, flip, impl; intros; try omega.
-Qed.
-
-Instance le_lt_morph''
-: Proper (Peano.le ==> eq ==> flip impl) Peano.lt.
-Proof.
-  unfold Proper, respectful, flip, impl; intros; try omega.
 Qed.
 
 Lemma linear_scan_assignment_small (ϱ:Map [var,var]) LV s alv ϱ' al n
@@ -453,7 +343,7 @@ Proof.
     rewrite lookup_set_agree; eauto.
     eapply agree_on_incl; try eapply linear_scan_renamedApart_agree;
     try eapply EQ0; eauto using live_sound.
-    rewrite H12; simpl; eauto. reflexivity.
+    rewrite H12; simpl; eauto.
     exploit IHLS2; try eapply EQ0; eauto.
     rewrite H12; simpl. rewrite <- incl; eauto.
     rewrite H12. simpl. eauto.
@@ -571,7 +461,6 @@ Proof.
         rewrite (vars_up_to_incl H3).
         cset_tac; intuition.
         rewrite fresh_list_length; eauto.
-        reflexivity.
         symmetry.
         etransitivity.
         eapply agree_on_incl.

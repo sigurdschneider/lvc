@@ -545,6 +545,8 @@ match goal with
     let X'' := fresh H in pose proof (PIR2_drop n H) as X''
 end.
 
+Hint Extern 20 (PIR2 _ ?a ?a') => is_evar a || has_evar a || is_evar a' || has_evar a' || reflexivity.
+
 (*
 *** Local Variables: ***
 *** coq-load-path: (("../" "Lvc")) ***

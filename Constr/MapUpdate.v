@@ -392,10 +392,10 @@ Lemma update_with_list_lookup_list {X} `{OrderedType X} {Y} `{OrderedType Y} (f:
 Proof.
   intros L. eapply length_length_eq in L.
   general induction L; simpl in * |- *; dcr.
-  - rewrite lookup_set_empty; eauto. reflexivity.
+  - rewrite lookup_set_empty; eauto.
   - rewrite lookup_set_add; eauto. lud.
     + rewrite lookup_set_agree.
-      rewrite IHL; eauto. reflexivity. eauto. eauto.
+      rewrite IHL; eauto.  eauto. eauto.
       eapply agree_on_update_dead; eauto. intro. eapply InA_in in H2. eauto.
     + exfalso; eapply H2; reflexivity.
 Qed.
