@@ -298,9 +298,11 @@ Lemma linear_scan_assignment_small (ϱ:Map [var,var]) LV s alv ϱ' al n
       (allocOK:linear_scan s alv ϱ = Success ϱ')
       (incl:getAnn alv ⊆ fst (getAnn al))
       (sd:renamedApart s al)
-      (up:lookup_set (findt ϱ' 0) (fst (getAnn al)) ⊆ vars_up_to n)
+      (up:lookup_set (findt ϱ 0) (fst (getAnn al)) ⊆ vars_up_to n)
 : lookup_set (findt ϱ' 0) (snd (getAnn al)) ⊆ vars_up_to (max (size_of_largest_live_set alv) n).
 Proof.
+  exploit linear_scan_renamedApart_agree; eauto using live_sound.
+  rewrite lookup_set_agree in up; eauto. clear X.
   general induction LS; invt renamedApart; simpl in * |- *.
   - assert ( singleton (findt ϱ' 0 x)
                        ⊆ vars_up_to (size_of_largest_live_set al)). {
