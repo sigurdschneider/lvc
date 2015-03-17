@@ -272,6 +272,25 @@ Proof.
     + rewrite fresh_list_length; eauto.
 Qed.
 
+
+Require Import Restrict RenamedApart_Liveness.
+
+Lemma locally_inj_live_agree' s ang ϱ ϱ' (alv:ann (set var)) Lv
+  : renamedApart s ang
+  -> live_sound Imperative Lv s alv
+  -> bounded (live_globals Lv) (fst (getAnn ang))
+  -> ann_R Subset1 alv ang
+  -> LabelsDefined.noUnreachableCode s
+  -> injective_on (getAnn alv) (findt ϱ 0)
+  -> linear_scan s alv ϱ = Success ϱ'
+  -> locally_inj (findt ϱ' 0) s alv.
+Proof.
+  intros.
+  eapply renamedApart_live_imperative_is_functional in H0; eauto using bounded_disjoint, renamedApart_disj, meet1_Subset1, live_sound_annotation, renamedApart_annotation.
+  eapply linear_scan_correct; eauto using locally_inj_subset, meet1_Subset, live_sound_annotation, renamedApart_annotation.
+  eapply ann_R_get in H2. destruct (getAnn ang); simpl; cset_tac; intuition.
+Qed.
+
 Fixpoint largest_live_set (a:ann (set var)) : set var :=
   match a with
     | ann0 gamma => gamma
@@ -484,6 +503,27 @@ Proof.
     + rewrite fresh_list_length; eauto.
 Qed.
 
+
+Lemma linear_scan_assignment_small' s ang ϱ ϱ' (alv:ann (set var)) Lv n
+  : renamedApart s ang
+  -> live_sound Imperative Lv s alv
+  -> bounded (live_globals Lv) (fst (getAnn ang))
+  -> ann_R Subset1 alv ang
+  -> LabelsDefined.noUnreachableCode s
+  -> linear_scan s alv ϱ = Success ϱ'
+  -> lookup_set (findt ϱ 0) (fst (getAnn ang)) ⊆ vars_up_to n
+  -> lookup_set (findt ϱ' 0) (fst (getAnn ang) ∪ snd (getAnn ang)) ⊆ vars_up_to (max (size_of_largest_live_set alv) n).
+Proof.
+  intros.
+  eapply renamedApart_live_imperative_is_functional in H0; eauto using bounded_disjoint, renamedApart_disj, meet1_Subset1, live_sound_annotation, renamedApart_annotation.
+  eapply live_sound_overapproximation_F in H0.
+  exploit linear_scan_assignment_small; eauto using locally_inj_subset, meet1_Subset, live_sound_annotation, renamedApart_annotation.
+  eapply ann_R_get in H2. destruct (getAnn ang); simpl; cset_tac; intuition.
+  rewrite lookup_set_union; intuition.
+  rewrite X.
+  rewrite <- lookup_set_agree; eauto using linear_scan_renamedApart_agree; intuition.
+  rewrite H5. repeat rewrite vars_up_to_max. cset_tac; intuition.
+Qed.
 
 (*
 *** Local Variables: ***
