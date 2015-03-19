@@ -87,6 +87,17 @@ Proof.
 Qed.
 
 
+Lemma no_activated_tau_step {S} `{StateType S} (σ σ':S)
+ :  activated σ
+  -> step σ EvtTau σ'
+  -> False.
+Proof.
+  intros. destruct H0 as [? [? ?]].
+  eapply step_internally_deterministic in H0; eauto.
+  dcr; congruence.
+Qed.
+
+
 (*
 *** Local Variables: ***
 *** coq-load-path: (("../" "Lvc")) ***

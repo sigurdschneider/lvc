@@ -6,66 +6,7 @@ Require Import DecSolve RenamedApart LabelsDefined.
 
 Set Implicit Arguments.
 
-(* shadowing free *)
-Inductive shadowing_free : set var -> stmt -> Prop :=
-  | shadowing_freeExp x e s D
-    : x ∉ D
-      -> Exp.freeVars e ⊆ D
-      -> shadowing_free {x; D} s
-      -> shadowing_free D (stmtLet x e s)
-  | shadowing_freeIf D e s t
-    : Exp.freeVars e ⊆ D
-    -> shadowing_free D s
-    -> shadowing_free D t
-    -> shadowing_free D (stmtIf e s t)
-  | shadowing_freeRet D e
-    : Exp.freeVars e ⊆ D
-    -> shadowing_free D (stmtReturn e)
-  | shadowing_freeGoto D f Y
-    : list_union (List.map Exp.freeVars Y) ⊆ D
-    -> shadowing_free D (stmtApp f Y)
-  | shadowing_freeExtern x f Y s D
-    : x ∉ D
-      -> list_union (List.map Exp.freeVars Y) ⊆ D
-      -> shadowing_free {x; D} s
-      -> shadowing_free D (stmtExtern x f Y s)
-  | shadowing_freeLet D s t Z
-    : of_list Z ∩ D [=] ∅
-    -> shadowing_free (of_list Z ∪ D) s
-    -> shadowing_free D t
-    -> shadowing_free D (stmtFun Z s t).
-
-Lemma shadowing_free_ext s D D'
-  : D' [=] D
-  -> shadowing_free D s
-  -> shadowing_free D' s.
-Proof.
-  intros EQ SF. general induction SF; simpl; econstructor; try rewrite EQ; eauto.
-  - eapply IHSF; eauto.
-    rewrite EQ; reflexivity.
-  - eapply IHSF; eauto. rewrite EQ; reflexivity.
-  - eapply IHSF1; eauto. rewrite EQ. reflexivity.
-Qed.
-
-Instance shadowing_free_morphism
-: Proper (Equal ==> eq ==> iff) shadowing_free.
-Proof.
-  unfold Proper, respectful; intros; subst.
-  split; eapply shadowing_free_ext; eauto. symmetry; eauto.
-Qed.
-
-Lemma renamedApart_shadowing_free s an
-  : renamedApart s an -> shadowing_free (fst (getAnn an)) s.
-Proof.
-  intros. general induction H; simpl; eauto using shadowing_free.
-  - econstructor; eauto. rewrite H2 in IHrenamedApart. eauto.
-  - rewrite H4 in IHrenamedApart1. rewrite H5 in IHrenamedApart2.
-    econstructor; eauto.
-  - econstructor; eauto. rewrite H2 in IHrenamedApart; eauto.
-  - rewrite H3 in IHrenamedApart1. rewrite H5 in IHrenamedApart2.
-    econstructor; eauto.
-Qed.
-
+(** * Definition of Coherence: [srd] *)
 
 Inductive srd : list (option (set var)) -> stmt -> ann (set var) -> Prop :=
  | srdExp DL x e s lv al
@@ -89,9 +30,9 @@ Inductive srd : list (option (set var)) -> stmt -> ann (set var) -> Prop :=
     -> srd (Some (getAnn als \ of_list Z)::DL) t alt
     -> srd DL (stmtFun Z s t) (ann2 lv als alt).
 
+(*
 Definition peq := prod_eq (@feq var var eq) (@Equal var _ _).
 
-(*
 Instance srd_morphism
   : Proper (list_eq (option_eq Equal) ==> Equal ==> eq ==> impl) srd.
 Proof.
@@ -117,6 +58,8 @@ Proof.
     eapply IHsrd2; eauto. constructor; eauto; reflexivity.
 Qed.
 *)
+
+(** ** Coherence is decidable *)
 
 Definition srd_dec DL s a
   : Computable (srd DL s a).
@@ -172,6 +115,8 @@ Proof.
 Abort.
 *)
 
+(** ** Some monotonicity properties *)
+
 Lemma srd_monotone (DL DL' : list (option (set var))) s a
  : srd DL s a
    -> PIR2 (fstNoneOrR Equal) DL DL'
@@ -208,6 +153,10 @@ Proof.
     eapply restrict_subset2; eauto.
     eapply IHsrd2. constructor; eauto. reflexivity.
 Qed.
+
+(** *** Every renamed apart program is coherent *)
+(** Note that this lemma also builds the liveness annotation:
+    It exploits that we can always claim more variables live *)
 
 Lemma renamedApart_coherent s ang DL
 : renamedApart s ang
@@ -258,6 +207,8 @@ Proof.
       reflexivity.
 Qed.
 
+(** *** In a coherent program, the globals of every function that can eventually be called are live *)
+
 Lemma srd_globals_live s DL AL alv f
 : live_sound Imperative AL s alv
   -> srd DL s alv
@@ -297,6 +248,8 @@ Proof.
     eexists; split; eauto. rewrite H4; eauto.
 Qed.
 
+(** *** On a coherent program a liveness analysis which is sound imperatively is also sound functionally. *)
+
 Lemma srd_live_functional s DL AL alv
 : live_sound Imperative AL s alv
   -> srd DL s alv
@@ -318,8 +271,13 @@ Proof.
       dcr. inv H3. rewrite H4; eauto.
 Qed.
 
+(** ** Definition of invariance *)
+
 Definition invariant (s:stmt) :=
   forall (E:onv var), bisim (nil:list F.block,E,s) (nil:list I.block,E,s).
+
+
+(** ** Agreement Invariant *)
 
 Definition rd_agree (DL:list (option (set var)))
            L (E:onv val)
@@ -361,66 +319,22 @@ Proof.
   eapply restr_iff in H4; dcr; subst; eauto.
 Qed.
 
+(** ** Context coherence for IL/F contexts: [approxF] *)
 
-Inductive approx'
+Inductive approxF
   : list (option (set var)) -> list (set var * list var) -> F.block -> Prop :=
   approxI' AL DL o Z E s
   :  (forall G, o = Some G -> of_list Z ∩ G [=] ∅ /\
            exists a, getAnn a [=] (G ∪ of_list Z)
                 /\ srd (restrict (Some G::AL) G) s a
                 /\ live_sound Imperative DL s a)
-     -> approx' (o::AL) DL (F.blockI E Z s).
+     -> approxF (o::AL) DL (F.blockI E Z s).
 
-Section AIR21.
-  Variable X Y Z : Type.
-  Variable R : list X -> list Y -> Z -> Prop.
-
-  Inductive AIR21
-    : list X -> list Y -> list Z -> Prop :=
-  | AIR21_nil : AIR21 nil nil nil
-  | AIR21_cons x XL y (YL:list Y) z (ZL:list Z) (pf:R (x::XL) (y::YL) z)
-    : AIR21 XL YL ZL ->
-      AIR21 (x::XL) (y::YL) (z::ZL).
-
-  Lemma AIR21_nth XL YL ZL l blkx :
-    AIR21 XL YL ZL
-    -> get XL l blkx
-    -> exists (blky:Y) (blkz:Z),
-      get YL l blky /\ get ZL l blkz /\ R (drop l XL) (drop l YL) blkz.
-  Proof.
-    intros. general induction H; isabsurd.
-    inv H0. eexists; eauto using get.
-    edestruct IHAIR21 as [blk [A B]]; eauto; dcr.
-    do 2 eexists; repeat split; eauto using get.
-  Qed.
-
-  Lemma AIR21_drop XL YL ZL n
-    : AIR21 XL YL ZL -> AIR21 (drop n XL) (drop n YL) (drop n ZL).
-  Proof.
-    general induction n; simpl; eauto.
-    inv H; simpl; eauto using AIR2.
-  Qed.
-
-End AIR21.
-
-Ltac provide_invariants_21 :=
-match goal with
-  | [ H : AIR21 ?R ?A ?B ?C, H' : get ?A ?n ?b |- _ ] =>
-    let X := fresh H in
-    destruct (AIR21_nth H H') as [? [? [? [? X]]]]; eauto; inv X;
-    repeat get_functional; (try subst);
-    let X'' := fresh H in pose proof (AIR21_drop n H) as X'';
-    match goal with
-      | [ H'' : ?x :: ?DL = drop ?n ?Lv |- _ ] =>
-        (try rewrite <- H'' in X'');
-          let X' := fresh H in
-          pose proof (get_drop_eq H' H'') as X'; inv X'; try clear X'
-    end
-end.
+(** Stability under restriction *)
 
 Lemma approx_restrict AL DL L G
-: AIR21 approx' AL DL L
-  -> AIR21 approx' (restrict AL G) DL L.
+: AIR21 approxF AL DL L
+  -> AIR21 approxF (restrict AL G) DL L.
 Proof.
   intros.
   general induction H; simpl; eauto using AIR21.
@@ -435,15 +349,19 @@ Qed.
 
 Unset Printing Records.
 
+(** ** Preservation properties *)
+(** The rough slogan of what we show here is that the set of coherent states
+    is closed under reduction *)
+
 Lemma srd_preservation (E E':onv val) L L' s s' DL (G:set var) DA a e
   (SRD:srd DA s a)
   (RA:rd_agree DA L E)
-  (A: AIR21 approx' DA DL L)
+  (A: AIR21 approxF DA DL L)
   (LV:live_sound Imperative DL s a)
   (S:F.step (L, E, s) e (L',E',s'))
   : exists DA' DL' a', srd DA' s' a'
                    /\ rd_agree DA' L' E'
-                   /\ AIR21 approx' DA' DL' L'.
+                   /\ AIR21 approxF DA' DL' L'.
 Proof.
   destruct SRD; try inv S.
 
@@ -476,6 +394,8 @@ Proof.
     eexists; eauto. split; [| split;eauto].
     cset_tac; intuition. decide (a ∈ of_list Z); intuition.
 Qed.
+
+(** context coherence for imperative states (not required in the soundess proof) *)
 
 Inductive approxI
   : list (option (set var)) -> list (set var * list var) -> I.block -> Prop :=
@@ -533,9 +453,13 @@ Proof.
       * cset_tac; intuition. decide (a ∈ of_list Z); intuition.
 Qed.
 
-Definition stripB (b:F.block) : I.block.
-  destruct b; eauto using I.block.
-Defined.
+(** ** Main Theorem about Coherence *)
+
+(** [stripB] removes the environment from a closure  *)
+Definition stripB (b:F.block) : I.block :=
+  match b with
+    | F.blockI E Z s => I.blockI Z s
+  end.
 
 Definition strip := List.map stripB.
 
@@ -545,15 +469,19 @@ Proof.
   unfold strip. rewrite drop_map; eauto.
 Qed.
 
+(** The Bisimulation candidate. *)
+
 Inductive srdSim : F.state -> I.state -> Prop :=
   | srdSimI (E EI:onv val) L s AL DL a
   (SRD:srd AL s a)
   (RA:rd_agree AL L E)
-  (A: AIR21 approx' AL DL L)
+  (A: AIR21 approxF AL DL L)
   (AG:agree_on eq (getAnn a) E EI)
   (LV:live_sound Imperative DL s a)
   (ER:PIR2 eqReq AL DL)
   : srdSim (L, E, s) (strip L, EI,s).
+
+(** The bisimulation is indeed a bisimulation *)
 
 Lemma srdSim_sim σ1 σ2
   : srdSim σ1 σ2 -> bisim σ1 σ2.
@@ -640,6 +568,8 @@ Proof.
     eapply agree_on_incl; eauto.
     econstructor; eauto. econstructor; reflexivity.
 Qed.
+
+(** ** Coherence implies invariance *)
 
 Lemma srd_implies_invariance s a
 : live_sound Imperative nil s a -> srd nil s a -> invariant s.
