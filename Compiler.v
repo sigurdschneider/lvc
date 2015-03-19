@@ -308,28 +308,12 @@ Proof.
   eapply labelsDefined_rename_apart; eauto.
   intros; isabsurd.
   rewrite fst_renamedApartAnn.
-  Lemma cp_eqns_no_assumption d G
-  : (forall x : var,
-      x \In G -> MapInterface.find x d = ⎣⎦)
-     -> ConstantPropagation.cp_eqns (fun x0 : var => MapInterface.find x0 d)
-        G [=] ∅.
-  Proof.
-    intros. revert H. pattern G. eapply set_induction.
-    intros. eapply empty_is_empty_1 in H. rewrite H.
-    reflexivity.
-    intros. eapply Add_Equal in H1. rewrite H1.
-    assert ({x; s} [=] {{x}} ∪ s) by (cset_tac; intuition).
-    rewrite H3. rewrite ConstantPropagation.cp_eqns_union.
-    rewrite ConstantPropagation.cp_eqns_single. unfold ConstantPropagation.cp_eqn.
-    rewrite H2. rewrite H. cset_tac; intuition. intros; eapply H2.
-    rewrite H1. cset_tac; intuition. rewrite H1. cset_tac; intuition.
-  Qed.
   intros. hnf; intros.
-  rewrite cp_eqns_no_assumption in H. cset_tac; intuition. eassumption.
+  rewrite ConstantPropagation.cp_eqns_no_assumption in H. cset_tac; intuition. eassumption.
   constructor.
   eapply rename_apart_renamedApart.
   rewrite fst_renamedApartAnn.
-  rewrite cp_eqns_no_assumption. eapply incl_empty. eauto.
+  rewrite ConstantPropagation.cp_eqns_no_assumption. eapply incl_empty. eauto.
   hnf; intuition.
 Qed.
 
