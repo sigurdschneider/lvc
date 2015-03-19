@@ -1,5 +1,5 @@
 Require Import List.
-Require Export Util Var Val Exp Env Map CSet AutoIndTac IL Bisim Infra.Status.
+Require Export Util Var Val Exp Env Map CSet AutoIndTac IL Bisim Infra.Status Pos.
 
 Set Implicit Arguments.
 
@@ -21,14 +21,6 @@ Fixpoint freeVars (s:nstmt) : set var :=
     | nstmtExtern x f Y s => (freeVars s \ {{x}}) ∪ list_union (List.map Exp.freeVars Y)
     | nstmtFun l Z s1 s2 => (freeVars s1 \ of_list Z) ∪ freeVars s2
   end.
-
-
-Fixpoint pos X `{OrderedType X} (l:list X) (x:X) (n:nat) : option nat :=
-  match l with
-    | nil => None
-    | y::l => if [ x === y ] then Some n else pos l x (S n)
-  end.
-
 
 (** *** Functional Semantics *)
 Module F.
@@ -269,42 +261,15 @@ Inductive labIndicesSim : I.state -> IL.I.state -> Prop :=
     (EX:forall f i k, pos symb f k = Some i -> L (counted f) <> None)
   : labIndicesSim (L, E, s) (L', E, s').
 
-Lemma pos_add k' symb (f:lab) k i
-: pos symb f k = Some i -> pos symb f (k' + k) = Some (k' + i).
-Proof.
-  general induction symb; eauto.
-  unfold pos in *; fold pos in *.
-  destruct if. congruence.
-  eapply IHsymb in H. orewrite (S (k' + k) = k' + S k). eauto.
-Qed.
-
-Lemma pos_sub k' symb (f:lab) k i
-: pos symb f (k' + k) = Some (k' + i) -> pos symb f k = Some i.
-Proof.
-  general induction symb; eauto.
-  unfold pos in *; fold pos in *.
-  destruct if. f_equal. inv H. omega.
-  orewrite (S (k' + k) = k' + S k) in H.
-  eauto.
-Qed.
-
-Lemma pos_ge symb (l:lab) i k
-: pos symb l k = Some i
-  -> k <= i.
-Proof.
-  general induction symb. unfold pos in H; fold pos in H.
-  destruct if in H. inv H. cbv in e. omega.
-  exploit IHsymb; eauto. omega.
-Qed.
 
 Lemma pos_drop_eq symb (l:lab) x
 : pos symb l 0 = Some x
-          -> drop x symb = l::tl (drop x symb).
+  -> drop x symb = l::tl (drop x symb).
 Proof.
   general induction symb.
   unfold pos in H; fold pos in H. destruct if in H.
   inv H; inv e; eauto.
-  destruct x. exfalso. exploit pos_ge; eauto. omega.
+  destruct x. exfalso. exploit (pos_ge _ _ _ H); eauto. omega.
   simpl. erewrite IHsymb; eauto.
   eapply (pos_sub 1); eauto.
 Qed.

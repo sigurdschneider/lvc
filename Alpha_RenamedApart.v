@@ -237,6 +237,68 @@ Proof.
       revert H4; clear_all; cset_tac; intuition; eauto.
 Qed.
 
+Require Import ILDB.
+
+Lemma exp_alpha_real ϱ ϱ' e e' symb symb'
+: alpha_exp ϱ ϱ' e e'
+  -> (forall x y, ϱ x = y -> ϱ' y = x -> pos symb x 0 = pos symb' y 0)
+  -> exp_idx symb e = exp_idx symb' e'.
+Proof.
+  intros. general induction H; simpl in * |- *; eauto.
+  - erewrite H1; eauto.
+  - erewrite IHalpha_exp; intros; eauto.
+  - erewrite IHalpha_exp1; eauto with cset.
+    erewrite IHalpha_exp2; eauto with cset.
+Qed.
+
+Lemma alpha_real ϱ ϱ' s t symb symb'
+: alpha ϱ ϱ' s t
+  -> (forall x y, ϱ x = y -> ϱ' y = x -> pos symb x 0 = pos symb' y 0)
+  -> stmt_idx s symb = stmt_idx t symb'.
+Proof.
+  intros. general induction H; simpl in * |- *.
+  - erewrite exp_alpha_real; eauto.
+  - erewrite smap_agree_2; eauto.
+    intros; erewrite exp_alpha_real; eauto.
+  - erewrite exp_alpha_real; eauto with cset.
+    case_eq (exp_idx symb' e'); intros; simpl; eauto.
+    erewrite IHalpha; eauto with cset.
+    simpl; intros.
+    lud; repeat destruct if; try congruence; intuition.
+    exploit H1; eauto. eapply pos_inc with (k':=1); eauto.
+  - erewrite exp_alpha_real; eauto with cset.
+    erewrite IHalpha1; eauto with cset.
+    erewrite IHalpha2; eauto with cset.
+  - erewrite smap_agree_2; eauto; [| intros; erewrite exp_alpha_real; eauto].
+    erewrite IHalpha; eauto.
+    simpl; intros.
+    lud; repeat destruct if; try congruence; intuition.
+    exploit H1; eauto. eapply pos_inc with (k':=1); eauto.
+  - erewrite IHalpha1; eauto with cset.
+    erewrite IHalpha2; eauto with cset.
+    rewrite H. reflexivity.
+    intros.
+    decide (x ∈ of_list Z).
+    + edestruct (of_list_get_first _ i) as [n]; eauto. dcr. hnf in H6. subst x0.
+      rewrite pos_app_in; eauto.
+      exploit (update_with_list_lookup_in_list_first ra _ H H7 H9); eauto; dcr.
+      assert (x0 = y) by congruence. subst x0. clear_dup.
+      edestruct (list_lookup_in_list_first _ _ _ (eq_sym H) H4) as [n'];
+        eauto using get_in_of_list; dcr.
+      hnf in H8; subst x0.
+      rewrite pos_app_in; eauto.
+      decide (n < n'). exfalso; exploit H12; eauto.
+      decide (n' < n). exfalso; exploit H9; eauto. assert (n = n') by omega. subst n'.
+      repeat erewrite get_first_pos; eauto.
+      eapply get_in_of_list; eauto.
+    + exploit (update_with_list_lookup_not_in ra Z Z' y n); eauto.
+      assert ((ira [Z' <-- Z]) y ∉ of_list Z). rewrite H4; eauto.
+      eapply lookup_set_update_not_in_Z'_not_in_Z in H5; eauto.
+      repeat rewrite pos_app_not_in; eauto.
+      exploit (update_with_list_lookup_not_in ira Z' Z x H5); eauto.
+      rewrite H. eapply pos_inc; eauto.
+Qed.
+
 
 (*
 *** Local Variables: ***

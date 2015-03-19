@@ -1,4 +1,4 @@
-Require Import String List.
+Require Import String List Get.
 
 Set Implicit Arguments.
 
@@ -81,7 +81,7 @@ Ltac monadS_inv H :=
   | (Success _ = Success _) => monadS_inv1 H
   | (Error _  = Success _) => monadS_inv1 H
   | (bind ?F ?G = Success ?X) => monadS_inv1 H
-  | (@eq _ (@bind _ _ _ _ _ ?G) (?X)) => 
+  | (@eq _ (@bind _ _ _ _ _ ?G) (?X)) =>
     let X := fresh in remember G as X; simpl in H; subst X; monadS_inv1 H
   end.
 
@@ -92,13 +92,13 @@ Section ParametricOptionMapIndex.
 
   Fixpoint smapi_impl (n:nat) (L:list X) : status (list Y) :=
     match L with
-      | x::L => 
-        sdo v <- f n x; 
+      | x::L =>
+        sdo v <- f n x;
           sdo vl <- smapi_impl (S n) L;
           Success (v::vl)
       | _ => Success nil
     end.
-  
+
   Definition smapi := smapi_impl 0.
 
 End ParametricOptionMapIndex.
@@ -109,11 +109,59 @@ Section ParametricZip.
 
   Fixpoint szip (L:list X) (L':list Y) : status (list Z) :=
     match L, L' with
-      | x::L, y::L' => 
+      | x::L, y::L' =>
         sdo z <- f x y;
           sdo ZL <- szip L L';
           Success (z::ZL)
       | _, _ => Success nil
     end.
-  
+
 End ParametricZip.
+
+Section ParametricStatusMap.
+  Variables X Y : Type.
+  Hypothesis f : X -> status Y : Type.
+
+  Fixpoint smap (L:list X) : status (list Y) :=
+    match L with
+      | x::L =>
+        sdo v <- f x;
+          sdo vl <- smap L;
+          Success (v::vl)
+      | _ => Success nil
+    end.
+
+  Lemma smap_spec L L'
+  : smap L = Success L'
+    -> forall n x, get L n x -> exists y, f x = Success y /\ get L' n y.
+  Proof.
+    intros. general induction L; simpl in * |- *; isabsurd.
+    - monadS_inv H.  inv H0; eauto using get.
+      edestruct IHL; eauto. dcr; eauto using get.
+  Qed.
+
+  Lemma smap_length L L'
+  : smap L = Success L'
+    -> length L' = length L.
+  Proof.
+    intros. general induction L; simpl in *; try monadS_inv H; simpl; eauto.
+  Qed.
+
+End ParametricStatusMap.
+
+Lemma smap_agree_2 X X' Y (f: X -> status Y) (g: X' -> status Y) L L'
+: (forall n x y, get L n x -> get L' n y -> f x = g y)
+  -> length L = length L'
+  -> smap f L = smap g L'.
+Proof.
+  intros. eapply length_length_eq in H0.
+  general induction H0; simpl; eauto.
+  erewrite <- H; eauto using get. erewrite IHlength_eq; eauto using get.
+Qed.
+
+
+(*
+*** Local Variables: ***
+*** coq-load-path: (("../" "Lvc")) ***
+*** End: ***
+*)
