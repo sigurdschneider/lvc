@@ -6,6 +6,73 @@ Set Implicit Arguments.
 
 Local Hint Resolve incl_empty minus_incl incl_right incl_left.
 
+Inductive argsLive (Caller Callee:set var) : args -> params -> Prop :=
+| AL_nil : argsLive Caller Callee nil nil
+| AL_cons y z Y Z
+  : argsLive Caller Callee Y Z
+    -> (z ∈ Callee -> live_exp_sound y Caller)
+    -> argsLive Caller Callee (y::Y) (z::Z).
+
+Lemma argsLive_length lv bv Y Z
+  : argsLive lv bv Y Z
+  -> length Y = length Z.
+Proof.
+  intros. general induction H; simpl; eauto.
+Qed.
+
+Lemma argsLive_liveSound lv blv Y Z
+: argsLive lv blv Y Z
+  -> forall (n : nat) (y : exp),
+      get (filter_by (fun y : var => B[y ∈ blv]) Z Y) n y ->
+      live_exp_sound y lv.
+Proof.
+      intros. general induction H; simpl in * |- *.
+      - isabsurd.
+      - decide (z ∈ blv); eauto.
+        inv H1; eauto.
+Qed.
+
+Lemma argsLive_live_exp_sound lv blv Y Z y z n
+: argsLive lv blv Y Z
+  -> get Y n y
+  -> get Z n z
+  -> z ∈ blv
+  -> live_exp_sound y lv.
+Proof.
+  intros. general induction n; inv H0; inv H1; inv H; intuition; eauto.
+Qed.
+
+Lemma argsLive_agree_on' (V E E':onv val) lv blv Y Z v v'
+:  argsLive lv blv Y Z
+ -> agree_on eq lv E E'
+ -> omap (exp_eval E) Y = Some v
+ -> omap (exp_eval E') Y = Some v'
+ -> agree_on eq blv (V [Z <-- List.map Some v]) (V [Z <-- List.map Some v']).
+Proof.
+  intros. general induction H; simpl in * |- *; eauto.
+  - monad_inv H2. monad_inv H3.
+    decide (z ∈ blv).
+    +erewrite <- exp_eval_live in EQ0; eauto.
+     *  assert (x1 = x) by congruence.
+        subst. simpl.
+        eauto using agree_on_update_same, agree_on_incl.
+    + eapply agree_on_update_dead_both; eauto.
+Qed.
+
+Lemma argsLive_agree_on (V V' E E':onv val) lv blv Y Z v v'
+: agree_on eq (blv \ of_list Z) V V'
+  -> argsLive lv blv Y Z
+  -> agree_on eq lv E E'
+  -> omap (exp_eval E) Y = Some v
+  -> omap (exp_eval E') Y = Some v'
+  -> agree_on eq blv (V [Z <-- List.map Some v]) (V' [Z <-- List.map Some v']).
+Proof.
+  intros. etransitivity; eauto using argsLive_agree_on'.
+  eapply update_with_list_agree; eauto.
+  exploit omap_length; eauto. exploit argsLive_length; eauto.
+  rewrite map_length; congruence.
+Qed.
+
 
 Inductive true_live_sound (i:overapproximation)
   : list (set var *params) -> stmt -> ann (set var) -> Prop :=
