@@ -182,7 +182,6 @@ Proof.
   - eapply Add_Equal in H2. rewrite H2 in H3.
     decide (x ∈ s0).
     + rewrite fold_add in H3; eauto using union_m, transpose_union_subset.
-      cset_tac.
     + rewrite fold_add with (eqA:=Equal) in H3; eauto using union_m, transpose_union, Equal_ST.
       cset_tac. destruct H3. left; eexists x; split; eauto.
       eapply H2. cset_tac; intuition.
@@ -261,6 +260,17 @@ Proof.
     rewrite meet_comm. eapply H0.
     eapply incl_list_union; eauto.
 Qed.
+
+
+Lemma list_union_cons X `{OrderedType X} s sl
+: list_union sl ⊆ list_union (s :: sl).
+Proof.
+  unfold list_union; simpl.
+  setoid_rewrite list_union_start_swap at 2.
+  cset_tac; intuition.
+Qed.
+
+Hint Resolve list_union_cons : cset.
 
 
 (*

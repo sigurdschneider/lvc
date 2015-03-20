@@ -387,7 +387,6 @@ Proof.
   - destruct if; simpl; try reflexivity. cset_tac; intuition.
     rewrite <- IHtrue_live_sound. cset_tac; intuition.
   - repeat destruct if; simpl; try reflexivity; eauto.
-    + cset_tac; intuition.
 Qed.
 
 
@@ -419,7 +418,7 @@ Proof.
     + eapply live_exp_sound_incl; eauto. cset_tac; intuition.
     + rewrite compile_live_incl; eauto.
       rewrite <- H1. cset_tac; intuition.
-    + eapply incl_compile_live; eauto. cset_tac; intuition.
+    + eapply incl_compile_live; eauto.
   - repeat destruct if; eauto.
     + econstructor; eauto; try rewrite compile_live_incl; eauto.
       eapply live_exp_sound_incl. eapply incl_right.
@@ -448,7 +447,7 @@ Proof.
   - econstructor; eauto.
     + intros; eapply live_exp_sound_incl; eauto using incl_right.
     + rewrite compile_live_incl; eauto. rewrite <- H1. cset_tac; intuition.
-    + eapply incl_compile_live; eauto. cset_tac; intuition.
+    + eapply incl_compile_live; eauto.
   - econstructor; simpl in *.
     eapply live_sound_monotone. eapply live_sound_monotone2.
     eapply IHtrue_live_sound1. cset_tac; intuition.

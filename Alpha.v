@@ -5,6 +5,8 @@ Import F.
 Set Implicit Arguments.
 Unset Printing Records.
 
+(** * Alpha Equivalence *)
+
 Inductive alpha : env var -> env var -> stmt -> stmt -> Prop :=
 | alpha_return ra ira e e'
   : alpha_exp ra ira e e'  -> alpha ra ira (stmtReturn e) (stmtReturn e')
@@ -30,6 +32,9 @@ Inductive alpha : env var -> env var -> stmt -> stmt -> Prop :=
   -> alpha (ra [ Z <-- Z']) (ira [ Z' <-- Z ]) s s'
   -> alpha ra ira t t' -> alpha ra ira (stmtFun Z s t) (stmtFun Z' s' t').
 
+(** ** Morphisims *)
+(** These properties are requires because we do not assume functional extensionality. *)
+
 Global Instance alpha_morph
  : Proper ((@feq _ _ _eq) ==> (@feq _ _ _eq) ==> eq ==> eq ==> impl) alpha.
 Proof.
@@ -44,59 +49,6 @@ Proof.
   - eapply IHalpha1.
     + rewrite H0; reflexivity.
     + rewrite H1; reflexivity.
-Qed.
-
-Lemma alpha_refl s
-  : alpha id id s s.
-Proof.
-  general induction s; eauto using alpha, alpha_exp_refl.
-  - econstructor. eapply alpha_exp_refl.
-    rewrite update_id; eauto.
-  - constructor; eauto using lookup_id.
-    + intros. get_functional; subst; eauto using alpha_exp_refl.
-  - econstructor; eauto.
-    + intros. get_functional; subst; eauto using alpha_exp_refl.
-    + rewrite update_id; eauto.
-  - econstructor; try rewrite update_with_list_id; eauto using length_eq_refl.
-Qed.
-
-Lemma alpha_sym ϱ ϱ' s s'
-  : alpha ϱ ϱ' s s'
-  ->alpha ϱ' ϱ s' s.
-Proof.
-  intros. general induction H; eauto using alpha, length_eq_sym, alpha_exp_sym.
-Qed.
-
-Lemma inverse_on_dead_update X `{OrderedType X} Y `{OrderedType Y} (ra:X->Y) ira (x:X) (y:Y) s
-: inverse_on s (ra [x <- y]) (ira [y <- x])
-  -> inverse_on (s \ {{x}}) ra ira.
-Proof.
-  intros. hnf; intros. cset_tac; dcr.
-  specialize (H1 _ H3). lud; intuition.
-Qed.
-
-Lemma alpha_inverse_on  ϱ ϱ' s t
-  : alpha ϱ ϱ' s t -> inverse_on (freeVars s) ϱ ϱ'.
-Proof.
-  intros A. general induction A; simpl; eauto using alpha_exp_inverse_on.
-  + hnf; intros.
-    edestruct (list_union_get (List.map Exp.freeVars X)) as [[? []]|]; eauto; dcr.
-    edestruct map_get_4; eauto; dcr.
-    edestruct get_length_eq; eauto. subst.
-    eapply alpha_exp_inverse_on; eauto.
-    inv i.
-  + eapply inverse_on_union;
-    eauto using inverse_on_dead_update, alpha_exp_inverse_on.
-  + eapply inverse_on_union; try eapply inverse_on_union; eauto using alpha_exp_inverse_on.
-  + eapply inverse_on_union; eauto using inverse_on_dead_update.
-    hnf; intros.
-    edestruct (list_union_get (List.map Exp.freeVars Y)) as [[? []]|]; eauto; dcr.
-    edestruct map_get_4; eauto; dcr; subst.
-    edestruct get_length_eq; try eapply H; eauto.
-    eapply alpha_exp_inverse_on; eauto.
-    inv i.
-  + eapply inverse_on_union; eauto.
-    eapply update_with_list_inverse_on; eauto.
 Qed.
 
 Lemma alpha_agree_on_morph f g ϱ ϱ' s t
@@ -171,6 +123,33 @@ Proof.
     eapply agree_on_incl; eauto. eapply union_subset_2.
 Qed.
 
+(** ** Properties *)
+
+(** *** [ϱ] and [ϱ'] are inverses of each other on the free variables of [s] *)
+Lemma alpha_inverse_on  ϱ ϱ' s t
+  : alpha ϱ ϱ' s t -> inverse_on (freeVars s) ϱ ϱ'.
+Proof.
+  intros A. general induction A; simpl; eauto using alpha_exp_inverse_on.
+  + hnf; intros.
+    edestruct (list_union_get (List.map Exp.freeVars X)) as [[? []]|]; eauto; dcr.
+    edestruct map_get_4; eauto; dcr.
+    edestruct get_length_eq; eauto. subst.
+    eapply alpha_exp_inverse_on; eauto.
+    inv i.
+  + eapply inverse_on_union;
+    eauto using inverse_on_dead_update, alpha_exp_inverse_on.
+  + eapply inverse_on_union; try eapply inverse_on_union; eauto using alpha_exp_inverse_on.
+  + eapply inverse_on_union; eauto using inverse_on_dead_update.
+    hnf; intros.
+    edestruct (list_union_get (List.map Exp.freeVars Y)) as [[? []]|]; eauto; dcr.
+    edestruct map_get_4; eauto; dcr; subst.
+    edestruct get_length_eq; try eapply H; eauto.
+    eapply alpha_exp_inverse_on; eauto.
+    inv i.
+  + eapply inverse_on_union; eauto.
+    eapply update_with_list_inverse_on; eauto.
+Qed.
+
 Lemma alpha_inverse_on_agree f g ϱ ϱ' s t
   : alpha ϱ ϱ' s t
   -> inverse_on (freeVars s) f g
@@ -185,6 +164,34 @@ Proof.
   eapply inverse_on_agree_on; try eassumption; try intuition.
   eapply inverse_on_agree_on_2; eauto; try intuition.
 Qed.
+
+
+(** *** Reflexivity *)
+
+Lemma alpha_refl s
+  : alpha id id s s.
+Proof.
+  general induction s; eauto using alpha, alpha_exp_refl.
+  - econstructor. eapply alpha_exp_refl.
+    rewrite update_id; eauto.
+  - constructor; eauto using lookup_id.
+    + intros. get_functional; subst; eauto using alpha_exp_refl.
+  - econstructor; eauto.
+    + intros. get_functional; subst; eauto using alpha_exp_refl.
+    + rewrite update_id; eauto.
+  - econstructor; try rewrite update_with_list_id; eauto using length_eq_refl.
+Qed.
+
+(** *** Symmetry *)
+
+Lemma alpha_sym ϱ ϱ' s s'
+  : alpha ϱ ϱ' s s'
+  ->alpha ϱ' ϱ s' s.
+Proof.
+  intros. general induction H; eauto using alpha, length_eq_sym, alpha_exp_sym.
+Qed.
+
+(** *** Transitivity *)
 
 Lemma alpha_trans ϱ1 ϱ1' ϱ2 ϱ2' s s' s''
   : alpha ϱ1 ϱ1' s s' -> alpha ϱ2 ϱ2' s' s'' -> alpha (ϱ1 ∘ ϱ2) (ϱ2' ∘ ϱ1') s s''.
@@ -222,6 +229,8 @@ Proof.
     instantiate (1:=ira).
     instantiate (1:=ϱ2'). eapply alpha_inverse_on; eauto.
 Qed.
+
+(** ** Soundness wrt. equivalence *)
 
 Definition envCorr ra ira (E E':onv val) :=
   forall x y, ra x = y -> ira y = x -> E x = E' y.
@@ -304,15 +313,12 @@ Proof.
   - erewrite IHalpha_exp1, IHalpha_exp2; eauto.
 Qed.
 
-
-
 Inductive alphaSim : F.state -> F.state -> Prop :=
  | alphaSimI ra ira s s' L L' E E'
   (AE:alpha ra ira s s')
   (EA:PIR2 approx L L')
   (EC:envCorr ra ira E E')
    : alphaSim (L, E, s) (L', E', s').
-
 
 Lemma alphaSim_sim σ1 σ2
 : alphaSim σ1 σ2 -> bisim σ1 σ2.

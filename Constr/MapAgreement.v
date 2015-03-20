@@ -145,12 +145,20 @@ Proof.
   rewrite H2 in H6; eauto.
 Qed.
 
-Lemma agree_on_union {X} `{OrderedType X} {Y} `{OrderedType Y} (f:X->Y) g D D'
+Lemma eagree_on_union {X} `{OrderedType X} {Y} (f:X->Y) g D D'
   : eagree_on D f g
   -> eagree_on D' f g
   -> eagree_on (D ∪ D') f g.
 Proof.
-  intros. hnf; intros. cset_tac. destruct H3; eauto.
+  intros. hnf; intros. cset_tac. destruct H2; eauto.
+Qed.
+
+Lemma agree_on_union {X} `{OrderedType X} {Y} (f:X->Y) R g D D'
+  : agree_on R D f g
+  -> agree_on R D' f g
+  -> agree_on R (D ∪ D') f g.
+Proof.
+  intros. hnf; intros. cset_tac. destruct H2; eauto.
 Qed.
 
 Global Instance agree_on_computable {X} `{OrderedType X} {Y} `{OrderedType Y}
@@ -195,6 +203,15 @@ Qed.
 Hint Extern 10 (agree_on _ _?a ?a) => reflexivity.
 
 Extraction Inline agree_on_computable.
+
+Global Instance incl_agree_on_morphism_flip_impl X `{OrderedType X} Y R `{Transitive Y R} `{Symmetric Y R}
+: Proper (SetInterface.Subset ==> eq ==> eq ==> flip impl) (agree_on R).
+Proof.
+  unfold Proper, respectful, agree_on, flip, impl; intros; subst.
+  rewrite H2 in H6; eauto.
+Qed.
+
+Hint Resolve agree_on_incl : cset.
 
 (*
  *** Local Variables: ***

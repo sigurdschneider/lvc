@@ -144,6 +144,13 @@ Proof.
   eauto using rename_exp_ext, map_ext_get_eq; eauto.
 Qed.
 
+Lemma rename_agree ϱ ϱ' s
+: agree_on eq (occurVars s) ϱ ϱ'
+  -> rename ϱ s = rename ϱ' s.
+Proof with eauto 50 using rename_exp_agree, map_ext_get_eq with cset.
+  intros. general induction s; simpl in *; f_equal...
+Qed.
+
 
 Fixpoint label_closed (n:nat) (s:stmt) : Prop :=
   match s with

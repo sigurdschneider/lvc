@@ -104,7 +104,7 @@ Definition fromILF (s:stmt) : status stmt :=
         /\ getAnn lv ⊆ freeVars s_hoisted] then
        let fvl := to_list (getAnn lv) in
        let ϱ := CMap.update_with_list fvl fvl (@MapInterface.empty var _ _ _) in
-       sdo ϱ' <- AllocationAlgo.linear_scan s_renamed_apart lv ϱ;
+       sdo ϱ' <- AllocationAlgo.reg_assign s_renamed_apart lv ϱ;
        let s_allocated := rename (CMap.findt ϱ' 0) s_renamed_apart in
        let s_lowered := ParallelMove.lower parallel_move
                                             nil
@@ -223,7 +223,7 @@ Proof.
   econstructor; eauto using PIR2, Alpha.envCorr_idOn_refl.
   eapply Alpha.alpha_sym. eapply rename_apart_alpha.
   exploit rename_apart_renamedApart; eauto.
-  exploit AllocationAlgo.linear_scan_correct; eauto.
+  exploit AllocationAlgo.reg_assign_correct; eauto.
   eapply injective_on_agree; [| eapply CMap.map_update_list_update_agree].
   hnf; intros.
   rewrite lookup_update_same in H3.
@@ -239,7 +239,7 @@ Proof.
   instantiate (1:=id).
   eapply Allocation.renamedApart_locally_inj_alpha; eauto.
   eapply Liveness.live_sound_overapproximation_F; eauto.
-  eapply AllocationAlgo.linear_scan_renamedApart_agree in EQ1; eauto.
+  eapply AllocationAlgo.reg_assign_renamedApart_agree in EQ1; eauto.
   rewrite fst_renamedApartAnn in EQ1.
   rewrite <- CMap.map_update_list_update_agree in EQ1.
   hnf; intros. repeat rewrite <- EQ1; eauto;
@@ -329,7 +329,7 @@ Print Assumptions optimize_correct.
 
 Extraction Inline bind Option.bind toString.
 
-Extraction "extraction/lvc.ml" toILF fromILF AllocationAlgo.linear_scan optimize toDeBruijn.
+Extraction "extraction/lvc.ml" toILF fromILF AllocationAlgo.reg_assign optimize toDeBruijn.
 
 
 

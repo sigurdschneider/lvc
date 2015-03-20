@@ -47,6 +47,13 @@ Proof.
   eapply prod_Equivalence_obligation_3; eauto using Equal_ST.
 Qed.
 
+Ltac pe_rewrite :=
+  repeat
+    (match goal with
+       | [ H : pe ?an _, H' : context [?an] |- _ ] => rewrite H in H'; simpl in H'
+       | [ H : pe ?an _ |-  context [?an] ] => rewrite H; simpl
+     end).
+
 
 Instance Subset_morphism_2 X `{OrderedType X}
   : Proper (flip Subset ==> Subset ==> impl) (Subset).
@@ -191,6 +198,49 @@ Proof.
       eexists x0; split; eauto.
       eapply H4. eauto.
 Qed.
+
+
+Hint Extern 20 ( ?v ∈ singleton ?v ) =>  eapply singleton_iff; reflexivity.
+Hint Extern 20 ( ?s ⊆ ?s ∪ _ ) =>  eapply incl_left.
+Hint Extern 20 ( ?s ⊆ _ ∪ ?s ) =>  eapply incl_right.
+Hint Extern 20 => match goal with
+                   | [ H: ?x ∈ ?s, H': ?x ∉ ?s |- _ ] => exfalso; eapply H', H
+                 end.
+
+Lemma incl_union_right X `{OrderedType X} s t u
+: s ⊆ t -> s ⊆ u ++ t.
+Proof.
+  cset_tac; intuition.
+Qed.
+
+Arguments incl_union_right X [H] s t u _ _ _ .
+
+Lemma incl_union_left X `{OrderedType X} s t u
+: s ⊆ t -> s ⊆ t ++ u.
+Proof.
+  cset_tac; intuition.
+Qed.
+
+Arguments incl_union_left X [H] s t u _ _ _ .
+
+Lemma incl_add_right X `{OrderedType X} s t x
+: s ⊆ t -> s ⊆ {x; t}.
+Proof.
+  cset_tac; intuition.
+Qed.
+
+
+Lemma in_add_left X `{OrderedType X} s x
+: x ∈ {x; s}.
+Proof.
+  cset_tac; intuition.
+Qed.
+
+
+Create HintDb cset discriminated.
+
+Hint Resolve incl_union_left incl_union_right incl_add_right in_add_left
+             union_left union_right get_list_union_map : cset.
 
 
 (*

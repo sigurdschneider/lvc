@@ -200,6 +200,14 @@ Set Implicit Arguments.
     - f_equal; eauto.
   Qed.
 
+  Lemma rename_exp_agree ϱ ϱ' e
+  : agree_on eq (Exp.freeVars e) ϱ ϱ'
+    -> rename_exp ϱ e = rename_exp ϱ' e.
+  Proof.
+    intros; general induction e; simpl in *; f_equal;
+    eauto 30 using agree_on_incl, incl_left, incl_right.
+  Qed.
+
 
   Lemma rename_exp_freeVars
   : forall e ϱ `{Proper _ (_eq ==> _eq) ϱ},
@@ -325,7 +333,12 @@ Set Implicit Arguments.
         eapply agree_on_incl; eauto. eapply union_subset_2; intuition.
   Qed.
 
-
+  Lemma exp_rename_renamedApart_all_alpha e e' ϱ ϱ'
+  : alpha_exp ϱ ϱ' e e'
+    -> rename_exp ϱ e = e'.
+  Proof.
+    intros. general induction H; simpl; eauto.
+  Qed.
 
   Inductive notOccur : set var -> exp -> Prop :=
   | ConNotOccur D v : notOccur D (Con v)

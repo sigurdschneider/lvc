@@ -31,6 +31,10 @@ echo "Patching Makefile to include target 'extraction'."
 # sed -i -e  '/.\/extraction:/c\.\/extraction: Compiler.vo' Makefile
 sed -i -e  's%\./extraction:%\./extraction: Compiler.vo%' Makefile
 
+echo "Patching Makefile to reference external Containers documentation."
+sed -i -e 's%COQDOCFLAGS?=-interpolate -utf8%COQDOCFLAGS?=--interpolate --utf8 --external "http://www.lix.polytechnique.fr/coq/pylons/contribs/files/Containers/v8.4/" Containers --toc --toc-depth 3 --index indexpage --no-lib-name%' Makefile
+
+
 if [ -z "$VANILLA" ]; then
 	echo "Patching Makefile to use ruby-based timing scripts (use --vanilla if undesired)."
 	sed -i -e 's/$(COQC) $(COQDEBUG) $(COQFLAGS)/@.\/time.sh $(if $(findstring j,$(MAKEFLAGS)),--parallel,) $(COQC) $(COQDEBUG) $(COQFLAGS)/' Makefile

@@ -5,6 +5,10 @@ Require Import Val Var Env EnvTy IL Annotation SetOperations MoreList.
 
 Set Implicit Arguments.
 
+(** * Renamed-apart (formally) *)
+(** Every subterm is annotated with two sets [D] and [D'] such that
+    [D] contains all free variables of the subterm and [D'] is extactly
+    the set of variables that occur in a binding position. *)
 Inductive renamedApart : stmt -> ann (set var * set var) -> Prop :=
   | renamedApartExp x e s D D' D'' an
     : x ∉ D
@@ -48,6 +52,8 @@ Inductive renamedApart : stmt -> ann (set var * set var) -> Prop :=
       -> unique Z
       -> renamedApart (stmtFun Z s t) (ann2 (D,D') ans ant).
 
+(** ** Morphisms *)
+
 Lemma renamedApart_ext s an an'
   : ann_R (@pe _ _) an an'
   -> renamedApart s an
@@ -84,6 +90,7 @@ Proof.
   eapply renamedApart_ext; try symmetry; eauto.
 Qed.
 
+(** ** Relation to freeVars and occurVars *)
 Lemma renamedApart_freeVars s an
   : renamedApart s an -> freeVars s ⊆ fst (getAnn an).
 Proof.
@@ -110,6 +117,8 @@ Proof.
     clear_all; cset_tac; intuition.
   - rewrite IHrenamedApart1, IHrenamedApart2. rewrite H3, H5; simpl. eauto.
 Qed.
+
+(** ** Relation to notOccur *)
 
 Definition pminus (D'':set var) (s:set var * set var) :=
   match s with
@@ -191,6 +200,8 @@ Proof.
       rewrite H12, H13. reflexivity.
 Qed.
 
+(** ** The two annotated sets are disjoint. *)
+
 Lemma renamedApart_disj s G
 : renamedApart s G
   -> disj (fst (getAnn G)) (snd (getAnn G)).
@@ -211,6 +222,8 @@ Proof.
     split. split; eauto. rewrite incl_right; eauto.
     symmetry; eauto.
 Qed.
+
+
 
 (*
 *** Local Variables: ***
