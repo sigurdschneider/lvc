@@ -7,6 +7,10 @@ open Big
 open Pmove
 
 let main () =
+  (* Give identifiert i, n the lowest indexes, do force
+     heuristic to pick them. *)
+  let _ = register_name "i" in
+  let _ = register_name "n" in
   let infile = ref "" in
   let outfile = ref "a.s" in
   let toILF = ref false in
