@@ -6,7 +6,9 @@ Require Import RenamedApart_Liveness.
 
 Set Implicit Arguments.
 
-(** Inductive definition of local injectivity of a renaming rho *)
+(** * Local Injectivity *)
+
+(** ** Inductive definition of local injectivity of a renaming rho *)
 
 Inductive locally_inj (rho:env var) : stmt -> ann (set var) -> Prop :=
 | RNOpr x b lv e (al:ann (set var))
@@ -37,7 +39,35 @@ Inductive locally_inj (rho:env var) : stmt -> ann (set var) -> Prop :=
 (*  -> injective_on (getAnn alvs ∪ of_list Z) rho *)
   -> locally_inj rho (stmtFun Z s b) (ann2 lv alvs alvb).
 
-(** local injectivity is decidable *)
+(** ** Some Properties *)
+
+(** local injectivity can only hold if [lv] is a valid annotation *)
+
+Lemma locally_inj_annotation (ϱ:env var) (s:stmt) (lv:ann (set var))
+: locally_inj ϱ s lv -> annotation s lv.
+Proof.
+  intros. general induction H; econstructor; eauto.
+Qed.
+
+(** local injectivity respects functional equivalence (if the function itself is injective wrt. the underlying equivalence) *)
+
+Global Instance locally_inj_morphism
+  : Proper (@fpeq _ _ eq _ _ ==> eq ==> eq ==> impl) locally_inj.
+Proof.
+  unfold Proper, respectful, impl; intros; subst.
+  general induction H2; assert (FEQ:x ≡ y) by first [eapply H0 | eapply H1 | eapply H2];  econstructor; eauto;
+  try rewrite <- FEQ; eauto.
+Qed.
+
+(** local injectivity means injectivity on the live variables *)
+Lemma locally_injective s (slv:ann (set var)) ϱ
+  : locally_inj ϱ s slv
+  -> injective_on (getAnn slv) ϱ.
+Proof.
+  intros. general induction H; eauto.
+Qed.
+
+(** ** local injectivity is decidable *)
 
 Definition locally_inj_dec (ϱ:env var) (s:stmt) (lv:ann (set var)) (an:annotation s lv)
   : {locally_inj ϱ s lv} + {~ locally_inj ϱ s lv}.
@@ -60,16 +90,6 @@ Proof.
     edestruct IHs2; eauto; try inv an; eauto; try dec_solve.
 Defined.
 
-(** local injectivity can only hold if [lv] is a valid annotation *)
-
-Lemma locally_inj_annotation (ϱ:env var) (s:stmt) (lv:ann (set var))
-: locally_inj ϱ s lv -> annotation s lv.
-Proof.
-  intros. general induction H; econstructor; eauto.
-Qed.
-
-(** local injectivity is decidable *)
-
 Instance locally_inj_dec_inst (ϱ:env var) (s:stmt) (lv:ann (set var))
          `{Computable (annotation s lv)}
   : Computable (locally_inj ϱ s lv).
@@ -79,24 +99,7 @@ Proof.
   right; intro; eauto using locally_inj_annotation.
 Defined.
 
-(** local injectivity respects functional equivalence (if the function itself is injective wrt. the underlying equivalence) *)
-
-Global Instance locally_inj_morphism
-  : Proper (@fpeq _ _ eq _ _ ==> eq ==> eq ==> impl) locally_inj.
-Proof.
-  unfold Proper, respectful, impl; intros; subst.
-  general induction H2; assert (FEQ:x ≡ y) by first [eapply H0 | eapply H1 | eapply H2];  econstructor; eauto;
-  try rewrite <- FEQ; eauto.
-Qed.
-
-(** local injectivity means injectivity on the live variables *)
-Lemma locally_injective s (slv:ann (set var)) ϱ
-  : locally_inj ϱ s slv
-  -> injective_on (getAnn slv) ϱ.
-Proof.
-  intros. general induction H; eauto.
-Qed.
-
+(** ** Renaming with a locally injective renaming yields a coherent program *)
 
 Lemma rename_renamedApart_srd s ang ϱ (alv:ann (set var)) Lv
   : renamedApart s ang
@@ -225,7 +228,6 @@ Proof.
     exploit IHLv; eauto.
 Qed.
 
-
 Lemma meet1_incl2 a b
 : Subset1 (meet1 a b) b.
 Proof.
@@ -260,6 +262,8 @@ Proof.
 Qed.
 
 Open Scope set_scope.
+
+(** ** Renaming with a locally injective renaming yields an α-equivalent program *)
 
 Lemma renamedApart_locally_inj_alpha s ϱ ϱ' DL (slv:ann (set var)) ang
   : renamedApart s ang
@@ -347,31 +351,70 @@ Proof.
   destruct (getAnn ang); simpl; cset_tac; intuition.
 Qed.
 
+(** ** local injectivity only looks at variables occuring in the program *)
 
-Fixpoint norm_rho ra s s' : env var :=
-  match s, s' with
-    | stmtLet x e s, stmtLet x' e' s' => norm_rho (ra[x<- x']) s s'
-    | stmtIf _ s t, stmtIf _ s' t' => norm_rho (norm_rho ra s s') t t'
-    | stmtFun Z s t, stmtFun Z' s' t' => norm_rho (norm_rho (ra [Z <-- Z']) s s') t t'
-    | _, _ => ra
-  end.
-
-(*
-
-Lemma ssa_rename_alpha C C' s s' ra ira
-  : ssa C s C' -> alpha ra ira s s' ->
-    rename (norm_rho ra s s') s = s'.
+Lemma locally_inj_live_agree s ϱ ϱ' ara alv LV
+      (LS:live_sound FunctionalAndImperative LV s alv)
+      (sd: renamedApart s ara)
+      (inj: locally_inj ϱ s alv)
+      (agr: agree_on eq (fst (getAnn ara) ∪ snd (getAnn ara)) ϱ ϱ')
+      (incl:getAnn alv ⊆ fst (getAnn ara))
+: locally_inj ϱ' s alv.
 Proof.
-  intros. general induction H0; simpl in *.
-  + rewrite H; eauto.
-  + f_equal. eauto.
-
-
-Lemma ssa_rename_alpha C C' s s' ra ira
-  : ssa C s C' -> alpha ra ira s s' ->
-    locally_inj (norm_rho ra s s') s .
-Proof.
-*)
+  intros.
+  general induction inj; invt renamedApart; invt live_sound; simpl in *.
+  - econstructor; eauto.
+    + eapply IHinj; eauto.
+      rewrite H8 in agr.
+      rewrite H7; simpl. eapply agree_on_incl; eauto. cset_tac; intuition.
+      rewrite H7; simpl.
+      rewrite <- incl, <- H13.
+      clear_all; cset_tac; intuition.
+      decide (x === a); cset_tac; intuition.
+    + eapply injective_on_agree; eauto.
+      eapply agree_on_incl; try eapply agr.
+      rewrite H8. rewrite incl. eapply incl_left.
+  - econstructor; eauto.
+    eapply injective_on_agree; eauto.
+    eapply agree_on_incl; eauto. rewrite incl. eapply incl_left.
+    + eapply IHinj1; eauto.
+      rewrite H9; simpl. eapply agree_on_incl; eauto. rewrite <- H5; cset_tac; intuition.
+      rewrite H9; simpl. rewrite <- incl; eauto.
+    + eapply IHinj2; eauto.
+      rewrite H10; simpl. eapply agree_on_incl; eauto. rewrite <- H5; cset_tac; intuition.
+      rewrite H10; simpl. rewrite <- incl; eauto.
+  - econstructor; eauto.
+    eapply injective_on_agree; eauto.
+    eapply agree_on_incl; eauto.
+    rewrite incl. eapply incl_left.
+  - econstructor; eauto.
+    eapply injective_on_agree; eauto.
+    eapply agree_on_incl; eauto.
+    rewrite incl. eapply incl_left.
+  - econstructor; eauto.
+    + eapply IHinj; eauto. rewrite H8; simpl; eauto.
+      eapply agree_on_incl; eauto. rewrite H9.
+      clear_all; cset_tac; intuition.
+      rewrite H8. simpl. rewrite <- incl, <- H14.
+      clear_all; cset_tac; intuition.
+      decide (x === a); intuition.
+    + eapply injective_on_agree; eauto.
+      eapply agree_on_incl; eauto.
+      rewrite incl. eapply incl_left.
+  - econstructor; eauto.
+    + eapply IHinj1; eauto.
+      eapply agree_on_incl; eauto.
+      rewrite H7; simpl. rewrite <- H5. clear_all; cset_tac; intuition.
+      rewrite H7; simpl. rewrite <- incl. rewrite <- H18.
+      clear_all; cset_tac; intuition.
+    + eapply IHinj2; eauto.
+      eapply agree_on_incl; eauto.
+      rewrite H10. simpl. rewrite <- H5. cset_tac; intuition.
+      rewrite H10; simpl. rewrite <- incl. rewrite <- H19. reflexivity.
+    +  eapply injective_on_agree; eauto.
+       eapply agree_on_incl; eauto.
+       rewrite incl. eapply incl_left.
+Qed.
 
 (*
 *** Local Variables: ***

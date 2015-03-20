@@ -1,4 +1,4 @@
-Require Import DecSolve IL Annotation Liveness LengthEq.
+Require Import DecSolve IL Annotation Liveness TrueLiveness LengthEq.
 
 Instance argsLive_dec Caller Callee Y Z
       : Computable (argsLive Caller Callee Y Z).
@@ -60,8 +60,6 @@ Proof.
   eapply live_sound_dec; eauto.
   right; intro. eauto using live_sound_annotation.
 Defined.
-
-Require Import TrueLiveness.
 
 Definition true_live_sound_dec i Lv s slv (an:annotation s slv)
       : Computable (true_live_sound i Lv s slv).

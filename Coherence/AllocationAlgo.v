@@ -6,32 +6,35 @@ Require Import Coherence Allocation RenamedApart.
 
 Set Implicit Arguments.
 
+(** * SSA-based register assignment formulated for IL *)
 
-Fixpoint linear_scan (st:stmt) (an: ann (set var)) (ϱ:Map [var, var])
+Fixpoint reg_assign (st:stmt) (an: ann (set var)) (ϱ:Map [var, var])
   : status (Map [var, var]) :=
  match st, an with
     | stmtLet x e s, ann1 lv ans =>
       let xv := least_fresh (SetConstructs.map (findt ϱ 0) (getAnn ans\{{x}})) in
-        linear_scan s ans (ϱ[x<- xv])
+        reg_assign s ans (ϱ[x<- xv])
     | stmtIf _ s t, ann2 lv ans ant =>
-      sdo ϱ' <- linear_scan s ans ϱ;
-        linear_scan t ant ϱ'
+      sdo ϱ' <- reg_assign s ans ϱ;
+        reg_assign t ant ϱ'
     | stmtApp _ _, ann0 _ => Success ϱ
     | stmtReturn _, ann0 _ => Success ϱ
     | stmtExtern x f Y s, ann1 lv ans =>
       let xv := least_fresh (SetConstructs.map (findt ϱ 0) (getAnn ans\{{x}})) in
-      linear_scan s ans (ϱ[x<- xv])
+      reg_assign s ans (ϱ[x<- xv])
     | stmtFun Z s t, ann2 _ ans ant =>
       let Z' := fresh_list least_fresh (SetConstructs.map (findt ϱ 0) (getAnn ans\of_list Z)) (length Z) in
-      sdo ϱ' <- linear_scan s ans (ϱ[Z <-- Z']);
-        linear_scan t ant ϱ'
-    | _, _ => Error "linear_scan: Annotation mismatch"
+      sdo ϱ' <- reg_assign s ans (ϱ[Z <-- Z']);
+        reg_assign t ant ϱ'
+    | _, _ => Error "reg_assign: Annotation mismatch"
  end.
 
-Lemma linear_scan_renamedApart_agree' i s al ϱ ϱ' LV alv G
+(** The algorithm only changes bound variables in the mapping [ϱ] *)
+
+Lemma reg_assign_renamedApart_agree' i s al ϱ ϱ' LV alv G
       (sd:renamedApart s al)
       (LS:live_sound i LV s alv)
-      (allocOK:linear_scan s alv ϱ = Success ϱ')
+      (allocOK:reg_assign s alv ϱ = Success ϱ')
 : agree_on eq (G \ snd (getAnn al)) (findt ϱ 0) (findt ϱ' 0).
 Proof.
   general induction LS; inv sd; simpl in * |- *; try monadS_inv allocOK; eauto.
@@ -71,87 +74,26 @@ Proof.
     rewrite fresh_list_length; eauto.
 Qed.
 
-Lemma linear_scan_renamedApart_agree i s al ϱ ϱ' LV alv
+Lemma reg_assign_renamedApart_agree i s al ϱ ϱ' LV alv
       (sd:renamedApart s al)
       (LS:live_sound i LV s alv)
-      (allocOK:linear_scan s alv ϱ = Success ϱ')
+      (allocOK:reg_assign s alv ϱ = Success ϱ')
 : agree_on eq (fst (getAnn al)) (findt ϱ 0) (findt ϱ' 0).
 Proof.
   eapply agree_on_incl.
-  eapply linear_scan_renamedApart_agree'; eauto.
+  eapply reg_assign_renamedApart_agree'; eauto.
   instantiate (1:=fst (getAnn al)).
   exploit renamedApart_disj; eauto.
   revert X. unfold disj.
   clear_all; cset_tac; intuition; eauto.
 Qed.
 
-Lemma locally_inj_live_agree s ϱ ϱ' ara alv LV
-      (LS:live_sound FunctionalAndImperative LV s alv)
-      (sd: renamedApart s ara)
-      (inj: locally_inj ϱ s alv)
-      (agr: agree_on eq (fst (getAnn ara) ∪ snd (getAnn ara)) ϱ ϱ')
-      (incl:getAnn alv ⊆ fst (getAnn ara))
-: locally_inj ϱ' s alv.
-Proof.
-  intros.
-  general induction inj; invt renamedApart; invt live_sound; simpl in *.
-  - econstructor; eauto.
-    + eapply IHinj; eauto.
-      rewrite H8 in agr.
-      rewrite H7; simpl. eapply agree_on_incl; eauto. cset_tac; intuition.
-      rewrite H7; simpl.
-      rewrite <- incl, <- H13.
-      clear_all; cset_tac; intuition.
-      decide (x === a); cset_tac; intuition.
-    + eapply injective_on_agree; eauto.
-      eapply agree_on_incl; try eapply agr.
-      rewrite H8. rewrite incl. eapply incl_left.
-  - econstructor; eauto.
-    eapply injective_on_agree; eauto.
-    eapply agree_on_incl; eauto. rewrite incl. eapply incl_left.
-    + eapply IHinj1; eauto.
-      rewrite H9; simpl. eapply agree_on_incl; eauto. rewrite <- H5; cset_tac; intuition.
-      rewrite H9; simpl. rewrite <- incl; eauto.
-    + eapply IHinj2; eauto.
-      rewrite H10; simpl. eapply agree_on_incl; eauto. rewrite <- H5; cset_tac; intuition.
-      rewrite H10; simpl. rewrite <- incl; eauto.
-  - econstructor; eauto.
-    eapply injective_on_agree; eauto.
-    eapply agree_on_incl; eauto.
-    rewrite incl. eapply incl_left.
-  - econstructor; eauto.
-    eapply injective_on_agree; eauto.
-    eapply agree_on_incl; eauto.
-    rewrite incl. eapply incl_left.
-  - econstructor; eauto.
-    + eapply IHinj; eauto. rewrite H8; simpl; eauto.
-      eapply agree_on_incl; eauto. rewrite H9.
-      clear_all; cset_tac; intuition.
-      rewrite H8. simpl. rewrite <- incl, <- H14.
-      clear_all; cset_tac; intuition.
-      decide (x === a); intuition.
-    + eapply injective_on_agree; eauto.
-      eapply agree_on_incl; eauto.
-      rewrite incl. eapply incl_left.
-  - econstructor; eauto.
-    + eapply IHinj1; eauto.
-      eapply agree_on_incl; eauto.
-      rewrite H7; simpl. rewrite <- H5. clear_all; cset_tac; intuition.
-      rewrite H7; simpl. rewrite <- incl. rewrite <- H18.
-      clear_all; cset_tac; intuition.
-    + eapply IHinj2; eauto.
-      eapply agree_on_incl; eauto.
-      rewrite H10. simpl. rewrite <- H5. cset_tac; intuition.
-      rewrite H10; simpl. rewrite <- incl. rewrite <- H19. reflexivity.
-    +  eapply injective_on_agree; eauto.
-       eapply agree_on_incl; eauto.
-       rewrite incl. eapply incl_left.
-Qed.
+(** ** the algorithm produces a locally injective renaming *)
 
-Lemma linear_scan_correct (ϱ:Map [var,var]) LV s alv ϱ' al
+Lemma reg_assign_correct (ϱ:Map [var,var]) LV s alv ϱ' al
       (LS:live_sound FunctionalAndImperative LV s alv)
       (inj:injective_on (getAnn alv) (findt ϱ 0))
-      (allocOK:linear_scan s alv ϱ = Success ϱ')
+      (allocOK:reg_assign s alv ϱ = Success ϱ')
       (incl:getAnn alv ⊆ fst (getAnn al))
       (sd:renamedApart s al)
 : locally_inj (findt ϱ' 0) s alv.
@@ -167,7 +109,7 @@ Proof.
     + rewrite H9. simpl in *. rewrite <- incl, <- H0.
       clear_all; cset_tac; intuition.
       decide (x === a); eauto.
-    + exploit linear_scan_renamedApart_agree; try eapply allocOK; simpl; eauto using live_sound.
+    + exploit reg_assign_renamedApart_agree; try eapply allocOK; simpl; eauto using live_sound.
       rewrite H9 in *.
       simpl in *.
       econstructor. eauto using injective_on_incl.
@@ -177,8 +119,8 @@ Proof.
       etransitivity. eapply map_update_update_agree.
       eapply X0.
       revert H5 incl; clear_all; cset_tac; intuition. invc H0. eauto.
-  - exploit linear_scan_renamedApart_agree; try eapply EQ; simpl; eauto using live_sound.
-    exploit linear_scan_renamedApart_agree; try eapply EQ0; simpl; eauto using live_sound.
+  - exploit reg_assign_renamedApart_agree; try eapply EQ; simpl; eauto using live_sound.
+    exploit reg_assign_renamedApart_agree; try eapply EQ0; simpl; eauto using live_sound.
     rewrite H11 in X. rewrite H12 in X0.
     simpl in *.
     exploit IHLS1; eauto using injective_on_incl.
@@ -192,7 +134,7 @@ Proof.
     eapply injective_on_agree; eauto. eauto using agree_on_incl.
     eapply locally_inj_live_agree. eauto. eauto. eauto.
     rewrite H11; simpl; eauto.
-    exploit linear_scan_renamedApart_agree'; try eapply EQ0; simpl; eauto using live_sound.
+    exploit reg_assign_renamedApart_agree'; try eapply EQ0; simpl; eauto using live_sound.
     rewrite H12 in X3. simpl in *.
     eapply agree_on_incl. eapply X3. instantiate (1:=D ++ Ds).
     pose proof (renamedApart_disj H9). unfold disj in H2.
@@ -207,7 +149,7 @@ Proof.
     + rewrite H10. simpl in *. rewrite <- incl.
       revert H0; clear_all; cset_tac; intuition.
       decide (x === a); eauto. right; eapply H0; cset_tac; intuition.
-    + exploit linear_scan_renamedApart_agree; try eapply allocOK; simpl; eauto using live_sound.
+    + exploit reg_assign_renamedApart_agree; try eapply allocOK; simpl; eauto using live_sound.
       rewrite H10 in *.
       simpl in *.
       econstructor. eauto using injective_on_incl.
@@ -218,8 +160,8 @@ Proof.
       eapply X0.
       revert H6 incl; clear_all; cset_tac; intuition. invc H0. eauto.
   - simpl in *.
-    exploit linear_scan_renamedApart_agree; try eapply EQ; simpl; eauto using live_sound.
-    exploit linear_scan_renamedApart_agree; try eapply EQ0; simpl; eauto using live_sound.
+    exploit reg_assign_renamedApart_agree; try eapply EQ; simpl; eauto using live_sound.
+    exploit reg_assign_renamedApart_agree; try eapply EQ0; simpl; eauto using live_sound.
     rewrite <- map_update_list_update_agree in X.
     exploit IHLS1; eauto.
     + eapply injective_on_agree; [| eapply map_update_list_update_agree].
@@ -260,7 +202,7 @@ Proof.
         eapply locally_inj_live_agree; eauto.
         rewrite H9. simpl.
         eapply agree_on_incl.
-        eapply linear_scan_renamedApart_agree'; try eapply EQ0; eauto.
+        eapply reg_assign_renamedApart_agree'; try eapply EQ0; eauto.
         rewrite H12; simpl. instantiate (1:=(of_list Z ++ D) ++ Ds).
         pose proof (renamedApart_disj sd). unfold disj in H3.
         simpl in *. rewrite <- H7 in H3.
@@ -282,14 +224,16 @@ Lemma locally_inj_live_agree' s ang ϱ ϱ' (alv:ann (set var)) Lv
   -> ann_R Subset1 alv ang
   -> LabelsDefined.noUnreachableCode s
   -> injective_on (getAnn alv) (findt ϱ 0)
-  -> linear_scan s alv ϱ = Success ϱ'
+  -> reg_assign s alv ϱ = Success ϱ'
   -> locally_inj (findt ϱ' 0) s alv.
 Proof.
   intros.
   eapply renamedApart_live_imperative_is_functional in H0; eauto using bounded_disjoint, renamedApart_disj, meet1_Subset1, live_sound_annotation, renamedApart_annotation.
-  eapply linear_scan_correct; eauto using locally_inj_subset, meet1_Subset, live_sound_annotation, renamedApart_annotation.
+  eapply reg_assign_correct; eauto using locally_inj_subset, meet1_Subset, live_sound_annotation, renamedApart_annotation.
   eapply ann_R_get in H2. destruct (getAnn ang); simpl; cset_tac; intuition.
 Qed.
+
+(** ** Bound on the number of registers used *)
 
 Fixpoint largest_live_set (a:ann (set var)) : set var :=
   match a with
@@ -312,20 +256,20 @@ Proof.
   destruct al; simpl; eauto using Max.le_max_l.
 Qed.
 
-Lemma linear_scan_assignment_small (ϱ:Map [var,var]) LV s alv ϱ' al n
+Lemma reg_assign_assignment_small (ϱ:Map [var,var]) LV s alv ϱ' al n
       (LS:live_sound Functional LV s alv)
-      (allocOK:linear_scan s alv ϱ = Success ϱ')
+      (allocOK:reg_assign s alv ϱ = Success ϱ')
       (incl:getAnn alv ⊆ fst (getAnn al))
       (sd:renamedApart s al)
       (up:lookup_set (findt ϱ 0) (fst (getAnn al)) ⊆ vars_up_to n)
 : lookup_set (findt ϱ' 0) (snd (getAnn al)) ⊆ vars_up_to (max (size_of_largest_live_set alv) n).
 Proof.
-  exploit linear_scan_renamedApart_agree; eauto using live_sound.
+  exploit reg_assign_renamedApart_agree; eauto using live_sound.
   rewrite lookup_set_agree in up; eauto. clear X.
   general induction LS; invt renamedApart; simpl in * |- *.
   - assert ( singleton (findt ϱ' 0 x)
                        ⊆ vars_up_to (size_of_largest_live_set al)). {
-      eapply linear_scan_renamedApart_agree in allocOK; eauto.
+      eapply reg_assign_renamedApart_agree in allocOK; eauto.
       rewrite <- allocOK. unfold findt at 1.
       rewrite MapFacts.add_eq_o; eauto.
       cset_tac. invc H2. eapply in_vars_up_to.
@@ -362,7 +306,7 @@ Proof.
     rewrite H11; eauto. simpl. rewrite <- incl; eauto.
     rewrite H11; simpl.
     rewrite lookup_set_agree; eauto.
-    eapply agree_on_incl; try eapply linear_scan_renamedApart_agree;
+    eapply agree_on_incl; try eapply reg_assign_renamedApart_agree;
     try eapply EQ0; eauto using live_sound.
     rewrite H12; simpl; eauto.
     exploit IHLS2; try eapply EQ0; eauto.
@@ -379,13 +323,13 @@ Proof.
     unfold findt; intuition.
     eapply agree_on_incl.
     symmetry.
-    eapply linear_scan_renamedApart_agree'; try eapply EQ0; eauto. rewrite H12; simpl.
+    eapply reg_assign_renamedApart_agree'; try eapply EQ0; eauto. rewrite H12; simpl.
     instantiate (1:=Ds). revert H6; clear_all; cset_tac; intuition; eauto.
   - rewrite H7. rewrite lookup_set_empty; cset_tac; intuition; eauto.
   - rewrite H2. rewrite lookup_set_empty; cset_tac; intuition; eauto.
   - assert ( singleton (findt ϱ' 0 x)
                        ⊆ vars_up_to (size_of_largest_live_set al)). {
-      eapply linear_scan_renamedApart_agree in allocOK; eauto.
+      eapply reg_assign_renamedApart_agree in allocOK; eauto.
       rewrite <- allocOK. unfold findt at 1.
       rewrite MapFacts.add_eq_o; eauto.
       cset_tac. invc H2. eapply in_vars_up_to.
@@ -418,8 +362,8 @@ Proof.
       cset_tac; intuition.
   - monadS_inv allocOK.
     simpl in *.
-    exploit linear_scan_renamedApart_agree; try eapply EQ; simpl; eauto using live_sound.
-    exploit linear_scan_renamedApart_agree; try eapply EQ0; simpl; eauto using live_sound.
+    exploit reg_assign_renamedApart_agree; try eapply EQ; simpl; eauto using live_sound.
+    exploit reg_assign_renamedApart_agree; try eapply EQ0; simpl; eauto using live_sound.
     rewrite H9 in *. rewrite H12 in *. simpl in *.
     assert (D [=] (of_list Z ++ D) \ of_list Z). {
       revert H5. clear_all; cset_tac; intuition.
@@ -486,42 +430,42 @@ Proof.
         etransitivity.
         eapply agree_on_incl.
         rewrite map_update_list_update_agree.
-        eapply linear_scan_renamedApart_agree'; try eapply EQ; eauto.
+        eapply reg_assign_renamedApart_agree'; try eapply EQ; eauto.
         rewrite fresh_list_length; eauto.
         instantiate (1:=of_list Z). rewrite H9. simpl.
         generalize (renamedApart_disj H8).
         rewrite H9. simpl. unfold disj. clear_all; cset_tac; intuition; eauto.
         eapply agree_on_incl.
-        eapply linear_scan_renamedApart_agree'; try eapply EQ0; eauto.
+        eapply reg_assign_renamedApart_agree'; try eapply EQ0; eauto.
         instantiate (1:=of_list Z). rewrite H12. simpl.
         revert H6. clear_all; cset_tac; intuition; eauto.
         symmetry.
         eapply agree_on_incl.
-        eapply linear_scan_renamedApart_agree'; try eapply EQ0; eauto.
+        eapply reg_assign_renamedApart_agree'; try eapply EQ0; eauto.
         instantiate (1:=Ds). rewrite H12. simpl.
         revert H6; clear_all; cset_tac; intuition; eauto.
     + rewrite fresh_list_length; eauto.
 Qed.
 
 
-Lemma linear_scan_assignment_small' s ang ϱ ϱ' (alv:ann (set var)) Lv n
+Lemma reg_assign_assignment_small' s ang ϱ ϱ' (alv:ann (set var)) Lv n
   : renamedApart s ang
   -> live_sound Imperative Lv s alv
   -> bounded (live_globals Lv) (fst (getAnn ang))
   -> ann_R Subset1 alv ang
   -> LabelsDefined.noUnreachableCode s
-  -> linear_scan s alv ϱ = Success ϱ'
+  -> reg_assign s alv ϱ = Success ϱ'
   -> lookup_set (findt ϱ 0) (fst (getAnn ang)) ⊆ vars_up_to n
   -> lookup_set (findt ϱ' 0) (fst (getAnn ang) ∪ snd (getAnn ang)) ⊆ vars_up_to (max (size_of_largest_live_set alv) n).
 Proof.
   intros.
   eapply renamedApart_live_imperative_is_functional in H0; eauto using bounded_disjoint, renamedApart_disj, meet1_Subset1, live_sound_annotation, renamedApart_annotation.
   eapply live_sound_overapproximation_F in H0.
-  exploit linear_scan_assignment_small; eauto using locally_inj_subset, meet1_Subset, live_sound_annotation, renamedApart_annotation.
+  exploit reg_assign_assignment_small; eauto using locally_inj_subset, meet1_Subset, live_sound_annotation, renamedApart_annotation.
   eapply ann_R_get in H2. destruct (getAnn ang); simpl; cset_tac; intuition.
   rewrite lookup_set_union; intuition.
   rewrite X.
-  rewrite <- lookup_set_agree; eauto using linear_scan_renamedApart_agree; intuition.
+  rewrite <- lookup_set_agree; eauto using reg_assign_renamedApart_agree; intuition.
   rewrite H5. repeat rewrite vars_up_to_max. cset_tac; intuition.
 Qed.
 
