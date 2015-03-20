@@ -68,7 +68,7 @@ let main () =
 	if !toILI then
           (match Lvc.fromILF parallel_move generic_first sopt with
 	   | Lvc.Success ili ->
-	      Printf.printf "\nto IL/I compilate:\n%s\n\n" (print_stmt !ids 0 ili);
+	      Printf.printf "\nto IL/I compilate (functions are de-bruijn now):\n%s\n\n" (print_stmt !ids 0 ili);
 	      ili
 	   | Lvc.Error e -> raise (Compiler_error (implode e))
 	  )
