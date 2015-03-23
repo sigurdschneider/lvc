@@ -1,5 +1,5 @@
 Require Import AllInRel List Map Env DecSolve.
-Require Import IL Annotation AutoIndTac Bisim Exp MoreExp Filter.
+Require Import IL Annotation AutoIndTac Bisim Exp MoreExp Filter Rename.
 
 Set Implicit Arguments.
 

@@ -1,5 +1,5 @@
 Require Import List CSet.
-Require Import Util AllInRel IL EnvTy RenameApart Sim Status Annotation.
+Require Import Util AllInRel IL Rename EnvTy RenameApart Sim Status Annotation.
 Require CMap.
 Require Liveness TrueLiveness LivenessValidators ParallelMove ILN LivenessAnalysis.
 Require Coherence Delocation DelocationAlgo DelocationValidator Allocation AllocationAlgo.

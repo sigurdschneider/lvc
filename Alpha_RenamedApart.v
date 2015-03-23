@@ -1,5 +1,5 @@
 Require Import Util Map Env EnvTy Exp IL AllInRel Bisim Computable Annotation.
-Require Import RenamedApart Alpha ILDB SetOperations.
+Require Import Rename RenamedApart Alpha ILDB SetOperations.
 Import F.
 
 Set Implicit Arguments.
