@@ -340,23 +340,6 @@ Set Implicit Arguments.
     intros. general induction H; simpl; eauto.
   Qed.
 
-  Inductive notOccur : set var -> exp -> Prop :=
-  | ConNotOccur D v : notOccur D (Con v)
-  | VarNotOccur D x : x ∉ D -> notOccur D (Var x)
-  | UnOpNotOccur D o e
-    : notOccur D e
-      -> notOccur D (UnOp o e)
-  | BinopNotOccur D o e1 e2 :
-      notOccur D e1 ->
-      notOccur D e2 ->
-      notOccur D (BinOp o e1 e2).
-
-  Lemma notOccur_antitone
-  : forall D D' e, D' ⊆ D -> notOccur D e -> notOccur D' e.
-  Proof.
-    intros. general induction H0; eauto using notOccur.
-  Qed.
-
   Lemma alpha_exp_morph
   : forall (ϱ1 ϱ1' ϱ2 ϱ2':env var) e e',
       @feq _ _ eq ϱ1  ϱ1'
@@ -482,49 +465,6 @@ Lemma freeVars_renameExp ϱ e
 Proof.
   general induction e; simpl; try rewrite lookup_set_union; eauto.
   - rewrite IHe1, IHe2; reflexivity.
-Qed.
-
-Lemma notOccur_disj_freeVars G e
-: notOccur G e -> disj G (freeVars e).
-Proof.
-  intros. general induction H; simpl; repeat rewrite disj_app; eauto using disj_singleton.
-Qed.
-
-Lemma freeVars_disj_notOccur G e
-: disj G (freeVars e) -> notOccur G e.
-Proof.
-  intros. general induction e; simpl in * |- *; repeat rewrite disj_app in H; eauto using notOccur.
-  - econstructor. unfold disj in *. cset_tac; intuition. eapply H; cset_tac; intuition; eauto.
-Qed.
-
-
-Lemma list_union_notOccur {X} `{OrderedType X} Y D
-:  (forall (n : nat) (e : exp), get Y n e -> notOccur D e)
-   -> disj D (list_union (List.map freeVars Y)).
-Proof.
-  unfold disj. intros.
-  edestruct (list_union_disjunct (List.map freeVars Y)) as [? _].
-  exploit H1; intros.
-  edestruct map_get_4; eauto; dcr; subst.
-  rewrite meet_comm.
-  eapply notOccur_disj_freeVars; eauto.
-  rewrite meet_comm; eauto.
-Qed.
-
-
-Lemma list_union_notOccur' {X} `{OrderedType X} Y D
-:  disj D (list_union (List.map freeVars Y))
--> (forall (n : nat) (e : exp), get Y n e -> notOccur D e).
-Proof.
-  intros. general induction H1; simpl in *.
-  - unfold list_union in H0. simpl in *.
-    rewrite list_union_start_swap in H0.
-    eapply freeVars_disj_notOccur.
-    unfold disj in *; cset_tac; intuition; eauto.
-  - eapply IHget; eauto.
-    unfold list_union in H0. simpl in *.
-    rewrite list_union_start_swap in H0.
-    unfold disj in *; cset_tac; intuition; eauto.
 Qed.
 
 Definition exp2bool (e:exp) : option bool :=

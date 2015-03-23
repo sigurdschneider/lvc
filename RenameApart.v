@@ -106,7 +106,6 @@ Proof.
   general induction s; eauto.
 Qed.
 
-
 Lemma snd_renameApartAnn s G ϱ G'
 : snd (getAnn (renamedApartAnn (snd (renameApart' ϱ G s)) G')) = fst (renameApart' ϱ G s).
 Proof.
@@ -117,71 +116,73 @@ Proof.
   - subst. rewrite IHs1. rewrite IHs2. reflexivity.
 Qed.
 
+Lemma snd_renamedApartAnn s G
+ : snd (getAnn (renamedApartAnn s G)) [=] definedVars s.
+Proof.
+  general induction s; simpl; eauto.
+  - rewrite IHs; eauto.
+  - rewrite IHs1, IHs2; eauto.
+  - rewrite IHs; eauto.
+  - rewrite IHs1, IHs2. cset_tac; intuition.
+Qed.
+
+
 Lemma renameApartAnn_decomp s G
 : pe (getAnn (renamedApartAnn s G)) (G, snd (getAnn (renamedApartAnn s G))).
 Proof.
   destruct s; simpl; try reflexivity.
 Qed.
 
+Hint Resolve prod_eq_intro : cset.
+
 Lemma ann_R_pe_notOccur G G' s
-:  notOccur G' s
+:  disj (occurVars s) G'
    -> G \ G' [=] G
    -> ann_R (@pe var _)
            (renamedApartAnn s G)
                      (mapAnn (pminus G') (renamedApartAnn s (G ∪ G'))).
 Proof.
-  intros. general induction H; simpl; try now (econstructor; reflexivity).
-  - assert ({x ; G ++ G'} [=] {x; G} ++ G'). {
-      cset_tac; intuition.
-    }
-    econstructor.
-    + rewrite H3. rewrite IHnotOccur.
-      rewrite getAnn_mapAnn. unfold pminus.
-      let_pair_case_eq; simpl; eauto.
+  intros. general induction s; simpl in * |- *; try now (econstructor; reflexivity).
+  - econstructor.
+    + econstructor; eauto. rewrite minus_dist_union. rewrite H0.
+      cset_tac; intuition. repeat rewrite snd_renamedApartAnn; eauto.
+    + assert ({x ; G ++ G'} [=] {x; G} ++ G'). {
+        cset_tac; intuition.
+      } rewrite H1. eapply IHs; eauto with cset.
+      admit.
+  - econstructor; eauto with cset.
+    + rewrite IHs1, IHs2; eauto with cset;
+      repeat rewrite getAnn_mapAnn.
+      unfold pminus.
+      repeat let_pair_case_eq; simpl; subst; eauto.
       econstructor; try reflexivity.
-      revert H2; clear_all; cset_tac; intuition.
-      eapply H2 in H; intuition.
-      rewrite <- H2.
-      revert H; clear_all; cset_tac; intuition.
-    + rewrite H3.
-      eapply IHnotOccur.
-      rewrite <- H2. revert H; clear_all; cset_tac; intuition.
-  - econstructor; eauto.
-    rewrite IHnotOccur1, IHnotOccur2; eauto.
-    repeat rewrite getAnn_mapAnn.
-    unfold pminus.
-    repeat let_pair_case_eq; simpl; eauto.
-    econstructor; try reflexivity.
-    rewrite <- H2. clear_all; cset_tac; intuition.
-  - econstructor. econstructor. rewrite <- H0; cset_tac; intuition; eauto. reflexivity.
+      rewrite minus_dist_union. rewrite H0. cset_tac; intuition.
+  - econstructor; eauto with cset. econstructor; eauto.
+    rewrite minus_dist_union. rewrite H0. cset_tac; intuition.
   - econstructor. econstructor; try rewrite <- H0; clear_all; cset_tac; intuition.
   - assert ({x ; G ++ G'} [=] {x; G} ++ G'). {
       cset_tac; intuition.
     }
-    econstructor.
-    + rewrite H3. rewrite IHnotOccur.
-      rewrite getAnn_mapAnn. unfold pminus.
-      let_pair_case_eq; simpl.
-      econstructor; try reflexivity.
-      rewrite <- H2; clear_all; cset_tac; intuition.
-      rewrite <- H2; revert H0; clear_all; cset_tac; intuition.
-    + rewrite H3.
-      eapply IHnotOccur.
-      rewrite <- H2; revert H0; clear_all; cset_tac; intuition.
+    econstructor; eauto with cset.
+    + econstructor; eauto.
+      * rewrite minus_dist_union. rewrite H0.
+        cset_tac; intuition.
+      * repeat rewrite snd_renamedApartAnn; eauto.
+    + assert ({x ; G ++ G'} [=] {x; G} ++ G'). {
+        cset_tac; intuition.
+      } rewrite H1. eapply IHs; eauto with cset.
+      admit.
   - assert ((G ++ G') ++ of_list Z [=] (G ++ of_list Z) ++ G'). {
       cset_tac; intuition.
     }
-    econstructor; eauto.
-    + rewrite H3. rewrite IHnotOccur1.
-      rewrite getAnn_mapAnn. unfold pminus.
-      let_pair_case_eq; simpl.
-      econstructor. rewrite <- H2; clear_all; cset_tac; intuition.
-      rewrite IHnotOccur2, getAnn_mapAnn; eauto.
-      unfold pminus. let_pair_case_eq; simpl; eauto.
-      rewrite <- H2. revert H; clear_all; cset_tac; intuition; eauto.
-    + rewrite H3.
-      eapply IHnotOccur1.
-      rewrite <- H2. revert H; clear_all; cset_tac; intuition; eauto.
+    econstructor; eauto with cset.
+    + econstructor; eauto.
+      * rewrite minus_dist_union. rewrite H0. cset_tac; intuition.
+      * repeat rewrite snd_renamedApartAnn; eauto.
+    + rewrite H1. eapply IHs1; eauto with cset.
+      rewrite minus_dist_union, H0.
+      rewrite minus_inane_set; eauto.
+      eapply disj_1_incl; eauto with cset.
 Qed.
 
 
@@ -281,15 +282,16 @@ Proof.
       cset_tac; intuition.
     + pose proof (renameApart'_disj ϱ G s1). rewrite H1 in H0.
       pose proof (renameApart'_disj ϱ (G ++ Gs1) s2). rewrite H2 in H3.
-      assert (notOccur Gs1 (snd (renameApart' ϱ (G ++ Gs1) s2))). {
-        eapply occurVars_disj_notOccur.
-        rewrite occurVars_freeVars_definedVars, disj_app.
-        rewrite freeVars_renamedApart'. split.
-        rewrite lookup_set_incl; eauto.
-        rewrite H. symmetry; eauto. cset_tac; intuition.
-        rewrite definedVars_renamedApart'. rewrite H2.
-        rewrite incl_right; eauto.
-        rewrite <- H. repeat rewrite lookup_set_union; cset_tac; intuition.
+      assert (disj (occurVars (snd (renameApart' ϱ (G ++ Gs1) s2))) Gs1). {
+        rewrite occurVars_freeVars_definedVars.
+        rewrite definedVars_renamedApart'.
+        symmetry; apply disj_app; split; symmetry.
+        rewrite freeVars_renamedApart'.
+        eapply disj_1_incl; eauto.
+        rewrite lookup_set_incl; eauto with cset.
+        rewrite lookup_set_incl; eauto with cset.
+        symmetry. setoid_rewrite incl_right at 1.
+        eapply renameApart'_disj.
       }
       eapply renamedApart_minus; [|eapply IHs2|eapply ann_R_pe_notOccur]; eauto.
       * rewrite <- H. repeat rewrite lookup_set_union; cset_tac; intuition.
@@ -357,18 +359,26 @@ Proof.
       rewrite H1 in H0.
       pose proof (renameApart'_disj ϱ (G ++ Gs1 ++ of_list (fresh_list fresh G (length Z))) s2).
       rewrite H2 in H3.
-      assert (notOccur (Gs1 ++ of_list (fresh_list fresh G (length Z))) (snd (renameApart' ϱ (G ++ Gs1 ++ of_list (fresh_list fresh G (length Z))) s2))). {
-        eapply occurVars_disj_notOccur.
+      assert (disj
+     (occurVars
+        (snd
+           (renameApart' ϱ
+              (G ++ Gs1 ++ of_list (fresh_list fresh G (length Z))) s2)))
+     (Gs1 ++ of_list (fresh_list fresh G (length Z)))). {
         rewrite occurVars_freeVars_definedVars, disj_app.
         rewrite freeVars_renamedApart'. split.
         rewrite lookup_set_incl; eauto.
         rewrite H. symmetry. rewrite disj_app; split.
-        rewrite incl_left; eauto.
-        symmetry; eapply fresh_list_spec, fresh_spec.
-        cset_tac; intuition.
-        rewrite definedVars_renamedApart'. rewrite H2.
-        rewrite incl_right; eauto.
-        rewrite <- H at 1. repeat rewrite lookup_set_union; cset_tac; intuition.
+        symmetry. eauto with cset.
+        rewrite definedVars_renamedApart'.
+        eapply disj_1_incl. eapply renameApart'_disj.
+        eauto with cset. eauto with cset.
+        rewrite definedVars_renamedApart'.
+        symmetry. rewrite disj_app; split.
+        eapply disj_2_incl. eapply fresh_list_spec, fresh_spec.
+        rewrite lookup_set_incl; eauto with cset.
+        eapply disj_1_incl. eapply renameApart'_disj. eauto with cset.
+        rewrite lookup_set_incl; eauto with cset.
       }
       eapply renamedApart_minus; [|eapply IHs2| eapply ann_R_pe_notOccur]; eauto.
       * rewrite <- H at 1. rewrite lookup_set_union; cset_tac; intuition.

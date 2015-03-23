@@ -118,8 +118,6 @@ Proof.
   - rewrite IHrenamedApart1, IHrenamedApart2. rewrite H3, H5; simpl. eauto.
 Qed.
 
-(** ** Relation to notOccur *)
-
 Definition pminus (D'':set var) (s:set var * set var) :=
   match s with
     | pair s s' => (s \ D'', s')
@@ -146,58 +144,56 @@ Proof.
     + rewrite H. reflexivity.
 Qed.
 
+Lemma not_in_minus X `{OrderedType X} (s t: set X) x
+: x ∉ s
+  -> x ∉ s \ t.
+Proof.
+  cset_tac; intuition.
+Qed.
+
+Hint Resolve not_in_minus : cset.
+
+Lemma not_incl_minus X `{OrderedType X} (s t u: set X)
+: s ⊆ t
+  -> disj s u
+  -> s ⊆ t \ u.
+Proof.
+  cset_tac; intuition.
+Qed.
+
+Hint Resolve not_incl_minus : cset.
+Hint Resolve disj_1_incl disj_2_incl : cset.
+
+Hint Extern 20 (pe ?a ?a) => reflexivity.
+
 Lemma renamedApart_minus D an an' s
-  : notOccur D s
+  : disj (occurVars s) D
     -> renamedApart s an
     -> ann_R (@pe _ _) an' (mapAnn (pminus D) an)
     -> renamedApart s an'.
 Proof.
-  intros ? ? PE. general induction H0; invt notOccur; try rewrite PE; simpl in * |- *.
-  - eapply Exp.notOccur_disj_freeVars in H10.
-    econstructor.
-    + revert H; clear_all; cset_tac; intuition.
-    + revert H10 H0; clear_all; cset_tac; intuition; eauto.
-    + eapply IHrenamedApart; eauto.
-    + rewrite getAnn_mapAnn. inv H2; simpl.
-      rewrite H11, H12. econstructor.
-      revert H8 H10; clear_all; cset_tac; intuition; cset_tac; eauto.
-      reflexivity.
-    + rewrite H3; reflexivity.
-  - eapply Exp.notOccur_disj_freeVars in H8.
-    econstructor; [|eapply H0| | | | |].
-    + revert H H8; clear_all; cset_tac; intuition; cset_tac; eauto.
-    + rewrite H1; reflexivity.
-    + eapply IHrenamedApart1; eauto; try reflexivity.
-    + eapply IHrenamedApart2; eauto; try reflexivity.
-    + rewrite getAnn_mapAnn. inv H2; simpl. rewrite H11, H12; reflexivity.
-    + rewrite getAnn_mapAnn. inv H3; simpl. rewrite H11, H12; reflexivity.
-  - eapply Exp.notOccur_disj_freeVars in H3.
-    econstructor; eauto.
-    revert H H3; clear_all; cset_tac; intuition; cset_tac; eauto.
-  - econstructor; eauto.
-    edestruct (list_union_disjunct (List.map Exp.freeVars Y)) as [? _].
-    exploit H2; intros.
-    rewrite meet_comm.
-    edestruct map_get_4; eauto; dcr; subst.
-    eapply Exp.notOccur_disj_freeVars; eauto.
-    revert H X; clear_all; cset_tac; intuition; eauto.
-  - eapply list_union_notOccur in H8.
-    econstructor.
-    + revert H; clear_all; cset_tac; intuition.
-    + revert H8 H0; clear_all; cset_tac; intuition; eauto.
-    + eapply IHrenamedApart; eauto.
-    + rewrite getAnn_mapAnn. inv H2; simpl.
-      rewrite H9, H12. econstructor.
-      revert H H10; clear_all; cset_tac; intuition; cset_tac; eauto.
-      reflexivity.
-    + rewrite H3; reflexivity.
-  - econstructor; try eapply H0; eauto.
-    + revert H H9; clear_all; cset_tac; intuition; eauto.
-    + rewrite getAnn_mapAnn; simpl. inv H2; simpl.
-      rewrite H12, H13. constructor; try reflexivity.
-      revert H9; clear_all; cset_tac; intuition; eauto.
-    + rewrite getAnn_mapAnn; simpl. inv H3; simpl.
-      rewrite H12, H13. reflexivity.
+  intros ? ? PE. general induction H0; try rewrite PE; simpl in * |- *.
+  - econstructor; eauto with cset.
+    + rewrite getAnn_mapAnn. pe_rewrite.
+      econstructor; eauto.
+      revert H H4; unfold disj; clear_all; cset_tac; intuition.
+      invc H2; eapply H1; eauto.
+  - econstructor; [|eapply H0| | | | |]; eauto with cset.
+    + rewrite getAnn_mapAnn. pe_rewrite; eauto.
+    + rewrite getAnn_mapAnn. pe_rewrite; eauto.
+  - econstructor; eauto with cset.
+  - econstructor; eauto with cset.
+  - econstructor; eauto with cset.
+    + rewrite getAnn_mapAnn. pe_rewrite.
+      econstructor; eauto.
+      revert H H4; unfold disj; clear_all; cset_tac; intuition.
+      invc H2; eapply H1; eauto.
+  - econstructor; [| |eapply H1| | | | |]; eauto with cset.
+    + change (disj (of_list Z) (D \ D0)). rewrite minus_incl; eauto.
+    + rewrite getAnn_mapAnn; simpl. pe_rewrite; econstructor; eauto.
+      rewrite minus_dist_union. rewrite minus_inane_set; eauto.
+      eapply disj_1_incl; eauto with cset.
+    + rewrite getAnn_mapAnn; simpl. pe_rewrite; constructor; eauto.
 Qed.
 
 (** ** The two annotated sets are disjoint. *)
