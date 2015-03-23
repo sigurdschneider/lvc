@@ -25,16 +25,16 @@ Class ProofRelation (A:Type) := {
 }.
 
 Inductive simB (SIM:ProgramEquivalence F.state F.state) (r:F.state -> F.state -> Prop) {A} (AR:ProofRelation A)  : F.labenv -> F.labenv -> A -> F.block -> F.block -> Prop :=
-| simBI a L L' V V' Z Z' s s'
+| simBI a L L' V V' Z Z' s s' n
   : ParamRel a Z Z'
-    -> BlockRel a (F.blockI V Z s) (F.blockI V' Z' s')
+    -> BlockRel a (F.blockI V Z s n) (F.blockI V' Z' s' n)
     -> (forall E E' Y Y' Yv Y'v,
          omap (exp_eval E) Y = Some Yv
          -> omap (exp_eval E') Y' = Some Y'v
          -> ArgRel V V' a Yv Y'v
          -> progeq r (L, E, stmtApp (LabI 0) Y)
                         (L', E', stmtApp (LabI 0) Y'))
-    -> simB SIM r AR L L' a (F.blockI V Z s) (F.blockI V' Z' s').
+    -> simB SIM r AR L L' a (F.blockI V Z s n) (F.blockI V' Z' s' n).
 
 Definition simL' (SIM:ProgramEquivalence F.state F.state) r
            {A} AR (AL:list A) L L' := AIR5 (simB SIM r AR) L L' AL L L'.

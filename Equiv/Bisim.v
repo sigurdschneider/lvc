@@ -582,16 +582,16 @@ Proof.
   intros. eapply paco2_mon; eauto. eapply H3; eauto.
 Qed.
 
-Lemma subst_lemma A AR (a:A) AL s s' V V' E E' Z Z' L1 L2 t t'
+Lemma subst_lemma A AR (a:A) AL s s' V V' E E' Z Z' L1 L2 t t' n
 : fexteq' bisim_progeq AR a (a::AL) E Z s E' Z' s'
   -> ParamRel a Z Z'
-  -> BlockRel a (F.blockI E Z s) (F.blockI E' Z' s')
+  -> BlockRel a (F.blockI E Z s n) (F.blockI E' Z' s' n)
   -> simL' bisim_progeq bot2 AR AL L1 L2
   -> (forall r (L L' : list F.block),
        simL' bisim_progeq r AR (a :: AL) L L' ->
        paco2 (@bisim_gen F.state _ F.state _) r (L, V, t) (L', V', t'))
-  -> paco2 (@bisim_gen F.state _ F.state _) bot2 (F.blockI E Z s :: L1, V, t)
-         (F.blockI E' Z' s' :: L2, V', t').
+  -> paco2 (@bisim_gen F.state _ F.state _) bot2 (F.blockI E Z s n:: L1, V, t)
+         (F.blockI E' Z' s' n:: L2, V', t').
 Proof.
   revert_all; pcofix CIH; intros.
   eapply H4.
@@ -609,15 +609,15 @@ Proof.
   eapply simL_mon; eauto. intros; isabsurd.
 Qed.
 
-Lemma fix_compatible r A AR (a:A) AL s s' E E' Z Z' L L' Yv Y'v
+Lemma fix_compatible r A AR (a:A) AL s s' E E' Z Z' L L' Yv Y'v n
 : simL' bisim_progeq r AR AL L L'
   -> fexteq' bisim_progeq AR a (a::AL) E Z s E' Z' s'
   -> ParamRel a Z Z'
-  -> BlockRel a (F.blockI E Z s) (F.blockI E' Z' s')
+  -> BlockRel a (F.blockI E Z s n) (F.blockI E' Z' s' n)
   -> ArgRel E E' a Yv Y'v
   -> bisim'r r
-            (F.blockI E Z s :: L, E [Z <-- List.map Some Yv], s)
-            (F.blockI E' Z' s' :: L', E' [Z' <-- List.map Some Y'v], s').
+            (F.blockI E Z s n :: L, E [Z <-- List.map Some Yv], s)
+            (F.blockI E' Z' s' n :: L', E' [Z' <-- List.map Some Y'v], s').
 Proof.
   revert_all; pcofix CIH; intros.
   eapply H1; eauto.
@@ -636,11 +636,11 @@ Proof.
   - eapply simL_mon; eauto.
 Qed.
 
-Lemma simL_extension' r A AR (a:A) AL s s' E E' Z Z' L L'
+Lemma simL_extension' r A AR (a:A) AL s s' E E' Z Z' L L' n
 : simL' bisim_progeq r AR AL L L'
   -> fexteq' bisim_progeq AR a (a::AL) E Z s E' Z' s'
-  -> BlockRel a (F.blockI E Z s) (F.blockI E' Z' s')
-  -> simL' bisim_progeq r AR (a::AL) (F.blockI E Z s :: L) (F.blockI E' Z' s' :: L').
+  -> BlockRel a (F.blockI E Z s n) (F.blockI E' Z' s' n)
+  -> simL' bisim_progeq r AR (a::AL) (F.blockI E Z s n :: L) (F.blockI E' Z' s' n :: L').
 Proof.
   intros. destruct H0.
   hnf; intros. econstructor; eauto. econstructor; eauto; intros.
@@ -669,6 +669,7 @@ Proof.
   intros. eapply get_drop in H; simpl in *. orewrite (labN l + 0 = labN l) in H; eauto.
 Qed.
 
+(*
 Lemma bisim_drop_shift r l L E Y L' E' Y'
 : paco2 (@bisim_gen F.state _ F.state _) r (drop (labN l) L, E, stmtApp (LabI 0) Y)
         (drop (labN l) L', E', stmtApp (LabI 0) Y')
@@ -728,7 +729,7 @@ Proof.
       econstructor; eauto using get_drop_lab0, drop_get_lab0. eapply H11.
       left. pfold. econstructor 3; try eapply star2_refl; eauto.
 Qed.
-
+*)
 
 Ltac single_step :=
   match goal with
