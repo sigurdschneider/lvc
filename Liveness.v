@@ -172,11 +172,9 @@ Proof.
   intros. general induction H; simpl.
   - econstructor; eauto using live_exp_rename_sound.
     + rewrite getAnn_mapAnn.
-      cset_tac; eqs; simpl; eauto. eapply lookup_set_incl; eauto.
-      eapply lookup_set_spec; eauto.
-      eapply lookup_set_spec in H4; eauto. destruct H4; dcr; eauto.
-      eexists x0; intuition. cset_tac; eauto.
-      intro. eapply H3. rewrite H7, <- H4; eauto.
+      rewrite <- lookup_set_singleton'; intuition.
+      rewrite lookup_set_minus_incl; eauto.
+      eapply lookup_set_incl; eauto.
     + rewrite getAnn_mapAnn.
       eapply lookup_set_spec; eauto.
   - econstructor; eauto using live_exp_rename_sound.
@@ -200,12 +198,9 @@ Proof.
     + edestruct map_get_4; eauto; dcr; subst.
       eapply live_exp_rename_sound; eauto.
     + rewrite getAnn_mapAnn.
-      (* TODO extract lemma here (its occuring in first case also) *)
-      cset_tac; eqs; simpl; eauto. eapply lookup_set_incl; eauto.
-      eapply lookup_set_spec; eauto.
-      eapply lookup_set_spec in H4; eauto. destruct H4; dcr; eauto.
-      eexists x0; intuition. cset_tac; eauto.
-      intro. eapply H3. rewrite H8, <- H4; eauto.
+      rewrite <- lookup_set_singleton; intuition.
+      rewrite lookup_set_minus_incl; eauto.
+      eapply lookup_set_incl; eauto.
     + rewrite getAnn_mapAnn; eauto. eapply lookup_set_spec; eauto.
   - econstructor; eauto; try rewrite getAnn_mapAnn; eauto.
     eapply IHlive_sound1. eapply IHlive_sound2.
