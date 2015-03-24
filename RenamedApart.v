@@ -9,6 +9,14 @@ Set Implicit Arguments.
 (** Every subterm is annotated with two sets [D] and [D'] such that
     [D] contains all free variables of the subterm and [D'] is extactly
     the set of variables that occur in a binding position. *)
+
+Definition defVars (Zs:params * stmt) (a:ann (set var * set var)) := of_list (fst Zs) ∪ snd (getAnn a).
+
+Definition pairwise_ne {X} (P:X->X->Prop) (L:list X) :=
+  forall n m a b, n <> m -> get L n a -> get L m b -> P a b.
+
+Hint Unfold defVars.
+
 Inductive renamedApart : stmt -> ann (set var * set var) -> Prop :=
   | renamedApartExp x e s D D' D'' an
     : x ∉ D
@@ -41,18 +49,52 @@ Inductive renamedApart : stmt -> ann (set var * set var) -> Prop :=
       -> pe (getAnn an) ({x; D}, D')
       -> D'' [=] {x; D'}
       -> renamedApart (stmtExtern x f Y s) (ann1 (D, D'') an)
-  | renamedApartLet D D' s t Ds Dt Z ans ant
-    : of_list Z ∩ D [=] ∅
-      -> (Ds ++ of_list Z) ∩ Dt [=] ∅
-      -> Ds ∪ Dt ∪ of_list Z [=] D'
-      -> renamedApart s ans
-      -> pe (getAnn ans) (of_list Z ∪ D, Ds)
+  | renamedApartLet D D' F t Dt ans ant
+    : length F = length ans
+      -> (forall n Zs a, get F n Zs -> get ans n a -> renamedApart (snd Zs) a)
+      -> (forall n Zs a, get F n Zs -> get ans n a ->
+                    fst (getAnn a) [=] of_list (fst Zs) ∪ D
+                    /\ unique (fst Zs)
+                    /\ of_list (fst Zs) ∩ D [=] ∅
+                    /\ of_list (fst Zs) ∪ snd (getAnn a) ∩ Dt [=] ∅
+        )
+      -> pairwise_ne disj (zip defVars F ans)
       -> renamedApart t ant
       -> pe (getAnn ant) (D, Dt)
-      -> unique Z
-      -> renamedApart (stmtFun Z s t) (ann2 (D,D') ans ant).
+      -> list_union (zip defVars F ans) ∪ Dt  [=] D'
+      -> renamedApart (stmtFun F t) (annF (D,D') ans ant).
 
 (** ** Morphisms *)
+
+Lemma zip_ext X Y Z (f f':X -> Y -> Z) L L'
+ : (forall x y n, get L n x -> get L' n y -> f x y = f' x y) -> zip f L L' = zip f' L L'.
+Proof.
+  general induction L; destruct L'; simpl; eauto.
+  f_equal; eauto using get.
+Qed.
+
+Lemma zip_ext_PIR2 X Y Z (f:X -> Y -> Z) X' Y' Z' (f':X'->Y'->Z') (R:Z->Z'->Prop) L1 L2 L1' L2'
+: length L1 = length L2
+  -> length L1' = length L2'
+  -> length L1 = length L1'
+  -> (forall n x y x' y', get L1 n x -> get L2 n y -> get L1' n x' -> get L2' n y' -> R (f x y) (f' x' y'))
+  -> PIR2 R (zip f L1 L2) (zip f' L1' L2').
+Proof.
+  intros A B C.
+  length_equify. general induction A; inv B; inv C; simpl; eauto 50 using PIR2, get.
+Qed.
+
+Definition pairwise_disj_PIR2 X `{OrderedType X} L L'
+: pairwise_ne disj L
+  -> PIR2 Equal L L'
+  -> pairwise_ne disj L'.
+Proof.
+  unfold pairwise_ne; intros.
+  eapply PIR2_nth_2 in H3; eauto; dcr.
+  eapply PIR2_nth_2 in H4; eauto; dcr.
+  rewrite <- H7, <- H8; eauto.
+Qed.
+
 
 Lemma renamedApart_ext s an an'
   : ann_R (@pe _ _) an an'
@@ -76,10 +118,23 @@ Proof.
     eapply IHrenamedApart; eauto. rewrite <- H8.
     rewrite <- (ann_R_get H9). eauto. rewrite <- H11; eauto.
 
-  - econstructor; eauto. rewrite <- H8; eauto.
-    rewrite <- H13; eauto.
-    rewrite <- H8. rewrite <- (ann_R_get H11); eauto.
-    rewrite <- H8. rewrite <- (ann_R_get H12); eauto.
+  - assert (PIR2 Equal (zip defVars F bns) (zip defVars F ans)).
+    { eapply zip_ext_PIR2; eauto; try congruence.
+      intros. get_functional; subst.
+      exploit H14; eauto. unfold defVars. rewrite X. reflexivity.
+    }
+    econstructor; eauto.
+    + congruence.
+    + intros. edestruct (get_length_eq _ H13 (eq_sym H12)).
+      eapply H1; eauto.
+    + intros. edestruct (get_length_eq _ H13 (eq_sym H12)).
+      exploit H2; eauto. dcr.
+      exploit H14; eauto. rewrite X in *. rewrite <- H10.
+      instantiate (1:=Dt).
+      intuition eauto.
+    + eapply pairwise_disj_PIR2; eauto. symmetry; eauto.
+    + rewrite <- H10. rewrite <- H15; eauto.
+    + unfold list_union. rewrite H8. rewrite <- H16; eauto.
 Qed.
 
 Instance renamedApart_morphism
@@ -100,9 +155,37 @@ Proof.
   - rewrite H, IHrenamedApart1, IHrenamedApart2. rewrite H4, H5; simpl.
     cset_tac; intuition.
   - rewrite H0, IHrenamedApart, H2; simpl. cset_tac; intuition.
-  - rewrite IHrenamedApart1, IHrenamedApart2. inv H3; inv H5; simpl.
-    rewrite H10, H13. cset_tac; intuition.
+  - pe_rewrite. rewrite IHrenamedApart.
+    unfold list_union.
+    rewrite list_union_incl. instantiate (1:=D). cset_tac; intuition.
+    intros. inv_map H7.
+    edestruct (get_length_eq _ H8 H); eauto.
+    rewrite H1; eauto. exploit H2; eauto; dcr.
+    rewrite H11. clear_all; cset_tac; intuition.
+    cset_tac; intuition.
 Qed.
+
+Lemma list_union_eq {X} `{OrderedType X} (L L':list (set X)) (s s':set X)
+: length L = length L'
+  -> (forall n s t, get L n s -> get L' n t -> s [=] t)
+  -> s [=] s'
+  -> fold_left union L s [=] fold_left union L' s'.
+Proof.
+  intros. length_equify.
+  general induction H0; simpl; eauto.
+  exploit H1; eauto using get. rewrite H2, X0; eauto using get.
+Qed.
+
+Ltac inv_zip H :=
+  match type of H with
+    | get (zip ?f ?L ?L') ?n ?x =>
+      match goal with
+(*        | [H' : get ?L ?n ?y |- _ ] =>
+          let EQ := fresh "EQ" in pose proof (map_get f H' H) as EQ; invc EQ *)
+        | _ => let X := fresh "X" in let EQ := fresh "EQ" in
+              pose proof (get_zip f _ _ H) as X; destruct X as [? [? [? EQ]]]; invc EQ
+      end
+  end.
 
 Lemma renamedApart_occurVars s an
   : renamedApart s an -> definedVars s [=] snd (getAnn an).
@@ -115,7 +198,12 @@ Proof.
   - cset_tac; intuition; eauto.
   - rewrite H3, IHrenamedApart, H2. simpl.
     clear_all; cset_tac; intuition.
-  - rewrite IHrenamedApart1, IHrenamedApart2. rewrite H3, H5; simpl. eauto.
+  - pe_rewrite. rewrite IHrenamedApart.
+    unfold list_union.
+    rewrite list_union_eq; eauto.
+    rewrite map_length, zip_length2; eauto.
+    intros. inv_map H7. inv_zip H8. get_functional; subst.
+    rewrite H1; eauto. unfold defVars. cset_tac; intuition.
 Qed.
 
 Definition pminus (D'':set var) (s:set var * set var) :=
@@ -142,6 +230,10 @@ Proof.
     + rewrite H. reflexivity.
   - econstructor; eauto.
     + rewrite H. reflexivity.
+  - econstructor; eauto.
+    + rewrite H; reflexivity.
+    + repeat rewrite map_length; eauto.
+    + intros. inv_map H4. inv_map H5. eauto.
 Qed.
 
 Lemma not_in_minus X `{OrderedType X} (s t: set X) x
@@ -188,12 +280,34 @@ Proof.
       econstructor; eauto.
       revert H H4; unfold disj; clear_all; cset_tac; intuition.
       invc H2; eapply H1; eauto.
-  - econstructor; [| |eapply H1| | | | |]; eauto with cset.
-    + change (disj (of_list Z) (D \ D0)). rewrite minus_incl; eauto.
-    + rewrite getAnn_mapAnn; simpl. pe_rewrite; econstructor; eauto.
-      rewrite minus_dist_union. rewrite minus_inane_set; eauto.
-      eapply disj_1_incl; eauto with cset.
-    + rewrite getAnn_mapAnn; simpl. pe_rewrite; constructor; eauto.
+  - econstructor.
+    + rewrite map_length; eauto.
+    + intros. inv_map H9. eapply H1; eauto.
+      eapply disj_1_incl; eauto.
+      rewrite <- get_list_union_map; eauto. cset_tac; intuition.
+      reflexivity.
+    + intros. inv_map H9. exploit H2; eauto; dcr. instantiate (1:=Dt).
+      rewrite getAnn_mapAnn.
+      destruct (getAnn x); simpl in *.
+      assert (disj (of_list (fst Zs)) D0).
+      eapply disj_1_incl; eauto.
+      rewrite <- get_list_union_map; eauto. cset_tac; intuition.
+      split. rewrite H12.
+      revert H15; unfold disj; clear_all; cset_tac; intuition; eauto.
+      split; eauto. split; eauto.
+      eapply disj_2_incl. eapply H13. eapply incl_minus.
+    + eapply pairwise_disj_PIR2; eauto.
+      eapply zip_ext_PIR2; eauto. rewrite map_length; eauto.
+      intros. get_functional; subst. inv_map H11.
+      unfold defVars. rewrite getAnn_mapAnn. destruct (getAnn y); reflexivity.
+    + eapply IHrenamedApart. eapply disj_1_incl; eauto with cset.
+      reflexivity.
+    + rewrite getAnn_mapAnn. pe_rewrite. reflexivity.
+    + unfold list_union. rewrite list_union_eq; eauto.
+      repeat rewrite zip_length2; eauto. rewrite map_length; eauto.
+      intros. inv_zip H8. inv_zip H9. inv_map H11.
+      get_functional; subst. unfold defVars.
+      rewrite getAnn_mapAnn. destruct (getAnn x2); simpl. reflexivity.
 Qed.
 
 (** ** The two annotated sets are disjoint. *)
@@ -213,10 +327,16 @@ Proof.
   - rewrite H3. rewrite H2 in *. simpl in *.
     revert IHrenamedApart H. unfold disj.
     clear_all; cset_tac; intuition; cset_tac; eauto.
-  - rewrite <- H1. repeat rewrite disj_app.
-    rewrite H3,H5 in *; simpl in *; eauto.
-    split. split; eauto. rewrite incl_right; eauto.
-    symmetry; eauto.
+  - rewrite <- H6. eapply disj_app; split.
+    + symmetry. rewrite <- list_union_disjunct.
+      intros. inv_zip H7.
+      exploit H1; eauto.
+      unfold defVars.
+      exploit H2; eauto; dcr.
+      change (disj (of_list (fst x) ++ snd (getAnn x0)) D).
+      symmetry. eapply disj_app; split. symmetry; eauto.
+      rewrite H10 in X. rewrite incl_right; eauto.
+    + pe_rewrite; eauto.
 Qed.
 
 
