@@ -83,6 +83,8 @@ Inductive noUnreachableCode : stmt -> Prop :=
       -> noUnreachableCode (stmtIf e s t)
   | NoUnrechableCodeGoto f Y
     : noUnreachableCode (stmtApp f Y)
+  | NoUnrechableCodeReturn e
+    : noUnreachableCode (stmtReturn e)
   | NoUnrechableCodeExtern x f Y s
     : noUnreachableCode s
       -> noUnreachableCode (stmtExtern x f Y s)

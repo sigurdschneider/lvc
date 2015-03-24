@@ -217,7 +217,13 @@ Qed.
 
 Require Import Restrict RenamedApart_Liveness.
 
-Lemma locally_inj_live_agree' s ang ϱ ϱ' (alv:ann (set var)) Lv
+(** ** Theorem 8 from the paper. *)
+(** One could prove this theorem directly by induction, however, we exploit that
+    under the assumption of the theorem, the liveness information [alv] is also
+    sound for functional liveness and we can thus rely on theorem [reg_assign_correct]
+    above, which we did prove by induction. *)
+
+Lemma reg_assign_correct' s ang ϱ ϱ' (alv:ann (set var)) Lv
   : renamedApart s ang
   -> live_sound Imperative Lv s alv
   -> bounded (live_globals Lv) (fst (getAnn ang))
@@ -232,6 +238,8 @@ Proof.
   eapply reg_assign_correct; eauto using locally_inj_subset, meet1_Subset, live_sound_annotation, renamedApart_annotation.
   eapply ann_R_get in H2. destruct (getAnn ang); simpl; cset_tac; intuition.
 Qed.
+
+Require Import LabelsDefined.
 
 (** ** Bound on the number of registers used *)
 
@@ -446,6 +454,12 @@ Proof.
         revert H6; clear_all; cset_tac; intuition; eauto.
     + rewrite fresh_list_length; eauto.
 Qed.
+
+(** ** Theorem 8 from the paper. *)
+(** One could prove this theorem directly by induction, however, we exploit that
+    under the assumption of the theorem, the liveness information [alv] is also
+    sound for functional liveness and we can thus rely on theorem [reg_assign_assignment_small]
+    above, which we did prove by induction. *)
 
 
 Lemma reg_assign_assignment_small' s ang ϱ ϱ' (alv:ann (set var)) Lv n
