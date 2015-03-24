@@ -20,11 +20,12 @@ Inductive labelsDefined : stmt -> nat -> Prop :=
   | labelsDefinedExtern x f Y s L
     : labelsDefined s L
       -> labelsDefined (stmtExtern x f Y s) L
-  | labelsDefinedLet s t Z L
-    :  labelsDefined s (S L)
-      -> labelsDefined t (S L)
-      -> labelsDefined (stmtFun Z s t) L.
+  | labelsDefinedLet F t L
+    :  (forall n Zs, get F n Zs -> labelsDefined (snd Zs) (length F + L))
+      -> labelsDefined t (length F + L)
+      -> labelsDefined (stmtFun F t) L.
 
+Local Arguments length {A} L.
 
 Inductive paramsMatch : stmt -> list nat -> Prop :=
   | paramsMatchExp x e s L
@@ -43,10 +44,10 @@ Inductive paramsMatch : stmt -> list nat -> Prop :=
   | paramsMatchExtern x f Y s L
     : paramsMatch s L
       -> paramsMatch (stmtExtern x f Y s) L
-  | paramsMatchLet s t Z L
-    :  paramsMatch s (length Z::L)
-      -> paramsMatch t (length Z::L)
-      -> paramsMatch (stmtFun Z s t) L.
+  | paramsMatchLet F t L
+    :  (forall n Zs, get F n Zs -> paramsMatch (snd Zs) (List.map (fst ∘ length) F ++ L))
+      -> paramsMatch t (List.map (fst ∘ length) F ++ L)
+      -> paramsMatch (stmtFun F t) L.
 
 
 Inductive isCalled : stmt -> lab -> Prop :=
@@ -64,13 +65,15 @@ Inductive isCalled : stmt -> lab -> Prop :=
   | IsCalledExtern x f Y s l
     : isCalled s l
       -> isCalled (stmtExtern x f Y s) l
-  | IsCalledLet1 s t Z l
-    : isCalled s (incc l 1)
-      -> isCalled t (LabI 0)
-      -> isCalled (stmtFun Z s t) l
-  | IsCalledLet s t Z l
-    : isCalled t (incc l 1)
-      -> isCalled (stmtFun Z s t) l.
+  | IsCalledLet1 F t k Zs l
+    : k < length F
+      -> get F k Zs
+      -> isCalled (snd Zs) (incc l k)
+      -> isCalled t (LabI k)
+      -> isCalled (stmtFun F t) l
+  | IsCalledLet F t l
+    : isCalled t (incc l (length F))
+      -> isCalled (stmtFun F t) l.
 
 
 Inductive noUnreachableCode : stmt -> Prop :=
@@ -88,35 +91,11 @@ Inductive noUnreachableCode : stmt -> Prop :=
   | NoUnrechableCodeExtern x f Y s
     : noUnreachableCode s
       -> noUnreachableCode (stmtExtern x f Y s)
-  | NoUnrechableCodeLet1 s t Z
-    : noUnreachableCode s
+  | NoUnrechableCodeLet1 F t
+    : (forall n Zs, get F n Zs -> noUnreachableCode (snd Zs))
       -> noUnreachableCode t
-      -> isCalled t (LabI 0)
-      -> noUnreachableCode (stmtFun Z s t).
-
-
-Inductive isFreeLab : stmt -> lab -> Prop :=
-  | IsFreeLabExp x e s l
-    : isFreeLab s l
-      -> isFreeLab (stmtLet x e s) l
-  | IsFreeLabIf1 e s t l
-    : isFreeLab s l
-      -> isFreeLab (stmtIf e s t) l
-  | IsFreeLabIf2 e s t l
-    : isFreeLab t l
-      -> isFreeLab (stmtIf e s t) l
-  | IsFreeLabGoto f Y
-    : isFreeLab (stmtApp f Y) f
-  | IsFreeLabExtern x f Y s l
-    : isFreeLab s l
-      -> isFreeLab (stmtExtern x f Y s) l
-  | IsFreeLabLet1 s t Z l
-    : isFreeLab s (incc l 1)
-      -> isFreeLab (stmtFun Z s t) l
-  | IsFreeLabLet s t Z l
-    : isFreeLab t (incc l 1)
-      -> isFreeLab (stmtFun Z s t) l.
-
+      -> (forall n, n < length F -> isCalled t (LabI n))
+      -> noUnreachableCode (stmtFun F t).
 
 (*
 *** Local Variables: ***
