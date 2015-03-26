@@ -8,8 +8,8 @@ Inductive bstmt : Type :=
 | bstmtIf     (e : exp) (s : bstmt) (t : bstmt)
 | bstmtApp    (l : lab) (Y:args)
 | bstmtReturn (e : exp)
-| bstmtExtern (f:external) (Y:args) (s:bstmt)
-| bstmtFun    (Z: nat) (s : bstmt) (t : bstmt).
+| bstmtExtern (f : external) (Y:args) (s:bstmt)
+| bstmtFun    (F : list (nat * bstmt)) (t : bstmt).
 
 Fixpoint exp_eval (E:list val) (e:exp) : option val :=
   match e with
@@ -29,11 +29,18 @@ Module F.
     blockI {
       block_E : list val;
       block_Z : nat;
-      block_s : bstmt
+      block_s : bstmt;
+      block_n : nat
     }.
 
   Definition labenv := list block.
   Definition state : Type := (labenv * list val * bstmt)%type.
+
+  Definition mkBlock E n f :=
+    blockI E (fst f) (snd f) n.
+
+  Definition mkBlocks E F :=
+    mapi (mkBlock E) F.
 
   Inductive step : state -> event -> state -> Prop :=
   | stepExp L E e b v
@@ -59,11 +66,11 @@ Module F.
     (updOk:(List.app vl  (block_E blk)) = E')
     : step  (L, E, bstmtApp l Y)
             EvtTau
-            (drop (counted l) L, E', block_s blk)
+            (drop (counted l - block_n blk) L, E', block_s blk)
 
   | stepLet L E
-    s Z t
-    : step (L, E, bstmtFun Z s t) EvtTau (blockI E Z s::L, E, t)
+    F t
+    : step (L, E, bstmtFun F t) EvtTau ((mkBlocks E F++L)%list, E, t)
 
   | stepExtern L E f Y s vl v
     (def:omap (exp_eval E) Y = Some vl)
@@ -120,15 +127,15 @@ Fixpoint exp_idx (symb:list var) (e:exp) : status exp :=
         Success (BinOp o e1 e2)
   end.
 
-Fixpoint stmt_idx (s:stmt) (symb: list var) : status bstmt :=
+Fixpoint stmt_idx (symb: list var) (s:stmt) : status bstmt :=
   match s with
     | stmtLet x e s =>
       sdo e <- exp_idx symb e;
-      sdo s' <- (stmt_idx s (x::symb)); Success (bstmtLet e s')
+      sdo s' <- (stmt_idx (x::symb) s); Success (bstmtLet e s')
     | stmtIf e s1 s2 =>
       sdo e <- exp_idx symb e;
-      sdo s1' <- (stmt_idx s1 symb);
-      sdo s2' <- (stmt_idx s2 symb);
+      sdo s1' <- (stmt_idx symb s1);
+      sdo s2' <- (stmt_idx symb s2);
       Success (bstmtIf e s1' s2')
     | stmtApp l Y =>
       sdo Y <- smap (exp_idx symb) Y;
@@ -138,11 +145,11 @@ Fixpoint stmt_idx (s:stmt) (symb: list var) : status bstmt :=
       Success (bstmtReturn e)
     | stmtExtern x f Y s =>
       sdo Y <- smap (exp_idx symb) Y;
-      sdo s' <- (stmt_idx s (x::symb)); Success (bstmtExtern f Y s')
-    | stmtFun Z s1 s2 =>
-      sdo s1' <- stmt_idx s1 (Z ++ symb);
-      sdo s2' <- stmt_idx s2 (symb);
-      Success (bstmtFun (length Z) s1' s2')
+      sdo s' <- (stmt_idx (x::symb) s); Success (bstmtExtern f Y s')
+    | stmtFun F s2 =>
+      sdo F' <- smap (fun sZ => sdo s <- stmt_idx (fst sZ ++ symb) (snd sZ); Success (length (fst sZ), s)) F;
+      sdo s2' <- stmt_idx (symb) s2;
+      Success (bstmtFun F' s2')
   end.
 
 Definition state_result X (s:X*list val*bstmt) : option val :=
@@ -179,15 +186,15 @@ Definition defs_agree symb (E:onv val) E' :=
 
 
 Inductive approx : IL.F.block -> F.block -> Prop :=
-| Approx E (Z:list var) s E' s' symb :
-    stmt_idx s (Z ++ symb) = Success s'
+| Approx E (Z:list var) s E' s' symb n :
+    stmt_idx (Z ++ symb) s = Success s'
     -> vars_exist E symb
     -> defs_agree symb E E'
-    -> approx (IL.F.blockI E Z s) (F.blockI E' (length Z) s').
+    -> approx (IL.F.blockI E Z s n) (F.blockI E' (length Z) s' n).
 
 Inductive stmtIdxSim : IL.F.state -> F.state -> Prop :=
   | labIndicesSimI (L:IL.F.labenv) L' E E' s s' symb
-    (EQ:stmt_idx s symb = Success s')
+    (EQ:stmt_idx symb s = Success s')
     (LA:PIR2 approx L L')
     (Edef:vars_exist E symb)
     (Eagr:defs_agree symb E E')
@@ -303,7 +310,14 @@ Proof.
       get_functional; subst; eauto. symmetry; eapply smap_length; eauto.
       congruence.
   - one_step. eapply stmt_idx_sim. econstructor; eauto.
-    econstructor; eauto. econstructor; eauto.
+    eapply PIR2_app; eauto.
+    pose proof (smap_spec _ EQ0). simpl in H.
+    eapply smap_length in EQ0.
+    unfold IL.F.mkBlocks,F.mkBlocks in *.
+    eapply PIR2_get; intros; unfold mapi; repeat rewrite mapi_length; try congruence.
+    inv_mapi H0. inv_mapi H1.
+    edestruct H; eauto; dcr. monadS_inv H5. get_functional; subst.
+    econstructor; eauto.
 Qed.
 
 (*
