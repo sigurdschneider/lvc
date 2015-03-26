@@ -28,10 +28,10 @@ Definition isImperative (o:overapproximation) :=
 
 (** ** Inductive Definition of Liveness *)
 
-
-Definition mkLv (alL:list (ann (set var))) (F:list (params*stmt)) :=
-  zip (fun als f => (getAnn  als,fst f)) alL F.
-
+Definition live_global (F:params*stmt) (alF:ann (set var)) := (getAnn alF, fst F).
+Definition live_globals F alF :=
+  zip live_global F alF.
+Definition live_oglobals F alF := List.map Some (live_globals F alF).
 
 Inductive live_sound (i:overapproximation) : list (set var*params) -> stmt -> ann (set var) -> Prop :=
 | LOpr x Lv b lv e (al:ann (set var))
@@ -62,18 +62,18 @@ Inductive live_sound (i:overapproximation) : list (set var*params) -> stmt -> an
   -> (getAnn al\{{x}}) ⊆ lv
   -> x ∈ getAnn al
   -> live_sound i Lv (stmtExtern x f Y b) (ann1 lv al)
-| LLet Lv Zs b lv als alb
-  : live_sound i (mkLv als Zs++Lv) b alb
-    -> length Zs = length als
-  -> (forall n Zs' a, get Zs n Zs' ->
-                     get als n a ->
-                     live_sound i (mkLv als Zs ++ Lv) (snd Zs') a)
-  -> (forall n Zs' a, get Zs n Zs' ->
-                  get als n a ->
-                  (of_list (fst Zs')) ⊆ getAnn a
-                  /\ (if isFunctional i then (getAnn a \ of_list (fst Zs')) ⊆ lv else True))
+| LLet Lv F b lv als alb
+  : live_sound i (live_globals F als++Lv) b alb
+    -> length F = length als
+  -> (forall n Zs a, get F n Zs ->
+               get als n a ->
+               live_sound i (live_globals F als ++ Lv) (snd Zs) a)
+  -> (forall n Zs a, get F n Zs ->
+               get als n a ->
+               (of_list (fst Zs)) ⊆ getAnn a
+               /\ (if isFunctional i then (getAnn a \ of_list (fst Zs)) ⊆ lv else True))
   -> getAnn alb ⊆ lv
-  -> live_sound i Lv (stmtFun Zs b)(annF lv als alb).
+  -> live_sound i Lv (stmtFun F b)(annF lv als alb).
 
 
 (** ** Relation between different overapproximations *)
@@ -178,16 +178,17 @@ Definition live_rename_L_entry (ϱ:env var) (x:set var * params)
 Definition live_rename_L (ϱ:env var) DL
   := List.map (live_rename_L_entry ϱ) DL.
 
-Lemma live_rename_L_mkLv ϱ als Zs
-: length Zs = length als
-  -> (live_rename_L ϱ (mkLv als Zs) =
-     mkLv (List.map (mapAnn (lookup_set ϱ)) als)
-          (List.map
-             (fun Zs0 : params * stmt =>
-                (lookup_list ϱ (fst Zs0), rename ϱ (snd Zs0))) Zs)).
+Lemma live_rename_L_globals ϱ als F
+: length F = length als
+  -> live_rename_L ϱ (live_globals F als) =
+    live_globals
+      (List.map
+         (fun Zs0 : params * stmt =>
+            (lookup_list ϱ (fst Zs0), rename ϱ (snd Zs0))) F)
+      (List.map (mapAnn (lookup_set ϱ)) als).
 Proof.
   intros. length_equify. general induction H; simpl; eauto.
-  - f_equal; eauto. rewrite getAnn_mapAnn; reflexivity.
+  - f_equal; eauto. unfold live_global. rewrite getAnn_mapAnn; reflexivity.
 Qed.
 
 Lemma live_rename_L_app ϱ L L'
@@ -234,10 +235,10 @@ Proof.
       eapply lookup_set_incl; eauto.
     + rewrite getAnn_mapAnn; eauto. eapply lookup_set_spec; eauto.
   - econstructor; eauto; try rewrite getAnn_mapAnn; eauto.
-    + rewrite <- live_rename_L_mkLv, <- live_rename_L_app; eauto.
+    + rewrite <- live_rename_L_globals, <- live_rename_L_app; eauto.
     + repeat rewrite map_length; eauto.
     + intros. inv_map H5. inv_map H6.
-      rewrite <- live_rename_L_mkLv, <- live_rename_L_app; eauto.
+      rewrite <- live_rename_L_globals, <- live_rename_L_app; eauto.
       eapply H2; eauto.
     + intros. inv_map H6; inv_map H5.
       exploit H3; eauto. simpl. split.
@@ -397,9 +398,10 @@ Lemma approx_mutual_block alF F Lv i
   ->  (forall (n : nat) Zs (als : ann (set var)),
         get F n Zs ->
         get alF n als -> live_sound Imperative Lv (snd Zs) als)
-  -> mutual_block (approxI Lv) i (mkLv alF F) (mapi_impl I.mkBlock i F) (mapi_impl I.mkBlock i F).
+  -> mutual_block (approxI Lv) i (live_globals F alF)
+                 (mapi_impl I.mkBlock i F) (mapi_impl I.mkBlock i F).
 Proof.
-  unfold I.mkBlocks, mkLv, mapi.
+  unfold I.mkBlocks, live_globals, mapi.
   intros. length_equify.
   general induction H; simpl.
   - econstructor.

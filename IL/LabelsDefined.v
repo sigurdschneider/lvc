@@ -68,7 +68,7 @@ Inductive isCalled : stmt -> lab -> Prop :=
   | IsCalledLet1 F t k Zs l
     : k < length F
       -> get F k Zs
-      -> isCalled (snd Zs) (incc l k)
+      -> isCalled (snd Zs) (labInc l (length F))
       -> isCalled t (LabI k)
       -> isCalled (stmtFun F t) l
   | IsCalledLet F t l
