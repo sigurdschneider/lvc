@@ -92,7 +92,7 @@ Lemma sawtooth_I_mkBlocks L F
 Proof.
   econstructor; eauto using tooth_I_mkBlocks.
 Qed.
-
+(*
 Lemma nth_drop X (L:list X) n m x
 : nth n (drop m L) x = nth (n+m) L x.
 Proof.
@@ -146,7 +146,7 @@ Lemma drop_app_eq X (L L' : list X) n
 Proof.
   intros; subst. orewrite (length L = length L + 0) . eapply drop_app.
 Qed.
-
+*)
 
 (*
 *** Local Variables: ***

@@ -258,6 +258,14 @@ Proof.
     + right; eauto using get.
 Defined.
 
+Lemma mapi_get_1 k X Y (L:list X) (f:nat -> X -> Y) n x
+: get L n x -> get (mapi_impl f k L) n (f (k+n) x).
+Proof.
+  intros. general induction H; simpl in *; eauto using get.
+  - orewrite (k + 0 = k); eauto using get.
+  - orewrite (k + S n = S k + n); eauto using get.
+Qed.
+
 
 (*
 *** Local Variables: ***

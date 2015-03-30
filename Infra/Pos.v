@@ -194,6 +194,23 @@ Proof.
   - rewrite IHL; eauto.
 Qed.
 
+Require Import Drop.
+
+Lemma pos_get_first X  `{OrderedType X} (symb:list X) v x i
+:  pos symb v i = ⎣x ⎦
+   -> exists v', get symb (x-i) v' /\ v === v' /\ x >= i /\
+     forall z' n, n < x-i -> get symb n z' -> z' =/= v.
+Proof.
+  general induction symb; simpl in * |- *; eauto using get.
+  destruct if in H.
+  - invc H0. orewrite (x - x = 0). eexists; repeat split; eauto using get.
+    + intros. exfalso. omega.
+  - exploit IHsymb; eauto; dcr.
+    orewrite (x - i = S (x - S i)).
+    eexists; split. econstructor; eauto. repeat split; eauto; try omega.
+    + intros. inv H6; intro; eauto. eapply H5; eauto. omega.
+Qed.
+
 (*
 *** Local Variables: ***
 *** coq-load-path: (("../" "Lvc")) ***

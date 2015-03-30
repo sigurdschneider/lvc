@@ -4,14 +4,14 @@ Require Export DecSolve.
 Set Implicit Arguments.
 
 Class BlockType X := {
-  block_s : X -> stmt;
-  block_Z : X -> list var;
-  block_n : X -> nat;
+(*  block_s : X -> stmt;
+  block_Z : X -> list var; *)
+  block_n : X -> nat
 (*  rename_block : env var -> X -> X; *)
-  block_ctor : forall s Z n, { b : X | block_s b = s /\ block_Z b = Z /\ block_n b = n };
+(*  block_ctor : forall s Z n, { b : X | block_s b = s /\ block_Z b = Z /\ block_n b = n };
   mkBlocks : onv val -> list (params * stmt) -> list X;
   mkBlocks_closed :
-    forall E F n b, get (mkBlocks E F) n b -> block_n b < length F
+    forall E F n b, get (mkBlocks E F) n b -> block_n b < length F *)
 (*  rename_block_s : forall ϱ b, block_s (rename_block ϱ b) = rename ϱ (block_s b);
   rename_block_Z : forall ϱ b, block_Z (rename_block ϱ b) = lookup_list ϱ (block_Z b) *)
 }.
@@ -25,19 +25,19 @@ Proof.
 Qed.
 
 Global Instance block_type_I : BlockType (I.block) := {
-  block_s := I.block_s;
-  block_Z := I.block_Z;
-  block_n := I.block_n;
-  mkBlocks := fun _ => I.mkBlocks
+(*  block_s := I.block_s;
+  block_Z := I.block_Z; *)
+  block_n := I.block_n
+(*  mkBlocks := fun _ => I.mkBlocks *)
                                                      }.
 (*  rename_block := rename_block_I
 }. *)
-+ intros. eexists (I.blockI Z s n); eauto. (*
+(*+ intros. eexists (I.blockI Z s n); eauto. (*
 + intros; destruct b; eauto.
 + intros; destruct b; eauto. *)
 + intros. pose proof (@mkBlocks_I_less F n 0 b H).
   destruct F. inv H. simpl in *. omega.
-Defined.
+Defined. *)
 
 Lemma mkBlocks_F_less
       : forall E (F : list (params * stmt)) (n k : nat) (b : F.block),
@@ -48,18 +48,18 @@ Proof.
 Qed.
 
 Global Instance block_type_F : BlockType (F.block) := {
-  block_s := F.block_s;
-  block_Z := F.block_Z;
-  block_n := F.block_n;
-  mkBlocks := F.mkBlocks}.
+(*  block_s := F.block_s;
+  block_Z := F.block_Z; *)
+  block_n := F.block_n
+(*  mkBlocks := F.mkBlocks *) }.
 (*  rename_block := rename_block_F
 }. *)
-+ intros. eexists (F.blockI (fun _ => None) Z s n); eauto. (*
+(* + intros. eexists (F.blockI (fun _ => None) Z s n); eauto. (*
 + intros; destruct b; eauto.
 + intros; destruct b; eauto. *)
 + intros. pose proof (@mkBlocks_F_less _ F n 0 b H).
   destruct F. inv H. simpl in *. omega.
-Defined.
+Defined.*)
 
 Inductive mutual_block {A} {B} `{BlockType B} {C} `{BlockType C} (R:A->B->C->Prop)
 : nat -> list A -> list B -> list C -> Prop :=
