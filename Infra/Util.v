@@ -437,6 +437,26 @@ Proof.
   unfold Proper, respectful, flip, impl; intros; try omega.
 Qed.
 
+(** ** List Length automation *)
+
+Lemma length_map_2 X Y Z (L:list X) (L':list Y) (f:Y->Z)
+: length L = length L'
+  -> length L = length (List.map f L').
+Proof.
+  intros. rewrite map_length; eauto.
+Qed.
+
+Lemma length_map_1 X Y Z (L:list Y) (L':list X) (f:Y->Z)
+: length L = length L'
+  -> length (List.map f L) = length L'.
+Proof.
+  intros. rewrite map_length; eauto.
+Qed.
+
+Create HintDb len discriminated.
+
+Hint Resolve length_map_1 length_map_2 : len.
+
 
 (*
 *** Local Variables: ***

@@ -2,11 +2,18 @@ Require Import CSet Le.
 
 Require Import Plus Util AllInRel Map.
 Require Import Val Var Env EnvTy IL Annotation SetOperations MoreList.
-Require Import Liveness Restrict RenamedApart LabelsDefined.
+Require Import Liveness Restrict RenamedApart LabelsDefined Indexwise.
 
 Set Implicit Arguments.
 
 
+Lemma params_length (F:list (params * stmt)) (ans:list (ann (set var * set var)))
+: length F = length ans
+  -> List.map (fst ∘ length (A:=var)) F
+    = List.map (snd ∘ length (A:=var)) (zip Liveness.live_global F (List.map (mapAnn fst) ans)).
+Proof.
+  intros. length_equify. general induction H; simpl; eauto; f_equal; eauto.
+Qed.
 
 Lemma renamedApart_live_functional s ang DL
 : renamedApart s ang
@@ -30,9 +37,16 @@ Proof.
       rewrite <- H0. eapply get_list_union_map; eauto.
     + rewrite getAnn_mapAnn, H2. simpl; cset_tac; intuition.
     + rewrite getAnn_mapAnn, H2. simpl; cset_tac; intuition.
-  - econstructor; eauto.
-    + rewrite getAnn_mapAnn, H3; simpl. cset_tac; intuition.
-    + destruct if; eauto. rewrite getAnn_mapAnn, H3; simpl. cset_tac; intuition.
+  - econstructor; eauto with len.
+    + eapply IHrenamedApart. unfold Liveness.live_globals.
+      rewrite List.map_app.
+      rewrite <- params_length; eauto.
+    + intros. inv_map H9. exploit H1; eauto.
+      rewrite List.map_app. rewrite <- params_length; eauto.
+    + intros. inv_map H9. edestruct H2; eauto; dcr.
+      destruct if; eauto; rewrite getAnn_mapAnn, H14; simpl.
+      split; cset_tac; intuition.
+      split; cset_tac; intuition.
     + rewrite getAnn_mapAnn, H5; simpl. reflexivity.
 Qed.
 
@@ -70,15 +84,29 @@ Proof.
       rewrite <- H0. eapply get_list_union_map; eauto.
     + rewrite getAnn_mapAnn, H2. simpl; cset_tac; intuition.
     + rewrite getAnn_mapAnn, H2. simpl; cset_tac; intuition.
-  - econstructor; eauto.
-    + eapply IHrenamedApart1; eauto; simpl.
-      rewrite getAnn_mapAnn, H3; simpl in *.
-      split. cset_tac; intuition. rewrite <- incl_right; eauto.
-    + eapply IHrenamedApart2; eauto; simpl.
-      rewrite getAnn_mapAnn, H3, H5; simpl in *.
-      split. cset_tac; intuition. eauto.
-    + rewrite getAnn_mapAnn, H3; simpl. cset_tac; intuition.
-    + destruct if; eauto. rewrite getAnn_mapAnn, H3; simpl. cset_tac; intuition.
+  - econstructor; eauto with len.
+    + eapply IHrenamedApart; eauto; simpl.
+      rewrite List.map_app. rewrite <-params_length; eauto.
+      rewrite H5; eauto. rewrite List.map_app.
+      rewrite bounded_app; split; eauto.
+      simpl. eapply get_bounded. intros.
+      inv_map H9. unfold Liveness.live_globals in H10.
+      inv_zip H10. inv_map H14. simpl.
+      edestruct H2; eauto. dcr. rewrite getAnn_mapAnn. rewrite H17.
+      cset_tac; intuition.
+    + intros. inv_map H10.
+      exploit H1; eauto; simpl.
+      rewrite List.map_app. rewrite <-params_length; eauto.
+      edestruct H2; eauto; dcr. rewrite H15.
+      rewrite List.map_app. rewrite bounded_app; split; eauto.
+      eapply get_bounded. intros.
+      inv_map H16. unfold Liveness.live_globals in H18.
+      inv_zip H18. inv_map H22. simpl.
+      edestruct H2; eauto. dcr. rewrite getAnn_mapAnn. rewrite H25.
+      cset_tac; intuition.
+      rewrite <- incl_right; eauto.
+    + intros. inv_map H10. edestruct H2; eauto; dcr.
+      destruct if; eauto; rewrite getAnn_mapAnn, H15; simpl; split; cset_tac; intuition.
     + rewrite getAnn_mapAnn, H5; simpl. reflexivity.
 Qed.
 
@@ -191,6 +219,55 @@ Proof.
     eapply disj_2_incl; eauto. cset_tac; intuition.
 Qed.
 
+
+Lemma disjoint_app L L' D
+: disjoint (L ++ L') D <-> disjoint L D /\ disjoint L' D.
+Proof.
+  split; unfold disjoint.
+  - split; intros; eauto using get_shift, get_app.
+  -intros. eapply get_app_cases in H0; intuition; eauto.
+Qed.
+
+
+Lemma disjoint_funF1 AL D D' F ans Dt lv als
+: disjoint (live_globals AL) D'
+  -> list_union (zip defVars F ans) ++ Dt[=]D'
+  -> indexwise_R (funConstr D Dt) F ans
+  -> (forall n a b, get als n a -> get ans n b -> ann_R Subset1 a b)
+  -> lv ⊆ D'
+  -> length F = length ans
+  -> disj D D'
+  -> disjoint (live_globals (Liveness.live_globals F als ++ AL)) lv.
+Proof.
+  intros. unfold live_globals.
+  rewrite List.map_app.
+  rewrite disjoint_app; split.
+  - hnf; intros n s A.
+    inv_map A. unfold Liveness.live_globals in H6.
+    inv_zip H6. simpl in *.
+    rewrite H3.
+    edestruct (get_length_eq _ H7 H4).
+    edestruct H1; eauto; dcr. exploit H2; eauto. eapply ann_R_get in X.
+    destruct (getAnn x); simpl in *. rewrite X.
+    rewrite H10.
+    eapply disj_1_incl; eauto. clear_all; cset_tac; intuition.
+  - rewrite H3; eauto.
+Qed.
+
+
+Lemma lv_incl F ans Dt D' k a Zs
+: list_union (zip defVars F ans) ++ Dt[=]D'
+  -> get ans k a
+  -> get F k Zs
+  -> snd (getAnn a) ⊆ D'.
+Proof.
+  intros.
+  rewrite <- H. eapply incl_union_left.
+  eapply incl_list_union. eapply zip_get; try eapply H3; eauto.
+  unfold defVars; eapply incl_right.
+Qed.
+
+
 Lemma renamedApart_globals_live s AL alv f ang
 : live_sound Imperative AL s alv
   -> renamedApart s ang
@@ -223,23 +300,51 @@ Proof.
       eapply in_disj_absurd in X; eauto; cset_tac; intuition; eauto.
       revert H0 H2; clear_all; cset_tac; intuition.
       invc H. cset_tac; intuition; eauto.
-  - edestruct IHIC1; eauto; dcr; eauto using disjoint_fun1.
-    destruct l; simpl in *. inv H1.
-    edestruct IHIC2; eauto using disjoint_fun2; dcr. inv H14; simpl in *.
+  - edestruct (get_length_eq _ H0 H5).
+    edestruct (get_length_eq _ H0 H7).
+    edestruct IHIC1; eauto; dcr; eauto using disjoint_fun1.
+    {
+      eapply renamedApart_disj in RA; simpl in *.
+      eapply disjoint_funF1; eauto.
+      eapply lv_incl; eauto.
+    }
+    edestruct IHIC2; eauto using disjoint_fun2; dcr.
+    {
+      eapply disjoint_funF1; eauto.
+      pe_rewrite. rewrite <- H16. eapply incl_right.
+      eapply renamedApart_disj in RA; eauto.
+    }
+    destruct l; simpl in *.
+    assert (length F = length (Liveness.live_globals F als)).
+    unfold Liveness.live_globals. rewrite zip_length2; eauto.
+    rewrite H15 in H17. eapply shift_get in H17.
+    eapply get_in_range_app in H20; try rewrite <- H15; eauto.
+    unfold Liveness.live_globals in H20. inv_zip H20.
+    repeat get_functional. subst x4 x3. simpl in *.
     eexists; split; eauto.
-    eapply ann_R_get in H20.
-    eapply ann_R_get in H21.
-    rewrite H12 in *. rewrite H15 in *. simpl in *.
-    rewrite <- H2 in H18.
-    rewrite <- H10 in H. exploit H; eauto. eapply map_get_1 with (f:=live_global); eauto.
-    rewrite <- H9, <- H18.
-    revert X; clear_all; intros; cset_tac; intuition.
-    eapply in_disj_absurd in X; eauto. cset_tac; intuition; eauto.
+    assert ((of_list (fst Zs)) ⊆ D').
+    rewrite <- H16. eapply incl_union_left.
+    eapply incl_list_union. eapply zip_get; eauto. unfold defVars.
     cset_tac; intuition.
+    assert (disj (fst x1 \ of_list (snd x1)) D').
+    eapply disj_1_incl. eapply H1.
+    unfold live_globals.
+    eapply (map_get_1 live_global H17). reflexivity.
+    rewrite <- H10. rewrite <- H24. rewrite <- H18.
+    rewrite <- H0 in H2. revert H2; unfold disj; clear_all; cset_tac; intuition; eauto.
   - edestruct IHIC; eauto using disjoint_fun2; dcr.
-    destruct l; simpl in *. inv H1.
-    eexists; split; eauto.
-    rewrite H2; eauto.
+    pe_rewrite.
+    {
+      eapply disjoint_funF1; eauto.
+      rewrite <- H14. eapply incl_right.
+      eapply renamedApart_disj in RA; eauto.
+    }
+    destruct l; simpl in *.
+    assert (length F = length (Liveness.live_globals F als)).
+    unfold Liveness.live_globals. rewrite zip_length2; eauto.
+    rewrite H0 in H1.
+    eexists; split; eauto using shift_get.
+    rewrite H13; eauto.
 Qed.
 
 Lemma renamedApart_live_imperative_is_functional s ang DL alv
@@ -251,14 +356,30 @@ Lemma renamedApart_live_imperative_is_functional s ang DL alv
   -> live_sound FunctionalAndImperative DL s alv.
 Proof.
   intros RA NUC LS AR DISJ.
-  general induction RA; invt noUnreachableCode; invt live_sound; invt (@ann_R);
+  general induction LS; invt noUnreachableCode; invt renamedApart; invt (@ann_R);
   eauto 50 using live_sound, disjoint_let, disjoint_if1, disjoint_if2.
   - econstructor; simpl; eauto.
-    + eapply IHRA1; eauto using disjoint_fun1.
-    + eapply IHRA2; eauto using disjoint_fun2.
-    + simpl in *.
-      edestruct (@renamedApart_globals_live t); eauto using disjoint_fun2; simpl in *; dcr.
-      inv H6. simpl in *. rewrite H7. eauto.
+    + eapply IHLS; eauto using disjoint_funF1.
+      eapply disjoint_funF1; eauto.
+      * simpl. pe_rewrite. rewrite <- H16. eapply incl_right.
+      * simpl. eapply renamedApart_disj in RA. eauto.
+    + intros. edestruct (get_length_eq _ H4 H9).
+      eapply H1; eauto using disjoint_fun2.
+      eapply disjoint_funF1; eauto. simpl.
+      eapply lv_incl; eauto. simpl.
+      eapply renamedApart_disj in RA. eauto.
+    + intros. edestruct (get_length_eq _ H4 H9).
+      simpl in *.
+      edestruct (@renamedApart_globals_live b); eauto using disjoint_fun2; simpl in *; dcr.
+      eapply H8. eapply get_range; eauto.
+      eapply disjoint_funF1; eauto. pe_rewrite. rewrite <- H16; eapply incl_right.
+      eapply renamedApart_disj in RA; eauto.
+      eapply get_in_range_app in H18; eauto using get_range.
+      unfold Liveness.live_globals in H18. inv_zip H18. simpl in *.
+      repeat get_functional. subst x1 x2. rewrite H20; split; eauto.
+      edestruct H2; eauto; dcr.
+      unfold Liveness.live_globals. rewrite zip_length2. eapply get_range; eauto.
+      congruence.
 Qed.
 
 Fixpoint mapAnn2 X X' Y (f:X -> X' -> Y) (a:ann X) (b:ann X') : ann Y :=
@@ -266,6 +387,8 @@ Fixpoint mapAnn2 X X' Y (f:X -> X' -> Y) (a:ann X) (b:ann X') : ann Y :=
     | ann1 a an, ann1 b bn => ann1 (f a b) (mapAnn2 f an bn)
     | ann2 a an1 an2, ann2 b bn1 bn2 => ann2 (f a b) (mapAnn2 f an1 bn1) (mapAnn2 f an2 bn2)
     | ann0 a, ann0 b => ann0 (f a b)
+    | annF a anF an2, annF b bnF bn2 =>
+      annF (f a b) (zip (mapAnn2 f) anF bnF) (mapAnn2 f an2 bn2)
     | a, b => ann0 (f (getAnn a) (getAnn b))
   end.
 
@@ -313,6 +436,11 @@ Lemma meet1_Subset s alv ang
   -> ann_R Subset (mapAnn2 meet1 alv ang) alv.
 Proof.
   intros AN1 AN2; general induction AN1; inv AN2; simpl; eauto using @ann_R, meet1_incl.
+  - econstructor; eauto using meet1_incl. (* todo make HintDb len solve this *)
+    rewrite zip_length2; congruence.
+    intros. destruct (get_length_eq _ H3 (eq_sym H)).
+    inv_zip H2. get_functional; subst.
+    eapply H1; eauto.
 Qed.
 
 Instance meet1_morphism
@@ -328,7 +456,6 @@ Proof.
   unfold Proper, respectful; intros.
   inv H0; simpl. rewrite H, H1. reflexivity.
 Qed.
-
 
 Lemma live_sound_renamedApart_minus s ang DL alv i
 : renamedApart s ang
@@ -375,31 +502,68 @@ Proof.
     + erewrite getAnn_mapAnn2; eauto using live_sound_annotation, renamedApart_annotation.
       rewrite H1; simpl; cset_tac; eauto.
   - constructor; eauto.
-    + erewrite getAnn_mapAnn2; eauto using live_sound_annotation, renamedApart_annotation.
-      eapply IHRA1; eauto.
+    + eapply IHRA; eauto.
       * eapply live_sound_monotone; eauto.
-        econstructor; simpl. rewrite H2; simpl.
-        split; eauto. cset_tac; intuition.
-        reflexivity.
-      * simpl. rewrite H2; simpl; split.
+        eapply PIR2_app; eauto.
+        unfold Liveness.live_globals in *.
+        eapply PIR2_get; intros.
+        inv_zip H7. inv_zip H8. inv_zip H17.
+        simpl.
+        erewrite getAnn_mapAnn2; eauto using live_sound_annotation, renamedApart_annotation.
+        repeat get_functional; subst; split; eauto.
+        edestruct H2; eauto; dcr.
+        eapply meet1_incl.
+        unfold Liveness.live_globals in *.
+        repeat rewrite zip_length2; eauto. congruence.
+      * pe_rewrite.
+        unfold live_globals. rewrite List.map_app.
+        eapply bounded_app; split; eauto.
+        unfold Liveness.live_globals. rewrite map_zip.
+        eapply get_bounded; intros.
+        inv_zip H7. inv_zip H12. simpl in *.
+        unfold live_global, Liveness.live_global in H14. simpl in *.
+        invc H14.
+        erewrite getAnn_mapAnn2; eauto using live_sound_annotation, renamedApart_annotation.
+        edestruct H2; eauto; dcr.
+        destruct (getAnn x3); simpl in *. rewrite H14.
         clear_all; cset_tac; intuition.
-        rewrite <- incl_right; eauto.
-    + erewrite getAnn_mapAnn2; eauto using live_sound_annotation, renamedApart_annotation.
-      eapply IHRA2; eauto.
+    + rewrite zip_length2; congruence.
+    + intros. inv_zip H8.
+      eapply (H1 _ _ _ H7 H14); eauto.
       * eapply live_sound_monotone; eauto.
-        econstructor; simpl. rewrite H2; simpl.
-        split; eauto. cset_tac; intuition.
-        reflexivity.
-      * simpl. rewrite H2, H3; simpl; split; eauto.
-        cset_tac; intuition.
-    + erewrite getAnn_mapAnn2; eauto using live_sound_annotation, renamedApart_annotation.
-      rewrite <- H12. rewrite H2. simpl; clear_all; cset_tac; intuition.
-    + destruct if; eauto.
+        eapply PIR2_app; eauto.
+        unfold Liveness.live_globals in *.
+        eapply PIR2_get; intros.
+        inv_zip H16. inv_zip H17. inv_zip H21.
+        simpl.
+        erewrite getAnn_mapAnn2; eauto using live_sound_annotation, renamedApart_annotation.
+        repeat get_functional; subst; split; eauto.
+        eapply meet1_incl.
+        unfold Liveness.live_globals in *.
+        repeat rewrite zip_length2; eauto. congruence.
+      * unfold live_globals. rewrite List.map_app.
+        eapply bounded_app; split; eauto.
+        unfold Liveness.live_globals. rewrite map_zip.
+        eapply get_bounded; intros.
+        inv_zip H16. inv_zip H18. simpl in *.
+        unfold live_global, Liveness.live_global in H19. simpl in *.
+        invc H19.
+        erewrite getAnn_mapAnn2; eauto using live_sound_annotation, renamedApart_annotation.
+        edestruct H2; eauto; dcr.
+        destruct (getAnn x5); simpl in *. rewrite H19.
+        edestruct (H2 _ _ _ H7 H14); eauto; dcr. rewrite H22.
+        clear_all; cset_tac; intuition.
+        edestruct (H2 _ _ _ H7 H14); eauto; dcr. rewrite H16.
+        rewrite <- incl_right; eauto.
+    + intros. inv_zip H8.
       erewrite getAnn_mapAnn2; eauto using live_sound_annotation, renamedApart_annotation.
-      rewrite H2. simpl. rewrite <- minus_meet.
-      revert H14; clear_all; cset_tac; intuition.
+      edestruct H2; eauto; dcr. destruct (getAnn x0); simpl in *.
+      edestruct H13; eauto.
+      split. rewrite <- H17. rewrite H16. clear_all; cset_tac; intuition.
+      destruct if; eauto. rewrite H16. rewrite <- H19.
+      clear_all; cset_tac; intuition.
     + erewrite getAnn_mapAnn2; eauto using live_sound_annotation, renamedApart_annotation.
-      rewrite H3; simpl. rewrite H15; reflexivity.
+      pe_rewrite. rewrite H15; reflexivity.
 Qed.
 
 

@@ -111,6 +111,17 @@ Proof.
 Qed.
 *)
 
+  Lemma update_with_list_no_update (E:X -> Y) Y' Z x
+    : x ∉ of_list Z
+    -> (E [ Z <-- Y' ]) x = E x.
+  Proof.
+    intros. general induction Z; simpl; destruct Y'; eauto.
+    lud.
+    + exfalso. eapply H0. simpl; cset_tac; intuition.
+    + simpl in H0. assert (x ∉ of_list Z); eauto.
+      - cset_tac; intuition.
+  Qed.
+
   Context `{Equivalence Y}.
 
   Lemma update_with_list_agree lv (E E':X -> Y) XL YL
@@ -126,17 +137,6 @@ Qed.
     rewrite add_union_singleton. rewrite (empty_union_2 (s:=∅)); eauto.
     rewrite <- add_union_singleton; eauto.
     eapply SetInterface.empty_1.
-  Qed.
-
-  Lemma update_with_list_no_update (E:X -> Y) Y' Z x
-    : x ∉ of_list Z
-    -> (E [ Z <-- Y' ]) x = E x.
-  Proof.
-    intros. general induction Z; simpl; destruct Y'; eauto.
-    lud.
-    + exfalso. eapply H1. simpl; cset_tac; intuition.
-    + simpl in H1. assert (x ∉ of_list Z); eauto.
-      - cset_tac; intuition.
   Qed.
 
   Lemma update_with_list_agree_minus lv (E E':X -> Y) XL YL

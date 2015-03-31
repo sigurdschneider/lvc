@@ -27,10 +27,12 @@ Inductive alpha : env var -> env var -> stmt -> stmt -> Prop :=
   -> (forall n x y, get Y n x -> get Y' n y -> alpha_exp ra ira x y)
   -> alpha (ra[x<-y]) (ira[y <- x]) s s'
   -> alpha ra ira (stmtExtern x f Y s) (stmtExtern y f Y' s')
-| alpha_let ra ira s s' Z Z' t t'
-  : length Z = length Z'
-  -> alpha (ra [ Z <-- Z']) (ira [ Z' <-- Z ]) s s'
-  -> alpha ra ira t t' -> alpha ra ira (stmtFun Z s t) (stmtFun Z' s' t').
+| alpha_let ra ira F F' t t'
+  : length F = length F'
+    -> (forall n Zs Zs', get F n Zs -> get F' n Zs' -> length (fst Zs) = length (fst Zs'))
+    -> (forall n Zs Zs', get F n Zs -> get F' n Zs'
+                   -> alpha (ra [ fst Zs <-- fst Zs']) (ira [ fst Zs' <-- fst Zs ]) (snd Zs) (snd Zs'))
+    -> alpha ra ira t t' -> alpha ra ira (stmtFun F t) (stmtFun F' t').
 
 (** ** Morphisims *)
 (** These properties are requires because we do not assume functional extensionality. *)
@@ -46,9 +48,9 @@ Proof.
   - eapply IHalpha.
     + rewrite H1; reflexivity.
     + rewrite H2; reflexivity.
-  - eapply IHalpha1.
-    + rewrite H0; reflexivity.
-    + rewrite H1; reflexivity.
+  - intros. eapply H2; eauto.
+    + rewrite H4; reflexivity.
+    + rewrite H5; reflexivity.
 Qed.
 
 Lemma alpha_agree_on_morph f g ϱ ϱ' s t
@@ -105,25 +107,35 @@ Proof.
       eapply agree_on_update_same. reflexivity. eapply agree_on_incl; eauto.
       cset_tac; eqs; intuition.
   - econstructor; eauto.
-    eapply IHalpha1; eauto.
-    eapply update_with_list_agree; eauto using length_eq_sym.
-    eapply agree_on_incl; eauto.
-    hnf; intros. eapply lookup_set_spec. intuition.
-    cset_tac. eapply lookup_set_spec in H5. destruct H5; dcr.
-    exists x. cset_tac. left. intuition. eapply H6.
-    rewrite H7. eapply update_with_list_lookup_in; eauto.
-    symmetry. symmetry in H7.
-    eapply update_with_list_lookup_not_in; eauto.
-    intro. eapply H6. rewrite <- H7. eapply update_with_list_lookup_in; eauto.
-    intuition.
-    eapply update_with_list_agree; eauto.
-    eapply agree_on_incl; eauto. eapply union_subset_1.
-    eapply IHalpha2; eauto. eapply agree_on_incl; eauto.
-    eapply lookup_set_incl; intuition.
-    eapply agree_on_incl; eauto. eapply union_subset_2.
+    + intros.
+      eapply H2; eauto.
+      * eapply update_with_list_agree; eauto using length_eq_sym.
+        eapply agree_on_incl; eauto.
+        hnf; intros. eapply lookup_set_spec. intuition.
+        cset_tac. eapply lookup_set_spec in H9. destruct H9; dcr.
+        exists x. cset_tac. left. eapply incl_list_union. eapply map_get_1; eauto. reflexivity.
+        rewrite H11 in H10.
+        eapply lookup_set_update_not_in_Z'_not_in_Z in H10.
+        cset_tac; intuition. intuition. eapply H0; eauto.
+        rewrite H11 in H10. eapply lookup_set_update_not_in_Z' in H10.
+        rewrite <- H10; eauto. intuition. symmetry. eapply H0; eauto.
+      * eapply update_with_list_agree; eauto.
+        eapply agree_on_incl; eauto. eapply incl_union_left.
+        eapply incl_list_union. eapply map_get_1; eauto. reflexivity.
+    + eapply IHalpha; eauto.
+      * eapply agree_on_incl; eauto. rewrite lookup_set_union; eauto.
+      * eapply agree_on_incl; eauto with cset.
 Qed.
 
 (** ** Properties *)
+
+Lemma inverse_on_list_union {X} `{OrderedType X} {Y} (f:X->Y) (g:Y->X) L
+  : (forall n D, get L n D -> inverse_on D f g)
+  -> inverse_on (list_union L) f g.
+Proof.
+  intros. hnf; intros. exploit list_union_get. eapply H1.
+  destruct X0; dcr. eapply H0; eauto. cset_tac; intuition.
+Qed.
 
 (** *** [ϱ] and [ϱ'] are inverses of each other on the free variables of [s] *)
 Lemma alpha_inverse_on  ϱ ϱ' s t
@@ -147,7 +159,10 @@ Proof.
     eapply alpha_exp_inverse_on; eauto.
     inv i.
   + eapply inverse_on_union; eauto.
-    eapply update_with_list_inverse_on; eauto.
+    eapply inverse_on_list_union.
+    intros. inv_map H3.
+    edestruct (get_length_eq _ H4 H); eauto.
+    eapply update_with_list_inverse_on; try eapply (H2 _ _ _ H4 H6); eauto.
 Qed.
 
 Lemma alpha_inverse_on_agree f g ϱ ϱ' s t
@@ -159,10 +174,10 @@ Proof.
   intros. eapply alpha_agree_on_morph; eauto.
   symmetry in H1.
   eapply inverse_on_agree_on_2; eauto; try now intuition.
-  eapply inverse_on_agree_on; eauto; try intuition.
-  eapply alpha_inverse_on in H.
-  eapply inverse_on_agree_on; try eassumption; try intuition.
-  eapply inverse_on_agree_on_2; eauto; try intuition.
+  - eapply inverse_on_agree_on; eauto; try intuition.
+  - eapply alpha_inverse_on in H.
+    eapply inverse_on_agree_on; try eassumption; try intuition.
+    eapply inverse_on_agree_on_2; eauto; try intuition.
 Qed.
 
 
@@ -171,7 +186,7 @@ Qed.
 Lemma alpha_refl s
   : alpha id id s s.
 Proof.
-  general induction s; eauto using alpha, alpha_exp_refl.
+  sind s; destruct s; eauto using alpha, alpha_exp_refl.
   - econstructor. eapply alpha_exp_refl.
     rewrite update_id; eauto.
   - constructor; eauto using lookup_id.
@@ -180,15 +195,21 @@ Proof.
     + intros. get_functional; subst; eauto using alpha_exp_refl.
     + rewrite update_id; eauto.
   - econstructor; try rewrite update_with_list_id; eauto using length_eq_refl.
+    + intros; get_functional; subst; eauto.
+    + intros; get_functional; subst.
+      rewrite update_with_list_id.
+      eapply IH; eauto.
 Qed.
 
 (** *** Symmetry *)
 
 Lemma alpha_sym ϱ ϱ' s s'
-  : alpha ϱ ϱ' s s'
-  ->alpha ϱ' ϱ s' s.
+  :  alpha ϱ ϱ' s s'
+  ->  alpha ϱ' ϱ s' s.
 Proof.
   intros. general induction H; eauto using alpha, length_eq_sym, alpha_exp_sym.
+  - econstructor; intros; eauto.
+    symmetry; eauto.
 Qed.
 
 (** *** Transitivity *)
@@ -216,18 +237,25 @@ Proof.
       eapply inverse_on_comp; eauto. eapply alpha_inverse_on; eauto.
       symmetry. eapply lookup_set_agree_on_comp. intuition.
       eapply inverse_on_update_lookup_set. intuition. eauto.
-  - econstructor; eauto. congruence.
-    specialize (IHalpha1 _ _ _ H10).
-    eapply alpha_inverse_on_agree; eauto.
-    eapply alpha_inverse_on in IHalpha1.
-    pose proof (inverse_on_comp_list _ _ _ H H8 IHalpha1).
-    pose proof (inverse_on_sym IHalpha1).
-    pose proof H3.
-    eapply inverse_on_comp_list in H4; eauto.
-    eapply inverse_on_agree_on; eauto.
-    symmetry. eapply inverse_on_comp_list; eauto.
-    instantiate (1:=ira).
-    instantiate (1:=ϱ2'). eapply alpha_inverse_on; eauto.
+  - econstructor; eauto.
+    + congruence.
+    + intros. edestruct (get_length_eq _ H5 H).
+      exploit H8; eauto. exploit H0; eauto. congruence.
+    + intros.
+      edestruct (get_length_eq _ H5 H).
+      exploit H0; eauto. exploit H8; eauto.
+      exploit H2; eauto.
+      eapply alpha_inverse_on_agree; eauto.
+      eapply alpha_inverse_on in X1; eauto.
+      eapply inverse_on_agree_on; eauto.
+      eapply inverse_on_comp_list; eauto.
+      eapply inverse_on_sym in X1.
+      eapply inverse_on_comp_list; eauto.
+      unfold comp; intuition.
+      unfold comp; intuition.
+      symmetry.
+      eapply inverse_on_comp_list; eauto.
+      eapply alpha_inverse_on; eauto.
 Qed.
 
 (** ** Soundness wrt. equivalence *)
@@ -242,11 +270,11 @@ Proof.
 Qed.
 
 Inductive approx : F.block -> F.block ->  Prop :=
-| EA2_cons ra ira E E' s s' Z Z'
+| EA2_cons ra ira E E' s s' Z Z' n
   : length Z = length Z'
   -> alpha (ra [ Z <-- Z']) (ira [ Z' <-- Z ]) s s'
   -> envCorr ra ira E E'
-  -> approx (F.blockI E Z s) (F.blockI E' Z' s').
+  -> approx (F.blockI E Z s n) (F.blockI E' Z' s' n).
 
 Lemma approx_refl b
   : approx b b.
@@ -373,7 +401,11 @@ Proof.
     + no_step.
   - one_step. eapply alphaSim_sim.
     econstructor; eauto.
-    econstructor; eauto. econstructor; eauto.
+    eapply PIR2_app; eauto.
+    eapply PIR2_get.
+    + intros. unfold mkBlocks in *. inv_mapi H3. inv_mapi H4.
+      econstructor; eauto.
+    + unfold mkBlocks, mapi; repeat rewrite mapi_length; eauto.
 Qed.
 
 (*

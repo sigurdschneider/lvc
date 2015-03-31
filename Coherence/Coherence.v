@@ -114,14 +114,6 @@ match goal with
   | [ H: length ?L = length ?L' |- length ?L = length (List.map ?f ?L')] => rewrite map_length; eauto
 end.
 
-Lemma get_bounded L D
-: (forall n x, get L n (Some x) -> x ⊆ D)
-  -> bounded L D.
-Proof.
-  general induction L; simpl; isabsurd; eauto.
-  destruct a; eauto 50 using get.
-Qed.
-
 Lemma inv_oglobals F als k lv
 : length F = length als
   -> get (oglobals F als) k ⎣lv⎦
@@ -179,14 +171,15 @@ Proof.
     + intros. inv_map H10.
       exploit H1; eauto. instantiate (1:=globals F (List.map (mapAnn fst) ans) ++ DL).
       rewrite app_length. unfold globals. rewrite zip_length2; eauto.
-      exploit H2; eauto; dcr.
+      edestruct H2; eauto; dcr.
       rewrite List.map_app. eapply bounded_app; split; eauto.
       rewrite H15. eapply get_bounded.
-      intros. inv_map H18. eapply inv_globals in H20.
-      destruct H20; dcr; subst.
-      inv_map H21. exploit H2; eauto; dcr.
+      intros. inv_map H16. eapply inv_globals in H18.
+      destruct H18; dcr; subst.
+      inv_map H21. edestruct H2; eauto; dcr.
       rewrite getAnn_mapAnn. rewrite H24.
-      revert H25; clear_all; cset_tac; intuition. rewrite map_length; eauto.
+      revert H28; clear_all; cset_tac; intuition.
+      rewrite map_length; eauto.
       rewrite H15. rewrite <- incl_right; eauto.
       eapply srd_monotone. eapply X.
       rewrite getAnn_mapAnn; simpl.
@@ -197,19 +190,19 @@ Proof.
       eapply get_bounded.
       intros. eapply inv_oglobals in H15.
       destruct H15; dcr; subst.
-      inv_map H16. exploit H2; eauto; dcr.
+      inv_map H16. edestruct H2; eauto; dcr.
       rewrite getAnn_mapAnn. rewrite H19.
       decide (n=n0); subst. repeat get_functional; subst.
       rewrite H19.
       revert H20; clear_all; cset_tac; intuition.
       exploit H3; eauto. eapply zip_get; eauto. eapply zip_get; eauto.
       unfold defVars in X0. simpl in *.
-      exploit H2; try eapply H12; eauto. dcr. rewrite H22.
-      revert H20 H24; clear_all; cset_tac; intuition; eauto.
+      edestruct H2; try eapply H12; eauto. dcr. rewrite H20.
+      revert H23 H27; clear_all; cset_tac; intuition; eauto.
       rewrite List.map_length; eauto.
       erewrite bounded_restrict_eq; simpl; eauto. simpl.
-      exploit H2; eauto; dcr.
-      rewrite H15. revert H16; clear_all; cset_tac; intuition; eauto.
+      edestruct H2; eauto; dcr.
+      rewrite H15. revert H19; clear_all; cset_tac; intuition; eauto.
     + eapply srd_monotone.
       eapply (IHrenamedApart (globals F (List.map (mapAnn fst) ans) ++ DL)); eauto.
       * unfold globals. rewrite app_length, zip_length2; eauto.
@@ -217,9 +210,9 @@ Proof.
         eapply get_bounded.
         intros. inv_map H9. eapply inv_globals in H10.
         destruct H10; dcr; subst.
-        inv_map H12. exploit H2; eauto; dcr.
+        inv_map H12. edestruct H2; eauto; dcr.
         rewrite getAnn_mapAnn. rewrite H16.
-        revert H17; clear_all; cset_tac; intuition. rewrite map_length; eauto.
+        revert H20; clear_all; cset_tac; intuition. rewrite map_length; eauto.
       * rewrite List.map_app. reflexivity.
 Qed.
 

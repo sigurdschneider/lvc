@@ -384,7 +384,23 @@ Inductive labIndicesSim : I.state -> IL.I.state -> Prop :=
     (*    (SM:forall l blk, L l = Some blk -> I.block_f blk < length (I.block_F blk)) *)
     (BL:forall f blk, L f = Some blk -> exists j, pos symb f 0 = Some j /\
                                         get LB j blk)
-  : labIndicesSim (L, E, s) (L', E, s').
+    : labIndicesSim (L, E, s) (L', E, s').
+
+Lemma length_mkBlocks_1 X (L:list X) L' Lb
+: length L = length L'
+  -> length (I.mkBlocks Lb L') = length L.
+Proof.
+  intros. unfold I.mkBlocks, mapi. rewrite mapi_length; eauto.
+Qed.
+
+Lemma length_mkBlocks_2 X (L:list X) L' Lb
+: length L = length L'
+  -> length L = length (I.mkBlocks Lb L').
+Proof.
+  intros. unfold I.mkBlocks, mapi. rewrite mapi_length; eauto.
+Qed.
+
+Hint Resolve length_mkBlocks_1 length_mkBlocks_2 : len.
 
 Lemma labIndicesSim_sim σ1 σ2
   : labIndicesSim σ1 σ2 -> bisim σ1 σ2.
@@ -423,9 +439,7 @@ Proof.
       * intros.
         decide (f0 ∈ of_list (List.map (fst ∘ fst) F)).
         eapply update_with_list_lookup_in_list in i1. dcr.
-        erewrite H7. inv_map H4. eauto.
-        repeat rewrite map_length.
-        unfold I.mkBlocks, I.mkBlock, mapi. rewrite mapi_length; eauto.
+        erewrite H7. inv_map H4. eauto. eauto with len.
         erewrite (update_with_list_no_update _ _ _ n); eauto.
         destruct C6. rewrite H4 in H3.
         rewrite pos_app_not_in in H3.
@@ -441,8 +455,8 @@ Proof.
         eexists; split. eapply get_first_pos; eauto.
         rewrite H6. eapply get_app.
         inv_map H11; eauto.
-        repeat rewrite map_length. unfold I.mkBlocks, mapi.
-        rewrite mapi_length; eauto. eauto.
+        eauto with len.
+        eauto.
         erewrite (update_with_list_no_update _ _ _ n) in H3; eauto.
         edestruct C2; eauto; dcr.
         rewrite H4 in H7. eexists; eauto.
@@ -503,12 +517,8 @@ Proof.
         - rewrite map_length; eauto.
       }
     * dcr.
-      assert (length (List.map (fst ∘ fst) F) = length (I.mkBlocks L F)).
-      rewrite map_length. unfold I.mkBlocks. unfold mapi.
-      rewrite mapi_length; eauto.
-      assert (length F = length (I.mkBlocks L F)).
-      unfold I.mkBlocks. unfold mapi.
-      rewrite mapi_length; eauto.
+      assert (length (List.map (fst ∘ fst) F) = length (I.mkBlocks L F)) by eauto with len.
+      assert (length F = length (I.mkBlocks L F)) by eauto with len.
       orewrite (i =  length (List.map (fst ∘ fst) F) + (i -  length (I.mkBlocks L F))) in H0.
       eapply shift_get in H0.
       inv LA; exploit LEQ; eauto; dcr; clear LEQ.
@@ -550,8 +560,7 @@ Proof.
         decide (f ∈ of_list (List.map (fst ∘ fst) F)).
         - eapply update_with_list_lookup_in_list in i0. dcr.
           rewrite H2. inv_map H0. eauto.
-          repeat rewrite map_length. unfold I.mkBlocks, mapi.
-          rewrite mapi_length. eauto.
+          eauto with len.
         -  erewrite (update_with_list_no_update _ _ _ n); eauto.
            rewrite pos_app_not_in in H; eauto.
       }
@@ -565,15 +574,14 @@ Proof.
           erewrite get_first_pos; eauto.
           eexists; split; eauto.
           inv_map H3. eapply get_app; eauto.
-          repeat rewrite map_length. unfold I.mkBlocks. unfold mapi. rewrite mapi_length; eauto.
+          eauto with len.
           eauto.
         - erewrite update_with_list_no_update in H; eauto.
           edestruct BL; eauto; dcr.
           eexists; split; eauto using get_shift.
           repeat rewrite pos_app_not_in; eauto.
-          assert (length (List.map (fst ∘ fst) F) = length (I.mkBlocks L F)).
-          rewrite map_length. unfold I.mkBlocks. unfold mapi.
-          rewrite mapi_length; eauto.
+          assert (length (List.map (fst ∘ fst) F) = length (I.mkBlocks L F))
+                 by eauto with len.
           rewrite H0. eapply pos_add; eauto. instantiate (1:=eq). eauto.
       }
 Qed.

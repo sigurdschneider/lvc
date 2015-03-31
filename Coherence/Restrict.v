@@ -317,6 +317,14 @@ Proof.
     eauto using get.
 Qed.
 
+Lemma get_bounded L D
+: (forall n x, get L n (Some x) -> x ⊆ D)
+  -> bounded L D.
+Proof.
+  general induction L; simpl; isabsurd; eauto.
+  destruct a; eauto 50 using get.
+Qed.
+
 
 (*
 *** Local Variables: ***

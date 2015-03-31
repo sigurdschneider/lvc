@@ -1,7 +1,7 @@
 Require Import CSet Le.
 
 Require Import Plus Util AllInRel Map.
-Require Import Val Var Env EnvTy IL Annotation SetOperations MoreList.
+Require Import Val Var Env EnvTy IL Annotation SetOperations MoreList Indexwise.
 
 Set Implicit Arguments.
 
@@ -16,6 +16,12 @@ Definition pairwise_ne {X} (P:X->X->Prop) (L:list X) :=
   forall n m a b, n <> m -> get L n a -> get L m b -> P a b.
 
 Hint Unfold defVars.
+
+Definition funConstr D Dt (Zs:params * stmt) a :=
+  fst (getAnn a) [=] of_list (fst Zs) ∪ D
+  /\ unique (fst Zs)
+  /\ of_list (fst Zs) ∩ D [=] ∅
+  /\ of_list (fst Zs) ∪ snd (getAnn a) ∩ Dt [=] ∅.
 
 Inductive renamedApart : stmt -> ann (set var * set var) -> Prop :=
   | renamedApartExp x e s D D' D'' an
@@ -52,12 +58,7 @@ Inductive renamedApart : stmt -> ann (set var * set var) -> Prop :=
   | renamedApartLet D D' F t Dt ans ant
     : length F = length ans
       -> (forall n Zs a, get F n Zs -> get ans n a -> renamedApart (snd Zs) a)
-      -> (forall n Zs a, get F n Zs -> get ans n a ->
-                    fst (getAnn a) [=] of_list (fst Zs) ∪ D
-                    /\ unique (fst Zs)
-                    /\ of_list (fst Zs) ∩ D [=] ∅
-                    /\ of_list (fst Zs) ∪ snd (getAnn a) ∩ Dt [=] ∅
-        )
+      -> indexwise_R (funConstr D Dt) F ans
       -> pairwise_ne disj (zip defVars F ans)
       -> renamedApart t ant
       -> pe (getAnn ant) (D, Dt)
@@ -127,9 +128,9 @@ Proof.
     + congruence.
     + intros. edestruct (get_length_eq _ H13 (eq_sym H12)).
       eapply H1; eauto.
-    + intros. edestruct (get_length_eq _ H13 (eq_sym H12)).
-      exploit H2; eauto. dcr.
-      exploit H14; eauto. rewrite X in *. rewrite <- H10.
+    + hnf; intros. edestruct (get_length_eq _ H13 (eq_sym H12)).
+      exploit H2; eauto. destruct X. dcr.
+      exploit H14; eauto. hnf. rewrite X in *. rewrite <- H10.
       instantiate (1:=Dt).
       intuition eauto.
     + eapply pairwise_disj_PIR2; eauto. symmetry; eauto.
@@ -160,7 +161,7 @@ Proof.
     rewrite list_union_incl. instantiate (1:=D). cset_tac; intuition.
     intros. inv_map H7.
     edestruct (get_length_eq _ H8 H); eauto.
-    rewrite H1; eauto. exploit H2; eauto; dcr.
+    rewrite H1; eauto. edestruct H2; eauto; dcr.
     rewrite H11. clear_all; cset_tac; intuition.
     cset_tac; intuition.
 Qed.
@@ -286,16 +287,16 @@ Proof.
       eapply disj_1_incl; eauto.
       rewrite <- get_list_union_map; eauto. cset_tac; intuition.
       reflexivity.
-    + intros. inv_map H9. exploit H2; eauto; dcr. instantiate (1:=Dt).
-      rewrite getAnn_mapAnn.
+    + hnf; intros. inv_map H9. edestruct H2; eauto; dcr. instantiate (1:=Dt).
+      hnf. rewrite getAnn_mapAnn.
       destruct (getAnn x); simpl in *.
-      assert (disj (of_list (fst Zs)) D0).
+      assert (disj (of_list (fst a)) D0).
       eapply disj_1_incl; eauto.
       rewrite <- get_list_union_map; eauto. cset_tac; intuition.
       split. rewrite H12.
-      revert H15; unfold disj; clear_all; cset_tac; intuition; eauto.
+      revert H13; unfold disj; clear_all; cset_tac; intuition; eauto.
       split; eauto. split; eauto.
-      eapply disj_2_incl. eapply H13. eapply incl_minus.
+      eapply disj_2_incl. eapply H16. eapply incl_minus.
     + eapply pairwise_disj_PIR2; eauto.
       eapply zip_ext_PIR2; eauto. rewrite map_length; eauto.
       intros. get_functional; subst. inv_map H11.
@@ -334,8 +335,10 @@ Proof.
       unfold defVars.
       exploit H2; eauto; dcr.
       change (disj (of_list (fst x) ++ snd (getAnn x0)) D).
-      symmetry. eapply disj_app; split. symmetry; eauto.
-      rewrite H10 in X. rewrite incl_right; eauto.
+      symmetry. destruct X0; dcr.
+      eapply disj_app; split. symmetry; eauto.
+      rewrite H10 in X; eauto.
+      rewrite incl_right; eauto.
     + pe_rewrite; eauto.
 Qed.
 
