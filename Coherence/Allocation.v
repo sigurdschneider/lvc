@@ -13,31 +13,29 @@ Set Implicit Arguments.
 Inductive locally_inj (rho:env var) : stmt -> ann (set var) -> Prop :=
 | RNOpr x b lv e (al:ann (set var))
   :  locally_inj rho b al
-  -> injective_on lv rho
-(*  -> injective_on (getAnn al ∪ {{x}}) rho *)
-  -> locally_inj rho (stmtLet x e b) (ann1 lv al)
+     -> injective_on lv rho
+     -> locally_inj rho (stmtLet x e b) (ann1 lv al)
 | RNIf x b1 b2 lv (alv1 alv2:ann (set var))
   :  injective_on lv rho
-  -> locally_inj rho b1 alv1
-  -> locally_inj rho b2 alv2
-  -> locally_inj rho (stmtIf x b1 b2) (ann2 lv alv1 alv2)
+     -> locally_inj rho b1 alv1
+     -> locally_inj rho b2 alv2
+     -> locally_inj rho (stmtIf x b1 b2) (ann2 lv alv1 alv2)
 | RNGoto l Y lv
   : injective_on lv rho
-  -> locally_inj rho (stmtApp l Y) (ann0 lv)
+    -> locally_inj rho (stmtApp l Y) (ann0 lv)
 | RNReturn x lv
   : injective_on lv rho
-  -> locally_inj rho (stmtReturn x) (ann0 lv)
+    -> locally_inj rho (stmtReturn x) (ann0 lv)
 | RNExtern x f Y b lv (al:ann (set var))
   : locally_inj rho b al
-  -> injective_on lv rho
-(*  -> injective_on (getAnn al ∪ {{x}}) rho *)
-  -> locally_inj rho (stmtExtern x f Y b) (ann1 lv al)
-| RNLet s Z b lv (alvs alvb:ann (set var))
-  : locally_inj rho s alvs
-  -> locally_inj rho b alvb
-  -> injective_on lv rho
-(*  -> injective_on (getAnn alvs ∪ of_list Z) rho *)
-  -> locally_inj rho (stmtFun Z s b) (ann2 lv alvs alvb).
+    -> injective_on lv rho
+    -> locally_inj rho (stmtExtern x f Y b) (ann1 lv al)
+| RNLet F b lv alvs alvb
+  : length F = length alvs
+    -> (forall n Zs alv, get F n Zs -> get alvs n alv -> locally_inj rho (snd Zs) alv)
+    -> locally_inj rho b alvb
+    -> injective_on lv rho
+    -> locally_inj rho (stmtFun F b) (annF lv alvs alvb).
 
 (** ** Some Properties *)
 
@@ -55,8 +53,9 @@ Global Instance locally_inj_morphism
   : Proper (@fpeq _ _ eq _ _ ==> eq ==> eq ==> impl) locally_inj.
 Proof.
   unfold Proper, respectful, impl; intros; subst.
-  general induction H2; assert (FEQ:x ≡ y) by first [eapply H0 | eapply H1 | eapply H2];  econstructor; eauto;
-  try rewrite <- FEQ; eauto.
+  general induction H2;
+    assert (FEQ:x ≡ y) by first [eapply H0 | eapply H1 | eapply H2 | eapply H4 ];  econstructor; eauto;
+    try rewrite <- FEQ; eauto.
 Qed.
 
 (** local injectivity means injectivity on the live variables *)
@@ -72,22 +71,23 @@ Qed.
 Definition locally_inj_dec (ϱ:env var) (s:stmt) (lv:ann (set var)) (an:annotation s lv)
   : {locally_inj ϱ s lv} + {~ locally_inj ϱ s lv}.
 Proof.
-  general induction s; destruct lv; try (now exfalso; inv an).
-  + decide(injective_on a ϱ);
-    (*decide(injective_on (getAnn lv ∪ {{x}}) ϱ);*) try dec_solve;
-    edestruct IHs; eauto; try dec_solve; inv an; eauto.
+  revert ϱ lv an.
+  sind s; intros; destruct s; destruct lv; try (now exfalso; inv an).
+  + decide(injective_on a ϱ); try dec_solve.
+    edestruct (IH s); eauto; try dec_solve. inv an; eauto.
   + decide(injective_on a ϱ); try dec_solve;
-    edestruct IHs1; eauto; try inv an; eauto; try dec_solve;
-    edestruct IHs2; eauto; try inv an; eauto; try dec_solve.
+    edestruct (IH s1); eauto; try inv an; eauto; try dec_solve;
+    edestruct (IH s2); eauto; try inv an; eauto; try dec_solve.
   + decide(injective_on a ϱ); try dec_solve.
   + decide(injective_on a ϱ); try dec_solve.
-  + decide(injective_on a ϱ);
-    (* decide(injective_on (getAnn lv ∪ {{x}}) ϱ); *) try dec_solve;
-    edestruct IHs; eauto; try dec_solve; inv an; eauto.
-  + decide(injective_on a ϱ);
-    (* decide (injective_on (getAnn lv1 ∪ of_list Z) ϱ); *) try dec_solve;
-    edestruct IHs1; eauto; try inv an; eauto; try dec_solve;
-    edestruct IHs2; eauto; try inv an; eauto; try dec_solve.
+  + decide(injective_on a ϱ); try dec_solve;
+    edestruct (IH s); eauto; try dec_solve; inv an; eauto.
+  + decide(injective_on a ϱ); try dec_solve.
+    decide(length s = length sa); try dec_solve.
+    edestruct (IH s0); eauto; try inv an; eauto; try dec_solve.
+    edestruct (indexwise_R_dec' (R:=fun x y => locally_inj ϱ (snd x) y) (LA:=s) (LB:=sa));
+      try dec_solve.
+    intros. eapply IH; eauto. inv an; eauto.
 Defined.
 
 Instance locally_inj_dec_inst (ϱ:env var) (s:stmt) (lv:ann (set var))
@@ -171,44 +171,125 @@ Proof.
         assert (getAnn al [=] getAnn al ++ {x; {}}). cset_tac; intuition.
         invc H2; eauto. rewrite <- H1. eauto using locally_injective.
         cset_tac; intuition.
-  - assert (injective_on (getAnn alvs ++ of_list Z) ϱ). {
+  - econstructor; eauto with len.
+    + intros.
+      inv_map H4. clear H19. inv_map H5. clear H20.
+      edestruct (get_length_eq _ H17 H6).
+      eapply srd_monotone.
+      * edestruct H8; eauto; dcr.
+        eapply (H1 _ _ _ H17 H19); eauto. simpl in *.
+        rewrite H21. exploit H13; eauto; dcr. rewrite <- INCL, <- H24.
+        clear_all; cset_tac; intuition.
+        rewrite H21. unfold live_globals. rewrite List.map_app.
+        rewrite <- incl_right.
+        rewrite bounded_app. simpl in *. split; eauto.
+        eapply get_bounded; intros.
+        unfold live_global, Liveness.live_globals in H22. inv_map H22.
+        inv_zip H24. simpl. exploit H13; eauto; dcr.
+        rewrite H30; eauto.
+      * simpl.
+        Lemma live_globals_app L L'
+        : live_globals (L ++ L') = live_globals L ++ live_globals L'.
+        Proof.
+          unfold live_globals. rewrite List.map_app. reflexivity.
+        Qed.
+        rewrite live_globals_app.
+        repeat rewrite restrict_app.
+        Lemma map_lookup_app L L' ϱ
+        : map_lookup ϱ (L ++ L') = map_lookup ϱ L ++ map_lookup ϱ L'.
+        Proof.
+          unfold map_lookup. rewrite List.map_app. reflexivity.
+        Qed.
+        rewrite map_lookup_app.
+        Ltac norm_map_zip :=
+          unfold map_lookup, live_globals, restrict, oglobals, globals, Liveness.live_globals;
+          repeat (progress (repeat rewrite List.map_app;
+                            repeat rewrite List.map_map;
+                            repeat rewrite map_zip;
+                            repeat rewrite zip_map_l;
+                            repeat rewrite zip_map_r)).
+        eapply AllInRel.PIR2_app.
+        rewrite getAnn_mapAnn.
+        rewrite of_list_lookup_list; intuition.
+        erewrite (@restrict_incl_ext _ (getAnn x0)); eauto.
+        instantiate (1:=getAnn x0 \ of_list (fst x)).
+        norm_map_zip.
+        eapply AllInRel.PIR2_get; intros.
+        inv_zip H21.
+        inv_zip H22. repeat get_functional; subst.
+        unfold global. rewrite getAnn_mapAnn. simpl.
+        repeat destruct if; simpl; try now econstructor.
+        econstructor.
+        rewrite of_list_lookup_list; intuition.
+        eapply lookup_set_minus_eq; intuition.
+        exploit H13; eauto. simpl in *; dcr.
+        exploit H0; eauto. eapply locally_injective in X.
+        eapply injective_on_incl. eapply X. rewrite H23.
+        clear_all; cset_tac; intuition.
+        exfalso. eapply n1.
+        rewrite of_list_lookup_list; intuition.
+        repeat rewrite <- lookup_set_minus_eq.
+        eapply lookup_set_incl; eauto. intuition.
+        exploit H13; try eapply H19; eauto. simpl in *; dcr.
+        exploit H0; try eapply H19; eauto. eapply locally_injective in X.
+        eapply injective_on_incl. eapply X. rewrite H23.
+        clear_all; cset_tac; intuition.
+        intuition.
+        exploit H13; eauto. simpl in *; dcr.
+        exploit H0; eauto. eapply locally_injective in X.
+        eapply injective_on_incl. eapply X. rewrite H23.
+        clear_all; cset_tac; intuition.
+        repeat rewrite zip_length2; eauto.
+        instantiate (1:=D).
+        simpl in H13. simpl in *. rewrite <- INCL.
+        Lemma live_globals_bounded F alvs lv
+        : ( forall (n : nat) (Zs : params * stmt) (a : ann (set var)),
+              get F n Zs ->
+              get alvs n a ->
+              of_list (fst Zs)[<=]getAnn a /\ getAnn a \ of_list (fst Zs)[<=]lv)
+           -> bounded
+               (live_globals (Liveness.live_globals F alvs)) lv.
+        Proof.
+          intros. unfold live_globals, Liveness.live_globals.
+          rewrite map_zip.
+          eapply get_bounded. intros.
+          inv_zip H0. inv H3.
+          edestruct H; eauto.
+        Qed.
+        eapply live_globals_bounded; eauto.
+        edestruct H8; eauto; dcr.
+        revert H25; clear_all; cset_tac; intuition; eauto.
+        simpl.
+        erewrite (@restrict_incl_ext _ (getAnn x0)); eauto.
+        instantiate (1:=getAnn x0 \ of_list (fst x)).
+        eapply list_eq_special; eauto.
+        edestruct H13; eauto.
+        rewrite getAnn_mapAnn. rewrite of_list_lookup_list.
+        eapply lookup_set_minus_incl_inj; eauto; intuition.
+        exploit H0; try eapply H19; eauto.
+        eapply locally_injective in X.
+        eapply injective_on_incl; eauto.
+        exploit H13; eauto. simpl in *. dcr. rewrite H21.
+        clear_all; cset_tac; intuition. intuition. simpl.
+        edestruct H8; eauto. dcr.
+        revert H25; clear_all; cset_tac; intuition; eauto.
+    + eapply srd_monotone. simpl in * |- *.
+      eapply IHRI; eauto.
+      rewrite H16; simpl in * |- *; eauto. transitivity lv; eauto.
+      rewrite H16; simpl.
+      unfold live_globals. rewrite List.map_app.
+      rewrite bounded_app; split; eauto.
+      eapply get_bounded; intros.
+      unfold live_global, Liveness.live_globals in H4. inv_map H4.
+      inv_zip H5. simpl. exploit H13; eauto; dcr.
+      rewrite H21; eauto.
+      admit.
+Qed.
+
+assert (injective_on (getAnn alvs ++ of_list Z) ϱ). {
       eapply injective_on_incl. eapply locally_injective. eapply RI1.
       cset_tac; intuition.
     }
-    econstructor; eauto.
-    + eapply srd_monotone.
-      * eapply IHRI1; eauto. simpl in *. rewrite H13; simpl.
-        rewrite <- INCL. rewrite <- H11. eapply incl_union_minus.
-        simpl. split. simpl in *. rewrite H11, H13; simpl. cset_tac; intuition.
-        rewrite H13; simpl. rewrite <- incl_right; eauto.
-      * Opaque restrict. simpl. unfold live_global. rewrite restrict_incl. simpl.
-        simpl. rewrite restrict_incl. constructor. constructor.
-        rewrite getAnn_mapAnn. rewrite of_list_lookup_list.
-        eapply lookup_set_minus_eq; eauto; intuition.
-        intuition.
-        erewrite (@restrict_incl_ext _ (getAnn alvs)); eauto.
-        instantiate (1:=getAnn alvs \ of_list Z).
-        eapply list_eq_special; eauto.
-        rewrite getAnn_mapAnn. rewrite of_list_lookup_list.
-        eapply lookup_set_minus_incl_inj; eauto; intuition. intuition.
-        simpl. simpl in *.
-        cset_tac; intuition; eauto. reflexivity.
-        eapply incl_minus.
-    + eapply srd_monotone. simpl in * |- *.
-      eapply IHRI2; eauto.
-      rewrite H16; simpl in * |- *; eauto. transitivity lv; eauto.
-      rewrite H16; simpl.
-      split; eauto. eapply Subset_trans; eauto.
-      simpl. decide (getAnn alvs \ of_list Z ⊆ getAnn alvb).
-      unfold live_global. simpl.
-      rewrite restrict_incl; eauto. simpl. econstructor. econstructor; eauto.
-      rewrite getAnn_mapAnn. rewrite of_list_lookup_list.
-      eapply lookup_set_minus_eq; eauto; intuition. intuition.
-      eapply list_eq_fstNoneOrR_incl; eauto.
-      unfold live_global. simpl. rewrite restrict_not_incl; eauto. simpl.
-      econstructor. econstructor. eapply list_eq_fstNoneOrR_incl; eauto.
-Qed.
-
 Lemma locally_inj_subset ϱ s alv alv'
 : locally_inj ϱ s alv
   -> ann_R Subset alv' alv

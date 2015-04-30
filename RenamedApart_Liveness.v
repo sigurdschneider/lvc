@@ -50,10 +50,23 @@ Proof.
     + rewrite getAnn_mapAnn, H5; simpl. reflexivity.
 Qed.
 
+Lemma indexwise_R_bounded D Dt F ans
+:  indexwise_R (funConstr D Dt) F ans
+   -> bounded
+       (live_globals (Liveness.live_globals F (List.map (mapAnn fst) ans))) D.
+Proof.
+  intros. unfold live_globals.
+  eapply get_bounded. intros.
+  inv_map H0. unfold Liveness.live_globals in H1.
+  inv_zip H1. inv_map H3. simpl in *.
+  edestruct H; eauto. dcr. rewrite getAnn_mapAnn. rewrite H6.
+  cset_tac; intuition.
+Qed.
+
 Lemma renamedApart_live s ang DL i
 : renamedApart s ang
   -> paramsMatch s (List.map (snd ∘ @length _) DL)
-  -> bounded (List.map (fun x => Some (fst x \ of_list (snd x))) DL) (fst (getAnn ang))
+  -> bounded (live_globals DL) (fst (getAnn ang))
   -> live_sound i DL s (mapAnn fst ang).
 Proof.
   intros. general induction H; invt paramsMatch; simpl.
@@ -87,24 +100,16 @@ Proof.
   - econstructor; eauto with len.
     + eapply IHrenamedApart; eauto; simpl.
       rewrite List.map_app. rewrite <-params_length; eauto.
+      unfold live_globals.
       rewrite H5; eauto. rewrite List.map_app.
-      rewrite bounded_app; split; eauto.
-      simpl. eapply get_bounded. intros.
-      inv_map H9. unfold Liveness.live_globals in H10.
-      inv_zip H10. inv_map H14. simpl.
-      edestruct H2; eauto. dcr. rewrite getAnn_mapAnn. rewrite H17.
-      cset_tac; intuition.
+      rewrite bounded_app; split; eauto using indexwise_R_bounded.
     + intros. inv_map H10.
       exploit H1; eauto; simpl.
       rewrite List.map_app. rewrite <-params_length; eauto.
       edestruct H2; eauto; dcr. rewrite H15.
-      rewrite List.map_app. rewrite bounded_app; split; eauto.
-      eapply get_bounded. intros.
-      inv_map H16. unfold Liveness.live_globals in H18.
-      inv_zip H18. inv_map H22. simpl.
-      edestruct H2; eauto. dcr. rewrite getAnn_mapAnn. rewrite H25.
-      cset_tac; intuition.
-      rewrite <- incl_right; eauto.
+      unfold live_globals. rewrite List.map_app.
+      rewrite <- incl_right.
+      rewrite bounded_app; split; eauto using indexwise_R_bounded.
     + intros. inv_map H10. edestruct H2; eauto; dcr.
       destruct if; eauto; rewrite getAnn_mapAnn, H15; simpl; split; cset_tac; intuition.
     + rewrite getAnn_mapAnn, H5; simpl. reflexivity.
