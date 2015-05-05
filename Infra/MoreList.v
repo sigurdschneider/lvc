@@ -266,6 +266,22 @@ Proof.
   - orewrite (k + S n = S k + n); eauto using get.
 Qed.
 
+Lemma zip_app X Y Z (f : X -> Y -> Z) (xl:list X) (yl:list Y) xl' yl'
+: length xl = length yl
+  -> zip f (xl ++ xl') (yl ++ yl') = zip f xl yl ++ zip f xl' yl'.
+Proof.
+  intros. length_equify. general induction H; simpl; f_equal; eauto.
+Qed.
+
+Lemma zip_rev X Y Z (f : X -> Y -> Z) (xl:list X) (yl:list Y)
+: length xl = length yl
+  -> zip f (rev xl) (rev yl) = rev (zip f xl yl).
+Proof.
+  intros. length_equify. general induction H; simpl; eauto.
+  rewrite zip_app.
+  - rewrite IHlength_eq; eauto.
+  - repeat rewrite rev_length; eauto using length_eq_length.
+Qed.
 
 (*
 *** Local Variables: ***

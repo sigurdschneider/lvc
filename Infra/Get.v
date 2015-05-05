@@ -37,7 +37,7 @@ Qed.
 Lemma get_functional X (xl:list X) n (x x':X) :
   get xl n x -> get xl n x' -> x = x'.
 Proof.
-  induction 1; inversion 1; subst; eauto. 
+  induction 1; inversion 1; subst; eauto.
 Qed.
 
 Lemma get_shift X (L:list X) k L1 blk :
@@ -61,7 +61,7 @@ Qed.
 
 Lemma get_nth_default {X:Type} L n m (default:X):
 get L n m -> nth n L default = m.
-induction 1; auto. Qed. 
+induction 1; auto. Qed.
 
 Lemma get_length {X:Type} L n (s:X)
 (getl : get L n s) :
@@ -92,21 +92,21 @@ Proof.
   eauto.
 Qed.
 
-Lemma nth_get {X:Type} L n s {default:X} 
-(lt : n < length L) 
+Lemma nth_get {X:Type} L n s {default:X}
+(lt : n < length L)
 (nthL : nth n L default = s):
 get L n s.
 Proof.
 revert n s default lt nthL. induction L; intros.
  exfalso; inv lt.
  destruct n.
-  subst. simpl. constructor. 
+  subst. simpl. constructor.
  constructor. eapply IHL; auto.
   simpl in lt. omega.
   simpl in nthL. eauto.
 Qed.
 
-Lemma nth_get_neq {X:Type} L n s {default:X} 
+Lemma nth_get_neq {X:Type} L n s {default:X}
 (neq:s <> default)
 (nthL : nth n L default = s):
 get L n s.
@@ -114,7 +114,7 @@ Proof.
 revert n s default neq nthL. induction L; intros.
  simpl in nthL; destruct n; congruence.
  destruct n.
-  subst. simpl. constructor. 
+  subst. simpl. constructor.
  constructor. eapply IHL; auto.
   eassumption.
   simpl in nthL. eauto.
@@ -132,7 +132,7 @@ Qed.
 Lemma nth_error_app X (L L':list X) k x
  : nth_error L k = Some x -> nth_error (L++L') k = Some x.
 Proof.
-  revert k; induction L; simpl; intros k A. destruct k; inversion A. 
+  revert k; induction L; simpl; intros k A. destruct k; inversion A.
   destruct k; simpl; eauto.
 Qed.
 
@@ -184,7 +184,7 @@ Ltac simplify_get := try repeat get_functional; repeat eval_nth_get; eauto with 
 Lemma nth_shift X x (L L':list X) d
   : nth (length L+x) (L++L') d = nth x L' d.
 Proof.
-  induction L; intros; simpl; eauto. 
+  induction L; intros; simpl; eauto.
 Qed.
 
 
@@ -201,11 +201,11 @@ Qed.
 Lemma get_in_range X (L:list X) n
   : n < length L -> { x:X & get L n x }.
 Proof.
-  general induction n; destruct L; try now(simpl in *; exfalso; omega). 
+  general induction n; destruct L; try now(simpl in *; exfalso; omega).
   eauto using get.
-  edestruct IHn. instantiate (1:=L). simpl in *; omega. 
+  edestruct IHn. instantiate (1:=L). simpl in *; omega.
   eauto using get.
-Qed.  
+Qed.
 
 Lemma nth_in X L x (d:X)
   : x < length L -> In (nth x L d) L.
@@ -220,10 +220,10 @@ Qed.
 Lemma in_get X `{EqDec X eq} (xl : list X) (x : X) :
   In x xl -> { n : nat & get xl n x }.
 Proof.
-  induction xl; simpl; intros. inv H0. 
+  induction xl; simpl; intros. inv H0.
   decide (x=a); subst.
   exists 0. constructor.
-  edestruct (IHxl). destruct H0; eauto; congruence. 
+  edestruct (IHxl). destruct H0; eauto; congruence.
   exists (S x0). constructor. assumption.
 Qed.
 
@@ -257,7 +257,7 @@ Qed.
 Lemma map_get_2 X Y (L:list X) (f:X -> Y) n x
   : get (List.map f L) n x -> exists x' : X, get L n x'.
 Proof.
-  intros. general induction H; simpl in *; 
+  intros. general induction H; simpl in *;
           destruct L; simpl in *; inv Heql; try now (econstructor; eauto using get).
   edestruct IHget; eauto using get.
 Qed.
@@ -265,7 +265,7 @@ Qed.
 Lemma map_get_3 X Y (L:list X) (f:X -> Y) n x
   : getT (List.map f L) n x -> { x' : X & (getT L n x' * (f x' = x))%type }.
 Proof.
-  intros. general induction X0; simpl in *; 
+  intros. general induction X0; simpl in *;
           destruct L; simpl in *; inv Heql;
           try now (econstructor; eauto using getT).
   edestruct IHX0; dcr; eauto using getT.
@@ -284,21 +284,21 @@ Lemma map_get X Y (L:list X) (f:X -> Y) n blk Z
   -> get (List.map f L) n Z
   -> Z = f blk.
 Proof.
-  intros. general induction H; simpl in *; inv H0; eauto. 
+  intros. general induction H; simpl in *; inv H0; eauto.
 Qed.
 
 
 Lemma get_length_eq X Y (L:list X) (L':list Y) n x
   : get L n x -> length L = length L' -> exists y, get L' n y.
 Proof.
-  intros. eapply length_length_eq in H0. 
+  intros. eapply length_length_eq in H0.
   general induction H0; inv H; eauto using get.
   edestruct IHlength_eq; eauto using get.
 Qed.
 
 Require Compare_dec.
 
-Lemma get_in_range_app X L L' n (x:X) 
+Lemma get_in_range_app X L L' n (x:X)
   : n < length L -> get (L ++ L') n x -> get L n x.
 Proof.
   intros. general induction L; simpl in *; eauto; try omega.
@@ -307,8 +307,8 @@ Qed.
 
 Lemma get_subst X (L L':list X) x x' n
   : get (L ++ x :: L') n x'
-    -> get L n x' 
-       \/ (x = x' /\ n = length L) 
+    -> get L n x'
+       \/ (x = x' /\ n = length L)
        \/ (get L' (n - S (length L)) x' /\ n > length L).
 Proof.
   destruct (Compare_dec.lt_eq_lt_dec n (length L)) as [ [A|A] | A]; intros.
@@ -316,19 +316,19 @@ Proof.
   right. left. orewrite (n = length L + 0) in H.
   eapply shift_get in H. inv H; eauto.
   right. right. split; try omega.
-  orewrite (n = (length L + S (n - S (length L)))) in H. 
+  orewrite (n = (length L + S (n - S (length L)))) in H.
   eapply shift_get in H. inv H. eauto.
 Qed.
 
 Lemma get_app_cases X (L L':list X) x' n
   : get (L ++ L') n x'
-    -> get L n x' 
+    -> get L n x'
        \/ (get L' (n - length L) x' /\ n >= length L).
 Proof.
   destruct (Compare_dec.le_lt_dec (S n) (length L)) as [ A | A]; intros.
-  left. eapply get_in_range_app; eauto. 
+  left. eapply get_in_range_app; eauto.
   right. split; try omega.
-  orewrite (n = (length L + (n - length L))) in H. 
+  orewrite (n = (length L + (n - length L))) in H.
   eapply shift_get in H. eauto.
 Qed.
 
@@ -339,7 +339,7 @@ Proof.
 Qed.
 
 
-Lemma get_length_app X (L L':list X) x 
+Lemma get_length_app X (L L':list X) x
   : get (L ++ x :: L') (length L) x.
 Proof.
   orewrite (length L = length L + 0). eapply get_shift. constructor.
@@ -367,7 +367,23 @@ destruct a'. simpl in H. invc H. reflexivity.
 simpl in H. specialize (IHE _ H). subst. reflexivity.
 Qed.
 
-(* 
+
+Lemma get_rev X (L:list X) n x
+: get (rev L) n x ->
+  get L (length L - S n) x.
+Proof.
+  intros.
+  general induction L; simpl in *; isabsurd.
+  edestruct get_app_cases; eauto; dcr.
+  - exploit @get_length; eauto.
+    rewrite rev_length in X0; simpl in *.
+    orewrite (length L - n = S (length L - S n)).
+    eauto using get.
+  - rewrite rev_length in H2. orewrite (length L - n = 0).
+    inv H1; isabsurd; eauto using get.
+Qed.
+
+(*
 *** Local Variables: ***
 *** coq-load-path: (("../" "Lvc")) ***
 *** End: ***

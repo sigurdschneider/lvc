@@ -112,24 +112,6 @@ Fixpoint renamedApartAnn (s:stmt) (G:set var) : ann (set var * set var) :=
       annF (G, G' ∪ (snd (getAnn ant))) ans ant
   end.
 
-Lemma list_union_indexwise_ext X `{OrderedType X} Y (f:Y->set X) Z (g:Z -> set X) L L'
-: length L = length L'
-  -> (forall n y z, get L n y -> get L' n z -> f y [=] g z)
-  -> list_union (List.map f L) [=] list_union (List.map g L').
-Proof.
-  intros. length_equify.
-  general induction H0; simpl; eauto.
-  unfold list_union; simpl.
-  repeat rewrite list_union_start_swap.
-  rewrite IHlength_eq, H1; eauto using get; reflexivity.
-Qed.
-
-Lemma union_eq_decomp X `{OrderedType X} s s' t t'
-: s [=] s' -> t [=] t' -> s ++ t [=] s' ++ t'.
-Proof.
-  cset_tac; intros; firstorder.
-Qed.
-
 (*
 Instance renamedApart_ann_morph
 : Proper (eq ==> Equal ==> ann_R (@pe _ _ )) renamedApartAnn.
@@ -151,8 +133,8 @@ Proof.
     + rewrite H0 at 1.
       econstructor; eauto. rewrite IH; eauto.
       eapply union_eq_decomp; eauto.
-      admit.
-    + admit.
+      .
+    + .
     + intros.
       inv_map H. inv_map H1.
     pose proof (IH (snd x)).
@@ -173,8 +155,6 @@ Proof.
   sind s; destruct s; eauto.
   - simpl. let_pair_case_eq. simpl; eauto.
 Qed.
-
-
 
 Lemma snd_renamedApartAnnF_fst G G' G'' s ϱ L L' G'''
 : (forall n Zs G ϱ G',
@@ -198,32 +178,6 @@ Proof.
     erewrite H; eauto using get.
 Qed.
 
-Lemma get_rev X (L:list X) n x
-: get (rev L) n x ->
-  get L (length L - S n) x.
-Proof.
-  intros.
-  general induction L; simpl in *; isabsurd.
-  edestruct get_app_cases; eauto; dcr.
-  - exploit @get_length; eauto.
-    rewrite rev_length in X0; simpl in *.
-    orewrite (length L - n = S (length L - S n)).
-    eauto using get.
-  - rewrite rev_length in H2. orewrite (length L - n = 0).
-    inv H1; isabsurd; eauto using get.
-Qed.
-
-Lemma list_union_rev X `{OrderedType X} (L:list (set X)) s
-: fold_left union L s [=] fold_left union (rev L) s.
-Proof.
-  general induction L; simpl; eauto.
-  rewrite list_union_app.
-  unfold list_union. simpl.
-  rewrite IHL.
-  repeat rewrite list_union_start_swap.
-  cset_tac; intuition.
-Qed.
-
 Lemma definedVars_renameApartF G ϱ F
 : (forall ϱ G n Zs, get F n Zs -> definedVars (snd (renameApart' ϱ G (snd Zs)))
                                         [=] fst (renameApart' ϱ G (snd Zs)))
@@ -243,7 +197,7 @@ Proof.
   - simpl.
     unfold renameApartFStep. let_pair_case_eq.
     simpl_pair_eqs. subst. simpl.
-    unfold list_union. simpl. rewrite list_union_start_swap.
+    simpl. rewrite list_union_start_swap.
     simpl.
     eapply union_eq_decomp; eauto.
     + edestruct H; eauto using get.
@@ -262,7 +216,6 @@ Proof.
   intros.
   rewrite <- definedVars_renameApartF; eauto.
   rewrite map_rev.
-  unfold list_union.
   rewrite <- list_union_rev; eauto.
 Qed.
 
@@ -276,7 +229,7 @@ Lemma snd_renamedApartAnnF' G s
               (definedVars (snd f) ++ of_list (fst f))%set) s).
 Proof.
   general induction s; simpl; eauto.
-  - rewrite H; eauto using get. unfold list_union. simpl.
+  - rewrite H; eauto using get. simpl.
     rewrite list_union_start_swap. rewrite IHs; intros; eauto using get.
     cset_tac; intuition.
 Qed.
@@ -291,28 +244,6 @@ Proof.
   - do 2 eexists; split; eauto using get.
   - edestruct IHF as [? [? [? [? ?]]]]; eauto.
     do 2 eexists; split; eauto using get.
-Qed.
-
-Lemma lookup_set_update_disj {X} `{OrderedType X} {Y} `{OrderedType Y} (f:X->Y)
-      `{Proper _ (_eq ==> _eq) f} Z Z' G
-: disj (of_list Z) G
-  -> lookup_set (f [ Z <-- Z' ]) G [=] lookup_set f G.
-Proof.
-  intros. hnf; intros.
-  rewrite lookup_set_spec; eauto.
-  split; intuition; dcr. rewrite H6.
-  - rewrite lookup_set_update_not_in_Z; eauto.
-    eapply lookup_set_spec; eauto.
-  - eapply lookup_set_spec in H3; eauto; dcr.
-    eexists x.
-    rewrite lookup_set_update_not_in_Z; eauto.
-Qed.
-
-Lemma rev_swap X (L L':list X)
-: rev L = L'
-  -> L = rev L'.
-Proof.
-  intros. subst. rewrite rev_involutive; eauto.
 Qed.
 
 Lemma get_fst_renameApartF G ϱ F n ans
@@ -377,7 +308,6 @@ Proof.
     rewrite snd_renamedApartAnnF'; eauto.
     rewrite <- definedVars_renameApartF; eauto using definedVars_renamedApart'.
     rewrite map_rev.
-    unfold list_union.
     rewrite <- list_union_rev; eauto.
     intros.
     eapply get_rev in H.
@@ -413,53 +343,11 @@ Proof.
   - let_pair_case_eq; simpl_pair_eqs; subst; simpl; eauto.
 Qed.
 
-Hint Resolve prod_eq_intro : cset.
-
-Lemma disj_not_in X `{OrderedType X} x s
-: disj {x} s
-  -> x ∉ s.
-Proof.
-  unfold disj; cset_tac.
-  intro.
-  eapply H0; eauto; intuition.
-Qed.
-
-Hint Resolve disj_not_in incl_singleton: cset.
-
 Lemma length_fst_renamedApartAnnF G F
 : length (fst (renamedApartAnnF renamedApartAnn G (nil, {}) F))
   = length F.
 Proof.
   general induction F; simpl; eauto.
-Qed.
-
-Lemma disj_eq_minus X `{OrderedType X} (s t u: set X)
-: s [=] t
-  -> disj t u
-  -> s [=] t \ u.
-Proof.
-  unfold disj.
-  cset_tac; intuition; eauto.
-  - eapply H0; eauto.
-  - eapply H1; intuition; eauto. eapply H0; eauto.
-  - eapply H0; eauto.
-Qed.
-
-Lemma union_incl_split X `{OrderedType X} s t u
-: s ⊆ u -> t ⊆ u -> s ∪ t ⊆ u.
-Proof.
-  cset_tac; intuition.
-Qed.
-
-Lemma list_union_drop_incl X `{OrderedType X} (L L':list (set X)) n
-: list_union (drop n L) ⊆ list_union (drop n L')
-  -> list_union (drop n L) ⊆ list_union L'.
-Proof.
-  intros; hnf; intros.
-  eapply H0 in H1.
-  edestruct list_union_get; eauto; dcr.
-  eapply incl_list_union; eauto using get_drop; reflexivity.
-  cset_tac; intuition.
 Qed.
 
 Lemma ann_R_pe_notOccur G1 G2 G' s
@@ -505,7 +393,7 @@ Proof.
       edestruct get_fst_renamedApartAnnF as [? [? ?]]; dcr; try eapply H1; eauto. subst.
       get_functional; subst.
       eapply IH; eauto.
-      * eapply disj_1_incl; eauto. unfold list_union.
+      * eapply disj_1_incl; eauto.
         eapply incl_union_left.
         eapply incl_list_union; eauto using map_get_1 with cset.
       * repeat rewrite minus_dist_union.
@@ -523,7 +411,7 @@ Lemma freeVars_rename_exp_list ϱ Y
   : list_union (List.map Exp.freeVars (List.map (rename_exp ϱ) Y))[=]
                lookup_set ϱ (list_union (List.map Exp.freeVars Y)).
 Proof.
-  unfold list_union. rewrite lookup_set_list_union; eauto using lookup_set_empty.
+  rewrite lookup_set_list_union; eauto using lookup_set_empty.
   repeat rewrite map_map. eapply fold_left_union_morphism; [|reflexivity].
   clear_all. general induction Y; simpl; eauto using AllInRel.PIR2, freeVars_renameExp.
 Qed.
@@ -623,38 +511,23 @@ Proof.
       rewrite <- H at 3. repeat rewrite lookup_set_union; eauto.
       cset_tac; intuition.
   - eapply union_eq_decomp; eauto.
-    + unfold list_union.
-      rewrite lookup_set_list_union; eauto; try reflexivity.
+    + rewrite lookup_set_list_union; eauto; try reflexivity.
       rewrite map_map.
       intros.
       eapply list_union_indexwise_ext.
       intros.
       rewrite rev_length, renameApartF_length; eauto.
       intros.
-      (*
-    rewrite IHs1, IHs2.
-    + rewrite lookup_set_update_union_minus_list; eauto.
-      rewrite lookup_set_union in H; eauto.
-      pose proof (fresh_list_spec _ fresh_spec G (length Z)).
-      cset_tac; intuition; eauto.
-      assert (a ∈ G). eapply H; eauto. cset_tac; intuition.
-      left; intuition; eauto.
-      rewrite fresh_list_length; eauto.
-    + rewrite <- H at 1. rewrite lookup_set_union; eauto.
-      cset_tac; intuition.
-    + rewrite lookup_set_update_with_list_in_union_length; eauto.
-      rewrite <- H at 2. rewrite lookup_set_union; eauto. cset_tac; intuition.
-      rewrite fresh_list_length; eauto.*)
       exploit get_range; eauto.
       eapply get_rev in H0.
       rewrite renameApartF_length in H0.
 
-intros.
-edestruct get_fst_renameApartF as [? [? [? ?]]]; dcr; eauto.
-orewrite (length s - S (length s - S n) = n) in H3. get_functional; subst.
+      intros.
+      edestruct get_fst_renameApartF as [? [? [? ?]]]; dcr; eauto.
+      orewrite (length s - S (length s - S n) = n) in H3. get_functional; subst.
 
-rewrite H5.
-rewrite IH; eauto.
+      rewrite H5.
+      rewrite IH; eauto.
       * assert (freeVars (snd x0) [=] (freeVars (snd x0) \ of_list (fst x0)) ∪ (of_list (fst x0) ∩ freeVars (snd x0))).
         clear_all; cset_tac; intuition. simpl in *.
         decide (a ∈ of_list a0); intuition.
@@ -667,12 +540,6 @@ rewrite IH; eauto.
         clear_all; cset_tac; intuition.
         rewrite H11 in H2.
         rewrite <- lookup_set_agree; eauto.
-        Lemma disj_minus_eq X `{OrderedType X} (s t:set X)
-        : disj s t
-          -> s \ t [=] s.
-        Proof.
-          unfold disj; cset_tac; intuition; eauto.
-        Qed.
         intros. rewrite disj_minus_eq.
         setoid_rewrite diff_subset_equal at 2. cset_tac; intuition.
         rewrite meet_incl; eauto; try reflexivity.
@@ -764,7 +631,7 @@ Proof.
       subst. reflexivity.
   - econstructor; [| reflexivity]. simpl in H.
     rewrite <- H.
-    unfold list_union. rewrite lookup_set_list_union; eauto.
+    rewrite lookup_set_list_union; eauto.
     instantiate (1:={}).
     eapply fold_left_subset_morphism; try reflexivity.
     repeat rewrite map_map.
@@ -781,7 +648,7 @@ Proof.
       rewrite <- H.
       eapply lookup_set_incl; eauto.
       rewrite <- H1.
-      unfold list_union. rewrite lookup_set_list_union; eauto.
+      rewrite lookup_set_list_union; eauto.
       instantiate (1:={}).
       eapply fold_left_subset_morphism; try reflexivity.
       repeat rewrite map_map.
@@ -821,7 +688,7 @@ Proof.
       rewrite snd_renamedApartAnn; eauto. cset_tac; intuition.
       rewrite IHl; eauto.
     Qed.
-    rewrite map_rev. unfold list_union at 2. rewrite <- list_union_rev.
+    rewrite map_rev. rewrite <- list_union_rev.
     Lemma fst_renamedApartAnnF_app G F F'
     : fst (renamedApartAnnF renamedApartAnn G (nil, {}) (F ++ F'))
       = fst (renamedApartAnnF renamedApartAnn G (nil, {}) F)
@@ -847,7 +714,7 @@ Proof.
       rewrite <- renameApartFRight_corr.
       remember (rev F). clear Heql. general induction l; simpl; eauto.
       unfold renameApartFStep. let_pair_case_eq; simpl_pair_eqs.
-      simpl. unfold list_union. simpl.
+      simpl.
       rewrite list_union_start_swap. subst.
       rewrite IHl; eauto.
       eapply union_eq_decomp; eauto. unfold defVars. simpl.
@@ -855,26 +722,10 @@ Proof.
       rewrite <- definedVars_renamedApart'. cset_tac; intuition.
     Qed.
     intros. rewrite fst_renamedApartAnnF_rev.
-    Lemma zip_app X Y Z (f : X -> Y -> Z) (xl:list X) (yl:list Y) xl' yl'
-    : length xl = length yl
-      -> zip f (xl ++ xl') (yl ++ yl') = zip f xl yl ++ zip f xl' yl'.
-    Proof.
-      intros. length_equify. general induction H; simpl; f_equal; eauto.
-    Qed.
-
-    Lemma zip_rev X Y Z (f : X -> Y -> Z) (xl:list X) (yl:list Y)
-    : length xl = length yl
-      -> zip f (rev xl) (rev yl) = rev (zip f xl yl).
-    Proof.
-      intros. length_equify. general induction H; simpl; eauto.
-      rewrite zip_app.
-      - rewrite IHlength_eq; eauto.
-      - repeat rewrite rev_length; eauto using length_eq_length.
-    Qed.
-    rewrite zip_rev. unfold list_union. rewrite <- list_union_rev.
-    pose proof union_defVars_renameApartF. unfold list_union in H1.
+    rewrite zip_rev. rewrite <- list_union_rev.
+    pose proof union_defVars_renameApartF.
     rewrite H1.
-    pose proof definedVars_renameApartF. unfold list_union in H2.
+    pose proof definedVars_renameApartF.
     rewrite H2; eauto.
     eauto using definedVars_renamedApart'.
     rewrite renameApartF_length.
@@ -930,20 +781,6 @@ Proof.
       eapply map_get_1. eauto. cset_tac; intuition.
     + rewrite fst_renamedApartAnnF_rev.
       rewrite zip_rev.
-      Lemma pairwise_ne_rev X (P:relation X) (L: list X)
-      : pairwise_ne P L
-        -> pairwise_ne P (rev L).
-      Proof.
-        intros; hnf; intros.
-        exploit (get_range H1); eauto.
-        exploit (get_range H2); eauto.
-        eapply get_rev in H1.
-        eapply get_rev in H2.
-        eapply H; try eapply H1; try eapply H2; eauto.
-        rewrite rev_length in X0.
-        rewrite rev_length in X1.
-        omega.
-      Qed.
       eapply pairwise_ne_rev.
       eapply pairwise_disj_PIR2.
       Focus 2. symmetry.

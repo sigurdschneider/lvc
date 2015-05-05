@@ -2,10 +2,7 @@ Require Export Setoid Coq.Classes.Morphisms.
 Require Export Sets SetInterface SetConstructs SetProperties.
 Require Import EqDec Get CSetNotation CSetTac CSetComputable.
 
-Definition list_union X `{OrderedType X} (L:list (set X)) :=
-  fold_left union L ∅.
-
-Arguments list_union [X] {H} L.
+Notation "'list_union' L" := (fold_left union L ∅) (at level 50).
 
 Lemma list_union_start {X} `{OrderedType X} (s: set X) L t
 : s ⊆ t
@@ -76,7 +73,6 @@ Lemma get_in_of_list X `{OrderedType X} L n x
 Proof.
   intros. general induction H0; simpl; cset_tac; intuition.
 Qed.
-
 
 (*
 *** Local Variables: ***

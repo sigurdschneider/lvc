@@ -86,6 +86,35 @@ match goal with
     exfalso; eapply (in_disj_absurd H' H'' H)
 end.
 
+Lemma disj_minus_eq X `{OrderedType X} (s t:set X)
+: disj s t
+  -> s \ t [=] s.
+Proof.
+  unfold disj; cset_tac; intuition; eauto.
+Qed.
+
+
+Lemma disj_not_in X `{OrderedType X} x s
+: disj {x} s
+  -> x ∉ s.
+Proof.
+  unfold disj; cset_tac.
+  intro.
+  eapply H0; eauto; intuition.
+Qed.
+
+Lemma disj_eq_minus X `{OrderedType X} (s t u: set X)
+: s [=] t
+  -> disj t u
+  -> s [=] t \ u.
+Proof.
+  unfold disj.
+  cset_tac; intuition; eauto.
+  - eapply H0; eauto.
+  - eapply H1; intuition; eauto. eapply H0; eauto.
+  - eapply H0; eauto.
+Qed.
+
 
 (*
 *** Local Variables: ***

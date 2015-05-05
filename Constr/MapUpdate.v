@@ -400,6 +400,21 @@ Proof.
     + exfalso; eapply H2; reflexivity.
 Qed.
 
+Lemma lookup_set_update_disj {X} `{OrderedType X} {Y} `{OrderedType Y} (f:X->Y)
+      `{Proper _ (_eq ==> _eq) f} Z Z' G
+: disj (of_list Z) G
+  -> lookup_set (f [ Z <-- Z' ]) G [=] lookup_set f G.
+Proof.
+  intros. hnf; intros.
+  rewrite lookup_set_spec; eauto.
+  split; intuition; dcr. rewrite H6.
+  - rewrite lookup_set_update_not_in_Z; eauto.
+    eapply lookup_set_spec; eauto.
+  - eapply lookup_set_spec in H3; eauto; dcr.
+    eexists x.
+    rewrite lookup_set_update_not_in_Z; eauto.
+Qed.
+
 (*
 *** Local Variables: ***
 *** coq-load-path: (("../" "Lvc")) ***

@@ -526,6 +526,12 @@ Proof.
   eapply H3. eapply H0. eauto.
 Qed.
 
+Lemma union_eq_decomp X `{OrderedType X} s s' t t'
+: s [=] s' -> t [=] t' -> s ++ t [=] s' ++ t'.
+Proof.
+  cset_tac; intros; firstorder.
+Qed.
+
 (*
 *** Local Variables: ***
 *** coq-load-path: (("../" "Lvc")) ***

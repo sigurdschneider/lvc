@@ -241,6 +241,17 @@ Create HintDb cset discriminated.
 
 Hint Resolve incl_union_left incl_union_right incl_add_right in_add_left
              union_left union_right get_list_union_map : cset.
+Hint Resolve prod_eq_intro : cset.
+Hint Resolve disj_not_in incl_singleton: cset.
+Hint Resolve incl_empty : cset.
+
+Lemma union_incl_split X `{OrderedType X} s t u
+: s ⊆ u -> t ⊆ u -> s ∪ t ⊆ u.
+Proof.
+  cset_tac; intuition.
+Qed.
+
+Hint Resolve union_incl_split : cset.
 
 
 (*

@@ -15,6 +15,21 @@ Definition defVars (Zs:params * stmt) (a:ann (set var * set var)) := of_list (fs
 Definition pairwise_ne {X} (P:X->X->Prop) (L:list X) :=
   forall n m a b, n <> m -> get L n a -> get L m b -> P a b.
 
+Lemma pairwise_ne_rev X (P:relation X) (L: list X)
+: pairwise_ne P L
+  -> pairwise_ne P (rev L).
+Proof.
+  intros; hnf; intros.
+  exploit (get_range H1); eauto.
+  exploit (get_range H2); eauto.
+  eapply get_rev in H1.
+  eapply get_rev in H2.
+  eapply H; try eapply H1; try eapply H2; eauto.
+  rewrite rev_length in X0.
+  rewrite rev_length in X1.
+  omega.
+Qed.
+
 Hint Unfold defVars.
 
 Definition funConstr D Dt (Zs:params * stmt) a :=
@@ -135,7 +150,7 @@ Proof.
       intuition eauto.
     + eapply pairwise_disj_PIR2; eauto. symmetry; eauto.
     + rewrite <- H10. rewrite <- H15; eauto.
-    + unfold list_union. rewrite H8. rewrite <- H16; eauto.
+    + rewrite H8. rewrite <- H16; eauto.
 Qed.
 
 Instance renamedApart_morphism
@@ -157,7 +172,6 @@ Proof.
     cset_tac; intuition.
   - rewrite H0, IHrenamedApart, H2; simpl. cset_tac; intuition.
   - pe_rewrite. rewrite IHrenamedApart.
-    unfold list_union.
     rewrite list_union_incl. instantiate (1:=D). cset_tac; intuition.
     intros. inv_map H7.
     edestruct (get_length_eq _ H8 H); eauto.
@@ -200,7 +214,6 @@ Proof.
   - rewrite H3, IHrenamedApart, H2. simpl.
     clear_all; cset_tac; intuition.
   - pe_rewrite. rewrite IHrenamedApart.
-    unfold list_union.
     rewrite list_union_eq; eauto.
     rewrite map_length, zip_length2; eauto.
     intros. inv_map H7. inv_zip H8. get_functional; subst.
@@ -304,7 +317,7 @@ Proof.
     + eapply IHrenamedApart. eapply disj_1_incl; eauto with cset.
       reflexivity.
     + rewrite getAnn_mapAnn. pe_rewrite. reflexivity.
-    + unfold list_union. rewrite list_union_eq; eauto.
+    + rewrite list_union_eq; eauto.
       repeat rewrite zip_length2; eauto. rewrite map_length; eauto.
       intros. inv_zip H8. inv_zip H9. inv_map H11.
       get_functional; subst. unfold defVars.

@@ -457,6 +457,13 @@ Create HintDb len discriminated.
 
 Hint Resolve length_map_1 length_map_2 : len.
 
+Lemma rev_swap X (L L':list X)
+: rev L = L'
+  -> L = rev L'.
+Proof.
+  intros. subst. rewrite rev_involutive; eauto.
+Qed.
+
 
 (*
 *** Local Variables: ***

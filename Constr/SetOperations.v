@@ -110,9 +110,9 @@ Qed.
 Lemma list_union_start_swap X `{OrderedType X} (L : list (set X)) s
 : fold_left union L s[=]s ++ list_union L.
 Proof.
-  general induction L; unfold list_union; simpl; eauto.
+  general induction L; simpl; eauto.
   - cset_tac; intuition.
-  - repeat rewrite IHL. cset_tac; intuition.
+  - rewrite IHL. symmetry. rewrite IHL. cset_tac; intuition.
 Qed.
 
 Lemma list_union_app X `{OrderedType X} (L L' : list (set X)) s
@@ -120,6 +120,24 @@ Lemma list_union_app X `{OrderedType X} (L L' : list (set X)) s
 Proof.
   general induction L; simpl; eauto using list_union_start_swap.
 Qed.
+
+Lemma list_union_cons X `{OrderedType X} s sl
+: list_union (s :: sl) [=] s ∪ list_union sl.
+Proof.
+  simpl. setoid_rewrite list_union_start_swap.
+  cset_tac; intuition.
+Qed.
+
+Lemma incl_list_union_cons X `{OrderedType X} s sl
+: list_union sl ⊆ list_union (s :: sl).
+Proof.
+  simpl. setoid_rewrite list_union_start_swap at 2.
+  cset_tac; intuition.
+Qed.
+
+Hint Resolve incl_list_union_cons : cset.
+
+
 
 
 Lemma fold_union_app X `{OrderedType X} Gamma Γ'
@@ -247,30 +265,65 @@ Lemma list_union_disjunct {X} `{OrderedType X} Y D
 Proof.
   split; intros.
   - eapply set_incl; try now (cset_tac; intuition).
-    unfold list_union; hnf; intros.
+    hnf; intros.
     general induction Y; simpl in * |- *; intuition.
     exploit H0; eauto using get.
     exploit IHY; intros; eauto using get.
     rewrite list_union_start_swap.
     rewrite list_union_start_swap in H1.
     revert H1 X0; clear_all; cset_tac; intuition; eauto.
-  - unfold list_union, disj in H0.
+  - unfold disj in H0.
     rewrite meet_comm in H0.
     eapply incl_meet_empty in H0.
     rewrite meet_comm. eapply H0.
     eapply incl_list_union; eauto.
 Qed.
 
-
-Lemma list_union_cons X `{OrderedType X} s sl
-: list_union sl ⊆ list_union (s :: sl).
+Lemma list_union_indexwise_ext X `{OrderedType X} Y (f:Y->set X) Z (g:Z -> set X) L L'
+: length L = length L'
+  -> (forall n y z, get L n y -> get L' n z -> f y [=] g z)
+  -> list_union (List.map f L) [=] list_union (List.map g L').
 Proof.
-  unfold list_union; simpl.
+  intros. length_equify.
+  general induction H0; simpl; eauto.
+  rewrite list_union_start_swap.
+  setoid_rewrite list_union_start_swap at 2.
+  rewrite IHlength_eq, H1; eauto using get; reflexivity.
+Qed.
+
+Lemma list_union_rev X `{OrderedType X} (L:list (set X)) s
+: fold_left union L s [=] fold_left union (rev L) s.
+Proof.
+  general induction L; simpl; eauto.
+  rewrite list_union_app.
+  simpl.
+  rewrite IHL.
+  rewrite list_union_start_swap.
   setoid_rewrite list_union_start_swap at 2.
   cset_tac; intuition.
 Qed.
 
-Hint Resolve list_union_cons : cset.
+Require Import Drop.
+
+Lemma list_union_drop_incl X `{OrderedType X} (L L':list (set X)) n
+: list_union (drop n L) ⊆ list_union (drop n L')
+  -> list_union (drop n L) ⊆ list_union L'.
+Proof.
+  intros; hnf; intros.
+  eapply H0 in H1.
+  edestruct list_union_get; eauto; dcr.
+  eapply incl_list_union; eauto using get_drop; reflexivity.
+  cset_tac; intuition.
+Qed.
+
+Ltac norm_lunion :=
+ repeat match goal with
+      | [ |- context [ fold_left union ?A ?B ]] =>
+        match B with
+          | empty => fail 1
+          | _ => rewrite (list_union_start_swap _ A B)
+        end
+    end.
 
 
 (*

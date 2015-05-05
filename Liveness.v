@@ -157,7 +157,7 @@ Proof.
     intros.
     edestruct map_get_4; eauto; dcr; subst.
     exploit Exp.freeVars_live; eauto.
-  + unfold list_union. rewrite list_union_incl; eauto.
+  + rewrite list_union_incl; eauto.
     instantiate (1:=lv). rewrite IHlive_sound. rewrite H1. cset_tac; intuition.
     eauto. intros.
     edestruct map_get_4; eauto; dcr; subst.
@@ -262,6 +262,8 @@ Inductive approxF :  F.block -> F.block -> Prop :=
 
 Unset Printing Records.
 
+Require Import SetOperations.
+
 Lemma mkBlocks_approxF s0 E E' s i
 : agree_on eq (list_union
                  (List.map
@@ -277,7 +279,7 @@ Proof.
     rewrite <- get_list_union_map; eauto using get.
     eapply IHs.
     eapply agree_on_incl; eauto. simpl.
-    rewrite <- SetOperations.list_union_cons. reflexivity.
+    norm_lunion. cset_tac; intuition; eauto.
 Qed.
 
 

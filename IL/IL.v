@@ -63,8 +63,7 @@ Lemma list_union_f_incl X `{OrderedType X} Y (f g:Y->set X) s
   -> list_union (List.map f s) ⊆ list_union (List.map g s).
 Proof.
   intros. general induction s; simpl; eauto.
-  unfold list_union; simpl.
-  repeat rewrite list_union_start_swap.
+  norm_lunion.
   rewrite IHs, H0; eauto using get; reflexivity.
 Qed.
 
@@ -73,12 +72,9 @@ Lemma list_union_f_eq X `{OrderedType X} Y (f g:Y->set X) s
   -> list_union (List.map f s) [=] list_union (List.map g s).
 Proof.
   intros. general induction s; simpl; eauto.
-  unfold list_union; simpl.
-  repeat rewrite list_union_start_swap.
-  rewrite IHs, H0; eauto using get; reflexivity.
+  norm_lunion.
+  rewrite IHs, H0; eauto using get; eauto.
 Qed.
-
-Hint Extern 10 (size _ < size _) => somega.
 
 Lemma freeVars_occurVars s
 : freeVars s ⊆ occurVars s.
@@ -98,10 +94,9 @@ Lemma list_union_f_union X `{OrderedType X} Y (f g:Y->set X) s
              list_union (List.map (fun x => f x ∪ g x) s).
 Proof.
   intros. general induction s; simpl; eauto.
-  - unfold list_union; simpl. cset_tac; intuition.
-  - unfold list_union; simpl.
-  repeat rewrite list_union_start_swap.
-  rewrite <- IHs; eauto using get. cset_tac; intuition.
+  - cset_tac; intuition.
+  - norm_lunion.
+    rewrite <- IHs; eauto using get. cset_tac; intuition.
 Qed.
 
 

@@ -149,6 +149,8 @@ C (A : Type) : (A -> ord) -> ord.
 *)
 
 
+Hint Extern 10 (size _ < size _) => somega.
+
 (*
 *** Local Variables: ***
 *** coq-load-path: ((".." "Lyn")) ***

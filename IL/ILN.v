@@ -582,7 +582,7 @@ Proof.
           repeat rewrite pos_app_not_in; eauto.
           assert (length (List.map (fst ∘ fst) F) = length (I.mkBlocks L F))
                  by eauto with len.
-          rewrite H0. eapply pos_add; eauto. instantiate (1:=eq). eauto.
+          rewrite H0. eapply pos_add; eauto.
       }
 Qed.
 
