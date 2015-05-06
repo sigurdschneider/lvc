@@ -29,6 +29,16 @@ Fixpoint setTopAnn A (s:ann A) (a:A) : ann A :=
    | annF _ s1 s2 => annF a s1 s2
    end.
 
+Fixpoint setAnn A (a:A) (s:stmt) : ann A :=
+  match s with
+    | stmtLet x e s0 => ann1 a (setAnn a s0)
+    | stmtIf e s1 s2 => ann2 a (setAnn a s1) (setAnn a s2)
+    | stmtApp l Y => ann0 a
+    | stmtReturn e => ann0 a
+    | stmtExtern x f Y s0 => ann1 a (setAnn a s0)
+    | stmtFun s0 s1 => annF a (List.map (snd ∘ (setAnn a)) s0) (setAnn a s1)
+  end.
+
 Lemma getAnn_setTopAnn A (an:ann A) a
  : getAnn (setTopAnn an a) = a.
 Proof.

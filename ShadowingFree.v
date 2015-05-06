@@ -7,63 +7,57 @@ Require Import DecSolve RenamedApart LabelsDefined.
 Set Implicit Arguments.
 
 (* shadowing free *)
-Inductive shadowing_free : set var -> stmt -> Prop :=
-  | shadowing_freeExp x e s D
+Inductive shadowingFree : set var -> stmt -> Prop :=
+  | shadowingFreeExp x e s D
     : x ∉ D
       -> Exp.freeVars e ⊆ D
-      -> shadowing_free {x; D} s
-      -> shadowing_free D (stmtLet x e s)
-  | shadowing_freeIf D e s t
+      -> shadowingFree {x; D} s
+      -> shadowingFree D (stmtLet x e s)
+  | shadowingFreeIf D e s t
     : Exp.freeVars e ⊆ D
-    -> shadowing_free D s
-    -> shadowing_free D t
-    -> shadowing_free D (stmtIf e s t)
-  | shadowing_freeRet D e
+    -> shadowingFree D s
+    -> shadowingFree D t
+    -> shadowingFree D (stmtIf e s t)
+  | shadowingFreeRet D e
     : Exp.freeVars e ⊆ D
-    -> shadowing_free D (stmtReturn e)
-  | shadowing_freeGoto D f Y
+    -> shadowingFree D (stmtReturn e)
+  | shadowingFreeGoto D f Y
     : list_union (List.map Exp.freeVars Y) ⊆ D
-    -> shadowing_free D (stmtApp f Y)
-  | shadowing_freeExtern x f Y s D
+    -> shadowingFree D (stmtApp f Y)
+  | shadowingFreeExtern x f Y s D
     : x ∉ D
       -> list_union (List.map Exp.freeVars Y) ⊆ D
-      -> shadowing_free {x; D} s
-      -> shadowing_free D (stmtExtern x f Y s)
-  | shadowing_freeLet D s t Z
-    : of_list Z ∩ D [=] ∅
-    -> shadowing_free (of_list Z ∪ D) s
-    -> shadowing_free D t
-    -> shadowing_free D (stmtFun Z s t).
+      -> shadowingFree {x; D} s
+      -> shadowingFree D (stmtExtern x f Y s)
+  | shadowingFreeLet D F t
+    : (forall n Zs, get F n Zs -> shadowingFree (of_list (fst Zs) ∪ D) (snd Zs))
+      -> (forall n Zs, get F n Zs -> disj (of_list (fst Zs)) D)
+      -> shadowingFree D t
+      -> shadowingFree D (stmtFun F t).
 
-Lemma shadowing_free_ext s D D'
+Lemma shadowingFree_ext s D D'
   : D' [=] D
-  -> shadowing_free D s
-  -> shadowing_free D' s.
+  -> shadowingFree D s
+  -> shadowingFree D' s.
 Proof.
-  intros EQ SF. general induction SF; simpl; econstructor; try rewrite EQ; eauto.
-  - eapply IHSF; eauto.
-    rewrite EQ; reflexivity.
-  - eapply IHSF; eauto. rewrite EQ; reflexivity.
-  - eapply IHSF1; eauto. rewrite EQ. reflexivity.
+  intros EQ SF. general induction SF; simpl; econstructor; try rewrite EQ; eauto with cset.
 Qed.
 
-Instance shadowing_free_morphism
-: Proper (Equal ==> eq ==> iff) shadowing_free.
+Instance shadowingFree_morphism
+: Proper (Equal ==> eq ==> iff) shadowingFree.
 Proof.
   unfold Proper, respectful; intros; subst.
-  split; eapply shadowing_free_ext; eauto. symmetry; eauto.
+  split; eapply shadowingFree_ext; eauto. symmetry; eauto.
 Qed.
 
 Lemma renamedApart_shadowing_free s an
-  : renamedApart s an -> shadowing_free (fst (getAnn an)) s.
+  : renamedApart s an -> shadowingFree (fst (getAnn an)) s.
 Proof.
-  intros. general induction H; simpl; eauto using shadowing_free.
-  - econstructor; eauto. rewrite H2 in IHrenamedApart. eauto.
-  - rewrite H4 in IHrenamedApart1. rewrite H5 in IHrenamedApart2.
-    econstructor; eauto.
-  - econstructor; eauto. rewrite H2 in IHrenamedApart; eauto.
-  - rewrite H3 in IHrenamedApart1. rewrite H5 in IHrenamedApart2.
-    econstructor; eauto.
+  intros. general induction H; simpl; pe_rewrite; eauto using shadowingFree.
+  - econstructor; eauto.
+    + intros. edestruct get_length_eq; eauto. exploit H1; eauto.
+      edestruct H2; eauto; dcr. rewrite H9 in *. eauto.
+    + intros. edestruct get_length_eq; eauto. edestruct H2; eauto; dcr. eauto.
 Qed.
 
 

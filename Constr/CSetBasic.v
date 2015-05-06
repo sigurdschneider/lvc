@@ -532,6 +532,27 @@ Proof.
   cset_tac; intros; firstorder.
 Qed.
 
+Lemma add_struct_eq X `{OrderedType X} x s t
+: s [=] t
+  -> {x; s} [=] {x; t}.
+Proof.
+  intros. rewrite H0; eauto.
+Qed.
+
+Lemma union_struct_eq_1 X `{OrderedType X} s t u
+: s [=] t
+  ->  s ++ u [=] t ++ u.
+Proof.
+  cset_tac; firstorder.
+Qed.
+
+Lemma union_struct_eq_2 X `{OrderedType X} s t u
+: s [=] t
+  ->  u ++ s [=] u ++ t.
+Proof.
+  cset_tac; firstorder.
+Qed.
+
 (*
 *** Local Variables: ***
 *** coq-load-path: (("../" "Lvc")) ***

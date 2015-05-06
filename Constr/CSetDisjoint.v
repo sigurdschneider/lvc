@@ -115,6 +115,34 @@ Proof.
   - eapply H0; eauto.
 Qed.
 
+Lemma disj_struct_1 X `{OrderedType X} s t u
+: s [=] t
+  ->  disj s u -> disj t u.
+Proof.
+  intros. rewrite <- H0; eauto.
+Qed.
+
+Lemma disj_struct_1_r X `{OrderedType X} s t u
+: s [=] t
+  ->  disj t u -> disj s u.
+Proof.
+  intros. rewrite H0; eauto.
+Qed.
+
+Lemma disj_struct_2 X `{OrderedType X} s t u
+: s [=] t
+  ->  disj u s -> disj u t.
+Proof.
+  intros. rewrite <- H0; eauto.
+Qed.
+
+Lemma disj_struct_2_r X `{OrderedType X} s t u
+: s [=] t
+  ->  disj u t -> disj u s.
+Proof.
+  intros. rewrite H0; eauto.
+Qed.
+
 
 (*
 *** Local Variables: ***

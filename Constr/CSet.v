@@ -245,6 +245,9 @@ Hint Resolve prod_eq_intro : cset.
 Hint Resolve disj_not_in incl_singleton: cset.
 Hint Resolve incl_empty : cset.
 
+Hint Resolve add_struct_eq union_struct_eq_1 union_struct_eq_2 disj_struct_1
+     disj_struct_1_r disj_struct_2 disj_struct_2_r : cset.
+
 Lemma union_incl_split X `{OrderedType X} s t u
 : s ⊆ u -> t ⊆ u -> s ∪ t ⊆ u.
 Proof.
