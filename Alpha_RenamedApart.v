@@ -91,7 +91,7 @@ Proof.
          rewrite <- get_list_union_map in H8; eauto using get.
          rewrite H8. cset_tac; intuition.
          simpl in *; eapply IHlength_eq; eauto using get, list_union_cons.
-         rewrite list_union_cons; eauto.
+         rewrite incl_list_union_cons; eauto.
     + eapply agree_on_incl. eapply agree_on_update_inv; eauto.
       cset_tac; intuition.
   - edestruct IHalpha1; eauto; dcr; pe_rewrite.
