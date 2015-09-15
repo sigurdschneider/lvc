@@ -682,7 +682,7 @@ Proof.
     destruct H0; destruct H1; dcr. inv H3.
     simpl in *. inv H1; simpl in *.
     pfold. econstructor; try eapply star2_plus2.
-    econstructor; eauto using get_drop_lab0, drop_get_lab0. eauto.
+    econstructor; eauto.
     econstructor; eauto using get_drop_lab0, drop_get_lab0. eauto.
     eauto.
   - inv H0.

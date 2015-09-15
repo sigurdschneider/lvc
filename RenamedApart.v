@@ -191,17 +191,6 @@ Proof.
   exploit H1; eauto using get. rewrite H2, X0; eauto using get.
 Qed.
 
-Ltac inv_zip H :=
-  match type of H with
-    | get (zip ?f ?L ?L') ?n ?x =>
-      match goal with
-(*        | [H' : get ?L ?n ?y |- _ ] =>
-          let EQ := fresh "EQ" in pose proof (map_get f H' H) as EQ; invc EQ *)
-        | _ => let X := fresh "X" in let EQ := fresh "EQ" in
-              pose proof (get_zip f _ _ H) as X; destruct X as [? [? [? EQ]]]; invc EQ
-      end
-  end.
-
 Lemma renamedApart_occurVars s an
   : renamedApart s an -> definedVars s [=] snd (getAnn an).
 Proof.
