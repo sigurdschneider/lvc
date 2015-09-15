@@ -283,6 +283,67 @@ Proof.
   - repeat rewrite rev_length; eauto using length_eq_length.
 Qed.
 
+
+Lemma zip_eq_app_inv X Y Z (f:X->Y->Z) L L' AL DL
+: length AL = length DL
+  -> L ++ L' = zip f AL DL
+  -> exists AL1 AL2 DL1 DL2,
+      AL = AL1 ++ AL2 /\ DL = DL1 ++ DL2 /\ L = zip f AL1 DL1 /\ L' = zip f AL2 DL2 /\
+      length AL1 = length DL1 /\ length AL2 = length DL2.
+Proof.
+  intros. general induction L; simpl in *; subst.
+  - eexists nil, AL, nil, DL; simpl; intuition.
+  - destruct AL, DL; simpl in *; isabsurd. inv H0.
+    exploit IHL; try eapply H3. omega. dcr; subst.
+    eexists (x::x0), x1, (y::x2), x3; simpl; intuition.
+Qed.
+
+Lemma zip_eq_cons_inv X Y Z (f:X->Y->Z) a L L1 L2
+:  a :: L = zip f L1 L2
+   -> exists b c L1' L2', b::L1'=L1 /\ c::L2'=L2 /\ a = f b c /\ L = zip f L1' L2'.
+Proof.
+  intros. destruct L1, L2; isabsurd.
+  do 4 eexists; intuition; simpl in H; inv H; eauto.
+Qed.
+
+Lemma zip_pair_inv X Y (AL1 AL2:list X) (DL1 DL2:list Y)
+: length AL1 = length DL1
+  -> length AL2 = length DL2
+  -> zip pair AL1 DL1 = zip pair AL2 DL2
+  -> AL1 = AL2 /\ DL1 = DL2.
+Proof.
+  intros. length_equify. general induction H; inv H0; simpl in *; isabsurd; eauto.
+  - inv H1.
+    exploit IHlength_eq; try eapply H5; eauto; dcr; subst; eauto.
+Qed.
+
+
+Lemma zip_pair_app_inv X Y (AL AL1 AL2:list X) (DL DL1 DL2:list Y)
+: length AL1 = length DL1
+  -> length AL2 = length DL2
+  -> length AL = length DL
+  -> zip pair AL DL = zip pair (AL1 ++ AL2) (DL1 ++ DL2)
+  -> AL = AL1 ++ AL2 /\ DL = DL1 ++ DL2.
+Proof.
+  intros. length_equify. general induction H1.
+  - inv H; inv H0; simpl in *; isabsurd; eauto.
+  - inv H; simpl in *; isabsurd.
+    + inv H0; simpl in *; isabsurd.
+      inv H2. exploit (IHlength_eq nil XL0 nil YL0); eauto. dcr; subst. intuition.
+    + inv H2. exploit (IHlength_eq XL0 AL2 YL0 DL2); eauto. dcr; subst. intuition.
+Qed.
+
+Ltac inv_zip H :=
+  match type of H with
+    | get (zip ?f ?L ?L') ?n ?x =>
+      match goal with
+(*        | [H' : get ?L ?n ?y |- _ ] =>
+          let EQ := fresh "EQ" in pose proof (map_get f H' H) as EQ; invc EQ *)
+        | _ => let X := fresh "X" in let EQ := fresh "EQ" in
+              pose proof (get_zip f _ _ H) as X; destruct X as [? [? [? EQ]]]; invc EQ
+      end
+  end.
+
 (*
 *** Local Variables: ***
 *** coq-load-path: (("../" "Lvc")) ***
