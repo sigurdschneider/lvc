@@ -382,10 +382,10 @@ Qed.
 (** ** Live variables contain all variables significant to an IL/I program *)
 
 Inductive approxI
-  : list (set var * params) -> set var * params -> I.block -> I.block -> Prop :=
-  approxII DL Z s lv n
+  : list (set var * params) -> list I.block -> list I.block -> set var * params -> I.block -> I.block -> Prop :=
+  approxII DL Z s lv n L L'
   : live_sound Imperative DL s lv
-    ->  approxI DL (getAnn lv,Z) (I.blockI Z s n) (I.blockI Z s n).
+    ->  approxI DL L L' (getAnn lv,Z) (I.blockI Z s n) (I.blockI Z s n).
 
 Inductive liveSimI : I.state -> I.state -> Prop :=
   liveSimII (E E':onv val) L s Lv lv
@@ -394,13 +394,13 @@ Inductive liveSimI : I.state -> I.state -> Prop :=
   (AG:agree_on eq (getAnn lv) E E')
   : liveSimI (L, E, s) (L, E', s).
 
-Lemma approx_mutual_block alF F Lv i
+Lemma approx_mutual_block alF F Lv i L L'
 :
   length alF = length F
   ->  (forall (n : nat) Zs (als : ann (set var)),
         get F n Zs ->
         get alF n als -> live_sound Imperative Lv (snd Zs) als)
-  -> mutual_block (approxI Lv) i (live_globals F alF)
+  -> mutual_block (approxI Lv L L') i (live_globals F alF)
                  (mapi_impl I.mkBlock i F) (mapi_impl I.mkBlock i F).
 Proof.
   unfold I.mkBlocks, live_globals, mapi.
