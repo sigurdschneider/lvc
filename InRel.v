@@ -144,12 +144,13 @@ Proof.
 Qed.
 
 
-Inductive inRel {A} {B} `{BlockType B} {C} `{BlockType C} (R:list A -> A -> B -> C -> Prop)
+Inductive inRel {A} {B} `{BlockType B} {C} `{BlockType C}
+          (R:list A -> list B -> list C -> A -> B -> C -> Prop)
 : list A -> list B -> list C -> Prop :=
   | LPM_nil : inRel R nil nil nil
   | LPM_app AL AL' L1 L2 L1' L2' :
       inRel R AL L1 L2
-      -> mutual_block (R (AL'++AL)) 0 AL' L1' L2'
+      -> mutual_block (R (AL'++AL) (L1'++L1) (L2'++L2)) 0 AL' L1' L2'
       -> inRel R (AL'++AL) (L1'++L1) (L2'++L2).
 
 Lemma inRel_length {A} {B} `{BlockType B} {C} `{BlockType C} R
@@ -201,7 +202,7 @@ Lemma inRel_nth {A} {B} `{BlockType B} {C} `{BlockType C} R
       (AL:list A) (L:list B) (L':list C) n b
 : inRel R AL L L' -> get L n b ->
   exists a:A, exists c:C,
-    get AL n a /\ get L' n c /\ R (drop (n - block_n b) AL) a b c.
+    get AL n a /\ get L' n c /\ R (drop (n - block_n b) AL) (drop (n - block_n b) L) (drop (n - block_n b) L') a b c.
 Proof.
   intros. general induction H1; isabsurd.
   eapply get_app_cases in H3; destruct H3; dcr.
@@ -216,18 +217,33 @@ Proof.
     exploit (inRel_less H1 H4).
     orewrite (length L1' + (n - length L1') - block_n b
              = length L1' + (n - length L1' - block_n b)).
-    rewrite <- H8 at 1. rewrite drop_app. eauto.
+    rewrite <- H8 at 1. repeat rewrite drop_app. rewrite H10. rewrite drop_app.
+    rewrite <- H10. eauto.
 Qed.
 
 Lemma inRel_nthA {A} {B} `{BlockType B} {C} `{BlockType C} R
       (AL:list A) (L:list B) (L':list C) n a
 : inRel R AL L L' -> get AL n a ->
   exists b:B, exists c:C,
-    get L n b /\ get L' n c /\ R (drop (n - block_n b) AL) a b c.
+    get L n b /\ get L' n c /\ R (drop (n - block_n b) AL) (drop (n - block_n b) L) (drop (n - block_n b) L') a b c.
 Proof.
   intros.
   exploit (inRel_length H1); eauto; dcr.
   edestruct (get_length_eq _ H2 H3); eauto.
+  edestruct (inRel_nth H1 H5); eauto; dcr.
+  get_functional; subst.
+  do 2 eexists; split; eauto.
+Qed.
+
+Lemma inRel_nthC {A} {B} `{BlockType B} {C} `{BlockType C} R
+      (AL:list A) (L:list B) (L':list C) n c
+: inRel R AL L L' -> get L' n c ->
+  exists a:A, exists b:B,
+    get AL n a /\ get L n b /\ R (drop (n - block_n b) AL) (drop (n - block_n b) L) (drop (n - block_n b) L') a b c.
+Proof.
+  intros.
+  exploit (inRel_length H1); eauto; dcr.
+  edestruct (get_length_eq _ H2 (eq_sym H4)); eauto.
   edestruct (inRel_nth H1 H5); eauto; dcr.
   get_functional; subst.
   do 2 eexists; split; eauto.
@@ -288,6 +304,10 @@ match goal with
           let X' := fresh H in
          pose proof (get_drop_eq H' H'') as X'; inversion X'; try subst; try clear X'
     end *)
+  | [ H : inRel ?R ?A ?B ?C, H' : get ?C ?n ?c |- _ ] =>
+    let InR := fresh "InR" in let G := fresh "G" in
+    edestruct (inRel_nthC H H') as [? [? [? [G InR]]]]; (try eassumption); dcr; inversion InR; try subst;
+    repeat get_functional; (try subst)
 end.
 
 

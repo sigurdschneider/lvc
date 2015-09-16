@@ -92,6 +92,39 @@ Lemma sawtooth_I_mkBlocks L F
 Proof.
   econstructor; eauto using tooth_I_mkBlocks.
 Qed.
+
+Lemma tooth_F_mkBlocks E n F
+  : tooth n (mapi_impl (F.mkBlock E) n F).
+Proof.
+  general induction F; simpl; econstructor; eauto.
+Qed.
+
+Lemma sawtooth_F_mkBlocks E L F
+  : sawtooth L
+    -> sawtooth (F.mkBlocks E F ++ L).
+Proof.
+  econstructor; eauto using tooth_F_mkBlocks.
+Qed.
+
+Lemma mutual_block_tooth {A} {B} `{BlockType B} {C} `{BlockType C} R
+      (AL:list A) (L:list B) (L':list C) n
+  : mutual_block R n AL L L'
+    -> tooth n L /\ tooth n L'.
+Proof.
+  intros. general induction H1; eauto using @tooth.
+Qed.
+
+Lemma inRel_sawtooth {A} {B} `{BlockType B} {C} `{BlockType C} R
+      (AL:list A) (L:list B) (L':list C)
+  : inRel R AL L L'
+    -> sawtooth L /\ sawtooth L'.
+Proof.
+  intros. general induction H1; eauto using @sawtooth.
+  - eapply mutual_block_tooth in H2.
+    split; econstructor; eauto.
+Qed.
+
+
 (*
 Lemma nth_drop X (L:list X) n m x
 : nth n (drop m L) x = nth (n+m) L x.
