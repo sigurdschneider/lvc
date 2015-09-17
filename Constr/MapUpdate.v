@@ -133,10 +133,18 @@ Qed.
     general induction XL; simpl in * |- *.
     rewrite (@minus_empty _ _ lv) in H1; eauto.
     inv H2. eapply agree_on_update_same. eapply H0; eauto.
-    eapply IHXL; eauto. rewrite minus_union; eauto.
-    rewrite add_union_singleton. rewrite (empty_union_2 (s:=∅)); eauto.
-    rewrite <- add_union_singleton; eauto.
-    eapply SetInterface.empty_1.
+    eapply IHXL; eauto.
+    eapply agree_on_incl; eauto. cset_tac; intuition.
+  Qed.
+
+  Lemma update_with_list_agree_preserve lv (E E':X -> Y) XL YL
+    : agree_on R lv E E'
+    -> agree_on R lv (E [ XL <-- YL]) (E' [ XL <-- YL ]).
+  Proof.
+    intros.
+    general induction XL; destruct YL; simpl in * |- *; eauto.
+    eapply agree_on_update_same; eauto. reflexivity.
+    eapply IHXL; eauto. eapply agree_on_incl; eauto.
   Qed.
 
   Lemma update_with_list_agree_minus lv (E E':X -> Y) XL YL
