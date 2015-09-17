@@ -815,7 +815,6 @@ Proof.
   edestruct H1; eauto using get. erewrite H; eauto.
   eapply update_with_list_agree; eauto.
   eapply agree_on_incl; eauto. eapply incl_list_union. eapply map_get_1; eauto. reflexivity.
-  rewrite fresh_list_length; eauto.
 Qed.
 
 Lemma renameApart'_agree G s f g
