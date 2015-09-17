@@ -140,16 +140,18 @@ Qed.
   Qed.
 
   Lemma update_with_list_agree_minus lv (E E':X -> Y) XL YL
-    : length XL = length YL
-    -> agree_on R lv E' E
+    : agree_on R lv E' E
     -> agree_on R (lv\of_list XL) (E' [ XL <-- YL ]) E.
   Proof.
-    intros. eapply length_length_eq in H1.
-    general induction H1; simpl. rewrite minus_empty. eassumption.
-    rewrite add_union_singleton. rewrite union_comm. rewrite <- minus_union.
-    eapply agree_on_update_dead.
-    cset_tac. intro; decompose records; eauto.
-    eauto using agree_on_incl, incl_minus.
+    intros.
+    general induction XL; simpl.
+    - rewrite minus_empty. eassumption.
+    - destruct YL; simpl.
+      + eapply agree_on_incl; eauto.
+      + rewrite add_union_singleton. rewrite union_comm. rewrite <- minus_union.
+        eapply agree_on_update_dead.
+        cset_tac. intro; decompose records; eauto.
+        eauto using agree_on_incl, incl_minus.
   Qed.
 
   Hint Resolve minus_single_singleton minus_single_singleton' minus_single_singleton''.
