@@ -109,6 +109,7 @@ Hint Extern 20 (Subset (?a \ _) ?a') => (is_evar a ; fail 1)
                                         || (has_evar a'; fail 1)
                                         || eapply minus_incl.
 
+Hint Extern 20 (pe ?a ?a) => reflexivity.
 
 Hint Extern 10 (Subset ?a (_ ∪ ?a)) => eapply incl_right.
 
@@ -248,13 +249,13 @@ Hint Resolve incl_empty : cset.
 Hint Resolve add_struct_eq union_struct_eq_1 union_struct_eq_2 disj_struct_1
      disj_struct_1_r disj_struct_2 disj_struct_2_r : cset.
 
-Lemma union_incl_split X `{OrderedType X} s t u
-: s ⊆ u -> t ⊆ u -> s ∪ t ⊆ u.
-Proof.
-  cset_tac; intuition.
-Qed.
-
 Hint Resolve union_incl_split : cset.
+
+
+Hint Resolve not_in_minus : cset.
+Hint Resolve not_incl_minus : cset.
+Hint Resolve disj_1_incl disj_2_incl : cset.
+
 
 
 (*

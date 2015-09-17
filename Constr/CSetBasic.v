@@ -553,6 +553,13 @@ Proof.
   cset_tac; firstorder.
 Qed.
 
+Lemma not_in_minus X `{OrderedType X} (s t: set X) x
+: x ∉ s
+  -> x ∉ s \ t.
+Proof.
+  cset_tac; intuition.
+Qed.
+
 (*
 *** Local Variables: ***
 *** coq-load-path: (("../" "Lvc")) ***

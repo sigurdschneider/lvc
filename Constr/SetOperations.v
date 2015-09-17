@@ -260,11 +260,12 @@ Proof.
 Qed.
 
 Lemma list_union_disjunct {X} `{OrderedType X} Y D
-:  (forall (n : nat) (e : set X), get Y n e -> e ∩ D[=]{})
+:  (forall (n : nat) (D' : set X), get Y n D' -> disj D' D)
    <-> disj (list_union Y) D.
 Proof.
   split; intros.
-  - eapply set_incl; try now (cset_tac; intuition).
+  - eapply disj_intersection.
+    eapply set_incl; try now (cset_tac; intuition).
     hnf; intros.
     general induction Y; simpl in * |- *; intuition.
     exploit H0; eauto using get.
@@ -272,11 +273,8 @@ Proof.
     rewrite list_union_start_swap.
     rewrite list_union_start_swap in H1.
     revert H1 X0; clear_all; cset_tac; intuition; eauto.
-  - unfold disj in H0.
-    rewrite meet_comm in H0.
-    eapply incl_meet_empty in H0.
-    rewrite meet_comm. eapply H0.
-    eapply incl_list_union; eauto.
+  - hnf; intros. eapply H0; eauto.
+    eapply incl_list_union. eauto. reflexivity. eauto.
 Qed.
 
 Lemma list_union_indexwise_ext X `{OrderedType X} Y (f:Y->set X) Z (g:Z -> set X) L L'

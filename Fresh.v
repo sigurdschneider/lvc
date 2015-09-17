@@ -255,17 +255,18 @@ Section FreshList.
   Definition fresh_set (G:set var) (n:nat) : set var :=
     of_list (fresh_list G n).
 
-  Lemma fresh_list_spec : forall (G:set var) n, (of_list (fresh_list G n)) ∩ G [=] ∅.
+  Lemma fresh_list_spec : forall (G:set var) n, disj (of_list (fresh_list G n)) G.
   Proof.
-    intros. general induction n; simpl; split; intros; try now (cset_tac; intuition).
-    - cset_tac; intuition.
-      + invc H; eauto.
-      + specialize (H0 (G ∪ {{fresh G}})).
+    intros. general induction n; simpl; intros; eauto.
+    - hnf; intros. cset_tac; intuition.
+      + eapply fresh_spec. rewrite H1; eauto.
+      + specialize (H (G ∪ {{fresh G}})).
+        eapply H; eauto.
         intuition (cset_tac; eauto).
   Qed.
 
   Lemma fresh_set_spec
-  : forall (G:set var) n, (fresh_set G n) ∩ G [=] ∅.
+  : forall (G:set var) n, disj (fresh_set G n) G.
   Proof.
     unfold fresh_set. eapply fresh_list_spec.
   Qed.
@@ -275,9 +276,8 @@ Section FreshList.
   Proof.
     general induction n; simpl; eauto.
     split; eauto. intro.
-    eapply (not_in_empty (fresh G)).
     eapply fresh_list_spec.
-    cset_tac. eapply InA_in; eauto.
+    eapply InA_in. eapply H.
     cset_tac; eauto.
   Qed.
 End FreshList.

@@ -265,8 +265,8 @@ Proof.
   eapply add_iff in i; destruct i; isabsurd.
   eapply IHlength_eq; try eassumption.
   hnf; intros. exfalso; cset_tac; eauto.
-  hnf; intros. split; intros. cset_tac. eapply lookup_set_spec in H14; dcr.
-  cset_tac; intuition. intuition. cset_tac; intuition.
+  hnf; intros. eapply lookup_set_spec in H13; dcr.
+  cset_tac; intuition. intuition.
 
   erewrite update_with_list_no_update; eauto.
   erewrite update_with_list_no_update; eauto.

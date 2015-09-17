@@ -35,7 +35,7 @@ Hint Unfold defVars.
 Definition funConstr D Dt (Zs:params * stmt) a :=
   fst (getAnn a) [=] of_list (fst Zs) ∪ D
   /\ unique (fst Zs)
-  /\ of_list (fst Zs) ∩ D [=] ∅
+  /\ disj (of_list (fst Zs)) D
   /\ of_list (fst Zs) ∪ snd (getAnn a) ∩ Dt [=] ∅.
 
 Inductive renamedApart : stmt -> ann (set var * set var) -> Prop :=
@@ -48,7 +48,7 @@ Inductive renamedApart : stmt -> ann (set var * set var) -> Prop :=
       -> renamedApart (stmtLet x e s) (ann1 (D, D'') an)
   | renamedApartIf  D D' Ds Dt e s t ans ant
     : Exp.freeVars e ⊆ D
-      -> Ds ∩ Dt [=] ∅
+      -> disj Ds Dt
       -> Ds ∪ Dt [=] D'
       -> renamedApart s ans
       -> renamedApart t ant
@@ -239,28 +239,6 @@ Proof.
     + intros. inv_map H4. inv_map H5. eauto.
 Qed.
 
-Lemma not_in_minus X `{OrderedType X} (s t: set X) x
-: x ∉ s
-  -> x ∉ s \ t.
-Proof.
-  cset_tac; intuition.
-Qed.
-
-Hint Resolve not_in_minus : cset.
-
-Lemma not_incl_minus X `{OrderedType X} (s t u: set X)
-: s ⊆ t
-  -> disj s u
-  -> s ⊆ t \ u.
-Proof.
-  cset_tac; intuition.
-Qed.
-
-Hint Resolve not_incl_minus : cset.
-Hint Resolve disj_1_incl disj_2_incl : cset.
-
-Hint Extern 20 (pe ?a ?a) => reflexivity.
-
 Lemma renamedApart_minus D an an' s
   : disj (occurVars s) D
     -> renamedApart s an
@@ -271,8 +249,7 @@ Proof.
   - econstructor; eauto with cset.
     + rewrite getAnn_mapAnn. pe_rewrite.
       econstructor; eauto.
-      revert H H4; unfold disj; clear_all; cset_tac; intuition.
-      invc H2; eapply H1; eauto.
+      revert H H4; unfold disj; clear_all; cset_tac; intuition eauto.
   - econstructor; [|eapply H0| | | | |]; eauto with cset.
     + rewrite getAnn_mapAnn. pe_rewrite; eauto.
     + rewrite getAnn_mapAnn. pe_rewrite; eauto.
@@ -281,8 +258,7 @@ Proof.
   - econstructor; eauto with cset.
     + rewrite getAnn_mapAnn. pe_rewrite.
       econstructor; eauto.
-      revert H H4; unfold disj; clear_all; cset_tac; intuition.
-      invc H2; eapply H1; eauto.
+      revert H H4; unfold disj; clear_all; cset_tac; intuition; eauto.
   - econstructor.
     + rewrite map_length; eauto.
     + intros. inv_map H9. eapply H1; eauto.
@@ -313,7 +289,7 @@ Proof.
       rewrite getAnn_mapAnn. destruct (getAnn x2); simpl. reflexivity.
 Qed.
 
-(** ** The two annotated sets are disjoint. *)
+(** ** The two annotating sets are disjoint. *)
 
 Lemma renamedApart_disj s G
 : renamedApart s G

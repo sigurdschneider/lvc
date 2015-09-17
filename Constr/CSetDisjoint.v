@@ -5,7 +5,7 @@ Require Import EqDec CSetNotation CSetTac CSetComputable.
 Set Implicit Arguments.
 
 Definition disj {X} `{OrderedType X} (s t: set X)
-  := s ∩ t [=] ∅.
+  := forall x, x ∈ s -> x ∈ t -> False.
 
 Instance disj_sym {X} `{OrderedType X} : Symmetric disj.
 Proof.
@@ -24,9 +24,8 @@ Qed.
 Instance disj_subset_subset_flip_impl {X} `{OrderedType X}
 : Proper (Subset ==> Subset ==> flip impl) disj.
 Proof.
-  unfold Proper, respectful, disj; intros.
-  split; intros;
-  cset_tac; intuition; firstorder.
+  unfold Proper, respectful, disj, flip, impl; intros.
+  firstorder.
 Qed.
 
 Lemma disj_app {X} `{OrderedType X} (s t u: set X)
@@ -141,6 +140,20 @@ Lemma disj_struct_2_r X `{OrderedType X} s t u
   ->  disj u t -> disj u s.
 Proof.
   intros. rewrite H0; eauto.
+Qed.
+
+Lemma disj_intersection X `{OrderedType X} s t
+  : disj s t <-> s ∩ t [=] ∅.
+Proof.
+  intros. split; cset_tac; firstorder.
+Qed.
+
+Lemma not_incl_minus X `{OrderedType X} (s t u: set X)
+: s ⊆ t
+  -> disj s u
+  -> s ⊆ t \ u.
+Proof.
+  cset_tac; intuition.
 Qed.
 
 
