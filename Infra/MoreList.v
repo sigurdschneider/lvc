@@ -163,7 +163,17 @@ Proof.
   f_equal; eauto.
 Qed.
 
-Lemma map_ext_get_eq X Y L (f:X->Y) (g:X->Y)
+Lemma map_ext_get_eq X Y L L' (f:X->Y)
+  : (forall x y n, get L n x -> get L' n y -> f x = y)
+    -> length L = length L'
+    -> List.map f L = L'.
+Proof.
+  intros GET LEN. length_equify.
+  general induction LEN; unfold mapi; simpl; eauto.
+  f_equal; eauto using get.
+Qed.
+
+Lemma map_ext_get_eq2 X Y L (f:X->Y) (g:X->Y)
  : (forall x n, get L n x -> g x = f x)
    -> List.map g L = List.map f L.
 Proof.

@@ -22,17 +22,17 @@ Global Instance rename_morphism
 Proof.
   unfold Proper, respectful; intros; subst.
   sind y0; destruct y0; simpl; f_equal; eauto; try (now rewrite H; eauto);
-  eauto using rename_exp_ext, map_ext_get_eq; eauto.
-  eapply map_ext_get_eq; intros. f_equal; eauto. rewrite H; eauto.
+  eauto using rename_exp_ext, map_ext_get_eq2; eauto.
+  eapply map_ext_get_eq2; intros. f_equal; eauto. rewrite H; eauto.
 Qed.
 
 Lemma rename_agree ϱ ϱ' s
 : agree_on eq (occurVars s) ϱ ϱ'
   -> rename ϱ s = rename ϱ' s.
-Proof with eauto 50 using rename_exp_agree, map_ext_get_eq with cset.
+Proof with eauto 50 using rename_exp_agree, map_ext_get_eq2 with cset.
   intros.
   sind s; destruct s; simpl in *; f_equal...
-  eapply map_ext_get_eq; intros. f_equal; eauto.
+  eapply map_ext_get_eq2; intros. f_equal; eauto.
   - erewrite lookup_list_agree; eauto.
     eapply agree_on_incl; eauto.
     rewrite <- get_list_union_map; eauto with cset. eauto with cset.
