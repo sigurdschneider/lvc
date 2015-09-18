@@ -50,8 +50,10 @@ Qed.
 Ltac pe_rewrite :=
   repeat
     (match goal with
-       | [ H : pe ?an _, H' : context [?an] |- _ ] => rewrite H in H'; simpl in H'
-       | [ H : pe ?an _ |-  context [?an] ] => rewrite H; simpl
+     | [ H : pe ?an _, H' : context [?an] |- _ ] =>
+       setoid_rewrite H in H'; simpl in H'
+     | [ H : pe ?an _ |-  context [?an] ] =>
+       setoid_rewrite H; simpl
      end).
 
 
