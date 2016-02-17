@@ -1,4 +1,4 @@
-Require Import List.
+Require Import List Omega.
 Require Import Util EqDec.
 Require Import OrderedTypeEx.
 

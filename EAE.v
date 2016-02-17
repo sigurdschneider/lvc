@@ -37,10 +37,10 @@ Section MapUpdate.
     dcr. exfalso. eapply H7. econstructor. eapply H4.
     exploit (IHlength_eq H E {x1} x0 y0). simpl in *; intuition.
     hnf; intros. eapply H8. econstructor 2; eauto.
-    rewrite X0. lud. cset_tac; intuition.
+    rewrite H8. lud. cset_tac; intuition.
     exploit (IHlength_eq H E {x1} x0 y0). simpl in *; intuition.
     hnf; intros. eapply H7. econstructor 2; eauto.
-    rewrite X0. lud. cset_tac; intuition.
+    rewrite H7. lud. cset_tac; intuition.
   Qed.
 
   Lemma update_with_list_agree' (XL:list X) (VL:list Y) E D
@@ -75,12 +75,10 @@ Proof.
     symmetry. eapply agree_on_update_dead.
     cset_tac. intro. eapply (H2 x).
     split; cset_tac; intuition.
-    unfold list_union. simpl.
     eapply list_union_start_swap. cset_tac; intuition.
     reflexivity. eauto. intuition.
     cset_tac; intuition.
     eapply (H2 a); split; cset_tac; intuition.
-    unfold list_union. simpl.
     eapply list_union_start_swap. cset_tac; intuition.
 Qed.
 
@@ -99,10 +97,8 @@ Proof.
       eapply omap_exp_eval_agree; eauto.
       symmetry. eapply agree_on_update_dead; try reflexivity.
       intro. cset_tac. eapply (H2 x). cset_tac; intuition.
-      unfold list_union; simpl.
       eapply list_union_start_swap. cset_tac; intuition.
       cset_tac; intuition. eapply (H2 a); cset_tac; intuition.
-      unfold list_union; simpl.
       eapply list_union_start_swap. cset_tac; intuition.
       eexists. split; eauto.
       econstructor 2 with (y:=EvtTau).

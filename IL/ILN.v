@@ -439,7 +439,7 @@ Proof.
       * intros.
         decide (f0 ∈ of_list (List.map (fst ∘ fst) F)).
         eapply update_with_list_lookup_in_list in i1. dcr.
-        erewrite H7. inv_map H4. eauto. eauto with len.
+        erewrite H7. simpl in *. inv_map H4. eauto. eauto with len.
         erewrite (update_with_list_no_update _ _ _ n); eauto.
         destruct C6. rewrite H4 in H3.
         rewrite pos_app_not_in in H3.
@@ -485,7 +485,7 @@ Proof.
     eapply get_app_cases in H. destruct H.
     * {
         unfold I.mkBlocks in H. inv_mapi H.
-        exploit @get_length; eauto. unfold mapi in X. rewrite mapi_length in X.
+        exploit @get_length; eauto. unfold mapi in H2. rewrite mapi_length in H2.
         eapply get_in_range_app in H0.
         orewrite (f' - f' = 0); simpl.
         split.
@@ -495,23 +495,23 @@ Proof.
           rewrite map_length. eapply pos_add; eauto.
           eapply get_app_right.
           unfold I.mkBlocks, mapi. rewrite mapi_length. reflexivity. eauto.
-        - split. intros. erewrite <- map_length in H2.
-          rewrite drop_length_eq in H2.
+        - split. intros. erewrite <- map_length in H3.
+          rewrite drop_length_eq in H3.
           eapply EX; eauto.
           split; eauto. destruct x1 as [[? ?] ?].
           inv_map H0; unfold comp in *; simpl in *.
           do 2 eexists; eauto.
           split; eauto.
           intros. eapply smap_spec in EQ0; eauto; dcr. destruct EQ0; dcr.
-          monadS_inv H5. simpl in *. eexists. repeat split; eauto.
+          monadS_inv H6. simpl in *. eexists. repeat split; eauto.
           unfold IL.I.mkBlocks. eapply get_app.
           intros.
-          eapply (mapi_get_1 0 (IL.I.mkBlock)) in H6. eauto.
+          eapply (mapi_get_1 0 (IL.I.mkBlock)) in H7. eauto.
           assert (get (List.map (fst ∘ fst) F0) fn fb).
-          eapply (map_get_1 (fst ∘ fst) H2).
+          eapply (map_get_1 (fst ∘ fst) H3).
           rewrite pos_app_in.
           eapply get_first_pos; eauto.
-          intros. inv_map H7. eapply H3; eauto.
+          intros. inv_map H8. eapply H4; eauto.
           eapply get_in_of_list; eauto.
           split; eauto.
         - rewrite map_length; eauto.
@@ -539,7 +539,7 @@ Proof.
       eapply smap_length in EQ0.
       unfold I.mkBlocks. unfold IL.I.mkBlocks. unfold mapi.
       repeat rewrite mapi_length. congruence.
-      setoid_rewrite H8 at 2. rewrite drop_length_eq.
+      setoid_rewrite H4 at 2. rewrite drop_length_eq.
       setoid_rewrite <- H at 3. rewrite <- drop_drop. rewrite drop_length_eq.
       setoid_rewrite <- H at 4. rewrite <- drop_drop. rewrite drop_length_eq. eauto.
       split; eauto.
@@ -559,7 +559,7 @@ Proof.
         intros.
         decide (f ∈ of_list (List.map (fst ∘ fst) F)).
         - eapply update_with_list_lookup_in_list in i0. dcr.
-          rewrite H2. inv_map H0. eauto.
+          rewrite H2. simpl in *. inv_map H0. eauto.
           eauto with len.
         -  erewrite (update_with_list_no_update _ _ _ n); eauto.
            rewrite pos_app_not_in in H; eauto.

@@ -48,7 +48,7 @@ Qed.
 
 Lemma omap_self_update E Z l
 :  omap (exp_eval E) (List.map Var Z) = ⎣l ⎦
-   -> E [Z <-- List.map Some l] ≡ E.
+   -> E [Z <-- List.map Some l] [-] E.
 Proof.
   general induction Z; simpl in * |- *.
   - reflexivity.

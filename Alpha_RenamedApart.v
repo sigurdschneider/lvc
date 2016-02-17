@@ -75,8 +75,10 @@ Lemma alpha_rho_agrees_snd s u ang ϱ ϱ' D
 Proof.
   intros RA.
   general induction RA; destruct u; simpl in *; eauto.
-  - eapply IHRA. eapply agree_on_update_same; eauto using agree_on_incl.
-  - eapply IHRA. eapply agree_on_update_same; eauto using agree_on_incl.
+  - eapply IHRA. eapply agree_on_update_same; eauto.
+    eapply agree_on_incl; eauto.
+  - eapply IHRA. eapply agree_on_update_same; eauto.
+    eapply agree_on_incl; eauto.
   - eapply IHRA. eapply alpha_rho_agrees_snd_F; eauto.
 Qed.
 
@@ -193,7 +195,9 @@ Proof.
   - eapply IHRA; eauto. eapply alpha_rho_agrees_snd2_F; eauto using agree_on_incl.
     + eapply agree_on_incl; eauto.
       unfold defVars.
-      rewrite renamedApart_occurVars; eauto. cset_tac; intuition.
+      rewrite renamedApart_occurVars; eauto.
+      pe_rewrite.
+      cset_tac; intuition.
 
 Qed.
 

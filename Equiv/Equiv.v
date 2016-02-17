@@ -50,7 +50,6 @@ Definition fexteq' (SIM:ProgramEquivalence F.state F.state)
     -> progeq r (L, E[Z <-- List.map Some VL], s)
             (L', E'[Z' <-- List.map Some VL'], s').
 
-
 (*
 *** Local Variables: ***
 *** coq-load-path: (("../" "Lvc")) ***

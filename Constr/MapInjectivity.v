@@ -350,8 +350,8 @@ Lemma injective_on_agree X `{OrderedType X} Y `{OrderedType Y} D (ϱ ϱ': X -> Y
   -> injective_on D ϱ'.
 Proof.
   intros. hnf; intros. eapply H1; eauto.
-  exploit H2; eauto. rewrite X0.
-  exploit H2; try eapply H3. rewrite X1. eauto.
+  exploit H2; eauto. rewrite H6.
+  exploit H2; try eapply H3. rewrite H7. eauto.
 Qed.
 
 Lemma injective_on_fresh_list X `{OrderedType X} Y `{OrderedType Y} XL YL (ϱ: X -> Y) `{Proper _ (_eq ==> _eq) ϱ} lv

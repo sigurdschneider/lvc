@@ -71,7 +71,7 @@ Proof.
     intros. general induction H0; simpl; isabsurd.
     get_cases H2.
     - exploit tooth_index; eauto.
-      rewrite X. orewrite (f - (f + 0) = 0).
+      rewrite H3. orewrite (f - (f + 0) = 0).
       simpl; econstructor; eauto.
     - exploit (sawtooth_smaller H0 H2).
       specialize (IHsawtooth _ _ H2).

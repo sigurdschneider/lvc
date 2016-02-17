@@ -1,6 +1,6 @@
 Require Export Setoid Coq.Classes.Morphisms.
-Require Import EqDec Computable Util AutoIndTac.
 Require Export CSet Containers.SetDecide.
+Require Import EqDec Computable Util AutoIndTac.
 Require Export MapBasics.
 
 Set Implicit Arguments.

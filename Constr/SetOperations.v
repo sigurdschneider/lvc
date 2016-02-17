@@ -270,7 +270,7 @@ Proof.
     exploit IHY; intros; eauto using get.
     rewrite list_union_start_swap.
     rewrite list_union_start_swap in H1.
-    revert H1 X0; clear_all; cset_tac; intuition; eauto.
+    revert H1 H2; clear_all; cset_tac; intuition; eauto.
   - hnf; intros. eapply H0; eauto.
     eapply incl_list_union. eauto. reflexivity. eauto.
 Qed.

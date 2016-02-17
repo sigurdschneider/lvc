@@ -122,7 +122,7 @@ Proof.
     + exfalso. inv H3; dcr.
       exploit step_internally_deterministic. eapply H. eapply H7. dcr; congruence.
     + exploit star2_reach_silent_step; eauto. eapply H1.
-      destruct X; subst. exfalso. eapply H5; firstorder.
+      destruct H3; subst. exfalso. eapply H5; firstorder.
       econstructor 3; eauto.
     + econstructor 4.
 Qed.
@@ -272,9 +272,9 @@ Lemma prefix_preserved' S `{StateType S} S' `{StateType S'} (σ1 σ1' σ1'':S) (
 Proof.
   intros.
   - exploit (prefix_star_activated _ H2 H3 H4 H8).
-    eapply H1 in X.
-    eapply prefix_extevent in X. dcr.
-    exploit both_activated. eapply H10. eapply H5. eauto. eauto. subst.
+    eapply H1 in H9.
+    eapply prefix_extevent in H9. dcr.
+    exploit both_activated. eapply H11. eapply H5. eauto. eauto. subst.
     assert (x0 = σ2''). eapply step_externally_determined; eauto. subst; eauto.
 Qed.
 
@@ -340,13 +340,13 @@ Proof.
   intros. inv H0.
   - exploit activated_star_reach. eapply H3. eauto.
     eapply (S_star2 EvtTau); eauto. econstructor.
-    econstructor. eapply X. eauto. eauto. eauto.
+    econstructor. eapply H6. eauto. eauto. eauto.
   - econstructor. eapply diverges_reduction_closed; eauto.
     eapply (S_star2 EvtTau); eauto. econstructor.
   - exploit star2_reach_normal. eauto.
     eapply (S_star2 EvtTau); eauto. econstructor.
     eapply H. eauto.
-    econstructor; try eapply X. eauto. eauto.
+    econstructor; try eapply X. eauto. eauto. eauto.
 Qed.
 
 Lemma coproduces_reduction_closed S `{StateType S} (σ σ':S) L
@@ -369,11 +369,11 @@ Proof.
     eapply bisim'_reduction_closed. eapply (bisim_bisim' H1).
     eauto. econstructor.
     exploit (bisim'_activated H4 H7). dcr.
-    edestruct H10. eauto. dcr.
-    econstructor; try eapply H8. eauto. eapply H11.
+    edestruct H11. eauto. dcr.
+    econstructor; try eapply H8. eauto. eauto.
     eapply COH; eauto.
-    destruct H11.
-    eapply bisim'_bisim. eapply H13.
+    destruct H8.
+    eapply bisim'_bisim. eapply H12.
   - econstructor. eapply (bisim_sound_diverges H1); eauto.
   - exploit (bisim'_terminate H4 H5 (bisim_bisim' H1)).
     dcr.
@@ -448,25 +448,25 @@ Proof.
   - dcr. inv H4; dcr.
     assert (prefix x1 nil) by econstructor 4.
     exploit (prefix_star_activated _ H3 H4 H5 H2).
-    eapply H1 in X.
-    eapply prefix_extevent in X. dcr.
+    eapply H1 in H6.
+    eapply prefix_extevent in H6. dcr.
     econstructor 2; eauto.
     + intros.
       assert (B:prefix x (EEvtExtern evt::nil)) by
           (econstructor 2; eauto; econstructor 4).
       pose proof H1.
-      eapply produces_silent_closed in H11; eauto.
-      eapply H11 in B.
+      eapply produces_silent_closed in H9; eauto.
+      eapply H9 in B.
       inv B.
-      * exfalso. exploit (step_internally_deterministic _ _ _ _ H12 H9 ); eauto. dcr; congruence.
+      * exfalso. exploit (step_internally_deterministic _ _ _ _ H12 H10 ); eauto. dcr; congruence.
       * eexists; split. eauto. eapply f.
         eapply prefix_preserved; eauto.
     + intros.
       assert (B:prefix x2 (EEvtExtern evt::nil)) by
           (econstructor 2; eauto; econstructor 4).
       pose proof H1.
-      eapply produces_silent_closed in H11; eauto.
-      eapply H11 in B.
+      eapply produces_silent_closed in H9; eauto.
+      eapply H9 in B.
       inv B.
       * exfalso. exploit (step_internally_deterministic _ _ _ _ H12 H5 ); eauto. dcr; congruence.
       * eexists; split. eauto. eapply f.

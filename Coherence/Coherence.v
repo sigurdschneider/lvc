@@ -165,8 +165,8 @@ Proof.
     eapply srd_monotone.
     eapply IHrenamedApart; eauto.
     rewrite H2. simpl in *. rewrite <- incl_add'; eauto.
-    erewrite bounded_restrict_eq; simpl. eauto.
-    simpl. eapply bounded_incl. cset_tac; intuition.
+    erewrite bounded_restrict_eq; simpl; eauto.
+    eapply bounded_incl; eauto. cset_tac; intuition.
   - econstructor; eauto.
     + intros. inv_map H10.
       exploit H1; eauto. instantiate (1:=globals F (List.map (mapAnn fst) ans) ++ DL).
@@ -181,28 +181,28 @@ Proof.
       revert H28; clear_all; cset_tac; intuition.
       rewrite map_length; eauto.
       rewrite H15. rewrite <- incl_right; eauto.
-      eapply srd_monotone. eapply X.
+      eapply srd_monotone. eapply H15.
       rewrite getAnn_mapAnn; simpl.
       repeat rewrite restrict_app. rewrite List.map_app.
       eapply PIR2_app.
       erewrite bounded_restrict_eq. reflexivity.
       reflexivity.
       eapply get_bounded.
-      intros. eapply inv_oglobals in H15.
-      destruct H15; dcr; subst.
-      inv_map H16. edestruct H2; eauto; dcr.
-      rewrite getAnn_mapAnn. rewrite H19.
+      intros. eapply inv_oglobals in H16.
+      destruct H16; dcr; subst.
+      inv_map H17. edestruct H2; eauto; dcr.
+      rewrite getAnn_mapAnn. rewrite H20.
       decide (n=n0); subst. repeat get_functional; subst.
-      rewrite H19.
-      revert H20; clear_all; cset_tac; intuition.
+      rewrite H20.
+      revert H21; clear_all; cset_tac; intuition.
       exploit H3; eauto. eapply zip_get; eauto. eapply zip_get; eauto.
-      unfold defVars in X0. simpl in *.
-      edestruct H2; try eapply H12; eauto. dcr. rewrite H20.
-      revert H23 H27; clear_all; cset_tac; intuition; eauto.
+      unfold defVars in H21. simpl in *.
+      edestruct H2; try eapply H12; eauto. dcr. rewrite H23.
+      revert H24 H29; clear_all; cset_tac; intuition; eauto.
       rewrite List.map_length; eauto.
       erewrite bounded_restrict_eq; simpl; eauto. simpl.
       edestruct H2; eauto; dcr.
-      rewrite H15. revert H19; clear_all; cset_tac; intuition; eauto.
+      rewrite H16. revert H20; clear_all; cset_tac; intuition; eauto.
     + eapply srd_monotone.
       eapply (IHrenamedApart (globals F (List.map (mapAnn fst) ans) ++ DL)); eauto.
       * unfold globals. rewrite app_length, zip_length2; eauto.
@@ -364,28 +364,29 @@ Qed.
 (** ** Context coherence for IL/F contexts: [approxF] *)
 
 Inductive approx
-  : list (option (set var) * (set var * list var)) -> option (set var) * (set var * list var) -> F.block -> I.block -> Prop :=
-  approxI AL DL o Z E s n lvZ
+  : list (option (set var) * (set var * list var)) -> list F.block -> list I.block ->
+    option (set var) * (set var * list var) -> F.block -> I.block -> Prop :=
+  approxI AL DL o Z E s n lvZ L1 L2
   :  (forall G, o = Some G -> of_list Z ∩ G [=] ∅ /\
            exists a, getAnn a [=] (G ∪ of_list Z)
                 /\ srd (restrict AL G) s a
                 /\ live_sound Imperative DL s a)
      -> snd lvZ = Z
      -> length AL = length DL
-     -> approx (zip pair AL DL) (o, lvZ) (F.blockI E Z s n) (I.blockI Z s n).
+     -> approx (zip pair AL DL) L1 L2 (o, lvZ) (F.blockI E Z s n) (I.blockI Z s n).
 
 (** Stability under restriction *)
 
 
 Unset Printing Records.
 
-Lemma approx_restrict_block AL1 AL2 DL1 DL2 L1 L2 G n AL1' DL1'
+Lemma approx_restrict_block AL1 AL2 DL1 DL2 L1 L2 G n AL1' DL1' L1X L2X
 : length AL1 = length DL1
   -> length AL2 = length DL2
-  -> mutual_block (approx (zip pair AL1 DL1 ++ zip pair AL2 DL2)) n
+  -> mutual_block (approx (zip pair AL1 DL1 ++ zip pair AL2 DL2) L1X L2X) n
                  (zip pair AL1' DL1') L1 L2
   -> mutual_block
-      (approx (zip pair (restrict AL1 G) DL1 ++ zip pair (restrict AL2 G) DL2))
+      (approx (zip pair (restrict AL1 G) DL1 ++ zip pair (restrict AL2 G) DL2) L1X L2X)
       n (zip pair (restrict AL1' G) DL1') L1 L2.
 Proof.
   intros. general induction H1.
@@ -395,6 +396,7 @@ Proof.
     inv H2. rewrite <- zip_app; try rewrite restrict_length; eauto.
     rewrite <- zip_app in H0; eauto.
     eapply zip_pair_app_inv in H0; dcr; subst; eauto.
+    simpl.
     econstructor; eauto.
     intros. eapply restr_iff in H0; dcr; subst. exploit H7; eauto; dcr.
     intuition.
@@ -534,30 +536,30 @@ Proof.
       inRel_invs.
       one_step. simpl.
       eapply srdSim_sim.
-      exploit H9; eauto; dcr. simpl in *.
+      exploit H11; eauto; dcr. simpl in *.
       econstructor; simpl; eauto using approx_restrict, PIR2_length.
       assert (restrict AL0 G' = restrict (drop (labN f - n) AL) G').
-      rewrite drop_zip in H2. eapply zip_pair_inv in H2; dcr; subst. reflexivity.
+      rewrite drop_zip in H8. eapply zip_pair_inv in H8; dcr; subst. reflexivity.
       eauto. repeat rewrite length_drop_minus. eapply PIR2_length in ER. omega.
       eauto using PIR2_length.
-      rewrite H11.
+      rewrite H9.
       eapply rd_agree_update_list; eauto.
       exploit omap_length; eauto. rewrite map_length. congruence.
-      eapply (RA _ _ _ H1 H).
+      eapply (RA _ _ _ H4 H).
       eapply approx_restrict; eauto.
-      rewrite H2. eapply (inRel_drop A H1).
-      eapply update_with_list_agree; eauto. rewrite H8.
+      rewrite H8. eapply (inRel_drop A H4).
+      eapply update_with_list_agree; eauto. rewrite H12.
       rewrite union_comm. rewrite union_minus_remove.
-      pose proof (RA _ _ G' H1 H); dcr. simpl in *.
+      pose proof (RA _ _ G' H4 H); dcr. simpl in *.
       eapply agree_on_sym; eauto. eapply agree_on_incl; eauto using incl_minus.
       etransitivity; eauto. symmetry. hnf in RA.
       eapply agree_on_incl; eauto.
       edestruct PIR2_nth_2; eauto; dcr. get_functional; eauto; subst.
-      inv H16. rewrite H14. simpl. eauto.
+      inv H18. rewrite H14. simpl. eauto.
       exploit omap_length; eauto. rewrite map_length. congruence.
       eapply restrict_eqReq.
-      rewrite drop_zip in H2; eauto using PIR2_length.
-      eapply  zip_pair_inv in H2; dcr; subst; eauto.
+      rewrite drop_zip in H8; eauto using PIR2_length.
+      eapply  zip_pair_inv in H8; dcr; subst; eauto.
       eapply PIR2_drop; eauto.
       repeat rewrite length_drop_minus. eapply PIR2_length in ER; eauto.
     + exploit omap_exp_eval_live_agree; eauto.
@@ -596,7 +598,7 @@ Proof.
     split. clear_all; cset_tac; intuition.
     eexists a. split.
     exploit H11; eauto. dcr; simpl in *.
-    revert H5; clear_all; cset_tac; intuition.
+    revert H6; clear_all; cset_tac; intuition.
     decide (a0 ∈ of_list Z); intuition.
     split. exploit H0; eauto.
     exploit H10; eauto.

@@ -56,7 +56,7 @@ Proof.
   intros. general induction H; simpl; pe_rewrite; eauto using shadowingFree.
   - econstructor; eauto.
     + intros. edestruct get_length_eq; eauto. exploit H1; eauto.
-      edestruct H2; eauto; dcr. rewrite H9 in *. eauto.
+      edestruct H2; eauto; dcr. rewrite H10 in *. eauto.
     + intros. edestruct get_length_eq; eauto. edestruct H2; eauto; dcr. eauto.
 Qed.
 

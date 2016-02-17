@@ -252,8 +252,8 @@ Proof.
     inv_zip H6. simpl in *.
     rewrite H3.
     edestruct (get_length_eq _ H7 H4).
-    edestruct H1; eauto; dcr. exploit H2; eauto. eapply ann_R_get in X.
-    destruct (getAnn x); simpl in *. rewrite X.
+    edestruct H1; eauto; dcr. exploit H2; eauto. eapply ann_R_get in H11.
+    destruct (getAnn x); simpl in *. rewrite H11.
     rewrite H10.
     eapply disj_1_incl; eauto. clear_all; cset_tac; intuition.
   - rewrite H3; eauto.
@@ -285,12 +285,12 @@ Proof.
   general induction IC; invt live_sound; invt renamedApart; invt (@ann_R); simpl in * |- *; eauto.
   - edestruct IHIC; dcr; eauto using disjoint_let.
     + eexists; split; eauto.
-      exploit H; eauto. eapply map_get_1 with (f:=live_global); eauto. rewrite H12 in X.
+      exploit H; eauto. eapply map_get_1 with (f:=live_global); eauto. rewrite H12 in H0.
       rewrite <- H7.
       assert (x ∉ fst x0 \ of_list (snd x0)).
-      revert X; clear_all; cset_tac; intuition.
-      eapply in_disj_absurd in X; eauto; cset_tac; intuition; eauto.
-      revert H0 H2; clear_all; cset_tac; intuition.
+      revert H0; clear_all; cset_tac; intuition.
+      eapply in_disj_absurd in H0; eauto; cset_tac; intuition; eauto.
+      revert H13 H2; clear_all; cset_tac; intuition.
       invc H. cset_tac; intuition; eauto.
   - edestruct IHIC; dcr; eauto using disjoint_if1.
     eexists; split; eauto. rewrite H2; eauto.
@@ -299,11 +299,11 @@ Proof.
   - edestruct IHIC; dcr; eauto using disjoint_let.
     + eexists; split; eauto.
       exploit H; eauto. eapply map_get_1 with (f:=live_global); eauto.
-      rewrite H13 in X. rewrite <- H8.
+      rewrite H13 in H0. rewrite <- H8.
       assert (x ∉ fst x0 \ of_list (snd x0)).
-      revert X; clear_all; cset_tac; intuition.
-      eapply in_disj_absurd in X; eauto; cset_tac; intuition; eauto.
-      revert H0 H2; clear_all; cset_tac; intuition.
+      revert H0; clear_all; cset_tac; intuition.
+      eapply in_disj_absurd in H0; eauto; cset_tac; intuition; eauto.
+      revert H10 H2; clear_all; cset_tac; intuition.
       invc H. cset_tac; intuition; eauto.
   - edestruct (get_length_eq _ H0 H5).
     edestruct (get_length_eq _ H0 H7).
@@ -490,15 +490,14 @@ Proof.
     + destruct if; simpl in *; eauto.
       exploit bounded_get; eauto.
       eapply map_get_1 with (f:=live_global); eauto. simpl in *.
-      rewrite <- X. rewrite <- H5. clear_all; cset_tac; intuition.
+      rewrite <- H2. rewrite <- H5. clear_all; cset_tac; intuition.
     + intros. eapply live_exp_sound_meet; eauto.
       rewrite incl_list_union; eauto using map_get_1.
   -  econstructor; eauto using live_exp_sound_meet.
     eapply IHRA; eauto using disjoint_let.
     + rewrite H1; simpl. rewrite <- incl_add'; eauto.
     + intros. eapply live_exp_sound_meet; eauto.
-      rewrite incl_list_union; eauto. eapply map_get_1; eauto.
-      reflexivity.
+      rewrite incl_list_union; eauto.
     + erewrite getAnn_mapAnn2; eauto using live_sound_annotation, renamedApart_annotation.
       rewrite H1; simpl. rewrite <- minus_meet.
       revert H12; clear_all; cset_tac; intuition.

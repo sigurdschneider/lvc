@@ -104,7 +104,7 @@ Proof.
   - exfalso. exploit (H1 0); eauto using get. omega.
   - exploit IHget; eauto.
     intros; eapply (H1 (S n')); eauto using get. omega.
-    eapply pos_add with (k':=1) in X0. eauto.
+    eapply pos_add with (k':=1) in H2. eauto.
 Qed.
 
 
@@ -208,7 +208,7 @@ Proof.
   - exploit IHsymb; eauto; dcr.
     orewrite (x - i = S (x - S i)).
     eexists; split. econstructor; eauto. repeat split; eauto; try omega.
-    + intros. inv H6; intro; eauto. eapply H5; eauto. omega.
+    + intros. inv H5; intro; eauto. eapply H6; eauto. omega.
 Qed.
 
 (*

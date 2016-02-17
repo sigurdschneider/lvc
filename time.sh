@@ -1,4 +1,4 @@
-#!/usr/bin/ruby
+#!/usr/bin/ruby21
 require 'term/ansicolor'
 require 'open3'
 

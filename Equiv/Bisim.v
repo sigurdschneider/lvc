@@ -287,17 +287,18 @@ Proof.
   destruct (bisim'_activated H12 H7); dcr.
   econstructor 2.
   eapply plus2_star2 in H4.
-  eapply (star2_trans H4 H3). eapply H11.
+  eapply (star2_trans H4 H5). eapply H11.
   eauto. eauto.
-  + intros. edestruct H16; eauto. destruct H9.
+  + intros. edestruct H17; eauto. destruct H16.
     edestruct H14; eauto. dcr.
-    eexists; split; eauto. destruct H20; isabsurd.
-    right. eapply CIH. eapply bisim'_sym in H17. eauto.
+    destruct H21; isabsurd.
+    eexists; split; eauto.
+    right. eapply CIH. eapply bisim'_sym in H18. eauto.
     left. eapply star2_refl. eauto.
   + intros. edestruct H15; eauto; dcr.
-    edestruct H5; eauto; dcr. destruct H9.
-    eexists; split; eauto. destruct H18; isabsurd.
-    right. eapply CIH. eapply bisim'_sym. eapply H19.
+    edestruct H8; eauto; dcr. destruct H16.
+    eexists; split; eauto. destruct H19; isabsurd.
+    right. eapply CIH. eapply bisim'_sym. eapply H20.
     left; eapply star2_refl.
     eauto.
 Qed.
@@ -322,11 +323,11 @@ Proof.
         eapply star2_trans in H11; eauto. clear H2; simpl in *.
         eapply plus2_star2 in H6.
         exploit (star2_reach_normal H11 H6); eauto. eapply H0.
-        edestruct (bisim'_terminate X H13 (bisim'_sym H7)); eauto; dcr.
+        edestruct (bisim'_terminate H2 H13 (bisim'_sym H7)); eauto; dcr.
         pfold.
-        econstructor 3. rewrite H16 in H10. eapply H10.
+        econstructor 3. rewrite H17 in H10. eapply H10.
         eapply plus2_star2 in H4.
-        eapply (star2_trans H4 H8); eauto.
+        eapply (star2_trans H4 H9); eauto.
         eauto. eauto. eauto.
       - (* plus step <-> activated *)
           pfold.
@@ -337,15 +338,15 @@ Proof.
           destruct (bisim'_activated H8 H15); dcr.
           econstructor 2. eauto.
           eapply plus2_star2 in H14.
-          eapply (star2_trans H14 H11). eauto.
+          eapply (star2_trans H14 H12). eauto.
           eauto.
           + intros.
             edestruct H9 as [? [? [?|?]]]; eauto; isabsurd.
-            edestruct H12 as [? [? ?]]; eauto; isabsurd.
+            edestruct H16 as [? [? ?]]; eauto; isabsurd.
             eexists; split; eauto.
             right. eapply CIH; eauto. left. eapply star2_refl.
           + intros.
-            edestruct H18 as [? [? ?]]; eauto; isabsurd.
+            edestruct H19 as [? [? ?]]; eauto; isabsurd.
             edestruct H10 as [? [? [?|?]]]; eauto; isabsurd.
             eexists; split; eauto.
             right. eapply CIH; eauto.
@@ -373,12 +374,12 @@ Proof.
         eapply plus2_star2 in H12.
         eapply star2_trans in H12; eauto. clear H2; simpl in *.
         exploit (star2_reach_normal H7 H12); eauto. eapply H0.
-        edestruct (bisim'_terminate X H9 H14); eauto; dcr.
+        edestruct (bisim'_terminate H2 H9 H14); eauto; dcr.
         pfold.
-        econstructor 3. rewrite H16 in H4. eapply H4.
+        econstructor 3. rewrite H17 in H4. eapply H4.
         eauto.
         eapply plus2_star2 in H13.
-        eapply (star2_trans H13 H10); eauto.
+        eapply (star2_trans H13 H11); eauto.
         eauto. eauto.
       - eapply star2_trans in H12; eauto. clear H2; simpl in *.
         exfalso; eapply (activated_normal_star H12 H14 H7); eauto.
@@ -408,29 +409,29 @@ Proof.
           destruct (bisim'_activated H12 H7); dcr.
           econstructor 2.
           eapply plus2_star2 in H4.
-          eapply (star2_trans H4 H8). eapply H11.
+          eapply (star2_trans H4 H9). eapply H11.
           eauto. eauto.
           + intros.
-            edestruct H18 as [? [? ?]]; eauto; isabsurd.
+            edestruct H19 as [? [? ?]]; eauto; isabsurd.
             edestruct H14 as [? [? [?|?]]]; eauto; isabsurd.
             eexists; split; eauto.
-            right. eapply CIH. eapply bisim'_sym in H19; eauto.
+            right. eapply CIH. eapply bisim'_sym in H20; eauto.
             left. eapply star2_refl. eauto.
           + intros.
             edestruct H15 as [? [? [?|?]]]; eauto; isabsurd.
-            edestruct H9 as [? [? ?]]; eauto; isabsurd.
+            edestruct H16 as [? [? ?]]; eauto; isabsurd.
             eexists; split; eauto.
-            right. eapply CIH. eapply bisim'_sym in H21; eauto.
+            right. eapply CIH. eapply bisim'_sym in H22; eauto.
             left; eapply star2_refl. eauto.
       - (* plus step <-> term *)
         eapply plus2_star2 in H6.
         eapply star2_trans in H6; eauto. clear H2; simpl in *.
         exploit (star2_reach_normal H11 H6); eauto. eapply H0.
-        edestruct (bisim'_terminate X H13 (bisim'_sym H7)); eauto; dcr.
+        edestruct (bisim'_terminate H2 H13 (bisim'_sym H7)); eauto; dcr.
         pfold.
-        econstructor 3. rewrite H16 in H10. eapply H10.
+        econstructor 3. rewrite H17 in H10. eapply H10.
         eapply plus2_star2 in H4.
-        eapply (star2_trans H4 H8); eauto.
+        eapply (star2_trans H4 H9); eauto.
         eauto. eauto. eauto.
       - (* plus step <-> activated *)
           pfold.
@@ -441,15 +442,15 @@ Proof.
           destruct (bisim'_activated H8 H15); dcr.
           econstructor 2. eauto.
           eapply plus2_star2 in H14.
-          eapply (star2_trans H14 H11). eauto.
+          eapply (star2_trans H14 H12). eauto.
           eauto.
           + intros.
             edestruct H9 as [? [? [?|?]]]; eauto; isabsurd.
-            edestruct H12 as [? [? ?]]; eauto; isabsurd.
+            edestruct H16 as [? [? ?]]; eauto; isabsurd.
             eexists; split; eauto.
             right. eapply CIH; eauto. left. eapply star2_refl.
           + intros.
-            edestruct H18 as [? [? ?]]; eauto; isabsurd.
+            edestruct H19 as [? [? ?]]; eauto; isabsurd.
             edestruct H10 as [? [? [?|?]]]; eauto; isabsurd.
             eexists; split; eauto.
             right. eapply CIH; eauto.
@@ -473,12 +474,12 @@ Proof.
         eapply star2_trans in H7; eauto. clear H2; simpl in *.
         eapply plus2_star2 in H12.
         exploit (star2_reach_normal H7 H12); eauto. eapply H0.
-        edestruct (bisim'_terminate X H9 H14); eauto; dcr.
+        edestruct (bisim'_terminate H2 H9 H14); eauto; dcr.
         pfold.
-        econstructor 3. rewrite H16 in H4. eapply H4.
+        econstructor 3. rewrite H17 in H4. eapply H4.
         eauto.
         eapply plus2_star2 in H13.
-        eapply (star2_trans H13 H10); eauto.
+        eapply (star2_trans H13 H11); eauto.
         eauto. eauto.
       - eapply star2_trans in H7; eauto. clear H2; simpl in *.
         exfalso; eapply (activated_normal_star H12 H14 H7); eauto.
@@ -568,32 +569,6 @@ Definition fexteq'
 Instance bisim_progeq : ProgramEquivalence F.state F.state.
 constructor. eapply (paco2 (@bisim_gen F.state _ F.state _)).
 Defined.
-
-Lemma mutual_block_mon A B (H : BlockType B) (C : Type)
-          (H0 : BlockType C)
-          (R R': A -> B -> C -> Prop) AL L1 L2 n
-:  mutual_block R n AL L1 L2
-  -> (forall a b c, R a b c -> R' a b c)
-  ->  mutual_block R' n AL L1 L2.
-Proof.
-  intros. general induction H1.
-  - econstructor.
-  - econstructor; eauto.
-Qed.
-
-
-Lemma inRel_mon A B (H : BlockType B) (C : Type)
-          (H0 : BlockType C)
-          (R R': list A -> list B -> list C -> A -> B -> C -> Prop) AL L1 L2
-:  inRel R AL L1 L2
-  -> (forall AL L1 L2 a b c, R AL L1 L2 a b c -> R' AL L1 L2 a b c)
-  ->  inRel R' AL L1 L2.
-Proof.
-  intros. general induction H1.
-  - econstructor.
-  - econstructor; eauto using mutual_block_mon.
-Qed.
-
 
 Lemma simL_mon (r r0:rel2 F.state (fun _ : F.state => F.state)) A AR L1 L2 (AL:list A)
 :  inRel (simB bisim_progeq r AR) AL L1 L2
@@ -966,9 +941,11 @@ Proof.
     destruct evt.
     + exploit DET. eauto. eapply H5.
       exploit RCPT; eauto. dcr.
-      exploit H4. eapply H6. dcr.
-      eexists; split. eapply H6.
-      exploit step_externally_determined. eapply H11. eapply H5. subst. eauto.
+      exploit H4. eapply H11. dcr.
+      eexists; split. eapply H11.
+      exploit step_externally_determined. Focus 3.
+      instantiate (2:=σ2') in H8. rewrite H8. eapply H14.
+      eauto. eauto.
     + exfalso. exploit step_internally_deterministic; eauto; dcr. congruence.
 Qed.
 

@@ -54,7 +54,7 @@ Global Instance locally_inj_morphism
 Proof.
   unfold Proper, respectful, impl; intros; subst.
   general induction H2;
-    assert (FEQ:x ≡ y) by first [eapply H0 | eapply H1 | eapply H2 | eapply H4 ];  econstructor; eauto;
+    assert (FEQ:x [-] y) by first [eapply H0 | eapply H1 | eapply H2 | eapply H4 ];  econstructor; eauto;
     try rewrite <- FEQ; eauto.
 Qed.
 
@@ -192,21 +192,21 @@ Proof.
     rewrite of_list_lookup_list; intuition.
     eapply lookup_set_minus_eq; intuition.
     exploit H13; eauto. simpl in *; dcr.
-    exploit H0; eauto. eapply locally_injective in X.
-    eapply injective_on_incl. eapply X. rewrite H2.
+    exploit H0; eauto. eapply locally_injective in H2.
+    eapply injective_on_incl. eapply H2. rewrite H3.
     clear_all; cset_tac; intuition.
     exfalso. eapply n1.
     rewrite of_list_lookup_list; intuition.
     repeat rewrite <- lookup_set_minus_eq; eauto.
     eapply lookup_set_incl; eauto. intuition.
     exploit H13; try eapply H19; eauto. simpl in *; dcr.
-    exploit H0; try eapply H19; eauto. eapply locally_injective in X.
-    eapply injective_on_incl. eapply X. rewrite H2.
+    exploit H0; try eapply H19; eauto. eapply locally_injective in H2.
+    eapply injective_on_incl. eapply H2. rewrite H3.
     clear_all; cset_tac; intuition.
     intuition.
     exploit H13; eauto. simpl in *; dcr.
-    exploit H0; eauto. eapply locally_injective in X.
-    eapply injective_on_incl. eapply X. rewrite H2.
+    exploit H0; eauto. eapply locally_injective in H2.
+    eapply injective_on_incl. eapply H2. rewrite H3.
     clear_all; cset_tac; intuition.
     repeat rewrite zip_length2; eauto.
   - instantiate (1:=D).
@@ -222,23 +222,73 @@ Proof.
     rewrite getAnn_mapAnn. rewrite of_list_lookup_list; eauto.
     eapply lookup_set_minus_incl_inj; eauto; intuition.
     exploit H0; try eapply H19; eauto.
-    eapply locally_injective in X.
+    eapply locally_injective in H.
     eapply injective_on_incl; eauto.
-    exploit H13; eauto; dcr. rewrite H.
-    clear_all; cset_tac; intuition.
+    exploit H13; eauto; dcr.
     edestruct H8; eauto; dcr.
     revert H4; clear_all; cset_tac; intuition; eauto.
 Qed.
 
+
+
+Instance fstNoneOrR_flip_Subset_trans2 {X} `{OrderedType X} : Transitive (fstNoneOrR Equal).
+hnf; intros. inv H; inv H0.
+- econstructor.
+- inv H1. econstructor. transitivity y0; eauto.
+Qed.
+
+Lemma PIR2_map_lookup ϱ A B
+  : AllInRel.PIR2 (fstNoneOrR (flip Subset)) A B ->
+    AllInRel.PIR2 (fstNoneOrR (flip Subset))
+                  (map_lookup ϱ A)
+                  (map_lookup ϱ B).
+Proof.
+  intros. general induction H; simpl; eauto using AllInRel.PIR2.
+  econstructor; eauto.
+  inv pf; simpl; econstructor. unfold flip in *. rewrite H0; eauto.
+Qed.
+
+Lemma PIR2_oglobals ϱ F alvs Lv (alvb:ann(set var)) lv
+      (LEN:length F = length alvs) (A:getAnn alvb ⊆ lv)
+  : AllInRel.PIR2 (fstNoneOrR (flip Subset))
+                  (map_lookup ϱ
+                              (restrict (live_globals (Liveness.live_globals F alvs ++ Lv))
+                                        (getAnn alvb)))
+                  (oglobals
+                     (List.map
+                        (fun Zs : params * stmt =>
+                           (lookup_list ϱ (fst Zs), rename ϱ (snd Zs))) F)
+                     (List.map (mapAnn (lookup_set ϱ)) alvs) ++
+                     map_lookup ϱ (restrict (live_globals Lv) lv)).
+Proof.
+  rewrite live_globals_app. rewrite restrict_app.
+  rewrite map_lookup_app. eapply AllInRel.PIR2_app; eauto using list_eq_fstNoneOrR_incl.
+  unfold oglobals. unfold globals. rewrite map_zip.
+  unfold live_globals, Liveness.live_globals.
+  rewrite map_zip. rewrite zip_map_l. rewrite zip_map_r.
+  unfold global. unfold map_lookup. unfold restrict.
+  repeat rewrite map_zip.
+  eapply AllInRel.PIR2_get; intros.
+  inv_zip H. inv_zip H0. repeat get_functional; subst.
+  unfold lookup_set_option, restr, live_global, Liveness.live_global; simpl.
+  destruct if. rewrite getAnn_mapAnn. econstructor. unfold flip.
+             rewrite of_list_lookup_list; eauto. eapply lookup_set_minus_incl; eauto.
+             econstructor. repeat rewrite zip_length2; eauto.
+             eapply PIR2_map_lookup. eapply restrict_subset2; eauto.
+Qed.
+
+
+
+
 Lemma rename_renamedApart_srd s ang ϱ (alv:ann (set var)) Lv
-: renamedApart s ang
-  -> (getAnn alv) ⊆ fst (getAnn ang)
-  -> live_sound FunctionalAndImperative Lv s alv
-  -> locally_inj ϱ s alv
-  -> bounded (live_globals Lv) (fst (getAnn ang))
-  -> srd (map_lookup ϱ (restrict (live_globals Lv) (getAnn alv)))
-        (rename ϱ s)
-        (mapAnn (lookup_set ϱ) alv).
+  : renamedApart s ang
+    -> (getAnn alv) ⊆ fst (getAnn ang)
+    -> live_sound FunctionalAndImperative Lv s alv
+    -> locally_inj ϱ s alv
+    -> bounded (live_globals Lv) (fst (getAnn ang))
+    -> srd (map_lookup ϱ (restrict (live_globals Lv) (getAnn alv)))
+          (rename ϱ s)
+          (mapAnn (lookup_set ϱ) alv).
 Proof.
   intros SSA INCL LS RI.
   general induction RI; inv LS; subst; inv SSA; simpl in * |- *; pe_rewrite.
@@ -305,7 +355,7 @@ Proof.
       eapply srd_monotone.
       * edestruct H8; eauto; dcr.
         eapply (H1 _ _ _ H17 H19); eauto. simpl in *.
-        rewrite H21. exploit H13; eauto; dcr. rewrite <- INCL, <- H24.
+        rewrite H21. exploit H13; eauto; dcr. rewrite <- INCL, <- H27.
         clear_all; cset_tac; intuition.
         rewrite H21. unfold live_globals. rewrite List.map_app.
         rewrite <- incl_right.
@@ -313,9 +363,8 @@ Proof.
         eapply get_bounded; intros.
         unfold live_global, Liveness.live_globals in H22. inv_map H22.
         inv_zip H24. simpl. exploit H13; eauto; dcr.
-        rewrite H30; eauto.
-      *
-        eapply PIR2_rename; eauto.
+        rewrite H31; eauto.
+      * eapply PIR2_rename; eauto.
     + eapply srd_monotone2. simpl in * |- *.
       * eapply IHRI; eauto.
         rewrite H16; simpl in * |- *; eauto. transitivity lv; eauto.
@@ -325,53 +374,8 @@ Proof.
         eapply get_bounded; intros.
         unfold live_global, Liveness.live_globals in H4. inv_map H4.
         inv_zip H5. simpl. exploit H13; eauto; dcr.
-        rewrite H21; eauto.
-        Instance fstNoneOrR_flip_Subset_trans2 {X} `{OrderedType X} : Transitive (fstNoneOrR Equal).
-        hnf; intros. inv H; inv H0.
-  - econstructor.
-  - inv H1. econstructor. transitivity y0; eauto.
-Qed.
-
-*
-  Lemma PIR2_oglobals ϱ F alvs Lv (alvb:ann(set var)) lv
-        (LEN:length F = length alvs) (A:getAnn alvb ⊆ lv)
-  : AllInRel.PIR2 (fstNoneOrR (flip Subset))
-     (map_lookup ϱ
-                 (restrict (live_globals (Liveness.live_globals F alvs ++ Lv))
-                           (getAnn alvb)))
-     (oglobals
-        (List.map
-           (fun Zs : params * stmt =>
-              (lookup_list ϱ (fst Zs), rename ϱ (snd Zs))) F)
-        (List.map (mapAnn (lookup_set ϱ)) alvs) ++
-        map_lookup ϱ (restrict (live_globals Lv) lv)).
-  Proof.
-    rewrite live_globals_app. rewrite restrict_app.
-    rewrite map_lookup_app. eapply AllInRel.PIR2_app; eauto using list_eq_fstNoneOrR_incl.
-    unfold oglobals. unfold globals. rewrite map_zip.
-    unfold live_globals, Liveness.live_globals.
-    rewrite map_zip. rewrite zip_map_l. rewrite zip_map_r.
-    unfold global. unfold map_lookup. unfold restrict.
-    repeat rewrite map_zip.
-    eapply AllInRel.PIR2_get; intros.
-    inv_zip H. inv_zip H0. repeat get_functional; subst.
-    unfold lookup_set_option, restr, live_global, Liveness.live_global; simpl.
-    destruct if. rewrite getAnn_mapAnn. econstructor. unfold flip.
-    rewrite of_list_lookup_list; eauto. eapply lookup_set_minus_incl; eauto.
-    econstructor. repeat rewrite zip_length2; eauto.
-    Lemma PIR2_map_lookup ϱ A B
-    : AllInRel.PIR2 (fstNoneOrR (flip Subset)) A B ->
-      AllInRel.PIR2 (fstNoneOrR (flip Subset))
-                    (map_lookup ϱ A)
-                    (map_lookup ϱ B).
-    Proof.
-      intros. general induction H; simpl; eauto using AllInRel.PIR2.
-      econstructor; eauto.
-      inv pf; simpl; econstructor. unfold flip in *. rewrite H0; eauto.
-    Qed.
-    eapply PIR2_map_lookup. eapply restrict_subset2; eauto.
-Qed.
-  eapply PIR2_oglobals; eauto.
+        rewrite H22; eauto.
+      * eapply PIR2_oglobals; eauto.
 Qed.
 
 Lemma locally_inj_subset ϱ s alv alv'
@@ -426,8 +430,8 @@ Lemma rename_renamedApart_srd' s ang ϱ (alv:ann (set var)) Lv
 Proof.
   intros.
   exploit live_sound_renamedApart_minus; eauto.
-  eapply renamedApart_live_imperative_is_functional in X; eauto using bounded_disjoint, renamedApart_disj, meet1_Subset1, live_sound_annotation, renamedApart_annotation.
-  eapply rename_renamedApart_srd in X; eauto using locally_inj_subset, meet1_Subset, live_sound_annotation, renamedApart_annotation.
+  eapply renamedApart_live_imperative_is_functional in H4; eauto using bounded_disjoint, renamedApart_disj, meet1_Subset1, live_sound_annotation, renamedApart_annotation.
+  eapply rename_renamedApart_srd in H4; eauto using locally_inj_subset, meet1_Subset, live_sound_annotation, renamedApart_annotation.
   erewrite getAnn_mapAnn2; eauto using live_sound_annotation, renamedApart_annotation.
   destruct (getAnn ang); simpl; cset_tac; intuition.
 Qed.
@@ -525,8 +529,8 @@ Proof.
         intros. split. eapply H12; eauto.
         edestruct get_length_eq; try eapply H5; eauto.
         edestruct H7; eauto.
-        exploit H23; eauto. eapply ann_R_get in X.
-        destruct (getAnn x2); simpl in *. rewrite X.
+        exploit H23; eauto. eapply ann_R_get in H37.
+        destruct (getAnn x2); simpl in *. rewrite H37.
         rewrite H35. clear_all; cset_tac; intuition.
       * eapply PIR2_rename; eauto.
         simpl in *.
@@ -537,27 +541,27 @@ Proof.
         edestruct renamedApart_globals_live; eauto.
         hnf; intros. pe_rewrite.
         eapply renamedApart_disj in H14. pe_rewrite; eauto.
-        exploit H23; eauto. eapply ann_R_get in X0.
-        rewrite live_globals_app in H32.
-        eapply get_app_cases in H32. destruct H32; dcr.
-        unfold live_globals, Liveness.live_globals in H32.
-        rewrite map_zip in H32. inv_zip H32.
-        unfold live_global, Liveness.live_global in H38.
-        inv H38.
-        simpl in *. clear H38.
+        exploit H23; eauto. eapply ann_R_get in H37.
+        rewrite live_globals_app in H34.
+        eapply get_app_cases in H34. destruct H34; dcr.
+        unfold live_globals, Liveness.live_globals in H34.
+        rewrite map_zip in H34. inv_zip H34.
+        unfold live_global, Liveness.live_global in H40.
+        inv H40.
+        simpl in *. clear H40.
         edestruct get_length_eq; try eapply H5; eauto.
         edestruct H7; eauto; dcr.
-        exploit H23; eauto. eapply ann_R_get in X1.
+        exploit H23; eauto. eapply ann_R_get in H42.
         destruct (getAnn x5); simpl in *.
-        rewrite X1. rewrite H39. eapply disj_1_incl; try eapply H14.
+        rewrite H42. rewrite H41. eapply disj_1_incl; try eapply H14.
         clear_all; cset_tac; intuition.
         eapply disj_1_incl. eapply H14.
-        eapply bounded_get in H34. eapply H34. eauto.
+        eapply bounded_get in H38. eapply H38. eauto.
         dcr; simpl in *.
-        eapply get_app_le in H34; eauto.
-        unfold Liveness.live_globals in H34. inv_zip H34.
+        eapply get_app_le in H37; eauto.
+        unfold Liveness.live_globals in H37. inv_zip H37.
         repeat get_functional; subst.
-        simpl in H37. rewrite H37. eauto.
+        simpl in H38. rewrite H38. eauto.
         unfold live_globals, Liveness.live_globals.
         rewrite zip_length2; eauto. eapply get_range; eauto.
     + eapply srd_monotone2. simpl in * |- *.
@@ -568,8 +572,8 @@ Proof.
       * eapply H12; eauto.
       * edestruct get_length_eq; try eapply H5; eauto.
         edestruct H7; eauto.
-        exploit H23; eauto. eapply ann_R_get in X.
-        destruct (getAnn x); simpl in *. rewrite X.
+        exploit H23; eauto. eapply ann_R_get in H27.
+        destruct (getAnn x); simpl in *. rewrite H27.
         rewrite H25. clear_all; cset_tac; intuition.
       * eapply PIR2_oglobals; eauto.
 Qed.
@@ -644,9 +648,8 @@ Proof.
       eapply inverse_on_update_with_list; try intuition.
       eapply injective_on_incl. eapply locally_injective.
       eapply H13; eauto.
-      edestruct H23; eauto. rewrite H19.
-      clear_all; cset_tac; intuition.
-      eapply inverse_on_incl; eauto; intuition.
+      edestruct H23; eauto.
+      eapply inverse_on_incl; try eassumption. simpl.
       edestruct H23; eauto.
     + eapply IHrenamedApart; eauto using inverse_on_incl.
 Qed.
@@ -662,9 +665,9 @@ Lemma renamedApart_locally_inj_alpha' s ϱ ϱ' Lv alv ang
 Proof.
   intros.
   exploit live_sound_renamedApart_minus; eauto.
-  eapply renamedApart_live_imperative_is_functional in X; eauto using bounded_disjoint, renamedApart_disj, meet1_Subset1, live_sound_annotation, renamedApart_annotation.
-  eapply live_sound_overapproximation_F in X.
-  eapply renamedApart_locally_inj_alpha in X; eauto using locally_inj_subset, meet1_Subset, live_sound_annotation, renamedApart_annotation.
+  eapply renamedApart_live_imperative_is_functional in H5; eauto using bounded_disjoint, renamedApart_disj, meet1_Subset1, live_sound_annotation, renamedApart_annotation.
+  eapply live_sound_overapproximation_F in H5.
+  eapply renamedApart_locally_inj_alpha in H5; eauto using locally_inj_subset, meet1_Subset, live_sound_annotation, renamedApart_annotation.
   eapply inverse_on_incl; eauto.
   erewrite getAnn_mapAnn2; eauto using live_sound_annotation, renamedApart_annotation.
   destruct (getAnn ang); simpl; cset_tac; intuition.
@@ -754,9 +757,8 @@ Proof.
         eapply inverse_on_update_with_list; try intuition.
         eapply injective_on_incl. eapply locally_injective.
         eapply H16; eauto.
-        simpl. edestruct H26; eauto; simpl in *. rewrite H35.
-        eauto with cset.
-        eapply inverse_on_incl; eauto; intuition. simpl.
+        simpl. edestruct H26; eauto; simpl in *.
+        eapply inverse_on_incl; try eassumption. simpl.
         exploit H21; eauto using get_range.
         edestruct renamedApart_globals_live; eauto; dcr.
         {
@@ -776,17 +778,17 @@ Proof.
             inv_zip H4. invc H7; simpl in *.
             edestruct get_length_eq; try eapply H; eauto.
             edestruct H2; eauto; dcr.
-            exploit H1; eauto. eapply ann_R_get in X.
+            exploit H1; eauto. eapply ann_R_get in H9.
             destruct (getAnn x1); simpl in *.
-            rewrite X, H8. eapply disj_1_incl; try eapply H3; eauto.
+            rewrite H9, H8. eapply disj_1_incl; try eapply H3; eauto.
             clear_all; cset_tac; intuition.
           Qed.
           eapply funConstr_disjoint_globals; eauto.
         }
-        simpl in *. eapply get_app_le in H36.
-        unfold Liveness.live_globals in H36.
-        inv_zip H36. simpl in *. repeat get_functional; subst.
-        rewrite H37; eauto. unfold Liveness.live_globals.
+        simpl in *. eapply get_app_le in H37.
+        unfold Liveness.live_globals in H37.
+        inv_zip H37. simpl in *. repeat get_functional; subst.
+        rewrite H38; eauto. unfold Liveness.live_globals.
         rewrite zip_length2; eauto using get_range.
       * {
           edestruct H2; eauto; dcr. rewrite H34.
@@ -795,11 +797,11 @@ Proof.
           eapply live_globals_bounded; intros.
           edestruct get_length_eq; eauto.
           edestruct H2; eauto; dcr.
-          exploit H30; eauto. eapply ann_R_get in X.
+          exploit H30; eauto. eapply ann_R_get in H42.
           exploit H26; eauto. simpl in *; dcr.
           split; eauto.
           destruct (getAnn x1); simpl in *.
-          rewrite X, H41. clear_all; cset_tac; intuition.
+          rewrite H42, H41. clear_all; cset_tac; intuition.
         }
     + eapply IHrenamedApart; eauto using inverse_on_incl.
       pe_rewrite. rewrite live_globals_app. rewrite bounded_app; split; eauto.
@@ -823,11 +825,11 @@ Proof.
   eapply get_bounded. intros.
   inv_zip H. invc H2.
   edestruct get_length_eq; try eapply LEN2; eauto.
-  exploit ANNR; eauto; dcr. eapply ann_R_get in X.
+  exploit ANNR; eauto; dcr. eapply ann_R_get in H3.
   edestruct ZINCL; eauto; dcr.
   edestruct FUNC; eauto; dcr.
   destruct (getAnn x); simpl in *.
-  rewrite X, H5. clear_all; cset_tac; intuition.
+  rewrite H3, H6. clear_all; cset_tac; intuition.
 Qed.
       eapply live_globals_bounded2; eauto.
 Qed.
@@ -858,7 +860,7 @@ Proof.
       rewrite H8. rewrite incl. eapply incl_left.
   - econstructor; eauto.
     eapply injective_on_agree; eauto.
-    eapply agree_on_incl; eauto. rewrite incl. eapply incl_left.
+    eapply agree_on_incl; eauto.
     + eapply IHinj1; eauto.
       rewrite H9; simpl. eapply agree_on_incl; eauto. rewrite <- H5; cset_tac; intuition.
       rewrite H9; simpl. rewrite <- incl; eauto.
@@ -868,11 +870,9 @@ Proof.
   - econstructor; eauto.
     eapply injective_on_agree; eauto.
     eapply agree_on_incl; eauto.
-    rewrite incl. eapply incl_left.
   - econstructor; eauto.
     eapply injective_on_agree; eauto.
     eapply agree_on_incl; eauto.
-    rewrite incl. eapply incl_left.
   - econstructor; eauto.
     + eapply IHinj; eauto. rewrite H8; simpl; eauto.
       eapply agree_on_incl; eauto. rewrite H9.
@@ -882,7 +882,6 @@ Proof.
       decide (x === a); intuition.
     + eapply injective_on_agree; eauto.
       eapply agree_on_incl; eauto.
-      rewrite incl. eapply incl_left.
   - econstructor; eauto.
     + intros.
       edestruct get_length_eq; try eapply H5; eauto.
@@ -904,7 +903,6 @@ Proof.
       rewrite H10; simpl. rewrite <- incl. eauto.
     + eapply injective_on_agree; eauto.
       eapply agree_on_incl; eauto.
-      rewrite incl. eapply incl_left.
 Qed.
 
 (*

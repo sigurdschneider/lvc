@@ -1,6 +1,6 @@
 Require Export Setoid Coq.Classes.Morphisms Omega.
 Require Export Sets SetInterface SetConstructs SetProperties.
-Require Import EqDec Computable Util.
+Require Export EqDec Computable Util.
 Require Export CSetNotation CSetTac CSetBasic CSetCases CSetGet CSetComputable CSetDisjoint.
 
 Set Implicit Arguments.

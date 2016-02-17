@@ -1,4 +1,4 @@
-Require Import OrderedTypeEx Util List Get Computable DecSolve AllInRel.
+Require Import OrderedTypeEx Util List Get Computable DecSolve AllInRel Omega.
 
 Set Implicit Arguments.
 (** * Lemmas and tactics for lists *)

@@ -81,7 +81,7 @@ Lemma activated_normal_star S `{StateType S} (σ σ' σ'':S)
     -> False.
 Proof.
   intros.
-  exploit activated_star_reach; eauto. inv X.
+  exploit activated_star_reach; eauto. inv H4.
   - eauto using activated_normal.
   - eapply H3. do 2 eexists; eauto.
 Qed.

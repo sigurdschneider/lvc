@@ -259,10 +259,10 @@ Proof.
   repeat match goal with
     | [H : lt ?x ?y, H' : ?y = None |- _ ] => rewrite H' in H; inv H
   end.
-  rewrite H2, n0 in X. inv X.
-  rewrite H2, n1 in X; inv X.
-  rewrite H2; constructor.
-  rewrite H2; econstructor.
+  rewrite H3, n0 in H2. inv H2.
+  rewrite H3, n1 in H2; inv H2.
+  rewrite H3; constructor.
+  rewrite H3; econstructor.
   constructor.
 Qed.
 

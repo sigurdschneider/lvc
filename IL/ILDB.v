@@ -175,7 +175,7 @@ Proof.
   general induction e; eauto; simpl in * |- *; try monadS_inv EQ.
   - eapply option2status_inv in EQ0. simpl.
     exploit Eagr; eauto. dcr.
-    rewrite H1. erewrite get_nth_error; eauto.
+    rewrite H2. erewrite get_nth_error; eauto.
   - erewrite IHe; eauto. reflexivity.
   - erewrite IHe1; eauto. erewrite IHe2; eauto. reflexivity.
 Qed.

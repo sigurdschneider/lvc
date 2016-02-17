@@ -173,8 +173,8 @@ Proof.
   hnf; intros. simpl.
   destruct (decision_procedure (f x === g x));
   destruct (decision_procedure (f y === g y)); try reflexivity.
-  exfalso. eapply n. rewrite <- H4; eauto.
-  exfalso. eapply n. rewrite H4; eauto.
+  exfalso. eapply n. rewrite <- H5; eauto.
+  exfalso. eapply n. rewrite H5; eauto.
 
   right. intro.
   change False with (Is_true false). rewrite <- H3.

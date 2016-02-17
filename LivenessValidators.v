@@ -47,7 +47,8 @@ Proof.
     decide (getAnn slv ⊆ a); try dec_solve.
     exploit (@indexwise_R_dec' _ _
                                (fun Zs a0 => live_sound i (live_globals s sa ++ Lv) (snd Zs) a0) s sa).
-    intros. eapply IH; eauto. inv an; eauto. destruct X; try dec_solve.
+    intros. eapply IH; eauto. inv an; eauto.
+    destruct H; try dec_solve.
     exploit (@indexwise_R_dec' _ _
                                (fun Zs a0 =>  of_list (fst Zs)[<=]getAnn a0 /\
                                              (if isFunctional i then
@@ -55,7 +56,7 @@ Proof.
                                               else True)) s sa).
     intros. decide (of_list (fst a0)[<=]getAnn b); try dec_solve.
     destruct if; try dec_solve. decide ( getAnn b \ of_list (fst a0)[<=]a); try dec_solve.
-    destruct X; try dec_solve.
+    destruct H; try dec_solve.
     Grab Existential Variables. eassumption. eassumption.
 Defined.
 
@@ -89,7 +90,7 @@ Proof.
     decide (isImperative i); try dec_solve.
     decide ((blv \ of_list Z) ⊆ a).
     - left; econstructor; eauto. destruct if; eauto.
-    - right; intro. inv H; eauto. destruct if in H5; eauto.
+    - right; intro. inv H0; eauto. destruct if in H6; eauto.
       get_functional; subst; eauto.
     - left; econstructor; eauto. destruct if; eauto. intuition.
   + decide(live_exp_sound e a); try dec_solve.
@@ -103,7 +104,7 @@ Proof.
     exploit (@indexwise_R_dec' _ _
                                (fun Zs a0 =>
                                   true_live_sound i (live_globals s sa ++ Lv) (snd Zs) a0) s sa).
-    intros. eapply IH; eauto. inv an; eauto. destruct X; try dec_solve.
+    intros. eapply IH; eauto. inv an; eauto. destruct H; try dec_solve.
     exploit (@indexwise_R_dec' _ _
                                (fun Zs a0 => if isFunctional i then
                                                 getAnn a0 \ of_list (fst Zs)[<=]a
@@ -111,7 +112,7 @@ Proof.
     intros.
     destruct if; try dec_solve.
     decide ( getAnn b \ of_list (fst a0)[<=]a); try dec_solve. left; eauto. right; eauto.
-    destruct X; try dec_solve.
+    destruct H; try dec_solve.
     Grab Existential Variables. eassumption. eassumption.
 Defined.
 

@@ -87,10 +87,10 @@ Section MapUpdateList.
     dcr. exfalso. eapply H8. econstructor. eapply H5.
     exploit (IHlength_eq H0 E {x1} x0 y0). simpl in *; intuition.
     hnf; intros. eapply H9. econstructor 2; eauto.
-    exploit X0. cset_tac; reflexivity. rewrite X1. lud.
+    exploit H9. cset_tac; reflexivity. rewrite H10. lud.
     exploit (IHlength_eq H0 E {x1} x0 y0). simpl in *; intuition.
     hnf; intros. eapply H8. econstructor 2; eauto.
-    exploit X0. cset_tac; reflexivity. rewrite X1. lud.
+    exploit H8. cset_tac; reflexivity. rewrite H9. lud.
   Qed.
 
 
@@ -143,7 +143,8 @@ Qed.
   Proof.
     intros.
     general induction XL; destruct YL; simpl in * |- *; eauto.
-    eapply agree_on_update_same; eauto using agree_on_incl. reflexivity.
+    eapply agree_on_update_same; eauto. reflexivity.
+    eapply agree_on_incl; eauto.
   Qed.
 
   Lemma update_with_list_agree_minus lv (E E':X -> Y) XL YL
@@ -287,19 +288,22 @@ Proof.
 Qed.
 
 Lemma lookup_set_update_not_in_Z'_not_in_Z {X} `{OrderedType X} {Y} `{OrderedType Y}
-  (f: X-> Y) `{Proper _ (_eq ==> _eq) f} x Z Z'
+  (f: X-> Y) x Z Z'
 : length Z = length Z'
-  -> f [Z <-- Z'] x ∉ of_list Z' -> x ∉ of_list Z.
+  -> f [Z <-- Z'] x ∉ of_list Z'
+  -> Proper (_eq ==> _eq) f
+  -> x ∉ of_list Z.
 Proof.
-  intros. eapply length_length_eq in H2.
-  general induction H2; simpl in *; eauto.
+  intros. eapply length_length_eq in H1.
+  general induction H1; simpl in *; eauto.
   - cset_tac; intuition.
   - lud.
     + exfalso; cset_tac; intuition.
     + cset_tac; intuition; eauto.
 Qed.
 
-Lemma update_with_list_lookup_not_in {X} `{OrderedType X} {Y} `{OrderedType Y} (f:X->Y) (Z:list X) (Z':list Y) x y
+Lemma update_with_list_lookup_not_in {X} `{OrderedType X} {Y} `{OrderedType Y}
+      (f:X->Y) (Z:list X) (Z':list Y) x y
   : x ∉ of_list Z
     -> f [ Z <-- Z' ] x === y
     -> f x === y.
@@ -312,10 +316,11 @@ Qed.
 
 
 Lemma update_with_list_lookup_set_incl {X} `{OrderedType X} {Y} `{OrderedType Y}
-(f:X->Y) Z Z' `{Proper _ (_eq ==> _eq) f} D
+(f:X->Y) Z Z' D
   : length Z = length Z'
-  -> D ⊆ of_list Z
-  -> lookup_set (f [ Z <-- Z' ]) D ⊆ of_list Z'.
+    -> D ⊆ of_list Z
+    -> Proper (_eq ==> _eq) f
+    -> lookup_set (f [ Z <-- Z' ]) D ⊆ of_list Z'.
 Proof.
   intros. hnf; intros.
   eapply lookup_set_spec in H4; try eapply proper_update_with_list; eauto.

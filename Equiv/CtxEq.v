@@ -158,9 +158,9 @@ Proof.
     get_functional; subst. destruct b2. econstructor; eauto; try now (clear_all; intuition).
     * exploit tooth_get_n; eauto. simpl in *. subst block_n.
       intros. hnf.
-      hnf in H1; dcr; subst; simpl in *. dcr; subst.
+      dcr; subst; simpl in *.
       exploit omap_length; eauto.
-      exploit omap_length; try eapply H2; eauto.
+      exploit omap_length; try eapply H4; eauto.
       pone_step; eauto using get_app; simpl; eauto; try congruence.
       eapply paco2_mon. eapply bisim'_refl. clear_all; firstorder.
 Qed.
@@ -237,7 +237,7 @@ Proof.
             eapply bisimeq'_refl; eauto.
           - dcr; subst. invc H5.
             exploit get_length_app.
-            eapply get_functional in X; try eapply H2. inv X.
+            eapply get_functional in H1; try eapply H2.
             erewrite <- map_length in H3.
             exploit get_length_app.
             eapply get_functional in X0; try eapply H3. subst a.

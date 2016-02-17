@@ -1,3 +1,5 @@
+
+
 Require Import CSet Le Arith.Compare_dec.
 
 Require Import Plus Util Map Var Get.
@@ -67,7 +69,7 @@ Section SafeFirst.
 
   Fixpoint safe_first n (s:safe n) : nat.
   refine (if [ P n ] then n else safe_first (S n) _).
-  destruct s; eauto. destruct (_H H).
+  destruct s; eauto. destruct (n0 H).
   Defined.
 
 
@@ -126,8 +128,8 @@ Proof.
     assert (lv [=] {n; lv \ {{n}} }).
     exploit (H (n)); eauto.
     cset_tac; intuition. decide (n = a); subst; intuition.
-    invc H1; eauto.
-    rewrite H0. erewrite cardinal_2; eauto. omega. cset_tac; intuition.
+    invc H3; eauto.
+    rewrite H1. erewrite cardinal_2; eauto. omega. cset_tac; intuition.
 Qed.
 
 
@@ -182,9 +184,8 @@ eapply le_dec.
 Defined.
 
 Definition least_fresh (lv:set var) : var.
-  refine (@safe_first (fun x => x ∉ lv /\ x <= cardinal lv) _ _ _).
-  - intros; eauto. hnf. decide (n ∉ lv /\ n <= cardinal lv); eauto.
-  - instantiate (1:=0). eapply small_fresh_variable_exists.
+  refine (@safe_first (fun x => x ∉ lv /\ x <= cardinal lv) _ 0 _).
+  - eapply small_fresh_variable_exists.
     intros. omega. eapply le_is_le; omega.
 Defined.
 
@@ -290,7 +291,7 @@ Proof.
   general induction n; simpl in *; isabsurd.
   - inv H. exploit (least_fresh_small G). omega.
     exploit IHn; eauto.
-    erewrite cardinal_2 with (s:=G) in X. omega.
+    erewrite cardinal_2 with (s:=G) in H0. omega.
     eapply least_fresh_spec.
     hnf; cset_tac; intuition.
 Qed.

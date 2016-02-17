@@ -102,6 +102,7 @@ Proof.
         rewrite H11 in H10.
         eapply lookup_set_update_not_in_Z'_not_in_Z in H10.
         cset_tac; intuition. intuition. eapply H0; eauto.
+        eauto.
         rewrite H11 in H10. eapply lookup_set_update_not_in_Z' in H10.
         rewrite <- H10; eauto. intuition. symmetry. eapply H0; eauto.
       * eapply update_with_list_agree; eauto.
@@ -228,17 +229,20 @@ Proof.
       edestruct (get_length_eq _ H5 H).
       exploit H0; eauto. exploit H8; eauto.
       exploit H2; eauto.
-      eapply alpha_inverse_on_agree; eauto.
-      eapply alpha_inverse_on in X1; eauto.
-      eapply inverse_on_agree_on; eauto.
-      eapply inverse_on_comp_list; eauto.
-      eapply inverse_on_sym in X1.
-      eapply inverse_on_comp_list; eauto.
-      unfold comp; intuition.
-      unfold comp; intuition.
-      symmetry.
-      eapply inverse_on_comp_list; eauto.
-      eapply alpha_inverse_on; eauto.
+      * eapply H11; eauto.
+      * eapply alpha_inverse_on_agree. eauto.
+        {
+          - eapply alpha_inverse_on in H14; eauto.
+            eapply inverse_on_agree_on; eauto.
+            eapply inverse_on_comp_list; eauto.
+            eapply inverse_on_sym in H14.
+            eapply inverse_on_comp_list; eauto.
+            unfold comp; intuition.
+            unfold comp; intuition.
+        }
+        symmetry.
+        eapply inverse_on_comp_list; eauto.
+        eapply alpha_inverse_on; eauto.
 Qed.
 
 (** ** Soundness wrt. equivalence *)

@@ -104,18 +104,19 @@ Proof.
 Qed.
 
 
-Lemma mutual_approx_impl {A} {A'} {B} `{BlockType B} {C} `{BlockType C} (R: list A-> A->B->C->Prop)
-      (AL:list A') DL (F:list (params*stmt)) AL' F' i f g zipf
+Lemma mutual_approx_impl {A} {A'} {B} `{BlockType B} {C} `{BlockType C}
+      (R: list A -> list B -> list C -> A -> B -> C -> Prop)
+      (AL:list A') DL (F:list (params*stmt)) AL' F' i f g zipf L1 L2
 : length AL = length F
   -> F' = drop i F
   -> AL' = drop i AL
   -> (forall n a Z s,
         get AL n a
         -> get F n (Z,s)
-        -> R DL (zipf a (Z,s)) (f n (Z,s)) (g n (Z,s)))
+        -> R DL L1 L2 (zipf a (Z,s)) (f n (Z,s)) (g n (Z,s)))
   -> (forall i b, i = block_n (f i b))
   -> (forall i b, i = block_n (g i b))
-  -> mutual_block (R DL) i (zip zipf AL' F')
+  -> mutual_block (R DL L1 L2) i (zip zipf AL' F')
                   (mapi_impl f i F') (mapi_impl g i F').
 Proof.
   intros.
@@ -128,16 +129,17 @@ Proof.
     destruct y; eapply H4; eauto using drop_eq.
 Qed.
 
-Lemma mutual_approx {A} {A'} {B} `{BlockType B} {C} `{BlockType C} (R: list A-> A->B->C->Prop)
-      (AL:list A') DL (F:list (params*stmt)) f g zipf
+Lemma mutual_approx {A} {A'} {B} `{BlockType B} {C} `{BlockType C}
+      (R: list A -> list B -> list C -> A -> B -> C -> Prop)
+      (AL:list A') DL (F:list (params*stmt)) f g zipf L1 L2
 : length AL = length F
   -> (forall n a Z s,
         get AL n a
         -> get F n (Z,s)
-        -> R DL (zipf a (Z,s)) (f n (Z,s)) (g n (Z,s)))
+        -> R DL L1 L2 (zipf a (Z,s)) (f n (Z,s)) (g n (Z,s)))
   -> (forall i b, i = block_n (f i b))
   -> (forall i b, i = block_n (g i b))
-  -> mutual_block (R DL) 0 (zip zipf AL F)
+  -> mutual_block (R DL L1 L2) 0 (zip zipf AL F)
                   (mapi_impl f 0 F) (mapi_impl g 0 F).
 Proof.
   intros. eapply mutual_approx_impl; eauto.
@@ -185,16 +187,16 @@ Proof.
   - inv H2.
   - eapply get_app_cases in H3; destruct H3; dcr.
     + exploit (mutual_block_zero H2 H3); eauto.
-      rewrite X. orewrite (n - (n + 0)= 0). simpl; econstructor; eauto.
+      rewrite H4. orewrite (n - (n + 0)= 0). simpl; econstructor; eauto.
     + exploit (inRel_less H1 H4); eauto.
       specialize (IHinRel _ _ H4).
       assert (length L1' + (n - length L1') = n) by omega.
-      rewrite <- H3.
+      rewrite <- H6.
       orewrite (length L1' + (n - length L1') - block_n b
                 = length L1' + (n - length L1' - block_n b)).
       exploit (mutual_block_length H2). dcr.
-      rewrite <- H6 at 1.
-      rewrite H7 at 4.
+      rewrite <- H8 at 1.
+      rewrite H9 at 4.
       repeat rewrite drop_app. eauto.
 Qed.
 
@@ -206,7 +208,7 @@ Lemma inRel_nth {A} {B} `{BlockType B} {C} `{BlockType C} R
 Proof.
   intros. general induction H1; isabsurd.
   eapply get_app_cases in H3; destruct H3; dcr.
-  - exploit (mutual_block_zero H2 H3); eauto. rewrite X.
+  - exploit (mutual_block_zero H2 H3); eauto. rewrite H4.
     orewrite (n - (n + 0) = 0). simpl.
     edestruct (mutual_block_get H2 H3) as [? [? [? []]]].
     do 2 eexists. repeat split; eauto using get_app.
@@ -229,8 +231,8 @@ Lemma inRel_nthA {A} {B} `{BlockType B} {C} `{BlockType C} R
 Proof.
   intros.
   exploit (inRel_length H1); eauto; dcr.
-  edestruct (get_length_eq _ H2 H3); eauto.
-  edestruct (inRel_nth H1 H5); eauto; dcr.
+  edestruct (get_length_eq _ H2 H4); eauto.
+  edestruct (inRel_nth H1 H3); eauto; dcr.
   get_functional; subst.
   do 2 eexists; split; eauto.
 Qed.
@@ -243,12 +245,38 @@ Lemma inRel_nthC {A} {B} `{BlockType B} {C} `{BlockType C} R
 Proof.
   intros.
   exploit (inRel_length H1); eauto; dcr.
-  edestruct (get_length_eq _ H2 (eq_sym H4)); eauto.
-  edestruct (inRel_nth H1 H5); eauto; dcr.
+  edestruct (get_length_eq _ H2 (eq_sym H5)); eauto.
+  edestruct (inRel_nth H1 H3); eauto; dcr.
   get_functional; subst.
   do 2 eexists; split; eauto.
 Qed.
 
+
+
+Lemma mutual_block_mon A B (H : BlockType B) (C : Type)
+          (H0 : BlockType C)
+          (R R': A -> B -> C -> Prop) AL L1 L2 n
+:  mutual_block R n AL L1 L2
+  -> (forall a b c, R a b c -> R' a b c)
+  ->  mutual_block R' n AL L1 L2.
+Proof.
+  intros. general induction H1.
+  - econstructor.
+  - econstructor; eauto.
+Qed.
+
+
+Lemma inRel_mon A B (H : BlockType B) (C : Type)
+          (H0 : BlockType C)
+          (R R': list A -> list B -> list C -> A -> B -> C -> Prop) AL L1 L2
+:  inRel R AL L1 L2
+  -> (forall AL L1 L2 a b c, R AL L1 L2 a b c -> R' AL L1 L2 a b c)
+  ->  inRel R' AL L1 L2.
+Proof.
+  intros. general induction H1.
+  - econstructor.
+  - econstructor; eauto using mutual_block_mon.
+Qed.
 
 (*
 Lemma lpm_less {B} `{BlockType B} L n b

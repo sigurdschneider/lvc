@@ -166,7 +166,7 @@ Proof.
     eapply list_union_incl; intros; eauto.
     inv_map H5. edestruct (get_length_eq _ H6 H0); eauto.
     edestruct H3; eauto. simpl in *. exploit H2; eauto.
-    rewrite X; eauto.
+    rewrite H11; eauto.
     rewrite IHlive_sound; eauto.
 Qed.
 

@@ -70,9 +70,9 @@ Proof.
  exploit IHLEN1; eauto using get. etransitivity; try eapply INCL.
  norm_lunion. eauto with cset.
  exploit IH; eauto using get.
- rewrite <- map_update_list_update_agree in X1; eauto.
- etransitivity; try eapply X0.
- eapply agree_on_incl. eapply update_with_list_agree_inv; try eapply X1; eauto.
+ rewrite <- map_update_list_update_agree in H0; eauto.
+ etransitivity; try eapply H.
+ eapply agree_on_incl. eapply update_with_list_agree_inv; try eapply X; eauto.
  instantiate (1:=G). rewrite minus_union.
  eapply incl_minus_lr; eauto.
  erewrite <- INCL. norm_lunion. unfold defVars. eauto with cset.
@@ -86,32 +86,34 @@ Lemma regAssign_renamedApart_agree' i s al ϱ ϱ' LV alv G
 Proof.
   general induction LS; inv sd; simpl in * |- *; try monadS_inv allocOK; eauto.
   - exploit IHLS; eauto.
-    rewrite <- map_update_update_agree in X.
-    rewrite H9 in X; simpl in *.
+    rewrite <- map_update_update_agree in H2.
+    rewrite H9 in H2; simpl in *.
     eapply agree_on_incl.
     eapply agree_on_update_inv.
-    eapply X.
+    eapply H2.
     instantiate (1:=G). rewrite H10.
     revert H5; clear_all; cset_tac; intuition; eauto.
   - exploit IHLS1; eauto.
     exploit IHLS2; eauto.
-    rewrite H11 in X. rewrite H12 in X0. simpl in *.
+    rewrite H11 in H2. rewrite H12 in H3. simpl in *.
     etransitivity; eapply agree_on_incl; eauto.
     instantiate (1:=G). rewrite <- H7. clear_all; intro; cset_tac; intuition.
     instantiate (1:=G). rewrite <- H7. clear_all; intro; cset_tac; intuition.
   - exploit IHLS; eauto.
-    rewrite <- map_update_update_agree in X.
-    rewrite H10 in X; simpl in *.
+    rewrite <- map_update_update_agree in H2.
+    rewrite H10 in H2; simpl in *.
     eapply agree_on_incl.
-    eapply agree_on_update_inv. eapply X.
+    eapply agree_on_update_inv. eapply H2.
     instantiate (1:=G).
     rewrite H11. simpl in *.
     revert H6; clear_all; cset_tac; intuition.
-  - exploit IHLS; eauto.
-    etransitivity; [| eapply agree_on_incl; try eapply X].
-    eapply agree_on_incl; try eapply regAssign_renamedApart_agreeF; eauto; try reflexivity.
-    rewrite <- H13. eapply incl_minus_lr; eauto; try reflexivity.
-    eapply incl_minus_lr; try reflexivity. rewrite <- H13. pe_rewrite; eauto with cset.
+  - exploit IHLS; eauto. instantiate (1:=G) in H4.
+    pe_rewrite.
+    etransitivity; [| eapply agree_on_incl; try eapply H4].
+    eapply agree_on_incl.
+    eapply regAssign_renamedApart_agreeF with (G':=D'); try eassumption; eauto.
+    rewrite <- H13. cset_tac; intuition. reflexivity.
+    eapply incl_minus_lr; try reflexivity. rewrite <- H13. eauto with cset.
 Qed.
 
 Lemma regAssign_renamedApart_agree i s al ϱ ϱ' LV alv
@@ -124,7 +126,7 @@ Proof.
   eapply regAssign_renamedApart_agree'; eauto.
   instantiate (1:=fst (getAnn al)).
   exploit renamedApart_disj; eauto.
-  revert X. unfold disj.
+  revert H. unfold disj.
   clear_all; cset_tac; intuition; eauto.
 Qed.
 
@@ -167,7 +169,7 @@ Proof.
   - exploit (IHGET1 G); hnf; intros; eauto using get; dcr.
     do 2 eexists; split; eauto. split; eauto.
     rewrite EQ0. simpl. rewrite EQ1; eauto.
-    etransitivity; eapply agree_on_incl; eauto; try reflexivity.
+    etransitivity; eapply agree_on_incl; eauto.
     + repeat rewrite <- map_update_list_update_agree; eauto.
       erewrite least_fresh_list_ext; eauto.
       eapply update_with_list_agree; eauto.

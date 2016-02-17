@@ -77,7 +77,7 @@ Lemma inverse_on_lookup_list_eq {X} `{OrderedType X} {Y} `{OrderedType Y}
   -> @fpeq _ _ _eq _ _ (update_with_list (lookup_list ϱ Z) Z ϱ') ϱ'.
 Proof.
   general induction Z; simpl; eauto. split. reflexivity. eauto.
-  split. edestruct IHZ; eauto.
+  split. edestruct IHZ; try eapply H3; eauto.
   + hnf; intros. eapply H4; simpl; eapply add_2; eauto.
   + decompose records. erewrite H5; eauto. intro.
     lud. rewrite <- H3. rewrite e. reflexivity.
@@ -102,7 +102,7 @@ Global Instance inverse_on_morphism_full {X} `{OrderedType X} {Y} `{OrderedType 
   : Proper (Equal ==> (@fpeq X Y _eq _ _)==> (@fpeq Y X _eq _ _) ==> iff) inverse_on.
 Proof.
   unfold Proper, respectful, flip, impl; intros.
-  split; intros; eapply inverse_on_morphism; eauto.
+  split; intros; eapply inverse_on_morphism; try eapply H4; eauto.
   rewrite H1; reflexivity.
   destruct H2; split; eauto. symmetry; eauto. intuition.
   destruct H3; split; eauto. symmetry; eauto. intuition.
