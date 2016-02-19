@@ -52,8 +52,12 @@ Lemma omap_self_update E Z l
 Proof.
   general induction Z; simpl in * |- *.
   - reflexivity.
-  - monad_inv H; simpl. rewrite IHZ; eauto.
-    hnf; intros. lud; congruence.
+  - monad_inv H; simpl.
+    eapply feq_transitive; [ clear_all; hnf; intros; subst; eauto | | eapply IHZ]; eauto.
+    hnf. intros. lud. rewrite IHZ; eauto. invc H; eauto.
+    (* This works, but it is really slow *)
+    (* rewrite (IHZ _ _ EQ1); eauto.
+    hnf; intros. lud. *)
 Qed.
 
 

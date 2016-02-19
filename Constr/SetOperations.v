@@ -2,6 +2,24 @@ Require Export Setoid Coq.Classes.Morphisms.
 Require Export Sets SetInterface SetConstructs SetProperties.
 Require Import EqDec Get CSet Map AllInRel.
 
+Lemma transpose_union X `{OrderedType X}
+      : transpose Equal union.
+Proof.
+  repeat (hnf; intros). cset_tac; intuition.
+Qed.
+
+Lemma transpose_union_eq X `{OrderedType X}
+      : transpose _eq union.
+Proof.
+  repeat (hnf; intros). cset_tac; intuition.
+Qed.
+
+Lemma transpose_union_subset X `{OrderedType X}
+      : transpose Subset union.
+Proof.
+  repeat (hnf; intros). cset_tac; intuition.
+Qed.
+
 Lemma fold_union_incl X `{OrderedType.OrderedType X} s u (x:X) y
   : x ∈ y
     -> y ∈ s
@@ -10,24 +28,13 @@ Proof.
   revert_except s.
   pattern s. eapply set_induction; intros.
   - exfalso. eapply H0; eauto.
-  - rewrite fold_2; eauto. eapply Add_Equal in H2. rewrite H2 in H4.
+  - rewrite fold_2; eauto using transpose_union, Equal_ST, union_m.
+    eapply Add_Equal in H2. rewrite H2 in H4.
     cset_tac. destruct H4.
     left. rewrite H4. eauto.
-    right. eapply H0; eauto. eapply Equal_ST. eapply union_m.
-    hnf; intros. cset_tac; intuition.
+    right. eapply H0; eauto.
 Qed.
 
-Lemma transpose_union X `{OrderedType X}
-      : transpose Equal union.
-Proof.
-  hnf; intros. cset_tac; intuition.
-Qed.
-
-Lemma transpose_union_subset X `{OrderedType X}
-      : transpose Subset union.
-Proof.
-  hnf; intros. cset_tac; intuition.
-Qed.
 
 Lemma fold_union_incl_start X `{OrderedType.OrderedType X} s u (x:X)
   : x ∈ u
@@ -36,9 +43,8 @@ Proof.
   revert_except s.
   pattern s. eapply set_induction; intros.
   - rewrite fold_1; eauto using Equal_ST.
-  - rewrite fold_2; eauto using Equal_ST, transpose_union.
-    cset_tac. right. eapply H0; eauto.
-    eapply union_m.
+  - rewrite fold_2; eauto using Equal_ST, transpose_union, union_m.
+    cset_tac. eauto.
 Qed.
 
 Lemma map_app X `{OrderedType X} Y `{OrderedType Y} (f:X->Y)
@@ -46,11 +52,12 @@ Lemma map_app X `{OrderedType X} Y `{OrderedType Y} (f:X->Y)
 : map f (s ∪ t) [=] map f s ∪ map f t.
 Proof.
   cset_tac. repeat rewrite map_iff; eauto.
-  split; intros. destruct H2.
-  dcr.
-  eapply union_cases in H3. firstorder.
-  intuition. destruct H3; dcr. eexists; split; eauto. cset_tac; eauto.
-  intuition. destruct H3; dcr. eexists; split; eauto. cset_tac; eauto.
+  split; intros.
+  - destruct H2. dcr.
+    eapply union_cases in H3. firstorder.
+  - intuition.
+    + destruct H3; dcr. eexists; split; eauto. cset_tac; eauto.
+    + destruct H3; dcr. eexists; split; eauto. cset_tac; eauto.
 Qed.
 
 Lemma map_add X `{OrderedType X} Y `{OrderedType Y} (f:X->Y)
@@ -59,11 +66,9 @@ Lemma map_add X `{OrderedType X} Y `{OrderedType Y} (f:X->Y)
 Proof.
   cset_tac. repeat rewrite map_iff; eauto.
   split; intros; cset_tac.
-  firstorder.
-  - left. rewrite H2; eauto.
-  - intuition; cset_tac.
-    + eexists x; eauto.
-    + eexists x0; eauto.
+  - firstorder.
+    left. rewrite H2; eauto.
+  - intuition; cset_tac; eauto.
 Qed.
 
 Lemma map_empty X `{OrderedType X} Y `{OrderedType Y} (f:X->Y)
@@ -96,15 +101,13 @@ Proof.
   eapply set_induction; intros.
   - repeat rewrite fold_1; eauto.
     rewrite <- H1; eauto.
-  - rewrite fold_2; eauto using union_m.
+  - rewrite fold_2; eauto using union_m, transpose_union_eq.
     eapply Add_Equal in H2.
     rewrite H3 in H2.
     eapply Add_Equal in H2.
     symmetry.
-    rewrite fold_2; eauto using union_m.
-    rewrite H0; try reflexivity. symmetry; eauto.
-    hnf; intros. hnf. cset_tac; intuition.
-    hnf; intros. hnf. cset_tac; intuition.
+    rewrite fold_2; eauto using union_m, transpose_union_eq.
+    rewrite H0; try reflexivity. eauto.
 Qed.
 
 Lemma list_union_start_swap X `{OrderedType X} (L : list (set X)) s
@@ -112,7 +115,8 @@ Lemma list_union_start_swap X `{OrderedType X} (L : list (set X)) s
 Proof.
   general induction L; simpl; eauto.
   - cset_tac; intuition.
-  - rewrite IHL. symmetry. rewrite IHL. cset_tac; intuition.
+  - rewrite IHL. symmetry. rewrite IHL.
+    hnf; intros. cset_tac; intuition.
 Qed.
 
 Lemma list_union_app X `{OrderedType X} (L L' : list (set X)) s
@@ -125,7 +129,7 @@ Lemma list_union_cons X `{OrderedType X} s sl
 : list_union (s :: sl) [=] s ∪ list_union sl.
 Proof.
   simpl. setoid_rewrite list_union_start_swap.
-  cset_tac; intuition.
+  hnf; intros. cset_tac; intuition.
 Qed.
 
 Lemma incl_list_union_cons X `{OrderedType X} s sl
@@ -136,8 +140,6 @@ Proof.
 Qed.
 
 Hint Resolve incl_list_union_cons : cset.
-
-
 
 
 Lemma fold_union_app X `{OrderedType X} Gamma Γ'
@@ -296,7 +298,7 @@ Proof.
   rewrite IHL.
   rewrite list_union_start_swap.
   setoid_rewrite list_union_start_swap at 2.
-  cset_tac; intuition.
+  hnf; intros. clear_all; cset_tac; intuition.
 Qed.
 
 Require Import Drop.
@@ -320,6 +322,17 @@ Ltac norm_lunion :=
           | _ => rewrite (list_union_start_swap _ A B)
         end
     end.
+
+Lemma list_union_eq {X} `{OrderedType X} (L L':list (set X)) (s s':set X)
+: length L = length L'
+  -> (forall n s t, get L n s -> get L' n t -> s [=] t)
+  -> s [=] s'
+  -> fold_left union L s [=] fold_left union L' s'.
+Proof.
+  intros. length_equify.
+  general induction H0; simpl; eauto.
+  exploit H1; eauto using get. rewrite H2, H3; eauto using get.
+Qed.
 
 
 (*

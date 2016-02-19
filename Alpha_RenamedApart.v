@@ -184,6 +184,17 @@ Proof.
       cset_tac; intuition. exploit LENF; eauto using get.
 Qed.
 
+Lemma list_union_incl {X} `{OrderedType X} (L L':list (set X)) (s s':set X)
+: length L = length L'
+  -> (forall n s t, get L n s -> get L' n t -> s [<=] t)
+  -> s [<=] s'
+  -> fold_left union L s [<=] fold_left union L' s'.
+Proof.
+  intros. length_equify.
+  general induction H0; simpl; eauto.
+  exploit H1; eauto using get. rewrite H2, H3; eauto using get.
+Qed.
+
 Lemma alpha_rho_agrees_snd2 s u ang ϱ ϱ' D ρ ρ'
   : renamedApart s ang
     -> alpha ρ ρ' s u
@@ -196,9 +207,12 @@ Proof.
     + eapply agree_on_incl; eauto.
       unfold defVars.
       rewrite renamedApart_occurVars; eauto.
-      pe_rewrite.
-      cset_tac; intuition.
-
+      pe_rewrite. rewrite union_comm. rewrite <- minus_union.
+      eapply incl_minus_lr; eauto.
+      eapply list_union_incl; eauto.
+      * rewrite map_length, zip_length2; eauto.
+      * intros. inv_map H7. inv_zip H8. repeat get_functional; subst.
+        rewrite <- renamedApart_occurVars; eauto. cset_tac; intuition.
 Qed.
 
 Lemma rename_renamedApart_all_alpha s t ang ϱ ϱ'
@@ -284,14 +298,14 @@ Proof.
       pe_rewrite. instantiate (1:=D). eauto with cset.
       rewrite <- H6. pe_rewrite.
       etransitivity. erewrite incl_list_union. reflexivity.
-      eapply map_get_1. eapply H1. reflexivity. instantiate (1:={}).
+      eapply map_get_1. eapply H2. reflexivity. instantiate (1:={}).
       eapply not_incl_minus; eauto.
       rewrite H6. unfold disj in *. cset_tac; eauto.
   - exploit IHALPHA; eauto; dcr; pe_rewrite.
     f_equal.
     + eapply map_ext_get_eq; eauto.
       intros. destruct x as [Z u].
-      edestruct (get_length_eq _ H3 H5); eauto.
+      edestruct (get_length_eq _ H4 H5); eauto.
       exploit H6; eauto.
       exploit H2; eauto. simpl in *.
       destruct y. f_equal.
@@ -302,7 +316,7 @@ Proof.
     + erewrite rename_agree; eauto.
       eapply agree_on_incl.
       eapply alpha_rho_agrees_snd2; eauto.
-Qed.
+Admitted.
 
 
 (** ** Alpha Equivalent programs map to identical De-Bruijn terms *)
@@ -349,25 +363,25 @@ Proof.
     intros.
     exploit H0; eauto. simpl in *.
     decide (x ∈ of_list Z).
-    + edestruct (of_list_get_first _ i) as [n]; eauto. dcr. hnf in H10. subst x0.
+    + edestruct (of_list_get_first _ i) as [n]; eauto. dcr. hnf in H11. subst x0.
       rewrite pos_app_in; eauto.
-      exploit (update_with_list_lookup_in_list_first ra _ X H11 H13); eauto; dcr.
+      exploit (update_with_list_lookup_in_list_first ra _ H9 H12 H14); eauto; dcr.
       assert (x0 = y) by congruence. subst x0. clear_dup.
-      edestruct (list_lookup_in_list_first _ _ _ (eq_sym X) H8) as [n'];
+      edestruct (list_lookup_in_list_first _ _ _ (eq_sym H9) H8) as [n'];
         eauto using get_in_of_list; dcr.
-      hnf in H12; subst x0.
+      hnf in H11; subst x0.
       rewrite pos_app_in; eauto.
-      decide (n < n'). now exfalso; exploit H16; eauto.
-      decide (n' < n). now exfalso; exploit H13; eauto.
+      decide (n < n'). now exfalso; exploit H17; eauto.
+      decide (n' < n). now exfalso; exploit H14; eauto.
       assert (n = n') by omega. subst n'.
       repeat erewrite get_first_pos; eauto.
       eapply get_in_of_list; eauto.
     + exploit (update_with_list_lookup_not_in ra Z Z' y n); eauto.
       assert ((ira [Z' <-- Z]) y ∉ of_list Z). rewrite H8; eauto.
-      eapply lookup_set_update_not_in_Z'_not_in_Z in H9; eauto.
+      eapply lookup_set_update_not_in_Z'_not_in_Z in H11; eauto.
       repeat rewrite pos_app_not_in; eauto.
-      exploit (update_with_list_lookup_not_in ira Z' Z x H9); eauto.
-      rewrite X. eapply pos_inc; eauto.
+      exploit (update_with_list_lookup_not_in ira Z' Z x H11); eauto.
+      rewrite H9. eapply pos_inc; eauto.
 Qed.
 
 

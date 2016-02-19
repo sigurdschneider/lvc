@@ -216,11 +216,7 @@ Proof.
   inv H; simpl; eauto.
 Qed.
 
-Hint Extern 20 (ann_R _ ?a ?a') => (is_evar a ; fail 1)
-                                    || (has_evar a ; fail 1)
-                                    || (is_evar a' ; fail 1)
-                                    || (has_evar a'; fail 1)
-                                    || reflexivity.
+Hint Extern 20 (ann_R _ ?a ?a') => progress (first [ has_evar a | has_evar a' | reflexivity ]).
 
 (*
 *** Local Variables: ***

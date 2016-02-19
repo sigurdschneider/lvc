@@ -105,11 +105,7 @@ Hint Extern 20 (?s \ singleton ?x [=] ?s \ {?x; {}}) => rewrite minus_single_sin
 
 
 Hint Extern 20 (Subset (?a \ _) ?a) => eapply minus_incl.
-Hint Extern 20 (Subset (?a \ _) ?a') => (is_evar a ; fail 1)
-                                        || (has_evar a ; fail 1)
-                                        || (is_evar a' ; fail 1)
-                                        || (has_evar a'; fail 1)
-                                        || eapply minus_incl.
+Hint Extern 20 (Subset (?a \ _) ?a') => progress (first [ has_evar a | has_evar a' | eapply minus_incl ]).
 
 Hint Extern 20 (pe ?a ?a) => reflexivity.
 

@@ -240,13 +240,9 @@ Hint Extern 10 => match goal with
                    | [ H : ?x ∈ ?s, H' : ?y ∈ ?s -> False, H'' : ?x === ?y |- _ ] => exfalso; eapply H'; rewrite <- H''; eapply H
                  end.
 
-Hint Extern 20 (incl ?a ?a') => (is_evar a ; fail 1) || (has_evar a ; fail 1) ||
-                               (is_evar a' ; fail 1) || (has_evar a'; fail 1) || reflexivity.
-Hint Extern 20 (Subset ?a ?a') => (is_evar a ; fail 1) || (has_evar a ; fail 1) ||
-                                 (is_evar a' ; fail 1) || (has_evar a'; fail 1) || reflexivity.
-
-Hint Extern 20 (Equal ?a ?a') => (is_evar a ; fail 1) || (has_evar a ; fail 1) ||
-                                 (is_evar a' ; fail 1) || (has_evar a'; fail 1) || reflexivity.
+(*Hint Extern 20 (incl ?a ?a') => progress (first [ has_evar a | has_evar a' | reflexivity ]).*)
+Hint Extern 20 (Subset ?a ?a') => progress (first [ has_evar a | has_evar a' | reflexivity ]).
+Hint Extern 20 (Equal ?a ?a') => progress (first [ has_evar a | has_evar a' | reflexivity ]).
 
 
 (*

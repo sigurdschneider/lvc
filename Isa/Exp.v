@@ -313,7 +313,8 @@ Set Implicit Arguments.
       -> agree_on _eq (freeVars s) f ϱ
       -> alpha_exp f g s t.
   Proof.
-    intros. general induction H; simpl in *; eauto 20 using alpha_exp, agree_on_incl.
+    intros. general induction H; simpl in *;
+            eauto 20 using alpha_exp, agree_on_incl, lookup_set_union_incl.
     - econstructor.
       + rewrite <- H. eapply H2; simpl; cset_tac; eauto.
       + rewrite <- H0. eapply H1. set_tac. eexists x; simpl; cset_tac; eauto.

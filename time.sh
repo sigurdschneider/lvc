@@ -26,8 +26,9 @@ mod = ARGV.last
 pad = "".ljust(50 - cmd.length)
 
 est = File.readable?("#{mod}.time") ? File.read("#{mod}.time") : ""
-
-print "#{Time.now.strftime("%H:%M:%S")} #{blue('>>>')} #{mod}#{pad}(#{blue(est.strip)})#{parallel ? "\n" : " "}"
+eta = (Time.now + est.to_i).strftime("%H:%M:%S")
+pad2 = "".ljust(17 - est.length)
+print "#{Time.now.strftime("%H:%M:%S")} #{blue('>>>')} #{mod}#{pad}(#{blue(est.strip)})#{pad2}ETA: #{eta} #{parallel ? "\n" : " "}"
 
 start = Time.now
 cstdin, cstdout, cstderr, waitthr = Open3.popen3("bash -c \"time #{cmd}\"")

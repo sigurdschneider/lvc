@@ -237,11 +237,12 @@ Proof.
             eapply bisimeq'_refl; eauto.
           - dcr; subst. invc H5.
             exploit get_length_app.
-            eapply get_functional in H1; try eapply H2.
+            eapply get_functional in H2; try eapply H4.
             erewrite <- map_length in H3.
             exploit get_length_app.
-            eapply get_functional in X0; try eapply H3. subst a.
-            simpl; repeat split; eauto. intros; hnf in H4; dcr; subst.
+            eapply get_functional in H5; try eapply H3. subst a.
+            invc H2.
+            simpl; repeat split; eauto. intros; hnf in H2; dcr; subst.
             eapply IHctx; eauto.
           - dcr.
             Lemma get_length_right A (L1 L2:list A) n (x y:A)
@@ -366,11 +367,4 @@ Proof.
                                    transitivity y; eauto.
 Qed.
 
-*)
-
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("../" "Lvc")) ***
-*** End: ***
 *)

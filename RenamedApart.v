@@ -180,17 +180,6 @@ Proof.
     cset_tac; intuition.
 Qed.
 
-Lemma list_union_eq {X} `{OrderedType X} (L L':list (set X)) (s s':set X)
-: length L = length L'
-  -> (forall n s t, get L n s -> get L' n t -> s [=] t)
-  -> s [=] s'
-  -> fold_left union L s [=] fold_left union L' s'.
-Proof.
-  intros. length_equify.
-  general induction H0; simpl; eauto.
-  exploit H1; eauto using get. rewrite H2, H3; eauto using get.
-Qed.
-
 Lemma renamedApart_occurVars s an
   : renamedApart s an -> definedVars s [=] snd (getAnn an).
 Proof.

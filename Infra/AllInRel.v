@@ -593,7 +593,7 @@ match goal with
 end.
 
 
-Hint Extern 20 (PIR2 _ ?a ?a') => is_evar a || has_evar a || is_evar a' || has_evar a' || reflexivity.
+Hint Extern 20 (PIR2 _ ?a ?a') => progress (first [has_evar a | has_evar a' | reflexivity]).
 
 (*
 *** Local Variables: ***

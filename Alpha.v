@@ -66,7 +66,7 @@ Proof.
     eapply lookup_set_incl; try now intuition; eauto using get_list_union_map.
     eapply agree_on_incl; eauto using get_list_union_map.
   - econstructor.
-    eapply alpha_exp_agree_on_morph; eauto using agree_on_incl.
+    eapply alpha_exp_agree_on_morph; eauto using agree_on_incl, lookup_set_union_incl.
     eapply IHalpha; eauto.
     + eapply agree_on_update_same. reflexivity. eapply agree_on_incl; eauto.
       hnf; intros. eapply lookup_set_spec. intuition.
@@ -75,9 +75,9 @@ Proof.
       split; eqs. cset_tac. left. split; eauto. intuition.
     + eapply agree_on_update_same. reflexivity. eapply agree_on_incl; eauto.
   - econstructor; eauto.
-    + eapply alpha_exp_agree_on_morph; eauto using agree_on_incl.
-    + eapply IHalpha1; eauto using agree_on_incl.
-    + eapply IHalpha2; eauto using agree_on_incl.
+    + eapply alpha_exp_agree_on_morph; eauto using agree_on_incl, lookup_set_union_incl.
+    + eapply IHalpha1; eauto using agree_on_incl, lookup_set_union_incl.
+    + eapply IHalpha2; eauto using agree_on_incl, lookup_set_union_incl.
   - econstructor; eauto.
     + intros. eapply alpha_exp_agree_on_morph; eauto.
       eapply agree_on_incl; eauto.
@@ -108,7 +108,7 @@ Proof.
       * eapply update_with_list_agree; eauto.
         eapply agree_on_incl; eauto. eapply incl_union_left.
         eapply incl_list_union. eapply map_get_1; eauto. reflexivity.
-    + eapply IHalpha; eauto using agree_on_incl.
+    + eapply IHalpha; eauto using agree_on_incl, lookup_set_union_incl.
 Qed.
 
 (** ** Properties *)

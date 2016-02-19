@@ -67,7 +67,8 @@ Lemma regAssign_renamedApart_agreeF G F ans als ϱ ϱ'
 Proof.
  intros G' INCL.
  length_equify. general induction LEN1; inv LEN2; simpl in * |- *; try monadS_inv allocOK; eauto.
- exploit IHLEN1; eauto using get. etransitivity; try eapply INCL.
+ exploit IHLEN1; eauto using get.
+ etransitivity; try eapply INCL.
  norm_lunion. eauto with cset.
  exploit IH; eauto using get.
  rewrite <- map_update_list_update_agree in H0; eauto.
@@ -169,30 +170,30 @@ Proof.
   - exploit (IHGET1 G); hnf; intros; eauto using get; dcr.
     do 2 eexists; split; eauto. split; eauto.
     rewrite EQ0. simpl. rewrite EQ1; eauto.
-    etransitivity; eapply agree_on_incl; eauto.
+    etransitivity; eapply agree_on_incl; [ | reflexivity | eassumption | eauto ].
     + repeat rewrite <- map_update_list_update_agree; eauto.
       erewrite least_fresh_list_ext; eauto.
-      eapply update_with_list_agree; eauto.
-      eapply regAssign_renamedApart_agree' in EQ0; eauto using get.
-      rewrite <- map_update_list_update_agree in EQ0; eauto.
-      eapply update_with_list_agree_inv in EQ0; eauto.
-      eapply agree_on_incl; eauto. norm_lunion.
-      instantiate (1:=G \ list_union zip defVars (take n xl) (take n xl1)).
-      unfold defVars at 1. clear_all; cset_tac; intuition.
-      eapply lookup_set_agree; eauto.
-      eapply regAssign_renamedApart_agree' in EQ0; eauto using get.
-      rewrite <- map_update_list_update_agree in EQ0; eauto.
-      eapply update_with_list_agree_inv in EQ0; eauto.
-      eapply agree_on_incl; eauto.
-      instantiate (1:=getAnn a \ of_list (fst x)).
-      setoid_rewrite minus_union at 1.
-      assert (disj (getAnn a \ of_list (fst x)) (snd (getAnn x'1) ∪ of_list (fst x'))). {
-        exploit PWDISJ; [| eauto using get| econstructor 2; eapply zip_get; eauto|].
-        omega. unfold defVars in X.
-        exploit (LVINC (S n)); eauto using get; dcr.
-        rewrite H5. rewrite incl. rewrite union_comm. eapply DDISJ; eauto using get.
-      }
-      setoid_rewrite disj_minus_eq at 2; eauto.
+      * eapply update_with_list_agree; eauto.
+        eapply regAssign_renamedApart_agree' in EQ0; eauto using get.
+        rewrite <- map_update_list_update_agree in EQ0; eauto.
+        eapply update_with_list_agree_inv in EQ0; eauto.
+        eapply agree_on_incl. eauto.
+        instantiate (1:=G \ list_union zip defVars (take n xl) (take n xl1)).
+        norm_lunion. unfold defVars at 1. clear_all; cset_tac; intuition.
+      * eapply lookup_set_agree; eauto.
+        eapply regAssign_renamedApart_agree' in EQ0; eauto using get.
+        rewrite <- map_update_list_update_agree in EQ0; eauto.
+        eapply update_with_list_agree_inv in EQ0; eauto.
+        eapply agree_on_incl; eauto.
+        instantiate (1:=getAnn a \ of_list (fst x)).
+        setoid_rewrite minus_union at 1.
+        assert (disj (getAnn a \ of_list (fst x)) (snd (getAnn x'1) ∪ of_list (fst x'))). {
+          exploit PWDISJ; [| eauto using get| econstructor 2; eapply zip_get; eauto|].
+          omega. unfold defVars in H.
+          exploit (LVINC (S n)); eauto using get; dcr.
+          rewrite H7. rewrite incl. rewrite union_comm. eapply DDISJ; eauto using get.
+        }
+        setoid_rewrite disj_minus_eq at 2; eauto.
     + norm_lunion. clear_all; cset_tac; intuition.
 Qed.
 
@@ -280,11 +281,11 @@ Proof.
       eapply agree_on_incl.
       eapply agree_on_update_inv.
       etransitivity. eapply map_update_update_agree.
-      eapply X0.
+      eapply H3.
       revert H5 incl; clear_all; cset_tac; intuition. invc H0. eauto.
   - exploit regAssign_renamedApart_agree; try eapply EQ; simpl; eauto using live_sound.
     exploit regAssign_renamedApart_agree; try eapply EQ0; simpl; eauto using live_sound.
-    rewrite H11 in X. rewrite H12 in X0.
+    pe_rewrite.
     simpl in *.
     exploit IHLS1; eauto using injective_on_incl.
     rewrite H11; simpl. rewrite <- incl; eauto.
@@ -298,11 +299,11 @@ Proof.
     eapply locally_inj_live_agree. eauto. eauto. eauto.
     rewrite H11; simpl; eauto.
     exploit regAssign_renamedApart_agree'; try eapply EQ0; simpl; eauto using live_sound.
-    rewrite H12 in X3. simpl in *.
-    eapply agree_on_incl. eapply X3. instantiate (1:=D ++ Ds).
-    pose proof (renamedApart_disj H9). unfold disj in H2.
-    rewrite H12 in H2. simpl in *.
-    revert H6 H2; clear_all; cset_tac; intuition; eauto.
+    pe_rewrite.
+    eapply agree_on_incl. eapply H13. instantiate (1:=D ++ Ds).
+    pose proof (renamedApart_disj H9).
+    pe_rewrite.
+    revert H6 H14; clear_all; cset_tac; intuition; eauto.
     rewrite H11; simpl. rewrite <- incl; eauto.
   - exploit IHLS; try eapply allocOK; eauto.
     + eapply injective_on_incl.
@@ -320,7 +321,7 @@ Proof.
       eapply agree_on_incl.
       eapply agree_on_update_inv.
       etransitivity. eapply map_update_update_agree.
-      eapply X0.
+      eapply H3.
       revert H6 incl; clear_all; cset_tac; intuition. invc H0. eauto.
   -
     exploit regAssign_renamedApart_agreeF; eauto using regAssign_renamedApart_agree'. reflexivity.
@@ -331,11 +332,11 @@ Proof.
       eapply agree_on_incl; eauto. instantiate (1:=D).
       rewrite disj_minus_eq; eauto. simpl in *.
       symmetry. rewrite <- list_union_disjunct.
-      intros. inv_zip H4. edestruct H8; eauto; dcr.
-      unfold defVars. rewrite meet_comm. eapply disj_app; split; eauto.
+      intros. inv_zip H12. edestruct H8; eauto; dcr.
+      unfold defVars. symmetry. eapply disj_app; split; eauto.
       symmetry; eauto.
-      exploit H7; eauto. eapply renamedApart_disj in X1.
-      eapply disj_1_incl; eauto. rewrite H14. eauto with cset.
+      exploit H7; eauto. eapply renamedApart_disj in H17.
+      eapply disj_1_incl; eauto. rewrite H16. eauto with cset.
     + pe_rewrite. etransitivity; eauto.
     +
       assert (DDISJ:forall n  DD' Zs, get F n Zs -> get ans n DD' ->
@@ -345,84 +346,89 @@ Proof.
       }
 
       econstructor; eauto.
-      * intros. edestruct get_length_eq; try eapply H6; eauto.
-        edestruct (regAssignF_get (fst (getAnn x0) ++ snd (getAnn x0) ++ getAnn alv)); eauto; dcr.
-        rewrite <- map_update_list_update_agree in H18; eauto.
-        exploit H1; try eapply H16; eauto.
-        assert (getAnn alv \ of_list (fst Zs) ++ of_list (fst Zs) [=] getAnn alv).
-        edestruct H2; eauto. revert H14; clear_all; cset_tac; intuition.
-        decide (a ∈ of_list (fst Zs)); eauto.
-        eapply injective_on_agree.
-        Focus 2.
-        eapply agree_on_incl.
-        eauto. do 2 rewrite <- incl_right.
-        rewrite disj_minus_eq; eauto.
-        eapply renamedApart_disj in sd.
-        simpl in *.
-        rewrite <- H14. symmetry. rewrite disj_app. split; symmetry.
-        eapply disj_1_incl. eapply disj_2_incl. eapply sd.
-        rewrite <- H13. eapply incl_union_left.
-        hnf; intros. eapply list_union_get in H17. destruct H17. dcr.
-        inv_zip H17.
-        eapply incl_list_union. eapply zip_get.
-        eapply get_take; eauto. eauto using get_take. reflexivity. eauto.
-        cset_tac; intuition.
-        edestruct H2; eauto; dcr. rewrite <- incl. eauto.
-        eapply disj_1_incl.
-        eapply defVars_take_disj; eauto. unfold defVars.
-        eauto with cset.
-        setoid_rewrite <- H14 at 1.
-        eapply injective_on_fresh_list; eauto.
-        eapply injective_on_incl; eauto.
-        eapply H2; eauto.
-        eapply disj_2_incl. eapply fresh_list_spec. eapply least_fresh_spec.
-        reflexivity.
-        edestruct H8; eauto.
-        eapply fresh_list_unique, least_fresh_spec.
-        edestruct H8; eauto; dcr. rewrite H14.
-        exploit H2; eauto; dcr. rewrite incl in H20.
-        revert H20; clear_all; cset_tac; intuition.
-        decide (a ∈ of_list (fst Zs)); intuition.
-        eapply locally_inj_live_agree; try eapply X2; eauto.
-        eapply regAssign_renamedApart_agreeF in H15;
-          eauto using regAssign_renamedApart_agree', get_drop, drop_length_stable; try reflexivity.
-        eapply regAssign_renamedApart_agree' in EQ0; simpl; eauto using live_sound.
-        etransitivity; eapply agree_on_incl; eauto.
-        rewrite disj_minus_eq. reflexivity.
-        {
-          edestruct H8; eauto; dcr. rewrite H14.
-          rewrite union_comm. rewrite <- union_assoc.
-          symmetry; rewrite disj_app; split; symmetry.
-          - eapply disj_1_incl. eapply defVars_drop_disj; eauto.
-            unfold defVars. eauto with cset.
-          - eapply renamedApart_disj in sd; simpl in sd.
-            eapply disj_2_incl; eauto.
+      * {
+          intros. edestruct get_length_eq; try eapply H6; eauto.
+          edestruct (regAssignF_get (fst (getAnn x0) ++ snd (getAnn x0) ++ getAnn alv)); eauto; dcr.
+          rewrite <- map_update_list_update_agree in H21; eauto.
+          exploit H1; try eapply H19; eauto.
+          - assert (getAnn alv \ of_list (fst Zs) ++ of_list (fst Zs) [=] getAnn alv).
+            edestruct H2; eauto. revert H17; clear_all; cset_tac; intuition.
+            decide (a ∈ of_list (fst Zs)); eauto.
+            eapply injective_on_agree.
+            Focus 2.
+            eapply agree_on_incl.
+            eauto. do 2 rewrite <- incl_right.
+            rewrite disj_minus_eq; eauto.
+            eapply renamedApart_disj in sd.
+            simpl in *.
+            rewrite <- H17. symmetry. rewrite disj_app. split; symmetry.
+            eapply disj_1_incl. eapply disj_2_incl. eapply sd.
             rewrite <- H13. eapply incl_union_left.
-            rewrite <- drop_zip; eauto.
-            eapply list_union_drop_incl; eauto.
+            hnf; intros ? A. eapply list_union_get in A. destruct A. dcr.
+            inv_zip H20.
+            eapply incl_list_union. eapply zip_get.
+            eapply get_take; eauto. eauto using get_take. reflexivity. eauto.
+            cset_tac; intuition.
+            edestruct H2; eauto; dcr. rewrite <- incl. eauto.
+            eapply disj_1_incl.
+            eapply defVars_take_disj; eauto. unfold defVars.
+            eauto with cset.
+            setoid_rewrite <- H17 at 1.
+            eapply injective_on_fresh_list; eauto.
+            eapply injective_on_incl; eauto.
+            eapply H2; eauto.
+            eapply disj_intersection.
+            eapply disj_2_incl. eapply fresh_list_spec. eapply least_fresh_spec.
+            reflexivity.
+            edestruct H8; eauto.
+            eapply fresh_list_unique, least_fresh_spec.
+          - edestruct H8; eauto; dcr. rewrite H17.
+            exploit H2; eauto; dcr. rewrite incl in H26; simpl in *.
+            revert H26; clear_all; cset_tac; intuition.
+            decide (a ∈ of_list (fst Zs)); intuition.
+          - eapply locally_inj_live_agree; try eapply H17; eauto.
+            eapply regAssign_renamedApart_agreeF in H18;
+              eauto using get_drop, drop_length_stable; try reflexivity.
+            + eapply regAssign_renamedApart_agree' in EQ0; simpl; eauto using live_sound.
+              etransitivity; eapply agree_on_incl; try eassumption.
+              * rewrite disj_minus_eq. reflexivity.
+                {
+                  edestruct H8; eauto; dcr. rewrite H20.
+                  rewrite union_comm. rewrite <- union_assoc.
+                  symmetry; rewrite disj_app; split; symmetry.
+                  - eapply disj_1_incl. eapply defVars_drop_disj; eauto.
+                    unfold defVars. eauto with cset.
+                  - eapply renamedApart_disj in sd; simpl in sd.
+                    eapply disj_2_incl; eauto.
+                    rewrite <- H13. eapply incl_union_left.
+                    rewrite <- drop_zip; eauto.
+                    eapply list_union_drop_incl; eauto.
+                }
+              * pe_rewrite.
+                rewrite disj_minus_eq. reflexivity.
+                {
+                  edestruct H8; eauto; dcr. rewrite H20.
+                  rewrite union_comm. rewrite <- union_assoc.
+                  symmetry; rewrite disj_app; split; symmetry.
+                  rewrite union_comm; eauto.
+                  eapply renamedApart_disj in H10. pe_rewrite. eapply H10.
+                }
+            + intros.
+              eapply regAssign_renamedApart_agree'; eauto using get_drop, drop_get.
+            + intros. edestruct H8; eauto; dcr. rewrite H20.
+              exploit H2; eauto; dcr. rewrite incl in H27. simpl in *.
+              revert H27; clear_all; cset_tac; intuition.
+              decide (a ∈ of_list (fst Zs)); intuition.
         }
-        pe_rewrite.
-        rewrite disj_minus_eq. reflexivity.
-        {
-          edestruct H8; eauto; dcr. rewrite H14.
-          rewrite union_comm. rewrite <- union_assoc.
-          symmetry; rewrite disj_app; split; symmetry.
-          rewrite union_comm; eauto.
-          eapply renamedApart_disj in H10. pe_rewrite. eapply H10.
-        }
-        edestruct H8; eauto; dcr. rewrite H14.
-        exploit H2; eauto; dcr. rewrite incl in H20.
-        revert H20; clear_all; cset_tac; intuition.
-        decide (a ∈ of_list (fst Zs)); intuition.
       * eapply injective_on_agree; try eapply inj; eauto.
         etransitivity; eapply agree_on_incl; eauto.
         rewrite disj_minus_eq; eauto. simpl in *.
         symmetry. rewrite <- list_union_disjunct.
-        intros. inv_zip H4. edestruct H8; eauto; dcr.
-        unfold defVars. rewrite meet_comm. eapply disj_app; split; eauto.
+        intros. inv_zip H14. edestruct H8; eauto; dcr.
+        unfold defVars. symmetry. eapply disj_app; split; eauto.
         symmetry; eauto.
-        exploit H7; eauto. eapply renamedApart_disj in X2.
-        eapply disj_1_incl; eauto. rewrite H14. eauto with cset.
+        exploit H7; eauto. eapply renamedApart_disj in H18.
+        eapply disj_1_incl; eauto. rewrite H17. eauto with cset.
         pe_rewrite. eauto.
 Qed.
 
@@ -471,8 +477,8 @@ Lemma list_max_swap L x
 Proof.
   general induction L; simpl; eauto.
   setoid_rewrite <- IHL; eauto.
-  setoid_rewrite NPeano.Nat.max_comm at 4.
-  rewrite NPeano.Nat.max_assoc; eauto.
+  setoid_rewrite Max.max_comm at 4.
+  rewrite Max.max_assoc; eauto.
 Qed.
 
 Lemma list_max_get L n x
@@ -511,7 +517,7 @@ Lemma regAssign_assignment_small (ϱ:Map [var,var]) LV s alv ϱ' al n
 : lookup_set (findt ϱ' 0) (snd (getAnn al)) ⊆ vars_up_to (max (size_of_largest_live_set alv) n).
 Proof.
   exploit regAssign_renamedApart_agree; eauto using live_sound.
-  rewrite lookup_set_agree in up; eauto. clear X.
+  rewrite lookup_set_agree in up; eauto. clear H.
   general induction LS; invt renamedApart; simpl in * |- *.
   - assert ( singleton (findt ϱ' 0 x)
                        ⊆ vars_up_to (size_of_largest_live_set al)). {
@@ -542,8 +548,8 @@ Proof.
       rewrite lookup_set_add; eauto.
       rewrite up.
       rewrite vars_up_to_max. cset_tac; intuition.
-    + rewrite H9 in X. simpl in *. rewrite H10.
-      rewrite lookup_set_add; eauto. rewrite X.
+    + rewrite H9 in H3. simpl in *. rewrite H10.
+      rewrite lookup_set_add; eauto. rewrite H3.
 (*      rewrite <- NPeano.Nat.add_max_distr_r. *)
       repeat rewrite vars_up_to_max.
       cset_tac; intuition; eauto.
@@ -559,9 +565,9 @@ Proof.
       * simpl. eauto.
       * rewrite <- H7.
         rewrite lookup_set_union; eauto.
-        rewrite X0.
-        rewrite lookup_set_agree; eauto. rewrite X.
-        repeat (try rewrite <- NPeano.Nat.add_max_distr_r; rewrite vars_up_to_max).
+        rewrite H3.
+        rewrite lookup_set_agree; eauto. rewrite H2.
+        repeat (try rewrite <- Nat.add_max_distr_r; rewrite vars_up_to_max).
         clear_all; cset_tac; intuition.
         unfold findt; intuition.
         unfold findt; intuition.
@@ -600,11 +606,11 @@ Proof.
       rewrite lookup_set_add; eauto.
       rewrite up.
       rewrite vars_up_to_max. cset_tac; intuition.
-    + rewrite H10 in X. simpl in *.
-      rewrite H11. rewrite lookup_set_add, X; eauto.
+    + rewrite H10 in H3. simpl in *.
+      rewrite H11. rewrite lookup_set_add, H3; eauto.
       repeat rewrite vars_up_to_max.
       cset_tac; intuition.
-  - repeat (try rewrite <- NPeano.Nat.add_max_distr_r; rewrite vars_up_to_max).
+  - repeat (try rewrite <- Nat.add_max_distr_r; rewrite vars_up_to_max).
     monadS_inv allocOK.
     rewrite <- H13, lookup_set_union; eauto.
     eapply union_incl_split.
@@ -637,7 +643,7 @@ Proof.
         rewrite disj_minus_eq; [ | eauto using defVars_take_disj].
         unfold defVars. eauto. eauto.
         rewrite disj_minus_eq; eauto.
-        exploit H7; eauto. eapply renamedApart_disj in X0.
+        exploit H7; eauto. eapply renamedApart_disj in H25.
         eapply disj_1_incl; eauto. rewrite H22.
         rewrite <- incl. revert H20.
         clear_all; cset_tac; intuition.
@@ -655,7 +661,7 @@ Proof.
         rewrite <- (diff_inter_cardinal (getAnn x0) (of_list (fst x1))).
         assert (getAnn x0 ∩ of_list (fst x1) [=] of_list (fst x1)).
         revert H17; clear_all; cset_tac; intuition.
-        rewrite H23 at 1. rewrite cardinal_of_list_unique; eauto. omega.
+        rewrite H25. rewrite cardinal_of_list_unique; eauto. omega.
         etransitivity;[| eapply list_max_get; eauto; eapply map_get_1; eauto].
         rewrite <- size_of_largest_live_set_live_set. omega.
         eauto. intuition. eauto. intuition. intuition.
@@ -697,19 +703,19 @@ Proof.
           etransitivity; [| eapply agree_on_incl; try eapply X2].
           eapply agree_on_incl; try apply H21.
           rewrite disj_minus_eq; [ | eauto using defVars_take_disj].
-          unfold defVars. eapply incl_left.
+          unfold defVars. eapply incl_left. eauto.
           rewrite disj_minus_eq; eauto.
-          exploit H7; eauto. eapply renamedApart_disj in X3.
+          exploit H7; eauto. eapply renamedApart_disj in H30.
           eapply disj_1_incl; eauto. rewrite H22.
           rewrite <- incl. revert H20. clear_all; cset_tac; intuition.
-          decide (a ∈ of_list (fst x1)); intuition.
+          decide (a ∈ of_list (fst x1)); intuition. eauto.
           rewrite disj_minus_eq; [ | eauto using defVars_drop_disj].
-          eapply incl_left.
+          eapply incl_left. eauto.
           rewrite disj_minus_eq; eauto.
           pe_rewrite.
           assert (getAnn x0 [=] getAnn x0 \ of_list (fst x1) ∪ of_list (fst x1)).
           revert H17; clear_all; cset_tac; intuition.
-          decide (a ∈ of_list (fst x1)); eauto. rewrite H23.
+          decide (a ∈ of_list (fst x1)); eauto. rewrite H30.
           symmetry. eapply disj_app; split. symmetry.
           eapply disj_1_incl. eapply disj_2_incl.
           eapply renamedApart_disj in sd. eapply sd. simpl.
@@ -717,7 +723,7 @@ Proof.
           simpl. rewrite H20; eauto.
           symmetry.
           eapply renamedApart_disj in H10. pe_rewrite.
-          eapply disj_1_incl; eauto. eapply incl_left.
+          eapply disj_1_incl; eauto.
           rewrite lookup_set_update_with_list_in_union_length; eauto.
           rewrite diff_subset_equal. rewrite lookup_set_empty.
           clear_all; cset_tac; intuition. intuition. reflexivity.
@@ -735,13 +741,14 @@ Proof.
         rewrite <- (diff_inter_cardinal (getAnn x0) (of_list (fst x1))).
         assert (getAnn x0 ∩ of_list (fst x1) [=] of_list (fst x1)).
         revert H17; clear_all; cset_tac; intuition.
-        rewrite H23 at 1. rewrite cardinal_of_list_unique; eauto. omega.
+        rewrite H25. rewrite cardinal_of_list_unique; eauto. omega.
         etransitivity;[| eapply list_max_get; eauto; eapply map_get_1; eauto].
         rewrite <- size_of_largest_live_set_live_set. omega.
         eauto.
-      * erewrite lookup_set_agree; eauto. erewrite X; eauto.
-        repeat (try rewrite <- NPeano.Nat.add_max_distr_r; rewrite vars_up_to_max); eauto.
-        setoid_rewrite vars_up_to_incl at 1. instantiate (1:=list_max List.map size_of_largest_live_set als).
+      * erewrite lookup_set_agree; eauto. erewrite H23; eauto.
+        repeat (try rewrite <- Nat.add_max_distr_r; rewrite vars_up_to_max); eauto.
+        setoid_rewrite vars_up_to_incl at 1.
+        instantiate (1:=list_max List.map size_of_largest_live_set als).
         clear_all; cset_tac; intuition.
         eapply list_max_get. eapply map_get_1; eauto.
         eapply regAssign_renamedApart_agree' in EQ0; eauto. symmetry in EQ0.
@@ -756,11 +763,11 @@ Proof.
     + exploit IHLS; eauto.
       * pe_rewrite. rewrite <- incl; eauto.
       * pe_rewrite. instantiate (1:=max (list_max (List.map size_of_largest_live_set als)) n).
-        repeat (try rewrite <- NPeano.Nat.add_max_distr_r; rewrite vars_up_to_max).
+        repeat (try rewrite <- Nat.add_max_distr_r; rewrite vars_up_to_max).
         rewrite up; eauto with cset.
       * pe_rewrite.
-        repeat (try rewrite <- NPeano.Nat.add_max_distr_r in X; rewrite vars_up_to_max in X).
-        rewrite X. clear_all; cset_tac; intuition.
+        repeat (try rewrite <- Nat.add_max_distr_r in H4; rewrite vars_up_to_max in H4).
+        rewrite H4. clear_all; cset_tac; intuition.
 Qed.
 
 (** ** Theorem 8 from the paper. *)
@@ -786,7 +793,7 @@ Proof.
   exploit regAssign_assignment_small; eauto using locally_inj_subset, meet1_Subset, live_sound_annotation, renamedApart_annotation.
   eapply ann_R_get in H2. destruct (getAnn ang); simpl; cset_tac; intuition.
   rewrite lookup_set_union; intuition.
-  rewrite X.
+  rewrite H6.
   rewrite <- lookup_set_agree; eauto using regAssign_renamedApart_agree; intuition.
   rewrite H5. repeat rewrite vars_up_to_max. cset_tac; intuition.
 Qed.

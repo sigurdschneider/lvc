@@ -297,11 +297,11 @@ Unset Implicit Arguments.
 Ltac normalize_notations :=
   match goal with
  | H : ?R ?x ?y |- _ =>
-   progress ((change (x === y) in H) || (change (x <<< y) in H) ||
-     (change (x >>> y) in H)); normalize_notations
+   (progress ((change (x === y) in H) || (change (x <<< y) in H) ||
+     (change (x >>> y) in H))); normalize_notations
  | H : ~(?R ?x ?y) |- _ =>
-   progress ((change (x =/= y) in H) || (change (~ x <<< y) in H) ||
-     (change (~ y <<< x) in H)); normalize_notations
+   (progress ((change (x =/= y) in H) || (change (~ x <<< y) in H) ||
+     (change (~ y <<< x) in H))); normalize_notations
  | |- ?R ?x ?y =>
    progress (change (x === y) || change (x <<< y) || change (y <<< x))
  | |- ~?R ?x ?y =>
@@ -421,17 +421,17 @@ Ltac order :=
 
 Ltac false_order := elimtype False; order.
 
-Hint Extern 0 (_eq _ _) => reflexivity.
-Hint Extern 0 (_ === _) => reflexivity.
-Hint Extern 2 (_eq _ _) => symmetry; assumption.
-Hint Extern 2 (_ === _) => symmetry; assumption.
-Hint Extern 1 (Equivalence _) => constructor; congruence.
-Hint Extern 1 (Equivalence _) => apply OT_Equivalence.
-Hint Extern 1 (StrictOrder _) => apply OT_StrictOrder.
-Hint Extern 1 (RelationClasses.StrictOrder _) =>
+Hint Extern 10 (_eq _ _) => reflexivity.
+Hint Extern 10 (_ === _) => reflexivity.
+Hint Extern 20 (_eq _ _) => symmetry; assumption.
+Hint Extern 20 (_ === _) => symmetry; assumption.
+Hint Extern 21 (Equivalence _) => constructor; congruence.
+Hint Extern 21 (Equivalence _) => apply OT_Equivalence.
+Hint Extern 21 (StrictOrder _) => apply OT_StrictOrder.
+Hint Extern 21 (RelationClasses.StrictOrder _) =>
   constructor; repeat intro; order.
-Hint Extern 1 (Proper _ _) => apply lt_m.
-Hint Extern 1 (Proper _ _) => repeat intro; intuition order.
+Hint Extern 21 (Proper _ _) => apply lt_m.
+Hint Extern 21 (Proper _ _) => repeat intro; intuition order.
 
 (** ** Specific Ordered types : [OrderedType] with specific equality
 
@@ -557,7 +557,7 @@ Section KeyOrderedType.
   Qed.
   Local Instance ltk_SO : RelationClasses.StrictOrder ltk.
   Proof.
-    constructor; repeat intro; unfold ltk in *; intuition order. 
+    constructor; repeat intro; unfold ltk in *; intuition order.
   Qed.
   Local Instance ltk_m : Proper (eqk ==> eqk ==> iff) ltk.
   Proof.
