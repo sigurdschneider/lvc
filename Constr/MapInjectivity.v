@@ -302,15 +302,15 @@ Proof.
   rewrite H13 in H10.
   clear H8.
   rewrite <- H10 in n0.
-  rewrite <- H6 in n0. rewrite <- lookup_set_union in n0.
+  rewrite <- H6 in n0. rewrite <- lookup_set_union in n0; eauto.
   assert (s ∪ D' [=] (s' ∪ D') \ {{x}}).
-  rewrite H4; cset_tac; intuition.
+  rewrite H4. clear H1 H2 H4 H6 H7 H10 H11 H12 H13 H14 n0 s0 FOO.
+  cset_tac; intuition.
   rewrite H8 in n0. rewrite H8 in H2.
   pose proof (injective_on_update_not_in H2 n0); eauto. intuition.
-
-  simpl. split; intros; isabsurd.
-  simpl in H2. eapply H2. eapply (injective_on_incl H11).
-  rewrite H4. cset_tac; intuition.
+  simpl.
+  simpl in H2. eapply H12. eapply (injective_on_incl H2).
+  rewrite H4. clear_all; cset_tac; intuition.
 Qed.
 
 Global Instance injective_on_computable {X} `{OrderedType X} {Y} `{OrderedType Y}

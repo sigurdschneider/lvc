@@ -37,7 +37,7 @@ Proof.
   intros. hnf; intros; unfold comp in *.
   lud; try (now exfalso; eauto).
   simpl in *. specialize (H2 x0 H3). simpl in H2.
-  lud; try (now exfalso; eauto).
+  lud; exfalso; eauto.
   specialize (H2 x0 H3). simpl in H2. lud.
   exfalso; eauto.
 Qed.
