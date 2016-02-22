@@ -85,18 +85,20 @@ Fixpoint compile (ZL:list (list var)) (s:stmt) (an:ann (list (list var))) : stmt
 
 Inductive approx
   : list ((set var * list var) * (option (set var)) * (params))
+    -> list I.block
+    -> list I.block
     -> ((set var * list var) * (option (set var)) * (params))
     -> I.block
     -> I.block -> Prop :=
-  blk_approxI o (Za Z':list var) Lv DL ZL s ans ans_lv ans_lv' n
+  blk_approxI o (Za Z':list var) Lv DL ZL s ans ans_lv ans_lv' n L1 L2
               (RD:forall G, o = Some G ->
                        live_sound Imperative Lv (compile ZL s ans) ans_lv'
                        /\ trs (restrict DL G) ZL s ans_lv ans)
   : length DL = length ZL
   -> length ZL = length Lv
-  -> approx (zip pair (zip pair Lv DL) ZL) ((getAnn ans_lv',Z'++Za), o, Za) (I.blockI Z' s n) (I.blockI (Z'++Za) (compile ZL s ans) n).
+  -> approx (zip pair (zip pair Lv DL) ZL) L1 L2 ((getAnn ans_lv',Z'++Za), o, Za) (I.blockI Z' s n) (I.blockI (Z'++Za) (compile ZL s ans) n).
 
-Lemma approx_restrict_block Lv1 Lv2 DL1 DL2 ZL1 ZL2 Lv1' DL1' ZL1' L1' L2' G n
+Lemma approx_restrict_block Lv1 Lv2 DL1 DL2 ZL1 ZL2 Lv1' DL1' ZL1' L1' L2' G n L1X L2X
 : length Lv1 = length DL1
   -> length Lv2 = length DL2
   -> length DL1 = length ZL1
@@ -104,12 +106,12 @@ Lemma approx_restrict_block Lv1 Lv2 DL1 DL2 ZL1 ZL2 Lv1' DL1' ZL1' L1' L2' G n
   -> mutual_block
         (approx
            (zip pair (zip pair Lv1 DL1) ZL1 ++
-            zip pair (zip pair Lv2 DL2) ZL2)) n
+            zip pair (zip pair Lv2 DL2) ZL2) L1X L2X) n
         (zip pair (zip pair Lv1' DL1') ZL1') L1' L2'
   -> mutual_block
      (approx
         (zip pair (zip pair Lv1 (restrict DL1 G)) ZL1 ++
-         zip pair (zip pair Lv2 (restrict DL2 G)) ZL2)) n
+         zip pair (zip pair Lv2 (restrict DL2 G)) ZL2) L1X L2X) n
      (zip pair (zip pair Lv1' (restrict DL1' G)) ZL1') L1' L2'.
 Proof.
   intros. general induction H3.
@@ -226,7 +228,68 @@ Proof.
     eapply update_with_list_no_update; eauto.
 Qed.
 
-
+Lemma approx_mutual_block n ZL DL F F' Za Za' ans ans' ans_lv ans_lv' als als' Lv L1X L2X
+      (LEN1:length F = length Za)
+      (LEN2:length F = length ans_lv)
+      (LEN3:length F = length ans)
+      (LEN4:length F = length als)
+      (LEN5:length DL = length ZL)
+      (LEN6:length ZL = length Lv)
+      (DROP1:F' = drop n F)
+      (DROP2:Za' = drop n Za)
+      (DROP3:ans' = drop n ans)
+      (DROP4:ans_lv' = drop n ans_lv)
+      (DROP5:als' = drop n als)
+      (TRS: forall (n : nat) (ans' : ann (list params))
+              (lvs : ann (set var)) (Zs : params * stmt)
+              (Zx : params),
+          get ans_lv n lvs ->
+          get F n Zs ->
+          get Za n Zx ->
+          get ans n ans' ->
+          trs
+            (restrict (mkGlobals F Za ans_lv ++ DL)
+                      (getAnn lvs \ of_list (fst Zs ++ Zx)))
+            (Za ++ ZL) (snd Zs) lvs ans')
+      (LIVE : forall (n : nat) (Zs : params * stmt) (a : ann (set var)),
+          get (compileF compile ZL F Za Za ans) n Zs ->
+          get als n a ->
+          live_sound Imperative
+                     (Liveness.live_globals (compileF compile ZL F Za Za ans) als ++ Lv) (snd Zs) a)
+  : mutual_block
+      (approx
+         (zip pair
+              (zip pair
+                   (zip Liveness.live_global (compileF compile ZL F Za Za ans) als)
+                   (mkGlobals F Za ans_lv)) Za ++ zip pair (zip pair Lv DL) ZL) L1X L2X)
+      n
+      (zip pair
+           (zip pair
+                (zip Liveness.live_global (compileF compile ZL F' Za' Za ans') als')
+                (mkGlobals F' Za' ans_lv')) Za')
+      (mapi_impl I.mkBlock n F')
+      (mapi_impl I.mkBlock n (compileF compile ZL F' Za' Za ans')).
+Proof with eapply length_length_eq; subst; eauto using drop_length_stable.
+  unfold mkGlobals, compileF.
+  assert (LEN1':length_eq F' Za'). eauto...
+  assert (LEN2':length_eq F' ans_lv'). eauto...
+  assert (LEN3':length_eq F' ans'). eauto...
+  assert (LEN4':length_eq F' als'). eauto...
+  general induction LEN1'; inv LEN2'; inv LEN3'; inv LEN4'.
+  - econstructor.
+  - simpl. econstructor; eauto.
+    + eapply IHLEN1'; eauto using drop_shift_1.
+    + unfold I.mkBlock. simpl fst. simpl snd.
+      rewrite <- zip_app. rewrite <- zip_app.
+      econstructor; eauto.
+      intros. invc H0. split.
+      exploit LIVE; eauto 30 using zip_get, drop_eq.
+      exploit TRS; eauto 30 using zip_get, drop_eq.
+      repeat rewrite app_length; try omega; eauto. repeat rewrite zip_length2; try omega; eauto.
+      repeat rewrite app_length; try omega; eauto. repeat rewrite zip_length2; try omega; eauto.
+      repeat rewrite app_length; try omega; eauto. repeat rewrite zip_length2; try omega; eauto.
+      repeat rewrite app_length; try omega; eauto. repeat rewrite zip_length2; try omega; eauto.
+Qed.
 
 Lemma trsR_sim σ1 σ2
   : trsR σ1 σ2 -> bisim σ1 σ2.
@@ -263,7 +326,7 @@ Proof.
     edestruct (omap_var_defined_on Za); eauto.
     eapply get_in_incl; intros.
     exploit H8. eapply get_app_right. Focus 2.
-    eapply map_get_1; eauto. reflexivity. inv X1; eauto.
+    eapply map_get_1; eauto. reflexivity. inv H11; eauto.
     + (*exploit get_drop_eq; try eapply LEN1; eauto. subst o.
       exploit get_drop_eq; try eapply H11; eauto. subst x.*)
       one_step.
@@ -274,14 +337,15 @@ Proof.
         rewrite omap_app.
         erewrite omap_agree. Focus 2.
         intros. rewrite <- EQ. reflexivity.
-        rewrite H7; simpl. rewrite H1; simpl. reflexivity.
+        rewrite H10; simpl. rewrite H1; simpl. reflexivity.
       * exploit RD0; eauto; dcr. simpl.
         eapply trsR_sim. econstructor. eauto.
         eapply approx_restrict.
         Focus 3.
         instantiate (1:=Lv).
-        erewrite H5.
-        eapply (inRel_drop EA H2). congruence. congruence.
+        erewrite H9.
+        eapply (inRel_drop EA H7).
+        congruence. congruence.
         simpl. rewrite map_app.
         rewrite update_with_list_app.
         rewrite (omap_self_update E' Za). rewrite EQ. reflexivity. eauto.
@@ -293,7 +357,7 @@ Proof.
         eapply defined_on_update_list; eauto using defined_on_incl.
         exploit omap_length; try eapply H0; eauto.
         exploit omap_length; try eapply H1; eauto.
-        rewrite map_length in X1.
+        rewrite map_length in H11.
         repeat rewrite app_length in H6. rewrite map_length in H6.
         repeat rewrite app_length. omega.
         rewrite restrict_length. simpl in H7.
@@ -327,38 +391,8 @@ Proof.
     unfold Liveness.live_globals.
     repeat rewrite zip_app.
     econstructor; eauto.
-(*
-    Lemma approx_mutual_block n ZL DL Za' F Za ans ans_lv als Lv'
-          (LEN1:length F = length Za)
-          (LEN2:length F = length ans_lv)
-          (LEN3:length F = length ans)
-          (LEN4:length F = length als)
-      : mutual_block
-          (approx
-             (zip pair
-                  (zip pair
-                       (zip Liveness.live_global (compileF compile ZL F Za Za ans) als)
-                       (mkGlobals F Za ans_lv)) Za ++ zip pair (zip pair Lv' DL) ZL))
-          n
-          (zip pair
-               (zip pair
-                    (zip Liveness.live_global (compileF compile ZL F Za Za' ans) als)
-                    (mkGlobals F Za ans_lv)) Za) (mapi_impl I.mkBlock n F)
-          (mapi_impl I.mkBlock n (compileF compile ZL F Za Za' ans)).
-    Proof.
-      length_equify. general induction LEN1; inv LEN2; inv LEN3; inv LEN4; simpl.
-      - econstructor.
-      - unfold I.mkBlocks, mapi. simpl. econstructor; eauto.
-        exploit (IHLEN1 (S n) ZL DL Za' YL1 YL0); eauto.
-        Focus 2.
-        intros; eauto using get.
-        eapply OK; eauto using get.
-        unfold I.mkBlock. simpl.
-        unfold Liveness.live_global. simpl.
-        assert ().
-    Qed.
- *)
-    admit.
+    eapply approx_mutual_block; eauto.
+    repeat rewrite app_length; try omega; eauto. repeat rewrite zip_length2; try omega; eauto.
     unfold compileF, mkGlobals.
     repeat rewrite zip_length2; eauto; try congruence.
     unfold compileF, mkGlobals.
@@ -370,7 +404,24 @@ Proof.
     repeat rewrite app_length.
     unfold Liveness.live_globals.
     repeat rewrite zip_length2; eauto; try congruence.
-Admitted.
+Qed.
+
+Lemma oglobals_compileF_mkGlobals_PIR2 ZL F Za Za' ans ans_lv
+      (LEN1 : length F = length ans_lv)
+      (LEN2 : length F = length ans)
+      (LEN3 : length F = length Za)
+  : PIR2 (fstNoneOrR Equal)
+         (mkGlobals F Za ans_lv)
+         (oglobals (compileF compile ZL F Za Za' ans) ans_lv).
+Proof.
+  length_equify.
+  unfold compileF, oglobals, mkGlobals. simpl.
+  general induction LEN1; inv LEN2; inv LEN3; simpl; eauto using PIR2.
+  - econstructor.
+    + reflexivity.
+    + eapply IHLEN1; eauto.
+Qed.
+
 
 Lemma trs_srd AL ZL s ans_lv ans
   (RD:trs AL ZL s ans_lv ans)
@@ -382,8 +433,13 @@ Proof.
     * intros. unfold compileF in H4. inv_zip H4.
       inv_zip H7.
       exploit H3; eauto. simpl.
-      admit.
-    * admit.
+      eapply srd_monotone; eauto.
+      eapply restrict_subset; eauto.
+      eapply PIR2_app; eauto.
+      eapply oglobals_compileF_mkGlobals_PIR2; eauto.
+    * eapply srd_monotone; eauto.
+      eapply PIR2_app; eauto.
+      eapply oglobals_compileF_mkGlobals_PIR2; eauto.
 Qed.
 
 Inductive additionalParameters_live : list (list var)   (* additional params *)
@@ -418,6 +474,22 @@ Inductive additionalParameters_live : list (list var)   (* additional params *)
     -> additionalParameters_live (Za ++ ZL) t ant_lv ant
     -> additionalParameters_live ZL (stmtFun F t) (annF lv ans_lv ant_lv) (annF Za ans ant).
 
+
+Lemma live_globals_compileF_PIR2 F als Lv Za Za' ans ZL
+      (LEN1 : length F = length als)
+      (LEN2 : length F = length ans)
+      (LEN3 : length F = length Za)
+  : PIR2 live_ann_subset
+         (zip (fun (s : set var * params) (t : params) => (fst s, snd s ++ t))
+              (Liveness.live_globals F als ++ Lv) (Za ++ ZL))
+         (Liveness.live_globals (compileF compile ZL F Za Za' ans) als ++
+                                zip (fun (s : set var * params) (t : params) => (fst s, snd s ++ t)) Lv ZL).
+Proof.
+  length_equify. unfold Liveness.live_globals, compileF.
+  general induction LEN1; inv LEN2; inv LEN3; eauto using PIR2.
+  econstructor; simpl; eauto.
+Qed.
+
 Lemma live_sound_compile DL ZL AL s ans_lv ans o
   (RD:trs AL ZL s ans_lv ans)
   (LV:live_sound o DL s ans_lv)
@@ -436,25 +508,22 @@ Proof.
     edestruct map_get_4; eauto; dcr; subst. econstructor.
     rewrite <- H9. eauto using get_in_of_list.
   - simpl. econstructor; eauto.
-    + exploit IHLV; eauto. admit.
+    + exploit IHLV; eauto.
+      eapply live_sound_monotone; eauto.
+      eapply live_globals_compileF_PIR2; eauto.
     + unfold compileF. repeat rewrite zip_length2; eauto; congruence.
     + intros.
       unfold compileF in H4. inv_zip H4. inv_zip H7.
       simpl.
-      admit.
+      exploit H1; eauto.
+      eapply live_sound_monotone; eauto.
+      eapply live_globals_compileF_PIR2; eauto.
     + intros.
       unfold compileF in H4. inv_zip H4. inv_zip H7. simpl.
       exploit H2; eauto. exploit H9; eauto. dcr.
       split.
-      * rewrite of_list_app. rewrite H13. rewrite X0.
+      * rewrite of_list_app. rewrite H17. rewrite H18 at 1.
         clear_all; cset_tac; intuition.
       * destruct if; eauto. rewrite of_list_app.
-        rewrite <- minus_union. rewrite H17. eauto.
+        rewrite <- minus_union. rewrite H21. eauto.
 Qed.
-
-
-(*
-*** Local Variables: ***
-*** coq-load-path: ((".." "Lvc")) ***
-*** End: ***
-*)
