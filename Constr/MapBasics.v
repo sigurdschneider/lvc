@@ -341,10 +341,3 @@ Section UpdateFacts.
 *)
 
 End UpdateFacts.
-
-
-(*
- *** Local Variables: ***
- *** coq-load-path: (("../" "Lvc")) ***
- *** End: ***
- *)

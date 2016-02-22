@@ -36,26 +36,26 @@ Section Relations.
     Definition total :=
       forall x, reducible x.
 
-    Hint Unfold symmetric transitive functional reducible normal total. 
+    Hint Unfold symmetric transitive functional reducible normal total.
 
     (** *** The transitive reflexive closure of a relation *)
 
-    Inductive star : rel  := 
+    Inductive star : rel  :=
     | star_refl : forall x, star x x
     | S_star    : forall y x z, R x y -> star y z -> star x z.
 
     CoInductive diverges : X -> Prop :=
     | DivergesI x y : R x y -> diverges y -> diverges x.
 
-    Lemma star_trans (x y z:X) 
+    Lemma star_trans (x y z:X)
       : star x y -> star y z -> star x z.
       intros A. revert z. induction A; eauto using star.
     Qed.
-    
-    Lemma star_right (x y z:X) 
+
+    Lemma star_right (x y z:X)
       : star x y -> R y z -> star x z.
-    Proof. 
-      intros A B. induction A ; eauto using star. 
+    Proof.
+      intros A B. induction A ; eauto using star.
     Qed.
 
     (** *** The transitive reflexive closure of a relation with size index *)
@@ -74,7 +74,7 @@ Section Relations.
       forall x y, starn n x y -> forall z, starn m y z -> starn (n+m) x z.
     Proof.
       intros. induction H. simpl. assumption.
-      econstructor; eauto. 
+      econstructor; eauto.
     Qed.
 
     Lemma star0_is_eq a b
@@ -105,7 +105,7 @@ Section Relations.
     Proof.
       intros. general induction H0.
       constructor. assumption.
-      econstructor 2; eauto. 
+      econstructor 2; eauto.
     Qed.
 
     Lemma plus_right x y z :
@@ -141,7 +141,7 @@ Section Relations.
 
     Inductive terminates : X -> Prop :=
     | terminatesI x : (forall y, R x y -> terminates y) -> terminates x.
-    
+
     Definition terminating : Prop :=
       forall x, terminates x.
 
@@ -154,33 +154,33 @@ Section Relations.
 
     Lemma normalizes_normalizes'_agree (x:X) :
       normalizes' x <-> normalizes x.
-      split; intros. 
+      split; intros.
       destruct H as [y [A B]] . destruct A.
       general induction H; eauto 20 using  inhabited, normalizes.
       induction H.
       exists x. eauto using star.
-      firstorder. exists x0. firstorder using star. 
+      firstorder. exists x0. firstorder using star.
     Qed.
 
     Definition normalizing : Prop :=
       forall x, normalizes x.
 
-    Lemma functional_normalizes_terminates x 
+    Lemma functional_normalizes_terminates x
       : functional -> normalizes x -> terminates x.
-    Proof. 
+    Proof.
       intros F N. induction N as [x A|x y A B]; constructor.
       intros y B. exfalso. apply A. now exists y; eauto using inhabited.
-      intros y' C. assert (y=y') by (eapply F; eauto). subst. trivial. 
+      intros y' C. assert (y=y') by (eapply F; eauto). subst. trivial.
     Qed.
 
   End Unary.
 
   Lemma star_starplus (R : rel) (x y : X)
-    : star R x y -> star (plus R) x y. 
+    : star R x y -> star (plus R) x y.
   Proof.
-    intros. induction H; eauto using star, plus. 
-  Qed.  
-  
+    intros. induction H; eauto using star, plus.
+  Qed.
+
   Lemma star_idem_1 R x y
     : star (star R) x y -> star R x y.
   Proof.
@@ -197,8 +197,8 @@ Section Relations.
 
   Lemma div_plus' : forall (R : rel) (x y : X),  star R x y -> diverges (plus R) y -> diverges R x.
   Proof.
-    intro R. cofix. intros. destruct H0. 
-    apply plus_destr in H0. destruct H0 as [x0' [Step SStep]]. 
+    intro R. cofix. intros. destruct H0.
+    apply plus_destr in H0. destruct H0 as [x0' [Step SStep]].
     destruct H; eapply DivergesI; eauto using star_trans, star_right.
   Qed.
 
@@ -219,13 +219,13 @@ Section Relations.
     intros. general induction H1; eauto.
     inv H2. eapply IHstar; eauto. erewrite H0; eauto.
   Qed.
-  
+
   Lemma div_ext_plus (R: rel) x y
   : functional R -> diverges R x -> plus R x y -> diverges R y.
   Proof.
     intros. eapply div_ext_star_2; eauto. eapply plus_star; eauto.
   Qed.
-  
+
   Lemma normal_terminates (R: rel) s
   : normal R s -> terminates R s.
   Proof.
@@ -233,16 +233,16 @@ Section Relations.
   Qed.
 
   (** Relational approximation *)
-  
+
   Definition rle (R R' : rel) :=
     forall x y, R x y -> R' x y.
-  
+
   Definition req (R R' : rel) :=
     (rle R R' * rle R' R)%type.
-  
+
   (** Reduction decidability *)
-  
-  Definition reddec R := 
+
+  Definition reddec R :=
     forall x, reducible R x \/ normal R x.
 
 End Relations.
@@ -253,37 +253,37 @@ Global Hint Unfold symmetric transitive functional reducible normal total.
 
 Require Import Omega.
 
-Lemma complete_induction (p : nat -> Prop) (x : nat) 
+Lemma complete_induction (p : nat -> Prop) (x : nat)
   : (forall x, (forall y, y<x -> p y) -> p x) -> p x.
-Proof. 
+Proof.
   intros A. apply A. induction x; intros y B.
   exfalso ; omega.
-  apply A. intros z C. apply IHx. omega. 
+  apply A. intros z C. apply IHx. omega.
 Qed.
 
-Lemma gt_terminates 
+Lemma gt_terminates
   : terminating gt.
-Proof. 
+Proof.
   intros x. apply complete_induction. clear x.
-  intros x A. constructor. exact A. 
+  intros x A. constructor. exact A.
 Qed.
 
-Lemma size_induction (X : Type) (f : X -> nat) (p: X ->Prop) (x : X) 
+Lemma size_induction (X : Type) (f : X -> nat) (p: X ->Prop) (x : X)
   : (forall x, (forall y, f y  < f x -> p y)  -> p x) -> p x.
-Proof. 
+Proof.
   intros A. apply A.
   induction (f x); intros y B.
   exfalso; omega.
-  apply A. intros z C. apply IHn. omega. 
+  apply A. intros z C. apply IHn. omega.
 Qed.
 
-Definition size_recursion (X : Type) (f : X -> nat) (p: X -> Type) (x : X) 
+Definition size_recursion (X : Type) (f : X -> nat) (p: X -> Type) (x : X)
   : (forall x, (forall y, f y  < f x -> p y) -> p x) -> p x.
-Proof. 
+Proof.
   intros A. apply A.
   induction (f x); intros y B.
   exfalso; destruct (f y); inv B.
-  apply A. intros z C. apply IHn. cbv in B,C. cbv. 
+  apply A. intros z C. apply IHn. cbv in B,C. cbv.
   inv B. assumption. eapply le_S in C. eapply le_trans; eauto.
 Defined.
 
@@ -294,15 +294,8 @@ Inductive fstNoneOrR {X Y:Type} (R:X->Y->Prop)
 | bothR (x:X) (y:Y) : R x y -> fstNoneOrR R (Some x) (Some y)
 .
 
-Instance fstNoneOrR_Reflexive {A : Type} {R : relation A} {Rrefl: Reflexive R} 
+Instance fstNoneOrR_Reflexive {A : Type} {R : relation A} {Rrefl: Reflexive R}
 : Reflexive (fstNoneOrR R).
 Proof.
   hnf; intros. destruct x; econstructor; eauto.
 Qed.
-
-
-(* 
-*** Local Variables: ***
-*** coq-load-path: (("../" "Lvc")) ***
-*** End: ***
-*)

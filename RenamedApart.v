@@ -314,11 +314,3 @@ Proof.
       rewrite incl_right; eauto.
     + pe_rewrite; eauto.
 Qed.
-
-
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("." "Lvc")) ***
-*** End: ***
-*)

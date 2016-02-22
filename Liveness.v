@@ -461,9 +461,3 @@ Proof.
     + econstructor; eauto using agree_on_incl.
       eapply approx_mutual_block; eauto.
 Qed.
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("." "Lvc")) ***
-*** End: ***
-*)

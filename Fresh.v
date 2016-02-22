@@ -369,9 +369,3 @@ Proof.
   eapply fresh_list_unique, fresh_spec.
   eapply fresh_list_spec, fresh_spec.
 Qed.
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("." "Lvc")) ***
-*** End: ***
-*)

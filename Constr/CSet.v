@@ -261,10 +261,3 @@ Hint Resolve equal_minus_empty incl_minus_empty incl_minus_change incl_minus_uni
      .
 
 Hint Resolve incl_empty : auto.
-
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("../" "Lvc")) ***
-*** End: ***
-*)

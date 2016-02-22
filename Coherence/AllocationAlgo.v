@@ -797,9 +797,3 @@ Proof.
   rewrite <- lookup_set_agree; eauto using regAssign_renamedApart_agree; intuition.
   rewrite H5. repeat rewrite vars_up_to_max. cset_tac; intuition.
 Qed.
-
-(*
-*** Local Variables: ***
-*** coq-load-path: ((".." "Lvc")) ***
-*** End: ***
-*)

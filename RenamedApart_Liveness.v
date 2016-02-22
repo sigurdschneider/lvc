@@ -568,10 +568,3 @@ Proof.
     + erewrite getAnn_mapAnn2; eauto using live_sound_annotation, renamedApart_annotation.
       pe_rewrite. rewrite H15; reflexivity.
 Qed.
-
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("." "Lvc")) ***
-*** End: ***
-*)

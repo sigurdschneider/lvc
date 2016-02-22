@@ -109,9 +109,3 @@ Notation "'if' [ P ] 'then' s 'else' t" :=
   "'if'  [ P ]  'then'  s  'else'  t").
 
 Extraction Inline decision_procedure.
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("../" "Lvc")) ***
-*** End: ***
-*)

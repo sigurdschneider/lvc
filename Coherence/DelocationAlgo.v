@@ -1211,10 +1211,3 @@ Proof.
     simpl in X, X0. inv X; inv X0; simpl. eauto.
     simpl in X, X0. inv X; inv X0; simpl. eauto.
 Qed.
-
-
-(*
-*** Local Variables: ***
-*** coq-load-path: ((".." "Lvc")) ***
-*** End: ***
-*)

@@ -423,10 +423,3 @@ Hint Immediate @zIn_1 @zmem_2 @zequal_2 @zsubset_2 @zis_empty_2 @zadd_3
     @zmin_elt_1 @zmin_elt_2 @zmin_elt_3 @zmax_elt_1 @zmax_elt_2 @zmax_elt_3
     : set.
 (* Typeclasses Opaque set. *)
-
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("../" "Containers")) ***
-*** End: ***
-*)

@@ -10,9 +10,3 @@ Definition onv (X:Type) := var -> option X.
 (** ** Value Environments *)
 (** Value environments are functions from var to a value type X. *)
 Definition env (X:Type) := var -> X.
-
-(* 
-*** Local Variables: ***
-*** coq-load-path: ("../infra" "../constr" "../il" "../isa") ***
-*** End: ***
-*)

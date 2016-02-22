@@ -712,9 +712,3 @@ Proof.
   rewrite H2. rewrite H. cset_tac; intuition. intros; eapply H2.
   rewrite H1. cset_tac; intuition. rewrite H1. cset_tac; intuition.
 Qed.
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("." "Lvc")) ***
-*** End: ***
-*)

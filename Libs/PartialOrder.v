@@ -24,10 +24,3 @@ Instance PartialOrder_list_instance X `{PartialOrder X}
   poEq := list_eq poEq;
   poEq_dec := _
 }.
-
-
-(*
-*** Local Variables: ***
-*** coq-load-path: ((".." "Lvc")) ***
-*** End: ***
-*)

@@ -263,9 +263,3 @@ Lemma sim_EAE V s
 Proof.
   eapply bisim'_bisim. hnf. eapply sim_EAE'. constructor.
 Qed.
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("." "Lvc")) ***
-*** End: ***
-*)

@@ -34,10 +34,3 @@ Instance statetype_I : StateType I.state := {
   step_internally_deterministic := I.step_internally_deterministic;
   step_externally_determined := I.step_externally_determined
 }.
-
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("../" "Lvc")) ***
-*** End: ***
-*)

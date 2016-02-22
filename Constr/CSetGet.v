@@ -73,9 +73,3 @@ Lemma get_in_of_list X `{OrderedType X} L n x
 Proof.
   intros. general induction H0; simpl; cset_tac; intuition.
 Qed.
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("../" "Lvc")) ***
-*** End: ***
-*)

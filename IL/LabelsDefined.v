@@ -96,9 +96,3 @@ Inductive noUnreachableCode : stmt -> Prop :=
       -> noUnreachableCode t
       -> (forall n, n < length F -> isCalled t (LabI n))
       -> noUnreachableCode (stmtFun F t).
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("../" "Lvc")) ***
-*** End: ***
-*)

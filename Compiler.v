@@ -330,11 +330,3 @@ Print Assumptions optimize_correct.
 Extraction Inline bind Option.bind toString.
 
 Extraction "extraction/lvc.ml" toILF fromILF AllocationAlgo.reg_assign optimize toDeBruijn.
-
-
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("." "Lvc")) ***
-*** End: ***
-*)

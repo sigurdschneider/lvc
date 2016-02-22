@@ -353,9 +353,3 @@ Ltac inv_zip H :=
               pose proof (get_zip f _ _ H) as X; destruct X as [? [? [? EQ]]]; invc EQ
       end
   end.
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("../" "Lvc")) ***
-*** End: ***
-*)

@@ -334,9 +334,3 @@ Proof.
 Qed.
 
 Hint Resolve bounded_incl.
-
-(*
-*** Local Variables: ***
-*** coq-load-path: ((".." "Lvc")) ***
-*** End: ***
-*)

@@ -475,13 +475,3 @@ Proof.
     eapply (produces_diverges H1); eauto.
     eapply bisim_complete_diverges; eauto.
 Qed.
-
-
-
-
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("../" "Lvc")) ***
-*** End: ***
-*)

@@ -158,10 +158,3 @@ Proof.
   general induction H0; simpl; eauto.
   erewrite <- H; eauto using get. erewrite IHlength_eq; eauto using get.
 Qed.
-
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("../" "Lvc")) ***
-*** End: ***
-*)

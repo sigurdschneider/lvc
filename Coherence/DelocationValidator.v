@@ -32,10 +32,3 @@ Proof.
   try (now right; intro A; eapply trs_annotation in A; dcr; eauto).
   hnf; eauto using trs_dec.
 Defined.
-
-
-(*
-*** Local Variables: ***
-*** coq-load-path: ((".." "Lvc")) ***
-*** End: ***
-*)

@@ -64,11 +64,3 @@ Proof.
   exfalso; eauto.
   eapply H2. cset_tac; eauto.
 Qed.
-
-
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("../" "Lvc")) ***
-*** End: ***
-*)

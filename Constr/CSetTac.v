@@ -243,10 +243,3 @@ Hint Extern 10 => match goal with
 (*Hint Extern 20 (incl ?a ?a') => progress (first [ has_evar a | has_evar a' | reflexivity ]).*)
 Hint Extern 20 (Subset ?a ?a') => progress (first [ has_evar a | has_evar a' | reflexivity ]).
 Hint Extern 20 (Equal ?a ?a') => progress (first [ has_evar a | has_evar a' | reflexivity ]).
-
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("../" "Lvc")) ***
-*** End: ***
-*)

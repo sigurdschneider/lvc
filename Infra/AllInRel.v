@@ -594,9 +594,3 @@ end.
 
 
 Hint Extern 20 (PIR2 _ ?a ?a') => progress (first [has_evar a | has_evar a' | reflexivity]).
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("../" "Lvc")) ***
-*** End: ***
-*)

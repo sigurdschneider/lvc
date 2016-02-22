@@ -40,10 +40,3 @@ Proof with eauto 50 using rename_exp_agree, map_ext_get_eq2 with cset.
     eapply agree_on_incl; eauto.
     rewrite <- get_list_union_map; eauto with cset. eauto with cset.
 Qed.
-
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("../" "Lvc")) ***
-*** End: ***
-*)

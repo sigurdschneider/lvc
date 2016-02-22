@@ -394,9 +394,3 @@ Proof.
       econstructor; eauto.
     + unfold mkBlocks, mapi; repeat rewrite mapi_length; eauto.
 Qed.
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("." "Lvc")) ***
-*** End: ***
-*)

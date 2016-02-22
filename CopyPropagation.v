@@ -294,10 +294,3 @@ Proof.
     + rewrite cp_eqns_freeVars; eauto; reflexivity.
     + reflexivity.
 Qed.
-
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("." "Lvc")) ***
-*** End: ***
-*)

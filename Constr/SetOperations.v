@@ -333,10 +333,3 @@ Proof.
   general induction H0; simpl; eauto.
   exploit H1; eauto using get. rewrite H2, H3; eauto using get.
 Qed.
-
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("../" "Lvc")) ***
-*** End: ***
-*)

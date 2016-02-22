@@ -15,11 +15,3 @@ fun (X Y : Type) (R : X->Y->X->Prop) (x : X) => ~ reducible2 R x.
 
 Definition reddec :=
 fun (X Y : Type) (R : X->Y->X->Prop) => forall x : X, reducible2 R x \/ normal2 R x.
-
-
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("../" "Lvc")) ***
-*** End: ***
-*)

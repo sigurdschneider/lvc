@@ -383,10 +383,3 @@ Proof.
       exploit (update_with_list_lookup_not_in ira Z' Z x H11); eauto.
       rewrite H9. eapply pos_inc; eauto.
 Qed.
-
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("." "Lvc")) ***
-*** End: ***
-*)

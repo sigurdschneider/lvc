@@ -82,11 +82,3 @@ Proof.
     + cset_tac; intuition.
   - hnf; intros. cset_tac; intuition. unfold comp. lud. exfalso; eauto.
 Qed.
-
-
-
-(*
- *** Local Variables: ***
- *** coq-load-path: ((".." "Lvc")) ***
- *** End: ***
- *)

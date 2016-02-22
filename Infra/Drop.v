@@ -188,10 +188,3 @@ Lemma get_eq_drop X (L :list X) n x
 Proof.
   intros. general induction H; simpl; eauto.
 Qed.
-
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("../" "Lvc")) ***
-*** End: ***
-*)

@@ -471,9 +471,3 @@ Qed.
 
 
 (* End Expressions. *)
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("../" "Lvc")) ***
-*** End: ***
-*)

@@ -7,11 +7,3 @@ Require Import Liveness Filter.
 
 Set Implicit Arguments.
 Unset Printing Records.
-
-
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("." "Lvc")) ***
-*** End: ***
-*)

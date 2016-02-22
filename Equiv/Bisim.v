@@ -948,10 +948,3 @@ Proof.
       eauto. eauto.
     + exfalso. exploit step_internally_deterministic; eauto; dcr. congruence.
 Qed.
-
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("../" "Lvc")) ***
-*** End: ***
-*)

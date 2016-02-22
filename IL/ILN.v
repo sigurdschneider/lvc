@@ -585,9 +585,3 @@ Proof.
           rewrite H0. eapply pos_add; eauto.
       }
 Qed.
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("../" "Lvc")) ***
-*** End: ***
-*)

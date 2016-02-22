@@ -147,10 +147,3 @@ Definition sid := fun x => Var x.
 
 Definition unsatisfiable (Gamma:eqns) :=
   forall E, ~ satisfiesAll E Gamma.
-
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("." "Lvc")) ***
-*** End: ***
-*)

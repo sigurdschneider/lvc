@@ -59,10 +59,3 @@ Proof.
       edestruct H2; eauto; dcr. rewrite H10 in *. eauto.
     + intros. edestruct get_length_eq; eauto. edestruct H2; eauto; dcr. eauto.
 Qed.
-
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("." "Lvc")) ***
-*** End: ***
-*)

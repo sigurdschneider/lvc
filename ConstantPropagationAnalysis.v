@@ -432,10 +432,3 @@ Defined.
 
 Definition constant_propagation_analysis :=
   SSA.makeForwardAnalysis _ Dom_params_semilattice constant_propagation_transform (fun Z an => (an, Z)) fst.
-
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("." "Lvc")) ***
-*** End: ***
-*)

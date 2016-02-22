@@ -178,9 +178,3 @@ Qed.
 (*  This hint Resolve will slow everything down by 100x *)
 (* Hint Resolve lookup_set_union_incl. *)
 Hint Resolve lookup_set_single_fact.
-
-(*
- *** Local Variables: ***
- *** coq-load-path: ((".." "Lvc")) ***
- *** End: ***
- *)

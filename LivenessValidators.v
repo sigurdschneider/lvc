@@ -123,9 +123,3 @@ Proof.
   eapply true_live_sound_dec; eauto.
   right; intro. eauto using true_live_sound_annotation.
 Defined.
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("." "Lvc")) ***
-*** End: ***
-*)

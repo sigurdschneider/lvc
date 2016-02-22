@@ -254,9 +254,3 @@ makeAnalysis _
 *)
 
 End SSA.
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("." "Lvc")) ***
-*** End: ***
-*)

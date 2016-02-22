@@ -904,9 +904,3 @@ Proof.
     + eapply injective_on_agree; eauto.
       eapply agree_on_incl; eauto.
 Qed.
-
-(*
-*** Local Variables: ***
-*** coq-load-path: ((".." "Lvc")) ***
-*** End: ***
-*)

@@ -180,9 +180,3 @@ Proof.
   intros; subst. orewrite (length L = length L + 0) . eapply drop_app.
 Qed.
 *)
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("." "Lvc")) ***
-*** End: ***
-*)

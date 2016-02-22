@@ -212,9 +212,3 @@ Proof.
 Qed.
 
 Hint Resolve agree_on_incl : cset.
-
-(*
- *** Local Variables: ***
- *** coq-load-path: (("../" "Lvc")) ***
- *** End: ***
- *)

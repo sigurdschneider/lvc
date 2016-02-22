@@ -1,5 +1,5 @@
 (** * Wrapper for decidable equalities in coq.
-  
+
    The actual infrarstructure for equivalence relations is already implemented
    in coq. In this file we simply lift it to instances of Computable/Decidable,
    to make the features from Computable available for equalities.
@@ -51,7 +51,7 @@ Extraction Inline sumbool_option.
 Lemma sumbool_inversion {P:Prop} (p:{P}+{~P}) x
   : sumbool_option p = Some x -> p = left x.
 Proof.
-  intros. destruct p; simpl in * |- *; congruence. 
+  intros. destruct p; simpl in * |- *; congruence.
 Qed.
 
 Coercion sum_option {T:Type} : (T+(T -> False)) -> option T.
@@ -59,29 +59,29 @@ destruct 1. eapply (Some t). eapply None.
 Defined.
 
 Tactic Notation "destruct" "if" "in" hyp(H) :=
-  match goal with 
+  match goal with
     | H : context [if sumbool_bool ?P then _ else _] |- _ => destruct P
-    | H : context [if ?P then _ else _] |- _ => 
-      match P with 
-        | decision_procedure _ => destruct P 
-        | _ => 
-          let EQ := fresh "Heq" in 
-          let b := fresh "b" in 
+    | H : context [if ?P then _ else _] |- _ =>
+      match P with
+        | decision_procedure _ => destruct P
+        | _ =>
+          let EQ := fresh "Heq" in
+          let b := fresh "b" in
           remember P as b eqn:EQ; destruct b
-      end 
+      end
   end.
 
 Tactic Notation "destruct" "if" :=
   match goal with
     | |- context [if (if ?P then true else false) then _ else _] => destruct P
-    | |- context [if ?P then _ else _] => 
-      match P with 
-        | decision_procedure _ => destruct P 
-        | _ => 
-          let EQ := fresh "Heq" in 
-          let b := fresh "b" in 
+    | |- context [if ?P then _ else _] =>
+      match P with
+        | decision_procedure _ => destruct P
+        | _ =>
+          let EQ := fresh "Heq" in
+          let b := fresh "b" in
           remember P as b eqn:EQ; destruct b
-      end 
+      end
   end.
 
 Extraction Inline sum_option.
@@ -103,7 +103,7 @@ Proof.
 Qed.
 
 Lemma equiv_dec_R_neg A eq `(EqDec A eq) (a b:A)
-  : ~equiv_dec a b -> ~eq a b. 
+  : ~equiv_dec a b -> ~eq a b.
 Proof.
   intros. cbv in H0. destruct (H a b); eauto; contradiction.
 Qed.
@@ -112,13 +112,13 @@ Qed.
 Lemma equiv_dec_false A `(EqDec A eq) (a b:A)
   : a <> b -> false = equiv_dec a b.
 Proof.
-  intros. destruct (equiv_dec a b); simpl; congruence. 
+  intros. destruct (equiv_dec a b); simpl; congruence.
 Qed.
 
 Lemma false_equiv_dec A `(EqDec A eq) (a b:A)
   : false = equiv_dec a b -> a <> b.
 Proof.
-  intros. destruct (equiv_dec a b); simpl in *; congruence. 
+  intros. destruct (equiv_dec a b); simpl in *; congruence.
 Qed.
 
 (* The following proof is from http://cstheory.stackexchange.com/questions/5158/prove-proof-irrelevance-in-coq *)
@@ -150,7 +150,7 @@ Section PI.
     : forall x y, forall (p q :false = equiv_dec x y), p = q.
   Proof.
     intros. rewrite (bool_pcanonical _ _ q). rewrite (bool_pcanonical _ _ p).
-    unfold nu. destruct (equiv_dec x y); simpl. 
+    unfold nu. destruct (equiv_dec x y); simpl.
     simpl in p. congruence. reflexivity.
   Qed.
 
@@ -181,18 +181,12 @@ Tactic Notation "eqsubst" :=
 
 Require Import List.
 
-Global Instance inst_in_cm X (a:X) (L:list X) `(EqDec X eq) : Computable (In a L). 
+Global Instance inst_in_cm X (a:X) (L:list X) `(EqDec X eq) : Computable (In a L).
 eapply In_dec. eapply equiv_dec.
 Defined.
-  
+
 Lemma dneg_eq A `(EqDec A eq) (a b:A)
   : (~ a <> b) -> a = b.
 Proof.
   intros. decide (a=b); firstorder.
 Qed.
-
-(* 
-*** Local Variables: ***
-*** coq-load-path: (("../" "Lvc")) ***
-*** End: ***
-*)

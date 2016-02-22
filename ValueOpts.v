@@ -1115,9 +1115,3 @@ Proof.
 Qed.
 
 Print Assumptions sim_vopt.
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("." "Lvc")) ***
-*** End: ***
-*)

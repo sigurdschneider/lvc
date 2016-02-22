@@ -384,9 +384,3 @@ Proof.
   - rewrite rev_length in H2. orewrite (length L - n = 0).
     inv H1; isabsurd; eauto using get.
 Qed.
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("../" "Lvc")) ***
-*** End: ***
-*)

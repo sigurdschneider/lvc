@@ -143,11 +143,3 @@ Proof.
       edestruct (minus_in_in _ _ _ _ H4); eauto.
       eapply in_in_minus; eauto. eapply agree_set_spec; eauto.
 Qed.
-
-
-
-(*
- *** Local Variables: ***
- *** coq-load-path: ((".." "Lvc")) ***
- *** End: ***
- *)

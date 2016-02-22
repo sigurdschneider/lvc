@@ -132,9 +132,3 @@ Lemma true_live_sound_annotation i Lv s slv
 Proof.
   intros. general induction H; econstructor; eauto.
 Qed.
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("." "Lvc")) ***
-*** End: ***
-*)

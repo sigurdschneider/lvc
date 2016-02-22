@@ -620,9 +620,3 @@ Proof.
   intros. hnf; intros. eapply srdSim_sim.
   econstructor; eauto. isabsurd. econstructor. econstructor.
 Qed.
-
-(*
-*** Local Variables: ***
-*** coq-load-path: ((".." "Lvc")) ***
-*** End: ***
-*)

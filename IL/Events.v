@@ -261,9 +261,3 @@ Proof.
   intros. inv H0; eauto.
   exploit H1; eauto. dcr; subst; eauto.
 Qed.
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("../" "Lvc")) ***
-*** End: ***
-*)

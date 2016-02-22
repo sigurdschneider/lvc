@@ -53,11 +53,3 @@ Ltac length_equify :=
           end).
 
 Hint Resolve length_length_eq length_eq_length : len.
-
-
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("../" "Lvc")) ***
-*** End: ***
-*)

@@ -210,9 +210,3 @@ Proof.
     eexists; split. econstructor; eauto. repeat split; eauto; try omega.
     + intros. inv H5; intro; eauto. eapply H6; eauto. omega.
 Qed.
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("../" "Lvc")) ***
-*** End: ***
-*)

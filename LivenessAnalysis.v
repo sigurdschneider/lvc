@@ -45,11 +45,3 @@ Definition liveness_transform (DL:list (set var * params)) st a :=
 
 
 Definition liveness_analysis := makeBackwardAnalysis _ liveness_transform (fun Z an => (getAnn an, Z)).
-
-
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("." "Lvc")) ***
-*** End: ***
-*)

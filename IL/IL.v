@@ -315,9 +315,3 @@ Module I.
   Qed.
 
 End I.
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("../" "Lvc")) ***
-*** End: ***
-*)

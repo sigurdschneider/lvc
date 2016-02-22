@@ -585,9 +585,3 @@ Lemma incl_minus_union X `{OrderedType X} s t u
 Proof.
   cset_tac; intuition.
 Qed.
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("../" "Lvc")) ***
-*** End: ***
-*)

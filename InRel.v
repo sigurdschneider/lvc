@@ -337,10 +337,3 @@ match goal with
     edestruct (inRel_nthC H H') as [? [? [? [G InR]]]]; (try eassumption); dcr; inversion InR; try subst;
     repeat get_functional; (try subst)
 end.
-
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("." "Lvc")) ***
-*** End: ***
-*)

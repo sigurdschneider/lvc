@@ -49,9 +49,3 @@ Definition fexteq' (SIM:ProgramEquivalence F.state F.state)
     -> simL' SIM r AR AL L L'
     -> progeq r (L, E[Z <-- List.map Some VL], s)
             (L', E'[Z' <-- List.map Some VL'], s').
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("../" "Lvc")) ***
-*** End: ***
-*)

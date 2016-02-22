@@ -989,11 +989,3 @@ Proof.
   intro. eapply lookup_set_spec in H2. destruct H2; dcr.
   specialize (H0 x0 y).
 *)
-
-
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("." "Lvc")) ***
-*** End: ***
-*)

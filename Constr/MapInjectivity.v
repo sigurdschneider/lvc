@@ -384,9 +384,3 @@ Proof.
     hnf; intros. lud; eauto; try now exfalso; eauto.
     eapply update_unique_commute; eauto using length_eq_length.
 Qed.
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("../" "Lvc")) ***
-*** End: ***
-*)

@@ -89,10 +89,3 @@ Proof.
     destruct (omap f L); simpl; eauto.
     destruct (omap f L'); simpl; eauto.
 Qed.
-
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("../" "Lvc")) ***
-*** End: ***
-*)

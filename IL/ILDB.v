@@ -319,9 +319,3 @@ Proof.
     edestruct H; eauto; dcr. monadS_inv H5. get_functional; subst.
     econstructor; eauto.
 Qed.
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("../" "Lvc")) ***
-*** End: ***
-*)

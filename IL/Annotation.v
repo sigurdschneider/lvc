@@ -217,9 +217,3 @@ Proof.
 Qed.
 
 Hint Extern 20 (ann_R _ ?a ?a') => progress (first [ has_evar a | has_evar a' | reflexivity ]).
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("../" "Lvc")) ***
-*** End: ***
-*)

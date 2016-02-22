@@ -155,10 +155,3 @@ Lemma not_incl_minus X `{OrderedType X} (s t u: set X)
 Proof.
   cset_tac; intuition.
 Qed.
-
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("../" "Lvc")) ***
-*** End: ***
-*)

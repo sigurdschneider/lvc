@@ -131,9 +131,3 @@ Hint Extern 20 (@Proper
                (@respectful _ _
                             (@_eq _ (@SOT_as_OT _ (@eq nat) nat_OrderedType))
                             (@_eq _ (@SOT_as_OT _ (@eq nat) nat_OrderedType))) ?ϱ) => eapply proper_var.
-
-(*
-*** Local Variables: ***
-*** coq-load-path: ((".." "Lvc")) ***
-*** End: ***
-*)

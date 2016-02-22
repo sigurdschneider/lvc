@@ -59,10 +59,3 @@ Proof.
     (* rewrite (IHZ _ _ EQ1); eauto.
     hnf; intros. lud. *)
 Qed.
-
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("../" "Lvc")) ***
-*** End: ***
-*)

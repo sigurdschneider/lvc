@@ -53,10 +53,3 @@ Proof.
   etransitivity; try eapply map_update_update_agree; eauto.
   eapply agree_on_update_same; eauto.
 Qed.
-
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("../" "Lvc")) ***
-*** End: ***
-*)

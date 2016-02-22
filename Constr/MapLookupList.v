@@ -119,10 +119,3 @@ Proof.
 Qed.
 
 Hint Resolve lookup_list_agree : cset.
-
-
-(*
- *** Local Variables: ***
- *** coq-load-path: (("../" "Lvc")) ***
- *** End: ***
- *)

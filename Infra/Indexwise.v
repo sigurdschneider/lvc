@@ -30,10 +30,3 @@ intros. destruct (Rdec 0 a b).
   + right; intro HH. eapply n; hnf; intros; eapply HH; eauto using get.
 - right; intro. eapply n; hnf; intros. eapply H; eauto using get.
 Defined.
-
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("../" "Lvc")) ***
-*** End: ***
-*)

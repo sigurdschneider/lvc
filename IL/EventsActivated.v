@@ -96,10 +96,3 @@ Proof.
   eapply step_internally_deterministic in H0; eauto.
   dcr; congruence.
 Qed.
-
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("../" "Lvc")) ***
-*** End: ***
-*)

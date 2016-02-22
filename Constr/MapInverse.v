@@ -285,10 +285,3 @@ Proof.
   intros. hnf; intros. cset_tac; dcr.
   specialize (H1 _ H3). lud; intuition.
 Qed.
-
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("../" "Lvc")) ***
-*** End: ***
-*)

@@ -463,10 +463,3 @@ Lemma rev_swap X (L L':list X)
 Proof.
   intros. subst. rewrite rev_involutive; eauto.
 Qed.
-
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("../" "Lvc")) ***
-*** End: ***
-*)

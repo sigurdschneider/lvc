@@ -428,9 +428,3 @@ Proof.
     eexists x.
     rewrite lookup_set_update_not_in_Z; eauto.
 Qed.
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("../" "Lvc")) ***
-*** End: ***
-*)

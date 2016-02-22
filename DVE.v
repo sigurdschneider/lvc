@@ -472,9 +472,3 @@ Proof.
     eapply filter_in; eauto. intuition. hnf. destruct if; eauto.
     rewrite compile_live_incl; eauto. cset_tac; intuition.
 Qed.
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("." "Lvc")) ***
-*** End: ***
-*)

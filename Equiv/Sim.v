@@ -1362,10 +1362,3 @@ Ltac extern_step :=
     | intros ? ? STEP; inv STEP
     | intros ? ? STEP; inv STEP
     ].
-
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("../" "Lvc")) ***
-*** End: ***
-*)
