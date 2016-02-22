@@ -1,4 +1,4 @@
-Require Import Arith Coq.Lists.List Setoid Coq.Lists.SetoidList.
+Require Import Arith Coq.Lists.List Setoid Coq.Lists.SetoidList Omega.
 Require Export Infra.Option EqDec AutoIndTac Util Get.
 
 Set Implicit Arguments.

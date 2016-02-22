@@ -1,4 +1,4 @@
-Require Export Setoid Coq.Classes.Morphisms.
+Require Export Setoid Coq.Classes.Morphisms Omega.
 Require Export Sets SetInterface SetConstructs SetProperties.
 Require Import EqDec Computable Util.
 Require Export CSetNotation CSetTac CSetBasic CSetCases CSetGet CSetComputable CSetDisjoint.
@@ -44,7 +44,7 @@ Qed.
 Instance pe_trans X `{OrderedType X} : Transitive (@pe _ _).
 Proof.
   hnf; intros ? ? ? B C.
-  eapply prod_Equivalence_obligation_3; eauto using Equal_ST.
+  eapply Equivalence_Transitive; eauto using Equal_ST.
 Qed.
 
 Ltac pe_rewrite :=
@@ -258,6 +258,13 @@ Hint Resolve not_in_minus : cset.
 Hint Resolve not_incl_minus : cset.
 Hint Resolve disj_1_incl disj_2_incl : cset.
 
+(* general hints *)
+
+Hint Resolve equal_minus_empty incl_minus_empty incl_minus_change incl_minus_union
+     incl_union_lr incl_union_left incl_union_right incl_singleton union_incl_split
+     .
+
+Hint Resolve incl_empty : auto.
 
 
 (*

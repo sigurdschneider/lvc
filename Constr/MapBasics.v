@@ -1,6 +1,6 @@
 Require Export Setoid Coq.Classes.Morphisms.
 Require Import EqDec Computable Util AutoIndTac.
-Require Export CSet Containers.SetDecide.
+Require Export CSet Containers.SetDecide OrderedTypeEx CSetComputable.
 
 Set Implicit Arguments.
 
@@ -57,7 +57,7 @@ End feq.
 
 Arguments feq {X} {Y} {R} f g.
 
-Notation "f ≡ g" := (@feq _ _ eq f g) (no associativity, at level 70) : fmap_scope.
+Notation "f [-] g" := (@feq _ _ eq f g) (no associativity, at level 70) : fmap_scope.
 
 
 Lemma equiv_nequiv_combine W `{OrderedType W} (x y z:W)
@@ -257,7 +257,7 @@ Section UpdateFacts.
 
 
   Lemma update_commute (m : X -> Y) x x' y y':
-    x =/= x' -> m[x <- y][x' <- y'] ≡ m[x' <- y'][x <- y].
+    x =/= x' -> m[x <- y][x' <- y'] [-] m[x' <- y'][x <- y].
   Proof.
     intros ? x''; lud.
   Qed.

@@ -333,7 +333,7 @@ Proof.
   change False with (Is_true false). rewrite <- H3.
   unfold injective_on_compute in H3. rewrite H3 in H7.
   unfold injective_on_compute. rewrite H3. eapply H7.
-  eapply injective_on_incl; eauto. cset_tac; intuition.
+  eapply injective_on_incl; eauto using incl_empty.
 Defined.
 
 Lemma lookup_set_minus_eq X `{OrderedType X} Y `{OrderedType Y} s t (m:X -> Y) `{Proper _ (_eq ==> _eq) m}
@@ -364,7 +364,7 @@ Lemma injective_on_fresh_list X `{OrderedType X} Y `{OrderedType Y} XL YL (ϱ: X
 Proof.
   intros. eapply length_length_eq in H3.
   general induction H3; simpl in * |- * ; eauto.
-  - eapply injective_on_incl; eauto. cset_tac; intuition.
+  - eapply injective_on_incl; eauto using incl_empty.
   - eapply injective_on_agree.
     assert (lv ∪ { x; of_list XL} [=] {{x}} ∪ lv ∪ of_list XL) by (cset_tac; intuition; eauto).
     rewrite H7. eapply IHlength_eq; auto.

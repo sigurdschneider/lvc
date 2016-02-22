@@ -244,8 +244,6 @@ Instance fold_left_subset_morphism X `{OrderedType X}:
 Proof.
   unfold Proper, respectful; intros.
   general induction H0; simpl; eauto.
-  - rewrite IHPIR2; eauto. reflexivity.
-    rewrite H1, pf. reflexivity.
 Qed.
 
 Lemma lookup_set_list_union
@@ -310,7 +308,7 @@ Proof.
   intros; hnf; intros.
   eapply H0 in H1.
   edestruct list_union_get; eauto; dcr.
-  eapply incl_list_union; eauto using get_drop; reflexivity.
+  eapply incl_list_union. eauto using get_drop. reflexivity. eauto.
   cset_tac; intuition.
 Qed.
 

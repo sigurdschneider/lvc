@@ -143,8 +143,7 @@ Qed.
   Proof.
     intros.
     general induction XL; destruct YL; simpl in * |- *; eauto.
-    eapply agree_on_update_same; eauto. reflexivity.
-    eapply IHXL; eauto. eapply agree_on_incl; eauto.
+    eapply agree_on_update_same; eauto using agree_on_incl. reflexivity.
   Qed.
 
   Lemma update_with_list_agree_minus lv (E E':X -> Y) XL YL

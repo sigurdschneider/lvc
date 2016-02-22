@@ -160,6 +160,21 @@ Hint Extern 20 ({} [=] lookup_set ?ϱ {}) => symmetry; eapply lookup_set_empty; 
 Hint Extern 20 (lookup_set ?ϱ (singleton ?v) [=] singleton (?ϱ ?v)) => eapply lookup_set_singleton'; eauto.
 Hint Extern 20 (singleton (?ϱ ?v) [=] lookup_set ?ϱ (singleton ?v)) => symmetry; eapply lookup_set_singleton'; eauto.
 
+Lemma lookup_set_single_fact X `{OrderedType X} (x:X) ϱ `{Proper _ (_eq ==> _eq) ϱ}
+  : singleton (ϱ x) ⊆ lookup_set ϱ {x}.
+Proof.
+  cset_tac; intuition.
+  eapply lookup_set_spec; eauto. eexists x; eauto.
+Qed.
+
+Lemma lookup_set_union_incl X `{OrderedType X} s t u ϱ `{Proper _ (_eq ==> _eq) ϱ}
+  : u ⊆ lookup_set ϱ s ++ lookup_set ϱ t
+    -> u ⊆ lookup_set ϱ (s ++ t).
+Proof.
+  rewrite lookup_set_union; eauto.
+Qed.
+
+Hint Resolve lookup_set_union_incl lookup_set_single_fact.
 (*
  *** Local Variables: ***
  *** coq-load-path: ((".." "Lvc")) ***

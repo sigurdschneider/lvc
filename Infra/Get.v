@@ -1,4 +1,4 @@
-Require Import Arith Coq.Lists.List Setoid Coq.Lists.SetoidList.
+Require Import Arith Coq.Lists.List Setoid Coq.Lists.SetoidList Omega.
 Require Export Infra.Option EqDec AutoIndTac Util LengthEq.
 
 Set Implicit Arguments.
@@ -254,6 +254,8 @@ Proof.
   intros. general induction H; simpl in *; eauto using get.
 Qed.
 
+Hint Resolve map_get_1.
+
 Lemma map_get_2 X Y (L:list X) (f:X -> Y) n x
   : get (List.map f L) n x -> exists x' : X, get L n x'.
 Proof.
@@ -376,7 +378,7 @@ Proof.
   general induction L; simpl in *; isabsurd.
   edestruct get_app_cases; eauto; dcr.
   - exploit @get_length; eauto.
-    rewrite rev_length in X0; simpl in *.
+    rewrite rev_length in H1; simpl in *.
     orewrite (length L - n = S (length L - S n)).
     eauto using get.
   - rewrite rev_length in H2. orewrite (length L - n = 0).

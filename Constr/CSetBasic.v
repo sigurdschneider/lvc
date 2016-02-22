@@ -1,5 +1,5 @@
 Require Export Setoid Coq.Classes.Morphisms.
-Require Export Sets SetInterface SetConstructs SetProperties.
+Require Export Sets SetInterface SetConstructs SetProperties CSetComputable.
 Require Import EqDec CSetNotation Util CSetTac.
 
 Section theorems.
@@ -506,7 +506,7 @@ Lemma of_list_app X `{OrderedType X} (A B: list X)
 Proof.
   split; intros.
   - rewrite of_list_1 in H0. cset_tac. eapply InA_app in H0.
-    repeat rewrite of_list_1. intuition. destruct H; eauto.
+    repeat rewrite of_list_1. intuition.
   - rewrite of_list_1. eapply InA_app_iff. destruct H; eauto.
     cset_tac. repeat rewrite of_list_1 in H0. intuition.
 Qed.
@@ -556,6 +556,32 @@ Qed.
 Lemma not_in_minus X `{OrderedType X} (s t: set X) x
 : x ∉ s
   -> x ∉ s \ t.
+Proof.
+  cset_tac; intuition.
+Qed.
+
+Lemma equal_minus_empty X `{OrderedType X} s t
+  : s [=] t
+    -> s [=] t \ {}.
+Proof.
+  cset_tac; firstorder.
+Qed.
+
+Lemma incl_minus_empty X `{OrderedType X} s t
+  : s ⊆ t
+    -> s ⊆ t \ {}.
+Proof.
+  cset_tac; firstorder.
+Qed.
+
+Lemma incl_minus_change X `{OrderedType X} s t x
+  : (s \ t) \ {x; {}}[<=]s \ {x; t}.
+Proof.
+  cset_tac; intuition.
+Qed.
+
+Lemma incl_minus_union X `{OrderedType X} s t u
+  :  (s \ t) \ u [<=] s \ (u ++ t).
 Proof.
   cset_tac; intuition.
 Qed.
