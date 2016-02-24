@@ -325,29 +325,25 @@ Proof.
       edestruct PIR2_nth_2; eauto; dcr; eauto.
   - no_step. simpl. erewrite exp_eval_agree; eauto. symmetry; eauto.
   - case_eq (omap (exp_eval E) Y); intros.
-    exploit omap_exp_eval_agree; eauto.
-    eapply agree_on_incl; eauto.
+    exploit omap_exp_eval_agree; eauto using agree_on_incl.
     extern_step.
-    + exploit omap_exp_eval_agree; eauto.
-      eapply agree_on_incl; eauto.
+    + exploit omap_exp_eval_agree; eauto using agree_on_incl.
       eexists; split.
       * econstructor; eauto.
       * eapply freeVarSimF_sim. econstructor; eauto.
         eapply agree_on_update_same; eauto using agree_on_incl.
-    + exploit omap_exp_eval_agree; eauto. symmetry.
-      eapply agree_on_incl; eauto.
+    + exploit omap_exp_eval_agree. symmetry. eauto using agree_on_incl. eauto.
       eexists; split.
       * econstructor; eauto.
       * eapply freeVarSimF_sim. econstructor; eauto.
         eapply agree_on_update_same; eauto using agree_on_incl.
     + no_step.
-      exploit omap_exp_eval_agree; eauto.
       symmetry in AG.
-      eapply agree_on_incl; eauto. congruence.
+      exploit omap_exp_eval_agree; eauto using agree_on_incl.
+      congruence.
   - one_step.
-    eapply freeVarSimF_sim; econstructor; eauto.
+    eapply freeVarSimF_sim; econstructor; eauto using agree_on_incl.
     eapply PIR2_app; eauto. eapply mkBlocks_approxF; eauto.
-    eapply agree_on_incl; eauto.
 Qed.
 
 (** ** Since live variables contain free variables, liveness contains all variables significant to an IL/F program *)
@@ -461,10 +457,9 @@ Proof.
         eapply agree_on_update_same; eauto using agree_on_incl.
     + no_step.
   - one_step.
-    eapply liveSimI_sim; econstructor; eauto.
+    eapply liveSimI_sim; econstructor; eauto using agree_on_incl.
     + econstructor; eauto using agree_on_incl.
       eapply approx_mutual_block; eauto.
-    + eapply agree_on_incl; eauto.
 Qed.
 
 (*

@@ -325,6 +325,15 @@ Proof.
   destruct a; eauto 50 using get.
 Qed.
 
+Lemma bounded_incl DL G G'
+: bounded DL G
+  -> G ⊆ G'
+  -> bounded DL G'.
+Proof.
+  intros. rewrite <- H0; eauto.
+Qed.
+
+Hint Resolve bounded_incl.
 
 (*
 *** Local Variables: ***

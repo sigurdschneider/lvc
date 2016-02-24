@@ -201,25 +201,19 @@ Set Implicit Arguments.
   Qed.
 
   Lemma rename_exp_agree ϱ ϱ' e
-  : agree_on eq (Exp.freeVars e) ϱ ϱ'
+  : agree_on eq (freeVars e) ϱ ϱ'
     -> rename_exp ϱ e = rename_exp ϱ' e.
   Proof.
     intros; general induction e; simpl in *; f_equal;
     eauto 30 using agree_on_incl, incl_left, incl_right.
   Qed.
 
-
   Lemma rename_exp_freeVars
   : forall e ϱ `{Proper _ (_eq ==> _eq) ϱ},
       freeVars (rename_exp ϱ e) ⊆ lookup_set ϱ (freeVars e).
   Proof.
-    intros. general induction e; simpl; cset_tac; intuition.
-    hnf in H.
-    eapply lookup_set_spec; eauto. eexists v; cset_tac; eauto.
-    - eapply Subset_trans; eauto.
-    - eapply Subset_trans; eauto. eapply lookup_set_incl; intuition.
-    - eapply Subset_trans; try eapply IHe2; eauto.
-      eapply lookup_set_incl; intuition.
+    intros. general induction e; simpl; eauto using lookup_set_single_fact,
+                                        lookup_set_union_incl, incl_union_lr; eauto.
   Qed.
 
   Lemma live_exp_rename_sound e lv (ϱ:env var)
@@ -319,18 +313,11 @@ Set Implicit Arguments.
       -> agree_on _eq (freeVars s) f ϱ
       -> alpha_exp f g s t.
   Proof.
-    intros. general induction H; eauto using alpha_exp.
-    econstructor.
-    + rewrite <- H. eapply H2; simpl; cset_tac; eauto.
-    + rewrite <- H0. eapply H1. set_tac. eexists x; simpl; cset_tac; eauto.
-      intuition.
-    + simpl in *. econstructor.
-      - eapply IHalpha_exp1; eauto.
-        eapply agree_on_incl; eauto. eapply lookup_set_incl; intuition.
-        eapply agree_on_incl; eauto. eapply union_subset_1; intuition.
-      - eapply IHalpha_exp2; eauto.
-        eapply agree_on_incl; eauto. eapply lookup_set_incl; intuition.
-        eapply agree_on_incl; eauto. eapply union_subset_2; intuition.
+    intros. general induction H; simpl in *; eauto 20 using alpha_exp, agree_on_incl.
+    - econstructor.
+      + rewrite <- H. eapply H2; simpl; cset_tac; eauto.
+      + rewrite <- H0. eapply H1. set_tac. eexists x; simpl; cset_tac; eauto.
+        intuition.
   Qed.
 
   Lemma exp_rename_renamedApart_all_alpha e e' ϱ ϱ'

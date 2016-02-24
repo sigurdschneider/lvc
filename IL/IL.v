@@ -81,13 +81,10 @@ Lemma freeVars_occurVars s
 Proof.
   sind s; destruct s; simpl in * |- *; eauto.
   - rewrite IH; cset_tac; intuition.
-  - repeat rewrite IH; eauto.
   - rewrite IH; eauto. cset_tac; intuition.
   - rewrite IH, list_union_f_incl; eauto. reflexivity.
     intros. destruct y; simpl. rewrite IH; cset_tac; intuition; eauto.
 Qed.
-
-Hint Resolve incl_empty : cset.
 
 Lemma list_union_f_union X `{OrderedType X} Y (f g:Y->set X) s
 : list_union (List.map f s) ∪ list_union (List.map g s) [=]
@@ -129,7 +126,6 @@ Proof.
   sind s; destruct s; simpl in * |- *; eauto with cset.
   - rewrite IH; cset_tac; intuition.
   - repeat rewrite IH; eauto.
-  - rewrite IH; eauto.
   - rewrite IH, list_union_f_incl; eauto. reflexivity.
     intros. destruct y; simpl. rewrite IH; cset_tac; intuition; eauto.
 Qed.

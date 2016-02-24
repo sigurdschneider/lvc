@@ -110,14 +110,6 @@ Qed.
 Hint Resolve minus_incl_add : cset.
 (** ** Renaming with a locally injective renaming yields a coherent program *)
 
-Lemma bounded_incl DL G G'
-: bounded DL G
-  -> G ⊆ G'
-  -> bounded DL G'.
-Proof.
-  intros. rewrite <- H0; eauto.
-Qed.
-
 Lemma live_globals_bounded F alvs lv
 : ( forall (n : nat) (Zs : params * stmt) (a : ann (set var)),
       get F n Zs ->
@@ -837,7 +829,7 @@ Proof.
   destruct (getAnn x); simpl in *.
   rewrite X, H5. clear_all; cset_tac; intuition.
 Qed.
-      eapply live_globals_bounded2; eauto. 
+      eapply live_globals_bounded2; eauto.
 Qed.
 
 

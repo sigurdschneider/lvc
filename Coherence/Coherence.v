@@ -152,7 +152,7 @@ Proof.
     eapply IHrenamedApart; eauto.
     rewrite H2. simpl in *. rewrite <- incl_add'; eauto.
     erewrite bounded_restrict_eq; simpl; eauto.
-    simpl. cset_tac; intuition.
+    simpl in *. eapply bounded_incl; eauto. cset_tac; intuition.
   - econstructor; eauto.
     + eapply IHrenamedApart1; eauto.
       rewrite H4; eauto.
@@ -165,8 +165,8 @@ Proof.
     eapply srd_monotone.
     eapply IHrenamedApart; eauto.
     rewrite H2. simpl in *. rewrite <- incl_add'; eauto.
-    erewrite bounded_restrict_eq; simpl; eauto.
-    simpl. cset_tac; intuition.
+    erewrite bounded_restrict_eq; simpl. eauto.
+    simpl. eapply bounded_incl. cset_tac; intuition.
   - econstructor; eauto.
     + intros. inv_map H10.
       exploit H1; eauto. instantiate (1:=globals F (List.map (mapAnn fst) ans) ++ DL).
