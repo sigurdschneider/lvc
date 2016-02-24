@@ -36,7 +36,7 @@ Definition funConstr D Dt (Zs:params * stmt) a :=
   fst (getAnn a) [=] of_list (fst Zs) ∪ D
   /\ unique (fst Zs)
   /\ disj (of_list (fst Zs)) D
-  /\ of_list (fst Zs) ∪ snd (getAnn a) ∩ Dt [=] ∅.
+  /\ disj (of_list (fst Zs) ∪ snd (getAnn a)) Dt.
 
 Inductive renamedApart : stmt -> ann (set var * set var) -> Prop :=
   | renamedApartExp x e s D D' D'' an

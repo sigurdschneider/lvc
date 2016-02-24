@@ -198,7 +198,7 @@ Proof.
     eapply renamedApart_disj in H3. rewrite H1 in H3. simpl in *.
     rewrite minus_incl; eauto.
   * exploit H0; eauto using map_get_1.
-    eapply disj_2_incl; eauto. cset_tac; intuition.
+    eapply disj_2_incl; eauto.
 Qed.
 
 
@@ -209,7 +209,7 @@ Lemma disjoint_fun2 D D' Ds Dt (DL:list (set var * list var)) ant als Z s ans
     -> ann_R Subset1 als ans
     -> renamedApart s ant
     -> pe (getAnn ans) ((of_list Z ++ D)%set, Ds)
-    -> (Ds ++ of_list Z) ∩ Dt[=]{}
+    -> disj (Ds ++ of_list Z) Dt
     -> disjoint (live_globals ((getAnn als, Z) :: DL)) (snd (getAnn ant)).
 Proof.
   intros. rewrite H1. rewrite <- H in *. simpl in *.
@@ -221,7 +221,7 @@ Proof.
     + symmetry. rewrite incl_right; eauto.
     + symmetry; eauto.
   - exploit H0; eauto using map_get_1.
-    eapply disj_2_incl; eauto. cset_tac; intuition.
+    eapply disj_2_incl; eauto.
 Qed.
 
 
@@ -492,8 +492,7 @@ Proof.
       eapply map_get_1 with (f:=live_global); eauto. simpl in *.
       rewrite <- X. rewrite <- H5. clear_all; cset_tac; intuition.
     + intros. eapply live_exp_sound_meet; eauto.
-      rewrite incl_list_union; eauto. eapply map_get_1; eauto.
-      reflexivity.
+      rewrite incl_list_union; eauto using map_get_1.
   -  econstructor; eauto using live_exp_sound_meet.
     eapply IHRA; eauto using disjoint_let.
     + rewrite H1; simpl. rewrite <- incl_add'; eauto.

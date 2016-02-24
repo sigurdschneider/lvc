@@ -29,110 +29,277 @@ Qed.
 (** ** Given an renamedApart program, every alpha-equivalent program
        can be obtained as a renaming according to some [rho] *)
 
+Definition alpha_rho_F (alpha_rho:env var -> stmt -> stmt -> env var) :=
+  fix f (rho: env var) (F F':list (params*stmt)) : env var :=
+    match F, F' with
+    | (Z,s)::F, (Z',s')::F' => f (alpha_rho (rho [Z <-- Z']) s s') F F'
+    | _, _ => rho
+    end.
+
+Fixpoint alpha_rho (rho:env var) (s t:stmt) : env var :=
+  match s, t with
+  | stmtLet x _ s, stmtLet y _ t => alpha_rho (rho [x <- y]) s t
+  | stmtIf _ s1 s2, stmtIf _ t1 t2 => alpha_rho (alpha_rho rho s1 t1) s2 t2
+  | stmtApp _ _, stmtApp _ _ => rho
+  | stmtReturn _, stmtReturn _ => rho
+  | stmtExtern x _ _ s, stmtExtern y _ _ t => alpha_rho (rho[x <- y]) s t
+  | stmtFun F1 s, stmtFun F2 t => alpha_rho (alpha_rho_F alpha_rho rho F1 F2) s t
+  | _, _ => rho
+  end.
+
+Lemma alpha_rho_agrees_snd_F F F' ans ϱ ϱ' D
+  : ( forall (n : nat) (Zs : params * stmt) (a : ann (set var * set var)),
+       get F n Zs ->
+       get ans n a ->
+       forall (u : stmt) (ϱ ϱ' : var -> var) (D0 : set var),
+       agree_on eq D0 ϱ ϱ' ->
+       agree_on eq D0 (alpha_rho ϱ (snd Zs) u) (alpha_rho ϱ' (snd Zs) u))
+    -> (forall (n : nat) (Zs : params * stmt) (a : ann (set var * set var)),
+          get F n Zs -> get ans n a -> renamedApart (snd Zs) a)
+    -> length F = length ans
+    -> agree_on eq D ϱ ϱ'
+    -> agree_on eq D (alpha_rho_F alpha_rho ϱ F F') (alpha_rho_F alpha_rho ϱ' F F').
+Proof.
+  intros AR RA LEN AGR. length_equify.
+  general induction LEN; simpl; eauto.
+  - destruct x as [Z u], F' as [|[Z' u'] F']; eauto.
+    eapply IHLEN; eauto using get.
+    + eapply AR with (Zs:=(Z,u)); eauto using get.
+      eapply update_with_list_agree_preserve; eauto.
+Qed.
+
+Lemma alpha_rho_agrees_snd s u ang ϱ ϱ' D
+  : renamedApart s ang
+    -> agree_on eq D ϱ ϱ'
+    -> agree_on eq D (alpha_rho ϱ s u) (alpha_rho ϱ' s u).
+Proof.
+  intros RA.
+  general induction RA; destruct u; simpl in *; eauto.
+  - eapply IHRA. eapply agree_on_update_same; eauto using agree_on_incl.
+  - eapply IHRA. eapply agree_on_update_same; eauto using agree_on_incl.
+  - eapply IHRA. eapply alpha_rho_agrees_snd_F; eauto.
+Qed.
+
+Lemma alpha_rho_agree_F F F' ans ϱ ϱ' D
+  : (forall (n : nat) (Zs : params * stmt) (a : ann (set var * set var)),
+       get F n Zs ->
+       get ans n a ->
+       forall (D0 : set var) (u : stmt) (ϱ ϱ' : var -> var),
+       agree_on eq (D0 \ snd (getAnn a)) ϱ ϱ' ->
+       agree_on eq (D0 \ snd (getAnn a)) ϱ (alpha_rho ϱ' (snd Zs) u))
+    -> (forall (n : nat) (Zs : params * stmt) (a : ann (set var * set var)),
+          get F n Zs -> get ans n a -> renamedApart (snd Zs) a)
+    -> length F = length ans
+    -> agree_on eq (D \ list_union zip defVars F ans) ϱ ϱ'
+    -> agree_on eq (D \ list_union zip defVars F ans)
+               ϱ (alpha_rho_F alpha_rho ϱ' F F').
+
+Proof.
+  intros AR RA LEN AGR. length_equify.
+  general induction LEN; simpl.
+  + eauto.
+  + destruct x as [Z s1], F' as [|[Z' s2] F']; simpl in *; eauto.
+    eapply agree_on_incl. eapply IHLEN; eauto using get.
+    instantiate (1:=D \ defVars (Z, s1) y).
+    eapply agree_on_incl. eapply AR with (Zs:=(Z,s1)); eauto using get.
+    symmetry. eapply agree_on_incl. eapply update_with_list_agree_minus; eauto.
+    symmetry; eauto.
+    instantiate (1:=D \ fold_left union (zip defVars XL YL) ({} ∪ defVars (Z, s1) y) \ of_list Z).
+    cset_tac; intuition. unfold defVars at 1. simpl.
+    setoid_rewrite list_union_start_swap at 2. unfold defVars at 2.
+    simpl. cset_tac; intuition.
+    rewrite list_union_start_swap. cset_tac; intuition.
+Qed.
+
+
+Lemma alpha_rho_agree D s u ang ϱ ϱ'
+  : renamedApart s ang
+    -> agree_on eq (D \ snd (getAnn ang)) ϱ ϱ'
+    -> agree_on eq (D \ snd (getAnn ang)) ϱ (alpha_rho ϱ' s u).
+Proof.
+  intros RA.
+  general induction RA; destruct u; simpl; eauto.
+  - setoid_rewrite H1 in IHRA. simpl in *.
+    rewrite H2 in *.
+    eapply agree_on_incl. eapply IHRA.
+    symmetry. instantiate (1:=D0 \ {{x}}).
+    eapply agree_on_update_dead; [| symmetry; eauto].
+    cset_tac; intuition. eapply agree_on_incl; eauto. cset_tac; intuition.
+    cset_tac; intuition.
+  - simpl in *. rewrite <- H1 in *.
+    setoid_rewrite H2 in IHRA1.
+    setoid_rewrite H3 in IHRA2. simpl in *.
+    eapply agree_on_incl. eapply (IHRA2 (D0 \ Ds)).
+    eapply agree_on_incl. eapply (IHRA1 (D0 \ Dt)).
+    eapply agree_on_incl; eauto.
+    cset_tac; intuition. cset_tac; intuition.
+  - setoid_rewrite H1 in IHRA. simpl in *.
+    rewrite H2 in *.
+    eapply agree_on_incl. eapply IHRA.
+    symmetry. instantiate (1:=D0 \ {{x}}).
+    eapply agree_on_update_dead; [| symmetry; eauto].
+    cset_tac; intuition. eapply agree_on_incl; eauto. cset_tac; intuition.
+    cset_tac; intuition.
+  - pe_rewrite.
+    simpl in *.
+    eapply agree_on_incl. eapply IHRA.
+    eapply agree_on_incl. eapply alpha_rho_agree_F; eauto.
+    eapply agree_on_incl; eauto. rewrite <- H5.
+    instantiate (1:=D0 \ Dt). cset_tac; intuition.
+    instantiate (1:=D0 \ list_union zip defVars F ans). cset_tac; intuition.
+    rewrite <- H5. cset_tac; intuition.
+Qed.
+
+Lemma alpha_rho_agrees_snd2_F F F' ans ϱ ϱ' D
+  : (forall (n : nat) (Zs Zs': params * stmt)  (a : ann (set var * set var)),
+       get F n Zs ->
+       get ans n a ->
+       get F' n Zs' ->
+       forall (ϱ ϱ' : var -> var) (D0 : set var),
+       agree_on eq (D0 \ definedVars (snd Zs)) ϱ ϱ' ->
+       agree_on eq (D0) (alpha_rho ϱ (snd Zs) (snd Zs')) (alpha_rho ϱ' (snd Zs) (snd Zs')))
+    ->  (forall (n : nat) (Zs Zs' : params * stmt),
+           get F n Zs ->
+           get F' n Zs' -> length (fst Zs) = length (fst Zs'))
+    -> (forall (n : nat) (Zs : params * stmt) (a : ann (set var * set var)),
+          get F n Zs -> get ans n a -> renamedApart (snd Zs) a)
+    -> length F = length ans
+    -> length F = length F'
+    -> agree_on eq (D \ list_union zip defVars F ans) ϱ ϱ'
+    -> agree_on eq D (alpha_rho_F alpha_rho ϱ F F') (alpha_rho_F alpha_rho ϱ' F F').
+Proof.
+  intros AR LENF RA LEN1 LEN2 AGR. length_equify.
+  general induction LEN1; inv LEN2; simpl in *; eauto using agree_on_incl.
+  - destruct x as [Z u], y0 as [Z' u']; eauto.
+    eapply IHLEN1; eauto using get.
+    + rewrite list_union_start_swap in AGR.
+      exploit (AR 0); eauto using get.
+      eapply update_with_list_agree with (XL:=Z) (YL:=Z'); eauto.
+      eapply agree_on_incl. eapply AGR.
+      unfold defVars at 2. simpl.
+      exploit (RA 0); eauto using get.
+      rewrite renamedApart_occurVars; eauto.
+      cset_tac; intuition. exploit LENF; eauto using get.
+Qed.
+
+Lemma alpha_rho_agrees_snd2 s u ang ϱ ϱ' D ρ ρ'
+  : renamedApart s ang
+    -> alpha ρ ρ' s u
+    -> agree_on eq (D \ definedVars s) ϱ ϱ'
+    -> agree_on eq D (alpha_rho ϱ s u) (alpha_rho ϱ' s u).
+Proof.
+  intros RA ALPHA.
+  general induction RA; invt alpha; simpl in *; eauto using agree_on_incl, agree_on_update_same.
+  - eapply IHRA; eauto. eapply alpha_rho_agrees_snd2_F; eauto using agree_on_incl.
+    + eapply agree_on_incl; eauto.
+      unfold defVars.
+      rewrite renamedApart_occurVars; eauto. cset_tac; intuition.
+
+Qed.
+
 Lemma rename_renamedApart_all_alpha s t ang ϱ ϱ'
 : renamedApart s ang
   -> alpha ϱ ϱ' s t
-  -> exists rho, rename rho s = t /\ agree_on eq (fst (getAnn ang)) ϱ rho.
+  -> rename (alpha_rho ϱ s t) s = t.
 Proof.
-  intros. general induction H0; invt renamedApart; pe_rewrite; simpl.
-  - eexists ra. erewrite exp_rename_renamedApart_all_alpha; eauto.
-  - eexists ra. split; eauto. f_equal. length_equify.
-    clear l H1 H6 H4. clear D D'. general induction H; simpl; eauto.
+  intros RA ALPHA.
+  intros. general induction ALPHA; invt renamedApart; pe_rewrite; simpl.
+  - erewrite exp_rename_renamedApart_all_alpha; eauto.
+  - f_equal. length_equify.
+    revert H H0; clear_all; intros. general induction H; simpl; eauto.
     f_equal.
     + eapply exp_rename_renamedApart_all_alpha; eauto using get.
     + eapply IHlength_eq; eauto using get, list_union_cons.
-  - edestruct IHalpha; eauto; dcr; pe_rewrite.
-    eexists x0; split.
-    + f_equal; eauto.
-      * rewrite <- H4. lud; congruence. cset_tac; intuition.
-      * eapply exp_rename_renamedApart_all_alpha.
-        eapply alpha_exp_agree_on_morph; eauto.
-        instantiate (1:=ira). eauto.
-        eapply agree_on_incl. symmetry. eapply agree_on_update_inv; eauto.
-        rewrite H6. cset_tac; intuition.
-    + eapply agree_on_incl. eapply agree_on_update_inv; eauto.
+  - exploit IHALPHA; eauto; dcr; pe_rewrite.
+    f_equal; eauto.
+    + erewrite <- alpha_rho_agree; eauto. instantiate (1:=ra [x <- y]).
+      lud; try congruence.
+      reflexivity.
+      pe_rewrite. eapply renamedApart_disj in H5. pe_rewrite.
+      instantiate (1:={x}). specialize (H5 x).
       cset_tac; intuition.
-  - edestruct IHalpha1; eauto; dcr; pe_rewrite.
-    edestruct IHalpha2; eauto; dcr; pe_rewrite.
-    eexists (combine (D ∪ Ds) x x0); simpl; split.
-    + f_equal.
-      * erewrite rename_exp_agree. eapply exp_rename_renamedApart_all_alpha; eauto.
-        eapply agree_on_incl; eauto. symmetry. etransitivity. eapply H3.
-        eauto using combine_agree with cset.
-      * erewrite rename_agree; eauto.
-        rewrite occurVars_freeVars_definedVars.
-        rewrite renamedApart_freeVars; eauto.
-        rewrite renamedApart_occurVars; eauto.
-        pe_rewrite. symmetry. eapply combine_agree.
-      * erewrite rename_agree; eauto.
-        rewrite occurVars_freeVars_definedVars.
-        rewrite renamedApart_freeVars; eauto.
-        rewrite renamedApart_occurVars; eauto.
-        pe_rewrite. symmetry.
-        eapply agree_on_union.
-        etransitivity;[| eapply agree_on_incl; [eapply combine_agree| eapply incl_left]].
-        etransitivity; eauto. symmetry; eauto.
-        eapply combine_agree'.
-        eapply renamedApart_disj in H8. pe_rewrite.
-        eapply disj_app; split. eapply disj_sym; eauto.
-        symmetry. eapply H5.
-    + etransitivity;[| eapply agree_on_incl; [eapply combine_agree| eapply incl_left]]; eauto.
-  - edestruct IHalpha; eauto; dcr; pe_rewrite.
-    eexists x0; split.
-    + f_equal; eauto.
-      * rewrite <- H5. lud; congruence. cset_tac; intuition.
-      *  length_equify.
-         clear H2 IHalpha. general induction H; simpl; eauto.
-         f_equal.
-         erewrite rename_exp_agree.
-         eapply exp_rename_renamedApart_all_alpha; eauto using get.
-         symmetry. eapply agree_on_incl.
-         eapply agree_on_update_inv; eauto.
-         rewrite <- get_list_union_map in H8; eauto using get.
-         rewrite H8. cset_tac; intuition.
-         simpl in *; eapply IHlength_eq; eauto using get, list_union_cons.
-         rewrite incl_list_union_cons; eauto.
-    + eapply agree_on_incl. eapply agree_on_update_inv; eauto.
+    + eapply exp_rename_renamedApart_all_alpha.
+      eapply alpha_exp_agree_on_morph; eauto.
+      instantiate (1:=ira). eauto.
+      etransitivity. symmetry. eapply agree_on_incl.
+      eapply alpha_rho_agree; eauto. reflexivity.
+      instantiate (1:=D). pe_rewrite.
+      eapply renamedApart_disj in H5. pe_rewrite. eauto with cset.
+      eapply agree_on_update_dead; eauto.
+  - f_equal.
+    + erewrite rename_exp_agree. eapply exp_rename_renamedApart_all_alpha; eauto.
+      symmetry. etransitivity. Focus 2.
+      eapply agree_on_incl. eapply alpha_rho_agree; eauto. reflexivity.
+      instantiate (1:=D). eapply renamedApart_disj in H7; pe_rewrite.
+      eauto with cset.
+      eapply agree_on_incl. eapply alpha_rho_agree; eauto.
+      instantiate (1:=D). eapply renamedApart_disj in H6; pe_rewrite.
+      eauto with cset.
+    + erewrite rename_agree; eauto.
+      rewrite occurVars_freeVars_definedVars.
+      rewrite renamedApart_freeVars; eauto.
+      rewrite renamedApart_occurVars; eauto.
+      pe_rewrite. symmetry.
+      eapply agree_on_incl. eapply alpha_rho_agree; eauto.
+      instantiate (1:=D ∪ Ds). pe_rewrite.
+      eapply renamedApart_disj in H7. pe_rewrite.
       cset_tac; intuition.
-  - edestruct IHalpha1; eauto; dcr; pe_rewrite.
-    edestruct IHalpha2; eauto; dcr; pe_rewrite.
-    eexists (combine (of_list Z ∪ D ∪ Ds) x x0); simpl; split.
-    + f_equal.
-      * erewrite lookup_list_agree.
-        instantiate (1:=ra [Z <-- Z']).
-        eapply lookup_list_unique; eauto.
-        eapply agree_on_incl. instantiate (1:=of_list Z ∪ D).
+    + erewrite rename_agree; eauto.
+      rewrite occurVars_freeVars_definedVars.
+      rewrite renamedApart_freeVars; eauto.
+      rewrite renamedApart_occurVars; eauto.
+      pe_rewrite. symmetry. eapply agree_on_union.
+      * eapply agree_on_incl. eapply alpha_rho_agree. eauto.
+        instantiate (1:=D \ Ds). pe_rewrite.
         etransitivity. symmetry.
-        eapply agree_on_incl. eapply combine_agree. eauto.
-        symmetry; eauto. eauto.
-      * erewrite rename_agree; eauto.
-        rewrite occurVars_freeVars_definedVars.
-        rewrite renamedApart_freeVars; eauto.
-        rewrite renamedApart_occurVars; eauto.
-        pe_rewrite. symmetry. eapply combine_agree.
-      * erewrite rename_agree; eauto.
-        rewrite occurVars_freeVars_definedVars.
-        rewrite renamedApart_freeVars; eauto.
-        rewrite renamedApart_occurVars; eauto.
-        pe_rewrite. symmetry.
-        eapply agree_on_union.
-        etransitivity;[| eapply agree_on_incl; [eapply combine_agree| eauto with cset]].
-        etransitivity; eauto. symmetry; eauto.
-        eapply agree_on_incl. eapply update_with_list_agree_inv; eauto.
-        revert H4; clear_all; cset_tac; intuition; eauto.
-        eapply combine_agree'.
-        eapply renamedApart_disj in H9; pe_rewrite.
-        eapply disj_app; split.
-        eapply disj_app; split. symmetry. rewrite incl_right. eauto.
-        eapply disj_sym; eauto.
-        symmetry. rewrite incl_left. eauto.
-    + eapply agree_on_incl.
-      etransitivity.
-      eapply update_with_list_agree_inv; eauto.
+        eapply agree_on_incl. eapply alpha_rho_agree. eauto. reflexivity.
+        pe_rewrite. reflexivity.
+        eapply agree_on_incl. eapply alpha_rho_agree. eauto. reflexivity.
+        pe_rewrite. instantiate (1:=D\Dt). cset_tac; intuition. pe_rewrite.
+        eapply renamedApart_disj in H7.
+        eapply renamedApart_disj in H6.
+        pe_rewrite. eauto with cset.
+      * eapply agree_on_incl. eapply alpha_rho_agrees_snd. eauto.
+        eapply alpha_rho_agree; eauto. pe_rewrite.
+        instantiate (1:=Dt). cset_tac; intuition.
+  - exploit IHALPHA; eauto; dcr; pe_rewrite.
+    f_equal; eauto.
+    + erewrite <- alpha_rho_agree; eauto. instantiate (1:=ra [x <- y]). lud; try congruence.
+      reflexivity.
+      pe_rewrite. eapply renamedApart_disj in H8. pe_rewrite.
+      instantiate (1:={x}). specialize (H8 x).
+      cset_tac; intuition.
+    + eapply map_ext_get_eq; eauto.
+      intros.
+      erewrite rename_exp_agree; eauto.
+      eapply exp_rename_renamedApart_all_alpha; eauto using get.
+      symmetry.
+      pose proof (renamedApart_disj H8); eauto. pe_rewrite.
+      eapply agree_on_incl. eapply alpha_rho_agree; eauto.
+      symmetry. eapply agree_on_incl. eapply agree_on_update_dead; eauto.
+      pe_rewrite. instantiate (1:=D). eauto with cset.
+      rewrite <- H6. pe_rewrite.
+      etransitivity. erewrite incl_list_union. reflexivity.
+      eapply map_get_1. eapply H1. reflexivity. instantiate (1:={}).
+      eapply not_incl_minus; eauto.
+      rewrite H6. unfold disj in *. cset_tac; eauto.
+  - exploit IHALPHA; eauto; dcr; pe_rewrite.
+    f_equal.
+    + eapply map_ext_get_eq; eauto.
+      intros. destruct x as [Z u].
+      edestruct (get_length_eq _ H3 H5); eauto.
+      exploit H6; eauto.
+      exploit H2; eauto. simpl in *.
+      destruct y. f_equal.
+      * simpl in *. admit.
+      * simpl in *.
+        erewrite rename_agree; eauto.
+        admit.
+    + erewrite rename_agree; eauto.
       eapply agree_on_incl.
-      eapply combine_agree. clear_all; cset_tac; intuition.
-      revert H4; clear_all; cset_tac; intuition; eauto.
+      eapply alpha_rho_agrees_snd2; eauto.
 Qed.
+
 
 (** ** Alpha Equivalent programs map to identical De-Bruijn terms *)
 
@@ -151,7 +318,7 @@ Qed.
 Lemma alpha_real ϱ ϱ' s t symb symb'
 : alpha ϱ ϱ' s t
   -> (forall x y, ϱ x = y -> ϱ' y = x -> pos symb x 0 = pos symb' y 0)
-  -> stmt_idx s symb = stmt_idx t symb'.
+  -> stmt_idx symb s = stmt_idx symb' t.
 Proof.
   intros. general induction H; simpl in * |- *.
   - erewrite exp_alpha_real; eauto.
@@ -171,29 +338,32 @@ Proof.
     simpl; intros.
     lud; repeat destruct if; try congruence; intuition.
     exploit H1; eauto. eapply pos_inc with (k':=1); eauto.
-  - erewrite IHalpha1; eauto with cset.
-    erewrite IHalpha2; eauto with cset.
-    rewrite H. reflexivity.
+  - erewrite IHalpha; eauto with cset.
+    erewrite smap_agree_2; eauto.
+    intros m [Z u] [Z' u'] ? ?. erewrite H0; eauto.
+    erewrite H2; eauto.
     intros.
+    exploit H0; eauto. simpl in *.
     decide (x ∈ of_list Z).
-    + edestruct (of_list_get_first _ i) as [n]; eauto. dcr. hnf in H6. subst x0.
+    + edestruct (of_list_get_first _ i) as [n]; eauto. dcr. hnf in H10. subst x0.
       rewrite pos_app_in; eauto.
-      exploit (update_with_list_lookup_in_list_first ra _ H H7 H9); eauto; dcr.
+      exploit (update_with_list_lookup_in_list_first ra _ X H11 H13); eauto; dcr.
       assert (x0 = y) by congruence. subst x0. clear_dup.
-      edestruct (list_lookup_in_list_first _ _ _ (eq_sym H) H4) as [n'];
+      edestruct (list_lookup_in_list_first _ _ _ (eq_sym X) H8) as [n'];
         eauto using get_in_of_list; dcr.
-      hnf in H8; subst x0.
+      hnf in H12; subst x0.
       rewrite pos_app_in; eauto.
-      decide (n < n'). exfalso; exploit H12; eauto.
-      decide (n' < n). exfalso; exploit H9; eauto. assert (n = n') by omega. subst n'.
+      decide (n < n'). now exfalso; exploit H16; eauto.
+      decide (n' < n). now exfalso; exploit H13; eauto.
+      assert (n = n') by omega. subst n'.
       repeat erewrite get_first_pos; eauto.
       eapply get_in_of_list; eauto.
     + exploit (update_with_list_lookup_not_in ra Z Z' y n); eauto.
-      assert ((ira [Z' <-- Z]) y ∉ of_list Z). rewrite H4; eauto.
-      eapply lookup_set_update_not_in_Z'_not_in_Z in H5; eauto.
+      assert ((ira [Z' <-- Z]) y ∉ of_list Z). rewrite H8; eauto.
+      eapply lookup_set_update_not_in_Z'_not_in_Z in H9; eauto.
       repeat rewrite pos_app_not_in; eauto.
-      exploit (update_with_list_lookup_not_in ira Z' Z x H5); eauto.
-      rewrite H. eapply pos_inc; eauto.
+      exploit (update_with_list_lookup_not_in ira Z' Z x H9); eauto.
+      rewrite X. eapply pos_inc; eauto.
 Qed.
 
 

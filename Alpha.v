@@ -66,10 +66,7 @@ Proof.
     eapply lookup_set_incl; try now intuition; eauto using get_list_union_map.
     eapply agree_on_incl; eauto using get_list_union_map.
   - econstructor.
-    eapply alpha_exp_agree_on_morph; eauto.
-    eapply agree_on_incl; eauto.
-    eapply lookup_set_incl; try now intuition; eauto using get_list_union_map.
-    eapply agree_on_incl; eauto. cset_tac; intuition.
+    eapply alpha_exp_agree_on_morph; eauto using agree_on_incl.
     eapply IHalpha; eauto.
     + eapply agree_on_update_same. reflexivity. eapply agree_on_incl; eauto.
       hnf; intros. eapply lookup_set_spec. intuition.
@@ -77,27 +74,16 @@ Proof.
       destruct H4; dcr. eexists x0. lud.
       split; eqs. cset_tac. left. split; eauto. intuition.
     + eapply agree_on_update_same. reflexivity. eapply agree_on_incl; eauto.
-      cset_tac; eqs; intuition.
   - econstructor; eauto.
-    + eapply alpha_exp_agree_on_morph; eauto.
-      eapply agree_on_incl; eauto.
-      eapply lookup_set_incl; try now intuition; eauto using get_list_union_map.
-      eapply agree_on_incl; eauto using get_list_union_map. cset_tac; intuition.
-    + eapply IHalpha1. eapply agree_on_incl; eauto.
-      eapply lookup_set_incl; intuition.
-      cset_tac; intuition.
-      eapply agree_on_incl; eauto. cset_tac; intuition.
-    + eapply IHalpha2. eapply agree_on_incl; eauto.
-      eapply lookup_set_incl; intuition.
-      cset_tac; intuition.
-      eapply agree_on_incl; eauto. cset_tac; intuition.
+    + eapply alpha_exp_agree_on_morph; eauto using agree_on_incl.
+    + eapply IHalpha1; eauto using agree_on_incl.
+    + eapply IHalpha2; eauto using agree_on_incl.
   - econstructor; eauto.
     + intros. eapply alpha_exp_agree_on_morph; eauto.
       eapply agree_on_incl; eauto.
       eapply lookup_set_incl; try now intuition.
       rewrite get_list_union_map; eauto. eapply incl_right.
       eapply agree_on_incl; eauto using get_list_union_map.
-      rewrite get_list_union_map; eauto. eapply incl_right.
     + eapply IHalpha.
       eapply agree_on_update_same. reflexivity. eapply agree_on_incl; eauto.
       hnf; intros. eapply lookup_set_spec. intuition.
@@ -105,7 +91,6 @@ Proof.
       destruct H5; dcr. eexists x0. lud.
       split; eqs. cset_tac. left. split; eauto. intuition.
       eapply agree_on_update_same. reflexivity. eapply agree_on_incl; eauto.
-      cset_tac; eqs; intuition.
   - econstructor; eauto.
     + intros.
       eapply H2; eauto.
@@ -122,9 +107,7 @@ Proof.
       * eapply update_with_list_agree; eauto.
         eapply agree_on_incl; eauto. eapply incl_union_left.
         eapply incl_list_union. eapply map_get_1; eauto. reflexivity.
-    + eapply IHalpha; eauto.
-      * eapply agree_on_incl; eauto. rewrite lookup_set_union; eauto.
-      * eapply agree_on_incl; eauto with cset.
+    + eapply IHalpha; eauto using agree_on_incl.
 Qed.
 
 (** ** Properties *)

@@ -496,8 +496,8 @@ Proof.
       rewrite <- H at 3. repeat rewrite lookup_set_union; eauto.
       cset_tac; intuition.
   - repeat rewrite IH; eauto.
-    + rewrite <- H at 1. repeat rewrite lookup_set_union; eauto. cset_tac; intuition.
-    + rewrite <- H at 1. repeat rewrite lookup_set_union; eauto. cset_tac; intuition.
+    + rewrite <- H at 1. repeat rewrite lookup_set_union; eauto.
+    + rewrite <- H at 1. repeat rewrite lookup_set_union; eauto.
   - eapply freeVars_rename_exp_list.
   - rewrite IH; eauto.
     + rewrite freeVars_rename_exp_list.
@@ -528,35 +528,42 @@ Proof.
 
       rewrite H5.
       rewrite IH; eauto.
-      * assert (freeVars (snd x0) [=] (freeVars (snd x0) \ of_list (fst x0)) ∪ (of_list (fst x0) ∩ freeVars (snd x0))).
-        clear_all; cset_tac; intuition. simpl in *.
-        decide (a ∈ of_list a0); intuition.
-        rewrite H1 at 1.
-        repeat rewrite lookup_set_union; eauto.
-        repeat rewrite minus_dist_union.
-        pose proof (update_with_list_agree_inv _ _ _ H8 H7); eauto.
-        assert ((freeVars (snd x0) ++ of_list (fst x0)) \ of_list (fst x0) [=]
-                         freeVars (snd x0) \ of_list (fst x0)).
-        clear_all; cset_tac; intuition.
-        rewrite H11 in H2.
-        rewrite <- lookup_set_agree; eauto.
-        intros. rewrite disj_minus_eq.
-        setoid_rewrite diff_subset_equal at 2. cset_tac; intuition.
-        rewrite meet_incl; eauto; try reflexivity.
-        rewrite <- incl_right in H7.
-        rewrite <- lookup_set_agree; eauto.
-        eapply update_with_list_lookup_set_incl; eauto.
-        eapply disj_1_incl; eauto.
-        rewrite <- H. eapply lookup_set_incl; eauto.
-        eapply incl_union_left. eapply incl_list_union; eauto.
-        eapply map_get_1; eauto. eauto.
-      * assert (freeVars (snd x0) ⊆ (freeVars (snd x0) \ of_list (fst x0)) ∪ of_list (fst x0)).
-        clear_all; cset_tac; intuition.
-        decide (a ∈ of_list (fst x0)); eauto.
+      * { assert (freeVars (snd x0) [=]
+                           (freeVars (snd x0) \ of_list (fst x0))
+                           ∪ (of_list (fst x0) ∩ freeVars (snd x0))). {
+            clear_all; cset_tac; intuition. simpl in *.
+            decide (a ∈ of_list a0); intuition.
+          }
+          rewrite H1 at 1.
+          repeat rewrite lookup_set_union; eauto.
+          repeat rewrite minus_dist_union.
+          pose proof (update_with_list_agree_inv _ _ _ H8 H7); eauto.
+          assert ((freeVars (snd x0) ++ of_list (fst x0)) \ of_list (fst x0) [=]
+                                                         freeVars (snd x0) \ of_list (fst x0)). {
+            clear_all; cset_tac; intuition.
+          }
+          rewrite H11 in H2.
+          rewrite <- lookup_set_agree; eauto.
+          intros. rewrite disj_minus_eq.
+          - setoid_rewrite diff_subset_equal at 2. cset_tac; intuition.
+            rewrite <- incl_right in H7.
+            rewrite meet_incl; [|reflexivity].
+            rewrite <- lookup_set_agree; eauto.
+            eapply update_with_list_lookup_set_incl; eauto.
+          - eapply disj_1_incl; eauto.
+            rewrite <- H. eapply lookup_set_incl; eauto.
+            eapply incl_union_left. eapply incl_list_union.
+            eapply map_get_1; eauto. eauto.
+        }
+      * assert (freeVars (snd x0) ⊆ (freeVars (snd x0) \ of_list (fst x0)) ∪ of_list (fst x0)). {
+          clear_all; cset_tac; intuition.
+          decide (a ∈ of_list (fst x0)); eauto.
+        }
         rewrite H1. rewrite lookup_set_union; eauto.
         pose proof (update_with_list_agree_inv _ _ _ H8 H7); eauto.
-        assert (freeVars (snd x0) \ of_list (fst x0) ⊆ (freeVars (snd x0) ++ of_list (fst x0)) \ of_list (fst x0)).
-        cset_tac; intuition.
+        assert (freeVars (snd x0) \ of_list (fst x0) ⊆ (freeVars (snd x0) ++ of_list (fst x0)) \ of_list (fst x0)). {
+          cset_tac; intuition.
+        }
         rewrite <- H11 in H2.
         eapply union_subset_3; eauto.
         rewrite <- H4. rewrite <- H.
@@ -598,15 +605,14 @@ Proof.
   - subst s0 s4. simpl in H. simpl. rename s3 into Gs2. rename s into Gs1.
     eapply renamedApartIf with (Ds := Gs1) (Dt := Gs2).
     + rewrite <- H. rewrite Exp.rename_exp_freeVars; eauto.
-      eapply lookup_set_incl; eauto.
     + eapply disj_1_incl; eauto. eapply disj_2_incl.
-      eapply (renameApart'_disj ϱ (G' ++ Gs1) s2).
+      eapply (@renameApart'_disj ϱ (G' ∪ Gs1) s2).
       subst; eauto. eauto.
     + repeat rewrite snd_renameApartAnn_fst. subst; reflexivity.
     + subst. eapply (IH s1); eauto.
-      etransitivity; eauto. eapply lookup_set_incl; eauto. cset_tac; intuition.
-    + pose proof (renameApart'_disj ϱ G' s1). rewrite H2 in H1.
-      pose proof (renameApart'_disj ϱ (G' ++ Gs1) s2). rewrite H3 in H4.
+      etransitivity; eauto. eapply lookup_set_incl; eauto.
+    + pose proof (@renameApart'_disj ϱ G' s1). rewrite H2 in H1.
+      pose proof (@renameApart'_disj ϱ (G' ++ Gs1) s2). rewrite H3 in H4.
       assert (disj (occurVars (snd (renameApart' ϱ (G' ++ Gs1) s2))) Gs1). {
         rewrite occurVars_freeVars_definedVars.
         rewrite definedVars_renamedApart'.
@@ -619,10 +625,10 @@ Proof.
         - symmetry. setoid_rewrite incl_right at 1.
           eapply renameApart'_disj.
       }
-      eapply renamedApart_minus; [|eapply (IH s2); eauto |eapply ann_R_pe_notOccur]; eauto.
-      * instantiate (1:=G).
-        rewrite <- H. repeat rewrite lookup_set_union; cset_tac; intuition.
-      * rewrite H0; eauto.
+      eapply @renamedApart_minus; [ eapply disj_2_incl; try reflexivity |eapply (IH s2); eauto |eapply ann_R_pe_notOccur].
+      * eapply disj_2_incl; eauto. reflexivity.
+      * rewrite <- H; eauto.
+      * eauto.
       * rewrite disj_minus_eq; eauto. eauto using disj_1_incl.
     + rewrite renameApartAnn_decomp. rewrite snd_renameApartAnn_fst.
       subst; reflexivity.
@@ -754,7 +760,7 @@ Proof.
       rewrite <- H.
       eapply lookup_set_incl; eauto.
       eapply incl_union_left.
-      eapply incl_list_union; eauto.
+      eapply incl_list_union.
       eapply map_get_1; eauto. eauto.
       eapply update_with_list_agree_inv; eauto using agree_on_incl with cset.
       rewrite <- incl_right in H9.
@@ -828,10 +834,10 @@ Proof.
   - erewrite (IH s1); eauto using agree_on_incl with cset.
     erewrite (IH s2); eauto using agree_on_incl with cset.
     erewrite rename_exp_agree; eauto using agree_on_incl with cset.
-  - do 2 f_equal. eapply map_ext_get_eq; intros. eapply rename_exp_agree.
+  - do 2 f_equal. eapply map_ext_get_eq2; intros. eapply rename_exp_agree.
     eapply agree_on_incl; eauto. eapply incl_list_union. eapply map_get_1; eauto. eauto.
   - erewrite rename_exp_agree; eauto with cset.
-  - erewrite map_ext_get_eq; intros.
+  - erewrite map_ext_get_eq2; intros.
     erewrite (IH s); eauto using agree_on_incl, agree_on_update_same with cset.
     eapply rename_exp_agree.
     eapply agree_on_incl; eauto. eapply incl_union_right.
@@ -857,7 +863,6 @@ Proof.
     eapply inverse_on_incl; eauto with cset. eauto with cset.
     eapply IH; eauto.
     + rewrite <- H at 3. rewrite lookup_set_update_in_union; intuition.
-      rewrite lookup_set_union; cset_tac; intuition.
     + eapply inverse_on_update_inverse. intuition.
       eapply inverse_on_incl; eauto. cset_tac; eauto.
       assert (lookup_set ϱ (freeVars s \ {{x}}) ⊆
@@ -894,7 +899,6 @@ Proof.
       eapply map_get_1; eauto.
     + eapply IH; eauto.
       * rewrite <- H at 3. rewrite lookup_set_update_in_union; intuition.
-        rewrite lookup_set_union; cset_tac; intuition.
       * eapply inverse_on_update_inverse. intuition.
         eapply inverse_on_incl; eauto. cset_tac; eauto.
         assert (lookup_set ϱ (freeVars s \ {{x}}) ⊆
@@ -935,7 +939,7 @@ Proof.
       * symmetry. eapply agree_on_incl; eauto with cset.
     + eapply IH; eauto.
       * rewrite <- H at 1.
-        rewrite lookup_set_union; eauto. cset_tac; intuition.
+        rewrite lookup_set_union; eauto.
       * eapply inverse_on_incl; eauto. eapply incl_right.
 Qed.
 
