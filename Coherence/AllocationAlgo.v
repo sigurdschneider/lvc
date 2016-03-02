@@ -1,6 +1,6 @@
 Require Import CSet Le Arith.Compare_dec.
 
-Require Import Plus Util Map CMap Status.
+Require Import Plus Util Map CMap Status Take.
 Require Import Val Var Env EnvTy IL Annotation Liveness Fresh MoreList SetOperations.
 Require Import Coherence Allocation RenamedApart.
 
@@ -131,12 +131,6 @@ Proof.
   clear_all; cset_tac; intuition; eauto.
 Qed.
 
-Fixpoint take n X (L:list X) :=
-  match n, L with
-    | S n, x::L => x::take n L
-    | _, _ => nil
-  end.
-
 Ltac eadmit := exfalso; clear_all; admit.
 
 Lemma regAssignF_get G F ans alv n Zs a ϱ ϱ' an Lv i D Dt lv
@@ -195,21 +189,6 @@ Proof.
         }
         setoid_rewrite disj_minus_eq at 2; eauto.
     + norm_lunion. clear_all; cset_tac; intuition.
-Qed.
-
-Lemma get_take_lt k X (L:list X) n x
-: get (take k L) n x -> n < k.
-Proof.
-  intros. general induction k; destruct L; simpl in *; isabsurd.
-  - inv H; eauto; try omega.
-    + exploit IHk; eauto. omega.
-Qed.
-
-Lemma get_take k X (L:list X) n x
-: get (take k L) n x -> get L n x.
-Proof.
-  intros. general induction k; destruct L; simpl in *; isabsurd.
-  inv H; eauto using get.
 Qed.
 
 Lemma defVars_take_disj F ans n Zs a
