@@ -106,8 +106,8 @@ Module F.
     - case_eq (L l); intros.
       + destruct b as [L' E' F' f'].
         destruct (get_dec F' f') as [[[[l' Z] s] ?]|].
-        * decide (l = l'); subst; try now (right; stuck2).
-          decide (length Z = length Y); try now (right; stuck2).
+        * decide (l = l'); subst.
+          decide (length Z = length Y).
           case_eq (omap (exp_eval V) Y); intros; try now (right; stuck2).
           left. eexists EvtTau. econstructor. econstructor; eauto.
           orewrite (l' + 0=l'). eauto.
@@ -215,11 +215,10 @@ Module I.
     - case_eq (L l); intros.
       + destruct b as [L' F' f'].
         destruct (get_dec F' f') as [[[[l' Z] s] ?]|].
-        * decide (l = l'); subst; try now (right; stuck2).
-          decide (length Z = length Y); try now (right; stuck2).
-          case_eq (omap (exp_eval V) Y); intros; try now (right; stuck2).
+        * decide (l = l').
+          decide (length Z = length Y).
+          case_eq (omap (exp_eval V) Y); intros;[| now (right; stuck2)].
           left. eexists EvtTau. econstructor. econstructor; eauto.
-          orewrite (l' + 0=l'). eauto.
           right; stuck2. rewrite Ldef in H. inv H. get_functional; subst. congruence.
           right; stuck2. rewrite Ldef in H. inv H. get_functional; subst. congruence.
         * right; stuck2. rewrite Ldef in H. inv H. eauto.
@@ -525,6 +524,7 @@ Proof.
       orewrite (i - f' = i - length (I.mkBlocks L F) - f' + length (I.mkBlocks L F)).
       split.
       repeat rewrite <- drop_drop. repeat rewrite drop_length_eq.
+      Typeclasses eauto := 5.
       setoid_rewrite <- H at 2. rewrite drop_length_eq. eauto.
       split; eauto.
       orewrite (i - length (I.mkBlocks L F) - f' + length (I.mkBlocks L F) +

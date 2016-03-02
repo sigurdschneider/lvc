@@ -367,11 +367,12 @@ Proof.
   - eapply injective_on_incl; eauto using incl_empty.
   - eapply injective_on_agree.
     assert (lv ∪ { x; of_list XL} [=] {{x}} ∪ lv ∪ of_list XL) by (cset_tac; intuition; eauto).
-    rewrite H7. eapply IHlength_eq; auto.
+    rewrite H7. dcr.
+    eapply IHlength_eq; try assumption.
     Focus 2.
     eapply injective_on_fresh. instantiate (1:=ϱ); eauto.
     eapply injective_on_incl; eauto. instantiate (1:=y).
-    intro. eapply lookup_set_spec in H8. dcr.
+    intro. eapply lookup_set_spec in H5. dcr.
     eapply (not_in_empty (ϱ x0)). rewrite <- H4. cset_tac; intuition.
     eapply lookup_set_spec; eauto. eapply H1.
     hnf; intros. lud; eauto; try now exfalso; eauto.

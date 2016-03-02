@@ -166,13 +166,13 @@ Section MapUpdate.
       end.
 
   Lemma lookup_equiv f x y x'
-    : x === x' -> (update f x y) x' === y.
+    : x === x' -> (update f x y) x' = y.
   Proof.
     intros. eqs. unfold update. eqdec.
   Qed.
 
   Lemma lookup_nequiv f x y x'
-    : x =/= x' -> (update f x y) x' === f x'.
+    : x =/= x' -> (update f x y) x' = f x'.
   Proof.
     intros. unfold update. eqdec.
   Qed.

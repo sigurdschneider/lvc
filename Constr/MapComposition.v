@@ -34,12 +34,9 @@ Lemma inverse_on_comp {X} `{OrderedType X} {Y} `{OrderedType Y} {Z} `{OrderedTyp
 : inverse_on D ((f[x<-y]) ∘ (g[y<-z])) ((g'[z<-y]) ∘ (f'[y<-x]))
   -> inverse_on D ((f ∘ g) [x <- z]) ((g' ∘ f') [z <- x]).
 Proof.
-  intros. hnf; intros; unfold comp in *.
+  intros A. hnf; intros a aInD.
+  specialize (A a aInD). unfold comp in A; simpl in A.
   lud; try (now exfalso; eauto).
-  simpl in *. specialize (H2 x0 H3). simpl in H2.
-  lud; exfalso; eauto.
-  specialize (H2 x0 H3). simpl in H2. lud.
-  exfalso; eauto.
 Qed.
 
 Lemma inverse_on_comp_agree {X} `{OrderedType X} {Y} `{OrderedType Y} {Z} `{OrderedType Z}
@@ -47,9 +44,8 @@ Lemma inverse_on_comp_agree {X} `{OrderedType X} {Y} `{OrderedType Y} {Z} `{Orde
 : inverse_on D ((f[x<-y]) ∘ (g[y<-z])) ((g'[z<-y]) ∘ (f'[y<-x]))
   -> agree_on _eq D ((f[x<-y]) ∘ (g[y<-z])) ((f ∘ g) [x <- z]).
 Proof.
-  intros. hnf; intros; unfold comp in *.
-  lud; try (now exfalso; eauto).
-  specialize (H2 x0 H3). simpl in H2.
+  intros A. hnf; intros a aInD.
+  specialize (A a aInD). unfold comp in *; simpl in A.
   lud; try (now exfalso; eauto).
 Qed.
 
