@@ -23,37 +23,41 @@ end
 
 cmd = ARGV.join(' ')
 mod = ARGV.last
-pad = "".ljust(50 - cmd.length)
+timefile = mod.gsub(/(.*)(\/)(.*)/, '\1/.\3') + ".time"
+pad = "".ljust(40 - mod.length)
 
-est = File.readable?("#{mod}.time") ? File.read("#{mod}.time") : ""
+est = File.readable?(timefile) ? File.read(timefile) : ""
 eta = (Time.now + est.to_i).strftime("%H:%M:%S")
-pad2 = "".ljust(17 - est.length)
-print "#{Time.now.strftime("%H:%M:%S")} #{blue('>>>')} #{mod}#{pad}(#{blue(est.strip)})#{pad2}ETA: #{eta} #{parallel ? "\n" : " "}"
+pad2 = "".ljust(19 - est.strip.length)
+eststr = "#{cyan(est.strip)}#{pad2}" + (parallel ? (est.strip == "" ? blue("ETA unavailable") : "ETA #{eta}") : "")
+timestamp = Time.now.strftime("%H:%M:%S") 
+print "#{timestamp} #{cyan('>>>')} #{mod}#{pad}#{eststr}#{(parallel ? "\n" : "")}"
 
 start = Time.now
 cstdin, cstdout, cstderr, waitthr = Open3.popen3("bash -c \"time #{cmd}\"")
 waitthr.join
 time = Time.now - start
-
-File.open("#{mod}.time", 'w') do |file|
-  file.puts "#{time}"
-end
-
-
 success = waitthr.value.to_i == 0
 color = lambda { |s| success ? (green s) : (red s) }
-
 serr = cstderr.read
 user = serr.match(/.*user[ \t]*([0123456789]+)m([0123456789\.]+)s.*/m)
 sys = serr.match(/.*sys[ \t]*([0123456789]+)m([0123456789\.]+)s.*/m)
 cpu = user[1].to_f * 60 + user[2].to_f + sys[1].to_f * 60 + sys[2].to_f
+timing = "#{cpu.round(2)} / #{time.round(2)}"
+pad2 = "".ljust(19 - timing.length)
+changesec = (time - est.to_f)
+changesecstr = "%+.2f" % changesec 
+change = est == "" ? blue("n/a") : (changesec <= 0 ? green(changesecstr) : red(changesecstr))
 
-File.open("#{mod}.time", 'w') do |file|
-  file.puts "#{cpu.round(2)}"
+
+if success then
+  File.open(timefile, File::CREAT|File::TRUNC|File::RDWR, 0644) do |file|
+    file.puts "#{cpu.round(2)}"
+  end
 end
 
 if !parallel then
-  print color.call("#{cpu.round(2)} / #{time.round(2)}"), "\n"
+	print color.call("#{cpu.round(2)} / #{time.round(2)}"), pad2, change, "\n"
 end
 
 sout = cstdout.read
@@ -65,7 +69,7 @@ if !sout.strip.empty? then
 end
 
 if parallel then
-  print "#{Time.now.strftime("%H:%M:%S")} ", color.call("<<<"), " #{mod}#{pad} ", color.call("#{cpu.round(2)} / #{time.round(2)}"), "\n"
+	print "#{Time.now.strftime("%H:%M:%S")} ", color.call("<<<"), " #{mod}#{pad}", color.call(timing), pad2, change, "\n"
 end
 
 exit success
