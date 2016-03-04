@@ -24,7 +24,7 @@ end
 cmd = ARGV.join(' ')
 mod = ARGV.last
 timefile = mod.gsub(/(.*)(\/)(.*)/, '\1/.\3') + ".time"
-pad = "".ljust(40 - mod.length)
+pad = "".ljust(30 - mod.length)
 
 est = File.readable?(timefile) ? File.read(timefile) : ""
 eta = (Time.now + est.to_i).strftime("%H:%M:%S")
@@ -48,8 +48,9 @@ pad2 = "".ljust(19 - timing.length)
 changesec = (time - est.to_f)
 changesecstr = "%+.2f" % changesec 
 change = est == "" ? blue("n/a") : (changesec <= 0 ? green(changesecstr) : red(changesecstr))
-
-
+line_count = `wc -l "#{mod}.v"`.strip.split(' ')[0].to_i
+spl = (line_count / cpu).round(0)
+speed = success ? ("#{line_count} L,".rjust(9) + "#{spl} L/s".rjust(8)) : ""
 if success then
   File.open(timefile, File::CREAT|File::TRUNC|File::RDWR, 0644) do |file|
     file.puts "#{cpu.round(2)}"
@@ -57,7 +58,7 @@ if success then
 end
 
 if !parallel then
-	print color.call("#{cpu.round(2)} / #{time.round(2)}"), pad2, change, "\n"
+	print color.call("#{cpu.round(2)} / #{time.round(2)}"), pad2, change.ljust(8), "\n"
 end
 
 sout = cstdout.read
@@ -69,7 +70,7 @@ if !sout.strip.empty? then
 end
 
 if parallel then
-	print "#{Time.now.strftime("%H:%M:%S")} ", color.call("<<<"), " #{mod}#{pad}", color.call(timing), pad2, change, "\n"
+	print "#{Time.now.strftime("%H:%M:%S")} ", color.call("<<<"), " #{mod}#{pad}", color.call(timing), pad2, change, ("".ljust(15 - change.strip.length)), speed, "\n"
 end
 
 exit success
