@@ -24,8 +24,7 @@ Section MapUpdate.
     intros. general induction XL; simpl.
     rewrite minus_empty. eassumption.
     rewrite add_union_singleton. rewrite union_comm. rewrite <- minus_union.
-    eapply agree_on_update_dead.
-    cset_tac. intro; decompose records; eauto.
+    eapply agree_on_update_dead; cset_tac.
     eauto using agree_on_incl, incl_minus.
   Qed.
 
@@ -87,9 +86,9 @@ Section MapUpdateList.
     dcr. exfalso. eapply H8. econstructor. eapply H5.
     exploit (IHlength_eq H0 E {x1} x0 y0). simpl in *; intuition.
     hnf; intros. eapply H9. econstructor 2; eauto.
-    exploit H9. cset_tac; reflexivity. rewrite H10. lud.
+    exploit (H9 x1); cset_tac. rewrite H10. lud.
     exploit (IHlength_eq H0 E {x1} x0 y0). simpl in *; intuition.
-    hnf; intros. eapply H8. econstructor 2; eauto.
+    hnf; intros. cset_tac.
     exploit H8. cset_tac; reflexivity. rewrite H9. lud.
   Qed.
 
@@ -157,8 +156,7 @@ Qed.
     - destruct YL; simpl.
       + eapply agree_on_incl; eauto.
       + rewrite add_union_singleton. rewrite union_comm. rewrite <- minus_union.
-        eapply agree_on_update_dead.
-        cset_tac. intro; decompose records; eauto.
+        eapply agree_on_update_dead. cset_tac.
         eauto using agree_on_incl, incl_minus.
   Qed.
 
@@ -184,7 +182,7 @@ Qed.
     destruct YL. reflexivity.
     rewrite add_union_singleton.
     rewrite union_comm. rewrite <- minus_union. eapply agree_on_update_dead.
-    cset_tac. intro; decompose records; eauto.
+    cset_tac.
     eapply agree_on_incl. eapply IHXL; eauto.
     instantiate (1:=lv). eapply incl_minus.
   Qed.
@@ -341,14 +339,16 @@ Lemma lookup_set_add_update {X} `{OrderedType X} {Y} `{OrderedType Y} (ϱ:X->Y) 
   -> lookup_set (update ϱ x y) {x; D} [=] {y; lookup_set ϱ D}.
 Proof.
   intros. hnf; intros. cset_tac.
-  repeat rewrite lookup_set_spec; try (now intuition).
-  split; intros; cset_tac.
-  lud; intuition.
-  right. eauto.
-  destruct H3.
-  eexists x. intuition. lud. intuition.
-  destruct H3; dcr. eexists x0.
-  intuition. lud. exfalso. eapply H2. cset_tac.
+  - rewrite lookup_set_spec in *; cset_tac.
+    lud; intuition.
+    lud; eauto.
+    intuition. intuition.
+  - rewrite lookup_set_spec in *; cset_tac.
+    eexists x; split; eauto. lud; intuition.
+    intuition.
+  - rewrite lookup_set_spec in *; cset_tac.
+    eexists x0; split; eauto. lud; intuition.
+    intuition.
 Qed.
 
 Lemma lookup_update_same X `{OrderedType X} x Z (ϱ:X->X)
@@ -371,12 +371,7 @@ Proof.
     lud; cset_tac; eauto; intuition. eapply lookup_set_spec; eauto.
     eexists x0; cset_tac; eauto.
   - eapply lookup_set_spec in H3; destruct H3; dcr; eauto.
-  - eapply lookup_set_spec in H3; destruct H3; dcr; eauto.
-  - eapply lookup_set_spec in H3; destruct H3; dcr; eauto.
-    lud; cset_tac; eauto; intuition. eapply lookup_set_spec; eauto.
-    eexists x0; cset_tac; eauto. lud; intuition.
-  - eapply lookup_set_spec in H3; destruct H3; dcr; eauto.
-  - eauto.
+    eapply lookup_set_spec; eauto. eexists x0; lud; cset_tac; eauto.
 Qed.
 
 Lemma lookup_set_update_union_minus_list X `{OrderedType X} Y `{OrderedType Y}

@@ -17,8 +17,7 @@ Instance disj_eq_eq_iff {X} `{OrderedType X}
 : Proper (Equal ==> Equal ==> iff) disj.
 Proof.
   unfold Proper, respectful, disj; intros.
-  split; intros;
-  cset_tac; intuition; firstorder.
+  cset_tac; firstorder.
 Qed.
 
 Instance disj_subset_subset_flip_impl {X} `{OrderedType X}
@@ -29,7 +28,7 @@ Proof.
 Qed.
 
 Lemma disj_app {X} `{OrderedType X} (s t u: set X)
-: disj s (t ++ u) <-> disj s t /\ disj s u.
+: disj s (t ∪ u) <-> disj s t /\ disj s u.
 Proof.
   split; unfold disj; intros; cset_tac; intuition; eauto.
 Qed.
@@ -98,7 +97,6 @@ Lemma disj_not_in X `{OrderedType X} x s
   -> x ∉ s.
 Proof.
   unfold disj; cset_tac.
-  intro.
   eapply H0; eauto; intuition.
 Qed.
 

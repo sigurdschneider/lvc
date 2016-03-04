@@ -89,7 +89,7 @@ Section MapAgreement.
   Proof.
     intros A B.
     hnf; intros. cset_tac.
-    exploit A; eauto. lud; eauto.
+    exploit A; eauto. lud; cset_tac.
   Qed.
 
   Lemma agree_on_update_dead_both R (lv:set X) (E E':X -> Y) x v v'
@@ -150,7 +150,7 @@ Lemma eagree_on_union {X} `{OrderedType X} {Y} (f:X->Y) g D D'
   -> eagree_on D' f g
   -> eagree_on (D ∪ D') f g.
 Proof.
-  intros. hnf; intros. cset_tac. destruct H2; eauto.
+  intros. hnf; intros. cset_tac.
 Qed.
 
 Lemma agree_on_union {X} `{OrderedType X} {Y} (f:X->Y) R g D D'
@@ -158,7 +158,7 @@ Lemma agree_on_union {X} `{OrderedType X} {Y} (f:X->Y) R g D D'
   -> agree_on R D' f g
   -> agree_on R (D ∪ D') f g.
 Proof.
-  intros. hnf; intros. cset_tac. destruct H2; eauto.
+  intros. hnf; intros. cset_tac.
 Qed.
 
 Global Instance agree_on_computable {X} `{OrderedType X} {Y} `{OrderedType Y}

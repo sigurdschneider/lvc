@@ -26,7 +26,7 @@ Lemma filter_incl X `{OrderedType X} lv Y
 Proof.
   general induction Y; simpl.
   - cset_tac; intuition.
-  - decide (a ∈ lv); simpl. cset_tac; intuition. rewrite <- H1; eauto.
+  - decide (a ∈ lv); simpl. cset_tac; intuition.
     rewrite <- IHY; eauto.
     eauto.
 Qed.
@@ -99,8 +99,7 @@ Lemma filter_in X `{OrderedType X} (p:X->bool) `{Proper _ (_eq ==> eq) p} a Z
     -> a \In of_list (List.filter p Z).
 Proof.
   general induction Z; simpl in * |- *; eauto.
-  - cset_tac. destruct H2. rewrite <- H2 in H1.
-    destruct if; isabsurd. rewrite <- H2. simpl. cset_tac; intuition.
-    destruct if. simpl. exploit IHZ; eauto. cset_tac; intuition.
-    eauto.
+  - cset_tac. rewrite <- H3 in H1.
+    destruct if; isabsurd. rewrite <- H3. simpl. cset_tac; intuition.
+    destruct if; eauto. simpl. exploit IHZ; eauto. cset_tac; intuition.
 Qed.

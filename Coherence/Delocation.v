@@ -40,7 +40,7 @@ Inductive trs
     : length F = length ans_lv
       -> length F = length ans
       -> length F = length Za
-      -> (forall n ans' lvs Zs Za', get ans_lv n lvs -> get F n Zs -> get Za n Za' -> get ans n ans' ->
+      -> (forall n lvs Zs Za' ans', get ans_lv n lvs -> get F n Zs -> get Za n Za' -> get ans n ans' ->
                               trs (restrict (mkGlobals F Za ans_lv ++ DL)
                                             (getAnn lvs \ of_list (fst Zs++Za')))
                                   (Za++ZL) (snd Zs) lvs ans')

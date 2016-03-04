@@ -268,8 +268,7 @@ Lemma mkBlocks_approxF s0 E E' s i
 : agree_on eq (list_union
                  (List.map
                     (fun f : params * stmt =>
-                       IL.freeVars (snd f) \ of_list (fst f)) s) ++
-                     IL.freeVars s0) E E'
+                       IL.freeVars (snd f) \ of_list (fst f)) s) ∪ IL.freeVars s0) E E'
   -> PIR2 approxF (mapi_impl (F.mkBlock E) i s) (mapi_impl (F.mkBlock E') i s).
 Proof.
   intros.

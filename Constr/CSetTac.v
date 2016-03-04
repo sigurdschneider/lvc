@@ -1,5 +1,5 @@
 Require Export Setoid Coq.Classes.Morphisms.
-Require Export Sets SetInterface SetConstructs SetProperties.
+Require Export Sets SetInterface SetConstructs SetProperties Get.
 Require Import EqDec CSetNotation Util.
 
 Lemma In_add_empty {X} `{OrderedType X} x y
@@ -62,6 +62,17 @@ Lemma and_True_away_left A
 : True /\ A <-> A.
 Proof.
   intuition.
+Qed.
+
+Lemma of_list_app X `{OrderedType X} (A B: list X)
+  : of_list (A ++ B) [=] of_list A ∪ of_list B.
+Proof.
+  split; intros H0.
+  - rewrite of_list_1 in H0. eapply InA_app in H0.
+    eapply union_iff. repeat rewrite of_list_1. intuition.
+  - rewrite of_list_1. eapply InA_app_iff.
+    eapply union_iff in H0.
+    repeat rewrite of_list_1 in H0. intuition.
 Qed.
 
   Ltac cset_assumption :=
@@ -139,8 +150,8 @@ Qed.
                           end
 *)
     (* goal *)
-      | [ |- context [ In ?x (union ?s ?t) ]] =>
-        rewrite (union_iff s t x)
+      | [ |- context [ In _ (union ?s ?t) ]] =>
+        setoid_rewrite (union_iff s t _)
 (*      | [ |- @eq_cset _ _ _ _ ] => unfold eq_cset; intro
       | [ H : @eq_cset _ _ ?s ?t, H' : Is_true (member ?x ?s)
         |- Is_true (member ?x ?t) ] => rewrite <- H; eauto
@@ -160,42 +171,62 @@ Qed.
         now (rewrite H; eauto)
       | [ H : ?y === ?x, H' : In ?y ?s |- In ?x ?s ] =>
         now (rewrite <- H; eauto)
+      | [ H : ?x === ?y, H' : In ?y ?s |- (In ?x ?s) \/ _ ] =>
+        now (left; rewrite H; eauto)
+      | [ H : ?y === ?x, H' : In ?y ?s |- (In ?x ?s) \/ _ ] =>
+        now (left; rewrite <- H; eauto)
+      | [ H : ?x === ?y, H' : In ?y ?s |- _ \/ (In ?x ?s) ] =>
+        now (right; rewrite H; eauto)
+      | [ H : ?y === ?x, H' : In ?y ?s |- _ \/ (In ?x ?s) ] =>
+        now (right; rewrite <- H; eauto)
+      | [ H : ?s === ?s', H' : In ?x ?s' |- (In ?x ?s) \/ _ ] =>
+        now (left; rewrite H; eauto)
+      | [ H : ?s === ?s', H' : In ?x ?s |- (In ?x ?s') \/ _ ] =>
+        now (left; rewrite <- H; eauto)
+      | [ H : ?s === ?s', H' : In ?y ?s' |- _ \/ (In ?x ?s) ] =>
+        now (right; rewrite H; eauto)
+      | [ H : ?s === ?s', H' : In ?y ?s |- _ \/ (In ?x ?s') ] =>
+        now (right; rewrite <- H; eauto)
+      | [ H : ?s === ?s', H' : In ?y ?s' |- In ?x ?s ] =>
+        now (rewrite H; eauto)
+      | [ H : ?s === ?s', H' : In ?y ?s |- In ?x ?s' ] =>
+        now (rewrite <- H; eauto)
       | [ H : ?x === ?y, H' : ~In ?y ?s |- ~In ?x ?s ] =>
         now (rewrite H; eauto)
       | [ H : ?y === ?x, H' : ~In ?y ?s |- ~In ?x ?s ] =>
         now (rewrite <- H; eauto)
-      | [ |- context [ In ?x (diff ?s ?t) ] ] =>
-        rewrite (diff_iff s t)
-      | [ |- context [ In ?x (inter ?s ?t) ] ] =>
-        rewrite (inter_iff s t)
-      | [ |- ?s ≅ ?t] => intro
+      | [ |- context [ In _ (diff ?s ?t) ] ] =>
+        setoid_rewrite (diff_iff s t)
+      | [ |- context [ In _ (inter ?s ?t) ] ] =>
+        setoid_rewrite (inter_iff s t)
+      | [ |- ?s [=] ?t] => intro
       | [ |- complement _ _ _ ] => intro
       | [ H : ?x =/= ?y |- ~In ?x (add ?y empty) ] =>
         now (rewrite not_In_add_empty; eauto)
       | [ |- context [~In ?x (add ?y empty)] ] =>
-        rewrite (not_In_add_empty x y)
+        setoid_rewrite (not_In_add_empty x y)
       | [ |- context [In ?x (add ?y empty)] ] =>
-        rewrite (In_add_empty x y)
+        setoid_rewrite (In_add_empty x y)
       | [ |- context [In ?x empty] ] =>
-        rewrite (empty_iff x)
+        setoid_rewrite (empty_iff x)
       | [ |- context [ ~In ?x empty ] ] =>
-        rewrite (empty_iff x)
+        setoid_rewrite (empty_iff x)
       | [ |- _ ⊆ _ ] => hnf; intros
       | [ |- context [ In ?x (diff ?s ?t) ]] =>
         intros
       | [ |- context [ In ?x (singleton ?y) ]] =>
-        rewrite (singleton_iff y x)
+        setoid_rewrite (singleton_iff y x)
       | [ H : context [ In ?x (singleton ?y) ] |- _ ] =>
-        rewrite (singleton_iff y x) in H
+        setoid_rewrite (singleton_iff y x) in H
       | [ |- context [ In ?y (add ?x ?s) ]] =>
-        rewrite (add_iff s x y )
+        setoid_rewrite (add_iff s x y )
       | [ H : context [ In ?y (add ?x ?s) ] |- _ ] =>
-        rewrite (add_iff s x y ) in H
+        setoid_rewrite (add_iff s x y ) in H
       | [ H : ?A [=] ∅ |- _ ] =>
         assert (A ⊆ ∅);
           [ let H := fresh "H" in
             edestruct (double_inclusion A ∅) as [[H ?] ?]; eauto| clear H]
-      | [ H : ?s ≅ ?t |- _ ] => unfold Equal in H
+      | [ H : ?s [=] ?t |- _ ] => unfold Equal in H
       | [ H : ?A ⊆ ∅ |- _ ] =>
         assert (forall a, a ∈ A -> False);[
             let a := fresh "a" in let C := fresh "H" in
@@ -205,9 +236,26 @@ Qed.
         lazymatch goal with
           | [ H : a ∈ s |- _ ] => fail
           | [ H : a ∉ s |- _ ] => fail
+          | [ H : a ∈ s -> False |- _ ] => fail
           | _ => decide (a ∈ s)
         end
+      | [ |- ?a ∈ ?s \/ ( _ /\ (?a ∈ ?s -> False) ) ] =>
+        lazymatch goal with
+        | [ H : a ∈ s |- _ ] => fail
+        | [ H : a ∉ s |- _ ] => fail
+        | [ H : a ∈ s -> False |- _ ] => fail
+        | _ => decide (a ∈ s)
+        end
       | [ H: (not ?A) -> False |- ?A ] => try now (eapply dneg_dec; intuition)
+      | [ H : context [ InA _ ?x ?l ] |- _ ] => setoid_rewrite <- of_list_1 in H
+      | [ |- context [ InA _ ?x ?l ] ] => setoid_rewrite <- of_list_1
+      | [ H : (?x ∈ ?s -> False) -> False |- _ ] =>
+        lazymatch goal with
+        | [ H : x ∈ s |- _ ] => fail
+        | [ H : x ∉ s |- _ ] => fail
+        | [ H : x ∈ s -> False |- _ ] => fail
+        | _ => decide (x ∈ s)
+        end
   end.
 
   Ltac mycleartrivial :=
@@ -220,12 +268,15 @@ Qed.
                   is_var a; is_var b; invc H; clear_trivial_eqs
               end)).
 
-  Ltac cset_tac_step :=
-    intros; (try subst); decompose records; destr; mycleartrivial; (cset_assumption ||
-      bool_to_prop || bool_to_prop in * || mycleartrivial); mycleartrivial.
+  Ltac cset_tac_step f :=
+    intros; (try subst); decompose records; destr; mycleartrivial; (try cset_assumption);
+    (try (f tt)); (try bool_to_prop); (try (bool_to_prop in *)); mycleartrivial.
 
-  Ltac cset_tac :=
-      repeat (cset_tac_step).
+  Ltac set_tac f :=
+    repeat ((repeat (eauto using get; cset_tac_step f))
+            || intuition (eauto using get; cset_tac_step f)).
+
+  Ltac cset_tac := set_tac idtac.
 
 Hint Extern 9 =>
      match goal with

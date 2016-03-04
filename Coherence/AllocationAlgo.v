@@ -220,7 +220,7 @@ Proof.
 Qed.
 
 Lemma defVars_disj_D F ans D Dt D'
-      (D'def:list_union zip defVars F ans ++ Dt[=]D')
+      (D'def:list_union zip defVars F ans ∪ Dt[=]D')
       (Ddisj: disj D D')
 : forall n  DD' Zs, get F n Zs -> get ans n DD' ->
                disj D (defVars Zs DD').
@@ -261,7 +261,7 @@ Proof.
       eapply agree_on_update_inv.
       etransitivity. eapply map_update_update_agree.
       eapply H3.
-      revert H5 incl; clear_all; cset_tac; intuition. invc H0. eauto.
+      revert H5 incl; clear_all; cset_tac; intuition.
   - exploit regAssign_renamedApart_agree; try eapply EQ; simpl; eauto using live_sound.
     exploit regAssign_renamedApart_agree; try eapply EQ0; simpl; eauto using live_sound.
     pe_rewrite.
@@ -279,7 +279,7 @@ Proof.
     rewrite H11; simpl; eauto.
     exploit regAssign_renamedApart_agree'; try eapply EQ0; simpl; eauto using live_sound.
     pe_rewrite.
-    eapply agree_on_incl. eapply H13. instantiate (1:=D ++ Ds).
+    eapply agree_on_incl. eapply H13. instantiate (1:=D ∪ Ds).
     pose proof (renamedApart_disj H9).
     pe_rewrite.
     revert H6 H14; clear_all; cset_tac; intuition; eauto.
@@ -301,9 +301,8 @@ Proof.
       eapply agree_on_update_inv.
       etransitivity. eapply map_update_update_agree.
       eapply H3.
-      revert H6 incl; clear_all; cset_tac; intuition. invc H0. eauto.
-  -
-    exploit regAssign_renamedApart_agreeF; eauto using regAssign_renamedApart_agree'. reflexivity.
+      revert H6 incl; clear_all; cset_tac; intuition.
+  - exploit regAssign_renamedApart_agreeF; eauto using regAssign_renamedApart_agree'. reflexivity.
     exploit regAssign_renamedApart_agree; try eapply EQ0; simpl; eauto using live_sound.
     exploit IHLS; eauto.
     + eapply injective_on_incl; eauto.
@@ -327,16 +326,17 @@ Proof.
       econstructor; eauto.
       * {
           intros. edestruct get_length_eq; try eapply H6; eauto.
-          edestruct (regAssignF_get (fst (getAnn x0) ++ snd (getAnn x0) ++ getAnn alv)); eauto; dcr.
+          edestruct (regAssignF_get (fst (getAnn x0) ∪ snd (getAnn x0) ∪ getAnn alv)); eauto; dcr.
           rewrite <- map_update_list_update_agree in H21; eauto.
           exploit H1; try eapply H19; eauto.
-          - assert (getAnn alv \ of_list (fst Zs) ++ of_list (fst Zs) [=] getAnn alv).
-            edestruct H2; eauto. revert H17; clear_all; cset_tac; intuition.
+          - assert (getAnn alv \ of_list (fst Zs) ∪ of_list (fst Zs) [=] getAnn alv).
+            edestruct H2; eauto.
+            revert H17; clear_all; cset_tac; intuition.
             decide (a ∈ of_list (fst Zs)); eauto.
             eapply injective_on_agree.
             Focus 2.
             eapply agree_on_incl.
-            eauto. do 2 rewrite <- incl_right.
+            eauto. rewrite <- incl_right.
             rewrite disj_minus_eq; eauto.
             eapply renamedApart_disj in sd.
             simpl in *.
@@ -512,7 +512,7 @@ Proof.
       rewrite H2. rewrite singleton_cardinal.
       assert (SetInterface.cardinal (getAnn al) > 0).
       assert ({x; getAnn al \ singleton x } [=] getAnn al).
-      cset_tac; intuition. invc H4; eauto. decide (x === a); eauto.
+      cset_tac; intuition. decide (x === a); eauto.
       rewrite <- H3. rewrite add_cardinal_2. omega. cset_tac; intuition.
       omega.
       cset_tac; intuition.
@@ -570,7 +570,7 @@ Proof.
       rewrite H2. rewrite singleton_cardinal.
       assert (SetInterface.cardinal (getAnn al) > 0).
       assert ({x; getAnn al \ singleton x } [=] getAnn al).
-      cset_tac; intuition. invc H4; eauto. decide (x === a); eauto.
+      cset_tac; intuition. decide (x === a); eauto.
       rewrite <- H3. rewrite add_cardinal_2. omega. cset_tac; intuition.
       omega.
       cset_tac; intuition.

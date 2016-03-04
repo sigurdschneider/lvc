@@ -23,7 +23,8 @@ if ! [[ $(ruby -v) =~ ^ruby\ 1.9 ]]; then
 	VANILLA=yes
 fi
 
-SOURCES=$(find . -name \*.v -print | grep -v /\.# | sed -e 's%^\./%%g')
+BLACKLIST=`cat _BLACKLIST`
+SOURCES=$(find . -name \*.v -print | grep -v /\.# | grep -v $BLACKLIST | sed -e 's%^\./%%g')
 coq_makefile -R . Lvc extraction $SOURCES > Makefile
 echo "Makefile generated."
 

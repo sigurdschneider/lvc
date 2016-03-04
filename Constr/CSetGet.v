@@ -64,7 +64,7 @@ Proof.
   - cset_tac; intuition.
   - exploit H0; eauto using get.
     exploit IHL; intros; eauto using get.
-    cset_tac; intuition. rewrite <- H4; eauto.
+    cset_tac; intuition.
 Qed.
 
 Lemma get_in_of_list X `{OrderedType X} L n x

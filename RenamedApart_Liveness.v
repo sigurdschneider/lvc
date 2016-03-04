@@ -152,7 +152,7 @@ Proof.
 Qed.
 
 Lemma disjoint_if1 D D' Ds Dt (DL:list (set var * list var)) an
-:  Ds ++ Dt[=]D'
+:  Ds ∪ Dt [=] D'
   -> disjoint (live_globals DL) D'
   -> pe (getAnn an) (D, Ds)
   -> disjoint (live_globals DL) (snd (getAnn an)).
@@ -161,7 +161,7 @@ Proof.
 Qed.
 
 Lemma disjoint_if2 D D' Ds Dt (DL:list (set var * list var)) an
-:  Ds ++ Dt[=]D'
+:  Ds ∪ Dt [=] D'
   -> disjoint (live_globals DL) D'
   -> pe (getAnn an) (D, Dt)
   -> disjoint (live_globals DL) (snd (getAnn an)).
@@ -183,9 +183,9 @@ Proof.
 Qed.
 
 Lemma disjoint_fun1 D D' Ds Dt (DL:list (set var * list var)) ans als Z s
-:   (Ds ++ Dt) ++ of_list Z[=]D'
+:   (Ds ∪ Dt) ∪ of_list Z [=] D'
     -> disjoint (live_globals DL) D'
-    -> pe (getAnn ans) ((of_list Z ++ D)%set, Ds)
+    -> pe (getAnn ans) ((of_list Z ∪ D)%set, Ds)
     -> ann_R Subset1 als ans
     -> renamedApart s ans
     -> disjoint (live_globals ((getAnn als, Z) :: DL)) (snd (getAnn ans)).
@@ -203,13 +203,13 @@ Qed.
 
 
 Lemma disjoint_fun2 D D' Ds Dt (DL:list (set var * list var)) ant als Z s ans
-:   (Ds ++ Dt) ++ of_list Z[=]D'
+:   (Ds ∪ Dt) ∪ of_list Z[=]D'
     -> disjoint (live_globals DL) D'
     -> pe (getAnn ant) (D, Dt)
     -> ann_R Subset1 als ans
     -> renamedApart s ant
-    -> pe (getAnn ans) ((of_list Z ++ D)%set, Ds)
-    -> disj (Ds ++ of_list Z) Dt
+    -> pe (getAnn ans) ((of_list Z ∪ D)%set, Ds)
+    -> disj (Ds ∪ of_list Z) Dt
     -> disjoint (live_globals ((getAnn als, Z) :: DL)) (snd (getAnn ant)).
 Proof.
   intros. rewrite H1. rewrite <- H in *. simpl in *.
@@ -236,7 +236,7 @@ Qed.
 
 Lemma disjoint_funF1 AL D D' F ans Dt lv als
 : disjoint (live_globals AL) D'
-  -> list_union (zip defVars F ans) ++ Dt[=]D'
+  -> list_union (zip defVars F ans) ∪ Dt[=]D'
   -> indexwise_R (funConstr D Dt) F ans
   -> (forall n a b, get als n a -> get ans n b -> ann_R Subset1 a b)
   -> lv ⊆ D'
@@ -261,7 +261,7 @@ Qed.
 
 
 Lemma lv_incl F ans Dt D' k a Zs
-: list_union (zip defVars F ans) ++ Dt[=]D'
+: list_union (zip defVars F ans) ∪ Dt[=]D'
   -> get ans k a
   -> get F k Zs
   -> snd (getAnn a) ⊆ D'.
@@ -291,7 +291,6 @@ Proof.
       revert H0; clear_all; cset_tac; intuition.
       eapply in_disj_absurd in H0; eauto; cset_tac; intuition; eauto.
       revert H13 H2; clear_all; cset_tac; intuition.
-      invc H. cset_tac; intuition; eauto.
   - edestruct IHIC; dcr; eauto using disjoint_if1.
     eexists; split; eauto. rewrite H2; eauto.
   - edestruct IHIC; dcr; eauto using disjoint_if2.
@@ -304,7 +303,6 @@ Proof.
       revert H0; clear_all; cset_tac; intuition.
       eapply in_disj_absurd in H0; eauto; cset_tac; intuition; eauto.
       revert H10 H2; clear_all; cset_tac; intuition.
-      invc H. cset_tac; intuition; eauto.
   - edestruct (get_length_eq _ H0 H5).
     edestruct (get_length_eq _ H0 H7).
     edestruct IHIC1; eauto; dcr; eauto using disjoint_fun1.

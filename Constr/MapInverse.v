@@ -158,7 +158,7 @@ Lemma inverse_on_union {X} `{OrderedType X} {Y} (f:X->Y) (g:Y->X) D D'
   -> inverse_on D' f g
   -> inverse_on (D ∪ D') f g.
 Proof.
-  intros. hnf; intros. cset_tac. destruct H2; eauto.
+  intros. hnf; intros. cset_tac.
 Qed.
 
 Lemma lookup_list_inverse_on {X} `{OrderedType X} {Y} `{OrderedType Y} f g
@@ -275,7 +275,6 @@ Proof.
   specialize (H4 (ϱ x)). cset_tac; intuition; eauto.
   eapply H7.
   eapply lookup_set_spec; cset_tac; intuition.
-  eexists x; eauto.
 Qed.
 
 Lemma inverse_on_dead_update X `{OrderedType X} Y `{OrderedType Y} (ra:X->Y) ira (x:X) (y:Y) s

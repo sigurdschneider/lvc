@@ -307,7 +307,7 @@ Proof.
       exploit H1; eauto.
       unfold defVars.
       exploit H2; eauto; dcr.
-      change (disj (of_list (fst x) ++ snd (getAnn x0)) D).
+      change (disj (of_list (fst x) ∪ snd (getAnn x0)) D).
       symmetry. destruct H11; dcr.
       eapply disj_app; split. symmetry; eauto.
       rewrite H11 in H10; eauto.

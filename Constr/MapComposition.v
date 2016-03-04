@@ -72,7 +72,7 @@ Proof.
     + unfold comp. lud. specialize (H8 _ H11). unfold comp in H8. lud.
       exfalso; eauto.
     + hnf; intros. cset_tac; eqs.
-      specialize (H8 _ H15).
+      specialize (H8 _ H16).
       unfold comp in H8.
       unfold comp. lud; exfalso; eauto.
     + cset_tac; intuition.

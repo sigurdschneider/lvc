@@ -171,8 +171,7 @@ Proof.
   - intros.
     erewrite (SetProperties.cardinal_2 H3 H4); eauto.
     decide (f x ∈ SetConstructs.map f s0).
-    + assert (SetConstructs.map f s0 [=] {f x; SetConstructs.map f s0}).
-      cset_tac; intuition. rewrite <- H6; eauto.
+    + assert (SetConstructs.map f s0 [=] {f x; SetConstructs.map f s0}) by cset_tac.
       rewrite <- H2. rewrite H5.
       assert (SetConstructs.map f s' ⊆ {f x; SetConstructs.map f s0}).
       hnf; intros.
@@ -207,7 +206,7 @@ Hint Extern 20 => match goal with
                  end.
 
 Lemma incl_union_right X `{OrderedType X} s t u
-: s ⊆ t -> s ⊆ u ++ t.
+: s ⊆ t -> s ⊆ u ∪ t.
 Proof.
   cset_tac; intuition.
 Qed.
@@ -215,7 +214,7 @@ Qed.
 Arguments incl_union_right X [H] s t u _ _ _ .
 
 Lemma incl_union_left X `{OrderedType X} s t u
-: s ⊆ t -> s ⊆ t ++ u.
+: s ⊆ t -> s ⊆ t ∪ u.
 Proof.
   cset_tac; intuition.
 Qed.

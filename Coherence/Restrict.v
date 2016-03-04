@@ -113,7 +113,6 @@ Proof.
   unfold Proper, respectful, impl; intros.
   subst. general induction y; simpl; eauto.
   destruct a; simpl in *; cset_tac; intuition.
-  eapply IHy; eauto. eapply IHy; eauto.
 Qed.
 
 Instance bounded_morphism

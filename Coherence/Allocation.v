@@ -305,8 +305,8 @@ Proof.
         rewrite lookup_set_minus_incl; intuition. eapply lookup_set_incl; intuition.
         rewrite lookup_set_singleton; intuition.
         rewrite meet_comm. eapply meet_minus.
-        assert (getAnn al [=] getAnn al ++ {x; {}}). cset_tac; intuition.
-        invc H2; eauto. rewrite <- H1. eauto using locally_injective.
+        assert (getAnn al [=] getAnn al ∪ {x; {}}). cset_tac; intuition.
+        rewrite <- H1. eauto using locally_injective.
         cset_tac; intuition.
   - econstructor. simpl in *.
     + eapply srd_monotone.
@@ -345,8 +345,8 @@ Proof.
         rewrite lookup_set_minus_incl; intuition. eapply lookup_set_incl; intuition.
         rewrite lookup_set_singleton; intuition.
         rewrite meet_comm. eapply meet_minus. intuition.
-        assert (getAnn al [=] getAnn al ++ {x; {}}). cset_tac; intuition.
-        invc H2; eauto. rewrite <- H1. eauto using locally_injective.
+        assert (getAnn al [=] getAnn al ∪ {x; {}}). cset_tac; intuition.
+        rewrite <- H1. eauto using locally_injective.
         cset_tac; intuition.
   - econstructor; eauto with len.
     + intros.
@@ -470,8 +470,8 @@ Proof.
         rewrite lookup_set_minus_incl; intuition. eapply lookup_set_incl; intuition.
         rewrite lookup_set_singleton; intuition.
         rewrite meet_comm. eapply meet_minus. intuition.
-        assert (getAnn al [=] getAnn al ++ {x; {}}). cset_tac; intuition.
-        invc H2; eauto. rewrite <- H0. eauto using locally_injective.
+        assert (getAnn al [=] getAnn al ∪ {x; {}}). cset_tac; intuition.
+        rewrite <- H0. eauto using locally_injective.
         cset_tac; intuition.
   - econstructor. simpl in *.
     + eapply srd_monotone.
@@ -505,8 +505,8 @@ Proof.
         rewrite lookup_set_minus_incl; intuition. eapply lookup_set_incl; intuition.
         rewrite lookup_set_singleton; intuition.
         rewrite meet_comm. eapply meet_minus. intuition.
-        assert (getAnn al [=] getAnn al ++ {x; {}}). cset_tac; intuition.
-        invc H2; eauto. rewrite <- H0. eauto using locally_injective.
+        assert (getAnn al [=] getAnn al ∪ {x; {}}). cset_tac; intuition.
+        rewrite <- H0. eauto using locally_injective.
         cset_tac; intuition.
   - econstructor; eauto.
     + repeat rewrite map_length; eauto.
@@ -603,7 +603,7 @@ Proof.
     eapply locally_inj_morphism; eauto.
     eapply inverse_on_update_minus; eauto using inverse_on_incl, locally_injective.
     eapply injective_on_incl. eapply locally_injective, H11.
-    cset_tac; intuition. invc H9; eauto.
+    cset_tac; intuition.
   - econstructor; eauto. eapply alpha_exp_rename_injective.
     eapply inverse_on_incl. eapply Exp.freeVars_live; eauto. eauto.
     now eapply IHrenamedApart1; eauto using inverse_on_incl.
@@ -636,7 +636,7 @@ Proof.
       eapply inverse_on_update_minus; eauto using inverse_on_incl,
                                       locally_injective.
       eapply injective_on_incl. eapply locally_injective, H12.
-      cset_tac; intuition. invc H9; eauto.
+      cset_tac; intuition.
   - constructor.
     + rewrite map_length; eauto.
     + intros. inv_map H11; simpl. rewrite lookup_list_length; eauto.
@@ -700,7 +700,7 @@ Proof.
     eapply locally_inj_morphism; eauto.
     eapply inverse_on_update_minus; eauto using inverse_on_incl, locally_injective.
     eapply injective_on_incl. eapply locally_injective, H14.
-    cset_tac; intuition. invc H16; eauto.
+    cset_tac; intuition.
     pe_rewrite; simpl in *. rewrite <- incl_add'; eauto.
   - econstructor; eauto. eapply alpha_exp_rename_injective.
     eapply inverse_on_incl. eapply Exp.freeVars_live; eauto. eauto.
@@ -736,7 +736,7 @@ Proof.
       eapply inverse_on_update_minus; eauto using inverse_on_incl,
                                       locally_injective.
       eapply injective_on_incl. eapply locally_injective, H15.
-      cset_tac; intuition. invc H14; eauto.
+      cset_tac; intuition.
       pe_rewrite; eauto. rewrite <- incl_add'; eauto.
   -(* exploit renamedApart_globals_live; eauto.
     hnf; intros. inv H13. pe_rewrite.

@@ -748,7 +748,7 @@ Proof.
       eapply PIR2_ifSndR_right. eapply PIR2_drop; eauto.
       unfold addParams. rewrite drop_zip; eauto 20 with len.
       rewrite zip_app; eauto with len.
-      rewrite drop_length_ass; eauto with len.
+      repeat rewrite drop_length_ass; eauto with len.
 
     exploit IHLS1. reflexivity. Focus 2. instantiate (6:=getAnn als::DL).
     instantiate (5:=Z::ZL). eapply eq. reflexivity. simpl.

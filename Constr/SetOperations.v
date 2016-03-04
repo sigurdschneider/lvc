@@ -30,9 +30,7 @@ Proof.
   - exfalso. eapply H0; eauto.
   - rewrite fold_2; eauto using transpose_union, Equal_ST, union_m.
     eapply Add_Equal in H2. rewrite H2 in H4.
-    cset_tac. destruct H4.
-    left. rewrite H4. eauto.
-    right. eapply H0; eauto.
+    cset_tac.
 Qed.
 
 
@@ -44,52 +42,46 @@ Proof.
   pattern s. eapply set_induction; intros.
   - rewrite fold_1; eauto using Equal_ST.
   - rewrite fold_2; eauto using Equal_ST, transpose_union, union_m.
-    cset_tac. eauto.
+    cset_tac.
 Qed.
+
+Ltac rewrite_map_iff dummy := match goal with
+           | [ H : context [ In ?y (map ?f ?s) ] |- _ ] =>
+             setoid_rewrite (@map_iff _ _ _ _ f _ s y) in H
+           | [ |- context [ In ?y (map ?f ?s) ]] =>
+             setoid_rewrite (@map_iff _ _ _ _ f _ s y)
+           end.
+Ltac mset_tac := set_tac rewrite_map_iff.
 
 Lemma map_app X `{OrderedType X} Y `{OrderedType Y} (f:X->Y)
       `{Proper _ (_eq ==> _eq) f} s t
 : map f (s ∪ t) [=] map f s ∪ map f t.
 Proof.
-  cset_tac. repeat rewrite map_iff; eauto.
-  split; intros.
-  - destruct H2. dcr.
-    eapply union_cases in H3. firstorder.
-  - intuition.
-    + destruct H3; dcr. eexists; split; eauto. cset_tac; eauto.
-    + destruct H3; dcr. eexists; split; eauto. cset_tac; eauto.
+  mset_tac.
 Qed.
 
 Lemma map_add X `{OrderedType X} Y `{OrderedType Y} (f:X->Y)
       `{Proper _ (_eq ==> _eq) f} x t
 : map f ({x; t}) [=] {f x; map f t}.
 Proof.
-  cset_tac. repeat rewrite map_iff; eauto.
-  split; intros; cset_tac.
-  - firstorder.
-    left. rewrite H2; eauto.
-  - intuition; cset_tac; eauto.
+  mset_tac.
+  rewrite H2; eauto.
 Qed.
 
 Lemma map_empty X `{OrderedType X} Y `{OrderedType Y} (f:X->Y)
       `{Proper _ (_eq ==> _eq) f}
 : map f ∅ [=] ∅.
 Proof.
-  cset_tac.
-  rewrite map_iff; eauto.
-  firstorder. cset_tac; eauto.
+  mset_tac.
 Qed.
 
 Instance map_Proper X `{OrderedType X} Y `{OrderedType Y}
   : Proper (@fpeq X Y _eq _ _ ==> _eq ==> _eq) map.
 Proof.
   unfold Proper, respectful; intros. inv H1; dcr.
-  hnf; intros. repeat rewrite map_iff; eauto.
-  intuition.
-  destruct H4; dcr; eexists; split; eauto.
-  rewrite <- H2; eauto. rewrite H8. eapply H3.
-  destruct H4; dcr; eexists; split; eauto.
-  rewrite H2; eauto. rewrite H8. symmetry. eapply H3.
+  hnf; intros. mset_tac.
+  eexists x1. rewrite <- H2, H9. split; eauto. eapply H3.
+  eexists x1. rewrite H2, H9. split; eauto. symmetry. eapply H3.
 Qed.
 
 
@@ -111,7 +103,7 @@ Proof.
 Qed.
 
 Lemma list_union_start_swap X `{OrderedType X} (L : list (set X)) s
-: fold_left union L s[=]s ++ list_union L.
+: fold_left union L s [=] s ∪ list_union L.
 Proof.
   general induction L; simpl; eauto.
   - cset_tac; intuition.
@@ -153,7 +145,7 @@ Proof.
     rewrite empty_neutral_union. reflexivity.
   - intros.
     eapply Add_Equal in H2. rewrite H2.
-    assert ({x; s} ++ Γ' [=] (s ++ {x; Γ'})).
+    assert ({x; s} ∪ Γ' [=] (s ∪ {x; Γ'})).
     clear_all; cset_tac; intuition.
     rewrite H3. rewrite H0.
     decide (x ∈ Γ').
@@ -177,7 +169,7 @@ Proof.
   hnf; intros. rewrite map_iff; eauto.
   split; intros.
   - destruct H2; dcr. cset_tac; intuition. rewrite H4, H3; eauto.
-  - cset_tac; intuition. eexists x; split; eauto.
+  - cset_tac; intuition.
 Qed.
 
 Lemma fold_single {X} `{OrderedType X} Y `{Equivalence Y} (f:X->Y->Y)
@@ -203,10 +195,10 @@ Proof.
     decide (x ∈ s0).
     + rewrite fold_add in H3; eauto using union_m, transpose_union_subset.
     + rewrite fold_add with (eqA:=Equal) in H3; eauto using union_m, transpose_union, Equal_ST.
-      cset_tac. destruct H3. left; eexists x; split; eauto.
+      cset_tac. left; eexists x; split; eauto.
       eapply H2. cset_tac; intuition.
-      eapply H0 in H3. destruct H3; eauto.
-      destruct H3; dcr. left; eexists x1; split; eauto.
+      eapply H0 in H4. cset_tac; eauto.
+      left; eexists x1; split; eauto.
       eapply H2. cset_tac; intuition.
 Qed.
 

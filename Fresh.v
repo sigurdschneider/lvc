@@ -124,12 +124,11 @@ Proof.
   general induction n; simpl.
   - omega.
   - exploit (IHn (lv \ {{n}})).
-    intros. cset_tac; intuition. invc H1. omega.
+    intros. cset_tac; omega.
     assert (lv [=] {n; lv \ {{n}} }).
     exploit (H (n)); eauto.
-    cset_tac; intuition. decide (n = a); subst; intuition.
-    invc H3; eauto.
-    rewrite H1. erewrite cardinal_2; eauto. omega. cset_tac; intuition.
+    cset_tac. decide (n = a); subst; intuition.
+    rewrite H1. erewrite cardinal_2; eauto. omega. cset_tac.
 Qed.
 
 
@@ -352,10 +351,9 @@ Proof.
       decide (n < m).
       * rewrite max_r; eauto; try omega.
         assert (n ∈ vars_up_to m); eauto using in_vars_up_to.
-        cset_tac; intuition.
-        cset_tac; intuition.
+        cset_tac.
       * rewrite max_l; eauto. assert (m <= n) by omega.
-        cset_tac; intuition; eauto. cset_tac; intuition.
+        cset_tac.
         decide (n = a); subst; intuition.
         right. left. eapply in_vars_up_to. omega. omega.
 Qed.
