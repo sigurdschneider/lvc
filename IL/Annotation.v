@@ -217,3 +217,10 @@ Proof.
 Qed.
 
 Hint Extern 20 (ann_R _ ?a ?a') => progress (first [ has_evar a | has_evar a' | reflexivity ]).
+
+Create HintDb ann discriminated.
+
+Hint Extern 10 =>
+match goal with
+| [ |- context [ getAnn (mapAnn _ _) ] ] => setoid_rewrite getAnn_mapAnn
+end : ann.

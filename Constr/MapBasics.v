@@ -178,7 +178,7 @@ Section MapUpdate.
   Qed.
 End MapUpdate.
 
-Notation "f [ w <- x ]" := (update f w x) (at level 29, left associativity) : fmap_scope.
+Notation "f [ w <- x ]" := (update f w x) (at level 29, left associativity).
 
 Ltac lookup_eq_tac :=
   match goal with

@@ -63,50 +63,55 @@ Proof.
   - econstructor; intros; eauto.
     eapply alpha_exp_agree_on_morph; eauto.
     eapply agree_on_incl; eauto.
-    eapply lookup_set_incl; try now intuition; eauto using get_list_union_map.
+    eapply lookup_set_incl; eauto using get_list_union_map.
     eapply agree_on_incl; eauto using get_list_union_map.
   - econstructor.
-    eapply alpha_exp_agree_on_morph; eauto using agree_on_incl, lookup_set_union_incl.
+    eapply alpha_exp_agree_on_morph;
+      eauto using agree_on_incl, lookup_set_union_incl with cset.
     eapply IHalpha; eauto.
     + eapply agree_on_update_same. reflexivity. eapply agree_on_incl; eauto.
-      hnf; intros. eapply lookup_set_spec. intuition.
+      hnf; intros. eapply lookup_set_spec; eauto.
       cset_tac; eqs. eapply lookup_set_spec in H4; eauto.
       destruct H4; dcr. eexists x0.
-      lud; split; eqs; cset_tac; intuition.
-    + eapply agree_on_update_same. reflexivity. eapply agree_on_incl; eauto.
+      lud; split; eqs; cset_tac. intuition.
+    + eapply agree_on_update_same. reflexivity.
+      eapply agree_on_incl; eauto with cset.
   - econstructor; eauto.
-    + eapply alpha_exp_agree_on_morph; eauto using agree_on_incl, lookup_set_union_incl.
-    + eapply IHalpha1; eauto using agree_on_incl, lookup_set_union_incl.
-    + eapply IHalpha2; eauto using agree_on_incl, lookup_set_union_incl.
+    + eapply alpha_exp_agree_on_morph;
+      eauto using agree_on_incl, lookup_set_union_incl with cset.
+    + eapply IHalpha1; eauto using agree_on_incl, lookup_set_union_incl with cset.
+    + eapply IHalpha2; eauto using agree_on_incl, lookup_set_union_incl with cset.
   - econstructor; eauto.
     + intros. eapply alpha_exp_agree_on_morph; eauto.
       eapply agree_on_incl; eauto.
-      eapply lookup_set_incl; try now intuition.
+      eapply lookup_set_incl; eauto.
       rewrite get_list_union_map; eauto. eapply incl_right.
-      eapply agree_on_incl; eauto using get_list_union_map.
+      eapply agree_on_incl; eauto using get_list_union_map with cset.
     + eapply IHalpha.
       * eapply agree_on_update_same. reflexivity. eapply agree_on_incl; eauto.
         lset_tac. eexists x0.
         lud; split; eqs; cset_tac; intuition.
-      * eapply agree_on_update_same. reflexivity. eapply agree_on_incl; eauto.
+      * eapply agree_on_update_same. reflexivity.
+        eapply agree_on_incl; eauto with cset.
   - econstructor; eauto.
     + intros.
       eapply H2; eauto.
       * eapply update_with_list_agree; eauto using length_eq_sym.
         eapply agree_on_incl; eauto.
-        hnf; intros. eapply lookup_set_spec. intuition.
+        hnf; intros. eapply lookup_set_spec. eauto.
         cset_tac. eapply lookup_set_spec in H9. destruct H9; dcr.
         exists x. cset_tac. left. eapply incl_list_union. eapply map_get_1; eauto. reflexivity.
         rewrite H11 in H10.
         eapply lookup_set_update_not_in_Z'_not_in_Z in H10.
-        cset_tac; intuition. intuition. eapply H0; eauto.
+        cset_tac. eapply H0; eauto.
         eauto.
         rewrite H11 in H10. eapply lookup_set_update_not_in_Z' in H10.
-        rewrite <- H10; eauto. intuition. symmetry. eapply H0; eauto.
+        rewrite <- H10; eauto. eauto. symmetry. eapply H0; eauto.
       * eapply update_with_list_agree; eauto.
         eapply agree_on_incl; eauto. eapply incl_union_left.
         eapply incl_list_union. eapply map_get_1; eauto. reflexivity.
-    + eapply IHalpha; eauto using agree_on_incl, lookup_set_union_incl.
+    + eapply IHalpha;
+      eauto using agree_on_incl, lookup_set_union_incl with cset.
 Qed.
 
 (** ** Properties *)
@@ -131,7 +136,7 @@ Proof.
     eapply alpha_exp_inverse_on; eauto.
     inv i.
   + eapply inverse_on_union;
-    eauto using inverse_on_dead_update, alpha_exp_inverse_on.
+    eauto 10 using inverse_on_dead_update, alpha_exp_inverse_on with cset.
   + eapply inverse_on_union; try eapply inverse_on_union; eauto using alpha_exp_inverse_on.
   + eapply inverse_on_union; eauto using inverse_on_dead_update.
     hnf; intros.
@@ -144,7 +149,7 @@ Proof.
     eapply inverse_on_list_union.
     intros. inv_map H3.
     edestruct (get_length_eq _ H4 H); eauto.
-    eapply update_with_list_inverse_on; try eapply (H2 _ _ _ H4 H6); eauto.
+    eauto 20 using @update_with_list_inverse_on with len.
 Qed.
 
 Lemma alpha_inverse_on_agree f g ϱ ϱ' s t

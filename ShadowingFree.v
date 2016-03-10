@@ -40,7 +40,8 @@ Lemma shadowingFree_ext s D D'
   -> shadowingFree D s
   -> shadowingFree D' s.
 Proof.
-  intros EQ SF. general induction SF; simpl; econstructor; try rewrite EQ; eauto with cset.
+  intros EQ SF.
+  general induction SF; simpl; econstructor; try setoid_rewrite EQ; eauto with cset.
 Qed.
 
 Instance shadowingFree_morphism

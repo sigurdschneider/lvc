@@ -188,3 +188,10 @@ Lemma get_eq_drop X (L :list X) n x
 Proof.
   intros. general induction H; simpl; eauto.
 Qed.
+
+Lemma drop_length_ass X (L L' :list X) k
+  : length L' = k
+    -> drop k (L' ++ L) = L.
+Proof.
+  intros; subst; eauto using drop_length_eq.
+Qed.

@@ -21,7 +21,7 @@ Section MapAgreeSet.
   Proof.
     intros.
     assert (Proper (_eq ==> eq) (fun x : X => if [m x === m' x] then true else false)). {
-      hnf; intros. cbv beta. repeat destruct if; eauto.
+      hnf; intros. cbv beta. repeat destruct if; try reflexivity.
        - exfalso. eapply n. rewrite <- H2; eauto. rewrite H1; eauto.
        - exfalso; eapply n. rewrite H2; eauto. rewrite H1; eauto. }
     split; intros.
@@ -33,15 +33,15 @@ Section MapAgreeSet.
       - destruct if; eauto.
   Qed.
 
-
   Lemma agree_on_agree_set_eq
         (lv:set X) (D D':X -> Y)
         `{Proper _ (respectful _eq _eq) D} `{Proper _ (respectful _eq _eq) D'}
   : agree_on _eq lv D D' -> agree_set lv D D' [=] lv.
   Proof.
     intros. hnf; intros. split; intros.
-    + eapply agree_set_spec in H4; decompose records; eauto.
-    + eapply agree_set_spec; eauto. split; eauto. eapply H3; eauto.
+    + eapply agree_set_spec in H4; decompose records; eassumption.
+    + eapply agree_set_spec; try eassumption. split; eauto.
+      eapply H3; eauto.
   Qed.
 
 
@@ -52,7 +52,7 @@ Section MapAgreeSet.
     -> agree_on _eq lv E E'.
   Proof.
     intros. hnf; intros.
-    eapply H5. eapply agree_set_spec; eauto. split; eauto.
+    eapply H5. eapply agree_set_spec; try assumption. split; eauto.
     eapply H4; eauto.
   Qed.
 
@@ -62,7 +62,7 @@ Section MapAgreeSet.
         `{Proper _ (respectful _eq _eq) D''}
   : agree_on _eq lv D D' -> agree_set lv D D'' ⊆ agree_set lv D' D''.
   Proof.
-    intros. hnf; intros. rewrite agree_set_spec in *; eauto.
+    intros. hnf; intros. rewrite agree_set_spec in *; try assumption.
     intuition. transitivity (D a); eauto. symmetry. eapply H4; eauto.
   Qed.
 
@@ -94,8 +94,11 @@ Global Instance eq_cset_agree_set_morphism X `{OrderedType X} Y `{OrderedType Y}
 Proof.
   unfold respectful; unfold fpeq.
   hnf;intros; decompose records. hnf.
-  intros. split; intros.
-  + eapply agree_set_spec in H2; eauto. decompose records.
+  intros.
+  Unset Ltac Debug.
+  split; intros.
+  + eapply agree_set_spec in H2; eauto.
+    decompose records.
     eapply agree_set_spec; eauto. split.
     - rewrite <- H1; eauto.
     - rewrite <- (H4 _). rewrite <- (H3 _); eauto.

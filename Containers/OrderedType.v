@@ -421,18 +421,6 @@ Ltac order :=
 
 Ltac false_order := elimtype False; order.
 
-Hint Extern 10 (_eq _ _) => reflexivity.
-Hint Extern 10 (_ === _) => reflexivity.
-Hint Extern 20 (_eq _ _) => symmetry; assumption.
-Hint Extern 20 (_ === _) => symmetry; assumption.
-Hint Extern 21 (Equivalence _) => constructor; congruence.
-Hint Extern 21 (Equivalence _) => apply OT_Equivalence.
-Hint Extern 21 (StrictOrder _) => apply OT_StrictOrder.
-Hint Extern 21 (RelationClasses.StrictOrder _) =>
-  constructor; repeat intro; order.
-Hint Extern 21 (Proper _ _) => apply lt_m.
-Hint Extern 21 (Proper _ _) => repeat intro; intuition order.
-
 (** ** Specific Ordered types : [OrderedType] with specific equality
 
    Sometimes, one wants to consider ordered types where the equality
@@ -459,6 +447,31 @@ Instance SOT_SO_to_SO `{SpecificOrderedType A eqA} : StrictOrder SOT_lt eqA | 4.
 Proof.
   intros; apply SOT_StrictOrder.
 Defined.
+
+
+Instance Proper_eq_fun X H0 (f:X->X)
+:  @Proper (X -> X)
+           (@respectful X X
+                        (@_eq X (@SOT_as_OT X (@eq X) H0))
+                        (@_eq X (@SOT_as_OT X (@eq X) H0))) f.
+Proof.
+  intuition.
+Qed.
+
+Hint Extern 5 (_eq _ _) => reflexivity.
+Hint Extern 5 (_ === _) => reflexivity.
+Hint Extern 10 (_eq _ _) => symmetry; assumption.
+Hint Extern 10 (_ === _) => symmetry; assumption.
+Hint Extern 11 (Equivalence _) => constructor; congruence.
+Hint Extern 11 (Equivalence _) => apply OT_Equivalence.
+Hint Extern 11 (StrictOrder _) => apply OT_StrictOrder.
+Hint Extern 11 (RelationClasses.StrictOrder _) =>
+constructor; repeat intro; order.
+(*Hint Extern 1 (Proper _ _) => eassumption.
+Hint Extern 8 (Proper _ _) => apply lt_m. *)
+Hint Extern 9 (Proper _ _) =>
+first [ eassumption | apply lt_m | apply Proper_eq_fun | repeat intro; intuition order ].
+
 
 (** ** Usual Ordered types : [OrderedType] with Leibniz equality
 

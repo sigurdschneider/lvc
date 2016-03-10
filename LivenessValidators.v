@@ -16,12 +16,11 @@ Definition live_sound_dec i Lv s slv (an:annotation s slv)
       : Computable (live_sound i Lv s slv).
 Proof.
   revert i Lv slv an.
-  sind s; intros; destruct s; destruct slv; try isabsurd.
+  sind s; intros; destruct s; destruct slv; try now (exfalso; simple inversion an).
   + edestruct (IH s); eauto; try inv an; eauto;
     decide (getAnn slv\{{x}} ⊆ a);
     decide (live_exp_sound e a);
-    decide (x ∈ getAnn slv);
-    try dec_solve.
+    decide (x ∈ getAnn slv); try dec_solve.
   + edestruct (IH s1); try inv an; eauto;
     edestruct (IH s2); try inv an; eauto;
     decide (live_exp_sound e a);

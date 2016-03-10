@@ -5,33 +5,6 @@ Require Import Val Var Env EnvTy IL Annotation Liveness Coherence MoreList Restr
 
 Set Implicit Arguments.
 
-Create HintDb len discriminated.
-
-Inductive already_swapped (P:Prop) := AlreadySwapped.
-Lemma mark_swapped P : already_swapped P.
-Proof.
-  constructor.
-Qed.
-
-Hint Extern 1000 =>
-match goal with
-  | [ H : already_swapped (?a = ?b) |- ?a = ?b ] => fail 1
-  | [ |- ?a = ?b ] => eapply eq_sym; pose proof (mark_swapped (a = b))
-end : len.
-
-
-Lemma zip_length_ass (X Y Z : Type) (f : X -> Y -> Z) (L : list X) (L' : list Y) k
-  : length L = length L'
-    -> k = length L
-    -> length (zip f L L') = k.
-Proof.
-  intros; subst; eauto using zip_length2.
-Qed.
-
-Hint Resolve zip_length_ass | 10 : len.
-Hint Immediate eq_trans : len.
-Hint Immediate eq_sym : len.
-
 Definition addParam x (DL:list (set var)) (AP:list (set var)) :=
   zip (fun (DL:set var) AP => if [x ∈ DL]
                    then {{x}} ∪ AP else AP) DL AP.
@@ -66,11 +39,6 @@ Proof.
 Qed.
 
 Definition lminus (s:set var) L := s \ of_list L.
-
-Hint Extern 10 =>
-match goal with
-  [ H : ?a = ?b, H': ?b = ?c |- ?c = ?a ] => eapply eq_sym; eapply (eq_trans H H')
-end : len.
 
 Lemma addParams_length Z DL AP
  : length DL = length AP
@@ -223,13 +191,6 @@ Proof.
     + inv pf; simpl.
       * econstructor.
       * destruct if. econstructor; eauto. econstructor.
-Qed.
-
-Lemma to_list_nil {X} `{OrderedType X}
-  : to_list ∅ = nil.
-Proof.
-  eapply elements_Empty.
-  cset_tac; intuition.
 Qed.
 
 Opaque to_list.
@@ -455,52 +416,6 @@ Proof.
   destruct p; eauto.
 Qed.
 
-Lemma map_length_ass_both X X' Y Y' (L:list X) (L':list Y) (f:X->X') (g:Y->Y')
-  : length L = length L'
-    -> length (List.map f L) = length (List.map g L').
-Proof.
-  repeat rewrite map_length; eauto.
-Qed.
-
-Lemma app_length_ass_both X Y (L1 L2:list X) (L1' L2':list Y)
-  : length L1 = length L1'
-    -> length L2 = length L2'
-    -> length (L1 ++ L2) = length (L1' ++ L2').
-Proof.
-  repeat rewrite app_length; eauto.
-Qed.
-
-Hint Resolve map_length_ass_both app_length_ass_both | 2 : len.
-
-Lemma app_length_ass X (L:list X) L' k
-  : length L + length L' = k
-    -> length (L ++ L') = k.
-Proof.
-  intros; subst. rewrite app_length; eauto.
-Qed.
-
-Lemma app_length_ass_right X (L:list X) L' k
-  : length L + length L' = k
-    -> k = length (L ++ L').
-Proof.
-  intros; subst. rewrite app_length; eauto.
-Qed.
-
-Lemma map_length_ass X Y (L:list X) (f:X->Y) k
-  : length L = k
-    -> length (List.map f L) = k.
-Proof.
-  intros; subst. rewrite map_length; eauto.
-Qed.
-
-Lemma map_length_ass_right X Y (L:list X) (f:X->Y) k
-  : length L = k
-    -> k = length (List.map f L).
-Proof.
-  intros; subst. rewrite map_length; eauto.
-Qed.
-
-Hint Resolve map_length_ass app_length_ass | 4 : len.
 
 Lemma live_globals_zip F als DL ZL (LEN1:length F = length als)
   : Liveness.live_globals F als ++ zip pair DL ZL =
@@ -700,13 +615,6 @@ Proof with eauto 20 using get with len.
   general induction A; simpl; eauto.
   - rewrite IHA...
     + rewrite drop_zip...
-Qed.
-
-Lemma drop_length_ass X (L L' :list X) k
-  : length L' = k
-    -> drop k (L' ++ L) = L.
-Proof.
-  intros; subst; eauto using drop_length_eq.
 Qed.
 
 Lemma computeParameters_AP_LV DL ZL AP s lv an' LV

@@ -204,9 +204,9 @@ Ltac inv_map H :=
     | get (List.map ?f ?L) ?n ?x =>
       match goal with
         | [H' : get ?L ?n ?y |- _ ] =>
-          let EQ := fresh "EQ" in pose proof (map_get f H' H) as EQ; invc EQ
+          let EQ := fresh "EQ" in pose proof (map_get f H' H) as EQ; invcs EQ
         | _ => let X := fresh "X" in let EQ := fresh "EQ" in
-              pose proof (map_get_4 _ f H) as X; destruct X as [? [? EQ]]; invc EQ
+              pose proof (map_get_4 _ f H) as X; destruct X as [? [? EQ]]; invcs EQ
       end
   end.
 
@@ -353,3 +353,44 @@ Ltac inv_zip H :=
               pose proof (get_zip f _ _ H) as X; destruct X as [? [? [? EQ]]]; invc EQ
       end
   end.
+
+
+Lemma zip_length_ass (X Y Z : Type) (f : X -> Y -> Z) (L : list X) (L' : list Y) k
+  : length L = length L'
+    -> k = length L
+    -> length (zip f L L') = k.
+Proof.
+  intros; subst; eauto using zip_length2.
+Qed.
+
+Hint Resolve zip_length_ass | 10 : len.
+
+Lemma fold_zip_length_ass (X Y Z : Type) (f : X -> Y -> Y) DL a AP k
+  : length AP = length DL
+    -> length DL = k
+    -> length (fold_left (fun AP0 (z:Z) => zip f DL AP0) a AP) = k.
+Proof.
+  intros. subst. general induction a; simpl; eauto with len.
+  rewrite IHa; eauto with len.
+Qed.
+
+Hint Resolve fold_zip_length_ass : len.
+
+
+Lemma zip_ext_get X Y Z (f f':X -> Y -> Z) L L'
+ : (forall x y n, get L n x -> get L' n y -> f x y = f' x y) -> zip f L L' = zip f' L L'.
+Proof.
+  general induction L; destruct L'; simpl; eauto.
+  f_equal; eauto using get.
+Qed.
+
+Lemma zip_ext_PIR2 X Y Z (f:X -> Y -> Z) X' Y' Z' (f':X'->Y'->Z') (R:Z->Z'->Prop) L1 L2 L1' L2'
+: length L1 = length L2
+  -> length L1' = length L2'
+  -> length L1 = length L1'
+  -> (forall n x y x' y', get L1 n x -> get L2 n y -> get L1' n x' -> get L2' n y' -> R (f x y) (f' x' y'))
+  -> PIR2 R (zip f L1 L2) (zip f' L1' L2').
+Proof.
+  intros A B C.
+  length_equify. general induction A; inv B; inv C; simpl; eauto 50 using PIR2, get.
+Qed.

@@ -97,7 +97,6 @@ Lemma disj_not_in X `{OrderedType X} x s
   -> x ∉ s.
 Proof.
   unfold disj; cset_tac.
-  eapply H0; eauto; intuition.
 Qed.
 
 Lemma disj_eq_minus X `{OrderedType X} (s t u: set X)

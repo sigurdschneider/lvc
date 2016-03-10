@@ -13,7 +13,7 @@ Lemma restr_iff G o G'
   : restr G o = Some G' <-> G' ⊆ G /\ o = Some G'.
 Proof.
   unfold restr; destruct o; intros.
-  destruct if; intuition; try inv H; try inv H1; eauto; isabsurd.
+  destruct if; split; intros A; inv A; isabsurd; eauto.
   split; intros; dcr; congruence.
 Qed.
 
@@ -144,17 +144,14 @@ Lemma bounded_restrict_eq DL G' G
 Proof.
   general induction DL; simpl; eauto.
   case_eq (restr G' a); intros; try split; eauto.
-  eapply restr_iff in H1; intuition.
-  subst; simpl in *; dcr.
-  f_equal. eapply (IHDL _ _ H H3).
-  destruct a; unfold restr in H1; dcr.
-  destruct if in H1; isabsurd. simpl in H0.
-  exfalso. eapply n. dcr. rewrite H2; eauto.
-  f_equal. eapply IHDL; eauto.
+  - eapply restr_iff in H1; dcr; simpl in *.
+    subst; dcr.
+    f_equal. eauto.
+  - destruct a; unfold restr in H1; dcr.
+    + exfalso. destruct if in H1; isabsurd.
+      simpl in H0; dcr. eapply n. cset_tac.
+    + f_equal. eapply IHDL; eauto.
 Qed.
-
-
-
 
 Lemma restrict_subset2 DL DL' G G'
 : PIR2 (fstNoneOrR (flip Subset)) DL DL'
@@ -216,8 +213,7 @@ Lemma bounded_map_lookup G (ϱ: var -> var) DL
   : bounded DL G -> bounded (map_lookup ϱ DL) (lookup_set ϱ G).
 Proof.
   general induction DL; simpl; eauto.
-  destruct a; simpl in *; dcr; intuition.
-  eapply lookup_set_incl; eauto.
+  destruct a; simpl in *; dcr; eauto using lookup_set_incl.
 Qed.
 
 Lemma restrict_incl_ext DL G G' D
@@ -248,8 +244,8 @@ Proof.
   intros. general induction DL; simpl. econstructor.
   unfold restr. unfold lookup_set_option.
   destruct a; repeat destruct if;econstructor; eauto; try econstructor; eauto.
-  exfalso. eapply n. cset_tac; intuition. eapply H0. eapply lookup_set_incl; eauto. intuition.
-  exfalso. eapply n. cset_tac; intuition.
+  - exfalso. eapply n. lset_tac. eapply H0. eapply lookup_set_incl; lset_tac.
+  - exfalso. eapply n. cset_tac.
 Qed.
 
 Lemma list_eq_fstNoneOrR_incl DL ϱ A B
@@ -258,9 +254,11 @@ Lemma list_eq_fstNoneOrR_incl DL ϱ A B
        (map_lookup ϱ (restrict DL A))
        (map_lookup ϱ (restrict DL B)).
 Proof.
-  intros. general induction DL; simpl.  econstructor.
-  unfold restr; destruct a; repeat destruct if; simpl; econstructor; eauto; try econstructor; eauto.
-  exfalso. eapply n. rewrite <- H; eauto.
+  intros. general induction DL; simpl.
+  - econstructor.
+  - unfold restr; destruct a; repeat destruct if;
+      simpl; econstructor; eauto; try econstructor; eauto.
+    exfalso. cset_tac; intuition.
 Qed.
 
 Lemma restrict_app L L' s

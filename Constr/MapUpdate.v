@@ -172,7 +172,7 @@ Qed.
     - eapply agree_on_incl; eauto.
     - rewrite add_union_singleton. rewrite <- minus_union.
       eapply IHlength_eq; eauto.
-      eapply agree_on_incl; eauto. eapply agree_on_update_inv; eauto.
+      eapply agree_on_update_inv; eauto.
   Qed.
 
   Lemma update_with_list_agree_self  `{Defaulted X} lv (E:X -> Y) XL YL
@@ -224,6 +224,13 @@ Proof.
   exfalso. eapply H8. eapply H2.
 Qed.
 
+Instance update_inst_eq X `{OrderedType X} Y
+  : Proper ((@feq X Y eq) ==> eq ==> eq ==> (@feq _ _ eq)) (@update X Y _).
+Proof.
+  unfold respectful, Proper, update, feq; intros.
+  repeat destruct if; eqs; eauto; congruence.
+Qed.
+
 Lemma update_with_list_id X `{OrderedType X} (l:list X)
   : @feq _ _ _eq (update_with_list l l id) id.
 Proof.
@@ -250,10 +257,11 @@ Qed.
 
 Instance proper_update X `{OrderedType X} Y `{OrderedType Y} (ϱ:X -> Y) (x : X) (y :Y)
 : Proper (_eq ==> _eq) ϱ
-  -> Proper (_eq ==> _eq) (update ϱ x y).
+  -> Proper (_eq ==> _eq) (update ϱ x y) | 5.
 Proof.
   unfold Proper, respectful; intros; lud; intuition.
 Qed.
+
 
 Instance proper_update_with_list X `{OrderedType X} Y `{OrderedType Y} (f:X->Y) Z Z'
 : Proper (_eq ==> _eq) f
@@ -264,6 +272,8 @@ Proof.
   - destruct Z'; intuition. simpl.
     eapply proper_update. eauto.
 Qed.
+
+Hint Resolve proper_update proper_update_with_list.
 
 Lemma lookup_set_update_not_in_Z' X `{OrderedType X} Y `{OrderedType Y}
   Z Z' (f: X-> Y) x
@@ -342,13 +352,10 @@ Proof.
   - rewrite lookup_set_spec in *; cset_tac.
     lud; intuition.
     lud; eauto.
-    intuition. intuition.
   - rewrite lookup_set_spec in *; cset_tac.
-    eexists x; split; eauto. lud; intuition.
-    intuition.
+    eexists x; split; eauto. lud; eauto.
   - rewrite lookup_set_spec in *; cset_tac.
-    eexists x0; split; eauto. lud; intuition.
-    intuition.
+    eexists x0; split; eauto. lud; eauto.
 Qed.
 
 Lemma lookup_update_same X `{OrderedType X} x Z (ϱ:X->X)
@@ -360,18 +367,23 @@ Proof.
   eapply IHZ. simpl in *. cset_tac; intuition.
 Qed.
 
-Hint Resolve proper_update proper_update_with_list.
 
 Lemma lookup_set_update_union_minus X `{OrderedType X} Y `{OrderedType Y}
  (f: X->Y) D x y `{Proper _ (_eq ==> _eq) f}
   : lookup_set (update f x y) D \ {{y}} [=] lookup_set f (D \ {{x}}) \ {{ y }}.
 Proof.
-  split; intros; cset_tac.
-  - eapply lookup_set_spec in H3; destruct H3; dcr; eauto.
-    lud; cset_tac; eauto; intuition. eapply lookup_set_spec; eauto.
-    eexists x0; cset_tac; eauto.
-  - eapply lookup_set_spec in H3; destruct H3; dcr; eauto.
-    eapply lookup_set_spec; eauto. eexists x0; lud; cset_tac; eauto.
+  split; intros; lset_tac.
+  - lud; cset_tac; eauto.
+  -  eexists x0; lud; cset_tac; eauto.
+Qed.
+
+Lemma lookup_set_update_union_minus_single X `{OrderedType X} Y `{OrderedType Y}
+ (f: X->Y) D x y `{Proper _ (_eq ==> _eq) f}
+  : lookup_set (update f x y) D \ singleton y [=] lookup_set f (D \ singleton x) \ singleton y.
+Proof.
+  split; intros; lset_tac; eauto.
+  - lud; cset_tac; eauto.
+  - eexists x0; lud; cset_tac; eauto.
 Qed.
 
 Lemma lookup_set_update_union_minus_list X `{OrderedType X} Y `{OrderedType Y}
@@ -383,12 +395,12 @@ Proof.
   - eapply lookup_set_spec in H4; destruct H4; dcr; eauto.
     rewrite H6 in H5.
     eapply lookup_set_spec; eauto.
-    eexists x; cset_tac; intuition; eauto.
+    eexists x; cset_tac; eauto.
     eapply lookup_set_update_not_in_Z'_not_in_Z in H5; eauto.
     eapply lookup_set_update_not_in_Z' in H5; eauto.
     rewrite H5 in H6; eauto.
   - eapply lookup_set_spec in H4; destruct H4; dcr; eauto.
-    lud; cset_tac; eauto; intuition. eapply lookup_set_spec; eauto.
+    lud; cset_tac; eauto; eapply lookup_set_spec; eauto.
     eexists x; cset_tac; eauto.
     erewrite lookup_set_update_not_in_Z; eauto.
 Qed.
@@ -416,8 +428,8 @@ Lemma lookup_set_update_disj {X} `{OrderedType X} {Y} `{OrderedType Y} (f:X->Y)
 Proof.
   intros. hnf; intros.
   rewrite lookup_set_spec; eauto.
-  split; intuition; dcr. rewrite H6.
-  - rewrite lookup_set_update_not_in_Z; eauto.
+  split; intros; dcr.
+  - rewrite H6. rewrite lookup_set_update_not_in_Z; eauto.
     eapply lookup_set_spec; eauto.
   - eapply lookup_set_spec in H3; eauto; dcr.
     eexists x.

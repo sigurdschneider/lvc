@@ -63,6 +63,14 @@ Section MapLookup.
     eexists x; eauto. intuition.
   Qed.
 
+  Lemma lookup_set_minus_single_incl `{OrderedType Y}
+        (s:set X) x (m:X -> Y) `{Proper _ (_eq ==> _eq) m}
+  : lookup_set m s \ singleton (m x) ⊆ lookup_set m (s \ singleton x).
+  Proof.
+    intros; hnf; intros.
+    eapply lookup_set_minus_incl; eauto.
+  Qed.
+
 End MapLookup.
 
 Arguments lookup_set {X} {H} {Y} {H0} m s.

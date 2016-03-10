@@ -11,7 +11,8 @@ Proof.
   revert DL ZL ans_lv ans.
   sind s. destruct s; destruct ans; try dec_solve;
   destruct ans_lv; try dec_solve.
-  + destruct a; edestruct (IH s (ltac:(eauto)) (restrict DL (a0\{{x}})) ZL ans_lv ans); try dec_solve.
+  + destruct a; edestruct (IH s (ltac:(eauto)) (restrict DL (a0\ singleton x)) ZL ans_lv ans);
+    try dec_solve.
   + destruct a; subst; try dec_solve;
     destruct (IH s1 (ltac:(eauto)) DL ZL ans_lv1 ans1); try dec_solve;
     destruct (IH s2 (ltac:(eauto)) DL ZL ans_lv2 ans2); try dec_solve.
@@ -23,7 +24,7 @@ Proof.
     subst; try dec_solve; try inv an; try inv an_lv; eauto.
   + decide (a = nil);
     subst; try dec_solve; try inv an; try inv an_lv; eauto.
-  + destruct a; edestruct (IH s (ltac:(eauto)) (restrict DL (a0\{{x}})) ZL ans_lv ans); try dec_solve.
+  + destruct a; edestruct (IH s (ltac:(eauto)) (restrict DL (a0\ singleton x)) ZL ans_lv ans); try dec_solve.
   + decide (length s = length a);
     decide (length s = length sa);
     decide (length s = length sa0); try dec_solve.

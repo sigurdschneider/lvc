@@ -56,21 +56,20 @@ Section MapAgreement.
 
   Lemma agree_on_update_same (R:relation Y) (lv:set X) (E E':X -> Y) x v v'
   : R v v'
-    -> agree_on R (lv\{{x}}) E E'
+    -> agree_on R (lv \ singleton x) E E'
     -> agree_on R lv (E [x <- v]) (E' [x <- v']).
   Proof.
     intros ? A. hnf; intros; lud; eauto;
-    eapply A. eapply in_in_minus; eauto. eapply neq_not_in_single. eqs.
+    eapply A. eapply in_in_minus; eauto. cset_tac.
   Qed.
 
   Lemma agree_on_update_any_same (R:relation Y) (lv:set X) (E E':X -> Y) x v v'
   : R v v'
     -> agree_on R lv E E'
-    -> agree_on R (lv ∪ {{x}}) (E [x <- v]) (E' [x <- v']).
+    -> agree_on R (lv ∪ singleton x ) (E [x <- v]) (E' [x <- v']).
   Proof.
     intros inR A. hnf; intros; lud; eauto; eapply A.
-    eapply union_cases in H0; destruct H0; eauto.
-    eapply single_spec_neq in H0. exfalso; eauto.
+    eapply union_cases in H0; destruct H0; eauto. cset_tac.
   Qed.
 
   Lemma agree_on_update_dead R (lv:set X) (E E':X -> Y) x v
@@ -85,7 +84,7 @@ Section MapAgreement.
 
   Lemma agree_on_update_inv R (lv:set X) (E E':X -> Y) x v
   : agree_on R lv (E [x <- v]) E'
-    -> agree_on R (lv \ {{ x }}) E E'.
+    -> agree_on R (lv \ singleton x) E E'.
   Proof.
     intros A B.
     hnf; intros. cset_tac.
@@ -144,6 +143,39 @@ Proof.
   unfold Proper, respectful, agree_on, flip, impl; intros; subst.
   rewrite H2 in H6; eauto.
 Qed.
+
+Instance agree_on_iff_morph X `{OrderedType X} Y `{OrderedType Y} s
+  : Proper (@agree_on X _ Y _eq s ==> @agree_on X _ Y _eq s ==> iff) (@agree_on X _ Y _eq s) | 1.
+Proof.
+  eapply (PER_morphism (Equivalence_PER (agree_on_equivalence (Y:=Y)))).
+Qed.
+
+Instance agree_on_1_iff_morph X `{OrderedType X} Y `{OrderedType Y} s
+  : Proper (@agree_on X _ Y _eq s ==> eq ==> iff) (@agree_on X _ Y _eq s) | 1.
+Proof.
+  unfold Proper, respectful; intros; subst.
+  split; intros.
+  - etransitivity; [ symmetry; eassumption | eassumption].
+  - etransitivity; [ eassumption | eassumption].
+Qed.
+
+Instance agree_on_1_iff_morph_eq X `{OrderedType X} Y s
+  : Proper (@agree_on X _ Y eq s ==> eq ==> iff) (@agree_on X _ Y eq s) | 1.
+Proof.
+  unfold Proper, respectful; intros; subst.
+  split; intros.
+  - etransitivity; [ symmetry; eassumption | eassumption].
+  - etransitivity; [ eassumption | eassumption].
+Qed.
+
+Instance agree_on_1_impl_morph X `{OrderedType X} Y s
+  : Proper (@agree_on X _ Y eq s ==> eq ==> impl) (@agree_on X _ Y eq s) | 1.
+Proof.
+  unfold Proper, respectful; intros; subst.
+  hnf; intros.
+  - etransitivity; [ symmetry; eassumption | eassumption].
+Qed.
+
 
 Lemma eagree_on_union {X} `{OrderedType X} {Y} (f:X->Y) g D D'
   : eagree_on D f g

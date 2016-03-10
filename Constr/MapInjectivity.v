@@ -21,8 +21,8 @@ Section MapInjectivity.
   Qed.
 
   Lemma injective_on_dead lv (f:X -> Y) x v `{Proper _ (respectful _eq _eq) f}
-  : injective_on (lv\{{x}}) f
-    -> injective_on (lv\{{x}}) (f[x<-v]).
+  : injective_on (lv\ singleton x) f
+    -> injective_on (lv\ singleton x) (f[x<-v]).
    Proof.
     intros; hnf; intros. lud; eauto.
     + exfalso; cset_tac; eauto.
@@ -30,9 +30,9 @@ Section MapInjectivity.
   Qed.
 
   Lemma injective_on_fresh lv (f:X -> Y) x xr `{Proper _ (_eq ==> _eq) f}
-    :    injective_on (lv\{{x}}) f
-      -> ~xr ∈ lookup_set f (lv\{{x}})
-      -> injective_on ({{x}} ∪ lv) (f[x <- xr]).
+    :    injective_on (lv\ singleton x) f
+      -> ~xr ∈ lookup_set f (lv\ singleton x)
+      -> injective_on {x; lv} (f[x <- xr]).
   Proof.
     intros. hnf; intros. lud.
     + exfalso; lset_tac; eqs.
@@ -42,7 +42,7 @@ Section MapInjectivity.
 
   Lemma injective_on_forget s (f:X -> Y) y `{Proper _ (_eq ==> _eq) f}
   : injective_on s f
-    -> injective_on (s\{{y}}) f.
+    -> injective_on (s\ singleton y) f.
   Proof.
     intros. hnf; intros.
     cset_tac.
@@ -66,15 +66,15 @@ Proof.
   split; intros; hnf; intros.
   + eapply H2; try rewrite H0 ; eauto.
     hnf in H1. repeat rewrite H1. eauto.
-  + eapply H2; cset_tac; eauto; firstorder.
+  + rewrite H0 in *. eapply H2; cset_tac; eauto.
     hnf in H1. repeat rewrite <- H1. eauto.
 Qed.
 
 
 Lemma injective_on_update_not_in {X} `{OrderedType X} {Y} `{OrderedType Y}
   D x (f:X -> Y) `{Proper _ (_eq ==> _eq) f}
-: injective_on (D \ {{x}}) f
-  -> f x ∉ lookup_set f (D \ {{x}})
+: injective_on (D \ singleton x) f
+  -> f x ∉ lookup_set f (D \ singleton x)
   -> injective_on D f.
 Proof.
   intros; hnf; intros.
@@ -90,8 +90,8 @@ Qed.
 
 Lemma injective_on_update_fresh {X} `{OrderedType X} {Y} `{OrderedType Y}
   D x y f `{Proper _ (_eq ==> _eq) f}
-: injective_on (D \ {{x}}) f
-  -> y ∉ lookup_set f (D \ {{x}})
+: injective_on (D \ singleton x) f
+  -> y ∉ lookup_set f (D \ singleton x)
   -> injective_on D (update f x y).
 Proof.
   intros; hnf; intros. lud.
@@ -105,7 +105,7 @@ Qed.
 Lemma injective_on_not_in_lookup_set {X} `{OrderedType X} {Y} `{OrderedType Y} f D D' x
     `{Proper _ (_eq ==> _eq) f}
     : injective_on D f
-      -> D' ⊆ D\{{x}} -> x ∈ D
+      -> D' ⊆ D\ singleton x -> x ∈ D
       -> f x ∉ lookup_set f D'.
 Proof.
   intros. intro. eapply lookup_set_spec in H5; eauto. destruct H5; dcr.
@@ -115,7 +115,7 @@ Qed.
 Lemma lookup_set_not_in  {X} `{OrderedType X} {Y} `{OrderedType Y} f D x
     `{Proper _ (_eq ==> _eq) f}
   : f x ∉ lookup_set f D
-    -> lookup_set f D \ {{f x}} [=] lookup_set f (D\{{x}}).
+    -> lookup_set f D \ singleton (f x) [=] lookup_set f (D\ singleton x).
 Proof.
   intros. cset_tac; try eapply lookup_set_spec; eauto.
   + eapply lookup_set_spec in H4; dcr.
@@ -245,8 +245,8 @@ Proof.
 
      decide (x ∈ D'). exfalso. destruct (FOO x).
      cset_tac; intuition.
-     assert (D' ∩ s [=] ∅). cset_tac; intuition. destruct (FOO a).
-     eapply H5; split; eauto.
+     assert (D' ∩ s [=] ∅).
+     revert H5. rewrite H4. clear_all; cset_tac; intuition.
 
   specialize (H2 D' _ H9 H6 H7).
   case_eq (fold (injective_on_step f) s (LD', true)); intros; rewrite H10 in *.
@@ -275,7 +275,7 @@ Proof.
   clear H8.
   rewrite <- H10 in n0.
   rewrite <- H6 in n0. rewrite <- lookup_set_union in n0; eauto.
-  assert (s ∪ D' [=] (s' ∪ D') \ {{x}}).
+  assert (s ∪ D' [=] (s' ∪ D') \ singleton x).
   rewrite H4. clear H1 H2 H4 H6 H7 H10 H11 H12 H13 H14 n0 s0 FOO.
   cset_tac; intuition.
   rewrite H8 in n0. rewrite H8 in H2.
@@ -302,7 +302,7 @@ Proof.
   change False with (Is_true false). rewrite <- H3.
   unfold injective_on_compute in H3. rewrite H3 in H7.
   unfold injective_on_compute. rewrite H3. eapply H7.
-  eapply injective_on_incl; eauto using incl_empty.
+  eapply injective_on_incl; eauto with cset.
 Defined.
 
 Lemma lookup_set_minus_eq X `{OrderedType X} Y `{OrderedType Y} s t (m:X -> Y) `{Proper _ (_eq ==> _eq) m}
@@ -333,24 +333,24 @@ Lemma injective_on_fresh_list X `{OrderedType X} Y `{OrderedType Y} XL YL (ϱ: X
 Proof.
   intros. eapply length_length_eq in H3.
   general induction H3; simpl in * |- * ; eauto.
-  - eapply injective_on_incl; eauto using incl_empty.
+  - eapply injective_on_incl; eauto with cset.
   - eapply injective_on_agree.
-    assert (lv ∪ { x; of_list XL} [=] {{x}} ∪ lv ∪ of_list XL) by (cset_tac; intuition; eauto).
+    assert (lv ∪ { x; of_list XL} [=] {x; lv} ∪ of_list XL) by (cset_tac; intuition; eauto).
     rewrite H7. dcr.
     eapply IHlength_eq; try assumption.
     Focus 2.
     eapply injective_on_fresh. instantiate (1:=ϱ); eauto.
     eapply injective_on_incl; eauto. instantiate (1:=y).
-    intro. eapply lookup_set_spec in H5. dcr.
-    eapply (not_in_empty (ϱ x0)). rewrite <- H4. cset_tac; intuition.
-    eapply lookup_set_spec; eauto. eapply H1.
-    hnf; intros. lud; eauto; try now exfalso; eauto.
-    dcr. cset_tac; intuition.
-    eapply lookup_set_spec in H12; dcr. lud.
+
+    intro. eapply lookup_set_spec in H5; try eassumption. dcr.
+    eapply (not_in_empty (ϱ x0)). rewrite <- H4.
+    lset_tac; eauto. eauto.
+    cset_tac; intuition.
+    eapply lookup_set_spec in H12; dcr; eauto. lud.
     eapply H8. rewrite <- H14; eauto. eapply InA_in; eauto.
     cset_tac; intuition.
     eapply H4. split. right; eauto.
-    eapply lookup_set_spec. eauto. eexists; eauto.
-    hnf; intros. lud; eauto; try now exfalso; eauto.
+    lset_tac.
+
     eapply update_unique_commute; eauto using length_eq_length.
 Qed.

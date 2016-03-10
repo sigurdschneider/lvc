@@ -2,6 +2,8 @@ Require Export Setoid Coq.Classes.Morphisms.
 Require Export Sets SetInterface SetConstructs SetProperties.
 Require Import EqDec Get CSetNotation CSetTac CSetComputable.
 
+Set Implicit Arguments.
+
 Notation "'list_union' L" := (fold_left union L ∅) (at level 50).
 
 Lemma list_union_start {X} `{OrderedType X} (s: set X) L t

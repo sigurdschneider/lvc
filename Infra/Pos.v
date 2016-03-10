@@ -100,7 +100,8 @@ Lemma get_first_pos X `{OrderedType X} n
   -> (forall n' z', n' < n -> get Z n' z' -> z' =/= z)
   -> pos Z z 0 = Some n.
 Proof.
-  intros. general induction H0; simpl; destruct if; eauto; intuition.
+  intros. general induction H0; simpl; destruct if; eauto.
+  - order.
   - exfalso. exploit (H1 0); eauto using get. omega.
   - exploit IHget; eauto.
     intros; eapply (H1 (S n')); eauto using get. omega.
@@ -177,9 +178,9 @@ Lemma pos_app_in X `{OrderedType X} x k L L'
   -> pos (L ++ L') x k = pos L x k.
 Proof.
   intros.
-  general induction L; simpl in * |- *; cset_tac; intuition;
-  destruct if; try congruence; eauto.
-  exfalso; eauto.
+  general induction L; simpl in * |- *; cset_tac.
+  - destruct if; try congruence; exfalso; eauto.
+  - destruct if; try congruence; eauto.
 Qed.
 
 
@@ -188,7 +189,7 @@ Lemma pos_app_not_in X `{OrderedType X} x k L L'
   -> pos (L ++ L') x k = pos L' x (length L + k).
 Proof.
   intros.
-  general induction L; simpl in * |- *; cset_tac; intuition;
+  general induction L; simpl in * |- *; cset_tac.
   destruct if; try congruence; eauto.
   - exfalso; eauto.
   - rewrite IHL; eauto.

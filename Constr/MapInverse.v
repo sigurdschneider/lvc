@@ -279,7 +279,7 @@ Qed.
 
 Lemma inverse_on_dead_update X `{OrderedType X} Y `{OrderedType Y} (ra:X->Y) ira (x:X) (y:Y) s
 : inverse_on s (update ra x y) (update ira y x)
-  -> inverse_on (s \ {{x}}) ra ira.
+  -> inverse_on (s \ singleton x) ra ira.
 Proof.
   intros. hnf; intros. cset_tac; dcr.
   specialize (H1 _ H3). lud; intuition.

@@ -314,10 +314,10 @@ Set Implicit Arguments.
       -> alpha_exp f g s t.
   Proof.
     intros. general induction H; simpl in *;
-            eauto 20 using alpha_exp, agree_on_incl, lookup_set_union_incl.
+            eauto 20 using alpha_exp, agree_on_incl, lookup_set_union_incl with cset.
     - econstructor.
       + rewrite <- H. eapply H2; simpl; cset_tac; eauto.
-      + rewrite <- H0. eapply H1. lset_tac. eexists x; simpl; cset_tac; eauto.
+      + rewrite <- H0. eapply H1. lset_tac.
   Qed.
 
   Lemma exp_rename_renamedApart_all_alpha e e' ϱ ϱ'

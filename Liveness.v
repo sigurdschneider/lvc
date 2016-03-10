@@ -59,7 +59,7 @@ Inductive live_sound (i:overapproximation) : list (set var*params) -> stmt -> an
 | LExtern x Lv b lv Y al f
   :  live_sound i Lv b al
   -> (forall n y, get Y n y -> live_exp_sound y lv)
-  -> (getAnn al\{{x}}) ⊆ lv
+  -> (getAnn al\ singleton x) ⊆ lv
   -> x ∈ getAnn al
   -> live_sound i Lv (stmtExtern x f Y b) (ann1 lv al)
 | LLet Lv F b lv als alb
@@ -139,35 +139,46 @@ Proof.
   - econstructor; eauto using live_exp_sound_incl.
     etransitivity; eauto.
   - econstructor; eauto. intros. edestruct H3; eauto.
-    destruct i; simpl; eauto; cset_tac; intuition.
+    destruct i; simpl; eauto; cset_tac.
     cset_tac; intuition.
 Qed.
 
 (** ** Live variables always contain the free variables *)
 
+Lemma incl_incl_minus X `{OrderedType X} s t u v
+  : t \ u ⊆ v -> s ⊆ t -> s \ u ⊆ v.
+Proof.
+  intros A B. rewrite B; eauto.
+Qed.
+
+Lemma incl_minus_exp_live_union s t e v
+  : s \ t ⊆ v -> live_exp_sound e v -> s \ t ∪ Exp.freeVars e ⊆ v.
+Proof.
+  intros. eauto using Exp.freeVars_live with cset.
+Qed.
+
+Hint Resolve incl_incl_minus incl_minus_exp_live_union : cset.
+
 Lemma freeVars_live s lv Lv
   : live_sound Functional Lv s lv -> IL.freeVars s ⊆ getAnn lv.
 Proof.
-  intros. general induction H; simpl; eauto using Exp.freeVars_live.
-  + exploit Exp.freeVars_live; eauto.
-    cset_tac; intuition. eapply H1.
-    cset_tac; intuition.
-  + cset_tac; intuition. exploit Exp.freeVars_live; eauto.
-  + eapply list_union_incl; eauto.
-    intros.
-    edestruct map_get_4; eauto; dcr; subst.
-    exploit Exp.freeVars_live; eauto.
-  + rewrite list_union_incl; eauto.
-    instantiate (1:=lv). rewrite IHlive_sound. rewrite H1. cset_tac; intuition.
-    eauto. intros.
-    edestruct map_get_4; eauto; dcr; subst.
-    exploit Exp.freeVars_live; eauto.
-  + eapply union_subset_3.
-    eapply list_union_incl; intros; eauto.
-    inv_map H5. edestruct (get_length_eq _ H6 H0); eauto.
-    edestruct H3; eauto. simpl in *. exploit H2; eauto.
-    rewrite H11; eauto.
-    rewrite IHlive_sound; eauto.
+  intros.
+  induction H; simpl.
+  - eauto using Exp.freeVars_live with cset.
+  - eauto using Exp.freeVars_live with cset.
+  - eapply list_union_incl; eauto.
+    intros. inv_map H3.
+    eauto using Exp.freeVars_live with cset.
+  - eauto using Exp.freeVars_live with cset.
+  - rewrite (list_union_incl (s':=lv)); eauto with cset.
+    intros ? ? GET. inv_map GET.
+    eauto using Exp.freeVars_live with cset.
+  - eapply union_subset_3.
+    + eapply list_union_incl; intros; eauto.
+      inv_map H5. edestruct (get_length_eq _ H6 H0); eauto.
+      edestruct H3; eauto. simpl in *. exploit H2; eauto.
+      eauto with cset.
+    + rewrite IHlive_sound; eauto.
 Qed.
 
 (** ** Liveness is stable under renaming *)
@@ -230,8 +241,7 @@ Proof.
     + edestruct map_get_4; eauto; dcr; subst.
       eapply live_exp_rename_sound; eauto.
     + rewrite getAnn_mapAnn.
-      rewrite <- lookup_set_singleton; intuition.
-      rewrite lookup_set_minus_incl; eauto.
+      rewrite lookup_set_minus_single_incl; eauto.
       eapply lookup_set_incl; eauto.
     + rewrite getAnn_mapAnn; eauto. eapply lookup_set_spec; eauto.
   - econstructor; eauto; try rewrite getAnn_mapAnn; eauto.
@@ -241,15 +251,17 @@ Proof.
       rewrite <- live_rename_L_globals, <- live_rename_L_app; eauto.
       eapply H2; eauto.
     + intros. inv_map H6; inv_map H5.
-      exploit H3; eauto. simpl. split.
-      rewrite of_list_lookup_list; eauto.
-      rewrite getAnn_mapAnn. dcr.
-      eapply lookup_set_incl; eauto.
-      destruct if; eauto.
-      rewrite getAnn_mapAnn. dcr.
-      rewrite of_list_lookup_list; eauto.
-      rewrite lookup_set_minus_incl; eauto.
-      eapply lookup_set_incl; eauto.
+      exploit H3; eauto; dcr. simpl.
+      assert (Proper (_eq ==> _eq) ϱ) by eapply Proper_eq_fun.
+      split.
+      * rewrite of_list_lookup_list; eauto.
+        rewrite getAnn_mapAnn.
+        eapply lookup_set_incl; eauto.
+      * destruct if; eauto.
+        rewrite getAnn_mapAnn.
+        rewrite of_list_lookup_list; eauto.
+        rewrite lookup_set_minus_incl; eauto.
+        eapply lookup_set_incl; eauto.
     + eapply lookup_set_incl; eauto.
 Qed.
 
@@ -278,7 +290,7 @@ Proof.
     rewrite <- get_list_union_map; eauto using get.
     eapply IHs.
     eapply agree_on_incl; eauto. simpl.
-    norm_lunion. cset_tac; intuition; eauto.
+    norm_lunion. clear_all; cset_tac.
 Qed.
 
 
@@ -297,7 +309,7 @@ Proof.
     + exploit exp_eval_agree; eauto. eauto using agree_on_incl.
       one_step.
       eapply freeVarSimF_sim. econstructor; eauto.
-      eapply agree_on_update_same; eauto using agree_on_incl.
+      eapply agree_on_update_same; eauto using agree_on_incl with cset.
     + exploit exp_eval_agree; eauto using agree_on_incl.
       no_step.
   - case_eq (exp_eval E e); intros.
@@ -330,12 +342,12 @@ Proof.
       eexists; split.
       * econstructor; eauto.
       * eapply freeVarSimF_sim. econstructor; eauto.
-        eapply agree_on_update_same; eauto using agree_on_incl.
+        eapply agree_on_update_same; eauto using agree_on_incl with cset.
     + exploit omap_exp_eval_agree. symmetry. eauto using agree_on_incl. eauto.
       eexists; split.
       * econstructor; eauto.
       * eapply freeVarSimF_sim. econstructor; eauto.
-        eapply agree_on_update_same; eauto using agree_on_incl.
+        eapply agree_on_update_same; eauto using agree_on_incl with cset.
     + no_step.
       symmetry in AG.
       exploit omap_exp_eval_agree; eauto using agree_on_incl.

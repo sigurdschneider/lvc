@@ -9,11 +9,25 @@ Proof.
   exfalso. eapply empty_iff; eauto.
 Qed.
 
+Lemma In_single {X} `{OrderedType X} x y
+  : In x (singleton y) <-> y === x.
+Proof.
+  split.
+  - eapply singleton_1.
+  - eapply singleton_2.
+Qed.
+
 Lemma not_In_add_empty {X} `{OrderedType X} x y
   : ~In x (add y empty) <-> x =/= y.
 Proof.
   rewrite add_iff. split; firstorder.
   intro; firstorder. eapply empty_iff; eauto.
+Qed.
+
+Lemma not_In_single {X} `{OrderedType X} x y
+  : ~In x (singleton y) <-> y =/= x.
+Proof.
+  split; intros B; intro A; eapply B; clear B; eapply In_single; eauto.
 Qed.
 
 Lemma not_in_empty {X} `{OrderedType X} (x:X)
@@ -137,6 +151,10 @@ Qed.
         setoid_rewrite In_add_empty in H
       | [ |- context [ In _ (add _ empty) ] ] =>
         setoid_rewrite In_add_empty
+      | [ H : context [ In _ (singleton _) ] |- _ ] =>
+        setoid_rewrite In_single in H
+      | [ |- context [ In _ (singleton _) ] ] =>
+        setoid_rewrite In_single
 (*      | [ H : context [ Is_true (@member _ _ ?x (@single _ ?y)) ] |- _ ] =>
         rewrite (@single_spec _ _ x y) in H *)
 (*      | [ H : @eq_cset _ _ ?s ?t, H' : not (Is_true (@member _ _ ?x ?s))
@@ -205,6 +223,10 @@ Qed.
         now (rewrite not_In_add_empty; eauto)
       | [ |- context [~In ?x (add ?y empty)] ] =>
         setoid_rewrite (not_In_add_empty x y)
+      | [ |- context [~In _ (singleton _)] ] =>
+        setoid_rewrite (not_In_single)
+      | [ H : context [~In _ (singleton _)] |- _ ] =>
+        setoid_rewrite not_In_single in H
       | [ |- context [In ?x (add ?y empty)] ] =>
         setoid_rewrite (In_add_empty x y)
       | [ |- context [In ?x empty] ] =>
@@ -294,3 +316,9 @@ Hint Extern 10 => match goal with
 (*Hint Extern 20 (incl ?a ?a') => progress (first [ has_evar a | has_evar a' | reflexivity ]).*)
 Hint Extern 20 (Subset ?a ?a') => progress (first [ has_evar a | has_evar a' | reflexivity ]).
 Hint Extern 20 (Equal ?a ?a') => progress (first [ has_evar a | has_evar a' | reflexivity ]).
+
+Ltac srewrite s :=
+  match goal with
+  | [ H : s [=] _ |- _ ] => rewrite H
+  | [ H : _ [=] s |- _ ] => rewrite <- H
+  end.

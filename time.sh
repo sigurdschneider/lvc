@@ -58,7 +58,7 @@ if success then
 end
 
 if !parallel then
-	print color.call("#{cpu.round(2)} / #{time.round(2)}"), pad2, change.ljust(8), "\n"
+	print color.call("#{cpu.round(2)} / #{time.round(2)}"), pad2, change.ljust(8), ("".ljust(15 - change.strip.length)), speed, "\n"
 end
 
 sout = cstdout.read

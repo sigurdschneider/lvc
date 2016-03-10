@@ -39,13 +39,13 @@ Definition funConstr D Dt (Zs:params * stmt) a :=
   /\ disj (of_list (fst Zs) ∪ snd (getAnn a)) Dt.
 
 Inductive renamedApart : stmt -> ann (set var * set var) -> Prop :=
-  | renamedApartExp x e s D D' D'' an
+  | renamedApartExp x e s D Ds D' an
     : x ∉ D
       -> Exp.freeVars e ⊆ D
       -> renamedApart s an
-      -> pe (getAnn an) ({x; D}, D')
-      -> D'' [=] {x; D'}
-      -> renamedApart (stmtLet x e s) (ann1 (D, D'') an)
+      -> D' [=] {x; Ds}
+      -> pe (getAnn an) ({x; D}, Ds)
+      -> renamedApart (stmtLet x e s) (ann1 (D, D') an)
   | renamedApartIf  D D' Ds Dt e s t ans ant
     : Exp.freeVars e ⊆ D
       -> disj Ds Dt
@@ -63,13 +63,13 @@ Inductive renamedApart : stmt -> ann (set var * set var) -> Prop :=
     : list_union (List.map Exp.freeVars Y) ⊆ D
       -> D' [=] ∅
       -> renamedApart (stmtApp f Y) (ann0 (D, D'))
-  | renamedApartExtern x f Y s D D' D'' an
+  | renamedApartExtern x f Y s D Ds D' an
     : x ∉ D
       -> list_union (List.map Exp.freeVars Y) ⊆ D
       -> renamedApart s an
-      -> pe (getAnn an) ({x; D}, D')
-      -> D'' [=] {x; D'}
-      -> renamedApart (stmtExtern x f Y s) (ann1 (D, D'') an)
+      -> D' [=] {x; Ds}
+      -> pe (getAnn an) ({x; D}, Ds)
+      -> renamedApart (stmtExtern x f Y s) (ann1 (D, D') an)
   | renamedApartLet D D' F t Dt ans ant
     : length F = length ans
       -> (forall n Zs a, get F n Zs -> get ans n a -> renamedApart (snd Zs) a)
@@ -81,24 +81,6 @@ Inductive renamedApart : stmt -> ann (set var * set var) -> Prop :=
       -> renamedApart (stmtFun F t) (annF (D,D') ans ant).
 
 (** ** Morphisms *)
-
-Lemma zip_ext X Y Z (f f':X -> Y -> Z) L L'
- : (forall x y n, get L n x -> get L' n y -> f x y = f' x y) -> zip f L L' = zip f' L L'.
-Proof.
-  general induction L; destruct L'; simpl; eauto.
-  f_equal; eauto using get.
-Qed.
-
-Lemma zip_ext_PIR2 X Y Z (f:X -> Y -> Z) X' Y' Z' (f':X'->Y'->Z') (R:Z->Z'->Prop) L1 L2 L1' L2'
-: length L1 = length L2
-  -> length L1' = length L2'
-  -> length L1 = length L1'
-  -> (forall n x y x' y', get L1 n x -> get L2 n y -> get L1' n x' -> get L2' n y' -> R (f x y) (f' x' y'))
-  -> PIR2 R (zip f L1 L2) (zip f' L1' L2').
-Proof.
-  intros A B C.
-  length_equify. general induction A; inv B; inv C; simpl; eauto 50 using PIR2, get.
-Qed.
 
 Definition pairwise_disj_PIR2 X `{OrderedType X} L L'
 : pairwise_ne disj L
@@ -117,40 +99,35 @@ Lemma renamedApart_ext s an an'
   -> renamedApart s an
   -> renamedApart s an'.
 Proof.
-  intros. general induction H0; simpl; invt (ann_R (@pe var _));
-          invt (@pe var _); eauto using renamedApart.
-  - econstructor. rewrite <- H8; eauto. rewrite <- H8; eauto.
-    eapply IHrenamedApart; eauto. rewrite <- H8. rewrite (ann_R_get H9) in H2. eauto.
-    rewrite <- H11. eauto.
+  intros.
+  general induction H0; simpl; invt (ann_R (@pe var _));
+  invt (@pe var _); eauto using renamedApart.
+  - econstructor; try srewrite c; try srewrite d; eauto.
+    rewrite <- (ann_R_get H9). eauto.
+  - econstructor; try srewrite c; try srewrite d; eauto.
+    + rewrite <- (ann_R_get H10); eauto.
+    + rewrite <- (ann_R_get H11); eauto.
 
-  - econstructor; eauto. rewrite <- H7; eauto. rewrite <- H12; eauto.
-    rewrite <- (ann_R_get H10). rewrite <- H7. eauto.
-    rewrite <- (ann_R_get H11). rewrite <- H7. eauto.
-
-  - econstructor; eauto. rewrite <- H5; eauto. rewrite <- H7; eauto.
-  - econstructor. rewrite <- H5; eauto. rewrite <- H7; eauto.
-
-  - econstructor. rewrite <- H8; eauto. rewrite <- H8; eauto.
-    eapply IHrenamedApart; eauto. rewrite <- H8.
-    rewrite <- (ann_R_get H9). eauto. rewrite <- H11; eauto.
-
+  - econstructor; try srewrite c; try srewrite d; eauto.
+  - econstructor; try srewrite c; try srewrite d; eauto.
+  - econstructor; try srewrite c; try srewrite d; eauto.
+    rewrite <- (ann_R_get H9). eauto.
   - assert (PIR2 Equal (zip defVars F bns) (zip defVars F ans)).
     { eapply zip_ext_PIR2; eauto; try congruence.
       intros. get_functional; subst.
       exploit H14; eauto. unfold defVars. rewrite H8. reflexivity.
     }
-    econstructor; eauto.
-    + congruence.
+    econstructor; try srewrite c; try srewrite d; eauto with len.
     + intros. edestruct (get_length_eq _ H13 (eq_sym H12)).
       eapply H1; eauto.
     + hnf; intros. edestruct (get_length_eq _ H13 (eq_sym H12)).
       exploit H2; eauto. destruct H18. dcr.
-      exploit H14; eauto. hnf. rewrite H19 in *. rewrite <- H10.
+      exploit H14; eauto. hnf. rewrite <- H10.
       instantiate (1:=Dt).
-      intuition eauto.
+      rewrite <- H19; eauto.
     + eapply pairwise_disj_PIR2; eauto. symmetry; eauto.
-    + rewrite <- H10. rewrite <- H15; eauto.
-    + rewrite H8. rewrite <- H16; eauto.
+    + rewrite <- H15; eauto.
+    + rewrite H8. eauto.
 Qed.
 
 Instance renamedApart_morphism
@@ -165,37 +142,30 @@ Qed.
 Lemma renamedApart_freeVars s an
   : renamedApart s an -> freeVars s ⊆ fst (getAnn an).
 Proof.
-  intros. general induction H; simpl; eauto.
-  - rewrite H0, IHrenamedApart, H2. simpl.
+  intros. general induction H; simpl; eauto; pe_rewrite.
+  - rewrite IHrenamedApart, H0.
     clear_all; cset_tac; intuition.
-  - rewrite H, IHrenamedApart1, IHrenamedApart2. rewrite H4, H5; simpl.
-    cset_tac; intuition.
-  - rewrite H0, IHrenamedApart, H2; simpl. cset_tac; intuition.
-  - pe_rewrite. rewrite IHrenamedApart.
-    rewrite list_union_incl. instantiate (1:=D). cset_tac; intuition.
-    intros. inv_map H7.
-    edestruct (get_length_eq _ H8 H); eauto.
-    rewrite H1; eauto. edestruct H2; eauto; dcr.
-    rewrite H11. clear_all; cset_tac; intuition.
-    cset_tac; intuition.
+  - rewrite H, IHrenamedApart1, IHrenamedApart2. cset_tac.
+  - rewrite H0, IHrenamedApart; simpl. clear_all; cset_tac.
+  - rewrite IHrenamedApart.
+    rewrite (@list_union_incl _ _ _ _ D); eauto with cset.
+    intros ? ? GET. inv_map GET.
+    edestruct (get_length_eq _ H7 H); eauto.
+    rewrite H1; eauto.
+    edestruct H2; eauto; dcr; eauto with cset.
 Qed.
 
 Lemma renamedApart_occurVars s an
   : renamedApart s an -> definedVars s [=] snd (getAnn an).
 Proof.
-  intros. general induction H; simpl; eauto.
-  - rewrite H3, IHrenamedApart, H2. simpl.
-    clear_all; cset_tac; intuition.
-  - rewrite IHrenamedApart1, IHrenamedApart2. rewrite H4, H5; simpl; eauto.
-  - cset_tac; intuition; eauto.
-  - cset_tac; intuition; eauto.
-  - rewrite H3, IHrenamedApart, H2. simpl.
-    clear_all; cset_tac; intuition.
-  - pe_rewrite. rewrite IHrenamedApart.
-    rewrite list_union_eq; eauto.
-    rewrite map_length, zip_length2; eauto.
+  intros.
+  general induction H; simpl; eauto;
+  pe_rewrite; srewrite D'; eauto with cset.
+  - rewrite IHrenamedApart.
+    eapply eq_union_lr; eauto.
+    eapply list_union_eq; eauto with len.
     intros. inv_map H7. inv_zip H8. get_functional; subst.
-    rewrite H1; eauto. unfold defVars. cset_tac; intuition.
+    rewrite H1; eauto. unfold defVars. eauto with cset.
 Qed.
 
 Definition pminus (D'':set var) (s:set var * set var) :=
@@ -215,17 +185,8 @@ Instance mapAnn_pminus_morphism G'
   : Proper (ann_R (@pe _ _) ==> ann_R (@pe _ _)) (mapAnn (pminus G')).
 Proof.
   unfold Proper, respectful; intros.
-  general induction H; simpl.
-  - econstructor; eauto.
-    + rewrite H. reflexivity.
-  - econstructor; eauto.
-    + rewrite H. reflexivity.
-  - econstructor; eauto.
-    + rewrite H. reflexivity.
-  - econstructor; eauto.
-    + rewrite H; reflexivity.
-    + repeat rewrite map_length; eauto.
-    + intros. inv_map H4. inv_map H5. eauto.
+  general induction H; simpl; constructor; eauto with len pe.
+  - intros. inv_map H4. inv_map H5. eauto.
 Qed.
 
 Lemma renamedApart_minus D an an' s
@@ -234,52 +195,35 @@ Lemma renamedApart_minus D an an' s
     -> ann_R (@pe _ _) an' (mapAnn (pminus D) an)
     -> renamedApart s an'.
 Proof.
-  intros ? ? PE. general induction H0; try rewrite PE; simpl in * |- *.
-  - econstructor; eauto with cset.
-    + eapply IHrenamedApart. instantiate (1:=D0). eauto with cset.
-      reflexivity.
-    + rewrite getAnn_mapAnn. pe_rewrite.
-      econstructor; eauto.
-      revert H H4; unfold disj; clear_all; cset_tac; intuition eauto.
-  - econstructor; [|eapply H0| | | | |]; eauto with cset.
-    + eapply (IHrenamedApart1 D0); eauto with cset.
-    + eapply (IHrenamedApart2 D0); eauto with cset.
-    + rewrite getAnn_mapAnn. pe_rewrite; eauto.
-    + rewrite getAnn_mapAnn. pe_rewrite; eauto.
+  intros DISJ RN PE. revert an' PE.
+  induction RN; indros; try rewrite PE; simpl in * |- *.
+  - econstructor; eauto 20 with cset pe ann.
+  - econstructor; eauto with cset pe ann.
   - econstructor; eauto with cset.
   - econstructor; eauto with cset.
-  - econstructor; eauto with cset.
-    + eapply IHrenamedApart. instantiate (1:=D0). eauto with cset.
-      reflexivity.
-    + rewrite getAnn_mapAnn. pe_rewrite.
-      econstructor; eauto.
-      revert H H4; unfold disj; clear_all; cset_tac; intuition; eauto.
-  - econstructor.
-    + rewrite map_length; eauto.
-    + intros. inv_map H9. eapply H1; eauto.
+  - econstructor; eauto 20 with cset pe ann.
+  - econstructor; eauto with cset len.
+    + intros ? ? ? GET1 GET2. inv_map GET2. eapply H1; eauto.
       eapply disj_1_incl; eauto.
-      rewrite <- get_list_union_map; eauto. cset_tac; intuition.
-      reflexivity.
-    + hnf; intros. inv_map H9. edestruct H2; eauto; dcr. instantiate (1:=Dt).
+      rewrite <- get_list_union_map; eauto. cset_tac.
+    + hnf; intros ? ? ? GET1 GET2.
+      inv_map GET2. edestruct H2; eauto; dcr. instantiate (1:=Dt).
       hnf. rewrite getAnn_mapAnn.
       destruct (getAnn x); simpl in *.
-      assert (disj (of_list (fst a)) D0).
+      assert (disj (of_list (fst a)) D).
       eapply disj_1_incl; eauto.
       rewrite <- get_list_union_map; eauto. cset_tac; intuition.
-      split. rewrite H12.
-      revert H13; unfold disj; clear_all; cset_tac; intuition; eauto.
-      split; eauto. split; eauto.
-      eapply disj_2_incl. eapply H16. eapply incl_minus.
+      split. rewrite H7.
+      revert H8; unfold disj; clear_all; cset_tac; intuition; eauto.
+      eauto with cset.
     + eapply pairwise_disj_PIR2; eauto.
       eapply zip_ext_PIR2; eauto. rewrite map_length; eauto.
-      intros. get_functional; subst. inv_map H11.
+      intros ? ? ? ? ? GET1 GET2 GET3 GET4. get_functional; subst.
+      inv_map GET4.
       unfold defVars. rewrite getAnn_mapAnn. destruct (getAnn y); reflexivity.
-    + eapply IHrenamedApart. eapply disj_1_incl; eauto with cset.
-      reflexivity.
-    + rewrite getAnn_mapAnn. pe_rewrite. reflexivity.
-    + rewrite list_union_eq; eauto.
-      repeat rewrite zip_length2; eauto. rewrite map_length; eauto.
-      intros. inv_zip H8. inv_zip H9. inv_map H11.
+    + eauto with cset pe ann.
+    + rewrite list_union_eq; eauto with len.
+      intros ? ? ? GET1 GET2. inv_zip GET1. inv_zip GET2. inv_map H7.
       get_functional; subst. unfold defVars.
       rewrite getAnn_mapAnn. destruct (getAnn x2); simpl. reflexivity.
 Qed.
@@ -290,27 +234,20 @@ Lemma renamedApart_disj s G
 : renamedApart s G
   -> disj (fst (getAnn G)) (snd (getAnn G)).
 Proof.
-  intros. general induction H; simpl.
-  - rewrite H3. rewrite H2 in *. simpl in *.
-    revert IHrenamedApart H. unfold disj.
-    clear_all; cset_tac; intuition; cset_tac; eauto.
-  - rewrite H4 in *. rewrite H5 in *. simpl in *.
-    rewrite <- H1. rewrite disj_app; eauto.
-  - rewrite H0. eauto using disj_empty.
-  - rewrite H0. eauto using disj_empty.
-  - rewrite H3. rewrite H2 in *. simpl in *.
-    revert IHrenamedApart H. unfold disj.
-    clear_all; cset_tac; intuition; cset_tac; eauto.
-  - rewrite <- H6. eapply disj_app; split.
+  intros. general induction H; simpl; pe_rewrite; try srewrite D'.
+  - eauto with cset.
+  - eauto with cset.
+  - eauto with cset.
+  - eauto with cset.
+  - eauto with cset.
+  - eapply disj_app; split; eauto.
     + symmetry. rewrite <- list_union_disjunct.
-      intros. inv_zip H7.
+      intros ? ? GET. inv_zip GET.
       exploit H1; eauto.
       unfold defVars.
-      exploit H2; eauto; dcr.
-      change (disj (of_list (fst x) ∪ snd (getAnn x0)) D).
-      symmetry. destruct H11; dcr.
-      eapply disj_app; split. symmetry; eauto.
-      rewrite H11 in H10; eauto.
-      rewrite incl_right; eauto.
-    + pe_rewrite; eauto.
+      edestruct H2; eauto; dcr. rewrite H10 in H9.
+      symmetry.
+      eapply disj_app; split.
+      symmetry; eauto.
+      eauto with cset.
 Qed.

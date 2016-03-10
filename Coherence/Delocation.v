@@ -19,7 +19,7 @@ Inductive trs
                                 inside the program *)
     -> Prop :=
  | trsExp DL ZL x e s an an_lv lv
-    : trs (restrict DL (lv\{{x}})) ZL  s an_lv an
+    : trs (restrict DL (lv\ singleton x)) ZL  s an_lv an
     -> trs DL ZL (stmtLet x e s) (ann1 lv an_lv) (ann1 nil an)
   | trsIf DL ZL e s t ans ant ans_lv ant_lv lv
     :  trs DL ZL s ans_lv ans
@@ -34,7 +34,7 @@ Inductive trs
 (*    -> of_list Za ⊆ lv *)
     -> trs DL ZL (stmtApp f Y) (ann0 lv) (ann0 nil)
   | trsExtern DL ZL x f Y s lv an_lv an
-    : trs (restrict DL (lv\{{x}})) ZL s an_lv an
+    : trs (restrict DL (lv\ singleton x)) ZL s an_lv an
     -> trs DL ZL (stmtExtern x f Y s) (ann1 lv an_lv) (ann1 nil an)
   | trsLet DL ZL F t Za ans ant lv ans_lv ant_lv
     : length F = length ans_lv
@@ -124,19 +124,15 @@ Proof.
     * inv H1.
       pose proof (@zip_length2 _ _ _ pair Lv2 DL2 H4).
       pose proof (@zip_length2 _ _ _ pair Lv1 DL1 H2).
-      repeat rewrite <- zip_app; try rewrite restrict_length; eauto.
-      rewrite <- zip_app in H; eauto; try congruence.
-      eapply zip_pair_app_inv in H; dcr; subst; eauto; try congruence.
-      rewrite <- zip_app in H9; eauto; try congruence.
-      eapply zip_pair_app_inv in H9; dcr; subst; eauto; try congruence.
-      econstructor; eauto.
+      repeat rewrite <- zip_app; try rewrite restrict_length; eauto with len.
+      rewrite <- zip_app in H; eauto with len.
+      eapply zip_pair_app_inv in H; dcr; subst; eauto with len.
+      rewrite <- zip_app in H9; eauto with len.
+      eapply zip_pair_app_inv in H9; dcr; subst; eauto with len.
+      econstructor; eauto with len.
       intros. eapply restr_iff in H; dcr; subst. exploit RD; eauto; dcr.
       rewrite <- restrict_app, restrict_idem.
       eauto. eauto.
-      repeat rewrite app_length, restrict_length. omega.
-      rewrite zip_length2; eauto. congruence.
-      rewrite zip_length2; eauto. congruence.
-      rewrite restrict_length. congruence.
 Qed.
 
 Lemma approx_restrict Lv DL ZL L L' G
@@ -148,20 +144,19 @@ Proof.
   intros.
   general induction H1; simpl in *.
   - destruct DL, ZL, Lv; isabsurd; simpl; eauto using @inRel.
-  - eapply zip_eq_app_inv in Heql; eauto.
+  - eapply zip_eq_app_inv in Heql; eauto with len.
     destruct Heql as [LVDL1 [LVDL2 [ZL1 [ZL2 ?]]]]; dcr; subst.
     symmetry in H4.
-    eapply zip_eq_app_inv in H4; eauto.
+    eapply zip_eq_app_inv in H4; eauto with len.
     destruct H4 as [Lv1 [Lv2 [DL1 [DL2 ?]]]]; dcr; subst.
     pose proof (@zip_length2 _ _ _ pair Lv2 DL2 H12).
     pose proof (@zip_length2 _ _ _ pair Lv1 DL1 H9).
-    rewrite restrict_app. repeat rewrite zip_app; try rewrite restrict_length; eauto.
+    rewrite restrict_app.
+    repeat rewrite zip_app; try rewrite restrict_length; eauto with len.
     econstructor. eapply IHinRel; eauto; try congruence.
     eapply approx_restrict_block; try congruence.
     rewrite zip_length2; try congruence.
     rewrite restrict_length; congruence.
-    congruence.
-    rewrite zip_length2; congruence.
 Qed.
 
 Definition appsnd {X} {Y} (s:X * list Y) (t: list Y) := (fst s, snd s ++ t).
@@ -429,7 +424,7 @@ Lemma trs_srd AL ZL s ans_lv ans
 Proof.
   general induction RD; simpl; eauto using srd.
   - econstructor; eauto.
-    * unfold compileF; repeat rewrite zip_length2; eauto; congruence.
+    * unfold compileF; repeat rewrite zip_length2; congruence.
     * intros. unfold compileF in H4. inv_zip H4.
       inv_zip H7.
       exploit H3; eauto. simpl.

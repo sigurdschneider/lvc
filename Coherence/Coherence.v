@@ -15,7 +15,7 @@ Definition oglobals F alF := List.map Some (globals F alF).
 
 Inductive srd : list (option (set var)) -> stmt -> ann (set var) -> Prop :=
 | srdExp DL x e s lv al
-  : srd (restrict DL (lv\{{x}})) s al
+  : srd (restrict DL (lv \ singleton x)) s al
     -> srd DL (stmtLet x e s) (ann1 lv al)
 | srdIf DL e s t lv als alt
   : srd DL s als
@@ -27,7 +27,7 @@ Inductive srd : list (option (set var)) -> stmt -> ann (set var) -> Prop :=
   : get DL (counted f) (Some G')
     -> srd DL (stmtApp f Y) (ann0 lv)
 | srdExtern DL x f Y s lv al
-  : srd (restrict DL (lv\{{x}})) s al
+  : srd (restrict DL (lv \ singleton x)) s al
     -> srd DL (stmtExtern x f Y s) (ann1 lv al)
 | srdLet DL F t lv als alt
   : length F = length als
@@ -37,32 +37,6 @@ Inductive srd : list (option (set var)) -> stmt -> ann (set var) -> Prop :=
     -> srd (oglobals F als ++ DL) t alt
     -> srd DL (stmtFun F t) (annF lv als alt).
 
-(** ** Coherence is decidable *)
-
-Definition srd_dec DL s a
-  : Computable (srd DL s a).
-Proof.
-  hnf. revert DL a.
-  sinduction s; simpl.
-  + edestruct a as [|lv a'| |]; try dec_solve.
-    edestruct (X x0); try dec_solve; eauto.
-  + edestruct a as [?|?|lv als alt|]; try dec_solve.
-    edestruct (X x1), (X x2); try dec_solve; eauto.
-  + destruct a;
-    destruct (get_dec DL (counted l)) as [[[G'|] ?]|?];
-    try dec_solve.
-  + destruct a; try dec_solve.
-  + edestruct a as [|lv a'| |]; try dec_solve.
-    edestruct (X x0); try dec_solve; eauto.
-  + destruct a as [?|?|lv als alt| ]; try dec_solve.
-    decide (length s = length sa); try dec_solve.
-    edestruct (X x) with (DL:=oglobals s sa++DL); eauto; try dec_solve.
-    edestruct (indexwise_R_dec'
-                 (R:=fun x y => srd (restrict (oglobals s sa ++ DL) (getAnn y \ of_list (fst x))) (snd x) y) (LA:=s) (LB:=sa));
-      try dec_solve.
-    intros. eapply X; eauto.
-    Grab Existential Variables. eauto. eauto. eauto. eauto.
-Defined.
 
 (** ** Some monotonicity properties *)
 
@@ -146,63 +120,53 @@ Lemma renamedApart_coherent s ang DL
   -> bounded (List.map Some DL) (fst (getAnn ang))
   -> srd (List.map Some DL) s (mapAnn fst ang).
 Proof.
-  intros. general induction H; invt labelsDefined; simpl.
+  intros. general induction H; invt labelsDefined; simpl in * |- *; pe_rewrite.
   - econstructor; eauto.
     eapply srd_monotone.
-    eapply IHrenamedApart; eauto.
-    rewrite H2. simpl in *. rewrite <- incl_add'; eauto.
-    erewrite bounded_restrict_eq; simpl; eauto.
-    simpl in *. eapply bounded_incl; eauto. cset_tac; intuition.
+    eapply IHrenamedApart; eauto with cset.
+    erewrite bounded_restrict_eq; simpl; eauto. eauto with cset.
   - econstructor; eauto.
-    + eapply IHrenamedApart1; eauto.
-      rewrite H4; eauto.
-    + eapply IHrenamedApart2; eauto.
-      rewrite H5; eauto.
   - econstructor.
-  - edestruct get_in_range as [a ?]; eauto.
-    econstructor. eapply map_get_1; eauto.
+  - edestruct get_in_range as [a ?]; eauto using map_get_1, srd.
   - econstructor; eauto.
     eapply srd_monotone.
-    eapply IHrenamedApart; eauto.
-    rewrite H2. simpl in *. rewrite <- incl_add'; eauto.
-    erewrite bounded_restrict_eq; simpl; eauto.
-    eapply bounded_incl; eauto. cset_tac; intuition.
+    eapply IHrenamedApart; eauto with cset.
+    erewrite bounded_restrict_eq; simpl; eauto. eauto with cset.
   - econstructor; eauto.
     + intros. inv_map H10.
       exploit H1; eauto. instantiate (1:=globals F (List.map (mapAnn fst) ans) ++ DL).
       rewrite app_length. unfold globals. rewrite zip_length2; eauto.
       edestruct H2; eauto; dcr.
       rewrite List.map_app. eapply bounded_app; split; eauto.
-      rewrite H15. eapply get_bounded.
-      intros. inv_map H16. eapply inv_globals in H18.
-      destruct H18; dcr; subst.
-      inv_map H21. edestruct H2; eauto; dcr.
-      rewrite getAnn_mapAnn. rewrite H24.
-      revert H28; clear_all; cset_tac; intuition.
-      rewrite map_length; eauto.
-      rewrite H15. rewrite <- incl_right; eauto.
-      eapply srd_monotone. eapply H15.
+      rewrite H14. eapply get_bounded.
+      intros. inv_map H15. eapply inv_globals in H17.
+      destruct H17; dcr; subst.
+      inv_map H20. edestruct H2; eauto; dcr.
+      rewrite getAnn_mapAnn. rewrite H22.
+      revert H26; clear_all; cset_tac; intuition.
+      eauto with len.
+      rewrite H14. rewrite <- incl_right; eauto.
+      eapply srd_monotone. eapply H14.
       rewrite getAnn_mapAnn; simpl.
       repeat rewrite restrict_app. rewrite List.map_app.
       eapply PIR2_app.
       erewrite bounded_restrict_eq. reflexivity.
       reflexivity.
       eapply get_bounded.
-      intros. eapply inv_oglobals in H16.
-      destruct H16; dcr; subst.
-      inv_map H17. edestruct H2; eauto; dcr.
-      rewrite getAnn_mapAnn. rewrite H20.
+      intros. eapply inv_oglobals in H15.
+      destruct H15; dcr; subst.
+      inv_map H16. edestruct H2; eauto; dcr.
+      rewrite getAnn_mapAnn. rewrite H18.
       decide (n=n0); subst. repeat get_functional; subst.
-      rewrite H20.
-      revert H21; clear_all; cset_tac; intuition.
+      rewrite H18. clear_all; cset_tac; intuition.
       exploit H3; eauto. eapply zip_get; eauto. eapply zip_get; eauto.
-      unfold defVars in H21. simpl in *.
-      edestruct H2; try eapply H12; eauto. dcr. rewrite H23.
-      revert H24 H29; clear_all; cset_tac; intuition; eauto.
-      rewrite List.map_length; eauto.
-      erewrite bounded_restrict_eq; simpl; eauto. simpl.
+      unfold defVars in H19. simpl in *.
+      edestruct H2; try eapply H12; eauto. dcr. rewrite H21.
+      revert H22 H27; clear_all; cset_tac; intuition; eauto.
+      eauto with len.
+      erewrite bounded_restrict_eq; simpl; eauto.
       edestruct H2; eauto; dcr.
-      rewrite H16. revert H20; clear_all; cset_tac; intuition; eauto.
+      rewrite H15. revert H19; clear_all; cset_tac; intuition; eauto.
     + eapply srd_monotone.
       eapply (IHrenamedApart (globals F (List.map (mapAnn fst) ans) ++ DL)); eauto.
       * unfold globals. rewrite app_length, zip_length2; eauto.
@@ -211,8 +175,8 @@ Proof.
         intros. inv_map H9. eapply inv_globals in H10.
         destruct H10; dcr; subst.
         inv_map H12. edestruct H2; eauto; dcr.
-        rewrite getAnn_mapAnn. rewrite H16.
-        revert H20; clear_all; cset_tac; intuition. rewrite map_length; eauto.
+        rewrite getAnn_mapAnn. rewrite H15.
+        clear_all; cset_tac; intuition. eauto with len.
       * rewrite List.map_app. reflexivity.
 Qed.
 
@@ -329,12 +293,12 @@ Definition rd_agree (DL:list (option (set var)))
 
 Lemma rd_agree_update DL L E G x v
  (RA:rd_agree DL L E)
-  : rd_agree (restrict DL (G \ {{x}})) L (E [x <- v]).
+  : rd_agree (restrict DL (G \ singleton x)) L (E [x <- v]).
 Proof.
   intros. hnf; intros.
   unfold restrict in H0. eapply map_get_4 in H0; dcr.
   unfold restr in H2. destruct x0; isabsurd. destruct if in H2; isabsurd.
-  inv H2. eapply agree_on_update_dead. rewrite s0. cset_tac; intuition.
+  inv H2. eapply agree_on_update_dead. rewrite s0. cset_tac.
   eapply RA; eauto.
 Qed.
 
@@ -399,9 +363,9 @@ Proof.
     simpl.
     econstructor; eauto.
     intros. eapply restr_iff in H0; dcr; subst. exploit H7; eauto; dcr.
-    intuition.
-    eexists x; intuition.
-    rewrite <- restrict_app; eauto. rewrite restrict_idem; eauto.
+    split; eauto.
+    eexists x; eauto.
+    rewrite <- restrict_app; eauto. rewrite restrict_idem; eauto with len.
     repeat rewrite app_length. repeat rewrite restrict_length. congruence.
 Qed.
 
@@ -594,11 +558,11 @@ Proof.
     erewrite (zip_sym _ F als).
     eapply mutual_approx; simpl; eauto; try congruence.
     intros. simpl. rewrite <- zip_app. econstructor; eauto.
-    intros. inv H4. simpl. unfold global. simpl.
+    intros. invs H4. simpl. unfold global. simpl.
     split. clear_all; cset_tac; intuition.
     eexists a. split.
     exploit H11; eauto. dcr; simpl in *.
-    revert H6; clear_all; cset_tac; intuition.
+    revert H5; clear_all; cset_tac; intuition.
     decide (a0 ∈ of_list Z); intuition.
     split. exploit H0; eauto.
     exploit H10; eauto.

@@ -237,7 +237,7 @@ Instance fold_left_subset_morphism X `{OrderedType X}:
   Proper (PIR2 Subset ==> Subset ==> Subset) (fold_left union).
 Proof.
   unfold Proper, respectful; intros.
-  general induction H0; simpl; eauto.
+  general induction H0; simpl; eauto with cset.
 Qed.
 
 Lemma lookup_set_list_union

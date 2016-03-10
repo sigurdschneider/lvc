@@ -195,6 +195,7 @@ Proof.
       orewrite (length L1' + (n - length L1') - block_n b
                 = length L1' + (n - length L1' - block_n b)).
       exploit (mutual_block_length H2). dcr.
+      Typeclasses eauto := 5.
       rewrite <- H8 at 1.
       rewrite H9 at 4.
       repeat rewrite drop_app. eauto.
@@ -218,7 +219,8 @@ Proof.
     orewrite (n = length L1' + (n - length L1')).
     exploit (inRel_less H1 H4).
     orewrite (length L1' + (n - length L1') - block_n b
-             = length L1' + (n - length L1' - block_n b)).
+              = length L1' + (n - length L1' - block_n b)).
+    Typeclasses eauto :=10.
     rewrite <- H8 at 1. repeat rewrite drop_app. rewrite H10. rewrite drop_app.
     rewrite <- H10. eauto.
 Qed.

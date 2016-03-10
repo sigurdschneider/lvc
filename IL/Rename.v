@@ -35,8 +35,8 @@ Proof with eauto 50 using rename_exp_agree, map_ext_get_eq2 with cset.
   eapply map_ext_get_eq2; intros. f_equal; eauto.
   - erewrite lookup_list_agree; eauto.
     eapply agree_on_incl; eauto.
-    rewrite <- get_list_union_map; eauto with cset. eauto with cset.
+    rewrite <- (get_list_union_map _ H0); eauto with cset.
   - eapply IH; eauto.
     eapply agree_on_incl; eauto.
-    rewrite <- get_list_union_map; eauto with cset. eauto with cset.
+    rewrite <- (get_list_union_map _ H0); eauto with cset.
 Qed.

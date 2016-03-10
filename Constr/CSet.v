@@ -5,17 +5,6 @@ Require Export CSetNotation CSetTac CSetBasic CSetCases CSetGet CSetComputable C
 
 Set Implicit Arguments.
 
-Lemma Proper_eq_fun X H0 (f:X->X)
-:  @Proper (X -> X)
-           (@respectful X X
-                        (@_eq X (@SOT_as_OT X (@eq X) H0))
-                        (@_eq X (@SOT_as_OT X (@eq X) H0))) f.
-Proof.
-  intuition.
-Qed.
-
-Hint Resolve Proper_eq_fun.
-
 Hint Resolve incl_empty minus_incl incl_right incl_left : auto.
 
 Definition pe X `{OrderedType X} := prod_eq (@Equal X _ _) (@Equal X _ _).
@@ -202,7 +191,10 @@ Hint Extern 20 ( ?v ∈ singleton ?v ) =>  eapply singleton_iff; reflexivity.
 Hint Extern 20 ( ?s ⊆ ?s ∪ _ ) =>  eapply incl_left.
 Hint Extern 20 ( ?s ⊆ _ ∪ ?s ) =>  eapply incl_right.
 Hint Extern 20 => match goal with
-                   | [ H: ?x ∈ ?s, H': ?x ∉ ?s |- _ ] => exfalso; eapply H', H
+                 | [ H: ?x ∈ ?s, H': ?x ∉ ?s |- _ ] => exfalso; eapply H', H
+                 | [ H: ?x === ?y, H': ?x =/= ?y |- _ ] => exfalso; eapply H', H
+                 | [ H: ?y === ?x, H': ?x =/= ?y |- _ ] => exfalso; eapply H'; symmetry; eapply H
+                 | [ H: ?x =/= ?x |- _ ] => exfalso; eapply H; reflexivity
                  end.
 
 Lemma incl_union_right X `{OrderedType X} s t u
@@ -234,6 +226,13 @@ Proof.
   cset_tac; intuition.
 Qed.
 
+Lemma to_list_nil {X} `{OrderedType X}
+  : to_list ∅ = nil.
+Proof.
+  eapply elements_Empty.
+  cset_tac; intuition.
+Qed.
+
 
 Create HintDb cset discriminated.
 
@@ -257,6 +256,125 @@ Hint Resolve disj_1_incl disj_2_incl : cset.
 
 Hint Resolve equal_minus_empty incl_minus_empty incl_minus_change incl_minus_union
      incl_union_lr incl_union_left incl_union_right incl_singleton union_incl_split
-     .
+     : cset.
 
 Hint Resolve incl_empty : auto.
+
+Lemma eq_union_lr (X : Type) (H : OrderedType X) (s s' t t' : set X)
+  : s [=] s' -> t [=] t' -> s ∪ t [=] s' ∪ t'.
+Proof.
+  intros A B. rewrite A, B; eauto.
+Qed.
+
+Hint Immediate eq_union_lr : cset.
+
+Lemma union_sym_simpl (X : Type) (H : OrderedType X) (s t : set X)
+  : s ∪ t [=] t ∪ s.
+Proof.
+  eapply union_sym.
+Qed.
+
+Hint Resolve union_sym_simpl : cset.
+
+
+Lemma incl_from_union_eq X `{OrderedType X} s t u
+  : t [=] s ∪ u
+    -> s ⊆ t.
+Proof.
+  intro eq; rewrite eq. eauto.
+Qed.
+
+Hint Extern 0 =>
+match goal with
+| [ H : disj ?s ?t |- disj ?s' ?t ] => eapply disj_1_incl
+| [ H : disj ?s ?t |- disj ?s' (?t \ _)  ] => eapply (disj_2_incl H); eapply incl_minus
+| [ H : disj ({ _ ; ?s} ∪ _) _ |- disj ?s ?t ] =>
+  is_evar t; eapply (disj_1_incl H); eapply incl_union_left, incl_add_right, reflexivity
+| [ H : disj ?s ?t |- disj ?s (_ ∪ ?t ∪ _) ] =>
+  eapply (disj_2_incl H); eapply incl_union_left; eapply incl_right
+| [ H1 : ?s ⊆ ?t, H2: ?t ⊆ ?u |- ?s ⊆ ?u] => eapply (Subset_trans H1 H2)
+| [ H : ?t [=] ?s ∪ ?u |- ?s ⊆ ?t] => eapply (incl_from_union_eq H)
+end : cset.
+
+Lemma add_minus_comm X `{OrderedType X} x s t:
+  x ∉ t
+  -> {x; s} \ t [=] {x; s \ t}.
+Proof.
+  cset_tac; intuition; eauto.
+Qed.
+
+Hint Resolve add_minus_comm : cset.
+
+Create HintDb pe discriminated.
+
+Ltac pe_rewrite_step :=
+  match goal with
+     | [ H : pe ?an _, H' : context [?an] |- _ ] =>
+       setoid_rewrite H in H'; simpl in H'
+     | [ H : pe ?an _ |-  context [?an] ] =>
+       setoid_rewrite H; simpl
+  end.
+
+Hint Extern 20 => pe_rewrite_step : pe.
+
+Hint Extern 10 =>
+match goal with
+|  [ |- pe (_, _) (_,_) ] => constructor
+end : pe.
+
+Lemma disj_add_swap X `{OrderedType X} x D Ds :
+  x ∉ D
+  -> disj {x; D} Ds
+  -> disj D {x; Ds}.
+Proof.
+  unfold disj. cset_tac.
+Qed.
+
+Lemma disj_union_right X `{OrderedType X} s t u
+  : disj s t -> disj s u -> disj s (t ∪ u).
+Proof.
+  intros. eapply disj_app; eauto.
+Qed.
+
+Hint Resolve disj_add_swap disj_union_right : cset.
+
+Hint Immediate disj_sym : cset.
+
+Lemma add_single_rm_single_incl X `{OrderedType X} x D
+  : {x; D} \ singleton x ⊆ D.
+Proof.
+  cset_tac.
+Qed.
+
+Lemma minus_incl_disj_eq X `{OrderedType X} s t u
+  : s [=] t ∪ u
+    -> disj t u
+    -> s \ t ⊆ u.
+Proof.
+  cset_tac; firstorder.
+Qed.
+
+Lemma minus_incl_add X `{OrderedType X} x (s t:set X)
+:  s \ singleton x ⊆ t
+   -> s [<=]{x; t}.
+Proof.
+  cset_tac; intuition. decide (x === a); eauto. right. eapply H0.
+  cset_tac; intuition.
+Qed.
+
+Lemma incl_minus_single_not_in X `{OrderedType X} x D
+  : x ∉ D
+    -> D ⊆ D \ singleton x.
+Proof.
+  cset_tac.
+Qed.
+
+Lemma minus_minus_minus_add X `{OrderedType X} s t x
+  : s \ t \ singleton x ⊆ s \ {x; t}.
+Proof.
+  cset_tac.
+Qed.
+
+Hint Resolve minus_incl_add add_single_rm_single_incl minus_incl_disj_eq
+     incl_minus_single_not_in minus_minus_minus_add
+  : cset.

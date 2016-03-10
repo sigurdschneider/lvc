@@ -27,11 +27,11 @@ Instance Stmt_size : Size stmt. gen_Size. Defined.
 
 Fixpoint freeVars (s:stmt) : set var :=
   match s with
-    | stmtLet x e s0 => (freeVars s0 \ {{x}}) ∪ Exp.freeVars e
+    | stmtLet x e s0 => (freeVars s0 \ singleton x) ∪ Exp.freeVars e
     | stmtIf e s1 s2 => freeVars s1 ∪ freeVars s2 ∪ Exp.freeVars e
     | stmtApp l Y => list_union (List.map Exp.freeVars Y)
     | stmtReturn e => Exp.freeVars e
-    | stmtExtern x f Y s => (freeVars s \ {{x}}) ∪ list_union (List.map Exp.freeVars Y)
+    | stmtExtern x f Y s => (freeVars s \ singleton x) ∪ list_union (List.map Exp.freeVars Y)
     | stmtFun s t =>
       list_union (List.map (fun f => (freeVars (snd f) \ of_list (fst f))) s) ∪ freeVars t
   end.
@@ -79,11 +79,12 @@ Qed.
 Lemma freeVars_occurVars s
 : freeVars s ⊆ occurVars s.
 Proof.
-  sind s; destruct s; simpl in * |- *; eauto.
-  - rewrite IH; cset_tac; intuition.
-  - rewrite IH; eauto. cset_tac; intuition.
-  - rewrite IH, list_union_f_incl; eauto. reflexivity.
-    intros. destruct y; simpl. rewrite IH; cset_tac; intuition; eauto.
+  sind s; destruct s; simpl in * |- *; repeat rewrite IH; eauto.
+  - cset_tac.
+  - cset_tac.
+  - rewrite list_union_f_incl. reflexivity.
+    intros. destruct y; simpl.
+    rewrite IH; cset_tac; intuition; eauto.
 Qed.
 
 Lemma list_union_f_union X `{OrderedType X} Y (f g:Y->set X) s
@@ -93,41 +94,42 @@ Proof.
   intros. general induction s; simpl; eauto.
   - cset_tac; intuition.
   - norm_lunion.
-    rewrite <- IHs; eauto using get. cset_tac; intuition.
+    rewrite <- IHs; eauto using get. cset_tac.
 Qed.
-
 
 
 Lemma occurVars_freeVars_definedVars s
 : occurVars s [=] freeVars s ∪ definedVars s.
 Proof.
   sind s; destruct s; simpl in * |- *; eauto with cset.
-  - rewrite IH; eauto. clear_all; cset_tac; intuition; eauto.
-    decide (x === a); intuition; eauto.
-  - repeat rewrite IH; eauto. clear_all; cset_tac; intuition; eauto.
-  - cset_tac; intuition.
-  - cset_tac; intuition.
-  - rewrite IH; eauto. clear_all; cset_tac; intuition; eauto.
-    decide (x === a); intuition; eauto.
+  - rewrite IH; eauto.
+    clear_all; cset_tac.
+    decide (x === a); eauto.
+  - repeat rewrite IH; eauto.
+    clear_all; cset_tac.
+  - cset_tac.
+  - cset_tac.
+  - rewrite IH; eauto. clear_all; cset_tac.
+    decide (x === a); eauto.
   - rewrite IH; eauto.
     repeat setoid_rewrite union_assoc at 1.
     setoid_rewrite union_comm at 5.
     repeat setoid_rewrite <- union_assoc.
     erewrite list_union_f_union.
-    rewrite list_union_f_eq. cset_tac; intuition; eauto.
+    rewrite list_union_f_eq. cset_tac.
     simpl. intros. rewrite IH; eauto.
-    clear_all; cset_tac; intuition; eauto. simpl in *.
-    decide (a ∈ of_list a0); intuition; eauto.
+    clear_all; cset_tac. simpl in *.
+    decide (a ∈ of_list a0); eauto.
 Qed.
 
 Lemma definedVars_occurVars s
 : definedVars s ⊆ occurVars s.
 Proof.
   sind s; destruct s; simpl in * |- *; eauto with cset.
-  - rewrite IH; cset_tac; intuition.
+  - rewrite IH; cset_tac.
   - repeat rewrite IH; eauto.
   - rewrite IH, list_union_f_incl; eauto. reflexivity.
-    intros. destruct y; simpl. rewrite IH; cset_tac; intuition; eauto.
+    intros. destruct y; simpl. rewrite IH; cset_tac.
 Qed.
 
 

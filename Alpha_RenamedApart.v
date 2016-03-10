@@ -109,8 +109,9 @@ Proof.
     instantiate (1:=D \ fold_left union (zip defVars XL YL) ({} ∪ defVars (Z, s1) y) \ of_list Z).
     cset_tac; intuition. unfold defVars at 1. simpl.
     setoid_rewrite list_union_start_swap at 2. unfold defVars at 2.
-    simpl. cset_tac; intuition.
-    rewrite list_union_start_swap. cset_tac; intuition.
+    simpl.
+    * clear_all; cset_tac.
+    * rewrite list_union_start_swap. clear_all; cset_tac.
 Qed.
 
 
@@ -121,29 +122,27 @@ Lemma alpha_rho_agree D s u ang ϱ ϱ'
 Proof.
   intros RA.
   general induction RA; destruct u; simpl; eauto.
-  - setoid_rewrite H1 in IHRA. simpl in *.
-    rewrite H2 in *.
-    eapply agree_on_incl. eapply IHRA.
-    symmetry. instantiate (1:=D0 \ {{x}}).
-    eapply agree_on_update_dead; [| symmetry; eauto].
-    cset_tac; intuition. eapply agree_on_incl; eauto. cset_tac; intuition.
-    cset_tac; intuition.
+  - pe_rewrite; simpl in *. rewrite H1 in *.
+    eapply agree_on_incl.
+    + eapply IHRA.
+      symmetry. instantiate (1:=D0 \ singleton x).
+      eapply agree_on_update_dead; [ cset_tac | ].
+      symmetry. eapply agree_on_incl; cset_tac.
+    + cset_tac.
   - simpl in *. rewrite <- H1 in *.
-    setoid_rewrite H2 in IHRA1.
-    setoid_rewrite H3 in IHRA2. simpl in *.
+    pe_rewrite.
     eapply agree_on_incl. eapply (IHRA2 (D0 \ Ds)).
     eapply agree_on_incl. eapply (IHRA1 (D0 \ Dt)).
-    eapply agree_on_incl; eauto.
+    eapply agree_on_incl; eauto with cset.
     cset_tac; intuition. cset_tac; intuition.
-  - setoid_rewrite H1 in IHRA. simpl in *.
-    rewrite H2 in *.
+  - pe_rewrite. rewrite H1 in *. simpl in *.
     eapply agree_on_incl. eapply IHRA.
-    symmetry. instantiate (1:=D0 \ {{x}}).
+    symmetry. instantiate (1:=D0 \ singleton x).
     eapply agree_on_update_dead; [| symmetry; eauto].
-    cset_tac; intuition. eapply agree_on_incl; eauto. cset_tac; intuition.
-    cset_tac; intuition.
-  - pe_rewrite.
-    simpl in *.
+    cset_tac; intuition. eapply agree_on_incl; eauto.
+    clear_all; cset_tac; intuition.
+    clear_all; cset_tac; intuition.
+  - pe_rewrite. simpl in *.
     eapply agree_on_incl. eapply IHRA.
     eapply agree_on_incl. eapply alpha_rho_agree_F; eauto.
     eapply agree_on_incl; eauto. rewrite <- H5.
@@ -171,7 +170,7 @@ Lemma alpha_rho_agrees_snd2_F F F' ans ϱ ϱ' D
     -> agree_on eq D (alpha_rho_F alpha_rho ϱ F F') (alpha_rho_F alpha_rho ϱ' F F').
 Proof.
   intros AR LENF RA LEN1 LEN2 AGR. length_equify.
-  general induction LEN1; inv LEN2; simpl in *; eauto using agree_on_incl.
+  general induction LEN1; inv LEN2; simpl in *; eauto using agree_on_incl with cset.
   - destruct x as [Z u], y0 as [Z' u']; eauto.
     eapply IHLEN1; eauto using get.
     + rewrite list_union_start_swap in AGR.
@@ -184,6 +183,7 @@ Proof.
       cset_tac; intuition. exploit LENF; eauto using get.
 Qed.
 
+
 Lemma list_union_incl {X} `{OrderedType X} (L L':list (set X)) (s s':set X)
 : length L = length L'
   -> (forall n s t, get L n s -> get L' n t -> s [<=] t)
@@ -195,6 +195,7 @@ Proof.
   exploit H1; eauto using get. rewrite H2, H3; eauto using get.
 Qed.
 
+
 Lemma alpha_rho_agrees_snd2 s u ang ϱ ϱ' D ρ ρ'
   : renamedApart s ang
     -> alpha ρ ρ' s u
@@ -202,7 +203,8 @@ Lemma alpha_rho_agrees_snd2 s u ang ϱ ϱ' D ρ ρ'
     -> agree_on eq D (alpha_rho ϱ s u) (alpha_rho ϱ' s u).
 Proof.
   intros RA ALPHA.
-  general induction RA; invt alpha; simpl in *; eauto using agree_on_incl, agree_on_update_same.
+  general induction RA; invt alpha; simpl in *;
+  eauto using agree_on_incl, agree_on_update_same with cset.
   - eapply IHRA; eauto. eapply alpha_rho_agrees_snd2_F; eauto using agree_on_incl.
     + eapply agree_on_incl; eauto.
       unfold defVars.
@@ -311,11 +313,26 @@ Proof.
       destruct y. f_equal.
       * simpl in *. admit.
       * simpl in *.
-        erewrite rename_agree; eauto.
+(*        erewrite rename_agree; eauto.
+        eapply agree_on_incl.
+        etransitivity.
+        symmetry.
+        eapply alpha_rho_agree. eauto.
+        instantiate (2:=occurVars u).
+        eapply agree_on_incl. eapply alpha_rho_agree_F; eauto.
+        intros. edestruct H7; eauto; dcr.
+        eapply alpha_rho_agree; eauto.
+        Focus 3. eapply agree_on_incl. eapply alpha_rho_agree. eauto.
+        eapply agree_on_incl. symmetry. eapply update_with_list_agree_minus. eauto.
+        reflexivity.
+        shelve. shelve. reflexivity.
+
+        eapply alpha_rho_agrees_snd2_F; eauto.
+        intros. eapply alpha_rho_agrees_snd2. eauto. eauto. eauto.*)
         admit.
     + erewrite rename_agree; eauto.
       eapply agree_on_incl.
-      eapply alpha_rho_agrees_snd2; eauto.
+      eapply alpha_rho_agrees_snd2; eauto with cset.
 Admitted.
 
 
@@ -346,7 +363,7 @@ Proof.
     case_eq (exp_idx symb' e'); intros; simpl; eauto.
     erewrite IHalpha; eauto with cset.
     simpl; intros.
-    lud; repeat destruct if; try congruence; intuition.
+    lud; repeat destruct if; try congruence.
     exploit H1; eauto. eapply pos_inc with (k':=1); eauto.
   - erewrite exp_alpha_real; eauto with cset.
     erewrite IHalpha1; eauto with cset.
@@ -354,7 +371,7 @@ Proof.
   - erewrite smap_agree_2; eauto; [| intros; erewrite exp_alpha_real; eauto].
     erewrite IHalpha; eauto.
     simpl; intros.
-    lud; repeat destruct if; try congruence; intuition.
+    lud; repeat destruct if; try congruence.
     exploit H1; eauto. eapply pos_inc with (k':=1); eauto.
   - erewrite IHalpha; eauto with cset.
     erewrite smap_agree_2; eauto.

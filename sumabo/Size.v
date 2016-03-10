@@ -64,7 +64,7 @@ Defined.
 
 
 
-Instance size_list (A : Type) (size_A : Size A) : Size (list A). gen_Size. Show Proof. Defined.
+Instance size_list (A : Type) (size_A : Size A) : Size (list A). gen_Size. Defined.
 
 Lemma size_list_get {A : Type} `{Size A} {L : list A} {n} {a}
 : get L n a -> size a <= size L.
@@ -105,7 +105,7 @@ Hint Extern 20 (size _ < size _) => somega.
 
 Inductive foo := Foo1 | Foo2 (_ : list foo) (_ : nat).
 
-Instance size_foo : Size foo. gen_Size. Set Printing Implicit. Show Proof. Defined.
+Instance size_foo : Size foo. gen_Size. Set Printing Implicit. Defined.
 
 
 (*
