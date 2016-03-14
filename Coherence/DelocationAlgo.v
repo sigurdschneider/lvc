@@ -120,8 +120,16 @@ Definition computeParametersF
   | _, _ => nil
   end.
 
-
-
+Lemma computeParametersF_zip f DL ZL AP F ans
+  : length F = length ans
+    -> computeParametersF f DL ZL AP F ans =
+      zip (fun Zs a => f DL ZL AP (snd Zs) a) F ans.
+Proof.
+  intros. length_equify.
+  general induction H; simpl; eauto.
+  let_pair_case_eq; subst; simpl.
+  f_equal; eauto.
+Qed.
 
 Fixpoint computeParameters (DL: list (set var)) (ZL:list (list var)) (AP:list (set var))
          (s:stmt) (an:ann (set var)) {struct s}
@@ -366,7 +374,8 @@ Proof.
   - econstructor.
   - simpl in *. inv H2; inv H3.
     exploit IHlength_eq; eauto.
-    inv pf; inv pf0; simpl; try now (econstructor; [econstructor; eauto| eauto]).
+    inv pf; inv pf0; simpl;
+    (econstructor; [econstructor; eauto with cset | eauto]).
 Qed.
 
 Lemma PIR2_ounion_AB {X} `{OrderedType X} (A A' B B':list (option (set X)))
@@ -399,7 +408,8 @@ Proof.
   - econstructor.
   - simpl in *. inv H2; inv H3.
     exploit IHlength_eq; eauto.
-    inv pf; inv pf0; simpl; try now (econstructor; [econstructor; eauto| eauto]).
+    inv pf; inv pf0; simpl;
+    now (econstructor; [econstructor; eauto with cset | eauto]).
 Qed.
 
 Lemma zip_sym X Y Z (f : X -> Y -> Z) (L:list X) (L':list Y)
@@ -425,6 +435,34 @@ Proof with eauto with len.
   rewrite zip_sym...
 Qed.
 
+Lemma computeParametersF_snd_length2 DL ZL AP F als
+      (LEN1 : length F = length als)
+      (LEN2 : length AP = length DL)
+      (LEN3 : length DL = length ZL)
+      (ASS:  forall (n : nat) (Zs : params * stmt) (a : ann (set var)),
+          get F n Zs ->
+          get als n a ->
+          forall an' (LV : list (option (set var))),
+            computeParameters (zip lminus DL ZL) ZL AP (snd Zs) a = (an', LV) ->
+            length AP = length DL ->
+            length DL = length ZL -> length LV = length DL)
+  : forall n aa, get
+              (computeParametersF computeParameters
+                                  (zip lminus DL ZL) ZL AP F als) n aa
+            -> length (snd aa) = length AP.
+Proof.
+  eapply length_length_eq in LEN1.
+  general induction LEN1; simpl in *; isabsurd.
+  let_case_eq; subst. inv H; eauto using get.
+  exploit ASS; [ eauto using get
+               | eauto using get
+               | eapply pair_eta
+               | eauto with len
+               | eauto with len
+               | eauto ]; simpl in *.
+  rewrite H0; eauto with len.
+Qed.
+
 Lemma computeParametersF_snd_length' DL ZL AP F als F' als'
       (LEN1 : length F = length als)
       (LEN2 : length AP = length DL)
@@ -441,15 +479,14 @@ Lemma computeParametersF_snd_length' DL ZL AP F als F' als'
             length AP = length DL0 ->
             length DL0 = length ZL0 -> length LV = length DL0)
   : forall n aa, get
-              (List.map snd
-                        (computeParametersF computeParameters
-                                            (zip lminus (List.map getAnn als') (List.map fst F')
-                                                 ++ zip lminus DL ZL)
-                                            (List.map fst F' ++ ZL)
-                                            (addParams (list_union List.map of_list (List.map fst F'))
-                                                       (zip lminus (List.map getAnn als') (List.map fst F') ++
-                                                            zip lminus DL ZL) (List.map (fun _ => ∅) F' ++ AP)) F als)) n aa
-            -> length aa = length F' + length AP.
+              (computeParametersF computeParameters
+                                  (zip lminus (List.map getAnn als') (List.map fst F')
+                                       ++ zip lminus DL ZL)
+                                  (List.map fst F' ++ ZL)
+                                  (addParams (list_union List.map of_list (List.map fst F'))
+                                             (zip lminus (List.map getAnn als') (List.map fst F') ++
+                                                  zip lminus DL ZL) (List.map (fun _ => ∅) F' ++ AP)) F als) n aa
+            -> length (snd aa) = length F' + length AP.
 Proof.
   eapply length_length_eq in LEN1.
   general induction LEN1; simpl in *; isabsurd.
@@ -464,6 +501,8 @@ Proof.
                | eauto ].
   rewrite H0; eauto with len.
   Unshelve.
+  rewrite addParams_length.
+  eauto 20 with len.
   eauto 20 with len.
 Qed.
 
@@ -495,6 +534,7 @@ Proof.
       rewrite H4. rewrite app_length, map_length. omega.
       * rewrite H4. rewrite app_length, map_length.
         rewrite <- LEQ, <- H.
+        intros. inv_map H5.
         eapply computeParametersF_snd_length'; eauto.
 Qed.
 
@@ -509,15 +549,14 @@ Lemma computeParametersF_snd_length DL ZL AP F als
          (Liveness.live_globals F als ++ zip pair DL ZL)
          (snd Zs) a)
   : forall n aa, get
-              (List.map snd
-                        (computeParametersF computeParameters
-                                            (zip lminus (List.map getAnn als) (List.map fst F)
-                                                 ++ zip lminus DL ZL)
-                                            (List.map fst F ++ ZL)
-                                            (addParams (list_union List.map of_list (List.map fst F))
-                                                       (zip lminus (List.map getAnn als) (List.map fst F) ++
-                                                            zip lminus DL ZL) (List.map (fun _ => ∅) F ++ AP)) F als)) n aa
-            -> length aa = length F + length AP.
+              (computeParametersF computeParameters
+                                  (zip lminus (List.map getAnn als) (List.map fst F)
+                                       ++ zip lminus DL ZL)
+                                  (List.map fst F ++ ZL)
+                                  (addParams (list_union List.map of_list (List.map fst F))
+                                             (zip lminus (List.map getAnn als) (List.map fst F) ++
+                                                  zip lminus DL ZL) (List.map (fun _ => ∅) F ++ AP)) F als) n aa
+            -> length (snd aa) = length F + length AP.
 Proof.
   eapply computeParametersF_snd_length'; eauto.
   intros. eapply computeParameters_length; eauto.
@@ -570,7 +609,8 @@ Proof.
   general induction H0.
   - inv H1; econstructor.
   - inv H1.
-    inv pf; inv pf0; simpl; try now (econstructor; [econstructor; eauto| eauto]).
+    inv pf; inv pf0; simpl;
+    now (econstructor; [econstructor; eauto with cset | eauto]).
 Qed.
 
 Lemma ifSndR_fold_zip_ounion {X} `{OrderedType X} A B C
@@ -617,6 +657,16 @@ Proof with eauto 20 using get with len.
     + rewrite drop_zip...
 Qed.
 
+Lemma zip_AP_mon X Y `{OrderedType Y}
+      (AP:list (set Y)) (DL:list X) (f:X -> set Y  -> set Y)
+      (LEN:length DL = length AP)
+  : (forall x y, y ⊆ f x y)
+    -> PIR2 Subset AP (zip f DL AP).
+Proof.
+  length_equify.
+  general induction LEN; simpl; eauto using PIR2.
+Qed.
+
 Lemma computeParameters_AP_LV DL ZL AP s lv an' LV
 :live_sound FunctionalAndImperative (zip pair DL ZL) s lv
   -> computeParameters (zip lminus DL ZL) ZL AP s lv = (an', LV)
@@ -647,7 +697,17 @@ Proof.
   - eapply ifSndR_addAdds; eauto 20 with len.
     rewrite drop_fold_zip_ounion.
     eapply ifSndR_fold_zip_ounion.
-    + admit.
+    + intros.
+      inv_map H5. inv_map H6.
+      destruct x0 as (an, LV).
+      rewrite computeParametersF_zip in H7; eauto.
+      inv_zip H7. rewrite <- zip_app in H10.
+      eapply H1 in H10. unfold addParams in H10.
+      rewrite zip_app in H10.
+      rewrite zip_app in H10.
+      simpl.
+      Lemma
+
     + rewrite <- zip_app in eq; eauto with len.
       exploit IHLS; [ eauto
                     | eapply live_globals_zip; eauto with len
@@ -657,6 +717,7 @@ Proof.
       unfold addParams. rewrite drop_zip; eauto 20 with len.
       rewrite zip_app; eauto with len.
       repeat rewrite drop_length_ass; eauto with len.
+      eapply zip_AP_mon; eauto with len.
 
     exploit IHLS1. reflexivity. Focus 2. instantiate (6:=getAnn als::DL).
     instantiate (5:=Z::ZL). eapply eq. reflexivity. simpl.

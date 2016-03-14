@@ -478,6 +478,16 @@ Proof.
   intros. general induction H; eauto using PIR2.
 Qed.
 
+Lemma PIR2_app' X Y (R:X->Y->Prop) L1 L2 L1' L2'
+: PIR2 R (L1 ++ L2) (L1' ++ L2')
+  -> length L1 = length L1'
+  -> PIR2 R (L1) (L1') /\ PIR2 R (L2) (L2').
+Proof.
+  intros P LEN. length_equify.
+  general induction LEN; simpl in *; eauto using PIR2.
+  inv P. exploit IHLEN; eauto. eauto using PIR2.
+Qed.
+
 Lemma PIR2_get X Y (R:X->Y->Prop) L L'
 : (forall n x x', get L n x -> get L' n x' -> R x x')
   -> length L = length L'

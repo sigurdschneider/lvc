@@ -394,3 +394,14 @@ Proof.
   intros A B C.
   length_equify. general induction A; inv B; inv C; simpl; eauto 50 using PIR2, get.
 Qed.
+
+Require Import Take Drop.
+
+Lemma take_eta n X (L:list X)
+  : L = take n L ++ drop n L.
+Proof.
+  general induction n; eauto.
+  - destruct L; simpl.
+    + rewrite drop_nil; eauto.
+    + f_equal; eauto.
+Qed.

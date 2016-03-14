@@ -52,4 +52,5 @@ Ltac length_equify :=
               eapply length_length_eq in H
           end).
 
-Hint Resolve length_length_eq length_eq_length : len.
+Hint Immediate length_eq_length : len.
+Hint Resolve length_length_eq : len.
