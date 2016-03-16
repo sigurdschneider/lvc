@@ -2,6 +2,9 @@ Require Import CSet Map OrderedTypeEx Util List Get Computable DecSolve AllInRel
 
 Set Implicit Arguments.
 
+Unset Printing Abstraction Types.
+Check (fun T (x:T) => x).
+
 Fixpoint pos X `{OrderedType X} (l:list X) (x:X) (n:nat) : option nat :=
   match l with
     | nil => None

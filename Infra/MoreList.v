@@ -189,6 +189,15 @@ Proof.
   econstructor; eauto using get.
 Qed.
 
+Lemma mapi_length_ass (X Y : Type) (f : nat -> X -> Y) L k
+  : length L = k
+    -> length (mapi f L) = k.
+Proof.
+  intros. subst. eapply mapi_length.
+Qed.
+
+Hint Resolve mapi_length_ass : len.
+
 Ltac list_eqs :=
   match goal with
     | [ H' : ?x :: ?L = ?L' ++ ?L |- _ ] =>
@@ -405,3 +414,5 @@ Proof.
     + rewrite drop_nil; eauto.
     + f_equal; eauto.
 Qed.
+
+Notation "⊜ f L1 L2" := (zip f L1 L2) (at level 50, f at level 0, L1 at level 0, L2 at level 0).

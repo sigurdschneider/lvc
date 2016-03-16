@@ -327,6 +327,20 @@ Tactic Notation "exploiT" constr(ty) :=
       | H: ty _ _ _ _ _ _ _ _ _ |- _ => exploit H
   end.
 
+
+Ltac exploit2 H H' :=
+  eapply modus_ponens;
+  [
+    let H' := fresh "exploitH" in
+    pose proof H as H'; hnf in H';
+      eapply H'; clear H'
+  | intros H'].
+
+
+Tactic Notation "exploit" uconstr(X) := exploit X.
+Tactic Notation "exploit" uconstr(X) "as" ident(H) := exploit2 X H.
+
+
 Definition foo A B C := (A -> ~ B \/ C).
 
 Lemma test (A B C D : Prop) (a:A) (b:B)
@@ -546,3 +560,7 @@ Proof.
 Qed.
 
 Hint Resolve map_length_ass app_length_ass | 4 : len.
+
+Notation "‖ L ‖" := (length L) (at level 9, format "'‖' L '‖'", L at level 0).
+Notation "f ⊝ L" := (List.map f L) (at level 50).
+Notation "'tab' s '‖' L '‖'" := (List.map (fun _ => s) L) (at level 50, format "'tab'  s  '‖' L '‖'").

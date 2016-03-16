@@ -3,6 +3,8 @@ Require Import IL Annotation AutoIndTac Bisim Exp MoreExp Filter Rename.
 
 Set Implicit Arguments.
 
+Notation "DL \\ ZL" := (zip (@lminus _ _) DL ZL) (at level 50).
+
 Local Hint Resolve incl_empty minus_incl incl_right incl_left.
 
 (** * Liveness *)

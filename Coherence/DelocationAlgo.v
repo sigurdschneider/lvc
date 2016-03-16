@@ -1,22 +1,22 @@
 Require Import CSet Le.
 
-Require Import Plus Util AllInRel Map Take.
-Require Import Val Var Env EnvTy IL Annotation Liveness Coherence MoreList Restrict Delocation.
+Require Import Plus Util AllInRel Map Take MoreList.
+Require Import Val Var Env EnvTy IL Annotation Liveness Coherence Restrict Delocation.
 
 Set Implicit Arguments.
+Unset Printing Abstraction Types.
+Local Arguments lminus {X} {H} s L.
+
+Print Visibility.
 
 Definition addParam x (DL:list (set var)) (AP:list (set var)) :=
   zip (fun (DL:set var) AP => if [x ∈ DL]
                    then {{x}} ∪ AP else AP) DL AP.
 
-Definition addParams s DL (AP:list (set var)) :=
-  zip (fun DL AP => (s ∩ DL) ∪ AP) DL AP.
-
 Definition oget {X} `{OrderedType X} (s:option (set X)) :=
   match s with Some s => s | None => ∅ end.
 
-Definition addAdds s DL (AP:list (option (set var))) :=
-  zip (fun (DL:set var) AP => mdo t <- AP; Some ((s ∩ DL) ∪ t)) DL AP.
+Definition addAdd s := (fun (DL:set var) AP => mdo t <- AP; Some ((s ∩ DL) ∪ t)).
 
 Lemma addParam_length x DL AP
  : length DL = length AP
@@ -25,26 +25,10 @@ Proof.
   intros. unfold addParam. eauto with len.
 Qed.
 
-Lemma addAdds_length Z DL AP
- : length DL = length AP
-   -> length (addAdds Z DL AP) = length DL.
-Proof.
-  intros. unfold addAdds. eauto with len.
-Qed.
-
 Lemma length_tl X (l:list X)
   : length (tl l) = length l - 1.
 Proof.
   destruct l; simpl; eauto; omega.
-Qed.
-
-Definition lminus (s:set var) L := s \ of_list L.
-
-Lemma addParams_length Z DL AP
- : length DL = length AP
-   -> length (addParams Z DL AP) = length DL.
-Proof.
-  eauto with len.
 Qed.
 
 Lemma addParam_zip_lminus_length DL ZL AP x
@@ -54,32 +38,6 @@ Lemma addParam_zip_lminus_length DL ZL AP x
 Proof.
   eauto with len.
 Qed.
-
-Lemma addParams_zip_lminus_length DL ZL AP Z
-: length AP = length DL
-  -> length DL = length ZL
-  -> length (addParams Z (zip lminus DL ZL) AP) = length DL.
-Proof.
-  eauto with len.
-Qed.
-
-Lemma fold_addParams_length DL a AP
-  : length DL = length AP
-    -> length (fold_left (fun AP0 Z => addParams Z DL AP0) a AP) = length DL.
-Proof.
-  general induction a; simpl; eauto.
-  rewrite IHa; eauto with len.
-Qed.
-
-Lemma fold_addParams_length_ass DL a AP k
-  : length DL = length AP
-    -> length DL = k
-    -> length (fold_left (fun AP0 Z => addParams Z DL AP0) a AP) = k.
-Proof.
-  intros; subst; eapply fold_addParams_length; trivial.
-Qed.
-
-Hint Resolve fold_addParams_length_ass : len.
 
 Definition ounion {X} `{OrderedType X} (s t: option (set X)) :=
   match s, t with
@@ -99,12 +57,37 @@ Proof.
 Qed.
 
 
-Definition killExcept f (AP:list (set var)) :=
+Definition keep f (AP:list (set var)) :=
   mapi (fun n x => if [n = counted f] then Some x else None) AP.
 
 
 Definition oto_list {X} `{OrderedType X} (s:option (set X)) :=
   match s with Some s => to_list s | None => nil end.
+
+
+Definition ounion2 {X} `{OrderedType X} (t:set X) (s: option (set X))  :=
+  match s with
+    | Some s => s ∪ t
+    | None => t
+  end.
+
+Definition Zunion (t:set var) (s: (params*stmt))  :=
+  t ∪ of_list (fst s).
+
+Notation "'unionParams' F" := (fold_left Zunion F ∅) (at level 50).
+
+
+Notation "'olist_union' A B" := (fold_left (zip ounion) A B) (at level 50, A at level 0, B at level 0).
+Notation "'listo_union' rFt" := (fold_left ounion2 rFt ∅) (at level 50, rFt at level 0).
+
+(*Notation "'unionCombineParameters' F A B" :=
+  (fold_left ounion2 (take (length F) (fold_left (zip ounion) (List.map snd A) B)) ∅)
+    (at level 50).
+ *)
+
+
+Check drop (length nil) nil.
+
 
 Fixpoint computeParameters (DL: list (set var)) (ZL:list (list var)) (AP:list (set var))
          (s:stmt) (an:ann (set var)) {struct s}
@@ -117,7 +100,7 @@ Fixpoint computeParameters (DL: list (set var)) (ZL:list (list var)) (AP:list (s
       let (ars, rs) := computeParameters DL ZL AP s ans in
       let (art, rt) := computeParameters DL ZL AP t ant in
       (ann2 nil ars art, zip ounion rs rt)
-    | stmtApp f Y, ann0 lv => (ann0 nil, killExcept f AP)
+    | stmtApp f Y, ann0 lv => (ann0 nil, keep f AP)
     | stmtReturn x, ann0 _ => (ann0 nil, (mapi (fun _ _ => None) AP))
     | stmtExtern x f e s, ann1 _ an =>
       let (ar, r) := computeParameters DL ZL (addParam x DL AP) s an in
@@ -125,19 +108,27 @@ Fixpoint computeParameters (DL: list (set var)) (ZL:list (list var)) (AP:list (s
     | stmtFun F t, annF lv ans ant =>
       let DL' := zip lminus (List.map getAnn ans) (List.map fst F) in
       let Z : list params := List.map fst F in
-      let AP' := addParams (list_union (List.map of_list Z))
-                          (DL' ++ DL)
-                          (List.map (fun _ => ∅) F ++ AP) in
+      let Zset := fold_left Zunion F ∅ in
+      let AP' := (List.map (fun _ => ∅) F ++ AP) in
       let ars_rF :=
           zip (fun Zs a => computeParameters (DL' ++ DL) (Z ++ ZL) AP' (snd Zs) a)
               F ans in
       let (art, rt) := computeParameters (DL' ++ DL) (Z ++ ZL) AP' t ant in
       let rFt := fold_left (zip ounion) (List.map snd ars_rF) rt in
-      let ZaF := list_union (List.map oget (take (length F) rFt)) in
-      let ur := addAdds ZaF DL (drop (length F) rFt) in
-      (annF (List.map (fun _ => to_list ZaF) F) (List.map fst ars_rF) art, ur)
+      let ZaF := fold_left ounion2 (take (length F) rFt) ∅ in
+      let ur : list (option (set var)) :=
+          zip (addAdd (ZaF ∪ Zset)) (DL' ++ DL) rFt in
+      (annF (List.map oto_list (take (length F) ur))
+            (List.map fst ars_rF) art, drop (length F) ur)
     | s, a => (ann0 nil, nil)
   end.
+
+Notation "'computeParametersF' DL ZL AP F als" :=
+  (⊜ (fun Zs a0 => computeParameters ((getAnn ⊝ als) \\ (fst ⊝ F) ++ DL \\ ZL)
+                                    (fst ⊝ F ++ ZL)
+                                    (List.map (fun _ => ∅) F ++ AP)
+                                    (snd Zs) a0) F als)
+    (at level 50, DL, ZL, AP, F, als at level 0).
 
 Local Notation "≽" := (fstNoneOrR (flip Subset)).
 Local Notation "≼" := (fstNoneOrR (Subset)).
@@ -180,48 +171,17 @@ Qed.
 
 Opaque to_list.
 
-
-(*Lemma trs_monotone3 (DL : list (option (set var))) AP AP' ZL s lv a
- : trs DL (zip (fun Z a => match a with Some a => Z++to_list a | None => Z end) ZL AP) s lv a
-   -> PIR2 (fstNoneOrR Subset) AP AP'
-   -> trs DL (zip (fun Z a => match a with Some a => Z++to_list a | None => Z end) ZL AP') s lv a.
-Proof.
-  intros. general induction H; eauto using trs.
-  - edestruct get_zip as  [? []]; eauto; dcr.
-    destruct (PIR2_nth H1 H4); eauto; dcr.
-    exploit zip_get. eapply H2. eapply H6.
-    econstructor; eauto.
-  - econstructor; eauto.
-    + intros. exploit H3; eauto.
-
-      pose proof (H3 (Some ∅::AP) (Some ∅::AP') (Za::ZL0)) as A.
-    simpl zip in A.
-    rewrite to_list_nil in A. rewrite app_nil_r in A.
-    eapply A. reflexivity. econstructor. reflexivity. eauto.
-    (*
-    simpl. destruct if. econstructor. constructor.
-    hnf. cset_tac; intuition. eapply list_eq_restrict; eauto.
-    econstructor. econstructor. eapply list_eq_restrict; eauto.*)
-    pose proof (IHtrs2 (Some ∅::AP) (Some ∅::AP') (Za::ZL0)) as A.
-    simpl zip in A.
-    rewrite to_list_nil in A. rewrite app_nil_r in A.
-    eapply A. reflexivity. econstructor. reflexivity. eauto.
-Qed.
- *)
-
 Definition elem_eq {X} `{OrderedType X} (x y: list X) := of_list x [=] of_list y.
 
-Instance elem_eq_refl {X} `{OrderedType X} : Reflexive elem_eq.
+Instance elem_eq_refl X `{OrderedType X} : Reflexive (@elem_eq X _).
 hnf; intros. hnf. cset_tac; intuition.
 Qed.
-
 
 Definition elem_incl {X} `{OrderedType X} (x y: list X) := of_list x [<=] of_list y.
 
-Instance elem_incl_refl {X} `{OrderedType X} : Reflexive elem_incl.
+Instance elem_incl_refl X `{OrderedType X} : Reflexive (@elem_incl _ _).
 hnf; intros. hnf. cset_tac; intuition.
 Qed.
-
 
 Lemma trs_AP_seteq (DL : list (option (set var))) AP AP' s lv a
  : trs DL AP s lv a
@@ -234,8 +194,6 @@ Proof.
   - econstructor; eauto using PIR2_app.
 Qed.
 
-
-
 Lemma trs_AP_incl (DL : list (option (set var))) AP AP' s lv a
  : trs DL AP s lv a
    -> PIR2 elem_incl AP AP'
@@ -246,18 +204,6 @@ Proof.
     econstructor; eauto.
   - econstructor; eauto using PIR2_app.
 Qed.
-
-Lemma trs_AP_incl' (DL : list (option (set var))) AP AP' s lv a
- : trs DL AP s lv a
-   -> PIR2 elem_incl AP AP'
-   -> trs DL AP' s lv a.
-Proof.
-  intros. general induction H; eauto using trs.
-  + destruct (PIR2_nth H1 H0); eauto; dcr.
-    econstructor; eauto.
-  + econstructor; eauto using PIR2_app.
-Qed.
-
 
 Definition map_to_list {X} `{OrderedType X} (AP:list (option (set X)))
   := List.map (fun a => match a with Some a => to_list a | None => nil end) AP.
@@ -281,7 +227,7 @@ Lemma trs_monotone3' (DL : list (option (set var))) AP AP' s lv a
    -> PIR2 (fstNoneOrR Subset) AP AP'
    -> trs DL (List.map oto_list AP') s lv a.
 Proof.
-  intros. eapply trs_AP_incl'; eauto. eapply PIR2_flip.
+  intros. eapply trs_AP_incl; eauto. eapply PIR2_flip.
   eapply PIR2_Subset_of_list; eauto.
 Qed.
 
@@ -413,38 +359,40 @@ Proof with eauto with len.
 Qed.
 
 Lemma computeParameters_length DL ZL AP s lv an' LV
-:live_sound FunctionalAndImperative (zip pair DL ZL) s lv
-  -> computeParameters (zip lminus DL ZL) ZL AP s lv = (an', LV)
-  -> length AP = length DL
-  -> length DL = length ZL
-  -> length LV = length DL.
+ : computeParameters (zip lminus DL ZL) ZL AP s lv = (an', LV)
+   -> live_sound FunctionalAndImperative (zip pair DL ZL) s lv
+   -> length AP = length DL
+   -> length DL = length ZL
+   -> length LV = length DL.
 Proof.
-  intros LS CPEQ LEQ LEQ2.
+  intros CPEQ LS LEQ LEQ2.
   general induction LS; simpl in *; repeat let_case_eq; inv CPEQ.
   - rewrite LEQ. eapply IHLS; eauto. rewrite addParam_zip_lminus_length; eauto.
   - exploit IHLS1; eauto.
     exploit IHLS2; eauto.
     repeat rewrite zip_length2; congruence.
-  - unfold killExcept, mapi. rewrite mapi_length. eauto.
-  - unfold mapi. rewrite mapi_length; eauto.
+  - eauto with len.
+  - eauto with len.
   - rewrite LEQ. eapply IHLS; eauto with len.
-  - exploit IHLS.
-    + reflexivity.
-    + eapply live_globals_zip; eauto.
-    + rewrite zip_app. eapply eq. eauto with len.
-    + eauto 20 with len.
+  - rewrite <- zip_app in eq.
+    exploit IHLS; eauto using live_globals_zip.
     + eauto with len.
-    + rewrite addAdds_length, zip_length2; eauto.
-      rewrite length_drop_minus, zip_length2; eauto.
+    + eauto with len.
+    + rewrite length_drop_minus.
+      rewrite zip_length2; eauto with len.
+      rewrite app_length.
+      repeat rewrite zip_length2; eauto with len.
+      rewrite map_length. omega.
       rewrite fold_zip_ounion_length.
-      rewrite H4. rewrite app_length, map_length. omega.
-      * rewrite H4. rewrite app_length, map_length.
+      * rewrite H4. eauto with len.
+      * intros. rewrite H4. rewrite app_length, map_length.
         rewrite <- LEQ, <- H.
         intros. inv_map H5.
         destruct x as [an LV]. inv_zip H6.
         rewrite <- zip_app in H9; eauto with len.
         eapply H1 in H9; eauto 20 using pair_eta, live_globals_zip with len.
         simpl. rewrite H9. eauto with len.
+    + eauto with len.
 Qed.
 
 
@@ -490,10 +438,10 @@ Proof.
   - eapply IHA; eauto using get, ifSndR_zip_ounion.
 Qed.
 
-Lemma ifSndR_addAdds s DL A B
+Lemma ifSndR_zip_addAdd s DL A B
  : length DL = length A
    -> PIR2 (ifSndR Subset) A B
-   -> PIR2 (ifSndR Subset) A (addAdds s DL B).
+   -> PIR2 (ifSndR Subset) A (zip (addAdd s) DL B).
 Proof.
   intros. eapply length_length_eq in H.
   general induction H; inv H0; simpl.
@@ -501,17 +449,6 @@ Proof.
   + econstructor; eauto.
     - inv pf; simpl; econstructor.
       * cset_tac; intuition.
-Qed.
-
-
-Lemma addParams_Subset Z DL AP
-: length DL = length AP
-  -> PIR2 Subset AP (addParams Z DL AP).
-Proof.
-  intros. eapply length_length_eq in H.
-  general induction H; simpl.
-  + econstructor.
-  + econstructor; eauto.
 Qed.
 
 Lemma drop_fold_zip_ounion X `{OrderedType X} A B k
@@ -552,7 +489,7 @@ Proof.
     exploit computeParameters_length; try eapply eq; eauto.
     exploit computeParameters_length; try eapply eq0; eauto.
     eapply ifSndR_zip_ounion; eauto.
-  - clear_all. unfold killExcept, mapi. generalize 0.
+  - clear_all. unfold keep, mapi. generalize 0.
     general induction AP; simpl. econstructor.
     destruct if; eauto using PIR2, @ifSndR.
   - clear_all. unfold mapi. generalize 0.
@@ -561,8 +498,14 @@ Proof.
     eapply PIR2_ifSndR_right. eapply H3.
     eapply PIR2_addParam; eauto.
     rewrite zip_length2; eauto.
-  - eapply ifSndR_addAdds; eauto 20 with len.
+  - rewrite <- zip_app in eq; eauto with len.
+    rewrite live_globals_zip in LS; eauto with len.
+    rewrite live_globals_zip in H0; eauto with len.
+    exploit computeParameters_length as B0LEN; eauto 20 with len.
+    rewrite drop_zip.
+    rewrite drop_length_ass; eauto with len.
     rewrite drop_fold_zip_ounion.
+    eapply ifSndR_zip_addAdd; eauto 20 with len.
     eapply ifSndR_fold_zip_ounion.
     + clear IHLS. intros.
       inv_map H5. inv_map H6.
@@ -570,37 +513,29 @@ Proof.
       inv_zip H7. rewrite <- zip_app in H10; eauto with len.
       exploit H1; try eapply H10; clear H1; eauto 20 using live_globals_zip with len.
       rewrite (take_eta (length F) LV) in H11.
-      unfold addParams in H11.
-      rewrite zip_app in H11; eauto with len.
-      rewrite zip_app in H11; eauto with len.
       eapply PIR2_app' in H11.
       * dcr. simpl in *.
         eapply PIR2_ifSndR_right; eauto with len.
-        eapply zip_AP_mon; eauto with len.
-      * eapply zip_length_ass. eauto with len.
-        rewrite take_less_length. eauto with len.
+      * rewrite take_less_length. eauto with len.
         eapply computeParameters_length in H10; eauto 20 with len.
         rewrite H10. rewrite app_length, map_length. omega.
-        rewrite <- live_globals_zip; eauto with len.
-    + rewrite <- zip_app in eq; eauto with len.
-      exploit IHLS; [ eauto
+    + exploit IHLS; [ eauto
                     | eapply live_globals_zip; eauto with len
                     | eapply eq
                     | | | ]; eauto 20 with len.
       eapply PIR2_ifSndR_right. eapply PIR2_drop; eauto.
-      unfold addParams. rewrite drop_zip; eauto 20 with len.
-      rewrite zip_app; eauto with len.
       repeat rewrite drop_length_ass; eauto with len.
-      eapply zip_AP_mon; eauto with len.
-    + rewrite live_globals_zip in H0; eauto with len.
-      intros. inv_map H5. destruct x as [an LV].
+    + intros. inv_map H5. destruct x as [an LV].
       inv_zip H6. rewrite <- zip_app in H9; eauto with len.
-      eapply computeParameters_length in H9; eauto 20 with len. simpl.
-      rewrite H9.
-      rewrite <- zip_app in eq; eauto with len.
-      eapply computeParameters_length in eq; eauto 20 with len.
-      rewrite <- live_globals_zip; eauto with len.
+      eapply computeParameters_length in H9; eauto 20 with len.
+    + rewrite fold_zip_ounion_length; eauto with len.
+      rewrite B0LEN. eauto with len.
+      intros. inv_map H5. destruct x as [an LV].
+      inv_zip H6.
+      rewrite <- zip_app in H9; eauto with len.
+      eapply computeParameters_length in H9; eauto 20 with len.
 Qed.
+
 
 Inductive ifFstR {X Y} (R:X -> Y -> Prop) : option X -> Y -> Prop :=
   | IfFstR_None y : ifFstR R None y
@@ -622,7 +557,7 @@ Qed.
 
 Lemma ifFstR_addAdds s A B
 : PIR2 (ifFstR Subset) B  A
-  -> PIR2 (ifFstR Subset) (addAdds s A B) A.
+  -> PIR2 (ifFstR Subset) (zip (addAdd s) A B) A.
 Proof.
   intros.
   general induction H; simpl.
@@ -643,14 +578,24 @@ Proof.
     + eauto.
 Qed.
 
-Lemma addParams_Subset2 Z DL AP
-: PIR2 Subset AP DL
-  -> PIR2 Subset (addParams Z DL AP) DL.
+Lemma PIR2_ifFstR_right {X} `{OrderedType X} A B C
+      : PIR2 (ifFstR Subset) B C
+        -> PIR2 (option_eq Subset) A B
+        -> PIR2 (ifFstR Subset) A C.
 Proof.
-  intros. general induction H; simpl.
-  + econstructor.
-  + econstructor; eauto.
-    cset_tac; intuition.
+  intros H1 H2. general induction H2; inv H1; eauto using @PIR2.
+  econstructor; eauto.
+  inv pf; try econstructor. inv pf0. intuition.
+Qed.
+
+Lemma ifFstR_fold_zip_ounion {X} `{OrderedType X} A B C
+  : (forall n a, get A n a -> PIR2 (ifFstR Subset) a C)
+    -> PIR2 (ifFstR Subset) B C
+    -> PIR2 (ifFstR Subset) (fold_left (zip ounion) A B) C.
+Proof.
+  intros GET LE.
+  general induction A; simpl; eauto.
+  - eapply IHA; eauto using get, ifFstR_zip_ounion.
 Qed.
 
 
@@ -673,7 +618,7 @@ Proof.
     eapply ifFstR_zip_ounion; eauto.
   - revert LEQ H4 H3. clear_all; intros. eapply length_length_eq in LEQ.
     eapply length_length_eq in H3.
-    unfold killExcept, mapi. generalize 0.
+    unfold keep, mapi. generalize 0.
     general induction LEQ; inv H3; simpl. econstructor. inv H4.
     destruct if; econstructor; eauto. constructor; eauto.
     econstructor.
@@ -685,23 +630,45 @@ Proof.
   - exploit IHLS; eauto using addParam_zip_lminus_length.
     eapply addParam_Subset; eauto.
   - rewrite <- zip_app in eq; eauto with len.
-    eapply ifFstR_addAdds; eauto.
-
-    exploit IHLS; eauto 20 using live_globals_zip with len.
-    admit.
-
-    reflexivity. Focus 2. instantiate (6:=getAnn als::DL).
-    instantiate (5:=Z::ZL). eapply eq. reflexivity. simpl.
-    rewrite addParams_zip_lminus_length; eauto. simpl; eauto. simpl.
-    econstructor; eauto. cset_tac; intuition.
-    eapply addParams_Subset2; eauto.
-    exploit IHLS2. reflexivity. Focus 2. instantiate (6:=getAnn als::DL).
-    instantiate (5:=Z::ZL). eapply eq0. reflexivity. simpl. congruence.
-    simpl; eauto. econstructor; eauto. cset_tac; intuition.
-    inv X; inv X0. simpl.
-    eapply ifFstR_zip_ounion; eauto.
-    eapply ifFstR_addAdds; eauto.
+    rewrite drop_zip; eauto with len.
+    + rewrite drop_length_ass; eauto with len.
+      eapply ifFstR_addAdds; eauto.
+      exploit IHLS; eauto 20 using live_globals_zip with len.
+      rewrite zip_app; eauto with len.
+      eapply PIR2_app; eauto.
+      eapply PIR2_get; intros; eauto with cset len.
+      inv_map H6; eauto with cset len.
+      rewrite zip_app in H6; eauto with len.
+      assert (EQ: DL \\ ZL = drop ‖F‖ ((getAnn ⊝ als) \\ (fst ⊝ F) ++ DL \\ ZL)).
+      rewrite drop_length_ass; eauto with len.
+      rewrite EQ at 1.
+      eapply PIR2_drop; eauto.
+      eapply ifFstR_fold_zip_ounion; eauto.
+      intros. inv_map H7. destruct x as [an LV].
+      inv_zip H8. simpl.
+      rewrite <- zip_app in H11; eauto with len.
+      eapply H1 in H11; eauto using live_globals_zip with len.
+      rewrite <- zip_app; eauto with len.
+      rewrite zip_app; eauto with len.
+      eapply PIR2_app; eauto with len.
+      eapply PIR2_get; eauto with len.
+      intros. inv_map H12; eauto with cset.
+    + rewrite live_globals_zip in LS; eauto with len.
+      eapply computeParameters_length in eq; eauto with len.
+      rewrite fold_zip_ounion_length; eauto with len.
+      rewrite eq; eauto with len.
+      rewrite eq. intros.
+      inv_map H6. destruct x as [an LV]. inv_zip H7.
+      simpl.
+      rewrite <- zip_app in H10; eauto with len.
+      eapply H1 in H10; eauto using live_globals_zip with len.
+      eapply PIR2_length in H10. rewrite H10. eauto with len.
+      rewrite zip_app; eauto with len.
+      eapply PIR2_app; eauto with len.
+      eapply PIR2_get; eauto with len.
+      intros. inv_map H11; eauto with cset.
 Qed.
+
 
 Lemma ounion_comm {X} `{OrderedType X} (s t:option (set X))
   : option_eq Equal (ounion s t) (ounion t s).
@@ -740,31 +707,13 @@ Proof.
     + destruct x,y; simpl; econstructor; cset_tac; intuition.
 Qed.
 
-Definition ominus (s : set var) (t : option (set var)) := mdo t' <- t; ⎣s \ t' ⎦.
-
-(*
-Lemma zip_contra_ounion DL b b'
-  :
-    length DL = length b
-    -> length b = length b'
-    -> zip (fun (s : set var) (t : option (set var)) => mdo t' <- t; ⎣s \ t' ⎦)
-          DL b
-          ≿ zip (fun (s : set var) (t : option (set var)) => mdo t' <- t; ⎣s \ t' ⎦)
-          DL (zip ounion b b').
-Proof.
-  intros. eapply length_length_eq in H. eapply length_length_eq in H0.
-  general induction H; inv H0; simpl.
-  - reflexivity.
-  - econstructor; eauto.
-    + destruct y, y0; simpl; econstructor; unfold flip; cset_tac; intuition.
-Qed.
-*)
+Definition ominus' (s : set var) (t : option (set var)) := mdo t' <- t; ⎣s \ t' ⎦.
 
 Lemma zip_ominus_contra DL b b'
   : length DL = length b
     -> length b = length b'
     -> PIR2 (fstNoneOrR Subset) b b'
-    -> zip ominus DL b ≿ zip ominus DL b'.
+    -> zip ominus' DL b ≿ zip ominus' DL b'.
 Proof.
   intros. eapply length_length_eq in H. eapply length_length_eq in H0.
   general induction H; inv H0; simpl.
@@ -790,12 +739,12 @@ Proof.
 Qed.
 
 Lemma PIR2_not_in LV x DL AP
-: length DL = length AP
-  -> PIR2 (ifSndR Subset) (addParam x DL AP) LV
-  ->  forall (n : nat) (lv0 dl : set var),
-       get LV n ⎣lv0 ⎦ -> get DL n dl -> x ∉ lv0 -> x ∉ dl.
+  : PIR2 (ifSndR Subset) (addParam x DL AP) LV
+    -> length DL = length AP
+    ->  forall (n : nat) (lv0 dl : set var),
+        get LV n ⎣lv0 ⎦ -> get DL n dl -> x ∉ lv0 -> x ∉ dl.
 Proof.
-  intros LEN LEQ. intros. eapply length_length_eq in LEN.
+  intros LEQ LEN. intros. eapply length_length_eq in LEN.
   general induction n; simpl in *.
   - inv H; inv H0. invc LEN. simpl in LEQ. invc LEQ.
     destruct if in pf; inv pf.
@@ -824,37 +773,33 @@ Proof.
 Qed.
 
 
-Lemma restrict_zip_ominus DL LV lv x al
-:  length DL = length LV
--> (forall n lv dl, get LV n (Some lv) -> get DL n dl -> x ∉ lv -> x ∉ dl)
--> al \ {{x}} ⊆ lv
-->  restrict (zip ominus DL LV) al
- ≿ restrict (zip ominus DL LV) (lv \ {{x}}).
-Proof.
-  intros. eapply length_length_eq in H.
-  general induction H; simpl in *.
-  - econstructor.
-  - econstructor.
-    + destruct y; intros; simpl.
-      repeat destruct if; try now econstructor.
-      * econstructor. reflexivity.
-      * decide (x0 ∈ s). exfalso. eapply n.
-        hnf; intros. decide (a === x0). rewrite e in H2.
-        exfalso; cset_tac; intuition.
-        rewrite <- H1.
-        cset_tac; intuition.
-        exploit H0; eauto using get.
-        exfalso. eapply n. rewrite <- H1. cset_tac; intuition.
-      * econstructor.
-    + eapply IHlength_eq; eauto using get.
-Qed.
-
 Lemma restrict_zip_ominus' DL LV lv x al
 :  length DL = length LV
 -> (forall n lv dl, get LV n (Some lv) -> get DL n dl -> x ∉ lv -> x ∉ dl)
--> al \ {{x}} ⊆ lv
+-> al \ singleton x ⊆ lv
+->  restrict (zip ominus' DL LV) al
+ ≿ restrict (zip ominus' DL LV) (lv \ singleton x).
+Proof.
+  intros. eapply length_length_eq in H.
+  general induction H; simpl in *.
+  - econstructor.
+  - econstructor; eauto using get.
+    destruct y; intros; simpl; try now econstructor.
+    repeat destruct if; try now econstructor.
+    exfalso. eapply n. rewrite <- H1, <- s0.
+    decide (x0 ∈ s).
+  + cset_tac.
+  + exploit H0; eauto using get.
+    cset_tac.
+Qed.
+
+(*
+Lemma restrict_zip_ominus' DL LV lv x al
+:  length DL = length LV
+-> (forall n lv dl, get LV n (Some lv) -> get DL n dl -> x ∉ lv -> x ∉ dl)
+-> al \ singleton x ⊆ lv
 ->  restrict (zip ominus DL LV) al
- ≿ restrict (zip ominus DL LV) (lv \ {{x}}).
+ ≿ restrict (zip ominus DL LV) (lv \ singleton x).
 Proof.
   intros. eapply length_length_eq in H.
   general induction H; simpl in *.
@@ -873,6 +818,7 @@ Proof.
       * econstructor.
     + eapply IHlength_eq; eauto using get.
 Qed.
+ *)
 
 Lemma get_mapi_impl X Y L (f:nat->X->Y) n x k
  : get L n x
@@ -887,15 +833,16 @@ Lemma get_mapi X Y L (f:nat->X->Y) n x
    -> get (mapi f L) n (f n x).
 Proof.
   intros. exploit (get_mapi_impl f 0 H); eauto.
-  orewrite (n + 0 = n) in X0. eauto.
+  orewrite (n + 0 = n) in H0. eauto.
 Qed.
 
 Lemma killExcept_get l AP s
 : get AP (counted l) s ->
-  get (killExcept l AP) (counted l) (Some s).
+  get (keep l AP) (counted l) (Some s).
 Proof.
-  intros. exploit (get_mapi (fun (n : nat) (x : set var) => if [n = counted l] then ⎣x ⎦ else ⎣⎦) H); eauto.
-  destruct if in X; eauto.
+  intros.
+  exploit (get_mapi (fun (n : nat) (x : set var) => if [n = counted l] then ⎣x ⎦ else ⎣⎦) H); eauto.
+  destruct if in H0; eauto.
   exfalso; eauto.
 Qed.
 
@@ -911,12 +858,9 @@ Proof.
     + econstructor; eauto.
 Qed.
 
-Transparent addAdds.
-
-
 Lemma PIR2_addAdds s DL b
 : length DL = length b
-  -> PIR2 ≼ b (addAdds s DL b).
+  -> PIR2 ≼ b (zip (addAdd s) DL b).
 Proof.
   intros. eapply length_length_eq in H.
   general induction H.
@@ -928,98 +872,218 @@ Proof.
     + eauto.
 Qed.
 
+Lemma PIR2_addAdds' s DL b c
+  : length DL = length b
+    -> PIR2 ≼ b c
+    -> PIR2 ≼ b (zip (addAdd s) DL c).
+Proof.
+  intros. eapply length_length_eq in H.
+  general induction H; invt PIR2.
+  - econstructor.
+  - simpl. econstructor.
+    + destruct y,y0; simpl; try now econstructor.
+      * econstructor. inv pf. cset_tac; intuition.
+      * inv pf.
+    + eauto.
+Qed.
 
+Lemma fstNoneOrR_ounion X `{OrderedType X} a b c
+  : ≼ a b -> ≼ a (ounion b c).
+Proof.
+  intros A; inv A; eauto using @fstNoneOrR.
+  destruct c; simpl; eauto.
+  econstructor. cset_tac.
+Qed.
+
+
+Lemma PIR2_ounion_1 X `{OrderedType X} (A B C:list (option (set X)))
+: length A = length B
+  -> PIR2 ≼ C A
+  -> PIR2 ≼ C (zip ounion A B).
+Proof.
+  intros. length_equify.
+  general induction H0; invt PIR2; simpl.
+  - econstructor.
+  - exploit IHlength_eq; eauto.
+    econstructor; eauto using fstNoneOrR_ounion.
+Qed.
+
+Lemma PIR2_ounion_2 X `{OrderedType X} (A B C:list (option (set X)))
+: length A = length C
+  -> PIR2 ≼ C B
+  -> PIR2 ≼ C (zip ounion A B).
+Proof.
+  intros. length_equify.
+  general induction H0; invt PIR2; simpl.
+  - econstructor.
+  - exploit IHlength_eq; eauto.
+    econstructor; eauto using fstNoneOrR_ounion.
+    admit.
+Admitted.
+
+Lemma PIR2_combineParams (A:list (ann (list params) * list (option (set var))))
+      (B C:list (option (set var)))
+  : (forall n a, get A n a -> length (snd a) = length B)
+    -> PIR2 ≼ B C
+    -> PIR2 ≼ B (olist_union (List.map snd A) C).
+Proof.
+  general induction B; invt PIR2.
+  - clear H. general induction A; eauto.
+  - general induction A.
+    + econstructor; eauto.
+    + exploit H; eauto using get.
+      destruct a. destruct l; isabsurd. simpl in *.
+      assert (length YL = length l). {
+        eapply PIR2_length in H0. simpl in *. omega.
+      }
+      simpl. eapply IHA; eauto 10 using fstNoneOrR_ounion, PIR2_ounion_1, get, @PIR2 with len.
+Qed.
+
+Lemma PIR2_combineParams_get (A:list (ann (list params) * list (option (set var))))
+      (B C:list (option (set var))) n a
+  : (forall n a, get A n a -> length (snd a) = length B)
+    -> length B = length C
+    -> get A n a
+    -> PIR2 ≼ B (snd a)
+    -> PIR2 ≼ B (olist_union (List.map snd A) C).
+Proof.
+  intros LEN1 LEN2 GET P. length_equify.
+  general induction LEN2; simpl.
+  - clear LEN1 GET P. general induction A; eauto.
+  - clear IHLEN2.
+    general induction GET; simpl.
+    + exploit (LEN1); eauto using get.
+      destruct x. destruct l; isabsurd. simpl in *.
+      eapply PIR2_combineParams; eauto using get.
+      inv P.
+      econstructor; eauto using fstNoneOrR_ounion.
+      admit.
+      eapply PIR2_ounion_2; eauto with len.
+    + exploit (LEN1); eauto using get.
+      destruct x'. destruct l; isabsurd. simpl in *.
+      eapply IHGET; eauto using get with len.
+      eapply length_length_eq. rewrite zip_length2; try omega. eauto with len.
+      eapply length_eq_length in LEN2. omega.
+Admitted.
 
 Lemma computeParameters_trs DL ZL AP s an' LV lv
-: length DL = length ZL
-  -> length ZL = length AP
-  -> live_sound FunctionalAndImperative (zip pair DL ZL) s lv
+: live_sound FunctionalAndImperative (zip pair DL ZL) s lv
   -> computeParameters (zip lminus DL ZL) ZL AP s lv = (an', LV)
   -> PIR2 Subset AP (zip lminus DL ZL)
-  -> trs (restrict (zip ominus (zip lminus DL ZL) LV) (getAnn lv))
+  -> length DL = length ZL
+  -> length ZL = length AP
+  -> trs (restrict (zip ominus' (zip lminus DL ZL) LV) (getAnn lv))
         (List.map oto_list LV)  s lv an'.
 Proof.
-  intros. general induction H1; simpl in *.
-  - let_case_eq. inv H5.
-    eapply trsExp.
-    eapply trs_monotone.
-    eapply IHlive_sound; try eapply eq; eauto using addParam_Subset.
-    rewrite addParam_length. rewrite zip_length.
-    rewrite <- H3. rewrite Min.min_idempotent. eauto.
-    rewrite zip_length2; congruence.
-    exploit computeParameters_AP_LV; eauto; try congruence.
-    eapply addParam_zip_lminus_length; congruence.
-    exploit computeParameters_length; eauto; try congruence.
-    eapply addParam_zip_lminus_length; congruence.
-    rewrite restrict_comp_meet.
-    assert (SEQ:lv ∩ (lv \ {{x}}) [=] lv \ {{x}}) by (cset_tac; intuition).
-    rewrite SEQ. eapply restrict_zip_ominus; eauto.
-    rewrite zip_length2; eauto.
-    eapply PIR2_not_in; try eapply X. rewrite zip_length2; congruence.
-  - repeat let_case_eq. invc H4.
-    exploit computeParameters_length; eauto; try congruence. congruence.
-    exploit computeParameters_length; try eapply eq; eauto; try congruence.
-    congruence.
+  intros LIVE CPEQ P LEN1 LEN2.
+  remember (zip pair DL ZL) as DLZL. revert_except LIVE.
+  induction LIVE; simpl in *; intros; (repeat let_case_eq); invc CPEQ.
+  - eapply trsExp, trs_monotone.
+    + eapply IHLIVE; try eapply eq; eauto 10 using addParam_Subset with len.
+    + exploit computeParameters_AP_LV; eauto with len.
+      exploit computeParameters_length; eauto with len.
+      rewrite restrict_comp_meet.
+      assert (SEQ:lv ∩ (lv \ singleton x) [=] lv \ singleton x) by cset_tac.
+      rewrite SEQ. eapply restrict_zip_ominus'; eauto with len.
+      eapply PIR2_not_in; eauto with len.
+  - exploit (computeParameters_length _ _ _ eq); eauto with len.
+    exploit (computeParameters_length _ _ _ eq0); eauto with len.
     econstructor.
-    + eapply trs_monotone.
-      eapply trs_monotone3'.
-      eapply IHlive_sound1; try eapply eq; eauto; try congruence.
-      eapply PIR2_zip_ounion. congruence.
+    + exploit (PIR2_zip_ounion b b0); eauto with len.
+      eapply trs_monotone.
+      eapply trs_monotone3'; eauto.
       eapply restrict_subset2; eauto.
-      eapply zip_ominus_contra; try congruence.
-      rewrite zip_length2; congruence.
-      rewrite zip_length2; congruence.
-      eapply PIR2_zip_ounion; congruence.
-    + eapply trs_monotone.
-      eapply trs_monotone3'.
-      eapply IHlive_sound2; try eapply eq0; eauto.
-      eapply PIR2_zip_ounion'. congruence.
+      eapply zip_ominus_contra; eauto with len.
+    + exploit (PIR2_zip_ounion' b0 b); eauto with len.
+      eapply trs_monotone.
+      eapply trs_monotone3'; eauto.
       eapply restrict_subset2; eauto.
-      eapply zip_ominus_contra; eauto.
-      rewrite zip_length2; congruence.
-      rewrite zip_length2; congruence.
-      eapply PIR2_zip_ounion'; congruence.
-  - edestruct get_zip as [? [? []]]; dcr; eauto. inv H10.
-    edestruct (get_length_eq _ H9 H4).
-    exploit killExcept_get; eauto.
-    exploit (zip_get lminus). eapply H7. apply H9.
-    exploit (zip_get ominus). eapply X0. eapply X.
-    exploit map_get_1. eapply X.
+      eapply zip_ominus_contra; eauto with len.
+  - edestruct get_zip as [D [L [GETZL [GETDL EQ]]]]; dcr; eauto. invc EQ.
+    edestruct (get_length_eq _ GETDL LEN2) as [ap GETAP].
+    exploit killExcept_get as GETKILL; eauto.
+    exploit (zip_get lminus GETZL GETDL) as GETLMINUS.
+    exploit (zip_get ominus' GETLMINUS GETKILL) as GETOMINUS.
     econstructor.
-    eapply restrict_get. eapply X1. unfold lminus.
-    simpl in *. cset_tac; intuition.
-    eapply X2.
+    eapply restrict_get. eapply GETOMINUS. unfold lminus.
+    rewrite <- H0. clear_all; cset_tac.
+    eapply map_get_1; eauto.
+
   - econstructor.
-  - let_case_eq. inv H5.
-    eapply trsExtern.
-    eapply trs_monotone.
-    eapply IHlive_sound; try eapply eq; eauto using addParam_Subset.
-    rewrite addParam_length. rewrite zip_length.
-    rewrite <- H3. rewrite Min.min_idempotent. eauto.
-    rewrite zip_length2; congruence.
-    exploit computeParameters_AP_LV; eauto; try congruence.
-    eapply addParam_zip_lminus_length; congruence.
-    exploit computeParameters_length; eauto; try congruence.
-    eapply addParam_zip_lminus_length; congruence.
+
+  - eapply trsExtern, trs_monotone.
+    eapply IHLIVE; try eapply eq; eauto 10 using addParam_Subset with len.
+    exploit computeParameters_AP_LV; eauto with len.
+    exploit computeParameters_length; eauto with len.
     rewrite restrict_comp_meet.
-    assert (SEQ:lv ∩ (lv \ {{x}}) [=] lv \ {{x}}) by (cset_tac; intuition).
-    rewrite SEQ. eapply restrict_zip_ominus; eauto.
-    rewrite zip_length2; eauto.
-    eapply PIR2_not_in; try eapply X. rewrite zip_length2; congruence.
-  - repeat let_case_eq. invc H4.
-    exploit (computeParameters_length (getAnn als::DL) (Z::ZL)); try eapply eq0; simpl; eauto; try congruence.
-    exploit (computeParameters_length (getAnn als::DL) (Z::ZL)); try eapply eq; simpl; eauto; try congruence.
-    rewrite addParams_zip_lminus_length; congruence.
-    exploit (computeParameters_LV_DL (getAnn als::DL) (Z::ZL)); try eapply eq;
-    simpl; eauto.
-    rewrite addParams_zip_lminus_length; congruence.
-    econstructor; eauto. cset_tac; intuition.
-    eapply addParams_Subset2; eauto.
-    exploit (computeParameters_LV_DL (getAnn als::DL) (Z::ZL)); try eapply eq0;
-    simpl; eauto.
-    congruence.
-    econstructor; eauto. cset_tac; intuition.
-    econstructor.
+    assert (SEQ:lv ∩ (lv \ singleton x) [=] lv \ singleton x) by cset_tac.
+    rewrite SEQ. eapply restrict_zip_ominus'; eauto with len.
+    eapply PIR2_not_in; eauto with len.
+
+  - rewrite <- zip_app in eq; eauto with len.
+    rewrite live_globals_zip in LIVE; eauto with len.
+    exploit (computeParameters_length _ _ _ eq); eauto with len.
+    exploit (computeParameters_LV_DL _ _ LIVE eq); eauto with len.
+    admit.
+    econstructor; eauto with len.
+    + admit.
+    + intros.
+      inv_map H9. destruct x as [an LV].
+      inv_zip H10.
+      repeat get_functional; subst.
+      eapply trs_monotone.
+      rewrite <- map_app.
+      rewrite <- take_eta.
+      eapply trs_monotone3'.
+      rewrite <- zip_app in H13.
+      eapply H1; try eapply H13; eauto using live_globals_zip with len.
+      admit. eauto with len.
+      eapply PIR2_addAdds'; eauto with len.
+      rewrite <- zip_app in H13.
+      eapply computeParameters_length in H13; eauto with len.
+      rewrite H13. eauto with len.
+      rewrite <- live_globals_zip. eauto. eauto with len.
+      eauto with len.
+      eapply PIR2_combineParams_get.
+      intros. destruct a0 as [an' LV'].
+      inv_zip H6. rewrite <- zip_app in H15. eapply computeParameters_length in H15.
+      simpl. rewrite H15. admit.
+      admit. eauto with len. eauto with len. eauto with len.
+      admit. eauto. reflexivity.
+      rewrite restrict_app. rewrite restrict_comp_meet.
+      rewrite (take_eta (length F) LV).
+      rewrite zip_app. rewrite zip_app.
+      rewrite restrict_app.
+      eapply PIR2_app.
+      * admit.
+      * assert (LVEQ: lv ∩ (getAnn x0 \ of_list (fst x ++ Za')) [=]
+                   getAnn x0 \ of_list (fst x ++ Za')). {
+          edestruct H2 as [INCL1 INCL2]; eauto.
+          rewrite of_list_app.
+          revert INCL2. clear_all. intros.
+          cset_tac; intuition.
+        }
+        rewrite LVEQ.
+
+
+
+    + eapply trs_monotone.
+      rewrite <- map_app.
+      rewrite <- take_eta.
+      eapply trs_monotone3'.
+      eapply IHLIVE; eauto using live_globals_zip with len.
+      * admit.
+      * eapply PIR2_addAdds'; eauto with len.
+        rewrite H4. eauto with len.
+        eapply PIR2_combineParams; eauto.
+        intros. destruct a0 as [an LV]. inv_zip H6. simpl.
+        rewrite <- zip_app in H9; eauto with len.
+        eapply computeParameters_length in H9; eauto with len.
+        rewrite <- live_globals_zip; eauto with len.
+      * repeat rewrite zip_app.
+        admit.
+
+
     + inv X1; inv X2.
       exploit trs_monotone3'.
       eapply (IHlive_sound1 (getAnn als::DL) (Z::ZL)); simpl; eauto; try congruence.
