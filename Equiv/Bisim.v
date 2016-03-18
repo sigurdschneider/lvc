@@ -803,7 +803,7 @@ Proof.
     eapply plus2_destr_nil in H3.
     destruct H2; destruct H3; dcr. inv H3.
     simpl in *. inv H5; simpl in *.
-    simpl_get_drop; repeat get_functional; subst blk0 blk1.
+    simpl_get_drop; repeat get_functional.
     simpl_minus.
     pfold. econstructor; try eapply star2_plus2.
     econstructor; eauto. eauto.
@@ -815,7 +815,7 @@ Proof.
       * exfalso. destruct H5 as [? [? ?]]. inv H5.
       * inv H9; inv H12; simpl in *.
         pfold. subst yl yl0.
-        simpl_get_drop; repeat get_functional; subst blk0 blk1.
+        simpl_get_drop; repeat get_functional.
         simpl_minus.
         econstructor; try eapply star2_plus2.
         econstructor; eauto using get_drop_lab0, drop_get_lab0. eauto.
@@ -831,7 +831,7 @@ Proof.
         econstructor; eauto using get_drop_lab0, drop_get_lab0.
         simpl_get_drop. eauto.
     + inv H8.
-      simpl_get_drop; repeat get_functional. subst blk0.
+      simpl_get_drop; repeat get_functional.
       pfold. econstructor 3; [
              | eapply star2_refl
              |
@@ -846,7 +846,7 @@ Proof.
       simpl_get_drop. eauto.
       eauto.
     + inv H8.
-      simpl_get_drop; repeat get_functional. subst blk0.
+      simpl_get_drop; repeat get_functional.
       pfold. econstructor 3; [
              |
              |eapply star2_refl
@@ -860,7 +860,7 @@ Proof.
       econstructor; eauto using get_drop_lab0, drop_get_lab0.
       simpl_get_drop. eauto.
     + inv H8; inv H11. pfold. simpl in *. subst yl yl0.
-      simpl_get_drop; repeat get_functional. subst blk0 blk1.
+      simpl_get_drop; repeat get_functional.
       simpl in *. simpl_minus.
       econstructor 1; try eapply star2_plus2.
       econstructor; eauto using get_drop_lab0, drop_get_lab0. eauto.

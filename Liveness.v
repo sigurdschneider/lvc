@@ -447,8 +447,8 @@ Proof.
     + exploit omap_exp_eval_live_agree; eauto.
       one_step; simpl; try congruence.
       simpl. eapply liveSimI_sim. econstructor; eauto.
-      eapply (inRel_drop LA H3).
-      eapply update_with_list_agree; eauto using agree_on_incl.
+      eapply (inRel_drop LA G).
+      eapply update_with_list_agree; eauto using agree_on_incl with len.
       exploit omap_length; eauto. rewrite map_length. congruence.
     + exploit omap_exp_eval_live_agree; eauto.
       no_step.

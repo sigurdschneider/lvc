@@ -4,7 +4,7 @@ Require Import EqDec Get CSetNotation CSetTac CSetComputable.
 
 Set Implicit Arguments.
 
-Notation "'list_union' L" := (fold_left union L ∅) (at level 50).
+Notation "'list_union' L" := (fold_left union L ∅) (at level 40).
 
 Lemma list_union_start {X} `{OrderedType X} (s: set X) L t
 : s ⊆ t

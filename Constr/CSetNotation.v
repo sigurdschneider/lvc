@@ -9,3 +9,4 @@ Notation "x '∈' s" := (In x s) (at level 70, no associativity) : set_scope.
 Notation "∅" := empty : set_scope.
 Notation "s '⊆' t" := (Subset s t) (at level 70, no associativity) : set_scope.
 Notation "{{ x , .. , y }}" := (add x .. (add y empty) .. ) : set_scope.
+Notation "⦃ X ⦄" := (set X) (format "'⦃' X '⦄'") : type_scope.

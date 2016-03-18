@@ -330,4 +330,20 @@ Proof.
   intros. rewrite <- H0; eauto.
 Qed.
 
+Lemma restrict_disj (DL : 〔؟⦃var⦄〕) (s t : ⦃var⦄)
+  : (forall n u, get DL n 「u」 -> disj t u)
+    -> restrict DL (s \ t) = restrict DL s.
+Proof.
+  general induction DL; simpl; eauto.
+  rewrite IHDL; eauto using get.
+  unfold restr. destruct a; eauto.
+  exploit H; eauto using get.
+  repeat destruct if; eauto.
+                    - exfalso. rewrite s1 in n. cset_tac.
+                    - exfalso. eapply n.
+                      intros a aIns.
+                      decide (a ∈ t); exfalso; intuition.
+Qed.
+
+
 Hint Resolve bounded_incl.

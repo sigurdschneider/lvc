@@ -157,7 +157,7 @@ Proof.
       destruct H15; dcr; subst.
       inv_map H16. edestruct H2; eauto; dcr.
       rewrite getAnn_mapAnn. rewrite H18.
-      decide (n=n0); subst. repeat get_functional; subst.
+      decide (n=n0); subst. repeat get_functional.
       rewrite H18. clear_all; cset_tac; intuition.
       exploit H3; eauto. eapply zip_get; eauto. eapply zip_get; eauto.
       unfold defVars in H19. simpl in *.
@@ -225,7 +225,7 @@ Proof.
     eexists; split; eauto. rewrite <- H13; eauto.
   - eexists; split; eauto.
     edestruct PIR2_nth; eauto; dcr. get_functional; subst.
-    inv H5; simpl in *. rewrite H6; eauto.
+    inv H5; simpl in *. rewrite H4; eauto.
   - edestruct IHsrd; eauto using restrict_eqReq.
     dcr. edestruct restrict_get; eauto.
     eexists; split; eauto. revert H6; clear_all; cset_tac; intuition; eauto.
@@ -519,7 +519,7 @@ Proof.
       etransitivity; eauto. symmetry. hnf in RA.
       eapply agree_on_incl; eauto.
       edestruct PIR2_nth_2; eauto; dcr. get_functional; eauto; subst.
-      inv H18. rewrite H14. simpl. eauto.
+      inv H18. rewrite H16. simpl. eauto.
       exploit omap_length; eauto. rewrite map_length. congruence.
       eapply restrict_eqReq.
       rewrite drop_zip in H8; eauto using PIR2_length.

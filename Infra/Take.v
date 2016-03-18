@@ -55,3 +55,13 @@ Proof.
     rewrite min_l; try omega.
     eapply take_gr_length; eauto.
 Qed.
+
+Lemma take_get X (L:list X) n k x
+  : get (take k L) n x -> get L n x /\ n < k.
+Proof.
+  intros.
+  general induction H ; destruct k, L; simpl in *; inv Heql.
+  - split; eauto using get; omega.
+  - exploit IHget; eauto; dcr.
+    split; eauto using get; omega.
+Qed.

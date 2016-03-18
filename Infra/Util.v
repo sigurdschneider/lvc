@@ -3,6 +3,8 @@ Require Export Infra.Option EqDec AutoIndTac Computable.
 
 Set Implicit Arguments.
 
+Set Regular Subst Tactic.
+
 Tactic Notation "inv" hyp(A) := inversion A; subst.
 Tactic Notation "invc" hyp(A) := inversion A; subst; clear A.
 Tactic Notation "invs" hyp(A) := inversion A; subst; clear_trivial_eqs.
@@ -559,8 +561,26 @@ Proof.
   intros; subst. rewrite map_length; eauto.
 Qed.
 
+Lemma length_tl X (l:list X)
+  : length (tl l) = length l - 1.
+Proof.
+  destruct l; simpl; eauto; omega.
+Qed.
+
+
+Lemma pair_eta (X Y:Type) (p:X * Y)
+  : p = (fst p, snd p).
+Proof.
+  destruct p; eauto.
+Qed.
+
 Hint Resolve map_length_ass app_length_ass | 4 : len.
 
-Notation "‖ L ‖" := (length L) (at level 9, format "'‖' L '‖'", L at level 0).
-Notation "f ⊝ L" := (List.map f L) (at level 50).
-Notation "'tab' s '‖' L '‖'" := (List.map (fun _ => s) L) (at level 50, format "'tab'  s  '‖' L '‖'").
+Notation "❬ L ❭" := (length L) (at level 9, format "'❬' L '❭'").
+Notation "f ⊝ L" := (List.map f L) (at level 50, L at level 50, left associativity).
+Notation "'tab' s '‖' L '‖'" := (List.map (fun _ => s) L)
+                                 (at level 50, format "'tab'  s  '‖' L '‖'", s at level 0, L at level 200).
+
+Notation "〔 X 〕" := (list X) (format "'〔' X '〕'") : type_scope.
+Notation "؟ X" := (option X) (format "'؟' X", at level 50, X at level 0) : type_scope.
+Notation "「 t 」" := (Some t) (at level 9, format "'「' t '」'").

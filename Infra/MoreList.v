@@ -196,6 +196,22 @@ Proof.
   intros. subst. eapply mapi_length.
 Qed.
 
+Lemma get_mapi_impl X Y L (f:nat->X->Y) n x k
+ : get L n x
+   -> get (mapi_impl f k L) n (f (n+k) x).
+Proof.
+  intros. general induction H; simpl; eauto using get.
+  econstructor. orewrite (S (n + k) = n + (S k)). eauto.
+Qed.
+
+Lemma get_mapi X Y L (f:nat->X->Y) n x
+ : get L n x
+   -> get (mapi f L) n (f n x).
+Proof.
+  intros. exploit (get_mapi_impl f 0 H); eauto.
+  orewrite (n + 0 = n) in H0. eauto.
+Qed.
+
 Hint Resolve mapi_length_ass : len.
 
 Ltac list_eqs :=
@@ -404,6 +420,14 @@ Proof.
   length_equify. general induction A; inv B; inv C; simpl; eauto 50 using PIR2, get.
 Qed.
 
+Lemma zip_sym X Y Z (f : X -> Y -> Z) (L:list X) (L':list Y)
+: length L = length L'
+  -> zip f L L' = zip (fun x y => f y x) L' L.
+Proof.
+  intros. length_equify. general induction H; simpl; eauto.
+  f_equal; eauto.
+Qed.
+
 Require Import Take Drop.
 
 Lemma take_eta n X (L:list X)
@@ -415,4 +439,4 @@ Proof.
     + f_equal; eauto.
 Qed.
 
-Notation "⊜ f L1 L2" := (zip f L1 L2) (at level 50, f at level 0, L1 at level 0, L2 at level 0).
+Notation "f ⊜ L1 L2" := (zip f L1 L2) (at level 40, L1 at level 0, L2 at level 0).

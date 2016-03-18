@@ -114,8 +114,9 @@ Proof.
     rewrite <- (ann_R_get H9). eauto.
   - assert (PIR2 Equal (zip defVars F bns) (zip defVars F ans)).
     { eapply zip_ext_PIR2; eauto; try congruence.
-      intros. get_functional; subst.
-      exploit H14; eauto. unfold defVars. rewrite H8. reflexivity.
+      intros. get_functional.
+      exploit H14; eauto. unfold defVars.
+      rewrite H13. reflexivity.
     }
     econstructor; try srewrite c; try srewrite d; eauto with len.
     + intros. edestruct (get_length_eq _ H13 (eq_sym H12)).

@@ -1,6 +1,5 @@
 Require Export Setoid Coq.Classes.Morphisms.
-Require Export Sets SetInterface SetConstructs SetProperties.
-Require Import EqDec Get CSet Map AllInRel.
+Require Export EqDec Get CSet Map AllInRel.
 
 Lemma transpose_union X `{OrderedType X}
       : transpose Equal union.

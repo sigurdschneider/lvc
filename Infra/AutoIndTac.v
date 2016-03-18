@@ -85,6 +85,18 @@ Ltac clear_dup :=
       end
   end.
 
+Ltac clear_if_dup H :=
+  match type of H with
+    | ?X =>
+      match goal with
+      | [ H' : ?Y |- _ ] =>
+        match H with
+        | H' => fail 2
+        | _ => unify X Y ; (clear H' || clear H)
+        end
+      end
+  end.
+
 Ltac inv_eqs :=
   repeat (match goal with
               | [ H : @eq _ ?x ?x |- _ ] => fail (* nothing to do on x = x *)

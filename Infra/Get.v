@@ -152,9 +152,12 @@ Qed.
 
 Ltac get_functional :=
   match goal with
-    | [ H : get ?XL ?n _, H' : get ?XL ?n _ |- _ ] =>
-      simplify_eq (get_functional H H'); intros; clear H
-    | _ => fail "no matching get assumptions"
+  | [ H : get ?XL ?n ?x, H' : get ?XL ?n ?y |- _ ] =>
+    let EQ := fresh "EQ" in
+    pose proof (get_functional H H') as EQ;
+      first [ is_var y; subst y; clear H' | is_var x; subst x; clear H' |
+              simplify_eq EQ; intros; clear H'; clear_trivial_eqs ]
+  | _ => fail "no matching get assumptions"
   end.
 
 Ltac eval_nth_get :=

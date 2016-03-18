@@ -1,4 +1,5 @@
-Require Import AllInRel Util Map Env EnvTy Exp IL Annotation Coherence Bisim DecSolve Liveness Restrict MoreExp InRel.
+Require Import AllInRel Util Map Env EnvTy Exp IL Annotation Coherence Bisim DecSolve Liveness.
+Require Import Restrict MoreExp InRel.
 
 (*  IL_Types. *)
 
@@ -11,7 +12,7 @@ Definition mkGlobals (F:list (params*stmt)) (Za:list (list var)) (ans_lv:list (a
   zip (fun lvs z => Some (getAnn lvs \ z)) ans_lv (zip (fun Zs Za => of_list (fst Zs++Za)) F Za).
 
 Inductive trs
-  : list (option (set var)) (** globals *)
+  : 〔؟⦃var⦄〕 (** globals *)
     -> list (params)        (** additional parameters for functions in scope *)
     -> stmt                 (** the program *)
     -> ann (set var)        (** liveness information *)
@@ -46,7 +47,6 @@ Inductive trs
                                   (Za++ZL) (snd Zs) lvs ans')
     -> trs (mkGlobals F Za ans_lv ++ DL) (Za++ZL) t ant_lv ant
     -> trs DL ZL (stmtFun F t) (annF lv ans_lv ant_lv) (annF Za ans ant).
-
 
 Lemma trs_annotation DL ZL s lv Y
       : trs DL ZL s lv Y -> annotation s lv /\ annotation s Y.
@@ -494,12 +494,12 @@ Proof.
   general induction LV; inv RD; inv APL; eauto using live_sound.
   - pose proof (zip_get  (fun (s : set var * list var) (t : list var) => (fst s, snd s ++ t)) H H10).
     inv_zip H3; simpl in *.
-    repeat get_functional; subst x0 Za0 x.
+    repeat get_functional.
     econstructor. eapply H3; eauto.
     destruct if. simpl in * |- *; intuition. rewrite of_list_app. cset_tac; intuition. eauto.
     erewrite get_nth; eauto. repeat rewrite app_length, map_length, app_length. simpl. congruence.
     erewrite get_nth; eauto.
-    intros. eapply get_app_cases in H. destruct H; dcr; eauto.
+    intros ? ? GET. eapply get_app_cases in GET. destruct GET; dcr; eauto.
     edestruct map_get_4; eauto; dcr; subst. econstructor.
     rewrite <- H9. eauto using get_in_of_list.
   - simpl. econstructor; eauto.
