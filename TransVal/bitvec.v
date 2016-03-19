@@ -1,4 +1,4 @@
-Require Import List.
+Require Import List Arith.
 Require Import AutoIndTac Util.
 
 Require Export orderedBitvec.
@@ -8,26 +8,65 @@ Set Implicit Arguments.
 (** HELPER FUNCTIONS for bitvector functions **)
 
 (** zero extension **)
-Fixpoint zext (k:nat) (bv:bitvec) :=
-match k with
+Fixpoint zext' (l:nat) (bv:bitvec) :=
+match l with
 | 0 => nil
-| S k' => match bv with
-              |nil => O:: zext k' nil
-              | a::b' => a::zext k' b'
-          end
+| S l' => match bv with
+         |nil => O:: zext' l' nil
+         |a::b' => a::zext' l' b'
+         end
 end.
 
-Definition zero := zext k (O::nil).
+Lemma zext'_length : forall l bv, length (zext' l bv) = l.
+Proof.
+  intros. general induction l.
+  - auto.
+  - simpl. case bv; simpl.
+    * rewrite (IHl nil); reflexivity.
+    * intros. rewrite (IHl l0); reflexivity.
+Qed.
+
+Definition zext bv := zext' k bv.
+
+Corollary zext_length : forall bv, length (zext bv) = k.
+Proof.
+  intros. unfold zext; rewrite (zext'_length k bv); reflexivity.
+Qed.
+
+Definition zero := zext (O::nil).
 
 (** sign extension **)
-Fixpoint sext (k:nat) (bv:bitvec) (b:bit) :=
-match k with
+Fixpoint sext' (l:nat) (bv:bitvec) (b:bit) :=
+match l with
 | 0 => nil
-| S k' => match bv with
-              | nil => b:: sext k' nil b
-              | a::b' => a::sext k' b' a
+| S l' => match bv with
+              | nil => b:: sext' l' nil b
+              | a::b' => a::sext' l' b' a
           end
 end.
+
+Lemma sext'_length : forall l bv b, length (sext' l bv b) = l.
+Proof.
+  intros. general induction l.
+  - auto.
+  - simpl. case bv; simpl.
+    * rewrite (IHl nil b); reflexivity.
+    * intros. rewrite (IHl l0 b0); reflexivity.
+Qed.
+
+Lemma sext'_I : forall l, l > 0 -> exists bv', (sext' l nil I) = I::bv'.
+Proof.
+  intros. destruct l.
+  - isabsurd.
+  - simpl. eauto.
+Qed.
+
+Definition sext bv b := sext' k bv b.
+
+Corollary sext_length : forall bv b, length (sext bv b) = k.
+Proof.
+  intros. unfold sext. rewrite (sext'_length k bv b); reflexivity.
+Qed.
 
 Definition bitComplement b :=
 match b with
@@ -36,17 +75,31 @@ match b with
 end.
 
 (* Complement *)
-Fixpoint complement' k  b :=
-match k with
+Fixpoint complement' l bv :=
+match l with
 | 0 => nil
-| S k' => match sext k b O with
-              | nil => nil
-              | a::b' => bitComplement  a :: complement' k' b'
+| S l' => match bv with
+              | nil => sext' (S l') nil I
+              | a::b' => bitComplement  a :: complement' l' b'
           end
 end.
 
-Definition complement b :=
-complement' k b.
+Lemma complement'_length : forall l bv, length (complement' l bv) = l.
+Proof.
+  intros. general induction l.
+  - auto.
+  - simpl. case bv.
+    * simpl. rewrite (sext'_length l nil I); reflexivity.
+    * intros; simpl. rewrite (IHl l0 ); reflexivity.
+Qed.
+
+Definition complement bv :=
+  complement' k bv.
+
+Corollary complement_length : forall bv, length (complement bv) = k.
+Proof.
+  intros; unfold complement. rewrite (complement'_length k bv); reflexivity.
+Qed.
 
 (** Left shift **)
 Fixpoint shl s b :=
@@ -62,6 +115,36 @@ match b with
 | O::b' => toBool b'
 end.
 
+Lemma toBool_I_true:
+  forall l,
+    1 <= l
+    -> toBool (sext' l (I::nil) I) = true.
+Proof.
+  intros l geq.
+  destruct l; try auto; isabsurd.
+Qed.
+
+Lemma toBool_nil_ext_false:
+  forall l,
+    toBool (zext' l (nil)) = false.
+
+Proof.
+  intros l.
+  induction l.
+  - auto.
+  - simpl; rewrite IHl; auto.
+Qed.
+
+Lemma toBool_O_false:
+  forall l,
+    toBool (zext' l (O::nil)) = false.
+
+Proof.
+  intros l; destruct l.
+  - auto.
+  - simpl. rewrite toBool_nil_ext_false; auto.
+Qed.
+
 Definition msb b :=
 match List.rev b with
 | nil => O
@@ -73,15 +156,15 @@ Fixpoint incr' (k:nat) (b:bitvec) :=
 match k with
 | 0 => nil
 | S k' => match b with
-            | nil => I::(sext k' nil I)
-            | O::b' => I:: (sext k' b' I)
+            | nil => I::(sext' k' nil I)
+            | O::b' => I:: (sext' k' b' I)
             | I::b' => O:: incr' k' b'
           end
 end.
 
 (** increment function that uses the defined size **)
 Definition incr (b:bitvec) :=
-incr' k (sext k b O).
+incr' k (sext' k b O).
 
 (** Decrement function TODO: Maybe remove it **)
 Fixpoint decr (b:bitvec) :=
@@ -122,7 +205,7 @@ match k with
 end.
 
 Definition bvAnd b1 b2 :=
-bvAndBounded k (sext k b1 O) (sext k b2 O).
+bvAndBounded k (sext' k b1 O) (sext' k b2 O).
 
 Fixpoint bvAndBit k bv b :bitvec :=
 match k with
@@ -160,10 +243,10 @@ end.
 
 (** Bitvector Addition for binary  numbers. Forwards the call to bvAddBounded with k defined before. **)
 Definition bvAdd (a:bitvec) (b:bitvec)  :bitvec :=
-bvAddBounded k (sext k a O) (sext k b O) O.
+bvAddBounded k (sext' k a O) (sext' k b O) O.
 
 Definition bvSub (a:bitvec) (b:bitvec) :bitvec :=
-bvAdd( bvAdd a (complement b) ) (zext k (I::nil)).
+bvAdd( bvAdd a (complement b) ) (zext' k (I::nil)).
 
 Fixpoint bvMult' k s a b :=
 match k with
@@ -176,10 +259,10 @@ end.
 
 
 Definition bvMult a b :=
-bvMult' (2*k) 0 (sext (2*k) a O) (sext (2*k) b O).
+bvMult' (2*k) 0 (sext' (2*k) a O) (sext' (2*k) b O).
 
 Definition neg b :=
-bvAdd (complement b) (zext k (I::nil)).
+bvAdd (complement b) (zext' k (I::nil)).
 
 Definition bitEq b1 b2 :=
 match b1, b2 with
@@ -190,12 +273,12 @@ end.
 
 Fixpoint bvEq b1 b2 :=
 match b1, b2 with
-| nil, nil => sext k (nil) I
-| nil, _ => sext k nil O
-| _, nil => sext k nil O
+| nil, nil => sext' k (nil) I
+| nil, _ => nil
+| _, nil => nil
 | a1::b1', a2::b2' => match bitEq a1 a2 with
                         |I => bvEq b1' b2'
-                        |O => sext k (nil) O
+                        |O => nil
                       end
 
 end.
@@ -256,13 +339,20 @@ Fixpoint bvDiv' a b1 b2 :=
 match a with
 | 0 =>  O::nil
 | S n' => match  toBool (bvEq b1 b2) with
-           | true =>  (zext k (I::nil))
+           | true =>  (zext' k (I::nil))
            | false => incr( bvDiv' n' (bvSub b1 b2) b2)
           end
 end.
 
-(** Lemmas about the functions **)
+Lemma sext'_nil_true : toBool (sext' k nil I) = true.
+Proof.
+  simpl. pose proof (sext'_I). destruct (H k).
+  Focus 2.  rewrite H0. unfold toBool. econstructor.
+  - pose K_ge1. apply le_lt_n_Sm in l. apply lt_S_n in l.
+    change (0 < k); auto.
+Qed.
 
+(** Lemmas about the functions **)
 Lemma bvEq_equiv_eq:
 forall b1 b2, toBool(bvEq b1 b2) <-> eq b1 b2.
 
@@ -270,7 +360,7 @@ Proof.
 intros; split; intros.
 - general induction b1; destruct b2.
   + reflexivity.
-  + simpl in H. exfalso; assumption.
+  + simpl in H. unfold toBool in H. exfalso; assumption.
   + simpl in H. exfalso; assumption.
   + destruct a,b.
     * simpl. simpl in H. f_equal. eapply IHb1. assumption.
@@ -278,21 +368,20 @@ intros; split; intros.
     * simpl in H; exfalso; assumption.
     * f_equal. simpl in H; eapply IHb1; assumption.
 - general induction b1.
-  + simpl. econstructor.
+  + unfold bvEq. rewrite (sext'_nil_true); econstructor.
   + destruct a.
     * simpl. eapply (IHb1 b1). reflexivity.
     * simpl. eapply (IHb1 b1); reflexivity.
 Qed.
 
-
 Lemma bvEq_refl:
 forall b,
-toBool (bvEq b b).
+toBool (bvEq b b) = true.
 
 Proof.
 intros. general induction b.
-+ simpl. econstructor.
-+ destruct a; simpl; assumption.
++ simpl. rewrite (sext'_nil_true); reflexivity.
++ destruct a; simpl; reflexivity.
 Qed.
 
 (** Division wrapper function. Starts the bvDiv' function with the size argument b1.
@@ -319,16 +408,17 @@ Lemma not_zero:
 Proof.
  intros. general induction b.
 - unfold bvZero in H. unfold zero. hnf; intros.
-  rewrite H0 in H. unfold zero in H. simpl in H; isabsurd.
+  rewrite H0 in H. unfold zero in H.
+  rewrite (bvEq_refl (zext (O::nil))) in H; isabsurd.
 - unfold bvZero in *; unfold zero in *. hnf; intros. rewrite H0 in H.
-   simpl in H; isabsurd.
+  rewrite (bvEq_refl (zext (O::nil))) in H; isabsurd.
 Qed.
 
 Lemma zext_nil_eq_sext:
-  forall n, sext n nil O = zext n nil.
+  forall l, sext' l nil O = zext' l nil.
 
 Proof.
-  intros; general induction n.
+  intros; general induction l.
   - simpl. reflexivity.
   - simpl. f_equal; eauto; assumption.
 Qed.

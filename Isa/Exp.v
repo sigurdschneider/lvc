@@ -20,7 +20,7 @@ Set Implicit Arguments.
       | 3 => option_lift2 bvEq
       | 4 => option_lift2 (fun a b => neg (bvEq a b))
       | 5 => bvDiv
-      | _ => option_lift2 (fun a b => sext k nil O)
+      | _ => option_lift2 (fun a b => sext nil O)
 (*      | _ => option_lift2 bvAdd (*fun _ _ => None *) *)
     end.
 

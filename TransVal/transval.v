@@ -434,7 +434,7 @@ intros. decide (e = e').
    eapply (bvEq_equiv_eq e' e); eauto.
   + eapply guard_true_if_eval; eauto.
   + unfold smt_eval.  rewrite H4.
-      eapply bvEq_refl.
+    rewrite bvEq_refl; econstructor.
 Qed.
 
 Lemma predeval_uneq_goto:

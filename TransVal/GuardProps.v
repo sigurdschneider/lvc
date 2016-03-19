@@ -26,7 +26,9 @@ intros. general induction e; simpl in *; eauto.
      unfold smt_eval in H.
      erewrite exp_eval_partial_total in H; eauto.
      simpl in H.
-     rewrite H in EQ2; subst; simpl in EQ2; isabsurd.
+     rewrite H in EQ2; subst; simpl in EQ2. unfold bvDiv in EQ2.
+     destruct if in EQ2; isabsurd.
+     unfold zero in n. isabsurd. (*rewrite <- zero in EQ2. isabsurd. *)
    + erewrite models_combine; simpl; erewrite models_combine; simpl.
      split; try split; eauto.
 Qed.

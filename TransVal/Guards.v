@@ -21,7 +21,7 @@ match e with
 |BinOp n a b
  => combine (combine (undef a) (undef b))
            (if [n = 5]
-            then smtNeg (constr b (Con (zext k (O::nil))))
+            then smtNeg (constr b (Con (zext (O::nil))))
             else smtTrue)
 |UnOp n a => undef a
 |Con v => smtTrue

@@ -14,7 +14,10 @@ recursive function definitions.
 Definition bitvec := list bit.
 
 (** Define the length of a bitvector k **)
-Definition k:= 32.
+(*Definition k:= 32.*)
+Parameter k: nat.
+
+Axiom K_ge1 : 1 <= k.
 
 (** Inductive lt predicate for bits **)
 Inductive ltBit :bit-> bit -> Prop :=
@@ -77,17 +80,6 @@ match a,b with
                          | z => z
                    end
 end.
-(*                       | Lt, Lt => Lt
-                       | Lt, Gt => Lt (* TODO *)
-                       | Lt, Eq => Lt
-                       |Eq, Lt => Lt
-                       |Eq, Eq => Eq
-                       |Eq, Gt => Gt
-                       |Gt, Lt => Gt (* TODO *)
-                       |Gt, Eq => Gt
-                       |Gt, Gt => Gt
-                                    end
-end.*)
 
 Instance ltBitvec_trans:
 Transitive ltBitvec.
