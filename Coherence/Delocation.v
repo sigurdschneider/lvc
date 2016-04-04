@@ -5,11 +5,17 @@ Require Import Restrict MoreExp InRel.
 
 Set Implicit Arguments.
 Unset Printing Records.
+Unset Printing Abstraction Types.
+Local Arguments lminus {X} {H} s L.
+
 
 (** Correctness predicate for  *)
 
-Definition mkGlobals (F:list (params*stmt)) (Za:list (list var)) (ans_lv:list (ann (set var))) :=
-  zip (fun lvs z => Some (getAnn lvs \ z)) ans_lv (zip (fun Zs Za => of_list (fst Zs++Za)) F Za).
+Definition mergeParams (Zs:params*stmt) Za := fst Zs ++ Za.
+Definition mkGlobal lvs (Z:params) := Some (getAnn lvs \ of_list Z).
+
+Notation "'mkGlobals' F Za ans_lv" := (Some ⊝ (zip lminus (zip lminus (getAnn ⊝ ans_lv) (fst ⊝ F)) Za))
+                                       (at level 50, F, Za, ans_lv at level 0).
 
 Inductive trs
   : 〔؟⦃var⦄〕 (** globals *)
@@ -37,12 +43,14 @@ Inductive trs
   | trsExtern DL ZL x f Y s lv an_lv an
     : trs (restrict DL (lv\ singleton x)) ZL s an_lv an
     -> trs DL ZL (stmtExtern x f Y s) (ann1 lv an_lv) (ann1 nil an)
-  | trsLet DL ZL F t Za ans ant lv ans_lv ant_lv
+  | trsLet (DL:list (option (set var))) ZL (F:list (params*stmt)) t Za ans ant lv ans_lv ant_lv
     : length F = length ans_lv
       -> length F = length ans
       -> length F = length Za
       -> (forall n lvs Zs Za' ans', get ans_lv n lvs -> get F n Zs -> get Za n Za' -> get ans n ans' ->
-                              trs (restrict (mkGlobals F Za ans_lv ++ DL)
+                              trs (restrict (Some ⊝ (zip lminus
+                                                         (zip lminus (getAnn ⊝ ans_lv) (fst ⊝ F)) Za)
+                                            ++ DL)
                                             (getAnn lvs \ of_list (fst Zs++Za')))
                                   (Za++ZL) (snd Zs) lvs ans')
     -> trs (mkGlobals F Za ans_lv ++ DL) (Za++ZL) t ant_lv ant
@@ -79,7 +87,8 @@ Fixpoint compile (ZL:list (list var)) (s:stmt) (an:ann (list (list var))) : stmt
     | stmtExtern x f Y s, ann1 _ an =>
       stmtExtern x f Y (compile ZL s an)
     | stmtFun F t, annF Za ans ant =>
-      stmtFun (compileF compile ZL F Za Za ans) (compile (Za++ZL) t ant)
+      stmtFun (compileF compile ZL F Za Za ans)
+              (compile (Za++ZL) t ant)
     | s, _ => s
   end.
 
@@ -155,8 +164,6 @@ Proof.
     repeat rewrite zip_app; try rewrite restrict_length; eauto with len.
     econstructor. eapply IHinRel; eauto; try congruence.
     eapply approx_restrict_block; try congruence.
-    rewrite zip_length2; try congruence.
-    rewrite restrict_length; congruence.
 Qed.
 
 Definition appsnd {X} {Y} (s:X * list Y) (t: list Y) := (fst s, snd s ++ t).
@@ -265,7 +272,7 @@ Lemma approx_mutual_block n ZL DL F F' Za Za' ans ans' ans_lv ans_lv' als als' L
       (mapi_impl I.mkBlock n F')
       (mapi_impl I.mkBlock n (compileF compile ZL F' Za' Za ans')).
 Proof with eapply length_length_eq; subst; eauto using drop_length_stable.
-  unfold mkGlobals, compileF.
+  unfold compileF.
   assert (LEN1':length_eq F' Za'). eauto...
   assert (LEN2':length_eq F' ans_lv'). eauto...
   assert (LEN3':length_eq F' ans'). eauto...
@@ -275,15 +282,14 @@ Proof with eapply length_length_eq; subst; eauto using drop_length_stable.
   - simpl. econstructor; eauto.
     + eapply IHLEN1'; eauto using drop_shift_1.
     + unfold I.mkBlock. simpl fst. simpl snd.
-      rewrite <- zip_app. rewrite <- zip_app.
-      econstructor; eauto.
+      rewrite <- zip_app.
+      rewrite <- zip_app; eauto 20 with len.
+      econstructor; eauto 20 with len.
       intros. invc H0. split.
-      exploit LIVE; eauto 30 using zip_get, drop_eq.
-      exploit TRS; eauto 30 using zip_get, drop_eq.
-      repeat rewrite app_length; try omega; eauto. repeat rewrite zip_length2; try omega; eauto.
-      repeat rewrite app_length; try omega; eauto. repeat rewrite zip_length2; try omega; eauto.
-      repeat rewrite app_length; try omega; eauto. repeat rewrite zip_length2; try omega; eauto.
-      repeat rewrite app_length; try omega; eauto. repeat rewrite zip_length2; try omega; eauto.
+      exploit LIVE; eauto 30 using zip_get, drop_eq; eauto with len.
+      exploit TRS; eauto 30 using zip_get, drop_eq; eauto with len.
+      rewrite of_list_app in H0. rewrite <- minus_union in H0. eauto.
+      repeat rewrite zip_length2; eauto 20 with len.
 Qed.
 
 Lemma trsR_sim σ1 σ2
@@ -382,23 +388,12 @@ Proof.
     unfold compileF in H7.
     rewrite zip_length2 in H7; eauto.
     rewrite zip_length2; eauto. congruence.
-    eapply trsR_sim; econstructor; eauto.
-    unfold Liveness.live_globals.
-    repeat rewrite zip_app.
-    econstructor; eauto.
-    eapply approx_mutual_block; eauto.
-    repeat rewrite app_length; try omega; eauto. repeat rewrite zip_length2; try omega; eauto.
-    unfold compileF, mkGlobals.
-    repeat rewrite zip_length2; eauto; try congruence.
-    unfold compileF, mkGlobals.
-    repeat rewrite zip_length2; eauto; try congruence.
-    simpl in *. eapply defined_on_incl; eauto.
-    unfold compileF, mkGlobals.
-    repeat rewrite app_length.
-    repeat rewrite zip_length2; eauto; try congruence.
-    repeat rewrite app_length.
-    unfold Liveness.live_globals.
-    repeat rewrite zip_length2; eauto; try congruence.
+    eapply trsR_sim; econstructor; eauto 20 with len.
+    + unfold Liveness.live_globals; eauto 30 with len.
+      repeat rewrite zip_app; eauto 30 with len.
+      econstructor; eauto.
+      eapply approx_mutual_block; eauto.
+    + simpl in *. eapply defined_on_incl; eauto.
 Qed.
 
 Lemma oglobals_compileF_mkGlobals_PIR2 ZL F Za Za' ans ans_lv
@@ -410,10 +405,11 @@ Lemma oglobals_compileF_mkGlobals_PIR2 ZL F Za Za' ans ans_lv
          (oglobals (compileF compile ZL F Za Za' ans) ans_lv).
 Proof.
   length_equify.
-  unfold compileF, oglobals, mkGlobals. simpl.
+  unfold compileF, oglobals. simpl.
   general induction LEN1; inv LEN2; inv LEN3; simpl; eauto using PIR2.
   - econstructor.
-    + reflexivity.
+    + unfold lminus, global; simpl.
+      econstructor. rewrite of_list_app, minus_union. reflexivity.
     + eapply IHLEN1; eauto.
 Qed.
 
@@ -492,12 +488,14 @@ Lemma live_sound_compile DL ZL AL s ans_lv ans o
   : live_sound o (zip (fun s t => (fst s, snd s ++ t)) DL ZL) (compile ZL s ans) ans_lv.
 Proof.
   general induction LV; inv RD; inv APL; eauto using live_sound.
-  - pose proof (zip_get  (fun (s : set var * list var) (t : list var) => (fst s, snd s ++ t)) H H10).
+  -
+    pose proof (zip_get  (fun (s : set var * list var) (t : list var) => (fst s, snd s ++ t)) H H10).
     inv_zip H3; simpl in *.
     repeat get_functional.
     econstructor. eapply H3; eauto.
-    destruct if. simpl in * |- *; intuition. rewrite of_list_app. cset_tac; intuition. eauto.
-    erewrite get_nth; eauto. repeat rewrite app_length, map_length, app_length. simpl. congruence.
+    destruct if. simpl in * |- *.
+    rewrite of_list_app. cset_tac. intuition. eauto.
+    erewrite get_nth; eauto. eauto with len.
     erewrite get_nth; eauto.
     intros ? ? GET. eapply get_app_cases in GET. destruct GET; dcr; eauto.
     edestruct map_get_4; eauto; dcr; subst. econstructor.
@@ -506,7 +504,7 @@ Proof.
     + exploit IHLV; eauto.
       eapply live_sound_monotone; eauto.
       eapply live_globals_compileF_PIR2; eauto.
-    + unfold compileF. repeat rewrite zip_length2; eauto; congruence.
+    + unfold compileF. eauto with len.
     + intros.
       unfold compileF in H4. inv_zip H4. inv_zip H7.
       simpl.

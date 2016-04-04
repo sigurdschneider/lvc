@@ -383,5 +383,6 @@ Definition lminus X `{OrderedType X} (s:set X) L := s \ of_list L.
 
 Hint Extern 10 =>
 match goal with
-  [ H : ?a = ?b, H': ?c = ?b |- ?c = ?a ] => eapply (eq_trans H' (eq_sym H))
+| [ H : ?a = ?b, H': ?c = ?b |- ?c = ?a ] => eapply (eq_trans H' (eq_sym H))
+| [ H : ?b = ?a, H': ?b = ?c |- ?a = ?c ] => eapply (eq_trans (eq_sym H) H')
 end : len.

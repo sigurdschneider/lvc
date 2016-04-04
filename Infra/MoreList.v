@@ -409,6 +409,20 @@ Proof.
   f_equal; eauto using get.
 Qed.
 
+Lemma zip_ext_get2 X1 Y1 X2 Y2 Z (f1:X1 -> Y1 -> Z) (f2:X2 -> Y2 -> Z) L1 L1' L2 L2'
+  : length L1 = length L2
+    -> length L1' = length L2'
+    -> (forall x1 y1 x2 y2 n,
+          get L1 n x1 -> get L1' n y1 ->
+          get L2 n x2 -> get L2' n y2 ->
+          f1 x1 y1 = f2 x2 y2)
+    -> zip f1 L1 L1' = zip f2 L2 L2'.
+Proof.
+  intros LEN1 LEN2 GET. length_equify.
+  general induction LEN1; inv LEN2; simpl in * |- *; eauto.
+  f_equal; eauto 20 using get.
+Qed.
+
 Lemma zip_ext_PIR2 X Y Z (f:X -> Y -> Z) X' Y' Z' (f':X'->Y'->Z') (R:Z->Z'->Prop) L1 L2 L1' L2'
 : length L1 = length L2
   -> length L1' = length L2'

@@ -360,7 +360,6 @@ Proof.
   intros ANa ANb. general induction ANa; inv ANb; simpl; eauto.
 Qed.
 
-
 Lemma renamedApart_annotation s ang
 : renamedApart s ang
   -> annotation s ang.

@@ -331,7 +331,7 @@ Proof.
 Qed.
 
 Lemma restrict_disj (DL : 〔؟⦃var⦄〕) (s t : ⦃var⦄)
-  : (forall n u, get DL n 「u」 -> disj t u)
+  : (forall n u, get DL n 「u」 -> disj (s ∩ t) u)
     -> restrict DL (s \ t) = restrict DL s.
 Proof.
   general induction DL; simpl; eauto.
@@ -339,10 +339,10 @@ Proof.
   unfold restr. destruct a; eauto.
   exploit H; eauto using get.
   repeat destruct if; eauto.
-                    - exfalso. rewrite s1 in n. cset_tac.
-                    - exfalso. eapply n.
-                      intros a aIns.
-                      decide (a ∈ t); exfalso; intuition.
+  - exfalso. rewrite s1 in n. cset_tac.
+  - exfalso. eapply n.
+    intros a aIns.
+    cset_tac. eapply H0; eauto. cset_tac.
 Qed.
 
 
