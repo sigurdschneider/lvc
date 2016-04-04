@@ -23,7 +23,7 @@ Proof.
     + exploit IHk; eauto. omega.
 Qed.
 
-Lemma get_take k X (L:list X) n x
+Lemma get_take_get k X (L:list X) n x
 : get (take k L) n x -> get L n x.
 Proof.
   intros. general induction k; destruct L; simpl in *; isabsurd.
@@ -64,4 +64,15 @@ Proof.
   - split; eauto using get; omega.
   - exploit IHget; eauto; dcr.
     split; eauto using get; omega.
+Qed.
+
+Lemma get_take X (L:list X) n k x
+  : n < k
+    -> get L n x
+    -> get (take k L) n x.
+Proof.
+  intros LE GET.
+  general induction GET; destruct k; simpl; eauto using get; try now (exfalso; omega).
+  - econstructor.
+    eapply IHGET. omega.
 Qed.

@@ -704,28 +704,6 @@ Proof.
 Qed.
 *)
 
-Lemma computeParameters_bounded DL ZL AP s lv an' LV
-: live_sound FunctionalAndImperative (zip pair DL ZL) s lv
-  -> computeParameters (zip lminus DL ZL) ZL AP s lv = (an', LV)
-  -> length AP = length DL
-  -> length DL = length ZL
-  -> bounded (zip ominus' (zip lminus DL ZL) LV) (getAnn lv).
-Proof.
-  intros LS CPEQ LEQ.
-  general induction LS; simpl in * |- *; repeat let_case_eq; invc CPEQ.
-  - exploit IHLS; eauto using addParam_zip_lminus_length.
-    exploit computeParameters_AP_LV; eauto. rewrite addParam_length; eauto with len.
-    admit.
-  - exploit IHLS1; eauto.
-    exploit IHLS2; eauto. admit.
-  - admit.
-  - admit.
-  - admit.
-  - assert (EQ: DL \\ ZL = drop ❬F❭ ((getAnn ⊝ als) \\ (fst ⊝ F) ++ DL \\ ZL))
-      by (rewrite drop_length_ass; eauto with len).
-    rewrite EQ at 1. rewrite <- drop_zip.
-Admitted.
-
 
 Lemma ounion_comm X `{OrderedType X} (s t:option (set X))
   : option_eq Equal (ounion s t) (ounion t s).
@@ -1166,24 +1144,35 @@ Proof.
         rewrite <- LENFtake. eauto with len.
         eapply PIR2_take; eauto.
 
-        intros. inv_get; clear_dup.
-        unfold lminus, oto_list in EQ1.
-        destruct x,x0; simpl in *. rewrite <- EQ1.
-        subst NPL. inv_get. destruct x0. simpl in *. inv EQ0.
-        clear_trivial_eqs. clear H12 EQ H20.
-        destruct x4. rewrite of_list_3. subst NP.
-        simpl in *. invc EQ2. simpl.
-        set (NP := (list_union (oget
-                   ⊝ take ❬F❭
-                       (olist_union (snd
-                                     ⊝ computeParametersF DL ZL AP F als)
-                        b0)))).
-        rewrite of_list_app. rewrite of_list_3.
-        admit. invc EQ2. invc EQ0. admit. admit. admit.
+        intros. inv_get; clear_dup. subst.
+        unfold lminus, oto_list.
+        subst NPL. inv_get.
+        rewrite <- zip_app in H15; eauto with len.
+        rewrite <- zip_app in H19; eauto with len.
+        inv_get. exploit (get_range H16).
+        exploit (get_range H9).
+        assert (n0 < ❬fst ⊝ F❭). rewrite map_length. omega.
+        assert (n < ❬fst ⊝ F❭). rewrite map_length. omega.
+        eapply get_in_range_app in H15; eauto with len.
+        eapply get_in_range_app in H19; eauto with len.
+        eapply get_in_range_app in H20; eauto with len.
+        eapply get_in_range_app in H21; eauto with len.
+        inv_get.
+        destruct x4,x5; simpl in *. rewrite of_list_app.
+        repeat rewrite of_list_3. unfold lminus.
+        hnf; intros. cset_tac. eapply H27; eauto.
+        eapply incl_right.
+        eapply incl_list_union; [ eapply map_get_1 | reflexivity | eapply H21]; eauto.
+        eapply H21; eauto. eapply incl_left.
+        eapply incl_list_union.
+        eapply map_get_1. eapply get_take; try eapply H10. eauto. reflexivity. eauto.
+        admit.
+        admit.
+        admit. rewrite map_length. omega. rewrite map_length. omega.
+
         rewrite restrict_comp_meet.
         assert (lvsEQ:getAnn lvs \ of_list (fst Zs ++ oto_list x)
-                             [=] lv ∩ (getAnn lvs \ of_list (fst Zs ++ oto_list x))).
-        {
+                             [=] lv ∩ (getAnn lvs \ of_list (fst Zs ++ oto_list x))). {
           exploit H2; eauto; dcr.
           rewrite of_list_app. revert H16; clear_all.
           intros. cset_tac. eapply H16; eauto. cset_tac; intuition.
@@ -1196,7 +1185,45 @@ Proof.
         rewrite zip_length2; eauto with len. omega.
         eapply drop_length_stable; eauto. omega.
         eapply PIR2_drop; eauto.
+
+        intros. inv_get; clear_dup.
+        unfold ominus', lminus in EQ0. destruct x1; inv EQ0. simpl in *.
+        eapply get_drop in H14. clear EQ0. subst NPL.
+        inv_get.
+        rewrite <- zip_app in H16; eauto with len.
+        rewrite <- zip_app in H19; eauto with len.
+        inv_get. destruct x1; inv H18. simpl in *.
+        inv_get.
+Lemma get_app_right_ge X L L' n (x:X)
+  : n >= length L -> get (L ++ L') n x -> get L' (n - length L) x.
+Proof.
+  intros. general induction L; simpl in *; eauto; try omega.
+  - orewrite (n - 0 = n); eauto.
+  - inv H0; simpl.
+    + exfalso; omega.
+    + eapply IHL; eauto. omega.
+Qed.
+        eapply get_app_right_ge in H21. rewrite map_length in H21.
+        orewrite (❬F❭ + n0 - ❬als❭ = n0) in H21.
+        eapply get_app_right_ge in H16. rewrite map_length in H16.
+        orewrite (❬F❭ + n0 - ❬F❭ = n0) in H16.
+        exploit (get_range H8).
+        assert (n < ❬fst ⊝ F❭). rewrite map_length. omega.
+        assert (n < ❬getAnn ⊝ als❭). rewrite map_length. omega.
+        eapply get_in_range_app in H20; eauto with len.
+        eapply get_in_range_app in H19; eauto with len.
+        inv_get. clear lvsEQ.
+        destruct x5; simpl in *. rewrite of_list_app.
+        repeat rewrite of_list_3. unfold lminus.
+        hnf; intros. cset_tac. eapply H25; eauto.
+        eapply incl_right.
+        eapply incl_list_union; [ eapply map_get_1 | reflexivity | eapply H21]; eauto.
+        eapply H21; eauto. eapply incl_left.
+        eapply incl_list_union.
+        eapply map_get_1. eapply get_take; try eapply H10. eauto. reflexivity. eauto.
         admit.
+        rewrite map_length. omega. rewrite map_length. omega.
+
         rewrite <- LENFtake. eauto with len.
       * eauto.
     + rewrite NPLEQ.
