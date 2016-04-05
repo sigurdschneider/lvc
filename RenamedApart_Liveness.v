@@ -36,7 +36,7 @@ Proof.
     + intros. inv_map H9. exploit H1; eauto.
       rewrite List.map_app. rewrite <- params_length; eauto.
     + intros. inv_map H9. edestruct H2; eauto; dcr.
-      destruct if; split; pe_rewrite; eauto with cset pe ann.
+      cases; split; pe_rewrite; eauto with cset pe ann.
     + eauto with cset pe ann.
 Qed.
 
@@ -66,7 +66,7 @@ Proof.
   - inv_map H5. destruct x; unfold comp in *; simpl in *.
     econstructor; simpl;
     eauto using live_exp_sound_incl, live_freeVars, get_list_union_map with cset.
-    + destruct if; eauto.
+    + cases; eauto.
       eapply map_get_1 with (f:=fun x : set var * params => ⎣fst x \ of_list (snd x) ⎦) in H3.
       eapply bounded_get; eauto.
   - econstructor; eauto using live_exp_sound_incl, live_freeVars with cset pe ann.
@@ -84,7 +84,7 @@ Proof.
       rewrite <- incl_right.
       rewrite bounded_app; split; eauto using indexwise_R_bounded.
     + intros. inv_map H10. edestruct H2; eauto; dcr.
-      destruct if; eauto with cset pe ann.
+      cases; eauto with cset pe ann.
     + eauto with cset pe ann.
 Qed.
 
@@ -438,7 +438,7 @@ Proof.
     + erewrite getAnn_mapAnn2; eauto using live_sound_annotation, renamedApart_annotation.
       rewrite H3; simpl. rewrite H14. reflexivity.
   - econstructor; eauto.
-    + destruct if; simpl in *; eauto.
+    + cases; simpl in *; eauto.
       exploit bounded_get; eauto.
       eapply map_get_1 with (f:=live_global); eauto. simpl in *.
       rewrite <- H2. rewrite <- H5. clear_all; cset_tac; intuition.
@@ -513,7 +513,7 @@ Proof.
       edestruct H2; eauto; dcr. destruct (getAnn x0); simpl in *.
       edestruct H13; eauto.
       split. rewrite <- H17. rewrite H16. clear_all; cset_tac; intuition.
-      destruct if; eauto. rewrite H16. rewrite <- H19.
+      cases; eauto. rewrite H16. rewrite <- H19.
       clear_all; cset_tac; intuition.
     + erewrite getAnn_mapAnn2; eauto using live_sound_annotation, renamedApart_annotation.
       pe_rewrite. rewrite H15; reflexivity.

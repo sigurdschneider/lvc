@@ -79,7 +79,7 @@ Section SafeFirst.
     unfold safe_first.
     destruct s.
     - simpl. destruct (decision_procedure (P n)); eauto.
-    - destruct if; eauto.
+    - cases; eauto.
   Qed.
 
 End SafeFirst.
@@ -94,9 +94,9 @@ Fixpoint safe_first_ext P Q n
 Proof.
   destruct PS; destruct QS; simpl.
   - destruct (decision_procedure (P n)), (decision_procedure (Q n)); eauto; intuition.
-  - destruct if; destruct (decision_procedure (P n)); eauto; intuition. exfalso; firstorder.
-  - destruct if; destruct (decision_procedure (Q n)); eauto; intuition. exfalso; firstorder.
-  - repeat destruct if; intuition; exfalso; firstorder.
+  - cases; destruct (decision_procedure (P n)); eauto; intuition. exfalso; firstorder.
+  - cases; destruct (decision_procedure (Q n)); eauto; intuition. exfalso; firstorder.
+  - repeat cases; intuition; exfalso; firstorder.
 Qed.
 
 Lemma safe_impl (P Q: nat -> Prop) n
@@ -225,7 +225,7 @@ Definition fresh_stable (lv:set var) (x:var) : var :=
 Lemma fresh_stable_spec G x
       : fresh_stable G x ∉ G.
 Proof.
-  unfold fresh_stable. destruct if; eauto using fresh_spec.
+  unfold fresh_stable. cases; eauto using fresh_spec.
 Qed.
 
 Section FreshList.

@@ -145,7 +145,7 @@ Proof.
     inv_zip H.
     inv_zip H1. repeat get_functional; subst.
     unfold global. rewrite getAnn_mapAnn. simpl.
-    repeat destruct if; simpl; try now econstructor.
+    repeat cases; simpl; try now econstructor.
     econstructor.
     rewrite of_list_lookup_list; eauto.
     eapply lookup_set_minus_eq; eauto.
@@ -228,7 +228,7 @@ Proof.
   eapply AllInRel.PIR2_get; intros.
   inv_zip H. inv_zip H0. repeat get_functional; subst.
   unfold lookup_set_option, restr, live_global, Liveness.live_global; simpl.
-  destruct if. rewrite getAnn_mapAnn. econstructor. unfold flip.
+  cases. rewrite getAnn_mapAnn. econstructor. unfold flip.
              rewrite of_list_lookup_list; eauto. eapply lookup_set_minus_incl; eauto.
              econstructor. repeat rewrite zip_length2; eauto.
              eapply PIR2_map_lookup. eapply restrict_subset2; eauto.

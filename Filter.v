@@ -18,7 +18,7 @@ Lemma lookup_list_filter_by_commute A B C (V:A->B) (Z:list C) Y p
 Proof.
   intros. eapply length_length_eq in H.
   general induction H; simpl; eauto.
-  + destruct if; simpl; rewrite IHlength_eq; eauto.
+  + cases; simpl; rewrite IHlength_eq; eauto.
 Qed.
 
 Lemma filter_incl X `{OrderedType X} lv Y
@@ -39,7 +39,7 @@ Lemma omap_filter_by A B C f p (Y:list A) (l:list B) (Z:list C)
 Proof.
   intros. eapply length_length_eq in H0.
   general induction H0; simpl in * |- *; eauto.
-  monad_inv H. destruct if; simpl; eauto.
+  monad_inv H. cases; simpl; eauto.
   - rewrite EQ. erewrite IHlength_eq; simpl; eauto.
 Qed.
 
@@ -50,7 +50,7 @@ Lemma filter_filter_by_length {X} {Y} (Z:list X) (VL:list Y)
 Proof.
   intros. eapply length_length_eq in H.
   general induction H; simpl; eauto.
-  destruct if; simpl. rewrite IHlength_eq; eauto. eauto.
+  cases; simpl. rewrite IHlength_eq; eauto. eauto.
 Qed.
 
 
@@ -59,7 +59,7 @@ Lemma filter_incl2 X `{OrderedType X} (p:X->bool) Z
 Proof.
   general induction Z; simpl.
   - reflexivity.
-  - destruct if; simpl. rewrite IHZ; reflexivity.
+  - cases; simpl. rewrite IHZ; reflexivity.
     rewrite IHZ. cset_tac; intuition.
 Qed.
 
@@ -70,7 +70,7 @@ Lemma filter_by_get A B p (Z:list A) (Y:list B) y n
 Proof.
   intros. eapply length_length_eq in H0.
   general induction H0; simpl in * |- *; isabsurd.
-  destruct if in H. eapply get_getT in H.
+  cases in H. eapply get_getT in H.
   inv H.
   do 2 eexists; repeat split; eauto using get.
   rewrite <- Heq; eauto. eapply I.
@@ -88,7 +88,7 @@ Proof.
   intros.
   general induction Z; simpl.
   - isabsurd.
-  - simpl in H. destruct if in H. inv H. rewrite <- Heq. eapply I.
+  - simpl in H. cases in H. inv H. rewrite <- Heq. eapply I.
     eapply IHZ; eauto.
     eapply IHZ; eauto.
 Qed.
@@ -100,6 +100,6 @@ Lemma filter_in X `{OrderedType X} (p:X->bool) `{Proper _ (_eq ==> eq) p} a Z
 Proof.
   general induction Z; simpl in * |- *; eauto.
   - cset_tac. rewrite <- H3 in H1.
-    destruct if; isabsurd. rewrite <- H3. simpl. cset_tac; intuition.
-    destruct if; eauto. simpl. exploit IHZ; eauto. cset_tac; intuition.
+    cases; isabsurd. rewrite <- H3. simpl. cset_tac; intuition.
+    cases; eauto. simpl. exploit IHZ; eauto. cset_tac; intuition.
 Qed.

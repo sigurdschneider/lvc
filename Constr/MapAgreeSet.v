@@ -21,16 +21,16 @@ Section MapAgreeSet.
   Proof.
     intros.
     assert (Proper (_eq ==> eq) (fun x : X => if [m x === m' x] then true else false)). {
-      hnf; intros. cbv beta. repeat destruct if; try reflexivity.
+      hnf; intros. cbv beta. repeat cases; try reflexivity.
        - exfalso. eapply n. rewrite <- H2; eauto. rewrite H1; eauto.
        - exfalso; eapply n. rewrite H2; eauto. rewrite H1; eauto. }
     split; intros.
     + pose proof (filter_1 H4). pose proof (filter_2 H4).
-      cbv beta in *. destruct if in H6; eauto. congruence.
+      cbv beta in *. cases in H6; eauto. congruence.
     + eapply filter_3.
       - eassumption.
       - eapply H4.
-      - destruct if; eauto.
+      - cases; eauto.
   Qed.
 
   Lemma agree_on_agree_set_eq

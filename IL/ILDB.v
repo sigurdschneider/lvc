@@ -223,7 +223,7 @@ Lemma defs_agree_update symb E E' x v
   -> defs_agree (x :: symb) (E [x <- ⎣v ⎦]) (v :: E').
 Proof.
   unfold defs_agree; intros.
-  simpl in H0. destruct if in H0.
+  simpl in H0. cases in H0.
   - invc e; invc H0.
     eexists; split; eauto using get. lud; congruence.
   - exploit (pos_ge _ _ _ H0).

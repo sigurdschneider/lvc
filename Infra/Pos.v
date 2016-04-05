@@ -16,7 +16,7 @@ Lemma pos_add X `{OrderedType X} k' symb (f:X) k i
 Proof.
   general induction symb; eauto.
   unfold pos in *; fold pos in *.
-  destruct if. congruence.
+  cases. congruence.
   eapply IHsymb in H0. orewrite (S (k' + k) = k' + S k). eauto.
 Qed.
 
@@ -25,7 +25,7 @@ Lemma pos_sub X `{OrderedType X} k' symb (f:X) k i
 Proof.
   general induction symb; eauto.
   unfold pos in *; fold pos in *.
-  destruct if. f_equal. inv H0. omega.
+  cases. f_equal. inv H0. omega.
   orewrite (S (k' + k) = k' + S k) in H0.
   eauto.
 Qed.
@@ -35,7 +35,7 @@ Lemma pos_ge X `{OrderedType X} symb (l:X) i k
   -> k <= i.
 Proof.
   general induction symb. unfold pos in H0; fold pos in H0.
-  destruct if in H0. inv H0. cbv in e. omega.
+  cases in H0. inv H0. cbv in e. omega.
   exploit IHsymb; eauto. omega.
 Qed.
 
@@ -103,7 +103,7 @@ Lemma get_first_pos X `{OrderedType X} n
   -> (forall n' z', n' < n -> get Z n' z' -> z' =/= z)
   -> pos Z z 0 = Some n.
 Proof.
-  intros. general induction H0; simpl; destruct if; eauto.
+  intros. general induction H0; simpl; cases; eauto.
   - order.
   - exfalso. exploit (H1 0); eauto using get. omega.
   - exploit IHget; eauto.
@@ -117,7 +117,7 @@ Lemma pos_get X  `{OrderedType X} (symb:list X) v x i
    -> exists v', get symb (x-i) v' /\ v === v' /\ x >= i.
 Proof.
   general induction symb; simpl in * |- *; eauto using get.
-  destruct if in H.
+  cases in H.
   - invc H0. orewrite (x - x = 0). eexists; split; eauto using get.
   - exploit IHsymb; eauto; dcr.
     orewrite (x - i = S (x - S i)).
@@ -129,7 +129,7 @@ Lemma pos_none X `{OrderedType X} symb (x:X) k k'
   -> pos symb x k' = None.
 Proof.
   general induction symb; eauto; simpl in *.
-  destruct if; try congruence.
+  cases; try congruence.
   rewrite H0; eauto.
 Qed.
 
@@ -137,7 +137,7 @@ Lemma pos_eq X `{OrderedType X} symb y k
 : pos symb y k = Some k
   -> hd_error symb === Some y.
 Proof.
-  intros. destruct symb; simpl in *; try destruct if in H0; simpl; try congruence.
+  intros. destruct symb; simpl in *; try cases in H0; simpl; try congruence.
   - unfold value. constructor. rewrite e. reflexivity.
   - exfalso. exploit pos_ge; eauto. omega.
 Qed.
@@ -149,13 +149,13 @@ Lemma pos_indep  X `{OrderedType X} symb symb' x y k k'
 Proof.
   general induction symb.
   - general induction symb'; simpl in *; eauto.
-    destruct if in H0; try congruence; eauto.
-  - simpl in *. destruct if.
+    cases in H0; try congruence; eauto.
+  - simpl in *. cases.
     + symmetry in H0. eapply pos_eq in H0. destruct symb'; simpl in *.
       inv H0.
-      destruct if; eauto. inv H0; exfalso; eauto.
+      cases; eauto. inv H0; exfalso; eauto.
     + destruct symb'; simpl in *. eauto using pos_none.
-      destruct if.
+      cases.
       * exfalso. exploit pos_ge; eauto. omega.
       * eauto.
 Qed.
@@ -182,8 +182,8 @@ Lemma pos_app_in X `{OrderedType X} x k L L'
 Proof.
   intros.
   general induction L; simpl in * |- *; cset_tac.
-  - destruct if; try congruence; exfalso; eauto.
-  - destruct if; try congruence; eauto.
+  - cases; try congruence; exfalso; eauto.
+  - cases; try congruence; eauto.
 Qed.
 
 
@@ -193,7 +193,7 @@ Lemma pos_app_not_in X `{OrderedType X} x k L L'
 Proof.
   intros.
   general induction L; simpl in * |- *; cset_tac.
-  destruct if; try congruence; eauto.
+  cases; try congruence; eauto.
   - exfalso; eauto.
   - rewrite IHL; eauto.
 Qed.
@@ -206,7 +206,7 @@ Lemma pos_get_first X  `{OrderedType X} (symb:list X) v x i
      forall z' n, n < x-i -> get symb n z' -> z' =/= v.
 Proof.
   general induction symb; simpl in * |- *; eauto using get.
-  destruct if in H.
+  cases in H.
   - invc H0. orewrite (x - x = 0). eexists; repeat split; eauto using get.
     + intros. exfalso. omega.
   - exploit IHsymb; eauto; dcr.

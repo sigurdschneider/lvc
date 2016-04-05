@@ -13,14 +13,14 @@ Lemma restr_iff G o G'
   : restr G o = Some G' <-> G' ⊆ G /\ o = Some G'.
 Proof.
   unfold restr; destruct o; intros.
-  destruct if; split; intros A; inv A; isabsurd; eauto.
+  cases; split; intros A; inv A; isabsurd; eauto.
   split; intros; dcr; congruence.
 Qed.
 
 Lemma restr_idem G o G'
   : G' ⊆ G -> restr G' (restr G o) = restr G' o.
 Proof.
-  unfold restr; destruct o. repeat destruct if; eauto; isabsurd.
+  unfold restr; destruct o. repeat cases; eauto; isabsurd.
   intros. exfalso. eapply n; cset_tac; intuition.
   eauto.
 Qed.
@@ -28,7 +28,7 @@ Qed.
 Lemma restr_comm o G G'
   : restr G' (restr G o) = restr G (restr G' o).
 Proof.
-  destruct o; unfold restr; repeat destruct if; eauto; isabsurd.
+  destruct o; unfold restr; repeat cases; eauto; isabsurd.
 Qed.
 
 Instance restr_morphism
@@ -36,7 +36,7 @@ Instance restr_morphism
 Proof.
   unfold Proper, respectful; intros.
   destruct x0,y0; unfold restr;
-  repeat destruct if; try econstructor;
+  repeat cases; try econstructor;
   inv H0; eauto.
   exfalso. eapply n. rewrite <- H3, <- H; eauto.
   exfalso. eapply n. rewrite H3, H; eauto.
@@ -47,7 +47,7 @@ Instance restr_morphism_eq
 Proof.
   unfold Proper, respectful; intros.
   destruct x0,y0; unfold restr;
-  repeat destruct if; try econstructor;
+  repeat cases; try econstructor;
   inv H0; eauto.
   exfalso. eapply n. rewrite <- H; eauto.
   exfalso. eapply n. rewrite H; eauto.
@@ -74,7 +74,7 @@ Lemma restrict_not_incl G G' DL
  : ~G' ⊆ G -> restrict (Some G'::DL) G = None::restrict DL G.
 Proof.
   intros. unfold restrict, List.map; f_equal.
-  unfold restr. destruct if; firstorder.
+  unfold restr. cases; firstorder.
 Qed.
 
 Lemma restrict_comm DL G G'
@@ -148,7 +148,7 @@ Proof.
     subst; dcr.
     f_equal. eauto.
   - destruct a; unfold restr in H1; dcr.
-    + exfalso. destruct if in H1; isabsurd.
+    + exfalso. cases in H1; isabsurd.
       simpl in H0; dcr. eapply n. cset_tac.
     + f_equal. eapply IHDL; eauto.
 Qed.
@@ -161,7 +161,7 @@ Proof.
   intros. induction H; simpl; econstructor; eauto.
   - inv pf.
     + simpl. econstructor.
-    + unfold restr. repeat destruct if; try econstructor; eauto.
+    + unfold restr. repeat cases; try econstructor; eauto.
       exfalso. eapply n. transitivity G; eauto. rewrite <- s; eauto.
 Qed.
 
@@ -174,7 +174,7 @@ Proof.
    intros. induction H; simpl; econstructor; eauto.
   - inv pf.
     + simpl. econstructor.
-    + unfold restr. repeat destruct if; try econstructor; eauto.
+    + unfold restr. repeat cases; try econstructor; eauto.
       exfalso. eapply n. transitivity G; eauto. rewrite <- s; eauto.
       rewrite H1; reflexivity.
 Qed.
@@ -184,7 +184,7 @@ Lemma restr_comp_meet G o G'
   : restr G' (restr G o) = restr (G ∩ G') o.
 Proof.
   unfold restr; destruct o.
-  repeat destruct if; eauto; isabsurd.
+  repeat cases; eauto; isabsurd.
   - cset_tac; intuition.
   - exfalso; eapply n. rewrite s1. cset_tac; intuition.
   - exfalso; eapply n. rewrite s0. cset_tac; intuition.
@@ -224,7 +224,7 @@ Proof.
   intros.
   general induction DL; simpl in *; try destruct a; dcr; eauto.
   f_equal; eauto.
-  unfold restr. repeat destruct if; eauto.
+  unfold restr. repeat cases; eauto.
   exfalso. eapply n. eapply meet_incl_eq in H0; eauto.
   rewrite meet_comm in H0. rewrite <- incl_meet in H0; eauto.
   rewrite H0. eapply meet_incl; reflexivity.
@@ -243,7 +243,7 @@ Lemma list_eq_special DL ϱ A B A'
 Proof.
   intros. general induction DL; simpl. econstructor.
   unfold restr. unfold lookup_set_option.
-  destruct a; repeat destruct if;econstructor; eauto; try econstructor; eauto.
+  destruct a; repeat cases;econstructor; eauto; try econstructor; eauto.
   - exfalso. eapply n. lset_tac. eapply H0. eapply lookup_set_incl; lset_tac.
   - exfalso. eapply n. cset_tac.
 Qed.
@@ -256,7 +256,7 @@ Lemma list_eq_fstNoneOrR_incl DL ϱ A B
 Proof.
   intros. general induction DL; simpl.
   - econstructor.
-  - unfold restr; destruct a; repeat destruct if;
+  - unfold restr; destruct a; repeat cases;
       simpl; econstructor; eauto; try econstructor; eauto.
     exfalso. cset_tac; intuition.
 Qed.
@@ -297,7 +297,7 @@ Lemma restrict_eqReq DL DL' G
 Proof.
   intros. induction H; simpl; econstructor; eauto.
   unfold restr. destruct pf. constructor.
-  destruct if; eauto. subst. constructor; eauto. constructor.
+  cases; eauto. subst. constructor; eauto. constructor.
 Qed.
 
 Lemma restrict_get DL lv n s
@@ -307,7 +307,7 @@ Proof.
   intros. general induction H.
   - destruct DL; simpl in *; isabsurd.
     inv Heql. unfold restr in H0. destruct o.
-    destruct if in H0. inv H0.
+    cases in H0. inv H0.
     eauto using get. congruence. congruence.
   - destruct DL; simpl in *; isabsurd.
     inv Heql. edestruct IHget; eauto.
@@ -338,7 +338,7 @@ Proof.
   rewrite IHDL; eauto using get.
   unfold restr. destruct a; eauto.
   exploit H; eauto using get.
-  repeat destruct if; eauto.
+  repeat cases; eauto.
   - exfalso. rewrite s1 in n. cset_tac.
   - exfalso. eapply n.
     intros a aIns.

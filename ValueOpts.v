@@ -933,7 +933,7 @@ Proof.
         intro. hnf in H8. simpl in *.
         rewrite <- H4 in H8. inv H8.
         cbv in H7. destruct y. congruence.
-        destruct if in H18. congruence. cbv in H18. congruence.
+        cases in H18. congruence. cbv in H18. congruence.
       } *)
       econstructor; try eapply plus2O.
       econstructor; eauto using eq_sym. reflexivity.
@@ -956,7 +956,7 @@ Proof.
           intro. hnf in H8. simpl in *.
           rewrite <- H4 in H8. inv H8.
           cbv in H7. destruct y.
-          destruct if in H18. cbv in H18. congruence.
+          cases in H18. cbv in H18. congruence.
           congruence. congruence.
         } *)
         econstructor; try eapply plus2O.

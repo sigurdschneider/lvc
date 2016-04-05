@@ -4,15 +4,6 @@
 Tactic Notation "if" tactic(t) "then" tactic(t1) "else" tactic(t2) :=
   first [ t; first [ t1 | fail 2 ] | t2 ].
 
-(** Destruct if arguments for case analysis. *)
-(*
-Tactic Notation "destruct" "if" "in" "*" :=
-  repeat (match goal with
-    | |-  context [if ?P then _ else _]      => destruct P
-    | _ : context [if ?P then _ else _] |- _ => destruct P
-  end).
-*)
-
 (* Destruct all records, that is, inductive types with a single constructor. *)
 Tactic Notation "decompose" "records" :=
   repeat (

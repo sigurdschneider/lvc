@@ -120,7 +120,7 @@ Proof.
   - edestruct PIR2_nth; eauto; dcr; simpl in *.
     destruct x; subst; simpl in *.
     econstructor; eauto.
-    destruct if; simpl in *; eauto; dcr; subst.
+    cases; simpl in *; eauto; dcr; subst.
     rewrite <- H0. rewrite <- H4. reflexivity.
     cset_tac; intuition; eauto.
   - econstructor; eauto 20 using PIR2_app.
@@ -259,7 +259,7 @@ Proof.
       * rewrite of_list_lookup_list; eauto.
         rewrite getAnn_mapAnn.
         eapply lookup_set_incl; eauto.
-      * destruct if; eauto.
+      * cases; eauto.
         rewrite getAnn_mapAnn.
         rewrite of_list_lookup_list; eauto.
         rewrite lookup_set_minus_incl; eauto.

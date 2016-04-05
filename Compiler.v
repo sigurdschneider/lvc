@@ -173,7 +173,7 @@ Lemma toILF_correct (ili:IL.stmt) s (E:onv val)
 Proof.
   intros. unfold toILF in H. simpl in *; unfold ensure_f, additionalArguments in *.
   monadS_inv H.
-  repeat (destruct if in EQ0; [|isabsurd]).
+  repeat (cases in EQ0; [|isabsurd]).
   invc EQ0. dcr.
   - case_eq (DelocationAlgo.computeParameters nil nil nil
               (DVE.compile nil ili x) (DVE.compile_live ili x ∅)); intros.
@@ -213,7 +213,7 @@ Lemma fromILF_correct (s s':stmt) E
 Proof.
   unfold fromILF; intros.
   monadS_inv H.
-  destruct if in EQ0; dcr; isabsurd.
+  cases in EQ0; dcr; isabsurd.
   monadS_inv EQ0; dcr.
   eapply sim_trans with (σ2:=(nil:list F.block, E, rename_apart (EAE.compile s))).
   eapply sim_trans with (σ2:=(nil:list F.block, E, EAE.compile s)).
@@ -287,9 +287,9 @@ Proof.
   intros.
   unfold optimize, ensure_f in *.
   monadS_inv H. destruct x.
-  repeat (destruct if in EQ0; [| isabsurd]).
+  repeat (cases in EQ0; [| isabsurd]).
   monadS_inv EQ0.
-  repeat (destruct if in EQ2; [| isabsurd]).
+  repeat (cases in EQ2; [| isabsurd]).
   invc EQ2.
 
   eapply sim_trans with (S2:=F.state).

@@ -60,7 +60,7 @@ Lemma keep_Some AP n x
 Proof.
   intros.
   eapply (get_mapi (fun n' x => if [n' = n] then 「x」 else ⎣⎦)) in H.
-  destruct if in H; eauto. omega.
+  cases in H; eauto. omega.
 Qed.
 
 Definition oto_list {X} `{OrderedType X} (s:option (set X)) :=
@@ -157,7 +157,7 @@ Proof.
   - econstructor; eauto.
     + inv pf; simpl.
       * econstructor.
-      * destruct if. econstructor; eauto. econstructor.
+      * cases. econstructor; eauto. econstructor.
 Qed.
 
 Opaque to_list.
@@ -240,7 +240,7 @@ Proof.
   general induction A.
   - constructor.
   - econstructor.
-    + destruct if; cset_tac; intuition.
+    + cases; cset_tac; intuition.
     + exploit (IHA x0); eauto.
 Qed.
 
@@ -462,7 +462,7 @@ Proof.
   unfold keep, mapi. generalize 0.
   general induction AP; simpl.
   - econstructor.
-  - destruct if; eauto using PIR2, @ifSndR.
+  - cases; eauto using PIR2, @ifSndR.
 Qed.
 
 Local Create HintDb rew.
@@ -555,7 +555,7 @@ Proof.
   unfold keep, mapi. generalize 0.
   general induction AP; simpl.
   - econstructor.
-  - destruct if; eauto using PIR2, @ifFstR.
+  - cases; eauto using PIR2, @ifFstR.
 Qed.
 
 Lemma ifFstR_addAdds s A B
@@ -576,7 +576,7 @@ Lemma addParam_Subset x DL AP
 Proof.
   intros. general induction H; simpl.
   - constructor.
-  - econstructor. destruct if; eauto.
+  - econstructor. cases; eauto.
     + cset_tac.
     + eauto.
 Qed.
@@ -674,7 +674,7 @@ Proof.
   - simpl in *.
     intros.
     edestruct (mapi_get _ _ GET) as [x [ H]]; eauto; subst.
-    destruct if; try omega.
+    cases; try omega.
 
     exploit keep_Some.
 
@@ -716,7 +716,7 @@ Proof.
   - econstructor.
   - econstructor; eauto using get.
     destruct y; intros; simpl; try now econstructor.
-    repeat destruct if; try now econstructor.
+    repeat cases; try now econstructor.
     exfalso. eapply n. rewrite <- H1, <- s0.
     decide (x0 ∈ s).
   + cset_tac.
@@ -788,7 +788,7 @@ Proof.
   unfold addParam; intros.
   edestruct get_zip as [? []]; eauto; dcr. clear H.
   repeat get_functional; subst.
-  destruct if in H1; simpl in *.
+  cases in H1; simpl in *.
   + cset_tac; intuition.
   + cset_tac; intuition.
 Qed.
@@ -802,7 +802,7 @@ Proof.
   intros LEQ LEN. intros. eapply length_length_eq in LEN.
   general induction n; simpl in *.
   - inv H; inv H0. invc LEN. simpl in LEQ. invc LEQ.
-    destruct if in pf; inv pf.
+    cases in pf; inv pf.
     + exfalso; cset_tac; intuition.
     + eauto.
   - invc H; invc H0. invc LEN. simpl in LEQ. invc LEQ.
@@ -840,7 +840,7 @@ Proof.
   - econstructor.
   - econstructor.
     + destruct y; intros; simpl.
-      repeat destruct if; try now econstructor.
+      repeat cases; try now econstructor.
       * econstructor. reflexivity.
       * decide (x0 ∈ s). exfalso. eapply n.
         hnf; intros. decide (a === x0). rewrite e in H2.
@@ -860,7 +860,7 @@ Lemma keep_get l AP s
 Proof.
   intros.
   exploit (get_mapi (fun (n : nat) (x : set var) => if [n = counted l] then ⎣x ⎦ else ⎣⎦) H); eauto.
-  destruct if in H0; eauto.
+  cases in H0; eauto.
   exfalso; eauto.
 Qed.
 
@@ -870,7 +870,7 @@ Lemma restrict_get L s t n
   -> get (restrict L t) n (Some s).
 Proof.
   intros. general induction H; simpl.
-  + destruct if.
+  + cases.
     - econstructor.
     - exfalso; eauto.
     + econstructor; eauto.
@@ -1391,13 +1391,13 @@ Qed.
       econstructor; try reflexivity.
       simpl in X3. eapply X3.
       simpl.
-      econstructor. destruct if.
+      econstructor. cases.
       destruct x, x0; simpl; try now econstructor.
-      * repeat destruct if; unfold lminus in * |- *. econstructor.
+      * repeat cases; unfold lminus in * |- *. econstructor.
       unfold flip; clear_all. repeat rewrite of_list_app.
       rewrite of_list_3. cset_tac; intuition.
       exfalso; intuition.
-      * unfold lminus. destruct if.
+      * unfold lminus. cases.
         econstructor.
         unfold flip; clear_all. repeat rewrite of_list_app.
         rewrite of_list_3. cset_tac; intuition.
@@ -1418,21 +1418,21 @@ Qed.
         length_equify.
         general induction H; inv H0; inv H1; inv H5; inv H6; inv H7; simpl; try econstructor; eauto.
         inv H2; inv H3; inv pf; inv pf0; inv pf1; simpl; try now econstructor.
-        {repeat destruct if; try now (econstructor; hnf; cset_tac; intuition).
+        {repeat cases; try now (econstructor; hnf; cset_tac; intuition).
         exfalso. eapply n. cset_tac; intuition. }
-        {repeat destruct if; try now (econstructor; hnf; cset_tac; intuition).
+        {repeat cases; try now (econstructor; hnf; cset_tac; intuition).
         exfalso. eapply n. cset_tac; intuition. }
-        {repeat destruct if; try now (econstructor; hnf; cset_tac; intuition).
+        {repeat cases; try now (econstructor; hnf; cset_tac; intuition).
         exfalso. eapply n. repeat rewrite of_list_3. cset_tac; intuition. }
-        {repeat destruct if; try now (econstructor; hnf; cset_tac; intuition).
+        {repeat cases; try now (econstructor; hnf; cset_tac; intuition).
         exfalso. eapply n. repeat rewrite of_list_3. cset_tac; intuition. }
-        {repeat destruct if; try now (econstructor; hnf; cset_tac; intuition).
+        {repeat cases; try now (econstructor; hnf; cset_tac; intuition).
         exfalso. eapply n. repeat rewrite of_list_3. cset_tac; intuition. }
-        {repeat destruct if; try now (econstructor; hnf; cset_tac; intuition).
+        {repeat cases; try now (econstructor; hnf; cset_tac; intuition).
         exfalso. eapply n. repeat rewrite of_list_3. cset_tac; intuition. }
-        {repeat destruct if; try now (econstructor; hnf; cset_tac; intuition).
+        {repeat cases; try now (econstructor; hnf; cset_tac; intuition).
         exfalso. eapply n. repeat rewrite of_list_3. cset_tac; intuition. }
-        {repeat destruct if; try now (econstructor; hnf; cset_tac; intuition).
+        {repeat cases; try now (econstructor; hnf; cset_tac; intuition).
         exfalso. eapply n. repeat rewrite of_list_3. cset_tac; intuition. }
    +  inv X1; inv X2.
       exploit trs_monotone3'.
@@ -1457,12 +1457,12 @@ Qed.
       econstructor; try reflexivity.
       eapply X3.
       econstructor. destruct x,x0. simpl.
-      destruct if. unfold lminus. econstructor.
+      cases. unfold lminus. econstructor.
       unfold flip; clear_all. repeat rewrite of_list_app.
       rewrite of_list_3. cset_tac; intuition.
       econstructor.
       simpl. econstructor.
-      simpl. destruct if.
+      simpl. cases.
       constructor. unfold flip, lminus; clear_all. repeat rewrite of_list_app.
       rewrite of_list_3. cset_tac; intuition.
       econstructor.

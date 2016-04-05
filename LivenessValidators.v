@@ -31,10 +31,10 @@ Proof.
     (try (decide (isImperative i); [decide ((blv \ of_list Z) ⊆ a)|]));
     try decide (forall n y, get Y n y -> live_exp_sound y a);
     try decide (length Y = length Z); try dec_solve.
-    - left; econstructor; eauto. destruct if; eauto.
-    - right; intro. inv H; eauto. destruct if in H5; eauto.
+    - left; econstructor; eauto. cases; eauto.
+    - right; intro. inv H; eauto. cases in H5; eauto.
       get_functional; subst. eauto.
-    - left; econstructor; eauto. destruct if; eauto. intuition.
+    - left; econstructor; eauto. cases; eauto. intuition.
   + decide(live_exp_sound e a); try dec_solve.
   + edestruct (IH s); eauto; try inv an; eauto;
     decide (getAnn slv \ {{x}} ⊆ a);
@@ -54,7 +54,7 @@ Proof.
                                                 getAnn a0 \ of_list (fst Zs)[<=]a
                                               else True)) s sa).
     intros. decide (of_list (fst a0)[<=]getAnn b); try dec_solve.
-    destruct if; try dec_solve. decide ( getAnn b \ of_list (fst a0)[<=]a); try dec_solve.
+    cases; try dec_solve. decide ( getAnn b \ of_list (fst a0)[<=]a); try dec_solve.
     destruct H; try dec_solve.
     Grab Existential Variables. eassumption. eassumption.
 Defined.
@@ -88,10 +88,10 @@ Proof.
     exploit argsLive_length; eauto.
     decide (isImperative i); try dec_solve.
     decide ((blv \ of_list Z) ⊆ a).
-    - left; econstructor; eauto. destruct if; eauto.
-    - right; intro. inv H0; eauto. destruct if in H6; eauto.
+    - left; econstructor; eauto. cases; eauto.
+    - right; intro. inv H0; eauto. cases in H6; eauto.
       get_functional; subst; eauto.
-    - left; econstructor; eauto. destruct if; eauto. intuition.
+    - left; econstructor; eauto. cases; eauto. intuition.
   + decide(live_exp_sound e a); try dec_solve.
   + edestruct (IH s); eauto; try inv an; eauto;
     decide (getAnn slv \ {{x}} ⊆ a);
@@ -109,7 +109,7 @@ Proof.
                                                 getAnn a0 \ of_list (fst Zs)[<=]a
                                               else True) s sa).
     intros.
-    destruct if; try dec_solve.
+    cases; try dec_solve.
     decide ( getAnn b \ of_list (fst a0)[<=]a); try dec_solve. left; eauto. right; eauto.
     destruct H; try dec_solve.
     Grab Existential Variables. eassumption. eassumption.

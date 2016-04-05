@@ -219,7 +219,7 @@ Instance update_inst X `{OrderedType X} Y `{OrderedType Y} :
   Proper ((@feq _ _ _eq) ==> _eq ==> _eq ==> (@feq _ _ _eq)) (@update X Y _).
 Proof.
   unfold respectful, Proper, update, feq; intros.
-  repeat destruct if; eqs; eauto.
+  repeat cases; eqs; eauto.
   exfalso. eapply H7. eapply H2.
   exfalso. eapply H8. eapply H2.
 Qed.
@@ -228,7 +228,7 @@ Instance update_inst_eq X `{OrderedType X} Y
   : Proper ((@feq X Y eq) ==> eq ==> eq ==> (@feq _ _ eq)) (@update X Y _).
 Proof.
   unfold respectful, Proper, update, feq; intros.
-  repeat destruct if; eqs; eauto; congruence.
+  repeat cases; eqs; eauto; congruence.
 Qed.
 
 Lemma update_with_list_id X `{OrderedType X} (l:list X)

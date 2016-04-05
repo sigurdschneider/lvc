@@ -617,7 +617,7 @@ Proof.
             inv X. isabsurd.
         - eapply eqn_sound_entails_monotone; eauto.
           rewrite H12; eauto. simpl.
-          hnf. intros. destruct if.
+          hnf. intros. cases.
           + inv i; simpl in *.
             rewrite cp_eqns_update.
             * eapply satisfiesAll_union; split.
@@ -627,7 +627,7 @@ Proof.
               case_eq (E x); intros. simpl in *.
               rewrite H4 in X. simpl in *.
               unfold option_lift1, comp in X.
-              destruct if in X; subst; try econstructor; eauto.
+              cases in X; subst; try econstructor; eauto.
               simpl in *. inv X. inv H16.
               simpl in *. rewrite H4 in X. isabsurd.
               hnf; intros. eapply H3. cset_tac; right; eauto.
@@ -651,7 +651,7 @@ Proof.
             inv X. isabsurd.
         - eapply eqn_sound_entails_monotone; eauto.
           + rewrite H13; eauto. simpl.
-            destruct if.
+            cases.
             * inv i; simpl in *.
               rewrite cp_eqns_update.
               hnf; intros.

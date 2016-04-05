@@ -60,7 +60,7 @@ Proof.
   intros. eapply length_length_eq in H1.
   general induction H1.
   - eapply agree_on_refl. eapply H0.
-  - simpl. destruct if. simpl. eapply agree_on_update_same. reflexivity.
+  - simpl. cases. simpl. eapply agree_on_update_same. reflexivity.
     eapply agree_on_incl. eapply IHlength_eq. eauto. cset_tac; intuition.
     eapply agree_on_update_dead; eauto.
 Qed.
@@ -87,7 +87,7 @@ Lemma sim_DVE' r L L' V V' s LV lv
 -> sim'r r (L,V, s) (L',V', compile LV s lv).
 Proof.
   general induction s; simpl; inv H0; simpl in * |- *.
-  - case_eq (exp_eval V e); intros. destruct if.
+  - case_eq (exp_eval V e); intros. cases.
     + pfold. econstructor; try eapply plus2O.
       econstructor; eauto. reflexivity.
       econstructor; eauto. instantiate (1:=v).
@@ -101,7 +101,7 @@ Proof.
       eapply IHs; eauto. eapply agree_on_update_dead; eauto.
       eapply agree_on_incl; eauto. rewrite <- H9. cset_tac; intuition.
     + pfold. econstructor 3; [| eapply star2_refl|]; eauto. stuck.
-  - repeat destruct if.
+  - repeat cases.
     + edestruct (exp2bool_val2bool V); eauto; dcr.
       eapply sim'_expansion_closed.
       eapply IHs1; eauto. eapply agree_on_incl; eauto.
@@ -223,7 +223,7 @@ Lemma sim_I r L L' V V' s LV lv
 -> sim'r r (L,V, s) (L',V', compile LV s lv).
 Proof.
   general induction s; simpl; inv H0; simpl in * |- *.
-  - case_eq (exp_eval V e); intros. destruct if.
+  - case_eq (exp_eval V e); intros. cases.
     + pfold. econstructor; try eapply plus2O.
       econstructor; eauto. reflexivity.
       econstructor; eauto. instantiate (1:=v).
@@ -237,7 +237,7 @@ Proof.
       eapply IHs; eauto. eapply agree_on_update_dead; eauto.
       eapply agree_on_incl; eauto. rewrite <- H9. cset_tac; intuition.
     + pfold. econstructor 3; [| eapply star2_refl|]; eauto. stuck.
-  - repeat destruct if.
+  - repeat cases.
     + edestruct (exp2bool_val2bool V); eauto; dcr.
       eapply sim'_expansion_closed.
       eapply IHs1; eauto. eapply agree_on_incl; eauto.
@@ -363,9 +363,9 @@ Lemma compile_live_incl G i LV s lv
     -> getAnn (compile_live s lv G) ⊆ G ∪ getAnn lv.
 Proof.
   intros. general induction H; simpl; eauto; try (now (cset_tac; intuition)).
-  - destruct if; simpl; try reflexivity.
+  - cases; simpl; try reflexivity.
     rewrite IHtrue_live_sound. rewrite <- H1. cset_tac; intuition.
-  - repeat destruct if; simpl; try reflexivity.
+  - repeat cases; simpl; try reflexivity.
     + etransitivity; eauto. rewrite <- H2. reflexivity. congruence.
     + etransitivity; eauto.  rewrite <- H3. reflexivity. congruence.
 Qed.
@@ -384,9 +384,9 @@ Lemma incl_compile_live G i LV s lv
     -> G ⊆ getAnn (compile_live s lv G).
 Proof.
   intros. general induction H; simpl; eauto; try (now (cset_tac; intuition)).
-  - destruct if; simpl; try reflexivity. cset_tac; intuition.
+  - cases; simpl; try reflexivity. cset_tac; intuition.
     rewrite <- IHtrue_live_sound. cset_tac; intuition.
-  - repeat destruct if; simpl; try reflexivity; eauto.
+  - repeat cases; simpl; try reflexivity; eauto.
 Qed.
 
 
@@ -396,10 +396,10 @@ Lemma compile_live_incl' i LV s lv
     -> getAnn lv ⊆ getAnn (compile_live s lv).
 Proof.
   intros. general induction H; simpl; eauto; try reflexivity.
-  - destruct if; simpl; try reflexivity.
+  - cases; simpl; try reflexivity.
     rewrite <- IHtrue_live_sound.
     rewrite H2; eauto.
-  - repeat destruct if; simpl; try reflexivity.
+  - repeat cases; simpl; try reflexivity.
     + etransitivity; eauto.
     + etransitivity; eauto.
 Qed.
@@ -414,12 +414,12 @@ Lemma dve_live i LV s lv G
     -> live_sound i (compile_LV LV) (compile LV s lv) (compile_live s lv G).
 Proof.
   intros. general induction H; simpl; eauto using live_sound, compile_live_incl.
-  - destruct if; eauto. econstructor; eauto.
+  - cases; eauto. econstructor; eauto.
     + eapply live_exp_sound_incl; eauto. cset_tac; intuition.
     + rewrite compile_live_incl; eauto.
       rewrite <- H1. cset_tac; intuition.
     + eapply incl_compile_live; eauto.
-  - repeat destruct if; eauto.
+  - repeat cases; eauto.
     + econstructor; eauto; try rewrite compile_live_incl; eauto.
       eapply live_exp_sound_incl. eapply incl_right.
       eapply H1. case_eq (exp2bool e); intros; try destruct b; congruence.
@@ -431,10 +431,10 @@ Proof.
     + simpl. destruct i; simpl in * |- *; eauto.
       rewrite <- H0. rewrite minus_inter_empty. eapply incl_right.
       cset_tac; intuition. eapply filter_incl2; eauto.
-      eapply filter_in; eauto. intuition. hnf. destruct if; eauto.
+      eapply filter_in; eauto. intuition. hnf. cases; eauto.
       rewrite <- H0. rewrite minus_inter_empty. eapply incl_right.
       cset_tac; intuition. eapply filter_incl2; eauto.
-      eapply filter_in; eauto. intuition. hnf. destruct if; eauto.
+      eapply filter_in; eauto. intuition. hnf. cases; eauto.
     + simpl. eapply get_nth in H. erewrite H. simpl.
       erewrite filter_filter_by_length. reflexivity. congruence.
     + intros. eapply get_nth in H. erewrite H in H3. simpl in *.
@@ -462,13 +462,13 @@ Proof.
     eapply PIR2_refl. hnf; intuition.
     rewrite getAnn_setTopAnn. cset_tac; intuition.
     rewrite getAnn_setTopAnn.
-    destruct if; simpl in * |- *; eauto.
+    cases; simpl in * |- *; eauto.
     rewrite compile_live_incl; eauto.
     rewrite union_comm. rewrite union_minus_remove.
     rewrite <- H1.
     rewrite minus_inter_empty. instantiate (1:=of_list Z).
     cset_tac; intuition.
     cset_tac; intuition. eapply filter_incl2; eauto.
-    eapply filter_in; eauto. intuition. hnf. destruct if; eauto.
+    eapply filter_in; eauto. intuition. hnf. cases; eauto.
     rewrite compile_live_incl; eauto. cset_tac; intuition.
 Qed.

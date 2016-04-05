@@ -493,7 +493,7 @@ Proof.
     inv_zip H3; simpl in *.
     repeat get_functional.
     econstructor. eapply H3; eauto.
-    destruct if. simpl in * |- *.
+    cases. simpl in * |- *.
     rewrite of_list_app. cset_tac. intuition. eauto.
     erewrite get_nth; eauto. eauto with len.
     erewrite get_nth; eauto.
@@ -517,6 +517,6 @@ Proof.
       split.
       * rewrite of_list_app. rewrite H17. rewrite H18 at 1.
         clear_all; cset_tac; intuition.
-      * destruct if; eauto. rewrite of_list_app.
+      * cases; eauto. rewrite of_list_app.
         rewrite <- minus_union. rewrite H21. eauto.
 Qed.

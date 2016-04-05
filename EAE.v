@@ -187,7 +187,7 @@ Proof.
         simpl in *. repeat get_functional; subst.
         inv H11.
         decide (length Y = length bZ). {
-          - destruct if. eapply bisim_drop_shift; eapply H18; eauto. hnf; intros; intuition.
+          - cases. eapply bisim_drop_shift; eapply H18; eauto. hnf; intros; intuition.
         eapply omap_length in H0. hnf in H15; dcr; subst. congruence.
         eapply bisim'_expansion_closed; [eapply bisim_drop_shift; eapply H18| eapply star2_refl |].
         eauto.
@@ -203,7 +203,7 @@ Proof.
         eapply X.
         }
         hnf in H15. hnf in H17. dcr; simpl in *. subst. pfold.
-        destruct if.
+        cases.
         econstructor 3; try eapply X; try eapply star2_refl.
         reflexivity.
         edestruct AIR5_nth2 as [? [?[? [?]]]]; try eassumption; dcr.
@@ -216,7 +216,7 @@ Proof.
         edestruct AIR5_nth2 as [? [?[? [?]]]]; try eassumption; dcr.
         stuck2. repeat get_functional; subst. simpl in *.
         rewrite map_length in len. rewrite fresh_list_length in len. congruence.
-      * destruct if. pfold. econstructor 3; try eapply X; try eapply star2_refl.
+      * cases. pfold. econstructor 3; try eapply X; try eapply star2_refl.
         simpl in *. congruence. stuck2; eauto.
         stuck2; eauto.
         edestruct AIR5_nth2 as [? [?[? [?]]]]; try eassumption; dcr. eauto.
@@ -224,7 +224,7 @@ Proof.
         simpl in *. congruence. stuck2; eauto.
         stuck2; eauto.
         edestruct AIR5_nth2 as [? [?[? [?]]]]; try eassumption; dcr. eauto.
-    + destruct if.
+    + cases.
       pfold. econstructor 3; try eapply H2; try eapply star2_refl.
       simpl in *. congruence. stuck2. stuck2.
       edestruct list_to_stmt_crash; eauto.

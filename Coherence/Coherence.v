@@ -297,7 +297,7 @@ Lemma rd_agree_update DL L E G x v
 Proof.
   intros. hnf; intros.
   unfold restrict in H0. eapply map_get_4 in H0; dcr.
-  unfold restr in H2. destruct x0; isabsurd. destruct if in H2; isabsurd.
+  unfold restr in H2. destruct x0; isabsurd. cases in H2; isabsurd.
   inv H2. eapply agree_on_update_dead. rewrite s0. cset_tac.
   eapply RA; eauto.
 Qed.

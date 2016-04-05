@@ -16,14 +16,14 @@ Lemma combine_agree X `{OrderedType X} Y (D:set X) (ϱ ϱ':X->Y)
 : agree_on eq D ϱ (combine D ϱ ϱ').
 Proof.
   unfold combine; hnf; intros; simpl.
-  destruct if; eauto.
+  cases; eauto.
 Qed.
 
 Lemma combine_agree' X `{OrderedType X} Y (D D':set X) (ϱ ϱ':X->Y)
 : disj D D' -> agree_on eq D ϱ' (combine D' ϱ ϱ').
 Proof.
   intros. unfold combine; hnf; intros; simpl.
-  destruct if; eauto.
+  cases; eauto.
 Qed.
 
 (** ** Given an renamedApart program, every alpha-equivalent program
@@ -363,7 +363,7 @@ Proof.
     case_eq (exp_idx symb' e'); intros; simpl; eauto.
     erewrite IHalpha; eauto with cset.
     simpl; intros.
-    lud; repeat destruct if; try congruence.
+    lud; repeat cases; try congruence.
     exploit H1; eauto. eapply pos_inc with (k':=1); eauto.
   - erewrite exp_alpha_real; eauto with cset.
     erewrite IHalpha1; eauto with cset.
@@ -371,7 +371,7 @@ Proof.
   - erewrite smap_agree_2; eauto; [| intros; erewrite exp_alpha_real; eauto].
     erewrite IHalpha; eauto.
     simpl; intros.
-    lud; repeat destruct if; try congruence.
+    lud; repeat cases; try congruence.
     exploit H1; eauto. eapply pos_inc with (k':=1); eauto.
   - erewrite IHalpha; eauto with cset.
     erewrite smap_agree_2; eauto.

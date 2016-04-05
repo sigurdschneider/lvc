@@ -56,7 +56,7 @@ Section Translate.
     -> forall y : var, M2 [ Z <-- (lookup_list MC Y) ] y = (M1 (par_move f fC Z Y y)).
   Proof.
     general induction Z; destruct Y; isabsurd; eauto.
-    simpl. destruct if; lud; intuition.
+    simpl. cases; lud; intuition.
   Qed.
 
   Lemma symb_eval p (M1 M2 : env X) f
@@ -82,7 +82,7 @@ Section Translate.
     assert (check_pmove vars p1 p2 = true) by cbool. clear COK.
     unfold agree_on,check_pmove in *; intros.
     eapply (@for_all_2 var _ _ _ vars) in H0.
-    specialize (H0 x H1); simpl in *. destruct if in H; simpl in *.
+    specialize (H0 x H1); simpl in *. cases in H; simpl in *.
     erewrite symb_eval with (M1:=M) (f:=fun x => x); eauto.
     erewrite symb_eval with (M1:=M) (f:=fun x => x); eauto.
     intuition.
@@ -97,7 +97,7 @@ Section Translate.
     (Src:forall x : var, x \In of_list l2 -> M x <> ⎣⎦)
     : forall x : var, x \In pmov_source_set p1 -> M x <> ⎣⎦.
   Proof.
-    unfold check_source_set in COK. destruct if in COK; isabsurd.
+    unfold check_source_set in COK. cases in COK; isabsurd.
     simpl in *.
     intros. eapply Src. rewrite s in H0. cset_tac; intuition.
   Qed.
@@ -187,7 +187,7 @@ Section GlueCode.
         agree_on eq vars M' (M[ l1 <-- lookup_list M l2]).
   Proof.
     unfold compile_parallel_assignment; intros.
-    destruct if in H; try discriminate. inv H.
+    cases in H; try discriminate. inv H.
     eapply validate_parallel_assignment_correct; eauto.
   Qed.
 

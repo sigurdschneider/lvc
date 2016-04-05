@@ -58,7 +58,7 @@ Coercion sum_option {T:Type} : (T+(T -> False)) -> option T.
 destruct 1. eapply (Some t). eapply None.
 Defined.
 
-Tactic Notation "destruct" "if" "in" hyp(H) :=
+Tactic Notation "cases" "in" hyp(H) :=
   match goal with
     | H : context [if sumbool_bool ?P then _ else _] |- _ => destruct P
     | H : context [if ?P then _ else _] |- _ =>
@@ -71,7 +71,7 @@ Tactic Notation "destruct" "if" "in" hyp(H) :=
       end
   end.
 
-Tactic Notation "destruct" "if" :=
+Tactic Notation "cases" :=
   match goal with
     | |- context [if (if ?P then true else false) then _ else _] => destruct P
     | |- context [if ?P then _ else _] =>

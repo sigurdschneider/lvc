@@ -183,7 +183,7 @@ Lemma copyPropagate_sound_eqn s ang Es ϱ
               ang.
 Proof.
   intros. general induction H; invt labelsDefined; simpl.
-  - destruct if.
+  - cases.
     + inv i; simpl in *. econstructor; eauto.
       * { eapply eqn_sound_entails_monotone; eauto.
           - eapply IHrenamedApart; eauto.
