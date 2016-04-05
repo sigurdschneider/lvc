@@ -387,3 +387,13 @@ Proof.
   - rewrite rev_length in H2. orewrite (length L - n = 0).
     inv H1; isabsurd; eauto using get.
 Qed.
+
+Lemma get_app_right_ge X L L' n (x:X)
+  : n >= length L -> get (L ++ L') n x -> get L' (n - length L) x.
+Proof.
+  intros. general induction L; simpl in *; eauto; try omega.
+  - orewrite (n - 0 = n); eauto.
+  - inv H0; simpl.
+    + exfalso; omega.
+    + eapply IHL; eauto. omega.
+Qed.
