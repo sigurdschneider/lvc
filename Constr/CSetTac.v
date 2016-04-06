@@ -248,7 +248,6 @@ Qed.
         assert (A ⊆ ∅);
           [ let H := fresh "H" in
             edestruct (double_inclusion A ∅) as [[H ?] ?]; eauto| clear H]
-      | [ H : ?s [=] ?t |- _ ] => unfold Equal in H
       | [ H : ?A ⊆ ∅ |- _ ] =>
         assert (forall a, a ∈ A -> False);[
             let a := fresh "a" in let C := fresh "H" in
@@ -278,7 +277,49 @@ Qed.
         | [ H : x ∈ s -> False |- _ ] => fail
         | _ => decide (x ∈ s)
         end
-  end.
+      | [ INCL: ?s1 ⊆ ?s2, NINCL : ~ ?t1 ⊆ ?t2 |- _ ] =>
+        match s1 with
+        | t1 =>
+          match s2 with
+          | t2 => exfalso; eapply NINCL, INCL
+          | _ => match goal with
+                | [ H : s2 [=] t2 |- _ ] => exfalso; eapply NINCL; rewrite <- H; eapply INCL
+                | [ H : t2 [=] s2 |- _ ] => exfalso; eapply NINCL; rewrite H; eapply INCL
+                | [ H : s2 ⊆ t2 |- _ ] => exfalso; eapply NINCL; rewrite <- H; eapply INCL
+                end
+          end
+        | _ => match goal with
+              | [ H1 : s1 [=] t1 |- _ ] =>
+                match s2 with
+                | t2 => exfalso; eapply NINCL; rewrite <- H1; eapply INCL
+                | _ => match goal with
+                      | [ H : s2 [=] t2 |- _ ] => exfalso; eapply NINCL; rewrite <- H1, <- H; eapply INCL
+                      | [ H : t2 [=] s2 |- _ ] => exfalso; eapply NINCL; rewrite <- H1, H; eapply INCL
+                      | [ H : s2 ⊆ t2 |- _ ] => exfalso; eapply NINCL; rewrite <- H1, <- H; eapply INCL
+                      end
+                end
+              | [ H1 : t1 [=] s1 |- _ ] =>
+                match s2 with
+                | t2 => exfalso; eapply NINCL; rewrite H1;  INCL
+                | _ => match goal with
+                      | [ H : s2 [=] t2 |- _ ] => exfalso; eapply NINCL; rewrite H1, <- H; eapply INCL
+                      | [ H : t2 [=] s2 |- _ ] => exfalso; eapply NINCL; rewrite H1, H; eapply INCL
+                      | [ H : s2 ⊆ t2 |- _ ] => exfalso; eapply NINCL; rewrite H1, <- H; eapply INCL
+                      end
+                end
+              | [ H1 : s1 ⊆ t1 |- _ ] =>
+                match s2 with
+                | t2 => exfalso; eapply NINCL; rewrite <- H1; eapply INCL
+                | _ => match goal with
+                      | [ H : s2 [=] t2 |- _ ] => exfalso; eapply NINCL; rewrite <- H1, <- H; eapply INCL
+                      | [ H : t2 [=] s2 |- _ ] => exfalso; eapply NINCL; rewrite <- H1, H; eapply INCL
+                      | [ H : s2 ⊆ t2 |- _ ] => exfalso; eapply NINCL; rewrite <- H1, <- H; eapply INCL
+                      end
+                end
+              end
+        end
+      | [ H : ?s [=] ?t |- _ ] => unfold Equal in H
+    end.
 
   Ltac mycleartrivial :=
     try (progress (clear_trivial_eqs;

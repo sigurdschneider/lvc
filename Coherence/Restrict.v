@@ -20,9 +20,8 @@ Qed.
 Lemma restr_idem G o G'
   : G' ⊆ G -> restr G' (restr G o) = restr G' o.
 Proof.
-  unfold restr; destruct o. repeat cases; eauto; isabsurd.
-  intros. exfalso. eapply n; cset_tac; intuition.
-  eauto.
+  unfold restr; destruct o; eauto. repeat cases; eauto; isabsurd.
+  intros. exfalso; firstorder.
 Qed.
 
 Lemma restr_comm o G G'
@@ -37,9 +36,7 @@ Proof.
   unfold Proper, respectful; intros.
   destruct x0,y0; unfold restr;
   repeat cases; try econstructor;
-  inv H0; eauto.
-  exfalso. eapply n. rewrite <- H3, <- H; eauto.
-  exfalso. eapply n. rewrite H3, H; eauto.
+  inv H0; eauto; cset_tac.
 Qed.
 
 Instance restr_morphism_eq
@@ -48,9 +45,7 @@ Proof.
   unfold Proper, respectful; intros.
   destruct x0,y0; unfold restr;
   repeat cases; try econstructor;
-  inv H0; eauto.
-  exfalso. eapply n. rewrite <- H; eauto.
-  exfalso. eapply n. rewrite H; eauto.
+  inv H0; eauto; cset_tac.
 Qed.
 
 Definition restrict (DL:list (option (set var))) (G:set var)
@@ -149,8 +144,8 @@ Proof.
     f_equal. eauto.
   - destruct a; unfold restr in H1; dcr.
     + exfalso. cases in H1; isabsurd.
-      simpl in H0; dcr. eapply n. cset_tac.
-    + f_equal. eapply IHDL; eauto.
+      simpl in H0; dcr. cset_tac.
+    + f_equal. eauto.
 Qed.
 
 Lemma restrict_subset2 DL DL' G G'
@@ -162,7 +157,7 @@ Proof.
   - inv pf.
     + simpl. econstructor.
     + unfold restr. repeat cases; try econstructor; eauto.
-      exfalso. eapply n. transitivity G; eauto. rewrite <- s; eauto.
+      exfalso. unfold flip in H1. rewrite H0 in COND. cset_tac.
 Qed.
 
 
@@ -175,20 +170,19 @@ Proof.
   - inv pf.
     + simpl. econstructor.
     + unfold restr. repeat cases; try econstructor; eauto.
-      exfalso. eapply n. transitivity G; eauto. rewrite <- s; eauto.
-      rewrite H1; reflexivity.
+      cset_tac.
 Qed.
 
 
 Lemma restr_comp_meet G o G'
   : restr G' (restr G o) = restr (G ∩ G') o.
 Proof.
-  unfold restr; destruct o.
+  unfold restr; destruct o; eauto.
   repeat cases; eauto; isabsurd.
   - cset_tac; intuition.
-  - exfalso; eapply n. rewrite s1. cset_tac; intuition.
-  - exfalso; eapply n. rewrite s0. cset_tac; intuition.
-  - eauto.
+  - rewrite COND0 in NOTCOND. exfalso; eapply NOTCOND.
+    cset_tac.
+  - rewrite COND in NOTCOND. exfalso; eapply NOTCOND. cset_tac.
 Qed.
 
 Lemma restrict_comp_meet DL G G'
@@ -225,10 +219,10 @@ Proof.
   general induction DL; simpl in *; try destruct a; dcr; eauto.
   f_equal; eauto.
   unfold restr. repeat cases; eauto.
-  exfalso. eapply n. eapply meet_incl_eq in H0; eauto.
+  exfalso. eapply NOTCOND. eapply meet_incl_eq in H0; eauto.
   rewrite meet_comm in H0. rewrite <- incl_meet in H0; eauto.
   rewrite H0. eapply meet_incl; reflexivity.
-  exfalso. eapply n. eapply meet_incl_eq in H0; eauto. symmetry in H0.
+  exfalso. eapply NOTCOND. eapply meet_incl_eq in H0; eauto. symmetry in H0.
   rewrite meet_comm in H0. rewrite <- incl_meet in H0; eauto.
   rewrite H0. eapply meet_incl; reflexivity.
   f_equal; eauto.
@@ -244,8 +238,8 @@ Proof.
   intros. general induction DL; simpl. econstructor.
   unfold restr. unfold lookup_set_option.
   destruct a; repeat cases;econstructor; eauto; try econstructor; eauto.
-  - exfalso. eapply n. lset_tac. eapply H0. eapply lookup_set_incl; lset_tac.
-  - exfalso. eapply n. cset_tac.
+  - exfalso. eapply NOTCOND. lset_tac. eapply H0. eapply lookup_set_incl; lset_tac.
+  - exfalso. eapply NOTCOND. cset_tac.
 Qed.
 
 Lemma list_eq_fstNoneOrR_incl DL ϱ A B
@@ -308,7 +302,7 @@ Proof.
   - destruct DL; simpl in *; isabsurd.
     inv Heql. unfold restr in H0. destruct o.
     cases in H0. inv H0.
-    eauto using get. congruence. congruence.
+    eauto using get. congruence.
   - destruct DL; simpl in *; isabsurd.
     inv Heql. edestruct IHget; eauto.
     eauto using get.
@@ -331,7 +325,7 @@ Proof.
 Qed.
 
 Lemma restrict_disj (DL : 〔؟⦃var⦄〕) (s t : ⦃var⦄)
-  : (forall n u, get DL n 「u」 -> disj (s ∩ t) u)
+  : (forall n u, get DL n (Some u) -> disj (s ∩ t) u)
     -> restrict DL (s \ t) = restrict DL s.
 Proof.
   general induction DL; simpl; eauto.
@@ -339,8 +333,8 @@ Proof.
   unfold restr. destruct a; eauto.
   exploit H; eauto using get.
   repeat cases; eauto.
-  - exfalso. rewrite s1 in n. cset_tac.
-  - exfalso. eapply n.
+  - exfalso. rewrite COND in NOTCOND. cset_tac.
+  - exfalso. eapply NOTCOND.
     intros a aIns.
     cset_tac. eapply H0; eauto. cset_tac.
 Qed.

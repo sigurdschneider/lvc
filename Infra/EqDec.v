@@ -8,7 +8,7 @@
 
 Require Export Coq.Classes.EquivDec.
 Require Export Computable.
-Require Import Option.
+Require Import Option AutoIndTac.
 
 Global Instance inst_equiv_cm A R `(EqDec A R) (x y : A) :
   Computable (x === y).
@@ -60,28 +60,34 @@ Defined.
 
 Tactic Notation "cases" "in" hyp(H) :=
   match goal with
-    | H : context [if sumbool_bool ?P then _ else _] |- _ => destruct P
-    | H : context [if ?P then _ else _] |- _ =>
-      match P with
-        | decision_procedure _ => destruct P
-        | _ =>
-          let EQ := fresh "Heq" in
-          let b := fresh "b" in
-          remember P as b eqn:EQ; destruct b
-      end
+  | H : context [if sumbool_bool ?P then _ else _] |- _ => destruct P
+  | H : context [if ?P then _ else _] |- _ =>
+    match P with
+    | decision_procedure _ =>
+      let EQ := fresh "COND" in
+      let NEQ := fresh "NOTCOND" in
+      destruct P as [EQ|NEQ]; [ clear_trivial_eqs | try now (exfalso; eauto) ]
+    | _ =>
+      let EQ := fresh "Heq" in
+      let b := fresh "b" in
+      remember P as b eqn:EQ; destruct b
+    end
   end.
 
 Tactic Notation "cases" :=
   match goal with
-    | |- context [if (if ?P then true else false) then _ else _] => destruct P
-    | |- context [if ?P then _ else _] =>
-      match P with
-        | decision_procedure _ => destruct P
-        | _ =>
-          let EQ := fresh "Heq" in
-          let b := fresh "b" in
-          remember P as b eqn:EQ; destruct b
-      end
+  | |- context [if (if ?P then true else false) then _ else _] => destruct P
+  | |- context [if ?P then _ else _] =>
+    match P with
+    | decision_procedure _ =>
+      let EQ := fresh "COND" in
+      let NEQ := fresh "NOTCOND" in
+      destruct P as [EQ|NEQ]; [ clear_trivial_eqs | try now (exfalso; eauto) ]
+    | _ =>
+      let EQ := fresh "Heq" in
+      let b := fresh "b" in
+      remember P as b eqn:EQ; destruct b
+    end
   end.
 
 Extraction Inline sum_option.

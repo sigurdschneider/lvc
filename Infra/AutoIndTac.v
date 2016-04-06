@@ -99,7 +99,7 @@ Ltac clear_if_dup H :=
 
 Ltac inv_eqs :=
   repeat (match goal with
-              | [ H : @eq _ ?x ?x |- _ ] => fail (* nothing to do on x = x *)
+              | [ H : @eq _ ?x ?x |- _ ] => clear H
               | [ H : @eq _ ?x ?y |- _ ] => progress (inversion H; subst; try clear_dup)
             end).
 

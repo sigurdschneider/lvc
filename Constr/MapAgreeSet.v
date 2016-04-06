@@ -22,11 +22,11 @@ Section MapAgreeSet.
     intros.
     assert (Proper (_eq ==> eq) (fun x : X => if [m x === m' x] then true else false)). {
       hnf; intros. cbv beta. repeat cases; try reflexivity.
-       - exfalso. eapply n. rewrite <- H2; eauto. rewrite H1; eauto.
-       - exfalso; eapply n. rewrite H2; eauto. rewrite H1; eauto. }
+       - exfalso. eapply NOTCOND. rewrite <- H2; eauto. rewrite H1; eauto.
+       - exfalso; eapply NOTCOND. rewrite H2; eauto. rewrite H1; eauto. }
     split; intros.
     + pose proof (filter_1 H4). pose proof (filter_2 H4).
-      cbv beta in *. cases in H6; eauto. congruence.
+      cbv beta in *. cases in H6; eauto.
     + eapply filter_3.
       - eassumption.
       - eapply H4.

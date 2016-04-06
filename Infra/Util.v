@@ -583,4 +583,3 @@ Notation "'tab' s '‖' L '‖'" := (List.map (fun _ => s) L)
 
 Notation "〔 X 〕" := (list X) (format "'〔' X '〕'") : type_scope.
 Notation "؟ X" := (option X) (format "'؟' X", at level 50, X at level 0) : type_scope.
-Notation "「 t 」" := (Some t) (at level 9, format "'「' t '」'").

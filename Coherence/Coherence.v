@@ -298,7 +298,7 @@ Proof.
   intros. hnf; intros.
   unfold restrict in H0. eapply map_get_4 in H0; dcr.
   unfold restr in H2. destruct x0; isabsurd. cases in H2; isabsurd.
-  inv H2. eapply agree_on_update_dead. rewrite s0. cset_tac.
+  inv H2. eapply agree_on_update_dead. rewrite COND. cset_tac.
   eapply RA; eauto.
 Qed.
 

@@ -572,3 +572,16 @@ Lemma incl_minus_union X `{OrderedType X} s t u
 Proof.
   cset_tac; intuition.
 Qed.
+
+Lemma incl_union_incl_minus X `{OrderedType X} s t u
+  : s \ t ⊆ u
+    -> s ⊆ t ∪ u.
+Proof.
+  cset_tac. decide (a ∈ t); cset_tac. right. intuition.
+Qed.
+
+Lemma incl_meet_split X `{OrderedType X} s t u
+  : s ⊆ t -> s ⊆ u -> s ⊆ t ∩ u.
+Proof.
+  cset_tac.
+Qed.

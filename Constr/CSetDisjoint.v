@@ -152,3 +152,11 @@ Lemma not_incl_minus X `{OrderedType X} (s t u: set X)
 Proof.
   cset_tac; intuition.
 Qed.
+
+Lemma disj_minus X `{OrderedType X} s t u
+  : (s ∩ t) ⊆ u
+    -> disj s (t \ u).
+Proof.
+  intros. hnf; intros. specialize (H0 x).
+  cset_tac.
+Qed.
