@@ -267,6 +267,13 @@ Qed.
         | [ H : a ∈ s -> False |- _ ] => fail
         | _ => decide (a ∈ s)
         end
+      | [ |- ( _ /\ (?a ∈ ?s -> False) \/ ?a ∈ ?s) ] =>
+        lazymatch goal with
+        | [ H : a ∈ s |- _ ] => fail
+        | [ H : a ∉ s |- _ ] => fail
+        | [ H : a ∈ s -> False |- _ ] => fail
+        | _ => decide (a ∈ s)
+        end
       | [ H: (not ?A) -> False |- ?A ] => try now (eapply dneg_dec; intuition)
       | [ H : context [ InA _ ?x ?l ] |- _ ] => setoid_rewrite <- of_list_1 in H
       | [ |- context [ InA _ ?x ?l ] ] => setoid_rewrite <- of_list_1

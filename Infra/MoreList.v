@@ -454,3 +454,30 @@ Proof.
 Qed.
 
 Notation "f ⊜ L1 L2" := (zip f L1 L2) (at level 40, L1 at level 0, L2 at level 0).
+
+
+Ltac inv_get :=
+  repeat
+    (repeat (get_functional);
+      match goal with
+      | [ H :  get (take _ ?L) ?n ?x |- _ ] => eapply take_get in H; destruct H
+      | [ H : get (zip ?f ?L ?L') ?n ?x  |- _ ] =>
+        let X := fresh "X" in
+        let EQ := fresh "EQ" in
+        let GET := fresh "GET" in
+        pose proof (get_zip f _ _ H) as X; destruct X as [? [? [? [GET EQ]]]];
+        try (subst x);
+        try (simplify_eq EQ); intros;
+        clear H; rename GET into H
+      | [ H : get (List.map ?f ?L) ?n ?x |- _ ]=>
+        match goal with
+        | [H' : get ?L ?n ?y |- _ ] =>
+          let EQ := fresh "EQ" in pose proof (map_get f H' H) as EQ; clear H; invcs EQ
+        | _ => let X := fresh "X" in
+              let EQ := fresh "EQ" in
+              let GET := fresh "GET" in
+              pose proof (map_get_4 _ f H) as X; destruct X as [? [GET EQ]]; try (subst x);
+              try (simplify_eq EQ); intros;
+              clear H; rename GET into H
+        end
+      end); clear_trivial_eqs; try clear_dup.

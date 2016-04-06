@@ -30,11 +30,6 @@ Definition isImperative (o:overapproximation) :=
 
 (** ** Inductive Definition of Liveness *)
 
-Definition live_global (F:params*stmt) (alF:ann (set var)) := (getAnn alF, fst F).
-Definition live_globals F alF :=
-  zip live_global F alF.
-Definition live_oglobals F alF := List.map Some (live_globals F alF).
-
 Inductive live_sound (i:overapproximation) : list (set var*params) -> stmt -> ann (set var) -> Prop :=
 | LOpr x Lv b lv e (al:ann (set var))
   :  live_sound i Lv b al
@@ -65,11 +60,11 @@ Inductive live_sound (i:overapproximation) : list (set var*params) -> stmt -> an
   -> x ∈ getAnn al
   -> live_sound i Lv (stmtExtern x f Y b) (ann1 lv al)
 | LLet Lv F b lv als alb
-  : live_sound i (live_globals F als++Lv) b alb
+  : live_sound i (zip pair (getAnn ⊝ als) (fst ⊝ F) ++ Lv) b alb
     -> length F = length als
   -> (forall n Zs a, get F n Zs ->
                get als n a ->
-               live_sound i (live_globals F als ++ Lv) (snd Zs) a)
+               live_sound i (zip pair (getAnn ⊝ als) (fst ⊝ F) ++ Lv) (snd Zs) a)
   -> (forall n Zs a, get F n Zs ->
                get als n a ->
                (of_list (fst Zs)) ⊆ getAnn a
@@ -193,15 +188,13 @@ Definition live_rename_L (ϱ:env var) DL
 
 Lemma live_rename_L_globals ϱ als F
 : length F = length als
-  -> live_rename_L ϱ (live_globals F als) =
-    live_globals
-      (List.map
-         (fun Zs0 : params * stmt =>
-            (lookup_list ϱ (fst Zs0), rename ϱ (snd Zs0))) F)
-      (List.map (mapAnn (lookup_set ϱ)) als).
+  -> live_rename_L ϱ (zip pair (getAnn ⊝ als) (fst ⊝ F)) =
+    zip pair
+        (getAnn ⊝ (List.map (mapAnn (lookup_set ϱ)) als))
+        (fst ⊝ (List.map (fun Zs0 => (lookup_list ϱ (fst Zs0), rename ϱ (snd Zs0))) F)).
 Proof.
   intros. length_equify. general induction H; simpl; eauto.
-  - f_equal; eauto. unfold live_global. rewrite getAnn_mapAnn; reflexivity.
+  - f_equal; eauto. rewrite getAnn_mapAnn; reflexivity.
 Qed.
 
 Lemma live_rename_L_app ϱ L L'
@@ -409,10 +402,10 @@ Lemma approx_mutual_block alF F Lv i L L'
   ->  (forall (n : nat) Zs (als : ann (set var)),
         get F n Zs ->
         get alF n als -> live_sound Imperative Lv (snd Zs) als)
-  -> mutual_block (approxI Lv L L') i (live_globals F alF)
+  -> mutual_block (approxI Lv L L') i (zip pair (getAnn ⊝ alF) (fst ⊝ F))
                  (mapi_impl I.mkBlock i F) (mapi_impl I.mkBlock i F).
 Proof.
-  unfold I.mkBlocks, live_globals, mapi.
+  unfold I.mkBlocks, mapi.
   intros. length_equify.
   general induction H; simpl.
   - econstructor.

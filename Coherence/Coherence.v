@@ -8,10 +8,7 @@ Set Implicit Arguments.
 
 (** * Definition of Coherence: [srd] *)
 
-Definition global (F:params*stmt) (alF:ann (set var)) := getAnn alF \ of_list (fst F).
-Definition globals (F:list (params*stmt)) (alF:list (ann (set var))) :=
-  zip global F alF.
-Definition oglobals F alF := List.map Some (globals F alF).
+Notation "'oglobals' F alF" := (List.map Some ((getAnn ⊝ alF) \\ (fst ⊝ F))) (at level 50, F, alF at level 0).
 
 Inductive srd : list (option (set var)) -> stmt -> ann (set var) -> Prop :=
 | srdExp DL x e s lv al
@@ -88,7 +85,7 @@ match goal with
   | [ H: length ?L = length ?L' |- length ?L = length (List.map ?f ?L')] => rewrite map_length; eauto
 end.
 
-Lemma inv_oglobals F als k lv
+Lemma inv_oglobals (F:〔params*stmt〕) als k lv
 : length F = length als
   -> get (oglobals F als) k ⎣lv⎦
   -> exists Zs a, get F k Zs /\ get als k a /\ lv = getAnn a \ of_list (fst Zs).
@@ -101,9 +98,9 @@ Proof.
       do 2 eexists; eauto using get.
 Qed.
 
-Lemma inv_globals F als k lv
+Lemma inv_globals (F:〔params*stmt〕) als k lv
 : length F = length als
-  -> get (globals F als) k lv
+  -> get ((getAnn ⊝ als) \\ (fst ⊝ F)) k lv
   -> exists Zs a, get F k Zs /\ get als k a /\ lv = getAnn a \ of_list (fst Zs).
 Proof.
   intros. length_equify.
@@ -115,10 +112,10 @@ Proof.
 Qed.
 
 Lemma renamedApart_coherent s ang DL
-: renamedApart s ang
-  -> labelsDefined s (length DL)
-  -> bounded (List.map Some DL) (fst (getAnn ang))
-  -> srd (List.map Some DL) s (mapAnn fst ang).
+  : renamedApart s ang
+    -> labelsDefined s (length DL)
+    -> bounded (List.map Some DL) (fst (getAnn ang))
+    -> srd (List.map Some DL) s (mapAnn fst ang).
 Proof.
   intros. general induction H; invt labelsDefined; simpl in * |- *; pe_rewrite.
   - econstructor; eauto.
@@ -134,42 +131,44 @@ Proof.
     erewrite bounded_restrict_eq; simpl; eauto. eauto with cset.
   - econstructor; eauto.
     + intros. inv_map H10.
-      exploit H1; eauto. instantiate (1:=globals F (List.map (mapAnn fst) ans) ++ DL).
-      rewrite app_length. unfold globals. rewrite zip_length2; eauto.
-      edestruct H2; eauto; dcr.
-      rewrite List.map_app. eapply bounded_app; split; eauto.
-      rewrite H14. eapply get_bounded.
-      intros. inv_map H15. eapply inv_globals in H17.
-      destruct H17; dcr; subst.
-      inv_map H20. edestruct H2; eauto; dcr.
-      rewrite getAnn_mapAnn. rewrite H22.
-      revert H26; clear_all; cset_tac; intuition.
-      eauto with len.
-      rewrite H14. rewrite <- incl_right; eauto.
-      eapply srd_monotone. eapply H14.
-      rewrite getAnn_mapAnn; simpl.
-      repeat rewrite restrict_app. rewrite List.map_app.
-      eapply PIR2_app.
-      erewrite bounded_restrict_eq. reflexivity.
-      reflexivity.
-      eapply get_bounded.
-      intros. eapply inv_oglobals in H15.
-      destruct H15; dcr; subst.
-      inv_map H16. edestruct H2; eauto; dcr.
-      rewrite getAnn_mapAnn. rewrite H18.
-      decide (n=n0); subst. repeat get_functional.
-      rewrite H18. clear_all; cset_tac; intuition.
-      exploit H3; eauto. eapply zip_get; eauto. eapply zip_get; eauto.
-      unfold defVars in H19. simpl in *.
-      edestruct H2; try eapply H12; eauto. dcr. rewrite H21.
-      revert H22 H27; clear_all; cset_tac; intuition; eauto.
-      eauto with len.
-      erewrite bounded_restrict_eq; simpl; eauto.
-      edestruct H2; eauto; dcr.
-      rewrite H15. revert H19; clear_all; cset_tac; intuition; eauto.
+      exploit H1; eauto.
+      * instantiate (1:=(getAnn ⊝ (mapAnn fst ⊝ ans)) \\ (fst ⊝ F) ++ DL).
+        rewrite app_length. rewrite zip_length2; eauto with len.
+        repeat rewrite map_length. rewrite <- H. eauto.
+      * edestruct H2; eauto; dcr.
+        rewrite List.map_app. eapply bounded_app; split; eauto.
+        rewrite H14. eapply get_bounded.
+        intros. inv_map H15. eapply inv_globals in H17.
+        destruct H17; dcr; subst.
+        inv_map H20. edestruct H2; eauto; dcr.
+        rewrite getAnn_mapAnn. rewrite H22.
+        revert H26; clear_all; cset_tac; intuition.
+        eauto with len.
+        rewrite H14. rewrite <- incl_right; eauto.
+      * eapply srd_monotone. eapply H14.
+        rewrite getAnn_mapAnn; simpl.
+        repeat rewrite restrict_app. rewrite List.map_app.
+        eapply PIR2_app.
+        erewrite bounded_restrict_eq. reflexivity.
+        reflexivity.
+        eapply get_bounded.
+        intros. eapply inv_oglobals in H15.
+        destruct H15; dcr; subst.
+        inv_map H16. edestruct H2; eauto; dcr.
+        rewrite getAnn_mapAnn. rewrite H18.
+        decide (n=n0); subst. repeat get_functional.
+        rewrite H18. clear_all; cset_tac; intuition.
+        exploit H3; eauto. eapply zip_get; eauto. eapply zip_get; eauto.
+        unfold defVars in H19. simpl in *.
+        edestruct H2; try eapply H12; eauto. dcr. rewrite H21.
+        revert H22 H27; clear_all; cset_tac; intuition; eauto.
+        eauto with len.
+        erewrite bounded_restrict_eq; simpl; eauto.
+        edestruct H2; eauto; dcr.
+        rewrite H15. revert H19; clear_all; cset_tac; intuition; eauto.
     + eapply srd_monotone.
-      eapply (IHrenamedApart (globals F (List.map (mapAnn fst) ans) ++ DL)); eauto.
-      * unfold globals. rewrite app_length, zip_length2; eauto.
+      eapply (IHrenamedApart ((getAnn ⊝ (mapAnn fst ⊝ ans)) \\ (fst ⊝ F) ++ DL)); eauto.
+      * rewrite app_length, zip_length2, map_length, map_length, <- H; eauto with len.
       * pe_rewrite. rewrite List.map_app. rewrite bounded_app. split; eauto.
         eapply get_bounded.
         intros. inv_map H9. eapply inv_globals in H10.
@@ -182,28 +181,13 @@ Qed.
 
 (** *** In a coherent program, the globals of every function that can eventually be called are live *)
 
-Lemma eqReq_oglobals_liveGlobals F als
+Lemma eqReq_oglobals_liveGlobals (F:〔params*stmt〕) als
 : length F = length als
-  -> PIR2 eqReq (oglobals F als) (Liveness.live_globals F als).
+  -> PIR2 eqReq (oglobals F als) (zip pair (getAnn ⊝ als) (fst ⊝ F)).
 Proof.
   intros. length_equify. general induction H; simpl; eauto using PIR2.
-  - econstructor.
   - econstructor; eauto.
     econstructor; reflexivity.
-Qed.
-
-Lemma oglobals_length F als
-: length F = length als
-  -> length (oglobals F als) = length F.
-Proof.
-  intros. unfold oglobals. rewrite map_length.
-  unfold globals. rewrite zip_length2; eauto.
-Qed.
-
-Lemma liveGlobals_length DL
-: length (live_globals DL) = length DL.
-Proof.
-  intros. unfold live_globals. rewrite map_length; eauto.
 Qed.
 
 
@@ -239,19 +223,20 @@ Proof.
     simpl in *; dcr.
     rewrite restrict_app in H11.
     assert (length F = length (restrict (oglobals F als) (getAnn x \ of_list (fst Zs)))).
-    rewrite restrict_length.
-    rewrite oglobals_length; eauto.
+    rewrite restrict_length. eauto with len.
     rewrite H7 in H11. eapply shift_get in H11.
     eapply restrict_get in H11; dcr.
     eexists; split; eauto.
     eapply get_app_le in H19.
     eapply inv_oglobals in H19. destruct H19; dcr. repeat get_functional; subst.
-    rewrite H22, H20; eauto. eauto. rewrite oglobals_length; eauto.
+    rewrite H22, H20; eauto. eauto.
+    rewrite map_length, zip_length2, map_length, <- H; eauto with len.
   - edestruct IHsrd; eauto using PIR2_app, restrict_eqReq, eqReq_oglobals_liveGlobals.
     destruct f; simpl in *.
     dcr.
-    erewrite <- oglobals_length in H7. eapply shift_get in H7.
-    eexists; split; eauto. rewrite H8; eauto. eauto.
+    assert (LEN: length F = length (oglobals F als)) by eauto with len.
+    erewrite LEN in H7. eapply shift_get in H7.
+    eexists; split; eauto. rewrite H8; eauto.
 Qed.
 
 (** *** On a coherent program a liveness analysis which is sound imperatively is also sound functionally. *)
@@ -275,7 +260,7 @@ Proof.
       eapply get_app_le in H18; simpl.
       eapply inv_oglobals in H18. destruct H18; dcr. simpl in *. repeat get_functional; subst.
       rewrite H19; eauto. eauto.
-      rewrite oglobals_length; eauto using get_length.
+      rewrite map_length, zip_length2, map_length, <- H; eauto using get_range with len.
 Qed.
 
 (** ** Definition of invariance *)
@@ -450,10 +435,8 @@ Lemma rd_agree_extend F als AL L E
 Proof.
   intros. hnf; intros.
   assert (length (F.mkBlocks E F) = length (oglobals F als)).
-  rewrite oglobals_length. unfold F.mkBlocks, mapi. rewrite mapi_length; eauto.
-  eauto.
-  assert (length (oglobals F als) = length F).
-  rewrite oglobals_length; eauto.
+  unfold F.mkBlocks, mapi. rewrite mapi_length; eauto. eauto with len.
+  assert (length (oglobals F als) = length F) by eauto with len.
   eapply get_app_cases in H2; eauto. destruct H2.
   - eapply get_in_range_app in H1; eauto.
     eapply inv_oglobals in H2; eauto. destruct H2; dcr; subst; eauto.
@@ -549,31 +532,19 @@ Proof.
   - one_step.
     eapply srdSim_sim; econstructor;
     eauto using agree_on_incl, PIR2_app, eqReq_oglobals_liveGlobals, rd_agree_extend.
-    rewrite zip_app. econstructor; eauto.
+    rewrite zip_app; [|eauto 30 with len]. econstructor; eauto.
     unfold F.mkBlocks, I.mkBlocks. unfold mapi.
-    unfold oglobals at 2. unfold globals.
-    unfold Liveness.live_globals at 2.
-    unfold Liveness.live_global.
-    rewrite map_zip. rewrite zip_zip.
-    erewrite (zip_sym _ F als).
-    eapply mutual_approx; simpl; eauto; try congruence.
-    intros. simpl. rewrite <- zip_app. econstructor; eauto.
-    intros. invs H4. simpl. unfold global. simpl.
-    split. clear_all; cset_tac; intuition.
-    eexists a. split.
+    eapply mutual_approx; simpl; eauto 30 with len; try congruence.
+    intros. inv_get. rewrite <- zip_app; eauto 20 with len.
+    econstructor; eauto.
+    intros. invc H2. simpl.
+    split. unfold lminus. clear_all; cset_tac; intuition.
+    eexists x0. split.
     exploit H11; eauto. dcr; simpl in *.
-    revert H5; clear_all; cset_tac; intuition.
-    decide (a0 ∈ of_list Z); intuition.
+    unfold lminus. eauto with cset.
     split. exploit H0; eauto.
     exploit H10; eauto.
-    repeat rewrite app_length.
-    unfold Liveness.live_globals; rewrite zip_length2.
-    rewrite oglobals_length; eauto. eapply PIR2_length in ER. omega.
-    eauto.
-    unfold Liveness.live_globals; rewrite zip_length2.
-    rewrite oglobals_length; eauto. eauto.
-    unfold Liveness.live_globals; rewrite zip_length2.
-    rewrite oglobals_length; eauto. eauto.
+    eauto 30 using PIR2_length with len.
 Qed.
 
 (** ** Coherence implies invariance *)

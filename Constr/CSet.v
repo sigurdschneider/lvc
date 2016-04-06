@@ -376,7 +376,7 @@ Proof.
 Qed.
 
 Hint Resolve minus_incl_add add_single_rm_single_incl minus_incl_disj_eq
-     incl_minus_single_not_in minus_minus_minus_add
+     incl_minus_single_not_in minus_minus_minus_add equiv_minus_union
   : cset.
 
 Definition lminus X `{OrderedType X} (s:set X) L := s \ of_list L.

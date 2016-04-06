@@ -11,9 +11,6 @@ Local Arguments lminus {X} {H} s L.
 
 (** Correctness predicate for  *)
 
-Definition mergeParams (Zs:params*stmt) Za := fst Zs ++ Za.
-Definition mkGlobal lvs (Z:params) := Some (getAnn lvs \ of_list Z).
-
 Notation "'mkGlobals' F Za ans_lv" := (Some ⊝ (zip lminus (zip lminus (getAnn ⊝ ans_lv) (fst ⊝ F)) Za))
                                        (at level 50, F, Za, ans_lv at level 0).
 
@@ -257,17 +254,17 @@ Lemma approx_mutual_block n ZL DL F F' Za Za' ans ans' ans_lv ans_lv' als als' L
           get (compileF compile ZL F Za Za ans) n Zs ->
           get als n a ->
           live_sound Imperative
-                     (Liveness.live_globals (compileF compile ZL F Za Za ans) als ++ Lv) (snd Zs) a)
+                     ( zip pair (getAnn ⊝ als) (fst ⊝ (compileF compile ZL F Za Za ans)) ++ Lv) (snd Zs) a)
   : mutual_block
       (approx
          (zip pair
               (zip pair
-                   (zip Liveness.live_global (compileF compile ZL F Za Za ans) als)
+                   (zip pair (getAnn ⊝ als) (fst ⊝ (compileF compile ZL F Za Za ans)))
                    (mkGlobals F Za ans_lv)) Za ++ zip pair (zip pair Lv DL) ZL) L1X L2X)
       n
       (zip pair
            (zip pair
-                (zip Liveness.live_global (compileF compile ZL F' Za' Za ans') als')
+                (zip pair (getAnn ⊝ als') (fst ⊝ (compileF compile ZL F' Za' Za ans')))
                 (mkGlobals F' Za' ans_lv')) Za')
       (mapi_impl I.mkBlock n F')
       (mapi_impl I.mkBlock n (compileF compile ZL F' Za' Za ans')).
@@ -389,8 +386,7 @@ Proof.
     rewrite zip_length2 in H7; eauto.
     rewrite zip_length2; eauto. congruence.
     eapply trsR_sim; econstructor; eauto 20 with len.
-    + unfold Liveness.live_globals; eauto 30 with len.
-      repeat rewrite zip_app; eauto 30 with len.
+    + repeat rewrite zip_app; eauto 30 with len.
       econstructor; eauto.
       eapply approx_mutual_block; eauto.
     + simpl in *. eapply defined_on_incl; eauto.
@@ -405,10 +401,10 @@ Lemma oglobals_compileF_mkGlobals_PIR2 ZL F Za Za' ans ans_lv
          (oglobals (compileF compile ZL F Za Za' ans) ans_lv).
 Proof.
   length_equify.
-  unfold compileF, oglobals. simpl.
+  unfold compileF. simpl.
   general induction LEN1; inv LEN2; inv LEN3; simpl; eauto using PIR2.
   - econstructor.
-    + unfold lminus, global; simpl.
+    + unfold lminus; simpl.
       econstructor. rewrite of_list_app, minus_union. reflexivity.
     + eapply IHLEN1; eauto.
 Qed.
@@ -472,11 +468,11 @@ Lemma live_globals_compileF_PIR2 F als Lv Za Za' ans ZL
       (LEN3 : length F = length Za)
   : PIR2 live_ann_subset
          (zip (fun (s : set var * params) (t : params) => (fst s, snd s ++ t))
-              (Liveness.live_globals F als ++ Lv) (Za ++ ZL))
-         (Liveness.live_globals (compileF compile ZL F Za Za' ans) als ++
+              ( zip pair (getAnn ⊝ als) (fst ⊝ F) ++ Lv) (Za ++ ZL))
+         (zip pair (getAnn ⊝ als) (fst ⊝ (compileF compile ZL F Za Za' ans)) ++
                                 zip (fun (s : set var * params) (t : params) => (fst s, snd s ++ t)) Lv ZL).
 Proof.
-  length_equify. unfold Liveness.live_globals, compileF.
+  length_equify. unfold compileF.
   general induction LEN1; inv LEN2; inv LEN3; eauto using PIR2.
   econstructor; simpl; eauto.
 Qed.

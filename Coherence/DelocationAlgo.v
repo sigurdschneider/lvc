@@ -353,22 +353,17 @@ Proof.
     now (econstructor; [econstructor; eauto with cset | eauto]).
 Qed.
 
-Lemma live_globals_zip F als DL ZL (LEN1:length F = length als)
-  : Liveness.live_globals F als ++ zip pair DL ZL =
+Lemma live_globals_zip (F:〔params*stmt〕) (als:〔ann ⦃var⦄〕) DL ZL (LEN1:length F = length als)
+  : zip pair (getAnn ⊝ als) (fst ⊝ F) ++ zip pair DL ZL =
     zip pair (List.map getAnn als ++ DL) (List.map fst F ++ ZL).
 Proof with eauto with len.
-  rewrite zip_app... rewrite zip_map_l, zip_map_r. f_equal.
-  rewrite zip_sym...
+  rewrite zip_app...
 Qed.
 
 Local Ltac lnorm :=
   repeat (match goal with
           | [ H : context [ zip _ _ _ ++ zip _ _ _ ] |- _ ] => rewrite <- zip_app in H; [| eauto with len]
-          | [ H : context [ Liveness.live_globals ?F ?als ++ _ ] |- _ ] =>
-            rewrite live_globals_zip in H; [|eauto with len]
           | [ |- context [ zip _ _ _ ++ zip _ _ _ ] ] => rewrite <- zip_app; [| eauto with len]
-          | [ |- context [ Liveness.live_globals ?F ?als ++ _ ] ] =>
-            rewrite live_globals_zip; [|eauto with len]
           end).
 
 Lemma computeParameters_length DL ZL AP s lv an' LV
@@ -410,32 +405,6 @@ Qed.
 Local Create HintDb rew.
 Local Hint Extern 20 => rewrite <- zip_app : rew.
 Local Hint Extern 20 => rewrite <- live_globals_zip; eauto with len : rew.
-
-Ltac inv_get :=
-  repeat
-    (repeat (get_functional);
-      match goal with
-      | [ H :  get (take _ ?L) ?n ?x |- _ ] => eapply take_get in H; destruct H
-      | [ H : get (zip ?f ?L ?L') ?n ?x  |- _ ] =>
-        let X := fresh "X" in
-        let EQ := fresh "EQ" in
-        let GET := fresh "GET" in
-        pose proof (get_zip f _ _ H) as X; destruct X as [? [? [? [GET EQ]]]];
-        try (subst x);
-        try (simplify_eq EQ); intros;
-        clear H; rename GET into H
-      | [ H : get (List.map ?f ?L) ?n ?x |- _ ]=>
-        match goal with
-        | [H' : get ?L ?n ?y |- _ ] =>
-          let EQ := fresh "EQ" in pose proof (map_get f H' H) as EQ; clear H; invcs EQ
-        | _ => let X := fresh "X" in
-              let EQ := fresh "EQ" in
-              let GET := fresh "GET" in
-              pose proof (map_get_4 _ f H) as X; destruct X as [? [GET EQ]]; try (subst x);
-              try (simplify_eq EQ); intros;
-              clear H; rename GET into H
-        end
-      end); clear_trivial_eqs; try clear_dup.
 
 
 Lemma computeParametersF_length DL ZL AP F als k

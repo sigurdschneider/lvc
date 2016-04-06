@@ -104,20 +104,19 @@ Proof.
 Qed.
 
 
-Lemma mutual_approx_impl {A} {A'} {B} `{BlockType B} {C} `{BlockType C}
+Lemma mutual_approx_impl {A} {B} `{BlockType B} {C} `{BlockType C}
       (R: list A -> list B -> list C -> A -> B -> C -> Prop)
-      (AL:list A') DL (F:list (params*stmt)) AL' F' i f g zipf L1 L2
+      (AL:list A) DL (F:list (params*stmt)) AL' F' i f g L1 L2
 : length AL = length F
   -> F' = drop i F
   -> AL' = drop i AL
   -> (forall n a Z s,
         get AL n a
         -> get F n (Z,s)
-        -> R DL L1 L2 (zipf a (Z,s)) (f n (Z,s)) (g n (Z,s)))
+        -> R DL L1 L2 a (f n (Z,s)) (g n (Z,s)))
   -> (forall i b, i = block_n (f i b))
   -> (forall i b, i = block_n (g i b))
-  -> mutual_block (R DL L1 L2) i (zip zipf AL' F')
-                  (mapi_impl f i F') (mapi_impl g i F').
+  -> mutual_block (R DL L1 L2) i AL' (mapi_impl f i F') (mapi_impl g i F').
 Proof.
   intros.
   assert (length_eq AL' F').
@@ -129,18 +128,17 @@ Proof.
     destruct y; eapply H4; eauto using drop_eq.
 Qed.
 
-Lemma mutual_approx {A} {A'} {B} `{BlockType B} {C} `{BlockType C}
+Lemma mutual_approx {A} {B} `{BlockType B} {C} `{BlockType C}
       (R: list A -> list B -> list C -> A -> B -> C -> Prop)
-      (AL:list A') DL (F:list (params*stmt)) f g zipf L1 L2
+      (AL:list A) DL (F:list (params*stmt)) f g L1 L2
 : length AL = length F
   -> (forall n a Z s,
         get AL n a
         -> get F n (Z,s)
-        -> R DL L1 L2 (zipf a (Z,s)) (f n (Z,s)) (g n (Z,s)))
+        -> R DL L1 L2 a (f n (Z,s)) (g n (Z,s)))
   -> (forall i b, i = block_n (f i b))
   -> (forall i b, i = block_n (g i b))
-  -> mutual_block (R DL L1 L2) 0 (zip zipf AL F)
-                  (mapi_impl f 0 F) (mapi_impl g 0 F).
+  -> mutual_block (R DL L1 L2) 0 AL (mapi_impl f 0 F) (mapi_impl g 0 F).
 Proof.
   intros. eapply mutual_approx_impl; eauto.
 Qed.

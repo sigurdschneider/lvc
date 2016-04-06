@@ -585,3 +585,9 @@ Lemma incl_meet_split X `{OrderedType X} s t u
 Proof.
   cset_tac.
 Qed.
+
+Lemma equiv_minus_union X `{OrderedType X} s t
+  : s ⊆ t -> t [=] t \ s ∪ s.
+Proof.
+  cset_tac.
+Qed.
