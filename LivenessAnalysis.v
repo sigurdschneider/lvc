@@ -23,17 +23,17 @@ Defined.
 
 Definition liveness_transform (DL:list (set var * params)) st a :=
   match st, a with
-    | stmtExp x e s as st, anni1 d =>
+    | stmtLet x e s as st, anni1 d =>
       (d \ {{x}}) ∪ (if [x ∈ d] then Exp.freeVars e else ∅)
     | stmtIf e s t as st, anni2 ds dt =>
       Exp.freeVars e ∪ ds ∪ dt
-    | stmtGoto f Y as st, anni0 =>
+    | stmtApp f Y as st, anni0 =>
       let (lv,Z) := nth (counted f) DL (∅,nil) in
       lv \ of_list Z ∪ list_union (List.map Exp.freeVars (filter_by (fun x => B[x ∈ lv]) Z Y))
     | stmtReturn e as st, anni0 => Exp.freeVars e
     | stmtExtern x f Y s as st, anni1 d=>
       (d \ {{x}}) ∪ list_union (List.map Exp.freeVars Y)
-    | stmtLet Z s t as st, anni2 ds dt =>
+    | stmtFun Z s t as st, anni2 ds dt =>
        (ds \ of_list Z) ∪ dt
     | _, an => ∅
   end.

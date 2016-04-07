@@ -2,7 +2,7 @@ open List
 open Names
 
 exception Range_error of string
-exception Compiler_error
+exception Compiler_error of string
 exception FailThroughFalsehood
 
 let implode l =
@@ -27,22 +27,28 @@ let rec discard_dead lv m =
     | _, _ -> []
 
 let rec first f x =
-  if f x then x else first f (Big.succ x)
+  if f x then x else first f (x + 1)
 
-let print_var ids v = try (BigMap.find v ids) with Not_found -> "?" ^ (Big_int.string_of_big_int v)
+let print_var ids v = try (IntMap.find v ids) with Not_found -> "?" ^ (string_of_int v)
 
 let rec print_binop op =
-  match (Big_int.string_of_big_int op) with
+  match (string_of_int op) with
     | "0" -> "+"
     | "1" -> "-"
     | "2" -> "*"
     | _ -> "unknown"
 
+let rec print_unop op =
+  match (string_of_int op) with
+    | "0" -> "?"
+    | _ -> "unknown"
+
 
 let rec print_sexpr ids e =
   match e with
-    | Lvc.Con x -> Big_int.string_of_big_int x
+    | Lvc.Con x -> string_of_int x
     | Lvc.Var x -> print_var ids x
+    | Lvc.UnOp (op, e1) -> print_unop op ^ " " ^ print_sexpr ids e1
     | Lvc.BinOp (op, e1, e2) -> print_sexpr ids e1 ^ " " ^ (print_binop op) ^ " " ^ (print_sexpr ids e2)
 
 let rec print_list p l =
@@ -59,8 +65,8 @@ let rec print_nstmt ids ident s =
   let print_nstmt = print_nstmt ids in
   match s with
     | Lvc.NstmtReturn e -> print_sexpr e
-    | Lvc.NstmtGoto (f, y) -> print_var f ^ "(" ^ (print_list print_sexpr y) ^ ")"
-    | Lvc.NstmtExp (x, e, s) -> "let " ^ (print_var x) ^ " = " ^
+    | Lvc.NstmtApp (f, y) -> print_var f ^ "(" ^ (print_list print_sexpr y) ^ ")"
+    | Lvc.NstmtLet (x, e, s) -> "let " ^ (print_var x) ^ " = " ^
       (print_sexpr e) ^ " in\n" ^ print_ident ident ^
        (print_nstmt ident s)
     | Lvc.NstmtExtern (x, f, y, s) -> "let " ^ (print_var x) ^ " = extern " ^
@@ -70,7 +76,7 @@ let rec print_nstmt ids ident s =
        "if " ^ (print_sexpr v) ^ " then\n" ^
        (print_ident (ident+2)) ^ (print_nstmt (ident+2) s)
       ^ "\n" ^ print_ident ident ^ "else\n" ^ print_ident (ident+2) ^ (print_nstmt (ident+2) t) ^ "\n"
-    | Lvc.NstmtLet (f, y, s, t) -> "fun " ^
+    | Lvc.NstmtFun (f, y, s, t) -> "fun " ^
 	  (print_var f) ^ "(" ^ (print_list (print_var) y) ^ ") = \n"
 	  ^ print_ident (ident+2) ^ (print_nstmt (ident+2) s) ^ "\n" ^ print_ident ident
       ^ "in \n"
@@ -82,8 +88,8 @@ let rec print_stmt ids ident s =
   let print_stmt = print_stmt ids in
   match s with
     | Lvc.StmtReturn e -> print_sexpr e
-    | Lvc.StmtGoto (f, y) -> "λ" ^ (Big_int.string_of_big_int f) ^ "(" ^ (print_list print_sexpr y) ^ ")"
-    | Lvc.StmtExp (x, e, s) -> "let " ^ (print_var x) ^ " = " ^
+    | Lvc.StmtApp (f, y) -> "λ" ^ (string_of_int f) ^ "(" ^ (print_list print_sexpr y) ^ ")"
+    | Lvc.StmtLet (x, e, s) -> "let " ^ (print_var x) ^ " = " ^
       (print_sexpr e) ^ " in\n" ^ print_ident ident ^
       (print_stmt ident s)
     | Lvc.StmtExtern (x, f, y, s) -> "let " ^ (print_var x) ^ " = extern " ^
@@ -92,7 +98,7 @@ let rec print_stmt ids ident s =
     | Lvc.StmtIf (e, s, t) -> "if " ^ (print_sexpr e) ^ " then\n" ^
       (print_ident (ident+2)) ^ (print_stmt (ident+2) s)
       ^ "\n" ^ print_ident ident ^ "else\n" ^ print_ident (ident+2) ^ (print_stmt (ident+2) t) ^ "\n"
-    | Lvc.StmtLet (y, s, t) -> "fun " ^
+    | Lvc.StmtFun (y, s, t) -> "fun " ^
 	  "_ " ^ "(" ^ (print_list print_var y) ^ ") = \n"
 	  ^ print_ident (ident+2) ^ (print_stmt (ident+2) s) ^ "\n" ^ print_ident ident
       ^ "in \n"

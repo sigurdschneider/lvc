@@ -33,8 +33,7 @@ IL - IL/I, IL/F and Coherence
 
 Translation validation for register assignment and SSA construction
 
-This is an advancement of http://www.ps.uni-saarland.de/~sdschn/master
-
+LVC stands for Linear Verified Compiler.
 
 ## Dependencies
 
@@ -45,7 +44,7 @@ This is an advancement of http://www.ps.uni-saarland.de/~sdschn/master
 - **Coq Containers Plugin**
 
     You need to have the containers library installed:
-    http://coq.inria.fr/pylons/contribs/view/Containers/v8.4
+		http://www.lix.polytechnique.fr/coq/pylons/contribs/view/Containers/v8.4
 
 - **OCaml** (including ocamlbuild)
 

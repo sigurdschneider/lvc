@@ -1,5 +1,5 @@
 Require Import Arith Coq.Lists.List Setoid Coq.Lists.SetoidList Omega Containers.OrderedTypeEx.
-Require Export Infra.Option EqDec AutoIndTac.
+Require Export Infra.Option EqDec AutoIndTac Computable.
 
 Set Implicit Arguments.
 
@@ -241,7 +241,6 @@ Fixpoint unique X `{Equivalence X} (Y:list X) : Prop :=
     | cons x Y' => fresh x Y' /\ unique Y'
   end.
 
-
 Ltac let_case_eq :=
   match goal with
     | [ H : context [let (_, _) := ?e in _] |- _ ] =>
@@ -273,7 +272,13 @@ repeat match goal with
        end; cofix; intros.
 
 Ltac stuck :=
-  let σ := fresh "σ" in let A := fresh "A" in let v := fresh "v" in intros [v A]; inv A; isabsurd.
+  let A := fresh "A" in let v := fresh "v" in intros [v A]; inv A; isabsurd.
+
+Ltac stuck2 :=
+  let A := fresh "A" in
+  let v := fresh "v" in
+  let evt := fresh "evt" in
+  intros [v [evt A]]; inv A; isabsurd.
 
 
 Lemma modus_ponens P Q
@@ -337,8 +342,44 @@ Proof.
   intros. general induction H; simpl; eauto.
 Qed.
 
-Tactic Notation "isTrue" := simpl; econstructor.
+Inductive option_R (A B : Type) (eqA : A -> B -> Prop)
+: option A -> option B -> Prop :=
+| option_R_Some a b : eqA a b -> option_R eqA ⎣a⎦ ⎣b⎦.
 
+
+Lemma option_R_refl A R `{Reflexive A R} : forall x, option_R R ⎣x⎦ ⎣x⎦.
+intros; eauto using option_R.
+Qed.
+
+Instance option_R_sym A R `{Symmetric A R} : Symmetric (option_R R).
+hnf; intros ? [] []; eauto using option_R.
+Qed.
+
+Instance option_R_trans A R `{Transitive A R} : Transitive (option_R R).
+hnf; intros. inv H0; inv H1; econstructor; eauto.
+Qed.
+
+Section PolyIter.
+  Variable A : Type.
+
+  Fixpoint iter n (s:A) (f: nat -> A-> A) :=
+    match n with
+        | 0 => s
+        | S n => iter n (f n s) f
+    end.
+
+End PolyIter.
+
+Require Le Arith.Compare_dec.
+
+Instance le_comp (a b: nat) : Computable (lt a b).
+eapply Arith.Compare_dec.lt_dec.
+Defined.
+
+Hint Extern 20 => match goal with
+                   | [ H: ?a /\ ?b |- ?b ] => eapply H
+                   | [ H: ?a /\ ?b |- ?a ] => eapply H
+                 end.
 (*
 *** Local Variables: ***
 *** coq-load-path: (("../" "Lvc")) ***

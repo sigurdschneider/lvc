@@ -90,7 +90,7 @@ Section Translate.
   Qed.
 
   Definition check_source_set (p1 p2 : pmov) :=
-    if [ pmov_source_set p1 [=] pmov_source_set p2 ] then true else false.
+    if [ pmov_source_set p1 ⊆ pmov_source_set p2 ] then true else false.
 
   Lemma check_source_set_correct p1 l1 l2
     (COK:check_source_set p1 ((l1,l2)::nil)) (M : onv X)
@@ -99,7 +99,7 @@ Section Translate.
   Proof.
     unfold check_source_set in COK. destruct if in COK; isabsurd.
     simpl in *.
-    intros. eapply Src. rewrite e in H0. cset_tac; intuition.
+    intros. eapply Src. rewrite s in H0. cset_tac; intuition.
   Qed.
 
   End Translate.
@@ -110,7 +110,7 @@ Section GlueCode.
   Function list_to_stmt (p : list (list var * list var)) (s : stmt) {struct p} : stmt :=
     match p with
       | nil => s
-      | (x :: nil, y:: nil) :: p' => stmtExp x (var_to_exp y) (list_to_stmt p' s)
+      | (x :: nil, y:: nil) :: p' => stmtLet x (var_to_exp y) (list_to_stmt p' s)
       | _ => s
     end.
 
@@ -230,28 +230,28 @@ Qed.
 Fixpoint lower DL s (an:ann (set var))
   : status stmt :=
   match s, an with
-    | stmtExp x e s, ann1 lv ans =>
+    | stmtLet x e s, ann1 lv ans =>
       sdo sl <- lower DL s ans;
-        Success (stmtExp x e sl)
+        Success (stmtLet x e sl)
     | stmtIf x s t, ann2 lv ans ant =>
       sdo sl <- lower DL s ans;
         sdo tl <- lower DL t ant;
             Success (stmtIf x sl tl)
-    | stmtGoto l Y, ann0 lv  =>
+    | stmtApp l Y, ann0 lv  =>
        sdo Lve <- option2status (nth_error DL (counted l)) "lower: No annotation for function";
         sdo Y <- onlyVars Y;
         let '(lv', Z) := Lve in
-        compile_parallel_assignment parallel_move lv' Z Y (stmtGoto l nil)
+        compile_parallel_assignment parallel_move lv' Z Y (stmtApp l nil)
 
     | stmtReturn x, ann0 lv => Success (stmtReturn x)
     | stmtExtern x f Y s, ann1 _ ans =>
       sdo sl <- lower DL s ans;
         Success (stmtExtern x f Y sl)
-    | stmtLet Z s t, ann2 lv ans ant =>
+    | stmtFun Z s t, ann2 lv ans ant =>
       let DL' := (getAnn ans,Z) in
       sdo s' <- lower (DL' :: DL)%list s ans;
         sdo t' <- lower (DL' :: DL)%list t ant;
-        Success (stmtLet nil s' t')
+        Success (stmtFun nil s' t')
     | s, _ => Error "lower: Annotation mismatch"
   end.
 
@@ -259,7 +259,7 @@ Inductive approx
 : list (set var * list var) -> I.block -> I.block -> Prop :=
   approxI Lv s Z lv s'
   (al:ann (set var))
-  (LS:live_sound ((lv,Z)::Lv) s al)
+  (LS:live_sound Imperative ((lv,Z)::Lv) s al)
   (AL:(of_list Z) ⊆ lv)
   (EQ:getAnn al \ of_list Z ⊆ lv)
   (spm:lower ((lv,Z)::Lv) s al = Success s')
@@ -268,7 +268,7 @@ Inductive approx
 Inductive pmSim : I.state -> I.state -> Prop :=
   pmSimI Lv s (E E':onv val) L L' s'
   (al: ann (set var))
-  (LS:live_sound Lv s al)
+  (LS:live_sound Imperative Lv s al)
   (pmlowerOk:lower Lv s al = Success s')
   (LA:AIR3 approx Lv L L')
   (EEQ:agree_on eq (getAnn al) E E')

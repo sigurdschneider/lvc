@@ -1,6 +1,6 @@
 Require Export Setoid Coq.Classes.Morphisms.
 Require Export Sets SetInterface SetConstructs SetProperties.
-Require Import EqDec Get CSet Map.
+Require Import EqDec Get CSet Map AllInRel.
 
 Lemma fold_union_incl X `{OrderedType.OrderedType X} s u (x:X) y
   : x ∈ y
@@ -51,6 +51,19 @@ Proof.
   eapply union_cases in H3. firstorder.
   intuition. destruct H3; dcr. eexists; split; eauto. cset_tac; eauto.
   intuition. destruct H3; dcr. eexists; split; eauto. cset_tac; eauto.
+Qed.
+
+Lemma map_add X `{OrderedType X} Y `{OrderedType Y} (f:X->Y)
+      `{Proper _ (_eq ==> _eq) f} x t
+: map f ({x; t}) [=] {f x; map f t}.
+Proof.
+  cset_tac. repeat rewrite map_iff; eauto.
+  split; intros; cset_tac.
+  firstorder.
+  - left. rewrite H2; eauto.
+  - intuition; cset_tac.
+    + eexists x; eauto.
+    + eexists x0; eauto.
 Qed.
 
 Lemma map_empty X `{OrderedType X} Y `{OrderedType Y} (f:X->Y)
@@ -143,8 +156,8 @@ Lemma map_single {X} `{OrderedType X} Y `{OrderedType Y} (f:X->Y)
 Proof.
   hnf; intros. rewrite map_iff; eauto.
   split; intros.
-  - destruct H2; dcr. cset_tac. rewrite H4, H3; eauto.
-  - cset_tac. eexists x; split; eauto. cset_tac; intuition.
+  - destruct H2; dcr. cset_tac; intuition. rewrite H4, H3; eauto.
+  - cset_tac; intuition. eexists x; split; eauto.
 Qed.
 
 Lemma fold_single {X} `{OrderedType X} Y `{Equivalence Y} (f:X->Y->Y)
@@ -169,11 +182,7 @@ Proof.
   - eapply Add_Equal in H2. rewrite H2 in H3.
     decide (x ∈ s0).
     + rewrite fold_add in H3; eauto using union_m, transpose_union_subset.
-      cset_tac. destruct H3.
-      left. eexists x. split. eapply H2. cset_tac; intuition. eauto.
-      edestruct H0; eauto. destruct H4; dcr.
-      left; eexists x1; split; eauto. eapply H2. cset_tac; intuition.
-      exfalso; eauto.
+      cset_tac.
     + rewrite fold_add with (eqA:=Equal) in H3; eauto using union_m, transpose_union, Equal_ST.
       cset_tac. destruct H3. left; eexists x; split; eauto.
       eapply H2. cset_tac; intuition.
@@ -205,12 +214,52 @@ Proof.
 Qed.
 
 Instance fold_left_union_morphism X `{OrderedType X}:
-  Proper (list_eq Equal ==> Equal ==> Equal) (fold_left union).
+  Proper (PIR2 Equal ==> Equal ==> Equal) (fold_left union).
 Proof.
   unfold Proper, respectful; intros.
   general induction H0; simpl; eauto.
-  - rewrite IHlist_eq; eauto. reflexivity.
-    rewrite H0, H2. reflexivity.
+  - rewrite IHPIR2; eauto. reflexivity.
+    rewrite H1, pf. reflexivity.
+Qed.
+
+Instance fold_left_subset_morphism X `{OrderedType X}:
+  Proper (PIR2 Subset ==> Subset ==> Subset) (fold_left union).
+Proof.
+  unfold Proper, respectful; intros.
+  general induction H0; simpl; eauto.
+  - rewrite IHPIR2; eauto. reflexivity.
+    rewrite H1, pf. reflexivity.
+Qed.
+
+Lemma lookup_set_list_union
+      X `{OrderedType X } Y `{OrderedType Y} (ϱ:X->Y) `{Proper _ (_eq ==> _eq) ϱ} l s s'
+: lookup_set ϱ s[=]s' ->
+  lookup_set ϱ (fold_left union l s)
+             [=]  fold_left union (List.map (lookup_set ϱ) l) s'.
+Proof.
+  general induction l; simpl; eauto.
+  eapply IHl; eauto. rewrite lookup_set_union; eauto.
+  rewrite H2. reflexivity.
+Qed.
+
+Lemma list_union_disjunct {X} `{OrderedType X} Y D
+:  (forall (n : nat) (e : set X), get Y n e -> e ∩ D[=]{})
+   <-> disj (list_union Y) D.
+Proof.
+  split; intros.
+  - eapply set_incl; try now (cset_tac; intuition).
+    unfold list_union; hnf; intros.
+    general induction Y; simpl in * |- *; intuition.
+    exploit H0; eauto using get.
+    exploit IHY; intros; eauto using get.
+    rewrite list_union_start_swap.
+    rewrite list_union_start_swap in H1.
+    revert H1 X0; clear_all; cset_tac; intuition; eauto.
+  - unfold list_union, disj in H0.
+    rewrite meet_comm in H0.
+    eapply incl_meet_empty in H0.
+    rewrite meet_comm. eapply H0.
+    eapply incl_list_union; eauto. reflexivity.
 Qed.
 
 

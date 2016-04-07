@@ -90,6 +90,12 @@ Section theorems.
     cset_tac; firstorder.
   Qed.
 
+  Lemma incl_singleton (x:X) (s:set X)
+    : x ∈ s -> singleton x ⊆ s.
+  Proof.
+    intros. hnf; intros. cset_tac; intuition.
+  Qed.
+
   Lemma minus_incl (s t:set X)
     : (s\t) ⊆ s.
   Proof.
@@ -387,7 +393,7 @@ Section theorems.
     : ~ x ∈ D
     -> D ∩ {{x}} ≅ ∅.
   Proof.
-    cset_tac; firstorder. cset_tac.
+    cset_tac; firstorder.
   Qed.
 
   Lemma incl_eq (s t:set X)
@@ -446,7 +452,7 @@ Qed.
 Lemma minus_union_both X `{OrderedType X} (s t: set X) x
   : x ∉ s -> s \ t [=] (s ∪ {{x}}) \ (t ∪ {{x}}).
 Proof.
-  cset_tac; firstorder. intro; firstorder. eapply H0. rewrite <- H3. eauto.
+  cset_tac; firstorder.
 Qed.
 
 Lemma list_eq_eq {X} {L L':list X}

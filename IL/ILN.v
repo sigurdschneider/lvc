@@ -4,22 +4,22 @@ Require Export Util Var Val Exp Env Map CSet AutoIndTac IL Bisim Infra.Status.
 Set Implicit Arguments.
 
 Inductive nstmt : Type :=
-| nstmtExp    (x : var) (e: exp) (s : nstmt)
+| nstmtLet    (x : var) (e: exp) (s : nstmt)
 | nstmtIf     (e : exp) (s : nstmt) (t : nstmt)
-| nstmtGoto   (l : lab) (Y:args)
+| nstmtApp   (l : lab) (Y:args)
 | nstmtReturn (e : exp)
 | nstmtExtern (x : var) (f:external) (Y:args) (s:nstmt)
 (* block f Z : rt = s in b *)
-| nstmtLet    (l : lab) (Z:params) (s : nstmt) (t : nstmt).
+| nstmtFun    (l : lab) (Z:params) (s : nstmt) (t : nstmt).
 
 Fixpoint freeVars (s:nstmt) : set var :=
   match s with
-    | nstmtExp x e s0 => (freeVars s0 \ {{x}}) ∪ Exp.freeVars e
+    | nstmtLet x e s0 => (freeVars s0 \ {{x}}) ∪ Exp.freeVars e
     | nstmtIf e s1 s2 => freeVars s1 ∪ freeVars s2 ∪ Exp.freeVars e
-    | nstmtGoto l Y => list_union (List.map Exp.freeVars Y)
+    | nstmtApp l Y => list_union (List.map Exp.freeVars Y)
     | nstmtReturn e => Exp.freeVars e
     | nstmtExtern x f Y s => (freeVars s \ {{x}}) ∪ list_union (List.map Exp.freeVars Y)
-    | nstmtLet l Z s1 s2 => (freeVars s1 \ of_list Z) ∪ freeVars s2
+    | nstmtFun l Z s1 s2 => (freeVars s1 \ of_list Z) ∪ freeVars s2
   end.
 
 
@@ -46,7 +46,7 @@ Module F.
   Inductive step : state -> event -> state -> Prop :=
   | nstepExp L E x e b v
     (def:exp_eval E e = Some v)
-    : step (L, E, nstmtExp x e b) EvtTau (L, E[x<-Some v], b)
+    : step (L, E, nstmtLet x e b) EvtTau (L, E[x<-Some v], b)
 
   | nstepIfT L E
     (e:exp) b1 b2 v
@@ -69,12 +69,12 @@ Module F.
     (Ldef:L (counted l) = Some (blockI L' E' (l',Z,s))) E'' vl
     (def:omap (exp_eval E) Y = Some vl)
     (updOk:E'[Z <-- List.map Some vl]  = E'')
-    : step (L, E, nstmtGoto l Y)
+    : step (L, E, nstmtApp l Y)
            EvtTau
            (L'[(counted l) <- Some (blockI L' E' (l,Z,s))], E'', s)
 
   | stepLet L E f s Z t
-    : step (L, E, nstmtLet f Z s t) EvtTau (L[counted f <- Some (blockI L E (f,Z,s))], E, t)
+    : step (L, E, nstmtFun f Z s t) EvtTau (L[counted f <- Some (blockI L E (f,Z,s))], E, t)
 
   | stepExtern L E x f Y s vl v
     (def:omap (exp_eval E) Y = Some vl)
@@ -130,7 +130,7 @@ Module I.
   Inductive step : state -> event -> state -> Prop :=
   | nstepExp L E x e b v
     (def:exp_eval E e = Some v)
-    : step (L, E, nstmtExp x e b) EvtTau (L, E[x<-Some v], b)
+    : step (L, E, nstmtLet x e b) EvtTau (L, E[x<-Some v], b)
 
   | nstepIfT L E
     (e:exp) b1 b2 v
@@ -150,12 +150,12 @@ Module I.
     (Ldef:L (counted l) = Some (blockI L' (l',Z,s))) E''
     (def:omap (exp_eval E) Y = Some vl)
     (updOk:E [Z <-- List.map Some vl]  = E'')
-    : step (L, E, nstmtGoto l Y)
+    : step (L, E, nstmtApp l Y)
            EvtTau
            (L'[(counted l) <- Some (blockI L' (l,Z,s))], E'', s)
 
   | stepLet L E f s Z t
-    : step (L, E, nstmtLet f Z s t)
+    : step (L, E, nstmtFun f Z s t)
            EvtTau
            (L[counted f <- Some (blockI L (f,Z,s))], E, t)
 
@@ -171,6 +171,14 @@ Module I.
   Proof.
     hnf; intros. inv H; inv H0; split; eauto; try congruence.
   Qed.
+
+  Lemma step_externally_determined
+  : externally_determined step.
+  Proof.
+    hnf; intros.
+    inv H; inv H0; eauto; try get_functional; try congruence.
+  Qed.
+
 
   Lemma step_dec
   : reddec step.
@@ -198,20 +206,20 @@ End I.
 
 Fixpoint labIndices (s:nstmt) (symb: list lab) : status stmt :=
   match s with
-    | nstmtExp x e s => sdo s' <- (labIndices s symb); Success (stmtExp x e s')
+    | nstmtLet x e s => sdo s' <- (labIndices s symb); Success (stmtLet x e s')
     | nstmtIf x s1 s2 =>
       sdo s1' <- (labIndices s1 symb);
       sdo s2' <- (labIndices s2 symb);
       Success (stmtIf x s1' s2')
-    | nstmtGoto l Y =>
-      sdo f <- option2status (pos symb l 0) "labIndices: Undeclared function" ; Success (stmtGoto (LabI f) Y)
+    | nstmtApp l Y =>
+      sdo f <- option2status (pos symb l 0) "labIndices: Undeclared function" ; Success (stmtApp (LabI f) Y)
     | nstmtReturn x => Success (stmtReturn x)
     | nstmtExtern x f Y s =>
       sdo s' <- (labIndices s symb); Success (stmtExtern x f Y s')
-    | nstmtLet l Z s1 s2 =>
+    | nstmtFun l Z s1 s2 =>
       sdo s1' <- labIndices s1 (l::symb);
       sdo s2' <- labIndices s2 (l::symb);
-      Success (stmtLet Z s1' s2')
+      Success (stmtFun Z s1' s2')
   end.
 
 Definition state_result X (s:X*onv val*nstmt) : option val :=
@@ -224,12 +232,13 @@ Instance statetype_I : StateType I.state := {
   step := I.step;
   result := (@state_result I.labenv);
   step_dec := I.step_dec;
-  step_internally_deterministic := I.step_internally_deterministic
+  step_internally_deterministic := I.step_internally_deterministic;
+  step_externally_determined := I.step_externally_determined
 }.
 
 (*Tactic Notation "goto_invs" tactic(tac) :=
   match goal with
-    | [ |- sim (?L, _, nstmtGoto ?l ?Y) (_, _, _) ] =>
+    | [ |- sim (?L, _, nstmtApp ?l ?Y) (_, _, _) ] =>
       let b := fresh "blk" in
       destruct (get_dec L (counted l)) as [[b ?]|];
         [ first [ decide (length (F.block_Z b) = length Y);

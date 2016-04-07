@@ -106,7 +106,6 @@ Proof.
   rewrite H1; reflexivity.
   destruct H2; split; eauto. symmetry; eauto. intuition.
   destruct H3; split; eauto. symmetry; eauto. intuition.
-  rewrite H1; reflexivity.
 Qed.
 
 Global Instance inverse_on_morphism_eq {X} `{OrderedType X} {Y}
@@ -148,9 +147,9 @@ Proof.
   rewrite e; reflexivity.
 
   assert (ϱ x ∉ of_list(lookup_list ϱ Z)).
-  rewrite of_list_lookup_list. rewrite lookup_set_spec. intro; dcr.
-  eapply H3 in H9; eauto. eapply n. rewrite H9; eauto. eapply union_2; eauto.
-  eapply union_3; eauto. eauto. eauto.
+  rewrite of_list_lookup_list; eauto. rewrite lookup_set_spec; eauto.
+  intro; dcr.
+  eapply H3 in H9; eauto; cset_tac; intuition.
   erewrite update_with_list_no_update; eauto. eapply H4; eauto using in_in_minus.
 Qed.
 
@@ -245,6 +244,40 @@ Lemma inverse_on_id {X} `{OrderedType X} (G:set X)
 Proof.
   intros. hnf; intros. reflexivity.
 Qed.
+
+
+Lemma inverse_on_update_fresh X `{OrderedType X} (D:set X) (Z Z':list X) (ϱ ϱ' : X -> X) `{Proper _ (_eq ==> _eq) ϱ}
+ : inverse_on (D \ of_list Z) ϱ ϱ'
+  -> unique Z'
+  -> length Z = length Z'
+  -> disj (of_list Z') (lookup_set ϱ (D \ of_list Z))
+  -> inverse_on D (update_with_list Z Z' ϱ)
+                 (update_with_list Z' Z ϱ').
+Proof.
+  intros. eapply length_length_eq in H3.
+  hnf; intros. lud. decide(x ∈ of_list Z).
+  general induction H3; simpl in *; eauto; dcr. cset_tac; exfalso; eauto.
+  lud. eapply add_iff in i. destruct i; eauto.
+  assert (y ∈ of_list YL). rewrite e.
+  eapply update_with_list_lookup_in; eauto using length_eq_length.
+  exfalso. eapply (fresh_of_list H6 H11).
+  exfalso; eauto.
+  eapply add_iff in i; destruct i; isabsurd.
+  eapply IHlength_eq; try eassumption.
+  hnf; intros. exfalso; cset_tac; eauto.
+  hnf; intros. split; intros. cset_tac. eapply lookup_set_spec in H14; dcr.
+  cset_tac; intuition. intuition. cset_tac; intuition.
+
+  erewrite update_with_list_no_update; eauto.
+  erewrite update_with_list_no_update; eauto.
+  eapply H1; eauto. cset_tac ; eauto.
+  erewrite update_with_list_no_update; eauto. intro.
+  specialize (H4 (ϱ x)). cset_tac; intuition; eauto.
+  eapply H7.
+  eapply lookup_set_spec; cset_tac; intuition.
+  eexists x; eauto.
+Qed.
+
 
 (*
 *** Local Variables: ***

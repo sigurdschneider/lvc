@@ -18,12 +18,12 @@ Definition getAnn {A} (a:ann A) : A :=
 
 Fixpoint setAnn A (s:stmt) (a:A) : ann A :=
   match s with
-   | stmtExp x e s' => ann1 a (setAnn s' a)
+   | stmtLet x e s' => ann1 a (setAnn s' a)
    | stmtIf x s1 s2 => ann2 a (setAnn s1 a) (setAnn s2 a)
-   | stmtGoto l Y => ann0 a
+   | stmtApp l Y => ann0 a
    | stmtReturn x => ann0 a
    | stmtExtern x f Y s => ann1 a (setAnn s a)
-   | stmtLet Z s1 s2 => ann2 a (setAnn s1 a) (setAnn s2 a)
+   | stmtFun Z s1 s2 => ann2 a (setAnn s1 a) (setAnn s2 a)
    end.
 
 Fixpoint setTopAnn A (s:ann A) (a:A) : ann A :=
@@ -55,13 +55,13 @@ Qed.
 Inductive annotation {A:Type} : stmt -> ann A -> Prop :=
 | antExp x e s a sa
   : annotation s sa
-    -> annotation (stmtExp x e s) (ann1 a sa)
+    -> annotation (stmtLet x e s) (ann1 a sa)
 | antIf x s t a sa ta
   : annotation s sa
     -> annotation t ta
     -> annotation (stmtIf x s t) (ann2 a sa ta)
 | antGoto l Y a
-  : annotation (stmtGoto l Y) (ann0 a)
+  : annotation (stmtApp l Y) (ann0 a)
 | antReturn x a
   : annotation (stmtReturn x) (ann0 a)
 | antExtern x f Y s a sa
@@ -70,7 +70,7 @@ Inductive annotation {A:Type} : stmt -> ann A -> Prop :=
 | antLet Z s t a sa ta
   : annotation s sa
     -> annotation t ta
-    -> annotation (stmtLet Z s t) (ann2 a sa ta).
+    -> annotation (stmtFun Z s t) (ann2 a sa ta).
 
 Instance annotation_dec_inst {A} {s} {a} : Computable (@annotation A s a).
 Proof.
@@ -130,6 +130,19 @@ Proof.
   - econstructor; eauto.
 Qed.
 
+Instance ann_R_trans A R `{Transitive A R} : Transitive (ann_R R).
+Proof.
+  hnf; intros ? ? ? B C.
+  general induction B; inv C; econstructor; eauto.
+Qed.
+
+Instance ann_R_ann1_pe_morphism X `{OrderedType X}
+: Proper (@pe X _ ==> ann_R (@pe X _) ==> ann_R (@pe X _)) (@ann1 _).
+Proof.
+  unfold Proper, respectful; intros.
+  econstructor; eauto.
+Qed.
+
 Instance ordered_type_lt_dec A `{OrderedType A} (a b: A)
 : Computable (_lt a b).
 pose proof (_compare_spec a b).
@@ -163,6 +176,18 @@ Instance PartialOrder_ann Dom `{PartialOrder Dom}
   poEq_dec := @ann_R_dec _ _ poEq poEq_dec
 }.
 
+Instance getAnn_ann_R_morphism A (R:A->A->Prop)
+: Proper (ann_R R ==> R) (getAnn).
+Proof.
+  unfold Proper, respectful; intros.
+  inv H; simpl; eauto.
+Qed.
+
+Hint Extern 20 (ann_R _ ?a ?a') => (is_evar a ; fail 1)
+                                    || (has_evar a ; fail 1)
+                                    || (is_evar a' ; fail 1)
+                                    || (has_evar a'; fail 1)
+                                    || reflexivity.
 
 (*
 *** Local Variables: ***

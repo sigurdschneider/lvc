@@ -1,233 +1,76 @@
 Require Import CSet Le.
 
 Require Import Plus Util AllInRel Map.
-Require Import CSet Val Var Env EnvTy Equiv.Sim IL Fresh Annotation MoreExp Coherence.
+Require Import CSet Val Var Env EnvTy Equiv.Sim IL Fresh Annotation MoreExp Coherence RenamedApart.
 
-Require Import SetOperations Liveness Filter.
+Require Import SetOperations Liveness Filter Eqn.
 
 Set Implicit Arguments.
 Unset Printing Records.
 
-Inductive eqn :=
-  | Eqn (o:nat) (e e':exp).
-
-Definition EqnEq := 0.
-Definition EqnApx := 1.
-
-Inductive option_R (A B : Type) (eqA : A -> B -> Prop)
-: option A -> option B -> Prop :=
-| option_R_Some a b : eqA a b -> option_R eqA ⎣a⎦ ⎣b⎦.
-
-
-Lemma option_R_refl A R `{Reflexive A R} : forall x, option_R R ⎣x⎦ ⎣x⎦.
-intros; eauto using option_R.
-Qed.
-
-Instance option_R_sym A R `{Symmetric A R} : Symmetric (option_R R).
-hnf; intros ? [] []; eauto using option_R.
-Qed.
-
-Instance option_R_trans A R `{Transitive A R} : Transitive (option_R R).
-hnf; intros. inv H0; inv H1; econstructor; eauto.
-Qed.
-
-Inductive satisfies (E:onv val) : eqn -> Prop :=
-| SatisfiesEq e e'
-  : option_R eq (exp_eval E e) (exp_eval E e')
-    -> satisfies E (Eqn 0 e e')
-| SatisfiesApx e e'
-  : fstNoneOrR eq (exp_eval E e) (exp_eval E e')
-    -> satisfies E (Eqn 1 e e').
-
-Inductive eqnLt : eqn -> eqn -> Prop :=
-| EqnLtEq1 o o' e1 e1' e2 e2'
-  : _lt o o'
-    -> eqnLt (Eqn o e1 e2) (Eqn o' e1' e2')
-| EqnLtEq2 o e1 e1' e2 e2'
-  : expLt e1 e1'
-    -> eqnLt (Eqn o e1 e2) (Eqn o e1' e2')
-| EqnLtEq3 o e1 e2 e2'
-  : expLt e2 e2'
-    -> eqnLt (Eqn o e1 e2) (Eqn o e1 e2').
-
-Instance eqnLt_irr : Irreflexive eqnLt.
-hnf; intros; unfold complement.
-- induction x; inversion 1; subst; eauto;
-  try now eapply expLt_irr; eauto.
-  eapply (@StrictOrder_Irreflexive nat); eauto.
-Qed.
-
-Instance eqnLt_trans : Transitive eqnLt.
-hnf; intros.
-inv H; inv H0; eauto using eqnLt, expLt_trans.
-- econstructor. eapply StrictOrder_Transitive; eauto.
-Qed.
-
-Instance StrictOrder_eqnLt : OrderedType.StrictOrder eqnLt eq.
-econstructor.
-- eapply eqnLt_trans.
-- intros. intro. eapply eqnLt_irr. rewrite H0 in H.
-  eapply H.
-Qed.
-
-Notation "'Compare' x 'next' y" :=
-  (match x with
-    | Eq => y
-    | z => z
-  end) (at level 100).
-
-Fixpoint eqn_cmp (e e':eqn) :=
-  match e, e' with
-    | Eqn o e1 e2, Eqn o' e1' e2' =>
-      Compare _cmp o o' next
-      Compare _cmp e1 e1' next
-      Compare _cmp e2 e2' next Eq
+(*
+Fixpoint compile (s:stmt) (a:ann (list exp)) :=
+  match s, a with
+    | stmtLet x _ s, ann1 (e'::nil) an =>
+      stmtLet x e' (compile s an)
+    | stmtIf _ s t, ann2 (e'::nil) ans ant =>
+      stmtIf e' (compile s ans) (compile t ant)
+    | stmtApp f _, ann0 Y' =>
+      stmtApp f Y'
+    | stmtReturn _, ann0 (e'::nil) => stmtReturn e'
+    | stmtExtern x f _ s, ann1 Y' an =>
+      stmtExtern x f Y' (compile s an)
+    | stmtFun Z s t, ann2 nil ans ant =>
+      stmtFun Z (compile s ans) (compile t ant)
+    | s, _ => s
   end.
-
-Instance OrderedType_exp : OrderedType eqn :=
- { _eq := eq;
-  _lt := eqnLt;
-  _cmp := eqn_cmp}.
-intros.
-destruct x,y; simpl eqn_cmp; try now (econstructor; eauto using eqnLt).
-pose proof (_compare_spec o o0); unfold _cmp in *; simpl in *.
-inv H; try now (econstructor; eauto using eqnLt).
-pose proof (_compare_spec e e0); unfold _cmp in *; simpl in *.
-inv H1; try now (econstructor; eauto using eqnLt).
-pose proof (_compare_spec e' e'0); unfold _cmp in *; simpl in *.
-inv H3; try now (econstructor; eauto 20 using eqnLt).
-Defined.
-
-Definition eqns := set eqn.
-
-Definition satisfiesAll (E:onv val) (Gamma:eqns) :=
-  forall gamma, gamma ∈ Gamma -> satisfies E gamma.
-
-Definition freeVars (gamma:eqn) :=
-  match gamma with
-    | Eqn o e e' => Exp.freeVars e ∪ Exp.freeVars e'
-  end.
-
-Definition eqns_freeVars (Gamma:eqns) := fold union (map freeVars Gamma) ∅.
-
-Definition entails Gamma Γ' := (forall E, satisfiesAll E Gamma -> satisfiesAll E Γ')
-(* /\ eqns_freeVars Γ' ⊆ eqns_freeVars Gamma *).
-
-Definition not_entails Gamma gamma := (exists E, satisfiesAll E Gamma /\ ~ satisfies E gamma).
-
-Definition onvLe X (E E':onv X)
-:= forall x v, E x = Some v -> E' x = Some v.
-
-Definition moreDefined Gamma e e' :=
-  forall E, satisfiesAll E Gamma
-          -> fstNoneOrR eq (exp_eval E e) (exp_eval E e').
-
-Lemma exp_eval_onvLe e E E' v
-: onvLe E E'
-  -> exp_eval E e = Some v
-  -> exp_eval E' e = Some v.
-Proof.
-  intros. general induction e; simpl in * |- *; eauto.
-  simpl in H0. rewrite H0. eapply H in H0. eauto.
-  - monad_inv H0. rewrite EQ.
-    erewrite IHe; eauto.
-  - monad_inv H0. rewrite EQ, EQ1.
-    erewrite IHe1, IHe2; eauto.
-Qed.
-
-Instance moreDefined_refl Gamma
-: Reflexive (moreDefined Gamma).
-Proof.
-  hnf; intros; hnf; intros.
-  case_eq (exp_eval E x); intros.
-  constructor; eauto.
-  constructor.
-Qed.
-
-Definition moreDefinedArgs Gamma Y Y' :=
-  forall E,
-           satisfiesAll E Gamma
-
-          -> fstNoneOrR eq (omap (exp_eval E) Y) (omap (exp_eval E) Y').
-
-Definition remove (Gamma:eqns) G :=
-  filter (fun gamma => B[freeVars gamma ∩ G [=] ∅]) Gamma.
-
-Definition subst_eqn (ϱ : env exp) (gamma: eqn) :=
-  match gamma with
-    | Eqn o e e' => Eqn o (subst_exp ϱ e) (subst_exp ϱ e')
-  end.
-
-Definition subst_eqns (ϱ : env exp) (G:eqns) : eqns :=
-  map (subst_eqn ϱ) G.
-
-Definition sid := fun x => Var x.
-
-Definition unsatisfiable (Gamma:eqns) :=
-  forall E, ~ satisfiesAll E Gamma.
+ *)
 
 Inductive eqn_sound : list (params*set var*eqns*eqns)
-                      -> stmt
+                      -> stmt -> stmt
                       -> eqns
                       -> ann (set var * set var)
-                      -> ann (list exp)
                       -> Prop :=
-| EqnOpr x Lv b e Gamma e' cl G G' ang
-  : eqn_sound Lv b ({{ Eqn EqnEq (Var x) e}} ∪ {{Eqn EqnEq (Var x) e'}} ∪ Gamma) ang cl
+| EqnOpr x Lv s s' e Gamma e' G G' ang
+  : eqn_sound Lv s s' {EqnEq (Var x) e ; { EqnEq (Var x) e' ; Gamma } } ang
     (* make sure the rest conforms to the new assignment *)
-    -> moreDefined Gamma e e'
+    -> entails Gamma {EqnApx e e'}
     -> Exp.freeVars e' ⊆ G
-    -> eqn_sound Lv (stmtExp x e b) Gamma
-                (ann1 (G,G') ang) (ann1 (e'::nil) cl)
-| EqnIf Lv e e' b1 b2 Gamma cl1 cl2 G G' ang1 ang2
-  : eqn_sound Lv b1 ({{Eqn EqnEq (UnOp 0 e) (Con val_true)}} ∪ Gamma) ang1 cl1
-  -> eqn_sound Lv b2 ({{Eqn EqnEq (UnOp 0 e) (Con val_false)}} ∪ Gamma) ang2 cl2
-  -> moreDefined Gamma e e'
-  -> eqn_sound Lv (stmtIf e b1 b2) Gamma
-              (ann2 (G,G') ang1 ang2) (ann2 (e'::nil) cl1 cl2)
+    -> eqn_sound Lv (stmtLet x e s) (stmtLet x e' s') Gamma
+                (ann1 (G,G') ang)
+| EqnIf Lv e e' s s' t t' Gamma G G' ang1 ang2
+  : eqn_sound Lv s s' {EqnEq (UnOp 0 e) (Con val_true); Gamma} ang1
+  -> eqn_sound Lv t t' {EqnEq (UnOp 0 e) (Con val_false); Gamma} ang2
+  -> entails Gamma {(EqnApx e e')}
+  -> eqn_sound Lv (stmtIf e s t) (stmtIf e' s' t') Gamma
+              (ann2 (G,G') ang1 ang2)
 | EqnGoto l Y Y' Lv Gamma Z Γf EqS Gf G G'
   : get Lv (counted l) (Z,Gf,Γf, EqS)
     -> length Y = length Y'
     -> entails Gamma (subst_eqns (sid [Z <-- Y']) EqS)
-    -> moreDefinedArgs Gamma Y Y'
-    -> eqn_sound Lv (stmtGoto l Y) Gamma (ann0 (G,G')) (ann0 Y')
+    -> entails Gamma (list_EqnApx Y Y')
+    -> eqn_sound Lv (stmtApp l Y) (stmtApp l Y') Gamma (ann0 (G,G'))
 | EqnReturn Lv e e' Gamma G G'
-  : moreDefined Gamma e e'
-    -> eqn_sound Lv (stmtReturn e) Gamma (ann0 (G,G')) (ann0 (e'::nil))
-| EqnExtern x f Lv b Y Y' Gamma cl G G' ang
-  : eqn_sound Lv b Gamma ang cl
-    -> moreDefinedArgs Gamma Y Y'
+  : entails Gamma {(EqnApx e e')}
+    -> eqn_sound Lv (stmtReturn e) (stmtReturn e') Gamma (ann0 (G,G'))
+| EqnExtern x f Lv s s' Y Y' Gamma G G' ang
+  : eqn_sound Lv s s' Gamma ang
+    -> entails Gamma (list_EqnApx Y Y')
     -> list_union (List.map Exp.freeVars Y') ⊆ G
-    -> eqn_sound Lv (stmtExtern x f Y b) Gamma
-                (ann1 (G,G') ang) (ann1 Y' cl)
-| EqnLet Lv s Z b Gamma Γ2 EqS cls clb G G' angs angb
-  : eqn_sound ((Z, G, Γ2, EqS)::Lv) s (EqS ∪ Γ2) angs cls
-  -> eqn_sound ((Z, G ,Γ2, EqS)::Lv) b Gamma angb clb
+    -> length Y = length Y'
+    -> eqn_sound Lv (stmtExtern x f Y s) (stmtExtern x f Y' s') Gamma
+                (ann1 (G,G') ang)
+| EqnLet Lv Z s s' t t'  Gamma Γ2 EqS G G' angs angb
+  : eqn_sound ((Z, G, Γ2, EqS)::Lv) s s' (EqS ∪ Γ2) angs
+  -> eqn_sound ((Z, G ,Γ2, EqS)::Lv) t t' Gamma angb
   -> eqns_freeVars EqS ⊆ G ++ of_list Z
   -> eqns_freeVars Γ2  ⊆ G
   -> entails Gamma Γ2
-  -> eqn_sound Lv (stmtLet Z s b) Gamma
-              (ann2 (G,G') angs angb) (ann2 nil cls clb)
-| EqnUnsat Lv s Gamma ang cl
+  -> eqn_sound Lv (stmtFun Z s t) (stmtFun Z s' t') Gamma
+              (ann2 (G,G') angs angb)
+| EqnUnsat Lv s s' Gamma ang
   : unsatisfiable Gamma
-    -> eqn_sound Lv s Gamma ang cl.
-
-Fixpoint compile (s:stmt) (a:ann (list exp)) :=
-  match s, a with
-    | stmtExp x _ s, ann1 (e'::nil) an =>
-      stmtExp x e' (compile s an)
-    | stmtIf _ s t, ann2 (e'::nil) ans ant =>
-      stmtIf e' (compile s ans) (compile t ant)
-    | stmtGoto f _, ann0 Y' =>
-      stmtGoto f Y'
-    | stmtReturn _, ann0 (e'::nil) => stmtReturn e'
-    | stmtExtern x f _ s, ann1 Y' an =>
-      stmtExtern x f Y' (compile s an)
-    | stmtLet Z s t, ann2 nil ans ant =>
-      stmtLet Z (compile s ans) (compile t ant)
-    | s, _ => s
-  end.
-
+    -> eqn_sound Lv s s' Gamma ang.
 
 
 Definition ArgRel' (E E':onv val) (a:list var*set var*eqns*eqns) (VL VL': list val) : Prop :=
@@ -335,44 +178,41 @@ Proof.
   rewrite fold_union_app. reflexivity.
 Qed.
 
+Lemma fold_union_add X `{OrderedType X} x Γ
+: fold union ({x; Γ}) {}[=]
+  x ∪ fold union Γ {}.
+Proof.
+  assert ({x; Γ} [=] {{x}} ∪ Γ).
+  cset_tac; intuition. rewrite H0.
+  rewrite fold_union_app.
+  rewrite fold_single; eauto using Equal_ST, union_m, transpose_union.
+  cset_tac; intuition.
+Qed.
+
 Lemma eqns_freeVars_add Gamma e
-  : eqns_freeVars ({{e}} ∪ Gamma) [=] eqns_freeVars (Gamma) ∪ freeVars e.
+  : eqns_freeVars {e; Gamma} [=] eqns_freeVars (Gamma) ∪ freeVars e.
 Proof.
   intros. unfold eqns_freeVars.
-  rewrite map_app; eauto using freeVars_Proper.
-  rewrite fold_union_app. rewrite map_single.
-  rewrite fold_single.
+  rewrite map_add; eauto using freeVars_Proper.
+  rewrite fold_union_add.
   cset_tac; intuition.
-  eapply Equal_ST.
-  eapply union_m.
-  eapply transpose_union.
-  eapply freeVars_Proper.
 Qed.
 
 Lemma eqns_freeVars_add2 Gamma e e'
-  : eqns_freeVars ({{e}} ∪ {{e'}} ∪ Gamma) [=] eqns_freeVars (Gamma) ∪ freeVars e ∪ freeVars e'.
+  : eqns_freeVars ({e; { e'; Gamma } }) [=] eqns_freeVars (Gamma) ∪ freeVars e ∪ freeVars e'.
 Proof.
   intros. unfold eqns_freeVars.
-  repeat rewrite map_app; eauto using freeVars_Proper.
-  repeat rewrite fold_union_app.
-  repeat rewrite map_single; eauto using freeVars_Proper.
-  repeat rewrite fold_single.
+  repeat rewrite map_add; eauto using freeVars_Proper.
+  repeat rewrite fold_union_add.
   cset_tac; intuition.
-  eapply Equal_ST.
-  eapply union_m.
-  eapply transpose_union.
-  eapply Equal_ST.
-  eapply union_m.
-  eapply transpose_union.
 Qed.
 
 Lemma eqns_freeVars_add' Gamma e
   : eqns_freeVars ({e ; Gamma}) [=] eqns_freeVars (Gamma) ∪ freeVars e.
 Proof.
   intros. unfold eqns_freeVars.
-  assert ({e; Gamma} [=] {{e}} ∪ Gamma).
-  cset_tac; intuition.
-  rewrite H. eapply eqns_freeVars_add.
+  rewrite map_add, fold_union_add.
+  cset_tac; intuition. intuition.
 Qed.
 
 Ltac dowith c t :=
@@ -390,71 +230,98 @@ Proof.
   destruct H; dcr; eauto.
 Qed.
 
+Lemma satisfies_update_dead E gamma x v
+: satisfies E gamma
+  -> x ∉ freeVars gamma
+  -> satisfies (E[x <- v]) gamma.
+Proof.
+  intros.
+  destruct gamma; simpl in * |- *.
+  - inv H. symmetry in H2. symmetry in H1.
+    erewrite exp_eval_agree; try eapply H1.
+    symmetry.
+    erewrite exp_eval_agree; try eapply H2.
+    econstructor; reflexivity.
+    symmetry. eapply agree_on_update_dead; eauto.
+    cset_tac; intuition.
+    symmetry. eapply agree_on_update_dead; eauto.
+    cset_tac; intuition.
+  - inv H.
+    + symmetry in H2.
+      erewrite exp_eval_agree; try eapply H2. econstructor.
+      symmetry. eapply agree_on_update_dead; eauto.
+      cset_tac; intuition.
+    + symmetry in H1. symmetry in H2.
+      erewrite exp_eval_agree; try eapply H1.
+      erewrite exp_eval_agree; try eapply H2.
+      econstructor; reflexivity.
+      symmetry. eapply agree_on_update_dead; eauto.
+      cset_tac; intuition.
+      symmetry. eapply agree_on_update_dead; eauto.
+      cset_tac; intuition.
+  - eauto.
+Qed.
+
+Lemma satisfiesAll_add E gamma Gamma
+: satisfiesAll E {gamma ; Gamma}
+  <-> satisfies E gamma /\ satisfiesAll E Gamma.
+Proof.
+  split.
+  intros H; split; hnf; intros; eapply H; cset_tac; intuition.
+  intros [A B]; hnf; intros. cset_tac; intuition.
+  destruct H0; dcr; subst; eauto.
+Qed.
+
+Lemma satisfies_update_dead_list E gamma Z vl
+: length Z = length vl
+  -> satisfies E gamma
+  -> freeVars gamma ∩ of_list Z [=] ∅
+  -> satisfies (E[Z <-- vl]) gamma.
+Proof.
+  intros. destruct gamma; simpl in * |- *.
+  - inv H0. symmetry in H3. symmetry in H2.
+    erewrite exp_eval_agree; try eapply H2.
+    symmetry.
+    erewrite exp_eval_agree; try eapply H3.
+    econstructor; reflexivity.
+    erewrite <- minus_inane_set. symmetry.
+    eapply update_with_list_agree_minus; eauto.
+    cset_tac; intuition. eapply (H1 a); cset_tac; intuition.
+    erewrite <- minus_inane_set. symmetry.
+    eapply update_with_list_agree_minus; eauto.
+    cset_tac; intuition. eapply (H1 a); cset_tac; intuition.
+  - inv H0.
+    + symmetry in H3.
+      erewrite exp_eval_agree; try eapply H3. econstructor.
+      erewrite <- minus_inane_set. symmetry.
+      eapply update_with_list_agree_minus; eauto.
+      cset_tac; intuition. eapply (H1 a); cset_tac; intuition.
+    + symmetry in H3. symmetry in H2.
+      erewrite exp_eval_agree; try eapply H2.
+      erewrite exp_eval_agree; try eapply H3.
+      econstructor; reflexivity.
+      erewrite <- minus_inane_set. symmetry.
+      eapply update_with_list_agree_minus; eauto.
+      cset_tac; intuition. eapply (H1 a); cset_tac; intuition.
+      erewrite <- minus_inane_set. symmetry.
+      eapply update_with_list_agree_minus; eauto.
+      cset_tac; intuition. eapply (H1 a); cset_tac; intuition.
+  - eauto.
+Qed.
+
+
 Lemma satisfiesAll_update_dead E Gamma Z vl
 : length Z = length vl
   -> satisfiesAll E Gamma
   -> eqns_freeVars Gamma ∩ of_list Z [=] ∅
   -> satisfiesAll (E[Z <-- vl]) Gamma.
 Proof.
-  intros. hnf; intros. hnf; intros.
-  hnf in H0; exploit H0; eauto.
-  inv X; eauto.
-  - inv H3. econstructor.
-    erewrite exp_eval_agree; try eapply H3.
-    symmetry.
-    erewrite exp_eval_agree; try eapply H3.
-    symmetry.
-    erewrite <- minus_inane_set.
-    eapply update_with_list_agree_minus; eauto. reflexivity.
-    exploit eqns_freeVars_incl; eauto.
-    rewrite <- H1.
-    simpl in X0.
-    revert H1 X0; clear_all; cset_tac; intuition; exfalso; eauto.
-    inv H3; eauto.
-    erewrite <- minus_inane_set.
-    symmetry.
-    eapply update_with_list_agree_minus; eauto. reflexivity.
-    exploit eqns_freeVars_incl; eauto.
-    rewrite <- H1.
-    revert H1 X0; simpl; clear_all; cset_tac; intuition; exfalso; eauto.
-    inv H3; eauto.
-  - inv H3.
-    + econstructor.
-      erewrite exp_eval_agree.
-      erewrite exp_eval_agree; try eapply H3.
-      symmetry.
-      erewrite <- minus_inane_set.
-      eapply update_with_list_agree_minus; eauto. reflexivity.
-      exploit eqns_freeVars_incl; eauto.
-      rewrite <- H1.
-      simpl in X0.
-      revert H1 X0; clear_all; cset_tac; intuition; exfalso; eauto.
-      inv H3; eauto.
-      erewrite <- minus_inane_set.
-      symmetry.
-      eapply update_with_list_agree_minus; eauto. reflexivity.
-      exploit eqns_freeVars_incl; eauto.
-      rewrite <- H1.
-      revert H1 X0; simpl; clear_all; cset_tac; intuition; exfalso; eauto.
-      inv H3; eauto.
-    + econstructor.
-      erewrite exp_eval_agree.
-      erewrite exp_eval_agree; try eapply H3.
-      symmetry.
-      erewrite <- minus_inane_set.
-      eapply update_with_list_agree_minus; eauto. reflexivity.
-      exploit eqns_freeVars_incl; eauto.
-      rewrite <- H1.
-      simpl in X0.
-      revert H1 X0; clear_all; cset_tac; intuition; exfalso; eauto.
-      inv H3; eauto.
-      erewrite <- minus_inane_set.
-      symmetry.
-      eapply update_with_list_agree_minus; eauto. reflexivity.
-      exploit eqns_freeVars_incl; eauto.
-      rewrite <- H1.
-      revert H1 X0; simpl; clear_all; cset_tac; intuition; exfalso; eauto.
-      inv H3; eauto.
+  intros. hnf; intros.
+  exploit H0; eauto.
+  eapply satisfies_update_dead_list; eauto.
+  exploit eqns_freeVars_incl; eauto.
+  rewrite <- H1.
+  revert H1 X0; simpl; clear_all; cset_tac; intuition; exfalso; eauto.
 Qed.
 
 Lemma eval_exp_subst E y Y Z e
@@ -470,12 +337,7 @@ Proof.
   symmetry in H0. monad_inv H0. simpl.
   lud; eauto. eapply IHlength_eq; eauto.
   cset_tac; intuition.
-  remember (sid [Z <-- Y] v); intros. symmetry in Heqy0; eauto.
-  eapply update_with_list_lookup_not_in in Heqy0.
-  remember (E [Z <-- List.map Some y] v); intros.
-  symmetry in Heqy1.
-  eapply update_with_list_lookup_not_in in Heqy1; eauto.
-  subst; simpl; eauto. eauto.
+  repeat rewrite lookup_set_update_not_in_Z; eauto.
   erewrite IHe; eauto.
   erewrite IHe1; eauto.
   erewrite IHe2; eauto.
@@ -493,10 +355,8 @@ Proof.
     + destruct vl.
       * rewrite H1. eapply H0 in H1. eauto.
       * lud. erewrite IHZ; eauto. cset_tac; intuition.
-  - eapply update_with_list_lookup_not_in in H1; eauto.
-    remember (V' [Z <-- vl] x). eapply eq_sym in Heqy.
-    eapply update_with_list_lookup_not_in in Heqy; eauto.
-    eapply H0 in H1. congruence.
+  - rewrite lookup_set_update_not_in_Z; eauto.
+    rewrite lookup_set_update_not_in_Z in H1; eauto.
 Qed.
 
 
@@ -531,6 +391,15 @@ Proof.
 Qed.
 *)
 
+
+Lemma entails_subset Γ Γ'
+  : Γ' ⊆ Γ
+    -> entails Γ Γ'.
+Proof.
+  unfold entails, satisfiesAll; intuition.
+Qed.
+
+
 Lemma entails_add Gamma gamma Γ'
 : entails Gamma ({{gamma}} ∪ Γ')
   -> entails Gamma Γ'.
@@ -538,6 +407,86 @@ Proof.
   unfold entails; intros; dcr; intros.
   - hnf; intros. eapply H; eauto. cset_tac; intuition.
 Qed.
+
+Lemma entails_add' Gamma gamma Γ'
+: entails Gamma Γ'
+  -> entails Gamma {{gamma}}
+  -> entails Gamma {gamma; Γ'}.
+Proof.
+  unfold entails; intros; dcr; intros.
+  - hnf; intros. cset_tac; intuition.
+    + eapply H0; cset_tac; intuition.
+    + eapply H; eauto.
+Qed.
+
+
+Lemma entails_monotonic_add Gamma Γ' gamma
+: entails Gamma Γ' -> entails (gamma ∪ Gamma) Γ'.
+Proof.
+  unfold entails; intros; dcr.
+  - hnf; intros. eapply H. hnf; intros. eapply H0. cset_tac; intuition. eauto.
+Qed.
+
+Lemma entails_union_split Gamma Γ' Γ''
+: entails Gamma (Γ' ∪ Γ'')
+-> entails Gamma (Γ')
+/\ entails Gamma (Γ'').
+Proof.
+  unfold entails, satisfiesAll.
+  split; intros; dcr.
+    + eapply H; eauto. cset_tac; intuition.
+    + eapply H; eauto. cset_tac; intuition.
+Qed.
+
+Lemma entails_union Gamma Γ' Γ''
+: entails Gamma (Γ')
+/\ entails Gamma (Γ'')
+-> entails Gamma (Γ' ∪ Γ'').
+Proof.
+  unfold entails, satisfiesAll.
+  intros; dcr.
+  + intros. cset_tac. destruct H1; eauto.
+Qed.
+
+Lemma entails_add_single Gamma gamma Γ'
+: entails Gamma Γ'
+  -> entails Gamma {gamma}
+  -> entails Gamma {gamma; Γ'}.
+Proof.
+  unfold entails; intros; dcr; intros.
+  - hnf; intros. cset_tac; intuition.
+    + eapply H0; cset_tac; intuition.
+    + eapply H; eauto.
+Qed.
+
+Instance satisfiesAll_Equal_morphism
+  : Proper (eq ==> Equal ==> iff) satisfiesAll.
+Proof.
+  unfold Proper, respectful; intros; subst.
+  intuition. hnf; intros. eapply H. eapply H0; eauto.
+  hnf; intros. eapply H. eapply H0; eauto.
+Qed.
+
+
+Lemma entails_monotone Γ1 Γ2 Γ1'
+: entails Γ1 Γ2
+  -> Γ1 ⊆ Γ1'
+  -> entails Γ1' Γ2.
+Proof.
+  unfold entails; intros; dcr.
+  - intros. eapply H. hnf; intros. eapply H1; eauto.
+Qed.
+
+
+Instance entails_morphism_add gamma
+: Proper (entails ==> entails) (add gamma).
+Proof.
+  unfold Proper, respectful; intros.
+  eapply entails_add'.
+  - eapply entails_monotone; cset_tac; eauto.
+  - eapply entails_subset; cset_tac; eauto.
+Qed.
+
 
 Instance map_freeVars_morphism
 : Proper (Subset ==> Subset) (map freeVars).
@@ -596,13 +545,16 @@ Proof.
     + rewrite H0; reflexivity.
 Qed.
 
-Lemma entails_union Gamma Γ' Γ''
-: entails Gamma (Γ')
-  /\ entails Gamma (Γ'')
-  -> entails Gamma (Γ' ∪ Γ'').
+Lemma entails_union' Gamma Γ' Γ'' Γ'''
+: Γ''' ⊆ Γ' ∪ Γ''
+  -> entails Gamma (Γ')
+  -> entails Gamma (Γ'')
+  -> entails Gamma (Γ''').
 Proof.
-  unfold entails, satisfiesAll; intros; dcr.
-  + intros. cset_tac. destruct H1; eauto.
+  intros; hnf; intros; hnf; intros.
+  rewrite H in H3. cset_tac. destruct H3.
+  eapply H0; eauto.
+  eapply H1; eauto.
 Qed.
 
 Instance entails_refl
@@ -619,24 +571,24 @@ Proof.
 Qed.
 
 Lemma entails_eqns_trans Gamma e e' e''
-: Eqn EqnEq e e' ∈ Gamma
-  -> Eqn EqnEq e' e'' ∈ Gamma
-  -> entails Gamma {Eqn EqnEq e e''; {}}.
+: EqnEq e e' ∈ Gamma
+  -> EqnEq e' e'' ∈ Gamma
+  -> entails Gamma {EqnEq e e''}.
 Proof.
   intros. hnf; intros.
-  hnf; intros. cset_tac. hnf; intros. rewrite H2.
-  simpl. exploit (H1 _ H); eauto.
+  hnf; intros. cset_tac. hnf; intros. rewrite <- H2.
+  exploit (H1 _ H); eauto.
   exploit (H1 _ H0); eauto.
   simpl in *. inv X; inv X0.
-  - econstructor. etransitivity; eauto.
+  - econstructor. congruence.
 Qed.
 
 
 Lemma entails_eqns_apx_refl e Gamma
-: entails Gamma {{ Eqn EqnApx e e }}.
+: entails Gamma {EqnApx e e}.
 Proof.
-  hnf; intros. hnf; intros. hnf; intros. cset_tac. rewrite H0.
-  econstructor. simpl. reflexivity.
+  hnf; intros. hnf; intros. hnf; intros. cset_tac. rewrite <- H0.
+  reflexivity.
 Qed.
 
 
@@ -657,18 +609,16 @@ Proof.
   - hnf; intros. eapply Add_Equal in H1. rewrite H1 in H10.
     eapply add_iff in H10. destruct H10.
     + hnf in H10; subst.
-      hnf in H5; simpl in *. subst.
       specialize (H5 V H6 (subst_eqn (sid [Z <-- Y]) gamma)). exploit H5.
       eapply in_subst_eqns; eauto. rewrite H1. cset_tac; intuition.
       hnf in X. destruct gamma. simpl in *. inv X.
-      * do 2 erewrite <- eval_exp_subst in H11; eauto.
-        econstructor.
+      * do 2 erewrite <- eval_exp_subst in X; eauto.
         erewrite exp_eval_agree; [| |reflexivity].
         erewrite exp_eval_agree with (e:=e'); [| |reflexivity].
-        eapply H11.
+        eapply X.
         eapply update_with_list_agree; eauto.
         eapply agree_on_incl; eauto.
-        assert (Eqn 0 e e' ∈ s'). rewrite H1.
+        assert (EqnEq e e' ∈ s'). rewrite H1.
         cset_tac; intuition.
         exploit eqns_freeVars_incl; eauto. simpl in *.
         rewrite H3 in X0.
@@ -678,7 +628,7 @@ Proof.
         exploit omap_length; eauto. congruence.
         eapply update_with_list_agree; eauto.
         eapply agree_on_incl; eauto.
-        assert (Eqn 0 e e' ∈ s'). rewrite H1.
+        assert (EqnEq e e' ∈ s'). rewrite H1.
         cset_tac; intuition.
         exploit eqns_freeVars_incl; eauto.
         rewrite H3 in X0. simpl in X0.
@@ -686,14 +636,14 @@ Proof.
         rewrite <- X0. eapply incl_minus_lr; cset_tac; intuition.
         rewrite map_length. simpl in *.
         exploit omap_length; eauto. congruence.
-      * do 2 erewrite <- eval_exp_subst in H11; eauto.
-        econstructor.
+      * simpl in * |- *.
+        do 2 erewrite <- eval_exp_subst in X; eauto.
         erewrite exp_eval_agree; [| |reflexivity].
         erewrite exp_eval_agree with (e:=e'); [| |reflexivity].
-        eapply H11.
+        eapply X.
         eapply update_with_list_agree; eauto.
         eapply agree_on_incl; eauto.
-        assert (Eqn 1 e e' ∈ s'). rewrite H1.
+        assert (EqnApx e e' ∈ s'). rewrite H1.
         cset_tac; intuition.
         exploit eqns_freeVars_incl; eauto. simpl in *.
         rewrite H3 in X0.
@@ -703,7 +653,7 @@ Proof.
         exploit omap_length; eauto. congruence.
         eapply update_with_list_agree; eauto.
         eapply agree_on_incl; eauto.
-        assert (Eqn 1 e e' ∈ s'). rewrite H1.
+        assert (EqnApx e e' ∈ s'). rewrite H1.
         cset_tac; intuition.
         exploit eqns_freeVars_incl; eauto.
         rewrite H3 in X0. simpl in X0.
@@ -711,6 +661,7 @@ Proof.
         rewrite <- X0. eapply incl_minus_lr; cset_tac; intuition.
         rewrite map_length. simpl in *.
         exploit omap_length; eauto. congruence.
+      * simpl in *; eauto.
     + rewrite H1 in H5.
       eapply H; try eapply H7; eauto.
       rewrite <- H3. rewrite H1.
@@ -735,41 +686,23 @@ Lemma satisfiesAll_update x Gamma V e e' y
   -> satisfiesAll V Gamma
   -> ⎣y ⎦ = exp_eval V e
   -> ⎣y ⎦ = exp_eval V e'
-  -> satisfiesAll (V [x <- ⎣y ⎦]) ({{Eqn EqnEq (Var x) e}} ∪ {Eqn EqnEq (Var x) e'; {}} ∪ Gamma).
+  -> satisfiesAll (V [x <- ⎣y ⎦])
+                 ({EqnEq (Var x) e ; {EqnEq (Var x) e'; Gamma } }).
 Proof.
-  intros. hnf; intros. cset_tac. destruct H5. destruct H5.
-  - invc H5; simpl in * |- *; subst. econstructor.
+  intros. hnf; intros. cset_tac. destruct H5 as [|[|]].
+  - invc H5; simpl in * |- *; subst.
     + erewrite <- exp_eval_agree; eauto. instantiate (1:=V).
       rewrite <- H3. simpl. lud. econstructor; eauto.
       exfalso; eauto.
-      eapply agree_on_update_dead; eauto. reflexivity.
-  - invc H5; simpl in * |- *; subst. econstructor.
+      eapply agree_on_update_dead; eauto.
+  - invc H5; simpl in * |- *; subst.
     + erewrite <- exp_eval_agree; eauto. instantiate (1:=V).
       rewrite <- H4. simpl. lud. econstructor; eauto.
       exfalso; eauto.
-      eapply agree_on_update_dead; eauto. reflexivity.
-  - hnf in H1. exploit H2; eauto. inv X.
-    + econstructor.
-      erewrite <- exp_eval_agree; eauto.
-      symmetry.
-      erewrite <- exp_eval_agree; eauto. symmetry. eapply H6.
-      eapply agree_on_update_dead; try reflexivity.
-      intro. eapply H. eapply in_eqns_freeVars; eauto.
-      simpl; cset_tac; intuition.
-      eapply agree_on_update_dead; try reflexivity.
-      intro. eapply H. eapply in_eqns_freeVars; eauto.
-      simpl; cset_tac; intuition.
-    + econstructor.
-      erewrite (@exp_eval_agree _ _ e0); eauto.
-      erewrite exp_eval_agree with (e:=e'0); eauto.
-      symmetry.
-      eapply agree_on_update_dead; try reflexivity.
-      intro. eapply H. eapply in_eqns_freeVars; eauto.
-      simpl; cset_tac; intuition.
-      symmetry.
-      eapply agree_on_update_dead; try reflexivity.
-      intro. eapply H. eapply in_eqns_freeVars; eauto.
-      simpl; cset_tac; intuition.
+      eapply agree_on_update_dead; eauto.
+  - hnf in H1. exploit H2; eauto.
+    eapply satisfies_update_dead; eauto.
+    intro. eapply in_eqns_freeVars in H6; eauto.
 Qed.
 
 
@@ -779,22 +712,8 @@ Lemma satisfiesAll_update_dead_single x Gamma V y
   -> satisfiesAll (V [x <- ⎣y ⎦]) Gamma.
 Proof.
   intros. hnf; intros.
-  - hnf; intros.
-    assert (agree_on eq (freeVars gamma) (V [x <- ⎣y ⎦]) V). {
-      hnf; intros. lud. exfalso; eauto.
-      eapply H. eapply in_eqns_freeVars; eauto. rewrite e; eauto.
-    }
-    + exploit (H0 _ H1); eauto. inv X.
-      * econstructor.
-        erewrite exp_eval_agree; eauto. instantiate (1:=V).
-        erewrite exp_eval_agree with (e:=e'); eauto.
-        symmetry. eapply agree_on_incl; eauto. simpl; cset_tac; intuition.
-        symmetry. eapply agree_on_incl; eauto. simpl; cset_tac; intuition.
-      * econstructor.
-        erewrite exp_eval_agree; eauto. instantiate (1:=V).
-        erewrite exp_eval_agree with (e:=e'); eauto.
-        symmetry. eapply agree_on_incl; eauto. simpl; cset_tac; intuition.
-        symmetry. eapply agree_on_incl; eauto. simpl; cset_tac; intuition.
+  - eapply satisfies_update_dead; eauto.
+    intro. eapply in_eqns_freeVars in H2; eauto.
 Qed.
 
 Lemma satisfiesAll_monotone E Gamma Γ'
@@ -803,31 +722,6 @@ Lemma satisfiesAll_monotone E Gamma Γ'
   -> satisfiesAll E Γ'.
 Proof.
   intros. hnf; intros. eapply H; eauto.
-Qed.
-
-Lemma moreDefined_monotone Γ1 Γ1' e e'
-  : moreDefined Γ1  e e'
-    -> Γ1 ⊆ Γ1'
-    -> moreDefined Γ1' e e'.
-Proof.
-  intros. hnf; intros. eapply H; eauto using satisfiesAll_monotone.
-Qed.
-
-Lemma moreDefinedArgs_monotone Γ1 Γ1' Y Y'
-  : moreDefinedArgs Γ1 Y Y'
-    -> Γ1 ⊆ Γ1'
-    -> moreDefinedArgs Γ1' Y Y'.
-Proof.
-  intros. hnf; intros. eapply H; eauto using satisfiesAll_monotone.
-Qed.
-
-Lemma entails_monotone Γ1 Γ2 Γ1'
-: entails Γ1 Γ2
-  -> Γ1 ⊆ Γ1'
-  -> entails Γ1' Γ2.
-Proof.
-  unfold entails; intros; dcr.
-  - intros. eapply H. hnf; intros. eapply H1; eauto.
 Qed.
 
 Lemma not_entails_antitone Gamma Γ' gamma
@@ -849,31 +743,26 @@ Proof.
   eapply satisfiesAll_monotone; eauto.
 Qed.
 
-Lemma eqn_sound_monotone Es Γ1 Γ1' s ang an
-: ssa s ang
-  -> eqn_sound Es s Γ1 ang an
+Lemma eqn_sound_monotone Es Γ1 Γ1' s s' ang
+: renamedApart s ang
+  -> eqn_sound Es s s' Γ1 ang
   -> Γ1 ⊆ Γ1'
-  -> eqn_sound Es s Γ1' ang an.
+  -> eqn_sound Es s s' Γ1' ang.
 Proof.
-  intros. general induction H0; eauto.
-  - invt ssa. econstructor; eauto.
+  intros. general induction H0;
+    (try now (eapply EqnUnsat; eauto using unsatisfiable_monotone)); invt renamedApart; eauto.
+  - constructor; eauto.
     eapply IHeqn_sound; eauto.
     + rewrite H3; reflexivity.
-    + eapply moreDefined_monotone; eauto.
-  - invt ssa.
-    econstructor; intros; eauto using moreDefined_monotone, not_entails_antitone.
+    + eapply entails_monotone; eauto.
+  - econstructor; intros; eauto using entails_monotone, not_entails_antitone.
     eapply IHeqn_sound1; eauto using not_entails_antitone. rewrite H1; reflexivity.
     eapply IHeqn_sound2; eauto using not_entails_antitone. rewrite H1. reflexivity.
-  - invt ssa.
-    econstructor; eauto using entails_monotone, moreDefinedArgs_monotone.
-  - invt ssa.
-    econstructor; eauto using moreDefined_monotone.
-  - invt ssa.
-    econstructor; eauto using moreDefinedArgs_monotone.
-  - invt ssa.
-    econstructor; eauto.
+  - econstructor; eauto using entails_monotone.
+  - econstructor; eauto using entails_monotone.
+  - econstructor; eauto using entails_monotone.
+  - econstructor; eauto.
     + rewrite <- H3; eauto.
-  - eapply EqnUnsat. eauto using unsatisfiable_monotone.
 Qed.
 
 
@@ -899,20 +788,14 @@ Proof.
     dcr; split; eauto.
 Qed.
 
-Lemma moreDefined_entails_monotone Γ1 Γ1' e e'
-  : moreDefined Γ1 e e'
-    -> entails Γ1' Γ1
-    -> moreDefined Γ1' e e'.
+Lemma entails_inert_add x Γ2 Γ2'
+: entails Γ2 Γ2'
+  -> entails {x ; Γ2} {x ; Γ2'}.
 Proof.
-  intros. hnf; intros. eapply H; eauto.
-Qed.
-
-Lemma moreDefinedArgs_entails_monotone Γ1 Γ1' Y Y'
-  : moreDefinedArgs Γ1 Y Y'
-    -> entails Γ1' Γ1
-    -> moreDefinedArgs Γ1' Y Y'.
-Proof.
-  intros. hnf; intros. eapply H; eauto.
+  unfold entails; intros; dcr.
+  - hnf; intros. cset_tac; intuition.
+    eapply H; eauto. hnf; intros; eapply H0.
+    cset_tac; intuition.
 Qed.
 
 Lemma entails_transitive Γ Γ' Γ''
@@ -946,33 +829,29 @@ Proof.
   intros. hnf; intros. intro. exploit (H E); eauto.
 Qed.
 
-Lemma eqn_sound_entails_monotone Es Γ1 Γ1' s ang an
-: ssa s ang
-  -> eqn_sound Es s Γ1 ang an
+Lemma eqn_sound_entails_monotone Es Γ1 Γ1' s s' ang
+: renamedApart s ang
+  -> eqn_sound Es s s' Γ1 ang
   -> entails Γ1' Γ1
-  -> eqn_sound Es s Γ1' ang an.
+  -> eqn_sound Es s s' Γ1' ang.
 Proof.
-  intros. general induction H0; eauto.
-  - invt ssa. econstructor; eauto.
-    eapply IHeqn_sound; eauto using entails_inert.
-    + eapply moreDefined_entails_monotone; eauto.
-  - invt ssa. econstructor; intros; eauto using moreDefined_entails_monotone,
+  intros. general induction H0;
+    (try now (eapply EqnUnsat; eauto using unsatisfiable_entails_monotone));
+    invt renamedApart; eauto.
+  - econstructor; eauto.
+    eapply IHeqn_sound; eauto. rewrite <- H3. reflexivity.
+    + etransitivity; eauto.
+  - econstructor; intros; eauto using entails_transitive,
     not_entails_entails_antitone.
     + eapply IHeqn_sound1; eauto using not_entails_entails_antitone.
-      eapply entails_union; split.
-      eapply entails_monotone. reflexivity. cset_tac; intuition.
-      eapply entails_monotone. eauto. cset_tac; intuition.
+      rewrite H1. reflexivity.
     + eapply IHeqn_sound2; eauto using not_entails_entails_antitone.
-      eapply entails_union; split.
-      eapply entails_monotone. reflexivity. cset_tac; intuition.
-      eapply entails_monotone. eauto. cset_tac; intuition.
-  - invt ssa. econstructor; eauto using entails_transitive,
-                            moreDefinedArgs_entails_monotone.
-  - invt ssa. econstructor; eauto using moreDefined_entails_monotone.
-  - invt ssa. econstructor; eauto using moreDefinedArgs_entails_monotone.
-  - invt ssa. econstructor; eauto.
+      rewrite H1. reflexivity.
+  - econstructor; eauto using entails_transitive.
+  - econstructor; eauto using entails_transitive.
+  - econstructor; eauto using entails_transitive, entails_monotone.
+  - econstructor; eauto.
     + etransitivity; eauto.
-  - eapply EqnUnsat. eauto using unsatisfiable_entails_monotone.
 Qed.
 
 
@@ -988,21 +867,43 @@ Proof.
   erewrite IHY; eauto; simpl; eauto.
 Qed.
 
+Ltac length_equify :=
+  repeat (match goal with
+            | [ H : length ?A = length ?B |- _ ] =>
+              eapply length_length_eq in H
+          end).
+
+Lemma omap_satisfies_list_EqnApx V Y Y' v
+ : length Y = length Y'
+   -> satisfiesAll V (list_EqnApx Y Y')
+   -> omap (exp_eval V) Y = ⎣ v ⎦
+   -> omap (exp_eval V) Y' = ⎣ v ⎦.
+Proof.
+  intros. length_equify.
+  general induction H; simpl in * |- *; eauto.
+  monad_inv H1.
+  exploit H0. eapply add_1. reflexivity. inv X. congruence.
+  simpl. erewrite IHlength_eq; eauto. rewrite EQ1. reflexivity.
+  eapply satisfiesAll_monotone; eauto.
+  unfold list_EqnApx; simpl in *.
+  cset_tac; intuition.
+Qed.
 
 
-Lemma sim_vopt r L L' V V' s LV Gamma repl ang
+Lemma sim_vopt r L L' V V' s s' LV Gamma ang
 : satisfiesAll V Gamma
--> eqn_sound LV s Gamma ang repl
+-> eqn_sound LV s s' Gamma ang
 -> simL' sim_progeq r (AR (fst (getAnn ang)) V V') LV L L'
--> ssa s ang
+-> renamedApart s ang
 -> eqns_freeVars Gamma ⊆ fst (getAnn ang)
 -> onvLe V V'
--> sim'r r (L,V, s) (L',V', compile s repl).
+-> sim'r r (L,V, s) (L',V', s').
 Proof.
-  intros SAT EQN SIML SSA FV OLE.
+  intros SAT EQN SIML REAPT FV OLE.
   general induction EQN; (try (now exfalso; eapply H; eauto))
-  ; simpl; invt ssa; simpl in * |- *.
-  - exploiT moreDefined; eauto. inv X.
+  ; simpl; invt renamedApart; simpl in * |- *.
+  - exploit H; eauto. exploit X; eauto. cset_tac; reflexivity. inv X0.
+    inv H2.
     + pfold. econstructor 3; try eapply star2_refl; eauto. stuck2.
     + pose proof H2. symmetry in H3. eapply exp_eval_onvLe in H3; eauto.
       pfold. econstructor; try eapply plus2O.
@@ -1013,13 +914,14 @@ Proof.
       * {
           eapply simL'_update; eauto.
           - intros. hnf in H4.
-            hnf. destruct x0 as [[[ ?] ?] ?]. dcr. repeat (split; eauto).
-            rewrite H10, H11. simpl. clear_all; cset_tac; intuition.
+            hnf. destruct x0 as [[[ ?] ?] ?]. dcr.
+            repeat (split; eauto).
+            rewrite H10, H12. simpl. clear_all; cset_tac; intuition.
             symmetry. eapply agree_on_update_dead.
-            intro. eapply H6. eauto.
+            intro. eapply H7. eauto.
             symmetry; eauto.
             symmetry. eapply agree_on_update_dead.
-            intro. eapply H6. eauto.
+            intro. eapply H7. eauto.
             symmetry; eauto.
           - intros; reflexivity.
         }
@@ -1027,7 +929,8 @@ Proof.
         rewrite FV. simpl. rewrite H8. rewrite H0.
         clear_all; cset_tac; intuition.
       * hnf; intros. lud; eauto.
-  - exploiT moreDefined; eauto. inv X.
+  - exploit H; eauto. exploit X; eauto. cset_tac; reflexivity. inv X0.
+    inv H1.
     + pfold. econstructor 3; try eapply star2_refl; eauto. stuck2.
     + pose proof H1. symmetry in H2. eapply exp_eval_onvLe in H2; eauto.
       pfold. case_eq (val2bool y); intros.
@@ -1042,10 +945,10 @@ Proof.
       econstructor; eauto using eq_sym. reflexivity.
       econstructor; eauto using eq_sym. reflexivity.
       left. eapply IHEQN1; try eapply H9; eauto.
-      * eapply satisfiesAll_union; split; eauto.
-        hnf; intros. cset_tac. invc H4.
-        econstructor. simpl. rewrite <- H0. unfold option_lift1. simpl.
-        unfold val2bool in H3. rewrite H3. econstructor. reflexivity.
+      * eapply satisfiesAll_add; split; eauto.
+        hnf; intros.
+        simpl. rewrite <- H0. unfold option_lift1. unfold comp; simpl.
+        rewrite H3; constructor. reflexivity.
       * eapply simL'_update; eauto.
         unfold BlockRel.
         destruct x as [[[ ?] ?] ?]; simpl; intros; dcr.
@@ -1067,11 +970,9 @@ Proof.
         econstructor 3; eauto using eq_sym. reflexivity.
         {
           left. eapply IHEQN2; try eapply H13; eauto.
-          - eapply satisfiesAll_union; split; eauto.
-            hnf; intros. cset_tac. invc H4.
-            econstructor. simpl. rewrite <- H0. unfold option_lift1. simpl.
-            unfold val2bool in H3.
-            rewrite H3. constructor. reflexivity.
+          - eapply satisfiesAll_add; split; eauto.
+            hnf; intros. simpl. rewrite <- H0. unfold option_lift1.
+            unfold comp; simpl. rewrite H3. constructor. reflexivity.
           - eapply simL'_update; eauto.
             unfold BlockRel.
             destruct x as [[[ ?] ?] ?]; simpl; intros; dcr.
@@ -1084,45 +985,55 @@ Proof.
   - destruct (get_dec L (counted l)) as [[[bE bZ bs]]|].
     (* hnf in H2. exploit H2; eauto. simpl in *. subst bZ. *)
     decide (length bZ = length Y).
-    exploiT moreDefinedArgs; eauto. inv X.
+    exploit H2; eauto. case_eq (omap (exp_eval V) Y); intros. Focus 2.
     + pfold. econstructor 3; try eapply star2_refl. eauto. stuck2.
-    + pose proof H4. symmetry in H5. eapply omap_exp_eval_onvLe in H5; eauto.
+    + pose proof H3.
+      eapply omap_satisfies_list_EqnApx in H4; eauto.
+      eapply omap_exp_eval_onvLe in H4; eauto.
+      pose proof H3.
+      eapply omap_satisfies_list_EqnApx in H5; eauto.
       edestruct AIR5_length; try eassumption; dcr.
       edestruct get_length_eq; try eassumption.
       edestruct AIR5_nth as [?[? [?]]]; try eassumption; dcr.
       simpl in *. repeat get_functional; subst.
-      inv H18. hnf in H21; simpl in H21; dcr; subst.
-      eapply sim_drop_shift. eapply H24; eauto. hnf. simpl; repeat split.
+      inv H18. hnf in H21; simpl in H23; dcr; subst.
+      eapply sim_drop_shift. eapply H24; eauto.
+      hnf. simpl; repeat split.
       exploit omap_length; eauto. unfold var in *. congruence.
-      hnf in H23; dcr.
       eapply satisfiesAll_union; split; eauto.
-      eapply (@satisfiesAll_subst V Gamma Γf); try eapply H4; eauto.
+      symmetry in H5.
+      eapply (@satisfiesAll_subst V Gamma Γf); try eapply H5; eauto.
       congruence.
       symmetry; eauto.
       eapply satisfiesAll_update_dead; eauto. rewrite map_length.
       exploit omap_length; eauto. congruence.
       rewrite <- H.
-      revert H H22; clear_all; cset_tac; intuition; exfalso; eauto.
+      revert H H25; clear_all; cset_tac; intuition; exfalso; eauto.
     + pfold. econstructor 3; try eapply star2_refl. eauto. stuck2; eauto.
       get_functional; subst. simpl in *. congruence.
     + pfold. econstructor 3; try eapply star2_refl. eauto. stuck2; eauto.
-  - simpl. exploiT moreDefined; eauto. inv X; eauto.
+  - simpl. exploit H; eauto. exploit X. cset_tac; reflexivity. inv X0; eauto.
+    inv H1.
     + pfold. econstructor 3; try eapply star2_refl. simpl. congruence.
       stuck2.
     + pfold. econstructor 4; try eapply star2_refl. simpl.
       erewrite <- exp_eval_onvLe in H0; eauto.
       stuck2. stuck2.
-  - exploiT moreDefinedArgs; eauto. inv X.
+  - case_eq (omap (exp_eval V) Y); intros. Focus 2.
     + pfold. econstructor 3; try eapply star2_refl. eauto.
       stuck2.
-    + pfold. eapply sim'Extern; try eapply star2_refl.
-      * eexists (ExternI f y default_val); eexists; econstructor; eauto.
-      * pose proof H2. symmetry in H2. eapply omap_exp_eval_onvLe in H2; eauto.
-        eexists (ExternI f y default_val); eexists; econstructor; eauto.
-      * { intros. inv H3.
+    + pose proof H2.
+      eapply omap_satisfies_list_EqnApx in H3; eauto.
+      eapply omap_exp_eval_onvLe in H3; eauto.
+      pfold. eapply sim'Extern; try eapply star2_refl.
+      * exists (ExternI f l 0); eexists; econstructor; eauto.
+      * pose proof H2. eapply omap_exp_eval_onvLe in H2; eauto.
+        eexists (ExternI f l 0); eexists; econstructor; eauto.
+      * { intros. inv H4.
           eexists. econstructor; eauto.
           - econstructor; eauto.
-            eapply omap_exp_eval_onvLe; eauto. congruence.
+            eapply omap_exp_eval_onvLe; eauto.
+            eapply omap_satisfies_list_EqnApx; eauto.
           - left. eapply IHEQN; eauto.
             + eapply satisfiesAll_update_dead_single; eauto.
             + eapply simL'_update; eauto.
@@ -1130,20 +1041,20 @@ Proof.
                 unfold BlockRel' in *.
                 destruct x0 as [[[ ?] ?] ?]; simpl; intros; dcr.
                 repeat (split; eauto).
-                rewrite H11. rewrite H8. simpl. clear_all; cset_tac; intuition.
-                symmetry. eapply agree_on_update_dead. rewrite H8. eauto.
+                rewrite H12. rewrite H9. simpl. clear_all; cset_tac; intuition.
+                symmetry. eapply agree_on_update_dead. rewrite H9. eauto.
                 symmetry; eauto.
-                symmetry. eapply agree_on_update_dead. rewrite H8. eauto.
+                symmetry. eapply agree_on_update_dead. rewrite H9. eauto.
                 symmetry; eauto.
               * intros; reflexivity.
-            + rewrite H11, FV; simpl. clear_all; cset_tac; intuition.
+            + rewrite H12, FV; simpl. clear_all; cset_tac; intuition.
             + hnf; intros; lud; eauto.
         }
-      * { intros. inv H3.
+      * { intros. inv H4.
           eexists. econstructor; eauto.
           - econstructor; eauto.
             pose proof H2.
-            erewrite <- omap_exp_eval_onvLe in H4; eauto. congruence.
+            erewrite <- omap_exp_eval_onvLe in H5; eauto. congruence.
           - left. eapply IHEQN; eauto.
             + eapply satisfiesAll_update_dead_single; eauto.
             + eapply simL'_update; eauto.
@@ -1151,13 +1062,13 @@ Proof.
                 unfold BlockRel' in *.
                 destruct x0 as [[[ ?] ?] ?]; simpl; intros; dcr.
                 repeat (split; eauto).
-                rewrite H8, H11. simpl. clear_all; cset_tac; intuition.
-                symmetry. eapply agree_on_update_dead. rewrite H8. eauto.
+                rewrite H9, H12. simpl. clear_all; cset_tac; intuition.
+                symmetry. eapply agree_on_update_dead. rewrite H9. eauto.
                 symmetry; eauto.
-                symmetry. eapply agree_on_update_dead. rewrite H8. eauto.
+                symmetry. eapply agree_on_update_dead. rewrite H9. eauto.
                 symmetry; eauto.
               * intros; reflexivity.
-            + rewrite FV, H11; simpl. clear_all; cset_tac; intuition.
+            + rewrite FV, H12; simpl. clear_all; cset_tac; intuition.
             + hnf; intros; lud; eauto.
         }
   - pfold. econstructor; try eapply plus2O.
@@ -1171,7 +1082,8 @@ Proof.
         repeat (split; eauto).
         rewrite H5, H15; reflexivity.
         clear_all; reflexivity.
-      * hnf; intros. hnf in H2; dcr.
+      * hnf; split; intros. hnf; intuition.
+        hnf in H2; dcr.
         eapply IHEQN1; try eapply H10; eauto.
         eapply simL'_update; eauto.
         unfold BlockRel. intros.
@@ -1179,18 +1091,20 @@ Proof.
         simpl. dcr.
         assert (sEQ: s0 [=] s0 \ of_list Z). {
           assert (s0 ∩ of_list Z [=] ∅).
-          rewrite <- H9. rewrite H15 in H18.
-          revert H9 H18; simpl; clear_all; cset_tac; intuition; exfalso; eauto.
+          rewrite <- H9. rewrite H15 in H17.
+          revert H9 H17; simpl; clear_all; cset_tac; intuition; exfalso; eauto.
           rewrite <- (minus_union_set _ _ _ H2).
           clear_all; cset_tac; intuition.
         }
         repeat (split; eauto).
-        rewrite H13. rewrite H18, H15; simpl. eapply incl_right.
+        rewrite H13. rewrite H17, H15; simpl. eapply incl_right.
         rewrite sEQ. symmetry.
         eapply update_with_list_agree_minus; eauto. rewrite map_length; eauto.
         symmetry; eauto.
         rewrite sEQ. symmetry.
         eapply update_with_list_agree_minus; eauto. rewrite map_length; eauto.
+        symmetry; eauto.
+        congruence.
         symmetry; eauto.
         reflexivity.
         rewrite H13; simpl. rewrite eqns_freeVars_union.

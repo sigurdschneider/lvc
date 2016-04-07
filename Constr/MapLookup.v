@@ -97,8 +97,7 @@ Lemma lookup_set_singleton {X} `{OrderedType X} {Y} `{OrderedType Y} (f:X->Y)
   `{Proper _ (_eq ==> _eq) f} x
   : lookup_set f {{x}} [=] {{f x}}.
 Proof.
-  cset_tac; intros. rewrite lookup_set_spec; eauto. split; intros; firstorder.
-  cset_tac. rewrite <- H2; eauto.
+  cset_tac; intuition.
 Qed.
 
 Lemma lookup_set_singleton' {X} `{OrderedType X} {Y} `{OrderedType Y} (f:X->Y)
@@ -118,9 +117,22 @@ Lemma lookup_set_single X `{OrderedType X} Y `{OrderedType Y} (ϱ:X->Y)
   -> {{ ϱ v }} ⊆ D'.
 Proof.
   intros. hnf; intros.
-  eapply H3. cset_tac.
-  rewrite H4.
+  eapply H3. cset_tac; intuition.
   eapply lookup_set_spec; eauto.
+Qed.
+
+Lemma lookup_set_add X `{OrderedType X} Y `{OrderedType Y} x s (m:X -> Y) `{Proper _ (_eq ==> _eq) m}
+: (lookup_set m {x; s}) [=] {m x; lookup_set m s}.
+Proof.
+  intro. split; intros.
+  - eapply lookup_set_spec in H2; eauto.
+    cset_tac. destruct H4.
+    + left; rewrite H2; symmetry; eauto.
+    + right; eapply lookup_set_spec; firstorder.
+  - cset_tac. destruct H2; eapply lookup_set_spec; dcr; eauto.
+    + eexists x; cset_tac; firstorder.
+    + eapply lookup_set_spec in H2; eauto.
+      firstorder.
 Qed.
 
 Ltac set_tac :=
@@ -131,6 +143,22 @@ Ltac set_tac :=
     | [ |- context [ In ?y (lookup_set ?f ?s) ]] =>
       rewrite (@lookup_set_spec _ _ _ _ f s y)
   end.
+
+
+Lemma lookup_set_empty X `{OrderedType X} Y `{OrderedType Y} (ϱ:X->Y)
+      `{Proper _ (_eq ==> _eq) ϱ}
+: lookup_set ϱ {} [=] {}.
+Proof.
+  unfold lookup_set. cset_tac.
+  rewrite map_iff; eauto.
+  firstorder. cset_tac; eauto.
+Qed.
+
+Hint Extern 20 (lookup_set ?ϱ {} [=] {}) => eapply lookup_set_empty; eauto.
+Hint Extern 20 ({} [=] lookup_set ?ϱ {}) => symmetry; eapply lookup_set_empty; eauto.
+
+Hint Extern 20 (lookup_set ?ϱ (singleton ?v) [=] singleton (?ϱ ?v)) => eapply lookup_set_singleton'; eauto.
+Hint Extern 20 (singleton (?ϱ ?v) [=] lookup_set ?ϱ (singleton ?v)) => symmetry; eapply lookup_set_singleton'; eauto.
 
 (*
  *** Local Variables: ***

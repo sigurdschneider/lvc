@@ -1,14 +1,8 @@
 Require Import List.
 Require Export Util Relations Get Drop Var Val Exp Env Map CSet AutoIndTac MoreList OptionMap Events.
+Require Import SetOperations.
 
 Set Implicit Arguments.
-
-Ltac stuck2 :=
-  let σ := fresh "σ" in
-  let A := fresh "A" in
-  let v := fresh "v" in
-  let evt := fresh "evt" in
-  intros [v [evt A]]; inv A; isabsurd.
 
 (** * Intermediate Language IL *)
 
@@ -21,106 +15,160 @@ Notation "'params'" := (list var) (at level 0).
 
 
 Inductive stmt : Type :=
-| stmtExp    (x : var) (e: exp) (s : stmt) : stmt
+| stmtLet    (x : var) (e: exp) (s : stmt) : stmt
 | stmtIf     (e : exp) (s : stmt) (t : stmt) : stmt
-| stmtGoto   (l : lab) (Y:args) : stmt
+| stmtApp   (l : lab) (Y:args) : stmt
 | stmtReturn (e : exp) : stmt
 | stmtExtern (x : var) (f:external) (Y:args) (s:stmt)
 (* block f Z : rt = s in b *)
-| stmtLet    (Z:params) (s : stmt) (t : stmt) : stmt.
+| stmtFun    (Z:params) (s : stmt) (t : stmt) : stmt.
 
 Inductive notOccur (G:set var) : stmt -> Prop :=
-  | ncExp x e s
+  | noExp x e s
     : x ∉ G
       -> notOccur G s
       -> Exp.notOccur G e
-      -> notOccur G (stmtExp x e s)
-  | ncIf e s t
+      -> notOccur G (stmtLet x e s)
+  | noIf e s t
     : Exp.notOccur G e
       -> notOccur G s
       -> notOccur G t
       -> notOccur G (stmtIf e s t)
-  | ncRet e : Exp.notOccur G e -> notOccur G (stmtReturn e)
-  | ncGoto l (Y:list exp)
+  | noRet e : Exp.notOccur G e -> notOccur G (stmtReturn e)
+  | noGoto l (Y:list exp)
     : (forall n e, get Y n e -> Exp.notOccur G e)
-      -> notOccur G (stmtGoto l Y)
-  | ncExtern x f Y s
+      -> notOccur G (stmtApp l Y)
+  | noExtern x f Y s
     : (forall n e, get Y n e -> Exp.notOccur G e)
       -> x ∉ G
       -> notOccur G s
       -> notOccur G (stmtExtern x f Y s)
-  | ncLet s Z t
-    : of_list Z ∩ G [=] ∅
+  | noLet s Z t
+    : disj G (of_list Z)
       -> notOccur G s
       -> notOccur G t
-      -> notOccur G (stmtLet Z s t).
+      -> notOccur G (stmtFun Z s t).
 
 Fixpoint freeVars (s:stmt) : set var :=
   match s with
-    | stmtExp x e s0 => (freeVars s0 \ {{x}}) ∪ Exp.freeVars e
+    | stmtLet x e s0 => (freeVars s0 \ {{x}}) ∪ Exp.freeVars e
     | stmtIf e s1 s2 => freeVars s1 ∪ freeVars s2 ∪ Exp.freeVars e
-    | stmtGoto l Y => list_union (List.map Exp.freeVars Y)
+    | stmtApp l Y => list_union (List.map Exp.freeVars Y)
     | stmtReturn e => Exp.freeVars e
     | stmtExtern x f Y s => (freeVars s \ {{x}}) ∪ list_union (List.map Exp.freeVars Y)
-    | stmtLet Z s1 s2 => (freeVars s1 \ of_list Z) ∪ freeVars s2
+    | stmtFun Z s1 s2 => (freeVars s1 \ of_list Z) ∪ freeVars s2
+  end.
+
+Fixpoint definedVars (s:stmt) : set var :=
+  match s with
+    | stmtLet x e s0 => {x; definedVars s0}
+    | stmtIf e s1 s2 => definedVars s1 ∪ definedVars s2
+    | stmtApp l Y => ∅
+    | stmtReturn e => ∅
+    | stmtExtern x f Y s => {x; definedVars s}
+    | stmtFun Z s1 s2 => definedVars s1 ∪ definedVars s2 ∪ of_list Z
   end.
 
 Fixpoint occurVars (s:stmt) : set var :=
   match s with
-    | stmtExp x e s0 => occurVars s0 ∪ {{x}}
+    | stmtLet x e s0 => {x; occurVars s0} ∪ Exp.freeVars e
     | stmtIf e s1 s2 => occurVars s1 ∪ occurVars s2 ∪ Exp.freeVars e
-    | stmtGoto l Y => list_union (List.map Exp.freeVars Y)
+    | stmtApp l Y => list_union (List.map Exp.freeVars Y)
     | stmtReturn e => Exp.freeVars e
-    | stmtExtern x f Y s => freeVars s ∪ {{x}} ∪ list_union (List.map Exp.freeVars Y)
-    | stmtLet Z s1 s2 => freeVars s1 ∪ freeVars s2 ∪ of_list Z
+    | stmtExtern x f Y s => {x; occurVars s} ∪ list_union (List.map Exp.freeVars Y)
+    | stmtFun Z s1 s2 => occurVars s1 ∪ occurVars s2 ∪ of_list Z
   end.
+
+Lemma freeVars_occurVars s
+: freeVars s ⊆ occurVars s.
+Proof.
+  general induction s; simpl; cset_tac; intuition.
+Qed.
+
+Lemma definedVars_occurVars s
+: definedVars s ⊆ occurVars s.
+Proof.
+  general induction s; simpl; try now (cset_tac; intuition).
+Qed.
+
+Lemma occurVars_freeVars_definedVars s
+: occurVars s [=] freeVars s ∪ definedVars s.
+Proof.
+  general induction s; simpl.
+  - rewrite IHs. clear_all; cset_tac; intuition; eauto.
+    decide (x === a); intuition; eauto.
+  - rewrite IHs1, IHs2. clear_all; cset_tac; intuition; eauto.
+  - cset_tac; intuition.
+  - cset_tac; intuition.
+  - rewrite IHs. clear_all; cset_tac; intuition; eauto.
+    decide (x === a); intuition; eauto.
+  - rewrite IHs1, IHs2. clear_all; cset_tac; intuition; eauto.
+    decide (a ∈ of_list Z); intuition; eauto.
+Qed.
+
+Lemma notOccur_disj_occurVars G s
+: notOccur G s -> disj G (occurVars s).
+Proof.
+  intros.
+  general induction H; simpl; repeat (rewrite disj_app || rewrite disj_add);
+  eauto using Exp.notOccur_disj_freeVars, list_union_notOccur.
+Qed.
+
+Lemma occurVars_disj_notOccur G s
+: disj G (occurVars s) -> notOccur G s.
+Proof.
+  intros.
+  - general induction s; simpl in * |- *;
+    repeat (rewrite disj_app in H || rewrite disj_add in H); dcr;
+    eauto using notOccur, Exp.freeVars_disj_notOccur, list_union_notOccur'.
+Qed.
+
 
 Fixpoint rename (ϱ:env var) (s:stmt) : stmt :=
   match s with
-    | stmtExp x e s => stmtExp (ϱ x) (rename_exp ϱ e) (rename ϱ s)
+    | stmtLet x e s => stmtLet (ϱ x) (rename_exp ϱ e) (rename ϱ s)
     | stmtIf e s t => stmtIf (rename_exp ϱ e) (rename ϱ s) (rename ϱ t)
-    | stmtGoto l Y => stmtGoto l (List.map (rename_exp ϱ) Y)
+    | stmtApp l Y => stmtApp l (List.map (rename_exp ϱ) Y)
     | stmtReturn e => stmtReturn (rename_exp ϱ e)
     | stmtExtern x f e s => stmtExtern (ϱ x) f (List.map (rename_exp ϱ) e) (rename ϱ s)
-    | stmtLet Z s t => stmtLet (lookup_list ϱ Z) (rename ϱ s) (rename ϱ t)
+    | stmtFun Z s t => stmtFun (lookup_list ϱ Z) (rename ϱ s) (rename ϱ t)
   end.
 
 Fixpoint label_closed (n:nat) (s:stmt) : Prop :=
   match s with
-    | stmtExp _ _ s => label_closed n s
+    | stmtLet _ _ s => label_closed n s
     | stmtIf _ s t => label_closed n s /\ label_closed n t
-    | stmtGoto l _ => counted l < n
+    | stmtApp l _ => counted l < n
     | stmtReturn _ => True
     | stmtExtern _ _ _ s => label_closed n s
-    | stmtLet _ s t => label_closed (S n) s /\ label_closed (S n) t
+    | stmtFun _ s t => label_closed (S n) s /\ label_closed (S n) t
   end.
 
 Lemma notOccur_incl G G' s
   : G' ⊆ G -> notOccur G s -> notOccur G' s.
 Proof.
   intros A B. general induction B;
-              eauto 20 using notOccur, incl_not_member, incl_meet_empty,
+              eauto 20 using notOccur, incl_not_member, disj_1_incl,
               Exp.notOccur_antitone.
 Qed.
 
-Add Parametric Morphism : notOccur with
-  signature Subset ==> eq ==> flip impl as incl_notOccur_morphism.
+Instance notOccur_subset
+: Proper (Subset ==> eq ==> flip impl) notOccur.
 Proof.
-  intros; hnf; intros. general induction H0; eauto 20 using notOccur, Exp.notOccur_antitone.
-  - econstructor; eauto.
-    eapply incl_eq; eauto using incl_empty. rewrite <- H.
-    eapply incl_meet_lr; intuition.
+  unfold Proper, respectful, flip, impl; intros; subst.
+  general induction H1; eauto 20 using notOccur, Exp.notOccur_antitone, disj_1_incl.
 Qed.
 
-Add Parametric Morphism : notOccur with
-  signature Equal ==> eq ==> iff as eq_cset_notOccur_morphism.
+Instance notOccur_equal
+: Proper (Equal ==> eq ==> iff) notOccur.
 Proof.
-  intros. split; intros.
+  split; intros; subst.
   assert (Subset y x); intuition.
-  rewrite H1; eauto.
+  rewrite H0; eauto.
   assert (Subset x y); intuition.
-  rewrite H1; eauto.
+  rewrite H0; eauto.
 Qed.
+
 
 (** ** Semantics *)
 
@@ -140,7 +188,7 @@ Module F.
   Inductive step : state -> event -> state -> Prop :=
   | stepExp L E x e b v
     (def:exp_eval E e = Some v)
-    : step (L, E, stmtExp x e b) EvtTau (L, E[x<-Some v], b)
+    : step (L, E, stmtLet x e b) EvtTau (L, E[x<-Some v], b)
 
   | stepIfT L E
     e (b1 b2 : stmt) v
@@ -159,13 +207,13 @@ Module F.
     (len:length (block_Z blk) = length Y)
     (def:omap (exp_eval E) Y = Some vl) E'
     (updOk:(block_E blk) [block_Z blk <-- List.map Some vl] = E')
-    : step  (L, E, stmtGoto l Y)
+    : step  (L, E, stmtApp l Y)
             EvtTau
             (drop (counted l) L, E', block_s blk)
 
   | stepLet L E
     s Z (t:stmt)
-    : step (L, E, stmtLet Z s t) EvtTau (blockI E Z s::L, E, t)
+    : step (L, E, stmtFun Z s t) EvtTau (blockI E Z s::L, E, t)
 
   | stepExtern L E x f Y s vl v
     (def:omap (exp_eval E) Y = Some vl)
@@ -173,11 +221,18 @@ Module F.
             (EvtExtern (ExternI f vl v))
             (L, E[x <- Some v], s).
 
-  Lemma step_internally_deterministic :
-    internally_deterministic step.
+  Lemma step_internally_deterministic
+  : internally_deterministic step.
   Proof.
     hnf; intros.
     inv H; inv H0; split; eauto; try get_functional; try congruence.
+  Qed.
+
+  Lemma step_externally_determined
+  : externally_determined step.
+  Proof.
+    hnf; intros.
+    inv H; inv H0; eauto; try get_functional; try congruence.
   Qed.
 
   Lemma step_dec
@@ -218,7 +273,7 @@ Module I.
   Inductive step : state -> event -> state -> Prop :=
   | stepExp L E x e b v
     (def:exp_eval E e = Some v)
-    : step (L, E, stmtExp x e b) EvtTau (L, E[x<-Some v], b)
+    : step (L, E, stmtLet x e b) EvtTau (L, E[x<-Some v], b)
 
   | stepIfT L E
     e (b1 b2 : stmt) v
@@ -237,14 +292,14 @@ Module I.
     (len:length (block_Z blk) = length Y)
     (def:omap (exp_eval E) Y = Some vl) E'
     (updOk:E[block_Z blk  <-- List.map Some vl] = E')
-    : step  (L, E, stmtGoto l Y)
+    : step  (L, E, stmtApp l Y)
             EvtTau
             (drop (counted l) L, E', block_s blk)
 
 
   | stepLet L E
     s Z (b:stmt)
-    : step (L, E, stmtLet Z s b) EvtTau (blockI Z s::L, E, b)
+    : step (L, E, stmtFun Z s b) EvtTau (blockI Z s::L, E, b)
 
   | stepExtern L E x f Y s vl v
     (def:omap (exp_eval E) Y = Some vl)
@@ -253,11 +308,18 @@ Module I.
             (L, E[x <- Some v], s).
 
 
-  Lemma step_internally_deterministic :
-    internally_deterministic step.
+  Lemma step_internally_deterministic
+  : internally_deterministic step.
   Proof.
     hnf; intros.
     inv H; inv H0; split; eauto; try get_functional; try congruence.
+  Qed.
+
+  Lemma step_externally_determined
+  : externally_determined step.
+  Proof.
+    hnf; intros.
+    inv H; inv H0; eauto; try get_functional; try congruence.
   Qed.
 
   Lemma step_dec

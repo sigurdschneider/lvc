@@ -1,4 +1,4 @@
-Require Import CSet Util Get Drop Var Map Infra.Relations.
+Require Import CSet Util Get Drop Var Map Infra.Relations AllInRel.
 
 Set Implicit Arguments.
 
@@ -12,7 +12,7 @@ Definition restr (G:set var) (o:option (set var)) :=
 Lemma restr_iff G o G'
   : restr G o = Some G' <-> G' ⊆ G /\ o = Some G'.
 Proof.
-  unfold restr; destruct o; intros. 
+  unfold restr; destruct o; intros.
   destruct if; intuition; try inv H; try inv H1; eauto; isabsurd.
   split; intros; dcr; congruence.
 Qed.
@@ -20,7 +20,7 @@ Qed.
 Lemma restr_idem G o G'
   : G' ⊆ G -> restr G' (restr G o) = restr G' o.
 Proof.
-  unfold restr; destruct o. repeat destruct if; eauto; isabsurd. 
+  unfold restr; destruct o. repeat destruct if; eauto; isabsurd.
   intros. exfalso. eapply n; cset_tac; intuition.
   eauto.
 Qed.
@@ -35,9 +35,9 @@ Instance restr_morphism
   : Proper (Equal ==> option_eq Equal ==> option_eq Equal) restr.
 Proof.
   unfold Proper, respectful; intros.
-  destruct x0,y0; unfold restr; 
+  destruct x0,y0; unfold restr;
   repeat destruct if; try econstructor;
-  inv H0; eauto. 
+  inv H0; eauto.
   exfalso. eapply n. rewrite <- H3, <- H; eauto.
   exfalso. eapply n. rewrite H3, H; eauto.
 Qed.
@@ -46,9 +46,9 @@ Instance restr_morphism_eq
   : Proper (Equal ==> eq ==> eq) restr.
 Proof.
   unfold Proper, respectful; intros.
-  destruct x0,y0; unfold restr; 
+  destruct x0,y0; unfold restr;
   repeat destruct if; try econstructor;
-  inv H0; eauto. 
+  inv H0; eauto.
   exfalso. eapply n. rewrite <- H; eauto.
   exfalso. eapply n. rewrite H; eauto.
 Qed.
@@ -84,18 +84,18 @@ Proof.
 Qed.
 
 Instance restrict_morphism
-  : Proper (list_eq (option_eq Equal) ==> 
-                    Equal ==> list_eq (option_eq Equal)) restrict.
+  : Proper (PIR2 (option_eq Equal) ==>
+                    Equal ==> PIR2 (option_eq Equal)) restrict.
 Proof.
   unfold Proper, respectful; intros.
   general induction H; simpl; try econstructor; eauto.
-  rewrite H1, H. reflexivity.
+  rewrite pf, H0. reflexivity.
 Qed.
 
 Instance restrict_morphism_eq
   : Proper (eq ==> Equal ==> eq) restrict.
 Proof.
-  unfold Proper, respectful; intros; subst. 
+  unfold Proper, respectful; intros; subst.
   general induction y; simpl; try econstructor; eauto.
   f_equal. rewrite H0; reflexivity. eauto.
 Qed.
@@ -112,15 +112,15 @@ Instance bounded_morphism_subset
 Proof.
   unfold Proper, respectful, impl; intros.
   subst. general induction y; simpl; eauto.
-  destruct a; simpl in *; cset_tac; intuition. 
+  destruct a; simpl in *; cset_tac; intuition.
   eapply IHy; eauto. eapply IHy; eauto.
 Qed.
 
-Instance bounded_morphism 
+Instance bounded_morphism
   : Proper (eq ==> Equal ==> iff) bounded.
 Proof.
   unfold Proper, respectful, impl; intros; split; intros; subst;
-  eapply double_inclusion in H0; dcr. 
+  eapply double_inclusion in H0; dcr.
   rewrite <- H; eauto.
   rewrite <- H2; eauto.
 Qed.
@@ -132,20 +132,20 @@ Proof.
   destruct x'; eapply IHget; intuition.
 Qed.
 
-Lemma bounded_restrict DL G' G 
-  : G' ⊆ G -> bounded (restrict DL G') G. 
-Proof. 
+Lemma bounded_restrict DL G' G
+  : G' ⊆ G -> bounded (restrict DL G') G.
+Proof.
   general induction DL; simpl; eauto.
   case_eq (restr G' a); intros; try split; eauto.
   eapply restr_iff in H0; cset_tac; intuition.
 Qed.
 
-Lemma bounded_restrict_eq DL G' G 
-  : G ⊆ G' -> bounded DL G -> restrict DL G' = DL. 
-Proof. 
+Lemma bounded_restrict_eq DL G' G
+  : G ⊆ G' -> bounded DL G -> restrict DL G' = DL.
+Proof.
   general induction DL; simpl; eauto.
   case_eq (restr G' a); intros; try split; eauto.
-  eapply restr_iff in H1; intuition. 
+  eapply restr_iff in H1; intuition.
   subst; simpl in *; dcr.
   f_equal. eapply (IHDL _ _ H H3).
   destruct a; unfold restr in H1; dcr.
@@ -158,26 +158,29 @@ Qed.
 
 
 Lemma restrict_subset2 DL DL' G G'
-: list_eq (fstNoneOrR (flip Subset)) DL DL' 
+: PIR2 (fstNoneOrR (flip Subset)) DL DL'
   -> G ⊆ G'
-  -> list_eq (fstNoneOrR (flip Subset)) (restrict DL G) (restrict DL' G').
+  -> PIR2 (fstNoneOrR (flip Subset)) (restrict DL G) (restrict DL' G').
 Proof.
   intros. induction H; simpl; econstructor; eauto.
-  inv H. simpl. econstructor.
-  unfold restr. repeat destruct if; try econstructor; eauto.
-  exfalso. eapply n. transitivity G; eauto. rewrite <- H2; eauto.
+  - inv pf.
+    + simpl. econstructor.
+    + unfold restr. repeat destruct if; try econstructor; eauto.
+      exfalso. eapply n. transitivity G; eauto. rewrite <- s; eauto.
 Qed.
 
 
 Lemma restrict_subset DL DL' G G'
-: list_eq (fstNoneOrR Equal) DL DL' 
+: PIR2 (fstNoneOrR Equal) DL DL'
   -> G ⊆ G'
-  -> list_eq (fstNoneOrR Equal) (restrict DL G) (restrict DL' G').
+  -> PIR2 (fstNoneOrR Equal) (restrict DL G) (restrict DL' G').
 Proof.
-  intros. induction H; simpl; econstructor; eauto.
-  inv H. simpl. econstructor.
-  unfold restr. repeat destruct if; try econstructor; eauto.
-  exfalso. eapply n. transitivity G; eauto. rewrite <- H2; eauto.
+   intros. induction H; simpl; econstructor; eauto.
+  - inv pf.
+    + simpl. econstructor.
+    + unfold restr. repeat destruct if; try econstructor; eauto.
+      exfalso. eapply n. transitivity G; eauto. rewrite <- s; eauto.
+      rewrite H1; reflexivity.
 Qed.
 
 
@@ -185,10 +188,10 @@ Lemma restr_comp_meet G o G'
   : restr G' (restr G o) = restr (G ∩ G') o.
 Proof.
   unfold restr; destruct o.
-  repeat destruct if; eauto; isabsurd. 
+  repeat destruct if; eauto; isabsurd.
   - cset_tac; intuition.
   - exfalso; eapply n. rewrite s1. cset_tac; intuition.
-  - exfalso; eapply n. rewrite s0. cset_tac; intuition. 
+  - exfalso; eapply n. rewrite s0. cset_tac; intuition.
   - eauto.
 Qed.
 
@@ -199,10 +202,10 @@ Proof.
   f_equal; eauto using restr_comp_meet.
 Qed.
 
-Definition lookup_set_option (ϱ:var->var) (x:option (set var)) : option (set var):= 
-  match x with 
-    | None => None 
-    | Some x => Some (lookup_set ϱ x) 
+Definition lookup_set_option (ϱ:var->var) (x:option (set var)) : option (set var):=
+  match x with
+    | None => None
+    | Some x => Some (lookup_set ϱ x)
   end.
 
 Definition map_lookup (ϱ:var -> var) := List.map (lookup_set_option ϱ).
@@ -210,12 +213,12 @@ Definition map_lookup (ϱ:var -> var) := List.map (lookup_set_option ϱ).
 Definition live_global (p:set var * list var) := Some (fst p \ of_list (snd p)).
 Definition live_globals (Lv:list (set var * list var)) := List.map live_global Lv.
 
-Lemma bounded_map_lookup G (ϱ: var -> var) DL 
+Lemma bounded_map_lookup G (ϱ: var -> var) DL
   : bounded DL G -> bounded (map_lookup ϱ DL) (lookup_set ϱ G).
 Proof.
   general induction DL; simpl; eauto.
-  destruct a; simpl in *; dcr; intuition. 
-  eapply lookup_set_incl; eauto. 
+  destruct a; simpl in *; dcr; intuition.
+  eapply lookup_set_incl; eauto.
 Qed.
 
 Lemma restrict_incl_ext DL G G' D
@@ -237,14 +240,14 @@ Proof.
 Qed.
 
 Lemma list_eq_special DL ϱ A B A'
-: A ⊆ B 
+: A ⊆ B
   -> lookup_set ϱ A ⊆ A'
-  -> list_eq (fstNoneOrR Equal)
-             (map_lookup ϱ (restrict DL A))
-             (restrict (map_lookup ϱ (restrict DL B)) A').
+  -> PIR2 (fstNoneOrR Equal)
+         (map_lookup ϱ (restrict DL A))
+         (restrict (map_lookup ϱ (restrict DL B)) A').
 Proof.
   intros. general induction DL; simpl. econstructor.
-  unfold restr. unfold lookup_set_option.  
+  unfold restr. unfold lookup_set_option.
   destruct a; repeat destruct if;econstructor; eauto; try econstructor; eauto. reflexivity.
   exfalso. eapply n. cset_tac; intuition. eapply H0. eapply lookup_set_incl; eauto. intuition.
   exfalso. eapply n. cset_tac; intuition.
@@ -252,9 +255,9 @@ Qed.
 
 Lemma list_eq_fstNoneOrR_incl DL ϱ A B
 : A ⊆ B ->
-  list_eq (fstNoneOrR Equal)
-          (map_lookup ϱ (restrict DL A))
-          (map_lookup ϱ (restrict DL B)).
+  PIR2 (fstNoneOrR Equal)
+       (map_lookup ϱ (restrict DL A))
+       (map_lookup ϱ (restrict DL B)).
 Proof.
   intros. general induction DL; simpl.  econstructor.
   unfold restr; destruct a; repeat destruct if; simpl; econstructor; eauto; try econstructor; eauto. reflexivity.
@@ -277,20 +280,13 @@ Lemma bounded_app L L' s
 : bounded (L++L') s <-> bounded L s /\ bounded L' s.
 Proof.
   general induction L; simpl; (try destruct a); (try edestruct IHL); eauto; intuition.
-  eapply H; eauto. eapply H; eauto. 
+  eapply H; eauto. eapply H; eauto.
   Grab Existential Variables. eapply s. eapply L'.
 Qed.
 
-Instance list_eq_Reflexive {A : Type} {R : relation A} {Rrefl: Reflexive R} 
- : Reflexive (list_eq R).
-Proof.
-  hnf; intros. induction x; econstructor; eauto.
-Qed.
 
-
-(* 
+(*
 *** Local Variables: ***
-*** coq-load-path: (("." "Lvc")) ***
+*** coq-load-path: ((".." "Lvc")) ***
 *** End: ***
 *)
-

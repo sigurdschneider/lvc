@@ -1,6 +1,6 @@
-Require Import EqDec Computable Util AutoIndTac.
+Require Import EqDec Computable Util AutoIndTac LengthEq.
 Require Export CSet Containers.SetDecide.
-Require Export MapBasics MapLookup OrderedTypeEx.
+Require Export MapBasics MapUpdate MapLookup OrderedTypeEx.
 
 Set Implicit Arguments.
 
@@ -37,7 +37,7 @@ Section MapInjectivity.
     intros. hnf; intros. lud.
     + exfalso. eapply H3. eapply lookup_set_spec; eauto.
       exists x0. split.
-      - cset_tac. intuition.
+      - cset_tac; intuition.
       - eqs.
     + exfalso. eapply H3. eapply lookup_set_spec; eauto.
       eexists y. split; cset_tac; intuition; eauto.
@@ -91,11 +91,15 @@ Lemma injective_on_update_not_in {X} `{OrderedType X} {Y} `{OrderedType Y}
 Proof.
   intros; hnf; intros.
   decide(x0 === x); decide (x0 === y); eauto.
-  exfalso. eapply H3. eapply lookup_set_spec. eauto.
-  eexists y. cset_tac; eqs; eauto. rewrite e in H6; eauto.
-  eapply H2; cset_tac; eauto. intro.
-  eapply H3. do 2 set_tac; intuition.  eexists x0. cset_tac; intuition.
-  rewrite <- H7. eqs.
+  - exfalso. eapply H3. eapply lookup_set_spec. eauto.
+    eexists y. cset_tac; eqs; eauto. rewrite e in H6; eauto.
+  - eapply H2; cset_tac; eauto.
+    intro. eapply H3.
+    eapply lookup_set_spec; intuition.
+    cset_tac.
+    intuition.
+    eexists x0; eauto. intuition.
+    rewrite H6, H7; eauto.
 Qed.
 
 Lemma injective_on_update_fresh {X} `{OrderedType X} {Y} `{OrderedType Y}
@@ -128,8 +132,10 @@ Lemma lookup_set_not_in  {X} `{OrderedType X} {Y} `{OrderedType Y} f D x
     -> lookup_set f D \ {{f x}} [=] lookup_set f (D\{{x}}).
 Proof.
   intros. cset_tac; split; intros; dcr. eapply lookup_set_spec; eauto.
-  + eapply lookup_set_spec in H4. destruct H4; dcr; eauto. eexists x0; cset_tac; eauto.
-    intro. eapply H2. eapply lookup_set_spec; eauto. eexists x.  rewrite H3 in H4; eauto.
+  + eapply lookup_set_spec in H4. destruct H4; dcr; eauto.
+    eexists x0; cset_tac; intuition.
+    eapply H2. eapply lookup_set_spec; eauto.
+    eexists x. rewrite <- H3 in H4; eauto.
     eauto.
   + eapply lookup_set_spec in H3; eauto. destruct H3; dcr. cset_tac.
     eapply lookup_set_spec; eauto.
@@ -299,8 +305,6 @@ Proof.
   rewrite <- H6 in n0. rewrite <- lookup_set_union in n0.
   assert (s ∪ D' [=] (s' ∪ D') \ {{x}}).
   rewrite H4; cset_tac; intuition.
-  intro A; rewrite A in H13; eauto.
-  intro A; rewrite A in H13; eauto.
   rewrite H8 in n0. rewrite H8 in H2.
   pose proof (injective_on_update_not_in H2 n0); eauto. intuition.
 
@@ -315,8 +319,7 @@ Global Instance injective_on_computable {X} `{OrderedType X} {Y} `{OrderedType Y
 Proof.
   case_eq (@injective_on_compute X _ Y _ D f _); eauto; intros.
   left. pose proof (@injective_on_iff X _ Y _ f _ D ∅ ∅).
-  destruct H4; eauto. cset_tac; intuition. set_tac; intuition.
-  edestruct H4; cset_tac; intuition. isabsurd.
+  destruct H4; eauto. cset_tac; intuition. isabsurd.
   unfold injective_on_compute in H3.
   rewrite H3 in H4. specialize (H4 I). eapply injective_on_incl ;eauto.
   cset_tac; eauto.
@@ -341,6 +344,46 @@ Proof.
   apply lookup_set_minus_incl; eauto.
 Qed.
 
+Lemma injective_on_agree X `{OrderedType X} Y `{OrderedType Y} D (ϱ ϱ': X -> Y)
+: injective_on D ϱ
+  -> agree_on _eq D ϱ ϱ'
+  -> injective_on D ϱ'.
+Proof.
+  intros. hnf; intros. eapply H1; eauto.
+  exploit H2; eauto. rewrite X0.
+  exploit H2; try eapply H3. rewrite X1. eauto.
+Qed.
+
+Lemma injective_on_fresh_list X `{OrderedType X} Y `{OrderedType Y} XL YL (ϱ: X -> Y) `{Proper _ (_eq ==> _eq) ϱ} lv
+: injective_on lv ϱ
+  -> length XL = length YL
+  -> (of_list YL) ∩ (lookup_set ϱ lv) [=] ∅
+  -> unique XL
+  -> unique YL
+  -> injective_on (lv ∪ of_list XL) (ϱ [XL <-- YL]).
+Proof.
+  intros. eapply length_length_eq in H3.
+  general induction H3; simpl in * |- * ; eauto.
+  - eapply injective_on_incl; eauto. cset_tac; intuition.
+  - eapply injective_on_agree.
+    assert (lv ∪ { x; of_list XL} [=] {{x}} ∪ lv ∪ of_list XL) by (cset_tac; intuition; eauto).
+    rewrite H7. eapply IHlength_eq; auto.
+    Focus 2.
+    eapply injective_on_fresh. instantiate (1:=ϱ); eauto.
+    eapply injective_on_incl; eauto. instantiate (1:=y).
+    intro. eapply lookup_set_spec in H8. dcr.
+    eapply (not_in_empty (ϱ x0)). rewrite <- H4. cset_tac; intuition.
+    eapply lookup_set_spec; eauto. eapply H1.
+    hnf; intros. lud; eauto; try now exfalso; eauto.
+    dcr. cset_tac; intuition.
+    eapply lookup_set_spec in H12; dcr. lud.
+    eapply H8. rewrite <- H14; eauto. eapply InA_in; eauto.
+    cset_tac; intuition.
+    eapply H4. split. right; eauto.
+    eapply lookup_set_spec. eauto. eexists; eauto.
+    hnf; intros. lud; eauto; try now exfalso; eauto.
+    eapply update_unique_commute; eauto using length_eq_length.
+Qed.
 
 (*
 *** Local Variables: ***

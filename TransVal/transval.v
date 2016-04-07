@@ -814,7 +814,48 @@ clear termcrash2.
   destruct H8. destruct H9. unfold failed in H10. eapply simErr; eauto.
 Qed.
 
-(*
+
+(** Theorem 2 in the thesis **)
+Lemma sat_impl_nosim:
+forall L D D' Df  Ds' Dt'  E s t,
+(forall F E, models F E (smtCheck s t))
+-> getAnn D = (Df, Ds') (*To acces the environments from ssa *)
+-> getAnn D' = (Df, Dt') (* Same *)
+-> ssa s D (* Every variable gets defined only once *)
+-> ssa t D' (* Same *)
+-> Ds' ∩ Dt' = Df (* The free Variables do not get overwritten? *)
+-> noFun s (* disallow function definitions and external function calls *)
+-> noFun t (* same*)
+-> (forall x, x ∈ Df -> exists v, E x = Some v) (* Free Variables must be defined *)
+-> ~ @sim _ statetype_F _ statetype_F  (L, E, s) (L, E, t).
+
+Proof.
+  intros L D D' Df Ds' Dt' E s t.
+  intros Sat AnnD AnnD' ssa_s ssa_t Live_Vars noFun_s noFun_t val_exists.
+  intros sim.
+  pose proof  (noFun_impl_term_crash E s noFun_s);
+  pose proof  (noFun_impl_term_crash E t noFun_t).
+  destruct H as [E' [s' H]].
+  destruct H0 as [E'' [t' H0]].
+  destruct (H L) as [Terminates_s | Crash_s];
+    destruct (H0 L) as [Terminates_t | Crash_t];
+    clear H H0.
+
+  (** Case s and t terminate **)
+  - admit.
+
+  (** Case s terminates and t crashes **)
+  - admit.
+
+  (** Case s crashes and t terminates **)
+  - admit.
+
+  (** Case s crashes and t crashes **)
+  - admit.
+
+Qed.
+
+  (*
 Require Import ExtrOcamlBasic.
 Require Import ExtrOcamlNatInt.
 Require Import String ExtrOcamlString.

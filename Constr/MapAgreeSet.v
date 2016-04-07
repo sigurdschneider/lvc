@@ -1,4 +1,4 @@
-Require Export Setoid Coq.Classes.Morphisms.  
+Require Export Setoid Coq.Classes.Morphisms.
 Require Import EqDec Computable Util AutoIndTac.
 Require Export CSet Containers.SetDecide.
 Require Export MapBasics MapLookup MapAgreement.
@@ -12,25 +12,25 @@ Section MapAgreeSet.
   Variable Y : Type.
   Context `{OrderedType Y}.
 
-  Definition agree_set (lv:set X) (m m':X -> Y) : set X 
+  Definition agree_set (lv:set X) (m m':X -> Y) : set X
     := filter (fun x => if [m x === m' x] then true else false) lv.
 
   Lemma agree_set_spec (lv:set X) (m m': X -> Y) x
         `{Proper _ (respectful _eq _eq) m} `{Proper _ (respectful _eq _eq) m'}
   : x ∈ agree_set lv m m' <-> x ∈ lv /\ m x === m' x.
-  Proof.    
+  Proof.
     intros.
     assert (Proper (_eq ==> eq) (fun x : X => if [m x === m' x] then true else false)). {
-      hnf; intros. cbv beta. repeat destruct if; eauto. 
+      hnf; intros. cbv beta. repeat destruct if; eauto.
        - exfalso. eapply n. rewrite <- H2; eauto. rewrite H1; eauto.
        - exfalso; eapply n. rewrite H2; eauto. rewrite H1; eauto. }
     split; intros.
     + pose proof (filter_1 H4). pose proof (filter_2 H4).
       cbv beta in *. destruct if in H6; eauto. congruence.
-    + eapply filter_3. 
+    + eapply filter_3.
       - eassumption.
       - eapply H4.
-      - destruct if; eauto. exfalso; firstorder.
+      - destruct if; eauto.
   Qed.
 
 
@@ -43,12 +43,12 @@ Section MapAgreeSet.
     + eapply agree_set_spec in H4; decompose records; eauto.
     + eapply agree_set_spec; eauto. split; eauto. eapply H3; eauto.
   Qed.
-  
+
 
   Lemma agree_set_agree_on  Z `{OrderedType Z}
         (lv:set X) (D D':X -> Y) (E E': X -> Z)
         `{Proper _ (respectful _eq _eq) D} `{Proper _ (respectful _eq _eq) D'}
-  : agree_on _eq lv D D' -> agree_on _eq (agree_set lv D D') E E' 
+  : agree_on _eq lv D D' -> agree_on _eq (agree_set lv D D') E E'
     -> agree_on _eq lv E E'.
   Proof.
     intros. hnf; intros.
@@ -57,7 +57,7 @@ Section MapAgreeSet.
   Qed.
 
   Lemma agree_on_agree_set (lv:set X) (D D' D'': X -> Y)
-        `{Proper _ (respectful _eq _eq) D} 
+        `{Proper _ (respectful _eq _eq) D}
         `{Proper _ (respectful _eq _eq) D'}
         `{Proper _ (respectful _eq _eq) D''}
   : agree_on _eq lv D D' -> agree_set lv D D'' ⊆ agree_set lv D' D''.
@@ -66,9 +66,9 @@ Section MapAgreeSet.
     intuition. transitivity (D a); eauto. symmetry. eapply H4; eauto.
   Qed.
 
-  
+
   Lemma agree_set_incl (lv:set X) (D D': X -> Y)
-        `{Proper _ (respectful _eq _eq) D} 
+        `{Proper _ (respectful _eq _eq) D}
         `{Proper _ (respectful _eq _eq) D'}
   : (agree_set lv D D') ⊆ lv.
   Proof.
@@ -77,7 +77,7 @@ Section MapAgreeSet.
 
 
   Lemma agree_set_incl_both (lv' lv:set X) (D D':X->Y)
-        `{Proper _ (respectful _eq _eq) D} 
+        `{Proper _ (respectful _eq _eq) D}
         `{Proper _ (respectful _eq _eq) D'}
   : lv' ⊆ lv -> agree_set lv' D D' ⊆ agree_set lv D D'.
   Proof.
@@ -94,12 +94,12 @@ Global Instance eq_cset_agree_set_morphism X `{OrderedType X} Y `{OrderedType Y}
 Proof.
   unfold respectful; unfold fpeq.
   hnf;intros; decompose records. hnf.
-  intros. split; intros. 
-  + eapply agree_set_spec in H2; eauto. decompose records. 
+  intros. split; intros.
+  + eapply agree_set_spec in H2; eauto. decompose records.
     eapply agree_set_spec; eauto. split.
     - rewrite <- H1; eauto.
     - rewrite <- (H4 _). rewrite <- (H3 _); eauto.
-  + eapply agree_set_spec in H2; eauto. decompose records. 
+  + eapply agree_set_spec in H2; eauto. decompose records.
     eapply agree_set_spec; eauto. split.
     - rewrite H1; eauto.
     - rewrite (H4 _). rewrite (H3 _); eauto.
@@ -110,19 +110,19 @@ Add Parametric Morphism {X} `{OrderedType X} {Y} `{OrderedType Y} : (@lookup_set
     as eq_cset_lookup_set_morphism.
 Proof.
   intros. intro. unfold fpeq in *; decompose records.
-  split; intros; eapply lookup_set_spec in H1; decompose records; eauto. 
-  + eapply lookup_set_spec; eauto. 
+  split; intros; eapply lookup_set_spec in H1; decompose records; eauto.
+  + eapply lookup_set_spec; eauto.
     eexists x1. split. rewrite <- H2; eauto. rewrite <- (H3 _); eauto.
-  + eapply lookup_set_spec; eauto. 
+  + eapply lookup_set_spec; eauto.
     eexists x1. split. rewrite H2; eauto. rewrite (H3 _); eauto.
 Qed.
 
 Add Parametric Morphism {X} `{OrderedType X} {Y} `{OrderedType Y}
-  : (@lookup_set  X _ Y _) 
+  : (@lookup_set  X _ Y _)
   with signature (@fpeq X Y _eq _ _) ==> Subset ==> Subset
     as incl_lookup_set_morphism.
 Proof.
-  intros. hnf; intros. 
+  intros. hnf; intros.
   unfold fpeq in *; decompose records.
   eapply lookup_set_spec in H3; decompose records; eauto; eapply lookup_set_spec; eauto.
   eexists x1. split. rewrite <- H2. eauto. rewrite <- (H4 _); eauto.
@@ -134,7 +134,7 @@ Lemma agree_set_minus X `{OrderedType X} Y `{OrderedType Y} lv lv' (D D': X -> Y
 : agree_set lv D D' \ lv' [=] agree_set (lv \ lv') D D'.
 Proof.
   intro. split; intros.
-  + edestruct (@minus_in_in _ _ _ _ _ H3); eauto. 
+  + edestruct (@minus_in_in _ _ _ _ _ H3); eauto.
     rewrite agree_set_spec in H4 |- *; eauto.
     split.
   - eapply in_in_minus; eauto; eapply H4.
@@ -146,7 +146,7 @@ Qed.
 
 
 
-(* 
+(*
  *** Local Variables: ***
  *** coq-load-path: ((".." "Lvc")) ***
  *** End: ***

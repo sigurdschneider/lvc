@@ -11,10 +11,16 @@ Class ProgramEquivalence S S' `{StateType S} `{StateType S'} := {
 
 Arguments ProgramEquivalence S S' {H} {H0}.
 
+(* A proof relation is parameterized by analysis information A *)
 Class ProofRelation (A:Type) := {
-    ParamRel : A-> list var -> list var -> Prop;
+    (* Relates parameter lists according to analysis information *)
+    ParamRel : A -> list var -> list var -> Prop;
+    (* Relates argument lists according to analysis information
+       and closure environments *)
     ArgRel : onv val -> onv val -> A-> list val -> list val -> Prop;
+    (* Relates blocks according to analysis information *)
     BlockRel : A-> F.block -> F.block -> Prop;
+    (* Ensures that argument lists match parameter lists *)
     RelsOK : forall E E' a Z Z' VL VL', ParamRel a Z Z' -> ArgRel E E' a VL VL' -> length Z = length VL /\ length Z' = length VL'
 }.
 
@@ -26,8 +32,8 @@ Inductive simB (SIM:ProgramEquivalence F.state F.state) (r:F.state -> F.state ->
          omap (exp_eval E) Y = Some Yv
          -> omap (exp_eval E') Y' = Some Y'v
          -> ArgRel V V' a Yv Y'v
-         -> progeq r (L, E, stmtGoto (LabI 0) Y)
-                        (L', E', stmtGoto (LabI 0) Y'))
+         -> progeq r (L, E, stmtApp (LabI 0) Y)
+                        (L', E', stmtApp (LabI 0) Y'))
     -> simB SIM r AR L L' a (F.blockI V Z s) (F.blockI V' Z' s').
 
 Definition simL' (SIM:ProgramEquivalence F.state F.state) r
@@ -35,11 +41,11 @@ Definition simL' (SIM:ProgramEquivalence F.state F.state) r
 
 Definition fexteq' (SIM:ProgramEquivalence F.state F.state)
            {A} AR (a:A) (AL:list A) E Z s E' Z' s' :=
+  ParamRel a Z Z'
+  /\
   forall VL VL' L L' (r:rel2 F.state (fun _ : F.state => F.state)),
     ArgRel E E' a VL VL'
     -> simL' SIM r AR AL L L'
-    -> length Z = length VL
-    -> length Z' = length VL'
     -> progeq r (L, E[Z <-- List.map Some VL], s)
             (L', E'[Z' <-- List.map Some VL'], s').
 

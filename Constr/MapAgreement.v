@@ -83,13 +83,22 @@ Section MapAgreement.
     eapply B; eauto.
   Qed.
 
+  Lemma agree_on_update_inv R (lv:set X) (E E':X -> Y) x v
+  : agree_on R lv (E [x <- v]) E'
+    -> agree_on R (lv \ {{ x }}) E E'.
+  Proof.
+    intros A B.
+    hnf; intros. cset_tac.
+    exploit A; eauto. lud; eauto.
+  Qed.
+
   Lemma agree_on_update_dead_both R (lv:set X) (E E':X -> Y) x v v'
     : ~x ∈ lv
     -> agree_on R lv E E'
     -> agree_on R lv (E [x <- v]) (E'[x <- v']).
   Proof.
     intros A B.
-    hnf; intros. lud; eauto. exfalso; eapply A; rewrite e; intuition.
+    hnf; intros. lud; eauto.
   Qed.
 
 End MapAgreement.
@@ -170,6 +179,20 @@ Proof.
   exfalso. eapply n. rewrite <- H5; eauto.
   exfalso. eapply n. rewrite H5; eauto.
 Defined.
+
+Lemma map_agree X `{OrderedType X} Y `{OrderedType Y}
+      lv (f:X->Y) `{Proper _ (_eq ==> _eq) f} (g:X->Y) `{Proper _ (_eq ==> _eq) g}
+: agree_on _eq lv f g
+  -> map f lv [=] map g lv.
+Proof.
+  intros. intro.
+  repeat rewrite map_iff; eauto.
+  split; intros []; intros; dcr; eexists x; split; eauto.
+  + specialize (H3 x H5). rewrite <- H3; eauto.
+  + specialize (H3 x H5). rewrite H3; eauto.
+Qed.
+
+Hint Extern 10 (agree_on _ _?a ?a) => reflexivity.
 
 Extraction Inline agree_on_computable.
 

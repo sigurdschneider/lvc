@@ -131,8 +131,13 @@ Next Obligation.
   apply nat_compare_gt in Hcomp; assumption.
 Qed.
 
-(*
-*** Local Variables: ***
-*** coq-load-path: ("../infra" "../constr") ***
-*** End: ***
-*)
+Instance proper_var (ϱ:var -> var)
+: Proper (_eq ==> _eq) ϱ.
+Proof.
+  intuition.
+Qed.
+
+Hint Extern 20 (@Proper
+               (@respectful _ _
+                            (@_eq _ (@SOT_as_OT _ (@eq nat) nat_OrderedType))
+                            (@_eq _ (@SOT_as_OT _ (@eq nat) nat_OrderedType))) ?ϱ) => eapply proper_var.

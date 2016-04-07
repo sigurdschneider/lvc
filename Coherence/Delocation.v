@@ -17,7 +17,7 @@ Inductive trs
     -> Prop :=
  | trsExp DL ZL x e s an an_lv lv
     : trs (restrict DL (lv\{{x}})) ZL  s an_lv an
-    -> trs DL ZL (stmtExp x e s) (ann1 lv an_lv) (ann1 nil an)
+    -> trs DL ZL (stmtLet x e s) (ann1 lv an_lv) (ann1 nil an)
   | trsIf DL ZL e s t ans ant ans_lv ant_lv lv
     :  trs DL ZL s ans_lv ans
     -> trs DL ZL t ant_lv ant
@@ -27,9 +27,9 @@ Inductive trs
   | trsGoto DL ZL G' f Za Y lv
     :  get DL (counted f) (Some G')
     -> get ZL (counted f) (Za)
-    -> G' ⊆ lv
+(*    -> G' ⊆ lv *)
 (*    -> of_list Za ⊆ lv *)
-    -> trs DL ZL (stmtGoto f Y) (ann0 lv) (ann0 nil)
+    -> trs DL ZL (stmtApp f Y) (ann0 lv) (ann0 nil)
   | trsExtern DL ZL x f Y s lv an_lv an
     : trs (restrict DL (lv\{{x}})) ZL s an_lv an
     -> trs DL ZL (stmtExtern x f Y s) (ann1 lv an_lv) (ann1 nil an)
@@ -41,7 +41,7 @@ Inductive trs
          be recomputed) *)
       trs (restrict (Some (getAnn ans_lv \ of_list (Z++Za))::DL) (getAnn ans_lv \ of_list (Z++Za))) (Za::ZL) s ans_lv ans
     -> trs (Some (getAnn ans_lv \ of_list (Z++Za))::DL) (Za::ZL) t ant_lv ant
-    -> trs DL ZL (stmtLet Z s t) (ann2 lv ans_lv ant_lv) (ann2 Za ans ant).
+    -> trs DL ZL (stmtFun Z s t) (ann2 lv ans_lv ant_lv) (ann2 Za ans ant).
 
 
 Lemma trs_annotation DL ZL s lv Y
@@ -52,14 +52,14 @@ Qed.
 
 Fixpoint compile (ZL:list (list var)) (s:stmt) (an:ann (list var)) : stmt :=
   match s, an with
-    | stmtExp x e s, ann1 _ an => stmtExp x e (compile ZL s an)
+    | stmtLet x e s, ann1 _ an => stmtLet x e (compile ZL s an)
     | stmtIf e s t, ann2 _ ans ant => stmtIf e (compile ZL s ans) (compile ZL t ant)
-    | stmtGoto f Y, ann0 _ => stmtGoto f (Y++List.map Var (nth (counted f) ZL nil))
+    | stmtApp f Y, ann0 _ => stmtApp f (Y++List.map Var (nth (counted f) ZL nil))
     | stmtReturn e, ann0 _ => stmtReturn e
     | stmtExtern x f Y s, ann1 _ an =>
       stmtExtern x f Y (compile ZL s an)
-    | stmtLet Z s t, ann2 Za ans ant =>
-      stmtLet (Z++Za) (compile (Za::ZL) s ans) (compile (Za::ZL) t ant)
+    | stmtFun Z s t, ann2 Za ans ant =>
+      stmtFun (Z++Za) (compile (Za::ZL) s ans) (compile (Za::ZL) t ant)
     | s, _ => s
   end.
 
@@ -69,7 +69,7 @@ Inductive approx
     -> list (params) -> I.block -> I.block -> Prop :=
   blk_approxI o (Za Z':list var) DL ZL Lv s ans ans_lv ans_lv'
               (RD:forall G, o = Some G ->
-                       live_sound ((getAnn ans_lv',Z'++Za)::Lv) (compile (Za :: ZL) s ans) ans_lv'
+                       live_sound Imperative ((getAnn ans_lv',Z'++Za)::Lv) (compile (Za :: ZL) s ans) ans_lv'
                        /\ trs (restrict (Some G::DL) G) (Za::ZL) s ans_lv ans)
   : approx ((getAnn ans_lv',Z'++Za)::Lv) (o::DL) (Za::ZL) (I.blockI Z' s) (I.blockI (Z'++Za) (compile (Za::ZL) s ans)).
 
@@ -111,7 +111,7 @@ Inductive trsR : I.state -> I.state -> Prop :=
   (RD: trs DL ZL s ans_lv ans)
   (EA: AIR53 approx Lv' DL ZL L L')
   (EQ: (@feq _ _ eq) E E')
-  (LV': live_sound Lv' (compile ZL s ans) ans_lv')
+  (LV': live_sound Imperative Lv' (compile ZL s ans) ans_lv')
   (EDEF: defined_on (getAnn ans_lv') E')
   : trsR (L, E, s) (L', E', compile ZL s ans).
 
@@ -174,13 +174,13 @@ Proof.
     decide (length Z' = length Y).
     case_eq (omap (exp_eval E) Y); intros.
     simpl in *.
-    erewrite get_nth_default in H9; eauto.
+    erewrite get_nth_default in H8; eauto.
     edestruct (omap_var_defined_on x); eauto.
     eapply get_in_incl; intros.
-    exploit H9. eapply get_app_right. Focus 2.
+    exploit H8. eapply get_app_right. Focus 2.
     eapply map_get_1; eauto. reflexivity. inv X. eauto.
-    + exploit get_drop_eq; try eapply H11; eauto. subst o.
-      exploit get_drop_eq; try eapply H12; eauto. subst x.
+    + exploit get_drop_eq; try eapply H10; eauto. subst o.
+      exploit get_drop_eq; try eapply H11; eauto. subst x.
       erewrite get_nth_default; eauto.
       one_step.
       * simpl; eauto.
@@ -190,10 +190,10 @@ Proof.
         rewrite omap_app.
         erewrite omap_agree. Focus 2.
         intros. rewrite <- EQ. reflexivity.
-        rewrite H0; simpl. rewrite H8; simpl. reflexivity.
+        rewrite H0; simpl. rewrite H7; simpl. reflexivity.
       * exploit RD0; eauto; dcr. simpl.
         eapply trsR_sim; econstructor; eauto.
-        rewrite <- H11, <- H10, <- H12 in EA1.
+        rewrite <- H10, <- H9, <- H11 in EA1.
         eapply (approx_restrict G' EA1).
         simpl. rewrite map_app.
         rewrite update_with_list_app.
@@ -205,6 +205,7 @@ Proof.
         exploit omap_length; try eapply H8; eauto.
         rewrite map_length in X0.
         repeat rewrite app_length. omega.
+
     + no_step. get_functional; subst. simpl in *.
       rewrite omap_app in def.
       erewrite omap_agree in H0. Focus 2.
@@ -213,7 +214,7 @@ Proof.
       get_functional; subst. simpl in *. congruence.
       get_functional; subst. simpl in *.
       apply n. repeat rewrite app_length in len.
-      eapply get_drop_eq in H12; eauto. subst Za0.
+      eapply get_drop_eq in H11; eauto. subst Za0.
       erewrite get_nth_default in len; eauto. rewrite map_length in len. omega.
   - remember (omap (exp_eval E) Y); intros. symmetry in Heqo.
     pose proof Heqo. erewrite omap_agree in H0. Focus 2.
@@ -236,90 +237,11 @@ Proof.
     eauto using defined_on_incl.
 Qed.
 
-Inductive fstNoneOrR' {X Y:Type} (R:X->Y->Prop)
-  : option X -> Y -> Prop :=
-| fstNone' (y:Y) : fstNoneOrR' R None y
-| bothR' (x:X) (y:Y) : R x y -> fstNoneOrR' R (Some x) y
-.
-(*
-Lemma restrict_subset2 DL DL' G G'
-: list_eq (fstNoneOrR (flip Subset)) DL DL'
-  -> G' ⊆ G
-  -> list_eq (fstNoneOrR (flip Subset)) (restrict DL G) (restrict DL' G').
-Proof.
-  intros. induction H; simpl; econstructor; eauto.
-  inv H. simpl. econstructor.
-  unfold restr. repeat destruct if; try econstructor; eauto.
-  exfalso. eapply n. transitivity G; eauto. rewrite <- H2; eauto.
-Qed.
-*)
-
-Definition lessReq := (fstNoneOrR' (fun (s : set var) (t : set var * params) => s ⊆ fst t)).
-
-Lemma restrict_lessReq DL DL' G
-: PIR2 lessReq DL DL'
-  -> PIR2 lessReq (restrict DL G) DL'.
-Proof.
-  intros. induction H; simpl; econstructor; eauto.
-  unfold restr. destruct pf. constructor.
-  destruct if; eauto. subst. constructor; eauto. constructor.
-Qed.
-
-Lemma trs_srd DL AL ZL s ans_lv ans
+Lemma trs_srd AL ZL s ans_lv ans
   (RD:trs AL ZL s ans_lv ans)
-  (LV:live_sound DL s ans_lv)
-  (EQ:PIR2 lessReq AL DL)
-  : srd (restrict AL (getAnn ans_lv)) (compile ZL s ans) ans_lv.
+  : srd AL (compile ZL s ans) ans_lv.
 Proof.
-  general induction RD; inv LV; simpl; eauto using srd.
-  - econstructor; eauto.
-    eapply srd_monotone. eapply IHRD; eauto.
-    eapply restrict_lessReq; eauto.
-    repeat rewrite restrict_comp_meet.
-    eapply restrict_subset. reflexivity.
-    cset_tac; intuition.
-  - econstructor; eauto.
-    eapply srd_monotone. eapply IHRD1; eauto.
-    eapply restrict_subset; eauto. reflexivity.
-    eapply srd_monotone. eapply IHRD2; eauto.
-    eapply restrict_subset; eauto. reflexivity.
-  - edestruct PIR2_nth_2; eauto; dcr.
-    inv H4; get_functional; subst. simpl in *.
-    econstructor; eauto. unfold restrict.
-    pose proof (map_get_1 (restr lv) H3). unfold fst in H.
-    assert (restr lv (Some x0) = Some x0). eapply restr_iff; split; eauto.
-    cset_tac; eauto.
-    rewrite <- H6; eauto.
-  - econstructor; eauto.
-    eapply srd_monotone.
-    + eapply IHRD; eauto.
-      eapply restrict_lessReq; eauto.
-    + repeat rewrite restrict_comp_meet.
-      eapply restrict_subset.
-      * reflexivity.
-      * cset_tac; intuition.
-  - econstructor; eauto.
-    + eapply srd_monotone2. eapply IHRD1; eauto.
-      eapply restrict_lessReq. econstructor; eauto.
-      constructor. simpl. cset_tac; intuition.
-      rewrite restrict_incl; [|reflexivity].
-      rewrite restrict_incl; [|eapply minus_incl].
-      rewrite restrict_incl; [|reflexivity].
-      econstructor. constructor; unfold flip.
-      rewrite of_list_app. cset_tac; intuition.
-      repeat rewrite restrict_comp_meet.
-      eapply restrict_subset2. reflexivity.
-      rewrite of_list_app.
-      hnf; intros. cset_tac; intuition.
-    + eapply srd_monotone2. eapply IHRD2; eauto.
-      constructor. constructor. simpl. cset_tac; intuition. eauto.
-      decide (getAnn ans_lv \ of_list (Z ++ Za) ⊆ getAnn ant_lv).
-      rewrite restrict_incl; eauto.
-      econstructor. reflexivity.
-      eapply restrict_subset2. reflexivity. eauto.
-      rewrite restrict_not_incl; eauto.
-      econstructor. constructor.
-      eapply restrict_subset2. reflexivity. eauto.
+  general induction RD; simpl; eauto using srd.
 Qed.
 
 Inductive additionalParameters_live : list (set var)   (* additional params *)
@@ -329,7 +251,7 @@ Inductive additionalParameters_live : list (set var)   (* additional params *)
                                       -> Prop :=
 | additionalParameters_liveExp ZL x e s an an_lv lv
   : additionalParameters_live ZL s an_lv an
-    -> additionalParameters_live ZL (stmtExp x e s) (ann1 lv an_lv) (ann1 nil an)
+    -> additionalParameters_live ZL (stmtLet x e s) (ann1 lv an_lv) (ann1 nil an)
 | additionalParameters_liveIf ZL e s t ans ant ans_lv ant_lv lv
   : additionalParameters_live ZL s ans_lv ans
     -> additionalParameters_live ZL t ant_lv ant
@@ -339,7 +261,7 @@ Inductive additionalParameters_live : list (set var)   (* additional params *)
 | additionalParameters_liveGoto ZL Za f Y lv
   : get ZL (counted f) Za
     -> Za ⊆ lv
-    -> additionalParameters_live ZL (stmtGoto f Y) (ann0 lv) (ann0 nil)
+    -> additionalParameters_live ZL (stmtApp f Y) (ann0 lv) (ann0 nil)
 | additionalParameters_liveExtern ZL x f Y s an an_lv lv
   : additionalParameters_live ZL s an_lv an
     -> additionalParameters_live ZL
@@ -350,31 +272,32 @@ Inductive additionalParameters_live : list (set var)   (* additional params *)
   : of_list Za ⊆ getAnn ans_lv \ of_list Z
     -> additionalParameters_live (of_list Za::ZL) s ans_lv ans
     -> additionalParameters_live (of_list Za::ZL) t ant_lv ant
-    -> additionalParameters_live ZL (stmtLet Z s t) (ann2 lv ans_lv ant_lv) (ann2 Za ans ant).
+    -> additionalParameters_live ZL (stmtFun Z s t) (ann2 lv ans_lv ant_lv) (ann2 Za ans ant).
 
-Lemma live_sound_compile DL ZL AL s ans_lv ans
+Lemma live_sound_compile DL ZL AL s ans_lv ans o
   (RD:trs AL ZL s ans_lv ans)
-  (LV:live_sound DL s ans_lv)
+  (LV:live_sound o DL s ans_lv)
   (APL: additionalParameters_live (List.map of_list ZL) s ans_lv ans)
-  : live_sound (zip (fun s t => (fst s, snd s ++ t)) DL ZL) (compile ZL s ans) ans_lv.
+  : live_sound o (zip (fun s t => (fst s, snd s ++ t)) DL ZL) (compile ZL s ans) ans_lv.
 Proof.
   general induction LV; inv RD; inv APL; eauto using live_sound.
-  + pose proof (zip_get  (fun (s : set var * list var) (t : list var) => (fst s, snd s ++ t)) H H9).
+  + pose proof (zip_get  (fun (s : set var * list var) (t : list var) => (fst s, snd s ++ t)) H H10).
     edestruct (map_get_4); eauto; dcr; subst.
     get_functional; subst x.
-    econstructor. eapply H3. simpl. rewrite of_list_app. cset_tac; intuition.
-    simpl. erewrite get_nth; eauto. repeat rewrite app_length, map_length, app_length. congruence.
+    econstructor. eapply H3; eauto. simpl.
+    destruct if. simpl in * |- *; intuition. rewrite of_list_app. cset_tac; intuition. eauto.
+    erewrite get_nth; eauto. repeat rewrite app_length, map_length, app_length. simpl. congruence.
     erewrite get_nth; eauto.
     intros. eapply get_app_cases in H5. destruct H5; dcr; eauto.
     edestruct map_get_4; eauto; dcr; subst. econstructor.
-    rewrite <- H10. eauto using get_in_of_list.
+    rewrite <- H9. eauto using get_in_of_list.
   + simpl. econstructor; eauto.
     specialize (IHLV1 (Za::ZL)). eapply IHLV1; eauto.
     specialize (IHLV2 (Za::ZL)). eapply IHLV2; eauto.
     rewrite of_list_app. rewrite H7.
     cset_tac; intuition.
-    rewrite of_list_app.
-    rewrite <- H0. cset_tac; intuition.
+    destruct if; simpl in * |- *; intuition; eauto.
+    rewrite of_list_app. simpl. cset_tac; intuition.
 Qed.
 
 

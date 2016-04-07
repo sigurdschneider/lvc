@@ -52,7 +52,7 @@ Definition backward Dom FunDom
   fix backward
          (st:stmt) (AL:list FunDom) (a:ann Dom) {struct st} : ann Dom :=
   match st, a with
-    | stmtExp x e s as st, ann1 d ans =>
+    | stmtLet x e s as st, ann1 d ans =>
       let ans' := backward s AL ans in
       let ai := anni1 (getAnn ans') in
       let d := (btransform AL st ai) in
@@ -64,7 +64,7 @@ Definition backward Dom FunDom
       let d' := (btransform AL st ai) in
       ann2 d' ans' ant'
 
-    | stmtGoto f Y as st, ann0 d as an =>
+    | stmtApp f Y as st, ann0 d as an =>
       ann0 (btransform AL st anni0)
 
     | stmtReturn x as st, ann0 d as an =>
@@ -75,7 +75,7 @@ Definition backward Dom FunDom
       let ai := anni1 (getAnn ans') in
       let d' := (btransform AL st ai) in
       ann1 d' ans'
-    | stmtLet Z s t as st, ann2 d ans ant =>
+    | stmtFun Z s t as st, ann2 d ans ant =>
       let ans' := backward s (bmkFunDom Z ans::AL) ans in
       let ant' := backward t (bmkFunDom Z ans'::AL) ant in
       let ai := anni2 (getAnn ans') (getAnn ant') in
@@ -92,7 +92,7 @@ Definition forward Dom FunDom
       (st:stmt) (a:list FunDom * ann Dom) {struct st}
 : list FunDom * ann Dom :=
   match st, a with
-    | stmtExp x e s as st, (AL, ann1 d ans) =>
+    | stmtLet x e s as st, (AL, ann1 d ans) =>
       let (AL', ai) := (ftransform st (AL, d)) in
       forward s (AL', setAnni ans ai)
     | stmtIf x s t as st, (AL, ann2 d ans ant) =>
@@ -100,7 +100,7 @@ Definition forward Dom FunDom
       let (AL', ans') := forward s (AL, setAnni ans ai) in
       let (AL'', ant') := forward t (AL', setAnni ant ai) in
       (AL'', ann2 d ans' ant')
-    | stmtGoto f Y as st, (AL, ann0 d as an) =>
+    | stmtApp f Y as st, (AL, ann0 d as an) =>
       let (AL', ai) := ftransform st (AL, d) in
       (AL', an)
     | stmtReturn x as st, (AL, ann0 d as an) =>
@@ -109,7 +109,7 @@ Definition forward Dom FunDom
     | stmtExtern x f Y s as st, (AL, ann1 d ans) =>
       let (AL, ai) := (ftransform st (AL, d)) in
       forward s (AL, setAnni ans ai)
-    | stmtLet Z s t as st, (AL, ann2 d ans ant) =>
+    | stmtFun Z s t as st, (AL, ann2 d ans ant) =>
       let (AL, ai) := ftransform st (fmkFunDom Z ans::AL, d) in
       let (AL', ans') := forward s (fmkFunDom Z (setAnni ans ai)::AL, setAnni ans ai) in
       let (AL'', ant') := forward t (fmkFunDom Z ans'::AL', setAnni ant ai) in
@@ -140,7 +140,7 @@ Definition forward Dom {BSL:BoundedSemiLattice Dom} FunDom
       (st:stmt) (a:list FunDom * Dom) {struct st}
   : status (list FunDom * Dom) :=
   match st, a with
-    | stmtExp x e s as st, (AL, d) =>
+    | stmtLet x e s as st, (AL, d) =>
       match ftransform st (AL, d) with
         | (AL, anni1 a) => forward s (AL, a)
         | _ => Error "expression transformer failed"
@@ -157,7 +157,7 @@ Definition forward Dom {BSL:BoundedSemiLattice Dom} FunDom
           forward s (AL, a1)
         | _ => Error "condition transformer failed"
       end
-    | stmtGoto f Y as st, (AL, d) =>
+    | stmtApp f Y as st, (AL, d) =>
       match ftransform st (AL, d) with
         | (AL, anni1 a) => Success (AL, a)
         | _ => Error "tailcall transformer failed"
@@ -172,7 +172,7 @@ Definition forward Dom {BSL:BoundedSemiLattice Dom} FunDom
         | (AL, anni1 a) => forward s (AL, a)
         | _ => Error "syscall transformer failed"
       end
-    | stmtLet Z s t as st, (AL, d) =>
+    | stmtFun Z s t as st, (AL, d) =>
       match ftransform st (fmkFunDom Z bottom::AL, d) with
         | (AL', anni2 a1 a2) =>
           sdo ALdt <- forward t (AL', a2);
@@ -204,17 +204,17 @@ Definition forward Dom FunDom
       (st:stmt) (a:list FunDom * Dom) {struct st}
 : list FunDom * Dom :=
   match st, a with
-    | stmtExp x e s as st, (AL, d) =>
+    | stmtLet x e s as st, (AL, d) =>
       forward s (ftransform st (AL, d))
     | stmtIf x s t as st, (AL, d) =>
       forward t (forward s (ftransform st (AL, d)))
-    | stmtGoto f Y as st, (AL, d) =>
+    | stmtApp f Y as st, (AL, d) =>
       ftransform st (AL, d)
     | stmtReturn x as st, (AL, d) =>
       ftransform st (AL, d)
     | stmtExtern x f Y s as st, (AL, d) =>
       forward s (ftransform st (AL, d))
-    | stmtLet Z s t as st, (AL, d) =>
+    | stmtFun Z s t as st, (AL, d) =>
       forward t (forward s( ftransform st (fmkFunDom Z d::AL, d)))
   end.
 *)

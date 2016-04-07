@@ -41,7 +41,7 @@
                 let id = StringMap.find s !names in
                   IL_ident id
               with Not_found -> let id = get_next_id () in
-                                let _ = ids := BigMap.add id s !ids in
+                                let _ = ids := IntMap.add id s !ids in
                                 names := StringMap.add s id !names; IL_ident id
       }
     | whitespace { token lexbuf }

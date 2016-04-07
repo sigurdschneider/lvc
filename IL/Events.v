@@ -20,6 +20,9 @@ Inductive event :=
 Definition internally_deterministic {X : Type} (R : X -> event -> X -> Prop)
 := forall x y x1 x2, R x EvtTau x1 -> R x y x2 -> x1 = x2 /\ y = EvtTau.
 
+Definition externally_determined {X : Type} (R : X -> event -> X -> Prop)
+:= forall x e x1 x2, R x e x1 -> R x e x2 -> x1 = x2.
+
 Definition filter_tau (o:event) (L:list event) : list event :=
   match o with
       | EvtTau => L
@@ -121,6 +124,27 @@ Proof.
   intros.
   general induction H0; eauto.
   - destruct y, yl; isabsurd; eauto.
+    inv H1.
+    + exfalso. eapply H3. do 2 eexists. eauto.
+    + destruct y, yl; isabsurd.
+      assert (x'0 = x'). eapply H2; eauto. subst.
+      eapply IHstar2; eauto.
+Qed.
+
+Lemma star2_reach_normal2 X (R:X -> event -> X -> Prop) σ1 σ2a σ2b
+: star2 R σ1 nil σ2a
+  -> star2 R σ1 nil σ2b
+  -> internally_deterministic R
+  -> normal2 R σ2a
+  -> normal2 R σ2b
+  -> σ2a = σ2b.
+Proof.
+  intros.
+  general induction H0; eauto.
+  - general induction H.
+    + eauto.
+    + exfalso. eapply H3. firstorder.
+  - destruct y, yl; isabsurd; eauto. simpl in *.
     inv H1.
     + exfalso. eapply H3. do 2 eexists. eauto.
     + destruct y, yl; isabsurd.

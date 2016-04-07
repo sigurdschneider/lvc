@@ -366,7 +366,7 @@ Definition domenv (d:Dom) (x:var) : option val :=
 
 Definition constant_propagation_transform st (a:list (Dom * params)*Dom) :=
   match st, a with
-    | stmtExp x e s as st, (AL, d) =>
+    | stmtLet x e s as st, (AL, d) =>
       let d' := d in
       let d'' := domupd d' x (exp_eval (domenv d') e) in
       (AL, anni1 d'')
@@ -387,7 +387,7 @@ Definition constant_propagation_transform st (a:list (Dom * params)*Dom) :=
             anni2opt (Some d) (Some d)
       in
       (AL, ai)
-    | stmtGoto f Y as st, (AL, d) =>
+    | stmtApp f Y as st, (AL, d) =>
       let df := nth (counted f) AL (bottom, nil) in
       let Yc := List.map (fun e => match exp_eval (domenv d) e with
                         | Some v => wTA v
@@ -402,7 +402,7 @@ Definition constant_propagation_transform st (a:list (Dom * params)*Dom) :=
     | stmtExtern x f Y s as st, (AL, d) =>
       (* we assume renamed apart here, and dont zero x *)
       (AL, anni1 d)
-    | stmtLet Z s t as st, (AL, d) =>
+    | stmtFun Z s t as st, (AL, d) =>
       (* we assume renamed apart here, and dont zero Z *)
       (AL, anni2 d d)
   end.

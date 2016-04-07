@@ -71,14 +71,16 @@ Proof.
   specialize (IHlength_eq _ _ _ _ _ _ _ _ _ _ _ _ YL0 (D\{{x}}) X0).
   assert (D ⊆ (D \ {{x}}) ∪ {{x}}). cset_tac. decide(a === x); intuition.
   eapply agree_on_incl; eauto. eapply agree_on_union.
-  hnf; intros. cset_tac; eqs. lud.
-  unfold agree_on in IHlength_eq. symmetry. rewrite <- IHlength_eq.
-  unfold comp. lud. specialize (H8 _ H11). unfold comp in H8. lud.
-  exfalso; eauto.
-  hnf; intros. cset_tac; eqs. specialize (H8 _ H14). unfold comp in H8.
-  unfold comp. lud. exfalso; eauto.
-  exfalso; eauto. cset_tac; eauto.
-  hnf; intros. cset_tac. unfold comp. lud. exfalso; eauto.
+  - hnf; intros. cset_tac; eqs. intuition. lud; intuition.
+    unfold agree_on in IHlength_eq. symmetry. rewrite <- IHlength_eq.
+    + unfold comp. lud. specialize (H8 _ H11). unfold comp in H8. lud.
+      exfalso; eauto.
+    + hnf; intros. cset_tac; eqs.
+      specialize (H8 _ H15).
+      unfold comp in H8.
+      unfold comp. lud; exfalso; eauto.
+    + cset_tac; intuition.
+  - hnf; intros. cset_tac; intuition. unfold comp. lud. exfalso; eauto.
 Qed.
 
 
