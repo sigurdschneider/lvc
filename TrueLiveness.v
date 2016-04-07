@@ -103,11 +103,11 @@ Inductive true_live_sound (i:overapproximation)
   -> (getAnn al\{{x}}) ⊆ lv
   -> true_live_sound i Lv (stmtExtern x f Y b) (ann1 lv al)
 | TLLet Lv F b lv als alb
-  : true_live_sound i (live_globals F als++Lv) b alb
+  : true_live_sound i (zip pair (getAnn ⊝ als) (fst ⊝ F) ++ Lv) b alb
     -> length F = length als
     -> (forall n Zs a, get F n Zs ->
                  get als n a ->
-                 true_live_sound i (live_globals F als ++ Lv) (snd Zs) a)
+                 true_live_sound i (zip pair (getAnn ⊝ als) (fst ⊝ F) ++ Lv) (snd Zs) a)
     -> (forall n Zs a, get F n Zs ->
                  get als n a ->
                  if isFunctional i then (getAnn a \ of_list (fst Zs)) ⊆ lv else True)

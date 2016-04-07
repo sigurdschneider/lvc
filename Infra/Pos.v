@@ -3,7 +3,6 @@ Require Import CSet Map OrderedTypeEx Util List Get Computable DecSolve AllInRel
 Set Implicit Arguments.
 
 Unset Printing Abstraction Types.
-Check (fun T (x:T) => x).
 
 Fixpoint pos X `{OrderedType X} (l:list X) (x:X) (n:nat) : option nat :=
   match l with
@@ -35,7 +34,7 @@ Lemma pos_ge X `{OrderedType X} symb (l:X) i k
   -> k <= i.
 Proof.
   general induction symb. unfold pos in H0; fold pos in H0.
-  cases in H0. inv H0. cbv in e. omega.
+  cases in H0. inv H0. cbv in COND. omega.
   exploit IHsymb; eauto. omega.
 Qed.
 
@@ -104,7 +103,6 @@ Lemma get_first_pos X `{OrderedType X} n
   -> pos Z z 0 = Some n.
 Proof.
   intros. general induction H0; simpl; cases; eauto.
-  - order.
   - exfalso. exploit (H1 0); eauto using get. omega.
   - exploit IHget; eauto.
     intros; eapply (H1 (S n')); eauto using get. omega.
@@ -138,7 +136,7 @@ Lemma pos_eq X `{OrderedType X} symb y k
   -> hd_error symb === Some y.
 Proof.
   intros. destruct symb; simpl in *; try cases in H0; simpl; try congruence.
-  - unfold value. constructor. rewrite e. reflexivity.
+  - constructor. rewrite COND. reflexivity.
   - exfalso. exploit pos_ge; eauto. omega.
 Qed.
 

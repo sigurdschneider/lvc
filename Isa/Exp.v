@@ -290,7 +290,7 @@ Set Implicit Arguments.
   Proof.
     intros. general induction H.
     + inversion H0. subst v0 ϱ0 ϱ'0 s''. econstructor.
-    + inversion H1. subst x0 ϱ0 ϱ'0 s''. econstructor; unfold comp; congruence.
+    + inversion H1. subst x ϱ0 ϱ'0 s''. econstructor; unfold comp; congruence.
     + inversion H0. subst. econstructor; eauto.
     + inversion H1. subst. econstructor; eauto.
   Qed.
@@ -301,7 +301,7 @@ Set Implicit Arguments.
     intros. general induction H.
     + isabsurd.
     + simpl. hnf; intros; cset_tac.
-      rewrite <- H1. rewrite H. rewrite H0. reflexivity.
+      rewrite <- H0. rewrite H. rewrite H0. reflexivity.
     + simpl; eauto.
     + simpl. eapply inverse_on_union; eauto.
   Qed.
@@ -316,8 +316,8 @@ Set Implicit Arguments.
     intros. general induction H; simpl in *;
             eauto 20 using alpha_exp, agree_on_incl, lookup_set_union_incl with cset.
     - econstructor.
-      + rewrite <- H. eapply H2; simpl; cset_tac; eauto.
-      + rewrite <- H0. eapply H1. lset_tac.
+      + rewrite H2; eauto.
+      + eapply H1. lset_tac.
   Qed.
 
   Lemma exp_rename_renamedApart_all_alpha e e' ϱ ϱ'

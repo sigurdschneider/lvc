@@ -583,3 +583,40 @@ Notation "'tab' s '‖' L '‖'" := (List.map (fun _ => s) L)
 
 Notation "〔 X 〕" := (list X) (format "'〔' X '〕'") : type_scope.
 Notation "؟ X" := (option X) (format "'؟' X", at level 50, X at level 0) : type_scope.
+
+Lemma len_le_app X Y Z (A:list X) (B:list Y) (C D:list Z) n
+  : n < length B
+    -> length A = length (C ++ D)
+    -> length B = length C
+    -> n < length A.
+Proof.
+  intros LE EQ1 EQ2. rewrite EQ1. rewrite app_length. omega.
+Qed.
+
+Hint Resolve len_le_app : len.
+
+Lemma map_length_lt_ass_right X Y (L:list X) (f:X->Y) k
+  : k < length L
+    -> k < length (List.map f L).
+Proof.
+  intros; subst. rewrite map_length; eauto.
+Qed.
+
+Hint Resolve map_length_lt_ass_right : len.
+
+Hint Extern 10 =>
+match goal with
+| [ H : length ?A = length ?B, H' : ?n < length ?B  |- ?n < length ?A] =>
+  rewrite H; eapply H'
+| [ H : length ?B = length ?A, H' : ?n < length ?B  |- ?n < length ?A] =>
+  rewrite <- H; eapply H'
+end : len.
+
+Lemma length_le_plus X Y (A:list X) (B:list Y) k
+  : length A = length B
+    -> length A <= length B + k.
+Proof.
+  omega.
+Qed.
+
+Hint Resolve length_le_plus : len.

@@ -106,8 +106,9 @@ Ltac inv_eqs :=
 (* this is a standard tactic *)
 Ltac clear_trivial_eqs :=
   repeat (progress (match goal with
-              | [ H : @eq _ ?x ?x |- _ ] => clear H
-            end)).
+                    | [ H : @eq _ ?x ?x |- _ ] => clear H
+                    | [ H : @eq _ ?x ?y |- _ ] => first [ is_var x; subst x | is_var y; subst y ]
+                    end)).
 
 Tactic Notation "general" "induction" hyp(H) :=
   remember_arguments H; revert_except H;

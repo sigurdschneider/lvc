@@ -456,28 +456,56 @@ Qed.
 Notation "f ⊜ L1 L2" := (zip f L1 L2) (at level 40, L1 at level 0, L2 at level 0).
 
 
-Ltac inv_get :=
-  repeat
-    (repeat (get_functional);
-      match goal with
-      | [ H :  get (take _ ?L) ?n ?x |- _ ] => eapply take_get in H; destruct H
-      | [ H : get (zip ?f ?L ?L') ?n ?x  |- _ ] =>
-        let X := fresh "X" in
-        let EQ := fresh "EQ" in
-        let GET := fresh "GET" in
-        pose proof (get_zip f _ _ H) as X; destruct X as [? [? [? [GET EQ]]]];
-        try (subst x);
-        try (simplify_eq EQ); intros;
+Ltac inv_get_step :=
+  match goal with
+  | [ H : get (take _ ?L) ?n ?x |- _ ] => eapply take_get in H; destruct H
+  | [ H : get (drop _ ?L) ?n ?x |- _ ] => eapply get_drop in H; destruct H
+  | [ H : get (zip ?f ?L ?L') ?n ?x  |- _ ] =>
+    let X := fresh "X" in
+    let EQ := fresh "EQ" in
+    let GET := fresh "GET" in
+    pose proof (get_zip f _ _ H) as X; destruct X as [? [? [? [GET EQ]]]];
+      try (subst x);
+      try (simplify_eq EQ); intros;
         clear H; rename GET into H
-      | [ H : get (List.map ?f ?L) ?n ?x |- _ ]=>
-        match goal with
-        | [H' : get ?L ?n ?y |- _ ] =>
-          let EQ := fresh "EQ" in pose proof (map_get f H' H) as EQ; clear H; invcs EQ
-        | _ => let X := fresh "X" in
-              let EQ := fresh "EQ" in
-              let GET := fresh "GET" in
-              pose proof (map_get_4 _ f H) as X; destruct X as [? [GET EQ]]; try (subst x);
-              try (simplify_eq EQ); intros;
+  | [ H : get (List.map ?f ?L) ?n ?x |- _ ]=>
+    match goal with
+    | [H' : get ?L ?n ?y |- _ ] =>
+      let EQ := fresh "EQ" in pose proof (map_get f H' H) as EQ; clear H; invcs EQ
+    | _ => let X := fresh "X" in
+          let EQ := fresh "EQ" in
+          let GET := fresh "GET" in
+          pose proof (map_get_4 _ f H) as X; destruct X as [? [GET EQ]]; try (subst x);
+            try (simplify_eq EQ); intros;
               clear H; rename GET into H
-        end
-      end); clear_trivial_eqs; try clear_dup.
+    end
+  | [ H: get (?A ++ ?B) ?n _, H' : get ?A ?n _ |- _ ] =>
+    eapply (get_app_le _ _ (get_range H')) in H
+  | [ H: get (?A ++ ?B) ?n _, H' : ?n < length ?A |- _ ] =>
+    eapply (get_app_le _ _ H') in H
+  | [ H: get (List.map _ ?A ++ ?B) ?n _, H' : get ?A ?n _ |- _ ] =>
+    eapply (get_app_le _ _ (map_length_lt_ass_right _ _ (get_range H'))) in H
+  | [ H: get (List.map _ ?A ++ ?B) ?n _, H' : ?n < length ?A |- _ ] =>
+    eapply (get_app_le _ _ (map_length_lt_ass_right _ _ H')) in H
+  | [ H: get (?A ++ ?B) (length ?A) _ |- _ ] =>
+    eapply (get_length_app_eq) in H; [simplify_eq H; intros; clear_trivial_eqs | reflexivity]
+  | [ H: get (List.map _ ?A ++ ?B) (length ?A) _ |- _ ] =>
+    eapply get_length_app_eq in H; [simplify_eq H; intros; clear_trivial_eqs | eauto with len]
+  | [ H: get (?A ++ ?B) ?n  _, H' : ?n > length ?A |- _ ] =>
+    eapply get_length_right in H; [| eapply H']
+  | [ H: get (List.map _ ?A ++ ?B) ?n  _, H' : ?n > length ?A |- _ ] =>
+    eapply get_length_right in H; [| rewrite map_length; eapply H']
+  end.
+
+Ltac inv_get :=
+  repeat (repeat (get_functional); inv_get_step); clear_trivial_eqs; try clear_dup.
+
+Lemma zip_length_lt_ass (X Y Z : Type) (f : X -> Y -> Z) (L : list X) (L' : list Y) k
+  : length L = length L'
+    -> k < length L
+    -> k < length (zip f L L').
+Proof.
+  intros. rewrite zip_length2; eauto.
+Qed.
+
+Hint Resolve zip_length_lt_ass : len.

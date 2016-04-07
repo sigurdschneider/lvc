@@ -43,9 +43,10 @@ Proof.
     try dec_solve.
   + edestruct (IH s0); eauto; try inv an; eauto; try dec_solve.
     decide (length s = length sa); try dec_solve;
-    decide (getAnn slv ⊆ a); try dec_solve.
+      decide (getAnn slv ⊆ a); try dec_solve.
     exploit (@indexwise_R_dec' _ _
-                               (fun Zs a0 => live_sound i (live_globals s sa ++ Lv) (snd Zs) a0) s sa).
+                               (fun Zs a0 => live_sound i (pair ⊜ (getAnn ⊝ sa) (fst ⊝ s) ++ Lv)
+                                                     (snd Zs) a0) s sa).
     intros. eapply IH; eauto. inv an; eauto.
     destruct H; try dec_solve.
     exploit (@indexwise_R_dec' _ _
@@ -102,7 +103,8 @@ Proof.
     decide (getAnn slv ⊆ a); try dec_solve.
     exploit (@indexwise_R_dec' _ _
                                (fun Zs a0 =>
-                                  true_live_sound i (live_globals s sa ++ Lv) (snd Zs) a0) s sa).
+                                  true_live_sound i (pair ⊜ (getAnn ⊝ sa) (fst ⊝ s) ++ Lv)
+                                                  (snd Zs) a0) s sa).
     intros. eapply IH; eauto. inv an; eauto. destruct H; try dec_solve.
     exploit (@indexwise_R_dec' _ _
                                (fun Zs a0 => if isFunctional i then

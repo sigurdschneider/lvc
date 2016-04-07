@@ -7,8 +7,6 @@ Set Implicit Arguments.
 Unset Printing Abstraction Types.
 Local Arguments lminus {X} {H} s L.
 
-Print Visibility.
-
 Definition addParam x (DL:list (set var)) (AP:list (set var)) :=
   zip (fun (DL:set var) AP => if [x ∈ DL]
                    then {{x}} ∪ AP else AP) DL AP.
@@ -1201,53 +1199,10 @@ Proof.
   general induction REL; destruct n; simpl; eauto using PIR2.
 Qed.
 
-Lemma len_le_app X Y Z (A:list X) (B:list Y) (C D:list Z) n
-  : n < length B
-    -> length A = length (C ++ D)
-    -> length B = length C
-    -> n < length A.
-Proof.
-  intros LE EQ1 EQ2. rewrite EQ1. rewrite app_length. omega.
-Qed.
 
-Hint Resolve len_le_app : len.
 Hint Extern 10 (forall _ _, get (snd ⊝ computeParametersF ?DL ?ZL ?AP ?F ?als) _ _ -> ❬?LVb❭ = ❬_❭)
 => eapply computeParametersF_length : len.
 
-Lemma map_length_lt_ass_right X Y (L:list X) (f:X->Y) k
-  : k < length L
-    -> k < length (List.map f L).
-Proof.
-  intros; subst. rewrite map_length; eauto.
-Qed.
-
-
-Lemma zip_length_lt_ass (X Y Z : Type) (f : X -> Y -> Z) (L : list X) (L' : list Y) k
-  : length L = length L'
-    -> k < length L
-    -> k < length (zip f L L').
-Proof.
-  intros. rewrite zip_length2; eauto.
-Qed.
-
-Hint Resolve map_length_lt_ass_right zip_length_lt_ass : len.
-Hint Resolve drop_length_stable : len.
-Hint Extern 10 =>
-match goal with
-| [ H : length ?A = length ?B, H' : ?n < length ?B  |- ?n < length ?A] =>
-  rewrite H; eapply H'
-| [ H : length ?B = length ?A, H' : ?n < length ?B  |- ?n < length ?A] =>
-  rewrite <- H; eapply H'
-end : len.
-
-Lemma length_le_plus X Y (A:list X) (B:list Y) k
-  : length A = length B
-    -> length A <= length B + k.
-Proof.
-  omega.
-Qed.
-
-Hint Resolve length_le_plus : len.
 
 Lemma computeParameters_trs DL ZL AP s an' LV lv
 : live_sound Imperative (zip pair DL ZL) s lv
