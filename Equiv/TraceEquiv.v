@@ -5,105 +5,7 @@ Require Export EventsActivated StateType paco Equiv Bisim Sim.
 Set Implicit Arguments.
 Unset Printing Records.
 
-Inductive extevent :=
-  | EEvtExtern (evt:event)
-  | EEvtTerminate (res:option val).
-
-Inductive prefix {S} `{StateType S} : S -> list extevent -> Prop :=
-  | producesPrefixSilent (σ:S) (σ':S) L :
-      step σ EvtTau σ'
-      -> prefix σ' L
-      -> prefix σ  L
-  | producesPrefixExtern (σ:S) (σ':S) evt L :
-      activated σ
-      -> step σ evt σ'
-      -> prefix σ' L
-      -> prefix σ (EEvtExtern evt::L)
-  | producesPrefixTerm (σ:S) (σ':S) r
-    : result σ' = r
-      -> star2 step σ nil σ'
-      -> normal2 step σ'
-      -> prefix σ (EEvtTerminate r::nil)
-  | producesPrefixPrefix (σ:S)
-    : prefix σ nil.
-
-Lemma prefix_star2_silent {S} `{StateType S} (σ σ':S) L
- : star2 step σ nil σ' ->
-   prefix σ' L -> prefix σ L.
-Proof.
-  intros. general induction H0; eauto.
-  - destruct yl, y; simpl in *; try congruence.
-    econstructor 1; eauto.
-Qed.
-
-Lemma star2_reach_silent_step (X : Type) (R:X -> event -> X -> Prop) (x y z : X)
-: R x EvtTau y
-  -> star2 R x nil z
-  -> internally_deterministic R
-  -> x = z \/ star2 R y nil z.
-Proof.
-  intros. inv H0; eauto.
-  exploit H1; eauto. dcr; subst; eauto.
-Qed.
-
-
-Lemma prefix_star2_silent' {S} `{StateType S} (σ σ':S) L
- : star2 step σ nil σ' ->
-   prefix σ L -> prefix σ' L.
-Proof.
-  intros. general induction H0; eauto.
-  - destruct yl, y; simpl in *; try congruence.
-    eapply IHstar2; eauto.
-    inv H2.
-    + exploit step_internally_deterministic. eapply H. eapply H3.
-      dcr; subst. eauto.
-    + exfalso. inv H3; dcr.
-      exploit step_internally_deterministic. eapply H. eapply H7. dcr; congruence.
-    + exploit star2_reach_silent_step; eauto. eapply H1.
-      destruct X; subst. exfalso. eapply H5; firstorder.
-      econstructor 3; eauto.
-    + econstructor 4.
-Qed.
-
-Lemma no_activated_tau_step {S} `{StateType S} (σ σ':S)
- :  activated σ
-  -> step σ EvtTau σ'
-  -> False.
-Proof.
-  intros. destruct H0 as [? [? ?]].
-  eapply step_internally_deterministic in H0; eauto.
-  dcr; congruence.
-Qed.
-
-Lemma bisim_prefix {S} `{StateType S} {S'} `{StateType S'} (sigma:S) (σ':S')
-: bisim sigma σ' -> forall L, prefix sigma L -> prefix σ' L.
-Proof.
-  intros. general induction H2.
-  - eapply bisim_bisim' in H3.
-    eapply IHprefix; eauto.
-    eapply bisim'_bisim. eapply bisim'_reduction_closed_1; eauto.
-    eapply (S_star2 _ _ H0). eapply star2_refl.
-  - eapply bisim_bisim' in H4.
-    eapply bisim'_activated in H4; eauto.
-    destruct H4 as [? [? [? []]]].
-    destruct evt.
-    + eapply prefix_star2_silent; eauto.
-      edestruct H6; eauto. destruct H8.
-      econstructor 2. eauto. eapply H8.
-      eapply IHprefix; eauto.
-      eapply bisim'_bisim. eapply H9.
-    + exfalso; eapply (no_activated_tau_step _ H0 H1); eauto.
-  - eapply bisim_bisim' in H4. eapply bisim'_terminate in H4; eauto.
-    destruct H4 as [? [? []]]. econstructor 3; [ | eauto | eauto]. congruence.
-  - econstructor 4.
-Qed.
-
-Lemma bisim_prefix_eq {S} `{StateType S} {S'} `{StateType S'} (sigma:S) (σ':S')
-  : bisim sigma σ' -> forall L, prefix sigma L <-> prefix σ' L.
-Proof.
-  split; eapply bisim_prefix; eauto.
-  eapply bisim_sym; eauto.
-Qed.
+(** * Divergence *)
 
 CoInductive diverges S `{StateType S} : S -> Prop :=
 | DivergesI σ σ'
@@ -165,71 +67,99 @@ Proof.
   eapply COH; eauto.
 Qed.
 
-CoInductive stream (A : Type) : Type :=
-| sil : stream A
-| sons : A -> stream A -> stream A.
 
-Arguments sil [A].
+(** * Three equivalent notions of program equivalence **)
 
-CoInductive coproduces {S} `{StateType S} : S -> stream extevent -> Prop :=
-| CoProducesExtern (σ σ' σ'':S) evt L :
-    star2 step σ nil σ'
-      -> activated σ'
-      -> step σ' evt σ''
-      -> coproduces σ'' L
-      -> coproduces σ (sons (EEvtExtern evt) L)
-| CoProducesSilent (σ:S) :
-    diverges σ
-    -> coproduces σ sil
-| CoProducesTerm (σ:S) (σ':S) r
-  : result σ' = r
-    -> star2 step σ nil σ'
-    -> normal2 step σ'
-    -> coproduces σ (sons (EEvtTerminate r) sil).
+(** ** Prefix Trace Equivalence (partial traces) **)
 
-Lemma coproduces_reduction_closed_step S `{StateType S} (σ σ':S) L
-: coproduces σ L -> step σ EvtTau σ'  -> coproduces σ' L.
+(** A prefix is a list of [extevent] *)
+
+Inductive extevent :=
+  | EEvtExtern (evt:event)
+  | EEvtTerminate (res:option val).
+
+(** A relation that assigns prefixes to states *)
+
+Inductive prefix {S} `{StateType S} : S -> list extevent -> Prop :=
+  | producesPrefixSilent (σ:S) (σ':S) L :
+      step σ EvtTau σ'
+      -> prefix σ' L
+      -> prefix σ  L
+  | producesPrefixExtern (σ:S) (σ':S) evt L :
+      activated σ
+      -> step σ evt σ'
+      -> prefix σ' L
+      -> prefix σ (EEvtExtern evt::L)
+  | producesPrefixTerm (σ:S) (σ':S) r
+    : result σ' = r
+      -> star2 step σ nil σ'
+      -> normal2 step σ'
+      -> prefix σ (EEvtTerminate r::nil)
+  | producesPrefixPrefix (σ:S)
+    : prefix σ nil.
+
+(** *** Closedness under silent reduction/expansion *)
+
+Lemma prefix_star2_silent {S} `{StateType S} (σ σ':S) L
+ : star2 step σ nil σ' ->
+   prefix σ' L -> prefix σ L.
 Proof.
-  intros. inv H0.
-  - exploit activated_star_reach. eapply H3. eauto.
-    eapply (S_star2 EvtTau); eauto. econstructor.
-    econstructor. eapply X. eauto. eauto. eauto.
-  - econstructor. eapply diverges_reduction_closed; eauto.
-    eapply (S_star2 EvtTau); eauto. econstructor.
-  - exploit star2_reach_normal. eauto.
-    eapply (S_star2 EvtTau); eauto. econstructor.
-    eapply H. eauto.
-    econstructor; try eapply X. eauto. eauto.
+  intros. general induction H0; eauto.
+  - destruct yl, y; simpl in *; try congruence.
+    econstructor 1; eauto.
 Qed.
 
-Lemma coproduces_reduction_closed S `{StateType S} (σ σ':S) L
-: coproduces σ L -> star2 step σ nil σ'  -> coproduces σ' L.
+Lemma prefix_star2_silent' {S} `{StateType S} (σ σ':S) L
+ : star2 step σ nil σ' ->
+   prefix σ L -> prefix σ' L.
 Proof.
-  intros. general induction H1; eauto using coproduces. eauto.
-  destruct yl, y; simpl in *; try congruence.
-  eapply IHstar2; eauto.
-  eapply coproduces_reduction_closed_step; eauto.
+  intros. general induction H0; eauto.
+  - destruct yl, y; simpl in *; try congruence.
+    eapply IHstar2; eauto.
+    inv H2.
+    + exploit step_internally_deterministic. eapply H. eapply H3.
+      dcr; subst. eauto.
+    + exfalso. inv H3; dcr.
+      exploit step_internally_deterministic. eapply H. eapply H7. dcr; congruence.
+    + exploit star2_reach_silent_step; eauto. eapply H1.
+      destruct H3; subst. exfalso. eapply H5; firstorder.
+      econstructor 3; eauto.
+    + econstructor 4.
 Qed.
 
-Lemma bisim_coproduces S `{StateType S} S' `{StateType S'} (sigma:S) (σ':S')
-  : bisim sigma σ' -> forall L, coproduces sigma L -> coproduces σ' L.
+(** *** Bisimilarity is sound for prefix inclusion *)
+
+Lemma bisim_prefix' {S} `{StateType S} {S'} `{StateType S'} (sigma:S) (σ':S')
+: bisim sigma σ' -> forall L, prefix sigma L -> prefix σ' L.
 Proof.
-  revert sigma σ'. cofix COH; intros.
-  inv H2.
-  - assert (bisim' σ'0 σ').
-    eapply bisim'_reduction_closed. eapply (bisim_bisim' H1).
-    eauto. econstructor.
-    exploit (bisim'_activated H4 H7). dcr.
-    edestruct H10. eauto. dcr.
-    econstructor; try eapply H8. eauto. eapply H11.
-    eapply COH; eauto.
-    destruct H11.
-    eapply bisim'_bisim. eapply H13.
-  - econstructor. eapply (bisim_sound_diverges H1); eauto.
-  - exploit (bisim'_terminate H4 H5 (bisim_bisim' H1)).
-    dcr.
-    econstructor; eauto.
+  intros. general induction H2.
+  - eapply bisim_bisim' in H3.
+    eapply IHprefix; eauto.
+    eapply bisim'_bisim. eapply bisim'_reduction_closed_1; eauto.
+    eapply (S_star2 _ _ H0). eapply star2_refl.
+  - eapply bisim_bisim' in H4.
+    eapply bisim'_activated in H4; eauto.
+    destruct H4 as [? [? [? []]]].
+    destruct evt.
+    + eapply prefix_star2_silent; eauto.
+      edestruct H6; eauto. destruct H8.
+      econstructor 2. eauto. eapply H8.
+      eapply IHprefix; eauto.
+      eapply bisim'_bisim. eapply H9.
+    + exfalso; eapply (no_activated_tau_step _ H0 H1); eauto.
+  - eapply bisim_bisim' in H4. eapply bisim'_terminate in H4; eauto.
+    destruct H4 as [? [? []]]. econstructor 3; [ | eauto | eauto]. congruence.
+  - econstructor 4.
 Qed.
+
+Lemma bisim_prefix {S} `{StateType S} {S'} `{StateType S'} (sigma:S) (σ':S')
+  : bisim sigma σ' -> forall L, prefix sigma L <-> prefix σ' L.
+Proof.
+  split; eapply bisim_prefix'; eauto.
+  eapply bisim_sym; eauto.
+Qed.
+
+(** *** The only prefix is empty if and only if the state diverges *)
 
 Lemma produces_only_nil_diverges S `{StateType S} (σ:S)
 : (forall L, prefix σ L -> L = nil) -> diverges σ.
@@ -283,6 +213,8 @@ Proof.
     exfalso. eapply diverges_never_terminates; eauto using diverges_reduction_closed.
 Qed.
 
+(** *** Prefix Equivalence is sound for divergence *)
+
 Lemma produces_diverges S `{StateType S} S' `{StateType S'} (σ:S) (σ':S')
 : (forall L, prefix σ L <-> prefix σ' L)
   -> diverges σ -> diverges σ'.
@@ -313,6 +245,8 @@ Proof.
     congruence.
 Qed.
 
+(** *** Several closedness properties *)
+
 Lemma prefix_star_activated S `{StateType S} (σ1 σ1' σ1'':S) evt L
 : star2 step σ1 nil σ1'
   -> activated σ1'
@@ -338,12 +272,11 @@ Lemma prefix_preserved' S `{StateType S} S' `{StateType S'} (σ1 σ1' σ1'':S) (
 Proof.
   intros.
   - exploit (prefix_star_activated _ H2 H3 H4 H8).
-    eapply H1 in X.
-    eapply prefix_extevent in X. dcr.
-    exploit both_activated. eapply H10. eapply H5. eauto. eauto. subst.
+    eapply H1 in H9.
+    eapply prefix_extevent in H9. dcr.
+    exploit both_activated. eapply H11. eapply H5. eauto. eauto. subst.
     assert (x0 = σ2''). eapply step_externally_determined; eauto. subst; eauto.
 Qed.
-
 
 Lemma prefix_preserved S `{StateType S} S' `{StateType S'} (σ1 σ1' σ1'':S) (σ2 σ2' σ2'':S') evt
 :
@@ -362,7 +295,94 @@ Proof.
   eapply (prefix_preserved' _ _ H1); eauto.
 Qed.
 
-Lemma produces_coproduces S `{StateType S} S' `{StateType S'} (σ:S) (σ':S')
+Lemma produces_silent_closed {S} `{StateType S}  S' `{StateType S'}  (σ1 σ1':S) (σ2 σ2':S')
+: star2 step σ1 nil σ1'
+  -> star2 step σ2 nil σ2'
+  -> (forall L, prefix σ1 L <-> prefix σ2 L)
+  -> (forall L, prefix σ1' L <-> prefix σ2' L).
+Proof.
+  split; intros.
+  - eapply prefix_star2_silent'; eauto. eapply H3.
+    eapply prefix_star2_silent; eauto.
+  - eapply prefix_star2_silent'; eauto. eapply H3.
+    eapply prefix_star2_silent; eauto.
+Qed.
+
+(** ** Trace Equivalence (maximal traces) *)
+
+CoInductive stream (A : Type) : Type :=
+| sil : stream A
+| sons : A -> stream A -> stream A.
+
+Arguments sil [A].
+
+CoInductive coproduces {S} `{StateType S} : S -> stream extevent -> Prop :=
+| CoProducesExtern (σ σ' σ'':S) evt L :
+    star2 step σ nil σ'
+      -> activated σ'
+      -> step σ' evt σ''
+      -> coproduces σ'' L
+      -> coproduces σ (sons (EEvtExtern evt) L)
+| CoProducesSilent (σ:S) :
+    diverges σ
+    -> coproduces σ sil
+| CoProducesTerm (σ:S) (σ':S) r
+  : result σ' = r
+    -> star2 step σ nil σ'
+    -> normal2 step σ'
+    -> coproduces σ (sons (EEvtTerminate r) sil).
+
+(** *** Several closedness properties *)
+
+Lemma coproduces_reduction_closed_step S `{StateType S} (σ σ':S) L
+: coproduces σ L -> step σ EvtTau σ'  -> coproduces σ' L.
+Proof.
+  intros. inv H0.
+  - exploit activated_star_reach. eapply H3. eauto.
+    eapply (S_star2 EvtTau); eauto. econstructor.
+    econstructor. eapply H6. eauto. eauto. eauto.
+  - econstructor. eapply diverges_reduction_closed; eauto.
+    eapply (S_star2 EvtTau); eauto. econstructor.
+  - exploit star2_reach_normal. eauto.
+    eapply (S_star2 EvtTau); eauto. econstructor.
+    eapply H. eauto.
+    econstructor; try eapply X. eauto. eauto. eauto.
+Qed.
+
+Lemma coproduces_reduction_closed S `{StateType S} (σ σ':S) L
+: coproduces σ L -> star2 step σ nil σ'  -> coproduces σ' L.
+Proof.
+  intros. general induction H1; eauto using coproduces. eauto.
+  destruct yl, y; simpl in *; try congruence.
+  eapply IHstar2; eauto.
+  eapply coproduces_reduction_closed_step; eauto.
+Qed.
+
+(** *** Bisimilarity is sound for maximal traces *)
+
+Lemma bisim_coproduces S `{StateType S} S' `{StateType S'} (sigma:S) (σ':S')
+  : bisim sigma σ' -> forall L, coproduces sigma L -> coproduces σ' L.
+Proof.
+  revert sigma σ'. cofix COH; intros.
+  inv H2.
+  - assert (bisim' σ'0 σ').
+    eapply bisim'_reduction_closed. eapply (bisim_bisim' H1).
+    eauto. econstructor.
+    exploit (bisim'_activated H4 H7). dcr.
+    edestruct H11. eauto. dcr.
+    econstructor; try eapply H8. eauto. eauto.
+    eapply COH; eauto.
+    destruct H8.
+    eapply bisim'_bisim. eapply H12.
+  - econstructor. eapply (bisim_sound_diverges H1); eauto.
+  - exploit (bisim'_terminate H4 H5 (bisim_bisim' H1)).
+    dcr.
+    econstructor; eauto.
+Qed.
+
+(** *** Prefix trace equivalence coincides with maximal trace equivalence. *)
+
+Lemma produces_coproduces' S `{StateType S} S' `{StateType S'} (σ:S) (σ':S')
 : (forall L, prefix σ L <-> prefix σ' L)
   -> (forall T, coproduces σ T -> coproduces σ' T).
 Proof.
@@ -382,6 +402,16 @@ Proof.
     eapply prefix_terminates in H3. dcr.
     econstructor 3; eauto.
 Qed.
+
+Lemma produces_coproduces S `{StateType S} S' `{StateType S'} (σ:S) (σ':S')
+: (forall L, prefix σ L <-> prefix σ' L)
+  -> (forall T, coproduces σ T <-> coproduces σ' T).
+Proof.
+  split; eapply produces_coproduces'; eauto. symmetry; eauto.
+Qed.
+
+
+(** ** Bisimilarity is complete for prefix trace equivalence. *)
 
 Require Import Classical_Prop.
 
@@ -403,19 +433,6 @@ Proof.
   - exfalso. eapply H0; eexists σ; intuition. econstructor.
 Qed.
 
-Lemma produces_silent_closed {S} `{StateType S}  S' `{StateType S'}  (σ1 σ1':S) (σ2 σ2':S')
-: star2 step σ1 nil σ1'
-  -> star2 step σ2 nil σ2'
-  -> (forall L, prefix σ1 L <-> prefix σ2 L)
-  -> (forall L, prefix σ1' L <-> prefix σ2' L).
-Proof.
-  split; intros.
-  - eapply prefix_star2_silent'; eauto. eapply H3.
-    eapply prefix_star2_silent; eauto.
-  - eapply prefix_star2_silent'; eauto. eapply H3.
-    eapply prefix_star2_silent; eauto.
-Qed.
-
 Lemma prefix_bisim S `{StateType S} S' `{StateType S'} (σ:S) (σ':S')
 : (forall L, prefix σ L <-> prefix σ' L)
   -> bisim σ σ'.
@@ -431,25 +448,25 @@ Proof.
   - dcr. inv H4; dcr.
     assert (prefix x1 nil) by econstructor 4.
     exploit (prefix_star_activated _ H3 H4 H5 H2).
-    eapply H1 in X.
-    eapply prefix_extevent in X. dcr.
+    eapply H1 in H6.
+    eapply prefix_extevent in H6. dcr.
     econstructor 2; eauto.
     + intros.
       assert (B:prefix x (EEvtExtern evt::nil)) by
           (econstructor 2; eauto; econstructor 4).
       pose proof H1.
-      eapply produces_silent_closed in H11; eauto.
-      eapply H11 in B.
+      eapply produces_silent_closed in H9; eauto.
+      eapply H9 in B.
       inv B.
-      * exfalso. exploit (step_internally_deterministic _ _ _ _ H12 H9 ); eauto. dcr; congruence.
+      * exfalso. exploit (step_internally_deterministic _ _ _ _ H12 H10 ); eauto. dcr; congruence.
       * eexists; split. eauto. eapply f.
         eapply prefix_preserved; eauto.
     + intros.
       assert (B:prefix x2 (EEvtExtern evt::nil)) by
           (econstructor 2; eauto; econstructor 4).
       pose proof H1.
-      eapply produces_silent_closed in H11; eauto.
-      eapply H11 in B.
+      eapply produces_silent_closed in H9; eauto.
+      eapply H9 in B.
       inv B.
       * exfalso. exploit (step_internally_deterministic _ _ _ _ H12 H5 ); eauto. dcr; congruence.
       * eexists; split. eauto. eapply f.
@@ -458,13 +475,3 @@ Proof.
     eapply (produces_diverges H1); eauto.
     eapply bisim_complete_diverges; eauto.
 Qed.
-
-
-
-
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("../" "Lvc")) ***
-*** End: ***
-*)

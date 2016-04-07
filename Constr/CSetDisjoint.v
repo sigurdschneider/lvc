@@ -5,7 +5,7 @@ Require Import EqDec CSetNotation CSetTac CSetComputable.
 Set Implicit Arguments.
 
 Definition disj {X} `{OrderedType X} (s t: set X)
-  := s ∩ t [=] ∅.
+  := forall x, x ∈ s -> x ∈ t -> False.
 
 Instance disj_sym {X} `{OrderedType X} : Symmetric disj.
 Proof.
@@ -17,20 +17,18 @@ Instance disj_eq_eq_iff {X} `{OrderedType X}
 : Proper (Equal ==> Equal ==> iff) disj.
 Proof.
   unfold Proper, respectful, disj; intros.
-  split; intros;
-  cset_tac; intuition; firstorder.
+  cset_tac; firstorder.
 Qed.
 
 Instance disj_subset_subset_flip_impl {X} `{OrderedType X}
 : Proper (Subset ==> Subset ==> flip impl) disj.
 Proof.
-  unfold Proper, respectful, disj; intros.
-  split; intros;
-  cset_tac; intuition; firstorder.
+  unfold Proper, respectful, disj, flip, impl; intros.
+  firstorder.
 Qed.
 
 Lemma disj_app {X} `{OrderedType X} (s t u: set X)
-: disj s (t ++ u) <-> disj s t /\ disj s u.
+: disj s (t ∪ u) <-> disj s t /\ disj s u.
 Proof.
   split; unfold disj; intros; cset_tac; intuition; eauto.
 Qed.
@@ -86,9 +84,79 @@ match goal with
     exfalso; eapply (in_disj_absurd H' H'' H)
 end.
 
+Lemma disj_minus_eq X `{OrderedType X} (s t:set X)
+: disj s t
+  -> s \ t [=] s.
+Proof.
+  unfold disj; cset_tac; intuition; eauto.
+Qed.
 
-(*
-*** Local Variables: ***
-*** coq-load-path: (("../" "Lvc")) ***
-*** End: ***
-*)
+
+Lemma disj_not_in X `{OrderedType X} x s
+: disj {x} s
+  -> x ∉ s.
+Proof.
+  unfold disj; cset_tac.
+Qed.
+
+Lemma disj_eq_minus X `{OrderedType X} (s t u: set X)
+: s [=] t
+  -> disj t u
+  -> s [=] t \ u.
+Proof.
+  unfold disj.
+  cset_tac; intuition; eauto.
+  - eapply H0; eauto.
+  - eapply H1; intuition; eauto. eapply H0; eauto.
+  - eapply H0; eauto.
+Qed.
+
+Lemma disj_struct_1 X `{OrderedType X} s t u
+: s [=] t
+  ->  disj s u -> disj t u.
+Proof.
+  intros. rewrite <- H0; eauto.
+Qed.
+
+Lemma disj_struct_1_r X `{OrderedType X} s t u
+: s [=] t
+  ->  disj t u -> disj s u.
+Proof.
+  intros. rewrite H0; eauto.
+Qed.
+
+Lemma disj_struct_2 X `{OrderedType X} s t u
+: s [=] t
+  ->  disj u s -> disj u t.
+Proof.
+  intros. rewrite <- H0; eauto.
+Qed.
+
+Lemma disj_struct_2_r X `{OrderedType X} s t u
+: s [=] t
+  ->  disj u t -> disj u s.
+Proof.
+  intros. rewrite H0; eauto.
+Qed.
+
+Lemma disj_intersection X `{OrderedType X} s t
+  : disj s t <-> s ∩ t [=] ∅.
+Proof.
+  intros. split; cset_tac; firstorder.
+Qed.
+
+Lemma not_incl_minus X `{OrderedType X} (s t u: set X)
+: s ⊆ t
+  -> disj s u
+  -> s ⊆ t \ u.
+Proof.
+  cset_tac; intuition.
+Qed.
+
+Lemma disj_minus X `{OrderedType X} s t u
+  : (s ∩ t) ⊆ u
+    -> disj s (t \ u).
+Proof.
+  intros. hnf; intros. specialize (H0 x).
+  cset_tac.
+Qed.

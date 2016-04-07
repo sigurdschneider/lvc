@@ -1,4 +1,4 @@
-Require Export Setoid Coq.Classes.Morphisms.  
+Require Export Setoid Coq.Classes.Morphisms.
 Require Export Sets SetInterface SetConstructs SetProperties.
 Require Import EqDec CSetNotation CSetTac Util CSetComputable.
 
@@ -20,15 +20,15 @@ Section theorems.
 
   Lemma minus_inane s (x:X)
     : x ∉ s
-    -> s ≅ (s\{{x}}).
+    -> s [=] (s\{{x}}).
   Proof.
     repeat (cset_tac; firstorder).
   Qed.
- 
+
   Lemma incl_set_decomp (s t:set X)
-    : s ⊆ t -> t ≅ s ∪ (t \ s).
+    : s ⊆ t -> t [=] s ∪ (t \ s).
   Proof.
-    repeat (cset_tac; firstorder).
+    cset_tac.
   Qed.
 
   Lemma incl_union_minus (s t:set X)
@@ -36,19 +36,19 @@ Section theorems.
   Proof.
     cset_tac; firstorder.
   Qed.
-  
+
   Lemma union_minus s (x:X)
-    : x ∉ s -> s ≅ ({{x}} ∪ s) \ {{x}}.
+    : x ∉ s -> s [=] ({{x}} ∪ s) \ {{x}}.
   Proof.
-    repeat (cset_tac; firstorder). 
+    repeat (cset_tac; firstorder).
   Qed.
 
   Lemma set_fact_1 s t (x:X)
     : x ∉ t
-    -> {{x}} ∪ (s \ ({{x}} ∪ t)) ≅ {{x}} ∪ s \ t.
+    -> {{x}} ∪ (s \ ({{x}} ∪ t)) [=] {{x}} ∪ s \ t.
   Proof.
-    intros. cset_tac; firstorder. cset_tac. 
-    decide (a===x); firstorder. 
+    intros. cset_tac; firstorder. cset_tac.
+    decide (a===x); firstorder.
   Qed.
 
   Lemma incl_not_in (x:X) s t
@@ -57,10 +57,10 @@ Section theorems.
     cset_tac. specialize (H1 a). cset_tac; firstorder.
   Qed.
 
-  
+
   Lemma minus_incl_special (c c' d : set X)
     : c ⊆ c'
-    -> c ∪ (c' \ (c \ d)) ≅ c'.
+    -> c ∪ (c' \ (c \ d)) [=] c'.
   Proof.
     cset_tac.
     decide(a ∈ c). firstorder.
@@ -71,26 +71,15 @@ Section theorems.
   Lemma minus_incl_meet_special (c c' d : set X)
     : d ⊆ c
     -> c ⊆ c'
-    -> c ∩ (c' \ (c \ d)) ≅ d.
+    -> c ∩ (c' \ (c \ d)) [=] d.
   Proof.
-    cset_tac; firstorder.
-    decide(a ∈ d); firstorder.
+    cset_tac.
   Qed.
 
   Lemma minus_minus_id (s t: set X)
     : s ⊆ t
-    -> s ≅ t \ (t \ s).
+    -> s [=] t \ (t \ s).
   Proof.
-    repeat (cset_tac; firstorder).
+    cset_tac.
   Qed.
 End theorems.
-
-
-(* 
-*** Local Variables: ***
-*** coq-load-path: (("../" "Lvc")) ***
-*** End: ***
-*)
-
-
-

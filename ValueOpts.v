@@ -867,12 +867,6 @@ Proof.
   erewrite IHY; eauto; simpl; eauto.
 Qed.
 
-Ltac length_equify :=
-  repeat (match goal with
-            | [ H : length ?A = length ?B |- _ ] =>
-              eapply length_length_eq in H
-          end).
-
 Lemma omap_satisfies_list_EqnApx V Y Y' v
  : length Y = length Y'
    -> satisfiesAll V (list_EqnApx Y Y')
@@ -939,7 +933,7 @@ Proof.
         intro. hnf in H8. simpl in *.
         rewrite <- H4 in H8. inv H8.
         cbv in H7. destruct y. congruence.
-        destruct if in H18. congruence. cbv in H18. congruence.
+        cases in H18. congruence. cbv in H18. congruence.
       } *)
       econstructor; try eapply plus2O.
       econstructor; eauto using eq_sym. reflexivity.
@@ -962,7 +956,7 @@ Proof.
           intro. hnf in H8. simpl in *.
           rewrite <- H4 in H8. inv H8.
           cbv in H7. destruct y.
-          destruct if in H18. cbv in H18. congruence.
+          cases in H18. cbv in H18. congruence.
           congruence. congruence.
         } *)
         econstructor; try eapply plus2O.
@@ -1121,9 +1115,3 @@ Proof.
 Qed.
 
 Print Assumptions sim_vopt.
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("." "Lvc")) ***
-*** End: ***
-*)

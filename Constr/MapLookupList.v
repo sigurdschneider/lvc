@@ -105,9 +105,17 @@ Proof.
   rewrite IHA; eauto.
 Qed.
 
+Lemma lookup_list_unique X `{OrderedType X} Y (Z:list X) (Z':list Y) f
+: length Z = length Z'
+  -> unique Z
+  -> lookup_list (f [Z <-- Z']) Z = Z'.
+Proof.
+  intros. length_equify. general induction H0; simpl in *; dcr; eauto.
+  - f_equal.
+    + lud; intuition.
+    + erewrite lookup_list_agree; eauto.
+      eapply agree_on_update_dead; try reflexivity.
+      eapply fresh_of_list; eauto.
+Qed.
 
-(*
- *** Local Variables: ***
- *** coq-load-path: (("../" "Lvc")) ***
- *** End: ***
- *)
+Hint Resolve lookup_list_agree : cset.

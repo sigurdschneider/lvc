@@ -10,7 +10,7 @@
 
   Furthermore there are two tactics dleft, dright which correspond
   to classical_left and classical_right. *)
-
+Require Import Coq.Program.Tactics.
 Require Export CoreTactics Bool.
 
 Class Computable (P : Prop) := decision_procedure : { P } + { ~P }.
@@ -41,7 +41,7 @@ End ComputableInstances.
 
 Extraction Inline inst_true_cm_obligation_1 inst_false_cm_obligation_1
   inst_not_cm_obligation_1 inst_and_cm_obligation_1 inst_or_cm_obligation_1
-  inst_impl_cm_obligation_1 inst_iff_cm_obligation_1 
+  inst_impl_cm_obligation_1 inst_iff_cm_obligation_1
   inst_and_cm inst_or_cm inst_impl_cm inst_iff_cm.
 
 (** Lift boolean predicates to computable Props. *)
@@ -109,9 +109,3 @@ Notation "'if' [ P ] 'then' s 'else' t" :=
   "'if'  [ P ]  'then'  s  'else'  t").
 
 Extraction Inline decision_procedure.
-
-(* 
-*** Local Variables: ***
-*** coq-load-path: (("../" "Lvc")) ***
-*** End: ***
-*)

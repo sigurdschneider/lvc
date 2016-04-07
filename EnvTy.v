@@ -133,11 +133,3 @@ Lemma updD_param D Z x
 Proof.
   intros. unfold updD. rewrite update_list_upd; intros; eauto.
 Qed.
-
-
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("." "Lvc")) ***
-*** End: ***
-*)

@@ -69,8 +69,3 @@ Defined.
 
 Inductive valOfType : val -> ty -> Prop :=
   naturalOfType n : valOfType n Natural.
-(*
-*** Local Variables: ***
-*** coq-load-path: ((".." "Lvc")) ***
-*** End: ***
-*)

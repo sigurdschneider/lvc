@@ -90,11 +90,11 @@ Proof.
         rewrite <- H6; eauto.
         eapply H2; eauto.
       * unfold Proper, respectful, flip; intros; subst.
-        repeat destruct if; eauto.
+        repeat cases; eauto.
         exfalso. rewrite H7 in n; eauto.
         exfalso. rewrite H7 in p; eauto.
       * unfold transpose, flip; intros.
-        repeat destruct if; eauto.
+        repeat cases; eauto.
   - right.
     revert H2. pattern s. eapply set_induction.
     + intros.
@@ -110,11 +110,11 @@ Proof.
         eapply Add_Equal in H4. eapply n, H6.
         rewrite H4. cset_tac; intuition.
       * unfold Proper, respectful, flip; intros; subst.
-        repeat destruct if; eauto.
+        repeat cases; eauto.
         exfalso. rewrite H7 in n; eauto.
         exfalso. rewrite H7 in p; eauto.
       * unfold transpose, flip; intros.
-        repeat destruct if; eauto.
+        repeat cases; eauto.
 Defined.
 
 Arguments set_quant_computable [X] {H} s P {H0} {H1}.
@@ -158,7 +158,7 @@ Proof.
     -> exists x n, get L n x /\ snd x = v /\ f (fst x).
   Proof.
     general induction L; simpl; eauto.
-    - simpl in H. destruct a. destruct if in H.
+    - simpl in H. destruct a. cases in H.
     + inv H.
       eexists (a,v). eexists 0. repeat split; eauto using get. simpl.
       rewrite <- Heq. eapply I.
@@ -207,8 +207,8 @@ Lemma lt_join x y x' y'
 Proof.
   intros.
   inv H; inv H0; simpl; eauto using le;
-  try destruct x'; try destruct x; simpl; try destruct w; try destruct if; try destruct w0;
-    try destruct if; subst; eauto using le.
+  try destruct x'; try destruct x; simpl; try destruct w; try cases; try destruct w0;
+    try cases; subst; eauto using le.
 Qed.
 
 
@@ -259,10 +259,10 @@ Proof.
   repeat match goal with
     | [H : lt ?x ?y, H' : ?y = None |- _ ] => rewrite H' in H; inv H
   end.
-  rewrite H2, n0 in X. inv X.
-  rewrite H2, n1 in X; inv X.
-  rewrite H2; constructor.
-  rewrite H2; econstructor.
+  rewrite H3, n0 in H2. inv H2.
+  rewrite H3, n1 in H2; inv H2.
+  rewrite H3; constructor.
+  rewrite H3; econstructor.
   constructor.
 Qed.
 
@@ -282,21 +282,21 @@ Instance set_var_semilattice : BoundedSemiLattice Dom := {
 - intros. hnf. unfold joinDom.
   intros.
   rewrite MapFacts.map2_1bis; unfold join; eauto.
-  destruct (find y a); try destruct if; eauto; try congruence.
-  destruct w; eauto. destruct if; eauto. congruence.
+  destruct (find y a); try cases; eauto; try congruence.
+  destruct w; eauto. cases; eauto. congruence.
 - hnf; intros. unfold joinDom.
   hnf; intros.
   repeat rewrite MapFacts.map2_1bis; try reflexivity.
-  destruct (find y a), (find y b); simpl; repeat destruct if; try destruct w; try destruct w0; try congruence.
-  repeat destruct if; try subst a0; eauto; try congruence.
+  destruct (find y a), (find y b); simpl; repeat cases; try destruct w; try destruct w0; try congruence.
+  repeat cases; try subst a0; eauto; try congruence.
 - intros; hnf; intros.
   unfold joinDom.
   repeat rewrite MapFacts.map2_1bis; try reflexivity.
-  destruct (find y a), (find y b), (find y c); simpl; repeat destruct if; subst; simpl;
-    try destruct w; try destruct w0; try destruct w1; simpl; repeat destruct if; try subst;
+  destruct (find y a), (find y b), (find y c); simpl; repeat cases; subst; simpl;
+    try destruct w; try destruct w0; try destruct w1; simpl; repeat cases; try subst;
     simpl; try congruence.
-  destruct if; congruence.
-  destruct if; congruence.
+  cases; congruence.
+  cases; congruence.
 - unfold Proper, respectful; intros.
   simpl in *.
   intro. unfold joinDom. repeat rewrite MapFacts.map2_1bis; try reflexivity.
@@ -432,10 +432,3 @@ Defined.
 
 Definition constant_propagation_analysis :=
   SSA.makeForwardAnalysis _ Dom_params_semilattice constant_propagation_transform (fun Z an => (an, Z)) fst.
-
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("." "Lvc")) ***
-*** End: ***
-*)

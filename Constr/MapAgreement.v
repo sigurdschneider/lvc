@@ -1,6 +1,6 @@
 Require Export Setoid Coq.Classes.Morphisms.
 Require Import EqDec Computable Util AutoIndTac.
-Require Export CSet Containers.SetDecide.
+Require Export CSet  Containers.SetDecide.
 Require Export MapBasics MapLookup.
 
 Set Implicit Arguments.
@@ -56,21 +56,20 @@ Section MapAgreement.
 
   Lemma agree_on_update_same (R:relation Y) (lv:set X) (E E':X -> Y) x v v'
   : R v v'
-    -> agree_on R (lv\{{x}}) E E'
+    -> agree_on R (lv \ singleton x) E E'
     -> agree_on R lv (E [x <- v]) (E' [x <- v']).
   Proof.
     intros ? A. hnf; intros; lud; eauto;
-    eapply A. eapply in_in_minus; eauto. eapply neq_not_in_single. eqs.
+    eapply A. eapply in_in_minus; eauto. cset_tac.
   Qed.
 
   Lemma agree_on_update_any_same (R:relation Y) (lv:set X) (E E':X -> Y) x v v'
   : R v v'
     -> agree_on R lv E E'
-    -> agree_on R (lv ∪ {{x}}) (E [x <- v]) (E' [x <- v']).
+    -> agree_on R (lv ∪ singleton x ) (E [x <- v]) (E' [x <- v']).
   Proof.
     intros inR A. hnf; intros; lud; eauto; eapply A.
-    eapply union_cases in H0; destruct H0; eauto.
-    eapply single_spec_neq in H0. exfalso; eauto.
+    eapply union_cases in H0; destruct H0; eauto. cset_tac.
   Qed.
 
   Lemma agree_on_update_dead R (lv:set X) (E E':X -> Y) x v
@@ -85,11 +84,11 @@ Section MapAgreement.
 
   Lemma agree_on_update_inv R (lv:set X) (E E':X -> Y) x v
   : agree_on R lv (E [x <- v]) E'
-    -> agree_on R (lv \ {{ x }}) E E'.
+    -> agree_on R (lv \ singleton x) E E'.
   Proof.
     intros A B.
     hnf; intros. cset_tac.
-    exploit A; eauto. lud; eauto.
+    exploit A; eauto. lud; cset_tac.
   Qed.
 
   Lemma agree_on_update_dead_both R (lv:set X) (E E':X -> Y) x v v'
@@ -145,12 +144,53 @@ Proof.
   rewrite H2 in H6; eauto.
 Qed.
 
-Lemma agree_on_union {X} `{OrderedType X} {Y} `{OrderedType Y} (f:X->Y) g D D'
+Instance agree_on_iff_morph X `{OrderedType X} Y `{OrderedType Y} s
+  : Proper (@agree_on X _ Y _eq s ==> @agree_on X _ Y _eq s ==> iff) (@agree_on X _ Y _eq s) | 1.
+Proof.
+  eapply (PER_morphism (Equivalence_PER (agree_on_equivalence (Y:=Y)))).
+Qed.
+
+Instance agree_on_1_iff_morph X `{OrderedType X} Y `{OrderedType Y} s
+  : Proper (@agree_on X _ Y _eq s ==> eq ==> iff) (@agree_on X _ Y _eq s) | 1.
+Proof.
+  unfold Proper, respectful; intros; subst.
+  split; intros.
+  - etransitivity; [ symmetry; eassumption | eassumption].
+  - etransitivity; [ eassumption | eassumption].
+Qed.
+
+Instance agree_on_1_iff_morph_eq X `{OrderedType X} Y s
+  : Proper (@agree_on X _ Y eq s ==> eq ==> iff) (@agree_on X _ Y eq s) | 1.
+Proof.
+  unfold Proper, respectful; intros; subst.
+  split; intros.
+  - etransitivity; [ symmetry; eassumption | eassumption].
+  - etransitivity; [ eassumption | eassumption].
+Qed.
+
+Instance agree_on_1_impl_morph X `{OrderedType X} Y s
+  : Proper (@agree_on X _ Y eq s ==> eq ==> impl) (@agree_on X _ Y eq s) | 1.
+Proof.
+  unfold Proper, respectful; intros; subst.
+  hnf; intros.
+  - etransitivity; [ symmetry; eassumption | eassumption].
+Qed.
+
+
+Lemma eagree_on_union {X} `{OrderedType X} {Y} (f:X->Y) g D D'
   : eagree_on D f g
   -> eagree_on D' f g
   -> eagree_on (D ∪ D') f g.
 Proof.
-  intros. hnf; intros. cset_tac. destruct H3; eauto.
+  intros. hnf; intros. cset_tac.
+Qed.
+
+Lemma agree_on_union {X} `{OrderedType X} {Y} (f:X->Y) R g D D'
+  : agree_on R D f g
+  -> agree_on R D' f g
+  -> agree_on R (D ∪ D') f g.
+Proof.
+  intros. hnf; intros. cset_tac.
 Qed.
 
 Global Instance agree_on_computable {X} `{OrderedType X} {Y} `{OrderedType Y}
@@ -165,8 +205,8 @@ Proof.
   hnf; intros. simpl.
   destruct (decision_procedure (f x === g x));
   destruct (decision_procedure (f y === g y)); try reflexivity.
-  exfalso. eapply n. rewrite <- H4; eauto.
-  exfalso. eapply n. rewrite H4; eauto.
+  exfalso. eapply n. rewrite <- H5; eauto.
+  exfalso. eapply n. rewrite H5; eauto.
 
   right. intro.
   change False with (Is_true false). rewrite <- H3.
@@ -196,8 +236,11 @@ Hint Extern 10 (agree_on _ _?a ?a) => reflexivity.
 
 Extraction Inline agree_on_computable.
 
-(*
- *** Local Variables: ***
- *** coq-load-path: (("../" "Lvc")) ***
- *** End: ***
- *)
+Global Instance incl_agree_on_morphism_flip_impl X `{OrderedType X} Y R `{Transitive Y R} `{Symmetric Y R}
+: Proper (SetInterface.Subset ==> eq ==> eq ==> flip impl) (agree_on R).
+Proof.
+  unfold Proper, respectful, agree_on, flip, impl; intros; subst.
+  rewrite H2 in H6; eauto.
+Qed.
+
+Hint Resolve agree_on_incl : cset.

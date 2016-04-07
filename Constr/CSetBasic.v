@@ -1,5 +1,5 @@
 Require Export Setoid Coq.Classes.Morphisms.
-Require Export Sets SetInterface SetConstructs SetProperties.
+Require Export Sets SetInterface SetConstructs SetProperties CSetComputable.
 Require Import EqDec CSetNotation Util CSetTac.
 
 Section theorems.
@@ -9,52 +9,49 @@ Section theorems.
   Lemma single_spec_neq (x y:X)
     : x ∈ {{ y }} -> x === y.
   Proof.
-    cset_tac; firstorder.
+    cset_tac.
   Qed.
 
   Lemma neq_not_in_single (x y:X)
     :  x =/= y -> ~x ∈ {{y}}.
   Proof.
-    cset_tac; firstorder.
+    cset_tac.
   Qed.
 
   Lemma minus_empty (s:set X)
-    : s \ ∅ ≅ s.
+    : s \ ∅ [=] s.
   Proof.
-    cset_tac; firstorder.
+    cset_tac.
   Qed.
 
   Lemma minus_in_in s t (x:X)
     : x ∈ (s \ t) -> x ∈ s /\ ~x ∈ t.
   Proof.
-    cset_tac; firstorder.
+    cset_tac.
   Qed.
 
   Lemma in_in_minus s t (x:X)
     : x ∈ s -> ~x ∈ t -> x ∈ (s \ t).
   Proof.
-    cset_tac; firstorder.
+    cset_tac.
   Qed.
 
   Lemma union_comm (s t:set X)
-    : s ∪ t ≅ t ∪ s .
+    : s ∪ t [=] t ∪ s .
   Proof.
-    cset_tac; firstorder.
+    cset_tac.
   Qed.
 
   Lemma minus_inane_set (s t:set X)
-    : s ∩ t ≅ ∅ -> (s \ t) ≅ s.
+    : s ∩ t [=] ∅ -> (s \ t) [=] s.
   Proof.
-    intros.   cset_tac.
-
-
- cset_tac. specialize (H0 a). cset_tac; firstorder.
+    cset_tac.
   Qed.
 
   Lemma minus_union_set (s t:set X)
-    : s ∩ t ≅ ∅ -> ((s ∪ t) \ t) ≅ s.
+    : s ∩ t [=] ∅ -> ((s ∪ t) \ t) [=] s.
   Proof.
-    cset_tac. specialize (H0 a). cset_tac; firstorder.
+    cset_tac.
   Qed.
 
 
@@ -67,7 +64,7 @@ Section theorems.
 
   Lemma add_inane s (x:X)
     : x ∈ s
-    -> s ≅ ({{x}} ∪ s).
+    -> s [=] ({{x}} ∪ s).
   Proof.
     repeat (cset_tac; firstorder).
   Qed.
@@ -79,7 +76,7 @@ Section theorems.
   Qed.
 
   Lemma minus_union (s t u:set X)
-    : (s \ t \ u) ≅ s \ (t ∪ u).
+    : (s \ t \ u) [=] s \ (t ∪ u).
   Proof.
     repeat (cset_tac; firstorder).
   Qed.
@@ -103,7 +100,7 @@ Section theorems.
   Qed.
 
   Lemma empty_neutral_union (s:set X)
-    : ∅ ∪ s ≅ s.
+    : ∅ ∪ s [=] s.
   Proof.
     cset_tac; firstorder.
   Qed.
@@ -147,7 +144,7 @@ Section theorems.
 
 
   Lemma union_assoc (s t u : set X)
-    : s ∪ t ∪ u ≅ s ∪ (t ∪ u).
+    : s ∪ t ∪ u [=] s ∪ (t ∪ u).
   Proof.
     cset_tac; firstorder.
   Qed.
@@ -166,7 +163,7 @@ Section theorems.
 
 
   Lemma union_idem (s:set X)
-    : s ∪ s ≅ s.
+    : s ∪ s [=] s.
   Proof.
     hnf; cset_tac; firstorder.
   Qed.
@@ -208,14 +205,14 @@ Section theorems.
   Qed.
 
   Lemma set_fact_2 s t (x:X)
-    : (s \ ({{x}} ∪ t)) \ {{x}} ≅ s \ ({{x}} ∪ t).
+    : (s \ ({{x}} ∪ t)) \ {{x}} [=] s \ ({{x}} ∪ t).
   Proof.
     cset_tac; firstorder.
   Qed.
 
 
   Lemma incl_union_absorption (s t:set X)
-    : s ⊆ t -> s ∪ t ≅ t.
+    : s ⊆ t -> s ∪ t [=] t.
   Proof.
     intros; hnf in *; hnf; cset_tac; firstorder.
   Qed.
@@ -251,33 +248,33 @@ Section theorems.
   Qed.
 
   Lemma meet_comm (s t:set X)
-    : s ∩ t ≅ t ∩ s.
+    : s ∩ t [=] t ∩ s.
   Proof.
-    cset_tac. firstorder.
+    cset_tac.
   Qed.
 
   Lemma incl_meet (s t:set X)
-    : s ⊆ t -> s ≅ s ∩ t.
+    : s ⊆ t -> s [=] s ∩ t.
   Proof.
     repeat (cset_tac; subst; firstorder).
   Qed.
 
 
   Lemma minus_meet (s t u:set X)
-    : (s \ t) ∩ u ≅ s ∩ u \ t.
+    : (s \ t) ∩ u [=] s ∩ u \ t.
   Proof.
     cset_tac; firstorder.
   Qed.
 
   Lemma set_incl (s t: set X)
-    : s ⊆ t -> t ⊆ s -> t ≅ s.
+    : s ⊆ t -> t ⊆ s -> t [=] s.
   Proof.
     intros; hnf in *; cset_tac; firstorder.
   Qed.
 
 
   Lemma elements_nil_eset (s : set X) :
-    s ≅ ∅ <-> elements s = nil.
+    s [=] ∅ <-> elements s = nil.
   Proof.
     split; intros.
     remember (elements s). destruct l; eauto.
@@ -291,31 +288,31 @@ Section theorems.
   Qed.
 
   Lemma union_meet_distr_r (s t u : set X) :
-    (s ∪ t) ∩ u ≅ (s ∩ u) ∪ (t ∩ u).
+    (s ∪ t) ∩ u [=] (s ∩ u) ∪ (t ∩ u).
   Proof.
     cset_tac; firstorder.
   Qed.
 
   Lemma union_is_empty (s t : set X) :
-    s ∪ t ≅ ∅ -> (s ≅ ∅ /\ t ≅ ∅).
+    s ∪ t [=] ∅ -> (s [=] ∅ /\ t [=] ∅).
   Proof.
     cset_tac; specialize (H0 a); cset_tac; firstorder.
   Qed.
 
   Lemma smaller_meet_empty (s t u : set X) :
-    (s ∪ t) ∩ u ≅ ∅ -> t ∩ u ≅ ∅.
+    (s ∪ t) ∩ u [=] ∅ -> t ∩ u [=] ∅.
   Proof.
     intros. cset_tac; specialize (H0 a); cset_tac; firstorder.
   Qed.
 
   Lemma empty_intersection_in_one_not_other (s t : set X) x :
-    s ∩ t ≅ ∅ -> x ∈ s -> ~ x ∈ t.
+    s ∩ t [=] ∅ -> x ∈ s -> ~ x ∈ t.
   Proof.
-    cset_tac. specialize (H0 x); cset_tac; firstorder.
+    cset_tac.
   Qed.
 
   Lemma meet_assoc (s t u : set X)
-    : s ∩ t ∩ u ≅ s ∩ (t ∩ u).
+    : s ∩ t ∩ u [=] s ∩ (t ∩ u).
   Proof.
     cset_tac; firstorder.
   Qed.
@@ -333,13 +330,13 @@ Section theorems.
   Qed.
 
   Lemma minus_dist_union (s t u:set X)
-    : (s ∪ t) \ u ≅ (s \ u) ∪ (t \ u).
+    : (s ∪ t) \ u [=] (s \ u) ∪ (t \ u).
   Proof.
     cset_tac; firstorder.
   Qed.
 
   Lemma minus_dist_intersection (s t u:set X)
-    : (s ∩ t) \ u ≅ (s \ u) ∩ (t \ u).
+    : (s ∩ t) \ u [=] (s \ u) ∩ (t \ u).
   Proof.
     cset_tac; firstorder.
   Qed.
@@ -352,9 +349,9 @@ Section theorems.
   Qed.
 
   Lemma incl_meet_empty (s t u:set X)
-    : s ⊆ t -> u ∩ t ≅ empty -> u ∩ s ≅ empty.
+    : s ⊆ t -> u ∩ t [=] empty -> u ∩ s [=] empty.
   Proof.
-    cset_tac. specialize (H1 a); cset_tac; firstorder.
+    cset_tac.
   Qed.
 
   Lemma union_incl_split (s t u : set X)
@@ -364,7 +361,7 @@ Section theorems.
   Qed.
 
   Lemma union_minus_remove (a b : set X)
-        : (a ∪ b) \ a ≅ b \ a.
+        : (a ∪ b) \ a [=] b \ a.
   Proof.
     cset_tac; firstorder.
   Qed.
@@ -372,13 +369,13 @@ Section theorems.
   Lemma minus_incl_meet_special2 (c c' d : set X)
     : c ⊆ d
     -> c ⊆ c'
-    -> c ∩ (c' \ (c \ d)) ≅ c.
+    -> c ∩ (c' \ (c \ d)) [=] c.
   Proof.
     cset_tac; firstorder.
   Qed.
 
   Lemma meet_minus (s t : set X)
-    : s ∩ (t \ s) ≅ ∅.
+    : s ∩ (t \ s) [=] ∅.
   Proof.
     cset_tac; firstorder.
   Qed.
@@ -391,19 +388,19 @@ Section theorems.
 
   Lemma not_in_meet_empty (D:set X) x
     : ~ x ∈ D
-    -> D ∩ {{x}} ≅ ∅.
+    -> D ∩ {{x}} [=] ∅.
   Proof.
     cset_tac; firstorder.
   Qed.
 
   Lemma incl_eq (s t:set X)
-    : s ⊆ t -> t ⊆ s -> t ≅ s.
+    : s ⊆ t -> t ⊆ s -> t [=] s.
   Proof.
     cset_tac; firstorder.
   Qed.
 
   Lemma eq_incl (s t:set X)
-    : t ≅ s -> s ⊆ t /\ t ⊆ s.
+    : t [=] s -> s ⊆ t /\ t ⊆ s.
   Proof.
     cset_tac; firstorder.
   Qed.
@@ -501,16 +498,6 @@ Proof.
   cset_tac; intuition.
 Qed.
 
-Lemma of_list_app X `{OrderedType X} (A B: list X)
-  : of_list (A ++ B) [=] of_list A ∪ of_list B.
-Proof.
-  split; intros.
-  - rewrite of_list_1 in H0. cset_tac. eapply InA_app in H0.
-    repeat rewrite of_list_1. intuition. destruct H; eauto.
-  - rewrite of_list_1. eapply InA_app_iff. destruct H; eauto.
-    cset_tac. repeat rewrite of_list_1 in H0. intuition.
-Qed.
-
 Lemma incl_set_left X `{OrderedType X} (s t : set X)
 : s [=] t -> s [<=] t.
 Proof.
@@ -526,8 +513,81 @@ Proof.
   eapply H3. eapply H0. eauto.
 Qed.
 
-(*
-*** Local Variables: ***
-*** coq-load-path: (("../" "Lvc")) ***
-*** End: ***
-*)
+Lemma union_eq_decomp X `{OrderedType X} s s' t t'
+: s [=] s' -> t [=] t' -> s ∪ t [=] s' ∪ t'.
+Proof.
+  cset_tac; intros; firstorder.
+Qed.
+
+Lemma add_struct_eq X `{OrderedType X} x s t
+: s [=] t
+  -> {x; s} [=] {x; t}.
+Proof.
+  intros. rewrite H0; eauto.
+Qed.
+
+Lemma union_struct_eq_1 X `{OrderedType X} s t u
+: s [=] t
+  ->  s ∪ u [=] t ∪ u.
+Proof.
+  cset_tac; firstorder.
+Qed.
+
+Lemma union_struct_eq_2 X `{OrderedType X} s t u
+: s [=] t
+  ->  u ∪ s [=] u ∪ t.
+Proof.
+  cset_tac; firstorder.
+Qed.
+
+Lemma not_in_minus X `{OrderedType X} (s t: set X) x
+: x ∉ s
+  -> x ∉ s \ t.
+Proof.
+  cset_tac; intuition.
+Qed.
+
+Lemma equal_minus_empty X `{OrderedType X} s t
+  : s [=] t
+    -> s [=] t \ {}.
+Proof.
+  cset_tac; firstorder.
+Qed.
+
+Lemma incl_minus_empty X `{OrderedType X} s t
+  : s ⊆ t
+    -> s ⊆ t \ {}.
+Proof.
+  cset_tac; firstorder.
+Qed.
+
+Lemma incl_minus_change X `{OrderedType X} s t x
+  : (s \ t) \ {x; {}}[<=]s \ {x; t}.
+Proof.
+  cset_tac; intuition.
+Qed.
+
+Lemma incl_minus_union X `{OrderedType X} s t u
+  :  (s \ t) \ u [<=] s \ (u ∪ t).
+Proof.
+  cset_tac; intuition.
+Qed.
+
+Lemma incl_union_incl_minus X `{OrderedType X} s t u
+  : s \ t ⊆ u
+    -> s ⊆ t ∪ u.
+Proof.
+  cset_tac. decide (a ∈ t); cset_tac. right. intuition.
+Qed.
+
+Lemma incl_meet_split X `{OrderedType X} s t u
+  : s ⊆ t -> s ⊆ u -> s ⊆ t ∩ u.
+Proof.
+  cset_tac.
+Qed.
+
+Lemma equiv_minus_union X `{OrderedType X} s t
+  : s ⊆ t -> t [=] t \ s ∪ s.
+Proof.
+  cset_tac.
+Qed.

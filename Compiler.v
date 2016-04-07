@@ -1,7 +1,7 @@
 Require Import List CSet.
-Require Import Util AllInRel IL EnvTy RenameApart Sim Status Annotation.
+Require Import Util AllInRel IL Rename EnvTy RenameApart Sim Status Annotation.
 Require CMap.
-Require Liveness LivenessValidators ParallelMove ILN LivenessAnalysis.
+Require Liveness TrueLiveness LivenessValidators ParallelMove ILN LivenessAnalysis.
 Require Coherence Delocation DelocationAlgo DelocationValidator Allocation AllocationAlgo.
 Require CopyPropagation DVE EAE Alpha.
 Require ConstantPropagation ConstantPropagationAnalysis.
@@ -70,10 +70,10 @@ Definition toDeBruijn (ilin:ILN.nstmt) : status IL.stmt :=
 
 Definition toILF (ili:IL.stmt) : status IL.stmt :=
   sdo lv <- livenessAnalysis ili;
-  ensure (Liveness.true_live_sound Liveness.FunctionalAndImperative nil ili lv /\ getAnn lv ⊆ freeVars ili) ("Liveness unsound (1)") ;
+  ensure (TrueLiveness.true_live_sound Liveness.FunctionalAndImperative nil ili lv /\ getAnn lv ⊆ freeVars ili) ("Liveness unsound (1)") ;
   let ilid := DVE.compile nil ili lv in
-  let additional_params := additionalArguments ilid (DVE.compile_live ili lv) in
-  ensure (Delocation.trs nil nil ilid (DVE.compile_live ili lv) additional_params)
+  let additional_params := additionalArguments ilid (DVE.compile_live ili lv ∅) in
+  ensure (Delocation.trs nil nil ilid (DVE.compile_live ili lv ∅) additional_params)
          "Additional arguments insufficient";
     Success (Delocation.compile nil ilid additional_params).
 
@@ -90,7 +90,7 @@ Definition optimize (s':stmt) : status stmt :=
              "Constant propagation makes no assumptions on free vars";
       let s := ConstantPropagation.constantPropagate AE s in
       sdo lv <- livenessAnalysis s;
-      ensure (Liveness.true_live_sound Liveness.Functional nil s lv) "Liveness unsound (2)";
+      ensure (TrueLiveness.true_live_sound Liveness.Functional nil s lv) "Liveness unsound (2)";
       Success (DVE.compile nil s lv)
   end.
 
@@ -104,7 +104,7 @@ Definition fromILF (s:stmt) : status stmt :=
         /\ getAnn lv ⊆ freeVars s_hoisted] then
        let fvl := to_list (getAnn lv) in
        let ϱ := CMap.update_with_list fvl fvl (@MapInterface.empty var _ _ _) in
-       sdo ϱ' <- AllocationAlgo.linear_scan s_renamed_apart lv ϱ;
+       sdo ϱ' <- AllocationAlgo.reg_assign s_renamed_apart lv ϱ;
        let s_allocated := rename (CMap.findt ϱ' 0) s_renamed_apart in
        let s_lowered := ParallelMove.lower parallel_move
                                             nil
@@ -173,10 +173,10 @@ Lemma toILF_correct (ili:IL.stmt) s (E:onv val)
 Proof.
   intros. unfold toILF in H. simpl in *; unfold ensure_f, additionalArguments in *.
   monadS_inv H.
-  repeat (destruct if in EQ0; [|isabsurd]).
+  repeat (cases in EQ0; [|isabsurd]).
   invc EQ0. dcr.
   - case_eq (DelocationAlgo.computeParameters nil nil nil
-              (DVE.compile nil ili x) (DVE.compile_live ili x)); intros.
+              (DVE.compile nil ili x) (DVE.compile_live ili x ∅)); intros.
     assert (l = nil). {
     exploit (DelocationAlgo.computeParameters_length nil nil); eauto.
     eapply (@DVE.dve_live Liveness.FunctionalAndImperative nil); eauto. destruct l; simpl in *; congruence.
@@ -204,7 +204,7 @@ Proof.
     hnf; intros. rewrite DVE.compile_live_incl in H3. eapply H0; eauto.
     eapply H.
     eapply DVE.I.sim_DVE. reflexivity.
-    eapply Liveness.true_live_sound_overapproximation_I; eauto.
+    eapply TrueLiveness.true_live_sound_overapproximation_I; eauto.
 Qed.
 
 Lemma fromILF_correct (s s':stmt) E
@@ -213,7 +213,7 @@ Lemma fromILF_correct (s s':stmt) E
 Proof.
   unfold fromILF; intros.
   monadS_inv H.
-  destruct if in EQ0; dcr; isabsurd.
+  cases in EQ0; dcr; isabsurd.
   monadS_inv EQ0; dcr.
   eapply sim_trans with (σ2:=(nil:list F.block, E, rename_apart (EAE.compile s))).
   eapply sim_trans with (σ2:=(nil:list F.block, E, EAE.compile s)).
@@ -223,7 +223,7 @@ Proof.
   econstructor; eauto using PIR2, Alpha.envCorr_idOn_refl.
   eapply Alpha.alpha_sym. eapply rename_apart_alpha.
   exploit rename_apart_renamedApart; eauto.
-  exploit AllocationAlgo.linear_scan_correct; eauto.
+  exploit AllocationAlgo.reg_assign_correct; eauto.
   eapply injective_on_agree; [| eapply CMap.map_update_list_update_agree].
   hnf; intros.
   rewrite lookup_update_same in H3.
@@ -239,7 +239,7 @@ Proof.
   instantiate (1:=id).
   eapply Allocation.renamedApart_locally_inj_alpha; eauto.
   eapply Liveness.live_sound_overapproximation_F; eauto.
-  eapply AllocationAlgo.linear_scan_renamedApart_agree in EQ1; eauto.
+  eapply AllocationAlgo.reg_assign_renamedApart_agree in EQ1; eauto.
   rewrite fst_renamedApartAnn in EQ1.
   rewrite <- CMap.map_update_list_update_agree in EQ1.
   hnf; intros. repeat rewrite <- EQ1; eauto;
@@ -287,9 +287,9 @@ Proof.
   intros.
   unfold optimize, ensure_f in *.
   monadS_inv H. destruct x.
-  repeat (destruct if in EQ0; [| isabsurd]).
+  repeat (cases in EQ0; [| isabsurd]).
   monadS_inv EQ0.
-  repeat (destruct if in EQ2; [| isabsurd]).
+  repeat (cases in EQ2; [| isabsurd]).
   invc EQ2.
 
   eapply sim_trans with (S2:=F.state).
@@ -308,28 +308,12 @@ Proof.
   eapply labelsDefined_rename_apart; eauto.
   intros; isabsurd.
   rewrite fst_renamedApartAnn.
-  Lemma cp_eqns_no_assumption d G
-  : (forall x : var,
-      x \In G -> MapInterface.find x d = ⎣⎦)
-     -> ConstantPropagation.cp_eqns (fun x0 : var => MapInterface.find x0 d)
-        G [=] ∅.
-  Proof.
-    intros. revert H. pattern G. eapply set_induction.
-    intros. eapply empty_is_empty_1 in H. rewrite H.
-    reflexivity.
-    intros. eapply Add_Equal in H1. rewrite H1.
-    assert ({x; s} [=] {{x}} ∪ s) by (cset_tac; intuition).
-    rewrite H3. rewrite ConstantPropagation.cp_eqns_union.
-    rewrite ConstantPropagation.cp_eqns_single. unfold ConstantPropagation.cp_eqn.
-    rewrite H2. rewrite H. cset_tac; intuition. intros; eapply H2.
-    rewrite H1. cset_tac; intuition. rewrite H1. cset_tac; intuition.
-  Qed.
   intros. hnf; intros.
-  rewrite cp_eqns_no_assumption in H. cset_tac; intuition. eassumption.
+  rewrite ConstantPropagation.cp_eqns_no_assumption in H. cset_tac; intuition. eassumption.
   constructor.
   eapply rename_apart_renamedApart.
   rewrite fst_renamedApartAnn.
-  rewrite cp_eqns_no_assumption. eapply incl_empty. eauto.
+  rewrite ConstantPropagation.cp_eqns_no_assumption. eapply incl_empty. eauto.
   hnf; intuition.
 Qed.
 
@@ -345,12 +329,4 @@ Print Assumptions optimize_correct.
 
 Extraction Inline bind Option.bind toString.
 
-Extraction "extraction/lvc.ml" toILF fromILF AllocationAlgo.linear_scan optimize toDeBruijn.
-
-
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("." "Lvc")) ***
-*** End: ***
-*)
+Extraction "extraction/lvc.ml" toILF fromILF AllocationAlgo.reg_assign optimize toDeBruijn.

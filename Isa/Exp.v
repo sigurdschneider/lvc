@@ -207,18 +207,20 @@ Defined.
     - f_equal; eauto.
   Qed.
 
+  Lemma rename_exp_agree ϱ ϱ' e
+  : agree_on eq (freeVars e) ϱ ϱ'
+    -> rename_exp ϱ e = rename_exp ϱ' e.
+  Proof.
+    intros; general induction e; simpl in *; f_equal;
+    eauto 30 using agree_on_incl, incl_left, incl_right.
+  Qed.
 
   Lemma rename_exp_freeVars
   : forall e ϱ `{Proper _ (_eq ==> _eq) ϱ},
       freeVars (rename_exp ϱ e) ⊆ lookup_set ϱ (freeVars e).
   Proof.
-    intros. general induction e; simpl; cset_tac; intuition.
-    hnf in H.
-    eapply lookup_set_spec; eauto. eexists v; cset_tac; eauto.
-    - eapply Subset_trans; eauto. eapply lookup_set_incl; intuition.
-    - eapply Subset_trans; eauto. eapply lookup_set_incl; intuition.
-    - eapply Subset_trans; try eapply IHe2; eauto.
-      eapply lookup_set_incl; intuition.
+    intros. general induction e; simpl; eauto using lookup_set_single_fact,
+                                        lookup_set_union_incl, incl_union_lr; eauto.
   Qed.
 
   Lemma live_exp_rename_sound e lv (ϱ:env var)
@@ -318,37 +320,18 @@ Defined.
       -> agree_on _eq (freeVars s) f ϱ
       -> alpha_exp f g s t.
   Proof.
-    intros. general induction H; eauto using alpha_exp.
-    econstructor.
-    + rewrite <- H. eapply H2; simpl; cset_tac; eauto.
-    + rewrite <- H0. eapply H1. set_tac. eexists x; simpl; cset_tac; eauto.
-      intuition.
-    + simpl in *. econstructor.
-      - eapply IHalpha_exp1; eauto.
-        eapply agree_on_incl; eauto. eapply lookup_set_incl; intuition.
-        eapply agree_on_incl; eauto. eapply union_subset_1; intuition.
-      - eapply IHalpha_exp2; eauto.
-        eapply agree_on_incl; eauto. eapply lookup_set_incl; intuition.
-        eapply agree_on_incl; eauto. eapply union_subset_2; intuition.
+    intros. general induction H; simpl in *;
+            eauto 20 using alpha_exp, agree_on_incl, lookup_set_union_incl with cset.
+    - econstructor.
+      + rewrite <- H. eapply H2; simpl; cset_tac; eauto.
+      + rewrite <- H0. eapply H1. lset_tac.
   Qed.
 
-
-
-  Inductive notOccur : set var -> exp -> Prop :=
-  | ConNotOccur D v : notOccur D (Con v)
-  | VarNotOccur D x : x ∉ D -> notOccur D (Var x)
-  | UnOpNotOccur D o e
-    : notOccur D e
-      -> notOccur D (UnOp o e)
-  | BinopNotOccur D o e1 e2 :
-      notOccur D e1 ->
-      notOccur D e2 ->
-      notOccur D (BinOp o e1 e2).
-
-  Lemma notOccur_antitone
-  : forall D D' e, D' ⊆ D -> notOccur D e -> notOccur D' e.
+  Lemma exp_rename_renamedApart_all_alpha e e' ϱ ϱ'
+  : alpha_exp ϱ ϱ' e e'
+    -> rename_exp ϱ e = e'.
   Proof.
-    intros. general induction H0; eauto using notOccur.
+    intros. general induction H; simpl; eauto.
   Qed.
 
   Lemma alpha_exp_morph
@@ -490,54 +473,19 @@ Proof.
   - rewrite IHe1, IHe2; reflexivity.
 Qed.
 
-Lemma notOccur_disj_freeVars G e
-: notOccur G e -> disj G (freeVars e).
+Definition exp2bool (e:exp) : option bool :=
+  match e with
+    | Con c => Some (val2bool c)
+    | _ => None
+  end.
+
+Lemma exp2bool_val2bool E e b
+: exp2bool e = Some b
+  -> exists v, exp_eval E e = Some v /\ val2bool v = b.
 Proof.
-  intros. general induction H; simpl; repeat rewrite disj_app; eauto using disj_singleton.
-Qed.
-
-Lemma freeVars_disj_notOccur G e
-: disj G (freeVars e) -> notOccur G e.
-Proof.
-  intros. general induction e; simpl in * |- *; repeat rewrite disj_app in H; eauto using notOccur.
-  - econstructor. unfold disj in *. cset_tac; intuition. eapply H; cset_tac; intuition; eauto.
-Qed.
-
-
-Lemma list_union_notOccur {X} `{OrderedType X} Y D
-:  (forall (n : nat) (e : exp), get Y n e -> notOccur D e)
-   -> disj D (list_union (List.map freeVars Y)).
-Proof.
-  unfold disj. intros.
-  edestruct (list_union_disjunct (List.map freeVars Y)) as [? _].
-  exploit H1; intros.
-  edestruct map_get_4; eauto; dcr; subst.
-  rewrite meet_comm.
-  eapply notOccur_disj_freeVars; eauto.
-  rewrite meet_comm; eauto.
-Qed.
-
-
-Lemma list_union_notOccur' {X} `{OrderedType X} Y D
-:  disj D (list_union (List.map freeVars Y))
--> (forall (n : nat) (e : exp), get Y n e -> notOccur D e).
-Proof.
-  intros. general induction H1; simpl in *.
-  - unfold list_union in H0. simpl in *.
-    rewrite list_union_start_swap in H0.
-    eapply freeVars_disj_notOccur.
-    unfold disj in *; cset_tac; intuition; eauto.
-  - eapply IHget; eauto.
-    unfold list_union in H0. simpl in *.
-    rewrite list_union_start_swap in H0.
-    unfold disj in *; cset_tac; intuition; eauto.
+  destruct e; simpl; intros; try congruence.
+  inv H; eauto.
 Qed.
 
 
 (* End Expressions. *)
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("../" "Lvc")) ***
-*** End: ***
-*)

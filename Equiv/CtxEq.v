@@ -6,9 +6,10 @@ Unset Printing Records.
 
 Instance SR : ProofRelation (params) := {
    ParamRel G Z Z' := Z = Z' /\ Z = G;
-   ArgRel V V G VL VL' := VL = VL' /\ length VL = length G;
+   ArgRel V V' G VL VL' := V = V' /\ VL = VL' /\ length VL = length G;
    BlockRel := fun Z b b' => length (F.block_Z b) = length Z
                            /\ length (F.block_Z b') = length Z
+                           /\ F.block_E b = F.block_E b'
 }.
 intros; dcr; subst; split; congruence.
 Defined.
@@ -49,60 +50,63 @@ Ltac pextern_step :=
     ].
 
 Lemma bisimeq'_refl s
-: forall ZL L L' E r,
+  : forall ZL L L' E r,
     simL' _ r SR ZL L L'
     -> bisim'r r (L, E, s) (L', E, s).
 Proof.
-  unfold bisimeq; intros. general induction s.
+  unfold bisimeq. sind s; destruct s; simpl in *; intros.
   - case_eq (exp_eval E e); intros.
-    + pone_step. eapply IHs; eauto.
+    + pone_step. eapply (IH s); eauto.
     + pno_step.
   - case_eq (exp_eval E e); intros.
     case_eq (val2bool v); intros.
-    + pone_step. eapply IHs1; eauto.
-    + pone_step. eapply IHs2; eauto.
+    + pone_step. eapply (IH s1); eauto.
+    + pone_step. eapply (IH s2); eauto.
     + pno_step.
   - edestruct (get_dec L (counted l)) as [[b]|].
     decide (length Y = length (F.block_Z b)).
     case_eq (omap (exp_eval E) Y); intros.
-    + edestruct AIR5_nth1 as [? [? [? []]]]; eauto; dcr.
-      inv H7. eapply bisim_drop_shift.
-      eapply paco2_mon. eapply H8; eauto.
-      hnf; intuition. exploit omap_length; eauto.
-      hnf in H6. hnf in H1; dcr. simpl in *.
-      get_functional. subst b. simpl in *.
-      congruence. eauto.
+    + exploit @inRel_sawtooth; eauto.
+      hnf in H. inRel_invs. simpl in *. dcr. subst x. subst Z'.
+      inv InR. eapply bisim_drop_shift; eauto.
+      eapply paco2_mon. eapply H6; eauto. repeat split; eauto.
+
+      exploit omap_length; eauto. congruence. eauto.
     + pno_step.
     + pno_step. exploit omap_length; eauto.
       get_functional; subst. congruence.
-      edestruct AIR5_nth1 as [? [? [? []]]]; eauto; dcr.
-      inv H6. hnf in H5; dcr. repeat get_functional; subst. simpl in *.
+      hnf in H. inRel_invs. simpl in *.
+      dcr. repeat get_functional; subst. simpl in *.
       congruence.
     + pno_step.
-      * edestruct AIR5_nth1 as [? [? [? []]]]; eauto; dcr.
-      * edestruct AIR5_nth2 as [? [? [? []]]]; eauto; dcr. eauto.
+      * hnf in H. inRel_invs. simpl in *. eauto.
+      * hnf in H. inRel_invs. simpl in *; eauto.
   - pno_step.
   - case_eq (omap (exp_eval E) Y); intros.
     + pextern_step.
       * eexists; split.
         econstructor; eauto.
-        left. eapply IHs; eauto.
+        left. eapply (IH s); eauto.
       * eexists; split.
         econstructor; eauto.
-        left. eapply IHs; eauto.
+        left. eapply (IH s); eauto.
     + pno_step.
   - pone_step.
-    eapply IHs2; eauto.
-    eapply simL_extension'; hnf; intros; eauto.
-    hnf in H; dcr; subst.
-    split; simpl; eauto. intros; dcr; subst.
-    eapply IHs1; eauto.
+    eapply (IH s0); eauto using sawtooth_F_mkBlocks.
+    eapply simL_extension'; eauto.
+    instantiate (1:=List.map fst s). rewrite map_length; eauto.
+    intros; get_functional; subst.
+    eapply map_get in H2; eauto. simpl in *; subst.
+    repeat split; eauto.
+    intros. hnf in H0; dcr; subst.
+    eapply (IH s'); eauto.
 Qed.
 
 Lemma bisimeq_refl s
 : bisimeq s s.
 Proof.
   hnf; intros. eapply bisim'_bisim.
+  exploit @inRel_sawtooth; eauto.
   eapply bisimeq'_refl; eauto.
 Qed.
 
@@ -113,24 +117,52 @@ Proof.
   intros; hnf; intros.
   hnf in H. eapply bisim_trans with (S2:=F.state).
   eapply H. eapply bisim'_bisim.
+  exploit @inRel_sawtooth; eauto.
   eapply bisimeq'_refl; eauto.
 Qed.
 
-Lemma simL'_refl r L
-: AIR5 (simB bisim_progeq r SR) L L (List.map F.block_Z L) L L.
+Lemma get_mutual_block (A B : Type) (H : BlockType B)
+      (C : Type) (H0 : BlockType C) (R : A -> B -> C -> Prop) L1 L2 AL n
+      (LEN1:length L1 = length L2) (LEN2:length AL = length L1)
+  : tooth n L1
+    -> tooth n L2
+    -> (forall n a b1 b2, get AL n a -> get L1 n b1 -> get L2 n b2 -> R a b1 b2)
+    -> mutual_block R n AL L1 L2.
 Proof.
-  intros.
-  general induction L; simpl.
+  intros. length_equify.
+  general induction LEN1; inv LEN2; eauto using @mutual_block.
+  - inv H1; inv H2. econstructor; eauto 20 using get.
+Qed.
+
+Lemma tooth_get_n (B : Type) (H : BlockType B) n L i b
+  : tooth n L
+    -> get L i b
+    -> block_n b = n + i.
+Proof.
+  intros. general induction H0. inv H1.
+  inv H2. omega.
+  exploit IHtooth. eauto. omega.
+Qed.
+
+Lemma simL'_refl r L
+  : sawtooth L
+    -> simL' bisim_progeq r SR (List.map F.block_Z L) L L.
+Proof.
+  intros. hnf.
+  general induction H.
   - econstructor.
-  - econstructor.
-    + destruct a. econstructor; eauto; try now (clear_all; intuition).
-      * intros. hnf.
-        hnf in H1; dcr; subst; simpl in *.
-        exploit omap_length; eauto.
-        exploit omap_length; try eapply H0; eauto.
-        pone_step; eauto using get; simpl; eauto; try congruence.
-        eapply paco2_mon. eapply bisim'_refl. clear_all; firstorder.
-    + eapply IHL.
+  - rewrite map_app. econstructor; eauto.
+    eapply get_mutual_block; eauto.
+    rewrite map_length; eauto.
+    intros. eapply map_get in H1; eauto; subst.
+    get_functional; subst. destruct b2. econstructor; eauto; try now (clear_all; intuition).
+    * exploit tooth_get_n; eauto. simpl in *. subst block_n.
+      intros. hnf.
+      dcr; subst; simpl in *.
+      exploit omap_length; eauto.
+      exploit omap_length; try eapply H4; eauto.
+      pone_step; eauto using get_app; simpl; eauto; try congruence.
+      eapply paco2_mon. eapply bisim'_refl. clear_all; firstorder.
 Qed.
 
 (** * Contextual Equivalence *)
@@ -140,8 +172,8 @@ Inductive stmtCtx : Type :=
 | ctxIfS     (e : exp) (C : stmtCtx) (t : stmt) : stmtCtx
 | ctxIfT     (e : exp) (s : stmt) (C : stmtCtx) : stmtCtx
 (* block f Z : rt = s in b  *)
-| ctxLetS    (Z:params) (C : stmtCtx) (t : stmt) : stmtCtx
-| ctxLetT    (Z:params) (s : stmt) (C : stmtCtx) : stmtCtx
+| ctxLetS    (F1: list (params*stmt)) (Z:params) (C : stmtCtx) (F2: list (params*stmt)) (t : stmt) : stmtCtx
+| ctxLetT    (F: list (params*stmt)) (C : stmtCtx) : stmtCtx
 | ctxExtern (x : var)  (f:external) (e:args) (C:stmtCtx) : stmtCtx
 | ctxHole.
 
@@ -150,8 +182,8 @@ Fixpoint fill (ctx:stmtCtx) (s':stmt) : stmt :=
     | ctxExp x e ctx => stmtLet x e (fill ctx s')
     | ctxIfS e ctx t => stmtIf e (fill ctx s') t
     | ctxIfT e s ctx => stmtIf e s (fill ctx s')
-    | ctxLetS Z ctx t => stmtFun Z (fill ctx s') t
-    | ctxLetT Z s ctx => stmtFun Z s (fill ctx s')
+    | ctxLetS F1 Z ctx F2 t => stmtFun (F1 ++ (Z,fill ctx s')::F2) t
+    | ctxLetT F ctx => stmtFun F (fill ctx s')
     | ctxExtern x f e ctx => stmtExtern x f e (fill ctx s')
     | ctxHole => s'
   end.
@@ -161,8 +193,8 @@ Fixpoint fillC (ctx:stmtCtx) (s':stmtCtx) : stmtCtx :=
     | ctxExp x e ctx => ctxExp x e (fillC ctx s')
     | ctxIfS e ctx t => ctxIfS e (fillC ctx s') t
     | ctxIfT e s ctx => ctxIfT e s (fillC ctx s')
-    | ctxLetS Z ctx t => ctxLetS Z (fillC ctx s') t
-    | ctxLetT Z s ctx => ctxLetT Z s (fillC ctx s')
+    | ctxLetS F1 Z ctx F2 t => ctxLetS F1 Z (fillC ctx s') F2 t
+    | ctxLetT F ctx => ctxLetT F (fillC ctx s')
     | ctxExtern x f e ctx => ctxExtern x f e (fillC ctx s')
     | ctxHole => s'
   end.
@@ -190,18 +222,56 @@ Proof.
     + pno_step.
   - pone_step.
     eapply bisimeq'_refl.
-    eapply simL_extension'; eauto.  Focus 2.
-    instantiate (1:=Z). hnf; intros; simpl; eauto.
-    hnf; intros. split. hnf; intros; eauto.
-    intros. simpl. hnf in H1; dcr; subst.
-    eapply IHctx. eapply H. eauto.
+    eapply simL_extension'; eauto.
+    + instantiate (1:=(List.map fst F1 ++ Z :: List.map fst F2)%list).
+      repeat rewrite app_length; simpl; repeat rewrite map_length; eauto.
+    + repeat rewrite app_length; simpl; repeat rewrite map_length; eauto.
+    + intros.
+      { destruct (get_subst _ _ _ H1) as [? |[?|?]].
+          - exploit @get_length; try eapply H4; eauto.
+            eapply get_app_le in H2; eauto.
+            eapply get_app_le in H3; eauto; try rewrite map_length; eauto.
+            get_functional; subst. eapply map_get in H3; eauto. subst.
+            simpl; repeat split; eauto.
+            hnf; intros. simpl. hnf in H2; dcr; subst.
+            eapply bisimeq'_refl; eauto.
+          - dcr; subst. invc H5.
+            exploit get_length_app.
+            eapply get_functional in H2; try eapply H4.
+            erewrite <- map_length in H3.
+            exploit get_length_app.
+            eapply get_functional in H5; try eapply H3. subst a.
+            invc H2.
+            simpl; repeat split; eauto. intros; hnf in H2; dcr; subst.
+            eapply IHctx; eauto.
+          - dcr.
+            Lemma get_length_right A (L1 L2:list A) n (x y:A)
+              : n > length L1
+                -> get (L1 ++ x :: L2) n y
+                -> get L2 (n - S (length L1)) y.
+            Proof.
+              intros. general induction L1.
+              - simpl in *. inv H0; try omega; simpl.
+                orewrite (n0 - 0 = n0); eauto.
+              - simpl in *. inv H0. omega. simpl in *.
+                eapply IHL1; eauto. omega.
+            Qed.
+            eapply get_length_right in H2; eauto.
+            eapply get_length_right in H3; eauto; try rewrite map_length; eauto.
+            get_functional; subst.
+            eapply map_get in H3; eauto; try rewrite map_length; eauto. simpl in *; subst.
+            hnf; intros. simpl; repeat split; eauto.
+            intros. hnf in H2. dcr; subst.
+            eapply bisimeq'_refl. eauto.
+        }
   - pone_step.
     eapply IHctx. eauto.
-    eapply simL_extension'; eauto. instantiate (1:=Z).
-    hnf; intros. split. hnf; intros; eauto.
-    intros. simpl. hnf in H1; dcr; subst.
-    eapply bisimeq'_refl. eauto.
-    hnf; simpl; eauto.
+    eapply simL_extension'; eauto.
+    + instantiate (1:=List.map fst F). rewrite map_length; eauto.
+    + intros. get_functional; subst. eapply map_get in H3; eauto. simpl in *; subst.
+      repeat split; eauto.
+      intros. hnf in H1; dcr; subst.
+      eapply bisimeq'_refl. eauto.
   - case_eq (omap (exp_eval E) e); intros.
     + pextern_step.
       * eexists; split.
@@ -218,6 +288,7 @@ Lemma fill_fillC C C' s
   :  fill (fillC C C') s = fill C (fill C' s).
 Proof.
   general induction C; simpl; f_equal; eauto.
+  rewrite IHC; eauto.
 Qed.
 
 (*
@@ -296,11 +367,4 @@ Proof.
                                    transitivity y; eauto.
 Qed.
 
-*)
-
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("../" "Lvc")) ***
-*** End: ***
 *)

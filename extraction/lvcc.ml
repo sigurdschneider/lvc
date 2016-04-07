@@ -7,6 +7,10 @@ open Big
 open Pmove
 
 let main () =
+  (* Give identifiert i, n the lowest indexes, do force
+     heuristic to pick them. *)
+  let _ = register_name "i" in
+  let _ = register_name "n" in
   let infile = ref "" in
   let outfile = ref "a.s" in
   let toILF = ref false in
@@ -37,7 +41,7 @@ let main () =
       let file_chan = open_in !infile in
       let lexbuf = Lexing.from_channel  file_chan in
       let ilin = Parser.program Lexer.token lexbuf in
-      let _ =  Printf.printf "Input:\n%s\n\n" (* (print_nstmt !ids 0 ilin) *) "a"  in
+      let _ =  Printf.printf "Input:\n%s\n\n" (print_nstmt !ids 0 ilin) in
       let ili = (match Lvc.toDeBruijn ilin with
 		 | Lvc.Success ili -> ili
 		 | Lvc.Error e -> raise (Compiler_error "Converting to de bruijn failed (did you define all functions?)"))
@@ -66,10 +70,9 @@ let main () =
       in
       let res =
 	if !toILI then
-	  let _ = Printf.printf "\nbefore fromILF\n" in
           (match Lvc.fromILF parallel_move generic_first sopt with
 	   | Lvc.Success ili ->
-	      Printf.printf "\nto IL/I compilate:\n%s\n\nXXX\n\n\n" (* (print_stmt !ids 0 ili) *) "a";
+	      Printf.printf "\nto IL/I compilate (functions are de-bruijn now):\n%s\n\n" (print_stmt !ids 0 ili);
 	      ili
 	   | Lvc.Error e -> raise (Compiler_error (implode e))
 	  )

@@ -19,3 +19,4 @@ extraction/lvc.ml
 extraction/lvc.mli
 extraction/_build
 *.time
+*.aux

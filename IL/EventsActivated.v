@@ -81,14 +81,18 @@ Lemma activated_normal_star S `{StateType S} (σ σ' σ'':S)
     -> False.
 Proof.
   intros.
-  exploit activated_star_reach; eauto. inv X.
+  exploit activated_star_reach; eauto. inv H4.
   - eauto using activated_normal.
   - eapply H3. do 2 eexists; eauto.
 Qed.
 
 
-(*
-*** Local Variables: ***
-*** coq-load-path: (("../" "Lvc")) ***
-*** End: ***
-*)
+Lemma no_activated_tau_step {S} `{StateType S} (σ σ':S)
+ :  activated σ
+  -> step σ EvtTau σ'
+  -> False.
+Proof.
+  intros. destruct H0 as [? [? ?]].
+  eapply step_internally_deterministic in H0; eauto.
+  dcr; congruence.
+Qed.

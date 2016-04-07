@@ -23,13 +23,18 @@ if ! [[ $(ruby -v) =~ ^ruby\ 2.1 ]]; then
 	VANILLA=yes
 fi
 
-SOURCES=$(find . -name \*.v -print | grep -v /\.# | sed -e 's%^\./%%g')
+BLACKLIST=`cat _BLACKLIST`
+SOURCES=$(find . -name \*.v -print | grep -v /\.# | grep -v $BLACKLIST | sed -e 's%^\./%%g')
 coq_makefile -R . Lvc extraction $SOURCES > Makefile
 echo "Makefile generated."
 
 echo "Patching Makefile to include target 'extraction'."
 # sed -i -e  '/.\/extraction:/c\.\/extraction: Compiler.vo' Makefile
 sed -i -e  's%\./extraction:%\./extraction: Compiler.vo%' Makefile
+
+echo "Patching Makefile to reference external Containers documentation."
+sed -i -e 's%COQDOCFLAGS?=-interpolate -utf8%COQDOCFLAGS?=--interpolate --utf8 --external "http://www.lix.polytechnique.fr/coq/pylons/contribs/files/Containers/v8.4/" Containers --toc --toc-depth 3 --index indexpage --no-lib-name%' Makefile
+
 
 if [ -z "$VANILLA" ]; then
 	echo "Patching Makefile to use ruby-based timing scripts (use --vanilla if undesired)."

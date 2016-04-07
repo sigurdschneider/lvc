@@ -16,12 +16,12 @@ Fixpoint patternVars (p:pattern) : set var :=
     | PatternList Z => of_list Z
   end.
 
-Definition patternMatchList 
+Definition patternMatchList
          (patternMatch: pattern -> val -> option (list var * list val)) :=
-  fix patternMatchList (Z:list pattern) (vl:list val) {struct Z} : option (list var * list val) := 
-  match Z, vl with 
-    | p::Z', v::vl => 
-      mdo l <- patternMatch p v; 
+  fix patternMatchList (Z:list pattern) (vl:list val) {struct Z} : option (list var * list val) :=
+  match Z, vl with
+    | p::Z', v::vl =>
+      mdo l <- patternMatch p v;
         let (varl, vall) := l in
         mdo l' <- patternMatchList Z' vl;
           let (varl', vall') := l' in
@@ -31,17 +31,17 @@ Definition patternMatchList
   end.
 
 Fixpoint patternMatch (p:pattern) (v:val) {struct p} : option (list var * list val) :=
-  match p, v with 
+  match p, v with
     | PatternScore, _ => Some (nil, nil)
     | PatternVar x, v => Some (x::nil, v::nil)
-(*  | PatternList Z, ValTpl vl => if [ length Z = length vl] then 
+(*  | PatternList Z, ValTpl vl => if [ length Z = length vl] then
                                    Some (Z, vl)
                                  else
                                    None *)
     | _, _ => None
   end.
 
-Definition patterneq (p q:pattern) 
+Definition patterneq (p q:pattern)
   := forall v, patternMatch p v <> None <-> patternMatch q v <> None.
 
 Instance patterneq_Equivalence_instance : Equivalence patterneq.
@@ -56,12 +56,3 @@ Proof.
   - eexists; eauto.
   - exfalso; firstorder. eapply H; congruence.
 Qed.
-
-
-
-(* 
-*** Local Variables: ***
-*** coq-load-path: (("../" "Lvc")) ***
-*** End: ***
-*)
-

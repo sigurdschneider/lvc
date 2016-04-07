@@ -21,8 +21,8 @@ Section MapInjectivity.
   Qed.
 
   Lemma injective_on_dead lv (f:X -> Y) x v `{Proper _ (respectful _eq _eq) f}
-  : injective_on (lv\{{x}}) f
-    -> injective_on (lv\{{x}}) (f[x<-v]).
+  : injective_on (lv\ singleton x) f
+    -> injective_on (lv\ singleton x) (f[x<-v]).
    Proof.
     intros; hnf; intros. lud; eauto.
     + exfalso; cset_tac; eauto.
@@ -30,42 +30,30 @@ Section MapInjectivity.
   Qed.
 
   Lemma injective_on_fresh lv (f:X -> Y) x xr `{Proper _ (_eq ==> _eq) f}
-    :    injective_on (lv\{{x}}) f
-      -> ~xr ∈ lookup_set f (lv\{{x}})
-      -> injective_on ({{x}} ∪ lv) (f[x <- xr]).
+    :    injective_on (lv\ singleton x) f
+      -> ~xr ∈ lookup_set f (lv\ singleton x)
+      -> injective_on {x; lv} (f[x <- xr]).
   Proof.
     intros. hnf; intros. lud.
-    + exfalso. eapply H3. eapply lookup_set_spec; eauto.
-      exists x0. split.
-      - cset_tac; intuition.
-      - eqs.
-    + exfalso. eapply H3. eapply lookup_set_spec; eauto.
-      eexists y. split; cset_tac; intuition; eauto.
-    + eapply H2; eauto. cset_tac; intuition.
-      cset_tac; intuition.
+    + exfalso; lset_tac; eqs.
+    + exfalso. lset_tac; eqs.
+    + eapply H2; cset_tac; intuition.
   Qed.
 
   Lemma injective_on_forget s (f:X -> Y) y `{Proper _ (_eq ==> _eq) f}
   : injective_on s f
-    -> injective_on (s\{{y}}) f.
+    -> injective_on (s\ singleton y) f.
   Proof.
     intros. hnf; intros.
-    assert (y =/= y0). intro; cset_tac; firstorder.
-    assert (x =/= y). intro; cset_tac; firstorder.
-    eapply H. cset_tac; firstorder.
+    cset_tac.
   Qed.
 
   Lemma lookup_set_minus_incl_inj s t (m:X -> Y) `{Proper _ (_eq ==> _eq) m}
   : injective_on (s ∪ t) m
     -> lookup_set m (s \ t) ⊆ lookup_set m s \ (lookup_set m t).
   Proof.
-    intros; hnf; intros.
-    eapply lookup_set_spec in H3; decompose records; eauto.
-    edestruct (minus_in_in _ _ _ _ H5); eauto.
-    eapply in_in_minus; eauto. eapply lookup_set_spec; eauto.
-    intro. eapply lookup_set_spec in H7; decompose records; eauto.
-    subst. eapply H4. rewrite H2; eauto. eapply union_left; eauto.
-    eapply union_right; eauto. rewrite <- H6. rewrite <- H10. reflexivity.
+    intros; hnf; intros. repeat lset_tac.
+    eapply H4. rewrite H2; cset_tac. eqs.
   Qed.
 
 
@@ -78,15 +66,15 @@ Proof.
   split; intros; hnf; intros.
   + eapply H2; try rewrite H0 ; eauto.
     hnf in H1. repeat rewrite H1. eauto.
-  + eapply H2; cset_tac; eauto; firstorder.
+  + rewrite H0 in *. eapply H2; cset_tac; eauto.
     hnf in H1. repeat rewrite <- H1. eauto.
 Qed.
 
 
 Lemma injective_on_update_not_in {X} `{OrderedType X} {Y} `{OrderedType Y}
   D x (f:X -> Y) `{Proper _ (_eq ==> _eq) f}
-: injective_on (D \ {{x}}) f
-  -> f x ∉ lookup_set f (D \ {{x}})
+: injective_on (D \ singleton x) f
+  -> f x ∉ lookup_set f (D \ singleton x)
   -> injective_on D f.
 Proof.
   intros; hnf; intros.
@@ -94,18 +82,16 @@ Proof.
   - exfalso. eapply H3. eapply lookup_set_spec. eauto.
     eexists y. cset_tac; eqs; eauto. rewrite e in H6; eauto.
   - eapply H2; cset_tac; eauto.
-    intro. eapply H3.
-    eapply lookup_set_spec; intuition.
-    cset_tac.
-    intuition.
-    eexists x0; eauto. intuition.
+    eapply H3.
+    eapply lookup_set_spec; cset_tac; intuition.
+    eexists x0; eauto. cset_tac.
     rewrite H6, H7; eauto.
 Qed.
 
 Lemma injective_on_update_fresh {X} `{OrderedType X} {Y} `{OrderedType Y}
   D x y f `{Proper _ (_eq ==> _eq) f}
-: injective_on (D \ {{x}}) f
-  -> y ∉ lookup_set f (D \ {{x}})
+: injective_on (D \ singleton x) f
+  -> y ∉ lookup_set f (D \ singleton x)
   -> injective_on D (update f x y).
 Proof.
   intros; hnf; intros. lud.
@@ -119,7 +105,7 @@ Qed.
 Lemma injective_on_not_in_lookup_set {X} `{OrderedType X} {Y} `{OrderedType Y} f D D' x
     `{Proper _ (_eq ==> _eq) f}
     : injective_on D f
-      -> D' ⊆ D\{{x}} -> x ∈ D
+      -> D' ⊆ D\ singleton x -> x ∈ D
       -> f x ∉ lookup_set f D'.
 Proof.
   intros. intro. eapply lookup_set_spec in H5; eauto. destruct H5; dcr.
@@ -129,17 +115,18 @@ Qed.
 Lemma lookup_set_not_in  {X} `{OrderedType X} {Y} `{OrderedType Y} f D x
     `{Proper _ (_eq ==> _eq) f}
   : f x ∉ lookup_set f D
-    -> lookup_set f D \ {{f x}} [=] lookup_set f (D\{{x}}).
+    -> lookup_set f D \ singleton (f x) [=] lookup_set f (D\ singleton x).
 Proof.
-  intros. cset_tac; split; intros; dcr. eapply lookup_set_spec; eauto.
-  + eapply lookup_set_spec in H4. destruct H4; dcr; eauto.
+  intros. cset_tac; try eapply lookup_set_spec; eauto.
+  + eapply lookup_set_spec in H4; dcr.
     eexists x0; cset_tac; intuition.
     eapply H2. eapply lookup_set_spec; eauto.
-    eexists x. rewrite <- H3 in H4; eauto.
+    eexists x. rewrite <- H3 in H6; eauto.
     eauto.
   + eapply lookup_set_spec in H3; eauto. destruct H3; dcr. cset_tac.
-    eapply lookup_set_spec; eauto.
-    intro. eapply H2. eapply lookup_set_spec; eauto. eexists x0; split; eqs; eauto.
+  + eapply H2. eapply lookup_set_spec; eauto.
+    eapply lookup_set_spec in H3; cset_tac.
+    eexists x0; split; eqs; eauto.
 Qed.
 
 
@@ -156,12 +143,11 @@ Proof.
   hnf; intros.
   unfold injective_on_step. econstructor.
   destruct z; simpl. econstructor; cset_tac; intuition.
-  destruct z. unfold snd. destruct b.
-  unfold fst, snd;
-  decide (f y ∈ s); decide (f x ∈ {f y; s});
-  decide (f x ∈ s); decide (f y ∈ {f x; s}); simpl;
-  eauto; cset_tac; intuition.
-  econstructor.
+  destruct z. unfold snd. destruct b; eauto.
+  unfold fst, snd.
+  decide (f y ∈ s); decide (f x ∈ s); simpl; try reflexivity;
+  decide (f x ∈ {f y; s}); decide (f y ∈ {f x; s}); simpl; try reflexivity;
+  exfalso; cset_tac.
 Qed.
 
 Lemma injective_on_step_spec {X} `{OrderedType X} {Y} `{OrderedType Y}
@@ -228,22 +214,14 @@ Proof.
           lookup_set f D ∪ LD' [=] fst fld
          ) _ (LD', true)); intros; simpl.
 
-  + eapply empty_is_empty_1 in H2.
-    set_tac; intuition. destruct H4; cset_tac.
-    eapply H2 in H4. cset_tac; intuition.
-
-  + cset_tac.
-    split; intros. destruct H6. set_tac. destruct H6; dcr.
-    eapply H4 in H7. destruct H7. rewrite <- H6 in H8; eauto.
-    right. eapply H5. cset_tac. left. set_tac. eexists x0; intuition.
-    eauto. eauto. right. eapply H5. cset_tac. right; eauto.
-    destruct H6. left. set_tac. eexists x; intuition.
-    eapply H4. eauto. intuition.
-    eapply H5 in H6. cset_tac; intuition.
-    left. set_tac; intuition. set_tac; intuition.
-    eexists x0; eauto. split; eauto. eapply H4. right; eauto.
+  - eapply empty_is_empty_1 in H2.
+    lset_tac.
+    exfalso; eauto.
+  - destruct a; simpl in *.
+    rewrite <- H5. clear H5. eapply Add_Equal in H4.
+    rewrite H4; clear H4.
+    lset_tac. rewrite H7, H4. cset_tac.
 Qed.
-
 
 Definition injective_on_iff {X} `{OrderedType X} {Y} `{OrderedType Y}
    (f: X-> Y) `{Proper _ (_eq ==> _eq) f} D
@@ -254,27 +232,21 @@ Definition injective_on_iff {X} `{OrderedType X} {Y} `{OrderedType Y}
     -> (snd (fold (injective_on_step f) D (LD', true)) <-> (injective_on (D ∪ D') f)).
 Proof.
   pattern D. eapply set_induction; intros.
-  eapply empty_is_empty_1 in H2. intuition. eapply injective_on_incl; eauto.
-  rewrite H2. cset_tac; intuition.
+  - eapply empty_is_empty_1 in H2. intuition. eapply injective_on_incl; eauto.
+    rewrite H2. cset_tac; intuition.
+    pose proof (@fold_equal X _ _ _ _ _ _ (injective_on_step f) _ (injective_on_step_transpose f) (LD', true) _ _ H2).
+    rewrite fold_empty in H7.
+    destruct (fold (injective_on_step f) s (LD', true)).
+    inv H7. inv H13. eapply I.
+  -  pose proof H4 as FOO. eapply Add_Equal in H4.
+     pose proof (@fold_equal X _ _ _ _ _ _ (injective_on_step f) _ (injective_on_step_transpose f) (LD', true) _ _ H4).
+     destruct (fold (injective_on_step f) s' (LD', true)).
+     rewrite (@fold_add X _ _ _ _ _ _ (injective_on_step f) (injective_on_step_proper f) (injective_on_step_transpose f) (LD', true) _ _ H3) in H8.
 
-  pose proof (@fold_equal X _ _ _ _ _ _ (injective_on_step f) _ (injective_on_step_transpose f) (LD', true) _ _ H2).
-  rewrite fold_empty in H7.
-  destruct (fold (injective_on_step f) s (LD', true)). inv H7. inv H13.
-  eapply I.
-
-
-  pose proof H4 as FOO. eapply Add_Equal in H4.
-  pose proof (@fold_equal X _ _ _ _ _ _ (injective_on_step f) _ (injective_on_step_transpose f) (LD', true) _ _ H4).
-  destruct (fold (injective_on_step f) s' (LD', true)).
-  rewrite (@fold_add X _ _ _ _ _ _ (injective_on_step f) (injective_on_step_proper f) (injective_on_step_transpose f) (LD', true) _ _ H3) in H8.
-
-  decide (x ∈ D'). exfalso. destruct (FOO x).
-  cset_tac; intuition. eapply (H5 x). intuition cset_tac.
-  eapply H11; reflexivity.
-  assert (D' ∩ s [=] ∅). cset_tac; intuition. destruct (FOO a).
-  eapply H5; split; eauto.
-
-(*  erewrite <- H9. cset_tac; intuition. eapply H4. eapply add_iff. right; eauto. *)
+     decide (x ∈ D'). exfalso. destruct (FOO x).
+     cset_tac; intuition.
+     assert (D' ∩ s [=] ∅).
+     revert H5. rewrite H4. clear_all; cset_tac; intuition.
 
   specialize (H2 D' _ H9 H6 H7).
   case_eq (fold (injective_on_step f) s (LD', true)); intros; rewrite H10 in *.
@@ -288,7 +260,7 @@ Proof.
   rewrite H12 in H10. clear H8.
   rewrite <- H10 in i. rewrite <- H6 in i. rewrite <- lookup_set_union in i.
   eapply lookup_set_spec in i. destruct i; dcr.
-  eapply H11 in H15. cset_tac. rewrite H15 in n,H3. destruct H14; eauto.
+  eapply H11 in H15. cset_tac.
   rewrite H4; revert H14 H9; clear_all; intros. cset_tac; intuition.
   rewrite H4.
   revert H14 H9; clear_all; intros.
@@ -302,15 +274,15 @@ Proof.
   rewrite H13 in H10.
   clear H8.
   rewrite <- H10 in n0.
-  rewrite <- H6 in n0. rewrite <- lookup_set_union in n0.
-  assert (s ∪ D' [=] (s' ∪ D') \ {{x}}).
-  rewrite H4; cset_tac; intuition.
+  rewrite <- H6 in n0. rewrite <- lookup_set_union in n0; eauto.
+  assert (s ∪ D' [=] (s' ∪ D') \ singleton x).
+  rewrite H4. clear H1 H2 H4 H6 H7 H10 H11 H12 H13 H14 n0 s0 FOO.
+  cset_tac; intuition.
   rewrite H8 in n0. rewrite H8 in H2.
   pose proof (injective_on_update_not_in H2 n0); eauto. intuition.
-
-  simpl. split; intros; isabsurd.
-  simpl in H2. eapply H2. eapply (injective_on_incl H11).
-  rewrite H4. cset_tac; intuition.
+  simpl.
+  simpl in H2. eapply H12. eapply (injective_on_incl H2).
+  rewrite H4. clear_all; cset_tac; intuition.
 Qed.
 
 Global Instance injective_on_computable {X} `{OrderedType X} {Y} `{OrderedType Y}
@@ -326,14 +298,11 @@ Proof.
   right. intro.
   pose proof (@injective_on_iff X _ Y _ f _ D ∅ ∅).
   edestruct H5. cset_tac; intuition. cset_tac; intuition.
-  assert (a ∈ lookup_set f D).
-  set_tac; eauto. set_tac; eauto. eexists x. intuition.
-  set_tac; eauto. set_tac. destruct H6; cset_tac. eauto.
-  intuition. isabsurd.
+  isabsurd.
   change False with (Is_true false). rewrite <- H3.
   unfold injective_on_compute in H3. rewrite H3 in H7.
   unfold injective_on_compute. rewrite H3. eapply H7.
-  eapply injective_on_incl; eauto. cset_tac; intuition.
+  eapply injective_on_incl; eauto with cset.
 Defined.
 
 Lemma lookup_set_minus_eq X `{OrderedType X} Y `{OrderedType Y} s t (m:X -> Y) `{Proper _ (_eq ==> _eq) m}
@@ -350,8 +319,8 @@ Lemma injective_on_agree X `{OrderedType X} Y `{OrderedType Y} D (ϱ ϱ': X -> Y
   -> injective_on D ϱ'.
 Proof.
   intros. hnf; intros. eapply H1; eauto.
-  exploit H2; eauto. rewrite X0.
-  exploit H2; try eapply H3. rewrite X1. eauto.
+  exploit H2; eauto. rewrite H6.
+  exploit H2; try eapply H3. rewrite H7. eauto.
 Qed.
 
 Lemma injective_on_fresh_list X `{OrderedType X} Y `{OrderedType Y} XL YL (ϱ: X -> Y) `{Proper _ (_eq ==> _eq) ϱ} lv
@@ -364,29 +333,24 @@ Lemma injective_on_fresh_list X `{OrderedType X} Y `{OrderedType Y} XL YL (ϱ: X
 Proof.
   intros. eapply length_length_eq in H3.
   general induction H3; simpl in * |- * ; eauto.
-  - eapply injective_on_incl; eauto. cset_tac; intuition.
+  - eapply injective_on_incl; eauto with cset.
   - eapply injective_on_agree.
-    assert (lv ∪ { x; of_list XL} [=] {{x}} ∪ lv ∪ of_list XL) by (cset_tac; intuition; eauto).
-    rewrite H7. eapply IHlength_eq; auto.
+    assert (lv ∪ { x; of_list XL} [=] {x; lv} ∪ of_list XL) by (cset_tac; intuition; eauto).
+    rewrite H7. dcr.
+    eapply IHlength_eq; try assumption.
     Focus 2.
     eapply injective_on_fresh. instantiate (1:=ϱ); eauto.
     eapply injective_on_incl; eauto. instantiate (1:=y).
-    intro. eapply lookup_set_spec in H8. dcr.
-    eapply (not_in_empty (ϱ x0)). rewrite <- H4. cset_tac; intuition.
-    eapply lookup_set_spec; eauto. eapply H1.
-    hnf; intros. lud; eauto; try now exfalso; eauto.
-    dcr. cset_tac; intuition.
-    eapply lookup_set_spec in H12; dcr. lud.
+
+    intro. eapply lookup_set_spec in H5; try eassumption. dcr.
+    eapply (not_in_empty (ϱ x0)). rewrite <- H4.
+    lset_tac; eauto. eauto.
+    cset_tac; intuition.
+    eapply lookup_set_spec in H12; dcr; eauto. lud.
     eapply H8. rewrite <- H14; eauto. eapply InA_in; eauto.
     cset_tac; intuition.
     eapply H4. split. right; eauto.
-    eapply lookup_set_spec. eauto. eexists; eauto.
-    hnf; intros. lud; eauto; try now exfalso; eauto.
+    lset_tac.
+
     eapply update_unique_commute; eauto using length_eq_length.
 Qed.
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("../" "Lvc")) ***
-*** End: ***
-*)

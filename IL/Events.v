@@ -252,8 +252,12 @@ Proof.
   exfalso. firstorder.
 Qed.
 
-(*
-*** Local Variables: ***
-*** coq-load-path: (("../" "Lvc")) ***
-*** End: ***
-*)
+Lemma star2_reach_silent_step (X : Type) (R:X -> event -> X -> Prop) (x y z : X)
+: R x EvtTau y
+  -> star2 R x nil z
+  -> internally_deterministic R
+  -> x = z \/ star2 R y nil z.
+Proof.
+  intros. inv H0; eauto.
+  exploit H1; eauto. dcr; subst; eauto.
+Qed.

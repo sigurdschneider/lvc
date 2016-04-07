@@ -13,4 +13,9 @@ let get_next_id () =
 let tmp = !curr_id in
   curr_id := tmp + 1; tmp
 
+let register_name s =
+  let id = get_next_id () in
+  let _ = ids := IntMap.add id s !ids in
+  names := StringMap.add s id !names; id
+
 let calls : (string Stack.t) ref = ref (Stack.create ())

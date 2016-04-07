@@ -1,4 +1,4 @@
-Require Import List Arith.
+Require Import Coq.Lists.List Coq.Arith.Arith Coq.Arith.PeanoNat Omega.
 Require Import AutoIndTac Util.
 
 Require Export orderedBitvec.
@@ -330,8 +330,9 @@ Proof.
 intros.  general induction b.
 - exists 0; reflexivity.
 - destruct IHb.  destruct a.
-  + exists (2*x).  simpl. rewrite H. omega.
+  + exists (2*x).  simpl. rewrite H. auto.
   + exists ((2*x)+1). simpl. rewrite H. omega.
+
 Qed.
 
 (** TODO: Find better division algorithm **)

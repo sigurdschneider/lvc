@@ -3,8 +3,12 @@ Require Export Infra.Option EqDec AutoIndTac Computable.
 
 Set Implicit Arguments.
 
-Tactic Notation "inv" hyp(A) := inversion A ; subst.
-Tactic Notation "invc" hyp(A) := inversion A ; subst ; clear A.
+Set Regular Subst Tactic.
+
+Tactic Notation "inv" hyp(A) := inversion A; subst.
+Tactic Notation "invc" hyp(A) := inversion A; subst; clear A.
+Tactic Notation "invs" hyp(A) := inversion A; subst; clear_trivial_eqs.
+Tactic Notation "invcs" hyp(A) := inversion A; subst; clear A; clear_trivial_eqs.
 
 Ltac invt ty :=
   match goal with
@@ -18,6 +22,20 @@ Ltac invt ty :=
       | h: ty _ _ _ _ _ _ _ |- _ => inv h
       | h: ty _ _ _ _ _ _ _ _ |- _ => inv h
       | h: ty _ _ _ _ _ _ _ _ _ |- _ => inv h
+  end.
+
+Ltac invts ty :=
+  match goal with
+      | h: ty |- _ => invs h
+      | h: ty _ |- _ => invs h
+      | h: ty _ _ |- _ => invs h
+      | h: ty _ _ _ |- _ => invs h
+      | h: ty _ _ _ _ |- _ => invs h
+      | h: ty _ _ _ _ _ |- _ => invs h
+      | h: ty _ _ _ _ _ _ |- _ => invs h
+      | h: ty _ _ _ _ _ _ _ |- _ => invs h
+      | h: ty _ _ _ _ _ _ _ _ |- _ => invs h
+      | h: ty _ _ _ _ _ _ _ _ _ |- _ => invs h
   end.
 
 Definition iffT (A B : Type) := ((A -> B) * (B -> A))%type.
@@ -311,6 +329,20 @@ Tactic Notation "exploiT" constr(ty) :=
       | H: ty _ _ _ _ _ _ _ _ _ |- _ => exploit H
   end.
 
+
+Ltac exploit2 H H' :=
+  eapply modus_ponens;
+  [
+    let H' := fresh "exploitH" in
+    pose proof H as H'; hnf in H';
+      eapply H'; clear H'
+  | intros H'].
+
+
+Tactic Notation "exploit" uconstr(X) := exploit X.
+Tactic Notation "exploit" uconstr(X) "as" ident(H) := exploit2 X H.
+
+
 Definition foo A B C := (A -> ~ B \/ C).
 
 Lemma test (A B C D : Prop) (a:A) (b:B)
@@ -380,8 +412,174 @@ Hint Extern 20 => match goal with
                    | [ H: ?a /\ ?b |- ?b ] => eapply H
                    | [ H: ?a /\ ?b |- ?a ] => eapply H
                  end.
-(*
-*** Local Variables: ***
-*** coq-load-path: (("../" "Lvc")) ***
-*** End: ***
-*)
+
+Instance instance_option_eq_trans_R X {R: relation X} `{Transitive _ R}
+ : Transitive (option_eq R).
+Proof.
+  hnf; intros. inv H0; inv H1.
+  + econstructor.
+  + econstructor; eauto.
+Qed.
+
+Instance instance_option_eq_refl_R X {R: relation X} `{Reflexive _ R}
+ : Reflexive (option_eq R).
+Proof.
+  hnf; intros. destruct x.
+  + econstructor; eauto.
+  + econstructor.
+Qed.
+
+Instance instance_option_eq_sym_R X {R: relation X} `{Symmetric _ R}
+ : Symmetric (option_eq R).
+Proof.
+  hnf; intros. inv H0.
+  + econstructor.
+  + econstructor; eauto.
+Qed.
+
+Instance plus_le_morpism
+: Proper (Peano.le ==> Peano.le ==> Peano.le) Peano.plus.
+Proof.
+  unfold Proper, respectful.
+  intros. omega.
+Qed.
+
+Instance plus_S_morpism
+: Proper (Peano.le ==> Peano.le) S.
+Proof.
+  unfold Proper, respectful.
+  intros. omega.
+Qed.
+
+Instance le_lt_morph
+: Proper (Peano.ge ==> Peano.le ==> impl) Peano.lt.
+Proof.
+  unfold Proper, respectful, impl; intros; try omega.
+Qed.
+
+Instance le_lt_morph'
+: Proper (eq ==> Peano.le ==> impl) Peano.lt.
+Proof.
+  unfold Proper, respectful, flip, impl; intros; try omega.
+Qed.
+
+Instance le_lt_morph''
+: Proper (Peano.le ==> eq ==> flip impl) Peano.lt.
+Proof.
+  unfold Proper, respectful, flip, impl; intros; try omega.
+Qed.
+
+(** ** List Length automation *)
+
+Lemma length_map_2 X Y Z (L:list X) (L':list Y) (f:Y->Z)
+: length L = length L'
+  -> length L = length (List.map f L').
+Proof.
+  intros. rewrite map_length; eauto.
+Qed.
+
+Lemma length_map_1 X Y Z (L:list Y) (L':list X) (f:Y->Z)
+: length L = length L'
+  -> length (List.map f L) = length L'.
+Proof.
+  intros. rewrite map_length; eauto.
+Qed.
+
+Create HintDb len discriminated.
+
+Hint Resolve length_map_1 length_map_2 : len.
+
+Lemma rev_swap X (L L':list X)
+: rev L = L'
+  -> L = rev L'.
+Proof.
+  intros. subst. rewrite rev_involutive; eauto.
+Qed.
+
+Inductive already_swapped (P:Prop) := AlreadySwapped.
+Lemma mark_swapped P : already_swapped P.
+Proof.
+  constructor.
+Qed.
+
+Hint Extern 1000 =>
+match goal with
+  | [ H : already_swapped (?a = ?b) |- ?a = ?b ] => fail 1
+  | [ |- ?a = ?b ] => eapply eq_sym; pose proof (mark_swapped (a = b))
+end : len.
+
+Hint Immediate eq_trans : len.
+Hint Immediate eq_sym : len.
+
+Hint Extern 10 =>
+match goal with
+  [ H : ?a = ?b, H': ?b = ?c |- ?c = ?a ] => eapply eq_sym; eapply (eq_trans H H')
+end : len.
+
+Lemma map_length_ass_both X X' Y Y' (L:list X) (L':list Y) (f:X->X') (g:Y->Y')
+  : length L = length L'
+    -> length (List.map f L) = length (List.map g L').
+Proof.
+  repeat rewrite map_length; eauto.
+Qed.
+
+Lemma app_length_ass_both X Y (L1 L2:list X) (L1' L2':list Y)
+  : length L1 = length L1'
+    -> length L2 = length L2'
+    -> length (L1 ++ L2) = length (L1' ++ L2').
+Proof.
+  repeat rewrite app_length; eauto.
+Qed.
+
+Hint Resolve map_length_ass_both app_length_ass_both | 2 : len.
+
+Lemma app_length_ass X (L:list X) L' k
+  : length L + length L' = k
+    -> length (L ++ L') = k.
+Proof.
+  intros; subst. rewrite app_length; eauto.
+Qed.
+
+Lemma app_length_ass_right X (L:list X) L' k
+  : length L + length L' = k
+    -> k = length (L ++ L').
+Proof.
+  intros; subst. rewrite app_length; eauto.
+Qed.
+
+Lemma map_length_ass X Y (L:list X) (f:X->Y) k
+  : length L = k
+    -> length (List.map f L) = k.
+Proof.
+  intros; subst. rewrite map_length; eauto.
+Qed.
+
+Lemma map_length_ass_right X Y (L:list X) (f:X->Y) k
+  : length L = k
+    -> k = length (List.map f L).
+Proof.
+  intros; subst. rewrite map_length; eauto.
+Qed.
+
+Lemma length_tl X (l:list X)
+  : length (tl l) = length l - 1.
+Proof.
+  destruct l; simpl; eauto; omega.
+Qed.
+
+
+Lemma pair_eta (X Y:Type) (p:X * Y)
+  : p = (fst p, snd p).
+Proof.
+  destruct p; eauto.
+Qed.
+
+Hint Resolve map_length_ass app_length_ass | 4 : len.
+
+Notation "❬ L ❭" := (length L) (at level 9, format "'❬' L '❭'").
+Notation "f ⊝ L" := (List.map f L) (at level 50, L at level 50, left associativity).
+Notation "'tab' s '‖' L '‖'" := (List.map (fun _ => s) L)
+                                 (at level 50, format "'tab'  s  '‖' L '‖'", s at level 0, L at level 200).
+
+Notation "〔 X 〕" := (list X) (format "'〔' X '〕'") : type_scope.
+Notation "؟ X" := (option X) (format "'؟' X", at level 50, X at level 0) : type_scope.

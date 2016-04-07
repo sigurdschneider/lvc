@@ -76,7 +76,10 @@ This will generate a binary
 There are some example files in extraction/examples. Run one by issuing the following command:
 
 	cd extraction
-	./lvcc.native examples/foo.il
+
+    Transformation'. Master's Thesis. Saarland University, 2013.
+	./lvcc.native -3 true examples/fib.il
+
+Several phases are supported, -3 true activates the IL to IL/I phase (register assignment and parameter elimination).
 
 [1] Sigurd Schneider. 'Semantics of an Intermediate Language for Program
-    Transformation'. Master's Thesis. Saarland University, 2013.

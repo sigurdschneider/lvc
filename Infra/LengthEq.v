@@ -45,8 +45,12 @@ Proof.
   right. intro. eapply length_eq_length in X0. congruence.
 Defined.
 
-(* 
-*** Local Variables: ***
-*** coq-load-path: (("../" "Lvc")) ***
-*** End: ***
-*)
+
+Ltac length_equify :=
+  repeat (match goal with
+            | [ H : length ?A = length ?B |- _ ] =>
+              eapply length_length_eq in H
+          end).
+
+Hint Immediate length_eq_length : len.
+Hint Resolve length_length_eq : len.

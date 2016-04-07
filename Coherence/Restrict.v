@@ -13,22 +13,21 @@ Lemma restr_iff G o G'
   : restr G o = Some G' <-> G' ⊆ G /\ o = Some G'.
 Proof.
   unfold restr; destruct o; intros.
-  destruct if; intuition; try inv H; try inv H1; eauto; isabsurd.
+  cases; split; intros A; inv A; isabsurd; eauto.
   split; intros; dcr; congruence.
 Qed.
 
 Lemma restr_idem G o G'
   : G' ⊆ G -> restr G' (restr G o) = restr G' o.
 Proof.
-  unfold restr; destruct o. repeat destruct if; eauto; isabsurd.
-  intros. exfalso. eapply n; cset_tac; intuition.
-  eauto.
+  unfold restr; destruct o; eauto. repeat cases; eauto; isabsurd.
+  intros. exfalso; firstorder.
 Qed.
 
 Lemma restr_comm o G G'
   : restr G' (restr G o) = restr G (restr G' o).
 Proof.
-  destruct o; unfold restr; repeat destruct if; eauto; isabsurd.
+  destruct o; unfold restr; repeat cases; eauto; isabsurd.
 Qed.
 
 Instance restr_morphism
@@ -36,10 +35,8 @@ Instance restr_morphism
 Proof.
   unfold Proper, respectful; intros.
   destruct x0,y0; unfold restr;
-  repeat destruct if; try econstructor;
-  inv H0; eauto.
-  exfalso. eapply n. rewrite <- H3, <- H; eauto.
-  exfalso. eapply n. rewrite H3, H; eauto.
+  repeat cases; try econstructor;
+  inv H0; eauto; cset_tac.
 Qed.
 
 Instance restr_morphism_eq
@@ -47,10 +44,8 @@ Instance restr_morphism_eq
 Proof.
   unfold Proper, respectful; intros.
   destruct x0,y0; unfold restr;
-  repeat destruct if; try econstructor;
-  inv H0; eauto.
-  exfalso. eapply n. rewrite <- H; eauto.
-  exfalso. eapply n. rewrite H; eauto.
+  repeat cases; try econstructor;
+  inv H0; eauto; cset_tac.
 Qed.
 
 Definition restrict (DL:list (option (set var))) (G:set var)
@@ -74,7 +69,7 @@ Lemma restrict_not_incl G G' DL
  : ~G' ⊆ G -> restrict (Some G'::DL) G = None::restrict DL G.
 Proof.
   intros. unfold restrict, List.map; f_equal.
-  unfold restr. destruct if; firstorder.
+  unfold restr. cases; firstorder.
 Qed.
 
 Lemma restrict_comm DL G G'
@@ -113,7 +108,6 @@ Proof.
   unfold Proper, respectful, impl; intros.
   subst. general induction y; simpl; eauto.
   destruct a; simpl in *; cset_tac; intuition.
-  eapply IHy; eauto. eapply IHy; eauto.
 Qed.
 
 Instance bounded_morphism
@@ -145,17 +139,14 @@ Lemma bounded_restrict_eq DL G' G
 Proof.
   general induction DL; simpl; eauto.
   case_eq (restr G' a); intros; try split; eauto.
-  eapply restr_iff in H1; intuition.
-  subst; simpl in *; dcr.
-  f_equal. eapply (IHDL _ _ H H3).
-  destruct a; unfold restr in H1; dcr.
-  destruct if in H1; isabsurd. simpl in H0.
-  exfalso. eapply n. dcr. rewrite H2; eauto.
-  f_equal. eapply IHDL; eauto.
+  - eapply restr_iff in H1; dcr; simpl in *.
+    subst; dcr.
+    f_equal. eauto.
+  - destruct a; unfold restr in H1; dcr.
+    + exfalso. cases in H1; isabsurd.
+      simpl in H0; dcr. cset_tac.
+    + f_equal. eauto.
 Qed.
-
-
-
 
 Lemma restrict_subset2 DL DL' G G'
 : PIR2 (fstNoneOrR (flip Subset)) DL DL'
@@ -165,8 +156,8 @@ Proof.
   intros. induction H; simpl; econstructor; eauto.
   - inv pf.
     + simpl. econstructor.
-    + unfold restr. repeat destruct if; try econstructor; eauto.
-      exfalso. eapply n. transitivity G; eauto. rewrite <- s; eauto.
+    + unfold restr. repeat cases; try econstructor; eauto.
+      exfalso. unfold flip in H1. rewrite H0 in COND. cset_tac.
 Qed.
 
 
@@ -178,21 +169,20 @@ Proof.
    intros. induction H; simpl; econstructor; eauto.
   - inv pf.
     + simpl. econstructor.
-    + unfold restr. repeat destruct if; try econstructor; eauto.
-      exfalso. eapply n. transitivity G; eauto. rewrite <- s; eauto.
-      rewrite H1; reflexivity.
+    + unfold restr. repeat cases; try econstructor; eauto.
+      cset_tac.
 Qed.
 
 
 Lemma restr_comp_meet G o G'
   : restr G' (restr G o) = restr (G ∩ G') o.
 Proof.
-  unfold restr; destruct o.
-  repeat destruct if; eauto; isabsurd.
+  unfold restr; destruct o; eauto.
+  repeat cases; eauto; isabsurd.
   - cset_tac; intuition.
-  - exfalso; eapply n. rewrite s1. cset_tac; intuition.
-  - exfalso; eapply n. rewrite s0. cset_tac; intuition.
-  - eauto.
+  - rewrite COND0 in NOTCOND. exfalso; eapply NOTCOND.
+    cset_tac.
+  - rewrite COND in NOTCOND. exfalso; eapply NOTCOND. cset_tac.
 Qed.
 
 Lemma restrict_comp_meet DL G G'
@@ -217,8 +207,7 @@ Lemma bounded_map_lookup G (ϱ: var -> var) DL
   : bounded DL G -> bounded (map_lookup ϱ DL) (lookup_set ϱ G).
 Proof.
   general induction DL; simpl; eauto.
-  destruct a; simpl in *; dcr; intuition.
-  eapply lookup_set_incl; eauto.
+  destruct a; simpl in *; dcr; eauto using lookup_set_incl.
 Qed.
 
 Lemma restrict_incl_ext DL G G' D
@@ -229,11 +218,11 @@ Proof.
   intros.
   general induction DL; simpl in *; try destruct a; dcr; eauto.
   f_equal; eauto.
-  unfold restr. repeat destruct if; eauto.
-  exfalso. eapply n. eapply meet_incl_eq in H0; eauto.
+  unfold restr. repeat cases; eauto.
+  exfalso. eapply NOTCOND. eapply meet_incl_eq in H0; eauto.
   rewrite meet_comm in H0. rewrite <- incl_meet in H0; eauto.
   rewrite H0. eapply meet_incl; reflexivity.
-  exfalso. eapply n. eapply meet_incl_eq in H0; eauto. symmetry in H0.
+  exfalso. eapply NOTCOND. eapply meet_incl_eq in H0; eauto. symmetry in H0.
   rewrite meet_comm in H0. rewrite <- incl_meet in H0; eauto.
   rewrite H0. eapply meet_incl; reflexivity.
   f_equal; eauto.
@@ -248,9 +237,9 @@ Lemma list_eq_special DL ϱ A B A'
 Proof.
   intros. general induction DL; simpl. econstructor.
   unfold restr. unfold lookup_set_option.
-  destruct a; repeat destruct if;econstructor; eauto; try econstructor; eauto. reflexivity.
-  exfalso. eapply n. cset_tac; intuition. eapply H0. eapply lookup_set_incl; eauto. intuition.
-  exfalso. eapply n. cset_tac; intuition.
+  destruct a; repeat cases;econstructor; eauto; try econstructor; eauto.
+  - exfalso. eapply NOTCOND. lset_tac. eapply H0. eapply lookup_set_incl; lset_tac.
+  - exfalso. eapply NOTCOND. cset_tac.
 Qed.
 
 Lemma list_eq_fstNoneOrR_incl DL ϱ A B
@@ -259,9 +248,11 @@ Lemma list_eq_fstNoneOrR_incl DL ϱ A B
        (map_lookup ϱ (restrict DL A))
        (map_lookup ϱ (restrict DL B)).
 Proof.
-  intros. general induction DL; simpl.  econstructor.
-  unfold restr; destruct a; repeat destruct if; simpl; econstructor; eauto; try econstructor; eauto. reflexivity.
-  exfalso. eapply n. rewrite <- H; eauto.
+  intros. general induction DL; simpl.
+  - econstructor.
+  - unfold restr; destruct a; repeat cases;
+      simpl; econstructor; eauto; try econstructor; eauto.
+    exfalso. cset_tac; intuition.
 Qed.
 
 Lemma restrict_app L L' s
@@ -285,8 +276,68 @@ Proof.
 Qed.
 
 
-(*
-*** Local Variables: ***
-*** coq-load-path: ((".." "Lvc")) ***
-*** End: ***
-*)
+Inductive fstNoneOrR' {X Y:Type} (R:X->Y->Prop)
+  : option X -> Y -> Prop :=
+| fstNone' (y:Y) : fstNoneOrR' R None y
+| bothR' (x:X) (y:Y) : R x y -> fstNoneOrR' R (Some x) y
+.
+
+Definition eqReq := (fstNoneOrR' (fun (s : set var) (t : set var * list var) =>
+                                   s [=] fst t \ of_list (snd t))).
+
+Lemma restrict_eqReq DL DL' G
+: PIR2 eqReq DL DL'
+  -> PIR2 eqReq (restrict DL G) DL'.
+Proof.
+  intros. induction H; simpl; econstructor; eauto.
+  unfold restr. destruct pf. constructor.
+  cases; eauto. subst. constructor; eauto. constructor.
+Qed.
+
+Lemma restrict_get DL lv n s
+: get (restrict DL lv) n ⎣ s ⎦
+  -> get DL n (Some s) /\ s ⊆ lv.
+Proof.
+  intros. general induction H.
+  - destruct DL; simpl in *; isabsurd.
+    inv Heql. unfold restr in H0. destruct o.
+    cases in H0. inv H0.
+    eauto using get. congruence.
+  - destruct DL; simpl in *; isabsurd.
+    inv Heql. edestruct IHget; eauto.
+    eauto using get.
+Qed.
+
+Lemma get_bounded L D
+: (forall n x, get L n (Some x) -> x ⊆ D)
+  -> bounded L D.
+Proof.
+  general induction L; simpl; isabsurd; eauto.
+  destruct a; eauto 50 using get.
+Qed.
+
+Lemma bounded_incl DL G G'
+: bounded DL G
+  -> G ⊆ G'
+  -> bounded DL G'.
+Proof.
+  intros. rewrite <- H0; eauto.
+Qed.
+
+Lemma restrict_disj (DL : 〔؟⦃var⦄〕) (s t : ⦃var⦄)
+  : (forall n u, get DL n (Some u) -> disj (s ∩ t) u)
+    -> restrict DL (s \ t) = restrict DL s.
+Proof.
+  general induction DL; simpl; eauto.
+  rewrite IHDL; eauto using get.
+  unfold restr. destruct a; eauto.
+  exploit H; eauto using get.
+  repeat cases; eauto.
+  - exfalso. rewrite COND in NOTCOND. cset_tac.
+  - exfalso. eapply NOTCOND.
+    intros a aIns.
+    cset_tac. eapply H0; eauto. cset_tac.
+Qed.
+
+
+Hint Resolve bounded_incl.

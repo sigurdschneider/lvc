@@ -195,10 +195,3 @@ Section LatticeTheory.
   Qed.
 End LatticeTheory.
 *)
-
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("." "Lvc")) ***
-*** End: ***
-*)

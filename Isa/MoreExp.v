@@ -22,7 +22,7 @@ Proof.
   erewrite omap_agree; eauto.
   intros. eapply exp_eval_agree; eauto.
   eapply agree_on_incl; eauto.
-  eapply incl_list_union; eauto using map_get_1. reflexivity.
+  eapply incl_list_union; eauto using map_get_1.
 Qed.
 
 Lemma exp_eval_live_agree E E' e lv v
@@ -48,17 +48,14 @@ Qed.
 
 Lemma omap_self_update E Z l
 :  omap (exp_eval E) (List.map Var Z) = ⎣l ⎦
-   -> E [Z <-- List.map Some l] ≡ E.
+   -> E [Z <-- List.map Some l] [-] E.
 Proof.
   general induction Z; simpl in * |- *.
   - reflexivity.
-  - monad_inv H; simpl.  specialize (IHZ E x0 EQ1).  hnf.  intros.  lud. 
-    +  congruence. 
-    +  rewrite IHZ.  reflexivity.
+  - monad_inv H; simpl.
+    eapply feq_transitive; [ clear_all; hnf; intros; subst; eauto | | eapply IHZ]; eauto.
+    hnf. intros. lud. rewrite IHZ; eauto. invc H; eauto.
+    (* This works, but it is really slow *)
+    (* rewrite (IHZ _ _ EQ1); eauto.
+    hnf; intros. lud. *)
 Qed.
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("../" "Lvc")) ***
-*** End: ***
-*)

@@ -77,7 +77,7 @@ Lemma inverse_on_lookup_list_eq {X} `{OrderedType X} {Y} `{OrderedType Y}
   -> @fpeq _ _ _eq _ _ (update_with_list (lookup_list ϱ Z) Z ϱ') ϱ'.
 Proof.
   general induction Z; simpl; eauto. split. reflexivity. eauto.
-  split. edestruct IHZ; eauto.
+  split. edestruct IHZ; try eapply H3; eauto.
   + hnf; intros. eapply H4; simpl; eapply add_2; eauto.
   + decompose records. erewrite H5; eauto. intro.
     lud. rewrite <- H3. rewrite e. reflexivity.
@@ -102,7 +102,7 @@ Global Instance inverse_on_morphism_full {X} `{OrderedType X} {Y} `{OrderedType 
   : Proper (Equal ==> (@fpeq X Y _eq _ _)==> (@fpeq Y X _eq _ _) ==> iff) inverse_on.
 Proof.
   unfold Proper, respectful, flip, impl; intros.
-  split; intros; eapply inverse_on_morphism; eauto.
+  split; intros; eapply inverse_on_morphism; try eapply H4; eauto.
   rewrite H1; reflexivity.
   destruct H2; split; eauto. symmetry; eauto. intuition.
   destruct H3; split; eauto. symmetry; eauto. intuition.
@@ -142,7 +142,7 @@ Proof.
   induction Z. exfalso.  simpl in i. eapply not_in_empty in i; eauto.
   simpl. lud. eapply H3; eauto. simpl. eapply union_3. intuition.
   eapply union_2; eauto. eapply IHZ. eapply injective_on_incl; eauto.
-  eapply incl_union_lr; eauto. reflexivity. simpl. intuition. simpl in i.
+  eapply incl_union_lr; eauto. simpl. intuition. simpl in i.
   eapply add_3; eauto. decide (a === x); eauto. exfalso. eapply H4.
   rewrite e; reflexivity.
 
@@ -158,7 +158,7 @@ Lemma inverse_on_union {X} `{OrderedType X} {Y} (f:X->Y) (g:Y->X) D D'
   -> inverse_on D' f g
   -> inverse_on (D ∪ D') f g.
 Proof.
-  intros. hnf; intros. cset_tac. destruct H2; eauto.
+  intros. hnf; intros. cset_tac.
 Qed.
 
 Lemma lookup_list_inverse_on {X} `{OrderedType X} {Y} `{OrderedType Y} f g
@@ -265,8 +265,8 @@ Proof.
   eapply add_iff in i; destruct i; isabsurd.
   eapply IHlength_eq; try eassumption.
   hnf; intros. exfalso; cset_tac; eauto.
-  hnf; intros. split; intros. cset_tac. eapply lookup_set_spec in H14; dcr.
-  cset_tac; intuition. intuition. cset_tac; intuition.
+  hnf; intros. eapply lookup_set_spec in H13; dcr.
+  cset_tac; intuition. intuition.
 
   erewrite update_with_list_no_update; eauto.
   erewrite update_with_list_no_update; eauto.
@@ -275,12 +275,12 @@ Proof.
   specialize (H4 (ϱ x)). cset_tac; intuition; eauto.
   eapply H7.
   eapply lookup_set_spec; cset_tac; intuition.
-  eexists x; eauto.
 Qed.
 
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("../" "Lvc")) ***
-*** End: ***
-*)
+Lemma inverse_on_dead_update X `{OrderedType X} Y `{OrderedType Y} (ra:X->Y) ira (x:X) (y:Y) s
+: inverse_on s (update ra x y) (update ira y x)
+  -> inverse_on (s \ singleton x) ra ira.
+Proof.
+  intros. hnf; intros. cset_tac; dcr.
+  specialize (H1 _ H3). lud; intuition.
+Qed.

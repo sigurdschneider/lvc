@@ -478,6 +478,16 @@ Proof.
   intros. general induction H; eauto using PIR2.
 Qed.
 
+Lemma PIR2_app' X Y (R:X->Y->Prop) L1 L2 L1' L2'
+: PIR2 R (L1 ++ L2) (L1' ++ L2')
+  -> length L1 = length L1'
+  -> PIR2 R (L1) (L1') /\ PIR2 R (L2) (L2').
+Proof.
+  intros P LEN. length_equify.
+  general induction LEN; simpl in *; eauto using PIR2.
+  inv P. exploit IHLEN; eauto. eauto using PIR2.
+Qed.
+
 Lemma PIR2_get X Y (R:X->Y->Prop) L L'
 : (forall n x x', get L n x -> get L' n x' -> R x x')
   -> length L = length L'
@@ -545,8 +555,52 @@ match goal with
     let X'' := fresh H in pose proof (PIR2_drop n H) as X''
 end.
 
-(*
-*** Local Variables: ***
-*** coq-load-path: (("../" "Lvc")) ***
-*** End: ***
-*)
+Section AIR21.
+  Variable X Y Z : Type.
+  Variable R : list X -> list Y -> Z -> Prop.
+
+  Inductive AIR21
+    : list X -> list Y -> list Z -> Prop :=
+  | AIR21_nil : AIR21 nil nil nil
+  | AIR21_cons x XL y (YL:list Y) z (ZL:list Z) (pf:R (x::XL) (y::YL) z)
+    : AIR21 XL YL ZL ->
+      AIR21 (x::XL) (y::YL) (z::ZL).
+
+  Lemma AIR21_nth XL YL ZL l blkx :
+    AIR21 XL YL ZL
+    -> get XL l blkx
+    -> exists (blky:Y) (blkz:Z),
+      get YL l blky /\ get ZL l blkz /\ R (drop l XL) (drop l YL) blkz.
+  Proof.
+    intros. general induction H; isabsurd.
+    inv H0. eexists; eauto using get.
+    edestruct IHAIR21 as [blk [A B]]; eauto; dcr.
+    do 2 eexists; repeat split; eauto using get.
+  Qed.
+
+  Lemma AIR21_drop XL YL ZL n
+    : AIR21 XL YL ZL -> AIR21 (drop n XL) (drop n YL) (drop n ZL).
+  Proof.
+    general induction n; simpl; eauto.
+    inv H; simpl; eauto using AIR2.
+  Qed.
+
+End AIR21.
+
+Ltac provide_invariants_21 :=
+match goal with
+  | [ H : AIR21 ?R ?A ?B ?C, H' : get ?A ?n ?b |- _ ] =>
+    let X := fresh H in
+    destruct (AIR21_nth H H') as [? [? [? [? X]]]]; eauto; inv X;
+    repeat get_functional; (try subst);
+    let X'' := fresh H in pose proof (AIR21_drop n H) as X'';
+    match goal with
+      | [ H'' : ?x :: ?DL = drop ?n ?Lv |- _ ] =>
+        (try rewrite <- H'' in X'');
+          let X' := fresh H in
+          pose proof (get_drop_eq H' H'') as X'; inv X'; try clear X'
+    end
+end.
+
+
+Hint Extern 20 (PIR2 _ ?a ?a') => progress (first [has_evar a | has_evar a' | reflexivity]).
