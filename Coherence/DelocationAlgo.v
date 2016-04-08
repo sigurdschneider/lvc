@@ -77,6 +77,22 @@ Proof.
   cases in H; eauto.
 Qed.
 
+Lemma keep_None n m AP x
+  : get (keep n AP) m x -> n <> m -> x = None.
+Proof.
+  intros. edestruct (mapi_get _ _ H) as [y [A B]].
+  cases in B; congruence.
+Qed.
+
+Lemma keep_get AP n m x
+  : get (keep n AP) m (Some x) -> get AP m x /\ n = m.
+Proof.
+  intros.
+  edestruct (mapi_get _ _ H) as [y [A B]].
+  cases in B; inv B; eauto.
+Qed.
+
+
 Definition oto_list {X} `{OrderedType X} (s:option (set X)) :=
   match s with Some s => to_list s | None => nil end.
 
@@ -407,7 +423,7 @@ Local Hint Extern 20 => rewrite <- live_globals_zip; eauto with len : rew.
 
 Lemma computeParametersF_length DL ZL AP F als k
   : (forall n Zs a, get F n Zs -> get als n a ->
-               live_sound Imperative (Liveness.live_globals F als ++ pair ⊜ DL ZL) (snd Zs) a)
+               live_sound Imperative (pair ⊜ (getAnn ⊝ als) (fst ⊝ F) ++ pair ⊜ DL ZL) (snd Zs) a)
     -> k = ❬getAnn ⊝ als ++ DL❭
     -> length F = length als
     -> length AP = length DL
@@ -432,11 +448,7 @@ Lemma PIR2_ifSndR_Subset_left X `{OrderedType X} A B C
 Proof.
   intros. general induction H1; simpl in *.
   + inv H0. econstructor.
-  + inv H0. inv pf0.
-    - econstructor.
-      * econstructor.
-      * eauto.
-    - econstructor; eauto. econstructor; cset_tac; intuition.
+  + inv H0. inv pf0; eauto using @PIR2, @ifSndR with cset.
 Qed.
 
 
@@ -449,8 +461,7 @@ Proof.
   general induction H0.
   - inv H1; econstructor.
   - inv H1.
-    inv pf; inv pf0; simpl;
-    now (econstructor; [econstructor; eauto with cset | eauto]).
+    inv pf; inv pf0; eauto using @PIR2, @ifSndR with cset.
 Qed.
 
 Lemma ifSndR_fold_zip_ounion X `{OrderedType X} A B C
@@ -470,9 +481,9 @@ Lemma ifSndR_zip_addAdd s DL A B
 Proof.
   intros. eapply length_length_eq in H.
   general induction H; inv H0; simpl.
-  + constructor.
-  + econstructor; eauto.
-    - inv pf; simpl; econstructor.
+  - constructor.
+  - econstructor; eauto.
+    + inv pf; simpl; econstructor.
       * cset_tac; intuition.
 Qed.
 
@@ -731,7 +742,7 @@ Proof.
     edestruct (mapi_get _ _ GET) as [x [ H]]; eauto; subst.
     cases; eauto.
   - edestruct IHIC; eauto with len.
-  - simpl in *. eapply get_drop in GET. inv_get.
+  - simpl in *. inv_get.
     rewrite <- zip_app in H1; eauto with len. inv_get.
     rewrite live_globals_zip in H5; eauto with len.
     rewrite <- zip_app in eq; eauto with len.
@@ -743,7 +754,7 @@ Proof.
           (computeParameters ((getAnn ⊝ als ++ DL) \\ (fst ⊝ F ++ ZL))
                              (fst ⊝ F ++ ZL) (tab {} ‖F‖ ++ AP) (snd Zs) alv)) (❬F❭ + n))
       as [pF GETpF].
-    rewrite H6. eapply get_range in H2. eauto.
+    rewrite H6. eapply get_range in H2. rewrite app_length, map_length. omega.
     edestruct IHIC1; try eapply GETpF; eauto using pair_eta.
     eauto with len. eauto with len. subst.
     Rexploit (get_olist_union_A _ _ GETpF GET _).
@@ -755,13 +766,13 @@ Proof.
     eapply computeParametersF_length; eauto. rewrite live_globals_zip; eauto.
     rewrite <- live_globals_zip; eauto.
     edestruct H8; subst. simpl. eauto.
-  - simpl in *. eapply get_drop in GET. inv_get.
+  - simpl in *. inv_get.
     rewrite <- zip_app in H; eauto with len. inv_get.
     rewrite live_globals_zip in H1; eauto with len.
     rewrite <- zip_app in eq; [| eauto with len].
     exploit computeParameters_length; eauto. eauto with len. eauto with len.
-    destruct (@get_in_range _ b (❬F❭ + n)) as [pF GETpF]. rewrite H4.
-    eapply get_range; eauto .
+    destruct (@get_in_range _ b (❬F❭ + n)) as [pF GETpF].
+    rewrite H4, app_length, map_length. exploit (get_range H0). omega.
     edestruct IHIC; eauto. eauto with len. eauto with len. subst.
     Rexploit (get_olist_union_b GETpF GET _).
     rewrite H4.
@@ -837,7 +848,7 @@ Proof.
       rewrite <- H1. rewrite <- H6. reflexivity.
   - eapply get_bounded; intros.
     inv_get; subst. destruct x1; simpl in *; try congruence.
-    invc EQ. assert (n = labN l) by admit; subst n.
+    invc EQ. edestruct keep_get; eauto; subst.
     repeat get_functional. unfold lminus. rewrite H0. cset_tac.
   - eapply get_bounded; intros; inv_get; simpl in *; congruence.
   - exploit IHLS; eauto using addParam_zip_lminus_length.
@@ -852,9 +863,8 @@ Proof.
     + revert NOTCOND; clear_all; intros; hnf; intros; cset_tac.
   - lnorm.
     eapply get_bounded. intros. inv_get.
-    destruct x1; inv EQ.
-    eapply get_drop in H4. inv_get.
-    destruct x0; inv EQ0. unfold lminus at 1.
+    get_functional.
+    destruct x3; invc EQ.
     exploit IHLS; eauto with len.
     exploit bounded_get; eauto.
     eapply zip_get_eq. rewrite zip_app.
@@ -1029,14 +1039,6 @@ Proof.
 Qed.
  *)
 
-Lemma keep_get l AP s
-: get AP (counted l) s ->
-  get (keep l AP) (counted l) (Some s).
-Proof.
-  intros.
-  exploit (get_mapi (fun (n : nat) (x : set var) => if [n = counted l] then ⎣x ⎦ else ⎣⎦) H); eauto.
-  cases in H0; eauto.
-Qed.
 
 Lemma restrict_get L s t n
 : get L n (Some s)
