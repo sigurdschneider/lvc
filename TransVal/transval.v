@@ -1,7 +1,7 @@
 Require Import List Arith.
-Require Import IL Annotation AutoIndTac Bisim Exp MoreExp Coherence Fresh Util.
+Require Import IL Annotation AutoIndTac Exp MoreExp RenamedApart Fresh Util.
 Require Import SetOperations Sim Var.
-Require Import bitvec smt nofun noGoto freeVars CombineEnv.
+Require Import bitvec smt nofun freeVars CombineEnv.
 Require Import Compute Guards ILFtoSMT tvalTactics TUtil GuardProps ComputeProps.
 
 (** Function Definitions **)
@@ -12,7 +12,7 @@ smtAnd (translateStmt s source) (translateStmt t target).
 (** Lemmata **)
 Lemma freeVars_incl:
   forall s D Ds Ds' p,
-    ssa s D
+    renamedApart s D
     -> noFun s
     -> pe (getAnn D) (Ds, Ds')
     -> freeVars (translateStmt s p) ⊆ Ds'.

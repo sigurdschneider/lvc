@@ -3,7 +3,7 @@ Require Import smt Guards IL.
 Fixpoint translateStmt (s:stmt) (p:pol) :smt :=
 match s, p with
 (*let x = e in s' *)
-| stmtExp x e s', _
+| stmtLet x e s', _
   =>  let smt' := translateStmt s' p in
         let res := smtAnd (constr (Var x) e) smt'  in
         guardGen (undef e) p res
@@ -14,14 +14,14 @@ match s, p with
         let res := ite e s' t' in
         guardGen (undef e) p res
 (* fun f x = t in s *)
-|  stmtLet x  t s, _ => smtFalse
+|  stmtFun x t, _ => smtFalse
 (* extern ?? *)
 |  stmtExtern x f Y s, _ => smtFalse
 (* f e, s*)
-| stmtGoto f e, source
+| stmtApp f e, source
   =>  guardGen (undefLift e) p (funcApp (labInc f 1) e)
 (* f e, t *)
-| stmtGoto f e, target
+| stmtApp f e, target
   =>  guardGen (undefLift e) p ( smtNeg (funcApp (labInc f 1) e ))
 (* value statement *)
 | stmtReturn e, source

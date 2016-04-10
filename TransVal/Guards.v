@@ -12,7 +12,7 @@ Lemma models_combine F E a b
 : models F E (combine a b) <-> models F E (smtAnd a b).
 
 Proof.
-  unfold combine. repeat (destruct if; subst); simpl; intuition.
+  unfold combine. repeat (cases; subst); simpl; intuition.
 Qed.
 
 (** Function to generate the guard expression for one expression **)
@@ -45,13 +45,13 @@ Lemma models_guardGen_source F E s cont
 : models F E (guardGen s source cont) <-> models F E (smtAnd s cont).
 
 Proof.
- unfold guardGen; destruct if; subst; simpl; intuition.
+ unfold guardGen; cases; subst; simpl; intuition.
 Qed.
 
 Lemma models_guardGen_target F E s cont
 : models F E (guardGen s target cont) <-> models F E (smtImp s cont).
 Proof.
- unfold guardGen; destruct if; subst; simpl; intuition.
+ unfold guardGen; cases; subst; simpl; intuition.
 Qed.
 
 Lemma freeVars_undef :
@@ -61,7 +61,8 @@ a ∈ freeVars (undef e)
 
 Proof.
   intros. general induction e; simpl in * |- *; cset_tac; intuition.
-  - repeat (destruct if in H; unfold combine in *; simpl in *; cset_tac); eauto; intuition.
+  - repeat (cases in H; unfold combine in *; simpl in *; cset_tac); eauto; intuition.
+    repeat (cases in H0; simpl in *;  cset_tac; eauto).
 Qed.
 
 Lemma freeVars_undefLift:
@@ -72,14 +73,7 @@ forall a el,
 Proof.
   intros a el inclFV.
   general induction el; simpl in * |- *; eauto.
-  - unfold list_union. simpl in *.
-    eapply list_union_start_swap.
+  - simpl in *. eapply list_union_start_swap.
     unfold combine in *.
-    repeat (destruct if in inclFV); simpl in *; cset_tac; intuition (eauto using freeVars_undef).
+    repeat (cases in inclFV); simpl in *; cset_tac; intuition (eauto using freeVars_undef).
 Qed.
-
-  (*
-  *** Local Variables: ***
-  *** coq-load-path: (("../" "Lvc")) ***
-  *** End: ***
-  *)

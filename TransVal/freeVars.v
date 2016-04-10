@@ -42,12 +42,10 @@ intros agree; general  induction s; simpl in *; try reflexivity.
 - rewrite (IHs1 F E E'), (IHs2 F E E'); try reflexivity; setSubst2 agree.
 - assert (exp_eval (to_partial E) e = exp_eval (to_partial E') e). {
     eapply exp_eval_agree; symmetry; eauto.
-    eapply agree_on_partial. eapply agree_on_incl; eauto. cset_tac; intuition.
-  }
+    eapply agree_on_partial. eapply agree_on_incl; eauto.  }
   assert (exp_eval (to_partial E) e0 = exp_eval (to_partial E') e0). {
     eapply exp_eval_agree; symmetry; eauto.
-    eapply agree_on_partial. eapply agree_on_incl; eauto. cset_tac; intuition.
-  }
+    eapply agree_on_partial. eapply agree_on_incl; eauto.  }
   unfold smt_eval in *.
   rewrite <- H; rewrite <- H0.
   unfold val2bool.
@@ -65,15 +63,14 @@ intros agree; general  induction s; simpl in *; try reflexivity.
       eapply agree_on_partial.
       simpl in agree.
       eapply (agree_on_incl (bv:=Exp.freeVars a)(lv:=list_union (Exp.freeVars a:: List.map Exp.freeVars a0))); eauto.
-      cset_tac; unfold list_union; simpl;
+      cset_tac; simpl.
       eapply list_union_start_swap.
       cset_tac; eauto. }
       { rewrite H. f_equal. eapply IHa; eauto.
         eapply (agree_on_incl (bv:=list_union (List.map Exp.freeVars a0))
                (lv:=list_union (List.map Exp.freeVars (a::a0)))); eauto.
-        unfold list_union. cset_tac; simpl.
+        cset_tac; simpl.
         eapply list_union_start_swap.
-        unfold list_union.
         eapply union_right; eauto. }
   + rewrite H.  split; eauto.
 Qed.
@@ -88,14 +85,14 @@ Lemma exp_freeVars_list_agree (E: onv val) e el:
 Proof.
   intros. split;
   intros; specialize (H x); destruct H; eauto;
-    unfold list_union; simpl;
+    simpl;
     eapply list_union_start_swap;
     cset_tac; eauto.
 Qed.
 
 
 Lemma exp_freeVars_bin_agree (E:onv val) a b:
-  (forall x, x ∈ (Exp.freeVars a ++ Exp.freeVars b) -> exists v, E x = Some v)
+  (forall x, x ∈ (union (Exp.freeVars a) (Exp.freeVars b)) -> exists v, E x = Some v)
     ->(forall x, x ∈ Exp.freeVars a -> (exists v, E x = Some v)) /\
       (forall x, x ∈ Exp.freeVars b -> exists v, E x = Some v).
 
@@ -103,9 +100,3 @@ Proof.
   intros.
   split; intros; specialize (H x); destruct H; cset_tac; eauto.
 Qed.
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("../" "Lvc")) ***
-*** End: ***
-*)

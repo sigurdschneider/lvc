@@ -1,5 +1,5 @@
-Require Import IL Annotation AutoIndTac Bisim Exp MoreExp Coherence.
-Require Import Fresh Util SetOperations Sim Var.
+Require Import IL Annotation AutoIndTac Exp MoreExp Coherence.
+Require Import Util SetOperations Var.
 
 Tactic Notation "setSubst" hyp(A) :=
   hnf in A; simpl in A; cset_tac; eapply A.
@@ -11,7 +11,7 @@ Tactic Notation "destructBin" hyp(A) :=
   destruct A; try destruct A; try destruct A; try destruct A;  try destruct A; try destruct A.
 
 Tactic Notation "setSubstUnion" hyp(A) :=
-  intros; eapply A; unfold list_union; simpl;
+  intros; eapply A; simpl;
   eapply list_union_start_swap; cset_tac; eauto.
 
 Tactic Notation "rwsimpl" hyp(R) hyp(H) :=
@@ -19,9 +19,3 @@ Tactic Notation "rwsimpl" hyp(R) hyp(H) :=
 
 Tactic Notation "rwsimplB" hyp (R) hyp (H) :=
   rewrite <- R in H; simpl in H.
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("../" "Lvc")) ***
-*** End: ***
-*)

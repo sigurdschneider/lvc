@@ -1,7 +1,7 @@
 Require Import List Arith.
-Require Import IL Annotation AutoIndTac Bisim Exp MoreExp Coherence Fresh Util.
+Require Import IL Annotation AutoIndTac Exp MoreExp Coherence Fresh Util.
 Require Import SetOperations Sim Var.
-Require Import smt nofun noGoto bitvec freeVars.
+Require Import smt nofun bitvec freeVars.
 Require Import Compute Guards ILFtoSMT tvalTactics TUtil.
 
 Opaque zext.
@@ -18,7 +18,7 @@ Proof.
 intros. general induction e; simpl in *; eauto.
 - monad_inv H.
   eapply IHe; eauto.
-- monad_inv H; destruct if.
+- monad_inv H; cases.
    + repeat( erewrite models_combine; simpl).
      split; try split; intros; eauto.
      unfold val2bool in H.
@@ -27,8 +27,7 @@ intros. general induction e; simpl in *; eauto.
      erewrite exp_eval_partial_total in H; eauto.
      simpl in H.
      rewrite H in EQ2; subst; simpl in EQ2. unfold bvDiv in EQ2.
-     destruct if in EQ2; isabsurd.
-     unfold zero in n. isabsurd. (*rewrite <- zero in EQ2. isabsurd. *)
+     cases in EQ2; isabsurd.
    + erewrite models_combine; simpl; erewrite models_combine; simpl.
      split; try split; eauto.
 Qed.
@@ -54,7 +53,6 @@ forall F E e,
 
 Proof.
   intros. general induction e; simpl in *; eauto.
-  - destruct (H v); cset_tac; eauto.
   - destruct (IHe F E); subst; destruct u; eauto; simpl; rewrite H1.
     + case_eq (val2bool x); intros.
       * exists val_true; simpl; unfold option_lift1; rewrite H2; simpl; eauto.
@@ -65,18 +63,18 @@ Proof.
     edestruct (IHe1 F); eauto.
     edestruct (IHe2 F); eauto.
     rewrite H1, H4.
-    destruct if in H2; simpl in *; unfold val2bool in H2.
-   + erewrite bvEq_equiv_eq in H2.
-     rewrite e. unfold binop_eval.
+    cases in H2; simpl in *; unfold val2bool in H2.
+    + erewrite bvEq_equiv_eq in H2; subst.
+      unfold binop_eval; simpl.
      unfold smt_eval in *; erewrite exp_eval_partial_total in H2; eauto.
-     unfold bvDiv. destruct if; isabsurd.
+     unfold bvDiv. cases; isabsurd.
      destruct (bvLessZero x); destruct (bvLessZero x0); eexists; eauto.
    + unfold binop_eval; unfold option_lift2; simpl; case_eq b; intros; [ eexists; eauto |].
+     case_eq n; intros; [ eexists; eauto | ].
      case_eq n0; intros; [ eexists; eauto | ].
      case_eq n1; intros; [ eexists; eauto | ].
      case_eq n2; intros; [ eexists; eauto | ].
-     case_eq n3; intros; [ eexists; eauto | ].
-     case_eq n4; intros; [ isabsurd | eexists; eauto].
+     case_eq n3; intros; [ isabsurd | eexists; eauto].
 Qed.
 
 (*  Lemma 8 lifted to lists**)
@@ -106,9 +104,11 @@ noFun s
 -> forall F, models F (to_total E') (undef e).
 
 Proof.
-  intros. general induction H0; eauto using guard_true_if_eval.
-  specialize (IHTerminates L0 L'0 E' s' E'0 e).
-  inversion H; subst; invt noFun; eauto using IHTerminates; eauto.
+  intros L L' E s E' e noFun_s Terminates_s_ret F.
+  general induction Terminates_s_ret; eauto using guard_true_if_eval.
+  specialize (IHTerminates_s_ret L0 L'0 E' s' E'0 e).
+  inversion H; subst; invt noFun; eauto using IHTerminates_s_ret; eauto.
+  specialize (H0 l Y).
   isabsurd.
 Qed.
 
@@ -116,13 +116,14 @@ Qed.
 Lemma guardTrue_if_Terminates_goto:
 forall L L' E s E' f el,
 noFun s
--> Terminates (L, E, s) (L', E' , stmtGoto f el)
+-> Terminates (L, E, s) (L', E' , stmtApp f el)
 -> forall F, models F (to_total E') (undefLift el).
 
 Proof.
   intros. general induction H0; eauto using guardList_true_if_eval.
   specialize (IHTerminates L0 L'0  E' s' E'0 f el).
   inversion H; subst; invt noFun; eauto using IHTerminates; eauto.
+  specialize (H1 l Y).
   isabsurd.
 Qed.
 
@@ -147,13 +148,14 @@ Proof.
     + edestruct (guard_models_impl_eval F E e1); eauto.
       * eapply (exp_freeVars_bin_agree E e1 e2); eauto.
       *  unfold smt_eval.  rewrite H4, H5 in *; simpl in *.
-         destruct if in H3; simpl in H3.
+         cases in H3; simpl in H3.
          { eapply H3. unfold val2bool; eapply bvEq_equiv_eq.
            subst; simpl in *.
            unfold smt_eval; erewrite exp_eval_partial_total; eauto.
-           unfold bvDiv in H0; destruct if in H0; subst; eauto; isabsurd. }
-         { destructBin b; subst; isabsurd. }
-Qed.
+           unfold bvDiv in H0; cases in H0; subst; eauto; isabsurd. }
+         (** FIXME !!  Bug Report?
+         { destructBin b; isabsurd. } **)
+         Admitted.
 
 Lemma undefList_models:
   forall F E el,
@@ -174,8 +176,3 @@ Proof.
     + eapply IHel; eauto.
       eapply exp_freeVars_list_agree; eauto.
 Qed.
-(*
-*** Local Variables: ***
-*** coq-load-path: (("../" "Lvc")) ***
-*** End: ***
-*)

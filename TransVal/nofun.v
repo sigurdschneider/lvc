@@ -3,13 +3,13 @@ Require Import IL Compute.
 Inductive noFun : stmt->Prop :=
 |noFunLet x e s :
  noFun s
- -> noFun (stmtExp x e s)
+ -> noFun (stmtLet x e s)
 |noFunIf e s t :
  noFun s
  -> noFun t
  -> noFun (stmtIf e s t)
 |noFunCall l Y :
- noFun (stmtGoto l Y)
+ noFun (stmtApp l Y)
 |noFunExp e :
  noFun (stmtReturn e).
 
@@ -23,23 +23,22 @@ noFun s
         Terminates (L, E, s)(L, E', s') \/ Crash (L, E, s) (L, E', s').
 
 Proof.
-intros.
-general induction H.
+intros E s noFun_s; general induction noFun_s.
 -  case_eq (exp_eval E e); intros.
-   + destruct (IHnoFun (E[x<- Some v])) as [E' [s' termcrash]].
+   + destruct (IHnoFun_s (E[x<- Some v])) as [E' [s' termcrash]].
      exists E'; exists s'; intros.
      destruct (termcrash L) as [ term | crash].
      * left. econstructor; eauto.
               { econstructor; eauto. }
               { intros. hnf; isabsurd. }
      * right. econstructor; eauto; try  econstructor; eauto; intros; isabsurd.
-   + exists E; exists (stmtExp x e s); intros.
+   + exists E; exists (stmtLet x e s); intros.
        right. econstructor; eauto; intros; try hnf; try isabsurd.
-       intros. unfold reducible2 in H1.  destruct H1. destruct H1.
+       intros. unfold reducible2 in H0. destruct H0 as [y [σ' H0]].
        isabsurd.
 - case_eq (exp_eval E e); intros.
   + case_eq (val2bool v); intros.
-    * destruct (IHnoFun1 E) as [E' [s' termcrash]].
+    * destruct (IHnoFun_s1 E) as [E' [s' termcrash]].
       exists E'; exists s'; intros.
       destruct (termcrash L) as [term | crash].
       { left. econstructor; eauto.
@@ -47,7 +46,7 @@ general induction H.
        - hnf; intros; isabsurd. }
       { right. econstructor; eauto. econstructor; eauto.
       intros; isabsurd. }
-    * destruct (IHnoFun2 E) as [E' [s' termcrash]];
+    * destruct (IHnoFun_s2 E) as [E' [s' termcrash]];
       exists E'; exists s'; intros.
       destruct (termcrash L) as [ term | crash ].
       { left. econstructor; eauto.
@@ -57,11 +56,11 @@ general induction H.
       intros; isabsurd. }
   +  exists E; exists (stmtIf e s t).
             right. econstructor; eauto; intros; try hnf; try isabsurd.
-            intros. unfold reducible2 in H2. destruct H2. destruct H2.
+            intros. unfold reducible2 in H0. destruct H0 as [y [σ' H0]].
             isabsurd.
 - case_eq (omap (exp_eval E) Y); intros.
-  + exists E; exists (stmtGoto l Y); left; econstructor; eauto.
-  + exists E; exists (stmtGoto l Y); right.
+  + exists E; exists (stmtApp l Y); left; econstructor; eauto.
+  + exists E; exists (stmtApp l Y); right.
            econstructor; eauto; intros; try hnf; try isabsurd.
 - case_eq (exp_eval E e).
   + exists E; exists (stmtReturn e).
