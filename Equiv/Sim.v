@@ -901,7 +901,7 @@ Proof.
     eapply plus2_destr_nil in H3.
     destruct H2; destruct H3; dcr. inv H3.
     simpl in *. inv H5; simpl in *.
-    simpl_get_drop; repeat get_functional; subst blk0 blk1.
+    simpl_get_drop; repeat get_functional. (*FIXME subst blk0 blk1.*)
     simpl_minus.
     pfold. econstructor; try eapply star2_plus2.
     econstructor; eauto. eauto.
@@ -913,7 +913,7 @@ Proof.
       * exfalso. destruct H5 as [? [? ?]]. inv H5.
       * inv H9; inv H12; simpl in *.
         pfold. subst yl yl0.
-        simpl_get_drop; repeat get_functional; subst blk0 blk1.
+        simpl_get_drop; repeat get_functional. (*FIXME: subst blk0 blk1.*)
         simpl_minus.
         econstructor; try eapply star2_plus2.
         econstructor; eauto using get_drop_lab0, drop_get_lab0. eauto.
@@ -928,7 +928,7 @@ Proof.
     + inv H6.
       pfold. econstructor 3; try eapply H2; eauto.
       destruct yl; isabsurd.
-      simpl in *. simpl_get_drop. repeat get_functional; subst blk0.
+      simpl in *. simpl_get_drop. repeat get_functional. (* FIXME: subst blk0*)
       eapply (S_star2 EvtTau).
       econstructor; eauto using get_drop_lab0, drop_get_lab0.
       eauto. rewrite drop_drop in H8. simpl_minus. simpl in *. eauto.
@@ -940,17 +940,17 @@ Proof.
       simpl. simpl_get_drop. eauto.
     + inv H8. inv H4; simpl in *.
       * pfold. subst. econstructor 3; try eapply H2; eauto.
-        simpl in *. simpl_get_drop. repeat get_functional; subst blk0.
+        simpl in *. simpl_get_drop. repeat get_functional. (*FIXME: subst blk0.*)
         eapply (S_star2 EvtTau).
         econstructor; eauto using get_drop_lab0, drop_get_lab0.
         eauto. rewrite drop_drop in H8. simpl_minus. simpl in *. eauto.
       * inv H11.
         pfold. econstructor 4; try eapply H2; eauto.
-        simpl in *. simpl_get_drop. repeat get_functional; subst blk0.
+        simpl in *. simpl_get_drop. repeat get_functional. (* FIXME: subst blk0*)
         eapply (S_star2 EvtTau).
         econstructor; eauto using get_drop_lab0, drop_get_lab0.
         eauto. rewrite drop_drop in H8. simpl_minus. simpl in *. eauto.
-        simpl in *. simpl_get_drop. repeat get_functional; subst blk0.
+        simpl in *. simpl_get_drop. repeat get_functional. (* FIXME: subst blk0.*)
         eapply (S_star2 EvtTau).
         econstructor; eauto using get_drop_lab0, drop_get_lab0. subst.
         eauto. rewrite drop_drop in H8. simpl_minus. simpl in *. eauto.
