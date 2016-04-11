@@ -459,6 +459,7 @@ Inductive additionalParameters_live : list (list var)   (* additional params *)
     -> (forall Zs lv a n, get F n Zs -> get ans_lv n lv -> get ans n a ->
                     additionalParameters_live (Za ++ ZL) (snd Zs) lv a)
     -> additionalParameters_live (Za ++ ZL) t ant_lv ant
+    -> length Za = length F
     -> additionalParameters_live ZL (stmtFun F t) (annF lv ans_lv ant_lv) (annF Za ans ant).
 
 
@@ -511,8 +512,10 @@ Proof.
       unfold compileF in H4. inv_zip H4. inv_zip H7. simpl.
       exploit H2; eauto. exploit H9; eauto. dcr.
       split.
-      * rewrite of_list_app. rewrite H17. rewrite H18 at 1.
+      * rewrite of_list_app.
+        get_functional. simpl in *. inv_get. simpl in *; clear_trivial_eqs.
+        rewrite H18. exploit H13; eauto. rewrite H7.
         clear_all; cset_tac; intuition.
       * cases; eauto. rewrite of_list_app.
-        rewrite <- minus_union. rewrite H21. eauto.
+        rewrite <- minus_union. rewrite <- H22. eauto.
 Qed.
