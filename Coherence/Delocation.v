@@ -429,7 +429,7 @@ Proof.
       eapply oglobals_compileF_mkGlobals_PIR2; eauto.
 Qed.
 
-Inductive additionalParameters_live : list (list var)   (* additional params *)
+Inductive additionalParameters_live : list (set var)   (* additional params *)
                                       -> stmt           (* the program *)
                                       -> ann (set var)  (* liveness *)
                                       -> ann (list (list var)) (* additional params *)
@@ -445,7 +445,7 @@ Inductive additionalParameters_live : list (list var)   (* additional params *)
     :  additionalParameters_live ZL (stmtReturn e) (ann0 lv) (ann0 nil)
 | additionalParameters_liveGoto ZL Za f Y lv
   : get ZL (counted f) Za
-    -> of_list Za ⊆ lv
+    -> Za ⊆ lv
     -> additionalParameters_live ZL (stmtApp f Y) (ann0 lv) (ann0 nil)
 | additionalParameters_liveExtern ZL x f Y s an an_lv lv
   : additionalParameters_live ZL s an_lv an
@@ -453,12 +453,12 @@ Inductive additionalParameters_live : list (list var)   (* additional params *)
                                 (stmtExtern x f Y s)
                                 (ann1 lv an_lv)
                                 (ann1 nil an)
-| additionalParameters_liveLet ZL F t Za ans ant lv ans_lv ant_lv
+| additionalParameters_liveLet ZL F t (Za:〔〔var〕〕) ans ant lv ans_lv ant_lv
   : (forall Za' lv Zs n, get F n Zs -> get ans_lv n lv -> get Za n Za' ->
        of_list Za' ⊆ getAnn lv \ of_list (fst Zs))
     -> (forall Zs lv a n, get F n Zs -> get ans_lv n lv -> get ans n a ->
-                    additionalParameters_live (Za ++ ZL) (snd Zs) lv a)
-    -> additionalParameters_live (Za ++ ZL) t ant_lv ant
+                    additionalParameters_live (of_list ⊝ Za ++ ZL) (snd Zs) lv a)
+    -> additionalParameters_live ((of_list ⊝ Za) ++ ZL) t ant_lv ant
     -> length Za = length F
     -> additionalParameters_live ZL (stmtFun F t) (annF lv ans_lv ant_lv) (annF Za ans ant).
 
@@ -481,7 +481,7 @@ Qed.
 Lemma live_sound_compile DL ZL AL s ans_lv ans o
   (RD:trs AL ZL s ans_lv ans)
   (LV:live_sound o DL s ans_lv)
-  (APL: additionalParameters_live ZL s ans_lv ans)
+  (APL: additionalParameters_live (of_list ⊝ ZL) s ans_lv ans)
   : live_sound o (zip (fun s t => (fst s, snd s ++ t)) DL ZL) (compile ZL s ans) ans_lv.
 Proof.
   general induction LV; inv RD; inv APL; eauto using live_sound.
@@ -494,28 +494,26 @@ Proof.
     rewrite of_list_app. cset_tac. intuition. eauto.
     erewrite get_nth; eauto. eauto with len.
     erewrite get_nth; eauto.
-    intros ? ? GET. eapply get_app_cases in GET. destruct GET; dcr; eauto.
-    edestruct map_get_4; eauto; dcr; subst. econstructor.
-    rewrite <- H9. eauto using get_in_of_list.
-  - simpl. econstructor; eauto.
+    intros ? ? GET. inv_get; simpl in *; clear_trivial_eqs.
+    eapply get_app_cases in GET. destruct GET; dcr; eauto. inv_get.
+    econstructor. rewrite <- H9. eauto using get_in_of_list.
+  - rewrite <- map_app in H20. rewrite <- map_app in H19.
+    simpl. econstructor; eauto.
     + exploit IHLV; eauto.
       eapply live_sound_monotone; eauto.
       eapply live_globals_compileF_PIR2; eauto.
     + unfold compileF. eauto with len.
     + intros.
-      unfold compileF in H4. inv_zip H4. inv_zip H7.
-      simpl.
+      unfold compileF in H4. inv_get. simpl.
       exploit H1; eauto.
       eapply live_sound_monotone; eauto.
       eapply live_globals_compileF_PIR2; eauto.
     + intros.
-      unfold compileF in H4. inv_zip H4. inv_zip H7. simpl.
-      exploit H2; eauto. exploit H9; eauto. dcr.
+      unfold compileF in H4. inv_get; simpl.
+      exploit H2; eauto. exploit H13; eauto. dcr.
       split.
       * rewrite of_list_app.
-        get_functional. simpl in *. inv_get. simpl in *; clear_trivial_eqs.
-        rewrite H18. exploit H13; eauto. rewrite H7.
-        clear_all; cset_tac; intuition.
+        rewrite H10, H9. eauto with cset.
       * cases; eauto. rewrite of_list_app.
-        rewrite <- minus_union. rewrite <- H22. eauto.
+        rewrite <- minus_union. rewrite <- H11. eauto with cset.
 Qed.
