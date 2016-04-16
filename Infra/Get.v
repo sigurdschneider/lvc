@@ -417,3 +417,9 @@ Proof.
   - simpl in *. inv H0. omega. simpl in *.
     eapply IHL1; eauto. omega.
 Qed.
+
+Hint Extern 5 =>
+match goal with
+| [ H : ❬?A❭ = ❬?B❭, H' : ❬?C❭ = ❬?B❭, H'' : get ?A ?n _  |- ?n < ❬?C❭]
+  => rewrite H'; rewrite <- H; eapply (get_range H'')
+end : len.

@@ -328,17 +328,7 @@ Proof.
       inv_get. simpl in *.
       rewrite H20; split; eauto.
       edestruct H2; eauto; dcr.
-      Hint Extern 5 => match goal with
-                      | [ H : ❬?A❭ = ❬?B❭, H' : ❬?C❭ = ❬?B❭, H'' : get ?A ?n _  |- ?n < ❬?C❭]
-                        => rewrite H'; rewrite <- H; eapply (get_range H'')
-                      end : len.
-      simpl. eapply zip_length_lt_ass. eauto with len.
-      eapply map_length_lt_ass_right. eauto with len.
-
-      simpl. eauto 20 with len.
-      debug eauto 2 with len.
-      unfold . rewrite zip_length2. eapply get_range; eauto.
-      congruence.
+      simpl. eauto with len.
 Qed.
 
 Fixpoint mapAnn2 X X' Y (f:X -> X' -> Y) (a:ann X) (b:ann X') : ann Y :=
@@ -415,105 +405,96 @@ Proof.
   inv H0; simpl. rewrite H, H1. reflexivity.
 Qed.
 
+Local Hint Extern 0 => pe_rewrite_step : cset.
+
+Hint Resolve meet1_incl : cset.
+
 Lemma live_sound_renamedApart_minus s ang DL alv i
 : renamedApart s ang
   -> live_sound i DL s alv
-  -> bounded (live_globals DL) (fst (getAnn ang))
+  -> bounded (live_global ⊝ DL) (fst (getAnn ang))
   -> live_sound i DL s (mapAnn2 meet1 alv ang).
 Proof.
   intros RA LS. general induction RA; invt live_sound; simpl in * |- *; pe_rewrite;
                 eauto using live_sound, live_exp_sound_meet.
   - econstructor; eauto using live_exp_sound_meet.
-    eapply IHRA; eauto using disjoint_let, bounded_incl with cset ann.
-    + erewrite getAnn_mapAnn2; eauto using live_sound_annotation, renamedApart_annotation.
-      pe_rewrite. rewrite <- minus_meet.
-      revert H11; clear_all; cset_tac; intuition.
-      eapply H11; cset_tac; intuition.
-    + erewrite getAnn_mapAnn2; eauto using live_sound_annotation, renamedApart_annotation.
+    eapply IHRA; eauto using disjoint_let, bounded_incl with cset ann...
+    + erewrite getAnn_mapAnn2; eauto using live_sound_annotation,
+                               renamedApart_annotation.
+      pe_rewrite.
+      rewrite minus_dist_intersection. rewrite H11.
+      clear_all; cset_tac; intuition.
+    + erewrite getAnn_mapAnn2; eauto using live_sound_annotation,
+                               renamedApart_annotation.
       pe_rewrite. simpl; cset_tac; eauto.
   - econstructor; eauto using live_exp_sound_meet.
-    + erewrite getAnn_mapAnn2; eauto using live_sound_annotation, renamedApart_annotation.
-      rewrite H2; simpl. rewrite H13. reflexivity.
-    + erewrite getAnn_mapAnn2; eauto using live_sound_annotation, renamedApart_annotation.
-      rewrite H3; simpl. rewrite H14. reflexivity.
+    + erewrite getAnn_mapAnn2; eauto using live_sound_annotation,
+                               renamedApart_annotation with cset.
+    + erewrite getAnn_mapAnn2; eauto using live_sound_annotation,
+                               renamedApart_annotation with cset.
   - econstructor; eauto.
     + cases; simpl in *; eauto.
       exploit bounded_get; eauto.
       eapply map_get_1 with (f:=live_global); eauto. simpl in *.
-      rewrite <- H2. rewrite <- H5. clear_all; cset_tac; intuition.
+      eauto with cset.
     + intros. eapply live_exp_sound_meet; eauto.
       rewrite incl_list_union; eauto using map_get_1.
   - econstructor; eauto using live_exp_sound_meet.
     eapply IHRA; eauto using disjoint_let with cset.
     + intros. eapply live_exp_sound_meet; eauto.
       rewrite incl_list_union; eauto.
-    + erewrite getAnn_mapAnn2; eauto using live_sound_annotation, renamedApart_annotation.
-      pe_rewrite. rewrite <- minus_meet.
-      revert H12; clear_all; cset_tac; intuition.
-      eapply H12; cset_tac; intuition.
-    + erewrite getAnn_mapAnn2; eauto using live_sound_annotation, renamedApart_annotation.
+    + erewrite getAnn_mapAnn2; eauto using live_sound_annotation,
+                               renamedApart_annotation.
+      pe_rewrite.
+      rewrite minus_dist_intersection. rewrite H12.
+      clear_all; cset_tac; intuition.
+    + erewrite getAnn_mapAnn2; eauto using live_sound_annotation,
+                               renamedApart_annotation.
       pe_rewrite. simpl; cset_tac; eauto.
-  - constructor; eauto.
+  - constructor; eauto with len.
     + eapply IHRA; eauto.
       * eapply live_sound_monotone; eauto.
         eapply PIR2_app; eauto.
-        unfold Liveness.live_globals in *.
-        eapply PIR2_get; intros.
-        inv_zip H7. inv_zip H8. inv_zip H17.
+        eapply PIR2_get; intros; eauto 20 with len.
+        inv_get.
         simpl.
         erewrite getAnn_mapAnn2; eauto using live_sound_annotation, renamedApart_annotation.
-        repeat get_functional; subst; split; eauto.
+        split; eauto.
         edestruct H2; eauto; dcr.
-        eapply meet1_incl.
-        unfold Liveness.live_globals in *.
-        repeat rewrite zip_length2; eauto. congruence.
-      * pe_rewrite.
-        unfold live_globals. rewrite List.map_app.
+        eauto with cset.
+      * rewrite List.map_app.
         eapply bounded_app; split; eauto.
-        unfold Liveness.live_globals. rewrite map_zip.
-        eapply get_bounded; intros.
-        inv_zip H7. inv_zip H12. simpl in *.
-        unfold live_global, Liveness.live_global in H14. simpl in *.
-        invc H14.
+        eapply get_bounded; intros; inv_get.
+        simpl in *. clear EQ.
         erewrite getAnn_mapAnn2; eauto using live_sound_annotation, renamedApart_annotation.
         edestruct H2; eauto; dcr.
-        destruct (getAnn x3); simpl in *. rewrite H14.
+        destruct (getAnn x3); simpl in *.
+        rewrite H8.
         clear_all; cset_tac; intuition.
-    + rewrite zip_length2; congruence.
-    + intros. inv_zip H8.
-      eapply (H1 _ _ _ H7 H14); eauto.
+    + intros. inv_get.
+      eapply H1; eauto.
       * eapply live_sound_monotone; eauto.
         eapply PIR2_app; eauto.
-        unfold Liveness.live_globals in *.
-        eapply PIR2_get; intros.
-        inv_zip H16. inv_zip H17. inv_zip H21.
-        simpl.
+        eapply PIR2_get; [intros; inv_get; simpl | eauto 20 with len].
         erewrite getAnn_mapAnn2; eauto using live_sound_annotation, renamedApart_annotation.
-        repeat get_functional; subst; split; eauto.
-        eapply meet1_incl.
-        unfold Liveness.live_globals in *.
-        repeat rewrite zip_length2; eauto. congruence.
-      * unfold live_globals. rewrite List.map_app.
+        split; eauto with cset.
+      * rewrite List.map_app.
         eapply bounded_app; split; eauto.
-        unfold Liveness.live_globals. rewrite map_zip.
-        eapply get_bounded; intros.
-        inv_zip H16. inv_zip H18. simpl in *.
-        unfold live_global, Liveness.live_global in H19. simpl in *.
-        invc H19.
+        eapply get_bounded; intros; inv_get; simpl.
+        clear EQ.
         erewrite getAnn_mapAnn2; eauto using live_sound_annotation, renamedApart_annotation.
         edestruct H2; eauto; dcr.
-        destruct (getAnn x5); simpl in *. rewrite H19.
-        edestruct (H2 _ _ _ H7 H14); eauto; dcr. rewrite H22.
+        destruct (getAnn x5); simpl in *. rewrite H16.
+        edestruct (H2 _ _ _ H7 H8); eauto; dcr. rewrite H19.
         clear_all; cset_tac; intuition.
-        edestruct (H2 _ _ _ H7 H14); eauto; dcr. rewrite H16.
+        edestruct H2; eauto; dcr. rewrite H14.
         rewrite <- incl_right; eauto.
-    + intros. inv_zip H8.
+    + intros. inv_get.
       erewrite getAnn_mapAnn2; eauto using live_sound_annotation, renamedApart_annotation.
       edestruct H2; eauto; dcr. destruct (getAnn x0); simpl in *.
-      edestruct H13; eauto.
-      split. rewrite <- H17. rewrite H16. clear_all; cset_tac; intuition.
-      cases; eauto. rewrite H16. rewrite <- H19.
+      exploit H13; eauto; dcr.
+      split. eauto with cset.
+      cases; eauto. rewrite H14. rewrite <- H21.
       clear_all; cset_tac; intuition.
-    + erewrite getAnn_mapAnn2; eauto using live_sound_annotation, renamedApart_annotation.
-      pe_rewrite. rewrite H15; reflexivity.
+    + erewrite getAnn_mapAnn2; eauto using live_sound_annotation, renamedApart_annotation with cset.
 Qed.

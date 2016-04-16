@@ -792,7 +792,7 @@ Proof.
     intros.
     edestruct (mapi_get _ _ GetLV) as [x [ H]]; eauto; subst.
     cases; eauto. inv_get. (*TODO this repeat should not be necc *)
-    repeat get_functional. eexists; split; eauto.
+    eexists; split; eauto.
     rewrite <- H2. eauto with cset.
   - edestruct IHIC as [? [A B]]; eauto with len.
     subst; simpl. eexists; split; eauto.
@@ -815,11 +815,11 @@ Proof.
           (computeParameters ((getAnn ⊝ als ++ DL) \\ (fst ⊝ F ++ ZL))
                              (fst ⊝ F ++ ZL) (tab {} ‖F‖ ++ AP) (snd Zs) alv)) (❬F❭ + n))
       as [pF GETpF].
-    rewrite H1. eapply get_range in H2. rewrite app_length, map_length. omega.
+    rewrite H1. eapply get_range in GetDL. rewrite app_length, map_length. omega.
     edestruct IHIC1; try eapply GETpF; eauto using pair_eta.
     eauto with len. eauto with len. eapply get_app_right; eauto.
     orewrite (n + 0 = n). eauto. eapply get_app_right; eauto.
-    rewrite map_length; eauto with len. destruct H6. subst.
+    rewrite map_length; eauto with len. destruct H2. subst.
     rewrite zip_app; eauto with len.
     rewrite zip_app in GetLV; eauto with len.
     exploit computeParameters_length as LENb; try eapply eq; eauto with len.
@@ -828,36 +828,36 @@ Proof.
     eapply map_get_1. eapply zip_get_eq; eauto.
     rewrite zip_app; eauto with len.
     eapply computeParametersF_length; eauto. rewrite live_globals_zip; eauto.
-    destruct H6 as [? [? ?]]; subst. get_functional. simpl. eexists; split; eauto.
+    destruct H2 as [? [? ?]]; subst. get_functional. simpl. eexists; split; eauto.
     edestruct (@get_in_range _ b k); try eapply GETalv.
     rewrite LENb. rewrite app_length, map_length. omega.
     edestruct IHIC2 as [? [ ? ?]];
       try eapply eq; eauto using map_get_1, get_app with len.
-    dcr; subst. rewrite <- H9. rewrite <- H10. rewrite <- H11, <- H8.
-    repeat get_functional. repeat rewrite minus_union.
+    dcr; subst. rewrite <- H9. rewrite <- H10. rewrite <- H6, <- H8.
+    repeat rewrite minus_union.
     unfold lminus at 3.
     assert (of_list (fst Zs) ⊆ list_union (fst ∘ of_list ⊝ F)). {
       eapply incl_list_union. eapply map_get_1; eauto. reflexivity.
     }
     rewrite <- H2.
-    assert (x3 ⊆ list_union (oget ⊝ take ❬F❭
+    assert (x2 ⊆ list_union (oget ⊝ take ❬F❭
            (olist_union (snd ⊝ computeParametersF DL ZL AP F als) b))). {
       exploit (get_olist_union_b (A:=snd ⊝ computeParametersF DL ZL AP F als));
       try eapply g.
       eapply computeParametersF_length; eauto. rewrite live_globals_zip; eauto.
-      destruct H6; dcr.
+      destruct H11; dcr.
       eapply incl_list_union. eapply map_get_1.
       eapply get_take; eauto.
       eassumption.
     }
-    rewrite <- H6.
+    rewrite <- H11.
     clear_all; cset_tac.
   - lnorm. simpl in *. inv_get.
     rewrite zip_app in GetLV; eauto with len.
     rewrite zip_app; eauto with len.
     exploit computeParameters_length; eauto. eauto with len. eauto with len.
     destruct (@get_in_range _ b (❬F❭ + n)) as [pF GETpF].
-    rewrite H, app_length, map_length. exploit (get_range H0). omega.
+    rewrite H, app_length, map_length. exploit (get_range GetDL). omega.
     edestruct IHIC; eauto. eauto with len. eauto with len.
     eapply get_app_right; eauto using map_get_1.
     orewrite (n+0 = n); eauto.
@@ -867,8 +867,8 @@ Proof.
       try eapply GETpF.
     eapply computeParametersF_length; eauto.
     rewrite live_globals_zip; eauto.
-    destruct H4; dcr; subst; simpl. repeat get_functional.
-    eexists; split; try reflexivity. rewrite <- H7, <- H8, <- H9.
+    destruct H0; dcr; subst; simpl. get_functional.
+    eexists; split; try reflexivity. rewrite <- H7, <- H8, <- H6.
     repeat rewrite minus_union.
     unfold lminus at 3. clear_all; cset_tac.
 Qed.
@@ -1392,7 +1392,7 @@ Proof.
 
         eapply PIR2_drop; eauto.
 
-        intros. inv_get; clear_dup.
+        intros. inv_get.
         unfold ominus', lminus in EQ. destruct x1; inv EQ. simpl in *.
         clear EQ. subst NPL.
         inv_get.

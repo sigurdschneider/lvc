@@ -502,8 +502,9 @@ Ltac inv_get_step :=
     rewrite H' in H; rewrite <- (map_length f A) in H; eapply shift_get in H
   end.
 
+
 Ltac inv_get :=
-  repeat (repeat (get_functional); inv_get_step); clear_trivial_eqs; try clear_dup.
+  repeat (repeat get_functional; inv_get_step; repeat get_functional); clear_trivial_eqs; repeat clear_dup.
 
 Lemma zip_length_lt_ass (X Y Z : Type) (f : X -> Y -> Z) (L : list X) (L' : list Y) k
   : length L = length L'
