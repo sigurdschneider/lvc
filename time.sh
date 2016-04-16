@@ -28,7 +28,7 @@ pad = "".ljust(30 - mod.length)
 
 est = File.readable?(timefile) ? File.read(timefile) : ""
 eta = (Time.now + est.to_i).strftime("%H:%M:%S")
-pad2 = "".ljust(19 - est.strip.length)
+pad2 = "".ljust(12 - est.strip.length)
 eststr = "#{cyan(est.strip)}#{pad2}" + (parallel ? (est.strip == "" ? blue("ETA unavailable") : "ETA #{eta}") : "")
 timestamp = Time.now.strftime("%H:%M:%S") 
 print "#{timestamp} #{cyan('>>>')} #{mod}#{pad}#{eststr}#{(parallel ? "\n" : "")}"
@@ -43,10 +43,10 @@ serr = cstderr.read
 user = serr.match(/.*user[ \t]*([0123456789]+)m([0123456789\.]+)s.*/m)
 sys = serr.match(/.*sys[ \t]*([0123456789]+)m([0123456789\.]+)s.*/m)
 cpu = user[1].to_f * 60 + user[2].to_f + sys[1].to_f * 60 + sys[2].to_f
-timing = "#{cpu.round(2)} / #{time.round(2)}"
-pad2 = "".ljust(19 - timing.length)
+timing = "#{cpu.round(2)}"
+pad2 = "".ljust(12 - timing.length)
 changesec = (time - est.to_f)
-changesecstr = "%+.2f" % changesec 
+changesecstr = sprintf("%+.2f (%+.1f%%)", changesec, (100*changesec/est.to_f)) 
 change = est == "" ? blue("n/a") : (changesec <= 0 ? green(changesecstr) : red(changesecstr))
 line_count = `wc -l "#{mod}.v"`.strip.split(' ')[0].to_i
 spl = (line_count / cpu).round(0)
@@ -58,7 +58,7 @@ if success then
 end
 
 if !parallel then
-	print color.call("#{cpu.round(2)} / #{time.round(2)}"), pad2, change.ljust(8), ("".ljust(15 - change.strip.length)), speed, "\n"
+	print color.call(timing), pad2, change, ("".ljust(15 - changesecstr.strip.length)), speed, "\n"
 end
 
 sout = cstdout.read
@@ -70,7 +70,7 @@ if !sout.strip.empty? then
 end
 
 if parallel then
-	print "#{Time.now.strftime("%H:%M:%S")} ", color.call("<<<"), " #{mod}#{pad}", color.call(timing), pad2, change, ("".ljust(15 - change.strip.length)), speed, "\n"
+	print "#{Time.now.strftime("%H:%M:%S")} ", color.call("<<<"), " #{mod}#{pad}", color.call(timing), pad2, change, ("".ljust(15 - changesecstr.strip.length)), speed, "\n"
 end
 
 exit success
