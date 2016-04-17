@@ -1,27 +1,40 @@
 #!/usr/bin/ruby21
 require 'term/ansicolor'
 require 'open3'
+require 'csv'
 
 include Term::ANSIColor
+
+@hostname=`hostname`.strip
 
 def col(width, text) 
   return text + "".ljust(width - uncolored(text).length)
 end
 
 def timefile(mod) 
-	return mod.gsub(/(.*)(\/)(.*)/, '\1/.\3') + ".time"
+	return Dir.pwd + "/" + mod.gsub(/(.*)(\/)(.*)/, '\1/.\3') + ".time"
 end
 
 def readETA(mod)
-	est = File.readable?(timefile(mod)) ? File.read(timefile(mod)).strip : ""
+	num = 0
+	avg = 0.0
+	if (File.readable?(timefile(mod))) then
+    CSV.foreach(timefile(mod)) do |row|
+			if row[1] != nil and row[1].strip == @hostname then
+        avg += row[0].strip.to_f
+			  num += 1
+			end
+	  end
+	end
+	est = num > 0 ? (avg/num.to_f).round(2).to_s : "" 
   eta = (Time.now + est.to_i).strftime("%H:%M:%S")
   return est, eta 
 end
 
 def writeETA(mod, time)
-  File.open(timefile(mod), File::CREAT|File::TRUNC|File::RDWR, 0644) do |file|
-    file.puts "#{time.round(2)}"
-  end
+  CSV.open(timefile(mod), "ab") do |csv|
+		  csv << ["#{time}", "#{@hostname}", "#{Time.now.to_i}"]
+	end	
 end	
 
 begin
