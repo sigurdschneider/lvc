@@ -86,7 +86,6 @@ Section Translate.
     erewrite symb_eval with (M1:=M) (f:=fun x => x); eauto.
     erewrite symb_eval with (M1:=M) (f:=fun x => x); eauto.
     intuition.
-    intuition.
   Qed.
 
   Definition check_source_set (p1 p2 : pmov) :=
@@ -99,7 +98,7 @@ Section Translate.
   Proof.
     unfold check_source_set in COK. cases in COK; isabsurd.
     simpl in *.
-    intros. eapply Src. rewrite s in H0. cset_tac; intuition.
+    intros. eapply Src. rewrite COND in H0. cset_tac; intuition.
   Qed.
 
   End Translate.
@@ -212,9 +211,7 @@ Proof.
   - cset_tac; intuition.
   - destruct a; isabsurd. monadS_inv H. monad_inv H0.
     simpl in * |- *.
-    cset_tac. destruct H1.
-    + hnf in H; subst. congruence.
-    + eapply IHY; eauto.
+    cset_tac; congruence.
 Qed.
 
 Lemma onlyVars_lookup (E:onv var) Y Y' v
@@ -247,32 +244,34 @@ Fixpoint lower DL s (an:ann (set var))
     | stmtExtern x f Y s, ann1 _ ans =>
       sdo sl <- lower DL s ans;
         Success (stmtExtern x f Y sl)
-    | stmtFun Z s t, ann2 lv ans ant =>
-      let DL' := (getAnn ans,Z) in
-      sdo s' <- lower (DL' :: DL)%list s ans;
-        sdo t' <- lower (DL' :: DL)%list t ant;
-        Success (stmtFun nil s' t')
+    | stmtFun F t, annF lv ans ant =>
+      let DL' := pair ⊜ (getAnn ⊝ ans) (fst ⊝ F) in
+      sdo s' <- szip (fun Zs a => lower (DL' ++ DL) (snd Zs) a) F ans;
+        sdo t' <- lower (DL' ++ DL) t ant;
+        Success (stmtFun ((fun s => (nil, s)) ⊝ s') t')
     | s, _ => Error "lower: Annotation mismatch"
   end.
 
 Inductive approx
-: list (set var * list var) -> I.block -> I.block -> Prop :=
-  approxI Lv s Z lv s'
+: list (set var * list var) -> list I.block -> list I.block -> (⦃var⦄ * params) -> I.block -> I.block -> Prop :=
+  approxI L L' DL Z s s' lv n
   (al:ann (set var))
-  (LS:live_sound Imperative ((lv,Z)::Lv) s al)
+  (LS:live_sound Imperative DL s al)
   (AL:(of_list Z) ⊆ lv)
-  (EQ:getAnn al \ of_list Z ⊆ lv)
-  (spm:lower ((lv,Z)::Lv) s al = Success s')
-  : approx ((lv,Z)::Lv) (I.blockI Z s) (I.blockI nil s').
+  (INCL:getAnn al \ of_list Z ⊆ lv)
+  (spm:lower DL s al = Success s')
+  : approx DL L L' (lv, Z) (I.blockI Z s n) (I.blockI nil s' n).
 
 Inductive pmSim : I.state -> I.state -> Prop :=
   pmSimI Lv s (E E':onv val) L L' s'
   (al: ann (set var))
   (LS:live_sound Imperative Lv s al)
   (pmlowerOk:lower Lv s al = Success s')
-  (LA:AIR3 approx Lv L L')
+  (LA:inRel approx Lv L L')
   (EEQ:agree_on eq (getAnn al) E E')
   : pmSim (L,E,s) (L', E', s').
+
+Unset Printing Records.
 
 Lemma pmSim_sim σ1 σ2
 : pmSim σ1 σ2 -> sim σ1 σ2.
@@ -298,7 +297,7 @@ Proof.
     get_functional; subst.
     case_eq (omap (exp_eval E) Y); intros.
     + exploit omap_exp_eval_live_agree; try eassumption.
-      provide_invariants_3.
+      inRel_invs; simpl in *.
       edestruct (compile_parallel_assignment_correct _ _ _ _ _ EQ2 E' L')
         as [M' [X' X'']].
       eapply onlyVars_defined; eauto.
@@ -306,18 +305,15 @@ Proof.
       * eapply plus2O. econstructor; eauto. reflexivity.
       * eapply star2_plus2_plus2 with (A:=nil) (B:=nil); eauto.
         eapply plus2O. econstructor; eauto. reflexivity. reflexivity.
-      * eapply pmSim_sim; econstructor; try eapply LA1; eauto. simpl.
-        assert (getAnn al ⊆ lv0). {
-          revert AL EQ0; clear_all. cset_tac; intuition; eauto.
-          decide (a ∈ of_list Z0); eauto. cset_tac; intuition.
-        }
-        eapply agree_on_incl in X''; eauto. symmetry in X''.
+      * eapply pmSim_sim; econstructor; try eapply LA1; eauto; simpl.
+        eapply (inRel_drop LA H6).
+        assert (getAnn al ⊆ blv) by eauto with cset.
+        eapply agree_on_incl in X''; eauto. symmetry in X''. simpl.
         eapply agree_on_trans; eauto. eapply equiv_transitive.
         erewrite onlyVars_lookup; eauto.
-        eapply update_with_list_agree.
-        eapply eq_equivalence.
-        eapply agree_on_incl; eauto. cset_tac; intuition.
-        exploit omap_length; eauto. rewrite map_length. congruence.
+        eapply update_with_list_agree; eauto.
+        eapply agree_on_incl; eauto. eauto with cset.
+        exploit omap_length; eauto with len.
     + err_step.
   - no_step. simpl. eauto using exp_eval_live.
   - remember (omap (exp_eval E) Y). symmetry in Heqo.
@@ -332,9 +328,15 @@ Proof.
         eapply agree_on_update_same; eauto using agree_on_incl.
     + no_step.
   - one_step.
-    eapply pmSim_sim. econstructor; eauto.
-    econstructor; eauto. econstructor; eauto using minus_incl.
-    eapply agree_on_incl; eauto.
+    eapply pmSim_sim. econstructor; eauto using agree_on_incl.
+    econstructor; eauto.
+    unfold I.mkBlocks.
+    eapply mutual_approx2; eauto 20 using mkBlock_I_i with len.
+    intros; inv_get.
+    econstructor; eauto.
+    + exploit H3; eauto.
+    +
+      exploit szip_get; try eapply EQ; eauto.
 Qed.
 
 End Implementation.

@@ -4,16 +4,7 @@ Require Export DecSolve.
 Set Implicit Arguments.
 
 Class BlockType X := {
-(*  block_s : X -> stmt;
-  block_Z : X -> list var; *)
   block_n : X -> nat
-(*  rename_block : env var -> X -> X; *)
-(*  block_ctor : forall s Z n, { b : X | block_s b = s /\ block_Z b = Z /\ block_n b = n };
-  mkBlocks : onv val -> list (params * stmt) -> list X;
-  mkBlocks_closed :
-    forall E F n b, get (mkBlocks E F) n b -> block_n b < length F *)
-(*  rename_block_s : forall ϱ b, block_s (rename_block ϱ b) = rename ϱ (block_s b);
-  rename_block_Z : forall ϱ b, block_Z (rename_block ϱ b) = lookup_list ϱ (block_Z b) *)
 }.
 
 Lemma mkBlocks_I_less
@@ -24,20 +15,22 @@ Proof.
   rewrite IHF; eauto. omega.
 Qed.
 
-Global Instance block_type_I : BlockType (I.block) := {
-(*  block_s := I.block_s;
-  block_Z := I.block_Z; *)
-  block_n := I.block_n
-(*  mkBlocks := fun _ => I.mkBlocks *)
-                                                     }.
-(*  rename_block := rename_block_I
-}. *)
-(*+ intros. eexists (I.blockI Z s n); eauto. (*
-+ intros; destruct b; eauto.
-+ intros; destruct b; eauto. *)
-+ intros. pose proof (@mkBlocks_I_less F n 0 b H).
-  destruct F. inv H. simpl in *. omega.
-Defined. *)
+Lemma mkBlock_I_i F
+  : forall i b, get (mapi I.mkBlock F) i b -> i = I.block_n b.
+Proof.
+  intros; inv_get; eauto.
+Qed.
+
+Lemma mkBlock_F_i E F
+  : forall i b, get (mapi (F.mkBlock E) F) i b -> i = F.block_n b.
+Proof.
+  intros; inv_get; eauto.
+Qed.
+
+Instance block_type_I : BlockType (I.block) :=
+  {
+    block_n := I.block_n
+  }.
 
 Lemma mkBlocks_F_less
       : forall E (F : list (params * stmt)) (n k : nat) (b : F.block),
@@ -47,19 +40,10 @@ Proof.
   rewrite IHF; eauto. omega.
 Qed.
 
-Global Instance block_type_F : BlockType (F.block) := {
-(*  block_s := F.block_s;
-  block_Z := F.block_Z; *)
-  block_n := F.block_n
-(*  mkBlocks := F.mkBlocks *) }.
-(*  rename_block := rename_block_F
-}. *)
-(* + intros. eexists (F.blockI (fun _ => None) Z s n); eauto. (*
-+ intros; destruct b; eauto.
-+ intros; destruct b; eauto. *)
-+ intros. pose proof (@mkBlocks_F_less _ F n 0 b H).
-  destruct F. inv H. simpl in *. omega.
-Defined.*)
+Global Instance block_type_F : BlockType (F.block) :=
+  {
+    block_n := F.block_n
+  }.
 
 Inductive mutual_block {A} {B} `{BlockType B} {C} `{BlockType C} (R:A->B->C->Prop)
 : nat -> list A -> list B -> list C -> Prop :=
@@ -143,6 +127,44 @@ Proof.
   intros. eapply mutual_approx_impl; eauto.
 Qed.
 
+Lemma mutual_approx_impl2 {A} {B} `{BlockType B} {C} `{BlockType C}
+      (R: list A -> list B -> list C -> A -> B -> C -> Prop)
+      (AL:list A) DL F1 F2 AL' F1' F2' i L1 L2
+  : length AL = length F1
+    -> length F1 = length F2
+    -> F1' = drop i F1
+    -> F2' = drop i F2
+    -> AL' = drop i AL
+    -> (forall n a b b',
+          get AL n a
+          -> get F1 n b
+          -> get F2 n b'
+          -> R DL L1 L2 a b b')
+    -> (forall i b, get F1 i b -> i = block_n b)
+    -> (forall i b, get F2 i b -> i = block_n b)
+    -> mutual_block (R DL L1 L2) i AL' F1' F2'.
+Proof.
+  intros LenEq1 LenEq2 LenF1' LenF2' LenAL' GET I1 I2.
+  assert (LenAL1:length_eq AL' F1'). subst; eauto using drop_length_stable with len.
+  assert (LenAL2:length_eq AL' F2'). subst; eauto using drop_length_stable with len.
+  general induction LenAL1; inv LenAL2; eauto using @mutual_block.
+  - econstructor; eauto using drop_eq.
+    eapply IHLenAL1; eauto using drop_shift_1.
+Qed.
+
+
+Lemma mutual_approx2 {A} {B} `{BlockType B} {C} `{BlockType C}
+      (R: list A -> list B -> list C -> A -> B -> C -> Prop)
+      (AL:list A) DL F1 F2 L1 L2
+  : length AL = length F1
+    -> length F1 = length F2
+    -> (forall n a b b', get AL n a -> get F1 n b -> get F2 n b' -> R DL L1 L2 a b b')
+    -> (forall i b, get F1 i b -> i = block_n b)
+    -> (forall i b, get F2 i b -> i = block_n b)
+    -> mutual_block (R DL L1 L2) 0 AL F1 F2.
+Proof.
+  intros. eapply mutual_approx_impl2; eauto.
+Qed.
 
 Inductive inRel {A} {B} `{BlockType B} {C} `{BlockType C}
           (R:list A -> list B -> list C -> A -> B -> C -> Prop)

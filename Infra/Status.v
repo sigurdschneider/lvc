@@ -158,3 +158,28 @@ Proof.
   general induction H0; simpl; eauto.
   erewrite <- H; eauto using get. erewrite IHlength_eq; eauto using get.
 Qed.
+
+Lemma szip_length_ass X Y Z (f:X->Y-> status Z) A B C k
+  : szip f A B = Success C
+    -> length A = length B
+    -> length A = k
+    -> length C = k.
+Proof.
+  intros EQ LEN1 LEN2; subst. length_equify.
+  general induction LEN1; simpl in *; eauto.
+  monadS_inv EQ; simpl; eauto.
+Qed.
+
+Hint Resolve szip_length_ass : len.
+
+Lemma szip_get X Y Z (f:X->Y-> status Z) A B C n a b c
+  : szip f A B = Success C
+    -> get A n a
+    -> get B n b
+    -> get C n c
+    -> f a b = Success c.
+Proof.
+  intros EQ GetA GetB GetC.
+  general induction GetA; inv GetB; inv GetC; simpl in *;
+    monadS_inv EQ; eauto.
+Qed.

@@ -500,11 +500,18 @@ Ltac inv_get_step :=
     rewrite <- (map_length f A) in H; eapply shift_get in H
   | [ H: get (?f ⊝ ?A ++ ?B) (❬?C❭ + _) _, H' : ❬?C❭ = ❬?A❭ |- _ ] =>
     rewrite H' in H; rewrite <- (map_length f A) in H; eapply shift_get in H
+  | [ H : get (mapi ?f ?L) ?n ?x |- _ ] =>
+    let X := fresh "X" in
+    let EQ := fresh "EQ" in
+    pose proof (mapi_get f _ H) as X; destruct X as [? [GET EQ]];
+    try (simplify_eq EQ); intros;
+    clear H; rename GET into H
   end.
 
 
 Ltac inv_get :=
-  repeat (repeat get_functional; inv_get_step; repeat get_functional); clear_trivial_eqs; repeat clear_dup.
+  repeat (repeat get_functional; inv_get_step; repeat get_functional);
+  clear_trivial_eqs; repeat clear_dup.
 
 Lemma zip_length_lt_ass (X Y Z : Type) (f : X -> Y -> Z) (L : list X) (L' : list Y) k
   : length L = length L'
