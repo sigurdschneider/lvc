@@ -234,7 +234,7 @@ Proof.
   intros; subst. orewrite (length L = length L + 0) . eapply drop_app.
 Qed.
 
-Lemma egalize_funs_get2 D F L' f Zb sb n'
+Lemma egalize_funs_get2 D n' F L' f Zb sb
   : get F f (Zb, sb)
     -> exists L'',
       let h := egalize_funs egalize D n' in
@@ -317,6 +317,12 @@ Lemma renestSim_sim r L L' E s n D L''
           exists b' : I.block,
             get L' (nth f D 0) b' /\
             approx L' (drop (f - block_n b) D) (nth f D 0) b b')
+      (SIM:
+         forall E b l m f, get L f b
+                           -> bisim'r r
+                                     (drop (f - I.block_n b) L, E [I.block_Z b <-- Some ⊝ l], I.block_s b)
+                                     (L', E [I.block_Z b <-- Some ⊝ l],
+                                      fst (egalize (drop (f - I.block_n b) D) m (I.block_s b))))
       (ST:sawtooth L)
       (DROP:drop n L' = mapi_impl I.mkBlock n (snd (egalize D n s)) ++ L'')
   : bisim'r r (L, E, s) (L', E, fst (egalize D n s)).
@@ -342,15 +348,8 @@ Proof.
       case_eq (omap (exp_eval E) Y); [ intros | intros; pno_step; eauto ].
       pone_step. left. simpl.
       * orewrite (nth f D 0 - nth f D 0 = 0); simpl.
-        repeat rewrite drop_drop. rewrite nth_drop.
-        eapply get_drop in GET. edestruct (SL _ _ GET); dcr.
-        rewrite plus_comm. eexists; split; eauto.
-        rewrite plus_comm; eauto.
-        pose proof (sawtooth_resetting ST _ g GET).
-        simpl in *.
-         orewrite (f - n0 + (f0 - I.block_n b) = f - n0 + f0 - I.block_n b).
-         eauto.
-      * eapply (sawtooth_drop ST g).
+        exploit SIM; eauto.
+      (* * eapply (sawtooth_drop ST g).
       * orewrite (nth f D 0 - nth f D 0 = 0). simpl.
         eauto. *)
     + pno_step; eauto.
@@ -362,12 +361,52 @@ Proof.
       left. eapply IH; eauto.
     + eexists; split. econstructor; eauto.
       left. eapply IH; eauto.
-  - eapply bisim'_expansion_closed;
+  - rename s into F. eapply bisim'_expansion_closed;
       [ | eapply (S_star2 EvtTau); [ econstructor | eapply star2_refl ]
         | eapply star2_refl].
     eapply IH; eauto.
     + admit.
-    + econstructor; eauto. eapply tooth_I_mkBlocks.
+    + intros. eapply get_app_cases in H. destruct H; dcr.
+      unfold I.mkBlocks in H. inv_get. simpl.
+      orewrite (f - f = 0); simpl.
+      eapply IH; eauto. admit. admit. admit. admit.
+      admit.
+      intros. eapply get_app_cases in H. destruct H; dcr.
+      * unfold I.mkBlocks in H. inv_get. destruct x as [Z s].
+        edestruct (egalize_funs_get2 D n); eauto. simpl in *.
+        rewrite egalize_funs_length2 in H0.
+        unfold extend at 1.
+        rewrite app_nth1. eexists; split.
+        assert (nth f (mapi (fun (i : nat) (_ : params * stmt) => i + n) F) 0 = n + f).
+        admit.
+        rewrite H0. eapply get_drop. rewrite DROP.
+        exploit get_range; eauto.
+        repeat rewrite mapi_app.
+        eapply get_app. eapply get_app.
+        eapply get_mapi_impl.
+
+
+      * exploit SL; eauto. unfold extend at 1.
+        rewrite app_nth2. unfold mapi. rewrite mapi_length.
+        unfold I.mkBlocks in *. unfold mapi in H0,H1,H.
+        rewrite mapi_length in *. destruct H; dcr.
+        eexists; split; eauto.
+        unfold extend at 2. rewrite app_nth2. unfold mapi. rewrite mapi_length.
+        exploit (sawtooth_smaller ST); eauto.
+Lemma drop_app_gen X (L L' :list X) n
+: n > length L' -> drop n (L' ++ L) = (drop (n - length L') L).
+Proof.
+  intros. general induction L'; simpl.
+  destruct n. inv H. simpl. f_equal; omega.
+  destruct n. inv H.
+  simpl. eapply IHL'. simpl in *; omega.
+Qed.
+unfold extend. rewrite drop_app_gen. unfold mapi. rewrite mapi_length.
+orewrite(f - I.block_n b - ❬F❭ = f - ❬F❭ - I.block_n b). eauto.
+unfold mapi. rewrite mapi_length. admit.
+unfold mapi. rewrite mapi_length. eauto.
+unfold mapi. rewrite mapi_length. admit.
+
     +
 
       rewrite egalize_funs_get
