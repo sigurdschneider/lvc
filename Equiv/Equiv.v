@@ -49,3 +49,45 @@ Definition fexteq' (SIM:ProgramEquivalence F.state F.state)
     -> simL' SIM r AR AL L L'
     -> progeq r (L, E[Z <-- List.map Some VL], s)
             (L', E'[Z' <-- List.map Some VL'], s').
+
+(* A proof relation is parameterized by analysis information A *)
+Class ProofRelationI (A:Type) := {
+    (* Relates parameter lists according to analysis information *)
+    ParamRelI : A -> list var -> list var -> Prop;
+    (* Relates argument lists according to analysis information
+       and closure environments *)
+    ArgRelI :  A -> list val -> list val -> Prop;
+    (* Relates blocks according to analysis information *)
+    BlockRelI : A -> I.block -> I.block -> Prop;
+    (* Relates environments according to analysis information *)
+    RelsOKI : forall a Z Z' VL VL',
+        ParamRelI a Z Z' -> ArgRelI a VL VL' ->
+        length Z = length VL /\ length Z' = length VL'
+}.
+
+Inductive simIBlock (SIM:ProgramEquivalence I.state I.state)
+          (r:I.state -> I.state -> Prop)
+          {A} (AR:ProofRelationI A)
+  : list A -> I.labenv -> I.labenv -> A -> I.block -> I.block -> Prop :=
+| simIBI a L L' Z Z' s s' n AL
+  : ParamRelI a Z Z'
+    -> BlockRelI a (I.blockI Z s n) (I.blockI Z' s' n)
+    -> (forall E E' Y Y' Yv Y'v,
+         omap (exp_eval E) Y = Some Yv
+         -> omap (exp_eval E') Y' = Some Y'v
+         -> ArgRelI a Yv Y'v
+         -> progeq r (L, E, stmtApp (LabI n) Y)
+                        (L', E', stmtApp (LabI n) Y'))
+    -> simIBlock SIM r AR AL L L' a (I.blockI Z s n) (I.blockI Z' s' n).
+
+Definition simILabenv (SIM:ProgramEquivalence I.state I.state) r
+           {A} AR (AL:list A) L L' := inRel (simIBlock SIM r AR) AL L L'.
+
+Definition fexteqI (SIM:ProgramEquivalence I.state I.state)
+           {A} (AR:ProofRelationI A) (a:A) (AL:list A) E Z s E' Z' s' :=
+  ParamRelI a Z Z' /\
+  forall VL VL' L L' (r:rel2 I.state (fun _ : I.state => I.state)),
+    ArgRelI a VL VL'
+    -> simILabenv SIM r AR AL L L'
+    -> progeq r (L, E[Z <-- List.map Some VL], s)
+            (L', E'[Z' <-- List.map Some VL'], s').

@@ -126,13 +126,6 @@ Qed.
 
 
 (*
-Lemma nth_drop X (L:list X) n m x
-: nth n (drop m L) x = nth (n+m) L x.
-Proof.
-  general induction m; simpl. orewrite (n + 0 = n); eauto.
-  rewrite IHm; eauto. orewrite (n + S m = S (n + m)); eauto.
-  destruct L; simpl; eauto. destruct (n + m); eauto.
-Qed.
 
 Lemma drop_length_ge (X : Type) (L L' : list X) (n : nat)
 : n >= length L' -> drop n (L' ++ L) = drop (n - length L') L.

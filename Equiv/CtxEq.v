@@ -24,31 +24,6 @@ Definition bisimeqid s s' :=
 Definition bisimeq' r s s' :=
   forall ZL L L' E, simL' _ r SR ZL L L' -> bisim'r r (L, E, s) (L', E, s').
 
-Ltac pone_step := pfold; eapply bisim'Silent; [ eapply plus2O; single_step
-                              | eapply plus2O; single_step
-                              | left ].
-
-Ltac pone_step' := pfold; eapply bisim'Silent; [ eapply plus2O; single_step
-                              | eapply plus2O; single_step
-                              | right ].
-
-Ltac pno_step := pfold; eapply bisim'Term;
-               try eapply star2_refl; try get_functional; try subst;
-                [ try reflexivity
-                | stuck2
-                | stuck2  ].
-
-Ltac pextern_step :=
-  let STEP := fresh "STEP" in
-  pfold; eapply bisim'Extern;
-    [ eapply star2_refl
-    | eapply star2_refl
-    | try step_activated
-    | try step_activated
-    | intros ? ? STEP; inv STEP
-    | intros ? ? STEP; inv STEP
-    ].
-
 Lemma bisimeq'_refl s
   : forall ZL L L' E r,
     simL' _ r SR ZL L L'

@@ -532,39 +532,6 @@ Proof.
   eapply bisim'_reduction_closed_1; eauto.
   eapply bisim'_refl.
 Qed.
-(*
-Class BisimRelation (A:Type) := {
-    ParamRel : A-> list var -> list var -> Prop;
-    ArgRel : onv val -> onv val -> A-> list val -> list val -> Prop;
-    BlockRel : A-> F.block -> F.block -> Prop;
-    RelsOK : forall E E' a Z Z' VL VL', ParamRel a Z Z' -> ArgRel E E' a VL VL' -> length Z = length VL /\ length Z' = length VL'
-}.
-
-Inductive simB (r:rel2 F.state (fun _ : F.state => F.state)) {A} (AR:BisimRelation A)  : F.labenv -> F.labenv -> A -> F.block -> F.block -> Prop :=
-| simBI a L L' V V' Z Z' s s'
-  : ParamRel a Z Z'
-    -> BlockRel a (F.blockI V Z s) (F.blockI V' Z' s')
-    -> (forall E E' Y Y' Yv Y'v,
-         omap (exp_eval E) Y = Some Yv
-         -> omap (exp_eval E') Y' = Some Y'v
-         -> ArgRel V V' a Yv Y'v
-         -> paco2 (@bisim_gen F.state _ F.state _) r (L, E, stmtApp (LabI 0) Y)
-                        (L', E', stmtApp (LabI 0) Y'))
-    -> simB r AR L L' a (F.blockI V Z s) (F.blockI V' Z' s').
-
-Definition simL' (r:rel2 F.state (fun _ : F.state => F.state))
-           {A} AR (AL:list A) L L' := AIR5 (simB r AR) L L' AL L L'.
-
-Definition fexteq'
-           {A} AR (a:A) (AL:list A) E Z s E' Z' s' :=
-  forall VL VL' L L' (r:rel2 F.state (fun _ : F.state => F.state)),
-    ArgRel E E' a VL VL'
-    -> simL' r AR AL L L'
-    -> length Z = length VL
-    -> length Z' = length VL'
-    -> paco2 (@bisim_gen F.state _ F.state _) r (L, E[Z <-- List.map Some VL], s)
-            (L', E'[Z' <-- List.map Some VL'], s').
-*)
 
 Instance bisim_progeq : ProgramEquivalence F.state F.state.
 constructor. eapply (paco2 (@bisim_gen F.state _ F.state _)).
@@ -694,6 +661,53 @@ Proof.
     eapply simL_mon; eauto.
 Qed.
 
+Lemma mutual_block_extension_simple r A AR F1 F2 F1' F2' ALX AL AL' i E1 E2 L1 L2
+      (D1:F1' = drop i F1) (D2:F2' = drop i F2) (D3:AL' = drop i AL)
+      (LEN1:length F1 = length F2) (LEN2:length AL = length F1)
+      (SIML:simL' bisim_progeq r AR ALX L1 L2)
+  :
+    (forall (n : nat) (Z : params)
+       (s : stmt) (Z' : params) (s' : stmt)
+       (a : A),
+        get F1 n (Z, s) ->
+        get F2 n (Z', s') ->
+        get AL n a ->
+        fexteq' bisim_progeq AR a (AL ++ ALX) E1 Z s E2 Z' s' /\
+        BlockRel a (F.blockI E1 Z s n) (F.blockI E2 Z' s' n) /\
+        ParamRel a Z Z')
+    -> mutual_block
+        (simB bisim_progeq r AR (AL ++ ALX) (F.mkBlocks E1 F1 ++ L1)%list
+              (F.mkBlocks E2 F2 ++ L2)%list) i AL'
+        (mapi_impl (F.mkBlock E1) i F1')
+        (mapi_impl (F.mkBlock E2) i F2').
+Proof.
+  intros.
+  assert (LEN1':length_eq F1' F2').
+  eapply length_length_eq. subst; eauto using drop_length_stable.
+  assert (LEN2':length_eq AL' F1').
+  eapply length_length_eq. subst; eauto using drop_length_stable.
+  general induction LEN1'. inv LEN2'.
+  - simpl. econstructor.
+  - inv LEN2'.
+    simpl. econstructor; simpl; eauto.
+    + eapply IHLEN1'; eauto using drop_shift_1.
+    + destruct x,y. edestruct H as [[B1 B2] [B3 B4]]; eauto using drop_eq.
+      econstructor; eauto.
+      intros. hnf.
+      pfold. econstructor; try eapply plus2O.
+      econstructor; eauto. eapply get_app.
+      eapply mapi_get_1. eapply drop_eq. eauto. simpl.
+      edestruct RelsOK; eauto. exploit omap_length; try eapply H0; eauto.
+      congruence. reflexivity.
+      econstructor; eauto. eapply get_app.
+      eapply mapi_get_1. eapply drop_eq. eauto. simpl.
+      edestruct RelsOK; eauto. exploit omap_length; try eapply H5; eauto.
+      congruence. reflexivity.
+      simpl. left. orewrite (i-i=0); simpl.
+      eapply fix_compatible; eauto.
+      eauto using drop_eq. eauto using drop_eq. eauto using drop_eq.
+Qed.
+
 Lemma simL_extension' r A AR (AL AL':list A) F F' E E' L L'
       (LEN1:length AL' = length F) (LEN2:length F = length F')
 : simL' bisim_progeq r AR AL L L'
@@ -706,52 +720,6 @@ Proof.
   intros.
   hnf; intros.
   econstructor; eauto.
-  Lemma mutual_block_extension_simple r A AR F1 F2 F1' F2' ALX AL AL' i E1 E2 L1 L2
-        (D1:F1' = drop i F1) (D2:F2' = drop i F2) (D3:AL' = drop i AL)
-        (LEN1:length F1 = length F2) (LEN2:length AL = length F1)
-        (SIML:simL' bisim_progeq r AR ALX L1 L2)
-    :
-       (forall (n : nat) (Z : params)
-         (s : stmt) (Z' : params) (s' : stmt)
-         (a : A),
-       get F1 n (Z, s) ->
-       get F2 n (Z', s') ->
-       get AL n a ->
-       fexteq' bisim_progeq AR a (AL ++ ALX) E1 Z s E2 Z' s' /\
-       BlockRel a (F.blockI E1 Z s n) (F.blockI E2 Z' s' n) /\
-       ParamRel a Z Z')
-      -> mutual_block
-          (simB bisim_progeq r AR (AL ++ ALX) (F.mkBlocks E1 F1 ++ L1)%list
-                (F.mkBlocks E2 F2 ++ L2)%list) i AL'
-          (mapi_impl (F.mkBlock E1) i F1')
-          (mapi_impl (F.mkBlock E2) i F2').
-  Proof.
-    intros.
-    assert (LEN1':length_eq F1' F2').
-    eapply length_length_eq. subst; eauto using drop_length_stable.
-    assert (LEN2':length_eq AL' F1').
-    eapply length_length_eq. subst; eauto using drop_length_stable.
-    general induction LEN1'. inv LEN2'.
-    - simpl. econstructor.
-    - inv LEN2'.
-      simpl. econstructor; simpl; eauto.
-      + eapply IHLEN1'; eauto using drop_shift_1.
-      + destruct x,y. edestruct H as [[B1 B2] [B3 B4]]; eauto using drop_eq.
-        econstructor; eauto.
-        intros. hnf.
-        pfold. econstructor; try eapply plus2O.
-        econstructor; eauto. eapply get_app.
-        eapply mapi_get_1. eapply drop_eq. eauto. simpl.
-        edestruct RelsOK; eauto. exploit omap_length; try eapply H0; eauto.
-        congruence. reflexivity.
-        econstructor; eauto. eapply get_app.
-        eapply mapi_get_1. eapply drop_eq. eauto. simpl.
-        edestruct RelsOK; eauto. exploit omap_length; try eapply H5; eauto.
-        congruence. reflexivity.
-        simpl. left. orewrite (i-i=0); simpl.
-        eapply fix_compatible; eauto.
-        eauto using drop_eq. eauto using drop_eq. eauto using drop_eq.
-  Qed.
   eapply mutual_block_extension_simple; eauto.
 Qed.
 
@@ -948,3 +916,28 @@ Proof.
       eauto. eauto.
     + exfalso. exploit step_internally_deterministic; eauto; dcr. congruence.
 Qed.
+
+Ltac pone_step := pfold; eapply bisim'Silent; [ eapply plus2O; single_step
+                              | eapply plus2O; single_step
+                              | left ].
+
+Ltac pone_step' := pfold; eapply bisim'Silent; [ eapply plus2O; single_step
+                              | eapply plus2O; single_step
+                              | right ].
+
+Ltac pno_step := pfold; eapply bisim'Term;
+               try eapply star2_refl; try get_functional; try subst;
+                [ try reflexivity
+                | stuck2
+                | stuck2  ].
+
+Ltac pextern_step :=
+  let STEP := fresh "STEP" in
+  pfold; eapply bisim'Extern;
+    [ eapply star2_refl
+    | eapply star2_refl
+    | try step_activated
+    | try step_activated
+    | intros ? ? STEP; inv STEP
+    | intros ? ? STEP; inv STEP
+    ].
