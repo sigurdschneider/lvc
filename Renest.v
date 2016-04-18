@@ -321,17 +321,17 @@ Lemma renestSim_sim r L L' E s n D L''
       (DROP:drop n L' = mapi_impl I.mkBlock n (snd (egalize D n s)) ++ L'')
   : bisim'r r (L, E, s) (L', E, fst (egalize D n s)).
 Proof.
-  revert_all. pcofix CIH.
-  intros. destruct s; simpl in *;
+  revert_except s.
+  sind s; intros; destruct s; simpl in *;
             repeat let_case_eq; repeat simpl_pair_eqs; subst; simpl in *.
   - case_eq (exp_eval E e); intros.
-    + pone_step. right. eapply CIH; eauto.
+    + pone_step. left. eapply IH; eauto.
     + pno_step.
   - case_eq (exp_eval E e); [ intros | intros; pno_step ].
     rewrite mapi_app in DROP. rewrite <- app_assoc in DROP.
     case_eq (val2bool v); intros.
-    + pone_step. right. eapply CIH; eauto.
-    + pone_step. right. eapply CIH; eauto.
+    + pone_step. left. eapply IH; eauto.
+    + pone_step. left. eapply IH; eauto.
       eapply app_drop in DROP. rewrite mapi_length in DROP.
       rewrite drop_drop in DROP. rewrite plus_comm.
       rewrite DROP. rewrite plus_comm. eauto.
@@ -340,32 +340,37 @@ Proof.
       repeat let_case_eq; repeat let_pair_case_eq; simpl in * |- *; subst.
       decide (length Z = length Y); [| pno_step; get_functional; simpl in *; eauto].
       case_eq (omap (exp_eval E) Y); [ intros | intros; pno_step; eauto ].
-      pone_step. right. simpl. eapply CIH.
-      *  orewrite (nth f D 0 - nth f D 0 = 0); simpl; intros ? ? GET.
-         repeat rewrite drop_drop. rewrite nth_drop.
-         eapply get_drop in GET. edestruct (SL _ _ GET); dcr.
-         rewrite plus_comm. eexists; split; eauto.
-         rewrite plus_comm; eauto.
-         pose proof (sawtooth_resetting ST _ g GET).
-         simpl in *.
+      pone_step. left. simpl.
+      * orewrite (nth f D 0 - nth f D 0 = 0); simpl.
+        repeat rewrite drop_drop. rewrite nth_drop.
+        eapply get_drop in GET. edestruct (SL _ _ GET); dcr.
+        rewrite plus_comm. eexists; split; eauto.
+        rewrite plus_comm; eauto.
+        pose proof (sawtooth_resetting ST _ g GET).
+        simpl in *.
          orewrite (f - n0 + (f0 - I.block_n b) = f - n0 + f0 - I.block_n b).
          eauto.
       * eapply (sawtooth_drop ST g).
       * orewrite (nth f D 0 - nth f D 0 = 0). simpl.
-        eauto.
+        eauto. *)
     + pno_step; eauto.
       admit.
   - pno_step.
   - case_eq (omap (exp_eval E) Y); [intros | intros; pno_step ].
     pextern_step.
     + eexists; split. econstructor; eauto.
-      right. eapply CIH; eauto.
+      left. eapply IH; eauto.
     + eexists; split. econstructor; eauto.
-      right. eapply CIH; eauto.
+      left. eapply IH; eauto.
   - eapply bisim'_expansion_closed;
       [ | eapply (S_star2 EvtTau); [ econstructor | eapply star2_refl ]
         | eapply star2_refl].
-    eapply CIH.
+    eapply IH; eauto.
+    + admit.
+    + econstructor; eauto. eapply tooth_I_mkBlocks.
+    +
+
+      rewrite egalize_funs_get
     unfold I.mkBlocks in A. eapply mapi_get in A. destruct A; dcr.
     destruct x as [Zb sb]. unfold I.mkBlock in H10; simpl in H10.
     subst b1. simpl. orewrite (f - f = 0). simpl.
