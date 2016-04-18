@@ -295,10 +295,6 @@ Instance PR : ProofRelationI (params) :=
 intros. dcr; repeat subst. eauto.
 Defined.
 
-Instance bisim_progeq {S} `{StateType S} : ProgramEquivalence S S.
-constructor. eapply (paco2 (@bisim_gen S _ S _)).
-Defined.
-
 Ltac pone_step := pfold; eapply bisim'Silent; [ eapply plus2O; single_step
                               | eapply plus2O; single_step
                               | ].

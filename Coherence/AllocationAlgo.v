@@ -199,12 +199,8 @@ Lemma defVars_take_disj F ans n Zs a
    -> disj (defVars Zs a) (list_union zip defVars (take n F) (take n ans)).
 Proof.
   intros.
-  symmetry. rewrite <- list_union_disjunct; intros.
-  inv_zip H2.
-  eapply H. Focus 3. eapply zip_get; eauto.
-  Focus 2.
-  eapply zip_get; eauto using get_take.
-  exploit get_take_lt; eauto. omega.
+  symmetry. rewrite <- list_union_disjunct; intros; inv_get.
+  eapply (H n0 n); eauto using zip_get. omega.
 Qed.
 
 Lemma defVars_drop_disj F ans n Zs a
@@ -214,10 +210,8 @@ Lemma defVars_drop_disj F ans n Zs a
    -> disj (defVars Zs a) (list_union zip defVars (drop (S n) F) (drop (S n) ans)).
 Proof.
   intros.
-  symmetry. rewrite <- list_union_disjunct; intros.
-  inv_zip H2.
-  eapply H. Focus 3. eapply zip_get; eauto.
-  Focus 2. eapply zip_get; eauto using get_drop. omega.
+  symmetry. rewrite <- list_union_disjunct; intros; inv_get.
+  eapply (H (S n + n0) n); eauto using zip_get. omega.
 Qed.
 
 Lemma defVars_disj_D F ans D Dt D'
@@ -228,6 +222,5 @@ Lemma defVars_disj_D F ans D Dt D'
 Proof.
   intros.
   eapply disj_2_incl; eauto. rewrite <- D'def.
-  eapply incl_union_left. eapply incl_list_union; eauto.
-  eapply zip_get; eauto. reflexivity.
+  eapply incl_union_left. eapply incl_list_union; eauto using zip_get.
 Qed.

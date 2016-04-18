@@ -61,7 +61,7 @@ Lemma list_to_stmt_correct L E s xl Y vl
 : length xl = length Y
   -> omap (exp_eval E) Y = Some vl
   -> unique xl
-  -> of_list xl ∩ list_union (List.map Exp.freeVars Y) [=] ∅
+  -> disj (of_list xl) (list_union (List.map Exp.freeVars Y))
   -> star2 F.step (L, E, list_to_stmt xl Y s) nil (L, update_with_list' xl (List.map Some vl) E, s).
 Proof.
   intros. eapply length_length_eq in H.
@@ -70,44 +70,40 @@ Proof.
   - monad_inv H0.
     econstructor 2 with (y:=EvtTau).
     econstructor; eauto.
-    simpl. eapply IHlength_eq.
-    eapply omap_exp_eval_agree.
-    symmetry. eapply agree_on_update_dead.
-    cset_tac. intro. eapply (H2 x).
-    split; cset_tac; intuition.
-    eapply list_union_start_swap. cset_tac; intuition.
-    reflexivity. eauto. intuition.
-    cset_tac; intuition.
-    eapply (H2 a); split; cset_tac; intuition.
-    eapply list_union_start_swap. cset_tac; intuition.
+    simpl. eapply IHlength_eq; eauto.
+    + eapply omap_exp_eval_agree; [|eauto].
+      symmetry. eapply agree_on_update_dead; [|reflexivity].
+      rewrite list_union_start_swap in H2.
+      intro. eapply (H2 x); eauto; cset_tac.
+    + rewrite list_union_start_swap in H2.
+      eauto with cset.
 Qed.
 
 Lemma list_to_stmt_crash L E s xl Y
 : length xl = length Y
   -> omap (exp_eval E) Y = None
   -> unique xl
-  -> of_list xl ∩ list_union (List.map Exp.freeVars Y) [=] ∅
+  -> disj (of_list xl) (list_union (List.map Exp.freeVars Y))
   -> exists σ, star2 F.step (L, E, list_to_stmt xl Y s) nil σ /\ state_result σ = None /\ normal2 F.step σ.
 Proof.
   intros. eapply length_length_eq in H.
   general induction H; simpl in * |- *.
   - monad_inv H0; isabsurd.
     + eexists; repeat split; eauto using star2_refl. stuck2.
-    + edestruct (IHlength_eq L (E [x <- Some x0])); eauto; intuition.
-      eapply omap_exp_eval_agree; eauto.
-      symmetry. eapply agree_on_update_dead; try reflexivity.
-      intro. cset_tac. eapply (H2 x). cset_tac; intuition.
-      eapply list_union_start_swap. cset_tac; intuition.
-      cset_tac; intuition. eapply (H2 a); cset_tac; intuition.
-      eapply list_union_start_swap. cset_tac; intuition.
-      eexists. split; eauto.
-      econstructor 2 with (y:=EvtTau).
-      econstructor; eauto.
-      eauto.
+    + rewrite list_union_start_swap in H2.
+      edestruct (IHlength_eq L (E [x <- Some x0])); eauto.
+      * eapply omap_exp_eval_agree; eauto. symmetry.
+        eapply agree_on_update_dead; [|reflexivity].
+        intro. eapply (H2 x); cset_tac.
+      * eauto with cset.
+      * dcr. eexists. split; eauto.
+        econstructor 2 with (y:=EvtTau).
+        econstructor; eauto.
+        eauto.
 Qed.
 
-Fixpoint compile s
-  : stmt :=
+Fixpoint compile s {struct s}
+  : stmt  :=
   match s with
     | stmtLet x e s => stmtLet x e (compile s)
     | stmtIf x s t => stmtIf x (compile s) (compile t)
@@ -119,7 +115,7 @@ Fixpoint compile s
         list_to_stmt xl Y (stmtApp l (List.map Var xl))
     | stmtReturn x => stmtReturn x
     | stmtExtern x f Y s => stmtExtern x f Y (compile s)
-    | stmtFun Z s t => stmtFun Z (compile s) (compile t)
+    | stmtFun F t => stmtFun (List.map (fun Zs => (fst Zs, compile (snd Zs))) F) (compile t)
   end.
 
 Definition ArgRel (V V:onv val) (G:params) (VL VL': list val) : Prop :=
@@ -148,8 +144,6 @@ Proof.
   erewrite omap_exp_eval_agree; try eapply IHlength_eq; eauto; simpl in *; intuition.
   instantiate (1:= V [x <- Some y]).
   eapply update_unique_commute; eauto; simpl; intuition.
-  rewrite map_length.
-  eapply length_eq_length; eauto.
 Qed.
 
 
@@ -177,17 +171,14 @@ Proof.
     pfold. econstructor 3; try eapply star2_refl; eauto; stuck.
   - case_eq (omap (exp_eval V) Y); intros.
     + exploit (list_to_stmt_correct L' V (stmtApp l (List.map Var
-            (fresh_list fresh (list_union (List.map Exp.freeVars Y)) (length Y))))).
-      rewrite fresh_list_length; eauto. eauto.
+            (fresh_list fresh (list_union (List.map Exp.freeVars Y)) (length Y))))); try eassumption.
+      rewrite fresh_list_length; eauto.
       eapply fresh_list_unique. eapply fresh_spec. eapply fresh_list_spec. eapply fresh_spec.
       destruct (get_dec L (counted l)) as [[[bE bZ bs]]|].
-      * edestruct AIR5_length; try eassumption; dcr.
-        edestruct get_length_eq; try eassumption.
-        edestruct AIR5_nth as [?[? [?]]]; try eassumption; dcr.
-        simpl in *. repeat get_functional; subst.
-        inv H11.
-        decide (length Y = length bZ). {
-          - cases. eapply bisim_drop_shift; eapply H18; eauto. hnf; intros; intuition.
+      * hnf in H. inRel_invs. simpl in H3, InR, H14.
+        hnf in H12; dcr; subst.
+        decide (length Y = length Z'). {
+          - cases. eapply bisim_drop_shift; eauto. hnf; intros; intuition.
         eapply omap_length in H0. hnf in H15; dcr; subst. congruence.
         eapply bisim'_expansion_closed; [eapply bisim_drop_shift; eapply H18| eapply star2_refl |].
         eauto.

@@ -533,8 +533,8 @@ Proof.
   eapply bisim'_refl.
 Qed.
 
-Instance bisim_progeq : ProgramEquivalence F.state F.state.
-constructor. eapply (paco2 (@bisim_gen F.state _ F.state _)).
+Instance bisim_progeq {S} `{StateType S} : ProgramEquivalence S S.
+constructor. eapply (paco2 (@bisim_gen S _ S _)).
 Defined.
 
 Lemma simL_mon (r r0:rel2 F.state (fun _ : F.state => F.state)) A AR L1 L2 (AL:list A)
@@ -919,11 +919,7 @@ Qed.
 
 Ltac pone_step := pfold; eapply bisim'Silent; [ eapply plus2O; single_step
                               | eapply plus2O; single_step
-                              | left ].
-
-Ltac pone_step' := pfold; eapply bisim'Silent; [ eapply plus2O; single_step
-                              | eapply plus2O; single_step
-                              | right ].
+                              | ].
 
 Ltac pno_step := pfold; eapply bisim'Term;
                try eapply star2_refl; try get_functional; try subst;

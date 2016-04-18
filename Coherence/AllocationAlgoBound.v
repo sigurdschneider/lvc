@@ -281,7 +281,7 @@ Proof.
           pe_rewrite.
           assert (getAnn x0 [=] getAnn x0 \ of_list (fst x1) ∪ of_list (fst x1)).
           revert H16; clear_all; cset_tac; intuition.
-          decide (a ∈ of_list (fst x1)); eauto. rewrite H29.
+          rewrite H29.
           symmetry. eapply disj_app; split. symmetry.
           eapply disj_1_incl. eapply disj_2_incl.
           eapply renamedApart_disj in sd. eapply sd. simpl.
@@ -293,7 +293,7 @@ Proof.
           rewrite lookup_set_update_with_list_in_union_length; eauto.
           rewrite diff_subset_equal. rewrite lookup_set_empty.
           clear_all; cset_tac; intuition. intuition. reflexivity.
-          intuition. intuition.
+          eauto. eauto.
         }
         rewrite FLEQ.
         rewrite least_fresh_list_small_vars_up_to.
@@ -350,7 +350,7 @@ Qed.
 Lemma regAssign_assignment_small' s ang ϱ ϱ' (alv:ann (set var)) Lv n
   : renamedApart s ang
   -> live_sound Imperative Lv s alv
-  -> bounded (live_globals Lv) (fst (getAnn ang))
+  -> bounded (live_global ⊝ Lv) (fst (getAnn ang))
   -> ann_R Subset1 alv ang
   -> LabelsDefined.noUnreachableCode s
   -> regAssign s alv ϱ = Success ϱ'

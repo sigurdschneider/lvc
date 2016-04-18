@@ -112,7 +112,6 @@ Proof.
           - assert (getAnn alv \ of_list (fst Zs) ∪ of_list (fst Zs) [=] getAnn alv).
             edestruct H2; eauto.
             revert H17; clear_all; cset_tac; intuition.
-            decide (a ∈ of_list (fst Zs)); eauto.
             eapply injective_on_agree.
             Focus 2.
             eapply agree_on_incl.
@@ -124,10 +123,9 @@ Proof.
             eapply disj_1_incl. eapply disj_2_incl. eapply sd.
             rewrite <- H13. eapply incl_union_left.
             hnf; intros ? A. eapply list_union_get in A. destruct A. dcr.
-            inv_zip H20.
-            eapply incl_list_union. eapply zip_get.
-            eapply get_take; eauto. eauto using get_take. reflexivity. eauto.
-            cset_tac; intuition.
+            inv_get.
+            eapply incl_list_union; eauto using zip_get.
+            reflexivity. cset_tac.
             edestruct H2; eauto; dcr. rewrite <- incl. eauto.
             eapply disj_1_incl.
             eapply defVars_take_disj; eauto. unfold defVars.
@@ -143,8 +141,7 @@ Proof.
             eapply fresh_list_unique, least_fresh_spec.
           - edestruct H8; eauto; dcr. rewrite H17.
             exploit H2; eauto; dcr. rewrite incl in H26; simpl in *.
-            revert H26; clear_all; cset_tac; intuition.
-            decide (a ∈ of_list (fst Zs)); intuition.
+            rewrite <- H26. clear_all; cset_tac; intuition.
           - eapply locally_inj_live_agree; try eapply H17; eauto.
             eapply regAssign_renamedApart_agreeF in H18;
               eauto using get_drop, drop_length_stable; try reflexivity.
@@ -203,7 +200,7 @@ Require Import Restrict RenamedApart_Liveness.
 Lemma regAssign_correct' s ang ϱ ϱ' (alv:ann (set var)) Lv
   : renamedApart s ang
   -> live_sound Imperative Lv s alv
-  -> bounded (live_globals Lv) (fst (getAnn ang))
+  -> bounded (live_global ⊝ Lv) (fst (getAnn ang))
   -> ann_R Subset1 alv ang
   -> LabelsDefined.noUnreachableCode s
   -> injective_on (getAnn alv) (findt ϱ 0)

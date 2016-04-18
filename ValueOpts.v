@@ -8,24 +8,6 @@ Require Import SetOperations Liveness Filter Eqn.
 Set Implicit Arguments.
 Unset Printing Records.
 
-(*
-Fixpoint compile (s:stmt) (a:ann (list exp)) :=
-  match s, a with
-    | stmtLet x _ s, ann1 (e'::nil) an =>
-      stmtLet x e' (compile s an)
-    | stmtIf _ s t, ann2 (e'::nil) ans ant =>
-      stmtIf e' (compile s ans) (compile t ant)
-    | stmtApp f _, ann0 Y' =>
-      stmtApp f Y'
-    | stmtReturn _, ann0 (e'::nil) => stmtReturn e'
-    | stmtExtern x f _ s, ann1 Y' an =>
-      stmtExtern x f Y' (compile s an)
-    | stmtFun Z s t, ann2 nil ans ant =>
-      stmtFun Z (compile s ans) (compile t ant)
-    | s, _ => s
-  end.
- *)
-
 Inductive eqn_sound : list (params*set var*eqns*eqns)
                       -> stmt -> stmt
                       -> eqns
@@ -60,13 +42,14 @@ Inductive eqn_sound : list (params*set var*eqns*eqns)
     -> length Y = length Y'
     -> eqn_sound Lv (stmtExtern x f Y s) (stmtExtern x f Y' s') Gamma
                 (ann1 (G,G') ang)
-| EqnLet Lv Z s s' t t'  Gamma Γ2 EqS G G' angs angb
-  : eqn_sound ((Z, G, Γ2, EqS)::Lv) s s' (EqS ∪ Γ2) angs
+| EqnLet Lv F F' t t'  Gamma Γ2 EqS G G' angs angb
+  : (forall n Z s Z' s', get F n (Z, s) -> get F' n (Z', s') ->
+               eqn_sound ((Z, G, Γ2, EqS)::Lv) s s' (EqS ∪ Γ2) angs)
   -> eqn_sound ((Z, G ,Γ2, EqS)::Lv) t t' Gamma angb
   -> eqns_freeVars EqS ⊆ G ++ of_list Z
   -> eqns_freeVars Γ2  ⊆ G
   -> entails Gamma Γ2
-  -> eqn_sound Lv (stmtFun Z s t) (stmtFun Z s' t') Gamma
+  -> eqn_sound Lv (stmtFun F t) (stmtFun F' t') Gamma
               (ann2 (G,G') angs angb)
 | EqnUnsat Lv s s' Gamma ang
   : unsatisfiable Gamma

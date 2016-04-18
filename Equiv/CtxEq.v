@@ -31,12 +31,12 @@ Lemma bisimeq'_refl s
 Proof.
   unfold bisimeq. sind s; destruct s; simpl in *; intros.
   - case_eq (exp_eval E e); intros.
-    + pone_step. eapply (IH s); eauto.
+    + pone_step. left. eapply (IH s); eauto.
     + pno_step.
   - case_eq (exp_eval E e); intros.
     case_eq (val2bool v); intros.
-    + pone_step. eapply (IH s1); eauto.
-    + pone_step. eapply (IH s2); eauto.
+    + pone_step. left. eapply (IH s1); eauto.
+    + pone_step. left. eapply (IH s2); eauto.
     + pno_step.
   - edestruct (get_dec L (counted l)) as [[b]|].
     decide (length Y = length (F.block_Z b)).
@@ -66,7 +66,7 @@ Proof.
         econstructor; eauto.
         left. eapply (IH s); eauto.
     + pno_step.
-  - pone_step.
+  - pone_step. left.
     eapply (IH s0); eauto using sawtooth_F_mkBlocks.
     eapply simL_extension'; eauto.
     instantiate (1:=List.map fst s). rewrite map_length; eauto.
@@ -134,7 +134,7 @@ Proof.
       exploit omap_length; eauto.
       exploit omap_length; try eapply H4; eauto.
       pone_step; eauto using get_app; simpl; eauto; try congruence.
-      eapply paco2_mon. eapply bisim'_refl. clear_all; firstorder.
+      left. eapply paco2_mon. eapply bisim'_refl. clear_all; firstorder.
 Qed.
 
 (** * Contextual Equivalence *)
@@ -177,21 +177,21 @@ Lemma simeq_contextual' s s' ctx r
 Proof.
   intros. general induction ctx; simpl; hnf; intros; eauto.
   - case_eq (exp_eval E e); intros.
-    + pone_step. eapply IHctx; eauto.
+    + pone_step. left. eapply IHctx; eauto.
     + pno_step.
   - case_eq (exp_eval E e); intros.
     case_eq (val2bool v); intros.
-    + pone_step; eapply IHctx; eauto.
-    + pone_step.
+    + pone_step; left; eapply IHctx; eauto.
+    + pone_step. left.
       eapply bisimeq'_refl; eauto.
     + pno_step.
   - case_eq (exp_eval E e); intros.
     case_eq (val2bool v); intros.
-    + pone_step.
+    + pone_step. left.
       eapply bisimeq'_refl; eauto.
-    + pone_step; eapply IHctx; eauto.
+    + pone_step; left; eapply IHctx; eauto.
     + pno_step.
-  - pone_step.
+  - pone_step. left.
     eapply bisimeq'_refl.
     eapply simL_extension'; eauto.
     + instantiate (1:=(List.map fst F1 ++ Z :: List.map fst F2)%list).
@@ -214,7 +214,7 @@ Proof.
           intros. hnf in H2. dcr; subst.
           eapply bisimeq'_refl. eauto.
         }
-  - pone_step.
+  - pone_step. left.
     eapply IHctx. eauto.
     eapply simL_extension'; eauto.
     + instantiate (1:=List.map fst F). rewrite map_length; eauto.
