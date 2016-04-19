@@ -178,20 +178,23 @@ Proof.
       * hnf in H. inRel_invs. simpl in H3, InR, H14.
         hnf in H12; dcr; subst.
         decide (length Y = length Z'). {
-          - cases. eapply bisim_drop_shift; eauto. hnf; intros; intuition.
-        eapply omap_length in H0. hnf in H15; dcr; subst. congruence.
-        eapply bisim'_expansion_closed; [eapply bisim_drop_shift; eapply H18| eapply star2_refl |].
-        eauto.
-        Focus 2. hnf; split. reflexivity. simpl. hnf in H15. hnf in H17.
-        dcr; subst. simpl in *.
-        erewrite <- omap_length; try eapply H0; eauto.
-        eapply omap_exp_eval_agree. Focus 2.
-        eapply omap_lookup_vars.
-        rewrite fresh_list_length. eapply omap_length; eauto.
-        eapply fresh_list_unique. eapply fresh_spec.
-        eapply update_with_list_agree'. rewrite fresh_list_length, map_length.
-        eapply omap_length; eauto. eapply fresh_list_unique. eapply fresh_spec.
-        eapply X.
+          cases.
+          - eapply bisim_drop_shift; eauto. eapply (inRel_sawtooth H).
+            eapply (inRel_sawtooth H). eapply H14; eauto. hnf.
+            eapply omap_length in H0. hnf in H13; dcr; subst. simpl. split; congruence.
+          - eapply bisim'_expansion_closed; [eapply bisim_drop_shift| eapply star2_refl |]; eauto.
+
+            eauto.
+            Focus 2. hnf; split. reflexivity. simpl. hnf in H15. hnf in H17.
+            dcr; subst. simpl in *.
+            erewrite <- omap_length; try eapply H0; eauto.
+            eapply omap_exp_eval_agree. Focus 2.
+            eapply omap_lookup_vars.
+            rewrite fresh_list_length. eapply omap_length; eauto.
+            eapply fresh_list_unique. eapply fresh_spec.
+            eapply update_with_list_agree'. rewrite fresh_list_length, map_length.
+            eapply omap_length; eauto. eapply fresh_list_unique. eapply fresh_spec.
+            eapply X.
         }
         hnf in H15. hnf in H17. dcr; simpl in *. subst. pfold.
         cases.

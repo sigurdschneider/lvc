@@ -112,7 +112,7 @@ Section ParametricMapIndex.
 
   Definition mapi := mapi_impl 0.
 
-  Lemma mapi_get_impl L i y n
+  Lemma mapi_impl_getT L i y n
   : getT (mapi_impl i L) n y -> { x : X & (getT L n x * (f (n+i) x = y))%type }.
   Proof.
     intros. general induction X0; simpl in *;
@@ -123,12 +123,18 @@ Section ParametricMapIndex.
     rewrite <- b. f_equal; omega.
   Qed.
 
+  Lemma mapi_impl_get L i y n
+  : get (mapi_impl i L) n y -> { x : X & (get L n x * (f (n+i) x = y))%type }.
+  Proof.
+    intros.
+    eapply get_getT, mapi_impl_getT in H. dcr; eexists; split; eauto using getT_get.
+  Qed.
+
   Lemma mapi_get L n y
   : get (mapi L) n y -> { x : X | get L n x /\ f n x = y }.
   Proof.
-    intros. eapply get_getT in H. eapply mapi_get_impl in H; dcr.
-    orewrite (n+0 = n) in b.
-    eexists; eauto using getT_get.
+    intros. eapply mapi_impl_get in H; dcr; subst.
+    orewrite (n+0 = n). eauto.
   Qed.
 
   Lemma mapi_length L {n}
@@ -504,6 +510,12 @@ Ltac inv_get_step :=
     let X := fresh "X" in
     let EQ := fresh "EQ" in
     pose proof (mapi_get f _ H) as X; destruct X as [? [GET EQ]];
+    try (simplify_eq EQ); intros;
+    clear H; rename GET into H
+  | [ H : get (mapi_impl ?f ?k ?L) ?n ?x |- _ ] =>
+    let X := fresh "X" in
+    let EQ := fresh "EQ" in
+    pose proof (mapi_impl_get f _ k H) as X; destruct X as [? [GET EQ]];
     try (simplify_eq EQ); intros;
     clear H; rename GET into H
   end.

@@ -285,10 +285,125 @@ Proof.
   general induction L'; simpl; eauto.
 Qed.
 
+Require Import BisimI.
+
+
+Ltac simpl_get_dropI :=
+  repeat match goal with
+  | [ H : get (drop (?n - _) ?L) _ _, H' : get ?L ?n ?blk, STL: sawtooth ?L |- _ ]
+    => eapply get_drop in H;
+      let X := fresh "LT" in pose proof (sawtooth_smaller STL H') as X;
+        simpl in X, H;
+        orewrite (n - I.block_n blk + I.block_n blk = n) in H; clear X
+  | [ H' : get ?L ?n ?blk, STL: sawtooth ?L |- get (drop (?n - _) ?L) _ _ ]
+    => eapply drop_get;
+      let X := fresh "LT" in pose proof (sawtooth_smaller STL H') as X;
+        simpl in X; simpl;
+        orewrite (n - I.block_n blk + I.block_n blk = n); clear X
+  end.
+
+Lemma sawtooth_app B `{BlockType B} L L'
+  : sawtooth L -> sawtooth L' -> sawtooth (L ++ L').
+Proof.
+  intros H1 H2. general induction H1; eauto.
+  rewrite <- app_assoc. econstructor; eauto.
+Qed.
+
+Require Import CtxEq.
+
+Lemma bisim'r_refl s
+  : forall L E r,
+    bisim'r r (L, E, s) (L, E, s).
+Proof.
+  revert s. pcofix CIH.
+  intros; destruct s; simpl in *; intros.
+  - case_eq (exp_eval E e); intros.
+    + pone_step. right. eapply (CIH); eauto.
+    + pno_step.
+  - case_eq (exp_eval E e); intros.
+    case_eq (val2bool v); intros.
+    + pone_step. right. eapply (CIH s1); eauto.
+    + pone_step. right. eapply (CIH s2); eauto.
+    + pno_step.
+  - edestruct (get_dec L (counted l)) as [[b]|].
+    decide (length Y = length (I.block_Z b)).
+    case_eq (omap (exp_eval E) Y); intros.
+    + pone_step. right. eapply CIH.
+    + pno_step.
+    + pno_step; get_functional.
+      exploit omap_length; eauto. congruence.
+    + pno_step; eauto.
+  - pno_step.
+  - case_eq (omap (exp_eval E) Y); intros.
+    + pextern_step.
+      * eexists; split.
+        econstructor; eauto.
+        right. eapply (CIH s); eauto.
+      * eexists; split.
+        econstructor; eauto.
+        right. eapply (CIH s); eauto.
+    + pno_step.
+  - pone_step. right.
+    eapply (CIH s0); eauto using sawtooth_F_mkBlocks.
+Qed.
+
+Lemma sim_drop_shift_I r l (L:I.labenv) E Y (L':I.labenv)
+      blk (STL:sawtooth L) (STL':sawtooth L')
+  : get L (labN l) blk
+  -> paco2 (@bisim_gen I.state _ I.state _) r
+          (drop (labN l - block_n blk) L, E, stmtApp (LabI (block_n blk)) Y)
+          (L, E, stmtApp l Y).
+Proof.
+  intros.
+  assert ( get (drop (labN l - block_n blk) L) (counted (LabI (block_n blk))) blk). {
+    eapply drop_get. simpl.
+    exploit (sawtooth_smaller STL); eauto. simpl in *.
+    orewrite (labN l - I.block_n blk + I.block_n blk = labN l). eauto.
+  }
+  decide (❬I.block_Z blk❭ = ❬Y❭).
+  case_eq (omap (exp_eval E) Y); intros.
+  pone_step. simpl. left. repeat rewrite drop_drop.
+  orewrite (I.block_n blk - I.block_n blk = 0). simpl.
+  eapply bisim'r_refl.
+  pno_step.
+  pno_step; get_functional; congruence.
+Qed.
+
+Lemma bisim'r_trans_bot r σ1 σ2 σ3
+  : bisim'r bot2 σ1 σ2 -> bisim'r r σ2 σ3 -> bisim'r r σ1 σ3.
+Proof.
+  revert_all. pcofix CIH; intros.
+Admitted.
+
+
+Inductive simIBlock (SIM:ProgramEquivalence I.state I.state)
+          (r:I.state -> I.state -> Prop)
+          {A} (AR:ProofRelationI A)
+  : list A -> I.labenv -> I.labenv -> A -> I.block -> I.block -> Prop :=
+| simIBI a L L' Z Z' s s' n n' AL
+  : ParamRelI a Z Z'
+    -> BlockRelI a (I.blockI Z s n) (I.blockI Z' s' n')
+    -> (forall E E' Yv Y'v,
+          ArgRelI E E' a Yv Y'v
+          -> progeq r (L,  E [Z <-- Some ⊝ Yv],   s)
+                   (L', E'[Z' <-- Some ⊝ Y'v], s'))
+          -> simIBlock SIM r AR AL L L' a (I.blockI Z s n) (I.blockI Z' s' n').
+
+
+Definition renILabenv (SIM:ProgramEquivalence I.state I.state) r
+           {A} AR (R: nat -> nat -> Prop) (AL:list A) L L' :=
+  forall n n' a b b', R n n' -> get AL n a -> get L n b -> get L' n' b'
+               -> simIBlock SIM r AR
+                           (drop (n - I.block_n b) AL)
+                           (drop (n - I.block_n b) L)
+                           (drop (n' - I.block_n b') L')
+                           a b b'.
+
+
 Instance PR : ProofRelationI (params) :=
   {
     ParamRelI G Z Z' := Z = Z' /\ Z = G;
-    ArgRelI G VL VL' := VL = VL' /\ length VL = length G;
+    ArgRelI V V' G VL VL' := VL = VL' /\ length VL = length G;
     BlockRelI := fun Z b b' => length (I.block_Z b) = length Z
                            /\ length (I.block_Z b') = length Z
   }.
@@ -307,18 +422,15 @@ Proof.
   destruct L; simpl; eauto. destruct (n + m); eauto.
 Qed.
 
-Lemma renestSim_sim r L L' E s n D L''
+Definition R D n n' := n' = (nth n D 0).
+
+Lemma renestSim_sim r L L' E s n D L'' ZL
       (SL:forall (f : nat) (b : I.block),
           get L f b ->
           exists b' : I.block,
             get L' (nth f D 0) b' /\
             approx L' (drop (f - block_n b) D) (nth f D 0) b b')
-      (SIM:
-         forall E b l m f, get L f b
-                           -> bisim'r r
-                                     (drop (f - I.block_n b) L, E [I.block_Z b <-- Some ⊝ l], I.block_s b)
-                                     (L', E [I.block_Z b <-- Some ⊝ l],
-                                      fst (egalize (drop (f - I.block_n b) D) m (I.block_s b))))
+      (SIM:renILabenv bisim_progeq r PR (R D) ZL L L')
       (ST:sawtooth L)
       (DROP:drop n L' = mapi_impl I.mkBlock n (snd (egalize D n s)) ++ L'')
   : bisim'r r (L, E, s) (L', E, fst (egalize D n s)).
@@ -343,11 +455,9 @@ Proof.
       decide (length Z = length Y); [| pno_step; get_functional; simpl in *; eauto].
       case_eq (omap (exp_eval E) Y); [ intros | intros; pno_step; eauto ].
       pone_step. left. simpl.
-      * orewrite (nth f D 0 - nth f D 0 = 0); simpl.
-        exploit SIM; eauto.
-      (* * eapply (sawtooth_drop ST g).
-      * orewrite (nth f D 0 - nth f D 0 = 0). simpl.
-        eauto. *)
+      * exploit SIM; eauto. hnf. reflexivity. admit. simpl in *.
+        inv H3. unfold progeq in H16. simpl in H16. unfold bisim'r.
+        eapply H16. eauto.
     + pno_step; eauto.
       admit.
   - pno_step.
@@ -362,9 +472,16 @@ Proof.
         | eapply star2_refl].
     eapply IH; eauto.
     + admit.
-    + intros. eapply get_app_cases in H. destruct H; dcr.
-      unfold I.mkBlocks in H. inv_get. simpl.
-      orewrite (f - f = 0); simpl.
+    + intros. hnf; intros. instantiate (1:=fst ⊝ F ++ ZL).
+      eapply get_app_cases in H0. destruct H0.
+      inv_get. eapply get_app_le in H1; eauto. unfold I.mkBlocks in H1. inv_get.
+      simpl. orewrite (n0 - n0 = 0); simpl. hnf in H. subst.
+      unfold extend. rewrite app_nth1.
+      assert (nth n0 (mapi (fun (i : nat) (_ : params * stmt) => i + n) F) 0 = n + n0) by admit.
+      rewrite H.
+      exploit IH. instantiate (1:= (snd x)). eauto. admit.
+      assert (n + n0 - I.block_n b' = n0 - I.block_n b' + n) by admit.
+      rewrite H1. rewrite <- drop_drop. rewrite DROP.
       eapply IH; eauto. admit. admit. admit. admit.
       admit.
       intros. eapply get_app_cases in H. destruct H; dcr.

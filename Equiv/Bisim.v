@@ -534,7 +534,9 @@ Proof.
 Qed.
 
 Instance bisim_progeq {S} `{StateType S} : ProgramEquivalence S S.
-constructor. eapply (paco2 (@bisim_gen S _ S _)).
+Proof.
+  econstructor. instantiate (1:=(paco2 (@bisim_gen S _ S _))).
+  eapply paco2_mon.
 Defined.
 
 Lemma simL_mon (r r0:rel2 F.state (fun _ : F.state => F.state)) A AR L1 L2 (AL:list A)

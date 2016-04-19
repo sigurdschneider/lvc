@@ -11,8 +11,7 @@ Lemma mkBlocks_I_less
       : forall (F : list (params * stmt)) (n k : nat) (b : I.block),
           get (mapi_impl I.mkBlock k F) n b -> I.block_n b <= k + length F - 1.
 Proof.
-  intros. general induction F; simpl in *; inv H; simpl in *; try omega.
-  rewrite IHF; eauto. omega.
+  intros; inv_get. simpl. eapply get_range in H. omega.
 Qed.
 
 Lemma mkBlock_I_i F
@@ -36,11 +35,10 @@ Lemma mkBlocks_F_less
       : forall E (F : list (params * stmt)) (n k : nat) (b : F.block),
           get (mapi_impl (F.mkBlock E) k F) n b -> F.block_n b <= k + length F - 1.
 Proof.
-  intros. general induction F; simpl in *; inv H; simpl in *; try omega.
-  rewrite IHF; eauto. omega.
+  intros; inv_get. simpl. eapply get_range in H. omega.
 Qed.
 
-Global Instance block_type_F : BlockType (F.block) :=
+Instance block_type_F : BlockType (F.block) :=
   {
     block_n := F.block_n
   }.
@@ -135,11 +133,7 @@ Lemma mutual_approx_impl2 {A} {B} `{BlockType B} {C} `{BlockType C}
     -> F1' = drop i F1
     -> F2' = drop i F2
     -> AL' = drop i AL
-    -> (forall n a b b',
-          get AL n a
-          -> get F1 n b
-          -> get F2 n b'
-          -> R DL L1 L2 a b b')
+    -> (forall n a b b', get AL n a -> get F1 n b -> get F2 n b' -> R DL L1 L2 a b b')
     -> (forall i b, get F1 i b -> i = block_n b)
     -> (forall i b, get F2 i b -> i = block_n b)
     -> mutual_block (R DL L1 L2) i AL' F1' F2'.
@@ -300,37 +294,6 @@ Proof.
   - econstructor; eauto using mutual_block_mon.
 Qed.
 
-(*
-Lemma lpm_less {B} `{BlockType B} L n b
-: labenv_parameters_match L -> get L n b -> block_n b <= n.
-Proof.
-  intros. general induction H0. inv H1; eauto.
-  eapply get_app_cases in H3; destruct H3; dcr.
-  erewrite  chainsaw_zero; eauto. omega.
-  rewrite IHlabenv_parameters_match; try eapply H4. omega.
-Qed.
-
-Lemma labenv_parameters_match_get B `{BlockType B} n L (blk:B)
-: labenv_parameters_match L
-  -> get L n blk
-  -> parameters_match (drop (n - block_n blk) L) (block_s blk)
-     /\ labenv_parameters_match (drop (n - block_n blk) L).
-Proof.
-  intros. general induction H0. inv H1.
-  eapply get_app_cases in H3; destruct H3; dcr.
-  - exploit (eapply chainsaw_zero; eauto). rewrite X.
-    orewrite (n - (n + 0) = 0). simpl.
-    split; eauto. econstructor; eauto.
-  - inv H0. inv H4.
-    specialize (IHlabenv_parameters_match _ _ H4).
-    assert (length L' + (n - length L') = n) by omega.
-    exploit (eapply lpm_less; eauto).
-    rewrite <- H8.
-    orewrite (length L' + (n - length L') - block_n blk
-              = length L' + (n - length L' - block_n blk)).
-    rewrite drop_app. eauto.
-Qed.
-*)
 Tactic Notation "inRel_invs" :=
 match goal with
   | [ H : inRel ?R ?A ?B ?C, H' : get ?B ?n ?b |- _ ] =>

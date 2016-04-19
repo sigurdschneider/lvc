@@ -5,59 +5,6 @@ Require Export EventsActivated StateType paco Equiv Sim.
 Set Implicit Arguments.
 Unset Printing Records.
 
-(* A proof relation is parameterized by analysis information A *)
-Class ProofRelationI (A:Type) := {
-    (* Relates parameter lists according to analysis information *)
-    ParamRelI : A -> list var -> list var -> Prop;
-    (* Relates argument lists according to analysis information
-       and closure environments *)
-    ArgRelI :  onv val -> onv val -> A -> list val -> list val -> Prop;
-    (* Relates blocks according to analysis information *)
-    BlockRelI : A -> I.block -> I.block -> Prop;
-    (* Relates environments according to analysis information *)
-    RelsOKI : forall a Z Z' VL VL' E E',
-        ParamRelI a Z Z' -> ArgRelI E E' a VL VL' ->
-        length Z = length VL /\ length Z' = length VL'
-}.
-
-Inductive simIBlock (SIM:ProgramEquivalence I.state I.state)
-          (r:I.state -> I.state -> Prop)
-          {A} (AR:ProofRelationI A)
-  : list A -> I.labenv -> I.labenv -> A -> I.block -> I.block -> Prop :=
-| simIBI a L L' Z Z' s s' n AL
-  : ParamRelI a Z Z'
-    -> BlockRelI a (I.blockI Z s n) (I.blockI Z' s' n)
-    -> (forall E E' Y Y' Yv Y'v,
-         omap (exp_eval E) Y = Some Yv
-         -> omap (exp_eval E') Y' = Some Y'v
-         -> ArgRelI E E' a Yv Y'v
-         -> progeq r (L, E, stmtApp (LabI n) Y)
-                        (L', E', stmtApp (LabI n) Y'))
-    -> simIBlock SIM r AR AL L L' a (I.blockI Z s n) (I.blockI Z' s' n).
-
-Definition simILabenv (SIM:ProgramEquivalence I.state I.state) r
-           {A} AR (AL:list A) L L' := inRel (simIBlock SIM r AR) AL L L'.
-
-Definition fexteqI (SIM:ProgramEquivalence I.state I.state)
-           {A} (AR:ProofRelationI A) (a:A) (AL:list A) Z s Z' s' :=
-  ParamRelI a Z Z' /\
-  forall E E' VL VL' L L' (r:rel2 I.state (fun _ : I.state => I.state)),
-    ArgRelI E E' a VL VL'
-    -> simILabenv SIM r AR AL L L'
-    -> progeq r (L, E[Z <-- List.map Some VL], s)
-            (L', E'[Z' <-- List.map Some VL'], s').
-
-Lemma simILabenv_mon (r r0:rel2 I.state (fun _ : I.state => I.state)) A AR L1 L2 (AL:list A)
-:  inRel (simIBlock sim_progeq r AR) AL L1 L2
-  -> (forall x0 x1 : I.state, r x0 x1 -> r0 x0 x1)
-  ->  inRel (simIBlock sim_progeq r0 AR) AL L1 L2.
-Proof.
-  intros. eapply inRel_mon. eauto.
-  intros. inv H1. econstructor; eauto.
-  intros. eapply paco2_mon. eapply H4; eauto. eauto.
-Qed.
-
-
 Lemma mutual_block_extension_I r A (AR:ProofRelationI A) F1 F2 F1' F2' ALX AL AL' i L1 L2
       (D1:F1' = drop i F1) (D2:F2' = drop i F2) (D3:AL' = drop i AL)
       (LEN1:length F1 = length F2) (LEN2:length AL = length F1)
