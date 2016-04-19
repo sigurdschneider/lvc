@@ -1,5 +1,5 @@
 Require Import List.
-Require Export Util Var Val Exp Env Map CSet AutoIndTac IL Bisim Infra.Status Pos.
+Require Export Util Var Val Exp Env Map CSet AutoIndTac IL Bisim Infra.Status Pos SmallStepCommon.
 
 Set Implicit Arguments.
 
@@ -105,8 +105,8 @@ Module F.
       decide (block_Z blk = length Y).
       case_eq (omap (exp_eval V) Y); intros; try now (right; stuck).
       + left. do 2 eexists. econstructor; eauto.
-      + right. stuck2. get_functional; subst; eauto.
-      + right. stuck2. eauto.
+      + right. stuck2.
+      + right. stuck2.
     - right. stuck2.
     - case_eq (omap (exp_eval V) Y); intros; try now (right; stuck).
       left; eexists (EvtExtern (ExternI f l 0)). eexists; eauto using step.
@@ -284,7 +284,7 @@ Proof.
       intros. eapply exp_idx_ok; eauto. edestruct H2; eauto; dcr.
       get_functional; subst; eauto. symmetry; eapply smap_length; eauto.
       congruence.
-    + no_step; get_functional; subst; try congruence.
+    + no_step.
       invt approx; simpl in *; subst. exploit smap_length; eauto. congruence.
     + no_step; eauto. edestruct PIR2_nth_2; eauto; dcr. eauto.
   - no_step. simpl.

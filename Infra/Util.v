@@ -139,11 +139,6 @@ Tactic Notation "bool_to_prop" "in" "*" :=
     | [ H : _ |- _ ] => bool_to_prop in H
   end).
 
-Ltac isabsurd :=
-  try now (hnf; intros; match goal with
-                 [ H : _ |- _ ] => exfalso; inversion H; try congruence
-               end).
-
 Ltac destr_assumption H :=
   repeat match goal with
            | [ H : _ /\ _  |- _ ] => destruct H
@@ -180,7 +175,7 @@ Tactic Notation "beq_to_prop" :=
 
 
 Tactic Notation "cbool" :=
-  simpl in *; bool_to_prop in *; destr in *; bool_to_prop; destr; beq_to_prop; isabsurd.
+  simpl in *; bool_to_prop in *; destr in *; bool_to_prop; destr; beq_to_prop.
 
 Global Instance inst_eq_dec_list {A} `{EqDec A eq} : EqDec (list A) eq.
 hnf. eapply list_eq_dec. eapply equiv_dec.
@@ -288,16 +283,6 @@ repeat match goal with
              | _ => revert H
            end
        end; cofix; intros.
-
-Ltac stuck :=
-  let A := fresh "A" in let v := fresh "v" in intros [v A]; inv A; isabsurd.
-
-Ltac stuck2 :=
-  let A := fresh "A" in
-  let v := fresh "v" in
-  let evt := fresh "evt" in
-  intros [v [evt A]]; inv A; isabsurd.
-
 
 Lemma modus_ponens P Q
 : P -> (P -> Q) -> Q.

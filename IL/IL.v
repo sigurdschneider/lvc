@@ -1,5 +1,6 @@
 Require Import List.
-Require Export Util Relations Get Drop Var Val Exp Env Map CSet AutoIndTac MoreList OptionMap Events Size.
+Require Export Util Relations Get Drop Var Val Exp Env Map CSet AutoIndTac MoreList OptionMap.
+Require Export Events Size SmallStepCommon.
 Require Import SetOperations.
 
 Set Implicit Arguments.
@@ -214,14 +215,12 @@ Module F.
     - case_eq (exp_eval V e); intros.
       left. case_eq (val2bool v); intros; do 2 eexists; eauto using step.
       right. stuck.
-    - destruct (get_dec L (counted l)) as [[blk A]|?].
-      decide (length (block_Z blk) = length Y).
-      case_eq (omap (exp_eval V) Y); intros; try now (right; stuck).
-      + left. do 2 eexists. econstructor; eauto.
-      + right. stuck2. get_functional; subst; eauto.
-      + right. stuck2. eauto.
+    - destruct (get_dec L (counted l)) as [[blk A]|?]; [ | right; stuck2 ].
+      decide (length (block_Z blk) = length Y); [ | right; stuck2 ].
+      case_eq (omap (exp_eval V) Y); intros; [ | right; stuck2 ].
+      left. do 2 eexists. econstructor; eauto.
     - right. stuck2.
-    - case_eq (omap (exp_eval V) Y); intros; try now (right; stuck).
+    - case_eq (omap (exp_eval V) Y); intros; [ | right; stuck2 ].
       left; eexists (EvtExtern (ExternI f l 0)). eexists; eauto using step.
     - left. eexists. eauto using step.
   Qed.
@@ -304,12 +303,10 @@ Module I.
     - case_eq (exp_eval V e); intros.
       left. case_eq (val2bool v); intros; do 2 eexists; eauto using step.
       right. stuck.
-    - destruct (get_dec L (counted l)) as [[blk A]|?].
-      decide (length (block_Z blk) = length Y).
-      case_eq (omap (exp_eval V) Y); intros; try now (right; stuck).
-      + left. do 2 eexists. econstructor; eauto.
-      + right. stuck2. get_functional; subst; eauto.
-      + right. stuck2. eauto.
+    - destruct (get_dec L (counted l)) as [[blk A]|?]; [| right; stuck2].
+      decide (length (block_Z blk) = length Y); [| right; stuck2].
+      case_eq (omap (exp_eval V) Y); intros; [| right; stuck2].
+      left. do 2 eexists. econstructor; eauto.
     - right. stuck2.
     - case_eq (omap (exp_eval V) Y); intros; try now (right; stuck).
       left; eexists (EvtExtern (ExternI f l 0)). eexists; eauto using step.

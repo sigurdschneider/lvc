@@ -37,17 +37,14 @@ Inductive alpha : env var -> env var -> stmt -> stmt -> Prop :=
 (** ** Morphisims *)
 (** These properties are requires because we do not assume functional extensionality. *)
 
+
 Global Instance alpha_morph
  : Proper ((@feq _ _ _eq) ==> (@feq _ _ _eq) ==> eq ==> eq ==> impl) alpha.
 Proof.
   unfold respectful, Proper, impl; intros; subst.
   general induction H3; econstructor; eauto using alpha_exp_morph.
-  - eapply IHalpha.
-    + rewrite H0; reflexivity.
-    + rewrite H1; reflexivity.
-  - eapply IHalpha.
-    + rewrite H1; reflexivity.
-    + rewrite H2; reflexivity.
+  - eapply IHalpha; eapply update_inst; eauto.
+  - eapply IHalpha; eapply update_inst; eauto.
   - intros. eapply H2; eauto.
     + rewrite H4; reflexivity.
     + rewrite H5; reflexivity.
@@ -360,9 +357,7 @@ Proof.
       erewrite H1 in def. congruence.
       intros. eapply alpha_exp_eval. eapply H0; eauto. eauto.
     + edestruct PIR2_nth; eauto; dcr. inv H3.
-      no_step. simpl in *.
-      get_functional; subst. simpl in *. congruence.
-      get_functional; subst. simpl in *. congruence.
+      no_step.
     + no_step; eauto. edestruct PIR2_nth_2; eauto; dcr. eauto.
   - case_eq (exp_eval E e); intros.
     one_step. erewrite <- alpha_exp_eval; eauto.

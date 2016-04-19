@@ -86,13 +86,12 @@ Proof.
       rewrite fold_2 in H5; eauto.
       * decide (P x); try congruence.
         eapply Add_Equal in H4.
-        eapply H4 in H6. cset_tac. destruct H6.
-        rewrite <- H6; eauto.
-        eapply H2; eauto.
+        eapply H4 in H6. cset_tac.
+        rewrite <- H7; eauto.
       * unfold Proper, respectful, flip; intros; subst.
         repeat cases; eauto.
-        exfalso. rewrite H7 in n; eauto.
-        exfalso. rewrite H7 in p; eauto.
+        exfalso. rewrite H7 in NOTCOND; eauto.
+        exfalso. rewrite H7 in COND; eauto.
       * unfold transpose, flip; intros.
         repeat cases; eauto.
   - right.
@@ -111,8 +110,8 @@ Proof.
         rewrite H4. cset_tac; intuition.
       * unfold Proper, respectful, flip; intros; subst.
         repeat cases; eauto.
-        exfalso. rewrite H7 in n; eauto.
-        exfalso. rewrite H7 in p; eauto.
+        exfalso. rewrite H7 in NOTCOND; eauto.
+        exfalso. rewrite H7 in COND; eauto.
       * unfold transpose, flip; intros.
         repeat cases; eauto.
 Defined.
@@ -135,16 +134,29 @@ Instance Equal_computable (s t:Map [var, withTop val])
 : Computable (Equal s t).
 pose (R:=@withTop_eq_dec _ _ inst_eq_dec_val).
 case_eq (equal R s t); intros.
-eapply MF.equal_iff in H. subst R.
-eapply MF.Equal_Equivb in H. left; eauto.
+rewrite <- MapFacts.equal_iff in H. subst R.
+eapply MapFacts.Equal_Equivb in H. left; eauto.
 intros. destruct (withTop_eq_dec val e e'); intuition.
 right; intro.
-eapply MF.Equal_Equivb in H0.
-eapply MF.equal_iff in H0. instantiate (1:=fun x y => R x y) in H0.
+eapply MapFacts.Equal_Equivb in H0.
+eapply MapFacts.equal_iff in H0. instantiate (1:=fun x y => R x y) in H0.
 congruence.
 intros; simpl. subst R.
 destruct (withTop_eq_dec val e e'); intuition.
 Defined.
+
+Lemma findA_get A B (L:list (A * B)) f v
+  : findA f L = Some v
+    -> exists x n, get L n x /\ snd x = v /\ f (fst x).
+Proof.
+  general induction L; simpl; eauto.
+  - simpl in H. destruct a. cases in H.
+    + inv H.
+      eexists (a,v). eexists 0. repeat split; eauto using get. simpl.
+      rewrite <- Heq. eapply I.
+    + edestruct IHL as [? [? ]]; dcr; eauto.
+      do 2 eexists; eauto using get.
+Qed.
 
 Lemma not_domain_find {X} `{OrderedType X} {Y} (d:Map [X, Y]) x
 : x ∉ domain d -> find x d = None.
@@ -153,18 +165,6 @@ Proof.
   case_eq (find x d); intros; eauto.
   exfalso. eapply H0.
   rewrite MapFacts.elements_o in H1.
-  Lemma findA_get A B (L:list (A * B)) f v
-  : findA f L = Some v
-    -> exists x n, get L n x /\ snd x = v /\ f (fst x).
-  Proof.
-    general induction L; simpl; eauto.
-    - simpl in H. destruct a. cases in H.
-    + inv H.
-      eexists (a,v). eexists 0. repeat split; eauto using get. simpl.
-      rewrite <- Heq. eapply I.
-    + edestruct IHL as [? [? ]]; dcr; eauto.
-      do 2 eexists; eauto using get.
-  Qed.
   eapply findA_get in H1. destruct H1 as [? [? ]]; dcr; subst.
   unfold MapFacts.eqb in H5.
   cbv in H5. destruct x0.
@@ -195,8 +195,8 @@ Proof.
   instantiate (1:=eq_key_elt). hnf; eauto.
   destruct x0.
   dcr.
-  eapply MF.elements_mapsto_iff in H3.
-  simpl in *. eapply MF.find_mapsto_iff in H3. rewrite <- H4 in H3.
+  eapply MapFacts.elements_mapsto_iff in H3.
+  simpl in *. eapply MapFacts.find_mapsto_iff in H3. rewrite <- H4 in H3.
   congruence.
 Qed.
 
@@ -228,42 +228,41 @@ Qed.
 
 
 Lemma leDom_join x y x' y'
-: leDom y x
-  -> leDom y' x'
-  -> leDom (joinDom y y') (joinDom x x').
+  : leDom y x
+    -> leDom y' x'
+    -> leDom (joinDom y y') (joinDom x x').
 Proof.
   unfold leDom, joinDom.
   intros.
   repeat rewrite MapFacts.map2_1bis; eauto.
   repeat rewrite domain_join in H1.
-  cset_tac.
+  cset_tac;
   decide (x0 ∈ domain y);
-  decide (x0 ∈ domain y');
-  decide (x0 ∈ domain x);
-  decide (x0 ∈ domain x'); (try now intuition);
-  repeat match goal with
-    | [H' : ?x ∈ domain y |- _ ] => exploit (H x); eauto;
-                                 eapply domain_find in H'; destruct H'
-    | [H' : ?x ∈ domain x |- _ ] => exploit (H x); eauto;
-                                 eapply domain_find in H'; destruct H'
-    | [H' : ?x ∈ domain y' |- _ ] => exploit (H0 x); eauto;
-                                 eapply domain_find in H'; destruct H'
-    | [H' : ?x ∈ domain x' |- _ ] => exploit (H0 x); eauto;
-                                 eapply domain_find in H'; destruct H'
-  end; (try now eapply lt_join; eauto);
-  repeat match goal with
-      | [H' : ?x ∉ domain ?y |- _ ] => eapply not_domain_find in H'; rewrite H'
-         end;
-  repeat rewrite join_bot_right;
-  repeat rewrite join_bot_left; eauto; simpl;
-  repeat match goal with
-    | [H : lt ?x ?y, H' : ?y = None |- _ ] => rewrite H' in H; inv H
-  end.
-  rewrite H3, n0 in H2. inv H2.
-  rewrite H3, n1 in H2; inv H2.
-  rewrite H3; constructor.
-  rewrite H3; econstructor.
-  constructor.
+    decide (x0 ∈ domain y');
+    decide (x0 ∈ domain x);
+    decide (x0 ∈ domain x');
+      repeat match goal with
+             | [H' : ?x ∈ domain y |- _ ] => exploit (H x); eauto;
+                                             eapply domain_find in H'; destruct H'
+             | [H' : ?x ∈ domain x |- _ ] => exploit (H x); eauto;
+                                             eapply domain_find in H'; destruct H'
+             | [H' : ?x ∈ domain y' |- _ ] => exploit (H0 x); eauto;
+                                              eapply domain_find in H'; destruct H'
+             | [H' : ?x ∈ domain x' |- _ ] => exploit (H0 x); eauto;
+                                              eapply domain_find in H'; destruct H'
+             end; (try now eapply lt_join; eauto);
+        repeat match goal with
+               | [H' : ?x ∉ domain ?y |- _ ] => eapply not_domain_find in H'; rewrite H'
+               end;
+        repeat rewrite join_bot_right;
+        repeat rewrite join_bot_left; eauto; simpl;
+          repeat match goal with
+                 | [H : lt ?x ?y, H' : ?y = None |- _ ] => rewrite H' in H; eauto
+                 | [H1 : le ?x ?y, H : ?y = None |- _ ] => rewrite H in H1; eauto
+                 | [H1 : le ?x ?y, H : ?x = None |- _ ] => rewrite H in H1; eauto
+                 end.
+  econstructor.
+  econstructor.
 Qed.
 
 Set Implicit Arguments.
@@ -283,7 +282,7 @@ Instance set_var_semilattice : BoundedSemiLattice Dom := {
   intros.
   rewrite MapFacts.map2_1bis; unfold join; eauto.
   destruct (find y a); try cases; eauto; try congruence.
-  destruct w; eauto. cases; eauto. congruence.
+  destruct w; eauto. cases; eauto.
 - hnf; intros. unfold joinDom.
   hnf; intros.
   repeat rewrite MapFacts.map2_1bis; try reflexivity.
@@ -344,18 +343,10 @@ Qed.
       inv Heql0; eauto.
   Qed.
 
-  Fixpoint update_with_list X `{OrderedType X} Y XL YL (m:Map [X, Y]) :=
-    match XL, YL with
-      | x::XL, y::YL => (update_with_list XL YL m)[x <- y]
-      | _, _ => m
-    end.
-
-Local Notation "f [ w <-- x ]" := (update_with_list w x f) (at level 29, left associativity).
-
 Definition domupd (d:Dom) x (o:option val) : Dom :=
   match o with
-    | Some xv => (d [x <- wTA xv])
-    | None => (d [x <- Top])
+    | Some xv => (d [- x <- wTA xv-])
+    | None => (d [- x <- Top -])
   end.
 
 Definition domenv (d:Dom) (x:var) : option val :=
@@ -374,12 +365,12 @@ Definition constant_propagation_transform st (a:list (Dom * params)*Dom) :=
       let ai :=
           if [exp_eval (domenv d) e = Some val_true] then
               match e with
-                | BinOp 3 (Var x) (Con c) => anni2opt (Some (d[x <- wTA c])) None
+                | BinOp 3 (Var x) (Con c) => anni2opt (Some (d[-x <- wTA c-])) None
                 | _ => anni2opt (Some d) None
               end
           else if [exp_eval (domenv d) e = Some val_false] then
             match e with
-              | Var x => anni2opt None (Some (d[x <- wTA 0]))
+              | Var x => anni2opt None (Some (d[-x <- wTA 0-]))
 (*            | BinOp 4 (Var x) (Con c) => anni2opt None (Some (Some (d[x <- c]))) *)
               | _ => anni2opt None (Some d)
             end
@@ -395,16 +386,16 @@ Definition constant_propagation_transform st (a:list (Dom * params)*Dom) :=
                         end ) Y in
       (* we assume renamed apart here, so it's ok to leave definitions
        in d[X <-- Yc] that are /not/ defined at the point where f is defined *)
-      let d' := (d [snd df <-- Yc]) in
+      let d' := (d [- snd df <-- Yc -]) in
       (list_update_at AL (counted f) (joinDom (fst df) d', snd df), anni1 d')
     | stmtReturn e as st, (AL, d) =>
       (AL, anni1 d)
     | stmtExtern x f Y s as st, (AL, d) =>
       (* we assume renamed apart here, and dont zero x *)
       (AL, anni1 d)
-    | stmtFun Z s t as st, (AL, d) =>
+    | stmtFun F t as st, (AL, d) =>
       (* we assume renamed apart here, and dont zero Z *)
-      (AL, anni2 d d)
+      (AL, anniF ((fun _ => d) ⊝ F)  d)
   end.
 
 Instance list_equal_computable X `{@EqDec X eq _}
@@ -424,11 +415,6 @@ Instance Dom_params_semilattice : PartialOrder (Dom * params) := {
   poEq p p' := poEq (fst p) (fst p') /\ snd p = snd p';
   poEq_dec := _
 }.
-- intros. decide (poLe (fst d) (fst d')); decide (snd d = snd d'); try dec_solve.
-- intros. decide (poEq (fst d) (fst d')); decide (snd d = snd d'); try dec_solve.
-Defined.
-
-
 
 Definition constant_propagation_analysis :=
   SSA.makeForwardAnalysis _ Dom_params_semilattice constant_propagation_transform (fun Z an => (an, Z)) fst.

@@ -922,12 +922,12 @@ Qed.
 Ltac pone_step := pfold; eapply bisim'Silent; [ eapply plus2O; single_step
                               | eapply plus2O; single_step
                               | ].
-
-Ltac pno_step := pfold; eapply bisim'Term;
-               try eapply star2_refl; try get_functional; try subst;
-                [ try reflexivity
-                | stuck2
-                | stuck2  ].
+Ltac pno_step :=
+  pfold; eapply bisim'Term;
+  [ | eapply star2_refl | eapply star2_refl | | ];
+  [ repeat get_functional; try reflexivity
+  | repeat get_functional; stuck2
+  | repeat get_functional; stuck2 ].
 
 Ltac pextern_step :=
   let STEP := fresh "STEP" in
@@ -936,6 +936,6 @@ Ltac pextern_step :=
     | eapply star2_refl
     | try step_activated
     | try step_activated
-    | intros ? ? STEP; inv STEP
-    | intros ? ? STEP; inv STEP
+    | intros ? ? STEP; inv STEP; eexists; split; [econstructor; eauto | ]
+    | intros ? ? STEP; inv STEP; eexists; split; [econstructor; eauto | ]
     ].

@@ -188,22 +188,20 @@ Proof.
             hnf; split; congruence.
         }
         cases.
-        pno_step; get_functional; simpl in *; congruence.
+        pno_step; simpl in *; congruence.
         eapply bisim'_expansion_closed; [| eapply star2_refl | eapply LTSC].
-        pno_step; repeat get_functional; simpl in *. congruence.
+        pno_step. simpl in *.
         eapply n; rewrite len. rewrite map_length. rewrite fresh_list_length. eauto.
       * cases. pno_step; eauto. hnf in H. inRel_invs; eauto.
         eapply bisim'_expansion_closed; [| eapply star2_refl | eapply LTSC].
-        pno_step; repeat get_functional; simpl in *. eauto.
+        pno_step; repeat get_functional; simpl in *.
         hnf in H. inRel_invs; eauto.
     + cases. pno_step.
       edestruct (list_to_stmt_crash L' V (stmtApp l (Var ⊝ fresh_list fresh (list_union (Exp.freeVars ⊝ Y)) ❬Y❭)) (fresh_list fresh (list_union (Exp.freeVars ⊝ Y)) ❬Y❭) Y); eauto using fresh_spec, fresh_list_unique, fresh_list_spec; dcr.
       pfold. econstructor 3; try eapply H2; try eapply star2_refl; eauto. stuck2.
   - pno_step.
   - case_eq (omap (exp_eval V) Y); intros.
-    + pextern_step.
-      * eexists; split; [ econstructor; eauto | eauto ].
-      * eexists; split; [ econstructor; eauto | eauto ].
+    + pextern_step; eauto.
     + pno_step.
   - pone_step.
     left. eapply IH with (PL:=fst ⊝ s ++ PL); eauto.

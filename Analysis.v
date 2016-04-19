@@ -94,7 +94,7 @@ Definition backward Dom FunDom
     | _, an => an
   end.
 
-(*
+
 Definition forward Dom FunDom
          (ftransform : (list FunDom * Dom) -> stmt -> (list FunDom * anni Dom))
          (fmkFunDom : params -> ann Dom -> FunDom) :=
