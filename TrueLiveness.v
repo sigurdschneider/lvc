@@ -1,6 +1,6 @@
 Require Import AllInRel List Map Env DecSolve.
-Require Import IL Annotation AutoIndTac Bisim Exp MoreExp Filter.
-Require Export Liveness.
+Require Import IL Annotation AutoIndTac Bisim Exp MoreExp.
+Require Export Liveness Filter.
 
 Set Implicit Arguments.
 

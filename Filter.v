@@ -21,14 +21,14 @@ Proof.
   + cases; simpl; rewrite IHlength_eq; eauto.
 Qed.
 
-Lemma filter_incl X `{OrderedType X} lv Y
-  : of_list (List.filter (fun y : X => B[y ∈ lv]) Y) ⊆ lv.
+Lemma of_list_filter X `{OrderedType X} lv Y
+  : of_list (List.filter (fun y : X => B[y ∈ lv]) Y) [=] lv ∩ of_list Y.
 Proof.
   general induction Y; simpl.
   - cset_tac; intuition.
-  - decide (a ∈ lv); simpl. cset_tac; intuition.
-    rewrite <- IHY; eauto.
-    eauto.
+  - decide (a ∈ lv); simpl.
+    rewrite IHY; eauto. cset_tac; intuition.
+    rewrite IHY; eauto. cset_tac; intuition.
 Qed.
 
 
