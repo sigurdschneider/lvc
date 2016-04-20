@@ -355,7 +355,7 @@ Definition domenv (d:Dom) (x:var) : option val :=
     | _ => None
   end.
 
-Definition constant_propagation_transform st (a:list (Dom * params)*Dom) :=
+Definition constant_propagation_transform st (a:list (params * Dom)*Dom) :=
   match st, a with
     | stmtLet x e s as st, (AL, d) =>
       let d' := d in
@@ -379,15 +379,15 @@ Definition constant_propagation_transform st (a:list (Dom * params)*Dom) :=
       in
       (AL, ai)
     | stmtApp f Y as st, (AL, d) =>
-      let df := nth (counted f) AL (bottom, nil) in
+      let df := nth (counted f) AL (nil, bottom) in
       let Yc := List.map (fun e => match exp_eval (domenv d) e with
                         | Some v => wTA v
                         | None => Top
                         end ) Y in
       (* we assume renamed apart here, so it's ok to leave definitions
        in d[X <-- Yc] that are /not/ defined at the point where f is defined *)
-      let d' := (d [- snd df <-- Yc -]) in
-      (list_update_at AL (counted f) (joinDom (fst df) d', snd df), anni1 d')
+      let d' := (d [- fst df <-- Yc -]) in
+      (list_update_at AL (counted f) (fst df, joinDom (snd df) d'), anni1 d')
     | stmtReturn e as st, (AL, d) =>
       (AL, anni1 d)
     | stmtExtern x f Y s as st, (AL, d) =>
@@ -417,4 +417,4 @@ Instance Dom_params_semilattice : PartialOrder (Dom * params) := {
 }.
 
 Definition constant_propagation_analysis :=
-  SSA.makeForwardAnalysis _ Dom_params_semilattice constant_propagation_transform (fun Z an => (an, Z)) fst.
+  SSA.makeForwardAnalysis _ constant_propagation_transform.

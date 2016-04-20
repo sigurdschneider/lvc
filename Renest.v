@@ -330,18 +330,13 @@ Proof.
     case_eq (omap (exp_eval E) Y); intros.
     + pone_step. right. eapply CIH.
     + pno_step.
-    + pno_step; get_functional.
-      exploit omap_length; eauto. congruence.
+    + pno_step.
     + pno_step; eauto.
   - pno_step.
   - case_eq (omap (exp_eval E) Y); intros.
     + pextern_step.
-      * eexists; split.
-        econstructor; eauto.
-        right. eapply (CIH s); eauto.
-      * eexists; split.
-        econstructor; eauto.
-        right. eapply (CIH s); eauto.
+      * right. eapply (CIH s); eauto.
+      * right. eapply (CIH s); eauto.
     + pno_step.
   - pone_step. right.
     eapply (CIH s0); eauto using sawtooth_F_mkBlocks.
@@ -410,10 +405,6 @@ Instance PR : ProofRelationI (params) :=
 intros. dcr; repeat subst. eauto.
 Defined.
 
-Ltac pone_step := pfold; eapply bisim'Silent; [ eapply plus2O; single_step
-                              | eapply plus2O; single_step
-                              | ].
-
 Lemma nth_drop X (L:list X) n m x
 : nth n (drop m L) x = nth (n+m) L x.
 Proof.
@@ -463,10 +454,8 @@ Proof.
   - pno_step.
   - case_eq (omap (exp_eval E) Y); [intros | intros; pno_step ].
     pextern_step.
-    + eexists; split. econstructor; eauto.
-      left. eapply IH; eauto.
-    + eexists; split. econstructor; eauto.
-      left. eapply IH; eauto.
+    + left. eapply IH; eauto.
+    + left. eapply IH; eauto.
   - rename s into F. eapply bisim'_expansion_closed;
       [ | eapply (S_star2 EvtTau); [ econstructor | eapply star2_refl ]
         | eapply star2_refl].
@@ -479,7 +468,7 @@ Proof.
       unfold extend. rewrite app_nth1.
       assert (nth n0 (mapi (fun (i : nat) (_ : params * stmt) => i + n) F) 0 = n + n0) by admit.
       rewrite H.
-      exploit IH. instantiate (1:= (snd x)). eauto. admit.
+      exploit IH. instantiate (1:= (snd x)). eauto. admit. eauto. admit.
       assert (n + n0 - I.block_n b' = n0 - I.block_n b' + n) by admit.
       rewrite H1. rewrite <- drop_drop. rewrite DROP.
       eapply IH; eauto. admit. admit. admit. admit.
