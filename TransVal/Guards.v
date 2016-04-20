@@ -15,6 +15,13 @@ Proof.
   unfold combine. repeat (cases; subst); simpl; intuition.
 Qed.
 
+Lemma models_combine_vars a b:
+  freeVars (combine a b) [=] freeVars (smtAnd a b).
+
+Proof.
+  unfold combine. repeat(cases; subst); simpl; cset_tac.
+Qed.
+
 (** Function to generate the guard expression for one expression **)
 Fixpoint undef e :=
 match e with

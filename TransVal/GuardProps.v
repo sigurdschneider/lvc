@@ -176,3 +176,16 @@ Proof.
     + eapply IHel; eauto.
       eapply exp_freeVars_list_agree; eauto.
 Qed.
+
+Lemma undef_vars_subset:
+  forall e,
+    freeVars (undef e) ⊆ Exp.freeVars e.
+Proof.
+  intros e.
+  cset_tac.
+  induction e; simpl in *; try isabsurd; eauto.
+  - rewrite models_combine_vars in H; simpl in H.
+    rewrite models_combine_vars in H; simpl in H.
+    cset_tac.
+    cases in H0; simpl in *; cset_tac.
+Qed.
