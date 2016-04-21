@@ -13,7 +13,6 @@ Function list_to_stmt (xl: list var) (Y : list exp) (s : stmt) : stmt :=
     | _, _ => s
   end.
 
-
 Section MapUpdate.
   Open Scope fmap_scope.
   Variable X : Type.
@@ -31,9 +30,9 @@ Section MapUpdate.
     -> unique (x::XL)
     -> agree_on eq D (E [x <- y] [XL <-- VL]) (E [XL <-- VL] [x <- y]).
   Proof.
-    intros. eapply length_length_eq in H0.
-    general induction H0; simpl. reflexivity.
-    hnf; intros. lud. hnf in H1; simpl in *.
+    intros LEN UNIQ. length_equify.
+    general induction LEN; simpl; eauto.
+    hnf; intros. lud. exfalso. simpl in *; dcr. unfold Util.fresh in H5.
     dcr. exfalso. eapply H7. econstructor. eapply H4.
     exploit (IHlength_eq H E {x1} x0 y0). simpl in *; intuition.
     hnf; intros. eapply H8. econstructor 2; eauto.

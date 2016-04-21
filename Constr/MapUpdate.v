@@ -59,7 +59,6 @@ Section MapUpdate.
 
 End MapUpdate.
 
-
 Section MapUpdateList.
   Variable X : Type.
   Context `{OrderedType X}.
@@ -81,34 +80,12 @@ Section MapUpdateList.
     -> agree_on _eq D (E [x <- y] [XL <-- VL]) (E [XL <-- VL] [x <- y]).
   Proof.
     intros. eapply length_length_eq in H1.
-    general induction H1; simpl. reflexivity.
-    hnf; intros. lud. hnf in H2; simpl in *.
-    dcr. exfalso. eapply H8. econstructor. eapply H5.
-    exploit (IHlength_eq H0 E {x1} x0 y0). simpl in *; intuition.
-    hnf; intros. eapply H9. econstructor 2; eauto.
-    exploit (H9 x1); cset_tac. rewrite H10. lud.
-    exploit (IHlength_eq H0 E {x1} x0 y0). simpl in *; intuition.
-    hnf; intros. cset_tac.
-    exploit H8. cset_tac; reflexivity. rewrite H9. lud.
+    general induction H1; simpl in * |- *; dcr; simpl in *; eauto.
+    hnf; intros. lud.
+    - exfalso; eauto.
+    - etransitivity; [eapply IHlength_eq|]; eauto; lud.
+    - etransitivity; [eapply IHlength_eq|]; eauto; lud.
   Qed.
-
-
-
-(*
-Lemma update_with_list_agree_minus X `{OrderedType X} Y `{Equivalence Y}
-      lv (E E':X -> Y) XL YL
-: length XL = length YL
-  -> agree_on lv E' E
-  -> agree_on (lv\of_list XL) (E' [ XL <-- YL ]) E.
-Proof.
-  intros. eapply length_length_eq in H1.
-  general induction H1; simpl. rewrite minus_empty. eassumption.
-  rewrite add_union_singleton. rewrite union_comm. rewrite <- minus_union.
-  eapply agree_on_update_dead.
-  cset_tac. intro; decompose records; eauto.
-  eauto using agree_on_incl, incl_minus.
-Qed.
-*)
 
   Lemma update_with_list_no_update (E:X -> Y) Y' Z x
     : x ∉ of_list Z
@@ -205,10 +182,10 @@ Lemma update_with_list_lookup_in_list X `{OrderedType X} B E
   -> exists n y z', get Z n z' /\ get Y n y /\ E [Z <-- Y] z === y /\ z === z'.
 Proof.
   intros. eapply length_length_eq in H0.
-  general induction H0; simpl in *; isabsurd.
+  general induction H0; simpl in *; [ isabsurd |].
   decide (z === x).
   - exists 0, y, x; repeat split; eauto using get. lud.
-  - cset_tac; intuition.
+  - cset_tac; [ exfalso; eauto| ].
     edestruct (IHlength_eq _ E z) as [? [? ]]; eauto; dcr.
     exists (S x0), x1, x2. eexists; repeat split; eauto using get.
     lud. exfalso; eauto.
@@ -268,8 +245,8 @@ Instance proper_update_with_list X `{OrderedType X} Y `{OrderedType Y} (f:X->Y) 
   -> Proper (_eq ==> _eq) (f [Z <-- Z']).
 Proof.
   intros.
-  general induction Z; intuition.
-  - destruct Z'; intuition. simpl.
+  general induction Z; eauto.
+  - destruct Z'; eauto. simpl.
     eapply proper_update. eauto.
 Qed.
 
@@ -281,8 +258,8 @@ Lemma lookup_set_update_not_in_Z' X `{OrderedType X} Y `{OrderedType Y}
 Proof.
   general induction Z; simpl in *; eauto.
   destruct Z'; eauto.
-  lud. simpl in *; exfalso. cset_tac; intuition.
-  eapply IHZ; eauto. simpl in *. cset_tac; intuition.
+  lud. simpl in *; exfalso. cset_tac.
+  eapply IHZ; eauto. simpl in *. cset_tac.
 Qed.
 
 Lemma lookup_set_update_not_in_Z X `{OrderedType X} Y
@@ -291,8 +268,8 @@ Lemma lookup_set_update_not_in_Z X `{OrderedType X} Y
 Proof.
   general induction Z; simpl in *; eauto.
   destruct Z'; eauto.
-  lud. simpl in *; cset_tac; intuition.
-  eapply IHZ; eauto. cset_tac; intuition.
+  lud. simpl in *; cset_tac.
+  eapply IHZ; eauto. cset_tac.
 Qed.
 
 Lemma lookup_set_update_not_in_Z'_not_in_Z {X} `{OrderedType X} {Y} `{OrderedType Y}
@@ -306,8 +283,8 @@ Proof.
   general induction H1; simpl in *; eauto.
   - cset_tac; intuition.
   - lud.
-    + exfalso; cset_tac; intuition.
-    + cset_tac; intuition; eauto.
+    + exfalso; cset_tac.
+    + cset_tac; eauto.
 Qed.
 
 Lemma update_with_list_lookup_not_in {X} `{OrderedType X} {Y} `{OrderedType Y}
@@ -317,9 +294,10 @@ Lemma update_with_list_lookup_not_in {X} `{OrderedType X} {Y} `{OrderedType Y}
     -> f x === y.
 Proof.
   general induction Z; simpl in * |- *; eauto.
-  destruct Z'; eauto. lud. rewrite add_iff in H1.
-  exfalso; firstorder.
-  eapply IHZ; eauto. intro. eapply H1. eapply add_2; eauto.
+  destruct Z'; eauto. lud.
+  - rewrite add_iff in H1;
+    exfalso; intuition.
+  - eapply IHZ; eauto. cset_tac.
 Qed.
 
 
@@ -348,23 +326,18 @@ Lemma lookup_set_add_update {X} `{OrderedType X} {Y} `{OrderedType Y} (ϱ:X->Y) 
 : x ∉ D
   -> lookup_set (update ϱ x y) {x; D} [=] {y; lookup_set ϱ D}.
 Proof.
-  intros. hnf; intros. cset_tac.
-  - rewrite lookup_set_spec in *; cset_tac.
-    lud; intuition.
-    lud; eauto.
-  - rewrite lookup_set_spec in *; cset_tac.
-    eexists x; split; eauto. lud; eauto.
-  - rewrite lookup_set_spec in *; cset_tac.
-    eexists x0; split; eauto. lud; eauto.
+  intros. hnf; intros. lset_tac; lud; eauto.
+  - eexists x; lud; eauto.
+  - eexists x0; lud; eauto.
 Qed.
 
 Lemma lookup_update_same X `{OrderedType X} x Z (ϱ:X->X)
 : x ∈ of_list Z
   -> ϱ [Z <-- Z] x === x.
 Proof.
-  general induction Z; simpl; isabsurd.
+  general induction Z; simpl; [isabsurd|].
   lud; eauto.
-  eapply IHZ. simpl in *. cset_tac; intuition.
+  eapply IHZ. simpl in *. cset_tac.
 Qed.
 
 
@@ -374,7 +347,7 @@ Lemma lookup_set_update_union_minus X `{OrderedType X} Y `{OrderedType Y}
 Proof.
   split; intros; lset_tac.
   - lud; cset_tac; eauto.
-  -  eexists x0; lud; cset_tac; eauto.
+  - eexists x0; lud; cset_tac.
 Qed.
 
 Lemma lookup_set_update_union_minus_single X `{OrderedType X} Y `{OrderedType Y}
@@ -383,7 +356,7 @@ Lemma lookup_set_update_union_minus_single X `{OrderedType X} Y `{OrderedType Y}
 Proof.
   split; intros; lset_tac; eauto.
   - lud; cset_tac; eauto.
-  - eexists x0; lud; cset_tac; eauto.
+  - eexists x0; lud; cset_tac.
 Qed.
 
 Lemma lookup_set_update_union_minus_list X `{OrderedType X} Y `{OrderedType Y}
@@ -391,16 +364,13 @@ Lemma lookup_set_update_union_minus_list X `{OrderedType X} Y `{OrderedType Y}
 : length Z = length Z'
   -> lookup_set (f[ Z <-- Z']) D \ of_list Z' [=] lookup_set f (D \ of_list Z) \ of_list Z'.
 Proof.
-  split; intros; cset_tac; eauto.
-  - eapply lookup_set_spec in H4; destruct H4; dcr; eauto.
-    rewrite H6 in H5.
-    eapply lookup_set_spec; eauto.
+  split; intros; lset_tac; eauto.
+  - rewrite H7 in H5.
     eexists x; cset_tac; eauto.
     eapply lookup_set_update_not_in_Z'_not_in_Z in H5; eauto.
     eapply lookup_set_update_not_in_Z' in H5; eauto.
-    rewrite H5 in H6; eauto.
-  - eapply lookup_set_spec in H4; destruct H4; dcr; eauto.
-    lud; cset_tac; eauto; eapply lookup_set_spec; eauto.
+    rewrite <- H5; eauto.
+  - lud; cset_tac.
     eexists x; cset_tac; eauto.
     erewrite lookup_set_update_not_in_Z; eauto.
 Qed.

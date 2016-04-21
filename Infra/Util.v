@@ -251,8 +251,16 @@ Definition fresh {X} `{Equivalence X} (x:X) (Y:list X) : Prop :=
 Fixpoint unique X `{Equivalence X} (Y:list X) : Prop :=
   match Y with
     | nil => True
-    | cons x Y' => fresh x Y' /\ unique Y'
+    | cons x Y' => ~InA R x Y' /\ unique Y'
   end.
+
+Lemma unique_decons X (R : relation X) (H : Equivalence R) x L
+    : unique (x::L) -> unique L.
+Proof.
+  intros [A B]; eapply B.
+Qed.
+
+Hint Resolve unique_decons.
 
 Ltac let_case_eq :=
   match goal with

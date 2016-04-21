@@ -60,7 +60,9 @@ Defined.
 
 Tactic Notation "cases" "in" hyp(H) :=
   match goal with
-  | H : context [if sumbool_bool ?P then _ else _] |- _ => destruct P
+  | [ H : context [if sumbool_bool ?P then _ else _] |- _ ] => destruct P
+  | [ H : context [ match (if ?P then true else false) with _ => _ end ] |- _ ] => destruct P
+
   | H : context [if ?P then _ else _] |- _ =>
     match P with
     | decision_procedure _ =>
@@ -76,9 +78,14 @@ Tactic Notation "cases" "in" hyp(H) :=
 
 Tactic Notation "cases" :=
   match goal with
-  | |- context [if (if ?P then true else false) then _ else _] => destruct P
-  | |- context [if ?P then _ else _] =>
+  | |- context [if sumbool_bool ?P then _ else _] => destruct P
+  | |- context [ match (if ?P then true else false) with _ => _ end ] => destruct P
+  | |- context [ match ?P with _ => _ end ] =>
     match P with
+    | negb (?P':decision_procedure _) =>
+      let EQ := fresh "COND" in
+      let NEQ := fresh "NOTCOND" in
+      destruct P' as [EQ|NEQ]; [ clear_trivial_eqs | try now (exfalso; eauto) ]
     | decision_procedure _ =>
       let EQ := fresh "COND" in
       let NEQ := fresh "NOTCOND" in

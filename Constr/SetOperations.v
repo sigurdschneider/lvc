@@ -27,8 +27,13 @@ Proof.
   revert_except s.
   pattern s. eapply set_induction; intros.
   - exfalso. eapply H0; eauto.
-  - rewrite fold_2; eauto using transpose_union, Equal_ST, union_m.
-    eapply Add_Equal in H2. rewrite H2 in H4.
+  - rewrite fold_2; [
+    | eapply Equal_ST
+    | eapply union_m
+    | eapply transpose_union
+    | eapply H1
+    | eapply H2 ].
+    eapply Add_Equal in H2. rewrite H2 in H4; clear H1 H2.
     cset_tac.
 Qed.
 
@@ -40,7 +45,12 @@ Proof.
   revert_except s.
   pattern s. eapply set_induction; intros.
   - rewrite fold_1; eauto using Equal_ST.
-  - rewrite fold_2; eauto using Equal_ST, transpose_union, union_m.
+  - rewrite fold_2; [
+    | eapply Equal_ST
+    | eapply union_m
+    | eapply transpose_union
+    | eapply H1
+    | eapply H2 ].
     cset_tac.
 Qed.
 
@@ -64,7 +74,6 @@ Lemma map_add X `{OrderedType X} Y `{OrderedType Y} (f:X->Y)
 : map f ({x; t}) [=] {f x; map f t}.
 Proof.
   mset_tac.
-  rewrite H2; eauto.
 Qed.
 
 Lemma map_empty X `{OrderedType X} Y `{OrderedType Y} (f:X->Y)
@@ -92,12 +101,22 @@ Proof.
   eapply set_induction; intros.
   - repeat rewrite fold_1; eauto.
     rewrite <- H1; eauto.
-  - rewrite fold_2; eauto using union_m, transpose_union_eq.
+  - rewrite fold_2; [
+    | eapply Equal_ST
+    | eapply union_m
+    | eapply transpose_union
+    | eapply H1
+    | eapply H2 ].
     eapply Add_Equal in H2.
     rewrite H3 in H2.
     eapply Add_Equal in H2.
     symmetry.
-    rewrite fold_2; eauto using union_m, transpose_union_eq.
+    rewrite fold_2; [
+    | eapply Equal_ST
+    | eapply union_m
+    | eapply transpose_union
+    | eapply H1
+    | eapply H2 ].
     rewrite H0; try reflexivity. eauto.
 Qed.
 
@@ -148,15 +167,16 @@ Proof.
     clear_all; cset_tac; intuition.
     rewrite H3. rewrite H0.
     decide (x ∈ Γ').
-    rewrite add_fold; eauto using Equal_ST, union_m, transpose_union.
-    rewrite fold_add; eauto using Equal_ST, union_m, transpose_union.
+    rewrite (@add_fold ⦃X⦄ _ _ _ _ Equal Equal_ST union);
+      [| eapply union_m | eapply transpose_union | eauto ].
+    rewrite (@fold_add ⦃X⦄ _ _ _ _ Equal Equal_ST union _); [| eapply transpose_union | ]; eauto.
     symmetry.
     rewrite union_comm. rewrite <- union_assoc.
     rewrite <- (union_comm _ x).
     rewrite (incl_union_absorption _ x). rewrite union_comm. reflexivity.
     hnf; intros. eapply fold_union_incl; eauto.
-    rewrite fold_add; eauto using Equal_ST, union_m, transpose_union.
-    rewrite fold_add; eauto using Equal_ST, union_m, transpose_union.
+    rewrite (@fold_add ⦃X⦄ _ _ _ _ Equal Equal_ST union _); [| eapply transpose_union | ]; eauto.
+    rewrite (@fold_add ⦃X⦄ _ _ _ _ Equal Equal_ST union _); [| eapply transpose_union | ]; eauto.
     symmetry. rewrite (union_comm _ x). rewrite union_assoc. reflexivity.
 Qed.
 
@@ -167,7 +187,7 @@ Lemma map_single {X} `{OrderedType X} Y `{OrderedType Y} (f:X->Y)
 Proof.
   hnf; intros. rewrite map_iff; eauto.
   split; intros.
-  - destruct H2; dcr. cset_tac; intuition. rewrite H4, H3; eauto.
+  - destruct H2; dcr. cset_tac; intuition.
   - cset_tac; intuition.
 Qed.
 
@@ -256,16 +276,17 @@ Lemma list_union_disjunct {X} `{OrderedType X} Y D
 Proof.
   split; intros.
   - eapply disj_intersection.
-    eapply set_incl; try now (cset_tac; intuition).
+    eapply set_incl;[ cset_tac|].
     hnf; intros.
-    general induction Y; simpl in * |- *; intuition.
-    exploit H0; eauto using get.
-    exploit IHY; intros; eauto using get.
-    rewrite list_union_start_swap.
-    rewrite list_union_start_swap in H1.
-    revert H1 H2; clear_all; cset_tac; intuition; eauto.
-  - hnf; intros. eapply H0; eauto.
-    eapply incl_list_union. eauto. reflexivity. eauto.
+    general induction Y; simpl in * |- *.
+    + cset_tac.
+    + exploit H0; eauto using get.
+      exploit IHY; intros; eauto using get.
+      rewrite list_union_start_swap.
+      rewrite list_union_start_swap in H1.
+      cset_tac.
+  - eapply disj_1_incl; eauto.
+    eapply incl_list_union; eauto.
 Qed.
 
 Lemma list_union_indexwise_ext X `{OrderedType X} Y (f:Y->set X) Z (g:Z -> set X) L L'

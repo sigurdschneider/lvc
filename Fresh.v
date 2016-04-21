@@ -1,5 +1,3 @@
-
-
 Require Import CSet Le Arith.Compare_dec.
 
 Require Import Plus Util Map Var Get.
@@ -22,9 +20,10 @@ Proof.
   intuition.
   hnf; intros. rewrite Max.max_assoc. rewrite (Max.max_comm x1).
   rewrite Max.max_assoc. reflexivity.
-  pattern (fold max s'' 0). rewrite fold_2; eauto; try intuition.
+  pattern (fold max s'' 0). rewrite fold_2; eauto.
   pose proof (Max.le_max_r x (fold max s' 0)).
   specialize (H2 _ H3). unfold max in H2. rewrite <- H4. eapply H2.
+  clear_all; intuition.
   hnf; intros. rewrite Max.max_assoc. rewrite (Max.max_comm x1).
   rewrite Max.max_assoc. reflexivity.
 Qed.
@@ -92,11 +91,8 @@ Fixpoint safe_first_ext P Q n
       (EXT:(forall x, P x <-> Q x)) {struct PS}
 : safe_first PC PS = safe_first QC QS.
 Proof.
-  destruct PS; destruct QS; simpl.
-  - destruct (decision_procedure (P n)), (decision_procedure (Q n)); eauto; intuition.
-  - cases; destruct (decision_procedure (P n)); eauto; intuition. exfalso; firstorder.
-  - cases; destruct (decision_procedure (Q n)); eauto; intuition. exfalso; firstorder.
-  - repeat cases; intuition; exfalso; firstorder.
+  destruct PS; destruct QS; simpl; repeat cases; eauto;
+  exfalso; firstorder.
 Qed.
 
 Lemma safe_impl (P Q: nat -> Prop) n
@@ -127,7 +123,7 @@ Proof.
     intros. cset_tac; omega.
     assert (lv [=] {n; lv \ {{n}} }).
     exploit (H (n)); eauto.
-    cset_tac. decide (n = a); subst; intuition.
+    cset_tac. decide (n = a); subst; eauto.
     rewrite H1. erewrite cardinal_2; eauto. omega. cset_tac.
 Qed.
 
@@ -258,7 +254,7 @@ Section FreshList.
   Lemma fresh_list_spec : forall (G:set var) n, disj (of_list (fresh_list G n)) G.
   Proof.
     intros. general induction n; simpl; intros; eauto.
-    - hnf; intros. cset_tac; intuition.
+    - hnf; intros. cset_tac.
       + eapply fresh_spec. rewrite H1; eauto.
       + specialize (H (G ∪ {{fresh G}})).
         eapply H; eauto.
@@ -344,18 +340,19 @@ Lemma vars_up_to_max n m
 : vars_up_to (max n m) [=] vars_up_to n ∪ vars_up_to m.
 Proof.
   general induction n; simpl.
-  - cset_tac; intuition.
+  - cset_tac.
   - destruct m; simpl.
-    + cset_tac; intuition.
+    + clear_all; cset_tac.
     + rewrite IHn.
       decide (n < m).
       * rewrite max_r; eauto; try omega.
         assert (n ∈ vars_up_to m); eauto using in_vars_up_to.
         cset_tac.
-      * rewrite max_l; eauto. assert (m <= n) by omega.
+      * assert (m <= n) by omega.
+        rewrite max_l; eauto.
         cset_tac.
-        decide (n = a); subst; intuition.
-        right. left. eapply in_vars_up_to. omega. omega.
+        decide (n = a); subst; eauto.
+        right. left. eapply in_vars_up_to. omega.
 Qed.
 
 Lemma inverse_on_update_fresh_list (D:set var) (Z:list var) (ϱ ϱ' : var -> var)
