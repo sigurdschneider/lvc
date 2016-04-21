@@ -8,8 +8,13 @@ include Term::ANSIColor
 @hostname=`hostname`.strip
 
 def col(width, text) 
-  return text + "".ljust(width - uncolored(text).length)
+  return text + "".ljust(width - uncolored(text).size)
 end
+
+def rcol(width, text) 
+  return "".ljust(width - uncolored(text).size) + text
+end
+
 
 def timefile(mod) 
 	return Dir.pwd + "/" + mod.gsub(/(.*)(\/)(.*)/, '\1/.\3') + ".time"
@@ -60,7 +65,7 @@ timestamp = Time.now.strftime("%H:%M:%S")
 
 est, eta = readETA(mod) 
 eststr = "#{col(12, cyan(est))}" + (parallel ? (est == "" ? blue("ETA unavailable") : "ETA #{eta}") : "")
-print "#{timestamp} #{cyan('>>>')} #{col(30, mod)}#{eststr}#{(parallel ? "\n" : "")}"
+print "#{timestamp} #{cyan('>>>')} #{col(35, mod)}#{eststr}#{(parallel ? "\n" : "")}"
 
 start = Time.now
 cstdin, cstdout, cstderr, waitthr = Open3.popen3("bash -c \"time #{cmd}\"")
@@ -77,8 +82,13 @@ changesec = (time - est.to_f)
 changesecstr = sprintf("%+.2f (%+.1f%%)", changesec, (100*changesec/est.to_f)) 
 change = est == "" ? blue("n/a") : (changesec <= 0 ? green(changesecstr) : red(changesecstr))
 line_count = `wc -l "#{mod}.v"`.strip.split(' ')[0].to_i
-spl = (line_count / cpu).round(0)
-speed = success ? ("#{line_count} L,".rjust(9) + "#{spl} L/s".rjust(8)) : ""
+lps = (line_count / cpu).round(0)
+vosize = File.size?("#{mod}.vo").to_f
+vokps = (vosize / cpu / 1000).round(0)
+clr = lambda { |s, l, h| s >= h ? (green (s.to_s)) : (s < l ? (red (s.to_s)) : (yellow (s.to_s)))  }
+speed = success ? rcol(9, "#{line_count} L,") + 
+                          rcol( 9, "#{clr[lps, 15, 75]} L/s,") +
+													rcol(11, "#{clr[vokps, 15, 75]} vok/s") : ""
 if success then
 	writeETA(mod, cpu)
 end
@@ -90,12 +100,12 @@ end
 sout = cstdout.read
 
 if !sout.strip.empty? then
-	print "#{Time.now.strftime("%H:%M:%S")} ", color["==="], " #{col(30, mod)} ", "OUTPUT FOLLOWS" , "\n"
+	print "#{Time.now.strftime("%H:%M:%S")} ", color["==="], " #{col(35, mod)} ", "OUTPUT FOLLOWS" , "\n"
   print sout.gsub!(/^/, '  ')
 end
 
 if parallel then
-	print "#{Time.now.strftime("%H:%M:%S")} ", color["<<<"], " #{col(30, mod)}", col(12, color[timing]), col(15, change), speed, "\n"
+	print "#{Time.now.strftime("%H:%M:%S")} ", color["<<<"], " #{col(35, mod)}", col(12, color[timing]), col(15, change), speed, "\n"
 end
 
 exit success
