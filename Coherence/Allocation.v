@@ -431,15 +431,6 @@ Proof.
         cset_tac; intuition.
   - econstructor; eauto.
     + repeat rewrite map_length; eauto.
-(*    exploit renamedApart_globals_live; eauto.
-    hnf; intros. inv H1. pe_rewrite.
-    eapply renamedApart_disj in H13. pe_rewrite; eauto.
-    eapply ann_R_get in H20. pe_rewrite. rewrite H20.
-    revert H13; unfold disj; clear_all; cset_tac; intuition; eauto.
-    eapply bounded_disjoint; eauto.
-    eapply renamedApart_disj in H13. pe_rewrite; eauto.
-    destruct X; dcr. invc H2; simpl in *.
-    econstructor; eauto. *)
     + intros. inv_map H3. inv_map H4.
       edestruct get_length_eq; try eapply H5; eauto.
       eapply srd_monotone.

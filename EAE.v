@@ -31,15 +31,11 @@ Section MapUpdate.
     -> agree_on eq D (E [x <- y] [XL <-- VL]) (E [XL <-- VL] [x <- y]).
   Proof.
     intros LEN UNIQ. length_equify.
-    general induction LEN; simpl; eauto.
-    hnf; intros. lud. exfalso. simpl in *; dcr. unfold Util.fresh in H5.
-    dcr. exfalso. eapply H7. econstructor. eapply H4.
-    exploit (IHlength_eq H E {x1} x0 y0). simpl in *; intuition.
-    hnf; intros. eapply H8. econstructor 2; eauto.
-    rewrite H8. lud. cset_tac; intuition.
-    exploit (IHlength_eq H E {x1} x0 y0). simpl in *; intuition.
-    hnf; intros. eapply H7. econstructor 2; eauto.
-    rewrite H7. lud. cset_tac; intuition.
+    general induction LEN; simpl in * |- *; dcr; simpl in *; eauto.
+    hnf; intros. lud.
+    - exfalso; eauto.
+    - etransitivity; [eapply IHLEN|]; eauto; lud.
+    - etransitivity; [eapply IHLEN|]; eauto; lud.
   Qed.
 
   Lemma update_with_list_agree' (XL:list X) (VL:list Y) E D
@@ -47,11 +43,10 @@ Section MapUpdate.
     -> unique XL
     -> agree_on eq D (E [XL <-- VL]) (update_with_list' XL VL E).
   Proof.
-    intros. eapply length_length_eq in H0.
-    general induction H0; simpl in *.
-    - reflexivity.
+    intros LEN UNIQ. length_equify.
+    general induction LEN; simpl in *; eauto.
     - etransitivity. symmetry. eapply update_unique_commute; eauto using length_eq_length.
-      eapply IHlength_eq; intuition.
+      eapply IHLEN; eauto.
   Qed.
 End MapUpdate.
 
@@ -75,7 +70,7 @@ Proof.
       rewrite list_union_start_swap in H2.
       intro. eapply (H2 x); eauto; cset_tac.
     + rewrite list_union_start_swap in H2.
-      eauto with cset.
+      eapply disj_1_incl; [ eapply disj_2_incl |]; eauto with cset.
 Qed.
 
 Lemma list_to_stmt_crash L E s xl Y
@@ -87,18 +82,17 @@ Lemma list_to_stmt_crash L E s xl Y
 Proof.
   intros. eapply length_length_eq in H.
   general induction H; simpl in * |- *.
-  - monad_inv H0; isabsurd.
+  - monad_inv H0; [| | isabsurd].
     + eexists; repeat split; eauto using star2_refl. stuck2.
     + rewrite list_union_start_swap in H2.
       edestruct (IHlength_eq L (E [x <- Some x0])); eauto.
       * eapply omap_exp_eval_agree; eauto. symmetry.
         eapply agree_on_update_dead; [|reflexivity].
         intro. eapply (H2 x); cset_tac.
-      * eauto with cset.
+      * eapply disj_1_incl; [ eapply disj_2_incl |]; eauto with cset.
       * dcr. eexists. split; eauto.
-        econstructor 2 with (y:=EvtTau).
+        econstructor 2 with (y:=EvtTau); eauto.
         econstructor; eauto.
-        eauto.
 Qed.
 
 Fixpoint compile s {struct s}

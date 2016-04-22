@@ -20,20 +20,16 @@ Qed.
 Lemma restr_idem G o G'
   : G' ⊆ G -> restr G' (restr G o) = restr G' o.
 Proof.
-  unfold restr; destruct o; eauto. repeat cases; eauto; try cases in Heq; invc Heq; eauto; intros.
-  exfalso; eauto.
-  exfalso; eauto.
-  exfalso; eauto.
-  eapply NOTCOND. rewrite <- H. eauto.
+  unfold restr; destruct o; eauto. repeat cases; eauto.
+  intros. exfalso. eapply NOTCOND. rewrite <- H. eauto.
 Qed.
 
 Lemma restr_comm o G G'
   : restr G' (restr G o) = restr G (restr G' o).
 Proof.
   destruct o; unfold restr; eauto.
-  repeat cases; eauto; try cases in Heq; invc Heq; try cases in Heq0; try invc Heq0; eauto; try now exfalso; eauto.
-  exfalso. inv H0; eauto.
-  exfalso. inv H0; eauto.
+  repeat cases; eauto.
+  exfalso; eauto.
 Qed.
 
 Instance restr_morphism
@@ -184,9 +180,9 @@ Lemma restr_comp_meet G o G'
   : restr G' (restr G o) = restr (G ∩ G') o.
 Proof.
   unfold restr; destruct o; eauto.
-  repeat cases; eauto; cases in Heq; invc Heq; eauto.
+  repeat cases; eauto.
   - exfalso. eapply NOTCOND. cset_tac.
-  - exfalso. rewrite COND in NOTCOND. eapply NOTCOND. cset_tac.
+  - exfalso. rewrite COND0 in NOTCOND. eapply NOTCOND. cset_tac.
   - rewrite COND in NOTCOND. exfalso; eapply NOTCOND. cset_tac.
 Qed.
 
@@ -242,12 +238,8 @@ Proof.
   intros. general induction DL; simpl. econstructor.
   unfold restr. unfold lookup_set_option.
   destruct a; repeat cases; eauto using PIR2, @fstNoneOrR.
-  - cases in Heq; cases in Heq; invc Heq; try invc Heq0;
-    eauto using PIR2, @fstNoneOrR.
-  - exfalso. cases in Heq; cases in Heq; invc Heq; try invc Heq0.
-    eapply NOTCOND. lset_tac; eauto. eapply H0; lset_tac.
-  - cases in Heq; cases in Heq; invc Heq; try invc Heq0.
-    exfalso. eapply NOTCOND; rewrite <- H. eauto.
+  - exfalso. eapply NOTCOND. lset_tac; eauto. eapply H0; lset_tac.
+  - exfalso. eapply NOTCOND; rewrite <- H. eauto.
 Qed.
 
 Lemma list_eq_fstNoneOrR_incl DL ϱ A B

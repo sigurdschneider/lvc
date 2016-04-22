@@ -282,20 +282,19 @@ Instance set_var_semilattice : BoundedSemiLattice Dom := {
   intros.
   rewrite MapFacts.map2_1bis; unfold join; eauto.
   destruct (find y a); try cases; eauto; try congruence.
-  destruct w; eauto. cases; eauto.
+  destruct w; eauto; cases; eauto.
 - hnf; intros. unfold joinDom.
   hnf; intros.
   repeat rewrite MapFacts.map2_1bis; try reflexivity.
   destruct (find y a), (find y b); simpl; repeat cases; try destruct w; try destruct w0; try congruence.
-  repeat cases; try subst a0; eauto; try congruence.
 - intros; hnf; intros.
   unfold joinDom.
   repeat rewrite MapFacts.map2_1bis; try reflexivity.
   destruct (find y a), (find y b), (find y c); simpl; repeat cases; subst; simpl;
     try destruct w; try destruct w0; try destruct w1; simpl; repeat cases; try subst;
     simpl; try congruence.
-  cases; congruence.
-  cases; congruence.
+  cases in Heq1; congruence.
+  cases in Heq1; congruence.
 - unfold Proper, respectful; intros.
   simpl in *.
   intro. unfold joinDom. repeat rewrite MapFacts.map2_1bis; try reflexivity.
