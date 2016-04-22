@@ -290,46 +290,97 @@ Proof.
     econstructor.
 Qed.
 
-Lemma agree_on_ssa_combine:
-  forall D D' Ds' Dt' L E s t Es Et es et,
-    getAnn D = (Ds' ∩ Dt', Ds')
-    -> getAnn D' = (Ds' ∩ Dt', Dt')
-    -> renamedApart s D
-    -> renamedApart t D'
-    -> noFun s
-    -> noFun t
-    ->Terminates (L, E, s) (L, Es, stmtReturn es)
-    -> Terminates (L, E, t) (L, Et, stmtReturn et)
-    -> (agree_on eq (Exp.freeVars et) Et (combineEnv Ds' Es Et)
-        /\ agree_on eq (Exp.freeVars es) Es (combineEnv Ds' Es Et)).
+Lemma renamed_apart_contained x e L E s Es D:
+  x \In Exp.freeVars e
+  -> Terminates (L, E, s) (L, Es, stmtReturn e)
+  -> noFun s
+  -> renamedApart s D
+  -> x \In (fst(getAnn D)) \/ x \In (snd (getAnn D)).
 
 Proof.
-  Admitted.
-(*  intros D D' Ds' Dt' L E s t Es Et es et.
-  intros getD getD' ssaS ssaT nfS nfT (*liveness*) sterm tterm.
+  intros fv_e term_s nf_s ssa_s.
+  general induction term_s.
+  - inv ssa_s.
+    cset_tac.
+  - inv H; inv ssa_s; inv nf_s; simpl.
+    + specialize (IHterm_s x e L' (E0 [x0 <- ⎣ v ⎦]) s' Es an fv_e).
+      destruct IHterm_s as [in_fv | in_dv]; auto.
+      * rewrite H8.
+        rewrite H9 in in_fv; simpl in in_fv.
+        cset_tac.
+      * rewrite H8.
+        rewrite H9 in in_dv; simpl in in_dv.
+        cset_tac.
+    + specialize (IHterm_s x e L' E' s' Es ans).
+      destruct IHterm_s as [in_fv | in_dv]; auto.
+      * rewrite <- H6.
+        rewrite H10 in in_fv; simpl in in_fv.
+        cset_tac.
+      * rewrite <- H6.
+        rewrite H10 in in_dv; simpl in in_dv.
+        cset_tac.
+    + specialize (IHterm_s x e L' E' s' Es ant).
+      destruct IHterm_s as [in_fv | in_dv]; auto.
+      * rewrite <- H6.
+        rewrite H11 in in_fv; simpl in in_fv.
+        cset_tac.
+      * rewrite <- H6.
+        rewrite H11 in in_dv; simpl in in_dv.
+        cset_tac.
+    + specialize (H0 l Y); isabsurd.
+Qed.
+
+
+Lemma agree_on_ssa_combine:
+  forall D D' L E s t Es Et es et,
+    renamedApart s D
+    -> renamedApart t D'
+    -> fst (getAnn D) [=] fst (getAnn D')
+    -> disj (snd (getAnn D)) (snd (getAnn D'))
+    -> noFun s
+    -> noFun t
+    -> Terminates (L, E, s) (L, Es, stmtReturn es)
+    -> Terminates (L, E, t) (L, Et, stmtReturn et)
+    -> (agree_on eq (Exp.freeVars et) Et (combineEnv (fst(getAnn D) ∪ snd(getAnn D)) Es Et)
+        /\ agree_on eq (Exp.freeVars es) Es (combineEnv (fst(getAnn D) ∪ snd(getAnn D)) Es Et)).
+
+Proof.
+  intros D D' L E s t Es Et es et.
+  intros ssa_s ssa_t agree_fv disj_dv nf_s nf_t sterm tterm.
   split.
-  - pose proof (ssa_move_return D' L E t Et et nfT ssaT tterm).
+  - pose proof (ssa_move_return D' L E t Et et nf_t ssa_t tterm).
     destruct H as [D'' [ ssaRet [fstSubset sndSubset]]].
-    inv ssaRet. rewrite getD' in *; simpl in *.
-    rewrite H1 in sndSubset.
-    hnf; intros.
+    inv ssaRet.
+    hnf.
+    intros x fv_Et.
+    simpl in *.
     unfold combineEnv.
-    cases; eauto.
-    + assert (x ∈ Ds' ∩ Dt').
-      * hnf in fstSubset. hnf in H0.  specialize (H0 x H).
-       cset_tac; eauto.
-     *(* specialize (liveness x  H2); destruct liveness.*)
-       pose proof (term_ssa_eval_agree L L s D (stmtReturn es) E Es ssaS nfS sterm).
-       pose proof (term_ssa_eval_agree L L t D' (stmtReturn et) E Et ssaT nfT tterm).
-       rewrite getD  in H3. rewrite getD'  in H4. simpl in *.
-       rewrite <- H3; eauto. rewrite <- H4; eauto.
-  - pose proof (ssa_move_return D L E s Es es nfS ssaS sterm).
+    cases; try reflexivity.
+    + cset_tac.
+      * pose proof (term_ssa_eval_agree L L s D (stmtReturn es) E Es ssa_s nf_s sterm).
+        pose proof (term_ssa_eval_agree L L t D' (stmtReturn et) E Et ssa_t nf_t tterm).
+        hnf in H2, H3.
+        rewrite <- (H2 x H).
+        rewrite (agree_fv x) in H.
+        rewrite <- (H3 x H).
+        reflexivity.
+      * exfalso.
+        pose proof (renamed_apart_contained x et L E t Et D') as fv_dv.
+        destruct fv_dv as [in_fv | in_dv]; auto.
+        pose proof (renamedApart_disj ssa_s) as disj_fv_dv.
+        unfold disj in disj_fv_dv.
+        apply (disj_fv_dv x); auto.
+        rewrite (agree_fv x); auto.
+  - pose proof (ssa_move_return D L E s Es es nf_s ssa_s sterm).
     destruct H as [D'' [ssaRet [fstSubset sndSubset]]].
-    inv ssaRet. rewrite getD in *; simpl in *.
-    rewrite <- H1 in sndSubset.
+    inv ssaRet.
+    simpl in *.
     hnf; intros.
     unfold combineEnv.
-    cases; eauto.
-    exfalso; apply n. hnf in H0. specialize (H0 x H).
-    eapply sndSubset; eauto.
-Qed. *)
+    cases; auto.
+    exfalso.
+    apply NOTCOND. hnf in H0. specialize (H0 x H).
+    cset_tac.
+    pose proof (renamed_apart_contained x es L E s Es D) as fv_dv.
+    destruct fv_dv; auto.
+Qed.
