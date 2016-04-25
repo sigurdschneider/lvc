@@ -37,7 +37,6 @@ CoInductive sim {S} `{StateType S} {S'} `{StateType S'}  : S -> S' -> Prop :=
 
 Arguments sim [S] {H} [S'] {H0} _ _.
 
-(** Simulation is an equivalence relation *)
 Lemma sim_refl {S} `{StateType S} (σ:S)
       : sim σ σ.
 Proof.
@@ -91,14 +90,10 @@ Hint Unfold sim'r.
 Lemma sim_gen_mon {S} `{StateType S} {S'} `{StateType S'}
 : monotone2 (@sim_gen S _ S' _).
 Proof.
-  hnf; intros. inv IN.
-  - econstructor 1; eauto.
+  hnf; intros. inv IN; eauto using @sim_gen.
   - econstructor 2; eauto; intros.
     edestruct H5; eauto; dcr. eexists; eauto.
     edestruct H6; eauto; dcr. eexists; eauto.
-
-  - econstructor 3; eauto.
-  - econstructor 4; eauto.
 Qed.
 
 Arguments sim_gen_mon [S] {H} [S'] {H0} [x0] [x1] r r' IN LE.
@@ -111,13 +106,10 @@ Lemma sim_sim' {S} `{StateType S} {S'} `{StateType S'} (σ1:S) (σ2:S')
 Proof.
   revert σ1 σ2. pcofix CIH.
   intros. pfold.
-  inv H2.
-  - econstructor; eauto.
+  inv H2; eauto using sim_gen.
   - econstructor 2; eauto; intros.
     + edestruct H6; eauto; dcr. eexists; eauto.
     + edestruct H7; eauto; dcr. eexists; eauto.
-  - econstructor 3; eauto.
-  - econstructor 4; eauto.
 Qed.
 
 

@@ -364,39 +364,186 @@ Proof.
   pno_step; get_functional; congruence.
 Qed.
 
-Lemma bisim'r_trans_bot r σ1 σ2 σ3
-  : bisim'r bot2 σ1 σ2 -> bisim'r r σ2 σ3 -> bisim'r r σ1 σ3.
-Proof.
-  revert_all. pcofix CIH; intros.
-Admitted.
 
+Lemma drop_app_gen X (L L' :list X) n
+: n >= length L' -> drop n (L' ++ L) = (drop (n - length L') L).
+Proof.
+  intros. general induction L'; simpl.
+  - orewrite (n - 0 = n). eauto.
+  - destruct n.
+    + inv H.
+    + simpl. eapply IHL'. simpl in *; omega.
+Qed.
+
+(* A proof relation is parameterized by analysis information A *)
+Class ProofRelationI (A:Type) := {
+    (* Relates parameter lists according to analysis information *)
+    ParamRelI : A -> list var -> list var -> Prop;
+    (* Relates argument lists according to analysis information
+       and closure environments *)
+    ArgRelI : onv val -> onv val -> A-> list val -> list val -> Prop;
+    (* Relates blocks according to analysis information *)
+    BlockRelI : A -> I.block -> I.block -> Prop;
+    (* Relates environments according to analysis information *)
+    IndexRelI : 〔A〕 -> nat -> nat -> Prop;
+    ArgLengthMatchI : forall E E' a Z Z' VL VL',
+        ParamRelI a Z Z' -> ArgRelI E E' a VL VL' -> length Z = length VL /\ length Z' = length VL';
+    IndexRelDrop : forall k AL n n', IndexRelI AL n n' -> IndexRelI (drop k AL) (n - k) n'
+(*    IndexRelApp : forall AL AL' n n', IndexRelI AL n n' -> IndexRelI (AL' ++ AL) (❬AL'❭ + n) n' *)
+
+}.
 
 Inductive simIBlock (SIM:ProgramEquivalence I.state I.state)
           (r:I.state -> I.state -> Prop)
           {A} (AR:ProofRelationI A)
   : list A -> I.labenv -> I.labenv -> A -> I.block -> I.block -> Prop :=
-| simIBI a L L' Z Z' s s' n n' AL
+| simIBlockI a L L' Z Z' s s' n n' bn bn' AL
   : ParamRelI a Z Z'
-    -> BlockRelI a (I.blockI Z s n) (I.blockI Z' s' n')
-    -> (forall E E' Yv Y'v,
-          ArgRelI E E' a Yv Y'v
-          -> progeq r (L,  E [Z <-- Some ⊝ Yv],   s)
-                   (L', E'[Z' <-- Some ⊝ Y'v], s'))
-          -> simIBlock SIM r AR AL L L' a (I.blockI Z s n) (I.blockI Z' s' n').
+    -> BlockRelI a (I.blockI Z s bn) (I.blockI Z' s' bn')
+    -> IndexRelI AL n n'
+    -> (forall E E' Yv Y'v Y Y',
+          omap (exp_eval E) Y = Some Yv
+          -> omap (exp_eval E') Y' = Some Y'v
+          -> ArgRelI E E' a Yv Y'v
+          -> progeq r (L, E, stmtApp (LabI n) Y)
+                   (L', E', stmtApp (LabI n') Y'))
+          -> simIBlock SIM r AR AL L L' a (I.blockI Z s bn) (I.blockI Z' s' bn').
 
 
 Definition renILabenv (SIM:ProgramEquivalence I.state I.state) r
-           {A} AR (R: nat -> nat -> Prop) (AL:list A) L L' :=
-  forall n n' a b b', R n n' -> get AL n a -> get L n b -> get L' n' b'
+           {A} AR (AL:list A) L L' :=
+  (length AL = length L /\ tooth 0 L' /\ sawtooth L) /\
+  forall n n' a b b', IndexRelI AL n n' -> get AL n a -> get L n b -> get L' n' b'
                -> simIBlock SIM r AR
                            (drop (n - I.block_n b) AL)
                            (drop (n - I.block_n b) L)
-                           (drop (n' - I.block_n b') L')
-                           a b b'.
+                           L'
+                           a b b' .
+
+Definition fexteqI (SIM:ProgramEquivalence I.state I.state)
+           {A} (PR:ProofRelationI A) (a:A) (AL:list A) Z s Z' s' :=
+  ParamRelI a Z Z' /\
+  forall E E' VL VL' L L' (r:rel2 I.state (fun _ : I.state => I.state)),
+    ArgRelI E E' a VL VL'
+    -> renILabenv SIM r PR AL L L'
+    -> progeq r (L, E[Z <-- List.map Some VL], s)
+            (L', E'[Z' <-- List.map Some VL'], s').
+
+Lemma fix_compatible_I r A (PR:ProofRelationI A) (a:A) AL F E E' Z Z' L L' Yv Y'v s s' n n' AL' bn
+(LEN2:length AL' = length F)
+  : renILabenv bisim_progeq r PR AL L L'
+    -> (forall n n' Z s Z' s' a bn, get F n (Z,s) -> IndexRelI (AL' ++ AL) n n'
+                              -> get L' n' (I.blockI Z' s' bn) -> get AL' n a ->
+                             fexteqI bisim_progeq PR a (AL' ++ AL) Z s Z' s'
+                             /\ BlockRelI a (I.blockI Z s n) (I.blockI Z' s' bn)
+                             /\ ParamRelI a Z Z')
+    -> get F n (Z,s)
+    -> IndexRelI (AL' ++ AL) n n'
+    -> get L' n' (I.blockI Z' s' bn)
+    -> get AL' n a
+    -> ArgRelI E E' a Yv Y'v
+    -> tooth 0 L'
+    -> sawtooth L
+    -> bisim'r r
+              (I.mkBlocks F ++ L, E [Z <-- List.map Some Yv], s)
+              (L', E' [Z' <-- List.map Some Y'v], s').
+Proof.
+  unfold I.mkBlocks.
+  revert_all; pcofix CIH; intros.
+  eapply H1; eauto. clear H2 H3 H4 H5 H6. clear s s' Z Z' n n' a bn.
+  hnf. split.
+  destruct H0; dcr; split; eauto with len. split; eauto.
+  econstructor; eauto. eapply tooth_I_mkBlocks.
+  intros ? ? ? ? ? RN GetAL GetFL GetL'.
+  assert (❬AL'❭ = ❬mapi I.mkBlock F❭) by eauto with len.
+  eapply get_app_cases in GetAL. destruct GetAL.
+  - eapply get_app_le in GetFL; [| rewrite <- H; eauto using get_range].
+    inv_get. destruct x as [Z s]. destruct b' as [Z' s' bn]. simpl.
+    assert (bn = n'). {
+      exploit (tooth_index H7 GetL'); eauto. simpl in *. omega.
+    }
+    subst bn.
+    orewrite (n - n = 0). simpl.
+    exploit H1; eauto; dcr.
+    eapply simIBlockI; eauto. simpl.
+    intros.
+    exploit (ArgLengthMatchI); eauto; dcr.
+    exploit (omap_length _ _ _ _ _ H3).
+    exploit (omap_length _ _ _ _ _ H5).
+    pone_step; eauto using get_app, get_mapi; eauto; simpl.
+    congruence. congruence.
+    orewrite (n - n = 0); simpl.
+    right.
+    orewrite (n' - n' = 0); simpl.
+    eapply CIH; eauto.
+  - destruct H0.
+    dcr. eapply get_app_right_ge in GetFL; [ | rewrite <- H; eauto].
+    assert (n - I.block_n b >= ❬mapi I.mkBlock F❭). {
+      exploit (sawtooth_smaller H8 GetFL). rewrite <- H in *. simpl in *. omega.
+    }
+    exploit H3. instantiate (2:=n-❬mapi I.mkBlock F❭). instantiate (1:=n').
+    eapply IndexRelDrop in RN. instantiate (1:=❬AL'❭) in RN.
+    rewrite drop_length_eq in RN. rewrite <- H. eauto.
+    rewrite <- H. eauto. eauto. eauto.
+    rewrite (drop_app_gen _ (mapi I.mkBlock F)); eauto.
+    assert (EQ:n - ❬mapi I.mkBlock F❭ - I.block_n b = n - I.block_n b - ❬mapi I.mkBlock F❭)
+      by omega.
+    rewrite <- EQ.
+    inv H6. econstructor; eauto. simpl in *.
+    rewrite (drop_app_gen _ AL'); eauto.
+    rewrite H. rewrite <- EQ. eauto. omega.
+    intros. eapply progeq_mon; eauto.
+Qed.
 
 
+Lemma simILabenv_extension r A (PR:ProofRelationI A) (AL AL':list A) F L L'
+      (LEN1:length AL' = length F)
+  : renILabenv bisim_progeq r PR AL L L'
+    -> (forall n n' Z s Z' s' a bn, get F n (Z,s) -> IndexRelI (AL' ++ AL) n n'
+                              -> get L' n' (I.blockI Z' s' bn) -> get AL' n a ->
+                              fexteqI bisim_progeq PR a (AL' ++ AL) Z s Z' s'
+                              /\ BlockRelI a (I.blockI Z s n) (I.blockI Z' s' bn)
+                              /\ ParamRelI a Z Z')
+  -> renILabenv bisim_progeq r PR (AL' ++ AL) (I.mkBlocks F ++ L) L'.
+Proof.
+  unfold I.mkBlocks. intros. destruct H.
+  split. dcr. split. eauto with len.
+  split; eauto. econstructor; eauto using tooth_I_mkBlocks.
+  intros ? ? ? ? ? RN GetAL GetL GetL'.
+  assert (ALLEN:❬AL'❭ = ❬mapi I.mkBlock F❭) by eauto with len.
+  eapply get_app_cases in GetAL. destruct GetAL.
+  - eapply get_app_le in GetL; [| rewrite <- ALLEN; eauto using get_range].
+    inv_get. destruct x, b'.
+    exploit H0; eauto. simpl in *. dcr.
+    destruct H4. orewrite (n - n = 0); simpl.
+    econstructor; eauto. intros.
+    exploit (ArgLengthMatchI); eauto; dcr.
+    exploit (omap_length _ _ _ _ _ H5).
+    exploit (omap_length _ _ _ _ _ H10).
+    pone_step; eauto using get_app, get_mapi; simpl; eauto with len.
+    left. orewrite (n - n = 0); simpl.
+    exploit (tooth_index H8 GetL'); eauto. simpl in *.
+    orewrite (n' + 0 = n') in H16. subst; simpl in *.
+    orewrite (n' - n' = 0); simpl.
+    eapply fix_compatible_I; eauto.
+    split; eauto.
+  - dcr.
+    eapply get_app_right_ge in GetL; [ | rewrite <- ALLEN; eauto].
+    assert (n - I.block_n b >= ❬mapi I.mkBlock F❭). {
+      exploit (sawtooth_smaller H7 GetL). rewrite <- ALLEN in *. simpl in *. omega.
+    }
+    rewrite (drop_app_gen _ (mapi I.mkBlock F)); eauto.
+    rewrite (drop_app_gen _ AL'); [ | rewrite ALLEN; eauto ].
+    assert (EQ:n - ❬mapi I.mkBlock F❭ - I.block_n b = n - I.block_n b - ❬mapi I.mkBlock F❭)
+      by omega.
+    rewrite ALLEN. rewrite <- EQ.
+    eapply H1; eauto.
+    eapply (IndexRelDrop ❬mapi I.mkBlock F❭) in RN.
+    rewrite <- ALLEN in RN. rewrite drop_length_eq in RN.
+    rewrite ALLEN in RN. eauto. rewrite <- ALLEN. eauto.
+Qed.
 
-Instance PR : ProofRelationI (params) :=
+Definition PR : ProofRelationI (params) :=
   {
     ParamRelI G Z Z' := Z = Z' /\ Z = G;
     ArgRelI V V' G VL VL' := VL = VL' /\ length VL = length G;
@@ -496,14 +643,6 @@ Proof.
         eexists; split; eauto.
         unfold extend at 2. rewrite app_nth2. unfold mapi. rewrite mapi_length.
         exploit (sawtooth_smaller ST); eauto.
-Lemma drop_app_gen X (L L' :list X) n
-: n > length L' -> drop n (L' ++ L) = (drop (n - length L') L).
-Proof.
-  intros. general induction L'; simpl.
-  destruct n. inv H. simpl. f_equal; omega.
-  destruct n. inv H.
-  simpl. eapply IHL'. simpl in *; omega.
-Qed.
 unfold extend. rewrite drop_app_gen. unfold mapi. rewrite mapi_length.
 orewrite(f - I.block_n b - ❬F❭ = f - ❬F❭ - I.block_n b). eauto.
 unfold mapi. rewrite mapi_length. admit.
