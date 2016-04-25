@@ -330,6 +330,45 @@ Proof.
     + specialize (H0 l Y); isabsurd.
 Qed.
 
+Lemma renamed_apart_contained_list x X L E s Es f D:
+  x \In list_union (Exp.freeVars ⊝ X)
+  -> Terminates (L,E,s) (L, Es, stmtApp f X)
+  -> noFun s
+  -> renamedApart s D
+  -> x \In (fst (getAnn D)) \/ x \In (snd (getAnn D)).
+
+Proof.
+  intros fv_e term_s nf_s ssa_s.
+  general induction term_s.
+  - inv ssa_s.
+    cset_tac.
+  - inv H; inv ssa_s; inv nf_s; simpl.
+    + specialize (IHterm_s x X L' (E0 [x0 <- ⎣ v ⎦]) s' Es f an fv_e).
+      destruct IHterm_s as [in_fv | in_dv]; auto.
+      * rewrite H8.
+        rewrite H9 in in_fv; simpl in in_fv.
+        cset_tac.
+      * rewrite H8.
+        rewrite H9 in in_dv; simpl in in_dv.
+        cset_tac.
+    + specialize (IHterm_s x X L' E' s' Es f ans).
+      destruct IHterm_s as [in_fv | in_dv]; auto.
+      * rewrite <- H6.
+        rewrite H10 in in_fv; simpl in in_fv.
+        cset_tac.
+      * rewrite <- H6.
+        rewrite H10 in in_dv; simpl in in_dv.
+        cset_tac.
+    + specialize (IHterm_s x X L' E' s' Es f ant).
+      destruct IHterm_s as [in_fv | in_dv]; auto.
+      * rewrite <- H6.
+        rewrite H11 in in_fv; simpl in in_fv.
+        cset_tac.
+      * rewrite <- H6.
+        rewrite H11 in in_dv; simpl in in_dv.
+        cset_tac.
+    + specialize (H0 l Y); isabsurd.
+Qed.
 
 Lemma agree_on_ssa_combine:
   forall D D' L E s t Es Et es et,
