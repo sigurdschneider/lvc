@@ -533,21 +533,21 @@ Proof.
 
       rewrite H6.
       rewrite IH; eauto.
-      * { assert (freeVars (snd x0) [=]
-                           (freeVars (snd x0) \ of_list (fst x0))
-                           ∪ (of_list (fst x0) ∩ freeVars (snd x0))). {
+      * { assert (freeVars (snd z) [=]
+                           (freeVars (snd z) \ of_list (fst z))
+                           ∪ (of_list (fst z) ∩ freeVars (snd z))). {
             clear_all; cset_tac; intuition. simpl in *.
             decide (a ∈ of_list a0); intuition.
           }
-          rewrite H1 at 1.
+          rewrite H3 at 1.
           repeat rewrite lookup_set_union; eauto.
           repeat rewrite minus_dist_union.
           pose proof (update_with_list_agree_inv _ _ _ H9 H8); eauto.
-          assert ((freeVars (snd x0) ∪ of_list (fst x0)) \ of_list (fst x0) [=]
-                                                         freeVars (snd x0) \ of_list (fst x0)). {
+          assert ((freeVars (snd z) ∪ of_list (fst z)) \ of_list (fst z) [=]
+                                                         freeVars (snd z) \ of_list (fst z)). {
             clear_all; cset_tac; intuition.
           }
-          rewrite H12 in H3.
+          rewrite H12 in H4.
           rewrite <- lookup_set_agree; eauto.
           intros. rewrite disj_minus_eq.
           - setoid_rewrite diff_subset_equal at 2.
@@ -561,16 +561,15 @@ Proof.
             eapply incl_union_left. eapply incl_list_union.
             eapply map_get_1; eauto. eauto.
         }
-      * assert (freeVars (snd x0) ⊆ (freeVars (snd x0) \ of_list (fst x0)) ∪ of_list (fst x0)). {
+      * assert (freeVars (snd z) ⊆ (freeVars (snd z) \ of_list (fst z)) ∪ of_list (fst z)). {
           clear_all; cset_tac; intuition.
-          decide (a ∈ of_list (fst x0)); eauto.
         }
-        rewrite H1. rewrite lookup_set_union; eauto.
+        rewrite H3. rewrite lookup_set_union; eauto.
         pose proof (update_with_list_agree_inv _ _ _ H9 H8); eauto.
-        assert (freeVars (snd x0) \ of_list (fst x0) ⊆ (freeVars (snd x0) ∪ of_list (fst x0)) \ of_list (fst x0)). {
+        assert (freeVars (snd z) \ of_list (fst z) ⊆ (freeVars (snd z) ∪ of_list (fst z)) \ of_list (fst z)). {
           cset_tac; intuition.
         }
-        rewrite <- H12 in H3.
+        rewrite <- H12 in H4.
         eapply union_subset_3; eauto.
         rewrite <- H5. rewrite <- H.
         rewrite <- lookup_set_agree; eauto.
@@ -747,18 +746,18 @@ Proof.
       repeat rewrite length_fst_renamedApartAnnF, renameApartF_length, rev_length; eauto.
       rewrite renameApartF_length; eauto.
     + intros.
-      edestruct get_fst_renamedApartAnnF; eauto; dcr.
+      edestruct get_fst_renamedApartAnnF; eauto; dcr; subst.
       get_functional; subst.
-      assert (n < length s). eapply get_range in H5.
-      rewrite rev_length in H5. rewrite renameApartF_length in H5. eauto.
-      eapply get_rev in H5.
-      rewrite renameApartF_length in H5.
+      assert (n < length s). eapply get_range in H1.
+      rewrite rev_length in H1. rewrite renameApartF_length in H1. eauto.
+      eapply get_rev in H1.
+      rewrite renameApartF_length in H1.
       edestruct get_fst_renameApartF as [? [? []]]; eauto; dcr.
       rewrite H7. eapply IH; eauto with cset.
-      assert (freeVars (snd x1) ⊆ (freeVars (snd x1) \ of_list (fst x1)) ∪ of_list (fst x1)).
-      clear_all; cset_tac; intuition; simpl.
-      decide (a ∈ of_list (fst x1)); eauto.
-      rewrite H3. rewrite lookup_set_union; eauto.
+      assert (freeVars (snd x0) ⊆ (freeVars (snd x0) \ of_list (fst x0)) ∪ of_list (fst x0)). {
+        clear_all; cset_tac; intuition.
+      }
+      rewrite H4. rewrite lookup_set_union; eauto.
       eapply union_subset_3; eauto.
       eapply incl_union_left.
       rewrite <- lookup_set_agree; eauto.
@@ -777,7 +776,7 @@ Proof.
       get_functional; subst.
       rewrite fst_renamedApartAnn.
       split. clear_all; cset_tac; intuition.
-      eapply get_rev in H5.
+      eapply get_rev in H1.
       edestruct get_fst_renameApartF as [? [? []]]; eauto; dcr.
       repeat rewrite snd_renamedApartAnn.
       split; eauto.

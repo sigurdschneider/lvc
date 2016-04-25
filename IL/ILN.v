@@ -287,7 +287,7 @@ Lemma pos_drop_eq symb (l:lab) x
 Proof.
   general induction symb.
   unfold pos in H; fold pos in H. cases in H.
-  inv H; inv e; eauto.
+  inv H; inv COND; eauto.
   destruct x. exfalso. exploit (pos_ge _ _ _ H); eauto. omega.
   simpl. erewrite IHsymb; eauto.
   eapply (pos_sub 1); eauto.

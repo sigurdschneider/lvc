@@ -147,9 +147,9 @@ Proof.
     inv i.
   + eapply inverse_on_union; eauto.
     eapply inverse_on_list_union.
-    intros. inv_map H3.
-    edestruct (get_length_eq _ H4 H); eauto.
-    eauto 20 using @update_with_list_inverse_on with len.
+    intros. inv_get.
+    edestruct (get_length_eq _ H3 H); eauto.
+    eauto using @update_with_list_inverse_on.
 Qed.
 
 Lemma alpha_inverse_on_agree f g ϱ ϱ' s t
@@ -299,11 +299,11 @@ Proof.
   eapply length_length_eq in LC.
   eapply length_length_eq in LC'.
   eapply length_length_eq in LC''.
-  general induction LC; simpl. destruct X,Y; eauto.
-  inversion LC'. subst x0 XL0 X. inv LC''.
-  simpl in *; injection LL; injection H2; intros.
-  rewrite <- H0 in H3. rewrite <- H in H1. erewrite EC'; eauto.
-  eapply envCorr_update; eauto.
+  general induction LC; simpl; eauto.
+  - inversion LC'; subst x0 XL0. inv LC''.
+    simpl in *; injection LL. injection H; intros.
+    subst y0 YL0.
+    erewrite EC'; eauto using envCorr_update.
 Qed.
 
 Lemma envCorr_update_list bra bira block_E block_E' block_Z block_Z' ra ira

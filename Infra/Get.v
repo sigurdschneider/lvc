@@ -155,8 +155,9 @@ Ltac get_functional :=
   | [ H : get ?XL ?n ?x, H' : get ?XL ?n ?y |- _ ] =>
     let EQ := fresh "EQ" in
     pose proof (get_functional H H') as EQ;
-      first [ is_var y; subst y; clear H' | is_var x; subst x; clear H' |
-              simplify_eq EQ; intros; clear H'; clear_trivial_eqs ]
+    first [ is_var y; subst y; clear H'
+          | is_var x; subst x; clear H'
+          | simplify_eq EQ; intros; clear H'; clear_trivial_eqs ]
   | _ => fail "no matching get assumptions"
   end.
 
@@ -350,6 +351,13 @@ Proof.
   orewrite (length L = length L + 0). eapply get_shift. constructor.
 Qed.
 
+Lemma get_length_app_eq X (L L':list X) x y l
+  : l = length L -> get (L ++ x :: L') l y -> x = y.
+Proof.
+  orewrite (length L = length L + 0). intros; subst.
+  eapply shift_get in H0. inv H0. eauto.
+Qed.
+
 Lemma get_app_le X (L L':list X) n x (LE:n < length L)
   : get (L ++ L') n x -> get L n x.
 Proof.
@@ -397,3 +405,21 @@ Proof.
     + exfalso; omega.
     + eapply IHL; eauto. omega.
 Qed.
+
+Lemma get_length_right A (L1 L2:list A) n (x y:A)
+  : n > length L1
+    -> get (L1 ++ x :: L2) n y
+    -> get L2 (n - S (length L1)) y.
+Proof.
+  intros. general induction L1.
+  - simpl in *. inv H0; try omega; simpl.
+    orewrite (n0 - 0 = n0); eauto.
+  - simpl in *. inv H0. omega. simpl in *.
+    eapply IHL1; eauto. omega.
+Qed.
+
+Hint Extern 5 =>
+match goal with
+| [ H : ❬?A❭ = ❬?B❭, H' : ❬?C❭ = ❬?B❭, H'' : get ?A ?n _  |- ?n < ❬?C❭]
+  => rewrite H'; rewrite <- H; eapply (get_range H'')
+end : len.

@@ -379,6 +379,8 @@ Hint Resolve minus_incl_add add_single_rm_single_incl minus_incl_disj_eq
      incl_minus_single_not_in minus_minus_minus_add equiv_minus_union
   : cset.
 
+Hint Resolve incl_meet_lr incl_meet_split : cset.
+
 Definition lminus X `{OrderedType X} (s:set X) L := s \ of_list L.
 
 Hint Extern 10 =>
@@ -386,3 +388,17 @@ match goal with
 | [ H : ?a = ?b, H': ?c = ?b |- ?c = ?a ] => eapply (eq_trans H' (eq_sym H))
 | [ H : ?b = ?a, H': ?b = ?c |- ?a = ?c ] => eapply (eq_trans (eq_sym H) H')
 end : len.
+
+Lemma incl_minus_both X `{OrderedType X} (s t u: set X)
+  : s \ u ⊆ t
+    -> u ⊆ t
+    -> s ⊆ t.
+Proof.
+  intros. cset_tac. specialize (H0 a). specialize (H1 a).
+  cset_tac. decide (a ∈ u); eauto.
+Qed.
+
+Hint Extern 5 =>
+match goal with
+  | [ H1 : ?s \ ?u ⊆ ?t, H2 : ?u ⊆ ?t |- ?s ⊆ ?t ] => eapply (incl_minus_both H1 H2)
+end : cset.

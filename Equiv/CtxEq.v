@@ -24,31 +24,6 @@ Definition bisimeqid s s' :=
 Definition bisimeq' r s s' :=
   forall ZL L L' E, simL' _ r SR ZL L L' -> bisim'r r (L, E, s) (L', E, s').
 
-Ltac pone_step := pfold; eapply bisim'Silent; [ eapply plus2O; single_step
-                              | eapply plus2O; single_step
-                              | left ].
-
-Ltac pone_step' := pfold; eapply bisim'Silent; [ eapply plus2O; single_step
-                              | eapply plus2O; single_step
-                              | right ].
-
-Ltac pno_step := pfold; eapply bisim'Term;
-               try eapply star2_refl; try get_functional; try subst;
-                [ try reflexivity
-                | stuck2
-                | stuck2  ].
-
-Ltac pextern_step :=
-  let STEP := fresh "STEP" in
-  pfold; eapply bisim'Extern;
-    [ eapply star2_refl
-    | eapply star2_refl
-    | try step_activated
-    | try step_activated
-    | intros ? ? STEP; inv STEP
-    | intros ? ? STEP; inv STEP
-    ].
-
 Lemma bisimeq'_refl s
   : forall ZL L L' E r,
     simL' _ r SR ZL L L'
@@ -56,12 +31,12 @@ Lemma bisimeq'_refl s
 Proof.
   unfold bisimeq. sind s; destruct s; simpl in *; intros.
   - case_eq (exp_eval E e); intros.
-    + pone_step. eapply (IH s); eauto.
+    + pone_step. left. eapply (IH s); eauto.
     + pno_step.
   - case_eq (exp_eval E e); intros.
     case_eq (val2bool v); intros.
-    + pone_step. eapply (IH s1); eauto.
-    + pone_step. eapply (IH s2); eauto.
+    + pone_step. left. eapply (IH s1); eauto.
+    + pone_step. left. eapply (IH s2); eauto.
     + pno_step.
   - edestruct (get_dec L (counted l)) as [[b]|].
     decide (length Y = length (F.block_Z b)).
@@ -91,14 +66,13 @@ Proof.
         econstructor; eauto.
         left. eapply (IH s); eauto.
     + pno_step.
-  - pone_step.
+  - pone_step. left.
     eapply (IH s0); eauto using sawtooth_F_mkBlocks.
     eapply simL_extension'; eauto.
     instantiate (1:=List.map fst s). rewrite map_length; eauto.
-    intros; get_functional; subst.
-    eapply map_get in H2; eauto. simpl in *; subst.
-    repeat split; eauto.
-    intros. hnf in H0; dcr; subst.
+    intros; inv_get; eauto.
+    repeat split.
+    intros. hnf in H1; dcr; subst.
     eapply (IH s'); eauto.
 Qed.
 
@@ -154,15 +128,13 @@ Proof.
   - rewrite map_app. econstructor; eauto.
     eapply get_mutual_block; eauto.
     rewrite map_length; eauto.
-    intros. eapply map_get in H1; eauto; subst.
-    get_functional; subst. destruct b2. econstructor; eauto; try now (clear_all; intuition).
-    * exploit tooth_get_n; eauto. simpl in *. subst block_n.
-      intros. hnf.
-      dcr; subst; simpl in *.
+    intros. inv_get.
+    destruct b1. econstructor; eauto; try now (clear_all; intuition).
+    * exploit tooth_get_n; eauto. simpl in *. subst block_n; dcr; subst.
       exploit omap_length; eauto.
       exploit omap_length; try eapply H4; eauto.
       pone_step; eauto using get_app; simpl; eauto; try congruence.
-      eapply paco2_mon. eapply bisim'_refl. clear_all; firstorder.
+      left. eapply paco2_mon. eapply bisim'_refl. clear_all; firstorder.
 Qed.
 
 (** * Contextual Equivalence *)
@@ -199,28 +171,27 @@ Fixpoint fillC (ctx:stmtCtx) (s':stmtCtx) : stmtCtx :=
     | ctxHole => s'
   end.
 
-
 Lemma simeq_contextual' s s' ctx r
 : (forall r, bisimeq' r s s')
   -> bisimeq' r (fill ctx s) (fill ctx s').
 Proof.
   intros. general induction ctx; simpl; hnf; intros; eauto.
   - case_eq (exp_eval E e); intros.
-    + pone_step. eapply IHctx; eauto.
+    + pone_step. left. eapply IHctx; eauto.
     + pno_step.
   - case_eq (exp_eval E e); intros.
     case_eq (val2bool v); intros.
-    + pone_step; eapply IHctx; eauto.
-    + pone_step.
+    + pone_step; left; eapply IHctx; eauto.
+    + pone_step. left.
       eapply bisimeq'_refl; eauto.
     + pno_step.
   - case_eq (exp_eval E e); intros.
     case_eq (val2bool v); intros.
-    + pone_step.
+    + pone_step. left.
       eapply bisimeq'_refl; eauto.
-    + pone_step; eapply IHctx; eauto.
+    + pone_step; left; eapply IHctx; eauto.
     + pno_step.
-  - pone_step.
+  - pone_step. left.
     eapply bisimeq'_refl.
     eapply simL_extension'; eauto.
     + instantiate (1:=(List.map fst F1 ++ Z :: List.map fst F2)%list).
@@ -228,49 +199,28 @@ Proof.
     + repeat rewrite app_length; simpl; repeat rewrite map_length; eauto.
     + intros.
       { destruct (get_subst _ _ _ H1) as [? |[?|?]].
-          - exploit @get_length; try eapply H4; eauto.
-            eapply get_app_le in H2; eauto.
-            eapply get_app_le in H3; eauto; try rewrite map_length; eauto.
-            get_functional; subst. eapply map_get in H3; eauto. subst.
-            simpl; repeat split; eauto.
-            hnf; intros. simpl. hnf in H2; dcr; subst.
-            eapply bisimeq'_refl; eauto.
-          - dcr; subst. invc H5.
-            exploit get_length_app.
-            eapply get_functional in H2; try eapply H4.
-            erewrite <- map_length in H3.
-            exploit get_length_app.
-            eapply get_functional in H5; try eapply H3. subst a.
-            invc H2.
-            simpl; repeat split; eauto. intros; hnf in H2; dcr; subst.
-            eapply IHctx; eauto.
-          - dcr.
-            Lemma get_length_right A (L1 L2:list A) n (x y:A)
-              : n > length L1
-                -> get (L1 ++ x :: L2) n y
-                -> get L2 (n - S (length L1)) y.
-            Proof.
-              intros. general induction L1.
-              - simpl in *. inv H0; try omega; simpl.
-                orewrite (n0 - 0 = n0); eauto.
-              - simpl in *. inv H0. omega. simpl in *.
-                eapply IHL1; eauto. omega.
-            Qed.
-            eapply get_length_right in H2; eauto.
-            eapply get_length_right in H3; eauto; try rewrite map_length; eauto.
-            get_functional; subst.
-            eapply map_get in H3; eauto; try rewrite map_length; eauto. simpl in *; subst.
-            hnf; intros. simpl; repeat split; eauto.
-            intros. hnf in H2. dcr; subst.
-            eapply bisimeq'_refl. eauto.
+        - inv_get.
+          simpl; repeat split; eauto.
+          hnf; intros. simpl. hnf in H2; dcr; subst.
+          eapply bisimeq'_refl; eauto.
+        - dcr; subst. invc H5.
+          inv_get.
+          simpl; repeat split; eauto. intros; hnf in H1; dcr; subst.
+          eapply IHctx; eauto.
+        - dcr.
+          inv_get. rewrite map_length in H3.
+          get_functional.
+          simpl; repeat split; eauto.
+          intros. hnf in H2. dcr; subst.
+          eapply bisimeq'_refl. eauto.
         }
-  - pone_step.
+  - pone_step. left.
     eapply IHctx. eauto.
     eapply simL_extension'; eauto.
     + instantiate (1:=List.map fst F). rewrite map_length; eauto.
-    + intros. get_functional; subst. eapply map_get in H3; eauto. simpl in *; subst.
+    + intros. inv_get.
       repeat split; eauto.
-      intros. hnf in H1; dcr; subst.
+      intros. hnf in H2; dcr; subst.
       eapply bisimeq'_refl. eauto.
   - case_eq (omap (exp_eval E) e); intros.
     + pextern_step.

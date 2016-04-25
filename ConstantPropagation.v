@@ -3,7 +3,7 @@ Require Import CSet Le.
 Require Import Plus Util AllInRel Map.
 Require Import CSet Val Var Env EnvTy IL Sim Fresh Annotation MoreExp Coherence LabelsDefined DecSolve.
 
-Require Import RenamedApart Filter SetOperations Eqn ValueOpts Lattice.
+Require Import RenamedApart SetOperations Eqn ValueOpts Lattice.
 
 Set Implicit Arguments.
 Unset Printing Records.

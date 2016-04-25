@@ -660,47 +660,11 @@ Proof.
   eapply sim'_refl.
 Qed.
 
-(*
-Module I.
-
-Class SimRelation (A:Type) := {
-    ParamRel : A-> list var -> list var -> Prop;
-    ArgRel : onv val -> onv val -> A-> list val -> list val -> Prop;
-    BlockRel : A-> I.block -> I.block -> Prop;
-    RelsOK : forall E E' a Z Z' VL VL', ParamRel a Z Z' -> ArgRel E E' a VL VL' -> length Z = length VL /\ length Z' = length VL'
-}.
-*)
-(*
-Inductive simB (r:rel2 I.state (fun _ : I.state => I.state)) {A} (AR:SimRelation A)  : I.labenv -> I.labenv -> A -> I.block -> I.block -> Prop :=
-| simBI a L L' Z Z' s s'
-  : ParamRel a Z Z'
-    -> BlockRel a (I.blockI Z s n) (I.blockI Z' s' n)
-    -> (forall E E' Y Y' Yv Y'v,
-         omap (exp_eval E) Y = Some Yv
-         -> omap (exp_eval E') Y' = Some Y'v
-         -> ArgRel E E' a Yv Y'v
-         -> paco2 (@sim_gen I.state _ I.state _) r (L, E, stmtApp (LabI 0) Y)
-                        (L', E', stmtApp (LabI 0) Y'))
-    -> simB r AR L L' a (I.blockI Z s) (I.blockI Z' s').
-
-Definition simL' (r:rel2 I.state (fun _ : I.state => I.state))
-           {A} AR (AL:list A) L L' := AIR5 (simB r AR) L L' AL L L'.
-
-Definition fexteq'
-           {A} AR (a:A) (AL:list A) Z s Z' s' :=
-  forall E E' VL VL' L L' (r:rel2 I.state (fun _ : I.state => I.state)),
-    ArgRel E E' a VL VL'
-    -> simL' r AR AL L L'
-    -> ParamRel a Z Z'
-    -> paco2 (@sim_gen I.state _ I.state _) r (L, E[Z <-- List.map Some VL], s)
-            (L', E'[Z' <-- List.map Some VL'], s').
-*)
-
-Instance sim_progeq : ProgramEquivalence F.state F.state.
-constructor. eapply (paco2 (@sim_gen F.state _ F.state _)).
+Instance sim_progeq {S} `{StateType S} : ProgramEquivalence S S.
+Proof.
+econstructor. instantiate (1:=paco2 (@sim_gen S _ S _)).
+eapply paco2_mon.
 Defined.
-
-
 
 Lemma simL_mon (r r0:rel2 F.state (fun _ : F.state => F.state)) A AR L1 L2 (AL:list A)
 :  inRel (simB sim_progeq r AR) AL L1 L2
@@ -768,6 +732,7 @@ Proof.
       eapply CIH; eauto using drop_eq.
 Qed.
 
+
 Lemma fix_compatible r A AR (a:A) AL F F' E E' Z Z' L L' Yv Y'v s s' n AL'
 (LEN1:length F = length F') (LEN2:length AL' = length F)
   : simL' sim_progeq r AR AL L L'
@@ -792,6 +757,53 @@ Proof.
     eapply simL_mon; eauto.
 Qed.
 
+Lemma mutual_block_extension_simple r A AR F1 F2 F1' F2' ALX AL AL' i E1 E2 L1 L2
+      (D1:F1' = drop i F1) (D2:F2' = drop i F2) (D3:AL' = drop i AL)
+      (LEN1:length F1 = length F2) (LEN2:length AL = length F1)
+      (SIML:simL' sim_progeq r AR ALX L1 L2)
+  :
+    (forall (n : nat) (Z : params)
+       (s : stmt) (Z' : params) (s' : stmt)
+       (a : A),
+        get F1 n (Z, s) ->
+        get F2 n (Z', s') ->
+        get AL n a ->
+        fexteq' sim_progeq AR a (AL ++ ALX) E1 Z s E2 Z' s' /\
+        BlockRel a (F.blockI E1 Z s n) (F.blockI E2 Z' s' n) /\
+        ParamRel a Z Z')
+    -> mutual_block
+        (simB sim_progeq r AR (AL ++ ALX) (F.mkBlocks E1 F1 ++ L1)%list
+              (F.mkBlocks E2 F2 ++ L2)%list) i AL'
+        (mapi_impl (F.mkBlock E1) i F1')
+        (mapi_impl (F.mkBlock E2) i F2').
+Proof.
+  intros.
+  assert (LEN1':length_eq F1' F2').
+  eapply length_length_eq. subst; eauto using drop_length_stable.
+  assert (LEN2':length_eq AL' F1').
+  eapply length_length_eq. subst; eauto using drop_length_stable.
+  general induction LEN1'. inv LEN2'.
+  - simpl. econstructor.
+  - inv LEN2'.
+    simpl. econstructor; simpl; eauto.
+    + eapply IHLEN1'; eauto using drop_shift_1.
+    + destruct x,y. edestruct H as [[B1 B2] [B3 B4]]; eauto using drop_eq.
+      econstructor; eauto.
+      intros. hnf.
+      pfold. econstructor; try eapply plus2O.
+      econstructor; eauto. eapply get_app.
+      eapply mapi_get_1. eapply drop_eq. eauto. simpl.
+      edestruct RelsOK; eauto. exploit omap_length; try eapply H0; eauto.
+      congruence. reflexivity.
+      econstructor; eauto. eapply get_app.
+      eapply mapi_get_1. eapply drop_eq. eauto. simpl.
+      edestruct RelsOK; eauto. exploit omap_length; try eapply H5; eauto.
+      congruence. reflexivity.
+      simpl. left. orewrite (i-i=0); simpl.
+      eapply fix_compatible; eauto.
+      eauto using drop_eq. eauto using drop_eq. eauto using drop_eq.
+Qed.
+
 Lemma simL_extension' r A AR (AL AL':list A) F F' E E' L L'
       (LEN1:length AL' = length F) (LEN2:length F = length F')
 : simL' sim_progeq r AR AL L L'
@@ -804,54 +816,9 @@ Proof.
   intros.
   hnf; intros.
   econstructor; eauto.
-  Lemma mutual_block_extension_simple r A AR F1 F2 F1' F2' ALX AL AL' i E1 E2 L1 L2
-        (D1:F1' = drop i F1) (D2:F2' = drop i F2) (D3:AL' = drop i AL)
-        (LEN1:length F1 = length F2) (LEN2:length AL = length F1)
-        (SIML:simL' sim_progeq r AR ALX L1 L2)
-    :
-       (forall (n : nat) (Z : params)
-         (s : stmt) (Z' : params) (s' : stmt)
-         (a : A),
-       get F1 n (Z, s) ->
-       get F2 n (Z', s') ->
-       get AL n a ->
-       fexteq' sim_progeq AR a (AL ++ ALX) E1 Z s E2 Z' s' /\
-       BlockRel a (F.blockI E1 Z s n) (F.blockI E2 Z' s' n) /\
-       ParamRel a Z Z')
-      -> mutual_block
-          (simB sim_progeq r AR (AL ++ ALX) (F.mkBlocks E1 F1 ++ L1)%list
-                (F.mkBlocks E2 F2 ++ L2)%list) i AL'
-          (mapi_impl (F.mkBlock E1) i F1')
-          (mapi_impl (F.mkBlock E2) i F2').
-  Proof.
-    intros.
-    assert (LEN1':length_eq F1' F2').
-    eapply length_length_eq. subst; eauto using drop_length_stable.
-    assert (LEN2':length_eq AL' F1').
-    eapply length_length_eq. subst; eauto using drop_length_stable.
-    general induction LEN1'. inv LEN2'.
-    - simpl. econstructor.
-    - inv LEN2'.
-      simpl. econstructor; simpl; eauto.
-      + eapply IHLEN1'; eauto using drop_shift_1.
-      + destruct x,y. edestruct H as [[B1 B2] [B3 B4]]; eauto using drop_eq.
-        econstructor; eauto.
-        intros. hnf.
-        pfold. econstructor; try eapply plus2O.
-        econstructor; eauto. eapply get_app.
-        eapply mapi_get_1. eapply drop_eq. eauto. simpl.
-        edestruct RelsOK; eauto. exploit omap_length; try eapply H0; eauto.
-        congruence. reflexivity.
-        econstructor; eauto. eapply get_app.
-        eapply mapi_get_1. eapply drop_eq. eauto. simpl.
-        edestruct RelsOK; eauto. exploit omap_length; try eapply H5; eauto.
-        congruence. reflexivity.
-        simpl. left. orewrite (i-i=0); simpl.
-        eapply fix_compatible; eauto.
-        eauto using drop_eq. eauto using drop_eq. eauto using drop_eq.
-  Qed.
   eapply mutual_block_extension_simple; eauto.
 Qed.
+
 
 Lemma get_drop_lab0 (L:F.labenv) l blk
 :  get L (counted l) blk
@@ -887,7 +854,7 @@ Ltac simpl_minus :=
     => orewrite (n - n = 0) in H
   end.
 
-Lemma bisim_drop_shift r l L E Y L' E' Y' blk blk' (STL:sawtooth L) (STL':sawtooth L')
+Lemma sim_drop_shift r l L E Y L' E' Y' blk blk' (STL:sawtooth L) (STL':sawtooth L')
   : get L (labN l) blk
   -> get L' (labN l) blk'
   -> paco2 (@sim_gen F.state _ F.state _) r
@@ -901,7 +868,11 @@ Proof.
     eapply plus2_destr_nil in H3.
     destruct H2; destruct H3; dcr. inv H3.
     simpl in *. inv H5; simpl in *.
+<<<<<<< HEAD
     simpl_get_drop; repeat get_functional. (*FIXME subst blk0 blk1.*)
+=======
+    simpl_get_drop; repeat get_functional.
+>>>>>>> origin
     simpl_minus.
     pfold. econstructor; try eapply star2_plus2.
     econstructor; eauto. eauto.
@@ -913,7 +884,7 @@ Proof.
       * exfalso. destruct H5 as [? [? ?]]. inv H5.
       * inv H9; inv H12; simpl in *.
         pfold. subst yl yl0.
-        simpl_get_drop; repeat get_functional. (*FIXME: subst blk0 blk1.*)
+        simpl_get_drop; repeat get_functional.
         simpl_minus.
         econstructor; try eapply star2_plus2.
         econstructor; eauto using get_drop_lab0, drop_get_lab0. eauto.
@@ -928,7 +899,7 @@ Proof.
     + inv H6.
       pfold. econstructor 3; try eapply H2; eauto.
       destruct yl; isabsurd.
-      simpl in *. simpl_get_drop. repeat get_functional. (* FIXME: subst blk0*)
+      simpl in *. simpl_get_drop. repeat get_functional.
       eapply (S_star2 EvtTau).
       econstructor; eauto using get_drop_lab0, drop_get_lab0.
       eauto. rewrite drop_drop in H8. simpl_minus. simpl in *. eauto.
@@ -940,381 +911,103 @@ Proof.
       simpl. simpl_get_drop. eauto.
     + inv H8. inv H4; simpl in *.
       * pfold. subst. econstructor 3; try eapply H2; eauto.
-        simpl in *. simpl_get_drop. repeat get_functional. (*FIXME: subst blk0.*)
+        simpl in *. simpl_get_drop. repeat get_functional.
         eapply (S_star2 EvtTau).
         econstructor; eauto using get_drop_lab0, drop_get_lab0.
         eauto. rewrite drop_drop in H8. simpl_minus. simpl in *. eauto.
       * inv H11.
         pfold. econstructor 4; try eapply H2; eauto.
-        simpl in *. simpl_get_drop. repeat get_functional. (* FIXME: subst blk0*)
+        simpl in *. simpl_get_drop. repeat get_functional.
         eapply (S_star2 EvtTau).
         econstructor; eauto using get_drop_lab0, drop_get_lab0.
         eauto. rewrite drop_drop in H8. simpl_minus. simpl in *. eauto.
-        simpl in *. simpl_get_drop. repeat get_functional. (* FIXME: subst blk0.*)
+        simpl in *. simpl_get_drop. repeat get_functional.
         eapply (S_star2 EvtTau).
         econstructor; eauto using get_drop_lab0, drop_get_lab0. subst.
         eauto. rewrite drop_drop in H8. simpl_minus. simpl in *. eauto.
 Qed.
-(*
-Lemma subst_lemma A AR (a:A) AL s s' V V' Z Z' L1 L2 t t'
-: fexteq' AR a (a::AL) Z s Z' s'
-  -> ParamRel a Z Z'
-  -> BlockRel a (I.blockI Z s) (I.blockI Z' s')
-  -> simL' bot2 AR AL L1 L2
-  -> (forall r (L L' : list I.block),
-       simL' r AR (a :: AL) L L' ->
-       sim'r r (L, V, t) (L', V', t'))
-  -> sim' (I.blockI Z s :: L1, V, t)
-         (I.blockI Z' s' :: L2, V', t').
-Proof.
-  revert_all; pcofix CIH; intros.
-  eapply H4.
-  econstructor. econstructor; eauto.
-  intros. pfold.
-  econstructor; try eapply plus2O.
-  econstructor; eauto using get; simpl.
-  edestruct RelsOK; eauto.
-  eapply omap_length in H. congruence. reflexivity.
-  econstructor; eauto using get; simpl. edestruct RelsOK; eauto.
-  eapply omap_length in H5. congruence. reflexivity.
-  simpl.
-  right. eapply CIH; eauto.
-  eapply simL_mon; eauto. intros; isabsurd.
-Qed.
 
+Ltac simpl_get_dropI :=
+  repeat match goal with
+  | [ H : get (drop (?n - _) ?L) _ _, H' : get ?L ?n ?blk, STL: sawtooth ?L |- _ ]
+    => eapply get_drop in H;
+      let X := fresh "LT" in pose proof (sawtooth_smaller STL H') as X;
+        simpl in X, H;
+        orewrite (n - I.block_n blk + I.block_n blk = n) in H; clear X
+  | [ H' : get ?L ?n ?blk, STL: sawtooth ?L |- get (drop (?n - _) ?L) _ _ ]
+    => eapply drop_get;
+      let X := fresh "LT" in pose proof (sawtooth_smaller STL H') as X;
+        simpl in X; simpl;
+        orewrite (n - I.block_n blk + I.block_n blk = n); clear X
+  end.
 
-Lemma fix_compatible r A AR (a:A) AL s s' E E' Z Z' L L' Yv Y'v
-: simL' r AR AL L L'
-  -> fexteq' AR a (a::AL) Z s Z' s'
-  -> ParamRel a Z Z'
-  -> BlockRel a (I.blockI Z s) (I.blockI Z' s')
-  -> ArgRel E E' a Yv Y'v
-  -> sim'r r
-            (I.blockI Z s :: L, E [Z <-- List.map Some Yv], s)
-            (I.blockI Z' s' :: L', E' [Z' <-- List.map Some Y'v], s').
-Proof.
-  revert_all; pcofix CIH; intros.
-  eapply H1; eauto.
-  hnf; intros. econstructor; eauto. econstructor; eauto; intros.
-  pfold. econstructor; try eapply plus2O.
-  - econstructor; eauto using get.
-    + simpl. edestruct RelsOK; eauto.
-      exploit omap_length; try eapply H; eauto.
-      congruence.
-  - reflexivity.
-  - econstructor; eauto using get. simpl.
-    edestruct RelsOK; eauto. exploit omap_length; try eapply H6; eauto.
-    congruence.
-  - reflexivity.
-  - simpl. right. eapply CIH; eauto.
-  - eapply simL_mon; eauto.
-Qed.
-
-Lemma simL_extension' r A AR (a:A) AL s s' Z Z' L L'
-: simL' r AR AL L L'
-  -> fexteq' AR a (a::AL) Z s Z' s'
-  -> ParamRel a Z Z'
-  -> BlockRel a (I.blockI Z s) (I.blockI Z' s')
-  -> simL' r AR (a::AL) (I.blockI Z s :: L) (I.blockI Z' s' :: L').
-Proof.
-  intros.
-  hnf; intros. econstructor; eauto. econstructor; eauto; intros.
-  + pfold. econstructor; try eapply plus2O.
-    econstructor; eauto using get. simpl.
-    edestruct RelsOK; eauto. exploit omap_length; try eapply H3; eauto.
-    congruence. reflexivity.
-    econstructor; eauto using get. simpl.
-    edestruct RelsOK; eauto. exploit omap_length; try eapply H4; eauto.
-    congruence. reflexivity.
-    simpl. left.
-    eapply fix_compatible; eauto.
-Qed.
-
-Lemma get_drop_lab0 (L:I.labenv) l blk
-:  get L (counted l) blk
-   -> get (drop (labN l) L) (counted (LabI 0)) blk.
-Proof.
-  intros. eapply drop_get; simpl. orewrite (labN l + 0 = labN l); eauto.
-Qed.
-
-Lemma drop_get_lab0 (L:I.labenv) l blk
-: get (drop (labN l) L) (counted (LabI 0)) blk
-  -> get L (counted l) blk.
-Proof.
-  intros. eapply get_drop in H; simpl in *. orewrite (labN l + 0 = labN l) in H; eauto.
-Qed.
-
-Lemma sim_drop_shift r l L E Y L' E' Y'
-: sim'r (S:=I.state) (S':=I.state) r (drop (labN l) L, E, stmtApp (LabI 0) Y)
-        (drop (labN l) L', E', stmtApp (LabI 0) Y')
-  -> sim'r (S:=I.state) (S':=I.state)  r (L, E, stmtApp l Y)
+Lemma sim_drop_shift_I r l (L:I.labenv) E Y (L':I.labenv) E' Y' blk blk' (STL:sawtooth L) (STL':sawtooth L')
+  : get L (labN l) blk
+  -> get L' (labN l) blk'
+  -> paco2 (@sim_gen I.state _ I.state _) r
+          (drop (labN l - block_n blk) L, E, stmtApp (LabI (block_n blk)) Y)
+          (drop (labN l - block_n blk') L', E', stmtApp (LabI (block_n blk')) Y')
+  -> paco2 (@sim_gen I.state _ I.state _) r (L, E, stmtApp l Y)
           (L', E', stmtApp l Y').
 Proof.
-  intros. pinversion H; subst.
-  - eapply plus2_destr_nil in H0.
-    eapply plus2_destr_nil in H1.
-    destruct H0; destruct H1; dcr. inv H3.
-    simpl in *. inv H1; simpl in *.
+  intros. pinversion H1; subst.
+  - eapply plus2_destr_nil in H2.
+    eapply plus2_destr_nil in H3.
+    dcr. inv H5; simpl in *. inv H6; simpl in *.
+    simpl_get_dropI. repeat get_functional.
+    simpl_minus.
     pfold. econstructor; try eapply star2_plus2.
-    econstructor; eauto using get_drop_lab0, drop_get_lab0. eauto.
+    econstructor; eauto. eauto.
     econstructor; eauto using get_drop_lab0, drop_get_lab0. eauto.
     eauto.
-  - inv H0.
-    + exfalso. destruct H2 as [? [? ?]]. inv H2.
-    + inv H1.
-      * exfalso. destruct H3 as [? [? ?]]. inv H3.
-      * inv H7; inv H10; simpl in *.
+  - inv H2.
+    + exfalso. destruct H4 as [? [? ?]]. inv H4.
+    + inv H3.
+      * exfalso. destruct H5 as [? [? ?]]. inv H5.
+      * inv H9; inv H12; simpl in *.
         pfold. subst yl yl0.
+        simpl_get_dropI; repeat get_functional.
+        simpl_minus.
         econstructor; try eapply star2_plus2.
-        econstructor; eauto using get_drop_lab0, drop_get_lab0. eapply H9.
-        econstructor; eauto using get_drop_lab0, drop_get_lab0. eapply H12.
+        econstructor; eauto using get_drop_lab0, drop_get_lab0. eauto.
+        econstructor; eauto using get_drop_lab0, drop_get_lab0. eauto.
         left. pfold. econstructor 2; try eapply star2_refl; eauto.
-  - inv H1.
-    + pfold. econstructor 3; try eapply star2_refl. reflexivity.
-      stuck2. eapply H2. do 2 eexists.
+  - inv H3; simpl in *.
+    + pfold. econstructor 3; simpl; eauto using star2_refl. eauto.
+      stuck2. eapply H4.
+      do 2 eexists.
       econstructor; eauto using get_drop_lab0, drop_get_lab0.
-    + inv H4.
-      pfold. econstructor 3.
-      Focus 2. rewrite <- H3. eapply S_star2.
+      simpl. simpl_get_dropI. eauto.
+    + inv H6.
+      pfold. econstructor 3; try eapply H2; eauto.
+      destruct yl; isabsurd.
+      simpl in *. simpl_get_dropI. repeat get_functional.
+      eapply (S_star2 EvtTau).
       econstructor; eauto using get_drop_lab0, drop_get_lab0.
-      eauto. eauto. eauto.
-  - inv H1; inv H2; simpl in *.
-    + pfold. econstructor 3; try eapply star2_refl. reflexivity.
-      * stuck2. eapply H3. do 2 eexists.
+      eauto. rewrite drop_drop in H8. simpl_minus. simpl in *. eauto.
+  - inv H3; simpl in *.
+    + pfold. econstructor 3; try eapply star2_refl. eauto.
+      stuck2. eapply H5.
+      do 2 eexists.
+      econstructor; eauto using get_drop_lab0, drop_get_lab0.
+      simpl. simpl_get_dropI. eauto.
+    + inv H8. inv H4; simpl in *.
+      * pfold. subst. econstructor 3; try eapply H2; eauto.
+        simpl in *. simpl_get_dropI. repeat get_functional.
+        eapply (S_star2 EvtTau).
         econstructor; eauto using get_drop_lab0, drop_get_lab0.
-    + inv H6.
-      pfold. econstructor 4; [
-             | eapply star2_refl
-             |
-             |
-             |].
-      Focus 2. rewrite <- H5. eapply S_star2.
-      econstructor; eauto using get_drop_lab0, drop_get_lab0. eauto.
-      simpl; eauto.
-      stuck2. eapply H3. do 2 eexists.
-      econstructor; eauto using get_drop_lab0, drop_get_lab0. eauto.
-    + inv H6.
-      pfold. econstructor 4; [
-             |
-             |eapply star2_refl
-             |
-             |].
-      Focus 2. rewrite <- H5. eapply S_star2.
-      econstructor; eauto using get_drop_lab0, drop_get_lab0. eauto.
-      simpl; eauto. eauto.
-      stuck2. eapply H4. do 2 eexists.
-      econstructor; eauto using get_drop_lab0, drop_get_lab0.
-    + inv H6; inv H9. pfold. simpl in *. subst yl yl0.
-      econstructor 1; try eapply star2_plus2.
-      econstructor; eauto using get_drop_lab0, drop_get_lab0. eapply H8.
-      econstructor; eauto using get_drop_lab0, drop_get_lab0. eapply H11.
-      left. pfold. econstructor 4; try eapply star2_refl; eauto.
-Qed.
-
-End I.
-
-(*
-Inductive simB (r:rel2 F.state (fun _ : F.state => F.state)) {A} (AR:SimRelation A)  : F.labenv -> F.labenv -> A -> F.block -> F.block -> Prop :=
-| simBI a L L' V V' Z Z' s s'
-  : ParamRel a Z Z'
-    -> BlockRel a (F.blockI V Z s) (F.blockI V' Z' s')
-    -> (forall E E' Y Y' Yv Y'v,
-         omap (exp_eval E) Y = Some Yv
-         -> omap (exp_eval E') Y' = Some Y'v
-         -> ArgRel V V' a Yv Y'v
-         -> paco2 (@sim_gen F.state _ F.state _) r (L, E, stmtApp (LabI 0) Y)
-                        (L', E', stmtApp (LabI 0) Y'))
-    -> simB r AR L L' a (F.blockI V Z s) (F.blockI V' Z' s').
-
-Definition simL' (r:rel2 F.state (fun _ : F.state => F.state))
-           {A} AR (AL:list A) L L' := AIR5 (simB r AR) L L' AL L L'.
-
-Definition fexteq'
-           {A} AR (a:A) (AL:list A) E Z s E' Z' s' :=
-  forall VL VL' L L' (r:rel2 F.state (fun _ : F.state => F.state)),
-    ArgRel E E' a VL VL'
-    -> simL' r AR AL L L'
-    -> length Z = length VL
-    -> length Z' = length VL'
-    -> paco2 (@sim_gen F.state _ F.state _) r (L, E[Z <-- List.map Some VL], s)
-            (L', E'[Z' <-- List.map Some VL'], s').
-
-*)
-
-Instance sim_progeq : ProgramEquivalence F.state F.state.
-constructor. eapply (paco2 (@sim_gen F.state _ F.state _)).
-Defined.
-
-Lemma simL_mon (r r0:rel2 F.state (fun _ : F.state => F.state)) A AR L1 L2 (AL:list A) L1' L2'
-:  AIR5 (simB sim_progeq r AR) L1 L2 AL L1' L2'
-  -> (forall x0 x1 : F.state, r x0 x1 -> r0 x0 x1)
-  -> L1 = L1'
-  -> L2 = L2'
-  ->  AIR5 (simB sim_progeq r0 AR) L1 L2 AL L1' L2'.
-Proof.
-  intros. general induction H; eauto using AIR5.
-  econstructor; eauto.
-  inv pf. econstructor; eauto.
-  intros. eapply paco2_mon; eauto. eapply H3; eauto.
-Qed.
-
-Lemma subst_lemma A AR (a:A) AL s s' V V' E E' Z Z' L1 L2 t t'
-: fexteq' sim_progeq AR a (a::AL) E Z s E' Z' s'
-  -> ParamRel a Z Z'
-  -> BlockRel a (F.blockI E Z s) (F.blockI E' Z' s')
-  -> simL' sim_progeq bot2 AR AL L1 L2
-  -> (forall r (L L' : list F.block),
-       simL' sim_progeq r AR (a :: AL) L L' ->
-       sim'r r (L, V, t) (L', V', t'))
-  -> sim' (F.blockI E Z s :: L1, V, t)
-         (F.blockI E' Z' s' :: L2, V', t').
-Proof.
-  revert_all; pcofix CIH; intros.
-  eapply H4.
-  econstructor. econstructor; eauto.
-  intros. pfold.
-  econstructor; try eapply plus2O.
-  econstructor; eauto using get; simpl.
-  edestruct RelsOK; eauto.
-  eapply omap_length in H. congruence. reflexivity.
-  econstructor; eauto using get; simpl. edestruct RelsOK; eauto.
-  eapply omap_length in H5. congruence. reflexivity.
-  simpl.
-  right. eapply CIH; eauto.
-  intros. eapply H0; eauto.
-  eapply simL_mon; eauto. intros; isabsurd.
-Qed.
-
-
-Lemma fix_compatible r A AR (a:A) AL s s' E E' Z Z' L L' Yv Y'v
-: simL' sim_progeq r AR AL L L'
-  -> fexteq' sim_progeq AR a (a::AL) E Z s E' Z' s'
-  -> ParamRel a Z Z'
-  -> BlockRel a (F.blockI E Z s) (F.blockI E' Z' s')
-  -> ArgRel E E' a Yv Y'v
-  -> sim'r r
-            (F.blockI E Z s :: L, E [Z <-- List.map Some Yv], s)
-            (F.blockI E' Z' s' :: L', E' [Z' <-- List.map Some Y'v], s').
-Proof.
-  revert_all; pcofix CIH; intros.
-  eapply H1; eauto.
-  hnf; intros. econstructor; eauto. econstructor; eauto; intros.
-  pfold. econstructor; try eapply plus2O.
-  - econstructor; eauto using get.
-    + simpl. edestruct RelsOK; eauto.
-      exploit omap_length; try eapply H; eauto.
-      congruence.
-  - reflexivity.
-  - econstructor; eauto using get. simpl.
-    edestruct RelsOK; eauto. exploit omap_length; try eapply H6; eauto.
-    congruence.
-  - reflexivity.
-  - simpl. right. eapply CIH; eauto.
-  - eapply simL_mon; eauto.
-Qed.
-
-Lemma simL_extension' r A AR (a:A) AL s s' E E' Z Z' L L'
-: simL' sim_progeq r AR AL L L'
-  -> fexteq' sim_progeq AR a (a::AL) E Z s E' Z' s'
-  -> ParamRel a Z Z'
-  -> BlockRel a (F.blockI E Z s) (F.blockI E' Z' s')
-  -> simL' sim_progeq r AR (a::AL) (F.blockI E Z s :: L) (F.blockI E' Z' s' :: L').
-Proof.
-  intros.
-  hnf; intros. econstructor; eauto. econstructor; eauto; intros.
-  + pfold. econstructor; try eapply plus2O.
-    econstructor; eauto using get. simpl.
-    edestruct RelsOK; eauto. exploit omap_length; try eapply H3; eauto.
-    congruence. reflexivity.
-    econstructor; eauto using get. simpl.
-    edestruct RelsOK; eauto. exploit omap_length; try eapply H4; eauto.
-    congruence. reflexivity.
-    simpl. left.
-    eapply fix_compatible; eauto.
-Qed.
-
-Lemma get_drop_lab0 (L:F.labenv) l blk
-:  get L (counted l) blk
-   -> get (drop (labN l) L) (counted (LabI 0)) blk.
-Proof.
-  intros. eapply drop_get; simpl. orewrite (labN l + 0 = labN l); eauto.
-Qed.
-
-Lemma drop_get_lab0 (L:F.labenv) l blk
-: get (drop (labN l) L) (counted (LabI 0)) blk
-  -> get L (counted l) blk.
-Proof.
-  intros. eapply get_drop in H; simpl in *. orewrite (labN l + 0 = labN l) in H; eauto.
-Qed.
-
-Lemma sim_drop_shift r l L E Y L' E' Y'
-: sim'r (S:=F.state) (S':=F.state) r (drop (labN l) L, E, stmtApp (LabI 0) Y)
-        (drop (labN l) L', E', stmtApp (LabI 0) Y')
-  -> sim'r (S:=F.state) (S':=F.state)  r (L, E, stmtApp l Y)
-          (L', E', stmtApp l Y').
-Proof.
-  intros. pinversion H; subst.
-  - eapply plus2_destr_nil in H0.
-    eapply plus2_destr_nil in H1.
-    destruct H0; destruct H1; dcr. inv H3.
-    simpl in *. inv H1; simpl in *.
-    pfold. econstructor; try eapply star2_plus2.
-    econstructor; eauto using get_drop_lab0, drop_get_lab0. eauto.
-    econstructor; eauto using get_drop_lab0, drop_get_lab0. eauto.
-    eauto.
-  - inv H0.
-    + exfalso. destruct H2 as [? [? ?]]. inv H2.
-    + inv H1.
-      * exfalso. destruct H3 as [? [? ?]]. inv H3.
-      * inv H7; inv H10; simpl in *.
-        pfold. subst yl yl0.
-        econstructor; try eapply star2_plus2.
-        econstructor; eauto using get_drop_lab0, drop_get_lab0. eapply H9.
-        econstructor; eauto using get_drop_lab0, drop_get_lab0. eapply H12.
-        left. pfold. econstructor 2; try eapply star2_refl; eauto.
-  - inv H1.
-    + pfold. econstructor 3; try eapply star2_refl. reflexivity.
-      stuck2. eapply H2. do 2 eexists.
-      econstructor; eauto using get_drop_lab0, drop_get_lab0.
-    + inv H4.
-      pfold. econstructor 3.
-      Focus 2. rewrite <- H3. eapply S_star2.
-      econstructor; eauto using get_drop_lab0, drop_get_lab0.
-      eauto. eauto. eauto.
-  - inv H1; inv H2; simpl in *.
-    + pfold. econstructor 3; try eapply star2_refl. reflexivity.
-      * stuck2. eapply H3. do 2 eexists.
+        eauto. rewrite drop_drop in H8. simpl_minus. simpl in *. eauto.
+      * inv H11.
+        pfold. econstructor 4; try eapply H2; eauto.
+        simpl in *. simpl_get_dropI. repeat get_functional.
+        eapply (S_star2 EvtTau).
         econstructor; eauto using get_drop_lab0, drop_get_lab0.
-    + inv H6.
-      pfold. econstructor 4; [
-             | eapply star2_refl
-             |
-             |
-             |].
-      Focus 2. rewrite <- H5. eapply S_star2.
-      econstructor; eauto using get_drop_lab0, drop_get_lab0. eauto.
-      simpl; eauto.
-      stuck2. eapply H3. do 2 eexists.
-      econstructor; eauto using get_drop_lab0, drop_get_lab0. eauto.
-    + inv H6.
-      pfold. econstructor 4; [
-             |
-             |eapply star2_refl
-             |
-             |].
-      Focus 2. rewrite <- H5. eapply S_star2.
-      econstructor; eauto using get_drop_lab0, drop_get_lab0. eauto.
-      simpl; eauto. eauto.
-      stuck2. eapply H4. do 2 eexists.
-      econstructor; eauto using get_drop_lab0, drop_get_lab0.
-    + inv H6; inv H9. pfold. simpl in *. subst yl yl0.
-      econstructor 1; try eapply star2_plus2.
-      econstructor; eauto using get_drop_lab0, drop_get_lab0. eapply H8.
-      econstructor; eauto using get_drop_lab0, drop_get_lab0. eapply H11.
-      left. pfold. econstructor 4; try eapply star2_refl; eauto.
+        eauto. rewrite drop_drop in H8. simpl_minus. simpl in *. eauto.
+        simpl in *. simpl_get_dropI. repeat get_functional.
+        eapply (S_star2 EvtTau).
+        econstructor; eauto using get_drop_lab0, drop_get_lab0. subst.
+        eauto. rewrite drop_drop in H8. simpl_minus. simpl in *. eauto.
 Qed.
-
-*)
 
 Ltac single_step :=
   match goal with
@@ -1355,6 +1048,29 @@ Ltac step_activated :=
 Ltac extern_step :=
   let STEP := fresh "STEP" in
   eapply simExtern;
+    [ eapply star2_refl
+    | eapply star2_refl
+    | try step_activated
+    | try step_activated
+    | intros ? ? STEP; inv STEP
+    | intros ? ? STEP; inv STEP
+    ].
+
+
+
+Ltac pone_step := pfold; eapply sim'Silent; [ eapply plus2O; single_step
+                              | eapply plus2O; single_step
+                              | ].
+
+Ltac pno_step := pfold; eapply sim'Term;
+                try eapply star2_refl; try get_functional; try subst;
+                [ try reflexivity
+                | stuck2
+                | stuck2  ].
+
+Ltac pextern_step :=
+  let STEP := fresh "STEP" in
+  pfold; eapply sim'Extern;
     [ eapply star2_refl
     | eapply star2_refl
     | try step_activated

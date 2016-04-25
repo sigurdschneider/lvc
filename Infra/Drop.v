@@ -195,3 +195,5 @@ Lemma drop_length_ass X (L L' :list X) k
 Proof.
   intros; subst; eauto using drop_length_eq.
 Qed.
+
+Hint Resolve drop_length_stable : len.

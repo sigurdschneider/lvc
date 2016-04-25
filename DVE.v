@@ -25,10 +25,11 @@ Fixpoint compile (LV:list (set var * params)) (s:stmt) (a:ann (set var)) :=
     | stmtReturn x, ann0 _ => stmtReturn x
     | stmtExtern x f e s, ann1 lv an =>
       stmtExtern x f e (compile LV s an)
-    | stmtFun Z s t, ann2 lv ans ant =>
-      let LV' := (getAnn ans,Z)::LV in
-      stmtFun (List.filter (fun x => B[x ∈ getAnn ans]) Z)
-              (compile LV' s ans) (compile LV' t ant)
+    | stmtFun F t, annF lv ans ant =>
+      let LV' := pair ⊜ (getAnn ⊝ ans) (fst ⊝ F) ++ LV in
+      stmtFun (zip (fun Zs a => (List.filter (fun x => B[x ∈ getAnn a]) (fst Zs),
+                              compile LV' (snd Zs) a)) F ans)
+              (compile LV' t ant)
     | s, _ => s
   end.
 
@@ -86,32 +87,29 @@ Lemma sim_DVE' r L L' V V' s LV lv
 -> simL' sim_progeq r SR LV L L'
 -> sim'r r (L,V, s) (L',V', compile LV s lv).
 Proof.
-  general induction s; simpl; inv H0; simpl in * |- *.
+  revert_except s.
+  sind s; destruct s; simpl; intros; invt true_live_sound; simpl in * |- *.
   - case_eq (exp_eval V e); intros. cases.
-    + pfold. econstructor; try eapply plus2O.
-      econstructor; eauto. reflexivity.
-      econstructor; eauto. instantiate (1:=v).
-      erewrite exp_eval_live; eauto. eapply agree_on_sym; eauto. reflexivity.
-      left. eapply IHs; eauto. eapply agree_on_update_same. reflexivity.
-      eapply agree_on_incl; eauto.
+    + pone_step.
+      instantiate (1:=v). erewrite exp_eval_live; eauto. eapply agree_on_sym; eauto.
+      left. eapply (IH s); eauto. eapply agree_on_update_same; eauto with cset.
     + eapply sim'_expansion_closed;
       [ | eapply S_star2 with (y:=EvtTau);
           [ econstructor; eauto | eapply star2_refl ]
         | eapply star2_refl].
-      eapply IHs; eauto. eapply agree_on_update_dead; eauto.
-      eapply agree_on_incl; eauto. rewrite <- H9. cset_tac; intuition.
+      eapply (IH s); eauto. eapply agree_on_update_dead; eauto with cset.
     + pfold. econstructor 3; [| eapply star2_refl|]; eauto. stuck.
   - repeat cases.
     + edestruct (exp2bool_val2bool V); eauto; dcr.
       eapply sim'_expansion_closed.
-      eapply IHs1; eauto. eapply agree_on_incl; eauto.
+      eapply (IH s1); eauto. eapply agree_on_incl; eauto.
       eapply H10; congruence.
       eapply S_star2 with (y:=EvtTau) (yl:=nil).
       econstructor; eauto. eapply star2_refl.
       eapply star2_refl.
     + edestruct (exp2bool_val2bool V); eauto; dcr.
       eapply sim'_expansion_closed.
-      eapply IHs2; eauto. eapply agree_on_incl; eauto.
+      eapply (IH s2); eauto. eapply agree_on_incl; eauto.
       eapply S_star2 with (y:=EvtTau) (yl:=nil).
       econstructor 3; eauto. eapply star2_refl.
       eapply star2_refl.
@@ -119,41 +117,26 @@ Proof.
       exploit exp_eval_live_agree; eauto.
       eapply H8. case_eq (exp2bool e); intros; try destruct b; congruence.
       destruct o. case_eq (val2bool v); intros.
-      pfold; econstructor; try eapply plus2O.
-      econstructor; eauto. reflexivity.
-      econstructor; eauto. reflexivity.
-      left; eapply IHs1; eauto using agree_on_incl.
-      pfold; econstructor; try eapply plus2O.
-      econstructor 3; eauto. reflexivity.
-      econstructor 3; eauto. reflexivity.
-      left; eapply IHs2; eauto using agree_on_incl.
-      pfold. econstructor 3; try eapply star2_refl; eauto.
-      stuck.
+      pone_step. left. eapply IH; eauto with cset.
+      pone_step. left; eapply (IH s2); eauto with cset.
+      pno_step.
   - destruct (get_dec L (counted l)) as [[[bE bZ bs]]|].
     + remember (omap (exp_eval V) Y). symmetry in Heqo.
-      exploit (get_nth); try eapply H4; eauto. rewrite X; simpl.
+      rewrite (get_nth (∅, nil) H4); simpl.
       destruct o.
       * exploit omap_filter_by; eauto.
-        unfold simL' in H1.
-        edestruct AIR5_length; try eassumption; dcr.
-        edestruct get_length_eq; try eassumption.
-        edestruct AIR5_nth as [?[? [?]]]; try eassumption; dcr.
-        simpl in *. repeat get_functional; subst.
-        inv H16. hnf in H21. hnf in H19. simpl in *.
-        dcr; simpl in *. subst bZ.
-        eapply sim_drop_shift. eapply H22; eauto.
+        unfold simL' in H1. inRel_invs. simpl in *.
+        hnf in H17; dcr; subst; simpl in *.
+        eapply sim_drop_shift; eauto.
+        eapply (inRel_sawtooth H1). eapply (inRel_sawtooth H1). eapply H19. eauto.
         eapply omap_exp_eval_live_agree; eauto.
-        inv H0.
         eapply argsLive_liveSound; eauto.
         hnf; split; eauto. simpl. exploit omap_length; try eapply Heqo; eauto.
         congruence.
       * pfold; econstructor 3; try eapply star2_refl; eauto; stuck2.
     + pfold; econstructor 3; try eapply star2_refl; eauto; stuck2.
-      hnf in H1.
-      edestruct AIR5_nth3 as [? [? [? []]]]; eauto; dcr.
-  - pfold. econstructor 4; try eapply star2_refl.
-    simpl. erewrite <- exp_eval_live_agree; eauto. eapply agree_on_sym; eauto.
-    stuck2. stuck2.
+      hnf in H1. inRel_invs. eauto.
+  - pno_step; simpl. erewrite <- exp_eval_live_agree; eauto; symmetry; eauto.
   - pfold.
     remember (omap (exp_eval V) Y). symmetry in Heqo.
     exploit omap_exp_eval_live_agree; eauto.
@@ -163,27 +146,24 @@ Proof.
     + eexists (ExternI f l default_val); eexists; try (now (econstructor; eauto)).
     + intros. inv H2. eexists. split.
       * econstructor; eauto. congruence.
-      * left. eapply IHs; eauto. eapply agree_on_update_same; eauto.
+      * left. eapply (IH s); eauto. eapply agree_on_update_same; eauto.
         eapply agree_on_incl; eauto.
-    + intros. inv H2. eexists. split.
+    + intros. inv H3. eexists. split.
       * econstructor; eauto. congruence.
-      * left. eapply IHs; eauto. eapply agree_on_update_same; eauto.
+      * left. eapply (IH s); eauto. eapply agree_on_update_same; eauto.
         eapply agree_on_incl; eauto.
     + eapply sim'Err; try eapply star2_refl; simpl; eauto.
       stuck2.
-  - pfold. econstructor; try eapply plus2O.
-    econstructor; eauto. reflexivity.
-    econstructor; eauto. reflexivity.
-    simpl. left. eapply IHs2; eauto.
-    + simpl in *; eapply agree_on_incl; eauto.
-    + eapply simL_mon; eauto. eapply simL_extension'; eauto.
-      * hnf; intros. split. simpl. hnf. simpl; intuition.
-        hnf; intros. hnf in H3. hnf in H2. dcr; simpl in *. subst.
-        eapply IHs1; eauto.
+  - pone_step. left. eapply IH; eauto with cset.
+    + eapply simL_mon; eauto. eapply simL_extension'; eauto with len.
+      * intros. inv_get; simpl. split. hnf; intros; simpl.
+        unfold ParamRel, ArgRel. intuition.
+        eapply (IH s1); eauto. subst.
         eapply agree_on_update_filter'; eauto.
-        eapply agree_on_incl; eauto.
-      * split; reflexivity.
-      * hnf; intros; eauto.
+        eapply agree_on_incl; eauto. simpl.
+        exploit H8; eauto.
+        exploit H6; eauto.
+        unfold ParamRel. intuition.
 Qed.
 
 Lemma sim_DVE V V' s lv
@@ -197,7 +177,7 @@ Qed.
 
 Module I.
 
-Import Sim.I.
+  Require Import SimI.
 
 Definition ArgRel (V V':onv val) (G:(set var * params)) (VL VL': list val) : Prop :=
   VL' = (filter_by (fun x => B[x ∈ (fst G)]) (snd G) VL) /\
@@ -207,10 +187,10 @@ Definition ArgRel (V V':onv val) (G:(set var * params)) (VL VL': list val) : Pro
 Definition ParamRel (G:(set var * params)) (Z Z' : list var) : Prop :=
   Z' = (List.filter (fun x => B[x ∈ (fst G)]) Z) /\ snd G = Z.
 
-Instance SR : SimRelation (set var * params) := {
-   ParamRel := ParamRel;
-   ArgRel := ArgRel;
-   BlockRel := fun lvZ b b' => I.block_Z b = snd lvZ
+Instance SR : ProofRelationI (set var * params) := {
+   ParamRelI := ParamRel;
+   ArgRelI := ArgRel;
+   BlockRelI := fun lvZ b b' => I.block_Z b = snd lvZ
 }.
 intros. inv H; inv H0; dcr; simpl in *.
 erewrite filter_filter_by_length; eauto.
@@ -219,35 +199,34 @@ Defined.
 Lemma sim_I r L L' V V' s LV lv
 : agree_on eq (getAnn lv) V V'
 -> true_live_sound Imperative LV s lv
--> simL' r SR LV L L'
+-> simILabenv sim_progeq r SR LV L L'
 -> sim'r r (L,V, s) (L',V', compile LV s lv).
 Proof.
-  general induction s; simpl; inv H0; simpl in * |- *.
+  revert_except s.
+  sind s; destruct s; simpl; intros; invt true_live_sound; simpl in * |- *.
   - case_eq (exp_eval V e); intros. cases.
-    + pfold. econstructor; try eapply plus2O.
-      econstructor; eauto. reflexivity.
-      econstructor; eauto. instantiate (1:=v).
-      erewrite exp_eval_live; eauto. eapply agree_on_sym; eauto. reflexivity.
-      left. eapply IHs; eauto. eapply agree_on_update_same. reflexivity.
+    + pone_step. instantiate (1:=v).
+      erewrite exp_eval_live; eauto. eapply agree_on_sym; eauto.
+      left. eapply (IH s); eauto. eapply agree_on_update_same. reflexivity.
       eapply agree_on_incl; eauto.
     + eapply sim'_expansion_closed;
       [ | eapply S_star2 with (y:=EvtTau);
           [ econstructor; eauto | eapply star2_refl ]
         | eapply star2_refl].
-      eapply IHs; eauto. eapply agree_on_update_dead; eauto.
+      eapply (IH s); eauto. eapply agree_on_update_dead; eauto.
       eapply agree_on_incl; eauto. rewrite <- H9. cset_tac; intuition.
     + pfold. econstructor 3; [| eapply star2_refl|]; eauto. stuck.
   - repeat cases.
     + edestruct (exp2bool_val2bool V); eauto; dcr.
       eapply sim'_expansion_closed.
-      eapply IHs1; eauto. eapply agree_on_incl; eauto.
+      eapply (IH s1); eauto. eapply agree_on_incl; eauto.
       eapply H10; congruence.
       eapply S_star2 with (y:=EvtTau) (yl:=nil).
       econstructor; eauto. eapply star2_refl.
       eapply star2_refl.
     + edestruct (exp2bool_val2bool V); eauto; dcr.
       eapply sim'_expansion_closed.
-      eapply IHs2; eauto. eapply agree_on_incl; eauto.
+      eapply (IH s2); eauto. eapply agree_on_incl; eauto.
       eapply S_star2 with (y:=EvtTau) (yl:=nil).
       econstructor 3; eauto. eapply star2_refl.
       eapply star2_refl.
@@ -258,35 +237,32 @@ Proof.
       pfold; econstructor; try eapply plus2O.
       econstructor; eauto. reflexivity.
       econstructor; eauto. reflexivity.
-      left; eapply IHs1; eauto using agree_on_incl.
+      left; eapply (IH s1); eauto using agree_on_incl.
       pfold; econstructor; try eapply plus2O.
       econstructor 3; eauto. reflexivity.
       econstructor 3; eauto. reflexivity.
-      left; eapply IHs2; eauto using agree_on_incl.
+      left; eapply (IH s2); eauto using agree_on_incl.
       pfold. econstructor 3; try eapply star2_refl; eauto.
       stuck.
   - destruct (get_dec L (counted l)) as [[[bZ bs]]|].
     remember (omap (exp_eval V) Y). symmetry in Heqo.
-    exploit (get_nth); try eapply H4; eauto. rewrite X; simpl.
+    rewrite (get_nth (∅, nil) H4); eauto; simpl.
     destruct o.
     exploit omap_filter_by; eauto.
-    unfold simL' in H1.
-    edestruct AIR5_length; try eassumption; dcr.
-    edestruct get_length_eq; try eassumption.
-    edestruct AIR5_nth as [?[? [?]]]; try eassumption; dcr.
-    simpl in *. repeat get_functional; subst.
-    inv H16. hnf in H21. dcr; simpl in *. subst bZ.
-    eapply sim_drop_shift. eapply H21; eauto.
+    hnf in H1. inRel_invs; simpl in *; subst.
+    hnf in H15. dcr; simpl in *; clear_trivial_eqs; subst.
+    eapply sim_drop_shift_I. eapply (inRel_sawtooth H1).
+    eapply (inRel_sawtooth H1). eauto. eauto.
+    simpl. eapply H18; eauto.
     eapply omap_exp_eval_live_agree; eauto.
     inv H0.
     eapply argsLive_liveSound; eauto.
-    hnf; split; eauto. simpl. exploit omap_length; try eapply Heqo; eauto.
-    split.
-    congruence. eapply agree_on_incl; eauto.
+    hnf; split; eauto. simpl. split.
+    exploit omap_length; try eapply Heqo; eauto. congruence.
+    eapply agree_on_incl; eauto.
     pfold; econstructor 3; try eapply star2_refl; eauto; stuck2.
     pfold; econstructor 3; try eapply star2_refl; eauto; stuck2.
-    hnf in H1.
-    edestruct AIR5_nth3 as [? [? [? []]]]; eauto; dcr.
+    hnf in H1. inRel_invs; eauto.
   - pfold. econstructor 4; try eapply star2_refl.
     simpl. erewrite <- exp_eval_live_agree; eauto. eapply agree_on_sym; eauto.
     stuck2. stuck2.
@@ -299,25 +275,26 @@ Proof.
     + eexists (ExternI f l default_val); eexists; try (now (econstructor; eauto)).
     + intros. inv H2. eexists. split.
       * econstructor; eauto. congruence.
-      * left. eapply IHs; eauto. eapply agree_on_update_same; eauto.
+      * left. eapply (IH s); eauto. eapply agree_on_update_same; eauto.
         eapply agree_on_incl; eauto.
-    + intros. inv H2. eexists. split.
+    + intros. inv H3. eexists. split.
       * econstructor; eauto. congruence.
-      * left. eapply IHs; eauto. eapply agree_on_update_same; eauto.
+      * left. eapply (IH s); eauto. eapply agree_on_update_same; eauto.
         eapply agree_on_incl; eauto.
     + eapply sim'Err; try eapply star2_refl; simpl; eauto.
       stuck2.
   - pfold. econstructor; try eapply plus2O.
     econstructor; eauto. reflexivity.
     econstructor; eauto. reflexivity.
-    simpl. left. eapply IHs2; eauto.
+    simpl. left. eapply IH; eauto.
     + simpl in *; eapply agree_on_incl; eauto.
-    + eapply simL_mon; eauto. eapply simL_extension'; eauto.
-      * hnf; intros. hnf in H3. hnf in H2. dcr; subst.
-        eapply IHs1; eauto.
+    + eapply simILabenv_mon; eauto. eapply simILabenv_extension; eauto with len.
+      * intros. inv_get; simpl. split. hnf; intros; simpl.
+        unfold ParamRel, ArgRel. intuition.
+        eapply (IH s1); eauto. subst.
         eapply agree_on_update_filter'; eauto.
-      * split; reflexivity.
-      * hnf; intros; eauto.
+        exploit H6; eauto.
+        unfold ParamRel. intuition.
 Qed.
 
 Lemma sim_DVE V V' s lv
@@ -348,12 +325,10 @@ Fixpoint compile_live (s:stmt) (a:ann (set var)) (G:set var) : ann (set var) :=
     | stmtReturn x, ann0 lv => ann0 (G ∪ lv)
     | stmtExtern x f Y s, ann1 lv an as a =>
       ann1 (G ∪ lv) (compile_live s an {x})
-    | stmtFun Z s t, ann2 lv ans ant =>
-      let ans' := compile_live s ans ∅ in
-      ann2 (G ∪ lv) (setTopAnn (ans')
-                           (getAnn ans' ∪
-                                   of_list (List.filter (fun x => B[x ∈ getAnn ans]) Z)))
-                           (compile_live t ant ∅)
+    | stmtFun F t, annF lv ans ant =>
+      let ans' := zip (fun Zs a => let a' := compile_live (snd Zs) a ∅ in
+                               setTopAnn a' (getAnn a' ∪ of_list (List.filter (fun x => B[x ∈ getAnn a]) (fst Zs)))) F ans in
+      annF (G ∪ lv) ans' (compile_live t ant ∅)
     | _, a => a
   end.
 
@@ -362,12 +337,12 @@ Lemma compile_live_incl G i LV s lv
   : true_live_sound i LV s lv
     -> getAnn (compile_live s lv G) ⊆ G ∪ getAnn lv.
 Proof.
-  intros. general induction H; simpl; eauto; try (now (cset_tac; intuition)).
+  intros. general induction H; simpl; eauto.
   - cases; simpl; try reflexivity.
     rewrite IHtrue_live_sound. rewrite <- H1. cset_tac; intuition.
   - repeat cases; simpl; try reflexivity.
-    + etransitivity; eauto. rewrite <- H2. reflexivity. congruence.
-    + etransitivity; eauto.  rewrite <- H3. reflexivity. congruence.
+    + etransitivity; eauto. rewrite <- H2. eauto. congruence.
+    + etransitivity; eauto.  rewrite <- H3; eauto.
 Qed.
 
 Lemma compile_live_incl_empty i LV s lv
@@ -383,27 +358,11 @@ Lemma incl_compile_live G i LV s lv
   : true_live_sound i LV s lv
     -> G ⊆ getAnn (compile_live s lv G).
 Proof.
-  intros. general induction H; simpl; eauto; try (now (cset_tac; intuition)).
+  intros. general induction H; simpl; eauto.
   - cases; simpl; try reflexivity. cset_tac; intuition.
     rewrite <- IHtrue_live_sound. cset_tac; intuition.
   - repeat cases; simpl; try reflexivity; eauto.
 Qed.
-
-
-(*
-Lemma compile_live_incl' i LV s lv
-  : true_live_sound i LV s lv
-    -> getAnn lv ⊆ getAnn (compile_live s lv).
-Proof.
-  intros. general induction H; simpl; eauto; try reflexivity.
-  - cases; simpl; try reflexivity.
-    rewrite <- IHtrue_live_sound.
-    rewrite H2; eauto.
-  - repeat cases; simpl; try reflexivity.
-    + etransitivity; eauto.
-    + etransitivity; eauto.
-Qed.
- *)
 
 Definition compile_LV (LV:list (set var *params)) :=
   List.map (fun lvZ => let Z' := List.filter (fun x => B[x ∈ fst lvZ]) (snd lvZ) in
@@ -415,7 +374,7 @@ Lemma dve_live i LV s lv G
 Proof.
   intros. general induction H; simpl; eauto using live_sound, compile_live_incl.
   - cases; eauto. econstructor; eauto.
-    + eapply live_exp_sound_incl; eauto. cset_tac; intuition.
+    + eapply live_exp_sound_incl; eauto. eauto.
     + rewrite compile_live_incl; eauto.
       rewrite <- H1. cset_tac; intuition.
     + eapply incl_compile_live; eauto.
@@ -448,27 +407,28 @@ Proof.
     + intros; eapply live_exp_sound_incl; eauto using incl_right.
     + rewrite compile_live_incl; eauto. rewrite <- H1. cset_tac; intuition.
     + eapply incl_compile_live; eauto.
-  - econstructor; simpl in *.
-    eapply live_sound_monotone. eapply live_sound_monotone2.
-    eapply IHtrue_live_sound1. cset_tac; intuition.
-    econstructor; simpl.
-    simpl. rewrite getAnn_setTopAnn, compile_live_incl.
-    split; eauto. rewrite filter_incl. cset_tac; intuition.
-    eauto. eapply PIR2_refl. hnf; intuition.
-    eapply live_sound_monotone. eapply IHtrue_live_sound2.
-    econstructor; simpl.
-    rewrite getAnn_setTopAnn, compile_live_incl.
-    split; eauto. rewrite filter_incl. cset_tac; intuition. eauto.
-    eapply PIR2_refl. hnf; intuition.
-    rewrite getAnn_setTopAnn. cset_tac; intuition.
-    rewrite getAnn_setTopAnn.
-    cases; simpl in * |- *; eauto.
-    rewrite compile_live_incl; eauto.
-    rewrite union_comm. rewrite union_minus_remove.
-    rewrite <- H1.
-    rewrite minus_inter_empty. instantiate (1:=of_list Z).
-    cset_tac; intuition.
-    cset_tac; intuition. eapply filter_incl2; eauto.
-    eapply filter_in; eauto. intuition. hnf. cases; eauto.
-    rewrite compile_live_incl; eauto. cset_tac; intuition.
+  - econstructor; simpl in *; eauto with len.
+    + eapply live_sound_monotone.
+      eapply IHtrue_live_sound.
+      unfold compile_LV. rewrite map_app. eapply PIR2_app; eauto.
+      eapply PIR2_get; eauto 30 with len.
+      intros; inv_get. simpl. rewrite getAnn_setTopAnn.
+      rewrite compile_live_incl_empty; eauto. rewrite of_list_filter.
+      split; cset_tac.
+    + intros; inv_get.
+      eapply live_sound_monotone.
+      eapply live_sound_monotone2; eauto. eapply H2; eauto.
+      unfold compile_LV. rewrite map_app. eapply PIR2_app; eauto.
+      eapply PIR2_get; eauto 30 with len.
+      intros; inv_get. simpl. rewrite getAnn_setTopAnn.
+      rewrite compile_live_incl_empty; eauto. rewrite of_list_filter.
+      split; cset_tac.
+    + intros; inv_get.
+      repeat rewrite getAnn_setTopAnn; simpl.
+      split; eauto. cases; eauto.
+      exploit H3; eauto.
+      rewrite compile_live_incl_empty; eauto. rewrite <- H5.
+      rewrite of_list_filter.
+      clear_all; cset_tac.
+    + rewrite compile_live_incl; eauto with cset.
 Qed.

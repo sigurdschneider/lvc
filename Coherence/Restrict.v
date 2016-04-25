@@ -201,7 +201,6 @@ Definition lookup_set_option (ϱ:var->var) (x:option (set var)) : option (set va
 Definition map_lookup (ϱ:var -> var) := List.map (lookup_set_option ϱ).
 
 Definition live_global (p:set var * list var) := Some (fst p \ of_list (snd p)).
-Definition live_globals (Lv:list (set var * list var)) := List.map live_global Lv.
 
 Lemma bounded_map_lookup G (ϱ: var -> var) DL
   : bounded DL G -> bounded (map_lookup ϱ DL) (lookup_set ϱ G).

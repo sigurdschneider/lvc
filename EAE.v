@@ -2,7 +2,7 @@ Require Import CSet Le.
 Require Import Plus Util AllInRel Map SetOperations.
 
 Require Import Val EqDec Computable Var Env EnvTy IL Annotation.
-Require Import Bisim Fresh Filter Filter MoreExp.
+Require Import Bisim Fresh MoreExp.
 
 Set Implicit Arguments.
 Unset Printing Records.
@@ -61,7 +61,7 @@ Lemma list_to_stmt_correct L E s xl Y vl
 : length xl = length Y
   -> omap (exp_eval E) Y = Some vl
   -> unique xl
-  -> of_list xl ∩ list_union (List.map Exp.freeVars Y) [=] ∅
+  -> disj (of_list xl) (list_union (List.map Exp.freeVars Y))
   -> star2 F.step (L, E, list_to_stmt xl Y s) nil (L, update_with_list' xl (List.map Some vl) E, s).
 Proof.
   intros. eapply length_length_eq in H.
@@ -70,44 +70,40 @@ Proof.
   - monad_inv H0.
     econstructor 2 with (y:=EvtTau).
     econstructor; eauto.
-    simpl. eapply IHlength_eq.
-    eapply omap_exp_eval_agree.
-    symmetry. eapply agree_on_update_dead.
-    cset_tac. intro. eapply (H2 x).
-    split; cset_tac; intuition.
-    eapply list_union_start_swap. cset_tac; intuition.
-    reflexivity. eauto. intuition.
-    cset_tac; intuition.
-    eapply (H2 a); split; cset_tac; intuition.
-    eapply list_union_start_swap. cset_tac; intuition.
+    simpl. eapply IHlength_eq; eauto.
+    + eapply omap_exp_eval_agree; [|eauto].
+      symmetry. eapply agree_on_update_dead; [|reflexivity].
+      rewrite list_union_start_swap in H2.
+      intro. eapply (H2 x); eauto; cset_tac.
+    + rewrite list_union_start_swap in H2.
+      eauto with cset.
 Qed.
 
 Lemma list_to_stmt_crash L E s xl Y
 : length xl = length Y
   -> omap (exp_eval E) Y = None
   -> unique xl
-  -> of_list xl ∩ list_union (List.map Exp.freeVars Y) [=] ∅
+  -> disj (of_list xl) (list_union (List.map Exp.freeVars Y))
   -> exists σ, star2 F.step (L, E, list_to_stmt xl Y s) nil σ /\ state_result σ = None /\ normal2 F.step σ.
 Proof.
   intros. eapply length_length_eq in H.
   general induction H; simpl in * |- *.
   - monad_inv H0; isabsurd.
     + eexists; repeat split; eauto using star2_refl. stuck2.
-    + edestruct (IHlength_eq L (E [x <- Some x0])); eauto; intuition.
-      eapply omap_exp_eval_agree; eauto.
-      symmetry. eapply agree_on_update_dead; try reflexivity.
-      intro. cset_tac. eapply (H2 x). cset_tac; intuition.
-      eapply list_union_start_swap. cset_tac; intuition.
-      cset_tac; intuition. eapply (H2 a); cset_tac; intuition.
-      eapply list_union_start_swap. cset_tac; intuition.
-      eexists. split; eauto.
-      econstructor 2 with (y:=EvtTau).
-      econstructor; eauto.
-      eauto.
+    + rewrite list_union_start_swap in H2.
+      edestruct (IHlength_eq L (E [x <- Some x0])); eauto.
+      * eapply omap_exp_eval_agree; eauto. symmetry.
+        eapply agree_on_update_dead; [|reflexivity].
+        intro. eapply (H2 x); cset_tac.
+      * eauto with cset.
+      * dcr. eexists. split; eauto.
+        econstructor 2 with (y:=EvtTau).
+        econstructor; eauto.
+        eauto.
 Qed.
 
-Fixpoint compile s
-  : stmt :=
+Fixpoint compile s {struct s}
+  : stmt  :=
   match s with
     | stmtLet x e s => stmtLet x e (compile s)
     | stmtIf x s t => stmtIf x (compile s) (compile t)
@@ -119,7 +115,7 @@ Fixpoint compile s
         list_to_stmt xl Y (stmtApp l (List.map Var xl))
     | stmtReturn x => stmtReturn x
     | stmtExtern x f Y s => stmtExtern x f Y (compile s)
-    | stmtFun Z s t => stmtFun Z (compile s) (compile t)
+    | stmtFun F t => stmtFun (List.map (fun Zs => (fst Zs, compile (snd Zs))) F) (compile t)
   end.
 
 Definition ArgRel (V V:onv val) (G:params) (VL VL': list val) : Prop :=
@@ -148,8 +144,6 @@ Proof.
   erewrite omap_exp_eval_agree; try eapply IHlength_eq; eauto; simpl in *; intuition.
   instantiate (1:= V [x <- Some y]).
   eapply update_unique_commute; eauto; simpl; intuition.
-  rewrite map_length.
-  eapply length_eq_length; eauto.
 Qed.
 
 
@@ -157,105 +151,66 @@ Lemma sim_EAE' r L L' V s PL
 : simL' bisim_progeq r SR PL L L'
 -> bisim'r r (L, V, s) (L',V, compile s).
 Proof.
-  general induction s; simpl; simpl in * |- *.
+  revert_except s. unfold bisim'r.
+  sind s; destruct s; simpl; intros; simpl in * |- *.
   - case_eq (exp_eval V e); intros.
-    + pfold. econstructor; try eapply plus2O.
-      econstructor; eauto. reflexivity.
-      econstructor; eauto. reflexivity.
-      left. eapply IHs; eauto.
-    + pfold. econstructor 3; [| eapply star2_refl|eapply star2_refl| |]; eauto; stuck.
+    + pone_step; eauto.
+    + pno_step.
   - case_eq (exp_eval V e); intros.
-    case_eq (val2bool v); intros.
-    pfold; econstructor; try eapply plus2O.
-    econstructor; eauto. reflexivity.
-    econstructor; eauto. reflexivity.
-    left; eapply IHs1; eauto.
-    pfold; econstructor; try eapply plus2O.
-    econstructor 3; eauto. reflexivity.
-    econstructor 3; eauto. reflexivity.
-    left; eapply IHs2; eauto.
-    pfold. econstructor 3; try eapply star2_refl; eauto; stuck.
+    + case_eq (val2bool v); intros;
+        pone_step; eauto.
+    + pno_step.
   - case_eq (omap (exp_eval V) Y); intros.
-    + exploit (list_to_stmt_correct L' V (stmtApp l (List.map Var
-            (fresh_list fresh (list_union (List.map Exp.freeVars Y)) (length Y))))).
-      rewrite fresh_list_length; eauto. eauto.
-      eapply fresh_list_unique. eapply fresh_spec. eapply fresh_list_spec. eapply fresh_spec.
-      destruct (get_dec L (counted l)) as [[[bE bZ bs]]|].
-      * edestruct AIR5_length; try eassumption; dcr.
-        edestruct get_length_eq; try eassumption.
-        edestruct AIR5_nth as [?[? [?]]]; try eassumption; dcr.
-        simpl in *. repeat get_functional; subst.
-        inv H11.
-        decide (length Y = length bZ). {
-          - cases. eapply bisim_drop_shift; eapply H18; eauto. hnf; intros; intuition.
-        eapply omap_length in H0. hnf in H15; dcr; subst. congruence.
-        eapply bisim'_expansion_closed; [eapply bisim_drop_shift; eapply H18| eapply star2_refl |].
-        eauto.
-        Focus 2. hnf; split. reflexivity. simpl. hnf in H15. hnf in H17.
-        dcr; subst. simpl in *.
-        erewrite <- omap_length; try eapply H0; eauto.
-        eapply omap_exp_eval_agree. Focus 2.
-        eapply omap_lookup_vars.
-        rewrite fresh_list_length. eapply omap_length; eauto.
-        eapply fresh_list_unique. eapply fresh_spec.
-        eapply update_with_list_agree'. rewrite fresh_list_length, map_length.
-        eapply omap_length; eauto. eapply fresh_list_unique. eapply fresh_spec.
-        eapply X.
+    exploit (list_to_stmt_correct L' V (stmtApp l (Var ⊝ fresh_list fresh (list_union (Exp.freeVars ⊝ Y)) ❬Y❭)) (fresh_list fresh (list_union (Exp.freeVars ⊝ Y)) ❬Y❭) Y) as LTSC; eauto using fresh_spec, fresh_list_unique, fresh_list_spec.
+    + destruct (get_dec L (counted l)) as [[[bE bZ bs]]|].
+      * hnf in H. inRel_invs. simpl in H2, InR, H13.
+        hnf in H11, H12; dcr; subst; simpl in *.
+        exploit omap_length as Hlen; eauto.
+        decide (length Y = length Z'). {
+          cases.
+          - eapply bisim_drop_shift; eauto. eapply (inRel_sawtooth H).
+            eapply (inRel_sawtooth H). eapply H13; eauto. hnf.
+            split; congruence.
+          - eapply bisim'_expansion_closed;
+              [ eapply bisim_drop_shift
+              | eapply star2_refl
+              | eapply (list_to_stmt_correct);
+                eauto using fresh_spec, fresh_list_unique, fresh_list_spec
+              ]; try eapply (inRel_sawtooth H); eauto.
+            simpl. eapply H13; eauto.
+            instantiate (1:=l0).
+            eapply omap_exp_eval_agree. Focus 2.
+            eapply omap_lookup_vars.
+            rewrite fresh_list_length; eauto.
+            eapply fresh_list_unique. eapply fresh_spec.
+            eapply update_with_list_agree'. rewrite fresh_list_length, map_length; eauto.
+            eapply fresh_list_unique. eapply fresh_spec.
+            hnf; split; congruence.
         }
-        hnf in H15. hnf in H17. dcr; simpl in *. subst. pfold.
         cases.
-        econstructor 3; try eapply X; try eapply star2_refl.
-        reflexivity.
-        edestruct AIR5_nth2 as [? [?[? [?]]]]; try eassumption; dcr.
-        stuck2. repeat get_functional; subst. simpl in *. congruence.
-        edestruct AIR5_nth2 as [? [?[? [?]]]]; try eassumption; dcr.
-        stuck2. repeat get_functional; subst. simpl in *. congruence.
-        econstructor 3; try eapply X; try eapply star2_refl.
-        reflexivity.
-        stuck2. get_functional; subst; simpl in *; congruence.
-        edestruct AIR5_nth2 as [? [?[? [?]]]]; try eassumption; dcr.
-        stuck2. repeat get_functional; subst. simpl in *.
-        rewrite map_length in len. rewrite fresh_list_length in len. congruence.
-      * cases. pfold. econstructor 3; try eapply X; try eapply star2_refl.
-        simpl in *. congruence. stuck2; eauto.
-        stuck2; eauto.
-        edestruct AIR5_nth2 as [? [?[? [?]]]]; try eassumption; dcr. eauto.
-        pfold. econstructor 3; try eapply X; try eapply star2_refl.
-        simpl in *. congruence. stuck2; eauto.
-        stuck2; eauto.
-        edestruct AIR5_nth2 as [? [?[? [?]]]]; try eassumption; dcr. eauto.
-    + cases.
-      pfold. econstructor 3; try eapply H2; try eapply star2_refl.
-      simpl in *. congruence. stuck2. stuck2.
-      edestruct list_to_stmt_crash; eauto.
-      eapply fresh_list_length. eapply fresh_list_unique. eapply fresh_spec.
-      eapply fresh_list_spec. eapply fresh_spec. dcr.
-      pfold. econstructor 3; try eapply H2; try eapply star2_refl.
-      simpl in *. congruence. stuck2. eapply H5.
-  - pfold. econstructor 3; try eapply star2_refl.
-    simpl; eauto.
-    stuck2. stuck2.
-  - pfold.
-    case_eq (omap (exp_eval V) Y); intros.
-    econstructor 2; try eapply star2_refl.
-    + eexists (ExternI f l 0); eexists; try (now (econstructor; eauto)).
-    + eexists (ExternI f l 0); eexists; try (now (econstructor; eauto)).
-    + intros. inv H1. eexists. split.
-      * econstructor; eauto.
-      * left. eapply IHs; eauto.
-    + intros. inv H1. eexists. split.
-      * econstructor; eauto.
-      * left. eapply IHs; eauto.
-    + econstructor 3; try eapply star2_refl; simpl; eauto.
-      stuck2. stuck2.
-  - pfold. econstructor; try eapply plus2O.
-    econstructor; eauto. reflexivity.
-    econstructor; eauto. reflexivity.
-    simpl. left. eapply IHs2; eauto.
-    + eapply simL_mon; eauto. eapply simL_extension'; eauto.
-      * hnf; intros. split. hnf; split. reflexivity. reflexivity.
-        intros. inv H0. eapply IHs1; eauto.
-      * split; reflexivity.
+        pno_step; get_functional; simpl in *; congruence.
+        eapply bisim'_expansion_closed; [| eapply star2_refl | eapply LTSC].
+        pno_step; repeat get_functional; simpl in *. congruence.
+        eapply n; rewrite len. rewrite map_length. rewrite fresh_list_length. eauto.
+      * cases. pno_step; eauto. hnf in H. inRel_invs; eauto.
+        eapply bisim'_expansion_closed; [| eapply star2_refl | eapply LTSC].
+        pno_step; repeat get_functional; simpl in *. eauto.
+        hnf in H. inRel_invs; eauto.
+    + cases. pno_step.
+      edestruct (list_to_stmt_crash L' V (stmtApp l (Var ⊝ fresh_list fresh (list_union (Exp.freeVars ⊝ Y)) ❬Y❭)) (fresh_list fresh (list_union (Exp.freeVars ⊝ Y)) ❬Y❭) Y); eauto using fresh_spec, fresh_list_unique, fresh_list_spec; dcr.
+      pfold. econstructor 3; try eapply H2; try eapply star2_refl; eauto. stuck2.
+  - pno_step.
+  - case_eq (omap (exp_eval V) Y); intros.
+    + pextern_step.
+      * eexists; split; [ econstructor; eauto | eauto ].
+      * eexists; split; [ econstructor; eauto | eauto ].
+    + pno_step.
+  - pone_step.
+    left. eapply IH with (PL:=fst ⊝ s ++ PL); eauto.
+    + eapply simL_mon; eauto. eapply simL_extension'; eauto with len.
+      * intros; inv_get; simpl. unfold fexteq', ParamRel; split; eauto.
+        split; hnf; eauto; intros. hnf in H1. dcr; subst.
+        eapply IH; eauto.
 Qed.
 
 Lemma sim_EAE V s
