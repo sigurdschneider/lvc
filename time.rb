@@ -37,8 +37,9 @@ def readETA(mod)
 end
 
 def writeETA(mod, time)
+	rev = `git rev-parse HEAD`
   CSV.open(timefile(mod), "ab") do |csv|
-		  csv << ["#{time}", "#{@hostname}", "#{Time.now.to_i}"]
+		  csv << ["#{time}", "#{@hostname}", "#{Time.now.to_i}", "#{rev}"]
 	end	
 end	
 
