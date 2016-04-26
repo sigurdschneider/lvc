@@ -21,17 +21,17 @@ def timefile(mod)
 end
 
 def readETA(mod)
-	num = 0
-	avg = 0.0
+	times = []
 	if (File.readable?(timefile(mod))) then
     CSV.foreach(timefile(mod)) do |row|
 			if row[1] != nil and row[1].strip == @hostname then
-        avg += row[0].strip.to_f
-			  num += 1
+				times << row[0].strip.to_f
 			end
 	  end
 	end
-	est = num > 0 ? (avg/num.to_f).round(2).to_s : "" 
+	times = times.last(5)
+	avg = times.inject(0.0) { |sum, el| sum + el } / times.size
+	est = times.size > 0 ? avg.round(2).to_s : "" 
   eta = (Time.now + est.to_i).strftime("%H:%M:%S")
   return est, eta 
 end
