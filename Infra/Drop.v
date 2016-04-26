@@ -197,3 +197,19 @@ Proof.
 Qed.
 
 Hint Resolve drop_length_stable : len.
+
+Lemma drop_app_gen X (L L' :list X) n
+: n >= length L' -> drop n (L' ++ L) = (drop (n - length L') L).
+Proof.
+  intros. general induction L'; simpl.
+  - orewrite (n - 0 = n). eauto.
+  - destruct n.
+    + inv H.
+    + simpl. eapply IHL'. simpl in *; omega.
+Qed.
+
+Instance trival_drop_instance X
+  : Proper (eq ==> eq ==> eq) (@drop X).
+Proof.
+  unfold Proper, respectful; intros; subst; eauto.
+Qed.

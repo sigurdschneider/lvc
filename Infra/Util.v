@@ -613,3 +613,17 @@ Proof.
 Qed.
 
 Hint Resolve length_le_plus : len.
+
+Instance instance_impl_2 x
+  : Proper (impl ==> impl) (impl x).
+Proof.
+  unfold Proper, respectful, impl. intros.
+  eauto.
+Qed.
+
+Instance instance_impl_3
+  : Proper (impl --> impl ==> impl) impl.
+Proof.
+  unfold Proper, respectful, impl, flip. intros.
+  eauto.
+Qed.

@@ -679,8 +679,8 @@ Lemma mutual_block_extension r A AR F1 F2 F1' F2' ALX AL AL' i E1 E2 L1 L2
           get F2 n (Z', s') ->
           get AL n a ->
           ArgRel E1 E2 a Yv Y'v ->
-          r ((F.mkBlocks E1 F1 ++ L1)%list, E1 [Z <-- List.map Some Yv], s)
-            ((F.mkBlocks E2 F2 ++ L2)%list, E2 [Z' <-- List.map Some Y'v], s'))
+          r ((mapi (F.mkBlock E1) F1 ++ L1)%list, E1 [Z <-- List.map Some Yv], s)
+            ((mapi (F.mkBlock E2) F2 ++ L2)%list, E2 [Z' <-- List.map Some Y'v], s'))
   :
 
     (forall (n : nat) (Z : params)
@@ -693,8 +693,8 @@ Lemma mutual_block_extension r A AR F1 F2 F1' F2' ALX AL AL' i E1 E2 L1 L2
         BlockRel a (F.blockI E1 Z s n) (F.blockI E2 Z' s' n) /\
         ParamRel a Z Z')
     -> mutual_block
-        (simB sim_progeq r AR (AL ++ ALX) (F.mkBlocks E1 F1 ++ L1)%list
-              (F.mkBlocks E2 F2 ++ L2)%list) i AL'
+        (simB sim_progeq r AR (AL ++ ALX) (mapi (F.mkBlock E1) F1 ++ L1)%list
+              (mapi (F.mkBlock E2) F2 ++ L2)%list) i AL'
         (mapi_impl (F.mkBlock E1) i F1')
         (mapi_impl (F.mkBlock E2) i F2').
 Proof.
@@ -737,8 +737,8 @@ Lemma fix_compatible r A AR (a:A) AL F F' E E' Z Z' L L' Yv Y'v s s' n AL'
     -> get AL' n a
     -> ArgRel E E' a Yv Y'v
     -> sim'r r
-              ((F.mkBlocks E F ++ L)%list, E [Z <-- List.map Some Yv], s)
-              ((F.mkBlocks E' F' ++ L')%list, E' [Z' <-- List.map Some Y'v], s').
+              ((mapi (F.mkBlock E) F ++ L)%list, E [Z <-- List.map Some Yv], s)
+              ((mapi (F.mkBlock E') F' ++ L')%list, E' [Z' <-- List.map Some Y'v], s').
 Proof.
   revert_all; pcofix CIH; intros.
   eapply H1; eauto.
@@ -764,8 +764,8 @@ Lemma mutual_block_extension_simple r A AR F1 F2 F1' F2' ALX AL AL' i E1 E2 L1 L
         BlockRel a (F.blockI E1 Z s n) (F.blockI E2 Z' s' n) /\
         ParamRel a Z Z')
     -> mutual_block
-        (simB sim_progeq r AR (AL ++ ALX) (F.mkBlocks E1 F1 ++ L1)%list
-              (F.mkBlocks E2 F2 ++ L2)%list) i AL'
+        (simB sim_progeq r AR (AL ++ ALX) (mapi (F.mkBlock E1) F1 ++ L1)%list
+              (mapi (F.mkBlock E2) F2 ++ L2)%list) i AL'
         (mapi_impl (F.mkBlock E1) i F1')
         (mapi_impl (F.mkBlock E2) i F2').
 Proof.
@@ -803,7 +803,7 @@ Lemma simL_extension' r A AR (AL AL':list A) F F' E E' L L'
                          fexteq' sim_progeq AR a (AL' ++ AL) E Z s E' Z' s'
                          /\ BlockRel a (F.blockI E Z s n) (F.blockI E' Z' s' n)
                          /\ ParamRel a Z Z')
-  -> simL' sim_progeq r AR (AL' ++ AL) (F.mkBlocks E F ++ L) (F.mkBlocks E' F' ++ L').
+  -> simL' sim_progeq r AR (AL' ++ AL) (mapi (F.mkBlock E) F ++ L) (mapi (F.mkBlock E') F' ++ L').
 Proof.
   intros.
   hnf; intros.

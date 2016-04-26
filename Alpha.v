@@ -96,14 +96,14 @@ Proof.
       * eapply update_with_list_agree; eauto using length_eq_sym.
         eapply agree_on_incl; eauto.
         hnf; intros. eapply lookup_set_spec. eauto.
-        cset_tac. eapply lookup_set_spec in H9. destruct H9; dcr.
+        lset_tac.
         exists x. cset_tac. left. eapply incl_list_union. eapply map_get_1; eauto. reflexivity.
-        rewrite H11 in H10.
+        rewrite H12 in H10.
         eapply lookup_set_update_not_in_Z'_not_in_Z in H10.
         cset_tac. eapply H0; eauto.
         eauto.
-        rewrite H11 in H10. eapply lookup_set_update_not_in_Z' in H10.
-        rewrite <- H10; eauto. eauto. symmetry. eapply H0; eauto.
+        rewrite H12 in H10. eapply lookup_set_update_not_in_Z' in H10.
+        rewrite <- H10; eauto. symmetry. eapply H0; eauto.
       * eapply update_with_list_agree; eauto.
         eapply agree_on_incl; eauto. eapply incl_union_left.
         eapply incl_list_union. eapply map_get_1; eauto. reflexivity.
@@ -157,11 +157,13 @@ Lemma alpha_inverse_on_agree f g ϱ ϱ' s t
 Proof.
   intros. eapply alpha_agree_on_morph; eauto.
   symmetry in H1.
-  eapply inverse_on_agree_on_2; eauto; try now intuition.
-  - eapply inverse_on_agree_on; eauto; try intuition.
+  eapply inverse_on_agree_on_2; eauto.
+  - eapply inverse_on_agree_on; eauto.
+    eapply agree_on_sym; eauto.
   - eapply alpha_inverse_on in H.
-    eapply inverse_on_agree_on; try eassumption; try intuition.
-    eapply inverse_on_agree_on_2; eauto; try intuition.
+    eapply inverse_on_agree_on; try eassumption; eauto.
+    eapply inverse_on_agree_on_2; eauto.
+    eapply agree_on_sym; eauto.
 Qed.
 
 
@@ -387,8 +389,6 @@ Proof.
   - one_step. eapply alphaSim_sim.
     econstructor; eauto.
     eapply PIR2_app; eauto.
-    eapply PIR2_get.
-    + intros. unfold mkBlocks in *. inv_mapi H3. inv_mapi H4.
-      econstructor; eauto.
-    + unfold mkBlocks, mapi; repeat rewrite mapi_length; eauto.
+    eapply PIR2_get; eauto with len.
+    + intros. inv_get. econstructor; eauto.
 Qed.

@@ -121,6 +121,13 @@ Proof.
   rewrite <- H2; eauto.
 Qed.
 
+Instance bounded_instance_1 DL
+  : Proper (Equal ==> flip impl) (bounded DL).
+Proof.
+  unfold Proper, respectful, flip, impl; intros.
+  rewrite H; eauto.
+Qed.
+
 Lemma bounded_get DL G G' n
   : bounded DL G -> get DL n (Some G') -> G' ⊆ G.
 Proof.

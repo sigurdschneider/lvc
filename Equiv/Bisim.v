@@ -103,7 +103,6 @@ Qed.
 
 Arguments bisim_gen_mon [S] {H} [S'] {H0} [x0] [x1] r r' IN LE.
 
-
 Hint Resolve bisim_gen_mon : paco.
 
 Lemma bisim_bisim' {S} `{StateType S} {S'} `{StateType S'} (σ1:S) (σ2:S')
@@ -594,8 +593,8 @@ Lemma mutual_block_extension r A AR F1 F2 F1' F2' ALX AL AL' i E1 E2 L1 L2
           get F2 n (Z', s') ->
           get AL n a ->
           ArgRel E1 E2 a Yv Y'v ->
-          r ((F.mkBlocks E1 F1 ++ L1)%list, E1 [Z <-- List.map Some Yv], s)
-            ((F.mkBlocks E2 F2 ++ L2)%list, E2 [Z' <-- List.map Some Y'v], s'))
+          r ((mapi (F.mkBlock E1) F1 ++ L1)%list, E1 [Z <-- List.map Some Yv], s)
+            ((mapi (F.mkBlock E2) F2 ++ L2)%list, E2 [Z' <-- List.map Some Y'v], s'))
   :
 
     (forall (n : nat) (Z : params)
@@ -608,8 +607,8 @@ Lemma mutual_block_extension r A AR F1 F2 F1' F2' ALX AL AL' i E1 E2 L1 L2
         BlockRel a (F.blockI E1 Z s n) (F.blockI E2 Z' s' n) /\
         ParamRel a Z Z')
     -> mutual_block
-        (simB bisim_progeq r AR (AL ++ ALX) (F.mkBlocks E1 F1 ++ L1)%list
-              (F.mkBlocks E2 F2 ++ L2)%list) i AL'
+        (simB bisim_progeq r AR (AL ++ ALX) (mapi (F.mkBlock E1) F1 ++ L1)%list
+              (mapi (F.mkBlock E2) F2 ++ L2)%list) i AL'
         (mapi_impl (F.mkBlock E1) i F1')
         (mapi_impl (F.mkBlock E2) i F2').
 Proof.
@@ -626,17 +625,16 @@ Proof.
     + destruct x,y. edestruct H as [[B1 B2] [B3 B4]]; eauto using drop_eq.
       econstructor; eauto.
       intros. hnf.
+      edestruct RelsOK; eauto.
+      exploit omap_length; try eapply H0; eauto.
+      exploit omap_length; try eapply H5; eauto.
       pfold. econstructor; try eapply plus2O.
-      econstructor; eauto. eapply get_app.
-      eapply mapi_get_1. eapply drop_eq. eauto. simpl.
-      edestruct RelsOK; eauto. exploit omap_length; try eapply H0; eauto.
-      congruence. reflexivity.
-      econstructor; eauto. eapply get_app.
-      eapply mapi_get_1. eapply drop_eq. eauto. simpl.
-      edestruct RelsOK; eauto. exploit omap_length; try eapply H5; eauto.
-      congruence. reflexivity.
-      simpl. right. orewrite (i-i=0); simpl.
-      eapply CIH; eauto using drop_eq.
+      * econstructor; simpl; eauto using get_app, mapi_get_1, drop_eq with len.
+      * reflexivity.
+      * econstructor; simpl; eauto using get_app, mapi_get_1, drop_eq with len.
+      * reflexivity.
+      * simpl. right. orewrite (i-i=0); simpl.
+        eapply CIH; eauto using drop_eq.
 Qed.
 
 Lemma fix_compatible r A AR (a:A) AL F F' E E' Z Z' L L' Yv Y'v s s' n AL'
@@ -651,8 +649,8 @@ Lemma fix_compatible r A AR (a:A) AL F F' E E' Z Z' L L' Yv Y'v s s' n AL'
     -> get AL' n a
     -> ArgRel E E' a Yv Y'v
     -> bisim'r r
-              ((F.mkBlocks E F ++ L)%list, E [Z <-- List.map Some Yv], s)
-              ((F.mkBlocks E' F' ++ L')%list, E' [Z' <-- List.map Some Y'v], s').
+              ((mapi (F.mkBlock E) F ++ L)%list, E [Z <-- List.map Some Yv], s)
+              ((mapi (F.mkBlock E') F' ++ L')%list, E' [Z' <-- List.map Some Y'v], s').
 Proof.
   revert_all; pcofix CIH; intros.
   eapply H1; eauto.
@@ -678,8 +676,8 @@ Lemma mutual_block_extension_simple r A AR F1 F2 F1' F2' ALX AL AL' i E1 E2 L1 L
         BlockRel a (F.blockI E1 Z s n) (F.blockI E2 Z' s' n) /\
         ParamRel a Z Z')
     -> mutual_block
-        (simB bisim_progeq r AR (AL ++ ALX) (F.mkBlocks E1 F1 ++ L1)%list
-              (F.mkBlocks E2 F2 ++ L2)%list) i AL'
+        (simB bisim_progeq r AR (AL ++ ALX) (mapi (F.mkBlock E1) F1 ++ L1)%list
+              (mapi (F.mkBlock E2) F2 ++ L2)%list) i AL'
         (mapi_impl (F.mkBlock E1) i F1')
         (mapi_impl (F.mkBlock E2) i F2').
 Proof.
@@ -696,18 +694,16 @@ Proof.
     + destruct x,y. edestruct H as [[B1 B2] [B3 B4]]; eauto using drop_eq.
       econstructor; eauto.
       intros. hnf.
+      edestruct RelsOK; eauto.
+      exploit omap_length; try eapply H0; eauto.
+      exploit omap_length; try eapply H5; eauto.
       pfold. econstructor; try eapply plus2O.
-      econstructor; eauto. eapply get_app.
-      eapply mapi_get_1. eapply drop_eq. eauto. simpl.
-      edestruct RelsOK; eauto. exploit omap_length; try eapply H0; eauto.
-      congruence. reflexivity.
-      econstructor; eauto. eapply get_app.
-      eapply mapi_get_1. eapply drop_eq. eauto. simpl.
-      edestruct RelsOK; eauto. exploit omap_length; try eapply H5; eauto.
-      congruence. reflexivity.
+      econstructor; eauto using get_app, mapi_get_1, drop_eq with len.
+      reflexivity.
+      econstructor; eauto using get_app, mapi_get_1, drop_eq with len.
+      reflexivity.
       simpl. left. orewrite (i-i=0); simpl.
-      eapply fix_compatible; eauto.
-      eauto using drop_eq. eauto using drop_eq. eauto using drop_eq.
+      eapply fix_compatible; eauto using drop_eq.
 Qed.
 
 Lemma simL_extension' r A AR (AL AL':list A) F F' E E' L L'
@@ -717,7 +713,7 @@ Lemma simL_extension' r A AR (AL AL':list A) F F' E E' L L'
                          fexteq' bisim_progeq AR a (AL' ++ AL) E Z s E' Z' s'
                          /\ BlockRel a (F.blockI E Z s n) (F.blockI E' Z' s' n)
                          /\ ParamRel a Z Z')
-  -> simL' bisim_progeq r AR (AL' ++ AL) (F.mkBlocks E F ++ L) (F.mkBlocks E' F' ++ L').
+  -> simL' bisim_progeq r AR (AL' ++ AL) (mapi (F.mkBlock E) F ++ L) (mapi (F.mkBlock E') F' ++ L').
 Proof.
   intros.
   hnf; intros.

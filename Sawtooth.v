@@ -88,7 +88,7 @@ Qed.
 
 Lemma sawtooth_I_mkBlocks L F
   : sawtooth L
-    -> sawtooth (I.mkBlocks F ++ L).
+    -> sawtooth (mapi I.mkBlock F ++ L).
 Proof.
   econstructor; eauto using tooth_I_mkBlocks.
 Qed.
@@ -101,7 +101,7 @@ Qed.
 
 Lemma sawtooth_F_mkBlocks E L F
   : sawtooth L
-    -> sawtooth (F.mkBlocks E F ++ L).
+    -> sawtooth (mapi (F.mkBlock E) F ++ L).
 Proof.
   econstructor; eauto using tooth_F_mkBlocks.
 Qed.

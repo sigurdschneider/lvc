@@ -153,11 +153,8 @@ Module F.
   Definition mkBlock E n f :=
     blockI E (fst f) (snd f) n.
 
-  Definition mkBlocks E F :=
-    mapi (mkBlock E) F.
-
   Inductive step : state -> event -> state -> Prop :=
-  | stepExp L E x e b v
+  | stepLet L E x e b v
     (def:exp_eval E e = Some v)
     : step (L, E, stmtLet x e b) EvtTau (L, E[x<-Some v], b)
 
@@ -182,9 +179,9 @@ Module F.
             EvtTau
             (drop (counted l - block_n blk) L, E', block_s blk)
 
-  | stepLet L E
-    s (t:stmt)
-    : step (L, E, stmtFun s t) EvtTau ((mkBlocks E s ++ L)%list, E, t)
+  | stepFun L E
+    F (t:stmt)
+    : step (L, E, stmtFun F t) EvtTau ((mapi (mkBlock E) F ++ L)%list, E, t)
 
   | stepExtern L E x f Y s vl v
     (def:omap (exp_eval E) Y = Some vl)
@@ -240,10 +237,9 @@ Module I.
   Definition labenv := list block.
   Definition state : Type := (labenv * onv val * stmt)%type.
   Definition mkBlock n f := blockI (fst f) (snd f) n.
-  Definition mkBlocks F := mapi mkBlock F.
 
   Inductive step : state -> event -> state -> Prop :=
-  | stepExp L E x e b v
+  | stepLet L E x e b v
     (def:exp_eval E e = Some v)
     : step (L, E, stmtLet x e b) EvtTau (L, E[x<-Some v], b)
 
@@ -269,9 +265,9 @@ Module I.
             (drop (counted l - block_n blk) L, E', block_s blk)
 
 
-  | stepLet L E
+  | stepFun L E
     s (t:stmt)
-    : step (L, E, stmtFun s t) EvtTau ((mkBlocks s ++ L)%list, E, t)
+    : step (L, E, stmtFun s t) EvtTau ((mapi mkBlock s ++ L)%list, E, t)
 
   | stepExtern L E x f Y s vl v
     (def:omap (exp_eval E) Y = Some vl)

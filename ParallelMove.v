@@ -330,13 +330,11 @@ Proof.
   - one_step.
     eapply pmSim_sim. econstructor; eauto using agree_on_incl.
     econstructor; eauto.
-    unfold I.mkBlocks.
     eapply mutual_approx2; eauto 20 using mkBlock_I_i with len.
     intros; inv_get.
     econstructor; eauto.
     + exploit H3; eauto.
-    +
-      exploit szip_get; try eapply EQ; eauto.
+    + exploit szip_get; try eapply EQ; eauto.
 Qed.
 
 End Implementation.

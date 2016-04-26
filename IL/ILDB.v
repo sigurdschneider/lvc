@@ -39,9 +39,6 @@ Module F.
   Definition mkBlock E n f :=
     blockI E (fst f) (snd f) n.
 
-  Definition mkBlocks E F :=
-    mapi (mkBlock E) F.
-
   Inductive step : state -> event -> state -> Prop :=
   | stepExp L E e b v
     (def:exp_eval E e = Some v)
@@ -70,7 +67,7 @@ Module F.
 
   | stepLet L E
     F t
-    : step (L, E, bstmtFun F t) EvtTau ((mkBlocks E F++L)%list, E, t)
+    : step (L, E, bstmtFun F t) EvtTau ((mapi (mkBlock E) F++L)%list, E, t)
 
   | stepExtern L E f Y s vl v
     (def:omap (exp_eval E) Y = Some vl)
@@ -313,9 +310,8 @@ Proof.
     eapply PIR2_app; eauto.
     pose proof (smap_spec _ EQ0). simpl in H.
     eapply smap_length in EQ0.
-    unfold IL.F.mkBlocks,F.mkBlocks in *.
     eapply PIR2_get; intros; unfold mapi; repeat rewrite mapi_length; try congruence.
-    inv_mapi H0. inv_mapi H1.
-    edestruct H; eauto; dcr. monadS_inv H5. get_functional; subst.
+    inv_get; simpl.
+    edestruct H; eauto; dcr. monadS_inv H3. get_functional; subst.
     econstructor; eauto.
 Qed.

@@ -212,3 +212,10 @@ Proof.
     eexists; split. econstructor; eauto. repeat split; eauto; try omega.
     + intros. inv H5; intro; eauto. eapply H6; eauto. omega.
 Qed.
+
+
+Instance trivial_pos_instance X `{OrderedType X}
+  : Proper (eq ==> eq ==> eq ==> eq) (@pos X _).
+Proof.
+  unfold Proper, respectful. intros; subst. eauto.
+Qed.
