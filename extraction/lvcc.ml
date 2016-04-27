@@ -59,14 +59,15 @@ let main () =
 	else
 	  ili in
       let sopt =
-	if !optimize then
+(*	if !optimize then
 	  (match Lvc.optimize generic_first ilf with
 	   | Lvc.Success sopt ->
 	      Printf.printf "\noptimized compilate:\n%s\n\n" (print_stmt !ids 0 sopt);
 	      sopt
 	   | Lvc.Error e -> raise (Compiler_error (implode e))
 	   )
-	else ilf
+	else *)
+	ilf
       in
       let res =
 	if !toILI then

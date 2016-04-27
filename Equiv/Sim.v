@@ -639,6 +639,9 @@ Proof.
   eapply (sim'_trans H2 H3).
 Qed.
 
+Arguments sim_trans [S1] {H} σ1 [S2] {H0} σ2 [S3] {H1} σ3 _ _.
+
+
 Lemma sim'_reduction_closed {S} `{StateType S}
       (σ1 σ1':S) {S'} `{StateType S'} (σ2 σ2':S')
   : sim' σ1 σ2

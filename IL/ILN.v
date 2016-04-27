@@ -19,13 +19,15 @@ Inductive nstmt : Type :=
 (* block f Z : rt = s in b *)
 | nstmtFun    (F : list (var * params * nstmt)) (t : nstmt).
 
+Instance NStmt_size : Size nstmt. gen_Size. Defined.
+
 Fixpoint freeVars (s:nstmt) : set var :=
   match s with
-    | nstmtLet x e s0 => (freeVars s0 \ {{x}}) ∪ Exp.freeVars e
+    | nstmtLet x e s0 => (freeVars s0 \ singleton x) ∪ Exp.freeVars e
     | nstmtIf e s1 s2 => freeVars s1 ∪ freeVars s2 ∪ Exp.freeVars e
     | nstmtApp l Y => list_union (List.map Exp.freeVars Y)
     | nstmtReturn e => Exp.freeVars e
-    | nstmtExtern x f Y s => (freeVars s \ {{x}}) ∪ list_union (List.map Exp.freeVars Y)
+    | nstmtExtern x f Y s => (freeVars s \ singleton x) ∪ list_union (List.map Exp.freeVars Y)
     | nstmtFun F s2 =>
       list_union (List.map (fun f => (freeVars (snd f) \ of_list (snd (fst f)))) F)
                  ∪ freeVars s2
@@ -249,6 +251,28 @@ Fixpoint labIndices (symb: list var) (s:nstmt) : status stmt :=
       sdo s2' <- labIndices (fl++symb) s2;
       Success (stmtFun F' s2')
   end.
+
+Lemma labIndices_freeVars ilin s L
+: labIndices L ilin = Success s
+  -> freeVars ilin = IL.freeVars s.
+Proof.
+  revert_except ilin.
+  sind ilin; destruct ilin; simpl in *; intros; monadS_inv H; simpl.
+  - erewrite IH; eauto with cset.
+  - erewrite IH; eauto.
+    erewrite IH; eauto.
+  - reflexivity.
+  - reflexivity.
+  - erewrite IH; eauto.
+  - erewrite IH; eauto.
+    f_equal. f_equal.
+    exploit smap_length; eauto.
+    erewrite map_ext_get_eq; eauto with len.
+    intros; inv_get.
+    eapply smap_spec in EQ; eauto. destruct EQ; dcr.
+    monadS_inv H3; get_functional; simpl in *.
+    erewrite IH; eauto.
+Qed.
 
 Definition state_result X (s:X*onv val*nstmt) : option val :=
   match s with

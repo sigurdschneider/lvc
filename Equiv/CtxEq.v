@@ -63,8 +63,7 @@ Proof.
   unfold bisim'r, simL'. sind s; destruct s; simpl in *; intros.
   - case_eq (exp_eval E e); intros.
     + pone_step; eauto.
-    +
-      time pno_step.
+    + time pno_step.
   - case_eq (exp_eval E e); intros.
     case_eq (val2bool v); intros.
     + pone_step. left. eapply (IH s1); eauto.
