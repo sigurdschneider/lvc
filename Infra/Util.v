@@ -575,7 +575,7 @@ Notation "'tab' s '‖' L '‖'" := (List.map (fun _ => s) L)
                                  (at level 50, format "'tab'  s  '‖' L '‖'", s at level 0, L at level 200).
 
 Notation "〔 X 〕" := (list X) (format "'〔' X '〕'") : type_scope.
-Notation "؟ X" := (option X) (format "'؟' X", at level 50, X at level 0) : type_scope.
+Notation "؟" := option.
 
 Lemma len_le_app X Y Z (A:list X) (B:list Y) (C D:list Z) n
   : n < length B

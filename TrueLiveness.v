@@ -1,6 +1,6 @@
 Require Import AllInRel List Map Env DecSolve.
 Require Import IL Annotation AutoIndTac Bisim Exp MoreExp.
-Require Export Liveness Filter.
+Require Export Liveness Filter LabelsDefined.
 
 Set Implicit Arguments.
 
@@ -73,46 +73,56 @@ Proof.
   rewrite map_length; congruence.
 Qed.
 
+Definition getOAnn A `{OrderedType A} (a:ann (؟⦃A⦄)) : ⦃A⦄ :=
+  match a with
+    | ann0 (Some a) => a
+    | ann1 (Some a) _ => a
+    | ann2 (Some a) _ _ => a
+    | annF (Some a) _ _ => a
+    | _ => ∅
+  end.
 
 Inductive true_live_sound (i:overapproximation)
-  : list (set var *params) -> stmt -> ann (set var) -> Prop :=
+  : list ((؟ (set var) * params)) -> stmt -> ann (؟ (set var)) -> Prop :=
 | TLOpr x Lv b lv e al
   :  true_live_sound i Lv b al
-  -> (x ∈ getAnn al -> live_exp_sound e lv)
-  -> (getAnn al\{{x}}) ⊆ lv
-  -> true_live_sound i Lv (stmtLet x e b) (ann1 lv al)
+  -> (x ∈ getOAnn al -> live_exp_sound e lv)
+  -> (getOAnn al\{{x}}) ⊆ lv
+  -> true_live_sound i Lv (stmtLet x e b) (ann1 (Some lv) al)
 | TLIf Lv e b1 b2 lv al1 al2
   :  true_live_sound i Lv b1 al1
   -> true_live_sound i Lv b2 al2
   -> (exp2bool e = None -> live_exp_sound e lv)
-  -> (exp2bool e <> Some false -> getAnn al1 ⊆ lv)
-  -> (exp2bool e <> Some true -> getAnn al2 ⊆ lv)
-  -> true_live_sound i Lv (stmtIf e b1 b2) (ann2 lv al1 al2)
+  -> (exp2bool e <> Some false -> getOAnn al1 ⊆ lv)
+  -> (exp2bool e <> Some true -> getOAnn al2 ⊆ lv)
+  -> true_live_sound i Lv (stmtIf e b1 b2) (ann2 (Some lv) al1 al2)
 | TLGoto l Y Lv lv blv Z
-  : get Lv (counted l) (blv,Z)
+  : get Lv (counted l) (Some blv,Z)
   -> (if isImperative i then  (blv \ of_list Z ⊆ lv) else True)
   -> argsLive lv blv Y Z
   -> length Y = length Z
-  -> true_live_sound i Lv (stmtApp l Y) (ann0 lv)
+  -> true_live_sound i Lv (stmtApp l Y) (ann0 (Some lv))
 | TLReturn Lv e lv
   : live_exp_sound e lv
-  -> true_live_sound i Lv (stmtReturn e) (ann0 lv)
+  -> true_live_sound i Lv (stmtReturn e) (ann0 (Some lv))
 | TLExtern x Lv b lv Y al f
   : true_live_sound i Lv b al
   -> (forall n y, get Y n y -> live_exp_sound y lv)
-  -> (getAnn al\{{x}}) ⊆ lv
-  -> true_live_sound i Lv (stmtExtern x f Y b) (ann1 lv al)
-| TLLet Lv F b lv als alb
-  : true_live_sound i (zip pair (getAnn ⊝ als) (fst ⊝ F) ++ Lv) b alb
+  -> (getOAnn al\{{x}}) ⊆ lv
+  -> true_live_sound i Lv (stmtExtern x f Y b) (ann1 (Some lv) al)
+| TLLet Lv F t lv als alt Lv'
+  : true_live_sound i (Lv' ++ Lv) t alt
+    -> Lv' = zip pair (getAnn ⊝ als) (fst ⊝ F)
+    -> (forall n x Z, get Lv' n ((Some x), Z) -> isCalled t (LabI n))
     -> length F = length als
     -> (forall n Zs a, get F n Zs ->
                  get als n a ->
-                 true_live_sound i (zip pair (getAnn ⊝ als) (fst ⊝ F) ++ Lv) (snd Zs) a)
+                 true_live_sound i (Lv' ++ Lv) (snd Zs) a)
     -> (forall n Zs a, get F n Zs ->
                  get als n a ->
-                 if isFunctional i then (getAnn a \ of_list (fst Zs)) ⊆ lv else True)
-    -> getAnn alb ⊆ lv
-    -> true_live_sound i Lv (stmtFun F b)(annF lv als alb).
+                 if isFunctional i then (getOAnn a \ of_list (fst Zs)) ⊆ lv else True)
+    -> getOAnn alt ⊆ lv
+    -> true_live_sound i Lv (stmtFun F t)(annF (Some lv) als alt).
 
 
 Lemma true_live_sound_overapproximation_I Lv s slv

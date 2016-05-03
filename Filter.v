@@ -101,3 +101,34 @@ Proof.
     cases; isabsurd. rewrite <- H3. simpl. cset_tac; intuition.
     cases; eauto. simpl. exploit IHZ; eauto. cset_tac; intuition.
 Qed.
+
+
+Lemma agree_on_update_filter X `{OrderedType X} Y `{Equivalence (option Y)}
+      (lv:set X) (V: X -> option Y) Z VL
+: length Z = length VL
+  -> agree_on R lv
+             (V [Z <-- List.map Some VL])
+             (V [List.filter (fun x => B[x ∈ lv]) Z <--
+                             List.map Some (filter_by (fun x => B[x ∈ lv]) Z VL)]).
+Proof.
+  intros. eapply length_length_eq in H1.
+  general induction H1.
+  - eapply agree_on_refl. eapply H0.
+  - simpl. cases. simpl. eapply agree_on_update_same. reflexivity.
+    eapply agree_on_incl. eapply IHlength_eq. eauto. cset_tac; intuition.
+    eapply agree_on_update_dead; eauto.
+Qed.
+
+Lemma agree_on_update_filter' X `{OrderedType X} Y `{Equivalence (option Y)} (lv:set X) (V V':X -> option Y) Z VL
+: length Z = length VL
+  -> agree_on R (lv \ of_list Z) V V'
+  -> agree_on R lv
+             (V [Z <-- List.map Some VL])
+             (V' [(List.filter (fun x => B[x ∈ lv]) Z) <-- (List.map Some
+                             (filter_by (fun x => B[x ∈ lv]) Z VL))]).
+Proof.
+  intros.
+  eapply agree_on_trans. eapply H0.
+  eapply update_with_list_agree; eauto. rewrite map_length; eauto.
+  eapply agree_on_update_filter; eauto.
+Qed.
