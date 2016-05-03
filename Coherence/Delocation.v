@@ -1,5 +1,5 @@
 Require Import AllInRel Util Map Env EnvTy Exp IL Annotation Coherence Bisim DecSolve Liveness.
-Require Import Restrict MoreExp InRel.
+Require Import Restrict MoreExp InRel OUnion.
 
 (*  IL_Types. *)
 
@@ -63,6 +63,77 @@ Proof.
   - edestruct get_length_eq; try eapply H1; eauto.
     edestruct get_length_eq; try eapply H; eauto.
     exploit H3; eauto.
+Qed.
+
+
+Lemma trs_monotone_DL (DL DL' : list (option (set var))) ZL s lv a
+ : trs DL ZL s lv a
+   -> DL ≿ DL'
+   -> trs DL' ZL s lv a.
+Proof.
+  intros. general induction H; eauto 30 using trs, restrict_subset2.
+  - destruct (PIR2_nth H1 H); eauto; dcr. inv H4.
+    econstructor; eauto.
+  - econstructor; eauto using restrict_subset2, PIR2_app.
+Qed.
+
+Opaque to_list.
+
+Lemma trs_AP_seteq (DL : list (option (set var))) AP AP' s lv a
+ : trs DL AP s lv a
+   -> PIR2 elem_eq AP AP'
+   -> trs DL AP' s lv a.
+Proof.
+  intros. general induction H; eauto using trs.
+  - destruct (PIR2_nth H1 H0); eauto; dcr.
+    econstructor; eauto.
+  - econstructor; eauto using PIR2_app.
+Qed.
+
+Lemma trs_AP_incl (DL : list (option (set var))) AP AP' s lv a
+ : trs DL AP s lv a
+   -> PIR2 elem_incl AP AP'
+   -> trs DL AP' s lv a.
+Proof.
+  intros. general induction H; eauto using trs.
+  - destruct (PIR2_nth H1 H0); eauto; dcr.
+    econstructor; eauto.
+  - econstructor; eauto using PIR2_app.
+Qed.
+
+Definition map_to_list {X} `{OrderedType X} (AP:list (option (set X)))
+  := List.map (fun a => match a with Some a => to_list a | None => nil end) AP.
+
+Lemma PIR2_Subset_of_list (AP AP': list (option (set var)))
+: PIR2 (fstNoneOrR Subset) AP AP'
+  -> PIR2 (flip elem_incl) (map_to_list AP') (map_to_list AP).
+Proof.
+  intros. general induction H; simpl.
+  + econstructor.
+  + econstructor. destruct x, y; cset_tac; intuition.
+    - hnf. setoid_rewrite of_list_3. inv pf; eauto.
+    - inv pf.
+    - hnf; intros; simpl in *.
+      exfalso; cset_tac; intuition.
+    - eauto.
+Qed.
+
+Lemma trs_monotone_AP (DL : list (option (set var))) AP AP' s lv a
+ : trs DL (List.map oto_list AP) s lv a
+   -> PIR2 (fstNoneOrR Subset) AP AP'
+   -> trs DL (List.map oto_list AP') s lv a.
+Proof.
+  intros. eapply trs_AP_incl; eauto. eapply PIR2_flip.
+  eapply PIR2_Subset_of_list; eauto.
+Qed.
+
+Lemma trs_monotone_DL_AP (DL DL' : list (option (set var))) AP AP' s lv a
+  : trs DL (List.map oto_list AP) s lv a
+   -> DL ≿ DL'
+   -> PIR2 (fstNoneOrR Subset) AP AP'
+   -> trs DL' (List.map oto_list AP') s lv a.
+Proof.
+  eauto using trs_monotone_AP, trs_monotone_DL.
 Qed.
 
 Definition compileF (compile : list (list var) -> stmt -> ann (list (list var)) -> stmt)

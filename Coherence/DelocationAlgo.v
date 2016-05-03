@@ -2,6 +2,7 @@ Require Import CSet Le.
 
 Require Import Plus Util AllInRel Map Take MoreList.
 Require Import Val Var Env EnvTy IL Annotation Liveness Coherence Restrict Delocation LabelsDefined.
+Require Import Keep OUnion.
 
 Set Implicit Arguments.
 Unset Printing Abstraction Types.
@@ -10,9 +11,6 @@ Local Arguments lminus {X} {H} s L.
 Definition addParam x (DL:list (set var)) (AP:list (set var)) :=
   zip (fun (DL:set var) AP => if [x ∈ DL]
                    then {x; AP} else AP) DL AP.
-
-Definition oget {X} `{OrderedType X} (s:option (set X)) :=
-  match s with Some s => s | None => ∅ end.
 
 Definition addAdd s := (fun (DL:set var) AP => mdo t <- AP; Some ((s ∩ DL) ∪ t)).
 
@@ -30,71 +28,6 @@ Lemma addParam_zip_lminus_length DL ZL AP x
 Proof.
   eauto with len.
 Qed.
-
-Definition ounion {X} `{OrderedType X} (s t: option (set X)) :=
-  match s, t with
-    | Some s, Some t => Some (s ∪ t)
-    | Some s, None => Some s
-    | None, Some t => Some t
-    | _, _ => None
-  end.
-
-Lemma ounion_left_Some X `{OrderedType X} s t
-  : ounion (Some s) t === Some (s ∪ oget t).
-Proof.
-  destruct t; simpl.
-  - cset_tac.
-  - econstructor. hnf. cset_tac.
-Qed.
-
-Lemma ounion_right_Some X `{OrderedType X} s t
-  : ounion s (Some t) === Some (oget s ∪ t).
-Proof.
-  destruct s; simpl.
-  - cset_tac.
-  - econstructor. hnf. cset_tac.
-Qed.
-
-Lemma fold_zip_ounion_length X `{OrderedType X} a b
-  : (forall n aa, get a n aa -> length aa = length b)
-    -> length (fold_left (zip ounion) a b) = length b.
-Proof.
-  intros LEN.
-  general induction a; simpl; eauto.
-  rewrite IHa; eauto 10 using get with len.
-Qed.
-
-
-Definition keep m (AP:list (set var)) :=
-  mapi (fun n x => if [n = m] then Some x else None) AP.
-
-Lemma keep_Some AP n x
-  : get AP n x
-    -> get (keep n AP) n (Some x).
-Proof.
-  intros.
-  eapply (get_mapi (fun n' x => if [n' = n] then ⎣x⎦ else ⎣⎦)) in H.
-  cases in H; eauto.
-Qed.
-
-Lemma keep_None n m AP x
-  : get (keep n AP) m x -> n <> m -> x = None.
-Proof.
-  intros. edestruct (mapi_get _ _ H) as [y [A B]].
-  cases in B; congruence.
-Qed.
-
-Lemma keep_get AP n m x
-  : get (keep n AP) m (Some x) -> get AP m x /\ n = m.
-Proof.
-  intros.
-  edestruct (mapi_get _ _ H) as [y [A B]].
-  cases in B; inv B; eauto.
-Qed.
-
-
-Definition oto_list {X} `{OrderedType X} (s:option (set X)) :=
-  match s with Some s => to_list s | None => nil end.
 
 Notation "'olist_union' A B" := (fold_left (zip ounion) A B) (at level 50, A at level 0, B at level 0).
 
@@ -142,127 +75,6 @@ Notation "'computeParametersF' DL ZL AP F als" :=
      ⊜ F als)
     (at level 50, DL, ZL, AP, F, als at level 0).
 
-Local Notation "≽" := (fstNoneOrR (flip Subset)).
-Local Notation "≼" := (fstNoneOrR (Subset)).
-Local Notation "A ≿ B" := (PIR2 (fstNoneOrR (flip Subset)) A B) (at level 60).
-
-Lemma PIR2_flip_Subset_ext_right X `{OrderedType X} A B B'
-  : A ≿ B
-    -> PIR2 (option_eq Equal) B B'
-    -> A ≿ B'.
-Proof.
-  intros GE EQ. general induction GE; inv EQ; eauto.
-  econstructor; eauto.
-  inv pf; inv pf0; econstructor.
-  rewrite <- H2. eauto.
-Qed.
-
-Lemma trs_monotone_DL (DL DL' : list (option (set var))) ZL s lv a
- : trs DL ZL s lv a
-   -> DL ≿ DL'
-   -> trs DL' ZL s lv a.
-Proof.
-  intros. general induction H; eauto 30 using trs, restrict_subset2.
-  - destruct (PIR2_nth H1 H); eauto; dcr. inv H4.
-    econstructor; eauto.
-  - econstructor; eauto using restrict_subset2, PIR2_app.
-Qed.
-
-Instance fstNoneOrR_flip_Subset_trans {X} `{OrderedType X} : Transitive ≽.
-hnf; intros. inv H; inv H0.
-- econstructor.
-- inv H1. econstructor. transitivity y0; eauto.
-Qed.
-
-Instance fstNoneOrR_flip_Subset_trans2 {X} `{OrderedType X} : Transitive (fstNoneOrR Subset).
-hnf; intros. inv H; inv H0.
-- econstructor.
-- inv H1. econstructor. transitivity y0; eauto.
-Qed.
-
-Lemma PIR2_restrict A B s
-:  A ≿ B
-   -> restrict A s ≿ B.
-Proof.
-  intros. general induction H; simpl.
-  - econstructor.
-  - econstructor; eauto.
-    + inv pf; simpl.
-      * econstructor.
-      * cases. econstructor; eauto. econstructor.
-Qed.
-
-Opaque to_list.
-
-Definition elem_eq {X} `{OrderedType X} (x y: list X) := of_list x [=] of_list y.
-
-Instance elem_eq_refl X `{OrderedType X} : Reflexive (@elem_eq X _).
-hnf; intros. hnf. cset_tac; intuition.
-Qed.
-
-Definition elem_incl {X} `{OrderedType X} (x y: list X) := of_list x [<=] of_list y.
-
-Instance elem_incl_refl X `{OrderedType X} : Reflexive (@elem_incl _ _).
-hnf; intros. hnf. cset_tac; intuition.
-Qed.
-
-Lemma trs_AP_seteq (DL : list (option (set var))) AP AP' s lv a
- : trs DL AP s lv a
-   -> PIR2 elem_eq AP AP'
-   -> trs DL AP' s lv a.
-Proof.
-  intros. general induction H; eauto using trs.
-  - destruct (PIR2_nth H1 H0); eauto; dcr.
-    econstructor; eauto.
-  - econstructor; eauto using PIR2_app.
-Qed.
-
-Lemma trs_AP_incl (DL : list (option (set var))) AP AP' s lv a
- : trs DL AP s lv a
-   -> PIR2 elem_incl AP AP'
-   -> trs DL AP' s lv a.
-Proof.
-  intros. general induction H; eauto using trs.
-  - destruct (PIR2_nth H1 H0); eauto; dcr.
-    econstructor; eauto.
-  - econstructor; eauto using PIR2_app.
-Qed.
-
-Definition map_to_list {X} `{OrderedType X} (AP:list (option (set X)))
-  := List.map (fun a => match a with Some a => to_list a | None => nil end) AP.
-
-Lemma PIR2_Subset_of_list (AP AP': list (option (set var)))
-: PIR2 (fstNoneOrR Subset) AP AP'
-  -> PIR2 (flip elem_incl) (map_to_list AP') (map_to_list AP).
-Proof.
-  intros. general induction H; simpl.
-  + econstructor.
-  + econstructor. destruct x, y; cset_tac; intuition.
-    - hnf. setoid_rewrite of_list_3. inv pf; eauto.
-    - inv pf.
-    - hnf; intros; simpl in *.
-      exfalso; cset_tac; intuition.
-    - eauto.
-Qed.
-
-Lemma trs_monotone_AP (DL : list (option (set var))) AP AP' s lv a
- : trs DL (List.map oto_list AP) s lv a
-   -> PIR2 (fstNoneOrR Subset) AP AP'
-   -> trs DL (List.map oto_list AP') s lv a.
-Proof.
-  intros. eapply trs_AP_incl; eauto. eapply PIR2_flip.
-  eapply PIR2_Subset_of_list; eauto.
-Qed.
-
-Lemma trs_monotone_DL_AP (DL DL' : list (option (set var))) AP AP' s lv a
-  : trs DL (List.map oto_list AP) s lv a
-   -> DL ≿ DL'
-   -> PIR2 (fstNoneOrR Subset) AP AP'
-   -> trs DL' (List.map oto_list AP') s lv a.
-Proof.
-  eauto using trs_monotone_AP, trs_monotone_DL.
-Qed.
-
 Lemma PIR2_addParam DL AP x
   : length AP = length DL
     -> PIR2 Subset AP (addParam x DL AP).
@@ -274,97 +86,6 @@ Proof.
   - econstructor.
     + cases; cset_tac; intuition.
     + exploit (IHA x0); eauto.
-Qed.
-
-Lemma PIR2_map_some {X} R (AP AP':list X)
-: length AP = length AP'
-  -> PIR2 R AP AP'
-  -> PIR2 (fstNoneOrR R) (List.map Some AP) (List.map Some AP').
-Proof.
-  intros. general induction H0.
-  + econstructor.
-  + simpl. econstructor.
-    - econstructor; eauto.
-    - eauto.
-Qed.
-
-Lemma PIR2_map_some_option {X} R (AP AP':list X)
-: length AP = length AP'
-  -> PIR2 R AP AP'
-  -> PIR2 (option_eq R) (List.map Some AP) (List.map Some AP').
-Proof.
-  intros. general induction H0.
-  + econstructor.
-  + simpl. econstructor.
-    - econstructor; eauto.
-    - eauto.
-Qed.
-
-Lemma PIR2_ounion {X} `{OrderedType X} (A B C:list (option (set X)))
-: length A = length B
-  -> length B = length C
-  -> PIR2 ≽ A C
-  -> PIR2 ≽ B C
-  -> PIR2 ≽ (zip ounion A B) C.
-Proof.
-  intros. length_equify.
-  general induction H0; inv H1; simpl.
-  - econstructor.
-  - simpl in *. inv H2; inv H3.
-    exploit IHlength_eq; eauto.
-    inv pf; inv pf0; simpl; try now (econstructor; [econstructor; eauto| eauto]).
-    econstructor; eauto. econstructor. unfold flip in *.
-    cset_tac; intuition.
-Qed.
-
-Lemma PIR2_ounion' {X} `{OrderedType X} (A B C:list (option (set X)))
-: length A = length B
-  -> length B = length C
-  -> PIR2 ≼ C A
-  -> PIR2 ≼ C B
-  -> PIR2 ≼ C (zip ounion A B).
-Proof.
-  intros. length_equify.
-  general induction H0; inv H1; simpl.
-  - econstructor.
-  - simpl in *. inv H2; inv H3.
-    exploit IHlength_eq; eauto.
-    inv pf; inv pf0; simpl;
-    (econstructor; [econstructor; eauto with cset | eauto]).
-Qed.
-
-Lemma PIR2_ounion_AB {X} `{OrderedType X} (A A' B B':list (option (set X)))
-: length A = length A'
-  -> length B = length B'
-  -> length A = length B
-  -> PIR2 ≼ A A'
-  -> PIR2 ≼ B B'
-  -> PIR2 ≼ (zip ounion A B) (zip ounion A' B').
-Proof.
-  intros. length_equify.
-  general induction H0; inv H1; inv H2; simpl; econstructor.
-  - inv H3; inv H4.
-    inv pf; inv pf0; simpl; try econstructor.
-    destruct y; simpl; eauto. econstructor. cset_tac; intuition.
-    destruct y0; simpl; eauto. econstructor. cset_tac; intuition.
-    cset_tac; intuition.
-  - inv H3; inv H4. eapply IHlength_eq; eauto.
-Qed.
-
-Lemma PIR2_option_eq_Subset_zip {X} `{OrderedType X} (A B C:list (option (set X)))
-: length A = length B
-  -> length B = length C
-  -> PIR2 (option_eq Subset) C A
-  -> PIR2 (option_eq Subset) C B
-  -> PIR2 (option_eq Subset) C (zip ounion A B).
-Proof.
-  intros. length_equify.
-  general induction H0; inv H1; simpl.
-  - econstructor.
-  - simpl in *. inv H2; inv H3.
-    exploit IHlength_eq; eauto.
-    inv pf; inv pf0; simpl;
-    now (econstructor; [econstructor; eauto with cset | eauto]).
 Qed.
 
 Lemma live_globals_zip (F:〔params*stmt〕) (als:〔ann ⦃var⦄〕) DL ZL (LEN1:length F = length als)
@@ -387,7 +108,7 @@ Lemma computeParameters_length s lv DL ZL AP an' LV
    -> length DL = length ZL
    -> length LV = length DL.
 Proof.
-  intros CPEQ LS LEQ LEQ2.
+  intros CPEQ LS LEQ LEQ2 .
   general induction LS; simpl in *; repeat let_case_eq; inv CPEQ.
   - rewrite LEQ. eapply IHLS; eauto. rewrite addParam_zip_lminus_length; eauto.
   - exploit IHLS1; eauto.
@@ -415,11 +136,9 @@ Proof.
         rewrite H9. eauto with len.
 Qed.
 
-
 Local Create HintDb rew.
 Local Hint Extern 20 => rewrite <- zip_app : rew.
 Local Hint Extern 20 => rewrite <- live_globals_zip; eauto with len : rew.
-
 
 Lemma computeParametersF_length DL ZL AP F als k
   : (forall n Zs a, get F n Zs -> get als n a ->
@@ -435,43 +154,6 @@ Proof.
   intros. inv_get.
   symmetry. rewrite <- zip_app; eauto with len.
   eapply computeParameters_length; eauto using pair_eta with len.
-Qed.
-
-Inductive ifSndR {X Y} (R:X -> Y -> Prop) : X -> option Y -> Prop :=
-  | ifsndR_None x : ifSndR R x None
-  | ifsndR_R x y : R x y -> ifSndR R x (Some y).
-
-Lemma PIR2_ifSndR_Subset_left X `{OrderedType X} A B C
-: PIR2 (ifSndR Subset) B C
--> PIR2 Subset A B
--> PIR2 (ifSndR Subset) A C.
-Proof.
-  intros. general induction H1; simpl in *.
-  + inv H0. econstructor.
-  + inv H0. inv pf0; eauto using @PIR2, @ifSndR with cset.
-Qed.
-
-
-Lemma ifSndR_zip_ounion X `{OrderedType X} A B C
-: PIR2 (ifSndR Subset) C A
-  -> PIR2 (ifSndR Subset) C B
-  -> PIR2 (ifSndR Subset) C (zip ounion A B).
-Proof.
-  intros.
-  general induction H0.
-  - inv H1; econstructor.
-  - inv H1.
-    inv pf; inv pf0; eauto using @PIR2, @ifSndR with cset.
-Qed.
-
-Lemma ifSndR_fold_zip_ounion X `{OrderedType X} A B C
-: (forall n a, get A n a -> PIR2 (ifSndR Subset) C a)
-  -> PIR2 (ifSndR Subset) C B
-  -> PIR2 (ifSndR Subset) C (fold_left (zip ounion) A B).
-Proof.
-  intros GET LE.
-  general induction A; simpl; eauto.
-  - eapply IHA; eauto using get, ifSndR_zip_ounion.
 Qed.
 
 Lemma ifSndR_zip_addAdd s DL A B
@@ -507,7 +189,7 @@ Proof.
   general induction LEN; simpl; eauto using PIR2.
 Qed.
 
-Lemma PIR2_ifSndR_keep n AP
+Lemma PIR2_ifSndR_keep n (AP:〔⦃var⦄〕)
   :  PIR2 (ifSndR Subset) AP (keep n AP).
 Proof.
   unfold keep, mapi. generalize 0.
@@ -551,33 +233,6 @@ Proof.
                     | | | ]; eauto 20 with len.
 Qed.
 
-Inductive ifFstR {X Y} (R:X -> Y -> Prop) : option X -> Y -> Prop :=
-  | IfFstR_None y : ifFstR R None y
-  | IfFstR_R x y : R x y -> ifFstR R (Some x) y.
-
-Lemma ifFstR_zip_ounion X `{OrderedType X} A B C
-: PIR2 (ifFstR Subset) A C
-  -> PIR2 (ifFstR Subset) B C
-  -> PIR2 (ifFstR Subset) (zip ounion A B) C.
-Proof.
-  intros.
-  general induction H0.
-  - inv H1; econstructor.
-  - inv H1.
-    inv pf; inv pf0; simpl; try now (econstructor; [econstructor; eauto| eauto]).
-    econstructor; eauto. econstructor.
-    cset_tac; intuition.
-Qed.
-
-Lemma PIR2_ifFstR_keep n AP
-  :  PIR2 (ifFstR Subset) (keep n AP) AP.
-Proof.
-  unfold keep, mapi. generalize 0.
-  general induction AP; simpl.
-  - econstructor.
-  - cases; eauto using PIR2, @ifFstR.
-Qed.
-
 Lemma ifFstR_addAdds s A B
 : PIR2 (ifFstR Subset) B  A
   -> PIR2 (ifFstR Subset) (zip (addAdd s) A B) A.
@@ -599,38 +254,6 @@ Proof.
   - econstructor. cases; eauto.
     + cset_tac.
     + eauto.
-Qed.
-
-Lemma PIR2_ifFstR_option_eq_left X `{OrderedType X} A B C
-      : PIR2 (ifFstR Subset) B C
-        -> PIR2 (option_eq Subset) A B
-        -> PIR2 (ifFstR Subset) A C.
-Proof.
-  intros H1 H2. general induction H2; inv H1; eauto using @PIR2.
-  econstructor; eauto.
-  inv pf; try econstructor. inv pf0. intuition.
-Qed.
-
-Lemma PIR2_ifFstR_Subset_right X `{OrderedType X} A B C
-: PIR2 (ifFstR Subset) A B
--> PIR2 Subset B C
--> PIR2 (ifFstR Subset) A C.
-Proof.
-  intros P S. general induction P; inv S; simpl in *; eauto using PIR2.
-  - inv pf; eauto using PIR2, @ifFstR.
-    econstructor; eauto.
-    econstructor; cset_tac; intuition.
-Qed.
-
-
-Lemma ifFstR_fold_zip_ounion X `{OrderedType X} A B C
-  : (forall n a, get A n a -> PIR2 (ifFstR Subset) a C)
-    -> PIR2 (ifFstR Subset) B C
-    -> PIR2 (ifFstR Subset) (fold_left (zip ounion) A B) C.
-Proof.
-  intros GET LE.
-  general induction A; simpl; eauto.
-  - eapply IHA; eauto using get, ifFstR_zip_ounion.
 Qed.
 
 Lemma PIR2_Subset_tab_extend AP DL ZL (F:list (params*stmt)) als
@@ -747,12 +370,6 @@ Tactic Notation "Rexploit" uconstr(H) :=
 
 Tactic Notation "Rexploit" uconstr(X) "as" ident(H)  :=
   eapply modus_ponens; [refine X | intros H].
-
-Lemma zip_get_eq X Y Z (f:X -> Y -> Z) L L' n (x:X) (y:Y)
-  : get L n x -> get L' n y -> forall fxy, fxy = f x y -> get (zip f L L') n fxy.
-Proof.
-  intros. general induction n; inv H; inv H0; simpl; eauto using get.
-Qed.
 
 Lemma computeParameters_isCalled_Some DL ZL AP s lv an' LV n D Z p
 : live_sound Imperative (zip pair DL ZL) s lv
@@ -933,44 +550,6 @@ Proof.
       cset_tac.
 Qed.
 
-Lemma ounion_comm X `{OrderedType X} (s t:option (set X))
-  : option_eq Equal (ounion s t) (ounion t s).
-Proof.
-  destruct s,t; simpl; try now econstructor.
-  - econstructor. cset_tac; intuition.
-Qed.
-
-Lemma zip_PIR2 X Y (eqA:Y -> Y -> Prop) (f:X -> X -> Y) l l'
-  : (forall x y, eqA (f x y) (f y x))
-    -> PIR2 eqA (zip f l l') (zip f l' l).
-Proof.
-  general induction l; destruct l'; simpl; try now econstructor.
-  econstructor; eauto.
-Qed.
-
-Lemma PIR2_zip_ounion X `{OrderedType X} (b:list (option (set X))) b'
-  : length b = length b'
-    -> PIR2 (fstNoneOrR Subset) b (zip ounion b b').
-Proof.
-  intros. eapply length_length_eq in H0.
-  general induction H0; simpl.
-  - econstructor.
-  - econstructor; eauto.
-    + destruct x,y; simpl; econstructor; cset_tac; intuition.
-Qed.
-
-Lemma PIR2_zip_ounion' X `{OrderedType X} (b:list (option (set X))) b'
-  : length b = length b'
-    -> PIR2 (fstNoneOrR Subset) b (zip ounion b' b).
-Proof.
-  intros. eapply length_length_eq in H0.
-  general induction H0; simpl.
-  - econstructor.
-  - econstructor; eauto.
-    + destruct x,y; simpl; econstructor; cset_tac; intuition.
-Qed.
-
-
 Lemma addParam_x DL AP x n ap' dl
   : get (addParam x DL AP) n ap'
     -> get DL n dl
@@ -1018,17 +597,6 @@ Proof.
   + eapply IHlength_eq; eauto using get.
 Qed.
 
-Lemma restrict_get L s t n
-: get L n (Some s)
-  -> s ⊆ t
-  -> get (restrict L t) n (Some s).
-Proof.
-  intros. general induction H; simpl.
-  + cases.
-    - econstructor.
-    + econstructor; eauto.
-Qed.
-
 Lemma PIR2_addAdds s DL b
 : length DL = length b
   -> PIR2 ≼ b (zip (addAdd s) DL b).
@@ -1056,49 +624,6 @@ Proof.
       * econstructor. inv pf. cset_tac; intuition.
       * inv pf.
     + eauto.
-Qed.
-
-
-Lemma fstNoneOrR_ounion_left X `{OrderedType X} a b c
-  : ≼ a b -> ≼ a (ounion b c).
-Proof.
-  intros A; inv A; eauto using @fstNoneOrR.
-  destruct c; simpl; eauto.
-  econstructor. cset_tac.
-Qed.
-
-
-Lemma fstNoneOrR_ounion_right X `{OrderedType X} a b c
-  : ≼ a c -> ≼ a (ounion b c).
-Proof.
-  intros A; inv A; eauto using @fstNoneOrR.
-  destruct b; simpl; eauto.
-  econstructor. cset_tac.
-Qed.
-
-
-Lemma PIR2_ounion_left X `{OrderedType X} (A B C:list (option (set X)))
-: length A = length B
-  -> PIR2 ≼ C A
-  -> PIR2 ≼ C (zip ounion A B).
-Proof.
-  intros. length_equify.
-  general induction H0; invt PIR2; simpl.
-  - econstructor.
-  - exploit IHlength_eq; eauto.
-    econstructor; eauto using fstNoneOrR_ounion_left.
-Qed.
-
-Lemma PIR2_ounion_right X `{OrderedType X} (A B C:list (option (set X)))
-: length A = length C
-  -> PIR2 ≼ C B
-  -> PIR2 ≼ C (zip ounion A B).
-Proof.
-  intros. length_equify.
-  general induction H0; invt PIR2; simpl.
-  - econstructor.
-  - exploit IHlength_eq; eauto.
-    econstructor; eauto using fstNoneOrR_ounion_left, fstNoneOrR_ounion_right.
 Qed.
 
 Lemma PIR2_combineParams (A:list (ann (list params) * list (option (set var))))
@@ -1153,8 +678,8 @@ Proof.
   intros. rewrite map_zip.
   eapply zip_ext_PIR2; eauto with len.
   intros. inv_get.
-  unfold minuso, lminus.
-  destruct y'; simpl.
+  unfold minuso, lminus, oto_list.
+  destruct y'.
   - econstructor. rewrite of_list_3; eauto.
   - econstructor; eauto.
 Qed.
@@ -1171,18 +696,8 @@ Proof.
   simpl. unfold flip. rewrite H. reflexivity.
 Qed.
 
-Lemma PIR2_take X Y (R: X -> Y -> Prop) L L' n
-  : PIR2 R L L'
-    -> PIR2 R (take n L) (take n L').
-Proof.
-  intros REL.
-  general induction REL; destruct n; simpl; eauto using PIR2.
-Qed.
-
-
 Hint Extern 10 (forall _ _, get (snd ⊝ computeParametersF ?DL ?ZL ?AP ?F ?als) _ _ -> ❬?LVb❭ = ❬_❭)
 => eapply computeParametersF_length : len.
-
 
 Lemma computeParameters_trs DL ZL AP s an' LV lv
 : live_sound Imperative (zip pair DL ZL) s lv
@@ -1218,11 +733,11 @@ Proof.
       eapply zip_ominus_contra; eauto with len.
   - invc CPEQ. edestruct get_zip as [D [L [GETZL [GETDL EQ]]]]; dcr; eauto. invc EQ.
     edestruct (get_length_eq _ GETDL LEN2) as [ap GETAP].
-    exploit (@keep_Some AP (labN l)) as GETKEEP; eauto.
+    exploit (@keep_Some _ AP (labN l)) as GETKEEP; eauto.
     exploit (zip_get lminus GETZL GETDL) as GETLMINUS.
     exploit (zip_get ominus' GETLMINUS GETKEEP) as GETOMINUS.
     econstructor.
-    eapply restrict_get. eapply GETOMINUS. unfold lminus.
+    eapply restrict_get_Some. eapply GETOMINUS. unfold lminus.
     rewrite <- H0. clear_all; cset_tac.
     eapply map_get_1; eauto.
   - invc CPEQ. econstructor.
@@ -1349,7 +864,7 @@ Proof.
         eauto using get_app, map_get_1 with len. dcr; subst.
         edestruct computeParameters_isCalled_get_Some; try eapply H9;
           eauto using get_app, map_get_1 with len. dcr; subst.
-
+        Opaque to_list.
         simpl in *. rewrite of_list_app.
         repeat rewrite of_list_3. unfold lminus.
         rewrite minus_union.
@@ -1468,66 +983,6 @@ Proof.
       eauto 30 with len.
 Qed.
 
-Lemma PIR2_ifFstR_Subset_oget X `{OrderedType X} A B
-  : PIR2 (ifFstR Subset) A B
-    -> PIR2 Subset (oget ⊝ A) B.
-Proof.
-  intros PIR. general induction PIR; simpl in *; eauto using PIR2.
-  - inv pf; eauto using @PIR2, @ifSndR with cset.
-Qed.
-
-Instance PIR2_subset_impl X `{OrderedType X}
-  : Proper (PIR2 (flip Subset) ==> PIR2 Subset ==> impl) (PIR2 Subset).
-Proof.
-  unfold Proper, respectful, impl, flip; intros.
-  general induction H0; inv H1; inv H2; eauto using PIR2 with cset.
-  econstructor; eauto. rewrite pf, pf1; eauto.
-Qed.
-
-Instance PIR2_Subset_Equal_Equal_impl X `{OrderedType X}
-  : Proper (PIR2 Equal ==> PIR2 Equal ==> impl) (PIR2 Equal).
-Proof.
-  unfold Proper, respectful, impl; intros.
-  general induction H0; inv H1; inv H2; eauto using PIR2 with cset.
-  econstructor; eauto. rewrite <- pf, <- pf0. eauto.
-Qed.
-
-Instance PIR2_Subset_Equal_Equal_flip_impl X `{OrderedType X}
-  : Proper (PIR2 Equal ==> PIR2 Equal ==> flip impl) (PIR2 Equal).
-Proof.
-  unfold Proper, respectful, flip, impl; intros.
-  general induction H0; inv H1; inv H2; eauto using PIR2 with cset.
-  econstructor; eauto. rewrite pf, pf0. eauto.
-Qed.
-
-Instance PIR2_Equal_Subset_subrelation X `{OrderedType X}
-  : subrelation (PIR2 Equal) (PIR2 Subset).
-Proof.
-  unfold subrelation; intros x y PIR.
-  general induction PIR; eauto using PIR2.
-  econstructor. rewrite pf; eauto. eauto.
-Qed.
-
-Instance map_Equal_impl X Y `{OrderedType Y}
-  : Proper (@feq X (set Y) Equal ==> eq ==> PIR2 Equal) (@List.map _ _).
-Proof.
-  unfold Proper, respectful. intros; subst.
-  general induction y0; simpl; eauto using PIR2.
-Qed.
-
-Instance app_Equal_Equal_Equal X `{OrderedType X}
-  : Proper (PIR2 Equal ==> PIR2 Equal ==> PIR2 Equal) (@List.app _).
-Proof.
-  unfold Proper, respectful. intros; subst.
-  eapply PIR2_app; eauto.
-Qed.
-
-Lemma of_list_oto_list_oget X `{OrderedType X}
-  : @feq _ _ Equal (fun x => of_list (oto_list x)) oget.
-Proof.
-  hnf; intros L. destruct L; simpl; eauto. rewrite of_list_3; eauto.
-Qed.
-
 Lemma ifFstR_addAdds2 s A B C
   : PIR2 Subset A C
   -> PIR2 (ifFstR Subset) B C
@@ -1539,7 +994,6 @@ Proof.
     - inv pf0; simpl; econstructor.
       * cset_tac; intuition.
 Qed.
-
 
 Lemma computeParameters_live DL ZL AP s an' LV lv
 : live_sound Imperative (zip pair DL ZL) s lv

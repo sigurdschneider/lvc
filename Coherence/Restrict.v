@@ -1,7 +1,6 @@
-Require Import CSet Util Get Drop Var Map Infra.Relations AllInRel.
+Require Import CSet Util Get Drop Var Map Infra.Relations AllInRel OUnion.
 
 Set Implicit Arguments.
-
 
 Definition restr (G:set var) (o:option (set var)) :=
   match o with
@@ -348,3 +347,26 @@ Qed.
 
 
 Hint Resolve bounded_incl.
+
+
+Lemma PIR2_restrict A B s
+:  A ≿ B
+   -> restrict A s ≿ B.
+Proof.
+  intros. general induction H; simpl.
+  - econstructor.
+  - econstructor; eauto.
+    + inv pf; simpl.
+      * econstructor.
+      * cases. econstructor; eauto. econstructor.
+Qed.
+
+
+Lemma restrict_get_Some L s t n
+: get L n (Some s)
+  -> s ⊆ t
+  -> get (restrict L t) n (Some s).
+Proof.
+  intros. general induction H; simpl; eauto using get.
+  - cases; eauto using get.
+Qed.

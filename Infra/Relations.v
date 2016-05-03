@@ -299,3 +299,12 @@ Instance fstNoneOrR_Reflexive {A : Type} {R : relation A} {Rrefl: Reflexive R}
 Proof.
   hnf; intros. destruct x; econstructor; eauto.
 Qed.
+
+Inductive ifFstR {X Y} (R:X -> Y -> Prop) : option X -> Y -> Prop :=
+  | IfFstR_None y : ifFstR R None y
+  | IfFstR_R x y : R x y -> ifFstR R (Some x) y.
+
+
+Inductive ifSndR {X Y} (R:X -> Y -> Prop) : X -> option Y -> Prop :=
+  | ifsndR_None x : ifSndR R x None
+  | ifsndR_R x y : R x y -> ifSndR R x (Some y).

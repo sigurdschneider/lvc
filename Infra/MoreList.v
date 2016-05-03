@@ -429,6 +429,12 @@ Proof.
   f_equal; eauto 20 using get.
 Qed.
 
+Lemma zip_get_eq X Y Z (f:X -> Y -> Z) L L' n (x:X) (y:Y)
+  : get L n x -> get L' n y -> forall fxy, fxy = f x y -> get (zip f L L') n fxy.
+Proof.
+  intros. general induction n; inv H; inv H0; simpl; eauto using get.
+Qed.
+
 Lemma zip_ext_PIR2 X Y Z (f:X -> Y -> Z) X' Y' Z' (f':X'->Y'->Z') (R:Z->Z'->Prop) L1 L2 L1' L2'
 : length L1 = length L2
   -> length L1' = length L2'
@@ -438,6 +444,15 @@ Lemma zip_ext_PIR2 X Y Z (f:X -> Y -> Z) X' Y' Z' (f':X'->Y'->Z') (R:Z->Z'->Prop
 Proof.
   intros A B C.
   length_equify. general induction A; inv B; inv C; simpl; eauto 50 using PIR2, get.
+Qed.
+
+
+Lemma zip_PIR2 X Y (eqA:Y -> Y -> Prop) (f:X -> X -> Y) l l'
+  : (forall x y, eqA (f x y) (f y x))
+    -> PIR2 eqA (zip f l l') (zip f l' l).
+Proof.
+  general induction l; destruct l'; simpl; try now econstructor.
+  econstructor; eauto.
 Qed.
 
 Lemma zip_sym X Y Z (f : X -> Y -> Z) (L:list X) (L':list Y)

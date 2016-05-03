@@ -402,3 +402,15 @@ Hint Extern 5 =>
 match goal with
   | [ H1 : ?s \ ?u ⊆ ?t, H2 : ?u ⊆ ?t |- ?s ⊆ ?t ] => eapply (incl_minus_both H1 H2)
 end : cset.
+
+Definition elem_eq {X} `{OrderedType X} (x y: list X) := of_list x [=] of_list y.
+
+Instance elem_eq_refl X `{OrderedType X} : Reflexive (@elem_eq X _).
+hnf; intros. hnf. cset_tac; intuition.
+Qed.
+
+Definition elem_incl {X} `{OrderedType X} (x y: list X) := of_list x [<=] of_list y.
+
+Instance elem_incl_refl X `{OrderedType X} : Reflexive (@elem_incl _ _).
+hnf; intros. hnf. cset_tac; intuition.
+Qed.

@@ -1,5 +1,5 @@
 Require Import Coq.Arith.Lt Coq.Arith.Plus Coq.Classes.RelationClasses List.
-Require Import Util Get Drop DecSolve.
+Require Import Util Get Drop Take DecSolve.
 
 (** * AllInRel: Inductive characterization of lists which are element-wise in relation *)
 
@@ -544,6 +544,15 @@ Proof.
   intros. general induction H.
   - econstructor.
   - econstructor; eauto.
+Qed.
+
+
+Lemma PIR2_take X Y (R: X -> Y -> Prop) L L' n
+  : PIR2 R L L'
+    -> PIR2 R (take n L) (take n L').
+Proof.
+  intros REL.
+  general induction REL; destruct n; simpl; eauto using PIR2.
 Qed.
 
 Ltac provide_invariants_P2 :=
