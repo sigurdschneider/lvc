@@ -1,5 +1,6 @@
 #! /bin/sh
 
+MAKEFILE=Makefile.coq
 function display_help {
   echo "configure.sh - Generate a Coq Makefile for this directory"
   echo ""
@@ -25,20 +26,20 @@ fi
 
 BLACKLIST=`cat _BLACKLIST`
 SOURCES=$(find . -name \*.v -print | grep -v /\.# | grep -v $BLACKLIST | sed -e 's%^\./%%g')
-coq_makefile -R . Lvc extraction $SOURCES > Makefile
-echo "Makefile generated."
+coq_makefile -R . Lvc extraction $SOURCES > ${MAKEFILE}
+echo "${MAKEFILE} generated."
 
-echo "Patching Makefile to include target 'extraction'."
+echo "Patching ${MAKEFILE} to include target 'extraction'."
 # sed -i -e  '/.\/extraction:/c\.\/extraction: Compiler.vo' Makefile
-sed -i -e  's%\./extraction:%\./extraction: Compiler.vo%' Makefile
+sed -i -e  's%\./extraction:%\./extraction: Compiler.vo%' ${MAKEFILE}
 
-echo "Patching Makefile to reference external Containers documentation."
-sed -i -e 's%COQDOCFLAGS?=-interpolate -utf8%COQDOCFLAGS?=--interpolate --utf8 --external "http://www.lix.polytechnique.fr/coq/pylons/contribs/files/Containers/v8.4/" Containers --toc --toc-depth 3 --index indexpage --no-lib-name%' Makefile
+echo "Patching ${MAKEFILE} to reference external Containers documentation."
+sed -i -e 's%COQDOCFLAGS?=-interpolate -utf8%COQDOCFLAGS?=--interpolate --utf8 --external "http://www.lix.polytechnique.fr/coq/pylons/contribs/files/Containers/v8.4/" Containers --toc --toc-depth 3 --index indexpage --no-lib-name%' ${MAKEFILE}
 
 
 if [ -z "$VANILLA" ]; then
-	echo "Patching Makefile to use ruby-based timing scripts (use --vanilla if undesired)."
+	echo "Patching ${MAKEFILE} to use ruby-based timing scripts (use --vanilla if undesired)."
 	#sed -i -e 's/$(COQC) $(COQDEBUG) $(COQFLAGS)/@.\/time.sh $(if $(findstring j,$(MAKEFLAGS)),--parallel,) $(COQC) $(COQDEBUG) $(COQFLAGS)/' Makefile
 	#sed -i -e 's/^TIMED=/TIMED=true/' Makefile
-	sed -i -e 's/TIMECMD=/TIMECMD=@.\/time.rb $(if $(findstring j,$(MAKEFLAGS)),--parallel,)/' Makefile
+	sed -i -e 's/TIMECMD=/TIMECMD=@.\/time.rb $(if $(findstring j,$(MAKEFLAGS)),--parallel,)/' ${MAKEFILE}
 fi
