@@ -4,6 +4,37 @@ Require Export Util Var Val Exp Env Map CSet AutoIndTac IL AllInRel Bisim.
 Set Implicit Arguments.
 Unset Printing Records.
 
+Lemma bisim'r_refl s
+  : forall L E r,
+    bisim'r r (L, E, s) (L, E, s).
+Proof.
+  revert s. pcofix CIH.
+  intros; destruct s; simpl in *; intros.
+  - case_eq (exp_eval E e); intros.
+    + pone_step. right. eapply (CIH); eauto.
+    + pno_step.
+  - case_eq (exp_eval E e); intros.
+    case_eq (val2bool v); intros.
+    + pone_step. right. eapply (CIH s1); eauto.
+    + pone_step. right. eapply (CIH s2); eauto.
+    + pno_step.
+  - edestruct (get_dec L (counted l)) as [[b]|].
+    decide (length Y = length (I.block_Z b)).
+    case_eq (omap (exp_eval E) Y); intros.
+    + pone_step. right. eapply CIH.
+    + pno_step.
+    + pno_step.
+    + pno_step; eauto.
+  - pno_step.
+  - case_eq (omap (exp_eval E) Y); intros.
+    + pextern_step.
+      * right. eapply (CIH s); eauto.
+      * right. eapply (CIH s); eauto.
+    + pno_step.
+  - pone_step. right.
+    eapply (CIH s0); eauto using sawtooth_F_mkBlocks.
+Qed.
+
 Instance SR : ProofRelation (params) := {
    ParamRel G Z Z' := Z = Z' /\ Z = G;
    ArgRel V V' G VL VL' := V = V' /\ VL = VL' /\ length VL = length G;
@@ -29,10 +60,10 @@ Lemma bisimeq'_refl s
     simL' _ r SR ZL L L'
     -> bisim'r r (L, E, s) (L', E, s).
 Proof.
-  unfold bisimeq. sind s; destruct s; simpl in *; intros.
+  unfold bisim'r, simL'. sind s; destruct s; simpl in *; intros.
   - case_eq (exp_eval E e); intros.
-    + pone_step. left. eapply (IH s); eauto.
-    + pno_step.
+    + pone_step; eauto.
+    + time pno_step.
   - case_eq (exp_eval E e); intros.
     case_eq (val2bool v); intros.
     + pone_step. left. eapply (IH s1); eauto.
@@ -49,22 +80,13 @@ Proof.
       exploit omap_length; eauto. congruence. eauto.
     + pno_step.
     + pno_step. exploit omap_length; eauto.
-      get_functional; subst. congruence.
-      hnf in H. inRel_invs. simpl in *.
-      dcr. repeat get_functional; subst. simpl in *.
-      congruence.
+      inRel_invs. simpl in *.
+      dcr. congruence.
     + pno_step.
-      * hnf in H. inRel_invs. simpl in *. eauto.
-      * hnf in H. inRel_invs. simpl in *; eauto.
+      * inRel_invs. eauto.
   - pno_step.
   - case_eq (omap (exp_eval E) Y); intros.
-    + pextern_step.
-      * eexists; split.
-        econstructor; eauto.
-        left. eapply (IH s); eauto.
-      * eexists; split.
-        econstructor; eauto.
-        left. eapply (IH s); eauto.
+    + pextern_step; eauto.
     + pno_step.
   - pone_step. left.
     eapply (IH s0); eauto using sawtooth_F_mkBlocks.
@@ -224,12 +246,8 @@ Proof.
       eapply bisimeq'_refl. eauto.
   - case_eq (omap (exp_eval E) e); intros.
     + pextern_step.
-      * eexists; split.
-        econstructor; eauto.
-        left. eapply IHctx; eauto.
-      * eexists; split.
-        econstructor; eauto.
-        left. eapply IHctx; eauto.
+      * left. eapply IHctx; eauto.
+      * left. eapply IHctx; eauto.
     + pno_step.
   - eapply H; eauto.
 Qed.

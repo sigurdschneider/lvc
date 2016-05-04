@@ -486,13 +486,13 @@ Ltac inv_get_step :=
           clear H; rename GET into H
     end
   | [ H: get (?A ++ ?B) ?n _, H' : get ?A ?n _ |- _ ] =>
-    eapply (get_app_le _ _ (get_range H')) in H
+    eapply (get_app_lt_1 _ _ (get_range H')) in H
   | [ H: get (?A ++ ?B) ?n _, H' : ?n < length ?A |- _ ] =>
-    eapply (get_app_le _ _ H') in H
+    eapply (get_app_lt_1 _ _ H') in H
   | [ H: get (List.map _ ?A ++ ?B) ?n _, H' : get ?A ?n _ |- _ ] =>
-    eapply (get_app_le _ _ (map_length_lt_ass_right _ _ (get_range H'))) in H
+    eapply (get_app_lt_1 _ _ (map_length_lt_ass_right _ _ (get_range H'))) in H
   | [ H: get (List.map _ ?A ++ ?B) ?n _, H' : ?n < length ?A |- _ ] =>
-    eapply (get_app_le _ _ (map_length_lt_ass_right _ _ H')) in H
+    eapply (get_app_lt_1 _ _ (map_length_lt_ass_right _ _ H')) in H
   | [ H: get (?A ++ ?B) (length ?A) _ |- _ ] =>
     eapply (get_length_app_eq) in H; [simplify_eq H; intros; clear_trivial_eqs | reflexivity]
   | [ H: get (List.map _ ?A ++ ?B) (length ?A) _ |- _ ] =>

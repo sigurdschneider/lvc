@@ -49,6 +49,14 @@ Proof.
   lud; exfalso; eauto.
 Qed.
 
+Lemma incl_minus_union2 X `{OrderedType X} s t
+  : s ⊆ (s \ t) ∪ t.
+Proof.
+  cset_tac.
+Qed.
+
+Hint Resolve incl_minus_union2 : cset.
+
 Lemma inverse_on_comp_list {X} `{OrderedType X} {Y} `{OrderedType Y} {Z} `{OrderedType Z}
   (f:X -> Y) (f':Y -> X) (g:Y -> Z) (g': Z -> Y)
   `{Proper _ (_eq ==> _eq) f}  `{Proper _ (_eq ==> _eq) g}
@@ -61,21 +69,17 @@ XL YL ZL D :
                ((update_with_list ZL YL g') ∘ (update_with_list YL XL f'))
   -> agree_on _eq D ((update_with_list XL YL f) ∘ (update_with_list YL ZL g)) (update_with_list XL ZL (f ∘ g)).
 Proof.
-  intros. eapply length_length_eq in H6. eapply length_length_eq in H7.
-  general induction H6. reflexivity.
-  inv H7; simpl in *.
-  specialize (IHlength_eq _ _ _ _ _ _ _ _ _ _ _ _ YL0 (D\{{x}}) X0).
-  assert (D ⊆ (D \ {{x}}) ∪ {{x}}).
-  clear_all; cset_tac. decide(a === x); intuition.
+  intros LEN1 LEN2 INV. length_equify.
+  general induction LEN1; inv LEN2; simpl in *; eauto.
+  specialize (IHLEN1 _ _ _ _ _ _ _ _ _ _ _ _ YL0 (D\ singleton x) X0).
+  assert (D ⊆ (D \ singleton x) ∪ singleton x) by eauto with cset.
   eapply agree_on_incl; eauto. eapply agree_on_union.
-  - hnf; intros. cset_tac; eqs. intuition. lud; intuition.
-    unfold agree_on in IHlength_eq. symmetry. rewrite <- IHlength_eq.
-    + unfold comp. lud. specialize (H8 _ H11). unfold comp in H8. lud.
-      exfalso; eauto.
-    + hnf; intros. cset_tac; eqs.
-      specialize (H8 _ H16).
-      unfold comp in H8.
-      unfold comp. lud; exfalso; eauto.
+  - hnf; intros. cset_tac. lud; [ intuition |].
+    unfold agree_on in IHLEN1. symmetry. rewrite <- IHLEN1.
+    + unfold comp in *. lud. exfalso. exploit INV; eauto. lud; eauto.
+    + hnf; intros. cset_tac.
+      exploit INV; eauto.
+      unfold comp in *. lud; exfalso; eauto.
     + cset_tac; intuition.
-  - hnf; intros. cset_tac; intuition. unfold comp. lud. exfalso; eauto.
+  - hnf; intros. cset_tac. unfold comp. lud. exfalso; eauto.
 Qed.

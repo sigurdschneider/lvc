@@ -431,15 +431,6 @@ Proof.
         cset_tac; intuition.
   - econstructor; eauto.
     + repeat rewrite map_length; eauto.
-(*    exploit renamedApart_globals_live; eauto.
-    hnf; intros. inv H1. pe_rewrite.
-    eapply renamedApart_disj in H13. pe_rewrite; eauto.
-    eapply ann_R_get in H20. pe_rewrite. rewrite H20.
-    revert H13; unfold disj; clear_all; cset_tac; intuition; eauto.
-    eapply bounded_disjoint; eauto.
-    eapply renamedApart_disj in H13. pe_rewrite; eauto.
-    destruct X; dcr. invc H2; simpl in *.
-    econstructor; eauto. *)
     + intros. inv_map H3. inv_map H4.
       edestruct get_length_eq; try eapply H5; eauto.
       eapply srd_monotone.
@@ -475,7 +466,7 @@ Proof.
         eapply disj_1_incl. eapply H14.
         eapply bounded_get in H37. eapply H37. eauto.
         dcr; simpl in *.
-        eapply get_app_le in H36; eauto.
+        eapply get_app_lt_1 in H36; eauto.
         inv_get.
         simpl in H37. rewrite H37. eauto.
         eauto with len.
@@ -668,7 +659,6 @@ Proof.
     pe_rewrite; eauto.
     eapply IHrenamedApart2; eauto using inverse_on_incl.
     pe_rewrite; eauto.
-
   - econstructor; eauto. eapply alpha_exp_rename_injective.
     eapply inverse_on_incl. eapply Exp.freeVars_live; eauto. eauto.
 
@@ -720,7 +710,7 @@ Proof.
           rewrite disjoint_app; split; eauto using bounded_disjoint.
           eapply funConstr_disjoint_globals; eauto.
         }
-        simpl in *. eapply get_app_le in H36.
+        simpl in *. eapply get_app_lt_1 in H36.
         inv_get.
         rewrite H37; eauto. eauto with len.
       * {

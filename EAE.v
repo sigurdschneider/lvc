@@ -13,7 +13,6 @@ Function list_to_stmt (xl: list var) (Y : list exp) (s : stmt) : stmt :=
     | _, _ => s
   end.
 
-
 Section MapUpdate.
   Open Scope fmap_scope.
   Variable X : Type.
@@ -31,16 +30,12 @@ Section MapUpdate.
     -> unique (x::XL)
     -> agree_on eq D (E [x <- y] [XL <-- VL]) (E [XL <-- VL] [x <- y]).
   Proof.
-    intros. eapply length_length_eq in H0.
-    general induction H0; simpl. reflexivity.
-    hnf; intros. lud. hnf in H1; simpl in *.
-    dcr. exfalso. eapply H7. econstructor. eapply H4.
-    exploit (IHlength_eq H E {x1} x0 y0). simpl in *; intuition.
-    hnf; intros. eapply H8. econstructor 2; eauto.
-    rewrite H8. lud. cset_tac; intuition.
-    exploit (IHlength_eq H E {x1} x0 y0). simpl in *; intuition.
-    hnf; intros. eapply H7. econstructor 2; eauto.
-    rewrite H7. lud. cset_tac; intuition.
+    intros LEN UNIQ. length_equify.
+    general induction LEN; simpl in * |- *; dcr; simpl in *; eauto.
+    hnf; intros. lud.
+    - exfalso; eauto.
+    - etransitivity; [eapply IHLEN|]; eauto; lud.
+    - etransitivity; [eapply IHLEN|]; eauto; lud.
   Qed.
 
   Lemma update_with_list_agree' (XL:list X) (VL:list Y) E D
@@ -48,11 +43,10 @@ Section MapUpdate.
     -> unique XL
     -> agree_on eq D (E [XL <-- VL]) (update_with_list' XL VL E).
   Proof.
-    intros. eapply length_length_eq in H0.
-    general induction H0; simpl in *.
-    - reflexivity.
+    intros LEN UNIQ. length_equify.
+    general induction LEN; simpl in *; eauto.
     - etransitivity. symmetry. eapply update_unique_commute; eauto using length_eq_length.
-      eapply IHlength_eq; intuition.
+      eapply IHLEN; eauto.
   Qed.
 End MapUpdate.
 
@@ -76,7 +70,7 @@ Proof.
       rewrite list_union_start_swap in H2.
       intro. eapply (H2 x); eauto; cset_tac.
     + rewrite list_union_start_swap in H2.
-      eauto with cset.
+      eapply disj_1_incl; [ eapply disj_2_incl |]; eauto with cset.
 Qed.
 
 Lemma list_to_stmt_crash L E s xl Y
@@ -88,18 +82,17 @@ Lemma list_to_stmt_crash L E s xl Y
 Proof.
   intros. eapply length_length_eq in H.
   general induction H; simpl in * |- *.
-  - monad_inv H0; isabsurd.
+  - monad_inv H0; [| | isabsurd].
     + eexists; repeat split; eauto using star2_refl. stuck2.
     + rewrite list_union_start_swap in H2.
       edestruct (IHlength_eq L (E [x <- Some x0])); eauto.
       * eapply omap_exp_eval_agree; eauto. symmetry.
         eapply agree_on_update_dead; [|reflexivity].
         intro. eapply (H2 x); cset_tac.
-      * eauto with cset.
+      * eapply disj_1_incl; [ eapply disj_2_incl |]; eauto with cset.
       * dcr. eexists. split; eauto.
-        econstructor 2 with (y:=EvtTau).
+        econstructor 2 with (y:=EvtTau); eauto.
         econstructor; eauto.
-        eauto.
 Qed.
 
 Fixpoint compile s {struct s}
@@ -188,22 +181,20 @@ Proof.
             hnf; split; congruence.
         }
         cases.
-        pno_step; get_functional; simpl in *; congruence.
+        pno_step; simpl in *; congruence.
         eapply bisim'_expansion_closed; [| eapply star2_refl | eapply LTSC].
-        pno_step; repeat get_functional; simpl in *. congruence.
+        pno_step. simpl in *.
         eapply n; rewrite len. rewrite map_length. rewrite fresh_list_length. eauto.
       * cases. pno_step; eauto. hnf in H. inRel_invs; eauto.
         eapply bisim'_expansion_closed; [| eapply star2_refl | eapply LTSC].
-        pno_step; repeat get_functional; simpl in *. eauto.
+        pno_step; repeat get_functional; simpl in *.
         hnf in H. inRel_invs; eauto.
     + cases. pno_step.
       edestruct (list_to_stmt_crash L' V (stmtApp l (Var ⊝ fresh_list fresh (list_union (Exp.freeVars ⊝ Y)) ❬Y❭)) (fresh_list fresh (list_union (Exp.freeVars ⊝ Y)) ❬Y❭) Y); eauto using fresh_spec, fresh_list_unique, fresh_list_spec; dcr.
       pfold. econstructor 3; try eapply H2; try eapply star2_refl; eauto. stuck2.
   - pno_step.
   - case_eq (omap (exp_eval V) Y); intros.
-    + pextern_step.
-      * eexists; split; [ econstructor; eauto | eauto ].
-      * eexists; split; [ econstructor; eauto | eauto ].
+    + pextern_step; eauto.
     + pno_step.
   - pone_step.
     left. eapply IH with (PL:=fst ⊝ s ++ PL); eauto.

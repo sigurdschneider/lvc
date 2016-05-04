@@ -1,5 +1,6 @@
 Require Import List.
-Require Export Util Relations Get Drop Var Val Exp Env Map CSet AutoIndTac MoreList OptionMap Events Size.
+Require Export Util Relations Get Drop Var Val Exp Env Map CSet AutoIndTac MoreList OptionMap.
+Require Export Events Size SmallStepCommon.
 Require Import SetOperations.
 
 Set Implicit Arguments.
@@ -152,11 +153,8 @@ Module F.
   Definition mkBlock E n f :=
     blockI E (fst f) (snd f) n.
 
-  Definition mkBlocks E F :=
-    mapi (mkBlock E) F.
-
   Inductive step : state -> event -> state -> Prop :=
-  | stepExp L E x e b v
+  | stepLet L E x e b v
     (def:exp_eval E e = Some v)
     : step (L, E, stmtLet x e b) EvtTau (L, E[x<-Some v], b)
 
@@ -181,9 +179,9 @@ Module F.
             EvtTau
             (drop (counted l - block_n blk) L, E', block_s blk)
 
-  | stepLet L E
-    s (t:stmt)
-    : step (L, E, stmtFun s t) EvtTau ((mkBlocks E s ++ L)%list, E, t)
+  | stepFun L E
+    F (t:stmt)
+    : step (L, E, stmtFun F t) EvtTau ((mapi (mkBlock E) F ++ L)%list, E, t)
 
   | stepExtern L E x f Y s vl v
     (def:omap (exp_eval E) Y = Some vl)
@@ -214,12 +212,10 @@ Module F.
     - case_eq (exp_eval V e); intros.
       left. case_eq (val2bool v); intros; do 2 eexists; eauto using step.
       right. stuck.
-    - destruct (get_dec L (counted l)) as [[blk A]|?].
-      decide (length (block_Z blk) = length Y).
-      case_eq (omap (exp_eval V) Y); intros; try now (right; stuck).
-      + left. do 2 eexists. econstructor; eauto.
-      + right. stuck2. get_functional; subst; eauto.
-      + right. stuck2. eauto.
+    - destruct (get_dec L (counted l)) as [[blk A]|?]; [ | right; stuck2 ].
+      decide (length (block_Z blk) = length Y); [ | right; stuck2 ].
+      case_eq (omap (exp_eval V) Y); intros; [ | right; stuck2 ].
+      left. do 2 eexists. econstructor; eauto.
     - right. stuck2.
     - case_eq (omap (exp_eval V) Y); intros; try now (right; stuck).
       left; eexists (EvtExtern (ExternI f l (default_val))). eexists; eauto using step.
@@ -241,10 +237,9 @@ Module I.
   Definition labenv := list block.
   Definition state : Type := (labenv * onv val * stmt)%type.
   Definition mkBlock n f := blockI (fst f) (snd f) n.
-  Definition mkBlocks F := mapi mkBlock F.
 
   Inductive step : state -> event -> state -> Prop :=
-  | stepExp L E x e b v
+  | stepLet L E x e b v
     (def:exp_eval E e = Some v)
     : step (L, E, stmtLet x e b) EvtTau (L, E[x<-Some v], b)
 
@@ -270,9 +265,9 @@ Module I.
             (drop (counted l - block_n blk) L, E', block_s blk)
 
 
-  | stepLet L E
+  | stepFun L E
     s (t:stmt)
-    : step (L, E, stmtFun s t) EvtTau ((mkBlocks s ++ L)%list, E, t)
+    : step (L, E, stmtFun s t) EvtTau ((mapi mkBlock s ++ L)%list, E, t)
 
   | stepExtern L E x f Y s vl v
     (def:omap (exp_eval E) Y = Some vl)
@@ -304,12 +299,10 @@ Module I.
     - case_eq (exp_eval V e); intros.
       left. case_eq (val2bool v); intros; do 2 eexists; eauto using step.
       right. stuck.
-    - destruct (get_dec L (counted l)) as [[blk A]|?].
-      decide (length (block_Z blk) = length Y).
-      case_eq (omap (exp_eval V) Y); intros; try now (right; stuck).
-      + left. do 2 eexists. econstructor; eauto.
-      + right. stuck2. get_functional; subst; eauto.
-      + right. stuck2. eauto.
+    - destruct (get_dec L (counted l)) as [[blk A]|?]; [| right; stuck2].
+      decide (length (block_Z blk) = length Y); [| right; stuck2].
+      case_eq (omap (exp_eval V) Y); intros; [| right; stuck2].
+      left. do 2 eexists. econstructor; eauto.
     - right. stuck2.
     - case_eq (omap (exp_eval V) Y); intros; try now (right; stuck).
       left; eexists (EvtExtern (ExternI f l default_val)). eexists; eauto using step.

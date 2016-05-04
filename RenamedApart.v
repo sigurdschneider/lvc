@@ -1,7 +1,7 @@
 Require Import CSet Le.
 
 Require Import Plus Util AllInRel Map.
-Require Import Val Var Env EnvTy IL Annotation SetOperations MoreList Indexwise.
+Require Import Val Var Env EnvTy IL Annotation SetOperations MoreList Indexwise PairwiseDisjoint.
 
 Set Implicit Arguments.
 
@@ -11,24 +11,6 @@ Set Implicit Arguments.
     the set of variables that occur in a binding position. *)
 
 Definition defVars (Zs:params * stmt) (a:ann (set var * set var)) := of_list (fst Zs) ∪ snd (getAnn a).
-
-Definition pairwise_ne {X} (P:X->X->Prop) (L:list X) :=
-  forall n m a b, n <> m -> get L n a -> get L m b -> P a b.
-
-Lemma pairwise_ne_rev X (P:relation X) (L: list X)
-: pairwise_ne P L
-  -> pairwise_ne P (rev L).
-Proof.
-  intros; hnf; intros.
-  exploit (get_range H1); eauto.
-  exploit (get_range H2); eauto.
-  eapply get_rev in H1.
-  eapply get_rev in H2.
-  eapply H; try eapply H1; try eapply H2; eauto.
-  rewrite rev_length in H3.
-  rewrite rev_length in H4.
-  omega.
-Qed.
 
 Hint Unfold defVars.
 
@@ -81,18 +63,6 @@ Inductive renamedApart : stmt -> ann (set var * set var) -> Prop :=
       -> renamedApart (stmtFun F t) (annF (D,D') ans ant).
 
 (** ** Morphisms *)
-
-Definition pairwise_disj_PIR2 X `{OrderedType X} L L'
-: pairwise_ne disj L
-  -> PIR2 Equal L L'
-  -> pairwise_ne disj L'.
-Proof.
-  unfold pairwise_ne; intros.
-  eapply PIR2_nth_2 in H3; eauto; dcr.
-  eapply PIR2_nth_2 in H4; eauto; dcr.
-  rewrite <- H7, <- H8; eauto.
-Qed.
-
 
 Lemma renamedApart_ext s an an'
   : ann_R (@pe _ _) an an'
@@ -169,6 +139,7 @@ Proof.
     rewrite H1; eauto. unfold defVars. eauto with cset.
 Qed.
 
+(* TODO(sigurd) find a home for this definition *)
 Definition pminus (D'':set var) (s:set var * set var) :=
   match s with
     | pair s s' => (s \ D'', s')

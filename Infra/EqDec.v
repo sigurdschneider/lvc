@@ -60,7 +60,10 @@ Defined.
 
 Tactic Notation "cases" "in" hyp(H) :=
   match goal with
-  | H : context [if sumbool_bool ?P then _ else _] |- _ => destruct P
+  | [ H : context [if sumbool_bool ?P then _ else _] |- _ ] => destruct P
+  | [ H : context [ match (if ?P then _ else _) with _ => _ end ] |- _ ] =>
+    let COND := fresh "COND" in
+    remember ?P as COND; destruct P
   | H : context [if ?P then _ else _] |- _ =>
     match P with
     | decision_procedure _ =>
@@ -74,20 +77,27 @@ Tactic Notation "cases" "in" hyp(H) :=
     end
   end.
 
+Notation "B[ x ]" := (if [ x ] then true else false).
+
 Tactic Notation "cases" :=
   match goal with
-  | |- context [if (if ?P then true else false) then _ else _] => destruct P
-  | |- context [if ?P then _ else _] =>
+  | |- context [if sumbool_bool ?P then _ else _] => destruct P
+  | |- context [ match (if ?P then true else false) with _ => _ end ] => destruct P
+  | |- context [ if ?P then _ else _ ] =>
     match P with
+    | negb (?P':decision_procedure _) =>
+      let EQ := fresh "COND" in
+      let NEQ := fresh "NOTCOND" in
+      destruct P' as [EQ|NEQ]; [ clear_trivial_eqs | try now (exfalso; eauto) ]
     | decision_procedure _ =>
       let EQ := fresh "COND" in
       let NEQ := fresh "NOTCOND" in
       destruct P as [EQ|NEQ]; [ clear_trivial_eqs | try now (exfalso; eauto) ]
-    | _ =>
-      let EQ := fresh "Heq" in
-      let b := fresh "b" in
-      remember P as b eqn:EQ; destruct b
     end
+  | |- context [ match ?P with _ => _ end ] =>
+    let EQ := fresh "Heq" in
+    let b := fresh "b" in
+    remember P as b eqn:EQ; destruct b
   end.
 
 Extraction Inline sum_option.

@@ -1,5 +1,5 @@
 Require Import List.
-Require Export Util Var Val Exp Env Map CSet AutoIndTac IL Bisim Infra.Status Pos.
+Require Export Util Var Val Exp Env Map CSet AutoIndTac IL Bisim Infra.Status Pos SmallStepCommon.
 
 Set Implicit Arguments.
 
@@ -39,9 +39,6 @@ Module F.
   Definition mkBlock E n f :=
     blockI E (fst f) (snd f) n.
 
-  Definition mkBlocks E F :=
-    mapi (mkBlock E) F.
-
   Inductive step : state -> event -> state -> Prop :=
   | stepExp L E e b v
     (def:exp_eval E e = Some v)
@@ -70,7 +67,7 @@ Module F.
 
   | stepLet L E
     F t
-    : step (L, E, bstmtFun F t) EvtTau ((mkBlocks E F++L)%list, E, t)
+    : step (L, E, bstmtFun F t) EvtTau ((mapi (mkBlock E) F++L)%list, E, t)
 
   | stepExtern L E f Y s vl v
     (def:omap (exp_eval E) Y = Some vl)
@@ -105,8 +102,8 @@ Module F.
       decide (block_Z blk = length Y).
       case_eq (omap (exp_eval V) Y); intros; try now (right; stuck).
       + left. do 2 eexists. econstructor; eauto.
-      + right. stuck2. get_functional; subst; eauto.
-      + right. stuck2. eauto.
+      + right. stuck2.
+      + right. stuck2.
     - right. stuck2.
     - case_eq (omap (exp_eval V) Y); intros; try now (right; stuck).
       left; eexists (EvtExtern (ExternI f l 0)). eexists; eauto using step.
@@ -284,7 +281,7 @@ Proof.
       intros. eapply exp_idx_ok; eauto. edestruct H2; eauto; dcr.
       get_functional; subst; eauto. symmetry; eapply smap_length; eauto.
       congruence.
-    + no_step; get_functional; subst; try congruence.
+    + no_step.
       invt approx; simpl in *; subst. exploit smap_length; eauto. congruence.
     + no_step; eauto. edestruct PIR2_nth_2; eauto; dcr. eauto.
   - no_step. simpl.
@@ -313,9 +310,8 @@ Proof.
     eapply PIR2_app; eauto.
     pose proof (smap_spec _ EQ0). simpl in H.
     eapply smap_length in EQ0.
-    unfold IL.F.mkBlocks,F.mkBlocks in *.
     eapply PIR2_get; intros; unfold mapi; repeat rewrite mapi_length; try congruence.
-    inv_mapi H0. inv_mapi H1.
-    edestruct H; eauto; dcr. monadS_inv H5. get_functional; subst.
+    inv_get; simpl.
+    edestruct H; eauto; dcr. monadS_inv H3. get_functional; subst.
     econstructor; eauto.
 Qed.

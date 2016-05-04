@@ -227,7 +227,7 @@ Proof.
     rewrite H7 in H11. eapply shift_get in H11.
     eapply restrict_get in H11; dcr.
     eexists; split; eauto.
-    eapply get_app_le in H19.
+    eapply get_app_lt_1 in H19.
     eapply inv_oglobals in H19. destruct H19; dcr. repeat get_functional; subst.
     rewrite H22, H20; eauto. eauto.
     rewrite map_length, zip_length2, map_length, <- H; eauto with len.
@@ -257,7 +257,7 @@ Proof.
       edestruct srd_globals_live; eauto using PIR2_app, restrict_eqReq, eqReq_oglobals_liveGlobals.
       eapply H10; eauto. eapply get_length; eauto. dcr.
       simpl; split; eauto.
-      eapply get_app_le in H18; simpl.
+      eapply get_app_lt_1 in H18; simpl.
       eapply inv_oglobals in H18. destruct H18; dcr. simpl in *. repeat get_functional; subst.
       rewrite H19; eauto. eauto.
       rewrite map_length, zip_length2, map_length, <- H; eauto using get_range with len.
@@ -431,21 +431,22 @@ Qed.
 Lemma rd_agree_extend F als AL L E
 : length F = length als
   -> rd_agree AL L E
-  -> rd_agree (oglobals F als ++ AL) (F.mkBlocks E F ++ L) E.
+  -> rd_agree (oglobals F als ++ AL) (mapi (F.mkBlock E) F ++ L) E.
 Proof.
   intros. hnf; intros.
-  assert (length (F.mkBlocks E F) = length (oglobals F als)).
-  unfold F.mkBlocks, mapi. rewrite mapi_length; eauto. eauto with len.
+  assert (length (mapi (F.mkBlock E) F) = length (oglobals F als)) by
+  eauto 30 with len.
   assert (length (oglobals F als) = length F) by eauto with len.
   eapply get_app_cases in H2; eauto. destruct H2.
   - eapply get_in_range_app in H1; eauto.
     eapply inv_oglobals in H2; eauto. destruct H2; dcr; subst; eauto.
-    unfold F.mkBlocks in H1. inv_mapi H1. reflexivity.
-    eapply get_length in H2. omega.
+    inv_get. reflexivity.
+    eapply get_range in H2. rewrite H4 in H2.
+    erewrite mapi_length_ass; eauto.
   - dcr.
     eapply H0; eauto.
-    eapply shift_get; eauto. instantiate (2:=F.mkBlocks E F).
-    orewrite (length (F.mkBlocks E F) + (n - length (oglobals F als)) = n); eauto.
+    eapply shift_get; eauto. instantiate (2:=mapi (F.mkBlock E) F).
+    orewrite (length (mapi (F.mkBlock E) F) + (n - length (oglobals F als)) = n); eauto.
 Qed.
 
 
@@ -533,7 +534,7 @@ Proof.
     eapply srdSim_sim; econstructor;
     eauto using agree_on_incl, PIR2_app, eqReq_oglobals_liveGlobals, rd_agree_extend.
     rewrite zip_app; [|eauto 30 with len]. econstructor; eauto.
-    unfold F.mkBlocks, I.mkBlocks. unfold mapi.
+    unfold mapi.
     eapply mutual_approx; simpl; eauto 30 with len; try congruence.
     intros. inv_get. rewrite <- zip_app; eauto 20 with len.
     econstructor; eauto.

@@ -1,6 +1,6 @@
 Require Import List.
 Require Export Util Var Val Exp Env Map CSet AutoIndTac IL AllInRel Sawtooth.
-Require Export EventsActivated StateType paco Equiv Sim.
+Require Export EventsActivated StateType paco Equiv Bisim.
 
 Set Implicit Arguments.
 Unset Printing Records.
@@ -8,7 +8,7 @@ Unset Printing Records.
 Lemma mutual_block_extension_I r A (AR:ProofRelationI A) F1 F2 F1' F2' ALX AL AL' i L1 L2
       (D1:F1' = drop i F1) (D2:F2' = drop i F2) (D3:AL' = drop i AL)
       (LEN1:length F1 = length F2) (LEN2:length AL = length F1)
-      (SIML:simILabenv sim_progeq r AR ALX L1 L2)
+      (SIML:simILabenv bisim_progeq r AR ALX L1 L2)
       (CIH: forall a
               (Z Z' : params)
               (Yv Y'v : list val) (s s' : stmt) (n : nat) E1 E2,
@@ -24,12 +24,12 @@ Lemma mutual_block_extension_I r A (AR:ProofRelationI A) F1 F2 F1' F2' ALX AL AL
         get F1 n (Z, s) ->
         get F2 n (Z', s') ->
         get AL n a ->
-        fexteqI sim_progeq AR a (AL ++ ALX) Z s Z' s' /\
+        fexteqI bisim_progeq AR a (AL ++ ALX) Z s Z' s' /\
         BlockRelI a (I.blockI Z s n) (I.blockI Z' s' n) /\
         ParamRelI a Z Z')
     -> mutual_block
-        (simIBlock sim_progeq r AR (AL ++ ALX) (mapi I.mkBlock F1 ++ L1)%list
-              (mapi I.mkBlock F2 ++ L2)%list) i AL'
+        (simIBlock bisim_progeq r AR (AL ++ ALX) (mapi I.mkBlock F1 ++ L1)
+              (mapi I.mkBlock F2 ++ L2)) i AL'
         (mapi_impl I.mkBlock i F1')
         (mapi_impl I.mkBlock i F2').
 Proof.
@@ -61,16 +61,16 @@ Qed.
 
 Lemma fix_compatible_I r A (AR:ProofRelationI A) (a:A) AL F F' E E' Z Z' L L' Yv Y'v s s' n AL'
 (LEN1:length F = length F') (LEN2:length AL' = length F)
-  : simILabenv sim_progeq r AR AL L L'
+  : simILabenv bisim_progeq r AR AL L L'
     -> (forall n Z s Z' s' a, get F n (Z,s) -> get F' n (Z',s') -> get AL' n a ->
-                             fexteqI sim_progeq AR a (AL' ++ AL) Z s Z' s'
+                             fexteqI bisim_progeq AR a (AL' ++ AL) Z s Z' s'
                              /\ BlockRelI a (I.blockI Z s n) (I.blockI Z' s' n)
                              /\ ParamRelI a Z Z')
     -> get F n (Z,s)
     -> get F' n (Z',s')
     -> get AL' n a
     -> ArgRelI E E' a Yv Y'v
-    -> sim'r r
+    -> bisim'r r
               (mapi I.mkBlock F ++ L, E [Z <-- List.map Some Yv], s)
               (mapi I.mkBlock F' ++ L', E' [Z' <-- List.map Some Y'v], s').
 Proof.
@@ -85,7 +85,7 @@ Qed.
 Lemma mutual_block_extension_simple_I r A AR F1 F2 F1' F2' ALX AL AL' i L1 L2
       (D1:F1' = drop i F1) (D2:F2' = drop i F2) (D3:AL' = drop i AL)
       (LEN1:length F1 = length F2) (LEN2:length AL = length F1)
-      (SIML:simILabenv sim_progeq r AR ALX L1 L2)
+      (SIML:simILabenv bisim_progeq r AR ALX L1 L2)
   :
     (forall (n : nat) (Z : params)
        (s : stmt) (Z' : params) (s' : stmt)
@@ -93,12 +93,12 @@ Lemma mutual_block_extension_simple_I r A AR F1 F2 F1' F2' ALX AL AL' i L1 L2
         get F1 n (Z, s) ->
         get F2 n (Z', s') ->
         get AL n a ->
-        fexteqI sim_progeq AR a (AL ++ ALX) Z s Z' s' /\
+        fexteqI bisim_progeq AR a (AL ++ ALX) Z s Z' s' /\
         BlockRelI a (I.blockI Z s n) (I.blockI Z' s' n) /\
         ParamRelI a Z Z')
     -> mutual_block
-        (simIBlock sim_progeq r AR (AL ++ ALX) (mapi I.mkBlock F1 ++ L1)%list
-              (mapi I.mkBlock F2 ++ L2)%list) i AL'
+        (simIBlock bisim_progeq r AR (AL ++ ALX) (mapi I.mkBlock F1 ++ L1)
+              (mapi I.mkBlock F2 ++ L2)) i AL'
         (mapi_impl I.mkBlock i F1')
         (mapi_impl I.mkBlock i F2').
 Proof.
@@ -126,12 +126,12 @@ Qed.
 
 Lemma simILabenv_extension r A (AR:ProofRelationI A) (AL AL':list A) F F' L L'
       (LEN1:length AL' = length F) (LEN2:length F = length F')
-: simILabenv sim_progeq r AR AL L L'
+: simILabenv bisim_progeq r AR AL L L'
   -> (forall n Z s Z' s' a, get F n (Z,s) -> get F' n (Z',s') -> get AL' n a ->
-                         fexteqI sim_progeq AR a (AL' ++ AL) Z s Z' s'
+                         fexteqI bisim_progeq AR a (AL' ++ AL) Z s Z' s'
                          /\ BlockRelI a (I.blockI Z s n) (I.blockI Z' s' n)
                          /\ ParamRelI a Z Z')
-  -> simILabenv sim_progeq r AR (AL' ++ AL) (mapi I.mkBlock F ++ L) (mapi I.mkBlock F' ++ L').
+  -> simILabenv bisim_progeq r AR (AL' ++ AL) (mapi I.mkBlock F ++ L) (mapi I.mkBlock F' ++ L').
 Proof.
   intros.
   hnf; intros.

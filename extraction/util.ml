@@ -51,16 +51,25 @@ let rec print_sexpr ids e =
     | Lvc.UnOp (op, e1) -> print_unop op ^ " " ^ print_sexpr ids e1
     | Lvc.BinOp (op, e1, e2) -> print_sexpr ids e1 ^ " " ^ (print_binop op) ^ " " ^ (print_sexpr ids e2)
 
+
 let rec print_list p l =
   match l with
     | [] -> ""
     | x::[] -> p x
     | x::l -> p x ^ ", " ^ print_list p l
 
+let rec print_list2 p l s =
+  match l with
+  | [] -> ""
+  | x::[] -> p x
+  | x::l -> p x ^ s ^ print_list p l
+
+
 let rec print_ident i = if i = 0 then "" else " " ^ print_ident (i-1)
 
+
 let rec print_nstmt ids ident s =
-  let print_sexpr = print_sexpr ids in
+  (let print_sexpr = print_sexpr ids in
   let print_var = print_var ids in
   let print_nstmt = print_nstmt ids in
   match s with
@@ -76,14 +85,19 @@ let rec print_nstmt ids ident s =
        "if " ^ (print_sexpr v) ^ " then\n" ^
        (print_ident (ident+2)) ^ (print_nstmt (ident+2) s)
       ^ "\n" ^ print_ident ident ^ "else\n" ^ print_ident (ident+2) ^ (print_nstmt (ident+2) t) ^ "\n"
-    | Lvc.NstmtFun (f, y, s, t) -> "fun " ^
-	  (print_var f) ^ "(" ^ (print_list (print_var) y) ^ ") = \n"
-	  ^ print_ident (ident+2) ^ (print_nstmt (ident+2) s) ^ "\n" ^ print_ident ident
-      ^ "in \n"
-      ^ print_ident (ident+2) ^ (print_nstmt (ident+2) t)
+    | Lvc.NstmtFun (sl, t) -> "fun " ^
+			       print_list2 (print_body ids ident) sl (print_ident ident ^ "and ")
+	  ^ print_ident ident ^ "in \n"
+	  ^ print_ident (ident+2) ^ (print_nstmt (ident+2) t))
+and print_body ids ident fZs =
+  match fZs with
+  | ((f, y), s) ->
+     (print_var ids f) ^ "(" ^ (print_list (print_var ids) y) ^ ") = \n"
+     ^ print_ident (ident+2) ^ (print_nstmt ids (ident+2) s) ^ "\n"
+
 
 let rec print_stmt ids ident s =
-  let print_sexpr = print_sexpr ids in
+  (let print_sexpr = print_sexpr ids in
   let print_var = print_var ids in
   let print_stmt = print_stmt ids in
   match s with
@@ -98,11 +112,16 @@ let rec print_stmt ids ident s =
     | Lvc.StmtIf (e, s, t) -> "if " ^ (print_sexpr e) ^ " then\n" ^
       (print_ident (ident+2)) ^ (print_stmt (ident+2) s)
       ^ "\n" ^ print_ident ident ^ "else\n" ^ print_ident (ident+2) ^ (print_stmt (ident+2) t) ^ "\n"
-    | Lvc.StmtFun (y, s, t) -> "fun " ^
-	  "_ " ^ "(" ^ (print_list print_var y) ^ ") = \n"
-	  ^ print_ident (ident+2) ^ (print_stmt (ident+2) s) ^ "\n" ^ print_ident ident
-      ^ "in \n"
-      ^ print_ident (ident+2) ^ (print_stmt (ident+2) t)
+    | Lvc.StmtFun (sl, t) ->
+       "fun "
+       ^ print_list2 (print_body ids ident) sl (print_ident ident ^ "and ")
+       ^ print_ident ident ^  "in \n"
+       ^ print_ident (ident+2) ^ (print_stmt (ident+2) t))
+and print_body ids ident fZs =
+  match fZs with
+  | (y, s) ->
+     "_ " ^ "(" ^ (print_list (print_var ids) y) ^ ") = \n"
+     ^ print_ident (ident+2) ^ (print_stmt ids (ident+2) s) ^ "\n"
 
 let rec print_set ids x =
 Lvc.fold

@@ -87,7 +87,7 @@ Lemma sim_DVE' r L L' V V' s LV lv
 -> simL' sim_progeq r SR LV L L'
 -> sim'r r (L,V, s) (L',V', compile LV s lv).
 Proof.
-  revert_except s.
+  unfold simL', sim'r. revert_except s.
   sind s; destruct s; simpl; intros; invt true_live_sound; simpl in * |- *.
   - case_eq (exp_eval V e); intros. cases.
     + pone_step.
@@ -135,25 +135,12 @@ Proof.
         congruence.
       * pfold; econstructor 3; try eapply star2_refl; eauto; stuck2.
     + pfold; econstructor 3; try eapply star2_refl; eauto; stuck2.
-      hnf in H1. inRel_invs. eauto.
   - pno_step; simpl. erewrite <- exp_eval_live_agree; eauto; symmetry; eauto.
-  - pfold.
-    remember (omap (exp_eval V) Y). symmetry in Heqo.
+  - remember (omap (exp_eval V) Y). symmetry in Heqo.
     exploit omap_exp_eval_live_agree; eauto.
     destruct o.
-    econstructor 2; try eapply star2_refl.
-    + eexists (ExternI f l default_val); eexists; try (now (econstructor; eauto)).
-    + eexists (ExternI f l default_val); eexists; try (now (econstructor; eauto)).
-    + intros. inv H2. eexists. split.
-      * econstructor; eauto. congruence.
-      * left. eapply (IH s); eauto. eapply agree_on_update_same; eauto.
-        eapply agree_on_incl; eauto.
-    + intros. inv H3. eexists. split.
-      * econstructor; eauto. congruence.
-      * left. eapply (IH s); eauto. eapply agree_on_update_same; eauto.
-        eapply agree_on_incl; eauto.
-    + eapply sim'Err; try eapply star2_refl; simpl; eauto.
-      stuck2.
+    + pextern_step; eauto using agree_on_update_same, agree_on_incl; try congruence.
+    + pno_step.
   - pone_step. left. eapply IH; eauto with cset.
     + eapply simL_mon; eauto. eapply simL_extension'; eauto with len.
       * intros. inv_get; simpl. split. hnf; intros; simpl.
@@ -202,7 +189,7 @@ Lemma sim_I r L L' V V' s LV lv
 -> simILabenv sim_progeq r SR LV L L'
 -> sim'r r (L,V, s) (L',V', compile LV s lv).
 Proof.
-  revert_except s.
+  unfold simILabenv, sim'r. revert_except s.
   sind s; destruct s; simpl; intros; invt true_live_sound; simpl in * |- *.
   - case_eq (exp_eval V e); intros. cases.
     + pone_step. instantiate (1:=v).
@@ -245,48 +232,31 @@ Proof.
       pfold. econstructor 3; try eapply star2_refl; eauto.
       stuck.
   - destruct (get_dec L (counted l)) as [[[bZ bs]]|].
-    remember (omap (exp_eval V) Y). symmetry in Heqo.
-    rewrite (get_nth (∅, nil) H4); eauto; simpl.
-    destruct o.
-    exploit omap_filter_by; eauto.
-    hnf in H1. inRel_invs; simpl in *; subst.
-    hnf in H15. dcr; simpl in *; clear_trivial_eqs; subst.
-    eapply sim_drop_shift_I. eapply (inRel_sawtooth H1).
-    eapply (inRel_sawtooth H1). eauto. eauto.
-    simpl. eapply H18; eauto.
-    eapply omap_exp_eval_live_agree; eauto.
-    inv H0.
-    eapply argsLive_liveSound; eauto.
-    hnf; split; eauto. simpl. split.
-    exploit omap_length; try eapply Heqo; eauto. congruence.
-    eapply agree_on_incl; eauto.
-    pfold; econstructor 3; try eapply star2_refl; eauto; stuck2.
-    pfold; econstructor 3; try eapply star2_refl; eauto; stuck2.
-    hnf in H1. inRel_invs; eauto.
-  - pfold. econstructor 4; try eapply star2_refl.
+    + remember (omap (exp_eval V) Y). symmetry in Heqo.
+      rewrite (get_nth (∅, nil) H4); eauto; simpl.
+      destruct o.
+      * exploit omap_filter_by; eauto.
+        hnf in H1. inRel_invs; simpl in *; subst.
+        hnf in H15. dcr; simpl in *; clear_trivial_eqs; subst.
+        eapply sim_drop_shift_I. eapply (inRel_sawtooth H1).
+        eapply (inRel_sawtooth H1). eauto. eauto.
+        simpl. eapply H18; eauto.
+        eapply omap_exp_eval_live_agree; eauto.
+        inv H0.
+        eapply argsLive_liveSound; eauto.
+        hnf; split; eauto. simpl. split.
+        exploit omap_length; try eapply Heqo; eauto. congruence.
+        eapply agree_on_incl; eauto.
+      * pfold; econstructor 3; try eapply star2_refl; eauto; stuck2.
+    + pfold; econstructor 3; try eapply star2_refl; eauto; stuck2.
+  - pno_step.
     simpl. erewrite <- exp_eval_live_agree; eauto. eapply agree_on_sym; eauto.
-    stuck2. stuck2.
-  - pfold.
-    remember (omap (exp_eval V) Y). symmetry in Heqo.
+  - remember (omap (exp_eval V) Y). symmetry in Heqo.
     exploit omap_exp_eval_live_agree; eauto.
     destruct o.
-    econstructor 2; try eapply star2_refl.
-    + eexists (ExternI f l default_val); eexists; try (now (econstructor; eauto)).
-    + eexists (ExternI f l default_val); eexists; try (now (econstructor; eauto)).
-    + intros. inv H2. eexists. split.
-      * econstructor; eauto. congruence.
-      * left. eapply (IH s); eauto. eapply agree_on_update_same; eauto.
-        eapply agree_on_incl; eauto.
-    + intros. inv H3. eexists. split.
-      * econstructor; eauto. congruence.
-      * left. eapply (IH s); eauto. eapply agree_on_update_same; eauto.
-        eapply agree_on_incl; eauto.
-    + eapply sim'Err; try eapply star2_refl; simpl; eauto.
-      stuck2.
-  - pfold. econstructor; try eapply plus2O.
-    econstructor; eauto. reflexivity.
-    econstructor; eauto. reflexivity.
-    simpl. left. eapply IH; eauto.
+    + pextern_step; eauto using agree_on_update_same, agree_on_incl; try congruence.
+    + pno_step.
+  - pone_step. left. eapply IH; eauto.
     + simpl in *; eapply agree_on_incl; eauto.
     + eapply simILabenv_mon; eauto. eapply simILabenv_extension; eauto with len.
       * intros. inv_get; simpl. split. hnf; intros; simpl.

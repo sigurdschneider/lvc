@@ -4,6 +4,12 @@ Require Export Util Var Val Exp Env Map CSet AutoIndTac IL Bisim Infra.Status Po
 Set Implicit Arguments.
 Unset Printing Records.
 
+Instance trivial_pos_instance
+  : Proper (eq ==> eq ==> eq ==> eq) (pos (X:=var)).
+Proof.
+  unfold Proper, respectful. intros; subst. eauto.
+Qed.
+
 Inductive nstmt : Type :=
 | nstmtLet    (x : var) (e: exp) (s : nstmt)
 | nstmtIf     (e : exp) (s : nstmt) (t : nstmt)
@@ -13,13 +19,15 @@ Inductive nstmt : Type :=
 (* block f Z : rt = s in b *)
 | nstmtFun    (F : list (var * params * nstmt)) (t : nstmt).
 
+Instance NStmt_size : Size nstmt. gen_Size. Defined.
+
 Fixpoint freeVars (s:nstmt) : set var :=
   match s with
-    | nstmtLet x e s0 => (freeVars s0 \ {{x}}) ∪ Exp.freeVars e
+    | nstmtLet x e s0 => (freeVars s0 \ singleton x) ∪ Exp.freeVars e
     | nstmtIf e s1 s2 => freeVars s1 ∪ freeVars s2 ∪ Exp.freeVars e
     | nstmtApp l Y => list_union (List.map Exp.freeVars Y)
     | nstmtReturn e => Exp.freeVars e
-    | nstmtExtern x f Y s => (freeVars s \ {{x}}) ∪ list_union (List.map Exp.freeVars Y)
+    | nstmtExtern x f Y s => (freeVars s \ singleton x) ∪ list_union (List.map Exp.freeVars Y)
     | nstmtFun F s2 =>
       list_union (List.map (fun f => (freeVars (snd f) \ of_list (snd (fst f)))) F)
                  ∪ freeVars s2
@@ -41,10 +49,6 @@ Module F.
 
   Definition mkBlock L E F f (_:var * params * nstmt) :=
     blockI L E F f.
-
-  Definition mkBlocks L E F :=
-    mapi (mkBlock L E F) F.
-
 
   Inductive step : state -> event -> state -> Prop :=
   | nstepExp L E x e b v
@@ -75,10 +79,11 @@ Module F.
     (updOk:E'[Z <-- List.map Some vl]  = E'')
     : step (L, E, nstmtApp l Y)
            EvtTau
-           (L'[List.map (fst ∘ fst) F <-- List.map Some (mkBlocks L' E' F)], E'', s)
+           (L'[List.map (fst ∘ fst) F <-- List.map Some (mapi (mkBlock L' E' F) F)], E'', s)
 
   | stepLet (L:onv block) E F t
-    : step (L, E, nstmtFun F t) EvtTau (L[List.map (fst ∘ fst) F <-- List.map Some (mkBlocks L E F)], E, t)
+    : step (L, E, nstmtFun F t) EvtTau (L[List.map (fst ∘ fst) F <--
+                                                   List.map Some (mapi (mkBlock L E F) F)], E, t)
 
   | stepExtern L E x f Y s vl v
     (def:omap (exp_eval E) Y = Some vl)
@@ -141,10 +146,6 @@ Module I.
   Definition mkBlock L F f (_:var *params*nstmt):=
     blockI L F f.
 
-  Definition mkBlocks L F :=
-    mapi (mkBlock L F) F.
-
-
   Inductive step : state -> event -> state -> Prop :=
   | nstepExp L E x e b v
     (def:exp_eval E e = Some v)
@@ -173,12 +174,12 @@ Module I.
     (updOk:E[Z <-- List.map Some vl]  = E'')
     : step (L, E, nstmtApp l Y)
            EvtTau
-           (L'[List.map (fst ∘ fst) F <-- List.map Some (mkBlocks L' F)], E'', s)
+           (L'[List.map (fst ∘ fst) F <-- List.map Some (mapi (mkBlock L' F) F)], E'', s)
 
   | stepLet L E F t
     : step (L, E, nstmtFun F t)
            EvtTau
-           (L[List.map (fst ∘ fst) F <-- List.map Some (mkBlocks L F)], E, t)
+           (L[List.map (fst ∘ fst) F <-- List.map Some (mapi (mkBlock L F) F)], E, t)
 
   | stepExtern L E x f Y s vl v
     (def:omap (exp_eval E) Y = Some vl)
@@ -231,8 +232,6 @@ Module I.
 
 End I.
 
-Definition foo := 3.
-
 Fixpoint labIndices (symb: list var) (s:nstmt) : status stmt :=
   match s with
     | nstmtLet x e s => sdo s' <- (labIndices symb s); Success (stmtLet x e s')
@@ -252,6 +251,28 @@ Fixpoint labIndices (symb: list var) (s:nstmt) : status stmt :=
       sdo s2' <- labIndices (fl++symb) s2;
       Success (stmtFun F' s2')
   end.
+
+Lemma labIndices_freeVars ilin s L
+: labIndices L ilin = Success s
+  -> freeVars ilin = IL.freeVars s.
+Proof.
+  revert_except ilin.
+  sind ilin; destruct ilin; simpl in *; intros; monadS_inv H; simpl.
+  - erewrite IH; eauto with cset.
+  - erewrite IH; eauto.
+    erewrite IH; eauto.
+  - reflexivity.
+  - reflexivity.
+  - erewrite IH; eauto.
+  - erewrite IH; eauto.
+    f_equal. f_equal.
+    exploit smap_length; eauto.
+    erewrite map_ext_get_eq; eauto with len.
+    intros; inv_get.
+    eapply smap_spec in EQ; eauto. destruct EQ; dcr.
+    monadS_inv H3; get_functional; simpl in *.
+    erewrite IH; eauto.
+Qed.
 
 Definition state_result X (s:X*onv val*nstmt) : option val :=
   match s with
@@ -342,7 +363,7 @@ Inductive lab_approx : list var -> list IL.I.block -> list I.block -> Prop :=
               /\ (exists symb', drop (i-f') symb
                           = (List.map (fst ∘ fst) F ++ symb')%list)
               /\ (exists LB', drop (i-f') LB
-                          = (I.mkBlocks Lb F ++ LB')%list)
+                          = (mapi (I.mkBlock Lb F) F ++ LB')%list)
               /\ i >= f'
 
     )
@@ -384,22 +405,6 @@ Inductive labIndicesSim : I.state -> IL.I.state -> Prop :=
     (BL:forall f blk, L f = Some blk -> exists j, pos symb f 0 = Some j /\
                                         get LB j blk)
     : labIndicesSim (L, E, s) (L', E, s').
-
-Lemma length_mkBlocks_1 X (L:list X) L' Lb
-: length L = length L'
-  -> length (I.mkBlocks Lb L') = length L.
-Proof.
-  intros. unfold I.mkBlocks, mapi. rewrite mapi_length; eauto.
-Qed.
-
-Lemma length_mkBlocks_2 X (L:list X) L' Lb
-: length L = length L'
-  -> length L = length (I.mkBlocks Lb L').
-Proof.
-  intros. unfold I.mkBlocks, mapi. rewrite mapi_length; eauto.
-Qed.
-
-Hint Resolve length_mkBlocks_1 length_mkBlocks_2 : len.
 
 Lemma labIndicesSim_sim σ1 σ2
   : labIndicesSim σ1 σ2 -> bisim σ1 σ2.
@@ -479,11 +484,11 @@ Proof.
         eapply labIndicesSim_sim; econstructor; eauto.
     + no_step.
   - one_step. eapply labIndicesSim_sim. econstructor; eauto.
-    instantiate (1:=(I.mkBlocks L F++LB)%list).
+    instantiate (1:=(mapi (I.mkBlock L F) F ++ LB)).
     econstructor. intros.
     eapply get_app_cases in H. destruct H.
     * {
-        unfold I.mkBlocks in H. inv_mapi H.
+        inv_mapi H.
         exploit @get_length; eauto. unfold mapi in H2. rewrite mapi_length in H2.
         eapply get_in_range_app in H0.
         orewrite (f' - f' = 0); simpl.
@@ -493,7 +498,7 @@ Proof.
           rewrite pos_app_not_in; eauto.
           rewrite map_length. eapply pos_add; eauto.
           eapply get_app_right.
-          unfold I.mkBlocks, mapi. rewrite mapi_length. reflexivity. eauto.
+          unfold mapi. rewrite mapi_length. reflexivity. eauto.
         - split. intros. erewrite <- map_length in H3.
           rewrite drop_length_eq in H3.
           eapply EX; eauto.
@@ -503,7 +508,7 @@ Proof.
           split; eauto.
           intros. eapply smap_spec in EQ0; eauto; dcr. destruct EQ0; dcr.
           monadS_inv H6. simpl in *. eexists. repeat split; eauto.
-          unfold IL.I.mkBlocks. eapply get_app.
+          eapply get_app.
           intros.
           eapply (mapi_get_1 0 (IL.I.mkBlock)) in H7. eauto.
           assert (get (List.map (fst ∘ fst) F0) fn fb).
@@ -513,43 +518,45 @@ Proof.
           intros. inv_map H8. eapply H4; eauto.
           eapply get_in_of_list; eauto.
           split; eauto.
-        - rewrite map_length; eauto.
+        - eauto with len.
       }
     * dcr.
-      assert (length (List.map (fst ∘ fst) F) = length (I.mkBlocks L F)) by eauto with len.
-      assert (length F = length (I.mkBlocks L F)) by eauto with len.
-      orewrite (i =  length (List.map (fst ∘ fst) F) + (i -  length (I.mkBlocks L F))) in H0.
+      assert (length (List.map (fst ∘ fst) F) = length (mapi (I.mkBlock L F) F)) by eauto with len.
+      assert (length F = length (mapi (I.mkBlock L F) F)) by eauto with len.
+      orewrite (i =  length (List.map (fst ∘ fst) F) + (i -  length (mapi (I.mkBlock L F) F))) in H0.
       eapply shift_get in H0.
       inv LA; exploit LEQ; eauto; dcr; clear LEQ.
-      orewrite (i - f' = i - length (I.mkBlocks L F) - f' + length (I.mkBlocks L F)).
+      orewrite (i - f' = i - length (mapi (I.mkBlock L F) F) - f' + length (mapi (I.mkBlock L F) F)).
       split.
       repeat rewrite <- drop_drop. repeat rewrite drop_length_eq.
-      Typeclasses eauto := 5.
-      setoid_rewrite <- H at 2. rewrite drop_length_eq. eauto.
+
+      intros.
+      setoid_rewrite <- H at 2.
+      rewrite drop_length_eq. eauto.
       split; eauto.
-      orewrite (i - length (I.mkBlocks L F) - f' + length (I.mkBlocks L F) +
-         length F0 = i - length (I.mkBlocks L F) - f' +
-                     length F0 + length (I.mkBlocks L F)).
+      orewrite (i - length (mapi (I.mkBlock L F) F) - f' + length (mapi (I.mkBlock L F) F) +
+         length F0 = i - length (mapi (I.mkBlock L F) F) - f' +
+                     length F0 + length (mapi (I.mkBlock L F) F)).
       setoid_rewrite <- H at 2.
       rewrite <- drop_drop. rewrite drop_length_eq. eauto.
       split; eauto.
-      split; eauto.
       rewrite <- drop_drop.
-      assert (length (I.mkBlocks L F) = length (IL.I.mkBlocks x)).
       eapply smap_length in EQ0.
-      unfold I.mkBlocks. unfold IL.I.mkBlocks. unfold mapi.
-      repeat rewrite mapi_length. congruence.
-      setoid_rewrite H4 at 2. rewrite drop_length_eq.
-      setoid_rewrite <- H at 3. rewrite <- drop_drop. rewrite drop_length_eq.
-      setoid_rewrite <- H at 4. rewrite <- drop_drop. rewrite drop_length_eq. eauto.
-      split; eauto.
-      setoid_rewrite <- H at 2. rewrite <- drop_drop. rewrite drop_length_eq. eauto.
-      split; eauto.
-      rewrite <- drop_drop. rewrite drop_length_eq. eauto.
-      omega.
+      unfold mapi.
+      repeat rewrite mapi_length.
+      unfold mapi in *.
+      repeat rewrite mapi_length in *.
+      repeat rewrite drop_drop.
+      repeat rewrite drop_app_gen. repeat rewrite mapi_length. repeat rewrite map_length.
+      assert (PLUSEQ: forall x y, x + y -y = x) by (intros; omega).
+      rewrite EQ0. repeat rewrite PLUSEQ. split; eauto.
+      split; eauto. split; eauto. omega.
+      rewrite mapi_length; omega.
+      rewrite map_length. omega.
+      rewrite mapi_length; omega.
     * { inv LA. revert ST. clear_all.
         intros. econstructor; eauto.
-        unfold I.mkBlocks, mapi.
+        unfold mapi.
         generalize 0. generalize F at 1.
         general induction F; simpl; eauto.
         econstructor.
@@ -580,7 +587,7 @@ Proof.
           edestruct BL; eauto; dcr.
           eexists; split; eauto using get_shift.
           repeat rewrite pos_app_not_in; eauto.
-          assert (length (List.map (fst ∘ fst) F) = length (I.mkBlocks L F))
+          assert (length (List.map (fst ∘ fst) F) = length (mapi (I.mkBlock L F) F))
                  by eauto with len.
           rewrite H0. eapply pos_add; eauto.
       }

@@ -139,11 +139,6 @@ Tactic Notation "bool_to_prop" "in" "*" :=
     | [ H : _ |- _ ] => bool_to_prop in H
   end).
 
-Ltac isabsurd :=
-  try now (hnf; intros; match goal with
-                 [ H : _ |- _ ] => exfalso; inversion H; try congruence
-               end).
-
 Ltac destr_assumption H :=
   repeat match goal with
            | [ H : _ /\ _  |- _ ] => destruct H
@@ -180,7 +175,7 @@ Tactic Notation "beq_to_prop" :=
 
 
 Tactic Notation "cbool" :=
-  simpl in *; bool_to_prop in *; destr in *; bool_to_prop; destr; beq_to_prop; isabsurd.
+  simpl in *; bool_to_prop in *; destr in *; bool_to_prop; destr; beq_to_prop.
 
 Global Instance inst_eq_dec_list {A} `{EqDec A eq} : EqDec (list A) eq.
 hnf. eapply list_eq_dec. eapply equiv_dec.
@@ -256,8 +251,16 @@ Definition fresh {X} `{Equivalence X} (x:X) (Y:list X) : Prop :=
 Fixpoint unique X `{Equivalence X} (Y:list X) : Prop :=
   match Y with
     | nil => True
-    | cons x Y' => fresh x Y' /\ unique Y'
+    | cons x Y' => ~InA R x Y' /\ unique Y'
   end.
+
+Lemma unique_decons X (R : relation X) (H : Equivalence R) x L
+    : unique (x::L) -> unique L.
+Proof.
+  intros [A B]; eapply B.
+Qed.
+
+Hint Resolve unique_decons.
 
 Ltac let_case_eq :=
   match goal with
@@ -288,16 +291,6 @@ repeat match goal with
              | _ => revert H
            end
        end; cofix; intros.
-
-Ltac stuck :=
-  let A := fresh "A" in let v := fresh "v" in intros [v A]; inv A; isabsurd.
-
-Ltac stuck2 :=
-  let A := fresh "A" in
-  let v := fresh "v" in
-  let evt := fresh "evt" in
-  intros [v [evt A]]; inv A; isabsurd.
-
 
 Lemma modus_ponens P Q
 : P -> (P -> Q) -> Q.
@@ -620,3 +613,17 @@ Proof.
 Qed.
 
 Hint Resolve length_le_plus : len.
+
+Instance instance_impl_2 x
+  : Proper (impl ==> impl) (impl x).
+Proof.
+  unfold Proper, respectful, impl. intros.
+  eauto.
+Qed.
+
+Instance instance_impl_3
+  : Proper (impl --> impl ==> impl) impl.
+Proof.
+  unfold Proper, respectful, impl, flip. intros.
+  eauto.
+Qed.

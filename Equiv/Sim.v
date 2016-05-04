@@ -37,7 +37,6 @@ CoInductive sim {S} `{StateType S} {S'} `{StateType S'}  : S -> S' -> Prop :=
 
 Arguments sim [S] {H} [S'] {H0} _ _.
 
-(** Simulation is an equivalence relation *)
 Lemma sim_refl {S} `{StateType S} (σ:S)
       : sim σ σ.
 Proof.
@@ -91,14 +90,10 @@ Hint Unfold sim'r.
 Lemma sim_gen_mon {S} `{StateType S} {S'} `{StateType S'}
 : monotone2 (@sim_gen S _ S' _).
 Proof.
-  hnf; intros. inv IN.
-  - econstructor 1; eauto.
+  hnf; intros. inv IN; eauto using @sim_gen.
   - econstructor 2; eauto; intros.
     edestruct H5; eauto; dcr. eexists; eauto.
     edestruct H6; eauto; dcr. eexists; eauto.
-
-  - econstructor 3; eauto.
-  - econstructor 4; eauto.
 Qed.
 
 Arguments sim_gen_mon [S] {H} [S'] {H0} [x0] [x1] r r' IN LE.
@@ -111,13 +106,10 @@ Lemma sim_sim' {S} `{StateType S} {S'} `{StateType S'} (σ1:S) (σ2:S')
 Proof.
   revert σ1 σ2. pcofix CIH.
   intros. pfold.
-  inv H2.
-  - econstructor; eauto.
+  inv H2; eauto using sim_gen.
   - econstructor 2; eauto; intros.
     + edestruct H6; eauto; dcr. eexists; eauto.
     + edestruct H7; eauto; dcr. eexists; eauto.
-  - econstructor 3; eauto.
-  - econstructor 4; eauto.
 Qed.
 
 
@@ -647,6 +639,9 @@ Proof.
   eapply (sim'_trans H2 H3).
 Qed.
 
+Arguments sim_trans [S1] {H} σ1 [S2] {H0} σ2 [S3] {H1} σ3 _ _.
+
+
 Lemma sim'_reduction_closed {S} `{StateType S}
       (σ1 σ1':S) {S'} `{StateType S'} (σ2 σ2':S')
   : sim' σ1 σ2
@@ -687,8 +682,8 @@ Lemma mutual_block_extension r A AR F1 F2 F1' F2' ALX AL AL' i E1 E2 L1 L2
           get F2 n (Z', s') ->
           get AL n a ->
           ArgRel E1 E2 a Yv Y'v ->
-          r ((F.mkBlocks E1 F1 ++ L1)%list, E1 [Z <-- List.map Some Yv], s)
-            ((F.mkBlocks E2 F2 ++ L2)%list, E2 [Z' <-- List.map Some Y'v], s'))
+          r ((mapi (F.mkBlock E1) F1 ++ L1)%list, E1 [Z <-- List.map Some Yv], s)
+            ((mapi (F.mkBlock E2) F2 ++ L2)%list, E2 [Z' <-- List.map Some Y'v], s'))
   :
 
     (forall (n : nat) (Z : params)
@@ -701,8 +696,8 @@ Lemma mutual_block_extension r A AR F1 F2 F1' F2' ALX AL AL' i E1 E2 L1 L2
         BlockRel a (F.blockI E1 Z s n) (F.blockI E2 Z' s' n) /\
         ParamRel a Z Z')
     -> mutual_block
-        (simB sim_progeq r AR (AL ++ ALX) (F.mkBlocks E1 F1 ++ L1)%list
-              (F.mkBlocks E2 F2 ++ L2)%list) i AL'
+        (simB sim_progeq r AR (AL ++ ALX) (mapi (F.mkBlock E1) F1 ++ L1)%list
+              (mapi (F.mkBlock E2) F2 ++ L2)%list) i AL'
         (mapi_impl (F.mkBlock E1) i F1')
         (mapi_impl (F.mkBlock E2) i F2').
 Proof.
@@ -745,8 +740,8 @@ Lemma fix_compatible r A AR (a:A) AL F F' E E' Z Z' L L' Yv Y'v s s' n AL'
     -> get AL' n a
     -> ArgRel E E' a Yv Y'v
     -> sim'r r
-              ((F.mkBlocks E F ++ L)%list, E [Z <-- List.map Some Yv], s)
-              ((F.mkBlocks E' F' ++ L')%list, E' [Z' <-- List.map Some Y'v], s').
+              ((mapi (F.mkBlock E) F ++ L)%list, E [Z <-- List.map Some Yv], s)
+              ((mapi (F.mkBlock E') F' ++ L')%list, E' [Z' <-- List.map Some Y'v], s').
 Proof.
   revert_all; pcofix CIH; intros.
   eapply H1; eauto.
@@ -772,8 +767,8 @@ Lemma mutual_block_extension_simple r A AR F1 F2 F1' F2' ALX AL AL' i E1 E2 L1 L
         BlockRel a (F.blockI E1 Z s n) (F.blockI E2 Z' s' n) /\
         ParamRel a Z Z')
     -> mutual_block
-        (simB sim_progeq r AR (AL ++ ALX) (F.mkBlocks E1 F1 ++ L1)%list
-              (F.mkBlocks E2 F2 ++ L2)%list) i AL'
+        (simB sim_progeq r AR (AL ++ ALX) (mapi (F.mkBlock E1) F1 ++ L1)%list
+              (mapi (F.mkBlock E2) F2 ++ L2)%list) i AL'
         (mapi_impl (F.mkBlock E1) i F1')
         (mapi_impl (F.mkBlock E2) i F2').
 Proof.
@@ -811,7 +806,7 @@ Lemma simL_extension' r A AR (AL AL':list A) F F' E E' L L'
                          fexteq' sim_progeq AR a (AL' ++ AL) E Z s E' Z' s'
                          /\ BlockRel a (F.blockI E Z s n) (F.blockI E' Z' s' n)
                          /\ ParamRel a Z Z')
-  -> simL' sim_progeq r AR (AL' ++ AL) (F.mkBlocks E F ++ L) (F.mkBlocks E' F' ++ L').
+  -> simL' sim_progeq r AR (AL' ++ AL) (mapi (F.mkBlock E) F ++ L) (mapi (F.mkBlock E') F' ++ L').
 Proof.
   intros.
   hnf; intros.
@@ -1062,19 +1057,20 @@ Ltac pone_step := pfold; eapply sim'Silent; [ eapply plus2O; single_step
                               | eapply plus2O; single_step
                               | ].
 
-Ltac pno_step := pfold; eapply sim'Term;
-                try eapply star2_refl; try get_functional; try subst;
-                [ try reflexivity
-                | stuck2
-                | stuck2  ].
+Ltac pno_step :=
+  pfold; eapply sim'Term;
+  [ | eapply star2_refl | eapply star2_refl | | ];
+  [ repeat get_functional; try reflexivity
+  | repeat get_functional; stuck2
+  | repeat get_functional; stuck2 ].
 
 Ltac pextern_step :=
   let STEP := fresh "STEP" in
   pfold; eapply sim'Extern;
-    [ eapply star2_refl
-    | eapply star2_refl
-    | try step_activated
-    | try step_activated
-    | intros ? ? STEP; inv STEP
-    | intros ? ? STEP; inv STEP
-    ].
+  [ eapply star2_refl
+  | eapply star2_refl
+  | try step_activated
+  | try step_activated
+  | intros ? ? STEP; inv STEP; eexists; split; [econstructor; eauto | ]
+  | intros ? ? STEP; inv STEP; eexists; split; [econstructor; eauto | ]
+  ].

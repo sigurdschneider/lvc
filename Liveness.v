@@ -405,7 +405,7 @@ Lemma approx_mutual_block alF F Lv i L L'
   -> mutual_block (approxI Lv L L') i (zip pair (getAnn ⊝ alF) (fst ⊝ F))
                  (mapi_impl I.mkBlock i F) (mapi_impl I.mkBlock i F).
 Proof.
-  unfold I.mkBlocks, mapi.
+  unfold mapi.
   intros. length_equify.
   general induction H; simpl.
   - econstructor.

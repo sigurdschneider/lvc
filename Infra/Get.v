@@ -13,6 +13,19 @@ Inductive get (X:Type) : list X -> nat -> X -> Prop :=
 | getLB xl x : get (x::xl) 0 x
 | getLS n xl x x' : get xl n x -> get (x'::xl) (S n) x.
 
+
+Ltac isabsurd :=
+  match goal with
+  | [ H : ?x = None, H' : ?x = Some _ |- _ ] => exfalso; rewrite H in H'; inv H'
+  | [ H : get ?L ?n _, H' : (forall _, get ?L ?n _ -> False) |- _ ] => exfalso; eapply H'; eapply H
+  | [ H : get nil _ _ |- _ ] => exfalso; inv H
+  | _ =>
+    try now (hnf; intros;
+             match goal with
+               [ H : _ |- _ ] => exfalso; inversion H; try subst; simpl in *; try congruence
+             end)
+  end.
+
 (** Get is informative anyway. *)
 
 Lemma get_getT X (x:X) n L
@@ -358,12 +371,36 @@ Proof.
   eapply shift_get in H0. inv H0. eauto.
 Qed.
 
-Lemma get_app_le X (L L':list X) n x (LE:n < length L)
+Lemma get_app_lt X (L L':list X) n x (LE:n < length L)
+  : get (L ++ L') n x <-> get L n x.
+Proof.
+  revert L L' x LE.
+  induction n; intros.
+  - split; intros H; inv H.
+    + destruct L; isabsurd.
+      injection H1; intros; subst. eauto using get.
+    + econstructor.
+  - split; intros H; inv H.
+    + destruct L; isabsurd. injection H0; intros; subst.
+      econstructor. eapply IHn; eauto. simpl in *. omega.
+    + simpl. econstructor. eapply IHn; eauto. simpl in *; omega.
+Qed.
+
+Lemma get_app_lt_1 X (L L':list X) n x (LE:n < length L)
   : get (L ++ L') n x -> get L n x.
 Proof.
-  revert L L' x LE. induction n; intros; inv H;
-  destruct L; isabsurd. injection H1; intros; subst. constructor.
-  constructor. eapply IHn. simpl in LE; omega. inv H0; eauto.
+  eapply get_app_lt; eauto.
+Qed.
+
+Lemma get_app_ge X (L L':list X) n x (LE:length L <= n)
+  : get (L ++ L') n x <-> get L' (n - length L) x.
+Proof.
+  revert n L' x LE.
+  induction L; intros; simpl in *.
+  - orewrite (n - 0 = n). reflexivity.
+  - destruct n; [ exfalso; omega|]; simpl.
+    rewrite <- (IHL n L' x); try omega.
+    split; intros; [ inv H|]; eauto using get.
 Qed.
 
 Lemma tl_map X Y L (f:X -> Y)
