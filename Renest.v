@@ -158,7 +158,7 @@ Ltac not_activated H :=
 Ltac not_normal H :=
   destruct H; econstructor; eexists; econstructor; eauto.
 
-Lemma sim_drop_shift_left r l (L:I.labenv) E Y
+Lemma bisim_drop_shift_left r l (L:I.labenv) E Y
       blk (STL:sawtooth L) sigma
   : get L (labN l) blk
     -> paco2 (@bisim_gen I.state _ I.state _) r
@@ -460,7 +460,7 @@ Proof.
       simpl in *. assert (f_eq: f = f - n0 + n0) by omega. rewrite <- f_eq in *.
       repeat get_functional.
       erewrite get_nth; eauto using zip_get.
-      eapply sim_drop_shift_left; eauto. simpl.
+      eapply bisim_drop_shift_left; eauto. simpl.
       eapply H22; eauto. exploit omap_length; eauto. split; eauto. split; congruence.
     + pno_step; simpl in *.
       erewrite get_nth in Ldef; eauto. get_functional. eauto.

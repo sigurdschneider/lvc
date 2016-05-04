@@ -1,6 +1,6 @@
 Require Import AllInRel List Map Env DecSolve.
 Require Import IL Annotation AutoIndTac Bisim Exp MoreExp.
-Require Export Liveness Filter LabelsDefined.
+Require Export Liveness Filter LabelsDefined OUnion.
 
 Set Implicit Arguments.
 
@@ -73,28 +73,19 @@ Proof.
   rewrite map_length; congruence.
 Qed.
 
-Definition getOAnn A `{OrderedType A} (a:ann (؟⦃A⦄)) : ⦃A⦄ :=
-  match a with
-    | ann0 (Some a) => a
-    | ann1 (Some a) _ => a
-    | ann2 (Some a) _ _ => a
-    | annF (Some a) _ _ => a
-    | _ => ∅
-  end.
-
 Inductive true_live_sound (i:overapproximation)
   : list ((؟ (set var) * params)) -> stmt -> ann (؟ (set var)) -> Prop :=
 | TLOpr x Lv b lv e al
   :  true_live_sound i Lv b al
-  -> (x ∈ getOAnn al -> live_exp_sound e lv)
-  -> (getOAnn al\{{x}}) ⊆ lv
+  -> (x ∈ oget (getAnn al) -> live_exp_sound e lv)
+  -> (oget (getAnn al)\{{x}}) ⊆ lv
   -> true_live_sound i Lv (stmtLet x e b) (ann1 (Some lv) al)
 | TLIf Lv e b1 b2 lv al1 al2
   :  true_live_sound i Lv b1 al1
   -> true_live_sound i Lv b2 al2
   -> (exp2bool e = None -> live_exp_sound e lv)
-  -> (exp2bool e <> Some false -> getOAnn al1 ⊆ lv)
-  -> (exp2bool e <> Some true -> getOAnn al2 ⊆ lv)
+  -> (exp2bool e <> Some false -> oget (getAnn al1) ⊆ lv)
+  -> (exp2bool e <> Some true -> oget (getAnn al2) ⊆ lv)
   -> true_live_sound i Lv (stmtIf e b1 b2) (ann2 (Some lv) al1 al2)
 | TLGoto l Y Lv lv blv Z
   : get Lv (counted l) (Some blv,Z)
@@ -108,7 +99,7 @@ Inductive true_live_sound (i:overapproximation)
 | TLExtern x Lv b lv Y al f
   : true_live_sound i Lv b al
   -> (forall n y, get Y n y -> live_exp_sound y lv)
-  -> (getOAnn al\{{x}}) ⊆ lv
+  -> (oget (getAnn al)\{{x}}) ⊆ lv
   -> true_live_sound i Lv (stmtExtern x f Y b) (ann1 (Some lv) al)
 | TLLet Lv F t lv als alt Lv'
   : true_live_sound i (Lv' ++ Lv) t alt
@@ -120,8 +111,8 @@ Inductive true_live_sound (i:overapproximation)
                  true_live_sound i (Lv' ++ Lv) (snd Zs) a)
     -> (forall n Zs a, get F n Zs ->
                  get als n a ->
-                 if isFunctional i then (getOAnn a \ of_list (fst Zs)) ⊆ lv else True)
-    -> getOAnn alt ⊆ lv
+                 if isFunctional i then (oget (getAnn a) \ of_list (fst Zs)) ⊆ lv else True)
+    -> oget (getAnn alt) ⊆ lv
     -> true_live_sound i Lv (stmtFun F t)(annF (Some lv) als alt).
 
 
