@@ -122,7 +122,7 @@ Module F.
       + right. stuck.
     - right. stuck.
     - case_eq (omap (exp_eval V) Y); intros; try now (right; stuck).
-      left. eexists (EvtExtern (ExternI f l 0)). eauto using step.
+      left. eexists (EvtExtern (ExternI f l default_val)). eauto using step.
     - left. exists EvtTau. eauto using step.
   Qed.
 
@@ -226,7 +226,7 @@ Module I.
       + right. stuck.
     - right. stuck.
     - case_eq (omap (exp_eval V) Y); intros; try now (right; stuck).
-      left. eexists (EvtExtern (ExternI f l 0)). eauto using step.
+      left. eexists (EvtExtern (ExternI f l default_val)). eauto using step.
     - left. exists EvtTau. eauto using step.
   Qed.
 
@@ -477,7 +477,7 @@ Proof.
   - no_step.
   - case_eq (omap (exp_eval E) Y); intros.
     + extern_step.
-      * eexists (ExternI f l 0); eexists; try (now (econstructor; eauto)).
+      * eexists (ExternI f l default_val); eexists; try (now (econstructor; eauto)).
       * eexists; split. econstructor; eauto.
         eapply labIndicesSim_sim; econstructor; eauto.
       * eexists; split. econstructor; eauto.

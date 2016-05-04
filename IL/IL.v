@@ -217,8 +217,8 @@ Module F.
       case_eq (omap (exp_eval V) Y); intros; [ | right; stuck2 ].
       left. do 2 eexists. econstructor; eauto.
     - right. stuck2.
-    - case_eq (omap (exp_eval V) Y); intros; [ | right; stuck2 ].
-      left; eexists (EvtExtern (ExternI f l 0)). eexists; eauto using step.
+    - case_eq (omap (exp_eval V) Y); intros; try now (right; stuck).
+      left; eexists (EvtExtern (ExternI f l (default_val))). eexists; eauto using step.
     - left. eexists. eauto using step.
   Qed.
 
@@ -305,7 +305,7 @@ Module I.
       left. do 2 eexists. econstructor; eauto.
     - right. stuck2.
     - case_eq (omap (exp_eval V) Y); intros; try now (right; stuck).
-      left; eexists (EvtExtern (ExternI f l 0)). eexists; eauto using step.
+      left; eexists (EvtExtern (ExternI f l default_val)). eexists; eauto using step.
     - left. eexists. eauto using step.
   Qed.
 

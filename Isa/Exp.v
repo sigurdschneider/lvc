@@ -1,5 +1,5 @@
 Require Import Util EqDec DecSolve Val CSet Map Env EnvTy Option Get SetOperations.
-Require Import Arith.
+Require Import Arith bitvec orderedBitvec.
 
 Set Implicit Arguments.
 
@@ -14,12 +14,14 @@ Set Implicit Arguments.
   Definition option_lift2 A B C (f:A -> B -> C) := fun x y => Some (f x y).
   Definition binop_eval (o:binop) :=
     match o with
-      | 0 => option_lift2 Peano.plus
-      | 1 => option_lift2 minus
-      | 2 => option_lift2 mult
-      | 3 => option_lift2 (fun x y => if [x = y] then 1 else 0)
-      | 4 => option_lift2 (fun x y => if [x <> y] then 1 else 0)
-      | _ => fun _ _ => None
+      | 0 => option_lift2 bvAdd
+      | 1 => option_lift2 bvSub
+      | 2 => option_lift2 bvMult
+      | 3 => option_lift2 bvEq
+      | 4 => option_lift2 (fun a b => neg (bvEq a b))
+      | 5 => bvDiv
+      | _ => option_lift2 (fun a b => sext nil O)
+(*      | _ => option_lift2 bvAdd (*fun _ _ => None *) *)
     end.
 
   Definition unop : Set := nat.
@@ -33,8 +35,12 @@ Set Implicit Arguments.
 
   Definition unop_eval (o:unop) :=
     match o with
-      | 0 => option_lift1 (val2bool ∘ bool2val)
-      | _ => fun _ => None
+
+      | 0 => option_lift1 (fun a => if val2bool  a then val_true else val_false)
+      | _ => option_lift1 neg
+(*      | _ => fun _ => None *)
+(*      | 0 => option_lift1 (val2bool ∘ bool2val)
+      | _ => fun _ => None *)
     end.
 
   Inductive exp :=
@@ -59,11 +65,12 @@ Set Implicit Arguments.
 
   Global Instance inst_eq_dec_exp : EqDec exp eq.
   hnf; intros. change ({x = y} + {x <> y}).
-  decide equality. eapply inst_eq_dec_val.
-  eapply inst_eq_dec_val.
-  eapply nat_eq_eqdec.
-  eapply nat_eq_eqdec.
-  Defined.
+  decide equality.
+- eapply inst_eq_dec_val.
+-  destruct v, v0;firstorder.
+- eapply nat_eq_eqdec.
+-  eapply nat_eq_eqdec.
+Defined.
 
   Fixpoint exp_eval (E:onv val) (e:exp) : option val :=
     match e with
@@ -375,23 +382,32 @@ Inductive expLt : exp -> exp -> Prop :=
   : expLt e2 e2'
     -> expLt (BinOp o e1 e2) (BinOp o e1 e2').
 
-
 Instance expLt_irr : Irreflexive expLt.
 hnf; intros; unfold complement.
-- induction x; inversion 1; subst; eauto using StrictOrder_Irreflexive.
-  + eapply (StrictOrder_Irreflexive _ H2).
-  + eapply (StrictOrder_Irreflexive _ H2).
-  + eapply (StrictOrder_Irreflexive _ H1).
-  + eapply (StrictOrder_Irreflexive _ H1).
+- induction x; inversion 1; subst; try now eauto using StrictOrder_Irreflexive.
+  +  eapply (StrictOrder_Irreflexive v H2); eauto.
+  + eapply (StrictOrder_Irreflexive v H2); eauto.
+  + eapply (StrictOrder_Irreflexive u  H1); eauto.
+  + eapply (StrictOrder_Irreflexive b  H1).
+Grab Existential Variables. econstructor.
+     * exact ltBitvec_irrefl.
+     * exact ltBitvec_trans.
 Qed.
+
+Instance lt_eq_strict : StrictOrder ltBitvec.
+econstructor.
+- apply ltBitvec_irrefl.
+- eapply ltBitvec_trans.
+Defined.
+
 
 Instance expLt_trans : Transitive expLt.
 hnf; intros.
-general induction H; invt expLt; eauto using expLt.
-- econstructor. eapply StrictOrder_Transitive; eauto.
-- econstructor. eapply StrictOrder_Transitive; eauto.
-- econstructor; eauto. transitivity o'; eauto.
-- econstructor; eauto. transitivity o'; eauto.
+general induction H; invt expLt; eauto using expLt; unfold unop in *.
+- econstructor. eapply StrictOrder_Transitive. eapply H. eapply H2.
+- econstructor. eapply StrictOrder_Transitive.  eapply H. eapply H2.
+- econstructor; eauto. eapply StrictOrder_Transitive. eapply H. eapply H4.
+- econstructor; eauto. eapply StrictOrder_Transitive. eapply H. eapply H5.
 Qed.
 
 Notation "'Compare' x 'next' y" :=
@@ -432,14 +448,17 @@ Instance OrderedType_exp : OrderedType exp :=
 intros.
 general induction x; destruct y; simpl; try now (econstructor; eauto using expLt).
 pose proof (_compare_spec v v0).
+- inv H.
+  + econstructor. eauto using expLt.
+  + econstructor. f_equal. eapply H1.
+  + econstructor; eauto using expLt.
+- pose proof (_compare_spec v v0).
 inv H; now (econstructor; eauto using expLt).
-pose proof (_compare_spec v v0).
-inv H; now (econstructor; eauto using expLt).
-pose proof (_compare_spec u u0).
+- pose proof (_compare_spec u u0).
 specialize (IHx y).
 inv H; try now (econstructor; eauto using expLt).
 inv H1. inv IHx; now (econstructor; eauto using expLt).
-pose proof (_compare_spec b b0).
+- pose proof (_compare_spec b b0).
 specialize (IHx1 y1). specialize (IHx2 y2).
 inv H; try now (econstructor; eauto using expLt).
 inv H1.

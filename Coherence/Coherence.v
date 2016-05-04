@@ -266,7 +266,7 @@ Qed.
 (** ** Definition of invariance *)
 
 Definition invariant (s:stmt) :=
-  forall (E:onv var), bisim (nil:list F.block,E,s) (nil:list I.block,E,s).
+  forall (E:onv val), bisim (nil:list F.block,E,s) (nil:list I.block,E,s).
 
 (** ** Agreement Invariant *)
 

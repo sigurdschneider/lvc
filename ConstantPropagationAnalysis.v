@@ -369,7 +369,8 @@ Definition constant_propagation_transform st (a:list (params * Dom)*Dom) :=
               end
           else if [exp_eval (domenv d) e = Some val_false] then
             match e with
-              | Var x => anni2opt None (Some (d[-x <- wTA 0-]))
+
+              | Var x => anni2opt None (Some (d[x <- wTA val_false]))
 (*            | BinOp 4 (Var x) (Con c) => anni2opt None (Some (Some (d[x <- c]))) *)
               | _ => anni2opt None (Some d)
             end

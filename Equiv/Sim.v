@@ -863,7 +863,11 @@ Proof.
     eapply plus2_destr_nil in H3.
     destruct H2; destruct H3; dcr. inv H3.
     simpl in *. inv H5; simpl in *.
+<<<<<<< HEAD
+    simpl_get_drop; repeat get_functional. (*FIXME subst blk0 blk1.*)
+=======
     simpl_get_drop; repeat get_functional.
+>>>>>>> origin
     simpl_minus.
     pfold. econstructor; try eapply star2_plus2.
     econstructor; eauto. eauto.
@@ -1033,7 +1037,7 @@ Ltac step_activated :=
   match goal with
     | [ H : omap (exp_eval ?E) ?Y = Some ?vl
         |- activated (_, ?E, stmtExtern ?x ?f ?Y ?s) ] =>
-      eexists (ExternI f vl 0); eexists; try (now (econstructor; eauto))
+      eexists (ExternI f vl default_val); eexists; try (now (econstructor; eauto))
   end.
 
 Ltac extern_step :=

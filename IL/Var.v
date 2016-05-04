@@ -92,6 +92,16 @@ Proof.
   eauto.
 Qed.
 
+(** incremented equality implies equality *)
+Lemma labeq_incr:
+forall n1 n2,
+LabI (1 + n1) = LabI (1 + n2)
+-> LabI n1  = LabI n2.
+
+Proof.
+intros; general induction n1; eauto.
+Qed.
+
 Definition lt (l l':lab) :=
   match l, l' with
     LabI n, LabI m => lt n m
