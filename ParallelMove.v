@@ -319,12 +319,10 @@ Proof.
   - remember (omap (exp_eval E) Y). symmetry in Heqo.
     exploit omap_exp_eval_live_agree; try eassumption.
     destruct o.
-    + extern_step.
-      * eexists; split. econstructor; eauto. congruence.
-        eapply pmSim_sim; econstructor; eauto.
+    + extern_step; try congruence.
+      * eapply pmSim_sim; econstructor; eauto.
         eapply agree_on_update_same; eauto using agree_on_incl.
-      * eexists; split. econstructor; eauto. congruence.
-        eapply pmSim_sim; econstructor; eauto.
+      * eapply pmSim_sim; econstructor; eauto.
         eapply agree_on_update_same; eauto using agree_on_incl.
     + no_step.
   - one_step.

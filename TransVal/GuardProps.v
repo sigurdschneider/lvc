@@ -68,7 +68,8 @@ Proof.
       unfold binop_eval; simpl.
      unfold smt_eval in *; erewrite exp_eval_partial_total in H2; eauto.
      unfold bvDiv. cases; isabsurd.
-     destruct (bvLessZero x); destruct (bvLessZero x0); eexists; eauto.
+     exfalso. eapply H2; reflexivity.
+     destruct (bvLessZero x); try destruct (bvLessZero x0); eexists; eauto.
    + unfold binop_eval; unfold option_lift2; simpl; case_eq b; intros; [ eexists; eauto |].
      case_eq n; intros; [ eexists; eauto | ].
      case_eq n0; intros; [ eexists; eauto | ].

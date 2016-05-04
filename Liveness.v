@@ -117,7 +117,7 @@ Proof.
     econstructor; eauto.
     cases; simpl in *; eauto; dcr; subst.
     rewrite <- H0. rewrite <- H4. reflexivity.
-    cset_tac; intuition; eauto.
+    cset_tac; eauto.
   - econstructor; eauto 20 using PIR2_app.
 Qed.
 
@@ -137,7 +137,7 @@ Proof.
     etransitivity; eauto.
   - econstructor; eauto. intros. edestruct H3; eauto.
     destruct i; simpl; eauto; cset_tac.
-    cset_tac; intuition.
+    cset_tac.
 Qed.
 
 (** ** Live variables always contain the free variables *)
@@ -210,7 +210,7 @@ Proof.
   intros. general induction H; simpl.
   - econstructor; eauto using live_exp_rename_sound.
     + rewrite getAnn_mapAnn.
-      rewrite <- lookup_set_singleton'; intuition.
+      rewrite <- lookup_set_singleton'; eauto.
       rewrite lookup_set_minus_incl; eauto.
       eapply lookup_set_incl; eauto.
     + rewrite getAnn_mapAnn.
@@ -334,13 +334,15 @@ Proof.
     exploit omap_exp_eval_agree; eauto using agree_on_incl.
     extern_step.
     + exploit omap_exp_eval_agree; eauto using agree_on_incl.
-      eexists; split.
-      * econstructor; eauto.
+    + exploit omap_exp_eval_agree.
+      * symmetry. eauto using agree_on_incl.
+      * eauto.
       * eapply freeVarSimF_sim. econstructor; eauto.
         eapply agree_on_update_same; eauto using agree_on_incl with cset.
-    + exploit omap_exp_eval_agree. symmetry. eauto using agree_on_incl. eauto.
-      eexists; split.
-      * econstructor; eauto.
+    + exploit omap_exp_eval_agree; eauto. symmetry; eauto using agree_on_incl with cset.
+    + exploit omap_exp_eval_agree.
+      * symmetry. eauto using agree_on_incl.
+      * eauto.
       * eapply freeVarSimF_sim. econstructor; eauto.
         eapply agree_on_update_same; eauto using agree_on_incl with cset.
     + no_step.
@@ -450,17 +452,11 @@ Proof.
     exploit omap_exp_eval_live_agree; eauto.
     extern_step.
     + exploit omap_exp_eval_live_agree; eauto.
-      eexists; split.
-      * econstructor; eauto.
-      * eapply liveSimI_sim; econstructor; eauto.
-        eapply agree_on_update_same; eauto using agree_on_incl.
-    + symmetry in AG.
-      exploit omap_exp_eval_live_agree; eauto.
-      eexists; split.
-      * econstructor; eauto.
-      * eapply liveSimI_sim; econstructor; eauto.
-        symmetry in AG.
-        eapply agree_on_update_same; eauto using agree_on_incl.
+    + eapply liveSimI_sim; econstructor; eauto.
+      eapply agree_on_update_same; eauto using agree_on_incl.
+    + symmetry in AG. exploit omap_exp_eval_live_agree; eauto.
+    + eapply liveSimI_sim; econstructor; eauto.
+      eapply agree_on_update_same; eauto using agree_on_incl.
     + no_step.
   - one_step.
     eapply liveSimI_sim; econstructor; eauto using agree_on_incl.

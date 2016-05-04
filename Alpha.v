@@ -380,11 +380,9 @@ Proof.
     intros. symmetry.
     eapply alpha_exp_eval. eapply H0; eauto; eauto. hnf; intros; eauto.
     destruct o.
-    extern_step.
-    + eexists; split. econstructor; eauto. congruence.
-      eapply alphaSim_sim; econstructor; eauto using envCorr_update.
-    + eexists; split. econstructor; eauto. congruence.
-      eapply alphaSim_sim; econstructor; eauto using envCorr_update.
+    extern_step; try congruence.
+    + eapply alphaSim_sim; econstructor; eauto using envCorr_update.
+    + eapply alphaSim_sim; econstructor; eauto using envCorr_update.
     + no_step.
   - one_step. eapply alphaSim_sim.
     econstructor; eauto.

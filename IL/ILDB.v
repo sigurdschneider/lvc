@@ -106,7 +106,7 @@ Module F.
       + right. stuck2.
     - right. stuck2.
     - case_eq (omap (exp_eval V) Y); intros; try now (right; stuck).
-      left; eexists (EvtExtern (ExternI f l 0)). eexists; eauto using step.
+      left; eexists (EvtExtern (ExternI f l default_val)). eexists; eauto using step.
     - left. eexists. eauto using step.
   Qed.
 
@@ -292,13 +292,13 @@ Proof.
     intros. exploit (smap_spec _ EQ0); eauto. dcr. get_functional; subst.
     erewrite exp_idx_ok; eauto.
     + extern_step.
-      * eexists (ExternI f l 0); eexists; try (now (econstructor; eauto)).
+      * eexists (ExternI f l default_val); eexists; try (now (econstructor; eauto)).
       * assert (vl = l) by congruence; subst.
-        eexists; split. econstructor; eauto.
-        eapply stmt_idx_sim; econstructor; eauto using vars_exist_update, defs_agree_update.
+        eauto using vars_exist_update, defs_agree_update.
+      * eapply stmt_idx_sim; econstructor; eauto using vars_exist_update, defs_agree_update.
       * assert (vl = l) by congruence; subst.
-        eexists; split. econstructor; eauto.
-        eapply stmt_idx_sim; econstructor; eauto using vars_exist_update, defs_agree_update.
+        eauto using vars_exist_update, defs_agree_update.
+      * eapply stmt_idx_sim; econstructor; eauto using vars_exist_update, defs_agree_update.
     + no_step.
       pose proof (smap_spec _ EQ0).
       assert (omap (Exp.exp_eval E) Y = Some vl).

@@ -1,5 +1,5 @@
 Require Import Coq.Lists.List Coq.Arith.Arith Coq.Arith.PeanoNat Omega.
-Require Import AutoIndTac Util.
+Require Import AutoIndTac Util Get.
 
 Require Export orderedBitvec.
 
@@ -423,9 +423,3 @@ Proof.
   - simpl. reflexivity.
   - simpl. f_equal; eauto; assumption.
 Qed.
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("../" "Lvc")) ***
-*** End: ***
-*)

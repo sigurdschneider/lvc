@@ -515,15 +515,13 @@ Proof.
     + no_step.
   - case_eq (omap (exp_eval E) Y); intros;
     exploit omap_exp_eval_live_agree; eauto.
-    extern_step; assert (vl = l) by congruence; subst.
-    + eexists; split. econstructor; eauto.
-      eapply srdSim_sim; econstructor; eauto using approx_restrict, rd_agree_update, PIR2_length.
+    extern_step; assert (vl = l) by congruence; subst; eauto.
+    + eapply srdSim_sim; econstructor; eauto using approx_restrict, rd_agree_update, PIR2_length.
       eapply agree_on_update_same. reflexivity.
       eapply agree_on_incl; eauto.
       eauto using restrict_eqReq; eauto.
     + symmetry in AG.
       exploit omap_exp_eval_live_agree; eauto.
-      eexists; split. econstructor; eauto.
       eapply srdSim_sim; econstructor; eauto using approx_restrict, rd_agree_update, PIR2_length.
       eapply agree_on_update_same. reflexivity.
       symmetry in AG.

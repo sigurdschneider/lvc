@@ -863,11 +863,7 @@ Proof.
     eapply plus2_destr_nil in H3.
     destruct H2; destruct H3; dcr. inv H3.
     simpl in *. inv H5; simpl in *.
-<<<<<<< HEAD
-    simpl_get_drop; repeat get_functional. (*FIXME subst blk0 blk1.*)
-=======
     simpl_get_drop; repeat get_functional.
->>>>>>> origin
     simpl_minus.
     pfold. econstructor; try eapply star2_plus2.
     econstructor; eauto. eauto.
@@ -1047,10 +1043,9 @@ Ltac extern_step :=
     | eapply star2_refl
     | try step_activated
     | try step_activated
-    | intros ? ? STEP; inv STEP
-    | intros ? ? STEP; inv STEP
+    | intros ? ? STEP; inv STEP; eexists; split; [econstructor; eauto | ]
+    | intros ? ? STEP; inv STEP; eexists; split; [econstructor; eauto | ]
     ].
-
 
 
 Ltac pone_step := pfold; eapply sim'Silent; [ eapply plus2O; single_step

@@ -478,10 +478,8 @@ Proof.
   - case_eq (omap (exp_eval E) Y); intros.
     + extern_step.
       * eexists (ExternI f l default_val); eexists; try (now (econstructor; eauto)).
-      * eexists; split. econstructor; eauto.
-        eapply labIndicesSim_sim; econstructor; eauto.
-      * eexists; split. econstructor; eauto.
-        eapply labIndicesSim_sim; econstructor; eauto.
+      * eapply labIndicesSim_sim; econstructor; eauto.
+      * eapply labIndicesSim_sim; econstructor; eauto.
     + no_step.
   - one_step. eapply labIndicesSim_sim. econstructor; eauto.
     instantiate (1:=(mapi (I.mkBlock L F) F ++ LB)).

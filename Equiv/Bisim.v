@@ -873,8 +873,8 @@ Ltac extern_step :=
     | eapply star2_refl
     | try step_activated
     | try step_activated
-    | intros ? ? STEP; inv STEP
-    | intros ? ? STEP; inv STEP
+    | intros ? ? STEP; inv STEP; eexists; split; [econstructor; eauto | ]
+    | intros ? ? STEP; inv STEP; eexists; split; [econstructor; eauto | ]
     ].
 
 
