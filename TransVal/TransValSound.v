@@ -1,6 +1,6 @@
 Require Import List Arith.
 Require Import IL Annotation AutoIndTac Exp MoreExp RenamedApart Fresh Util.
-Require Import SetOperations Sim Var.
+Require Import SetOperations SimF Var.
 Require Import BitVector SMT NoFun CombineEnv.
 Require Import Guards ILFtoSMT GuardProps ComputeProps.
 
@@ -9,88 +9,39 @@ Require Import Guards ILFtoSMT GuardProps ComputeProps.
 Definition smtCheck (s:stmt) (t:stmt) :=
 smtAnd (translateStmt s source) (translateStmt t target).
 
+Lemma freeVars_guardGen s p t
+  : freeVars (guardGen s p t) ⊆ freeVars s ∪ freeVars t.
+Proof.
+  unfold guardGen; repeat cases; eauto with cset.
+Qed.
+
+Lemma freeVars_translateStmt s p
+  : freeVars (translateStmt s p) ⊆ IL.occurVars s.
+Proof.
+  general induction s; simpl; try rewrite freeVars_guardGen; try rewrite freeVars_undef; simpl;
+    try rewrite IHs.
+  - clear_all; cset_tac.
+  - rewrite IHs1, IHs2. clear_all; cset_tac.
+  - cases; simpl; try rewrite freeVars_guardGen; try rewrite freeVars_undefLift; simpl;
+      cset_tac.
+  - cases; simpl; try rewrite freeVars_guardGen; try rewrite freeVars_undef; simpl;
+      cset_tac.
+  - cset_tac.
+  - cset_tac.
+Qed.
+
 (** Lemmata **)
 Lemma freeVars_incl:
   forall s D p,
     renamedApart s D
     -> noFun s
     -> freeVars (translateStmt s p) ⊆ (fst (getAnn D) ∪ (snd (getAnn D))).
-
 Proof.
   intros s D p ssaS nfS.
-  general induction nfS; inv ssaS; subst; simpl.
-  - specialize (IHnfS an p H4).
-    rewrite H7 in IHnfS; simpl in IHnfS.
-    destruct p.
-    + unfold guardGen.
-      cases; simpl; cset_tac.
-      * right; rewrite (H6 a); auto.
-      * specialize (IHnfS a H0).
-        cset_tac.
-        { right; rewrite (H6 a); auto. }
-        { right; rewrite (H6 a); auto. }
-      * eapply (freeVars_undef) in H0.
-        left; apply H3; auto.
-      * right; rewrite (H6 a); auto.
-      * specialize (IHnfS a H).
-        cset_tac.
-        { right; rewrite (H6 a); auto. }
-        { right; rewrite (H6 a); auto. }
-    + unfold guardGen.
-      cases; simpl; cset_tac.
-      * right; rewrite (H6 a); auto.
-      * specialize (IHnfS a H0).
-        cset_tac.
-        { right; rewrite (H6 a); auto. }
-        { right; rewrite (H6 a); auto. }
-      * eapply (freeVars_undef) in H0.
-        left; apply H3; auto.
-      * right; rewrite (H6 a); auto.
-      * specialize (IHnfS a H).
-        cset_tac.
-        { right; rewrite (H6 a); auto. }
-        { right; rewrite (H6 a); auto. }
-  - specialize (IHnfS1 ans p H5).
-    specialize (IHnfS2 ant p H6).
-    rewrite H8 in IHnfS1; rewrite H9 in IHnfS2; simpl in *.
-    destruct p.
-    + unfold guardGen.
-      cases; simpl; cset_tac.
-      * specialize (IHnfS1 a H); cset_tac.
-        right; rewrite <- (H4 a); auto.
-      * specialize (IHnfS2 a H); cset_tac.
-        right; rewrite <- (H4 a); auto.
-      * eapply freeVars_undef in H0.
-        left; apply H2; auto.
-      * specialize (IHnfS1 a H0); cset_tac.
-        right; rewrite <- (H4 a); auto.
-      * specialize (IHnfS2 a H0); cset_tac.
-        right; rewrite <- (H4 a); auto.
-    + unfold guardGen; cases; simpl; cset_tac.
-           * specialize (IHnfS1 a H); cset_tac.
-        right; rewrite <- (H4 a); auto.
-      * specialize (IHnfS2 a H); cset_tac.
-        right; rewrite <- (H4 a); auto.
-      * eapply freeVars_undef in H0.
-        left; apply H2; auto.
-      * specialize (IHnfS1 a H0); cset_tac.
-        right; rewrite <- (H4 a); auto.
-      * specialize (IHnfS2 a H0); cset_tac.
-        right; rewrite <- (H4 a); auto.
-  - destruct p.
-    + unfold guardGen; cases; simpl; cset_tac.
-      eapply freeVars_undefLift in H0.
-      left; apply H1; auto.
-    + unfold guardGen; cases; simpl; cset_tac.
-      eapply freeVars_undefLift in H0.
-      left; apply H1; auto.
-  - destruct p.
-    + unfold guardGen; cases; simpl; cset_tac.
-      eapply freeVars_undef in H2.
-      left; apply H0; auto.
-    + unfold guardGen; cases; simpl; cset_tac.
-      eapply freeVars_undef in H2.
-      left; apply H0; auto.
+  rewrite freeVars_translateStmt.
+  rewrite <- renamedApart_occurVars; eauto.
+  rewrite <- renamedApart_freeVars; eauto.
+  rewrite occurVars_freeVars_definedVars. reflexivity.
 Qed.
 
 (** Lemma 12 in the thesis
@@ -362,51 +313,47 @@ Proof.
     + isabsurd.
 Qed.
 
-Lemma predeval_uneq_ret:
-forall  E et es e e' P,
-exp_eval E et = Some e
--> exp_eval E es = Some e'
--> (forall F, models F (to_total E) P)
--> (forall (F:lab->vallst->bool),
-      models F (to_total E) P ->
-      ~ ((models F (to_total E) (translateStmt (stmtReturn et) target)) /\
-    models F (to_total E) (translateStmt (stmtReturn es) source)))
--> (e = e').
-
+Lemma predeval_uneq_ret E et es e e' P
+  : exp_eval E et = Some e
+    -> exp_eval E es = Some e'
+    -> (forall F, models F (to_total E) P)
+    -> (forall (F:lab->vallst->bool),
+          models F (to_total E) P ->
+          ~ ((models F (to_total E) (translateStmt (stmtReturn et) target)) /\
+             models F (to_total E) (translateStmt (stmtReturn es) source)))
+    -> (e = e').
 Proof.
-intros. decide (e = e').
-- assumption.
-- specialize (H1 (fun _ => fun x =>toBool (bvEq e' (hd (O::nil) x)))).
-  specialize (H2 (fun _ => fun x => toBool (bvEq e' (hd (O::nil) x)))).
-  specialize (H2 H1); simpl in H2.
-  pose proof (exp_eval_partial_total E et H).
-  pose proof (exp_eval_partial_total E es H0).
-  exfalso.
-  eapply H2.
-  erewrite models_guardGen_target at 1.
-  erewrite models_guardGen_source.
-  simpl; split; intros; try split.
-  +unfold smt_eval in H6.
-   rewrite H3 in H6.
-   eapply n.
-   symmetry.
-   eapply (bvEq_equiv_eq e' e); eauto.
-  + eapply guard_true_if_eval; eauto.
-  + unfold smt_eval.  rewrite H4.
-    rewrite bvEq_refl; econstructor.
+  intros. decide (e = e').
+  - assumption.
+  - specialize (H1 (fun _ => fun x =>toBool (bvEq e' (hd (O::nil) x)))).
+    specialize (H2 (fun _ => fun x => toBool (bvEq e' (hd (O::nil) x)))).
+    specialize (H2 H1); simpl in H2.
+    pose proof (exp_eval_partial_total E et H).
+    pose proof (exp_eval_partial_total E es H0).
+    exfalso.
+    eapply H2.
+    erewrite models_guardGen_target at 1.
+    erewrite models_guardGen_source.
+    simpl; split; intros; try split.
+    +unfold smt_eval in H6.
+     rewrite H3 in H6.
+     eapply n.
+     symmetry.
+     eapply (bvEq_equiv_eq e' e); eauto.
+    + eapply guard_true_if_eval; eauto.
+    + unfold smt_eval.  rewrite H4.
+      rewrite bvEq_refl; econstructor.
 Qed.
 
-Lemma predeval_uneq_goto:
-forall E l1 l2 et es el el' P,
-omap (exp_eval E) et = Some el
--> omap (exp_eval E) es = Some el'
-->(forall F, models F (to_total E) P)
--> (forall (F:lab->vallst->bool),
-      models F (to_total E) P ->
-      ~ ((models F (to_total E) (translateStmt (stmtApp l1 et) target)) /\
-         models F (to_total E) (translateStmt (stmtApp l2 es) source)))
--> (el = el').
-
+Lemma predeval_uneq_goto E l1 l2 et es el el' P
+  : omap (exp_eval E) et = Some el
+    -> omap (exp_eval E) es = Some el'
+    ->(forall F, models F (to_total E) P)
+    -> (forall (F:lab->vallst->bool),
+          models F (to_total E) P ->
+          ~ ((models F (to_total E) (translateStmt (stmtApp l1 et) target)) /\
+             models F (to_total E) (translateStmt (stmtApp l2 es) source)))
+    -> (el = el').
 Proof.
   intros. decide (el = el').
   - assumption.
@@ -436,22 +383,22 @@ Qed.
 (** Case 1 of final theorem.
 Given source program s, target program t, if [s]^+ /\ [t]^- is unsatisfiable
 the two programs must be equivalent **)
-Lemma tval_term_sound L D D' E Es Et s s' t t':
-  (forall F E, ~ models F E (smtCheck s t))
-  (* Both programs have the same free variables *)
-  -> (fst(getAnn D)) [=] (fst(getAnn D'))
-  (* The programs are renamed apart from each other *)
-  -> disj (snd (getAnn D)) (snd (getAnn D'))
-  (* Every variable gets defined only once in s and t*)
-  -> renamedApart s D
-  -> renamedApart t D'
-  -> noFun s (* disallow function definitions and external function calls *)
-  -> noFun t (* same*)
-  (* Free Variables must be defined *)
-  -> (forall x, x ∈ (fst(getAnn D)) -> exists v, E x = Some v)
-  -> Terminates (L,E,s) (L,Es,s')
-  -> Terminates (L,E,t) (L,Et,t')
-  -> @sim _ statetype_F _ statetype_F  (L, E, s) (L, E, t).
+Lemma tval_term_sound L D D' E Es Et s s' t t'
+  : (forall F E, ~ models F E (smtCheck s t))
+    (* Both programs have the same free variables *)
+    -> (fst(getAnn D)) [=] (fst(getAnn D'))
+    (* The programs are renamed apart from each other *)
+    -> disj (snd (getAnn D)) (snd (getAnn D'))
+    (* Every variable gets defined only once in s and t*)
+    -> renamedApart s D
+    -> renamedApart t D'
+    -> noFun s (* disallow function definitions and external function calls *)
+    -> noFun t (* same*)
+    (* Free Variables must be defined *)
+    -> (forall x, x ∈ (fst(getAnn D)) -> exists v, E x = Some v)
+    -> Terminates (L,E,s) (L,Es,s')
+    -> Terminates (L,E,t) (L,Et,t')
+    -> @sim _ statetype_F _ statetype_F  (L, E, s) (L, E, t).
 
 Proof.
   intros Unsat_check Eq_FVars RenApart ssa_s ssa_t nf_s nf_t val_def term_s term_t.
@@ -581,15 +528,10 @@ Proof.
             rewrite <- (beq_nat_refl (labN(labInc g 1))) in H0; intuition.
           - subst. rewrite <- combineenv_eql.
             + eapply (guardTrue_if_Terminates_ret L L _ s); eauto.
-            + hnf; intros. eapply (freeVars_undef a es) in H.
-              (* freeVars -> Ds' *)
-              pose proof (ssa_move_return D L E s Es es).
-              destruct H0 as [D'' [ssaRet [fstSubset sndSubset]]]; eauto;
-                inversion ssaRet.
-              subst.
-              simpl in *.
-              cset_tac.
-              eapply (renamed_apart_contained); eauto.
+            + rewrite freeVars_undef.
+              hnf; intros.
+              exploit (renamed_apart_contained); eauto.
+              revert H0; clear_all; cset_tac.
           - unfold F. destruct g; simpl; eauto.
         }
       * subst.
@@ -613,15 +555,10 @@ Proof.
            simpl in H0; isabsurd.
          - subst. rewrite <- combineenv_eql.
              * eapply (guardTrue_if_Terminates_goto L L _ s); eauto.
-             * hnf; intros.
-               eapply (freeVars_undefLift a X) in H.
-               (* freeVars -> Ds' *)
-               pose proof (ssa_move_goto D L E s Es f X).
-                destruct H0 as [D'' [ssaGoto [fstSubset sndSubset]]]; eauto;
-                  inversion ssaGoto; subst.
-                simpl in *.
-                cset_tac.
-                eapply (renamed_apart_contained_list); eauto.
+             * rewrite freeVars_undefLift.
+               hnf; intros.
+               exploit renamed_apart_contained_list; eauto.
+               revert H0; clear_all; cset_tac.
          - unfold F. rewrite <- (beq_nat_refl (labN (labInc f 1))); constructor.
        }
       * subst; eapply sim'_sim.

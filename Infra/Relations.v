@@ -268,26 +268,6 @@ Proof.
   intros x A. constructor. exact A.
 Qed.
 
-Lemma size_induction (X : Type) (f : X -> nat) (p: X ->Prop) (x : X)
-  : (forall x, (forall y, f y  < f x -> p y)  -> p x) -> p x.
-Proof.
-  intros A. apply A.
-  induction (f x); intros y B.
-  exfalso; omega.
-  apply A. intros z C. apply IHn. omega.
-Qed.
-
-Definition size_recursion (X : Type) (f : X -> nat) (p: X -> Type) (x : X)
-  : (forall x, (forall y, f y  < f x -> p y) -> p x) -> p x.
-Proof.
-  intros A. apply A.
-  induction (f x); intros y B.
-  exfalso; destruct (f y); inv B.
-  apply A. intros z C. apply IHn. cbv in B,C. cbv.
-  inv B. assumption. eapply le_S in C. eapply le_trans; eauto.
-Defined.
-
-
 Inductive fstNoneOrR {X Y:Type} (R:X->Y->Prop)
   : option X -> option Y -> Prop :=
 | fstNone (x:option Y) : fstNoneOrR R None x

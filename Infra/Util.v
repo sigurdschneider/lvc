@@ -1,5 +1,5 @@
-Require Import Arith Coq.Lists.List Setoid Coq.Lists.SetoidList Omega Containers.OrderedTypeEx.
-Require Export Infra.Option EqDec AutoIndTac Computable.
+
+Require Export List SetoidList Omega Infra.Option EqDec AutoIndTac Computable.
 
 Set Implicit Arguments.
 
@@ -347,25 +347,6 @@ Proof.
   intros. exploiT foo. eauto. exploit H. eauto. firstorder.
 Qed.
 
-Instance prod_eq_fst_morphism X Y R R'
-: Proper (@prod_eq X Y R R' ==> R) fst.
-Proof.
-  unfold Proper, respectful; intros.
-  inv H; simpl; eauto.
-Qed.
-
-Instance prod_eq_snd_morphism X Y R R'
-: Proper (@prod_eq X Y R R' ==> R') snd.
-Proof.
-  unfold Proper, respectful; intros.
-  inv H; simpl; eauto.
-Qed.
-
-Lemma list_eq_length A R l l'
-  : @list_eq A R l l' -> length l = length l'.
-Proof.
-  intros. general induction H; simpl; eauto.
-Qed.
 
 Inductive option_R (A B : Type) (eqA : A -> B -> Prop)
 : option A -> option B -> Prop :=
@@ -405,30 +386,6 @@ Hint Extern 20 => match goal with
                    | [ H: ?a /\ ?b |- ?b ] => eapply H
                    | [ H: ?a /\ ?b |- ?a ] => eapply H
                  end.
-
-Instance instance_option_eq_trans_R X {R: relation X} `{Transitive _ R}
- : Transitive (option_eq R).
-Proof.
-  hnf; intros. inv H0; inv H1.
-  + econstructor.
-  + econstructor; eauto.
-Qed.
-
-Instance instance_option_eq_refl_R X {R: relation X} `{Reflexive _ R}
- : Reflexive (option_eq R).
-Proof.
-  hnf; intros. destruct x.
-  + econstructor; eauto.
-  + econstructor.
-Qed.
-
-Instance instance_option_eq_sym_R X {R: relation X} `{Symmetric _ R}
- : Symmetric (option_eq R).
-Proof.
-  hnf; intros. inv H0.
-  + econstructor.
-  + econstructor; eauto.
-Qed.
 
 Instance plus_le_morpism
 : Proper (Peano.le ==> Peano.le ==> Peano.le) Peano.plus.
@@ -627,3 +584,28 @@ Proof.
   unfold Proper, respectful, impl, flip. intros.
   eauto.
 Qed.
+
+Lemma size_induction (X : Type) (f : X -> nat) (p: X ->Prop) (x : X)
+  : (forall x, (forall y, f y  < f x -> p y)  -> p x) -> p x.
+Proof.
+  intros A. apply A.
+  induction (f x); intros y B.
+  exfalso; omega.
+  apply A. intros z C. apply IHn. omega.
+Qed.
+
+Definition size_recursion (X : Type) (f : X -> nat) (p: X -> Type) (x : X)
+  : (forall x, (forall y, f y  < f x -> p y) -> p x) -> p x.
+Proof.
+  intros A. apply A.
+  induction (f x); intros y B.
+  exfalso; destruct (f y); inv B.
+  apply A. intros z C. apply IHn. cbv in B,C. cbv.
+  inv B. assumption. eapply le_S in C. eapply le_trans; eauto.
+Defined.
+
+Ltac simpl_minus :=
+  repeat match goal with
+  | [ H : context [?n - ?n] |- _ ]
+    => orewrite (n - n = 0) in H
+  end.

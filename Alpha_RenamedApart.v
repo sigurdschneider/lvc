@@ -1,5 +1,5 @@
 Require Import Util Map Env EnvTy Exp IL AllInRel Bisim Computable Annotation.
-Require Import Rename RenamedApart Alpha ILDB SetOperations.
+Require Import Rename RenamedApart Alpha ILDB SetOperations Status Pos.
 Import F.
 
 Set Implicit Arguments.
@@ -310,8 +310,8 @@ Proof.
       edestruct (get_length_eq _ H4 H5); eauto.
       exploit H6; eauto.
       exploit H2; eauto. simpl in *.
-      destruct y. f_equal.
-      * simpl in *. admit.
+      destruct y; simpl in *. f_equal.
+      * admit.
       * simpl in *.
 (*        erewrite rename_agree; eauto.
         eapply agree_on_incl.

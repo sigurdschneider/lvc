@@ -1,4 +1,4 @@
-Require Import Util Map Env EnvTy Exp IL AllInRel Bisim Computable.
+Require Import Util IL BisimF Computable.
 
 Import F.
 

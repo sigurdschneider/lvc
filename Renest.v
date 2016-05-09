@@ -189,7 +189,7 @@ Proof.
       orewrite (I.block_n blk - I.block_n blk = 0) in H8. simpl in *.
       pfold.
       econstructor 2.
-      eapply (S_star2 EvtTau). econstructor; eauto. eapply H8. eauto. eauto. eauto.
+      eapply star2_silent. econstructor; eauto. eapply H8. eauto. eauto. eauto.
       eauto. eauto.
   - inv H0.
     + assert ( get (drop (labN l - block_n blk) L) (counted (LabI (block_n blk))) blk). {
@@ -211,7 +211,7 @@ Proof.
       rewrite l_eq in *. get_functional. subst.
       orewrite (I.block_n blk - I.block_n blk = 0) in H7. simpl in *.
       pfold. econstructor 3. Focus 2.
-      eapply (S_star2 EvtTau). econstructor; eauto. eapply H7. eauto. eauto. eauto.
+      eapply star2_silent. econstructor; eauto. eapply H7. eauto. eauto. eauto.
       eauto.
 Qed.
 
@@ -470,7 +470,7 @@ Proof.
     + left. eapply IH; eauto.
     + left. eapply IH; eauto.
   - rename s into F. eapply bisim'_expansion_closed;
-                       [ | eapply (S_star2 EvtTau); [ econstructor | eapply star2_refl ]
+                       [ | eapply star2_silent; [ econstructor | eapply star2_refl ]
                          | eapply star2_refl].
     assert (SL': forall f f' : nat,
                get (mapi (plus' n) F ++ D) f f' ->

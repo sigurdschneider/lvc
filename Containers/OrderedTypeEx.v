@@ -262,6 +262,20 @@ Next Obligation. (* transitivity *)
   inductive_trans.
 Qed.
 
+Instance prod_eq_fst_morphism X Y R R'
+: Proper (@prod_eq X Y R R' ==> R) fst.
+Proof.
+  unfold Proper, respectful; intros.
+  inversion H; simpl; eauto.
+Qed.
+
+Instance prod_eq_snd_morphism X Y R R'
+: Proper (@prod_eq X Y R R' ==> R') snd.
+Proof.
+  unfold Proper, respectful; intros.
+  inversion H; simpl; eauto.
+Qed.
+
 Inductive prod_lt {A B}
   (eqA ltA : relation A) (ltB : relation B) : (A * B) -> (A * B) -> Prop :=
 | prod_lt_1 :
@@ -482,6 +496,13 @@ Qed.
 Next Obligation. (* transitivity *)
   rinductive_trans.
 Qed.
+
+Lemma list_eq_length A R l l'
+  : @list_eq A R l l' -> length l = length l'.
+Proof.
+  intros. induction H; simpl; eauto.
+Qed.
+
 
 Inductive list_lt {A} (ltA eqA : relation A) : list A -> list A -> Prop :=
 | list_lt_nil :

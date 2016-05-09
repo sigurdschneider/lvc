@@ -61,28 +61,19 @@ Proof.
  unfold guardGen; cases; subst; simpl; intuition.
 Qed.
 
-Lemma freeVars_undef :
-forall a e,
-a ∈ freeVars (undef e)
--> a ∈ Exp.freeVars e.
-
+Lemma freeVars_undef e
+  : freeVars (undef e) ⊆ Exp.freeVars e.
 Proof.
   intros. general induction e; simpl in * |- *; eauto with cset.
-  - cset_tac; intuition.
-  - unfold combine in *; repeat cases in H; simpl in *; eauto with cset;
-      cset_tac.
+  - unfold combine in *. repeat cases; simpl in *; eauto with cset.
 Qed.
 
-Lemma freeVars_undefLift:
-forall a el,
-  a ∈ freeVars (undefLift el)
--> a ∈ list_union (List.map Exp.freeVars el).
+Lemma freeVars_undefLift el
+  : freeVars (undefLift el) ⊆ list_union (List.map Exp.freeVars el).
 
 Proof.
-  intros a el inclFV.
   general induction el; simpl in * |- *; eauto.
-  - eapply list_union_start_swap.
-    unfold combine in *.
-    repeat cases in inclFV; simpl in *; eauto using freeVars_undef with cset.
-    cset_tac. eauto using freeVars_undef.
+  - rewrite list_union_start_swap.
+    unfold combine; repeat cases; simpl;
+      try rewrite IHel; try rewrite freeVars_undef; eauto with cset.
 Qed.

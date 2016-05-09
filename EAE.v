@@ -2,7 +2,7 @@ Require Import CSet Le.
 Require Import Plus Util AllInRel Map SetOperations.
 
 Require Import Val EqDec Computable Var Env EnvTy IL Annotation.
-Require Import Bisim Fresh MoreExp.
+Require Import BisimF Fresh MoreExp.
 
 Set Implicit Arguments.
 Unset Printing Records.

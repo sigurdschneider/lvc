@@ -1,5 +1,4 @@
 Require Import List.
-Require Export Util Get Drop Var Val Exp Env Map CSet AutoIndTac MoreList OptionMap.
 Require Export Events.
 
 Set Implicit Arguments.

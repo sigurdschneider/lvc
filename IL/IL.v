@@ -1,3 +1,4 @@
+
 Require Import List.
 Require Export Util Relations Get Drop Var Val Exp Env Map CSet AutoIndTac MoreList OptionMap.
 Require Export Events Size SmallStepRelations StateType.
@@ -326,7 +327,6 @@ Instance statetype_F : StateType F.state := {
   step_externally_determined := F.step_externally_determined
 }.
 
-
 Instance statetype_I : StateType I.state := {
   step := I.step;
   result := (@state_result I.labenv);
@@ -334,3 +334,17 @@ Instance statetype_I : StateType I.state := {
   step_internally_deterministic := I.step_internally_deterministic;
   step_externally_determined := I.step_externally_determined
 }.
+
+Ltac single_step :=
+  match goal with
+  | [ H : agree_on _ ?E ?E', I : val2bool (?E ?x) = true |- step (_, ?E', stmtIf ?x _ _) _ ] =>
+    econstructor; eauto; rewrite <- H; eauto; cset_tac; intuition
+  | [ H : agree_on _ ?E ?E', I : val2bool (?E ?x) = false |- step (_, ?E', stmtIf ?x _ _) _ ] =>
+    econstructor 3; eauto; rewrite <- H; eauto; cset_tac; intuition
+  | [ H : val2bool _ = false |- _ ] => econstructor 3 ; try eassumption; try reflexivity
+  | [ H : step (?L, _ , stmtApp ?l _) _, H': get ?L (counted ?l) _ |- _] =>
+    econstructor; try eapply H'; eauto
+  | [ H': get ?L (counted ?l) _ |- step (?L, _ , stmtApp ?l _) _] =>
+    econstructor; try eapply H'; eauto
+  | _ => econstructor; eauto
+  end.

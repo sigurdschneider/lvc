@@ -414,3 +414,27 @@ Definition elem_incl {X} `{OrderedType X} (x y: list X) := of_list x [<=] of_lis
 Instance elem_incl_refl X `{OrderedType X} : Reflexive (@elem_incl _ _).
 hnf; intros. hnf. cset_tac; intuition.
 Qed.
+
+Instance instance_option_eq_trans_R X {R: relation X} `{Transitive _ R}
+ : Transitive (option_eq R).
+Proof.
+  hnf; intros. inv H0; inv H1.
+  + econstructor.
+  + econstructor; eauto.
+Qed.
+
+Instance instance_option_eq_refl_R X {R: relation X} `{Reflexive _ R}
+ : Reflexive (option_eq R).
+Proof.
+  hnf; intros. destruct x.
+  + econstructor; eauto.
+  + econstructor.
+Qed.
+
+Instance instance_option_eq_sym_R X {R: relation X} `{Symmetric _ R}
+ : Symmetric (option_eq R).
+Proof.
+  hnf; intros. inv H0.
+  + econstructor.
+  + econstructor; eauto.
+Qed.

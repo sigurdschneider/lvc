@@ -17,25 +17,19 @@ Lemma diverges_reduction_closed S `{StateType S} (σ σ':S)
 : diverges σ -> star2 step σ nil σ'  -> diverges σ'.
 Proof.
   intros. general induction H1; eauto using diverges.
-  destruct yl, y; simpl in *; try congruence.
-  inv H2.
-  exploit step_internally_deterministic.
-  eapply H. eapply H3. dcr; subst.
-  eapply IHstar2; eauto.
+  invt diverges; relsimpl. eauto.
 Qed.
 
 Lemma diverges_never_activated S `{StateType S} (σ:S)
 : activated σ -> diverges σ -> False.
 Proof.
-  intros. inv H0. inv H1. dcr.
-  exploit step_internally_deterministic.
-  eapply H3. eapply H5. dcr; congruence.
+  intros. invt diverges; relsimpl.
 Qed.
 
 Lemma diverges_never_terminates S `{StateType S} (σ:S)
 : normal2 step σ -> diverges σ -> False.
 Proof.
-  intros. inv H1. eapply H0. firstorder.
+  intros. invt diverges; relsimpl.
 Qed.
 
 Lemma bisim_sound_diverges S `{StateType S} S' `{StateType S'} (σ:S) (σ':S')
@@ -49,7 +43,7 @@ Proof.
     eapply bisim'_bisim.
     eapply bisim'_reduction_closed.
     eapply bisim_bisim'. eapply H1. econstructor.
-    eapply (S_star2 EvtTau); eauto. econstructor.
+    eapply (star2_step EvtTau); eauto. econstructor.
   - eapply diverges_reduction_closed in H3.
     + exfalso. eapply (diverges_never_activated H5); eauto.
     + eapply H2.
@@ -117,10 +111,8 @@ Proof.
   - destruct yl, y; simpl in *; try congruence.
     eapply IHstar2; eauto.
     inv H2.
-    + exploit step_internally_deterministic. eapply H. eapply H3.
-      dcr; subst. eauto.
-    + exfalso. inv H3; dcr.
-      exploit step_internally_deterministic. eapply H. eapply H7. dcr; congruence.
+    + relsimpl; eauto.
+    + relsimpl.
     + exploit star2_reach_silent_step; eauto. eapply H1.
       destruct H3; subst. exfalso. eapply H5; firstorder.
       econstructor 3; eauto.
@@ -136,7 +128,7 @@ Proof.
   - eapply bisim_bisim' in H3.
     eapply IHprefix; eauto.
     eapply bisim'_bisim. eapply bisim'_reduction_closed_1; eauto.
-    eapply (S_star2 _ _ H0). eapply star2_refl.
+    eapply (star2_step _ _ H0). eapply star2_refl.
   - eapply bisim_bisim' in H4.
     eapply bisim'_activated in H4; eauto.
     destruct H4 as [? [? [? []]]].
@@ -173,7 +165,7 @@ Proof.
     + econstructor. eauto. eapply f.
       intros. eapply H0.
       eapply prefix_star2_silent.
-      eapply (S_star2 EvtTau); eauto. econstructor. eauto.
+      eapply star2_silent; eauto. econstructor. eauto.
   - exfalso.
     exploit H0. econstructor 3. reflexivity. econstructor. eauto. congruence.
 Qed.
@@ -186,9 +178,8 @@ Lemma prefix_extevent S `{StateType S} (σ:S) evt L
 Proof.
   intros. general induction H0.
   - edestruct IHprefix. reflexivity. dcr.
-    eexists x; intuition. eapply (S_star2 EvtTau); eauto.
-    eexists; eauto.
-  - eexists σ; intuition. econstructor. eexists; eauto.
+    eexists x; split; eauto using star2_silent.
+  - eexists σ; eauto using star2.
 Qed.
 
 Lemma prefix_terminates S `{StateType S} (σ:S) r L
@@ -197,7 +188,7 @@ Lemma prefix_terminates S `{StateType S} (σ:S) r L
 Proof.
   intros. general induction H0.
   - edestruct IHprefix. reflexivity.
-    eexists x; dcr; intuition. eapply (S_star2 EvtTau); eauto.
+    eexists x; dcr; subst. eauto using star2_silent.
   - eexists; intuition; eauto.
 Qed.
 
@@ -234,10 +225,10 @@ Proof.
     eapply f; intros; try eapply H4.
     split; intros.
     + eapply prefix_star2_silent'.
-      eapply (S_star2 EvtTau). eapply H7. econstructor.
+      eapply star2_silent. eapply H7. econstructor.
       eapply H1. econstructor; eauto.
     + eapply prefix_star2_silent'.
-      eapply (S_star2 EvtTau). eapply H3. econstructor.
+      eapply star2_silent. eapply H3. econstructor.
       eapply H1. econstructor; eauto.
   - exfalso.
     exploit (diverges_produces_only_nil H2).
@@ -256,7 +247,7 @@ Lemma prefix_star_activated S `{StateType S} (σ1 σ1' σ1'':S) evt L
 Proof.
   intros. general induction H0.
   - econstructor 2; eauto.
-  - destruct y, yl; simpl in *; try congruence.
+  - relsimpl.
     econstructor; eauto.
 Qed.
 
@@ -339,14 +330,12 @@ Lemma coproduces_reduction_closed_step S `{StateType S} (σ σ':S) L
 Proof.
   intros. inv H0.
   - exploit activated_star_reach. eapply H3. eauto.
-    eapply (S_star2 EvtTau); eauto. econstructor.
+    eapply (star2_step EvtTau); eauto. econstructor.
     econstructor. eapply H6. eauto. eauto. eauto.
   - econstructor. eapply diverges_reduction_closed; eauto.
-    eapply (S_star2 EvtTau); eauto. econstructor.
-  - exploit star2_reach_normal. eauto.
-    eapply (S_star2 EvtTau); eauto. econstructor.
-    eapply H. eauto.
-    econstructor; try eapply X. eauto. eauto. eauto.
+    eapply (star2_step EvtTau); eauto. econstructor.
+  - relsimpl.
+    econstructor; eauto.
 Qed.
 
 Lemma coproduces_reduction_closed S `{StateType S} (σ σ':S) L
@@ -428,8 +417,8 @@ Proof.
   - exfalso. eapply H1; eexists σ; intuition.
     econstructor. do 2 eexists; eauto.
   - econstructor. eauto. eapply f; intros; dcr.
-    eapply H0; eexists; split; eauto. eapply (S_star2 EvtTau); eauto.
-    eapply H1; eexists; split; eauto. eapply (S_star2 EvtTau); eauto.
+    eapply H0; eexists; split; eauto. eapply star2_silent; eauto.
+    eapply H1; eexists; split; eauto. eapply star2_silent; eauto.
   - exfalso. eapply H0; eexists σ; intuition. econstructor.
 Qed.
 

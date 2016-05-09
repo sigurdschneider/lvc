@@ -1,5 +1,5 @@
 Require Import List.
-Require Export Util Get Relations Val Exp AutoIndTac.
+Require Export Util Val.
 
 Set Implicit Arguments.
 

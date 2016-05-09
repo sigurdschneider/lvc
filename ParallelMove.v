@@ -1,7 +1,7 @@
 Require Import CSet Le.
 
 Require Import Plus Util AllInRel Map.
-Require Import Val Var Env EnvTy IL Annotation Sim Fresh Liveness Status MoreExp.
+Require Import Val Var Env EnvTy IL Annotation SimI Fresh Liveness Status MoreExp.
 
 Set Implicit Arguments.
 
@@ -120,14 +120,14 @@ Section GlueCode.
     forall K, star2 I.step (K, M, list_to_stmt p s) nil (K, upd_list p M, s).
   Proof.
     general induction p. firstorder using star2.
-    pose proof (H a). assert (List.In a (a :: p)). crush.
+    pose proof (H a). assert (List.In a (a :: p)) by (simpl; eauto).
     destruct (H1 H2) as [? [? ?]].
     subst. simpl.
     exploit (var_to_exp_correct M x0).
     exploit (H0 x0); eauto. simpl. cset_tac; intuition.
     destruct (M x0); isabsurd.
-    refine (S_star2 (yl:=nil) EvtTau _ _ _).
-    constructor; eauto. eapply IHp. intros. apply H. crush.
+    eapply star2_silent.
+    constructor; eauto. eapply IHp. intros. apply H. simpl; eauto.
     intros. lud. eauto. eapply H0; try reflexivity.
     simpl. cset_tac; intuition.
   Qed.
@@ -148,7 +148,10 @@ Section GlueCode.
     check_is_simple_ass p ->
     forall ass, List.In ass p -> exists x, exists y, ass = (x :: nil, y :: nil).
   Proof.
-    functional induction (check_is_simple_ass p); crush.
+    functional induction (check_is_simple_ass p); intros; simpl in *.
+    - intuition.
+    - intuition. subst; eauto.
+    - intuition.
   Qed.
 
   Definition validate_parallel_assignment vars p l1 l2 :=

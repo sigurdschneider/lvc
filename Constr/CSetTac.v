@@ -1,6 +1,6 @@
 Require Export Setoid Coq.Classes.Morphisms.
-Require Export Sets SetInterface SetConstructs SetProperties Get.
 Require Import EqDec CSetNotation Util.
+Require Export Sets SetInterface SetConstructs SetProperties Get.
 
 Lemma In_add_empty {X} `{OrderedType X} x y
   : In x (add y empty) <-> x === y.
