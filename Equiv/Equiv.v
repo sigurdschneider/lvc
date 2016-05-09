@@ -1,6 +1,6 @@
 Require Import List.
 Require Export Util Var Val Exp Env Map CSet AutoIndTac IL AllInRel InRel.
-Require Export EventsActivated StateType paco.
+Require Export SmallStepRelations StateType paco.
 
 Set Implicit Arguments.
 Unset Printing Records.

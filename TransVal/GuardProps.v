@@ -148,15 +148,14 @@ Proof.
     + eapply exp_freeVars_bin_agree; eauto.
     + edestruct (guard_models_impl_eval F E e1); eauto.
       * eapply (exp_freeVars_bin_agree E e1 e2); eauto.
-      *  unfold smt_eval.  rewrite H4, H5 in *; simpl in *.
-         cases in H3; simpl in H3.
-         { eapply H3. unfold val2bool; eapply bvEq_equiv_eq.
-           subst; simpl in *.
-           unfold smt_eval; erewrite exp_eval_partial_total; eauto.
-           unfold bvDiv in H0; cases in H0; subst; eauto; isabsurd. }
-         (** FIXME !!  Bug Report?
-         { destructBin b; isabsurd. } **)
-         Admitted.
+      * rewrite H4, H5 in *; simpl in *.
+        cases in H3; simpl in H3.
+        eapply H3. unfold val2bool; eapply bvEq_equiv_eq.
+        subst; simpl in *.
+        unfold smt_eval; erewrite exp_eval_partial_total; eauto.
+        unfold bvDiv in H0; cases in H0; subst; eauto; isabsurd.
+        do 6 (try destruct b); isabsurd.
+Qed.
 
 Lemma undefList_models:
   forall F E el,

@@ -683,14 +683,7 @@ Proof.
                 - one_step.
                   + simpl. rewrite <- e; rewrite H; rewrite <- H1; auto.
                   + eapply sim_refl.
-                - no_step. get_functional.
-                  + subst. simpl in *; congruence.
-                  + (* Construct a contradiction as both argument lists are equal
-                    and len contains the assumption that the lengths are equal *)
-                    eapply n. pose proof (get_functional g0 Ldef).
-                    rwsimplB H3 len.
-                    rewrite len.
-                    rewrite H, H1; auto. }
+                - no_step.  }
           - no_step; eauto. }
         { exfalso.
           pose (F := (fun l => fun (_:vallst) => if [labInc f 1 = l] then true else false)).

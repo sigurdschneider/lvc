@@ -11,6 +11,7 @@ COQDOCFLAGS := \
   -d $(DOC)
 COQMAKEFILE := Makefile.coq
 COQMAKE := +$(MAKE) -f $(COQMAKEFILE)
+CORES=$(shell cat /proc/cpuinfo | grep cpu\ cores | sed 's/.*:\ //' | head -n 1)
 VS=$(shell find -iname '*vo' | sed 's/\.vo/.v/' | grep -v paco | grep -v Containers)
 
 ifneq "$(COQBIN)" ""
@@ -38,5 +39,7 @@ $(COQMAKEFILE): Makefile $(VS)
 	./configure.sh
 #	coq_makefile -f _CoqProject $(VS) -o $(COQMAKEFILE)
 
+#%:: $(COQMAKEFILE)
+#	make -f $(COQMAKEFILE) -j$(CORES) $@
 
 .PHONY: all clean clean-doc doc

@@ -53,18 +53,13 @@ intros term. general induction term.
     * econstructor; eauto.
     * intros; isabsurd.
   + subst. specialize (H0 l Y); isabsurd.
-  +  pose( L2' := F.mkBlocks E s ++ L2).
-     specialize (IHterm L' L2' L1' E' V' s' s'0).
-     destruct IHterm; eauto; subst.
-     exists x. econstructor; eauto.
-    instantiate (1:=EvtTau); subst.
-     econstructor; eauto.
-  + specialize (IHterm L' L2 L1' E' V' s' s'0).
-    destruct IHterm as [L2'  IHterm]; eauto.
+  + subst. exploit IHterm; eauto.
+    edestruct H1 as [L2' ?].
+    eexists. econstructor; eauto.
+    econstructor; eauto.
+  + subst. edestruct IHterm as [L2' IHterm']; eauto.
     eexists; econstructor; eauto.
-    instantiate (1:= a); subst.
-    * econstructor; eauto.
-    * intros; isabsurd.
+    econstructor; eauto.
 Qed.
 
 (** Part 1 of Lemma 1 in the Thesis **)
@@ -255,29 +250,21 @@ Lemma ssa_move_return:
                   /\ snd (getAnn D') ⊆ snd (getAnn D).
 
 Proof.
-  intros. general induction H1.
-  - exists D. split; eauto.
-  - inversion H3; subst; isabsurd.
-    + inversion H; inversion H2; subst. exploit (IHTerminates an L' (E0[x<-Some v]) s' ); eauto.
-      destruct H9. exists x0.
-      destruct H9 as [H9 [H10 H11]].
-      split; eauto; split;  simpl; cset_tac; rewrite H8 in *;
-        simpl in *; hnf in *; eauto.
-      * eapply H10; cset_tac; eauto.
-      * apply H7. right; apply H11; eauto.
-    + inversion H; inversion H2; subst.
-      * exploit (IHTerminates ans); eauto.
-        destruct H11. exists x.
-        destruct H11 as [ H11 [ H12 H13]].
-        split; eauto; split; simpl; cset_tac; rewrite H9 in *;
-        simpl in *; hnf in *; eauto. eapply H6.
-        left; eapply H13; eauto.
-      * exploit (IHTerminates ant); eauto.
-        destruct H11; exists x.
-        destruct H11 as [ H11 [ H12 H13]].
-        split; eauto; split; simpl; cset_tac; rewrite H10 in *;
-        simpl in *; hnf in *; eauto; eapply H6.
-        right; eapply H13; eauto.
+  intros. general induction H1; invt renamedApart; invt noFun; try invt F.step.
+  - eexists. split; eauto.
+  - edestruct (IHTerminates an L' (E0[x<-Some v]) s' ); eauto; dcr.
+    pe_rewrite. simpl. eexists; split; eauto.
+    rewrite H7. split; eauto with cset.
+    rewrite <- H13. eauto with cset.
+  - edestruct (IHTerminates ans); eauto; dcr.
+    eexists; split; eauto. simpl.
+    rewrite <- H6. pe_rewrite.
+    rewrite H16, H17. eauto with cset.
+  - edestruct IHTerminates; eauto; dcr.
+    pe_rewrite. simpl.
+    eexists; split; eauto.
+    rewrite <- H6. eauto with cset.
+  - exfalso. eapply H0; eauto.
 Qed.
 
 (** See Lemma before **)
@@ -292,31 +279,21 @@ Lemma ssa_move_goto:
 
 Proof.
   intros D L E s E' f el nfS ssaS sterm.
-  general induction sterm.
-  - exists D; eauto.
-  - inversion ssaS; subst; try isabsurd.
-    + inversion nfS; inversion ssaS; inversion H;
-      subst; exploit (IHsterm an L' (E0 [ x<- Some v]) s'); eauto.
-      destruct H6 as [D'' [ssaGoto [fstSubset sndSubset]]].
-      exists D''; simpl.
-      split; eauto; split; cset_tac.
-      * apply fstSubset. rewrite H5; simpl. cset_tac.
-      * apply H19. rewrite H20 in sndSubset; simpl in *. right.
-        cset_tac.
-    + inversion nfS; inversion ssaS; inversion H; subst.
-       * exploit (IHsterm ans); eauto.
-         destruct H8 as [D'' [ssaGoto [fstSubset sndSubset]]].
-         exists D''; simpl.
-         split; eauto. split; simpl; cset_tac; rewrite H25 in *;
-         simpl in *; hnf in *; eauto.
-         eapply H22. left; eapply sndSubset; eauto.
-       * exploit (IHsterm ant); eauto.
-         destruct H8 as [D'' [ssaGoto [fstSubset sndSubset]]].
-         exists D''; simpl.
-         split; eauto.
-         split; cset_tac; rewrite H26 in *; simpl in *;
-         hnf in *; eauto.
-         eapply H22. right; eapply sndSubset; eauto.
+  general induction sterm; invt renamedApart; invt noFun; try invt F.step.
+  - eexists; eauto.
+  - edestruct (IHsterm an L' (E0[x<-Some v]) s' ); eauto; dcr.
+    pe_rewrite. simpl. eexists; split; eauto.
+    rewrite H4. split; eauto with cset.
+    rewrite <- H10. eauto with cset.
+  - edestruct (IHsterm ans); eauto; dcr.
+    eexists; split; eauto. simpl.
+    rewrite <- H3. pe_rewrite.
+    rewrite H13, H14. eauto with cset.
+  - edestruct IHsterm; eauto; dcr.
+    pe_rewrite. simpl.
+    eexists; split; eauto.
+    rewrite <- H3. eauto with cset.
+  - exfalso. eapply H0; eauto.
 Qed.
 
 (** Lemmata for Crash **)
@@ -343,8 +320,7 @@ Proof.
     + exists EvtTau; exists (L1, V, b2); econstructor; eauto.
     + subst. specialize (H l Y); isabsurd.
     + exists EvtTau.
-      exists (F.mkBlocks V s ++ L1, V, t).
-        econstructor; eauto.
+      eexists. econstructor.
     + exists x; subst.
         exists (L1, V[x1 <- Some v], s).
         econstructor; eauto.
@@ -362,11 +338,9 @@ Proof.
        eexists; econstructor; eauto.
        * instantiate (1:=EvtTau); econstructor; eauto.
      + specialize (H0 l Y); isabsurd.
-     + pose (L2' := F.mkBlocks V s ++ L2).
-       specialize (IHcrash (F.mkBlocks V s ++ L1) L2' L1' V V' t s').
-       destruct IHcrash; eauto.
+     + edestruct IHcrash; eauto.
        eexists; econstructor; eauto.
-       * instantiate (1:= EvtTau); econstructor; eauto.
+       * instantiate (2:= EvtTau); econstructor; eauto.
      + specialize (IHcrash  L1 L2 L1' (V[x<-Some v]) V' s s').
        destruct IHcrash; eauto.
        eexists; econstructor; eauto.

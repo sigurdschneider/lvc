@@ -1,36 +1,28 @@
 Require Import List.
-Require Export Util Relations Get Drop Var Val Exp Env Map CSet AutoIndTac MoreList OptionMap Events IL.
+Require Export Util Get Drop Var Val Exp Env Map CSet AutoIndTac MoreList OptionMap.
+Require Export Events.
 
 Set Implicit Arguments.
 
+Definition reducible2 :=
+  fun (X Y : Type) (R : X->Y->X->Prop) (x : X) => exists y x', R x y x'.
+
+Definition normal2 :=
+  fun (X Y : Type) (R : X->Y->X->Prop) (x : X) => ~ reducible2 R x.
+
+Definition reddec2 :=
+  fun (X Y : Type) (R : X->Y->X->Prop) => forall x : X, reducible2 R x \/ normal2 R x.
+
+Definition internally_deterministic {X : Type} (R : X -> event -> X -> Prop)
+  := forall x y x1 x2, R x EvtTau x1 -> R x y x2 -> x1 = x2 /\ y = EvtTau.
+
+Definition externally_determined {X : Type} (R : X -> event -> X -> Prop)
+  := forall x e x1 x2, R x e x1 -> R x e x2 -> x1 = x2.
 
 Class StateType S := {
   step : S -> event -> S -> Prop;
   result : S -> option val;
-  step_dec : reddec step;
+  step_dec : reddec2 step;
   step_internally_deterministic : internally_deterministic step;
   step_externally_determined : externally_determined step
-}.
-
-Definition state_result X (s:X*onv val*stmt) : option val :=
-  match s with
-    | (_, E, stmtReturn e) => exp_eval E e
-    | _ => None
-  end.
-
-Instance statetype_F : StateType F.state := {
-  step := F.step;
-  result := (@state_result F.labenv);
-  step_dec := F.step_dec;
-  step_internally_deterministic := F.step_internally_deterministic;
-  step_externally_determined := F.step_externally_determined
-}.
-
-
-Instance statetype_I : StateType I.state := {
-  step := I.step;
-  result := (@state_result I.labenv);
-  step_dec := I.step_dec;
-  step_internally_deterministic := I.step_internally_deterministic;
-  step_externally_determined := I.step_externally_determined
 }.

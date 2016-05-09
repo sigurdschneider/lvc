@@ -1,5 +1,5 @@
 Require Import List.
-Require Export Util Var Val Exp Env Map CSet AutoIndTac IL Bisim Infra.Status Pos SmallStepCommon.
+Require Export Util Var Val Exp Env Map CSet AutoIndTac IL Bisim Infra.Status Pos.
 
 Set Implicit Arguments.
 
@@ -90,7 +90,7 @@ Module F.
   Qed.
 
   Lemma step_dec
-  : reddec step.
+  : reddec2 step.
   Proof.
     hnf; intros. destruct x as [[L V] []].
     - case_eq (exp_eval V e); intros. left. do 2 eexists. eauto 20 using step.

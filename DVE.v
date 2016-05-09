@@ -365,74 +365,6 @@ Proof.
   - rewrite IHn; eauto. omega.
 Qed.
 
-Lemma inv_plus2_step S `{StateType S} σ1 σ2 σ3 L
-    : step σ1 EvtTau σ2
-      -> plus2 step σ1 L σ3
-      -> star2 step σ2 L σ3.
-Proof.
-  intros. destruct H1; subst.
-
-
-Qed.
-
-Lemma sim_drop_shift_left r σA1 σB1 σ1' σ2
-  : paco2 (@sim_gen I.state _ I.state _) r
-            σA1
-            σ2
-    -> step σA1 EvtTau σ1'
-    -> step σB1 EvtTau σ1'
-    -> paco2 (@sim_gen I.state _ I.state _) r
-            σB1
-            σ2.
-Proof.
-  intros SIM Step1 Step2. pinversion SIM; subst.
-  -
-
-    eapply plus2_destr_nil in H. destruct H as [? [? ?]].
-    invt step. clear H. simpl in *.
-    eapply get_drop in Ldef. exploit (sawtooth_smaller STL GetL); eauto.
-    simpl in *.
-    assert (l_eq:labN l - I.block_n blk + I.block_n blk = labN l). omega.
-    rewrite l_eq in *. get_functional.
-    orewrite (I.block_n blk - I.block_n blk = 0) in H2. simpl in *.
-    pfold.
-    econstructor 1.
-    eapply star2_plus2. econstructor; eauto. eapply H2. eauto. eauto.
-  - inv H.
-    + exfalso. not_activated H1.
-    + invt step. clear H6. simpl in *.
-      eapply get_drop in Ldef. exploit (sawtooth_smaller STL GetL); eauto.
-      simpl in *.
-      assert (l_eq:labN l - I.block_n blk + I.block_n blk = labN l). omega.
-      rewrite l_eq in *. get_functional. subst.
-      orewrite (I.block_n blk - I.block_n blk = 0) in H8. simpl in *.
-      pfold.
-      econstructor 2.
-      eapply (S_star2 EvtTau). econstructor; eauto. eapply H8. eauto. eauto. eauto.
-      eauto. eauto.
-  - inv H0.
-    + assert ( get (drop (labN l - block_n blk) L) (counted (LabI (block_n blk))) blk). {
-        eapply drop_get. simpl.
-        exploit (sawtooth_smaller STL); eauto. simpl in *.
-        orewrite (labN l - I.block_n blk + I.block_n blk = labN l). eauto.
-      }
-      decide (❬I.block_Z blk❭ = ❬Y❭).
-      case_eq (omap (exp_eval E) Y); intros.
-      not_normal H2.
-      pfold. econstructor 3. Focus 2. eapply star2_refl. eauto. eauto.
-      stuck2. eauto.
-      pfold. econstructor 3. Focus 2. eapply star2_refl. eauto. eauto.
-      stuck2. eauto.
-    + invt step. clear H5. simpl in *.
-      eapply get_drop in Ldef. exploit (sawtooth_smaller STL GetL); eauto.
-      simpl in *.
-      assert (l_eq:labN l - I.block_n blk + I.block_n blk = labN l). omega.
-      rewrite l_eq in *. get_functional. subst.
-      orewrite (I.block_n blk - I.block_n blk = 0) in H7. simpl in *.
-      pfold. econstructor 3. Focus 2.
-      eapply (S_star2 EvtTau). econstructor; eauto. eapply H7. eauto. eauto. eauto.
-      eauto.
-Qed.
 
 Lemma sim_I r L L' V V' s LV lv
 : agree_on eq (oget (getAnn lv)) V V'
@@ -492,10 +424,23 @@ Proof.
     remember (omap (exp_eval V) Y). symmetry in Heqo.
     rewrite (get_nth (None, nil) H5); eauto; simpl.
     destruct o.
-    + exploit omap_filter_by; eauto.
-      hnf in H1; dcr. exploit H7; eauto. split. reflexivity. eauto.
-      invc H1. simpl in *. hnf in H11. dcr; subst; simpl in *.
-      eapply sim_drop_shift_I.
+    + hnf in H1; dcr. exploit H4; eauto. split. reflexivity. eauto.
+      destruct x as [Z1 s1 n1], x0 as [Z2 s2 n2].
+      invc H1. simpl in *. dcr; subst; simpl in *.
+      hnf in H20; dcr. subst. simpl in *.
+      exploit (@omap_filter_by _ _ _ _ (fun y : var => if [y \In blv] then true else false) _ _ Z Heqo); eauto.
+      eapply sim_Y_left. eapply sim_Y_right.
+      eapply H24. eapply Heqo. eapply H1.
+      hnf. simpl. split; eauto. split; eauto.
+      exploit (omap_length _ _ _ _ _ Heqo); eauto. congruence.
+      Focus 4. econstructor; eauto.
+      Focus 2. econstructor; eauto. simpl.
+      eapply filter_filter_by_length; eauto.
+      eapply omap_exp_eval_live_agree; eauto.
+      eapply argsLive_liveSound; eauto. simpl.
+
+
+      eapply H15. eauto. eauto. hnf. simpl. admit.
       pone_step. simpl.
       eapply filter_filter_by_length; eauto.
       eapply omap_exp_eval_live_agree; eauto.

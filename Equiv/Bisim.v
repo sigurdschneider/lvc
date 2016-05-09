@@ -1,6 +1,6 @@
 Require Import List.
 Require Export Util Var Val Exp Env Map CSet AutoIndTac IL AllInRel Sawtooth.
-Require Export EventsActivated StateType paco Equiv.
+Require Export SmallStepRelations StateType paco Equiv.
 
 Set Implicit Arguments.
 Unset Printing Records.
@@ -214,8 +214,7 @@ Proof.
       eexists; split; eauto.
   - destruct y; isabsurd. simpl.
     eapply IHstar2; eauto.
-    eapply bisim'_reduction_closed_1; eauto using star2.
-    eapply (S_star2 _ _ H); eauto using star2_refl.
+    eapply bisim'_reduction_closed_1; eauto using star2, star2_silent.
 Qed.
 
 
@@ -321,7 +320,8 @@ Proof.
       - (* plus step <-> term *)
         eapply star2_trans in H11; eauto. clear H2; simpl in *.
         eapply plus2_star2 in H6.
-        exploit (star2_reach_normal H11 H6); eauto. eapply H0.
+        exploit (star2_reach_normal H11 H13 step_internally_deterministic H6);
+          eauto.
         edestruct (bisim'_terminate H2 H13 (bisim'_sym H7)); eauto; dcr.
         pfold.
         econstructor 3. rewrite H17 in H10. eapply H10.
@@ -372,7 +372,7 @@ Proof.
       - (* term <-> plus step *)
         eapply plus2_star2 in H12.
         eapply star2_trans in H12; eauto. clear H2; simpl in *.
-        exploit (star2_reach_normal H7 H12); eauto. eapply H0.
+        exploit (star2_reach_normal H7 H9 step_internally_deterministic H12); eauto.
         edestruct (bisim'_terminate H2 H9 H14); eauto; dcr.
         pfold.
         econstructor 3. rewrite H17 in H4. eapply H4.
@@ -425,7 +425,8 @@ Proof.
       - (* plus step <-> term *)
         eapply plus2_star2 in H6.
         eapply star2_trans in H6; eauto. clear H2; simpl in *.
-        exploit (star2_reach_normal H11 H6); eauto. eapply H0.
+        exploit (star2_reach_normal H11 H13 step_internally_deterministic H6);
+          eauto.
         edestruct (bisim'_terminate H2 H13 (bisim'_sym H7)); eauto; dcr.
         pfold.
         econstructor 3. rewrite H17 in H10. eapply H10.
@@ -472,7 +473,7 @@ Proof.
       - (* term <-> plus step *)
         eapply star2_trans in H7; eauto. clear H2; simpl in *.
         eapply plus2_star2 in H12.
-        exploit (star2_reach_normal H7 H12); eauto. eapply H0.
+        exploit (star2_reach_normal H7 H9 step_internally_deterministic H12); eauto.
         edestruct (bisim'_terminate H2 H9 H14); eauto; dcr.
         pfold.
         econstructor 3. rewrite H17 in H4. eapply H4.
@@ -803,7 +804,7 @@ Proof.
              |
              |
              |].
-      Focus 2. rewrite <- H7. eapply S_star2.
+      Focus 2. rewrite <- H7. eapply star2_step.
       econstructor; eauto using get_drop_lab0, drop_get_lab0.
       simpl in *. simpl_minus.
       eauto. eauto.
@@ -818,7 +819,7 @@ Proof.
              |eapply star2_refl
              |
              |].
-      Focus 2. rewrite <- H7. eapply S_star2.
+      Focus 2. rewrite <- H7. eapply star2_step.
       econstructor; eauto using get_drop_lab0, drop_get_lab0.
       simpl in *. simpl_minus.
       eauto. eauto. eauto.

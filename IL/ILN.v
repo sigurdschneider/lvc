@@ -100,7 +100,7 @@ Module F.
   Qed.
 
   Lemma step_dec
-  : reddec step.
+  : reddec2 step.
   Proof.
     hnf; intros. destruct x as [[L V] []].
     - case_eq (exp_eval V e); intros. left. eexists EvtTau; eauto using step.
@@ -205,7 +205,7 @@ Module I.
 
 
   Lemma step_dec
-  : reddec step.
+  : reddec2 step.
   Proof.
       hnf; intros. destruct x as [[L V] []].
     - case_eq (exp_eval V e); intros. left. eexists EvtTau; eauto using step.
