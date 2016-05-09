@@ -1,7 +1,7 @@
 Require Import Coq.Lists.List Coq.Arith.Arith Coq.Arith.PeanoNat Omega.
 Require Import AutoIndTac Util Get.
 
-Require Export orderedBitvec.
+Require Export OrderedBitVector.
 
 Set Implicit Arguments.
 

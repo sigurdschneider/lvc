@@ -1,5 +1,5 @@
-Require Import Arith Util EqDec List bitvec.
-Require Import OrderedTypeEx.
+Require Import Arith Util EqDec List.
+Require Import OrderedTypeEx BitVector.
 
 Set Implicit Arguments.
 

@@ -1,5 +1,5 @@
 Require Import List EqNat Bool SetOperations.
-Require Import IL Exp Val bitvec smt freeVars tvalTactics.
+Require Import BitVector IL Exp Val SMT.
 
 Opaque zext.
 
@@ -67,9 +67,10 @@ a ∈ freeVars (undef e)
 -> a ∈ Exp.freeVars e.
 
 Proof.
-  intros. general induction e; simpl in * |- *; cset_tac; intuition.
-  - repeat (cases in H; unfold combine in *; simpl in *; cset_tac); eauto; intuition.
-    repeat (cases in H0; simpl in *;  cset_tac; eauto).
+  intros. general induction e; simpl in * |- *; eauto with cset.
+  - cset_tac; intuition.
+  - unfold combine in *; repeat cases in H; simpl in *; eauto with cset;
+      cset_tac.
 Qed.
 
 Lemma freeVars_undefLift:
@@ -80,7 +81,8 @@ forall a el,
 Proof.
   intros a el inclFV.
   general induction el; simpl in * |- *; eauto.
-  - simpl in *. eapply list_union_start_swap.
+  - eapply list_union_start_swap.
     unfold combine in *.
-    repeat (cases in inclFV); simpl in *; cset_tac; intuition (eauto using freeVars_undef).
+    repeat cases in inclFV; simpl in *; eauto using freeVars_undef with cset.
+    cset_tac. eauto using freeVars_undef.
 Qed.

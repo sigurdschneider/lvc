@@ -1,8 +1,8 @@
 Require Import List Arith.
-Require Import IL Annotation AutoIndTac Exp MoreExp Coherence Fresh Util.
+Require Import IL Annotation AutoIndTac Exp MoreExp Fresh Util.
 Require Import SetOperations Sim Var.
-Require Import smt nofun bitvec freeVars.
-Require Import Compute Guards ILFtoSMT tvalTactics TUtil.
+Require Import BitVector SMT NoFun.
+Require Import Guards ILFtoSMT.
 
 Opaque zext.
 

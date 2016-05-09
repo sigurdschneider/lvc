@@ -138,10 +138,3 @@ destruct (_cmp s t); simpl in *.
 - right. inv H. intro; subst.
   eapply ltBitvec_irrefl. eapply H0.
 Defined.
-
-
-(*
-*** Local Variables: ***
-*** coq-load-path: (("../" "Lvc")) ***
-*** End: ***
-*)

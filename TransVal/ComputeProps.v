@@ -1,65 +1,25 @@
 Require Import List Arith.
 Require Import AutoIndTac Annotation Exp IL MoreExp RenamedApart Util.
 Require Import SetOperations Sim.
-Require Import bitvec smt nofun freeVars.
-Require Import Compute Guards ILFtoSMT tvalTactics TUtil GuardProps.
+Require Import BitVector SMT NoFun.
+Require Import Guards ILFtoSMT GuardProps.
 
-(*
-(** TODO Remove as unused **)
-Lemma exp_eval_if_list_eval:
-  forall el E vl,
-    omap (exp_eval E) el = Some vl
-    -> forall e, List.In e el -> exists v, exp_eval E e = Some v.
-
-Proof.
-intros.
-general induction el.
-- simpl in H. exists (O::nil). intros. inversion H0.
-- unfold omap in H. monad_inv H. decide (e=a).
-  + exists x. intros. rewrite e0. assumption.
-   + specialize (IHel E x0 EQ1). specialize (IHel e).
-     simpl in H0.  destruct H0.
-     * exfalso. apply n. rewrite H; reflexivity.
-     * destruct (IHel H).  exists x1.
-       rewrite H0. reflexivity.
-Qed. *)
 
 (** Lemma 2 in Thesis
 Proves that Terminates ignores the label environment **)
+
 Lemma term_swap_fun L1 L2 L1'  V V' s s':
 Terminates (L1,V,s) (L1',V',s')
 -> exists L2', Terminates (L2, V, s) (L2', V', s').
 
 Proof.
-intros term. general induction term.
-- eexists; econstructor;  eauto.
-- eexists; econstructor; eauto.
-- inversion H.
-  + specialize (IHterm L' L2 L1' E' V' s' s'0).
-  destruct IHterm as [L2'  IHterm]; eauto.
-  eexists; econstructor; eauto. instantiate (1:=a).
-    * rewrite <- H7.  subst. econstructor; eauto.
-    * intros; isabsurd.
-  + specialize (IHterm L' L2 L1' E' V' s' s'0).
-  destruct IHterm as [L2'  IHterm]; eauto.
- eexists; econstructor; eauto.
-    instantiate (1:=EvtTau); subst.
-    * econstructor; eauto.
-    * intros; isabsurd.
-  + specialize (IHterm L' L2 L1' E' V' s' s'0).
-  destruct IHterm as [L2'  IHterm]; eauto.
-  eexists; econstructor; eauto.
-  instantiate(1:=EvtTau); subst.
-    * econstructor; eauto.
-    * intros; isabsurd.
-  + subst. specialize (H0 l Y); isabsurd.
-  + subst. exploit IHterm; eauto.
-    edestruct H1 as [L2' ?].
-    eexists. econstructor; eauto.
-    econstructor; eauto.
-  + subst. edestruct IHterm as [L2' IHterm']; eauto.
-    eexists; econstructor; eauto.
-    econstructor; eauto.
+  intros term. general induction term; eauto using Terminates.
+  assert (exists L2', F.step (L2, V, s0) a (L2', E', s')). {
+    inv H; eexists; econstructor; eauto.
+    exfalso; eapply H0; eauto.
+  }
+  destruct H1; eauto. edestruct IHterm; eauto.
+  eexists; eauto using Terminates.
 Qed.
 
 (** Part 1 of Lemma 1 in the Thesis **)
@@ -71,8 +31,8 @@ Lemma term_ssa_eval_agree L L' s D s' (E:onv val) (E':onv val)
 
 Proof.
   intros.
-  general induction H1; invt renamedApart; try invt F.step;try invt noFun; simpl;
-  try reflexivity.
+  general induction H1; eauto using agree_on_refl.
+  invt renamedApart; try invt F.step;try invt noFun; simpl.
   - exploit IHTerminates; [ | | reflexivity | reflexivity |]; eauto.
     rewrite H8 in H9; simpl in *. cset_tac.
     hnf in *. intros x0 inD0.

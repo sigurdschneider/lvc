@@ -1,5 +1,5 @@
 Require Import Util EqDec DecSolve Val CSet Map Env EnvTy Option Get SetOperations.
-Require Import Arith bitvec orderedBitvec.
+Require Import Arith BitVector.
 
 Set Implicit Arguments.
 

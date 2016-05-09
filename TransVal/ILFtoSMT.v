@@ -1,4 +1,4 @@
-Require Import smt Guards IL.
+Require Import SMT Guards IL.
 
 Fixpoint translateStmt (s:stmt) (p:pol) :smt :=
 match s, p with
