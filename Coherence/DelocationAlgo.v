@@ -1,8 +1,6 @@
-Require Import CSet Le.
-
-Require Import Plus Util AllInRel Map Take MoreList.
-Require Import Val Var Env EnvTy IL Annotation Liveness Coherence Restrict Delocation LabelsDefined.
-Require Import Keep OUnion.
+Require Import Util IL InRel RenamedApart LabelsDefined.
+Require Import Keep Drop Take Restrict MoreExp SetOperations OUnion.
+Require Import Annotation Liveness Coherence Delocation.
 
 Set Implicit Arguments.
 Unset Printing Abstraction Types.
@@ -797,7 +795,7 @@ Proof.
     }
     assert (NPLEQ: oto_list ⊝ take ❬F❭ NPL ++ oto_list ⊝ drop ❬F❭ NPL
                    = oto_list ⊝ NPL). {
-      rewrite <- map_app. rewrite <- take_eta. reflexivity.
+      rewrite <- List.map_app. rewrite <- take_eta. reflexivity.
     }
     assert (LVb_LE:PIR2 ≼ LVb NPL). {
       eapply PIR2_addAdds'; eauto 20 with len.
@@ -1043,7 +1041,7 @@ Proof.
       eapply additionalParameters_live_monotone; try eapply H10; eauto.
       rewrite map_map.
       rewrite of_list_oto_list_oget.
-      rewrite <- map_app. rewrite <- take_eta.
+      rewrite <- List.map_app. rewrite <- take_eta.
       eapply PIR2_ifFstR_Subset_oget.
       eapply ifFstR_addAdds2. rewrite zip_app; eauto with len.
       eapply computeParametersF_LV_DL; eauto with len. rewrite live_globals_zip; eauto.
@@ -1051,7 +1049,7 @@ Proof.
         eauto using PIR2_Subset_tab_extend with len.
       rewrite map_map.
       rewrite of_list_oto_list_oget.
-      rewrite <- map_app. rewrite <- take_eta.
+      rewrite <- List.map_app. rewrite <- take_eta.
       eapply PIR2_ifFstR_Subset_oget.
       eapply ifFstR_addAdds2. rewrite zip_app; eauto with len.
       eapply computeParametersF_LV_DL; eauto with len. rewrite live_globals_zip; eauto.

@@ -1,4 +1,4 @@
-Require Import List Arith.
+Require Import List CSet.
 Require Import AutoIndTac Annotation Exp IL MoreExp RenamedApart Util.
 Require Import SetOperations Sim.
 Require Import BitVector SMT NoFun.
@@ -30,20 +30,18 @@ Lemma term_ssa_eval_agree L L' s D s' (E:onv val) (E':onv val)
    -> agree_on eq (fst(getAnn D)) E E'.
 
 Proof.
-  intros.
-  general induction H1; eauto using agree_on_refl.
+  intros RA NF Trm.
+  general induction Trm; eauto using agree_on_refl.
   invt renamedApart; try invt F.step;try invt noFun; simpl.
-  - exploit IHTerminates; [ | | reflexivity | reflexivity |]; eauto.
-    rewrite H8 in H9; simpl in *. cset_tac.
-    hnf in *. intros x0 inD0.
-    specialize (H9 x0).
-    assert (x0 ∈ {x; D0}) by (cset_tac; left; assumption).
-   specialize (H9 H11). unfold update in H9. cases in H9; eauto.
-  - exploit IHTerminates; [ | | reflexivity | reflexivity |]; eauto.
-    rewrite H9 in H11; simpl in *. assumption.
-  - exploit IHTerminates; [| | reflexivity | reflexivity |]; eauto.
-    rewrite H10 in H11; simpl in *; assumption.
-  - specialize (H0 f Y); isabsurd.
+  - exploit IHTrm; [ | | reflexivity | reflexivity |]; eauto.
+    pe_rewrite.
+    eapply agree_on_update_inv in H6.
+    eapply agree_on_incl; eauto. cset_tac.
+  - exploit IHTrm; [ | | reflexivity | reflexivity |]; eauto.
+    pe_rewrite. eauto.
+  - exploit IHTrm; [ | | reflexivity | reflexivity |]; eauto.
+    pe_rewrite. eauto.
+  - exfalso; eapply H0; eauto.
 Qed.
 
 Lemma terminates_impl_star2:
@@ -55,23 +53,11 @@ Lemma terminates_impl_star2:
 
 Proof.
   intros L E s L' Es s' noFun_s Terminates_s.
-  general induction Terminates_s.
-  - split; eauto; econstructor.
-  - split; eauto; econstructor.
-  - inversion noFun_s; subst; try isabsurd.
-    + exploit (IHTerminates_s L' E' s'); try reflexivity.
-      * inversion H; subst; eauto.
-      * destruct H2 as [step H2]; split.
-        { change (star2 F.step (L0, E0, stmtLet x e s) (filter_tau EvtTau nil) (L'0, Es, s'0)).
-          econstructor; eauto. destruct a; eauto; isabsurd. }
-        { destruct H2; eauto. }
-  + exploit (IHTerminates_s L' E' s'); eauto.
-    * inversion H; subst; eauto.
-    * destruct H3 as [step H3]; split.
-      { change (star2 F.step (L0, E0, stmtIf e s t)(filter_tau EvtTau nil) (L'0, Es, s'0)).
-        econstructor; eauto; destruct a; eauto; isabsurd. }
-      {destruct H3; eauto. }
-  + specialize (H0 l Y); isabsurd.
+  general induction Terminates_s; try invt F.step; invt noFun; eauto using star2_refl.
+  - edestruct IHTerminates_s as [step ?]; try reflexivity; eauto; dcr; split; eauto using star2_silent.
+  - edestruct IHTerminates_s as [step ?]; try reflexivity; eauto; dcr; split; eauto using star2_silent.
+  - edestruct IHTerminates_s as [step ?]; try reflexivity; eauto; dcr; split; eauto using star2_silent.
+  - exfalso; eapply H0; eauto.
 Qed.
 
 (** Lemma 13 in Thesis
@@ -165,37 +151,28 @@ general induction Term_s; simpl.
  + specialize (H0 l Y); isabsurd.
 Qed.
 
-Lemma terminates_impl_eval:
-forall L L' E s E' e,
-noFun s
--> Terminates (L, E, s) (L', E',stmtReturn  e)
--> exists v, exp_eval E' e = Some v.
-
+Lemma terminates_impl_eval L L' E s E' e
+  : noFun s
+    -> Terminates (L, E, s) (L', E',stmtReturn  e)
+    -> exists v, exp_eval E' e = Some v.
 Proof.
-intros. general induction H0.
-- exists v; eauto.
-- exploit (IHTerminates L0 L'0 E' s' E'0 e); eauto.
-  + inversion H2; subst; try isabsurd.
-    * inversion H. rewrite <- H13; eauto.
-    * inversion H;  rewrite <- H14; eauto.
-    * specialize (H1 l Y); isabsurd.
-  + inversion H; subst; eauto; isabsurd. specialize (H1 l Y); isabsurd.
+  intros NF Trm.
+  general induction Trm; eauto.
+  eapply IHTrm; try reflexivity.
+  inv NF; invt F.step; eauto.
+  exfalso; eapply H0; eauto.
 Qed.
 
-Lemma terminates_impl_evalList:
-forall L  L' E s E' f el,
-noFun s
--> Terminates (L, E, s) (L', E', stmtApp f el)
--> exists v, omap (exp_eval E') el = Some v.
-
+Lemma terminates_impl_evalList L  L' E s E' f el
+  : noFun s
+    -> Terminates (L, E, s) (L', E', stmtApp f el)
+    -> exists v, omap (exp_eval E') el = Some v.
 Proof.
-intros. general induction H0.
-- exists vl; eauto.
-- exploit (IHTerminates L0 L'0 E' s' E'0 f el); eauto.
-  + inversion H2; subst; inversion H; subst; eauto; isabsurd.
-    specialize (H1 l Y); isabsurd.
-  + inversion H; subst; eauto; isabsurd.
-    specialize (H1 l Y); isabsurd.
+  intros NF Trm.
+  general induction Trm; eauto.
+  eapply IHTrm; try reflexivity.
+  inv NF; invt F.step; eauto.
+  exfalso; eapply H0; eauto.
 Qed.
 
 (** Lemma cannot be proven with star2 step because in the
@@ -267,44 +244,19 @@ Crash (L1, V, s) (L1', V', s')
 -> exists L2', Crash (L2, V, s) (L2', V', s').
 
 Proof.
-  intros crash; general induction crash.
-  - eexists; econstructor; eauto.
-  - eexists; econstructor; eauto.
-    unfold normal2 in *.
-    hnf. intros. eapply H0.
-    unfold reducible2 in *.
-    destruct H2; destruct H2.
-    inversion H2; try isabsurd.
-    + exists EvtTau. exists ( L1, V[x1 <- Some v], b). econstructor; eauto.
-    + exists EvtTau; exists (L1, V, b1); econstructor; eauto.
-    + exists EvtTau; exists (L1, V, b2); econstructor; eauto.
-    + subst. specialize (H l Y); isabsurd.
-    + exists EvtTau.
-      eexists. econstructor.
-    + exists x; subst.
-        exists (L1, V[x1 <- Some v], s).
-        econstructor; eauto.
-   - inversion H; subst.
-     + specialize (IHcrash L1 L2 L1' (V[x<-Some v]) V' b s').
-       destruct IHcrash; eauto.
-       eexists; econstructor; eauto.
-       * instantiate (1:= EvtTau); econstructor; eauto.
-     + specialize (IHcrash L1 L2 L1' V V' b1 s').
-       destruct IHcrash; eauto.
-       eexists; econstructor; eauto.
-       * instantiate (1:=EvtTau); econstructor; eauto.
-     + specialize (IHcrash L1 L2 L1' V V' b2 s').
-       destruct IHcrash; eauto.
-       eexists; econstructor; eauto.
-       * instantiate (1:=EvtTau); econstructor; eauto.
-     + specialize (H0 l Y); isabsurd.
-     + edestruct IHcrash; eauto.
-       eexists; econstructor; eauto.
-       * instantiate (2:= EvtTau); econstructor; eauto.
-     + specialize (IHcrash  L1 L2 L1' (V[x<-Some v]) V' s s').
-       destruct IHcrash; eauto.
-       eexists; econstructor; eauto.
-       * instantiate (1:=EvtExtern {| extern_fnc := f; extern_args := vl; extern_res := v |}); subst; econstructor; eauto.
+  intros crash. general induction crash; eauto using Crash.
+  - eexists. econstructor; eauto.
+    intros [? [? ?]]. eapply H0.
+    invt F.step; try now (do 2 eexists; econstructor; eauto).
+    exfalso. eapply H; eauto.
+  - destruct sigma' as [[L2'' V''] s''].
+    assert (exists L2'', F.step (L2, V, s0) a (L2'', V'', s'')). {
+      inv H; try now (eexists; econstructor; eauto).
+      exfalso; eapply H0; eauto.
+    }
+    destruct H1; eauto. edestruct IHcrash; try reflexivity.
+    eexists; econstructor. eauto. eauto. eauto.
+    Grab Existential Variables. eauto.
 Qed.
 
 (** Part 2 of Lemma 1 in the Thesis *)
@@ -363,28 +315,28 @@ Proof.
 Qed.
 
 Lemma nostep_let:
-forall L E x e s,
-normal2 F.step (L, E, stmtLet x e s)
--> exp_eval E e = None.
+  forall L E x e s,
+    normal2 F.step (L, E, stmtLet x e s)
+    -> exp_eval E e = None.
 
 Proof.
-intros. case_eq (exp_eval E e); intros; eauto.
-exfalso; apply H. unfold reducible2.
-exists EvtTau. exists (L, E[x<-Some v],s). econstructor; eauto.
+  intros. case_eq (exp_eval E e); intros; eauto.
+  exfalso; apply H. unfold reducible2.
+  exists EvtTau. exists (L, E[x<-Some v],s). econstructor; eauto.
 Qed.
 
 Lemma nostep_if:
-forall L E e t f,
-normal2 F.step (L, E, stmtIf e t f)
--> exp_eval E e = None.
+  forall L E e t f,
+    normal2 F.step (L, E, stmtIf e t f)
+    -> exp_eval E e = None.
 
 Proof.
-intros. case_eq (exp_eval E e); intros; eauto.
-exfalso; eapply H; unfold reducible2.
-exists (EvtTau).
-case_eq (val2bool v); intros.
-- exists (L, E, t); econstructor; eauto.
-- exists (L, E, f); econstructor; eauto.
+  intros. case_eq (exp_eval E e); intros; eauto.
+  exfalso; eapply H; unfold reducible2.
+  exists (EvtTau).
+  case_eq (val2bool v); intros.
+  - exists (L, E, t); econstructor; eauto.
+  - exists (L, E, f); econstructor; eauto.
 Qed.
 
 (** Lemma 11 in the thesis

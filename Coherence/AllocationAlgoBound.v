@@ -76,7 +76,8 @@ Lemma minus_incl_incl_union X `{OrderedType X} s t u
   : s \ t ⊆ u
     -> s ⊆ t ∪ u.
 Proof.
-  cset_tac. decide (a ∈ t); cset_tac; intuition.
+  intros H1. rewrite <- H1. clear H1.
+  cset_tac.
 Qed.
 
 Hint Resolve minus_incl_incl_union | 10: cset.
@@ -95,20 +96,17 @@ Proof.
   - assert ( singleton (findt ϱ' 0 x)
                        ⊆ vars_up_to (size_of_largest_live_set al)). {
       eapply regAssign_renamedApart_agree in allocOK; eauto.
-      rewrite <- allocOK. unfold findt at 1.
-      rewrite MapFacts.add_eq_o; eauto.
-      cset_tac. invc H2. eapply in_vars_up_to.
+      rewrite <- allocOK; [|pe_rewrite; eauto with cset].
+      unfold findt at 1. rewrite MapFacts.add_eq_o; eauto.
+      eapply incl_singleton. eapply in_vars_up_to.
       rewrite least_fresh_small.
       rewrite cardinal_map; eauto.
-      rewrite cardinal_difference'.
+      rewrite cardinal_difference'; [|eauto with cset].
       rewrite <- size_of_largest_live_set_live_set.
       rewrite singleton_cardinal.
       assert (SetInterface.cardinal (getAnn al) > 0).
       rewrite <- (add_minus_single_eq H1).
-      rewrite add_cardinal_2. omega. cset_tac; intuition.
-      omega.
-      eauto with cset.
-      pe_rewrite. eauto with cset.
+      rewrite add_cardinal_2. omega. cset_tac; intuition. omega.
     }
     exploit IHLS; eauto.
     + pe_rewrite.

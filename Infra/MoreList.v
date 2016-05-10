@@ -456,10 +456,9 @@ Proof.
 Qed.
 
 Lemma zip_sym X Y Z (f : X -> Y -> Z) (L:list X) (L':list Y)
-: length L = length L'
-  -> zip f L L' = zip (fun x y => f y x) L' L.
+: zip f L L' = zip (fun x y => f y x) L' L.
 Proof.
-  intros. length_equify. general induction H; simpl; eauto.
+  intros. general induction L; destruct L'; simpl; eauto.
   f_equal; eauto.
 Qed.
 
@@ -549,3 +548,21 @@ Proof.
 Qed.
 
 Hint Resolve zip_length_lt_ass : len.
+
+Lemma zip_zip X X' Y Y' Z (f:X->Y->Z) (g1:X'->Y'->X) (g2:X'->Y'->Y) L L'
+: zip f (zip g1 L L') (zip g2 L L') =
+  zip (fun x y => f (g1 x y) (g2 x y)) L L'.
+Proof.
+  intros. general induction L; destruct L'; simpl; eauto.
+  f_equal; eauto.
+Qed.
+
+Lemma drop_zip X Y Z (f:X->Y->Z) L L' n
+: length L = length L'
+  -> drop n (zip f L L') = zip f (drop n L) (drop n L').
+Proof.
+  intros. length_equify.
+  general induction H; simpl; eauto.
+  - repeat rewrite drop_nil; eauto.
+  - destruct n; simpl; eauto.
+Qed.
