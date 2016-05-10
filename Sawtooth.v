@@ -80,6 +80,43 @@ Proof.
       rewrite drop_app; eauto.
 Qed.
 
+Lemma sawtooth_get {B} `{BlockType B} L f b
+  : sawtooth L
+    -> get L f b
+    -> get (drop (f - block_n b) L) (block_n b) b.
+Proof.
+  intros ST Get.
+  general induction ST; isabsurd.
+  get_cases Get.
+  - exploit tooth_index as Idx; eauto.
+    rewrite Idx. orewrite (f + 0 = f).
+    orewrite (f - f = 0); simpl.
+    eauto using get_app.
+  - exploit (sawtooth_smaller ST H1).
+    specialize (IHST _ _ H1).
+    orewrite (f - block_n b
+              = length L + (f - length L - block_n b)).
+    rewrite drop_app; eauto.
+Qed.
+
+
+Lemma stepGoto' L E l Y blk vl
+      (Ldef:get L l blk)
+      (len:length (I.block_Z blk) = length Y)
+      (def:omap (exp_eval E) Y = Some vl) E'
+      (updOk:E [I.block_Z blk <-- List.map Some vl] = E')
+      (ST:sawtooth L)
+  : step (drop (l - block_n blk) L, E, stmtApp (LabI (block_n blk)) Y)
+         EvtTau
+         (drop (l - block_n blk) L, E', I.block_s blk).
+Proof.
+  pattern (l - block_n blk) at 2.
+  orewrite (l - block_n blk = block_n blk - block_n blk + (l - block_n blk)).
+  rewrite <- drop_drop.
+  eapply sawtooth_get in Ldef; eauto.
+  eapply (I.stepGoto E (LabI (block_n blk)) Y Ldef len def); eauto.
+Qed.
+
 Lemma tooth_I_mkBlocks n F
   : tooth n (mapi_impl I.mkBlock n F).
 Proof.

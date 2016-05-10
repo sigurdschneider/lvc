@@ -137,10 +137,16 @@ Section ParametricMapIndex.
     orewrite (n+0 = n). eauto.
   Qed.
 
-  Lemma mapi_length L {n}
+  Lemma mapi_impl_length L {n}
   : length (mapi_impl n L) = length L.
   Proof.
     general induction L; simpl; eauto using f_equal.
+  Qed.
+
+  Lemma mapi_length L
+    : length (mapi L) = length L.
+  Proof.
+    unfold mapi; eapply mapi_impl_length.
   Qed.
 
 End ParametricMapIndex.
@@ -202,6 +208,22 @@ Proof.
   intros. subst. eapply mapi_length.
 Qed.
 
+Lemma mapi_length_ge_ass (X Y : Type) (f : nat -> X -> Y) L k
+  : k <= length L
+    -> k <= length (mapi f L).
+Proof.
+  intros. rewrite mapi_length; eauto.
+Qed.
+
+Lemma mapi_length_le_ass (X Y : Type) (f : nat -> X -> Y) L k
+  : length L <= k
+    -> length (mapi f L) <= k.
+Proof.
+  intros. rewrite mapi_length; eauto.
+Qed.
+
+Hint Resolve mapi_length_ass mapi_length_le_ass mapi_length_ge_ass : len.
+
 Lemma get_mapi_impl X Y L (f:nat->X->Y) n x k
  : get L n x
    -> get (mapi_impl f k L) n (f (n+k) x).
@@ -218,7 +240,7 @@ Proof.
   orewrite (n + 0 = n) in H0. eauto.
 Qed.
 
-Hint Resolve mapi_length_ass : len.
+
 
 Ltac list_eqs :=
   match goal with
@@ -565,4 +587,13 @@ Proof.
   general induction H; simpl; eauto.
   - repeat rewrite drop_nil; eauto.
   - destruct n; simpl; eauto.
+Qed.
+
+Lemma zip_map_fst X Y (L:list X) (L':list Y)
+  : length L = length L'
+    -> zip (fun x _ => x) L L' = L.
+Proof.
+  intros. length_equify.
+  general induction H; eauto; simpl in *.
+  f_equal; eauto.
 Qed.

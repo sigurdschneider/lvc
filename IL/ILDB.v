@@ -311,7 +311,7 @@ Proof.
     eapply PIR2_app; eauto.
     pose proof (smap_spec _ EQ0). simpl in H.
     eapply smap_length in EQ0.
-    eapply PIR2_get; intros; unfold mapi; repeat rewrite mapi_length; try congruence.
+    eapply PIR2_get; intros; repeat rewrite mapi_length; try congruence.
     inv_get; simpl.
     edestruct H; eauto; dcr. monadS_inv H3. get_functional; subst.
     econstructor; eauto.

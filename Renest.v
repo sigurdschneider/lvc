@@ -112,7 +112,7 @@ Proof.
     simpl in *.
     rewrite <- app_assoc.
     erewrite (drop_app_eq). eexists. rewrite Plus.plus_comm. reflexivity.
-    rewrite mapi_length; eauto.
+    rewrite mapi_impl_length; eauto.
   - inv H; simpl in *.
     repeat let_pair_case_eq; subst; simpl.
     edestruct (IHf D) with (n':=n'); eauto.
@@ -442,7 +442,7 @@ Proof.
     case_eq (val2bool v); intros.
     + pone_step. left. eapply IH; eauto.
     + pone_step. left. eapply IH; eauto.
-      eapply app_drop in DROP. rewrite mapi_length in DROP.
+      eapply app_drop in DROP. rewrite mapi_impl_length in DROP.
       rewrite drop_drop in DROP. rewrite plus_comm.
       rewrite DROP. rewrite plus_comm. eauto.
   - edestruct SIM as [SIM1 SIM2].
@@ -495,10 +495,10 @@ Proof.
       -
         edestruct SL as [b [b' [Z ?]]]; eauto.
         eexists b, b', Z.
-        unfold mapi in H0. rewrite mapi_length in H0.
-        repeat rewrite get_app_ge. unfold mapi. rewrite mapi_length.
+        rewrite mapi_length in H0.
+        repeat rewrite get_app_ge. rewrite mapi_length.
         rewrite map_length.
-        unfold mapi in H2. rewrite mapi_length in H2. dcr.
+        rewrite mapi_length in H2. dcr.
         split; eauto. split; eauto. split; eauto.
         destruct SIM; dcr.
         pose proof (sawtooth_smaller H12 H4).
@@ -506,11 +506,11 @@ Proof.
         simpl in *.
         orewrite (f - I.block_n b - ❬F❭ = f - ❬F❭ - I.block_n b).
         eauto. rewrite mapi_length. simpl in *. omega.
-        rewrite map_length; eauto. unfold mapi.
+        rewrite map_length; eauto.
         rewrite mapi_length. eauto.
     }
     eapply IH; eauto.
-    + unfold mapi. rewrite app_length, mapi_length; eauto.
+    + rewrite app_length, mapi_length; eauto.
     + rewrite zip_app; eauto with len.
       eapply renILabenv_extension; eauto 10 with len.
       intros ? ? ? ? ? ? ? ? GetF RN GetL' GetA. simpl. inv_get.
@@ -521,7 +521,7 @@ Proof.
       rewrite DROP in GetL'. repeat rewrite mapi_app in GetL'.
       repeat rewrite <- app_assoc in GetL'.
       rewrite get_app_lt in GetL';
-        [| rewrite mapi_length, egalize_funs_length1; eauto 20 using get_range].
+        [| rewrite mapi_impl_length, egalize_funs_length1; eauto 20 using get_range].
       inv_get. clear EQ.
       destruct x as [Z' s']; simpl.
       destruct (egalize_funs_get _ _ GetF GetL'); eauto; subst.
@@ -532,7 +532,7 @@ Proof.
       edestruct (@egalize_funs_get2 (mapi (plus' n) F ++ D) (❬F❭ + n) F) as [LX EQ]; eauto;
         simpl in *.
       eapply IH; eauto. simpl in *.
-      * unfold mapi. rewrite app_length, mapi_length. exploit H1; eauto.
+      * rewrite app_length, mapi_length. exploit H1; eauto.
       * instantiate (1:=LX).
         rewrite <- egalize_funs_length2.
         rewrite <- drop_drop.
@@ -540,7 +540,7 @@ Proof.
         repeat rewrite mapi_app in DROP.
         repeat rewrite <- app_assoc in DROP.
         eapply app_drop with (L:=drop n L') in DROP.
-        repeat rewrite mapi_length in DROP.
+        repeat rewrite mapi_impl_length in DROP.
         rewrite egalize_funs_length1 in DROP.
         rewrite drop_drop in DROP.
         rewrite DROP. f_equal. f_equal. rewrite plus_comm. eauto.
@@ -551,9 +551,9 @@ Proof.
       repeat rewrite mapi_app in DROP.
       repeat rewrite <- app_assoc in DROP.
       eapply app_drop with (L:=drop n L') in DROP.
-      repeat rewrite mapi_length in DROP.
+      repeat rewrite mapi_impl_length in DROP.
       rewrite egalize_funs_length1 in DROP.
-      eapply app_drop in DROP. repeat rewrite mapi_length in DROP.
+      eapply app_drop in DROP. repeat rewrite mapi_impl_length in DROP.
       repeat rewrite drop_drop in DROP. simpl. rewrite Plus.plus_assoc.
       rewrite DROP. simpl.
       rewrite <- egalize_funs_length2. f_equal. f_equal. omega.

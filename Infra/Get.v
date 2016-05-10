@@ -215,6 +215,9 @@ Proof.
 Qed.
 
 
+Hint Resolve get_range : len.
+
+
 Lemma get_in_range X (L:list X) n
   : n < length L -> { x:X & get L n x }.
 Proof.

@@ -76,3 +76,38 @@ Proof.
   - econstructor.
     eapply IHGET. omega.
 Qed.
+
+ Lemma map_take X Y (f:X -> Y) (L:list X) n
+  : f ⊝ take n L = take n (f ⊝ L).
+Proof.
+  general induction n; simpl; eauto.
+  destruct L; simpl; eauto.
+  f_equal; eauto.
+Qed.
+
+Lemma take_app_lt n X (L L':list X)
+  : n < length L
+    -> take n (L ++ L') = take n L.
+Proof.
+  intros. general induction n; simpl; eauto.
+  destruct L; isabsurd; simpl.
+  rewrite IHn; eauto. simpl in *; omega.
+Qed.
+
+Lemma take_app_ge n X (L L':list X)
+  : n >= length L
+    -> take n (L ++ L') = L ++ take (n - length L) L'.
+Proof.
+  intros. general induction n; simpl; eauto.
+  - destruct L; simpl in *; eauto. exfalso; omega.
+  - destruct L; simpl in *; eauto.
+    rewrite IHn; eauto. omega.
+Qed.
+
+Lemma take_eq_ge n X (L:list X)
+  : n >= ❬L❭ -> take n L = L.
+Proof.
+  intros. general induction n; destruct L; simpl in *; eauto.
+  - exfalso; omega.
+  - rewrite IHn; eauto. omega.
+Qed.

@@ -1,8 +1,6 @@
-Require Import CSet Le.
-Require Import Plus Util AllInRel Map.
-
-Require Import Val EqDec Computable Var Env EnvTy IL Annotation.
-Require Import Sim Fresh Filter Liveness TrueLiveness Filter MoreExp OUnion Take MoreList.
+Require Import CSet Util Fresh Filter MoreExp Take MoreList OUnion.
+Require Import IL Annotation Sawtooth InRel Liveness TrueLiveness.
+Require Import Sim SimTactics.
 
 Set Implicit Arguments.
 Unset Printing Records.
@@ -180,7 +178,7 @@ Proof.
     inv_get. destruct x as [Z s]. destruct b' as [Z' s' bn]. simpl.
     orewrite (n - n = 0). simpl.
     exploit H6; eauto using get_range.
-    eapply get_app_lt_1 in GetL'; [| unfold mapi; rewrite mapi_length; eauto ].
+    eapply get_app_lt_1 in GetL'; [| rewrite mapi_length; eauto ].
     inv_get. destruct x as [Z' s']; simpl in *; clear EQ.
     exploit H1; eauto; dcr.
     eapply simIBlockI; eauto. simpl.
@@ -199,20 +197,20 @@ Proof.
     eapply CIH; eauto.
   - destruct H0.
     dcr. eapply get_app_right_ge in GetFL; [ | rewrite <- H; eauto].
-    exploit H7; eauto. unfold mapi in H. rewrite mapi_length in H. omega.
-    eapply get_app_right_ge in GetL'; [ | unfold mapi; rewrite mapi_length; eauto].
+    exploit H7; eauto. rewrite mapi_length in H. omega.
+    eapply get_app_right_ge in GetL'; [ | eauto with len; rewrite mapi_length; eauto].
     assert (n - I.block_n b >= ❬mapi I.mkBlock F❭). {
       exploit (sawtooth_smaller H11 GetFL). rewrite <- H in *. simpl in *. omega.
     }
     assert (n' - I.block_n b' >= ❬mapi I.mkBlock F'❭). {
       exploit (sawtooth_smaller H10 GetL').
-      unfold mapi in *. rewrite mapi_length in *.
+      rewrite mapi_length in *.
       simpl in *. omega.
     }
     rewrite (drop_app_gen _ (mapi I.mkBlock F)); eauto.
     rewrite (drop_app_gen _ (mapi I.mkBlock F')); eauto.
     rewrite (drop_app_gen _ AL'); eauto.
-    unfold mapi in *; rewrite mapi_length in *. rewrite mapi_length.
+    rewrite mapi_length in *. rewrite mapi_length.
     rewrite H.
     orewrite (n - I.block_n b - ❬F❭ = n - ❬F❭ - I.block_n b).
     orewrite (n' - I.block_n b' - ❬F'❭ = n' - ❬F'❭ - I.block_n b').
@@ -252,7 +250,7 @@ Proof.
     inv_get. destruct x as [Z s]. destruct b' as [Z' s' bn]. simpl.
     orewrite (n - n = 0). simpl.
     exploit I1; eauto using get_range.
-    eapply get_app_lt_1 in GetL'; [| unfold mapi; rewrite mapi_length; eauto ].
+    eapply get_app_lt_1 in GetL'; [| eauto with len ].
     inv_get. destruct x as [Z' s']; simpl in *; clear EQ.
     orewrite (bn - bn = 0). simpl.
     exploit ASS; eauto; dcr.
@@ -273,16 +271,16 @@ Proof.
     assert (n - I.block_n b >= ❬mapi I.mkBlock F❭). {
       exploit (sawtooth_smaller H7 GetL). rewrite <- ALLEN in *. simpl in *. omega.
     }
-    exploit I2; eauto. unfold mapi in *; rewrite mapi_length in *. rewrite <- ALLEN. eauto.
-    eapply get_app_right_ge in GetL'; [ | unfold mapi; rewrite mapi_length; eauto ].
+    exploit I2; eauto. rewrite mapi_length in *. rewrite <- ALLEN. eauto.
+    eapply get_app_right_ge in GetL'; [ | eauto with len ].
     assert (n' - I.block_n b' >= ❬mapi I.mkBlock F'❭). {
       exploit (sawtooth_smaller H6 GetL'). rewrite ALLEN in *.
-      unfold mapi in *. rewrite mapi_length in *. simpl in *. omega.
+      rewrite mapi_length in *. simpl in *. omega.
     }
     rewrite (drop_app_gen _ (mapi I.mkBlock F)); eauto.
     rewrite (drop_app_gen _ (mapi I.mkBlock F')); eauto.
     rewrite (drop_app_gen _ AL'); [ | rewrite ALLEN; eauto ].
-    rewrite LEN1. unfold mapi in *. rewrite mapi_length in *. rewrite mapi_length.
+    rewrite LEN1. rewrite mapi_length in *. rewrite mapi_length.
     orewrite (n - I.block_n b - ❬F❭ = n - ❬F❭ - I.block_n b).
     orewrite (n' - I.block_n b' - ❬F'❭ = n' - ❬F'❭ - I.block_n b').
     eapply H0; eauto. eapply IndexRelDrop in RN. rewrite H1 in RN.
@@ -291,8 +289,6 @@ Proof.
 Qed.
 
 Module I.
-
-  Require Import SimI.
 
   Definition ArgRel (V V':onv val) (G:؟(set var) * params) (VL VL': list val) : Prop :=
       VL' = (filter_by (fun x => B[x ∈ oget (fst G)]) (snd G) VL) /\
@@ -321,48 +317,46 @@ Instance SR : ProofRelationI (؟(set var) * params) := {
   + destruct H' as [? [? ?]]. rewrite get_app_ge in H0; eauto.
 Defined.
 
-Lemma map_take X Y (f:X -> Y) (L:list X) n
-  : f ⊝ take n L = take n (f ⊝ L).
+Lemma getAnn_take_eq X Y Y' (F:list (Y * Y')) (als:list (ann X))
+  : ❬F❭ = ❬als❭
+    -> getAnn ⊝ als = fst ⊝ pair ⊜ (getAnn ⊝ als) (fst ⊝ F).
 Proof.
-  general induction n; simpl; eauto.
-  destruct L; simpl; eauto.
-  f_equal; eauto.
+  intros LEN.
+  repeat rewrite map_take.
+  rewrite map_zip.
+  rewrite zip_map_fst; eauto with len.
 Qed.
 
-Lemma take_app_lt n X (L L':list X)
-  : n < length L
-    -> take n (L ++ L') = take n L.
+Lemma inv_extend s L L' LV als lv Z f
+(LEN: ❬s❭ = ❬als❭)
+(H: forall (f : nat) (lv : ⦃var⦄) (Z : params),
+       get LV f (⎣ lv ⎦, Z) ->
+       exists b b' : I.block, get L f b /\ get L' (countSome (fst ⊝ take f LV)) b')
+(Get : get (pair ⊜ (getAnn ⊝ als) (fst ⊝ s) ++ LV) f (⎣ lv ⎦, Z))
+  :  exists b b' : I.block, get (mapi I.mkBlock s ++ L) f b /\
+                       get (mapi I.mkBlock (compileF compile (pair ⊜ (getAnn ⊝ als) (fst ⊝ s) ++ LV) s als) ++ L') (countSome (fst ⊝ take f (pair ⊜ (getAnn ⊝ als) (fst ⊝ s) ++ LV))) b'.
 Proof.
-  intros. general induction n; simpl; eauto.
-  destruct L; isabsurd; simpl.
-  rewrite IHn; eauto. simpl in *; omega.
-Qed.
-
-Lemma take_app_ge n X (L L':list X)
-  : n >= length L
-    -> take n (L ++ L') = L ++ take (n - length L) L'.
-Proof.
-  intros. general induction n; simpl; eauto.
-  - destruct L; simpl in *; eauto. exfalso; omega.
-  - destruct L; simpl in *; eauto.
-    rewrite IHn; eauto. omega.
-Qed.
-
-Lemma zip_map_fst X Y (L:list X) (L':list Y)
-  : length L = length L'
-    -> zip (fun x _ => x) L L' = L.
-Proof.
-  intros. length_equify.
-  general induction H; eauto; simpl in *.
-  f_equal; eauto.
-Qed.
-
-Lemma take_eq_ge n X (L:list X)
-  : n >= ❬L❭ -> take n L = L.
-Proof.
-  intros. general induction n; destruct L; simpl in *; eauto.
-  - exfalso; omega.
-  - rewrite IHn; eauto. omega.
+  get_cases Get; inv_get.
+  - exploit compileF_get; eauto.
+    do 2 eexists; split; eauto using get_app, mapi_get_1.
+    eapply get_app. eapply mapi_get_1.
+    rewrite map_take. rewrite map_app.
+    rewrite take_app_lt; eauto 20 with len.
+    rewrite <- getAnn_take_eq; eauto with len.
+    rewrite <- map_take; eauto.
+  - edestruct H as [b [b' [? ?]]]; eauto.
+    exists b, b'; split.
+    eapply get_app_right; eauto.
+    rewrite mapi_length. rewrite zip_length2; eauto with len.
+    rewrite map_length.
+    rewrite zip_length2 in H1; eauto with len.
+    rewrite map_length in H1. omega.
+    eapply get_app_right; eauto.
+    rewrite take_app_ge; eauto. rewrite map_app.
+    rewrite countSome_app.
+    rewrite mapi_length.
+    rewrite compileF_length; eauto.
+    rewrite <- getAnn_take_eq; eauto.
 Qed.
 
 
@@ -386,7 +380,7 @@ Proof.
          left. eapply (IH s); eauto. eapply agree_on_update_same. reflexivity.
          eapply agree_on_incl; eauto.
       *  eapply sim'_expansion_closed;
-           [ | eapply S_star2 with (y:=EvtTau);
+           [ | eapply star2_silent;
                [ econstructor; eauto | eapply star2_refl ]
              | eapply star2_refl].
          eapply (IH s); eauto. eapply agree_on_update_dead; eauto.
@@ -397,13 +391,13 @@ Proof.
       eapply sim'_expansion_closed.
       eapply (IH s1); eauto. eapply agree_on_incl; eauto.
       eapply H11; congruence.
-      eapply S_star2 with (y:=EvtTau) (yl:=nil).
+      eapply star2_silent.
       econstructor; eauto. eapply star2_refl.
       eapply star2_refl.
     + edestruct (exp2bool_val2bool V); eauto; dcr.
       eapply sim'_expansion_closed.
       eapply (IH s2); eauto. eapply agree_on_incl; eauto.
-      eapply S_star2 with (y:=EvtTau) (yl:=nil).
+      eapply star2_silent.
       econstructor 3; eauto. eapply star2_refl.
       eapply star2_refl.
     + remember (exp_eval V e). symmetry in Heqo.
@@ -429,34 +423,22 @@ Proof.
       invc H1. simpl in *. dcr; subst; simpl in *.
       hnf in H20; dcr. subst. simpl in *.
       exploit (@omap_filter_by _ _ _ _ (fun y : var => if [y \In blv] then true else false) _ _ Z Heqo); eauto.
-      eapply sim_Y_left. eapply sim_Y_right.
-      eapply H24. eapply Heqo. eapply H1.
+      exploit omap_exp_eval_live_agree; eauto.
+      intros. eapply argsLive_liveSound; eauto.
+      eapply (@sim_Y_left I.state _ I.state _).
+      eapply (@sim_Y_right I.state _ I.state _).
+      eapply H24. eapply Heqo. eapply H12.
       hnf. simpl. split; eauto. split; eauto.
       exploit (omap_length _ _ _ _ _ Heqo); eauto. congruence.
+      eauto using agree_on_incl.
       Focus 4. econstructor; eauto.
       Focus 2. econstructor; eauto. simpl.
       eapply filter_filter_by_length; eauto.
-      eapply omap_exp_eval_live_agree; eauto.
-      eapply argsLive_liveSound; eauto. simpl.
-
-
-      eapply H15. eauto. eauto. hnf. simpl. admit.
-      pone_step. simpl.
-      eapply filter_filter_by_length; eauto.
-      eapply omap_exp_eval_live_agree; eauto.
-      eapply argsLive_liveSound; eauto.
-      simpl. left.
-      hnf in H15. dcr; simpl in *; clear_trivial_eqs; subst.
-      eapply sim_drop_shift_I. eapply (inRel_sawtooth H1).
-      eapply (inRel_sawtooth H1). eauto. eauto.
-      simpl. eapply H18; eauto.
-      eapply omap_exp_eval_live_agree; eauto.
-      inv H0.
-      eapply argsLive_liveSound; eauto.
-      hnf; split; eauto. simpl. split.
-      exploit omap_length; try eapply Heqo; eauto. congruence.
-      eapply agree_on_incl; eauto.
-      admit.
+      * simpl.
+        eapply (stepGoto' _ _ GetL'); eauto; simpl.
+        eapply filter_filter_by_length; eauto.
+      * simpl.
+        eapply (stepGoto' _ _ GetL); eauto.
     + pfold; econstructor 3; try eapply star2_refl; eauto; stuck2.
 
   - pno_step.
@@ -470,38 +452,39 @@ Proof.
     + simpl in *; eapply agree_on_incl; eauto.
     + eapply renILabenv_extension. eauto with len.  eauto.
       * intros.
-        hnf in H3. dcr.
-        rewrite get_app_lt in H13; eauto using get_range.
+        hnf in H4. dcr.
+        rewrite get_app_lt in H14; eauto using get_range.
         inv_get.
         exploit (compileF_get ((pair ⊜ (getAnn ⊝ als) (fst ⊝ s) ++ LV) )); eauto.
-        rewrite map_take in H5. rewrite map_app in H5.
-        rewrite map_zip in H5. simpl in H5.
-        rewrite zip_map_fst in H5; eauto with len.
-        rewrite take_app_lt in H5.
-        rewrite map_take in H9. get_functional. clear EQ0. simpl.
+        rewrite map_take in H6. rewrite map_app in H6.
+        rewrite <- getAnn_take_eq in H6; eauto.
+        rewrite take_app_lt in H6; eauto with len.
+        rewrite map_take in H10. get_functional. clear EQ0. simpl.
         unfold ParamRel, ArgRel. simpl. split; eauto.
         hnf. simpl. unfold ParamRel, ArgRel. simpl.
         split; [eauto|].
         intros. dcr. subst. simpl. eapply IH; eauto.
         rewrite EQ. simpl.
         eapply agree_on_update_filter'; eauto.
-        exploit H6; eauto using zip_get.
+        exploit H7; eauto using zip_get.
         rewrite <- EQ. eapply zip_get; eauto using map_get.
-        exploit H8; eauto. rewrite map_length. eauto using get_range.
+        exploit H9; eauto.
+        intros.
+        eapply inv_extend; eauto.
       * intros. rewrite compileF_length; eauto.
-        hnf in H2; dcr; subst.
+        hnf in H3; dcr; subst.
         rewrite map_take. rewrite map_app.
         rewrite map_zip.
         rewrite zip_map_fst; eauto with len.
         rewrite take_app_lt; [|rewrite map_length; eauto; omega ].
         erewrite (take_eta n (getAnn ⊝ als)) at 2.
         rewrite countSome_app.
-        rewrite get_app_lt in H9;
+        rewrite get_app_lt in H10;
           [| rewrite zip_length2; eauto with len; rewrite map_length; omega].
         inv_get. erewrite <- get_eq_drop; eauto using map_get_1.
         simpl. rewrite EQ1. omega.
       * intros. rewrite compileF_length; eauto.
-        hnf in H2; dcr; subst.
+        hnf in H3; dcr; subst.
         rewrite map_take. rewrite map_app.
         rewrite map_zip.
         rewrite zip_map_fst; eauto with len.
@@ -510,6 +493,7 @@ Proof.
       * simpl. rewrite compileF_length; eauto.
         rewrite map_zip.
         rewrite zip_map_fst; eauto with len.
+    + intros; eapply inv_extend; eauto.
 Qed.
 
 Lemma sim_DVE V V' s lv

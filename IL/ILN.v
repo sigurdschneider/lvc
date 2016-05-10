@@ -488,7 +488,7 @@ Proof.
     eapply get_app_cases in H. destruct H.
     * {
         inv_mapi H.
-        exploit @get_length; eauto. unfold mapi in H2. rewrite mapi_length in H2.
+        exploit @get_length; eauto. rewrite mapi_length in H2.
         eapply get_in_range_app in H0.
         orewrite (f' - f' = 0); simpl.
         split.
@@ -497,7 +497,7 @@ Proof.
           rewrite pos_app_not_in; eauto.
           rewrite map_length. eapply pos_add; eauto.
           eapply get_app_right.
-          unfold mapi. rewrite mapi_length. reflexivity. eauto.
+          rewrite mapi_length. reflexivity. eauto.
         - split. intros. erewrite <- map_length in H3.
           rewrite drop_length_eq in H3.
           eapply EX; eauto.
@@ -541,9 +541,7 @@ Proof.
       split; eauto.
       rewrite <- drop_drop.
       eapply smap_length in EQ0.
-      unfold mapi.
       repeat rewrite mapi_length.
-      unfold mapi in *.
       repeat rewrite mapi_length in *.
       repeat rewrite drop_drop.
       repeat rewrite drop_app_gen. repeat rewrite mapi_length. repeat rewrite map_length.
@@ -555,8 +553,7 @@ Proof.
       rewrite mapi_length; omega.
     * { inv LA. revert ST. clear_all.
         intros. econstructor; eauto.
-        unfold mapi.
-        generalize 0. generalize F at 1.
+        unfold mapi. generalize 0. generalize F at 1.
         general induction F; simpl; eauto.
         econstructor.
         econstructor. eapply IHF. econstructor; simpl. reflexivity.
