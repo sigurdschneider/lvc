@@ -1,22 +1,9 @@
 Require Import CSet Util Fresh Filter MoreExp Take MoreList OUnion.
-Require Import IL Annotation Sawtooth InRel Liveness TrueLiveness.
+Require Import IL Annotation LabelsDefined Sawtooth InRel Liveness TrueLiveness.
 Require Import Sim SimTactics.
 
 Set Implicit Arguments.
 Unset Printing Records.
-
-Definition compileF (compile : forall (LV:list (؟ (set var) * params)) (s:stmt) (a:ann (؟(set var))), stmt)
-(LV:list (؟ (set var) * params)) :=
-  fix f (F:〔params * stmt〕) (ans:list (ann (؟⦃var⦄))) :=
-    match F, ans with
-    | (Z,s)::F, a::ans =>
-      match getAnn a with
-      | Some lv => (List.filter (fun x => B[x ∈ lv]) Z,
-                  compile LV s a) :: f F ans
-      | None => f F ans
-      end
-    | _, _ => nil
-    end.
 
 Fixpoint countSome X (L:list (؟ X)) :=
   match L with
@@ -32,6 +19,18 @@ Proof.
   destruct a; eauto. omega.
 Qed.
 
+Definition compileF (compile : forall (LV:list (؟ (set var) * params)) (s:stmt) (a:ann (؟(set var))), stmt)
+(LV:list (؟ (set var) * params)) :=
+  fix f (F:〔params * stmt〕) (ans:list (ann (؟⦃var⦄))) :=
+    match F, ans with
+    | (Z,s)::F, a::ans =>
+      match getAnn a with
+      | Some lv => (List.filter (fun x => B[x ∈ lv]) Z,
+                  compile LV s a) :: f F ans
+      | None => f F ans
+      end
+    | _, _ => nil
+    end.
 
 Fixpoint compile (LV:list (؟ (set var) * params)) (s:stmt) (a:ann (؟(set var))) :=
   match s, a with
@@ -77,6 +76,28 @@ Proof.
     + simpl. cases; simpl; eauto using get.
 Qed.
 
+Lemma compileF_get_inv LV F ans Z' s' n'
+  : ❬F❭ = ❬ans❭
+    -> get (compileF compile LV F ans) n' (Z', s')
+    -> exists Zs a n lv, get F n Zs
+      /\ get ans n a
+      /\ getAnn a = Some lv
+      /\ Z' = List.filter (fun x => B[x ∈ lv]) (fst Zs)
+      /\ s' = compile LV (snd Zs) a
+      /\ n' = countSome (getAnn ⊝ (take n ans)).
+Proof.
+  intros LEN Get. length_equify.
+  general induction LEN; simpl in *.
+  - isabsurd.
+  - destruct x as [Z s]. case_eq (getAnn y); [ intros ? EQ | intros EQ].
+    + rewrite EQ in *. inv Get.
+      * eexists (Z,s), y, 0, s0; eauto 20 using get.
+      * clear Get. edestruct IHLEN as [Zs [a [n' [lv ?]]]]; eauto; dcr; subst.
+        exists Zs, a, (S n'), lv. simpl; rewrite EQ. eauto 20 using get.
+    + rewrite EQ in *. edestruct IHLEN as [Zs [a [n [lv ?]]]]; eauto; dcr; subst.
+      exists Zs, a, (S n), lv. simpl; rewrite EQ. eauto 20 using get.
+Qed.
+
 Lemma compileF_length LV F ans
   : length F = length ans
     -> length (compileF compile LV F ans) = countSome (getAnn ⊝ ans).
@@ -84,6 +105,84 @@ Proof.
   intros. length_equify.
   general induction H; simpl; eauto.
   cases; subst. cases; simpl; eauto.
+Qed.
+
+Lemma getAnn_eq X Y Y' (F:list (Y * Y')) (als:list (ann X))
+  : ❬F❭ = ❬als❭
+    -> getAnn ⊝ als = fst ⊝ pair ⊜ (getAnn ⊝ als) (fst ⊝ F).
+Proof.
+  intros LEN.
+  rewrite map_zip.
+  rewrite zip_map_fst; eauto with len.
+Qed.
+
+Lemma getAnn_take_eq X Y Y' (F:list (Y * Y')) (als:list (ann X)) k a LV
+  : ❬F❭ = ❬als❭
+    -> get als k a
+    -> getAnn ⊝ take k als = fst ⊝ take k (pair ⊜ (getAnn ⊝ als) (fst ⊝ F) ++ LV).
+Proof.
+  intros LEN Get.
+  rewrite take_app_lt; eauto with len.
+  repeat rewrite map_take.
+  rewrite map_zip.
+  rewrite zip_map_fst; eauto with len.
+Qed.
+
+Lemma DVE_isCalled LV s lv n
+  : true_live_sound Imperative LV s lv
+    -> trueIsCalled s (LabI n)
+    -> isCalled (compile LV s lv) (LabI (countSome (fst ⊝ take n LV))).
+Proof.
+  intros Live IC. general induction IC; invt true_live_sound; simpl.
+  - cases; eauto using isCalled.
+  - repeat cases; eauto using isCalled. congruence.
+  - repeat cases; eauto using isCalled. congruence.
+  - eauto using isCalled.
+  - eauto using isCalled.
+  - edestruct get_length_eq as [a GetA]; eauto.
+    edestruct true_live_sound_trueIsCalled as [lv [Z ?]]; eauto.
+    rewrite get_app_lt in H1; eauto with len. simpl in *. inv_get.
+    + exploit compileF_get; eauto.
+      econstructor; eauto.
+      * rewrite compileF_length; eauto.
+        rewrite (take_eta k (getAnn ⊝ als)). rewrite countSome_app.
+        rewrite map_take. erewrite <- get_eq_drop; eauto.
+        rewrite <- H2. simpl. omega.
+      * exploit IHIC1 as IH; eauto; try reflexivity; simpl.
+        rewrite compileF_length; eauto with len.
+        rewrite take_app_ge in IH; eauto 20 with len.
+        rewrite map_app in IH.
+        rewrite <- getAnn_eq in IH; eauto. rewrite countSome_app in IH; eauto.
+        rewrite zip_length2 in IH; eauto with len.
+        rewrite map_length in IH. orewrite (❬F❭ + n - ❬als❭ = n) in IH. eauto.
+      * exploit IHIC2 as IH; eauto. erewrite <- getAnn_take_eq in IH; eauto.
+  - eapply IsCalledLet.
+    exploit IHIC; eauto; try reflexivity.
+    rewrite compileF_length; eauto.
+    rewrite take_app_ge in H; eauto 20 with len.
+    rewrite zip_length2 in H; eauto with len.
+    rewrite map_length in H.
+    orewrite (❬F❭ + n - ❬als❭ = n) in H. simpl.
+    rewrite map_app in H. rewrite countSome_app in H.
+    rewrite <- getAnn_eq in H; eauto.
+Qed.
+
+Lemma DVE_noUnreachableCode LV s lv
+  : true_live_sound Imperative LV s lv
+    -> noUnreachableCode (compile LV s lv).
+Proof.
+  intros Live. induction Live; simpl; repeat cases; eauto using noUnreachableCode.
+  - subst. econstructor; eauto using noUnreachableCode.
+    + intros. destruct Zs as [Z' s'].
+      edestruct compileF_get_inv as [Zs' [a [n' [lv' ?]]]]; eauto; dcr; subst; simpl.
+      eapply H3; eauto.
+    + intros.
+      edestruct get_in_range as [Zs ?]; eauto. destruct Zs as [Z' s'].
+      edestruct compileF_get_inv as [Zs' [a [n' [lv' ?]]]]; eauto; dcr; subst; simpl.
+      exploit H0; eauto. rewrite <- H8.
+      eauto using zip_get, map_get_1.
+      exploit DVE_isCalled as IH; eauto.
+      erewrite <- getAnn_take_eq in IH; eauto.
 Qed.
 
 (* A proof relation is parameterized by analysis information A *)
@@ -431,15 +530,6 @@ Instance SR : ProofRelationI (؟(set var) * params) := {
   + destruct H' as [? [? ?]]. rewrite get_app_ge in H0; eauto.
 Defined.
 
-Lemma getAnn_take_eq X Y Y' (F:list (Y * Y')) (als:list (ann X))
-  : ❬F❭ = ❬als❭
-    -> getAnn ⊝ als = fst ⊝ pair ⊜ (getAnn ⊝ als) (fst ⊝ F).
-Proof.
-  intros LEN.
-  repeat rewrite map_take.
-  rewrite map_zip.
-  rewrite zip_map_fst; eauto with len.
-Qed.
 
 Lemma inv_extend s L L' LV als lv Z f
 (LEN: ❬s❭ = ❬als❭)
@@ -454,10 +544,7 @@ Proof.
   - exploit compileF_get; eauto.
     do 2 eexists; split; eauto using get_app, mapi_get_1.
     eapply get_app. eapply mapi_get_1.
-    rewrite map_take. rewrite map_app.
-    rewrite take_app_lt; eauto 20 with len.
-    rewrite <- getAnn_take_eq; eauto with len.
-    rewrite <- map_take; eauto.
+    erewrite <- getAnn_take_eq; eauto.
   - edestruct H as [b [b' [? ?]]]; eauto.
     exists b, b'; split.
     eapply get_app_right; eauto.
@@ -470,7 +557,7 @@ Proof.
     rewrite countSome_app.
     rewrite mapi_length.
     rewrite compileF_length; eauto.
-    rewrite <- getAnn_take_eq; eauto.
+    rewrite <- getAnn_eq; eauto.
 Qed.
 
 
@@ -570,10 +657,8 @@ Proof.
         rewrite get_app_lt in H16; eauto using get_range.
         inv_get.
         exploit (compileF_get ((pair ⊜ (getAnn ⊝ als) (fst ⊝ s) ++ LV) )); eauto.
-        rewrite map_take in H10. rewrite map_app in H10.
-        rewrite <- getAnn_take_eq in H10; eauto.
-        rewrite take_app_lt in H10; eauto with len.
-        rewrite map_take in H12. get_functional. clear EQ0.
+        erewrite <- getAnn_take_eq in H10; eauto.
+        get_functional. clear EQ0.
         hnf in H14; dcr; subst.
         eapply IH; eauto.
         rewrite EQ. simpl.
@@ -585,25 +670,22 @@ Proof.
         eapply inv_extend; eauto.
       * hnf; intros.
         hnf in H3. dcr.
-        rewrite get_app_lt in H14; eauto using get_range.
+        rewrite get_app_lt in H14; eauto with len.
         inv_get. simpl; unfold ParamRel; simpl.
         exploit (compileF_get ((pair ⊜ (getAnn ⊝ als) (fst ⊝ s) ++ LV) )); eauto.
-        rewrite map_take in H6. rewrite map_app in H6.
-        rewrite <- getAnn_take_eq in H6; eauto.
-        rewrite take_app_lt in H6; eauto with len.
-        rewrite map_take in H10. get_functional. eauto.
+        erewrite <- getAnn_take_eq in H6; eauto.
+        get_functional. eauto.
       * intros. rewrite compileF_length; eauto.
         hnf in H3; dcr; subst.
-        rewrite map_take. rewrite map_app.
-        rewrite map_zip.
-        rewrite zip_map_fst; eauto with len.
-        rewrite take_app_lt; [|rewrite map_length; eauto; omega ].
-        erewrite (take_eta n (getAnn ⊝ als)) at 2.
-        rewrite countSome_app.
         rewrite get_app_lt in H10;
           [| rewrite zip_length2; eauto with len; rewrite map_length; omega].
-        inv_get. erewrite <- get_eq_drop; eauto using map_get_1.
-        simpl. rewrite EQ1. omega.
+        inv_get.
+        erewrite <- getAnn_take_eq; eauto.
+        rewrite map_take.
+        erewrite (take_eta n (getAnn ⊝ als)) at 2.
+        rewrite countSome_app.
+        erewrite <- get_eq_drop; eauto using map_get_1.
+        rewrite EQ1. simpl; omega.
       * intros. rewrite compileF_length; eauto.
         hnf in H3; dcr; subst.
         rewrite map_take. rewrite map_app.

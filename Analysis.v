@@ -7,25 +7,45 @@ Set Implicit Arguments.
 
 (** Specification of an analysis and generic fixpoint iteration algorithm *)
 
-Record Analysis (Dom: Type) := makeAnalysis {
+Class Analysis (Dom: Type) := makeAnalysis {
   dom_po :> PartialOrder Dom;
   analysis_step : stmt -> Dom -> status Dom;
-  initial_value : stmt -> Dom
+  initial_value : stmt -> Dom;
+  finite_heigt : terminating (fun x y => poLe x y /\ ~ poEq x y)
 }.
 
-Arguments Analysis Dom.
+Lemma dom_trm_ann Dom `{PartialOrder Dom}
+  : terminating (fun x y => poLe x y /\ ~ poEq x y)
+    -> terminating (fun x y => (@poLe (ann Dom) _ x y) /\ ~ @poEq (ann Dom) _ x y).
+Proof.
+  intros. hnf; intros.
+  specialize (H0 (getAnn x)).
+  general induction H0.
+  econstructor. intros.
+  eapply H0; [ | reflexivity | reflexivity ].
+  destruct H2 as [A B].
+  destruct x0, y; simpl in *; inv A; split; eauto; intro C; eauto; eapply B; econstructor; eauto.
+Qed.
 
 Section AnalysisAlgorithm.
   Variable Dom : Type.
   Variable analysis : Analysis Dom.
   Hypothesis first : Dom -> (Dom -> status (Dom * bool)) -> status Dom.
 
+  Fixpoint safeFirst (s:stmt) (d:Dom) (trm:terminates (fun x y => ~ poLe y x) d) : status Dom.
+    refine (sdo d' <- analysis_step s d;
+            if [poLe d' d] then Success d' else safeFirst s d' _
+
+           ).
+    destruct trm. eapply (H _ n).
+  Defined.
+
   Definition step s (d:Dom) :=
-    sdo d' <- analysis_step analysis s d;
-    Success (d', if [@poLe _ (dom_po analysis) d' d] then false else true).
+    sdo d' <- analysis_step s d;
+    Success (d', if [poLe d' d] then false else true).
 
   Definition fixpoint (s:stmt) :=
-    first (initial_value analysis s) (step s).
+    first (initial_value s) (step s).
 
 End AnalysisAlgorithm.
 
@@ -145,7 +165,7 @@ Definition makeForwardAnalysis Dom (BSL:BoundedSemiLattice Dom)
          (ftransform : (list (params * Dom) * ann Dom) -> stmt -> (list (params * Dom) * anni Dom))
 : Analysis (ann Dom) :=
 makeAnalysis _ (fun s d => Success (snd (forward ftransform s (nil, d)))) (fun s => setAnn s bottom).
-*)
+ *)
 
 Definition makeBackwardAnalysis Dom FunDom (BSL:BoundedSemiLattice Dom)
            (btransform : list FunDom -> stmt -> anni Dom -> Dom)

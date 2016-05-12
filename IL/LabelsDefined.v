@@ -1,5 +1,5 @@
-Require Import List.
-Require Import Util Relations Get Drop Var Val Exp Env Map CSet AutoIndTac MoreList IL DecSolve.
+Require Import Util Get Drop MoreList.
+Require Import Exp MoreExp IL.
 
 Set Implicit Arguments.
 
@@ -75,6 +75,40 @@ Inductive isCalled : stmt -> lab -> Prop :=
     : isCalled t (incc l (length F))
       -> isCalled (stmtFun F t) l.
 
+
+Inductive trueIsCalled : stmt -> lab -> Prop :=
+  | TrueIsCalledExp x e s l
+    : trueIsCalled s l
+      -> trueIsCalled (stmtLet x e s) l
+  | TrueIsCalledIf1 e s t l
+    : trueIsCalled s l
+      -> exp2bool e <> Some false
+      -> trueIsCalled (stmtIf e s t) l
+  | TrueIsCalledIf2 e s t l
+    : trueIsCalled t l
+      -> exp2bool e <> Some true
+      -> trueIsCalled (stmtIf e s t) l
+  | TrueIsCalledGoto f Y
+    : trueIsCalled (stmtApp f Y) f
+  | TrueIsCalledExtern x f Y s l
+    : trueIsCalled s l
+      -> trueIsCalled (stmtExtern x f Y s) l
+  | TrueIsCalledLet1 F t k Zs l
+    : k < length F
+      -> get F k Zs
+      -> trueIsCalled (snd Zs) (labInc l (length F))
+      -> trueIsCalled t (LabI k)
+      -> trueIsCalled (stmtFun F t) l
+  | TrueIsCalledLet F t l
+    : trueIsCalled t (incc l (length F))
+      -> trueIsCalled (stmtFun F t) l.
+
+Lemma trueIsCalled_isCalled s l
+  : trueIsCalled s l -> isCalled s l.
+Proof.
+  intro IC.
+  general induction IC; eauto using isCalled.
+Qed.
 
 Inductive noUnreachableCode : stmt -> Prop :=
   | NoUnrechableCodeExp x e s

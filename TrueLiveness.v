@@ -104,14 +104,16 @@ Inductive true_live_sound (i:overapproximation)
 | TLLet Lv F t lv als alt Lv'
   : true_live_sound i (Lv' ++ Lv) t alt
     -> Lv' = zip pair (getAnn ⊝ als) (fst ⊝ F)
-    -> (forall n x Z, get Lv' n ((Some x), Z) -> isCalled t (LabI n))
+    -> (forall n x Z, get Lv' n ((Some x), Z) -> trueIsCalled t (LabI n))
     -> length F = length als
-    -> (forall n Zs a, get F n Zs ->
+    -> (forall n Zs a lv, get F n Zs ->
                  get als n a ->
+                 getAnn a = Some lv ->
                  true_live_sound i (Lv' ++ Lv) (snd Zs) a)
-    -> (forall n Zs a, get F n Zs ->
-                 get als n a ->
-                 if isFunctional i then (oget (getAnn a) \ of_list (fst Zs)) ⊆ lv else True)
+    -> (forall n Zs a lv, get F n Zs ->
+                    get als n a ->
+                    getAnn a = Some lv ->
+                    if isFunctional i then (oget (getAnn a) \ of_list (fst Zs)) ⊆ lv else True)
     -> oget (getAnn alt) ⊆ lv
     -> true_live_sound i Lv (stmtFun F t)(annF (Some lv) als alt).
 
@@ -128,8 +130,23 @@ Proof.
   intros. general induction H; simpl in * |- *; econstructor; simpl; eauto.
 Qed.
 
-Lemma true_live_sound_annotation i Lv s slv
-: true_live_sound i Lv s slv -> annotation s slv.
+Lemma true_live_sound_trueIsCalled i Lv s slv l
+  : true_live_sound i Lv s slv
+    -> trueIsCalled s l
+    -> exists lv Z, get Lv (counted l) (Some lv, Z).
 Proof.
-  intros. general induction H; econstructor; eauto.
+  intros Live IC. destruct l; simpl in *.
+  general induction IC; invt true_live_sound; eauto.
+  - edestruct IHIC2 as [lv' [Z' ?]]; eauto; simpl in *.
+    rewrite get_app_lt in H1; eauto with len. inv_get.
+    edestruct IHIC1 as [lv'' [Z'' ?]]; eauto.
+    rewrite get_app_ge in H1; eauto with len.
+    rewrite zip_length2 in H1; eauto with len.
+    rewrite map_length in H1.
+    orewrite (❬F❭ + n - ❬als❭ = n) in H1. eauto.
+  - edestruct IHIC as [lv' [Z' ?]]; eauto; try reflexivity.
+    rewrite get_app_ge in H; eauto with len.
+    rewrite zip_length2 in H; eauto with len.
+    rewrite map_length in H.
+    orewrite (❬F❭ + n - ❬als❭ = n) in H. eauto.
 Qed.
