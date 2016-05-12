@@ -591,3 +591,25 @@ Lemma equiv_minus_union X `{OrderedType X} s t
 Proof.
   cset_tac.
 Qed.
+
+
+Lemma diff_subset_equal' X `{OrderedType X} s s'
+  : s \ s' [=] {} -> s ⊆ s'.
+Proof.
+  intros. cset_tac. decide (a ∈ s'); eauto.
+  exfalso; eauto.
+Qed.
+
+Lemma not_incl_element X `{OrderedType X} s
+  : forall s', ~ s ⊆ s' -> exists x, x ∈ s /\ x ∉ s'.
+Proof.
+  pattern s. eapply set_induction; intros.
+  - eapply empty_is_empty_1 in H0. rewrite H0 in H1.
+    exfalso. eapply H1. cset_tac.
+  - rewrite Add_Equal in H2.
+    decide (x ∈ s'0).
+    + edestruct H0 as [y [? ?]]. instantiate (1:=s'0). rewrite H2 in H3.
+      intro. eapply H3. cset_tac.
+      eexists; split; eauto. rewrite H2. cset_tac.
+    + eexists x. rewrite H2. cset_tac.
+Qed.

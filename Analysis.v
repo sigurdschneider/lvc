@@ -11,43 +11,129 @@ Class Analysis (Dom: Type) := makeAnalysis {
   dom_po :> PartialOrder Dom;
   analysis_step : stmt -> Dom -> status Dom;
   initial_value : stmt -> Dom;
-  finite_heigt : terminating (fun x y => poLe x y /\ ~ poEq x y)
+  finite_height : terminating poLt;
+  step_monotone : forall s d d', analysis_step s d = Success d' -> poLe d d';
+  step_respectful :> Proper (eq ==> poEq ==> status_eq poEq) analysis_step
 }.
 
-Lemma dom_trm_ann Dom `{PartialOrder Dom}
-  : terminating (fun x y => poLe x y /\ ~ poEq x y)
-    -> terminating (fun x y => (@poLe (ann Dom) _ x y) /\ ~ @poEq (ann Dom) _ x y).
+Lemma poLe_poLt Dom `{PartialOrder Dom} d d'
+  : poLe d d'
+    -> ~ poLe d' d
+    -> poLt d d'.
 Proof.
-  intros. hnf; intros.
-  specialize (H0 (getAnn x)).
-  general induction H0.
-  econstructor. intros.
-  eapply H0; [ | reflexivity | reflexivity ].
-  destruct H2 as [A B].
-  destruct x0, y; simpl in *; inv A; split; eauto; intro C; eauto; eapply B; econstructor; eauto.
+  split; eauto. decide (poEq d d'); eauto.
+  exfalso; eapply H1; eapply poEq_refl; symmetry; eauto.
 Qed.
 
 Section AnalysisAlgorithm.
   Variable Dom : Type.
   Variable analysis : Analysis Dom.
-  Hypothesis first : Dom -> (Dom -> status (Dom * bool)) -> status Dom.
 
-  Fixpoint safeFirst (s:stmt) (d:Dom) (trm:terminates (fun x y => ~ poLe y x) d) : status Dom.
+  Fixpoint safeFirst' (s:stmt) (d:Dom) (trm:terminates poLt d) : status Dom.
     refine (sdo d' <- analysis_step s d;
-            if [poLe d' d] then Success d' else safeFirst s d' _
-
-           ).
-    destruct trm. eapply (H _ n).
+            if [poLt d d'] then safeFirst' s d' _ else  Success d').
+    destruct trm. eapply H. eauto.
   Defined.
 
-  Definition step s (d:Dom) :=
-    sdo d' <- analysis_step s d;
-    Success (d', if [poLe d' d] then false else true).
+  Fixpoint safeFirst (s:stmt) (d:Dom) (trm:terminates poLt d) : status Dom.
+    case_eq (analysis_step s d); intros d' ?.
+    - intros. refine (if [poLe d' d] then Success d' else safeFirst s d' _).
+      destruct trm; eapply H0.
+      eapply step_monotone in H; eauto.
+      eapply poLe_poLt; eauto.
+    - eapply (Error d').
+  Defined.
 
-  Definition fixpoint (s:stmt) :=
-    first (initial_value s) (step s).
+  Definition safeFixpoint (s:stmt) :=
+    @safeFirst s (initial_value s) (finite_height _).
+
+  Definition step s (d:Dom) :=
+    match analysis_step s d with
+    | Success d' => d'
+    | Error _ => d
+    end.
+
+  Fixpoint safeFixpoint_iter s d d' trm
+    : @safeFirst s d trm = Success d'
+      -> exists n, d' = iter n d (fun _ => step s)
+             /\ poEq (step s d') d'.
+  Proof.
+    intros. destruct trm. simpl in *.
+    revert H.
+    cut (forall d'' (EQ:analysis_step s x = d''),
+            match d'' as s0 return (analysis_step s x = s0 -> status Dom) with
+            | Success d'0 =>
+              fun H : analysis_step s x = Success d'0 =>
+                match decision_procedure (poLe d'0 x) with
+                | left _ => Success d'0
+                | right x0 => safeFirst s (t d'0 (poLe_poLt x d'0 (step_monotone s x H) x0))
+                end
+            | Error d'0 => fun _ : analysis_step s x = Error d'0 => Error d'0
+            end EQ = Success d' ->
+               exists n : nat, d' = iter n x (fun _ : nat => step s) /\ poEq (step s d') d'); eauto.
+    intros. destruct d''; [|congruence].
+    destruct (decision_procedure (poLe d x)).
+    + invc H. eexists 1; simpl. unfold step at 1. rewrite EQ.
+      split; eauto.
+      pose proof (step_monotone _ _ EQ).
+      pose proof (po_antisymmetric _ _ H p).
+      unfold step. eapply step_respectful in H0; eauto.
+      rewrite EQ in H0. inv H0. symmetry. eauto.
+    + destruct (safeFixpoint_iter _ _ _ _ H) as [n' ?].
+      eexists (S n'). simpl. unfold step at 1. rewrite EQ. eapply H0.
+  Qed.
 
 End AnalysisAlgorithm.
+
+(*
+Inductive ann_R_ex {A B} (R:A->B->Prop) : ann A -> ann B -> Prop :=
+| annLt0 a b
+  : R a b
+    -> ann_R_ex R (ann0 a) (ann0 b)
+| annLt1A a b an bn
+  : R a b
+    -> ann_R_ex R (ann1 a an) (ann1 b bn)
+| annLt1B a b an bn
+  : R a b \/ ann_R R an bn
+    -> ann_R_ex R (ann1 a an) (ann1 b bn)
+| annLt2 a ans ant b bns bnt
+  : R a b \/ ann_R R ans bns \/ ann_R R ant bnt
+    -> ann_R_ex R (ann2 a ans ant) (ann2 b bns bnt)
+| annLtF a ans b bns ant bnt
+  : R a b
+    -> length ans = length bns
+    -> (exists n a b, get ans n a -> get bns n b -> ann_R R a b) \/ ann_R R ant bnt
+    -> ann_R_ex R (annF a ans ant) (annF b bns bnt).
+
+Lemma dom_trm_ann Dom `{PO:PartialOrder Dom}
+  : terminating poLt
+    -> terminating (fun x y => ann_R poLe x y /\ ann_R_ex (fun x y => ~ poEq x y) x y).
+Proof.
+  intros Trm a.
+  econstructor. intros. dcr.
+  general induction H1.
+  - specialize (Trm b).
+    general induction Trm.
+    econstructor. intros ? [A B].
+    inv A; inv B.
+    eapply H0; eauto. split; eauto.
+  - econstructor.
+    intros ? [A B]. inv A; inv B.
+    +
+    decide (poEq a b).
+    + exploit IHa; eauto. inv H.
+      exploit H0. split. eauto. intro. eapply B. econstructor; eauto.
+      specialize (Trm b).
+
+
+    specialize (Trm a).
+    general induction Trm.
+    econstructor. intros. destruct H1 as [A B].
+    inv A.
+    eapply H0; eauto. split; eauto.
+    intro. eapply B. econstructor; eauto.
+Qed.
+*)
 
 Inductive anni (A:Type) : Type :=
 | anni0 : anni A
@@ -159,6 +245,63 @@ Definition forward Dom
       end
     | _, an => an
   end.
+
+
+Instance PartialOrder_Subset_Equal X `{OrderedType X} U : PartialOrder ({ s : set X | s ⊆ U}) :=
+{
+  poLe x y := Subset (proj1_sig x) (proj1_sig y);
+  poLe_dec x y := @Subset_computable _ _ (proj1_sig x) (proj1_sig y);
+  poEq x y := Equal (proj1_sig x) (proj1_sig y);
+  poEq_dec x y := @Equal_computable _ _ (proj1_sig x) (proj1_sig y)
+}.
+Proof.
+  - intros [a ?] [b ?]. simpl. intros. rewrite H0. reflexivity.
+  - econstructor.
+    + hnf; intros. reflexivity.
+    + hnf; intros. symmetry; eauto.
+    + hnf; intros. etransitivity; eauto.
+  - hnf; intros. split; eauto.
+Defined.
+
+Instance set_var_semilattice U : BoundedSemiLattice ({ s : set var | s ⊆ U}) := {
+  bsl_partial_order := PartialOrder_Subset_Equal _ U;
+  bottom := exist _ ∅ (@incl_empty var _ U);
+  join x y := exist _ (union (proj1_sig x) (proj1_sig y)) _
+}.
+Proof.
+  - destruct x,y; simpl. cset_tac.
+  - hnf; intros. eapply union_idem.
+  - hnf; intros. eapply union_comm.
+  - hnf; intros. eapply union_assoc.
+  - simpl. unfold Proper, respectful; intros. destruct x,y,x0,y0; simpl in * |- *.
+    rewrite H, H0. reflexivity.
+  - simpl. unfold Proper, respectful; intros. destruct x,y,x0,y0; simpl in * |- *.
+    rewrite H, H0. reflexivity.
+Defined.
+
+Lemma bunded_set_terminating X `{OrderedType X} U
+  : terminating (@poLt _ (@PartialOrder_Subset_Equal X _ U)).
+Proof.
+  hnf; intros [s Incl].
+  remember (cardinal (U \ s)). assert (cardinal (U \ s) <= n) as Le by omega.
+  clear Heqn. revert s Incl Le. induction n; intros.
+  - econstructor. intros [y ?] [A B]; simpl in *.
+    exfalso. eapply B. assert (cardinal (U \ s) = 0) by omega.
+    rewrite <- cardinal_Empty in H0.
+    eapply empty_is_empty_1 in H0. eapply diff_subset_equal' in H0.
+    cset_tac.
+  - intros. econstructor. intros [y ?] [A B]; simpl in *.
+    eapply IHn.
+    assert (~ y ⊆ s) by (intro; eapply B; split; eauto).
+    edestruct not_incl_element; eauto; dcr.
+    rewrite cardinal_difference'; eauto.
+    rewrite cardinal_difference' in Le; eauto.
+    erewrite (@cardinal_2 _ _ _ _ (y \ singleton x) y); eauto;
+      [|cset_tac| rewrite Add_Equal; cset_tac; decide (x === a); eauto].
+    assert (s ⊆ y \ singleton x) by cset_tac.
+    eapply cardinal_morph in H1. omega.
+Qed.
+
 
 (*
 Definition makeForwardAnalysis Dom (BSL:BoundedSemiLattice Dom)

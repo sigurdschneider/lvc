@@ -183,3 +183,19 @@ Proof.
   general induction GetA; inv GetB; inv GetC; simpl in *;
     monadS_inv EQ; eauto.
 Qed.
+
+Inductive status_eq {A} (eqA : relation A) : status A -> status A -> Prop :=
+| status_eq_Error s : status_eq eqA (Error s) (Error s)
+| status_eq_Some : forall a a', eqA a a' -> status_eq eqA (Success a) (Success a').
+
+Program Instance success_Equivalence A eqA `(Equivalence A eqA) :
+  Equivalence (status_eq eqA).
+Next Obligation. (* reflexivity *)
+  inductive_refl.
+Qed.
+Next Obligation. (* symmetry *)
+  inductive_sym.
+Qed.
+Next Obligation. (* transitivity *)
+  inductive_trans.
+Qed.

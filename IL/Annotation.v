@@ -165,6 +165,19 @@ Proof.
   - intros. edestruct get_length_eq; try eapply H0; eauto.
 Qed.
 
+Instance ann_R_Equivalence A R `{Equivalence A R} : Equivalence (ann_R R).
+Proof.
+  econstructor.
+  - hnf; intros; reflexivity.
+  - hnf; intros; symmetry; eauto.
+  - hnf; intros; etransitivity; eauto.
+Qed.
+
+Instance ann_R_anti A R EqA `{Antisymmetric A R EqA} : Antisymmetric _ _ (ann_R R).
+Proof.
+  intros ? ? B C. general induction B; inv C; eauto using @ann_R.
+Qed.
+
 Instance ann_R_ann1_pe_morphism X `{OrderedType X}
 : Proper (@pe X _ ==> ann_R (@pe X _) ==> ann_R (@pe X _)) (@ann1 _).
 Proof.
@@ -208,6 +221,11 @@ Instance PartialOrder_ann Dom `{PartialOrder Dom}
   poEq := ann_R poEq;
   poEq_dec := @ann_R_dec _ _ poEq poEq_dec
 }.
+Proof.
+  - intros. general induction H0; eauto using @ann_R, poEq_refl.
+  - intros ? ? A B. general induction A; inv B; eauto using @ann_R, po_antisymmetric.
+    + econstructor; eauto using po_antisymmetric.
+Defined.
 
 Instance getAnn_ann_R_morphism A (R:A->A->Prop)
 : Proper (ann_R R ==> R) (getAnn).
