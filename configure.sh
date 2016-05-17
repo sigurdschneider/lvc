@@ -1,4 +1,4 @@
-#! /bin/sh
+#! /bin/bash
 
 MAKEFILE=Makefile.coq
 function display_help {
