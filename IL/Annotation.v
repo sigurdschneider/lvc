@@ -241,3 +241,18 @@ Hint Extern 10 =>
 match goal with
 | [ |- context [ getAnn (mapAnn _ _) ] ] => setoid_rewrite getAnn_mapAnn
 end : ann.
+
+
+Hint Extern 10 =>
+match goal with
+| [ H : ann_R poLe ?a ?b, H': ann_R poLe ?b ?c |- ann_R poLe ?a ?c ] =>
+  etransitivity; [ eapply H | eapply H' ]
+| [ H : poLe ?a ?b, H': ann_R poLe ?b ?c, H'' : poLe ?c ?d |- poLe ?a ?d ] =>
+  etransitivity; [ eapply H | etransitivity; [ eapply H' | eapply H''] ]
+| [ H : ann_R poLe ?a ?b, H': ann_R poLe ?b ?c, H'' : ann_R poLe ?c ?d |- ann_R poLe ?a ?d ] =>
+  etransitivity; [ eapply H | etransitivity; [ eapply H' | eapply H''] ]
+| [ H : poLe ?a ?b, H': ann_R poLe ?b ?c |- poLe ?a ?c ] =>
+  etransitivity; [ eapply H | eapply H' ]
+| [ H : poLe ?a ?b, H' : ann_R poLe ?b ?c, H'' : ~ poEq ?b ?c |- poLt ?a ?c ] =>
+  rewrite H; eapply poLt_intro; [ eapply H' | eapply H'']
+end.

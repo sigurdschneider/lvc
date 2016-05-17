@@ -136,42 +136,6 @@ Section Relations.
       intros. destruct H. left; eauto. right; eauto using star_plus.
     Qed.
 
-    (** *** Termination and Normalization *)
-    (** Also know as must-termination and may-termination *)
-
-    Inductive terminates : X -> Prop :=
-    | terminatesI x : (forall y, R x y -> terminates y) -> terminates x.
-
-    Definition terminating : Prop :=
-      forall x, terminates x.
-
-    Definition normalizes' (x:X) : Prop :=
-      exists y, inhabited (star x y) /\ normal y.
-
-    Inductive normalizes : X -> Prop :=
-    | normalizesI1 x : normal x -> normalizes x
-    | normalizesI2 x y : R x y -> normalizes y -> normalizes x.
-
-    Lemma normalizes_normalizes'_agree (x:X) :
-      normalizes' x <-> normalizes x.
-      split; intros.
-      destruct H as [y [A B]] . destruct A.
-      general induction H; eauto 20 using  inhabited, normalizes.
-      induction H.
-      exists x. eauto using star.
-      firstorder. exists x0. firstorder using star.
-    Qed.
-
-    Definition normalizing : Prop :=
-      forall x, normalizes x.
-
-    Lemma functional_normalizes_terminates x
-      : functional -> normalizes x -> terminates x.
-    Proof.
-      intros F N. induction N as [x A|x y A B]; constructor.
-      intros y B. exfalso. apply A. now exists y; eauto using inhabited.
-      intros y' C. assert (y=y') by (eapply F; eauto). subst. trivial.
-    Qed.
 
   End Unary.
 
@@ -226,12 +190,6 @@ Section Relations.
     intros. eapply div_ext_star_2; eauto. eapply plus_star; eauto.
   Qed.
 
-  Lemma normal_terminates (R: rel) s
-  : normal R s -> terminates R s.
-  Proof.
-    intros. econstructor; intros. exfalso. firstorder.
-  Qed.
-
   (** Relational approximation *)
 
   Definition rle (R R' : rel) :=
@@ -259,13 +217,6 @@ Proof.
   intros A. apply A. induction x; intros y B.
   exfalso ; omega.
   apply A. intros z C. apply IHx. omega.
-Qed.
-
-Lemma gt_terminates
-  : terminating gt.
-Proof.
-  intros x. apply complete_induction. clear x.
-  intros x A. constructor. exact A.
 Qed.
 
 Inductive fstNoneOrR {X Y:Type} (R:X->Y->Prop)

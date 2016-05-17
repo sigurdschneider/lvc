@@ -34,6 +34,15 @@ Proof.
   firstorder.
 Qed.
 
+Lemma poLe_poLt Dom `{PartialOrder Dom} d d'
+  : poLe d d'
+    -> ~ poLe d' d
+    -> poLt d d'.
+Proof.
+  split; eauto. decide (poEq d d'); eauto.
+  exfalso; eapply H1; eapply poLe_refl; symmetry; eauto.
+Qed.
+
 Hint Resolve poLt_intro poLt_poLe.
 
 Notation "s '⊑' t" := (poLe s t) (at level 70, no associativity).
@@ -132,3 +141,33 @@ Proof.
   - intros. general induction H0; eauto using @PIR2, poLe_refl.
   - intros ? ? A B. general induction A; inv B; eauto 20 using @PIR2, poLe_antisymmetric.
 Defined.
+
+
+Hint Extern 5 (poLe ?a ?a) => reflexivity.
+Hint Extern 5 (poEq ?a ?a) => reflexivity.
+Hint Extern 5 (poLe ?a ?a') => progress (first [has_evar a | has_evar a' | reflexivity]).
+Hint Extern 5 (poEq ?a ?a') => progress (first [has_evar a | has_evar a' | reflexivity]).
+
+Hint Extern 10 =>
+match goal with
+| [ H : poLe ?a ?b, H': poLe ?b ?c |- poLe ?a ?c ] =>
+  etransitivity; [ eapply H | eapply H' ]
+| [ H : poLe ?a ?b, H': PIR2 _ ?b ?c |- poLe ?a ?c ] =>
+  etransitivity; [ eapply H | eapply H' ]
+| [ H : poLe ?a ?b, H': poLe ?b ?c, H'' : poLe ?c ?d |- poLe ?a ?d ] =>
+  etransitivity; [ eapply H | etransitivity; [ eapply H' | eapply H''] ]
+| [ H : PIR2 poLe ?a ?b, H': PIR2 poLe ?b ?c |- PIR2 poLe ?a ?c ] =>
+  etransitivity; [ eapply H | eapply H' ]
+| [ H : PIR2 poLe ?a ?b, H': PIR2 poLe ?b ?c, H'' : PIR2 poLe ?c ?d |- PIR2 poLe ?a ?d ] =>
+  etransitivity; [ eapply H | etransitivity; [ eapply H' | eapply H''] ]
+| [ H : poLe ?a ?b, H': PIR2 _ ?b ?c, H'' : poLe ?c ?d |- poLe ?a ?d ] =>
+  etransitivity; [ eapply H | etransitivity; [ eapply H' | eapply H''] ]
+| [ H : poLe ?a ?b, H' : poLe ?b ?c, H'' : ~ poEq ?b ?c |- poLt ?a ?c ] =>
+  rewrite H; eapply (@poLt_intro _ _ _ _ H' H'')
+| [ H : poLe ?a ?b, H' : PIR2 _ ?b ?c, H'' : ~ poEq ?b ?c |- poLt ?a ?c ] =>
+  rewrite H; eapply poLt_intro; [ eapply H' | eapply H'']
+| [ H : poLt ?a ?b, H': poLe ?b ?c |- poLt ?a ?c ] =>
+  rewrite <- H'; eapply H
+| [ H : poLe ?a ?b, H': poEq ?b ?c |- poLe ?a ?c ] =>
+  rewrite <- H'; eapply H
+end.
