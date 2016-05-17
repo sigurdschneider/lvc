@@ -1,6 +1,6 @@
 Require Import List.
 Require Export Util Var Val Exp Env Map CSet AutoIndTac IL AllInRel Sawtooth.
-Require Export SmallStepRelations StateType paco Equiv Bisim Sim.
+Require Export SmallStepRelations StateType Equiv Bisim Sim.
 
 Set Implicit Arguments.
 Unset Printing Records.

@@ -1,5 +1,5 @@
-Require Import Util AllInRel Sawtooth Get.
-Require Export SmallStepRelations StateType paco Equiv.
+Require Import Util paco2 AllInRel Sawtooth Get.
+Require Export SmallStepRelations StateType Equiv.
 
 Set Implicit Arguments.
 Unset Printing Records.

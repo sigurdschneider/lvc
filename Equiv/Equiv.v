@@ -1,6 +1,5 @@
-Require Import List.
-Require Export Util.
-Require Export SmallStepRelations StateType paco.
+Require Import List Util.
+Require Export SmallStepRelations StateType.
 
 Set Implicit Arguments.
 Unset Printing Records.

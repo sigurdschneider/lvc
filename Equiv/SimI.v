@@ -1,6 +1,6 @@
-Require Import List.
+Require Import List paco2.
 Require Export Util Var Val Exp Env Map CSet AutoIndTac IL AllInRel Sawtooth.
-Require Export paco Equiv ProofRelations Sim SimTactics IL InRel.
+Require Export Equiv ProofRelations Sim SimTactics IL InRel.
 
 Set Implicit Arguments.
 Unset Printing Records.

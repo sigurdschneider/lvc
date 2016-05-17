@@ -1,4 +1,4 @@
-Require Import CSet Le.
+Require Import CSet Le ListUpdateAt.
 
 Require Import Plus Util AllInRel Map.
 Require Import Val Var Env EnvTy IL Annotation Lattice DecSolve LengthEq MoreList Status AllInRel.
@@ -22,7 +22,7 @@ Lemma poLe_poLt Dom `{PartialOrder Dom} d d'
     -> poLt d d'.
 Proof.
   split; eauto. decide (poEq d d'); eauto.
-  exfalso; eapply H1; eapply poEq_refl; symmetry; eauto.
+  exfalso; eapply H1; eapply poLe_refl; symmetry; eauto.
 Qed.
 
 Section AnalysisAlgorithm.
@@ -59,81 +59,222 @@ Section AnalysisAlgorithm.
              /\ poEq (step s d') d'.
   Proof.
     intros. destruct trm. simpl in *.
-    revert H.
-    cut (forall d'' (EQ:analysis_step s x = d''),
-            match d'' as s0 return (analysis_step s x = s0 -> status Dom) with
-            | Success d'0 =>
-              fun H : analysis_step s x = Success d'0 =>
-                match decision_procedure (poLe d'0 x) with
-                | left _ => Success d'0
-                | right x0 => safeFirst s (t d'0 (poLe_poLt x d'0 (step_monotone s x H) x0))
-                end
-            | Error d'0 => fun _ : analysis_step s x = Error d'0 => Error d'0
-            end EQ = Success d' ->
-               exists n : nat, d' = iter n x (fun _ : nat => step s) /\ poEq (step s d') d'); eauto.
-    intros. destruct d''; [|congruence].
+    revert H. generalize (eq_refl (analysis_step s x)).
+    generalize (analysis_step s x) at 2 3.
+    intros. destruct s0; [|congruence].
     destruct (decision_procedure (poLe d x)).
-    + invc H. eexists 1; simpl. unfold step at 1. rewrite EQ.
+    + invc H. eexists 1; simpl. unfold step at 1. rewrite e.
       split; eauto.
-      pose proof (step_monotone _ _ EQ).
-      pose proof (po_antisymmetric _ _ H p).
+      pose proof (step_monotone _ _ e).
+      pose proof (poLe_antisymmetric _ _ H p).
       unfold step. eapply step_respectful in H0; eauto.
-      rewrite EQ in H0. inv H0. symmetry. eauto.
+      rewrite e in H0. inv H0. symmetry. eauto.
     + destruct (safeFixpoint_iter _ _ _ _ H) as [n' ?].
-      eexists (S n'). simpl. unfold step at 1. rewrite EQ. eapply H0.
+      eexists (S n'). simpl. unfold step at 1. rewrite e. eapply H0.
   Qed.
 
 End AnalysisAlgorithm.
 
-(*
-Inductive ann_R_ex {A B} (R:A->B->Prop) : ann A -> ann B -> Prop :=
-| annLt0 a b
-  : R a b
-    -> ann_R_ex R (ann0 a) (ann0 b)
-| annLt1A a b an bn
-  : R a b
-    -> ann_R_ex R (ann1 a an) (ann1 b bn)
-| annLt1B a b an bn
-  : R a b \/ ann_R R an bn
-    -> ann_R_ex R (ann1 a an) (ann1 b bn)
-| annLt2 a ans ant b bns bnt
-  : R a b \/ ann_R R ans bns \/ ann_R R ant bnt
-    -> ann_R_ex R (ann2 a ans ant) (ann2 b bns bnt)
-| annLtF a ans b bns ant bnt
-  : R a b
-    -> length ans = length bns
-    -> (exists n a b, get ans n a -> get bns n b -> ann_R R a b) \/ ann_R R ant bnt
-    -> ann_R_ex R (annF a ans ant) (annF b bns bnt).
+Hint Extern 5 (poLe ?a ?a) => reflexivity.
+Hint Extern 5 (poEq ?a ?a) => reflexivity.
+Hint Extern 5 (poLe ?a ?a') => progress (first [has_evar a | has_evar a' | reflexivity]).
+Hint Extern 5 (poEq ?a ?a') => progress (first [has_evar a | has_evar a' | reflexivity]).
 
-Lemma dom_trm_ann Dom `{PO:PartialOrder Dom}
+Hint Extern 10 =>
+match goal with
+| [ H : poLe ?a ?b, H': poLe ?b ?c |- poLe ?a ?c ] =>
+  etransitivity; [ eapply H | eapply H' ]
+| [ H : poLe ?a ?b, H': PIR2 _ ?b ?c |- poLe ?a ?c ] =>
+  etransitivity; [ eapply H | eapply H' ]
+| [ H : poLe ?a ?b, H': poLe ?b ?c, H'' : poLe ?c ?d |- poLe ?a ?d ] =>
+  etransitivity; [ eapply H | etransitivity; [ eapply H' | eapply H''] ]
+| [ H : PIR2 poLe ?a ?b, H': PIR2 poLe ?b ?c |- PIR2 poLe ?a ?c ] =>
+  etransitivity; [ eapply H | eapply H' ]
+| [ H : PIR2 poLe ?a ?b, H': PIR2 poLe ?b ?c, H'' : PIR2 poLe ?c ?d |- PIR2 poLe ?a ?d ] =>
+  etransitivity; [ eapply H | etransitivity; [ eapply H' | eapply H''] ]
+| [ H : ann_R poLe ?a ?b, H': ann_R poLe ?b ?c |- ann_R poLe ?a ?c ] =>
+  etransitivity; [ eapply H | eapply H' ]
+| [ H : poLe ?a ?b, H': ann_R poLe ?b ?c, H'' : poLe ?c ?d |- poLe ?a ?d ] =>
+  etransitivity; [ eapply H | etransitivity; [ eapply H' | eapply H''] ]
+| [ H : poLe ?a ?b, H': PIR2 _ ?b ?c, H'' : poLe ?c ?d |- poLe ?a ?d ] =>
+  etransitivity; [ eapply H | etransitivity; [ eapply H' | eapply H''] ]
+| [ H : ann_R poLe ?a ?b, H': ann_R poLe ?b ?c, H'' : ann_R poLe ?c ?d |- ann_R poLe ?a ?d ] =>
+  etransitivity; [ eapply H | etransitivity; [ eapply H' | eapply H''] ]
+| [ H : poLe ?a ?b, H': ann_R poLe ?b ?c |- poLe ?a ?c ] =>
+  etransitivity; [ eapply H | eapply H' ]
+| [ H : poLe ?a ?b, H' : poLe ?b ?c, H'' : ~ poEq ?b ?c |- poLt ?a ?c ] =>
+  rewrite H; eapply (@poLt_intro _ _ _ _ H' H'')
+| [ H : poLe ?a ?b, H' : ann_R poLe ?b ?c, H'' : ~ poEq ?b ?c |- poLt ?a ?c ] =>
+  rewrite H; eapply poLt_intro; [ eapply H' | eapply H'']
+| [ H : poLe ?a ?b, H' : PIR2 _ ?b ?c, H'' : ~ poEq ?b ?c |- poLt ?a ?c ] =>
+  rewrite H; eapply poLt_intro; [ eapply H' | eapply H'']
+| [ H : poLt ?a ?b, H': poLe ?b ?c |- poLt ?a ?c ] =>
+  rewrite <- H'; eapply H
+| [ H : poLe ?a ?b, H': poEq ?b ?c |- poLe ?a ?c ] =>
+  rewrite <- H'; eapply H
+end.
+
+Lemma terminating_list Dom `{PO:PartialOrder Dom}
   : terminating poLt
-    -> terminating (fun x y => ann_R poLe x y /\ ann_R_ex (fun x y => ~ poEq x y) x y).
+    -> terminating (@poLt (list Dom) _).
+Proof.
+  intros. hnf; intros.
+  assert (LE:poLe x x) by reflexivity.
+  revert LE. generalize x at 2 3.
+  induction x; intros.
+  - inv LE. econstructor. intros ? [A B].
+    inv A. exfalso. eapply B. reflexivity.
+  - invc LE.
+    specialize (H a).
+    revert y pf YL H3.
+    induction H; intros.
+    assert (poLe x x) by reflexivity.
+    revert y pf YL H3. specialize (IHx _ H1). clear H1.
+    induction IHx; intros.
+    econstructor. intros ? [A B]; inv A.
+    decide (poEq YL YL0).
+    + decide (poEq y y1).
+      exfalso; apply B; econstructor; eauto.
+      eapply (H0 y1); eauto.
+    + eapply (H2 YL0); eauto.
+      time rewrite H3. split; eauto.
+Qed.
+
+Lemma terminates_get_list Dom `{PO:PartialOrder Dom} L
+  : terminates poLt L
+    -> forall n x, get L n x -> terminates poLt x.
+Proof.
+  intro Trm.
+  induction Trm; intros.
+  + econstructor; intros.
+    eapply H0. instantiate (1:=list_update_at x n y).
+    * revert H1 H2. clear_all.
+      general induction x; simpl; isabsurd.
+      inv H1.
+      split. econstructor; eauto.
+      intro. eapply H2. inv H; eauto.
+      exploit IHx; eauto. split; eauto.
+      econstructor; eauto. eapply H.
+      intro. eapply H. inv H0; eauto.
+    * eapply list_update_at_get_3; eauto.
+Qed.
+
+Lemma terminates_list_get Dom `{PO:PartialOrder Dom} L
+  : (forall n x, get L n x -> terminates poLt x)
+    -> terminates poLt L.
+Proof.
+  intros.
+  assert (LE:poLe L L) by reflexivity.
+  revert LE. generalize L at 2 3.
+  induction L; intros.
+  - inv LE. econstructor. intros ? [A B].
+    inv A. exfalso. eapply B. reflexivity.
+  - invc LE.
+    pose proof (H 0 a (getLB _ _)).
+    revert y pf YL H3.
+    induction H0; intros.
+    exploit IHL; [ eauto using get | reflexivity |].
+    revert y pf YL H3.
+    induction H2; intros.
+    econstructor. intros ? [A B]; inv A.
+    decide (poEq YL YL0).
+    + decide (poEq y y1).
+      exfalso; eapply B; econstructor; eauto.
+      eapply (H1 y1); eauto.
+      intros ? ? Get; inv Get; eauto using get.
+    + assert (poLe x0 YL0) by (etransitivity; eauto).
+      assert (poLt x0 YL0) by (time rewrite H4; split; eauto).
+      eapply H3; eauto.
+      * intros ? ? Get. inv Get; eauto using get.
+        exploit H2 as Trm; eauto using get.
+        eapply terminates_get_list in Trm; eauto.
+      * intros. eapply H1; eauto.
+        intros ? ? Get; inv Get; eauto using get.
+Qed.
+
+Lemma terminating_ann Dom `{PO:PartialOrder Dom}
+  : terminating poLt
+    -> terminating (@poLt (ann Dom) _).
 Proof.
   intros Trm a.
-  econstructor. intros. dcr.
-  general induction H1.
+  econstructor. intros ? [A _].
+  induction A.
   - specialize (Trm b).
     general induction Trm.
     econstructor. intros ? [A B].
-    inv A; inv B.
-    eapply H0; eauto. split; eauto.
-  - econstructor.
-    intros ? [A B]. inv A; inv B.
-    +
-    decide (poEq a b).
-    + exploit IHa; eauto. inv H.
-      exploit H0. split. eauto. intro. eapply B. econstructor; eauto.
-      specialize (Trm b).
-
-
-    specialize (Trm a).
-    general induction Trm.
-    econstructor. intros. destruct H1 as [A B].
     inv A.
     eapply H0; eauto. split; eauto.
-    intro. eapply B. econstructor; eauto.
+    intro. eapply B. econstructor. eauto.
+  - pose proof (Trm b) as FST. clear A H.
+    rename IHA into SND.
+    assert (poLe bn bn) by reflexivity.
+    revert H. generalize bn at 2 3.
+    induction FST as [? ? FST].
+    assert (poLe x x) by reflexivity.
+    revert H0. generalize x at 2 3.
+    induction SND as [? ? SND].
+    intros.
+    econstructor; intros ? [A B].
+    inv A.
+    decide (poEq bn bn0).
+    + decide (poEq x1 b).
+      exfalso; eapply B; econstructor; eauto.
+      eapply FST; eauto.
+    + eapply (SND bn0); eauto.
+  - clear H A1 A2 ans ant a.
+    assert (poLe bns bns) by reflexivity.
+    revert H. generalize bns at 2 3.
+    assert (poLe bnt bnt) by reflexivity.
+    revert H. generalize bnt at 2 3.
+    assert (poLe b b) by reflexivity.
+    revert H. generalize b at 2 3.
+    specialize (Trm b).
+    induction Trm.
+    induction IHA1.
+    induction IHA2.
+    intros.
+    econstructor; intros ? [A B].
+    inv A.
+    decide (poEq b b0).
+    + decide (poEq bns bns0).
+      * decide (poEq bnt bnt0).
+        exfalso; apply B; econstructor; eauto.
+        eapply (H4 bnt0); eauto.
+      * eapply (H2 bns0); eauto.
+    + eapply (H0 b0); eauto.
+  - clear H A.
+    pose proof (Trm b) as FST.
+    rename IHA into SND.
+    assert (TRD:terminates poLt bns). {
+      eapply terminates_list_get.
+      intros. symmetry in H0; edestruct get_length_eq; eauto.
+    }
+    clear H0 H1 H2.
+    assert (poLe bns bns) by reflexivity.
+    revert H. generalize bns at 2 3.
+    assert (poLe bnt bnt) by reflexivity.
+    revert H. generalize bnt at 2 3.
+    assert (poLe b b) by reflexivity.
+    revert H. generalize b at 2 3.
+    induction FST.
+    induction SND.
+    induction TRD.
+    intros.
+    econstructor; intros ? [A B].
+    inv A.
+    decide (poEq b b0).
+    + decide (poEq bns bns0).
+      * decide (poEq bnt bnt0).
+        exfalso; apply B; eauto. econstructor; eauto.
+        intros. eapply PIR2_nth in p0; eauto.
+        dcr. get_functional. eauto.
+        eapply (H2 bnt0); eauto.
+      * eapply PIR2_get in H14; eauto.
+        eapply (H4 bns0); eauto.
+    + eapply PIR2_get in H14; eauto.
+      eapply (H0 b0); eauto.
 Qed.
-*)
+
 
 Inductive anni (A:Type) : Type :=
 | anni0 : anni A

@@ -1,6 +1,6 @@
-Require Import List.
+Require Import List paco2.
 Require Import Util IL AllInRel Sawtooth.
-Require Export SmallStepRelations StateType paco Equiv.
+Require Export SmallStepRelations StateType Equiv.
 
 Set Implicit Arguments.
 Unset Printing Records.

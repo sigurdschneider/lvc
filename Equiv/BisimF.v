@@ -1,4 +1,4 @@
-Require Import List paco.
+Require Import List paco2.
 Require Export Util AutoIndTac AllInRel Sawtooth.
 Require Export Equiv ProofRelations Bisim BisimTactics IL InRel.
 

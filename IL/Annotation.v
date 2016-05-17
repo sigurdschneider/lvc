@@ -222,9 +222,8 @@ Instance PartialOrder_ann Dom `{PartialOrder Dom}
   poEq_dec := @ann_R_dec _ _ poEq poEq_dec
 }.
 Proof.
-  - intros. general induction H0; eauto using @ann_R, poEq_refl.
-  - intros ? ? A B. general induction A; inv B; eauto using @ann_R, po_antisymmetric.
-    + econstructor; eauto using po_antisymmetric.
+  - intros. general induction H0; eauto using @ann_R, poLe_refl.
+  - intros ? ? A B. general induction A; inv B; eauto 20 using @ann_R, poLe_antisymmetric.
 Defined.
 
 Instance getAnn_ann_R_morphism A (R:A->A->Prop)
