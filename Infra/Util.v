@@ -348,20 +348,20 @@ Proof.
 Qed.
 
 
-Inductive option_R (A B : Type) (eqA : A -> B -> Prop)
+Inductive option_R_Some (A B : Type) (eqA : A -> B -> Prop)
 : option A -> option B -> Prop :=
-| option_R_Some a b : eqA a b -> option_R eqA ⎣a⎦ ⎣b⎦.
+| Option_R_Some a b : eqA a b -> option_R_Some eqA ⎣a⎦ ⎣b⎦.
 
 
-Lemma option_R_refl A R `{Reflexive A R} : forall x, option_R R ⎣x⎦ ⎣x⎦.
-intros; eauto using option_R.
+Lemma option_R_Some_refl A R `{Reflexive A R} : forall x, option_R_Some R ⎣x⎦ ⎣x⎦.
+intros; eauto using option_R_Some.
 Qed.
 
-Instance option_R_sym A R `{Symmetric A R} : Symmetric (option_R R).
-hnf; intros ? [] []; eauto using option_R.
+Instance option_R_Some_sym A R `{Symmetric A R} : Symmetric (option_R_Some R).
+hnf; intros ? [] []; eauto using option_R_Some.
 Qed.
 
-Instance option_R_trans A R `{Transitive A R} : Transitive (option_R R).
+Instance option_R_trans A R `{Transitive A R} : Transitive (option_R_Some R).
 hnf; intros. inv H0; inv H1; econstructor; eauto.
 Qed.
 

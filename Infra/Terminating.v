@@ -8,9 +8,11 @@ Inductive terminates X (R: X -> X -> Prop) : X -> Prop :=
 Class Terminating X (R: X -> X -> Prop) : Prop :=
   terminating : forall x, terminates R x.
 
+Arguments Terminating X R : clear implicits.
+
 Instance terminating_list Dom `{PO:PartialOrder Dom}
-  : Terminating poLt
-    -> Terminating (@poLt (list Dom) _).
+  : Terminating Dom poLt
+    -> Terminating (list Dom) poLt.
 Proof.
   intros. hnf; intros.
   assert (LE:poLe x x) by reflexivity.
@@ -87,8 +89,8 @@ Proof.
 Qed.
 
 Lemma terminating_ann Dom `{PO:PartialOrder Dom}
-  : Terminating poLt
-    -> Terminating (@poLt (ann Dom) _).
+  : Terminating Dom poLt
+    -> Terminating (ann Dom) poLt.
 Proof.
   intros Trm a.
   econstructor. intros ? [A _].

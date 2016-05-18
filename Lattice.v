@@ -11,11 +11,11 @@ Require Export Libs.PartialOrder.
 Require Import EqDec DecSolve.
 
 
-Class BoundedSemiLattice (A : Type) := {
-  bsl_partial_order :> PartialOrder A;
-
+Class BoundedSemiLattice (A : Type) `{PartialOrder A} := {
   bottom : A;
   join : A -> A -> A;
+
+  bottom_least : forall a, poLe bottom a;
 
   join_idempotent : forall a, poEq (join a a) a;
   join_commutative : forall a b, poEq (join a b) (join b a);

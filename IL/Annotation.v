@@ -21,7 +21,7 @@ Definition getAnn {A} (a:ann A) : A :=
     | annF a _ _ => a
   end.
 
-Fixpoint setTopAnn A (s:ann A) (a:A) : ann A :=
+Definition setTopAnn A (s:ann A) (a:A) : ann A :=
   match s with
    | ann0 _ => ann0 a
    | ann1 _ s' => ann1 a s'
@@ -117,6 +117,14 @@ Proof.
   Grab Existential Variables. eauto. eauto.
 Defined.
 
+Lemma setAnn_annotation A (a:A) s
+  : annotation s (setAnn a s).
+Proof.
+  sind s; destruct s; simpl; eauto using @annotation.
+  - econstructor; eauto with len.
+    intros; inv_get; unfold comp; simpl; eauto.
+Qed.
+
 Inductive ann_R {A B} (R:A->B->Prop) : ann A -> ann B -> Prop :=
 | annLt0 a b
   : R a b
@@ -173,9 +181,10 @@ Proof.
   - hnf; intros; etransitivity; eauto.
 Qed.
 
-Instance ann_R_anti A R EqA `{Antisymmetric A R EqA} : Antisymmetric _ _ (ann_R R).
+Instance ann_R_anti A R Eq `{EqA:Equivalence _ Eq} `{@Antisymmetric A Eq EqA R}
+  : @Antisymmetric _ (ann_R Eq) _ (ann_R R).
 Proof.
-  intros ? ? B C. general induction B; inv C; eauto using @ann_R.
+  intros ? ? B C. general induction B; inv C; eauto 20 using @ann_R.
 Qed.
 
 Instance ann_R_ann1_pe_morphism X `{OrderedType X}
@@ -223,7 +232,6 @@ Instance PartialOrder_ann Dom `{PartialOrder Dom}
 }.
 Proof.
   - intros. general induction H0; eauto using @ann_R, poLe_refl.
-  - intros ? ? A B. general induction A; inv B; eauto 20 using @ann_R, poLe_antisymmetric.
 Defined.
 
 Instance getAnn_ann_R_morphism A (R:A->A->Prop)
@@ -256,3 +264,21 @@ match goal with
 | [ H : poLe ?a ?b, H' : ann_R poLe ?b ?c, H'' : ~ poEq ?b ?c |- poLt ?a ?c ] =>
   rewrite H; eapply poLt_intro; [ eapply H' | eapply H'']
 end.
+
+Lemma ann_R_annotation s A B (R : A -> B -> Prop) (a:ann A) (b:ann B)
+  : annotation s a
+    -> ann_R R a b
+    -> annotation s b.
+Proof.
+  intros Ann AnnR.
+  general induction Ann; inv AnnR; eauto using @annotation.
+  - econstructor; eauto with len.
+    intros. edestruct (get_length_eq _ H2 (eq_sym H6)); eauto.
+Qed.
+
+Lemma setTopAnn_annotation s A (an:ann A) a
+  : annotation s an
+    -> annotation s (setTopAnn an a).
+Proof.
+  intros. inv H; simpl; eauto using @annotation.
+Qed.

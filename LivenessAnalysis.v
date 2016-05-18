@@ -1,7 +1,7 @@
-Require Import CSet Le.
+Require Import CSet Le Var.
 
 Require Import Plus Util AllInRel Map CSet.
-Require Import Val Var Env EnvTy IL Annotation Lattice DecSolve Analysis Filter.
+Require Import Val Var Env EnvTy IL Annotation Lattice DecSolve Analysis Filter Terminating.
 
 Instance PartialOrder_Subset_Equal X `{OrderedType X} : PartialOrder (set X) :=
 {
@@ -10,18 +10,23 @@ Instance PartialOrder_Subset_Equal X `{OrderedType X} : PartialOrder (set X) :=
   poEq := Equal;
   poEq_dec := @Equal_computable _ _
 }.
+Proof.
+  - intros. rewrite H0; eauto.
+  - hnf; intros. split; eauto.
+Defined.
 
 Instance set_var_semilattice : BoundedSemiLattice (set var) := {
-  bsl_partial_order := PartialOrder_Subset_Equal _;
   bottom := ∅;
   join := union
 }.
-- hnf; intros. eapply union_idem.
-- hnf; intros. eapply union_comm.
-- hnf; intros. eapply union_assoc.
+Proof.
+  - intros; hnf; simpl. cset_tac.
+  - hnf; intros. eapply union_idem.
+  - hnf; intros. eapply union_comm.
+  - hnf; intros. eapply union_assoc.
 Defined.
 
-Instance PartialOrder_Subset_Equal X `{OrderedType X} U : PartialOrder ({ s : set X | s ⊆ U}) :=
+Instance PartialOrder_Subset_Equal_Bounded X `{OrderedType X} U : PartialOrder ({ s : set X | s ⊆ U}) :=
 {
   poLe x y := Subset (proj1_sig x) (proj1_sig y);
   poLe_dec x y := @Subset_computable _ _ (proj1_sig x) (proj1_sig y);
@@ -29,21 +34,22 @@ Instance PartialOrder_Subset_Equal X `{OrderedType X} U : PartialOrder ({ s : se
   poEq_dec x y := @Equal_computable _ _ (proj1_sig x) (proj1_sig y)
 }.
 Proof.
-  - intros [a ?] [b ?]. simpl. intros. rewrite H0. reflexivity.
   - econstructor.
     + hnf; intros. reflexivity.
     + hnf; intros. symmetry; eauto.
     + hnf; intros. etransitivity; eauto.
-  - hnf; intros. split; eauto.
+  - intros [a ?] [b ?]. simpl. intros. rewrite H0. reflexivity.
+  - hnf; intros [a ?] [b ?] [c ?]; simpl; intros. etransitivity; eauto.
+  - hnf; intros [a ?] [b ?]; simpl; intros. split; eauto.
 Defined.
 
-Instance set_var_semilattice U : BoundedSemiLattice ({ s : set var | s ⊆ U}) := {
-  bsl_partial_order := PartialOrder_Subset_Equal _ U;
+Instance set_var_semilattice_bounded U : BoundedSemiLattice ({ s : set var | s ⊆ U}) := {
   bottom := exist _ ∅ (@incl_empty var _ U);
   join x y := exist _ (union (proj1_sig x) (proj1_sig y)) _
 }.
 Proof.
   - destruct x,y; simpl. cset_tac.
+  - intros [a ?]; simpl. cset_tac.
   - hnf; intros. eapply union_idem.
   - hnf; intros. eapply union_comm.
   - hnf; intros. eapply union_assoc.
@@ -54,7 +60,7 @@ Proof.
 Defined.
 
 Lemma bunded_set_terminating X `{OrderedType X} U
-  : terminating (@poLt _ (@PartialOrder_Subset_Equal X _ U)).
+  : Terminating {s : ⦃X⦄ | s ⊆ U} poLt.
 Proof.
   hnf; intros [s Incl].
   remember (cardinal (U \ s)). assert (cardinal (U \ s) <= n) as Le by omega.
@@ -93,7 +99,7 @@ Definition liveness_transform (DL:list (set var * params)) st a :=
     | stmtReturn e as st, anni0 => Exp.freeVars e
     | stmtExtern x f Y s as st, anni1 d =>
       (d \ {{x}}) ∪ list_union (List.map Exp.freeVars Y)
-    | stmtFun F t as st, anniF ds dt =>
+    | stmtFun F t as st, anni1 ds dt =>
       dt ∪ list_union (zip (fun Zs ds => (ds \ of_list (fst Zs))) F ds)
     | _, an => ∅
   end.
