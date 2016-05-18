@@ -56,14 +56,7 @@ Inductive anni (A:Type) : Type :=
 | anni0 : anni A
 | anni1 (a1:A) : anni A
 | anni2 (a1:A) (a2:A) : anni A
-| anniF (a1:list A) (a2:A) : anni A
 | anni2opt (a1:option A) (a2:option A) : anni A.
-
-Definition anni_getF A (a:anni A) : list A :=
-  match a with
-    | anniF a1 s2 => a1
-    | _ => nil
-  end.
 
 Arguments anni A.
 Arguments anni0 [A].
@@ -73,9 +66,18 @@ Fixpoint setAnni {A} (a:ann A) (ai:anni A) : ann A :=
   match a, ai with
     | ann1 a an, anni1 a1 => ann1 a (setTopAnn an a1)
     | ann2 a an1 an2, anni2 a1 a2 => ann2 a (setTopAnn an1 a1) (setTopAnn an2 a2)
-    | annF a an1 an2, anniF a1 a2 => annF a (zip (@setTopAnn _) an1 a1) (setTopAnn an2 a2)
     | an, _ => an
   end.
+
+Inductive option_P {A} (P: A -> Prop) : option A -> Prop :=
+| option_P_None : option_P P (None)
+| option_R_Some a : P a -> option_P P (Some a).
+
+Inductive anni_P {A} (P : A -> Prop) : anni A -> Prop :=
+| anni_P0 : anni_P P anni0
+| anni_P1 a : P a -> anni_P P (anni1 a)
+| anni_P2 a a' : P a -> P a' -> anni_P P (anni2 a a')
+| anni_P2o o o' : option_P P o -> option_P P o' -> anni_P P (anni2opt o o').
 
 Definition backward Dom FunDom
            (btransform : list FunDom -> stmt -> anni Dom -> Dom)
@@ -111,20 +113,44 @@ Definition backward Dom FunDom
         backward (zip (fun Zs ans => bmkFunDom (fst Zs) ans) F ans ++ AL) (snd Zs)) F ans in
       let AL' := zip (fun Zs ans => bmkFunDom (fst Zs) ans) F ans' ++ AL in
       let ant' := backward AL' t ant in
-      let ai := anniF (List.map getAnn ans') (getAnn ant') in
+      let ai := anni1 (getAnn ant') in
       let d' := btransform AL' st ai in
       annF d' ans' ant'
     | _, an => an
   end.
 
+
+Ltac btransform t H :=
+  match goal with
+  | [ |- poLe ?a (t ?AL ?s ?d) ] =>
+    let LE := fresh "LE" in
+    let A := fresh "LE" in
+    let B := fresh "LE" in
+    pose proof (H AL s d) as LE; inversion LE as [A|A B|A B|A B]; subst; clear LE;
+    rename B into LE; rewrite <- LE
+  end.
+
+Instance getAnn_poLe Dom `{PartialOrder Dom}
+  : Proper (poLe ==> poLe) getAnn.
+Proof.
+  unfold Proper, respectful; intros.
+  inv H0; simpl; eauto.
+Qed.
+
 Lemma backward_increasing Dom FunDom `{PartialOrder Dom}
-                 (btransform : list FunDom -> stmt -> anni Dom -> Dom)
+      (f : list FunDom -> stmt -> anni Dom -> Dom)
+      (fOK:forall AL s ai, anni_P (fun x => poLe x (f AL s ai)) ai)
            (bmkFunDom : params -> ann Dom -> FunDom)
-  : forall (s : stmt) (d : ann Dom), d ⊑ backward btransform bmkFunDom nil s d.
+  : forall AL (s : stmt) (d : ann Dom), d ⊑ backward f bmkFunDom AL s d.
 Proof.
   intros.
   general induction s; destruct d; simpl; try reflexivity.
   - econstructor.
+    btransform f fOK.
+    rewrite <- IHs; eauto.
+
+    eapply IHs; eauto.
+
 Qed.
 
 Instance makeBackwardAnalysis Dom FunDom (BSL:BoundedSemiLattice Dom)
