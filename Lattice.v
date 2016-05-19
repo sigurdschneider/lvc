@@ -25,6 +25,64 @@ Class BoundedSemiLattice (A : Type) `{PartialOrder A} := {
   join_respects_le :> Proper (poLe ==> poLe ==> poLe) join
 }.
 
+Print Visibility.
+
+Infix "⊔" := join (at level 70, no associativity).
+Notation "⊥" := bottom (at level 70, no associativity).
+
+
+Instance pair_boundedsemilattice A B `{BoundedSemiLattice A} `{BoundedSemiLattice B}
+  : BoundedSemiLattice (A * B) := {
+  bottom := (bottom, bottom);
+  join x y := (join (fst x) (fst y), join (snd x) (snd y))
+}.
+Proof.
+  - intros [a b]; split; simpl; eapply bottom_least.
+  - intros [a b]; split; simpl; eapply join_idempotent.
+  - intros [a1 a2] [b1 b2]; split; simpl; eapply join_commutative.
+  - intros [a1 a2] [b1 b2] [c1 c2]; split; simpl; eapply join_associative.
+  - intros [a1 a2] [b1 b2] [EQa EQb] [c1 c2] [d1 d2] [EQc EQd]; simpl in *;
+      split; eapply join_respects_eq; eauto.
+  - intros [a1 a2] [b1 b2] [LEa LEb] [c1 c2] [d1 d2] [LEc LEd]; simpl in *;
+      split; eapply join_respects_le; eauto.
+Defined.
+
+
+Instance bool_boundedsemilattice
+  : BoundedSemiLattice bool := {
+  bottom := false;
+  join := orb
+}.
+Proof.
+  - intros []; simpl; eauto.
+  - intros []; simpl; eauto.
+  - intros [] []; simpl; eauto.
+  - intros [] [] []; simpl; eauto.
+  - intros [] [] LE [] [] LE'; simpl in *; eauto.
+Defined.
+
+Section SemiLatticeTheory.
+  Variable A : Type.
+  Context `{l : BoundedSemiLattice A}.
+  Hint Immediate join_idempotent join_commutative join_associative.
+
+End SemiLatticeTheory.
+
+Inductive withTop (A:Type) :=
+| Top : withTop A
+| wTA (a:A) : withTop A.
+
+Arguments Top [A].
+Arguments wTA [A] a.
+
+Instance withTop_eq_dec A `{EqDec A eq} : EqDec (withTop A) eq.
+Proof.
+  hnf. destruct x,y; eauto; try dec_solve.
+  destruct (H a a0); try dec_solve.
+  hnf in e. subst. left; eauto.
+Qed.
+
+
 (*
 Class Lattice (A : Type) `{OrderedType A} := {
   meet : A -> A -> A;
@@ -47,35 +105,10 @@ Class Lattice (A : Type) `{OrderedType A} := {
   join_respects_le : Proper (_le ==> _le ==> _le) join
 }.
 *)
-Generalizable Variable A.
 
 (* Infix "/*\" := meet (at level 40, left associativity) : lattice_scope. *)
-Infix "\*/" := join (at level 50, left associativity) : lattice_scope.
-
-Local Open Scope lattice_scope.
 
 
-Section SemiLatticeTheory.
-  Context `{l : BoundedSemiLattice A}.
-  Hint Immediate join_idempotent join_commutative join_associative.
-
-  (** *)
-
-End SemiLatticeTheory.
-
-Inductive withTop (A:Type) :=
-| Top : withTop A
-| wTA (a:A) : withTop A.
-
-Arguments Top [A].
-Arguments wTA [A] a.
-
-Instance withTop_eq_dec A `{EqDec A eq} : EqDec (withTop A) eq.
-Proof.
-  hnf. destruct x,y; eauto; try dec_solve.
-  destruct (H a a0); try dec_solve.
-  hnf in e. subst. left; eauto.
-Qed.
 
 (*
 

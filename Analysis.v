@@ -10,40 +10,40 @@ Set Implicit Arguments.
 Class Monotone Dom `{PartialOrder Dom} Dom' `{PartialOrder Dom'} (f:Dom->Dom') :=
   monotone : forall a b, poLe a b -> poLe (f a) (f b).
 
-Class Analysis (Dom: stmt -> Type) := makeAnalysis {
-  dom_po :> forall sT, PartialOrder (Dom sT);
-  analysis_step : forall sT, stmt -> Dom sT -> Dom sT;
-  initial_value : forall sT, Dom sT;
-  initial_value_bottom : forall s d, poLe (initial_value s) d;
-  finite_height : forall (sT:stmt), Terminating (Dom sT) poLt;
-  step_monotone : forall sT s, Monotone (@analysis_step sT s)
+Class Analysis (Dom: Type) := makeAnalysis {
+  dom_po :> PartialOrder Dom;
+  analysis_step : Dom -> Dom;
+  initial_value : Dom;
+  initial_value_bottom : forall d, poLe initial_value d;
+  finite_height : Terminating Dom poLt;
+  step_monotone : Monotone analysis_step
 }.
 
 Hint Extern 5 =>
 match goal with
-  [ H : poLe ?d ?d' |- poLe (analysis_step _ ?s ?d) (analysis_step _ ?s ?d')] =>
-  eapply (step_monotone _ s _ _ H)
+  [ H : poLe ?d ?d' |- poLe (analysis_step ?d) (analysis_step ?d')] =>
+  eapply (step_monotone _ _ H)
 end.
 
 Section AnalysisAlgorithm.
-  Variable Dom : stmt -> Type.
+  Variable Dom : Type.
   Variable analysis : Analysis Dom.
 
-  Fixpoint safeFirst (sT s:stmt) (d:Dom sT) (mon:poLe d (analysis_step sT s d)) (trm:terminates poLt d)
-    : { d' : Dom sT | exists n : nat, d' = iter n d (fun _ => analysis_step sT s) /\ poEq (analysis_step sT s d') d' }.
-    decide (poLe (analysis_step sT s d) d).
-    - eexists (analysis_step sT s d), 1; simpl.
+  Fixpoint safeFirst (d:Dom) (mon:poLe d (analysis_step d)) (trm:terminates poLt d)
+    : { d' : Dom | exists n : nat, d' = iter n d (fun _ => analysis_step) /\ poEq (analysis_step d') d' }.
+    decide (poLe (analysis_step d) d).
+    - eexists (analysis_step d), 1; simpl.
       split; eauto.
       eapply poLe_antisymmetric; eauto.
-    - destruct (safeFirst sT s (analysis_step sT s d)) as [d' H]; [ eauto | |].
+    - destruct (safeFirst (analysis_step d)) as [d' H]; [ eauto | |].
       + destruct trm. eapply H.
         eapply poLe_poLt; eauto.
       + eexists d'. destruct H as [n' H]. eexists (S n'); simpl. eauto.
   Defined.
 
-  Definition safeFixpoint (s:stmt)
-    : { d' : Dom s | exists n : nat, d' = iter n (initial_value s) (fun _ => analysis_step s s)
-                            /\ poEq (analysis_step s s d') d' }.
+  Definition safeFixpoint
+    : { d' : Dom | exists n : nat, d' = iter n initial_value (fun _ => analysis_step)
+                            /\ poEq (analysis_step d') d' }.
     eapply @safeFirst.
     - eapply initial_value_bottom.
     - eapply finite_height.
@@ -182,36 +182,36 @@ Require Import Keep.
 Definition ifb (b b':bool) := if b then b' else false.
 
 Definition backward Dom
-           (btransform : list params -> list (option Dom) -> stmt -> anni (option Dom) -> option Dom) :=
+           (btransform : list params -> list (Dom * bool) -> stmt -> anni (Dom * bool) -> Dom) :=
   fix backward
-      (ZL:list (params)) (AL:list (option Dom)) (st:stmt) (a:ann (option Dom)) {struct st}
-  : ann (option Dom) * list bool :=
+      (ZL:list (params)) (AL:list (Dom * bool)) (st:stmt) (a:ann (Dom * bool)) {struct st}
+  : ann (Dom * bool) * list bool :=
   match st, a with
     | stmtLet x e s as st, ann1 d ans =>
       let ans' := backward ZL AL s ans in
       let ai := anni1 (getAnn (fst ans')) in
       let d := (btransform ZL AL st ai) in
-      (ann1 d (fst ans'), snd ans')
+      (ann1 (d, true) (fst ans'), snd ans')
 
     | stmtIf x s t as st, ann2 d ans ant =>
       let ans' := backward ZL AL s ans in
       let ant' := backward ZL AL t ant in
       let ai := anni2 (getAnn (fst ans')) (getAnn (fst ant')) in
       let d' := (btransform ZL AL st ai) in
-      (ann2 d' (fst ans') (fst ant'), zip orb (snd ans') (snd ant'))
+      (ann2 (d', true) (fst ans') (fst ant'), zip orb (snd ans') (snd ant'))
 
     | stmtApp f Y as st, ann0 d as an =>
-      (ann0 (btransform ZL AL st anni0),
+      (ann0 (btransform ZL AL st anni0, true),
        list_update_at (List.map (fun _ => false) AL) (counted f) true)
 
     | stmtReturn x as st, ann0 d as an =>
-      (ann0 (btransform ZL AL st anni0), List.map (fun _ => false) AL)
+      (ann0 (btransform ZL AL st anni0, true), List.map (fun _ => false) AL)
 
     | stmtExtern x f Y s as st, ann1 d ans =>
       let ans' := backward ZL AL s ans in
       let ai := anni1 (getAnn (fst ans')) in
       let d' := (btransform ZL AL st ai) in
-      (ann1 d' (fst ans'), snd ans')
+      (ann1 (d', true) (fst ans'), snd ans')
 
     | stmtFun F t as st, annF d anF ant =>
       let ALinit := getAnn ⊝ anF ++ AL in
@@ -222,8 +222,8 @@ Definition backward Dom
       let ai := anni1 (getAnn (fst ant')) in
       let d' := btransform ZL' AL' st ai in
       let cll := fold_left (fun ant ans => zip ifb ant ans) (snd ⊝ anF') (snd ant') in
-      (annF d' (zip (fun (b:bool) a => if b then a else setTopAnn a None ) cll (fst ⊝ anF')) (fst ant'),
-       cll)
+      (annF (d', true) (zip (fun (b:bool) a => setTopAnn a (fst (getAnn a), b)) cll (fst ⊝ anF')) (fst ant'),
+       drop (length F) cll)
     | _, an => (an, List.map (fun x => false) AL)
   end.
 
@@ -245,26 +245,18 @@ Proof.
   inv H0; simpl; eauto.
 Qed.
 
-Definition impb (a b:bool) : Prop := if a then b else True.
-
-Instance PartialOrder_bool
-: PartialOrder bool := {
-  poLe := impb;
-  poLe_dec := _;
-  poEq := eq;
-  poEq_dec := _;
-}.
+Instance fst_poLe Dom `{PartialOrder Dom} Dom' `{PartialOrder Dom'}
+  : Proper (poLe ==> poLe) (@fst Dom Dom').
 Proof.
-  - intros. unfold impb. hnf. destruct d, d'; try dec_solve; eauto.
-  - hnf; unfold impb. intros. destruct d,d'; simpl; eauto using bool.
-    congruence.
-  - hnf; unfold impb. intros. destruct x,y,z; simpl; eauto.
-  - hnf; unfold impb. intros. destruct x,y; eauto. exfalso; eauto.
-Defined.
+  unfold Proper, respectful; intros.
+  inv H1; simpl; eauto.
+Qed.
 
-Instance implbb_refl : Reflexive impb.
+Instance snd_poLe Dom `{PartialOrder Dom} Dom' `{PartialOrder Dom'}
+  : Proper (poLe ==> poLe) (@snd Dom Dom').
 Proof.
-  hnf; destruct x; simpl; eauto.
+  unfold Proper, respectful; intros.
+  inv H1; simpl; eauto.
 Qed.
 
 Lemma tab_false_impb Dom `{PartialOrder Dom} AL AL'
@@ -299,25 +291,108 @@ Proof.
   - unfold impb. destruct n; simpl; eauto using @PIR2, tab_false_impb.
 Qed.
 
+Lemma fold_list_length A B (f:list B -> list A -> list B) (a:list (list A)) (b: list B)
+  : (forall n aa, get a n aa -> ❬b❭ <= ❬aa❭)
+    -> (forall aa b, ❬b❭ <= ❬aa❭ -> ❬f b aa❭ = ❬b❭)
+    -> length (fold_left f a b) = ❬b❭.
+Proof.
+  intros LEN.
+  general induction a; simpl; eauto.
+  erewrite IHa; eauto 10 using get with len.
+  intros. rewrite H; eauto using get.
+Qed.
+
+Lemma backward_length Dom `{PartialOrder Dom}
+      (f : list params -> list (Dom * bool) -> stmt -> anni (Dom * bool) -> Dom)
+      s b (Ann:annotation s b)
+  : forall ZL AL, length (snd (backward f ZL AL s b)) = length AL.
+Proof.
+  induction Ann; intros; simpl; eauto with len.
+  - rewrite zip_length2; eauto. rewrite IHAnn1, IHAnn2; eauto.
+  - rewrite list_update_at_length; eauto with len.
+  - rewrite length_drop_minus. rewrite fold_list_length; eauto.
+    + rewrite IHAnn. rewrite app_length. repeat rewrite map_length; eauto.
+      rewrite zip_length2; eauto. omega.
+    + intros; inv_get.
+      rewrite IHAnn. rewrite app_length. repeat rewrite map_length; eauto.
+      rewrite zip_length2; eauto.
+      erewrite H2; eauto. rewrite app_length, map_length. omega.
+    + intros; inv_get; eauto with len.
+      rewrite zip_length. rewrite min_l; eauto.
+Qed.
+
+Lemma zip_length3 {X Y Z} {f:X->Y->Z} DL ZL
+: length DL <= length ZL
+  -> length (zip f DL ZL) = length DL.
+Proof.
+  intros. rewrite zip_length. rewrite Min.min_l; eauto.
+Qed.
+
+Lemma zip_length4 {X Y Z} {f:X->Y->Z} DL ZL
+: length ZL <= length DL
+  -> length (zip f DL ZL) = length ZL.
+Proof.
+  intros. rewrite zip_length. rewrite Min.min_r; eauto.
+Qed.
+
+Lemma PIR2_impb A A' B B'
+  : PIR2 impb A A'
+    -> PIR2 impb B B'
+    -> PIR2 impb (ifb ⊜ A B) (ifb ⊜ A' B').
+Proof.
+  intros AA BB. general induction AA; inv BB; simpl; eauto using @PIR2.
+  econstructor; eauto.
+  destruct x, x0, y, y0; inv pf0; simpl; eauto.
+Qed.
+
+Lemma PIR2_impb_fold A B A' B'
+  : PIR2 (PIR2 impb) A A'
+    -> PIR2 impb B B'
+    -> PIR2 impb (fold_left (fun a b => ifb ⊜ a b) A B) (fold_left (fun a b => ifb ⊜ a b) A' B').
+Proof.
+  intros.
+  general induction H; simpl; eauto.
+  eapply IHPIR2; eauto using PIR2_impb.
+Qed.
+
+Lemma get_PIR2 X Y (R:X->Y->Prop) L L'
+  : PIR2 R L L'
+    -> forall n x x', get L n x -> get L' n x' -> R x x'.
+Proof.
+  intros Pir ? ? ? GetL. revert L' Pir x'.
+  induction GetL; intros L' Pir y GetL'; inv GetL'; inv Pir; eauto.
+Qed.
+
+Lemma ann_R_setTopAnn A B (R: A -> B -> Prop) (a:A) (b:B) an bn
+  : R a b
+    -> ann_R R an bn
+    -> ann_R R (setTopAnn an a) (setTopAnn bn b).
+Proof.
+  intros. inv H0; simpl; econstructor; eauto.
+Qed.
+
+
 Lemma backward_monotone Dom `{PartialOrder Dom}
-      (f : list params -> list (option Dom) -> stmt -> anni (option Dom) -> option Dom)
+      (f : list params -> list (Dom * bool) -> stmt -> anni (Dom * bool) -> Dom)
       (fMon:forall s ZL AL AL', poLe AL AL' ->
                            forall a b, a ⊑ b -> f ZL AL s a ⊑ f ZL AL' s b)
   : forall (s : stmt) ZL AL AL',
     poLe AL AL' ->
-    forall a b : ann (؟ Dom), a ⊑ b -> backward f ZL AL s a ⊑ backward f ZL AL' s b.
+    forall a b : ann (Dom * bool), annotation s a ->  a ⊑ b -> backward f ZL AL s a ⊑ backward f ZL AL' s b.
 Proof.
   intros s.
-  sind s; destruct s; intros ZL AL AL' ALLE d d' LE; simpl; inv LE; simpl;
+  sind s; destruct s; intros ZL AL AL' ALLE d d' Ann LE; simpl; inv LE; inv Ann; simpl;
     eauto 10 using @ann_R, tab_false_impb, update_at_impb, zip_orb_impb.
   - split; eauto. econstructor; eauto.
-    + eapply fMon; eauto.
+    + split; simpl; eauto.
+      eapply fMon; eauto.
       econstructor.
       eapply getAnn_poLe. eapply (IH s); eauto.
     + eapply IH; eauto.
     + eapply IH; eauto.
   - split. econstructor; eauto.
-    + eapply fMon; eauto.
+    + split; simpl; eauto.
+      eapply fMon; eauto.
       econstructor; eapply getAnn_poLe.
       eapply (IH s1); eauto.
       eapply (IH s2); eauto.
@@ -327,17 +402,22 @@ Proof.
       eapply IH; eauto.
       eapply IH; eauto.
   - split. econstructor; eauto.
-    + eapply fMon; eauto.
+    + split; simpl; eauto.
     + eapply update_at_impb; eauto.
   - split; eauto using tab_false_impb.
-    + econstructor; eapply fMon; eauto.
+    + econstructor; split; simpl; eauto.
   - split; eauto. econstructor; eauto.
-    + eapply fMon; eauto.
+    + split; simpl; eauto. eapply fMon; eauto.
       econstructor.
       eapply getAnn_poLe. eapply (IH s); eauto.
     + eapply IH; eauto.
     + eapply IH; eauto.
-  - assert ( getAnn
+  - assert (AL'LE:getAnn ⊝ ans ++ AL ⊑ getAnn ⊝ bns ++ AL'). {
+      eapply PIR2_app; eauto.
+      eapply PIR2_get; intros; inv_get.
+      eapply getAnn_poLe. eapply H2; eauto. eauto with len.
+    }
+    assert ( getAnn
                ⊝ fst
                ⊝ (fun Zs : params * stmt => backward f (fst ⊝ s ++ ZL) (getAnn ⊝ ans ++ AL) (snd Zs)) ⊜ s ans ++ AL
                ⊑ getAnn
@@ -347,73 +427,83 @@ Proof.
       eapply PIR2_app; eauto.
       eapply PIR2_get; intros; inv_get.
       eapply getAnn_poLe. eapply IH; eauto.
-      eapply PIR2_app; eauto.
-      eapply PIR2_get; intros; inv_get; try eapply getAnn_poLe; eauto with len.
-      exploit H2; eauto. eapply H2; eauto.
-      repeat rewrite map_length.
-      repeat rewrite zip_length2; eauto.
-      admit. admit.
+      exploit H2; eauto. eauto 20 with len.
     }
     simpl; split.
     + econstructor; eauto.
-      * eapply fMon; eauto.
+      * split; simpl; eauto. eapply fMon; eauto.
         econstructor.
         eapply getAnn_poLe. eapply IH; eauto.
-      * repeat rewrite zip_length2; eauto. admit.
-        admit. admit.
-      * intros; inv_get. admit.
+      * { (repeat rewrite zip_length4); [ eauto with len | |].
+          - repeat rewrite fold_list_length; eauto using zip_length3 with len.
+            repeat rewrite backward_length; eauto using ann_R_annotation.
+            repeat rewrite app_length. repeat rewrite map_length.
+            eapply PIR2_length in ALLE.
+            repeat rewrite zip_length2; eauto with len.
+
+            intros; inv_get.
+            repeat rewrite backward_length; eauto using ann_R_annotation.
+            repeat rewrite app_length. repeat rewrite map_length.
+            eapply PIR2_length in ALLE.
+            repeat rewrite zip_length2; eauto with len. omega.
+            edestruct (get_length_eq _ H5 (eq_sym H1)).
+            eapply ann_R_annotation; eauto.
+
+          - repeat rewrite fold_list_length; eauto using zip_length3 with len.
+            repeat rewrite backward_length; eauto using ann_R_annotation.
+            repeat rewrite app_length. repeat rewrite map_length.
+            eapply PIR2_length in ALLE.
+            repeat rewrite zip_length2; eauto with len.
+
+
+            intros; inv_get.
+            repeat rewrite backward_length; eauto using ann_R_annotation.
+            repeat rewrite app_length. repeat rewrite map_length.
+            eapply PIR2_length in ALLE.
+            repeat rewrite zip_length2; eauto with len. omega.
+        }
+      * intros. inv_get; simpl.
+        eapply ann_R_setTopAnn.
+        split; simpl; eauto.
+        eapply fst_poLe. eapply getAnn_poLe.
+        eapply IH; eauto.
+        eapply H2; eauto.
+        eapply get_PIR2; eauto.
+        {
+          eapply PIR2_impb_fold.
+          * eapply PIR2_get; intros; inv_get; eauto 20 with len.
+            eapply IH; eauto.
+            eapply H2; eauto.
+          * eapply IH; eauto.
+        }
+        eapply IH; eauto. eapply H2; eauto.
       * eapply IH; eauto.
-    + admit.
-Admitted.
+    + eapply PIR2_drop.
+      eapply PIR2_impb_fold.
+      * eapply PIR2_get; intros; inv_get; eauto with len.
+        eapply IH; eauto. eapply H2; eauto.
+      * eapply IH; eauto.
+Qed.
 
 Lemma backward_annotation Dom `{PartialOrder Dom} s
-      (f : list params -> list (option Dom) -> stmt -> anni (option Dom) -> option Dom)
-  : forall ZL AL sT a, annotation sT a
-                  -> annotation sT (fst (backward f ZL AL s a)).
+      (f : list params -> list (Dom * bool) -> stmt -> anni (Dom * bool) -> Dom)
+  : forall ZL AL a, annotation s a
+                  -> annotation s (fst (backward f ZL AL s a)).
 Proof.
-  sind s; intros ZL AL sT a Ann; destruct s; inv Ann; simpl; eauto using @annotation.
+  sind s; intros ZL AL a Ann; destruct s; inv Ann; simpl; eauto using @annotation.
   - econstructor; eauto.
-    + rewrite zip_length2; eauto.
-      admit. admit.
+    + repeat rewrite zip_length4; eauto.
+      rewrite map_length. rewrite zip_length2; eauto.
+      rewrite fold_list_length; eauto using zip_length3.
+      * rewrite backward_length; eauto. rewrite app_length.
+        repeat rewrite map_length. rewrite zip_length2; eauto. omega.
+      * intros; inv_get.
+        repeat rewrite backward_length; eauto.
+        repeat rewrite app_length.
+        repeat rewrite map_length. rewrite zip_length2; eauto. omega.
     + intros. inv_get.
-      destruct x.
+      eapply setTopAnn_annotation.
       * eapply IH; eauto.
-      * eapply setTopAnn_annotation.
-        eapply IH; eauto.
-Admitted.
-
-
-
-Instance PartialOrder_sig Dom `{PartialOrder Dom} (P:Dom -> Prop)
-: PartialOrder { x :Dom | P x } := {
-  poLe x y := poLe (proj1_sig x) (proj1_sig y);
-  poLe_dec := _;
-  poEq x y := poEq (proj1_sig x) (proj1_sig y);
-  poEq_dec := _;
-}.
-Proof.
-  - econstructor; hnf; intros; destruct x; try destruct y; try destruct z; simpl in *.
-    + reflexivity.
-    + symmetry; eauto.
-    + etransitivity; eauto.
-  - intros [a b] [c d]; simpl. eapply poLe_refl.
-  - intros [a b] [c d] [e f]; simpl; intros.
-    etransitivity; eauto.
-  - intros [a b] [c d]; simpl; intros.
-    eapply poLe_antisymmetric; eauto.
-Defined.
-
-
-Lemma terminating_sig Dom `{PO:PartialOrder Dom}
-  : Terminating Dom poLt
-    -> forall P, Terminating { x : Dom | P x } poLt.
-Proof.
-  intros Trm P [x Px].
-  specialize (Trm x).
-  induction Trm.
-  econstructor.
-  intros [y Py] [LE NEQ]; simpl in *.
-  eapply H0. split; eauto.
 Qed.
 
 
@@ -435,27 +525,30 @@ Qed.
 
 
 Instance makeBackwardAnalysis (Dom:stmt -> Type)
-         `{forall s, PartialOrder (Dom s)} (BSL:forall s, BoundedSemiLattice (option (Dom s)))
-         (f :forall s, list params -> list (option (Dom s)) -> stmt -> anni (option (Dom s)) -> option (Dom s))
+         `{forall s, PartialOrder (Dom s)} (BSL:forall s, BoundedSemiLattice (Dom s))
+         (f :forall s, list params -> list (Dom s * bool) -> stmt -> anni (Dom s * bool) -> Dom s)
          (fMon:forall (s s':stmt) ZL AL AL', poLe AL AL' ->
                                         forall a b, a ⊑ b -> f s ZL AL s' a ⊑ f s ZL AL' s' b)
          (Trm: forall s, Terminating (Dom s) poLt)
-  : Analysis (fun s => { a : ann (option (Dom s)) | annotation s a }) :=
-             {
-               initial_value :=  fun s : stmt =>
-                  exist (fun a : ann (؟ (Dom s)) => annotation s a) (setAnn bottom s)
-                    (setAnn_annotation bottom s)
-             }.
+  : forall s, Analysis { a : ann (Dom s * bool) | annotation s a } :=
+  {
+    analysis_step := fun X : {a : ann (Dom s * bool) | annotation s a} =>
+                      let (a, Ann) := X in
+                      exist (fun a0 : ann (Dom s * bool) => annotation s a0)
+                            (fst (backward (f s) nil nil s a)) (backward_annotation (f s) nil nil Ann);
+    initial_value :=
+      exist (fun a : ann (Dom s * bool) => annotation s a)
+            (setAnn bottom s)
+            (setAnn_annotation bottom s)
+  }.
 Proof.
-  - intros s' s [a Ann].
-    exists (fst (backward (f s') nil nil s a)).
-    eapply backward_annotation; eauto.
-  - intros ? [d Ann]; simpl.
-    pose proof (@ann_bottom s (option (Dom s)) _ _ _ Ann).
+  - intros [d Ann]; simpl.
+    pose proof (@ann_bottom s (Dom s * bool) _ _ _ Ann).
     eapply H0.
   - intros. eapply terminating_sig.
-    eapply terminating_ann. eapply terminating_option. eauto.
-  - intros s s' [a Ann] [b Bnn] LE; simpl in *.
+    eapply terminating_ann. eapply terminating_pair; eauto.
+    eapply terminating_bool.
+  - intros [a Ann] [b Bnn] LE; simpl in *.
     eapply (backward_monotone (f s) (fMon s)); eauto.
 Qed.
 

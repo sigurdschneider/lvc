@@ -63,22 +63,20 @@ Qed.
 
 Lemma filter_by_get A B p (Z:list A) (Y:list B) y n
 : get (filter_by p Z Y) n y
-  -> length Z = length Y
   -> { n : nat & { z : A | get Y n y /\ get Z n z /\ p z } }.
 Proof.
-  intros. eapply length_length_eq in H0.
-  general induction H0; simpl in * |- *; isabsurd.
+  intros.
+  general induction Z; destruct Y; simpl in * |- *; isabsurd.
   cases in H. eapply get_getT in H.
   inv H.
   do 2 eexists; repeat split; eauto using get.
   rewrite <- Heq; eauto. eapply I.
   eapply getT_get in X.
-  edestruct IHlength_eq as [? [? [? []]]]; eauto; dcr.
+  edestruct IHZ as [? [? [? []]]]; eauto; dcr.
   do 2 eexists; eauto using get.
-  edestruct IHlength_eq as [? [? [? []]]]; eauto; dcr.
+  edestruct IHZ as [? [? [? []]]]; eauto; dcr.
   do 2 eexists; eauto using get.
 Qed.
-
 
 Lemma filter_p X p (Z:list X)
 : forall n x, get (List.filter p Z) n x -> p x.

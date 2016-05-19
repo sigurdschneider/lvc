@@ -171,3 +171,45 @@ match goal with
 | [ H : poLe ?a ?b, H': poEq ?b ?c |- poLe ?a ?c ] =>
   rewrite <- H'; eapply H
 end.
+
+
+Instance PartialOrder_sig Dom `{PartialOrder Dom} (P:Dom -> Prop)
+: PartialOrder { x :Dom | P x } := {
+  poLe x y := poLe (proj1_sig x) (proj1_sig y);
+  poLe_dec := _;
+  poEq x y := poEq (proj1_sig x) (proj1_sig y);
+  poEq_dec := _;
+}.
+Proof.
+  - econstructor; hnf; intros; destruct x; try destruct y; try destruct z; simpl in *.
+    + reflexivity.
+    + symmetry; eauto.
+    + etransitivity; eauto.
+  - intros [a b] [c d]; simpl. eapply poLe_refl.
+  - intros [a b] [c d] [e f]; simpl; intros.
+    etransitivity; eauto.
+  - intros [a b] [c d]; simpl; intros.
+    eapply poLe_antisymmetric; eauto.
+Defined.
+
+Definition impb (a b:bool) : Prop := if a then b else True.
+
+Instance implbb_refl : Reflexive impb.
+Proof.
+  hnf; destruct x; simpl; eauto.
+Qed.
+
+Instance PartialOrder_bool
+: PartialOrder bool := {
+  poLe := impb;
+  poLe_dec := _;
+  poEq := eq;
+  poEq_dec := _;
+}.
+Proof.
+  - intros. unfold impb. hnf. destruct d, d'; try dec_solve; eauto.
+  - hnf; unfold impb. intros. destruct d,d'; simpl; eauto using bool.
+    congruence.
+  - hnf; unfold impb. intros. destruct x,y,z; simpl; eauto.
+  - hnf; unfold impb. intros. destruct x,y; eauto. exfalso; eauto.
+Defined.

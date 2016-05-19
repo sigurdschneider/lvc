@@ -82,27 +82,58 @@ Proof.
     eapply cardinal_morph in H1. omega.
 Qed.
 
-Definition liveness_transform (DL:list (set var * params)) st a :=
-  match st, a with
-    | stmtLet x e s as st, anni1 d =>
-      (d \ {{x}}) ∪ (if [x ∈ d] then Exp.freeVars e else ∅)
-    | stmtIf e s t as st, anni2 ds dt =>
-      if [exp2bool e = Some true] then
-        ds
-      else if [ exp2bool e = Some false ] then
-        dt
-      else
-        Exp.freeVars e ∪ ds ∪ dt
-    | stmtApp f Y as st, anni0 =>
-      let (lv,Z) := nth (counted f) DL (∅,nil) in
-      lv \ of_list Z ∪ list_union (List.map Exp.freeVars (filter_by (fun x => B[x ∈ lv]) Z Y))
-    | stmtReturn e as st, anni0 => Exp.freeVars e
-    | stmtExtern x f Y s as st, anni1 d =>
-      (d \ {{x}}) ∪ list_union (List.map Exp.freeVars Y)
-    | stmtFun F t as st, anni1 ds dt =>
-      dt ∪ list_union (zip (fun Zs ds => (ds \ of_list (fst Zs))) F ds)
-    | _, an => ∅
-  end.
+Definition liveness_transform (U:set var) (st:stmt)
+           (st_incl:occurVars st ⊆ U)
+           (ZL:list params) (DL:list ({ X : set var | X ⊆ U} * bool))
+           (a:anni ({X : ⦃var⦄ | X ⊆ U} * bool))
+  : {X : ⦃var⦄ | X ⊆ U}.
+Proof.
+  refine(
+      match st as s, a return st = s -> {X : ⦃var⦄ | X ⊆ U} with
+      | stmtLet x e s, anni1 d =>
+        fun EQ => exist _ ((proj1_sig (fst d) \ singleton x) ∪ (if [x ∈ proj1_sig (fst d)] then Exp.freeVars e else ∅)) _
+      | stmtIf e s t, anni2 ds dt =>
+        fun EQ => if [exp2bool e = Some true] then
+          fst ds
+        else
+          if [ exp2bool e = Some false ] then
+            fst dt
+          else
+            exist _ (Exp.freeVars e ∪ (proj1_sig (fst ds)) ∪ (proj1_sig (fst dt))) _
+      | stmtApp f Y, anni0 =>
+        fun EQ => let lv := nth (counted f) DL (exist _ ∅ _, false) in
+        let Z :=  nth (counted f) ZL nil in
+        exist _ (proj1_sig (fst lv) \ of_list Z ∪
+                           list_union (List.map Exp.freeVars
+                                                (filter_by (fun x => B[x ∈ proj1_sig (fst lv)]) Z Y))) _
+      | stmtReturn e, anni0 =>
+        fun _ => exist _ (Exp.freeVars e) _
+      | stmtExtern x f Y s, anni1 d =>
+        fun _ => exist _ ((proj1_sig (fst d) \ singleton x) ∪ list_union (List.map Exp.freeVars Y)) _
+      | stmtFun F t, anni1 dt =>
+        fun _ => fst dt
+      | _, _ => fun _ => exist _ ∅ _
+      end eq_refl); (try now eapply incl_empty); subst st; simpl in *.
+  - destruct d as [[d ?] b]; simpl.
+    cases; [| cset_tac].
+    rewrite s0.
+    cset_tac; eauto. eapply st_incl. cset_tac.
+  - destruct ds as [[ds ?] bs], dt as [[dt ?] bt]; simpl.
+    cset_tac. specialize (st_incl a0). cset_tac.
+  - destruct lv as [[lv ?] b]; simpl.
+    cset_tac. eapply st_incl.
+    eapply list_union_incl; try eapply H0; eauto with cset.
+    intros; inv_get. eapply filter_by_get in H. dcr.
+    cases in H4; isabsurd.
+    eapply incl_list_union; eauto using map_get_1.
+  - eauto.
+  - destruct d as [[d ?] b]; simpl.
+    cset_tac. eapply st_incl. cset_tac.
+    Grab Existential Variables. eapply incl_empty.
+Defined.
 
 
-Definition liveness_analysis := makeBackwardAnalysis _ liveness_transform (fun Z an => (getAnn an, Z)).
+Definition liveness_analysis (s:stmt) :=
+  @makeBackwardAnalysis (fun s => { U : set var | U ⊆ occurVars s}) _ _
+                        (fun s ZL AL s => liveness_transform (occurVars s) s (CSetBasic.incl_refl _ _) ZL AL).
+(fun Z an => (getAnn an, Z)).

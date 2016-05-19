@@ -170,3 +170,47 @@ Proof.
     + eapply PIR2_get in H14; eauto.
       eapply (H0 b0); eauto.
 Qed.
+
+Lemma terminating_sig Dom `{PO:PartialOrder Dom}
+  : Terminating Dom poLt
+    -> forall P, Terminating { x : Dom | P x } poLt.
+Proof.
+  intros Trm P [x Px].
+  specialize (Trm x).
+  induction Trm.
+  econstructor.
+  intros [y Py] [LE NEQ]; simpl in *.
+  eapply H0. split; eauto.
+Qed.
+
+Lemma terminating_pair Dom `{PO:PartialOrder Dom} Dom' `{PO':PartialOrder Dom'}
+  : Terminating Dom poLt
+    -> Terminating Dom' poLt
+    -> Terminating (Dom * Dom') poLt.
+Proof.
+  intros Trm1 Trm2 [x y].
+  specialize (Trm1 x).
+  specialize (Trm2 y).
+  assert (H:poLe y y) by reflexivity; revert H.
+  generalize y at 2 3.
+  induction Trm1.
+  assert (H':poLe x x) by reflexivity; revert H'.
+  generalize x at 2 3.
+  induction Trm2.
+  econstructor.
+  intros [z z'] [[LE1 LE2] NEQ]; simpl in *.
+  decide (poEq x1 z).
+  + decide (poEq y z').
+    exfalso; eapply NEQ; eauto.
+    eapply (H2 z'); eauto.
+  + eapply H0; eauto.
+Qed.
+
+Lemma terminating_bool
+  : Terminating bool poLt.
+Proof.
+  intros x.
+  econstructor. intros y [A B].
+  destruct x, y; simpl in *; isabsurd.
+  econstructor. intros [] [A' B']; isabsurd.
+Qed.
