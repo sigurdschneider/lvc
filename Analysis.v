@@ -523,19 +523,23 @@ Proof.
     + eapply IH; eauto.
 Qed.
 
+(*
+Hypothesis subTerm : stmt -> stmt -> Prop.
+Hypothesis subTerm_refl : forall s, subTerm s s.
 
 Instance makeBackwardAnalysis (Dom:stmt -> Type)
-         `{forall s, PartialOrder (Dom s)} (BSL:forall s, BoundedSemiLattice (Dom s))
-         (f :forall s, list params -> list (Dom s * bool) -> stmt -> anni (Dom s * bool) -> Dom s)
-         (fMon:forall (s s':stmt) ZL AL AL', poLe AL AL' ->
-                                        forall a b, a ⊑ b -> f s ZL AL s' a ⊑ f s ZL AL' s' b)
+         `{forall s, PartialOrder (Dom s) }
+         (BSL:forall s, BoundedSemiLattice (Dom s))
+         (f : forall s t, subTerm t s -> list params -> list (Dom s * bool) -> anni (Dom s * bool) -> Dom s)
+         (fMon:forall s t (Sub:subTerm t s) ZL (AL AL' : list (Dom s * bool)),
+               poLe AL AL' -> forall a b , a ⊑ b -> f s t Sub ZL AL a ⊑ f s t Sub ZL AL' b)
          (Trm: forall s, Terminating (Dom s) poLt)
   : forall s, Analysis { a : ann (Dom s * bool) | annotation s a } :=
   {
     analysis_step := fun X : {a : ann (Dom s * bool) | annotation s a} =>
                       let (a, Ann) := X in
                       exist (fun a0 : ann (Dom s * bool) => annotation s a0)
-                            (fst (backward (f s) nil nil s a)) (backward_annotation (f s) nil nil Ann);
+                            (fst (backward (f s s (subTerm_refl _)) nil nil s a)) (backward_annotation (f s) nil nil Ann);
     initial_value :=
       exist (fun a : ann (Dom s * bool) => annotation s a)
             (setAnn bottom s)
@@ -551,6 +555,7 @@ Proof.
   - intros [a Ann] [b Bnn] LE; simpl in *.
     eapply (backward_monotone (f s) (fMon s)); eauto.
 Qed.
+ *)
 
 (*
 Definition forwardF Dom
