@@ -3,6 +3,8 @@ Require Import CSet Le Var.
 Require Import Plus Util AllInRel Map CSet.
 Require Import Val Var Env EnvTy IL Annotation Lattice DecSolve Analysis Filter Terminating.
 
+Set Implicit Arguments.
+
 Instance PartialOrder_Subset_Equal X `{OrderedType X} : PartialOrder (set X) :=
 {
   poLe := Subset;
@@ -112,6 +114,71 @@ Definition liveness_transform
     fst dt
   | _, _ => ∅
   end.
+
+Require Import Subterm.
+
+Definition mapOption A B (f:A -> B) (o:option A) : option B :=
+  match o with
+  | Some a => Some (f a)
+  | None => None
+  end.
+
+Definition mapAnni {A B} (f:A -> B) (ai:anni A) : anni B :=
+  match ai with
+    | anni0 => anni0
+    | anni1 a1 => anni1 (f a1)
+    | anni2 a1 a2 => anni2 (f a1) (f a2)
+    | anni2opt o1 o2 => anni2opt (mapOption f o1) (mapOption f o2)
+  end.
+
+Lemma list_sig_decomp A (P:A->Prop)
+  : list { a : A | P a }
+    -> { L : list A | forall n a, get L n a -> P a }.
+Proof.
+  intros.
+  refine (exist _ (@proj1_sig A P ⊝ X) _).
+  intros. inv_get. destruct x. eauto.
+Defined.
+
+Lemma not_get_nth_default A (L:list A) n d
+  : (forall x, get L n x -> False)
+    -> nth n L d = d.
+Proof.
+  intros. general induction n; destruct L; simpl; eauto using get.
+  exfalso; eauto using get.
+Qed.
+
+Definition liveness_transform_dep (sT:stmt)
+           (ZL:list params)
+           (DL:list ({ X : set var | X ⊆ occurVars sT} * bool))
+      (s:stmt) (ST:subTerm s sT)
+      (a:anni ({X : ⦃var⦄ | X ⊆ occurVars sT} * bool))
+  : {X : ⦃var⦄ | X ⊆ occurVars sT}.
+Proof.
+  eapply (exist _ (liveness_transform ZL
+                                      ((fun p => (proj1_sig (fst p), snd p)) ⊝ DL) s
+                                      (mapAnni (fun p => (proj1_sig (fst p), snd p)) a))).
+  destruct s, a as [|[[a ?] b]|[[a ?] b] [[a' ?] b']|a]; simpl in *; try now eapply incl_empty.
+  - cases; [| cset_tac].
+    cset_tac; eauto. eapply subTerm_occurVars; eauto; simpl. cset_tac.
+  - repeat cases; eauto. eapply subTerm_occurVars in ST; simpl in *.
+    cset_tac. eapply ST; cset_tac.
+  - eapply union_incl_split.
+    + destruct (get_dec DL (counted l)) as [[[[D PD] b] GetDL]|].
+      * erewrite get_nth; eauto using map_get_1; simpl in *.
+        cset_tac.
+      * rewrite not_get_nth_default;
+          intros; inv_get; simpl in *; eauto using get. cset_tac.
+    + rewrite <- (subTerm_occurVars _ _ ST); simpl.
+      eapply list_union_incl; try eapply H0; eauto with cset.
+      intros; inv_get. eapply filter_by_get in H; dcr.
+      cases in H3; isabsurd.
+      eapply incl_list_union; eauto using map_get_1.
+  - eapply subTerm_occurVars in ST; simpl in *. eauto.
+  - cset_tac; eauto. eapply subTerm_occurVars; eauto; simpl. cset_tac.
+  - eauto.
+Defined.
+
 
 Lemma backward_liveness_transform ZL AL s a
   :

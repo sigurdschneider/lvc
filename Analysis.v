@@ -179,8 +179,6 @@ Defined.
 
 Require Import Keep.
 
-Definition ifb (b b':bool) := if b then b' else false.
-
 Definition backward Dom
            (btransform : list params -> list (Dom * bool) -> stmt -> anni (Dom * bool) -> Dom) :=
   fix backward
@@ -221,7 +219,8 @@ Definition backward Dom
       let ant' := backward ZL' AL' t ant in
       let ai := anni1 (getAnn (fst ant')) in
       let d' := btransform ZL' AL' st ai in
-      let cll := fold_left (fun ant ans => zip ifb ant ans) (snd ⊝ anF') (snd ant') in
+      let cll := fold_left (fun ant (ans:〔bool〕*bool) => if snd ans then zip orb ant (fst ans) else ant)
+                          (zip pair (snd ⊝ anF') (snd ant')) (snd ant') in
       (annF (d', true) (zip (fun (b:bool) a => setTopAnn a (fst (getAnn a), b)) cll (fst ⊝ anF')) (fst ant'),
        drop (length F) cll)
     | _, an => (an, List.map (fun x => false) AL)
@@ -291,9 +290,9 @@ Proof.
   - unfold impb. destruct n; simpl; eauto using @PIR2, tab_false_impb.
 Qed.
 
-Lemma fold_list_length A B (f:list B -> list A -> list B) (a:list (list A)) (b: list B)
-  : (forall n aa, get a n aa -> ❬b❭ <= ❬aa❭)
-    -> (forall aa b, ❬b❭ <= ❬aa❭ -> ❬f b aa❭ = ❬b❭)
+Lemma fold_list_length A B (f:list B -> (list A * bool) -> list B) (a:list (list A * bool)) (b: list B)
+  : (forall n aa, get a n aa -> ❬b❭ <= ❬fst aa❭)
+    -> (forall aa b, ❬b❭ <= ❬fst aa❭ -> ❬f b aa❭ = ❬b❭)
     -> length (fold_left f a b) = ❬b❭.
 Proof.
   intros LEN.
@@ -315,9 +314,10 @@ Proof.
       rewrite zip_length2; eauto. omega.
     + intros; inv_get.
       rewrite IHAnn. rewrite app_length. repeat rewrite map_length; eauto.
-      rewrite zip_length2; eauto.
+      rewrite zip_length2; eauto. simpl.
       erewrite H2; eauto. rewrite app_length, map_length. omega.
     + intros; inv_get; eauto with len.
+      cases; eauto.
       rewrite zip_length. rewrite min_l; eauto.
 Qed.
 
@@ -335,24 +335,44 @@ Proof.
   intros. rewrite zip_length. rewrite Min.min_r; eauto.
 Qed.
 
-Lemma PIR2_impb A A' B B'
+Lemma PIR2_impb_orb A A' B B'
   : PIR2 impb A A'
     -> PIR2 impb B B'
-    -> PIR2 impb (ifb ⊜ A B) (ifb ⊜ A' B').
+    -> PIR2 impb (orb ⊜ A B) (orb ⊜ A' B').
 Proof.
   intros AA BB. general induction AA; inv BB; simpl; eauto using @PIR2.
   econstructor; eauto.
   destruct x, x0, y, y0; inv pf0; simpl; eauto.
 Qed.
 
-Lemma PIR2_impb_fold A B A' B'
-  : PIR2 (PIR2 impb) A A'
-    -> PIR2 impb B B'
-    -> PIR2 impb (fold_left (fun a b => ifb ⊜ a b) A B) (fold_left (fun a b => ifb ⊜ a b) A' B').
+Lemma PIR2_impb_orb_right A A' B
+  : length A <= length B
+    -> PIR2 impb A A'
+    -> PIR2 impb A (orb ⊜ A' B).
 Proof.
-  intros.
+  intros LEN AA.
+  general induction AA; destruct B; simpl in *; isabsurd; eauto using @PIR2.
+  econstructor; eauto.
+  destruct x, y, b; inv pf; simpl; eauto.
+  eapply IHAA; eauto. omega.
+Qed.
+
+Lemma PIR2_impb_fold (A A':list (list bool * bool)) (B B':list bool)
+  : poLe A A'
+    -> poLe B B'
+    -> (forall n a, get A n a -> length B <= length (fst a))
+    -> poLe (fold_left (fun a (b:list bool * bool) => if snd b then orb ⊜ a (fst b) else a) A B)
+           (fold_left (fun a (b:list bool * bool) => if snd b then orb ⊜ a (fst b) else a) A' B').
+Proof.
+  intros. simpl in *.
   general induction H; simpl; eauto.
-  eapply IHPIR2; eauto using PIR2_impb.
+  eapply IHPIR2; eauto using PIR2_impb_orb.
+  dcr. hnf in H2.
+  repeat cases; try congruence; isabsurd; eauto using PIR2_impb_orb, PIR2_impb_orb_right.
+  eapply PIR2_impb_orb_right; eauto using get.
+  rewrite <- (PIR2_length H2); eauto. eauto using get.
+  intros. cases; eauto using get.
+  rewrite zip_length3; eauto using get.
 Qed.
 
 Lemma get_PIR2 X Y (R:X->Y->Prop) L L'
@@ -441,13 +461,16 @@ Proof.
             eapply PIR2_length in ALLE.
             repeat rewrite zip_length2; eauto with len.
 
-            intros; inv_get.
+            intros; inv_get. simpl.
             repeat rewrite backward_length; eauto using ann_R_annotation.
             repeat rewrite app_length. repeat rewrite map_length.
             eapply PIR2_length in ALLE.
-            repeat rewrite zip_length2; eauto with len. omega.
-            edestruct (get_length_eq _ H5 (eq_sym H1)).
+            repeat rewrite zip_length2; eauto with len.
+            simpl. omega.
+            edestruct (get_length_eq _ H6 (eq_sym H1)).
             eapply ann_R_annotation; eauto.
+
+            intros; cases; eauto. eapply zip_length3; eauto.
 
           - repeat rewrite fold_list_length; eauto using zip_length3 with len.
             repeat rewrite backward_length; eauto using ann_R_annotation.
@@ -456,11 +479,13 @@ Proof.
             repeat rewrite zip_length2; eauto with len.
 
 
-            intros; inv_get.
+            intros; inv_get. simpl.
             repeat rewrite backward_length; eauto using ann_R_annotation.
             repeat rewrite app_length. repeat rewrite map_length.
             eapply PIR2_length in ALLE.
             repeat rewrite zip_length2; eauto with len. omega.
+
+            intros; cases; eauto using zip_length3.
         }
       * intros. inv_get; simpl.
         eapply ann_R_setTopAnn.
@@ -471,18 +496,57 @@ Proof.
         eapply get_PIR2; eauto.
         {
           eapply PIR2_impb_fold.
-          * eapply PIR2_get; intros; inv_get; eauto 20 with len.
+          * eapply PIR2_get; intros; inv_get.
+            split.
             eapply IH; eauto.
             eapply H2; eauto.
+            unfold snd. eapply get_PIR2; eauto.
+            eapply IH; eauto.
+            intros.
+            repeat rewrite zip_length3.
+            eauto with len.
+            rewrite backward_length; eauto.
+            rewrite app_length.
+            repeat rewrite map_length. omega.
+            eapply ann_R_annotation; eauto.
+            repeat rewrite zip_length3.
+            eauto with len.
+            rewrite backward_length; eauto.
+            rewrite app_length.
+            repeat rewrite map_length. omega.
           * eapply IH; eauto.
+          * intros; inv_get. simpl fst.
+            repeat rewrite backward_length; eauto.
+            repeat rewrite app_length.
+            repeat rewrite map_length.
+            rewrite zip_length2; eauto. omega.
         }
         eapply IH; eauto. eapply H2; eauto.
       * eapply IH; eauto.
     + eapply PIR2_drop.
       eapply PIR2_impb_fold.
       * eapply PIR2_get; intros; inv_get; eauto with len.
+        split.
         eapply IH; eauto. eapply H2; eauto.
+        simpl snd. eapply get_PIR2; eauto.
+        eapply IH; eauto.
+        repeat rewrite zip_length3.
+        eauto with len.
+        rewrite backward_length; eauto.
+        rewrite app_length.
+        repeat rewrite map_length. omega.
+        eapply ann_R_annotation; eauto.
+        repeat rewrite zip_length3.
+        eauto with len.
+        rewrite backward_length; eauto.
+        rewrite app_length.
+        repeat rewrite map_length. omega.
       * eapply IH; eauto.
+      * intros; inv_get. simpl fst.
+        repeat rewrite backward_length; eauto.
+        repeat rewrite app_length.
+        repeat rewrite map_length.
+        rewrite zip_length2; eauto. omega.
 Qed.
 
 Lemma backward_annotation Dom `{PartialOrder Dom} s
@@ -497,15 +561,15 @@ Proof.
       rewrite fold_list_length; eauto using zip_length3.
       * rewrite backward_length; eauto. rewrite app_length.
         repeat rewrite map_length. rewrite zip_length2; eauto. omega.
-      * intros; inv_get.
+      * intros; inv_get; simpl.
         repeat rewrite backward_length; eauto.
         repeat rewrite app_length.
         repeat rewrite map_length. rewrite zip_length2; eauto. omega.
+      * intros. cases; eauto using zip_length3.
     + intros. inv_get.
       eapply setTopAnn_annotation.
       * eapply IH; eauto.
 Qed.
-
 
 Lemma ann_bottom s' (Dom:Type) `{BoundedSemiLattice Dom}
   :  forall (d : ann Dom), annotation s' d -> setAnn bottom s' ⊑ d.
@@ -524,9 +588,6 @@ Proof.
 Qed.
 
 (*
-Hypothesis subTerm : stmt -> stmt -> Prop.
-Hypothesis subTerm_refl : forall s, subTerm s s.
-
 Instance makeBackwardAnalysis (Dom:stmt -> Type)
          `{forall s, PartialOrder (Dom s) }
          (BSL:forall s, BoundedSemiLattice (Dom s))
