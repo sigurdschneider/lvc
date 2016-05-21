@@ -213,3 +213,17 @@ Proof.
   - hnf; unfold impb. intros. destruct x,y,z; simpl; eauto.
   - hnf; unfold impb. intros. destruct x,y; eauto. exfalso; eauto.
 Defined.
+
+Instance fst_poLe Dom `{PartialOrder Dom} Dom' `{PartialOrder Dom'}
+  : Proper (poLe ==> poLe) (@fst Dom Dom').
+Proof.
+  unfold Proper, respectful; intros.
+  inv H1; simpl; eauto.
+Qed.
+
+Instance snd_poLe Dom `{PartialOrder Dom} Dom' `{PartialOrder Dom'}
+  : Proper (poLe ==> poLe) (@snd Dom Dom').
+Proof.
+  unfold Proper, respectful; intros.
+  inv H1; simpl; eauto.
+Qed.

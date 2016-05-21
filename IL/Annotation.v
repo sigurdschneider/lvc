@@ -282,3 +282,18 @@ Lemma setTopAnn_annotation s A (an:ann A) a
 Proof.
   intros. inv H; simpl; eauto using @annotation.
 Qed.
+
+Lemma ann_R_setTopAnn A B (R: A -> B -> Prop) (a:A) (b:B) an bn
+  : R a b
+    -> ann_R R an bn
+    -> ann_R R (setTopAnn an a) (setTopAnn bn b).
+Proof.
+  intros. inv H0; simpl; econstructor; eauto.
+Qed.
+
+Instance getAnn_poLe Dom `{PartialOrder Dom}
+  : Proper (poLe ==> poLe) getAnn.
+Proof.
+  unfold Proper, respectful; intros.
+  inv H0; simpl; eauto.
+Qed.

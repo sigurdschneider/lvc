@@ -609,3 +609,5 @@ Ltac simpl_minus :=
   | [ H : context [?n - ?n] |- _ ]
     => orewrite (n - n = 0) in H
   end.
+
+Hint Extern 5 (Is_true true) => eapply I.

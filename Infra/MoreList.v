@@ -597,3 +597,17 @@ Proof.
   general induction H; eauto; simpl in *.
   f_equal; eauto.
 Qed.
+
+Lemma zip_length3 {X Y Z} {f:X->Y->Z} DL ZL
+: length DL <= length ZL
+  -> length (zip f DL ZL) = length DL.
+Proof.
+  intros. rewrite zip_length. rewrite Min.min_l; eauto.
+Qed.
+
+Lemma zip_length4 {X Y Z} {f:X->Y->Z} DL ZL
+: length ZL <= length DL
+  -> length (zip f DL ZL) = length ZL.
+Proof.
+  intros. rewrite zip_length. rewrite Min.min_r; eauto.
+Qed.

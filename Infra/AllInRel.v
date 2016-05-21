@@ -79,6 +79,15 @@ Proof.
 Qed.
 
 
+Lemma get_PIR2 X Y (R:X->Y->Prop) L L'
+  : PIR2 R L L'
+    -> forall n x x', get L n x -> get L' n x' -> R x x'.
+Proof.
+  intros Pir ? ? ? GetL. revert L' Pir x'.
+  induction GetL; intros L' Pir y GetL'; inv GetL'; inv Pir; eauto.
+Qed.
+
+
 Instance PIR2_refl X (R:X -> X -> Prop) `{Reflexive _ R} : Reflexive (PIR2 R).
 Proof.
   hnf; intros. general induction x; eauto using PIR2.

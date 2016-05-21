@@ -179,56 +179,6 @@ Defined.
 
 Require Import Keep Subterm.
 
-Lemma subTerm_EQ_Let sT st x e s
-  (EQ:st = stmtLet x e s)
-  (ST:subTerm st sT)
-  : subTerm s sT.
-Proof.
-  subst st. etransitivity; eauto. econstructor; reflexivity.
-Qed.
-
-Lemma subTerm_EQ_If1 sT st x s t
-  (EQ:st = stmtIf x s t)
-  (ST:subTerm st sT)
-  : subTerm s sT.
-Proof.
-  subst st. etransitivity; eauto. econstructor; reflexivity.
-Qed.
-
-Lemma subTerm_EQ_If2 sT st x s t
-  (EQ:st = stmtIf x s t)
-  (ST:subTerm st sT)
-  : subTerm t sT.
-Proof.
-  subst st. etransitivity; eauto. econstructor; reflexivity.
-Qed.
-
-Lemma subTerm_EQ_Extern sT st x f e s
-  (EQ:st = stmtExtern x f e s)
-  (ST:subTerm st sT)
-  : subTerm s sT.
-Proof.
-  subst st. etransitivity; eauto. econstructor; reflexivity.
-Qed.
-
-Lemma subTerm_EQ_Fun1 sT st F t
-  (EQ:st = stmtFun F t)
-  (ST:subTerm st sT)
-  : subTerm t sT.
-Proof.
-  intros. subst. etransitivity; eauto.
-  eapply subTermLet1; eauto. reflexivity.
-Qed.
-
-Lemma subTerm_EQ_Fun2 sT st F t
-  (EQ:st = stmtFun F t)
-  (ST:subTerm st sT)
-  : forall (n : nat) (s : params * stmt), get F n s -> subTerm (snd s) sT.
-Proof.
-  intros. subst. etransitivity; eauto.
-  eapply subTermLet2; eauto. reflexivity.
-Qed.
-
 Definition backwardF (sT:stmt) (Dom:stmt->Type)
            (backward:〔params〕 -> 〔Dom sT * bool〕 ->
                      forall s (ST:subTerm s sT) (a:ann (Dom sT * bool)),
@@ -334,27 +284,6 @@ Ltac btransform t H :=
     rename B into LE; rewrite <- LE
   end.
 
-Instance getAnn_poLe Dom `{PartialOrder Dom}
-  : Proper (poLe ==> poLe) getAnn.
-Proof.
-  unfold Proper, respectful; intros.
-  inv H0; simpl; eauto.
-Qed.
-
-Instance fst_poLe Dom `{PartialOrder Dom} Dom' `{PartialOrder Dom'}
-  : Proper (poLe ==> poLe) (@fst Dom Dom').
-Proof.
-  unfold Proper, respectful; intros.
-  inv H1; simpl; eauto.
-Qed.
-
-Instance snd_poLe Dom `{PartialOrder Dom} Dom' `{PartialOrder Dom'}
-  : Proper (poLe ==> poLe) (@snd Dom Dom').
-Proof.
-  unfold Proper, respectful; intros.
-  inv H1; simpl; eauto.
-Qed.
-
 Lemma tab_false_impb Dom `{PartialOrder Dom} AL AL'
   : poLe AL AL'
     -> PIR2 impb (tab false ‖AL‖) (tab false ‖AL'‖).
@@ -374,8 +303,6 @@ Proof.
   - econstructor; eauto.
     unfold impb. destruct x, x0, y, y0; simpl in *; eauto.
 Qed.
-
-Hint Extern 5 (Is_true true) => eapply I.
 
 Lemma update_at_impb Dom `{PartialOrder Dom} AL AL' n
   : poLe AL AL'
@@ -448,20 +375,6 @@ Proof.
       rewrite zip_length. rewrite min_l; eauto.
 Qed.
 
-Lemma zip_length3 {X Y Z} {f:X->Y->Z} DL ZL
-: length DL <= length ZL
-  -> length (zip f DL ZL) = length DL.
-Proof.
-  intros. rewrite zip_length. rewrite Min.min_l; eauto.
-Qed.
-
-Lemma zip_length4 {X Y Z} {f:X->Y->Z} DL ZL
-: length ZL <= length DL
-  -> length (zip f DL ZL) = length ZL.
-Proof.
-  intros. rewrite zip_length. rewrite Min.min_r; eauto.
-Qed.
-
 Lemma PIR2_impb_orb A A' B B'
   : PIR2 impb A A'
     -> PIR2 impb B B'
@@ -500,23 +413,6 @@ Proof.
   rewrite <- (PIR2_length H2); eauto. eauto using get.
   intros. cases; eauto using get.
   rewrite zip_length3; eauto using get.
-Qed.
-
-Lemma get_PIR2 X Y (R:X->Y->Prop) L L'
-  : PIR2 R L L'
-    -> forall n x x', get L n x -> get L' n x' -> R x x'.
-Proof.
-  intros Pir ? ? ? GetL. revert L' Pir x'.
-  induction GetL; intros L' Pir y GetL'; inv GetL'; inv Pir; eauto.
-Qed.
-
-
-Lemma ann_R_setTopAnn A B (R: A -> B -> Prop) (a:A) (b:B) an bn
-  : R a b
-    -> ann_R R an bn
-    -> ann_R R (setTopAnn an a) (setTopAnn bn b).
-Proof.
-  intros. inv H0; simpl; econstructor; eauto.
 Qed.
 
 
