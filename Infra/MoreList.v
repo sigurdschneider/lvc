@@ -498,7 +498,9 @@ Qed.
 Notation "f ⊜ L1 L2" := (zip f L1 L2) (at level 40, L1 at level 0, L2 at level 0).
 
 
-Ltac inv_get_step :=
+Create HintDb inv_get discriminated.
+
+Ltac inv_get_step0 :=
   match goal with
   | [ H : get (take _ ?L) ?n ?x |- _ ] => eapply take_get in H; destruct H
   | [ H : get (drop _ ?L) ?n ?x |- _ ] => eapply get_drop in H
@@ -556,6 +558,7 @@ Ltac inv_get_step :=
     clear H; rename GET into H
   end.
 
+Ltac inv_get_step := inv_get_step0.
 
 Ltac inv_get :=
   repeat (repeat get_functional; inv_get_step; repeat get_functional);

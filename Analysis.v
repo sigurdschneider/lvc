@@ -216,6 +216,25 @@ Proof.
   destruct F as [|[Z s] F'], anF; simpl; eauto.
 Qed.
 
+Lemma backwardF_length_ass sT (Dom:stmt->Type)
+      backward ZL (AL:list (Dom sT * bool)) F anF ST k
+  : length F = k
+    -> length F = length anF
+    -> length (backwardF backward ZL AL F anF ST) = k.
+Proof.
+  intros. rewrite backwardF_length, <- H0, Nat.min_idempotent; eauto.
+Qed.
+
+Lemma min_idempotent_ass n m k
+  : n = k
+    -> n = m
+    -> min n m = k.
+Proof.
+  intros. repeat subst. eapply Nat.min_idempotent.
+Qed.
+
+Hint Resolve backwardF_length_ass min_idempotent_ass.
+
 Fixpoint backward (sT:stmt) (Dom: stmt -> Type)
            (btransform :
               forall sT, list params -> list (Dom sT * bool) ->
@@ -348,6 +367,13 @@ Proof.
     subst. exists Zs. eauto 10 using get.
 Qed.
 
+Ltac inv_get_step ::= first [inv_get_step0 |
+                            match goal with
+                            | [ H: get (backwardF ?f ?ZL ?AL ?F ?anF ?ST) ?n ?x |- _ ]
+                              => eapply backwardF_get in H;
+                                destruct H as [? [? [? [? [? ]]]]]
+                            end
+                           ].
 
 Lemma backward_length sT (Dom:stmt -> Type) `{PartialOrder (Dom sT)}
       (f: forall sT, list params -> list (Dom sT * bool) ->
@@ -359,14 +385,13 @@ Proof.
   - rewrite zip_length2; eauto. rewrite IHAnn1, IHAnn2; eauto.
   - rewrite list_update_at_length; eauto with len.
   - rewrite length_drop_minus. rewrite fold_list_length; eauto.
-    + rewrite IHAnn. rewrite app_length. repeat rewrite map_length; eauto.
+    + rewrite IHAnn.
+      rewrite app_length. repeat rewrite map_length; eauto.
       rewrite backwardF_length; eauto.
       rewrite H0. rewrite Nat.min_idempotent. omega.
     + intros; inv_get.
       rewrite IHAnn. rewrite app_length. repeat rewrite map_length; eauto.
-      rewrite backwardF_length; eauto. simpl.
-      eapply backwardF_get in H4. destruct H4 as [? [? [? [? [? ]]]]].
-      subst.
+      rewrite backwardF_length; eauto; simpl.
       erewrite H2; eauto.
       rewrite app_length, map_length. rewrite H0.
       rewrite Nat.min_idempotent. omega.
@@ -414,7 +439,6 @@ Proof.
   intros. cases; eauto using get.
   rewrite zip_length3; eauto using get.
 Qed.
-
 
 Lemma backward_monotone (sT:stmt) (Dom : stmt -> Type) `{PartialOrder (Dom sT)}
       (f: forall sT, list params -> list (Dom sT * bool) ->
@@ -474,10 +498,7 @@ Proof.
       eapply PIR2_app; eauto.
       eapply PIR2_get; intros; inv_get.
       eapply getAnn_poLe.
-      eapply backwardF_get in H5. destruct H5 as [? [? [? [? [? ]]]]]. subst.
-      eapply backwardF_get in H4. destruct H4 as [? [? [? [? [? ]]]]]. subst.
-      repeat get_functional.
-      eapply fst_poLe. assert (x5 = x9) by eapply subTerm_PI; subst.
+      eapply fst_poLe. assert (x5 = x10) by eapply subTerm_PI; subst.
       eapply IH; eauto.
       exploit H2; eauto.
       repeat rewrite map_length. repeat rewrite backwardF_length.
@@ -490,47 +511,46 @@ Proof.
         eapply getAnn_poLe. eapply IH; eauto.
       * { (repeat rewrite zip_length4); [ eauto with len | |].
           - repeat rewrite fold_list_length; eauto using zip_length3 with len.
+            repeat rewrite map_length.
             repeat rewrite backward_length; eauto using ann_R_annotation.
-            repeat rewrite app_length. repeat rewrite map_length.
-            eapply PIR2_length in ALLE.
-            repeat rewrite zip_length2; eauto with len.
+            repeat rewrite app_length. repeat rewrite map_length. omega.
 
             intros; inv_get. simpl.
             repeat rewrite backward_length; eauto using ann_R_annotation.
             repeat rewrite app_length. repeat rewrite map_length.
             eapply PIR2_length in ALLE.
-            repeat rewrite zip_length2; eauto with len.
-            simpl. omega.
-            edestruct (get_length_eq _ H6 (eq_sym H1)).
+            repeat rewrite backwardF_length; eauto with len.
+            simpl. rewrite H8, H1, Nat.min_idempotent. omega.
+            edestruct (get_length_eq _ x4 (eq_sym H1)).
             eapply ann_R_annotation; eauto.
 
             intros; cases; eauto. eapply zip_length3; eauto.
 
           - repeat rewrite fold_list_length; eauto using zip_length3 with len.
             repeat rewrite backward_length; eauto using ann_R_annotation.
-            repeat rewrite app_length. repeat rewrite map_length.
-            eapply PIR2_length in ALLE.
-            repeat rewrite zip_length2; eauto with len.
-
+            repeat rewrite app_length. repeat rewrite map_length. omega.
 
             intros; inv_get. simpl.
             repeat rewrite backward_length; eauto using ann_R_annotation.
             repeat rewrite app_length. repeat rewrite map_length.
             eapply PIR2_length in ALLE.
-            repeat rewrite zip_length2; eauto with len. omega.
+            rewrite backwardF_length. rewrite H8, Nat.min_idempotent.
+            reflexivity.
 
             intros; cases; eauto using zip_length3.
         }
       * intros. inv_get; simpl.
         eapply ann_R_setTopAnn.
         split; simpl; eauto.
-        eapply fst_poLe. eapply getAnn_poLe.
+        eapply fst_poLe. eapply getAnn_poLe. eapply fst_poLe.
+        assert (x12 = x7) by eapply subTerm_PI; subst.
         eapply IH; eauto.
         eapply H2; eauto.
         eapply get_PIR2; eauto.
         {
           eapply PIR2_impb_fold.
           * eapply PIR2_get; intros; inv_get.
+            assert (x17 = x22) by eapply subTerm_PI; subst.
             split.
             eapply IH; eauto.
             eapply H2; eauto.
@@ -553,13 +573,15 @@ Proof.
             repeat rewrite backward_length; eauto.
             repeat rewrite app_length.
             repeat rewrite map_length.
-            rewrite zip_length2; eauto. omega.
+            erewrite backwardF_length_ass; eauto.
         }
+        assert (x7 = x12) by eapply subTerm_PI; subst.
         eapply IH; eauto. eapply H2; eauto.
       * eapply IH; eauto.
     + eapply PIR2_drop.
       eapply PIR2_impb_fold.
       * eapply PIR2_get; intros; inv_get; eauto with len.
+        assert (x7 = x12) by eapply subTerm_PI; subst.
         split.
         eapply IH; eauto. eapply H2; eauto.
         simpl snd. eapply get_PIR2; eauto.
@@ -580,25 +602,27 @@ Proof.
         repeat rewrite backward_length; eauto.
         repeat rewrite app_length.
         repeat rewrite map_length.
-        rewrite zip_length2; eauto. omega.
+        erewrite backwardF_length_ass; eauto.
 Qed.
 
-Lemma backward_annotation Dom `{PartialOrder Dom} s
-      (f : list params -> list (Dom * bool) -> stmt -> anni (Dom * bool) -> Dom)
-  : forall ZL AL a, annotation s a
-                  -> annotation s (fst (backward f ZL AL s a)).
+Lemma backward_annotation sT (Dom:stmt->Type) `{PartialOrder (Dom sT)} s
+      (f: forall sT, list params -> list (Dom sT * bool) ->
+                forall s, subTerm s sT -> anni (Dom sT * bool) -> Dom sT)
+  : forall ZL AL a (ST:subTerm s sT), annotation s a
+               -> annotation s (fst (backward Dom f ZL AL ST a)).
 Proof.
-  sind s; intros ZL AL a Ann; destruct s; inv Ann; simpl; eauto using @annotation.
+  sind s; intros ZL AL a ST Ann; destruct s; inv Ann; simpl; eauto using @annotation.
   - econstructor; eauto.
-    + repeat rewrite zip_length4; eauto.
-      rewrite map_length. rewrite zip_length2; eauto.
+    + repeat rewrite zip_length4; eauto with len.
+      rewrite map_length.
       rewrite fold_list_length; eauto using zip_length3.
       * rewrite backward_length; eauto. rewrite app_length.
-        repeat rewrite map_length. rewrite zip_length2; eauto. omega.
+        repeat rewrite map_length. omega.
       * intros; inv_get; simpl.
         repeat rewrite backward_length; eauto.
         repeat rewrite app_length.
-        repeat rewrite map_length. rewrite zip_length2; eauto. omega.
+        repeat rewrite map_length.
+        erewrite backwardF_length_ass; eauto.
       * intros. cases; eauto using zip_length3.
     + intros. inv_get.
       eapply setTopAnn_annotation.
@@ -621,20 +645,22 @@ Proof.
     + eapply IH; eauto.
 Qed.
 
-(*
+
 Instance makeBackwardAnalysis (Dom:stmt -> Type)
          `{forall s, PartialOrder (Dom s) }
          (BSL:forall s, BoundedSemiLattice (Dom s))
-         (f : forall s t, subTerm t s -> list params -> list (Dom s * bool) -> anni (Dom s * bool) -> Dom s)
-         (fMon:forall s t (Sub:subTerm t s) ZL (AL AL' : list (Dom s * bool)),
-               poLe AL AL' -> forall a b , a ⊑ b -> f s t Sub ZL AL a ⊑ f s t Sub ZL AL' b)
+         (f: forall sT, list params -> list (Dom sT * bool) ->
+                   forall s, subTerm s sT -> anni (Dom sT * bool) -> Dom sT)
+         (fMon:forall sT s (ST:subTerm s sT) ZL AL AL',
+             poLe AL AL' ->
+             forall a b, a ⊑ b -> f sT ZL AL s ST a ⊑ f sT ZL AL' s ST b)
          (Trm: forall s, Terminating (Dom s) poLt)
   : forall s, Analysis { a : ann (Dom s * bool) | annotation s a } :=
   {
     analysis_step := fun X : {a : ann (Dom s * bool) | annotation s a} =>
                       let (a, Ann) := X in
                       exist (fun a0 : ann (Dom s * bool) => annotation s a0)
-                            (fst (backward (f s s (subTerm_refl _)) nil nil s a)) (backward_annotation (f s) nil nil Ann);
+                            (fst (backward Dom f nil nil (subTerm_refl _) a)) (backward_annotation Dom f nil nil (subTerm_refl _) Ann);
     initial_value :=
       exist (fun a : ann (Dom s * bool) => annotation s a)
             (setAnn bottom s)
@@ -648,9 +674,8 @@ Proof.
     eapply terminating_ann. eapply terminating_pair; eauto.
     eapply terminating_bool.
   - intros [a Ann] [b Bnn] LE; simpl in *.
-    eapply (backward_monotone (f s) (fMon s)); eauto.
+    eapply (backward_monotone Dom f (fMon s)); eauto.
 Qed.
- *)
 
 (*
 Definition forwardF Dom

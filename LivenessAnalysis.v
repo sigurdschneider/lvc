@@ -169,7 +169,7 @@ Proof.
         cset_tac.
       * rewrite not_get_nth_default;
           intros; inv_get; simpl in *; eauto using get. cset_tac.
-    + rewrite <- (subTerm_occurVars _ _ ST); simpl.
+    + rewrite <- (subTerm_occurVars ST); simpl.
       eapply list_union_incl; try eapply H0; eauto with cset.
       intros; inv_get. eapply filter_by_get in H; dcr.
       cases in H3; isabsurd.
@@ -179,12 +179,39 @@ Proof.
   - eauto.
 Defined.
 
+Require Import SetOperations.
 
-Lemma backward_liveness_transform ZL AL s a
-  :
-    -> fst (backward liveness_transform ZL AL s a) = @ann0 _ (∅, true).
+Lemma liveness_transform_dep_monotone (sT s : stmt) (ST : subTerm s sT)
+      (ZL : 〔params〕) (AL AL' : 〔{x : ⦃var⦄ | x ⊆ occurVars sT} * bool〕)
+  : AL ⊑ AL' ->
+    forall a b : anni ({x : ⦃var⦄ | x ⊆ occurVars sT} * bool),
+      a ⊑ b
+      -> liveness_transform_dep ZL AL ST a ⊑ liveness_transform_dep ZL AL' ST b.
+Proof.
+  intros. destruct s; inv H0; simpl; eauto with cset;
+            repeat match goal with
+                   | [ x : { x : set var | x ⊆ occurVars sT } * bool |- _ ] =>
+                     destruct x as [[? ?] ?]
+                   end; simpl in * |- *; dcr.
+  - repeat cases; cset_tac.
+  - repeat cases; try (now congruence); eauto.
+    cset_tac.
+  - eapply incl_union_lr.
+    + destruct (get_dec AL (counted l)) as [[[[D PD] b] GetDL]|].
+      * erewrite get_nth; eauto using map_get_1; simpl in *.
+        provide_invariants_P2. simpl in *; dcr.
+        erewrite (@get_nth _ (_ ⊝ AL') ); eauto using map_get_1; simpl in *.
+        cset_tac.
+      * rewrite not_get_nth_default; simpl; intros; inv_get; eauto.
+        cset_tac.
+    + admit.
+  - rewrite H2; reflexivity.
+  - eauto.
+Qed.
 
-〔params〕 -> 〔⦃var⦄ * bool〕 -> stmt -> ann (⦃var⦄ * bool) -> ann (⦃var⦄ * bool) * 〔bool〕
+Definition liveness_analysis :=
+  makeBackwardAnalysis (fun s => { x : ⦃var⦄ | x ⊆ occurVars s}) _
+                       liveness_transform_dep I.
 
 Instance makeBackwardAnalysis
   : forall s, Analysis { a : ann ({} * bool) | annotation s a } :=
