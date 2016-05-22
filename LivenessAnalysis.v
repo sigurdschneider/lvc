@@ -188,11 +188,12 @@ Lemma liveness_transform_dep_monotone (sT s : stmt) (ST : subTerm s sT)
       a ⊑ b
       -> liveness_transform_dep ZL AL ST a ⊑ liveness_transform_dep ZL AL' ST b.
 Proof.
-  intros. destruct s; inv H0; simpl; eauto with cset;
+  intros.
+  time (destruct s; eauto with cset; inv H0; simpl; try reflexivity;
             repeat match goal with
                    | [ x : { x : set var | x ⊆ occurVars sT } * bool |- _ ] =>
                      destruct x as [[? ?] ?]
-                   end; simpl in * |- *; dcr.
+                   end; simpl in * |- *; dcr).
   - repeat cases; cset_tac.
   - repeat cases; try (now congruence); eauto.
     cset_tac.
@@ -204,7 +205,14 @@ Proof.
         cset_tac.
       * rewrite not_get_nth_default; simpl; intros; inv_get; eauto.
         cset_tac.
-    + admit.
+    + eapply list_union_incl; eauto with cset.
+      intros; inv_get. eapply filter_by_get in H1. dcr.
+      destruct (get_dec AL (counted l)) as [[[[D PD] b] GetDL]|].
+      * cases in H5.
+        erewrite get_nth in COND; eauto. simpl in *.
+        provide_invariants_P2. simpl in *.
+        eapply incl_list_union. eapply map_get_1.
+
   - rewrite H2; reflexivity.
   - eauto.
 Qed.

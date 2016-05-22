@@ -78,6 +78,21 @@ Proof.
   do 2 eexists; eauto using get.
 Qed.
 
+Lemma get_filter_by A B (p:A->bool) (Z:list A) (Y:list B) y n z
+  : get Y n y
+    -> get Z n z
+    -> p z
+    -> { n : nat & get (filter_by p Z Y) n y }.
+Proof.
+  intros GetY GetZ Pz.
+  eapply get_getT in GetZ.
+  eapply get_getT in GetY.
+  general induction GetZ; inv GetY; simpl in * |- *; isabsurd.
+  - cases. eauto using get.
+  - edestruct IHGetZ; eauto.
+    cases; eexists; eauto using get.
+Qed.
+
 Lemma filter_p X p (Z:list X)
 : forall n x, get (List.filter p Z) n x -> p x.
 Proof.

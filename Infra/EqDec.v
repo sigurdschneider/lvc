@@ -59,12 +59,12 @@ destruct 1. eapply (Some t). eapply None.
 Defined.
 
 Tactic Notation "cases" "in" hyp(H) :=
-  match goal with
-  | [ H : context [if sumbool_bool ?P then _ else _] |- _ ] => destruct P
-  | [ H : context [ match (if ?P then _ else _) with _ => _ end ] |- _ ] =>
+  match type of H with
+  | context [if sumbool_bool ?P then _ else _] => destruct P
+  | context [ match (if ?P then _ else _) with _ => _ end ] =>
     let COND := fresh "COND" in
     remember ?P as COND; destruct P
-  | H : context [if ?P then _ else _] |- _ =>
+  | context [if ?P then _ else _] =>
     match P with
     | decision_procedure _ =>
       let EQ := fresh "COND" in
@@ -83,6 +83,8 @@ Tactic Notation "cases" :=
   match goal with
   | |- context [if sumbool_bool ?P then _ else _] => destruct P
   | |- context [ match (if ?P then true else false) with _ => _ end ] => destruct P
+  | [ H' : Is_true (?P) |- context [if ?P then _ else _] ] =>
+    rewrite (Is_true_eq_true _ H')
   | |- context [ if ?P then _ else _ ] =>
     match P with
     | negb (?P':decision_procedure _) =>
