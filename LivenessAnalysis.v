@@ -211,40 +211,24 @@ Proof.
       * cases in H5.
         erewrite get_nth in COND; eauto. simpl in *.
         provide_invariants_P2. simpl in *.
+        edestruct get_filter_by. Focus 4.
         eapply incl_list_union. eapply map_get_1.
-
+        eapply g. reflexivity. eauto. eauto.
+        simpl. cases; eauto.
+        erewrite get_nth in NOTCOND; eauto. simpl in *.
+        eapply NOTCOND. eapply H1; eauto.
+      * rewrite not_get_nth_default in H5. simpl in *.
+        cases in H5; cset_tac.
+        intros; inv_get; eauto.
   - rewrite H2; reflexivity.
   - eauto.
 Qed.
 
 Definition liveness_analysis :=
   makeBackwardAnalysis (fun s => { x : ⦃var⦄ | x ⊆ occurVars s}) _
-                       liveness_transform_dep I.
-
-Instance makeBackwardAnalysis
-  : forall s, Analysis { a : ann ({} * bool) | annotation s a } :=
-  {
-    analysis_step := fun X : {a : ann (Dom s * bool) | annotation s a} =>
-                      let (a, Ann) := X in
-                      exist (fun a0 : ann (Dom s * bool) => annotation s a0)
-                            (fst (backward () nil nil s a)) (backward_annotation (f s) nil nil Ann);
-    initial_value :=
-      exist (fun a : ann (Dom s * bool) => annotation s a)
-            (setAnn bottom s)
-            (setAnn_annotation bottom s)
-  }.
-Proof.
-  - intros [d Ann]; simpl.
-    pose proof (@ann_bottom s (Dom s * bool) _ _ _ Ann).
-    eapply H0.
-  - intros. eapply terminating_sig.
-    eapply terminating_ann. eapply terminating_pair; eauto.
-    eapply terminating_bool.
-  - intros [a Ann] [b Bnn] LE; simpl in *.
-    eapply (backward_monotone (f s) (fMon s)); eauto.
-Qed.
- *)
-
+                       liveness_transform_dep
+                       liveness_transform_dep_monotone
+                       (fun s => (@bunded_set_terminating _ _ (occurVars s))).
 
 (*
 
@@ -302,8 +286,3 @@ Next Obligation.
     Grab Existential Variables. eapply incl_empty.
 Defined.
  *)
-
-Definition liveness_analysis (s:stmt) :=
-  @makeBackwardAnalysis (fun s => { U : set var | U ⊆ occurVars s}) _ _
-                        (fun s ZL AL s' => liveness_transform (occurVars s) s (CSetBasic.incl_refl _ _) ZL AL).
-(fun Z an => (getAnn an, Z)).
