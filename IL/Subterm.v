@@ -83,3 +83,12 @@ Proof.
   intros. subst. etransitivity; eauto.
   eapply subTermLet2; eauto. reflexivity.
 Qed.
+
+Require Import ProofIrrelevance.
+
+Lemma subTerm_PI s s'
+      (p p':subTerm s s')
+  : p = p'.
+Proof.
+  eapply proof_irrelevance.
+Qed.

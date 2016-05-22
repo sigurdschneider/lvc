@@ -336,16 +336,16 @@ Lemma backwardF_get  (sT:stmt) (Dom:stmt->Type)
            (ST:forall n s, get F n s -> subTerm (snd s) sT) aa n
            (GetBW:get (backwardF backward ZL AL F anF ST) n aa)
       :
-        { n : nat & { Zs : params * stmt & {GetF : get F n Zs &
+        { Zs : params * stmt & {GetF : get F n Zs &
         { a : ann (Dom sT * bool) & { getAnF : get anF n a &
         { ST' : subTerm (snd Zs) sT | aa = backward ZL AL (snd Zs) ST' a
-        } } } } } }.
+        } } } } }.
 Proof.
   eapply get_getT in GetBW.
   general induction anF; destruct F as [|[Z s] F']; inv GetBW.
-  - exists 0, (Z, s). eauto using get.
-  - edestruct IHanF as [n [Zs [? [? [? ]]]]]; eauto; dcr.
-    subst. exists (S n), Zs. eauto 10 using get.
+  - exists (Z, s). eauto using get.
+  - edestruct IHanF as [Zs [? [? [? ]]]]; eauto; dcr.
+    subst. exists Zs. eauto 10 using get.
 Qed.
 
 
@@ -365,7 +365,7 @@ Proof.
     + intros; inv_get.
       rewrite IHAnn. rewrite app_length. repeat rewrite map_length; eauto.
       rewrite backwardF_length; eauto. simpl.
-      eapply backwardF_get in H4. destruct H4 as [? [? [? [? [? [? ]]]]]].
+      eapply backwardF_get in H4. destruct H4 as [? [? [? [? [? ]]]]].
       subst.
       erewrite H2; eauto.
       rewrite app_length, map_length. rewrite H0.
@@ -463,17 +463,25 @@ Proof.
       eapply PIR2_get; intros; inv_get.
       eapply getAnn_poLe. eapply H2; eauto. eauto with len.
     }
-    assert ( getAnn
-               ⊝ fst
-               ⊝ (fun Zs : params * stmt => backward f (fst ⊝ s ++ ZL) (getAnn ⊝ ans ++ AL) (snd Zs)) ⊜ s ans ++ AL
-               ⊑ getAnn
-               ⊝ fst
-               ⊝ (fun Zs : params * stmt => backward f (fst ⊝ s ++ ZL) (getAnn ⊝ bns ++ AL') (snd Zs)) ⊜ s
-               bns ++ AL'). {
+    assert (getAnn
+   ⊝ fst
+     ⊝ backwardF (backward Dom f) (fst ⊝ s ++ ZL) (getAnn ⊝ ans ++ AL) s ans
+         (subTerm_EQ_Fun2 eq_refl ST) ++ AL
+   ⊑ getAnn
+     ⊝ fst
+       ⊝ backwardF (backward Dom f) (fst ⊝ s ++ ZL) (getAnn ⊝ bns ++ AL') s bns
+           (subTerm_EQ_Fun2 eq_refl ST) ++ AL'). {
       eapply PIR2_app; eauto.
       eapply PIR2_get; intros; inv_get.
-      eapply getAnn_poLe. eapply IH; eauto.
-      exploit H2; eauto. eauto 20 with len.
+      eapply getAnn_poLe.
+      eapply backwardF_get in H5. destruct H5 as [? [? [? [? [? ]]]]]. subst.
+      eapply backwardF_get in H4. destruct H4 as [? [? [? [? [? ]]]]]. subst.
+      repeat get_functional.
+      eapply fst_poLe. assert (x5 = x9) by eapply subTerm_PI; subst.
+      eapply IH; eauto.
+      exploit H2; eauto.
+      repeat rewrite map_length. repeat rewrite backwardF_length.
+      rewrite H1. reflexivity.
     }
     simpl; split.
     + econstructor; eauto.
