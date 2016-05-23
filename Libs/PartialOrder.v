@@ -227,3 +227,17 @@ Proof.
   unfold Proper, respectful; intros.
   inv H1; simpl; eauto.
 Qed.
+
+Instance fst_poEq Dom `{PartialOrder Dom} Dom' `{PartialOrder Dom'}
+  : Proper (poEq ==> poEq) (@fst Dom Dom').
+Proof.
+  unfold Proper, respectful; intros.
+  inv H1; simpl; eauto.
+Qed.
+
+Instance snd_poEq Dom `{PartialOrder Dom} Dom' `{PartialOrder Dom'}
+  : Proper (poEq ==> poEq) (@snd Dom Dom').
+Proof.
+  unfold Proper, respectful; intros.
+  inv H1; simpl; eauto.
+Qed.

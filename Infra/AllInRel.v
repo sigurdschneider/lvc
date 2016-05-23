@@ -156,7 +156,7 @@ Ltac provide_invariants_P2 :=
 match goal with
   | [ H : PIR2 ?R ?A ?B, H' : get ?A ?n ?b |- _ ] =>
     let X := fresh H in
-    destruct (PIR2_nth H H') as [? [? X]]; eauto; inv X;
+    destruct (PIR2_nth H H') as [? [? X]]; eauto; (try inv X);
     repeat get_functional; (try subst) ;
     let X'' := fresh H in pose proof (PIR2_drop n H) as X''
 end.

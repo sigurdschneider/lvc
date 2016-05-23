@@ -297,3 +297,10 @@ Proof.
   unfold Proper, respectful; intros.
   inv H0; simpl; eauto.
 Qed.
+
+Instance getAnn_poEq Dom `{PartialOrder Dom}
+  : Proper (poEq ==> poEq) getAnn.
+Proof.
+  unfold Proper, respectful; intros.
+  inv H0; simpl; eauto.
+Qed.

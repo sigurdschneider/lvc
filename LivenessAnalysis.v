@@ -85,33 +85,33 @@ Proof.
 Qed.
 
 Definition liveness_transform
-           (ZL:list params) (DL:list (set var * bool))
+           (ZL:list params) (DL:list (set var))
            (st:stmt)
-           (a:anni (⦃var⦄ * bool))
+           (a:anni (⦃var⦄))
   : ⦃var⦄ :=
   match st, a with
   | stmtLet x e s, anni1 d =>
-    fst d \ singleton x ∪ (if [x ∈ fst d] then Exp.freeVars e else ∅)
+    d \ singleton x ∪ (if [x ∈ d] then Exp.freeVars e else ∅)
   | stmtIf e s t, anni2 ds dt =>
     if [exp2bool e = Some true] then
-      fst ds
+      ds
     else
       if [ exp2bool e = Some false ] then
-        fst dt
+        dt
       else
-        Exp.freeVars e ∪ (fst ds) ∪ (fst dt)
+        Exp.freeVars e ∪ (ds) ∪ (dt)
   | stmtApp f Y, anni0 =>
-    let lv := nth (counted f) DL (∅, false) in
+    let lv := nth (counted f) DL ∅ in
     let Z :=  nth (counted f) ZL nil in
-    fst lv \ of_list Z ∪
-        list_union (List.map Exp.freeVars
-                             (filter_by (fun x => B[x ∈ fst lv]) Z Y))
+    lv \ of_list Z ∪
+       list_union (List.map Exp.freeVars
+                            (filter_by (fun x => B[x ∈ lv]) Z Y))
   | stmtReturn e, anni0 =>
     Exp.freeVars e
   | stmtExtern x f Y s, anni1 d =>
-    fst d \ singleton x ∪ list_union (List.map Exp.freeVars Y)
+    d \ singleton x ∪ list_union (List.map Exp.freeVars Y)
   | stmtFun F t, anni1 dt =>
-    fst dt
+    dt
   | _, _ => ∅
   end.
 
@@ -150,21 +150,22 @@ Qed.
 
 Definition liveness_transform_dep (sT:stmt)
            (ZL:list params)
-           (DL:list ({ X : set var | X ⊆ occurVars sT} * bool))
+           (DL:list ({ X : set var | X ⊆ occurVars sT}))
       (s:stmt) (ST:subTerm s sT)
-      (a:anni ({X : ⦃var⦄ | X ⊆ occurVars sT} * bool))
+      (a:anni ({X : ⦃var⦄ | X ⊆ occurVars sT}))
   : {X : ⦃var⦄ | X ⊆ occurVars sT}.
 Proof.
   eapply (exist _ (liveness_transform ZL
-                                      ((fun p => (proj1_sig (fst p), snd p)) ⊝ DL) s
-                                      (mapAnni (fun p => (proj1_sig (fst p), snd p)) a))).
-  destruct s, a as [|[[a ?] b]|[[a ?] b] [[a' ?] b']|a]; simpl in *; try now eapply incl_empty.
+                                      (@proj1_sig _ _ ⊝ DL) s
+                                      (mapAnni (@proj1_sig _ _) a))).
+  destruct s, a as [|[a ?]|[a ?] [a' ?]|a]; simpl in *;
+    try now eapply incl_empty.
   - cases; [| cset_tac].
     cset_tac; eauto. eapply subTerm_occurVars; eauto; simpl. cset_tac.
   - repeat cases; eauto. eapply subTerm_occurVars in ST; simpl in *.
     cset_tac. eapply ST; cset_tac.
   - eapply union_incl_split.
-    + destruct (get_dec DL (counted l)) as [[[[D PD] b] GetDL]|].
+    + destruct (get_dec DL (counted l)) as [[[D PD] GetDL]|].
       * erewrite get_nth; eauto using map_get_1; simpl in *.
         cset_tac.
       * rewrite not_get_nth_default;
@@ -182,9 +183,9 @@ Defined.
 Require Import SetOperations.
 
 Lemma liveness_transform_dep_monotone (sT s : stmt) (ST : subTerm s sT)
-      (ZL : 〔params〕) (AL AL' : 〔{x : ⦃var⦄ | x ⊆ occurVars sT} * bool〕)
+      (ZL : 〔params〕) (AL AL' : 〔{x : ⦃var⦄ | x ⊆ occurVars sT}〕)
   : AL ⊑ AL' ->
-    forall a b : anni ({x : ⦃var⦄ | x ⊆ occurVars sT} * bool),
+    forall a b : anni ({x : ⦃var⦄ | x ⊆ occurVars sT}),
       a ⊑ b
       -> liveness_transform_dep ZL AL ST a ⊑ liveness_transform_dep ZL AL' ST b.
 Proof.
@@ -198,8 +199,9 @@ Proof.
   - repeat cases; try (now congruence); eauto.
     cset_tac.
   - eapply incl_union_lr.
-    + destruct (get_dec AL (counted l)) as [[[[D PD] b] GetDL]|].
+    + destruct (get_dec AL (counted l)) as [[[D PD] GetDL]|].
       * erewrite get_nth; eauto using map_get_1; simpl in *.
+
         provide_invariants_P2. simpl in *; dcr.
         erewrite (@get_nth _ (_ ⊝ AL') ); eauto using map_get_1; simpl in *.
         cset_tac.
@@ -220,9 +222,46 @@ Proof.
       * rewrite not_get_nth_default in H5. simpl in *.
         cases in H5; cset_tac.
         intros; inv_get; eauto.
-  - rewrite H2; reflexivity.
+  - rewrite H1; reflexivity.
   - eauto.
 Qed.
+
+Lemma liveness_transform_dep_ext (sT s : stmt) (ST : subTerm s sT)
+      (ZL : 〔params〕) (AL AL' : 〔{x : ⦃var⦄ | x ⊆ occurVars sT}〕)
+  : AL ≣ AL' ->
+    forall a b : anni ({x : ⦃var⦄ | x ⊆ occurVars sT}),
+      a ≣ b
+      -> liveness_transform_dep ZL AL ST a ≣ liveness_transform_dep ZL AL' ST b.
+Proof.
+  intros.
+  time (destruct s; eauto with cset; inv H0; simpl; try reflexivity;
+            repeat match goal with
+                   | [ x : { x : set var | x ⊆ occurVars sT } * bool |- _ ] =>
+                     destruct x as [[? ?] ?]
+                   end; simpl in * |- *; dcr).
+  - rewrite H1 at 1. specialize (H1 x).
+    repeat cases; try reflexivity.
+    exfalso. eapply NOTCOND. eapply H1. eauto.
+    exfalso. eapply NOTCOND. eapply H1. eauto.
+  - repeat cases; try (now congruence); eauto.
+    rewrite H1, H2. reflexivity.
+  - eapply eq_union_lr.
+    + destruct (get_dec AL (counted l)) as [[[D PD] GetDL]|].
+      * erewrite get_nth; eauto using map_get_1; simpl in *.
+        provide_invariants_P2. simpl in *; dcr.
+        erewrite (@get_nth _ (_ ⊝ AL') ); eauto using map_get_1; simpl in *.
+        rewrite H1. reflexivity.
+      * rewrite not_get_nth_default; simpl; intros; inv_get; eauto.
+        destruct (get_dec AL' (counted l)) as [[[D PD] GetDL]|].
+        exfalso. edestruct PIR2_nth_2; eauto; dcr. eauto.
+        rewrite (@not_get_nth_default _ (_ ⊝ AL')); simpl; intros; inv_get; eauto.
+    + eapply list_union_eq.
+      * admit.
+      * admit.
+      * reflexivity.
+  - rewrite H1; reflexivity.
+  - eauto.
+Admitted.
 
 Definition liveness_analysis :=
   makeBackwardAnalysis (fun s => { x : ⦃var⦄ | x ⊆ occurVars s}) _

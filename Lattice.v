@@ -25,8 +25,6 @@ Class BoundedSemiLattice (A : Type) `{PartialOrder A} := {
   join_respects_le :> Proper (poLe ==> poLe ==> poLe) join
 }.
 
-Print Visibility.
-
 Infix "⊔" := join (at level 70, no associativity).
 Notation "⊥" := bottom (at level 70, no associativity).
 

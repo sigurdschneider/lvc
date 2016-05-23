@@ -62,8 +62,16 @@ Tactic Notation "cases" "in" hyp(H) :=
   match type of H with
   | context [if sumbool_bool ?P then _ else _] => destruct P
   | context [ match (if ?P then _ else _) with _ => _ end ] =>
-    let COND := fresh "COND" in
-    remember ?P as COND; destruct P
+    match P with
+    | decision_procedure _ =>
+      let EQ := fresh "COND" in
+      let NEQ := fresh "NOTCOND" in
+      destruct P as [EQ|NEQ]; [ clear_trivial_eqs | try now (exfalso; eauto) ]
+    | _ =>
+      let EQ := fresh "Heq" in
+      let b := fresh "b" in
+      remember P as b eqn:EQ; destruct b
+    end
   | context [if ?P then _ else _] =>
     match P with
     | decision_procedure _ =>

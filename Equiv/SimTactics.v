@@ -1,4 +1,4 @@
-Require Import Sim IL.
+Require Import Sim IL paco2.
 
 Ltac one_step := eapply simSilent; [ eapply plus2O; single_step
                               | eapply plus2O; single_step

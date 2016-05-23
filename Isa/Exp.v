@@ -120,6 +120,22 @@ Defined.
       live_exp_sound e2 lv ->
       live_exp_sound (BinOp o e1 e2) lv.
 
+  Instance live_exp_sound_Subset e
+    : Proper (Subset ==> impl) (live_exp_sound e).
+  Proof.
+    unfold Proper, respectful, impl; intros.
+    general induction e; invt live_exp_sound; eauto using live_exp_sound.
+  Qed.
+
+  Instance live_exp_sound_Equal e
+    : Proper (Equal ==> iff) (live_exp_sound e).
+  Proof.
+    unfold Proper, respectful, impl; split; intros.
+    - eapply subset_equal in H. rewrite H in H0; eauto.
+    - symmetry in H. eapply subset_equal in H.
+      rewrite <- H; eauto.
+  Qed.
+
   Instance live_exp_sound_dec e lv
   : Computable (live_exp_sound e lv).
   Proof.
