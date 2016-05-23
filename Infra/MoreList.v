@@ -558,11 +558,13 @@ Ltac inv_get_step0 :=
     clear H; rename GET into H
   end.
 
-Ltac inv_get_step := inv_get_step0.
+Tactic Notation "inv_get_step" := inv_get_step0.
 
-Ltac inv_get :=
-  repeat (repeat get_functional; inv_get_step; repeat get_functional);
+Ltac inv_get' tac :=
+  repeat (repeat get_functional; tac; repeat get_functional);
   clear_trivial_eqs; repeat clear_dup.
+
+Tactic Notation "inv_get" := inv_get' inv_get_step0.
 
 Lemma zip_length_lt_ass (X Y Z : Type) (f : X -> Y -> Z) (L : list X) (L' : list Y) k
   : length L = length L'
