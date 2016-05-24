@@ -6,37 +6,26 @@ Require Import Analysis LivenessAnalysis TrueLiveness Subterm.
 
 Set Implicit Arguments.
 
-Instance proj1_eq_sym X `{OrderedType X} (U:set X)
-  : Symmetric (fun x y : {s0 : ⦃X⦄ | s0 ⊆ U} => proj1_sig x [=] proj1_sig y).
-Proof.
-  hnf; intros [x ?] [y ?]; simpl; intros; symmetry; eauto.
-Qed.
-
-Instance proj1_eq_transitive X `{OrderedType X} (U:set X)
-  : Transitive (fun x y : {s0 : ⦃X⦄ | s0 ⊆ U} => proj1_sig x [=] proj1_sig y).
-Proof.
-  hnf; intros [x ?] [y ?] [z ?]; simpl; intros; etransitivity; eauto.
-Qed.
+Local Arguments proj1_sig {A} {P} e.
+Local Arguments length {A} e.
+Local Arguments backward {sT} {Dom} btransform ZL AL st {ST} a.
 
 Definition liveness_analysis_correct sT ZL LV s a (ST:subTerm s sT)
-  : ann_R
-         (fun x y : {s0 : ⦃var⦄ | s0 ⊆ occurVars sT} => proj1_sig x [=] proj1_sig y)
-         (backward (fun s : stmt => {x : ⦃var⦄ | x ⊆ occurVars s})
-                   liveness_transform_dep ZL LV ST a) a
+  : ann_R poEq (@backward _ _ liveness_transform_dep ZL LV s ST a) a
     -> annotation s a
     -> labelsDefined s (length ZL)
     -> labelsDefined s (length LV)
-    -> paramsMatch s (@length _ ⊝ ZL)
-    -> true_live_sound Imperative ZL (@proj1_sig _ _ ⊝ LV) s
-                      (mapAnn (@proj1_sig _ _) a).
+    -> paramsMatch s (length ⊝ ZL)
+    -> true_live_sound Imperative ZL (proj1_sig ⊝ LV) s
+                      (mapAnn proj1_sig a).
 Proof.
   intros EQ Ann DefZL DefLV PM.
-  general induction Ann; simpl in *; inv DefZL; inv DefLV; inv PM.
+  general induction Ann; simpl in *; inv DefZL; inv DefLV; inv PM; destruct a.
   - inv EQ.
     pose proof (ann_R_get H7); simpl in *.
     econstructor.
     eapply IHAnn; eauto.
-    + intros. destruct a. simpl in *.
+    + intros. simpl in *.
       rewrite getAnn_mapAnn in H0.
       rewrite <- H in H0.
       cases in H2.
@@ -98,9 +87,9 @@ Proof.
       eapply (IHAnn (fst ⊝ s ++ ZL) (getAnn ⊝ sa ++ LV)
              (subTerm_EQ_Fun1 eq_refl ST)); eauto.
       etransitivity; eauto.
-      eapply (@backward_ext sT (fun s => { x : ⦃var⦄ | x ⊆ occurVars s}) _
+      refine (@backward_ext sT (fun s => { x : ⦃var⦄ | x ⊆ occurVars s}) _
                             (liveness_transform_dep)
-                            (@liveness_transform_dep_ext sT)); eauto.
+                            (@liveness_transform_dep_ext sT) _ _ _ _ _ _ _ _ _ _); eauto.
       eapply PIR2_app; eauto.
       eapply PIR2_get; eauto with len.
       intros; inv_get.
@@ -115,9 +104,8 @@ Proof.
       rewrite map_map.
       erewrite map_ext with (l:=sa);[| intros; rewrite getAnn_mapAnn; reflexivity].
       rewrite <- map_map with (l:=sa). rewrite <- map_app.
-      edestruct (@get_backwardF sT _ (backward (fun s0 : stmt => {x1 : ⦃var⦄ | x1 ⊆ occurVars s0}) liveness_transform_dep)); eauto.
-      eapply (H1 _ _ _ H3 H2 (fst ⊝ s ++ ZL) (getAnn ⊝ sa ++ LV)
-             x0); eauto.
+      edestruct (@get_backwardF sT _ (@backward _ (fun s0 : stmt => {x1 : ⦃var⦄ | x1 ⊆ occurVars s0}) liveness_transform_dep)); eauto.
+      eapply (H1 _ _ _ H3 H2 (fst ⊝ s ++ ZL) (getAnn ⊝ sa ++ LV) x1); eauto.
       * rewrite app_length, map_length. eauto.
       * rewrite app_length, map_length, <- H. eauto.
       * rewrite map_app. exploit H6; eauto.

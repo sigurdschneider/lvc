@@ -26,7 +26,7 @@ Section MapAgreeSet.
        - exfalso; eapply NOTCOND. rewrite H2; eauto. rewrite H1; eauto. }
     split; intros.
     + pose proof (filter_1 H4). pose proof (filter_2 H4).
-      cbv beta in *. cases in H6; eauto.
+      cbv beta in *. cases in H6; easy.
     + eapply filter_3.
       - eassumption.
       - eapply H4.

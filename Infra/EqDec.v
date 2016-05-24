@@ -66,7 +66,7 @@ Tactic Notation "cases" "in" hyp(H) :=
     | decision_procedure _ =>
       let EQ := fresh "COND" in
       let NEQ := fresh "NOTCOND" in
-      destruct P as [EQ|NEQ]; [ clear_trivial_eqs | try now (exfalso; eauto) ]
+      destruct P as [EQ|NEQ]; [ clear_trivial_eqs | try solve [exfalso; eauto] ]
     | _ =>
       let EQ := fresh "Heq" in
       let b := fresh "b" in
@@ -77,7 +77,7 @@ Tactic Notation "cases" "in" hyp(H) :=
     | decision_procedure _ =>
       let EQ := fresh "COND" in
       let NEQ := fresh "NOTCOND" in
-      destruct P as [EQ|NEQ]; [ clear_trivial_eqs | try now (exfalso; eauto) ]
+      destruct P as [EQ|NEQ]; [ clear_trivial_eqs | try solve [exfalso; eauto] ]
     | _ =>
       let EQ := fresh "Heq" in
       let b := fresh "b" in
@@ -98,11 +98,11 @@ Tactic Notation "cases" :=
     | negb (?P':decision_procedure _) =>
       let EQ := fresh "COND" in
       let NEQ := fresh "NOTCOND" in
-      destruct P' as [EQ|NEQ]; [ clear_trivial_eqs | try now (exfalso; eauto) ]
+      destruct P' as [EQ|NEQ]; [ clear_trivial_eqs | try solve [exfalso; eauto] ]
     | decision_procedure _ =>
       let EQ := fresh "COND" in
       let NEQ := fresh "NOTCOND" in
-      destruct P as [EQ|NEQ]; [ clear_trivial_eqs | try now (exfalso; eauto) ]
+      destruct P as [EQ|NEQ]; [ clear_trivial_eqs | try solve [exfalso; eauto] ]
     end
   | |- context [ match ?P with _ => _ end ] =>
     let EQ := fresh "Heq" in

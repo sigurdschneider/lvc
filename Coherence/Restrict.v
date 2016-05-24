@@ -306,9 +306,9 @@ Lemma restrict_get DL lv n s
 Proof.
   intros. general induction H.
   - destruct DL; simpl in *; isabsurd.
-    inv Heql. unfold restr in H0. destruct o.
-    cases in H0.
-    eauto using get. congruence.
+    inv Heql. unfold restr in H0. destruct o; isabsurd.
+    + cases in H0.
+      eauto using get. congruence.
   - destruct DL; simpl in *; isabsurd.
     inv Heql. edestruct IHget; eauto.
     eauto using get.

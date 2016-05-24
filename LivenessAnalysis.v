@@ -3,6 +3,8 @@ Require Import CSet Le Var.
 Require Import Plus Util AllInRel Map CSet.
 Require Import Val Var Env EnvTy IL Annotation Lattice DecSolve Analysis Filter Terminating.
 
+Remove Hints trans_eq_bool.
+
 Set Implicit Arguments.
 
 Instance PartialOrder_Subset_Equal X `{OrderedType X} : PartialOrder (set X) :=
@@ -28,20 +30,65 @@ Proof.
   - hnf; intros. eapply union_assoc.
 Defined.
 
+Definition sig_R {A} {P:A->Prop} (R:A -> A -> Prop) (a b: { a : A | P a}) :=
+  match a, b with
+  | exist _ a _, exist _ b _ => R a b
+  end.
+
+Instance sig_R_refl A (P:A->Prop) R `{Reflexive A R} : Reflexive (@sig_R A P R).
+Proof.
+  hnf in H.
+  hnf; intros [a ?]. hnf. eauto.
+Qed.
+
+Instance sig_R_sym A (P:A->Prop) R `{Symmetric A R} : Symmetric (@sig_R A P R).
+Proof.
+  hnf in H.
+  hnf; intros [a ?] [b ?]. eapply H.
+Qed.
+
+Instance sig_R_trans A (P:A -> Prop) R `{Transitive A R} : Transitive (@sig_R A P R).
+Proof.
+  hnf; intros [a ?] [b ?] [c ?]. eapply H.
+Qed.
+
+Instance sig_R_Equivalence A (P:A -> Prop) R `{Equivalence A R} : Equivalence (@sig_R A P R).
+Proof.
+  econstructor.
+  - hnf; intros; reflexivity.
+  - hnf; intros; symmetry; eauto.
+  - hnf; intros; etransitivity; eauto.
+Qed.
+
+Instance sig_R_anti A R Eq `{EqA:Equivalence _ Eq} `{@Antisymmetric A Eq EqA R}
+  : @Antisymmetric _ (ann_R Eq) _ (ann_R R).
+Proof.
+  intros ? ? B C. general induction B; inv C; eauto 20 using @ann_R.
+Qed.
+
+Instance sig_R_dec A (P:A -> Prop) (R:A->A->Prop)
+         `{forall a b, Computable (R a b)} (a b:sig P) :
+  Computable (sig_R R a b).
+Proof.
+  destruct a,b; simpl; eauto.
+Defined.
+
+Instance sig_R_proj1_sig A (P:A->Prop) (R:A -> A -> Prop)
+  : Proper (@sig_R A P R ==> R) (@proj1_sig A P).
+Proof.
+  unfold Proper, respectful.
+  intros [a ?] [b ?]; simpl; eauto.
+Qed.
+
 Instance PartialOrder_Subset_Equal_Bounded X `{OrderedType X} U : PartialOrder ({ s : set X | s ⊆ U}) :=
 {
-  poLe x y := Subset (proj1_sig x) (proj1_sig y);
-  poLe_dec x y := @Subset_computable _ _ (proj1_sig x) (proj1_sig y);
-  poEq x y := Equal (proj1_sig x) (proj1_sig y);
-  poEq_dec x y := @Equal_computable _ _ (proj1_sig x) (proj1_sig y)
+  poLe := sig_R Subset;
+  poLe_dec x y := _;
+  poEq := sig_R Equal;
+  poEq_dec x y := _;
 }.
 Proof.
-  - econstructor.
-    + hnf; intros. reflexivity.
-    + hnf; intros. symmetry; eauto.
-    + hnf; intros. etransitivity; eauto.
-  - intros [a ?] [b ?]. simpl. intros. rewrite H0. reflexivity.
-  - hnf; intros [a ?] [b ?] [c ?]; simpl; intros. etransitivity; eauto.
+  - intros [a ?] [b ?]; simpl. intros EQ. rewrite EQ. reflexivity.
   - hnf; intros [a ?] [b ?]; simpl; intros. split; eauto.
 Defined.
 
@@ -52,9 +99,9 @@ Instance set_var_semilattice_bounded U : BoundedSemiLattice ({ s : set var | s �
 Proof.
   - destruct x,y; simpl. cset_tac.
   - intros [a ?]; simpl. cset_tac.
-  - hnf; intros. eapply union_idem.
-  - hnf; intros. eapply union_comm.
-  - hnf; intros. eapply union_assoc.
+  - hnf; intros [a ?]. eapply union_idem.
+  - hnf; intros [a ?] [b ?]. eapply union_comm.
+  - hnf; intros [a ?] [b ?] [c ?]. eapply union_assoc.
   - simpl. unfold Proper, respectful; intros. destruct x,y,x0,y0; simpl in * |- *.
     rewrite H, H0. reflexivity.
   - simpl. unfold Proper, respectful; intros. destruct x,y,x0,y0; simpl in * |- *.
@@ -190,21 +237,18 @@ Lemma liveness_transform_dep_monotone (sT s : stmt) (ST : subTerm s sT)
       -> liveness_transform_dep ZL AL ST a ⊑ liveness_transform_dep ZL AL' ST b.
 Proof.
   intros.
-  time (destruct s; eauto with cset; inv H0; simpl; try reflexivity;
+  Start Profiling.
+  time (inv H0; destruct s; simpl in * |- *; try reflexivity;
             repeat match goal with
-                   | [ x : { x : set var | x ⊆ occurVars sT } * bool |- _ ] =>
-                     destruct x as [[? ?] ?]
+                   | [ x : { x : set var | x ⊆ occurVars sT } |- _ ] =>
+                     destruct x as [? ?]
                    end; simpl in * |- *; dcr).
-  - repeat cases; cset_tac.
-  - repeat cases; try (now congruence); eauto.
-    cset_tac.
   - eapply incl_union_lr.
     + destruct (get_dec AL (counted l)) as [[[D PD] GetDL]|].
       * erewrite get_nth; eauto using map_get_1; simpl in *.
-
-        provide_invariants_P2. simpl in *; dcr.
+        provide_invariants_P2. destruct x. simpl in *; dcr.
         erewrite (@get_nth _ (_ ⊝ AL') ); eauto using map_get_1; simpl in *.
-        cset_tac.
+        rewrite H1; eauto.
       * rewrite not_get_nth_default; simpl; intros; inv_get; eauto.
         cset_tac.
     + eapply list_union_incl; eauto with cset.
@@ -212,7 +256,7 @@ Proof.
       destruct (get_dec AL (counted l)) as [[[[D PD] b] GetDL]|].
       * cases in H5.
         erewrite get_nth in COND; eauto. simpl in *.
-        provide_invariants_P2. simpl in *.
+        provide_invariants_P2. destruct x2. simpl in *.
         edestruct get_filter_by. Focus 4.
         eapply incl_list_union. eapply map_get_1.
         eapply g. reflexivity. eauto. eauto.
@@ -222,8 +266,12 @@ Proof.
       * rewrite not_get_nth_default in H5. simpl in *.
         cases in H5; cset_tac.
         intros; inv_get; eauto.
+  - rewrite H1 at 1. repeat cases; eauto.
+    cset_tac.
   - rewrite H1; reflexivity.
   - eauto.
+  - repeat cases; try (now congruence); eauto.
+    cset_tac.
 Qed.
 
 Lemma liveness_transform_dep_ext (sT s : stmt) (ST : subTerm s sT)
@@ -236,7 +284,7 @@ Proof.
   intros.
   time (destruct s; eauto with cset; inv H0; simpl; try reflexivity;
             repeat match goal with
-                   | [ x : { x : set var | x ⊆ occurVars sT } * bool |- _ ] =>
+                   | [ x : { x : set var | x ⊆ occurVars sT } |- _ ] =>
                      destruct x as [[? ?] ?]
                    end; simpl in * |- *; dcr).
   - rewrite H1 at 1. specialize (H1 x).
@@ -248,20 +296,24 @@ Proof.
   - eapply eq_union_lr.
     + destruct (get_dec AL (counted l)) as [[[D PD] GetDL]|].
       * erewrite get_nth; eauto using map_get_1; simpl in *.
-        provide_invariants_P2. simpl in *; dcr.
+        provide_invariants_P2. destruct x. simpl in *; dcr.
         erewrite (@get_nth _ (_ ⊝ AL') ); eauto using map_get_1; simpl in *.
         rewrite H1. reflexivity.
       * rewrite not_get_nth_default; simpl; intros; inv_get; eauto.
         destruct (get_dec AL' (counted l)) as [[[D PD] GetDL]|].
         exfalso. edestruct PIR2_nth_2; eauto; dcr. eauto.
         rewrite (@not_get_nth_default _ (_ ⊝ AL')); simpl; intros; inv_get; eauto.
-    + eapply list_union_eq.
-      * admit.
-      * admit.
-      * reflexivity.
+    + erewrite filter_by_ext; [reflexivity| eauto with len |].
+      * intros; inv_get. get_functional.
+        destruct (get_dec AL (counted l)) as [[[D PD] GetDL]|]; provide_invariants_P2.
+        erewrite get_nth; [| eauto using map_get_1].
+        destruct x. simpl in *.
+        erewrite get_nth; [| eauto using map_get_1]. simpl.
+        repeat cases; eauto; exfalso; rewrite H2 in *; eauto.
+        repeat erewrite not_get_nth_default; intros; inv_get; eauto.
   - rewrite H1; reflexivity.
   - eauto.
-Admitted.
+Qed.
 
 Definition liveness_analysis :=
   makeBackwardAnalysis (fun s => { x : ⦃var⦄ | x ⊆ occurVars s}) _

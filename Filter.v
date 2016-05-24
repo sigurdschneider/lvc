@@ -1,5 +1,7 @@
 Require Import Util List OptionMap LengthEq Map Get.
 
+Set Implicit Types.
+
 Fixpoint filter_by {A B} (f:A -> bool) (L:list A) (L':list B) : list B :=
   match L, L' with
     | x :: L, y::L' => if f x then y :: filter_by f L L' else filter_by f L L'
@@ -8,6 +10,17 @@ Fixpoint filter_by {A B} (f:A -> bool) (L:list A) (L':list B) : list B :=
 
 Arguments filter_by [A B] f L L'.
 
+Lemma filter_by_ext A B (f f':A -> bool) L1 L1' (L2:list B)
+  : length L1 = length L1'
+    -> (forall n a a', get L1 n a -> get L1' n a' -> f a = f' a')
+    -> filter_by f L1 L2 = filter_by f' L1' L2.
+Proof.
+  intros. length_equify.
+  general induction H; destruct L2; simpl; eauto.
+  - erewrite H0; eauto using get.
+    cases; eauto using get.
+    f_equal. eauto using get.
+Qed.
 
 Lemma lookup_list_filter_by_commute A B C (V:A->B) (Z:list C) Y p
 : length Z = length Y
