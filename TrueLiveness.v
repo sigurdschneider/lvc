@@ -87,7 +87,7 @@ Proof.
     + intros. cases in INCL.
       simpl List.map in INCL.
       rewrite list_union_cons in INCL.
-      eapply live_exp_sound_incl;[| eapply live_freeVars].
+      eapply live_exp_sound_incl;[eapply live_freeVars|].
       rewrite <- INCL. eauto with cset.
 Qed.
 

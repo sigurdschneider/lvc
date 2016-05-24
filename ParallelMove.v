@@ -82,7 +82,8 @@ Section Translate.
     assert (check_pmove vars p1 p2 = true) by cbool. clear COK.
     unfold agree_on,check_pmove in *; intros.
     eapply (@for_all_2 var _ _ _ vars) in H0.
-    specialize (H0 x H1); simpl in *. cases in H; simpl in *.
+    specialize (H0 x H1); simpl in *.
+    cases in H0; simpl in *; try congruence.
     erewrite symb_eval with (M1:=M) (f:=fun x => x); eauto.
     erewrite symb_eval with (M1:=M) (f:=fun x => x); eauto.
     intuition.

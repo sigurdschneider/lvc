@@ -146,9 +146,9 @@ Defined.
   Defined.
 
   Lemma live_exp_sound_incl
-    : forall e lv lv', lv' ⊆ lv -> live_exp_sound e lv' -> live_exp_sound e lv.
+    : forall e lv lv', live_exp_sound e lv' -> lv' ⊆ lv -> live_exp_sound e lv.
   Proof.
-    intros; general induction H0; econstructor; eauto.
+    intros; general induction H; econstructor; eauto.
   Qed.
 
   Fixpoint freeVars (e:exp) : set var :=
@@ -162,10 +162,7 @@ Defined.
   Lemma live_freeVars
     : forall e, live_exp_sound e (freeVars e).
   Proof.
-    intros. general induction e; simpl; econstructor. cset_tac; eauto.
-    - eapply live_exp_sound_incl; eauto. cset_tac; intuition.
-    - eapply live_exp_sound_incl; eauto. cset_tac; intuition.
-    - eapply live_exp_sound_incl; eauto. cset_tac; intuition.
+    intros. general induction e; simpl; econstructor; eauto using live_exp_sound_incl with cset.
   Qed.
 
   Lemma freeVars_live e lv

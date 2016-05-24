@@ -105,27 +105,6 @@ Inductive approxF' : list (set var * params) -> F.block -> F.block -> Prop :=
     -> agree_on eq (getAnn lv \ of_list Z) E E'
     ->  approxF' ((getAnn lv,Z)::DL) (F.blockI E Z s n) (F.blockI E' Z s n).
 
-Inductive liveSimF : F.state -> F.state -> Prop :=
-  liveSimFI (E E':onv val) L L' s Lv lv
-            (LS:live_sound Functional Lv s lv)
-            (LA:AIR3 approxF' Lv L L')
-            (AG:agree_on eq (getAnn lv) E E')
-  : liveSimF (L, E, s) (L', E', s).
-
-
-Lemma liveSim_freeVarSim σ1 σ2
-  : liveSimF σ1 σ2 -> freeVarSimF σ1 σ2.
-Proof.
-  intros. general induction H; econstructor; eauto.
-  clear LS.
-  general induction LA; eauto using PIR2.
-  econstructor. inv pf. econstructor.
-  eapply agree_on_incl; eauto. eapply incl_minus_lr; try reflexivity.
-  eapply freeVars_live; eauto.
-  eapply IHLA; eauto.
-  eapply agree_on_incl; eauto. eapply freeVars_live; eauto.
-Qed.
-
 (** ** Live variables contain all variables significant to an IL/I program *)
 
 Inductive approxI

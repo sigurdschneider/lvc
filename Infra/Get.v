@@ -22,9 +22,9 @@ Ltac isabsurd :=
 (*  | [ H : _ < _ |- _ ] => try now exfalso; inv H *)
   | _ =>
     try now (hnf; intros;
-             match goal with
-               [ H : _ |- _ ] => exfalso; inversion H; try subst; simpl in *; try congruence
-             end)
+              match goal with
+                [ H : _ |- _ ] => exfalso; inversion H; try subst; simpl in *; try congruence
+              end)
   end.
 
 (** Get is informative anyway. *)

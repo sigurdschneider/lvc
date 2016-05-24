@@ -26,7 +26,7 @@ Proof.
   intros. hnf; intros.
   unfold restrict in H0. eapply map_get_4 in H0; dcr.
   unfold restr in H2. destruct x0; isabsurd. cases in H2; isabsurd.
-  inv H2. eapply agree_on_update_dead. rewrite COND. cset_tac.
+  eapply agree_on_update_dead. rewrite COND. cset_tac.
   eapply RA; eauto.
 Qed.
 
@@ -158,7 +158,7 @@ Lemma srdSim_sim σ1 σ2
   : srdSim σ1 σ2 -> bisim σ1 σ2.
 Proof.
   revert σ1 σ2. cofix; intros.
-  destruct H; inv SRD; inv LV; simpl in *; try provide_invariants_21.
+  destruct H; inv SRD; inv LV; simpl in *.
   - case_eq (exp_eval E e); intros.
     one_step.
     instantiate (1:=v). erewrite <- exp_eval_live; eauto.

@@ -5,19 +5,11 @@ Require Import Sim SimTactics.
 Set Implicit Arguments.
 Unset Printing Records.
 
-Fixpoint countSome X (L:list (؟ X)) :=
-  match L with
-  | nil => 0
-  | Some _ ::xs => 1 + countSome xs
-  | None :: xs => countSome xs
-  end.
-
-Lemma countSome_app X (L L':list (؟ X))
-  : countSome (L ++ L') = countSome L + countSome L'.
-Proof.
-  intros. induction L; simpl; eauto.
-  destruct a; eauto. omega.
-Qed.
+Local Hint Extern 5 =>
+match goal with
+| [ H : ?A = ⎣ true ⎦, H' : ?A = ⎣ false ⎦ |- _ ] => congruence
+| [ H : ?A = None , H' : ?A = Some _ |- _ ] => congruence
+end.
 
 Fixpoint compile (LV:list ((set var) * params)) (s:stmt) (a:ann (set var)) :=
   match s, a with
@@ -65,6 +57,129 @@ Proof.
   repeat rewrite map_take.
   rewrite map_zip.
   rewrite zip_map_fst; eauto with len.
+Qed.
+
+
+Fixpoint compile_live (s:stmt) (a:ann (set var)) (G:set var) : ann (set var) :=
+  match s, a with
+    | stmtLet x e s, ann1 lv an as a =>
+      if [x ∈ getAnn an] then ann1 (G ∪ lv) (compile_live s an {x})
+                         else compile_live s an G
+    | stmtIf e s t, ann2 lv ans ant =>
+      if [exp2bool e = Some true] then
+        compile_live s ans G
+      else if [exp2bool e = Some false ] then
+        compile_live t ant G
+      else
+        ann2 (G ∪ lv) (compile_live s ans ∅) (compile_live t ant ∅)
+    | stmtApp f Y, ann0 lv => ann0 (G ∪ lv)
+    | stmtReturn x, ann0 lv => ann0 (G ∪ lv)
+    | stmtExtern x f Y s, ann1 lv an as a =>
+      ann1 (G ∪ lv) (compile_live s an {x})
+    | stmtFun F t, annF lv ans ant =>
+      let ans' := zip (fun Zs a => let a' := compile_live (snd Zs) a ∅ in
+                               setTopAnn a' (getAnn a' ∪ of_list (List.filter (fun x => B[x ∈ getAnn a]) (fst Zs)))) F ans in
+      annF (G ∪ lv) ans' (compile_live t ant ∅)
+    | _, a => a
+  end.
+
+
+Lemma compile_live_incl G i ZL LV s lv
+  : true_live_sound i ZL LV s lv
+    -> getAnn (compile_live s lv G) ⊆ G ∪ getAnn lv.
+Proof.
+  intros. general induction H; simpl; eauto.
+  - cases; simpl; try reflexivity.
+    rewrite IHtrue_live_sound. rewrite <- H1. cset_tac; intuition.
+  - repeat cases; simpl; try reflexivity.
+    + etransitivity; eauto. rewrite H4; eauto.
+    + etransitivity; eauto. rewrite <- H5; eauto.
+Qed.
+
+Lemma compile_live_incl_empty i ZL LV s lv
+  : true_live_sound i ZL LV s lv
+    -> getAnn (compile_live s lv ∅) ⊆ getAnn lv.
+Proof.
+  intros.
+  eapply compile_live_incl in H.
+  rewrite H. cset_tac; intuition.
+Qed.
+
+Lemma incl_compile_live G i ZL LV s lv
+  : true_live_sound i ZL LV s lv
+    -> G ⊆ getAnn (compile_live s lv G).
+Proof.
+  intros. general induction H; simpl; eauto.
+  - cases; simpl; eauto with cset.
+  - repeat cases; simpl; eauto.
+Qed.
+
+Definition compile_LV (ZL:list (params)) (LV:list (set var)) :=
+  zip (fun Z lv => let Z' := List.filter (fun x => B[x ∈ lv]) Z in (lv, Z')) ZL LV.
+
+Lemma dve_live i ZL LV s lv G
+  : true_live_sound i ZL LV s lv
+    -> live_sound i (compile_LV ZL LV) (compile (zip pair LV ZL) s lv) (compile_live s lv G).
+Proof.
+  intros. general induction H; simpl; eauto using live_sound, compile_live_incl.
+  - cases; eauto. econstructor; eauto.
+    + eapply live_exp_sound_incl; eauto. eauto.
+    + rewrite compile_live_incl; eauto.
+      rewrite <- H1. cset_tac; intuition.
+    + eapply incl_compile_live; eauto.
+  - repeat cases; eauto.
+    + econstructor; eauto; try rewrite compile_live_incl; eauto.
+      eapply live_exp_sound_incl; eauto. eapply incl_right.
+      eapply H1. case_eq (exp2bool e); intros; try destruct b; congruence.
+      cset_tac; intuition.
+      cset_tac; intuition.
+  - econstructor.
+    + eapply (map_get_1 (fun lvZ => let Z' := List.filter (fun x => B[x ∈ fst lvZ]) (snd lvZ) in
+                                   (fst lvZ, Z')) H); eauto.
+    + simpl. destruct i; simpl in * |- *; eauto.
+      rewrite <- H0. rewrite minus_inter_empty. eapply incl_right.
+      cset_tac; intuition. eapply filter_incl2; eauto.
+      eapply filter_in; eauto. intuition. hnf. cases; eauto.
+      rewrite <- H0. rewrite minus_inter_empty. eapply incl_right.
+      cset_tac; intuition. eapply filter_incl2; eauto.
+      eapply filter_in; eauto. intuition. hnf. cases; eauto.
+    + simpl. eapply get_nth in H. erewrite H. simpl.
+      erewrite filter_filter_by_length. reflexivity. congruence.
+    + intros. eapply get_nth in H. erewrite H in H3. simpl in *.
+      edestruct filter_by_get as [? [? [? []]]]; eauto; dcr.
+      eapply live_exp_sound_incl. eapply incl_right.
+      eapply argsLive_live_exp_sound; eauto. simpl in *.
+      decide (x0 ∈ blv); intuition.
+  - econstructor; eauto.
+    eapply live_exp_sound_incl; eauto using incl_right.
+  - econstructor; eauto.
+    + intros; eapply live_exp_sound_incl; eauto using incl_right.
+    + rewrite compile_live_incl; eauto. rewrite <- H1. cset_tac; intuition.
+    + eapply incl_compile_live; eauto.
+  - econstructor; simpl in *; eauto with len.
+    + eapply live_sound_monotone.
+      eapply IHtrue_live_sound.
+      unfold compile_LV. rewrite map_app. eapply PIR2_app; eauto.
+      eapply PIR2_get; eauto 30 with len.
+      intros; inv_get. simpl. rewrite getAnn_setTopAnn.
+      rewrite compile_live_incl_empty; eauto. rewrite of_list_filter.
+      split; cset_tac.
+    + intros; inv_get.
+      eapply live_sound_monotone.
+      eapply live_sound_monotone2; eauto. eapply H2; eauto.
+      unfold compile_LV. rewrite map_app. eapply PIR2_app; eauto.
+      eapply PIR2_get; eauto 30 with len.
+      intros; inv_get. simpl. rewrite getAnn_setTopAnn.
+      rewrite compile_live_incl_empty; eauto. rewrite of_list_filter.
+      split; cset_tac.
+    + intros; inv_get.
+      repeat rewrite getAnn_setTopAnn; simpl.
+      split; eauto. cases; eauto.
+      exploit H3; eauto.
+      rewrite compile_live_incl_empty; eauto. rewrite <- H5.
+      rewrite of_list_filter.
+      clear_all; cset_tac.
+    + rewrite compile_live_incl; eauto with cset.
 Qed.
 
 Require Import paco2.
@@ -443,130 +558,6 @@ intros. hnf in H, H0. destruct a; dcr. subst.
 erewrite filter_filter_by_length; eauto.
 Admitted.
 
-
-Fixpoint compile_live (s:stmt) (a:ann (set var)) (G:set var) : ann (set var) :=
-  match s, a with
-    | stmtLet x e s, ann1 lv an as a =>
-      if [x ∈ getAnn an] then ann1 (G ∪ lv) (compile_live s an {x})
-                         else compile_live s an G
-    | stmtIf e s t, ann2 lv ans ant =>
-      if [exp2bool e = Some true] then
-        compile_live s ans G
-      else if [exp2bool e = Some false ] then
-        compile_live t ant G
-      else
-        ann2 (G ∪ lv) (compile_live s ans ∅) (compile_live t ant ∅)
-    | stmtApp f Y, ann0 lv => ann0 (G ∪ lv)
-    | stmtReturn x, ann0 lv => ann0 (G ∪ lv)
-    | stmtExtern x f Y s, ann1 lv an as a =>
-      ann1 (G ∪ lv) (compile_live s an {x})
-    | stmtFun F t, annF lv ans ant =>
-      let ans' := zip (fun Zs a => let a' := compile_live (snd Zs) a ∅ in
-                               setTopAnn a' (getAnn a' ∪ of_list (List.filter (fun x => B[x ∈ getAnn a]) (fst Zs)))) F ans in
-      annF (G ∪ lv) ans' (compile_live t ant ∅)
-    | _, a => a
-  end.
-
-
-Lemma compile_live_incl G i LV s lv
-  : true_live_sound i LV s lv
-    -> getAnn (compile_live s lv G) ⊆ G ∪ getAnn lv.
-Proof.
-  intros. general induction H; simpl; eauto.
-  - cases; simpl; try reflexivity.
-    rewrite IHtrue_live_sound. rewrite <- H1. cset_tac; intuition.
-  - repeat cases; simpl; try reflexivity.
-    + etransitivity; eauto. rewrite <- H2. eauto. congruence.
-    + etransitivity; eauto.  rewrite <- H3; eauto.
-Qed.
-
-Lemma compile_live_incl_empty i LV s lv
-  : true_live_sound i LV s lv
-    -> getAnn (compile_live s lv ∅) ⊆ getAnn lv.
-Proof.
-  intros.
-  eapply compile_live_incl in H.
-  rewrite H. cset_tac; intuition.
-Qed.
-
-Lemma incl_compile_live G i LV s lv
-  : true_live_sound i LV s lv
-    -> G ⊆ getAnn (compile_live s lv G).
-Proof.
-  intros. general induction H; simpl; eauto.
-  - cases; simpl; try reflexivity. cset_tac; intuition.
-    rewrite <- IHtrue_live_sound. cset_tac; intuition.
-  - repeat cases; simpl; try reflexivity; eauto.
-Qed.
-
-Definition compile_LV (LV:list (set var *params)) :=
-  List.map (fun lvZ => let Z' := List.filter (fun x => B[x ∈ fst lvZ]) (snd lvZ) in
-                      (fst lvZ, Z')) LV.
-
-Lemma dve_live i LV s lv G
-  : true_live_sound i LV s lv
-    -> live_sound i (compile_LV LV) (compile LV s lv) (compile_live s lv G).
-Proof.
-  intros. general induction H; simpl; eauto using live_sound, compile_live_incl.
-  - cases; eauto. econstructor; eauto.
-    + eapply live_exp_sound_incl; eauto. eauto.
-    + rewrite compile_live_incl; eauto.
-      rewrite <- H1. cset_tac; intuition.
-    + eapply incl_compile_live; eauto.
-  - repeat cases; eauto.
-    + econstructor; eauto; try rewrite compile_live_incl; eauto.
-      eapply live_exp_sound_incl. eapply incl_right.
-      eapply H1. case_eq (exp2bool e); intros; try destruct b; congruence.
-      cset_tac; intuition.
-      cset_tac; intuition.
-  - econstructor.
-    + eapply (map_get_1 (fun lvZ => let Z' := List.filter (fun x => B[x ∈ fst lvZ]) (snd lvZ) in
-                                   (fst lvZ, Z')) H); eauto.
-    + simpl. destruct i; simpl in * |- *; eauto.
-      rewrite <- H0. rewrite minus_inter_empty. eapply incl_right.
-      cset_tac; intuition. eapply filter_incl2; eauto.
-      eapply filter_in; eauto. intuition. hnf. cases; eauto.
-      rewrite <- H0. rewrite minus_inter_empty. eapply incl_right.
-      cset_tac; intuition. eapply filter_incl2; eauto.
-      eapply filter_in; eauto. intuition. hnf. cases; eauto.
-    + simpl. eapply get_nth in H. erewrite H. simpl.
-      erewrite filter_filter_by_length. reflexivity. congruence.
-    + intros. eapply get_nth in H. erewrite H in H3. simpl in *.
-      edestruct filter_by_get as [? [? [? []]]]; eauto; dcr.
-      eapply live_exp_sound_incl. eapply incl_right.
-      eapply argsLive_live_exp_sound; eauto. simpl in *.
-      decide (x0 ∈ blv); intuition.
-  - econstructor; eauto.
-    eapply live_exp_sound_incl; eauto using incl_right.
-  - econstructor; eauto.
-    + intros; eapply live_exp_sound_incl; eauto using incl_right.
-    + rewrite compile_live_incl; eauto. rewrite <- H1. cset_tac; intuition.
-    + eapply incl_compile_live; eauto.
-  - econstructor; simpl in *; eauto with len.
-    + eapply live_sound_monotone.
-      eapply IHtrue_live_sound.
-      unfold compile_LV. rewrite map_app. eapply PIR2_app; eauto.
-      eapply PIR2_get; eauto 30 with len.
-      intros; inv_get. simpl. rewrite getAnn_setTopAnn.
-      rewrite compile_live_incl_empty; eauto. rewrite of_list_filter.
-      split; cset_tac.
-    + intros; inv_get.
-      eapply live_sound_monotone.
-      eapply live_sound_monotone2; eauto. eapply H2; eauto.
-      unfold compile_LV. rewrite map_app. eapply PIR2_app; eauto.
-      eapply PIR2_get; eauto 30 with len.
-      intros; inv_get. simpl. rewrite getAnn_setTopAnn.
-      rewrite compile_live_incl_empty; eauto. rewrite of_list_filter.
-      split; cset_tac.
-    + intros; inv_get.
-      repeat rewrite getAnn_setTopAnn; simpl.
-      split; eauto. cases; eauto.
-      exploit H3; eauto.
-      rewrite compile_live_incl_empty; eauto. rewrite <- H5.
-      rewrite of_list_filter.
-      clear_all; cset_tac.
-    + rewrite compile_live_incl; eauto with cset.
-Qed.
 
 Lemma sim_DVE' r L L' V V' s LV lv
 : agree_on eq (getAnn lv) V V'

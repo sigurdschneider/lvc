@@ -19,7 +19,7 @@ Class Analysis (Dom: Type) := makeAnalysis {
   step_monotone : Monotone analysis_step
 }.
 
-Hint Extern 5 =>
+Local Hint Extern 5 =>
 match goal with
   [ H : poLe ?d ?d' |- poLe (analysis_step ?d) (analysis_step ?d')] =>
   eapply (step_monotone _ _ H)
