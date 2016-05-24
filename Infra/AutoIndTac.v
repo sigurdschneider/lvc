@@ -74,15 +74,18 @@ Ltac remember_arguments E :=
 
 (* from Coq.Program.Tactics *)
 Ltac clear_dup :=
+(*  match goal with
+  | [ H : ?X, H' : ?X |- _ ] => clear H' || clear H
+  end.*)
   match goal with
-    | [ H : ?X |- _ ] =>
-      match goal with
-        | [ H' : ?Y |- _ ] =>
-          match H with
-            | H' => fail 2
-            | _ => unify X Y ; (clear H' || clear H)
-          end
+  | [ H : ?X |- _ ] =>
+    match goal with
+    | [ H' : ?Y |- _ ] =>
+      match H with
+      | H' => fail 2
+      | _ => unify X Y ; (clear H' || clear H)
       end
+    end
   end.
 
 Ltac clear_if_dup H :=
@@ -108,6 +111,11 @@ Ltac clear_trivial_eqs :=
   repeat (progress (match goal with
                     | [ H : @eq _ ?x ?x |- _ ] => clear H
                     | [ H : @eq _ ?x ?y |- _ ] => first [ is_var x; subst x | is_var y; subst y ]
+                    | [ H : @eq _ (Some ?x) (Some ?y) |- _ ]
+                      => let H' := fresh "H" in assert (H':x = y) by congruence; clear H;
+                                              first [ is_var x; subst x; clear H'
+                                                    | is_var y; subst y; clear H'
+                                                    | rename H' into H ]
                     end)).
 
 Tactic Notation "general" "induction" hyp(H) :=

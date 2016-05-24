@@ -114,11 +114,13 @@ Module F.
         destruct (get_dec F' f') as [[[[l' Z] s] ?]|].
         * decide (l = l'); subst.
           decide (length Z = length Y).
+          Start Profiling.
           case_eq (omap (exp_eval V) Y); intros; try now (right; stuck2).
           left. eexists EvtTau. econstructor. econstructor; eauto.
           orewrite (l' + 0=l'). eauto.
           right; stuck2. rewrite Ldef in H. inv H. get_functional; subst. congruence.
           right; stuck2. rewrite Ldef in H. inv H. get_functional; subst. congruence.
+          Show Profile.
         * right; stuck2. rewrite Ldef in H. inv H. eauto.
       + right. stuck.
     - right. stuck.

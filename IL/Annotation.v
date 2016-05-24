@@ -1,6 +1,6 @@
 Require Import List.
 Require Import Util Relations Get Drop Var Val Exp Env Map CSet AutoIndTac MoreList IL DecSolve.
-Require Import Libs.PartialOrder.
+Require Import PartialOrder.
 
 Set Implicit Arguments.
 

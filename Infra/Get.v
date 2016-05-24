@@ -15,10 +15,11 @@ Inductive get (X:Type) : list X -> nat -> X -> Prop :=
 
 
 Ltac isabsurd :=
-  match goal with
+  try match goal with
   | [ H : ?x = None, H' : ?x = Some _ |- _ ] => exfalso; rewrite H in H'; inv H'
   | [ H : get ?L ?n _, H' : (forall _, get ?L ?n _ -> False) |- _ ] => exfalso; eapply H'; eapply H
   | [ H : get nil _ _ |- _ ] => exfalso; inv H
+(*  | [ H : _ < _ |- _ ] => try now exfalso; inv H *)
   | _ =>
     try now (hnf; intros;
              match goal with

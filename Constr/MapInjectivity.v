@@ -166,7 +166,9 @@ Proof.
   unfold Proper, respectful; intros.
   destruct x0, y0. unfold injective_on_step. unfold snd.
   destruct b, b0. unfold fst. econstructor.
-  inv H3. rewrite H7. time rewrite H2. reflexivity.
+  inv H3. rewrite H7.
+  time rewrite H2.
+  reflexivity.
   decide (f x ∈ s); decide (f y ∈ s0).
   econstructor. exfalso. eapply n. rewrite <- H2.
   inv H3. rewrite <- H7. eauto.

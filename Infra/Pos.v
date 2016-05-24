@@ -34,7 +34,7 @@ Lemma pos_ge X `{OrderedType X} symb (l:X) i k
   -> k <= i.
 Proof.
   general induction symb. unfold pos in H0; fold pos in H0.
-  cases in H0. inv H0. cbv in COND. omega.
+  cases in H0. omega.
   exploit IHsymb; eauto. omega.
 Qed.
 
@@ -115,8 +115,8 @@ Lemma pos_get X  `{OrderedType X} (symb:list X) v x i
    -> exists v', get symb (x-i) v' /\ v === v' /\ x >= i.
 Proof.
   general induction symb; simpl in * |- *; eauto using get.
-  cases in H.
-  - invc H0. orewrite (x - x = 0). eexists; split; eauto using get.
+  cases in H0.
+  - orewrite (x - x = 0). eexists; split; eauto using get.
   - exploit IHsymb; eauto; dcr.
     orewrite (x - i = S (x - S i)).
     eexists; split. econstructor; eauto. split; eauto; omega.
@@ -204,8 +204,8 @@ Lemma pos_get_first X  `{OrderedType X} (symb:list X) v x i
      forall z' n, n < x-i -> get symb n z' -> z' =/= v.
 Proof.
   general induction symb; simpl in * |- *; eauto using get.
-  cases in H.
-  - invc H0. orewrite (x - x = 0). eexists; repeat split; eauto using get.
+  cases in H0.
+  - orewrite (x - x = 0). eexists; repeat split; eauto using get.
     + intros. exfalso. omega.
   - exploit IHsymb; eauto; dcr.
     orewrite (x - i = S (x - S i)).

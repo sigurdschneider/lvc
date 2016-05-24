@@ -500,7 +500,7 @@ Notation "f ⊜ L1 L2" := (zip f L1 L2) (at level 40, L1 at level 0, L2 at level
 
 Create HintDb inv_get discriminated.
 
-Ltac inv_get_step0 :=
+Ltac inv_get_step0 dummy :=
   match goal with
   | [ H : get (take _ ?L) ?n ?x |- _ ] => eapply take_get in H; destruct H
   | [ H : get (drop _ ?L) ?n ?x |- _ ] => eapply get_drop in H
@@ -558,10 +558,10 @@ Ltac inv_get_step0 :=
     clear H; rename GET into H
   end.
 
-Tactic Notation "inv_get_step" := inv_get_step0.
+Tactic Notation "inv_get_step" := inv_get_step0 idtac.
 
 Ltac inv_get' tac :=
-  repeat (repeat get_functional; tac; repeat get_functional);
+  repeat (repeat get_functional; tac idtac; repeat get_functional);
   clear_trivial_eqs; repeat clear_dup.
 
 Tactic Notation "inv_get" := inv_get' inv_get_step0.

@@ -1,4 +1,4 @@
-Require Import Util DecSolve Coq.Classes.RelationClasses Libs.PartialOrder Terminating.
+Require Import Util DecSolve Coq.Classes.RelationClasses PartialOrder Terminating.
 
 Set Implicit Arguments.
 

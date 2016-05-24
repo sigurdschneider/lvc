@@ -385,13 +385,17 @@ Proof.
     eexists x0. econstructor. eauto.
 Qed.
 
-Ltac inv_get_step ::= first [inv_get_step0 |
+Ltac inv_get_step1 dummy := first [inv_get_step |
                             match goal with
                             | [ H: get (backwardF ?f ?ZL ?AL ?F ?anF ?ST) ?n ?x |- _ ]
                               => eapply backwardF_get in H;
                                 destruct H as [? [? [? [? [? ]]]]]
                             end
                            ].
+
+Tactic Notation "inv_get_step" := inv_get_step1.
+Tactic Notation "inv_get" := inv_get' inv_get_step1.
+
 (*
 Lemma backward_length sT (Dom:stmt -> Type) `{PartialOrder (Dom sT)}
       (f: forall sT, list params -> list (Dom sT) ->

@@ -1,4 +1,4 @@
-Require Import Bisim IL.
+Require Import paco2 Bisim IL.
 
 Ltac one_step := eapply bisimSilent; [ eapply plus2O; single_step
                               | eapply plus2O; single_step

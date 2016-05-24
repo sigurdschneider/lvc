@@ -46,7 +46,7 @@ Proof.
   unfold Proper, respectful; intros.
   destruct x0,y0; unfold restr;
   repeat cases; try econstructor;
-  inv H0; eauto; cset_tac.
+  eauto; cset_tac.
 Qed.
 
 Definition restrict (DL:list (option (set var))) (G:set var)
@@ -307,7 +307,7 @@ Proof.
   intros. general induction H.
   - destruct DL; simpl in *; isabsurd.
     inv Heql. unfold restr in H0. destruct o.
-    cases in H0. inv H0.
+    cases in H0.
     eauto using get. congruence.
   - destruct DL; simpl in *; isabsurd.
     inv Heql. edestruct IHget; eauto.

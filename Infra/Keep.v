@@ -29,7 +29,7 @@ Lemma keep_get X AP n m (x:X)
   : get (keep n AP) m (Some x) -> get AP m x /\ n = m.
 Proof.
   intros Get. edestruct (mapi_get _ _ Get) as [y [A B]].
-  cases in B; inv B; eauto.
+  cases in B; eauto.
 Qed.
 
 Lemma PIR2_ifFstR_keep X (R:relation X) `{Reflexive _ R} n (AP:list X)

@@ -1,5 +1,5 @@
 Require Import List.
-Require Import Util Var Val Exp Env Map CSet AutoIndTac AllInRel IL.
+Require Import Util Var Val Exp Env Map CSet AutoIndTac AllInRel IL MoreList.
 Require Import Bisim BisimTactics Infra.Status Pos.
 
 Set Implicit Arguments.
@@ -222,7 +222,7 @@ Lemma defs_agree_update symb E E' x v
 Proof.
   unfold defs_agree; intros.
   simpl in H0. cases in H0.
-  - invc COND; invc H0.
+  - invc COND.
     eexists; split; eauto using get. lud; congruence.
   - exploit (pos_ge _ _ _ H0).
     edestruct H; eauto; dcr.

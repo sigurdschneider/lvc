@@ -7,7 +7,7 @@ Updated to accomodate non-extensional equalities
 *)
 
 Require Export Containers.OrderedType Setoid Coq.Classes.Morphisms Computable.
-Require Export Libs.PartialOrder.
+Require Export PartialOrder.
 Require Import EqDec DecSolve.
 
 
