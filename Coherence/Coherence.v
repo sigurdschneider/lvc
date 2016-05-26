@@ -1,12 +1,43 @@
 Require Import Util IL InRel RenamedApart LabelsDefined.
-Require Import Annotation Liveness Restrict MoreExp SetOperations.
+Require Import Annotation MoreExp SetOperations Liveness Restrict.
 Require Import Bisim BisimTactics.
 
 Set Implicit Arguments.
 
-(** * Definition of Coherence: [srd] *)
+Lemma plus_minus_eq n m
+  : n + m - n = m.
+Proof.
+  omega.
+Qed.
 
-Notation "'oglobals' F alF" := (List.map Some ((getAnn ⊝ alF) \\ (fst ⊝ F))) (at level 50, F, alF at level 0).
+Ltac inv_get_step_some_minus dummy :=
+  first [inv_get_step |
+         match goal with
+         | [ H : get (?f ⊝ (?g1 ⊝ ?A) \\ (?g2 ⊝ ?B) ++ ?C) ?k _,
+                 H' : get ?A ?k _ |- _ ] =>
+           eapply get_app_lt_1 in H; [| eauto with len]
+         | [ H : get (?f ⊝ (?g1 ⊝ ?A) \\ (?g2 ⊝ ?B) ++ ?C) ?k _,
+                 H' : get ?B ?k _ |- _ ] =>
+           eapply get_app_lt_1 in H; [| eauto with len]
+         | [ H : get (?f ⊝ (?g1 ⊝ ?A) \\ (?g2 ⊝ ?B) ++ ?C) (❬?B❭ + ?n) _ |- _ ] =>
+           let LENEQ := fresh "LenEq" in
+           assert (LENEQ:❬f ⊝ (g1 ⊝ A) \\ (g2 ⊝ B)❭ = ❬B❭) by eauto with len;
+           rewrite get_app_ge in H;
+           [ rewrite LENEQ in H; rewrite plus_minus_eq in H
+           | rewrite LENEQ; omega]
+         | [ H : get (?f ⊝ (?g1 ⊝ ?A) \\ (?g2 ⊝ ?B) ++ ?C) (❬?A❭ + ?n) _ |- _ ] =>
+           let LENEQ := fresh "LenEq" in
+           assert (LENEQ:❬f ⊝ (g1 ⊝ A) \\ (g2 ⊝ B)❭ = ❬A❭) by eauto with len;
+           rewrite get_app_ge in H;
+           [ rewrite LENEQ in H; rewrite plus_minus_eq in H
+           | rewrite LENEQ; omega]
+         end
+        ].
+
+Tactic Notation "inv_get_step" := inv_get_step_some_minus idtac.
+Tactic Notation "inv_get" := inv_get' inv_get_step_some_minus.
+
+(** * Definition of Coherence: [srd] *)
 
 Inductive srd : list (option (set var)) -> stmt -> ann (set var) -> Prop :=
 | srdExp DL x e s lv al
@@ -27,9 +58,9 @@ Inductive srd : list (option (set var)) -> stmt -> ann (set var) -> Prop :=
 | srdLet DL F t lv als alt
   : length F = length als
     -> (forall n Zs a, get F n Zs -> get als n a ->
-                 srd (restrict (oglobals F als ++ DL)
+                 srd (restrict (Some ⊝ (getAnn ⊝ als) \\ (fst ⊝ F) ++ DL)
                                (getAnn a \ of_list (fst Zs))) (snd Zs) a)
-    -> srd (oglobals F als ++ DL) t alt
+    -> srd (Some ⊝ (getAnn ⊝ als) \\ (fst ⊝ F) ++ DL) t alt
     -> srd DL (stmtFun F t) (annF lv als alt).
 
 
@@ -83,32 +114,6 @@ match goal with
   | [ H: length ?L = length ?L' |- length ?L = length (List.map ?f ?L')] => rewrite map_length; eauto
 end.
 
-Lemma inv_oglobals (F:〔params*stmt〕) als k lv
-: length F = length als
-  -> get (oglobals F als) k ⎣lv⎦
-  -> exists Zs a, get F k Zs /\ get als k a /\ lv = getAnn a \ of_list (fst Zs).
-Proof.
-  intros. length_equify.
-  general induction H; isabsurd.
-  - inv H0.
-    + eexists; eauto using get.
-    + edestruct IHlength_eq as [? []]; eauto; dcr; subst.
-      do 2 eexists; eauto using get.
-Qed.
-
-Lemma inv_globals (F:〔params*stmt〕) als k lv
-: length F = length als
-  -> get ((getAnn ⊝ als) \\ (fst ⊝ F)) k lv
-  -> exists Zs a, get F k Zs /\ get als k a /\ lv = getAnn a \ of_list (fst Zs).
-Proof.
-  intros. length_equify.
-  general induction H; isabsurd.
-  - inv H0.
-    + eexists; eauto using get.
-    + edestruct IHlength_eq as [? []]; eauto; dcr; subst.
-      do 2 eexists; eauto using get.
-Qed.
-
 Lemma renamedApart_coherent s ang DL
   : renamedApart s ang
     -> labelsDefined s (length DL)
@@ -136,31 +141,26 @@ Proof.
       * edestruct H2; eauto; dcr.
         rewrite List.map_app. eapply bounded_app; split; eauto.
         rewrite H14. eapply get_bounded.
-        intros. inv_map H15. eapply inv_globals in H17.
-        destruct H17; dcr; subst.
-        inv_map H20. edestruct H2; eauto; dcr.
-        rewrite getAnn_mapAnn. rewrite H22.
-        revert H26; clear_all; cset_tac; intuition.
-        eauto with len.
+        intros. inv_get. edestruct H2; eauto; dcr.
+        rewrite getAnn_mapAnn. unfold lminus. rewrite H10.
+        eauto with cset.
         rewrite H14. rewrite <- incl_right; eauto.
       * eapply srd_monotone. eapply H14.
         rewrite getAnn_mapAnn; simpl.
         repeat rewrite restrict_app. rewrite List.map_app.
         eapply PIR2_app.
         erewrite bounded_restrict_eq. reflexivity.
-        reflexivity.
+        reflexivity. inv_get. edestruct H2; eauto; dcr.
         eapply get_bounded.
-        intros. eapply inv_oglobals in H15.
-        destruct H15; dcr; subst.
-        inv_map H16. edestruct H2; eauto; dcr.
-        rewrite getAnn_mapAnn. rewrite H18.
+        intros. inv_get.
+        edestruct H2; eauto; dcr.
+        rewrite getAnn_mapAnn. unfold lminus. rewrite H10.
         decide (n=n0); subst. repeat get_functional.
-        rewrite H18. clear_all; cset_tac; intuition.
-        exploit H3; eauto. eapply zip_get; eauto. eapply zip_get; eauto.
-        unfold defVars in H19. simpl in *.
-        edestruct H2; try eapply H12; eauto. dcr. rewrite H21.
-        revert H22 H27; clear_all; cset_tac; intuition; eauto.
-        eauto with len.
+        rewrite H10; reflexivity.
+        exploit H3; eauto using zip_get.
+        unfold defVars in H21.
+        rewrite H17.
+        revert H18 H24; clear_all; cset_tac; intuition; eauto.
         erewrite bounded_restrict_eq; simpl; eauto.
         edestruct H2; eauto; dcr.
         rewrite H15. revert H19; clear_all; cset_tac; intuition; eauto.
@@ -169,89 +169,99 @@ Proof.
       * rewrite app_length, zip_length2, map_length, map_length, <- H; eauto with len.
       * pe_rewrite. rewrite List.map_app. rewrite bounded_app. split; eauto.
         eapply get_bounded.
-        intros. inv_map H9. eapply inv_globals in H10.
-        destruct H10; dcr; subst.
-        inv_map H12. edestruct H2; eauto; dcr.
-        rewrite getAnn_mapAnn. rewrite H15.
-        clear_all; cset_tac; intuition. eauto with len.
+        intros. inv_get.
+        edestruct H2; eauto; dcr.
+        rewrite getAnn_mapAnn. unfold lminus. rewrite H10.
+        clear_all; cset_tac; intuition.
       * rewrite List.map_app. reflexivity.
 Qed.
 
 (** *** In a coherent program, the globals of every function that can eventually be called are live *)
 
-Lemma eqReq_oglobals_liveGlobals (F:〔params*stmt〕) als
-: length F = length als
-  -> PIR2 eqReq (oglobals F als) (zip pair (getAnn ⊝ als) (fst ⊝ F)).
+Lemma restrict_ifFstR B (R:⦃var⦄->B->Prop) DL GL G
+: PIR2 (ifFstR R) DL GL
+  -> PIR2 (ifFstR R) (restrict DL G) GL.
 Proof.
-  intros. length_equify. general induction H; simpl; eauto using PIR2.
-  - econstructor; eauto.
-    econstructor; reflexivity.
+  intros. induction H; simpl; eauto using PIR2, @ifFstR.
+  unfold restr. destruct pf.
+  - eauto using @PIR2, @ifFstR.
+  - cases; eauto using PIR2, @ifFstR.
+Qed.
+
+Lemma PIR2_ifFstR_refl A (R:A->A->Prop) `{Reflexive _ R} L
+  : PIR2 (ifFstR R) (Some ⊝ L) L.
+Proof.
+  eapply PIR2_get; intros; inv_get; eauto using @ifFstR with len.
 Qed.
 
 
-Lemma srd_globals_live s DL AL alv f
-: live_sound Imperative AL s alv
+Lemma srd_globals_live s ZL Lv DL alv f
+: live_sound Imperative ZL Lv s alv
   -> srd DL s alv
-  -> PIR2 eqReq DL AL
+  -> PIR2 (ifFstR Equal) DL (Lv \\ ZL)
   -> isCalled s f
-  -> exists lv, get DL (counted f) (Some lv) /\ lv ⊆ getAnn alv.
+  -> exists lv Z, get ZL (counted f) Z
+            /\ get DL (counted f) (Some lv)
+            /\ lv ⊆ getAnn alv.
 Proof.
-  intros. general induction H0; invt live_sound; invt isCalled; simpl in * |- *.
-  - edestruct IHsrd; eauto using restrict_eqReq.
-    dcr. edestruct restrict_get; eauto.
-    eexists; split; eauto. revert H6; clear_all; cset_tac; intuition; eauto.
-    specialize (H6 a); cset_tac; intuition.
-  - edestruct IHsrd1; eauto. dcr.
-    eexists; split; eauto. rewrite <- H12; eauto.
-  - edestruct IHsrd2; eauto. dcr.
-    eexists; split; eauto. rewrite <- H13; eauto.
-  - eexists; split; eauto.
-    edestruct PIR2_nth; eauto; dcr. get_functional; subst.
-    inv H5; simpl in *. rewrite H4; eauto.
-  - edestruct IHsrd; eauto using restrict_eqReq.
-    dcr. edestruct restrict_get; eauto.
-    eexists; split; eauto. revert H6; clear_all; cset_tac; intuition; eauto.
-    specialize (H6 a); cset_tac; intuition.
-  - edestruct get_length_eq; eauto.
-    edestruct H1; eauto.
-    rewrite restrict_app. eapply PIR2_app; eauto using restrict_eqReq.
-    eapply restrict_eqReq; eauto using eqReq_oglobals_liveGlobals.
-    dcr. destruct f; simpl in *.
-    edestruct IHsrd; eauto using PIR2_app, restrict_eqReq, eqReq_oglobals_liveGlobals.
-    simpl in *; dcr.
-    rewrite restrict_app in H11.
-    assert (length F = length (restrict (oglobals F als) (getAnn x \ of_list (fst Zs)))).
-    rewrite restrict_length. eauto with len.
-    rewrite H7 in H11. eapply shift_get in H11.
-    eapply restrict_get in H11; dcr.
-    eexists; split; eauto.
-    eapply get_app_lt_1 in H19.
-    eapply inv_oglobals in H19. destruct H19; dcr. repeat get_functional; subst.
-    rewrite H22, H20; eauto. eauto.
-    rewrite map_length, zip_length2, map_length, <- H; eauto with len.
-  - edestruct IHsrd; eauto using PIR2_app, restrict_eqReq, eqReq_oglobals_liveGlobals.
-    destruct f; simpl in *.
-    dcr.
-    assert (LEN: length F = length (oglobals F als)) by eauto with len.
-    erewrite LEN in H7. eapply shift_get in H7.
-    eexists; split; eauto. rewrite H8; eauto.
+  intros LS SRD PE IC.
+  general induction IC; invt live_sound; invt srd; simpl in * |- *.
+  - edestruct IHIC as [lv' [Z' ?]]; eauto using restrict_ifFstR; dcr.
+    inv_get.
+    do 2 eexists; split; [| split]; eauto.
+    idtac "improve"; rewrite H. eauto with cset.
+  - edestruct IHIC; eauto; dcr; inv_get. eauto with cset.
+  - edestruct IHIC; eauto; dcr; inv_get. eauto with cset.
+  - PIR2_inv. inv_get. unfold lminus in *.
+    do 2 eexists; split; [| split]; eauto with cset.
+    idtac "improve"; rewrite H5; eauto.
+  - edestruct IHIC; eauto using restrict_ifFstR; dcr; inv_get.
+    do 2 eexists; split; [| split]; eauto.
+    rewrite H. eauto with cset.
+  - inv_get.
+    edestruct IHIC2; eauto. rewrite zip_app; eauto with len.
+    eapply PIR2_app; eauto using restrict_ifFstR, PIR2_ifFstR_refl.
+    dcr; inv_get. unfold lminus in H11.
+    edestruct IHIC1; eauto. rewrite zip_app, restrict_app; eauto with len.
+    eapply PIR2_app; eauto using restrict_ifFstR, PIR2_ifFstR_refl.
+    destruct l; simpl in *; dcr; inv_get.
+    do 2 eexists; split; [|split]; eauto.
+    rewrite H2, H11; eauto.
+  - edestruct IHIC; eauto. rewrite zip_app; eauto with len.
+    eapply PIR2_app; eauto using restrict_ifFstR, PIR2_ifFstR_refl.
+    destruct l; simpl in *; dcr; inv_get.
+    eauto with cset.
 Qed.
 
 (** *** On a coherent program a liveness analysis which is sound imperatively is also sound functionally. *)
 
-Lemma srd_live_functional s DL AL alv
-: live_sound Imperative AL s alv
+Hint Extern 1 =>
+match goal with
+| [ |- context [ (?A ++ ?B) \\ (?C ++ ?D) ] ] =>
+  rewrite (zip_app (@lminus _ _) A C B D);
+    [| eauto with len]
+| [ |- context [ restrict (?A ++ ?B) ?G ] ] =>
+  rewrite (restrict_app A B G)
+end.
+
+
+Lemma srd_live_functional s ZL Lv DL alv
+: live_sound Imperative ZL Lv s alv
   -> srd DL s alv
-  -> PIR2 eqReq DL AL
+  -> PIR2 (ifFstR Equal) DL (Lv \\ ZL)
   -> noUnreachableCode s
-  -> live_sound FunctionalAndImperative AL s alv.
+  -> live_sound FunctionalAndImperative ZL Lv s alv.
 Proof.
-  intros. general induction H0; invt live_sound; invt noUnreachableCode; simpl in * |- *;
-          eauto using live_sound, restrict_eqReq.
+  intros LS SRD PE NUC.
+  general induction SRD;
+    invt live_sound; invt noUnreachableCode; simpl in * |- *;
+      eauto using live_sound, restrict_ifFstR.
   - econstructor; eauto.
-    + eapply IHsrd; eauto using PIR2_app, restrict_eqReq, eqReq_oglobals_liveGlobals.
-    + intros. eapply H1; eauto using PIR2_app, restrict_eqReq, eqReq_oglobals_liveGlobals.
-    + intros. exploit H15; eauto; dcr.
+    + eapply IHSRD; eauto using PIR2_app, restrict_ifFstR, PIR2_ifFstR_refl.
+    + intros.
+      eapply H1; eauto 10 using PIR2_app, restrict_ifFstR, PIR2_ifFstR_refl.
+    + intros. exploit H12; eauto; dcr.
+      simpl; split; eauto.
       edestruct srd_globals_live; eauto using PIR2_app, restrict_eqReq, eqReq_oglobals_liveGlobals.
       eapply H10; eauto. eapply get_length; eauto. dcr.
       simpl; split; eauto.

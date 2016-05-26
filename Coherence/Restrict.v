@@ -1,4 +1,4 @@
-Require Import CSet Util Get Drop Var Map Infra.Relations AllInRel OUnion.
+Require Import CSet Util Get Drop Var Map Infra.Relations AllInRel OUnion MoreList.
 
 Set Implicit Arguments.
 
@@ -313,6 +313,16 @@ Proof.
     inv Heql. edestruct IHget; eauto.
     eauto using get.
 Qed.
+
+Ltac inv_get_step_restrict dummy :=
+  first [inv_get_step |
+         match goal with
+         | [ H : get (restrict ?DL ?G) ?n (Some ?lv) |- _ ] =>
+           eapply (@restrict_get DL G n lv) in H; destruct H as [H ?]
+         end ].
+
+Tactic Notation "inv_get_step" := inv_get_step_restrict idtac.
+Tactic Notation "inv_get" := inv_get' inv_get_step_restrict.
 
 Lemma get_bounded L D
 : (forall n x, get L n (Some x) -> x ⊆ D)
