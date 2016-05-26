@@ -128,8 +128,6 @@ Proof.
     etransitivity; eauto. rewrite <- H4. eauto.
 Qed.
 
-
-
 Instance PartialOrder_ann Dom `{PartialOrder Dom}
 : PartialOrder (list Dom) := {
   poLe := PIR2 poLe;
@@ -142,6 +140,12 @@ Proof.
   - intros ? ? A B. general induction A; inv B; eauto 20 using @PIR2, poLe_antisymmetric.
 Defined.
 
+Instance poLt_poLe_PIR2_flip_impl Dom `{PartialOrder Dom}
+  : (Proper (PIR2 poLe ==> flip poLe ==> flip impl) poLt).
+Proof.
+  unfold Proper, respectful, flip, impl; intros.
+  eapply poLt_poLe_flip_impl; eauto.
+Qed.
 
 Hint Extern 5 (poLe ?a ?a) => reflexivity.
 Hint Extern 5 (poEq ?a ?a) => reflexivity.

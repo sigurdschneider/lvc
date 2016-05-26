@@ -12,115 +12,119 @@ Proof.
   - right; intro. eapply argsLive_length in H. congruence.
 Defined.
 
-Definition live_sound_dec i Lv s slv (an:annotation s slv)
-      : Computable (live_sound i Lv s slv).
+Tactic Notation "dec_right" :=
+  let A := fresh "A" in
+  right; intro A; inv A; repeat get_functional; eauto.
+
+Tactic Notation "ensure" constr(P) := decide P; [ | dec_right].
+
+Local Hint Extern 1 =>
+match goal with
+  [ H : annotation _ _ |- annotation _ _ ] => inv H; eassumption
+end.
+
+Definition live_sound_dec i ZL Lv s slv
+      : Computable (live_sound i ZL Lv s slv).
 Proof.
-  revert i Lv slv an.
-  sind s; intros; destruct s; destruct slv; try now (exfalso; simple inversion an).
-  + edestruct (IH s); eauto; try inv an; eauto;
-    decide (getAnn slv\{{x}} ⊆ a);
-    decide (live_exp_sound e a);
-    decide (x ∈ getAnn slv); try dec_solve.
-  + edestruct (IH s1); try inv an; eauto;
-    edestruct (IH s2); try inv an; eauto;
-    decide (live_exp_sound e a);
-    decide (getAnn slv1 ⊆ a);
-    decide (getAnn slv2 ⊆ a);
-    try dec_solve; try eassumption; try inv an; eauto.
-  + destruct (get_dec Lv (counted l)) as [[[blv Z] ?]|?];
-    (try (decide (isImperative i); [decide ((blv \ of_list Z) ⊆ a)|]));
-    try decide (forall n y, get Y n y -> live_exp_sound y a);
-    try decide (length Y = length Z); try dec_solve.
-    - left; econstructor; eauto. cases; eauto.
-    - right; intro. inv H; eauto. cases in H5; eauto.
-      get_functional; subst. eauto.
-    - left; econstructor; eauto. cases; eauto. intuition.
-  + decide(live_exp_sound e a); try dec_solve.
-  + edestruct (IH s); eauto; try inv an; eauto;
-    decide (getAnn slv \ {{x}} ⊆ a);
-    decide (x ∈ getAnn slv);
-    try decide (forall n y, get Y n y -> live_exp_sound y a);
-    try dec_solve.
-  + edestruct (IH s0); eauto; try inv an; eauto; try dec_solve.
-    decide (length s = length sa); try dec_solve;
-      decide (getAnn slv ⊆ a); try dec_solve.
+  revert i ZL Lv slv.
+  sind s; intros; destruct s; destruct slv;
+    try solve [dec_right].
+  - edestruct (IH s); eauto; [| dec_right ];
+    ensure (getAnn slv\{{x}} ⊆ a);
+    ensure (live_exp_sound e a);
+    ensure (x ∈ getAnn slv); dec_solve.
+  - edestruct (IH s1); eauto; [| dec_right ];
+    edestruct (IH s2); eauto; [| dec_right ];
+    ensure (live_exp_sound e a);
+    ensure (getAnn slv1 ⊆ a);
+    ensure (getAnn slv2 ⊆ a); dec_solve.
+  - destruct (get_dec Lv (counted l)) as [[blv ?]|?]; [| dec_right];
+      destruct (get_dec ZL (counted l)) as [[Z ?]|?]; [| dec_right];
+    decide (isImperative i); [ensure ((blv \ of_list Z) ⊆ a); [|cases in H6; eauto]|];
+    ensure (forall n y, get Y n y -> live_exp_sound y a);
+      ensure (length Y = length Z);
+    left; econstructor; eauto; cases; eauto.
+  - decide(live_exp_sound e a); try dec_solve.
+  - edestruct (IH s); eauto; [| dec_right];
+      ensure (getAnn slv \ {{x}} ⊆ a);
+      ensure (x ∈ getAnn slv);
+      ensure (forall n y, get Y n y -> live_exp_sound y a);
+      dec_solve.
+  - edestruct (IH s0); eauto; [| dec_solve];
+      ensure (length s = length sa);
+      ensure (getAnn slv ⊆ a).
     exploit (@indexwise_R_dec' _ _
-                               (fun Zs a0 => live_sound i (pair ⊜ (getAnn ⊝ sa) (fst ⊝ s) ++ Lv)
+                               (fun Zs a0 => live_sound i (fst ⊝ s ++ ZL)
+                                                     (getAnn ⊝ sa ++ Lv)
                                                      (snd Zs) a0) s sa).
-    intros. eapply IH; eauto. inv an; eauto.
-    destruct H; try dec_solve.
+    intros. eapply IH; eauto.
+    destruct H; [| dec_solve].
     exploit (@indexwise_R_dec' _ _
                                (fun Zs a0 =>  of_list (fst Zs)[<=]getAnn a0 /\
                                              (if isFunctional i then
                                                 getAnn a0 \ of_list (fst Zs)[<=]a
                                               else True)) s sa).
-    intros. decide (of_list (fst a0)[<=]getAnn b); try dec_solve.
-    cases; try dec_solve. decide ( getAnn b \ of_list (fst a0)[<=]a); try dec_solve.
-    destruct H; try dec_solve.
-    Grab Existential Variables. eassumption. eassumption.
+    + intros. ensure (of_list (fst a0)[<=]getAnn b).
+      cases; [| dec_solve].
+      ensure ( getAnn b \ of_list (fst a0)[<=]a); dec_solve.
+    + destruct H; dec_solve.
 Defined.
 
-Instance live_sound_dec_inst i Lv s slv `{Computable(annotation s slv)}
-: Computable (live_sound i Lv s slv).
-Proof.
-  edestruct H.
-  eapply live_sound_dec; eauto.
-  right; intro. eauto using live_sound_annotation.
-Defined.
+Hint Extern 5 =>
+match goal with
+| [ H : ?A = ⎣ true ⎦, H' : ?A = ⎣ false ⎦ |- _ ] => exfalso; congruence
+| [ H : ?A = None , H' : ?A = Some _ |- _ ] => exfalso; congruence
+| [ H : ?A <> ⎣ true ⎦ , H' : ?A <> ⎣ false ⎦ |- ?A = None ] =>
+  case_eq (A); [intros [] ?| intros ?]; congruence
+| [ H : ?A = ?B, H' : ?A <> ?B |- _ ] => exfalso; congruence
+end.
 
-Definition true_live_sound_dec i Lv s slv (an:annotation s slv)
-      : Computable (true_live_sound i Lv s slv).
+Definition true_live_sound_dec i ZL Lv s slv
+      : Computable (true_live_sound i ZL Lv s slv).
 Proof.
-  revert i Lv slv an.
-  sind s; intros; destruct s; destruct slv; try isabsurd.
-  + edestruct (IH s); eauto; try inv an; eauto;
-    decide (getAnn slv\{{x}} ⊆ a);
-    decide (x ∈ getAnn slv -> live_exp_sound e a);
-    decide (x ∉ getAnn slv -> a ⊆ getAnn slv\{{x}});
-    try dec_solve.
-  + edestruct (IH s1); try inv an; eauto;
-    edestruct (IH s2); try inv an; eauto;
-    decide (exp2bool e = None -> live_exp_sound e a);
-    decide (exp2bool e <> Some false -> getAnn slv1 ⊆ a);
-    decide (exp2bool e <> Some true -> getAnn slv2 ⊆ a);
-    try dec_solve; try eassumption; try inv an; eauto.
-  + destruct (get_dec Lv (counted l)) as [[[blv Z] ?]|?];
-    try decide (argsLive a blv Y Z); try dec_solve.
+  revert i ZL Lv slv.
+  sind s; intros; destruct s; destruct slv;
+    try solve [right; intro A; inversion A].
+  - edestruct (IH s); eauto; [| dec_right ];
+      ensure (getAnn slv \ singleton x ⊆ a);
+      ensure (x ∈ getAnn slv -> live_exp_sound e a); dec_solve.
+  - ensure (exp2bool e = None -> live_exp_sound e a);
+      ensure (exp2bool e <> Some false -> getAnn slv1 ⊆ a);
+      ensure (exp2bool e <> Some true -> getAnn slv2 ⊆ a);
+      case_eq (exp2bool e); [ intros [] EQ| intros EQ ].
+    + edestruct (IH s1); eauto; [ dec_solve | dec_right].
+    + edestruct (IH s2); eauto; [ dec_solve | dec_right].
+    + edestruct (IH s1); eauto; [| dec_right];
+        edestruct (IH s2); eauto; [ dec_solve | dec_right].
+  - destruct (get_dec ZL (counted l)) as [[Z ?]|?]; [| dec_right];
+    destruct (get_dec Lv (counted l)) as [[blv ?]|?]; [| dec_right];
+    ensure (argsLive a blv Y Z).
     exploit argsLive_length; eauto.
     decide (isImperative i); try dec_solve.
-    decide ((blv \ of_list Z) ⊆ a).
-    - left; econstructor; eauto. cases; eauto.
-    - right; intro. inv H0; eauto. cases in H6; eauto.
-      get_functional; subst; eauto.
-    - left; econstructor; eauto. cases; eauto. intuition.
-  + decide(live_exp_sound e a); try dec_solve.
-  + edestruct (IH s); eauto; try inv an; eauto;
-    decide (getAnn slv \ {{x}} ⊆ a);
-    try decide (forall n y, get Y n y -> live_exp_sound y a);
-    try dec_solve.
-  + edestruct (IH s0); eauto; try inv an; eauto; try dec_solve.
-    decide (length s = length sa); try dec_solve;
-    decide (getAnn slv ⊆ a); try dec_solve.
+    + decide ((blv \ of_list Z) ⊆ a).
+      * left; econstructor; eauto. cases; eauto.
+      * dec_right. cases in H7. eauto.
+    + left; econstructor; eauto. cases; eauto.
+  - ensure (live_exp_sound e a). dec_solve.
+  - edestruct (IH s); eauto; [| dec_right];
+      ensure (getAnn slv \ singleton x ⊆ a);
+      ensure (forall n y, get Y n y -> live_exp_sound y a);
+      dec_solve.
+  - edestruct (IH s0); eauto; [| dec_right];
+      ensure (length s = length sa);
+      ensure (getAnn slv ⊆ a).
     exploit (@indexwise_R_dec' _ _
                                (fun Zs a0 =>
-                                  true_live_sound i (pair ⊜ (getAnn ⊝ sa) (fst ⊝ s) ++ Lv)
+                                  true_live_sound i (fst ⊝ s ++ ZL)
+                                                  (getAnn ⊝ sa ++ Lv)
                                                   (snd Zs) a0) s sa).
-    intros. eapply IH; eauto. inv an; eauto. destruct H; try dec_solve.
+    intros. eapply IH; eauto. destruct H; [| dec_right].
+    decide (isFunctional i); [| left; econstructor; try cases; eauto].
     exploit (@indexwise_R_dec' _ _
-                               (fun Zs a0 => if isFunctional i then
-                                                getAnn a0 \ of_list (fst Zs)[<=]a
-                                              else True) s sa).
-    intros.
-    cases; try dec_solve.
-    decide ( getAnn b \ of_list (fst a0)[<=]a); try dec_solve. left; eauto. right; eauto.
-    destruct H; try dec_solve.
-    Grab Existential Variables. eassumption. eassumption.
-Defined.
-
-Instance true_live_sound_dec_inst i Lv s slv `{Computable(annotation s slv)}
-: Computable (true_live_sound i Lv s slv).
-Proof.
-  edestruct H.
-  eapply true_live_sound_dec; eauto.
-  right; intro. eauto using true_live_sound_annotation.
+                               (fun Zs a0 => getAnn a0 \ of_list (fst Zs)[<=]a) s sa).
+    + intros.
+      decide ( getAnn b \ of_list (fst a0)[<=]a).
+      left; eauto. right; eauto.
+    + destruct H. left; econstructor; try cases; eauto.
+      dec_right. cases in H9; eauto.
 Defined.

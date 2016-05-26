@@ -556,6 +556,18 @@ Ltac inv_get_step0 dummy :=
     pose proof (mapi_impl_get f _ k H) as X; destruct X as [? [GET EQ]];
     try (simplify_eq EQ); intros;
     clear H; rename GET into H
+  | [ Get : get ?L ?n _, Len : ❬?L❭ = ❬?L'❭ |- _ ] =>
+    is_var L';
+    match goal with
+    | [ H : get L' n _ |- _ ] => fail 1
+    | _ => destruct (get_length_eq _ Get Len)
+    end
+  | [ Get : get ?L ?n _, Len : ❬?L'❭ = ❬?L❭ |- _ ] =>
+    is_var L';
+    match goal with
+    | [ H : get L' n _ |- _ ] => fail 1
+    | _ => destruct (get_length_eq _ Get (eq_sym Len))
+    end
   end.
 
 Tactic Notation "inv_get_step" := inv_get_step0 idtac.

@@ -5,6 +5,9 @@ Require Export CSetNotation CSetTac CSetBasic CSetCases CSetGet CSetComputable C
 
 Set Implicit Arguments.
 
+(* idk who added this *)
+Remove Hints trans_eq_bool.
+
 Hint Resolve incl_empty minus_incl incl_right incl_left : auto.
 
 Definition pe X `{OrderedType X} := prod_eq (@Equal X _ _) (@Equal X _ _).
@@ -315,7 +318,7 @@ Ltac pe_rewrite_step :=
        setoid_rewrite H; simpl
   end.
 
-Hint Extern 20 => pe_rewrite_step : pe.
+Hint Extern 1 => pe_rewrite_step : pe.
 
 Hint Extern 10 =>
 match goal with

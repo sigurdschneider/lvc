@@ -111,6 +111,7 @@ Ltac clear_trivial_eqs :=
   repeat (progress (match goal with
                     | [ H : @eq _ ?x ?x |- _ ] => clear H
                     | [ H : @eq _ ?x ?y |- _ ] => first [ is_var x; subst x | is_var y; subst y ]
+                    | [ H : true = false |- _ ] => exfalso; inversion H
                     | [ H : @eq _ (Some ?x) (Some ?y) |- _ ]
                       => let H' := fresh "H" in assert (H':x = y) by congruence; clear H;
                                               first [ is_var x; subst x; clear H'

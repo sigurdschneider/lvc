@@ -58,9 +58,19 @@ Coercion sum_option {T:Type} : (T+(T -> False)) -> option T.
 destruct 1. eapply (Some t). eapply None.
 Defined.
 
+
+Lemma not_Is_true_eq_false : forall x:bool, ~ Is_true x -> x = false.
+  intros [] A; firstorder.
+Qed.
+
 Tactic Notation "cases" "in" hyp(H) :=
   match type of H with
   | context [if sumbool_bool ?P then _ else _] => destruct P
+  | context [if ?P then _ else _ ] =>
+    match goal with
+    |  [ H' : Is_true (P) |- _ ] => rewrite (Is_true_eq_true _ H') in H
+    | [ H' : ~ Is_true (P) |- _ ] => rewrite (not_Is_true_eq_false _ H') in H
+    end
   | context [ match (if ?P then _ else _) with _ => _ end ] =>
     match P with
     | decision_procedure _ =>
@@ -93,6 +103,8 @@ Tactic Notation "cases" :=
   | |- context [ match (if ?P then true else false) with _ => _ end ] => destruct P
   | [ H' : Is_true (?P) |- context [if ?P then _ else _] ] =>
     rewrite (Is_true_eq_true _ H')
+  | [ H' : ~ Is_true (?P) |- context [if ?P then _ else _] ] =>
+    rewrite (not_Is_true_eq_false _ H')
   | |- context [ if ?P then _ else _ ] =>
     match P with
     | negb (?P':decision_procedure _) =>

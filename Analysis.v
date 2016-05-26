@@ -393,7 +393,7 @@ Ltac inv_get_step1 dummy := first [inv_get_step |
                             end
                            ].
 
-Tactic Notation "inv_get_step" := inv_get_step1.
+Tactic Notation "inv_get_step" := inv_get_step1 idtac.
 Tactic Notation "inv_get" := inv_get' inv_get_step1.
 
 (*
@@ -510,7 +510,7 @@ Proof.
       eapply PIR2_app; eauto.
       eapply PIR2_get; eauto 20 with len; intros; inv_get.
       eapply getAnn_poLe.
-      assert (x5 = x10) by eapply subTerm_PI; subst.
+      assert (x5 = x11) by eapply subTerm_PI; subst.
       eapply IH; eauto.
       exploit H2; eauto.
     }
@@ -520,7 +520,7 @@ Proof.
       eapply getAnn_poLe. eapply IH; eauto.
     + eauto 30 with len.
     + intros; inv_get.
-      assert (x8 = x3) by eapply subTerm_PI; subst.
+      assert (x9 = x3) by eapply subTerm_PI; subst.
       eapply IH; eauto.
       eapply H2; eauto.
     + eapply IH; eauto.
@@ -572,7 +572,7 @@ Proof.
       eapply PIR2_app; eauto.
       eapply PIR2_get; eauto 20 with len; intros; inv_get.
       eapply getAnn_poEq.
-      assert (x5 = x10) by eapply subTerm_PI; subst.
+      assert (x5 = x11) by eapply subTerm_PI; subst.
       eapply IH; eauto.
       exploit H2; eauto.
     }
@@ -582,7 +582,7 @@ Proof.
       eapply getAnn_poEq. eapply IH; eauto.
     + eauto 30 with len.
     + intros; inv_get.
-      assert (x8 = x3) by eapply subTerm_PI; subst.
+      assert (x9 = x3) by eapply subTerm_PI; subst.
       eapply IH; eauto.
       eapply H2; eauto.
     + eapply IH; eauto.

@@ -160,11 +160,16 @@ Proof.
   intros. edestruct PIR2_nth_2; dcr; eauto.
 Qed.
 
-Ltac provide_invariants_P2 :=
+Ltac PIR2_inv :=
 match goal with
   | [ H : PIR2 ?R ?A ?B, H' : get ?A ?n ?b |- _ ] =>
     let X := fresh H in
     destruct (PIR2_nth H H') as [? [? X]]; eauto; (try inv X);
+    repeat get_functional; (try subst) ;
+    let X'' := fresh H in pose proof (PIR2_drop n H) as X''
+  | [ H : PIR2 ?R ?A ?B, H' : get ?B ?n ?b |- _ ] =>
+    let X := fresh H in
+    destruct (PIR2_nth_2 H H') as [? [? X]]; eauto; (try inv X);
     repeat get_functional; (try subst) ;
     let X'' := fresh H in pose proof (PIR2_drop n H) as X''
   | [ H : PIR2 ?R ?A ?B, H' : forall _, get ?A _ _ -> False |- _ ] =>

@@ -611,3 +611,16 @@ Ltac simpl_minus :=
   end.
 
 Hint Extern 5 (Is_true true) => eapply I.
+
+Instance map_m_eq A B
+  : Proper (@pointwise_relation A B eq ==> eq ==> eq) (@List.map A B).
+Proof.
+  unfold Proper, respectful, pointwise_relation; intros; subst.
+  eapply map_ext; eauto.
+Qed.
+
+Instance app_m_eq A
+  : Proper (eq ==> eq ==> eq) (@app A).
+Proof.
+  unfold Proper, respectful; intros; subst; eauto.
+Qed.

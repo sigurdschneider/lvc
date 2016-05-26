@@ -33,7 +33,7 @@ Proof.
       exfalso; apply B; econstructor; eauto.
       eapply (H0 y1); eauto.
     + eapply (H2 YL0); eauto.
-      time rewrite H3. split; eauto.
+      rewrite H3. split; eauto.
 Qed.
 
 Lemma terminates_get_list Dom `{PO:PartialOrder Dom} L
@@ -79,7 +79,7 @@ Proof.
       eapply (H1 y1); eauto.
       intros ? ? Get; inv Get; eauto using get.
     + assert (poLe x0 YL0) by (etransitivity; eauto).
-      assert (poLt x0 YL0) by (time rewrite H4; split; eauto).
+      assert (poLt x0 YL0) by (rewrite H4; split; eauto).
       eapply H3; eauto.
       * intros ? ? Get. inv Get; eauto using get.
         exploit H2 as Trm; eauto using get.

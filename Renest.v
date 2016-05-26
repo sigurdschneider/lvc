@@ -456,12 +456,13 @@ Proof.
       simpl. orewrite (f' + 0 = f'). eauto.
       simpl in *. inv H8. unfold progeq in H22. simpl in *. unfold bisim'r.
       destruct H21; dcr; subst. inv_get. inv SIM. dcr.
-      exploit (sawtooth_smaller H16 H0); eauto.
+      exploit (sawtooth_smaller H17 H0); eauto.
       simpl in *. assert (f_eq: f = f - n0 + n0) by omega. rewrite <- f_eq in *.
       repeat get_functional.
       erewrite get_nth; eauto using zip_get.
       eapply bisim_drop_shift_left; eauto. simpl.
-      eapply H22; eauto. exploit omap_length; eauto. split; eauto. split; congruence.
+      eapply H22; eauto. exploit omap_length; eauto. split; eauto.
+      split; congruence.
     + pno_step; simpl in *.
       erewrite get_nth in Ldef; eauto. get_functional. eauto.
   - pno_step.

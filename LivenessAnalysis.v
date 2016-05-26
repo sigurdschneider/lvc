@@ -237,7 +237,6 @@ Lemma liveness_transform_dep_monotone (sT s : stmt) (ST : subTerm s sT)
       -> liveness_transform_dep ZL AL ST a ⊑ liveness_transform_dep ZL AL' ST b.
 Proof.
   intros.
-  Start Profiling.
   time (inv H0; destruct s; simpl in * |- *; try reflexivity;
             repeat match goal with
                    | [ x : { x : set var | x ⊆ occurVars sT } |- _ ] =>
@@ -246,17 +245,17 @@ Proof.
   - eapply incl_union_lr.
     + destruct (get_dec AL (counted l)) as [[[D PD] GetDL]|].
       * erewrite get_nth; eauto using map_get_1; simpl in *.
-        provide_invariants_P2. destruct x. simpl in *; dcr.
+        PIR2_inv. destruct x. simpl in *; dcr.
         erewrite (@get_nth _ (_ ⊝ AL') ); eauto using map_get_1; simpl in *.
         rewrite H1; eauto.
       * rewrite not_get_nth_default; simpl; intros; inv_get; eauto.
         cset_tac.
     + eapply list_union_incl; eauto with cset.
       intros; inv_get. eapply filter_by_get in H1. dcr.
-      destruct (get_dec AL (counted l)) as [[[[D PD] b] GetDL]|].
+      destruct (get_dec AL (counted l)) as [[[D PD] GetDL]|].
       * cases in H5.
-        erewrite get_nth in COND; eauto. simpl in *.
-        provide_invariants_P2. destruct x2. simpl in *.
+        erewrite get_nth in COND; eauto; simpl in *.
+        PIR2_inv. destruct x2. simpl in *.
         edestruct get_filter_by. Focus 4.
         eapply incl_list_union. eapply map_get_1.
         eapply g. reflexivity. eauto. eauto.
@@ -296,7 +295,7 @@ Proof.
   - eapply eq_union_lr.
     + destruct (get_dec AL (counted l)) as [[[D PD] GetDL]|].
       * erewrite get_nth; eauto using map_get_1; simpl in *.
-        provide_invariants_P2. destruct x. simpl in *; dcr.
+        PIR2_inv. destruct x. simpl in *; dcr.
         erewrite (@get_nth _ (_ ⊝ AL') ); eauto using map_get_1; simpl in *.
         rewrite H1. reflexivity.
       * rewrite not_get_nth_default; simpl; intros; inv_get; eauto.
@@ -305,7 +304,7 @@ Proof.
         rewrite (@not_get_nth_default _ (_ ⊝ AL')); simpl; intros; inv_get; eauto.
     + erewrite filter_by_ext; [reflexivity| eauto with len |].
       * intros; inv_get. get_functional.
-        destruct (get_dec AL (counted l)) as [[[D PD] GetDL]|]; provide_invariants_P2.
+        destruct (get_dec AL (counted l)) as [[[D PD] GetDL]|]; PIR2_inv.
         erewrite get_nth; [| eauto using map_get_1].
         destruct x. simpl in *.
         erewrite get_nth; [| eauto using map_get_1]. simpl.

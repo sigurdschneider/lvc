@@ -96,7 +96,7 @@ Inductive true_live_sound (i:overapproximation)
 | TLOpr ZL Lv x b lv e al
   :  true_live_sound i ZL Lv b al
      -> (x ∈ getAnn al -> live_exp_sound e lv)
-     -> (getAnn al\{{x}}) ⊆ lv
+     -> (getAnn al\ singleton x) ⊆ lv
      -> true_live_sound i ZL Lv (stmtLet x e b) (ann1 lv al)
 | TLIf ZL Lv e b1 b2 lv al1 al2
   :  (exp2bool e <> Some false -> true_live_sound i ZL Lv b1 al1)
@@ -118,7 +118,7 @@ Inductive true_live_sound (i:overapproximation)
 | TLExtern ZL Lv x b lv Y al f
   : true_live_sound i ZL Lv b al
     -> (forall n y, get Y n y -> live_exp_sound y lv)
-    -> (getAnn al\{{x}}) ⊆ lv
+    -> (getAnn al\ singleton x) ⊆ lv
     -> true_live_sound i ZL Lv (stmtExtern x f Y b) (ann1 lv al)
 | TLLet ZL Lv F t lv als alt
   : true_live_sound i (fst ⊝ F ++ ZL) (getAnn ⊝ als ++ Lv) t alt

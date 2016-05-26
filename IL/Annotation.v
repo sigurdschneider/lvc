@@ -53,7 +53,7 @@ Fixpoint mapAnn X Y (f:X->Y) (a:ann X) : ann Y :=
     | annF a an1 an2 => annF (f a) (List.map (mapAnn f) an1) (mapAnn f an2)
   end.
 
-Lemma getAnn_mapAnn A A' (a:ann A) (f:A->A')
+Lemma getAnn_mapAnn A A' (f:A->A') (a:ann A)
   : getAnn (mapAnn f a) = f (getAnn a).
 Proof.
   general induction a; simpl; eauto.
@@ -245,7 +245,7 @@ Hint Extern 20 (ann_R _ ?a ?a') => progress (first [ has_evar a | has_evar a' | 
 
 Create HintDb ann discriminated.
 
-Hint Extern 10 =>
+Hint Extern 1 =>
 match goal with
 | [ |- context [ getAnn (mapAnn _ _) ] ] => setoid_rewrite getAnn_mapAnn
 end : ann.
@@ -303,4 +303,11 @@ Instance getAnn_poEq Dom `{PartialOrder Dom}
 Proof.
   unfold Proper, respectful; intros.
   inv H0; simpl; eauto.
+Qed.
+
+Lemma getAnn_mapAnn_map (A B:Type) (f:A->B) L
+  : getAnn ⊝ mapAnn f ⊝ L = f ⊝ getAnn ⊝ L.
+Proof.
+  rewrite map_map. setoid_rewrite getAnn_mapAnn.
+  rewrite <- map_map. reflexivity.
 Qed.

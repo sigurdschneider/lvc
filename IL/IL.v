@@ -347,3 +347,20 @@ Ltac single_step :=
     econstructor; try eapply H'; eauto
   | _ => econstructor; eauto
   end.
+
+
+Lemma ZL_mapi F L
+  : I.block_Z ⊝ (mapi I.mkBlock F ++ L) = fst ⊝ F ++ I.block_Z ⊝ L.
+Proof.
+  rewrite List.map_app. rewrite map_mapi. unfold mapi.
+  erewrite <- mapi_map_ext; [ reflexivity | simpl; reflexivity].
+Qed.
+
+Hint Extern 1 =>
+match goal with
+| [ |- context [ I.block_Z ⊝ (mapi I.mkBlock ?F ++ ?L) ] ] =>
+  rewrite (ZL_mapi F L)
+| [ |- context [ pair ⊜ (?A ++ ?B) (?C ++ ?D) ] ] =>
+  rewrite (zip_app pair A C B D);
+    [| eauto with len]
+end.

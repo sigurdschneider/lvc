@@ -257,20 +257,20 @@ Fixpoint lower DL s (an:ann (set var))
   end.
 
 Inductive approx
-: list (set var * list var) -> list I.block -> list I.block -> (⦃var⦄ * params) -> I.block -> I.block -> Prop :=
+: list (set var) -> list I.block -> list I.block -> ⦃var⦄ -> I.block -> I.block -> Prop :=
   approxI L L' DL Z s s' lv n
   (al:ann (set var))
-  (LS:live_sound Imperative DL s al)
+  (LS:live_sound Imperative (I.block_Z ⊝ L) DL s al)
   (AL:(of_list Z) ⊆ lv)
   (INCL:getAnn al \ of_list Z ⊆ lv)
-  (spm:lower DL s al = Success s')
-  : approx DL L L' (lv, Z) (I.blockI Z s n) (I.blockI nil s' n).
+  (spm:lower (zip pair DL (I.block_Z ⊝ L)) s al = Success s')
+  : approx DL L L' lv (I.blockI Z s n) (I.blockI nil s' n).
 
 Inductive pmSim : I.state -> I.state -> Prop :=
   pmSimI Lv s (E E':onv val) L L' s'
   (al: ann (set var))
-  (LS:live_sound Imperative Lv s al)
-  (pmlowerOk:lower Lv s al = Success s')
+  (LS:live_sound Imperative (I.block_Z ⊝ L) Lv s al)
+  (pmlowerOk:lower (zip pair Lv (I.block_Z ⊝ L))  s al = Success s')
   (LA:inRel approx Lv L L')
   (EEQ:agree_on eq (getAnn al) E E')
   : pmSim (L,E,s) (L', E', s').
@@ -298,19 +298,19 @@ Proof.
     + exploit exp_eval_live_agree; try eassumption.
       no_step.
   - eapply option2status_inv in EQ. eapply nth_error_get in EQ.
-    get_functional; subst.
+    inRel_invs.
+    inv_get. simpl in *.
     case_eq (omap (exp_eval E) Y); intros.
     + exploit omap_exp_eval_live_agree; try eassumption.
-      inRel_invs; simpl in *.
       edestruct (compile_parallel_assignment_correct _ _ _ _ _ EQ2 E' L')
         as [M' [X' X'']].
       eapply onlyVars_defined; eauto.
       eapply simSilent.
-      * eapply plus2O. econstructor; eauto. reflexivity.
+      * eapply plus2O. econstructor; eauto. simpl. reflexivity.
       * eapply star2_plus2_plus2 with (A:=nil) (B:=nil); eauto.
         eapply plus2O. econstructor; eauto. reflexivity. reflexivity.
       * eapply pmSim_sim; econstructor; try eapply LA1; eauto; simpl.
-        eapply (inRel_drop LA H6).
+        eapply (inRel_drop LA H5).
         assert (getAnn al ⊆ blv) by eauto with cset.
         eapply agree_on_incl in X''; eauto. symmetry in X''. simpl.
         eapply agree_on_trans; eauto. eapply equiv_transitive.

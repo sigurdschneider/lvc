@@ -5,10 +5,12 @@ Require Import Sim SimTactics.
 Set Implicit Arguments.
 Unset Printing Records.
 
-Local Hint Extern 5 =>
+Hint Extern 5 =>
 match goal with
 | [ H : ?A = ⎣ true ⎦, H' : ?A = ⎣ false ⎦ |- _ ] => congruence
 | [ H : ?A = None , H' : ?A = Some _ |- _ ] => congruence
+| [ H : ?A <> ⎣ true ⎦ , H' : ?A <> ⎣ false ⎦ |- ?A = None ] =>
+  case_eq (A); [intros [] ?| intros ?]; congruence
 end.
 
 Fixpoint compile (LV:list ((set var) * params)) (s:stmt) (a:ann (set var)) :=
@@ -115,41 +117,35 @@ Proof.
 Qed.
 
 Definition compile_LV (ZL:list (params)) (LV:list (set var)) :=
-  zip (fun Z lv => let Z' := List.filter (fun x => B[x ∈ lv]) Z in (lv, Z')) ZL LV.
+  zip (fun Z lv => List.filter (fun x => B[x ∈ lv]) Z) ZL LV.
 
 Lemma dve_live i ZL LV s lv G
   : true_live_sound i ZL LV s lv
-    -> live_sound i (compile_LV ZL LV) (compile (zip pair LV ZL) s lv) (compile_live s lv G).
+    -> live_sound i (compile_LV ZL LV) LV (compile (zip pair LV ZL) s lv) (compile_live s lv G).
 Proof.
   intros. general induction H; simpl; eauto using live_sound, compile_live_incl.
   - cases; eauto. econstructor; eauto.
-    + eapply live_exp_sound_incl; eauto. eauto.
+    + eapply live_exp_sound_incl; eauto.
     + rewrite compile_live_incl; eauto.
       rewrite <- H1. cset_tac; intuition.
     + eapply incl_compile_live; eauto.
   - repeat cases; eauto.
-    + econstructor; eauto; try rewrite compile_live_incl; eauto.
-      eapply live_exp_sound_incl; eauto. eapply incl_right.
-      eapply H1. case_eq (exp2bool e); intros; try destruct b; congruence.
-      cset_tac; intuition.
-      cset_tac; intuition.
-  - econstructor.
-    + eapply (map_get_1 (fun lvZ => let Z' := List.filter (fun x => B[x ∈ fst lvZ]) (snd lvZ) in
-                                   (fst lvZ, Z')) H); eauto.
-    + simpl. destruct i; simpl in * |- *; eauto.
-      rewrite <- H0. rewrite minus_inter_empty. eapply incl_right.
+    + econstructor; eauto.
+      eapply live_exp_sound_incl; eauto.
+      rewrite compile_live_incl_empty; eauto with cset.
+      rewrite compile_live_incl_empty; eauto with cset.
+  - econstructor; eauto using zip_get.
+    + simpl. cases; eauto.
+      rewrite <- H1. rewrite minus_inter_empty. eapply incl_right.
       cset_tac; intuition. eapply filter_incl2; eauto.
       eapply filter_in; eauto. intuition. hnf. cases; eauto.
-      rewrite <- H0. rewrite minus_inter_empty. eapply incl_right.
-      cset_tac; intuition. eapply filter_incl2; eauto.
-      eapply filter_in; eauto. intuition. hnf. cases; eauto.
-    + simpl. eapply get_nth in H. erewrite H. simpl.
-      erewrite filter_filter_by_length. reflexivity. congruence.
-    + intros. eapply get_nth in H. erewrite H in H3. simpl in *.
-      edestruct filter_by_get as [? [? [? []]]]; eauto; dcr.
-      eapply live_exp_sound_incl. eapply incl_right.
+    + erewrite get_nth; eauto using zip_get. simpl.
+      erewrite filter_filter_by_length; eauto with len.
+    + intros ? ? Get. erewrite get_nth in Get; eauto using zip_get. simpl in *.
+      edestruct filter_by_get as [? [? [? []]]]; eauto; dcr. simpl in *.
+      eapply live_exp_sound_incl.
       eapply argsLive_live_exp_sound; eauto. simpl in *.
-      decide (x0 ∈ blv); intuition.
+      decide (x0 ∈ blv); intuition. eauto with cset.
   - econstructor; eauto.
     eapply live_exp_sound_incl; eauto using incl_right.
   - econstructor; eauto.
@@ -158,6 +154,7 @@ Proof.
     + eapply incl_compile_live; eauto.
   - econstructor; simpl in *; eauto with len.
     + eapply live_sound_monotone.
+      rewrite map_zip. simpl.
       eapply IHtrue_live_sound.
       unfold compile_LV. rewrite map_app. eapply PIR2_app; eauto.
       eapply PIR2_get; eauto 30 with len.

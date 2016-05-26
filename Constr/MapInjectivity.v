@@ -91,7 +91,6 @@ Proof.
   decide(x0 === x); decide (x0 === y); eauto.
   - exfalso. lset_tac. eapply H3.
     eexists y. cset_tac; eauto.
-
   - eapply H2; lset_tac; eauto.
     eapply H3; eauto.
 Qed.
@@ -157,44 +156,31 @@ Proof.
   reflexivity.
 Qed.
 
-
-Global Instance injective_on_step_proper
+Instance injective_on_step_proper
   {X} `{OrderedType X} {Y} `{OrderedType Y} (f:X->Y)
   `{Proper _ (_eq ==> _eq) f}
  : Proper (_eq ==> _eq ==> _eq) (injective_on_step f).
 Proof.
   unfold Proper, respectful; intros.
-  destruct x0, y0. unfold injective_on_step. unfold snd.
-  destruct b, b0. unfold fst. econstructor.
-  inv H3. rewrite H7.
-  time rewrite H2.
-  reflexivity.
-  decide (f x ∈ s); decide (f y ∈ s0).
-  econstructor. exfalso. eapply n. rewrite <- H2.
-  inv H3. rewrite <- H7. eauto.
-  exfalso. eapply n. rewrite H2.
-  inv H3. rewrite H7. eauto. econstructor.
-  inv H3. inv H9. inv H3. inv H9.
-  econstructor. simpl. time rewrite H2.
-  inv H3. rewrite H7. econstructor; eauto. econstructor.
+  inv H3. econstructor.
+  - rewrite H3.
+    eapply add_m; eauto.
+  - inv H5; simpl. cases; trivial.
+    f_equal.
+    decide (f x ∈ a); decide (f y ∈ c); simpl; trivial.
+    exfalso; eapply n; rewrite <- H2, <- H4; eauto.
+    exfalso; eapply n; rewrite H2, H4; eauto.
 Qed.
 
-Global Instance injective_on_step_proper'
+Instance injective_on_step_proper'
   {X} `{OrderedType X} {Y} `{OrderedType Y} (f:X->Y)
   `{Proper _ (_eq ==> eq) f}
  : Proper (_eq ==> eq ==> eq) (injective_on_step f).
 Proof.
-  unfold Proper, respectful; intros.
-  destruct x0, y0. unfold injective_on_step. unfold snd.
-  destruct b, b0. unfold fst. f_equal.
-  inv H3. rewrite H2. reflexivity.
-  decide (f x ∈ s); decide (f y ∈ s0).
-  econstructor. exfalso. eapply n. rewrite <- H2.
-  inv H3. eauto.
-  exfalso. eapply n. rewrite H2.
-  inv H3. eauto.
-  inv H3. econstructor. inv H3. inv H3.
-  inv H3. f_equal. simpl. rewrite H2. reflexivity.
+  unfold Proper, respectful; intros; subst.
+  destruct y0; unfold injective_on_step; simpl.
+  rewrite (H1 _ _ H2).
+  decide (f x ∈ s); decide (f y ∈ s); simpl; trivial.
 Qed.
 
 

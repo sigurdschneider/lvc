@@ -10,6 +10,26 @@ Local Arguments proj1_sig {A} {P} e.
 Local Arguments length {A} e.
 Local Arguments backward {sT} {Dom} btransform ZL AL st {ST} a.
 
+Lemma labelsDefined_app A B (f:A->B) (L:list A) (L':list B) k t
+  : labelsDefined t (k + ❬L'❭)
+    -> length L = k
+    -> labelsDefined t ❬f ⊝ L ++ L'❭.
+Proof.
+  rewrite app_length, map_length. intros; subst; eauto.
+Qed.
+
+Hint Resolve labelsDefined_app.
+
+Lemma paramsMatch_app A B C (f:list A * B -> list C) (L:list (list A * B))
+      (L':list (list C)) t
+  : paramsMatch t (length ⊝ (f ⊝ L) ++ length ⊝ L')
+    -> paramsMatch t (length ⊝ (f ⊝ L ++ L')).
+Proof.
+  rewrite map_app. eauto.
+Qed.
+
+Hint Resolve paramsMatch_app.
+
 Definition liveness_analysis_correct sT ZL LV s a (ST:subTerm s sT)
   : ann_R poEq (@backward _ _ liveness_transform_dep ZL LV s ST a) a
     -> annotation s a
@@ -29,19 +49,19 @@ Proof.
       rewrite getAnn_mapAnn in H0.
       rewrite <- H in H0.
       cases in H2.
-      eapply live_exp_sound_incl; [| eapply live_freeVars].
+      eapply live_exp_sound_incl; [eapply live_freeVars|].
       rewrite <- H2. eapply incl_right.
     + rewrite <- H2.
       simpl. rewrite getAnn_mapAnn.
       eapply incl_union_left.
-      rewrite H. cset_tac.
+      rewrite H. reflexivity.
   - inv EQ.
     simpl in *.
     econstructor; intros.
     + eapply IHAnn1; eauto.
     + eapply IHAnn2; eauto.
     + repeat cases in H9; try congruence.
-      eapply live_exp_sound_incl; [| eapply live_freeVars].
+      eapply live_exp_sound_incl; [eapply live_freeVars|].
       rewrite <- H9. eauto with cset.
     + rewrite getAnn_mapAnn.
       rewrite <- H9.
@@ -72,7 +92,7 @@ Proof.
     econstructor.
     eapply IHAnn; eauto.
     + intros.
-      eapply live_exp_sound_incl; [|eapply live_freeVars].
+      eapply live_exp_sound_incl; [eapply live_freeVars|].
       rewrite <- H2. eapply incl_union_right.
       eapply incl_list_union; eauto using map_get_1.
     + rewrite getAnn_mapAnn. rewrite <- H2.
@@ -94,11 +114,7 @@ Proof.
       eapply PIR2_get; eauto with len.
       intros; inv_get.
       exploit H16; eauto.
-      eapply ann_R_get in H9. symmetry; eauto.
-      * rewrite app_length, map_length. eauto.
-      * rewrite app_length, map_length, <- H. eauto.
-      * rewrite map_app.
-        rewrite map_map. eauto.
+      eapply ann_R_get in H11. symmetry; eauto.
     + rewrite map_length. eauto.
     + intros. inv_get.
       rewrite map_map.
@@ -106,10 +122,6 @@ Proof.
       rewrite <- map_map with (l:=sa). rewrite <- map_app.
       edestruct (@get_backwardF sT _ (@backward _ (fun s0 : stmt => {x1 : ⦃var⦄ | x1 ⊆ occurVars s0}) liveness_transform_dep)); eauto.
       eapply (H1 _ _ _ H3 H2 (fst ⊝ s ++ ZL) (getAnn ⊝ sa ++ LV) x1); eauto.
-      * rewrite app_length, map_length. eauto.
-      * rewrite app_length, map_length, <- H. eauto.
-      * rewrite map_app. exploit H6; eauto.
-        rewrite map_map. eauto.
     + intros. inv_get. simpl. eauto.
     + rewrite getAnn_mapAnn.
       eapply ann_R_get in H17.

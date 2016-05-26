@@ -45,8 +45,8 @@ Inductive paramsMatch : stmt -> list nat -> Prop :=
     : paramsMatch s L
       -> paramsMatch (stmtExtern x f Y s) L
   | paramsMatchLet F t L
-    :  (forall n Zs, get F n Zs -> paramsMatch (snd Zs) (List.map (fst ∘ length) F ++ L))
-      -> paramsMatch t (List.map (fst ∘ length) F ++ L)
+    :  (forall n Zs, get F n Zs -> paramsMatch (snd Zs) (length ⊝ fst ⊝ F ++ L))
+      -> paramsMatch t (length ⊝ fst ⊝ F ++ L)
       -> paramsMatch (stmtFun F t) L.
 
 
