@@ -3,7 +3,7 @@ Require Import IL Annotation InRel AutoIndTac .
 
 Set Implicit Arguments.
 
-Notation "DL \\ ZL" := (zip (@lminus _ _) DL ZL) (at level 50).
+Notation "DL \\ ZL" := (zip (fun s L => s \ of_list L) DL ZL) (at level 50).
 
 Local Hint Resolve incl_empty minus_incl incl_right incl_left.
 

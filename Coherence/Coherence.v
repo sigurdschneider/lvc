@@ -15,10 +15,10 @@ Ltac inv_get_step_some_minus dummy :=
          match goal with
          | [ H : get (?f ⊝ (?g1 ⊝ ?A) \\ (?g2 ⊝ ?B) ++ ?C) ?k _,
                  H' : get ?A ?k _ |- _ ] =>
-           eapply get_app_lt_1 in H; [| eauto with len]
+           eapply get_app_lt_1 in H; [| eauto 20 with len]
          | [ H : get (?f ⊝ (?g1 ⊝ ?A) \\ (?g2 ⊝ ?B) ++ ?C) ?k _,
                  H' : get ?B ?k _ |- _ ] =>
-           eapply get_app_lt_1 in H; [| eauto with len]
+           eapply get_app_lt_1 in H; [| eauto 20 with len]
          | [ H : get (?f ⊝ (?g1 ⊝ ?A) \\ (?g2 ⊝ ?B) ++ ?C) (❬?B❭ + ?n) _ |- _ ] =>
            let LENEQ := fresh "LenEq" in
            assert (LENEQ:❬f ⊝ (g1 ⊝ A) \\ (g2 ⊝ B)❭ = ❬B❭) by eauto with len;
@@ -41,7 +41,7 @@ Tactic Notation "inv_get" := inv_get' inv_get_step_some_minus.
 
 Inductive srd : list (option (set var)) -> stmt -> ann (set var) -> Prop :=
 | srdExp DL x e s lv al
-  : srd (restrict DL (lv \ singleton x)) s al
+  : srd (restr (lv \ singleton x) ⊝ DL) s al
     -> srd DL (stmtLet x e s) (ann1 lv al)
 | srdIf DL e s t lv als alt
   : srd DL s als
@@ -53,13 +53,13 @@ Inductive srd : list (option (set var)) -> stmt -> ann (set var) -> Prop :=
   : get DL (counted f) (Some G')
     -> srd DL (stmtApp f Y) (ann0 lv)
 | srdExtern DL x f Y s lv al
-  : srd (restrict DL (lv \ singleton x)) s al
+  : srd (restr (lv \ singleton x) ⊝ DL) s al
     -> srd DL (stmtExtern x f Y s) (ann1 lv al)
 | srdLet DL F t lv als alt
   : length F = length als
     -> (forall n Zs a, get F n Zs -> get als n a ->
-                 srd (restrict (Some ⊝ (getAnn ⊝ als) \\ (fst ⊝ F) ++ DL)
-                               (getAnn a \ of_list (fst Zs))) (snd Zs) a)
+                 srd (restr (getAnn a \ of_list (fst Zs)) ⊝
+                            (Some ⊝ (getAnn ⊝ als) \\ (fst ⊝ F) ++ DL)) (snd Zs) a)
     -> srd (Some ⊝ (getAnn ⊝ als) \\ (fst ⊝ F) ++ DL) t alt
     -> srd DL (stmtFun F t) (annF lv als alt).
 
@@ -80,7 +80,7 @@ Proof.
     eapply restrict_subset; eauto.
   - econstructor; eauto.
     + intros. eapply H1; eauto.
-      repeat rewrite restrict_app.
+      repeat rewrite List.map_app.
       eapply PIR2_app; eauto.
       eapply restrict_subset; eauto.
     + eapply IHsrd. eapply PIR2_app; eauto.
@@ -99,7 +99,7 @@ Proof.
   - econstructor. eapply IHsrd, restrict_subset2; eauto.
   - econstructor; eauto.
     + intros. eapply H1; eauto.
-      repeat rewrite restrict_app.
+      repeat rewrite List.map_app.
       eapply PIR2_app; eauto.
       eapply restrict_subset2; eauto.
     + eapply IHsrd. eapply PIR2_app; eauto.
@@ -142,19 +142,19 @@ Proof.
         rewrite List.map_app. eapply bounded_app; split; eauto.
         rewrite H14. eapply get_bounded.
         intros. inv_get. edestruct H2; eauto; dcr.
-        rewrite getAnn_mapAnn. unfold lminus. rewrite H10.
+        rewrite getAnn_mapAnn. rewrite H10.
         eauto with cset.
         rewrite H14. rewrite <- incl_right; eauto.
       * eapply srd_monotone. eapply H14.
         rewrite getAnn_mapAnn; simpl.
-        repeat rewrite restrict_app. rewrite List.map_app.
+        repeat rewrite List.map_app.
         eapply PIR2_app.
         erewrite bounded_restrict_eq. reflexivity.
         reflexivity. inv_get. edestruct H2; eauto; dcr.
         eapply get_bounded.
         intros. inv_get.
         edestruct H2; eauto; dcr.
-        rewrite getAnn_mapAnn. unfold lminus. rewrite H10.
+        rewrite getAnn_mapAnn. rewrite H10.
         decide (n=n0); subst. repeat get_functional.
         rewrite H10; reflexivity.
         exploit H3; eauto using zip_get.
@@ -171,7 +171,7 @@ Proof.
         eapply get_bounded.
         intros. inv_get.
         edestruct H2; eauto; dcr.
-        rewrite getAnn_mapAnn. unfold lminus. rewrite H10.
+        rewrite getAnn_mapAnn. rewrite H10.
         clear_all; cset_tac; intuition.
       * rewrite List.map_app. reflexivity.
 Qed.
@@ -180,7 +180,7 @@ Qed.
 
 Lemma restrict_ifFstR B (R:⦃var⦄->B->Prop) DL GL G
 : PIR2 (ifFstR R) DL GL
-  -> PIR2 (ifFstR R) (restrict DL G) GL.
+  -> PIR2 (ifFstR R) (restr G ⊝ DL) GL.
 Proof.
   intros. induction H; simpl; eauto using PIR2, @ifFstR.
   unfold restr. destruct pf.
@@ -208,11 +208,12 @@ Proof.
   general induction IC; invt live_sound; invt srd; simpl in * |- *.
   - edestruct IHIC as [lv' [Z' ?]]; eauto using restrict_ifFstR; dcr.
     inv_get.
-    do 2 eexists; split; [| split]; eauto.
-    idtac "improve"; rewrite H. eauto with cset.
+    do 2 eexists; split; [| split]. eauto. eauto.
+
+    idtac "improve". rewrite H. eauto with cset.
   - edestruct IHIC; eauto; dcr; inv_get. eauto with cset.
   - edestruct IHIC; eauto; dcr; inv_get. eauto with cset.
-  - PIR2_inv. inv_get. unfold lminus in *.
+  - PIR2_inv. inv_get.
     do 2 eexists; split; [| split]; eauto with cset.
     idtac "improve"; rewrite H5; eauto.
   - edestruct IHIC; eauto using restrict_ifFstR; dcr; inv_get.
@@ -221,8 +222,8 @@ Proof.
   - inv_get.
     edestruct IHIC2; eauto. rewrite zip_app; eauto with len.
     eapply PIR2_app; eauto using restrict_ifFstR, PIR2_ifFstR_refl.
-    dcr; inv_get. unfold lminus in H11.
-    edestruct IHIC1; eauto. rewrite zip_app, restrict_app; eauto with len.
+    dcr; inv_get.
+    edestruct IHIC1; eauto. rewrite zip_app, List.map_app; eauto with len.
     eapply PIR2_app; eauto using restrict_ifFstR, PIR2_ifFstR_refl.
     destruct l; simpl in *; dcr; inv_get.
     do 2 eexists; split; [|split]; eauto.
@@ -235,15 +236,14 @@ Qed.
 
 (** *** On a coherent program a liveness analysis which is sound imperatively is also sound functionally. *)
 
-Hint Extern 1 =>
+Local Hint Extern 1 =>
 match goal with
 | [ |- context [ (?A ++ ?B) \\ (?C ++ ?D) ] ] =>
-  rewrite (zip_app (@lminus _ _) A C B D);
+  rewrite (zip_app _ A C B D);
     [| eauto with len]
-| [ |- context [ restrict (?A ++ ?B) ?G ] ] =>
-  rewrite (restrict_app A B G)
+| [ |- context [ restr ?G ⊝ (?A ++ ?B) ] ] =>
+  rewrite (@List.map_app _ _ (restr G) A B)
 end.
-
 
 Lemma srd_live_functional s ZL Lv DL alv
 : live_sound Imperative ZL Lv s alv
@@ -262,11 +262,8 @@ Proof.
       eapply H1; eauto 10 using PIR2_app, restrict_ifFstR, PIR2_ifFstR_refl.
     + intros. exploit H12; eauto; dcr.
       simpl; split; eauto.
-      edestruct srd_globals_live; eauto using PIR2_app, restrict_eqReq, eqReq_oglobals_liveGlobals.
-      eapply H10; eauto. eapply get_length; eauto. dcr.
-      simpl; split; eauto.
-      eapply get_app_lt_1 in H18; simpl.
-      eapply inv_oglobals in H18. destruct H18; dcr. simpl in *. repeat get_functional; subst.
-      rewrite H19; eauto. eauto.
-      rewrite map_length, zip_length2, map_length, <- H; eauto using get_range with len.
+      edestruct srd_globals_live as [lv' [Z' ?]];
+        eauto using PIR2_app, restrict_eqReq, PIR2_ifFstR_refl with len.
+      dcr. simpl in *. inv_get.
+      unfold lminus in H17. rewrite H17; eauto.
 Qed.

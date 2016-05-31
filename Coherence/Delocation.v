@@ -8,13 +8,8 @@ Require Import Bisim BisimTactics.
 Set Implicit Arguments.
 Unset Printing Records.
 Unset Printing Abstraction Types.
-Local Arguments lminus {X} {H} s L.
-
 
 (** Correctness predicate for  *)
-
-Notation "'mkGlobals' F Za ans_lv" := (Some ⊝ (zip lminus (zip lminus (getAnn ⊝ ans_lv) (fst ⊝ F)) Za))
-                                       (at level 50, F, Za, ans_lv at level 0).
 
 Inductive trs
   : 〔؟⦃var⦄〕 (** globals *)
@@ -24,35 +19,34 @@ Inductive trs
     -> ann (list (list var)) (** annotation providing additional parameters for function definitions
                                 inside the program *)
     -> Prop :=
- | trsExp DL ZL x e s an an_lv lv
-    : trs (restrict DL (lv\ singleton x)) ZL  s an_lv an
+| trsExp DL ZL x e s an an_lv lv
+  : trs (restrict DL (lv\ singleton x)) ZL  s an_lv an
     -> trs DL ZL (stmtLet x e s) (ann1 lv an_lv) (ann1 nil an)
-  | trsIf DL ZL e s t ans ant ans_lv ant_lv lv
-    :  trs DL ZL s ans_lv ans
-    -> trs DL ZL t ant_lv ant
-    -> trs DL ZL (stmtIf e s t) (ann2 lv ans_lv ant_lv) (ann2 nil ans ant)
-  | trsRet e DL ZL lv
-    :  trs DL ZL (stmtReturn e) (ann0 lv) (ann0 nil)
-  | trsGoto DL ZL G' f Za Y lv
-    :  get DL (counted f) (Some G')
-    -> get ZL (counted f) (Za)
-(*    -> G' ⊆ lv *)
-(*    -> of_list Za ⊆ lv *)
-    -> trs DL ZL (stmtApp f Y) (ann0 lv) (ann0 nil)
-  | trsExtern DL ZL x f Y s lv an_lv an
-    : trs (restrict DL (lv\ singleton x)) ZL s an_lv an
+| trsIf DL ZL e s t ans ant ans_lv ant_lv lv
+  :  trs DL ZL s ans_lv ans
+     -> trs DL ZL t ant_lv ant
+     -> trs DL ZL (stmtIf e s t) (ann2 lv ans_lv ant_lv) (ann2 nil ans ant)
+| trsRet e DL ZL lv
+  :  trs DL ZL (stmtReturn e) (ann0 lv) (ann0 nil)
+| trsGoto DL ZL G' f Za Y lv
+  :  get DL (counted f) (Some G')
+     -> get ZL (counted f) (Za)
+     (*    -> G' ⊆ lv *)
+     (*    -> of_list Za ⊆ lv *)
+     -> trs DL ZL (stmtApp f Y) (ann0 lv) (ann0 nil)
+| trsExtern DL ZL x f Y s lv an_lv an
+  : trs (restrict DL (lv\ singleton x)) ZL s an_lv an
     -> trs DL ZL (stmtExtern x f Y s) (ann1 lv an_lv) (ann1 nil an)
-  | trsLet (DL:list (option (set var))) ZL (F:list (params*stmt)) t Za ans ant lv ans_lv ant_lv
-    : length F = length ans_lv
-      -> length F = length ans
-      -> length F = length Za
-      -> (forall n lvs Zs Za' ans', get ans_lv n lvs -> get F n Zs -> get Za n Za' -> get ans n ans' ->
-                              trs (restrict (Some ⊝ (zip lminus
-                                                         (zip lminus (getAnn ⊝ ans_lv) (fst ⊝ F)) Za)
-                                            ++ DL)
-                                            (getAnn lvs \ of_list (fst Zs++Za')))
-                                  (Za++ZL) (snd Zs) lvs ans')
-    -> trs (mkGlobals F Za ans_lv ++ DL) (Za++ZL) t ant_lv ant
+| trsLet (DL:list (option (set var))) ZL (F:list (params*stmt)) t Za ans ant lv ans_lv ant_lv
+  : length F = length ans_lv
+    -> length F = length ans
+    -> length F = length Za
+    -> (forall n lvs Zs Za' ans',
+          get ans_lv n lvs -> get F n Zs -> get Za n Za' -> get ans n ans'
+          -> trs (restrict (Some ⊝ (getAnn ⊝ ans_lv) \\ zip (@List.app _) (fst ⊝ F) Za ++ DL) (getAnn lvs \ of_list (fst Zs++Za')))
+                (Za++ZL) (snd Zs) lvs ans')
+    -> trs (Some ⊝ (getAnn ⊝ ans_lv) \\ zip (@List.app _) (fst ⊝ F) Za ++ DL)
+          (Za++ZL) t ant_lv ant
     -> trs DL ZL (stmtFun F t) (annF lv ans_lv ant_lv) (annF Za ans ant).
 
 Lemma trs_annotation DL ZL s lv Y
@@ -160,22 +154,17 @@ Fixpoint compile (ZL:list (list var)) (s:stmt) (an:ann (list (list var))) : stmt
   end.
 
 
-Lemma oglobals_compileF_mkGlobals_PIR2 ZL F Za Za' ans ans_lv
-      (LEN1 : length F = length ans_lv)
-      (LEN2 : length F = length ans)
-      (LEN3 : length F = length Za)
-  : PIR2 (fstNoneOrR Equal)
-         (mkGlobals F Za ans_lv)
-         (oglobals (compileF compile ZL F Za Za' ans) ans_lv).
+Lemma fst_compileF_eq ZL F Za Za' ans
+      (LEN1 : length F = length ans)
+      (LEN2 : length F = length Za)
+  : fst ⊝ compileF compile ZL F Za Za' ans = app (A:=var) ⊜ (fst ⊝ F) Za.
 Proof.
   length_equify.
-  unfold compileF. simpl.
-  general induction LEN1; inv LEN2; inv LEN3; simpl; eauto using PIR2.
-  - econstructor.
-    + unfold lminus; simpl.
-      econstructor. rewrite of_list_app, minus_union. reflexivity.
-    + eapply IHLEN1; eauto.
+  unfold compileF.
+  general induction LEN1; inv LEN2; simpl; eauto using PIR2.
+  - f_equal. eauto.
 Qed.
+
 
 Lemma trs_srd AL ZL s ans_lv ans
   (RD:trs AL ZL s ans_lv ans)
@@ -184,16 +173,15 @@ Proof.
   general induction RD; simpl; eauto using srd.
   - econstructor; eauto.
     * unfold compileF; repeat rewrite zip_length2; congruence.
-    * intros. unfold compileF in H4. inv_zip H4.
-      inv_zip H7.
+    * intros. unfold compileF in H4. inv_get. simpl.
       exploit H3; eauto. simpl.
       eapply srd_monotone; eauto.
       eapply restrict_subset; eauto.
       eapply PIR2_app; eauto.
-      eapply oglobals_compileF_mkGlobals_PIR2; eauto.
+      rewrite fst_compileF_eq; eauto.
     * eapply srd_monotone; eauto.
       eapply PIR2_app; eauto.
-      eapply oglobals_compileF_mkGlobals_PIR2; eauto.
+      rewrite fst_compileF_eq; eauto.
 Qed.
 
 Inductive additionalParameters_live : list (set var)   (* additional params *)
@@ -229,59 +217,35 @@ Inductive additionalParameters_live : list (set var)   (* additional params *)
     -> length Za = length F
     -> additionalParameters_live ZL (stmtFun F t) (annF lv ans_lv ant_lv) (annF Za ans ant).
 
-
-
-Lemma live_globals_compileF_PIR2 F als Lv Za Za' ans ZL
-      (LEN1 : length F = length als)
-      (LEN2 : length F = length ans)
-      (LEN3 : length F = length Za)
-  : PIR2 live_ann_subset
-         (zip (fun (s : set var * params) (t : params) => (fst s, snd s ++ t))
-              ( zip pair (getAnn ⊝ als) (fst ⊝ F) ++ Lv) (Za ++ ZL))
-         (zip pair (getAnn ⊝ als) (fst ⊝ (compileF compile ZL F Za Za' ans)) ++
-                                zip (fun (s : set var * params) (t : params) => (fst s, snd s ++ t)) Lv ZL).
-Proof.
-  length_equify. unfold compileF.
-  general induction LEN1; inv LEN2; inv LEN3; eauto using PIR2.
-  econstructor; simpl; eauto.
-Qed.
-
-Lemma live_sound_compile DL ZL AL s ans_lv ans o
-  (RD:trs AL ZL s ans_lv ans)
-  (LV:live_sound o DL s ans_lv)
-  (APL: additionalParameters_live (of_list ⊝ ZL) s ans_lv ans)
-  : live_sound o (zip (fun s t => (fst s, snd s ++ t)) DL ZL) (compile ZL s ans) ans_lv.
+Lemma live_sound_compile ZL ZAL Lv DL s ans_lv ans o
+  (RD:trs DL ZAL s ans_lv ans)
+  (LV:live_sound o ZL Lv s ans_lv)
+  (APL: additionalParameters_live (of_list ⊝ ZAL) s ans_lv ans)
+  : live_sound o (zip (@List.app _) ZL ZAL) Lv (compile ZAL s ans) ans_lv.
 Proof.
   general induction LV; inv RD; inv APL; eauto using live_sound.
-  -
-    pose proof (zip_get  (fun (s : set var * list var) (t : list var) => (fst s, snd s ++ t)) H H10).
-    inv_zip H3; simpl in *.
-    repeat get_functional.
-    econstructor. eapply H3; eauto.
-    cases. simpl in * |- *.
-    rewrite of_list_app. cset_tac. intuition. eauto.
-    erewrite get_nth; eauto. eauto with len.
-    erewrite get_nth; eauto.
-    intros ? ? GET. inv_get; simpl in *; clear_trivial_eqs.
-    eapply get_app_cases in GET. destruct GET; dcr; eauto. inv_get.
-    econstructor. rewrite <- H9. eauto using get_in_of_list.
-  - rewrite <- List.map_app in H20. rewrite <- List.map_app in H19.
-    simpl. econstructor; eauto.
-    + exploit IHLV; eauto.
-      eapply live_sound_monotone; eauto.
-      eapply live_globals_compileF_PIR2; eauto.
-    + unfold compileF. eauto with len.
+  - simpl. erewrite get_nth; eauto.
+    inv_get.
+    econstructor; eauto using zip_get with len.
+    + cases; eauto. rewrite <- H1. rewrite of_list_app. eauto with cset.
+    + intros ? ? Get.
+      eapply get_app_cases in Get. destruct Get; dcr; eauto.
+      inv_get.
+      econstructor. rewrite <- H10. eauto using get_in_of_list.
+  - simpl. rewrite <- List.map_app in H20.
+    rewrite <- List.map_app in H19.
+    econstructor; eauto with len.
+    + rewrite fst_compileF_eq; eauto.
+      rewrite <- zip_app; eauto with len.
     + intros.
       unfold compileF in H4. inv_get. simpl.
-      exploit H1; eauto.
-      eapply live_sound_monotone; eauto.
-      eapply live_globals_compileF_PIR2; eauto.
+      rewrite fst_compileF_eq; eauto. rewrite <- zip_app; eauto with len.
     + intros.
       unfold compileF in H4. inv_get; simpl.
       exploit H2; eauto. exploit H13; eauto. dcr.
+      rewrite of_list_app at 1.
       split.
-      * rewrite of_list_app.
-        rewrite H10, H9. eauto with cset.
+      * rewrite H10, H9. eauto with cset.
       * cases; eauto. rewrite of_list_app.
         rewrite <- minus_union. rewrite <- H11. eauto with cset.
 Qed.

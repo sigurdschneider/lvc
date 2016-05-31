@@ -277,6 +277,12 @@ Qed.
 
 Hint Resolve map_get_1.
 
+Lemma map_get_eq X Y (L:list X) (f:X -> Y) n x y
+  : get L n x -> f x = y -> get (List.map f L) n y.
+Proof.
+  intros. general induction H; simpl in *; eauto using get.
+Qed.
+
 Lemma map_get_2 X Y (L:list X) (f:X -> Y) n x
   : get (List.map f L) n x -> exists x' : X, get L n x'.
 Proof.

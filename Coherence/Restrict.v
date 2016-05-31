@@ -49,39 +49,43 @@ Proof.
   eauto; cset_tac.
 Qed.
 
-Definition restrict (DL:list (option (set var))) (G:set var)
-  := List.map (restr G) DL.
+Instance restr_m2
+  : Proper (Equal ==> pointwise_relation _ eq) restr.
+Proof.
+  unfold Proper, respectful, pointwise_relation, restr; intros; subst.
+  repeat cases; eauto.
+  - exfalso. eapply NOTCOND. rewrite <- H. eauto.
+  - exfalso. eapply NOTCOND. rewrite H. eauto.
+Qed.
+
+Lemma restr_comp_meet G o G'
+  : restr G' (restr G o) = restr (G ∩ G') o.
+Proof.
+  unfold restr; destruct o; eauto.
+  repeat cases; eauto.
+  - exfalso. eapply NOTCOND. cset_tac.
+  - exfalso. rewrite COND0 in NOTCOND. eapply NOTCOND. cset_tac.
+  - rewrite COND in NOTCOND. exfalso; eapply NOTCOND. cset_tac.
+Qed.
+
+Lemma restrict_comp_meet DL G G'
+  : restr G' ⊝ (restr G ⊝ DL) = restr (G ∩ G') ⊝ DL.
+Proof.
+  rewrite map_map.
+  setoid_rewrite restr_comp_meet. reflexivity.
+Qed.
 
 Lemma restrict_idem DL G G'
-  : G ⊆ G' -> restrict (restrict DL G') G = restrict DL G.
+  : G ⊆ G' -> restr G ⊝ (restr G' ⊝ DL) = restr G ⊝ DL.
 Proof.
-  general induction DL; simpl; eauto.
-  f_equal; eauto using restr_idem.
+  rewrite restrict_comp_meet; intros.
+  rewrite meet_comm, <- incl_meet; eauto.
 Qed.
 
-Lemma restrict_incl G G' DL
- : G' ⊆ G -> restrict (Some G'::DL) G = Some G'::restrict DL G.
-Proof.
-  intros. unfold restrict, List.map; f_equal.
-  eapply restr_iff; eauto.
-Qed.
-
-Lemma restrict_not_incl G G' DL
- : ~G' ⊆ G -> restrict (Some G'::DL) G = None::restrict DL G.
-Proof.
-  intros. unfold restrict, List.map; f_equal.
-  unfold restr. cases; firstorder.
-Qed.
-
-Lemma restrict_comm DL G G'
-: restrict (restrict DL G) G' = restrict (restrict DL G') G.
-Proof.
-  general induction DL; simpl; eauto. f_equal; eauto using restr_comm.
-Qed.
-
+(*
 Instance restrict_morphism
   : Proper (PIR2 (option_eq Equal) ==>
-                    Equal ==> PIR2 (option_eq Equal)) restrict.
+                    Equal ==> PIR2 (option_eq Equal)) (restrict.
 Proof.
   unfold Proper, respectful; intros.
   general induction H; simpl; try econstructor; eauto.
@@ -95,6 +99,7 @@ Proof.
   general induction y; simpl; try econstructor; eauto.
   f_equal. rewrite H0; reflexivity. eauto.
 Qed.
+ *)
 
 Fixpoint bounded (DL:list (option (set var))) (G:set var) :=
   match DL with
@@ -135,7 +140,7 @@ Proof.
 Qed.
 
 Lemma bounded_restrict DL G' G
-  : G' ⊆ G -> bounded (restrict DL G') G.
+  : G' ⊆ G -> bounded (restr G' ⊝ DL) G.
 Proof.
   general induction DL; simpl; eauto.
   case_eq (restr G' a); intros; try split; eauto.
@@ -143,7 +148,7 @@ Proof.
 Qed.
 
 Lemma bounded_restrict_eq DL G' G
-  : G ⊆ G' -> bounded DL G -> restrict DL G' = DL.
+  : G ⊆ G' -> bounded DL G -> restr G' ⊝ DL = DL.
 Proof.
   general induction DL; simpl; eauto.
   case_eq (restr G' a); intros; try split; eauto.
@@ -159,7 +164,7 @@ Qed.
 Lemma restrict_subset2 DL DL' G G'
 : PIR2 (fstNoneOrR (flip Subset)) DL DL'
   -> G ⊆ G'
-  -> PIR2 (fstNoneOrR (flip Subset)) (restrict DL G) (restrict DL' G').
+  -> PIR2 (fstNoneOrR (flip Subset)) (restr G ⊝ DL) (restr G' ⊝ DL').
 Proof.
   intros. induction H; simpl; econstructor; eauto.
   - inv pf.
@@ -172,7 +177,7 @@ Qed.
 Lemma restrict_subset DL DL' G G'
 : PIR2 (fstNoneOrR Equal) DL DL'
   -> G ⊆ G'
-  -> PIR2 (fstNoneOrR Equal) (restrict DL G) (restrict DL' G').
+  -> PIR2 (fstNoneOrR Equal) (restr G ⊝ DL) (restr G' ⊝ DL').
 Proof.
    intros. induction H; simpl; econstructor; eauto.
   - inv pf.
@@ -181,36 +186,23 @@ Proof.
       cset_tac.
 Qed.
 
-
-Lemma restr_comp_meet G o G'
-  : restr G' (restr G o) = restr (G ∩ G') o.
-Proof.
-  unfold restr; destruct o; eauto.
-  repeat cases; eauto.
-  - exfalso. eapply NOTCOND. cset_tac.
-  - exfalso. rewrite COND0 in NOTCOND. eapply NOTCOND. cset_tac.
-  - rewrite COND in NOTCOND. exfalso; eapply NOTCOND. cset_tac.
-Qed.
-
-Lemma restrict_comp_meet DL G G'
-  : restrict (restrict DL G) G' = restrict DL (G ∩ G').
-Proof.
-  general induction DL; simpl; eauto.
-  f_equal; eauto using restr_comp_meet.
-Qed.
-
-Definition lookup_set_option (ϱ:var->var) (x:option (set var)) : option (set var):=
+Definition lookup_seto (ϱ:var->var) (x:option (set var)) : option (set var):=
   match x with
     | None => None
     | Some x => Some (lookup_set ϱ x)
   end.
 
-Definition map_lookup (ϱ:var -> var) := List.map (lookup_set_option ϱ).
+Lemma lookup_seto_restr G s ϱ
+  : lookup_seto ϱ (restr G ⎣ s ⎦) =
+    if [ s ⊆ G ] then Some (lookup_set ϱ s) else None.
+Proof.
+  unfold restr; cases; reflexivity.
+Qed.
 
 Definition live_global (p:set var * list var) := Some (fst p \ of_list (snd p)).
 
 Lemma bounded_map_lookup G (ϱ: var -> var) DL
-  : bounded DL G -> bounded (map_lookup ϱ DL) (lookup_set ϱ G).
+  : bounded DL G -> bounded (lookup_seto ϱ ⊝ DL) (lookup_set ϱ G).
 Proof.
   general induction DL; simpl; eauto.
   destruct a; simpl in *; dcr; eauto using lookup_set_incl.
@@ -219,7 +211,7 @@ Qed.
 Lemma restrict_incl_ext DL G G' D
 :  bounded DL D
    -> G ∩ D [=] G' ∩ D
-   -> restrict DL G = restrict DL G'.
+   -> restr G ⊝ DL = restr G' ⊝ DL.
 Proof.
   intros.
   general induction DL; simpl in *; try destruct a; dcr; eauto.
@@ -238,11 +230,11 @@ Lemma list_eq_special DL ϱ A B A'
 : A ⊆ B
   -> lookup_set ϱ A ⊆ A'
   -> PIR2 (fstNoneOrR Equal)
-         (map_lookup ϱ (restrict DL A))
-         (restrict (map_lookup ϱ (restrict DL B)) A').
+         (lookup_seto ϱ ⊝ (restr A ⊝ DL))
+         (restr A' ⊝ (lookup_seto ϱ ⊝ (restr B ⊝ DL))).
 Proof.
   intros. general induction DL; simpl. econstructor.
-  unfold restr. unfold lookup_set_option.
+  unfold restr. unfold lookup_seto.
   destruct a; repeat cases; eauto using PIR2, @fstNoneOrR.
   - exfalso. eapply NOTCOND. lset_tac; eauto. eapply H0; lset_tac.
   - exfalso. eapply NOTCOND; rewrite <- H. eauto.
@@ -251,26 +243,14 @@ Qed.
 Lemma list_eq_fstNoneOrR_incl DL ϱ A B
 : A ⊆ B ->
   PIR2 (fstNoneOrR Equal)
-       (map_lookup ϱ (restrict DL A))
-       (map_lookup ϱ (restrict DL B)).
+       (lookup_seto ϱ ⊝ (restr A ⊝ DL))
+       (lookup_seto ϱ ⊝ (restr B ⊝ DL)).
 Proof.
   intros. general induction DL; simpl.
   - econstructor.
   - unfold restr; destruct a; repeat cases;
       simpl; econstructor; eauto; try econstructor; eauto.
     exfalso. cset_tac; intuition.
-Qed.
-
-Lemma restrict_app L L' s
-: restrict (L++L') s = restrict L s ++ restrict L' s.
-Proof.
-  general induction L; simpl; eauto using f_equal.
-Qed.
-
-Lemma restrict_length L s
-: length (restrict L s) = length L.
-Proof.
-  unfold restrict. rewrite map_length; eauto.
 Qed.
 
 Lemma bounded_app L L' s
@@ -293,7 +273,7 @@ Definition eqReq := (fstNoneOrR' (fun (s : set var) (t : set var * list var) =>
 
 Lemma restrict_eqReq DL DL' G
 : PIR2 eqReq DL DL'
-  -> PIR2 eqReq (restrict DL G) DL'.
+  -> PIR2 eqReq (restr G ⊝ DL) DL'.
 Proof.
   intros. induction H; simpl; econstructor; eauto.
   unfold restr. destruct pf. constructor.
@@ -301,7 +281,7 @@ Proof.
 Qed.
 
 Lemma restrict_get DL lv n s
-: get (restrict DL lv) n ⎣ s ⎦
+: get (restr lv ⊝ DL) n ⎣ s ⎦
   -> get DL n (Some s) /\ s ⊆ lv.
 Proof.
   intros. general induction H.
@@ -313,16 +293,6 @@ Proof.
     inv Heql. edestruct IHget; eauto.
     eauto using get.
 Qed.
-
-Ltac inv_get_step_restrict dummy :=
-  first [inv_get_step |
-         match goal with
-         | [ H : get (restrict ?DL ?G) ?n (Some ?lv) |- _ ] =>
-           eapply (@restrict_get DL G n lv) in H; destruct H as [H ?]
-         end ].
-
-Tactic Notation "inv_get_step" := inv_get_step_restrict idtac.
-Tactic Notation "inv_get" := inv_get' inv_get_step_restrict.
 
 Lemma get_bounded L D
 : (forall n x, get L n (Some x) -> x ⊆ D)
@@ -342,7 +312,7 @@ Qed.
 
 Lemma restrict_disj (DL : 〔؟⦃var⦄〕) (s t : ⦃var⦄)
   : (forall n u, get DL n (Some u) -> disj (s ∩ t) u)
-    -> restrict DL (s \ t) = restrict DL s.
+    -> restr (s \ t) ⊝ DL = restr s ⊝ DL.
 Proof.
   general induction DL; simpl; eauto.
   rewrite IHDL; eauto using get.
@@ -361,7 +331,7 @@ Hint Resolve bounded_incl.
 
 Lemma PIR2_restrict A B s
 :  A ≿ B
-   -> restrict A s ≿ B.
+   -> restr s ⊝ A ≿ B.
 Proof.
   intros. general induction H; simpl.
   - econstructor.
@@ -371,12 +341,21 @@ Proof.
       * cases. econstructor; eauto. econstructor.
 Qed.
 
-
 Lemma restrict_get_Some L s t n
 : get L n (Some s)
   -> s ⊆ t
-  -> get (restrict L t) n (Some s).
+  -> get (restr t ⊝ L) n (Some s).
 Proof.
   intros. general induction H; simpl; eauto using get.
   - cases; eauto using get.
 Qed.
+
+Ltac inv_get_step_restrict dummy :=
+  first [
+         match goal with
+         | [ H : get (restr ?G ⊝ ?DL) ?n (Some ?lv) |- _ ] =>
+           eapply (@restrict_get DL G n lv) in H; destruct H as [H ?]
+         end | inv_get_step ].
+
+Tactic Notation "inv_get_step" := inv_get_step_restrict idtac.
+Tactic Notation "inv_get" := inv_get' inv_get_step_restrict.
