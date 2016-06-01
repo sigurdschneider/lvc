@@ -21,12 +21,10 @@ Definition rd_agree (DL:list (option (set var)))
 
 Lemma rd_agree_update DL L E G x v
  (RA:rd_agree DL L E)
-  : rd_agree (restrict DL (G \ singleton x)) L (E [x <- v]).
+  : rd_agree (restr (G \ singleton x) ⊝ DL) L (E [x <- v]).
 Proof.
-  intros. hnf; intros.
-  unfold restrict in H0. eapply map_get_4 in H0; dcr.
-  unfold restr in H2. destruct x0; isabsurd. cases in H2; isabsurd.
-  eapply agree_on_update_dead. rewrite COND. cset_tac.
+  intros. hnf; intros; inv_get.
+  eapply agree_on_update_dead. rewrite H1. cset_tac.
   eapply RA; eauto.
 Qed.
 
@@ -35,7 +33,7 @@ Lemma rd_agree_update_list DL L E E' (G G':set var) Z n vl
  (ZD:of_list Z ∩ G' [=] ∅)
  (LEQ:length Z = length vl)
  (AG:agree_on eq G' E E')
-: rd_agree (restrict (drop n DL) G') (drop n L) (E'[Z <-- vl]).
+: rd_agree (restr G' ⊝ (drop n DL)) (drop n L) (E'[Z <-- vl]).
 Proof.
   hnf; intros.
   assert (G'0 ⊆ G'). {
@@ -43,14 +41,10 @@ Proof.
   }
   assert (G'0 [=] G'0 \ of_list Z) by (split; cset_tac; intuition eauto).
   rewrite H2. eapply update_with_list_agree_minus; eauto.
-
-  unfold restrict in H0. rewrite drop_map in H0.
-  eapply get_drop in H. eapply get_drop in H0.
-  eapply map_get_4 in H0; dcr.
+  inv_get.
   hnf in RA.
   etransitivity; try eapply RA; eauto.
   symmetry. eauto using agree_on_incl.
-  eapply restr_iff in H4; dcr; subst; eauto.
 Qed.
 
 (** ** Context coherence for IL/F contexts: [approxF] *)
@@ -61,8 +55,8 @@ Inductive approx
   approxI AL DL o Z E s n lvZ L1 L2
   :  (forall G, o = Some G -> of_list Z ∩ G [=] ∅ /\
            exists a, getAnn a [=] (G ∪ of_list Z)
-                /\ srd (restrict AL G) s a
-                /\ live_sound Imperative DL s a)
+                /\ srd (restr G ⊝ AL) s a
+                /\ live_sound Imperative ZL DL s a)
      -> snd lvZ = Z
      -> length AL = length DL
      -> approx (zip pair AL DL) L1 L2 (o, lvZ) (F.blockI E Z s n) (I.blockI Z s n).

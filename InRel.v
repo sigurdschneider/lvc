@@ -1,47 +1,7 @@
 Require Import AllInRel List Map Env IL AutoIndTac MoreList.
-Require Export DecSolve.
+Require Export DecSolve BlockType.
 
 Set Implicit Arguments.
-
-Class BlockType X := {
-  block_n : X -> nat
-}.
-
-Lemma mkBlocks_I_less
-      : forall (F : list (params * stmt)) (n k : nat) (b : I.block),
-          get (mapi_impl I.mkBlock k F) n b -> I.block_n b <= k + length F - 1.
-Proof.
-  intros; inv_get. simpl. eapply get_range in H. omega.
-Qed.
-
-Lemma mkBlock_I_i F
-  : forall i b, get (mapi I.mkBlock F) i b -> i = I.block_n b.
-Proof.
-  intros; inv_get; eauto.
-Qed.
-
-Lemma mkBlock_F_i E F
-  : forall i b, get (mapi (F.mkBlock E) F) i b -> i = F.block_n b.
-Proof.
-  intros; inv_get; eauto.
-Qed.
-
-Instance block_type_I : BlockType (I.block) :=
-  {
-    block_n := I.block_n
-  }.
-
-Lemma mkBlocks_F_less
-      : forall E (F : list (params * stmt)) (n k : nat) (b : F.block),
-          get (mapi_impl (F.mkBlock E) k F) n b -> F.block_n b <= k + length F - 1.
-Proof.
-  intros; inv_get. simpl. eapply get_range in H. omega.
-Qed.
-
-Instance block_type_F : BlockType (F.block) :=
-  {
-    block_n := F.block_n
-  }.
 
 Inductive mutual_block {A} {B} `{BlockType B} {C} `{BlockType C} (R:A->B->C->Prop)
 : nat -> list A -> list B -> list C -> Prop :=
@@ -85,47 +45,7 @@ Proof.
   edestruct IHget as [? [? [? []]]]; try do 2 eexists; eauto using get.
 Qed.
 
-
 Lemma mutual_approx_impl {A} {B} `{BlockType B} {C} `{BlockType C}
-      (R: list A -> list B -> list C -> A -> B -> C -> Prop)
-      (AL:list A) DL (F:list (params*stmt)) AL' F' i f g L1 L2
-: length AL = length F
-  -> F' = drop i F
-  -> AL' = drop i AL
-  -> (forall n a Z s,
-        get AL n a
-        -> get F n (Z,s)
-        -> R DL L1 L2 a (f n (Z,s)) (g n (Z,s)))
-  -> (forall i b, i = block_n (f i b))
-  -> (forall i b, i = block_n (g i b))
-  -> mutual_block (R DL L1 L2) i AL' (mapi_impl f i F') (mapi_impl g i F').
-Proof.
-  intros.
-  assert (length_eq AL' F').
-  eapply length_length_eq. subst; eauto using drop_length_stable.
-  general induction X.
-  - simpl; econstructor.
-  - simpl. econstructor; eauto.
-    eapply IHX; eauto using drop_shift_1.
-    destruct y; eapply H4; eauto using drop_eq.
-Qed.
-
-Lemma mutual_approx {A} {B} `{BlockType B} {C} `{BlockType C}
-      (R: list A -> list B -> list C -> A -> B -> C -> Prop)
-      (AL:list A) DL (F:list (params*stmt)) f g L1 L2
-: length AL = length F
-  -> (forall n a Z s,
-        get AL n a
-        -> get F n (Z,s)
-        -> R DL L1 L2 a (f n (Z,s)) (g n (Z,s)))
-  -> (forall i b, i = block_n (f i b))
-  -> (forall i b, i = block_n (g i b))
-  -> mutual_block (R DL L1 L2) 0 AL (mapi_impl f 0 F) (mapi_impl g 0 F).
-Proof.
-  intros. eapply mutual_approx_impl; eauto.
-Qed.
-
-Lemma mutual_approx_impl2 {A} {B} `{BlockType B} {C} `{BlockType C}
       (R: list A -> list B -> list C -> A -> B -> C -> Prop)
       (AL:list A) DL F1 F2 AL' F1' F2' i L1 L2
   : length AL = length F1
@@ -146,8 +66,7 @@ Proof.
     eapply IHLenAL1; eauto using drop_shift_1.
 Qed.
 
-
-Lemma mutual_approx2 {A} {B} `{BlockType B} {C} `{BlockType C}
+Lemma mutual_approx {A} {B} `{BlockType B} {C} `{BlockType C}
       (R: list A -> list B -> list C -> A -> B -> C -> Prop)
       (AL:list A) DL F1 F2 L1 L2
   : length AL = length F1
@@ -157,7 +76,19 @@ Lemma mutual_approx2 {A} {B} `{BlockType B} {C} `{BlockType C}
     -> (forall i b, get F2 i b -> i = block_n b)
     -> mutual_block (R DL L1 L2) 0 AL F1 F2.
 Proof.
-  intros. eapply mutual_approx_impl2; eauto.
+  intros. eapply mutual_approx_impl; eauto.
+Qed.
+
+Lemma mutual_block_mon A B (H : BlockType B) (C : Type)
+          (H0 : BlockType C)
+          (R R': A -> B -> C -> Prop) AL L1 L2 n
+:  mutual_block R n AL L1 L2
+  -> (forall a b c, R a b c -> R' a b c)
+  ->  mutual_block R' n AL L1 L2.
+Proof.
+  intros. general induction H1.
+  - econstructor.
+  - econstructor; eauto.
 Qed.
 
 Inductive inRel {A} {B} `{BlockType B} {C} `{BlockType C}
@@ -266,21 +197,6 @@ Proof.
   get_functional; subst.
   do 2 eexists; split; eauto.
 Qed.
-
-
-
-Lemma mutual_block_mon A B (H : BlockType B) (C : Type)
-          (H0 : BlockType C)
-          (R R': A -> B -> C -> Prop) AL L1 L2 n
-:  mutual_block R n AL L1 L2
-  -> (forall a b c, R a b c -> R' a b c)
-  ->  mutual_block R' n AL L1 L2.
-Proof.
-  intros. general induction H1.
-  - econstructor.
-  - econstructor; eauto.
-Qed.
-
 
 Lemma inRel_mon A B (H : BlockType B) (C : Type)
           (H0 : BlockType C)

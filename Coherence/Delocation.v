@@ -20,7 +20,7 @@ Inductive trs
                                 inside the program *)
     -> Prop :=
 | trsExp DL ZL x e s an an_lv lv
-  : trs (restrict DL (lv\ singleton x)) ZL  s an_lv an
+  : trs (restr (lv\ singleton x) ⊝ DL) ZL  s an_lv an
     -> trs DL ZL (stmtLet x e s) (ann1 lv an_lv) (ann1 nil an)
 | trsIf DL ZL e s t ans ant ans_lv ant_lv lv
   :  trs DL ZL s ans_lv ans
@@ -35,7 +35,7 @@ Inductive trs
      (*    -> of_list Za ⊆ lv *)
      -> trs DL ZL (stmtApp f Y) (ann0 lv) (ann0 nil)
 | trsExtern DL ZL x f Y s lv an_lv an
-  : trs (restrict DL (lv\ singleton x)) ZL s an_lv an
+  : trs (restr (lv\ singleton x) ⊝ DL) ZL s an_lv an
     -> trs DL ZL (stmtExtern x f Y s) (ann1 lv an_lv) (ann1 nil an)
 | trsLet (DL:list (option (set var))) ZL (F:list (params*stmt)) t Za ans ant lv ans_lv ant_lv
   : length F = length ans_lv
@@ -43,7 +43,7 @@ Inductive trs
     -> length F = length Za
     -> (forall n lvs Zs Za' ans',
           get ans_lv n lvs -> get F n Zs -> get Za n Za' -> get ans n ans'
-          -> trs (restrict (Some ⊝ (getAnn ⊝ ans_lv) \\ zip (@List.app _) (fst ⊝ F) Za ++ DL) (getAnn lvs \ of_list (fst Zs++Za')))
+          -> trs (restr (getAnn lvs \ of_list (fst Zs++Za')) ⊝ (Some ⊝ (getAnn ⊝ ans_lv) \\ zip (@List.app _) (fst ⊝ F) Za ++ DL))
                 (Za++ZL) (snd Zs) lvs ans')
     -> trs (Some ⊝ (getAnn ⊝ ans_lv) \\ zip (@List.app _) (fst ⊝ F) Za ++ DL)
           (Za++ZL) t ant_lv ant

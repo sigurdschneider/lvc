@@ -58,7 +58,7 @@ Proof.
     + exploit exp_eval_agree; eauto using agree_on_incl.
       no_step.
   - destruct (get_dec L (counted l)) as [[[Eb Zb sb]]|].
-    provide_invariants_P2.
+    PIR2_inv.
     decide (length Zb = length Y).
     case_eq (omap (exp_eval E) Y); intros.
     + exploit omap_exp_eval_agree; eauto.
@@ -97,20 +97,12 @@ Proof.
     eapply PIR2_app; eauto. eapply mkBlocks_approxF; eauto.
 Qed.
 
-(** ** Since live variables contain free variables, liveness contains all variables significant to an IL/F program *)
-
-Inductive approxF' : list (set var * params) -> F.block -> F.block -> Prop :=
-  approxFI' DL E E' Z s lv n
-  : live_sound Functional ((getAnn lv, Z)::DL) s lv
-    -> agree_on eq (getAnn lv \ of_list Z) E E'
-    ->  approxF' ((getAnn lv,Z)::DL) (F.blockI E Z s n) (F.blockI E' Z s n).
-
 (** ** Live variables contain all variables significant to an IL/I program *)
 
 Inductive approxI
   : list (set var * params) -> list I.block -> list I.block -> set var * params -> I.block -> I.block -> Prop :=
   approxII DL Z s lv n L L'
-  : live_sound Imperative DL s lv
+  : live_sound Imperative ZL Lv s lv
     ->  approxI DL L L' (getAnn lv,Z) (I.blockI Z s n) (I.blockI Z s n).
 
 Inductive liveSimI : I.state -> I.state -> Prop :=

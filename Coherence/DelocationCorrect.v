@@ -8,81 +8,112 @@ Require Import Bisim BisimTactics.
 Set Implicit Arguments.
 Unset Printing Records.
 Unset Printing Abstraction Types.
-Local Arguments lminus {X} {H} s L.
+
+
+Inductive mutual_block {A1 A2 A3 A4} {B} `{BlockType B} {C} `{BlockType C} (R:A1->A2->A3->A4->B->C->Prop)
+: nat -> list A1 -> list A2 -> list A3 -> list A4 -> list B -> list C -> Prop :=
+  | CS_nil n : mutual_block R n nil nil nil nil nil nil
+  | CS_cons a1 a2 a3 a4 b c n AL1 AL2 AL3 AL4 L L' :
+      mutual_block R (S n) AL1 AL2 AL3 AL4 L L'
+      -> n = block_n b
+      -> n = block_n c
+      -> R a1 a2 a3 a4 b c
+      -> mutual_block R n (a1::AL1) (a2::AL2) (a3::AL3) (a4::AL4) (b::L) (c::L').
+
+
+Lemma mutual_block_zero {A1 A2 A3 A4} {B} `{BlockType B} {C} `{BlockType C} (R:A1->A2->A3->A4->B->C->Prop)
+      AL1 AL2 AL3 AL4 (L:list B) (L':list C) n b i
+: mutual_block R i AL1 AL2 AL3 AL4 L L' -> get L n b -> block_n b = (n+i).
+Proof.
+  intros. general induction H2. inv H1; eauto.
+  inv H1; eauto. erewrite IHget; eauto. omega.
+Qed.
+
+Lemma mutual_block_length {A1 A2 A3 A4} {B} `{BlockType B} {C} `{BlockType C} (R:A1->A2->A3->A4->B->C->Prop)
+      AL1 AL2 AL3 AL4 (L1:list B) (L2:list C) i
+: mutual_block R i AL1 AL2 AL3 AL4 L1 L2 -> ❬AL1❭ = ❬L1❭ /\ ❬AL2❭ = ❬L1❭ /\ ❬AL3❭ = ❬L1❭  /\ ❬AL4❭ = ❬L1❭ /\ ❬L2❭ = ❬L1❭.
+Proof.
+  intros. general induction H1; dcr; simpl; eauto.
+  repeat split; omega.
+Qed.
+
+
+Lemma mutual_approx {A1 A2 A3 A4} {B} `{BlockType B} {C} `{BlockType C}
+      (R:list A1 -> list A2 -> list A3 -> list A4 -> list B -> list C ->
+         A1 -> A2 -> A3 -> A4 -> B -> C -> Prop)
+      AL1 AL2 AL3 AL4 AL1' AL2' AL3' AL4' F1 F2 L1 L2
+  : length AL1' = length F1
+    -> length AL1' = length AL2'
+    -> length AL2' = length AL3'
+    -> length AL3' = length AL4'
+    -> length F1 = length F2
+    -> (forall n a1 a2 a3 a4 b b', get AL1' n a1 -> get AL2' n a2 -> get AL3' n a3 -> get AL4' n a4
+                             -> get F1 n b -> get F2 n b' -> R AL1 AL2 AL3 AL4 L1 L2 a1 a2 a3 a4 b b')
+    -> (forall i b, get F1 i b -> i = block_n b)
+    -> (forall i b, get F2 i b -> i = block_n b)
+    -> mutual_block (R AL1 AL2 AL3 AL4 L1 L2) 0 AL1' AL2' AL3' AL4' F1 F2.
+Proof.
+Admitted.
+
+Inductive inRel {A1 A2 A3 A4} {B} `{BlockType B} {C} `{BlockType C}
+          (R:list A1 -> list A2 -> list A3 -> list A4 -> list B -> list C ->
+             A1 -> A2 -> A3 -> A4 -> B -> C -> Prop)
+: list A1 -> list A2 -> list A3 -> list A4 -> list B -> list C -> Prop :=
+  | LPM_nil : inRel R nil nil nil nil nil nil
+  | LPM_app AL1 AL2 AL3 AL4 AL1' AL2' AL3' AL4' L1 L2 L1' L2' :
+      inRel R AL1 AL2 AL3 AL4 L1 L2
+      -> mutual_block (R (AL1'++AL1) (AL2'++AL2) (AL3'++AL3) (AL4'++AL4) (L1'++L1) (L2'++L2))
+                     0 AL1' AL2' AL3' AL4' L1' L2'
+      -> inRel R (AL1'++AL1) (AL2'++AL2) (AL3'++AL3) (AL4'++AL4) (L1'++L1) (L2'++L2).
 
 Inductive approx
-  : list ((set var * list var) * (option (set var)) * (params))
+  : list params
+    -> list (set var)
+    -> list (option (set var))
+    -> list params
     -> list I.block
     -> list I.block
-    -> ((set var * list var) * (option (set var)) * (params))
+    -> params
+    -> set var
+    -> option (set var)
+    -> params
     -> I.block
     -> I.block -> Prop :=
-  blk_approxI o (Za Z':list var) Lv DL ZL s ans ans_lv ans_lv' n L1 L2
+  blk_approxI o (Za Z':list var) ZL Lv DL ZAL s ans ans_lv ans_lv' n L1 L2
               (RD:forall G, o = Some G ->
-                       live_sound Imperative Lv (compile ZL s ans) ans_lv'
-                       /\ trs (restrict DL G) ZL s ans_lv ans)
+                       live_sound Imperative (@List.app _ ⊜ ZL ZAL) Lv (compile ZAL s ans) ans_lv'
+                       /\ trs (restr G ⊝ DL) ZAL s ans_lv ans)
   : length DL = length ZL
   -> length ZL = length Lv
-  -> approx (zip pair (zip pair Lv DL) ZL) L1 L2 ((getAnn ans_lv',Z'++Za), o, Za) (I.blockI Z' s n) (I.blockI (Z'++Za) (compile ZL s ans) n).
+  -> approx ZL Lv DL ZAL L1 L2 Z' (getAnn ans_lv') o Za (I.blockI Z' s n) (I.blockI (Z'++Za) (compile ZAL s ans) n).
 
-Lemma approx_restrict_block Lv1 Lv2 DL1 DL2 ZL1 ZL2 Lv1' DL1' ZL1' L1' L2' G n L1X L2X
-: length Lv1 = length DL1
-  -> length Lv2 = length DL2
-  -> length DL1 = length ZL1
-  -> length DL2 = length ZL2
-  -> mutual_block
-        (approx
-           (zip pair (zip pair Lv1 DL1) ZL1 ++
-            zip pair (zip pair Lv2 DL2) ZL2) L1X L2X) n
-        (zip pair (zip pair Lv1' DL1') ZL1') L1' L2'
-  -> mutual_block
-     (approx
-        (zip pair (zip pair Lv1 (restrict DL1 G)) ZL1 ++
-         zip pair (zip pair Lv2 (restrict DL2 G)) ZL2) L1X L2X) n
-     (zip pair (zip pair Lv1' (restrict DL1' G)) ZL1') L1' L2'.
+Lemma mutual_block_restrict AL1' AL1 AL2' AL2 AL3' AL3 AL4' AL4 L1' L1 L2' L2 G n
+  : mutual_block
+      (approx AL1 AL2 AL3 AL4 L1 L2) n AL1' AL2' AL3' AL4' L1' L2'
+    -> mutual_block (approx AL1 AL2 (restr G ⊝ AL3) AL4 L1 L2)
+                   n AL1' AL2' (restr G ⊝ AL3') AL4' L1' L2'.
 Proof.
-  intros. general induction H3.
-  - destruct Lv1', DL1', ZL1'; isabsurd; constructor.
-  - eapply zip_eq_cons_inv in Heql.
-    destruct Heql as [? [? ?]]; eauto; dcr; subst.
-    eapply zip_eq_cons_inv in H7.
-    destruct H7 as [? [? ?]]; eauto; dcr; subst.
-    simpl. econstructor; eauto.
-    * inv H1.
-      pose proof (@zip_length2 _ _ _ pair Lv2 DL2 H4).
-      pose proof (@zip_length2 _ _ _ pair Lv1 DL1 H2).
-      repeat rewrite <- zip_app; try rewrite restrict_length; eauto with len.
-      rewrite <- zip_app in H; eauto with len.
-      eapply zip_pair_app_inv in H; dcr; subst; eauto with len.
-      rewrite <- zip_app in H9; eauto with len.
-      eapply zip_pair_app_inv in H9; dcr; subst; eauto with len.
-      econstructor; eauto with len.
-      intros. eapply restr_iff in H; dcr; subst. exploit RD; eauto; dcr.
-      rewrite <- restrict_app, restrict_idem.
-      eauto. eauto.
-Qed.
-
-Lemma approx_restrict Lv DL ZL L L' G
-  : length DL = length ZL
-    -> length ZL = length Lv
-    -> inRel approx (zip pair (zip pair Lv DL) ZL) L L'
-    -> inRel approx (zip pair (zip pair Lv (restrict DL G)) ZL) L L'.
-Proof.
+  intros. general induction H; eauto using @mutual_block.
+  simpl.
+  econstructor; eauto.
+  inv H2. econstructor; eauto with len.
   intros.
-  general induction H1; simpl in *.
-  - destruct DL, ZL, Lv; isabsurd; simpl; eauto using @inRel.
-  - eapply zip_eq_app_inv in Heql; eauto with len.
-    destruct Heql as [LVDL1 [LVDL2 [ZL1 [ZL2 ?]]]]; dcr; subst.
-    symmetry in H4.
-    eapply zip_eq_app_inv in H4; eauto with len.
-    destruct H4 as [Lv1 [Lv2 [DL1 [DL2 ?]]]]; dcr; subst.
-    pose proof (@zip_length2 _ _ _ pair Lv2 DL2 H12).
-    pose proof (@zip_length2 _ _ _ pair Lv1 DL1 H9).
-    rewrite restrict_app.
-    repeat rewrite zip_app; try rewrite restrict_length; eauto with len.
-    econstructor. eapply IHinRel; eauto; try congruence.
-    eapply approx_restrict_block; try congruence.
+  destruct a3; isabsurd; simpl in *; cases in H4; isabsurd.
+  edestruct RD; eauto.
+  split; eauto. rewrite restrict_idem; eauto.
 Qed.
+
+Lemma approx_restrict ZL Lv DL ZAL L L' G
+  : inRel approx ZL Lv DL ZAL L L'
+    -> inRel approx ZL Lv (restr G ⊝ DL) ZAL L L'.
+Proof.
+  intros IR.
+  general induction IR; simpl in *; eauto using @inRel.
+  - rewrite List.map_app. econstructor; eauto.
+    rewrite <- List.map_app.
+    eapply mutual_block_restrict. eauto.
+Qed.
+
 
 Definition defined_on {X} `{OrderedType X} {Y} (G:set X) (E:X -> option Y)
   := forall x, x ∈ G -> exists y, E x = Some y.
@@ -103,17 +134,6 @@ Lemma defined_on_incl X `{OrderedType X} Y (G G':set X) (E:X -> option Y)
 Proof.
   unfold defined_on; intros; eauto.
 Qed.
-
-Inductive trsR : I.state -> I.state -> Prop :=
-  trsRI (E E':onv val) L L' s ans Lv' ans_lv ans_lv' DL ZL
-  (RD: trs DL ZL s ans_lv ans)
-  (EA: inRel approx (zip pair (zip pair Lv' DL) ZL) L L')
-  (EQ: (@feq _ _ eq) E E')
-  (LV': live_sound Imperative Lv' (compile ZL s ans) ans_lv')
-  (EDEF: defined_on (getAnn ans_lv') E')
-  (LEN1: length DL = length ZL)
-  (LEN2: length ZL = length Lv')
-  : trsR (L, E, s) (L', E', compile ZL s ans).
 
 Lemma omap_var_defined_on Za lv E
 : of_list Za ⊆ lv
@@ -145,6 +165,31 @@ Proof.
     exists x0. rewrite <- H2.
     eapply update_with_list_no_update; eauto.
 Qed.
+
+(*
+Lemma mutual_approx_impl {A} {B} `{BlockType B} {C} `{BlockType C}
+      (R: list A -> list B -> list C -> A -> B -> C -> Prop)
+      (AL:list A) DL F1 F2 AL' F1' F2' i L1 L2
+  : length AL = length F1
+    -> length F1 = length F2
+    -> F1' = drop i F1
+    -> F2' = drop i F2
+    -> AL' = drop i AL
+    -> (forall n a b b', get AL n a -> get F1 n b -> get F2 n b' -> R DL L1 L2 a b b')
+    -> (forall i b, get F1 i b -> i = block_n b)
+    -> (forall i b, get F2 i b -> i = block_n b)
+    -> mutual_block (R DL L1 L2) i AL' F1' F2'.
+Proof.
+  intros LenEq1 LenEq2 LenF1' LenF2' LenAL' GET I1 I2.
+  assert (LenAL1:length_eq AL' F1'). subst; eauto using drop_length_stable with len.
+  assert (LenAL2:length_eq AL' F2'). subst; eauto using drop_length_stable with len.
+  general induction LenAL1; inv LenAL2; eauto using @mutual_block.
+  - econstructor; eauto using drop_eq.
+    eapply IHLenAL1; eauto using drop_shift_1.
+Qed.
+ *)
+
+(*
 
 Lemma approx_mutual_block n ZL DL F F' Za Za' ans ans' ans_lv ans_lv' als als' Lv L1X L2X
       (LEN1:length F = length Za)
@@ -207,6 +252,7 @@ Proof with eapply length_length_eq; subst; eauto using drop_length_stable.
       rewrite of_list_app in H0. rewrite <- minus_union in H0. eauto.
       repeat rewrite zip_length2; eauto 20 with len.
 Qed.
+ *)
 
 Global Instance update_with_list_inst X `{OrderedType X} Y `{OrderedType Y} :
   Proper (eq ==> (list_eq (option_eq eq)) ==> (@feq X (option Y) eq ) ==> (@feq _ _ eq))
@@ -221,34 +267,112 @@ Proof.
     eapply IHlist_eq; eauto.
 Qed.
 
-Lemma trsR_sim σ1 σ2
-  : trsR σ1 σ2 -> bisim σ1 σ2.
+Lemma inRel_less {A1 A2 A3 A4:Type} {B} `{BlockType B} {C} `{BlockType C}
+      (R:list A1 -> list A2 -> list A3 -> list A4 -> list B -> list C ->
+         A1 -> A2 -> A3 -> A4 -> B -> C -> Prop)
+      AL1 AL2 AL3 AL4 (L:list B) (L':list C) n b
+: inRel R AL1 AL2 AL3 AL4 L L' -> get L n b -> block_n b <= n.
 Proof.
-  revert σ1 σ2. cofix; intros.
-  intros. destruct H; inv RD; invt live_sound; simpl.
+  intros. general induction H1. inv H2; eauto.
+  eapply get_app_cases in H3; destruct H3; dcr.
+  erewrite mutual_block_zero; eauto. omega.
+  rewrite IHinRel; try eapply H4. omega.
+Qed.
+
+Lemma inRel_drop {A1 A2 A3 A4:Type} {B} `{BlockType B} {C} `{BlockType C}
+      (R:list A1 -> list A2 -> list A3 -> list A4 -> list B -> list C ->
+         A1 -> A2 -> A3 -> A4 -> B -> C -> Prop)
+      AL1 AL2 AL3 AL4 (L:list B) (L':list C) n b
+: inRel R AL1 AL2 AL3 AL4 L L'
+  -> get L n b
+  -> inRel R
+          (drop (n - block_n b) AL1)
+          (drop (n - block_n b) AL2)
+          (drop (n - block_n b) AL3)
+          (drop (n - block_n b) AL4)
+          (drop (n - block_n b) L)
+          (drop (n - block_n b) L').
+Proof.
+  intros. general induction H1; simpl; eauto; isabsurd.
+  - eapply get_app_cases in H3; destruct H3; dcr.
+    + exploit (mutual_block_zero H2 H3); eauto.
+      rewrite H4. orewrite (n - (n + 0)= 0). simpl; econstructor; eauto.
+    + exploit (inRel_less H1 H4); eauto.
+      specialize (IHinRel _ _ H4).
+      assert (length L1' + (n - length L1') = n) by omega.
+      rewrite <- H6.
+      orewrite (length L1' + (n - length L1') - block_n b
+                = length L1' + (n - length L1' - block_n b)).
+      exploit (mutual_block_length H2); dcr.
+Admitted.
+
+Lemma inRel_nth {A} {B} `{BlockType B} {C} `{BlockType C} R
+      (AL:list A) (L:list B) (L':list C) n b
+: inRel R AL L L' -> get L n b ->
+  exists a:A, exists c:C,
+    get AL n a /\ get L' n c /\ R (drop (n - block_n b) AL) (drop (n - block_n b) L) (drop (n - block_n b) L') a b c.
+Proof.
+  intros. general induction H1; isabsurd.
+  eapply get_app_cases in H3; destruct H3; dcr.
+  - exploit (mutual_block_zero H2 H3); eauto. rewrite H4.
+    orewrite (n - (n + 0) = 0). simpl.
+    edestruct (mutual_block_get H2 H3) as [? [? [? []]]].
+    do 2 eexists. repeat split; eauto using get_app.
+  - edestruct IHinRel; eauto; dcr. do 2 eexists.
+    pose proof (mutual_block_length H2); dcr.
+    repeat split; try (eapply get_app_right; eauto; omega).
+    orewrite (n = length L1' + (n - length L1')).
+    exploit (inRel_less H1 H4).
+    orewrite (length L1' + (n - length L1') - block_n b
+              = length L1' + (n - length L1' - block_n b)).
+    Typeclasses eauto :=10.
+    rewrite <- H8 at 1. repeat rewrite drop_app. rewrite H10. rewrite drop_app.
+    rewrite <- H10. eauto.
+Qed.
+
+Tactic Notation "inRel_invs" :=
+match goal with
+  | [ H : inRel ?R ?A ?B ?C, H' : get ?B ?n ?b |- _ ] =>
+    let InR := fresh "InR" in let G := fresh "G" in
+    edestruct (inRel_nth H H') as [? [? [? [G InR]]]]; (try eassumption); dcr; inversion InR; try subst;
+    let X'' := fresh "H" in pose proof (inRel_drop H H') as X'';
+    repeat get_functional; (try subst)
+end.
+
+Lemma trsR_sim (E E':onv val) L L' s ans Lv' ans_lv ans_lv' DL ZL ZAL
+  (RD: trs DL ZAL s ans_lv ans)
+  (EA: inRel approx ZL Lv' DL ZAL L L')
+  (EQ: (@feq _ _ eq) E E')
+  (LV': live_sound Imperative (app (A:=var) ⊜ ZL ZAL) Lv' (compile ZAL s ans) ans_lv')
+  (EDEF: defined_on (getAnn ans_lv') E')
+  (LEN1: length DL = length ZL)
+  (LEN2: length ZL = length Lv')
+  : bisim (L, E, s) (L', E', compile ZAL s ans).
+Proof.
+  revert_all. cofix; intros.
+  inv RD; invt live_sound; simpl.
   - remember (exp_eval E e). symmetry in Heqo.
     pose proof Heqo. rewrite EQ in H0.
     destruct o.
     + one_step. simpl in *.
-      eapply trsR_sim.
-      econstructor; eauto using approx_restrict.
+      eapply trsR_sim; eauto using approx_restrict with len.
       * rewrite EQ; reflexivity.
       * eapply defined_on_update_some. eapply defined_on_incl; eauto.
-      * rewrite restrict_length; congruence.
     + no_step.
   - remember (exp_eval E e). symmetry in Heqo.
     pose proof Heqo. rewrite EQ in H1.
     destruct o.
     case_eq (val2bool v); intros.
-    + one_step. eapply trsR_sim; econstructor; eauto using defined_on_incl.
-    + one_step. eapply trsR_sim; econstructor; eauto using defined_on_incl.
+    + one_step. eapply trsR_sim; eauto using defined_on_incl.
+    + one_step. eapply trsR_sim; eauto using defined_on_incl.
     + no_step.
   - no_step. simpl. rewrite EQ; eauto.
   - simpl counted in *.
     erewrite get_nth_default; eauto.
     erewrite get_nth_default in H8; eauto.
     case_eq (omap (exp_eval E) Y); intros.
-    exploit (@zip_get _ _ _ pair Lv' DL); eauto.
+    +
+(*    exploit (@zip_get _ _ _ pair Lv' DL); eauto.
     exploit (@zip_get _ _ _ pair (zip pair Lv' DL) ZL); eauto.
     simpl in *.
     inRel_invs.
@@ -291,7 +415,8 @@ Proof.
         repeat rewrite app_length in H6. rewrite map_length in H6.
         repeat rewrite app_length. omega.
         rewrite restrict_length. simpl in H7.
-        congruence. congruence.
+        congruence. congruence.*)
+      admit.
     + no_step.
       rewrite omap_app in def. monad_inv def.
       erewrite omap_agree in H1. erewrite H1 in EQ0. congruence.
@@ -301,23 +426,28 @@ Proof.
     intros. rewrite EQ. reflexivity.
     destruct o.
     + extern_step; try congruence.
-      eapply trsR_sim; econstructor; eauto using approx_restrict.
-      hnf; intros. lud; eauto.
-      eauto using defined_on_update_some, defined_on_incl.
-      rewrite restrict_length; congruence.
-      eapply trsR_sim; econstructor; eauto using approx_restrict.
-      hnf; intros. lud; eauto.
-      eauto using defined_on_update_some, defined_on_incl.
-      rewrite restrict_length; congruence.
+      * eapply trsR_sim; eauto using approx_restrict with len.
+        hnf; intros. lud; eauto.
+        eauto using defined_on_update_some, defined_on_incl.
+      * eapply trsR_sim; eauto using approx_restrict with len.
+        hnf; intros. lud; eauto.
+        eauto using defined_on_update_some, defined_on_incl.
     + no_step.
   - one_step.
     assert (length F = length als).
-    unfold compileF in H7.
-    rewrite zip_length2 in H7; eauto.
-    rewrite zip_length2; eauto. congruence.
-    eapply trsR_sim; econstructor; eauto 20 with len.
+    rewrite <- H7. eauto with len.
+    rewrite fst_compileF_eq in H6; eauto with len.
+    rewrite <- zip_app in H6; eauto with len.
+    eapply trsR_sim; eauto 20 with len.
     + repeat rewrite zip_app; eauto 30 with len.
       econstructor; eauto.
-      eapply approx_mutual_block; eauto.
+      eapply mutual_approx; eauto 20 using mkBlock_I_i with len.
+      * intros; inv_get.
+        exploit H8; eauto.
+        unfold I.mkBlock. unfold compileF in H15. inv_get. simpl in *.
+        eapply blk_approxI; eauto 20 with len.
+        intros. invc H15. split; eauto.
+        rewrite fst_compileF_eq in H10; eauto with len.
+        rewrite <- zip_app in H10; eauto with len.
     + simpl in *. eapply defined_on_incl; eauto.
 Qed.
