@@ -1,5 +1,5 @@
 Require Import paco2 List.
-Require Export Util Var Val Exp Env Map CSet AutoIndTac IL AllInRel BisimF.
+Require Export Util Var Val Exp MoreExp Env Map CSet AutoIndTac IL AllInRel BisimF.
 
 Set Implicit Arguments.
 Unset Printing Records.
@@ -75,11 +75,10 @@ Proof.
     + exploit @inRel_sawtooth; eauto.
       hnf in H. inRel_invs. simpl in *. dcr. subst x. subst Z'.
       inv InR. eapply bisim_drop_shift; eauto.
-      eapply paco2_mon. eapply H6; eauto. repeat split; eauto.
-
-      exploit omap_length; eauto. congruence. eauto.
+      eapply H6; eauto.
+      repeat split; eauto with len.
     + pno_step.
-    + pno_step. exploit omap_length; eauto.
+    + pno_step.
       inRel_invs. simpl in *.
       dcr. congruence.
     + pno_step.
@@ -90,8 +89,7 @@ Proof.
     + pno_step.
   - pone_step. left.
     eapply (IH s0); eauto using sawtooth_F_mkBlocks.
-    eapply simL_extension'; eauto.
-    instantiate (1:=List.map fst s). rewrite map_length; eauto.
+    eapply simL_extension' with (AL':=fst ⊝ s); eauto with len.
     intros; inv_get; eauto.
     repeat split.
     intros. hnf in H1; dcr; subst.
@@ -153,9 +151,7 @@ Proof.
     intros. inv_get.
     destruct b1. econstructor; eauto; try now (clear_all; intuition).
     * exploit tooth_get_n; eauto. simpl in *. subst block_n; dcr; subst.
-      exploit omap_length; eauto.
-      exploit omap_length; try eapply H4; eauto.
-      pone_step; eauto using get_app; simpl; eauto; try congruence.
+      pone_step; eauto using get_app; simpl; eauto with len; try congruence.
       left. eapply paco2_mon. eapply bisim'_refl. clear_all; firstorder.
 Qed.
 

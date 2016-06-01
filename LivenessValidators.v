@@ -12,12 +12,6 @@ Proof.
   - right; intro. eapply argsLive_length in H. congruence.
 Defined.
 
-Tactic Notation "dec_right" :=
-  let A := fresh "A" in
-  right; intro A; inv A; repeat get_functional; eauto.
-
-Tactic Notation "ensure" constr(P) := decide P; [ | dec_right].
-
 Local Hint Extern 1 =>
 match goal with
   [ H : annotation _ _ |- annotation _ _ ] => inv H; eassumption

@@ -36,3 +36,11 @@ Lemma filter_tau_app evt A B
 Proof.
   destruct evt; eauto.
 Qed.
+
+Lemma filter_tau_nil_eq
+  : nil = filter_tau EvtTau nil.
+Proof.
+  reflexivity.
+Qed.
+
+Hint Extern 5 (nil = filter_tau _ nil) => apply filter_tau_nil_eq.

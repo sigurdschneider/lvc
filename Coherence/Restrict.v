@@ -359,3 +359,19 @@ Ltac inv_get_step_restrict dummy :=
 
 Tactic Notation "inv_get_step" := inv_get_step_restrict idtac.
 Tactic Notation "inv_get" := inv_get' inv_get_step_restrict.
+
+Lemma restrict_ifFstR B (R:⦃var⦄->B->Prop) DL GL G
+: PIR2 (ifFstR R) DL GL
+  -> PIR2 (ifFstR R) (restr G ⊝ DL) GL.
+Proof.
+  intros. induction H; simpl; eauto using PIR2, @ifFstR.
+  unfold restr. destruct pf.
+  - eauto using @PIR2, @ifFstR.
+  - cases; eauto using PIR2, @ifFstR.
+Qed.
+
+Lemma PIR2_ifFstR_refl A (R:A->A->Prop) `{Reflexive _ R} L
+  : PIR2 (ifFstR R) (Some ⊝ L) L.
+Proof.
+  eapply PIR2_get; intros; inv_get; eauto using @ifFstR with len.
+Qed.

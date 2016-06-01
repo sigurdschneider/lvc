@@ -9,8 +9,8 @@ Set Implicit Arguments.
 
 (** ** the algorithm produces a locally injective renaming *)
 
-Lemma regAssign_correct (ϱ:Map [var,var]) LV s alv ϱ' al
-      (LS:live_sound FunctionalAndImperative LV s alv)
+Lemma regAssign_correct (ϱ:Map [var,var]) ZL Lv s alv ϱ' al
+      (LS:live_sound FunctionalAndImperative ZL Lv s alv)
       (inj:injective_on (getAnn alv) (findt ϱ 0))
       (allocOK:regAssign s alv ϱ = Success ϱ')
       (incl:getAnn alv ⊆ fst (getAnn al))
@@ -197,10 +197,10 @@ Require Import Restrict RenamedApart_Liveness.
     sound for functional liveness and we can thus rely on theorem [regAssign_correct]
     above, which we did prove by induction. *)
 
-Lemma regAssign_correct' s ang ϱ ϱ' (alv:ann (set var)) Lv
+Lemma regAssign_correct' s ang ϱ ϱ' (alv:ann (set var)) ZL Lv
   : renamedApart s ang
-  -> live_sound Imperative Lv s alv
-  -> bounded (live_global ⊝ Lv) (fst (getAnn ang))
+  -> live_sound Imperative ZL Lv s alv
+  -> bounded (Some ⊝ Lv \\ ZL) (fst (getAnn ang))
   -> ann_R Subset1 alv ang
   -> LabelsDefined.noUnreachableCode s
   -> injective_on (getAnn alv) (findt ϱ 0)
@@ -210,5 +210,5 @@ Proof.
   intros.
   eapply renamedApart_live_imperative_is_functional in H0; eauto using bounded_disjoint, renamedApart_disj, meet1_Subset1, live_sound_annotation, renamedApart_annotation.
   eapply regAssign_correct; eauto using locally_inj_subset, meet1_Subset, live_sound_annotation, renamedApart_annotation.
-  eapply ann_R_get in H2. destruct (getAnn ang); simpl; cset_tac; intuition.
+  eapply ann_R_get in H2. destruct (getAnn ang); simpl; cset_tac.
 Qed.

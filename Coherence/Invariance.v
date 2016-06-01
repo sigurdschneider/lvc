@@ -1,5 +1,5 @@
-Require Import Util IL InRel RenamedApart LabelsDefined.
-Require Import Annotation Liveness Coherence Restrict MoreExp SetOperations.
+Require Import Util IL InRel4 RenamedApart LabelsDefined.
+Require Import Annotation Liveness Restrict MoreExp SetOperations Coherence.
 Require Import Bisim BisimTactics.
 
 Set Implicit Arguments.
@@ -28,18 +28,18 @@ Proof.
   eapply RA; eauto.
 Qed.
 
-Lemma rd_agree_update_list DL L E E' (G G':set var) Z n vl
+Lemma rd_agree_update_list DL L E E' (G:set var) Z n vl
  (RA:rd_agree DL L E)
- (ZD:of_list Z ∩ G' [=] ∅)
+ (ZD:of_list Z ∩ G [=] ∅)
  (LEQ:length Z = length vl)
- (AG:agree_on eq G' E E')
-: rd_agree (restr G' ⊝ (drop n DL)) (drop n L) (E'[Z <-- vl]).
+ (AG:agree_on eq G E E')
+: rd_agree (restr G ⊝ (drop n DL)) (drop n L) (E'[Z <-- vl]).
 Proof.
   hnf; intros.
-  assert (G'0 ⊆ G'). {
+  assert (G' ⊆ G). {
     eapply bounded_get; eauto. eapply bounded_restrict; reflexivity.
   }
-  assert (G'0 [=] G'0 \ of_list Z) by (split; cset_tac; intuition eauto).
+  assert (G' [=] G' \ of_list Z) by (split; cset_tac; intuition eauto).
   rewrite H2. eapply update_with_list_agree_minus; eauto.
   inv_get.
   hnf in RA.
@@ -50,59 +50,32 @@ Qed.
 (** ** Context coherence for IL/F contexts: [approxF] *)
 
 Inductive approx
-  : list (option (set var) * (set var * list var)) -> list F.block -> list I.block ->
-    option (set var) * (set var * list var) -> F.block -> I.block -> Prop :=
-  approxI AL DL o Z E s n lvZ L1 L2
+  : list params -> list params -> list (؟ (set var)) -> list (set var) -> list F.block -> list I.block ->
+    params -> params -> option (set var) -> set var -> F.block -> I.block -> Prop :=
+  approxI ZL AL Lv o Z E s n lv L1 L2
   :  (forall G, o = Some G -> of_list Z ∩ G [=] ∅ /\
            exists a, getAnn a [=] (G ∪ of_list Z)
                 /\ srd (restr G ⊝ AL) s a
-                /\ live_sound Imperative ZL DL s a)
-     -> snd lvZ = Z
-     -> length AL = length DL
-     -> approx (zip pair AL DL) L1 L2 (o, lvZ) (F.blockI E Z s n) (I.blockI Z s n).
+                /\ live_sound Imperative ZL Lv s a)
+     -> length AL = length ZL
+     -> length ZL = length Lv
+     -> approx ZL ZL AL Lv L1 L2 Z Z o lv (F.blockI E Z s n) (I.blockI Z s n).
 
 (** Stability under restriction *)
 
-Lemma approx_restrict_block AL1 AL2 DL1 DL2 L1 L2 G n AL1' DL1' L1X L2X
-: length AL1 = length DL1
-  -> length AL2 = length DL2
-  -> mutual_block (approx (zip pair AL1 DL1 ++ zip pair AL2 DL2) L1X L2X) n
-                 (zip pair AL1' DL1') L1 L2
-  -> mutual_block
-      (approx (zip pair (restrict AL1 G) DL1 ++ zip pair (restrict AL2 G) DL2) L1X L2X)
-      n (zip pair (restrict AL1' G) DL1') L1 L2.
+Lemma approx_restrict G
+  : forall (AL1 AL2 : 〔params〕) (AL3 : 〔؟ ⦃var⦄〕) (AL4 : 〔⦃var⦄〕) (L1 : 〔F.block〕)
+     (L2 : 〔I.block〕) (a1 a2 : params) (a3 : ؟ ⦃var⦄) (a4 : ⦃var⦄) (b1 : F.block)
+     (b2 : I.block),
+   approx AL1 AL2 AL3 AL4 L1 L2 a1 a2 a3 a4 b1 b2 ->
+   approx AL1 AL2 (restr G ⊝ AL3) AL4 L1 L2 a1 a2 (restr G a3) a4 b1 b2.
 Proof.
-  intros. general induction H1.
-  - destruct AL1', DL1'; isabsurd; constructor.
-  - eapply zip_eq_cons_inv in Heql. destruct Heql as [? [? ?]]; eauto; dcr; subst.
-    simpl. econstructor; eauto.
-    inv H2. rewrite <- zip_app; try rewrite restrict_length; eauto.
-    rewrite <- zip_app in H0; eauto.
-    eapply zip_pair_app_inv in H0; dcr; subst; eauto.
-    simpl.
-    econstructor; eauto.
-    intros. eapply restr_iff in H0; dcr; subst. exploit H7; eauto; dcr.
-    split; eauto.
-    eexists x; eauto.
-    rewrite <- restrict_app; eauto. rewrite restrict_idem; eauto with len.
-    repeat rewrite app_length. repeat rewrite restrict_length. congruence.
+  intros. inv H. econstructor; eauto with len.
+  intros. destruct a3; simpl in *; isabsurd.
+  cases in H3; [| inv H3].
+  exploit H0; eauto.
+  rewrite restrict_idem; eauto.
 Qed.
-
-Lemma approx_restrict AL DL G L L'
-: length AL = length DL
-  -> inRel approx (zip pair AL DL) L L'
-  -> inRel approx (zip pair (restrict AL G) DL) L L'.
-Proof.
-  intros. length_equify.
-  general induction H0; simpl in *; eauto using inRel.
-  - inv H; isabsurd; econstructor.
-  - eapply zip_eq_app_inv in Heql; eauto using length_eq_length.
-    destruct Heql as [AL1 [AL2 [DL1 [DL2 ?]]]]; dcr; subst.
-    rewrite restrict_app. rewrite zip_app; try rewrite restrict_length; eauto.
-    econstructor. eapply IHinRel; eauto using length_length_eq.
-    eapply approx_restrict_block; eauto.
-Qed.
-
 
 (** ** Main Theorem about Coherence *)
 
@@ -115,138 +88,128 @@ Definition strip (b:F.block) : I.block :=
 
 (** The Bisimulation candidate. *)
 
-Inductive srdSim : F.state -> I.state -> Prop :=
-  | srdSimI (E EI:onv val) L L' s AL DL a
-  (SRD:srd AL s a)
-  (RA:rd_agree AL L E)
-  (A: inRel approx (zip pair AL DL) L L')
-  (AG:agree_on eq (getAnn a) E EI)
-  (LV:live_sound Imperative DL s a)
-  (ER:PIR2 eqReq AL DL)
-  : srdSim (L, E, s) (L', EI,s).
+Hint Extern 5 =>
+match goal with
+| [ H : ?m >= ?k, H' : ?k = ?n |- context [ ?n + (?m - ?n) ] ] =>
+  let H := fresh "H" in
+  assert (H:n + (m - n) = m) by omega;
+    rewrite H;
+    clear H
+| [ H : ?m >= ?k, H' : ?k = ?n |- context [ ?n + (?m - ?k) ] ] =>
+  let H := fresh "H" in
+  assert (H:n + (m - k) = m) by omega;
+    rewrite H;
+    clear H
+end.
 
 Lemma rd_agree_extend F als AL L E
 : length F = length als
   -> rd_agree AL L E
-  -> rd_agree (oglobals F als ++ AL) (mapi (F.mkBlock E) F ++ L) E.
+  -> rd_agree (Some ⊝ (getAnn ⊝ als) \\ (fst ⊝ F) ++ AL) (mapi (F.mkBlock E) F ++ L) E.
 Proof.
   intros. hnf; intros.
-  assert (length (mapi (F.mkBlock E) F) = length (oglobals F als)) by
-  eauto 30 with len.
-  assert (length (oglobals F als) = length F) by eauto with len.
-  eapply get_app_cases in H2; eauto. destruct H2.
-  - eapply get_in_range_app in H1; eauto.
-    eapply inv_oglobals in H2; eauto. destruct H2; dcr; subst; eauto.
-    inv_get. reflexivity.
-    eapply get_range in H2. rewrite H4 in H2.
-    erewrite mapi_length_ass; eauto.
+  eapply get_app_cases in H1; eauto. destruct H1; inv_get.
+  - reflexivity.
   - dcr.
     eapply H0; eauto.
-    eapply shift_get; eauto. instantiate (2:=mapi (F.mkBlock E) F).
-    orewrite (length (mapi (F.mkBlock E) F) + (n - length (oglobals F als)) = n); eauto.
+    assert (❬mapi (F.mkBlock E) F❭ = ❬Some ⊝ (getAnn ⊝ als) \\ (fst ⊝ F)❭) by eauto 20 with len.
+    eapply shift_get; eauto. instantiate (1:=Some ⊝ (getAnn ⊝ als) \\ (fst ⊝ F)).
+    eauto.
 Qed.
 
 (** The bisimulation is indeed a bisimulation *)
 
-Lemma srdSim_sim σ1 σ2
-  : srdSim σ1 σ2 -> bisim σ1 σ2.
+Lemma srdSim_sim
+      (E EI:onv val) L L' s ZL AL Lv a
+  (SRD:srd AL s a)
+  (RA:rd_agree AL L E)
+  (A: inRel approx ZL ZL AL Lv L L')
+  (AG:agree_on eq (getAnn a) E EI)
+  (LV:live_sound Imperative ZL Lv s a)
+  (ER:PIR2 (ifFstR Equal) AL (Lv \\ ZL))
+  : bisim (L, E, s) (L', EI,s).
 Proof.
-  revert σ1 σ2. cofix; intros.
-  destruct H; inv SRD; inv LV; simpl in *.
+  revert_all. cofix; intros.
+  inv SRD; inv LV; simpl in *.
   - case_eq (exp_eval E e); intros.
-    one_step.
-    instantiate (1:=v). erewrite <- exp_eval_live; eauto.
-    eapply srdSim_sim; econstructor;
-    eauto using approx_restrict, rd_agree_update, PIR2_length.
-    eapply agree_on_update_same. reflexivity.
-    eapply agree_on_incl; eauto.
-    eauto using restrict_eqReq.
-    no_step.
-    erewrite <- exp_eval_live in def; eauto. congruence.
-  - case_eq (exp_eval E e); intros.
-    exploit exp_eval_live_agree; eauto.
-    case_eq (val2bool v); intros.
-    one_step.
-    eapply srdSim_sim; econstructor; eauto using agree_on_incl.
-    one_step.
-    eapply srdSim_sim; econstructor; eauto using agree_on_incl.
-    exploit exp_eval_live_agree; eauto.
-    no_step.
+    + one_step.
+      instantiate (1:=v). erewrite <- exp_eval_live; eauto.
+      eapply srdSim_sim; eauto using rd_agree_update.
+      * eapply inRel_map_A3; eauto using approx_restrict.
+      * eapply agree_on_update_same; eauto with cset.
+      * eauto using restrict_ifFstR.
+    + no_step.
+      erewrite <- exp_eval_live in def; eauto. congruence.
+  - case_eq (exp_eval E e); intros;
+      exploit exp_eval_live_agree; try eassumption.
+    + case_eq (val2bool v); intros.
+      one_step.
+      eapply srdSim_sim; eauto using agree_on_incl.
+      one_step.
+      eapply srdSim_sim; eauto using agree_on_incl.
+    + no_step.
   - no_step. simpl. eapply exp_eval_live; eauto.
   - decide (length Z = length Y).
-    case_eq (omap (exp_eval E) Y); intros.
-    + exploit omap_exp_eval_live_agree; eauto.
-      exploit (@zip_get _ _ _ pair AL DL); eauto.
-      inRel_invs.
-      one_step. simpl.
-      eapply srdSim_sim.
-      exploit H11; eauto; dcr. simpl in *.
-      econstructor; simpl; eauto using approx_restrict, PIR2_length.
-      assert (restrict AL0 G' = restrict (drop (labN f - n) AL) G').
-      rewrite drop_zip in H8. eapply zip_pair_inv in H8; dcr; subst. reflexivity.
-      eauto. repeat rewrite length_drop_minus. eapply PIR2_length in ER. omega.
-      eauto using PIR2_length.
-      rewrite H9.
-      eapply rd_agree_update_list; eauto.
-      exploit omap_length; eauto. rewrite map_length. congruence.
-      eapply (RA _ _ _ H4 H).
-      eapply approx_restrict; eauto.
-      rewrite H8. eapply (inRel_drop A H4).
-      eapply update_with_list_agree; eauto. rewrite H12.
-      rewrite union_comm. rewrite union_minus_remove.
-      pose proof (RA _ _ G' H4 H); dcr. simpl in *.
-      eapply agree_on_sym; eauto. eapply agree_on_incl; eauto using incl_minus.
-      etransitivity; eauto. symmetry. hnf in RA.
-      eapply agree_on_incl; eauto.
-      edestruct PIR2_nth_2; eauto; dcr. get_functional; eauto; subst.
-      inv H18. rewrite H16. simpl. eauto.
-      exploit omap_length; eauto. rewrite map_length. congruence.
-      eapply restrict_eqReq.
-      rewrite drop_zip in H8; eauto using PIR2_length.
-      eapply  zip_pair_inv in H8; dcr; subst; eauto.
-      eapply PIR2_drop; eauto.
-      repeat rewrite length_drop_minus. eapply PIR2_length in ER; eauto.
-    + exploit omap_exp_eval_live_agree; eauto.
+    case_eq (omap (exp_eval E) Y); intros;
+       exploit omap_exp_eval_live_agree; try eassumption.
+    + inRel_invs. inv H11. simpl in *.
+      exploit H2; try reflexivity; dcr.
+      one_step; simpl.
+      exploit RA; eauto; simpl in *.
+      eapply srdSim_sim; eauto.
+      * eapply rd_agree_update_list; eauto with len.
+      * eapply inRel_map_A3; eauto using approx_restrict.
+      * rewrite H15. eapply update_with_list_agree; eauto with len.
+        etransitivity; eapply agree_on_incl; eauto.
+        symmetry; eauto. clear_all; cset_tac.
+        PIR2_inv. inv_get. rewrite H21. rewrite <- H7.
+        clear_all; cset_tac.
+      * rewrite <- drop_zip.
+        eapply restrict_ifFstR; eauto.
+        eapply PIR2_drop; eauto.
+    + exploit omap_exp_eval_live_agree; try eassumption.
       no_step.
     + no_step.
   - case_eq (omap (exp_eval E) Y); intros;
-    exploit omap_exp_eval_live_agree; eauto.
+    exploit omap_exp_eval_live_agree; try eassumption.
     extern_step; assert (vl = l) by congruence; subst; eauto.
-    + eapply srdSim_sim; econstructor; eauto using approx_restrict, rd_agree_update, PIR2_length.
-      eapply agree_on_update_same. reflexivity.
-      eapply agree_on_incl; eauto.
-      eauto using restrict_eqReq; eauto.
+    + eapply srdSim_sim; eauto using rd_agree_update, PIR2_length.
+      * eapply inRel_map_A3; eauto. eapply approx_restrict; eauto.
+      * eapply agree_on_update_same. reflexivity.
+        eapply agree_on_incl; eauto.
+      * eauto using restrict_ifFstR; eauto.
     + symmetry in AG.
       exploit omap_exp_eval_live_agree; eauto.
-      eapply srdSim_sim; econstructor; eauto using approx_restrict, rd_agree_update, PIR2_length.
-      eapply agree_on_update_same. reflexivity.
-      symmetry in AG.
-      eapply agree_on_incl; eauto.
-      eauto using restrict_eqReq; eauto.
+      eapply srdSim_sim; eauto using rd_agree_update, PIR2_length.
+      * eapply inRel_map_A3; eauto. eapply approx_restrict; eauto.
+      * eapply agree_on_update_same. reflexivity.
+        eapply agree_on_incl; eauto. symmetry; eauto.
+      * eauto using restrict_ifFstR; eauto.
     + no_step.
   - one_step.
-    eapply srdSim_sim; econstructor;
-    eauto using agree_on_incl, PIR2_app, eqReq_oglobals_liveGlobals, rd_agree_extend.
-    rewrite zip_app; [|eauto 30 with len]. econstructor; eauto.
-    unfold mapi.
-    eapply mutual_approx; simpl; eauto 30 with len; try congruence.
-    intros. inv_get. rewrite <- zip_app; eauto 20 with len.
-    econstructor; eauto.
-    intros. invc H2. simpl.
-    split. unfold lminus. clear_all; cset_tac; intuition.
-    eexists x0. split.
-    exploit H11; eauto. dcr; simpl in *.
-    unfold lminus. eauto with cset.
-    split. exploit H0; eauto.
-    exploit H10; eauto.
-    eauto 30 using PIR2_length with len.
+    eapply srdSim_sim;
+      eauto using agree_on_incl, PIR2_app, rd_agree_extend.
+    * econstructor; eauto.
+      eapply mutual_approx; simpl;
+        eauto 30 using mkBlock_I_i, mkBlock_F_i with len.
+      intros; inv_get.
+      edestruct @inRel_length; eauto; dcr.
+      econstructor; eauto 20 with len.
+      intros ? EQ. invc EQ. simpl.
+      split. clear_all; cset_tac; intuition.
+      eexists x. split.
+      exploit H12; eauto; dcr; simpl in *; eauto with cset.
+      split. exploit H0; eauto.
+      exploit H11; eauto.
+    * rewrite zip_app; eauto with len.
+      eapply PIR2_app; eauto using PIR2_ifFstR_refl.
 Qed.
 
 (** ** Coherence implies invariance *)
 
 Lemma srd_implies_invariance s a
-: live_sound Imperative nil s a -> srd nil s a -> invariant s.
+: live_sound Imperative nil nil s a -> srd nil s a -> invariant s.
 Proof.
-  intros. hnf; intros. eapply srdSim_sim.
-  econstructor; eauto. isabsurd. econstructor. econstructor.
+  intros. hnf; intros. eapply srdSim_sim; eauto.
+  isabsurd. econstructor. econstructor.
 Qed.

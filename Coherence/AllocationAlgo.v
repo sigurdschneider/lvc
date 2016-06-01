@@ -81,10 +81,10 @@ Proof.
 Qed.
 
 
-Lemma regAssign_renamedApart_agree' i s al ϱ ϱ' LV alv G
+Lemma regAssign_renamedApart_agree' i s al ϱ ϱ' ZL Lv alv G
       (allocOK:regAssign s alv ϱ = Success ϱ')
       (sd:renamedApart s al)
-      (LS:live_sound i LV s alv)
+      (LS:live_sound i ZL Lv s alv)
 : agree_on eq (G \ snd (getAnn al)) (findt ϱ 0) (findt ϱ' 0).
 Proof.
   general induction LS; inv sd; simpl in * |- *; try monadS_inv allocOK; eauto.
@@ -116,9 +116,9 @@ Proof.
     eapply incl_minus_lr; try reflexivity. rewrite <- H13. eauto with cset.
 Qed.
 
-Lemma regAssign_renamedApart_agree i s al ϱ ϱ' LV alv
+Lemma regAssign_renamedApart_agree i s al ϱ ϱ' ZL Lv alv
       (sd:renamedApart s al)
-      (LS:live_sound i LV s alv)
+      (LS:live_sound i ZL Lv s alv)
       (allocOK:regAssign s alv ϱ = Success ϱ')
 : agree_on eq (fst (getAnn al)) (findt ϱ 0) (findt ϱ' 0).
 Proof.
@@ -130,12 +130,12 @@ Proof.
   clear_all; cset_tac; intuition; eauto.
 Qed.
 
-Lemma regAssignF_get G F ans alv n Zs a ϱ ϱ' an Lv i D Dt lv
+Lemma regAssignF_get G F ans alv n Zs a ϱ ϱ' an ZL Lv i D Dt lv
 : regAssignF regAssign ϱ F alv = Success ϱ'
   -> (forall n Zs a, get F n Zs -> get ans n a -> renamedApart (snd Zs) a)
   -> (forall n Zs a, get F n Zs ->
                get alv n a ->
-               live_sound i Lv (snd Zs) a)
+               live_sound i ZL Lv (snd Zs) a)
   -> (forall (n : nat) (Zs : params * stmt) (a : ann (set var)),
        get F n Zs ->
        get alv n a ->

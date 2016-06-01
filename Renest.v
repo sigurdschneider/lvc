@@ -307,10 +307,7 @@ Proof.
     eapply simIBlockI; eauto. simpl.
     intros.
     exploit (ArgLengthMatchI); eauto; dcr.
-    exploit (omap_length _ _ _ _ _ H3).
-    exploit (omap_length _ _ _ _ _ H5).
-    pone_step; eauto using get_app, get_mapi; eauto; simpl.
-    congruence. congruence.
+    pone_step; eauto using get_app, get_mapi; simpl; eauto with len.
     orewrite (n - n = 0); simpl.
     right.
     orewrite (n' - n' = 0); simpl.
@@ -357,12 +354,10 @@ Proof.
     destruct H4. orewrite (n - n = 0); simpl.
     econstructor; eauto. intros.
     exploit (ArgLengthMatchI); eauto; dcr.
-    exploit (omap_length _ _ _ _ _ H5).
-    exploit (omap_length _ _ _ _ _ H10).
     pone_step; eauto using get_app, get_mapi; simpl; eauto with len.
     left. orewrite (n - n = 0); simpl.
     exploit (tooth_index H8 GetL'); eauto. simpl in *.
-    orewrite (n' + 0 = n') in H16. subst; simpl in *.
+    orewrite (n' + 0 = n') in H12. subst; simpl in *.
     orewrite (n' - n' = 0); simpl.
     eapply fix_compatible_I; eauto.
     split; eauto.
@@ -461,8 +456,7 @@ Proof.
       repeat get_functional.
       erewrite get_nth; eauto using zip_get.
       eapply bisim_drop_shift_left; eauto. simpl.
-      eapply H22; eauto. exploit omap_length; eauto. split; eauto.
-      split; congruence.
+      eapply H22; eauto with len.
     + pno_step; simpl in *.
       erewrite get_nth in Ldef; eauto. get_functional. eauto.
   - pno_step.

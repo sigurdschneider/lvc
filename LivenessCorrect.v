@@ -1,5 +1,5 @@
 Require Import AllInRel List Map Env Exp MoreExp Rename SetOperations.
-Require Import IL InRel Annotation AutoIndTac Liveness BisimI BisimF.
+Require Import IL Annotation AutoIndTac Liveness BisimI BisimF InRel4.
 
 Set Implicit Arguments.
 
@@ -65,8 +65,7 @@ Proof.
       one_step.
       simpl. eapply freeVarSimF_sim. econstructor; eauto.
       eapply PIR2_drop; eauto.
-      eapply update_with_list_agree; eauto.
-      exploit omap_length; eauto. rewrite map_length; congruence.
+      eapply update_with_list_agree; eauto with len.
     + exploit omap_exp_eval_agree; eauto.
       no_step; get_functional; subst.
     + no_step; get_functional; subst; simpl in *; congruence.
@@ -100,80 +99,54 @@ Qed.
 (** ** Live variables contain all variables significant to an IL/I program *)
 
 Inductive approxI
-  : list (set var * params) -> list I.block -> list I.block -> set var * params -> I.block -> I.block -> Prop :=
-  approxII DL Z s lv n L L'
+  : list params -> list params -> list params -> list (set var) -> list I.block -> list I.block ->
+    params -> params -> params -> set var -> I.block -> I.block -> Prop :=
+  approxII ZL Lv Z s lv n L L'
   : live_sound Imperative ZL Lv s lv
-    ->  approxI DL L L' (getAnn lv,Z) (I.blockI Z s n) (I.blockI Z s n).
+    ->  approxI ZL ZL ZL Lv L L' Z Z Z (getAnn lv) (I.blockI Z s n) (I.blockI Z s n).
 
-Inductive liveSimI : I.state -> I.state -> Prop :=
-  liveSimII (E E':onv val) L s Lv lv
-  (LS:live_sound Imperative Lv s lv)
-  (LA:inRel approxI Lv L L)
+Lemma liveSimI_sim ZL Lv (E E':onv val) L s lv
+  (LS:live_sound Imperative ZL Lv s lv)
+  (LA:inRel approxI ZL ZL ZL Lv L L)
   (AG:agree_on eq (getAnn lv) E E')
-  : liveSimI (L, E, s) (L, E', s).
-
-Lemma approx_mutual_block alF F Lv i L L'
-:
-  length alF = length F
-  ->  (forall (n : nat) Zs (als : ann (set var)),
-        get F n Zs ->
-        get alF n als -> live_sound Imperative Lv (snd Zs) als)
-  -> mutual_block (approxI Lv L L') i (zip pair (getAnn ⊝ alF) (fst ⊝ F))
-                 (mapi_impl I.mkBlock i F) (mapi_impl I.mkBlock i F).
+  : bisim (L, E, s) (L, E', s).
 Proof.
-  unfold mapi.
-  intros. length_equify.
-  general induction H; simpl.
-  - econstructor.
-  - econstructor; eauto.
-    + eapply IHlength_eq; intros; eauto using get.
-    + destruct y. eauto using approxI, get.
-Qed.
-
-Lemma liveSimI_sim σ1 σ2
-  : liveSimI σ1 σ2 -> bisim σ1 σ2.
-Proof.
-  revert σ1 σ2. cofix; intros.
-  destruct H; inv LS; simpl; simpl in *.
+  revert_all. cofix; intros.
+  inv LS; simpl; simpl in *.
   - case_eq (exp_eval E e); intros.
-    + exploit exp_eval_live_agree; eauto.
-      one_step.
-      eapply liveSimI_sim. econstructor; eauto.
+    + one_step; eauto using exp_eval_live_agree.
+      eapply liveSimI_sim; eauto.
       eapply agree_on_update_same; eauto using agree_on_incl.
-    + exploit exp_eval_live_agree; eauto.
-      no_step.
+    + no_step; eauto.
   - case_eq (exp_eval E e); intros.
-    exploit exp_eval_live_agree; eauto.
     case_eq (val2bool v); intros.
-    one_step.
-    eapply liveSimI_sim; econstructor; eauto using agree_on_incl.
-    one_step.
-    eapply liveSimI_sim; econstructor; eauto using agree_on_incl.
-    exploit exp_eval_live_agree; eauto.
-    no_step.
-  - inRel_invs.
+    one_step; eauto using exp_eval_live_agree.
+    eapply liveSimI_sim; eauto using agree_on_incl.
+    one_step; eauto using exp_eval_live_agree.
+    eapply liveSimI_sim; eauto using agree_on_incl.
+    no_step; eauto.
+  - inRel_invs. inv H8; simpl in *.
     case_eq (omap (exp_eval E) Y); intros.
-    + exploit omap_exp_eval_live_agree; eauto.
+    + exploit omap_exp_eval_live_agree; try eassumption.
       one_step; simpl; try congruence.
-      simpl. eapply liveSimI_sim. econstructor; eauto.
-      eapply (inRel_drop LA G).
+      eapply liveSimI_sim; eauto.
       eapply update_with_list_agree; eauto using agree_on_incl with len.
-      exploit omap_length; eauto. rewrite map_length. congruence.
-    + exploit omap_exp_eval_live_agree; eauto.
+    + exploit omap_exp_eval_live_agree; try eassumption.
       no_step.
   - no_step. simpl. eapply exp_eval_live; eauto.
   - case_eq (omap (exp_eval E) Y); intros;
-    exploit omap_exp_eval_live_agree; eauto.
-    extern_step.
-    + exploit omap_exp_eval_live_agree; eauto.
-    + eapply liveSimI_sim; econstructor; eauto.
-      eapply agree_on_update_same; eauto using agree_on_incl.
-    + symmetry in AG. exploit omap_exp_eval_live_agree; eauto.
-    + eapply liveSimI_sim; econstructor; eauto.
-      eapply agree_on_update_same; eauto using agree_on_incl.
+    exploit omap_exp_eval_live_agree; try eassumption.
+    + extern_step.
+      * exploit omap_exp_eval_live_agree; eauto.
+      * eapply liveSimI_sim; eauto.
+        eapply agree_on_update_same; eauto using agree_on_incl.
+      * symmetry in AG. exploit omap_exp_eval_live_agree; eauto.
+      * eapply liveSimI_sim; eauto.
+        eapply agree_on_update_same; eauto using agree_on_incl.
     + no_step.
   - one_step.
-    eapply liveSimI_sim; econstructor; eauto using agree_on_incl.
+    eapply liveSimI_sim; eauto using agree_on_incl.
     + econstructor; eauto using agree_on_incl.
-      eapply approx_mutual_block; eauto.
+      eapply mutual_approx; eauto using mkBlock_I_i, mkBlock_F_i with len.
+      intros; inv_get. econstructor; eauto.
 Qed.

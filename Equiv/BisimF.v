@@ -1,6 +1,6 @@
 Require Import List paco2.
 Require Export Util AutoIndTac AllInRel Sawtooth.
-Require Export Equiv ProofRelations Bisim BisimTactics IL InRel.
+Require Export Equiv ProofRelations Bisim BisimTactics IL MoreExp InRel.
 
 Set Implicit Arguments.
 Unset Printing Records.
@@ -60,12 +60,12 @@ Proof.
       econstructor; eauto.
       intros. hnf.
       edestruct RelsOK; eauto.
-      exploit omap_length; try eapply H0; eauto.
-      exploit omap_length; try eapply H5; eauto.
       pfold. econstructor; try eapply plus2O.
-      * econstructor; simpl; eauto using get_app, mapi_get_1, drop_eq with len.
+      * econstructor; simpl; eauto using get_app, mapi_get_1, drop_eq;
+          simpl; eauto with len.
       * reflexivity.
-      * econstructor; simpl; eauto using get_app, mapi_get_1, drop_eq with len.
+      * econstructor; simpl; eauto using get_app, mapi_get_1, drop_eq;
+          simpl; eauto with len.
       * reflexivity.
       * simpl. right. orewrite (i-i=0); simpl.
         eapply CIH; eauto using drop_eq.
@@ -129,12 +129,10 @@ Proof.
       econstructor; eauto.
       intros. hnf.
       edestruct RelsOK; eauto.
-      exploit omap_length; try eapply H0; eauto.
-      exploit omap_length; try eapply H5; eauto.
       pfold. econstructor; try eapply plus2O.
-      econstructor; eauto using get_app, mapi_get_1, drop_eq with len.
+      econstructor; eauto using get_app, mapi_get_1, drop_eq with len; simpl; eauto with len.
       reflexivity.
-      econstructor; eauto using get_app, mapi_get_1, drop_eq with len.
+      econstructor; eauto using get_app, mapi_get_1, drop_eq with len; simpl; eauto with len.
       reflexivity.
       simpl. left. orewrite (i-i=0); simpl.
       eapply fix_compatible; eauto using drop_eq.

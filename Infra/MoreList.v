@@ -597,13 +597,11 @@ Proof.
 Qed.
 
 Lemma drop_zip X Y Z (f:X->Y->Z) L L' n
-: length L = length L'
-  -> drop n (zip f L L') = zip f (drop n L) (drop n L').
+: drop n (zip f L L') = zip f (drop n L) (drop n L').
 Proof.
-  intros. length_equify.
-  general induction H; simpl; eauto.
-  - repeat rewrite drop_nil; eauto.
-  - destruct n; simpl; eauto.
+  intros.
+  general induction L; destruct L'; destruct n; simpl; repeat rewrite drop_nil; eauto.
+  - destruct (drop n L); simpl; eauto.
 Qed.
 
 Lemma zip_map_fst X Y (L:list X) (L':list Y)

@@ -1,6 +1,6 @@
 Require Import List paco2.
 Require Export Util AutoIndTac AllInRel Sawtooth.
-Require Export Equiv ProofRelations Sim SimTactics IL InRel.
+Require Export Equiv ProofRelations Sim SimTactics MoreExp IL InRel.
 
 Set Implicit Arguments.
 Unset Printing Records.
@@ -158,15 +158,13 @@ Proof.
     + destruct x,y. edestruct H as [[B1 B2] [B3 B4]]; eauto using drop_eq.
       econstructor; eauto.
       intros. hnf.
-      pfold. econstructor; try eapply plus2O.
+      pfold. econstructor; try eapply plus2O; eauto.
       econstructor; eauto. eapply get_app.
       eapply mapi_get_1. eapply drop_eq. eauto. simpl.
-      edestruct RelsOK; eauto. exploit omap_length; try eapply H0; eauto.
-      congruence. reflexivity.
+      edestruct RelsOK; eauto with len.
       econstructor; eauto. eapply get_app.
       eapply mapi_get_1. eapply drop_eq. eauto. simpl.
-      edestruct RelsOK; eauto. exploit omap_length; try eapply H5; eauto.
-      congruence. reflexivity.
+      edestruct RelsOK; eauto with len.
       simpl. right. orewrite (i-i=0); simpl.
       eapply CIH; eauto using drop_eq.
 Qed.
@@ -229,15 +227,13 @@ Proof.
     + destruct x,y. edestruct H as [[B1 B2] [B3 B4]]; eauto using drop_eq.
       econstructor; eauto.
       intros. hnf.
-      pfold. econstructor; try eapply plus2O.
+      pfold. econstructor; try eapply plus2O; eauto.
       econstructor; eauto. eapply get_app.
       eapply mapi_get_1. eapply drop_eq. eauto. simpl.
-      edestruct RelsOK; eauto. exploit omap_length; try eapply H0; eauto.
-      congruence. reflexivity.
+      edestruct RelsOK; eauto with len.
       econstructor; eauto. eapply get_app.
       eapply mapi_get_1. eapply drop_eq. eauto. simpl.
-      edestruct RelsOK; eauto. exploit omap_length; try eapply H5; eauto.
-      congruence. reflexivity.
+      edestruct RelsOK; eauto with len.
       simpl. left. orewrite (i-i=0); simpl.
       eapply fix_compatible; eauto.
       eauto using drop_eq. eauto using drop_eq. eauto using drop_eq.

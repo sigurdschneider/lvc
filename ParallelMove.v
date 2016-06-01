@@ -315,9 +315,8 @@ Proof.
         eapply agree_on_incl in X''; eauto. symmetry in X''. simpl.
         eapply agree_on_trans; eauto. eapply equiv_transitive.
         erewrite onlyVars_lookup; eauto.
-        eapply update_with_list_agree; eauto.
+        eapply update_with_list_agree; eauto with len.
         eapply agree_on_incl; eauto. eauto with cset.
-        exploit omap_length; eauto with len.
     + err_step.
   - no_step. simpl. eauto using exp_eval_live.
   - remember (omap (exp_eval E) Y). symmetry in Heqo.
@@ -332,7 +331,7 @@ Proof.
   - one_step.
     eapply pmSim_sim. econstructor; eauto using agree_on_incl.
     econstructor; eauto.
-    eapply mutual_approx2; eauto 20 using mkBlock_I_i with len.
+    eapply mutual_approx; eauto 20 using mkBlock_I_i with len.
     intros; inv_get.
     econstructor; eauto.
     + exploit H3; eauto.

@@ -119,6 +119,12 @@ Qed.
 Definition compile_LV (ZL:list (params)) (LV:list (set var)) :=
   zip (fun Z lv => List.filter (fun x => B[x ∈ lv]) Z) ZL LV.
 
+Lemma map_fst_zip X Y Z(f: X -> Y) (g:X->Z) L
+  : fst ⊝ (fun x => (f x, g x)) ⊝ L = f ⊝ L.
+Proof.
+  rewrite map_map. reflexivity.
+Qed.
+
 Lemma dve_live i ZL LV s lv G
   : true_live_sound i ZL LV s lv
     -> live_sound i (compile_LV ZL LV) LV (compile (zip pair LV ZL) s lv) (compile_live s lv G).

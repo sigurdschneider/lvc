@@ -82,8 +82,8 @@ Qed.
 
 Hint Resolve minus_incl_incl_union | 10: cset.
 
-Lemma regAssign_assignment_small (ϱ:Map [var,var]) LV s alv ϱ' al n
-      (LS:live_sound Functional LV s alv)
+Lemma regAssign_assignment_small (ϱ:Map [var,var]) ZL Lv s alv ϱ' al n
+      (LS:live_sound Functional ZL Lv s alv)
       (allocOK:regAssign s alv ϱ = Success ϱ')
       (incl:getAnn alv ⊆ fst (getAnn al))
       (sd:renamedApart s al)
@@ -143,7 +143,7 @@ Proof.
           try eapply EQ0; eauto. rewrite H12; simpl.
         instantiate (1:=Ds). revert H6; clear_all; cset_tac; intuition; eauto.
 
-  - rewrite H7. rewrite lookup_set_empty; cset_tac; intuition; eauto.
+  - rewrite H8. rewrite lookup_set_empty; cset_tac; intuition; eauto.
   - rewrite H2. rewrite lookup_set_empty; cset_tac; intuition; eauto.
   - assert ( singleton (findt ϱ' 0 x)
                        ⊆ vars_up_to (size_of_largest_live_set al)). {
@@ -241,7 +241,7 @@ Proof.
         unfold getAnn, snd. rewrite <- H13.
         eapply incl_union_left.
         rewrite <- drop_zip.
-        eapply list_union_drop_incl; eauto. congruence.
+        eapply list_union_drop_incl; eauto.
         instantiate (1:=D). pe_rewrite.
         eapply renamedApart_disj in H10. pe_rewrite.
         rewrite disj_minus_eq; eauto.
@@ -345,10 +345,10 @@ Qed.
     above, which we did prove by induction. *)
 
 
-Lemma regAssign_assignment_small' s ang ϱ ϱ' (alv:ann (set var)) Lv n
+Lemma regAssign_assignment_small' s ang ϱ ϱ' (alv:ann (set var)) ZL Lv n
   : renamedApart s ang
-  -> live_sound Imperative Lv s alv
-  -> bounded (live_global ⊝ Lv) (fst (getAnn ang))
+  -> live_sound Imperative ZL Lv s alv
+  -> bounded (Some ⊝ Lv \\ ZL) (fst (getAnn ang))
   -> ann_R Subset1 alv ang
   -> LabelsDefined.noUnreachableCode s
   -> regAssign s alv ϱ = Success ϱ'
@@ -359,9 +359,9 @@ Proof.
   eapply renamedApart_live_imperative_is_functional in H0; eauto using bounded_disjoint, renamedApart_disj, meet1_Subset1, live_sound_annotation, renamedApart_annotation.
   eapply live_sound_overapproximation_F in H0.
   exploit regAssign_assignment_small; eauto using locally_inj_subset, meet1_Subset, live_sound_annotation, renamedApart_annotation.
-  eapply ann_R_get in H2. destruct (getAnn ang); simpl; cset_tac; intuition.
-  rewrite lookup_set_union; intuition.
+  eapply ann_R_get in H2. destruct (getAnn ang); simpl; cset_tac.
+  rewrite lookup_set_union; eauto.
   rewrite H6.
-  rewrite <- lookup_set_agree; eauto using regAssign_renamedApart_agree; intuition.
-  rewrite H5. repeat rewrite vars_up_to_max. cset_tac; intuition.
+  rewrite <- lookup_set_agree; eauto using regAssign_renamedApart_agree.
+  rewrite H5. repeat rewrite vars_up_to_max. cset_tac.
 Qed.

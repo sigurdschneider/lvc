@@ -1,5 +1,5 @@
 Require Import List.
-Require Import Util Var Val Exp Env Map CSet AutoIndTac AllInRel IL MoreList.
+Require Import Util Var Val Exp MoreExp Env Map CSet AutoIndTac AllInRel IL MoreList.
 Require Import Bisim BisimTactics Infra.Status Pos.
 
 Set Implicit Arguments.
@@ -271,8 +271,7 @@ Proof.
       one_step; eauto. inv H1; eauto; simpl. exploit smap_length; eauto.
       simpl in *. congruence.
       inv H1; simpl in *.
-      assert (length Z = length l0).
-      exploit omap_length; eauto. exploit smap_length; eauto. congruence.
+      assert (length Z = length l0) by eauto with len.
       eapply stmt_idx_sim; econstructor;
       eauto using PIR2_drop, vars_exist_update_list, defs_agree_update_list.
     + no_step.

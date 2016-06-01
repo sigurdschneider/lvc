@@ -1,4 +1,4 @@
-Require Import Util DecSolve Val CSet Map Get Env EnvTy Option.
+Require Import Util DecSolve Val CSet Map MapDefined Get Env EnvTy Option.
 Require Import Arith Exp OptionMap.
 
 Set Implicit Arguments.
@@ -53,9 +53,45 @@ Proof.
   general induction Z; simpl in * |- *.
   - reflexivity.
   - monad_inv H; simpl.
-    eapply feq_transitive; [ clear_all; hnf; intros; subst; eauto | | eapply IHZ]; eauto.
-    hnf. intros. lud. rewrite IHZ; eauto. invc H; eauto.
-    (* This works, but it is really slow *)
-    (* rewrite (IHZ _ _ EQ1); eauto.
-    hnf; intros. lud. *)
+    rewrite IHZ; eauto.
+    hnf; intros; lud. congruence.
 Qed.
+
+Lemma omap_var_defined_on Za lv E
+: of_list Za ⊆ lv
+  -> defined_on lv E
+  -> exists l, omap (exp_eval E) (List.map Var Za) = Some l.
+Proof.
+  intros. general induction Za; simpl.
+  - eauto.
+  - simpl in *.
+    edestruct H0.
+    + instantiate (1:=a). cset_tac; intuition.
+    + rewrite H1; simpl. edestruct IHZa; eauto.
+      cset_tac; intuition.
+      rewrite H2; simpl. eauto.
+Qed.
+
+Hint Extern 5 =>
+match goal with
+| [ EQ : ❬?Y❭ = ❬?x❭, OMAP: omap _ ?Y = Some ?l  |- ❬?x❭ = ❬?l❭ ] =>
+  rewrite <- EQ; eapply (omap_length _ _ _ _ _ OMAP)
+| [ EQ : ❬?Y❭ = ❬?x❭, OMAP: omap _ ?Y = Some ?l  |- ❬?l❭ = ❬?x❭ ] =>
+  rewrite <- EQ; symmetry; eapply (omap_length _ _ _ _ _ OMAP)
+| [ EQ : ❬?x❭ = ❬?Y❭, OMAP: omap _ ?Y = Some ?l  |- ❬?x❭ = ❬?l❭ ] =>
+  rewrite EQ; eapply (omap_length _ _ _ _ _ OMAP)
+| [ OMAP: omap _ _ = Some ?l  |- ❬?l❭ = ❬?B❭ ] =>
+  etransitivity; [ symmetry; eapply (omap_length _ _ _ _ _ OMAP)|]
+| [ EQ : ❬?l❭ = ❬?x❭, OMAP: omap _ ?Y = Some ?l  |- ❬?x❭ = ❬?Y❭ ] =>
+  rewrite <- EQ; symmetry; eapply (omap_length _ _ _ _ _ OMAP)
+| [ EQ : ❬?x❭ = ❬?l❭, OMAP: omap _ ?Y = Some ?l  |- ❬?x❭ = ❬?Y❭ ] =>
+  rewrite EQ; symmetry; eapply (omap_length _ _ _ _ _ OMAP)
+end : len.
+
+Hint Extern 5 =>
+match goal with
+| [ LV : live_exp_sound ?e ?lv, AG: agree_on eq ?lv ?E ?E',
+    H1 : exp_eval ?E ?e = _, H2 : exp_eval ?E' ?e = _ |- _ ] =>
+  rewrite (exp_eval_live_agree LV AG H1) in H2; try solve [ exfalso; inv H2 ];
+    clear_trivial_eqs
+end.

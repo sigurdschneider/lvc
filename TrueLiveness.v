@@ -20,6 +20,8 @@ Proof.
   intros. general induction H; simpl; eauto.
 Qed.
 
+Hint Resolve argsLive_length : len.
+
 Lemma argsLive_liveSound lv blv Y Z
   : argsLive lv blv Y Z
     -> forall (n : nat) (y : exp),
@@ -68,9 +70,7 @@ Lemma argsLive_agree_on (V V' E E':onv val) lv blv Y Z v v'
     -> agree_on eq blv (V [Z <-- List.map Some v]) (V' [Z <-- List.map Some v']).
 Proof.
   intros. etransitivity; eauto using argsLive_agree_on'.
-  eapply update_with_list_agree; eauto.
-  exploit omap_length; eauto. exploit argsLive_length; eauto.
-  rewrite map_length; congruence.
+  eapply update_with_list_agree; eauto with len.
 Qed.
 
 Lemma filter_by_incl_argsLive lv blv Y Z

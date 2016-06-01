@@ -405,3 +405,16 @@ Proof.
     eexists x.
     rewrite lookup_set_update_not_in_Z; eauto.
 Qed.
+
+Instance update_with_list_inst X `{OrderedType X} Y `{OrderedType Y} :
+  Proper (eq ==> (list_eq (option_eq eq)) ==> (@feq X (option Y) eq ) ==> (@feq _ _ eq))
+         (@update_with_list X _ (option Y)).
+Proof.
+  unfold respectful, Proper; intros. subst.
+  general induction H2; simpl; eauto.
+  - destruct y; simpl; eauto.
+  - destruct y; simpl; eauto.
+    hnf; intros. lud.
+    inv H; eauto.
+    eapply IHlist_eq; eauto.
+Qed.

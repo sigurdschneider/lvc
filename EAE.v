@@ -158,12 +158,11 @@ Proof.
     + destruct (get_dec L (counted l)) as [[[bE bZ bs]]|].
       * hnf in H. inRel_invs. simpl in H2, InR, H13.
         hnf in H11, H12; dcr; subst; simpl in *.
-        exploit omap_length as Hlen; eauto.
         decide (length Y = length Z'). {
           cases.
           - eapply bisim_drop_shift; eauto. eapply (inRel_sawtooth H).
             eapply (inRel_sawtooth H). eapply H13; eauto. hnf.
-            split; congruence.
+            eauto with len.
           - eapply bisim'_expansion_closed;
               [ eapply bisim_drop_shift
               | eapply star2_refl
@@ -174,11 +173,11 @@ Proof.
             instantiate (1:=l0).
             eapply omap_exp_eval_agree. Focus 2.
             eapply omap_lookup_vars.
-            rewrite fresh_list_length; eauto.
+            rewrite fresh_list_length; eauto with len.
             eapply fresh_list_unique. eapply fresh_spec.
-            eapply update_with_list_agree'. rewrite fresh_list_length, map_length; eauto.
+            eapply update_with_list_agree'. rewrite fresh_list_length, map_length; eauto with len.
             eapply fresh_list_unique. eapply fresh_spec.
-            hnf; split; congruence.
+            hnf; eauto with len.
         }
         cases.
         pno_step; simpl in *; congruence.
