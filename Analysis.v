@@ -289,16 +289,6 @@ Fixpoint backward (sT:stmt) (Dom: stmt -> Type)
     | _, an => fun EQ => an
   end eq_refl.
 
-Ltac btransform t H :=
-  match goal with
-  | [ |- poLe ?a (t ?AL ?s ?d) ] =>
-    let LE := fresh "LE" in
-    let A := fresh "LE" in
-    let B := fresh "LE" in
-    pose proof (H AL s d) as LE; inversion LE as [A|A B|A B|A B]; subst; clear LE;
-    rename B into LE; rewrite <- LE
-  end.
-
 Lemma tab_false_impb Dom `{PartialOrder Dom} AL AL'
   : poLe AL AL'
     -> PIR2 impb (tab false ‖AL‖) (tab false ‖AL'‖).

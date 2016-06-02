@@ -1,4 +1,4 @@
-Require Import CSet Util Fresh Filter MoreExp Take MoreList OUnion.
+Require Import CSet Util Fresh Filter MoreExp Take MoreList OUnion AllInRel.
 Require Import IL Annotation LabelsDefined Sawtooth InRel Liveness TrueLiveness.
 Require Import Sim SimTactics.
 
@@ -12,6 +12,8 @@ match goal with
 | [ H : ?A <> ⎣ true ⎦ , H' : ?A <> ⎣ false ⎦ |- ?A = None ] =>
   case_eq (A); [intros [] ?| intros ?]; congruence
 end.
+
+Definition filter (Z:params) (lv:set var) := List.filter (fun x => B[x ∈ lv]) Z.
 
 Fixpoint compile (LV:list ((set var) * params)) (s:stmt) (a:ann (set var)) :=
   match s, a with
@@ -34,8 +36,7 @@ Fixpoint compile (LV:list ((set var) * params)) (s:stmt) (a:ann (set var)) :=
       stmtExtern x f e (compile LV s an)
     | stmtFun F t, annF lv ans ant =>
       let LV' := pair ⊜ (getAnn ⊝ ans) (fst ⊝ F) ++ LV in
-      stmtFun (zip (fun Zs a => (List.filter (fun x => B[x ∈ getAnn a]) (fst Zs), compile LV' (snd Zs) a))
-                   F ans)
+      stmtFun (zip (fun Zs a => (filter (fst Zs) (getAnn a), compile LV' (snd Zs) a)) F ans)
               (compile LV' t ant)
     | s, _ => s
   end.
@@ -80,8 +81,8 @@ Fixpoint compile_live (s:stmt) (a:ann (set var)) (G:set var) : ann (set var) :=
       ann1 (G ∪ lv) (compile_live s an {x})
     | stmtFun F t, annF lv ans ant =>
       let ans' := zip (fun Zs a => let a' := compile_live (snd Zs) a ∅ in
-                               setTopAnn a' (getAnn a' ∪ of_list (List.filter (fun x => B[x ∈ getAnn a]) (fst Zs)))) F ans in
-      annF (G ∪ lv) ans' (compile_live t ant ∅)
+                               setTopAnn a' (getAnn a' ∪ of_list (filter (fst Zs) (getAnn a)))) F ans
+      in annF (G ∪ lv) ans' (compile_live t ant ∅)
     | _, a => a
   end.
 
@@ -116,18 +117,10 @@ Proof.
   - repeat cases; simpl; eauto.
 Qed.
 
-Definition compile_LV (ZL:list (params)) (LV:list (set var)) :=
-  zip (fun Z lv => List.filter (fun x => B[x ∈ lv]) Z) ZL LV.
-
-Lemma map_fst_zip X Y Z(f: X -> Y) (g:X->Z) L
-  : fst ⊝ (fun x => (f x, g x)) ⊝ L = f ⊝ L.
-Proof.
-  rewrite map_map. reflexivity.
-Qed.
 
 Lemma dve_live i ZL LV s lv G
   : true_live_sound i ZL LV s lv
-    -> live_sound i (compile_LV ZL LV) LV (compile (zip pair LV ZL) s lv) (compile_live s lv G).
+    -> live_sound i (filter ⊜ ZL LV) LV (compile (zip pair LV ZL) s lv) (compile_live s lv G).
 Proof.
   intros. general induction H; simpl; eauto using live_sound, compile_live_incl.
   - cases; eauto. econstructor; eauto.
@@ -143,9 +136,11 @@ Proof.
   - econstructor; eauto using zip_get.
     + simpl. cases; eauto.
       rewrite <- H1. rewrite minus_inter_empty. eapply incl_right.
+      unfold filter.
       cset_tac; intuition. eapply filter_incl2; eauto.
       eapply filter_in; eauto. intuition. hnf. cases; eauto.
     + erewrite get_nth; eauto using zip_get. simpl.
+      unfold filter.
       erewrite filter_filter_by_length; eauto with len.
     + intros ? ? Get. erewrite get_nth in Get; eauto using zip_get. simpl in *.
       edestruct filter_by_get as [? [? [? []]]]; eauto; dcr. simpl in *.
@@ -161,27 +156,32 @@ Proof.
   - econstructor; simpl in *; eauto with len.
     + eapply live_sound_monotone.
       rewrite map_zip. simpl.
+      do 2 rewrite zip_app in IHtrue_live_sound; eauto with len.
+      rewrite zip_map_l, zip_map_r in IHtrue_live_sound.
       eapply IHtrue_live_sound.
-      unfold compile_LV. rewrite map_app. eapply PIR2_app; eauto.
+      eapply PIR2_app; eauto.
       eapply PIR2_get; eauto 30 with len.
       intros; inv_get. simpl. rewrite getAnn_setTopAnn.
-      rewrite compile_live_incl_empty; eauto. rewrite of_list_filter.
-      split; cset_tac.
-    + intros; inv_get.
+      rewrite compile_live_incl_empty; eauto. unfold filter.
+      rewrite of_list_filter. cset_tac.
+    + intros; inv_get. simpl.
       eapply live_sound_monotone.
-      eapply live_sound_monotone2; eauto. eapply H2; eauto.
-      unfold compile_LV. rewrite map_app. eapply PIR2_app; eauto.
+      eapply live_sound_monotone2; eauto.
+      rewrite map_zip. simpl.
+      do 2 rewrite zip_app in H2; eauto with len.
+      rewrite zip_map_l, zip_map_r in H2.
+      eapply H2; eauto.
+      eapply PIR2_app; eauto.
       eapply PIR2_get; eauto 30 with len.
       intros; inv_get. simpl. rewrite getAnn_setTopAnn.
-      rewrite compile_live_incl_empty; eauto. rewrite of_list_filter.
-      split; cset_tac.
+      rewrite compile_live_incl_empty; eauto.
+      unfold filter. rewrite of_list_filter. cset_tac.
     + intros; inv_get.
       repeat rewrite getAnn_setTopAnn; simpl.
       split; eauto. cases; eauto.
       exploit H3; eauto.
       rewrite compile_live_incl_empty; eauto. rewrite <- H5.
-      rewrite of_list_filter.
-      clear_all; cset_tac.
+      unfold filter. rewrite of_list_filter. clear_all; cset_tac.
     + rewrite compile_live_incl; eauto with cset.
 Qed.
 
@@ -392,7 +392,7 @@ Lemma inv_extend s L L' ZL LV als lv f
     :  exists b b' : I.block,
       get (mapi I.mkBlock s ++ L) f b /\
       get (mapi I.mkBlock (zip (fun Zs a =>
-                                  (List.filter (fun x => B[x ∈ getAnn a]) (fst Zs),
+                                  (filter (fst Zs) (getAnn a),
                                    compile (pair ⊜ (getAnn ⊝ als ++ LV) (fst ⊝ s ++ ZL)) (snd Zs) a)) s als) ++ L')
           f b'.
 Proof.
@@ -410,7 +410,7 @@ Proof.
       rewrite map_length in *. omega.
 Qed.
 
-Lemma sim_I r L L' V V' s ZL LV lv
+Lemma sim_I ZL LV r L L' V V' s  lv
 : agree_on eq (getAnn lv) V V'
 -> true_live_sound Imperative ZL LV s lv
 -> renILabenv r SR (zip pair LV ZL) L L'
@@ -441,7 +441,6 @@ Proof.
     + edestruct (exp2bool_val2bool V); eauto; dcr.
       eapply sim'_expansion_closed.
       eapply (IH s1); eauto. eapply agree_on_incl; eauto.
-      eapply H12; congruence. eapply H6; congruence.
       eapply star2_silent.
       econstructor; eauto. eapply star2_refl.
       eapply star2_refl.
@@ -453,7 +452,6 @@ Proof.
       eapply star2_refl.
     + remember (exp_eval V e). symmetry in Heqo.
       exploit exp_eval_live_agree; eauto.
-      eapply H10. case_eq (exp2bool e); intros; try destruct b; congruence.
       destruct o. case_eq (val2bool v); intros.
       pfold; econstructor; try eapply plus2O.
       econstructor; eauto. reflexivity.
@@ -511,7 +509,7 @@ Proof.
         eapply agree_on_update_filter'; eauto.
         exploit H7; eauto using zip_get.
         rewrite zip_app; eauto with len.
-        intros. eapply inv_extend; eauto.
+        intros. rewrite <- zip_app; eauto with len. eapply inv_extend; eauto.
       * hnf; intros.
         hnf in H3. dcr. inv_get.
         simpl; unfold ParamRel; simpl; eauto.
@@ -527,15 +525,19 @@ Qed.
 
 Lemma sim_DVE V V' s lv
 : agree_on eq (getAnn lv) V V'
--> true_live_sound Imperative nil s lv
+-> true_live_sound Imperative nil nil s lv
 -> @sim I.state _ I.state _ (nil,V, s) (nil,V', compile nil s lv).
 Proof.
   intros. eapply sim'_sim.
-  eapply sim_I; eauto. hnf. econstructor.
+  eapply (@sim_I nil nil); eauto.
+  hnf; simpl; split; eauto using @sawtooth; isabsurd.
+  isabsurd.
 Qed.
 
 End I.
 
+
+(*
 
 Definition ArgRel (V V:onv val) (G:option (set var * params)) (VL VL': list val) : Prop :=
   match G with
@@ -642,3 +644,4 @@ Proof.
   intros. eapply sim'_sim.
   eapply sim_DVE'; eauto. hnf. econstructor.
 Qed.
+*)

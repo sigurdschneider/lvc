@@ -624,3 +624,34 @@ Instance app_m_eq A
 Proof.
   unfold Proper, respectful; intros; subst; eauto.
 Qed.
+
+Lemma app_length_le_ass X (L:list X) L' k
+  : length L + length L' <= k
+    -> length (L ++ L') <= k.
+Proof.
+  intros; subst. rewrite app_length; eauto.
+Qed.
+
+Lemma app_length_le_ass_right X (L:list X) L' k
+  : k <= length L + length L'
+    -> k <= length (L ++ L').
+Proof.
+  intros; subst. rewrite app_length; eauto.
+Qed.
+
+Lemma map_length_le_ass X Y (L:list X) (f:X->Y) k
+  : length L <= k
+    -> length (List.map f L) <= k.
+Proof.
+  intros; subst. rewrite map_length; eauto.
+Qed.
+
+Lemma map_length_le_ass_right X Y (L:list X) (f:X->Y) k
+  : length L = k
+    -> k = length (List.map f L).
+Proof.
+  intros; subst. rewrite map_length; eauto.
+Qed.
+
+Hint Resolve app_length_le_ass app_length_le_ass_right map_length_le_ass map_length_le_ass_right
+  : len.

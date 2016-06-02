@@ -99,64 +99,9 @@ Local Ltac lnorm :=
           | [ |- context [ zip _ _ _ ++ zip _ _ _ ] ] => rewrite <- zip_app; [| eauto with len]
           end).
 
-Lemma computeParameters_length AP s lv DL ZL
-  : live_sound Imperative ZL DL s lv
-    -> length AP = length DL
-    -> length DL = length ZL
-    -> length (snd (computeParameters (DL \\ ZL) ZL AP s lv)) = length DL.
-Proof.
-  intros LS. revert AP.
-  induction LS; simpl in *; intros; repeat let_pair_case_eq; subst; simpl.
-  - eapply IHLS; eauto. rewrite addParam_zip_lminus_length; eauto.
-  - rewrite zip_length2; eauto.
-    rewrite IHLS1; eauto.
-    rewrite IHLS2; eauto.
-  - eauto with len.
-  - eauto with len.
-  - eapply IHLS; eauto with len.
-  - rewrite length_drop_minus.
-    rewrite zip_length2; eauto with len.
-    + rewrite app_length.
-      repeat rewrite zip_length2; eauto with len.
-      rewrite map_length. omega.
-    + rewrite fold_zip_ounion_length.
-      * rewrite <- zip_app; [|eauto with len].
-        rewrite IHLS; eauto with len.
-      * intros; inv_get.
-        rewrite <- zip_app; [| eauto with len].
-        rewrite IHLS; [ | eauto with len | eauto with len].
-        erewrite H1; eauto with len.
-Qed.
-
 Local Create HintDb rew.
 Local Hint Extern 20 => rewrite <- zip_app : rew.
 Local Hint Extern 20 => rewrite <- live_globals_zip; eauto with len : rew.
-
-Lemma computeParametersF_length AP (ZL:list params) (Lv: list (set var)) F als k
-  : (forall n Zs a, get F n Zs -> get als n a ->
-               live_sound Imperative (fst ⊝ F ++ ZL) (getAnn ⊝ als ++ Lv) (snd Zs) a)
-    -> k = ❬getAnn ⊝ als ++ Lv❭
-    -> length F = length als
-    -> length AP = length Lv
-    -> length Lv = length ZL
-    -> forall n a, get (snd ⊝ computeParametersF F als Lv ZL AP) n a -> ❬a❭ = k.
-Proof.
-  intros LIVE EQ LEN1 LEN2 LEN3 n a GET. subst.
-  inv_get. rewrite computeParameters_length; eauto with len.
-Qed.
-
-Lemma computeParametersF_length_pair AP (ZL:list params) (Lv: list (set var)) F als k
-  : (forall n Zs a, get F n Zs -> get als n a ->
-               live_sound Imperative (fst ⊝ F ++ ZL) (getAnn ⊝ als ++ Lv) (snd Zs) a)
-    -> k = ❬getAnn ⊝ als ++ Lv❭
-    -> length F = length als
-    -> length AP = length Lv
-    -> length Lv = length ZL
-    -> forall n a, get (computeParametersF F als Lv ZL AP) n a -> ❬snd a❭ = k.
-Proof.
-  intros LIVE EQ LEN1 LEN2 LEN3 n a GET. subst.
-  inv_get. rewrite computeParameters_length; eauto with len.
-Qed.
 
 Lemma ifSndR_zip_addAdd s DL A B
  : length DL = length A
@@ -234,6 +179,43 @@ Proof.
     + rewrite drop_length_ass; eauto with len.
     + eauto with len.
 Qed.
+
+Corollary computeParameters_length AP s lv DL ZL
+  : live_sound Imperative ZL DL s lv
+    -> length AP = length DL
+    -> length DL = length ZL
+    -> length (snd (computeParameters (DL \\ ZL) ZL AP s lv)) = length DL.
+Proof.
+  intros. exploit computeParameters_AP_LV; eauto.
+  eapply PIR2_length in H2. eauto with len.
+Qed.
+
+Lemma computeParametersF_length AP (ZL:list params) (Lv: list (set var)) F als k
+  : (forall n Zs a, get F n Zs -> get als n a ->
+               live_sound Imperative (fst ⊝ F ++ ZL) (getAnn ⊝ als ++ Lv) (snd Zs) a)
+    -> k = ❬getAnn ⊝ als ++ Lv❭
+    -> length F = length als
+    -> length AP = length Lv
+    -> length Lv = length ZL
+    -> forall n a, get (snd ⊝ computeParametersF F als Lv ZL AP) n a -> ❬a❭ = k.
+Proof.
+  intros LIVE EQ LEN1 LEN2 LEN3 n a GET. subst.
+  inv_get. rewrite computeParameters_length; eauto with len.
+Qed.
+
+Lemma computeParametersF_length_pair AP (ZL:list params) (Lv: list (set var)) F als k
+  : (forall n Zs a, get F n Zs -> get als n a ->
+               live_sound Imperative (fst ⊝ F ++ ZL) (getAnn ⊝ als ++ Lv) (snd Zs) a)
+    -> k = ❬getAnn ⊝ als ++ Lv❭
+    -> length F = length als
+    -> length AP = length Lv
+    -> length Lv = length ZL
+    -> forall n a, get (computeParametersF F als Lv ZL AP) n a -> ❬snd a❭ = k.
+Proof.
+  intros LIVE EQ LEN1 LEN2 LEN3 n a GET. subst.
+  inv_get. rewrite computeParameters_length; eauto with len.
+Qed.
+
 
 Lemma ifFstR_addAdds s A B
 : PIR2 (ifFstR Subset) B  A
@@ -543,8 +525,8 @@ Lemma restrict_zip_ominus' DL LV lv x al
 :  length DL = length LV
 -> (forall n lv dl, get LV n (Some lv) -> get DL n dl -> x ∉ lv -> x ∉ dl)
 -> al \ singleton x ⊆ lv
-->  restrict (zip ominus' DL LV) al
- ≿ restrict (zip ominus' DL LV) (lv \ singleton x).
+->  restr al ⊝ (zip ominus' DL LV)
+ ≿ restr (lv \ singleton x) ⊝ (zip ominus' DL LV).
 Proof.
   intros. eapply length_length_eq in H.
   general induction H; simpl in *.
@@ -698,70 +680,6 @@ match goal with
   rewrite computeParameters_length; eauto with len
 end : len.
 
-
-Lemma app_length_le_ass X (L:list X) L' k
-  : length L + length L' <= k
-    -> length (L ++ L') <= k.
-Proof.
-  intros; subst. rewrite app_length; eauto.
-Qed.
-
-Lemma app_length_le_ass_right X (L:list X) L' k
-  : k <= length L + length L'
-    -> k <= length (L ++ L').
-Proof.
-  intros; subst. rewrite app_length; eauto.
-Qed.
-
-Lemma map_length_le_ass X Y (L:list X) (f:X->Y) k
-  : length L <= k
-    -> length (List.map f L) <= k.
-Proof.
-  intros; subst. rewrite map_length; eauto.
-Qed.
-
-Lemma map_length_le_ass_right X Y (L:list X) (f:X->Y) k
-  : length L = k
-    -> k = length (List.map f L).
-Proof.
-  intros; subst. rewrite map_length; eauto.
-Qed.
-
-Lemma zip_length_le_ass_right (X Y Z : Type) (f : X -> Y -> Z) (L : list X) (L' : list Y) k
-  : length L = length L'
-    -> k <= length L
-    -> k <= length (zip f L L').
-Proof.
-  intros; subst; rewrite zip_length2; eauto.
-Qed.
-
-Hint Resolve zip_length_le_ass_right : len.
-
-Hint Resolve app_length_le_ass app_length_le_ass_right map_length_le_ass map_length_le_ass_right
-  : len.
-
-Lemma take_zip (X Y Z : Type) (f : X -> Y -> Z) (L : list X) (L' : list Y) n
-  : take n (zip f L L') = zip f (take n L) (take n L').
-Proof.
-  intros. general induction n; simpl; eauto.
-  - destruct L, L'; simpl; eauto.
-    f_equal; eauto.
-Qed.
-
-Instance zip_eq_m (X Y Z : Type)
-  : Proper (eq ==> eq ==> eq ==> eq) (@zip X Y Z).
-Proof.
-  unfold Proper, respectful; intros; subst; eauto.
-Qed.
-
-Lemma take_app_eq n X (L L':list X)
-  : n = length L
-    -> take n (L ++ L') = L.
-Proof.
-  intros. subst. general induction L; simpl; eauto.
-  f_equal; eauto.
-Qed.
-
 Lemma ominus'_Some_oto_list A B C1 C2
   : PIR2 ≼ C1 C2
     -> ominus' ⊜ (A \\ B) C1 ≿ Some ⊝ A \\ app (A:=var) ⊜ B (oto_list ⊝ C2).
@@ -781,11 +699,11 @@ Lemma computeParameters_trs ZL Lv AP s lv
   -> PIR2 Subset AP (Lv \\ ZL)
   -> length Lv = length ZL
   -> length ZL = length AP
-  -> trs (restrict (zip ominus' (Lv \\ ZL)
-                       (snd (computeParameters (Lv \\ ZL) ZL AP s lv))) (getAnn lv))
-                  (List.map oto_list (snd (computeParameters (Lv \\ ZL) ZL AP s lv)))
-                  s lv
-                  (fst (computeParameters (Lv \\ ZL) ZL AP s lv)).
+  -> trs (restr (getAnn lv) ⊝ (zip ominus' (Lv \\ ZL)
+                                  (snd (computeParameters (Lv \\ ZL) ZL AP s lv))))
+        (List.map oto_list (snd (computeParameters (Lv \\ ZL) ZL AP s lv)))
+        s lv
+        (fst (computeParameters (Lv \\ ZL) ZL AP s lv)).
 Proof.
   intros LIVE NOUR P LEN1 LEN2.
   revert_except LIVE.
@@ -836,7 +754,7 @@ Proof.
       eapply trs_monotone_DL_AP.
       * eapply H1; eauto using PIR2_Subset_tab_extend with len.
       * { rewrite (take_eta (length F) (zip ominus' _ _)).
-          do 2 rewrite restrict_app.
+          do 2 rewrite List.map_app.
           eapply PIR2_app.
           - rewrite restrict_disj.
             + eapply restrict_subset2; eauto.
@@ -853,24 +771,81 @@ Proof.
                 | reflexivity ].
             + intros.
               inv_get.
+              Opaque to_list.
+              edestruct computeParameters_isCalled_get_Some;
+                try eapply H6; try eapply computeParametersF_length;
+                  eauto using get_app, map_get_1, computeParametersF_length with len.
+              edestruct computeParameters_isCalled_get_Some;
+                try eapply H11; try eapply computeParametersF_length;
+                  eauto using get_app, map_get_1, computeParametersF_length with len.
+              dcr; subst; simpl.
+              repeat rewrite of_list_app.
+              repeat rewrite of_list_3.
+              eapply disj_minus.
+              rewrite (meet_comm _ (getAnn lvs)) at 1.
+              rewrite union_meet_distr_r. rewrite union_meet_distr_r.
+              eapply union_incl_split.
 
+              eapply incl_union_incl_minus. eapply incl_union_left.
+              eapply incl_meet_split. eapply incl_union_right.
+              eapply incl_list_union; [ eapply map_get_1; try eapply H5 | ].
+              clear_all; cset_tac.
+              clear_all; cset_tac.
+              eapply incl_union_incl_minus. eapply incl_union_left.
+              revert H7 H6. clear_all. cset_tac. left.
+              eapply incl_list_union.
+              eapply map_get_1. eapply get_take; eauto. reflexivity.
+              simpl; eauto.
           - rewrite restrict_comp_meet.
-            assert (lvsEQ:getAnn lvs \ of_list (fst Zs ++ oto_list x)
-                                 [=] lv ∩ (getAnn lvs \ of_list (fst Zs ++ oto_list x))).         {
-              edestruct (@get_in_range _ LVb n). omega.
-              subst NPL. inv_get.
-              eapply get_in_range_app in H12; eauto with len.
-              inv_get.
-              edestruct computeParameters_isCalled_get_Some; try eapply eq;
-                eauto using get_app, map_get_1 with len. dcr; subst.
-              simpl. unfold lminus. rewrite H3 in H13.
-              rewrite of_list_app. repeat rewrite of_list_3.
-              revert H13; clear_all; cset_tac.
-              eapply H13. cset_tac.
+            edestruct computeParameters_isCalled_get_Some;
+              try eapply H6; try eapply computeParametersF_length;
+                eauto using get_app, map_get_1, computeParametersF_length with len.
+            dcr; subst; simpl.
+            repeat rewrite of_list_app. repeat rewrite of_list_3.
+            set (XX:=(list_union (oget
+                                ⊝ take ❬F❭
+                                    (olist_union (snd ⊝ computeParametersF F als Lv ZL AP)
+                                     (snd
+                                        (computeParameters ((getAnn ⊝ als ++ Lv) \\ (fst ⊝ F ++ ZL))
+                                           (fst ⊝ F ++ ZL) (tab {} ‖F‖ ++ AP) t alb))))
+                                 ∪ list_union (fst ∘ of_list ⊝ F))).
+
+            assert (lvsEQ:
+                      lv ∩ (getAnn lvs \ (of_list (fst Zs) ∪
+                                                  (XX ∩ (getAnn lvs \ of_list (fst Zs)) ∪ x)))
+                         [=]
+                         (getAnn lvs \ (of_list (fst Zs) ∪
+                                                (XX ∩ (getAnn lvs \ of_list (fst Zs)) ∪ x)))). {
+              rewrite meet_comm. symmetry. eapply incl_meet.
+              rewrite <- H3. rewrite <- H13.
+              clear_all; cset_tac.
             }
-
+            rewrite lvsEQ.
+            rewrite restrict_disj.
+            + eapply restrict_subset2; eauto.
+              do 2 rewrite drop_zip.
+              repeat rewrite drop_length_ass; eauto with len.
+              eapply zip_ominus_contra; eauto with len.
+              eapply PIR2_drop; eauto.
+              eapply PIR2_addAdds'; eauto with len.
+              eapply PIR2_combineParams_get;
+                [ | eauto with len | eauto using zip_get_eq | reflexivity].
+              eapply computeParametersF_length_pair; eauto with len.
+            + intros. inv_get.
+              unfold ominus', lminus in EQ.
+              destruct x3; invc EQ. simpl in *.
+              subst XX.
+              revert H5 H6. clear_all.
+              intros; hnf; intros. cset_tac.
+              * eapply H8; eauto.
+                eapply incl_list_union. eapply map_get_1; eauto. reflexivity.
+                eauto.
+              * eapply H; eauto.
+                eapply incl_list_union.
+                eapply map_get_1.
+                eapply get_take; eauto using get_range. reflexivity.
+                eauto.
         }
-
       * eapply PIR2_addAdds'; eauto with len.
         eapply PIR2_combineParams_get; [ | | | reflexivity].
         eapply computeParametersF_length_pair; eauto with len.
@@ -879,7 +854,7 @@ Proof.
       eapply trs_monotone_DL_AP.
       eapply IHLIVE; eauto using PIR2_Subset_tab_extend with len.
       * { rewrite (take_eta (length F) (zip ominus' _ _)).
-          rewrite restrict_app.
+          rewrite List.map_app.
           eapply PIR2_app.
           - eapply PIR2_restrict.
             do 2 rewrite take_zip.
@@ -891,8 +866,7 @@ Proof.
             eapply PIR2_combineParams; [| reflexivity].
             eapply computeParametersF_length_pair; eauto with len.
           - eapply restrict_subset2; eauto.
-            rewrite drop_zip; [|eauto with len].
-            rewrite drop_zip; [|eauto with len].
+            do 2 rewrite drop_zip.
             repeat (rewrite drop_length_ass; [| eauto with len]).
             eapply zip_ominus_contra.
             eapply PIR2_drop; eauto.
@@ -905,205 +879,13 @@ Proof.
         eapply computeParametersF_length_pair; eauto with len.
 Qed.
 
-
-    rename b0 into LVb.
-    exploit (computeParameters_length _ _ _ eq) as LENLVb; eauto with len.
-    exploit (computeParameters_LV_DL _ _ LIVE eq) as PIRLVb;
-      eauto using PIR2_Subset_tab_extend with len.
-    invc CPEQ.
-    assert (LENcPF:forall n aa, get (computeParametersF DL ZL AP F als) n aa -> ❬snd aa❭ = ❬LVb❭).
-    {
-      intros n aa GET. destruct aa as [an LV]. inv_get.
-      rewrite <- zip_app in EQ; eauto with len.
-      eapply computeParameters_length in EQ; eauto with len.
-      rewrite <- live_globals_zip; eauto.
-    }
-    assert (LENLVbNPL:❬LVb❭ = ❬NPL❭). {
-      rewrite LENLVb. subst NPL.
-      rewrite zip_length2; eauto 30 with len.
-      rewrite fold_zip_ounion_length. rewrite LENLVb.
-      eauto with len.
-      intros. inv_map H4. eauto.
-    }
-    assert (LENLEQ1:❬F❭ <= ❬LVb❭). {
-      rewrite LENLVb. rewrite app_length.
-      rewrite map_length. rewrite <- H. omega.
-    }
-    assert (LENLEQ2:❬F❭ <= ❬NPL❭). {
-      rewrite <- LENLVbNPL. eauto.
-    }
-    assert (LENFNPL:❬F❭ = ❬take ❬F❭ NPL❭). {
-      rewrite take_less_length; eauto.
-    }
-    assert (LENFLVb:length F = length (take ❬F❭ LVb)). {
-      rewrite take_less_length; eauto.
-    }
-    assert (NPLEQ: oto_list ⊝ take ❬F❭ NPL ++ oto_list ⊝ drop ❬F❭ NPL
-                   = oto_list ⊝ NPL). {
-      rewrite <- List.map_app. rewrite <- take_eta. reflexivity.
-    }
-    assert (LVb_LE:PIR2 ≼ LVb NPL). {
-      eapply PIR2_addAdds'; eauto 20 with len.
-      rewrite LENLVb. eauto 30 with len.
-      eapply PIR2_combineParams; eauto 20 with len.
-    }
-    econstructor; eauto with len.
-    + intros.
-      rewrite NPLEQ. inv_map H10; clear H10. destruct x as [an LV].
-      inv_get. simpl in *. rename EQ into EQcP.
-      exploit computeParameters_length; eauto using live_globals_zip with len.
-      assert (LENLV:❬LV❭ = length F + length DL). {
-        rewrite <- zip_app in EQcP; eauto with len.
-        eapply computeParameters_length in EQcP;
-          eauto using live_globals_zip with len rew.
-        rewrite EQcP. rewrite app_length, map_length. omega.
-      }
-      assert (LENLVb0:length LVb = length LV). {
-        rewrite LENLVb, LENLV. eauto with len.
-      }
-      assert (LVNPL:PIR2 ≼ LV NPL). {
-        eapply PIR2_addAdds'; eauto with len.
-        rewrite LENLV. eauto 20 with len.
-        eapply PIR2_combineParams_get;
-          eauto using zip_get with len.
-        intros.
-        rewrite LENLV. destruct a0 as [an' LV'].
-        inv_get; simpl in *. rename EQ into EQcP'.
-        rewrite <- zip_app in EQcP'; eauto with len.
-        eapply computeParameters_length in EQcP';
-          eauto using live_globals_zip with len rew.
-        rewrite EQcP'. eauto with len.
-        simpl_pair_eqs; subst. reflexivity.
-      }
-      assert (LENFtake:length F = length (take (length F) LV)). {
-        rewrite take_less_length; eauto. omega.
-      }
-      eapply trs_monotone_DL_AP.
-      * rewrite <- zip_app in EQcP; eauto with len.
-        eapply H1; eauto 20 using pair_eta,live_globals_zip, PIR2_Subset_tab_extend with len rew.
-      * rewrite zip_app; eauto with len .
-        rewrite (take_eta ❬F❭ LV).
-        rewrite zip_app; eauto with len.
-        repeat rewrite restrict_app.
-        eapply PIR2_app.
-        {
-        rewrite restrict_disj.
-        eapply restrict_subset2; eauto.
-        eapply PIR2_flip_Subset_ext_right;
-          [ | symmetry; eapply mkGlobals_zip_ominus'; eauto with len].
-        eapply PIR2_ominus_minuso; eauto.
-        rewrite <- LENFtake. eauto with len.
-        eapply PIR2_take; eauto.
-
-        intros. inv_get.
-        unfold oto_list.
-        subst NPL. inv_get.
-        eapply get_in_range_app in H11; eauto with len.
-        eapply get_in_range_app in H13; eauto with len.
-        inv_get.
-
-
-        edestruct computeParameters_isCalled_get_Some; try eapply eq;
-        eauto using get_app, map_get_1 with len. dcr; subst.
-        edestruct computeParameters_isCalled_get_Some; try eapply H9;
-          eauto using get_app, map_get_1 with len. dcr; subst.
-        Opaque to_list.
-        simpl in *. rewrite of_list_app.
-        repeat rewrite of_list_3.
-        rewrite minus_union.
-        eapply disj_minus.
-        rewrite (meet_comm _ (getAnn lvs)) at 1.
-        rewrite union_meet_distr_r. rewrite union_meet_distr_r.
-        eapply union_incl_split.
-
-        eapply incl_union_incl_minus. eapply incl_union_left.
-        eapply incl_meet_split. eapply incl_union_right.
-        eapply incl_list_union; [ eapply map_get_1; try eapply H5 | ].
-        clear_all; cset_tac.
-        clear_all; cset_tac.
-        eapply incl_union_incl_minus. eapply incl_union_left.
-        revert H9 H10. clear_all. cset_tac. eapply incl_left.
-        eapply incl_list_union.
-        eapply map_get_1. eapply get_take; try eapply H9. eauto. reflexivity. eauto.
-        }
-
-        rewrite restrict_comp_meet.
-        assert (lvsEQ:getAnn lvs \ of_list (fst Zs ++ oto_list x)
-                             [=] lv ∩ (getAnn lvs \ of_list (fst Zs ++ oto_list x))).         {
-          edestruct (@get_in_range _ LVb n). omega.
-          subst NPL. inv_get.
-          eapply get_in_range_app in H12; eauto with len.
-          inv_get.
-          edestruct computeParameters_isCalled_get_Some; try eapply eq;
-            eauto using get_app, map_get_1 with len. dcr; subst.
-          simpl. unfold lminus. rewrite H3 in H13.
-          rewrite of_list_app. repeat rewrite of_list_3.
-          revert H13; clear_all; cset_tac.
-          eapply H13. cset_tac.
-        }
-        rewrite <- lvsEQ.
-        rewrite restrict_disj.
-        eapply restrict_subset2; eauto.
-        eapply zip_ominus_contra; eauto with len.
-        rewrite length_drop_minus.
-        rewrite zip_length2; eauto with len. omega.
-
-        eapply PIR2_drop; eauto.
-
-        intros. inv_get.
-        unfold ominus', lminus in EQ. destruct x1; inv EQ. simpl in *.
-        clear EQ. subst NPL.
-        inv_get.
-        rewrite <- zip_app in H11; eauto with len.
-        rewrite <- zip_app in H16; eauto with len.
-        inv_get. destruct x1; simpl in *. invc EQ.
-
-        repeat get_functional.
-
-        edestruct computeParameters_isCalled_get_Some; try eapply H9;
-        eauto using get_app, map_get_1 with len. dcr; subst. simpl.
-        rewrite of_list_app.
-        repeat rewrite of_list_3. simpl. unfold lminus.
-        hnf; intros. cset_tac. eapply H20; eauto.
-        eapply incl_right.
-        eapply incl_list_union; [ eapply map_get_1 | reflexivity | eapply H18]; eauto.
-        eapply H18; eauto. eapply incl_left.
-        eapply incl_list_union.
-        eapply map_get_1. eapply get_take; try eapply H10. eauto. reflexivity. eauto.
-        congruence.
-      * eauto.
-    + rewrite NPLEQ.
-      eapply trs_monotone_DL_AP.
-      eapply IHLIVE; eauto using live_globals_zip, PIR2_Subset_tab_extend with len.
-      * rewrite (take_eta (length F) LVb) at 1.
-        rewrite zip_app; eauto with len.
-        rewrite zip_app. rewrite restrict_app.
-        eapply PIR2_app.
-        eapply PIR2_flip_Subset_ext_right;
-          [ | symmetry; eapply mkGlobals_zip_ominus'; eauto with len].
-        eapply PIR2_restrict.
-        eapply PIR2_ominus_minuso; eauto.
-        rewrite <- LENFLVb. eauto with len.
-        eapply PIR2_take; eauto.
-        eapply restrict_subset2; eauto.
-        eapply zip_ominus_contra; eauto with len.
-        rewrite length_drop_minus. rewrite LENLVb.
-        rewrite zip_length2; eauto with len.
-        rewrite app_length; eauto. rewrite map_length. omega.
-        eapply PIR2_drop; eauto.
-        rewrite <- LENFLVb. eauto with len.
-      * pose proof eq as H12.
-        eapply computeParameters_length in H12;
-          eauto using live_globals_zip with len rew.
-Qed.
-
 Print Assumptions computeParameters_trs.
 
 
-Lemma additionalParameters_live_monotone LV' DL ZL s an' LV lv
-: live_sound Imperative (zip pair DL ZL) s lv
+Lemma additionalParameters_live_monotone ZL Lv LV' s an' LV lv
+: live_sound Imperative ZL Lv s lv
   -> additionalParameters_live LV s lv an'
-  -> PIR2 Subset LV' (DL \\ ZL)
+  -> PIR2 Subset LV' (Lv \\ ZL)
   -> additionalParameters_live LV' s lv an'.
 Proof.
   intros LS APLS LE.
@@ -1138,58 +920,53 @@ Proof.
       * cset_tac; intuition.
 Qed.
 
-Lemma computeParameters_live DL ZL AP s an' LV lv
-: live_sound Imperative (zip pair DL ZL) s lv
-  -> computeParameters (zip lminus DL ZL) ZL AP s lv = (an', LV)
-  -> PIR2 Subset AP (zip lminus DL ZL)
-  -> length DL = length ZL
+Lemma computeParameters_live ZL Lv AP s lv
+: live_sound Imperative ZL Lv s lv
+  -> PIR2 Subset AP (Lv \\ ZL)
+  -> length Lv = length ZL
   -> length ZL = length AP
   -> noUnreachableCode s
-  -> additionalParameters_live (oget ⊝ LV) s lv an'.
+  -> additionalParameters_live (oget ⊝ (snd (computeParameters (Lv \\ ZL) ZL AP s lv)))
+                              s lv (fst (computeParameters (Lv \\ ZL) ZL AP s lv)).
 Proof.
-  intros LS CPEQ SUB LEN1 LEN2 REACH.
-  general induction LS; inv REACH; simpl in *; repeat let_case_eq; invc CPEQ.
-  - econstructor; eauto.
-    eapply IHLS; try eapply eq; eauto 20 using addParam_Subset with len.
-  - lnorm.
-    exploit computeParameters_LV_DL; try eapply eq0; eauto with len.
-    exploit computeParameters_LV_DL; try eapply eq; eauto with len.
-    econstructor; eauto.
-    eapply additionalParameters_live_monotone; eauto.
-    eapply PIR2_ifFstR_Subset_oget, ifFstR_zip_ounion; eauto.
-    eapply additionalParameters_live_monotone; eauto.
-    eapply PIR2_ifFstR_Subset_oget, ifFstR_zip_ounion; eauto.
-  - inv_get.
-    edestruct PIR2_nth_2; eauto using zip_get; dcr.
-    econstructor. eapply map_get_1; eauto. eapply keep_Some; eauto.
-    simpl. etransitivity; eauto.
+  intros LS SUB LEN1 LEN2 REACH.
+  general induction LS; inv REACH; simpl in *; repeat let_pair_case_eq; repeat let_case_eq;
+    subst; simpl in *.
+  - econstructor; eauto 20 using addParam_Subset with len.
+  - econstructor; eauto with len.
+    + eapply additionalParameters_live_monotone; eauto.
+      * eapply PIR2_ifFstR_Subset_oget, ifFstR_zip_ounion;
+          eauto using computeParameters_LV_DL with len.
+    + eapply additionalParameters_live_monotone; eauto.
+      * eapply PIR2_ifFstR_Subset_oget, ifFstR_zip_ounion;
+          eauto using computeParameters_LV_DL with len.
+  - inv_get. PIR2_inv. inv_get.
+    econstructor; eauto using map_get_eq, keep_Some; eauto with cset.
   - econstructor.
   - econstructor; eauto.
-    eapply IHLS; try eapply eq; eauto 20 using addParam_Subset with len.
+    eapply IHLS; eauto 20 using addParam_Subset with len.
   - lnorm.
-    rewrite zip_app; eauto with len.
-    exploit (computeParameters_LV_DL); try eapply eq; eauto using PIR2_Subset_tab_extend with len.
-    exploit PIR2_length as LENb0; eauto.
-    econstructor; eauto.
-    + intros. inv_get. rewrite zip_length2 in LENb0; eauto with len.
-      edestruct computeParameters_isCalled_get_Some; try eapply eq;
+    econstructor.
+    + intros. inv_get.
+      edestruct computeParameters_isCalled_get_Some; try eapply H9;
         eauto using map_get_1, get_app with len.
-      eapply computeParametersF_length; eauto with len. rewrite live_globals_zip; eauto.
-      dcr. subst. simpl. rewrite of_list_3. rewrite <- zip_app in H12; eauto with len.
-      inv_get.
+      eapply computeParametersF_length; eauto with len.
+      dcr. subst. simpl. rewrite of_list_3.
+      exploit (@computeParameters_LV_DL (fst ⊝ F ++ ZL) (getAnn ⊝ als ++ Lv) (tab {}  ‖F‖ ++ AP));
+        eauto using PIR2_Subset_tab_extend with len.
       exploit computeParametersF_LV_DL; try rewrite <- zip_app; eauto with len.
       eapply PIR2_nth in H12; eauto. dcr; inv_get. inv H16.
-      rewrite H13. unfold lminus. clear_all; cset_tac.
-    + intros. inv_get. repeat get_functional.
+      rewrite H14. clear_all; cset_tac.
+    + intros. inv_get.
       exploit H1; eauto using pair_eta, PIR2_Subset_tab_extend with len.
-      rewrite zip_app in H10; eauto with len.
-      eapply additionalParameters_live_monotone; try eapply H10; eauto.
+      eapply additionalParameters_live_monotone; try eapply H9; eauto.
       rewrite map_map.
       rewrite of_list_oto_list_oget.
       rewrite <- List.map_app. rewrite <- take_eta.
       eapply PIR2_ifFstR_Subset_oget.
       eapply ifFstR_addAdds2. rewrite zip_app; eauto with len.
-      eapply computeParametersF_LV_DL; eauto with len. rewrite live_globals_zip; eauto.
+      eapply computeParametersF_LV_DL; eauto with len.
+      eapply computeParameters_LV_DL; eauto using PIR2_Subset_tab_extend with len.
     + eapply additionalParameters_live_monotone; try eapply IHLS;
         eauto using PIR2_Subset_tab_extend with len.
       rewrite map_map.
@@ -1197,13 +974,10 @@ Proof.
       rewrite <- List.map_app. rewrite <- take_eta.
       eapply PIR2_ifFstR_Subset_oget.
       eapply ifFstR_addAdds2. rewrite zip_app; eauto with len.
-      eapply computeParametersF_LV_DL; eauto with len. rewrite live_globals_zip; eauto.
+      eapply computeParametersF_LV_DL; eauto with len.
+      eapply computeParameters_LV_DL; eauto using PIR2_Subset_tab_extend with len.
     + rewrite map_length. rewrite take_less_length; eauto.
-      rewrite zip_length2. rewrite app_length. rewrite zip_length2; eauto with len.
-      rewrite fold_zip_ounion_length; eauto. rewrite LENb0.
-      rewrite zip_app; eauto with len.
-      symmetry.
+      rewrite zip_length2. eauto 20 with len.
+      rewrite fold_zip_ounion_length; eauto. eauto 20 with len.
       eapply computeParametersF_length; try eapply H5; eauto with len.
-      rewrite <- zip_app; eauto with len.
-      rewrite LENb0; eauto with len.
 Qed.

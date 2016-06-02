@@ -626,3 +626,28 @@ Lemma zip_length4 {X Y Z} {f:X->Y->Z} DL ZL
 Proof.
   intros. rewrite zip_length. rewrite Min.min_r; eauto.
 Qed.
+
+
+Lemma zip_length_le_ass_right (X Y Z : Type) (f : X -> Y -> Z) (L : list X) (L' : list Y) k
+  : length L = length L'
+    -> k <= length L
+    -> k <= length (zip f L L').
+Proof.
+  intros; subst; rewrite zip_length2; eauto.
+Qed.
+
+Hint Resolve zip_length_le_ass_right : len.
+
+Lemma take_zip (X Y Z : Type) (f : X -> Y -> Z) (L : list X) (L' : list Y) n
+  : take n (zip f L L') = zip f (take n L) (take n L').
+Proof.
+  intros. general induction n; simpl; eauto.
+  - destruct L, L'; simpl; eauto.
+    f_equal; eauto.
+Qed.
+
+Instance zip_eq_m (X Y Z : Type)
+  : Proper (eq ==> eq ==> eq ==> eq) (@zip X Y Z).
+Proof.
+  unfold Proper, respectful; intros; subst; eauto.
+Qed.

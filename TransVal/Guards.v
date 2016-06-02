@@ -24,29 +24,29 @@ Qed.
 
 (** Function to generate the guard expression for one expression **)
 Fixpoint undef e :=
-match e with
-|BinOp n a b
- => combine (combine (undef a) (undef b))
-           (if [n = 5]
-            then smtNeg (constr b (Con (zext (O::nil))))
-            else smtTrue)
-|UnOp n a => undef a
-|Con v => smtTrue
-|Var v => smtTrue
-end.
+  match e with
+  | BinOp n a b
+    => combine (combine (undef a) (undef b))
+              (if [n = 5]
+               then smtNeg (constr b (Con (zext (O::nil))))
+               else smtTrue)
+  | UnOp n a => undef a
+  | Con v => smtTrue
+  | Var v => smtTrue
+  end.
 
 Fixpoint undefLift (el: list exp) :=
-match el with
-|nil => smtTrue
-| e::el' => combine (undef e) (undefLift el')
-end.
+  match el with
+  | nil => smtTrue
+  | e::el' => combine (undef e) (undefLift el')
+  end.
 
 Definition guardGen s p cont :=
   if [s = smtTrue] then cont else
-  match p with
+    match p with
     | source => smtAnd s cont
     | target => smtImp s cont
-  end.
+    end.
 
 Lemma models_guardGen_source F E s cont
 : models F E (guardGen s source cont) <-> models F E (smtAnd s cont).
@@ -70,7 +70,6 @@ Qed.
 
 Lemma freeVars_undefLift el
   : freeVars (undefLift el) ⊆ list_union (List.map Exp.freeVars el).
-
 Proof.
   general induction el; simpl in * |- *; eauto.
   - rewrite list_union_start_swap.

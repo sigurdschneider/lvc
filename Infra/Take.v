@@ -111,3 +111,12 @@ Proof.
   - exfalso; omega.
   - rewrite IHn; eauto. omega.
 Qed.
+
+
+Lemma take_app_eq n X (L L':list X)
+  : n = length L
+    -> take n (L ++ L') = L.
+Proof.
+  intros. subst. general induction L; simpl; eauto.
+  f_equal; eauto.
+Qed.

@@ -25,8 +25,7 @@ Definition compileF (compile : forall (LV:list (؟ (set var) * params)) (s:stmt)
     match F, ans with
     | (Z,s)::F, a::ans =>
       match getAnn a with
-      | Some lv => (List.filter (fun x => B[x ∈ lv]) Z,
-                  compile LV s a) :: f F ans
+      | Some lv => (Z, compile LV s a) :: f F ans
       | None => f F ans
       end
     | _, _ => nil
@@ -35,20 +34,12 @@ Definition compileF (compile : forall (LV:list (؟ (set var) * params)) (s:stmt)
 Fixpoint compile (LV:list (؟ (set var) * params)) (s:stmt) (a:ann (؟(set var))) :=
   match s, a with
     | stmtLet x e s, ann1 _ an =>
-      if [x ∈ oget (getAnn an)]
-      then stmtLet x e (compile LV s an)
-      else compile LV s an
+      stmtLet x e (compile LV s an)
     | stmtIf e s t, ann2 _ ans ant =>
-      if [exp2bool e = Some true] then
-        (compile LV s ans)
-      else if [ exp2bool e = Some false ] then
-        (compile LV t ant)
-      else
-        stmtIf e (compile LV s ans) (compile LV t ant)
+      stmtIf e (compile LV s ans) (compile LV t ant)
     | stmtApp f Y, ann0 _ =>
       let lvZ := nth (counted f) LV (None, nil) in
-      stmtApp (LabI (countSome (fst ⊝ (take (counted f) LV))))
-              (filter_by (fun y => B[y ∈ oget (fst lvZ)]) (snd lvZ) Y)
+      stmtApp (LabI (countSome (fst ⊝ (take (counted f) LV)))) Y
     | stmtReturn x, ann0 _ => stmtReturn x
     | stmtExtern x f e s, ann1 lv an =>
       stmtExtern x f e (compile LV s an)
@@ -65,7 +56,7 @@ Lemma compileF_get LV F n ans Zs a lv
     -> get ans n a
     -> getAnn a = Some lv
     -> get (compileF compile LV F ans) (countSome (getAnn ⊝ (take n ans)))
-          (List.filter (fun x => B[x ∈ lv]) (fst Zs), compile LV (snd Zs) a).
+          (fst Zs, compile LV (snd Zs) a).
 Proof.
   intros LEN GetF GetAns. length_equify.
   general induction LEN.
@@ -82,7 +73,7 @@ Lemma compileF_get_inv LV F ans Z' s' n'
     -> exists Zs a n lv, get F n Zs
       /\ get ans n a
       /\ getAnn a = Some lv
-      /\ Z' = List.filter (fun x => B[x ∈ lv]) (fst Zs)
+      /\ Z' = fst Zs
       /\ s' = compile LV (snd Zs) a
       /\ n' = countSome (getAnn ⊝ (take n ans)).
 Proof.
@@ -91,7 +82,7 @@ Proof.
   - isabsurd.
   - destruct x as [Z s]. case_eq (getAnn y); [ intros ? EQ | intros EQ].
     + rewrite EQ in *. inv Get.
-      * eexists (Z,s), y, 0, s0; eauto 20 using get.
+      * eexists (Z',s), y, 0, s0; eauto 20 using get.
       * clear Get. edestruct IHLEN as [Zs [a [n' [lv ?]]]]; eauto; dcr; subst.
         exists Zs, a, (S n'), lv. simpl; rewrite EQ. eauto 20 using get.
     + rewrite EQ in *. edestruct IHLEN as [Zs [a [n [lv ?]]]]; eauto; dcr; subst.
