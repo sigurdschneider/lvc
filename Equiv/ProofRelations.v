@@ -30,7 +30,6 @@ Class ProofRelationI (A:Type) := {
 }.
 
 
-
 Inductive simB (SIM:ProgramEquivalence F.state F.state) (r:F.state -> F.state -> Prop) {A} (AR:ProofRelation A)  : list A -> F.labenv -> F.labenv -> A -> F.block -> F.block -> Prop :=
 | simBI a L L' V V' Z Z' s s' n AL
   : ParamRel a Z Z'
