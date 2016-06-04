@@ -296,20 +296,10 @@ Proof.
       intros. eapply argsLive_liveSound; eauto.
       edestruct H4 as [[? ?] SIM]; eauto using zip_get. hnf; eauto.
       hnf in H13; dcr; subst.
-      eapply (@sim_Y_left I.state _ I.state _).
-      eapply (@sim_Y_right I.state _ I.state _).
-      eapply SIM; [ | eapply Heqo | eapply H9 ].
+      eapply SIM; eauto.
       hnf; simpl. split; eauto.
       exploit (omap_length _ _ _ _ _ Heqo); eauto. split. congruence.
       eauto using agree_on_incl.
-      Focus 4. econstructor; eauto. simpl.
-      Focus 2. econstructor; eauto. simpl.
-      eapply filter_filter_by_length; eauto.
-      * simpl.
-        eapply (stepGotoI' _ _ GetL'); eauto; simpl.
-        eapply filter_filter_by_length; eauto.
-      * simpl.
-        eapply (stepGotoI' _ _ GetL); eauto.
     + pfold; econstructor 3; try eapply star2_refl; eauto; stuck2.
   - pno_step.
     simpl. erewrite <- exp_eval_live_agree; eauto. eapply agree_on_sym; eauto.

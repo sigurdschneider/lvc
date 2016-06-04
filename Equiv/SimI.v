@@ -51,17 +51,17 @@ Definition simILabenv t (r:irel)
            {A} (PR:ProofRelationI A) (AL:list A) L L' :=
   (length AL = length L /\ sawtooth L' /\ sawtooth L) /\
   forall f f' a Z s n Z' s' n',
-    IndexRelI AL f f'
-    -> get AL f a
-    -> get L f (I.blockI Z s n)
-    -> get L' f' (I.blockI Z' s' n')
+    IndexRelI AL (counted f) (counted f')
+    -> get AL (counted f) a
+    -> get L (counted f) (I.blockI Z s n)
+    -> get L' (counted f') (I.blockI Z' s' n')
     -> (ParamRelI a Z Z' /\ BlockRelI a (I.blockI Z s n) (I.blockI Z' s' n'))
       /\ (forall E E' Yv Y'v Y Y',
             ArgRelI E E' a Yv Y'v
             -> omap (exp_eval E) Y = Some Yv
             -> omap (exp_eval E') Y' = Some Y'v
-            -> sim'r r t (drop (f  - n) L, E, stmtApp (LabI n) Y)
-                    (drop (f'  - n') L', E', stmtApp (LabI n') Y')).
+            -> sim'r r t (L, E, stmtApp f Y)
+                    (L', E', stmtApp f' Y')).
 
 Lemma simILabenv_mon t (r r':irel) A (PR:ProofRelationI A) AL L L'
   : simILabenv t r PR AL L L'
@@ -97,12 +97,11 @@ Proof.
   destruct SIML; dcr; split; eauto with len. split; eauto.
   econstructor; eauto. eapply tooth_I_mkBlocks.
   econstructor; eauto. eapply tooth_I_mkBlocks.
-  intros ? ? ? ? ? ? ? ? ? RN GetAL GetFL GetL'.
+  intros [f] [f'] ? ? ? ? ? ? ? RN GetAL GetFL GetL'.
   assert (❬AL'❭ = ❬mapi I.mkBlock F❭) by eauto with len.
   eapply get_app_cases in GetAL. destruct GetAL as [GetAL'|GetAL].
   - eapply get_app_lt_1 in GetFL; [| rewrite <- H; eauto using get_range].
     inv_get. destruct x as [Z s]. simpl in *. clear EQ.
-    orewrite (n - n = 0). simpl.
     exploit Ilt; eauto using get_range.
     eapply get_app_lt_1 in GetL'; [| rewrite mapi_length; eauto with len ].
     inv_get. destruct x as [Z' s']; simpl in *; clear EQ.
@@ -113,10 +112,7 @@ Proof.
     exploit (omap_length _ _ _ _ _ H3).
     pone_step; eauto using get_app, get_mapi; eauto; simpl; try congruence.
     orewrite (n' - n' = 0); simpl.
-    eapply get_app. eapply mapi_get_1; eauto.
-    simpl. congruence.
     orewrite (n - n = 0); simpl.
-    orewrite (n' - n' = 0); simpl.
     eapply ISIM; eauto.
   - destruct SIML; dcr.
     eapply get_app_right_ge in GetFL; [ | rewrite <- H; eauto].
@@ -124,7 +120,9 @@ Proof.
     eapply get_app_right_ge in GetL'; [ | eauto with len; rewrite mapi_length; eauto].
     rewrite mapi_length in *.
     eapply IndexRelDrop in RN; eauto.
-    edestruct H1 as [[? ?] SIM]; eauto. rewrite H; eauto. rewrite Img; eauto.
+    edestruct (H1 (LabI (f - ❬AL'❭)) (LabI (f' - Image AL')))
+      as [[? ?] SIM]; simpl; eauto.
+    rewrite H; eauto. rewrite Img; eauto.
     split; eauto.
     intros.
     assert (f - n >= ❬mapi I.mkBlock F❭). {
@@ -136,12 +134,32 @@ Proof.
       rewrite mapi_length in *.
       simpl in *. omega.
     }
-    rewrite (drop_app_gen _ (mapi I.mkBlock F)); eauto.
-    rewrite (drop_app_gen _ (mapi I.mkBlock F')); eauto.
-    repeat rewrite mapi_length. rewrite H in SIM. rewrite Img in SIM.
-    orewrite (f - n - ❬F❭ = f - ❬F❭ - n).
-    orewrite (f' - n' - ❬F'❭ = f' - ❬F'❭ - n').
-    eapply paco3_mon. eapply SIM; eauto. eauto.
+    eapply paco3_mon.
+    exploit (ArgLengthMatchI); eauto; dcr.
+    eapply (@sim_Y_left I.state _ I.state _).
+    eapply (@sim_Y_right I.state _ I.state _).
+    rewrite Img in SIM. rewrite H in SIM.
+    eapply SIM; eauto.
+    econstructor; simpl; eauto with len. simpl. eauto with len.
+    Focus 2.
+    econstructor; simpl; eauto. simpl. eauto with len.
+    simpl.
+    rewrite <- (mapi_length I.mkBlock).
+    orewrite (f' - ❬mapi I.mkBlock F'❭ - n' =  (f' - n') - ❬mapi I.mkBlock F'❭).
+    rewrite <- (drop_app_gen _ (mapi I.mkBlock F')); eauto.
+    change (f' - n') with (counted (LabI f') - I.block_n (I.blockI Z' s' n')).
+    econstructor. simpl.
+    rewrite get_app_ge. rewrite mapi_length. eauto. omega. simpl. eauto with len.
+    eauto. eauto.
+    simpl.
+    rewrite <- (mapi_length I.mkBlock).
+    orewrite (f - ❬mapi I.mkBlock F❭ - n =  (f - n) - ❬mapi I.mkBlock F❭).
+    rewrite <- (drop_app_gen _ (mapi I.mkBlock F)); eauto.
+    change (f - n) with (counted (LabI f) - I.block_n (I.blockI Z s n)).
+    econstructor. simpl.
+    rewrite get_app_ge. rewrite mapi_length. eauto. omega. simpl. eauto with len.
+    eauto. eauto.
+    eauto.
 Qed.
 
 Lemma fix_compatible_I t A (PR:ProofRelationI A) AL F F' L L' AL'
