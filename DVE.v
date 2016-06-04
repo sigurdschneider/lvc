@@ -117,7 +117,6 @@ Proof.
   - repeat cases; simpl; eauto.
 Qed.
 
-
 Lemma dve_live i ZL LV s lv G
   : true_live_sound i ZL LV s lv
     -> live_sound i (filter ⊜ ZL LV) LV (compile (zip pair LV ZL) s lv) (compile_live s lv G).
@@ -240,7 +239,7 @@ Qed.
 Lemma sim_I ZL LV r L L' V V' s  lv
 : agree_on eq (getAnn lv) V V'
 -> true_live_sound Imperative ZL LV s lv
--> renILabenv Sim r SR (zip pair LV ZL) L L'
+-> simILabenv Sim r SR (zip pair LV ZL) L L'
 -> (forall (f:nat) lv,
       get LV f lv
       -> exists (b b' : I.block),
@@ -280,16 +279,11 @@ Proof.
     + remember (exp_eval V e). symmetry in Heqo.
       exploit exp_eval_live_agree; eauto.
       destruct o. case_eq (val2bool v); intros.
-      pfold; econstructor; try eapply plus2O.
-      econstructor; eauto. reflexivity.
-      econstructor; eauto. reflexivity.
+      pone_step.
       left; eapply (IH s1); eauto using agree_on_incl.
-      pfold; econstructor; try eapply plus2O.
-      econstructor 3; eauto. reflexivity.
-      econstructor 3; eauto. reflexivity.
+      pone_step.
       left; eapply (IH s2); eauto using agree_on_incl.
-      pfold. econstructor 3; try eapply star2_refl; eauto.
-      stuck.
+      pno_step.
   - edestruct H2 as [? [? [GetL GetL']]]; eauto.
     remember (omap (exp_eval V) Y). symmetry in Heqo.
     erewrite (get_nth); eauto using zip_get; simpl.
@@ -326,9 +320,7 @@ Proof.
   - pone_step. left. rewrite <- zip_app; eauto with len. eapply IH; eauto.
     + simpl in *; eapply agree_on_incl; eauto.
     + rewrite zip_app; eauto with len.
-      eapply renILabenv_extension_len; eauto.
-      * eauto with len.
-      * eauto with len.
+      eapply renILabenv_extension_len; simpl; eauto 20 with len.
       * intros. hnf; intros.
         hnf in H4. subst n'. inv_get. simpl.
         hnf in H13; dcr; subst. simpl.
@@ -341,7 +333,6 @@ Proof.
       * hnf; intros.
         hnf in H3. dcr. inv_get.
         simpl; unfold ParamRel; simpl; eauto.
-      * simpl. eauto 20 with len.
     + intros; eapply inv_extend; eauto.
 Qed.
 
