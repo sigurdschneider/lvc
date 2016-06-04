@@ -1,6 +1,6 @@
 Require Import List paco2.
 Require Import Util IL AllInRel Sawtooth.
-Require Export SmallStepRelations StateType Equiv.
+Require Export SmallStepRelations StateType.
 
 Set Implicit Arguments.
 Unset Printing Records.
@@ -532,12 +532,6 @@ Proof.
   eapply bisim'_reduction_closed_1; eauto.
   eapply bisim'_refl.
 Qed.
-
-Instance bisim_progeq {S} `{StateType S} : ProgramEquivalence S S.
-Proof.
-  econstructor. instantiate (1:=(paco2 (@bisim_gen S _ S _))).
-  eapply paco2_mon.
-Defined.
 
 Definition same_call (e e':extern) := extern_fnc e = extern_fnc e' /\ extern_args e = extern_args e'.
 

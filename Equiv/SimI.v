@@ -1,221 +1,203 @@
 Require Import List paco2.
 Require Export Util Var Val Exp MoreExp Env Map CSet AutoIndTac IL AllInRel Sawtooth.
-Require Export Equiv ProofRelations Sim SimTactics IL InRel.
+Require Export Sim SimTactics IL InRel.
 
 Set Implicit Arguments.
 Unset Printing Records.
 
+(* A proof relation is parameterized by analysis information A *)
+Class ProofRelationI (A:Type) := {
+    (* Relates parameter lists according to analysis information *)
+    ParamRelI : A -> list var -> list var -> Prop;
+    (* Relates argument lists according to analysis information
+       and closure environments *)
+    ArgRelI : onv val -> onv val -> A-> list val -> list val -> Prop;
+    (* Relates blocks according to analysis information *)
+    BlockRelI : A -> I.block -> I.block -> Prop;
+    (* Relates environments according to analysis information *)
+    IndexRelI : 〔A〕 -> nat -> nat -> Prop;
+    Image : 〔A〕 -> nat;
+    ArgLengthMatchI : forall E E' a Z Z' VL VL',
+        ParamRelI a Z Z' -> ArgRelI E E' a VL VL' -> length Z = length VL /\ length Z' = length VL';
+    IndexRelDrop : forall AL' AL n n', IndexRelI (AL' ++ AL) n n' ->
+                                  n >= length AL'
+                                  -> IndexRelI AL (n - length AL') (n' - Image AL')
+(*    IndexRelApp : forall AL AL' n n', IndexRelI AL n n' -> IndexRelI (AL' ++ AL) (❬AL'❭ + n) n' *)
+}.
 
-Ltac simpl_get_dropI :=
-  repeat match goal with
-  | [ H : get (drop (?n - _) ?L) _ _, H' : get ?L ?n ?blk, STL: sawtooth ?L |- _ ]
-    => eapply get_drop in H;
-      let X := fresh "LT" in pose proof (sawtooth_smaller STL H') as X;
-        simpl in X, H;
-        orewrite (n - I.block_n blk + I.block_n blk = n) in H; clear X
-  | [ H' : get ?L ?n ?blk, STL: sawtooth ?L |- get (drop (?n - _) ?L) _ _ ]
-    => eapply drop_get;
-      let X := fresh "LT" in pose proof (sawtooth_smaller STL H') as X;
-        simpl in X; simpl;
-        orewrite (n - I.block_n blk + I.block_n blk = n); clear X
-  end.
+Definition irel := rel3 simtype (fun _ : simtype => I.state)
+                       (fun (_ : simtype) (_ : I.state) => I.state).
 
-Lemma sim_drop_shift_I r l (L:I.labenv) E Y (L':I.labenv) E' Y' blk blk' (STL:sawtooth L) (STL':sawtooth L')
-  : get L (labN l) blk
-  -> get L' (labN l) blk'
-  -> paco2 (@sim_gen I.state _ I.state _) r
-          (drop (labN l - block_n blk) L, E, stmtApp (LabI (block_n blk)) Y)
-          (drop (labN l - block_n blk') L', E', stmtApp (LabI (block_n blk')) Y')
-  -> paco2 (@sim_gen I.state _ I.state _) r (L, E, stmtApp l Y)
-          (L', E', stmtApp l Y').
-Proof.
-  intros. pinversion H1; subst.
-  - eapply plus2_destr_nil in H2.
-    eapply plus2_destr_nil in H3.
-    dcr. inv H5; simpl in *. inv H6; simpl in *.
-    simpl_get_dropI. repeat get_functional.
-    simpl_minus.
-    pfold. econstructor; try eapply star2_plus2.
-    econstructor; eauto. eauto.
-    econstructor; eauto. eauto.
-    eauto.
-  - inv H2.
-    + exfalso. destruct H4 as [? [? ?]]. inv H4.
-    + inv H3.
-      * exfalso. destruct H5 as [? [? ?]]. inv H5.
-      * inv H9; inv H12; simpl in *.
-        pfold. subst yl yl0.
-        simpl_get_dropI; repeat get_functional.
-        simpl_minus.
-        econstructor; try eapply star2_plus2.
-        econstructor; eauto. eauto.
-        econstructor; eauto. eauto.
-        left. pfold. econstructor 2; try eapply star2_refl; eauto.
-  - inv H3; simpl in *.
-    + pfold. econstructor 3; simpl; eauto using star2_refl. eauto.
-      stuck2. eapply H4.
-      do 2 eexists.
-      econstructor; eauto.
-      simpl. simpl_get_dropI. eauto.
-    + inv H6.
-      pfold. econstructor 3; try eapply H2; eauto.
-      destruct yl; isabsurd.
-      simpl in *. simpl_get_dropI. repeat get_functional.
-      eapply star2_silent.
-      econstructor; eauto.
-      eauto. rewrite drop_drop in H8. simpl_minus. simpl in *. eauto.
-  - inv H3; simpl in *.
-    + pfold. econstructor 3; try eapply star2_refl. eauto.
-      stuck2. eapply H5.
-      do 2 eexists.
-      econstructor; eauto.
-      simpl. simpl_get_dropI. eauto.
-    + inv H8. inv H4; simpl in *.
-      * pfold. subst. econstructor 3; try eapply H2; eauto.
-        simpl in *. simpl_get_dropI. repeat get_functional.
-        eapply star2_silent.
-        econstructor; eauto.
-        eauto. rewrite drop_drop in H8. simpl_minus. simpl in *. eauto.
-      * inv H11.
-        pfold. econstructor 4; try eapply H2; eauto.
-        simpl in *. simpl_get_dropI. repeat get_functional.
-        eapply star2_silent.
-        econstructor; eauto.
-        eauto. rewrite drop_drop in H8. simpl_minus. simpl in *. eauto.
-        simpl in *. simpl_get_dropI. repeat get_functional.
-        eapply star2_silent.
-        econstructor; eauto. subst.
-        eauto. rewrite drop_drop in H8. simpl_minus. simpl in *. eauto.
-Qed.
-
-Lemma mutual_block_extension_I r A (AR:ProofRelationI A) F1 F2 F1' F2' ALX AL AL' i L1 L2
-      (D1:F1' = drop i F1) (D2:F2' = drop i F2) (D3:AL' = drop i AL)
-      (LEN1:length F1 = length F2) (LEN2:length AL = length F1)
-      (SIML:simILabenv sim_progeq r AR ALX L1 L2)
-      (CIH: forall a
-              (Z Z' : params)
-              (Yv Y'v : list val) (s s' : stmt) (n : nat) E1 E2,
-          get F1 n (Z, s) ->
-          get F2 n (Z', s') ->
-          get AL n a ->
-          ArgRelI E1 E2 a Yv Y'v ->
-          r (mapi I.mkBlock F1 ++ L1, E1 [Z <-- List.map Some Yv], s)
-            (mapi I.mkBlock F2 ++ L2, E2 [Z' <-- List.map Some Y'v], s'))
-  : (forall (n : nat) (Z : params)
-       (s : stmt) (Z' : params) (s' : stmt)
-       (a : A),
-        get F1 n (Z, s) ->
-        get F2 n (Z', s') ->
-        get AL n a ->
-        fexteqI sim_progeq AR a (AL ++ ALX) Z s Z' s' /\
-        BlockRelI a (I.blockI Z s n) (I.blockI Z' s' n) /\
-        ParamRelI a Z Z')
-    -> mutual_block
-        (simIBlock sim_progeq r AR (AL ++ ALX) (mapi I.mkBlock F1 ++ L1)%list
-              (mapi I.mkBlock F2 ++ L2)%list) i AL'
-        (mapi_impl I.mkBlock i F1')
-        (mapi_impl I.mkBlock i F2').
-Proof.
-  intros.
-  assert (LEN1':length_eq F1' F2').
-  eapply length_length_eq. subst; eauto using drop_length_stable.
-  assert (LEN2':length_eq AL' F1').
-  eapply length_length_eq. subst; eauto using drop_length_stable.
-  general induction LEN1'. inv LEN2'.
-  - simpl. econstructor.
-  - inv LEN2'.
-    simpl. econstructor; simpl; eauto.
-    + eapply IHLEN1'; eauto using drop_shift_1.
-    + destruct x,y. edestruct H as [[B1 B2] [B3 B4]]; eauto using drop_eq.
-      econstructor; eauto.
-      intros. hnf.
-      pfold. econstructor; try eapply plus2O; eauto.
-      econstructor; eauto. eapply get_app.
-      eapply mapi_get_1. eapply drop_eq. eauto. simpl.
-      edestruct RelsOKI; eauto with len.
-      econstructor; eauto. eapply get_app.
-      eapply mapi_get_1. eapply drop_eq. eauto. simpl.
-      edestruct RelsOKI; eauto with len.
-      simpl. right. orewrite (i-i=0); simpl.
-      eapply CIH; eauto using drop_eq.
-Qed.
-
-Lemma fix_compatible_I r A (AR:ProofRelationI A) (a:A) AL F F' E E' Z Z' L L' Yv Y'v s s' n AL'
-(LEN1:length F = length F') (LEN2:length AL' = length F)
-  : simILabenv sim_progeq r AR AL L L'
-    -> (forall n Z s Z' s' a, get F n (Z,s) -> get F' n (Z',s') -> get AL' n a ->
-                             fexteqI sim_progeq AR a (AL' ++ AL) Z s Z' s'
-                             /\ BlockRelI a (I.blockI Z s n) (I.blockI Z' s' n)
-                             /\ ParamRelI a Z Z')
+Definition indexwise_r t (r:irel) A (PR:ProofRelationI A) AL' F F' AL L L' :=
+  forall n n' Z s Z' s' a,
+    IndexRelI (AL' ++ AL) n n'
     -> get F n (Z,s)
-    -> get F' n (Z',s')
+    -> get F' n' (Z',s')
     -> get AL' n a
-    -> ArgRelI E E' a Yv Y'v
-    -> sim'r r
-              (mapi I.mkBlock F ++ L, E [Z <-- List.map Some Yv], s)
-              (mapi I.mkBlock F' ++ L', E' [Z' <-- List.map Some Y'v], s').
+    -> forall E E' VL VL',
+        ArgRelI E E' a VL VL'
+        -> r t (mapi I.mkBlock F ++ L, E[Z <-- List.map Some VL], s)
+            (mapi I.mkBlock F' ++ L', E'[Z' <-- List.map Some VL'], s').
+
+Lemma indexwise_r_mon t (r r':irel) A (PR:ProofRelationI A) AL' F F' AL L L'
+  : indexwise_r t r PR AL' F F' AL L L'
+    -> (forall t x y, r t x y -> r' t x y)
+    -> indexwise_r t r' PR AL' F F' AL L L'.
 Proof.
-  revert_all; pcofix CIH; intros.
-  eapply H1; eauto.
-  hnf; intros.
-  econstructor; eauto using simILabenv_mon.
-  - eapply mutual_block_extension_I; eauto.
-    eapply simILabenv_mon; eauto.
+  intros Idx LE; hnf; intros; eauto.
 Qed.
 
-Lemma mutual_block_extension_simple_I r A AR F1 F2 F1' F2' ALX AL AL' i L1 L2
-      (D1:F1' = drop i F1) (D2:F2' = drop i F2) (D3:AL' = drop i AL)
-      (LEN1:length F1 = length F2) (LEN2:length AL = length F1)
-      (SIML:simILabenv sim_progeq r AR ALX L1 L2)
-  :
-    (forall (n : nat) (Z : params)
-       (s : stmt) (Z' : params) (s' : stmt)
-       (a : A),
-        get F1 n (Z, s) ->
-        get F2 n (Z', s') ->
-        get AL n a ->
-        fexteqI sim_progeq AR a (AL ++ ALX) Z s Z' s' /\
-        BlockRelI a (I.blockI Z s n) (I.blockI Z' s' n) /\
-        ParamRelI a Z Z')
-    -> mutual_block
-        (simIBlock sim_progeq r AR (AL ++ ALX) (mapi I.mkBlock F1 ++ L1)%list
-              (mapi I.mkBlock F2 ++ L2)%list) i AL'
-        (mapi_impl I.mkBlock i F1')
-        (mapi_impl I.mkBlock i F2').
+Definition simILabenv t (r:irel)
+           {A} (PR:ProofRelationI A) (AL:list A) L L' :=
+  (length AL = length L /\ sawtooth L' /\ sawtooth L) /\
+  forall f f' a Z s n Z' s' n',
+    IndexRelI AL f f'
+    -> get AL f a
+    -> get L f (I.blockI Z s n)
+    -> get L' f' (I.blockI Z' s' n')
+    -> (ParamRelI a Z Z' /\ BlockRelI a (I.blockI Z s n) (I.blockI Z' s' n'))
+      /\ (forall E E' Yv Y'v Y Y',
+            ArgRelI E E' a Yv Y'v
+            -> omap (exp_eval E) Y = Some Yv
+            -> omap (exp_eval E') Y' = Some Y'v
+            -> sim'r r t (drop (f  - n) L, E, stmtApp (LabI n) Y)
+                    (drop (f'  - n') L', E', stmtApp (LabI n') Y')).
+
+Lemma simILabenv_mon t (r r':irel) A (PR:ProofRelationI A) AL L L'
+  : simILabenv t r PR AL L L'
+    -> (forall t x y, r t x y -> r' t x y)
+    -> simILabenv t r' PR AL L L'.
 Proof.
-  intros ASS.
-  assert (LEN1':length_eq F1' F2') by (subst; eauto with len).
-  assert (LEN2':length_eq AL' F1') by (subst; eauto with len).
-  general induction LEN1'; inv LEN2'; eauto using @mutual_block.
-  - simpl. econstructor; simpl; eauto using drop_shift_1.
-    + destruct x,y. edestruct ASS as [[B1 B2] [B3 B4]]; eauto using drop_eq.
-      econstructor; eauto.
-      intros. hnf.
-      pfold. econstructor; try eapply plus2O.
-      econstructor; eauto. eapply get_app.
-      eapply mapi_get_1. eapply drop_eq. eauto. simpl.
-      edestruct RelsOKI; eauto with len.
-      reflexivity.
-      econstructor; eauto. eapply get_app.
-      eapply mapi_get_1. eapply drop_eq. eauto. simpl.
-      edestruct RelsOKI; eauto with len.
-      reflexivity.
-      simpl. left. orewrite (i-i=0); simpl.
-      eapply fix_compatible_I; eauto.
-      eauto using drop_eq. eauto using drop_eq. eauto using drop_eq.
+  intros [[? ?] SIM] LE; hnf; intros; split; eauto.
+  intros. edestruct SIM as [[? ?] SIM']; eauto.
+  split; eauto. intros.
+  eapply paco3_mon. eapply SIM; eauto. eauto.
 Qed.
 
-Lemma simILabenv_extension r A (AR:ProofRelationI A) (AL AL':list A) F F' L L'
+Definition indexwise_proofrel A (PR:ProofRelationI A) (F F':〔params * stmt〕) AL' AL :=
+  forall n n' Z s Z' s' a,
+    IndexRelI (AL' ++ AL) n n'
+    -> get F n (Z,s)
+    -> get F' n' (Z',s')
+    -> get AL' n a
+    -> ParamRelI a Z Z' /\ BlockRelI a (I.blockI Z s n) (I.blockI Z' s' n').
+
+Lemma simILabenv_extension' t (r:irel) A (PR:ProofRelationI A) (AL AL':list A) F F' L L'
+      (LEN1:length AL' = length F)
+  : indexwise_r t (sim'r r \3/ r) PR AL' F F' AL L L'
+    -> indexwise_proofrel PR F F' AL' AL
+    -> (forall n n', IndexRelI (AL' ++ AL) n n' -> n < length F -> n' < length F')
+    -> (forall n n', IndexRelI (AL' ++ AL) n n' -> n >= length F -> n' >= length F')
+    -> Image AL' = length F'
+    -> simILabenv t r PR AL L L'
+    -> simILabenv t r PR (AL' ++ AL) (mapi I.mkBlock F ++ L) (mapi I.mkBlock F' ++ L').
+Proof.
+  intros ISIM IP Ilt Ige Img SIML.
+  hnf. split.
+  destruct SIML; dcr; split; eauto with len. split; eauto.
+  econstructor; eauto. eapply tooth_I_mkBlocks.
+  econstructor; eauto. eapply tooth_I_mkBlocks.
+  intros ? ? ? ? ? ? ? ? ? RN GetAL GetFL GetL'.
+  assert (❬AL'❭ = ❬mapi I.mkBlock F❭) by eauto with len.
+  eapply get_app_cases in GetAL. destruct GetAL as [GetAL'|GetAL].
+  - eapply get_app_lt_1 in GetFL; [| rewrite <- H; eauto using get_range].
+    inv_get. destruct x as [Z s]. simpl in *. clear EQ.
+    orewrite (n - n = 0). simpl.
+    exploit Ilt; eauto using get_range.
+    eapply get_app_lt_1 in GetL'; [| rewrite mapi_length; eauto with len ].
+    inv_get. destruct x as [Z' s']; simpl in *; clear EQ.
+    split; eauto.
+    intros.
+    exploit (ArgLengthMatchI); eauto; dcr. eapply IP; eauto.
+    exploit (omap_length _ _ _ _ _ H2).
+    exploit (omap_length _ _ _ _ _ H3).
+    pone_step; eauto using get_app, get_mapi; eauto; simpl; try congruence.
+    orewrite (n' - n' = 0); simpl.
+    eapply get_app. eapply mapi_get_1; eauto.
+    simpl. congruence.
+    orewrite (n - n = 0); simpl.
+    orewrite (n' - n' = 0); simpl.
+    eapply ISIM; eauto.
+  - destruct SIML; dcr.
+    eapply get_app_right_ge in GetFL; [ | rewrite <- H; eauto].
+    exploit Ige; eauto; try congruence.
+    eapply get_app_right_ge in GetL'; [ | eauto with len; rewrite mapi_length; eauto].
+    rewrite mapi_length in *.
+    eapply IndexRelDrop in RN; eauto.
+    edestruct H1 as [[? ?] SIM]; eauto. rewrite H; eauto. rewrite Img; eauto.
+    split; eauto.
+    intros.
+    assert (f - n >= ❬mapi I.mkBlock F❭). {
+      exploit (sawtooth_smaller H7 GetFL).
+      rewrite <- H in *. rewrite mapi_length. simpl in *. omega.
+    }
+    assert (f' - n' >= ❬mapi I.mkBlock F'❭). {
+      exploit (sawtooth_smaller H6 GetL').
+      rewrite mapi_length in *.
+      simpl in *. omega.
+    }
+    rewrite (drop_app_gen _ (mapi I.mkBlock F)); eauto.
+    rewrite (drop_app_gen _ (mapi I.mkBlock F')); eauto.
+    repeat rewrite mapi_length. rewrite H in SIM. rewrite Img in SIM.
+    orewrite (f - n - ❬F❭ = f - ❬F❭ - n).
+    orewrite (f' - n' - ❬F'❭ = f' - ❬F'❭ - n').
+    eapply paco3_mon. eapply SIM; eauto. eauto.
+Qed.
+
+Lemma fix_compatible_I t A (PR:ProofRelationI A) AL F F' L L' AL'
+(LEN2:length AL' = length F)
+  : (forall r, simILabenv t r PR (AL' ++ AL) (mapi I.mkBlock F ++ L)
+                     (mapi I.mkBlock F' ++ L')
+            -> indexwise_r t (sim'r r) PR AL' F F' AL L L')
+    -> indexwise_proofrel PR F F' AL' AL
+    -> (forall n n', IndexRelI (AL' ++ AL) n n' -> n < length F -> n' < length F')
+    -> (forall n n', IndexRelI (AL' ++ AL) n n' -> n >= length F -> n' >= length F')
+    -> Image AL' = length F'
+    -> forall r, simILabenv t r PR AL L L'
+           -> indexwise_r t (sim'r r) PR AL' F F' AL L L'.
+Proof.
+  intros ISIM IP Ilt Ige Img r SIML; pcofix CIH.
+  eapply ISIM; eauto.
+  hnf. split.
+  destruct SIML; dcr; split; eauto with len. split.
+  econstructor; eauto. eapply tooth_I_mkBlocks.
+  econstructor; eauto. eapply tooth_I_mkBlocks.
+  eapply simILabenv_extension'; eauto using simILabenv_mon, indexwise_r_mon.
+Qed.
+
+Lemma simILabenv_extension t A (PR:ProofRelationI A) (AL AL':list A) F F' L L'
+      (LEN1:length AL' = length F)
+  : (forall r, simILabenv t r PR (AL' ++ AL) (mapi I.mkBlock F ++ L)
+                     (mapi I.mkBlock F' ++ L')
+          -> indexwise_r t (sim'r r) PR AL' F F' AL L L')
+    -> indexwise_proofrel PR F F' AL' AL
+    -> (forall n n', IndexRelI (AL' ++ AL) n n' -> n < length F -> n' < length F')
+    -> (forall n n', IndexRelI (AL' ++ AL) n n' -> n >= length F -> n' >= length F')
+    -> Image AL' = length F'
+    -> forall r, simILabenv t r PR AL L L'
+           -> simILabenv t r PR (AL' ++ AL) (mapi I.mkBlock F ++ L) (mapi I.mkBlock F' ++ L').
+Proof.
+  intros. eapply simILabenv_extension'; eauto.
+  eapply indexwise_r_mon.
+  eapply fix_compatible_I; eauto. eauto.
+Qed.
+
+Lemma renILabenv_extension_len t A (PR:ProofRelationI A) (AL AL':list A) F F' L L'
       (LEN1:length AL' = length F) (LEN2:length F = length F')
-: simILabenv sim_progeq r AR AL L L'
-  -> (forall n Z s Z' s' a, get F n (Z,s) -> get F' n (Z',s') -> get AL' n a ->
-                         fexteqI sim_progeq AR a (AL' ++ AL) Z s Z' s'
-                         /\ BlockRelI a (I.blockI Z s n) (I.blockI Z' s' n)
-                         /\ ParamRelI a Z Z')
-  -> simILabenv sim_progeq r AR (AL' ++ AL) (mapi I.mkBlock F ++ L) (mapi I.mkBlock F' ++ L').
+      (IDX:forall AL n n', IndexRelI AL n n' = (n = n'))
+  : (forall r, simILabenv t r PR (AL' ++ AL) (mapi I.mkBlock F ++ L)
+                     (mapi I.mkBlock F' ++ L')
+          -> indexwise_r t (sim'r r) PR AL' F F' AL L L')
+    -> indexwise_proofrel PR F F' AL' AL
+    -> Image AL' = length F'
+    -> forall r, simILabenv t r PR AL L L'
+           -> simILabenv t r PR (AL' ++ AL) (mapi I.mkBlock F ++ L) (mapi I.mkBlock F' ++ L').
 Proof.
-  intros.
-  hnf; intros.
-  econstructor; eauto.
-  eapply mutual_block_extension_simple_I; eauto.
+  assert (forall n n', IndexRelI (AL' ++ AL) n n' -> n < length F -> n' < length F').
+  intros. rewrite IDX in H. subst; omega.
+  assert (forall n n', IndexRelI (AL' ++ AL) n n' -> n >= length F -> n' >= length F').
+  intros. rewrite IDX in H0. subst; omega.
+  intros. eapply simILabenv_extension'; eauto.
+  eapply indexwise_r_mon.
+  eapply fix_compatible_I; eauto. eauto.
 Qed.

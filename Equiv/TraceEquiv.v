@@ -1,6 +1,6 @@
 Require Import List.
 Require Export Util Var Val Exp Env Map CSet AutoIndTac IL AllInRel.
-Require Export SmallStepRelations StateType Equiv Bisim Sim.
+Require Export SmallStepRelations StateType Bisim Sim.
 
 Set Implicit Arguments.
 Unset Printing Records.

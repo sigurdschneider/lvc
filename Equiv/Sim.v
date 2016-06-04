@@ -1,5 +1,5 @@
-Require Import Util paco3 AllInRel Sawtooth Get.
-Require Export SmallStepRelations StateType Equiv.
+Require Import Util AllInRel Sawtooth Get.
+Require Export paco3 SmallStepRelations StateType.
 
 Set Implicit Arguments.
 Unset Printing Records.
@@ -666,9 +666,3 @@ Proof.
   eapply sim'_reduction_closed_2; eauto.
   eapply sim'_refl.
 Qed.
-
-Instance sim_progeq {S} `{StateType S} : ProgramEquivalence simtype S S.
-Proof.
-econstructor. instantiate (1:=paco3 (@sim_gen S _ S _)).
-eapply paco3_mon.
-Defined.
