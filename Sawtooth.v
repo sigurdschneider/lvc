@@ -99,8 +99,7 @@ Proof.
     rewrite drop_app; eauto.
 Qed.
 
-
-Lemma stepGoto' L E l Y blk vl
+Lemma stepGotoI' L E l Y blk vl
       (Ldef:get L l blk)
       (len:length (I.block_Z blk) = length Y)
       (def:omap (exp_eval E) Y = Some vl) E'
@@ -116,6 +115,24 @@ Proof.
   eapply sawtooth_get in Ldef; eauto.
   eapply (I.stepGoto E (LabI (block_n blk)) Y Ldef len def); eauto.
 Qed.
+
+Lemma stepGotoF' L E l Y blk vl
+      (Ldef:get L l blk)
+      (len:length (F.block_Z blk) = length Y)
+      (def:omap (exp_eval E) Y = Some vl) E'
+      (updOk:(F.block_E blk) [F.block_Z blk <-- List.map Some vl] = E')
+      (ST:sawtooth L)
+  : step (drop (l - block_n blk) L, E, stmtApp (LabI (block_n blk)) Y)
+         EvtTau
+         (drop (l - block_n blk) L, E', F.block_s blk).
+Proof.
+  pattern (l - block_n blk) at 2.
+  orewrite (l - block_n blk = block_n blk - block_n blk + (l - block_n blk)).
+  rewrite <- drop_drop.
+  eapply sawtooth_get in Ldef; eauto.
+  eapply (F.stepGoto E (LabI (block_n blk)) Y Ldef len def); eauto.
+Qed.
+
 
 Lemma tooth_I_mkBlocks n F
   : tooth n (mapi_impl I.mkBlock n F).
