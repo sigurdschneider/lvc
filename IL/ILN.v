@@ -1,6 +1,6 @@
 Require Import List.
 Require Import Util Var Val Exp Env Map CSet AutoIndTac IL.
-Require Import Bisim BisimTactics Infra.Status Pos.
+Require Import Sim SimTactics Infra.Status Pos.
 
 Set Implicit Arguments.
 Unset Printing Records.

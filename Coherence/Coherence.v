@@ -1,6 +1,5 @@
 Require Import Util IL InRel RenamedApart LabelsDefined.
 Require Import Annotation MoreExp SetOperations Liveness Restrict.
-Require Import Bisim BisimTactics.
 
 Set Implicit Arguments.
 

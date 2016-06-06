@@ -1,7 +1,6 @@
 Require Import Util IL InRel RenamedApart LabelsDefined.
 Require Import Restrict MoreExp SetOperations OUnion.
 Require Import Annotation Liveness Coherence.
-Require Import Bisim BisimTactics.
 
 (*  IL_Types. *)
 

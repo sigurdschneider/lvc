@@ -278,7 +278,7 @@ Inductive pmSim : I.state -> I.state -> Prop :=
 Unset Printing Records.
 
 Lemma pmSim_sim σ1 σ2
-: pmSim σ1 σ2 -> sim σ1 σ2.
+: pmSim σ1 σ2 -> sim Sim σ1 σ2.
 Proof.
   revert σ1 σ2. cofix; intros.
   inv H; inv LS; simpl in *; try monadS_inv pmlowerOk.

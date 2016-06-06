@@ -1,6 +1,6 @@
 Require Import List.
 Require Import Util Var Val Exp MoreExp Env Map CSet AutoIndTac AllInRel IL MoreList.
-Require Import Bisim BisimTactics Infra.Status Pos.
+Require Import Sim SimTactics Infra.Status Pos.
 
 Set Implicit Arguments.
 
@@ -243,7 +243,7 @@ Proof.
 Qed.
 
 Lemma stmt_idx_sim σ1 σ2
-  : stmtIdxSim σ1 σ2 -> bisim σ1 σ2.
+  : stmtIdxSim σ1 σ2 -> sim Bisim σ1 σ2.
 Proof.
   revert σ1 σ2. cofix; intros.
   destruct H; destruct s; simpl in *; try monadS_inv EQ.

@@ -1,6 +1,6 @@
 Require Import List.
 Require Import Util Var Val Exp Env Map CSet AutoIndTac IL.
-Require Import Bisim BisimTactics Infra.Status Pos ILN InRel Sawtooth.
+Require Import Sim SimTactics Infra.Status Pos ILN InRel Sawtooth.
 
 Set Implicit Arguments.
 Unset Printing Records.
@@ -149,15 +149,13 @@ Inductive labIndicesSim : I.state -> IL.I.state -> Prop :=
   | labIndicesSimI (L:env (option I.block)) L' E s s' symb LB
     (EQ:labIndices symb s = Success s')
     (LA:lab_approx symb L' LB)
-(*    (LL:forall l b, L (counted l) = Some b -> fst (fst (I.block_F b)) = l) *)
     (EX:forall f i k, pos symb f k = Some i -> exists blk, L f = Some blk)
-    (*    (SM:forall l blk, L l = Some blk -> I.block_f blk < length (I.block_F blk)) *)
     (BL:forall f blk, L f = Some blk -> exists j, pos symb f 0 = Some j /\
                                         get LB j blk)
     : labIndicesSim (L, E, s) (L', E, s').
 
 Lemma labIndicesSim_sim σ1 σ2
-  : labIndicesSim σ1 σ2 -> bisim σ1 σ2.
+  : labIndicesSim σ1 σ2 -> sim Bisim σ1 σ2.
 Proof.
   revert σ1 σ2. cofix; intros.
   destruct H; destruct s; simpl in *; try monadS_inv EQ.

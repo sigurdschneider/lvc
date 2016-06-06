@@ -188,18 +188,12 @@ Module I.
 
   Require Import SimI.
 
-  Definition ArgRel (V V':onv val) (G:(set var) * params) (VL VL': list val) : Prop :=
-      VL' = (filter_by (fun x => B[x ∈ fst G]) (snd G) VL) /\
-      length (snd G) = length VL /\
-      agree_on eq (fst G \ of_list (snd G)) V V'.
-
-
-  Definition ParamRel (G:(set var) * params) (Z Z' : list var) : Prop :=
-    Z' = (List.filter (fun x => B[x ∈ fst G]) Z) /\ snd G = Z.
-
 Instance SR : ProofRelationI ((set var) * params) := {
-   ParamRelI := ParamRel;
-   ArgRelI := ArgRel;
+   ParamRelI G Z Z' := Z' = (List.filter (fun x => B[x ∈ fst G]) Z) /\ snd G = Z;
+   ArgRelI V V' G VL VL' :=
+     VL' = (filter_by (fun x => B[x ∈ fst G]) (snd G) VL) /\
+     length (snd G) = length VL /\
+     agree_on eq (fst G \ of_list (snd G)) V V';
    BlockRelI := fun lvZ b b' => True;
    Image AL := length AL;
    IndexRelI AL n n' := n = n'
@@ -311,19 +305,19 @@ Proof.
   - pone_step. left. rewrite <- zip_app; eauto with len. eapply IH; eauto.
     + simpl in *; eapply agree_on_incl; eauto.
     + rewrite zip_app; eauto with len.
-      eapply renILabenv_extension_len; simpl; eauto 20 with len.
+      eapply simILabenv_extension_len; simpl; eauto 20 with len.
       * intros. hnf; intros.
-        hnf in H4. subst n'. inv_get. simpl.
-        hnf in H13; dcr; subst. simpl.
+        hnf in H4. subst n'. inv_get.
+        simpl in *; dcr; subst.
         rewrite <- zip_app; eauto with len.
         eapply IH; eauto.
         eapply agree_on_update_filter'; eauto.
         exploit H7; eauto using zip_get.
         rewrite zip_app; eauto with len.
-        intros. rewrite <- zip_app; eauto with len. eapply inv_extend; eauto.
+        intros. rewrite <- zip_app; eauto with len.
+        eapply inv_extend; eauto.
       * hnf; intros.
-        hnf in H3. dcr. inv_get.
-        simpl; unfold ParamRel; simpl; eauto.
+        hnf in H3; subst. inv_get; simpl; eauto.
     + intros; eapply inv_extend; eauto.
 Qed.
 
@@ -344,17 +338,11 @@ Module F.
 
   Require Import SimF.
 
-  Definition ArgRel (G:(set var) * params) (VL VL': list val) : Prop :=
-      VL' = (filter_by (fun x => B[x ∈ fst G]) (snd G) VL) /\
-      length (snd G) = length VL.
-
-
-  Definition ParamRel (G:(set var) * params) (Z Z' : list var) : Prop :=
-    Z' = (List.filter (fun x => B[x ∈ fst G]) Z) /\ snd G = Z.
-
 Instance SR : ProofRelation ((set var) * params) := {
-   ParamRel := ParamRel;
-   ArgRel := ArgRel;
+   ParamRel G Z Z' := Z' = (List.filter (fun x => B[x ∈ fst G]) Z) /\ snd G = Z;
+   ArgRel G VL VL' :=
+     VL' = (filter_by (fun x => B[x ∈ fst G]) (snd G) VL) /\
+     length (snd G) = length VL;
    BlockRel := fun lvZ b b' => True;
    Image AL := length AL;
    IndexRel AL n n' := n = n'
@@ -452,19 +440,8 @@ Proof.
       intros. eapply argsLive_liveSound; eauto.
       edestruct H4 as [[? ?] SIM]; eauto using zip_get. hnf; eauto.
       hnf in H13; dcr; subst.
-      eapply (@sim_Y_left F.state _ F.state _).
-      eapply (@sim_Y_right F.state _ F.state _).
       eapply SIM; [ | eapply Heqo | eapply H9 ].
-      hnf; simpl. split; eauto.
-      exploit (omap_length _ _ _ _ _ Heqo); eauto. congruence.
-      Focus 4. econstructor; eauto. simpl.
-      Focus 2. econstructor; eauto. simpl.
-      eapply filter_filter_by_length; eauto. simpl.
-      * simpl.
-        eapply (stepGotoF' _ _ GetL'); eauto; simpl.
-        eapply filter_filter_by_length; eauto.
-      * simpl.
-        eapply (stepGotoF' _ _ GetL); eauto.
+      hnf; simpl. split; eauto with len.
     + pfold; econstructor 3; try eapply star2_refl; eauto; stuck2.
   - pno_step.
     simpl. erewrite <- exp_eval_live_agree; eauto. eapply agree_on_sym; eauto.
@@ -476,7 +453,7 @@ Proof.
   - pone_step. left. rewrite <- zip_app; eauto with len. eapply IH; eauto.
     + simpl in *; eapply agree_on_incl; eauto.
     + rewrite zip_app; eauto with len.
-      eapply renILabenv_extension_len; simpl; eauto 20 with len.
+      eapply simLabenv_extension_len; simpl; eauto 20 with len.
       * intros. hnf; intros.
         hnf in H4. subst n'. inv_get. simpl.
         hnf in H13; dcr; subst. simpl.

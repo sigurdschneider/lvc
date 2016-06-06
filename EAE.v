@@ -2,7 +2,7 @@ Require Import CSet Le.
 Require Import Plus Util AllInRel Map SetOperations.
 
 Require Import Val EqDec Computable Var Env EnvTy IL Annotation.
-Require Import paco2 BisimF Fresh MoreExp.
+Require Import paco2 SimF Fresh MoreExp.
 
 Set Implicit Arguments.
 Unset Printing Records.
@@ -111,18 +111,18 @@ Fixpoint compile s {struct s}
     | stmtFun F t => stmtFun (List.map (fun Zs => (fst Zs, compile (snd Zs))) F) (compile t)
   end.
 
-Definition ArgRel (V V:onv val) (G:params) (VL VL': list val) : Prop :=
-  VL = VL' /\ length VL = length G.
-
 Definition ParamRel (G:params) (Z Z' : list var) : Prop :=
   Z = Z' /\ length Z = length G.
 
 Instance SR : ProofRelation params := {
-   ParamRel := ParamRel;
-   ArgRel := ArgRel;
-   BlockRel := fun lvZ b b' => lvZ = F.block_Z b
+   ParamRel G VL VL' :=   VL = VL' /\ length VL = length G;
+   ArgRel G Z Z' := Z = Z' /\ length Z = length G;
+   BlockRel := fun lvZ b b' => lvZ = F.block_Z b;
+   IndexRel AL n n' := n = n';
+   Image AL := length AL
 }.
-intros. hnf in H. hnf in H0. dcr; split; congruence.
+- intros; dcr; subst; eauto with len.
+- intros; subst; eauto.
 Defined.
 
 
@@ -140,11 +140,12 @@ Proof.
 Qed.
 
 
-Lemma sim_EAE' r L L' V s PL
-: simL' bisim_progeq r SR PL L L'
--> bisim'r r (L, V, s) (L',V, compile s).
+Lemma sim_EAE' r L L' V s
+  : simLabenv Bisim r SR (block_Z ⊝ L) L L'
+    -> ❬L❭ = ❬L'❭
+    -> sim'r r Bisim (L, V, s) (L',V, compile s).
 Proof.
-  revert_except s. unfold bisim'r.
+  revert_except s. unfold sim'r.
   sind s; destruct s; simpl; intros; simpl in * |- *.
   - case_eq (exp_eval V e); intros.
     + pone_step; eauto.
@@ -155,56 +156,62 @@ Proof.
     + pno_step.
   - case_eq (omap (exp_eval V) Y); intros.
     exploit (list_to_stmt_correct L' V (stmtApp l (Var ⊝ fresh_list fresh (list_union (Exp.freeVars ⊝ Y)) ❬Y❭)) (fresh_list fresh (list_union (Exp.freeVars ⊝ Y)) ❬Y❭) Y) as LTSC; eauto using fresh_spec, fresh_list_unique, fresh_list_spec.
-    + destruct (get_dec L (counted l)) as [[[bE bZ bs]]|].
-      * hnf in H. inRel_invs. simpl in H2, InR, H13.
-        hnf in H11, H12; dcr; subst; simpl in *.
-        decide (length Y = length Z'). {
+    + destruct (get_dec L (counted l)) as [[[bE bZ bs n]]|].
+      * hnf in H; dcr. inv_get. destruct x as [bE' bZ' bs' n'].
+        decide (length Y = length bZ). {
           cases.
-          - eapply bisim_drop_shift; eauto. eapply (inRel_sawtooth H).
-            eapply (inRel_sawtooth H). eapply H13; eauto. hnf.
-            eauto with len.
-          - eapply bisim'_expansion_closed;
-              [ eapply bisim_drop_shift
-              | eapply star2_refl
-              | eapply (list_to_stmt_correct);
-                eauto using fresh_spec, fresh_list_unique, fresh_list_spec
-              ]; try eapply (inRel_sawtooth H); eauto.
-            simpl. eapply H13; eauto.
-            instantiate (1:=l0).
-            eapply omap_exp_eval_agree. Focus 2.
-            eapply omap_lookup_vars.
-            rewrite fresh_list_length; eauto with len.
-            eapply fresh_list_unique. eapply fresh_spec.
-            eapply update_with_list_agree'. rewrite fresh_list_length, map_length; eauto with len.
-            eapply fresh_list_unique. eapply fresh_spec.
+          - eapply H3; eauto. hnf; eauto.
             hnf; eauto with len.
+          - eapply sim'_expansion_closed;
+              [
+              | eapply star2_refl
+              | eapply list_to_stmt_correct;
+                eauto using fresh_spec, fresh_list_unique, fresh_list_spec
+              ]; eauto.
+            simpl. eapply H3; eauto.
+            hnf; eauto.
+            Focus 2.
+            eapply omap_exp_eval_agree.
+            eapply update_with_list_agree';
+              eauto using fresh_list_unique, fresh_spec with len.
+            eapply omap_lookup_vars;
+              eauto using fresh_list_unique, fresh_spec with len.
+            hnf; simpl; eauto with len.
         }
         cases.
-        pno_step; simpl in *; congruence.
-        eapply bisim'_expansion_closed; [| eapply star2_refl | eapply LTSC].
+        pno_step; simpl in *. exploit H3; eauto; dcr; subst. congruence.
+        eapply sim'_expansion_closed; [| eapply star2_refl | eapply LTSC].
+        exploit H3; eauto; dcr. hnf; eauto. simpl in *; dcr; subst.
         pno_step. simpl in *.
-        eapply n; rewrite len. rewrite map_length. rewrite fresh_list_length. eauto.
-      * cases. pno_step; eauto. hnf in H. inRel_invs; eauto.
-        eapply bisim'_expansion_closed; [| eapply star2_refl | eapply LTSC].
+        eapply n0; rewrite len. rewrite map_length.
+        rewrite fresh_list_length. eauto.
+      * cases. pno_step; eauto. inv_get; eauto.
+        eapply sim'_expansion_closed; [| eapply star2_refl | eapply LTSC].
         pno_step; repeat get_functional; simpl in *.
-        hnf in H. inRel_invs; eauto.
+        exploit H; eauto; dcr. inv_get; eauto.
     + cases. pno_step.
       edestruct (list_to_stmt_crash L' V (stmtApp l (Var ⊝ fresh_list fresh (list_union (Exp.freeVars ⊝ Y)) ❬Y❭)) (fresh_list fresh (list_union (Exp.freeVars ⊝ Y)) ❬Y❭) Y); eauto using fresh_spec, fresh_list_unique, fresh_list_spec; dcr.
-      pfold. econstructor 3; try eapply H2; try eapply star2_refl; eauto. stuck2.
+      pfold. econstructor 4; [ | eapply star2_refl | eapply H3 | | ]; eauto.
+      stuck2.
   - pno_step.
   - case_eq (omap (exp_eval V) Y); intros.
     + pextern_step; eauto.
     + pno_step.
   - pone_step.
-    left. eapply IH with (PL:=fst ⊝ s ++ PL); eauto.
-    + eapply simL_mon; eauto. eapply simL_extension'; eauto with len.
-      * intros; inv_get; simpl. unfold fexteq', ParamRel; split; eauto.
-        split; hnf; eauto; intros. hnf in H1. dcr; subst.
-        eapply IH; eauto.
+    left. eapply IH; eauto 20 with len.
+    + rewrite List.map_app.
+      eapply simLabenv_extension_len; eauto with len.
+      * intros; hnf; intros; inv_get; simpl in *; dcr; subst.
+        get_functional. eapply IH; eauto 20 with len.
+        rewrite List.map_app. eauto.
+      * hnf; intros; simpl in *; subst; inv_get; simpl; eauto.
+      * simpl. eauto with len.
 Qed.
 
 Lemma sim_EAE V s
-: @bisim _ statetype_F _ statetype_F (nil, V, s) (nil,V, compile s).
+: @sim _ statetype_F _ statetype_F Bisim (nil, V, s) (nil,V, compile s).
 Proof.
-  eapply bisim'_bisim. hnf. eapply sim_EAE'. constructor.
+  eapply sim'_sim. eapply sim_EAE'; eauto.
+  hnf; intros; split; eauto using @sawtooth with len.
+  isabsurd.
 Qed.

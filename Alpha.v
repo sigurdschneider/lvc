@@ -1,4 +1,4 @@
-Require Import Util IL BisimF Computable.
+Require Import Util AllInRel MoreExp IL Computable Sim SimTactics.
 
 Import F.
 
@@ -338,7 +338,7 @@ Inductive alphaSim : F.state -> F.state -> Prop :=
    : alphaSim (L, E, s) (L', E', s').
 
 Lemma alphaSim_sim σ1 σ2
-: alphaSim σ1 σ2 -> bisim σ1 σ2.
+: alphaSim σ1 σ2 -> sim Bisim σ1 σ2.
 Proof.
   revert σ1 σ2; cofix; intros.
   destruct H; inversion AE; subst ra0 ira0; simpl in * |- *;
