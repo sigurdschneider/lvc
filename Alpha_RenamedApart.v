@@ -1,4 +1,4 @@
-Require Import Util Map Env EnvTy Exp IL AllInRel Bisim Computable Annotation.
+Require Import Util Map Env EnvTy Exp IL AllInRel Computable Annotation.
 Require Import Rename RenamedApart Alpha ILDB SetOperations Status Pos.
 Import F.
 

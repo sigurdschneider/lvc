@@ -1,7 +1,18 @@
-Require Import Util Get Drop MoreList.
+Require Import Util Get Drop MoreList DecSolve Indexwise.
 Require Import Exp MoreExp IL.
 
 Set Implicit Arguments.
+
+Instance list_get_computable' X (L:list X) (R:X->Prop) `{forall n (x:X), get L n x -> Computable (R x)}
+: Computable (forall n x, get L n x -> R x).
+Proof.
+  hnf. general induction L.
+  - left; isabsurd.
+  - edestruct H; eauto using get.
+    + edestruct IHL; eauto using get.
+      * left; intros. inv H0; eauto using get.
+      * right; intros; eauto using get.
+Defined.
 
 
 Inductive labelsDefined : stmt -> nat -> Prop :=
@@ -27,6 +38,24 @@ Inductive labelsDefined : stmt -> nat -> Prop :=
 
 Local Arguments length {A} L.
 
+Lemma labelsDefined_dec s n : Computable (labelsDefined s n).
+Proof.
+  hnf. revert n. sind s; destruct s; simpl; intros.
+  - edestruct (IH s); eauto; dec_solve.
+  - edestruct (IH s1); [ eauto | | dec_right].
+    edestruct (IH s2); [ eauto | dec_solve | dec_right].
+  - ensure (n > counted l). dec_solve.
+  - dec_solve.
+  - edestruct (IH s); eauto; dec_solve.
+  - edestruct (IH s0); [ eauto | | dec_right].
+    exploit (@list_get_computable' _ s
+                                   (fun Zs => labelsDefined (snd Zs) (❬s❭ + n))).
+    intros. eapply IH; eauto.
+    destruct H; [| dec_right].
+    dec_solve.
+Qed.
+
+
 Inductive paramsMatch : stmt -> list nat -> Prop :=
   | paramsMatchExp x e s L
     : paramsMatch s L
@@ -48,6 +77,24 @@ Inductive paramsMatch : stmt -> list nat -> Prop :=
     :  (forall n Zs, get F n Zs -> paramsMatch (snd Zs) (length ⊝ fst ⊝ F ++ L))
       -> paramsMatch t (length ⊝ fst ⊝ F ++ L)
       -> paramsMatch (stmtFun F t) L.
+
+Lemma paramsMatch_dec s L : Computable (paramsMatch s L).
+Proof.
+  hnf. revert L. sind s; destruct s; simpl; intros.
+  - edestruct (IH s); eauto; dec_solve.
+  - edestruct (IH s1); [ eauto | | dec_right].
+    edestruct (IH s2); [ eauto | dec_solve | dec_right].
+  - destruct (get_dec L (counted l)) as [[? ?]|]; [| dec_right].
+    ensure (length Y = x). dec_solve.
+  - dec_solve.
+  - edestruct (IH s); eauto; dec_solve.
+  - edestruct (IH s0); [ eauto | | dec_right].
+    exploit (@list_get_computable' _ s
+                                   (fun Zs => paramsMatch (snd Zs) (length ⊝ fst ⊝ s ++ L))).
+    intros. eapply IH; eauto.
+    destruct H; [| dec_right].
+    dec_solve.
+Qed.
 
 
 Inductive isCalled : stmt -> lab -> Prop :=

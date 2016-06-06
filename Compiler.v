@@ -1,8 +1,10 @@
 Require Import List CSet.
-Require Import Util AllInRel IL Rename EnvTy RenameApart Sim Bisim BisimSim Status Annotation.
+Require Import Util AllInRel MapDefined IL Rename EnvTy RenameApart Sim BisimSim Status Annotation.
 Require CMap.
-Require Liveness TrueLiveness LivenessValidators ParallelMove ILN LivenessAnalysis.
-Require Coherence Delocation DelocationAlgo DelocationValidator.
+Require Liveness LivenessValidators ParallelMove ILN ILN_IL.
+Require TrueLiveness LivenessAnalysis LivenessAnalysisCorrect.
+Require Coherence Invariance.
+Require Delocation DelocationAlgo DelocationCorrect DelocationValidator.
 Require Allocation AllocationAlgo AllocationAlgoCorrect.
 Require DVE EAE Alpha.
 (* Require CopyPropagation ConstantPropagation ConstantPropagationAnalysis.*)
@@ -22,8 +24,6 @@ Hypothesis first : forall (A:Type), A -> ( A -> status (A * bool)) -> status A.
 
 Arguments first {A} _ _.
 
-Definition livenessAnalysis :=
-Analysis.fixpoint LivenessAnalysis.liveness_analysis first.
 
 (*Definition constantPropagationAnalysis :=
 Analysis.fixpoint ConstantPropagationAnalysis.constant_propagation_analysis first. *)
@@ -66,30 +66,76 @@ Notation "'ensure' P s ; cont " := (ensure_f P s cont)
 (* Print Grammar operconstr. *)
 
 Definition toDeBruijn (ilin:ILN.nstmt) : status IL.stmt :=
-  ILN.labIndices nil ilin.
+  ILN_IL.labIndices nil ilin.
 
 Lemma toDeBruijn_correct (ilin:ILN.nstmt) s (E:onv val)
  : toDeBruijn ilin = Success s
-   ->  @sim _ ILN.statetype_I _ _
+   ->  @sim _ ILN.statetype_I _ _ Bisim
            (ILN.I.labenv_empty, E, ilin)
            (nil:list I.block, E, s).
 Proof.
   intros. unfold toDeBruijn in H. simpl in *.
-  eapply bisim_sim.
-  eapply ILN.labIndicesSim_sim.
+  eapply ILN_IL.labIndicesSim_sim.
   econstructor; eauto; isabsurd. econstructor; isabsurd. constructor.
 Qed.
 
 
-
-Definition toILF (ili:IL.stmt) : status IL.stmt :=
-  sdo lv <- livenessAnalysis ili;
-  ensure (TrueLiveness.true_live_sound Liveness.Imperative nil ili lv /\ getAnn lv ⊆ freeVars ili) ("Liveness unsound (1)") ;
+Definition toILF (ili:IL.stmt) : IL.stmt :=
+  let lv := LivenessAnalysisCorrect.livenessAnalysis ili in
   let ilid := DVE.compile nil ili lv in
   let additional_params := additionalArguments ilid (DVE.compile_live ili lv ∅) in
-  ensure (Delocation.trs nil nil ilid (DVE.compile_live ili lv ∅) additional_params)
-         "Additional arguments insufficient";
-    Success (Delocation.compile nil ilid additional_params).
+  Delocation.compile nil ilid additional_params.
+
+Arguments sim S {H} S' {H0} t _ _.
+
+
+Lemma toILF_correct (ili:IL.stmt) s (E:onv val)
+  : toILF ili = s
+    -> defined_on (IL.freeVars ili) E
+    -> sim I.state F.state Sim (nil, E, ili) (nil:list F.block, E, s).
+Proof.
+  intros. subst. unfold toILF.
+  simpl in *; unfold ensure_f, additionalArguments in *.
+  - assert (PM:LabelsDefined.paramsMatch ili nil) by admit.
+    assert (LD:LabelsDefined.labelsDefined ili 0) by admit.
+    eapply sim_trans with (S2:=I.state).
+    eapply DVE.I.sim_DVE; [ reflexivity | eapply LivenessAnalysisCorrect.correct; eauto ].
+    assert (Liveness.live_sound
+              Liveness.Imperative nil nil
+              (DVE.compile nil ili (LivenessAnalysisCorrect.livenessAnalysis ili))
+              (DVE.compile_live ili (LivenessAnalysisCorrect.livenessAnalysis ili) {})). {
+      eapply (@DVE.dve_live _ nil nil).
+      eapply @LivenessAnalysisCorrect.correct; eauto.
+    }
+    assert (Delocation.trs
+              nil nil
+              (DVE.compile nil ili (LivenessAnalysisCorrect.livenessAnalysis ili))
+              (DVE.compile_live ili (LivenessAnalysisCorrect.livenessAnalysis ili) {})
+              (fst
+                 (DelocationAlgo.computeParameters
+                    nil nil nil
+                    (DVE.compile nil ili (LivenessAnalysisCorrect.livenessAnalysis ili))
+                    (DVE.compile_live ili (LivenessAnalysisCorrect.livenessAnalysis ili) {})))). {
+      eapply DelocationAlgo.is_trs; eauto.
+      admit.
+    }
+    eapply sim_trans with (S2:=I.state).
+    eapply BisimSim.bisim_sim'.
+    eapply DelocationCorrect.correct; eauto.
+    + eapply (@Delocation.live_sound_compile nil); eauto.
+      eapply DelocationAlgo.is_live; eauto.
+      admit.
+    + hnf; intros. rewrite DVE.compile_live_incl_empty in H2;
+                     [ | eapply LivenessAnalysisCorrect.correct; eauto].
+      eapply H0. admit.
+    + eapply BisimSim.bisim_sim'.
+      eapply sim_sym.
+      eapply (@Invariance.srdSim_sim nil nil nil nil nil);
+        [ | isabsurd | econstructor | reflexivity | | econstructor ].
+      eapply Delocation.trs_srd; eauto.
+      eapply (@Delocation.live_sound_compile nil nil nil); eauto.
+      eapply DelocationAlgo.is_live; eauto. admit.
+Admitted.
 
 (*
 Definition optimize (s':stmt) : status stmt :=
@@ -131,44 +177,6 @@ Definition fromILF (s:stmt) : status stmt :=
 Opaque LivenessValidators.live_sound_dec.
 Opaque DelocationValidator.trs_dec.
 
-Lemma toILF_correct (ili:IL.stmt) s (E:onv val)
-  : toILF ili = Success s
-    -> Delocation.defined_on (IL.freeVars ili) E
-    -> @sim _ statetype_I _ _ (nil, E, ili)
-          (nil:list F.block, E, s).
-Proof.
-  intros. unfold toILF in H. simpl in *; unfold ensure_f, additionalArguments in *.
-  monadS_inv H.
-  repeat cases in EQ0.
-  invc EQ0. dcr.
-  - case_eq (DelocationAlgo.computeParameters nil nil nil
-              (DVE.compile nil ili x) (DVE.compile_live ili x ∅)); intros.
-    assert (l = nil). {
-      exploit (DelocationAlgo.computeParameters_length nil _ _ H2); eauto.
-      eapply (@DVE.dve_live Liveness.Imperative nil); eauto.
-      destruct l; simpl in *; congruence.
-    }
-    subst.
-    exploit (@DVE.dve_live Liveness.Imperative nil); eauto.
-    exploit Delocation.trs_srd; eauto using PIR2.
-    exploit (@DelocationAlgo.computeParameters_live nil nil nil); eauto using PIR2.
-    admit.
-    eapply sim_trans with (S2:=I.state). Focus 2.
-    eapply bisim_sim. eapply Bisim.bisim_sym.
-    rewrite H2 in H4.
-    eapply Coherence.srdSim_sim; eauto.
-    econstructor; eauto using PIR2. isabsurd. econstructor. reflexivity.
-    simpl. rewrite H2 in COND0.
-    eapply (@Delocation.live_sound_compile nil nil nil); eauto.
-    eapply sim_trans with (S2:=I.state).
-    Focus 2.
-    eapply bisim_sim. eapply Delocation.trsR_sim.
-    rewrite H2 in COND0.
-    eapply Delocation.trsRI with (Lv':=nil); eauto. econstructor. reflexivity.
-    eapply (@Delocation.live_sound_compile nil); eauto.
-    hnf; intros. rewrite DVE.compile_live_incl in H6; eauto.
-    eapply DVE.I.sim_DVE; eauto.
-Admitted.
 
 Lemma fromILF_correct (s s':stmt) E
   : fromILF s = Success s'

@@ -981,3 +981,31 @@ Proof.
       rewrite fold_zip_ounion_length; eauto. eauto 20 with len.
       eapply computeParametersF_length; try eapply H5; eauto with len.
 Qed.
+
+Lemma is_trs s lv
+: live_sound Imperative nil nil s lv
+  -> noUnreachableCode s
+  -> trs nil nil s lv (fst (computeParameters nil nil nil s lv)).
+Proof.
+  intros.
+  assert (snd (computeParameters nil nil nil s lv) = nil). {
+    exploit computeParameters_AP_LV; eauto.
+    inv H1; eauto.
+  }
+  exploit computeParameters_trs; eauto using @PIR2.
+  simpl in *. rewrite H1 in H2. eauto.
+Qed.
+
+Lemma is_live s lv
+: live_sound Imperative nil nil s lv
+  -> noUnreachableCode s
+  -> additionalParameters_live nil s lv (fst (computeParameters nil nil nil s lv)).
+Proof.
+  intros.
+  assert (snd (computeParameters nil nil nil s lv) = nil). {
+    exploit computeParameters_AP_LV; eauto.
+    inv H1; eauto.
+  }
+  exploit computeParameters_live; eauto using @PIR2.
+  simpl in *. rewrite H1 in H2. eauto.
+Qed.

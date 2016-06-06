@@ -1,6 +1,6 @@
 Require Import Util IL InRel4 RenamedApart LabelsDefined.
 Require Import Annotation Liveness Restrict MoreExp SetOperations Coherence.
-Require Import Bisim BisimTactics.
+Require Import Sim SimTactics.
 
 Set Implicit Arguments.
 Unset Printing Records.
@@ -9,7 +9,7 @@ Unset Printing Records.
 (** ** Definition of invariance *)
 
 Definition invariant (s:stmt) :=
-  forall (E:onv val), bisim (nil:list F.block,E,s) (nil:list I.block,E,s).
+  forall (E:onv val), sim Bisim (nil:list F.block,E,s) (nil:list I.block,E,s).
 
 (** ** Agreement Invariant *)
 
@@ -119,15 +119,15 @@ Qed.
 
 (** The bisimulation is indeed a bisimulation *)
 
-Lemma srdSim_sim
-      (E EI:onv val) L L' s ZL AL Lv a
+Lemma srdSim_sim ZL AL Lv L L'
+      (E EI:onv val) s a
   (SRD:srd AL s a)
   (RA:rd_agree AL L E)
   (A: inRel approx ZL ZL AL Lv L L')
   (AG:agree_on eq (getAnn a) E EI)
   (LV:live_sound Imperative ZL Lv s a)
   (ER:PIR2 (ifFstR Equal) AL (Lv \\ ZL))
-  : bisim (L, E, s) (L', EI,s).
+  : sim Bisim (L, E, s) (L', EI,s).
 Proof.
   revert_all. cofix; intros.
   inv SRD; inv LV; simpl in *.

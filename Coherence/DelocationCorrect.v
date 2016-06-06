@@ -1,7 +1,7 @@
 Require Import Util CSet CMap MapDefined MoreExp SetOperations OUnion.
 Require Import IL InRel4 RenamedApart LabelsDefined Restrict.
 Require Import Annotation Liveness Coherence Delocation.
-Require Import Bisim BisimTactics.
+Require Import Sim SimTactics.
 
 (*  IL_Types. *)
 
@@ -33,7 +33,7 @@ Proof.
   rewrite restrict_idem; eauto.
 Qed.
 
-Lemma trsR_sim (E E':onv val) L L' s ans Lv' ans_lv ans_lv' DL ZL ZAL
+Lemma delocation_sim DL ZL ZAL L L' (E E':onv val) s ans Lv' ans_lv ans_lv'
   (RD: trs DL ZAL s ans_lv ans)
   (EA: inRel approx ZL Lv' DL ZAL L L')
   (EQ: (@feq _ _ eq) E E')
@@ -41,7 +41,7 @@ Lemma trsR_sim (E E':onv val) L L' s ans Lv' ans_lv ans_lv' DL ZL ZAL
   (EDEF: defined_on (getAnn ans_lv') E')
   (LEN1: length DL = length ZL)
   (LEN2: length ZL = length Lv')
-  : bisim (L, E, s) (L', E', compile ZAL s ans).
+  : sim Bisim (L, E, s) (L', E', compile ZAL s ans).
 Proof.
   revert_all. cofix; intros.
   inv RD; invt live_sound; simpl.
@@ -49,7 +49,7 @@ Proof.
     pose proof Heqo. rewrite EQ in H0.
     destruct o.
     + one_step. simpl in *.
-      eapply trsR_sim; eauto using approx_restrict with len.
+      eapply delocation_sim; eauto using approx_restrict with len.
       * rewrite EQ; reflexivity.
       * eapply defined_on_update_some. eapply defined_on_incl; eauto.
     + no_step.
@@ -57,8 +57,8 @@ Proof.
     pose proof Heqo. rewrite EQ in H1.
     destruct o.
     case_eq (val2bool v); intros.
-    + one_step. eapply trsR_sim; eauto using defined_on_incl.
-    + one_step. eapply trsR_sim; eauto using defined_on_incl.
+    + one_step. eapply delocation_sim; eauto using defined_on_incl.
+    + one_step. eapply delocation_sim; eauto using defined_on_incl.
     + no_step.
   - no_step. simpl. rewrite EQ; eauto.
   - simpl counted in *.
@@ -77,7 +77,7 @@ Proof.
       erewrite omap_agree with (g:=exp_eval E). rewrite H1.
       simpl. rewrite H9. reflexivity. intros. rewrite EQ; eauto.
       simpl. exploit RD0; eauto; dcr.
-      eapply trsR_sim; eauto using approx_restrict with len.
+      eapply delocation_sim; eauto using approx_restrict with len.
       * rewrite EQ. rewrite List.map_app.
         rewrite update_with_list_app; eauto with len.
         rewrite (omap_self_update _ _ H9); reflexivity.
@@ -92,10 +92,10 @@ Proof.
     intros. rewrite EQ. reflexivity.
     destruct o.
     + extern_step; try congruence.
-      * eapply trsR_sim; eauto using approx_restrict with len.
+      * eapply delocation_sim; eauto using approx_restrict with len.
         hnf; intros. lud; eauto.
         eauto using defined_on_update_some, defined_on_incl.
-      * eapply trsR_sim; eauto using approx_restrict with len.
+      * eapply delocation_sim; eauto using approx_restrict with len.
         hnf; intros. lud; eauto.
         eauto using defined_on_update_some, defined_on_incl.
     + no_step.
@@ -104,7 +104,7 @@ Proof.
     rewrite <- H7. eauto with len.
     rewrite fst_compileF_eq in H6; eauto with len.
     rewrite <- zip_app in H6; eauto with len.
-    eapply trsR_sim; eauto 20 with len.
+    eapply delocation_sim; eauto 20 with len.
     + repeat rewrite zip_app; eauto 30 with len.
       econstructor; eauto.
       eapply mutual_approx; eauto 20 using mkBlock_I_i with len.
@@ -116,4 +116,13 @@ Proof.
         rewrite fst_compileF_eq in H10; eauto with len.
         rewrite <- zip_app in H10; eauto with len.
     + simpl in *. eapply defined_on_incl; eauto.
+Qed.
+
+Lemma correct E s ans ans_lv ans_lv'
+  (RD: trs nil nil s ans_lv ans)
+  (LV': live_sound Imperative nil nil (compile nil s ans) ans_lv')
+  (EDEF: defined_on (getAnn ans_lv') E)
+  : sim Bisim (nil, E, s) (nil, E, compile nil s ans).
+Proof.
+  eapply (@delocation_sim nil nil nil nil nil); eauto using @inRel; reflexivity.
 Qed.

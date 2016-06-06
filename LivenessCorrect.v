@@ -1,5 +1,6 @@
 Require Import AllInRel List Map Env Exp MoreExp Rename SetOperations.
-Require Import IL Annotation AutoIndTac Liveness BisimI BisimF InRel4.
+Require Import IL Annotation AutoIndTac Liveness InRel4.
+Require Import Sim SimTactics.
 
 Set Implicit Arguments.
 
@@ -39,7 +40,7 @@ Inductive freeVarSimF : F.state -> F.state -> Prop :=
   : freeVarSimF (L, E, s) (L', E', s).
 
 Lemma freeVarSimF_sim σ1 σ2
-  : freeVarSimF σ1 σ2 -> bisim σ1 σ2.
+  : freeVarSimF σ1 σ2 -> sim Bisim σ1 σ2.
 Proof.
   revert σ1 σ2. cofix; intros.
   destruct H; destruct s; simpl; simpl in *.
@@ -109,7 +110,7 @@ Lemma liveSimI_sim ZL Lv (E E':onv val) L s lv
   (LS:live_sound Imperative ZL Lv s lv)
   (LA:inRel approxI ZL ZL ZL Lv L L)
   (AG:agree_on eq (getAnn lv) E E')
-  : bisim (L, E, s) (L, E', s).
+  : sim Bisim (L, E, s) (L, E', s).
 Proof.
   revert_all. cofix; intros.
   inv LS; simpl; simpl in *.

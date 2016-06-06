@@ -183,6 +183,7 @@ Proof.
     + rewrite compile_live_incl; eauto with cset.
 Qed.
 
+Require Import BisimSim.
 
 Module I.
 
