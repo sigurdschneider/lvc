@@ -1,12 +1,12 @@
 Require Import paco2 List.
-Require Export Util Var Val Exp MoreExp Env Map CSet AutoIndTac IL AllInRel BisimF.
+Require Export Util Var Val Exp MoreExp Env Map CSet AutoIndTac IL AllInRel SimF.
 
 Set Implicit Arguments.
 Unset Printing Records.
 
 Lemma bisim'r_refl s
   : forall L E r,
-    bisim'r r (L, E, s) (L, E, s).
+    @sim'r F.state _ F.state _ r Bisim (L, E, s) (L, E, s).
 Proof.
   revert s. pcofix CIH.
   intros; destruct s; simpl in *; intros.
@@ -19,7 +19,7 @@ Proof.
     + pone_step. right. eapply (CIH s2); eauto.
     + pno_step.
   - edestruct (get_dec L (counted l)) as [[b]|].
-    decide (length Y = length (I.block_Z b)).
+    decide (length Y = length (block_Z b)).
     case_eq (omap (exp_eval E) Y); intros.
     + pone_step. right. eapply CIH.
     + pno_step.
@@ -37,30 +37,37 @@ Qed.
 
 Instance SR : ProofRelation (params) := {
    ParamRel G Z Z' := Z = Z' /\ Z = G;
-   ArgRel V V' G VL VL' := V = V' /\ VL = VL' /\ length VL = length G;
+   ArgRel G VL VL' := VL = VL' /\ length VL = length G;
    BlockRel := fun Z b b' => length (F.block_Z b) = length Z
                            /\ length (F.block_Z b') = length Z
-                           /\ F.block_E b = F.block_E b'
+                           /\ F.block_E b = F.block_E b';
+   IndexRel AL n n' := n = n';
+   Image AL := length AL
 }.
-intros; dcr; subst; split; congruence.
+Proof.
+  - intros; dcr; subst; split; congruence.
+  - intros; subst; eauto.
 Defined.
 
-Definition bisimeq s s' :=
-  forall ZL L L' E, simL' _ bot2 SR ZL L L' -> bisim (L, E, s) (L', E, s').
 
-Definition bisimeqid s s' :=
-  forall (L:F.labenv) E, bisim (L, E, s) (L, E, s').
+Definition bisimeq t s s' :=
+  forall L L' E, simLabenv t bot3 SR (block_Z ⊝ L) L L'
+            -> ❬L❭ = ❬L'❭
+            -> sim'r bot3 t (L, E, s) (L', E, s').
+
+Definition bisimeq' t r s s' :=
+    forall L L' E, simLabenv t r SR (block_Z ⊝ L) L L'
+            -> ❬L❭ = ❬L'❭
+            -> sim'r r t (L, E, s) (L', E, s').
 
 
-Definition bisimeq' r s s' :=
-  forall ZL L L' E, simL' _ r SR ZL L L' -> bisim'r r (L, E, s) (L', E, s').
-
-Lemma bisimeq'_refl s
-  : forall ZL L L' E r,
-    simL' _ r SR ZL L L'
-    -> bisim'r r (L, E, s) (L', E, s).
+Lemma bisimeq'_refl s t
+  : forall L L' E r,
+    simLabenv t r SR (block_Z ⊝ L) L L'
+    -> ❬L❭ = ❬L'❭
+    -> sim'r r t (L, E, s) (L', E, s).
 Proof.
-  unfold bisim'r, simL'. sind s; destruct s; simpl in *; intros.
+  unfold sim'r. sind s; destruct s; simpl in *; intros.
   - case_eq (exp_eval E e); intros.
     + pone_step; eauto.
     + time pno_step.
@@ -69,49 +76,46 @@ Proof.
     + pone_step. left. eapply (IH s1); eauto.
     + pone_step. left. eapply (IH s2); eauto.
     + pno_step.
-  - edestruct (get_dec L (counted l)) as [[b]|].
+  - destruct H; dcr.
+    edestruct (get_dec L (counted l)) as [[b]|]; [ inv_get | ].
     decide (length Y = length (F.block_Z b)).
     case_eq (omap (exp_eval E) Y); intros.
-    + exploit @inRel_sawtooth; eauto.
-      hnf in H. inRel_invs. simpl in *. dcr. subst x. subst Z'.
-      inv InR. eapply bisim_drop_shift; eauto.
-      eapply H6; eauto.
-      repeat split; eauto with len.
+    + destruct b, x.
+      eapply H1; eauto; simpl; eauto with len.
     + pno_step.
-    + pno_step.
-      inRel_invs. simpl in *.
-      dcr. congruence.
-    + pno_step.
-      * inRel_invs. eauto.
+    + pno_step. destruct b,x; simpl in *.
+      exploit H1; eauto; simpl in *; dcr; subst.
+      congruence.
+    + pno_step. inv_get. eauto.
   - pno_step.
   - case_eq (omap (exp_eval E) Y); intros.
     + pextern_step; eauto.
     + pno_step.
   - pone_step. left.
-    eapply (IH s0); eauto using sawtooth_F_mkBlocks.
-    eapply simL_extension' with (AL':=fst ⊝ s); eauto with len.
-    intros; inv_get; eauto.
-    repeat split.
-    intros. hnf in H1; dcr; subst.
-    eapply (IH s'); eauto.
+    eapply (IH s0); eauto with len.
+    rewrite map_app.
+    eapply simLabenv_extension_len; eauto with len.
+    + intros; hnf; intros; inv_get; eauto.
+      simpl in *; dcr; subst. get_functional.
+      eapply IH; eauto with len. rewrite map_app; eauto.
+    + hnf; intros; simpl in *; subst; inv_get; simpl; eauto.
+    + simpl; eauto with len.
 Qed.
 
-Lemma bisimeq_refl s
-: bisimeq s s.
+Lemma bisimeq_refl t s
+: bisimeq t s s.
 Proof.
-  hnf; intros. eapply bisim'_bisim.
-  exploit @inRel_sawtooth; eauto.
+  hnf; intros.
   eapply bisimeq'_refl; eauto.
 Qed.
 
-Lemma bisimeq'_bisimeqid s s'
-: bisimeqid s s'
-  -> bisimeq s s'.
+Lemma bisimeq'_bisimeqid t s s'
+: (forall (L:F.labenv) E, sim'r bot3 t (L, E, s) (L, E, s'))
+  -> bisimeq t s s'.
 Proof.
   intros; hnf; intros.
-  hnf in H. eapply bisim_trans with (S2:=F.state).
-  eapply H. eapply bisim'_bisim.
-  exploit @inRel_sawtooth; eauto.
+  eapply sim'_trans with (S2:=F.state).
+  eapply H.
   eapply bisimeq'_refl; eauto.
 Qed.
 
@@ -140,19 +144,13 @@ Qed.
 
 Lemma simL'_refl r L
   : sawtooth L
-    -> simL' bisim_progeq r SR (List.map F.block_Z L) L L.
+    -> simLabenv Bisim r SR (List.map F.block_Z L) L L.
 Proof.
-  intros. hnf.
-  general induction H.
-  - econstructor.
-  - rewrite map_app. econstructor; eauto.
-    eapply get_mutual_block; eauto.
-    rewrite map_length; eauto.
-    intros. inv_get.
-    destruct b1. econstructor; eauto; try now (clear_all; intuition).
-    * exploit tooth_get_n; eauto. simpl in *. subst block_n; dcr; subst.
-      pone_step; eauto using get_app; simpl; eauto with len; try congruence.
-      left. eapply paco2_mon. eapply bisim'_refl. clear_all; firstorder.
+  intros. hnf; dcr; split; eauto using @sawtooth with len.
+  intros [] []; intros; simpl in *; subst; inv_get; split; eauto.
+  intros; dcr; simpl in *; subst.
+  pone_step; simpl; eauto with len. left.
+  eapply bisim'r_refl.
 Qed.
 
 (** * Contextual Equivalence *)
@@ -190,8 +188,8 @@ Fixpoint fillC (ctx:stmtCtx) (s':stmtCtx) : stmtCtx :=
   end.
 
 Lemma simeq_contextual' s s' ctx r
-: (forall r, bisimeq' r s s')
-  -> bisimeq' r (fill ctx s) (fill ctx s').
+: (forall r, bisimeq' Bisim r s s')
+  -> bisimeq' Bisim r (fill ctx s) (fill ctx s').
 Proof.
   intros. general induction ctx; simpl; hnf; intros; eauto.
   - case_eq (exp_eval E e); intros.
@@ -210,36 +208,37 @@ Proof.
     + pone_step; left; eapply IHctx; eauto.
     + pno_step.
   - pone_step. left.
-    eapply bisimeq'_refl.
-    eapply simL_extension'; eauto.
-    + instantiate (1:=(List.map fst F1 ++ Z :: List.map fst F2)%list).
-      repeat rewrite app_length; simpl; repeat rewrite map_length; eauto.
-    + repeat rewrite app_length; simpl; repeat rewrite map_length; eauto.
-    + intros.
-      { destruct (get_subst _ _ _ H1) as [? |[?|?]].
-        - inv_get.
-          simpl; repeat split; eauto.
-          hnf; intros. simpl. hnf in H2; dcr; subst.
-          eapply bisimeq'_refl; eauto.
-        - dcr; subst. invc H5.
-          inv_get.
-          simpl; repeat split; eauto. intros; hnf in H1; dcr; subst.
-          eapply IHctx; eauto.
-        - dcr.
-          inv_get. rewrite map_length in H3.
-          get_functional.
-          simpl; repeat split; eauto.
-          intros. hnf in H2. dcr; subst.
-          eapply bisimeq'_refl. eauto.
-        }
+    eapply bisimeq'_refl; eauto 20 with len.
+    rewrite map_app.
+    eapply simLabenv_extension_len; simpl; eauto 20 with len.
+    + intros; hnf; intros.
+      { destruct (get_subst _ _ _ H4) as [? |[?|?]].
+        - inv_get; simpl in *; dcr; subst.
+          simpl; repeat split; eauto. inv_get.
+          eapply bisimeq'_refl; eauto 20 with len.
+          rewrite map_app. eauto.
+        - simpl in *. dcr; subst. subst. invc H9.
+          inv_get. simpl in *.
+          eapply IHctx; eauto 20 with len.
+          rewrite map_app. eauto.
+        - simpl in *; dcr; subst.
+          inv_get. simpl in *.
+          eapply bisimeq'_refl; eauto 20 with len.
+          rewrite map_app; eauto.
+      }
+    + hnf; intros; simpl in *; subst; inv_get; simpl.
+      destruct (get_subst _ _ _ H4) as [? |[?|?]].
+      * inv_get; simpl in *; dcr; subst; eauto.
+      * dcr; subst. invc H5. inv_get; eauto with len.
+      * simpl in *; dcr; subst. inv_get; eauto.
   - pone_step. left.
-    eapply IHctx. eauto.
-    eapply simL_extension'; eauto.
-    + instantiate (1:=List.map fst F). rewrite map_length; eauto.
-    + intros. inv_get.
-      repeat split; eauto.
-      intros. hnf in H2; dcr; subst.
-      eapply bisimeq'_refl. eauto.
+    eapply IHctx; eauto with len.
+    rewrite map_app.
+    eapply simLabenv_extension_len; simpl; eauto 20 with len.
+    + intros; hnf; simpl; intros; dcr; subst; inv_get. simpl in *.
+      eapply bisimeq'_refl; eauto 20 with len.
+      rewrite map_app; eauto.
+    + hnf; simpl; intros; subst; inv_get; simpl; eauto.
   - case_eq (omap (exp_eval E) e); intros.
     + pextern_step.
       * left. eapply IHctx; eauto.
