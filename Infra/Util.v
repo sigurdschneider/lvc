@@ -655,3 +655,13 @@ Qed.
 
 Hint Resolve app_length_le_ass app_length_le_ass_right map_length_le_ass map_length_le_ass_right
   : len.
+
+Lemma min_idempotent_ass n m k
+  : n = k
+    -> n = m
+    -> min n m = k.
+Proof.
+  intros. repeat subst. eapply Nat.min_idempotent.
+Qed.
+
+Hint Resolve min_idempotent_ass : len.
