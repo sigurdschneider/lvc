@@ -49,48 +49,6 @@ Qed.
 
 Hint Resolve forwardF_length_ass : len.
 
-Definition getAnni A (a:A) (an:anni A) :=
-  match an with
-  | anni1 a => a
-  | _ => a
-  end.
-
-Lemma poLe_getAnni A `{PartialOrder A} (a a':A) an an'
-  : poLe a a'
-    -> poLe an an'
-    -> poLe (getAnni a an) (getAnni a' an').
-Proof.
-  intros LE LE'; inv LE'; simpl; eauto.
-Qed.
-
-Definition getAnniLeft A (a:A) (an:anni A) :=
-  match an with
-  | anni2 a _ => a
-  | _ => a
-  end.
-
-Lemma poLe_getAnniLeft A `{PartialOrder A} (a a':A) an an'
-  : poLe a a'
-    -> poLe an an'
-    -> poLe (getAnniLeft a an) (getAnniLeft a' an').
-Proof.
-  intros LE LE'; inv LE'; simpl; eauto.
-Qed.
-
-Definition getAnniRight A (a:A) (an:anni A) :=
-  match an with
-  | anni2 _ a => a
-  | _ => a
-  end.
-
-Lemma poLe_getAnniRight A `{PartialOrder A} (a a':A) an an'
-  : poLe a a'
-    -> poLe an an'
-    -> poLe (getAnniRight a an) (getAnniRight a' an').
-Proof.
-  intros LE LE'; inv LE'; simpl; eauto.
-Qed.
-
 Fixpoint forward (sT:stmt) (Dom: stmt -> Type) `{PartialOrder (Dom sT)} `{BoundedSemiLattice (Dom sT)}
            (ftransform :
               forall sT, list params ->

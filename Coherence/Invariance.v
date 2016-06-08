@@ -1,4 +1,4 @@
-Require Import Util IL InRel4 RenamedApart LabelsDefined.
+Require Import Util IL InRel4 RenamedApart LabelsDefined OptionR.
 Require Import Annotation Liveness Restrict MoreExp SetOperations Coherence.
 Require Import Sim SimTactics.
 

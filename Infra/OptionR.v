@@ -2,6 +2,12 @@ Require Import Util DecSolve Coq.Classes.RelationClasses PartialOrder Terminatin
 
 Set Implicit Arguments.
 
+Definition mapOption A B (f:A -> B) (o:option A) : option B :=
+  match o with
+  | Some a => Some (f a)
+  | None => None
+  end.
+
 Inductive option_R A B (R: A -> B -> Prop) : option A -> option B -> Prop :=
 | option_R_None : option_R R None None
 | option_R_Some a b : R a b -> option_R R (Some a) (Some b).

@@ -1,7 +1,7 @@
 Require Import CSet Le Var.
 
 Require Import Plus Util AllInRel Map CSet.
-Require Import Val Var Env EnvTy IL Annotation Lattice DecSolve Filter.
+Require Import Val Var Env EnvTy IL Annotation Lattice DecSolve Filter SigR.
 Require Import Analysis AnalysisBackward Terminating.
 
 Remove Hints trans_eq_bool.
@@ -31,56 +31,6 @@ Proof.
   - hnf; intros. eapply union_assoc.
   - hnf; intros. eapply incl_left.
 Defined.
-
-Definition sig_R {A} {P:A->Prop} (R:A -> A -> Prop) (a b: { a : A | P a}) :=
-  match a, b with
-  | exist _ a _, exist _ b _ => R a b
-  end.
-
-Instance sig_R_refl A (P:A->Prop) R `{Reflexive A R} : Reflexive (@sig_R A P R).
-Proof.
-  hnf in H.
-  hnf; intros [a ?]. hnf. eauto.
-Qed.
-
-Instance sig_R_sym A (P:A->Prop) R `{Symmetric A R} : Symmetric (@sig_R A P R).
-Proof.
-  hnf in H.
-  hnf; intros [a ?] [b ?]. eapply H.
-Qed.
-
-Instance sig_R_trans A (P:A -> Prop) R `{Transitive A R} : Transitive (@sig_R A P R).
-Proof.
-  hnf; intros [a ?] [b ?] [c ?]. eapply H.
-Qed.
-
-Instance sig_R_Equivalence A (P:A -> Prop) R `{Equivalence A R} : Equivalence (@sig_R A P R).
-Proof.
-  econstructor.
-  - hnf; intros; reflexivity.
-  - hnf; intros; symmetry; eauto.
-  - hnf; intros; etransitivity; eauto.
-Qed.
-
-Instance sig_R_anti A R Eq `{EqA:Equivalence _ Eq} `{@Antisymmetric A Eq EqA R}
-  : @Antisymmetric _ (ann_R Eq) _ (ann_R R).
-Proof.
-  intros ? ? B C. general induction B; inv C; eauto 20 using @ann_R.
-Qed.
-
-Instance sig_R_dec A (P:A -> Prop) (R:A->A->Prop)
-         `{forall a b, Computable (R a b)} (a b:sig P) :
-  Computable (sig_R R a b).
-Proof.
-  destruct a,b; simpl; eauto.
-Defined.
-
-Instance sig_R_proj1_sig A (P:A->Prop) (R:A -> A -> Prop)
-  : Proper (@sig_R A P R ==> R) (@proj1_sig A P).
-Proof.
-  unfold Proper, respectful.
-  intros [a ?] [b ?]; simpl; eauto.
-Qed.
 
 Instance PartialOrder_Subset_Equal_Bounded X `{OrderedType X} U : PartialOrder ({ s : set X | s ⊆ U}) :=
 {
@@ -166,20 +116,6 @@ Definition liveness_transform
   end.
 
 Require Import Subterm.
-
-Definition mapOption A B (f:A -> B) (o:option A) : option B :=
-  match o with
-  | Some a => Some (f a)
-  | None => None
-  end.
-
-Definition mapAnni {A B} (f:A -> B) (ai:anni A) : anni B :=
-  match ai with
-    | anni0 => anni0
-    | anni1 a1 => anni1 (f a1)
-    | anni2 a1 a2 => anni2 (f a1) (f a2)
-    | anni2opt o1 o2 => anni2opt (mapOption f o1) (mapOption f o2)
-  end.
 
 Lemma list_sig_decomp A (P:A->Prop)
   : list { a : A | P a }

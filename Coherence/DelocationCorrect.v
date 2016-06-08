@@ -1,4 +1,4 @@
-Require Import Util CSet CMap MapDefined MoreExp SetOperations OUnion.
+Require Import Util CSet CMap MapDefined MoreExp SetOperations OUnion OptionR.
 Require Import IL InRel4 RenamedApart LabelsDefined Restrict.
 Require Import Annotation Liveness Coherence Delocation.
 Require Import Sim SimTactics.

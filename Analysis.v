@@ -68,6 +68,14 @@ Fixpoint setAnni {A} (a:ann A) (ai:anni A) : ann A :=
     | an, _ => an
   end.
 
+Definition mapAnni {A B} (f:A -> B) (ai:anni A) : anni B :=
+  match ai with
+    | anni0 => anni0
+    | anni1 a1 => anni1 (f a1)
+    | anni2 a1 a2 => anni2 (f a1) (f a2)
+    | anni2opt o1 o2 => anni2opt (mapOption f o1) (mapOption f o2)
+  end.
+
 Inductive anni_R A B (R : A -> B -> Prop) : anni A -> anni B -> Prop :=
 | anni_R0
   : anni_R R anni0 anni0
@@ -131,6 +139,49 @@ Proof.
   - intros. inv H0; eauto 20 using @anni_R, poLe_refl.
     econstructor; eapply (@poLe_refl _ (PartialOrder_option Dom)); eauto.
 Defined.
+
+
+Definition getAnni A (a:A) (an:anni A) :=
+  match an with
+  | anni1 a => a
+  | _ => a
+  end.
+
+Lemma poLe_getAnni A `{PartialOrder A} (a a':A) an an'
+  : poLe a a'
+    -> poLe an an'
+    -> poLe (getAnni a an) (getAnni a' an').
+Proof.
+  intros LE LE'; inv LE'; simpl; eauto.
+Qed.
+
+Definition getAnniLeft A (a:A) (an:anni A) :=
+  match an with
+  | anni2 a _ => a
+  | _ => a
+  end.
+
+Lemma poLe_getAnniLeft A `{PartialOrder A} (a a':A) an an'
+  : poLe a a'
+    -> poLe an an'
+    -> poLe (getAnniLeft a an) (getAnniLeft a' an').
+Proof.
+  intros LE LE'; inv LE'; simpl; eauto.
+Qed.
+
+Definition getAnniRight A (a:A) (an:anni A) :=
+  match an with
+  | anni2 _ a => a
+  | _ => a
+  end.
+
+Lemma poLe_getAnniRight A `{PartialOrder A} (a a':A) an an'
+  : poLe a a'
+    -> poLe an an'
+    -> poLe (getAnniRight a an) (getAnniRight a' an').
+Proof.
+  intros LE LE'; inv LE'; simpl; eauto.
+Qed.
 
 
 Lemma ann_bottom s' (Dom:Type) `{BoundedSemiLattice Dom}
