@@ -1,4 +1,4 @@
-Require Import Util IL InRel RenamedApart LabelsDefined.
+Require Import Util IL InRel RenamedApart LabelsDefined OptionR.
 Require Import Annotation MoreExp SetOperations Liveness Restrict.
 
 Set Implicit Arguments.

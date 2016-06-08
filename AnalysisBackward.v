@@ -391,22 +391,6 @@ Proof.
       * eapply IH; eauto.
 Qed.
 
-Lemma ann_bottom s' (Dom:Type) `{BoundedSemiLattice Dom}
-  :  forall (d : ann Dom), annotation s' d -> setAnn bottom s' ⊑ d.
-Proof.
-  sind s'; destruct s'; simpl; intros d' Ann; inv Ann; simpl; eauto using @ann_R, bottom_least.
-  - econstructor; eauto using bottom_least.
-    eapply (IH s'); eauto.
-  - econstructor; eauto using bottom_least.
-    eapply IH; eauto.
-    eapply IH; eauto.
-  - econstructor. eauto using bottom_least.
-    eapply IH; eauto.
-  - econstructor; eauto using bottom_least with len.
-    + intros; inv_get. eapply IH; eauto.
-    + eapply IH; eauto.
-Qed.
-
 
 Instance makeBackwardAnalysis (Dom:stmt -> Type)
          `{forall s, PartialOrder (Dom s) }

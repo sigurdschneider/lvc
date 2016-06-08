@@ -291,6 +291,14 @@ Proof.
   intros. inv H0; simpl; econstructor; eauto.
 Qed.
 
+Lemma poLe_setTopAnn A `{PartialOrder A} (a b:A) an bn
+  : poLe a b
+    -> poLe an bn
+    -> poLe (setTopAnn an a) (setTopAnn bn b).
+Proof.
+  intros. eapply ann_R_setTopAnn; eauto.
+Qed.
+
 Instance getAnn_poLe Dom `{PartialOrder Dom}
   : Proper (poLe ==> poLe) getAnn.
 Proof.

@@ -279,8 +279,10 @@ Ltac let_pair_case_eq :=
 
 Ltac simpl_pair_eqs :=
   match goal with
-    | [ H : ?P = (?x, ?y) |- _ ] => assert (fst P = x) by (rewrite H; eauto);
-      assert (snd P = y) by (rewrite H; eauto); clear H
+  | [ H : ?P = (?x, ?y) |- _ ] => assert (fst P = x) by (rewrite H; eauto);
+                                assert (snd P = y) by (rewrite H; eauto); clear H
+  | [ H : (?x, ?y) = ?P |- _ ] => assert (fst P = x) by (rewrite <- H; eauto);
+                                assert (snd P = y) by (rewrite <- H; eauto); clear H
   end.
 
 
