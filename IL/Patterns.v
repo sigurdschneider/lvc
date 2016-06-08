@@ -1,5 +1,5 @@
 Require Import List.
-Require Export Util Relations Get Drop Var Val Exp Env Map CSet AutoIndTac MoreList.
+Require Export Util Get Drop Var Val Exp Env Map CSet AutoIndTac MoreList.
 
 Set Implicit Arguments.
 
@@ -54,5 +54,5 @@ Proof.
   intros. specialize (H v).
   destruct (patternMatch q v).
   - eexists; eauto.
-  - exfalso; firstorder. eapply H; congruence.
+  - exfalso. destruct H. eapply H; congruence.
 Qed.

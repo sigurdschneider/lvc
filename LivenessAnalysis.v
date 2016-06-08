@@ -1,7 +1,8 @@
 Require Import CSet Le Var.
 
 Require Import Plus Util AllInRel Map CSet.
-Require Import Val Var Env EnvTy IL Annotation Lattice DecSolve Analysis Filter Terminating.
+Require Import Val Var Env EnvTy IL Annotation Lattice DecSolve Filter.
+Require Import Analysis AnalysisBackward Terminating.
 
 Remove Hints trans_eq_bool.
 
@@ -28,6 +29,7 @@ Proof.
   - hnf; intros. eapply union_idem.
   - hnf; intros. eapply union_comm.
   - hnf; intros. eapply union_assoc.
+  - hnf; intros. eapply incl_left.
 Defined.
 
 Definition sig_R {A} {P:A->Prop} (R:A -> A -> Prop) (a b: { a : A | P a}) :=
@@ -102,6 +104,7 @@ Proof.
   - hnf; intros [a ?]. eapply union_idem.
   - hnf; intros [a ?] [b ?]. eapply union_comm.
   - hnf; intros [a ?] [b ?] [c ?]. eapply union_assoc.
+  - hnf; intros [a ?] [b ?]; simpl. eapply incl_left.
   - simpl. unfold Proper, respectful; intros. destruct x,y,x0,y0; simpl in * |- *.
     rewrite H, H0. reflexivity.
   - simpl. unfold Proper, respectful; intros. destruct x,y,x0,y0; simpl in * |- *.

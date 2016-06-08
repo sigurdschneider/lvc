@@ -10,7 +10,6 @@ Require Export Containers.OrderedType Setoid Coq.Classes.Morphisms Computable.
 Require Export PartialOrder.
 Require Import EqDec DecSolve.
 
-
 Class BoundedSemiLattice (A : Type) `{PartialOrder A} := {
   bottom : A;
   join : A -> A -> A;
@@ -20,6 +19,7 @@ Class BoundedSemiLattice (A : Type) `{PartialOrder A} := {
   join_idempotent : forall a, poEq (join a a) a;
   join_commutative : forall a b, poEq (join a b) (join b a);
   join_associative : forall a b c, poEq (join (join a b) c) (join a (join b c));
+  join_poLe : forall a b, poLe a (join a b);
 
   join_respects_eq :> Proper (poEq ==> poEq ==> poEq) join;
   join_respects_le :> Proper (poLe ==> poLe ==> poLe) join
@@ -39,6 +39,7 @@ Proof.
   - intros [a b]; split; simpl; eapply join_idempotent.
   - intros [a1 a2] [b1 b2]; split; simpl; eapply join_commutative.
   - intros [a1 a2] [b1 b2] [c1 c2]; split; simpl; eapply join_associative.
+  - intros [a1 a2] [b1 b2]; split; simpl; eapply join_poLe.
   - intros [a1 a2] [b1 b2] [EQa EQb] [c1 c2] [d1 d2] [EQc EQd]; simpl in *;
       split; eapply join_respects_eq; eauto.
   - intros [a1 a2] [b1 b2] [LEa LEb] [c1 c2] [d1 d2] [LEc LEd]; simpl in *;
@@ -56,7 +57,50 @@ Proof.
   - intros []; simpl; eauto.
   - intros [] []; simpl; eauto.
   - intros [] [] []; simpl; eauto.
+  - intros [] []; simpl; eauto.
   - intros [] [] LE [] [] LE'; simpl in *; eauto.
+Defined.
+
+Require Import OptionR.
+
+Definition ojoin A join (x y:option A) :=
+  match x, y with
+  | x, None => x
+  | None, y => y
+  | Some x, Some y => Some (join x y)
+  end.
+
+Instance ojoin_poEq A `{BoundedSemiLattice A}
+  : Proper (poEq ==> poEq ==> poEq) (ojoin A join).
+Proof.
+  unfold Proper, respectful.
+  intros ? ? EQ ? ? EQ'; inversion EQ; inversion EQ'; subst; simpl;
+    eauto using option_R.
+  econstructor. rewrite H1, H4. reflexivity.
+Qed.
+
+Instance ojoin_poLe A `{BoundedSemiLattice A}
+  : Proper (poLe ==> poLe ==> poLe) (ojoin A join).
+Proof.
+  unfold Proper, respectful.
+  intros ? [y|] EQ ? [y'|] EQ'; inversion EQ; inversion EQ'; subst; simpl;
+    eauto using fstNoneOrR.
+  - econstructor. rewrite H5. rewrite join_commutative. eapply join_poLe.
+  - econstructor. rewrite H3. eapply join_poLe.
+  - econstructor. rewrite H3. rewrite H6. reflexivity.
+Qed.
+
+Instance option_boundedsemilattice A `{BoundedSemiLattice A}
+  : @BoundedSemiLattice (option A) (PartialOrder_option_fstNoneOrR _) := {
+  bottom := None;
+  join := ojoin _ join
+}.
+Proof.
+  - intros [a|]; simpl; eauto using fstNoneOrR.
+  - intros [a|]; simpl; eauto using option_R, join_idempotent.
+  - intros [a|] [b|]; simpl; eauto using option_R, join_commutative.
+  - intros [a1|] [b1|] [c1|]; simpl; eauto using option_R, join_associative.
+  - intros [a|] [b|]; simpl; eauto using fstNoneOrR, join_poLe.
 Defined.
 
 Section SemiLatticeTheory.
@@ -65,6 +109,26 @@ Section SemiLatticeTheory.
   Hint Immediate join_idempotent join_commutative join_associative.
 
 End SemiLatticeTheory.
+
+(*
+Require Import MoreList.
+
+Instance list_boundedsemilattice A `{BoundedSemiLattice A}
+  : BoundedSemiLattice (list A) := {
+  bottom := nil;
+  join x y := zip join x y
+}.
+Proof.
+  - intros [a b]; split; simpl; eapply bottom_least.
+  - intros [a b]; split; simpl; eapply join_idempotent.
+  - intros [a1 a2] [b1 b2]; split; simpl; eapply join_commutative.
+  - intros [a1 a2] [b1 b2] [c1 c2]; split; simpl; eapply join_associative.
+  - intros [a1 a2] [b1 b2] [EQa EQb] [c1 c2] [d1 d2] [EQc EQd]; simpl in *;
+      split; eapply join_respects_eq; eauto.
+  - intros [a1 a2] [b1 b2] [LEa LEb] [c1 c2] [d1 d2] [LEc LEd]; simpl in *;
+      split; eapply join_respects_le; eauto.
+Defined.
+ *)
 
 Inductive withTop (A:Type) :=
 | Top : withTop A

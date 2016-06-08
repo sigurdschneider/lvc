@@ -8,14 +8,12 @@ Set Implicit Arguments.
 
 
 Definition forwardF (sT:stmt) (Dom:stmt->Type)
-           (backward:〔params〕 -> 〔Dom sT〕 ->
-                     forall s (ST:subTerm s sT) (a:ann (Dom sT)),
-                       ann (Dom sT))
+           (forward:〔params〕 ->
+                    forall s (ST:subTerm s sT) (a:ann (Dom sT)), ann (Dom sT) * 〔؟(Dom sT)〕)
            (ZL:list params)
-           (AL:list (Dom sT))
            (F:list (params * stmt)) (anF:list (ann (Dom sT)))
            (ST:forall n s, get F n s -> subTerm (snd s) sT)
-  : list (ann (Dom sT)).
+  : list (ann (Dom sT) * 〔؟(Dom sT)〕).
   revert F anF ST.
   fix g 1. intros.
   destruct F as [|[Z s] F'], anF as [|a anF'].
@@ -23,93 +21,94 @@ Definition forwardF (sT:stmt) (Dom:stmt->Type)
   - eapply nil.
   - eapply nil.
   - econstructor 2.
-    refine (backward ZL AL s _ a).
+    refine (forward ZL s _ a).
     eapply (ST 0 (Z, s)); eauto using get.
     eapply (g F' anF').
     eauto using get.
 Defined.
 
-Arguments forwardF [sT] [Dom] backward ZL AL F anF ST : clear implicits.
+Arguments forwardF [sT] [Dom] forward ZL F anF ST : clear implicits.
 
-Fixpoint forwardF_length (sT:stmt) (Dom:stmt->Type)
-           (backward:〔params〕 -> 〔Dom sT〕 ->
-                     forall s (ST:subTerm s sT) (a:ann (Dom sT)),
-                       ann (Dom sT))
+Fixpoint forwardF_length (sT:stmt) (Dom:stmt->Type) forward
            (ZL:list params)
-           (AL:list (Dom sT))
            (F:list (params * stmt)) (anF:list (ann (Dom sT)))
            (ST:forall n s, get F n s -> subTerm (snd s) sT) {struct F}
-  : length (forwardF backward ZL AL F anF ST) = min (length F) (length anF).
+  : length (forwardF forward ZL F anF ST) = min (length F) (length anF).
 Proof.
   destruct F as [|[Z s] F'], anF; simpl; eauto.
 Qed.
 
-Lemma forwardF_length_ass sT (Dom:stmt->Type)
-      forward ZL (AL:list (Dom sT)) F anF ST k
+Lemma forwardF_length_ass (sT:stmt) (Dom:stmt->Type)
+      forward ZL F anF ST k
   : length F = k
     -> length F = length anF
-    -> length (forwardF forward ZL AL F anF ST) = k.
+    -> length (@forwardF sT Dom forward ZL F anF ST) = k.
 Proof.
   intros. rewrite forwardF_length, <- H0, Nat.min_idempotent; eauto.
 Qed.
 
 Hint Resolve forwardF_length_ass : len.
 
-Fixpoint forward (sT:stmt) (Dom: stmt -> Type)
+Fixpoint forward (sT:stmt) (Dom: stmt -> Type) `{PartialOrder (Dom sT)} `{BoundedSemiLattice (Dom sT)}
            (ftransform :
               forall sT, list params ->
-                    forall s, subTerm s sT -> Dom sT -> anni (Dom sT) * list (Dom sT))
+                    forall s, subTerm s sT -> Dom sT -> anni (Dom sT))
            (ZL:list (params)) (st:stmt) (ST:subTerm st sT) (a:ann (Dom sT)) {struct st}
-  :  ann (Dom sT)
-  := match st as st', a return st = st' -> ann (Dom sT) with
+  :  ann (Dom sT) * list (؟(Dom sT))
+  := match st as st', a return st = st' -> ann (Dom sT) * list (option (Dom sT)) with
     | stmtLet x e s as st, ann1 d ans =>
       fun EQ =>
         match ftransform sT ZL st ST d with
-        | (anni1 d', AL) =>
-          let ans' := forward Dom ftransform ZL (subTerm_EQ_Let EQ ST) (setTopAnn ans d') in
-          ann1 d ans'
-        | _ => ann1 d ans
+        | anni1 d' =>
+          let (ans', AL) := forward Dom ftransform ZL (subTerm_EQ_Let EQ ST) (setTopAnn ans d') in
+          (ann1 d ans', AL)
+        | _ => (ann1 d ans, nil)
         end
     | stmtIf x s t, ann2 d ans ant =>
       fun EQ =>
         match ftransform sT ZL st ST d with
         | anni2 ds' dt' =>
-          let ans' := forward Dom ftransform ZL (subTerm_EQ_If1 EQ ST) (setTopAnn ans ds') in
-          let ant' := forward Dom ftransform ZL (subTerm_EQ_If2 EQ ST) (setTopAnn ant dt') in
-          ann2 d ans' ant'
-        | _ => ann2 d ans ant
+          let (ans', AL) := forward Dom ftransform ZL (subTerm_EQ_If1 EQ ST) (setTopAnn ans ds') in
+          let (ant', AL') := forward Dom ftransform ZL (subTerm_EQ_If2 EQ ST) (setTopAnn ant dt') in
+          (ann2 d ans' ant', zip join AL AL')
+        | _ => (ann2 d ans ant, nil)
         end
 
     | stmtApp f Y as st, ann0 d as an =>
-      fun EQ => ann0 (ftransform sT ZL st ST anni0)
-(*
+      fun EQ =>
+        match ftransform sT ZL st ST d with
+        | anni1 d' => (ann0 d, list_update_at ((fun _ => None) ⊝ ZL) (counted f) (Some d'))
+        | _ => (ann0 d, nil)
+        end
+
     | stmtReturn x as st, ann0 d as an =>
       fun EQ =>
-        (ann0 (btransform sT ZL AL st ST anni0))
+        match ftransform sT ZL st ST d with
+        | anni1 d' => (ann0 d, (fun _ => bottom) ⊝ ZL)
+        | _ => (ann0 d, nil)
+        end
 
     | stmtExtern x f Y s as st, ann1 d ans =>
       fun EQ =>
-        let ans' := backward Dom btransform ZL AL
-                            (subTerm_EQ_Extern EQ ST) ans in
-        let ai := anni1 (getAnn ans') in
-        let d' := btransform sT ZL AL st ST ai in
-        ann1 d' ans'
+        match ftransform sT ZL st ST d with
+        | anni1 d' =>
+          let (ans', AL) := forward Dom ftransform ZL (subTerm_EQ_Extern EQ ST) (setTopAnn ans d') in
+          (ann1 d ans', AL)
+        | _ => (ann1 d ans, nil)
+        end
 
     | stmtFun F t as st, annF d anF ant =>
       fun EQ =>
-        let ALinit := getAnn ⊝ anF ++ AL in
         let ZL' := List.map fst F ++ ZL in
+        let ant' := forward Dom ftransform ZL' (subTerm_EQ_Fun1 EQ ST) ant in
         let anF' :=
-            @forwardF sT Dom (backward Dom btransform) ZL' ALinit F anF
-                       (subTerm_EQ_Fun2 EQ ST)
-        in
-        let AL' := getAnn ⊝ anF' ++ AL in
-        let ant' := backward Dom btransform ZL' AL'
-                            (subTerm_EQ_Fun1 EQ ST) ant in
+            @forwardF sT Dom (forward Dom ftransform) ZL' F anF
+                       (subTerm_EQ_Fun2 EQ ST) in
+        let AL' := snd ⊝ anF' in (*
         let ai := anni1 (getAnn ant') in
-        let d' := btransform sT ZL' AL' st ST ai in
-        annF d' anF' ant'*)
-    | _, an => fun EQ => an
+        let d' := btransform sT ZL' AL' st ST ai in*)
+        (annF d anF ant, nil)
+    | _, an => fun EQ => (an, nil)
   end eq_refl.
 
 Lemma tab_false_impb Dom `{PartialOrder Dom} AL AL'

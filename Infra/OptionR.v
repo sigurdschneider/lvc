@@ -68,3 +68,58 @@ Proof.
   - econstructor; intros. inv H0.
     exfalso. inv H1. eapply H2; reflexivity.
 Qed.
+
+Inductive fstNoneOrR (X Y:Type) (R:X->Y->Prop)
+  : option X -> option Y -> Prop :=
+| fstNone (x:option Y) : fstNoneOrR R None x
+| bothR (x:X) (y:Y) : R x y -> fstNoneOrR R (Some x) (Some y)
+.
+
+Instance fstNoneOrR_Reflexive {A : Type} {R : relation A} {Rrefl: Reflexive R}
+: Reflexive (fstNoneOrR R).
+Proof.
+  hnf; intros. destruct x; econstructor; eauto.
+Qed.
+
+Instance fstNoneOrR_trans A R `{Transitive A R} : Transitive (fstNoneOrR R).
+Proof.
+  hnf; intros ? ? ? B C.
+  inv B; inv C; econstructor; eauto.
+Qed.
+
+Instance fstNoneOrR_anti A R Eq `{Equivalence _ Eq}
+         `{EqA:Equivalence (option A) (option_R Eq)} `{@Antisymmetric A Eq _ R}
+  : @Antisymmetric (option A) _ _ (fstNoneOrR R).
+Proof.
+  hnf; intros. inv H1; inv H2. reflexivity.
+  econstructor. eapply H0; eauto.
+Qed.
+
+Instance fstNoneOrR_dec A B (R:A->B->Prop)
+         `{forall a b, Computable (R a b)} (a:option A) (b:option B) :
+  Computable (fstNoneOrR R a b).
+Proof.
+  destruct a,b; try dec_solve.
+  decide (R a b); dec_solve.
+Defined.
+
+Instance PartialOrder_option_fstNoneOrR Dom `{PartialOrder Dom}
+: PartialOrder (option Dom) := {
+  poLe := fstNoneOrR poLe;
+  poLe_dec := _;
+  poEq := option_R poEq;
+  poEq_dec := _;
+}.
+Proof.
+  - intros; inv H0; eauto using fstNoneOrR, poLe_refl.
+Defined.
+
+
+Inductive ifFstR {X Y} (R:X -> Y -> Prop) : option X -> Y -> Prop :=
+  | IfFstR_None y : ifFstR R None y
+  | IfFstR_R x y : R x y -> ifFstR R (Some x) y.
+
+
+Inductive ifSndR {X Y} (R:X -> Y -> Prop) : X -> option Y -> Prop :=
+  | ifsndR_None x : ifSndR R x None
+  | ifsndR_R x y : R x y -> ifSndR R x (Some y).

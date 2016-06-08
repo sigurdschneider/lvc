@@ -1,4 +1,4 @@
-Require Import Util Get ListUpdateAt PartialOrder AllInRel Annotation.
+Require Import Util Get ListUpdateAt PartialOrder AllInRel.
 
 Set Implicit Arguments.
 
@@ -86,89 +86,6 @@ Proof.
         eapply terminates_get_list in Trm; eauto.
       * intros. eapply H1; eauto.
         intros ? ? Get; inv Get; eauto using get.
-Qed.
-
-Lemma terminating_ann Dom `{PO:PartialOrder Dom}
-  : Terminating Dom poLt
-    -> Terminating (ann Dom) poLt.
-Proof.
-  intros Trm a.
-  econstructor. intros ? [A _].
-  induction A.
-  - specialize (Trm b).
-    general induction Trm.
-    econstructor. intros ? [A B].
-    inv A.
-    eapply H0; eauto. split; eauto.
-    intro. eapply B. econstructor. eauto.
-  - pose proof (Trm b) as FST. clear A H.
-    rename IHA into SND.
-    assert (poLe bn bn) by reflexivity.
-    revert H. generalize bn at 2 3.
-    induction FST as [? ? FST].
-    assert (poLe x x) by reflexivity.
-    revert H0. generalize x at 2 3.
-    induction SND as [? ? SND].
-    intros.
-    econstructor; intros ? [A B].
-    inv A.
-    decide (poEq bn bn0).
-    + decide (poEq x1 b).
-      exfalso; eapply B; econstructor; eauto.
-      eapply FST; eauto.
-    + eapply (SND bn0); eauto.
-  - clear H A1 A2 ans ant a.
-    assert (poLe bns bns) by reflexivity.
-    revert H. generalize bns at 2 3.
-    assert (poLe bnt bnt) by reflexivity.
-    revert H. generalize bnt at 2 3.
-    assert (poLe b b) by reflexivity.
-    revert H. generalize b at 2 3.
-    specialize (Trm b).
-    induction Trm.
-    induction IHA1.
-    induction IHA2.
-    intros.
-    econstructor; intros ? [A B].
-    inv A.
-    decide (poEq b b0).
-    + decide (poEq bns bns0).
-      * decide (poEq bnt bnt0).
-        exfalso; apply B; econstructor; eauto.
-        eapply (H4 bnt0); eauto.
-      * eapply (H2 bns0); eauto.
-    + eapply (H0 b0); eauto.
-  - clear H A.
-    pose proof (Trm b) as FST.
-    rename IHA into SND.
-    assert (TRD:terminates poLt bns). {
-      eapply terminates_list_get.
-      intros. symmetry in H0; edestruct get_length_eq; eauto.
-    }
-    clear H0 H1 H2.
-    assert (poLe bns bns) by reflexivity.
-    revert H. generalize bns at 2 3.
-    assert (poLe bnt bnt) by reflexivity.
-    revert H. generalize bnt at 2 3.
-    assert (poLe b b) by reflexivity.
-    revert H. generalize b at 2 3.
-    induction FST.
-    induction SND.
-    induction TRD.
-    intros.
-    econstructor; intros ? [A B].
-    inv A.
-    decide (poEq b b0).
-    + decide (poEq bns bns0).
-      * decide (poEq bnt bnt0).
-        exfalso; apply B; eauto. econstructor; eauto.
-        intros. eapply PIR2_nth in p0; eauto.
-        dcr. get_functional. eauto.
-        eapply (H2 bnt0); eauto.
-      * eapply PIR2_get in H14; eauto.
-        eapply (H4 bns0); eauto.
-    + eapply PIR2_get in H14; eauto.
-      eapply (H0 b0); eauto.
 Qed.
 
 Lemma terminating_sig Dom `{PO:PartialOrder Dom}
