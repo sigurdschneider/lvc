@@ -133,9 +133,8 @@ Proof.
     erewrite bounded_restrict_eq; simpl; eauto. eauto with cset.
   - econstructor; eauto.
     + intros. inv_map H10.
-      exploit H1; eauto.
-      * instantiate (1:=(getAnn ⊝ (mapAnn fst ⊝ ans)) \\ (fst ⊝ F) ++ DL).
-        rewrite app_length. rewrite zip_length2; eauto with len.
+      exploit (H1 _ _ _ H9 H12 ((getAnn ⊝ (mapAnn fst ⊝ ans)) \\ (fst ⊝ F) ++ DL)); eauto.
+      * rewrite app_length. rewrite zip_length2; eauto with len.
         repeat rewrite map_length. rewrite <- H. eauto.
       * edestruct H2; eauto; dcr.
         rewrite List.map_app. eapply bounded_app; split; eauto.

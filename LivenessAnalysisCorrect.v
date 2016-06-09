@@ -10,26 +10,6 @@ Local Arguments proj1_sig {A} {P} e.
 Local Arguments length {A} e.
 Local Arguments backward {sT} {Dom} btransform ZL AL st {ST} a.
 
-Lemma labelsDefined_app A B (f:A->B) (L:list A) (L':list B) k t
-  : labelsDefined t (k + ❬L'❭)
-    -> length L = k
-    -> labelsDefined t ❬f ⊝ L ++ L'❭.
-Proof.
-  rewrite app_length, map_length. intros; subst; eauto.
-Qed.
-
-Hint Resolve labelsDefined_app.
-
-Lemma paramsMatch_app A B C (f:list A * B -> list C) (L:list (list A * B))
-      (L':list (list C)) t
-  : paramsMatch t (length ⊝ (f ⊝ L) ++ length ⊝ L')
-    -> paramsMatch t (length ⊝ (f ⊝ L ++ L')).
-Proof.
-  rewrite map_app. eauto.
-Qed.
-
-Hint Resolve paramsMatch_app.
-
 Definition liveness_analysis_correct sT ZL LV s a (ST:subTerm s sT)
   : ann_R poEq (@backward _ _ liveness_transform_dep ZL LV s ST a) a
     -> annotation s a

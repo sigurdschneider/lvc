@@ -3,6 +3,8 @@ Require Import Exp MoreExp IL.
 
 Set Implicit Arguments.
 
+Local Arguments length {A} L.
+
 Instance list_get_computable' X (L:list X) (R:X->Prop) `{forall n (x:X), get L n x -> Computable (R x)}
 : Computable (forall n x, get L n x -> R x).
 Proof.
@@ -36,7 +38,15 @@ Inductive labelsDefined : stmt -> nat -> Prop :=
       -> labelsDefined t (length F + L)
       -> labelsDefined (stmtFun F t) L.
 
-Local Arguments length {A} L.
+Lemma labelsDefined_app A B (f:A->B) (L:list A) (L':list B) k t
+  : labelsDefined t (k + ❬L'❭)
+    -> length L = k
+    -> labelsDefined t ❬f ⊝ L ++ L'❭.
+Proof.
+  rewrite app_length, map_length. intros; subst; eauto.
+Qed.
+
+Hint Resolve labelsDefined_app.
 
 Lemma labelsDefined_dec s n : Computable (labelsDefined s n).
 Proof.
@@ -77,6 +87,16 @@ Inductive paramsMatch : stmt -> list nat -> Prop :=
     :  (forall n Zs, get F n Zs -> paramsMatch (snd Zs) (length ⊝ fst ⊝ F ++ L))
       -> paramsMatch t (length ⊝ fst ⊝ F ++ L)
       -> paramsMatch (stmtFun F t) L.
+
+Lemma paramsMatch_app A B C (f:list A * B -> list C) (L:list (list A * B))
+      (L':list (list C)) t
+  : paramsMatch t (length ⊝ (f ⊝ L) ++ length ⊝ L')
+    -> paramsMatch t (length ⊝ (f ⊝ L ++ L')).
+Proof.
+  rewrite map_app. eauto.
+Qed.
+
+Hint Resolve paramsMatch_app.
 
 Lemma paramsMatch_dec s L : Computable (paramsMatch s L).
 Proof.

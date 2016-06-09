@@ -649,8 +649,8 @@ Proof.
 Qed.
 
 Lemma map_length_le_ass_right X Y (L:list X) (f:X->Y) k
-  : length L = k
-    -> k = length (List.map f L).
+  : k <= length L
+    -> k <= length (List.map f L).
 Proof.
   intros; subst. rewrite map_length; eauto.
 Qed.

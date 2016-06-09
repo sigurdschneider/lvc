@@ -147,18 +147,6 @@ Proof.
   - unfold impb. destruct n; simpl; eauto using @PIR2, tab_false_impb.
 Qed.
 
-Lemma fold_list_length A B (f:list B -> (list A * bool) -> list B) (a:list (list A * bool)) (b: list B)
-  : (forall n aa, get a n aa -> ❬b❭ <= ❬fst aa❭)
-    -> (forall aa b, ❬b❭ <= ❬fst aa❭ -> ❬f b aa❭ = ❬b❭)
-    -> length (fold_left f a b) = ❬b❭.
-Proof.
-  intros LEN.
-  general induction a; simpl; eauto.
-  erewrite IHa; eauto 10 using get with len.
-  intros. rewrite H; eauto using get.
-Qed.
-
-
 Lemma backwardF_get  (sT:stmt) (Dom:stmt->Type)
            (backward:〔params〕 -> 〔Dom sT〕 ->
                      forall s (ST:subTerm s sT) (a:ann (Dom sT)),

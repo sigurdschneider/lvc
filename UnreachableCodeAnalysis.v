@@ -2,7 +2,7 @@ Require Import CSet Le Var.
 
 Require Import Plus Util AllInRel Map CSet ListUpdateAt.
 Require Import Val Var Env EnvTy IL Annotation Lattice DecSolve Filter.
-Require Import Analysis AnalysisForward Terminating.
+Require Import Analysis AnalysisForward Terminating Subterm.
 
 Remove Hints trans_eq_bool.
 
@@ -81,9 +81,9 @@ Proof.
 Qed.
 
 
-Definition unreachable_code_transform
+Definition unreachable_code_transform (sT:stmt)
            (ZL:list params)
-           (st:stmt)
+           (st:stmt) (ST:subTerm st sT)
            (d:bool)
   : anni bool :=
   match st with
@@ -93,26 +93,24 @@ Definition unreachable_code_transform
     anni2 (if [exp2bool e = Some false] then false else true)
           (if [exp2bool e = Some true] then false else true)
     else anni2 false false
-  | stmtApp f Y => anni1 d
+  | stmtApp f Y => anni1 true
   | stmtReturn e => anni1 d
   | stmtExtern x f Y s => anni1 d
   | _ => anni1 false
   end.
 
-Lemma unreachable_code_transform_monotone sT s
-  : Subterm.subTerm s sT ->
-    Subterm.subTerm s sT ->
-    forall (ZL : 〔params〕) (a b : bool),
-      a ⊑ b -> unreachable_code_transform ZL s a ⊑ unreachable_code_transform ZL s b.
+
+Lemma unreachable_code_transform_monotone (sT s : stmt) (ST ST' : subTerm s sT)
+      (ZL : 〔params〕) (a b : bool)
+  : a ⊑ b
+    -> unreachable_code_transform ZL ST a ⊑ unreachable_code_transform ZL ST' b.
 Proof.
   intros; destruct s; simpl; try econstructor; simpl; eauto.
   - repeat cases; simpl in *; econstructor; simpl; eauto.
 Qed.
 
-Print Instances Terminating.
-
 Definition unreachable_code_analysis :=
   makeForwardAnalysis (fun s => bool ) _
-                      (fun sT ZL s ST => unreachable_code_transform ZL s)
+                      unreachable_code_transform
                       unreachable_code_transform_monotone
                       (fun s => terminating_bool).
