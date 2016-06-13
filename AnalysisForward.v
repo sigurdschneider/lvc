@@ -9,11 +9,11 @@ Set Implicit Arguments.
 
 Definition forwardF (sT:stmt) (Dom:stmt->Type) `{BoundedSemiLattice (Dom sT)}
            (forward:〔params〕 ->
-                    forall s (ST:subTerm s sT) (a:ann (Dom sT)), ann (Dom sT) * 〔؟(Dom sT)〕)
+                    forall s (ST:subTerm s sT) (a:ann (Dom sT)), ann (Dom sT) * 〔Dom sT〕)
            (ZL:list params)
-           (F:list (params * stmt)) (anF:list (ann (Dom sT))) (AL:list (option (Dom sT)))
+           (F:list (params * stmt)) (anF:list (ann (Dom sT))) (AL:list (Dom sT))
            (ST:forall n s, get F n s -> subTerm (snd s) sT)
-  : list (ann (Dom sT) * 〔؟(Dom sT)〕).
+  : list (ann (Dom sT) * 〔Dom sT〕).
   revert F anF AL ST.
   fix g 1. intros.
   destruct F as [|[Z s] F'], anF as [|a anF'], AL as [|al AL'].
@@ -25,10 +25,8 @@ Definition forwardF (sT:stmt) (Dom:stmt->Type) `{BoundedSemiLattice (Dom sT)}
   - eapply nil.
   - eapply nil.
   - econstructor 2.
-    + destruct al as [al|].
-      * refine (forward ZL s _ (setTopAnn a al)).
-        eapply (ST 0 (Z, s)); eauto using get.
-      * eapply (setAnn bottom s, ((fun _ => None) ⊝ ZL)).
+    + refine (forward ZL s _ (setTopAnn a al)).
+      eapply (ST 0 (Z, s)); eauto using get.
     + eapply (g F' anF' AL').
       eauto using get.
 Defined.
@@ -68,8 +66,8 @@ Fixpoint forward (sT:stmt) (Dom: stmt -> Type) `{BoundedSemiLattice (Dom sT)}
               forall sT, list params ->
                     forall s, subTerm s sT -> Dom sT -> anni (Dom sT))
            (ZL:list (params)) (st:stmt) (ST:subTerm st sT) (a:ann (Dom sT)) {struct st}
-  :  ann (Dom sT) * list (؟(Dom sT))
-  := match st as st', a return st = st' -> ann (Dom sT) * list (option (Dom sT)) with
+  :  ann (Dom sT) * list (Dom sT)
+  := match st as st', a return st = st' -> ann (Dom sT) * list (Dom sT) with
     | stmtLet x e s as st, ann1 d ans =>
       fun EQ =>
         let an := ftransform sT ZL st ST d in
@@ -86,7 +84,7 @@ Fixpoint forward (sT:stmt) (Dom: stmt -> Type) `{BoundedSemiLattice (Dom sT)}
     | stmtApp f Y as st, ann0 d as an =>
       fun EQ =>
         let an := ftransform sT ZL st ST d in
-        (ann0 d, list_update_at ((fun _ => None) ⊝ ZL) (counted f) (Some (getAnni d an)))
+        (ann0 d, list_update_at ((fun _ => bottom) ⊝ ZL) (counted f) (getAnni d an))
 
 
     | stmtReturn x as st, ann0 d as an =>
@@ -102,13 +100,13 @@ Fixpoint forward (sT:stmt) (Dom: stmt -> Type) `{BoundedSemiLattice (Dom sT)}
     | stmtFun F t as st, annF d anF ant =>
       fun EQ =>
         let ZL' := List.map fst F ++ ZL in
-        let (ant', ALt) := forward Dom ftransform ZL' (subTerm_EQ_Fun1 EQ ST) ant in
+        let (ant', ALt) := forward Dom ftransform ZL' (subTerm_EQ_Fun1 EQ ST) (setTopAnn ant d) in
         let anF' := forwardF (forward Dom ftransform) ZL' F anF ALt
                             (subTerm_EQ_Fun2 EQ ST) in
-        let AL' := fold_left (zip (ojoin _ join)) (snd ⊝ anF') ALt in
-        (annF d (zip setTopAnnO
-                     (fst ⊝ anF') AL') ant', drop ❬F❭ AL')
-    | _, an => fun EQ => (an, (fun _ => None) ⊝ ZL)
+        let AL' := fold_left (zip join) (snd ⊝ anF') ALt in
+        (annF d (zip (@setTopAnn _) (fst ⊝ anF') AL') ant',
+         drop ❬F❭ AL')
+    | _, an => fun EQ => (an, (fun _ => bottom) ⊝ ZL)
   end eq_refl.
 
 Lemma fold_list_length A B (f:list B -> (list A * bool) -> list B) (a:list (list A * bool)) (b: list B)
@@ -126,52 +124,44 @@ Qed.
 Lemma forwardF_get  (sT:stmt) (Dom:stmt->Type) `{BoundedSemiLattice (Dom sT)}
            (forward:〔params〕 ->
                      forall s (ST:subTerm s sT) (a:ann (Dom sT)),
-                       ann (Dom sT) * list (option (Dom sT)))
+                       ann (Dom sT) * list (Dom sT))
            (ZL:list params)
            (F:list (params * stmt)) (anF:list (ann (Dom sT))) AL
            (ST:forall n s, get F n s -> subTerm (snd s) sT) aa n
            (GetBW:get (forwardF forward ZL F anF AL ST) n aa)
       :
         { Zs : params * stmt & {GetF : get F n Zs &
-        { a : ann (Dom sT) & { getAnF : get anF n a & { al : option (Dom sT) & { getAL : get AL n al &
-        { ST' : subTerm (snd Zs) sT |
-          match al with
-          | None => aa = (setAnn bottom (snd Zs), (fun _ => None) ⊝ ZL)
-          | Some al' => aa = forward ZL (snd Zs) ST' (setTopAnn a al')
-          end
+        { a : ann (Dom sT) & { getAnF : get anF n a & { al : Dom sT & { getAL : get AL n al &
+        { ST' : subTerm (snd Zs) sT | aa = forward ZL (snd Zs) ST' (setTopAnn a al)
         } } } } } } }.
 Proof.
   eapply get_getT in GetBW.
   general induction anF; destruct F as [|[Z s] F'], AL as [|al AL']; inv GetBW.
   - exists (Z, s). simpl. do 6 (eexists; eauto 20 using get).
-    destruct al; simpl; reflexivity.
   - edestruct IHanF as [Zs [? [? [? ]]]]; eauto; dcr; subst.
     exists Zs. do 6 (eexists; eauto 20 using get).
 Qed.
 
-
 Lemma get_forwardF  (sT:stmt) (Dom:stmt->Type) `{BoundedSemiLattice (Dom sT)}
            (forward:〔params〕 ->
                      forall s (ST:subTerm s sT) (a:ann (Dom sT)),
-                       ann (Dom sT) * list (option (Dom sT)))
+                       ann (Dom sT) * list (Dom sT))
            (ZL:list params)
-           (F:list (params * stmt)) (anF:list (ann (Dom sT))) (AL:list (option (Dom sT)))
+           (F:list (params * stmt)) (anF:list (ann (Dom sT))) (AL:list (Dom sT))
            (ST:forall n s, get F n s -> subTerm (snd s) sT) n Zs a al
   :get F n Zs
    -> get anF n a
    -> get AL n al
    -> { ST' | get (forwardF forward ZL F anF AL ST) n
-                 (match al with
-                  | None => (setAnn bottom (snd Zs), (fun _ => None) ⊝ ZL)
-                  | Some al' => forward ZL (snd Zs) ST' (setTopAnn a al')
-                  end)}.
+                 (forward ZL (snd Zs) ST' (setTopAnn a al))
+     }.
 Proof.
   intros GetF GetAnF GetAL.
   eapply get_getT in GetF.
   eapply get_getT in GetAnF.
   eapply get_getT in GetAL.
   general induction GetAnF; destruct Zs as [Z s]; inv GetF; inv GetAL; simpl.
-  - eexists. destruct al; econstructor.
+  - eexists; econstructor.
   - destruct x'0; simpl.
     edestruct IHGetAnF; eauto.
     eexists x0. econstructor. eauto.
@@ -222,9 +212,7 @@ Proof.
   - rewrite length_drop_minus.
     rewrite fold_list_length'.
     + rewrite IH; eauto. rewrite app_length, map_length. omega.
-    + intros. inv_get. repeat rewrite IH; eauto. destruct x4; subst.
-      * rewrite IH; eauto.
-      * eauto with len.
+    + intros. inv_get. repeat rewrite IH; eauto.
     + intros. rewrite zip_length; eauto.
       eapply min_l; eauto.
 Qed.
@@ -262,37 +250,34 @@ Qed.
 
 Hint Resolve @forward_length_ass forward_length_le_ass forward_length_le_ass_right : len.
 
-Lemma PIR2_ojoin_zip A `{BoundedSemiLattice A} (a:list (option A)) a' b b'
+Lemma PIR2_ojoin_zip A `{BoundedSemiLattice A} (a:list A) a' b b'
   : poLe a a'
     -> poLe b b'
-    -> PIR2 (fstNoneOrR poLe) (ojoin _ join ⊜ a b) (ojoin _ join ⊜ a' b').
+    -> PIR2 poLe (join ⊜ a b) (join ⊜ a' b').
 Proof.
   intros. hnf in H1,H2. general induction H1; inv H2; simpl; eauto using PIR2.
   econstructor; eauto.
-  destruct y, y0; inv pf; inv pf0; simpl; eauto using fstNoneOrR.
-  - econstructor. rewrite H6. rewrite join_commutative. eapply join_poLe.
-  - econstructor. rewrite H6. eapply join_poLe.
-  - econstructor. rewrite H6, H7. eauto.
+  rewrite pf, pf0. reflexivity.
 Qed.
 
-Lemma update_at_poLe A `{PartialOrder A} B (L:list B) n (a:option A) b
+Lemma update_at_poLe A `{BoundedSemiLattice A} B (L:list B) n (a:A) b
   : poLe a b
-    -> poLe (list_update_at (tab None ‖L‖) n a)
-            (list_update_at (tab None ‖L‖) n b).
+    -> poLe (list_update_at (tab bottom ‖L‖) n a)
+            (list_update_at (tab bottom ‖L‖) n b).
 Proof.
   intros.
   general induction L; simpl; eauto using PIR2.
   - destruct n; simpl; eauto using @PIR2.
-    econstructor. econstructor.
+    econstructor; eauto.
     eapply IHL; eauto.
 Qed.
 
 
-Lemma PIR2_ojoin_fold X `{BoundedSemiLattice X} (A A':list (list (option X))) (B B':list (option X))
+Lemma PIR2_fold_zip_join X `{BoundedSemiLattice X} (A A':list (list X)) (B B':list X)
   : poLe A A'
     -> poLe B B'
-    -> poLe (fold_left (zip (ojoin _ join)) A B)
-           (fold_left (zip (ojoin _ join)) A' B').
+    -> poLe (fold_left (zip join) A B)
+           (fold_left (zip join) A' B').
 Proof.
   intros. simpl in *.
   general induction H1; simpl; eauto.
@@ -300,26 +285,19 @@ Proof.
   clear IHPIR2 H1.
   general induction pf; inv H2; simpl; eauto using PIR2.
   econstructor; eauto.
-  repeat cases; subst; eauto using fstNoneOrR; inv pf; inv pf1; simpl.
-  - destruct y; econstructor; rewrite H5; eauto.
-  - destruct y; econstructor; eauto.
-    + rewrite H3. eapply join_poLe.
-  - destruct y0; simpl; econstructor; eauto.
-    rewrite H3. rewrite join_commutative. eapply join_poLe.
-  - econstructor. rewrite H3, H4. reflexivity.
+  rewrite pf, pf1. reflexivity.
 Qed.
 
-Lemma PIR2_zip_setTopAnnO X `{BoundedSemiLattice X} (A A':list (ann X)) (B B':list (option X))
+Lemma PIR2_zip_setTopAnnO X `{BoundedSemiLattice X} (A A':list (ann X)) (B B':list X)
   : poLe A A'
     -> poLe B B'
-    -> poLe (setTopAnnO ⊜ A B) (setTopAnnO ⊜ A' B').
+    -> poLe ((@setTopAnn _) ⊜ A B) (@setTopAnn _ ⊜ A' B').
 Proof.
   intros; simpl in *.
   general induction H1; inv H2; simpl; eauto using PIR2.
   - econstructor; eauto.
-    destruct x0,y0; inv pf0; simpl; eauto using ann_R_setTopAnn.
-    admit.
-Admitted.
+    eauto using ann_R_setTopAnn.
+Qed.
 
 Hint Resolve min_l min_r : len.
 
@@ -331,17 +309,16 @@ Lemma forward_annotation sT (Dom:stmt->Type) `{BoundedSemiLattice (Dom sT)} s
 Proof.
   sind s; intros ZL a ST Ann; destruct s; inv Ann; simpl;
     repeat let_pair_case_eq; subst; eauto 20 using @annotation, setTopAnn_annotation.
-  - econstructor; eauto.
+  - econstructor; eauto using setTopAnn_annotation.
     + rewrite zip_length. rewrite map_length.
       rewrite forwardF_length; eauto with len.
       rewrite forward_length, app_length, map_length.
       rewrite <- H3. repeat rewrite min_l; eauto; try omega.
       rewrite fold_list_length'; intros; eauto with len.
-      * intros; inv_get; destruct x4; subst; simpl; eauto with len.
+      * intros; inv_get; subst; simpl; eauto with len.
       * rewrite zip_length; eauto with len.
     + intros. inv_get.
-      destruct x0,x6; subst; simpl;
-        eauto using setTopAnn_annotation, setAnn_annotation.
+      eauto using setTopAnn_annotation, setAnn_annotation.
 Qed.
 
 Lemma forward_getAnn (sT:stmt) (Dom : stmt -> Type) `{BoundedSemiLattice (Dom sT)}
@@ -358,6 +335,8 @@ Ltac fold_po :=
   repeat match goal with
          | [ H : context [ ann_R poLe ?x ?y ] |- _ ] =>
            change (ann_R poLe x y) with (poLe x y) in H
+         | [ H : context [ PIR2 poLe ?x ?y ] |- _ ] =>
+           change (PIR2 poLe x y) with (poLe x y) in H
          | [ |- context [ ann_R poLe ?x ?y ] ] =>
            change (ann_R poLe x y) with (poLe x y)
   end.
@@ -382,36 +361,34 @@ Proof with eauto using setTopAnn_annotation, poLe_setTopAnn, poLe_getAnni.
     + econstructor; eauto.
       eapply (IH s1); eauto using setTopAnn_annotation, poLe_setTopAnn, poLe_getAnniLeft.
       eapply (IH s2); eauto using setTopAnn_annotation, poLe_setTopAnn, poLe_getAnniRight.
-    + eapply PIR2_ojoin_zip.
+    +
+      eapply PIR2_ojoin_zip.
       * eapply IH; eauto using setTopAnn_annotation, poLe_setTopAnn, poLe_getAnniLeft.
       * eapply IH; eauto using setTopAnn_annotation, poLe_setTopAnn, poLe_getAnniRight.
   - econstructor; eauto. simpl.
     eapply update_at_poLe.
-    econstructor. eapply poLe_getAnni; eauto.
+    eapply poLe_getAnni; eauto.
   - econstructor; simpl; eauto.
   - econstructor; eauto.
     + econstructor. eauto.
       eapply IH; eauto using setTopAnn_annotation, poLe_setTopAnn, poLe_getAnni.
     + eapply IH; eauto using setTopAnn_annotation, poLe_setTopAnn, poLe_getAnni.
-  - assert (forall (n : nat) (x x' : ann (Dom sT) * 〔؟ (Dom sT)〕),
+  - assert (forall (n : nat) (x x' : ann (Dom sT) * 〔Dom sT〕),
                get (forwardF (forward Dom f) (fst ⊝ s ++ ZL) s ans
-                             (snd (forward Dom f (fst ⊝ s ++ ZL) (subTerm_EQ_Fun1 eq_refl ST) ant))
+                             (snd (forward Dom f (fst ⊝ s ++ ZL) (subTerm_EQ_Fun1 eq_refl ST)
+                                           (setTopAnn ant a)))
                              (subTerm_EQ_Fun2 eq_refl ST)) n x ->
                get (forwardF (forward Dom f) (fst ⊝ s ++ ZL) s bns
-                             (snd (forward Dom f (fst ⊝ s ++ ZL) (subTerm_EQ_Fun1 eq_refl ST') bnt))
+                             (snd (forward Dom f (fst ⊝ s ++ ZL) (subTerm_EQ_Fun1 eq_refl ST')
+                                           (setTopAnn bnt b)))
                              (subTerm_EQ_Fun2 eq_refl ST')) n x' ->
                x ⊑ x'). {
       intros; inv_get; dcr.
       exploit get_PIR2; [| eapply x13 | eapply x5 |]; [ eapply IH| ]; eauto.
-      destruct x4, x12; subst; inv H5.
+      - eauto using setTopAnn_annotation, poLe_setTopAnn.
+      - eauto using setTopAnn_annotation, poLe_setTopAnn.
       - eapply IH; eauto using setTopAnn_annotation, poLe_setTopAnn.
         eapply poLe_setTopAnn; eauto. eapply H3; eauto.
-      - econstructor; eauto; simpl.
-        + eapply ann_bottom. eapply forward_annotation, setTopAnn_annotation.
-          eapply ann_R_annotation. eapply H11; eauto. eapply H3; eauto.
-        + eapply PIR2_get; eauto with len.
-          intros; inv_get. econstructor.
-      - econstructor; simpl; eauto.
     }
     econstructor; simpl; eauto.
     + econstructor; eauto.
@@ -420,36 +397,34 @@ Proof with eauto using setTopAnn_annotation, poLe_setTopAnn, poLe_getAnni.
         repeat rewrite forwardF_length.
         repeat rewrite fold_list_length'.
         repeat rewrite forward_length. rewrite H2; reflexivity.
-        intros; inv_get; destruct x4; subst; eauto with len.
+        intros; inv_get; eauto with len.
         intros; rewrite zip_length; eauto with len.
-        intros; inv_get; destruct x4; subst; eauto with len.
+        intros; inv_get; eauto with len.
         intros; rewrite zip_length; eauto with len.
-      *
-        intros.
+      * intros.
         inv_zip H6; clear H6. inv_map H8; clear H8.
         inv_zip H7; clear H7. inv_map H8; clear H8.
         exploit H5; eauto.
-        exploit get_PIR2; [ eapply PIR2_ojoin_fold | eapply H10 | eapply H13 | ].
+        exploit get_PIR2; [ eapply PIR2_fold_zip_join | eapply H10 | eapply H13 | ].
         eapply PIR2_get. intros. inv_map H14; clear H14. inv_map H15; clear H15.
         eapply H5; eauto.
         repeat rewrite map_length.
         repeat rewrite forwardF_length.
         repeat rewrite forward_length. rewrite H2; reflexivity.
-        eapply IH; eauto.
-        destruct x0, x2; inv H14; simpl.
+        eapply IH; eauto using setTopAnn_annotation.
+        eapply ann_R_setTopAnn; eauto.
         eapply ann_R_setTopAnn; eauto. eapply H8.
-        eapply ann_R_setTopAnn; eauto. eapply bottom_least.
-        eapply H8.
-        eapply ann_R_setTopAnn; eauto. eapply H8.
-      * eapply IH; eauto.
-    + eapply PIR2_drop. eapply PIR2_ojoin_fold.
+      * eapply IH; eauto using setTopAnn_annotation.
+        eapply ann_R_setTopAnn; eauto.
+    + eapply PIR2_drop. eapply PIR2_fold_zip_join.
       * eapply PIR2_get; eauto.
         intros. inv_map H6. inv_map H7.
         exploit H5; eauto. eapply H13.
         repeat rewrite map_length.
         repeat rewrite forwardF_length.
         repeat rewrite forward_length. rewrite H2; reflexivity.
-      * eapply IH; eauto.
+      * eapply IH; eauto using setTopAnn_annotation.
+        eapply ann_R_setTopAnn; eauto.
 Qed.
 
 (*

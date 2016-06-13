@@ -196,13 +196,6 @@ Proof.
     eapply poLe_antisymmetric; eauto.
 Defined.
 
-Definition impb (a b:bool) : Prop := if a then b else True.
-
-Instance implbb_refl : Reflexive impb.
-Proof.
-  hnf; destruct x; simpl; eauto.
-Qed.
-
 Instance PartialOrder_bool
 : PartialOrder bool := {
   poLe := impb;
@@ -214,7 +207,6 @@ Proof.
   - intros. unfold impb. hnf. destruct d, d'; try dec_solve; eauto.
   - hnf; unfold impb. intros. destruct d,d'; simpl; eauto using bool.
     congruence.
-  - hnf; unfold impb. intros. destruct x,y,z; simpl; eauto.
   - hnf; unfold impb. intros. destruct x,y; eauto. exfalso; eauto.
 Defined.
 

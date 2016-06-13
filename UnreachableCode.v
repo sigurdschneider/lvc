@@ -1,5 +1,5 @@
 Require Import AllInRel List Map Env DecSolve.
-Require Import IL Annotation AutoIndTac Bisim Exp MoreExp SetOperations.
+Require Import IL Annotation AutoIndTac Exp MoreExp SetOperations.
 Require Export Filter LabelsDefined OUnion.
 
 Set Implicit Arguments.
@@ -8,51 +8,62 @@ Local Hint Resolve incl_empty minus_incl incl_right incl_left.
 
 Inductive unreachable_code
   : list params -> list bool -> stmt -> ann bool -> Prop :=
-| UCPOpr ZL Lv x b lv e al
-  :  unreachable_code ZL Lv b al
-     -> unreachable_code ZL Lv (stmtLet x e b) (ann1 lv al)
-| UCPIf ZL Lv e b1 b2 lv al1 al2
-  :  (exp2bool e <> Some false -> unreachable_code ZL Lv b1 al1)
-     -> (exp2bool e <> Some true -> unreachable_code ZL Lv b2 al2)
-     -> unreachable_code ZL Lv (stmtIf e b1 b2) (ann2 lv al1 al2)
-| UCPGoto ZL Lv l Y lv Z
+| UCPOpr ZL BL x s b e al
+  :  unreachable_code ZL BL s al
+     -> getAnn al = b
+     -> unreachable_code ZL BL (stmtLet x e s) (ann1 b al)
+| UCPIf ZL BL e b1 b2 b al1 al2
+  :  (exp2bool e <> Some false -> getAnn al1 = b)
+     -> (exp2bool e <> Some true -> getAnn al2 = b)
+     -> unreachable_code ZL BL b1 al1
+     -> unreachable_code ZL BL b2 al2
+     -> unreachable_code ZL BL (stmtIf e b1 b2) (ann2 b al1 al2)
+| UCPGoto ZL BL l Y Z b a
   : get ZL (counted l) Z
-    -> get Lv (counted l) true
+    -> get BL (counted l) b
+    -> impb a b
     -> length Y = length Z
-    -> unreachable_code ZL Lv (stmtApp l Y) (ann0 lv)
-| UCReturn ZL Lv e lv
-  : unreachable_code ZL Lv (stmtReturn e) (ann0 lv)
-| UCExtern ZL Lv x b lv Y al f
-  : unreachable_code ZL Lv b al
-    -> unreachable_code ZL Lv (stmtExtern x f Y b) (ann1 lv al)
-| UCLet ZL Lv F t lv als alt
-  : unreachable_code (fst ⊝ F ++ ZL) (getAnn ⊝ als ++ Lv) t alt
+    -> unreachable_code ZL BL (stmtApp l Y) (ann0 a)
+| UCReturn ZL BL e b
+  : unreachable_code ZL BL (stmtReturn e) (ann0 b)
+| UCExtern ZL BL x s b Y al f
+  : unreachable_code ZL BL s al
+    -> getAnn al = b
+    -> unreachable_code ZL BL (stmtExtern x f Y s) (ann1 b al)
+| UCLet ZL BL F t b als alt
+  : unreachable_code (fst ⊝ F ++ ZL) (getAnn ⊝ als ++ BL) t alt
     -> length F = length als
+    -> getAnn alt = b
     -> (forall n Zs a, get F n Zs ->
                  get als n a ->
-                 unreachable_code (fst ⊝ F ++ ZL) (getAnn ⊝ als ++ Lv) (snd Zs) a)
+                 unreachable_code (fst ⊝ F ++ ZL) (getAnn ⊝ als ++ BL) (snd Zs) a)
     -> (forall n Zs a, get F n Zs ->
                  get als n a ->
                  getAnn a ->
                  trueIsCalled t (LabI n))
-    -> unreachable_code ZL Lv (stmtFun F t) (annF lv als alt).
+    -> unreachable_code ZL BL (stmtFun F t) (annF b als alt).
 
+Local Hint Extern 0 =>
+match goal with
+| [ H : ?A, H' : ?A -> _ |- _ ] => specialize (H' H); subst
+end.
 
 Lemma unreachable_code_trueIsCalled i Lv s slv l
   : unreachable_code i Lv s slv
     -> trueIsCalled s l
-    -> get Lv (counted l) true.
+    -> exists b, get Lv (counted l) b /\ impb (getAnn slv) b.
 Proof.
   intros Live IC. destruct l; simpl in *.
-  general induction IC; invt unreachable_code; eauto.
-  - exploit IHIC2; eauto; simpl in *.
-    rewrite get_app_lt in H1; eauto with len. inv_get.
-    exploit IHIC1; eauto.
-    rewrite get_app_ge in H2; eauto with len.
-    rewrite map_length in H2; eauto with len.
-    orewrite (❬F❭ + n - ❬als❭ = n) in H2. eauto.
-  - exploit IHIC; eauto; try reflexivity.
-    rewrite get_app_ge in H; eauto with len.
-    rewrite map_length in H.
-    orewrite (❬F❭ + n - ❬als❭ = n) in H. eauto.
+  general induction IC; invt unreachable_code; subst; simpl in *; eauto.
+  - exploit IHIC2; eauto; simpl in *; dcr.
+    rewrite get_app_lt in H5; eauto with len. inv_get.
+    exploit IHIC1; eauto; dcr.
+    rewrite get_app_ge in H7; eauto with len.
+    rewrite map_length in H7; eauto with len.
+    orewrite (❬F❭ + n - ❬als❭ = n) in H7.
+    eexists; split; eauto. etransitivity; eauto.
+  - exploit IHIC; eauto; try reflexivity; dcr.
+    rewrite get_app_ge in H3; eauto with len.
+    rewrite map_length in H3.
+    orewrite (❬F❭ + n - ❬als❭ = n) in H3. eauto.
 Qed.

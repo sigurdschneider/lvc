@@ -93,10 +93,10 @@ Definition unreachable_code_transform (sT:stmt)
     anni2 (if [exp2bool e = Some false] then false else true)
           (if [exp2bool e = Some true] then false else true)
     else anni2 false false
-  | stmtApp f Y => anni1 true
+  | stmtApp f Y => anni1 d
   | stmtReturn e => anni1 d
   | stmtExtern x f Y s => anni1 d
-  | _ => anni1 false
+  | _ => anni1 d
   end.
 
 

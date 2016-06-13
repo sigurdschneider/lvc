@@ -667,3 +667,15 @@ Proof.
 Qed.
 
 Hint Resolve min_idempotent_ass : len.
+
+Definition impb (a b:bool) : Prop := if a then b else True.
+
+Instance impb_refl : Reflexive impb.
+Proof.
+  hnf; destruct x; simpl; eauto.
+Qed.
+
+Instance impb_trans : Transitive impb.
+Proof.
+  hnf; intros [] [] []; eauto.
+Qed.
