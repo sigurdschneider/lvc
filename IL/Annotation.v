@@ -45,6 +45,13 @@ Proof.
   destruct an; eauto.
 Qed.
 
+Lemma setTopAnn_eta A (an:ann A) a
+  : getAnn an = a
+    -> setTopAnn an a = an.
+Proof.
+  intros; destruct an; simpl in *; subst; eauto.
+Qed.
+
 Fixpoint mapAnn X Y (f:X->Y) (a:ann X) : ann Y :=
   match a with
     | ann0 a => ann0 (f a)
