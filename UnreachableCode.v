@@ -6,50 +6,58 @@ Set Implicit Arguments.
 
 Local Hint Resolve incl_empty minus_incl incl_right incl_left.
 
-Inductive unreachable_code
+Inductive sc := Sound | SoundAndComplete.
+
+Definition isComplete (s:sc) :=
+  match s with
+  | SoundAndComplete => true
+  | _ => false
+  end.
+
+Inductive unreachable_code (i:sc)
   : list params -> list bool -> stmt -> ann bool -> Prop :=
 | UCPOpr ZL BL x s b e al
-  :  unreachable_code ZL BL s al
+  :  unreachable_code i ZL BL s al
      -> getAnn al = b
-     -> unreachable_code ZL BL (stmtLet x e s) (ann1 b al)
+     -> unreachable_code i ZL BL (stmtLet x e s) (ann1 b al)
 | UCPIf ZL BL e b1 b2 b al1 al2
   :  (exp2bool e <> Some false -> getAnn al1 = b)
      -> (exp2bool e <> Some true -> getAnn al2 = b)
-     -> unreachable_code ZL BL b1 al1
-     -> unreachable_code ZL BL b2 al2
-     -> unreachable_code ZL BL (stmtIf e b1 b2) (ann2 b al1 al2)
+     -> unreachable_code i ZL BL b1 al1
+     -> unreachable_code i ZL BL b2 al2
+     -> unreachable_code i ZL BL (stmtIf e b1 b2) (ann2 b al1 al2)
 | UCPGoto ZL BL l Y Z b a
   : get ZL (counted l) Z
     -> get BL (counted l) b
     -> impb a b
     -> length Y = length Z
-    -> unreachable_code ZL BL (stmtApp l Y) (ann0 a)
+    -> unreachable_code i ZL BL (stmtApp l Y) (ann0 a)
 | UCReturn ZL BL e b
-  : unreachable_code ZL BL (stmtReturn e) (ann0 b)
+  : unreachable_code i ZL BL (stmtReturn e) (ann0 b)
 | UCExtern ZL BL x s b Y al f
-  : unreachable_code ZL BL s al
+  : unreachable_code i ZL BL s al
     -> getAnn al = b
-    -> unreachable_code ZL BL (stmtExtern x f Y s) (ann1 b al)
+    -> unreachable_code i ZL BL (stmtExtern x f Y s) (ann1 b al)
 | UCLet ZL BL F t b als alt
-  : unreachable_code (fst ⊝ F ++ ZL) (getAnn ⊝ als ++ BL) t alt
+  : unreachable_code i (fst ⊝ F ++ ZL) (getAnn ⊝ als ++ BL) t alt
     -> length F = length als
     -> getAnn alt = b
     -> (forall n Zs a, get F n Zs ->
                  get als n a ->
-                 unreachable_code (fst ⊝ F ++ ZL) (getAnn ⊝ als ++ BL) (snd Zs) a)
-    -> (forall n Zs a, get F n Zs ->
-                 get als n a ->
-                 getAnn a ->
-                 trueIsCalled t (LabI n))
-    -> unreachable_code ZL BL (stmtFun F t) (annF b als alt).
+                 unreachable_code i (fst ⊝ F ++ ZL) (getAnn ⊝ als ++ BL) (snd Zs) a)
+    -> (if isComplete i then (forall n Zs a, get F n Zs ->
+                                      get als n a ->
+                                      getAnn a ->
+                                      trueIsCalled t (LabI n)) else True)
+    -> unreachable_code i ZL BL (stmtFun F t) (annF b als alt).
 
 Local Hint Extern 0 =>
 match goal with
 | [ H : ?A, H' : ?A -> _ |- _ ] => specialize (H' H); subst
 end.
 
-Lemma unreachable_code_trueIsCalled i Lv s slv l
-  : unreachable_code i Lv s slv
+Lemma unreachable_code_trueIsCalled i ZL Lv s slv l
+  : unreachable_code i ZL Lv s slv
     -> trueIsCalled s l
     -> exists b, get Lv (counted l) b /\ impb (getAnn slv) b.
 Proof.

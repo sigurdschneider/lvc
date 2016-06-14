@@ -409,3 +409,19 @@ Proof.
     + eapply PIR2_get in H14; eauto.
       eapply (H0 b0); eauto.
 Qed.
+
+Lemma list_get_eq A (L L':list A)
+  : length L = length L'
+    -> (forall n a b, get L n a -> get L' n b -> a = b)
+    -> L = L'.
+Proof.
+  intros. length_equify. general induction H; f_equal; eauto using get.
+Qed.
+
+Lemma ann_R_eq A (a b:ann A)
+  : ann_R eq a b <-> a = b.
+Proof.
+  split; intros; subst; eauto.
+  induction H; subst; eauto.
+  f_equal. eapply list_get_eq; eauto.
+Qed.

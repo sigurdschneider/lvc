@@ -20,43 +20,95 @@ Ltac simpl_forward_setTopAnn :=
            end
          end; rewrite setTopAnn_eta in *; try eassumption.
 
-Lemma PIR2_zip_join_inv_left A B C
-  : PIR2 poLe (join ⊜ A B) C
+Lemma PIR2_zip_join_inv_left X `{BoundedSemiLattice X} A B C
+  : poLe (join ⊜ A B) C
     -> length A = length B
-    -> PIR2 poLe A C.
+    -> poLe A C.
+Proof.
+  intros. length_equify. hnf in H1.
+  general induction H1; inv H2; simpl in *; eauto using PIR2; try solve [ congruence ].
+  - inv Heql; econstructor; eauto.
+    + rewrite <- pf. eapply join_poLe.
+Qed.
+
+Lemma PIR2_zip_join_inv_right X `{BoundedSemiLattice X} A B C
+  : poLe (join ⊜ A B) C
+    -> length A = length B
+    -> poLe B C.
+Proof.
+  intros. length_equify. hnf in H1.
+  general induction H1; inv H2; simpl in *; eauto using PIR2; try solve [ congruence ].
+  - inv Heql; econstructor; eauto.
+    + rewrite <- pf. rewrite join_commutative. eapply join_poLe.
+Qed.
+
+Lemma PIR2_poLe_zip_join_left X `{BoundedSemiLattice X} A B
+  : length A = length B
+    -> poLe A (join ⊜ A B).
 Proof.
   intros. length_equify.
-  general induction H; inv H0; simpl in *; eauto using PIR2; try solve [ congruence ].
-  - inv Heql; econstructor; eauto.
-    + destruct x0, y0, y; simpl in *; inv pf; econstructor; eauto.
+  general induction H1; simpl in *; eauto using PIR2; try solve [ congruence ].
+  - econstructor; eauto using join_poLe.
 Qed.
 
-Lemma PIR2_zip_join_inv_right A B C
-  : PIR2 poLe (join ⊜ A B) C
-    -> length A = length B
-    -> PIR2 poLe B C.
+Lemma PIR2_zip_join_commutative X `{BoundedSemiLattice X} A B
+  : poLe (join ⊜ B A) (join ⊜ A B).
 Proof.
-  intros. length_equify.
-  general induction H; inv H0; simpl in *; eauto using PIR2; try solve [ congruence ].
-  - inv Heql; econstructor; eauto.
-    + destruct x0, y0, y; simpl in *; inv pf; econstructor; eauto.
+  intros.
+  general induction A; destruct B; simpl in *; eauto using PIR2.
+  econstructor; eauto. rewrite join_commutative; eauto.
 Qed.
 
-Instance impb_trans : Transitive impb.
+Lemma PIR2_poLe_zip_join_right X `{BoundedSemiLattice X} A B
+  : length A = length B
+    -> poLe B (join ⊜ A B).
 Proof.
-  hnf; intros [] [] []; simpl; intros; eauto.
+  intros. rewrite <- PIR2_zip_join_commutative. (* todo: missing morphism *)
+  eapply PIR2_poLe_zip_join_left; congruence.
 Qed.
 
-Lemma PIR2_fold_zip_join_inv A B C
-  : PIR2 poLe (fold_left (zip join) A B) C
+Lemma PIR2_fold_zip_join_inv X `{BoundedSemiLattice X} A B C
+  : poLe (fold_left (zip join) A B) C
     -> (forall n a, get A n a -> length a = length B)
-    -> PIR2 poLe B C.
+    -> poLe B C.
 Proof.
   intros.
   general induction A; simpl in *; eauto.
   eapply IHA; eauto using get.
   etransitivity; eauto.
-Admitted.
+  eapply PIR2_fold_zip_join; eauto.
+  eapply PIR2_poLe_zip_join_left.
+  symmetry. eauto using get.
+Qed.
+
+Lemma PIR2_fold_zip_join_right X `{BoundedSemiLattice X} (A:list X) B C
+  : (forall n a, get B n a -> length a = length C)
+    -> poLe A C
+    -> poLe A (fold_left (zip join) B C).
+Proof.
+  general induction B; simpl; eauto.
+  eapply IHB; intros; eauto using get with len.
+  - rewrite zip_length2; eauto using eq_sym, get.
+  - rewrite H2. eapply PIR2_poLe_zip_join_left. symmetry. eauto using get.
+Qed.
+
+Lemma PIR2_fold_zip_join_left X `{BoundedSemiLattice X} (A:list X) B C a k
+  : get B k a
+    -> poLe A a
+    -> (forall n a, get B n a -> length a = length C)
+    -> poLe A (fold_left (zip join) B C).
+Proof.
+  intros.
+  general induction B; simpl in *; eauto.
+  - isabsurd.
+  - inv H1.
+    + eapply PIR2_fold_zip_join_right.
+      intros. rewrite zip_length2; eauto using eq_sym, get.
+      rewrite H2. eapply PIR2_poLe_zip_join_right.
+      eauto using eq_sym, get.
+    + eapply IHB; eauto using get.
+      intros. rewrite zip_length2; eauto using eq_sym, get.
+Qed.
 
 
 Lemma get_union_union_b X `{BoundedSemiLattice X} (A:list (list X)) (b:list X) n x
@@ -111,14 +163,23 @@ Proof.
 Qed.
 *)
 
+Lemma setTopAnn_inv A R (an an':ann A) a
+  : ann_R R (setTopAnn an a) an'
+    -> R a (getAnn an').
+Proof.
+  intros; destruct an; inv H; simpl; eauto.
+Qed.
+
+Opaque poLe.
+
 Definition unreachable_code_analysis_correct sT ZL BL s a (ST:subTerm s sT)
-  : ann_R poEq (fst (forward unreachable_code_transform ZL s ST a)) a
+  : poEq (fst (forward unreachable_code_transform ZL s ST a)) a
     -> annotation s a
     -> labelsDefined s (length ZL)
     -> labelsDefined s (length BL)
     -> paramsMatch s (length ⊝ ZL)
     -> poLe (snd (@forward sT _ _ _ unreachable_code_transform ZL s ST a)) BL
-    -> unreachable_code ZL BL s a.
+    -> unreachable_code Sound ZL BL s a.
 Proof.
   intros EQ Ann DefZL DefBL PM.
   general induction Ann; simpl in *; inv DefZL; inv DefBL; inv PM;
@@ -137,8 +198,8 @@ Proof.
     repeat cases in EQ; simpl in *; try solve [congruence]; inv EQ;
     repeat simpl_forward_setTopAnn;
     econstructor; intros; try solve [congruence];
-      eauto using PIR2_zip_join_inv_left, PIR2_zip_join_inv_right.
-  - inv_get.
+      eauto using @PIR2_zip_join_inv_left, @PIR2_zip_join_inv_right.
+  - inv_get. Transparent poLe. hnf in H.
     edestruct PIR2_nth; eauto using ListUpdateAt.list_update_at_get_3; dcr.
     econstructor; eauto.
   - econstructor.
@@ -153,14 +214,14 @@ Proof.
     set (FWt:=(forward unreachable_code_transform (fst ⊝ s ++ ZL) t
                        (subTerm_EQ_Fun1 eq_refl ST) ta)).
     set (FWF:=forwardF (forward unreachable_code_transform) (fst ⊝ s ++ ZL) s sa
-                       (snd FWt) (subTerm_EQ_Fun2 eq_refl ST)).
+                       (subTerm_EQ_Fun2 eq_refl ST)).
     intros.
     econstructor; eauto.
     + eapply IHAnn; eauto.
       erewrite (take_eta ❬s❭) at 1. eapply PIR2_app; eauto.
       * eapply PIR2_get. intros. inv_get.
         edestruct (get_forwardF (fun _ => bool) (forward unreachable_code_transform)
-                                (fst ⊝ s ++ ZL) (subTerm_EQ_Fun2 eq_refl ST) H13 H10 H4).
+                                (fst ⊝ s ++ ZL) (subTerm_EQ_Fun2 eq_refl ST) H13 H10).
         edestruct (@get_union_union_b bool _ _).
         eapply H4.
         Focus 2. dcr.
@@ -168,7 +229,7 @@ Proof.
         eapply H14. eauto. eapply ann_R_get in H3. rewrite <- H3.
         rewrite getAnn_setTopAnn. eapply H15.
         intros. inv_get.
-        edestruct (@forwardF_get _ _ _ _ _ _ _ _ _ _ _ _ H3). dcr. subst.
+        edestruct (@forwardF_get _ _ _ _ _ _ _ _ _ _ _ H3). dcr. subst.
         repeat rewrite (@forward_length sT (fun _ => bool)); eauto with len.
         rewrite Take.take_less_length. eauto with len.
         repeat rewrite (@forward_length sT (fun _ => bool)); eauto with len.
@@ -176,7 +237,7 @@ Proof.
         eapply PIR2_fold_zip_join_inv. reflexivity.
         intros.
         inv_get.
-        edestruct (@forwardF_get _ _ _ _ _ _ _ _ _ _ _ _ H4). dcr.
+        edestruct (@forwardF_get _ _ _ _ _ _ _ _ _ _ _ H4). dcr.
         subst; repeat rewrite (@forward_length sT (fun _ => bool)); eauto with len.
     + intros.
       assert (n < ❬snd FWt❭). {
@@ -186,13 +247,13 @@ Proof.
       }
       edestruct get_in_range; eauto.
       edestruct (get_forwardF (fun _ => bool) (forward unreachable_code_transform)
-                              (fst ⊝ s ++ ZL) (subTerm_EQ_Fun2 eq_refl ST) H4 H10 g).
+                              (fst ⊝ s ++ ZL) (subTerm_EQ_Fun2 eq_refl ST) H4 H10).
       eapply H1 with (ST:=x0); eauto.
       eapply H17; eauto.
       *
         assert (n <
                 ❬snd (
-             forward unreachable_code_transform (fst ⊝ s ++ ZL) (snd Zs) x0 (setTopAnn a0 x))❭). {
+             forward unreachable_code_transform (fst ⊝ s ++ ZL) (snd Zs) x0 a0)❭). {
           erewrite (@forward_length sT (fun _ => bool)). rewrite app_length,map_length.
           eapply get_range in H4. omega.
         }
@@ -205,21 +266,94 @@ Proof.
         exploit H17.
         eapply zip_get.
         eapply map_get_1. eauto. eapply H19. eauto.
-        exploit (@forward_getAnn sT (fun _ => bool) _ _ _ _ _ _ _ _ H15).
-
+        exploit (setTopAnn_inv _ _ H15); eauto; subst.
+        rewrite setTopAnn_eta; eauto.
+        eapply (@forward_getAnn' sT (fun _ => bool)).
 
         clear_all. intros. inv_get.
-        edestruct (@forwardF_get _ _ _ _ _ _ _ _ _ _ _ _ H). dcr.
-        destruct x4; subst;
-          repeat erewrite (@forward_length sT (fun _ => bool)); eauto with len.
-      * admit.
-    + intros. admit.
-
+        edestruct (@forwardF_get _ _ _ _ _ _ _ _ _ _ _ H). dcr; subst.
+        subst FWt.
+        repeat erewrite (@forward_length sT (fun _ => bool)); eauto with len.
+      *
+        rewrite (take_eta ❬sa❭) at 1.
+        eapply PIR2_app.
+        eapply PIR2_get; intros; inv_get.
+        exploit (@get_union_union_A bool _ _).
+        eapply map_get_1. apply g0. instantiate (3:=snd). eauto.
+        Focus 2. dcr.
+        edestruct (get_forwardF (fun _ => bool) (forward unreachable_code_transform)
+                                (fst ⊝ s ++ ZL) (subTerm_EQ_Fun2 eq_refl ST) H20 H15).
+        exploit H17; eauto.
+        eapply zip_get. eapply map_get_1. subst FWF. eauto. eauto.
+        eapply ann_R_get in H3. rewrite getAnn_setTopAnn in H3. rewrite <- H3.
+        eauto.
+        clear_all. intros. inv_get.
+        edestruct (@forwardF_get _ _ _ _ _ _ _ _ _ _ _ H). dcr; subst.
+        subst FWt.
+        repeat erewrite (@forward_length sT (fun _ => bool)); eauto with len.
+        rewrite Take.take_less_length; eauto with len.
+        rewrite (@forward_length _ (fun _ => bool)). eauto with len.
+        etransitivity; eauto.
+        rewrite H. eapply PIR2_drop.
+        subst FWF.
+        pose proof (@PIR2_fold_zip_join_left bool _ _). eapply H13.
+        eauto. reflexivity.
+        clear_all. intros. inv_get.
+        edestruct (@forwardF_get _ _ _ _ _ _ _ _ _ _ _ H). dcr; subst.
+        subst FWt.
+        repeat erewrite (@forward_length sT (fun _ => bool)); eauto with len.
+    + simpl. eauto.
 Qed.
 
-Definition livenessAnalysis s :=
-  let a := Analysis.safeFixpoint (LivenessAnalysis.liveness_analysis s) in
-  mapAnn (@proj1_sig _ _) (proj1_sig (proj1_sig a)).
+
+Inductive unreachable_code_complete
+  : list params -> list bool -> stmt -> ann bool -> Prop :=
+| UCPOpr ZL BL x s b e al
+  :  unreachable_code_complete ZL BL s al
+     -> unreachable_code_complete ZL BL (stmtLet x e s) (ann1 b al)
+| UCPIf ZL BL e b1 b2 b al1 al2
+  :  unreachable_code_complete ZL BL b1 al1
+     -> unreachable_code_complete ZL BL b2 al2
+     -> unreachable_code_complete ZL BL (stmtIf e b1 b2) (ann2 b al1 al2)
+| UCPGoto ZL BL l Y a
+  : unreachable_code_complete ZL BL (stmtApp l Y) (ann0 a)
+| UCReturn ZL BL e b
+  : unreachable_code_complete ZL BL (stmtReturn e) (ann0 b)
+| UCExtern ZL BL x s b Y al f
+  : unreachable_code_complete ZL BL s al
+    -> unreachable_code_complete ZL BL (stmtExtern x f Y s) (ann1 b al)
+| UCLet ZL BL F t b als alt
+  : unreachable_code_complete (fst ⊝ F ++ ZL) (getAnn ⊝ als ++ BL) t alt
+    -> length F = length als
+    -> (forall n Zs a, get F n Zs ->
+                 get als n a ->
+                 unreachable_code_complete (fst ⊝ F ++ ZL) (getAnn ⊝ als ++ BL) (snd Zs) a)
+    -> (forall n Zs a, get F n Zs ->
+                 get als n a ->
+                 getAnn a ->
+                 trueIsCalled t (LabI n))
+-> unreachable_code_complete ZL BL (stmtFun F t) (annF b als alt).
+
+
+Definition unreachableCodeAnalysis s :=
+  Analysis.safeFixpoint (unreachable_code_analysis s).
+
+Lemma unreachable_code_analysis_complete sT ZL BL s a (ST:subTerm s sT) b
+  : unreachable_code_complete ZL BL s a
+    -> unreachable_code_complete ZL BL s
+                                (fst (forward unreachable_code_transform ZL s ST (setTopAnn a b))).
+Proof.
+  intros UCC.
+  general induction UCC; simpl; repeat let_pair_case_eq; subst; simpl;
+    eauto using unreachable_code_complete, subTerm.
+  - econstructor.
+    + admit.
+    + rewrite zip_length. admit.
+    + admit.
+    + intros. inv_get.
+      eapply H2; eauto.
+Qed.
+
 
 
 
