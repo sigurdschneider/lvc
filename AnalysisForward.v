@@ -353,8 +353,8 @@ Proof with eauto using setTopAnn_annotation, poLe_setTopAnn, poLe_getAnni.
   intros s.
   sind s; destruct s; intros ST ST' ZL d d' Ann LE; simpl forward; inv LE; inv Ann;
     simpl forward; repeat let_pair_case_eq; subst; eauto 10 using @ann_R.
-  - econstructor; simpl; eauto.
-    + econstructor; eauto.
+  - econstructor; simpl; eauto; fold_po.
+    + econstructor; eauto; fold_po.
       eapply IH; eauto using setTopAnn_annotation, poLe_setTopAnn, poLe_getAnni.
     + eapply IH; eauto using setTopAnn_annotation, poLe_setTopAnn, poLe_getAnni.
   - econstructor; simpl; eauto.

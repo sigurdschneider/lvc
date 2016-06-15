@@ -189,6 +189,15 @@ Defined.
     - erewrite IHy0_1, IHy0_2; eauto.
   Qed.
 
+  Lemma get_live_exp_sound Y D n y
+    : list_union (freeVars ⊝ Y) ⊆ D
+      -> get Y n y
+      -> live_exp_sound y D.
+  Proof.
+    intros. eapply live_exp_sound_incl; [eapply live_freeVars |].
+    rewrite <- H. eauto using get_list_union_map with cset.
+  Qed.
+
   Definition var_to_exp : forall x:var, exp := Var.
   Lemma var_to_exp_correct : forall M x,
      exp_eval M (var_to_exp x) = M x.

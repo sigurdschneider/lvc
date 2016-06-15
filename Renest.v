@@ -1,4 +1,4 @@
-Require Import paco2 AllInRel Util Map Env EnvTy Exp IL Bisim DecSolve MoreList InRel Sublist.
+Require Import paco2 AllInRel Util Map Env EnvTy Exp IL Sim DecSolve MoreList Sawtooth InRel Sublist.
 
 Set Implicit Arguments.
 Unset Printing Records.
@@ -127,9 +127,6 @@ Proof.
   general induction L'; simpl; eauto.
 Qed.
 
-Require Import BisimI.
-
-
 Ltac simpl_get_dropI :=
   repeat match goal with
   | [ H : get (drop (?n - _) ?L) _ _, H' : get ?L ?n ?blk, STL: sawtooth ?L |- _ ]
@@ -161,10 +158,10 @@ Ltac not_normal H :=
 Lemma bisim_drop_shift_left r l (L:I.labenv) E Y
       blk (STL:sawtooth L) sigma
   : get L (labN l) blk
-    -> paco2 (@bisim_gen I.state _ I.state _) r
+    -> paco3 (@sim_gen I.state _ I.state _) r
             (drop (labN l - block_n blk) L, E, stmtApp (LabI (block_n blk)) Y)
             sigma
-    -> paco2 (@bisim_gen I.state _ I.state _) r
+    -> paco3 (@sim_gen I.state _ I.state _) r
             (L, E, stmtApp l Y)
             sigma.
 Proof.

@@ -117,6 +117,16 @@ Proof.
 Qed.
 
 
+Inductive callChain (isCalled : stmt -> lab -> Prop) (F:〔params * stmt〕)
+  : nat -> lab -> Prop :=
+| CallChainDone k Zs l
+  : get F k Zs -> isCalled (snd Zs) l -> callChain isCalled F k l
+| CallChainStep k k' Zs l
+  : get F k Zs
+    -> k' < length F
+    -> isCalled (snd Zs) (LabI k')
+    -> callChain isCalled F k' l -> callChain isCalled F k l.
+
 Inductive isCalled : stmt -> lab -> Prop :=
   | IsCalledExp x e s l
     : isCalled s l
@@ -132,10 +142,9 @@ Inductive isCalled : stmt -> lab -> Prop :=
   | IsCalledExtern x f Y s l
     : isCalled s l
       -> isCalled (stmtExtern x f Y s) l
-  | IsCalledLet1 F t k Zs l
+  | IsCalledLet1 F k t l
     : k < length F
-      -> get F k Zs
-      -> isCalled (snd Zs) (labInc l (length F))
+      -> callChain isCalled F k (labInc l (length F))
       -> isCalled t (LabI k)
       -> isCalled (stmtFun F t) l
   | IsCalledLet F t l
@@ -170,12 +179,14 @@ Inductive trueIsCalled : stmt -> lab -> Prop :=
     : trueIsCalled t (incc l (length F))
       -> trueIsCalled (stmtFun F t) l.
 
+(*
 Lemma trueIsCalled_isCalled s l
   : trueIsCalled s l -> isCalled s l.
 Proof.
   intro IC.
   general induction IC; eauto using isCalled.
 Qed.
+ *)
 
 Inductive noUnreachableCode : stmt -> Prop :=
   | NoUnrechableCodeExp x e s

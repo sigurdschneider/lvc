@@ -441,3 +441,22 @@ Proof.
   + econstructor.
   + econstructor; eauto.
 Qed.
+
+Instance diff_m_eq X `{OrderedType X}
+  : Proper (eq ==> eq ==> eq) diff.
+Proof.
+  unfold Proper, respectful; intros; subst; eauto.
+Qed.
+
+Instance Subset_m_eq_eq_flip_impl X `{OrderedType X}
+  : (Proper (eq ==> eq ==> flip impl) Subset).
+Proof.
+  unfold Proper, respectful, flip, impl; intros; subst; eauto.
+Qed.
+
+Instance Subset_m_Equal_eq_flip_impl X `{OrderedType X}
+  : (Proper (Equal ==> eq ==> flip impl) Subset).
+Proof.
+  unfold Proper, respectful, flip, impl; intros; subst.
+  rewrite H0; eauto.
+Qed.

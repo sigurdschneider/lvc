@@ -186,7 +186,7 @@ Lemma srd_globals_live s ZL Lv DL alv f
             /\ lv ⊆ getAnn alv.
 Proof.
   intros LS SRD PE IC.
-  general induction IC; invt live_sound; invt srd; simpl in * |- *.
+  general induction IC; try invt live_sound; try invt srd; simpl in * |- *.
   - edestruct IHIC as [lv' [Z' ?]]; eauto using restrict_ifFstR; dcr.
     inv_get.
     do 2 eexists; split; [| split]. eauto. eauto.
@@ -201,22 +201,26 @@ Proof.
     do 2 eexists; split; [| split]; eauto.
     rewrite H. eauto with cset.
   - inv_get.
-    edestruct IHIC2; eauto. rewrite zip_app; eauto with len.
+    edestruct IHIC2; eauto.
+    rewrite zip_app; eauto with len.
     eapply PIR2_app; eauto using restrict_ifFstR, PIR2_ifFstR_refl.
     dcr; inv_get.
-    edestruct IHIC1; eauto. rewrite zip_app, List.map_app; eauto with len.
-    eapply PIR2_app; eauto using restrict_ifFstR, PIR2_ifFstR_refl.
-    destruct l; simpl in *; dcr; inv_get.
+    edestruct IHIC1; eauto. econstructor. eauto. eauto. eauto.
+    eauto. reflexivity.
+    econstructor. eauto. eauto. exploit H12; eauto. eapply srd_monotone. eapply H1.
+    admit. simpl in *. dcr.
     do 2 eexists; split; [|split]; eauto.
-    rewrite H2, H11; eauto.
+    PIR2_inv. inv_get. exploit H7; eauto; dcr.
+    admit.
   - edestruct IHIC; eauto. rewrite zip_app; eauto with len.
     eapply PIR2_app; eauto using restrict_ifFstR, PIR2_ifFstR_refl.
     destruct l; simpl in *; dcr; inv_get.
     eauto with cset.
-Qed.
+Admitted.
+
 
 (** *** On a coherent program a liveness analysis which is sound imperatively is also sound functionally. *)
-
+(*
 Local Hint Extern 1 =>
 match goal with
 | [ |- context [ (?A ++ ?B) \\ (?C ++ ?D) ] ] =>
@@ -248,3 +252,4 @@ Proof.
       dcr. simpl in *. inv_get.
       unfold lminus in H17. rewrite H17; eauto.
 Qed.
+*)

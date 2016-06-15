@@ -340,16 +340,32 @@ Definition unreachableCodeAnalysis s :=
 
 Lemma unreachable_code_analysis_complete sT ZL BL s a (ST:subTerm s sT) b
   : unreachable_code_complete ZL BL s a
-    -> unreachable_code_complete ZL BL s
+    -> forall n, get (snd (forward unreachable_code_transform ZL s ST (setTopAnn a b))) n true
+           -> trueIsCalled s (LabI n).
+Proof.
+  intros. general induction H; simpl in *; repeat let_case_eq; repeat simpl_pair_eqs; subst;
+            simpl in *; eauto using trueIsCalled.
+  - admit.
+  - admit.
+  - exfalso. inv_get.
+  -
+  econstructor. eapply IHunreachable_code_complete.
+
+Qed.
+
+Lemma unreachable_code_analysis_complete sT ZL BL BL' s a (ST:subTerm s sT) b
+  : unreachable_code_complete ZL BL s a
+    -> unreachable_code_complete ZL BL' s
                                 (fst (forward unreachable_code_transform ZL s ST (setTopAnn a b))).
 Proof.
   intros UCC.
   general induction UCC; simpl; repeat let_pair_case_eq; subst; simpl;
     eauto using unreachable_code_complete, subTerm.
-  - econstructor.
-    + admit.
-    + rewrite zip_length. admit.
-    + admit.
+  - econstructor; eauto.
+    + rewrite zip_length, map_length.
+      rewrite (@forwardF_length _ (fun _ => bool)).
+      admit.
+    + intros. inv_get. eapply H1.
     + intros. inv_get.
       eapply H2; eauto.
 Qed.

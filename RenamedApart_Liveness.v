@@ -15,34 +15,6 @@ Proof.
   intros. length_equify. general induction H; simpl; eauto; f_equal; eauto.
 Qed.
 
-Instance diff_m_eq X `{OrderedType X}
-  : Proper (eq ==> eq ==> eq) diff.
-Proof.
-  unfold Proper, respectful; intros; subst; eauto.
-Qed.
-
-Instance Subset_m_eq_eq_flip_impl X `{OrderedType X}
-  : (Proper (eq ==> eq ==> flip impl) Subset).
-Proof.
-  unfold Proper, respectful, flip, impl; intros; subst; eauto.
-Qed.
-
-Instance Subset_m_Equal_eq_flip_impl X `{OrderedType X}
-  : (Proper (Equal ==> eq ==> flip impl) Subset).
-Proof.
-  unfold Proper, respectful, flip, impl; intros; subst.
-  rewrite H0; eauto.
-Qed.
-
-Lemma get_live_exp_sound Y D n y
-  : list_union (Exp.freeVars ⊝ Y) ⊆ D
-    -> get Y n y
-    -> live_exp_sound y D.
-Proof.
-  intros. eapply live_exp_sound_incl; [eapply live_freeVars |].
-  rewrite <- H. eauto using get_list_union_map with cset.
-Qed.
-
 Lemma renamedApart_live_functional s ang ZL Lv
 : renamedApart s ang
   -> paramsMatch s (@length _ ⊝ ZL)
@@ -65,7 +37,6 @@ Proof.
       repeat rewrite List.map_app; eauto with len.
       eauto with len.
     + intros; inv_get. eapply H1; eauto with len.
-      rewrite List.map_app. eauto.
     + intros; inv_get. edestruct H2; eauto; dcr.
       cases; split; pe_rewrite; eauto with cset pe ann.
     + eauto with cset pe ann.
@@ -119,10 +90,8 @@ Proof.
     }
     econstructor; eauto with len.
     + eapply IHrenamedApart; eauto with len; simpl.
-      * rewrite List.map_app; eauto.
     + intros. inv_get.
       eapply H1; eauto.
-      * rewrite List.map_app; eauto.
       * edestruct H2; eauto; dcr. rewrite H15.
         rewrite zip_app; eauto with len.
         rewrite List.map_app. rewrite <- incl_right.
@@ -152,8 +121,6 @@ Proof.
   - rewrite H0; eauto.
 Qed.
 
-Definition disj1 (x:set var) (y: set var * set var) := disj x (snd y).
-
 Lemma disjoint_let D D' D'' x ZL (Lv:list (set var)) an
 : D''[=]{x; D'}
   -> disjoint (Some ⊝ Lv \\ ZL) (D'')
@@ -182,16 +149,14 @@ Proof.
 Qed.
 
 
-Definition Subset1 (x : set var) (y : set var * set var) :=
-  match y with
-    | (y, _) => x[<=] y
-  end.
+Definition Subset1 (x : set var) (y : set var * set var) := x[<=] fst y.
+
 
 Instance Subset1_morph
 : Proper (Equal ==> @pe _ _ ==> iff) Subset1.
 Proof.
   unfold Proper, respectful; intros.
-  inv H0; simpl. rewrite H, H1. reflexivity.
+  inv H0; simpl; unfold Subset1. rewrite H, H1. reflexivity.
 Qed.
 
 Lemma disjoint_app L L' D
@@ -224,7 +189,7 @@ Proof.
     eapply ann_R_get in H11.
     destruct (getAnn x2); simpl in *.
     repeat get_functional.
-    rewrite H3. unfold lminus. rewrite H11. rewrite H10.
+    rewrite H3. unfold Subset1 in H11. rewrite H11. rewrite H10.
     eauto with cset.
   - rewrite H3; eauto.
 Qed.
@@ -253,58 +218,83 @@ Lemma renamedApart_globals_live s ZL Lv alv f ang
             /\ get Lv (counted f) lv
             /\ (lv \ of_list Z) ⊆ getAnn alv.
 Proof.
-  intros LS RA IC AR.
-  general induction IC; invt live_sound;
-    invt renamedApart; invt (@ann_R); simpl in * |- *.
-  - edestruct IHIC; dcr; eauto using disjoint_let.
+  revert ZL Lv alv f ang.
+  sind s; destruct s; simpl; intros; invt live_sound;
+    invt renamedApart; invt (@ann_R); invt isCalled; simpl in * |- *.
+  - edestruct (IH s); dcr; eauto using disjoint_let.
     + do 2 eexists; split; [| split]; eauto with cset.
-      exploit H; eauto. rewrite <- H8.
+      exploit H3; eauto.
+      rewrite <- H12.
       eauto with cset.
-  - edestruct IHIC; dcr; eauto using disjoint_if1.
-    do 2 eexists; split; [| split]; eauto. rewrite <- H9; eauto.
-  - edestruct IHIC; dcr; eauto using disjoint_if2 with cset.
+  - edestruct (IH s1); dcr; eauto using disjoint_if1.
+    do 2 eexists; split; [| split]; eauto. rewrite <- H13; eauto.
+  - edestruct (IH s2); dcr; eauto using disjoint_if2 with cset.
   - eauto.
-  - edestruct IHIC; dcr; eauto using disjoint_let.
+  - edestruct (IH s); dcr; eauto using disjoint_let.
     + do 2 eexists; split; [| split]; eauto with cset.
-      exploit H; eauto. rewrite <- H9.
+      exploit H3; eauto. rewrite <- H13.
       eauto with cset.
-  - inv_get.
-    edestruct IHIC1; eauto; dcr; eauto.
+  - exploit (IH s0); eauto; dcr; pe_rewrite.
     {
-      eapply renamedApart_disj in RA; simpl in *.
+      eapply disjoint_funF1; eauto.
+      rewrite <- H18. eapply incl_right.
+      eapply renamedApart_disj in H0; eauto.
+    }
+    clear H22.
+    general induction H19.
+    + inv_get. exploit (IH (snd Zs)); eauto.
       eapply disjoint_funF1; eauto.
       eapply lv_incl; eauto.
-    }
-    edestruct IHIC2; eauto; dcr.
+      eapply renamedApart_disj in H3; simpl in *; eauto.
+      dcr. destruct f; simpl in *.
+      inv_get. do 2 eexists; split; [| split]; eauto.
+      assert ((of_list (fst Zs)) ⊆ D'). {
+        rewrite <- H18. eapply incl_union_left.
+        eapply incl_list_union. eapply zip_get; eauto.
+        unfold defVars. eauto with cset.
+      }
+      assert (disj (x \ of_list x2) D'). {
+        eapply disj_1_incl. eauto. reflexivity.
+      }
+      rewrite <- H13, <- H27. rewrite <- H30.
+      eauto with cset.
+    + inv_get. exploit (IH (snd Zs)). eauto. eauto. eauto. eauto. eauto.
+      eapply disjoint_funF1; eauto.
+      eapply lv_incl; eauto.
+      eapply renamedApart_disj in H4; simpl in *; eauto.
+      dcr.
+      exploit IHcallChain; eauto.
+      inv_get.
+      rewrite <- H27, <- H32.
+      exploit H24; eauto.
+      decide (k = k'). subst; repeat get_functional. clear_all; cset_tac.
+      exploit H10; eauto. eapply renamedApart_disj in H33.
+      exploit H14; eauto using zip_get. unfold defVars in H30.
+      edestruct H12; eauto. dcr. eapply ann_R_get in H30.
+      unfold defVars in H34. unfold Subset1 in H30.
+      rewrite H35 in H30.
+      assert ((of_list (fst Zs)) ⊆ D'). {
+        rewrite <- H18. eapply incl_union_left.
+        eapply incl_list_union. eapply zip_get.
+        eapply H. eauto.
+        unfold defVars. eauto with cset.
+      }
+      eapply renamedApart_disj in H4.
+      assert (disj (getAnn x4 \ of_list (fst x3)) D'). {
+        eapply disj_1_incl. eauto. simpl. rewrite H30.
+        eauto with cset.
+      }
+      eauto with cset.
+  - edestruct (IH s0); eauto; dcr; pe_rewrite.
     {
       eapply disjoint_funF1; eauto.
-      pe_rewrite. rewrite <- H16. eapply incl_right.
-      eapply renamedApart_disj in RA; eauto.
+      rewrite <- H18. eapply incl_right.
+      eapply renamedApart_disj in H0; eauto.
     }
-    destruct l; simpl in *.
-    inv_get.
-    do 2 eexists; split; [| split]; eauto.
-    assert ((of_list (fst Zs)) ⊆ D'). {
-      rewrite <- H16. eapply incl_union_left.
-      eapply incl_list_union. eapply zip_get; eauto.
-      unfold defVars. eauto with cset.
-    }
-    assert (disj (x1 \ of_list x2) D'). {
-      eapply disj_1_incl. eauto. reflexivity.
-    }
-    rewrite <- H11, <- H27. rewrite <- H24.
-    eauto with cset.
-  - edestruct IHIC; eauto; dcr.
-    pe_rewrite.
-    {
-      eapply disjoint_funF1; eauto.
-      rewrite <- H14. eapply incl_right.
-      eapply renamedApart_disj in RA; eauto.
-    }
-    destruct l; simpl in *.
+    destruct f; simpl in *.
     inv_get.
     do 2 eexists; split; [|split]; eauto using shift_get.
-    rewrite H16; eauto.
+    rewrite H22; eauto.
 Qed.
 
 Lemma renamedApart_live_imperative_is_functional s ang ZL Lv alv
