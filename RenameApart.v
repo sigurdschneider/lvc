@@ -86,9 +86,9 @@ Proof.
       [| reflexivity | eapply (IH s)]; eauto with cset.
   - repeat (rewrite disj_app; split); eauto.
     + cut (forall Ys G', disj G G' ->
-                    disj G (snd (renameApartF renameApart' G ϱ s (Ys, G'))));
+                    disj G (snd (renameApartF renameApart' G ϱ F (Ys, G'))));
       eauto using renameApartF_disj.
-    + eapply disj_subset_subset_flip_impl; [| reflexivity | eapply (IH s0)]; eauto with cset.
+    + eapply disj_subset_subset_flip_impl; [| reflexivity | eapply (IH s)]; eauto with cset.
 Qed.
 
 Definition renamedApartAnnF (renameApartAnn:stmt -> set var -> ann (set var * set var)) G
@@ -226,17 +226,17 @@ Proof.
 Qed.
 
 
-Lemma snd_renamedApartAnnF' G s
-: (forall n Zs, get s n Zs -> forall G, snd (getAnn (renamedApartAnn (snd Zs) G)) [=] definedVars (snd Zs))
-  -> snd (renamedApartAnnF renamedApartAnn G (nil, {}) s)[=]
+Lemma snd_renamedApartAnnF' G F
+: (forall n Zs, get F n Zs -> forall G, snd (getAnn (renamedApartAnn (snd Zs) G)) [=] definedVars (snd Zs))
+  -> snd (renamedApartAnnF renamedApartAnn G (nil, {}) F)[=]
         list_union
         (List.map
            (fun f : params * stmt =>
-              (definedVars (snd f) ∪ of_list (fst f))%set) s).
+              (definedVars (snd f) ∪ of_list (fst f))%set) F).
 Proof.
-  general induction s; simpl; eauto.
+  general induction F; simpl; eauto.
   - rewrite H; eauto using get. simpl.
-    rewrite list_union_start_swap. rewrite IHs; intros; eauto using get.
+    rewrite list_union_start_swap. rewrite IHF; intros; eauto using get.
     rewrite empty_neutral_union. reflexivity.
 Qed.
 
@@ -309,7 +309,7 @@ Proof.
   - subst. rewrite (IH s); eauto.
   - subst.
     let_pair_case_eq; simpl_pair_eqs; subst. simpl.
-    rewrite (IH s0); eauto.
+    rewrite (IH s); eauto.
     eapply union_eq_decomp; eauto.
     rewrite snd_renamedApartAnnF'; eauto.
     rewrite <- definedVars_renameApartF; eauto using definedVars_renamedApart'.
@@ -537,7 +537,7 @@ Proof.
 
       intros.
       edestruct get_fst_renameApartF as [? [? [? ?]]]; dcr; eauto.
-      orewrite (length s - S (length s - S n) = n) in H4. get_functional; subst.
+      orewrite (length F - S (length F - S n) = n) in H4. get_functional; subst.
 
       rewrite H6.
       rewrite IH; eauto.
@@ -724,7 +724,7 @@ Proof.
     + intros.
       edestruct get_fst_renamedApartAnnF; eauto; dcr; subst.
       get_functional; subst.
-      assert (n < length s). eapply get_range in H1.
+      assert (n < length F). eapply get_range in H1.
       rewrite rev_length in H1. rewrite renameApartF_length in H1. eauto.
       eapply get_rev in H1.
       rewrite renameApartF_length in H1.
@@ -820,7 +820,7 @@ Proof.
     eapply rename_exp_agree.
     eapply agree_on_incl; eauto. eapply incl_union_right.
     eapply incl_list_union. eapply map_get_1; eauto. eauto.
-  - erewrite (IH s0); eauto with cset.
+  - erewrite (IH s); eauto with cset.
     erewrite renameApartF_agree; eauto.
     eapply agree_on_incl; eauto with cset.
 Qed.
@@ -898,14 +898,14 @@ Proof.
       rewrite renameApartF_length in H1.
       edestruct get_fst_renameApartF as [? [? [? ]]]; dcr; eauto.
       exploit (get_range H2).
-      orewrite (length s - S (length s - S n) = n) in H4. get_functional; subst.
+      orewrite (length F - S (length F - S n) = n) in H4. get_functional; subst.
       eauto.
     + intros.
       eapply get_rev in H1.
       rewrite renameApartF_length in H1.
       edestruct get_fst_renameApartF as [? [? [? ]]]; dcr; eauto.
       exploit (get_range H2).
-      orewrite (length s - S (length s - S n) = n) in H4. get_functional; subst.
+      orewrite (length F - S (length F - S n) = n) in H4. get_functional; subst.
       rewrite H6.
       erewrite renameApart'_agree. eapply IH; eauto.
       * rewrite lookup_set_update_with_list_in_union_length; eauto.

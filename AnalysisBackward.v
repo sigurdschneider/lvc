@@ -281,10 +281,10 @@ Proof.
       eapply getAnn_poLe. eapply H2; eauto. eauto with len.
     }
     assert (getAnn
-              ⊝ backwardF (backward Dom f) (fst ⊝ s ++ ZL) (getAnn ⊝ ans ++ AL) s ans
+              ⊝ backwardF (backward Dom f) (fst ⊝ F ++ ZL) (getAnn ⊝ ans ++ AL) F ans
               (subTerm_EQ_Fun2 eq_refl ST) ++ AL
               ⊑ getAnn
-              ⊝ backwardF (backward Dom f) (fst ⊝ s ++ ZL) (getAnn ⊝ bns ++ AL') s bns
+              ⊝ backwardF (backward Dom f) (fst ⊝ F ++ ZL) (getAnn ⊝ bns ++ AL') F bns
               (subTerm_EQ_Fun2 eq_refl ST) ++ AL'). {
       eapply PIR2_app; eauto.
       eapply PIR2_get; eauto 20 with len; intros; inv_get.
@@ -343,10 +343,10 @@ Proof.
       eapply getAnn_poEq. eapply H2; eauto. eauto with len.
     }
     assert (getAnn
-              ⊝ backwardF (backward Dom f) (fst ⊝ s ++ ZL) (getAnn ⊝ ans ++ AL) s ans
+              ⊝ backwardF (backward Dom f) (fst ⊝ F ++ ZL) (getAnn ⊝ ans ++ AL) F ans
               (subTerm_EQ_Fun2 eq_refl ST) ++ AL
               ≣ getAnn
-              ⊝ backwardF (backward Dom f) (fst ⊝ s ++ ZL) (getAnn ⊝ bns ++ AL') s bns
+              ⊝ backwardF (backward Dom f) (fst ⊝ F ++ ZL) (getAnn ⊝ bns ++ AL') F bns
               (subTerm_EQ_Fun2 eq_refl ST) ++ AL'). {
       eapply PIR2_app; eauto.
       eapply PIR2_get; eauto 20 with len; intros; inv_get.

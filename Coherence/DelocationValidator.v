@@ -31,18 +31,18 @@ Proof.
     dec_solve.
   + destruct a;[| dec_right].
     edestruct (IH s (ltac:(eauto)) (restr (a0\ singleton x) ⊝ DL) ZL ans_lv ans); try dec_solve.
-  + ensure (length s = length a);
-    ensure (length s = length sa);
-    ensure(length s = length sa0).
-    destruct (IH s0 (ltac:(eauto)) (Some ⊝ (getAnn ⊝ sa0) \\ app (A:=var) ⊜ (fst ⊝ s) a ++ DL)
+  + ensure (length F = length a);
+    ensure (length F = length sa);
+    ensure(length F = length sa0).
+    destruct (IH s (ltac:(eauto)) (Some ⊝ (getAnn ⊝ sa0) \\ app (A:=var) ⊜ (fst ⊝ F) a ++ DL)
                  (a ++ ZL) ans_lv ans);[| dec_right].
     edestruct (indexwise_R4_dec
                  (R:=fun lvs Zs Za' ans' =>
                        trs (restr (getAnn lvs \ of_list (fst Zs ++ Za'))
-                                     ⊝ (Some ⊝ (getAnn ⊝ sa0) \\ app (A:=var) ⊜ (fst ⊝ s) a ++ DL))
+                                     ⊝ (Some ⊝ (getAnn ⊝ sa0) \\ app (A:=var) ⊜ (fst ⊝ F) a ++ DL))
                            (a ++ ZL) (snd Zs) lvs ans')
                  (LA:=sa0)
-                 (LB:=s)
+                 (LB:=F)
                  (LC:=a)
                  (LD:=sa)); intros; eauto.
     hnf; intros. eapply IH; eauto.

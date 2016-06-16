@@ -375,9 +375,9 @@ Proof with eauto using setTopAnn_annotation, poLe_setTopAnn, poLe_getAnni.
     + eapply IH; eauto using setTopAnn_annotation, poLe_setTopAnn, poLe_getAnni.
   - fold_po.
     assert (forall (n : nat) (x x' : ann (Dom sT) * 〔Dom sT〕),
-               get (forwardF (forward Dom f) (fst ⊝ s ++ ZL) s ans
+               get (forwardF (forward Dom f) (fst ⊝ F ++ ZL) F ans
                              (subTerm_EQ_Fun2 eq_refl ST)) n x ->
-               get (forwardF (forward Dom f) (fst ⊝ s ++ ZL) s bns
+               get (forwardF (forward Dom f) (fst ⊝ F ++ ZL) F bns
                              (subTerm_EQ_Fun2 eq_refl ST')) n x' ->
                x ⊑ x'). {
       intros; inv_get; dcr; eauto.

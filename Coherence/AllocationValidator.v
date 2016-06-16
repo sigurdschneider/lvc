@@ -22,13 +22,13 @@ Proof.
   + edestruct a as [|lv a'| |]; [dec_right| | dec_right| dec_right].
     edestruct (X x0); eauto; [| dec_right]. dec_solve; eauto.
   + destruct a as [?|?|lv als alt| ]; [dec_right| dec_right| dec_right|].
-    ensure (length s = length sa).
-    edestruct (X x) with (DL:=Some ⊝ (getAnn ⊝ sa) \\ (fst ⊝ s) ++ DL); eauto; [ |dec_right].
+    ensure (length F = length sa).
+    edestruct (X x) with (DL:=Some ⊝ (getAnn ⊝ sa) \\ (fst ⊝ F) ++ DL); eauto; [ |dec_right].
     edestruct (indexwise_R_dec'
                  (R:=fun x y =>
                        srd (restr (getAnn y \ of_list (fst x))
-                                  ⊝ (Some ⊝ (getAnn ⊝ sa) \\ (fst ⊝ s) ++ DL))
-                           (snd x) y) (LA:=s) (LB:=sa)).
+                                  ⊝ (Some ⊝ (getAnn ⊝ sa) \\ (fst ⊝ F) ++ DL))
+                           (snd x) y) (LA:=F) (LB:=sa)).
     intros. eapply X; eauto.
     dec_solve. dec_right.
     Grab Existential Variables. eauto. eauto. eauto. eauto.
@@ -57,9 +57,9 @@ Proof.
   + ensure (injective_on a ϱ).
     edestruct (IH s); eauto; [| dec_right]. dec_solve.
   + ensure (injective_on a ϱ).
-    ensure (length s = length sa).
-    edestruct (IH s0); eauto; [| dec_solve].
-    edestruct (indexwise_R_dec' (R:=fun x y => locally_inj ϱ (snd x) y) (LA:=s) (LB:=sa));
+    ensure (length F = length sa).
+    edestruct (IH s); eauto; [| dec_solve].
+    edestruct (indexwise_R_dec' (R:=fun x y => locally_inj ϱ (snd x) y) (LA:=F) (LB:=sa));
       try dec_solve.
     intros. eapply IH; eauto. inv an; eauto.
 Defined.

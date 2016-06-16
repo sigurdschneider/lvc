@@ -32,7 +32,7 @@ Proof.
       * right. eapply (CIH s); eauto.
     + pno_step.
   - pone_step. right.
-    eapply (CIH s0); eauto using sawtooth_F_mkBlocks.
+    eapply (CIH s); eauto using sawtooth_F_mkBlocks.
 Qed.
 
 Instance SR : ProofRelation (params) := {
@@ -92,7 +92,7 @@ Proof.
     + pextern_step; eauto.
     + pno_step.
   - pone_step. left.
-    eapply (IH s0); eauto with len.
+    eapply (IH s); eauto with len.
     rewrite map_app.
     eapply simLabenv_extension_len; eauto with len.
     + intros; hnf; intros; inv_get; eauto.

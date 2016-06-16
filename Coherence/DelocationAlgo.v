@@ -363,19 +363,21 @@ Tactic Notation "Rexploit" uconstr(X) "as" ident(H)  :=
   eapply modus_ponens; [refine X | intros H].
 
 Lemma computeParameters_isCalled_Some ZL Lv AP s lv n D Z p
-: live_sound Imperative ZL Lv s lv
-  -> length AP = length Lv
-  -> length Lv = length ZL
-  -> isCalled s (LabI n)
-  -> get Lv n D
-  -> get ZL n Z
-  -> get (snd (computeParameters (Lv \\ ZL) ZL AP s lv)) n p
-  -> exists Za, p = Some Za /\ D \ of_list Z \ Za ⊆ (getAnn lv).
+  : live_sound Imperative ZL Lv s lv
+    -> length AP = length Lv
+    -> length Lv = length ZL
+    -> isCalled s (LabI n)
+    -> get Lv n D
+    -> get ZL n Z
+    -> get (snd (computeParameters (Lv \\ ZL) ZL AP s lv)) n p
+    -> exists Za, p = Some Za /\ D \ of_list Z \ Za ⊆ (getAnn lv).
 Proof.
-  intros LS LEN1 LEN2 IC GetDL GetZL GetLV.
-  general induction IC; simpl in * |- *; inv LS;
-    repeat let_case_eq; repeat let_pair_case_eq; subst; simpl in *.
-  - edestruct IHIC as [Za [A B]]; try eapply GetLV; eauto with len;
+  revert ZL Lv AP lv n D Z p.
+  sind s; destruct s;
+    intros ZL Lv AP lv n D Z p LS LEN1 LEN2 IC GetDL GetZL GetLV;
+    simpl in * |- *; inv LS; invt isCalled;
+      repeat let_case_eq; repeat let_pair_case_eq; subst; simpl in *.
+  - edestruct (IH s) as [Za [A B]]; try eapply GetLV; eauto with len;
       subst; simpl.
     eexists; split; eauto.
     inv_get.
@@ -383,98 +385,135 @@ Proof.
       try eapply H2; eauto with len.
     PIR2_inv. unfold addParam in H3. inv_get.
     rewrite <- H7.
-    revert H9 B. clear_all; cases; intros; cset_tac.
+    revert H10 B. clear_all; cases; intros; cset_tac.
     idtac "improve".
     eapply B; cset_tac.
-    eapply H3. eapply H9. cset_tac.
+    eapply H3. eapply H10. cset_tac.
     eapply B. cset_tac.
   - inv_get.
-    edestruct IHIC as [? [? SUB]]; eauto; subst.
+    edestruct (IH s1) as [? [? SUB]]; eauto; subst.
     setoid_rewrite <- H8. setoid_rewrite <- SUB.
     destruct x0;
-    eexists; simpl; split; eauto; clear_all; cset_tac.
+      eexists; simpl; split; eauto; clear_all; cset_tac.
   - inv_get.
-    edestruct IHIC as [? [? SUB]]; eauto; subst.
+    edestruct (IH s2) as [? [? SUB]]; eauto; subst.
     setoid_rewrite <- H9. setoid_rewrite <- SUB.
     destruct x;
-    eexists; simpl; split; eauto; clear_all; cset_tac.
+      eexists; simpl; split; eauto; clear_all; cset_tac.
   - simpl in *. unfold keep in GetLV.
     inv_get.
     cases; eauto.
     eexists; split; eauto.
     rewrite <- H3. eauto with cset.
-  - edestruct IHIC as [? [A B]]; try eapply GetLV; eauto with len; subst.
+  - edestruct (IH s) as [? [A B]]; try eapply GetLV; eauto with len; subst.
     eexists; split; eauto.
     inv_get.
     exploit (@computeParameters_AP_LV Lv ZL (addParam x (Lv \\ ZL) AP));
       try eapply H5; eauto with len.
     PIR2_inv. unfold addParam in H2. inv_get.
     rewrite <- H8.
-    revert H6 B. clear_all; cases; intros; cset_tac.
+    revert H10 B. clear_all; cases; intros; cset_tac.
     idtac "improve".
     eapply B; cset_tac.
-    eapply H3. eapply H6. cset_tac.
+    eapply H3. eapply H10. cset_tac.
     eapply B. cset_tac.
   - lnorm. inv_get.
-    general induction H0.
-    +
-    exploit (@computeParameters_length (tab {} ‖F‖ ++ AP) (snd Zs) x);
-      eauto with len.
+    edestruct (get_length_eq _ H LEN1).
     destruct (@get_in_range _ (snd
-          (computeParameters ((getAnn ⊝ als ++ Lv) \\ (fst ⊝ F ++ ZL))
-                             (fst ⊝ F ++ ZL) (tab {} ‖F‖ ++ AP) (snd Zs) x)) (❬F❭ + n))
-      as [pF GETpF].
-    rewrite H6. eapply get_range in GetDL. rewrite app_length, map_length. omega.
-    edestruct IHIC1; try eapply GETpF; eauto with len.
-    eapply get_app_right; eauto.
-    orewrite (n + 0 = n). eauto. eapply get_app_right; eauto.
-    rewrite map_length; eauto with len.
-    dcr; subst.
-    exploit (computeParameters_length (tab {} ‖F‖ ++ AP)) as LENb;
-      try eapply H3; eauto with len.
-    edestruct get_olist_union_A' as [? [? ?]]; try eapply GetLV;
-      eauto using map_get_1, zip_get.
-    eapply computeParametersF_length; eauto with len.
-    subst; simpl. eexists; split; eauto.
-    assert (k < ❬snd
-            (computeParameters ((getAnn ⊝ als ++ Lv) \\ (fst ⊝ F ++ ZL))
-                               (fst ⊝ F ++ ZL) (tab {} ‖F‖ ++ AP) t alb)❭).
+                                 (computeParameters ((getAnn ⊝ als ++ Lv) \\ (fst ⊝ F ++ ZL))
+                                                    (fst ⊝ F ++ ZL) (tab {} ‖F‖ ++ AP) s alb)) k)
+      as [ps GETps]; eauto.
     rewrite computeParameters_length; eauto with len.
-    edestruct (get_in_range _ H7).
-    edestruct IHIC2 as [? [ ? ?]];
-      try eapply g; eauto using map_get_1, get_app with len. subst.
-    rewrite <- H10. rewrite <- H13. rewrite <- H11.
-    repeat rewrite minus_union.
-    assert (of_list (fst Zs) ⊆ list_union (fst ∘ of_list ⊝ F)). {
-      eapply incl_list_union. eapply map_get_1; eauto. reflexivity.
-    }
-    rewrite <- H12.
-    assert (x4 ⊆ list_union (oget ⊝ take ❬F❭
+    edestruct (get_in_range _ H4). inv_get.
+    exploit (IH s); try eapply GETps; eauto using get_app, map_get_1 with len.
+    dcr; subst.
+    clear H9.
+    setoid_rewrite <- H8. setoid_rewrite <- H12.
+    assert (x3 ⊆ list_union (oget ⊝ take ❬F❭
                                   (olist_union (snd ⊝ computeParametersF F als Lv ZL AP)
                                                (snd
                                                   (computeParameters
                                                      ((getAnn ⊝ als ++ Lv) \\ (fst ⊝ F ++ ZL))
-                                                     (fst ⊝ F ++ ZL) (tab {} ‖F‖ ++ AP) t alb))))). {
+                                                     (fst ⊝ F ++ ZL) (tab {} ‖F‖ ++ AP) s alb))))
+           ∪ list_union (fst ∘ of_list ⊝ F)). {
       exploit (get_olist_union_b (A:=snd ⊝ computeParametersF F als Lv ZL AP));
-      try eapply g.
-      eapply computeParametersF_length; eauto.
-      destruct H14; dcr.
+        try eapply GETps.
+      eapply computeParametersF_length; eauto with len.
+      rewrite computeParameters_length; eauto with len.
+      dcr. eapply incl_union_left.
       eapply incl_list_union. eapply map_get_1.
       eapply get_take; eauto.
-      eapply H16.
+      eauto.
     }
-    rewrite <- H9.
-    rewrite H14.
-    clear_all; cset_tac.
+    clear H8 H12 LS GETps. setoid_rewrite H7. clear H7.
+    general induction H5.
+    + get_functional.
+      destruct (@get_in_range _ (snd
+        (computeParameters ((getAnn ⊝ als ++ Lv) \\ (fst ⊝ F ++ ZL))
+                           (fst ⊝ F ++ ZL) (tab {} ‖F‖ ++ AP) (snd Zs) x1)) (❬F❭ + n))
+        as [pF GETpF].
+      rewrite computeParameters_length; [ |eauto | eauto with len | eauto with len].
+      eapply get_range in GetDL. rewrite app_length, map_length. omega.
+      edestruct (IH (snd Zs)); try eapply GETpF; eauto using get_app_right, map_get_1 with len.
+      dcr; subst.
+      edestruct get_olist_union_A' as [? [? ?]]; try eapply GetLV;
+        eauto using map_get_1, zip_get.
+      eapply computeParametersF_length; eauto with len.
+      rewrite computeParameters_length; eauto with len.
+      subst; simpl. eexists; split; eauto.
+      rewrite <- H11, <- H9.
+      repeat rewrite minus_union.
+      assert (of_list (fst Zs) ⊆ list_union (fst ∘ of_list ⊝ F)). {
+        eapply incl_list_union. eapply map_get_1; eauto. reflexivity.
+      }
+      revert H8;
+      clear_all; cset_tac.
+    + edestruct (get_in_range _ H0). inv_get.
+      exploit IHcallChain; eauto.
+      dcr. eexists; split; eauto.
+      rewrite H14.
+      destruct (@get_in_range _ (snd
+        (computeParameters ((getAnn ⊝ als ++ Lv) \\ (fst ⊝ F ++ ZL))
+                           (fst ⊝ F ++ ZL) (tab {} ‖F‖ ++ AP) (snd Zs) x1)) k')
+        as [pF' GETpF'].
+      rewrite computeParameters_length; [ |eauto | eauto with len | eauto with len].
+      rewrite app_length, map_length. omega.
+      exploit (IH (snd Zs)); try eapply GETpF'; eauto using get_app, map_get_1 with len.
+      dcr; subst. rewrite <- H16.
+      assert (x5 ⊆ list_union (oget ⊝ take ❬F❭
+                                    (olist_union (snd ⊝ computeParametersF F als Lv ZL AP)
+                                                 (snd
+                                                    (computeParameters
+                                                       ((getAnn ⊝ als ++ Lv) \\ (fst ⊝ F ++ ZL))
+                                                       (fst ⊝ F ++ ZL) (tab {} ‖F‖ ++ AP) s alb))))). {
+        exploit (@get_olist_union_A _ _ (snd ⊝ computeParametersF F als Lv ZL AP));
+          [| eapply GETpF' | | ]. instantiate (1:=k).
+        eapply map_get_1. eapply zip_get_eq; [| | reflexivity]. eauto. eauto.
+        instantiate (1:=(snd
+                                      (computeParameters ((getAnn ⊝ als ++ Lv) \\ (fst ⊝ F ++ ZL))
+                                                         (fst ⊝ F ++ ZL) (tab {} ‖F‖ ++ AP) s alb))).
+        eapply computeParametersF_length; eauto with len.
+        rewrite computeParameters_length; eauto with len.
+        dcr.
+        eapply incl_list_union. eapply map_get_1.
+        eapply get_take; try eapply H15; eauto. eauto.
+      }
+      rewrite H11.
+      assert (of_list (fst Zs) ⊆ list_union (fst ∘ of_list ⊝ F)). {
+        eapply incl_list_union. eapply map_get_1.
+        instantiate (1:=Zs). eauto. eauto.
+      }
+      rewrite H12.
+      clear_all; cset_tac.
   - lnorm. simpl in *. inv_get.
     exploit (computeParameters_length (tab {} ‖F‖ ++ AP));
       try eapply H1; eauto with len.
     assert (❬F❭ + n < ❬snd
           (computeParameters ((getAnn ⊝ als ++ Lv) \\ (fst ⊝ F ++ ZL))
-             (fst ⊝ F ++ ZL) (tab {} ‖F‖ ++ AP) t alb)❭).
+             (fst ⊝ F ++ ZL) (tab {} ‖F‖ ++ AP) s alb)❭).
     rewrite H0, app_length, map_length. exploit (get_range GetDL). omega.
     destruct (get_in_range _ H4) as [pF GETpF].
-    edestruct IHIC with (AP:=tab {} ‖F‖ ++ AP); eauto with len.
+    edestruct (IH s) with (AP:=tab {} ‖F‖ ++ AP); eauto with len.
     eapply get_app_right; eauto using map_get_1.
     orewrite (n+0 = n); eauto.
     eapply get_app_right; eauto using map_get_1.
@@ -483,7 +522,7 @@ Proof.
       as [? [? ?]]; try eapply GETpF.
     eapply computeParametersF_length; eauto.
     get_functional.
-    eexists; split; try reflexivity. rewrite <- H7, <- H8, <- H9.
+    eexists; split; try reflexivity. rewrite <- H8, <- H9, <- H10.
     repeat rewrite minus_union.
     clear_all; cset_tac.
 Qed.

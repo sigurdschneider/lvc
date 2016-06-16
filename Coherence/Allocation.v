@@ -356,25 +356,6 @@ Proof.
     + exploit IHLv; eauto.
 Qed.
 
-Lemma meet1_incl2 a b
-: Subset1 (meet1 a b) b.
-Proof.
-  destruct b; simpl. cset_tac; intuition.
-Qed.
-
-Hint Resolve meet1_incl2 : cset.
-
-Lemma meet1_Subset1 s alv ang
-: annotation s alv
-  -> annotation s ang
-  -> ann_R Subset1 (mapAnn2 meet1 alv ang) ang.
-Proof.
-  intros AN1 AN2; general induction AN1; inv AN2; simpl; eauto using @ann_R, meet1_incl2.
-  - econstructor; eauto with cset len.
-    + intros; inv_get.
-      symmetry in H. edestruct get_length_eq; try eapply H; eauto.
-Qed.
-
 Lemma rename_renamedApart_srd' s ang ϱ (alv:ann (set var)) ZL Lv
   : renamedApart s ang
   -> live_sound Imperative ZL Lv s alv
@@ -391,7 +372,7 @@ Proof.
   eapply renamedApart_live_imperative_is_functional in H4; eauto using bounded_disjoint, renamedApart_disj, meet1_Subset1, live_sound_annotation, renamedApart_annotation.
   eapply rename_renamedApart_srd in H4; eauto using locally_inj_subset, meet1_Subset, live_sound_annotation, renamedApart_annotation.
   erewrite getAnn_mapAnn2; eauto using live_sound_annotation, renamedApart_annotation.
-  destruct (getAnn ang); simpl; cset_tac; intuition.
+  cset_tac; intuition.
 Qed.
 
 Require Import LabelsDefined.
@@ -472,8 +453,8 @@ Proof.
         intros. split. eapply H13; eauto. inv_get.
         edestruct H7; eauto.
         exploit H23; eauto. eapply ann_R_get in H33.
-        destruct (getAnn x2); simpl in *. rewrite H33.
-        rewrite H31. clear_all; cset_tac; intuition.
+        rewrite H33.
+        rewrite H31. simpl. clear_all; cset_tac; intuition.
       * eapply PIR2_rename; eauto.
         simpl in *.
         split. eapply H13; eauto.
@@ -490,8 +471,7 @@ Proof.
         inv_get.
         edestruct H7; eauto; dcr.
         exploit H23; eauto. eapply ann_R_get in H37.
-        destruct (getAnn x4); simpl in *.
-        rewrite H37. rewrite H34. eapply disj_1_incl; try eapply H9.
+        rewrite H37. simpl. rewrite H34. eapply disj_1_incl; try eapply H9.
         clear_all; cset_tac; intuition.
         eapply disj_1_incl. eapply H9.
         eapply bounded_get in H34. eapply H34. eauto.
@@ -507,7 +487,7 @@ Proof.
       * inv_get.
         edestruct H7; eauto.
         exploit H23; eauto. eapply ann_R_get in H26.
-        destruct (getAnn x); simpl in *. rewrite H26.
+        rewrite H26. simpl.
         rewrite H11. clear_all; cset_tac; intuition.
       * eapply PIR2_oglobals; eauto.
 Qed.
@@ -603,7 +583,7 @@ Proof.
   eapply renamedApart_locally_inj_alpha in H5; eauto using locally_inj_subset, meet1_Subset, live_sound_annotation, renamedApart_annotation.
   eapply inverse_on_incl; eauto.
   erewrite getAnn_mapAnn2; eauto using live_sound_annotation, renamedApart_annotation.
-  destruct (getAnn ang); simpl; cset_tac; intuition.
+  cset_tac; intuition.
 Qed.
 
 Lemma funConstr_disjoint_globals F ans alvs D Dt
@@ -620,8 +600,7 @@ Proof.
   edestruct get_length_eq; try eapply H; eauto.
   edestruct H2; eauto; dcr.
   exploit H1; eauto. eapply ann_R_get in H9.
-  destruct (getAnn x1); simpl in *.
-  rewrite H9, H8. eapply disj_1_incl; try eapply H3; eauto.
+  rewrite H9, H8. simpl. eapply disj_1_incl; try eapply H3; eauto.
   clear_all; cset_tac; intuition.
 Qed.
 
@@ -647,8 +626,8 @@ Proof.
   exploit ANNR; eauto; dcr. eapply ann_R_get in H3.
   edestruct ZINCL; eauto; dcr.
   edestruct FUNC; eauto; dcr.
-  destruct (getAnn x); simpl in *.
-  rewrite H3, H6. clear_all; cset_tac; intuition.
+  rewrite H3, H6.
+  clear_all; cset_tac; intuition.
 Qed.
 
 (** ** Theorem 7 from the paper *)
@@ -749,7 +728,6 @@ Proof.
           exploit H30; eauto. eapply ann_R_get in H39.
           exploit H27; eauto. simpl in *; dcr.
           split; eauto.
-          destruct (getAnn x1); simpl in *.
           rewrite H39, H38. clear_all; cset_tac; intuition.
         }
     + eapply IHrenamedApart; eauto using inverse_on_incl.

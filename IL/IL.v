@@ -22,7 +22,7 @@ Inductive stmt : Type :=
 | stmtReturn (e : exp) : stmt
 | stmtExtern (x : var) (f:external) (Y:args) (s:stmt)
 (* block f Z : rt = s in b *)
-| stmtFun    (s:list (params * stmt)) (t : stmt) : stmt.
+| stmtFun    (F:list (params * stmt)) (t : stmt) : stmt.
 
 Instance Stmt_size : Size stmt. gen_Size. Defined.
 

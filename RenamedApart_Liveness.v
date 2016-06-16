@@ -149,14 +149,14 @@ Proof.
 Qed.
 
 
-Definition Subset1 (x : set var) (y : set var * set var) := x[<=] fst y.
+Notation "'Subset1'" := (fun (x : set var) (y : set var * set var) => x[<=] fst y).
 
 
 Instance Subset1_morph
 : Proper (Equal ==> @pe _ _ ==> iff) Subset1.
 Proof.
   unfold Proper, respectful; intros.
-  inv H0; simpl; unfold Subset1. rewrite H, H1. reflexivity.
+  inv H0; simpl. rewrite H, H1. reflexivity.
 Qed.
 
 Lemma disjoint_app L L' D
@@ -189,7 +189,7 @@ Proof.
     eapply ann_R_get in H11.
     destruct (getAnn x2); simpl in *.
     repeat get_functional.
-    rewrite H3. unfold Subset1 in H11. rewrite H11. rewrite H10.
+    rewrite H3. rewrite H11. rewrite H10.
     eauto with cset.
   - rewrite H3; eauto.
 Qed.
@@ -283,9 +283,26 @@ Proof.
     + do 2 eexists; split; [| split]; eauto with cset.
       exploit H3; eauto. rewrite <- H13.
       eauto with cset.
-  - exploit (IH s0); eauto 20 with cset; dcr.
+  - exploit (IH s); eauto 20 with cset; dcr.
     pe_rewrite. eauto with cset.
     clear H22.
+(*
+        Lemma test ZL Lv F als k n f lv Zs
+      : callChain isCalled F k (LabI (❬F❭ + n))
+        -> get F k Zs
+        -> get als k lv
+        -> (forall k Zs lv, get F k Zs -> get als k lv -> isCalled (snd Zs) (LabI (❬F❭ + n))
+                    -> exists (lv' : ⦃var⦄) (Z' : params),
+                        get ZL f Z' /\ get Lv f lv' /\ lv' \ of_list Z' ⊆ lv \ of_list (fst Zs))
+        ->  exists (lv' : ⦃var⦄) (Z' : params),
+            get ZL f Z' /\ get Lv f lv' /\ lv' \ of_list Z' ⊆ lv \ of_list (fst Zs).
+    Proof.
+      intros CC GetF GetAls IH.
+      general induction CC.
+      - get_functional; exploit IH; eauto.
+      -
+    Qed.
+*)
     general induction H19.
     + inv_get. exploit (IH (snd Zs)); eauto with cset.
       dcr. destruct f; simpl in *.
@@ -311,7 +328,7 @@ Proof.
       exploit H10; eauto. eapply renamedApart_disj in H33.
       exploit H14; eauto using zip_get. unfold defVars in H30.
       edestruct H12; eauto. dcr. eapply ann_R_get in H30.
-      unfold defVars in H34. unfold Subset1 in H30.
+      unfold defVars in H34.
       rewrite H35 in H30.
       assert ((of_list (fst Zs)) ⊆ D'). {
         rewrite <- H18. eapply incl_union_left.
@@ -325,7 +342,7 @@ Proof.
         eauto with cset.
       }
       eauto with cset.
-  - edestruct (IH s0); eauto; dcr; pe_rewrite.
+  - edestruct (IH s); eauto; dcr; pe_rewrite.
     eauto with cset.
     destruct f; simpl in *.
     inv_get.
@@ -405,10 +422,7 @@ Qed.
 
 Local Hint Extern 0 => pe_rewrite_step : cset.
 
-Definition meet1 (x:set var) (y:set var * set var) :=
-  match y with
-    | (y, _) => x ∩ y
-  end.
+Notation "'meet1'" := (fun (x:set var) (y:set var * set var) => x ∩ fst y).
 
 Lemma meet1_incl a b
 : meet1 a b ⊆ a.
@@ -444,6 +458,25 @@ Proof.
 Qed.
 
 Hint Resolve meet1_incl : cset.
+
+Lemma meet1_incl2 a b
+: Subset1 (meet1 a b) b.
+Proof.
+  destruct b; simpl. hnf. cset_tac; intuition.
+Qed.
+
+Hint Resolve meet1_incl2 : cset.
+
+Lemma meet1_Subset1 s alv ang
+: annotation s alv
+  -> annotation s ang
+  -> ann_R Subset1 (mapAnn2 meet1 alv ang) ang.
+Proof.
+  intros AN1 AN2; general induction AN1; inv AN2; simpl; eauto using @ann_R, meet1_incl2.
+  - econstructor; eauto with cset len.
+    + intros; inv_get.
+      symmetry in H. edestruct get_length_eq; try eapply H; eauto.
+Qed.
 
 Lemma live_sound_renamedApart_minus s ang ZL Lv alv i
 : renamedApart s ang

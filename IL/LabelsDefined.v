@@ -57,9 +57,9 @@ Proof.
   - ensure (n > counted l). dec_solve.
   - dec_solve.
   - edestruct (IH s); eauto; dec_solve.
-  - edestruct (IH s0); [ eauto | | dec_right].
-    exploit (@list_get_computable' _ s
-                                   (fun Zs => labelsDefined (snd Zs) (❬s❭ + n))).
+  - edestruct (IH s); [ eauto | | dec_right].
+    exploit (@list_get_computable' _ F
+                                   (fun Zs => labelsDefined (snd Zs) (❬F❭ + n))).
     intros. eapply IH; eauto.
     destruct H; [| dec_right].
     dec_solve.
@@ -108,9 +108,9 @@ Proof.
     ensure (length Y = x). dec_solve.
   - dec_solve.
   - edestruct (IH s); eauto; dec_solve.
-  - edestruct (IH s0); [ eauto | | dec_right].
-    exploit (@list_get_computable' _ s
-                                   (fun Zs => paramsMatch (snd Zs) (length ⊝ fst ⊝ s ++ L))).
+  - edestruct (IH s); [ eauto | | dec_right].
+    exploit (@list_get_computable' _ F
+                                   (fun Zs => paramsMatch (snd Zs) (length ⊝ fst ⊝ F ++ L))).
     intros. eapply IH; eauto.
     destruct H; [| dec_right].
     dec_solve.

@@ -116,9 +116,9 @@ Proof.
   edestruct (IH); eauto;
     try (now left; econstructor; eauto);
     try (now right; inversion 1; eauto); eauto.
-  decide (length s = length sa); try dec_solve.
-  edestruct (IH s0); try dec_solve; eauto.
-  destruct (@indexwise_R_dec' _ _ (fun a b => @annotation A (snd a) b) s sa);
+  decide (length F = length sa); try dec_solve.
+  edestruct (IH s); try dec_solve; eauto.
+  destruct (@indexwise_R_dec' _ _ (fun a b => @annotation A (snd a) b) F sa);
     try dec_solve.
   intros. eapply IH; eauto.
   Grab Existential Variables. eauto. eauto.

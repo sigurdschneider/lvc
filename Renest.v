@@ -352,7 +352,7 @@ Proof.
     pextern_step.
     + left. eapply IH; eauto.
     + left. eapply IH; eauto.
-  - rename s into F. eapply sim'_expansion_closed;
+  - rename s into t. eapply sim'_expansion_closed;
                        [ | eapply star2_silent; [ econstructor | eapply star2_refl ]
                          | eapply star2_refl].
     assert (SL': forall f f' : nat,

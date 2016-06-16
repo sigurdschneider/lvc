@@ -44,20 +44,20 @@ Proof.
       ensure (x ∈ getAnn slv);
       ensure (forall n y, get Y n y -> live_exp_sound y a);
       dec_solve.
-  - edestruct (IH s0); eauto; [| dec_solve];
-      ensure (length s = length sa);
+  - edestruct (IH s); eauto; [| dec_solve];
+      ensure (length F = length sa);
       ensure (getAnn slv ⊆ a).
     exploit (@indexwise_R_dec' _ _
-                               (fun Zs a0 => live_sound i (fst ⊝ s ++ ZL)
+                               (fun Zs a0 => live_sound i (fst ⊝ F ++ ZL)
                                                      (getAnn ⊝ sa ++ Lv)
-                                                     (snd Zs) a0) s sa).
+                                                     (snd Zs) a0) F sa).
     intros. eapply IH; eauto.
     destruct H; [| dec_solve].
     exploit (@indexwise_R_dec' _ _
                                (fun Zs a0 =>  of_list (fst Zs)[<=]getAnn a0 /\
                                              (if isFunctional i then
                                                 getAnn a0 \ of_list (fst Zs)[<=]a
-                                              else True)) s sa).
+                                              else True)) F sa).
     + intros. ensure (of_list (fst a0)[<=]getAnn b).
       cases; [| dec_solve].
       ensure ( getAnn b \ of_list (fst a0)[<=]a); dec_solve.
@@ -104,18 +104,18 @@ Proof.
       ensure (getAnn slv \ singleton x ⊆ a);
       ensure (forall n y, get Y n y -> live_exp_sound y a);
       dec_solve.
-  - edestruct (IH s0); eauto; [| dec_right];
-      ensure (length s = length sa);
+  - edestruct (IH s); eauto; [| dec_right];
+      ensure (length F = length sa);
       ensure (getAnn slv ⊆ a).
     exploit (@indexwise_R_dec' _ _
                                (fun Zs a0 =>
-                                  true_live_sound i (fst ⊝ s ++ ZL)
+                                  true_live_sound i (fst ⊝ F ++ ZL)
                                                   (getAnn ⊝ sa ++ Lv)
-                                                  (snd Zs) a0) s sa).
+                                                  (snd Zs) a0) F sa).
     intros. eapply IH; eauto. destruct H; [| dec_right].
     decide (isFunctional i); [| left; econstructor; try cases; eauto].
     exploit (@indexwise_R_dec' _ _
-                               (fun Zs a0 => getAnn a0 \ of_list (fst Zs)[<=]a) s sa).
+                               (fun Zs a0 => getAnn a0 \ of_list (fst Zs)[<=]a) F sa).
     + intros.
       decide ( getAnn b \ of_list (fst a0)[<=]a).
       left; eauto. right; eauto.
