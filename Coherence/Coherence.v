@@ -174,6 +174,8 @@ Proof.
       * rewrite List.map_app. reflexivity.
 Qed.
 
+
+(*
 (** *** In a coherent program, the globals of every function that can eventually be called are live *)
 
 Lemma srd_globals_live s ZL Lv DL alv f
@@ -220,7 +222,7 @@ Admitted.
 
 
 (** *** On a coherent program a liveness analysis which is sound imperatively is also sound functionally. *)
-(*
+
 Local Hint Extern 1 =>
 match goal with
 | [ |- context [ (?A ++ ?B) \\ (?C ++ ?D) ] ] =>

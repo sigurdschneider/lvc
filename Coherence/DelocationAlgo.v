@@ -416,6 +416,8 @@ Proof.
     eapply H3. eapply H6. cset_tac.
     eapply B. cset_tac.
   - lnorm. inv_get.
+    general induction H0.
+    +
     exploit (@computeParameters_length (tab {} ‖F‖ ++ AP) (snd Zs) x);
       eauto with len.
     destruct (@get_in_range _ (snd

@@ -662,3 +662,11 @@ Proof.
   erewrite IHa; eauto 10 using get with len.
   intros. rewrite H; eauto using get.
 Qed.
+
+Lemma mapi_app X Y (f:nat -> X -> Y) n L L'
+: mapi_impl f n (L++L') = mapi_impl f n L ++ mapi_impl f (n+length L) L'.
+Proof.
+  general induction L; simpl; eauto.
+  - orewrite (n + 0 = n); eauto.
+  - f_equal. rewrite IHL. f_equal; f_equal. omega.
+Qed.

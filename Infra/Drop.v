@@ -213,3 +213,25 @@ Instance trival_drop_instance X
 Proof.
   unfold Proper, respectful; intros; subst; eauto.
 Qed.
+
+Lemma drop_app_eq X (L L' : list X) n
+: length L = n
+  -> drop n (L ++ L') = L'.
+Proof.
+  intros; subst. orewrite (length L = length L + 0) . eapply drop_app.
+Qed.
+
+Lemma app_drop X (L L' L'':list X)
+ : L = L' ++ L''
+   -> drop (length L') L = L''.
+Proof.
+  general induction L'; simpl; eauto.
+Qed.
+
+Lemma nth_drop X (L:list X) n m x
+: nth n (drop m L) x = nth (n+m) L x.
+Proof.
+  general induction m; simpl. orewrite (n + 0 = n); eauto.
+  rewrite IHm; eauto. orewrite (n + S m = S (n + m)); eauto.
+  destruct L; simpl; eauto. destruct (n + m); eauto.
+Qed.

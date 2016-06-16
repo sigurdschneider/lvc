@@ -194,7 +194,6 @@ Proof.
   - rewrite H3; eauto.
 Qed.
 
-
 Lemma lv_incl F ans Dt D' k a Zs
 : list_union (zip defVars F ans) ∪ Dt[=]D'
   -> get ans k a
@@ -207,6 +206,56 @@ Proof.
   unfold defVars; eapply incl_right.
 Qed.
 
+Hint Resolve disjoint_funF1 lv_incl : cset.
+
+Lemma incl_minus_incl_union X `{OrderedType X} s t u
+  : s \ t ⊆ u
+    -> s ⊆ t ∪ u.
+Proof.
+  intros. rewrite <- H0. cset_tac.
+Qed.
+
+Lemma incl_union_lr_eq X `{OrderedType X} s t u v
+  : s ∪ t [=] u
+    -> v ∪ t ⊆ v ∪ u.
+Proof.
+  intros. rewrite <- H0. eauto with cset.
+Qed.
+
+Lemma incl_union_eq X `{OrderedType X} s t u
+  : s ∪ t [=] u
+    -> t ⊆ u.
+Proof.
+  intros. rewrite <- H0. eauto with cset.
+Qed.
+
+Lemma incl_add_union_union X `{OrderedType X} s x t u
+  : s [=] {x; t}
+    -> {x; u} ∪ t ⊆ u ∪ s.
+Proof.
+  intros. rewrite H0. cset_tac.
+Qed.
+
+Hint Immediate incl_minus_incl_union incl_union_lr_eq incl_union_eq incl_add_union_union : cset.
+
+(* Coq ist so doof *)
+Lemma renamedApart_disj_F s D D' ans ant
+  :  renamedApart s (annF (D, D') ans ant)
+     -> disj D D'.
+Proof.
+  intros H. eapply (renamedApart_disj H).
+Qed.
+
+Lemma incl_minus_disj X `{OrderedType X} s t D Ds x
+  : s ⊆ t
+    -> disj s D
+    -> D [=] {x; Ds}
+    -> s ⊆ t \ singleton x.
+Proof.
+  intros. eauto with cset.
+Qed.
+
+Hint Immediate incl_minus_disj renamedApart_disj_F : cset.
 
 Lemma renamedApart_globals_live s ZL Lv alv f ang
 : live_sound Imperative ZL Lv s alv
@@ -234,18 +283,11 @@ Proof.
     + do 2 eexists; split; [| split]; eauto with cset.
       exploit H3; eauto. rewrite <- H13.
       eauto with cset.
-  - exploit (IH s0); eauto; dcr; pe_rewrite.
-    {
-      eapply disjoint_funF1; eauto.
-      rewrite <- H18. eapply incl_right.
-      eapply renamedApart_disj in H0; eauto.
-    }
+  - exploit (IH s0); eauto 20 with cset; dcr.
+    pe_rewrite. eauto with cset.
     clear H22.
     general induction H19.
-    + inv_get. exploit (IH (snd Zs)); eauto.
-      eapply disjoint_funF1; eauto.
-      eapply lv_incl; eauto.
-      eapply renamedApart_disj in H3; simpl in *; eauto.
+    + inv_get. exploit (IH (snd Zs)); eauto with cset.
       dcr. destruct f; simpl in *.
       inv_get. do 2 eexists; split; [| split]; eauto.
       assert ((of_list (fst Zs)) ⊆ D'). {
@@ -258,10 +300,8 @@ Proof.
       }
       rewrite <- H13, <- H27. rewrite <- H30.
       eauto with cset.
-    + inv_get. exploit (IH (snd Zs)). eauto. eauto. eauto. eauto. eauto.
-      eapply disjoint_funF1; eauto.
-      eapply lv_incl; eauto.
-      eapply renamedApart_disj in H4; simpl in *; eauto.
+    + inv_get. exploit (IH (snd Zs)). eauto. eauto. eauto. eauto.
+      eauto.  pe_rewrite; eauto with cset.
       dcr.
       exploit IHcallChain; eauto.
       inv_get.
@@ -286,11 +326,7 @@ Proof.
       }
       eauto with cset.
   - edestruct (IH s0); eauto; dcr; pe_rewrite.
-    {
-      eapply disjoint_funF1; eauto.
-      rewrite <- H18. eapply incl_right.
-      eapply renamedApart_disj in H0; eauto.
-    }
+    eauto with cset.
     destruct f; simpl in *.
     inv_get.
     do 2 eexists; split; [|split]; eauto using shift_get.
@@ -367,6 +403,8 @@ Proof.
   rewrite <- H, <- H0. cset_tac; intuition.
 Qed.
 
+Local Hint Extern 0 => pe_rewrite_step : cset.
+
 Definition meet1 (x:set var) (y:set var * set var) :=
   match y with
     | (y, _) => x ∩ y
@@ -404,8 +442,6 @@ Proof.
   unfold Proper, respectful; intros.
   inv H0; simpl. rewrite H, H1. reflexivity.
 Qed.
-
-Local Hint Extern 0 => pe_rewrite_step : cset.
 
 Hint Resolve meet1_incl : cset.
 

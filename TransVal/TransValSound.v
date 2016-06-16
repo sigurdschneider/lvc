@@ -398,7 +398,7 @@ Lemma tval_term_sound L D D' E Es Et s s' t t'
     -> (forall x, x ∈ (fst(getAnn D)) -> exists v, E x = Some v)
     -> Terminates (L,E,s) (L,Es,s')
     -> Terminates (L,E,t) (L,Et,t')
-    -> @sim _ statetype_F _ statetype_F  (L, E, s) (L, E, t).
+    -> @sim _ statetype_F _ statetype_F Sim (L, E, s) (L, E, t).
 
 Proof.
   intros Unsat_check Eq_FVars RenApart ssa_s ssa_t nf_s nf_t val_def term_s term_t.
@@ -479,7 +479,7 @@ Proof.
       destruct s_star2 as [s_star2 [ [es ret_s'] | [f [X fcall_s']]]];
         destruct t_star2 as [t_star2 [ [et ret_t'] | [g [Y fcall_t']]]].
     (** s' = e /\ t' = e' --> must be sim **)
-      *  eapply (simTerm
+      *  eapply (simTerm Sim
                 (σ1 := (L, E, s)) (σ1' := (L, Es, stmtReturn es))
                 (σ2 := (L, E, t)) (σ2' := (L, Et, stmtReturn et)));
            subst; try auto.
@@ -665,7 +665,7 @@ Lemma tval_sound L D D' E s t:
   -> noFun t (* same*)
   (* Free Variables must be defined *)
   -> (forall x, x ∈ (fst(getAnn D)) -> exists v, E x = Some v)
-  -> @sim _ statetype_F _ statetype_F  (L, E, s) (L, E, t).
+  -> @sim _ statetype_F _ statetype_F Sim (L, E, s) (L, E, t).
 
 Proof.
   intros Unsat_check Eq_FVars RenApart ssa_s ssa_t nf_s nf_t val_def.

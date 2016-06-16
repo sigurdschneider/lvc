@@ -178,6 +178,13 @@ Proof.
     split; econstructor; eauto.
 Qed.
 
+Lemma sawtooth_app B `{BlockType B} L L'
+  : sawtooth L -> sawtooth L' -> sawtooth (L ++ L').
+Proof.
+  intros H1 H2. general induction H1; eauto.
+  rewrite <- app_assoc. econstructor; eauto.
+Qed.
+
 
 (*
 
