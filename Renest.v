@@ -105,28 +105,6 @@ Proof.
     eapply H0.
 Qed.
 
-Ltac simpl_get_dropI :=
-  repeat match goal with
-  | [ H : get (drop (?n - _) ?L) _ _, H' : get ?L ?n ?blk, STL: sawtooth ?L |- _ ]
-    => eapply get_drop in H;
-      let X := fresh "LT" in pose proof (sawtooth_smaller STL H') as X;
-        simpl in X, H;
-        orewrite (n - I.block_n blk + I.block_n blk = n) in H; clear X
-  | [ H' : get ?L ?n ?blk, STL: sawtooth ?L |- get (drop (?n - _) ?L) _ _ ]
-    => eapply drop_get;
-      let X := fresh "LT" in pose proof (sawtooth_smaller STL H') as X;
-        simpl in X; simpl;
-        orewrite (n - I.block_n blk + I.block_n blk = n); clear X
-  end.
-
-Ltac not_activated H :=
-  let STEP := fresh "STEP" in
-  destruct H as [? [? STEP]]; inv STEP.
-
-Ltac not_normal H :=
-  destruct H; econstructor; eexists; econstructor; eauto.
-
-
 (* A proof relation is parameterized by analysis information A *)
 Class ProofRelationI (A:Type) := {
     (* Relates parameter lists according to analysis information *)

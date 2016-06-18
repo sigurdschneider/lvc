@@ -169,24 +169,27 @@ Inductive trueIsCalled : stmt -> lab -> Prop :=
   | TrueIsCalledExtern x f Y s l
     : trueIsCalled s l
       -> trueIsCalled (stmtExtern x f Y s) l
-  | TrueIsCalledLet1 F t k Zs l
+  | TrueIsCalledLet1 F t k l
     : k < length F
-      -> get F k Zs
-      -> trueIsCalled (snd Zs) (labInc l (length F))
+      -> callChain trueIsCalled F k (labInc l (length F))
       -> trueIsCalled t (LabI k)
       -> trueIsCalled (stmtFun F t) l
   | TrueIsCalledLet F t l
     : trueIsCalled t (incc l (length F))
       -> trueIsCalled (stmtFun F t) l.
 
-(*
+
 Lemma trueIsCalled_isCalled s l
   : trueIsCalled s l -> isCalled s l.
 Proof.
-  intro IC.
-  general induction IC; eauto using isCalled.
+  revert l; sind s; destruct s; intros; invt trueIsCalled; eauto using isCalled.
+  - assert (callChain isCalled F k (labInc l ❬F❭)). {
+      clear H H5.
+      general induction H3; eauto using callChain.
+    }
+    econstructor; eauto.
 Qed.
- *)
+
 
 Inductive noUnreachableCode : stmt -> Prop :=
   | NoUnrechableCodeExp x e s

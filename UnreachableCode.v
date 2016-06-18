@@ -61,16 +61,29 @@ Lemma unreachable_code_trueIsCalled i ZL Lv s slv l
     -> trueIsCalled s l
     -> exists b, get Lv (counted l) b /\ impb (getAnn slv) b.
 Proof.
-  intros Live IC. destruct l; simpl in *.
-  general induction IC; invt unreachable_code; subst; simpl in *; eauto.
-  - exploit IHIC2; eauto; simpl in *; dcr.
+  destruct l; simpl.
+  revert ZL Lv slv n.
+  sind s; destruct s; intros ZL Lv slv n UC IC; inv UC; inv IC;
+    simpl in *; subst; simpl in *; eauto.
+  - specialize (H2 H6); subst.
+    exploit (IH s1); eauto.
+  - clear H8.
+    exploit (IH s); eauto; simpl in *; dcr.
     rewrite get_app_lt in H5; eauto with len. inv_get.
-    exploit IHIC1; eauto; dcr.
-    rewrite get_app_ge in H7; eauto with len.
-    rewrite map_length in H7; eauto with len.
-    orewrite (❬F❭ + n - ❬als❭ = n) in H7.
-    eexists; split; eauto. etransitivity; eauto.
-  - exploit IHIC; eauto; try reflexivity; dcr.
+    clear H7.
+    cut (exists b : bool, get Lv n b /\ impb (getAnn x0) b).
+    intros; dcr; eexists; split; eauto. etransitivity; eauto.
+    clear H8. clear H1. clear IC UC alt.
+    general induction H4.
+    + exploit (IH (snd Zs)); eauto; dcr.
+      inv_get. eexists; split; eauto.
+    + destruct (get_in_range _ H0). inv_get.
+      exploit (IHcallChain i s eq_refl IH). eauto.
+      eauto. eauto. eauto. eauto. eauto.
+      dcr. eexists; split; eauto.
+      exploit (IH (snd Zs)); eauto. dcr. inv_get.
+      etransitivity; eauto.
+  - exploit (IH s); eauto; try reflexivity; dcr.
     rewrite get_app_ge in H3; eauto with len.
     rewrite map_length in H3.
     orewrite (❬F❭ + n - ❬als❭ = n) in H3. eauto.

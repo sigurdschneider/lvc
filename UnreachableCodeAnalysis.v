@@ -89,10 +89,8 @@ Definition unreachable_code_transform (sT:stmt)
   match st with
   | stmtLet x e s => anni1 d
   | stmtIf e s t =>
-    if d then
-    anni2 (if [exp2bool e = Some false] then false else true)
-          (if [exp2bool e = Some true] then false else true)
-    else anni2 false false
+    anni2 (if [exp2bool e = Some false] then false else d)
+          (if [exp2bool e = Some true] then false else d)
   | stmtApp f Y => anni1 d
   | stmtReturn e => anni1 d
   | stmtExtern x f Y s => anni1 d
@@ -105,8 +103,8 @@ Lemma unreachable_code_transform_monotone (sT s : stmt) (ST ST' : subTerm s sT)
   : a ⊑ b
     -> unreachable_code_transform ZL ST a ⊑ unreachable_code_transform ZL ST' b.
 Proof.
-  intros; destruct s; simpl; try econstructor; simpl; eauto.
-  - repeat cases; simpl in *; econstructor; simpl; eauto.
+  intros; destruct s; simpl; try econstructor; simpl; eauto;
+    repeat cases; simpl in *; eauto.
 Qed.
 
 Definition unreachable_code_analysis :=
