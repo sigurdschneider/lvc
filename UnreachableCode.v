@@ -45,10 +45,10 @@ Inductive unreachable_code (i:sc)
     -> (forall n Zs a, get F n Zs ->
                  get als n a ->
                  unreachable_code i (fst ⊝ F ++ ZL) (getAnn ⊝ als ++ BL) (snd Zs) a)
-    -> (if isComplete i then (forall n Zs a, get F n Zs ->
-                                      get als n a ->
-                                      getAnn a ->
-                                      trueIsCalled t (LabI n)) else True)
+    -> (if isComplete i then (forall n a,
+                                get als n a ->
+                                getAnn a ->
+                                isCalledIn trueIsCalled F t (LabI n)) else True)
     -> unreachable_code i ZL BL (stmtFun F t) (annF b als alt).
 
 Local Hint Extern 0 =>
@@ -67,24 +67,17 @@ Proof.
     simpl in *; subst; simpl in *; eauto.
   - specialize (H2 H6); subst.
     exploit (IH s1); eauto.
-  - clear H8.
-    exploit (IH s); eauto; simpl in *; dcr.
-    rewrite get_app_lt in H5; eauto with len. inv_get.
-    clear H7.
-    cut (exists b : bool, get Lv n b /\ impb (getAnn x0) b).
-    intros; dcr; eexists; split; eauto. etransitivity; eauto.
-    clear H8. clear H1. clear IC UC alt.
-    general induction H4.
-    + exploit (IH (snd Zs)); eauto; dcr.
-      inv_get. eexists; split; eauto.
-    + destruct (get_in_range _ H0). inv_get.
-      exploit (IHcallChain i s eq_refl IH). eauto.
-      eauto. eauto. eauto. eauto. eauto.
-      dcr. eexists; split; eauto.
-      exploit (IH (snd Zs)); eauto. dcr. inv_get.
-      etransitivity; eauto.
-  - exploit (IH s); eauto; try reflexivity; dcr.
-    rewrite get_app_ge in H3; eauto with len.
-    rewrite map_length in H3.
-    orewrite (❬F❭ + n - ❬als❭ = n) in H3. eauto.
+  - clear H8 UC IC.
+    assert (size s < size (stmtFun F s)) by eauto.
+    revert H H4 H1. generalize s at 1 3 4.
+    intros s' LE ICI.
+    remember (LabI (❬F❭ + n)) in ICI.
+    generalize alt.
+    induction ICI; intros; subst.
+    + exploit (IH s0); eauto; dcr.
+      inv_get. eexists; eauto.
+    + inv_get.
+      edestruct IHICI; [ eauto | eauto | eauto | ]; dcr.
+      edestruct (IH s0); eauto; dcr. inv_get.
+      eexists; split; eauto.
 Qed.

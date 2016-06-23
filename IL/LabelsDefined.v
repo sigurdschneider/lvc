@@ -116,16 +116,23 @@ Proof.
     dec_solve.
 Qed.
 
+Inductive isCalledIn (isCalled : stmt -> lab -> Prop) (F:〔params * stmt〕)
+  : stmt -> lab -> Prop :=
+| IsCalledIn s l
+  : isCalled s l -> isCalledIn isCalled F s l
+| IsCalledInNext k s Zs l
+  : isCalled s (LabI k)
+    -> get F k Zs
+    -> isCalledIn isCalled F (snd Zs) l -> isCalledIn isCalled F s l.
 
-Inductive callChain (isCalled : stmt -> lab -> Prop) (F:〔params * stmt〕)
-  : nat -> lab -> Prop :=
-| CallChainDone k Zs l
-  : get F k Zs -> isCalled (snd Zs) l -> callChain isCalled F k l
-| CallChainStep k k' Zs l
-  : get F k Zs
-    -> k' < length F
-    -> isCalled (snd Zs) (LabI k')
-    -> callChain isCalled F k' l -> callChain isCalled F k l.
+Inductive isCalledIn (isCalled : stmt -> lab -> Prop) (F:〔params * stmt〕)
+  : stmt -> lab -> Prop :=
+| IsCalledIn s l
+  : isCalled s l -> isCalledIn isCalled F s l
+| IsCalledInNext k s Zs l
+  : isCalled s (LabI k)
+    -> get F k Zs
+    -> isCalledIn isCalled F (snd Zs) l -> isCalledIn isCalled F s l.
 
 Inductive isCalled : stmt -> lab -> Prop :=
   | IsCalledExp x e s l
@@ -142,13 +149,8 @@ Inductive isCalled : stmt -> lab -> Prop :=
   | IsCalledExtern x f Y s l
     : isCalled s l
       -> isCalled (stmtExtern x f Y s) l
-  | IsCalledLet1 F k t l
-    : k < length F
-      -> callChain isCalled F k (labInc l (length F))
-      -> isCalled t (LabI k)
-      -> isCalled (stmtFun F t) l
   | IsCalledLet F t l
-    : isCalled t (incc l (length F))
+    : isCalledIn isCalled F t (incc l (length F))
       -> isCalled (stmtFun F t) l.
 
 
@@ -169,27 +171,21 @@ Inductive trueIsCalled : stmt -> lab -> Prop :=
   | TrueIsCalledExtern x f Y s l
     : trueIsCalled s l
       -> trueIsCalled (stmtExtern x f Y s) l
-  | TrueIsCalledLet1 F t k l
-    : k < length F
-      -> callChain trueIsCalled F k (labInc l (length F))
-      -> trueIsCalled t (LabI k)
-      -> trueIsCalled (stmtFun F t) l
   | TrueIsCalledLet F t l
-    : trueIsCalled t (incc l (length F))
+    : isCalledIn trueIsCalled F t (incc l (length F))
       -> trueIsCalled (stmtFun F t) l.
-
 
 Lemma trueIsCalled_isCalled s l
   : trueIsCalled s l -> isCalled s l.
 Proof.
   revert l; sind s; destruct s; intros; invt trueIsCalled; eauto using isCalled.
-  - assert (callChain isCalled F k (labInc l ❬F❭)). {
-      clear H H5.
-      general induction H3; eauto using callChain.
-    }
-    econstructor; eauto.
+  - econstructor.
+    assert (size s < size (stmtFun F s)) by eauto.
+    clear H.
+    revert H0 H3. generalize s at 1 3 4.
+    intros.
+    general induction H3; eauto using isCalledIn.
 Qed.
-
 
 Inductive noUnreachableCode : stmt -> Prop :=
   | NoUnrechableCodeExp x e s

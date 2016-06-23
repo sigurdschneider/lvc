@@ -367,16 +367,20 @@ Instance option_R_trans A R `{Transitive A R} : Transitive (option_R_Some R).
 hnf; intros. inv H0; inv H1; econstructor; eauto.
 Qed.
 
-Section PolyIter.
-  Variable A : Type.
+Fixpoint iter A n (s:A) (f: A -> A) :=
+  match n with
+  | 0 => s
+  | S n => iter n (f s) f
+  end.
 
-  Fixpoint iter n (s:A) (f: nat -> A-> A) :=
-    match n with
-        | 0 => s
-        | S n => iter n (f n s) f
-    end.
-
-End PolyIter.
+Lemma iter_comm n A (a:A) (f:A -> A)
+  : iter (S n) a f = f (iter n a f).
+Proof.
+  general induction n.
+  - simpl; eauto.
+  - change (iter (S (S n)) a f) with (iter (S n) (f a) f).
+    rewrite IHn; eauto.
+Qed.
 
 Require Le Arith.Compare_dec.
 
@@ -679,3 +683,12 @@ Instance impb_trans : Transitive impb.
 Proof.
   hnf; intros [] [] []; eauto.
 Qed.
+
+Hint Extern 5 (impb ?a ?a') =>
+progress (first [has_evar a | has_evar a' | reflexivity]).
+
+Hint Extern 5 =>
+match goal with
+  [ H : impb ?a ?b, H' : impb ?b ?c |- impb ?a ?c ] =>
+  etransitivity; [ eapply H | eapply H' ]
+end.

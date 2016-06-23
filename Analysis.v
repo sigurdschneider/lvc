@@ -30,7 +30,7 @@ Section AnalysisAlgorithm.
   Variable analysis : Analysis Dom.
 
   Fixpoint safeFirst (d:Dom) (mon:poLe d (analysis_step d)) (trm:terminates poLt d)
-    : { d' : Dom | exists n : nat, d' = iter n d (fun _ => analysis_step) /\ poEq (analysis_step d') d' }.
+    : { d' : Dom | exists n : nat, d' = iter n d analysis_step /\ poEq (analysis_step d') d' }.
     decide (poLe (analysis_step d) d).
     - eexists (analysis_step d), 1; simpl.
       split; eauto.
@@ -42,7 +42,7 @@ Section AnalysisAlgorithm.
   Defined.
 
   Definition safeFixpoint
-    : { d' : Dom | exists n : nat, d' = iter n initial_value (fun _ => analysis_step)
+    : { d' : Dom | exists n : nat, d' = iter n initial_value analysis_step
                             /\ poEq (analysis_step d') d' }.
     eapply @safeFirst.
     - eapply initial_value_bottom.

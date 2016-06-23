@@ -163,12 +163,6 @@ Proof.
 Qed.
 *)
 
-Lemma setTopAnn_inv A R (an an':ann A) a
-  : ann_R R (setTopAnn an a) an'
-    -> R a (getAnn an').
-Proof.
-  intros; destruct an; inv H; simpl; eauto.
-Qed.
 
 Opaque poLe.
 
@@ -305,6 +299,24 @@ Proof.
     + simpl. eauto.
 Qed.
 
+Inductive isCalledIn' (als:list (ann bool)) (F:〔params * stmt〕)
+  : stmt -> lab -> Prop :=
+| IsCalledIn s l
+  : trueIsCalled s l -> isCalledIn' als F s l
+| IsCalledInNext k s Zs l a
+  : trueIsCalled s (LabI k)
+    -> get F k Zs
+    -> get als k a
+    -> getAnn a
+    -> isCalledIn' als F (snd Zs) l -> isCalledIn' als F s l.
+
+Lemma isCalledIn'_trueIsCalledIn als F s l
+  : isCalledIn' als F s l -> isCalledIn trueIsCalled F s l.
+Proof.
+  induction 1; eauto using isCalledIn.
+Qed.
+
+Hint Resolve isCalledIn'_trueIsCalledIn.
 
 Inductive unreachable_code_complete
   : list params -> list bool -> stmt -> ann bool -> Prop :=
@@ -334,15 +346,20 @@ Inductive unreachable_code_complete
     -> (forall n Zs a, get F n Zs ->
                  get als n a ->
                  unreachable_code_complete (fst ⊝ F ++ ZL) (getAnn ⊝ als ++ BL) (snd Zs) a)
-    -> (forall n a, get als n a ->
-                 getAnn a ->
-                 exists k, k < ❬F❭ /\
-                      trueIsCalled t (LabI k) /\
-                      (k <> n -> callChain trueIsCalled F k (LabI n))
-      )
+    -> (forall n a,
+          get als n a ->
+          getAnn a ->
+          isCalledIn' als F t (LabI n))
     -> (forall n a, get als n a -> impb (getAnn a) b )
     -> impb (getAnn alt) b
 -> unreachable_code_complete ZL BL (stmtFun F t) (annF b als alt).
+
+Lemma unreachable_code_complete_annotation ZL BL s a
+  : unreachable_code_complete ZL BL s a
+    -> annotation s a.
+Proof.
+  intros. general induction H; eauto using @annotation.
+Qed.
 
 Lemma fold_left_zip_orb_inv A b n
   : get (fold_left (zip orb) A b) n true
@@ -366,53 +383,36 @@ Proof.
     simpl in *; repeat let_case_eq; repeat simpl_pair_eqs; simpl in *;
       inv_get;
       try solve [ destruct a; simpl; eauto | destruct a1; simpl; eauto ].
-  - eapply IH in H1; eauto. etransitivity; eauto.
+  - eapply IH in H1; eauto.
   - cases in H6; cases in H1; try congruence.
-    + eapply IH in H1; eauto; try solve [ etransitivity; eauto ].
+    + eapply IH in H1; eauto.
       destruct x, x0, c; simpl in *; eauto.
-      eapply IH in H6; simpl in *; eauto. etransitivity; eauto.
-    + eapply IH in H6; eauto; try solve [ etransitivity; eauto ].
+      eapply IH in H6; simpl in *; eauto.
+    + eapply IH in H6; eauto.
       destruct x, x0, c; simpl in *; eauto.
-      eapply IH in H1; simpl in *; eauto. etransitivity; eauto.
-    + eapply IH in H1; eauto; try solve [ etransitivity; eauto ].
+      eapply IH in H1; simpl in *; eauto.
+    + eapply IH in H1; eauto.
       destruct x, x0, c; simpl in *; eauto.
-      eapply IH in H6; simpl in *; eauto. etransitivity; eauto.
+      eapply IH in H6; simpl in *; eauto.
   - decide (labN l = n); subst.
     + eapply ListUpdateAt.list_update_at_get_2 in H1; eauto; subst.
       reflexivity.
     + eapply ListUpdateAt.list_update_at_get_1 in H1; eauto; subst.
       inv_get. destruct a; simpl; eauto.
-  - eapply IH in H1; eauto. etransitivity; eauto.
+  - eapply IH in H1; eauto.
   - destruct b; [| destruct c; simpl; eauto].
     eapply fold_left_zip_orb_inv in H1. destruct H1.
-    + eapply IH in H1; eauto. etransitivity; eauto.
+    + eapply IH in H1; eauto.
     + dcr. inv_get.
       edestruct (forwardF_get _ _ _ _ _ H2); dcr; subst.
       erewrite <- (@setTopAnn_eta _ x3 (getAnn x3)) in H4; eauto.
-      eapply IH in H4; eauto; [| reflexivity].
+      eapply IH in H4; eauto.
       exploit H13; eauto. etransitivity; eauto.
-      etransitivity; eauto.
 Qed.
-
-Lemma getAnn_setAnn A s (a:A)
- : getAnn (setAnn a s) = a.
-Proof.
-  destruct s; eauto.
-Qed.
-
 
 Local Hint Extern 0 => first [ erewrite (@forward_getAnn' _ (fun _ => bool))
                             | erewrite getAnn_setTopAnn
                             | rewrite getAnn_setAnn ].
-
-Hint Extern 5 (impb ?a ?a') =>
-progress (first [has_evar a | has_evar a' | reflexivity]).
-
-Hint Extern 5 =>
-match goal with
-  [ H : impb ?a ?b, H' : impb ?b ?c |- impb ?a ?c ] =>
-  etransitivity; [ eapply H | eapply H' ]
-end.
 
 Lemma unreachable_code_analysis_complete_setTopAnn ZL BL s a b (LE:poLe (getAnn a) b)
   : unreachable_code_complete ZL BL s a
@@ -425,13 +425,24 @@ Proof.
     exploit H3; eauto.
 Qed.
 
-Lemma trueCallChain_extend (F:list (params * stmt)) k k' f Zs
-  : callChain trueIsCalled F k (LabI k')
-    -> get F k' Zs
+Lemma isCalledIn_extend (F:list (params * stmt)) k t f Zs
+  : isCalledIn trueIsCalled F t (LabI k)
+    -> get F k Zs
     -> trueIsCalled (snd Zs) f
-    -> callChain trueIsCalled F k f.
+    -> isCalledIn trueIsCalled F t f.
 Proof.
-  intros. general induction H; eauto using callChain, get_range.
+  intros. general induction H; eauto using isCalledIn, get_range.
+Qed.
+
+Lemma isCalledIn'_extend als (F:list (params * stmt)) k t f Zs a
+  : isCalledIn' als F t (LabI k)
+    -> get F k Zs
+    -> get als k a
+    -> getAnn a
+    -> trueIsCalled (snd Zs) f
+    -> isCalledIn' als F t f.
+Proof.
+  intros. general induction H; eauto using isCalledIn', get_range.
 Qed.
 
 Lemma unreachable_code_analysis_complete_isCalled sT ZL BL s a (ST:subTerm s sT) b
@@ -448,12 +459,10 @@ Proof.
     cases in H7; cases in H5; try congruence;
       destruct x,x0; isabsurd;
         try solve [ eapply TrueIsCalledIf2;
-                    [ eapply IHunreachable_code_complete2; eauto;
-                      etransitivity; eauto
+                    [ eapply IHunreachable_code_complete2; eauto
                     | congruence ]
                   | eapply TrueIsCalledIf1;
-                    [ eapply IHunreachable_code_complete1; eauto;
-                      etransitivity; eauto
+                    [ eapply IHunreachable_code_complete1; eauto
                     | congruence ]
                   ].
     + eapply H3 in COND.
@@ -471,27 +480,89 @@ Proof.
   - inv_get.
     eapply fold_left_zip_orb_inv in H6.
     destruct H6; dcr.
-    + eapply TrueIsCalledLet. eapply IHunreachable_code_complete.
-      eauto. etransitivity; eauto.
+    + eapply TrueIsCalledLet.
+      exploit IHunreachable_code_complete; eauto.
+      econstructor; eauto.
     + inv_get. edestruct (forwardF_get _ _ _ _ _ H8); dcr; subst.
       erewrite <- (@setTopAnn_eta _ x3 (getAnn x3)) in H10; eauto.
       exploit H2; eauto.
       exploit forward_snd_poLe; try eapply H10; eauto.
-      edestruct H3; eauto; dcr. decide (x1 = x); subst.
-      econstructor; eauto. econstructor; eauto.
-      econstructor; eauto.
-      eapply trueCallChain_extend; eauto.
+      exploit H3; eauto.
+      econstructor.
+      eapply isCalledIn_extend; eauto.
 Qed.
 
+Lemma trueIsCalled_snd_forward sT ZL s (ST:subTerm s sT) a n
+  : trueIsCalled s (LabI n)
+    -> annotation s a
+    -> labelsDefined s (length ZL)
+    -> get (snd (forward unreachable_code_transform ZL s ST
+                        (setTopAnn a true))) n true.
+Proof.
+  intros.
+  general induction H0; invt trueIsCalled; invt labelsDefined; simpl;
+    repeat let_pair_case_eq; subst; simpl; eauto.
+  - exploit (IHannotation1 sT ZL (subTerm_EQ_If1 eq_refl ST)); eauto.
+    cases; try congruence.
+    edestruct (@get_length_eq). eapply H0. Focus 2.
+    eapply zip_get_eq. eapply H0. eapply H2. eauto.
+    repeat rewrite (@forward_length _ (fun _ => bool)). eauto.
+  - exploit (IHannotation2 sT ZL (subTerm_EQ_If2 eq_refl ST)); eauto.
+    edestruct (@get_length_eq). eapply H0. Focus 2.
+    eapply zip_get_eq. eapply H2.
+    cases. congruence. eauto. destruct x0; eauto.
+    repeat rewrite (@forward_length _ (fun _ => bool)). eauto.
+  - exploit get_in_range; eauto; dcr.
+    eapply ListUpdateAt.list_update_at_get_3.
+    eapply map_get_1. eauto.
+  - eapply drop_get.
+    general induction H8.
+    + eapply (IHannotation sT (fst ⊝ s ++ ZL) (subTerm_EQ_Fun1 eq_refl ST)) in H; eauto.
+
+      edestruct (@get_union_union_b _ _ _ (snd
+         ⊝ forwardF (forward unreachable_code_transform) (fst ⊝ s ++ ZL) s sa
+         (subTerm_EQ_Fun2 eq_refl ST))). eauto.
+      intros. inv_get.
+      edestruct (forwardF_get _ _ _ _ _ H6); dcr; subst.
+      repeat rewrite (@forward_length _ (fun _ => bool)). eauto.
+      dcr. destruct x; isabsurd.
+      eapply H8.
+    + eapply IHisCalledIn.
+
+Admitted.
+
+Lemma isCalledIn_mono sT F t n Zs ZL (ST:subTerm (stmtFun F t) sT) als k a
+  : length F = length als
+    -> isCalledIn' als F (snd Zs) (LabI n)
+    -> get F k Zs
+    -> get als k a
+    -> getAnn a
+    -> (forall n Zs a, get F n Zs -> get als n a -> annotation (snd Zs) a)
+    -> (forall (n : nat) (Zs : params * stmt), get F n Zs -> labelsDefined (snd Zs) (❬F❭ + ❬ZL❭))
+    -> exists k a, get (snd ⊝ forwardF (forward unreachable_code_transform) (fst ⊝ F ++ ZL) F als
+                      (subTerm_EQ_Fun2 eq_refl ST)) k a /\ get a n true.
+Proof.
+  intros LEN ICI GetF GetAls Ann IsAnn.
+  general induction ICI.
+  - inv_get.
+    edestruct (@get_forwardF sT (fun _ => bool)); eauto.
+    do 2 eexists. split.
+    eapply map_get_1. eapply g.
+    exploit (@trueIsCalled_snd_forward sT (fst ⊝ F ++ ZL) _ x);
+      eauto using unreachable_code_complete_annotation.
+    rewrite setTopAnn_eta in H1; eauto.
+    eapply Is_true_eq_true; eauto.
+  - edestruct IHICI; eauto.
+Qed.
 
 Lemma unreachable_code_analysis_complete sT ZL BL BL' s a (ST:subTerm s sT) b
-      (LE:impb (getAnn a) b)
+      (LE:impb (getAnn a) b) (LDEF:labelsDefined s (length ZL))
   : unreachable_code_complete ZL BL s a
     -> unreachable_code_complete ZL BL' s
                                 (fst (forward unreachable_code_transform ZL s ST (setTopAnn a b))).
 Proof.
   intros UCC.
-  general induction UCC; simpl; repeat let_pair_case_eq; subst; simpl in *;
+  general induction UCC; simpl; repeat let_pair_case_eq; subst; simpl in *; invt labelsDefined;
     eauto using unreachable_code_complete, subTerm.
   - econstructor; intros; cases; eauto.
     eapply IHUCC1; eauto. rewrite H1; eauto.
@@ -509,33 +580,58 @@ Proof.
       rewrite (@forward_length _ (fun _ => bool)). reflexivity.
       intros. rewrite zip_length. rewrite min_l; eauto.
     + intros. inv_get.
-      edestruct (forwardF_get _ _ _ _ _ H7); dcr; subst.
+      edestruct (forwardF_get _ _ _ _ _ H8); dcr; subst.
       repeat get_functional.
       rewrite <- (setTopAnn_eta x eq_refl).
       eapply unreachable_code_analysis_complete_setTopAnn; eauto.
       erewrite (@forward_getAnn' _ (fun _ => bool)).
-      rewrite getAnn_setTopAnn. admit.
+      rewrite getAnn_setTopAnn.
+      exploit H3; eauto.
+      case_eq (getAnn x); intros; [| destruct x0; eauto].
+      rewrite H12 in H11; destruct b; isabsurd. destruct b0; isabsurd.
+      clear LE H11.
+      exploit H2; eauto. rewrite H12; eauto.
+      inv H11.
+      * exploit (@trueIsCalled_snd_forward _ (fst ⊝ F ++ ZL) _ (subTerm_EQ_Fun1 eq_refl ST));
+          eauto using unreachable_code_complete_annotation.
+        exploit (@get_union_union_b _ _ _
+                                    (snd
+                                       ⊝ forwardF (forward unreachable_code_transform)
+                                       (fst ⊝ F ++ ZL) F als
+                                       (subTerm_EQ_Fun2 eq_refl ST))); eauto.
+        intros. inv_get.
+        edestruct (forwardF_get _ _ _ _ _ H15); dcr; subst.
+        repeat rewrite (@forward_length _ (fun _ => bool)). eauto.
+        dcr. get_functional. eauto.
+      * intros. eapply (@isCalledIn_mono sT F t n Zs0 ZL ST als) in H17; eauto.
+        dcr.
+        exploit (@get_union_union_A). eapply H18. eapply H20.
+        instantiate (1:=(snd
+                           (forward unreachable_code_transform (fst ⊝ F ++ ZL) t
+                                    (subTerm_EQ_Fun1 eq_refl ST)
+                                    (setTopAnn alt true)))).
+        inv_get.
+        edestruct (forwardF_get _ _ _ _ _ H17); dcr; subst.
+        repeat rewrite (@forward_length _ (fun _ => bool)). eauto.
+        dcr. get_functional. eauto.
+        intros. exploit H0; eauto. eapply unreachable_code_complete_annotation; eauto.
     + intros. inv_get.
-      edestruct (forwardF_get _ _ _ _ _ H7); dcr; subst.
+      edestruct (forwardF_get _ _ _ _ _ H8); dcr; subst.
       rewrite getAnn_setTopAnn in H6.
       destruct x0; isabsurd.
       eapply fold_left_zip_orb_inv in H5. destruct H5.
       * eapply unreachable_code_analysis_complete_isCalled in H5; eauto.
-        eexists n; eauto. split; eauto using get_range.
-        split; eauto. econstructor; eauto. congruence.
+        econstructor; eauto.
         etransitivity; eauto.
       * dcr. inv_get.
-        edestruct (forwardF_get _ _ _ _ _ H8); dcr; subst.
-        rewrite <- (@setTopAnn_eta _ x8 (getAnn x8)) in H10; eauto.
-        exploit forward_snd_poLe; try eapply H10; eauto.
-        eapply unreachable_code_analysis_complete_isCalled in H10; eauto.
-        exploit H2; eauto. dcr.
-        decide (x6 = x0); subst.
-        eexists x0; split; eauto. split; eauto.
-        intros. econstructor. eauto. eauto.
-        eexists x6; split; eauto using get_range.
-        split; eauto. intros.
-        eapply trueCallChain_extend; eauto.
+        edestruct (forwardF_get _ _ _ _ _ H10); dcr; subst.
+        rewrite <- (@setTopAnn_eta _ x8 (getAnn x8)) in H12; eauto.
+        exploit forward_snd_poLe; try eapply H12; eauto.
+        eapply unreachable_code_analysis_complete_isCalled in H12; eauto.
+        exploit H2; eauto.
+        eapply isCalledIn'_extend; eauto.
+        general induction H11.
+
     + intros. inv_get. rewrite getAnn_setTopAnn.
       edestruct (forwardF_get _ _ _ _ _ H6); dcr; subst.
       exploit H3; eauto. destruct x0; simpl; eauto.
@@ -576,17 +672,6 @@ Tactic Notation "destr_sig" :=
   | [ |- context [proj1_sig ?x] ] => destruct x; simpl
   end.
 
-Lemma iter_comm A n (a:A) (f:nat -> A -> A)
-  : (forall n n' a, f n a = f n' a)
-    -> iter (S n) a f = f n (iter n a f).
-Proof.
-  general induction n.
-  - simpl; eauto.
-  - change (iter (S (S n)) a f) with (iter (S n) (f (S n) a) f).
-    rewrite IHn; eauto. erewrite H. f_equal. simpl.
-    erewrite H. reflexivity.
-Qed.
-
 Lemma ucc_complete s
   : unreachable_code_complete nil nil s (unreachableCodeAnalysis s).
 Proof.
@@ -594,7 +679,7 @@ Proof.
   clear H1. subst. simpl.
   general induction x0.
   - simpl in *. eapply unreachable_code_complete_bottom.
-  - rewrite iter_comm; [| reflexivity]. simpl.
+  - rewrite iter_comm; simpl.
     let_pair_case_eq. simpl.
     erewrite <- (setTopAnn_eta x); [| reflexivity].
     eapply unreachable_code_analysis_complete. reflexivity.
@@ -609,9 +694,4 @@ Lemma ucc_sound_and_complete ZL BL s a
 Proof.
   intros UCC UCS.
   general induction UCS; inv UCC; eauto using unreachable_code.
-  - econstructor; eauto.
-    simpl. intros.
-    exploit H13; eauto; dcr.
-    decide (x = n); subst; eauto.
-
 Qed.

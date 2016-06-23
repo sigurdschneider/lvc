@@ -425,3 +425,16 @@ Proof.
   induction H; subst; eauto.
   f_equal. eapply list_get_eq; eauto.
 Qed.
+
+Lemma setTopAnn_inv A R (an an':ann A) a
+  : ann_R R (setTopAnn an a) an'
+    -> R a (getAnn an').
+Proof.
+  intros; destruct an; inv H; simpl; eauto.
+Qed.
+
+Lemma getAnn_setAnn A s (a:A)
+ : getAnn (setAnn a s) = a.
+Proof.
+  destruct s; eauto.
+Qed.
