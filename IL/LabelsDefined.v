@@ -125,15 +125,6 @@ Inductive isCalledIn (isCalled : stmt -> lab -> Prop) (F:〔params * stmt〕)
     -> get F k Zs
     -> isCalledIn isCalled F (snd Zs) l -> isCalledIn isCalled F s l.
 
-Inductive isCalledIn (isCalled : stmt -> lab -> Prop) (F:〔params * stmt〕)
-  : stmt -> lab -> Prop :=
-| IsCalledIn s l
-  : isCalled s l -> isCalledIn isCalled F s l
-| IsCalledInNext k s Zs l
-  : isCalled s (LabI k)
-    -> get F k Zs
-    -> isCalledIn isCalled F (snd Zs) l -> isCalledIn isCalled F s l.
-
 Inductive isCalled : stmt -> lab -> Prop :=
   | IsCalledExp x e s l
     : isCalled s l
