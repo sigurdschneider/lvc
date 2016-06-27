@@ -49,6 +49,16 @@ Section AnalysisAlgorithm.
     - eapply finite_height.
   Defined.
 
+  Lemma safeFixpoint_chain n
+    : iter n initial_value analysis_step
+           ⊑ iter (S n) initial_value analysis_step.
+  Proof.
+    induction n.
+    - simpl. eapply initial_value_bottom.
+    - do 2 rewrite iter_comm.
+      eapply step_monotone. eauto.
+  Qed.
+
 End AnalysisAlgorithm.
 
 

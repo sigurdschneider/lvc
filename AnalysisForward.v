@@ -497,9 +497,8 @@ Instance makeForwardAnalysis (Dom:stmt -> Type)
   : forall s, Analysis { a : ann (Dom s) | annotation s a } :=
   {
     analysis_step := fun X : {a : ann (Dom s) | annotation s a} =>
-                      let (a, Ann) := X in
                       exist (fun a0 : ann (Dom s) => annotation s a0)
-                            (fst (forward Dom f nil (subTerm_refl _) a)) (forward_annotation Dom f nil (subTerm_refl _) Ann);
+                            (fst (forward Dom f nil (subTerm_refl _) (proj1_sig X))) (forward_annotation Dom f nil (subTerm_refl _) (proj2_sig X));
     initial_value :=
       exist (fun a : ann (Dom s) => annotation s a)
             (setAnn bottom s)
