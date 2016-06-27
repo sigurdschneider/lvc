@@ -257,6 +257,35 @@ Qed.
 
 Hint Immediate incl_minus_disj renamedApart_disj_F : cset.
 
+Lemma funConstr_disjoint_fun_defs F ans alvs D Dt k a
+  : length F = length ans
+    -> length F = length alvs
+    -> (forall (n : nat) (a : ann (set var)) (b : ann (set var * set var)),
+          get alvs n a -> get ans n b -> ann_R Subset1 a b)
+    -> Indexwise.indexwise_R (funConstr D Dt) F ans
+    -> PairwiseDisjoint.pairwise_ne disj (defVars ⊜ F ans)
+    -> disj D (list_union (defVars ⊜ F ans) ∪ Dt)
+    -> get ans k a
+    -> disj (fst (getAnn a)) (snd (getAnn a))
+    -> disjoint (Some ⊝ (getAnn ⊝ alvs) \\ (fst ⊝ F)) (snd (getAnn a)).
+Proof.
+  intros. hnf; intros; inv_get.
+  edestruct H2; eauto; dcr.
+  exploit H1 as A; eauto. eapply ann_R_get in A.
+  decide (k = n); subst.
+  - repeat get_functional. eauto with cset.
+  - exploit H3 as B; [ eauto | eauto using zip_get | eauto using zip_get|].
+    unfold defVars in B.
+    exploit H1 as C; try eapply H10; eauto. eapply ann_R_get in C.
+    edestruct H2; try eapply H10; eauto; dcr.
+    rewrite C. rewrite H13.
+    eapply disj_1_incl. eapply disj_2_incl. eapply H4.
+    + eapply incl_union_left.
+      eapply incl_list_union; eauto using zip_get.
+      unfold defVars. eapply incl_right.
+    + clear_all; cset_tac.
+Qed.
+
 Lemma renamedApart_globals_live s ZL Lv alv f ang
 : live_sound Imperative ZL Lv s alv
   -> renamedApart s ang
@@ -283,71 +312,65 @@ Proof.
     + do 2 eexists; split; [| split]; eauto with cset.
       exploit H3; eauto. rewrite <- H13.
       eauto with cset.
-  - exploit (IH s); eauto 20 with cset; dcr.
-    pe_rewrite. eauto with cset.
-    clear H22.
-(*
-        Lemma test ZL Lv F als k n f lv Zs
-      : callChain isCalled F k (LabI (❬F❭ + n))
-        -> get F k Zs
-        -> get als k lv
-        -> (forall k Zs lv, get F k Zs -> get als k lv -> isCalled (snd Zs) (LabI (❬F❭ + n))
-                    -> exists (lv' : ⦃var⦄) (Z' : params),
-                        get ZL f Z' /\ get Lv f lv' /\ lv' \ of_list Z' ⊆ lv \ of_list (fst Zs))
-        ->  exists (lv' : ⦃var⦄) (Z' : params),
-            get ZL f Z' /\ get Lv f lv' /\ lv' \ of_list Z' ⊆ lv \ of_list (fst Zs).
-    Proof.
-      intros CC GetF GetAls IH.
-      general induction CC.
-      - get_functional; exploit IH; eauto.
-      -
-    Qed.
-*)
-    general induction H19.
-    + inv_get. exploit (IH (snd Zs)); eauto with cset.
+  - clear H H1. eapply renamedApart_disj in H0. simpl in *.
+    invc H19.
+    + exploit (IH s); eauto with cset.
+      pe_rewrite. eauto with cset.
       dcr. destruct f; simpl in *.
-      inv_get. do 2 eexists; split; [| split]; eauto.
-      assert ((of_list (fst Zs)) ⊆ D'). {
+      inv_get. do 2 eexists; split; [| split]; eauto with cset.
+    + exploit (IH s); eauto with cset. pe_rewrite. eauto with cset.
+      dcr. simpl in *; inv_get.
+      setoid_rewrite <- H13; setoid_rewrite <- H22.
+      clear H22 H15 H16 H2 H25 H6 H13 H.
+      general induction H4.
+      *  inv_get. exploit (IH (snd Zs)); eauto with cset.
+         dcr. destruct f; simpl in *.
+         inv_get. do 2 eexists; split; [| split]; eauto.
+         rewrite <- H15.
+         assert ((of_list (fst Zs)) ⊆ D'). {
+           rewrite <- H18. eapply incl_union_left.
+           eapply incl_list_union. eapply zip_get; eauto.
+           unfold defVars. eauto with cset.
+         }
+         assert (disj (x \ of_list x2) D'). {
+           eapply disj_1_incl; [ eapply H3 | ]; eauto using map_get_1.
+         }
+         eauto with cset.
+      * inv_get.
+        edestruct (IH (snd Zs0));[ eauto | eauto | eauto | eauto | eauto | eauto | ].
+        rewrite zip_app, List.map_app; [| eauto with len].
+        eapply disjoint_app. split.
+        eapply funConstr_disjoint_fun_defs; eauto. rewrite H18. eauto.
+        eapply renamedApart_disj. eauto.
+        assert (snd (getAnn x0) ⊆ D').
         rewrite <- H18. eapply incl_union_left.
-        eapply incl_list_union. eapply zip_get; eauto.
-        unfold defVars. eauto with cset.
-      }
-      assert (disj (x \ of_list x2) D'). {
-        eapply disj_1_incl. eauto. reflexivity.
-      }
-      rewrite <- H13, <- H27. rewrite <- H30.
-      eauto with cset.
-    + inv_get. exploit (IH (snd Zs)). eauto. eauto. eauto. eauto.
-      eauto.  pe_rewrite; eauto with cset.
-      dcr.
-      exploit IHcallChain; eauto.
-      inv_get.
-      rewrite <- H27, <- H32.
-      exploit H24; eauto.
-      decide (k = k'). subst; repeat get_functional. clear_all; cset_tac.
-      exploit H10; eauto. eapply renamedApart_disj in H33.
-      exploit H14; eauto using zip_get. unfold defVars in H30.
-      edestruct H12; eauto. dcr. eapply ann_R_get in H30.
-      unfold defVars in H34.
-      rewrite H35 in H30.
-      assert ((of_list (fst Zs)) ⊆ D'). {
-        rewrite <- H18. eapply incl_union_left.
-        eapply incl_list_union. eapply zip_get.
-        eapply H. eauto.
-        unfold defVars. eauto with cset.
-      }
-      eapply renamedApart_disj in H4.
-      assert (disj (getAnn x4 \ of_list (fst x3)) D'). {
-        eapply disj_1_incl. eauto. simpl. rewrite H30.
+        eapply incl_list_union; eauto using zip_get.
+        unfold defVars. eapply incl_right.
+        rewrite H15. eauto.
+
+        dcr. simpl in *. inv_get.
+        time (exploit IHisCalledIn). Focus 19. reflexivity.
+        eauto. eauto. eauto. eauto.
+        eauto. eauto. eauto. eauto. eauto. eauto. eauto. eauto. eauto.
+        eauto. eauto. eauto. eauto. eauto. eauto. eauto. eauto.
+        dcr.
+        do 2 eexists; split; [|split]; eauto.
+        rewrite H25.
+        destruct f. simpl in *.
+        rewrite <- H22.
+        assert ((of_list (fst Zs0)) ⊆ D'). {
+           rewrite <- H18. eapply incl_union_left.
+           eapply incl_list_union. eapply zip_get; eauto.
+           unfold defVars. eauto with cset.
+         }
+        assert (disj (getAnn x2 \ of_list (fst Zs)) D'). {
+          eapply disj_1_incl; [ eapply H1 | ].
+          exploit H24; eauto. eapply ann_R_get in H20.
+          rewrite H20.
+          edestruct H12; try eapply H6; eauto. rewrite H26.
+          clear_all; cset_tac.
+        }
         eauto with cset.
-      }
-      eauto with cset.
-  - edestruct (IH s); eauto; dcr; pe_rewrite.
-    eauto with cset.
-    destruct f; simpl in *.
-    inv_get.
-    do 2 eexists; split; [|split]; eauto using shift_get.
-    rewrite H22; eauto.
 Qed.
 
 Lemma renamedApart_live_imperative_is_functional s ang ZL Lv alv
