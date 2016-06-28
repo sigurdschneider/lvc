@@ -116,6 +116,7 @@ Proof.
     dec_solve.
 Qed.
 
+(*
 Inductive isCalledIn (isCalled : stmt -> lab -> Prop) (F:〔params * stmt〕)
   : stmt -> lab -> Prop :=
 | IsCalledIn s l
@@ -124,6 +125,20 @@ Inductive isCalledIn (isCalled : stmt -> lab -> Prop) (F:〔params * stmt〕)
   : isCalled s (LabI k)
     -> get F k Zs
     -> isCalledIn isCalled F (snd Zs) l -> isCalledIn isCalled F s l.
+*)
+
+Inductive callChain (isCalled : stmt -> lab -> Prop) (F:〔params * stmt〕)
+  : lab -> lab -> Prop :=
+| CallChain_refl l
+  : callChain isCalled F l l
+| CallChain_step k k' Zs l
+  : get F k Zs
+    -> isCalled (snd Zs) (LabI k')
+    -> callChain isCalled F (LabI k') l -> callChain isCalled F (LabI k) l.
+
+Definition isCalledFrom (isCalled : stmt -> lab -> Prop) (F:〔params * stmt〕)
+           (t:stmt) (l:lab) :=
+  exists l', isCalled t l' /\ callChain isCalled F l' l.
 
 Inductive isCalled : stmt -> lab -> Prop :=
   | IsCalledExp x e s l
@@ -140,8 +155,9 @@ Inductive isCalled : stmt -> lab -> Prop :=
   | IsCalledExtern x f Y s l
     : isCalled s l
       -> isCalled (stmtExtern x f Y s) l
-  | IsCalledLet F t l
-    : isCalledIn isCalled F t (incc l (length F))
+  | IsCalledLet F t l l'
+    : callChain isCalled F l' (incc l (length F))
+      -> isCalled t l'
       -> isCalled (stmtFun F t) l.
 
 
@@ -162,20 +178,18 @@ Inductive trueIsCalled : stmt -> lab -> Prop :=
   | TrueIsCalledExtern x f Y s l
     : trueIsCalled s l
       -> trueIsCalled (stmtExtern x f Y s) l
-  | TrueIsCalledLet F t l
-    : isCalledIn trueIsCalled F t (incc l (length F))
+  | TrueIsCalledLet F t l l'
+    : callChain trueIsCalled F l' (incc l (length F))
+      -> trueIsCalled t l'
       -> trueIsCalled (stmtFun F t) l.
 
 Lemma trueIsCalled_isCalled s l
   : trueIsCalled s l -> isCalled s l.
 Proof.
   revert l; sind s; destruct s; intros; invt trueIsCalled; eauto using isCalled.
-  - econstructor.
-    assert (size s < size (stmtFun F s)) by eauto.
-    clear H.
-    revert H0 H3. generalize s at 1 3 4.
-    intros.
-    general induction H3; eauto using isCalledIn.
+  - econstructor; eauto.
+    clear H4 H.
+    general induction H2; eauto using callChain.
 Qed.
 
 Inductive noUnreachableCode : stmt -> Prop :=

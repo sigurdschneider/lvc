@@ -6,7 +6,7 @@ Require TrueLiveness LivenessAnalysis LivenessAnalysisCorrect.
 Require Coherence Invariance.
 Require Delocation DelocationAlgo DelocationCorrect DelocationValidator.
 Require Allocation AllocationAlgo AllocationAlgoCorrect.
-Require DVE EAE Alpha.
+Require DCE DVE EAE Alpha.
 (* Require CopyPropagation ConstantPropagation ConstantPropagationAnalysis.*)
 
 Require Import ExtrOcamlBasic.

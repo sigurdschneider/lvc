@@ -313,32 +313,15 @@ Proof.
       exploit H3; eauto. rewrite <- H13.
       eauto with cset.
   - clear H H1. eapply renamedApart_disj in H0. simpl in *.
-    invc H19.
-    + exploit (IH s); eauto with cset.
-      pe_rewrite. eauto with cset.
-      dcr. destruct f; simpl in *.
+    exploit (IH s); eauto. pe_rewrite. eauto with cset.
+    dcr. simpl in *; inv_get.
+    setoid_rewrite <- H13; setoid_rewrite <- H19.
+    clear H19 H20.
+    general induction H17.
+    + destruct f; simpl in *.
       inv_get. do 2 eexists; split; [| split]; eauto with cset.
-    + exploit (IH s); eauto with cset. pe_rewrite. eauto with cset.
-      dcr. simpl in *; inv_get.
-      setoid_rewrite <- H13; setoid_rewrite <- H22.
-      clear H22 H15 H16 H2 H25 H6 H13 H.
-      general induction H4.
-      *  inv_get. exploit (IH (snd Zs)); eauto with cset.
-         dcr. destruct f; simpl in *.
-         inv_get. do 2 eexists; split; [| split]; eauto.
-         rewrite <- H15.
-         assert ((of_list (fst Zs)) ⊆ D'). {
-           rewrite <- H18. eapply incl_union_left.
-           eapply incl_list_union. eapply zip_get; eauto.
-           unfold defVars. eauto with cset.
-         }
-         assert (disj (x \ of_list x2) D'). {
-           eapply disj_1_incl; [ eapply H3 | ]; eauto using map_get_1.
-         }
-         eauto with cset.
-      * inv_get.
-        edestruct (IH (snd Zs0));[ eauto | eauto | eauto | eauto | eauto | eauto | ].
-        rewrite zip_app, List.map_app; [| eauto with len].
+    + inv_get. exploit (IH (snd Zs)); eauto.
+      * rewrite zip_app, List.map_app; [| eauto with len].
         eapply disjoint_app. split.
         eapply funConstr_disjoint_fun_defs; eauto. rewrite H18. eauto.
         eapply renamedApart_disj. eauto.
@@ -346,29 +329,20 @@ Proof.
         rewrite <- H18. eapply incl_union_left.
         eapply incl_list_union; eauto using zip_get.
         unfold defVars. eapply incl_right.
-        rewrite H15. eauto.
-
-        dcr. simpl in *. inv_get.
-        time (exploit IHisCalledIn). Focus 19. reflexivity.
-        eauto. eauto. eauto. eauto.
-        eauto. eauto. eauto. eauto. eauto. eauto. eauto. eauto. eauto.
-        eauto. eauto. eauto. eauto. eauto. eauto. eauto. eauto.
-        dcr.
-        do 2 eexists; split; [|split]; eauto.
-        rewrite H25.
-        destruct f. simpl in *.
-        rewrite <- H22.
-        assert ((of_list (fst Zs0)) ⊆ D'). {
+        rewrite H5. eauto.
+      * dcr.
+        exploit IHcallChain; eauto. dcr.
+        do 2 eexists; split; [| split ]; eauto.
+        rewrite <- H27, <- H30.
+        simpl in *.
+        assert ((of_list (fst Zs)) ⊆ D'). {
            rewrite <- H18. eapply incl_union_left.
            eapply incl_list_union. eapply zip_get; eauto.
            unfold defVars. eauto with cset.
          }
-        assert (disj (getAnn x2 \ of_list (fst Zs)) D'). {
-          eapply disj_1_incl; [ eapply H1 | ].
-          exploit H24; eauto. eapply ann_R_get in H20.
-          rewrite H20.
-          edestruct H12; try eapply H6; eauto. rewrite H26.
-          clear_all; cset_tac.
+        assert (disj (x3 \ of_list x4) D'). {
+          eapply disj_1_incl; [ eapply H3 | ].
+          eapply map_get_eq. eapply zip_get; eauto. reflexivity. reflexivity.
         }
         eauto with cset.
 Qed.

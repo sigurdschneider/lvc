@@ -48,12 +48,13 @@ Inductive unreachable_code (i:sc)
     -> (if isComplete i then (forall n a,
                                 get als n a ->
                                 getAnn a ->
-                                isCalledIn trueIsCalled F t (LabI n)) else True)
+                                isCalledFrom trueIsCalled F t (LabI n)) else True)
     -> unreachable_code i ZL BL (stmtFun F t) (annF b als alt).
 
 Local Hint Extern 0 =>
 match goal with
-| [ H : ?A, H' : ?A -> _ |- _ ] => specialize (H' H); subst
+| [ H : exp2bool ?e <> Some ?t , H' : exp2bool ?e <> Some ?t -> ?B = ?C |- _ ] =>
+  specialize (H' H); subst
 end.
 
 Lemma unreachable_code_trueIsCalled i ZL Lv s slv l
@@ -65,19 +66,20 @@ Proof.
   revert ZL Lv slv n.
   sind s; destruct s; intros ZL Lv slv n UC IC; inv UC; inv IC;
     simpl in *; subst; simpl in *; eauto.
-  - specialize (H2 H6); subst.
-    exploit (IH s1); eauto.
-  - clear H8 UC IC.
-    assert (size s < size (stmtFun F s)) by eauto.
-    revert H H4 H1. generalize s at 1 3 4.
-    intros s' LE ICI.
-    remember (LabI (❬F❭ + n)) in ICI.
-    generalize alt.
-    induction ICI; intros; subst.
-    + exploit (IH s0); eauto; dcr.
-      inv_get. eexists; eauto.
+  - eapply (IH s); eauto.
+  - exploit (IH s1); eauto.
+  - exploit (IH s2); eauto.
+  - eapply (IH s); eauto.
+  - destruct l'.
+    exploit (IH s); eauto; dcr.
+    setoid_rewrite H7.
+    clear H5 H7 UC H8 H1 alt.
+    general induction H3.
+    + inv_get. eexists; split; eauto.
     + inv_get.
-      edestruct IHICI; [ eauto | eauto | eauto | ]; dcr.
-      edestruct (IH s0); eauto; dcr. inv_get.
-      eexists; split; eauto.
+      exploit H6; eauto.
+      eapply IH in H4; eauto.
+      dcr. inv_get.
+      edestruct IHcallChain; try eapply H7; eauto; dcr.
+      eexists x1; split; eauto.
 Qed.

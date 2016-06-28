@@ -352,7 +352,7 @@ Inductive unreachable_code_complete
     -> (forall n a,
           get als n a ->
           getAnn a ->
-          isCalledIn trueIsCalled F t (LabI n))
+          isCalledFrom trueIsCalled F t (LabI n))
         -> (forall n a, get als n a -> impb (getAnn a) b )
     -> impb (getAnn alt) b
 -> unreachable_code_complete ZL BL (stmtFun F t) (annF b als alt).
@@ -429,12 +429,14 @@ Proof.
 Qed.
 
 Lemma isCalledIn_extend (F:list (params * stmt)) k t f Zs
-  : isCalledIn trueIsCalled F t (LabI k)
+  : isCalledFrom trueIsCalled F t (LabI k)
     -> get F k Zs
     -> trueIsCalled (snd Zs) f
-    -> isCalledIn trueIsCalled F t f.
+    -> isCalledFrom trueIsCalled F t f.
 Proof.
-  intros. general induction H; eauto using isCalledIn, get_range.
+  intros. destruct H; dcr. hnf.
+  eexists; split; eauto. clear H2. destruct f as [f].
+  general induction H3; eauto using callChain, get_range.
 Qed.
 
 Lemma fold_left_mono A A' b b'
@@ -531,16 +533,16 @@ Proof.
     destruct Get as [Get|[? [? [GetFwd Get]]]]; dcr.
     + exploit forward_snd_poLe; try eapply Get; eauto.
       etransitivity; eauto.
-      eapply TrueIsCalledLet.
       exploit IHunreachable_code_complete; eauto.
-      econstructor; eauto.
+      eapply TrueIsCalledLet; eauto.
+      econstructor 1.
     + inv_get.
       erewrite <- (@setTopAnn_eta _ x3 (getAnn x3)) in Get; eauto.
       exploit H2; eauto.
       exploit forward_snd_poLe; try eapply Get; eauto.
-      exploit H3; eauto.
-      econstructor.
-      eapply isCalledIn_extend; eauto.
+      exploit H3; eauto; dcr.
+      edestruct isCalledIn_extend; eauto; dcr.
+      econstructor; eauto.
 Qed.
 
 Lemma ucc_sTA_inv (ZL : 〔params〕) (BL : 〔bool〕)
@@ -622,7 +624,7 @@ Proof.
       destruct x0; isabsurd.
       eapply fold_left_zip_orb_inv in H5. destruct H5.
       * eapply unreachable_code_analysis_complete_isCalled in H5; eauto.
-        econstructor; eauto.
+        econstructor; split; eauto. econstructor 1.
         eapply ann_R_get in H16.
         rewrite (@forward_getAnn' _ (fun _ => bool)) in H16.
         rewrite getAnn_setTopAnn in H16. eauto.

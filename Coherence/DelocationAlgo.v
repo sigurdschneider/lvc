@@ -362,6 +362,17 @@ Tactic Notation "Rexploit" uconstr(H) :=
 Tactic Notation "Rexploit" uconstr(X) "as" ident(H)  :=
   eapply modus_ponens; [refine X | intros H].
 
+Lemma get_fold_zip_join X (f: X-> X-> X) (A:list (list X)) (b:list X) n
+  : n < ❬b❭
+    -> (forall n a, get A n a -> ❬a❭ = ❬b❭)
+    -> exists y, get (fold_left (zip f) A b) n y.
+Proof.
+  intros LE LEN. general induction A; simpl in *.
+  - edestruct get_in_range; eauto.
+  - exploit LEN; eauto using get.
+    eapply IHA; eauto using get with len.
+Qed.
+
 Lemma computeParameters_isCalled_Some ZL Lv AP s lv n D Z p
   : live_sound Imperative ZL Lv s lv
     -> length AP = length Lv
@@ -418,15 +429,16 @@ Proof.
     eapply H3. eapply H10. cset_tac.
     eapply B. cset_tac.
   - lnorm. inv_get.
-    inv H5.
-    + exploit (computeParameters_length (tab {} ‖F‖ ++ AP)) as Len;
-        try eapply H1; eauto with len.
-      assert (❬F❭ + n < ❬snd
+    invc H4.
+    + exploit (computeParameters_length (tab {} ‖F‖ ++ AP) H1) as Len;
+        [ eauto with len | eauto with len | ].
+      assert (LE:❬F❭ + n < ❬snd
                            (computeParameters ((getAnn ⊝ als ++ Lv) \\ (fst ⊝ F ++ ZL))
                                               (fst ⊝ F ++ ZL) (tab {} ‖F‖ ++ AP) s alb)❭).
       rewrite Len, app_length, map_length. exploit (get_range GetDL). omega.
-      destruct (get_in_range _ H4) as [pF GETpF].
-      edestruct (IH s) with (AP:=tab {} ‖F‖ ++ AP); eauto with len.
+      destruct (get_in_range _ LE) as [pF GETpF].
+      edestruct (IH s) with (AP:=tab {} ‖F‖ ++ AP); eauto.
+      eauto with len. eauto with len.
       eapply get_app_right; eauto using map_get_1.
       orewrite (n+0 = n); eauto.
       eapply get_app_right; eauto using map_get_1.
@@ -435,19 +447,16 @@ Proof.
         as [? [? ?]]; try eapply GETpF.
       eapply computeParametersF_length; eauto.
       get_functional.
-      eexists; split; try reflexivity. rewrite <- H8, <- H9, <- H10.
-      repeat rewrite minus_union.
+      eexists; split; try reflexivity. rewrite <- H4, <- H8, <- H5.
       clear_all; cset_tac.
-    + edestruct (get_length_eq _ H LEN1).
+    + inv_get.
       destruct (@get_in_range _ (snd
                                    (computeParameters ((getAnn ⊝ als ++ Lv) \\ (fst ⊝ F ++ ZL))
                                                       (fst ⊝ F ++ ZL) (tab {} ‖F‖ ++ AP) s alb)) k)
         as [ps GETps]; eauto.
       rewrite computeParameters_length; eauto with len.
-      inv_get.
       exploit (IH s); try eapply GETps; eauto using get_app, map_get_1 with len.
       dcr; subst.
-      clear H5.
       setoid_rewrite <- H8. setoid_rewrite <- H13.
       assert (x2 ⊆ list_union (oget ⊝ take ❬F❭
                                     (olist_union (snd ⊝ computeParametersF F als Lv ZL AP)
@@ -465,9 +474,9 @@ Proof.
         eapply get_take; eauto using get_range.
         eauto.
       }
-      clear H8 H13 LS GETps. setoid_rewrite H5. clear H5.
-      clear H0.
-      general induction H7.
+      clear H8 H13 LS GETps. setoid_rewrite H10. clear H7 H10.
+      clear H1.
+      general induction H9.
       *
         destruct (@get_in_range _ (snd
                                      (computeParameters ((getAnn ⊝ als ++ Lv) \\ (fst ⊝ F ++ ZL))
@@ -480,24 +489,24 @@ Proof.
         edestruct get_olist_union_A' as [? [? ?]]; try eapply GetLV;
           eauto using map_get_1, zip_get.
         eapply computeParametersF_length; eauto with len.
-        rewrite computeParameters_length; eauto with len.
+        rewrite computeParameters_length; eauto with len. admit.
         subst; simpl. eexists; split; eauto.
-        rewrite <- H10, <- H7.
+        rewrite <- H9, <- H7.
         repeat rewrite minus_union.
         assert (of_list (fst Zs) ⊆ list_union (fst ∘ of_list ⊝ F)). {
           eapply incl_list_union. eapply map_get_1; eauto. reflexivity.
         }
-        revert H5; clear_all; cset_tac.
+        revert H1; clear_all; cset_tac.
       * inv_get.
-        exploit IHisCalledIn; try eapply H0; eauto.
+        exploit IHcallChain; eauto.
         dcr. eexists; split; eauto.
         rewrite H13.
         destruct (@get_in_range _ (snd
                                      (computeParameters ((getAnn ⊝ als ++ Lv) \\ (fst ⊝ F ++ ZL))
-                                                        (fst ⊝ F ++ ZL) (tab {} ‖F‖ ++ AP) (snd Zs0) x1)) k)
+                                                        (fst ⊝ F ++ ZL) (tab {} ‖F‖ ++ AP) (snd Zs0) x1)) k'0)
           as [pF' GETpF'].
         rewrite computeParameters_length; [ |eauto | eauto with len | eauto with len].
-        rewrite app_length, map_length. eapply get_range in H0. omega.
+        rewrite app_length, map_length. eapply get_range in H8. omega.
         exploit (IH (snd Zs0)); try eapply GETpF'; eauto using get_app, map_get_1 with len.
         dcr; subst. rewrite <- H15.
         assert (x4 ⊆ list_union (oget ⊝ take ❬F❭
@@ -505,14 +514,14 @@ Proof.
                                                    (snd
                                                       (computeParameters
                                                          ((getAnn ⊝ als ++ Lv) \\ (fst ⊝ F ++ ZL))
-                                                         (fst ⊝ F ++ ZL) (tab {} ‖F‖ ++ AP) s0 alb))))).
+                                                         (fst ⊝ F ++ ZL) (tab {} ‖F‖ ++ AP) s alb))))).
                {
                  exploit (@get_olist_union_A _ _ (snd ⊝ computeParametersF F als Lv ZL AP));
                    [| eapply GETpF' | | ]. instantiate (1:=k0).
                  eapply map_get_1. eapply zip_get_eq; [| | reflexivity]. eauto. eauto.
                  instantiate (1:=(snd
                                     (computeParameters ((getAnn ⊝ als ++ Lv) \\ (fst ⊝ F ++ ZL))
-                                                       (fst ⊝ F ++ ZL) (tab {} ‖F‖ ++ AP) s0 alb))).
+                                                       (fst ⊝ F ++ ZL) (tab {} ‖F‖ ++ AP) s alb))).
                  eapply computeParametersF_length; eauto with len.
                  rewrite computeParameters_length; eauto with len.
                  dcr.
