@@ -156,7 +156,6 @@ Lemma freeVars_live s lv ZL Lv
   : live_sound Functional ZL Lv s lv -> IL.freeVars s ⊆ getAnn lv.
 Proof.
   intros.
-  Start Profiling.
   induction H; simpl; eauto using Exp.freeVars_live, freeVars_live_list with cset.
   - eapply union_subset_3; eauto with cset.
     + eapply list_union_incl; intros; inv_get; eauto.
