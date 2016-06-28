@@ -117,7 +117,7 @@ Proof.
                     (DVE.compile nil ili (LivenessAnalysisCorrect.livenessAnalysis ili))
                     (DVE.compile_live ili (LivenessAnalysisCorrect.livenessAnalysis ili) {})))). {
       eapply DelocationAlgo.is_trs; eauto.
-      admit.
+
     }
     eapply sim_trans with (S2:=I.state).
     eapply BisimSim.bisim_sim'.

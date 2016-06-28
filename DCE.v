@@ -8,8 +8,9 @@ Unset Printing Records.
 
 Hint Extern 5 =>
 match goal with
-| [ H : ?A = ⎣ true ⎦, H' : ?A = ⎣ false ⎦ |- _ ] => congruence
-| [ H : ?A = None , H' : ?A = Some _ |- _ ] => congruence
+| [ H : ?A = ⎣ true ⎦, H' : ?A = ⎣ false ⎦ |- _ ] => exfalso; congruence
+| [ H : ?A <> ⎣ ?t ⎦, H' : ?A = ⎣ ?t ⎦ |- _ ] => exfalso; congruence
+| [ H : ?A = None , H' : ?A = Some _ |- _ ] => exfalso; congruence
 | [ H : ?A <> ⎣ true ⎦ , H' : ?A <> ⎣ false ⎦ |- ?A = None ] =>
   case_eq (A); [intros [] ?| intros ?]; congruence
 end.
@@ -65,9 +66,10 @@ Fixpoint compile (RZL:list (bool * params)) (s:stmt) (a:ann bool) :=
       stmtExtern x f e (compile RZL s an)
     | stmtFun F t, annF lv ans ant =>
       let LV' := pair ⊜ (getAnn ⊝ ans) (fst ⊝ F) ++ RZL in
-      match compileF compile LV' F ans with
+      let F' := compileF compile LV' F ans in
+      match F' with
       | nil => compile LV' t ant
-      | F' => stmtFun F' (compile LV' t ant)
+      | _ => stmtFun F' (compile LV' t ant)
       end
     | s, _ => s
   end.
@@ -141,27 +143,102 @@ Proof.
   rewrite zip_map_fst; eauto with len.
 Qed.
 
+Local Hint Extern 0 =>
+match goal with
+| [ H : exp2bool ?e <> Some ?t , H' : exp2bool ?e <> Some ?t -> ?B = ?C |- _ ] =>
+  specialize (H' H); subst
+end.
+
+Hint Extern 5 =>
+match goal with
+| [ H : Is_true ?B, EQ : ?A = ?B |- Is_true ?A] => rewrite EQ; eapply H
+| [ H : Is_true ?B, EQ : ?B = ?A |- Is_true ?A] => rewrite <- EQ; eapply H
+end.
+
+(*
+Lemma take_eq2 X Y Y' (F:list (Y * Y')) (als:list (ann X)) (RL:list X) ZL n
+  : ❬F❭ = ❬als❭
+    -> fst ⊝ take n (pair ⊜ RL ZL) = fst ⊝ take (❬F❭ + n) (pair ⊜ (getAnn ⊝ als ++ RL) (fst ⊝ F ++ ZL)).
+Proof.
+  intros Len.
+  rewrite zip_app; eauto with len.
+  rewrite take_app_ge; eauto 20 with len.
+  rewrite zip_length2; eauto with len.
+  rewrite map_length.
+  orewrite (❬F❭ + n - ❬als❭ = n).
+  rewrite map_app.
+  rewrite <- getAnn_eq; eauto.
+  rewrite map_take.
+Qed.
+ *)
+
+Lemma trueIsCalled_compileF_not_nil (i : sc) (ZL : 〔params〕)
+      (s : stmt) (slv : ann bool) k F als RL x
+  : unreachable_code i (fst ⊝ F ++ ZL) (getAnn ⊝ als ++ RL) s slv
+    -> getAnn slv
+    -> trueIsCalled s (LabI k)
+    -> get als k x
+    -> ❬F❭ = ❬als❭
+    -> nil = compileF compile (pair ⊜ (getAnn ⊝ als) (fst ⊝ F) ++ pair ⊜ RL ZL) F als
+    -> False.
+Proof.
+  intros UC Ann IC Get Len.
+  assert (LenNEq:length (compileF compile (pair ⊜ (getAnn ⊝ als) (fst ⊝ F) ++ pair ⊜ RL ZL) F als)
+                 <> 0). {
+    rewrite compileF_length; eauto.
+    edestruct (unreachable_code_trueIsCalled UC IC); eauto; simpl in *; dcr.
+    inv_get.
+    eapply countTrue_exists. eapply map_get_eq; eauto.
+    eapply Is_true_eq_true; eauto. rewrite <- H1; eauto.
+  }
+  intros EQ. eapply LenNEq. rewrite <- EQ. reflexivity.
+Qed.
+
 Lemma DVE_isCalled ZL RL s lv n
-  : unreachable_code ZL RL s lv
+  : unreachable_code SoundAndComplete ZL RL s lv
     -> trueIsCalled s (LabI n)
+    -> getAnn lv
     -> isCalled (compile (pair ⊜ RL ZL) s lv) (LabI (countTrue (fst ⊝ take n (pair ⊜ RL ZL)))).
 Proof.
   intros Live IC.
-  general induction IC; invt unreachable_code; simpl; eauto using isCalled.
-  - repeat cases; eauto using isCalled. congruence.
-  - repeat cases; eauto using isCalled. congruence.
+  revert ZL RL lv n Live IC.
+  sind s; simpl; intros; invt unreachable_code; invt trueIsCalled; simpl in *; eauto using isCalled.
+  - repeat cases; eauto using isCalled.
+  - repeat cases; eauto using isCalled.
   - simpl in *.
-    exploit unreachable_code_trueIsCalled; try eapply IC2; eauto.
-    simpl in *. inv_get. cases.
-    + exfalso.
-      assert (length (compileF compile (pair ⊜ (getAnn ⊝ als) (fst ⊝ F) ++ pair ⊜ RL ZL) F als)
-              <> 0). {
+    general induction H7.
+    + cases.
+      * exploit (IH s) as IHt; eauto.
+        rewrite <- zip_app; eauto with len.
+        rewrite zip_app in IHt; eauto with len.
+        rewrite take_app_ge in IHt; eauto 20 with len.
+        rewrite zip_length2 in IHt; eauto with len.
+        rewrite map_length in IHt.
+        orewrite (❬F❭ + n - ❬als❭ = n) in IHt. simpl.
+        rewrite map_app in IHt. rewrite countTrue_app in IHt.
+        rewrite <- getAnn_eq in IHt; eauto.
+        erewrite <- compileF_length in IHt; eauto.
+        erewrite <- Heq in IHt. eauto.
+      * rewrite Heq. eapply IsCalledLet.
+        exploit (IH s) as IHt; eauto.
         rewrite compileF_length; eauto.
-        eapply countTrue_exists. rewrite H5; eauto using map_get_1.
-      }
-      eapply H1. rewrite <- Heq; eauto.
-    + rewrite Heq; clear Heq. exploit compileF_get; eauto.
-      econstructor; eauto.
+        rewrite zip_app in IHt; eauto with len.
+        rewrite take_app_ge in IHt; eauto 20 with len.
+        rewrite zip_length2 in IHt; eauto with len.
+        rewrite map_length in IHt.
+        orewrite (❬F❭ + n - ❬als❭ = n) in IHt. simpl.
+        rewrite map_app in IHt. rewrite countTrue_app in IHt.
+        rewrite <- getAnn_eq in IHt; eauto.
+        econstructor; eauto.
+    + cases.
+      * exfalso. inv_get.
+        eapply trueIsCalled_compileF_not_nil; eauto.
+      * rewrite Heq; clear Heq. inv_get.
+        edestruct (unreachable_code_trueIsCalled H1 H); eauto; simpl in *; dcr.
+        inv_get. rewrite H10 in H5.
+        exploit compileF_get; eauto.
+        eapply Is_true_eq_true; eauto.
+        econstructor; eauto.
       * rewrite compileF_length; eauto.
         rewrite (take_eta k (getAnn ⊝ als)). rewrite countTrue_app.
         rewrite map_take. erewrite <- get_eq_drop; eauto.

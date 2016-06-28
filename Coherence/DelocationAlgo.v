@@ -418,113 +418,114 @@ Proof.
     eapply H3. eapply H10. cset_tac.
     eapply B. cset_tac.
   - lnorm. inv_get.
-    edestruct (get_length_eq _ H LEN1).
-    destruct (@get_in_range _ (snd
-                                 (computeParameters ((getAnn ⊝ als ++ Lv) \\ (fst ⊝ F ++ ZL))
-                                                    (fst ⊝ F ++ ZL) (tab {} ‖F‖ ++ AP) s alb)) k)
-      as [ps GETps]; eauto.
-    rewrite computeParameters_length; eauto with len.
-    edestruct (get_in_range _ H4). inv_get.
-    exploit (IH s); try eapply GETps; eauto using get_app, map_get_1 with len.
-    dcr; subst.
-    clear H9.
-    setoid_rewrite <- H8. setoid_rewrite <- H12.
-    assert (x3 ⊆ list_union (oget ⊝ take ❬F❭
-                                  (olist_union (snd ⊝ computeParametersF F als Lv ZL AP)
-                                               (snd
-                                                  (computeParameters
-                                                     ((getAnn ⊝ als ++ Lv) \\ (fst ⊝ F ++ ZL))
-                                                     (fst ⊝ F ++ ZL) (tab {} ‖F‖ ++ AP) s alb))))
-           ∪ list_union (fst ∘ of_list ⊝ F)). {
-      exploit (get_olist_union_b (A:=snd ⊝ computeParametersF F als Lv ZL AP));
-        try eapply GETps.
-      eapply computeParametersF_length; eauto with len.
-      rewrite computeParameters_length; eauto with len.
-      dcr. eapply incl_union_left.
-      eapply incl_list_union. eapply map_get_1.
-      eapply get_take; eauto.
-      eauto.
-    }
-    clear H8 H12 LS GETps. setoid_rewrite H7. clear H7.
-    general induction H5.
-    + get_functional.
-      destruct (@get_in_range _ (snd
-        (computeParameters ((getAnn ⊝ als ++ Lv) \\ (fst ⊝ F ++ ZL))
-                           (fst ⊝ F ++ ZL) (tab {} ‖F‖ ++ AP) (snd Zs) x1)) (❬F❭ + n))
-        as [pF GETpF].
-      rewrite computeParameters_length; [ |eauto | eauto with len | eauto with len].
-      eapply get_range in GetDL. rewrite app_length, map_length. omega.
-      edestruct (IH (snd Zs)); try eapply GETpF; eauto using get_app_right, map_get_1 with len.
-      dcr; subst.
-      edestruct get_olist_union_A' as [? [? ?]]; try eapply GetLV;
-        eauto using map_get_1, zip_get.
-      eapply computeParametersF_length; eauto with len.
-      rewrite computeParameters_length; eauto with len.
-      subst; simpl. eexists; split; eauto.
-      rewrite <- H11, <- H9.
+    inv H5.
+    + exploit (computeParameters_length (tab {} ‖F‖ ++ AP)) as Len;
+        try eapply H1; eauto with len.
+      assert (❬F❭ + n < ❬snd
+                           (computeParameters ((getAnn ⊝ als ++ Lv) \\ (fst ⊝ F ++ ZL))
+                                              (fst ⊝ F ++ ZL) (tab {} ‖F‖ ++ AP) s alb)❭).
+      rewrite Len, app_length, map_length. exploit (get_range GetDL). omega.
+      destruct (get_in_range _ H4) as [pF GETpF].
+      edestruct (IH s) with (AP:=tab {} ‖F‖ ++ AP); eauto with len.
+      eapply get_app_right; eauto using map_get_1.
+      orewrite (n+0 = n); eauto.
+      eapply get_app_right; eauto using map_get_1.
+      rewrite map_length; eauto. dcr; subst.
+      edestruct (get_olist_union_b (A:=snd ⊝ computeParametersF F als Lv ZL AP))
+        as [? [? ?]]; try eapply GETpF.
+      eapply computeParametersF_length; eauto.
+      get_functional.
+      eexists; split; try reflexivity. rewrite <- H8, <- H9, <- H10.
       repeat rewrite minus_union.
-      assert (of_list (fst Zs) ⊆ list_union (fst ∘ of_list ⊝ F)). {
-        eapply incl_list_union. eapply map_get_1; eauto. reflexivity.
-      }
-      revert H8;
       clear_all; cset_tac.
-    + edestruct (get_in_range _ H0). inv_get.
-      exploit IHcallChain; eauto.
-      dcr. eexists; split; eauto.
-      rewrite H14.
+    + edestruct (get_length_eq _ H LEN1).
       destruct (@get_in_range _ (snd
-        (computeParameters ((getAnn ⊝ als ++ Lv) \\ (fst ⊝ F ++ ZL))
-                           (fst ⊝ F ++ ZL) (tab {} ‖F‖ ++ AP) (snd Zs) x1)) k')
-        as [pF' GETpF'].
-      rewrite computeParameters_length; [ |eauto | eauto with len | eauto with len].
-      rewrite app_length, map_length. omega.
-      exploit (IH (snd Zs)); try eapply GETpF'; eauto using get_app, map_get_1 with len.
-      dcr; subst. rewrite <- H16.
-      assert (x5 ⊆ list_union (oget ⊝ take ❬F❭
+                                   (computeParameters ((getAnn ⊝ als ++ Lv) \\ (fst ⊝ F ++ ZL))
+                                                      (fst ⊝ F ++ ZL) (tab {} ‖F‖ ++ AP) s alb)) k)
+        as [ps GETps]; eauto.
+      rewrite computeParameters_length; eauto with len.
+      inv_get.
+      exploit (IH s); try eapply GETps; eauto using get_app, map_get_1 with len.
+      dcr; subst.
+      clear H5.
+      setoid_rewrite <- H8. setoid_rewrite <- H13.
+      assert (x2 ⊆ list_union (oget ⊝ take ❬F❭
                                     (olist_union (snd ⊝ computeParametersF F als Lv ZL AP)
                                                  (snd
                                                     (computeParameters
                                                        ((getAnn ⊝ als ++ Lv) \\ (fst ⊝ F ++ ZL))
-                                                       (fst ⊝ F ++ ZL) (tab {} ‖F‖ ++ AP) s alb))))). {
-        exploit (@get_olist_union_A _ _ (snd ⊝ computeParametersF F als Lv ZL AP));
-          [| eapply GETpF' | | ]. instantiate (1:=k).
-        eapply map_get_1. eapply zip_get_eq; [| | reflexivity]. eauto. eauto.
-        instantiate (1:=(snd
-                                      (computeParameters ((getAnn ⊝ als ++ Lv) \\ (fst ⊝ F ++ ZL))
-                                                         (fst ⊝ F ++ ZL) (tab {} ‖F‖ ++ AP) s alb))).
+                                                       (fst ⊝ F ++ ZL) (tab {} ‖F‖ ++ AP) s alb))))
+                 ∪ list_union (fst ∘ of_list ⊝ F)). {
+        exploit (get_olist_union_b (A:=snd ⊝ computeParametersF F als Lv ZL AP));
+          try eapply GETps.
         eapply computeParametersF_length; eauto with len.
         rewrite computeParameters_length; eauto with len.
-        dcr.
+        dcr. eapply incl_union_left.
         eapply incl_list_union. eapply map_get_1.
-        eapply get_take; try eapply H15; eauto. eauto.
+        eapply get_take; eauto using get_range.
+        eauto.
       }
-      rewrite H11.
-      assert (of_list (fst Zs) ⊆ list_union (fst ∘ of_list ⊝ F)). {
-        eapply incl_list_union. eapply map_get_1.
-        instantiate (1:=Zs). eauto. eauto.
-      }
-      rewrite H12.
-      clear_all; cset_tac.
-  - lnorm. simpl in *. inv_get.
-    exploit (computeParameters_length (tab {} ‖F‖ ++ AP));
-      try eapply H1; eauto with len.
-    assert (❬F❭ + n < ❬snd
-          (computeParameters ((getAnn ⊝ als ++ Lv) \\ (fst ⊝ F ++ ZL))
-             (fst ⊝ F ++ ZL) (tab {} ‖F‖ ++ AP) s alb)❭).
-    rewrite H0, app_length, map_length. exploit (get_range GetDL). omega.
-    destruct (get_in_range _ H4) as [pF GETpF].
-    edestruct (IH s) with (AP:=tab {} ‖F‖ ++ AP); eauto with len.
-    eapply get_app_right; eauto using map_get_1.
-    orewrite (n+0 = n); eauto.
-    eapply get_app_right; eauto using map_get_1.
-    rewrite map_length; eauto. dcr; subst.
-    edestruct (get_olist_union_b (A:=snd ⊝ computeParametersF F als Lv ZL AP))
-      as [? [? ?]]; try eapply GETpF.
-    eapply computeParametersF_length; eauto.
-    get_functional.
-    eexists; split; try reflexivity. rewrite <- H8, <- H9, <- H10.
-    repeat rewrite minus_union.
-    clear_all; cset_tac.
+      clear H8 H13 LS GETps. setoid_rewrite H5. clear H5.
+      clear H0.
+      general induction H7.
+      *
+        destruct (@get_in_range _ (snd
+                                     (computeParameters ((getAnn ⊝ als ++ Lv) \\ (fst ⊝ F ++ ZL))
+                                                        (fst ⊝ F ++ ZL) (tab {} ‖F‖ ++ AP) (snd Zs) x1)) (❬F❭ + n))
+          as [pF GETpF].
+        rewrite computeParameters_length; [ |eauto | eauto with len | eauto with len].
+        eapply get_range in GetDL. rewrite app_length, map_length. omega.
+        edestruct (IH (snd Zs)); try eapply GETpF; eauto using get_app_right, map_get_1 with len.
+        dcr; subst.
+        edestruct get_olist_union_A' as [? [? ?]]; try eapply GetLV;
+          eauto using map_get_1, zip_get.
+        eapply computeParametersF_length; eauto with len.
+        rewrite computeParameters_length; eauto with len.
+        subst; simpl. eexists; split; eauto.
+        rewrite <- H10, <- H7.
+        repeat rewrite minus_union.
+        assert (of_list (fst Zs) ⊆ list_union (fst ∘ of_list ⊝ F)). {
+          eapply incl_list_union. eapply map_get_1; eauto. reflexivity.
+        }
+        revert H5; clear_all; cset_tac.
+      * inv_get.
+        exploit IHisCalledIn; try eapply H0; eauto.
+        dcr. eexists; split; eauto.
+        rewrite H13.
+        destruct (@get_in_range _ (snd
+                                     (computeParameters ((getAnn ⊝ als ++ Lv) \\ (fst ⊝ F ++ ZL))
+                                                        (fst ⊝ F ++ ZL) (tab {} ‖F‖ ++ AP) (snd Zs0) x1)) k)
+          as [pF' GETpF'].
+        rewrite computeParameters_length; [ |eauto | eauto with len | eauto with len].
+        rewrite app_length, map_length. eapply get_range in H0. omega.
+        exploit (IH (snd Zs0)); try eapply GETpF'; eauto using get_app, map_get_1 with len.
+        dcr; subst. rewrite <- H15.
+        assert (x4 ⊆ list_union (oget ⊝ take ❬F❭
+                                      (olist_union (snd ⊝ computeParametersF F als Lv ZL AP)
+                                                   (snd
+                                                      (computeParameters
+                                                         ((getAnn ⊝ als ++ Lv) \\ (fst ⊝ F ++ ZL))
+                                                         (fst ⊝ F ++ ZL) (tab {} ‖F‖ ++ AP) s0 alb))))).
+               {
+                 exploit (@get_olist_union_A _ _ (snd ⊝ computeParametersF F als Lv ZL AP));
+                   [| eapply GETpF' | | ]. instantiate (1:=k0).
+                 eapply map_get_1. eapply zip_get_eq; [| | reflexivity]. eauto. eauto.
+                 instantiate (1:=(snd
+                                    (computeParameters ((getAnn ⊝ als ++ Lv) \\ (fst ⊝ F ++ ZL))
+                                                       (fst ⊝ F ++ ZL) (tab {} ‖F‖ ++ AP) s0 alb))).
+                 eapply computeParametersF_length; eauto with len.
+                 rewrite computeParameters_length; eauto with len.
+                 dcr.
+                 eapply incl_list_union. eapply map_get_1.
+                 eapply get_take; try eapply H14; eauto using get_range. eauto.
+               }
+        rewrite H10.
+        assert (of_list (fst Zs0) ⊆ list_union (fst ∘ of_list ⊝ F)). {
+          eapply incl_list_union. eapply map_get_1.
+          instantiate (1:=Zs0). eauto. eauto.
+        }
+        revert H11; clear_all; cset_tac.
+        Grab Existential Variables. eapply fst.
 Qed.
 
 Lemma computeParameters_isCalled_get_Some Lv ZL AP s lv n p A D Z

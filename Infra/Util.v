@@ -692,3 +692,10 @@ match goal with
   [ H : impb ?a ?b, H' : impb ?b ?c |- impb ?a ?c ] =>
   etransitivity; [ eapply H | eapply H' ]
 end.
+
+Instance Is_true_impb
+  : Proper (impb ==> impl) Is_true.
+Proof.
+  unfold Proper, respectful; intros.
+  destruct x,y; simpl in *; hnf; eauto.
+Qed.

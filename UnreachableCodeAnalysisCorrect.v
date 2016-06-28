@@ -437,13 +437,6 @@ Proof.
   intros. general induction H; eauto using isCalledIn, get_range.
 Qed.
 
-Instance Is_true_impb
-  : Proper (impb ==> impl) Is_true.
-Proof.
-  unfold Proper, respectful; intros.
-  destruct x,y; simpl in *; hnf; eauto.
-Qed.
-
 Lemma fold_left_mono A A' b b'
   : poLe A A'
     -> poLe b b'
