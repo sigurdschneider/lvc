@@ -20,3 +20,5 @@ extraction/lvc.mli
 extraction/_build
 *.time
 *.aux
+Makefile.coq
+_BLACKLIST
