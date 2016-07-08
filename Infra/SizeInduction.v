@@ -108,7 +108,8 @@ Ltac sizesimpl :=
                             end; clear_trivial_eqs).
 
 Tactic Notation "somega" := sizesimpl; omega.
-Hint Extern 10 (size _ < size _) => somega.
+Hint Extern 2 (size _ < size _) => somega.
+Hint Extern 2 (size _ < S (size _)) => somega.
 
 (** Tests *)
 

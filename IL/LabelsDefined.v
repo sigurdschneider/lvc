@@ -116,17 +116,6 @@ Proof.
     dec_solve.
 Qed.
 
-(*
-Inductive isCalledIn (isCalled : stmt -> lab -> Prop) (F:〔params * stmt〕)
-  : stmt -> lab -> Prop :=
-| IsCalledIn s l
-  : isCalled s l -> isCalledIn isCalled F s l
-| IsCalledInNext k s Zs l
-  : isCalled s (LabI k)
-    -> get F k Zs
-    -> isCalledIn isCalled F (snd Zs) l -> isCalledIn isCalled F s l.
-*)
-
 Inductive callChain (isCalled : stmt -> lab -> Prop) (F:〔params * stmt〕)
   : lab -> lab -> Prop :=
 | CallChain_refl l
@@ -139,6 +128,23 @@ Inductive callChain (isCalled : stmt -> lab -> Prop) (F:〔params * stmt〕)
 Definition isCalledFrom (isCalled : stmt -> lab -> Prop) (F:〔params * stmt〕)
            (t:stmt) (l:lab) :=
   exists l', isCalled t l' /\ callChain isCalled F l' l.
+
+Lemma callChain_cases  (isCalled : stmt -> lab -> Prop) (F:〔params * stmt〕) l l'
+  : callChain isCalled F l l'
+    -> l = l' \/
+      counted l < ❬F❭ /\
+      exists k Zs, callChain isCalled F l (LabI k)
+              /\ get F k Zs
+              /\ isCalled (snd Zs) l'.
+Proof.
+  intros.
+  general induction H.
+  - left. eauto.
+  - right; simpl. split; [ eauto using get_range | ].
+    destruct IHcallChain as [| [? [? [? ?]]]]; dcr; subst.
+    + eauto using callChain.
+    + eexists x, x0; eauto using callChain.
+Qed.
 
 Inductive isCalled : stmt -> lab -> Prop :=
   | IsCalledExp x e s l
@@ -210,5 +216,5 @@ Inductive noUnreachableCode : stmt -> Prop :=
   | NoUnrechableCodeLet1 F t
     : (forall n Zs, get F n Zs -> noUnreachableCode (snd Zs))
       -> noUnreachableCode t
-      -> (forall n, n < length F -> isCalled t (LabI n))
+      -> (forall n, n < length F -> isCalledFrom isCalled F t (LabI n))
       -> noUnreachableCode (stmtFun F t).

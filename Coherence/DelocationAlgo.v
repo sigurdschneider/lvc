@@ -475,7 +475,6 @@ Proof.
         eauto.
       }
       clear H8 H13 LS GETps. setoid_rewrite H10. clear H7 H10.
-      clear H1.
       general induction H9.
       *
         destruct (@get_in_range _ (snd
@@ -489,26 +488,26 @@ Proof.
         edestruct get_olist_union_A' as [? [? ?]]; try eapply GetLV;
           eauto using map_get_1, zip_get.
         eapply computeParametersF_length; eauto with len.
-        rewrite computeParameters_length; eauto with len. admit.
+        rewrite computeParameters_length; eauto with len.
         subst; simpl. eexists; split; eauto.
-        rewrite <- H9, <- H7.
+        rewrite <- H10, <- H8.
         repeat rewrite minus_union.
         assert (of_list (fst Zs) ⊆ list_union (fst ∘ of_list ⊝ F)). {
           eapply incl_list_union. eapply map_get_1; eauto. reflexivity.
         }
-        revert H1; clear_all; cset_tac.
+        revert H7; clear_all; cset_tac.
       * inv_get.
         exploit IHcallChain; eauto.
         dcr. eexists; split; eauto.
-        rewrite H13.
+        rewrite H14.
         destruct (@get_in_range _ (snd
                                      (computeParameters ((getAnn ⊝ als ++ Lv) \\ (fst ⊝ F ++ ZL))
                                                         (fst ⊝ F ++ ZL) (tab {} ‖F‖ ++ AP) (snd Zs0) x1)) k'0)
           as [pF' GETpF'].
         rewrite computeParameters_length; [ |eauto | eauto with len | eauto with len].
-        rewrite app_length, map_length. eapply get_range in H8. omega.
+        rewrite app_length, map_length. eapply get_range in H10. omega.
         exploit (IH (snd Zs0)); try eapply GETpF'; eauto using get_app, map_get_1 with len.
-        dcr; subst. rewrite <- H15.
+        dcr; subst. rewrite <- H16.
         assert (x4 ⊆ list_union (oget ⊝ take ❬F❭
                                       (olist_union (snd ⊝ computeParametersF F als Lv ZL AP)
                                                    (snd
@@ -528,13 +527,12 @@ Proof.
                  eapply incl_list_union. eapply map_get_1.
                  eapply get_take; try eapply H14; eauto using get_range. eauto.
                }
-        rewrite H10.
+        rewrite H11.
         assert (of_list (fst Zs0) ⊆ list_union (fst ∘ of_list ⊝ F)). {
           eapply incl_list_union. eapply map_get_1.
           instantiate (1:=Zs0). eauto. eauto.
         }
-        revert H11; clear_all; cset_tac.
-        Grab Existential Variables. eapply fst.
+        revert H12; clear_all; cset_tac.
 Qed.
 
 Lemma computeParameters_isCalled_get_Some Lv ZL AP s lv n p A D Z
