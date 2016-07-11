@@ -207,7 +207,7 @@ Lemma DCE_callChain RL ZL F als t alt l' k ZsEnd aEnd n
        unreachable_code SoundAndComplete ZL RL (snd Zs) lv ->
        trueIsCalled (snd Zs) (LabI n) ->
        getAnn lv ->
-       isCalled (compile (pair ⊜ RL ZL) (snd Zs) lv)
+       trueIsCalled (compile (pair ⊜ RL ZL) (snd Zs) lv)
                 (LabI (countTrue (fst ⊝ take n (pair ⊜ RL ZL)))))
   (UC:unreachable_code SoundAndComplete (fst ⊝ F ++ ZL) (getAnn ⊝ als ++ RL) t alt)
   (LEN: ❬F❭ = ❬als❭)
@@ -222,7 +222,7 @@ Lemma DCE_callChain RL ZL F als t alt l' k ZsEnd aEnd n
   (GetF: get F k ZsEnd)
   (ICEnd: trueIsCalled (snd ZsEnd) (LabI (❬F❭ + n)))
   (GetAls: get als k aEnd)
-: callChain isCalled
+: callChain trueIsCalled
             (compileF compile (pair ⊜ (getAnn ⊝ als ++ RL) (fst ⊝ F ++ ZL)) F als)
             (LabI (countTrue (fst ⊝ take l' (pair ⊜ (getAnn ⊝ als ++ RL)
                                                   (fst ⊝ F ++ ZL)))))
@@ -270,7 +270,7 @@ Lemma DCE_callChain' RL ZL F als l' k
        unreachable_code SoundAndComplete ZL RL (snd Zs) lv ->
        trueIsCalled (snd Zs) (LabI n) ->
        getAnn lv ->
-       isCalled (compile (pair ⊜ RL ZL) (snd Zs) lv)
+       trueIsCalled (compile (pair ⊜ RL ZL) (snd Zs) lv)
                 (LabI (countTrue (fst ⊝ take n (pair ⊜ RL ZL)))))
   (LEN: ❬F❭ = ❬als❭)
   (UCF:forall (n : nat) (Zs : params * stmt) (a : ann bool),
@@ -280,7 +280,7 @@ Lemma DCE_callChain' RL ZL F als l' k
          (getAnn ⊝ als ++ RL) (snd Zs) a)
   (Ann: get (getAnn ⊝ als ++ RL) l' true)
   (CC: callChain trueIsCalled F (LabI l') (LabI k))
-: callChain isCalled
+: callChain trueIsCalled
             (compileF compile (pair ⊜ (getAnn ⊝ als ++ RL) (fst ⊝ F ++ ZL)) F als)
             (LabI (countTrue (fst ⊝ take l' (pair ⊜ (getAnn ⊝ als ++ RL)
                                                   (fst ⊝ F ++ ZL)))))
@@ -305,18 +305,19 @@ Proof.
     subst. eauto.
 Qed.
 
-Lemma DCE_isCalled ZL RL s lv n
+Lemma DCE_trueIsCalled ZL RL s lv n
   : unreachable_code SoundAndComplete ZL RL s lv
     -> trueIsCalled s (LabI n)
     -> getAnn lv
-    -> isCalled (compile (pair ⊜ RL ZL) s lv)
+    -> trueIsCalled (compile (pair ⊜ RL ZL) s lv)
                (LabI (countTrue (fst ⊝ take n (pair ⊜ RL ZL)))).
 Proof.
   intros Live IC.
   revert ZL RL lv n Live IC.
-  sind s; simpl; intros; invt unreachable_code; invt trueIsCalled; simpl in *; eauto using isCalled.
-  - repeat cases; eauto using isCalled.
-  - repeat cases; eauto using isCalled.
+  sind s; simpl; intros; invt unreachable_code; invt trueIsCalled;
+    simpl in *; eauto using trueIsCalled.
+  - repeat cases; eauto using trueIsCalled.
+  - repeat cases; eauto using trueIsCalled.
   - eapply callChain_cases in H6. destruct H6; subst.
     + cases.
       * exploit (IH t) as IHt; eauto.
@@ -358,7 +359,7 @@ Qed.
 Lemma DCE_noUnreachableCode ZL RL s lv
   : unreachable_code SoundAndComplete ZL RL s lv
     -> getAnn lv
-    -> noUnreachableCode (compile (pair ⊜ RL ZL) s lv).
+    -> noUnreachableCode trueIsCalled (compile (pair ⊜ RL ZL) s lv).
 Proof.
   intros Live GetAnn.
   induction Live; simpl; repeat cases; eauto using noUnreachableCode.
@@ -381,9 +382,9 @@ Proof.
       exploit H3 as ICF; eauto. rewrite H8; eauto.
       rewrite <- zip_app; eauto with len.
       destruct ICF as [[l'] [? ?]].
-      exploit DCE_isCalled; eauto.
+      exploit DCE_trueIsCalled; eauto.
       eexists; split; eauto.
-      exploit DCE_callChain'; eauto using DCE_isCalled.
+      exploit DCE_callChain'; eauto using DCE_trueIsCalled.
       exploit unreachable_code_trueIsCalled; eauto.
       dcr; subst; simpl in *. rewrite H12 in GetAnn.
       destruct x; isabsurd; eauto.
@@ -394,6 +395,7 @@ Proof.
       setoid_rewrite <- map_take in H9. eauto.
       eauto with len.
 Qed.
+
 
 Module I.
 

@@ -494,22 +494,26 @@ Instance makeForwardAnalysis (Dom:stmt -> Type)
          (fMon:forall sT s (ST ST':subTerm s sT) ZL,
              forall a b, a ⊑ b -> f sT ZL s ST a ⊑ f sT ZL s ST' b)
          (Trm: forall s, Terminating (Dom s) poLt)
-  : forall s, Analysis { a : ann (Dom s) | annotation s a } :=
+
+  : forall s (i:Dom s), Analysis { a : ann (Dom s) | annotation s a } :=
   {
     analysis_step := fun X : {a : ann (Dom s) | annotation s a} =>
                       exist (fun a0 : ann (Dom s) => annotation s a0)
-                            (fst (forward Dom f nil (subTerm_refl _) (proj1_sig X))) (forward_annotation Dom f nil (subTerm_refl _) (proj2_sig X));
+                            (fst (forward Dom f nil (subTerm_refl _) (setTopAnn (proj1_sig X) i)))
+                                 (forward_annotation Dom f nil (subTerm_refl _) _);
     initial_value :=
       exist (fun a : ann (Dom s) => annotation s a)
             (setAnn bottom s)
             (setAnn_annotation bottom s)
   }.
 Proof.
+  - destruct X. eapply setTopAnn_annotation; eauto.
   - intros [d Ann]; simpl.
     pose proof (@ann_bottom s (Dom s) _ _ _ Ann).
     eapply H0.
   - intros. eapply terminating_sig.
     eapply terminating_ann. eauto.
   - intros [a Ann] [b Bnn] LE; simpl in *.
-    eapply (forward_monotone Dom f (fMon s)); eauto.
+    eapply (forward_monotone Dom f (fMon s)); eauto using setTopAnn_annotation.
+    eapply ann_R_setTopAnn; eauto.
 Defined.

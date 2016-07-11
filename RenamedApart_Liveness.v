@@ -436,7 +436,7 @@ Qed.
 
 Lemma renamedApart_live_imperative_is_functional s ang ZL Lv alv
   : renamedApart s ang
-    -> noUnreachableCode s
+    -> noUnreachableCode isCalled s
     -> live_sound Imperative ZL Lv s alv
     -> ann_R Subset1 alv ang
     -> disjoint (Some ⊝ Lv \\ ZL) (snd (getAnn ang))

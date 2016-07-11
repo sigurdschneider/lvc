@@ -878,7 +878,7 @@ Qed.
 
 Lemma computeParameters_trs ZL Lv AP s lv
 : live_sound Imperative ZL Lv s lv
-  -> noUnreachableCode s
+  -> noUnreachableCode isCalled s
   -> PIR2 Subset AP (Lv \\ ZL)
   -> length Lv = length ZL
   -> length ZL = length AP
@@ -1112,7 +1112,7 @@ Lemma computeParameters_live ZL Lv AP s lv
   -> PIR2 Subset AP (Lv \\ ZL)
   -> length Lv = length ZL
   -> length ZL = length AP
-  -> noUnreachableCode s
+  -> noUnreachableCode isCalled s
   -> additionalParameters_live (oget ⊝ (snd (computeParameters (Lv \\ ZL) ZL AP s lv)))
                               s lv (fst (computeParameters (Lv \\ ZL) ZL AP s lv)).
 Proof.
@@ -1171,7 +1171,7 @@ Qed.
 
 Lemma is_trs s lv
 : live_sound Imperative nil nil s lv
-  -> noUnreachableCode s
+  -> noUnreachableCode isCalled s
   -> trs nil nil s lv (fst (computeParameters nil nil nil s lv)).
 Proof.
   intros.
@@ -1185,7 +1185,7 @@ Qed.
 
 Lemma is_live s lv
 : live_sound Imperative nil nil s lv
-  -> noUnreachableCode s
+  -> noUnreachableCode isCalled s
   -> additionalParameters_live nil s lv (fst (computeParameters nil nil nil s lv)).
 Proof.
   intros.

@@ -699,3 +699,15 @@ Proof.
   unfold Proper, respectful; intros.
   destruct x,y; simpl in *; hnf; eauto.
 Qed.
+
+
+Ltac destr_sig H :=
+  match type of H with
+  | context [proj1_sig ?x] => destruct x; simpl in H
+  end.
+
+Tactic Notation "destr_sig" :=
+  match goal with
+  | [ |- context [proj1_sig (proj1_sig ?x)] ] => destruct x; simpl
+  | [ |- context [proj1_sig ?x] ] => destruct x; simpl
+  end.

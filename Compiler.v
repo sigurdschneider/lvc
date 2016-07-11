@@ -121,25 +121,48 @@ Proof.
   eapply sim_trans with (S2:=I.state).
   eapply BisimSim.bisim_sim'.
   eapply DCE.I.sim_DCE.
+  eapply UnreachableCodeAnalysisCorrect.correct; eauto.
+  admit.
+  eapply sim_trans with (S2:=I.state).
   eapply DVE.I.sim_DVE; [ reflexivity | eapply LivenessAnalysisCorrect.correct; eauto ].
+  admit. admit.
+  assert (Liveness.live_sound Liveness.Imperative nil nil
+     (DVE.compile nil (DCE.compile nil ili (UnreachableCodeAnalysis.unreachableCodeAnalysis ili))
+        (LivenessAnalysis.livenessAnalysis
+           (DCE.compile nil ili (UnreachableCodeAnalysis.unreachableCodeAnalysis ili))))
+     (DVE.compile_live (DCE.compile nil ili (UnreachableCodeAnalysis.unreachableCodeAnalysis ili))
+        (LivenessAnalysis.livenessAnalysis
+           (DCE.compile nil ili (UnreachableCodeAnalysis.unreachableCodeAnalysis ili)))
+        {})). {
+    eapply (@DVE.dve_live _ nil nil).
+    eapply @LivenessAnalysisCorrect.correct; eauto.
+    admit. admit.
+  }
+  assert (LabelsDefined.noUnreachableCode LabelsDefined.isCalled
+     (DVE.compile nil (DCE.compile nil ili (UnreachableCodeAnalysis.unreachableCodeAnalysis ili))
+        (LivenessAnalysis.livenessAnalysis
+           (DCE.compile nil ili (UnreachableCodeAnalysis.unreachableCodeAnalysis ili))))). {
+    admit.
+  }
+  eapply sim_trans with (S2:=I.state).
+  eapply BisimSim.bisim_sim'.
 
+  eapply DelocationCorrect.correct; eauto.
+  + eapply DelocationAlgo.is_trs; eauto.
 
-    eapply sim_trans with (S2:=I.state).
-
-    eapply DelocationCorrect.correct; eauto.
-    + eapply (@Delocation.live_sound_compile nil); eauto.
-      eapply DelocationAlgo.is_live; eauto.
-      admit.
-    + hnf; intros. rewrite DVE.compile_live_incl_empty in H2;
-                     [ | eapply LivenessAnalysisCorrect.correct; eauto].
-      eapply H0. admit.
-    + eapply BisimSim.bisim_sim'.
-      eapply sim_sym.
-      eapply (@Invariance.srdSim_sim nil nil nil nil nil);
-        [ | isabsurd | econstructor | reflexivity | | econstructor ].
-      eapply Delocation.trs_srd; eauto.
-      eapply (@Delocation.live_sound_compile nil nil nil); eauto.
-      eapply DelocationAlgo.is_live; eauto. admit.
+  + eapply (@Delocation.live_sound_compile nil); eauto.
+    eapply DelocationAlgo.is_trs; eauto.
+    eapply DelocationAlgo.is_live; eauto.
+  + admit.
+  + eapply BisimSim.bisim_sim'.
+    eapply sim_sym.
+    eapply (@Invariance.srdSim_sim nil nil nil nil nil);
+      [ | isabsurd | econstructor | reflexivity | | econstructor ].
+    eapply Delocation.trs_srd; eauto.
+    eapply DelocationAlgo.is_trs; eauto.
+    eapply (@Delocation.live_sound_compile nil nil nil); eauto.
+    eapply DelocationAlgo.is_trs; eauto.
+    eapply DelocationAlgo.is_live; eauto.
 Admitted.
 
 (*

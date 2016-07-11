@@ -189,7 +189,7 @@ Proof.
 Qed.
 
 
-Require Import Restrict RenamedApart_Liveness.
+Require Import Restrict RenamedApart_Liveness LabelsDefined.
 
 (** ** Theorem 8 from the paper. *)
 (** One could prove this theorem directly by induction, however, we exploit that
@@ -202,7 +202,7 @@ Lemma regAssign_correct' s ang ϱ ϱ' (alv:ann (set var)) ZL Lv
   -> live_sound Imperative ZL Lv s alv
   -> bounded (Some ⊝ Lv \\ ZL) (fst (getAnn ang))
   -> ann_R Subset1 alv ang
-  -> LabelsDefined.noUnreachableCode s
+  -> noUnreachableCode isCalled s
   -> injective_on (getAnn alv) (findt ϱ 0)
   -> regAssign s alv ϱ = Success ϱ'
   -> locally_inj (findt ϱ' 0) s alv.

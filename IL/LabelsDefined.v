@@ -116,6 +116,16 @@ Proof.
     dec_solve.
 Qed.
 
+Lemma paramsMatch_labelsDefined s (L:list nat)
+  : paramsMatch s L -> labelsDefined s ❬L❭.
+Proof.
+  intros PM.
+  general induction PM; eauto using labelsDefined, get_range.
+  - econstructor.
+    + intros. exploit H0; eauto. rewrite app_length, !map_length in H2. eauto.
+    + rewrite app_length, !map_length in IHPM. eauto.
+Qed.
+
 Inductive callChain (isCalled : stmt -> lab -> Prop) (F:〔params * stmt〕)
   : lab -> lab -> Prop :=
 | CallChain_refl l
@@ -125,9 +135,27 @@ Inductive callChain (isCalled : stmt -> lab -> Prop) (F:〔params * stmt〕)
     -> isCalled (snd Zs) (LabI k')
     -> callChain isCalled F (LabI k') l -> callChain isCalled F (LabI k) l.
 
+Lemma callChain_mono (isCalled isCalled' : stmt -> lab -> Prop) F l l'
+  : callChain isCalled F l l'
+    -> (forall s l, isCalled s l -> isCalled' s l)
+    -> callChain isCalled' F l l'.
+Proof.
+  intros CC LE.
+  general induction CC; eauto using callChain.
+Qed.
+
 Definition isCalledFrom (isCalled : stmt -> lab -> Prop) (F:〔params * stmt〕)
            (t:stmt) (l:lab) :=
   exists l', isCalled t l' /\ callChain isCalled F l' l.
+
+Lemma isCalledFrom_mono (isCalled isCalled' : stmt -> lab -> Prop) F t l
+  : isCalledFrom isCalled F t l
+    -> (forall s l, isCalled s l -> isCalled' s l)
+    -> isCalledFrom isCalled' F t l.
+Proof.
+  intros [l' [IC CC]] LE.
+  exists l'; split; eauto using callChain_mono.
+Qed.
 
 Lemma callChain_cases  (isCalled : stmt -> lab -> Prop) (F:〔params * stmt〕) l l'
   : callChain isCalled F l l'
@@ -198,23 +226,32 @@ Proof.
     general induction H2; eauto using callChain.
 Qed.
 
-Inductive noUnreachableCode : stmt -> Prop :=
+Inductive noUnreachableCode (isCalled : stmt -> lab -> Prop) : stmt -> Prop :=
   | NoUnrechableCodeExp x e s
-    : noUnreachableCode s
-      -> noUnreachableCode (stmtLet x e s)
+    : noUnreachableCode isCalled s
+      -> noUnreachableCode isCalled (stmtLet x e s)
   | NoUnrechableCodeIf1 e s t
-    : noUnreachableCode s
-      -> noUnreachableCode t
-      -> noUnreachableCode (stmtIf e s t)
+    : noUnreachableCode isCalled s
+      -> noUnreachableCode isCalled t
+      -> noUnreachableCode isCalled (stmtIf e s t)
   | NoUnrechableCodeGoto f Y
-    : noUnreachableCode (stmtApp f Y)
+    : noUnreachableCode isCalled (stmtApp f Y)
   | NoUnrechableCodeReturn e
-    : noUnreachableCode (stmtReturn e)
+    : noUnreachableCode isCalled (stmtReturn e)
   | NoUnrechableCodeExtern x f Y s
-    : noUnreachableCode s
-      -> noUnreachableCode (stmtExtern x f Y s)
+    : noUnreachableCode isCalled s
+      -> noUnreachableCode isCalled (stmtExtern x f Y s)
   | NoUnrechableCodeLet1 F t
-    : (forall n Zs, get F n Zs -> noUnreachableCode (snd Zs))
-      -> noUnreachableCode t
+    : (forall n Zs, get F n Zs -> noUnreachableCode isCalled (snd Zs))
+      -> noUnreachableCode isCalled t
       -> (forall n, n < length F -> isCalledFrom isCalled F t (LabI n))
-      -> noUnreachableCode (stmtFun F t).
+      -> noUnreachableCode isCalled (stmtFun F t).
+
+Lemma noUnreachableCode_mono (isCalled isCalled' : stmt -> lab -> Prop) s
+  : noUnreachableCode isCalled s
+    -> (forall s l, isCalled s l -> isCalled' s l)
+    -> noUnreachableCode isCalled' s.
+Proof.
+  intros NOC LE.
+  general induction NOC; eauto 20 using noUnreachableCode, isCalledFrom_mono.
+Qed.

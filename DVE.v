@@ -183,6 +183,57 @@ Proof.
     + rewrite compile_live_incl; eauto with cset.
 Qed.
 
+Lemma DVE_callChain Lv ZL F als n l'
+  : ❬F❭ = ❬als❭
+    -> (forall (n : nat) (Zs : params * stmt) (a : ann ⦃var⦄),
+         get F n Zs ->
+         get als n a ->
+         forall n0 : nat,
+           trueIsCalled (snd Zs) (LabI n0) ->
+           trueIsCalled (compile (pair ⊜ (getAnn ⊝ als ++ Lv) (fst ⊝ F ++ ZL)) (snd Zs) a) (LabI n0))
+     -> callChain trueIsCalled F (LabI l') (LabI n)
+     -> callChain trueIsCalled
+                 ((fun (Zs : params * stmt) (a : ann ⦃var⦄) =>
+                     (filter (fst Zs) (getAnn a),
+                      compile (pair ⊜ (getAnn ⊝ als ++ Lv) (fst ⊝ F ++ ZL)) (snd Zs) a)) ⊜ F als)
+                 (LabI l') (LabI n).
+Proof.
+  intros LEN IH CC.
+  general induction CC.
+  + econstructor.
+  + inv_get. econstructor 2.
+    eapply zip_get; eauto.
+    eapply IH; eauto.
+    eauto.
+Qed.
+
+Lemma DVE_isCalled i ZL LV s lv n
+  : true_live_sound i ZL LV s lv
+    -> trueIsCalled s (LabI n)
+    -> trueIsCalled (compile (zip pair LV ZL) s lv) (LabI n).
+Proof.
+  intros LS IC.
+  general induction LS; invt trueIsCalled; simpl; repeat cases; eauto using trueIsCalled;
+    try congruence.
+  - destruct l' as [l'].
+    econstructor; rewrite <- zip_app; eauto with len.
+    rewrite zip_length2; eauto. eapply DVE_callChain; eauto.
+Qed.
+
+Lemma DVE_noUnreachableCode i ZL LV s lv
+  : true_live_sound i ZL LV s lv
+    -> noUnreachableCode trueIsCalled s
+    -> noUnreachableCode trueIsCalled (compile (zip pair LV ZL) s lv).
+Proof.
+  intros LS UC.
+  general induction LS; inv UC; simpl; repeat cases; eauto using noUnreachableCode.
+  - econstructor; intros; inv_get; rewrite <- zip_app; simpl; eauto with len.
+    + edestruct H8 as [[l] [IC CC]]. rewrite zip_length2 in H4; eauto.
+      eexists (LabI l); split; eauto.
+      eapply DVE_isCalled; eauto.
+      eapply DVE_callChain; eauto using DVE_isCalled.
+Qed.
+
 Require Import BisimSim.
 
 Module I.

@@ -193,7 +193,7 @@ Tactic Notation "protect" hyp(H) := apply protect in H.
 Tactic Notation "unprotect" hyp(H) := apply unprotect in H.
 
 
-Definition unreachable_code_analysis_correct sT ZL BL s a (ST:subTerm s sT)
+Definition ucc_sound sT ZL BL s a (ST:subTerm s sT)
   : poEq (fst (forward unreachable_code_transform ZL s ST a)) a
     -> annotation s a
     -> labelsDefined s (length ZL)
@@ -660,17 +660,6 @@ Proof.
       unfold comp. eauto.
 Qed.
 
-Ltac destr_sig H :=
-  match type of H with
-  | context [proj1_sig ?x] => destruct x; simpl in H
-  end.
-
-Tactic Notation "destr_sig" :=
-  match goal with
-  | [ |- context [proj1_sig (proj1_sig ?x)] ] => destruct x; simpl
-  | [ |- context [proj1_sig ?x] ] => destruct x; simpl
-  end.
-
 Lemma ucc_complete s
   : labelsDefined s ❬nil:list params❭
     -> unreachable_code_complete nil nil s (unreachableCodeAnalysis s).
@@ -683,7 +672,7 @@ Proof.
   - rewrite iter_comm.
     eapply ucc_sTA_inv.
     eapply (@unreachable_code_analysis_complete s); eauto.
-    + erewrite (setTopAnn_eta _ eq_refl). reflexivity.
+    + reflexivity.
     + erewrite (setTopAnn_eta _ eq_refl).
       rewrite <- iter_comm.
       eapply (safeFixpoint_chain (unreachable_code_analysis s) n).
@@ -696,4 +685,22 @@ Lemma ucc_sound_and_complete ZL BL s a
 Proof.
   intros UCC UCS.
   general induction UCS; inv UCC; eauto using unreachable_code.
+Qed.
+
+Lemma correct s
+  : labelsDefined s 0
+    -> paramsMatch s nil
+    -> unreachable_code SoundAndComplete nil nil s (unreachableCodeAnalysis s).
+Proof.
+  intros.
+  eapply ucc_sound_and_complete.
+  - eapply ucc_complete; eauto.
+  - unfold unreachableCodeAnalysis.
+    destr_sig. destr_sig. eauto. dcr.
+    eapply ucc_sound; simpl; eauto.
+    + simpl in *. simpl_forward_setTopAnn.
+    + assert (❬snd (forward unreachable_code_transform nil s (subTerm_refl s) x)❭ = 0).
+      rewrite (@forward_length _ (fun _ => bool)); eauto.
+      destruct (snd (forward unreachable_code_transform nil s (subTerm_refl s) x)); isabsurd.
+      eauto using PIR2.
 Qed.

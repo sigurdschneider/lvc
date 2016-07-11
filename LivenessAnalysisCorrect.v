@@ -109,17 +109,6 @@ Proof.
       rewrite <- H13. reflexivity.
 Qed.
 
-Ltac destr_sig H :=
-  match type of H with
-  | context [proj1_sig ?x] => destruct x; simpl in H
-  end.
-
-Tactic Notation "destr_sig" :=
-  match goal with
-  | [ |- context [proj1_sig (proj1_sig ?x)] ] => destruct x; simpl
-  | [ |- context [proj1_sig ?x] ] => destruct x; simpl
-  end.
-
 Definition correct s
   : labelsDefined s 0
     -> paramsMatch s nil

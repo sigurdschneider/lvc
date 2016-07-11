@@ -356,12 +356,14 @@ Proof.
     + exploit IHLv; eauto.
 Qed.
 
+Require Import LabelsDefined.
+
 Lemma rename_renamedApart_srd' s ang ϱ (alv:ann (set var)) ZL Lv
   : renamedApart s ang
   -> live_sound Imperative ZL Lv s alv
   -> locally_inj ϱ s alv
   -> bounded (Some ⊝ Lv \\ ZL) (fst (getAnn ang))
-  -> LabelsDefined.noUnreachableCode s
+  -> noUnreachableCode isCalled s
   -> srd (lookup_seto ϱ ⊝
                      (restr (getAnn (mapAnn2 meet1 alv ang)) ⊝ (Some ⊝ Lv \\ ZL)))
         (rename ϱ s)
@@ -375,8 +377,6 @@ Proof.
   cset_tac; intuition.
 Qed.
 
-Require Import LabelsDefined.
-
 (** ** Theorem 6 from the paper. *)
 (** The generalization to the paper version is
     that we do not bound by the free variables, but by a set that that contains
@@ -389,7 +389,7 @@ Lemma rename_renamedApart_srd'' s ang ϱ (alv:ann (set var)) ZL Lv
     -> ann_R Subset1 alv ang
     -> locally_inj ϱ s alv
     -> bounded (Some ⊝ Lv \\ ZL) (fst (getAnn ang))
-    -> noUnreachableCode s
+    -> noUnreachableCode isCalled s
     -> srd (lookup_seto ϱ ⊝ (restr (getAnn alv) ⊝ (Some ⊝ Lv \\ ZL)))
           (rename ϱ s)
           (mapAnn (lookup_set ϱ) alv).
@@ -562,7 +562,7 @@ Lemma renamedApart_locally_inj_alpha' s ϱ ϱ' ZL Lv alv ang
   -> live_sound Imperative ZL Lv s alv
   -> locally_inj ϱ s alv
   -> bounded (Some ⊝ Lv \\ ZL) (fst (getAnn ang))
-  -> LabelsDefined.noUnreachableCode s
+  -> LabelsDefined.noUnreachableCode isCalled s
   -> inverse_on (getAnn alv) ϱ ϱ'
   -> alpha ϱ ϱ' s (rename ϱ s).
 Proof.
@@ -630,7 +630,7 @@ Lemma renamedApart_locally_inj_alpha'' s ϱ ϱ' ZL Lv (slv:ann (set var)) ang
   -> inverse_on (getAnn slv) ϱ ϱ'
   -> ann_R Subset1 slv ang
   -> bounded (Some ⊝ Lv \\ ZL) (fst (getAnn ang))
-  -> noUnreachableCode s
+  -> noUnreachableCode isCalled s
   -> alpha ϱ ϱ' s (rename ϱ s).
 Proof.
   intros RA INJ LS IOn AnnR BND NUC.

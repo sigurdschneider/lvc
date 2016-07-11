@@ -107,11 +107,11 @@ Proof.
     repeat cases; simpl in *; eauto.
 Qed.
 
-Definition unreachable_code_analysis :=
+Definition unreachable_code_analysis s :=
   makeForwardAnalysis (fun s => bool ) _
                       unreachable_code_transform
                       unreachable_code_transform_monotone
-                      (fun s => terminating_bool).
+                      (fun s => terminating_bool) s true.
 
 Definition unreachableCodeAnalysis s :=
   proj1_sig (proj1_sig (Analysis.safeFixpoint (unreachable_code_analysis s))).
