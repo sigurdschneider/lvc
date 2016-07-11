@@ -200,7 +200,7 @@ Qed.
 
 Tactic Notation "override" hyp(H) := apply override in H.
 
-Lemma DVE_callChain RL ZL F als t alt l' k ZsEnd aEnd n
+Lemma DCE_callChain RL ZL F als t alt l' k ZsEnd aEnd n
       (IH : forall k Zs,
           get F k Zs ->
        forall (ZL : 〔params〕) (RL : 〔bool〕) (lv : ann bool) (n : nat),
@@ -263,7 +263,7 @@ Proof.
     eapply (IHCC _ _ _ (snd Zs)); eauto.
 Qed.
 
-Lemma DVE_callChain' RL ZL F als l' k
+Lemma DCE_callChain' RL ZL F als l' k
       (IH : forall k Zs,
           get F k Zs ->
        forall (ZL : 〔params〕) (RL : 〔bool〕) (lv : ann bool) (n : nat),
@@ -305,7 +305,7 @@ Proof.
     subst. eauto.
 Qed.
 
-Lemma DVE_isCalled ZL RL s lv n
+Lemma DCE_isCalled ZL RL s lv n
   : unreachable_code SoundAndComplete ZL RL s lv
     -> trueIsCalled s (LabI n)
     -> getAnn lv
@@ -352,10 +352,10 @@ Proof.
         rewrite <- zip_app; eauto with len.
         econstructor; eauto. simpl.
         rewrite compileF_length; eauto.
-        eapply DVE_callChain; eauto.
+        eapply DCE_callChain; eauto.
 Qed.
 
-Lemma DVE_noUnreachableCode ZL RL s lv
+Lemma DCE_noUnreachableCode ZL RL s lv
   : unreachable_code SoundAndComplete ZL RL s lv
     -> getAnn lv
     -> noUnreachableCode (compile (pair ⊜ RL ZL) s lv).
@@ -381,9 +381,9 @@ Proof.
       exploit H3 as ICF; eauto. rewrite H8; eauto.
       rewrite <- zip_app; eauto with len.
       destruct ICF as [[l'] [? ?]].
-      exploit DVE_isCalled; eauto.
+      exploit DCE_isCalled; eauto.
       eexists; split; eauto.
-      exploit DVE_callChain'; eauto using DVE_isCalled.
+      exploit DCE_callChain'; eauto using DCE_isCalled.
       exploit unreachable_code_trueIsCalled; eauto.
       dcr; subst; simpl in *. rewrite H12 in GetAnn.
       destruct x; isabsurd; eauto.
@@ -609,7 +609,7 @@ Proof.
       rewrite zip_app; eauto with len. intros; eapply inv_extend; eauto.
 Qed.
 
-Lemma sim_DVE i V s a
+Lemma sim_DCE i V s a
   : unreachable_code i nil nil s a
     -> getAnn a
     -> @sim I.state _ I.state _ Bisim (nil,V, s) (nil,V, compile nil s a).

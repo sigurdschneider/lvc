@@ -259,6 +259,11 @@ Definition liveness_analysis :=
                        liveness_transform_dep_monotone
                        (fun s => (@bunded_set_terminating _ _ (occurVars s))).
 
+
+Definition livenessAnalysis s :=
+  let a := Analysis.safeFixpoint (LivenessAnalysis.liveness_analysis s) in
+  mapAnn (@proj1_sig _ _) (proj1_sig (proj1_sig a)).
+
 (*
 
 Program Definition liveness_transform (U:set var) (st:stmt)

@@ -7,6 +7,7 @@ Require Coherence Invariance.
 Require Delocation DelocationAlgo DelocationCorrect DelocationValidator.
 Require Allocation AllocationAlgo AllocationAlgoCorrect.
 Require DCE DVE EAE Alpha.
+Require DCE UnreachableCodeAnalysis UnreachableCodeAnalysisCorrect.
 (* Require CopyPropagation ConstantPropagation ConstantPropagationAnalysis.*)
 
 Require Import ExtrOcamlBasic.
@@ -81,46 +82,50 @@ Qed.
 
 
 Definition toILF (ili:IL.stmt) : IL.stmt :=
-  let lv := LivenessAnalysisCorrect.livenessAnalysis ili in
-  let ilid := DVE.compile nil ili lv in
-  let additional_params := additionalArguments ilid (DVE.compile_live ili lv ∅) in
+  let uc := UnreachableCodeAnalysis.unreachableCodeAnalysis ili in
+  let ili_ndc := DCE.compile nil ili uc in
+  let lv := LivenessAnalysis.livenessAnalysis ili_ndc in
+  let ilid := DVE.compile nil ili_ndc lv in
+  let additional_params := additionalArguments ilid (DVE.compile_live ili_ndc lv ∅) in
   Delocation.compile nil ilid additional_params.
 
 Arguments sim S {H} S' {H0} t _ _.
 
 
-Lemma toILF_correct (ili:IL.stmt) s (E:onv val)
-  : toILF ili = s
-    -> defined_on (IL.freeVars ili) E
-    -> sim I.state F.state Sim (nil, E, ili) (nil:list F.block, E, s).
+Lemma toILF_correct (ili:IL.stmt) (E:onv val)
+  (PM:LabelsDefined.paramsMatch ili nil) (LD:LabelsDefined.labelsDefined ili 0)
+  : defined_on (IL.freeVars ili) E
+    -> sim I.state F.state Sim (nil, E, ili) (nil:list F.block, E, toILF ili).
 Proof.
   intros. subst. unfold toILF.
   simpl in *; unfold ensure_f, additionalArguments in *.
-  - assert (PM:LabelsDefined.paramsMatch ili nil) by admit.
-    assert (LD:LabelsDefined.labelsDefined ili 0) by admit.
-    eapply sim_trans with (S2:=I.state).
-    eapply DVE.I.sim_DVE; [ reflexivity | eapply LivenessAnalysisCorrect.correct; eauto ].
-    assert (Liveness.live_sound
-              Liveness.Imperative nil nil
-              (DVE.compile nil ili (LivenessAnalysisCorrect.livenessAnalysis ili))
-              (DVE.compile_live ili (LivenessAnalysisCorrect.livenessAnalysis ili) {})). {
-      eapply (@DVE.dve_live _ nil nil).
-      eapply @LivenessAnalysisCorrect.correct; eauto.
-    }
-    assert (Delocation.trs
-              nil nil
-              (DVE.compile nil ili (LivenessAnalysisCorrect.livenessAnalysis ili))
-              (DVE.compile_live ili (LivenessAnalysisCorrect.livenessAnalysis ili) {})
-              (fst
-                 (DelocationAlgo.computeParameters
-                    nil nil nil
-                    (DVE.compile nil ili (LivenessAnalysisCorrect.livenessAnalysis ili))
-                    (DVE.compile_live ili (LivenessAnalysisCorrect.livenessAnalysis ili) {})))). {
-      eapply DelocationAlgo.is_trs; eauto.
+(*  assert (Liveness.live_sound
+            Liveness.Imperative nil nil
+            (DVE.compile nil ili (LivenessAnalysis.livenessAnalysis ili))
+            (DVE.compile_live ili (LivenessAnalysis.livenessAnalysis ili) {})). {
+    eapply (@DVE.dve_live _ nil nil).
+    eapply @LivenessAnalysisCorrect.correct; eauto.
+  }
+  assert (Delocation.trs
+            nil nil
+            (DVE.compile nil ili (LivenessAnalysis.livenessAnalysis ili))
+            (DVE.compile_live ili (LivenessAnalysis.livenessAnalysis ili) {})
+            (fst
+               (DelocationAlgo.computeParameters
+                  nil nil nil
+                  (DVE.compile nil ili (LivenessAnalysis.livenessAnalysis ili))
+                  (DVE.compile_live ili (LivenessAnalysis.livenessAnalysis ili) {})))). {
+    eapply DelocationAlgo.is_trs; eauto.
 
-    }
+  }*)
+  eapply sim_trans with (S2:=I.state).
+  eapply BisimSim.bisim_sim'.
+  eapply DCE.I.sim_DCE.
+  eapply DVE.I.sim_DVE; [ reflexivity | eapply LivenessAnalysisCorrect.correct; eauto ].
+
+
     eapply sim_trans with (S2:=I.state).
-    eapply BisimSim.bisim_sim'.
+
     eapply DelocationCorrect.correct; eauto.
     + eapply (@Delocation.live_sound_compile nil); eauto.
       eapply DelocationAlgo.is_live; eauto.

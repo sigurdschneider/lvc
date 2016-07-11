@@ -109,12 +109,6 @@ Proof.
       rewrite <- H13. reflexivity.
 Qed.
 
-Definition livenessAnalysis s :=
-  let a := Analysis.safeFixpoint (LivenessAnalysis.liveness_analysis s) in
-  mapAnn (@proj1_sig _ _) (proj1_sig (proj1_sig a)).
-
-
-
 Ltac destr_sig H :=
   match type of H with
   | context [proj1_sig ?x] => destruct x; simpl in H

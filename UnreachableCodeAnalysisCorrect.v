@@ -660,9 +660,6 @@ Proof.
       unfold comp. eauto.
 Qed.
 
-Definition unreachableCodeAnalysis s :=
-  proj1_sig (proj1_sig (Analysis.safeFixpoint (unreachable_code_analysis s))).
-
 Ltac destr_sig H :=
   match type of H with
   | context [proj1_sig ?x] => destruct x; simpl in H

@@ -112,3 +112,6 @@ Definition unreachable_code_analysis :=
                       unreachable_code_transform
                       unreachable_code_transform_monotone
                       (fun s => terminating_bool).
+
+Definition unreachableCodeAnalysis s :=
+  proj1_sig (proj1_sig (Analysis.safeFixpoint (unreachable_code_analysis s))).
