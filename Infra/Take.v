@@ -30,7 +30,7 @@ Proof.
   inv H; eauto using get.
 Qed.
 
-Lemma take_less_length X (L:list X) n
+Lemma take_length_le X (L:list X) n
   : n <= length L -> length (take n L) = n.
 Proof.
   intros. general induction L; destruct n; simpl in *; try omega; eauto.
@@ -38,7 +38,7 @@ Proof.
 Qed.
 
 
-Lemma take_gr_length X (L:list X) n
+Lemma take_length_ge X (L:list X) n
   : n >= length L -> length (take n L) = length L.
 Proof.
   intros. general induction L; destruct n; simpl in *; try omega; eauto.
@@ -49,11 +49,11 @@ Lemma take_length X (L:list X) n
   : length (take n L) = min (length L) n.
 Proof.
   decide (n < length L).
-  - rewrite take_less_length; try omega.
+  - rewrite take_length_le; try omega.
     rewrite min_r; omega.
   - eapply not_lt in n0.
     rewrite min_l; try omega.
-    eapply take_gr_length; eauto.
+    eapply take_length_ge; eauto.
 Qed.
 
 Lemma take_get X (L:list X) n k x

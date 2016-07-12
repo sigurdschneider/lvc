@@ -110,13 +110,12 @@ Proof.
 Qed.
 
 Definition correct s
-  : labelsDefined s 0
-    -> paramsMatch s nil
+  : paramsMatch s nil
     -> true_live_sound Imperative nil nil s (livenessAnalysis s).
 Proof.
   intros.
   unfold livenessAnalysis.
   destr_sig. destr_sig. dcr.
   eapply (@liveness_analysis_correct s nil nil s); eauto.
-  eapply H3.
+  eapply H2.
 Qed.

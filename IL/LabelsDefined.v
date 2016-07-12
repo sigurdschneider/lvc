@@ -126,6 +126,15 @@ Proof.
     + rewrite app_length, !map_length in IHPM. eauto.
 Qed.
 
+Lemma paramsMatch_labelsDefined_nil s
+  : paramsMatch s nil -> labelsDefined s 0.
+Proof.
+  intros PM. eapply (paramsMatch_labelsDefined PM).
+Qed.
+
+Hint Resolve paramsMatch_labelsDefined paramsMatch_labelsDefined_nil.
+
+
 Inductive callChain (isCalled : stmt -> lab -> Prop) (F:〔params * stmt〕)
   : lab -> lab -> Prop :=
 | CallChain_refl l

@@ -74,6 +74,14 @@ Fixpoint compile (RZL:list (bool * params)) (s:stmt) (a:ann bool) :=
     | s, _ => s
   end.
 
+Lemma compileF_Z_filter_by RZL F als (LEN: ❬F❭ = ❬als❭)
+  : fst ⊝ compileF compile RZL F als
+    = filter_by (fun b => b) (getAnn ⊝ als) (fst ⊝ F).
+Proof.
+  length_equify. general induction LEN; simpl; eauto.
+  destruct x as [Z s]; cases; simpl; f_equal; eauto.
+Qed.
+
 Lemma compileF_get RZL F n ans Zs a
   : ❬F❭ = ❬ans❭
     -> get F n Zs
@@ -122,13 +130,18 @@ Proof.
   cases; subst. cases; simpl; eauto.
 Qed.
 
+Lemma fst_zip_pair X Y (L:list X) (L':list Y) (LEN:❬L❭ = ❬L'❭)
+  : fst ⊝ pair ⊜ L L' = L.
+Proof.
+  length_equify.
+  general induction LEN; simpl; f_equal; eauto.
+Qed.
+
 Lemma getAnn_eq X Y Y' (F:list (Y * Y')) (als:list (ann X))
   : ❬F❭ = ❬als❭
     -> getAnn ⊝ als = fst ⊝ pair ⊜ (getAnn ⊝ als) (fst ⊝ F).
 Proof.
-  intros LEN.
-  rewrite map_zip.
-  rewrite zip_map_fst; eauto with len.
+  intros LEN. rewrite fst_zip_pair; eauto with len.
 Qed.
 
 Lemma getAnn_take_eq X Y Y' (F:list (Y * Y')) (als:list (ann X)) k a LV
@@ -139,14 +152,17 @@ Proof.
   intros LEN Get.
   rewrite take_app_lt; eauto with len.
   repeat rewrite map_take.
-  rewrite map_zip.
-  rewrite zip_map_fst; eauto with len.
+  rewrite fst_zip_pair; eauto with len.
 Qed.
 
 Local Hint Extern 0 =>
 match goal with
 | [ H : exp2bool ?e <> Some ?t , H' : exp2bool ?e <> Some ?t -> ?B = ?C |- _ ] =>
   specialize (H' H); subst
+| [ H : exp2bool ?e = Some true , H' : exp2bool ?e <> Some false -> ?B = ?C |- _ ] =>
+  let H'' := fresh "H" in
+  assert (H'':exp2bool e <> Some false) by congruence;
+    specialize (H' H''); subst
 end.
 
 Hint Extern 5 =>
@@ -155,22 +171,18 @@ match goal with
 | [ H : Is_true ?B, EQ : ?B = ?A |- Is_true ?A] => rewrite <- EQ; eapply H
 end.
 
-(*
-Lemma take_eq2 X Y Y' (F:list (Y * Y')) (als:list (ann X)) (RL:list X) ZL n
-  : ❬F❭ = ❬als❭
-    -> fst ⊝ take n (pair ⊜ RL ZL) = fst ⊝ take (❬F❭ + n) (pair ⊜ (getAnn ⊝ als ++ RL) (fst ⊝ F ++ ZL)).
+Lemma compileF_nil_als_false RZL F als (LEN:❬F❭ = ❬als❭)
+  : nil = compileF compile RZL F als
+    -> forall n a, get als n a -> getAnn a = false.
 Proof.
-  intros Len.
-  rewrite zip_app; eauto with len.
-  rewrite take_app_ge; eauto 20 with len.
-  rewrite zip_length2; eauto with len.
-  rewrite map_length.
-  orewrite (❬F❭ + n - ❬als❭ = n).
-  rewrite map_app.
-  rewrite <- getAnn_eq; eauto.
-  rewrite map_take.
+  length_equify.
+  general induction LEN; simpl in *.
+  - isabsurd.
+  - destruct x as [Z s]; simpl in *.
+    cases in H.
+    + inv H.
+    + inv H0; eauto.
 Qed.
- *)
 
 Lemma trueIsCalled_compileF_not_nil (i : sc) (ZL : 〔params〕)
       (s : stmt) (slv : ann bool) k F als RL x
@@ -193,12 +205,6 @@ Proof.
   }
   intros EQ. eapply LenNEq. rewrite <- EQ. reflexivity.
 Qed.
-
-Lemma override P : P -> True.
-  eauto.
-Qed.
-
-Tactic Notation "override" hyp(H) := apply override in H.
 
 Lemma DCE_callChain RL ZL F als t alt l' k ZsEnd aEnd n
       (IH : forall k Zs,
@@ -289,7 +295,6 @@ Lemma DCE_callChain' RL ZL F als l' k
 Proof.
   general induction CC.
   - econstructor.
-
   - inv_get.
     exploit unreachable_code_trueIsCalled; try eapply H0; eauto.
     simpl in *; dcr; inv_get. assert (x0 = true).
@@ -363,7 +368,6 @@ Lemma DCE_noUnreachableCode ZL RL s lv
 Proof.
   intros Live GetAnn.
   induction Live; simpl; repeat cases; eauto using noUnreachableCode.
-  - exploit H; try congruence; subst. eauto.
   - specialize (H NOTCOND0). specialize (H0 NOTCOND). subst.
     simpl in *. econstructor; eauto.
   - rewrite <- zip_app; eauto with len.
@@ -396,6 +400,67 @@ Proof.
       eauto with len.
 Qed.
 
+Lemma filter_by_app A B (f:A -> bool) L1 (L1':list B) L2 L2' (LEN: ❬L1❭ = ❬L1'❭)
+  : filter_by f (L1 ++ L2) (L1' ++ L2') = filter_by f L1 L1' ++ filter_by f L2 L2'.
+Proof.
+  length_equify.
+  general induction LEN; simpl; repeat cases; simpl; f_equal; eauto.
+Qed.
+
+Lemma filter_by_nil A B (f:A -> bool) L (L':list B)
+  : (forall n b, get L n b -> f b = false)
+    -> filter_by f L L' = nil.
+Proof.
+  intros.
+  general induction L; destruct L'; simpl; repeat cases; simpl; f_equal; eauto using get.
+  - exfalso. exploit H; eauto using get. congruence.
+Qed.
+
+Lemma get_filter_by A B (p:A->bool) (Z:list A) (Y:list B) y n z
+  : get Z n z
+    -> get Y n y
+    -> p z
+    -> get (filter_by p Z Y) (countTrue (p ⊝ (take n Z))) y.
+Proof.
+  intros GetZ GetY Pz.
+  eapply get_getT in GetZ.
+  eapply get_getT in GetY.
+  general induction GetZ; inv GetY; simpl in * |- *; isabsurd.
+  - cases. eauto using get.
+  - exploit IHGetZ; eauto.
+    cases; eauto using get.
+Qed.
+
+Lemma DCE_paramsMatch i PL ZL RL s lv
+  : unreachable_code i ZL RL s lv
+    -> getAnn lv
+    -> paramsMatch s PL
+    -> paramsMatch (compile (pair ⊜ RL ZL) s lv) (filter_by (fun b => b) RL PL).
+Proof.
+  intros UC Ann PM.
+  general induction UC; inv PM; simpl; repeat cases; eauto using paramsMatch.
+  - specialize (H NOTCOND0). specialize (H0 NOTCOND). subst. simpl in *.
+    econstructor; eauto.
+  - simpl in *. rewrite take_zip. rewrite fst_zip_pair; eauto.
+    exploit (get_filter_by (fun b => b) H0 H5). destruct a,b; isabsurd; eauto.
+    rewrite map_id in H3.
+    econstructor; eauto.
+    eapply get_range in H. eapply get_range in H0.
+    repeat rewrite take_length_le; omega.
+  - rewrite <- zip_app; eauto with len. exploit IHUC; eauto.
+    rewrite filter_by_app in H0; eauto with len.
+    rewrite filter_by_nil in H0; eauto.
+    intros; inv_get; eauto using compileF_nil_als_false.
+  - rewrite Heq; clear Heq p b.
+    rewrite <- zip_app in *; eauto with len.
+    econstructor.
+    + intros ? [Z s] Get.
+      eapply compileF_get_inv in Get; destruct Get; dcr; subst; simpl; eauto.
+      exploit H2; eauto. rewrite H8; eauto.
+      rewrite compileF_Z_filter_by, map_filter_by, <- filter_by_app; eauto with len.
+    + rewrite compileF_Z_filter_by, map_filter_by, <- filter_by_app; eauto with len.
+Qed.
+
 
 Module I.
 
@@ -410,7 +475,7 @@ Module I.
 Instance SR : ProofRelationI (bool * params) := {
    ParamRelI := ParamRel;
    ArgRelI := ArgRel;
-   BlockRelI := fun lvZ b b' => block_Z b = block_Z b';
+   BlockRelI := fun lvZ b b' => (*block_Z b = block_Z b' *) True;
    Image AL := countTrue (List.map fst AL);
    IndexRelI AL n n' :=
      n' = countTrue (fst ⊝ (take n AL)) /\ exists Z, get AL n (true, Z)
@@ -474,7 +539,7 @@ Proof.
   - repeat cases.
     + edestruct (exp2bool_val2bool V); eauto; dcr.
       eapply sim'_expansion_closed.
-      eapply (IH s1); eauto. rewrite H5; eauto.
+      eapply (IH s1); eauto.
       eapply star2_silent.
       econstructor; eauto. eapply star2_refl.
       eapply star2_refl.

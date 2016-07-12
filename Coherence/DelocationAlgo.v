@@ -927,7 +927,7 @@ Proof.
   - lnorm. econstructor.
     + eauto with len.
     + eauto with len.
-    + rewrite map_length. rewrite take_less_length; eauto.
+    + rewrite map_length. rewrite take_length_le; eauto.
       rewrite zip_length2; [eauto 20 with len|].
       rewrite fold_zip_ounion_length.
       * rewrite computeParameters_length; eauto with len.
@@ -1163,7 +1163,7 @@ Proof.
       eapply ifFstR_addAdds2. rewrite zip_app; eauto with len.
       eapply computeParametersF_LV_DL; eauto with len.
       eapply computeParameters_LV_DL; eauto using PIR2_Subset_tab_extend with len.
-    + rewrite map_length. rewrite take_less_length; eauto.
+    + rewrite map_length. rewrite take_length_le; eauto.
       rewrite zip_length2. eauto 20 with len.
       rewrite fold_zip_ounion_length; eauto. eauto 20 with len.
       eapply computeParametersF_length; try eapply H5; eauto with len.

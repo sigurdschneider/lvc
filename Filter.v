@@ -22,6 +22,12 @@ Proof.
     f_equal. eauto using get.
 Qed.
 
+Lemma map_filter_by A B C (f:A -> bool) (g:B -> C) L L'
+  : g ⊝ filter_by f L L' = filter_by f L (g ⊝ L').
+Proof.
+  general induction L; destruct L'; simpl; repeat cases; simpl; f_equal; eauto.
+Qed.
+
 Lemma lookup_list_filter_by_commute A B C (V:A->B) (Z:list C) Y p
 : length Z = length Y
   -> lookup_list V (filter_by p Z Y) =

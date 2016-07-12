@@ -91,9 +91,8 @@ Definition toILF (ili:IL.stmt) : IL.stmt :=
 
 Arguments sim S {H} S' {H0} t _ _.
 
-
 Lemma toILF_correct (ili:IL.stmt) (E:onv val)
-  (PM:LabelsDefined.paramsMatch ili nil) (LD:LabelsDefined.labelsDefined ili 0)
+  (PM:LabelsDefined.paramsMatch ili nil)
   : defined_on (IL.freeVars ili) E
     -> sim I.state F.state Sim (nil, E, ili) (nil:list F.block, E, toILF ili).
 Proof.
@@ -122,10 +121,12 @@ Proof.
   eapply BisimSim.bisim_sim'.
   eapply DCE.I.sim_DCE.
   eapply UnreachableCodeAnalysisCorrect.correct; eauto.
-  admit.
+  eapply UnreachableCodeAnalysisCorrect.unreachableCodeAnalysis_getAnn.
   eapply sim_trans with (S2:=I.state).
   eapply DVE.I.sim_DVE; [ reflexivity | eapply LivenessAnalysisCorrect.correct; eauto ].
-  admit. admit.
+  eapply (@DCE.DCE_paramsMatch _ nil nil nil); eauto.
+  eapply UnreachableCodeAnalysisCorrect.correct; eauto.
+  eapply UnreachableCodeAnalysisCorrect.unreachableCodeAnalysis_getAnn.
   assert (Liveness.live_sound Liveness.Imperative nil nil
      (DVE.compile nil (DCE.compile nil ili (UnreachableCodeAnalysis.unreachableCodeAnalysis ili))
         (LivenessAnalysis.livenessAnalysis
@@ -136,13 +137,21 @@ Proof.
         {})). {
     eapply (@DVE.dve_live _ nil nil).
     eapply @LivenessAnalysisCorrect.correct; eauto.
-    admit. admit.
+    eapply (@DCE.DCE_paramsMatch _ nil nil nil); eauto.
+    eapply UnreachableCodeAnalysisCorrect.correct; eauto.
+    eapply UnreachableCodeAnalysisCorrect.unreachableCodeAnalysis_getAnn.
   }
   assert (LabelsDefined.noUnreachableCode LabelsDefined.isCalled
      (DVE.compile nil (DCE.compile nil ili (UnreachableCodeAnalysis.unreachableCodeAnalysis ili))
         (LivenessAnalysis.livenessAnalysis
            (DCE.compile nil ili (UnreachableCodeAnalysis.unreachableCodeAnalysis ili))))). {
+    eapply LabelsDefined.noUnreachableCode_mono.
+    eapply (@DVE.DVE_noUnreachableCode _ nil nil); eauto.
     admit.
+    eapply (@DCE.DCE_noUnreachableCode nil nil).
+    eapply UnreachableCodeAnalysisCorrect.correct; eauto.
+    eapply UnreachableCodeAnalysisCorrect.unreachableCodeAnalysis_getAnn.
+    eapply LabelsDefined.trueIsCalled_isCalled.
   }
   eapply sim_trans with (S2:=I.state).
   eapply BisimSim.bisim_sim'.

@@ -251,7 +251,7 @@ Proof.
         intros. inv_get.
         edestruct (@forwardF_get _ _ _ _ _ _ _ _ _ _ _ H3). dcr. subst.
         eauto with len.
-        rewrite Take.take_less_length. eauto with len.
+        rewrite Take.take_length_le. eauto with len.
         repeat rewrite (@forward_length sT (fun _ => bool)); eauto with len.
       * etransitivity; eauto. eapply PIR2_drop.
         eapply PIR2_fold_zip_join_inv. reflexivity.
@@ -308,7 +308,7 @@ Proof.
         eauto.
         clear_all. intros. inv_get.
         subst FWt. eauto with len.
-        rewrite Take.take_less_length; eauto with len.
+        rewrite Take.take_length_le; eauto with len.
         rewrite (@forward_length _ (fun _ => bool)). eauto with len.
         etransitivity; eauto.
         rewrite H. eapply PIR2_drop.
@@ -703,4 +703,19 @@ Proof.
       rewrite (@forward_length _ (fun _ => bool)); eauto.
       destruct (snd (forward unreachable_code_transform nil s (subTerm_refl s) x)); isabsurd.
       eauto using PIR2.
+Qed.
+
+Instance proj1_sig_poLe (Dom : Type) P (H:PartialOrder Dom)
+  : Proper (@poLe _ (@PartialOrder_sig _ H _) ==> poLe) (@proj1_sig Dom P).
+Proof.
+  hnf; intros. destruct x,y. simpl in *. eauto.
+Qed.
+
+Lemma unreachableCodeAnalysis_getAnn s
+  : getAnn (UnreachableCodeAnalysis.unreachableCodeAnalysis s).
+Proof.
+  unfold unreachableCodeAnalysis.
+  destr_sig. destruct e as [n [H1 H2]]. subst x.
+  simpl in *; simpl_forward_setTopAnn; destr_sig; simpl in *.
+  rewrite H. eauto.
 Qed.
