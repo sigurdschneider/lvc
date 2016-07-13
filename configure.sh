@@ -26,7 +26,7 @@ fi
 
 BLACKLIST=`cat _BLACKLIST`
 SOURCES=$(find theories -name \*.v -print | grep -v /\.# | grep -v $BLACKLIST | sed -e 's%^\./%%g')
-coq_makefile -R . Lvc -R ContainersPlugin/theories Containers -I ContainersPlugin/src extraction $SOURCES > ${MAKEFILE}
+coq_makefile -R theories Lvc -R ContainersPlugin/theories Containers -I ContainersPlugin/src extraction $SOURCES > ${MAKEFILE}
 echo "${MAKEFILE} generated."
 
 echo "Patching ${MAKEFILE} to include target 'extraction'."
