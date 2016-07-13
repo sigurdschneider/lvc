@@ -670,3 +670,11 @@ Proof.
   - orewrite (n + 0 = n); eauto.
   - f_equal. rewrite IHL. f_equal; f_equal. omega.
 Qed.
+
+
+Lemma fst_zip_pair X Y (L:list X) (L':list Y) (LEN:❬L❭ = ❬L'❭)
+  : fst ⊝ pair ⊜ L L' = L.
+Proof.
+  length_equify.
+  general induction LEN; simpl; f_equal; eauto.
+Qed.

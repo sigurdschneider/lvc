@@ -1,4 +1,4 @@
-Require Import Util List OptionMap LengthEq Map Get.
+Require Import Util List OptionMap LengthEq Map Get Take MoreList.
 
 Set Implicit Types.
 
@@ -7,6 +7,28 @@ Fixpoint filter_by {A B} (f:A -> bool) (L:list A) (L':list B) : list B :=
     | x :: L, y::L' => if f x then y :: filter_by f L L' else filter_by f L L'
     | _, _ => nil
   end.
+
+Fixpoint countTrue (L:list bool) :=
+  match L with
+  | nil => 0
+  | true :: xs => 1 + countTrue xs
+  | false :: xs => countTrue xs
+  end.
+
+Lemma countTrue_exists (L:list bool) n
+  : get L n true
+    -> countTrue L <> 0.
+Proof.
+  intros. general induction H; simpl; eauto.
+  - cases; eauto.
+Qed.
+
+Lemma countTrue_app (L L':list bool)
+  : countTrue (L ++ L') = countTrue L + countTrue L'.
+Proof.
+  intros. induction L; simpl; eauto.
+  destruct a; eauto. omega.
+Qed.
 
 Arguments filter_by [A B] f L L'.
 
@@ -28,6 +50,108 @@ Proof.
   general induction L; destruct L'; simpl; repeat cases; simpl; f_equal; eauto.
 Qed.
 
+Lemma filter_by_app A B (f:A -> bool) L1 (L1':list B) L2 L2' (LEN: ❬L1❭ = ❬L1'❭)
+  : filter_by f (L1 ++ L2) (L1' ++ L2') = filter_by f L1 L1' ++ filter_by f L2 L2'.
+Proof.
+  length_equify.
+  general induction LEN; simpl; repeat cases; simpl; f_equal; eauto.
+Qed.
+
+Lemma filter_by_nil A B (f:A -> bool) L (L':list B)
+  : (forall n b, get L n b -> f b = false)
+    -> filter_by f L L' = nil.
+Proof.
+  intros.
+  general induction L; destruct L'; simpl; repeat cases; simpl; f_equal; eauto using get.
+  - exfalso. exploit H; eauto using get. congruence.
+Qed.
+
+Lemma filter_by_not_nil A B (f:A -> bool) L (L':list B) n b
+  : ❬L❭ = ❬L'❭
+    -> get L n b
+    -> f b = true
+    -> filter_by f L L' <> nil.
+Proof.
+  intros LEN Get Tru. length_equify.
+  general induction LEN; simpl; repeat cases; simpl; f_equal; eauto using get; isabsurd.
+  - inv Get; isabsurd; eauto.
+Qed.
+
+Lemma get_filter_by A B (p:A->bool) (Z:list A) (Y:list B) y n z
+  : get Z n z
+    -> get Y n y
+    -> p z
+    -> get (filter_by p Z Y) (countTrue (p ⊝ (take n Z))) y.
+Proof.
+  intros GetZ GetY Pz.
+  eapply get_getT in GetZ.
+  eapply get_getT in GetY.
+  general induction GetZ; inv GetY; simpl in * |- *; isabsurd.
+  - cases. eauto using get.
+  - exploit IHGetZ; eauto.
+    cases; eauto using get.
+Qed.
+
+
+Lemma filter_by_length A B  (p: A -> bool) L (L':list B)
+  : ❬L❭ = ❬L'❭
+    -> ❬filter_by p L L'❭ = countTrue (p ⊝ L).
+Proof.
+  intros LEN; length_equify.
+  general induction LEN; simpl; eauto.
+  cases; simpl; f_equal; eauto.
+Qed.
+
+Fixpoint posOfTrue (n:nat) (L:list bool) :=
+  match L, n with
+  | nil, _ => 0
+  | true :: xs, S n => S (posOfTrue n xs)
+  | true :: xs, 0 => 0
+  | false :: xs, n => S (posOfTrue n xs)
+  end.
+
+Lemma filter_by_get A B p (Z:list A) (Y:list B) y n
+: get (filter_by p Z Y) n y
+  -> { z : A | get Y (posOfTrue n (p ⊝ Z)) y /\ get Z (posOfTrue n (p ⊝ Z)) z /\ p z }.
+Proof.
+  intros.
+  general induction Z; destruct Y; simpl in * |- *; isabsurd.
+  cases in H.
+  - eapply get_getT in H.
+    inv H.
+    + do 2 eexists; repeat split; eauto using get.
+      rewrite <- Heq; eauto.
+    + eapply getT_get in X.
+      edestruct IHZ as [? [? []]]; eauto; dcr.
+      do 2 eexists; eauto using get.
+  - edestruct IHZ as [? [? []]]; eauto; dcr; eauto.
+    do 2 eexists; eauto using get.
+Qed.
+
+Lemma posOfTrue_countTrue L (n:nat)
+: get L n true
+  -> posOfTrue (countTrue (take n L)) L = n.
+Proof.
+  intros. general induction L; [ isabsurd |].
+  - invc H; simpl; eauto.
+    cases; f_equal; eauto.
+Qed.
+
+Ltac inv_get_step1 dummy :=
+  first [inv_get_step |
+         repeat (match goal with
+         | [ H : get (filter_by ?p ?L ?L') ?n ?x |- _ ] =>
+           eapply filter_by_get in H; try rewrite map_id in H; destruct H as [? [? [? ?]]]
+         | [ H : get _ (posOfTrue (countTrue (?f ⊝ take ?n ?L)) (?f ⊝ ?L)) _,
+                 H' : get ?L ?n ?x, H'' : ?f ?x = true |- _ ] =>
+           rewrite (@map_take _ _ f L) in H;
+           rewrite (@posOfTrue_countTrue (f ⊝ L) n) in H;[| eauto using map_get_eq]
+         end)
+        ].
+
+Tactic Notation "inv_get_step" := inv_get_step1 idtac.
+Tactic Notation "inv_get" := inv_get' inv_get_step1.
+
 Lemma lookup_list_filter_by_commute A B C (V:A->B) (Z:list C) Y p
 : length Z = length Y
   -> lookup_list V (filter_by p Z Y) =
@@ -37,6 +161,7 @@ Proof.
   general induction H; simpl; eauto.
   + cases; simpl; rewrite IHlength_eq; eauto.
 Qed.
+
 
 Lemma of_list_filter X `{OrderedType X} lv Y
   : of_list (List.filter (fun y : X => B[y ∈ lv]) Y) [=] lv ∩ of_list Y.
@@ -78,38 +203,6 @@ Proof.
   - reflexivity.
   - cases; simpl. rewrite IHZ; reflexivity.
     rewrite IHZ. cset_tac; intuition.
-Qed.
-
-Lemma filter_by_get A B p (Z:list A) (Y:list B) y n
-: get (filter_by p Z Y) n y
-  -> { n : nat & { z : A | get Y n y /\ get Z n z /\ p z } }.
-Proof.
-  intros.
-  general induction Z; destruct Y; simpl in * |- *; isabsurd.
-  cases in H. eapply get_getT in H.
-  inv H.
-  do 2 eexists; repeat split; eauto using get.
-  rewrite <- Heq; eauto.
-  eapply getT_get in X.
-  edestruct IHZ as [? [? [? []]]]; eauto; dcr.
-  do 2 eexists; eauto using get.
-  edestruct IHZ as [? [? [? []]]]; eauto; dcr.
-  do 2 eexists; eauto using get.
-Qed.
-
-Lemma get_filter_by A B (p:A->bool) (Z:list A) (Y:list B) y n z
-  : get Y n y
-    -> get Z n z
-    -> p z
-    -> { n : nat & get (filter_by p Z Y) n y }.
-Proof.
-  intros GetY GetZ Pz.
-  eapply get_getT in GetZ.
-  eapply get_getT in GetY.
-  general induction GetZ; inv GetY; simpl in * |- *; isabsurd.
-  - cases. eauto using get.
-  - edestruct IHGetZ; eauto.
-    cases; eexists; eauto using get.
 Qed.
 
 Lemma filter_p X p (Z:list X)

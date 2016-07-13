@@ -119,3 +119,12 @@ Proof.
   eapply (@liveness_analysis_correct s nil nil s); eauto.
   eapply H2.
 Qed.
+
+(* For now, settle for occur vars;
+   TODO: Show that the fixpoint is contained in freeVars (and union of Lv) *)
+Lemma livenessAnalysis_getAnn s
+  : getAnn (livenessAnalysis s) ⊆ occurVars s.
+Proof.
+  unfold livenessAnalysis. repeat destr_sig.
+  rewrite getAnn_mapAnn. destr_sig; eauto.
+Qed.

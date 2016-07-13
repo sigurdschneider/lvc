@@ -93,30 +93,28 @@ Arguments sim S {H} S' {H0} t _ _.
 
 Lemma toILF_correct (ili:IL.stmt) (E:onv val)
   (PM:LabelsDefined.paramsMatch ili nil)
-  : defined_on (IL.freeVars ili) E
+  : defined_on (IL.occurVars ili) E
     -> sim I.state F.state Sim (nil, E, ili) (nil:list F.block, E, toILF ili).
 Proof.
   intros. subst. unfold toILF.
   simpl in *; unfold ensure_f, additionalArguments in *.
-(*  assert (Liveness.live_sound
-            Liveness.Imperative nil nil
-            (DVE.compile nil ili (LivenessAnalysis.livenessAnalysis ili))
-            (DVE.compile_live ili (LivenessAnalysis.livenessAnalysis ili) {})). {
-    eapply (@DVE.dve_live _ nil nil).
+  assert (UnreachableCode.unreachable_code UnreachableCode.SoundAndComplete nil nil ili
+                                           (UnreachableCodeAnalysis.unreachableCodeAnalysis ili)). {
+    eapply UnreachableCodeAnalysisCorrect.correct; eauto.
+  }
+  assert (getAnn (UnreachableCodeAnalysis.unreachableCodeAnalysis ili)). {
+    eapply UnreachableCodeAnalysisCorrect.unreachableCodeAnalysis_getAnn.
+  }
+  assert (LabelsDefined.paramsMatch
+            (DCE.compile nil ili (UnreachableCodeAnalysis.unreachableCodeAnalysis ili)) nil). {
+    eapply (@DCE.DCE_paramsMatch _ nil nil nil); eauto.
+  }
+  assert (TrueLiveness.true_live_sound Liveness.Imperative nil nil
+   (DCE.compile nil ili (UnreachableCodeAnalysis.unreachableCodeAnalysis ili))
+   (LivenessAnalysis.livenessAnalysis
+      (DCE.compile nil ili (UnreachableCodeAnalysis.unreachableCodeAnalysis ili)))). {
     eapply @LivenessAnalysisCorrect.correct; eauto.
   }
-  assert (Delocation.trs
-            nil nil
-            (DVE.compile nil ili (LivenessAnalysis.livenessAnalysis ili))
-            (DVE.compile_live ili (LivenessAnalysis.livenessAnalysis ili) {})
-            (fst
-               (DelocationAlgo.computeParameters
-                  nil nil nil
-                  (DVE.compile nil ili (LivenessAnalysis.livenessAnalysis ili))
-                  (DVE.compile_live ili (LivenessAnalysis.livenessAnalysis ili) {})))). {
-    eapply DelocationAlgo.is_trs; eauto.
-
-  }*)
   eapply sim_trans with (S2:=I.state).
   eapply BisimSim.bisim_sim'.
   eapply DCE.I.sim_DCE.
@@ -124,9 +122,6 @@ Proof.
   eapply UnreachableCodeAnalysisCorrect.unreachableCodeAnalysis_getAnn.
   eapply sim_trans with (S2:=I.state).
   eapply DVE.I.sim_DVE; [ reflexivity | eapply LivenessAnalysisCorrect.correct; eauto ].
-  eapply (@DCE.DCE_paramsMatch _ nil nil nil); eauto.
-  eapply UnreachableCodeAnalysisCorrect.correct; eauto.
-  eapply UnreachableCodeAnalysisCorrect.unreachableCodeAnalysis_getAnn.
   assert (Liveness.live_sound Liveness.Imperative nil nil
      (DVE.compile nil (DCE.compile nil ili (UnreachableCodeAnalysis.unreachableCodeAnalysis ili))
         (LivenessAnalysis.livenessAnalysis
@@ -137,9 +132,6 @@ Proof.
         {})). {
     eapply (@DVE.dve_live _ nil nil).
     eapply @LivenessAnalysisCorrect.correct; eauto.
-    eapply (@DCE.DCE_paramsMatch _ nil nil nil); eauto.
-    eapply UnreachableCodeAnalysisCorrect.correct; eauto.
-    eapply UnreachableCodeAnalysisCorrect.unreachableCodeAnalysis_getAnn.
   }
   assert (LabelsDefined.noUnreachableCode LabelsDefined.isCalled
      (DVE.compile nil (DCE.compile nil ili (UnreachableCodeAnalysis.unreachableCodeAnalysis ili))
@@ -147,10 +139,7 @@ Proof.
            (DCE.compile nil ili (UnreachableCodeAnalysis.unreachableCodeAnalysis ili))))). {
     eapply LabelsDefined.noUnreachableCode_mono.
     eapply (@DVE.DVE_noUnreachableCode _ nil nil); eauto.
-    admit.
-    eapply (@DCE.DCE_noUnreachableCode nil nil).
-    eapply UnreachableCodeAnalysisCorrect.correct; eauto.
-    eapply UnreachableCodeAnalysisCorrect.unreachableCodeAnalysis_getAnn.
+    eapply (@DCE.DCE_noUnreachableCode nil nil); eauto.
     eapply LabelsDefined.trueIsCalled_isCalled.
   }
   eapply sim_trans with (S2:=I.state).
@@ -158,11 +147,13 @@ Proof.
 
   eapply DelocationCorrect.correct; eauto.
   + eapply DelocationAlgo.is_trs; eauto.
-
   + eapply (@Delocation.live_sound_compile nil); eauto.
     eapply DelocationAlgo.is_trs; eauto.
     eapply DelocationAlgo.is_live; eauto.
-  + admit.
+  + eapply defined_on_incl; eauto.
+    rewrite DVE.compile_live_incl_empty; eauto.
+    rewrite LivenessAnalysisCorrect.livenessAnalysis_getAnn.
+    eapply DCE.compile_occurVars.
   + eapply BisimSim.bisim_sim'.
     eapply sim_sym.
     eapply (@Invariance.srdSim_sim nil nil nil nil nil);
@@ -172,7 +163,7 @@ Proof.
     eapply (@Delocation.live_sound_compile nil nil nil); eauto.
     eapply DelocationAlgo.is_trs; eauto.
     eapply DelocationAlgo.is_live; eauto.
-Admitted.
+Qed.
 
 (*
 Definition optimize (s':stmt) : status stmt :=
@@ -192,6 +183,7 @@ Definition optimize (s':stmt) : status stmt :=
   end.
 *)
 
+(*
 Definition fromILF (s:stmt) : status stmt :=
   let s_hoisted := EAE.compile s in
   let s_renamed_apart := rename_apart s_hoisted in
@@ -311,9 +303,12 @@ Qed.
 *)
 End Compiler.
 
+ *)
+
+Print Assumptions toDeBruijn_correct.
 Print Assumptions toILF_correct.
-Print Assumptions fromILF_correct.
-(* Print Assumptions optimize_correct. *)
+(* Print Assumptions fromILF_correct.
+   Print Assumptions optimize_correct. *)
 
 
 (* Unset Extraction AccessOpaque. *)
@@ -321,4 +316,4 @@ Print Assumptions fromILF_correct.
 
 Extraction Inline bind Option.bind toString.
 
-Extraction "extraction/lvc.ml" toILF fromILF AllocationAlgo.regAssign (* optimize *) toDeBruijn.
+Extraction "extraction/lvc.ml" toILF (* fromILF AllocationAlgo.regAssign optimize *) toDeBruijn.

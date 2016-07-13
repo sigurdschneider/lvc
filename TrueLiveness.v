@@ -148,6 +148,28 @@ Proof.
   intros. general induction H; simpl in * |- *; econstructor; simpl; eauto.
 Qed.
 
+Lemma argsLive_monotone lv blv blv' Y Z
+  : argsLive lv blv Y Z
+    -> blv' ⊆ blv
+    -> argsLive lv blv' Y Z.
+Proof.
+  intros Args LE.
+  general induction Args; eauto using argsLive.
+Qed.
+
+Lemma true_live_sound_monotone i ZL LV LV' s lv
+: true_live_sound i ZL LV s lv
+  -> PIR2 Subset LV' LV
+  -> true_live_sound i ZL LV' s lv.
+Proof.
+  intros LS LE.
+  general induction LS; simpl; eauto 20 using true_live_sound, PIR2_app.
+  - PIR2_inv.
+    econstructor; eauto.
+    cases; eauto with cset.
+    eauto using argsLive_monotone.
+Qed.
+
 (*
 Lemma true_live_sound_trueIsCalled i Lv s slv l
   : true_live_sound i Lv s slv

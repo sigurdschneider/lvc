@@ -15,28 +15,6 @@ match goal with
   case_eq (A); [intros [] ?| intros ?]; congruence
 end.
 
-Fixpoint countTrue (L:list bool) :=
-  match L with
-  | nil => 0
-  | true :: xs => 1 + countTrue xs
-  | false :: xs => countTrue xs
-  end.
-
-Lemma countTrue_exists (L:list bool) n
-  : get L n true
-    -> countTrue L <> 0.
-Proof.
-  intros. general induction H; simpl; eauto.
-  - cases; eauto.
-Qed.
-
-Lemma countTrue_app (L L':list bool)
-  : countTrue (L ++ L') = countTrue L + countTrue L'.
-Proof.
-  intros. induction L; simpl; eauto.
-  destruct a; eauto. omega.
-Qed.
-
 Definition compileF (compile : forall (RZL:list (bool * params)) (s:stmt) (a:ann bool), stmt)
 (RZL:list (bool * params)) :=
   fix f (F:〔params * stmt〕) (ans:list (ann bool)) :=
@@ -83,25 +61,21 @@ Proof.
 Qed.
 
 Lemma compileF_get RZL F n ans Zs a
-  : ❬F❭ = ❬ans❭
-    -> get F n Zs
+  : get F n Zs
     -> get ans n a
     -> getAnn a = true
     -> get (compileF compile RZL F ans) (countTrue (getAnn ⊝ (take n ans)))
           (fst Zs, compile RZL (snd Zs) a).
 Proof.
-  intros LEN GetF GetAns. length_equify.
-  general induction LEN.
-  - isabsurd.
-  - destruct x as [Z s]; inv GetF; inv GetAns.
-    + simpl. rewrite H.
-      * eauto using get.
+  intros GetF GetAns EQ.
+  general induction ans; destruct F as [|[Z s] ?]; isabsurd.
+  - inv GetF; inv GetAns.
+    + simpl. rewrite EQ; eauto using get.
     + simpl. cases; simpl; eauto using get.
 Qed.
 
 Lemma compileF_get_inv RZL F ans Z' s' n'
-  : ❬F❭ = ❬ans❭
-    -> get (compileF compile RZL F ans) n' (Z', s')
+  : get (compileF compile RZL F ans) n' (Z', s')
     -> exists Zs a n, get F n Zs
       /\ get ans n a
       /\ getAnn a = true
@@ -109,16 +83,53 @@ Lemma compileF_get_inv RZL F ans Z' s' n'
       /\ s' = compile RZL (snd Zs) a
       /\ n' = countTrue (getAnn ⊝ (take n ans)).
 Proof.
-  intros LEN Get. length_equify.
-  general induction LEN; simpl in *.
-  - isabsurd.
-  - destruct x as [Z s]. case_eq (getAnn y); intros EQ.
-    + rewrite EQ in *. inv Get.
-      * eexists (Z',s), y, 0; eauto 20 using get.
-      * clear Get. edestruct IHLEN as [Zs [a [n' [lv ?]]]]; eauto; dcr; subst.
-        exists Zs, a, (S n'). simpl; rewrite EQ. eauto 20 using get.
-    + rewrite EQ in *. edestruct IHLEN as [Zs [a [n [lv ?]]]]; eauto; dcr; subst.
-      exists Zs, a, (S n). simpl; rewrite EQ. eauto 20 using get.
+  intros Get.
+  general induction ans; destruct F as [|[Z s] ?]; simpl in *; isabsurd.
+  - cases in Get.
+    + inv Get.
+      * eauto 20 using get.
+      * clear Get. edestruct IHans as [Zs [a' [n' [lv ?]]]]; eauto; dcr; subst.
+        exists Zs, a', (S n'). simpl; rewrite <- Heq; eauto 20 using get.
+    + edestruct IHans as [Zs [a' [n [lv ?]]]]; eauto; dcr; subst.
+      exists Zs, a', (S n). simpl; rewrite <- Heq; eauto 20 using get.
+Qed.
+
+Lemma compile_occurVars RZL s uc
+  : occurVars (compile RZL s uc) ⊆ occurVars s.
+Proof.
+  revert RZL uc.
+  sind s; destruct s; intros RZL uc; destruct uc; simpl; eauto.
+  - rewrite IH; eauto.
+  - repeat cases; simpl; repeat rewrite IH; eauto with cset.
+  - rewrite IH; eauto.
+  - cases.
+    + rewrite IH; eauto.
+    + rewrite Heq; clear Heq; simpl.
+      eapply incl_union_lr; eauto.
+      eapply list_union_incl; eauto with cset.
+      intros; inv_get. destruct x as [Z s'].
+      edestruct compileF_get_inv; eauto; dcr; subst.
+      eapply incl_list_union. eauto using map_get_1.
+      simpl. rewrite IH; eauto.
+Qed.
+
+Lemma compile_freeVars RZL s uc
+  : freeVars (compile RZL s uc) ⊆ freeVars s.
+Proof.
+  revert RZL uc.
+  sind s; destruct s; intros RZL uc; destruct uc; simpl; eauto.
+  - rewrite IH; eauto.
+  - repeat cases; simpl; repeat rewrite IH; eauto with cset.
+  - rewrite IH; eauto.
+  - cases.
+    + rewrite IH; eauto.
+    + rewrite Heq; clear Heq; simpl.
+      eapply incl_union_lr; eauto.
+      eapply list_union_incl; eauto with cset.
+      intros; inv_get. destruct x as [Z s'].
+      edestruct compileF_get_inv; eauto; dcr; subst.
+      eapply incl_list_union. eauto using map_get_1.
+      simpl. rewrite IH; eauto.
 Qed.
 
 Lemma compileF_length LV F ans
@@ -128,13 +139,6 @@ Proof.
   intros. length_equify.
   general induction H; simpl; eauto.
   cases; subst. cases; simpl; eauto.
-Qed.
-
-Lemma fst_zip_pair X Y (L:list X) (L':list Y) (LEN:❬L❭ = ❬L'❭)
-  : fst ⊝ pair ⊜ L L' = L.
-Proof.
-  length_equify.
-  general induction LEN; simpl; f_equal; eauto.
 Qed.
 
 Lemma getAnn_eq X Y Y' (F:list (Y * Y')) (als:list (ann X))
@@ -182,6 +186,20 @@ Proof.
     cases in H.
     + inv H.
     + inv H0; eauto.
+Qed.
+
+Lemma compileF_not_nil_exists_true RZL F als (LEN:❬F❭ = ❬als❭)
+  : nil <> compileF compile RZL F als
+    -> exists n a, get als n a /\ getAnn a.
+Proof.
+  length_equify.
+  general induction LEN; simpl in *.
+  - isabsurd.
+  - destruct x as [Z s]; simpl in *.
+    cases in H.
+    + eexists 0, y; split; eauto using get.
+      rewrite <- Heq; eauto.
+    + edestruct IHLEN; dcr; eauto 20 using get.
 Qed.
 
 Lemma trueIsCalled_compileF_not_nil (i : sc) (ZL : 〔params〕)
@@ -400,37 +418,6 @@ Proof.
       eauto with len.
 Qed.
 
-Lemma filter_by_app A B (f:A -> bool) L1 (L1':list B) L2 L2' (LEN: ❬L1❭ = ❬L1'❭)
-  : filter_by f (L1 ++ L2) (L1' ++ L2') = filter_by f L1 L1' ++ filter_by f L2 L2'.
-Proof.
-  length_equify.
-  general induction LEN; simpl; repeat cases; simpl; f_equal; eauto.
-Qed.
-
-Lemma filter_by_nil A B (f:A -> bool) L (L':list B)
-  : (forall n b, get L n b -> f b = false)
-    -> filter_by f L L' = nil.
-Proof.
-  intros.
-  general induction L; destruct L'; simpl; repeat cases; simpl; f_equal; eauto using get.
-  - exfalso. exploit H; eauto using get. congruence.
-Qed.
-
-Lemma get_filter_by A B (p:A->bool) (Z:list A) (Y:list B) y n z
-  : get Z n z
-    -> get Y n y
-    -> p z
-    -> get (filter_by p Z Y) (countTrue (p ⊝ (take n Z))) y.
-Proof.
-  intros GetZ GetY Pz.
-  eapply get_getT in GetZ.
-  eapply get_getT in GetY.
-  general induction GetZ; inv GetY; simpl in * |- *; isabsurd.
-  - cases. eauto using get.
-  - exploit IHGetZ; eauto.
-    cases; eauto using get.
-Qed.
-
 Lemma DCE_paramsMatch i PL ZL RL s lv
   : unreachable_code i ZL RL s lv
     -> getAnn lv
@@ -460,7 +447,6 @@ Proof.
       rewrite compileF_Z_filter_by, map_filter_by, <- filter_by_app; eauto with len.
     + rewrite compileF_Z_filter_by, map_filter_by, <- filter_by_app; eauto with len.
 Qed.
-
 
 Module I.
 
@@ -635,7 +621,8 @@ Proof.
             hnf in H3. dcr. hnf in H10; dcr; subst.
             rewrite get_app_lt in H14; eauto using get_range.
             inv_get.
-            exploit (compileF_get ((pair ⊜ (getAnn ⊝ als) (fst ⊝ F) ++ pair ⊜ RL ZL) )); eauto.
+            exploit (compileF_get ((pair ⊜ (getAnn ⊝ als) (fst ⊝ F) ++ pair ⊜ RL ZL) )).
+            eapply H6. eauto. eauto.
             erewrite <- getAnn_take_eq in H7; eauto.
             simpl in *. get_functional.
             rewrite <- zip_app; eauto with len.
@@ -648,7 +635,8 @@ Proof.
             hnf in H2. dcr; subst.
             rewrite get_app_lt in H12; eauto with len.
             inv_get. simpl; unfold ParamRel; simpl.
-            exploit (compileF_get ((pair ⊜ (getAnn ⊝ als) (fst ⊝ F) ++ pair ⊜ RL ZL) )); eauto.
+            exploit (compileF_get ((pair ⊜ (getAnn ⊝ als) (fst ⊝ F) ++ pair ⊜ RL ZL) )).
+            eapply H3. eauto. eauto.
             erewrite <- getAnn_take_eq in H6; eauto.
             get_functional. eauto.
           * intros. rewrite compileF_length; eauto.
@@ -687,3 +675,122 @@ Proof.
 Qed.
 
 End I.
+
+Fixpoint compile_live (s:stmt) (a:ann (set var)) (b:ann bool) : ann (set var) :=
+  match s, a, b with
+    | stmtLet x e s, ann1 lv an, ann1 _ bn =>
+      ann1 lv (compile_live s an bn)
+    | stmtIf e s t, ann2 lv ans ant, ann2 _ bns bnt =>
+      if [exp2bool e = Some true] then
+        compile_live s ans bns
+      else if [exp2bool e = Some false ] then
+        compile_live t ant bnt
+      else
+        ann2 lv (compile_live s ans bns) (compile_live t ant bnt)
+    | stmtApp f Y, ann0 lv, _ => ann0 lv
+    | stmtReturn x, ann0 lv, _ => ann0 lv
+    | stmtExtern x f Y s, ann1 lv an, ann1 _ bn  =>
+      ann1 lv (compile_live s an bn)
+    | stmtFun F t, annF lv anF ant, annF _ bnF bnt =>
+      let anF'' := zip (fun (Zs:params * stmt) ab =>
+                         compile_live (snd Zs) (fst ab) (snd ab)) F (pair ⊜ anF bnF) in
+      let anF' := filter_by (fun b => b) (getAnn ⊝ bnF) anF'' in
+      match anF' with
+      | nil => (compile_live t ant bnt)
+      | _ => annF lv anF' (compile_live t ant bnt)
+      end
+    | _, a, _ => a
+  end.
+
+
+Require Import TrueLiveness.
+
+Lemma compile_live_incl i uci ZL LV RL s lv uc
+  : true_live_sound i ZL LV s lv
+    -> unreachable_code uci ZL RL s uc
+    -> getAnn (compile_live s lv uc) ⊆ getAnn lv.
+Proof.
+  intros LS UC.
+  general induction LS; inv UC; simpl; eauto.
+  - repeat cases; simpl; eauto.
+    + rewrite H0; eauto.
+    + rewrite H2; eauto.
+  - cases.
+    + rewrite IHLS; eauto.
+    + rewrite Heq. simpl; eauto.
+Qed.
+
+Lemma DCE_live uci i ZL LV RL s uc lv
+  : unreachable_code uci ZL RL s uc
+    -> getAnn uc
+    -> true_live_sound i ZL LV s lv
+    -> true_live_sound i (filter_by (fun b => b) RL ZL)
+                      (filter_by (fun b => b) RL LV)
+                      (compile (zip pair RL ZL) s uc)
+                      (compile_live s lv uc).
+Proof.
+  intros UC Ann LS.
+  general induction LS; inv UC; simpl; eauto using true_live_sound.
+  - econstructor; eauto using compile_live_incl with cset.
+    intros. eapply H. eapply compile_live_incl; eauto.
+  - repeat cases; eauto. econstructor; eauto; intros.
+    + rewrite compile_live_incl; eauto.
+    + rewrite compile_live_incl; eauto.
+  - repeat get_functional. simpl in *.
+    assert (❬take (labN l) RL❭ = ❬take (labN l) ZL❭).
+    eapply get_range in H. eapply get_range in H7.
+    repeat rewrite take_length_le; eauto. omega. omega.
+    econstructor; eauto.
+    rewrite take_zip. rewrite fst_zip_pair; eauto.
+    exploit (get_filter_by (fun b => b) H7 H); eauto.
+    destruct a, b; isabsurd; eauto.
+    simpl. rewrite map_id in H5. eauto.
+    rewrite take_zip. rewrite fst_zip_pair; eauto.
+    exploit (get_filter_by (fun b => b) H7 H0); eauto.
+    destruct a, b; isabsurd; eauto.
+    simpl. rewrite map_id in H5. eauto.
+  - econstructor; eauto.
+    rewrite compile_live_incl; eauto.
+  - cases. rewrite <- zip_app; eauto with len.
+    + exploit IHLS; eauto.
+      assert (forall (n : nat) (b : bool), get (getAnn ⊝ als0) n b -> b = false).
+      intros; inv_get; eauto using compileF_nil_als_false.
+      rewrite !filter_by_app in H4; eauto with len.
+      rewrite filter_by_nil in H4; eauto.
+      setoid_rewrite filter_by_nil in H4 at 3; eauto.
+      setoid_rewrite filter_by_nil at 3; eauto.
+    + rewrite Heq. exploit compileF_not_nil_exists_true; eauto.
+      rewrite <- Heq; congruence. clear Heq; dcr.
+      rewrite <- zip_app; eauto with len.
+      cases. exfalso. refine (filter_by_not_nil _ _ _ _ _ (eq_sym Heq));
+                        eauto 20 using Is_true_eq_true with len.
+      rewrite Heq; clear Heq.
+      econstructor; eauto.
+      rewrite compileF_Z_filter_by; eauto with len.
+      rewrite map_filter_by. rewrite <- !filter_by_app; eauto 20 with len.
+      eapply true_live_sound_monotone.
+      eapply IHLS; eauto 20 with len.
+      rewrite !filter_by_app; eauto 20 with len. eapply PIR2_app; [ | reflexivity ].
+      eapply PIR2_get; intros; inv_get. simpl.
+      eapply compile_live_incl; eauto.
+      repeat rewrite filter_by_length; eauto 20 with len.
+      rewrite compileF_length; eauto. rewrite filter_by_length, map_id; eauto 20 with len.
+      intros; inv_get.
+      destruct Zs as [Z s].
+      edestruct compileF_get_inv; eauto; dcr; subst. simpl.
+      rewrite compileF_Z_filter_by; eauto with len.
+      inv_get. rewrite <- filter_by_app; eauto with len.
+      eapply true_live_sound_monotone.
+      eapply H1; eauto 20 with len.
+      rewrite !filter_by_app; eauto 20 with len. eapply PIR2_app; [ | reflexivity ].
+      eapply PIR2_get; intros; inv_get. simpl.
+      eapply compile_live_incl; eauto.
+      rewrite map_length.
+      repeat rewrite filter_by_length; eauto 20 with len.
+      intros. inv_get.
+      destruct Zs as [Z s].
+      edestruct compileF_get_inv; eauto; dcr; subst. simpl.
+      inv_get. cases; eauto.
+      rewrite compile_live_incl; eauto.
+      rewrite compile_live_incl; eauto.
+Qed.
