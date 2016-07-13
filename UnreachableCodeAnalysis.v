@@ -1,7 +1,7 @@
 Require Import CSet Le Var.
 
 Require Import Plus Util AllInRel Map CSet ListUpdateAt.
-Require Import Val Var Env EnvTy IL Annotation Lattice DecSolve Filter.
+Require Import Val Var Env IL Annotation Lattice DecSolve Filter.
 Require Import Analysis AnalysisForward Terminating Subterm.
 
 Remove Hints trans_eq_bool.

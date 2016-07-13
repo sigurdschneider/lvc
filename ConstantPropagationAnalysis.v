@@ -1,7 +1,7 @@
 Require Import CSet Le.
 
 Require Import Plus Util AllInRel CSet.
-Require Import Val Var Env EnvTy IL Annotation Lattice DecSolve Analysis Lattice.
+Require Import Val Var Env IL Annotation Lattice DecSolve Analysis Lattice.
 
 Require Import CMap.
 

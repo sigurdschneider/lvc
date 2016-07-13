@@ -1,4 +1,4 @@
-Require Import AllInRel Util Map Env EnvTy Exp IL DecSolve MoreList InRel Sublist.
+Require Import AllInRel Util Map Env Exp IL DecSolve MoreList InRel Sublist.
 
 Set Implicit Arguments.
 Unset Printing Records.

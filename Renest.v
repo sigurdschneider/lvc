@@ -1,4 +1,4 @@
-Require Import paco2 AllInRel Util Map Env EnvTy Exp IL SimI DecSolve MoreList Sawtooth InRel Sublist.
+Require Import paco2 AllInRel Util Map Env Exp IL SimI DecSolve MoreList Sawtooth InRel Sublist.
 
 Set Implicit Arguments.
 Unset Printing Records.

@@ -1,7 +1,7 @@
 Require Import CSet Le.
 Require Import Plus Util AllInRel Map SetOperations.
 
-Require Import Val EqDec Computable Var Env EnvTy IL Annotation.
+Require Import Val EqDec Computable Var Env IL Annotation.
 Require Import paco2 SimF Fresh MoreExp.
 
 Set Implicit Arguments.

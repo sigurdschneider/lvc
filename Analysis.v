@@ -1,7 +1,7 @@
 Require Import CSet Le ListUpdateAt Coq.Classes.RelationClasses.
 
 Require Import Plus Util AllInRel Map Terminating.
-Require Import Val Var Env EnvTy IL Annotation Lattice DecSolve LengthEq MoreList Status AllInRel OptionR.
+Require Import Val Var Env IL Annotation Lattice DecSolve LengthEq MoreList Status AllInRel OptionR.
 
 Set Implicit Arguments.
 

@@ -47,6 +47,52 @@ Proof.
   cases; eauto.
 Qed.
 
+Inductive binop : Type :=
+| BinOpAdd
+| BinOpSub
+| BinOpMul
+| BinOpDiv
+| BinOpEq.
+
+Instance inst_eq_dec_binop : EqDec binop eq.
+Proof.
+  hnf; intros. change ({x = y} + {x <> y}).
+  decide equality.
+Qed.
+
+Definition option_lift1 A B (f:A -> B) := fun x => Some (f x).
+Definition option_lift2 A B C (f:A -> B -> C) := fun x y => Some (f x y).
+Definition bool2val (b:bool) :=
+  match b with
+  | true => val_true
+  | false => val_false
+  end.
+
+Definition binop_eval (o:binop) :=
+  match o with
+      | BinOpAdd => option_lift2 Int.add
+      | BinOpSub => option_lift2 Int.sub
+      | BinOpMul => option_lift2 Int.mul
+      | BinOpDiv => option_lift2 Int.divs
+      | BinOpEq => option_lift2 (fun x y => bool2val(Int.eq x y))
+    end.
+
+Inductive unop : Type :=
+| UnOpToBool
+| UnOpNeg.
+
+Instance inst_eq_dec_unop : EqDec unop eq.
+Proof.
+  hnf; intros. change ({x = y} + {x <> y}).
+  decide equality.
+Qed.
+
+Definition unop_eval (o:unop) :=
+  match o with
+  | UnOpToBool => option_lift1 (fun a => bool2val(val2bool a))
+  | UnOpNeg => option_lift1 Int.notbool
+  end.
+
 Opaque val.
 Opaque default_val.
 Opaque val_true.

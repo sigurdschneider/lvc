@@ -1,7 +1,7 @@
 Require Import CSet Le.
 
 Require Import Plus Util Map.
-Require Import Env EnvTy IL Alpha Fresh Annotation RenamedApart SetOperations.
+Require Import Env IL Alpha Fresh Annotation RenamedApart SetOperations.
 Require Import LabelsDefined PairwiseDisjoint.
 
 Set Implicit Arguments.

@@ -1,7 +1,7 @@
 Require Import CSet Le.
 
 Require Import Plus Util Map DecSolve AllInRel OptionR.
-Require Import Env EnvTy IL Annotation Liveness Coherence Alpha Restrict RenamedApart.
+Require Import Env IL Annotation Liveness Coherence Alpha Restrict RenamedApart.
 Require Import Rename RenamedApart_Liveness.
 
 Set Implicit Arguments.

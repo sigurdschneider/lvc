@@ -1,7 +1,7 @@
 Require Import CSet Le Arith.Compare_dec.
 
 Require Import Plus Util Map CMap Status Take.
-Require Import Val Var Env EnvTy IL Annotation Liveness Fresh MoreList SetOperations PairwiseDisjoint.
+Require Import Val Var Env IL Annotation Liveness Fresh MoreList SetOperations PairwiseDisjoint.
 Require Import Coherence Allocation RenamedApart.
 
 Set Implicit Arguments.

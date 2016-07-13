@@ -1,7 +1,7 @@
 Require Import List CSet.
 Require Import AutoIndTac Annotation Exp IL MoreExp RenamedApart Util.
 Require Import SetOperations Sim.
-Require Import BitVector SMT NoFun.
+Require Import SMT NoFun.
 Require Import Guards ILFtoSMT GuardProps.
 
 

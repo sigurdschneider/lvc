@@ -1,4 +1,4 @@
-Require Import Util DecSolve Val CSet Map MapDefined Get Env EnvTy Option.
+Require Import Util DecSolve Val CSet Map MapDefined Get Env Option.
 Require Import Arith Exp OptionMap.
 
 Set Implicit Arguments.

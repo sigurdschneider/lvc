@@ -1,7 +1,7 @@
 Require Import CSet Le.
 
 Require Import Plus Util AllInRel Map OptionR.
-Require Import CSet Val Var Env EnvTy Equiv.Sim IL Fresh Annotation MoreExp Coherence.
+Require Import CSet Val Var Env Equiv.Sim IL Fresh Annotation MoreExp Coherence.
 
 Require Import SetOperations.
 

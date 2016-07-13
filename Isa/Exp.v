@@ -1,373 +1,310 @@
-Require Import Util EqDec DecSolve Val CSet Map Env EnvTy Option Get SetOperations.
-Require Import Arith BitVector.
+Require Import Util EqDec DecSolve Val CSet Map Env Option Get SetOperations.
+Require Import Arith.
 
 Set Implicit Arguments.
 
 (** * Expressions *)
 
-(* Module Type Expressions. *)
-(** Assume expressions. We could pack them into a module type, but at the moment
-   this would not buy as anything. Packing things in module types only is interesting
-   if the module types are instantiated; and expression are not in this development *)
+Inductive exp :=
+  Con : val -> exp
+| Var : var -> exp
+| UnOp : unop -> exp -> exp
+| BinOp : binop -> exp -> exp -> exp.
 
-  Definition binop : Set := nat.
-  Definition option_lift2 A B C (f:A -> B -> C) := fun x y => Some (f x y).
-  Definition binop_eval (o:binop) :=
-    match o with
-      | 0 => option_lift2 bvAdd
-      | 1 => option_lift2 bvSub
-      | 2 => option_lift2 bvMult
-      | 3 => option_lift2 bvEq
-      | 4 => option_lift2 (fun a b => neg (bvEq a b))
-      | 5 => bvDiv
-      | _ => option_lift2 (fun a b => sext nil O)
-(*      | _ => option_lift2 bvAdd (*fun _ _ => None *) *)
-    end.
+Inductive isVar : exp -> Prop :=
+  IisVar v : isVar (Var v).
 
-  Definition unop : Set := nat.
-  Definition option_lift1 A B (f:A -> B) := fun x => Some (f x).
-
-  Definition bool2val (b:bool) :=
-    match b with
-      | true => 1
-      | false => 0
-    end.
-
-  Definition unop_eval (o:unop) :=
-    match o with
-
-      | 0 => option_lift1 (fun a => if val2bool  a then val_true else val_false)
-      | _ => option_lift1 neg
-(*      | _ => fun _ => None *)
-(*      | 0 => option_lift1 (val2bool ∘ bool2val)
-      | _ => fun _ => None *)
-    end.
-
-  Inductive exp :=
-     Con : val -> exp
-   | Var : var -> exp
-   | UnOp : unop -> exp -> exp
-   | BinOp : binop -> exp -> exp -> exp.
-
-  Inductive isVar : exp -> Prop :=
-    IisVar v : isVar (Var v).
-
-  Instance isVar_dec e : Computable (isVar e).
-  Proof.
-    destruct e; try dec_solve.
-  Defined.
-
-  Definition getVar (e:exp) :=
-    match e with
-      | Var y => y
-      | _ => 0
-    end.
-
-  Global Instance inst_eq_dec_exp : EqDec exp eq.
-  hnf; intros. change ({x = y} + {x <> y}).
-  decide equality.
-- eapply inst_eq_dec_val.
--  destruct v, v0;firstorder.
-- eapply nat_eq_eqdec.
--  eapply nat_eq_eqdec.
+Instance isVar_dec e : Computable (isVar e).
+Proof.
+  destruct e; try dec_solve.
 Defined.
 
-  Fixpoint exp_eval (E:onv val) (e:exp) : option val :=
-    match e with
-      | Con v => Some v
-      | Var x => E x
-      | UnOp o e => mdo v <- exp_eval E e;
-                   unop_eval o v
-      | BinOp o e1 e2 => mdo v1 <- exp_eval E e1;
-                        mdo v2 <- exp_eval E e2;
-                        binop_eval o v1 v2
-    end.
+Definition getVar (e:exp) :=
+  match e with
+  | Var y => y
+  | _ => 0
+  end.
 
-  Inductive expOfType : onv ty -> exp -> ty -> Prop :=
-  | conOfType ET v t : expOfType ET (Con v) t
-  | varOfType ET x t : ET x = Some t -> expOfType ET (Var x) t.
+Instance inst_eq_dec_exp : EqDec exp eq.
+Proof.
+  hnf; intros. change ({x = y} + {x <> y}).
+  decide equality.
+  - eapply inst_eq_dec_val.
+  - eapply nat_eq_eqdec.
+  - eapply inst_eq_dec_unop.
+  - eapply inst_eq_dec_binop.
+Defined.
 
-  Lemma expOfType_subEnv
-    : forall ET ET' e t, subEnv ET' ET -> expOfType ET' e t -> expOfType ET e t.
-  Proof.
-    intros; destruct e; inv H0; eauto using expOfType.
-  Qed.
+Fixpoint exp_eval (E:onv val) (e:exp) : option val :=
+  match e with
+  | Con v => Some v
+  | Var x => E x
+  | UnOp o e => mdo v <- exp_eval E e;
+                 unop_eval o v
+  | BinOp o e1 e2 => mdo v1 <- exp_eval E e1;
+                      mdo v2 <- exp_eval E e2;
+                      binop_eval o v1 v2
+  end.
 
-  Lemma exp_type_soundness :
-    forall ET E e t v, expOfType ET e t ->
-                       envOfType E ET ->
-                       exp_eval E e = Some v ->
-                       valOfType v t.
-  Proof.
-    intros. destruct e,t; eexists; firstorder using valOfType.
-  Qed.
+Inductive live_exp_sound : exp -> set var -> Prop :=
+| ConLiveSound v lv : live_exp_sound (Con v) lv
+| VarLiveSound x lv : x ∈ lv -> live_exp_sound (Var x) lv
+| UnopLiveSound o e lv :
+    live_exp_sound e lv
+    -> live_exp_sound (UnOp o e) lv
+| binopLiveSound o e1 e2 lv :
+    live_exp_sound e1 lv ->
+    live_exp_sound e2 lv ->
+    live_exp_sound (BinOp o e1 e2) lv.
 
-  Lemma exp_eval_typed_eq
-    : forall ET E E' e t, typed_eq ET E E' -> expOfType ET e t
-      -> exp_eval E e = exp_eval E' e.
-  Proof.
-    intros. destruct e; inv H0; simpl; eauto.
-  Qed.
+Instance live_exp_sound_Subset e
+  : Proper (Subset ==> impl) (live_exp_sound e).
+Proof.
+  unfold Proper, respectful, impl; intros.
+  general induction e; invt live_exp_sound; eauto using live_exp_sound.
+Qed.
 
-  Inductive live_exp_sound : exp -> set var -> Prop :=
-  | ConLiveSound v lv : live_exp_sound (Con v) lv
-  | VarLiveSound x lv : x ∈ lv -> live_exp_sound (Var x) lv
-  | UnopLiveSound o e lv :
-      live_exp_sound e lv
-      -> live_exp_sound (UnOp o e) lv
-  | binopLiveSound o e1 e2 lv :
-      live_exp_sound e1 lv ->
-      live_exp_sound e2 lv ->
-      live_exp_sound (BinOp o e1 e2) lv.
+Instance live_exp_sound_Equal e
+  : Proper (Equal ==> iff) (live_exp_sound e).
+Proof.
+  unfold Proper, respectful, impl; split; intros.
+  - eapply subset_equal in H. rewrite H in H0; eauto.
+  - symmetry in H. eapply subset_equal in H.
+    rewrite <- H; eauto.
+Qed.
 
-  Instance live_exp_sound_Subset e
-    : Proper (Subset ==> impl) (live_exp_sound e).
-  Proof.
-    unfold Proper, respectful, impl; intros.
-    general induction e; invt live_exp_sound; eauto using live_exp_sound.
-  Qed.
-
-  Instance live_exp_sound_Equal e
-    : Proper (Equal ==> iff) (live_exp_sound e).
-  Proof.
-    unfold Proper, respectful, impl; split; intros.
-    - eapply subset_equal in H. rewrite H in H0; eauto.
-    - symmetry in H. eapply subset_equal in H.
-      rewrite <- H; eauto.
-  Qed.
-
-  Instance live_exp_sound_dec e lv
+Instance live_exp_sound_dec e lv
   : Computable (live_exp_sound e lv).
-  Proof.
-    induction e; try dec_solve.
-    - decide (v ∈ lv); try dec_solve.
-    - edestruct IHe; dec_solve.
-    - edestruct IHe1, IHe2; dec_solve.
-  Defined.
+Proof.
+  induction e; try dec_solve.
+  - decide (v ∈ lv); try dec_solve.
+  - edestruct IHe; dec_solve.
+  - edestruct IHe1, IHe2; dec_solve.
+Defined.
 
-  Lemma live_exp_sound_incl
-    : forall e lv lv', live_exp_sound e lv' -> lv' ⊆ lv -> live_exp_sound e lv.
-  Proof.
-    intros; general induction H; econstructor; eauto.
-  Qed.
+Lemma live_exp_sound_incl
+  : forall e lv lv', live_exp_sound e lv' -> lv' ⊆ lv -> live_exp_sound e lv.
+Proof.
+  intros; general induction H; econstructor; eauto.
+Qed.
 
-  Fixpoint freeVars (e:exp) : set var :=
-    match e with
-      | Con _ => ∅
-      | Var v => {v}
-      | UnOp o e => freeVars e
-      | BinOp o e1 e2 => freeVars e1 ∪ freeVars e2
-    end.
+Fixpoint freeVars (e:exp) : set var :=
+  match e with
+  | Con _ => ∅
+  | Var v => {v}
+  | UnOp o e => freeVars e
+  | BinOp o e1 e2 => freeVars e1 ∪ freeVars e2
+  end.
 
-  Lemma live_freeVars
-    : forall e, live_exp_sound e (freeVars e).
-  Proof.
-    intros. general induction e; simpl; econstructor; eauto using live_exp_sound_incl with cset.
-  Qed.
+Lemma live_freeVars
+  : forall e, live_exp_sound e (freeVars e).
+Proof.
+  intros. general induction e; simpl; econstructor; eauto using live_exp_sound_incl with cset.
+Qed.
 
-  Lemma freeVars_live e lv
-     : live_exp_sound e lv -> freeVars e ⊆ lv.
-  Proof.
-    intros. general induction H; simpl; cset_tac; intuition.
-  Qed.
+Lemma freeVars_live e lv
+  : live_exp_sound e lv -> freeVars e ⊆ lv.
+Proof.
+  intros. general induction H; simpl; cset_tac; intuition.
+Qed.
 
-  Lemma exp_eval_live
-    : forall e lv E E', live_exp_sound e lv -> agree_on eq lv E E' ->
-      exp_eval E e = exp_eval E' e.
-  Proof.
-    intros. general induction e; inv H; simpl; eauto.
-    - erewrite IHe; eauto.
-    - erewrite IHe1, IHe2; eauto.
-  Qed.
+Lemma exp_eval_live
+  : forall e lv E E', live_exp_sound e lv -> agree_on eq lv E E' ->
+                 exp_eval E e = exp_eval E' e.
+Proof.
+  intros. general induction e; inv H; simpl; eauto.
+  - erewrite IHe; eauto.
+  - erewrite IHe1, IHe2; eauto.
+Qed.
 
-  Global Instance eval_exp_ext
+Global Instance eval_exp_ext
   : Proper (@feq _ _ eq ==> eq ==> eq) exp_eval.
-  Proof.
-    unfold Proper, respectful; intros; subst.
-    general induction y0; simpl; eauto.
-    - erewrite IHy0; eauto.
-    - erewrite IHy0_1, IHy0_2; eauto.
-  Qed.
+Proof.
+  unfold Proper, respectful; intros; subst.
+  general induction y0; simpl; eauto.
+  - erewrite IHy0; eauto.
+  - erewrite IHy0_1, IHy0_2; eauto.
+Qed.
 
-  Lemma get_live_exp_sound Y D n y
-    : list_union (freeVars ⊝ Y) ⊆ D
-      -> get Y n y
-      -> live_exp_sound y D.
-  Proof.
-    intros. eapply live_exp_sound_incl; [eapply live_freeVars |].
-    rewrite <- H. eauto using get_list_union_map with cset.
-  Qed.
+Lemma get_live_exp_sound Y D n y
+  : list_union (freeVars ⊝ Y) ⊆ D
+    -> get Y n y
+    -> live_exp_sound y D.
+Proof.
+  intros. eapply live_exp_sound_incl; [eapply live_freeVars |].
+  rewrite <- H. eauto using get_list_union_map with cset.
+Qed.
 
-  Definition var_to_exp : forall x:var, exp := Var.
-  Lemma var_to_exp_correct : forall M x,
-     exp_eval M (var_to_exp x) = M x.
-  Proof.
-    reflexivity.
-  Qed.
+Definition var_to_exp : forall x:var, exp := Var.
+Lemma var_to_exp_correct : forall M x,
+    exp_eval M (var_to_exp x) = M x.
+Proof.
+  reflexivity.
+Qed.
 
-  Fixpoint rename_exp (ϱ:env var) (s:exp) : exp :=
-    match s with
-      | Con v => Con v
-      | Var v => Var (ϱ v)
-      | UnOp o e => UnOp o (rename_exp ϱ e)
-      | BinOp o e1 e2 => BinOp o (rename_exp ϱ e1) (rename_exp ϱ e2)
-    end.
+Fixpoint rename_exp (ϱ:env var) (s:exp) : exp :=
+  match s with
+  | Con v => Con v
+  | Var v => Var (ϱ v)
+  | UnOp o e => UnOp o (rename_exp ϱ e)
+  | BinOp o e1 e2 => BinOp o (rename_exp ϱ e1) (rename_exp ϱ e2)
+  end.
 
-  Lemma rename_exp_comp e ϱ ϱ'
+Lemma rename_exp_comp e ϱ ϱ'
   : rename_exp ϱ (rename_exp ϱ' e) = rename_exp (ϱ' ∘ ϱ) e.
-  Proof.
-    unfold comp. general induction e; simpl; eauto.
-    - f_equal; eauto.
-    - f_equal; eauto.
-  Qed.
+Proof.
+  unfold comp. general induction e; simpl; eauto.
+  - f_equal; eauto.
+  - f_equal; eauto.
+Qed.
 
-  Lemma rename_exp_ext
-    : forall e (ϱ ϱ':env var), feq (R:=eq) ϱ ϱ' -> rename_exp ϱ e = rename_exp ϱ' e.
-  Proof.
-    intros. general induction e; simpl; eauto.
-    - f_equal; eauto.
-    - f_equal; eauto.
-  Qed.
+Lemma rename_exp_ext
+  : forall e (ϱ ϱ':env var), feq (R:=eq) ϱ ϱ' -> rename_exp ϱ e = rename_exp ϱ' e.
+Proof.
+  intros. general induction e; simpl; eauto.
+  - f_equal; eauto.
+  - f_equal; eauto.
+Qed.
 
-  Lemma rename_exp_agree ϱ ϱ' e
+Lemma rename_exp_agree ϱ ϱ' e
   : agree_on eq (freeVars e) ϱ ϱ'
     -> rename_exp ϱ e = rename_exp ϱ' e.
-  Proof.
-    intros; general induction e; simpl in *; f_equal;
+Proof.
+  intros; general induction e; simpl in *; f_equal;
     eauto 30 using agree_on_incl, incl_left, incl_right.
-  Qed.
+Qed.
 
-  Lemma rename_exp_freeVars
+Lemma rename_exp_freeVars
   : forall e ϱ `{Proper _ (_eq ==> _eq) ϱ},
-      freeVars (rename_exp ϱ e) ⊆ lookup_set ϱ (freeVars e).
-  Proof.
-    intros. general induction e; simpl; eauto using lookup_set_single_fact,
-                                        lookup_set_union_incl, incl_union_lr; eauto.
-  Qed.
+    freeVars (rename_exp ϱ e) ⊆ lookup_set ϱ (freeVars e).
+Proof.
+  intros. general induction e; simpl; eauto using lookup_set_single_fact,
+                                      lookup_set_union_incl, incl_union_lr; eauto.
+Qed.
 
-  Lemma live_exp_rename_sound e lv (ϱ:env var)
+Lemma live_exp_rename_sound e lv (ϱ:env var)
   : live_exp_sound e lv
     -> live_exp_sound (rename_exp ϱ e) (lookup_set ϱ lv).
-  Proof.
-    intros. general induction H; simpl; eauto using live_exp_sound.
-    + econstructor. eapply lookup_set_spec; eauto.
-  Qed.
+Proof.
+  intros. general induction H; simpl; eauto using live_exp_sound.
+  + econstructor. eapply lookup_set_spec; eauto.
+Qed.
 
 
-  Fixpoint subst_exp (ϱ:env exp) (s:exp) : exp :=
-    match s with
-      | Con v => Con v
-      | Var v => (ϱ v)
-      | UnOp o e => UnOp o (subst_exp ϱ e)
-      | BinOp o e1 e2 => BinOp o (subst_exp ϱ e1) (subst_exp ϱ e2)
-    end.
+Fixpoint subst_exp (ϱ:env exp) (s:exp) : exp :=
+  match s with
+  | Con v => Con v
+  | Var v => (ϱ v)
+  | UnOp o e => UnOp o (subst_exp ϱ e)
+  | BinOp o e1 e2 => BinOp o (subst_exp ϱ e1) (subst_exp ϱ e2)
+  end.
 
-  Lemma subst_exp_comp e ϱ ϱ'
+Lemma subst_exp_comp e ϱ ϱ'
   : subst_exp ϱ (subst_exp ϱ' e) = subst_exp (fun x => subst_exp ϱ (ϱ' x)) e.
-  Proof.
-    general induction e; simpl; eauto.
-    - f_equal; eauto.
-    - f_equal; eauto.
-  Qed.
+Proof.
+  general induction e; simpl; eauto.
+  - f_equal; eauto.
+  - f_equal; eauto.
+Qed.
 
-  Lemma subst_exp_ext
-    : forall e (ϱ ϱ':env exp), feq (R:=eq) ϱ ϱ' -> subst_exp ϱ e = subst_exp ϱ' e.
-  Proof.
-    intros. general induction e; simpl; eauto.
-    - f_equal; eauto.
-    - f_equal; eauto.
-  Qed.
+Lemma subst_exp_ext
+  : forall e (ϱ ϱ':env exp), feq (R:=eq) ϱ ϱ' -> subst_exp ϱ e = subst_exp ϱ' e.
+Proof.
+  intros. general induction e; simpl; eauto.
+  - f_equal; eauto.
+  - f_equal; eauto.
+Qed.
 
-  Inductive alpha_exp : env var -> env var -> exp -> exp -> Prop :=
-  | AlphaCon ϱ ϱ' v : alpha_exp ϱ ϱ' (Con v) (Con v)
-  | AlphaVar ϱ ϱ' x y : ϱ x = y -> ϱ' y = x -> alpha_exp ϱ ϱ' (Var x) (Var y)
-  | AlphaUnOp ϱ ϱ' o e e' :
-      alpha_exp ϱ ϱ' e e'
-      -> alpha_exp ϱ ϱ' (UnOp o e) (UnOp o e')
-  | AlphaBinOp ϱ ϱ' o e1 e1' e2 e2' :
-      alpha_exp ϱ ϱ' e1 e1' ->
-      alpha_exp ϱ ϱ' e2 e2' ->
-      alpha_exp ϱ ϱ' (BinOp o e1 e2) (BinOp o e1' e2').
+Inductive alpha_exp : env var -> env var -> exp -> exp -> Prop :=
+| AlphaCon ϱ ϱ' v : alpha_exp ϱ ϱ' (Con v) (Con v)
+| AlphaVar ϱ ϱ' x y : ϱ x = y -> ϱ' y = x -> alpha_exp ϱ ϱ' (Var x) (Var y)
+| AlphaUnOp ϱ ϱ' o e e' :
+    alpha_exp ϱ ϱ' e e'
+    -> alpha_exp ϱ ϱ' (UnOp o e) (UnOp o e')
+| AlphaBinOp ϱ ϱ' o e1 e1' e2 e2' :
+    alpha_exp ϱ ϱ' e1 e1' ->
+    alpha_exp ϱ ϱ' e2 e2' ->
+    alpha_exp ϱ ϱ' (BinOp o e1 e2) (BinOp o e1' e2').
 
-  Lemma alpha_exp_rename_injective
+Lemma alpha_exp_rename_injective
   : forall e ϱ ϱ',
-      inverse_on (freeVars e) ϱ ϱ'
-      -> alpha_exp ϱ ϱ' e (rename_exp ϱ e).
-  Proof.
-    intros. induction e; simpl; eauto using alpha_exp.
-    econstructor; eauto. eapply H; eauto. simpl; cset_tac; eauto.
-    simpl in *. econstructor.
-    eapply IHe1. eapply inverse_on_incl; eauto. cset_tac; intuition.
-    eapply IHe2. eapply inverse_on_incl; eauto. cset_tac; intuition.
-  Qed.
+    inverse_on (freeVars e) ϱ ϱ'
+    -> alpha_exp ϱ ϱ' e (rename_exp ϱ e).
+Proof.
+  intros. induction e; simpl; eauto using alpha_exp.
+  econstructor; eauto. eapply H; eauto. simpl; cset_tac; eauto.
+  simpl in *. econstructor.
+  eapply IHe1. eapply inverse_on_incl; eauto. cset_tac; intuition.
+  eapply IHe2. eapply inverse_on_incl; eauto. cset_tac; intuition.
+Qed.
 
-  Lemma alpha_exp_refl : forall e, alpha_exp id id e e.
-  Proof.
-    intros; induction e; eauto using alpha_exp.
-  Qed.
+Lemma alpha_exp_refl : forall e, alpha_exp id id e e.
+Proof.
+  intros; induction e; eauto using alpha_exp.
+Qed.
 
-  Lemma alpha_exp_sym : forall ϱ ϱ' e e', alpha_exp ϱ ϱ' e e' -> alpha_exp ϱ' ϱ e' e.
-  Proof.
-    intros. general induction H; eauto using alpha_exp.
-  Qed.
+Lemma alpha_exp_sym : forall ϱ ϱ' e e', alpha_exp ϱ ϱ' e e' -> alpha_exp ϱ' ϱ e' e.
+Proof.
+  intros. general induction H; eauto using alpha_exp.
+Qed.
 
-  Lemma alpha_exp_trans
+Lemma alpha_exp_trans
   : forall ϱ1 ϱ1' ϱ2 ϱ2' s s' s'',
-      alpha_exp ϱ1 ϱ1' s s'
-      -> alpha_exp ϱ2 ϱ2' s' s''
-      -> alpha_exp (ϱ1 ∘ ϱ2) (ϱ2' ∘ ϱ1') s s''.
-  Proof.
-    intros. general induction H.
-    + inversion H0. subst v0 ϱ0 ϱ'0 s''. econstructor.
-    + inversion H1. subst x ϱ0 ϱ'0 s''. econstructor; unfold comp; congruence.
-    + inversion H0. subst. econstructor; eauto.
-    + inversion H1. subst. econstructor; eauto.
-  Qed.
+    alpha_exp ϱ1 ϱ1' s s'
+    -> alpha_exp ϱ2 ϱ2' s' s''
+    -> alpha_exp (ϱ1 ∘ ϱ2) (ϱ2' ∘ ϱ1') s s''.
+Proof.
+  intros. general induction H.
+  + inversion H0. subst v0 ϱ0 ϱ'0 s''. econstructor.
+  + inversion H1. subst x ϱ0 ϱ'0 s''. econstructor; unfold comp; congruence.
+  + inversion H0. subst. econstructor; eauto.
+  + inversion H1. subst. econstructor; eauto.
+Qed.
 
-  Lemma alpha_exp_inverse_on
-    : forall ϱ ϱ' s t, alpha_exp ϱ ϱ' s t -> inverse_on (freeVars s) ϱ ϱ'.
-  Proof.
-    intros. general induction H.
-    + isabsurd.
-    + simpl. hnf; intros; cset_tac.
-      rewrite <- H0. rewrite H. rewrite H0. reflexivity.
-    + simpl; eauto.
-    + simpl. eapply inverse_on_union; eauto.
-  Qed.
+Lemma alpha_exp_inverse_on
+  : forall ϱ ϱ' s t, alpha_exp ϱ ϱ' s t -> inverse_on (freeVars s) ϱ ϱ'.
+Proof.
+  intros. general induction H.
+  + isabsurd.
+  + simpl. hnf; intros; cset_tac.
+    rewrite <- H0. rewrite H. rewrite H0. reflexivity.
+  + simpl; eauto.
+  + simpl. eapply inverse_on_union; eauto.
+Qed.
 
-  Lemma alpha_exp_agree_on_morph
+Lemma alpha_exp_agree_on_morph
   : forall f g ϱ ϱ' s t,
-      alpha_exp ϱ ϱ' s t
-      -> agree_on _eq (lookup_set ϱ (freeVars s)) g ϱ'
-      -> agree_on _eq (freeVars s) f ϱ
-      -> alpha_exp f g s t.
-  Proof.
-    intros. general induction H; simpl in *;
+    alpha_exp ϱ ϱ' s t
+    -> agree_on _eq (lookup_set ϱ (freeVars s)) g ϱ'
+    -> agree_on _eq (freeVars s) f ϱ
+    -> alpha_exp f g s t.
+Proof.
+  intros. general induction H; simpl in *;
             eauto 20 using alpha_exp, agree_on_incl, lookup_set_union_incl with cset.
-    - econstructor.
-      + rewrite H2; eauto.
-      + eapply H1. lset_tac.
-  Qed.
+  - econstructor.
+    + rewrite H2; eauto.
+    + eapply H1. lset_tac.
+Qed.
 
-  Lemma exp_rename_renamedApart_all_alpha e e' ϱ ϱ'
+Lemma exp_rename_renamedApart_all_alpha e e' ϱ ϱ'
   : alpha_exp ϱ ϱ' e e'
     -> rename_exp ϱ e = e'.
-  Proof.
-    intros. general induction H; simpl; eauto.
-  Qed.
+Proof.
+  intros. general induction H; simpl; eauto.
+Qed.
 
-  Lemma alpha_exp_morph
+Lemma alpha_exp_morph
   : forall (ϱ1 ϱ1' ϱ2 ϱ2':env var) e e',
-      @feq _ _ eq ϱ1  ϱ1'
-      -> @feq _ _ eq ϱ2 ϱ2'
-      -> alpha_exp ϱ1 ϱ2 e e'
-      -> alpha_exp ϱ1' ϱ2' e e'.
-  Proof.
-    intros. general induction H1; eauto using alpha_exp.
-    econstructor.
-    + rewrite <- H1; eauto.
-    + rewrite <- H2; eauto.
-  Qed.
+    @feq _ _ eq ϱ1  ϱ1'
+    -> @feq _ _ eq ϱ2 ϱ2'
+    -> alpha_exp ϱ1 ϱ2 e e'
+    -> alpha_exp ϱ1' ϱ2' e e'.
+Proof.
+  intros. general induction H1; eauto using alpha_exp.
+  econstructor.
+  + rewrite <- H1; eauto.
+  + rewrite <- H2; eauto.
+Qed.
 
 Inductive expLt : exp -> exp -> Prop :=
 | ExpLtCon c c'
@@ -411,9 +348,9 @@ hnf; intros; unfold complement.
   + eapply (StrictOrder_Irreflexive v H2); eauto.
   + eapply (StrictOrder_Irreflexive u  H1); eauto.
   + eapply (StrictOrder_Irreflexive b  H1).
-Grab Existential Variables. econstructor.
-     * exact ltBitvec_irrefl.
-     * exact ltBitvec_trans.
+    Grab Existential Variables. econstructor.
+    * exact ltBitvec_irrefl.
+    * exact ltBitvec_trans.
 Qed.
 
 Instance lt_eq_strict : StrictOrder ltBitvec.
@@ -434,26 +371,26 @@ Qed.
 
 Notation "'Compare' x 'next' y" :=
   (match x with
-    | Eq => y
-    | z => z
-  end) (at level 100).
+   | Eq => y
+   | z => z
+   end) (at level 100).
 
 Fixpoint exp_cmp (e e':exp) :=
   match e, e' with
-    | Con c, Con c' => _cmp c c'
-    | Con _, _ => Lt
-    | Var v, Var v' => _cmp v v'
-    | Var v, UnOp _ _ => Lt
-    | Var v, BinOp _ _ _ => Lt
-    | UnOp _ _, BinOp _ _ _ => Lt
-    | UnOp o e, UnOp o' e' =>
-      Compare _cmp o o' next
-      Compare exp_cmp e e' next Eq
-    | BinOp o e1 e2, BinOp o' e1' e2' =>
-      Compare _cmp o o' next
-      Compare exp_cmp e1 e1' next
-      Compare exp_cmp e2 e2' next Eq
-    | _, _ => Gt
+  | Con c, Con c' => _cmp c c'
+  | Con _, _ => Lt
+  | Var v, Var v' => _cmp v v'
+  | Var v, UnOp _ _ => Lt
+  | Var v, BinOp _ _ _ => Lt
+  | UnOp _ _, BinOp _ _ _ => Lt
+  | UnOp o e, UnOp o' e' =>
+    Compare _cmp o o' next
+            Compare exp_cmp e e' next Eq
+  | BinOp o e1 e2, BinOp o' e1' e2' =>
+    Compare _cmp o o' next
+            Compare exp_cmp e1 e1' next
+            Compare exp_cmp e2 e2' next Eq
+  | _, _ => Gt
   end.
 
 Instance StrictOrder_expLt : OrderedType.StrictOrder expLt eq.
@@ -464,9 +401,9 @@ eapply H.
 Qed.
 
 Instance OrderedType_exp : OrderedType exp :=
- { _eq := eq;
-  _lt := expLt;
-  _cmp := exp_cmp}.
+  { _eq := eq;
+    _lt := expLt;
+    _cmp := exp_cmp}.
 intros.
 general induction x; destruct y; simpl; try now (econstructor; eauto using expLt).
 pose proof (_compare_spec v v0).
@@ -475,21 +412,21 @@ pose proof (_compare_spec v v0).
   + econstructor. f_equal. eapply H1.
   + econstructor; eauto using expLt.
 - pose proof (_compare_spec v v0).
-inv H; now (econstructor; eauto using expLt).
+  inv H; now (econstructor; eauto using expLt).
 - pose proof (_compare_spec u u0).
-specialize (IHx y).
-inv H; try now (econstructor; eauto using expLt).
-inv H1. inv IHx; now (econstructor; eauto using expLt).
+  specialize (IHx y).
+  inv H; try now (econstructor; eauto using expLt).
+  inv H1. inv IHx; now (econstructor; eauto using expLt).
 - pose proof (_compare_spec b b0).
-specialize (IHx1 y1). specialize (IHx2 y2).
-inv H; try now (econstructor; eauto using expLt).
-inv H1.
-inv IHx1; try now (econstructor; eauto using expLt).
-inv IHx2; try now (econstructor; eauto using expLt).
+  specialize (IHx1 y1). specialize (IHx2 y2).
+  inv H; try now (econstructor; eauto using expLt).
+  inv H1.
+  inv IHx1; try now (econstructor; eauto using expLt).
+  inv IHx2; try now (econstructor; eauto using expLt).
 Defined.
 
 Lemma freeVars_renameExp ϱ e
-: freeVars (rename_exp ϱ e) [=] lookup_set ϱ (freeVars e).
+  : freeVars (rename_exp ϱ e) [=] lookup_set ϱ (freeVars e).
 Proof.
   general induction e; simpl; try rewrite lookup_set_union; eauto.
   - rewrite IHe1, IHe2; reflexivity.
@@ -497,13 +434,13 @@ Qed.
 
 Definition exp2bool (e:exp) : option bool :=
   match e with
-    | Con c => Some (val2bool c)
-    | _ => None
+  | Con c => Some (val2bool c)
+  | _ => None
   end.
 
 Lemma exp2bool_val2bool E e b
-: exp2bool e = Some b
-  -> exists v, exp_eval E e = Some v /\ val2bool v = b.
+  : exp2bool e = Some b
+    -> exists v, exp_eval E e = Some v /\ val2bool v = b.
 Proof.
   destruct e; simpl; intros; try congruence.
   inv H; eauto.

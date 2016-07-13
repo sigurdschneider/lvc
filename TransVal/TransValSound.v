@@ -1,7 +1,7 @@
 Require Import List Arith.
 Require Import IL Annotation AutoIndTac Exp MoreExp RenamedApart Fresh Util.
 Require Import SetOperations SimF Var.
-Require Import BitVector SMT NoFun CombineEnv.
+Require Import SMT NoFun CombineEnv.
 Require Import Guards ILFtoSMT GuardProps ComputeProps.
 
 (** Function Definitions **)

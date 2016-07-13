@@ -1,5 +1,5 @@
 Require Import List CSet.
-Require Import Util AllInRel MapDefined IL Rename EnvTy RenameApart Sim BisimSim Status Annotation.
+Require Import Util AllInRel MapDefined IL Rename RenameApart Sim BisimSim Status Annotation.
 Require CMap.
 Require Liveness LivenessValidators ParallelMove ILN ILN_IL.
 Require TrueLiveness LivenessAnalysis LivenessAnalysisCorrect.
