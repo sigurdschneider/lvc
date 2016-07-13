@@ -1,4 +1,4 @@
-Require Import CSet Util Fresh Filter MoreExp Take MoreList OUnion.
+Require Import CSet Util Fresh MoreExp Take MoreList Filter OUnion.
 Require Import IL Annotation LabelsDefined Sawtooth InRel Liveness UnreachableCode.
 Require Import Sim SimTactics SimI.
 
@@ -771,7 +771,9 @@ Proof.
       eapply true_live_sound_monotone.
       eapply IHLS; eauto 20 with len.
       rewrite !filter_by_app; eauto 20 with len. eapply PIR2_app; [ | reflexivity ].
-      eapply PIR2_get; intros; inv_get. simpl.
+      eapply PIR2_get; intros; inv_get.
+
+      simpl.
       eapply compile_live_incl; eauto.
       repeat rewrite filter_by_length; eauto 20 with len.
       rewrite compileF_length; eauto. rewrite filter_by_length, map_id; eauto 20 with len.

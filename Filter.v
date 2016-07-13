@@ -1,5 +1,6 @@
 Require Import Util List OptionMap LengthEq Map Get Take MoreList.
 
+Set Implicit Arguments.
 Set Implicit Types.
 
 Fixpoint filter_by {A B} (f:A -> bool) (L:list A) (L':list B) : list B :=

@@ -159,7 +159,7 @@ Proof.
     + rewrite <- (subTerm_occurVars ST); simpl.
       eapply list_union_incl; try eapply H0; eauto with cset.
       intros; inv_get. eapply filter_by_get in H; dcr.
-      cases in H3; isabsurd.
+      cases in H3.
       eapply incl_list_union; eauto using map_get_1.
   - eapply subTerm_occurVars in ST; simpl in *. eauto.
   - cset_tac; eauto. eapply subTerm_occurVars; eauto; simpl. cset_tac.
@@ -194,10 +194,10 @@ Proof.
       destruct (get_dec AL (counted l)) as [[[D PD] GetDL]|].
       * cases in H5.
         erewrite get_nth in COND; eauto; simpl in *.
-        PIR2_inv. destruct x2. simpl in *.
-        edestruct get_filter_by. Focus 4.
+        PIR2_inv. destruct x1. simpl in *.
+        exploit get_filter_by. Focus 4.
         eapply incl_list_union. eapply map_get_1.
-        eapply g. reflexivity. eauto. eauto.
+        eapply H7. reflexivity. eauto. eauto.
         simpl. cases; eauto.
         erewrite get_nth in NOTCOND; eauto. simpl in *.
         eapply NOTCOND. eapply H1; eauto.
@@ -261,7 +261,7 @@ Definition liveness_analysis :=
 
 
 Definition livenessAnalysis s :=
-  let a := Analysis.safeFixpoint (LivenessAnalysis.liveness_analysis s) in
+  let a := Analysis.safeFixpoint (liveness_analysis s) in
   mapAnn (@proj1_sig _ _) (proj1_sig (proj1_sig a)).
 
 (*

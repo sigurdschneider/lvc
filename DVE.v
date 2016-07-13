@@ -141,10 +141,10 @@ Proof.
       unfold filter.
       erewrite filter_filter_by_length; eauto with len.
     + intros ? ? Get. erewrite get_nth in Get; eauto using zip_get. simpl in *.
-      edestruct filter_by_get as [? [? [? []]]]; eauto; dcr. simpl in *.
+      edestruct filter_by_get as [? [? []]]; eauto; dcr. simpl in *.
       eapply live_exp_sound_incl.
       eapply argsLive_live_exp_sound; eauto. simpl in *.
-      decide (x0 ∈ blv); intuition. eauto with cset.
+      decide (x ∈ blv); intuition. eauto with cset.
   - econstructor; eauto.
     eapply live_exp_sound_incl; eauto using incl_right.
   - econstructor; eauto.

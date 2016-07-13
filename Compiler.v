@@ -301,9 +301,8 @@ Proof.
   hnf; intuition.
 Qed.
 *)
+*)
 End Compiler.
-
- *)
 
 Print Assumptions toDeBruijn_correct.
 Print Assumptions toILF_correct.
