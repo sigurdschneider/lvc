@@ -360,7 +360,7 @@ Lemma inverse_on_update_fresh_list (D:set var) (Z:list var) (ϱ ϱ' : var -> var
   -> inverse_on D (update_with_list Z (fresh_list fresh (lookup_set ϱ (D \ of_list Z)) (length Z)) ϱ)
                  (update_with_list (fresh_list fresh (lookup_set ϱ (D \ of_list Z)) (length Z)) Z ϱ').
 Proof.
-  intros. eapply inverse_on_update_fresh; eauto.
+  intros. eapply inverse_on_update_fresh; eauto. Set Printing All. intros.
   eapply fresh_list_unique, fresh_spec.
   eapply fresh_list_spec, fresh_spec.
 Qed.

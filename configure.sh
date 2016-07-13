@@ -30,8 +30,7 @@ coq_makefile -R theories Lvc -R ContainersPlugin/theories Containers -I Containe
 echo "${MAKEFILE} generated."
 
 echo "Patching ${MAKEFILE} to include target 'extraction'."
-# sed -i -e  '/.\/extraction:/c\.\/extraction: Compiler.vo' Makefile
-sed -i -e  's%\./extraction:%\./extraction: Compiler.vo%' ${MAKEFILE}
+sed -i -e  's%\./extraction:%\./extraction: theories/Compiler.vo%' ${MAKEFILE}
 
 echo "Patching ${MAKEFILE} to reference external Containers documentation."
 sed -i -e 's%COQDOCFLAGS?=-interpolate -utf8%COQDOCFLAGS?=--interpolate --utf8 --external "http://www.lix.polytechnique.fr/coq/pylons/contribs/files/Containers/v8.4/" Containers --toc --toc-depth 3 --index indexpage --no-lib-name%' ${MAKEFILE}

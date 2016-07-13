@@ -12,14 +12,18 @@ COQDOCFLAGS := \
 COQMAKEFILE := Makefile.coq
 COQMAKE := +$(MAKE) -f $(COQMAKEFILE)
 CORES=$(shell cat /proc/cpuinfo | grep cpu\ cores | sed 's/.*:\ //' | head -n 1)
-VS=$(shell find -iname '*vo' | sed 's/\.vo/.v/' | grep -v paco | grep -v Containers)
+VS=$(shell find theories/ -iname '*vo' | sed 's/\.vo/.v/' | grep -v `cat _BLACKLIST`)
 
 ifneq "$(COQBIN)" ""
         COQBIN := $(COQBIN)/
 endif
 
-all: $(COQMAKEFILE)
+all: $(COQMAKEFILE) deps
 	+$(MAKE) -f $(COQMAKEFILE) $@
+
+deps:
+	+$(MAKE) -C paco all
+	+$(MAKE) -C ContainersPlugin all
 
 doc: clean-doc 
 	- mkdir -p $(DOC)

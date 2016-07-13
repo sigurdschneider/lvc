@@ -306,6 +306,7 @@ Proof.
   + rewrite <- H2; eauto.
 Qed.
 
+
 Inductive expLt : exp -> exp -> Prop :=
 | ExpLtCon c c'
   : _lt c c'
@@ -343,30 +344,25 @@ Inductive expLt : exp -> exp -> Prop :=
 
 Instance expLt_irr : Irreflexive expLt.
 hnf; intros; unfold complement.
-- induction x; inversion 1; subst; try now eauto using StrictOrder_Irreflexive.
-  +  eapply (StrictOrder_Irreflexive v H2); eauto.
-  + eapply (StrictOrder_Irreflexive v H2); eauto.
-  + eapply (StrictOrder_Irreflexive u  H1); eauto.
-  + eapply (StrictOrder_Irreflexive b  H1).
-    Grab Existential Variables. econstructor.
-    * exact ltBitvec_irrefl.
-    * exact ltBitvec_trans.
+- induction x; inversion 1; subst;
+    try now eauto using StrictOrder_Irreflexive with typeclass_instances.
+  * eapply (StrictOrder_Irreflexive _ H2).
+  * eapply (StrictOrder_Irreflexive _ H2).
+    Grab Existential Variables.
+    eauto with typeclass_instances.
 Qed.
-
-Instance lt_eq_strict : StrictOrder ltBitvec.
-econstructor.
-- apply ltBitvec_irrefl.
-- eapply ltBitvec_trans.
-Defined.
-
 
 Instance expLt_trans : Transitive expLt.
 hnf; intros.
-general induction H; invt expLt; eauto using expLt; unfold unop in *.
+general induction H; invt expLt; eauto using expLt.
 - econstructor. eapply StrictOrder_Transitive. eapply H. eapply H2.
 - econstructor. eapply StrictOrder_Transitive.  eapply H. eapply H2.
 - econstructor; eauto. eapply StrictOrder_Transitive. eapply H. eapply H4.
 - econstructor; eauto. eapply StrictOrder_Transitive. eapply H. eapply H5.
+  Grab Existential Variables.
+  + eauto with typeclass_instances.
+  + eauto with typeclass_instances.
+  + eauto with typeclass_instances.
 Qed.
 
 Notation "'Compare' x 'next' y" :=
@@ -445,6 +441,3 @@ Proof.
   destruct e; simpl; intros; try congruence.
   inv H; eauto.
 Qed.
-
-
-(* End Expressions. *)

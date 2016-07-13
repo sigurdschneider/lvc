@@ -81,11 +81,6 @@ Inductive unop : Type :=
 | UnOpToBool
 | UnOpNeg.
 
-Declare ML Module "containers_plugin".
-
-
-Generate OrderedType unop.
-
 Instance inst_eq_dec_unop : EqDec unop eq.
 Proof.
   hnf; intros. change ({x = y} + {x <> y}).
@@ -97,6 +92,90 @@ Definition unop_eval (o:unop) :=
   | UnOpToBool => option_lift1 (fun a => bool2val(val2bool a))
   | UnOpNeg => option_lift1 Int.notbool
   end.
+
+Declare ML Module "containers_plugin".
+Generate OrderedType unop.
+Generate OrderedType binop.
+
+Require Coq.Structures.OrderedTypeEx.
+
+
+Instance Reflexive_eq_int : Reflexive Int.eq.
+Proof.
+  hnf; intros. hnf. cases; eauto.
+  rewrite Int.eq_true in Heq. congruence.
+Qed.
+
+Instance Symmetric_eq_int : Symmetric Int.eq.
+Proof.
+  hnf; intros. rewrite Int.eq_sym; eauto.
+Qed.
+
+Instance Transitive_eq_int : Transitive Int.eq.
+Proof.
+  hnf; intros.
+  pose proof (Int.eq_spec x y).
+  pose proof (Int.eq_spec y z).
+  cases in H1; cases in H2; subst; eauto.
+Qed.
+
+Instance Equivalence_eq_int : Equivalence Int.eq.
+Proof.
+  econstructor; eauto with typeclass_instances.
+Qed.
+
+Instance Transitive_lt_int : Transitive Int.lt.
+Proof.
+  hnf. unfold Int.lt. intros ? ? ? A B.
+  cases in A; invc A; eauto.
+  cases in B; invc B; eauto.
+  destruct Z_StrictOrder.
+  specialize (StrictOrder_Transitive _ _ _ l l0).
+  rewrite Coqlib.zlt_true; eauto.
+Qed.
+
+Instance Irreflexive_lt_int : Irreflexive Int.lt.
+Proof.
+  unfold Irreflexive, complement, Reflexive, Int.lt; intros.
+  cases in H; eauto.
+  eapply Z.lt_irrefl; eauto.
+Qed.
+
+Instance int_eq_eq_lt
+  : Proper (Int.eq ==> Int.eq ==> eq) Int.lt.
+Proof.
+  unfold Proper, respectful; intros.
+  pose proof (Int.eq_spec x y).
+  pose proof (Int.eq_spec x0 y0).
+  cases in H1. cases in H2. subst. eauto.
+Qed.
+
+Instance StrictOrder_lt_int : StrictOrder Int.lt Int.eq.
+Proof.
+  econstructor; eauto with typeclass_instances.
+  - intros ? ? LE EQ.
+    rewrite <- EQ in LE.
+    eapply (Irreflexive_lt_int x); eauto.
+Defined.
+
+Definition int_compare (x y : int) : Datatypes.comparison :=
+  Z.compare (Int.signed x) (Int.signed y).
+
+Lemma compare_spec_int x y
+  : compare_spec Int.eq Int.lt x y (int_compare x y).
+Proof.
+  pose proof (Z.compare_spec (Int.signed x) (Int.signed y)).
+  case_eq (int_compare x y); intros EQ; econstructor; unfold int_compare in EQ;
+    rewrite EQ in H; inv H.
+Admitted.
+
+Instance OrderedType_int : OrderedType int.
+Proof.
+  eapply (Build_OrderedType _ Int.eq Int.lt); eauto with typeclass_instances.
+  eapply compare_spec_int.
+Defined.
+
+
 
 Opaque val.
 Opaque default_val.
