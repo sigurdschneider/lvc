@@ -1,5 +1,5 @@
 Require Import List EqNat Bool.
-Require Import IL BitVector Exp MoreExp SetOperations Val DecSolve.
+Require Import IL MoreExp SetOperations Val DecSolve.
 
 Set Implicit Arguments.
 
@@ -110,7 +110,7 @@ match s with
             else models F E f
 |smtImp a b
  => (models F E a) ->(models F E b)
-|constr s1 s2 => val2bool( bvEq (smt_eval E s1) (smt_eval E s2))
+|constr s1 s2 => (smt_eval E s1) === (smt_eval E s2)
 |funcApp f a => F f (List.map (smt_eval E) a)
 |smtFalse => False
 |smtTrue => True

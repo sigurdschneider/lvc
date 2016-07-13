@@ -1,7 +1,5 @@
 Require Import List EqNat Bool SetOperations.
-Require Import BitVector IL Exp Val SMT.
-
-Opaque zext.
+Require Import IL Exp Val SMT.
 
 (** Helper function to merge SMT options **)
 Definition combine (o1:smt) (o2: smt) :smt :=
@@ -28,7 +26,7 @@ Fixpoint undef e :=
   | BinOp n a b
     => combine (combine (undef a) (undef b))
               (if [n = 5]
-               then smtNeg (constr b (Con (zext (O::nil))))
+               then smtNeg (constr b (Con val_zero))
                else smtTrue)
   | UnOp n a => undef a
   | Con v => smtTrue

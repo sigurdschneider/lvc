@@ -1,10 +1,8 @@
 Require Import List Arith.
 Require Import IL Annotation AutoIndTac Exp MoreExp Fresh Util.
 Require Import SetOperations Sim Var.
-Require Import BitVector SMT NoFun.
+Require Import SMT NoFun.
 Require Import Guards ILFtoSMT.
-
-Opaque zext.
 
 (** Lemma 7 in the thesis.
 Proves that whenever an expression evaluates under
@@ -22,12 +20,11 @@ intros. general induction e; simpl in *; eauto.
    + repeat( erewrite models_combine; simpl).
      split; try split; intros; eauto.
      unfold val2bool in H.
-     eapply bvEq_equiv_eq in H.
+     eapply BitVector.bvEq_equiv_eq in H.
      unfold smt_eval in H.
      erewrite exp_eval_partial_total in H; eauto.
-     simpl in H.
-     rewrite H in EQ2; subst; simpl in EQ2. unfold bvDiv in EQ2.
-     cases in EQ2; isabsurd.
+     simpl in H. eapply bvEq_equiv_eq in H; subst. simpl in *.
+     unfold bvDiv in EQ2. cases in EQ2; isabsurd.
    + erewrite models_combine; simpl; erewrite models_combine; simpl.
      split; try split; eauto.
 Qed.
@@ -62,12 +59,11 @@ Proof.
     repeat (rewrite models_combine in H0; simpl in H0); intuition; cset_tac.
     edestruct (IHe1 F); eauto.
     edestruct (IHe2 F); eauto.
-    rewrite H1, H4.
-    cases in H2; simpl in *; unfold val2bool in H2.
-    + erewrite bvEq_equiv_eq in H2; subst.
-      unfold binop_eval; simpl.
-     unfold smt_eval in *; erewrite exp_eval_partial_total in H2; eauto.
-     unfold bvDiv. cases; isabsurd.
+    rewrite H1, H4. simpl.
+    cases in H2; simpl in H2.
+    + unfold binop_eval; simpl.
+      unfold smt_eval in *; erewrite exp_eval_partial_total in H2; eauto.
+      unfold bvDiv. simpl in *. cases; isabsurd.
      exfalso. eapply H2; reflexivity.
      destruct (bvLessZero x); try destruct (bvLessZero x0); eexists; eauto.
    + unfold binop_eval; unfold option_lift2; simpl; case_eq b; intros; [ eexists; eauto |].
