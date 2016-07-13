@@ -36,6 +36,9 @@ Instance MapPositive_FMap : @FMap _
   FMap_OrderedType := @PositiveMap.Map_OrderedType
 }.
 
+Local Transparent map MapsTo dict mem empty is_empty add insert
+  adjust remove find elements cardinal fold equal map mapi map2.
+
 (** * [MapPositive_FMapSpecs] : specifications for [MapPositive_FMap] *)
 Instance MapPositive_FMapSpecs_MapsTo : FMapSpecs_MapsTo MapPositive_FMap := {
   MapsTo_1 := PositiveMap.MapsTo_1

@@ -1,4 +1,3 @@
-
 Require Export List SetoidList Omega Infra.Option EqDec AutoIndTac Computable.
 
 Set Implicit Arguments.
@@ -62,7 +61,7 @@ Tactic Notation "You are here" := fail.
 
 (** * Reflecting boolean statements to Prop *)
 
-Require Export Basics Tactics Morphisms Morphisms_Prop.
+Require Import Basics Containers.Tactics Morphisms Morphisms_Prop.
 
 Lemma bool_extensionality (x y:bool)
   : (x -> y) -> (y -> x) -> x = y.

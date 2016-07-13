@@ -1,5 +1,7 @@
 Require Import OrderedTypeEx.
 Require Import SetInterface ZArith Program.Basics.
+Require Bool.
+Require SetList.
 
 Generalizable All Variables.
 
@@ -352,7 +354,7 @@ Module SetAVL.
     Definition partition f := partition_acc f (Leaf,Leaf).
 
     (** * [for_all] and [exists] *)
-    Require Import Bool.
+    Import Bool.
     Fixpoint for_all (f:elt->bool) s :=
       match s with
         | Leaf => true
@@ -516,9 +518,6 @@ Module SetAVL.
     Functional Scheme union_ind := Induction for union Sort Prop.
   End Definitions.
 
-  Arguments In {elt} {H} x t.
-
-
   (** ** Binary search trees *)
 
   (** [lt_tree x s]: all elements in [s] are smaller than [x]  *)
@@ -603,12 +602,12 @@ Module SetAVL.
       forall s (x y : elt), x === y -> In x s -> In y s.
     Proof.
       induction s; simpl; intuition_in; eauto.
-      constructor; transitivity x; eauto.
+      constructor; transitivity x; auto.
     Qed.
     Hint Immediate In_1.
 
     Lemma In_node_iff :
-      forall l (x:elt) r h y,
+      forall l x r h (y:elt),
         In y (Node l x r h) <-> In y l \/ y === x \/ In y r.
     Proof.
       intuition_in; eauto.
@@ -867,7 +866,7 @@ Module SetAVL.
 
     (** * Extraction of minimum element *)
 
-    Lemma remove_min_in : forall l (x:elt) r h y,
+    Lemma remove_min_in : forall l x r h y,
       In y (Node l x r h) <->
       y === (remove_min l x r)#2 \/ In y (remove_min l x r)#1.
     Proof.
@@ -1496,7 +1495,7 @@ Module SetAVL.
         destruct (andb_prop _ _ H0); auto.
       Qed.
 
-      Require Import Bool.
+      Import Bool.
       Lemma exists_1 : forall s `{Proper _ (_eq ==> @eq bool) f},
         Exists (fun x => f x = true) s -> exists_ f s = true.
       Proof.
@@ -1550,7 +1549,7 @@ Module SetAVL.
     Qed.
 
     (** * Fold *)
-    Require SetList. Require Import Bool.
+    Import Bool.
     Definition fold' (A : Type) (f : elt -> A -> A)(s : tree) :=
       SetList.SetList.fold f (elements s).
     Implicit Arguments fold' [A].
@@ -1734,14 +1733,15 @@ Module SetAVL.
       (h' : lt s' s'') : lt s s''.
     Proof.
       unfold lt in *.
-      etransitivity; eauto.
+      apply (OrderedTypeEx.list_StrictOrder_obligation_1 _ _
+        (elements s) (elements s') (elements s'')); auto.
     Qed.
 
     Lemma lt_not_eq : forall s s' : t,
       bst s -> bst s' -> lt s s' -> ~ Equal s s'.
     Proof.
       unfold lt in |- *; intros; intro.
-      apply (@StrictOrder_Irreflexive _ _ _ _ (list_StrictOrder Helt) (elements s) (elements s') H1).
+      apply (OrderedTypeEx.list_StrictOrder_obligation_2 _ _ (elements s) (elements s') H1).
       assert (Hs : sort _lt (elements s)) by auto.
       assert (Hs' : sort _lt (elements s')) by auto.
       set (S := SetList.Build_set Hs). set (S' := SetList.Build_set Hs').

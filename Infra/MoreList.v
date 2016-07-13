@@ -286,6 +286,13 @@ Proof.
     right. intro. eapply n. eauto using get.
 Qed.
 
+
+Lemma list_eq_length A R l l'
+  : @list_eq A R l l' -> length l = length l'.
+Proof.
+  intros. induction H; simpl; eauto.
+Qed.
+
 Instance list_eq_computable X (R:X -> X-> Prop) `{forall x y, Computable (R x y)}
 : forall (L L':list X), Computable (list_eq R L L').
 Proof.

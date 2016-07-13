@@ -42,6 +42,10 @@ Instance SetList_FSet `{Helt : OrderedType elt} : FSet := {
   FSet_OrderedType := @SetList.set_OrderedType elt Helt
 }.
 
+Local Transparent set In mem equal subset is_empty empty add remove
+  singleton union inter diff elements fold cardinal filter for_all
+  exists_ partition choose.
+
 (** * [SetList_FSetSpecs] : specifications for [SetList_FSet] *)
 Instance SetList_FSetSpecs_In `{Helt : OrderedType elt} :
   FSetSpecs_In SetList_FSet := {

@@ -25,8 +25,8 @@ if ! [[ $(ruby -v) =~ ^ruby\ 2.1 ]]; then
 fi
 
 BLACKLIST=`cat _BLACKLIST`
-SOURCES=$(find . -name \*.v -print | grep -v /\.# | grep -v $BLACKLIST | sed -e 's%^\./%%g')
-coq_makefile -R . Lvc extraction $SOURCES > ${MAKEFILE}
+SOURCES=$(find . -name \*.v -print | grep -v /\.# | grep -v $BLACKLIST | grep -v "ContainersPlugin" | sed -e 's%^\./%%g')
+coq_makefile -R . Lvc -R ContainersPlugin/theories Containers -I ContainersPlugin/src extraction $SOURCES > ${MAKEFILE}
 echo "${MAKEFILE} generated."
 
 echo "Patching ${MAKEFILE} to include target 'extraction'."

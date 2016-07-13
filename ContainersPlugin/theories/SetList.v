@@ -1279,7 +1279,7 @@ Section Spec.
     Proof. intros; eapply S.filter_1 with (f := f); auto. Qed.
     Lemma filter_2 `{Proper _ (_eq ==> (@eq bool)) f} :
       In x (filter f s) -> f x = true.
-    Proof. intros; eapply S.filter_2 with (s := s); eauto. Qed.
+    Proof. intros; eapply S.filter_2 with (s := s); auto. Qed.
     Lemma filter_3 `{Proper _ (_eq ==> (@eq bool)) f} :
       In x s -> f x = true -> In x (filter f s).
     Proof. apply S.filter_3; auto. Qed.

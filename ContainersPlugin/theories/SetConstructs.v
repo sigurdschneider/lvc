@@ -1,7 +1,11 @@
 Require Import SetInterface SetAVLInstance.
 Require Import SetFacts SetProperties.
 
+Unset Standard Proposition Elimination Names.
+
 Generalizable All Variables.
+
+Local Transparent set.
 
 (** This module provides a couple of common set constructions.  They
    are built with and for the AVL instance and are not parameterized
@@ -38,11 +42,12 @@ Section Mapping.
     right; exists z; auto.
   Qed.
   Global Opaque map.
+  Local Transparent In FSet_OrderedType.
 
   Instance map_m : Proper (_eq ==> _eq) map.
   Proof.
     intros s s' H z.
-    rewrite 2map_spec; firstorder.
+    setoid_rewrite map_spec; firstorder.
   Qed.
   Corollary map_1 : forall a s, In a s -> In (f a) (map s).
   Proof.
@@ -82,7 +87,7 @@ Section CartesianProduct.
     intros; intuition. contradiction (empty_1 H1).
     (* step *)
     intros b m s Hb IH [xa xb]; simpl.
-    rewrite add_iff, IH; clear IH; simpl; rewrite add_iff; intuition.
+    rewrite add_iff, IH; clear IH; simpl; rewrite add_iff; intuition auto.
     inversion_clear H0; right; split; auto; apply add_1; auto.
     left; constructor; auto.
   Qed.
@@ -105,12 +110,13 @@ Section CartesianProduct.
   Qed.
   (** Now that we have the specs, we hide the implementations. *)
   Global Opaque map_add cart_prod.
+  Local Transparent In FSet_OrderedType.
 
   (** [cart_prod] is a morphism *)
   Instance cart_prod_m : Proper (_eq ==> _eq ==> _eq) cart_prod.
   Proof.
     intros s s' Hs t t' Ht z.
-    rewrite 2cart_prod_spec, Hs, Ht; reflexivity.
+    setoid_rewrite cart_prod_spec. rewrite Hs, Ht; reflexivity.
   Qed.
   (** Properties of [cart_prod] in the FSetInterface style *)
   Corollary cart_prod_1 : forall s s' a b,
@@ -143,6 +149,9 @@ Section PowerSet.
   (** [powerset s] returns the power set of [s]. *)
   Definition powerset (s : set A) : set (set A) :=
     fold add_one s (singleton {}).
+
+  Local Transparent Equal _eq.
+  Local Transparent In FSet_OrderedType.
 
   (** Specs for [add_one] and [powerset] *)
   Property add_one_spec :
@@ -213,7 +222,7 @@ Section PowerSet.
   Instance powerset_m : Proper (_eq ==> _eq) powerset.
   Proof.
     intros s s' H z.
-    rewrite 2powerset_spec, H; reflexivity.
+    setoid_rewrite powerset_spec. rewrite H; reflexivity.
   Qed.
   (** Properties of [powerset] in the FSetInterface style *)
   Corollary powerset_1 : forall s s', s' [<=] s -> In s' (powerset s).
@@ -291,11 +300,13 @@ Section DiagonalProduct.
     intro abs; apply (Hmin a H0); rewrite abs; assumption.
   Qed.
 
+  Local Transparent Equal _eq In FSet_OrderedType.
+
   (** [diag_prod] is a morphism *)
   Instance diag_prod_m : Proper (_eq ==> _eq) diag_prod.
   Proof.
     intros s s' H z.
-    rewrite 2diag_prod_spec, H; reflexivity.
+    setoid_rewrite diag_prod_spec. rewrite H; reflexivity.
   Qed.
   (** Properties of [diag_prod] in the FSetInterface style *)
   Corollary diag_prod_1 : forall s x y, In x s -> In y s -> x <<< y ->
@@ -337,15 +348,16 @@ Section DisjointUnion.
     rewrite union_iff, 2map_iff.
     destruct x as [a|b]; firstorder; inversion_clear H0;
       rewrite H1; assumption.
-    repeat intro; constructor; assumption.
-    repeat intro; constructor; assumption.
+    repeat intro; Tactics.tconstructor ltac:(assumption).
+    repeat intro; Tactics.tconstructor ltac:(assumption).
   Qed.
   Global Opaque disj_union.
+  Local Transparent Equal _eq In FSet_OrderedType.
 
   Instance disj_union_m : Proper (_eq ==> _eq ==> _eq) disj_union.
   Proof.
     repeat intro.
-    rewrite 2disj_union_spec.
+    setoid_rewrite disj_union_spec.
     destruct a; [rewrite H | rewrite H0]; reflexivity.
   Qed.
   Property disj_union_1 :

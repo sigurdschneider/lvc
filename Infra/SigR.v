@@ -4,7 +4,7 @@ Set Implicit Arguments.
 
 Definition sig_R {A} {P:A->Prop} (R:A -> A -> Prop) (a b: { a : A | P a}) :=
   match a, b with
-  | exist _ a _, exist _ b _ => R a b
+  | exist a _, exist b _ => R a b
   end.
 
 Instance sig_R_refl A (P:A->Prop) R `{Reflexive A R} : Reflexive (@sig_R A P R).

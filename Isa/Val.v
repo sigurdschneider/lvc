@@ -1,5 +1,5 @@
 Require Import Arith Util EqDec List.
-Require Import OrderedTypeEx Integers.
+Require Import Containers.OrderedTypeEx Integers.
 
 Set Implicit Arguments.
 
@@ -80,6 +80,11 @@ Definition binop_eval (o:binop) :=
 Inductive unop : Type :=
 | UnOpToBool
 | UnOpNeg.
+
+Declare ML Module "containers_plugin".
+
+
+Generate OrderedType unop.
 
 Instance inst_eq_dec_unop : EqDec unop eq.
 Proof.

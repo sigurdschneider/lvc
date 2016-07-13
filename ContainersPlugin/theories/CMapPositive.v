@@ -1423,20 +1423,20 @@ Module CPositiveMap.
     Property tree_cmp_spec : forall x y,
       compare_spec tree_eq tree_lt x y (tree_cmp x y).
     Proof.
-      induction x; destruct y; try (constructor; constructor).
-      simpl; destruct (compare_dec a e); try (constructor; constructor; auto).
-      simpl; destruct (compare_dec o o0); try (constructor; constructor; auto).
+      induction x; destruct y; try (tconstructor (constructor)).
+      simpl; destruct (compare_dec a e); try (tconstructor (tconstructor (auto))).
+      simpl; destruct (compare_dec o o0); try (constructor; tconstructor (auto)).
       destruct (IHx1 y1); try constructor.
-      constructor; assumption.
+      tconstructor (assumption).
       destruct (IHx2 y2); try constructor;
-        constructor; solve [auto using tree_eq_sym].
-      constructor; solve [auto using tree_eq_sym].
-      simpl; destruct (compare_dec o o0); try (constructor; constructor; auto).
+        tconstructor (solve [auto using tree_eq_sym]).
+      tconstructor (solve [auto using tree_eq_sym]).
+      simpl; destruct (compare_dec o o0); try (constructor; tconstructor (auto)).
       destruct (IHx y); try constructor;
-        constructor; solve [auto using tree_eq_sym].
-      simpl; destruct (compare_dec o o0); try (constructor; constructor; auto).
+        tconstructor (solve [auto using tree_eq_sym]).
+      simpl; destruct (compare_dec o o0); try (constructor; tconstructor (auto)).
       destruct (IHx y); try constructor;
-        constructor; solve [auto using tree_eq_sym].
+        tconstructor (solve [auto using tree_eq_sym]).
     Qed.
 
     Program Instance tree_OrderedType : OrderedType (tree elt) := {
@@ -1560,3 +1560,4 @@ Module CPositiveMapAdditionalFacts.
 Qed.
 
 End CPositiveMapAdditionalFacts.
+

@@ -1,4 +1,4 @@
-Require MapList.
+Require MapList Bool OrderedTypeEx.
 Require Import MapInterface ZArith.
 
 (** This file corresponds to [FMapAVL.v] in the standard library
@@ -350,7 +350,7 @@ Module MapAVL.
       end.
 
     (** One step of comparison of elements *)
-    Require Import Bool.
+    Import Bool.
     Definition equal_more x1 d1 (cont:enumeration->bool) e2 :=
       match e2 with
         | End => false
@@ -388,14 +388,14 @@ Module MapAVL.
   (** * Map *)
   Fixpoint map (elt elt' : Type)(f : elt -> elt')(m : t elt) : t elt' :=
     match m with
-      | Leaf _  => Leaf _
+      | Leaf   => Leaf _
       | Node l x d r h => Node (map f l) x (f d) (map f r) h
     end.
 
   (* * Mapi *)
   Fixpoint mapi (elt elt' : Type)(f : key -> elt -> elt')(m : t elt) : t elt' :=
     match m with
-      | Leaf _  => Leaf _
+      | Leaf   => Leaf _
       | Node l x d r h => Node (mapi f l) x (f x d) (mapi f r) h
     end.
 
@@ -403,7 +403,7 @@ Module MapAVL.
   Fixpoint map_option
     (elt elt' : Type)(f : key -> elt -> option elt')(m : t elt) : t elt' :=
     match m with
-      | Leaf _ => Leaf _
+      | Leaf => Leaf _
       | Node l x d r h =>
         match f x d with
           | Some d' => join (map_option f l) x d' (map_option f r)
@@ -433,8 +433,8 @@ Module MapAVL.
 
     Fixpoint map2_opt m1 m2 :=
       match m1, m2 with
-        | Leaf _, _ => mapr m2
-        | _, Leaf _ => mapl m1
+        | Leaf, _ => mapr m2
+        | _, Leaf => mapl m1
         | Node l1 x1 d1 r1 h1, _ =>
           let (l2',o2,r2') := split x1 m2 in
             match f x1 d1 o2 with
@@ -1707,8 +1707,8 @@ Module MapAVL.
 
       Fixpoint flatten_e (e : enumeration elt) : list (key*elt) :=
         match e with
-          | End _ => nil
-          | More x e t r => (x,e) :: elements t ++ flatten_e r
+          | End => nil
+          | More x e t' r => (x,e) :: elements t' ++ flatten_e r
         end.
 
       Lemma flatten_e_elements :
@@ -2352,7 +2352,7 @@ Section EncapsulationOrd.
   (** One step of comparison of elements *)
   Definition compare_more x1 d1 (cont:enumeration elt -> comparison) e2 :=
    match e2 with
-    | Raw.End _ => Gt
+    | Raw.End => Gt
     | Raw.More x2 d2 r2 e2 =>
        match x1 =?= x2 with
         | Eq => match d1 =?= d2 with
@@ -2369,7 +2369,7 @@ Section EncapsulationOrd.
 
   Fixpoint compare_cont s1 (cont:enumeration elt -> comparison) e2 :=
    match s1 with
-    | Raw.Leaf _ => cont e2
+    | Raw.Leaf => cont e2
     | Raw.Node l1 x1 d1 r1 _ =>
        compare_cont l1 (compare_more x1 d1 (compare_cont r1 cont)) e2
    end.
@@ -2377,7 +2377,7 @@ Section EncapsulationOrd.
   (** Initial continuation *)
 
   Definition compare_end (e2:enumeration elt) :=
-   match e2 with Raw.End _ => Eq | _ => Lt end.
+   match e2 with Raw.End => Eq | _ => Lt end.
 
   (** The complete comparison *)
 
@@ -2386,7 +2386,7 @@ Section EncapsulationOrd.
 
   (** Correctness of this comparison *)
 
-  Require Import OrderedTypeEx.
+  Import OrderedTypeEx.
   Definition Cmp c : relation (list (key * elt)) :=
    match c with
      | Eq => @list_eq (key*elt) (prod_eq _eq _eq)

@@ -227,9 +227,7 @@ Qed.
 
 (** ** [unit] *)
 Program Instance unit_StrictOrder : StrictOrder (fun _ _ => False) (@eq unit).
-Next Obligation. congruence. Qed.
-
-
+Solve Obligations with contradiction.
 Program Instance unit_OrderedType : UsualOrderedType unit := {
   SOT_lt := fun _ _ => False;
   SOT_cmp := fun _ _ => Eq;
@@ -262,20 +260,6 @@ Next Obligation. (* transitivity *)
   inductive_trans.
 Qed.
 
-Instance prod_eq_fst_morphism X Y R R'
-: Proper (@prod_eq X Y R R' ==> R) fst.
-Proof.
-  unfold Proper, respectful; intros.
-  inversion H; simpl; eauto.
-Qed.
-
-Instance prod_eq_snd_morphism X Y R R'
-: Proper (@prod_eq X Y R R' ==> R') snd.
-Proof.
-  unfold Proper, respectful; intros.
-  inversion H; simpl; eauto.
-Qed.
-
 Inductive prod_lt {A B}
   (eqA ltA : relation A) (ltB : relation B) : (A * B) -> (A * B) -> Prop :=
 | prod_lt_1 :
@@ -296,7 +280,7 @@ Program Instance prod_UsualStrictOrder
   StrictOrder (@prod_lt A B (@Logic.eq _) _lt _lt) (@Logic.eq _).
 Next Obligation. (* transitivity *)
   do 4 intro; inversion_clear 0; intro; inversion_clear 0;
-    subst; try (constructor; auto; solve_by_trans_modulo).
+    subst; try (tconstructor (auto; solve_by_trans_modulo)).
 Qed.
 Next Obligation. (* irreflexivity *)
   intro E; inversion E; subst; clear E.
@@ -497,13 +481,6 @@ Next Obligation. (* transitivity *)
   rinductive_trans.
 Qed.
 
-Lemma list_eq_length A R l l'
-  : @list_eq A R l l' -> length l = length l'.
-Proof.
-  intros. induction H; simpl; eauto.
-Qed.
-
-
 Inductive list_lt {A} (ltA eqA : relation A) : list A -> list A -> Prop :=
 | list_lt_nil :
   forall a l, list_lt ltA eqA nil (cons a l)
@@ -517,7 +494,7 @@ Program Instance list_StrictOrder `(OrderedType A) :
 Next Obligation. (* transitivity *)
   intros nx ny nz nHlt1; revert nz; induction nHlt1;
     do 2 intro; inversion_clear 0;
-      try now (constructor; try solve_by_trans_modulo).
+      try tconstructor (idtac; solve_by_trans_modulo).
   constructor 3; order.
 Qed.
 Next Obligation. (* irreflexivity *)

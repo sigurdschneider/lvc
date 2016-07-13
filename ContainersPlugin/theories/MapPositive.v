@@ -815,7 +815,7 @@ Module PositiveMap.
   simpl; auto.
   destruct o; simpl; intros.
   (* Some *)
-  apply (SortA_app (eqA:=eq_key_elt)); eauto.
+  apply (SortA_app (eqA:=eq_key_elt)); auto.
   apply KeyOrderedType.eqke_Equiv.
   constructor; repeat intro; unfold lt_key, ME.ltk in *; try solve [order].
   apply In_InfA; intros.
@@ -1040,7 +1040,7 @@ Module PositiveMap.
 
     Fixpoint xfoldi (m : t A) (v : B) (i : positive) :=
       match m with
-        | Leaf _ => v
+        | Leaf => v
         | Node l (Some x) r =>
           xfoldi r (f i x (xfoldi l v (append i 2))) (append i 3)
         | Node l None r =>
@@ -1078,8 +1078,8 @@ Module PositiveMap.
 
   Fixpoint equal (A:Type)(cmp : A -> A -> bool)(m1 m2 : t A) {struct m1} : bool :=
     match m1, m2 with
-      | Leaf _, _ => is_empty m2
-      | _, Leaf _ => is_empty m1
+      | Leaf, _ => is_empty m2
+      | _, Leaf => is_empty m1
       | Node l1 o1 r1, Node l2 o2 r2 =>
            (match o1, o2 with
              | None, None => true
@@ -1237,9 +1237,9 @@ Module PositiveMap.
 
     Fixpoint t_cmp (m m' : t elt) : comparison :=
       match m, m' with
-        | Leaf _, Leaf _ => Eq
-        | Leaf _, Node _ _ _ => Lt
-        | Node _ _ _, Leaf _ => Gt
+        | Leaf, Leaf => Eq
+        | Leaf, Node _ _ _ => Lt
+        | Node _ _ _, Leaf => Gt
         | Node l o r, Node l' o' r' =>
           match o =?= o' with
             | Eq =>
@@ -1254,13 +1254,13 @@ Module PositiveMap.
       end.
     Property t_cmp_spec : forall x y, compare_spec t_eq t_lt x y (t_cmp x y).
     Proof.
-      induction x; destruct y; try (constructor; constructor).
-      simpl; destruct (compare_dec o o0); try (constructor; constructor; auto).
+      induction x; destruct y; try (tconstructor (constructor)).
+      simpl; destruct (compare_dec o o0); try (constructor; tconstructor (auto)).
       destruct (IHx1 y1); try constructor.
-      constructor; assumption.
+      tconstructor (assumption).
       destruct (IHx2 y2); try constructor;
-        constructor; solve [auto using t_eq_sym].
-      constructor; solve [auto using t_eq_sym].
+        tconstructor (solve [auto using t_eq_sym]).
+      tconstructor (solve [auto using t_eq_sym]).
     Qed.
 
     Program Instance Map_OrderedType : OrderedType (t elt) := {

@@ -460,3 +460,18 @@ Proof.
   unfold Proper, respectful, flip, impl; intros; subst.
   rewrite H0; eauto.
 Qed.
+
+
+Instance prod_eq_fst_morphism X Y R R'
+: Proper (@prod_eq X Y R R' ==> R) fst.
+Proof.
+  unfold Proper, respectful; intros.
+  inversion H; simpl; eauto.
+Qed.
+
+Instance prod_eq_snd_morphism X Y R R'
+: Proper (@prod_eq X Y R R' ==> R') snd.
+Proof.
+  unfold Proper, respectful; intros.
+  inversion H; simpl; eauto.
+Qed.

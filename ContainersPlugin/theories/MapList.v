@@ -1,5 +1,7 @@
 Require Export OrderedType.
 Require Import SetoidList.
+Require OrderedTypeEx.
+Require MapInterface.
 
 Generalizable All Variables.
 
@@ -209,7 +211,7 @@ Implicit Arguments
 
 (** Maps seen as an OrderedType : list comparison based
    solely on the first component. *)
-Require Import OrderedTypeEx.
+Import OrderedTypeEx.
 (* Definition map_eq `{OrderedType A} (B : Type) : relation (dict A B) := *)
 (*   @list_eq (A*B) (asym_prod_eq B _eq). *)
 (* Definition map_Equivalence `{OrderedType A} (B : Type) :  *)
@@ -1491,8 +1493,7 @@ Section MoreDefinitions.
   Qed.
 End MoreDefinitions.
 
-Require MapInterface.
-Require Import OrderedTypeEx.
+Import OrderedTypeEx.
 (** A dictionary [key, elt] can be seen as an OrderedType if the type of elements
    is also an OrderedType (only the fact that [key] is an OrderedType is required
    to build the dictionary). In that case, the equality is standard pointwise
@@ -1517,16 +1518,17 @@ Qed.
 Definition map_lt `{OrderedType A, OrderedType B} : relation (dict A B) :=
   fun x y => @list_lt (A*B)
     (prod_lt _eq _lt _lt) (prod_eq _eq _eq) x.(this) y.(this).
-Instance map_lt_StrictOrder `{OA:OrderedType A, OB: OrderedType B} :
+Program Instance map_lt_StrictOrder `{OA:OrderedType A, OB: OrderedType B} :
   StrictOrder (@map_lt A _ B _) (@map_eq A _ B _).
-Proof.
-  split.
-  - intros x y z; destruct x; destruct y; destruct z; unfold map_lt; simpl.
-    destruct (@list_StrictOrder (A*B) (prod_OrderedType _ _)).
-    exact (@StrictOrder_Transitive this0 this1 this2).
-  - destruct x; destruct y; unfold map_lt, map_eq in *; simpl in *.
-    destruct (@list_StrictOrder (A*B) (prod_OrderedType _ _)).
-    intro H. exact (@StrictOrder_Irreflexive this0 this1 H).
+Next Obligation.
+  intros x y z; destruct x; destruct y; destruct z; unfold map_lt; simpl.
+  destruct (@list_StrictOrder (A*B) (prod_OrderedType _ _)).
+  exact (@StrictOrder_Transitive this0 this1 this2).
+Qed.
+Next Obligation.
+  destruct x; destruct y; unfold map_lt, map_eq in *; simpl in *.
+  destruct (@list_StrictOrder (A*B) (prod_OrderedType _ _)).
+  exact (@StrictOrder_Irreflexive this0 this1 H).
 Qed.
 
 (** The inferred equality [map_eq] corresponds to pointwise equality *)

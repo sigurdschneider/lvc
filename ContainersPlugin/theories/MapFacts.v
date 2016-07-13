@@ -532,7 +532,7 @@ Section WeakFacts.
     Proof.
       intros. rewrite eq_option_alt. intro e.
       rewrite <- find_mapsto_iff, elements_mapsto_iff.
-      rewrite findA_rew, <- findA_NoDupA; intuition.
+      rewrite findA_rew; apply findA_NoDupA.
       order. apply elements_3w.
     Qed.
 
@@ -674,7 +674,7 @@ Section WeakFacts.
 
   Global Instance Empty_m elt : Proper (Equal ==> iff) (@Empty _ _ _ elt).
   Proof.
-    unfold Empty; intros m m' Hm; intuition.
+    unfold Empty; intros m m' Hm; unfold not; split; intros.
     rewrite <-Hm in H0; eauto.
     rewrite Hm in H0; eauto.
   Qed.
@@ -772,8 +772,7 @@ Section MoreWeakFacts.
           findA (eqb a) l = Some b).
     Proof.
       intros; rewrite findA_rew.
-      unfold K.eqke; rewrite <- findA_NoDupA; auto.
-      reflexivity.
+      unfold K.eqke; apply findA_NoDupA; auto.
     Qed.
 
     Lemma findA_rev : forall l k, NoDupA eqk l ->

@@ -163,7 +163,7 @@ Instance injective_on_step_proper
 Proof.
   unfold Proper, respectful; intros.
   inv H3. econstructor.
-  - rewrite H3.
+  - simpl. rewrite H4.
     eapply add_m; eauto.
   - inv H5; simpl. cases; trivial.
     f_equal.

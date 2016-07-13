@@ -53,19 +53,25 @@
    *)
 
 Require Import OrderedType.
+
+Ltac tconstructor t := once (constructor; t).
+
+Tactic Notation "tconstructor" tactic(t) :=
+  once (constructor; t).
+
 (** * Tactics for inductives without recursion, nor parameters *)
 
 (** ** Equivalence *)
 Ltac inductive_refl := try unfold Reflexive;
-  destruct 0; try constructor; reflexivity.
+  destruct 0; try tconstructor (reflexivity).
 
 Ltac inductive_sym := try unfold Symmetric;
   do 3 intro; destruct 0;
-    try constructor; symmetry; assumption.
+    try tconstructor (symmetry; assumption).
 
 Ltac inductive_trans := try unfold Transitive;
   do 4 intro; inversion_clear 0; intro; inversion_clear 0;
-    try constructor; eapply transitivity; eassumption.
+    try tconstructor (eapply transitivity; eassumption).
 
 (** ** StrictOrder *)
 Ltac solve_by_trans_modulo :=
@@ -79,7 +85,7 @@ Ltac solve_by_trans_modulo :=
  end.
 Ltac inductive_lexico_trans :=
   do 4 intro; inversion_clear 0; intro; inversion_clear 0;
-    try constructor; solve_by_trans_modulo.
+    try tconstructor (idtac; solve_by_trans_modulo).
 
 Ltac solve_by_irrefl :=
   match goal with
@@ -98,7 +104,7 @@ Ltac solve_compare_spec_match :=
     destruct (compare_dec X1 X2); solve_compare_spec_aux
   end
 with solve_compare_spec_aux :=
-  try solve [constructor; constructor; solve [auto]];
+  try solve [constructor; tconstructor (solve [auto])];
     solve_compare_spec_match.
 
 Ltac solve_compare_spec :=
@@ -110,17 +116,17 @@ Ltac solve_compare_spec :=
 
 (** ** Equivalence *)
 Ltac rinductive_refl := try unfold Reflexive;
-  induction 0; try constructor; try assumption; reflexivity.
+  induction 0; try tconstructor (try assumption; reflexivity).
 
 Ltac rinductive_sym := try unfold Symmetric;
-  do 3 intro; induction 0; try constructor; try symmetry; assumption.
+  do 3 intro; induction 0; try tconstructor (try symmetry; assumption).
 
 Ltac rinductive_trans :=
   let nx := fresh "x" in let ny := fresh "y" in let nz := fresh "z" in
     let nHeq1 := fresh "Heq1" in
       intros nx ny nz nHeq1; revert nz; induction nHeq1;
         do 2 intro; inversion_clear 0;
-          try (constructor; solve [auto | eapply transitivity; eassumption]).
+          try (tconstructor (solve [auto | eapply transitivity; eassumption])).
 
 (** ** StrictOrder *)
 Ltac solve_eq_lt  t_eq_sym t_eq_trans :=
@@ -134,7 +140,7 @@ Ltac rinductive_eq_lt t_eq_sym t_eq_trans :=
     let nHlt := fresh "Heq" in
       intros nx nx' ny nHeq; revert ny; induction nHeq;
         do 2 intro; inversion_clear 0;
-          try constructor; solve_eq_lt t_eq_sym t_eq_trans.
+          try tconstructor (solve_eq_lt t_eq_sym t_eq_trans).
 
 Ltac solve_eq_gt t_eq_trans :=
   solve [
@@ -148,7 +154,7 @@ Ltac rinductive_eq_gt t_eq_trans :=
     let nHeq := fresh "Heq" in
       intros nx nx' ny nHeq; revert ny; induction nHeq;
         do 2 intro; inversion_clear 0;
-          try constructor; solve_eq_gt t_eq_trans.
+          try tconstructor (solve_eq_gt t_eq_trans).
 
 Ltac rsolve_by_trans_modulo
   t_eq_sym t_eq_trans t_eq_gt t_eq_lt :=
@@ -168,7 +174,7 @@ Ltac rinductive_lexico_trans t_eq_sym t_eq_trans t_eq_gt t_eq_lt :=
     let nHlt1 := fresh "Hlt1" in
       intros nx ny nz nHlt1; revert nz; induction nHlt1;
         do 2 intro; inversion_clear 0;
-          try now (constructor; try rsolve_by_trans_modulo
+          try tconstructor (idtac; rsolve_by_trans_modulo
             t_eq_sym t_eq_trans t_eq_gt t_eq_lt).
 
 Ltac rinductive_irrefl :=
@@ -185,7 +191,7 @@ Ltac rsolve_compare_spec_match t_eq_sym :=
       destruct (compare_dec X1 X2); rsolve_compare_spec_aux t_eq_sym
   end
 with rsolve_compare_spec_aux t_eq_sym :=
-  try solve [constructor; constructor; solve [auto using t_eq_sym]];
+  try solve [constructor; tconstructor (solve [auto using t_eq_sym])];
     rsolve_compare_spec_match t_eq_sym.
 
 Ltac rsolve_compare_spec t_eq_sym :=
@@ -199,7 +205,7 @@ Ltac rsolve_compare_spec t_eq_sym :=
 Ltac minductive_refl :=
   induction 0; constructor; auto; reflexivity.
 Ltac minductive_sym :=
-  do 3 intro; induction 0; constructor; try symmetry; auto.
+  do 3 intro; induction 0; tconstructor (try symmetry); auto.
 Ltac minductive_trans :=
   let nx := fresh "x" in let ny := fresh "y" in
     let nz := fresh "z" in let nHeq1 := fresh "Heq1" in
@@ -230,7 +236,7 @@ Ltac minductive_eq_lt_gt s :=
     let ny := fresh "y" in let nHlt := fresh "Heq" in
       intros nx nx' ny nHeq; revert ny; induction nHeq;
         do 2 intro; inversion_clear 0;
-          constructor s.
+          tconstructor s.
 Ltac msolve_by_trans_modulo strans seqgt seqlt :=
   match goal with
   | H1:?R ?A ?B, H2:?R ?B ?C
@@ -252,7 +258,7 @@ Ltac minductive_lexico_trans sstrans seqgt seqlt :=
     let nz := fresh "z" in let nHlt1 := fresh "Hlt1" in
       intros nx ny nz nHlt1; revert nz; induction nHlt1;
         do 2 intro; inversion_clear 0;
-          constructor; msolve_by_trans_modulo sstrans seqgt seqlt.
+          tconstructor (msolve_by_trans_modulo sstrans seqgt seqlt).
 
 (** ** compare_spec *)
 Ltac msolve_compare_spec_match s :=
@@ -264,10 +270,10 @@ Ltac msolve_compare_spec_match s :=
       destruct (compare_dec X1 X2); msolve_compare_spec_aux s
   end
 with msolve_compare_spec_aux s :=
-  try solve [constructor; constructor; solve [s]];
+  try solve [constructor; tconstructor (solve [s])];
     msolve_compare_spec_match s.
 Ltac msolve_compare_spec s :=
   let nx := fresh "x" in let ny := fresh "y" in
     intros nx; induction nx; intros ny; destruct ny; simpl in *;
       msolve_compare_spec_aux s.
-(* ex : msolve_compare_spec ltac:(auto using term_eq_sym, terms_eq_sym). *)
+(* ex : msolve_compare_spec (auto using term_eq_sym, terms_eq_sym). *)

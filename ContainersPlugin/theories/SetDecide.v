@@ -9,6 +9,7 @@
 (** This file implements a decision procedure for a certain
     class of propositions involving finite sets.  *)
 Require Import SetInterface SetFacts.
+Require Decidable Setoid.
 Generalizable All Variables.
 
 (** * Overview
@@ -104,8 +105,8 @@ the above form:
    not affect the namespace if you import the enclosing
    module [Decide]. *)
 Module FSetLogicalFacts.
-  Require Export Decidable.
-  Require Export Setoid.
+  Export Decidable.
+  Export Setoid.
 
   (** ** Lemmas and Tactics About Decidable Propositions *)
 

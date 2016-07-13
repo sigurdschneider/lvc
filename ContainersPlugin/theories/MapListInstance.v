@@ -35,6 +35,9 @@ Instance MapList_FMap  `{Hkey : OrderedType key} : FMap := {
   FMap_OrderedType := @MapList.map_OrderedType key Hkey
 }.
 
+Local Transparent MapsTo dict mem empty is_empty
+  add insert adjust remove find elements cardinal fold equal map mapi map2.
+
 (** * [MapList_FMapSpecs] : specifications for [MapList_FMap] *)
 Instance MapList_FMapSpecs_MapsTo `{Hkey : OrderedType key} :
   FMapSpecs_MapsTo MapList_FMap := {

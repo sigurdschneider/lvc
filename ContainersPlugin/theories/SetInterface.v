@@ -88,6 +88,7 @@ Class FSet `{OrderedType A} := {
   FSet_OrderedType :>
     SpecificOrderedType _ (Equal_pw set A In)
 }.
+
 Implicit Arguments set [[H] [FSet]].
 
 (** Set notations (see below) are interpreted in scope [set_scope],
@@ -146,7 +147,7 @@ Definition Exists `{FSet elt} (P : elt -> Prop) s :=
    simultaneously with operations on lists and sets that have
    similar names ([mem], [In], ...). *)
 Notation "s [=] t" := (Equal s t) (at level 70, no associativity) : set_scope.
-Notation "s [<=] t" := (Subset s t) (at level 70, no associativity, only parsing) : set_scope.
+Notation "s [<=] t" := (Subset s t) (at level 70, no associativity) : set_scope.
 Notation "v '\In' S" := (In v S)(at level 70, no associativity) : set_scope.
 
 Notation "'{}'" := (empty)(at level 0, no associativity) : set_scope.
@@ -154,8 +155,8 @@ Notation "'{' v '}'" := (singleton v) : set_scope.
 Notation "'{' v ';' S '}'" := (add v S)(v at level 99) : set_scope.
 Notation "'{' S '~' v '}'" := (remove v S)(S at level 99) : set_scope.
 Notation "v '\in' S" := (mem v S)(at level 70, no associativity) : set_scope.
-Notation "S '∪' T" := (union S T) (left associativity, at level 61) : set_scope.
-Notation "S '\' T" := (diff S T) (at level 61, left associativity) : set_scope.
+Notation "S '++' T" := (union S T) : set_scope.
+Notation "S '\' T" := (diff S T) (at level 60, no associativity) : set_scope.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
