@@ -1,4 +1,4 @@
 -R theories Lvc 
 -R "ContainersPlugin/theories" Containers 
--R "paco" paco 
+-R "paco" Paco 
 -I ContainersPlugin/src

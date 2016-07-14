@@ -61,12 +61,14 @@ if ARGV[0] == "--parallel" then
 end
 
 cmd = ARGV.join(' ')
-mod = ARGV.last
+mod = ARGV.last.sub(/\.v/, "")
+modname = mod.sub("theories/", "")
+
 timestamp = Time.now.strftime("%H:%M:%S") 
 
 est, eta = readETA(mod) 
 eststr = "#{col(12, cyan(est))}" + (parallel ? (est == "" ? blue("ETA unavailable") : "ETA #{eta}") : "")
-print "#{timestamp} #{cyan('>>>')} #{col(35, mod)}#{eststr}#{(parallel ? "\n" : "")}"
+print "#{timestamp} #{cyan('>>>')} #{col(35, modname)}#{eststr}#{(parallel ? "\n" : "")}"
 
 start = Time.now
 cstdin, cstdout, cstderr, waitthr = Open3.popen3("bash -c \"time #{cmd}\"")
@@ -101,12 +103,12 @@ end
 sout = cstdout.read
 
 if !sout.strip.empty? then
-	print "#{Time.now.strftime("%H:%M:%S")} ", color["==="], " #{col(35, mod)} ", "OUTPUT FOLLOWS" , "\n"
+	print "#{Time.now.strftime("%H:%M:%S")} ", color["==="], " #{col(35, modname)} ", "OUTPUT FOLLOWS" , "\n"
   print sout.gsub!(/^/, '  ')
 end
 
 if parallel then
-	print "#{Time.now.strftime("%H:%M:%S")} ", color["<<<"], " #{col(35, mod)}", col(12, color[timing]), col(15, change), speed, "\n"
+	print "#{Time.now.strftime("%H:%M:%S")} ", color[success ? "<<<" : "!!!"], " #{col(35, modname)}", col(12, color[timing]), col(15, change), speed, "\n"
 end
 
 exit success

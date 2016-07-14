@@ -97,6 +97,18 @@ Declare ML Module "containers_plugin".
 Generate OrderedType unop.
 Generate OrderedType binop.
 
+Lemma unop_eq_eq x y
+  : unop_eq x y -> x = y.
+Proof.
+  destruct x,y; inversion 1; eauto.
+Qed.
+
+Lemma binop_eq_eq x y
+  : binop_eq x y -> x = y.
+Proof.
+  destruct x,y; inversion 1; eauto.
+Qed.
+
 Require Coq.Structures.OrderedTypeEx.
 
 
@@ -124,9 +136,9 @@ Proof.
   econstructor; eauto with typeclass_instances.
 Qed.
 
-Instance Transitive_lt_int : Transitive Int.lt.
+Instance Transitive_lt_int : Transitive Int.ltu.
 Proof.
-  hnf. unfold Int.lt. intros ? ? ? A B.
+  hnf. unfold Int.ltu. intros ? ? ? A B.
   cases in A; invc A; eauto.
   cases in B; invc B; eauto.
   destruct Z_StrictOrder.
@@ -134,15 +146,15 @@ Proof.
   rewrite Coqlib.zlt_true; eauto.
 Qed.
 
-Instance Irreflexive_lt_int : Irreflexive Int.lt.
+Instance Irreflexive_lt_int : Irreflexive Int.ltu.
 Proof.
-  unfold Irreflexive, complement, Reflexive, Int.lt; intros.
+  unfold Irreflexive, complement, Reflexive, Int.ltu; intros.
   cases in H; eauto.
   eapply Z.lt_irrefl; eauto.
 Qed.
 
 Instance int_eq_eq_lt
-  : Proper (Int.eq ==> Int.eq ==> eq) Int.lt.
+  : Proper (Int.eq ==> Int.eq ==> eq) Int.ltu.
 Proof.
   unfold Proper, respectful; intros.
   pose proof (Int.eq_spec x y).
@@ -150,7 +162,7 @@ Proof.
   cases in H1. cases in H2. subst. eauto.
 Qed.
 
-Instance StrictOrder_lt_int : StrictOrder Int.lt Int.eq.
+Instance StrictOrder_lt_int : StrictOrder Int.ltu Int.eq.
 Proof.
   econstructor; eauto with typeclass_instances.
   - intros ? ? LE EQ.
@@ -159,19 +171,40 @@ Proof.
 Defined.
 
 Definition int_compare (x y : int) : Datatypes.comparison :=
-  Z.compare (Int.signed x) (Int.signed y).
+  Z.compare (Int.intval x) (Int.intval y).
+
+Unset Printing Records.
+
+Require ProofIrrelevance.
 
 Lemma compare_spec_int x y
-  : compare_spec Int.eq Int.lt x y (int_compare x y).
+  : compare_spec Int.eq Int.ltu x y (int_compare x y).
 Proof.
-  pose proof (Z.compare_spec (Int.signed x) (Int.signed y)).
+  pose proof (Z.compare_spec (Int.intval x) (Int.intval y)).
   case_eq (int_compare x y); intros EQ; econstructor; unfold int_compare in EQ;
     rewrite EQ in H; inv H.
-Admitted.
+  - pose proof (Int.eq_spec x y).
+    hnf. cases; eauto. eapply H1.
+    destruct x,y; simpl in *.
+    subst. assert (intrange = intrange0) by eapply ProofIrrelevance.proof_irrelevance.
+    subst; eauto.
+  - hnf. unfold Int.ltu.
+    rewrite Coqlib.zlt_true; eauto.
+  - hnf. unfold Int.ltu.
+    rewrite Coqlib.zlt_true; eauto.
+Qed.
+
+Lemma compare_spec_int_eq x y
+  : int_compare x y = Eq -> x = y.
+Proof.
+  intros.
+  pose proof (compare_spec_int x y). rewrite H in H0.
+  inv H0. pose proof (Int.eq_spec x y). cases in H2. eauto.
+Qed.
 
 Instance OrderedType_int : OrderedType int.
 Proof.
-  eapply (Build_OrderedType _ Int.eq Int.lt); eauto with typeclass_instances.
+  eapply (Build_OrderedType _ Int.eq Int.ltu); eauto with typeclass_instances.
   eapply compare_spec_int.
 Defined.
 

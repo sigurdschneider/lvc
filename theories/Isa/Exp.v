@@ -11,6 +11,10 @@ Inductive exp :=
 | UnOp : unop -> exp -> exp
 | BinOp : binop -> exp -> exp -> exp.
 
+Instance DoNotRemember_exp : DoNotRemember exp.
+eapply (DNR exp exp).
+Defined.
+
 Inductive isVar : exp -> Prop :=
   IisVar v : isVar (Var v).
 
@@ -405,17 +409,19 @@ general induction x; destruct y; simpl; try now (econstructor; eauto using expLt
 pose proof (_compare_spec v v0).
 - inv H.
   + econstructor. eauto using expLt.
-  + econstructor. f_equal. eapply H1.
+  + econstructor. f_equal. eapply compare_spec_int_eq; eauto.
   + econstructor; eauto using expLt.
 - pose proof (_compare_spec v v0).
   inv H; now (econstructor; eauto using expLt).
 - pose proof (_compare_spec u u0).
   specialize (IHx y).
   inv H; try now (econstructor; eauto using expLt).
-  inv H1. inv IHx; now (econstructor; eauto using expLt).
+  eapply unop_eq_eq in H1; subst.
+  inv IHx; try now (econstructor; eauto using expLt).
 - pose proof (_compare_spec b b0).
   specialize (IHx1 y1). specialize (IHx2 y2).
   inv H; try now (econstructor; eauto using expLt).
+  eapply binop_eq_eq in H1.
   inv H1.
   inv IHx1; try now (econstructor; eauto using expLt).
   inv IHx2; try now (econstructor; eauto using expLt).

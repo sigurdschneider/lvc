@@ -349,7 +349,7 @@ Ltac single_step :=
   end.
 
 
-Lemma ZL_mapi F L
+Lemma ZL_mapi (F:〔params * stmt〕) L
   : I.block_Z ⊝ (mapi I.mkBlock F ++ L) = fst ⊝ F ++ I.block_Z ⊝ L.
 Proof.
   rewrite List.map_app. rewrite map_mapi. unfold mapi.

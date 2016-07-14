@@ -155,7 +155,7 @@ Notation "'{' v '}'" := (singleton v) : set_scope.
 Notation "'{' v ';' S '}'" := (add v S)(v at level 99) : set_scope.
 Notation "'{' S '~' v '}'" := (remove v S)(S at level 99) : set_scope.
 Notation "v '\in' S" := (mem v S)(at level 70, no associativity) : set_scope.
-Notation "S '++' T" := (union S T) : set_scope.
+(* Notation "S '++' T" := (union S T) : set_scope. *)
 Notation "S '\' T" := (diff S T) (at level 60, no associativity) : set_scope.
 
 Set Implicit Arguments.

@@ -18,12 +18,20 @@ ifneq "$(COQBIN)" ""
         COQBIN := $(COQBIN)/
 endif
 
-all: $(COQMAKEFILE) deps
+all: $(COQMAKEFILE) dep
 	+$(MAKE) -f $(COQMAKEFILE) $@
 
-deps:
+depmakefiles:
+	+$(MAKE) -C paco Makefile.coq
+	+$(MAKE) -C ContainersPlugin Makefile.coq
+
+dep:
 	+$(MAKE) -C paco all
 	+$(MAKE) -C ContainersPlugin all
+
+depclean: clean
+	+$(MAKE) -C paco clean
+	+$(MAKE) -C ContainersPlugin clean
 
 doc: clean-doc 
 	- mkdir -p $(DOC)
@@ -39,7 +47,7 @@ clean: clean-doc
 	-$(COQMAKE) clean
 	rm -f $(COQMAKEFILE)
 
-$(COQMAKEFILE): Makefile $(VS)
+$(COQMAKEFILE): Makefile depmakefiles $(VS)
 	./configure.sh
 #	coq_makefile -f _CoqProject $(VS) -o $(COQMAKEFILE)
 

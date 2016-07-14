@@ -26,7 +26,7 @@ fi
 
 BLACKLIST=`cat _BLACKLIST`
 SOURCES=$(find theories -name \*.v -print | grep -v /\.# | grep -v $BLACKLIST | sed -e 's%^\./%%g')
-coq_makefile -R theories Lvc -R ContainersPlugin/theories Containers -I ContainersPlugin/src extraction $SOURCES > ${MAKEFILE}
+coq_makefile -R theories Lvc -R ContainersPlugin/theories Containers -R paco Paco -I ContainersPlugin/src extraction $SOURCES > ${MAKEFILE}
 echo "${MAKEFILE} generated."
 
 echo "Patching ${MAKEFILE} to include target 'extraction'."
@@ -38,7 +38,5 @@ sed -i -e 's%COQDOCFLAGS?=-interpolate -utf8%COQDOCFLAGS?=--interpolate --utf8 -
 
 if [ -z "$VANILLA" ]; then
 	echo "Patching ${MAKEFILE} to use ruby-based timing scripts (use --vanilla if undesired)."
-	#sed -i -e 's/$(COQC) $(COQDEBUG) $(COQFLAGS)/@.\/time.sh $(if $(findstring j,$(MAKEFLAGS)),--parallel,) $(COQC) $(COQDEBUG) $(COQFLAGS)/' Makefile
-	#sed -i -e 's/^TIMED=/TIMED=true/' Makefile
 	sed -i -e 's/TIMECMD=/TIMECMD=@.\/time.rb $(if $(findstring j,$(MAKEFLAGS)),--parallel,)/' ${MAKEFILE}
 fi

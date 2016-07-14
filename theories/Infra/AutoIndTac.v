@@ -51,8 +51,13 @@ Ltac is_ftype H :=
    if is_var is successful, hence try (is_var x; fail 1) will
    fail exactly when x is a var. *)
 
+Class DoNotRemember (T:Type) := DNR { Q:Type }.
+
 Ltac remember_arguments E :=
-  let tac x := (try (is_var x; fail 1); (*try (is_ftype x; fail 1);*) remember (x)) in
+  let tac x := (try (is_var x; fail 1);
+               try (assert (DoNotRemember x) by eauto with typeclass_instances; fail 1 );
+               remember (x))
+  in
   repeat (match type of E with
     | ?t ?x _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ => tac x
     | ?t ?x _ _ _ _ _ _ _ _ _ _ _ _ _ _ => tac x
