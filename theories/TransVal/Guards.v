@@ -23,9 +23,9 @@ Qed.
 (** Function to generate the guard expression for one expression **)
 Fixpoint undef e :=
   match e with
-  | BinOp n a b
+  | BinOp op a b
     => combine (combine (undef a) (undef b))
-              (if [n = 5]
+              (if [op = BinOpDiv]
                then smtNeg (constr b (Con val_zero))
                else smtTrue)
   | UnOp n a => undef a

@@ -113,7 +113,7 @@ Proof.
     inv H2.
     + relsimpl; eauto.
     + relsimpl.
-    + exploit star2_reach_silent_step; eauto. eapply H1.
+    + exploit star2_reach_silent_step; eauto. eapply H.
       destruct H3; subst. exfalso. eapply H5; firstorder.
       econstructor 3; eauto.
     + econstructor 4.

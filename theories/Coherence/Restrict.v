@@ -112,7 +112,8 @@ Instance bounded_morphism_subset
   : Proper (eq ==> Subset ==> impl) bounded.
 Proof.
   unfold Proper, respectful, impl; intros.
-  subst. general induction y; simpl; eauto.
+  subst.
+  general induction y; simpl; eauto.
   destruct a; simpl in *; cset_tac; intuition.
 Qed.
 

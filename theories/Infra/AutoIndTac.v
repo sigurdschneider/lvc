@@ -53,28 +53,31 @@ Ltac is_ftype H :=
 
 Class DoNotRemember (T:Type) := DNR { Q:Type }.
 
+Declare ML Module "lvc_plugin".
+
 Ltac remember_arguments E :=
-  let tac x := (try (is_var x; fail 1);
-               try (assert (DoNotRemember x) by eauto with typeclass_instances; fail 1 );
-               remember (x))
+  let tac t x := ( try (is_param t 0; fail 1);
+                  try (is_var x; fail 1);
+                  try (assert (DoNotRemember x) by eauto with typeclass_instances; fail 1 );
+                  remember (x))
   in
   repeat (match type of E with
-    | ?t ?x _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ => tac x
-    | ?t ?x _ _ _ _ _ _ _ _ _ _ _ _ _ _ => tac x
-    | ?t ?x _ _ _ _ _ _ _ _ _ _ _ _ _ => tac x
-    | ?t ?x _ _ _ _ _ _ _ _ _ _ _ _ => tac x
-    | ?t ?x _ _ _ _ _ _ _ _ _ _ _ => tac x
-    | ?t ?x _ _ _ _ _ _ _ _ _ _ => tac x
-    | ?t ?x _ _ _ _ _ _ _ _ _ => tac x
-    | ?t ?x _ _ _ _ _ _ _ _ => tac x
-    | ?t ?x _ _ _ _ _ _ _ => tac x
-    | ?t ?x _ _ _ _ _ _ => tac x
-    | ?t ?x _ _ _ _ _ => tac x
-    | ?t ?x _ _ _ _ => tac x
-    | ?t ?x _ _ _ => tac x
-    | ?t ?x _ _ => tac x
-    | ?t ?x _ => tac x
-    | ?t ?x => tac x
+    | ?t ?x _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ => tac t x
+    | ?t ?x _ _ _ _ _ _ _ _ _ _ _ _ _ _ => tac t x
+    | ?t ?x _ _ _ _ _ _ _ _ _ _ _ _ _ => tac t x
+    | ?t ?x _ _ _ _ _ _ _ _ _ _ _ _ => tac t x
+    | ?t ?x _ _ _ _ _ _ _ _ _ _ _ => tac t x
+    | ?t ?x _ _ _ _ _ _ _ _ _ _ => tac t x
+    | ?t ?x _ _ _ _ _ _ _ _ _ => tac t x
+    | ?t ?x _ _ _ _ _ _ _ _ => tac t x
+    | ?t ?x _ _ _ _ _ _ _ => tac t x
+    | ?t ?x _ _ _ _ _ _ => tac t x
+    | ?t ?x _ _ _ _ _ => tac t x
+    | ?t ?x _ _ _ _ => tac t x
+    | ?t ?x _ _ _ => tac t x
+    | ?t ?x _ _ => tac t x
+    | ?t ?x _ => tac t x
+    | ?t ?x => tac t x
   end).
 
 (* from Coq.Program.Tactics *)
@@ -131,26 +134,29 @@ Tactic Notation "general" "induction" hyp(H) :=
 Tactic Notation "indros" :=
   intros; (try inv_eqs); (try clear_trivial_eqs).
 
-Module Test.
-Require Import List.
 
-Inductive decreasing : list nat -> Prop :=
+Module Test.
+
+  Require Import List.
+
+  Inductive decreasing : list nat -> Prop :=
   | base : decreasing nil
   | step m n L : decreasing (n::L) -> n <= m -> decreasing (m :: n :: L).
 
-Lemma all_zero_by_hand L
-  : decreasing (0::L) -> forall x, In x L -> x = 0.
-Proof.
-  intros. remember (0::L).
-  revert dependent L. revert x. induction H; intros.
-  inversion Heql.
-  inversion Heql. subst. inversion H0; subst; firstorder.
-Qed.
+  Lemma all_zero_by_hand L
+    : decreasing (0::L) -> forall x, In x L -> x = 0.
+  Proof.
+    intros. remember (0::L).
+    revert dependent L. revert x. induction H; intros.
+    inversion Heql.
+    inversion Heql. subst. inversion H0; subst; firstorder.
+  Qed.
 
-Lemma all_zero L
-  : decreasing (0::L) -> forall x, In x L -> x = 0.
-Proof.
-  intros. general induction H.
-  inversion H0; subst; firstorder.
-Qed.
+  Lemma all_zero L
+    : decreasing (0::L) -> forall x, In x L -> x = 0.
+  Proof.
+    intros. general induction H.
+    inversion H0; subst; firstorder.
+  Qed.
+
 End Test.

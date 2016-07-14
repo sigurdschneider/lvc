@@ -100,7 +100,9 @@ if !parallel then
 	print col(12, color[timing]), col(15, change), speed, "\n"
 end
 
-sout = cstdout.read
+
+serrs = serr.lines[1...-4] ? serr.lines[1...-4].join : ""
+sout = cstdout.read + serrs
 
 if !sout.strip.empty? then
 	print "#{Time.now.strftime("%H:%M:%S")} ", color["==="], " #{col(35, modname)} ", "OUTPUT FOLLOWS" , "\n"

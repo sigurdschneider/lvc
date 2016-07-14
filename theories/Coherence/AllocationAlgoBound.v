@@ -350,7 +350,7 @@ Lemma regAssign_assignment_small' s ang ϱ ϱ' (alv:ann (set var)) ZL Lv n
   -> live_sound Imperative ZL Lv s alv
   -> bounded (Some ⊝ Lv \\ ZL) (fst (getAnn ang))
   -> ann_R Subset1 alv ang
-  -> LabelsDefined.noUnreachableCode s
+  -> noUnreachableCode isCalled s
   -> regAssign s alv ϱ = Success ϱ'
   -> lookup_set (findt ϱ 0) (fst (getAnn ang)) ⊆ vars_up_to n
   -> lookup_set (findt ϱ' 0) (fst (getAnn ang) ∪ snd (getAnn ang)) ⊆ vars_up_to (max (size_of_largest_live_set alv) n).

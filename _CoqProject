@@ -2,3 +2,4 @@
 -R "ContainersPlugin/theories" Containers 
 -R "paco" Paco 
 -I ContainersPlugin/src
+-I src 
