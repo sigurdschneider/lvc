@@ -58,7 +58,7 @@ Proof.
     edestruct (IHe2 F); eauto.
     rewrite H1, H4; simpl.
     cases in H2; simpl in H2.
-    + decide (x0 === val_zero).
+    + decide (x0 = val_zero).
       * exfalso. eapply H2. unfold smt_eval; simpl.
         erewrite exp_eval_partial_total; eauto.
       * eapply binop_eval_div_nonzero; eauto.
@@ -137,9 +137,9 @@ Proof.
         cases in H3; simpl in H3.
         eapply H3.
         unfold smt_eval; erewrite exp_eval_partial_total; simpl; eauto.
-        eapply binop_eval_div_zero in H0.
-        unfold bvDiv in H0; cases in H0; subst; eauto; isabsurd.
-        do 6 (try destruct b); isabsurd.
+        eapply binop_eval_div_zero in H0; subst; eauto.
+        edestruct binop_eval_not_div in H0; eauto.
+        rewrite H6 in H0; congruence.
 Qed.
 
 Lemma undefList_models:

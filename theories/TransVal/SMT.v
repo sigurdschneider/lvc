@@ -41,7 +41,7 @@ Proof.
 Qed.
 
 Lemma to_partial_to_total (E:onv val) x v
-  : E x === Some v -> to_partial (to_total E) x === Some v.
+  : E x = Some v -> to_partial (to_total E) x = Some v.
 Proof.
   intros.
   unfold to_partial, to_total. cases; eauto.
@@ -118,7 +118,7 @@ match s with
             else models F E f
 |smtImp a b
  => (models F E a) ->(models F E b)
-|constr s1 s2 => (smt_eval E s1) === (smt_eval E s2)
+|constr s1 s2 => (smt_eval E s1) = (smt_eval E s2)
 |funcApp f a => F f (List.map (smt_eval E) a)
 |smtFalse => False
 |smtTrue => True
@@ -154,6 +154,7 @@ intros.
 specialize (H F E). assumption.
 Qed.
 
+(*
 Instance bind_equiv (A B : Type) `{Equivalence A} `{Equivalence B}
          (f:A -> option B) `{Proper _ (Equivalence.equiv ==> Equivalence.equiv) f}
   : Proper (Equivalence.equiv ==> Equivalence.equiv) (@bind A B f).
@@ -162,89 +163,44 @@ Proof.
   inv H2; simpl; eauto.
 Qed.
 
-Instance bind_binop_eval1 op v
-  : Proper (Equivalence.equiv ==> Equivalence.equiv)
-           (fun v' => bind (binop_eval op v') v).
-Proof.
-  hnf; intros. destruct v; simpl; eauto.
-  eapply binop_eval_equiv; eauto.
-Qed.
-
-Instance bind_binop_eval2 op v
-  : Proper (Equivalence.equiv ==> Equivalence.equiv)
-           (fun v' : Integers.Int.int => binop_eval op v v').
-Proof.
-  hnf; intros. destruct v; simpl; eauto.
-  eapply binop_eval_equiv; eauto.
-Qed.
-
-(*
-this doesn't help, setoid rewrite needs the instance above
-Instance test (A:Type) v `{Equivalence A}
-         (f : A -> A -> ؟ A)
-         `{Proper _ (Equivalence.equiv ==> Equivalence.equiv ==> Equivalence.equiv) f}
-  : Proper (Equivalence.equiv ==> Equivalence.equiv)
-           (fun v1 : A => bind (f v1) v).
-Proof.
-  hnf; intros. destruct v; simpl; eauto.
-  eapply H0; eauto.
-Qed.
-*)
-
-
 Lemma eq_equiv X (x y:X) `{Equivalence X}
   : x = y -> x === y.
 Proof.
   intros; subst; eauto.
 Qed.
-
 Hint Immediate eq_equiv.
+ *)
+
+
 
 Lemma exp_eval_partial_total E e v
- : exp_eval E e === Some v ->
-   exp_eval (to_partial (to_total E)) e === Some v.
+ : exp_eval E e = Some v ->
+   exp_eval (to_partial (to_total E)) e = Some v.
 Proof.
   intros.
   general induction e; simpl in * |- *; eauto.
   - erewrite to_partial_to_total; eauto.
   - monad_inv H; simpl; eauto.
-    exploit IHe; eauto.
-    rewrite bind_equiv; eauto; simpl. eauto.
-    eapply unop_eval_equiv; eauto.
+    erewrite IHe, EQ; eauto.
   - intros.
     monad_inv H; simpl.
-    rewrite IHe1; eauto; simpl.
-    rewrite IHe2; eauto.
-Qed.
-
-Instance bind_list A B (f:A -> option (list B)) `{Equivalence A} `{Equivalence B} a
-  : Proper (Equivalence.equiv ==> option_eq (list_eq R0))
-           (fun v  => mdo vl0 <- f a; ⎣ v :: vl0 ⎦).
-Proof.
-  unfold Proper, respectful; intros.
-  destruct (f a); simpl; eauto.
-  econstructor; econstructor; eauto. reflexivity.
-  econstructor.
+    erewrite IHe1, IHe2; eauto; simpl.
+    rewrite EQ, EQ1; eauto.
 Qed.
 
 (** Next 2 Lemmata belong to Lemma 4 in subsection 3.4 in the thesis
 They prove that evaluation without a total environment is equal
 to evaluation under a total environment **)
 Lemma exp_eval_partial_total_list E el vl
-:  omap (exp_eval E) el === Some vl
--> omap (exp_eval (to_partial (to_total  E))) el === Some vl.
+:  omap (exp_eval E) el = Some vl
+-> omap (exp_eval (to_partial (to_total  E))) el = Some vl.
 
 Proof.
   intros. general induction el; eauto using exp_eval_partial_total.
   - simpl in H. monad_inv H. simpl.
-    erewrite (exp_eval_partial_total _ _ (eq_equiv EQ)); eauto.
-    simpl.
-    exploit IHel; eauto.
-    rewrite bind_equiv; [ | | eapply H ]. eauto; simpl.
-    econstructor; eauto.
-    eapply bind_list.
-
-    rewrite IHel; eauto.
+    erewrite exp_eval_partial_total; eauto; simpl.
+    erewrite IHel; eauto; simpl.
+    rewrite EQ, EQ1; eauto.
 Qed.
 
 Lemma list_eval_agree E el v:

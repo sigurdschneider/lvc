@@ -132,7 +132,7 @@ Proof.
   rewrite H, H0. eauto.
 Qed.
 
-Instance StrictOrder_lt_int : StrictOrder Int.ltu int_eq.
+Instance StrictOrder_lt_int : StrictOrder Int.ltu eq.
 Proof.
   econstructor; eauto with typeclass_instances.
   - intros ? ? LE EQ.
@@ -145,29 +145,31 @@ Definition int_compare (x y : int) : Datatypes.comparison :=
 
 Unset Printing Records.
 
+Require Import ProofIrrelevance.
+
 Lemma compare_spec_int x y
-  : compare_spec int_eq Int.ltu x y (int_compare x y).
+  : compare_spec eq Int.ltu x y (int_compare x y).
 Proof.
   pose proof (Z.compare_spec (Int.intval x) (Int.intval y)).
   case_eq (int_compare x y); intros EQ; econstructor; unfold int_compare in EQ;
     rewrite EQ in H; inv H; eauto.
+  - destruct x,y; simpl in *; subst.
+    f_equal. eapply ProofIrrelevance.proof_irrelevance.
   - hnf. unfold Int.ltu.
     rewrite Coqlib.zlt_true; eauto.
   - hnf. unfold Int.ltu.
     rewrite Coqlib.zlt_true; eauto.
 Qed.
 
-Require Import ProofIrrelevance.
 
 Lemma compare_spec_int_eq x y
   : int_compare x y = Eq -> x = y.
 Proof.
   intros.
   pose proof (compare_spec_int x y). rewrite H in H0.
-  inv H0. destruct x,y; compute in H1; subst.
-  assert (intrange = intrange0).
-  eapply ProofIrrelevance.proof_irrelevance. subst. reflexivity.
+  inv H0. eauto.
 Qed.
+
 
 Instance int_eq_dec : EqDec val int_eq.
 hnf; intros. destruct x,y.
@@ -182,7 +184,7 @@ Defined.
 
 Instance OrderedType_int : OrderedType int.
 Proof.
-  eapply (Build_OrderedType _ int_eq Int.ltu); eauto with typeclass_instances.
+  eapply (Build_OrderedType _ eq Int.ltu); eauto with typeclass_instances.
   eapply compare_spec_int.
 Defined.
 
@@ -213,14 +215,14 @@ Definition bool2val (b:bool) :=
   end.
 
 
-Definition val2bool (v: val) : bool := if [ v === val_zero ] then false else true.
+Definition val2bool (v: val) : bool := if [ v = val_zero ] then false else true.
 
 Lemma val2bool_true
 : val2bool val_true = true.
 Proof.
   unfold val2bool.
   cases; eauto.
-  exfalso; eauto using val_true_false_nequiv.
+  exfalso; eauto using val_true_false_neq.
 Qed.
 
 Lemma val2bool_false
@@ -236,19 +238,19 @@ Definition binop_eval (o:binop) :=
       | BinOpAdd => option_lift2 Int.add
       | BinOpSub => option_lift2 Int.sub
       | BinOpMul => option_lift2 Int.mul
-      | BinOpDiv => fun x y => if [ y === val_zero] then None else (Some (Int.divs x y))
+      | BinOpDiv => fun x y => if [ y = val_zero] then None else (Some (Int.divs x y))
       | BinOpEq => option_lift2 (fun x y => bool2val(Int.eq x y))
     end.
 
 Lemma binop_eval_div_zero x y
-  : y === val_zero
+  : y = val_zero
     <-> binop_eval BinOpDiv x y = None.
 Proof.
   intros; simpl; cases; split; intros; eauto; exfalso; congruence.
 Qed.
 
 Lemma binop_eval_div_nonzero x y
-  : y =/= val_zero
+  : y <> val_zero
     -> exists v, binop_eval BinOpDiv x y = Some v.
 Proof.
   intros; simpl; cases; eauto.
@@ -275,6 +277,7 @@ Proof.
   intros; destruct op; simpl; unfold option_lift1; eauto.
 Qed.
 
+(*
 Lemma binop_eval_equiv
   : Proper (eq ==> equiv ==> equiv ==> equiv ) binop_eval.
 Proof.
@@ -298,6 +301,7 @@ Proof.
   destruct x0,y0; inv H; compute in H0; subst; simpl; unfold option_lift1;
     try reflexivity.
 Qed.
+ *)
 
 Opaque val.
 Opaque default_val.
