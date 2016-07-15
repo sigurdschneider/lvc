@@ -7,7 +7,10 @@ Require Import Guards ILFtoSMT.
 (** Lemma 7 in the thesis.
 Proves that whenever an expression evaluates under
 a partial environment, then it's guard must be satisfiable **)
- Lemma guard_true_if_eval:
+
+Unset Printing Records.
+
+Lemma guard_true_if_eval:
 forall F E e v,
  exp_eval E e = Some v
 ->  models F (to_total E) (undef e).
@@ -19,26 +22,23 @@ intros. general induction e; simpl in *; eauto.
 - monad_inv H; cases.
    + repeat( erewrite models_combine; simpl).
      split; try split; intros; eauto.
-     unfold val2bool in H.
-     eapply BitVector.bvEq_equiv_eq in H.
-     unfold smt_eval in H.
-     erewrite exp_eval_partial_total in H; eauto.
-     simpl in H. eapply bvEq_equiv_eq in H; subst. simpl in *.
-     unfold bvDiv in EQ2. cases in EQ2; isabsurd.
+     unfold smt_eval in H; simpl in H.
+     erewrite !exp_eval_partial_total in H; simpl; eauto.
+     eapply (binop_eval_div_zero x) in H; eauto. congruence.
    + erewrite models_combine; simpl; erewrite models_combine; simpl.
      split; try split; eauto.
 Qed.
 
 (** Lemma7 in the thesis, lifted to lists **)
 Lemma guardList_true_if_eval:
-forall F E el vl,
-omap (exp_eval E) el = Some vl
--> models F (to_total E) (undefLift el).
+  forall F E el vl,
+    omap (exp_eval E) el = Some vl
+    -> models F (to_total E) (undefLift el).
 
 Proof.
-intros. general induction el; simpl in *; eauto.
-monad_inv H.
-erewrite models_combine; simpl; split; eauto using guard_true_if_eval.
+  intros. general induction el; simpl in *; eauto.
+  monad_inv H.
+  erewrite models_combine; simpl; split; eauto using guard_true_if_eval.
 Qed.
 
 (** Lemma 8 **)
@@ -50,28 +50,19 @@ forall F E e,
 
 Proof.
   intros. general induction e; simpl in *; eauto.
-  - destruct (IHe F E); subst; destruct u; eauto; simpl; rewrite H1.
-    + case_eq (val2bool x); intros.
-      * exists val_true; simpl; unfold option_lift1; rewrite H2; simpl; eauto.
-      * exists val_false; simpl; unfold option_lift1; rewrite H2; simpl; eauto.
-    + exists (neg x). simpl; unfold option_lift1; eauto.
+  - destruct (IHe F E); subst; eauto; rewrite H1; simpl.
+    eapply unop_eval_total.
   - simpl in *.
     repeat (rewrite models_combine in H0; simpl in H0); intuition; cset_tac.
     edestruct (IHe1 F); eauto.
     edestruct (IHe2 F); eauto.
-    rewrite H1, H4. simpl.
+    rewrite H1, H4; simpl.
     cases in H2; simpl in H2.
-    + unfold binop_eval; simpl.
-      unfold smt_eval in *; erewrite exp_eval_partial_total in H2; eauto.
-      unfold bvDiv. simpl in *. cases; isabsurd.
-     exfalso. eapply H2; reflexivity.
-     destruct (bvLessZero x); try destruct (bvLessZero x0); eexists; eauto.
-   + unfold binop_eval; unfold option_lift2; simpl; case_eq b; intros; [ eexists; eauto |].
-     case_eq n; intros; [ eexists; eauto | ].
-     case_eq n0; intros; [ eexists; eauto | ].
-     case_eq n1; intros; [ eexists; eauto | ].
-     case_eq n2; intros; [ eexists; eauto | ].
-     case_eq n3; intros; [ isabsurd | eexists; eauto].
+    + decide (x0 === val_zero).
+      * exfalso. eapply H2. unfold smt_eval; simpl.
+        erewrite exp_eval_partial_total; eauto.
+      * eapply binop_eval_div_nonzero; eauto.
+   + eapply binop_eval_not_div; eauto.
 Qed.
 
 (*  Lemma 8 lifted to lists**)
@@ -80,25 +71,23 @@ Lemma guardlist_impl_eval:
     (forall x, x ∈ list_union (List.map Exp.freeVars el) -> exists v,  E x = Some v)
     -> models F (to_total E) (undefLift el)
     -> exists v, omap (exp_eval E) el = Some v.
-
 Proof.
   intros.
   general induction el; simpl in *; eauto.
-  eapply models_combine in H0; simpl in H0.
-  destruct H0.
+  eapply models_combine in H0; simpl in H0; dcr.
   edestruct IHel; eauto.
   - eapply exp_freeVars_list_agree; eauto.
-  - rewrite H2. edestruct guard_models_impl_eval; eauto.
+  - rewrite H0. edestruct guard_models_impl_eval; eauto.
     + eapply exp_freeVars_list_agree; eauto.
     + rewrite H3; eexists; simpl; eauto.
 Qed.
 
 (** Lemma 9 in thesis **)
 Lemma guardTrue_if_Terminates_ret:
-forall L L' E s E' e,
-noFun s
--> Terminates (L, E, s)(L', E', stmtReturn e)
--> forall F, models F (to_total E') (undef e).
+  forall L L' E s E' e,
+    noFun s
+    -> Terminates (L, E, s)(L', E', stmtReturn e)
+    -> forall F, models F (to_total E') (undef e).
 
 Proof.
   intros L L' E s E' e noFun_s Terminates_s_ret F.
@@ -146,9 +135,9 @@ Proof.
       * eapply (exp_freeVars_bin_agree E e1 e2); eauto.
       * rewrite H4, H5 in *; simpl in *.
         cases in H3; simpl in H3.
-        eapply H3. unfold val2bool; eapply bvEq_equiv_eq.
-        subst; simpl in *.
-        unfold smt_eval; erewrite exp_eval_partial_total; eauto.
+        eapply H3.
+        unfold smt_eval; erewrite exp_eval_partial_total; simpl; eauto.
+        eapply binop_eval_div_zero in H0.
         unfold bvDiv in H0; cases in H0; subst; eauto; isabsurd.
         do 6 (try destruct b); isabsurd.
 Qed.

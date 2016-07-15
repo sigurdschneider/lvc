@@ -131,7 +131,7 @@ Notation "'mdo' X <= A ; B" := (bind (sumbool_option (@decision_procedure A _)) 
 Lemma equiv_dec_refl A `(EqDec A eq) (a:A)
   : equiv_dec a a.
 Proof.
-  cbv. destruct H; eauto. eapply c. reflexivity.
+  cbv. destruct H; eauto.
 Qed.
 
 Lemma equiv_dec_R A eq `(EqDec A eq) (a b:A)
@@ -228,3 +228,7 @@ Lemma dneg_eq A `(EqDec A eq) (a b:A)
 Proof.
   intros. decide (a=b); firstorder.
 Qed.
+
+Global Instance inst_eq_dec_list {A} `{EqDec A eq} : EqDec (list A) eq.
+hnf. eapply list_eq_dec. eapply equiv_dec.
+Defined.

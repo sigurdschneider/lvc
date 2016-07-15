@@ -1,4 +1,4 @@
-Require Export List SetoidList Omega Infra.Option EqDec AutoIndTac Computable.
+Require Export List SetoidList Omega AutoIndTac Computable.
 
 Set Implicit Arguments.
 
@@ -176,11 +176,6 @@ Tactic Notation "beq_to_prop" :=
 Tactic Notation "cbool" :=
   simpl in *; bool_to_prop in *; destr in *; bool_to_prop; destr; beq_to_prop.
 
-Global Instance inst_eq_dec_list {A} `{EqDec A eq} : EqDec (list A) eq.
-hnf. eapply list_eq_dec. eapply equiv_dec.
-Defined.
-
-
 (** * Omega Rewrite *)
 
 Tactic Notation "orewrite" constr(A) :=
@@ -346,24 +341,6 @@ Lemma test (A B C D : Prop) (a:A) (b:B)
   ->  D.
 Proof.
   intros. exploiT foo. eauto. exploit H. eauto. firstorder.
-Qed.
-
-
-Inductive option_R_Some (A B : Type) (eqA : A -> B -> Prop)
-: option A -> option B -> Prop :=
-| Option_R_Some a b : eqA a b -> option_R_Some eqA ⎣a⎦ ⎣b⎦.
-
-
-Lemma option_R_Some_refl A R `{Reflexive A R} : forall x, option_R_Some R ⎣x⎦ ⎣x⎦.
-intros; eauto using option_R_Some.
-Qed.
-
-Instance option_R_Some_sym A R `{Symmetric A R} : Symmetric (option_R_Some R).
-hnf; intros ? [] []; eauto using option_R_Some.
-Qed.
-
-Instance option_R_trans A R `{Transitive A R} : Transitive (option_R_Some R).
-hnf; intros. inv H0; inv H1; econstructor; eauto.
 Qed.
 
 Fixpoint iter A n (s:A) (f: A -> A) :=
