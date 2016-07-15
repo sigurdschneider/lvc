@@ -7,7 +7,7 @@ Notation "⎣⎦" := (None) (at level 0).
 
 Set Implicit Arguments.
 
-Definition bind (A B : Type) (g : A -> option B) (x : option A) : option B :=
+Definition bind (A B : Type) (x : option A) (g : A -> option B) : option B :=
   match x with
     | Some a => g a
     | None   => None
@@ -15,24 +15,24 @@ Definition bind (A B : Type) (g : A -> option B) (x : option A) : option B :=
 
 Extraction Inline bind.
 
-Notation "'mdo' X <- A ; B" := (bind (fun X => B) A)
+Notation "'mdo' X <- A ; B" := (bind A (fun X => B))
  (at level 200, X ident, A at level 100, B at level 200).
 
 Lemma bind_inversion_Some (A B : Type) (f : option A) (g : A -> option B) (y : B) :
-  bind g f = Some y -> { x : A | f = Some x /\ g x = Some y }.
+  bind f g = Some y -> { x : A | f = Some x /\ g x = Some y }.
 Proof.
   destruct f. firstorder. discriminate.
 Qed.
 
 Lemma bind_inversion_None {A B : Type} (f : option A) (g : A -> option B) :
-  bind g f = None -> f = None \/ exists x, f = Some x /\ g x = None.
+  bind f g = None -> f = None \/ exists x, f = Some x /\ g x = None.
 Proof.
   destruct f; firstorder.
 Qed.
 
 Lemma bind_inversion_Some_equiv (A B : Type) `{Equivalence B}
       (f : option A) (g : A -> option B) (y : B) :
-  bind g f === Some y -> { x : A | f = Some x /\ g x === Some y }.
+  bind f g === Some y -> { x : A | f = Some x /\ g x === Some y }.
 Proof.
   intros.
   destruct f; simpl in *. firstorder.
@@ -40,7 +40,7 @@ Proof.
 Qed.
 
 Lemma bind_inversion_None_equiv {A B : Type} `{Equivalence B} (f : option A) (g : A -> option B) :
-  bind g f === None -> f = None \/ exists x, f = Some x /\ g x = None.
+  bind f g === None -> f = None \/ exists x, f = Some x /\ g x = None.
 Proof.
   destruct f; firstorder.
   inversion H0; subst; eauto.
@@ -75,28 +75,28 @@ Ltac monad_inv H :=
     let x   := fresh "x"  in
     let EQ1 := fresh "EQ" in
     let EQ2 := fresh "EQ" in
-    destruct (bind_inversion_Some G F H) as [x [EQ1 EQ2]];
+    destruct (bind_inversion_Some F G H) as [x [EQ1 EQ2]];
     clear H;
     try (monad_inv EQ2)
   | (bind ?F ?G = None) =>
     let x   := fresh "x"  in
     let EQ1 := fresh "EQ" in
     let EQ2 := fresh "EQ" in
-    destruct (bind_inversion_None G F H) as [|[x [EQ1 EQ2]]];
+    destruct (bind_inversion_None F G H) as [|[x [EQ1 EQ2]]];
     clear H;
     try (monad_inv EQ2)
   | (bind ?F ?G === Some ?X) =>
     let x   := fresh "x"  in
     let EQ1 := fresh "EQ" in
     let EQ2 := fresh "EQ" in
-    destruct (bind_inversion_Some_equiv G F H) as [x [EQ1 EQ2]];
+    destruct (bind_inversion_Some_equiv F G H) as [x [EQ1 EQ2]];
     clear H;
     try (monad_inv EQ2)
   | (bind ?F ?G === None) =>
     let x   := fresh "x"  in
     let EQ1 := fresh "EQ" in
     let EQ2 := fresh "EQ" in
-    destruct (bind_inversion_None_equiv G F H) as [|[x [EQ1 EQ2]]];
+    destruct (bind_inversion_None_equiv F G H) as [|[x [EQ1 EQ2]]];
     clear H;
     try (monad_inv EQ2)
   end.
