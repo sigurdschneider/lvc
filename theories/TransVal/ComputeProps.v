@@ -68,12 +68,12 @@ forall L s D E s' E',
 renamedApart s D
 -> noFun s
 -> Terminates (L,E, s) (L, E', s')
-->  models (fun (f:pred) (x:vallst) => true)  (to_total E')  (translateStmt s source).
+->  models (fun (f:pred) (x:list val) => true)  (to_total E')  (translateStmt s source).
 
 Proof.
 intros L s D E s' E' ren_s noFun_s Term_s.
 general induction Term_s; simpl.
-- assert (X: models (fun (_:pred) (_:vallst) => true) (to_total E0) (funcApp (LabI 0) (e::nil))).
+- assert (X: models (fun (_:pred) (_:list val) => true) (to_total E0) (funcApp (LabI 0) (e::nil))).
   + simpl; intuition.
   + eapply models_guardGen_source; simpl. split; eauto.
       eapply (guard_true_if_eval); eauto.
@@ -102,8 +102,8 @@ general induction Term_s; simpl.
         - eapply (agree_on_incl  (bv:=Exp.freeVars e) (lv:=fst (getAnn (ann1 (D0, D') an)))); eauto. }
       {  unfold smt_eval;
         repeat erewrite exp_eval_partial_total; eauto.
-         eapply  bvEq_equiv_eq; reflexivity. }
-  + assert (X: models  (fun (_:pred) (_:vallst) => true) (to_total E'0) ( ite e (translateStmt s' source) (translateStmt b2 source))).
+      }
+  + assert (X: models  (fun (_:pred) (_:list val) => true) (to_total E'0) ( ite e (translateStmt s' source) (translateStmt b2 source))).
     * simpl.
       assert (Exp.freeVars e ⊆ fst (getAnn (ann2 (D0, D') ans ant))) by cset_tac.
       assert (agree_on eq (fst (getAnn (ann2 (D0, D') ans ant))) E' E'0)
@@ -119,7 +119,7 @@ general induction Term_s; simpl.
         eapply agree_on_total; eauto. }
     * erewrite models_guardGen_source.
       simpl.
-      pose proof (guard_true_if_eval  (fun (_:pred) (_:vallst) => true) E'0 e v); eauto.
+      pose proof (guard_true_if_eval  (fun (_:pred) (_:list val) => true) E'0 e v); eauto.
       assert (Exp.freeVars e ⊆ fst (getAnn (ann2 (D0, D') ans ant))) by cset_tac.
       assert (agree_on eq (fst (getAnn (ann2 (D0, D') ans ant))) E' E'0)
         by ( eapply (term_ssa_eval_agree L' L' (stmtIf e s' b2) _ s'0 _ _); econstructor; eauto).
@@ -127,7 +127,7 @@ general induction Term_s; simpl.
         by (eapply (exp_eval_agree (E:=E') (E':=E'0)); eauto;
         eapply (agree_on_incl (bv:= Exp.freeVars e) (lv:= fst (getAnn (ann2 (D0, D') ans ant)))); eauto).
       split; eauto.
-  + assert (X: models  (fun (_:pred) (_:vallst) => true) (to_total E'0) ( ite e (translateStmt b1 source) (translateStmt s' source))).
+  + assert (X: models  (fun (_:pred) (_:list val) => true) (to_total E'0) ( ite e (translateStmt b1 source) (translateStmt s' source))).
     * simpl.
       assert (Exp.freeVars e ⊆ fst (getAnn (ann2 (D0, D') ans ant))) by cset_tac.
       assert (agree_on eq (fst (getAnn (ann2 (D0, D') ans ant))) E' E'0)
@@ -141,7 +141,7 @@ general induction Term_s; simpl.
       eapply agree_on_partial, agree_on_total; eauto.
     * erewrite models_guardGen_source; simpl.
       simpl; split; eauto.
-      eapply (guard_true_if_eval  (fun (_:pred) (_:vallst) => true) E'0 e v); eauto.
+      eapply (guard_true_if_eval  (fun (_:pred) (_:list val) => true) E'0 e v); eauto.
       assert (Exp.freeVars e ⊆ fst (getAnn (ann2 (D0, D') ans ant))) by cset_tac.
       assert (agree_on eq (fst (getAnn (ann2 (D0, D') ans ant))) E' E'0)
         by ( eapply (term_ssa_eval_agree L' L' (stmtIf e b1 s') _ s'0 _ _);
@@ -408,7 +408,7 @@ Proof.
     { destruct H7.
       unfold smt_eval.
       repeat erewrite exp_eval_partial_total; eauto.
-      eapply bvEq_equiv_eq; eauto. }
+    }
     +  unfold smt_eval.
        assert (exp_eval Es e = Some v).
        * eapply (exp_eval_agree (E:= E')); eauto.

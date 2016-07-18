@@ -3,12 +3,6 @@ Require Import IL MoreExp SetOperations Val DecSolve.
 
 Set Implicit Arguments.
 
-(** Arguments are lists of expressions **)
-Definition arglst := list exp.
-
-(** Lists of values **)
-Definition vallst := list val. (*bitvec.*)
-
 (**
 evalSexp evaluates an SMT expression given an environment that must be total on
 every variable that may occur in a formula.
@@ -66,7 +60,7 @@ Inductive smt :Type :=
 (** Constraint *)
 | constr: exp -> exp -> smt
 (** Predicate evaluation **)
-| funcApp: pred -> arglst -> smt
+| funcApp: pred -> list exp -> smt
 (** Constant false **)
 | smtFalse: smt
 (** Constant true **)
@@ -79,7 +73,7 @@ Proof.
   try (decide (s = t); subst; eauto; try dec_solve).
   - decide (e = e0); subst; dec_solve.
   - decide (e = e1); decide (e0 = e2); subst; dec_solve.
-  - decide (p = p0); decide (a = a0); subst; dec_solve.
+  - decide (p = p0); decide (l = l0); subst; dec_solve.
 Qed.
 
 
@@ -88,7 +82,7 @@ Inductive pol:Type :=
 | source :pol
 | target :pol.
 
-Fixpoint listGen (el:arglst) :=
+Fixpoint listGen (el:list exp) :=
 match el with
 |nil => nil
 |_:: el' => default_val :: listGen el'
@@ -104,34 +98,32 @@ Definition smt_eval (E:env val) (e:exp) :=
 
 (** models relation for smt. No need for options here too, because if models can be evaluated by an environment,
 every variable must have been defined. **)
-Fixpoint models (F:pred ->vallst->bool) (E:env val) (s:smt) : Prop:=
-match s with
+Fixpoint models (F:pred -> list val -> bool) (E:env val) (s:smt) : Prop:=
+  match s with
   |smtAnd a b
    => (models F E a) /\ (models F E b)
   |smtOr a b
    => (models F E a) \/  (models F E b)
   |smtNeg a
    =>  (models F E a) -> False
-| ite c t f
-  =>  if val2bool (smt_eval E c)
-            then models F E t
-            else models F E f
-|smtImp a b
- => (models F E a) ->(models F E b)
-|constr s1 s2 => (smt_eval E s1) = (smt_eval E s2)
-|funcApp f a => F f (List.map (smt_eval E) a)
-|smtFalse => False
-|smtTrue => True
-end.
+  | ite c t f
+    =>  if val2bool (smt_eval E c)
+       then models F E t
+       else models F E f
+  |smtImp a b
+   => (models F E a) ->(models F E b)
+  |constr s1 s2 => (smt_eval E s1) = (smt_eval E s2)
+  |funcApp f a => F f (List.map (smt_eval E) a)
+  |smtFalse => False
+  |smtTrue => True
+  end.
 
-Lemma smtand_comm:
-forall a b F E,
-models F E (smtAnd a b)
--> models F E (smtAnd b a).
-
+Lemma smtand_comm a b F E
+  : models F E (smtAnd a b)
+    -> models F E (smtAnd b a).
 Proof.
-intros.
-hnf in H. simpl. destruct H as [A B]. eauto.
+  intros.
+  hnf in H. simpl. destruct H as [A B]. eauto.
 Qed.
 
 Lemma smtand_neg_comm:
@@ -171,8 +163,6 @@ Qed.
 Hint Immediate eq_equiv.
  *)
 
-
-
 Lemma exp_eval_partial_total E e v
  : exp_eval E e = Some v ->
    exp_eval (to_partial (to_total E)) e = Some v.
@@ -186,6 +176,14 @@ Proof.
     monad_inv H; simpl.
     erewrite IHe1, IHe2; eauto; simpl.
     rewrite EQ, EQ1; eauto.
+Qed.
+
+Lemma exp_eval_smt_eval E e v
+ : exp_eval E e = Some v ->
+   smt_eval (to_total E) e = v.
+Proof.
+  intros. unfold smt_eval.
+  erewrite exp_eval_partial_total; eauto.
 Qed.
 
 (** Next 2 Lemmata belong to Lemma 4 in subsection 3.4 in the thesis
@@ -285,8 +283,8 @@ intros agree; general  induction s; simpl in *; try reflexivity.
   case_eq (exp_eval (to_partial E) e); case_eq (exp_eval (to_partial E) e0); intros;
   try rewrite bvEq_equiv_eq; reflexivity.
 - destruct p.
-  assert (List.map (smt_eval E) a =List.map (smt_eval E') a).
-  + general induction a.
+  assert (List.map (smt_eval E) l = List.map (smt_eval E') l).
+  + general induction l.
     * eauto.
     * simpl.
       assert (smt_eval E a = smt_eval E' a).
@@ -295,13 +293,15 @@ intros agree; general  induction s; simpl in *; try reflexivity.
       rewrite H; eauto.
       eapply agree_on_partial.
       simpl in agree.
-      eapply (agree_on_incl (bv:=Exp.freeVars a)(lv:=list_union (Exp.freeVars a:: List.map Exp.freeVars a0))); eauto.
+      eapply (agree_on_incl (bv:=Exp.freeVars a)
+                            (lv:=list_union (Exp.freeVars a ::
+                                                          List.map Exp.freeVars l))); eauto.
       cset_tac; simpl.
       eapply list_union_start_swap.
       cset_tac; eauto. }
-      { rewrite H. f_equal. eapply IHa; eauto.
-        eapply (agree_on_incl (bv:=list_union (List.map Exp.freeVars a0))
-               (lv:=list_union (List.map Exp.freeVars (a::a0)))); eauto.
+      { rewrite H. f_equal. eapply IHl; eauto.
+        eapply (agree_on_incl (bv:=list_union (List.map Exp.freeVars l))
+               (lv:=list_union (List.map Exp.freeVars (a::l)))); eauto.
         cset_tac; simpl.
         eapply list_union_start_swap.
         eapply union_right; eauto. }

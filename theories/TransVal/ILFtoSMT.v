@@ -1,4 +1,4 @@
-Require Import SMT Guards IL.
+Require Import SMT Guards IL SMT.
 
 Fixpoint translateStmt (s:stmt) (p:pol) :smt :=
 match s, p with
@@ -74,8 +74,13 @@ Fixpoint getNames (f:smt) : (set pred) :=
       => {}
   end.
 
-  (*
-  *** Local Variables: ***
-  *** coq-load-path: (("../" "Lvc")) ***
-  *** End: ***
-  *)
+Lemma freeVars_translateStmt s p
+  : freeVars (translateStmt s p) ⊆ IL.occurVars s.
+Proof.
+  general induction s; simpl; repeat cases;
+    try rewrite freeVars_guardGen;
+    try rewrite freeVars_undef;
+    try rewrite freeVars_undefLift; simpl;
+    try rewrite IHs; simpl; try solve [ cset_tac ].
+  - rewrite IHs1, IHs2; eauto with cset.
+Qed.

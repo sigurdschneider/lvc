@@ -82,7 +82,7 @@ Lemma list_to_stmt_crash L E s xl Y
 Proof.
   intros. eapply length_length_eq in H.
   general induction H; simpl in * |- *.
-  - monad_inv H0; [| | isabsurd].
+  - monad_inv H0.
     + eexists; repeat split; eauto using star2_refl. stuck2.
     + rewrite list_union_start_swap in H2.
       edestruct (IHlength_eq L (E [x <- Some x0])); eauto.

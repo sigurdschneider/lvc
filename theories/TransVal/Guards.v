@@ -46,6 +46,12 @@ Definition guardGen s p cont :=
     | target => smtImp s cont
     end.
 
+Lemma freeVars_guardGen s p t
+  : freeVars (guardGen s p t) ⊆ freeVars s ∪ freeVars t.
+Proof.
+  unfold guardGen; repeat cases; eauto with cset.
+Qed.
+
 Lemma models_guardGen_source F E s cont
 : models F E (guardGen s source cont) <-> models F E (smtAnd s cont).
 
