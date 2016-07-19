@@ -1,6 +1,6 @@
 Require Import List.
 Require Import Util Var Val Exp Env Map CSet AutoIndTac IL.
-Require Import Sim SimTactics Infra.Status Pos ILN InRel Sawtooth.
+Require Import Sim SimTactics Infra.Status Position ILN InRel Sawtooth.
 
 Set Implicit Arguments.
 Unset Printing Records.

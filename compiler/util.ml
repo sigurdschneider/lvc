@@ -1,23 +1,12 @@
 open List
 open Names
+open Camlcoq
+open Val
+
 
 exception Range_error of string
 exception Compiler_error of string
 exception FailThroughFalsehood
-
-let implode l =
-  let res = String.create (List.length l) in
-  let rec imp i = function
-    | [] -> res
-    | '\\' :: 'n' :: l -> res.[i] <- '\n'; imp (i + 2) l
-    | c :: l -> res.[i] <- c; imp (i + 1) l
-    in imp 0 l
-
-
-let explode s =
-  let rec exp i l =
-    if i < 0 then l else exp (i - 1) (s.[i] :: l) in
-  exp (String.length s - 1) []
 
 let rec discard_dead lv m =
   match lv, m with
@@ -32,24 +21,26 @@ let rec first f x =
 let print_var ids v = try (IntMap.find v ids) with Not_found -> "?" ^ (string_of_int v)
 
 let rec print_binop op =
-  match (string_of_int op) with
-    | "0" -> "+"
-    | "1" -> "-"
-    | "2" -> "*"
-    | _ -> "unknown"
+  match op with
+    | BinOpAdd -> "+"
+    | BinOpSub -> "-"
+    | BinOpMul -> "*"
+    | BinOpDiv -> "/"
+    | BinOpEq -> "=="
+    | BinOpLt -> "<="
 
 let rec print_unop op =
-  match (string_of_int op) with
-    | "0" -> "?"
-    | _ -> "unknown"
+  match op with
+    | UnOpToBool -> "?"
+    | UnOpNeg -> "!"
 
 
 let rec print_sexpr ids e =
   match e with
-    | Lvc.Con x -> string_of_int x
-    | Lvc.Var x -> print_var ids x
-    | Lvc.UnOp (op, e1) -> print_unop op ^ " " ^ print_sexpr ids e1
-    | Lvc.BinOp (op, e1, e2) -> print_sexpr ids e1 ^ " " ^ (print_binop op) ^ " " ^ (print_sexpr ids e2)
+    | Exp.Con x -> string_of_int (Z.to_int x)
+    | Exp.Var x -> print_var ids x
+    | Exp.UnOp (op, e1) -> print_unop op ^ " " ^ print_sexpr ids e1
+    | Exp.BinOp (op, e1, e2) -> print_sexpr ids e1 ^ " " ^ (print_binop op) ^ " " ^ (print_sexpr ids e2)
 
 
 let rec print_list p l =
@@ -73,19 +64,19 @@ let rec print_nstmt ids ident s =
   let print_var = print_var ids in
   let print_nstmt = print_nstmt ids in
   match s with
-    | Lvc.NstmtReturn e -> print_sexpr e
-    | Lvc.NstmtApp (f, y) -> print_var f ^ "(" ^ (print_list print_sexpr y) ^ ")"
-    | Lvc.NstmtLet (x, e, s) -> "let " ^ (print_var x) ^ " = " ^
+    | ILN.Coq_nstmtReturn e -> print_sexpr e
+    | ILN.Coq_nstmtApp (f, y) -> print_var f ^ "(" ^ (print_list print_sexpr y) ^ ")"
+    | ILN.Coq_nstmtLet (x, e, s) -> "let " ^ (print_var x) ^ " = " ^
       (print_sexpr e) ^ " in\n" ^ print_ident ident ^
        (print_nstmt ident s)
-    | Lvc.NstmtExtern (x, f, y, s) -> "let " ^ (print_var x) ^ " = extern " ^
+    | ILN.Coq_nstmtExtern (x, f, y, s) -> "let " ^ (print_var x) ^ " = extern " ^
        (print_var f) ^ " (" ^ (print_list print_sexpr y) ^ ") in\n" ^ print_ident ident ^
        (print_nstmt ident s)
-    | Lvc.NstmtIf (v, s, t) ->
+    | ILN.Coq_nstmtIf (v, s, t) ->
        "if " ^ (print_sexpr v) ^ " then\n" ^
        (print_ident (ident+2)) ^ (print_nstmt (ident+2) s)
       ^ "\n" ^ print_ident ident ^ "else\n" ^ print_ident (ident+2) ^ (print_nstmt (ident+2) t) ^ "\n"
-    | Lvc.NstmtFun (sl, t) -> "fun " ^
+    | ILN.Coq_nstmtFun (sl, t) -> "fun " ^
 			       print_list2 (print_body ids ident) sl (print_ident ident ^ "and ")
 	  ^ print_ident ident ^ "in \n"
 	  ^ print_ident (ident+2) ^ (print_nstmt (ident+2) t))
@@ -101,18 +92,18 @@ let rec print_stmt ids ident s =
   let print_var = print_var ids in
   let print_stmt = print_stmt ids in
   match s with
-    | Lvc.StmtReturn e -> print_sexpr e
-    | Lvc.StmtApp (f, y) -> "λ" ^ (string_of_int f) ^ "(" ^ (print_list print_sexpr y) ^ ")"
-    | Lvc.StmtLet (x, e, s) -> "let " ^ (print_var x) ^ " = " ^
+    | IL.Coq_stmtReturn e -> print_sexpr e
+    | IL.Coq_stmtApp (f, y) -> "λ" ^ (string_of_int f) ^ "(" ^ (print_list print_sexpr y) ^ ")"
+    | IL.Coq_stmtLet (x, e, s) -> "let " ^ (print_var x) ^ " = " ^
       (print_sexpr e) ^ " in\n" ^ print_ident ident ^
       (print_stmt ident s)
-    | Lvc.StmtExtern (x, f, y, s) -> "let " ^ (print_var x) ^ " = extern " ^
+    | IL.Coq_stmtExtern (x, f, y, s) -> "let " ^ (print_var x) ^ " = extern " ^
        (print_var f) ^ " (" ^  (print_list print_sexpr y) ^ ") in\n" ^ print_ident ident ^
        (print_stmt ident s)
-    | Lvc.StmtIf (e, s, t) -> "if " ^ (print_sexpr e) ^ " then\n" ^
+    | IL.Coq_stmtIf (e, s, t) -> "if " ^ (print_sexpr e) ^ " then\n" ^
       (print_ident (ident+2)) ^ (print_stmt (ident+2) s)
       ^ "\n" ^ print_ident ident ^ "else\n" ^ print_ident (ident+2) ^ (print_stmt (ident+2) t) ^ "\n"
-    | Lvc.StmtFun (sl, t) ->
+    | IL.Coq_stmtFun (sl, t) ->
        "fun "
        ^ print_list2 (print_body ids ident) sl (print_ident ident ^ "and ")
        ^ print_ident ident ^  "in \n"
@@ -124,31 +115,27 @@ and print_body ids ident fZs =
      ^ print_ident (ident+2) ^ (print_stmt ids (ident+2) s) ^ "\n"
 
 let rec print_set ids x =
-Lvc.fold
-  (Lvc.sOT_as_OT Lvc.nat_OrderedType)
-  (Lvc.setAVL_FSet (Lvc.sOT_as_OT Lvc.nat_OrderedType))
-(fun x s -> s ^ (print_var ids x) ^ " ") x " "
+SetAVL.fold
+  (OrderedType.coq_SOT_as_OT OrderedTypeEx.nat_OrderedType)
+  (fun x (s:string) -> s ^ (print_var ids x) ^ " ")
+  x
+  " "
 
 let rec print_list f sep l =
   match l with
     | [] -> ""
     | x :: l -> f x ^ (if length l > 0 then sep else "") ^ (print_list f sep l)
 
+open Annotation
 
 let rec print_ann p ident s =
   match s with
-    | Lvc.Ann0 x -> "{" ^ p x ^ "}"
-    | Lvc.Ann1 (a, s) -> "{" ^ (p a)
+    | Coq_ann0 x -> "{" ^ p x ^ "}"
+    | Coq_ann1 (a, s) -> "{" ^ (p a)
       ^ "}" ^
       print_ident ident ^ (print_ann p ident s)
-    | Lvc.Ann2 (a, s, t) -> "{" ^ (p a) ^ "} \n" ^
+    | Coq_ann2 (a, s, t) -> "{" ^ (p a) ^ "} \n" ^
       print_ident (ident+2) ^
       (print_ann p (ident+2) s)
       ^ "\n" ^ print_ident ident ^  "\n" ^ print_ident (ident+2) ^ (print_ann p (ident+2) t) ^ "\n"
-
-(* First argument is discarded. It is the type argument that extraction makes explicit *)
-let rec generic_first dummy d f =
-    match (f d) with
-      | Lvc.Success (dd, true) -> (* Printf.printf "."; *) generic_first dummy dd f
-      | Lvc.Success (dd, false) -> Lvc.Success dd
-      | Lvc.Error s -> Lvc.Error s
+    | Coq_annF (a, l, t) -> "TODO: function annot"

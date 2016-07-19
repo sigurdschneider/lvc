@@ -52,18 +52,16 @@ $(COQMAKEFILE): Makefile depmakefiles $(VS)
 #	coq_makefile -f _CoqProject $(VS) -o $(COQMAKEFILE)
 
 
-compiler:
-	+$(MAKE) -f $(COQMAKEFILE) theories/Compiler.vo
+extraction: compiler/STAMP
+	+$(MAKE) -C compiler
 
-extraction: extraction/STAMP
-	+$(MAKE) -C extraction
-
-extraction/STAMP: compiler theories/extraction.v  
+compiler/STAMP: theories/Compiler.vo compiler/extraction.v
 	rm -f theories/extraction.vo
-	+$(MAKE) -f $(COQMAKEFILE) theories/extraction.vo
-	touch extraction/STAMP
+	rm -f compiler/extraction/*
+	coqtop $(shell cat _CoqProject) -batch -load-vernac-source compiler/extraction.v
+	touch compiler/STAMP
 
-#%:: $(COQMAKEFILE)
-#	make -f $(COQMAKEFILE) -j$(CORES) $@
+%.vo:: $(COQMAKEFILE)
+	make -f $(COQMAKEFILE) -j$(CORES) $@
 
 .PHONY: all clean clean-doc doc

@@ -1,5 +1,5 @@
 Require Import Util Map Env Exp IL AllInRel Computable Annotation.
-Require Import Rename RenamedApart Alpha ILDB SetOperations Status Pos.
+Require Import Rename RenamedApart Alpha ILDB SetOperations Status Position.
 Import F.
 
 Set Implicit Arguments.

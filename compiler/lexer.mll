@@ -1,6 +1,5 @@
 {
   open Parser
-  open Big
   open Names
 }
   (** Integers, consisting of 0-9 digits *)

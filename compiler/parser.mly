@@ -1,5 +1,7 @@
 %{
   open Names
+  open Camlcoq
+  open ILN
 
   let parse_integer a = int_of_string a
 (*    let big_int_of_a = Big.of_string a in
@@ -31,8 +33,8 @@
 %token <int> IL_ident
 %token IL_eof
 
-%type <Lvc.nstmt> expr
-%type <Lvc.nstmt> program
+%type <ILN.nstmt> expr
+%type <ILN.nstmt> program
 %start program
 
 %%
@@ -40,27 +42,27 @@
 /* Integer literals, can be integer_literal or - integer_literal */
 
 integer_constant:
-  | IL_integer_constant { Lvc.Con (int_of_string $1) }
-  | IL_minus IL_integer_constant { Lvc.Con (parse_neg_integer $2) }
+  | IL_integer_constant { Exp.Con (Z.of_sint (int_of_string $1)) }
+  | IL_minus IL_integer_constant { Exp.Con (Z.of_sint (parse_neg_integer $2)) }
 
 primary_expression:
-  | IL_ident { Lvc.Var $1}
+  | IL_ident { Exp.Var $1}
   | integer_constant {$1}
 
   | IL_lparen expression IL_rparen { $2 }
 
 multiplicative_expression:
-  | multiplicative_expression IL_star primary_expression { Lvc.BinOp (Lvc.BinOpMul, $1, $3) }
-  | multiplicative_expression IL_div primary_expression { Lvc.BinOp (Lvc.BinOpDiv, $1, $3) }
+  | multiplicative_expression IL_star primary_expression { Exp.BinOp (Val.BinOpMul, $1, $3) }
+  | multiplicative_expression IL_div primary_expression { Exp.BinOp (Val.BinOpDiv, $1, $3) }
   | primary_expression { $1 }
 
 additive_expression:
-  | additive_expression IL_plus multiplicative_expression { Lvc.BinOp (Lvc.BinOpAdd,$1, $3) }
-  | additive_expression IL_minus multiplicative_expression { Lvc.BinOp (Lvc.BinOpSub,$1,$3) }
+  | additive_expression IL_plus multiplicative_expression { Exp.BinOp (Val.BinOpAdd,$1, $3) }
+  | additive_expression IL_minus multiplicative_expression { Exp.BinOp (Val.BinOpSub,$1,$3) }
   | multiplicative_expression { $1 }
 
 expression:
-  | expression IL_less_than additive_expression { Lvc.BinOp (2,$1,$3)}
+  | expression IL_less_than additive_expression { Exp.BinOp (Val.BinOpLt,$1,$3)}
   | additive_expression { $1 }
 
 
@@ -94,12 +96,13 @@ fun_list:
 | fun_def IL_and fun_list { $1::$3 }
 
 expr :
-| IL_let IL_ident IL_equal expression IL_in expr { Lvc.NstmtLet ($2, $4, $6) }
-| IL_let IL_ident IL_equal IL_extern IL_ident option_arglist IL_in expr { Lvc.NstmtExtern ($2, $5, $6, $8) }
-| IL_letrec fun_list IL_in expr { Lvc.NstmtFun ($2, $4) }
-| IL_if expression IL_then expr IL_else expr { Lvc.NstmtIf ($2,$4,$6) }
-| IL_ident option_arglist { Lvc.NstmtApp ($1,$2) }
-| expression { Lvc.NstmtReturn ($1) }
+| IL_let IL_ident IL_equal expression IL_in expr { Coq_nstmtLet ($2, $4, $6) }
+| IL_let IL_ident IL_equal IL_extern IL_ident option_arglist IL_in expr
+	 { Coq_nstmtExtern ($2, $5, $6, $8) }
+| IL_letrec fun_list IL_in expr { Coq_nstmtFun ($2, $4) }
+| IL_if expression IL_then expr IL_else expr { Coq_nstmtIf ($2,$4,$6) }
+| IL_ident option_arglist { Coq_nstmtApp ($1,$2) }
+| expression { Coq_nstmtReturn ($1) }
 
 program:
 | expr IL_eof { $1 }
