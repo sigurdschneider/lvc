@@ -50,13 +50,13 @@ primary_expression:
   | IL_lparen expression IL_rparen { $2 }
 
 multiplicative_expression:
-  | multiplicative_expression IL_star primary_expression { Lvc.BinOp (2, $1, $3) }
-  | multiplicative_expression IL_div primary_expression { Lvc.BinOp (2, $1, $3) }
+  | multiplicative_expression IL_star primary_expression { Lvc.BinOp (Lvc.BinOpMul, $1, $3) }
+  | multiplicative_expression IL_div primary_expression { Lvc.BinOp (Lvc.BinOpDiv, $1, $3) }
   | primary_expression { $1 }
 
 additive_expression:
-  | additive_expression IL_plus multiplicative_expression { Lvc.BinOp (0,$1, $3) }
-  | additive_expression IL_minus multiplicative_expression { Lvc.BinOp (1,$1,$3) }
+  | additive_expression IL_plus multiplicative_expression { Lvc.BinOp (Lvc.BinOpAdd,$1, $3) }
+  | additive_expression IL_minus multiplicative_expression { Lvc.BinOp (Lvc.BinOpSub,$1,$3) }
   | multiplicative_expression { $1 }
 
 expression:

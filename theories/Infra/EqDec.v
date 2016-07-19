@@ -146,7 +146,6 @@ Proof.
   intros. cbv in H0. destruct (H a b); eauto; contradiction.
 Qed.
 
-
 Lemma equiv_dec_false A `(EqDec A eq) (a b:A)
   : a <> b -> false = equiv_dec a b.
 Proof.

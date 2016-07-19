@@ -10,10 +10,12 @@ Require DCE DVE EAE Alpha.
 Require DCE UnreachableCodeAnalysis UnreachableCodeAnalysisCorrect.
 (* Require CopyPropagation ConstantPropagation ConstantPropagationAnalysis.*)
 
-Require Import ExtrOcamlBasic.
-Require Import ExtrOcamlZBigInt.
+Require Import String.
+Require Import ExtrOcamlBasic ExtrOcamlString.
+(*Require Import ExtrOcamlZInt.*)
 Require Import ExtrOcamlNatInt.
-Require Import String ExtrOcamlString.
+
+
 
 Set Implicit Arguments.
 
@@ -308,11 +310,3 @@ Print Assumptions toDeBruijn_correct.
 Print Assumptions toILF_correct.
 (* Print Assumptions fromILF_correct.
    Print Assumptions optimize_correct. *)
-
-
-(* Unset Extraction AccessOpaque. *)
-
-
-Extraction Inline bind Option.bind toString.
-
-Extraction "extraction/lvc.ml" toILF (* fromILF AllocationAlgo.regAssign optimize *) toDeBruijn.

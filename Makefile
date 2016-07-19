@@ -51,6 +51,18 @@ $(COQMAKEFILE): Makefile depmakefiles $(VS)
 	./configure.sh
 #	coq_makefile -f _CoqProject $(VS) -o $(COQMAKEFILE)
 
+
+compiler:
+	+$(MAKE) -f $(COQMAKEFILE) theories/Compiler.vo
+
+extraction: extraction/STAMP
+	+$(MAKE) -C extraction
+
+extraction/STAMP: compiler theories/extraction.v  
+	rm -f theories/extraction.vo
+	+$(MAKE) -f $(COQMAKEFILE) theories/extraction.vo
+	touch extraction/STAMP
+
 #%:: $(COQMAKEFILE)
 #	make -f $(COQMAKEFILE) -j$(CORES) $@
 
