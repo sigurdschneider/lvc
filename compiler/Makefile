@@ -2,7 +2,7 @@
 
 # add --table to menhir flags for table (instead of recursive descend) which is probably faster.
 all:
-	ocamlbuild -r -classic-display -use-ocamlfind -use-menhir -menhir "menhir --explain --infer -la 1" -package num lvcc.native
+	ocamlbuild -classic-display -use-ocamlfind -use-menhir -menhir "menhir --explain --infer -la 1" lvcc.native
 
 clean:
 	ocamlbuild -clean

@@ -11,11 +11,6 @@ Require DCE UnreachableCodeAnalysis UnreachableCodeAnalysisCorrect.
 (* Require CopyPropagation ConstantPropagation ConstantPropagationAnalysis.*)
 
 Require Import String.
-Require Import ExtrOcamlBasic ExtrOcamlString.
-(*Require Import ExtrOcamlZInt.*)
-Require Import ExtrOcamlNatInt.
-
-
 
 Set Implicit Arguments.
 

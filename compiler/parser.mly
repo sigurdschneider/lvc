@@ -46,7 +46,7 @@ integer_constant:
   | IL_minus IL_integer_constant { Exp.Con (Z.of_sint (parse_neg_integer $2)) }
 
 primary_expression:
-  | IL_ident { Exp.Var $1}
+  | IL_ident { Exp.Var (Nat.of_int $1)}
   | integer_constant {$1}
 
   | IL_lparen expression IL_rparen { $2 }
@@ -86,6 +86,7 @@ parameters :
 | ident_list { $1 }
 
 option_paramlist :
+| IL_ident { $1::[] }
 | IL_lparen parameters IL_rparen { $2 }
 
 fun_def:
@@ -96,12 +97,12 @@ fun_list:
 | fun_def IL_and fun_list { $1::$3 }
 
 expr :
-| IL_let IL_ident IL_equal expression IL_in expr { Coq_nstmtLet ($2, $4, $6) }
+| IL_let IL_ident IL_equal expression IL_in expr { Coq_nstmtLet (Nat.of_int $2, $4, $6) }
 | IL_let IL_ident IL_equal IL_extern IL_ident option_arglist IL_in expr
-	 { Coq_nstmtExtern ($2, $5, $6, $8) }
-| IL_letrec fun_list IL_in expr { Coq_nstmtFun ($2, $4) }
+	 { Coq_nstmtExtern (Nat.of_int $2, Nat.of_int $5, $6, $8) }
+| IL_letrec fun_list IL_in expr { Coq_nstmtFun (List.map (fun ((a,b),c) -> ((Nat.of_int a, List.map Nat.of_int b), c)) $2, $4) }
 | IL_if expression IL_then expr IL_else expr { Coq_nstmtIf ($2,$4,$6) }
-| IL_ident option_arglist { Coq_nstmtApp ($1,$2) }
+| IL_ident option_arglist { Coq_nstmtApp (Nat.of_int $1,$2) }
 | expression { Coq_nstmtReturn ($1) }
 
 program:

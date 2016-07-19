@@ -21,6 +21,28 @@ open BinNat
 open BinInt
 open BinPos
 
+module Nat = struct
+
+  type t = nat = O | S of t
+
+  let rec to_int = function
+  | O -> 0
+  | S n -> succ (to_int n)
+
+  let rec to_int32 = function
+  | O -> 0l
+  | S n -> Int32.succ(to_int32 n)
+
+  let rec of_int n =
+    assert (n >= 0);
+    if n = 0 then O else S (of_int (pred n))
+
+  let rec of_int32 n =
+    assert (n >= 0l);
+    if n = 0l then O else S (of_int32 (Int32.pred n))
+
+end
+
 (* Coq's [positive] type and some of its operations *)
 
 module P = struct

@@ -1,3 +1,6 @@
+Require Import ExtrOcamlBasic ExtrOcamlString.
+(*Require Import ExtrOcamlZInt.
+Require Import ExtrOcamlNatInt.*)
 Require Import Compiler OrderedType.
 
 (* Unset Extraction AccessOpaque. *)

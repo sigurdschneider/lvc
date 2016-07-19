@@ -38,7 +38,7 @@ let rec print_unop op =
 let rec print_sexpr ids e =
   match e with
     | Exp.Con x -> string_of_int (Z.to_int x)
-    | Exp.Var x -> print_var ids x
+    | Exp.Var x -> print_var ids (Nat.to_int x)
     | Exp.UnOp (op, e1) -> print_unop op ^ " " ^ print_sexpr ids e1
     | Exp.BinOp (op, e1, e2) -> print_sexpr ids e1 ^ " " ^ (print_binop op) ^ " " ^ (print_sexpr ids e2)
 
@@ -65,12 +65,12 @@ let rec print_nstmt ids ident s =
   let print_nstmt = print_nstmt ids in
   match s with
     | ILN.Coq_nstmtReturn e -> print_sexpr e
-    | ILN.Coq_nstmtApp (f, y) -> print_var f ^ "(" ^ (print_list print_sexpr y) ^ ")"
-    | ILN.Coq_nstmtLet (x, e, s) -> "let " ^ (print_var x) ^ " = " ^
+    | ILN.Coq_nstmtApp (f, y) -> print_var (Nat.to_int f) ^ "(" ^ (print_list print_sexpr y) ^ ")"
+    | ILN.Coq_nstmtLet (x, e, s) -> "let " ^ (print_var (Nat.to_int x)) ^ " = " ^
       (print_sexpr e) ^ " in\n" ^ print_ident ident ^
        (print_nstmt ident s)
-    | ILN.Coq_nstmtExtern (x, f, y, s) -> "let " ^ (print_var x) ^ " = extern " ^
-       (print_var f) ^ " (" ^ (print_list print_sexpr y) ^ ") in\n" ^ print_ident ident ^
+    | ILN.Coq_nstmtExtern (x, f, y, s) -> "let " ^ (print_var (Nat.to_int x)) ^ " = extern " ^
+       (print_var (Nat.to_int f)) ^ " (" ^ (print_list print_sexpr y) ^ ") in\n" ^ print_ident ident ^
        (print_nstmt ident s)
     | ILN.Coq_nstmtIf (v, s, t) ->
        "if " ^ (print_sexpr v) ^ " then\n" ^
@@ -83,7 +83,7 @@ let rec print_nstmt ids ident s =
 and print_body ids ident fZs =
   match fZs with
   | ((f, y), s) ->
-     (print_var ids f) ^ "(" ^ (print_list (print_var ids) y) ^ ") = \n"
+     (print_var ids (Nat.to_int f)) ^ "(" ^ (print_list (print_var ids) (List.map Nat.to_int y)) ^ ") = \n"
      ^ print_ident (ident+2) ^ (print_nstmt ids (ident+2) s) ^ "\n"
 
 
@@ -93,12 +93,12 @@ let rec print_stmt ids ident s =
   let print_stmt = print_stmt ids in
   match s with
     | IL.Coq_stmtReturn e -> print_sexpr e
-    | IL.Coq_stmtApp (f, y) -> "λ" ^ (string_of_int f) ^ "(" ^ (print_list print_sexpr y) ^ ")"
-    | IL.Coq_stmtLet (x, e, s) -> "let " ^ (print_var x) ^ " = " ^
+    | IL.Coq_stmtApp (f, y) -> "λ" ^ (string_of_int (Nat.to_int f)) ^ "(" ^ (print_list print_sexpr y) ^ ")"
+    | IL.Coq_stmtLet (x, e, s) -> "let " ^ (print_var (Nat.to_int x)) ^ " = " ^
       (print_sexpr e) ^ " in\n" ^ print_ident ident ^
       (print_stmt ident s)
-    | IL.Coq_stmtExtern (x, f, y, s) -> "let " ^ (print_var x) ^ " = extern " ^
-       (print_var f) ^ " (" ^  (print_list print_sexpr y) ^ ") in\n" ^ print_ident ident ^
+    | IL.Coq_stmtExtern (x, f, y, s) -> "let " ^ (print_var (Nat.to_int x)) ^ " = extern " ^
+       (print_var (Nat.to_int f)) ^ " (" ^  (print_list print_sexpr y) ^ ") in\n" ^ print_ident ident ^
        (print_stmt ident s)
     | IL.Coq_stmtIf (e, s, t) -> "if " ^ (print_sexpr e) ^ " then\n" ^
       (print_ident (ident+2)) ^ (print_stmt (ident+2) s)
@@ -111,13 +111,13 @@ let rec print_stmt ids ident s =
 and print_body ids ident fZs =
   match fZs with
   | (y, s) ->
-     "_ " ^ "(" ^ (print_list (print_var ids) y) ^ ") = \n"
+     "_ " ^ "(" ^ (print_list (print_var ids) (List.map Nat.to_int y)) ^ ") = \n"
      ^ print_ident (ident+2) ^ (print_stmt ids (ident+2) s) ^ "\n"
 
 let rec print_set ids x =
 SetAVL.fold
   (OrderedType.coq_SOT_as_OT OrderedTypeEx.nat_OrderedType)
-  (fun x (s:string) -> s ^ (print_var ids x) ^ " ")
+  (fun x (s:string) -> s ^ (print_var ids (Nat.to_int x)) ^ " ")
   x
   " "
 
