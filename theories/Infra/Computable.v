@@ -11,14 +11,14 @@
   Furthermore there are two tactics dleft, dright which correspond
   to classical_left and classical_right. *)
 Require Import Coq.Program.Tactics.
-Require Export CoreTactics Bool.
+Require Export Bool.
 
 Class Computable (P : Prop) := decision_procedure : { P } + { ~P }.
 Opaque decision_procedure.
 
 Arguments decision_procedure P {Computable}.
 
-Local Obligation Tactic := decompose records; firstorder.
+Local Obligation Tactic := firstorder.
 
 (** Propositional formulas over computable atoms are computable. *)
 Section ComputableInstances.

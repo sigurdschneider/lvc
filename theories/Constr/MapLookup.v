@@ -35,7 +35,7 @@ Lemma lookup_set_incl X `{OrderedType X} Y `{OrderedType Y} s t (m:X -> Y) `{Pro
 Proof.
   intros P I; hnf. intros Q.
   eapply lookup_set_spec in Q; [|now eauto].
-  decompose records. eapply lookup_set_spec; eauto.
+  dcr. eapply lookup_set_spec; eauto.
 Qed.
 
 Lemma lookup_set_union X `{OrderedType X} Y `{OrderedType Y} s t (m:X -> Y) `{Proper _ (_eq ==> _eq) m}

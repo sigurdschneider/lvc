@@ -39,7 +39,7 @@ Section MapAgreeSet.
   : agree_on _eq lv D D' -> agree_set lv D D' [=] lv.
   Proof.
     intros. hnf; intros. split; intros.
-    + eapply agree_set_spec in H4; decompose records; eassumption.
+    + eapply agree_set_spec in H4; dcr; eassumption.
     + eapply agree_set_spec; try eassumption. split; eauto.
       eapply H3; eauto.
   Qed.
@@ -93,16 +93,15 @@ Global Instance eq_cset_agree_set_morphism X `{OrderedType X} Y `{OrderedType Y}
   : Proper (SetInterface.Equal ==> (@fpeq X Y _eq H H0) ==> (@fpeq X Y _eq _ _) ==> SetInterface.Equal) (@agree_set X _ Y _ ).
 Proof.
   unfold respectful; unfold fpeq.
-  hnf;intros; decompose records. hnf.
+  hnf;intros; dcr. hnf.
   intros.
   Unset Ltac Debug.
   split; intros.
-  + eapply agree_set_spec in H2; eauto.
-    decompose records.
+  + eapply agree_set_spec in H2; eauto. dcr.
     eapply agree_set_spec; eauto. split.
     - rewrite <- H1; eauto.
     - rewrite <- (H4 _). rewrite <- (H3 _); eauto.
-  + eapply agree_set_spec in H2; eauto. decompose records.
+  + eapply agree_set_spec in H2; eauto. dcr.
     eapply agree_set_spec; eauto. split.
     - rewrite H1; eauto.
     - rewrite (H4 _). rewrite (H3 _); eauto.
@@ -112,8 +111,8 @@ Add Parametric Morphism {X} `{OrderedType X} {Y} `{OrderedType Y} : (@lookup_set
   with signature (@fpeq X Y _eq _ _) ==> SetInterface.Equal ==> SetInterface.Equal
     as eq_cset_lookup_set_morphism.
 Proof.
-  intros. intro. unfold fpeq in *; decompose records.
-  split; intros; eapply lookup_set_spec in H1; decompose records; eauto.
+  intros. intro. unfold fpeq in *; dcr.
+  split; intros; eapply lookup_set_spec in H1; dcr; eauto.
   + eapply lookup_set_spec; eauto.
     eexists x1. split. rewrite <- H2; eauto. rewrite <- (H3 _); eauto.
   + eapply lookup_set_spec; eauto.
@@ -126,8 +125,8 @@ Add Parametric Morphism {X} `{OrderedType X} {Y} `{OrderedType Y}
     as incl_lookup_set_morphism.
 Proof.
   intros. hnf; intros.
-  unfold fpeq in *; decompose records.
-  eapply lookup_set_spec in H3; decompose records; eauto; eapply lookup_set_spec; eauto.
+  unfold fpeq in *; dcr.
+  eapply lookup_set_spec in H3; dcr; eauto; eapply lookup_set_spec; eauto.
   eexists x1. split. rewrite <- H2. eauto. rewrite <- (H4 _); eauto.
 Qed.
 

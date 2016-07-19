@@ -9,6 +9,12 @@ Tactic Notation "invc" hyp(A) := inversion A; subst; clear A.
 Tactic Notation "invs" hyp(A) := inversion A; subst; clear_trivial_eqs.
 Tactic Notation "invcs" hyp(A) := inversion A; subst; clear A; clear_trivial_eqs.
 
+Tactic Notation "dcr" :=
+  repeat (
+    match goal with
+      | H: _ |- _ => progress (decompose record H); clear H
+    end).
+
 Ltac invt ty :=
   match goal with
       | h: ty |- _ => inv h

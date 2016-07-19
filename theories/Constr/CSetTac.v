@@ -339,7 +339,7 @@ Qed.
               end)).
 
   Ltac cset_tac_step f :=
-    intros; (try subst); decompose records; destr; mycleartrivial; (try cset_assumption);
+    intros; (try subst); dcr; destr; mycleartrivial; (try cset_assumption);
     (try (f tt)); (try bool_to_prop); (try (bool_to_prop in *)); mycleartrivial.
 
   Ltac set_tac f :=

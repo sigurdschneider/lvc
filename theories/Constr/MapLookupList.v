@@ -47,14 +47,14 @@ Section MapLookupList.
   Proof.
     general induction L; simpl.
     + intros x. cset_tac; firstorder. eapply lookup_set_spec in H2.
-      - decompose records; cset_tac; firstorder.
+      - dcr; cset_tac; firstorder.
       - eauto.
     + rewrite IHL; eauto. intros x. split; intros.
       - eapply lookup_set_spec; eauto. eapply add_iff in H2; destruct H2.
         * eexists a; split; eauto. eapply add_1; eauto.
-        * eapply lookup_set_spec in H2; eauto. decompose records. eexists x0; split; eauto.
+        * eapply lookup_set_spec in H2; eauto. dcr. eexists x0; split; eauto.
           eapply add_2; eauto.
-      - eapply lookup_set_spec in H2; eauto. decompose records.
+      - eapply lookup_set_spec in H2; eauto. dcr.
         eapply add_iff in H4; destruct H4.
         * eapply add_1. rewrite H5. eapply H1. eapply H2.
         * eapply add_2. eapply lookup_set_spec; eauto.

@@ -79,7 +79,7 @@ Proof.
   general induction Z; simpl; eauto. split. reflexivity. eauto.
   split. edestruct IHZ; try eapply H3; eauto.
   + hnf; intros. eapply H4; simpl; eapply add_2; eauto.
-  + decompose records. erewrite H5; eauto. intro.
+  + dcr. erewrite H5; eauto. intro.
     lud. rewrite <- H3. rewrite e. reflexivity.
     eapply H4; simpl; eapply add_1; eauto.
   + split. hnf; intros.
