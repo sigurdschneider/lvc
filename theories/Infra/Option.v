@@ -1,4 +1,4 @@
-Require Import List Coq.Classes.Equivalence Containers.OrderedTypeEx.
+Require Import Util List Coq.Classes.Equivalence Containers.OrderedTypeEx.
 
 (** Cast option in the framework of Monad. The code in this file is taken from CompCert. *)
 
@@ -117,3 +117,12 @@ Qed.
 Instance option_R_trans A R `{Transitive A R} : Transitive (option_R_Some R).
 hnf; intros. inversion H0; subst; inversion H1; subst; econstructor; eauto.
 Qed.
+
+Hint Extern 5 =>
+match goal with
+| [ H : ?A = ⎣ true ⎦, H' : ?A = ⎣ false ⎦ |- _ ] => exfalso; rewrite H in H'; inv H'
+| [ H : ?A <> ⎣ ?t ⎦, H' : ?A = ⎣ ?t ⎦ |- _ ] => exfalso; rewrite H' in H; eapply H; reflexivity
+| [ H : ?A = None , H' : ?A = Some _ |- _ ] => exfalso; rewrite H' in H; inv H
+| [ H : ?A <> ⎣ true ⎦ , H' : ?A <> ⎣ false ⎦ |- ?A = None ] =>
+  case_eq (A); [intros [] ?| intros ?]; congruence
+end.

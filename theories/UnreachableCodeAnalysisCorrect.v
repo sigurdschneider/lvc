@@ -178,21 +178,6 @@ Qed.
 
 Opaque poLe.
 
-Inductive protected (P:Prop) :=
-  Protected (p:P) : protected P.
-
-Lemma protect (P:Prop) : P -> protected P.
-  intros. econstructor. eauto.
-Qed.
-
-Lemma unprotect (P:Prop) : protected P -> P.
-  inversion 1; eauto.
-Qed.
-
-Tactic Notation "protect" hyp(H) := apply protect in H.
-Tactic Notation "unprotect" hyp(H) := apply unprotect in H.
-
-
 Definition ucc_sound sT ZL BL s a (ST:subTerm s sT)
   : poEq (fst (forward unreachable_code_transform ZL s ST a)) a
     -> annotation s a

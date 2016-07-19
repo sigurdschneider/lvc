@@ -15,6 +15,20 @@ Tactic Notation "dcr" :=
       | H: _ |- _ => progress (decompose record H); clear H
     end).
 
+Inductive protected (P:Prop) :=
+  Protected (p:P) : protected P.
+
+Lemma protect (P:Prop) : P -> protected P.
+  intros. econstructor. eauto.
+Qed.
+
+Lemma unprotect (P:Prop) : protected P -> P.
+  inversion 1; eauto.
+Qed.
+
+Tactic Notation "protect" hyp(H) := apply protect in H.
+Tactic Notation "unprotect" hyp(H) := apply unprotect in H.
+
 Ltac invt ty :=
   match goal with
       | h: ty |- _ => inv h

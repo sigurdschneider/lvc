@@ -136,7 +136,8 @@ Proof.
 Qed.
 
 
-(* This definition is handy in the folling proof *)
+(* This definition is handy in the following proof. *)
+
 Inductive le (n : nat) : nat -> Prop :=
   le_n : le n n | le_S : forall m : nat, le (S n) m -> le n m.
 

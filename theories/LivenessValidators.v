@@ -66,11 +66,7 @@ Defined.
 
 Hint Extern 5 =>
 match goal with
-| [ H : ?A = ⎣ true ⎦, H' : ?A = ⎣ false ⎦ |- _ ] => exfalso; congruence
-| [ H : ?A = None , H' : ?A = Some _ |- _ ] => exfalso; congruence
-| [ H : ?A <> ⎣ true ⎦ , H' : ?A <> ⎣ false ⎦ |- ?A = None ] =>
-  case_eq (A); [intros [] ?| intros ?]; congruence
-| [ H : ?A = ?B, H' : ?A <> ?B |- _ ] => exfalso; congruence
+| [ H : ?A = ?B, H' : ?A <> ?B |- _ ] => exfalso; eapply H', H
 end.
 
 Definition true_live_sound_dec i ZL Lv s slv

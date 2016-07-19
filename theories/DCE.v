@@ -5,16 +5,6 @@ Require Import Sim SimTactics SimI.
 Set Implicit Arguments.
 Unset Printing Records.
 
-
-Hint Extern 5 =>
-match goal with
-| [ H : ?A = ⎣ true ⎦, H' : ?A = ⎣ false ⎦ |- _ ] => exfalso; congruence
-| [ H : ?A <> ⎣ ?t ⎦, H' : ?A = ⎣ ?t ⎦ |- _ ] => exfalso; congruence
-| [ H : ?A = None , H' : ?A = Some _ |- _ ] => exfalso; congruence
-| [ H : ?A <> ⎣ true ⎦ , H' : ?A <> ⎣ false ⎦ |- ?A = None ] =>
-  case_eq (A); [intros [] ?| intros ?]; congruence
-end.
-
 Definition compileF (compile : forall (RZL:list (bool * params)) (s:stmt) (a:ann bool), stmt)
 (RZL:list (bool * params)) :=
   fix f (F:〔params * stmt〕) (ans:list (ann bool)) :=

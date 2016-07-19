@@ -35,7 +35,7 @@ Inductive alpha : env var -> env var -> stmt -> stmt -> Prop :=
     -> alpha ra ira t t' -> alpha ra ira (stmtFun F t) (stmtFun F' t').
 
 (** ** Morphisims *)
-(** These properties are requires because we do not assume functional extensionality. *)
+(** These properties are required because we do not assume functional extensionality. *)
 
 
 Global Instance alpha_morph
