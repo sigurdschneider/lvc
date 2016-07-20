@@ -451,7 +451,6 @@ Module I.
 Instance SR : ProofRelationI (bool * params) := {
    ParamRelI := ParamRel;
    ArgRelI := ArgRel;
-   BlockRelI := fun lvZ b b' => (*block_Z b = block_Z b' *) True;
    Image AL := countTrue (List.map fst AL);
    IndexRelI AL n n' :=
      n' = countTrue (fst ⊝ (take n AL)) /\ exists Z, get AL n (true, Z)

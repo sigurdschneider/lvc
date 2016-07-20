@@ -246,7 +246,6 @@ Instance SR : ProofRelationI ((set var) * params) := {
      VL' = (filter_by (fun x => B[x ∈ fst G]) (snd G) VL) /\
      length (snd G) = length VL /\
      agree_on eq (fst G \ of_list (snd G)) V V';
-   BlockRelI := fun lvZ b b' => True;
    Image AL := length AL;
    IndexRelI AL n n' := n = n'
 }.

@@ -12,8 +12,6 @@ Class ProofRelationI (A:Type) := {
     (* Relates argument lists according to analysis information
        and closure environments *)
     ArgRelI : onv val -> onv val -> A-> list val -> list val -> Prop;
-    (* Relates blocks according to analysis information *)
-    BlockRelI : A -> I.block -> I.block -> Prop;
     (* Relates environments according to analysis information *)
     IndexRelI : 〔A〕 -> nat -> nat -> Prop;
     Image : 〔A〕 -> nat;
@@ -55,7 +53,7 @@ Definition simILabenv t (r:irel)
     -> get AL (counted f) a
     -> get L (counted f) (I.blockI Z s n)
     -> get L' (counted f') (I.blockI Z' s' n')
-    -> (ParamRelI a Z Z' /\ BlockRelI a (I.blockI Z s n) (I.blockI Z' s' n'))
+    -> (ParamRelI a Z Z')
       /\ (forall E E' Yv Y'v Y Y',
             ArgRelI E E' a Yv Y'v
             -> omap (exp_eval E) Y = Some Yv
@@ -69,7 +67,7 @@ Lemma simILabenv_mon t (r r':irel) A (PR:ProofRelationI A) AL L L'
     -> simILabenv t r' PR AL L L'.
 Proof.
   intros [[? ?] SIM] LE; hnf; intros; split; eauto.
-  intros. edestruct SIM as [[? ?] SIM']; eauto.
+  intros. edestruct SIM as [? SIM']; eauto.
   split; eauto. intros.
   eapply paco3_mon. eapply SIM; eauto. eauto.
 Qed.
@@ -80,7 +78,7 @@ Definition indexwise_proofrel A (PR:ProofRelationI A) (F F':〔params * stmt〕)
     -> get F n (Z,s)
     -> get F' n' (Z',s')
     -> get AL' n a
-    -> ParamRelI a Z Z' /\ BlockRelI a (I.blockI Z s n) (I.blockI Z' s' n').
+    -> ParamRelI a Z Z'.
 
 
 Lemma stepGoto_mapi L blk Y E vl f F
@@ -130,7 +128,7 @@ Proof.
     inv_get. destruct x as [Z' s']; simpl in *; clear EQ.
     split; eauto.
     intros.
-    exploit (ArgLengthMatchI); eauto; dcr. eapply IP; eauto.
+    exploit (ArgLengthMatchI); eauto; dcr.
     pone_step; eauto using get_app, get_mapi; eauto; simpl; eauto with len.
     orewrite (labN f - labN f = 0); simpl.
     orewrite (labN f' - labN f' = 0); simpl.
@@ -141,7 +139,7 @@ Proof.
     eapply get_app_right_ge in GetL'; [ | eauto with len; rewrite mapi_length; eauto].    rewrite mapi_length in *.
     eapply IndexRelDrop in RN; eauto.
     edestruct (H1 (LabI (counted f - ❬AL'❭)) (LabI (counted f' - Image AL')))
-      as [[? ?] SIM]; simpl; eauto.
+      as [? SIM]; simpl; eauto.
     rewrite H; eauto. rewrite Img; eauto.
     split; eauto.
     intros.
