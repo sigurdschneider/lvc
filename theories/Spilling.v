@@ -143,29 +143,34 @@ Inductive fv_e_bounded : nat -> stmt -> Prop :=
 
 Inductive fns_closed : list (set var * set var) -> set var -> stmt -> Prop := 
 
-| fnsClosedLet Λ RM RM' x e s
-: RM' [=] RM
--> fns_closed Λ {x; RM} s
-  -> fns_closed Λ RM' (stmtLet x e s)
+| fnsClosedLet Λ X X' x e s
+: X [=] X' ∪ singleton x
+(*-> Exp.freeVars e ⊆ X*)
+-> fns_closed Λ X s
+  -> fns_closed Λ X' (stmtLet x e s)
 
-| fnsClosedReturn Λ RM e
-: fns_closed Λ RM (stmtReturn e)
+| fnsClosedReturn Λ X e
+: (*Exp.freeVars e ⊆ X
+  ->*) fns_closed Λ X (stmtReturn e)
 
-| fnsClosedIf Λ RM e s t
-: fns_closed Λ RM s
--> fns_closed Λ RM t
-  -> fns_closed Λ RM (stmtIf e s t)
+| fnsClosedIf Λ X e s t
+: (*Exp.freeVars e ⊆ X
+->*) fns_closed Λ X s
+-> fns_closed Λ X t
+  -> fns_closed Λ X (stmtIf e s t)
 
-| fnsClosedApp Λ RM f Y R_f M_f
+| fnsClosedApp Λ X f Y R_f M_f
 : get Λ (counted f) (R_f,M_f)
-  -> fns_closed Λ RM (stmtApp f Y)
+(*-> R_f ⊆ X ∪ of_list Y
+-> M_f ⊆ X ∪ of_list Y*)
+  -> fns_closed Λ X (stmtApp f Y)
 
-| fnsClosedFun Λ RM Z s t R_f M_f
-: R_f ⊆ RM
--> M_f ⊆ RM
--> fns_closed ((R_f,M_f)::Λ) RM s
--> fns_closed ((R_f,M_f)::Λ) RM t
-  -> fns_closed Λ RM (stmtFun ((Z,s)::nil) t)
+| fnsClosedFun Λ X Z s t R_f M_f
+: R_f ⊆ X
+-> M_f ⊆ X
+-> fns_closed ((R_f,M_f)::Λ) X s
+-> fns_closed ((R_f,M_f)::Λ) X t
+  -> fns_closed Λ X (stmtFun ((Z,s)::nil) t)
 .
 
 Fixpoint stupSpill (R : set var) (s : stmt) : ann (set var * set var) := 
@@ -232,9 +237,9 @@ intro kgeq1. revert R R' M Λ Lv ZL alv. induction s;
        | 
        |ZL' Lv' F' t' lv' als' alb' lvS_t lvS_snd lvS_fst lvS_alb];
   inversion_clear fClosed
-    as [Λ'' RM RM' x'' e'' s'' fCrm fCs
-       |Λ'' RM e''
-       |Λ'' RM e'' s'' t'' fCs fCt
+    as [Λ'' RM RM' x'' e'' s'' fCrm (*fCfv*) fCs
+       |Λ'' RM e'' (*fCfv*)
+       |Λ'' RM e'' s'' t'' (*fCfv*) fCs fCt
        |Λ'' RM f'' Y'' R_f M_f fCget
        |Λ'' RM Z'' s'' t'' R_f M_f fCsubR fCsubM fCs fCt];
   simpl in *. 
@@ -265,6 +270,7 @@ intro kgeq1. revert R R' M Λ Lv ZL alv. induction s;
   + eapply IHs2; eauto with cset.
     * cset_tac.
     * rewrite <- ReqR'. rewrite <- fvRM. cset_tac.
+    * admit. (* how? *)
 - (*specialize (exF l Y).
   assert (exists R_f M_f, get Λ (labN l) (R_f, M_f)).
           { apply exF. auto. }
