@@ -204,6 +204,12 @@ ul.doclist {
     margin-top: 1em;
 }
 
+#toc > .tocentry {
+    display: block;
+    float: left;
+    margin-top: 1em;
+}
+
 #toc a h2{
     display: inline;
 }
