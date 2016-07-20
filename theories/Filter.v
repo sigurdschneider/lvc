@@ -1,7 +1,6 @@
 Require Import Util List OptionMap LengthEq Map Get Take MoreList.
 
 Set Implicit Arguments.
-Set Implicit Types.
 
 Fixpoint filter_by {A B} (f:A -> bool) (L:list A) (L':list B) : list B :=
   match L, L' with
@@ -196,6 +195,7 @@ Proof.
   cases; simpl. rewrite IHlength_eq; eauto. eauto.
 Qed.
 
+Hint Resolve filter_filter_by_length : len.
 
 Lemma filter_incl2 X `{OrderedType X} (p:X->bool) Z
 : of_list (List.filter p Z) ⊆ of_list Z.

@@ -117,7 +117,6 @@ Definition ParamRel (G:params) (Z Z' : list var) : Prop :=
 Instance SR : ProofRelation params := {
    ParamRel G VL VL' :=   VL = VL' /\ length VL = length G;
    ArgRel G Z Z' := Z = Z' /\ length Z = length G;
-   BlockRel := fun lvZ b b' => lvZ = F.block_Z b;
    IndexRel AL n n' := n = n';
    Image AL := length AL
 }.

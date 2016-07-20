@@ -134,17 +134,14 @@ Proof.
   - econstructor; eauto using zip_get.
     + simpl. cases; eauto.
       rewrite <- H1. rewrite minus_inter_empty. eapply incl_right.
-      unfold filter.
-      cset_tac; intuition. eapply filter_incl2; eauto.
-      eapply filter_in; eauto. intuition. hnf. cases; eauto.
-    + erewrite get_nth; eauto using zip_get. simpl.
-      unfold filter.
-      erewrite filter_filter_by_length; eauto with len.
+      unfold filter. rewrite of_list_filter.
+      cset_tac; intuition.
+    + erewrite get_nth; eauto using zip_get.
+      simpl. eauto with len.
     + intros ? ? Get. erewrite get_nth in Get; eauto using zip_get. simpl in *.
-      edestruct filter_by_get as [? [? []]]; eauto; dcr. simpl in *.
+      edestruct filter_by_get as [? [? []]]; eauto; dcr. simpl in *; cases in H6.
       eapply live_exp_sound_incl.
-      eapply argsLive_live_exp_sound; eauto. simpl in *.
-      decide (x ∈ blv); intuition. eauto with cset.
+      eapply argsLive_live_exp_sound; eauto. eauto with cset.
   - econstructor; eauto.
     eapply live_exp_sound_incl; eauto using incl_right.
   - econstructor; eauto.
@@ -394,7 +391,6 @@ Instance SR : ProofRelation ((set var) * params) := {
    ArgRel G VL VL' :=
      VL' = (filter_by (fun x => B[x ∈ fst G]) (snd G) VL) /\
      length (snd G) = length VL;
-   BlockRel := fun lvZ b b' => True;
    Image AL := length AL;
    IndexRel AL n n' := n = n'
 }.

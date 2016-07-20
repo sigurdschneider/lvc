@@ -13,8 +13,6 @@ Class ProofRelation (A:Type) := {
        and closure environments *)
     ArgRel : A -> list val -> list val -> Prop;
     (* Relates blocks according to analysis information *)
-    BlockRel : A -> F.block -> F.block -> Prop;
-    (* Relates environments according to analysis information *)
     IndexRel : 〔A〕 -> nat -> nat -> Prop;
     Image : 〔A〕 -> nat;
     ArgLengthMatchI : forall a Z Z' VL VL',
@@ -55,7 +53,7 @@ Definition simLabenv t (r:frel)
     -> get AL (counted f) a
     -> get L (counted f) (F.blockI V Z s n)
     -> get L' (counted f') (F.blockI V' Z' s' n')
-    -> (ParamRel a Z Z' /\ BlockRel a (F.blockI V Z s n) (F.blockI V' Z' s' n'))
+    -> ParamRel a Z Z'
       /\ (forall E E' Yv Y'v Y Y',
             ArgRel a Yv Y'v
             -> omap (exp_eval E) Y = Some Yv
@@ -69,18 +67,18 @@ Lemma simLabenv_mon t (r r':frel) A (PR:ProofRelation A) AL L L'
     -> simLabenv t r' PR AL L L'.
 Proof.
   intros [[? ?] SIM] LE; hnf; intros; split; eauto.
-  intros. edestruct SIM as [[? ?] SIM']; eauto.
+  intros. edestruct SIM as [? SIM']; eauto.
   split; eauto. intros.
   eapply paco3_mon. eapply SIM; eauto. eauto.
 Qed.
 
-Definition indexwise_proofrel A (PR:ProofRelation A) E E' (F F':〔params * stmt〕) AL' AL :=
+Definition indexwise_proofrel A (PR:ProofRelation A) (F F':〔params * stmt〕) AL' AL :=
   forall n n' Z s Z' s' a,
     IndexRel (AL' ++ AL) n n'
     -> get F n (Z,s)
     -> get F' n' (Z',s')
     -> get AL' n a
-    -> ParamRel a Z Z' /\ BlockRel a (F.blockI E Z s n) (F.blockI E' Z' s' n').
+    -> ParamRel a Z Z'.
 
 
 Lemma stepGoto_mapi L blk Y E vl f F V
@@ -108,7 +106,7 @@ Qed.
 Lemma simLabenv_extension' t (r:frel) A (PR:ProofRelation A) (AL AL':list A) E E' F F' L L'
       (LEN1:length AL' = length F)
   : indexwise_r t (sim'r r \3/ r) PR AL' E E' F F' AL L L'
-    -> indexwise_proofrel PR E E' F F' AL' AL
+    -> indexwise_proofrel PR F F' AL' AL
     -> (forall n n', IndexRel (AL' ++ AL) n n' -> n < length F -> n' < length F')
     -> (forall n n', IndexRel (AL' ++ AL) n n' -> n >= length F -> n' >= length F')
     -> Image AL' = length F'
@@ -132,7 +130,7 @@ Proof.
     inv_get. destruct x as [Z' s']; simpl in *; clear EQ.
     split; eauto.
     intros.
-    exploit (ArgLengthMatchI); eauto; dcr. eapply IP; eauto.
+    exploit (ArgLengthMatchI); eauto; dcr.
     pone_step; eauto using get_app, get_mapi; eauto; simpl; eauto with len.
     orewrite (labN f - labN f = 0); simpl.
     orewrite (labN f' - labN f' = 0); simpl.
@@ -143,7 +141,7 @@ Proof.
     eapply get_app_right_ge in GetL'; [ | eauto with len; rewrite mapi_length; eauto].    rewrite mapi_length in *.
     eapply IndexRelDrop in RN; eauto.
     edestruct (H1 (LabI (counted f - ❬AL'❭)) (LabI (counted f' - Image AL')))
-      as [[? ?] SIM]; simpl; eauto.
+      as [? SIM]; simpl; eauto.
     rewrite H; eauto. rewrite Img; eauto.
     split; eauto.
     intros.
@@ -166,7 +164,7 @@ Lemma fix_compatible_I t A (PR:ProofRelation A) AL F F' E E' L L' AL'
   : (forall r, simLabenv t r PR (AL' ++ AL) (mapi (F.mkBlock E) F ++ L)
                      (mapi (F.mkBlock E') F' ++ L')
             -> indexwise_r t (sim'r r) PR AL' E E' F F' AL L L')
-    -> indexwise_proofrel PR E E' F F' AL' AL
+    -> indexwise_proofrel PR F F' AL' AL
     -> (forall n n', IndexRel (AL' ++ AL) n n' -> n < length F -> n' < length F')
     -> (forall n n', IndexRel (AL' ++ AL) n n' -> n >= length F -> n' >= length F')
     -> Image AL' = length F'
@@ -187,7 +185,7 @@ Lemma simILabenv_extension t A (PR:ProofRelation A) (AL AL':list A) E E' F F' L 
   : (forall r, simLabenv t r PR (AL' ++ AL) (mapi (F.mkBlock E) F ++ L)
                      (mapi (F.mkBlock E') F' ++ L')
           -> indexwise_r t (sim'r r) PR AL' E E' F F' AL L L')
-    -> indexwise_proofrel PR E E' F F' AL' AL
+    -> indexwise_proofrel PR F F' AL' AL
     -> (forall n n', IndexRel (AL' ++ AL) n n' -> n < length F -> n' < length F')
     -> (forall n n', IndexRel (AL' ++ AL) n n' -> n >= length F -> n' >= length F')
     -> Image AL' = length F'
@@ -208,7 +206,7 @@ Lemma simLabenv_extension_len t A (PR:ProofRelation A) (AL AL':list A)
   : (forall r, simLabenv t r PR (AL' ++ AL) (mapi (F.mkBlock E) F ++ L)
                      (mapi (F.mkBlock E') F' ++ L')
           -> indexwise_r t (sim'r r) PR AL' E E' F F' AL L L')
-    -> indexwise_proofrel PR E E' F F' AL' AL
+    -> indexwise_proofrel PR F F' AL' AL
     -> Image AL' = length F'
     -> forall r, simLabenv t r PR AL L L'
            -> simLabenv t r PR (AL' ++ AL)

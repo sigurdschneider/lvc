@@ -18,6 +18,7 @@ compiler/lexer.ml
 compiler/lvc.ml
 compiler/lvc.mli
 compiler/_build
+compiler/extraction/*
 compiler/STAMP
 *.time
 *.aux
