@@ -20,6 +20,58 @@
       <a href="./toc.html"> Table of Contents </a>
     </div>
     <div id="main">
+      <h1>LVC</h1>
+      <p>
+	LVC is a verfied compiler which is based on the <a href="IL.html">intermediate language IL</a>,
+	a functional language with nested, mutually recursive definitions.
+	IL realizes Functional SSA, which replaces SSA's dominance criterion by lexical scoping.
+      </p>
+      <p>
+	In <a href="http://www.ps.uni-saarland.de/~sdschn/publications/lvc15/"> previous work</a> we showed
+	that SSA-based register allocation can be faithfully implemented on functional SSA.
+	In this work we are concerned with the verified translation from an imperative language to Functional SSA.
+      </p>
+      <p>
+	The translation starts with a language that already employs nested, mutually recursive function definitions,
+	but uses imperative variables. The translation consists of the following phases:
+	<ol>
+	  <li>Unreachable Code Analysis and Unreachable Code Elimination</li>
+	  <li>Liveness Analysis and Dead Variable Elimination</li>
+	  <li>Adding parameters to function definitions to obtain a functional program</li>
+	</ol>
+	All three phases are fully verified, and no translation validation is used.
+      </p>
+      <p>
+	Our framework as a <a href="Analysis.html">generic fixed-point solver for analyses on IL</a>
+	with support for <a href="AnalysisForward.html">forward</a> and
+	<a href="AnalysisBackward.html">backward</a> analyses.
+	Our fixed-point solver is implemented in Coq and requires a proof that the analysis domain
+	is a partial order without infinite ascending chains to guarantee termination.
+      </p>
+      <p>
+	We <a href="UnreachableCode.html">specify soundness and completeness of unreachable code</a>,
+	devise an <a href="UnreachableCodeAnalysis.html">unreachable code analysis</a>,
+	and prove the <a href="UnreachableCodeAnalysisCorrect.html"> unreachable code analysis sound and complete</a>.
+	Based on unreachable code, we implement <a href="DCE.html">unreachable code elimination (UCE) and prove it correct</a>.
+      </p>
+      <p>
+	We <a href="TrueLiveness.html">specify soundness of liveness</a>,
+	devise a <a href="LivenessAnalysis.html">liveness analysis</a>,
+	and <a href="LivenessAnalysisCorrect.html">prove the analysis sound</a>.
+	Based on liveness, we implement <a href="DVE.html">dead variable elimination (DVE) and prove it correct</a>.
+      </p>
+      <p>
+	The proofs for UCE and DVE require an interesting simulation argument: In both cases a step must be argued
+	where the source program reduces (for example, a variable definition) while the target program does not reduce
+	(because the variable definition has been removed).
+	Our proof method is induction on the program structure, facilitated by a fixed-point lemma about our simulation,
+	which we call the extension lemma.
+	We prove the extension lemma for the <a href="SimI.html">imperative interpretation</a> and for the
+	<a href="SimF.html">functional interpretation</a>.
+      </p>
+
+
+
 <div id="toc">
 <a href="Option.html"><h2>Option</h2></a>
 <a href="OptionMap.html"><h2>OptionMap</h2></a>
@@ -587,7 +639,7 @@
 <a href="InRel.html"><h2>InRel</h2></a>
 </div>
       <script>
-	var newtoc = $("<div id='toc'></div>");
+	var newtoc = $("<div id='toc' style='visibility:hidden'></div>");
 	var last = null;
 
 	$("#toc").children().each(function (key, value) {
