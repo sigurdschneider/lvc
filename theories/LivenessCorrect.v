@@ -91,7 +91,6 @@ Proof.
     + no_step.
       symmetry in AG.
       exploit omap_exp_eval_agree; eauto using agree_on_incl.
-      congruence.
   - one_step.
     eapply freeVarSimF_sim; econstructor; eauto using agree_on_incl.
     eapply PIR2_app; eauto. eapply mkBlocks_approxF; eauto.
