@@ -10,7 +10,6 @@ Local Arguments proj1_sig {A} {P} e.
 Local Arguments length {A} e.
 Local Arguments forward {sT} {Dom} {H} {H0} ftransform ZL st ST a.
 
-(* Coq ist so doof *)
 Lemma forward_length_ass_UC
       (sT : stmt)
       (f : forall sT0 : stmt,
@@ -424,6 +423,18 @@ Proof.
   general induction H3; eauto using callChain, get_range.
 Qed.
 
+Lemma zip_orb_impb Dom `{PartialOrder Dom} AL AL' BL BL'
+  : poLe AL AL'
+    -> poLe BL BL'
+    -> PIR2 impb (orb ⊜ AL BL) (orb ⊜ AL' BL').
+Proof.
+  unfold poLe; simpl.
+  intros A B.
+  general induction A; inv B; simpl; eauto using PIR2.
+  - econstructor; eauto.
+    unfold impb. destruct x, x0, y, y0; simpl in *; eauto.
+Qed.
+
 Lemma fold_left_mono A A' b b'
   : poLe A A'
     -> poLe b b'
@@ -432,8 +443,7 @@ Proof.
   intros.
   hnf in H. general induction H; simpl; eauto.
   - eapply IHPIR2; eauto.
-    eapply (@zip_orb_impb (list bool)); eauto.
-    eauto with typeclass_instances.
+    eapply (@zip_orb_impb (list bool)); eauto with typeclass_instances.
 Qed.
 
 Lemma fold_left_forward_mono sT F t ZL als als' alt alt' b b'

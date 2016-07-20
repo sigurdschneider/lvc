@@ -33,7 +33,7 @@ depclean: clean
 
 doc: clean-doc 
 	- mkdir -p $(DOC)
-	coqdoc $(COQDOCFLAGS) $(VS)
+	coqdoc $(COQDOCFLAGS) $(shell cat _CoqProject | grep -v ^-I) $(VS)
 	cp $(EXTRA_DIR)/resources/* $(DOC)
 #	make -f $(COQMAKEFILE) html COQDOCFLAGS="$(COQDOCFLAGS)"
 

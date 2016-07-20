@@ -26,6 +26,8 @@ Inductive stmt : Type :=
 
 Instance Stmt_size : Size stmt. gen_Size. Defined.
 
+(** *** Free, Defined and Occuring Variables *)
+
 Fixpoint freeVars (s:stmt) : set var :=
   match s with
     | stmtLet x e s0 => (freeVars s0 \ singleton x) ∪ Exp.freeVars e
@@ -59,24 +61,6 @@ Fixpoint occurVars (s:stmt) : set var :=
       list_union (List.map (fun f => (occurVars (snd f) ∪ of_list (fst f))) s) ∪ occurVars t
   end.
 
-Lemma list_union_f_incl X `{OrderedType X} Y (f g:Y->set X) s
-: (forall n y, get s n y -> f y ⊆ g y)
-  -> list_union (List.map f s) ⊆ list_union (List.map g s).
-Proof.
-  intros. general induction s; simpl; eauto.
-  norm_lunion.
-  rewrite IHs, H0; eauto using get; reflexivity.
-Qed.
-
-Lemma list_union_f_eq X `{OrderedType X} Y (f g:Y->set X) s
-: (forall n y, get s n y -> f y [=] g y)
-  -> list_union (List.map f s) [=] list_union (List.map g s).
-Proof.
-  intros. general induction s; simpl; eauto.
-  norm_lunion.
-  rewrite IHs, H0; eauto using get; eauto.
-Qed.
-
 Lemma freeVars_occurVars s
 : freeVars s ⊆ occurVars s.
 Proof.
@@ -87,17 +71,6 @@ Proof.
     intros. destruct y; simpl.
     rewrite IH; cset_tac; intuition; eauto.
 Qed.
-
-Lemma list_union_f_union X `{OrderedType X} Y (f g:Y->set X) s
-: list_union (List.map f s) ∪ list_union (List.map g s) [=]
-             list_union (List.map (fun x => f x ∪ g x) s).
-Proof.
-  intros. general induction s; simpl; eauto.
-  - cset_tac; intuition.
-  - norm_lunion.
-    rewrite <- IHs; eauto using get. cset_tac.
-Qed.
-
 
 Lemma occurVars_freeVars_definedVars s
 : occurVars s [=] freeVars s ∪ definedVars s.
@@ -349,7 +322,7 @@ Ltac single_step :=
   end.
 
 
-Lemma ZL_mapi (F:〔params * stmt〕) L
+Lemma ZL_mapi F L
   : I.block_Z ⊝ (mapi I.mkBlock F ++ L) = fst ⊝ F ++ I.block_Z ⊝ L.
 Proof.
   rewrite List.map_app. rewrite map_mapi. unfold mapi.
