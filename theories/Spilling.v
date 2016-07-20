@@ -74,43 +74,53 @@ Inductive spill_sound : nat -> (list (set var * set var)) -> (set var * set var)
 .
 
 
-Inductive spill_sound' : nat -> (list (set var * set var)) -> (set var * set var) -> stmt -> ann (set var * set var * option (set var * set var)) -> Prop :=
+Inductive spill_sound' (k:nat) : 
+(list params) -> 
+(list (set var * set var)) ->
+(set var * set var) -> 
+stmt -> 
+ann (set var * set var * option (list (set var * set var)))
+-> Prop :=
 
-| SpillLet' k Λ R M Sp L K Kx sl x e s
-: spill_sound' k Λ ({x;(R\K ∪ L)\Kx }, Sp ∪ M) s sl
+| SpillLet' ZL Λ R M Sp L K Kx sl x e s
+: spill_sound' k ZL Λ ({x;(R\K ∪ L)\Kx }, Sp ∪ M) s sl
   -> Exp.freeVars e ⊆ R\K ∪ L
   -> cardinal (R\K ∪ L) <= k
   -> cardinal ({x;((R\K) ∪ L)\Kx }) <= k
-  -> spill_sound' k Λ (R,M) (stmtLet x e s) (ann1 (Sp,L,None) sl)
+  -> spill_sound' k ZL Λ (R,M) (stmtLet x e s) (ann1 (Sp,L,None) sl)
 
-| SpillReturn' k Λ R M Sp L K e
+| SpillReturn' ZL Λ R M Sp L K e
 : Exp.freeVars e ⊆ R\K ∪ L
   -> cardinal ((R\K) ∪ L) <= k
-  -> spill_sound' k Λ (R,M) (stmtReturn e) (ann0 (Sp,L,None))
+  -> spill_sound' k ZL Λ (R,M) (stmtReturn e) (ann0 (Sp,L,None))
 
-| SpillIf' k Λ R M Sp L K sl_s sl_t e s t
+| SpillIf' ZL Λ R M Sp L K sl_s sl_t e s t
 : Exp.freeVars e ⊆ R\K ∪ L
   -> cardinal (R\K ∪ L) <= k
-  -> spill_sound' k Λ (R\K ∪ L, Sp ∪ M) s sl_s
-  -> spill_sound' k Λ (R\K ∪ L, Sp ∪ M) t sl_t
-  -> spill_sound' k Λ (R,M) (stmtIf e s t) (ann2 (Sp,L,None) sl_s sl_t)
+  -> spill_sound' k ZL Λ (R\K ∪ L, Sp ∪ M) s sl_s
+  -> spill_sound' k ZL Λ (R\K ∪ L, Sp ∪ M) t sl_t
+  -> spill_sound' k ZL Λ (R,M) (stmtIf e s t) (ann2 (Sp,L,None) sl_s sl_t)
 
-| SpillApp' k Λ R M Sp L K f Y R_f M_f
+| SpillApp' ZL Z Λ R M Sp L K f Y R_f M_f
 : cardinal (R\K ∪ L) <= k
+  -> get ZL (counted f) Z
   -> get Λ (counted f) (R_f,M_f)
-  -> R_f ⊆ R\K ∪ L
-  -> M_f ⊆ Sp ∪ M
-    -> spill_sound' k Λ (R,M) (stmtApp f Y) (ann0 (Sp,L,None))
+  -> R_f \ of_list Z ⊆ R\K ∪ L
+  -> M_f \ of_list Z ⊆ Sp ∪ M
+    -> spill_sound' k ZL Λ (R,M) (stmtApp f Y) (ann0 (Sp,L,None))
 
-| SpillFun' k Λ R M Sp L K s t sl_s sl_t Z R_f M_f
+| SpillFun' (ZL:list params) Λ R M Sp L K t sl_F sl_t (F: list(params*stmt)) rms
 : cardinal (R\K ∪ L) <= k
-  -> cardinal R_f <= k
-  -> R_f ⊆ R\K ∪ Sp ∪ M ∪ of_list Z
-  -> M_f ⊆ R\K ∪ Sp ∪ M ∪ of_list Z
-  -> spill_sound' k ((R_f,M_f)::Λ) (R_f,M_f) s sl_s 
-  -> spill_sound' k ((R_f,M_f)::Λ) (R\K ∪ L, Sp ∪ M) t sl_t
-    -> spill_sound' k Λ (R,M) (stmtFun ((Z,s)::nil) t)
-                   (annF (Sp,L,Some (R_f,M_f)) (sl_s::nil) sl_t)
+  -> (forall n rm, get rms n rm -> cardinal (fst rm) <= k)
+  (*-> R_f ⊆ R\K ∪ Sp ∪ M ∪ of_list Z
+  -> M_f ⊆ R\K ∪ Sp ∪ M ∪ of_list Z*)
+  -> (forall n Zs rm sl_s, get rms n rm 
+     -> get F n Zs
+     -> get sl_F n sl_s
+     -> spill_sound' k ((List.map fst F) ++ ZL) (rms ++ Λ) rm (snd Zs) sl_s) 
+  -> spill_sound' k ((List.map fst F) ++ ZL) (rms ++ Λ) (R\K ∪ L, Sp ∪ M) t sl_t
+    -> spill_sound' k ZL Λ (R,M) (stmtFun F t)
+                   (annF (Sp,L,Some rms) sl_F sl_t)
 .
 
 
@@ -135,43 +145,12 @@ Inductive fv_e_bounded : nat -> stmt -> Prop :=
 | BoundApp k f Y
 : fv_e_bounded k (stmtApp f Y)
 
-| BoundFun k Z s t 
-: fv_e_bounded k s
+| BoundFun k F t 
+: (forall n Zs, get F n Zs -> fv_e_bounded k (snd Zs))
   -> fv_e_bounded k t
-  -> fv_e_bounded k (stmtFun ((Z,s)::nil) t)
+  -> fv_e_bounded k (stmtFun F t)
 .
 
-Inductive fns_closed : list (set var * set var) -> set var -> stmt -> Prop := 
-
-| fnsClosedLet Λ X X' x e s
-: X [=] X' ∪ singleton x
-(*-> Exp.freeVars e ⊆ X*)
--> fns_closed Λ X s
-  -> fns_closed Λ X' (stmtLet x e s)
-
-| fnsClosedReturn Λ X e
-: (*Exp.freeVars e ⊆ X
-  ->*) fns_closed Λ X (stmtReturn e)
-
-| fnsClosedIf Λ X e s t
-: (*Exp.freeVars e ⊆ X
-->*) fns_closed Λ X s
--> fns_closed Λ X t
-  -> fns_closed Λ X (stmtIf e s t)
-
-| fnsClosedApp Λ X f Y R_f M_f
-: get Λ (counted f) (R_f,M_f)
-(*-> R_f ⊆ X ∪ of_list Y
--> M_f ⊆ X ∪ of_list Y*)
-  -> fns_closed Λ X (stmtApp f Y)
-
-| fnsClosedFun Λ X Z s t R_f M_f
-: R_f ⊆ X
--> M_f ⊆ X
--> fns_closed ((R_f,M_f)::Λ) X s
--> fns_closed ((R_f,M_f)::Λ) X t
-  -> fns_closed Λ X (stmtFun ((Z,s)::nil) t)
-.
 
 Fixpoint stupSpill (R : set var) (s : stmt) : ann (set var * set var) := 
 match s with
@@ -187,7 +166,8 @@ match s with
 end.
 
 
-Fixpoint stupSpill' (R : set var) (s : stmt) (Lv : ann (set var)) : ann (set var * set var * option (set var * set var)) := 
+Fixpoint stupSpill' (R : set var) (s : stmt) (Lv : ann (set var)) 
+: ann (set var * set var * option (list (set var * set var))) := 
 match s,Lv with
 | stmtLet x e t, ann1 LV lv => ann1 (R, Exp.freeVars e, None)
                         (stupSpill' (singleton x) t lv)
@@ -196,62 +176,44 @@ match s,Lv with
                        (stupSpill' (Exp.freeVars e) t lv_s) 
                        (stupSpill' (Exp.freeVars e) v lv_t)
 | stmtApp f Y, _  => ann0 (R, ∅, None)
-| stmtFun ((Z,t)::nil) v, annF LV (lv_t::nil) lv_v  =>
-        annF (R, {}, Some ({}, LV)) ((stupSpill' ∅ t lv_t)::nil) 
-                                     (stupSpill' ∅ v lv_v)
+| stmtFun F t, annF LV als lv_t =>
+    annF (R, ∅, Some (List.map (fun lv => (∅, lv)) (List.map getAnn als)))
+           (zip (fun Zs lv => stupSpill' ∅ (snd Zs) lv) F als)
+           (stupSpill' ∅ t lv_t)
 | _,_ => ann0 (∅, ∅, None)
 end.
 
-Lemma union_assoc (X Y Z : set var) : X ∪ (Y ∪ Z) [=] (X ∪ Y) ∪ Z.
-Proof.
-cset_tac.
-Qed.
 
 Lemma stupSpill_sat_spillSound (k:nat) (s:stmt) (R R' M : set var) 
   (Λ : list (set var * set var)) (Lv : list (set var)) (ZL : list params)
   (alv : ann (set var)) :
 k > 0
 -> R [=] R'
--> freeVars s ⊆ R ∪ M
+-> getAnn alv ⊆ R ∪ M
 -> fv_e_bounded k s
 -> live_sound Imperative ZL Lv s alv
--> fns_closed Λ (R ∪ M) s
-(*-> getAnn alv ⊆ R' ∪ M 
--> PIR2 (fun RMf G => fst RMf [=] ∅ /\ snd RMf [=] G) Λ (Lv \\ ZL) *)
--> spill_sound' k Λ (R,M) s (stupSpill' R' s alv).
+-> PIR2 (fun RMf G => fst RMf [=] ∅ /\ snd RMf [=] G) Λ Lv
+-> spill_sound' k ZL Λ (R,M) s (stupSpill' R' s alv).
 
 Proof.
-intro kgeq1. revert R R' M Λ Lv ZL alv. induction s;
-  intros R R' M Λ Lv ZL alv ReqR' fvRM fvBound lvSound fClosed;
+intros kgeq1 ReqR' fvRM fvBound lvSound pir2. 
+general induction lvSound;
   inversion_clear fvBound
     as [k0 x0 e0 s0 fvBcard fvBs
        |k0 e0 fvBcard
        |k0 e0 s0 t0 fvBcard fvBs fvBt 
        |k0 f0 Y0 
        |k0 Z0 s0 t0 fvBs fvBt];
-  inversion_clear lvSound
-    as [ZL0 Lv' x' e' s' lv' al' lvS_s lvS_e lvS_al lvS_x
-       |ZL0 Lv' x' e' s1' s2' lv' al1' al2' lvS1 lvS2 lvS_e lvS_al1 lvS_al2 
-       |ZL' Lv' x' l' Y' lv' blv' Z' lvS_Z lvS_blv lvS_cnd lvS_YZ lvS_fa  
-       |ZL' Lv' x' e' lv' lvS_e 
-       | 
-       |ZL' Lv' F' t' lv' als' alb' lvS_t lvS_snd lvS_fst lvS_alb];
-  inversion_clear fClosed
-    as [Λ'' RM RM' x'' e'' s'' fCrm (*fCfv*) fCs
-       |Λ'' RM e'' (*fCfv*)
-       |Λ'' RM e'' s'' t'' (*fCfv*) fCs fCt
-       |Λ'' RM f'' Y'' R_f M_f fCget
-       |Λ'' RM Z'' s'' t'' R_f M_f fCsubR fCsubM fCs fCt];
   simpl in *. 
 
 - eapply SpillLet' with (K:= R) (Kx := Exp.freeVars e).
   + assert (seteq : singleton x [=] {x; R\R ∪ Exp.freeVars e \ Exp.freeVars e}).
     { cset_tac. }
-    eapply IHs; eauto with cset.
+    eapply IHlvSound; eauto with cset.
     * rewrite seteq. reflexivity.
-    * rewrite <- seteq. rewrite <- ReqR'. rewrite <- fvRM. 
-      cset_tac. decide (x === a); eauto with cset.
-    * admit. (* how? *)
+    * rewrite <- seteq. rewrite <- ReqR'. rewrite <- fvRM.
+      rewrite <- H0. clear. cset_tac.
+      decide (x === a); eauto with cset. 
   + cset_tac.
   + assert (seteq : R \ R ∪ Exp.freeVars e [=] Exp.freeVars e).
     { cset_tac. }
@@ -263,32 +225,41 @@ intro kgeq1. revert R R' M Λ Lv ZL alv. induction s;
   + cset_tac.
   + assert (seteq : R\R ∪ Exp.freeVars e [=] Exp.freeVars e). { cset_tac. }
     rewrite seteq. rewrite fvBcard. trivial.
-  + eapply IHs1; eauto with cset. 
+  + eapply IHlvSound1; eauto with cset. 
     * cset_tac.
     * rewrite <- ReqR'. rewrite <- fvRM. cset_tac.
-    * admit. (* how? *)
-  + eapply IHs2; eauto with cset.
+  + eapply IHlvSound2; eauto with cset.
     * cset_tac.
     * rewrite <- ReqR'. rewrite <- fvRM. cset_tac.
-    * admit. (* how? *)
-- (*specialize (exF l Y).
-  assert (exists R_f M_f, get Λ (labN l) (R_f, M_f)).
-          { apply exF. auto. }
-  destruct H3 as [R_f H3].
-  destruct H3 as [M_f H3].*)
-  eapply SpillApp' with (K:= R) (R_f := R_f) (M_f := M_f).
+- edestruct PIR2_nth_2; eauto using zip_get; dcr. 
+  destruct x as [R_f M_f]. simpl in *. 
+  eapply SpillApp' with (K:= R) (R_f:= R_f) (M_f:=M_f).
   + assert (seteq : R \ R ∪ ∅ [=] ∅). { cset_tac. }
     rewrite seteq. rewrite empty_cardinal. omega.
   + eauto.
-  + admit.
-  + admit.
+  + eauto. 
+  + rewrite H7. clear. eauto with cset.
+  + rewrite H8. rewrite H1. rewrite <- ReqR'. eauto. 
 - eapply SpillReturn' with (K:= R).
   + cset_tac.
   + assert (seteq : R\R ∪ Exp.freeVars e [=] Exp.freeVars e). { cset_tac. }
     rewrite seteq. rewrite fvBcard. trivial.
-- destruct alv; inversion lvSound.
-  + simpl. eapply SpillFun'. simpl. admit. 
-  + simpl. eapply SpillFun' with (K:=R).
+- eapply SpillFun' with (K:=R).
+  + assert (seteq : R \ R ∪ ∅ [=] ∅). { cset_tac. }
+    rewrite seteq. rewrite empty_cardinal. omega.
+  + intros ; inv_get. simpl. rewrite empty_cardinal. omega.
+  + intros ; inv_get. eapply H1; eauto.
+    eapply PIR2_app; eauto.
+    eapply PIR2_get; eauto with len.
+    intros ; inv_get. simpl. split; eauto with cset.
+  + eapply IHlvSound; eauto.
+    * cset_tac.
+    * rewrite <- ReqR'. rewrite H3. rewrite fvRM. clear. cset_tac.
+    * eapply PIR2_app; eauto.
+      eapply PIR2_get; eauto with len.
+      intros ; inv_get. simpl. split; eauto with cset.
+Qed.
+
 
 
 Lemma stupSpill_sat_spillSound (k:nat) (s:stmt) (R R' M : set var)
