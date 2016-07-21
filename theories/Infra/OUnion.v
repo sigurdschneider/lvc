@@ -1,4 +1,4 @@
-Require Import Util Get CSet OptionR AllInRel MoreList SetOperations.
+Require Import Util LengthEq Get CSet OptionR AllInRel MoreList SetOperations.
 
 Set Implicit Arguments.
 

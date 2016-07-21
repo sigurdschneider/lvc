@@ -1,5 +1,5 @@
-Require Import paco2 List.
-Require Export Util Var Val Exp MoreExp Env Map CSet AutoIndTac IL AllInRel SimF.
+Require Import Util LengthEq Map CSet AutoIndTac AllInRel.
+Require Import Var Val Exp MoreExp Env IL SimF.
 
 Set Implicit Arguments.
 Unset Printing Records.

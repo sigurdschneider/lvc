@@ -1,5 +1,5 @@
-Require Import List.
-Require Import Util Var Val Exp MoreExp Env Map CSet AutoIndTac AllInRel IL MoreList.
+Require Import Util LengthEq Map CSet AllInRel MoreList.
+Require Import Var Val Exp MoreExp Env IL.
 Require Import Sim SimTactics Infra.Status Position.
 
 Set Implicit Arguments.

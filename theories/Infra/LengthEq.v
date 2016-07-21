@@ -1,5 +1,5 @@
 Require Import Arith Coq.Lists.List Setoid Coq.Lists.SetoidList Omega.
-Require Export Infra.Option EqDec AutoIndTac Util.
+Require Import EqDec AutoIndTac.
 
 Set Implicit Arguments.
 
@@ -22,19 +22,19 @@ Qed.
 Lemma length_eq_trans X Y Z (XL:list X) (YL:list Y) (ZL:list Z)
   : length_eq XL YL -> length_eq YL ZL -> length_eq XL ZL.
 Proof.
-  intros. general induction X0; inv X1; eauto using length_eq.
+  intros. general induction X0; inversion X1; eauto using length_eq.
 Qed.
 
 Lemma length_length_eq X Y (L:list X) (L':list Y)
   : length L = length L' -> length_eq L L'.
 Proof.
-  intros H; general induction L; destruct L'; inv H; eauto using length_eq.
+  intros H; general induction L; destruct L'; inversion H; eauto using length_eq.
 Qed.
 
 Lemma length_eq_length X Y (L:list X) (L':list Y)
   : length_eq L L' -> length L = length L'.
 Proof.
-  intros H; general induction L; destruct L'; inv H; simpl; eauto.
+  intros H; general induction L; destruct L'; inversion H; simpl; eauto.
 Qed.
 
 Lemma length_eq_dec {X} (L L' : list X)

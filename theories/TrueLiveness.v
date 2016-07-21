@@ -1,4 +1,4 @@
-Require Import AllInRel List Map Env DecSolve.
+Require Import Util LengthEq AllInRel Map Env DecSolve.
 Require Import IL Annotation AutoIndTac Exp MoreExp SetOperations.
 Require Export Liveness Filter LabelsDefined OUnion.
 

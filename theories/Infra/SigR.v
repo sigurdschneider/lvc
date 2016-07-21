@@ -1,4 +1,4 @@
-Require Import Util DecSolve Coq.Classes.RelationClasses PartialOrder.
+Require Import Util DecSolve Coq.Classes.RelationClasses PartialOrder .
 
 Set Implicit Arguments.
 
@@ -51,3 +51,20 @@ Proof.
   unfold Proper, respectful.
   intros [a ?] [b ?]; simpl; eauto.
 Qed.
+
+Instance proj1_sig_poLe (Dom : Type) P (H:PartialOrder Dom)
+  : Proper (@poLe _ (@PartialOrder_sig _ H _) ==> poLe) (@proj1_sig Dom P).
+Proof.
+  hnf; intros. destruct x,y. simpl in *. eauto.
+Qed.
+
+Require Import Get MoreList.
+
+Lemma list_sig_decomp A (P:A->Prop)
+  : list { a : A | P a }
+    -> { L : list A | forall n a, get L n a -> P a }.
+Proof.
+  intros.
+  refine (exist _ (@proj1_sig A P ⊝ X) _).
+  intros. inv_get. destruct x. eauto.
+Defined.

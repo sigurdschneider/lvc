@@ -1,4 +1,4 @@
-Require Import Util IL InRel RenamedApart LabelsDefined.
+Require Import Util LengthEq IL InRel RenamedApart LabelsDefined.
 Require Import Restrict MoreExp SetOperations OUnion OptionR.
 Require Import Annotation Liveness Coherence.
 

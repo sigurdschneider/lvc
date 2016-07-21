@@ -166,6 +166,17 @@ Proof.
   exists l'; split; eauto using callChain_mono.
 Qed.
 
+Lemma isCalledFrom_extend (isCalled : stmt -> lab -> Prop) (F:list (params * stmt)) k t f Zs
+  : isCalledFrom isCalled F t (LabI k)
+    -> get F k Zs
+    -> isCalled (snd Zs) f
+    -> isCalledFrom isCalled F t f.
+Proof.
+  intros. destruct H; dcr. hnf.
+  eexists; split; eauto. clear H2. destruct f as [f].
+  general induction H3; eauto using callChain, get_range.
+Qed.
+
 Lemma callChain_cases  (isCalled : stmt -> lab -> Prop) (F:〔params * stmt〕) l l'
   : callChain isCalled F l l'
     -> l = l' \/

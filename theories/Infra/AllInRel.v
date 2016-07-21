@@ -1,5 +1,5 @@
 Require Import Coq.Arith.Lt Coq.Arith.Plus Coq.Classes.RelationClasses List.
-Require Import Util Get Drop Take DecSolve.
+Require Import Util LengthEq Get Drop Take DecSolve.
 
 (** * AllInRel: Inductive characterization of lists which are element-wise in relation *)
 

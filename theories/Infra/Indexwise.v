@@ -1,4 +1,4 @@
-Require Import Arith Coq.Lists.List Setoid Coq.Lists.SetoidList Omega Containers.OrderedTypeEx.
+Require Import Util Coq.Lists.List Setoid Coq.Lists.SetoidList Omega Containers.OrderedTypeEx.
 Require Export Infra.Option EqDec AutoIndTac Get.
 
 Set Implicit Arguments.

@@ -11,6 +11,8 @@ Local Arguments proj1_sig {A} {P} e.
 Local Arguments length {A} e.
 Local Arguments forward {sT} {Dom} {H} {H0} ftransform ZL st ST a.
 
+(* Coq can't figure out the instantiation (fun _ => bool) via unification,
+   so we have to add this specialized lemma *)
 Lemma forward_length_ass_UC
       (sT : stmt)
       (f : forall sT0 : stmt,
@@ -19,162 +21,21 @@ Lemma forward_length_ass_UC
       (s : stmt) (ST : subTerm s sT) (ZL : 〔params〕)
       k (a : ann bool)
   : ❬ZL❭ = k -> ❬snd (forward f ZL s ST a)❭ = k.
-  eapply (@forward_length_ass _ (fun _ => bool)). (* Coq can't find this instantiation *)
+  eapply (@forward_length_ass _ (fun _ => bool)).
 Qed.
 
 Hint Resolve forward_length_ass_UC.
 
-
 Ltac simpl_forward_setTopAnn :=
   repeat match goal with
-         | [H : ann_R eq (fst (forward ?unreachable_code_transform ?ZL ?s ?ST (setTopAnn ?sa ?a))) ?sa |- _ ] =>
+         | [H : ann_R eq (fst (forward ?unreachable_code_transform ?ZL
+                                       ?s ?ST (setTopAnn ?sa ?a))) ?sa |- _ ] =>
            let X := fresh "H" in
            match goal with
            | [ H' : getAnn sa = a |- _ ] => fail 1
            | _ => exploit (forward_getAnn _ _ _ _ _ H) as X
            end
          end; rewrite setTopAnn_eta in *; try eassumption.
-
-Lemma PIR2_zip_join_inv_left X `{BoundedSemiLattice X} A B C
-  : poLe (join ⊜ A B) C
-    -> length A = length B
-    -> poLe A C.
-Proof.
-  intros. length_equify. hnf in H1.
-  general induction H1; inv H2; simpl in *; eauto using PIR2; try solve [ congruence ].
-  - inv Heql; econstructor; eauto.
-    + rewrite <- pf. eapply join_poLe.
-Qed.
-
-Lemma PIR2_zip_join_inv_right X `{BoundedSemiLattice X} A B C
-  : poLe (join ⊜ A B) C
-    -> length A = length B
-    -> poLe B C.
-Proof.
-  intros. length_equify. hnf in H1.
-  general induction H1; inv H2; simpl in *; eauto using PIR2; try solve [ congruence ].
-  - inv Heql; econstructor; eauto.
-    + rewrite <- pf. rewrite join_commutative. eapply join_poLe.
-Qed.
-
-Lemma PIR2_poLe_zip_join_left X `{BoundedSemiLattice X} A B
-  : length A = length B
-    -> poLe A (join ⊜ A B).
-Proof.
-  intros. length_equify.
-  general induction H1; simpl in *; eauto using PIR2; try solve [ congruence ].
-  - econstructor; eauto using join_poLe.
-Qed.
-
-Lemma PIR2_zip_join_commutative X `{BoundedSemiLattice X} A B
-  : poLe (join ⊜ B A) (join ⊜ A B).
-Proof.
-  intros.
-  general induction A; destruct B; simpl in *; eauto using PIR2.
-  econstructor; eauto. rewrite join_commutative; eauto.
-Qed.
-
-Lemma PIR2_poLe_zip_join_right X `{BoundedSemiLattice X} A B
-  : length A = length B
-    -> poLe B (join ⊜ A B).
-Proof.
-  intros. rewrite <- PIR2_zip_join_commutative. (* todo: missing morphism *)
-  eapply PIR2_poLe_zip_join_left; congruence.
-Qed.
-
-Lemma PIR2_fold_zip_join_inv X `{BoundedSemiLattice X} A B C
-  : poLe (fold_left (zip join) A B) C
-    -> (forall n a, get A n a -> length a = length B)
-    -> poLe B C.
-Proof.
-  intros.
-  general induction A; simpl in *; eauto.
-  eapply IHA; eauto using get.
-  etransitivity; eauto.
-  eapply PIR2_fold_zip_join; eauto.
-  eapply PIR2_poLe_zip_join_left.
-  symmetry. eauto using get.
-Qed.
-
-Lemma PIR2_fold_zip_join_right X `{BoundedSemiLattice X} (A:list X) B C
-  : (forall n a, get B n a -> length a = length C)
-    -> poLe A C
-    -> poLe A (fold_left (zip join) B C).
-Proof.
-  general induction B; simpl; eauto.
-  eapply IHB; intros; eauto using get with len.
-  - rewrite zip_length2; eauto using eq_sym, get.
-  - rewrite H2. eapply PIR2_poLe_zip_join_left. symmetry. eauto using get.
-Qed.
-
-Lemma PIR2_fold_zip_join_left X `{BoundedSemiLattice X} (A:list X) B C a k
-  : get B k a
-    -> poLe A a
-    -> (forall n a, get B n a -> length a = length C)
-    -> poLe A (fold_left (zip join) B C).
-Proof.
-  intros.
-  general induction B; simpl in *; eauto.
-  - isabsurd.
-  - inv H1.
-    + eapply PIR2_fold_zip_join_right.
-      intros. rewrite zip_length2; eauto using eq_sym, get.
-      rewrite H2. eapply PIR2_poLe_zip_join_right.
-      eauto using eq_sym, get.
-    + eapply IHB; eauto using get.
-      intros. rewrite zip_length2; eauto using eq_sym, get.
-Qed.
-
-
-Lemma get_union_union_b X `{BoundedSemiLattice X} (A:list (list X)) (b:list X) n x
-  : get b n x
-    -> (forall n a, get A n a -> ❬a❭ = ❬b❭)
-    -> exists y, get (fold_left (zip join) A b) n y /\ poLe x y.
-Proof.
-  intros GETb LEN. general induction A; simpl in *.
-  - eexists x. eauto with cset.
-  - exploit LEN; eauto using get.
-    edestruct (get_length_eq _ GETb (eq_sym H1)) as [y GETa]; eauto.
-    exploit (zip_get join GETb GETa).
-    + exploit IHA; try eapply GET; eauto.
-      rewrite zip_length2; eauto using get with len.
-      edestruct H3; dcr; subst. eexists; split; eauto.
-      rewrite <- H8; eauto. eapply join_poLe.
-Qed.
-
-Lemma get_fold_zip_join X (f: X-> X-> X) (A:list (list X)) (b:list X) n
-  : (forall n a, get A n a -> ❬a❭ = ❬b❭)
-    -> n < ❬b❭
-    -> exists y, get (fold_left (zip f) A b) n y.
-Proof.
-  intros LEN. general induction A; simpl in *.
-  - edestruct get_in_range; eauto.
-  - exploit LEN; eauto using get.
-    eapply IHA; eauto using get with len.
-Qed.
-
-
-Lemma get_union_union_A X `{BoundedSemiLattice X} (A:list (list X)) a b n k x
-  : get A k a
-    -> get a n x
-    -> (forall n a, get A n a -> ❬a❭ = ❬b❭)
-    -> exists y, get (fold_left (zip join) A b) n y /\ poLe x y.
-Proof.
-  intros GETA GETa LEN.
-  general induction A; simpl in * |- *; isabsurd.
-  inv GETA; eauto.
-  - exploit LEN; eauto using get.
-    edestruct (get_length_eq _ GETa H1) as [y GETb].
-    exploit (zip_get join GETb GETa).
-    exploit (@get_union_union_b _ _ _ A); eauto.
-    rewrite zip_length2; eauto using get with len.
-    destruct H3; dcr; subst. eexists; split; eauto.
-    rewrite <- H5; eauto. rewrite join_commutative.
-    eapply join_poLe.
-  - exploit IHA; eauto.
-    rewrite zip_length2; eauto using get.
-    symmetry; eauto using get.
-Qed.
 
 Opaque poLe.
 
@@ -349,17 +210,6 @@ Proof.
   intros. general induction H; eauto using @annotation.
 Qed.
 
-Lemma fold_left_zip_orb_inv A b n
-  : get (fold_left (zip orb) A b) n true
-    -> get b n true \/ exists k a, get A k a /\ get a n true.
-Proof.
-  intros Get.
-  general induction A; simpl in *; eauto.
-  edestruct IHA; dcr; eauto 20 using get.
-  inv_get. destruct x, x0; isabsurd; eauto using get.
-Qed.
-
-
 Lemma forward_snd_poLe sT BL ZL s (ST:subTerm s sT) n a b c
   : unreachable_code_complete ZL BL s a
     -> poLe (getAnn a) c
@@ -411,40 +261,6 @@ Proof.
   - econstructor; eauto.
     intros; eauto.
     exploit H3; eauto.
-Qed.
-
-Lemma isCalledIn_extend (F:list (params * stmt)) k t f Zs
-  : isCalledFrom trueIsCalled F t (LabI k)
-    -> get F k Zs
-    -> trueIsCalled (snd Zs) f
-    -> isCalledFrom trueIsCalled F t f.
-Proof.
-  intros. destruct H; dcr. hnf.
-  eexists; split; eauto. clear H2. destruct f as [f].
-  general induction H3; eauto using callChain, get_range.
-Qed.
-
-Lemma zip_orb_impb Dom `{PartialOrder Dom} AL AL' BL BL'
-  : poLe AL AL'
-    -> poLe BL BL'
-    -> PIR2 impb (orb ⊜ AL BL) (orb ⊜ AL' BL').
-Proof.
-  unfold poLe; simpl.
-  intros A B.
-  general induction A; inv B; simpl; eauto using PIR2.
-  - econstructor; eauto.
-    unfold impb. destruct x, x0, y, y0; simpl in *; eauto.
-Qed.
-
-Lemma fold_left_mono A A' b b'
-  : poLe A A'
-    -> poLe b b'
-    -> poLe (fold_left (zip orb) A b) (fold_left (zip orb) A' b').
-Proof.
-  intros.
-  hnf in H. general induction H; simpl; eauto.
-  - eapply IHPIR2; eauto.
-    eapply (@zip_orb_impb (list bool)); eauto with typeclass_instances.
 Qed.
 
 Lemma fold_left_forward_mono sT F t ZL als als' alt alt' b b'
@@ -537,7 +353,7 @@ Proof.
       exploit H2; eauto.
       exploit forward_snd_poLe; try eapply Get; eauto.
       exploit H3; eauto; dcr.
-      edestruct isCalledIn_extend; eauto; dcr.
+      edestruct isCalledFrom_extend; eauto; dcr.
       econstructor; eauto.
 Qed.
 
@@ -548,14 +364,6 @@ Lemma ucc_sTA_inv (ZL : 〔params〕) (BL : 〔bool〕)
 Proof.
   intros. rewrite setTopAnn_eta in H; eauto.
 Qed.
-
-Lemma ann_R_setTopAnn_left (A B : Type) (R : A -> B -> Prop) (a : A)
-      (an : ann A) (bn : ann B)
-  : R a (getAnn bn) -> ann_R R an bn -> ann_R R (setTopAnn an a) bn.
-Proof.
-  intros. inv H0; simpl; eauto using @ann_R.
-Qed.
-
 
 Lemma unreachable_code_analysis_complete sT ZL BL BL' s a (ST:subTerm s sT) b b' c
       (LDEF:labelsDefined s (length ZL))
@@ -629,7 +437,7 @@ Proof.
         exploit forward_snd_poLe; try eapply H11; eauto.
         eapply unreachable_code_analysis_complete_isCalled in H11; eauto.
         exploit H2; eauto.
-        eapply isCalledIn_extend; eauto.
+        eapply isCalledFrom_extend; eauto.
     + intros. inv_get. rewrite getAnn_setTopAnn.
       exploit H3; eauto. destruct x0; simpl; eauto.
       destruct b0; eauto.
@@ -699,12 +507,6 @@ Proof.
       rewrite (@forward_length _ (fun _ => bool)); eauto.
       destruct (snd (forward unreachable_code_transform nil s (subTerm_refl s) x)); isabsurd.
       eauto using PIR2.
-Qed.
-
-Instance proj1_sig_poLe (Dom : Type) P (H:PartialOrder Dom)
-  : Proper (@poLe _ (@PartialOrder_sig _ H _) ==> poLe) (@proj1_sig Dom P).
-Proof.
-  hnf; intros. destruct x,y. simpl in *. eauto.
 Qed.
 
 Lemma unreachableCodeAnalysis_getAnn s

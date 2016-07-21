@@ -1,6 +1,6 @@
 Require Export Setoid Coq.Classes.Morphisms.
 Require Export Sets SetInterface SetConstructs SetProperties.
-Require Import EqDec Get CSetNotation CSetTac CSetBasic CSetComputable AllInRel.
+Require Import Util LengthEq EqDec Get CSetNotation CSetTac CSetBasic CSetComputable AllInRel.
 
 Set Implicit Arguments.
 

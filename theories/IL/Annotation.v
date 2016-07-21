@@ -1,5 +1,5 @@
-Require Import List AllInRel.
-Require Import Util Get Drop Var Val Exp Env Map CSet AutoIndTac MoreList IL DecSolve.
+Require Import Util LengthEq Get Drop Map CSet MoreList DecSolve AllInRel.
+Require Import Var Val Exp Env IL.
 Require Import PartialOrder Terminating .
 
 Set Implicit Arguments.
@@ -437,4 +437,11 @@ Lemma getAnn_setAnn A s (a:A)
  : getAnn (setAnn a s) = a.
 Proof.
   destruct s; eauto.
+Qed.
+
+Lemma ann_R_setTopAnn_left (A B : Type) (R : A -> B -> Prop) (a : A)
+      (an : ann A) (bn : ann B)
+  : R a (getAnn bn) -> ann_R R an bn -> ann_R R (setTopAnn an a) bn.
+Proof.
+  intros. inv H0; simpl; eauto using @ann_R.
 Qed.

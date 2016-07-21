@@ -1,4 +1,4 @@
-Require Import Util AllInRel MoreExp IL Computable Sim SimTactics.
+Require Import Util LengthEq AllInRel MoreExp IL Computable Sim SimTactics.
 
 Import F.
 

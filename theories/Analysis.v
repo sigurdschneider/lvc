@@ -1,4 +1,4 @@
-Require Import Util Get Coq.Classes.RelationClasses MoreList AllInRel ListUpdateAt.
+Require Import Util EqDec LengthEq Get Coq.Classes.RelationClasses MoreList AllInRel ListUpdateAt.
 Require Import SizeInduction Lattice OptionR DecSolve Annotation.
 
 Set Implicit Arguments.
@@ -274,4 +274,168 @@ Proof.
   rewrite <- (PIR2_length H2); eauto. eauto using get.
   intros. cases; eauto using get.
   rewrite zip_length3; eauto using get.
+Qed.
+
+
+Lemma PIR2_zip_join_inv_left X `{BoundedSemiLattice X} A B C
+  : poLe (join ⊜ A B) C
+    -> length A = length B
+    -> poLe A C.
+Proof.
+  intros. length_equify. hnf in H1.
+  general induction H1; inv H2; simpl in *; eauto using PIR2; try solve [ congruence ].
+  - inv Heql; econstructor; eauto.
+    + rewrite <- pf. eapply join_poLe.
+Qed.
+
+Lemma PIR2_zip_join_inv_right X `{BoundedSemiLattice X} A B C
+  : poLe (join ⊜ A B) C
+    -> length A = length B
+    -> poLe B C.
+Proof.
+  intros. length_equify. hnf in H1.
+  general induction H1; inv H2; simpl in *; eauto using PIR2; try solve [ congruence ].
+  - inv Heql; econstructor; eauto.
+    + rewrite <- pf. rewrite join_commutative. eapply join_poLe.
+Qed.
+
+Lemma PIR2_poLe_zip_join_left X `{BoundedSemiLattice X} A B
+  : length A = length B
+    -> poLe A (join ⊜ A B).
+Proof.
+  intros. length_equify.
+  general induction H1; simpl in *; eauto using PIR2; try solve [ congruence ].
+  - econstructor; eauto using join_poLe.
+Qed.
+
+Lemma PIR2_zip_join_commutative X `{BoundedSemiLattice X} A B
+  : poLe (join ⊜ B A) (join ⊜ A B).
+Proof.
+  intros.
+  general induction A; destruct B; simpl in *; eauto using PIR2.
+  econstructor; eauto. rewrite join_commutative; eauto.
+Qed.
+
+Lemma PIR2_poLe_zip_join_right X `{BoundedSemiLattice X} A B
+  : length A = length B
+    -> poLe B (join ⊜ A B).
+Proof.
+  intros. rewrite <- PIR2_zip_join_commutative. (* todo: missing morphism *)
+  eapply PIR2_poLe_zip_join_left; congruence.
+Qed.
+
+Lemma PIR2_fold_zip_join_inv X `{BoundedSemiLattice X} A B C
+  : poLe (fold_left (zip join) A B) C
+    -> (forall n a, get A n a -> length a = length B)
+    -> poLe B C.
+Proof.
+  intros.
+  general induction A; simpl in *; eauto.
+  eapply IHA; eauto using get.
+  etransitivity; eauto.
+  eapply PIR2_fold_zip_join; eauto.
+  eapply PIR2_poLe_zip_join_left.
+  symmetry. eauto using get.
+Qed.
+
+Lemma PIR2_fold_zip_join_right X `{BoundedSemiLattice X} (A:list X) B C
+  : (forall n a, get B n a -> length a = length C)
+    -> poLe A C
+    -> poLe A (fold_left (zip join) B C).
+Proof.
+  general induction B; simpl; eauto.
+  eapply IHB; intros; eauto using get with len.
+  - rewrite zip_length2; eauto using eq_sym, get.
+  - rewrite H2. eapply PIR2_poLe_zip_join_left. symmetry. eauto using get.
+Qed.
+
+Lemma PIR2_fold_zip_join_left X `{BoundedSemiLattice X} (A:list X) B C a k
+  : get B k a
+    -> poLe A a
+    -> (forall n a, get B n a -> length a = length C)
+    -> poLe A (fold_left (zip join) B C).
+Proof.
+  intros.
+  general induction B; simpl in *; eauto.
+  - isabsurd.
+  - inv H1.
+    + eapply PIR2_fold_zip_join_right.
+      intros. rewrite zip_length2; eauto using eq_sym, get.
+      rewrite H2. eapply PIR2_poLe_zip_join_right.
+      eauto using eq_sym, get.
+    + eapply IHB; eauto using get.
+      intros. rewrite zip_length2; eauto using eq_sym, get.
+Qed.
+
+
+Lemma get_union_union_b X `{BoundedSemiLattice X} (A:list (list X)) (b:list X) n x
+  : get b n x
+    -> (forall n a, get A n a -> ❬a❭ = ❬b❭)
+    -> exists y, get (fold_left (zip join) A b) n y /\ poLe x y.
+Proof.
+  intros GETb LEN. general induction A; simpl in *.
+  - eexists x. eauto with cset.
+  - exploit LEN; eauto using get.
+    edestruct (get_length_eq _ GETb (eq_sym H1)) as [y GETa]; eauto.
+    exploit (zip_get join GETb GETa).
+    + exploit IHA; try eapply GET; eauto.
+      rewrite zip_length2; eauto using get with len.
+      edestruct H3; dcr; subst. eexists; split; eauto.
+      rewrite <- H8; eauto. eapply join_poLe.
+Qed.
+
+Lemma get_fold_zip_join X (f: X-> X-> X) (A:list (list X)) (b:list X) n
+  : (forall n a, get A n a -> ❬a❭ = ❬b❭)
+    -> n < ❬b❭
+    -> exists y, get (fold_left (zip f) A b) n y.
+Proof.
+  intros LEN. general induction A; simpl in *.
+  - edestruct get_in_range; eauto.
+  - exploit LEN; eauto using get.
+    eapply IHA; eauto using get with len.
+Qed.
+
+
+Lemma get_union_union_A X `{BoundedSemiLattice X} (A:list (list X)) a b n k x
+  : get A k a
+    -> get a n x
+    -> (forall n a, get A n a -> ❬a❭ = ❬b❭)
+    -> exists y, get (fold_left (zip join) A b) n y /\ poLe x y.
+Proof.
+  intros GETA GETa LEN.
+  general induction A; simpl in * |- *; isabsurd.
+  inv GETA; eauto.
+  - exploit LEN; eauto using get.
+    edestruct (get_length_eq _ GETa H1) as [y GETb].
+    exploit (zip_get join GETb GETa).
+    exploit (@get_union_union_b _ _ _ A); eauto.
+    rewrite zip_length2; eauto using get with len.
+    destruct H3; dcr; subst. eexists; split; eauto.
+    rewrite <- H5; eauto. rewrite join_commutative.
+    eapply join_poLe.
+  - exploit IHA; eauto.
+    rewrite zip_length2; eauto using get.
+    symmetry; eauto using get.
+Qed.
+
+
+Lemma fold_left_zip_orb_inv A b n
+  : get (fold_left (zip orb) A b) n true
+    -> get b n true \/ exists k a, get A k a /\ get a n true.
+Proof.
+  intros Get.
+  general induction A; simpl in *; eauto.
+  edestruct IHA; dcr; eauto 20 using get.
+  inv_get. destruct x, x0; isabsurd; eauto using get.
+Qed.
+
+Lemma fold_left_mono A A' b b'
+  : poLe A A'
+    -> poLe b b'
+    -> poLe (fold_left (zip orb) A b) (fold_left (zip orb) A' b').
+Proof.
+  intros.
+  hnf in H. general induction H; simpl; eauto.
+  - eapply IHPIR2; eauto.
+    eapply (@zip_orb_impb (list bool)); eauto with typeclass_instances.
 Qed.

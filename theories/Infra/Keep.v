@@ -1,4 +1,4 @@
-Require Import Util CSet Get EqDec MoreList AllInRel OptionR.
+Require Import Util LengthEq Option CSet Get EqDec MoreList AllInRel OptionR.
 
 Set Implicit Arguments.
 

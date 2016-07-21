@@ -1,4 +1,4 @@
-Require Import CSet Map OrderedTypeEx Util List Get Computable DecSolve AllInRel.
+Require Import CSet LengthEq Option Map OrderedTypeEx Util List Get Computable DecSolve AllInRel.
 
 Set Implicit Arguments.
 

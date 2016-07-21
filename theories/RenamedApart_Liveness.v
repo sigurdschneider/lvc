@@ -1,8 +1,6 @@
-Require Import CSet Le.
-
-Require Import Plus Util AllInRel Map.
-Require Import Val Var Env IL Annotation SetOperations MoreList.
-Require Import Liveness Restrict RenamedApart LabelsDefined Indexwise.
+Require Import Util LengthEq AllInRel Map CSet SetOperations MoreList Indexwise.
+Require Import Val Var Env IL LabelsDefined Annotation.
+Require Import Liveness Restrict RenamedApart.
 
 Set Implicit Arguments.
 

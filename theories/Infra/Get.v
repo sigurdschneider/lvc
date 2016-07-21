@@ -1,5 +1,5 @@
 Require Import Arith Coq.Lists.List Setoid Coq.Lists.SetoidList Omega.
-Require Export Infra.Option EqDec AutoIndTac Util LengthEq.
+Require Import Infra.Option EqDec AutoIndTac Util LengthEq.
 
 Set Implicit Arguments.
 

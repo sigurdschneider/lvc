@@ -1,4 +1,4 @@
-Require Import CSet Util Fresh MoreExp Take MoreList Filter OUnion.
+Require Import CSet Util LengthEq Fresh MoreExp Take MoreList Filter OUnion.
 Require Import IL Annotation LabelsDefined Sawtooth InRel Liveness UnreachableCode.
 Require Import Sim SimTactics SimI.
 

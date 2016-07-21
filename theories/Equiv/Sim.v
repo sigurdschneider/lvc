@@ -1,4 +1,4 @@
-Require Import Util AllInRel Sawtooth Get.
+Require Import Util Option AllInRel Sawtooth Get.
 Require Export paco3 SmallStepRelations StateType.
 
 Set Implicit Arguments.
