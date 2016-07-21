@@ -259,64 +259,8 @@ Definition liveness_analysis :=
                        liveness_transform_dep_monotone
                        (fun s => (@bunded_set_terminating _ _ (occurVars s))).
 
+Require Import FiniteFixpointIteration.
 
 Definition livenessAnalysis s :=
-  let a := Analysis.safeFixpoint (liveness_analysis s) in
+  let a := safeFixpoint (liveness_analysis s) in
   mapAnn (@proj1_sig _ _) (proj1_sig (proj1_sig a)).
-
-(*
-
-Program Definition liveness_transform (U:set var) (st:stmt)
-           (st_incl:occurVars st ⊆ U)
-           (ZL:list params) (DL:list ({ X : set var | X ⊆ U} * bool))
-           (a:anni ({X : ⦃var⦄ | X ⊆ U} * bool))
-  : {X : ⦃var⦄ | X ⊆ U} :=
-  match st, a with
-      | stmtLet x e s, anni1 d =>
-        (proj1_sig (fst d) \ singleton x) ∪ (if [x ∈ proj1_sig (fst d)] then Exp.freeVars e else ∅)
-      | stmtIf e s t, anni2 ds dt =>
-        if [exp2bool e = Some true] then
-          fst ds
-        else
-          if [ exp2bool e = Some false ] then
-            fst dt
-          else
-            Exp.freeVars e ∪ (proj1_sig (fst ds)) ∪ (proj1_sig (fst dt))
-      | stmtApp f Y, anni0 =>
-        let lv := nth (counted f) DL (exist _ ∅ _, false) in
-        let Z :=  nth (counted f) ZL nil in
-        proj1_sig (fst lv) \ of_list Z ∪
-                  list_union (List.map Exp.freeVars
-                                       (filter_by (fun x => B[x ∈ proj1_sig (fst lv)]) Z Y))
-      | stmtReturn e, anni0 =>
-        Exp.freeVars e
-      | stmtExtern x f Y s, anni1 d =>
-        (proj1_sig (fst d) \ singleton x) ∪ list_union (List.map Exp.freeVars Y)
-      | stmtFun F t, anni1 dt =>
-        fst dt
-      | _, _ => exist _ ∅ _
-  end.
-Next Obligation.
-  simpl in *.
-  cases; [| cset_tac].
-  cset_tac; eauto. eapply st_incl. cset_tac.
-Qed.
-Next Obligation.
-  simpl in *. cset_tac. specialize (st_incl a). cset_tac.
-Qed.
-Next Obligation.
-  eapply incl_empty.
-Qed.
-Next Obligation.
-  simpl in *.
-  cset_tac. eapply st_incl.
-    eapply list_union_incl; try eapply H0; eauto with cset.
-    intros; inv_get. eapply filter_by_get in H. dcr.
-    cases in H4; isabsurd.
-    eapply incl_list_union; eauto using map_get_1.
-  - eauto.
-  - destruct d as [[d ?] b]; simpl.
-    cset_tac. eapply st_incl. cset_tac.
-    Grab Existential Variables. eapply incl_empty.
-Defined.
- *)

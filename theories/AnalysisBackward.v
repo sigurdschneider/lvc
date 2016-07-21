@@ -379,6 +379,7 @@ Proof.
       * eapply IH; eauto.
 Qed.
 
+Require Import FiniteFixpointIteration.
 
 Instance makeBackwardAnalysis (Dom:stmt -> Type)
          `{forall s, PartialOrder (Dom s) }
@@ -389,9 +390,9 @@ Instance makeBackwardAnalysis (Dom:stmt -> Type)
              poLe AL AL' ->
              forall a b, a ⊑ b -> f sT ZL AL s ST a ⊑ f sT ZL AL' s ST b)
          (Trm: forall s, Terminating (Dom s) poLt)
-  : forall s, Analysis { a : ann (Dom s) | annotation s a } :=
+  : forall s, Iteration { a : ann (Dom s) | annotation s a } :=
   {
-    analysis_step := fun X : {a : ann (Dom s) | annotation s a} =>
+    step := fun X : {a : ann (Dom s) | annotation s a} =>
                       let (a, Ann) := X in
                       exist (fun a0 : ann (Dom s) => annotation s a0)
                             (backward Dom f nil nil (subTerm_refl _) a) (backward_annotation Dom f nil nil (subTerm_refl _) Ann);

@@ -484,7 +484,7 @@ Proof.
 Qed.
  *)
 
-
+Require Import FiniteFixpointIteration.
 
 Instance makeForwardAnalysis (Dom:stmt -> Type)
          `{forall s, PartialOrder (Dom s) }
@@ -495,9 +495,9 @@ Instance makeForwardAnalysis (Dom:stmt -> Type)
              forall a b, a ⊑ b -> f sT ZL s ST a ⊑ f sT ZL s ST' b)
          (Trm: forall s, Terminating (Dom s) poLt)
 
-  : forall s (i:Dom s), Analysis { a : ann (Dom s) | annotation s a } :=
+  : forall s (i:Dom s), Iteration { a : ann (Dom s) | annotation s a } :=
   {
-    analysis_step := fun X : {a : ann (Dom s) | annotation s a} =>
+    step := fun X : {a : ann (Dom s) | annotation s a} =>
                       exist (fun a0 : ann (Dom s) => annotation s a0)
                             (fst (forward Dom f nil (subTerm_refl _) (setTopAnn (proj1_sig X) i)))
                                  (forward_annotation Dom f nil (subTerm_refl _) _);

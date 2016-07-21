@@ -31,7 +31,7 @@ depclean: clean
 	+$(MAKE) -C paco clean
 	+$(MAKE) -C ContainersPlugin clean
 
-doc: clean-doc 
+doc: clean-doc $(VS:.v=.vo)
 	- mkdir -p $(DOC)
 	coqdoc $(COQDOCFLAGS) $(shell cat _CoqProject | grep -v ^-I) $(VS)
 	cp $(EXTRA_DIR)/resources/* $(DOC)

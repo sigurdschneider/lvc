@@ -2,7 +2,8 @@ Require Import CSet Le Var.
 
 Require Import Plus Util AllInRel Map CSet OptionR.
 Require Import Val Var Env IL Annotation Lattice DecSolve Analysis Filter Terminating.
-Require Import Analysis AnalysisForward UnreachableCodeAnalysis UnreachableCode Subterm.
+Require Import Analysis AnalysisForward FiniteFixpointIteration.
+Require Import UnreachableCodeAnalysis UnreachableCode Subterm.
 
 Set Implicit Arguments.
 

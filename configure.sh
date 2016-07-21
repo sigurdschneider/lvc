@@ -26,11 +26,8 @@ fi
 
 BLACKLIST=`cat _BLACKLIST`
 SOURCES=$(find theories -name \*.v -print | grep -v /\.# | grep -v $BLACKLIST | sed -e 's%^\./%%g')
-coq_makefile -R theories Lvc -R ContainersPlugin/theories Containers -R paco Paco -I ContainersPlugin/src -I src extraction src/lvc_plugin.ml4 $SOURCES  > ${MAKEFILE}
+coq_makefile $(cat _CoqProject) src/lvc_plugin.ml4 $SOURCES  > ${MAKEFILE}
 echo "${MAKEFILE} generated."
-
-echo "Patching ${MAKEFILE} to include target 'extraction'."
-sed -i -e  's%\./extraction:%\./extraction: theories/Compiler.vo%' ${MAKEFILE}
 
 echo "Patching ${MAKEFILE} to reference external Containers documentation."
 sed -i -e 's%COQDOCFLAGS?=-interpolate -utf8%COQDOCFLAGS?=--interpolate --utf8 --external "http://www.lix.polytechnique.fr/coq/pylons/contribs/files/Containers/v8.4/" Containers --toc --toc-depth 3 --index indexpage --no-lib-name%' ${MAKEFILE}

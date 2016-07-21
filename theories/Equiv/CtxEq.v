@@ -38,9 +38,6 @@ Qed.
 Instance SR : ProofRelation (params) := {
    ParamRel G Z Z' := Z = Z' /\ Z = G;
    ArgRel G VL VL' := VL = VL' /\ length VL = length G;
-   BlockRel := fun Z b b' => length (F.block_Z b) = length Z
-                           /\ length (F.block_Z b') = length Z
-                           /\ F.block_E b = F.block_E b';
    IndexRel AL n n' := n = n';
    Image AL := length AL
 }.

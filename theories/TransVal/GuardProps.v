@@ -24,7 +24,7 @@ intros. general induction e; simpl in *; eauto.
      split; try split; intros; eauto.
      unfold smt_eval in H; simpl in H.
      erewrite !exp_eval_partial_total in H; simpl; eauto.
-     eapply (binop_eval_div_zero x) in H; eauto. congruence.
+     eapply (binop_eval_div_zero x) in H; eauto.
    + erewrite models_combine; simpl; erewrite models_combine; simpl.
      split; try split; eauto.
 Qed.
