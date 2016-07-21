@@ -1,5 +1,4 @@
 Require Export Setoid Coq.Classes.Morphisms.
-Require Export Sets SetInterface SetConstructs SetProperties.
 Require Import EqDec Computable Util.
 Require Export CSet MapAgreement MapUpdate LengthEq.
 

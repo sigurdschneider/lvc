@@ -470,3 +470,11 @@ match goal with
 | [ H : ❬?A❭ = ❬?B❭, H' : ❬?C❭ = ❬?B❭, H'' : get ?A ?n _  |- ?n < ❬?C❭]
   => rewrite H'; rewrite <- H; eapply (get_range H'')
 end : len.
+
+Lemma not_get_nth_default A (L:list A) n d
+  : (forall x, get L n x -> False)
+    -> nth n L d = d.
+Proof.
+  intros. general induction n; destruct L; simpl; eauto using get.
+  exfalso; eauto using get.
+Qed.

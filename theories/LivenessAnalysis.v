@@ -5,15 +5,6 @@ Remove Hints trans_eq_bool.
 
 Set Implicit Arguments.
 
-Lemma not_get_nth_default A (L:list A) n d
-  : (forall x, get L n x -> False)
-    -> nth n L d = d.
-Proof.
-  intros. general induction n; destruct L; simpl; eauto using get.
-  exfalso; eauto using get.
-Qed.
-
-
 Definition liveness_transform
            (ZL:list params) (DL:list (set var))
            (st:stmt)
@@ -121,8 +112,6 @@ Proof.
   - repeat cases; try (now congruence); eauto.
     cset_tac.
 Qed.
-
-Print Visibility.
 
 Lemma liveness_transform_dep_ext (sT s : stmt) (ST : subTerm s sT)
       (ZL : 〔params〕) (AL AL' : 〔{x : ⦃var⦄ | x ⊆ occurVars sT}〕)
