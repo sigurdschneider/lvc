@@ -1,4 +1,4 @@
-Require Import Util Get Coq.Classes.RelationClasses MoreList.
+Require Import Util Get Coq.Classes.RelationClasses MoreList AllInRel ListUpdateAt.
 Require Import SizeInduction Lattice OptionR DecSolve Annotation.
 
 Set Implicit Arguments.
@@ -147,4 +147,60 @@ Proof.
   - econstructor; eauto using bottom_least with len.
     + intros; inv_get. eapply IH; eauto.
     + eapply IH; eauto.
+Qed.
+
+Definition setTopAnnO {A} `{BoundedSemiLattice A} a (al:option A) :=
+  match al with
+  | None => setTopAnn a bottom
+  | Some al' => setTopAnn a al'
+  end.
+
+
+Lemma PIR2_ojoin_zip A `{BoundedSemiLattice A} (a:list A) a' b b'
+  : poLe a a'
+    -> poLe b b'
+    -> PIR2 poLe (join ⊜ a b) (join ⊜ a' b').
+Proof.
+  intros. hnf in H1,H2. general induction H1; inv H2; simpl; eauto using PIR2.
+  econstructor; eauto.
+  rewrite pf, pf0. reflexivity.
+Qed.
+
+Lemma update_at_poLe A `{BoundedSemiLattice A} B (L:list B) n (a:A) b
+  : poLe a b
+    -> poLe (list_update_at (tab bottom ‖L‖) n a)
+            (list_update_at (tab bottom ‖L‖) n b).
+Proof.
+  intros.
+  general induction L; simpl; eauto using PIR2.
+  - destruct n; simpl; eauto using @PIR2.
+    econstructor; eauto.
+    eapply IHL; eauto.
+Qed.
+
+
+Lemma PIR2_fold_zip_join X `{BoundedSemiLattice X} (A A':list (list X)) (B B':list X)
+  : poLe A A'
+    -> poLe B B'
+    -> poLe (fold_left (zip join) A B)
+           (fold_left (zip join) A' B').
+Proof.
+  intros. simpl in *.
+  general induction H1; simpl; eauto.
+  eapply IHPIR2; eauto.
+  clear IHPIR2 H1.
+  general induction pf; inv H2; simpl; eauto using PIR2.
+  econstructor; eauto.
+  rewrite pf, pf1. reflexivity.
+Qed.
+
+Lemma PIR2_zip_setTopAnnO X `{BoundedSemiLattice X} (A A':list (ann X)) (B B':list X)
+  : poLe A A'
+    -> poLe B B'
+    -> poLe ((@setTopAnn _) ⊜ A B) (@setTopAnn _ ⊜ A' B').
+Proof.
+  intros; simpl in *.
+  general induction H1; inv H2; simpl; eauto using PIR2.
+  - econstructor; eauto.
+    eauto using ann_R_setTopAnn.
 Qed.

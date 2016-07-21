@@ -707,3 +707,12 @@ Tactic Notation "destr_sig" :=
   | [ |- context [proj1_sig (proj1_sig ?x)] ] => destruct x; simpl
   | [ |- context [proj1_sig ?x] ] => destruct x; simpl
   end.
+
+Lemma minus_zero_eq n
+  : n - 0 = n.
+Proof.
+  omega.
+Qed.
+
+Hint Resolve minus_zero_eq.
+Hint Resolve min_l min_r : len.

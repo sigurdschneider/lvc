@@ -31,8 +31,9 @@ depclean: clean
 	+$(MAKE) -C paco clean
 	+$(MAKE) -C ContainersPlugin clean
 
-doc: clean-doc $(VS:.v=.vo)
+doc: clean-doc 
 	- mkdir -p $(DOC)
+	make -f $(COQMAKEFILE) $(VS:.v=.vo) -j$(CORES)
 	coqdoc $(COQDOCFLAGS) $(shell cat _CoqProject | grep -v ^-I) $(VS)
 	cp $(EXTRA_DIR)/resources/* $(DOC)
 #	make -f $(COQMAKEFILE) html COQDOCFLAGS="$(COQDOCFLAGS)"
