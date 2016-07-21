@@ -18,15 +18,14 @@ Definition backwardF (sT:stmt) (Dom:stmt->Type)
   : list (ann (Dom sT)).
   revert F anF ST.
   fix g 1. intros.
-  destruct F as [|[Z s] F'], anF as [|a anF'].
+  destruct F as [|Zs F'].
   - eapply nil.
-  - eapply nil.
-  - eapply nil.
-  - econstructor 2.
-    refine (backward ZL AL s _ a).
-    eapply (ST 0 (Z, s)); eauto using get.
-    eapply (g F' anF').
-    eauto using get.
+  - destruct anF as [|a anF'].
+    + eapply nil.
+    + econstructor 2.
+      * refine (backward ZL AL (snd Zs) _ a).
+        eapply (ST 0 Zs); eauto using get.
+      * eapply (g F' anF'); eauto using get.
 Defined.
 
 Arguments backwardF [sT] [Dom] backward ZL AL F anF ST : clear implicits.
@@ -41,7 +40,7 @@ Fixpoint backwardF_length (sT:stmt) (Dom:stmt->Type)
            (ST:forall n s, get F n s -> subTerm (snd s) sT) {struct F}
   : length (backwardF backward ZL AL F anF ST) = min (length F) (length anF).
 Proof.
-  destruct F as [|[Z s] F'], anF; simpl; eauto.
+  destruct F as [|Zs F'], anF; simpl; eauto.
 Qed.
 
 Lemma backwardF_length_ass sT (Dom:stmt->Type)
@@ -51,14 +50,6 @@ Lemma backwardF_length_ass sT (Dom:stmt->Type)
     -> length (backwardF backward ZL AL F anF ST) = k.
 Proof.
   intros. rewrite backwardF_length, <- H0, Nat.min_idempotent; eauto.
-Qed.
-
-Lemma min_idempotent_ass n m k
-  : n = k
-    -> n = m
-    -> min n m = k.
-Proof.
-  intros. repeat subst. eapply Nat.min_idempotent.
 Qed.
 
 Hint Resolve backwardF_length_ass : len.
@@ -117,36 +108,6 @@ Fixpoint backward (sT:stmt) (Dom: stmt -> Type)
     | _, an => fun EQ => an
   end eq_refl.
 
-Lemma tab_false_impb Dom `{PartialOrder Dom} AL AL'
-  : poLe AL AL'
-    -> PIR2 impb (tab false ‖AL‖) (tab false ‖AL'‖).
-Proof.
-  intros. hnf in H0.
-  general induction H0; simpl; unfold impb; eauto using @PIR2.
-Qed.
-
-Lemma zip_orb_impb Dom `{PartialOrder Dom} AL AL' BL BL'
-  : poLe AL AL'
-    -> poLe BL BL'
-    -> PIR2 impb (orb ⊜ AL BL) (orb ⊜ AL' BL').
-Proof.
-  unfold poLe; simpl.
-  intros A B.
-  general induction A; inv B; simpl; eauto using PIR2.
-  - econstructor; eauto.
-    unfold impb. destruct x, x0, y, y0; simpl in *; eauto.
-Qed.
-
-Lemma update_at_impb Dom `{PartialOrder Dom} AL AL' n
-  : poLe AL AL'
-    ->  PIR2 impb (list_update_at (tab false ‖AL‖) n true)
-            (list_update_at (tab false ‖AL'‖) n true).
-Proof.
-  unfold poLe; simpl.
-  intros A. general induction A; simpl; eauto using PIR2.
-  - unfold impb. destruct n; simpl; eauto using @PIR2, tab_false_impb.
-Qed.
-
 Lemma backwardF_get  (sT:stmt) (Dom:stmt->Type)
            (backward:〔params〕 -> 〔Dom sT〕 ->
                      forall s (ST:subTerm s sT) (a:ann (Dom sT)),
@@ -201,46 +162,6 @@ Ltac inv_get_step1 dummy := first [inv_get_step |
 
 Tactic Notation "inv_get_step" := inv_get_step1 idtac.
 Tactic Notation "inv_get" := inv_get' inv_get_step1.
-
-Lemma PIR2_impb_orb A A' B B'
-  : PIR2 impb A A'
-    -> PIR2 impb B B'
-    -> PIR2 impb (orb ⊜ A B) (orb ⊜ A' B').
-Proof.
-  intros AA BB. general induction AA; inv BB; simpl; eauto using @PIR2.
-  econstructor; eauto.
-  destruct x, x0, y, y0; inv pf0; simpl; eauto.
-Qed.
-
-Lemma PIR2_impb_orb_right A A' B
-  : length A <= length B
-    -> PIR2 impb A A'
-    -> PIR2 impb A (orb ⊜ A' B).
-Proof.
-  intros LEN AA.
-  general induction AA; destruct B; simpl in *; isabsurd; eauto using @PIR2.
-  econstructor; eauto.
-  destruct x, y, b; inv pf; simpl; eauto.
-  eapply IHAA; eauto. omega.
-Qed.
-
-Lemma PIR2_impb_fold (A A':list (list bool * bool)) (B B':list bool)
-  : poLe A A'
-    -> poLe B B'
-    -> (forall n a, get A n a -> length B <= length (fst a))
-    -> poLe (fold_left (fun a (b:list bool * bool) => if snd b then orb ⊜ a (fst b) else a) A B)
-           (fold_left (fun a (b:list bool * bool) => if snd b then orb ⊜ a (fst b) else a) A' B').
-Proof.
-  intros. simpl in *.
-  general induction H; simpl; eauto.
-  eapply IHPIR2; eauto using PIR2_impb_orb.
-  dcr. hnf in H2.
-  repeat cases; try congruence; isabsurd; eauto using PIR2_impb_orb, PIR2_impb_orb_right.
-  eapply PIR2_impb_orb_right; eauto using get.
-  rewrite <- (PIR2_length H2); eauto. eauto using get.
-  intros. cases; eauto using get.
-  rewrite zip_length3; eauto using get.
-Qed.
 
 Lemma backward_monotone (sT:stmt) (Dom : stmt -> Type) `{PartialOrder (Dom sT)}
       (f: forall sT, list params -> list (Dom sT) ->
@@ -393,9 +314,10 @@ Instance makeBackwardAnalysis (Dom:stmt -> Type)
   : forall s, Iteration { a : ann (Dom s) | annotation s a } :=
   {
     step := fun X : {a : ann (Dom s) | annotation s a} =>
-                      let (a, Ann) := X in
-                      exist (fun a0 : ann (Dom s) => annotation s a0)
-                            (backward Dom f nil nil (subTerm_refl _) a) (backward_annotation Dom f nil nil (subTerm_refl _) Ann);
+             let (a, Ann) := X in
+             exist (fun a0 : ann (Dom s) => annotation s a0)
+                   (backward Dom f nil nil (subTerm_refl _) a)
+                   (backward_annotation Dom f nil nil (subTerm_refl _) Ann);
     initial_value :=
       exist (fun a : ann (Dom s) => annotation s a)
             (setAnn bottom s)
