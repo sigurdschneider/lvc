@@ -69,15 +69,15 @@ general induction lvSound;
   + eapply IHlvSound2; eauto with cset.
     * cset_tac.
     * rewrite <- ReqR'. rewrite <- fvRM. cset_tac.
-- edestruct PIR2_nth_2; eauto using zip_get; dcr. 
-  destruct x as [R_f M_f]. simpl in *. 
+- eapply PIR2_nth_2 with (l:=counted l) in pir2; eauto using zip_get.
+  destruct pir2 as [[R_f M_f] [pir2_get [pir2_R pir2_M]]]. simpl in *.
   eapply SpillApp with (K:= R) (R_f:= R_f) (M_f:=M_f).
   + assert (seteq : R \ R ∪ ∅ [=] ∅). { cset_tac. }
     rewrite seteq. rewrite empty_cardinal. omega.
   + eauto.
   + eauto. 
-  + rewrite H7. clear. eauto with cset.
-  + rewrite H8. rewrite H1. rewrite <- ReqR'. eauto. 
+  + rewrite pir2_R. clear. eauto with cset.
+  + rewrite pir2_M. rewrite H1. rewrite <- ReqR'. eauto. 
 - eapply SpillReturn with (K:= R).
   + cset_tac.
   + assert (seteq : R\R ∪ Exp.freeVars e [=] Exp.freeVars e). { cset_tac. }
