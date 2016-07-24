@@ -22,7 +22,7 @@ match s,Lv with
      let Sp   := Lv_s ∩ K in 
      let R_e : set var  := R \ K ∪ L in
 
-     let K_x  := if [(cardinal R) >= k] 
+     let K_x  := if [(cardinal R_e) >= k] 
                       then singleton (hd 0 (elements R_e))
                       else ∅ in 
      let R_s  := {x; R_e \ K_x} in 
@@ -38,6 +38,10 @@ Proof.
 cset_tac.
 Qed.
 
+Lemma incl_minus (X Y Z : set var) : X ⊆ Y -> Z \ Y ⊆ Z \ X.  
+cset_tac.
+Qed.
+
 Lemma incl_add_eq (X Y : set var ) (a : var) : {a; Y} ⊆ X <-> a ∈ X /\ Y ⊆ X.
 Proof.
 split; intros H.
@@ -46,6 +50,10 @@ split; intros H.
   + rewrite <- H. cset_tac.
 - destruct H as [ain yx]. decide (a ∈ Y); cset_tac.
 Qed.
+
+Lemma set_fact (X Y Z : set var)
+ : Y ⊆ X \ Z -> X ∩ Z ⊆ X \ Y ∪ Z \ X.
+Proof.
 
 
 
@@ -78,54 +86,29 @@ decide (n < length xs).
   rewrite take_eq_ge ; [apply subList_refl | eauto].
 }
 Qed.
+(*
+Lemma ofList_elements (X Y : set var) : Y ⊆ X -> of_list (elements Y) ⊆ X.
+Proof. *)
 
 
 Lemma take_set_incl (n : nat) (X : set var) : 
         of_list (take n (elements X)) ⊆ X.
 Proof.
-
 assert (subList (elements X) (take n (elements X)) 0).
 { apply take_list_incl. }
 induction H.
 - eauto with cset.
-- simpl. apply incl_add_eq. split; eauto.
-  + remember (elements X). induction H.
-    * apply elements_iff. rewrite <- Heql0. eauto. 
-    * clear - H Heql0. apply IHget. inversion_clear H.
-- eauto with cset.
-- simpl. apply incl_add_eq. split.
-  + apply elements_iff.
-    admit.
-  + induction H1. 
-    * eauto with cset. 
-    * simpl. apply incl_add_eq. split.
-      -- 
-
-assert 
-  (forall ys Y, exists k, subList ys (elements Y) k -> Y ⊆ X-> of_list (take n ys) ⊆ X).
-- intros ys. induction ys.
-  + rewrite take_nil. eauto with cset.
-  + induction n.
-    * simpl. eauto with cset.
-    * intro Y. exists n. intros sub yx.
-      simpl. rewrite incl_add_eq. eapply IHys. ays yx.
-intro Y. 
-assert (elements Y) as ys.
-induction ys.
-- eauto with cset.
-- simpl. cset_tac. unfold take. unfold of_list. unfold fold_right.
-induction n; simpl; intros Y yx; eauto with cset.
-remember (elements Y). revert Y yx Heql. induction (elements Y) ; eauto with cset.
-- subst l. eauto with cset.
-- 
-rewrite <- yx.
-inducti); simpl; intros Y yx.
-+ rewrite take_nil. eauto with cset. 
-+ remember (elements X). induction (elements X).
-  * decide (n > 0). 
-    -- simpl. rewrite Heql; eauto with cset.
-  * unfold take in IHn. apply IHn. 
-
+- enough (l \In X).
+  + simpl. rewrite incl_add_eq. split; eauto.
+  + enough (InA _eq l (elements X)). { rewrite elements_iff. eauto. }
+    unfold Subset in IHsubList.
+    enough (forall xs k l, get xs k (l:var) -> InA _eq l xs).
+    { eapply H1 with (k:=n0); eauto. }
+    clear.
+    intros. induction H.
+    * constructor. reflexivity.
+    * apply InA_cons_tl. exact IHget.
+Qed.
 
 
 
@@ -159,33 +142,109 @@ general induction lvSound;
     * left. split; eauto with cset.
     * right. split; eauto with cset.
   }
-  decide (cardinal (R \ Exp.freeVars e) >= cardinal (Exp.freeVars e \ R));
+
+  (*decide (cardinal (R \ Exp.freeVars e) >= cardinal (Exp.freeVars e \ R));*)
   decide (cardinal R < k);
   eapply SpillLet with (K:= R \ Exp.freeVars e) (Kx := ∅).
   + eapply IHlvSound; eauto.
     * rewrite seteq.
-      assert ((R' \
-        of_list
-          (take (cardinal (Exp.freeVars e \ R'))
-             (elements (R' \ Exp.freeVars e))) ∪ Exp.freeVars e \ R') \
-       (if [cardinal R' >= k] then singleton (hd 0
-                                      (elements
-                                         (R' \
-                                          of_list
-                                            (take
-                                               (cardinal (Exp.freeVars e \ R'))
-                                               (elements (R' \ Exp.freeVars e)))
-                                          ∪ Exp.freeVars e \ R'))) else 
-        {}) [=] Exp.freeVars e) as seteq2. {
+      enough (
+        Exp.freeVars e \ ∅ [=]
+        (
+          R'\ of_list (
+            take (cardinal (Exp.freeVars e \ R'))(elements (R' \ Exp.freeVars e))
+          )
+          ∪ Exp.freeVars e \ R'
+        )
+        \ 
+        (
+          if [cardinal R' >= k] 
+          then singleton (
+            hd 0 (
+              elements (
+                R' \ of_list (
+                  take (
+                    cardinal (Exp.freeVars e \ R')
+                  )
+                  (elements (R' \ Exp.freeVars e))
+                )
+                ∪ Exp.freeVars e \ R'
+              )
+            )
+          ) 
+          else {}
+        )
+      ) as seteq2. (*proof is broken because of fix in simplSpill*)
+      { rewrite <- seteq2. eauto with cset. }
+      clear - ReqR' kgeq1 fvBs fvBcard seteq.
+      decide (cardinal R' >= k).
+      -- admit.
+      -- apply incl_eq.
+         ++ assert (Exp.freeVars e \ ∅ [=] Exp.freeVars e ∪ Exp.freeVars e).
+            { cset_tac. } rewrite H. rewrite minus_empty.
+            apply incl_union_lr. 
+            ** assert (
+                  of_list (
+                    take
+                      (cardinal ( Exp.freeVars e \ R'))
+                      (elements ( R' \ Exp.freeVars e))
+                  )
+                  ⊆ R' \ Exp.freeVars e
+                ) as takeIncl. { rewrite take_set_incl. eauto with cset. }
+                assert (R' \ (R' \ Exp.freeVars e) ⊆ Exp.freeVars e) as rree.
+                { rewrite <- ReqR'. rewrite <- seteq at 2. cset_tac. }
+                apply incl_minus with (Z:=R') in takeIncl.
+                admit.
+            ** cset_tac.
+         ++ assert (
+               of_list (
+                 take
+                   (cardinal ( Exp.freeVars e \ R'))
+                   (elements ( R' \ Exp.freeVars e))
+               )
+               ⊆ R' \ Exp.freeVars e
+             ) as takeIncl. { rewrite take_set_incl. eauto with cset. }
+             apply incl_minus with (Z:=R') in takeIncl.
+             assert (Exp.freeVars e \ ∅ [=] Exp.freeVars e) as seteq2. 
+             { cset_tac. }
+             rewrite seteq2. rewrite <- seteq at 1.
+             rewrite <- ReqR' in takeIncl at 1 2. rewrite minus_empty.
+             eauto with cset.
+          
+(*
+              rewrite erewrite <- takeIncl. { rewrite take_set_incl. eauto with cset. }
+  (of_list (take 
+                              (cardinal (Exp.freeVars e \ R'))
+                              (elements (R' \ Exp.freeVars e ))))
+                  (R' \ Exp.freeVars e)
+                  ).
+rewrite incl_minus.
+            --- 
+ apply not_ge in n. 
+               enough ( kladerradatsch ⊆ Exp.freeVars e \ R' rewrite take_set_incl.
+         ++ enough (* WRONG!!! *)
+             (
+               Exp.freeVars e ∩ R' ⊆
+                 R' \ of_list (
+                   take 
+                     (cardinal (Exp.freeVars e \ R'))
+                     (elements (R' \ Exp.freeVars e))
+                 ) 
+             )  as ErT.
+             { replace (Exp.freeVars e \ ∅) with (Exp.freeVars e). { 
+              rewrite <- TE at 1.
+
         clear - ReqR' seteq. cset_tac.
         - decide (cardinal (R \ Exp.freeVars e) >= cardinal (Exp.freeVars e \R)).
           + assert (of_list (take (cardinal (Exp.freeVars e \ R')) 
                                  (elements (R' \ Exp.freeVars e))) 
                     ⊆ R' \ Exp.freeVars e) as subs. {
+            apply take_set_incl. }
+            apply seteq. 
               rewrite <- take_length_le.
 (*take_length_le*)
-      }
-      rewrite seteq2. 
+      }*)
+    * admit.
   + rewrite seteq. eauto.
-  + rewrite seteq. eauto with cset.
-  + rewrite seteq. union_cardinal. 
+  + rewrite seteq. eauto with cset. (*until here it did work out*)
+  + rewrite seteq. union_cardinal. (*for this we need the decision on R_e*)
