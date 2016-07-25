@@ -1,4 +1,4 @@
-Require Import Util Map Env Exp IL AllInRel Computable Annotation.
+Require Import Util LengthEq Map Env Exp IL AllInRel Computable Annotation.
 Require Import Rename RenamedApart Alpha ILDB SetOperations Status Position.
 Import F.
 
@@ -6,25 +6,6 @@ Set Implicit Arguments.
 Unset Printing Records.
 
 (** * Properties of Alpha Equivalence and Renamed Apart Programs *)
-
-(** ** Definition of [combine] *)
-
-Definition combine X `{OrderedType X} Y (D:set X) (ϱ ϱ':X->Y) x :=
-  if [x ∈ D] then ϱ x else ϱ' x.
-
-Lemma combine_agree X `{OrderedType X} Y (D:set X) (ϱ ϱ':X->Y)
-: agree_on eq D ϱ (combine D ϱ ϱ').
-Proof.
-  unfold combine; hnf; intros; simpl.
-  cases; eauto.
-Qed.
-
-Lemma combine_agree' X `{OrderedType X} Y (D D':set X) (ϱ ϱ':X->Y)
-: disj D D' -> agree_on eq D ϱ' (combine D' ϱ ϱ').
-Proof.
-  intros. unfold combine; hnf; intros; simpl.
-  cases; eauto.
-Qed.
 
 (** ** Given an renamedApart program, every alpha-equivalent program
        can be obtained as a renaming according to some [rho] *)
@@ -211,10 +192,61 @@ Proof.
       rewrite renamedApart_occurVars; eauto.
       pe_rewrite. rewrite union_comm. rewrite <- minus_union.
       eapply incl_minus_lr; eauto.
-      eapply list_union_incl; eauto.
-      * rewrite map_length, zip_length2; eauto.
-      * intros. inv_map H7. inv_zip H8. repeat get_functional; subst.
-        rewrite <- renamedApart_occurVars; eauto. cset_tac; intuition.
+      eapply list_union_incl; eauto with len.
+      * intros; inv_get.
+        rewrite <- renamedApart_occurVars; eauto. eauto with cset.
+Qed.
+
+Lemma funConstr_disjoint_defVars F ans D Dt
+  : length F = length ans
+    -> Indexwise.indexwise_R (funConstr D Dt) F ans
+    -> disj (list_union (defVars ⊜ F ans)) Dt.
+Proof.
+  intros.
+  rewrite <- list_union_disjunct; intros; inv_get.
+  edestruct H0; dcr; eauto.
+Qed.
+
+Require Import Take Drop.
+
+Lemma alpha_rho_agree_F_get D F F' ans ϱ ϱ' n Z Z' u u'
+  : (forall (n : nat) (Zs : params * stmt) (a : ann (set var * set var)),
+        get F n Zs -> get ans n a -> renamedApart (snd Zs) a)
+    -> (forall (n : nat) (Zs Zs' : params * stmt),
+                 get F n Zs -> get F' n Zs' -> ❬fst Zs❭ = ❬fst Zs'❭)
+    -> length F = length ans
+    -> length F = length F'
+    -> agree_on eq (D \ list_union (take n (zip defVars F ans))) ϱ ϱ'
+    -> get F n (Z, u)
+    -> get F' n (Z', u')
+    -> agree_on eq (D \ list_union (take n (zip defVars F ans))
+                     \ list_union (drop (S n) (zip defVars F ans)))
+               (alpha_rho (ϱ [Z <-- Z']) u u') (alpha_rho_F alpha_rho ϱ' F F').
+
+Proof.
+  intros RA ZLEN LEN1 LEN2 AGR GetF GetF'. length_equify.
+  general induction LEN1; inv LEN2; simpl; [ isabsurd|]; inv GetF; inv GetF'.
+  - simpl in *.
+    + exploit RA; eauto using get; simpl in *.
+      eapply alpha_rho_agree_F; eauto using get, alpha_rho_agree with len.
+      eapply alpha_rho_agrees_snd; eauto.
+      eapply update_with_list_agree; eauto.
+      eapply agree_on_incl; eauto. clear; cset_tac.
+      exploit ZLEN; eauto.
+  - destruct x as [Z1 s1], y0 as [Z2 s2]; simpl.
+    exploit RA; try econstructor. simpl in *.
+    eapply agree_on_incl.
+    eapply (IHLEN1 (D \ (of_list Z1 ∪ snd (getAnn y)))) ; eauto using get.
+    + eapply agree_on_incl.
+      eapply alpha_rho_agree; eauto.
+      eapply agree_on_incl.
+      symmetry. eapply update_with_list_agree_minus; eauto. symmetry; eauto.
+      norm_lunion. unfold defVars at 1. simpl.
+      instantiate (1:=D \ of_list Z1 \ list_union take n0 (defVars ⊜ XL YL)).
+      clear; cset_tac.
+      clear; cset_tac.
+    + norm_lunion. unfold defVars at 1. simpl.
+      clear; cset_tac.
 Qed.
 
 Lemma rename_renamedApart_all_alpha s t ang ϱ ϱ'
@@ -306,34 +338,118 @@ Proof.
   - exploit IHALPHA; eauto; dcr; pe_rewrite.
     f_equal.
     + eapply map_ext_get_eq; eauto.
-      intros. destruct x as [Z u].
-      edestruct (get_length_eq _ H4 H5); eauto.
+      intros. destruct x as [Z u]. inv_get.
       exploit H6; eauto.
       exploit H2; eauto. simpl in *.
-      destruct y; simpl in *. f_equal.
-      * admit.
-      * simpl in *.
-(*        erewrite rename_agree; eauto.
-        eapply agree_on_incl.
-        etransitivity.
+      destruct y as [Z' u']; simpl in *. f_equal.
+      * erewrite lookup_list_agree.
+        instantiate (1:=ra[Z <-- Z']).
+        eapply lookup_list_unique; eauto.
+        exploit H0; eauto. edestruct H7; eauto.
         symmetry.
-        eapply alpha_rho_agree. eauto.
-        instantiate (2:=occurVars u).
-        eapply agree_on_incl. eapply alpha_rho_agree_F; eauto.
-        intros. edestruct H7; eauto; dcr.
-        eapply alpha_rho_agree; eauto.
-        Focus 3. eapply agree_on_incl. eapply alpha_rho_agree. eauto.
-        eapply agree_on_incl. symmetry. eapply update_with_list_agree_minus. eauto.
-        reflexivity.
-        shelve. shelve. reflexivity.
+        etransitivity.
+        Focus 2.
+        eapply agree_on_incl. eapply alpha_rho_agree; eauto.
+        eapply agree_on_incl.
+        eapply alpha_rho_agree_F_get; eauto. reflexivity.
+        instantiate (1:=of_list Z).
+        instantiate (1:=of_list Z).
+        rewrite minus_union.
+        repeat rewrite disj_minus_eq; eauto.
+        eapply disj_app; split.
+        symmetry. rewrite <- list_union_disjunct; intros; inv_get.
+        exploit (H8 n0 n); eauto using zip_get. omega.
+        eapply disj_2_incl; eauto. unfold defVars; simpl; eauto with cset.
+        symmetry. rewrite <- list_union_disjunct; intros; inv_get.
+        exploit (H8 (S n + n0) n); eauto using zip_get. omega.
+        eapply disj_2_incl; eauto. unfold defVars; simpl; eauto with cset.
 
-        eapply alpha_rho_agrees_snd2_F; eauto.
-        intros. eapply alpha_rho_agrees_snd2. eauto. eauto. eauto.*)
-        admit.
+        pe_rewrite. edestruct H7; dcr; eauto with cset.
+
+        pe_rewrite. rewrite disj_minus_eq; eauto.
+        edestruct H7; dcr; eauto; simpl in *.
+        eapply disj_1_incl; eauto with cset.
+
+        eapply agree_on_incl.
+        eapply alpha_rho_agree; eauto.
+        instantiate (1:=of_list Z).
+        edestruct H7; eauto; dcr; simpl in *.
+        eapply renamedApart_disj in H14.
+        rewrite H16 in H14.
+        rewrite disj_minus_eq; eauto with cset.
+      * erewrite rename_agree; eauto.
+        symmetry.
+        exploit renamedApart_occurVars as OC; eauto.
+        exploit renamedApart_freeVars as FV; eauto.
+        assert (DISJ:disj (occurVars u) Dt). {
+          pe_rewrite. rewrite occurVars_freeVars_definedVars.
+          edestruct H7; dcr; eauto; simpl in *.
+          symmetry; eapply disj_app; split; symmetry.
+          rewrite FV. rewrite H16.
+          symmetry; eapply disj_app; split; symmetry. eauto with cset.
+          eapply renamedApart_disj in RA. simpl in *.
+          eapply disj_2_incl; eauto. rewrite <- H12. eauto with cset.
+          rewrite OC. eauto with cset.
+        }
+
+        eapply agree_on_incl.
+        eapply alpha_rho_agree; eauto.
+        eapply agree_on_incl.
+        eapply alpha_rho_agree_F_get; eauto.
+        instantiate (2:=occurVars u).
+        instantiate (1:=occurVars u).
+
+        rewrite minus_union.
+        repeat rewrite disj_minus_eq; eauto.
+        rewrite occurVars_freeVars_definedVars.
+        eapply disj_app; split.
+        symmetry. rewrite <- list_union_disjunct; intros; inv_get.
+        rewrite (@incl_minus_union2 _ _ (freeVars u) (of_list Z)).
+        rewrite union_assoc.
+        exploit (H8 n0 n); eauto using zip_get. omega.
+        eapply disj_app; split.
+
+        exploit renamedApart_freeVars; try eapply RA; eauto. simpl in *.
+        exploit renamedApart_disj; try eapply RA; eauto. simpl in *.
+        symmetry. eapply disj_1_incl; [ eapply disj_2_incl | ]. eapply H22.
+        rewrite <- H12. eapply incl_union_left, incl_list_union; eauto using zip_get.
+        rewrite <- H21. eapply incl_union_left, incl_list_union.
+        eapply map_get_1; try eapply H4. simpl. reflexivity.
+
+        rewrite OC. unfold defVars in H20 at 2. simpl in *. eauto.
+
+        symmetry. rewrite <- list_union_disjunct; intros; inv_get.
+        rewrite (@incl_minus_union2 _ _ (freeVars u) (of_list Z)).
+        rewrite union_assoc.
+        eapply disj_app; split.
+
+        exploit renamedApart_freeVars; try eapply RA; eauto. simpl in *.
+        exploit renamedApart_disj; try eapply RA; eauto. simpl in *.
+        symmetry. eapply disj_1_incl; [ eapply disj_2_incl | ]. eapply H20.
+        rewrite <- H12. eapply incl_union_left, incl_list_union; eauto using zip_get.
+        rewrite <- H19. eapply incl_union_left, incl_list_union.
+        eapply map_get_1; try eapply H4. simpl. reflexivity.
+
+        exploit (H8 (S n + n0) n); eauto using zip_get. omega.
+        eapply disj_2_incl; eauto.  unfold defVars. simpl.
+        rewrite OC. eauto with cset.
+
+        pe_rewrite; eauto.
+
+        pe_rewrite. rewrite disj_minus_eq; eauto.
+
     + erewrite rename_agree; eauto.
-      eapply agree_on_incl.
-      eapply alpha_rho_agrees_snd2; eauto with cset.
-Admitted.
+      eapply alpha_rho_agrees_snd2; eauto.
+      eapply agree_on_incl. symmetry.
+      eapply alpha_rho_agree_F; eauto using alpha_rho_agree.
+      setoid_rewrite disj_minus_eq at 2; [ reflexivity | ].
+      eapply disj_1_incl. eapply disj_2_incl.
+      eapply (renamedApart_disj RA).
+      simpl. rewrite <- H12. eauto with cset.
+      simpl. rewrite occurVars_freeVars_definedVars.
+      eapply renamedApart_freeVars in RA. simpl in *.
+      rewrite <- RA. clear_all; cset_tac.
+Qed.
 
 
 (** ** Alpha Equivalent programs map to identical De-Bruijn terms *)
