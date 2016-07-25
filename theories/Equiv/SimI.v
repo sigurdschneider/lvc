@@ -20,30 +20,10 @@ Class ProofRelationI (A:Type) := {
     IndexRelDrop : forall AL' AL n n', IndexRelI (AL' ++ AL) n n' ->
                                   n >= length AL'
                                   -> IndexRelI AL (n - length AL') (n' - Image AL')
-(*    IndexRelApp : forall AL AL' n n', IndexRelI AL n n' -> IndexRelI (AL' ++ AL) (❬AL'❭ + n) n' *)
 }.
 
 Definition irel := rel3 simtype (fun _ : simtype => I.state)
                        (fun (_ : simtype) (_ : I.state) => I.state).
-
-Definition indexwise_r t (r:irel) A (PR:ProofRelationI A) AL' F F' AL L L' :=
-  forall n n' Z s Z' s' a,
-    IndexRelI (AL' ++ AL) n n'
-    -> get F n (Z,s)
-    -> get F' n' (Z',s')
-    -> get AL' n a
-    -> forall E E' VL VL',
-        ArgRelI E E' a VL VL'
-        -> r t (mapi I.mkBlock F ++ L, E[Z <-- List.map Some VL], s)
-            (mapi I.mkBlock F' ++ L', E'[Z' <-- List.map Some VL'], s').
-
-Lemma indexwise_r_mon t (r r':irel) A (PR:ProofRelationI A) AL' F F' AL L L'
-  : indexwise_r t r PR AL' F F' AL L L'
-    -> (forall t x y, r t x y -> r' t x y)
-    -> indexwise_r t r' PR AL' F F' AL L L'.
-Proof.
-  intros Idx LE; hnf; intros; eauto.
-Qed.
 
 Definition simILabenv t (r:irel)
            {A} (PR:ProofRelationI A) (AL:list A) L L' :=
@@ -72,6 +52,25 @@ Proof.
   eapply paco3_mon. eapply SIM; eauto. eauto.
 Qed.
 
+Definition indexwise_r t (r:irel) A (PR:ProofRelationI A) AL' F F' AL L L' :=
+  forall n n' Z s Z' s' a,
+    IndexRelI (AL' ++ AL) n n'
+    -> get F n (Z,s)
+    -> get F' n' (Z',s')
+    -> get AL' n a
+    -> forall E E' VL VL',
+        ArgRelI E E' a VL VL'
+        -> r t (mapi I.mkBlock F ++ L, E[Z <-- List.map Some VL], s)
+            (mapi I.mkBlock F' ++ L', E'[Z' <-- List.map Some VL'], s').
+
+Lemma indexwise_r_mon t (r r':irel) A (PR:ProofRelationI A) AL' F F' AL L L'
+  : indexwise_r t r PR AL' F F' AL L L'
+    -> (forall t x y, r t x y -> r' t x y)
+    -> indexwise_r t r' PR AL' F F' AL L L'.
+Proof.
+  intros Idx LE; hnf; intros; eauto.
+Qed.
+
 Definition indexwise_proofrel A (PR:ProofRelationI A) (F F':〔params * stmt〕) AL' AL :=
   forall n n' Z s Z' s' a,
     IndexRelI (AL' ++ AL) n n'
@@ -79,7 +78,6 @@ Definition indexwise_proofrel A (PR:ProofRelationI A) (F F':〔params * stmt〕)
     -> get F' n' (Z',s')
     -> get AL' n a
     -> ParamRelI a Z Z'.
-
 
 Lemma stepGoto_mapi L blk Y E vl f F
       (Ldef:get L (counted f - ❬F❭) blk)

@@ -469,17 +469,14 @@ Lemma ucc_complete s
     -> unreachable_code_complete nil nil s (unreachableCodeAnalysis s).
 Proof.
   unfold unreachableCodeAnalysis. destr_sig.
-  destruct e as [n [Iter _]].
-  subst.
-  general induction n.
-  - simpl in *. eapply unreachable_code_complete_bottom.
-  - rewrite iter_comm.
+  destruct e as [n [Iter _]]. subst.
+  intros. eapply safeFixpoint_induction.
+  - eapply unreachable_code_complete_bottom.
+  - intros.
     eapply ucc_sTA_inv.
     eapply (@unreachable_code_analysis_complete s); eauto.
-    + reflexivity.
-    + erewrite (setTopAnn_eta _ eq_refl).
-      rewrite <- iter_comm.
-      eapply (safeFixpoint_chain (unreachable_code_analysis s) n).
+    reflexivity.
+    erewrite (setTopAnn_eta _ eq_refl); eauto.
 Qed.
 
 Lemma ucc_sound_and_complete ZL BL s a
@@ -500,7 +497,7 @@ Proof.
   eapply ucc_sound_and_complete.
   - eapply ucc_complete; eauto.
   - unfold unreachableCodeAnalysis.
-    destr_sig. destr_sig. eauto. dcr.
+    destr_sig. destr_sig. dcr.
     eapply ucc_sound; simpl; eauto.
     + simpl in *. simpl_forward_setTopAnn.
     + assert (❬snd (forward unreachable_code_transform nil s (subTerm_refl s) x)❭ = 0).
