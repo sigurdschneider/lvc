@@ -11,6 +11,7 @@ COQMAKEFILE := Makefile.coq
 COQMAKE := +$(MAKE) -f $(COQMAKEFILE)
 CORES=$(shell cat /proc/cpuinfo | grep cpu\ cores | sed 's/.*:\ //' | head -n 1)
 VS=$(shell find theories/ -iname '*vo' | sed 's/\.vo/.v/' | grep -v `cat _BLACKLIST`)
+DOCS=$(shell find extra/ ) 
 
 ifneq "$(COQBIN)" ""
         COQBIN := $(COQBIN)/
@@ -31,13 +32,15 @@ depclean: clean
 	+$(MAKE) -C paco clean
 	+$(MAKE) -C ContainersPlugin clean
 
-doc: clean-doc 
+doc: clean-doc $(DOCS) 
 	- mkdir -p $(DOC)
 	make -f $(COQMAKEFILE) $(VS:.v=.vo) -j$(CORES)
 	coqdoc $(COQDOCFLAGS) $(shell cat _CoqProject | grep -v ^-I) $(VS)
 	cp $(EXTRA_DIR)/resources/* $(DOC)
 #	make -f $(COQMAKEFILE) html COQDOCFLAGS="$(COQDOCFLAGS)"
 
+doc-publish: doc
+	scp -r doc/ ps:public_html/LVC 
 
 clean-doc:
 	rm -rf $(DOC)

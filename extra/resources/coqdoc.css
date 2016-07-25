@@ -2,20 +2,9 @@
 
 body{
     font-family: 'Open Sans', sans-serif;
-    font-size: 16px;
+    font-size: 14px;
+    color: #2D2D2D
 }
-
-
-#main {
-    display: block;
-    padding: 16px;
-    padding-top: 0;
-    padding-bottom: 5em;
-    margin-left: auto;
-    margin-right: auto;
-    max-width: 60em;
-}
-
 
 a {
     text-decoration: none;
@@ -78,7 +67,6 @@ div:empty{ display: none;}
 }
 
 .inlinecode, .code, #main pre {
-    color: black;
     font-family: monospace;
 }
 
@@ -204,16 +192,6 @@ ul.doclist {
     margin-top: 1em;
 }
 
-#toc > .tocentry {
-    display: block;
-    float: left;
-    margin-top: 1em;
-}
-
 #toc a h2{
     display: inline;
-}
-
-a:empty {
-    float: right;
 }

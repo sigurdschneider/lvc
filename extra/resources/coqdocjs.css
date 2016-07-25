@@ -43,7 +43,6 @@
 .proof {
   overflow: hidden;
   position: relative;
-  transition: opacity 1s;
   display: inline-block;
 }
 
@@ -97,46 +96,103 @@
   content: "Hide Proofs";
 }
 
+
+/* page layout */
+
+html, body {
+  height: 100%;
+  margin:0;
+  padding:0;
+}
+
+body {
+  display: flex;
+  flex-direction: column
+}
+
+#content {
+  flex: 1;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+}
+#content:focus {
+  outline: none; /* prevent glow in OS X */
+}
+
+#main {
+    display: block;
+    padding: 16px;
+    padding-top: 1em;
+    padding-bottom: 2em;
+    margin-left: auto;
+    margin-right: auto;
+    max-width: 60em;
+    flex: 1 0 auto;
+}
+
+.libtitle {
+  display: none;
+}
+
 /* header */
 #header {
-  position:fixed;
-  top:0px;
   width:100%;
-  z-index: 100;
-  padding: 0.25em;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  background-color: rgb(21,57,105);
+  color: white;
+  font-weight: bold;
+  overflow: hidden;
 }
+
 
 .button {
   cursor: pointer;
 }
 
-#header {
-    display: block;
-    padding: 0;
-    margin: 0;
-    vertical-align: middle;
-    background-color: rgb(21,57,105);
-    color: white;
-    font-weight: bold;
-}
-
-#header > * {
-    color: white;
+#header * {
     text-decoration: none;
+    vertical-align: middle;
     margin-left: 15px;
     margin-right: 15px;
 }
 
-#header > a {
-    float: right;
+#header > .right, #header > .left {
+  display: flex;
+  flex: 1;
+  align-items: center;
+}
+#header > .left {
+  text-align: left;
+}
+#header > .right {
+  flex-direction: row-reverse;
 }
 
-#header > a, #header .button {
-    color : #D6EFFF;
-}
-
-#header > a:hover, #header .button:hover {
+#header a, #header .button {
     color: white;
+    box-sizing: border-box;
+}
+
+#header a {
+  border-radius: 0;
+  padding: 0.2em;
+}
+
+#header .button {
+  background-color: rgb(63, 103, 156);
+  border-radius: 1em;
+  padding-left: 0.5em;
+  padding-right: 0.5em;
+  margin: 0.2em;
+}
+
+#header a:hover, #header .button:hover {
+    background-color: rgb(181, 213, 255);
+    color: black;
 }
 
 #header h1 { padding: 0;
@@ -146,6 +202,7 @@
 #footer {
   text-align: center;
   opacity: 0.5;
+  font-size: 75%;
 }
 
 /* hyperlinks */
@@ -161,34 +218,28 @@
   animation-duration: 1s;
 }
 
-/* page layout */
-
-.libtitle {
-  display: none;
+a[name]:empty {
+  float: right;
 }
 
-html,	body {
-	margin:0;
-	padding:0;
-	height:100%;
+/* Proviola */
+
+div.code {
+  width: auto;
+  float: none;
 }
 
-#page {
-	min-height:100%;
-	position:relative;
+div.goal {
+  position: fixed;
+  left: 75%;
+  width: 25%;
+  top: 3em;
 }
 
-#footer {
-	position:absolute;
-	bottom:0;
-	width:100%;
+div.doc {
+  clear: both;
 }
 
-#main  a[name] {
-  position: relative;
-  padding-top: 4em;
-}
-
-#main {
-  padding-top: 1.5em;
+span.command:hover {
+  background-color: inherit;
 }
