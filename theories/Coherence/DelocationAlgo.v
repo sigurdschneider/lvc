@@ -28,8 +28,6 @@ Qed.
 
 Notation "'olist_union' A B" := (fold_left (zip ounion) A B) (at level 50, A at level 0, B at level 0).
 
-(*Notation "［ A | x , y 'in' X , Y ］" := (zip (fun x y => A) X Y).*)
-
 Fixpoint computeParameters (DL: list (set var)) (ZL:list (list var)) (AP:list (set var))
          (s:stmt) (an:ann (set var)) {struct s}
 : ann (list params) * list (option (set var)) :=
