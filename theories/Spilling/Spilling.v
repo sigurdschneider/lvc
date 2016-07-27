@@ -3,11 +3,11 @@ Require Import IL Annotation InRel AutoIndTac Liveness LabelsDefined.
 Require Import SimI.
 
 
-Inductive spill_sound (k:nat) : 
-(list params) -> 
+Inductive spill_sound (k:nat) :
+(list params) ->
 (list (set var * set var)) ->
-(set var * set var) -> 
-stmt -> 
+(set var * set var) ->
+stmt ->
 ann (set var * set var * option (list (set var * set var)))
 -> Prop :=
 
@@ -32,6 +32,7 @@ ann (set var * set var * option (list (set var * set var)))
 
 | SpillApp ZL Z Λ R M Sp L K f Y R_f M_f
 : cardinal (R\K ∪ L) <= k
+  -> list_union (Exp.freeVars ⊝ Y) ⊆ R\K ∪ L
   -> get ZL (counted f) Z
   -> get Λ (counted f) (R_f,M_f)
   -> R_f \ of_list Z ⊆ R\K ∪ L
@@ -43,10 +44,10 @@ ann (set var * set var * option (list (set var * set var)))
   -> (forall n rm, get rms n rm -> cardinal (fst rm) <= k)
   (*-> R_f ⊆ R\K ∪ Sp ∪ M ∪ of_list Z
   -> M_f ⊆ R\K ∪ Sp ∪ M ∪ of_list Z*)
-  -> (forall n Zs rm sl_s, get rms n rm 
+  -> (forall n Zs rm sl_s, get rms n rm
      -> get F n Zs
      -> get sl_F n sl_s
-     -> spill_sound k ((List.map fst F) ++ ZL) (rms ++ Λ) rm (snd Zs) sl_s) 
+     -> spill_sound k ((List.map fst F) ++ ZL) (rms ++ Λ) rm (snd Zs) sl_s)
   -> spill_sound k ((List.map fst F) ++ ZL) (rms ++ Λ) (R\K ∪ L, Sp ∪ M) t sl_t
     -> spill_sound k ZL Λ (R,M) (stmtFun F t)
                    (annF (Sp,L,Some rms) sl_F sl_t)
@@ -70,11 +71,11 @@ Inductive fv_e_bounded : nat -> stmt -> Prop :=
   -> fv_e_bounded k (stmtIf e s t)
 
 | BoundApp k f Y
-: fv_e_bounded k (stmtApp f Y)
+: cardinal (list_union (Exp.freeVars ⊝ Y)) <= k
+  -> fv_e_bounded k (stmtApp f Y)
 
-| BoundFun k F t 
+| BoundFun k F t
 : (forall n Zs, get F n Zs -> fv_e_bounded k (snd Zs))
   -> fv_e_bounded k t
   -> fv_e_bounded k (stmtFun F t)
 .
-

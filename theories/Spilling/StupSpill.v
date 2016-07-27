@@ -4,16 +4,16 @@ Require Import SimI.
 Require Import Spilling.
 
 
-Fixpoint stupSpill (R : set var) (s : stmt) (Lv : ann (set var)) 
-: ann (set var * set var * option (list (set var * set var))) := 
+Fixpoint stupSpill (R : set var) (s : stmt) (Lv : ann (set var))
+: ann (set var * set var * option (list (set var * set var))) :=
 match s,Lv with
 | stmtLet x e t, ann1 LV lv => ann1 (R, Exp.freeVars e, None)
                         (stupSpill (singleton x) t lv)
 | stmtReturn e, _ => ann0 (∅, Exp.freeVars e, None)
 | stmtIf e t v, ann2 LV lv_s lv_t => ann2 (R, Exp.freeVars e, None)
-                       (stupSpill (Exp.freeVars e) t lv_s) 
+                       (stupSpill (Exp.freeVars e) t lv_s)
                        (stupSpill (Exp.freeVars e) v lv_t)
-| stmtApp f Y, _  => ann0 (R, ∅, None)
+| stmtApp f Y, _  => ann0 (R, list_union (Exp.freeVars ⊝ Y), None)
 | stmtFun F t, annF LV als lv_t =>
     annF (R, ∅, Some (List.map (fun lv => (∅, lv)) (List.map getAnn als)))
            (zip (fun Zs lv => stupSpill ∅ (snd Zs) lv) F als)
@@ -22,7 +22,7 @@ match s,Lv with
 end.
 
 
-Lemma stupSpill_sat_spillSound (k:nat) (s:stmt) (R R' M : set var) 
+Lemma stupSpill_sat_spillSound (k:nat) (s:stmt) (R R' M : set var)
   (Λ : list (set var * set var)) (Lv : list (set var)) (ZL : list params)
   (alv : ann (set var)) :
 k > 0
@@ -34,15 +34,15 @@ k > 0
 -> spill_sound k ZL Λ (R,M) s (stupSpill R' s alv).
 
 Proof.
-intros kgeq1 ReqR' fvRM fvBound lvSound pir2. 
+intros kgeq1 ReqR' fvRM fvBound lvSound pir2.
 general induction lvSound;
   inversion_clear fvBound
     as [k0 x0 e0 s0 fvBcard fvBs
        |k0 e0 fvBcard
-       |k0 e0 s0 t0 fvBcard fvBs fvBt 
-       |k0 f0 Y0 
+       |k0 e0 s0 t0 fvBcard fvBs fvBt
+       |k0 f0 Y0
        |k0 Z0 s0 t0 fvBs fvBt];
-  simpl in *. 
+  simpl in *.
 
 - eapply SpillLet with (K:= R) (Kx := Exp.freeVars e).
   + assert (seteq : singleton x [=] {x; (R\R ∪Exp.freeVars e) \Exp.freeVars e}).
@@ -51,19 +51,19 @@ general induction lvSound;
     * rewrite seteq. reflexivity.
     * rewrite <- seteq. rewrite <- ReqR'. rewrite <- fvRM.
       rewrite <- H0. clear. cset_tac.
-      decide (x === a); eauto with cset. 
+      decide (x === a); eauto with cset.
   + cset_tac.
   + assert (seteq : R \ R ∪ Exp.freeVars e [=] Exp.freeVars e).
     { cset_tac. }
     rewrite seteq. rewrite fvBcard. trivial.
   + assert (seteq :{x; (R \ R ∪Exp.freeVars e)\ Exp.freeVars e} [=] singleton x).
     { cset_tac. }
-    rewrite seteq. rewrite singleton_cardinal. omega. 
+    rewrite seteq. rewrite singleton_cardinal. omega.
 - eapply SpillIf with (K:= R).
   + cset_tac.
   + assert (seteq : R\R ∪ Exp.freeVars e [=] Exp.freeVars e). { cset_tac. }
     rewrite seteq. rewrite fvBcard. trivial.
-  + eapply IHlvSound1; eauto with cset. 
+  + eapply IHlvSound1; eauto with cset.
     * cset_tac.
     * rewrite <- ReqR'. rewrite <- fvRM. cset_tac.
   + eapply IHlvSound2; eauto with cset.
@@ -72,12 +72,13 @@ general induction lvSound;
 - eapply PIR2_nth_2 with (l:=counted l) in pir2; eauto using zip_get.
   destruct pir2 as [[R_f M_f] [pir2_get [pir2_R pir2_M]]]. simpl in *.
   eapply SpillApp with (K:= R) (R_f:= R_f) (M_f:=M_f).
-  + assert (seteq : R \ R ∪ ∅ [=] ∅). { cset_tac. }
-    rewrite seteq. rewrite empty_cardinal. omega.
+  + assert (seteq : forall s, R \ R ∪ s [=] s). { cset_tac. }
+    rewrite seteq. eauto.
   + eauto.
-  + eauto. 
-  + rewrite pir2_R. clear. eauto with cset.
-  + rewrite pir2_M. rewrite H1. rewrite <- ReqR'. eauto. 
+  + eauto.
+  + simpl. eauto.
+  + rewrite pir2_R. clear. cset_tac.
+  + rewrite pir2_M. rewrite H1. rewrite <- ReqR'. eauto.
 - eapply SpillReturn with (K:= R).
   + cset_tac.
   + assert (seteq : R\R ∪ Exp.freeVars e [=] Exp.freeVars e). { cset_tac. }
