@@ -105,8 +105,8 @@ Lemma simILabenv_extension' t (r:irel) A (PR:ProofRelationI A) (AL AL':list A) F
       (LEN1:length AL' = length F)
   : indexwise_r t (sim'r r \3/ r) PR AL' F F' AL L L'
     -> indexwise_proofrel PR F F' AL' AL
-    -> (forall n n', IndexRelI (AL' ++ AL) n n' -> n < length F -> n' < length F')
-    -> (forall n n', IndexRelI (AL' ++ AL) n n' -> n >= length F -> n' >= length F')
+    -> (forall n n', IndexRelI (AL' ++ AL) n n' -> n < length AL' -> n' < Image AL')
+    -> (forall n n', IndexRelI (AL' ++ AL) n n' -> n >= length AL' -> n' >= Image AL')
     -> Image AL' = length F'
     -> simILabenv t r PR AL L L'
     -> simILabenv t r PR (AL' ++ AL) (mapi I.mkBlock F ++ L) (mapi I.mkBlock F' ++ L').
@@ -121,7 +121,7 @@ Proof.
   eapply get_app_cases in GetAL. destruct GetAL as [GetAL'|GetAL].
   - eapply get_app_lt_1 in GetFL; [| rewrite <- H; eauto using get_range].
     inv_get. destruct x as [Z s]. simpl in *. clear EQ.
-    exploit Ilt; eauto using get_range.
+    exploit Ilt; eauto using get_range. rewrite Img in H0.
     eapply get_app_lt_1 in GetL'; [| rewrite mapi_length; eauto with len ].
     inv_get. destruct x as [Z' s']; simpl in *; clear EQ.
     split; eauto.
@@ -134,7 +134,8 @@ Proof.
   - destruct SIML; dcr.
     eapply get_app_right_ge in GetFL; [ | rewrite <- H; eauto].
     exploit Ige; eauto; try congruence.
-    eapply get_app_right_ge in GetL'; [ | eauto with len; rewrite mapi_length; eauto].    rewrite mapi_length in *.
+    eapply get_app_right_ge in GetL'; [ | eauto with len; rewrite mapi_length; eauto].
+    rewrite mapi_length in *.
     eapply IndexRelDrop in RN; eauto.
     edestruct (H1 (LabI (counted f - ❬AL'❭)) (LabI (counted f' - Image AL')))
       as [? SIM]; simpl; eauto.
@@ -150,7 +151,7 @@ Proof.
     Focus 2.
     econstructor; simpl; eauto. simpl. eauto with len.
     simpl.
-    eapply (stepGoto_mapi _ _ _ _ GetL'); simpl; eauto with len.
+    eapply (stepGoto_mapi _ _ _ _ GetL'); simpl; eauto with len. rewrite
     eapply (stepGoto_mapi _ _ _ _ GetFL); simpl; eauto with len.
     simpl in *; omega.
 Qed.
@@ -161,18 +162,14 @@ Lemma fix_compatible_I t A (PR:ProofRelationI A) AL F F' L L' AL'
                      (mapi I.mkBlock F' ++ L')
             -> indexwise_r t (sim'r r) PR AL' F F' AL L L')
     -> indexwise_proofrel PR F F' AL' AL
-    -> (forall n n', IndexRelI (AL' ++ AL) n n' -> n < length F -> n' < length F')
-    -> (forall n n', IndexRelI (AL' ++ AL) n n' -> n >= length F -> n' >= length F')
+    -> (forall n n', IndexRelI (AL' ++ AL) n n' -> n < length AL' -> n' < Image AL')
+    -> (forall n n', IndexRelI (AL' ++ AL) n n' -> n >= length AL' -> n' >= Image AL')
     -> Image AL' = length F'
     -> forall r, simILabenv t r PR AL L L'
            -> indexwise_r t (sim'r r) PR AL' F F' AL L L'.
 Proof.
   intros ISIM IP Ilt Ige Img r SIML; pcofix CIH.
-  eapply ISIM; eauto.
-  hnf. split.
-  destruct SIML; dcr; split; eauto with len. split.
-  econstructor; eauto. eapply tooth_I_mkBlocks.
-  econstructor; eauto. eapply tooth_I_mkBlocks.
+  eapply ISIM.
   eapply simILabenv_extension'; eauto using simILabenv_mon, indexwise_r_mon.
 Qed.
 
