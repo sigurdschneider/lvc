@@ -498,7 +498,7 @@ Qed.
 
 Lemma sim_I i ZL RL r L L' V s (a:ann bool) (Ann:getAnn a)
   : unreachable_code i ZL RL s a
--> simILabenv Bisim r SR (pair ⊜ RL ZL) L L'
+-> labenv_sim Bisim (sim'r r) SR (pair ⊜ RL ZL) L L'
 -> (forall (f:nat) Z,
       get (pair ⊜ RL ZL) f (true, Z)
       -> exists (b b' : I.block),
@@ -541,13 +541,10 @@ Proof.
     remember (omap (exp_eval V) Y). symmetry in Heqo.
     destruct o.
     + destruct x as [Z1 s1 n1], x0 as [Z2 s2 n2].
-      edestruct H0 as [[? ?] SIM]; eauto; dcr.
-      edestruct SIM as [[? ?] SIM']; eauto using zip_get.
+      edestruct H0 as [? [? [? [ ? SIM]]]]; eauto; dcr.
+      eapply (SIM l (LabI (countTrue (fst ⊝ take l (pair ⊜ RL ZL))))); eauto using zip_get.
       hnf; simpl. split; eauto using zip_get.
-      instantiate (1:=LabI (countTrue (fst ⊝ take (labN l) (pair ⊜ RL ZL)))).
-      reflexivity. simpl. eauto.
-      eapply SIM'; eauto using zip_get.
-      hnf; simpl. split; eauto using zip_get with len.
+      hnf; eauto with len.
     + pfold; econstructor 4; try eapply star2_refl; eauto; stuck2.
   - pno_step.
   - remember (omap (exp_eval V) Y). symmetry in Heqo.
@@ -561,27 +558,16 @@ Proof.
       rewrite <- zip_app; eauto with len.
       eapply IH; eauto.
       * rewrite zip_app; eauto with len.
-        eapply simILabenv_extension with (F':=nil); eauto. eauto with len.
-        intros; isabsurd. isabsurd.
-        simpl; intros; dcr; subst. exfalso.
-        rewrite get_app_lt in H8; eauto with len. inv_get.
-        assert (length (compileF compile (pair ⊜ (getAnn ⊝ als) (fst ⊝ F) ++ pair ⊜ RL ZL) F als)
-                <> 0). {
-          rewrite compileF_length; eauto.
-          eapply countTrue_exists. rewrite <- EQ1; eauto using map_get_1.
-        }
-        eapply H6. rewrite <- Heq. eauto.
-        simpl; intros; dcr; subst.
-        rewrite get_app_ge in H8; eauto with len. inv_get.
-        rewrite map_take. rewrite map_app.
-        rewrite map_zip.
-        rewrite zip_map_fst; eauto with len.
-        rewrite take_app_ge. rewrite countTrue_app. omega.
-        rewrite map_length. omega.
-        rewrite zip_length2; eauto with len.
-        rewrite map_length. omega.
-        simpl. rewrite <- getAnn_eq; eauto. erewrite <- compileF_length; eauto.
-        erewrite <- Heq. eauto.
+        eapply labenv_sim_extension with (F':=nil); eauto.
+        -- intros; hnf; intros; isabsurd.
+        -- intros; hnf; intros; isabsurd.
+        -- hnf; split; eauto with len. split; [| split].
+           ++ simpl. erewrite <- getAnn_eq; eauto.
+             erewrite <- compileF_length; eauto. rewrite <- Heq. eauto.
+           ++ simpl; intros; dcr; subst.
+             rewrite <- zip_app in H8; eauto with len. inv_get.
+             exploit compileF_nil_als_false; eauto. congruence.
+           ++ simpl; intros; dcr; subst. omega.
       * intros. rewrite zip_app in H2; eauto with len.
         eapply get_app_cases in H2. destruct H2.
         exfalso. inv_get.
@@ -605,7 +591,7 @@ Proof.
       eapply IH; eauto.
       {
         + rewrite zip_app; eauto with len.
-          eapply simILabenv_extension; eauto. eauto with len.
+          eapply labenv_sim_extension; eauto.
           * intros. hnf; intros.
             hnf in H3. dcr. hnf in H10; dcr; subst.
             rewrite get_app_lt in H14; eauto using get_range.
@@ -615,11 +601,9 @@ Proof.
             erewrite <- getAnn_take_eq in H7; eauto.
             simpl in *. get_functional.
             rewrite <- zip_app; eauto with len.
-            eapply IH; eauto. rewrite EQ; eauto.
+            eapply IH; eauto.  rewrite EQ; eauto.
             exploit H9; eauto.
-            rewrite zip_app; eauto with len.
-            intros.
-            eapply inv_extend; eauto with len.
+            rewrite zip_app; eauto using inv_extend with len.
           * hnf; intros.
             hnf in H2. dcr; subst.
             rewrite get_app_lt in H12; eauto with len.
@@ -628,27 +612,27 @@ Proof.
             eapply H3. eauto. eauto.
             erewrite <- getAnn_take_eq in H6; eauto.
             get_functional. eauto.
-          * intros. rewrite compileF_length; eauto.
+          * hnf. split; eauto with len.
+            split.
+            rewrite compileF_length; eauto. simpl.
+            erewrite <- getAnn_eq; eauto with len.
+            split. intros.
             hnf in H2; dcr; subst.
-            rewrite get_app_lt in H8;
-              [| rewrite zip_length2; eauto with len; rewrite map_length; omega].
+            rewrite compileF_length; eauto.
+            rewrite <- zip_app in H8; eauto with len.
             inv_get.
-            erewrite <- getAnn_take_eq; eauto.
-            rewrite map_take.
-            erewrite (take_eta n (getAnn ⊝ als)) at 2.
+            erewrite <- getAnn_take_eq; eauto with len.
+            erewrite (take_eta n (getAnn ⊝ als)).
             rewrite countTrue_app.
             erewrite <- get_eq_drop; eauto using map_get_1.
-            rewrite EQ1. simpl; omega.
-          * intros. rewrite compileF_length; eauto.
+            rewrite <- H2. simpl. rewrite map_take. omega.
+            intros. rewrite compileF_length; eauto.
             hnf in H2; dcr; subst.
             rewrite map_take. rewrite map_app.
             rewrite map_zip.
             rewrite zip_map_fst; eauto with len.
             rewrite take_app_ge. rewrite countTrue_app. omega.
             rewrite map_length. omega.
-          * simpl. rewrite compileF_length; eauto.
-            rewrite map_zip.
-            rewrite zip_map_fst; eauto with len.
       }
       rewrite zip_app; eauto with len. intros; eapply inv_extend; eauto.
 Qed.
@@ -660,7 +644,7 @@ Lemma sim_DCE i V s a
 Proof.
   intros. eapply sim'_sim.
   eapply (@sim_I i nil nil); eauto; isabsurd.
-  econstructor; simpl; eauto using @sawtooth; isabsurd.
+  hnf; repeat split; simpl; eauto 20 using @sawtooth; isabsurd.
 Qed.
 
 End I.

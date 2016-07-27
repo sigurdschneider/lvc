@@ -230,6 +230,19 @@ Proof.
     eapply star2_reach_normal in H3; eauto. eapply H0.
 Qed.
 
+Lemma sim'_reduction_closed t {S} `{StateType S}
+      (σ1 σ1':S) {S'} `{StateType S'} (σ2 σ2':S')
+  : sim' t σ1 σ2
+    -> star2 step σ1 nil σ1'
+    -> star2 step σ2 nil σ2'
+    -> sim' t σ1' σ2'.
+Proof.
+  intros.
+  eapply sim'_reduction_closed_1; [| eauto].
+  eapply sim'_reduction_closed_2; eauto.
+Qed.
+
+
 
 Lemma sim'_terminate t {S1} `{StateType S1} (σ1 σ1':S1)
       {S2} `{StateType S2} (σ2:S2)
@@ -652,17 +665,3 @@ Proof.
 Qed.
 
 Arguments sim_trans t [S1] {H} σ1 [S2] {H0} σ2 [S3] {H1} σ3 _ _.
-
-
-Lemma sim'_reduction_closed t {S} `{StateType S}
-      (σ1 σ1':S) {S'} `{StateType S'} (σ2 σ2':S')
-  : sim' t σ1 σ2
-    -> star2 step σ1 nil σ1'
-    -> star2 step σ2 nil σ2'
-    -> sim' t σ1' σ2'.
-Proof.
-  intros.
-  eapply sim'_trans. eapply sim'_reduction_closed_1; eauto.
-  eapply sim'_reduction_closed_2; eauto.
-  eapply sim'_refl.
-Qed.
