@@ -58,9 +58,9 @@ match s,Lv with
      ann0 (Sp,L,None)
 
 | stmtFun F t, annF LV als lv_t
-  => annF (R, ∅, Some ((fun lv => (∅, lv)) ⊝ (List.map getAnn als)))
+  => annF (∅, ∅, Some ((fun lv => (∅, lv)) ⊝ (List.map getAnn als)))
                       ((fun Zs lv => simplSpill k ∅ (snd Zs) lv) ⊜ F als)
-                      (simplSpill k ∅ t lv_t)
+                      (simplSpill k R t lv_t)
 
 
 | _,_ => ann0 (∅, ∅, None)
@@ -489,7 +489,10 @@ general induction lvSound;
       intros ; inv_get. simpl. split; eauto with cset.
   + eapply IHlvSound; eauto.
     * cset_tac.
-c    * rewrite <- ReqR'. rewrite H3. rewrite fvRM. clear. cset_tac.
+    * enough (R \ ∅ ∪ ∅ ∪ (∅ ∪ M) [=] R ∪ M) as seteq'.
+      { rewrite seteq'. rewrite <- fvRM. eauto. }
+      clear. cset_tac.
     * eapply PIR2_app; eauto.
       eapply PIR2_get; eauto with len.
       intros ; inv_get. simpl. split; eauto with cset.
+Qed.
