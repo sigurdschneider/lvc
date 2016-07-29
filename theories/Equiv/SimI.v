@@ -102,18 +102,31 @@ Proof.
   intros Idx LE; hnf; intros; eauto.
 Qed.
 
-Lemma fix_compatible_bodies t A (PR:ProofRelationI A) AL L L'
-  : (forall r L1 L2, app_r t (sim'r r) PR AL L1 L2
-          -> bodies_r t (sim'r r) PR AL L1 L2 L L')
-    -> paramrel PR AL L L'
-    -> forall r, bodies_r t (sim'r r) PR AL L L' L L'.
+
+Lemma bodies_r_app_r t A (PR:ProofRelationI A) AL L L' r
+  : paramrel PR AL L L'
+    -> bodies_r t r PR AL L L' L L'
+    -> app_r t (sim'r r) PR AL L L'.
 Proof.
-  intros ISIM LP r. pcofix CIH.
-  eapply ISIM.
+  intros LP SIM.
   hnf; intros.
   exploit LP; eauto.
   exploit ArgLengthMatchI; eauto; dcr.
   pone_step; simpl; eauto with len.
+Qed.
+
+Lemma fix_compatible_bodies t A (PR:ProofRelationI A) AL L L'
+  : (forall (r:irel) L1 L2, app_r t (sim'r r) PR AL L1 L2
+          -> bodies_r t (sim'r r) PR AL L1 L2 L L')
+    -> paramrel PR AL L L'
+    -> forall r, bodies_r t (sim'r r) PR AL L L' L L'.
+Proof.
+  intros ISIM LP r.
+  pcofix CIH;
+  change (bodies_r t (sim'r r) PR AL L L' L L');
+  change (bodies_r t r PR AL L L' L L') in CIH.
+  eapply ISIM.
+  eapply bodies_r_app_r; eauto.
 Qed.
 
 Lemma stepGoto_mapi L blk Y E vl f F k
@@ -238,61 +251,6 @@ Proof.
     econstructor; simpl; eauto. simpl. eauto with len.
     eapply stepGoto_mapi; simpl in *; eauto using @sawtooth_smaller with len.
 Qed.
-
-(*
-Lemma labenv_sim_extension' t A (PR:ProofRelationI A) (AL AL':list A) F F' L L'
-  : (forall r L1 L2, labenv_sim t (sim'r r) PR (AL' ++ AL) L1 L2
-                -> indexwise_r t (sim'r r) PR AL' F F' AL L1 L2)
-    -> indexwise_proofrel PR F F' AL' AL
-    -> separates PR AL' AL F F'
-    -> paramrel PR AL L L'
-    -> sawtooth L
-    -> sawtooth L'
-    -> forall r, labenv_sim t (sim'r r) PR AL L L'
-        -> app_r t (sim'r r) PR (AL' ++ AL) (mapi I.mkBlock F ++ L) (mapi I.mkBlock F' ++ L').
-Proof.
-  intros SIM IPR [Len2 [Img [Ilt Ige]]] PAR STL STL' r LSIM. pcofix CIH.
-  intros f f' ? ? ? ? ? ? ? RN GetAL GetFL GetL'.
-  assert (Len1:❬AL'❭ = ❬mapi I.mkBlock F❭) by eauto with len.
-  eapply get_app_cases in GetFL. destruct GetFL as [GetFL'| [GetFL GE]].
-  - exploit Ilt; eauto. eapply get_range in GetFL'.
-    rewrite mapi_length in GetFL'; eauto.
-    eapply get_app_lt_1 in GetL'; [| rewrite mapi_length; eauto ].
-    inv_get. destruct x0 as [Z s], x as [Z' s']. simpl in *. clear EQ0 EQ.
-    exploit IPR; eauto.
-    exploit (ArgLengthMatchI); eauto; dcr.
-    exploit SIM.
-    repeat split; [ | | | | eapply app_r_mon; eauto];
-      eauto using sawtooth_I_mkBlocks, indexwise_paramrel with len.
-    hnf in LSIM; dcr; eauto with len.
-    exploit H1; eauto.
-    pone_step; simpl; eauto using get_app, get_mapi; simpl; eauto with len.
-    left.
-    orewrite (f-f=0). orewrite (f'-f'=0). simpl.
-    exploit H0; eauto.
-  - exploit Ige; eauto. rewrite mapi_length in GE; eauto.
-    eapply get_app_right_ge in GetAL; [ | rewrite Len1; eauto ].
-    eapply get_app_right_ge in GetL'; [ | rewrite mapi_length; eauto ].
-    rewrite mapi_length in *.
-    eapply IndexRelDrop in RN; eauto; [| rewrite Len1; eauto].
-    destruct LSIM as [Len3 [STLx [STL'x [PARx LSIM]]]].
-    exploit (LSIM (LabI  (f - ❬AL'❭)) (LabI (f' - Image AL'))) as SIMR; eauto.
-    rewrite Len1; eauto. rewrite Img; eauto.
-    exploit (PAR (LabI  (f - ❬AL'❭)) (LabI (f' - Image AL'))); eauto.
-    rewrite Len1; eauto. rewrite Img; eauto.
-    exploit (ArgLengthMatchI); eauto; dcr.
-    eapply (@sim_Y_left I.state _ I.state _).
-    eapply (@sim_Y_right I.state _ I.state _).
-    rewrite Img in SIMR. rewrite Len1 in SIMR.
-    eapply paco3_mon; [| eauto].
-    eapply SIMR; eauto.
-    econstructor; simpl; eauto with len. simpl. eauto with len.
-    eapply stepGoto_mapi; simpl in *; eauto using @sawtooth_smaller with len.
-    econstructor; simpl; eauto. simpl. eauto with len.
-    eapply stepGoto_mapi; simpl in *; eauto using @sawtooth_smaller with len.
-Qed.
- *)
-
 
 Lemma fix_compatible_separate t A (PR:ProofRelationI A) AL' AL F F' L L'
   : (forall r,
