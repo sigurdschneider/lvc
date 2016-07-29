@@ -10,7 +10,13 @@ Proof.
 eapply ge_dec.
 Qed.
 
-Fixpoint simplSpill (k : nat) (R : set var) (s : stmt) (Lv : ann (set var))
+Fixpoint simplSpill
+(k : nat)
+(Λ : list (set var * set var))
+(R : set var)
+(M : set var)
+(s : stmt)
+(Lv : ann (set var))
 : ann (set var * set var * option (list (set var * set var))) :=
 match s,Lv with
 
@@ -27,7 +33,7 @@ match s,Lv with
      let Sp   := getAnn lv ∩ (K ∪ K_x) in
      let R_s  := {x; R_e \ K_x} in
 
-     ann1 (Sp,L,None) (simplSpill k R_s s lv)
+     ann1 (Sp,L,None) (simplSpill k Λ R_s (Sp ∪ M) s lv)
 
 | stmtReturn e, _
   => let Fv_e := Exp.freeVars e in
@@ -45,8 +51,8 @@ match s,Lv with
      let R_e  := R \ K ∪ L in
      let Sp   := (getAnn lv1 ∪ getAnn lv2) ∩ K in
 
-     ann2 (Sp,L,None) (simplSpill k R_e s1 lv1)
-                      (simplSpill k R_e s2 lv2)
+     ann2 (Sp,L,None) (simplSpill k Λ R_e (Sp ∪ M) s1 lv1)
+                      (simplSpill k Λ R_e (Sp ∪ M) s2 lv2)
 
 | stmtApp f Y, _
   => let Fv_Y := list_union (Exp.freeVars ⊝ Y) in
@@ -58,9 +64,10 @@ match s,Lv with
      ann0 (Sp,L,None)
 
 | stmtFun F t, annF LV als lv_t
-  => annF (∅, ∅, Some ((fun lv => (∅, lv)) ⊝ (List.map getAnn als)))
-                      ((fun Zs lv => simplSpill k ∅ (snd Zs) lv) ⊜ F als)
-                      (simplSpill k R t lv_t)
+  =>let Λ' :=   ((fun lv : ⦃var⦄ => (∅, lv)) ⊝ getAnn ⊝ als ++ Λ) in
+    annF (R, ∅, Some ((fun lv => (∅, lv)) ⊝ (List.map getAnn als)))
+             ((fun Zs lv => simplSpill k Λ' ∅ (getAnn lv) (snd Zs) lv) ⊜ F als)
+                      (simplSpill k Λ' R (R ∪ M) t lv_t)
 
 
 | _,_ => ann0 (∅, ∅, None)
@@ -207,7 +214,7 @@ cset_tac.
 Qed.
 
 
-Lemma fTake (s t : set var)
+Lemma fTake X `{OrderedType X} (s t : set X)
  : (t)
             ⊆
             (s \
@@ -231,7 +238,7 @@ Proof.
          reflexivity.
 Qed.
 
-Lemma rke (s t: set var) (k : nat)
+Lemma rke X `{OrderedType X} (s t: set X) (k : nat)
 : cardinal s <= k ->
 cardinal (t) <= k ->  cardinal (s \
 of_list (take
@@ -264,18 +271,18 @@ decide (cardinal (t \ s) <= cardinal (s \ t)).
 * apply not_le in n. subst K. rewrite take_eq_ge.
   + rewrite of_list_elements. rewrite minus_minus.
     enough (s ∩ t ∪ t \ s [=] t).
-    { rewrite H. eauto. }
+    { rewrite H0. eauto. }
     clear. cset_tac. decide (a ∈ s); cset_tac.
   + clear - n. rewrite elements_length. omega.
 Qed.
 
 
-Lemma rkk (s t  : set var) (k : nat) (x : var)
+Lemma rkk X `{OrderedType X} (s t  : set X) (k : nat) (x y : X)
 : let K :=  of_list (take
                        (cardinal (t \ s))
                        (elements (s \ t))
                   ) in
-  let  K_x := singleton (hd 0 (elements (
+  let  K_x := singleton (hd y (elements (
                         s \ K ∪ t \ s ))) in
    cardinal s <= k
 -> cardinal (t) <= k
@@ -287,7 +294,7 @@ Proof.
 intros K K_x RleqK fvBcard kgeq1 sizeRL.
 rewrite add_cardinal. rewrite cardinal_difference'.
 - subst K_x. rewrite singleton_cardinal.
-  assert (rke := rke s t k RleqK fvBcard).
+  assert (rke := rke X s t k RleqK fvBcard).
   remember (cardinal (s \ K ∪ t \ s)).
   destruct n.
   + omega. (*uses kgt0*)
@@ -301,7 +308,8 @@ rewrite add_cardinal. rewrite cardinal_difference'.
   rewrite emptRE in sizeRL. omega.
 Qed.
 
-Lemma al_in_rkl (s t u : set var) (e : exp) (al : ann (set var)) (x : var) :
+Lemma al_in_rkl X `{OrderedType X}
+(s t u : set X) (al : ann (set X)) (x : X) :
 let K :=  of_list (take
                        (cardinal (t \ s))
                        (elements (s \ t))
@@ -331,20 +339,41 @@ Qed.
 
 (**********************************************************************)
 
-Lemma simplSpill_sat_spillSound (k:nat) (s:stmt) (R R' M : set var)
-  (Λ : list (set var * set var)) (Lv : list (set var)) (ZL : list params)
+Fixpoint eq_list_setset X `{OrderedType X} (l l' : list (set X * set X)) :=
+length l = length l' /\
+Forall (fun a => a) ((fun x y =>
+           match x,y with | (s,t), (u,v) => s [=] t /\ u [=] v end) ⊜ l l').
+
+Fixpoint eq_list_setset' {X} `{OrderedType X} (l l' : list (set X * set X)) :=
+match l , l' with
+| nil, nil => True
+| (s,t)::l , (s',t')::l'  => s [=] s' /\ t [=] t'
+| _ , _ => False
+end.
+
+
+Lemma list_eq_app X (R: relation X) (l1 l2 l1' l2' : list X)
+: list_eq R l1 l1' -> list_eq R l2 l2' -> list_eq R (l1++l2) (l1'++l2').
+Proof.
+intros eq1 eq2. general induction eq1; eauto using @list_eq.
+Qed.
+
+Lemma simplSpill_sat_spillSound (k:nat) (s:stmt) (R R' M M': set var)
+  (Λ Λ': list (set var * set var)) (Lv : list (set var)) (ZL : list params)
   (alv : ann (set var)) :
 k > 0
 -> R [=] R'
+-> M [=] M'
+-> Λ === Λ'(**Tοdo: we need another equlity relation here**)
 -> cardinal R' <= k
 -> getAnn alv ⊆ R ∪ M
 -> fv_e_bounded k s
 -> live_sound Imperative ZL Lv s alv
 -> PIR2 (fun RMf G => fst RMf [=] ∅ /\ snd RMf [=] G) Λ Lv
--> spill_sound k ZL Λ (R,M) s (simplSpill k R' s alv).
+-> spill_sound k ZL Λ (R,M) s (simplSpill k Λ' R' M' s alv).
 
 Proof.
-intros kgeq1 ReqR' RleqK fvRM fvBound lvSound pir2.
+intros kgeq1 ReqR' MeqM' ΛeqΛ' RleqK fvRM fvBound lvSound pir2.
 
 general induction lvSound;
   inversion_clear fvBound
@@ -353,12 +382,12 @@ general induction lvSound;
        |k0 e0 s0 t0 fvBcard fvBs fvBt
        |k0 f0 Y0
        |k0 Z0 s0 t0 fvBs fvBt];
-   simpl in *.
+   simpl.
 
 
 
-- assert (rke := rke R' (Exp.freeVars e) k RleqK fvBcard).
-  assert (fTake := fTake R' (Exp.freeVars e)).
+- assert (rke := rke var R' (Exp.freeVars e) k RleqK fvBcard).
+  assert (fTake := fTake var R' (Exp.freeVars e)).
   set (K := of_list (take
                        (cardinal (Exp.freeVars e \ R'))
                        (elements (R' \ Exp.freeVars e))
@@ -368,12 +397,12 @@ general induction lvSound;
     set (K_x:=singleton (hd 0 (elements (
                         R' \ K ∪ Exp.freeVars e \ R' )))).
 
-    assert (rkk := rkk R' (Exp.freeVars e) k x).
+    assert (rkk := rkk var R' (Exp.freeVars e) k x).
 
     eapply SpillLet with (K:= K) (Kx := K_x); eauto.
 
-    + eapply IHlvSound; try rewrite ReqR'; eauto.
-
+    + eapply IHlvSound;
+      try rewrite ReqR'; try rewrite <- MeqM'; try rewrite ΛeqΛ'; eauto.
       * unfold Subset; intro a. decide (a = x); [cset_tac|].
         intro aInAnn. rewrite union_iff.
         (** this can be simplified using al_in_rkl **)
@@ -381,17 +410,17 @@ general induction lvSound;
               \/ a ∈ K_x
               \/ a ∈ M
              ).
-      -- right. cset_tac.
-      -- left. apply not_or_dist in n0. destruct n0 as [nK nM].
-         decide (a = x).
-         ++ cset_tac.
-         ++ apply add_iff. right.
-            unfold Subset in H0. specialize (H0 a).
-            unfold Subset in fvRM. specialize (fvRM a).
-            assert (a ∈ (getAnn al \ (singleton x))). { cset_tac. }
-            assert (a ∈ R'). { cset_tac. rewrite <- ReqR'. eauto. }
-            assert (a ∈ R' \ K).
-            { cset_tac. } cset_tac.
+        -- right. cset_tac.
+        -- left. apply not_or_dist in n0. destruct n0 as [nK nM].
+           decide (a = x).
+           ++ cset_tac.
+           ++ apply add_iff. right.
+              unfold Subset in H0. specialize (H0 a).
+              unfold Subset in fvRM. specialize (fvRM a).
+              assert (a ∈ (getAnn al \ (singleton x))). { cset_tac. }
+              assert (a ∈ R'). { cset_tac. rewrite <- ReqR'. eauto. }
+              assert (a ∈ R' \ K).
+              { cset_tac. } cset_tac.
     + rewrite ReqR'. apply fTake.
     + rewrite ReqR'. apply rke.
 
@@ -416,6 +445,7 @@ general induction lvSound;
             (Kx := ∅).
   + eapply IHlvSound; eauto.
     * rewrite ReqR'. cset_tac.
+    * rewrite MeqM'. cset_tac.
     * clear - sizeRL. rewrite add_cardinal. apply not_ge in sizeRL.
       rewrite minus_empty. omega.
     * rewrite ReqR'. clear - H0 fvRM ReqR'.
@@ -454,7 +484,7 @@ general induction lvSound;
   | rewrite ReqR'; apply rke; eauto
   | eapply IHlvSound1
   | eapply IHlvSound2 ];
-  try rewrite ReqR'; eauto;
+  try rewrite ReqR'; try rewrite <- MeqM'; eauto;
   [ apply rke ; eauto  | | apply rke; eauto | ];
   [ rewrite <- seteq_1 | rewrite <- seteq_2 ];
   subst K; apply al_in_rkl; eauto;
@@ -466,11 +496,12 @@ general induction lvSound;
   eapply PIR2_nth_2 with (l:=counted l) in pir2; eauto using zip_get.
   destruct pir2 as [[R_f M_f] [pir2_get [pir2_R pir2_M]]]. simpl in *.
 
-  eapply SpillApp with (K:= K); try rewrite ReqR'; eauto.
+  eapply SpillApp with (K:= K); try rewrite ReqR'; try rewrite MeqM'; eauto.
   + subst K. apply rke; eauto.
   + subst K. apply fTake; eauto.
   + rewrite pir2_R. clear. cset_tac.
-  + rewrite pir2_M. rewrite H1. rewrite fvRM. rewrite ReqR'. cset_tac.
+  + rewrite pir2_M. rewrite H1. rewrite fvRM.
+    rewrite ReqR'. rewrite MeqM'. cset_tac.
 - set (K := of_list (take
                        (cardinal (Exp.freeVars e \ R'))
                        (elements (R' \ Exp.freeVars e))
@@ -483,15 +514,18 @@ general induction lvSound;
     rewrite (seteq' R). rewrite ReqR'. apply RleqK.
   + intros ; inv_get. simpl. rewrite empty_cardinal. omega.
   + intros ; inv_get. eapply H1; eauto with cset.
+    * apply list_eq_app; eauto. reflexivity.
     * rewrite empty_cardinal. omega.
     * eapply PIR2_app; eauto.
       eapply PIR2_get; eauto with len.
       intros ; inv_get. simpl. split; eauto with cset.
   + eapply IHlvSound; eauto.
     * cset_tac.
-    * enough (R \ ∅ ∪ ∅ ∪ (∅ ∪ M) [=] R ∪ M) as seteq'.
+    * rewrite MeqM'. eauto.
+    * apply list_eq_app; eauto. reflexivity.
+    * enough (R \ ∅ ∪ ∅ ∪ (R' ∪ M) [=] R ∪ M) as seteq'.
       { rewrite seteq'. rewrite <- fvRM. eauto. }
-      clear. cset_tac.
+      rewrite ReqR'. clear. cset_tac.
     * eapply PIR2_app; eauto.
       eapply PIR2_get; eauto with len.
       intros ; inv_get. simpl. split; eauto with cset.
