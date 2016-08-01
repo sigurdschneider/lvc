@@ -210,15 +210,15 @@ Proof.
     edestruct IHIC1; eauto. econstructor. eauto. eauto. eauto.
     eauto. reflexivity.
     econstructor. eauto. eauto. exploit H12; eauto. eapply srd_monotone. eapply H1.
-    admit. simpl in *. dcr.
+    (*todo*). simpl in *. dcr.
     do 2 eexists; split; [|split]; eauto.
     PIR2_inv. inv_get. exploit H7; eauto; dcr.
-    admit.
+    (*todo*).
   - edestruct IHIC; eauto. rewrite zip_app; eauto with len.
     eapply PIR2_app; eauto using restrict_ifFstR, PIR2_ifFstR_refl.
     destruct l; simpl in *; dcr; inv_get.
     eauto with cset.
-Admitted.
+(*todo*).
 
 
 (** *** On a coherent program a liveness analysis which is sound imperatively is also sound functionally. *)
