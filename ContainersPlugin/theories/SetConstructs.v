@@ -470,7 +470,7 @@ End DisjointUnion.
 (* (*     intros s' x sf. *) *)
 (* (*     apply fold_rec_weak with  *) *)
 (* (*       (P := fun bvu r => forall f, In f r <->). *) *)
-(*   Admitted. *)
+(*   *)
 (*   Corollary extend_ffunc_IsFunc : forall s x s' sf, *)
 (*     In x s -> *)
 (*     (forall f, In f sf <-> IsFunc {s ~ x} s' f) -> *)
