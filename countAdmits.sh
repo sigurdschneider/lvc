@@ -1,5 +1,3 @@
 #!/bin/bash
 
-NUM=`grep "admit" $(find . -type f | grep -v '\.glob' | grep -v '\.sh') | wc -l`
-
-echo "There are $NUM admits left in the developement" 
+grep -c "admit" $(find . -type f -iname '*.v') | sed '/:0$/d'
