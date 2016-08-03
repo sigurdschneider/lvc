@@ -25,3 +25,7 @@ Class StateType S := {
   step_internally_deterministic : internally_deterministic step;
   step_externally_determined : externally_determined step
 }.
+
+Definition stateType S (ST:StateType S) := S.
+
+Coercion stateType : StateType >-> Sortclass.
