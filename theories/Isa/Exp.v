@@ -435,15 +435,31 @@ Proof.
 Qed.
 
 Definition exp2bool (e:exp) : option bool :=
-  match e with
-  | Con c => Some (val2bool c)
-  | _ => None
-  end.
+  mdo r <- exp_eval (fun _ => None) e; Some (val2bool r).
+
+Require Import OptionR.
+
+Lemma exp_eval_mon (E E':onv val) e
+  : agree_on (fstNoneOrR eq) (freeVars e) E E'
+    -> fstNoneOrR eq (exp_eval E e) (exp_eval E' e).
+Proof.
+  intros. general induction e; simpl in *; eauto using fstNoneOrR.
+  - exploit IHe as EQ; eauto. inv EQ; simpl; eauto using fstNoneOrR.
+    reflexivity.
+  - exploit IHe1 as EQ1; eauto with cset.
+    inv EQ1; simpl; eauto using fstNoneOrR.
+    exploit IHe2 as EQ2; eauto with cset.
+    inv EQ2; simpl; eauto using fstNoneOrR.
+    reflexivity.
+Qed.
 
 Lemma exp2bool_val2bool E e b
   : exp2bool e = Some b
     -> exists v, exp_eval E e = Some v /\ val2bool v = b.
 Proof.
-  destruct e; simpl; intros; try congruence.
-  inv H; eauto.
+  intros. unfold exp2bool in H. monad_inv H.
+  eexists x; split; eauto.
+  exploit (@exp_eval_mon (fun _ => None) E e); eauto.
+  hnf; intros; econstructor.
+  inv H; congruence.
 Qed.
