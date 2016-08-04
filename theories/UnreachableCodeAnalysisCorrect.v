@@ -44,15 +44,14 @@ Definition ucc_sound sT ZL BL s a (ST:subTerm s sT)
     -> annotation s a
     -> labelsDefined s (length ZL)
     -> labelsDefined s (length BL)
-    -> paramsMatch s (length ⊝ ZL)
     -> poLe (snd (@forward sT _ _ _ unreachable_code_transform ZL s ST a)) BL
     -> unreachable_code Sound BL s a.
 Proof.
-  intros EQ Ann DefZL DefBL PM.
-  general induction Ann; simpl in *; inv DefZL; inv DefBL; inv PM;
+  intros EQ Ann DefZL DefBL.
+  general induction Ann; simpl in *; inv DefZL; inv DefBL;
     repeat let_case_eq; repeat simpl_pair_eqs; subst; simpl in *.
   - inv EQ.
-    pose proof (ann_R_get H8); simpl in *.
+    pose proof (ann_R_get H7); simpl in *.
     econstructor.
     eapply IHAnn; eauto;
       simpl_forward_setTopAnn.
@@ -65,18 +64,20 @@ Proof.
     repeat simpl_forward_setTopAnn;
     econstructor; intros; try solve [congruence];
       eauto using @PIR2_zip_join_inv_left, @PIR2_zip_join_inv_right.
-  - inv_get. Transparent poLe. hnf in H.
+  - edestruct get_in_range; eauto.
+    edestruct get_in_range; try eapply H3; eauto.
+    Transparent poLe. hnf in H.
     edestruct PIR2_nth; eauto using ListUpdateAt.list_update_at_get_3; dcr.
     econstructor; eauto.
   - econstructor.
   - inv EQ.
-    pose proof (ann_R_get H8); simpl in *.
+    pose proof (ann_R_get H7); simpl in *.
     econstructor.
     eapply IHAnn; eauto;
       simpl_forward_setTopAnn.
     simpl_forward_setTopAnn.
   - invc EQ. simpl_forward_setTopAnn.
-    revert H2 H16 H17 H18.
+    revert H2 H16 H16 H15.
     set (FWt:=(forward unreachable_code_transform (fst ⊝ s ++ ZL) t
                        (subTerm_EQ_Fun1 eq_refl ST) ta)).
     set (FWF:=forwardF (forward unreachable_code_transform) (fst ⊝ s ++ ZL) s sa
@@ -89,11 +90,11 @@ Proof.
         edestruct (get_forwardF (fun _ => bool) (forward unreachable_code_transform)
                                 (fst ⊝ s ++ ZL) (subTerm_EQ_Fun2 eq_refl ST) H13 H10).
         edestruct (@get_union_union_b bool _ _).
-        eapply H4.
+        eapply H8.
         Focus 2. dcr.
-        exploit H17. eapply zip_get. eapply map_get_1; eauto.
-        eapply H14. eauto. eapply ann_R_get in H3. rewrite <- H3.
-        rewrite getAnn_setTopAnn. eapply H15.
+        exploit H15. eapply zip_get. eapply map_get_1; eauto.
+        eapply H4. eauto. eapply ann_R_get in H3. rewrite <- H3.
+        rewrite getAnn_setTopAnn. eauto.
         intros. inv_get.
         edestruct (@forwardF_get _ _ _ _ _ _ _ _ _ _ _ H3). dcr. subst.
         eauto with len.
@@ -103,36 +104,36 @@ Proof.
         eapply PIR2_fold_zip_join_inv. reflexivity.
         intros.
         inv_get.
-        edestruct (@forwardF_get _ _ _ _ _ _ _ _ _ _ _ H4). dcr.
+        edestruct (@forwardF_get _ _ _ _ _ _ _ _ _ _ _ H8). dcr.
         subst; repeat rewrite (@forward_length sT (fun _ => bool)); eauto with len.
     + intros.
       assert (n < ❬snd FWt❭). {
         subst FWt.
         repeat rewrite (@forward_length sT (fun _ => bool)). rewrite app_length. rewrite map_length.
-        eapply get_range in H4. omega.
+        eapply get_range in H8. omega.
       }
       edestruct get_in_range; eauto.
       edestruct (get_forwardF (fun _ => bool) (forward unreachable_code_transform)
-                              (fst ⊝ s ++ ZL) (subTerm_EQ_Fun2 eq_refl ST) H4 H10).
+                              (fst ⊝ s ++ ZL) (subTerm_EQ_Fun2 eq_refl ST) H8 H10).
       eapply H1 with (ST:=x0); eauto.
-      eapply H17; eauto.
+      eapply H15; eauto.
       *
         assert (n <
                 ❬snd (
              forward unreachable_code_transform (fst ⊝ s ++ ZL) (snd Zs) x0 a0)❭). {
           erewrite (@forward_length sT (fun _ => bool)). rewrite app_length,map_length.
-          eapply get_range in H4. omega.
+          eapply get_range in H8. omega.
         }
         edestruct get_in_range; eauto.
         exploit (@get_union_union_A bool _ _).
         eapply map_get_1. apply g0. instantiate (3:=snd). eauto.
         Focus 2.
-        destruct H15; dcr.
+        destruct H17; dcr.
         eapply zip_get_eq. eapply map_get_1. eauto.  eauto.
-        exploit H17.
+        exploit H15.
         eapply zip_get.
-        eapply map_get_1. eauto. eapply H19. eauto.
-        exploit (setTopAnn_inv _ _ H15); eauto; subst.
+        eapply map_get_1. eauto. eapply H18. eauto.
+        exploit (setTopAnn_inv _ _ H17); eauto; subst.
         rewrite setTopAnn_eta; eauto.
         eapply (@forward_getAnn' sT (fun _ => bool)).
 
@@ -147,8 +148,8 @@ Proof.
         eapply map_get_1. apply g0. instantiate (3:=snd). eauto.
         Focus 2. dcr.
         edestruct (get_forwardF (fun _ => bool) (forward unreachable_code_transform)
-                                (fst ⊝ s ++ ZL) (subTerm_EQ_Fun2 eq_refl ST) H20 H15).
-        exploit H17; eauto.
+                                (fst ⊝ s ++ ZL) (subTerm_EQ_Fun2 eq_refl ST) H19 H17).
+        exploit H15; eauto.
         eapply zip_get. eapply map_get_1. subst FWF. eauto. eauto.
         eapply ann_R_get in H3. rewrite getAnn_setTopAnn in H3. rewrite <- H3.
         eauto.
@@ -163,7 +164,7 @@ Proof.
         eauto. reflexivity.
         clear_all. intros. inv_get.
         subst FWt. eauto with len.
-    + simpl. eauto.
+    + simpl; eauto.
 Qed.
 
 
@@ -490,7 +491,6 @@ Qed.
 
 Lemma correct s
   : labelsDefined s 0
-    -> paramsMatch s nil
     -> unreachable_code SoundAndComplete nil s (unreachableCodeAnalysis s).
 Proof.
   intros.
