@@ -1,4 +1,4 @@
-Require Import List Map Env AllInRel Exp MoreExp.
+Require Import List Map Env AllInRel Exp.
 Require Import IL Annotation InRel AutoIndTac Liveness LabelsDefined.
 Require Import SimI.
 

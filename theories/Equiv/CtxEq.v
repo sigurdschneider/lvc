@@ -1,5 +1,5 @@
 Require Import Util LengthEq Map CSet AutoIndTac AllInRel.
-Require Import Var Val Exp MoreExp Env IL SimF.
+Require Import Var Val Exp Env IL SimF.
 
 Set Implicit Arguments.
 Unset Printing Records.
@@ -10,27 +10,28 @@ Lemma bisim'r_refl s
 Proof.
   revert s. pcofix CIH.
   intros; destruct s; simpl in *; intros.
-  - case_eq (exp_eval E e); intros.
-    + pone_step. right. eapply (CIH); eauto.
-    + pno_step.
-  - case_eq (exp_eval E e); intros.
+  - destruct e.
+    + case_eq (op_eval E e); intros.
+      * pone_step. right. eapply (CIH); eauto.
+      * pno_step.
+    + case_eq (omap (op_eval E) Y); intros.
+      * pextern_step.
+        -- right. eapply (CIH s); eauto.
+        -- right. eapply (CIH s); eauto.
+      * pno_step.
+  - case_eq (op_eval E e); intros.
     case_eq (val2bool v); intros.
     + pone_step. right. eapply (CIH s1); eauto.
     + pone_step. right. eapply (CIH s2); eauto.
     + pno_step.
   - edestruct (get_dec L (counted l)) as [[b]|].
     decide (length Y = length (block_Z b)).
-    case_eq (omap (exp_eval E) Y); intros.
+    case_eq (omap (op_eval E) Y); intros.
     + pone_step. right. eapply CIH.
     + pno_step.
     + pno_step.
     + pno_step; eauto.
   - pno_step.
-  - case_eq (omap (exp_eval E) Y); intros.
-    + pextern_step.
-      * right. eapply (CIH s); eauto.
-      * right. eapply (CIH s); eauto.
-    + pno_step.
   - pone_step. right.
     eapply (CIH s); eauto using sawtooth_F_mkBlocks.
 Qed.
@@ -65,10 +66,14 @@ Lemma bisimeq'_refl s t
     -> sim'r r t (L, E, s) (L', E, s).
 Proof.
   unfold sim'r. sind s; destruct s; simpl in *; intros.
-  - case_eq (exp_eval E e); intros.
-    + pone_step; eauto.
-    + time pno_step.
-  - case_eq (exp_eval E e); intros.
+  - destruct e.
+    + case_eq (op_eval E e); intros.
+      * pone_step; eauto.
+      * time pno_step.
+    + case_eq (omap (op_eval E) Y); intros.
+      * pextern_step; eauto.
+      * pno_step.
+  - case_eq (op_eval E e); intros.
     case_eq (val2bool v); intros.
     + pone_step. left. eapply (IH s1); eauto.
     + pone_step. left. eapply (IH s2); eauto.
@@ -76,7 +81,7 @@ Proof.
   - destruct H; dcr.
     edestruct (get_dec L (counted l)) as [[b]|]; [ inv_get | ].
     decide (length Y = length (F.block_Z b)).
-    case_eq (omap (exp_eval E) Y); intros.
+    case_eq (omap (op_eval E) Y); intros.
     + destruct b, x.
       eapply H1; eauto; simpl; eauto with len.
     + pno_step.
@@ -85,9 +90,6 @@ Proof.
       congruence.
     + pno_step. inv_get. eauto.
   - pno_step.
-  - case_eq (omap (exp_eval E) Y); intros.
-    + pextern_step; eauto.
-    + pno_step.
   - pone_step. left.
     eapply (IH s); eauto with len.
     rewrite map_app.
@@ -154,12 +156,11 @@ Qed.
 
 Inductive stmtCtx : Type :=
 | ctxExp    (x : var) (e: exp) (C : stmtCtx) : stmtCtx
-| ctxIfS     (e : exp) (C : stmtCtx) (t : stmt) : stmtCtx
-| ctxIfT     (e : exp) (s : stmt) (C : stmtCtx) : stmtCtx
+| ctxIfS     (e : op) (C : stmtCtx) (t : stmt) : stmtCtx
+| ctxIfT     (e : op) (s : stmt) (C : stmtCtx) : stmtCtx
 (* block f Z : rt = s in b  *)
 | ctxLetS    (F1: list (params*stmt)) (Z:params) (C : stmtCtx) (F2: list (params*stmt)) (t : stmt) : stmtCtx
 | ctxLetT    (F: list (params*stmt)) (C : stmtCtx) : stmtCtx
-| ctxExtern (x : var)  (f:external) (e:args) (C:stmtCtx) : stmtCtx
 | ctxHole.
 
 Fixpoint fill (ctx:stmtCtx) (s':stmt) : stmt :=
@@ -169,7 +170,6 @@ Fixpoint fill (ctx:stmtCtx) (s':stmt) : stmt :=
     | ctxIfT e s ctx => stmtIf e s (fill ctx s')
     | ctxLetS F1 Z ctx F2 t => stmtFun (F1 ++ (Z,fill ctx s')::F2) t
     | ctxLetT F ctx => stmtFun F (fill ctx s')
-    | ctxExtern x f e ctx => stmtExtern x f e (fill ctx s')
     | ctxHole => s'
   end.
 
@@ -180,7 +180,6 @@ Fixpoint fillC (ctx:stmtCtx) (s':stmtCtx) : stmtCtx :=
     | ctxIfT e s ctx => ctxIfT e s (fillC ctx s')
     | ctxLetS F1 Z ctx F2 t => ctxLetS F1 Z (fillC ctx s') F2 t
     | ctxLetT F ctx => ctxLetT F (fillC ctx s')
-    | ctxExtern x f e ctx => ctxExtern x f e (fillC ctx s')
     | ctxHole => s'
   end.
 
@@ -189,16 +188,22 @@ Lemma simeq_contextual' s s' ctx r
   -> bisimeq' Bisim r (fill ctx s) (fill ctx s').
 Proof.
   intros. general induction ctx; simpl; hnf; intros; eauto.
-  - case_eq (exp_eval E e); intros.
-    + pone_step. left. eapply IHctx; eauto.
-    + pno_step.
-  - case_eq (exp_eval E e); intros.
+  - destruct e.
+    + case_eq (op_eval E e); intros.
+      * pone_step. left. eapply IHctx; eauto.
+      * pno_step.
+    + case_eq (omap (op_eval E) Y); intros.
+      * pextern_step.
+        -- left. eapply IHctx; eauto.
+        -- left. eapply IHctx; eauto.
+      * pno_step.
+  - case_eq (op_eval E e); intros.
     case_eq (val2bool v); intros.
     + pone_step; left; eapply IHctx; eauto.
     + pone_step. left.
       eapply bisimeq'_refl; eauto.
     + pno_step.
-  - case_eq (exp_eval E e); intros.
+  - case_eq (op_eval E e); intros.
     case_eq (val2bool v); intros.
     + pone_step. left.
       eapply bisimeq'_refl; eauto.
@@ -236,11 +241,6 @@ Proof.
       eapply bisimeq'_refl; eauto 20 with len.
       rewrite map_app; eauto.
     + hnf; simpl; intros; subst; inv_get; simpl; eauto.
-  - case_eq (omap (exp_eval E) e); intros.
-    + pextern_step.
-      * left. eapply IHctx; eauto.
-      * left. eapply IHctx; eauto.
-    + pno_step.
   - eapply H; eauto.
 Qed.
 

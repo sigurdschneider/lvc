@@ -1,5 +1,5 @@
 Require Import Util LengthEq IL InRel RenamedApart LabelsDefined.
-Require Import Restrict MoreExp SetOperations OUnion OptionR.
+Require Import Restrict SetOperations OUnion OptionR.
 Require Import Annotation Liveness Coherence.
 
 (*  IL_Types. *)
@@ -33,9 +33,6 @@ Inductive trs
      (*    -> G' ⊆ lv *)
      (*    -> of_list Za ⊆ lv *)
      -> trs DL ZL (stmtApp f Y) (ann0 lv) (ann0 nil)
-| trsExtern DL ZL x f Y s lv an_lv an
-  : trs (restr (lv\ singleton x) ⊝ DL) ZL s an_lv an
-    -> trs DL ZL (stmtExtern x f Y s) (ann1 lv an_lv) (ann1 nil an)
 | trsLet (DL:list (option (set var))) ZL (F:list (params*stmt)) t Za ans ant lv ans_lv ant_lv
   : length F = length ans_lv
     -> length F = length ans
@@ -144,8 +141,6 @@ Fixpoint compile (ZL:list (list var)) (s:stmt) (an:ann (list (list var))) : stmt
     | stmtIf e s t, ann2 _ ans ant => stmtIf e (compile ZL s ans) (compile ZL t ant)
     | stmtApp f Y, ann0 _ => stmtApp f (Y++List.map Var (nth (counted f) ZL nil))
     | stmtReturn e, ann0 _ => stmtReturn e
-    | stmtExtern x f Y s, ann1 _ an =>
-      stmtExtern x f Y (compile ZL s an)
     | stmtFun F t, annF Za ans ant =>
       stmtFun (compileF compile ZL F Za Za ans)
               (compile (Za++ZL) t ant)
@@ -201,12 +196,6 @@ Inductive additionalParameters_live : list (set var)   (* additional params *)
   : get ZL (counted f) Za
     -> Za ⊆ lv
     -> additionalParameters_live ZL (stmtApp f Y) (ann0 lv) (ann0 nil)
-| additionalParameters_liveExtern ZL x f Y s an an_lv lv
-  : additionalParameters_live ZL s an_lv an
-    -> additionalParameters_live ZL
-                                (stmtExtern x f Y s)
-                                (ann1 lv an_lv)
-                                (ann1 nil an)
 | additionalParameters_liveLet ZL F t (Za:〔〔var〕〕) ans ant lv ans_lv ant_lv
   : (forall Za' lv Zs n, get F n Zs -> get ans_lv n lv -> get Za n Za' ->
        of_list Za' ⊆ getAnn lv \ of_list (fst Zs))

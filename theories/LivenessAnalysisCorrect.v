@@ -29,9 +29,9 @@ Proof.
       rewrite getAnn_mapAnn in H0.
       rewrite <- H in H0.
       cases in H2.
-      eapply live_exp_sound_incl; [eapply live_freeVars|].
+      eapply live_exp_sound_incl; [eapply Exp.live_freeVars|].
       rewrite <- H2. eapply incl_right.
-    + rewrite <- H2.
+    + intros. rewrite <- H2.
       simpl. rewrite getAnn_mapAnn.
       eapply incl_union_left.
       rewrite H. reflexivity.
@@ -41,7 +41,7 @@ Proof.
     + eapply IHAnn1; eauto.
     + eapply IHAnn2; eauto.
     + repeat cases in H9; try congruence.
-      eapply live_exp_sound_incl; [eapply live_freeVars|].
+      eapply live_op_sound_incl; [eapply Op.live_freeVars|].
       rewrite <- H9. eauto with cset.
     + rewrite getAnn_mapAnn.
       rewrite <- H9.
@@ -67,17 +67,7 @@ Proof.
       rewrite <- H4; eauto with cset.
     + inv_get; eauto.
   - inv EQ. econstructor.
-    simpl in *. rewrite <- H1. eapply live_freeVars.
-  - inv EQ. simpl in *.
-    econstructor.
-    eapply IHAnn; eauto.
-    + intros.
-      eapply live_exp_sound_incl; [eapply live_freeVars|].
-      rewrite <- H2. eapply incl_union_right.
-      eapply incl_list_union; eauto using map_get_1.
-    + rewrite getAnn_mapAnn. rewrite <- H2.
-      eapply ann_R_get in H7. rewrite <- H7.
-      eauto with cset.
+    simpl in *. rewrite <- H1. eapply Op.live_freeVars.
   - inv EQ.
     simpl in *.
     econstructor.

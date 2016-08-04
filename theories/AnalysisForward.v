@@ -82,13 +82,6 @@ Fixpoint forward (sT:stmt) (Dom: stmt -> Type) `{BoundedSemiLattice (Dom sT)}
     | stmtReturn x as st, ann0 d as an =>
       fun EQ => (ann0 d, (fun _ => bottom) ⊝ ZL)
 
-    | stmtExtern x f Y s as st, ann1 d ans =>
-      fun EQ =>
-        let an := ftransform sT ZL st ST d in
-        let (ans', AL) := forward Dom ftransform ZL (subTerm_EQ_Extern EQ ST)
-                                 (setTopAnn ans (getAnni d an)) in
-        (ann1 d ans', AL)
-
     | stmtFun F t as st, annF d anF ant =>
       fun EQ =>
         let ZL' := List.map fst F ++ ZL in
@@ -306,10 +299,6 @@ Proof with eauto using setTopAnn_annotation, poLe_setTopAnn, poLe_getAnni.
     eapply update_at_poLe.
     eapply poLe_getAnni; eauto.
   - econstructor; simpl; eauto.
-  - econstructor; eauto.
-    + econstructor. eauto.
-      eapply IH; eauto using setTopAnn_annotation, poLe_setTopAnn, poLe_getAnni.
-    + eapply IH; eauto using setTopAnn_annotation, poLe_setTopAnn, poLe_getAnni.
   - fold_po.
     assert (forall (n : nat) (x x' : ann (Dom sT) * 〔Dom sT〕),
                get (forwardF (forward Dom f) (fst ⊝ F ++ ZL) F ans

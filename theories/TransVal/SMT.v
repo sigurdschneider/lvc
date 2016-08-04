@@ -1,5 +1,5 @@
 Require Import List EqNat Bool.
-Require Import IL MoreExp SetOperations Val DecSolve.
+Require Import IL Exp SetOperations Val DecSolve.
 
 Set Implicit Arguments.
 
@@ -54,13 +54,13 @@ Inductive smt :Type :=
 (** Negation **)
 | smtNeg: smt -> smt
 (** Conditional **)
-| ite: exp -> smt -> smt -> smt
+| ite: op -> smt -> smt -> smt
 (** Implication **)
 | smtImp: smt -> smt -> smt
 (** Constraint *)
-| constr: exp -> exp -> smt
+| constr: op -> op -> smt
 (** Predicate evaluation **)
-| funcApp: pred -> list exp -> smt
+| funcApp: pred -> list op -> smt
 (** Constant false **)
 | smtFalse: smt
 (** Constant true **)
@@ -71,8 +71,8 @@ Proof.
   general induction s; destruct t; try dec_solve;
   try (decide (s1 = t1); decide (s2 = t2); subst; eauto; try dec_solve);
   try (decide (s = t); subst; eauto; try dec_solve).
-  - decide (e = e0); subst; dec_solve.
-  - decide (e = e1); decide (e0 = e2); subst; dec_solve.
+  - decide (o = o0); subst; dec_solve.
+  - decide (o = o1); decide (o0 = o2); subst; dec_solve.
   - decide (p = p0); decide (l = l0); subst; dec_solve.
 Qed.
 
@@ -82,7 +82,7 @@ Inductive pol:Type :=
 | source :pol
 | target :pol.
 
-Fixpoint listGen (el:list exp) :=
+Fixpoint listGen (el:list op) :=
 match el with
 |nil => nil
 |_:: el' => default_val :: listGen el'
@@ -90,8 +90,8 @@ end.
 
 Parameter undef_substitute : val.
 
-Definition smt_eval (E:env val) (e:exp) :=
-  match exp_eval (to_partial E) e with
+Definition smt_eval (E:env val) (e:op) :=
+  match op_eval (to_partial E) e with
     | Some v => v
     | None => undef_substitute
   end.
@@ -163,9 +163,9 @@ Qed.
 Hint Immediate eq_equiv.
  *)
 
-Lemma exp_eval_partial_total E e v
- : exp_eval E e = Some v ->
-   exp_eval (to_partial (to_total E)) e = Some v.
+Lemma op_eval_partial_total E e v
+ : op_eval E e = Some v ->
+   op_eval (to_partial (to_total E)) e = Some v.
 Proof.
   intros.
   general induction e; simpl in * |- *; eauto.
@@ -178,31 +178,31 @@ Proof.
     rewrite EQ, EQ1; eauto.
 Qed.
 
-Lemma exp_eval_smt_eval E e v
- : exp_eval E e = Some v ->
+Lemma op_eval_smt_eval E e v
+ : op_eval E e = Some v ->
    smt_eval (to_total E) e = v.
 Proof.
   intros. unfold smt_eval.
-  erewrite exp_eval_partial_total; eauto.
+  erewrite op_eval_partial_total; eauto.
 Qed.
 
 (** Next 2 Lemmata belong to Lemma 4 in subsection 3.4 in the thesis
 They prove that evaluation without a total environment is equal
 to evaluation under a total environment **)
-Lemma exp_eval_partial_total_list E el vl
-:  omap (exp_eval E) el = Some vl
--> omap (exp_eval (to_partial (to_total  E))) el = Some vl.
+Lemma op_eval_partial_total_list E el vl
+:  omap (op_eval E) el = Some vl
+-> omap (op_eval (to_partial (to_total  E))) el = Some vl.
 
 Proof.
-  intros. general induction el; eauto using exp_eval_partial_total.
+  intros. general induction el; eauto using op_eval_partial_total.
   - simpl in H. monad_inv H. simpl.
-    erewrite exp_eval_partial_total; eauto; simpl.
+    erewrite op_eval_partial_total; eauto; simpl.
     erewrite IHel; eauto; simpl.
     rewrite EQ, EQ1; eauto.
 Qed.
 
 Lemma list_eval_agree E el v:
-  omap(exp_eval E) el = Some v
+  omap(op_eval E) el = Some v
   -> List.map (smt_eval (to_total E) ) el = v.
 
 Proof.
@@ -210,7 +210,7 @@ Proof.
   - eauto.
   - simpl in *.
     monad_inv H.
-    eapply exp_eval_partial_total in EQ.
+    eapply op_eval_partial_total in EQ.
     unfold smt_eval at 1.
     rewrite EQ.
     f_equal.
@@ -218,7 +218,7 @@ Proof.
 Qed.
 
 Lemma list_length_agree E el v:
-  omap (exp_eval E) el = v
+  omap (op_eval E) el = v
   ->(exists vl, List.map (smt_eval (to_total E)) el = vl
                /\ List.length el = List.length vl).
 
@@ -228,7 +228,7 @@ Proof.
   - simpl.
     exists nil; split; eauto.
   - simpl in *.
-    specialize (IHel E (omap (exp_eval E) el)).
+    specialize (IHel E (omap (op_eval E) el)).
     destruct IHel; eauto.
     destruct H.
     exists ( (smt_eval (to_total E) a):: x).
@@ -237,15 +237,15 @@ Qed.
 
 Fixpoint freeVars (s:smt) :=
 match s with
-| funcApp f x => list_union (List.map (Exp.freeVars) x)
+| funcApp f x => list_union (List.map (Op.freeVars) x)
 | smtAnd a b => freeVars a ∪ freeVars b
 | smtOr a b => freeVars a ∪ freeVars b
 | smtNeg a => freeVars a
-| ite c t f => freeVars t ∪ freeVars f ∪ Exp.freeVars c
+| ite c t f => freeVars t ∪ freeVars f ∪ Op.freeVars c
 | smtImp a b => freeVars a ∪ freeVars b
 | smtFalse => {}
 | smtTrue =>  {}
-|constr e1 e2 => Exp.freeVars e1 ∪ Exp.freeVars e2
+|constr e1 e2 => Op.freeVars e1 ∪ Op.freeVars e2
 end.
 
 Lemma models_agree F E E' s:
@@ -257,13 +257,13 @@ intros agree; general  induction s; simpl in *; try reflexivity.
 - rewrite (IHs1 F E E'), (IHs2 F E E'); eauto with cset. reflexivity.
 - rewrite (IHs1 F E E'), (IHs2 F E E'); eauto with cset. reflexivity.
 - rewrite (IHs F E E'); eauto with cset. reflexivity.
-- assert (agree_on eq (Exp.freeVars e) E E') by eauto with cset.
-  assert (exp_eval (to_partial E) e = exp_eval (to_partial E') e). {
-    eapply exp_eval_agree; symmetry; eauto.
+- assert (agree_on eq (Op.freeVars o) E E') by eauto with cset.
+  assert (op_eval (to_partial E) o = op_eval (to_partial E') o). {
+    eapply op_eval_agree; symmetry; eauto.
     eapply agree_on_partial; eauto.
   }
  unfold smt_eval in *.
-  case_eq (exp_eval (to_partial E) e); intros.
+  case_eq (op_eval (to_partial E) o); intros.
   +  rewrite <- H0. rewrite H1. case_eq(val2bool v); intros.
      * rewrite (IHs1 F E E'); eauto with cset.
      * rewrite (IHs2 F E E'); eauto with cset.
@@ -271,16 +271,16 @@ intros agree; general  induction s; simpl in *; try reflexivity.
     * rewrite (IHs1 F E E'); eauto with cset.
     * rewrite (IHs2 F E E'); eauto with cset.
 - rewrite (IHs1 F E E'), (IHs2 F E E'); eauto with cset. reflexivity.
-- assert (exp_eval (to_partial E) e = exp_eval (to_partial E') e). {
-    eapply exp_eval_agree; symmetry; eauto.
+- assert (op_eval (to_partial E) o = op_eval (to_partial E') o). {
+    eapply op_eval_agree; symmetry; eauto.
     eapply agree_on_partial. eapply agree_on_incl; eauto.  }
-  assert (exp_eval (to_partial E) e0 = exp_eval (to_partial E') e0). {
-    eapply exp_eval_agree; symmetry; eauto.
+  assert (op_eval (to_partial E) o0 = op_eval (to_partial E') o0). {
+    eapply op_eval_agree; symmetry; eauto.
     eapply agree_on_partial. eapply agree_on_incl; eauto.  }
   unfold smt_eval in *.
   rewrite <- H; rewrite <- H0.
   unfold val2bool.
-  case_eq (exp_eval (to_partial E) e); case_eq (exp_eval (to_partial E) e0); intros;
+  case_eq (op_eval (to_partial E) o); case_eq (op_eval (to_partial E) o0); intros;
   try rewrite bvEq_equiv_eq; reflexivity.
 - destruct p.
   assert (List.map (smt_eval E) l = List.map (smt_eval E') l).
@@ -289,29 +289,29 @@ intros agree; general  induction s; simpl in *; try reflexivity.
     * simpl.
       assert (smt_eval E a = smt_eval E' a).
       { unfold smt_eval.
-      pose proof (exp_eval_agree (E:=to_partial E) (E':=to_partial E') a (v:=exp_eval (to_partial E) a)).
+      pose proof (op_eval_agree (E:=to_partial E) (E':=to_partial E') a (v:=op_eval (to_partial E) a)).
       rewrite H; eauto.
       eapply agree_on_partial.
       simpl in agree.
-      eapply (agree_on_incl (bv:=Exp.freeVars a)
-                            (lv:=list_union (Exp.freeVars a ::
-                                                          List.map Exp.freeVars l))); eauto.
+      eapply (agree_on_incl (bv:=Op.freeVars a)
+                            (lv:=list_union (Op.freeVars a ::
+                                                          List.map Op.freeVars l))); eauto.
       cset_tac; simpl.
       eapply list_union_start_swap.
       cset_tac; eauto. }
       { rewrite H. f_equal. eapply IHl; eauto.
-        eapply (agree_on_incl (bv:=list_union (List.map Exp.freeVars l))
-               (lv:=list_union (List.map Exp.freeVars (a::l)))); eauto.
+        eapply (agree_on_incl (bv:=list_union (List.map Op.freeVars l))
+               (lv:=list_union (List.map Op.freeVars (a::l)))); eauto.
         cset_tac; simpl.
         eapply list_union_start_swap.
         eapply union_right; eauto. }
   + rewrite H.  split; eauto.
 Qed.
 
-Lemma exp_freeVars_list_agree (E: onv val) e el:
-    (forall x, x ∈ list_union (Exp.freeVars e:: List.map Exp.freeVars el) -> exists v, E x = Some v)
-    ->(forall x, x ∈ Exp.freeVars e -> (exists v, E x = Some v)) /\
-      (forall x, x ∈ list_union (List.map Exp.freeVars el) -> exists v, E x = Some v).
+Lemma op_freeVars_list_agree (E: onv val) e el:
+    (forall x, x ∈ list_union (Op.freeVars e:: List.map Op.freeVars el) -> exists v, E x = Some v)
+    ->(forall x, x ∈ Op.freeVars e -> (exists v, E x = Some v)) /\
+      (forall x, x ∈ list_union (List.map Op.freeVars el) -> exists v, E x = Some v).
 
 Proof.
   intros. split;
@@ -321,10 +321,10 @@ Proof.
     cset_tac; eauto.
 Qed.
 
-Lemma exp_freeVars_bin_agree (E:onv val) a b:
-  (forall x, x ∈ (union (Exp.freeVars a) (Exp.freeVars b)) -> exists v, E x = Some v)
-    ->(forall x, x ∈ Exp.freeVars a -> (exists v, E x = Some v)) /\
-      (forall x, x ∈ Exp.freeVars b -> exists v, E x = Some v).
+Lemma op_freeVars_bin_agree (E:onv val) a b:
+  (forall x, x ∈ (union (Op.freeVars a) (Op.freeVars b)) -> exists v, E x = Some v)
+    ->(forall x, x ∈ Op.freeVars a -> (exists v, E x = Some v)) /\
+      (forall x, x ∈ Op.freeVars b -> exists v, E x = Some v).
 
 Proof.
   intros.

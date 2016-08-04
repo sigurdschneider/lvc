@@ -22,8 +22,6 @@ Fixpoint labIndices (symb: list var) (s:nstmt) : status stmt :=
     | nstmtApp l Y =>
       sdo f <- option2status (pos symb l 0) "labIndices: Undeclared function" ; Success (stmtApp (LabI f) Y)
     | nstmtReturn x => Success (stmtReturn x)
-    | nstmtExtern x f Y s =>
-      sdo s' <- (labIndices symb s); Success (stmtExtern x f Y s')
     | nstmtFun F s2 =>
       let fl := List.map (fst ∘ fst) F in
       sdo F' <- smap (fun (fZs:var*params*nstmt) => sdo s <- labIndices (fl ++ symb) (snd fZs);
@@ -43,7 +41,6 @@ Proof.
     erewrite IH; eauto.
   - reflexivity.
   - reflexivity.
-  - erewrite IH; eauto.
   - erewrite IH; eauto.
     f_equal. f_equal.
     exploit smap_length; eauto.
@@ -159,10 +156,18 @@ Lemma labIndicesSim_sim σ1 σ2
 Proof.
   revert σ1 σ2. cofix; intros.
   destruct H; destruct s; simpl in *; try monadS_inv EQ.
-  - case_eq (exp_eval E e); intros.
-    + one_step. eapply labIndicesSim_sim; econstructor; eauto.
-    + no_step.
-  - case_eq (exp_eval E e); intros.
+  - destruct e.
+    + case_eq (op_eval E e); intros.
+      * one_step. eapply labIndicesSim_sim; econstructor; eauto.
+      * no_step.
+    + case_eq (omap (op_eval E) Y); intros.
+      * extern_step.
+        -- eexists (ExternI f l default_val); eexists; try (now (econstructor; eauto)).
+        -- eapply labIndicesSim_sim; econstructor; eauto.
+        -- eapply labIndicesSim_sim; econstructor; eauto.
+      * no_step.
+
+  - case_eq (op_eval E e); intros.
     case_eq (val2bool v); intros; one_step; eapply labIndicesSim_sim; econstructor; eauto.
     no_step.
   - eapply option2status_inv in EQ0.
@@ -174,7 +179,7 @@ Proof.
     orewrite (i - 0 = i) in H1.
     edestruct LEQ as [C2 [C3 [[Z [s C4]] [C5 [C6 [C7 C8]]]]]]; eauto.
     decide (length Z = length Y).
-    case_eq (omap (exp_eval E) Y); intros.
+    case_eq (omap (op_eval E) Y); intros.
     edestruct C5 as [s' [D1 [D2 D3]]]; eauto.
     {
       edestruct C6.
@@ -224,12 +229,6 @@ Proof.
        eapply get_drop in H3. orewrite (i - f + f = i) in H3.
        get_functional; subst. simpl in *. congruence.
   - no_step.
-  - case_eq (omap (exp_eval E) Y); intros.
-    + extern_step.
-      * eexists (ExternI f l default_val); eexists; try (now (econstructor; eauto)).
-      * eapply labIndicesSim_sim; econstructor; eauto.
-      * eapply labIndicesSim_sim; econstructor; eauto.
-    + no_step.
   - one_step. eapply labIndicesSim_sim. econstructor; eauto.
     instantiate (1:=(mapi (I.mkBlock L F) F ++ LB)).
     econstructor. intros.

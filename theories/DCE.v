@@ -1,4 +1,4 @@
-Require Import CSet Util LengthEq Fresh MoreExp Take MoreList Filter OUnion.
+Require Import CSet Util LengthEq Fresh Take MoreList Filter OUnion.
 Require Import IL Annotation LabelsDefined Sawtooth InRel Liveness TrueLiveness UnreachableCode.
 Require Import Sim SimTactics SimI.
 
@@ -20,17 +20,15 @@ Fixpoint compile (RL:list bool) (s:stmt) (a:ann bool) {struct s} :=
     | stmtLet x e s, ann1 _ an =>
       stmtLet x e (compile RL s an)
     | stmtIf e s t, ann2 _ ans ant =>
-      if [exp2bool e = Some true] then
+      if [op2bool e = Some true] then
         (compile RL s ans)
-      else if [ exp2bool e = Some false ] then
+      else if [ op2bool e = Some false ] then
              (compile RL t ant)
            else
              stmtIf e (compile RL s ans) (compile RL t ant)
     | stmtApp f Y, ann0 _ =>
       stmtApp (LabI (countTrue (take (counted f) RL))) Y
     | stmtReturn x, ann0 _ => stmtReturn x
-    | stmtExtern x f e s, ann1 lv an =>
-      stmtExtern x f e (compile RL s an)
     | stmtFun F t, annF lv ans ant =>
       let LV' := getAnn ⊝ ans ++ RL in
       let F' := compileF compile LV' F ans in
@@ -100,7 +98,6 @@ Proof.
   sind s; destruct s; intros RL uc; destruct uc; simpl; eauto.
   - rewrite IH; eauto.
   - repeat cases; simpl; repeat rewrite IH; eauto with cset.
-  - rewrite IH; eauto.
   - cases.
     + rewrite IH; eauto.
     + rewrite Heq; clear Heq; simpl.
@@ -119,7 +116,6 @@ Proof.
   sind s; destruct s; intros RL uc; destruct uc; simpl; eauto.
   - rewrite IH; eauto.
   - repeat cases; simpl; repeat rewrite IH; eauto with cset.
-  - rewrite IH; eauto.
   - cases.
     + rewrite IH; eauto.
     + rewrite Heq; clear Heq; simpl.
@@ -160,11 +156,11 @@ Qed.
 
 Local Hint Extern 0 =>
 match goal with
-| [ H : exp2bool ?e <> Some ?t , H' : exp2bool ?e <> Some ?t -> ?B = ?C |- _ ] =>
+| [ H : op2bool ?e <> Some ?t , H' : op2bool ?e <> Some ?t -> ?B = ?C |- _ ] =>
   specialize (H' H); subst
-| [ H : exp2bool ?e = Some true , H' : exp2bool ?e <> Some false -> ?B = ?C |- _ ] =>
+| [ H : op2bool ?e = Some true , H' : op2bool ?e <> Some false -> ?B = ?C |- _ ] =>
   let H'' := fresh "H" in
-  assert (H'':exp2bool e <> Some false) by congruence;
+  assert (H'':op2bool e <> Some false) by congruence;
     specialize (H' H''); subst
 end.
 
@@ -491,21 +487,26 @@ Lemma sim_I i ZL RL r L L' V s (a:ann bool) (Ann:getAnn a)
 Proof.
   unfold sim'r. revert_except s.
   sind s; destruct s; simpl; intros; invt unreachable_code; simpl in * |- *.
-  - case_eq (exp_eval V e); intros.
-    + pone_step; eauto.
-    + pno_step.
+  - destruct e.
+    + case_eq (op_eval V e); intros.
+      * pone_step; eauto.
+      * pno_step.
+    + remember (omap (op_eval V) Y). symmetry in Heqo.
+      destruct o.
+      * pextern_step; eauto using agree_on_update_same, agree_on_incl; try congruence.
+      * pno_step.
   - repeat cases.
-    + edestruct (exp2bool_val2bool V); eauto; dcr.
+    + edestruct (op2bool_val2bool V); eauto; dcr.
       pone_step_left. eauto.
-    + edestruct (exp2bool_val2bool V); eauto; dcr.
+    + edestruct (op2bool_val2bool V); eauto; dcr.
       pone_step_left; eauto.
-    + remember (exp_eval V e). symmetry in Heqo.
+    + remember (op_eval V e). symmetry in Heqo.
       destruct o.
       * case_eq (val2bool v); intros; pone_step; eauto.
       * pno_step.
   - assert (b=true). destruct a0, b; isabsurd; eauto. subst.
     edestruct H as [? [? [GetL GetL']]]; eauto using zip_get.
-    remember (omap (exp_eval V) Y). symmetry in Heqo.
+    remember (omap (op_eval V) Y). symmetry in Heqo.
     destruct o.
     + destruct x as [Z1 s1 n1], x0 as [Z2 s2 n2].
       edestruct LSIM as [? [? [? [ ? SIM]]]]; eauto; dcr.
@@ -521,10 +522,6 @@ Proof.
       * pno_step. simpl in *; dcr; subst. congruence.
     + pno_step.
   - pno_step.
-  - remember (omap (exp_eval V) Y). symmetry in Heqo.
-    destruct o.
-    + pextern_step; eauto using agree_on_update_same, agree_on_incl; try congruence.
-    + pno_step.
   - cases.
     + pone_step_left.
       eapply (IH s ltac:(eauto) i (fst ⊝ F ++ ZL)); eauto with len.
@@ -622,16 +619,14 @@ Fixpoint compile_live (s:stmt) (a:ann (set var)) (b:ann bool) : ann (set var) :=
     | stmtLet x e s, ann1 lv an, ann1 _ bn =>
       ann1 lv (compile_live s an bn)
     | stmtIf e s t, ann2 lv ans ant, ann2 _ bns bnt =>
-      if [exp2bool e = Some true] then
+      if [op2bool e = Some true] then
         compile_live s ans bns
-      else if [exp2bool e = Some false ] then
+      else if [op2bool e = Some false ] then
         compile_live t ant bnt
       else
         ann2 lv (compile_live s ans bns) (compile_live t ant bnt)
     | stmtApp f Y, ann0 lv, _ => ann0 lv
     | stmtReturn x, ann0 lv, _ => ann0 lv
-    | stmtExtern x f Y s, ann1 lv an, ann1 _ bn  =>
-      ann1 lv (compile_live s an bn)
     | stmtFun F t, annF lv anF ant, annF _ bnF bnt =>
       let anF'' := zip (fun (Zs:params * stmt) ab =>
                          compile_live (snd Zs) (fst ab) (snd ab)) F (pair ⊜ anF bnF) in
@@ -671,7 +666,8 @@ Proof.
   intros UC Ann LS.
   general induction LS; inv UC; simpl; eauto using true_live_sound.
   - econstructor; eauto using compile_live_incl with cset.
-    intros. eapply H. eapply compile_live_incl; eauto.
+    intros. eapply H. destruct H1; eauto.
+    left. eapply compile_live_incl; eauto.
   - repeat cases; eauto. econstructor; eauto; intros.
     + rewrite compile_live_incl; eauto.
     + rewrite compile_live_incl; eauto.
@@ -686,8 +682,6 @@ Proof.
     exploit (get_filter_by (fun b => b) H7 H0); eauto.
     destruct a, b; isabsurd; eauto.
     simpl. rewrite map_id in H5. eauto.
-  - econstructor; eauto.
-    rewrite compile_live_incl; eauto.
   - cases.
     + exploit IHLS; eauto.
       assert (forall (n : nat) (b : bool), get (getAnn ⊝ als0) n b -> b = false).

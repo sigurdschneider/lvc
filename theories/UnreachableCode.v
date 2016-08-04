@@ -1,5 +1,5 @@
 Require Import AllInRel List Map Env DecSolve.
-Require Import IL Annotation AutoIndTac Exp MoreExp SetOperations.
+Require Import IL Annotation AutoIndTac Exp SetOperations.
 Require Export Filter LabelsDefined OUnion.
 
 Set Implicit Arguments.
@@ -21,8 +21,8 @@ Inductive unreachable_code (i:sc)
      -> getAnn al = b
      -> unreachable_code i BL (stmtLet x e s) (ann1 b al)
 | UCPIf BL e b1 b2 b al1 al2
-  :  (exp2bool e <> Some false -> getAnn al1 = b)
-     -> (exp2bool e <> Some true -> getAnn al2 = b)
+  :  (op2bool e <> Some false -> getAnn al1 = b)
+     -> (op2bool e <> Some true -> getAnn al2 = b)
      -> unreachable_code i BL b1 al1
      -> unreachable_code i BL b2 al2
      -> unreachable_code i BL (stmtIf e b1 b2) (ann2 b al1 al2)
@@ -32,10 +32,6 @@ Inductive unreachable_code (i:sc)
     -> unreachable_code i BL (stmtApp l Y) (ann0 a)
 | UCReturn BL e b
   : unreachable_code i BL (stmtReturn e) (ann0 b)
-| UCExtern BL x s b Y al f
-  : unreachable_code i BL s al
-    -> getAnn al = b
-    -> unreachable_code i BL (stmtExtern x f Y s) (ann1 b al)
 | UCLet BL F t b als alt
   : unreachable_code i (getAnn ⊝ als ++ BL) t alt
     -> length F = length als
@@ -51,7 +47,7 @@ Inductive unreachable_code (i:sc)
 
 Local Hint Extern 0 =>
 match goal with
-| [ H : exp2bool ?e <> Some ?t , H' : exp2bool ?e <> Some ?t -> ?B = ?C |- _ ] =>
+| [ H : op2bool ?e <> Some ?t , H' : op2bool ?e <> Some ?t -> ?B = ?C |- _ ] =>
   specialize (H' H); subst
 end.
 
@@ -75,7 +71,6 @@ Proof.
     eapply (IH s); eauto.
   - exploit (IH s1); eauto.
   - exploit (IH s2); eauto.
-  - eapply (IH s); eauto.
   - destruct l'.
     exploit (IH s); eauto; dcr.
     setoid_rewrite H8.

@@ -1,4 +1,4 @@
-Require Import List Map Env AllInRel Exp MoreExp Rename.
+Require Import List Map Env AllInRel Exp Rename.
 Require Import IL Annotation InRel AutoIndTac .
 
 Set Implicit Arguments.
@@ -41,7 +41,7 @@ Inductive live_sound (i:overapproximation)
 | LIf Lv ZL e s1 s2 lv al1 al2
   :  live_sound i ZL Lv s1 al1
      -> live_sound i ZL Lv s2 al2
-     -> live_exp_sound e lv
+     -> live_op_sound e lv
      -> getAnn al1 ⊆ lv
      -> getAnn al2 ⊆ lv
      -> live_sound i ZL Lv (stmtIf e s1 s2) (ann2 lv al1 al2)
@@ -51,17 +51,11 @@ Inductive live_sound (i:overapproximation)
     (** Imperative Liveness requires the globals of a function to be live at the call site *)
     -> (if isImperative i then ((blv \ of_list Z) ⊆ lv) else True)
     -> length Y = length Z
-    -> (forall n y, get Y n y -> live_exp_sound y lv)
+    -> (forall n y, get Y n y -> live_op_sound y lv)
     -> live_sound i ZL Lv (stmtApp l Y) (ann0 lv)
 | LReturn ZL Lv e lv
-  : live_exp_sound e lv
+  : live_op_sound e lv
     -> live_sound i ZL Lv (stmtReturn e) (ann0 lv)
-| LExternZL ZL Lv x f Y s lv al
-  :  live_sound i ZL Lv s al
-     -> (forall n y, get Y n y -> live_exp_sound y lv)
-     -> (getAnn al \ singleton x) ⊆ lv
-     -> x ∈ getAnn al
-     -> live_sound i ZL Lv (stmtExtern x f Y s) (ann1 lv al)
 | LLet ZL Lv F t lv als alb
   : live_sound i (fst ⊝ F ++ ZL) (getAnn ⊝ als ++ Lv) t alb
     -> length F = length als
@@ -135,8 +129,9 @@ Lemma live_sound_monotone2 i ZL LV s lv a
   -> live_sound i ZL LV s (setTopAnn lv a).
 Proof.
   intros. general induction H; simpl in * |- *;
-            eauto using live_sound, live_exp_sound_incl, Subset_trans with cset.
-  - econstructor; eauto using live_exp_sound_incl.
+            eauto using live_sound, live_op_sound_incl,
+            live_exp_sound_incl, Subset_trans with cset.
+  - econstructor; eauto using live_op_sound_incl.
     cases; eauto with cset.
   - econstructor; eauto with cset.
     + intros. edestruct H3; eauto.
@@ -145,22 +140,14 @@ Qed.
 
 (** ** Live variables always contain the free variables *)
 
-Lemma freeVars_live_list Y lv
-  : (forall (n : nat) (y : exp), get Y n y -> live_exp_sound y lv)
-    -> list_union (Exp.freeVars ⊝ Y) ⊆ lv.
-Proof.
-  intros H. eapply list_union_incl; intros; inv_get; eauto using Exp.freeVars_live.
-Qed.
-
 Lemma freeVars_live s lv ZL Lv
   : live_sound Functional ZL Lv s lv -> IL.freeVars s ⊆ getAnn lv.
 Proof.
   intros.
-  induction H; simpl; eauto using Exp.freeVars_live, freeVars_live_list with cset.
+  induction H; simpl; eauto using Exp.freeVars_live, Op.freeVars_live,
+                      Op.freeVars_live_list with cset.
   - eapply union_subset_3; eauto with cset.
     + eapply list_union_incl; intros; inv_get; eauto.
-
-
       edestruct H3; eauto; simpl in *. exploit H2; eauto.
       eauto with cset.
 Qed.
@@ -179,7 +166,7 @@ Proof.
       eapply lookup_set_incl; eauto.
     + rewrite getAnn_mapAnn.
       eapply lookup_set_spec; eauto.
-  - econstructor; eauto using live_exp_rename_sound.
+  - econstructor; eauto using live_op_rename_sound.
     + rewrite getAnn_mapAnn. eapply lookup_set_incl; eauto.
     + rewrite getAnn_mapAnn. eapply lookup_set_incl; eauto.
   - econstructor; eauto with len.
@@ -188,14 +175,8 @@ Proof.
       etransitivity. eapply lookup_set_minus_incl; eauto.
       eapply lookup_set_incl; eauto.
     + rewrite lookup_list_length; eauto with len.
-    + intros; inv_get; eauto using live_exp_rename_sound.
-  - econstructor; eauto using live_exp_rename_sound.
-  - econstructor; eauto using live_exp_rename_sound.
-    + intros; inv_get; eauto using live_exp_rename_sound.
-    + rewrite getAnn_mapAnn.
-      rewrite lookup_set_minus_single_incl; eauto.
-      eapply lookup_set_incl; eauto.
-    + rewrite getAnn_mapAnn; eauto. eapply lookup_set_spec; eauto.
+    + intros; inv_get; eauto using live_op_rename_sound.
+  - econstructor; eauto using live_op_rename_sound.
   - econstructor; eauto; try rewrite getAnn_mapAnn; eauto with len.
     + repeat rewrite map_map; simpl. rewrite <- map_map.
       rewrite <- map_app.

@@ -35,7 +35,6 @@ Fixpoint setAnn A (a:A) (s:stmt) : ann A :=
     | stmtIf e s1 s2 => ann2 a (setAnn a s1) (setAnn a s2)
     | stmtApp l Y => ann0 a
     | stmtReturn e => ann0 a
-    | stmtExtern x f Y s0 => ann1 a (setAnn a s0)
     | stmtFun s0 s1 => annF a (List.map (snd ∘ (setAnn a)) s0) (setAnn a s1)
   end.
 
@@ -78,9 +77,6 @@ Inductive annotation {A:Type} : stmt -> ann A -> Prop :=
   : annotation (stmtApp l Y) (ann0 a)
 | antReturn x a
   : annotation (stmtReturn x) (ann0 a)
-| antExtern x f Y s a sa
-  : annotation s sa
-    -> annotation (stmtExtern x f Y s) (ann1 a sa)
 | antLet s t a sa ta
   : length s = length sa
     -> (forall n s' sa', get sa n sa' -> get s n s' -> annotation (snd s') sa')

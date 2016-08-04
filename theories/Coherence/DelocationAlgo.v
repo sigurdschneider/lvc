@@ -1,5 +1,5 @@
 Require Import Util LengthEq IL InRel RenamedApart LabelsDefined OptionR.
-Require Import Keep Drop Take Restrict MoreExp SetOperations OUnion.
+Require Import Keep Drop Take Restrict SetOperations OUnion.
 Require Import Annotation Liveness Coherence Delocation.
 
 Set Implicit Arguments.
@@ -41,9 +41,6 @@ Fixpoint computeParameters (DL: list (set var)) (ZL:list (list var)) (AP:list (s
       (ann2 nil ars art, zip ounion rs rt)
     | stmtApp f Y, ann0 lv => (ann0 nil, keep (counted f) AP)
     | stmtReturn x, ann0 _ => (ann0 nil, (List.map (fun _ => None) AP))
-    | stmtExtern x f e s, ann1 _ an =>
-      let (ar, r) := computeParameters DL ZL (addParam x DL AP) s an in
-      (ann1 nil ar, r)
     | stmtFun F t, annF lv ans ant =>
       let DL' := (getAnn ⊝ ans) \\ (fst ⊝ F) in
       let Z : list params := List.map fst F in
@@ -164,9 +161,6 @@ Proof.
   - eauto using PIR2_ifSndR_keep.
   - eapply PIR2_get; eauto with len.
     intros; inv_get; eauto using @ifSndR.
-  - eapply PIR2_ifSndR_Subset_left.
-    eapply IHLS; eauto using addParam_zip_lminus_length.
-    eauto using PIR2_addParam with len.
   - rewrite <- zip_app; eauto.
     eapply PIR2_ifSndR_Subset_left.
     eapply PIR2_drop.
@@ -269,7 +263,6 @@ Proof.
   - eauto using PIR2_ifFstR_Subset_right, PIR2_ifFstR_keep.
   - eapply PIR2_get; eauto with len.
     intros. inv_get; econstructor.
-  - eapply IHLS; eauto using addParam_zip_lminus_length, addParam_Subset.
   - assert (EQ: Lv \\ ZL = drop ❬F❭ ((getAnn ⊝ als) \\ (fst ⊝ F) ++ Lv \\ ZL))
       by (rewrite drop_length_ass; eauto with len).
     rewrite EQ at 4.
@@ -537,18 +530,6 @@ Proof.
     cases; eauto.
     eexists; split; eauto.
     rewrite <- H3. eauto with cset.
-  - edestruct (IH s) as [? [A B]]; try eapply GetLV; eauto with len; subst.
-    eexists; split; eauto.
-    inv_get.
-    exploit (@computeParameters_AP_LV Lv ZL (addParam x (Lv \\ ZL) AP));
-      try eapply H5; eauto with len.
-    PIR2_inv. unfold addParam in H2. inv_get.
-    rewrite <- H8.
-    revert H10 B. clear_all; cases; intros; cset_tac.
-    idtac "improve".
-    eapply B; cset_tac.
-    eapply H3. eapply H10. cset_tac.
-    eapply B. cset_tac.
   - lnorm. inv_get.
     invc H4.
     + exploit (computeParameters_length (tab {} ‖F‖ ++ AP) H1) as Len;
@@ -914,14 +895,6 @@ Proof.
       rewrite <- H1. eauto with cset.
     + eapply map_get_1. eapply keep_Some; eauto.
   - econstructor.
-
-  - eapply trsExtern, trs_monotone_DL.
-    + eapply IHLIVE; eauto 10 using addParam_Subset with len.
-    + rewrite restrict_comp_meet.
-      assert (SEQ:lv ∩ (lv \ singleton x) [=] lv \ singleton x) by cset_tac.
-      rewrite SEQ. eapply restrict_zip_ominus'; eauto with len.
-      eapply PIR2_not_in; [ eapply computeParameters_AP_LV; eauto with len
-                          | eauto with len].
   - lnorm. econstructor.
     + eauto with len.
     + eauto with len.
@@ -1128,8 +1101,6 @@ Proof.
   - inv_get. PIR2_inv. inv_get.
     econstructor; eauto using map_get_eq, keep_Some; eauto with cset.
   - econstructor.
-  - econstructor; eauto.
-    eapply IHLS; eauto 20 using addParam_Subset with len.
   - lnorm.
     econstructor.
     + intros. inv_get.

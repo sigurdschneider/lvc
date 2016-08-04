@@ -29,8 +29,6 @@ Proof.
         dec_solve.
   + destruct a;[| dec_right].
     dec_solve.
-  + destruct a;[| dec_right].
-    edestruct (IH s (ltac:(eauto)) (restr (a0\ singleton x) ⊝ DL) ZL ans_lv ans); try dec_solve.
   + ensure (length F = length a);
     ensure (length F = length sa);
     ensure(length F = length sa0).

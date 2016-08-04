@@ -1,4 +1,4 @@
-Require Import CSet Util Fresh Filter MoreExp Take MoreList OUnion AllInRel.
+Require Import CSet Util Fresh Filter Take MoreList OUnion AllInRel.
 Require Import IL Annotation LabelsDefined Sawtooth InRel Liveness TrueLiveness.
 
 Set Implicit Arguments.
@@ -9,13 +9,13 @@ Definition filter (Z:params) (lv:set var) := List.filter (fun x => B[x ∈ lv]) 
 Fixpoint compile (LV:list ((set var) * params)) (s:stmt) (a:ann (set var)) :=
   match s, a with
     | stmtLet x e s, ann1 _ an =>
-      if [x ∈ getAnn an]
+      if [x ∈ getAnn an \/ isCall e]
       then stmtLet x e (compile LV s an)
       else compile LV s an
     | stmtIf e s t, ann2 _ ans ant =>
-      if [exp2bool e = Some true] then
+      if [op2bool e = Some true] then
         (compile LV s ans)
-      else if [ exp2bool e = Some false ] then
+      else if [ op2bool e = Some false ] then
         (compile LV t ant)
       else
         stmtIf e (compile LV s ans) (compile LV t ant)
@@ -23,8 +23,6 @@ Fixpoint compile (LV:list ((set var) * params)) (s:stmt) (a:ann (set var)) :=
       let lvZ := nth (counted f) LV (∅, nil) in
       stmtApp f (filter_by (fun y => B[y ∈ fst lvZ]) (snd lvZ) Y)
     | stmtReturn x, ann0 _ => stmtReturn x
-    | stmtExtern x f e s, ann1 lv an =>
-      stmtExtern x f e (compile LV s an)
     | stmtFun F t, annF lv ans ant =>
       let LV' := pair ⊜ (getAnn ⊝ ans) (fst ⊝ F) ++ LV in
       stmtFun (zip (fun Zs a => (filter (fst Zs) (getAnn a), compile LV' (snd Zs) a)) F ans)
@@ -57,19 +55,17 @@ Qed.
 Fixpoint compile_live (s:stmt) (a:ann (set var)) (G:set var) : ann (set var) :=
   match s, a with
     | stmtLet x e s, ann1 lv an as a =>
-      if [x ∈ getAnn an] then ann1 (G ∪ lv) (compile_live s an {x})
+      if [x ∈ getAnn an \/ isCall e] then ann1 (G ∪ lv) (compile_live s an {x})
                          else compile_live s an G
     | stmtIf e s t, ann2 lv ans ant =>
-      if [exp2bool e = Some true] then
+      if [op2bool e = Some true] then
         compile_live s ans G
-      else if [exp2bool e = Some false ] then
+      else if [op2bool e = Some false ] then
         compile_live t ant G
       else
         ann2 (G ∪ lv) (compile_live s ans ∅) (compile_live t ant ∅)
     | stmtApp f Y, ann0 lv => ann0 (G ∪ lv)
     | stmtReturn x, ann0 lv => ann0 (G ∪ lv)
-    | stmtExtern x f Y s, ann1 lv an as a =>
-      ann1 (G ∪ lv) (compile_live s an {x})
     | stmtFun F t, annF lv ans ant =>
       let ans' := zip (fun Zs a => let a' := compile_live (snd Zs) a ∅ in
                                setTopAnn a' (getAnn a' ∪ of_list (filter (fst Zs) (getAnn a)))) F ans
@@ -120,7 +116,7 @@ Proof.
     + eapply incl_compile_live; eauto.
   - repeat cases; eauto.
     + econstructor; eauto.
-      eapply live_exp_sound_incl; eauto.
+      eapply live_op_sound_incl; eauto.
       rewrite compile_live_incl_empty; eauto with cset.
       rewrite compile_live_incl_empty; eauto with cset.
   - econstructor; eauto using zip_get.
@@ -132,14 +128,10 @@ Proof.
       simpl. eauto with len.
     + intros ? ? Get. erewrite get_nth in Get; eauto using zip_get. simpl in *.
       edestruct filter_by_get as [? [? []]]; eauto; dcr. simpl in *; cases in H6.
-      eapply live_exp_sound_incl.
+      eapply live_op_sound_incl.
       eapply argsLive_live_exp_sound; eauto. eauto with cset.
   - econstructor; eauto.
-    eapply live_exp_sound_incl; eauto using incl_right.
-  - econstructor; eauto.
-    + intros; eapply live_exp_sound_incl; eauto using incl_right.
-    + rewrite compile_live_incl; eauto. rewrite <- H1. cset_tac; intuition.
-    + eapply incl_compile_live; eauto.
+    eapply live_op_sound_incl; eauto using incl_right.
   - econstructor; simpl in *; eauto with len.
     + eapply live_sound_monotone.
       rewrite map_zip. simpl.
@@ -284,49 +276,52 @@ Lemma sim_I ZL LV r L L' V V' s  lv
 Proof.
   unfold sim'r. revert_except s.
   sind s; destruct s; simpl; intros; invt true_live_sound; simpl in * |- *.
-  - case_eq (exp_eval V e); intros.
-    + cases.
-      * pone_step. instantiate (1:=v).
-        erewrite exp_eval_live; eauto. eapply agree_on_sym; eauto.
-        left. eapply (IH s); eauto. eapply agree_on_update_same. reflexivity.
-        eapply agree_on_incl; eauto.
-      * eapply sim'_expansion_closed;
-          [ | eapply star2_silent;
-              [ econstructor; eauto | eapply star2_refl ]
-            | eapply star2_refl].
-        eapply (IH s); eauto. eapply agree_on_update_dead; eauto.
-        eapply agree_on_incl; eauto.
-        rewrite <- H11. cset_tac; intuition.
-    + pfold. econstructor 3; [| eapply star2_refl|]; eauto. stuck.
+  - destruct e.
+    + cases. exploit H10; eauto. inv H3.
+      * case_eq (op_eval V e); intros.
+        -- pone_step. instantiate (1:=v).
+           erewrite op_eval_live; eauto. eapply agree_on_sym; eauto.
+           left. eapply (IH s); eauto. eapply agree_on_update_same. reflexivity.
+           eapply agree_on_incl; eauto.
+        -- pno_step.
+           erewrite op_eval_live in H4; eauto. congruence.
+      * case_eq (op_eval V e); intros.
+        -- pone_step_left.
+           eapply (IH s); eauto. eapply agree_on_update_dead; eauto.
+           eapply agree_on_incl; eauto.
+           rewrite <- H11. cset_tac; intuition.
+        -- pno_step_left.
+    + cases. exploit H10; eauto. inv H3.
+      * remember (omap (op_eval V) Y). symmetry in Heqo.
+        exploit omap_op_eval_live_agree; eauto.
+        destruct o.
+        -- pextern_step; eauto using agree_on_update_same, agree_on_incl; try congruence.
+        -- pno_step.
+      * exfalso. eapply NOTCOND. right; simpl; eauto.
   - repeat cases.
-    + edestruct (exp2bool_val2bool V); eauto; dcr.
-      eapply sim'_expansion_closed.
+    + edestruct (op2bool_val2bool V); eauto; dcr.
+      pone_step_left.
       eapply (IH s1); eauto. eapply agree_on_incl; eauto.
-      eapply star2_silent.
-      econstructor; eauto. eapply star2_refl.
-      eapply star2_refl.
-    + edestruct (exp2bool_val2bool V); eauto; dcr.
-      eapply sim'_expansion_closed.
+    + edestruct (op2bool_val2bool V); eauto; dcr.
+      pone_step_left.
       eapply (IH s2); eauto. eapply agree_on_incl; eauto.
-      eapply star2_silent.
-      econstructor 3; eauto. eapply star2_refl.
-      eapply star2_refl.
-    + remember (exp_eval V e). symmetry in Heqo.
-      exploit exp_eval_live_agree; eauto.
-      destruct o. case_eq (val2bool v); intros.
-      pone_step.
-      left; eapply (IH s1); eauto using agree_on_incl.
-      pone_step.
-      left; eapply (IH s2); eauto using agree_on_incl.
-      pno_step.
+    + remember (op_eval V e). symmetry in Heqo.
+      exploit op_eval_live_agree; eauto.
+      destruct o.
+      * case_eq (val2bool v); intros.
+        -- pone_step.
+           left; eapply (IH s1); eauto using agree_on_incl.
+        -- pone_step.
+           left; eapply (IH s2); eauto using agree_on_incl.
+      * pno_step.
   - edestruct H2 as [? [? [GetL GetL']]]; eauto.
-    remember (omap (exp_eval V) Y). symmetry in Heqo.
+    remember (omap (op_eval V) Y). symmetry in Heqo.
     erewrite (get_nth); eauto using zip_get; simpl.
     destruct o.
     + destruct x as [Z1 s1 n1], x0 as [Z2 s2 n2].
       hnf in H1; dcr.
       exploit (@omap_filter_by _ _ _ _ (fun y : var => if [y \In blv] then true else false) _ _ Z Heqo); eauto.
-      exploit omap_exp_eval_live_agree; eauto.
+      exploit omap_op_eval_live_agree; eauto.
       intros. eapply argsLive_liveSound; eauto.
       eapply H13; eauto using zip_get.
       rewrite IndexRelIP_eq; eauto.
@@ -335,12 +330,7 @@ Proof.
       eauto using agree_on_incl.
     + pfold; econstructor 3; try eapply star2_refl; eauto; stuck2.
   - pno_step.
-    simpl. erewrite <- exp_eval_live_agree; eauto. eapply agree_on_sym; eauto.
-  - remember (omap (exp_eval V) Y). symmetry in Heqo.
-    exploit omap_exp_eval_live_agree; eauto.
-    destruct o.
-    + pextern_step; eauto using agree_on_update_same, agree_on_incl; try congruence.
-    + pno_step.
+    simpl. erewrite <- op_eval_live_agree; eauto. eapply agree_on_sym; eauto.
   - pone_step. left. rewrite <- zip_app; eauto with len. eapply IH; eauto.
     + simpl in *; eapply agree_on_incl; eauto.
     + rewrite zip_app; eauto with len.
@@ -434,49 +424,52 @@ Lemma sim_F ZL LV r L L' V V' s  lv
 Proof.
   unfold sim'r. revert_except s.
   sind s; destruct s; simpl; intros; invt true_live_sound; simpl in * |- *.
-  - case_eq (exp_eval V e); intros.
-    + cases.
-      * pone_step. instantiate (1:=v).
-        erewrite exp_eval_live; eauto. eapply agree_on_sym; eauto.
-        left. eapply (IH s); eauto. eapply agree_on_update_same. reflexivity.
-        eapply agree_on_incl; eauto.
-      * eapply sim'_expansion_closed;
-          [ | eapply star2_silent;
-              [ econstructor; eauto | eapply star2_refl ]
-            | eapply star2_refl].
-        eapply (IH s); eauto. eapply agree_on_update_dead; eauto.
-        eapply agree_on_incl; eauto.
-        rewrite <- H11. cset_tac; intuition.
-    + pfold. econstructor 3; [| eapply star2_refl|]; eauto. stuck.
+  - destruct e.
+    + cases. exploit H10; eauto. inv H3.
+      * case_eq (op_eval V e); intros.
+        -- pone_step. instantiate (1:=v).
+           erewrite op_eval_live; eauto. eapply agree_on_sym; eauto.
+           left. eapply (IH s); eauto. eapply agree_on_update_same. reflexivity.
+           eapply agree_on_incl; eauto.
+        -- pno_step.
+           erewrite op_eval_live in H4; eauto. congruence.
+      * case_eq (op_eval V e); intros.
+        -- pone_step_left.
+           eapply (IH s); eauto. eapply agree_on_update_dead; eauto.
+           eapply agree_on_incl; eauto.
+           rewrite <- H11. cset_tac; intuition.
+        -- pno_step_left.
+    + cases. exploit H10; eauto. inv H3.
+      * remember (omap (op_eval V) Y). symmetry in Heqo.
+        exploit omap_op_eval_live_agree; eauto.
+        destruct o.
+        -- pextern_step; eauto using agree_on_update_same, agree_on_incl; try congruence.
+        -- pno_step.
+      * exfalso. eapply NOTCOND. right; simpl; eauto.
   - repeat cases.
-    + edestruct (exp2bool_val2bool V); eauto; dcr.
-      eapply sim'_expansion_closed.
+    + edestruct (op2bool_val2bool V); eauto; dcr.
+      pone_step_left.
       eapply (IH s1); eauto. eapply agree_on_incl; eauto.
-      eapply star2_silent.
-      econstructor; eauto. eapply star2_refl.
-      eapply star2_refl.
-    + edestruct (exp2bool_val2bool V); eauto; dcr.
-      eapply sim'_expansion_closed.
+    + edestruct (op2bool_val2bool V); eauto; dcr.
+      pone_step_left.
       eapply (IH s2); eauto. eapply agree_on_incl; eauto.
-      eapply star2_silent.
-      econstructor 3; eauto. eapply star2_refl.
-      eapply star2_refl.
-    + remember (exp_eval V e). symmetry in Heqo.
-      exploit exp_eval_live_agree; eauto.
-      destruct o. case_eq (val2bool v); intros.
-      pone_step.
-      left; eapply (IH s1); eauto using agree_on_incl.
-      pone_step.
-      left; eapply (IH s2); eauto using agree_on_incl.
-      pno_step.
+    + remember (op_eval V e). symmetry in Heqo.
+      exploit op_eval_live_agree; eauto.
+      destruct o.
+      * case_eq (val2bool v); intros.
+        -- pone_step.
+           left; eapply (IH s1); eauto using agree_on_incl.
+        -- pone_step.
+           left; eapply (IH s2); eauto using agree_on_incl.
+      * pno_step.
   - edestruct H2 as [? [? [GetL GetL']]]; eauto.
-    remember (omap (exp_eval V) Y). symmetry in Heqo.
+    remember (omap (op_eval V) Y). symmetry in Heqo.
     erewrite (get_nth); eauto using zip_get; simpl.
     destruct o.
     + destruct x as [Z1 s1 n1], x0 as [Z2 s2 n2].
       hnf in H1; dcr.
       exploit (@omap_filter_by _ _ _ _ (fun y : var => if [y \In blv] then true else false) _ _ Z Heqo); eauto.
-      exploit omap_exp_eval_live_agree; eauto.
+      exploit omap_op_eval_live_agree; eauto.
       intros. eapply argsLive_liveSound; eauto.
       edestruct H4 as [[? ?] SIM]; eauto using zip_get. hnf; eauto.
       hnf in H13; dcr; subst.
@@ -484,12 +477,7 @@ Proof.
       hnf; simpl. split; eauto with len.
     + pfold; econstructor 3; try eapply star2_refl; eauto; stuck2.
   - pno_step.
-    simpl. erewrite <- exp_eval_live_agree; eauto. eapply agree_on_sym; eauto.
-  - remember (omap (exp_eval V) Y). symmetry in Heqo.
-    exploit omap_exp_eval_live_agree; eauto.
-    destruct o.
-    + pextern_step; eauto using agree_on_update_same, agree_on_incl; try congruence.
-    + pno_step.
+    simpl. erewrite <- op_eval_live_agree; eauto. eapply agree_on_sym; eauto.
   - pone_step. left. rewrite <- zip_app; eauto with len. eapply IH; eauto.
     + simpl in *; eapply agree_on_incl; eauto.
     + rewrite zip_app; eauto with len.

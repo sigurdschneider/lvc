@@ -1,4 +1,4 @@
-Require Import Util CSet CMap MapDefined MoreExp SetOperations OUnion OptionR.
+Require Import Util CSet CMap MapDefined SetOperations OUnion OptionR.
 Require Import IL InRel4 RenamedApart LabelsDefined Restrict.
 Require Import Annotation Liveness Coherence Delocation.
 Require Import Sim SimTactics.
@@ -45,15 +45,28 @@ Lemma delocation_sim DL ZL ZAL L L' (E E':onv val) s ans Lv' ans_lv ans_lv'
 Proof.
   revert_all. cofix; intros.
   inv RD; invt live_sound; simpl.
-  - remember (exp_eval E e). symmetry in Heqo.
-    pose proof Heqo. rewrite EQ in H0.
-    destruct o.
-    + one_step. simpl in *.
-      eapply delocation_sim; eauto using approx_restrict with len.
-      * rewrite EQ; reflexivity.
-      * eapply defined_on_update_some. eapply defined_on_incl; eauto.
-    + no_step.
-  - remember (exp_eval E e). symmetry in Heqo.
+  - destruct e.
+    + remember (op_eval E e). symmetry in Heqo.
+      pose proof Heqo. rewrite EQ in H0.
+      destruct o.
+      * one_step. simpl in *.
+        eapply delocation_sim; eauto using approx_restrict with len.
+        -- rewrite EQ; reflexivity.
+        -- eapply defined_on_update_some. eapply defined_on_incl; eauto.
+      * no_step.
+    + remember (omap (op_eval E) Y); intros. symmetry in Heqo.
+      pose proof Heqo. erewrite omap_agree in H0. Focus 2.
+      intros. rewrite EQ. reflexivity.
+      destruct o.
+      * extern_step; try congruence.
+        -- eapply delocation_sim; eauto using approx_restrict with len.
+           hnf; intros. lud; eauto.
+           eauto using defined_on_update_some, defined_on_incl.
+        -- eapply delocation_sim; eauto using approx_restrict with len.
+           hnf; intros. lud; eauto.
+           eauto using defined_on_update_some, defined_on_incl.
+      * no_step.
+  - remember (op_eval E e). symmetry in Heqo.
     pose proof Heqo. rewrite EQ in H1.
     destruct o.
     case_eq (val2bool v); intros.
@@ -63,7 +76,7 @@ Proof.
   - no_step. simpl. rewrite EQ; eauto.
   - simpl counted in *.
     erewrite get_nth in *; eauto.
-    case_eq (omap (exp_eval E) Y); intros.
+    case_eq (omap (op_eval E) Y); intros.
     + inv_get.
       assert (❬Y❭ = ❬x❭). {
         repeat rewrite app_length in H8.
@@ -74,7 +87,7 @@ Proof.
       eapply get_in_incl. intros.
       exploit H10; eauto using get_app_right. inv H14; eauto.
       one_step. rewrite omap_app.
-      erewrite omap_agree with (g:=exp_eval E). rewrite H1.
+      erewrite omap_agree with (g:=op_eval E). rewrite H1.
       simpl. rewrite H9. reflexivity. intros. rewrite EQ; eauto.
       simpl. exploit RD0; eauto; dcr.
       eapply delocation_sim; eauto using approx_restrict with len.
@@ -87,18 +100,6 @@ Proof.
       rewrite omap_app in def. monad_inv def.
       erewrite omap_agree in H1. erewrite H1 in EQ0. congruence.
       intros. rewrite EQ. reflexivity.
-  - remember (omap (exp_eval E) Y); intros. symmetry in Heqo.
-    pose proof Heqo. erewrite omap_agree in H0. Focus 2.
-    intros. rewrite EQ. reflexivity.
-    destruct o.
-    + extern_step; try congruence.
-      * eapply delocation_sim; eauto using approx_restrict with len.
-        hnf; intros. lud; eauto.
-        eauto using defined_on_update_some, defined_on_incl.
-      * eapply delocation_sim; eauto using approx_restrict with len.
-        hnf; intros. lud; eauto.
-        eauto using defined_on_update_some, defined_on_incl.
-    + no_step.
   - one_step.
     assert (length F = length als).
     rewrite <- H7. eauto with len.

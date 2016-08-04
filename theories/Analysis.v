@@ -142,8 +142,6 @@ Proof.
   - econstructor; eauto using bottom_least.
     eapply IH; eauto.
     eapply IH; eauto.
-  - econstructor. eauto using bottom_least.
-    eapply IH; eauto.
   - econstructor; eauto using bottom_least with len.
     + intros; inv_get. eapply IH; eauto.
     + eapply IH; eauto.

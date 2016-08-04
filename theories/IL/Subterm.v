@@ -7,7 +7,6 @@ Inductive subTerm : stmt -> stmt -> Prop :=
 | subTermExp s x e s' : subTerm s s' -> subTerm s (stmtLet x e s')
 | subTermIf1 e s s' t : subTerm s s' -> subTerm s (stmtIf e s' t)
 | subTermIf2 e s t t' : subTerm t t' -> subTerm t (stmtIf e s t')
-| subTermExtern s x f e s' : subTerm s s' -> subTerm s (stmtExtern x f e s')
 | subTermLet1 F t t' : subTerm t t' -> subTerm t (stmtFun F t')
 | subTermLet2 s Zs F t n : get F n Zs -> subTerm s (snd Zs) -> subTerm s (stmtFun F t).
 
@@ -54,14 +53,6 @@ Lemma subTerm_EQ_If2 sT st x s t
   (EQ:st = stmtIf x s t)
   (ST:subTerm st sT)
   : subTerm t sT.
-Proof.
-  subst st. etransitivity; eauto. econstructor; reflexivity.
-Qed.
-
-Lemma subTerm_EQ_Extern sT st x f e s
-  (EQ:st = stmtExtern x f e s)
-  (ST:subTerm st sT)
-  : subTerm s sT.
 Proof.
   subst st. etransitivity; eauto. econstructor; reflexivity.
 Qed.

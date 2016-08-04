@@ -1,5 +1,5 @@
 Require Import List paco2.
-Require Export Util Var Val Exp MoreExp Env Map CSet AutoIndTac IL AllInRel Sawtooth.
+Require Export Util Var Val Exp Env Map CSet AutoIndTac IL AllInRel Sawtooth.
 Require Export Sim SimTactics IL InRel.
 
 Set Implicit Arguments.
@@ -43,8 +43,8 @@ Definition app_r t (r:irel) A (PR:ProofRelationI A) AL (L L':I.labenv) :=
     -> get L' f' (I.blockI Z' s' i')
     -> forall E E' Yv Y'v Y Y',
         ArgRelI E E' a Yv Y'v
-        -> omap (exp_eval E) Y = Some Yv
-        -> omap (exp_eval E') Y' = Some Y'v
+        -> omap (op_eval E) Y = Some Yv
+        -> omap (op_eval E') Y' = Some Y'v
         -> r t (L, E, stmtApp f Y)
             (L', E', stmtApp f' Y').
 
@@ -132,7 +132,7 @@ Qed.
 Lemma stepGoto_mapi L blk Y E vl f F k
       (Ldef:get L (counted f - ❬F❭) blk)
       (len:length (I.block_Z blk) = length Y)
-      (def:omap (exp_eval E) Y = Some vl) E'
+      (def:omap (op_eval E) Y = Some vl) E'
       (updOk:E [I.block_Z blk <-- List.map Some vl] = E')
       (ST:smaller L) (GE: counted f >= ❬F❭) (EQ:k = counted f - ❬F❭ - block_n blk)
   : I.step (mapi I.mkBlock F ++ L, E, stmtApp f Y) EvtTau

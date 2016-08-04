@@ -1,7 +1,7 @@
 Require Import CSet Le.
 
 Require Import Plus Util AllInRel Map.
-Require Import Val Var Env IL Annotation Liveness Restrict Bisim MoreExp SetOperations.
+Require Import Val Var Env IL Annotation Liveness Restrict Bisim SetOperations.
 Require Import DecSolve RenamedApart LabelsDefined.
 
 Set Implicit Arguments.
@@ -14,21 +14,16 @@ Inductive shadowingFree : set var -> stmt -> Prop :=
       -> shadowingFree {x; D} s
       -> shadowingFree D (stmtLet x e s)
   | shadowingFreeIf D e s t
-    : Exp.freeVars e ⊆ D
+    : Op.freeVars e ⊆ D
     -> shadowingFree D s
     -> shadowingFree D t
     -> shadowingFree D (stmtIf e s t)
   | shadowingFreeRet D e
-    : Exp.freeVars e ⊆ D
+    : Op.freeVars e ⊆ D
     -> shadowingFree D (stmtReturn e)
   | shadowingFreeGoto D f Y
-    : list_union (List.map Exp.freeVars Y) ⊆ D
+    : list_union (List.map Op.freeVars Y) ⊆ D
     -> shadowingFree D (stmtApp f Y)
-  | shadowingFreeExtern x f Y s D
-    : x ∉ D
-      -> list_union (List.map Exp.freeVars Y) ⊆ D
-      -> shadowingFree {x; D} s
-      -> shadowingFree D (stmtExtern x f Y s)
   | shadowingFreeLet D F t
     : (forall n Zs, get F n Zs -> shadowingFree (of_list (fst Zs) ∪ D) (snd Zs))
       -> (forall n Zs, get F n Zs -> disj (of_list (fst Zs)) D)

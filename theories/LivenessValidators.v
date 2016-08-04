@@ -6,7 +6,7 @@ Proof.
   decide(length Y = length Z).
   - general induction Y; destruct Z; isabsurd.
     + left; econstructor.
-    + decide (v ∈ Callee -> live_exp_sound a Caller);
+    + decide (v ∈ Callee -> live_op_sound a Caller);
       edestruct (IHY Caller Callee); try dec_solve; try eassumption;
       try inv an; eauto; try tauto.
   - right; intro. eapply argsLive_length in H. congruence.
@@ -29,21 +29,16 @@ Proof.
     ensure (x ∈ getAnn slv); dec_solve.
   - edestruct (IH s1); eauto; [| dec_right ];
     edestruct (IH s2); eauto; [| dec_right ];
-    ensure (live_exp_sound e a);
+    ensure (live_op_sound e a);
     ensure (getAnn slv1 ⊆ a);
     ensure (getAnn slv2 ⊆ a); dec_solve.
   - destruct (get_dec Lv (counted l)) as [[blv ?]|?]; [| dec_right];
       destruct (get_dec ZL (counted l)) as [[Z ?]|?]; [| dec_right];
     decide (isImperative i); [ensure ((blv \ of_list Z) ⊆ a); [|cases in H6; eauto]|];
-    ensure (forall n y, get Y n y -> live_exp_sound y a);
+    ensure (forall n y, get Y n y -> live_op_sound y a);
       ensure (length Y = length Z);
     left; econstructor; eauto; cases; eauto.
-  - decide(live_exp_sound e a); try dec_solve.
-  - edestruct (IH s); eauto; [| dec_right];
-      ensure (getAnn slv \ {{x}} ⊆ a);
-      ensure (x ∈ getAnn slv);
-      ensure (forall n y, get Y n y -> live_exp_sound y a);
-      dec_solve.
+  - decide(live_op_sound e a); try dec_solve.
   - edestruct (IH s); eauto; [| dec_solve];
       ensure (length F = length sa);
       ensure (getAnn slv ⊆ a).
@@ -77,11 +72,11 @@ Proof.
     try solve [right; intro A; inversion A].
   - edestruct (IH s); eauto; [| dec_right ];
       ensure (getAnn slv \ singleton x ⊆ a);
-      ensure (x ∈ getAnn slv -> live_exp_sound e a); dec_solve.
-  - ensure (exp2bool e = None -> live_exp_sound e a);
-      ensure (exp2bool e <> Some false -> getAnn slv1 ⊆ a);
-      ensure (exp2bool e <> Some true -> getAnn slv2 ⊆ a);
-      case_eq (exp2bool e); [ intros [] EQ| intros EQ ].
+      ensure (x ∈ getAnn slv \/ isCall e -> live_exp_sound e a); dec_solve.
+  - ensure (op2bool e = None -> live_op_sound e a);
+      ensure (op2bool e <> Some false -> getAnn slv1 ⊆ a);
+      ensure (op2bool e <> Some true -> getAnn slv2 ⊆ a);
+      case_eq (op2bool e); [ intros [] EQ| intros EQ ].
     + edestruct (IH s1); eauto; [ dec_solve | dec_right].
     + edestruct (IH s2); eauto; [ dec_solve | dec_right].
     + edestruct (IH s1); eauto; [| dec_right];
@@ -95,11 +90,7 @@ Proof.
       * left; econstructor; eauto. cases; eauto.
       * dec_right. cases in H7. eauto.
     + left; econstructor; eauto. cases; eauto.
-  - ensure (live_exp_sound e a). dec_solve.
-  - edestruct (IH s); eauto; [| dec_right];
-      ensure (getAnn slv \ singleton x ⊆ a);
-      ensure (forall n y, get Y n y -> live_exp_sound y a);
-      dec_solve.
+  - ensure (live_op_sound e a). dec_solve.
   - edestruct (IH s); eauto; [| dec_right];
       ensure (length F = length sa);
       ensure (getAnn slv ⊆ a).

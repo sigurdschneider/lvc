@@ -26,10 +26,6 @@ Inductive locally_inj (rho:env var) : stmt -> ann (set var) -> Prop :=
 | RNReturn x lv
   : injective_on lv rho
     -> locally_inj rho (stmtReturn x) (ann0 lv)
-| RNExtern x f Y b lv (al:ann (set var))
-  : locally_inj rho b al
-    -> injective_on lv rho
-    -> locally_inj rho (stmtExtern x f Y b) (ann1 lv al)
 | RNLet F b lv alvs alvb
   : length F = length alvs
     -> (forall n Zs alv, get F n Zs -> get alvs n alv -> locally_inj rho (snd Zs) alv)
@@ -294,22 +290,6 @@ Proof.
     eapply map_get_eq. eauto using map_get_1. simpl.
     cases. reflexivity.
   - econstructor.
-  - econstructor.
-    + eapply srd_monotone.
-      * eapply IHRI; eauto. pe_rewrite. eauto with cset.
-        pe_rewrite. eauto with cset.
-      * erewrite (@restrict_incl_ext _ (getAnn al)); eauto.
-        instantiate (1:=getAnn al \ singleton x).
-        eapply list_eq_special; eauto with cset.
-        rewrite lookup_set_minus_incl_inj; eauto.
-        rewrite <- minus_inane_set.
-        instantiate (1:={ϱ x}). eapply incl_minus_lr; eauto.
-        rewrite lookup_set_minus_incl; eauto. eapply lookup_set_incl; eauto.
-        rewrite lookup_set_singleton'; eauto.
-        rewrite meet_comm. eapply meet_minus.
-        assert (getAnn al [=] getAnn al ∪ singleton x) by (cset_tac; intuition).
-        rewrite <- H1. eauto using locally_injective.
-        cset_tac; intuition.
   - econstructor; eauto with len.
     + intros. inv_get.
       eapply srd_monotone.
@@ -426,22 +406,6 @@ Proof.
     eapply map_get_eq. eauto using map_get_1. simpl.
     cases. reflexivity.
   - econstructor.
-  - econstructor.
-    + eapply srd_monotone.
-      * eapply IHRI; eauto. simpl in *. pe_rewrite.
-        rewrite <- incl_add'; eauto.
-      * erewrite (@restrict_incl_ext _ (getAnn al)); eauto.
-        instantiate (1:=getAnn al \ singleton x).
-        eapply list_eq_special; eauto.
-        rewrite lookup_set_minus_incl_inj; eauto.
-        rewrite <- minus_inane_set.
-        instantiate (1:={ϱ x}). eapply incl_minus_lr; eauto.
-        rewrite lookup_set_minus_incl; eauto. eapply lookup_set_incl; eauto.
-        rewrite lookup_set_singleton'; eauto.
-        rewrite meet_comm. eapply meet_minus. eauto.
-        assert (getAnn al [=] getAnn al ∪ singleton x). cset_tac; intuition.
-        rewrite <- H0. eauto using locally_injective.
-        cset_tac; intuition.
   - econstructor; eauto.
     + repeat rewrite map_length; eauto.
     + intros. inv_get.
@@ -506,39 +470,20 @@ Proof.
     eapply inverse_on_update_minus; eauto using inverse_on_incl, locally_injective.
     eapply injective_on_incl. eapply locally_injective, H11.
     cset_tac; intuition.
-  - econstructor; eauto. eapply alpha_exp_rename_injective.
-    eapply inverse_on_incl. eapply Exp.freeVars_live; eauto. eauto.
+  - econstructor; eauto. eapply alpha_op_rename_injective.
+    eapply inverse_on_incl. eapply Op.freeVars_live; eauto. eauto.
     now eapply IHrenamedApart1; eauto using inverse_on_incl.
     now eapply IHrenamedApart2; eauto using inverse_on_incl.
 
-  - econstructor; eauto. eapply alpha_exp_rename_injective.
-    eapply inverse_on_incl. eapply Exp.freeVars_live; eauto. eauto.
+  - econstructor; eauto. eapply alpha_op_rename_injective.
+    eapply inverse_on_incl. eapply Op.freeVars_live; eauto. eauto.
 
   - econstructor; eauto. rewrite map_length. eauto.
     intros. edestruct map_get_4; eauto; dcr; subst.
     get_functional; eauto; subst.
-    eapply alpha_exp_rename_injective.
-    eapply inverse_on_incl. eapply Exp.freeVars_live; eauto. eauto.
+    eapply alpha_op_rename_injective.
+    eapply inverse_on_incl. eapply Op.freeVars_live; eauto. eauto.
 
-  - econstructor.
-    + rewrite map_length; eauto.
-    + intros. edestruct map_get_4; eauto; dcr; subst.
-      get_functional; eauto; subst.
-      eapply alpha_exp_rename_injective.
-      eapply inverse_on_incl. eapply Exp.freeVars_live; eauto. eauto.
-    +
-      assert (rename ϱ s = rename (update ϱ x (ϱ x)) s). {
-        rewrite update_id; eauto.
-      }
-      rewrite H7. eapply IHrenamedApart; eauto.
-      assert (fpeq _eq ϱ (update ϱ x (ϱ x))). {
-        split; eauto. rewrite update_id. reflexivity. intuition.
-      }
-      eapply locally_inj_morphism; eauto.
-      eapply inverse_on_update_minus; eauto using inverse_on_incl,
-                                      locally_injective.
-      eapply injective_on_incl. eapply locally_injective, H12.
-      cset_tac; intuition.
   - constructor.
     + rewrite map_length; eauto.
     + intros. inv_map H11; simpl. rewrite lookup_list_length; eauto.
@@ -650,8 +595,8 @@ Proof.
     eapply injective_on_incl. eapply locally_injective, H4.
     cset_tac; intuition.
     pe_rewrite; simpl in *. rewrite <- incl_add'; eauto.
-  - econstructor; eauto. eapply alpha_exp_rename_injective.
-    eapply inverse_on_incl. eapply Exp.freeVars_live; eauto. eauto.
+  - econstructor; eauto. eapply alpha_op_rename_injective.
+    eapply inverse_on_incl. eapply Op.freeVars_live; eauto. eauto.
     eapply IHLS1; eauto using inverse_on_incl.
     pe_rewrite; eauto.
     eapply IHLS2; eauto using inverse_on_incl.
@@ -659,29 +604,11 @@ Proof.
 
   - econstructor; eauto with len.
     intros. inv_get.
-    eapply alpha_exp_rename_injective.
-    eapply inverse_on_incl. eapply Exp.freeVars_live; eauto. eauto.
+    eapply alpha_op_rename_injective.
+    eapply inverse_on_incl. eapply Op.freeVars_live; eauto. eauto.
 
-  - econstructor; eauto. eapply alpha_exp_rename_injective.
-    eapply inverse_on_incl. eapply Exp.freeVars_live; eauto. eauto.
-
-  - econstructor; eauto with len.
-    + intros. inv_get.
-      eapply alpha_exp_rename_injective.
-      eapply inverse_on_incl. eapply Exp.freeVars_live; eauto. eauto.
-    + assert (rename ϱ s = rename (update ϱ x (ϱ x)) s). {
-        rewrite update_id; eauto.
-      }
-      rewrite H2. eapply IHLS; eauto.
-      assert (fpeq _eq ϱ (update ϱ x (ϱ x))). {
-        split; eauto. rewrite update_id. reflexivity. intuition.
-      }
-      eapply locally_inj_morphism; eauto.
-      eapply inverse_on_update_minus; eauto using inverse_on_incl,
-                                      locally_injective.
-      eapply injective_on_incl. eapply locally_injective, H4.
-      cset_tac; intuition.
-      pe_rewrite; eauto. rewrite <- incl_add'; eauto.
+  - econstructor; eauto. eapply alpha_op_rename_injective.
+    eapply inverse_on_incl. eapply Op.freeVars_live; eauto. eauto.
 
   - constructor.
     + eauto with len.
@@ -751,9 +678,6 @@ Proof.
   - econstructor; eauto.
     eapply injective_on_agree; eauto.
     eapply agree_on_incl; eauto with cset.
-  - econstructor; eauto.
-    + eapply IHinj; eauto; pe_rewrite; eauto with cset.
-    + eapply injective_on_agree; eauto with cset.
   - econstructor; eauto.
     + intros. inv_get.
       eapply H1; eauto; pe_rewrite.

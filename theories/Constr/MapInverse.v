@@ -284,3 +284,11 @@ Proof.
   intros. hnf; intros. cset_tac; dcr.
   specialize (H1 _ H3). lud; intuition.
 Qed.
+
+Lemma inverse_on_list_union {X} `{OrderedType X} {Y} (f:X->Y) (g:Y->X) L
+  : (forall n D, get L n D -> inverse_on D f g)
+  -> inverse_on (list_union L) f g.
+Proof.
+  intros. hnf; intros. exploit list_union_get. eapply H1.
+  destruct X0; dcr. eapply H0; eauto. cset_tac; intuition.
+Qed.

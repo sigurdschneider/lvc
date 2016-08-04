@@ -102,7 +102,7 @@ Qed.
 Lemma stepGotoI' L E l Y blk vl
       (Ldef:get L l blk)
       (len:length (I.block_Z blk) = length Y)
-      (def:omap (exp_eval E) Y = Some vl) E'
+      (def:omap (op_eval E) Y = Some vl) E'
       (updOk:E [I.block_Z blk <-- List.map Some vl] = E')
       (ST:sawtooth L)
   : step (drop (l - block_n blk) L, E, stmtApp (LabI (block_n blk)) Y)
@@ -119,7 +119,7 @@ Qed.
 Lemma stepGotoF' L E l Y blk vl
       (Ldef:get L l blk)
       (len:length (F.block_Z blk) = length Y)
-      (def:omap (exp_eval E) Y = Some vl) E'
+      (def:omap (op_eval E) Y = Some vl) E'
       (updOk:(F.block_E blk) [F.block_Z blk <-- List.map Some vl] = E')
       (ST:sawtooth L)
   : step (drop (l - block_n blk) L, E, stmtApp (LabI (block_n blk)) Y)

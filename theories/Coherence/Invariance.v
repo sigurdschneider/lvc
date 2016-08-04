@@ -1,5 +1,5 @@
 Require Import Util IL InRel4 RenamedApart LabelsDefined OptionR.
-Require Import Annotation Liveness Restrict MoreExp SetOperations Coherence.
+Require Import Annotation Liveness Restrict SetOperations Coherence.
 Require Import Sim SimTactics.
 
 Set Implicit Arguments.
@@ -131,27 +131,44 @@ Lemma srdSim_sim ZL AL Lv L L'
 Proof.
   revert_all. cofix; intros.
   inv SRD; inv LV; simpl in *.
-  - case_eq (exp_eval E e); intros.
-    + one_step.
-      instantiate (1:=v). erewrite <- exp_eval_live; eauto.
-      eapply srdSim_sim; eauto using rd_agree_update.
-      * eapply inRel_map_A3; eauto using approx_restrict.
-      * eapply agree_on_update_same; eauto with cset.
-      * eauto using restrict_ifFstR.
-    + no_step.
-      erewrite <- exp_eval_live in def; eauto. congruence.
-  - case_eq (exp_eval E e); intros;
-      exploit exp_eval_live_agree; try eassumption.
+  - invt live_exp_sound.
+    + case_eq (op_eval E e0); intros.
+      *  one_step.
+         instantiate (1:=v). erewrite <- op_eval_live; eauto.
+         eapply srdSim_sim; eauto using rd_agree_update.
+         -- eapply inRel_map_A3; eauto using approx_restrict.
+         -- eapply agree_on_update_same; eauto with cset.
+         -- eauto using restrict_ifFstR.
+      * no_step.
+        erewrite <- op_eval_live in def; eauto. congruence.
+    + case_eq (omap (op_eval E) Y); intros;
+        exploit omap_op_eval_live_agree; try eassumption.
+      * extern_step; assert (vl = l) by congruence; subst; eauto.
+        -- eapply srdSim_sim; eauto using rd_agree_update, PIR2_length.
+           ++ eapply inRel_map_A3; eauto. eapply approx_restrict; eauto.
+           ++ eapply agree_on_update_same. reflexivity.
+           eapply agree_on_incl; eauto.
+           ++ eauto using restrict_ifFstR; eauto.
+        -- symmetry in AG.
+           exploit omap_op_eval_live_agree; eauto.
+           eapply srdSim_sim; eauto using rd_agree_update, PIR2_length.
+           ++ eapply inRel_map_A3; eauto. eapply approx_restrict; eauto.
+           ++ eapply agree_on_update_same. reflexivity.
+             eapply agree_on_incl; eauto. symmetry; eauto.
+           ++ eauto using restrict_ifFstR; eauto.
+      * no_step.
+  - case_eq (op_eval E e); intros;
+      exploit op_eval_live_agree; try eassumption.
     + case_eq (val2bool v); intros.
       one_step.
       eapply srdSim_sim; eauto using agree_on_incl.
       one_step.
       eapply srdSim_sim; eauto using agree_on_incl.
     + no_step.
-  - no_step. simpl. eapply exp_eval_live; eauto.
+  - no_step. simpl. eapply op_eval_live; eauto.
   - decide (length Z = length Y).
-    case_eq (omap (exp_eval E) Y); intros;
-       exploit omap_exp_eval_live_agree; try eassumption.
+    case_eq (omap (op_eval E) Y); intros;
+      exploit omap_op_eval_live_agree; try eassumption.
     + inRel_invs. inv H11. simpl in *.
       exploit H2; try reflexivity; dcr.
       one_step; simpl.
@@ -167,24 +184,8 @@ Proof.
       * rewrite <- drop_zip.
         eapply restrict_ifFstR; eauto.
         eapply PIR2_drop; eauto.
-    + exploit omap_exp_eval_live_agree; try eassumption.
+    + exploit omap_op_eval_live_agree; try eassumption.
       no_step.
-    + no_step.
-  - case_eq (omap (exp_eval E) Y); intros;
-    exploit omap_exp_eval_live_agree; try eassumption.
-    extern_step; assert (vl = l) by congruence; subst; eauto.
-    + eapply srdSim_sim; eauto using rd_agree_update, PIR2_length.
-      * eapply inRel_map_A3; eauto. eapply approx_restrict; eauto.
-      * eapply agree_on_update_same. reflexivity.
-        eapply agree_on_incl; eauto.
-      * eauto using restrict_ifFstR; eauto.
-    + symmetry in AG.
-      exploit omap_exp_eval_live_agree; eauto.
-      eapply srdSim_sim; eauto using rd_agree_update, PIR2_length.
-      * eapply inRel_map_A3; eauto. eapply approx_restrict; eauto.
-      * eapply agree_on_update_same. reflexivity.
-        eapply agree_on_incl; eauto. symmetry; eauto.
-      * eauto using restrict_ifFstR; eauto.
     + no_step.
   - one_step.
     eapply srdSim_sim;

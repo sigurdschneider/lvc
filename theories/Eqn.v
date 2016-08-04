@@ -1,7 +1,7 @@
 Require Import CSet Le.
 
 Require Import Plus Util AllInRel Map OptionR.
-Require Import CSet Val Var Env Equiv.Sim IL Fresh Annotation MoreExp Coherence.
+Require Import CSet Val Var Env Equiv.Sim IL Fresh Annotation Coherence.
 
 Require Import SetOperations.
 
@@ -9,14 +9,14 @@ Set Implicit Arguments.
 Unset Printing Records.
 
 Inductive eqn :=
-  | EqnEq (e e':exp)
-  | EqnApx (e e':exp)
+  | EqnEq (e e':op)
+  | EqnApx (e e':op)
   | EqnBot.
 
 Definition satisfies (E:onv val) (gamma:eqn) : Prop :=
 match gamma with
-| EqnEq e e' => option_R eq (exp_eval E e) (exp_eval E e')
-| EqnApx e e' => fstNoneOrR eq (exp_eval E e) (exp_eval E e')
+| EqnEq e e' => option_R eq (op_eval E e) (op_eval E e')
+| EqnApx e e' => fstNoneOrR eq (op_eval E e) (op_eval E e')
 | EqnBot => False
 end.
 
@@ -28,27 +28,27 @@ Inductive eqnLt : eqn -> eqn -> Prop :=
 | EqnLtEqApx e1 e1' e2 e2'
   : eqnLt (EqnEq e1 e2) (EqnApx e1' e2')
 | EqnLtEqEq1 e1 e1' e2 e2'
-  : expLt e1 e1'
+  : opLt e1 e1'
     -> eqnLt (EqnEq e1 e2) (EqnEq e1' e2')
 | EqnLtEqEq2 e1 e2 e2'
-  : expLt e2 e2'
+  : opLt e2 e2'
     -> eqnLt (EqnEq e1 e2) (EqnEq e1 e2')
 | EqnLtApxApx1 e1 e1' e2 e2'
-  : expLt e1 e1'
+  : opLt e1 e1'
     -> eqnLt (EqnApx e1 e2) (EqnApx e1' e2')
 | EqnLtApxApx2 e1 e2 e2'
-  : expLt e2 e2'
+  : opLt e2 e2'
     -> eqnLt (EqnApx e1 e2) (EqnApx e1 e2').
 
 Instance eqnLt_irr : Irreflexive eqnLt.
 hnf; intros; unfold complement.
 - induction x; inversion 1; subst; eauto;
-  try now eapply expLt_irr; eauto.
+  try now eapply opLt_irr; eauto.
 Qed.
 
 Instance eqnLt_trans : Transitive eqnLt.
 hnf; intros.
-inv H; inv H0; eauto using eqnLt, expLt_trans.
+inv H; inv H0; eauto using eqnLt, opLt_trans.
 Qed.
 
 Instance StrictOrder_eqnLt : OrderedType.StrictOrder eqnLt eq.
@@ -100,8 +100,8 @@ Definition satisfiesAll (E:onv val) (Gamma:eqns) :=
 
 Definition freeVars (gamma:eqn) :=
   match gamma with
-    | EqnEq e e' => Exp.freeVars e ∪ Exp.freeVars e'
-    | EqnApx e e' => Exp.freeVars e ∪ Exp.freeVars e'
+    | EqnEq e e' => Op.freeVars e ∪ Op.freeVars e'
+    | EqnApx e e' => Op.freeVars e ∪ Op.freeVars e'
     | EqnBot => ∅
   end.
 
@@ -119,8 +119,8 @@ Definition onvLe X (E E':onv X)
 
 Lemma exp_eval_onvLe e E E' v
 : onvLe E E'
-  -> exp_eval E e = Some v
-  -> exp_eval E' e = Some v.
+  -> op_eval E e = Some v
+  -> op_eval E' e = Some v.
 Proof.
   intros. general induction e; simpl in * |- *; eauto.
   simpl in H0. rewrite H0. eapply H in H0. eauto.
@@ -133,14 +133,14 @@ Qed.
 Definition list_EqnApx Y Y' :=
   of_list (zip (fun e e' => EqnApx e e') Y Y').
 
-Definition subst_eqn (ϱ : env exp) (gamma: eqn) :=
+Definition subst_eqn (ϱ : env op) (gamma: eqn) :=
   match gamma with
-    | EqnEq e e' => EqnEq (subst_exp ϱ e) (subst_exp ϱ e')
-    | EqnApx e e' => EqnApx (subst_exp ϱ e) (subst_exp ϱ e')
+    | EqnEq e e' => EqnEq (subst_op ϱ e) (subst_op ϱ e')
+    | EqnApx e e' => EqnApx (subst_op ϱ e) (subst_op ϱ e')
     | EqnBot => EqnBot
   end.
 
-Definition subst_eqns (ϱ : env exp) (G:eqns) : eqns :=
+Definition subst_eqns (ϱ : env op) (G:eqns) : eqns :=
   map (subst_eqn ϱ) G.
 
 Definition sid := fun x => Var x.

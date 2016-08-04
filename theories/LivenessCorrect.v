@@ -1,4 +1,4 @@
-Require Import AllInRel List Map Env Exp MoreExp Rename SetOperations.
+Require Import AllInRel List Map Env Exp Rename SetOperations OptionMap.
 Require Import IL Annotation AutoIndTac Liveness InRel4.
 Require Import Sim SimTactics.
 
@@ -44,53 +44,55 @@ Lemma freeVarSimF_sim σ1 σ2
 Proof.
   revert σ1 σ2. cofix; intros.
   destruct H; destruct s; simpl; simpl in *.
-  - case_eq (exp_eval E e); intros.
-    + exploit exp_eval_agree; eauto. eauto using agree_on_incl with cset.
-      one_step.
-      eapply freeVarSimF_sim. econstructor; eauto.
-      eapply agree_on_update_same; eauto using agree_on_incl with cset.
-    + exploit exp_eval_agree; eauto using agree_on_incl with cset.
-      no_step.
-  - case_eq (exp_eval E e); intros.
-    exploit exp_eval_agree; eauto using agree_on_incl.
+  - destruct e.
+    + case_eq (op_eval E e); intros.
+      * exploit op_eval_agree; eauto. eauto using agree_on_incl with cset.
+        one_step.
+        eapply freeVarSimF_sim. econstructor; eauto.
+        eapply agree_on_update_same; eauto using agree_on_incl with cset.
+      * no_step.
+        eapply op_eval_agree in H; eauto using agree_on_incl with cset.
+        congruence.
+    + case_eq (omap (op_eval E) Y); intros. simpl in *.
+      exploit omap_op_eval_agree; eauto using agree_on_incl.
+      extern_step.
+      * exploit omap_op_eval_agree; eauto using agree_on_incl.
+      * exploit omap_op_eval_agree.
+        -- symmetry. eauto using agree_on_incl.
+        -- eauto.
+        -- eapply freeVarSimF_sim. econstructor; eauto.
+           eapply agree_on_update_same; eauto using agree_on_incl with cset.
+      * exploit omap_op_eval_agree; eauto. symmetry; eauto using agree_on_incl with cset.
+      * exploit omap_op_eval_agree.
+        -- symmetry. eauto using agree_on_incl.
+        -- eauto.
+        -- eapply freeVarSimF_sim. econstructor; eauto.
+           eapply agree_on_update_same; eauto using agree_on_incl with cset.
+      * no_step. simpl in *.
+        symmetry in AG.
+        exploit omap_op_eval_agree; eauto using agree_on_incl.
+  - case_eq (op_eval E e); intros.
+    exploit op_eval_agree; eauto using agree_on_incl.
     case_eq (val2bool v); intros.
     + one_step; eauto using agree_on_incl, freeVarSimF.
     + one_step; eauto using agree_on_incl, freeVarSimF.
-    + exploit exp_eval_agree; eauto using agree_on_incl.
+    + exploit op_eval_agree; eauto using agree_on_incl.
       no_step.
   - destruct (get_dec L (counted l)) as [[[Eb Zb sb]]|].
     PIR2_inv.
     decide (length Zb = length Y).
-    case_eq (omap (exp_eval E) Y); intros.
-    + exploit omap_exp_eval_agree; eauto.
+    case_eq (omap (op_eval E) Y); intros.
+    + exploit omap_op_eval_agree; eauto.
       one_step.
       simpl. eapply freeVarSimF_sim. econstructor; eauto.
       eapply PIR2_drop; eauto.
       eapply update_with_list_agree; eauto with len.
-    + exploit omap_exp_eval_agree; eauto.
+    + exploit omap_op_eval_agree; eauto.
       no_step; get_functional; subst.
     + no_step; get_functional; subst; simpl in *; congruence.
     + no_step; eauto.
       edestruct PIR2_nth_2; eauto; dcr; eauto.
-  - no_step. simpl. erewrite exp_eval_agree; eauto. symmetry; eauto.
-  - case_eq (omap (exp_eval E) Y); intros.
-    exploit omap_exp_eval_agree; eauto using agree_on_incl.
-    extern_step.
-    + exploit omap_exp_eval_agree; eauto using agree_on_incl.
-    + exploit omap_exp_eval_agree.
-      * symmetry. eauto using agree_on_incl.
-      * eauto.
-      * eapply freeVarSimF_sim. econstructor; eauto.
-        eapply agree_on_update_same; eauto using agree_on_incl with cset.
-    + exploit omap_exp_eval_agree; eauto. symmetry; eauto using agree_on_incl with cset.
-    + exploit omap_exp_eval_agree.
-      * symmetry. eauto using agree_on_incl.
-      * eauto.
-      * eapply freeVarSimF_sim. econstructor; eauto.
-        eapply agree_on_update_same; eauto using agree_on_incl with cset.
-    + no_step.
-      symmetry in AG.
-      exploit omap_exp_eval_agree; eauto using agree_on_incl.
+  - no_step. simpl. erewrite op_eval_agree; eauto. symmetry; eauto.
   - one_step.
     eapply freeVarSimF_sim; econstructor; eauto using agree_on_incl.
     eapply PIR2_app; eauto. eapply mkBlocks_approxF; eauto.
@@ -113,37 +115,38 @@ Lemma liveSimI_sim ZL Lv (E E':onv val) L s lv
 Proof.
   revert_all. cofix; intros.
   inv LS; simpl; simpl in *.
-  - case_eq (exp_eval E e); intros.
-    + one_step; eauto using exp_eval_live_agree.
-      eapply liveSimI_sim; eauto.
-      eapply agree_on_update_same; eauto using agree_on_incl.
-    + no_step; eauto.
-  - case_eq (exp_eval E e); intros.
+  - invt live_exp_sound.
+    + case_eq (op_eval E e0); intros.
+      * one_step; eauto using op_eval_live_agree.
+        eapply liveSimI_sim; eauto.
+        eapply agree_on_update_same; eauto using agree_on_incl.
+      * no_step; eauto.
+    + case_eq (omap (op_eval E) Y); intros;
+        exploit omap_op_eval_live_agree; try eassumption.
+      * extern_step.
+        -- exploit omap_op_eval_live_agree; eauto.
+        -- eapply liveSimI_sim; eauto.
+           eapply agree_on_update_same; eauto using agree_on_incl.
+        -- symmetry in AG. exploit omap_op_eval_live_agree; eauto.
+        -- eapply liveSimI_sim; eauto.
+           eapply agree_on_update_same; eauto using agree_on_incl.
+      * no_step.
+  - case_eq (op_eval E e); intros.
     case_eq (val2bool v); intros.
-    one_step; eauto using exp_eval_live_agree.
+    one_step; eauto using op_eval_live_agree.
     eapply liveSimI_sim; eauto using agree_on_incl.
-    one_step; eauto using exp_eval_live_agree.
+    one_step; eauto using op_eval_live_agree.
     eapply liveSimI_sim; eauto using agree_on_incl.
     no_step; eauto.
   - inRel_invs. inv H8; simpl in *.
-    case_eq (omap (exp_eval E) Y); intros.
-    + exploit omap_exp_eval_live_agree; try eassumption.
+    case_eq (omap (op_eval E) Y); intros.
+    + exploit omap_op_eval_live_agree; try eassumption.
       one_step; simpl; try congruence.
       eapply liveSimI_sim; eauto.
       eapply update_with_list_agree; eauto using agree_on_incl with len.
-    + exploit omap_exp_eval_live_agree; try eassumption.
+    + exploit omap_op_eval_live_agree; try eassumption.
       no_step.
-  - no_step. simpl. eapply exp_eval_live; eauto.
-  - case_eq (omap (exp_eval E) Y); intros;
-    exploit omap_exp_eval_live_agree; try eassumption.
-    + extern_step.
-      * exploit omap_exp_eval_live_agree; eauto.
-      * eapply liveSimI_sim; eauto.
-        eapply agree_on_update_same; eauto using agree_on_incl.
-      * symmetry in AG. exploit omap_exp_eval_live_agree; eauto.
-      * eapply liveSimI_sim; eauto.
-        eapply agree_on_update_same; eauto using agree_on_incl.
-    + no_step.
+  - no_step. simpl. eapply op_eval_live; eauto.
   - one_step.
     eapply liveSimI_sim; eauto using agree_on_incl.
     + econstructor; eauto using agree_on_incl.

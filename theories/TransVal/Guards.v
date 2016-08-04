@@ -33,7 +33,7 @@ Fixpoint undef e :=
   | Var v => smtTrue
   end.
 
-Fixpoint undefLift (el: list exp) :=
+Fixpoint undefLift (el: list op) :=
   match el with
   | nil => smtTrue
   | e::el' => combine (undef e) (undefLift el')
@@ -66,14 +66,14 @@ Proof.
 Qed.
 
 Lemma freeVars_undef e
-  : freeVars (undef e) ⊆ Exp.freeVars e.
+  : freeVars (undef e) ⊆ Op.freeVars e.
 Proof.
   intros. general induction e; simpl in * |- *; eauto with cset.
   - unfold combine in *. repeat cases; simpl in *; eauto with cset.
 Qed.
 
 Lemma freeVars_undefLift el
-  : freeVars (undefLift el) ⊆ list_union (List.map Exp.freeVars el).
+  : freeVars (undefLift el) ⊆ list_union (List.map Op.freeVars el).
 Proof.
   general induction el; simpl in * |- *; eauto.
   - rewrite list_union_start_swap.

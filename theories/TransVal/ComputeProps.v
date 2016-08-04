@@ -1,5 +1,5 @@
 Require Import List CSet.
-Require Import AutoIndTac Annotation Exp IL MoreExp RenamedApart Util.
+Require Import AutoIndTac Annotation Exp IL RenamedApart Util.
 Require Import SetOperations Sim.
 Require Import SMT NoFun.
 Require Import Guards ILFtoSMT GuardProps.
@@ -82,79 +82,79 @@ general induction Term_s; simpl.
 - inv H; invt renamedApart; invt noFun; simpl in * |- *; subst.
   + eapply models_guardGen_source; simpl; split; eauto.
     * eapply (guard_true_if_eval _ E'0 e v ); eauto.
-      eapply exp_eval_agree; eauto.
+      eapply op_eval_agree; eauto.
       assert (A: agree_on eq (fst (getAnn (ann1 (D0, D') an))) E0 E'0).
-      { eapply (term_ssa_eval_agree L' L' (stmtLet x e s') _ s'0 _ _);
+      { eapply (term_ssa_eval_agree L' L' (stmtLet x (Operation e) s') _ s'0 _ _);
         econstructor; eauto. }
-      { eapply (agree_on_incl  (bv:=Exp.freeVars e) (lv:=fst (getAnn (ann1 (D0, D') an)))); eauto. }
+      { eapply (agree_on_incl  (bv:=Op.freeVars e) (lv:=fst (getAnn (ann1 (D0, D') an)))); eauto. }
     * split; eauto; subst.
-      assert (X1: exp_eval E'0 (Var x) = Some v).
-      { eapply (exp_eval_agree (E:= E0[x <- Some v])) ; eauto.
+      assert (X1: op_eval E'0 (Var x) = Some v).
+      { eapply (op_eval_agree (E:= E0[x <- Some v])) ; eauto.
         - simpl. eapply (agree_on_incl (bv:={x} ) (lv:= fst (getAnn an))); subst.
           + eapply (term_ssa_eval_agree L' L' s' _ s'0 _ E'0); eauto.
           + rewrite H9. unfold fst. cset_tac.
-        - unfold exp_eval. unfold update. decide (x===x); eauto; isabsurd. }
-      assert (X2: exp_eval E'0 e = Some v).
-      { eapply exp_eval_agree; eauto.
+        - unfold op_eval. unfold update. decide (x===x); eauto; isabsurd. }
+      assert (X2: op_eval E'0 e = Some v).
+      { eapply op_eval_agree; eauto.
       assert (A: agree_on eq (fst (getAnn (ann1 (D0, D') an))) E0 E'0).
-        - eapply (term_ssa_eval_agree L' L' (stmtLet x e s') _ s'0 _ _);
+        - eapply (term_ssa_eval_agree L' L' (stmtLet x (Operation e) s') _ s'0 _ _);
           econstructor; eauto.
-        - eapply (agree_on_incl  (bv:=Exp.freeVars e) (lv:=fst (getAnn (ann1 (D0, D') an)))); eauto. }
+        - eapply (agree_on_incl  (bv:=Op.freeVars e) (lv:=fst (getAnn (ann1 (D0, D') an)))); eauto. }
       {  unfold smt_eval;
-        repeat erewrite exp_eval_partial_total; eauto.
+        repeat erewrite op_eval_partial_total; eauto.
       }
   + assert (X: models  (fun (_:pred) (_:list val) => true) (to_total E'0) ( ite e (translateStmt s' source) (translateStmt b2 source))).
     * simpl.
-      assert (Exp.freeVars e ⊆ fst (getAnn (ann2 (D0, D') ans ant))) by cset_tac.
+      assert (Op.freeVars e ⊆ fst (getAnn (ann2 (D0, D') ans ant))) by cset_tac.
       assert (agree_on eq (fst (getAnn (ann2 (D0, D') ans ant))) E' E'0)
         by ( eapply (term_ssa_eval_agree L' L' (stmtIf e s' b2) _ s'0 _ _); econstructor; eauto).
       unfold smt_eval.
-      erewrite (exp_eval_agree (E:=to_partial (to_total E')) (E':=to_partial (to_total E'0))); eauto.
-      { erewrite exp_eval_partial_total; eauto.
+      erewrite (op_eval_agree (E:=to_partial (to_total E')) (E':=to_partial (to_total E'0))); eauto.
+      { erewrite op_eval_partial_total; eauto.
         rewrite condTrue.
         eapply IHTerm_s; eauto. }
-      { eapply (agree_on_incl (bv:= Exp.freeVars e) (lv:= fst (getAnn (ann2 (D0, D') ans ant)))); eauto.
+      { eapply (agree_on_incl (bv:= Op.freeVars e) (lv:= fst (getAnn (ann2 (D0, D') ans ant)))); eauto.
         simpl.
         eapply agree_on_partial; eauto.
         eapply agree_on_total; eauto. }
     * erewrite models_guardGen_source.
       simpl.
       pose proof (guard_true_if_eval  (fun (_:pred) (_:list val) => true) E'0 e v); eauto.
-      assert (Exp.freeVars e ⊆ fst (getAnn (ann2 (D0, D') ans ant))) by cset_tac.
+      assert (Op.freeVars e ⊆ fst (getAnn (ann2 (D0, D') ans ant))) by cset_tac.
       assert (agree_on eq (fst (getAnn (ann2 (D0, D') ans ant))) E' E'0)
         by ( eapply (term_ssa_eval_agree L' L' (stmtIf e s' b2) _ s'0 _ _); econstructor; eauto).
-      assert (exp_eval E'0 e = Some v)
-        by (eapply (exp_eval_agree (E:=E') (E':=E'0)); eauto;
-        eapply (agree_on_incl (bv:= Exp.freeVars e) (lv:= fst (getAnn (ann2 (D0, D') ans ant)))); eauto).
+      assert (op_eval E'0 e = Some v)
+        by (eapply (op_eval_agree (E:=E') (E':=E'0)); eauto;
+        eapply (agree_on_incl (bv:= Op.freeVars e) (lv:= fst (getAnn (ann2 (D0, D') ans ant)))); eauto).
       split; eauto.
   + assert (X: models  (fun (_:pred) (_:list val) => true) (to_total E'0) ( ite e (translateStmt b1 source) (translateStmt s' source))).
     * simpl.
-      assert (Exp.freeVars e ⊆ fst (getAnn (ann2 (D0, D') ans ant))) by cset_tac.
+      assert (Op.freeVars e ⊆ fst (getAnn (ann2 (D0, D') ans ant))) by cset_tac.
       assert (agree_on eq (fst (getAnn (ann2 (D0, D') ans ant))) E' E'0)
       by ( eapply (term_ssa_eval_agree L' L' (stmtIf e b1 s') _ s'0 _ _);econstructor;  eauto).
       unfold smt_eval.
-      erewrite (exp_eval_agree (E:=to_partial (to_total E')) (E':=to_partial (to_total E'0))); eauto. simpl.
-      erewrite exp_eval_partial_total; eauto.
+      erewrite (op_eval_agree (E:=to_partial (to_total E')) (E':=to_partial (to_total E'0))); eauto. simpl.
+      erewrite op_eval_partial_total; eauto.
       rewrite condFalse.
       eapply IHTerm_s; eauto.
-      eapply (agree_on_incl (bv:= Exp.freeVars e) (lv:= fst (getAnn (ann2 (D0, D') ans ant)))); eauto.
+      eapply (agree_on_incl (bv:= Op.freeVars e) (lv:= fst (getAnn (ann2 (D0, D') ans ant)))); eauto.
       eapply agree_on_partial, agree_on_total; eauto.
     * erewrite models_guardGen_source; simpl.
       simpl; split; eauto.
       eapply (guard_true_if_eval  (fun (_:pred) (_:list val) => true) E'0 e v); eauto.
-      assert (Exp.freeVars e ⊆ fst (getAnn (ann2 (D0, D') ans ant))) by cset_tac.
+      assert (Op.freeVars e ⊆ fst (getAnn (ann2 (D0, D') ans ant))) by cset_tac.
       assert (agree_on eq (fst (getAnn (ann2 (D0, D') ans ant))) E' E'0)
         by ( eapply (term_ssa_eval_agree L' L' (stmtIf e b1 s') _ s'0 _ _);
              econstructor; eauto).
-      eapply (exp_eval_agree (E:=E') (E':=E'0)); eauto.
-      eapply (agree_on_incl (bv:= Exp.freeVars e) (lv:= fst (getAnn (ann2 (D0, D') ans ant)))); eauto.
+      eapply (op_eval_agree (E:=E') (E':=E'0)); eauto.
+      eapply (agree_on_incl (bv:= Op.freeVars e) (lv:= fst (getAnn (ann2 (D0, D') ans ant)))); eauto.
  + specialize (H0 l Y); isabsurd.
 Qed.
 
 Lemma terminates_impl_eval L L' E s E' e
   : noFun s
     -> Terminates (L, E, s) (L', E',stmtReturn  e)
-    -> exists v, exp_eval E' e = Some v.
+    -> exists v, op_eval E' e = Some v.
 Proof.
   intros NF Trm.
   general induction Trm; eauto.
@@ -166,7 +166,7 @@ Qed.
 Lemma terminates_impl_evalList L  L' E s E' f el
   : noFun s
     -> Terminates (L, E, s) (L', E', stmtApp f el)
-    -> exists v, omap (exp_eval E') el = Some v.
+    -> exists v, omap (op_eval E') el = Some v.
 Proof.
   intros NF Trm.
   general induction Trm; eauto.
@@ -302,7 +302,7 @@ Proof.
   + exploit (IHCrash o s1 Es s' l L') ; try reflexivity; eauto; subst.
     * inversion H; eauto.
     * destruct H2; split; eauto.
-      change (star2 F.step (L0, E0, stmtLet x e s1) (filter_tau EvtTau nil) (L', Es, s')).
+      change (star2 F.step (L0, E0, stmtLet x (Operation e) s1) (filter_tau EvtTau nil) (L', Es, s')).
       econstructor; eauto. destruct a; eauto; isabsurd.
   + inversion H; exploit (IHCrash o s Es s' l L'); subst; eauto.
     * split; eauto.
@@ -316,11 +316,11 @@ Qed.
 
 Lemma nostep_let:
   forall L E x e s,
-    normal2 F.step (L, E, stmtLet x e s)
-    -> exp_eval E e = None.
+    normal2 F.step (L, E, stmtLet x (Operation e) s)
+    -> op_eval E e = None.
 
 Proof.
-  intros. case_eq (exp_eval E e); intros; eauto.
+  intros. case_eq (op_eval E e); intros; eauto.
   exfalso; apply H. unfold reducible2.
   exists EvtTau. exists (L, E[x<-Some v],s). econstructor; eauto.
 Qed.
@@ -328,10 +328,10 @@ Qed.
 Lemma nostep_if:
   forall L E e t f,
     normal2 F.step (L, E, stmtIf e t f)
-    -> exp_eval E e = None.
+    -> op_eval E e = None.
 
 Proof.
-  intros. case_eq (exp_eval E e); intros; eauto.
+  intros. case_eq (op_eval E e); intros; eauto.
   exfalso; eapply H; unfold reducible2.
   exists (EvtTau).
   case_eq (val2bool v); intros.
@@ -365,7 +365,7 @@ Proof.
     (** let Statement **)
     +pose proof (nostep_let L0 E0 x e s H0).
         pose proof (undef_models F  E0 e).
-        assert (forall x, x ∈ Exp.freeVars e -> exists v, E0 x = Some v).
+        assert (forall x, x ∈ Op.freeVars e -> exists v, E0 x = Some v).
      * intros; invt renamedApart. specialize (H3 x0). eapply H3.
        simpl; cset_tac; eauto.
       (** Contradiction: The expression does not evaluate, but the guard
@@ -374,12 +374,12 @@ Proof.
        (** conditional **)
     + pose proof (nostep_if L0 E0 e s t H0).
       pose proof (undef_models F  E0 e).
-     assert (forall x, x ∈ Exp.freeVars e -> exists v, E0 x = Some v).
+     assert (forall x, x ∈ Op.freeVars e -> exists v, E0 x = Some v).
      * intros; invt renamedApart. eapply (H3 x). simpl; cset_tac; eauto.
        (** Same contradiction **)
      * specialize (H9 H10 H8 H7); isabsurd.
     + pose proof (undef_models F E0 e).
-         assert (forall x, x ∈ Exp.freeVars e -> exists v, E0 x = Some v).
+         assert (forall x, x ∈ Op.freeVars e -> exists v, E0 x = Some v).
         { intros; inversion H2; cset_tac. }
         { eapply H7; eauto. }
        (** C-Step **)
@@ -393,13 +393,13 @@ Proof.
      unfold update. cases; eauto.
      destruct (H3 x0); eauto; simpl.
      rewrite H13 in H7; simpl in H7. cset_tac.
-    * assert ( exp_eval Es e = Some v /\ exp_eval Es (Var x) = Some v).
+    * assert ( op_eval Es e = Some v /\ op_eval Es (Var x) = Some v).
     { split.
-      - eapply (exp_eval_agree (E:=E0)); eauto.
+      - eapply (op_eval_agree (E:=E0)); eauto.
         hnf. intros.  hnf in H9. specialize (H9 x0 H7).
-        eapply (crash_ssa_eval_agree L L' (stmtLet x e sc) (ann1 (D0, D') an) s' E0 Es);
+        eapply (crash_ssa_eval_agree L L' (stmtLet x (Operation e) sc) (ann1 (D0, D') an) s' E0 Es);
           eauto; econstructor; eauto.
-      - eapply (exp_eval_agree (E:= E0[x<-Some v])).
+      - eapply (op_eval_agree (E:= E0[x<-Some v])).
         + hnf. intros; simpl in *.
           eapply (crash_ssa_eval_agree L L' sc an s' (E0[x<-Some v]) Es); eauto.
           rewrite H13; simpl. cset_tac.
@@ -407,25 +407,25 @@ Proof.
           }
     { destruct H7.
       unfold smt_eval.
-      repeat erewrite exp_eval_partial_total; eauto.
+      repeat erewrite op_eval_partial_total; eauto.
     }
     +  unfold smt_eval.
-       assert (exp_eval Es e = Some v).
-       * eapply (exp_eval_agree (E:= E')); eauto.
+       assert (op_eval Es e = Some v).
+       * eapply (op_eval_agree (E:= E')); eauto.
          hnf; intros.  hnf in H8.  specialize (H8 x H6).
          pose proof (crash_ssa_eval_agree L L' (stmtIf e sc b2) (ann2 (D0, D') ans ant) s'  E' Es).
          eapply H13; eauto; econstructor; eauto.
-       * unfold smt_eval; erewrite exp_eval_partial_total; eauto.
+       * unfold smt_eval; erewrite op_eval_partial_total; eauto.
          rewrite condTrue.
          eapply (IHCrash L L' ans sc E' Es s'); eauto.
          intros. rewrite H14 in H13. simpl in *; eauto.
     + unfold smt_eval.
-       assert (exp_eval Es e = Some v).
-       * eapply (exp_eval_agree (E:= E')); eauto.
+       assert (op_eval Es e = Some v).
+       * eapply (op_eval_agree (E:= E')); eauto.
          hnf; intros.  hnf in H8.  specialize (H8 x H6).
          pose proof (crash_ssa_eval_agree L L' (stmtIf e b1 sc) (ann2 (D0, D') ans ant) s'  E' Es).
          eapply H13; eauto; econstructor; eauto.
-       * unfold smt_eval; erewrite exp_eval_partial_total; eauto.
+       * unfold smt_eval; erewrite op_eval_partial_total; eauto.
          rewrite condFalse.
          eapply (IHCrash L L' ant sc E' Es s'); eauto.
          intros. rewrite H15 in H13. simpl in *; eauto.

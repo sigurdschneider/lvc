@@ -70,12 +70,6 @@ Proof.
     edestruct PIR2_nth; eauto using ListUpdateAt.list_update_at_get_3; dcr.
     econstructor; eauto.
   - econstructor.
-  - inv EQ.
-    pose proof (ann_R_get H7); simpl in *.
-    econstructor.
-    eapply IHAnn; eauto;
-      simpl_forward_setTopAnn.
-    simpl_forward_setTopAnn.
   - invc EQ. simpl_forward_setTopAnn.
     revert H2 H16 H16 H15.
     set (FWt:=(forward unreachable_code_transform (fst ⊝ s ++ ZL) t
@@ -179,17 +173,13 @@ Inductive unreachable_code_complete
      -> unreachable_code_complete BL b2 al2
      -> impb (getAnn al1) b
      -> impb (getAnn al2) b
-     -> (exp2bool e = ⎣ false ⎦ -> getAnn al1 = false)
-     -> (exp2bool e = ⎣ true ⎦ -> getAnn al2 = false)
+     -> (op2bool e = ⎣ false ⎦ -> getAnn al1 = false)
+     -> (op2bool e = ⎣ true ⎦ -> getAnn al2 = false)
      -> unreachable_code_complete BL (stmtIf e b1 b2) (ann2 b al1 al2)
 | UCPGoto BL l Y a
   : unreachable_code_complete BL (stmtApp l Y) (ann0 a)
 | UCReturn BL e b
   : unreachable_code_complete BL (stmtReturn e) (ann0 b)
-| UCExtern BL x s b Y al f
-  : unreachable_code_complete BL s al
-    -> impb (getAnn al) b
-    -> unreachable_code_complete BL (stmtExtern x f Y s) (ann1 b al)
 | UCLet BL F t b als alt
   : unreachable_code_complete(getAnn ⊝ als ++ BL) t alt
     -> length F = length als
@@ -238,7 +228,6 @@ Proof.
       reflexivity.
     + eapply ListUpdateAt.list_update_at_get_1 in H1; eauto; subst.
       inv_get. destruct a; simpl; eauto.
-  - eapply IH in H1; eauto.
   - destruct b; [| destruct c; simpl; eauto].
     eapply fold_left_zip_orb_inv in H1. destruct H1.
     + eapply IH in H1; eauto.
@@ -393,11 +382,6 @@ Proof.
       rewrite setTopAnn_eta; eauto.
     + eapply ucc_sTA_inv. eapply IHUCC2; eauto.
       rewrite setTopAnn_eta; eauto.
-  - econstructor. eapply ucc_sTA_inv.
-    eapply IHUCC; eauto.
-    rewrite setTopAnn_eta; eauto.
-    repeat rewrite (@forward_getAnn' _ (fun _ => bool)).
-    rewrite getAnn_setTopAnn; eauto.
   - econstructor; eauto using ucc_sTA_inv, ann_R_setTopAnn_left.
     + eapply ucc_sTA_inv. eapply IHUCC; eauto.
       rewrite setTopAnn_eta; eauto.

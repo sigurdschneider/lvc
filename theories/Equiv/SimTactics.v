@@ -17,8 +17,8 @@ Ltac err_step := eapply simErr;
 
 Ltac step_activated :=
   match goal with
-    | [ H : omap (exp_eval ?E) ?Y = Some ?vl
-        |- activated (_, ?E, stmtExtern ?x ?f ?Y ?s) ] =>
+    | [ H : omap (op_eval ?E) ?Y = Some ?vl
+        |- activated (_, ?E, stmtLet ?x (Call ?f ?Y) ?s) ] =>
       eexists (ExternI f vl default_val); eexists; try (now (econstructor; eauto))
   end.
 
@@ -61,3 +61,6 @@ Ltac pextern_step :=
   | intros ? ? STEP; inv STEP; eexists; split; [econstructor; eauto | ]
   | intros ? ? STEP; inv STEP; eexists; split; [econstructor; eauto | ]
   ].
+
+Ltac pno_step_left :=
+  pfold; econstructor 3; [ | eapply star2_refl|]; [ reflexivity | ]; stuck2.

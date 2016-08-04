@@ -1,5 +1,5 @@
 Require Import List Arith.
-Require Import IL Annotation AutoIndTac Exp MoreExp RenamedApart Fresh Util.
+Require Import IL Annotation AutoIndTac Exp RenamedApart Fresh Util.
 Require Import SetOperations SimF Var.
 Require Import SMT NoFun CombineEnv.
 Require Import Guards ILFtoSMT GuardProps ComputeProps.
@@ -64,20 +64,20 @@ Proof.
         split; try split; eauto.
         { apply models_guardGen_source; simpl; split.
           - eapply (guard_true_if_eval _ _ e v); eauto.
-            eapply (exp_eval_agree (E:=E0)); eauto. hnf; intros.
+            eapply (op_eval_agree (E:=E0)); eauto. hnf; intros.
             eapply (term_ssa_eval_agree); eauto; econstructor; eauto.
           - unfold smt_eval.
-            assert (exp_eval E'0 e = Some v).
-            + eapply (exp_eval_agree (E:=E0)); eauto; hnf; intros.
+            assert (op_eval E'0 e = Some v).
+            + eapply (op_eval_agree (E:=E0)); eauto; hnf; intros.
               eapply (term_ssa_eval_agree); eauto; econstructor; eauto.
-            + assert (exp_eval E'0 (Var x) = Some v).
-              * eapply (exp_eval_agree (E:= E0[x <- Some v])).
+            + assert (op_eval E'0 (Var x) = Some v).
+              * eapply (op_eval_agree (E:= E0[x <- Some v])).
                 { hnf. intros. simpl in H4.
                   eapply (term_ssa_eval_agree L' L' s'); eauto.
                   rewrite H10; simpl; cset_tac. }
                 { simpl. unfold update. cases; auto. }
-              * rewrite (exp_eval_partial_total E'0 (Var x) H4).
-                rewrite (exp_eval_partial_total E'0 e H2).
+              * rewrite (op_eval_partial_total E'0 (Var x) H4).
+                rewrite (op_eval_partial_total E'0 e H2).
                 eauto.
         }
         { rewrite H10 in fv_subset; simpl in *. cset_tac.
@@ -112,13 +112,13 @@ Proof.
           split; try split; auto.
           - apply models_guardGen_source; simpl; split.
             + eapply (guard_true_if_eval _ _ e v); eauto.
-              eapply (exp_eval_agree (E:=E')); eauto. hnf; intros.
+              eapply (op_eval_agree (E:=E')); eauto. hnf; intros.
               eapply (term_ssa_eval_agree); eauto; econstructor; eauto.
             + unfold smt_eval.
-              assert (exp_eval E'0 e = Some v).
-              * eapply (exp_eval_agree (E:=E')); eauto; hnf; intros.
+              assert (op_eval E'0 e = Some v).
+              * eapply (op_eval_agree (E:=E')); eauto; hnf; intros.
                 eapply (term_ssa_eval_agree); eauto; econstructor; eauto.
-              * rewrite (exp_eval_partial_total E'0 e H3).
+              * rewrite (op_eval_partial_total E'0 e H3).
                 rewrite condTrue; constructor.
           - simpl. cset_tac.
             + rewrite <- (H8 a).
@@ -150,13 +150,13 @@ Proof.
           split; try split; auto.
           - apply models_guardGen_source; simpl; split.
             + eapply (guard_true_if_eval _ _ e v); eauto.
-              eapply (exp_eval_agree (E:=E')); eauto. hnf; intros.
+              eapply (op_eval_agree (E:=E')); eauto. hnf; intros.
               eapply (term_ssa_eval_agree); eauto; econstructor; eauto.
             + unfold smt_eval.
-              assert (exp_eval E'0 e = Some v).
-              * eapply (exp_eval_agree (E:=E')); eauto; hnf; intros.
+              assert (op_eval E'0 e = Some v).
+              * eapply (op_eval_agree (E:=E')); eauto; hnf; intros.
                 eapply (term_ssa_eval_agree); eauto; econstructor; eauto.
-              * rewrite (exp_eval_partial_total E'0 e H3).
+              * rewrite (op_eval_partial_total E'0 e H3).
                 rewrite condFalse; constructor.
           - simpl. cset_tac.
             + rewrite <- (H8 a).
@@ -191,17 +191,17 @@ Proof.
         split; try split; eauto.
         { apply models_guardGen_target; simpl; intros.
           unfold smt_eval.
-          assert (exp_eval E'0 e = Some v).
-          - eapply (exp_eval_agree (E:=E0)); eauto; hnf; intros.
+          assert (op_eval E'0 e = Some v).
+          - eapply (op_eval_agree (E:=E0)); eauto; hnf; intros.
             eapply (term_ssa_eval_agree); eauto; econstructor; eauto.
-          - assert (exp_eval E'0 (Var x) = Some v).
-            + eapply (exp_eval_agree (E:= E0[x <- Some v])).
+          - assert (op_eval E'0 (Var x) = Some v).
+            + eapply (op_eval_agree (E:= E0[x <- Some v])).
               * hnf. intros. simpl in H8.
                   eapply (term_ssa_eval_agree L' L' s'); eauto.
                   rewrite H10; simpl; cset_tac.
               * simpl. unfold update. cases; auto.
-            + rewrite (exp_eval_partial_total E'0 (Var x) H8).
-              rewrite (exp_eval_partial_total E'0 e H4).
+            + rewrite (op_eval_partial_total E'0 (Var x) H8).
+              rewrite (op_eval_partial_total E'0 e H4).
               eauto.
         }
         { rewrite H10 in fv_subset; simpl in *. cset_tac.
@@ -236,10 +236,10 @@ Proof.
           - apply models_guardGen_target; simpl.
             + intros.
               unfold smt_eval.
-              assert (exp_eval E'0 e = Some v).
-              * eapply (exp_eval_agree (E:=E')); eauto; hnf; intros.
+              assert (op_eval E'0 e = Some v).
+              * eapply (op_eval_agree (E:=E')); eauto; hnf; intros.
                 eapply (term_ssa_eval_agree); eauto; econstructor; eauto.
-              * rewrite (exp_eval_partial_total E'0 e H4).
+              * rewrite (op_eval_partial_total E'0 e H4).
                 rewrite condTrue; constructor.
           - simpl. cset_tac.
             + rewrite <- (H8 a).
@@ -269,10 +269,10 @@ Proof.
           split; try split; auto.
           - apply models_guardGen_target; simpl.
             + unfold smt_eval.
-              assert (exp_eval E'0 e = Some v).
-              * eapply (exp_eval_agree (E:=E')); eauto; hnf; intros.
+              assert (op_eval E'0 e = Some v).
+              * eapply (op_eval_agree (E:=E')); eauto; hnf; intros.
                 eapply (term_ssa_eval_agree); eauto; econstructor; eauto.
-              * rewrite (exp_eval_partial_total E'0 e H3).
+              * rewrite (op_eval_partial_total E'0 e H3).
                 rewrite condFalse; constructor.
           - simpl. cset_tac.
             + rewrite <- (H8 a).
@@ -293,8 +293,8 @@ Proof.
 Qed.
 
 Lemma predeval_uneq_ret E et es e e' P
-  : exp_eval E et = Some e
-    -> exp_eval E es = Some e'
+  : op_eval E et = Some e
+    -> op_eval E es = Some e'
     -> (forall F, models F (to_total E) P)
     -> (forall (F:lab-> list val -> bool),
           models F (to_total E) P ->
@@ -311,13 +311,13 @@ Proof.
     erewrite models_guardGen_target at 1.
     erewrite models_guardGen_source. simpl.
     unfold F at 2 4; simpl.
-    repeat erewrite exp_eval_smt_eval; eauto.
+    repeat erewrite op_eval_smt_eval; eauto.
     repeat cases; eauto using guard_true_if_eval.
 Qed.
 
 Lemma predeval_uneq_goto E l1 l2 et es el el' P
-  : omap (exp_eval E) et = Some el
-    -> omap (exp_eval E) es = Some el'
+  : omap (op_eval E) et = Some el
+    -> omap (op_eval E) es = Some el'
     ->(forall F, models F (to_total E) P)
     -> (forall (F:lab -> list val -> bool),
           models F (to_total E) P ->
@@ -454,10 +454,10 @@ Proof.
                 (σ2 := (L, E, t)) (σ2' := (L, Et, stmtReturn et)));
            subst; try auto.
          { simpl.
-           assert (exists evs, exp_eval Es es = Some evs)
+           assert (exists evs, op_eval Es es = Some evs)
              as val_es
                by (apply (terminates_impl_eval L L E s Es es nf_s term_s)).
-           assert (exists evt, exp_eval Et et = Some evt)
+           assert (exists evt, op_eval Et et = Some evt)
           as val_et
             by (apply (terminates_impl_eval L L E t Et et nf_t term_t)).
            destruct val_es as [evs evalEs].
@@ -472,7 +472,7 @@ Proof.
            destruct (agree_on_ssa_combine D D' L E s t Es Et es et); eauto.
            subst.
            eapply H; clear H; intros;
-             try erewrite exp_eval_agree; eauto. }
+             try erewrite op_eval_agree; eauto. }
          { unfold normal2.
            unfold reducible2.
            hnf; intros.
@@ -544,10 +544,10 @@ Proof.
                           g g Y X et es)
               as equal_goto.
             specialize (equal_goto (smtAnd (smtAnd smtTrue Q) Q')).
-(*            exploit term_ssa_eval_agree; eauto.
-            exploit term_ssa_eval_agree; try eapply term_s; eauto.
-            exploit (ssa_move_goto D L E s Es g X) as ssa_goto; eauto; dcr.
-            erewrite <- combineEnv_omap_exp_eval in teval.
+(*            oploit term_ssa_eval_agree; eauto.
+            oploit term_ssa_eval_agree; try eapply term_s; eauto.
+            oploit (ssa_move_goto D L E s Es g X) as ssa_goto; eauto; dcr.
+            erewrite <- combineEnv_omap_op_eval in teval.
             specialize (equal_goto teval).
             inv H2; simpl in *.*)
             exploit (combineEnv_omap_exp_eval_left X (fst(getAnn D) ∪ (snd (getAnn D))) Es Et)
@@ -579,8 +579,8 @@ Proof.
               (** Make the result values equal **)
               { rewrite equal_goto in teval; intros;
                 [ | | eapply Unsat_st]; try auto.
-                pose proof (omap_length exp val es (exp_eval Es) X seval).
-                pose proof (omap_length exp val es (exp_eval Et) Y teval).
+                pose proof (omap_length op val es (op_eval Es) X seval).
+                pose proof (omap_length op val es (op_eval Et) Y teval).
                 decide (length X = length bZ).
                 - one_step.
                   + simpl. congruence.

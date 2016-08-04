@@ -89,3 +89,19 @@ Proof.
     destruct (omap f L); simpl; eauto.
     destruct (omap f L'); simpl; eauto.
 Qed.
+
+Hint Extern 5 =>
+match goal with
+| [ EQ : ❬?Y❭ = ❬?x❭, OMAP: omap _ ?Y = Some ?l  |- ❬?x❭ = ❬?l❭ ] =>
+  rewrite <- EQ; eapply (omap_length _ _ _ _ _ OMAP)
+| [ EQ : ❬?Y❭ = ❬?x❭, OMAP: omap _ ?Y = Some ?l  |- ❬?l❭ = ❬?x❭ ] =>
+  rewrite <- EQ; symmetry; eapply (omap_length _ _ _ _ _ OMAP)
+| [ EQ : ❬?x❭ = ❬?Y❭, OMAP: omap _ ?Y = Some ?l  |- ❬?x❭ = ❬?l❭ ] =>
+  rewrite EQ; eapply (omap_length _ _ _ _ _ OMAP)
+| [ OMAP: omap _ _ = Some ?l  |- ❬?l❭ = ❬?B❭ ] =>
+  etransitivity; [ symmetry; eapply (omap_length _ _ _ _ _ OMAP)|]
+| [ EQ : ❬?l❭ = ❬?x❭, OMAP: omap _ ?Y = Some ?l  |- ❬?x❭ = ❬?Y❭ ] =>
+  rewrite <- EQ; symmetry; eapply (omap_length _ _ _ _ _ OMAP)
+| [ EQ : ❬?x❭ = ❬?l❭, OMAP: omap _ ?Y = Some ?l  |- ❬?x❭ = ❬?Y❭ ] =>
+  rewrite EQ; symmetry; eapply (omap_length _ _ _ _ _ OMAP)
+end : len.

@@ -29,7 +29,7 @@ Inductive renamedApart : stmt -> ann (set var * set var) -> Prop :=
       -> pe (getAnn an) ({x; D}, Ds)
       -> renamedApart (stmtLet x e s) (ann1 (D, D') an)
   | renamedApartIf  D D' Ds Dt e s t ans ant
-    : Exp.freeVars e ⊆ D
+    : Op.freeVars e ⊆ D
       -> disj Ds Dt
       -> Ds ∪ Dt [=] D'
       -> renamedApart s ans
@@ -38,20 +38,13 @@ Inductive renamedApart : stmt -> ann (set var * set var) -> Prop :=
       -> pe (getAnn ant) (D, Dt)
       -> renamedApart (stmtIf e s t) (ann2 (D, D') ans ant)
   | renamedApartRet D D' e
-    : Exp.freeVars e ⊆ D
+    : Op.freeVars e ⊆ D
       -> D' [=] ∅
       -> renamedApart (stmtReturn e) (ann0 (D, D'))
   | renamedApartGoto D D' f Y
-    : list_union (List.map Exp.freeVars Y) ⊆ D
+    : list_union (List.map Op.freeVars Y) ⊆ D
       -> D' [=] ∅
       -> renamedApart (stmtApp f Y) (ann0 (D, D'))
-  | renamedApartExtern x f Y s D Ds D' an
-    : x ∉ D
-      -> list_union (List.map Exp.freeVars Y) ⊆ D
-      -> renamedApart s an
-      -> D' [=] {x; Ds}
-      -> pe (getAnn an) ({x; D}, Ds)
-      -> renamedApart (stmtExtern x f Y s) (ann1 (D, D') an)
   | renamedApartLet D D' F t Dt ans ant
     : length F = length ans
       -> (forall n Zs a, get F n Zs -> get ans n a -> renamedApart (snd Zs) a)
@@ -80,8 +73,6 @@ Proof.
 
   - econstructor; try srewrite c; try srewrite d; eauto.
   - econstructor; try srewrite c; try srewrite d; eauto.
-  - econstructor; try srewrite c; try srewrite d; eauto.
-    rewrite <- (ann_R_get H9). eauto.
   - assert (PIR2 Equal (zip defVars F bns) (zip defVars F ans)).
     { eapply zip_ext_PIR2; eauto; try congruence.
       intros. get_functional.
@@ -117,7 +108,6 @@ Proof.
   - rewrite IHrenamedApart, H0.
     clear_all; cset_tac; intuition.
   - rewrite H, IHrenamedApart1, IHrenamedApart2. cset_tac.
-  - rewrite H0, IHrenamedApart; simpl. clear_all; cset_tac.
   - rewrite IHrenamedApart.
     rewrite (@list_union_incl _ _ _ _ D); eauto with cset.
     intros ? ? GET. inv_map GET.
@@ -173,7 +163,6 @@ Proof.
   - econstructor; eauto with cset pe ann.
   - econstructor; eauto with cset.
   - econstructor; eauto with cset.
-  - econstructor; eauto 20 with cset pe ann.
   - econstructor; eauto with cset len.
     + intros ? ? ? GET1 GET2. inv_map GET2. eapply H1; eauto.
       eapply disj_1_incl; eauto.
@@ -207,7 +196,6 @@ Lemma renamedApart_disj s G
   -> disj (fst (getAnn G)) (snd (getAnn G)).
 Proof.
   intros. general induction H; simpl; pe_rewrite; try srewrite D'.
-  - eauto with cset.
   - eauto with cset.
   - eauto with cset.
   - eauto with cset.

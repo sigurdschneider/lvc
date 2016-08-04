@@ -36,9 +36,6 @@ Fixpoint regAssign (st:stmt) (an: ann (set var)) (ϱ:Map [var, var])
         regAssign t ant ϱ'
     | stmtApp _ _, ann0 _ => Success ϱ
     | stmtReturn _, ann0 _ => Success ϱ
-    | stmtExtern x f Y s, ann1 lv ans =>
-      let xv := least_fresh (SetConstructs.map (findt ϱ 0) (getAnn ans\ singleton x)) in
-      regAssign s ans (ϱ[- x <- xv -])
     | stmtFun F t, annF _ ans ant =>
       sdo ϱ' <- regAssignF regAssign ϱ F ans;
         regAssign t ant ϱ'
@@ -101,12 +98,6 @@ Proof.
     etransitivity; eapply agree_on_incl; eauto.
     instantiate (1:=G). rewrite <- H7. clear_all; intro; cset_tac; intuition.
     instantiate (1:=G). rewrite <- H7. clear_all; intro; cset_tac; intuition.
-  - exploit IHLS; eauto.
-    rewrite <- map_update_update_agree in H2.
-    eapply agree_on_incl.
-    eapply agree_on_update_inv. eapply H2.
-    rewrite H10, H11. instantiate (1:=G). simpl.
-    revert H6; clear_all; cset_tac; intuition.
   - exploit IHLS; eauto. instantiate (1:=G) in H4.
     pe_rewrite.
     etransitivity; [| eapply agree_on_incl; try eapply H4].

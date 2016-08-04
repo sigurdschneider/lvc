@@ -83,14 +83,6 @@ Fixpoint backward (sT:stmt) (Dom: stmt -> Type)
       fun EQ =>
         (ann0 (btransform sT ZL AL st ST anni0))
 
-    | stmtExtern x f Y s as st, ann1 d ans =>
-      fun EQ =>
-        let ans' := backward Dom btransform ZL AL
-                            (subTerm_EQ_Extern EQ ST) ans in
-        let ai := anni1 (getAnn ans') in
-        let d' := btransform sT ZL AL st ST ai in
-        ann1 d' ans'
-
     | stmtFun F t as st, annF d anF ant =>
       fun EQ =>
         let ALinit := getAnn ⊝ anF ++ AL in
@@ -191,11 +183,6 @@ Proof.
     + eapply IH; eauto.
   - econstructor; eauto.
   - econstructor; simpl; eauto.
-  - econstructor; eauto.
-    + eapply fMon; eauto.
-      econstructor.
-      eapply getAnn_poLe. eapply (IH s); eauto.
-    + eapply IH; eauto.
   - assert (AL'LE:getAnn ⊝ ans ++ AL ⊑ getAnn ⊝ bns ++ AL'). {
       eapply PIR2_app; eauto.
       eapply PIR2_get; intros; inv_get.
@@ -253,11 +240,6 @@ Proof.
     + eapply IH; eauto.
   - econstructor; eauto.
   - econstructor; simpl; eauto.
-  - econstructor; eauto.
-    + eapply fMon; eauto.
-      econstructor.
-      eapply getAnn_poEq. eapply (IH s); eauto.
-    + eapply IH; eauto.
   - assert (AL'LE:getAnn ⊝ ans ++ AL ≣ getAnn ⊝ bns ++ AL'). {
       eapply PIR2_app; eauto.
       eapply PIR2_get; intros; inv_get.

@@ -26,9 +26,6 @@ Fixpoint egalize (D:list nat) (n:nat) (s:stmt) : stmt * list (params * stmt) :=
     | stmtLet x e s =>
       let (s', F) := egalize D n s in
       (stmtLet x e s', F)
-    | stmtExtern x f Y s =>
-      let (s', F) := egalize D n s in
-      (stmtExtern x f Y s', F)
     | stmtIf x s1 s2 =>
       let (s1', F1) := egalize D n s1 in
       let (s2', F2) := egalize D (n + length F1) s2 in
@@ -265,10 +262,15 @@ Proof.
   revert_except s.
   sind s; intros; destruct s; simpl in *; invt labelsDefined;
     repeat let_case_eq; repeat simpl_pair_eqs; subst; simpl in *.
-  - case_eq (exp_eval E e); intros.
-    + pone_step. left. eapply IH; eauto.
-    + pno_step.
-  - case_eq (exp_eval E e); [ intros | intros; pno_step ].
+  - destruct e.
+    + case_eq (op_eval E e); intros.
+      * pone_step. left. eapply IH; eauto.
+      * pno_step.
+    + case_eq (omap (op_eval E) Y); [intros | intros; pno_step ].
+      pextern_step.
+      * left. eapply IH; eauto.
+      * left. eapply IH; eauto.
+  - case_eq (op_eval E e); [ intros | intros; pno_step ].
     rewrite mapi_app in DROP. rewrite <- app_assoc in DROP.
     case_eq (val2bool v); intros.
     + pone_step. left. eapply IH; eauto.
@@ -281,7 +283,7 @@ Proof.
     edestruct SL as [b [b' [Z ?]]]; eauto; dcr; eauto. invt approx.
     repeat let_case_eq; repeat let_pair_case_eq; simpl in * |- *; subst.
     decide (length Z = length Y).
-    + case_eq (omap (exp_eval E) Y); [ intros | intros; pno_step; eauto ].
+    + case_eq (omap (op_eval E) Y); [ intros | intros; pno_step; eauto ].
       exploit (SIML l (LabI f')); eauto using zip_get with len.
       simpl. eauto using zip_get.
       simpl. eauto with len.
@@ -289,10 +291,6 @@ Proof.
     + pno_step; simpl in *.
       erewrite get_nth in Ldef; eauto. get_functional. eauto.
   - pno_step.
-  - case_eq (omap (exp_eval E) Y); [intros | intros; pno_step ].
-    pextern_step.
-    + left. eapply IH; eauto.
-    + left. eapply IH; eauto.
   - rename s into t. eapply sim'_expansion_closed;
                        [ | eapply star2_silent; [ econstructor | eapply star2_refl ]
                          | eapply star2_refl].

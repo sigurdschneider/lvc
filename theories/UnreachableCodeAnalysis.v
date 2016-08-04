@@ -16,11 +16,10 @@ Definition unreachable_code_transform (sT:stmt)
   match st with
   | stmtLet x e s => anni1 d
   | stmtIf e s t =>
-    anni2 (if [exp2bool e = Some false] then false else d)
-          (if [exp2bool e = Some true] then false else d)
+    anni2 (if [op2bool e = Some false] then false else d)
+          (if [op2bool e = Some true] then false else d)
   | stmtApp f Y => anni1 d
   | stmtReturn e => anni1 d
-  | stmtExtern x f Y s => anni1 d
   | _ => anni1 d
   end.
 

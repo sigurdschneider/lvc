@@ -1,5 +1,5 @@
 Require Import Util IL InRel RenamedApart LabelsDefined OptionR.
-Require Import Annotation MoreExp SetOperations Liveness Restrict.
+Require Import Annotation Exp SetOperations Liveness Restrict.
 
 Set Implicit Arguments.
 
@@ -51,9 +51,6 @@ Inductive srd : list (option (set var)) -> stmt -> ann (set var) -> Prop :=
 | srdGoto DL lv G' f Y
   : get DL (counted f) (Some G')
     -> srd DL (stmtApp f Y) (ann0 lv)
-| srdExtern DL x f Y s lv al
-  : srd (restr (lv \ singleton x) ⊝ DL) s al
-    -> srd DL (stmtExtern x f Y s) (ann1 lv al)
 | srdLet DL F t lv als alt
   : length F = length als
     -> (forall n Zs a, get F n Zs -> get als n a ->
@@ -75,8 +72,6 @@ Proof.
     eapply IHsrd; eauto. eapply restrict_subset; eauto.
   - destruct (PIR2_nth H0 H); eauto; dcr. inv H3.
     econstructor; eauto.
-  - econstructor. eapply IHsrd; eauto.
-    eapply restrict_subset; eauto.
   - econstructor; eauto.
     + intros. eapply H1; eauto.
       repeat rewrite List.map_app.
@@ -95,7 +90,6 @@ Proof.
     eapply IHsrd; eauto. eapply restrict_subset2; eauto.
   - destruct (PIR2_nth H0 H); eauto; dcr. inv H3.
     econstructor; eauto.
-  - econstructor. eapply IHsrd, restrict_subset2; eauto.
   - econstructor; eauto.
     + intros. eapply H1; eauto.
       repeat rewrite List.map_app.
@@ -127,10 +121,6 @@ Proof.
   - econstructor; eauto.
   - econstructor.
   - edestruct get_in_range as [a ?]; eauto using map_get_1, srd.
-  - econstructor; eauto.
-    eapply srd_monotone.
-    eapply IHrenamedApart; eauto with cset.
-    erewrite bounded_restrict_eq; simpl; eauto. eauto with cset.
   - econstructor; eauto.
     + intros. inv_map H10.
       exploit (H1 _ _ _ H9 H12 ((getAnn ⊝ (mapAnn fst ⊝ ans)) \\ (fst ⊝ F) ++ DL)); eauto.

@@ -22,14 +22,12 @@ Proof.
   intros. general induction H; invt paramsMatch; simpl.
   - eauto 9 using @live_sound, live_exp_sound_incl, live_freeVars
             with ann pe cset.
-  - eauto 9 using @live_sound, live_exp_sound_incl, live_freeVars
+  - eauto 9 using @live_sound, live_op_sound_incl, Op.live_freeVars
     with ann pe cset.
-  - eauto using live_sound, live_exp_sound_incl, live_freeVars.
+  - eauto using live_sound, live_op_sound_incl, Op.live_freeVars.
   - inv_get.
     econstructor; simpl;
-      eauto using live_exp_sound_incl, live_freeVars, get_list_union_map with cset.
-  - econstructor;
-    eauto using get_live_exp_sound with cset pe ann.
+      eauto using live_op_sound_incl, Op.live_freeVars, get_list_union_map with cset.
   - econstructor; eauto with len.
     + eapply IHrenamedApart.
       repeat rewrite List.map_app; eauto with len.
@@ -71,15 +69,13 @@ Lemma renamedApart_live s ang ZL Lv i
 Proof.
   intros. general induction H; invt paramsMatch; simpl in * |- *; pe_rewrite.
   - econstructor; eauto using live_exp_sound_incl, live_freeVars with cset pe ann.
-  - econstructor; eauto using live_exp_sound_incl, live_freeVars with cset pe ann.
-  - econstructor; eauto using live_exp_sound_incl, live_freeVars with cset.
+  - econstructor; eauto using live_op_sound_incl, Op.live_freeVars with cset pe ann.
+  - econstructor; eauto using live_op_sound_incl, Op.live_freeVars with cset.
   - inv_get.
     econstructor; simpl;
-    eauto using live_exp_sound_incl, live_freeVars, get_list_union_map with cset.
+    eauto using live_op_sound_incl, Op.live_freeVars, get_list_union_map with cset.
     + cases; eauto.
       eapply bounded_get; eauto using map_get_1.
-  - econstructor;
-    eauto using get_live_exp_sound, live_freeVars with cset pe ann.
   - assert (bounded (Some ⊝ (getAnn ⊝ mapAnn fst ⊝ ans ++ Lv) \\ (fst ⊝ F ++ ZL)) D). {
       rewrite zip_app; eauto with len.
       rewrite List.map_app.
@@ -383,10 +379,6 @@ Proof.
     do 2 eexists; split; [| split]; eauto. rewrite <- H13; eauto.
   - edestruct (IH s2); dcr; eauto using disjoint_if2 with cset.
   - eauto.
-  - edestruct (IH s); dcr; eauto using disjoint_let.
-    + do 2 eexists; split; [| split]; eauto with cset.
-      exploit H3; eauto. rewrite <- H13.
-      eauto with cset.
   - clear H H1. eapply renamedApart_disj in H0. simpl in *.
     exploit (IH s); eauto. pe_rewrite. eauto with cset.
     dcr. simpl in *; inv_get.
@@ -495,6 +487,17 @@ Proof.
   intros. general induction H; eauto 20 using @annotation.
 Qed.
 
+Lemma live_op_sound_meet e D lv
+  : Op.freeVars e ⊆ D
+   -> live_op_sound e lv
+   -> live_op_sound e (lv ∩ D).
+Proof.
+  intros.
+  eapply Op.freeVars_live in H0.
+  eapply live_op_sound_incl; eauto using Op.live_freeVars.
+  rewrite <- H, <- H0. cset_tac; intuition.
+Qed.
+
 Lemma live_exp_sound_meet e D lv
   : Exp.freeVars e ⊆ D
    -> live_exp_sound e lv
@@ -571,8 +574,7 @@ Lemma live_sound_renamedApart_minus s ang ZL Lv alv i
   -> live_sound i ZL Lv s (mapAnn2 meet1 alv ang).
 Proof.
   intros RA LS.
-  general induction RA; invt live_sound; simpl in * |- *; pe_rewrite;
-    eauto using live_sound, live_exp_sound_meet.
+  general induction RA; invt live_sound; simpl in * |- *; pe_rewrite.
 
   - econstructor; eauto using live_exp_sound_meet.
     eapply IHRA; eauto using disjoint_let, bounded_incl with cset ann.
@@ -584,29 +586,19 @@ Proof.
     + erewrite getAnn_mapAnn2; eauto using live_sound_annotation,
                                renamedApart_annotation.
       pe_rewrite. simpl; cset_tac; eauto.
-  - econstructor; eauto using live_exp_sound_meet.
+  - econstructor; eauto using live_op_sound_meet.
     + erewrite getAnn_mapAnn2; eauto using live_sound_annotation,
                                renamedApart_annotation with cset.
     + erewrite getAnn_mapAnn2; eauto using live_sound_annotation,
                                renamedApart_annotation with cset.
+  - eauto using live_sound, live_op_sound_meet.
   - econstructor; eauto.
     + cases; simpl in *; eauto.
       exploit bounded_get; eauto.
       eauto with cset.
-    + intros. eapply live_exp_sound_meet; eauto.
+    + intros. eapply live_op_sound_meet; eauto.
       rewrite incl_list_union; eauto.
-  - econstructor; eauto using live_exp_sound_meet.
-    eapply IHRA; eauto using disjoint_let with cset.
-    + intros. eapply live_exp_sound_meet; eauto.
-      rewrite incl_list_union; eauto.
-    + erewrite getAnn_mapAnn2; eauto using live_sound_annotation,
-                               renamedApart_annotation.
-      pe_rewrite.
-      rewrite minus_dist_intersection. rewrite H13.
-      eauto with cset.
-    + erewrite getAnn_mapAnn2; eauto using live_sound_annotation,
-                               renamedApart_annotation.
-      pe_rewrite. cset_tac; eauto.
+
   - constructor; eauto with len.
     + eapply IHRA; eauto.
       * eapply live_sound_monotone; eauto.

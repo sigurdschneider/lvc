@@ -23,7 +23,6 @@ Fixpoint alpha_rho (rho:env var) (s t:stmt) : env var :=
   | stmtIf _ s1 s2, stmtIf _ t1 t2 => alpha_rho (alpha_rho rho s1 t1) s2 t2
   | stmtApp _ _, stmtApp _ _ => rho
   | stmtReturn _, stmtReturn _ => rho
-  | stmtExtern x _ _ s, stmtExtern y _ _ t => alpha_rho (rho[x <- y]) s t
   | stmtFun F1 s, stmtFun F2 t => alpha_rho (alpha_rho_F alpha_rho rho F1 F2) s t
   | _, _ => rho
   end.
@@ -56,8 +55,6 @@ Lemma alpha_rho_agrees_snd s u ang ϱ ϱ' D
 Proof.
   intros RA.
   general induction RA; destruct u; simpl in *; eauto.
-  - eapply IHRA. eapply agree_on_update_same; eauto.
-    eapply agree_on_incl; eauto.
   - eapply IHRA. eapply agree_on_update_same; eauto.
     eapply agree_on_incl; eauto.
   - eapply IHRA. eapply alpha_rho_agrees_snd_F; eauto.
@@ -116,13 +113,6 @@ Proof.
     eapply agree_on_incl. eapply (IHRA1 (D0 \ Dt)).
     eapply agree_on_incl; eauto with cset.
     cset_tac; intuition. cset_tac; intuition.
-  - pe_rewrite. rewrite H1 in *. simpl in *.
-    eapply agree_on_incl. eapply IHRA.
-    symmetry. instantiate (1:=D0 \ singleton x).
-    eapply agree_on_update_dead; [| symmetry; eauto].
-    cset_tac; intuition. eapply agree_on_incl; eauto.
-    clear_all; cset_tac; intuition.
-    clear_all; cset_tac; intuition.
   - pe_rewrite. simpl in *.
     eapply agree_on_incl. eapply IHRA.
     eapply agree_on_incl. eapply alpha_rho_agree_F; eauto.
@@ -256,11 +246,11 @@ Lemma rename_renamedApart_all_alpha s t ang ϱ ϱ'
 Proof.
   intros RA ALPHA.
   intros. general induction ALPHA; invt renamedApart; pe_rewrite; simpl.
-  - erewrite exp_rename_renamedApart_all_alpha; eauto.
+  - erewrite op_rename_renamedApart_all_alpha; eauto.
   - f_equal. length_equify.
     revert H H0; clear_all; intros. general induction H; simpl; eauto.
     f_equal.
-    + eapply exp_rename_renamedApart_all_alpha; eauto using get.
+    + eapply op_rename_renamedApart_all_alpha; eauto using get.
     + eapply IHlength_eq; eauto using get, list_union_cons.
   - exploit IHALPHA; eauto; dcr; pe_rewrite.
     f_equal; eauto.
@@ -279,7 +269,7 @@ Proof.
       eapply renamedApart_disj in H5. pe_rewrite. eauto with cset.
       eapply agree_on_update_dead; eauto.
   - f_equal.
-    + erewrite rename_exp_agree. eapply exp_rename_renamedApart_all_alpha; eauto.
+    + erewrite rename_op_agree. eapply op_rename_renamedApart_all_alpha; eauto.
       symmetry. etransitivity. Focus 2.
       eapply agree_on_incl. eapply alpha_rho_agree; eauto. reflexivity.
       instantiate (1:=D). eapply renamedApart_disj in H7; pe_rewrite.
@@ -314,27 +304,6 @@ Proof.
       * eapply agree_on_incl. eapply alpha_rho_agrees_snd. eauto.
         eapply alpha_rho_agree; eauto. pe_rewrite.
         instantiate (1:=Dt). cset_tac; intuition.
-  - exploit IHALPHA; eauto; dcr; pe_rewrite.
-    f_equal; eauto.
-    + erewrite <- alpha_rho_agree; eauto. instantiate (1:=ra [x <- y]). lud; try congruence.
-      reflexivity.
-      pe_rewrite. eapply renamedApart_disj in H8. pe_rewrite.
-      instantiate (1:={x}). specialize (H8 x).
-      cset_tac; intuition.
-    + eapply map_ext_get_eq; eauto.
-      intros.
-      erewrite rename_exp_agree; eauto.
-      eapply exp_rename_renamedApart_all_alpha; eauto using get.
-      symmetry.
-      pose proof (renamedApart_disj H8); eauto. pe_rewrite.
-      eapply agree_on_incl. eapply alpha_rho_agree; eauto.
-      symmetry. eapply agree_on_incl. eapply agree_on_update_dead; eauto.
-      pe_rewrite. instantiate (1:=D). eauto with cset.
-      rewrite <- H6. pe_rewrite.
-      etransitivity. erewrite incl_list_union. reflexivity.
-      eapply map_get_1. eapply H2. reflexivity. instantiate (1:={}).
-      eapply not_incl_minus; eauto.
-      rewrite H6. unfold disj in *. cset_tac; eauto.
   - exploit IHALPHA; eauto; dcr; pe_rewrite.
     f_equal.
     + eapply map_ext_get_eq; eauto.
@@ -454,16 +423,16 @@ Qed.
 
 (** ** Alpha Equivalent programs map to identical De-Bruijn terms *)
 
-Lemma exp_alpha_real ϱ ϱ' e e' symb symb'
-: alpha_exp ϱ ϱ' e e'
+Lemma op_alpha_real ϱ ϱ' e e' symb symb'
+: alpha_op ϱ ϱ' e e'
   -> (forall x y, ϱ x = y -> ϱ' y = x -> pos symb x 0 = pos symb' y 0)
   -> exp_idx symb e = exp_idx symb' e'.
 Proof.
   intros. general induction H; simpl in * |- *; eauto.
   - erewrite H1; eauto.
-  - erewrite IHalpha_exp; intros; eauto.
-  - erewrite IHalpha_exp1; eauto with cset.
-    erewrite IHalpha_exp2; eauto with cset.
+  - erewrite IHalpha_op; intros; eauto.
+  - erewrite IHalpha_op1; eauto with cset.
+    erewrite IHalpha_op2; eauto with cset.
 Qed.
 
 Lemma alpha_real ϱ ϱ' s t symb symb'
@@ -472,23 +441,24 @@ Lemma alpha_real ϱ ϱ' s t symb symb'
   -> stmt_idx symb s = stmt_idx symb' t.
 Proof.
   intros. general induction H; simpl in * |- *.
-  - erewrite exp_alpha_real; eauto.
+  - erewrite op_alpha_real; eauto.
   - erewrite smap_agree_2; eauto.
-    intros; erewrite exp_alpha_real; eauto.
-  - erewrite exp_alpha_real; eauto with cset.
-    case_eq (exp_idx symb' e'); intros; simpl; eauto.
-    erewrite IHalpha; eauto with cset.
-    simpl; intros.
-    lud; repeat cases; try congruence.
-    exploit H1; eauto. eapply pos_inc with (k':=1); eauto.
-  - erewrite exp_alpha_real; eauto with cset.
+    intros; erewrite op_alpha_real; eauto.
+  - inv H.
+    + erewrite op_alpha_real; eauto with cset.
+      case_eq (exp_idx symb' e'0); intros; simpl; eauto.
+      erewrite IHalpha; eauto with cset.
+      simpl; intros.
+      lud; repeat cases; try congruence.
+      exploit H1; eauto. eapply pos_inc with (k':=1); eauto.
+    + erewrite smap_agree_2; eauto; [| intros; erewrite op_alpha_real; eauto].
+      erewrite IHalpha; eauto.
+      simpl; intros.
+      lud; repeat cases; try congruence.
+      exploit H1; eauto. eapply pos_inc with (k':=1); eauto.
+  - erewrite op_alpha_real; eauto with cset.
     erewrite IHalpha1; eauto with cset.
     erewrite IHalpha2; eauto with cset.
-  - erewrite smap_agree_2; eauto; [| intros; erewrite exp_alpha_real; eauto].
-    erewrite IHalpha; eauto.
-    simpl; intros.
-    lud; repeat cases; try congruence.
-    exploit H1; eauto. eapply pos_inc with (k':=1); eauto.
   - erewrite IHalpha; eauto with cset.
     erewrite smap_agree_2; eauto.
     intros m [Z u] [Z' u'] ? ?. erewrite H0; eauto.

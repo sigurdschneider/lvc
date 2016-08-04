@@ -1,5 +1,5 @@
 Require Import List paco2.
-Require Export Util Var Val Exp MoreExp Env Map CSet AutoIndTac IL AllInRel Sawtooth.
+Require Export Util Var Val Exp Env Map CSet AutoIndTac IL AllInRel Sawtooth.
 Require Export Sim SimTactics IL InRel.
 
 Set Implicit Arguments.
@@ -56,8 +56,8 @@ Definition simLabenv t (r:frel)
     -> ParamRel a Z Z'
       /\ (forall E E' Yv Y'v Y Y',
             ArgRel a Yv Y'v
-            -> omap (exp_eval E) Y = Some Yv
-            -> omap (exp_eval E') Y' = Some Y'v
+            -> omap (op_eval E) Y = Some Yv
+            -> omap (op_eval E') Y' = Some Y'v
             -> sim'r r t (L, E, stmtApp f Y)
                     (L', E', stmtApp f' Y')).
 
@@ -84,7 +84,7 @@ Definition indexwise_proofrel A (PR:ProofRelation A) (F F':〔params * stmt〕) 
 Lemma stepGoto_mapi L blk Y E vl f F V
       (Ldef:get L (counted f - ❬F❭) blk)
       (len:length (F.block_Z blk) = length Y)
-      (def:omap (exp_eval V) Y = Some vl) E'
+      (def:omap (op_eval V) Y = Some vl) E'
       (updOk:F.block_E blk [F.block_Z blk <-- List.map Some vl] = E')
       (ST:sawtooth L) (GE: counted f >= ❬F❭)
   : F.step (mapi (F.mkBlock E) F ++ L, V, stmtApp f Y) EvtTau

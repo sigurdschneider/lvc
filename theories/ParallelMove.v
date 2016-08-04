@@ -1,7 +1,7 @@
 Require Import CSet Le.
 
 Require Import Plus Util AllInRel Map.
-Require Import Val Var Env IL Annotation SimI Fresh Liveness Status MoreExp.
+Require Import Val Var Env IL Annotation SimI Fresh Liveness Status.
 
 Set Implicit Arguments.
 
@@ -107,10 +107,10 @@ Section Translate.
 End Parallel_Move.
 
 Section GlueCode.
-  Function list_to_stmt (p : list (list var * list var)) (s : stmt) {struct p} : stmt :=
+  Fixpoint list_to_stmt (p : list (list var * list var)) (s : stmt) {struct p} : stmt :=
     match p with
       | nil => s
-      | (x :: nil, y:: nil) :: p' => stmtLet x (var_to_exp y) (list_to_stmt p' s)
+      | (x :: nil, y:: nil) :: p' => stmtLet x (Operation (var_to_op y)) (list_to_stmt p' s)
       | _ => s
     end.
 
@@ -124,7 +124,7 @@ Section GlueCode.
     pose proof (H a). assert (List.In a (a :: p)) by (simpl; eauto).
     destruct (H1 H2) as [? [? ?]].
     subst. simpl.
-    exploit (var_to_exp_correct M x0).
+    exploit (var_to_op_correct M x0).
     exploit (H0 x0); eauto. simpl. cset_tac; intuition.
     destruct (M x0); isabsurd.
     eapply star2_silent.
@@ -208,7 +208,7 @@ Fixpoint onlyVars (Y:args) : status params :=
 
 Lemma onlyVars_defined (E:onv val) Y Y' v
   : onlyVars Y = Success Y'
-    -> omap (exp_eval E) Y = Some v
+    -> omap (op_eval E) Y = Some v
     -> forall x, x ∈ of_list Y' -> E x <> None.
 Proof.
   intros. general induction Y; simpl in * |- *; eauto.
@@ -220,7 +220,7 @@ Qed.
 
 Lemma onlyVars_lookup (E:onv val) Y Y' v
   : onlyVars Y = Success Y'
-    -> omap (exp_eval E) Y = Some v
+    -> omap (op_eval E) Y = Some v
     -> lookup_list E Y' = List.map Some v.
 Proof.
   intros. general induction Y; simpl in * |- *; eauto.
@@ -245,9 +245,6 @@ Fixpoint lower DL s (an:ann (set var))
         compile_parallel_assignment parallel_move lv' Z Y (stmtApp l nil)
 
     | stmtReturn x, ann0 lv => Success (stmtReturn x)
-    | stmtExtern x f Y s, ann1 _ ans =>
-      sdo sl <- lower DL s ans;
-        Success (stmtExtern x f Y sl)
     | stmtFun F t, annF lv ans ant =>
       let DL' := pair ⊜ (getAnn ⊝ ans) (fst ⊝ F) in
       sdo s' <- szip (fun Zs a => lower (DL' ++ DL) (snd Zs) a) F ans;
@@ -282,26 +279,36 @@ Lemma pmSim_sim σ1 σ2
 Proof.
   revert σ1 σ2. cofix; intros.
   inv H; inv LS; simpl in *; try monadS_inv pmlowerOk.
-  - case_eq (exp_eval E e); intros.
-    one_step.
-    erewrite <- exp_eval_live; eauto.
-    eapply pmSim_sim; econstructor; eauto.
-    eapply agree_on_update_same; eauto using agree_on_incl.
-    no_step. erewrite <- exp_eval_live in def; eauto. congruence.
-  - case_eq (exp_eval E e); intros.
-    exploit exp_eval_live_agree; try eassumption.
+  - invt live_exp_sound.
+    + case_eq (op_eval E e0); intros.
+      * one_step.
+        erewrite <- op_eval_live; eauto.
+        eapply pmSim_sim; econstructor; eauto.
+        eapply agree_on_update_same; eauto using agree_on_incl.
+      * no_step. erewrite <- op_eval_live in def; eauto. congruence.
+    + remember (omap (op_eval E) Y). symmetry in Heqo.
+      exploit omap_op_eval_live_agree; try eassumption.
+      destruct o.
+      * extern_step; try congruence.
+        -- eapply pmSim_sim; econstructor; eauto.
+           eapply agree_on_update_same; eauto using agree_on_incl.
+        -- eapply pmSim_sim; econstructor; eauto.
+           eapply agree_on_update_same; eauto using agree_on_incl.
+      * no_step.
+  - case_eq (op_eval E e); intros.
+    exploit op_eval_live_agree; try eassumption.
     case_eq (val2bool v); intros.
     + one_step.
       eapply pmSim_sim; econstructor; eauto using agree_on_incl.
     + one_step.
       eapply pmSim_sim; econstructor; eauto using agree_on_incl.
-    + exploit exp_eval_live_agree; try eassumption.
+    + exploit op_eval_live_agree; try eassumption.
       no_step.
   - eapply option2status_inv in EQ. eapply nth_error_get in EQ.
     inRel_invs.
     inv_get. simpl in *.
-    case_eq (omap (exp_eval E) Y); intros.
-    + exploit omap_exp_eval_live_agree; try eassumption.
+    case_eq (omap (op_eval E) Y); intros.
+    + exploit omap_op_eval_live_agree; try eassumption.
       edestruct (compile_parallel_assignment_correct _ _ _ _ _ EQ2 E' L')
         as [M' [X' X'']].
       eapply onlyVars_defined; eauto.
@@ -318,16 +325,7 @@ Proof.
         eapply update_with_list_agree; eauto with len.
         eapply agree_on_incl; eauto. eauto with cset.
     + err_step.
-  - no_step. simpl. eauto using exp_eval_live.
-  - remember (omap (exp_eval E) Y). symmetry in Heqo.
-    exploit omap_exp_eval_live_agree; try eassumption.
-    destruct o.
-    + extern_step; try congruence.
-      * eapply pmSim_sim; econstructor; eauto.
-        eapply agree_on_update_same; eauto using agree_on_incl.
-      * eapply pmSim_sim; econstructor; eauto.
-        eapply agree_on_update_same; eauto using agree_on_incl.
-    + no_step.
+  - no_step. simpl. eauto using op_eval_live.
   - one_step.
     eapply pmSim_sim. econstructor; eauto using agree_on_incl.
     econstructor; eauto.

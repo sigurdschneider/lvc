@@ -11,17 +11,15 @@ Definition srd_dec DL s a
 Proof.
   hnf. revert DL a.
   sinduction s; simpl.
-  + edestruct a as [|lv a'| |]; [dec_right| | dec_right| dec_right].
+  - edestruct a as [|lv a'| |]; [dec_right| | dec_right| dec_right].
     edestruct (X x0); [ eauto | dec_solve | dec_right].
-  + edestruct a as [?|?|lv als alt|]; [dec_right| dec_right| | dec_right].
+  - edestruct a as [?|?|lv als alt|]; [dec_right| dec_right| | dec_right].
     edestruct (X x1), (X x2); eauto; [ | dec_right| |dec_right ]; dec_solve.
-  + destruct a; [ | dec_right | dec_right | dec_right].
+  - destruct a; [ | dec_right | dec_right | dec_right].
     destruct (get_dec DL (counted l)) as [[[G'|] ?]|?]; [| dec_right | dec_right].
     dec_solve.
-  + destruct a; [ | dec_right | dec_right | dec_right]. dec_solve.
-  + edestruct a as [|lv a'| |]; [dec_right| | dec_right| dec_right].
-    edestruct (X x0); eauto; [| dec_right]. dec_solve; eauto.
-  + destruct a as [?|?|lv als alt| ]; [dec_right| dec_right| dec_right|].
+  - destruct a; [ | dec_right | dec_right | dec_right]. dec_solve.
+  - destruct a as [?|?|lv als alt| ]; [dec_right| dec_right| dec_right|].
     ensure (length F = length sa).
     edestruct (X x) with (DL:=Some ⊝ (getAnn ⊝ sa) \\ (fst ⊝ F) ++ DL); eauto; [ |dec_right].
     edestruct (indexwise_R_dec'
@@ -47,16 +45,14 @@ Definition locally_inj_dec (ϱ:env var) (s:stmt) (lv:ann (set var)) (an:annotati
 Proof.
   revert ϱ lv an.
   sind s; intros; destruct s; destruct lv; try solve [ exfalso; inv an ].
-  + ensure (injective_on a ϱ).
+  - ensure (injective_on a ϱ).
     edestruct (IH s); eauto. dec_solve. dec_right.
-  + ensure (injective_on a ϱ).
+  - ensure (injective_on a ϱ).
     edestruct (IH s1); eauto; [|dec_right].
     edestruct (IH s2); eauto; [|dec_right]. dec_solve.
-  + ensure (injective_on a ϱ); dec_solve.
-  + ensure (injective_on a ϱ); dec_solve.
-  + ensure (injective_on a ϱ).
-    edestruct (IH s); eauto; [| dec_right]. dec_solve.
-  + ensure (injective_on a ϱ).
+  - ensure (injective_on a ϱ); dec_solve.
+  - ensure (injective_on a ϱ); dec_solve.
+  - ensure (injective_on a ϱ).
     ensure (length F = length sa).
     edestruct (IH s); eauto; [| dec_solve].
     edestruct (indexwise_R_dec' (R:=fun x y => locally_inj ϱ (snd x) y) (LA:=F) (LB:=sa));

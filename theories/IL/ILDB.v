@@ -1,25 +1,24 @@
 Require Import Util LengthEq Map CSet AllInRel MoreList.
-Require Import Var Val Exp MoreExp Env IL.
+Require Import Var Val Exp Env IL.
 Require Import Sim SimTactics Infra.Status Position.
 
 Set Implicit Arguments.
 
 Inductive bstmt : Type :=
 | bstmtLet    (e: exp) (s : bstmt)
-| bstmtIf     (e : exp) (s : bstmt) (t : bstmt)
+| bstmtIf     (e : op) (s : bstmt) (t : bstmt)
 | bstmtApp    (l : lab) (Y:args)
-| bstmtReturn (e : exp)
-| bstmtExtern (f : external) (Y:args) (s:bstmt)
+| bstmtReturn (e : op)
 | bstmtFun    (F : list (nat * bstmt)) (t : bstmt).
 
-Fixpoint exp_eval (E:list val) (e:exp) : option val :=
+Fixpoint op_eval (E:list val) (e:op) : option val :=
   match e with
     | Con v => Some v
     | Var x => nth_error E x
-    | UnOp o e => mdo v <- exp_eval E e;
+    | UnOp o e => mdo v <- op_eval E e;
         unop_eval o v
-    | BinOp o e1 e2 => mdo v1 <- exp_eval E e1;
-        mdo v2 <- exp_eval E e2;
+    | BinOp o e1 e2 => mdo v1 <- op_eval E e1;
+        mdo v2 <- op_eval E e2;
         binop_eval o v1 v2
   end.
 
@@ -42,25 +41,31 @@ Module F.
 
   Inductive step : state -> event -> state -> Prop :=
   | stepExp L E e b v
-    (def:exp_eval E e = Some v)
-    : step (L, E, bstmtLet e b) EvtTau (L, v::E, b)
+    (def:op_eval E e = Some v)
+    : step (L, E, bstmtLet (Operation e) b) EvtTau (L, v::E, b)
+
+  | stepExtern L E f Y s vl v
+    (def:omap (op_eval E) Y = Some vl)
+    : step  (L, E, bstmtLet (Call f Y) s)
+            (EvtExtern (ExternI f vl v))
+            (L, v::E, s)
 
   | stepIfT L E
     e b1 b2 v
-    (def:exp_eval E e = Some v)
+    (def:op_eval E e = Some v)
     (condTrue: val2bool v = true)
     : step (L, E, bstmtIf e b1 b2) EvtTau (L, E, b1)
 
   | stepIfF L E
     e b1 b2 v
-    (def:exp_eval E e = Some v)
+    (def:op_eval E e = Some v)
     (condFalse: val2bool v = false)
     : step (L, E, bstmtIf e b1 b2) EvtTau (L, E, b2)
 
   | stepGoto L E l Y blk vl
     (Ldef:get L (counted l) blk)
     (len:block_Z blk = length Y)
-    (def:omap (exp_eval E) Y = Some vl) E'
+    (def:omap (op_eval E) Y = Some vl) E'
     (updOk:(List.app vl  (block_E blk)) = E')
     : step  (L, E, bstmtApp l Y)
             EvtTau
@@ -68,13 +73,7 @@ Module F.
 
   | stepLet L E
     F t
-    : step (L, E, bstmtFun F t) EvtTau ((mapi (mkBlock E) F++L)%list, E, t)
-
-  | stepExtern L E f Y s vl v
-    (def:omap (exp_eval E) Y = Some vl)
-    : step  (L, E, bstmtExtern f Y s)
-            (EvtExtern (ExternI f vl v))
-            (L, v::E, s).
+    : step (L, E, bstmtFun F t) EvtTau ((mapi (mkBlock E) F++L)%list, E, t).
 
   Lemma step_internally_deterministic
   : internally_deterministic step.
@@ -94,26 +93,27 @@ Module F.
   : reddec2 step.
   Proof.
     hnf; intros. destruct x as [[L V] []].
-    - case_eq (exp_eval V e); intros. left. do 2 eexists. eauto 20 using step.
-      right. stuck.
-    - case_eq (exp_eval V e); intros.
+    - destruct e.
+      + case_eq (op_eval V e); intros. left. do 2 eexists. eauto 20 using step.
+        right. stuck.
+      + case_eq (omap (op_eval V) Y); intros; try now (right; stuck).
+        left; eexists (EvtExtern (ExternI f l default_val)). eexists; eauto using step.
+    - case_eq (op_eval V e); intros.
       left. case_eq (val2bool v); intros; do 2 eexists; eauto using step.
       right. stuck.
     - destruct (get_dec L (counted l)) as [[blk A]|?].
       decide (block_Z blk = length Y).
-      case_eq (omap (exp_eval V) Y); intros; try now (right; stuck).
+      case_eq (omap (op_eval V) Y); intros; try now (right; stuck).
       + left. do 2 eexists. econstructor; eauto.
       + right. stuck2.
       + right. stuck2.
     - right. stuck2.
-    - case_eq (omap (exp_eval V) Y); intros; try now (right; stuck).
-      left; eexists (EvtExtern (ExternI f l default_val)). eexists; eauto using step.
     - left. eexists. eauto using step.
   Qed.
 
 End F.
 
-Fixpoint exp_idx (symb:list var) (e:exp) : status exp :=
+Fixpoint exp_idx (symb:list var) (e:op) : status op :=
   match e with
     | Con v => Success (Con v)
     | Var x => sdo x <- option2status (pos symb x 0) "labIndices: Undeclared variable";
@@ -127,9 +127,12 @@ Fixpoint exp_idx (symb:list var) (e:exp) : status exp :=
 
 Fixpoint stmt_idx (symb: list var) (s:stmt) : status bstmt :=
   match s with
-    | stmtLet x e s =>
+    | stmtLet x (Operation e) s =>
       sdo e <- exp_idx symb e;
-      sdo s' <- (stmt_idx (x::symb) s); Success (bstmtLet e s')
+        sdo s' <- (stmt_idx (x::symb) s); Success (bstmtLet (Operation e) s')
+    | stmtLet x (Call f Y) s =>
+      sdo Y <- smap (exp_idx symb) Y;
+      sdo s' <- (stmt_idx (x::symb) s); Success (bstmtLet (Call f Y) s')
     | stmtIf e s1 s2 =>
       sdo e <- exp_idx symb e;
       sdo s1' <- (stmt_idx symb s1);
@@ -141,9 +144,6 @@ Fixpoint stmt_idx (symb: list var) (s:stmt) : status bstmt :=
     | stmtReturn e =>
       sdo e <- exp_idx symb e;
       Success (bstmtReturn e)
-    | stmtExtern x f Y s =>
-      sdo Y <- smap (exp_idx symb) Y;
-      sdo s' <- (stmt_idx (x::symb) s); Success (bstmtExtern f Y s')
     | stmtFun F s2 =>
       sdo F' <- smap (fun sZ => sdo s <- stmt_idx (fst sZ ++ symb) (snd sZ); Success (length (fst sZ), s)) F;
       sdo s2' <- stmt_idx (symb) s2;
@@ -152,7 +152,7 @@ Fixpoint stmt_idx (symb: list var) (s:stmt) : status bstmt :=
 
 Definition state_result X (s:X*list val*bstmt) : option val :=
   match s with
-    | (_, E, bstmtReturn e) => exp_eval E e
+    | (_, E, bstmtReturn e) => op_eval E e
     | _ => None
   end.
 
@@ -168,7 +168,7 @@ Lemma exp_idx_ok E E' e e' (symb:list var)
       (Edef:forall x v, E x = Some v -> exists n, get symb n x)
       (Eagr:forall x n, pos symb x 0 = Some n -> exists v, get E' n v /\ E x = Some v)
       (EQ:exp_idx symb e = Success e')
-: Exp.exp_eval E e = exp_eval E' e'.
+: Op.op_eval E e = op_eval E' e'.
 Proof.
   general induction e; eauto; simpl in * |- *; try monadS_inv EQ.
   - eapply option2status_inv in EQ0. simpl.
@@ -247,24 +247,45 @@ Lemma stmt_idx_sim σ1 σ2
 Proof.
   revert σ1 σ2. cofix; intros.
   destruct H; destruct s; simpl in *; try monadS_inv EQ.
-  - case_eq (Exp.exp_eval E e); intros.
-    + one_step. erewrite <- exp_idx_ok; eauto.
+  - destruct e; monadS_inv EQ.
+    + case_eq (Op.op_eval E e); intros.
+      * one_step. erewrite <- exp_idx_ok; eauto.
       eapply stmt_idx_sim; econstructor; eauto using vars_exist_update, defs_agree_update.
-    + no_step. erewrite <- exp_idx_ok in def; eauto. congruence.
-  - case_eq (Exp.exp_eval E e); intros.
-    case_eq (val2bool v); intros; one_step; eauto.
-    erewrite <- exp_idx_ok; eauto.
-    eapply stmt_idx_sim; econstructor; eauto.
-    erewrite <- exp_idx_ok; eauto.
-    eapply stmt_idx_sim; econstructor; eauto.
-    no_step.
-    erewrite <- exp_idx_ok in def; eauto. congruence.
-    erewrite <- exp_idx_ok in def; eauto. congruence.
+      * no_step. erewrite <- exp_idx_ok in def; eauto. congruence.
+    + case_eq (omap (Op.op_eval E) Y); intros.
+      assert (omap (op_eval E') x0 = ⎣l ⎦).
+      erewrite omap_agree_2; try eapply H; eauto using smap_length.
+      intros. exploit (smap_spec _ EQ0); eauto. dcr. get_functional; subst.
+      erewrite exp_idx_ok; eauto.
+      * extern_step.
+        -- eexists (ExternI f l default_val); eexists; try (now (econstructor; eauto)).
+        -- assert (vl = l) by congruence; subst.
+           eauto using vars_exist_update, defs_agree_update.
+        -- apply stmt_idx_sim; econstructor; eauto using vars_exist_update, defs_agree_update.
+        -- assert (vl = l) by congruence; subst.
+           eauto using vars_exist_update, defs_agree_update.
+        -- eapply stmt_idx_sim; econstructor; eauto using vars_exist_update, defs_agree_update.
+      * no_step.
+        pose proof (smap_spec _ EQ0).
+        assert (omap (Op.op_eval E) Y = Some vl).
+        erewrite omap_agree_2; eauto using smap_length.
+        intros. eapply exp_idx_ok; eauto. edestruct H0; eauto; dcr.
+        get_functional; subst; eauto. symmetry; eapply smap_length; eauto.
+        congruence.
+  - case_eq (Op.op_eval E e); intros.
+    * case_eq (val2bool v); intros; one_step; eauto.
+      erewrite <- exp_idx_ok; eauto.
+      eapply stmt_idx_sim; econstructor; eauto.
+      erewrite <- exp_idx_ok; eauto.
+      eapply stmt_idx_sim; econstructor; eauto.
+    * no_step.
+      erewrite <- exp_idx_ok in def; eauto. congruence.
+      erewrite <- exp_idx_ok in def; eauto. congruence.
   - destruct (get_dec L (counted l)) as [[blk A]|?].
     edestruct PIR2_nth; eauto; dcr.
     decide (length (IL.F.block_Z blk) = length Y).
-    case_eq (omap (Exp.exp_eval E) Y); intros.
-    + assert (omap (exp_eval E') x = ⎣l0 ⎦).
+    case_eq (omap (Op.op_eval E) Y); intros.
+    + assert (omap (op_eval E') x = ⎣l0 ⎦).
       erewrite omap_agree_2; try eapply H; eauto using smap_length.
       intros. exploit (smap_spec _ EQ0); eauto. dcr. get_functional; subst.
       erewrite exp_idx_ok; eauto.
@@ -276,7 +297,7 @@ Proof.
       eauto using PIR2_drop, vars_exist_update_list, defs_agree_update_list.
     + no_step.
       pose proof (smap_spec _ EQ0).
-      assert (omap (Exp.exp_eval E) Y = Some vl).
+      assert (omap (Op.op_eval E) Y = Some vl).
       erewrite omap_agree_2; eauto using smap_length.
       intros. eapply exp_idx_ok; eauto. edestruct H2; eauto; dcr.
       get_functional; subst; eauto. symmetry; eapply smap_length; eauto.
@@ -286,26 +307,6 @@ Proof.
     + no_step; eauto. edestruct PIR2_nth_2; eauto; dcr. eauto.
   - no_step. simpl.
     erewrite <- exp_idx_ok; eauto.
-  - case_eq (omap (Exp.exp_eval E) Y); intros.
-    assert (omap (exp_eval E') x0 = ⎣l ⎦).
-    erewrite omap_agree_2; try eapply H; eauto using smap_length.
-    intros. exploit (smap_spec _ EQ0); eauto. dcr. get_functional; subst.
-    erewrite exp_idx_ok; eauto.
-    + extern_step.
-      * eexists (ExternI f l default_val); eexists; try (now (econstructor; eauto)).
-      * assert (vl = l) by congruence; subst.
-        eauto using vars_exist_update, defs_agree_update.
-      * eapply stmt_idx_sim; econstructor; eauto using vars_exist_update, defs_agree_update.
-      * assert (vl = l) by congruence; subst.
-        eauto using vars_exist_update, defs_agree_update.
-      * eapply stmt_idx_sim; econstructor; eauto using vars_exist_update, defs_agree_update.
-    + no_step.
-      pose proof (smap_spec _ EQ0).
-      assert (omap (Exp.exp_eval E) Y = Some vl).
-      erewrite omap_agree_2; eauto using smap_length.
-      intros. eapply exp_idx_ok; eauto. edestruct H0; eauto; dcr.
-      get_functional; subst; eauto. symmetry; eapply smap_length; eauto.
-      congruence.
   - one_step. eapply stmt_idx_sim. econstructor; eauto.
     eapply PIR2_app; eauto.
     pose proof (smap_spec _ EQ0). simpl in H.

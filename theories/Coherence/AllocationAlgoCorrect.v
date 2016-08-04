@@ -62,24 +62,6 @@ Proof.
     revert H6 H14; clear_all; cset_tac; intuition; eauto.
     rewrite H11; simpl. rewrite <- incl; eauto.
 
-  - exploit IHLS; try eapply allocOK; eauto.
-    + eapply injective_on_incl.
-      eapply injective_on_agree; [| eapply map_update_update_agree].
-      eapply injective_on_fresh; eauto using injective_on_incl, least_fresh_spec.
-      eauto with cset.
-    + pe_rewrite. rewrite <- incl. eauto with cset.
-    + exploit regAssign_renamedApart_agree;
-      try eapply allocOK; simpl; eauto using live_sound.
-      rewrite H10 in *. simpl in *.
-      econstructor. eauto using injective_on_incl.
-      eapply injective_on_agree; try eapply inj.
-      eapply agree_on_incl.
-      eapply agree_on_update_inv.
-      rewrite map_update_update_agree.
-      eapply H3.
-      pe_rewrite.
-      revert H6 incl; clear_all; cset_tac; intuition.
-
   - exploit regAssign_renamedApart_agreeF;
     eauto using regAssign_renamedApart_agree'. reflexivity.
     exploit regAssign_renamedApart_agree;

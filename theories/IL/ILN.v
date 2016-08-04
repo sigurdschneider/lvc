@@ -7,10 +7,9 @@ Unset Printing Records.
 
 Inductive nstmt : Type :=
 | nstmtLet    (x : var) (e: exp) (s : nstmt)
-| nstmtIf     (e : exp) (s : nstmt) (t : nstmt)
+| nstmtIf     (e : op) (s : nstmt) (t : nstmt)
 | nstmtApp   (l : var) (Y:args)
-| nstmtReturn (e : exp)
-| nstmtExtern (x : var) (f:external) (Y:args) (s:nstmt)
+| nstmtReturn (e : op)
 | nstmtFun    (F : list (var * params * nstmt)) (t : nstmt).
 
 Instance NStmt_size : Size nstmt. gen_Size. Defined.
@@ -18,10 +17,9 @@ Instance NStmt_size : Size nstmt. gen_Size. Defined.
 Fixpoint freeVars (s:nstmt) : set var :=
   match s with
     | nstmtLet x e s0 => (freeVars s0 \ singleton x) ∪ Exp.freeVars e
-    | nstmtIf e s1 s2 => freeVars s1 ∪ freeVars s2 ∪ Exp.freeVars e
-    | nstmtApp l Y => list_union (List.map Exp.freeVars Y)
-    | nstmtReturn e => Exp.freeVars e
-    | nstmtExtern x f Y s => (freeVars s \ singleton x) ∪ list_union (List.map Exp.freeVars Y)
+    | nstmtIf e s1 s2 => freeVars s1 ∪ freeVars s2 ∪ Op.freeVars e
+    | nstmtApp l Y => list_union (List.map Op.freeVars Y)
+    | nstmtReturn e => Op.freeVars e
     | nstmtFun F s2 =>
       list_union (List.map (fun f => (freeVars (snd f) \ of_list (snd (fst f)))) F)
                  ∪ freeVars s2
@@ -47,18 +45,24 @@ Module F.
 
   Inductive step : state -> event -> state -> Prop :=
   | nstepExp L E x e b v
-    (def:exp_eval E e = Some v)
-    : step (L, E, nstmtLet x e b) EvtTau (L, E[x<-Some v], b)
+    (def:op_eval E e = Some v)
+    : step (L, E, nstmtLet x (Operation e) b) EvtTau (L, E[x<-Some v], b)
+
+  | stepExtern L E x f Y s vl v
+    (def:omap (op_eval E) Y = Some vl)
+    : step  (L, E, nstmtLet x (Call f Y) s)
+            (EvtExtern (ExternI f vl v))
+            (L, E[x <- Some v], s)
 
   | nstepIfT L E
-    (e:exp) b1 b2 v
-    (def:exp_eval E e = Some v)
+    e b1 b2 v
+    (def:op_eval E e = Some v)
     (condTrue: val2bool v = true)
     : step (L, E, nstmtIf e b1 b2) EvtTau (L, E, b1)
 
   | nstepIfF L E
-    (e:exp) b1 b2 v
-    (def:exp_eval E e = Some v)
+    e b1 b2 v
+    (def:op_eval E e = Some v)
     (condFalse:val2bool v = false)
     : step (L, E, nstmtIf e b1 b2) EvtTau (L, E, b2)
 
@@ -69,7 +73,7 @@ Module F.
                   simulation proofs*)
 
     (Ldef:L l = Some (blockI L' E' F f)) E'' vl
-    (def:omap (exp_eval E) Y = Some vl)
+    (def:omap (op_eval E) Y = Some vl)
     (sdef : get F f (l', Z, s))
     (updOk:E'[Z <-- List.map Some vl]  = E'')
     : step (L, E, nstmtApp l Y)
@@ -78,14 +82,7 @@ Module F.
 
   | stepLet (L:onv block) E F t
     : step (L, E, nstmtFun F t) EvtTau (L[List.map (fst ∘ fst) F <--
-                                                   List.map Some (mapi (mkBlock L E F) F)], E, t)
-
-  | stepExtern L E x f Y s vl v
-    (def:omap (exp_eval E) Y = Some vl)
-    : step  (L, E, nstmtExtern x f Y s)
-            (EvtExtern (ExternI f vl v))
-            (L, E[x <- Some v], s).
-
+                                                   List.map Some (mapi (mkBlock L E F) F)], E, t).
 
   Lemma step_internally_deterministic :
     internally_deterministic step.
@@ -98,9 +95,12 @@ Module F.
   : reddec2 step.
   Proof.
     hnf; intros. destruct x as [[L V] []].
-    - case_eq (exp_eval V e); intros. left. eexists EvtTau; eauto using step.
-      right. stuck.
-    - case_eq (exp_eval V e); intros.
+    - destruct e.
+      + case_eq (op_eval V e); intros. left. eexists EvtTau; eauto using step.
+        right. stuck.
+      + case_eq (omap (op_eval V) Y); intros; try now (right; stuck).
+        left. eexists (EvtExtern (ExternI f l default_val)). eauto using step.
+    - case_eq (op_eval V e); intros.
       left. case_eq (val2bool v); intros; eexists EvtTau; eauto using step.
       right. stuck.
     - case_eq (L l); intros.
@@ -108,7 +108,7 @@ Module F.
         destruct (get_dec F' f') as [[[[l' Z] s] ?]|].
         * decide (l = l'); subst.
           decide (length Z = length Y).
-          case_eq (omap (exp_eval V) Y); intros; [| right; stuck2].
+          case_eq (omap (op_eval V) Y); intros; [| right; stuck2].
           left. eexists EvtTau. econstructor. econstructor; eauto.
           orewrite (l' + 0=l'). eauto.
           right; stuck2. rewrite Ldef in H. inv H. get_functional; subst. congruence.
@@ -116,8 +116,6 @@ Module F.
         * right; stuck2. rewrite Ldef in H. inv H. eauto.
       + right. stuck.
     - right. stuck.
-    - case_eq (omap (exp_eval V) Y); intros; try now (right; stuck).
-      left. eexists (EvtExtern (ExternI f l default_val)). eauto using step.
     - left. exists EvtTau. eauto using step.
   Qed.
 
@@ -144,18 +142,22 @@ Module I.
 
   Inductive step : state -> event -> state -> Prop :=
   | nstepExp L E x e b v
-    (def:exp_eval E e = Some v)
-    : step (L, E, nstmtLet x e b) EvtTau (L, E[x<-Some v], b)
+    (def:op_eval E e = Some v)
+    : step (L, E, nstmtLet x (Operation e) b) EvtTau (L, E[x<-Some v], b)
 
-  | nstepIfT L E
-    (e:exp) b1 b2 v
-    (def:exp_eval E e = Some v)
+  | stepExtern L E x f Y s vl v
+    (def:omap (op_eval E) Y = Some vl)
+    : step  (L, E, nstmtLet x (Call f Y) s)
+            (EvtExtern (ExternI f vl v))
+            (L, E[x <- Some v], s)
+
+  | nstepIfT L E e b1 b2 v
+    (def:op_eval E e = Some v)
     (condTrue: val2bool v = true)
     : step (L, E, nstmtIf e b1 b2) EvtTau (L, E, b1)
 
-  | nstepIfF L E
-    (e:exp) b1 b2 v
-    (def:exp_eval E e = Some v)
+  | nstepIfF L E e b1 b2 v
+    (def:op_eval E e = Some v)
     (condFalse:val2bool v = false)
     : step (L, E, nstmtIf e b1 b2) EvtTau (L, E, b2)
 
@@ -165,7 +167,7 @@ Module I.
                   simulation proofs*)
 
     (Ldef:L l = Some (blockI L' F f)) E'' vl
-    (def:omap (exp_eval E) Y = Some vl)
+    (def:omap (op_eval E) Y = Some vl)
     (sdef : get F f (l', Z, s))
     (updOk:E[Z <-- List.map Some vl]  = E'')
     : step (L, E, nstmtApp l Y)
@@ -175,14 +177,7 @@ Module I.
   | stepLet L E F t
     : step (L, E, nstmtFun F t)
            EvtTau
-           (L[List.map (fst ∘ fst) F <-- List.map Some (mapi (mkBlock L F) F)], E, t)
-
-  | stepExtern L E x f Y s vl v
-    (def:omap (exp_eval E) Y = Some vl)
-    : step  (L, E, nstmtExtern x f Y s)
-            (EvtExtern (ExternI f vl v))
-            (L, E[x <- Some v], s).
-
+           (L[List.map (fst ∘ fst) F <-- List.map Some (mapi (mkBlock L F) F)], E, t).
 
   Lemma step_internally_deterministic :
     internally_deterministic step.
@@ -204,9 +199,12 @@ Module I.
   : reddec2 step.
   Proof.
       hnf; intros. destruct x as [[L V] []].
-    - case_eq (exp_eval V e); intros. left. eexists EvtTau; eauto using step.
-      right. stuck.
-    - case_eq (exp_eval V e); intros.
+      - destruct e.
+        + case_eq (op_eval V e); intros. left. eexists EvtTau; eauto using step.
+          right. stuck.
+        + case_eq (omap (op_eval V) Y); intros; try now (right; stuck).
+          left. eexists (EvtExtern (ExternI f l default_val)). eauto using step.
+    - case_eq (op_eval V e); intros.
       left. case_eq (val2bool v); intros; eexists EvtTau; eauto using step.
       right. stuck.
     - case_eq (L l); intros.
@@ -214,15 +212,13 @@ Module I.
         destruct (get_dec F' f') as [[[[l' Z] s] ?]|].
         * decide (l = l').
           decide (length Z = length Y).
-          case_eq (omap (exp_eval V) Y); intros;[| now (right; stuck2)].
+          case_eq (omap (op_eval V) Y); intros;[| now (right; stuck2)].
           left. eexists EvtTau. econstructor. econstructor; eauto.
           right; stuck2. rewrite Ldef in H. inv H. get_functional; subst. congruence.
           right; stuck2. rewrite Ldef in H. inv H. get_functional; subst. congruence.
         * right; stuck2. rewrite Ldef in H. inv H. eauto.
       + right. stuck.
     - right. stuck.
-    - case_eq (omap (exp_eval V) Y); intros; try now (right; stuck).
-      left. eexists (EvtExtern (ExternI f l default_val)). eauto using step.
     - left. exists EvtTau. eauto using step.
   Qed.
 
@@ -230,7 +226,7 @@ End I.
 
 Definition state_result X (s:X*onv val*nstmt) : option val :=
   match s with
-    | (_, E, nstmtReturn e) => exp_eval E e
+    | (_, E, nstmtReturn e) => op_eval E e
     | _ => None
   end.
 

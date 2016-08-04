@@ -1,5 +1,5 @@
 Require Import List Arith.
-Require Import IL Annotation AutoIndTac Exp MoreExp RenamedApart Fresh Util.
+Require Import IL Annotation AutoIndTac Exp RenamedApart Fresh Util.
 Require Import SetOperations Sim Var.
 Require Import SMT NoFun.
 Require Import Guards ILFtoSMT GuardProps ComputeProps.
@@ -44,20 +44,20 @@ Proof.
 Qed.
 
 Lemma combineEnv_omap_exp_eval_left el D Es Et
-  : list_union (List.map Exp.freeVars el) ⊆ D
-    -> omap (exp_eval (combineEnv D Es Et)) el = omap (exp_eval Es) el.
+  : list_union (List.map Op.freeVars el) ⊆ D
+    -> omap (op_eval (combineEnv D Es Et)) el = omap (op_eval Es) el.
 Proof.
   intros.
-  erewrite omap_exp_eval_agree; [reflexivity | | reflexivity].
+  erewrite omap_op_eval_agree; [reflexivity | | reflexivity].
   symmetry. eapply agree_on_incl; eauto using combineEnv_agree.
 Qed.
 
 Lemma combineEnv_omap_exp_eval_right el D Es Et
-  : agree_on eq (list_union (List.map Exp.freeVars el) ∩ D) Es Et
-    -> omap (exp_eval (combineEnv D Es Et)) el = omap (exp_eval Et) el.
+  : agree_on eq (list_union (List.map Op.freeVars el) ∩ D) Es Et
+    -> omap (op_eval (combineEnv D Es Et)) el = omap (op_eval Et) el.
 Proof.
   intros.
-  erewrite omap_exp_eval_agree; [reflexivity | | reflexivity].
+  erewrite omap_op_eval_agree; [reflexivity | | reflexivity].
   symmetry. eapply combineEnv_agree_meet; eauto.
 Qed.
 
@@ -89,8 +89,8 @@ Lemma agree_on_ssa_combine:
     -> noFun t
     -> Terminates (L, E, s) (L, Es, stmtReturn es)
     -> Terminates (L, E, t) (L, Et, stmtReturn et)
-    -> (agree_on eq (Exp.freeVars et) Et (combineEnv (fst(getAnn D) ∪ snd(getAnn D)) Es Et)
-        /\ agree_on eq (Exp.freeVars es) Es (combineEnv (fst(getAnn D) ∪ snd(getAnn D)) Es Et)).
+    -> (agree_on eq (Op.freeVars et) Et (combineEnv (fst(getAnn D) ∪ snd(getAnn D)) Es Et)
+        /\ agree_on eq (Op.freeVars es) Es (combineEnv (fst(getAnn D) ∪ snd(getAnn D)) Es Et)).
 
 Proof.
   intros D D' L E s t Es Et es et.

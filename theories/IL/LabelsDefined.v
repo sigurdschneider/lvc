@@ -1,5 +1,5 @@
 Require Import Util Get Drop MoreList DecSolve Indexwise.
-Require Import Exp MoreExp IL.
+Require Import Exp IL.
 
 Set Implicit Arguments.
 
@@ -30,9 +30,6 @@ Inductive labelsDefined : stmt -> nat -> Prop :=
   | labelsDefinedGoto f Y L
     : L > counted f
       -> labelsDefined (stmtApp f Y) L
-  | labelsDefinedExtern x f Y s L
-    : labelsDefined s L
-      -> labelsDefined (stmtExtern x f Y s) L
   | labelsDefinedLet F t L
     :  (forall n Zs, get F n Zs -> labelsDefined (snd Zs) (length F + L))
       -> labelsDefined t (length F + L)
@@ -56,7 +53,6 @@ Proof.
     edestruct (IH s2); [ eauto | dec_solve | dec_right].
   - ensure (n > counted l). dec_solve.
   - dec_solve.
-  - edestruct (IH s); eauto; dec_solve.
   - edestruct (IH s); [ eauto | | dec_right].
     exploit (@list_get_computable' _ F
                                    (fun Zs => labelsDefined (snd Zs) (❬F❭ + n))).
@@ -80,9 +76,6 @@ Inductive paramsMatch : stmt -> list nat -> Prop :=
     : get L (counted f) n
       -> length Y = n
       -> paramsMatch (stmtApp f Y) L
-  | paramsMatchExtern x f Y s L
-    : paramsMatch s L
-      -> paramsMatch (stmtExtern x f Y s) L
   | paramsMatchLet F t L
     :  (forall n Zs, get F n Zs -> paramsMatch (snd Zs) (length ⊝ fst ⊝ F ++ L))
       -> paramsMatch t (length ⊝ fst ⊝ F ++ L)
@@ -107,7 +100,6 @@ Proof.
   - destruct (get_dec L (counted l)) as [[? ?]|]; [| dec_right].
     ensure (length Y = x). dec_solve.
   - dec_solve.
-  - edestruct (IH s); eauto; dec_solve.
   - edestruct (IH s); [ eauto | | dec_right].
     exploit (@list_get_computable' _ F
                                    (fun Zs => paramsMatch (snd Zs) (length ⊝ fst ⊝ F ++ L))).
@@ -206,9 +198,6 @@ Inductive isCalled : stmt -> lab -> Prop :=
       -> isCalled (stmtIf e s t) l
   | IsCalledGoto f Y
     : isCalled (stmtApp f Y) f
-  | IsCalledExtern x f Y s l
-    : isCalled s l
-      -> isCalled (stmtExtern x f Y s) l
   | IsCalledLet F t l l'
     : callChain isCalled F l' (incc l (length F))
       -> isCalled t l'
@@ -221,17 +210,14 @@ Inductive trueIsCalled : stmt -> lab -> Prop :=
       -> trueIsCalled (stmtLet x e s) l
   | TrueIsCalledIf1 e s t l
     : trueIsCalled s l
-      -> exp2bool e <> Some false
+      -> op2bool e <> Some false
       -> trueIsCalled (stmtIf e s t) l
   | TrueIsCalledIf2 e s t l
     : trueIsCalled t l
-      -> exp2bool e <> Some true
+      -> op2bool e <> Some true
       -> trueIsCalled (stmtIf e s t) l
   | TrueIsCalledGoto f Y
     : trueIsCalled (stmtApp f Y) f
-  | TrueIsCalledExtern x f Y s l
-    : trueIsCalled s l
-      -> trueIsCalled (stmtExtern x f Y s) l
   | TrueIsCalledLet F t l l'
     : callChain trueIsCalled F l' (incc l (length F))
       -> trueIsCalled t l'
@@ -258,9 +244,6 @@ Inductive noUnreachableCode (isCalled : stmt -> lab -> Prop) : stmt -> Prop :=
     : noUnreachableCode isCalled (stmtApp f Y)
   | NoUnrechableCodeReturn e
     : noUnreachableCode isCalled (stmtReturn e)
-  | NoUnrechableCodeExtern x f Y s
-    : noUnreachableCode isCalled s
-      -> noUnreachableCode isCalled (stmtExtern x f Y s)
   | NoUnrechableCodeLet1 F t
     : (forall n Zs, get F n Zs -> noUnreachableCode isCalled (snd Zs))
       -> noUnreachableCode isCalled t

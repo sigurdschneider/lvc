@@ -41,14 +41,9 @@ match s with
    | stmtIf e s1 s2 =>
      let (G', s1') := renameApart' ϱ G s1 in
      let (G'', s2') := renameApart' ϱ (G ∪ G') s2 in
-      (G' ∪ G'', stmtIf (rename_exp ϱ e) s1' s2')
-   | stmtApp l Y => (∅, stmtApp l (List.map (rename_exp ϱ) Y))
-   | stmtReturn e => (∅, stmtReturn (rename_exp ϱ e))
-   | stmtExtern x f Y s =>
-     let y := fresh G in
-     let ϱ' := ϱ[x <- y] in
-     let (G', s') := renameApart' ϱ' {y; G} s in
-       ({y; G'}, stmtExtern y f (List.map (rename_exp ϱ) Y) s')
+      (G' ∪ G'', stmtIf (rename_op ϱ e) s1' s2')
+   | stmtApp l Y => (∅, stmtApp l (List.map (rename_op ϱ) Y))
+   | stmtReturn e => (∅, stmtReturn (rename_op ϱ e))
    | stmtFun F s2 =>
      let (F', G') := renameApartF renameApart' G ϱ F (nil, ∅) in
      let (G'', s2') := renameApart' ϱ (G ∪ G') s2 in
@@ -81,9 +76,6 @@ Proof.
   - rewrite disj_app; split; eauto.
     eapply disj_subset_subset_flip_impl;
       [| reflexivity | eapply (IH s2)]; eauto with cset.
-  - rewrite disj_add; split; eauto using fresh_spec.
-    eapply disj_subset_subset_flip_impl;
-      [| reflexivity | eapply (IH s)]; eauto with cset.
   - repeat (rewrite disj_app; split); eauto.
     + cut (forall Ys G', disj G G' ->
                     disj G (snd (renameApartF renameApart' G ϱ F (Ys, G'))));
@@ -109,9 +101,6 @@ Fixpoint renamedApartAnn (s:stmt) (G:set var) : ann (set var * set var) :=
       ann0 (G, ∅)
     | stmtApp f Y =>
       ann0 (G, ∅)
-    | stmtExtern x f Y s =>
-      let an := renamedApartAnn s {x; G} in
-      ann1 (G, {x; snd (getAnn an)}) an
     | stmtFun F t =>
       let (ans, G') := renamedApartAnnF renamedApartAnn G (nil, {}) F in
       let ant := renamedApartAnn t G in
@@ -306,7 +295,6 @@ Proof.
   sind s; destruct s; simpl; intros; repeat let_pair_case_eq; simpl; eauto.
   - subst. rewrite (IH s); eauto.
   - subst. rewrite (IH s1); eauto. rewrite (IH s2); eauto.
-  - subst. rewrite (IH s); eauto.
   - subst.
     let_pair_case_eq; simpl_pair_eqs; subst. simpl.
     rewrite (IH s); eauto.
@@ -385,7 +373,6 @@ Proof.
   - econstructor; eauto with cset pe ann.
   - econstructor; eauto with cset pe ann.
   - econstructor; eauto with cset pe ann.
-  - econstructor; eauto 20 with cset pe ann.
   - intros.
     repeat let_pair_case_eq; subst; simpl.
     econstructor; eauto 20 with cset pe ann.
@@ -409,17 +396,6 @@ Proof.
         eapply incl_list_union. eapply map_get_1; eauto.
         eapply incl_right.
 Qed.
-
-
-Lemma freeVars_rename_exp_list ϱ Y
-  : list_union (List.map Exp.freeVars (List.map (rename_exp ϱ) Y))[=]
-               lookup_set ϱ (list_union (List.map Exp.freeVars Y)).
-Proof.
-  rewrite lookup_set_list_union; eauto using lookup_set_empty.
-  repeat rewrite map_map. eapply fold_left_union_morphism; [|reflexivity].
-  clear_all. general induction Y; simpl; eauto using AllInRel.PIR2, freeVars_renameExp.
-Qed.
-
 
 Lemma renameApartF_pw_disj G' ϱ F
 : pw_disj (List.map
@@ -497,7 +473,8 @@ Lemma freeVars_renamedApart' ϱ G s
 Proof.
   revert G ϱ.
   sind s; destruct s; intros; simpl; repeat let_pair_case_eq; simpl in * |- *; subst; eauto;
-          repeat rewrite lookup_set_union; try rewrite freeVars_renameExp; eauto; try reflexivity.
+    repeat rewrite lookup_set_union; try rewrite freeVars_renameExp;
+      try rewrite freeVars_renameOp; eauto; try reflexivity.
   - rewrite IH; eauto.
     + rewrite lookup_set_update_union_minus_single; eauto.
       assert (fresh G ∉ lookup_set ϱ (freeVars s \ singleton x)).
@@ -511,18 +488,7 @@ Proof.
   - repeat rewrite IH; eauto.
     + rewrite <- H at 1. repeat rewrite lookup_set_union; eauto with cset.
     + rewrite <- H at 1. repeat rewrite lookup_set_union; eauto with cset.
-  - eapply freeVars_rename_exp_list.
-  - rewrite IH; eauto.
-    + rewrite freeVars_rename_exp_list.
-      rewrite lookup_set_update_union_minus_single; eauto.
-      assert (fresh G ∉ lookup_set ϱ (freeVars s \ singleton x)).
-      intro. eapply lookup_set_incl in H0; eauto.
-      eapply H in H0. eapply fresh_spec; eauto.
-      cset_tac; intuition.
-      cset_tac; intuition.
-    + rewrite lookup_set_update_in_union; eauto.
-      rewrite <- H at 3. repeat rewrite lookup_set_union; eauto.
-      cset_tac; intuition.
+  - eapply freeVars_rename_op_list.
   - eapply union_eq_decomp; eauto.
     + rewrite lookup_set_list_union; eauto; try reflexivity.
       rewrite map_map.
@@ -634,7 +600,7 @@ Proof.
     + reflexivity.
   - subst s0 s4. simpl in H. simpl. rename s3 into Gs2. rename s into Gs1.
     eapply renamedApartIf with (Ds := Gs1) (Dt := Gs2).
-    + rewrite <- H. rewrite Exp.rename_exp_freeVars; eauto using lookup_set_union_incl.
+    + rewrite <- H. rewrite rename_op_freeVars; eauto using lookup_set_union_incl.
     + eapply disj_1_incl; eauto. eapply disj_2_incl.
       eapply (@renameApart'_disj ϱ (G' ∪ Gs1) s2).
       subst; eauto. eauto.
@@ -673,33 +639,10 @@ Proof.
     eapply fold_left_subset_morphism; try reflexivity.
     repeat rewrite map_map.
     eapply map_ext_get; intros.
-    rewrite <- Exp.rename_exp_freeVars; eauto; reflexivity.
+    rewrite <- rename_op_freeVars; eauto; reflexivity.
     eapply lookup_set_empty; eauto.
   - econstructor; eauto. simpl in H. rewrite <- H.
-    rewrite Exp.rename_exp_freeVars; eauto.
-  - subst. econstructor; eauto using renameApartAnn_decomp.
-    + rewrite H0; eauto using fresh_spec.
-    + simpl in H.
-      assert  (lookup_set ϱ
-        (list_union (List.map Exp.freeVars Y)) [<=]G).
-      rewrite <- H.
-      eapply lookup_set_incl; eauto.
-      rewrite <- H1.
-      rewrite lookup_set_list_union; eauto.
-      instantiate (1:={}).
-      eapply fold_left_subset_morphism; try reflexivity.
-      repeat rewrite map_map.
-      eapply map_ext_get; intros.
-      rewrite <- Exp.rename_exp_freeVars; eauto; reflexivity.
-      eapply lookup_set_empty; eauto.
-    + eapply (IH s); eauto with cset. simpl in *.
-      hnf; intros. eapply lookup_set_spec in H1; eauto; dcr.
-      lud.
-      * rewrite H4. cset_tac.
-      * cset_tac. right. rewrite H4. eapply H.
-        lset_tac.
-      * rewrite H0; eauto.
-    +  reflexivity.
+    rewrite rename_op_freeVars; eauto.
   - simpl. subst s1.
     let_pair_case_eq. simpl_pair_eqs.
     subst. econstructor; eauto.
@@ -811,15 +754,10 @@ Proof.
     eapply agree_on_update_same; eauto with cset.
   - erewrite (IH s1); eauto using agree_on_incl with cset.
     erewrite (IH s2); eauto using agree_on_incl with cset.
-    erewrite rename_exp_agree; eauto using agree_on_incl with cset.
-  - do 2 f_equal. eapply map_ext_get_eq2; intros. eapply rename_exp_agree.
+    erewrite rename_op_agree; eauto using agree_on_incl with cset.
+  - do 2 f_equal. eapply map_ext_get_eq2; intros. eapply rename_op_agree.
     eapply agree_on_incl; eauto. eapply incl_list_union. eapply map_get_1; eauto. eauto.
-  - erewrite rename_exp_agree; eauto with cset.
-  - erewrite map_ext_get_eq2; intros.
-    erewrite (IH s); eauto using agree_on_incl, agree_on_update_same with cset.
-    eapply rename_exp_agree.
-    eapply agree_on_incl; eauto. eapply incl_union_right.
-    eapply incl_list_union. eapply map_get_1; eauto. eauto.
+  - erewrite rename_op_agree; eauto with cset.
   - erewrite (IH s); eauto with cset.
     erewrite renameApartF_agree; eauto.
     eapply agree_on_incl; eauto with cset.
@@ -850,7 +788,7 @@ Proof.
       rewrite lookup_set_union; cset_tac; intuition.
       rewrite H1, H. eapply fresh_spec; eauto.
   - econstructor; eauto.
-    + eapply alpha_exp_sym. eapply Exp.alpha_exp_rename_injective.
+    + eapply alpha_op_sym. eapply alpha_op_rename_injective.
       eapply inverse_on_incl; try eassumption. eapply incl_right.
     + eapply IH; eauto.
       * eapply Subset_trans; try eassumption. eapply lookup_set_incl; [intuition|].
@@ -863,35 +801,13 @@ Proof.
         cset_tac; intuition.
   - econstructor. rewrite map_length; eauto.
     intros. edestruct map_get_4; eauto; dcr; get_functional; subst.
-    eapply alpha_exp_sym. eapply Exp.alpha_exp_rename_injective.
+    eapply alpha_op_sym. eapply alpha_op_rename_injective.
     eapply inverse_on_incl; try eassumption. eapply incl_list_union; try reflexivity.
     eapply map_get_1; eauto.
 
-  - econstructor; eauto. eapply alpha_exp_sym.
-    eapply Exp.alpha_exp_rename_injective.
+  - econstructor; eauto. eapply alpha_op_sym.
+    eapply alpha_op_rename_injective.
     eapply inverse_on_incl; try eassumption. reflexivity.
-
-  - econstructor.
-    + rewrite map_length; eauto.
-    + intros. edestruct map_get_4; eauto; dcr; get_functional; subst.
-      eapply alpha_exp_sym. eapply Exp.alpha_exp_rename_injective.
-      eapply inverse_on_incl; try eassumption. etransitivity; [| eapply incl_right].
-      eapply  incl_list_union; try reflexivity.
-      eapply map_get_1; eauto.
-    + eapply IH; eauto.
-      * rewrite <- H at 3.
-        rewrite lookup_set_update_in_union; eauto.
-        cset_tac; intuition. right.
-        eapply lookup_set_union_incl; eauto. lset_tac.
-      * eapply inverse_on_update_inverse. intuition.
-        eapply inverse_on_incl; try eassumption.
-        eauto.
-        assert (lookup_set ϱ (freeVars s \ {{x}}) ⊆
-                           lookup_set ϱ ((freeVars s \ {{x}}) ∪ list_union (List.map Exp.freeVars Y))).
-        rewrite lookup_set_union; cset_tac; intuition.
-        eauto with cset.
-        rewrite lookup_set_incl; eauto. erewrite H; eauto using fresh_spec.
-        eauto with cset.
   - econstructor.
     + rewrite rev_length, renameApartF_length; eauto.
     + intros. eapply get_rev in H1.
@@ -974,7 +890,6 @@ Proof.
   intros.
   general induction H; simpl; repeat (let_pair_case_eq; simpl); try now econstructor; eauto; simpl_pair_eqs; instantiate; subst; eauto; subst.
   - subst. exploit IHlabelsDefined; eauto. econstructor. eapply H0.
-  - subst. eauto using labelsDefined.
   - subst. eauto using labelsDefined.
   - subst. econstructor.
     + intros.

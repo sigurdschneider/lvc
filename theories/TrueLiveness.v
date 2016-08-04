@@ -1,5 +1,5 @@
 Require Import Util LengthEq AllInRel Map Env DecSolve.
-Require Import IL Annotation AutoIndTac Exp MoreExp SetOperations.
+Require Import IL Annotation AutoIndTac Exp SetOperations.
 Require Export Liveness Filter LabelsDefined OUnion.
 
 Set Implicit Arguments.
@@ -10,7 +10,7 @@ Inductive argsLive (Caller Callee:set var) : args -> params -> Prop :=
 | AL_nil : argsLive Caller Callee nil nil
 | AL_cons y z Y Z
   : argsLive Caller Callee Y Z
-    -> (z ∈ Callee -> live_exp_sound y Caller)
+    -> (z ∈ Callee -> live_op_sound y Caller)
     -> argsLive Caller Callee (y::Y) (z::Z).
 
 Lemma argsLive_length lv bv Y Z
@@ -24,9 +24,9 @@ Hint Resolve argsLive_length : len.
 
 Lemma argsLive_liveSound lv blv Y Z
   : argsLive lv blv Y Z
-    -> forall (n : nat) (y : exp),
+    -> forall (n : nat) (y : op),
       get (filter_by (fun y : var => B[y ∈ blv]) Z Y) n y ->
-      live_exp_sound y lv.
+      live_op_sound y lv.
 Proof.
   intros. general induction H; simpl in * |- *.
   - isabsurd.
@@ -39,7 +39,7 @@ Lemma argsLive_live_exp_sound lv blv Y Z y z n
     -> get Y n y
     -> get Z n z
     -> z ∈ blv
-    -> live_exp_sound y lv.
+    -> live_op_sound y lv.
 Proof.
   intros. general induction n; inv H0; inv H1; inv H; intuition; eauto.
 Qed.
@@ -47,14 +47,14 @@ Qed.
 Lemma argsLive_agree_on' (V E E':onv val) lv blv Y Z v v'
   :  argsLive lv blv Y Z
      -> agree_on eq lv E E'
-     -> omap (exp_eval E) Y = Some v
-     -> omap (exp_eval E') Y = Some v'
+     -> omap (op_eval E) Y = Some v
+     -> omap (op_eval E') Y = Some v'
      -> agree_on eq blv (V [Z <-- List.map Some v]) (V [Z <-- List.map Some v']).
 Proof.
   intros. general induction H; simpl in * |- *; eauto.
   - monad_inv H2. monad_inv H3.
     decide (z ∈ blv).
-    +erewrite <- exp_eval_live in EQ0; eauto.
+    +erewrite <- op_eval_live in EQ0; eauto.
      *  assert (x1 = x) by congruence.
         subst. simpl.
         eauto using agree_on_update_same, agree_on_incl.
@@ -65,8 +65,8 @@ Lemma argsLive_agree_on (V V' E E':onv val) lv blv Y Z v v'
   : agree_on eq (blv \ of_list Z) V V'
     -> argsLive lv blv Y Z
     -> agree_on eq lv E E'
-    -> omap (exp_eval E) Y = Some v
-    -> omap (exp_eval E') Y = Some v'
+    -> omap (op_eval E) Y = Some v
+    -> omap (op_eval E') Y = Some v'
     -> agree_on eq blv (V [Z <-- List.map Some v]) (V' [Z <-- List.map Some v']).
 Proof.
   intros. etransitivity; eauto using argsLive_agree_on'.
@@ -75,7 +75,7 @@ Qed.
 
 Lemma filter_by_incl_argsLive lv blv Y Z
   : ❬Y❭ = ❬Z❭
-    -> list_union (Exp.freeVars ⊝ filter_by (fun x => if [x \In blv] then true else false) Z Y) ⊆ lv
+    -> list_union (Op.freeVars ⊝ filter_by (fun x => if [x \In blv] then true else false) Z Y) ⊆ lv
     -> argsLive lv blv Y Z.
 Proof.
   intros LEN INCL. length_equify.
@@ -87,7 +87,7 @@ Proof.
     + intros. cases in INCL.
       simpl List.map in INCL.
       rewrite list_union_cons in INCL.
-      eapply live_exp_sound_incl;[eapply live_freeVars|].
+      eapply live_op_sound_incl;[eapply Op.live_freeVars|].
       rewrite <- INCL. eauto with cset.
 Qed.
 
@@ -95,15 +95,15 @@ Inductive true_live_sound (i:overapproximation)
   : list params -> list (set var) -> stmt -> ann (set var) -> Prop :=
 | TLOpr ZL Lv x b lv e al
   :  true_live_sound i ZL Lv b al
-     -> (x ∈ getAnn al -> live_exp_sound e lv)
+     -> (x ∈ getAnn al \/ isCall e -> live_exp_sound e lv)
      -> (getAnn al\ singleton x) ⊆ lv
      -> true_live_sound i ZL Lv (stmtLet x e b) (ann1 lv al)
 | TLIf ZL Lv e b1 b2 lv al1 al2
-  :  (exp2bool e <> Some false -> true_live_sound i ZL Lv b1 al1)
-     -> (exp2bool e <> Some true -> true_live_sound i ZL Lv b2 al2)
-     -> (exp2bool e = None -> live_exp_sound e lv)
-     -> (exp2bool e <> Some false -> getAnn al1 ⊆ lv)
-     -> (exp2bool e <> Some true -> getAnn al2 ⊆ lv)
+  :  (op2bool e <> Some false -> true_live_sound i ZL Lv b1 al1)
+     -> (op2bool e <> Some true -> true_live_sound i ZL Lv b2 al2)
+     -> (op2bool e = None -> live_op_sound e lv)
+     -> (op2bool e <> Some false -> getAnn al1 ⊆ lv)
+     -> (op2bool e <> Some true -> getAnn al2 ⊆ lv)
      -> true_live_sound i ZL Lv (stmtIf e b1 b2) (ann2 lv al1 al2)
 | TLGoto ZL Lv l Y lv blv Z
   : get ZL (counted l) Z
@@ -113,13 +113,8 @@ Inductive true_live_sound (i:overapproximation)
     -> length Y = length Z
     -> true_live_sound i ZL Lv (stmtApp l Y) (ann0 lv)
 | TLReturn ZL Lv e lv
-  : live_exp_sound e lv
+  : live_op_sound e lv
     -> true_live_sound i ZL Lv (stmtReturn e) (ann0 lv)
-| TLExtern ZL Lv x b lv Y al f
-  : true_live_sound i ZL Lv b al
-    -> (forall n y, get Y n y -> live_exp_sound y lv)
-    -> (getAnn al\ singleton x) ⊆ lv
-    -> true_live_sound i ZL Lv (stmtExtern x f Y b) (ann1 lv al)
 | TLLet ZL Lv F t lv als alt
   : true_live_sound i (fst ⊝ F ++ ZL) (getAnn ⊝ als ++ Lv) t alt
     -> length F = length als

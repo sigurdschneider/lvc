@@ -3,10 +3,11 @@ Require Import SMT Guards IL SMT.
 Fixpoint translateStmt (s:stmt) (p:pol) :smt :=
 match s, p with
 (*let x = e in s' *)
-| stmtLet x e s', _
+| stmtLet x (Operation e) s', _
   =>  let smt' := translateStmt s' p in
         let res := smtAnd (constr (Var x) e) smt'  in
         guardGen (undef e) p res
+| stmtLet x (Call _ _) s', _ => smtFalse
 (* if e then s else t *)
 | stmtIf e s t, _
   => let s' := translateStmt s p in
@@ -15,8 +16,6 @@ match s, p with
         guardGen (undef e) p res
 (* fun f x = t in s *)
 |  stmtFun x t, _ => smtFalse
-(* extern ?? *)
-|  stmtExtern x f Y s, _ => smtFalse
 (* f e, s*)
 | stmtApp f e, source
   =>  guardGen (undefLift e) p (funcApp (labInc f 1) e)
@@ -39,13 +38,13 @@ Fixpoint getVars (f:smt) : (set var) :=
       | smtNeg f'
         => getVars f'
       | ite e f1 f2
-        => Exp.freeVars e ∪ getVars f1 ∪ getVars f2
+        => Op.freeVars e ∪ getVars f1 ∪ getVars f2
       | smtImp f1 f2
         => getVars f1 ∪ getVars f2
       | constr e1 e2
-        => Exp.freeVars e1 ∪ Exp.freeVars e2
+        => Op.freeVars e1 ∪ Op.freeVars e2
       | funcApp f el
-        => list_union (List.map Exp.freeVars el)
+        => list_union (List.map Op.freeVars el)
       | smtFalse
         => {}
       | smtTrue

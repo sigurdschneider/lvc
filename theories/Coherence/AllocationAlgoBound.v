@@ -145,34 +145,6 @@ Proof.
 
   - rewrite H8. rewrite lookup_set_empty; cset_tac; intuition; eauto.
   - rewrite H2. rewrite lookup_set_empty; cset_tac; intuition; eauto.
-  - assert ( singleton (findt ϱ' 0 x)
-                       ⊆ vars_up_to (size_of_largest_live_set al)). {
-      eapply regAssign_renamedApart_agree in allocOK; eauto.
-      rewrite <- allocOK. unfold findt at 1.
-      rewrite MapFacts.add_eq_o; eauto.
-      cset_tac. invc H2. eapply in_vars_up_to.
-      rewrite least_fresh_small.
-      rewrite cardinal_map; eauto.
-      rewrite cardinal_difference'.
-      rewrite <- size_of_largest_live_set_live_set.
-      rewrite singleton_cardinal.
-      assert (SetInterface.cardinal (getAnn al) > 0).
-      rewrite <- (add_minus_single_eq H1).
-      rewrite add_cardinal_2. omega. cset_tac; intuition. omega.
-      eauto with cset.
-      pe_rewrite. eauto with cset.
-    }
-    exploit IHLS; eauto.
-    + pe_rewrite. eauto with cset.
-    + pe_rewrite.
-      instantiate (1:=(max (size_of_largest_live_set al) n)).
-      rewrite lookup_set_add; eauto.
-      rewrite up.
-      rewrite vars_up_to_max. rewrite add_union, H2. reflexivity.
-    + pe_rewrite. rewrite H10.
-      rewrite lookup_set_add, H3, add_union, H2; eauto.
-      repeat rewrite vars_up_to_max.
-      clear_all. cset_tac.
 
   - repeat (try rewrite <- Nat.add_max_distr_r; rewrite vars_up_to_max).
     monadS_inv allocOK.
