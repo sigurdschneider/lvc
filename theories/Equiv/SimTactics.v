@@ -38,6 +38,12 @@ Ltac pone_step := pfold; eapply sim'Silent; [ eapply plus2O; single_step
                               | eapply plus2O; single_step
                               | ].
 
+Ltac pone_step_left :=
+  eapply sim'_expansion_closed; [ | eapply star2_silent; single_step | eapply star2_refl ].
+
+Ltac pone_step_right :=
+  eapply sim'_expansion_closed; [ | eapply star2_refl | eapply star2_silent; single_step ].
+
 Ltac pno_step :=
   pfold; eapply sim'Term;
   [ | eapply star2_refl | eapply star2_refl | | ];

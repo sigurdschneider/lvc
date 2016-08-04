@@ -46,7 +46,7 @@ Definition ucc_sound sT ZL BL s a (ST:subTerm s sT)
     -> labelsDefined s (length BL)
     -> paramsMatch s (length ⊝ ZL)
     -> poLe (snd (@forward sT _ _ _ unreachable_code_transform ZL s ST a)) BL
-    -> unreachable_code Sound ZL BL s a.
+    -> unreachable_code Sound BL s a.
 Proof.
   intros EQ Ann DefZL DefBL PM.
   general induction Ann; simpl in *; inv DefZL; inv DefBL; inv PM;
@@ -168,50 +168,50 @@ Qed.
 
 
 Inductive unreachable_code_complete
-  : list params -> list bool -> stmt -> ann bool -> Prop :=
-| UCPOpr ZL BL x s b e al
-  :  unreachable_code_complete ZL BL s al
+  : list bool -> stmt -> ann bool -> Prop :=
+| UCPOpr BL x s b e al
+  :  unreachable_code_complete BL s al
      -> impb (getAnn al) b
-     -> unreachable_code_complete ZL BL (stmtLet x e s) (ann1 b al)
-| UCPIf ZL BL e b1 b2 b al1 al2
-  :  unreachable_code_complete ZL BL b1 al1
-     -> unreachable_code_complete ZL BL b2 al2
+     -> unreachable_code_complete BL (stmtLet x e s) (ann1 b al)
+| UCPIf BL e b1 b2 b al1 al2
+  :  unreachable_code_complete BL b1 al1
+     -> unreachable_code_complete BL b2 al2
      -> impb (getAnn al1) b
      -> impb (getAnn al2) b
      -> (exp2bool e = ⎣ false ⎦ -> getAnn al1 = false)
      -> (exp2bool e = ⎣ true ⎦ -> getAnn al2 = false)
-     -> unreachable_code_complete ZL BL (stmtIf e b1 b2) (ann2 b al1 al2)
-| UCPGoto ZL BL l Y a
-  : unreachable_code_complete ZL BL (stmtApp l Y) (ann0 a)
-| UCReturn ZL BL e b
-  : unreachable_code_complete ZL BL (stmtReturn e) (ann0 b)
-| UCExtern ZL BL x s b Y al f
-  : unreachable_code_complete ZL BL s al
+     -> unreachable_code_complete BL (stmtIf e b1 b2) (ann2 b al1 al2)
+| UCPGoto BL l Y a
+  : unreachable_code_complete BL (stmtApp l Y) (ann0 a)
+| UCReturn BL e b
+  : unreachable_code_complete BL (stmtReturn e) (ann0 b)
+| UCExtern BL x s b Y al f
+  : unreachable_code_complete BL s al
     -> impb (getAnn al) b
-    -> unreachable_code_complete ZL BL (stmtExtern x f Y s) (ann1 b al)
-| UCLet ZL BL F t b als alt
-  : unreachable_code_complete (fst ⊝ F ++ ZL) (getAnn ⊝ als ++ BL) t alt
+    -> unreachable_code_complete BL (stmtExtern x f Y s) (ann1 b al)
+| UCLet BL F t b als alt
+  : unreachable_code_complete(getAnn ⊝ als ++ BL) t alt
     -> length F = length als
     -> (forall n Zs a, get F n Zs ->
                  get als n a ->
-                 unreachable_code_complete (fst ⊝ F ++ ZL) (getAnn ⊝ als ++ BL) (snd Zs) a)
+                 unreachable_code_complete (getAnn ⊝ als ++ BL) (snd Zs) a)
     -> (forall n a,
           get als n a ->
           getAnn a ->
           isCalledFrom trueIsCalled F t (LabI n))
         -> (forall n a, get als n a -> impb (getAnn a) b )
     -> impb (getAnn alt) b
--> unreachable_code_complete ZL BL (stmtFun F t) (annF b als alt).
+-> unreachable_code_complete BL (stmtFun F t) (annF b als alt).
 
-Lemma unreachable_code_complete_annotation ZL BL s a
-  : unreachable_code_complete ZL BL s a
+Lemma unreachable_code_complete_annotation BL s a
+  : unreachable_code_complete BL s a
     -> annotation s a.
 Proof.
   intros. general induction H; eauto using @annotation.
 Qed.
 
 Lemma forward_snd_poLe sT BL ZL s (ST:subTerm s sT) n a b c
-  : unreachable_code_complete ZL BL s a
+  : unreachable_code_complete BL s a
     -> poLe (getAnn a) c
     -> get (snd (forward unreachable_code_transform ZL s ST (setTopAnn a c))) n b
     -> poLe b c.
@@ -244,17 +244,17 @@ Proof.
     + dcr. inv_get.
       erewrite <- (@setTopAnn_eta _ x3 (getAnn x3)) in H4; eauto.
       eapply IH in H4; eauto.
-      exploit H13; eauto. etransitivity; eauto.
+      exploit H12; eauto. etransitivity; eauto.
 Qed.
 
 Local Hint Extern 0 => first [ erewrite (@forward_getAnn' _ (fun _ => bool))
                             | erewrite getAnn_setTopAnn
                             | rewrite getAnn_setAnn ].
 
-Lemma unreachable_code_analysis_complete_setTopAnn ZL BL s a b
+Lemma unreachable_code_analysis_complete_setTopAnn BL s a b
       (LE:poLe (getAnn a) b)
-  : unreachable_code_complete ZL BL s a
-    -> unreachable_code_complete ZL BL s (setTopAnn a b).
+  : unreachable_code_complete BL s a
+    -> unreachable_code_complete BL s (setTopAnn a b).
 Proof.
   intros UCC; general induction UCC; simpl in *;
     eauto using unreachable_code_complete.
@@ -307,7 +307,7 @@ Qed.
 
 Lemma unreachable_code_analysis_complete_isCalled sT ZL BL s a b
       (ST:subTerm s sT)
-  : unreachable_code_complete ZL BL s a
+  : unreachable_code_complete BL s a
     -> forall n, get (snd (forward unreachable_code_transform ZL s ST (setTopAnn a b))) n true
            -> poLe (getAnn a) b
            -> trueIsCalled s (LabI n).
@@ -357,10 +357,10 @@ Proof.
       econstructor; eauto.
 Qed.
 
-Lemma ucc_sTA_inv (ZL : 〔params〕) (BL : 〔bool〕)
+Lemma ucc_sTA_inv (BL : 〔bool〕)
          (s : stmt) (a : ann bool)
-  : unreachable_code_complete ZL BL s (setTopAnn a (getAnn a)) ->
-    unreachable_code_complete ZL BL s a.
+  : unreachable_code_complete BL s (setTopAnn a (getAnn a)) ->
+    unreachable_code_complete BL s a.
 Proof.
   intros. rewrite setTopAnn_eta in H; eauto.
 Qed.
@@ -370,8 +370,8 @@ Lemma unreachable_code_analysis_complete sT ZL BL BL' s a (ST:subTerm s sT) b b'
       (EQ:(fst (forward unreachable_code_transform ZL s ST (setTopAnn a b))) = c)
       (LE:poLe a (setTopAnn c b'))
       (LEb: poLe (getAnn c) b')
-  : unreachable_code_complete ZL BL s a
-    -> unreachable_code_complete ZL BL' s (setTopAnn c b').
+  : unreachable_code_complete BL s a
+    -> unreachable_code_complete BL' s (setTopAnn c b').
 Proof.
   subst c.
   intros UCC.
@@ -451,10 +451,10 @@ Proof.
         exploit H3; eauto. destruct (getAnn x8); isabsurd.
 Qed.
 
-Lemma unreachable_code_complete_bottom ZL BL s
-  : unreachable_code_complete ZL BL s (setAnn bottom s).
+Lemma unreachable_code_complete_bottom BL s
+  : unreachable_code_complete BL s (setAnn bottom s).
 Proof.
-  revert ZL BL.
+  revert BL.
   sind s; intros; destruct s; simpl; eauto 10 using unreachable_code_complete.
   - econstructor; eauto with len.
     + intros; inv_get; eauto.
@@ -466,7 +466,7 @@ Qed.
 
 Lemma ucc_complete s
   : labelsDefined s ❬nil:list params❭
-    -> unreachable_code_complete nil nil s (unreachableCodeAnalysis s).
+    -> unreachable_code_complete nil s (unreachableCodeAnalysis s).
 Proof.
   unfold unreachableCodeAnalysis. destr_sig.
   destruct e as [n [Iter _]]. subst.
@@ -474,15 +474,15 @@ Proof.
   - eapply unreachable_code_complete_bottom.
   - intros.
     eapply ucc_sTA_inv.
-    eapply (@unreachable_code_analysis_complete s); eauto.
+    eapply (@unreachable_code_analysis_complete s nil); eauto.
     reflexivity.
     erewrite (setTopAnn_eta _ eq_refl); eauto.
 Qed.
 
-Lemma ucc_sound_and_complete ZL BL s a
-  : unreachable_code_complete ZL BL s a
-    -> unreachable_code Sound ZL BL s a
-    -> unreachable_code SoundAndComplete ZL BL s a.
+Lemma ucc_sound_and_complete BL s a
+  : unreachable_code_complete BL s a
+    -> unreachable_code Sound BL s a
+    -> unreachable_code SoundAndComplete BL s a.
 Proof.
   intros UCC UCS.
   general induction UCS; inv UCC; eauto using unreachable_code.
@@ -491,14 +491,14 @@ Qed.
 Lemma correct s
   : labelsDefined s 0
     -> paramsMatch s nil
-    -> unreachable_code SoundAndComplete nil nil s (unreachableCodeAnalysis s).
+    -> unreachable_code SoundAndComplete nil s (unreachableCodeAnalysis s).
 Proof.
   intros.
   eapply ucc_sound_and_complete.
   - eapply ucc_complete; eauto.
   - unfold unreachableCodeAnalysis.
     destr_sig. destr_sig. dcr.
-    eapply ucc_sound; simpl; eauto.
+    eapply (@ucc_sound s nil); simpl; eauto.
     + simpl in *. simpl_forward_setTopAnn.
     + assert (❬snd (forward unreachable_code_transform nil s (subTerm_refl s) x)❭ = 0).
       rewrite (@forward_length _ (fun _ => bool)); eauto.

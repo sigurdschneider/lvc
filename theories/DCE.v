@@ -15,7 +15,7 @@ Definition compileF (compile : forall (RL:list bool) (s:stmt) (a:ann bool), stmt
     | _, _ => nil
     end.
 
-Fixpoint compile (RL:list bool) (s:stmt) (a:ann bool) :=
+Fixpoint compile (RL:list bool) (s:stmt) (a:ann bool) {struct s} :=
   match s, a with
     | stmtLet x e s, ann1 _ an =>
       stmtLet x e (compile RL s an)
@@ -40,6 +40,16 @@ Fixpoint compile (RL:list bool) (s:stmt) (a:ann bool) :=
       end
     | s, _ => s
   end.
+
+Lemma compileF_filter RL F als
+  : compileF compile RL F als
+    = map (fun p => (fst (fst p), compile RL (snd (fst p)) (snd p)))
+          (filter (fun b => getAnn (snd b)) (zip pair F als)).
+Proof.
+  length_equify. general induction F; destruct als; simpl; eauto.
+  - destruct a; eauto.
+  - destruct a as [Z s]; cases; simpl; f_equal; eauto.
+Qed.
 
 Lemma compileF_Z_filter_by RL F als (LEN: ❬F❭ = ❬als❭)
   : fst ⊝ compileF compile RL F als
@@ -191,9 +201,9 @@ Proof.
     + edestruct IHLEN; dcr; eauto 20 using get.
 Qed.
 
-Lemma trueIsCalled_compileF_not_nil (i : sc) (ZL : 〔params〕)
+Lemma trueIsCalled_compileF_not_nil (i : sc)
       (s : stmt) (slv : ann bool) k F als RL x
-  : unreachable_code i (fst ⊝ F ++ ZL) (getAnn ⊝ als ++ RL) s slv
+  : unreachable_code i (getAnn ⊝ als ++ RL) s slv
     -> getAnn slv
     -> trueIsCalled s (LabI k)
     -> get als k x
@@ -215,22 +225,21 @@ Qed.
 
 Hint Resolve Is_true_eq_true.
 
-Lemma DCE_callChain RL ZL F als t alt l' k ZsEnd aEnd n
+Lemma DCE_callChain RL F als t alt l' k ZsEnd aEnd n
       (IH : forall k Zs,
           get F k Zs ->
-       forall (ZL : 〔params〕) (RL : 〔bool〕) (lv : ann bool) (n : nat),
-       unreachable_code SoundAndComplete ZL RL (snd Zs) lv ->
+       forall (RL : 〔bool〕) (lv : ann bool) (n : nat),
+       unreachable_code SoundAndComplete RL (snd Zs) lv ->
        trueIsCalled (snd Zs) (LabI n) ->
        getAnn lv ->
        trueIsCalled (compile RL (snd Zs) lv)
                 (LabI (countTrue (take n RL))))
-  (UC:unreachable_code SoundAndComplete (fst ⊝ F ++ ZL) (getAnn ⊝ als ++ RL) t alt)
+  (UC:unreachable_code SoundAndComplete (getAnn ⊝ als ++ RL) t alt)
   (LEN: ❬F❭ = ❬als❭)
   (UCF:forall (n : nat) (Zs : params * stmt) (a : ann bool),
        get F n Zs ->
        get als n a ->
-       unreachable_code SoundAndComplete (fst ⊝ F ++ ZL)
-         (getAnn ⊝ als ++ RL) (snd Zs) a)
+       unreachable_code SoundAndComplete (getAnn ⊝ als ++ RL) (snd Zs) a)
   (Ann: getAnn alt)
   (IC: trueIsCalled t (LabI l'))
   (CC: callChain trueIsCalled F (LabI l') (LabI k))
@@ -264,14 +273,14 @@ Proof.
     rewrite <- map_take. eauto.
     simpl.
     eapply IH in H0; eauto.
-    eapply (IHCC _ _ _ (snd Zs)); eauto.
+    eapply IHCC in H0; eauto.
 Qed.
 
-Lemma DCE_callChain' RL ZL F als l' k
+Lemma DCE_callChain' RL F als l' k
       (IH : forall k Zs,
           get F k Zs ->
-       forall (ZL : 〔params〕) (RL : 〔bool〕) (lv : ann bool) (n : nat),
-       unreachable_code SoundAndComplete ZL RL (snd Zs) lv ->
+       forall (RL : 〔bool〕) (lv : ann bool) (n : nat),
+       unreachable_code SoundAndComplete RL (snd Zs) lv ->
        trueIsCalled (snd Zs) (LabI n) ->
        getAnn lv ->
        trueIsCalled (compile RL (snd Zs) lv)
@@ -280,8 +289,7 @@ Lemma DCE_callChain' RL ZL F als l' k
   (UCF:forall (n : nat) (Zs : params * stmt) (a : ann bool),
        get F n Zs ->
        get als n a ->
-       unreachable_code SoundAndComplete (fst ⊝ F ++ ZL)
-         (getAnn ⊝ als ++ RL) (snd Zs) a)
+       unreachable_code SoundAndComplete (getAnn ⊝ als ++ RL) (snd Zs) a)
   (Ann: get (getAnn ⊝ als ++ RL) l' true)
   (CC: callChain trueIsCalled F (LabI l') (LabI k))
 : callChain trueIsCalled
@@ -304,14 +312,14 @@ Proof.
     subst. eauto.
 Qed.
 
-Lemma DCE_trueIsCalled ZL RL s lv n
-  : unreachable_code SoundAndComplete ZL RL s lv
+Lemma DCE_trueIsCalled RL s lv n
+  : unreachable_code SoundAndComplete RL s lv
     -> trueIsCalled s (LabI n)
     -> getAnn lv
     -> trueIsCalled (compile RL s lv) (LabI (countTrue (take n RL))).
 Proof.
   intros Live IC.
-  revert ZL RL lv n Live IC.
+  revert RL lv n Live IC.
   sind s; simpl; intros; invt unreachable_code; invt trueIsCalled;
     simpl in *; eauto using trueIsCalled.
   - repeat cases; eauto using trueIsCalled.
@@ -345,8 +353,34 @@ Proof.
         eapply DCE_callChain; eauto.
 Qed.
 
-Lemma DCE_noUnreachableCode ZL RL s lv
-  : unreachable_code SoundAndComplete ZL RL s lv
+
+Lemma DCE_isCalledFrom RL F als t alt n (Len:❬F❭ = ❬als❭)
+  : (forall (n : nat) (Zs : params * stmt) (a : ann bool),
+       get F n Zs ->
+       get als n a ->
+       unreachable_code SoundAndComplete (getAnn ⊝ als ++ RL) (snd Zs) a)
+    -> unreachable_code SoundAndComplete (getAnn ⊝ als ++ RL) t alt
+    -> getAnn alt
+    -> isCalledFrom trueIsCalled F t (LabI n)
+    -> n < ❬F❭
+    -> isCalledFrom trueIsCalled (compileF compile (getAnn ⊝ als ++ RL) F als)
+                   (compile (getAnn ⊝ als ++ RL) t alt) (LabI (countTrue (getAnn ⊝ take n als))).
+Proof.
+  intros UCF UCt gAt ICF.
+  destruct ICF as [[l'] [? ?]].
+  exploit DCE_trueIsCalled; eauto.
+  eexists; split; eauto.
+  exploit DCE_callChain'; eauto using DCE_trueIsCalled.
+  exploit unreachable_code_trueIsCalled; eauto.
+  dcr; subst; simpl in *. rewrite H6 in gAt.
+  destruct x; isabsurd; eauto.
+  setoid_rewrite take_app_lt in H3 at 2.
+  setoid_rewrite <- map_take in H3. eauto.
+  eauto with len.
+Qed.
+
+Lemma DCE_noUnreachableCode RL s lv
+  : unreachable_code SoundAndComplete RL s lv
     -> getAnn lv
     -> noUnreachableCode trueIsCalled (compile RL s lv).
 Proof.
@@ -365,20 +399,12 @@ Proof.
       edestruct compileF_get_inv as [Zs' [a [n' [lv' ?]]]]; eauto.
       dcr; subst; simpl.
       exploit H3 as ICF; eauto. rewrite H8; eauto.
-      destruct ICF as [[l'] [? ?]].
-      exploit DCE_trueIsCalled; eauto.
-      eexists; split; eauto.
-      exploit DCE_callChain'; eauto using DCE_trueIsCalled.
-      exploit unreachable_code_trueIsCalled; eauto.
-      dcr; subst; simpl in *. rewrite H12 in GetAnn.
-      destruct x; isabsurd; eauto.
-      setoid_rewrite take_app_lt in H9 at 2.
-      setoid_rewrite <- map_take in H9. eauto.
-      eauto with len.
+      eapply DCE_isCalledFrom; eauto with len.
 Qed.
 
-Lemma DCE_paramsMatch i PL ZL RL s lv
-  : unreachable_code i ZL RL s lv
+
+Lemma DCE_paramsMatch i PL RL s lv
+  : unreachable_code i RL s lv
     -> getAnn lv
     -> paramsMatch s PL
     -> paramsMatch (compile RL s lv) (filter_by (fun b => b) RL PL).
@@ -388,8 +414,8 @@ Proof.
   - specialize (H NOTCOND0). specialize (H0 NOTCOND). subst. simpl in *.
     econstructor; eauto.
   - simpl in *.
-    exploit (get_filter_by (fun b => b) H0 H5). destruct a,b; isabsurd; eauto.
-    rewrite map_id in H3.
+    exploit (get_filter_by (fun b => b) H H3). destruct a,b; isabsurd; eauto.
+    rewrite map_id in H1.
     econstructor; eauto.
   - exploit IHUC; eauto.
     rewrite filter_by_app in H0; eauto with len.
@@ -406,17 +432,9 @@ Qed.
 
 Module I.
 
-  Definition ArgRel (V V':onv val) (G:bool * params) (VL VL': list val) : Prop :=
-      VL' = VL /\
-      length (snd G) = length VL /\ V = V'.
-
-
-  Definition ParamRel (G:bool * params) (Z Z' : list var) : Prop :=
-    Z' = Z /\ snd G = Z.
-
 Instance SR : ProofRelationI (bool * params) := {
-   ParamRelI := ParamRel;
-   ArgRelI := ArgRel;
+   ParamRelI G Z Z' := Z' = Z /\ snd G = Z;
+   ArgRelI V V' G VL VL' := VL' = VL /\ length (snd G) = length VL /\ V = V';
    Image AL := countTrue (List.map fst AL);
    IndexRelI AL n n' :=
      n' = countTrue (fst ⊝ (take n AL)) /\ exists Z, get AL n (true, Z)
@@ -460,16 +478,16 @@ Proof.
       rewrite compileF_length; eauto.
 Qed.
 
-
-Lemma sim_I i ZL RL r L L' V s (a:ann bool) (Ann:getAnn a) (LenEq:❬ZL❭=❬RL❭)
-  : unreachable_code i ZL RL s a
--> labenv_sim Bisim (sim'r r) SR (pair ⊜ RL ZL) L L'
--> (forall (f:nat),
-      get RL f true
-      -> exists (b b' : I.block),
-        get L f b /\
-        get L' (countTrue (take f RL)) b')
--> sim'r r Bisim (L,V, s) (L',V, compile RL s a).
+Lemma sim_I i ZL RL r L L' V s (a:ann bool) (Ann:getAnn a)
+ (UC: unreachable_code i RL s a)
+ (LSIM:labenv_sim Bisim (sim'r r) SR (pair ⊜ RL ZL) L L')
+ (LenEq:❬ZL❭=❬RL❭)
+  : (forall (f:nat),
+          get RL f true
+          -> exists (b b' : I.block),
+            get L f b /\
+            get L' (countTrue (take f RL)) b')
+    -> sim'r r Bisim (L,V, s) (L',V, compile RL s a).
 Proof.
   unfold sim'r. revert_except s.
   sind s; destruct s; simpl; intros; invt unreachable_code; simpl in * |- *.
@@ -478,51 +496,38 @@ Proof.
     + pno_step.
   - repeat cases.
     + edestruct (exp2bool_val2bool V); eauto; dcr.
-      eapply sim'_expansion_closed.
-      eapply (IH s1); eauto.
-      eapply star2_silent.
-      econstructor; eauto. eapply star2_refl.
-      eapply star2_refl.
+      pone_step_left. eauto.
     + edestruct (exp2bool_val2bool V); eauto; dcr.
-      eapply sim'_expansion_closed.
-      eapply (IH s2); eauto.
-      eapply star2_silent.
-      econstructor 3; eauto. eapply star2_refl.
-      eapply star2_refl.
+      pone_step_left; eauto.
     + remember (exp_eval V e). symmetry in Heqo.
-      destruct o. case_eq (val2bool v); intros.
-      pfold; econstructor; try eapply plus2O; eauto.
-      econstructor; eauto.
-      econstructor; eauto.
-      left; eapply (IH s1); eauto using agree_on_incl.
-      pfold; econstructor; try eapply plus2O; eauto.
-      econstructor 3; eauto.
-      econstructor 3; eauto.
-      left; eapply (IH s2); eauto using agree_on_incl.
-      pfold. econstructor 4; try eapply star2_refl; eauto.
-      stuck. stuck.
+      destruct o.
+      * case_eq (val2bool v); intros; pone_step; eauto.
+      * pno_step.
   - assert (b=true). destruct a0, b; isabsurd; eauto. subst.
-    edestruct H1 as [? [? [GetL GetL']]]; eauto using zip_get.
+    edestruct H as [? [? [GetL GetL']]]; eauto using zip_get.
     remember (omap (exp_eval V) Y). symmetry in Heqo.
     destruct o.
     + destruct x as [Z1 s1 n1], x0 as [Z2 s2 n2].
-      edestruct H0 as [? [? [? [ ? SIM]]]]; eauto; dcr.
-      eapply (SIM l (LabI (countTrue (take l RL)))); eauto using zip_get.
+      edestruct LSIM as [? [? [? [ ? SIM]]]]; eauto; dcr.
+      inv_get.
+      assert (IndexRelI (pair ⊜ RL ZL) l (LabI (countTrue (take l RL)))).
       hnf; simpl. split; eauto using zip_get.
-      hnf; eauto with len.
       rewrite map_take. rewrite fst_zip_pair. eauto. eauto.
-      hnf; simpl; eauto with len.
-    + pfold; econstructor 4; try eapply star2_refl; eauto; stuck2.
+      exploit (H4 l (LabI (countTrue (take l RL)))); eauto using zip_get.
+      decide (❬Y❭=❬Z1❭).
+      * eapply (SIM l (LabI (countTrue (take l RL)))); eauto using zip_get.
+        simpl in *; dcr; subst.
+        simpl; eauto with len.
+      * pno_step. simpl in *; dcr; subst. congruence.
+    + pno_step.
   - pno_step.
   - remember (omap (exp_eval V) Y). symmetry in Heqo.
     destruct o.
     + pextern_step; eauto using agree_on_update_same, agree_on_incl; try congruence.
     + pno_step.
   - cases.
-    + eapply sim'_expansion_closed;
-        [| eapply star2_silent; [ econstructor; eauto | eapply star2_refl ]
-         | eapply star2_refl ].
-      eapply IH; eauto. eauto with len.
+    + pone_step_left.
+      eapply (IH s ltac:(eauto) i (fst ⊝ F ++ ZL)); eauto with len.
       * rewrite zip_app; eauto with len.
         eapply labenv_sim_extension with (F':=nil); eauto.
         -- intros; hnf; intros; isabsurd.
@@ -531,11 +536,11 @@ Proof.
            ++ simpl. erewrite <- getAnn_eq; eauto.
              erewrite <- compileF_length; eauto. rewrite <- Heq. eauto.
            ++ simpl; intros; dcr; subst.
-             rewrite <- zip_app in H8; eauto with len. inv_get.
+             rewrite <- zip_app in H7; eauto with len. inv_get.
              exploit compileF_nil_als_false; eauto. congruence.
            ++ simpl; intros; dcr; subst. omega.
       * intros.
-        eapply get_app_cases in H2. destruct H2.
+        eapply get_app_cases in H0. destruct H0.
         exfalso. inv_get.
         assert (NEQ:length (compileF compile (getAnn ⊝ als ++ RL) F als)
                 <> 0). {
@@ -543,57 +548,54 @@ Proof.
           eapply countTrue_exists. rewrite <- EQ; eauto using map_get_1.
         }
         eapply NEQ. rewrite <- Heq. eauto.
-        dcr. exploit H1; eauto. destruct H2 as [? [? ?]]; dcr.
+        dcr. edestruct H as [? [? ?]]; eauto; dcr.
         do 2 eexists. split.
         eapply get_app_right; eauto. rewrite mapi_length; eauto with len.
         rewrite map_length.
-        rewrite map_length in H6. omega.
+        rewrite map_length in H4. omega.
         rewrite take_app_ge; eauto.
         rewrite countTrue_app.
         erewrite <- compileF_length; eauto. erewrite <- Heq. eauto.
     + rewrite Heq; clear Heq.
       pone_step. left.
-      eapply IH; eauto. eauto with len.
+      eapply (IH s ltac:(eauto) i (fst ⊝ F ++ ZL)); eauto with len.
       {
         + rewrite zip_app; eauto with len.
           eapply labenv_sim_extension; eauto.
           * intros. hnf; intros.
-            hnf in H3. dcr. hnf in H10; dcr; subst.
-            rewrite get_app_lt in H14; eauto using get_range.
+            hnf in H1. dcr. hnf in H9; dcr; subst.
+            rewrite get_app_lt in H12; eauto using get_range.
             inv_get.
-            exploit (compileF_get (getAnn ⊝ als ++ RL)).
-            eapply H6. eauto. eauto.
-            erewrite <- getAnn_take_eq in H7; eauto.
+            exploit (compileF_get (getAnn ⊝ als ++ RL)); try eapply H4; eauto.
+            erewrite <- getAnn_take_eq in H5; eauto.
             simpl in *. get_functional.
-            eapply IH; eauto.  rewrite EQ; eauto.
-            instantiate (1:=fst ⊝ F ++ ZL); eauto with len.
-            exploit H9; eauto.
-            eauto.
+            exploit H6; eauto.
+            eapply (IH s0 ltac:(eauto) i (fst ⊝ F ++ ZL)); eauto with len.
+            rewrite EQ; eauto.
             eauto 20 using inv_extend with len.
           * hnf; intros.
-            hnf in H2. dcr; subst.
-            rewrite get_app_lt in H12; eauto with len.
-            inv_get. simpl; unfold ParamRel; simpl.
-            exploit (compileF_get (getAnn ⊝ als ++ RL)).
-            eapply H3. eauto. eauto.
-            erewrite <- getAnn_take_eq in H6; eauto.
+            hnf in H0. dcr; subst.
+            rewrite get_app_lt in H10; eauto with len.
+            inv_get; simpl.
+            exploit (compileF_get (getAnn ⊝ als ++ RL)); try eapply H1; eauto.
+            erewrite <- getAnn_take_eq in H4; eauto.
             get_functional. eauto.
           * hnf. split; eauto with len.
             split.
             rewrite compileF_length; eauto. simpl.
             erewrite <- getAnn_eq; eauto with len.
             split. intros.
-            hnf in H2; dcr; subst.
+            hnf in H0; dcr; subst.
             rewrite compileF_length; eauto.
-            rewrite <- zip_app in H8; eauto with len.
+            rewrite <- zip_app in H7; eauto with len.
             inv_get.
             erewrite <- getAnn_take_eq; eauto with len.
             erewrite (take_eta n (getAnn ⊝ als)).
             rewrite countTrue_app.
             erewrite <- get_eq_drop; eauto using map_get_1.
-            rewrite <- H2. simpl. rewrite map_take. omega.
+            rewrite <- H0. simpl. rewrite map_take. omega.
             intros. rewrite compileF_length; eauto.
-            hnf in H2; dcr; subst.
+            hnf in H0; dcr; subst.
             rewrite map_take. rewrite map_app.
             rewrite map_zip.
             rewrite zip_map_fst; eauto with len.
@@ -604,7 +606,7 @@ Proof.
 Qed.
 
 Lemma sim_DCE i V s a
-  : unreachable_code i nil nil s a
+  : unreachable_code i nil s a
     -> getAnn a
     -> @sim I.state _ I.state _ Bisim (nil,V, s) (nil,V, compile nil s a).
 Proof.
@@ -644,7 +646,7 @@ Fixpoint compile_live (s:stmt) (a:ann (set var)) (b:ann bool) : ann (set var) :=
 
 Lemma compile_live_incl i uci ZL LV RL s lv uc
   : true_live_sound i ZL LV s lv
-    -> unreachable_code uci ZL RL s uc
+    -> unreachable_code uci RL s uc
     -> getAnn (compile_live s lv uc) ⊆ getAnn lv.
 Proof.
   intros LS UC.
@@ -658,7 +660,7 @@ Proof.
 Qed.
 
 Lemma DCE_live uci i ZL LV RL s uc lv
-  : unreachable_code uci ZL RL s uc
+  : unreachable_code uci RL s uc
     -> getAnn uc
     -> true_live_sound i ZL LV s lv
     -> true_live_sound i (filter_by (fun b => b) RL ZL)

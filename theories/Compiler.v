@@ -95,7 +95,7 @@ Lemma toILF_correct (ili:IL.stmt) (E:onv val)
 Proof.
   intros. subst. unfold toILF.
   simpl in *; unfold ensure_f, additionalArguments in *.
-  assert (UnreachableCode.unreachable_code UnreachableCode.SoundAndComplete nil nil ili
+  assert (UnreachableCode.unreachable_code UnreachableCode.SoundAndComplete nil ili
                                            (UnreachableCodeAnalysis.unreachableCodeAnalysis ili)). {
     eapply UnreachableCodeAnalysisCorrect.correct; eauto.
   }
@@ -104,7 +104,7 @@ Proof.
   }
   assert (LabelsDefined.paramsMatch
             (DCE.compile nil ili (UnreachableCodeAnalysis.unreachableCodeAnalysis ili)) nil). {
-    eapply (@DCE.DCE_paramsMatch _ nil nil nil); eauto.
+    eapply (@DCE.DCE_paramsMatch _ nil nil); eauto.
   }
   assert (TrueLiveness.true_live_sound Liveness.Imperative nil nil
    (DCE.compile nil ili (UnreachableCodeAnalysis.unreachableCodeAnalysis ili))
@@ -136,7 +136,7 @@ Proof.
            (DCE.compile nil ili (UnreachableCodeAnalysis.unreachableCodeAnalysis ili))))). {
     eapply LabelsDefined.noUnreachableCode_mono.
     eapply (@DVE.DVE_noUnreachableCode _ nil nil); eauto.
-    eapply (@DCE.DCE_noUnreachableCode nil nil); eauto.
+    eapply (@DCE.DCE_noUnreachableCode nil); eauto.
     eapply LabelsDefined.trueIsCalled_isCalled.
   }
   eapply sim_trans with (S2:=I.state).

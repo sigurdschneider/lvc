@@ -15,41 +15,39 @@ Definition isComplete (s:sc) :=
   end.
 
 Inductive unreachable_code (i:sc)
-  : list params -> list bool -> stmt -> ann bool -> Prop :=
-| UCPOpr ZL BL x s b e al
-  :  unreachable_code i ZL BL s al
+  : list bool -> stmt -> ann bool -> Prop :=
+| UCPOpr BL x s b e al
+  :  unreachable_code i BL s al
      -> getAnn al = b
-     -> unreachable_code i ZL BL (stmtLet x e s) (ann1 b al)
-| UCPIf ZL BL e b1 b2 b al1 al2
+     -> unreachable_code i BL (stmtLet x e s) (ann1 b al)
+| UCPIf BL e b1 b2 b al1 al2
   :  (exp2bool e <> Some false -> getAnn al1 = b)
      -> (exp2bool e <> Some true -> getAnn al2 = b)
-     -> unreachable_code i ZL BL b1 al1
-     -> unreachable_code i ZL BL b2 al2
-     -> unreachable_code i ZL BL (stmtIf e b1 b2) (ann2 b al1 al2)
-| UCPGoto ZL BL l Y Z b a
-  : get ZL (counted l) Z
-    -> get BL (counted l) b
+     -> unreachable_code i BL b1 al1
+     -> unreachable_code i BL b2 al2
+     -> unreachable_code i BL (stmtIf e b1 b2) (ann2 b al1 al2)
+| UCPGoto BL l Y b a
+  : get BL (counted l) b
     -> impb a b
-    -> length Y = length Z
-    -> unreachable_code i ZL BL (stmtApp l Y) (ann0 a)
-| UCReturn ZL BL e b
-  : unreachable_code i ZL BL (stmtReturn e) (ann0 b)
-| UCExtern ZL BL x s b Y al f
-  : unreachable_code i ZL BL s al
+    -> unreachable_code i BL (stmtApp l Y) (ann0 a)
+| UCReturn BL e b
+  : unreachable_code i BL (stmtReturn e) (ann0 b)
+| UCExtern BL x s b Y al f
+  : unreachable_code i BL s al
     -> getAnn al = b
-    -> unreachable_code i ZL BL (stmtExtern x f Y s) (ann1 b al)
-| UCLet ZL BL F t b als alt
-  : unreachable_code i (fst ⊝ F ++ ZL) (getAnn ⊝ als ++ BL) t alt
+    -> unreachable_code i BL (stmtExtern x f Y s) (ann1 b al)
+| UCLet BL F t b als alt
+  : unreachable_code i (getAnn ⊝ als ++ BL) t alt
     -> length F = length als
     -> getAnn alt = b
     -> (forall n Zs a, get F n Zs ->
                  get als n a ->
-                 unreachable_code i (fst ⊝ F ++ ZL) (getAnn ⊝ als ++ BL) (snd Zs) a)
+                 unreachable_code i (getAnn ⊝ als ++ BL) (snd Zs) a)
     -> (if isComplete i then (forall n a,
                                 get als n a ->
                                 getAnn a ->
                                 isCalledFrom trueIsCalled F t (LabI n)) else True)
-    -> unreachable_code i ZL BL (stmtFun F t) (annF b als alt).
+    -> unreachable_code i BL (stmtFun F t) (annF b als alt).
 
 Local Hint Extern 0 =>
 match goal with
@@ -57,29 +55,37 @@ match goal with
   specialize (H' H); subst
 end.
 
-Lemma unreachable_code_trueIsCalled i ZL Lv s slv l
-  : unreachable_code i ZL Lv s slv
+Lemma unreachable_code_trueIsCalled i Lv s slv l
+  : unreachable_code i Lv s slv
     -> trueIsCalled s l
     -> exists b, get Lv (counted l) b /\ impb (getAnn slv) b.
 Proof.
   destruct l; simpl.
-  revert ZL Lv slv n.
-  sind s; destruct s; intros ZL Lv slv n UC IC; inv UC; inv IC;
-    simpl in *; subst; simpl in *; eauto.
-  - eapply (IH s); eauto.
+  revert Lv slv n.
+  sind s; destruct s; intros Lv slv n UC IC; inv UC; inv IC;
+    simpl in *; subst; simpl in *; eauto 20.
+  - (* If I admit this here, then eauto does the job:
+    assert (forall y, size s < size (stmtLet x e s) -> forall Lv slv n,
+                 unreachable_code i Lv y slv ->
+                 trueIsCalled y (LabI n) ->
+                 exists b : bool,
+                   get Lv n b /\ impb (getAnn slv) b) by admit.
+     *)
+    (* However, it refuses to apply IH. *)
+    eapply (IH s); eauto.
   - exploit (IH s1); eauto.
   - exploit (IH s2); eauto.
   - eapply (IH s); eauto.
   - destruct l'.
     exploit (IH s); eauto; dcr.
-    setoid_rewrite H7.
-    clear H5 H7 UC H8 H1 alt.
+    setoid_rewrite H8.
+    clear H7 H6 UC H8 H1 alt.
     general induction H3.
     + inv_get. eexists; split; eauto.
     + inv_get.
-      exploit H6; eauto.
+      exploit H5; eauto.
       eapply IH in H4; eauto.
       dcr. inv_get.
-      edestruct IHcallChain; try eapply H7; eauto; dcr.
+      edestruct IHcallChain; try eapply H8; eauto; dcr.
       eexists x1; split; eauto.
 Qed.
