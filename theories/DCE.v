@@ -488,13 +488,8 @@ Proof.
   unfold sim'r. revert_except s.
   sind s; destruct s; simpl; intros; invt unreachable_code; simpl in * |- *.
   - destruct e.
-    + case_eq (op_eval V e); intros.
-      * pone_step; eauto.
-      * pno_step.
-    + remember (omap (op_eval V) Y). symmetry in Heqo.
-      destruct o.
-      * pextern_step; eauto using agree_on_update_same, agree_on_incl; try congruence.
-      * pno_step.
+    + eapply sim_let_op; eauto.
+    + eapply sim_let_call; eauto.
   - repeat cases.
     + edestruct (op2bool_val2bool V); eauto; dcr.
       pone_step_left. eauto.
