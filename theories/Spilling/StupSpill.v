@@ -9,11 +9,11 @@ Fixpoint stupSpill (R : set var) (s : stmt) (Lv : ann (set var))
 match s,Lv with
 | stmtLet x e t, ann1 LV lv => ann1 (R, Exp.freeVars e, None)
                         (stupSpill (singleton x) t lv)
-| stmtReturn e, _ => ann0 (∅, Exp.freeVars e, None)
-| stmtIf e t v, ann2 LV lv_s lv_t => ann2 (R, Exp.freeVars e, None)
-                       (stupSpill (Exp.freeVars e) t lv_s)
-                       (stupSpill (Exp.freeVars e) v lv_t)
-| stmtApp f Y, _  => ann0 (R, list_union (Exp.freeVars ⊝ Y), None)
+| stmtReturn e, _ => ann0 (∅, Op.freeVars e, None)
+| stmtIf e t v, ann2 LV lv_s lv_t => ann2 (R, Op.freeVars e, None)
+                       (stupSpill (Op.freeVars e) t lv_s)
+                       (stupSpill (Op.freeVars e) v lv_t)
+| stmtApp f Y, _  => ann0 (R, list_union (Op.freeVars ⊝ Y), None)
 | stmtFun F t, annF LV als lv_t =>
     annF (R, ∅, Some (List.map (fun lv => (∅, lv)) (List.map getAnn als)))
            (zip (fun Zs lv => stupSpill ∅ (snd Zs) lv) F als)
@@ -61,7 +61,7 @@ general induction lvSound;
     rewrite seteq. rewrite singleton_cardinal. omega.
 - eapply SpillIf with (K:= R).
   + cset_tac.
-  + assert (seteq : R\R ∪ Exp.freeVars e [=] Exp.freeVars e). { cset_tac. }
+  + assert (seteq : R\R ∪ Op.freeVars e [=] Op.freeVars e). { cset_tac. }
     rewrite seteq. rewrite fvBcard. trivial.
   + eapply IHlvSound1; eauto with cset.
     * cset_tac.
@@ -81,7 +81,7 @@ general induction lvSound;
   + rewrite pir2_M. rewrite H1. rewrite <- ReqR'. eauto.
 - eapply SpillReturn with (K:= R).
   + cset_tac.
-  + assert (seteq : R\R ∪ Exp.freeVars e [=] Exp.freeVars e). { cset_tac. }
+  + assert (seteq : R\R ∪ Op.freeVars e [=] Op.freeVars e). { cset_tac. }
     rewrite seteq. rewrite fvBcard. trivial.
 - eapply SpillFun with (K:=R).
   + assert (seteq : R \ R ∪ ∅ [=] ∅). { cset_tac. }

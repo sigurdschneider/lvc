@@ -5,13 +5,13 @@ Require Import SimI.
 Fixpoint write_spills (slot: var->var) (xs:list var) (s:stmt) : stmt :=
 match xs with
 | nil => s
-| x::xs => stmtLet (slot x) (Var x) (write_spills slot xs s) 
+| x::xs => stmtLet (slot x) (Operation (Var x)) (write_spills slot xs s)
 end.
 
 Fixpoint write_loads (slot: var-> var) (xs:list var) (s:stmt) : stmt :=
 match xs with
 | nil => s
-| x::xs => stmtLet x (Var (slot x)) (write_loads slot xs s)
+| x::xs => stmtLet x (Operation (Var (slot x))) (write_loads slot xs s)
 end.
 
 
@@ -23,9 +23,8 @@ match s, a with
 | _,_ => s
 end.
 
-      
+
 Theorem spill_sound_correct L E E' : spill_sound k Lsl (R,M) s alv asl
 -> (forall x : var, In x R -> E x = E' x)
 -> (forall x : var, In x S -> E x = E' (slot x))
--> bisim (L,E,s) (L,E', doSpill slot s asl).
-
+-> sim'r Bisim (L,E,s) (L,E', doSpill slot s asl).

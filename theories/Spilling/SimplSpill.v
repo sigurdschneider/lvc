@@ -36,7 +36,7 @@ match s,Lv with
      ann1 (Sp,L,None) (simplSpill k Λ R_s (Sp ∪ M) s lv)
 
 | stmtReturn e, _
-  => let Fv_e := Exp.freeVars e in
+  => let Fv_e := Op.freeVars e in
      let L    := Fv_e \ R in
      let K    := of_list (take (cardinal L) (elements (R \ Fv_e))) in
      let R_e  := R \ K ∪ L in
@@ -45,7 +45,7 @@ match s,Lv with
      ann0 (Sp,L,None)
 
 | stmtIf e s1 s2, ann2 LV lv1 lv2
-  => let Fv_e := Exp.freeVars e in
+  => let Fv_e := Op.freeVars e in
      let L    := Fv_e \ R in
      let K    := of_list (take (cardinal L) (elements (R \ Fv_e))) in
      let R_e  := R \ K ∪ L in
@@ -55,7 +55,7 @@ match s,Lv with
                       (simplSpill k Λ R_e (Sp ∪ M) s2 lv2)
 
 | stmtApp f Y, _
-  => let Fv_Y := list_union (Exp.freeVars ⊝ Y) in
+  => let Fv_Y := list_union (Op.freeVars ⊝ Y) in
      let L    := Fv_Y \ R in
      let K    := of_list (take (cardinal L) (elements (R \ Fv_Y))) in
      let Sp   := R in (* to avoid spilling R we would have to keep track on Λ *)
@@ -476,8 +476,8 @@ general induction lvSound;
     rewrite ReqR'. clear - sizeRL. subst K... omega.
   }
 - set (K := of_list (take
-                       (cardinal (Exp.freeVars e \ R'))
-                       (elements (R' \ Exp.freeVars e))
+                       (cardinal (Op.freeVars e \ R'))
+                       (elements (R' \ Op.freeVars e))
                   )) in *.
   eapply SpillIf with (K:= K);
   [rewrite ReqR'; apply fTake
@@ -490,8 +490,8 @@ general induction lvSound;
   subst K; apply al_in_rkl; eauto;
   rewrite <- ReqR'; eauto with cset.
 - set (K := of_list (take
-                       (cardinal (list_union (Exp.freeVars ⊝ Y) \ R'))
-                       (elements (R' \ list_union (Exp.freeVars ⊝ Y)))
+                       (cardinal (list_union (Op.freeVars ⊝ Y) \ R'))
+                       (elements (R' \ list_union (Op.freeVars ⊝ Y)))
                   )) in *.
   eapply PIR2_nth_2 with (l:=counted l) in pir2; eauto using zip_get.
   destruct pir2 as [[R_f M_f] [pir2_get [pir2_R pir2_M]]]. simpl in *.
@@ -503,8 +503,8 @@ general induction lvSound;
   + rewrite pir2_M. rewrite H1. rewrite fvRM.
     rewrite ReqR'. rewrite MeqM'. cset_tac.
 - set (K := of_list (take
-                       (cardinal (Exp.freeVars e \ R'))
-                       (elements (R' \ Exp.freeVars e))
+                       (cardinal (Op.freeVars e \ R'))
+                       (elements (R' \ Op.freeVars e))
                   )) in *.
   eapply SpillReturn with (K:= K); try rewrite ReqR'; eauto.
   + apply fTake.

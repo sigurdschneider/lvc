@@ -19,12 +19,12 @@ ann (set var * set var * option (list (set var * set var)))
   -> spill_sound k ZL Λ (R,M) (stmtLet x e s) (ann1 (Sp,L,None) sl)
 
 | SpillReturn ZL Λ R M Sp L K e
-: Exp.freeVars e ⊆ R\K ∪ L
+: Op.freeVars e ⊆ R\K ∪ L
   -> cardinal ((R\K) ∪ L) <= k
   -> spill_sound k ZL Λ (R,M) (stmtReturn e) (ann0 (Sp,L,None))
 
 | SpillIf ZL Λ R M Sp L K sl_s sl_t e s t
-: Exp.freeVars e ⊆ R\K ∪ L
+: Op.freeVars e ⊆ R\K ∪ L
   -> cardinal (R\K ∪ L) <= k
   -> spill_sound k ZL Λ (R\K ∪ L, Sp ∪ M) s sl_s
   -> spill_sound k ZL Λ (R\K ∪ L, Sp ∪ M) t sl_t
@@ -32,7 +32,7 @@ ann (set var * set var * option (list (set var * set var)))
 
 | SpillApp ZL Z Λ R M Sp L K f Y R_f M_f
 : cardinal (R\K ∪ L) <= k
-  -> list_union (Exp.freeVars ⊝ Y) ⊆ R\K ∪ L
+  -> list_union (Op.freeVars ⊝ Y) ⊆ R\K ∪ L
   -> get ZL (counted f) Z
   -> get Λ (counted f) (R_f,M_f)
   -> R_f \ of_list Z ⊆ R\K ∪ L
@@ -61,17 +61,17 @@ Inductive fv_e_bounded : nat -> stmt -> Prop :=
   -> fv_e_bounded k (stmtLet x e s)
 
 | BoundReturn k e
-: cardinal (Exp.freeVars e) <= k
+: cardinal (Op.freeVars e) <= k
   -> fv_e_bounded k (stmtReturn e)
 
 | BoundIf k e s t
-: cardinal (Exp.freeVars e) <= k
+: cardinal (Op.freeVars e) <= k
   -> fv_e_bounded k s
   -> fv_e_bounded k t
   -> fv_e_bounded k (stmtIf e s t)
 
 | BoundApp k f Y
-: cardinal (list_union (Exp.freeVars ⊝ Y)) <= k
+: cardinal (list_union (Op.freeVars ⊝ Y)) <= k
   -> fv_e_bounded k (stmtApp f Y)
 
 | BoundFun k F t
