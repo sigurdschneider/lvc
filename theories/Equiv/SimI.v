@@ -15,8 +15,6 @@ Class ProofRelationI (A:Type) := {
     (* Relates environments according to analysis information *)
     IndexRelI : 〔A〕 -> nat -> nat -> Prop;
     Image : 〔A〕 -> nat;
-    ArgLengthMatchI : forall E E' a Z Z' VL VL',
-        ParamRelI a Z Z' -> ArgRelI E E' a VL VL' -> length Z = length VL /\ length Z' = length VL';
     IndexRelDrop : forall AL' AL n n', IndexRelI (AL' ++ AL) n n' ->
                                   n >= length AL'
                                   -> IndexRelI AL (n - length AL') (n' - Image AL')
@@ -45,6 +43,8 @@ Definition app_r t (r:irel) A (PR:ProofRelationI A) AL (L L':I.labenv) :=
         ArgRelI E E' a Yv Y'v
         -> omap (op_eval E) Y = Some Yv
         -> omap (op_eval E') Y' = Some Y'v
+        -> ❬Z❭ = ❬Yv❭
+        -> ❬Z'❭ = ❬Y'v❭
         -> r t (L, E, stmtApp f Y)
             (L', E', stmtApp f' Y').
 
@@ -111,7 +111,6 @@ Proof.
   intros LP SIM.
   hnf; intros.
   exploit LP; eauto.
-  exploit ArgLengthMatchI; eauto; dcr.
   pone_step; simpl; eauto with len.
 Qed.
 
@@ -160,6 +159,7 @@ Definition indexwise_r t (r:irel) A (PR:ProofRelationI A) AL' F F' AL L L' :=
     -> get AL' n a
     -> forall E E' VL VL',
         ArgRelI E E' a VL VL'
+
         -> r t (L, E[Z <-- List.map Some VL], s)
             (L', E'[Z' <-- List.map Some VL'], s').
 
@@ -227,7 +227,6 @@ Proof.
     eapply get_app_lt_1 in GetL'; [| rewrite mapi_length; eauto ].
     inv_get. destruct x0 as [Z s], x as [Z' s']. simpl in *. clear EQ0 EQ.
     exploit IPR; eauto.
-    exploit (ArgLengthMatchI); eauto; dcr.
     pone_step; simpl; eauto using get_app, get_mapi; simpl; eauto with len.
     orewrite (f-f=0). orewrite (f'-f'=0). simpl.
     exploit SIM; eauto.
@@ -240,7 +239,6 @@ Proof.
     rewrite Len3; eauto. rewrite Img; eauto.
     exploit (PAR (LabI  (f - ❬AL'❭)) (LabI (f' - Image AL'))); eauto.
     rewrite Len3; eauto. rewrite Img; eauto.
-    exploit (ArgLengthMatchI); eauto; dcr.
     eapply (@sim_Y_left I.state _ I.state _).
     eapply (@sim_Y_right I.state _ I.state _).
     rewrite Img in SIMR. rewrite Len3 in SIMR.
@@ -294,15 +292,13 @@ Class PointwiseProofRelationI (A:Type) := {
        and closure environments *)
     ArgRelIP : onv val -> onv val -> A-> list val -> list val -> Prop;
     (* Relates environments according to analysis information *)
-    ArgLengthMatchIP : forall E E' a Z Z' VL VL',
-        ParamRelIP a Z Z' -> ArgRelIP E E' a VL VL' -> length Z = length VL /\ length Z' = length VL';
 }.
 
 Lemma pointwise_PR_as_PR A
   : PointwiseProofRelationI A -> ProofRelationI A.
 Proof.
-  intros. destruct X as [B C D].
-  eapply (Build_ProofRelationI B C (fun _ => eq) (@length _) D).
+  intros. destruct X as [B C].
+  eapply (Build_ProofRelationI B C (fun _ => eq) (@length _)).
   intros; eauto.
 Defined.
 
@@ -335,32 +331,4 @@ Proof.
   eapply labenv_sim_extension'; eauto.
   eapply indexwise_r_mon.
   eapply fix_compatible_separate; eauto. eauto.
-Qed.
-
-Lemma sim_let_op i r L L' V V' x x' e e' s s'
-      (EQ:op_eval V e = op_eval V' e')
-      (SIM: forall v, op_eval V e = Some v
-                 -> (sim'r r \3/ r) i (L, V [x <- ⎣ v ⎦], s) (L', V' [x' <- ⎣ v ⎦], s'))
-  : sim'r r i (L, V, stmtLet x (Operation e) s) (L', V', stmtLet x' (Operation e') s').
-Proof.
-  case_eq (op_eval V e); intros.
-  * pone_step; eauto. rewrite EQ in H; eauto.
-  * pno_step.
-Qed.
-
-Lemma sim_let_call i r L L' V V' x x' f Y Y' s s'
-      (EQ: omap (op_eval V) Y = omap (op_eval V') Y')
-      (SIM: forall v, (sim'r r \3/ r) i (L, V [x <- ⎣ v ⎦], s) (L', V' [x' <- ⎣ v ⎦], s'))
-  : sim'r r i (L, V, stmtLet x (Call f Y) s) (L', V', stmtLet x' (Call f Y') s').
-Proof.
-  case_eq (omap (op_eval V) Y); intros.
-  * pose proof H as H'. rewrite EQ in H'.
-    pfold; eapply sim'Extern;
-      [ eapply star2_refl
-      | eapply star2_refl | step_activated | step_activated | |].
-    intros ? ? STEP; inv STEP; eexists; split; [econstructor; eauto | ].
-    rewrite <- EQ. eauto. eapply SIM.
-    intros ? ? STEP; inv STEP; eexists; split; [econstructor; eauto | ].
-    rewrite EQ. eauto. eapply SIM.
-  * pno_step.
 Qed.

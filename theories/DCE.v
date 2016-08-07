@@ -428,24 +428,6 @@ Qed.
 
 Module I.
 
-Instance SR : ProofRelationI (bool * params) := {
-   ParamRelI G Z Z' := Z' = Z /\ snd G = Z;
-   ArgRelI V V' G VL VL' := VL' = VL /\ length (snd G) = length VL /\ V = V';
-   Image AL := countTrue (List.map fst AL);
-   IndexRelI AL n n' :=
-     n' = countTrue (fst ⊝ (take n AL)) /\ exists Z, get AL n (true, Z)
-}.
-- intros. hnf in H, H0; dcr; subst.
-  eauto.
-- intros AL' AL n n' [H H']; subst.
-  split. clear H' H.
-  + general induction AL'; simpl.
-    * orewrite (n - 0 = n). omega.
-    * destruct n; simpl; eauto. cases; simpl; eauto.
-  + destruct H' as [? ?]. rewrite get_app_ge in H0; eauto.
-Defined.
-
-
 Lemma inv_extend s L L' RL als f
 (LEN: ❬s❭ = ❬als❭)
 (H: forall (f : nat),
@@ -474,10 +456,25 @@ Proof.
       rewrite compileF_length; eauto.
 Qed.
 
-Lemma sim_I i ZL RL r L L' V s (a:ann bool) (Ann:getAnn a)
+Instance SR : ProofRelationI bool := {
+   ParamRelI G Z Z' := Z' = Z;
+   ArgRelI V V' G VL VL' := VL' = VL /\ V = V';
+   Image AL := countTrue AL;
+   IndexRelI AL n n' :=
+     n' = countTrue (take n AL) /\ get AL n true
+}.
+- intros AL' AL n n' [H H']; subst.
+  split.
+  + clear H' H.
+    general induction AL'; simpl.
+    * orewrite (n - 0 = n). omega.
+    * destruct n; simpl; eauto. cases; simpl; eauto.
+  + rewrite get_app_ge in H'; eauto.
+Defined.
+
+Lemma sim_I i RL r L L' V s (a:ann bool) (Ann:getAnn a)
  (UC: unreachable_code i RL s a)
- (LSIM:labenv_sim Bisim (sim'r r) SR (pair ⊜ RL ZL) L L')
- (LenEq:❬ZL❭=❬RL❭)
+ (LSIM:labenv_sim Bisim (sim'r r) SR RL L L')
   : (forall (f:nat),
           get RL f true
           -> exists (b b' : I.block),
@@ -505,31 +502,28 @@ Proof.
     destruct o.
     + destruct x as [Z1 s1 n1], x0 as [Z2 s2 n2].
       edestruct LSIM as [? [? [? [ ? SIM]]]]; eauto; dcr.
-      inv_get.
-      assert (IndexRelI (pair ⊜ RL ZL) l (LabI (countTrue (take l RL)))).
+      assert (IndexRelI RL l (LabI (countTrue (take l RL)))).
       hnf; simpl. split; eauto using zip_get.
-      rewrite map_take. rewrite fst_zip_pair. eauto. eauto.
       exploit (H4 l (LabI (countTrue (take l RL)))); eauto using zip_get.
       decide (❬Y❭=❬Z1❭).
-      * eapply (SIM l (LabI (countTrue (take l RL)))); eauto using zip_get.
-        simpl in *; dcr; subst.
-        simpl; eauto with len.
-      * pno_step. simpl in *; dcr; subst. congruence.
+      * eapply (SIM l (LabI (countTrue (take l RL)))); simpl in *; subst;
+          eauto with len; eauto.
+      * pno_step.
     + pno_step.
   - pno_step.
   - cases.
     + pone_step_left.
-      eapply (IH s ltac:(eauto) i (fst ⊝ F ++ ZL)); eauto with len.
-      * rewrite zip_app; eauto with len.
-        eapply labenv_sim_extension with (F':=nil); eauto.
+      eapply (IH s); eauto with len.
+      * eapply labenv_sim_extension with (F':=nil); eauto.
         -- intros; hnf; intros; isabsurd.
         -- intros; hnf; intros; isabsurd.
         -- hnf; split; eauto with len. split; [| split].
-           ++ simpl. erewrite <- getAnn_eq; eauto.
+           ++ simpl.
              erewrite <- compileF_length; eauto. rewrite <- Heq. eauto.
            ++ simpl; intros; dcr; subst.
-             rewrite <- zip_app in H7; eauto with len. inv_get.
-             exploit compileF_nil_als_false; eauto. congruence.
+             rewrite H3 in H1. inv_get.
+             exploit compileF_nil_als_false; eauto.
+             exfalso; congruence.
            ++ simpl; intros; dcr; subst. omega.
       * intros.
         eapply get_app_cases in H0. destruct H0.
@@ -550,48 +544,41 @@ Proof.
         erewrite <- compileF_length; eauto. erewrite <- Heq. eauto.
     + rewrite Heq; clear Heq.
       pone_step. left.
-      eapply (IH s ltac:(eauto) i (fst ⊝ F ++ ZL)); eauto with len.
+      eapply (IH s); eauto with len.
       {
-        + rewrite zip_app; eauto with len.
-          eapply labenv_sim_extension; eauto.
+        + eapply labenv_sim_extension; eauto.
           * intros. hnf; intros.
             hnf in H1. dcr. hnf in H9; dcr; subst.
-            rewrite get_app_lt in H12; eauto using get_range.
+            rewrite get_app_lt in H11; eauto using get_range.
             inv_get.
             exploit (compileF_get (getAnn ⊝ als ++ RL)); try eapply H4; eauto.
-            erewrite <- getAnn_take_eq in H5; eauto.
+            erewrite take_app_lt, <- map_take in H5; eauto with len.
             simpl in *. get_functional.
             exploit H6; eauto.
-            eapply (IH s0 ltac:(eauto) i (fst ⊝ F ++ ZL)); eauto with len.
+            eapply (IH s0); eauto with len.
             rewrite EQ; eauto.
             eauto 20 using inv_extend with len.
           * hnf; intros.
             hnf in H0. dcr; subst.
-            rewrite get_app_lt in H10; eauto with len.
+            rewrite get_app_lt in H9; eauto with len.
             inv_get; simpl.
             exploit (compileF_get (getAnn ⊝ als ++ RL)); try eapply H1; eauto.
-            erewrite <- getAnn_take_eq in H4; eauto.
+            erewrite take_app_lt, <- map_take in H4; eauto with len.
             get_functional. eauto.
           * hnf. split; eauto with len.
             split.
             rewrite compileF_length; eauto. simpl.
-            erewrite <- getAnn_eq; eauto with len.
-            split. intros.
-            hnf in H0; dcr; subst.
+            split. intros; dcr; subst.
             rewrite compileF_length; eauto.
-            rewrite <- zip_app in H7; eauto with len.
-            inv_get.
-            erewrite <- getAnn_take_eq; eauto with len.
-            erewrite (take_eta n (getAnn ⊝ als)).
+            rewrite H3 in H1. inv_get.
+            rewrite take_app_lt; eauto with len.
+            erewrite (take_eta n (getAnn ⊝ als)) at 2.
             rewrite countTrue_app.
             erewrite <- get_eq_drop; eauto using map_get_1.
-            rewrite <- H0. simpl. rewrite map_take. omega.
-            intros. rewrite compileF_length; eauto.
-            hnf in H0; dcr; subst.
-            rewrite map_take. rewrite map_app.
-            rewrite map_zip.
-            rewrite zip_map_fst; eauto with len.
-            rewrite take_app_ge. rewrite countTrue_app. omega.
+            rewrite EQ. simpl. omega.
+            intros; dcr; subst. rewrite compileF_length; eauto.
+            rewrite take_app_ge.
+            rewrite countTrue_app. omega.
             rewrite map_length. omega.
       }
       intros; eapply inv_extend; eauto.
@@ -603,8 +590,7 @@ Lemma sim_DCE i V s a
     -> @sim I.state _ I.state _ Bisim (nil,V, s) (nil,V, compile nil s a).
 Proof.
   intros. eapply sim'_sim.
-  eapply (@sim_I i nil nil); eauto; isabsurd.
-  hnf; repeat split; simpl; eauto 20 using @sawtooth; isabsurd.
+  eapply (@sim_I i nil); eauto; isabsurd.
 Qed.
 
 End I.
