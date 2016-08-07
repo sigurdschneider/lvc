@@ -475,12 +475,12 @@ Defined.
 Lemma sim_I i RL r L L' V s (a:ann bool) (Ann:getAnn a)
  (UC: unreachable_code i RL s a)
  (LSIM:labenv_sim Bisim (sim'r r) SR RL L L')
-  : (forall (f:nat),
-          get RL f true
-          -> exists (b b' : I.block),
-            get L f b /\
-            get L' (countTrue (take f RL)) b')
-    -> sim'r r Bisim (L,V, s) (L',V, compile RL s a).
+ (L'EX:(forall (f:nat),
+           get RL f true
+           -> exists (b b' : I.block),
+             get L f b /\
+             get L' (countTrue (take f RL)) b'))
+  : sim'r r Bisim (L,V, s) (L',V, compile RL s a).
 Proof.
   unfold sim'r. revert_except s.
   sind s; destruct s; simpl; intros; invt unreachable_code; simpl in * |- *.
@@ -497,14 +497,14 @@ Proof.
       * case_eq (val2bool v); intros; pone_step; eauto.
       * pno_step.
   - assert (b=true). destruct a0, b; isabsurd; eauto. subst.
-    edestruct H as [? [? [GetL GetL']]]; eauto using zip_get.
+    edestruct L'EX as [? [? [GetL GetL']]]; eauto using zip_get.
     remember (omap (op_eval V) Y). symmetry in Heqo.
     destruct o.
     + destruct x as [Z1 s1 n1], x0 as [Z2 s2 n2].
       edestruct LSIM as [? [? [? [ ? SIM]]]]; eauto; dcr.
       assert (IndexRelI RL l (LabI (countTrue (take l RL)))).
       hnf; simpl. split; eauto using zip_get.
-      exploit (H4 l (LabI (countTrue (take l RL)))); eauto using zip_get.
+      exploit (H3 l (LabI (countTrue (take l RL)))); eauto using zip_get.
       decide (❬Y❭=❬Z1❭).
       * eapply (SIM l (LabI (countTrue (take l RL)))); simpl in *; subst;
           eauto with len; eauto.
@@ -521,12 +521,12 @@ Proof.
            ++ simpl.
              erewrite <- compileF_length; eauto. rewrite <- Heq. eauto.
            ++ simpl; intros; dcr; subst.
-             rewrite H3 in H1. inv_get.
+             rewrite H2 in H0. inv_get.
              exploit compileF_nil_als_false; eauto.
              exfalso; congruence.
            ++ simpl; intros; dcr; subst. omega.
       * intros.
-        eapply get_app_cases in H0. destruct H0.
+        eapply get_app_cases in H. destruct H.
         exfalso. inv_get.
         assert (NEQ:length (compileF compile (getAnn ⊝ als ++ RL) F als)
                 <> 0). {
@@ -534,11 +534,11 @@ Proof.
           eapply countTrue_exists. rewrite <- EQ; eauto using map_get_1.
         }
         eapply NEQ. rewrite <- Heq. eauto.
-        dcr. edestruct H as [? [? ?]]; eauto; dcr.
+        dcr. edestruct L'EX as [? [? ?]]; eauto; dcr.
         do 2 eexists. split.
         eapply get_app_right; eauto. rewrite mapi_length; eauto with len.
         rewrite map_length.
-        rewrite map_length in H4. omega.
+        rewrite map_length in H3. omega.
         rewrite take_app_ge; eauto.
         rewrite countTrue_app.
         erewrite <- compileF_length; eauto. erewrite <- Heq. eauto.
@@ -548,29 +548,29 @@ Proof.
       {
         + eapply labenv_sim_extension; eauto.
           * intros. hnf; intros.
-            hnf in H1. dcr. hnf in H9; dcr; subst.
+            simpl in *; dcr; subst.
             rewrite get_app_lt in H11; eauto using get_range.
             inv_get.
-            exploit (compileF_get (getAnn ⊝ als ++ RL)); try eapply H4; eauto.
-            erewrite take_app_lt, <- map_take in H5; eauto with len.
+            exploit (compileF_get (getAnn ⊝ als ++ RL)); try eapply H3; eauto.
+            erewrite take_app_lt, <- map_take in H4; eauto with len.
             simpl in *. get_functional.
-            exploit H6; eauto.
+            exploit H5; eauto.
             eapply (IH s0); eauto with len.
             rewrite EQ; eauto.
             eauto 20 using inv_extend with len.
           * hnf; intros.
-            hnf in H0. dcr; subst.
-            rewrite get_app_lt in H9; eauto with len.
+            simpl in *; dcr; subst.
+            rewrite get_app_lt in H8; eauto with len.
             inv_get; simpl.
-            exploit (compileF_get (getAnn ⊝ als ++ RL)); try eapply H1; eauto.
-            erewrite take_app_lt, <- map_take in H4; eauto with len.
+            exploit (compileF_get (getAnn ⊝ als ++ RL)); try eapply H0; eauto.
+            erewrite take_app_lt, <- map_take in H3; eauto with len.
             get_functional. eauto.
           * hnf. split; eauto with len.
             split.
             rewrite compileF_length; eauto. simpl.
             split. intros; dcr; subst.
             rewrite compileF_length; eauto.
-            rewrite H3 in H1. inv_get.
+            rewrite H2 in H0. inv_get.
             rewrite take_app_lt; eauto with len.
             erewrite (take_eta n (getAnn ⊝ als)) at 2.
             rewrite countTrue_app.
