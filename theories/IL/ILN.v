@@ -44,7 +44,7 @@ Module F.
     blockI L E F f.
 
   Inductive step : state -> event -> state -> Prop :=
-  | nstepExp L E x e b v
+  | nstepLet L E x e b v
     (def:op_eval E e = Some v)
     : step (L, E, nstmtLet x (Operation e) b) EvtTau (L, E[x<-Some v], b)
 
@@ -80,7 +80,7 @@ Module F.
            EvtTau
            (L'[List.map (fst ∘ fst) F <-- List.map Some (mapi (mkBlock L' E' F) F)], E'', s)
 
-  | stepLet (L:onv block) E F t
+  | stepFun (L:onv block) E F t
     : step (L, E, nstmtFun F t) EvtTau (L[List.map (fst ∘ fst) F <--
                                                    List.map Some (mapi (mkBlock L E F) F)], E, t).
 
@@ -141,7 +141,7 @@ Module I.
     blockI L F f.
 
   Inductive step : state -> event -> state -> Prop :=
-  | nstepExp L E x e b v
+  | nstepLet L E x e b v
     (def:op_eval E e = Some v)
     : step (L, E, nstmtLet x (Operation e) b) EvtTau (L, E[x<-Some v], b)
 
@@ -174,7 +174,7 @@ Module I.
            EvtTau
            (L'[List.map (fst ∘ fst) F <-- List.map Some (mapi (mkBlock L' F) F)], E'', s)
 
-  | stepLet L E F t
+  | stepFun L E F t
     : step (L, E, nstmtFun F t)
            EvtTau
            (L[List.map (fst ∘ fst) F <-- List.map Some (mapi (mkBlock L F) F)], E, t).

@@ -66,7 +66,6 @@ Definition indexwise_indexes_exists A (PR:ProofRelationI A) (F F':〔params * st
     -> get F n Zs
     -> exists Zs', get F' n' Zs'.
 
-
 Definition labenv_sim t (r:irel)
            {A} (PR:ProofRelationI A) (AL:list A) L L' :=
   length AL = length L /\
@@ -284,7 +283,7 @@ Proof.
     eapply stepGoto_mapi; simpl in *; eauto using @sawtooth_smaller with len.
     econstructor; simpl; eauto. simpl. eauto with len.
     eapply stepGoto_mapi; simpl in *; eauto using @sawtooth_smaller with len.
-Admitted.
+Qed.
 
 Lemma fix_compatible_separate t A (PR:ProofRelationI A) AL' AL F F' L L'
   : (forall r,
