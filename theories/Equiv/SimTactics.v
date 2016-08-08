@@ -93,3 +93,9 @@ Proof.
     rewrite EQ. eauto. eapply SIM.
   * pno_step.
 Qed.
+
+Ltac perr :=
+  pfold; eapply sim'Err;
+  [ | eapply star2_refl | ];
+  [ repeat get_functional; try reflexivity
+  | repeat get_functional; stuck2 ].

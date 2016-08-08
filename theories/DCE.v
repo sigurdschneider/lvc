@@ -136,24 +136,6 @@ Proof.
   cases; subst. cases; simpl; eauto.
 Qed.
 
-Lemma getAnn_eq X Y Y' (F:list (Y * Y')) (als:list (ann X))
-  : ❬F❭ = ❬als❭
-    -> getAnn ⊝ als = fst ⊝ pair ⊜ (getAnn ⊝ als) (fst ⊝ F).
-Proof.
-  intros LEN. rewrite fst_zip_pair; eauto with len.
-Qed.
-
-Lemma getAnn_take_eq X Y Y' (F:list (Y * Y')) (als:list (ann X)) k a LV
-  : ❬F❭ = ❬als❭
-    -> get als k a
-    -> getAnn ⊝ take k als = fst ⊝ take k (pair ⊜ (getAnn ⊝ als) (fst ⊝ F) ++ LV).
-Proof.
-  intros LEN Get.
-  rewrite take_app_lt; eauto with len.
-  repeat rewrite map_take.
-  rewrite fst_zip_pair; eauto with len.
-Qed.
-
 Local Hint Extern 0 =>
 match goal with
 | [ H : op2bool ?e <> Some ?t , H' : op2bool ?e <> Some ?t -> ?B = ?C |- _ ] =>
@@ -428,34 +410,6 @@ Qed.
 
 Module I.
 
-Lemma inv_extend s L L' RL als f
-(LEN: ❬s❭ = ❬als❭)
-(H: forall (f : nat),
-       get RL f true ->
-       exists b b' : I.block, get L f b /\ get L' (countTrue (take f RL)) b')
-(Get : get (getAnn ⊝ als ++ RL) f true)
-  :  exists b b' : I.block, get (mapi I.mkBlock s ++ L) f b /\
-                       get (mapi I.mkBlock (compileF compile (getAnn ⊝ als ++ RL) s als) ++ L') (countTrue (take f (getAnn ⊝ als ++ RL))) b'.
-Proof.
-  get_cases Get; inv_get.
-  - exploit compileF_get; eauto.
-    do 2 eexists; split; eauto using get_app, mapi_get_1.
-    eapply get_app. eapply mapi_get_1.
-    rewrite take_app_lt; eauto with len.
-    rewrite <- map_take; eauto.
-  - edestruct H as [b [b' [? ?]]]; eauto.
-    exists b, b'; split.
-    + eapply get_app_right; eauto.
-      rewrite mapi_length.
-      rewrite map_length.
-      rewrite map_length in H1. omega.
-    + eapply get_app_right; eauto.
-      rewrite take_app_ge; eauto.
-      rewrite countTrue_app.
-      rewrite mapi_length.
-      rewrite compileF_length; eauto.
-Qed.
-
 Instance SR : ProofRelationI bool := {
    ParamRelI G Z Z' := Z' = Z;
    ArgRelI V V' G VL VL' := VL' = VL /\ V = V';
@@ -475,11 +429,6 @@ Defined.
 Lemma sim_I i RL r L L' V s (a:ann bool) (Ann:getAnn a)
  (UC: unreachable_code i RL s a)
  (LSIM:labenv_sim Bisim (sim'r r) SR RL L L')
- (L'EX:(forall (f:nat),
-           get RL f true
-           -> exists (b b' : I.block),
-             get L f b /\
-             get L' (countTrue (take f RL)) b'))
   : sim'r r Bisim (L,V, s) (L',V, compile RL s a).
 Proof.
   unfold sim'r. revert_except s.
@@ -497,19 +446,9 @@ Proof.
       * case_eq (val2bool v); intros; pone_step; eauto.
       * pno_step.
   - assert (b=true). destruct a0, b; isabsurd; eauto. subst.
-    edestruct L'EX as [? [? [GetL GetL']]]; eauto using zip_get.
-    remember (omap (op_eval V) Y). symmetry in Heqo.
-    destruct o.
-    + destruct x as [Z1 s1 n1], x0 as [Z2 s2 n2].
-      edestruct LSIM as [? [? [? [ ? SIM]]]]; eauto; dcr.
-      assert (IndexRelI RL l (LabI (countTrue (take l RL)))).
-      hnf; simpl. split; eauto using zip_get.
-      exploit (H3 l (LabI (countTrue (take l RL)))); eauto using zip_get.
-      decide (❬Y❭=❬Z1❭).
-      * eapply (SIM l (LabI (countTrue (take l RL)))); simpl in *; subst;
-          eauto with len; eauto.
-      * pno_step.
-    + pno_step.
+    eapply labenv_sim_app; eauto.
+    + hnf; simpl. split; eauto using zip_get.
+    + intros; simpl in *; subst. eauto 20.
   - pno_step.
   - cases.
     + pone_step_left.
@@ -517,6 +456,10 @@ Proof.
       * eapply labenv_sim_extension with (F':=nil); eauto.
         -- intros; hnf; intros; isabsurd.
         -- intros; hnf; intros; isabsurd.
+        -- hnf; intros; inv_get.
+           exfalso.
+           hnf in H; dcr; inv_get.
+           exploit compileF_nil_als_false; eauto. congruence.
         -- hnf; split; eauto with len. split; [| split].
            ++ simpl.
              erewrite <- compileF_length; eauto. rewrite <- Heq. eauto.
@@ -525,23 +468,6 @@ Proof.
              exploit compileF_nil_als_false; eauto.
              exfalso; congruence.
            ++ simpl; intros; dcr; subst. omega.
-      * intros.
-        eapply get_app_cases in H. destruct H.
-        exfalso. inv_get.
-        assert (NEQ:length (compileF compile (getAnn ⊝ als ++ RL) F als)
-                <> 0). {
-          rewrite compileF_length; eauto.
-          eapply countTrue_exists. rewrite <- EQ; eauto using map_get_1.
-        }
-        eapply NEQ. rewrite <- Heq. eauto.
-        dcr. edestruct L'EX as [? [? ?]]; eauto; dcr.
-        do 2 eexists. split.
-        eapply get_app_right; eauto. rewrite mapi_length; eauto with len.
-        rewrite map_length.
-        rewrite map_length in H3. omega.
-        rewrite take_app_ge; eauto.
-        rewrite countTrue_app.
-        erewrite <- compileF_length; eauto. erewrite <- Heq. eauto.
     + rewrite Heq; clear Heq.
       pone_step. left.
       eapply (IH s); eauto with len.
@@ -557,7 +483,6 @@ Proof.
             exploit H5; eauto.
             eapply (IH s0); eauto with len.
             rewrite EQ; eauto.
-            eauto 20 using inv_extend with len.
           * hnf; intros.
             simpl in *; dcr; subst.
             rewrite get_app_lt in H8; eauto with len.
@@ -565,6 +490,10 @@ Proof.
             exploit (compileF_get (getAnn ⊝ als ++ RL)); try eapply H0; eauto.
             erewrite take_app_lt, <- map_take in H3; eauto with len.
             get_functional. eauto.
+          * hnf; intros; inv_get.
+            hnf in H; dcr; inv_get.
+            rewrite take_app_lt; eauto with len. rewrite <- map_take.
+            exploit compileF_get; eauto.
           * hnf. split; eauto with len.
             split.
             rewrite compileF_length; eauto. simpl.
@@ -581,7 +510,6 @@ Proof.
             rewrite countTrue_app. omega.
             rewrite map_length. omega.
       }
-      intros; eapply inv_extend; eauto.
 Qed.
 
 Lemma sim_DCE i V s a

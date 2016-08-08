@@ -56,20 +56,34 @@ Proof.
   intros Lr LE; hnf; intros; eauto.
 Qed.
 
+Definition indexes_exists {A} (PR:ProofRelationI A) AL (L L' : I.labenv) :=
+  forall n n' a b, IndexRelI AL n n' -> get AL n a -> get L n b -> exists b', get L' n' b'.
+
+Definition indexwise_indexes_exists A (PR:ProofRelationI A) (F F':〔params * stmt〕) AL' AL :=
+  forall n n' Zs a,
+    IndexRelI (AL' ++ AL) n n'
+    -> get AL' n a
+    -> get F n Zs
+    -> exists Zs', get F' n' Zs'.
+
+
 Definition labenv_sim t (r:irel)
            {A} (PR:ProofRelationI A) (AL:list A) L L' :=
   length AL = length L /\
   sawtooth L' /\
   sawtooth L /\
   paramrel PR AL L L' /\
+  indexes_exists PR AL L L' /\
   app_r t r PR AL L L'.
 
 Lemma labenv_sim_nil t r A PR
   : @labenv_sim t r A PR nil nil nil.
 Proof.
-  repeat split; eauto using @sawtooth.
-  hnf; intros; isabsurd.
-  hnf; intros; isabsurd.
+  do 4 (try split); eauto using @sawtooth.
+  - hnf; intros; isabsurd.
+  - split.
+    + hnf; intros; isabsurd.
+    + hnf; intros; isabsurd.
 Qed.
 
 Hint Immediate labenv_sim_nil.
@@ -79,7 +93,7 @@ Lemma labenv_sim_mon t (r r':irel) A (PR:ProofRelationI A) AL L L'
     -> (forall t x y, r t x y -> r' t x y)
     -> labenv_sim t r' PR AL L L'.
 Proof.
-  intros [LEN [STL [STL' [PAR SIM]]]] LE; hnf; repeat split; eauto.
+  intros [LEN [STL [STL' [PAR [IE SIM]]]]] LE; hnf; do 5 (try split); eauto.
   eapply app_r_mon; eauto.
 Qed.
 
@@ -208,17 +222,39 @@ Proof.
     rewrite Len1; eauto. rewrite Img; rewrite mapi_length in *; eauto.
 Qed.
 
+Lemma complete_indexes_exists A (PR:ProofRelationI A) F F' AL' AL L L'
+  : indexwise_indexes_exists PR F F' AL' AL
+    -> indexes_exists PR AL L L'
+    -> separates PR AL' AL F F'
+    -> indexes_exists PR (AL' ++ AL) (mapi I.mkBlock F ++ L) (mapi I.mkBlock F' ++ L').
+Proof.
+  intros IIE IE [Len1 [Img [Ilt Ige]]].
+  hnf; intros ? ? ? ? RN GetAL GetF.
+  assert (Len3:❬AL'❭ = ❬mapi I.mkBlock F❭) by eauto with len.
+  eapply get_app_cases in GetF. destruct GetF as [GetF| [GetFL GE]].
+  + inv_get. edestruct IIE; eauto.
+    eexists; eapply get_app, get_mapi; eauto.
+  + eapply get_app_right_ge in GetAL; [ | rewrite Len3; eauto ].
+    exploit Ige; eauto. rewrite mapi_length in *; eauto.
+    eapply IndexRelDrop in RN; [| rewrite Len3; eauto].
+    edestruct IE; eauto. rewrite Len3. eauto.
+    rewrite Img in H0. eexists.
+    eapply get_app_right; eauto. rewrite mapi_length in *. omega.
+Qed.
+
 Hint Unfold separates.
 
 Lemma labenv_sim_extension' t r A (PR:ProofRelationI A) (AL AL':list A) F F' L L'
   : indexwise_r t (sim'r r \3/ r) PR AL' F F' AL (mapi I.mkBlock F ++ L) (mapi I.mkBlock F' ++ L')
     -> indexwise_paramrel PR F F' AL' AL
+    -> indexwise_indexes_exists PR F F' AL' AL
     -> separates PR AL' AL F F'
     -> labenv_sim t (sim'r r) PR AL L L'
     -> labenv_sim t (sim'r r) PR (AL' ++ AL) (mapi I.mkBlock F ++ L) (mapi I.mkBlock F' ++ L').
 Proof.
-  intros SIM IPR [Len2 [Img [Ilt Ige]]] [Len1 [STL [STL' [PAR LSIM]]]].
-  hnf; repeat split; eauto 20 using sawtooth_I_mkBlocks, complete_paramrel with len.
+  intros SIM IPR IIE [Len2 [Img [Ilt Ige]]] [Len1 [STL [STL' [PAR [IE LSIM]]]]].
+  hnf; do 5 (try split);
+    eauto 20 using sawtooth_I_mkBlocks, complete_paramrel, complete_indexes_exists with len.
   intros f f' ? ? ? ? ? ? ? RN GetAL GetFL GetL'.
   assert (Len3:❬AL'❭ = ❬mapi I.mkBlock F❭) by eauto with len.
   eapply get_app_cases in GetFL. destruct GetFL as [GetFL'| [GetFL GE]].
@@ -248,18 +284,19 @@ Proof.
     eapply stepGoto_mapi; simpl in *; eauto using @sawtooth_smaller with len.
     econstructor; simpl; eauto. simpl. eauto with len.
     eapply stepGoto_mapi; simpl in *; eauto using @sawtooth_smaller with len.
-Qed.
+Admitted.
 
 Lemma fix_compatible_separate t A (PR:ProofRelationI A) AL' AL F F' L L'
   : (forall r,
         labenv_sim t (sim'r r) PR (AL' ++ AL) (mapi I.mkBlock F ++ L) (mapi I.mkBlock F' ++ L')
         -> indexwise_r t (sim'r r) PR AL' F F' AL (mapi I.mkBlock F ++ L) (mapi I.mkBlock F' ++ L'))
     -> indexwise_paramrel PR F F' AL' AL
+    -> indexwise_indexes_exists PR F F' AL' AL
     -> separates PR AL' AL F F'
     -> forall r, labenv_sim t (sim'r r) PR AL L L'
            -> indexwise_r t (sim'r r) PR AL' F F' AL (mapi I.mkBlock F ++ L) (mapi I.mkBlock F' ++ L').
 Proof.
-  intros ISIM LP SEP r SIML. pcofix CIH.
+  intros ISIM LP IE SEP r SIML. pcofix CIH.
   eapply ISIM.
   eapply labenv_sim_extension'; eauto.
   eauto using indexwise_r_mon; eauto.
@@ -273,11 +310,12 @@ Lemma labenv_sim_extension t A (PR:ProofRelationI A) (AL AL':list A) F F' L L'
         labenv_sim t (sim'r r) PR (AL' ++ AL) (mapi I.mkBlock F ++ L) (mapi I.mkBlock F' ++ L')
         -> indexwise_r t (sim'r r) PR AL' F F' AL (mapi I.mkBlock F ++ L) (mapi I.mkBlock F' ++ L'))
     -> indexwise_paramrel PR F F' AL' AL
+    -> indexwise_indexes_exists PR F F' AL' AL
     -> separates PR AL' AL F F'
     -> forall r, labenv_sim t (sim'r r) PR AL L L'
         -> labenv_sim t (sim'r r) PR (AL' ++ AL) (mapi I.mkBlock F ++ L) (mapi I.mkBlock F' ++ L').
 Proof.
-  intros ISIM IP SEP r SIML.
+  intros ISIM IP IE SEP r SIML.
   eapply labenv_sim_extension'; eauto.
   eapply indexwise_r_mon.
   eapply fix_compatible_separate; eauto. eauto.
@@ -298,9 +336,12 @@ Lemma pointwise_PR_as_PR A
   : PointwiseProofRelationI A -> ProofRelationI A.
 Proof.
   intros. destruct X as [B C].
-  eapply (Build_ProofRelationI B C (fun _ => eq) (@length _)).
-  intros; eauto.
+  eapply (Build_ProofRelationI B C (fun L n n' => eq n n') (@length _)).
+  - intros; dcr; subst; eauto.
 Defined.
+
+Hint Resolve pointwise_PR_as_PR : typeclass_instances.
+Coercion pointwise_PR_as_PR : PointwiseProofRelationI >-> ProofRelationI.
 
 Lemma IndexRelIP_eq A PR L n n'
   : @IndexRelI A (pointwise_PR_as_PR PR) L n n' <-> n = n'.
@@ -308,22 +349,26 @@ Proof.
   destruct PR; simpl. reflexivity.
 Qed.
 
-Hint Resolve pointwise_PR_as_PR : typeclass_instances.
+Lemma IndexRelIP_refl A PR L n
+  : @IndexRelI A (pointwise_PR_as_PR PR) L n n.
+Proof.
+  destruct PR; simpl. reflexivity.
+Qed.
 
-Coercion pointwise_PR_as_PR : PointwiseProofRelationI >-> ProofRelationI.
-
+Hint Resolve IndexRelIP_refl.
 
 Lemma labenv_sim_extension_ptw t A (PR:PointwiseProofRelationI A) (AL AL':list A) F F' L L'
   : (forall r ,
         labenv_sim t (sim'r r) PR (AL' ++ AL) (mapi I.mkBlock F ++ L) (mapi I.mkBlock F' ++ L')
         -> indexwise_r t (sim'r r) PR AL' F F' AL (mapi I.mkBlock F ++ L) (mapi I.mkBlock F' ++ L'))
     -> indexwise_paramrel PR F F' AL' AL
+    -> indexwise_indexes_exists PR F F' AL' AL
     -> length AL' = length F
     -> length F = length F'
     -> forall r, labenv_sim t (sim'r r) PR AL L L'
         -> labenv_sim t (sim'r r) PR (AL' ++ AL) (mapi I.mkBlock F ++ L) (mapi I.mkBlock F' ++ L').
 Proof.
-  intros ISIM IP Len1 Len2 r SIML.
+  intros ISIM IP IE Len1 Len2 r SIML.
   assert (separates PR AL' AL F F'). {
     destruct SIML; dcr.
     hnf; destruct PR; simpl; repeat split; intros; omega.
@@ -331,4 +376,36 @@ Proof.
   eapply labenv_sim_extension'; eauto.
   eapply indexwise_r_mon.
   eapply fix_compatible_separate; eauto. eauto.
+Qed.
+
+Lemma labenv_sim_app i A (PR:ProofRelationI A) AL L L' r V V' Y Y' (f f':lab) a
+  : labenv_sim i (sim'r r) PR AL L L'
+    -> get AL f a
+    -> IndexRelI AL f f'
+    -> (forall Z s n Z' s' n',
+         get L f (I.blockI Z s n)
+         -> get L' f' (I.blockI Z' s' n')
+         -> ParamRelI a Z Z'
+         -> (forall Yv, omap (op_eval V) Y = ⎣ Yv ⎦ -> ❬Z❭ = ❬Yv❭
+                 -> exists Y'v, omap (op_eval V') Y' = ⎣ Y'v ⎦ /\
+                          ❬Z'❭ = ❬Y'v❭ /\ ArgRelI V V' a Yv Y'v)
+           /\ (i = Bisim -> omap (op_eval V) Y = None -> omap (op_eval V') Y' = None)
+           /\ (i = Bisim -> ❬Z❭ <> ❬Y❭ -> ❬Z'❭ <> ❬Y'❭))
+    -> sim'r r i (L, V, stmtApp f Y) (L', V', stmtApp f' Y').
+Proof.
+  intros LSIM GetAL RN ALL.
+  edestruct LSIM as [Len1 [STL [STL' [PAR [IE SIM]]]]]; eauto; dcr.
+  inv_get. edestruct IE; eauto.
+  destruct x as [Z s n], x0 as [Z' s' n'].
+  exploit PAR; eauto.
+  edestruct ALL as [A1 [A2 A3]]; eauto; dcr.
+  case_eq (omap (op_eval V) Y); intros.
+  - decide (❬Z❭ = ❬Y❭).
+    + edestruct A1; dcr; eauto with len.
+    + destruct i.
+      * exploit A3; eauto. pno_step.
+      * perr.
+  - destruct i.
+    + exploit A2; eauto. pno_step.
+    + perr.
 Qed.
