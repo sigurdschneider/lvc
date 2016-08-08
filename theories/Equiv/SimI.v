@@ -1,6 +1,6 @@
 Require Import List paco2.
-Require Export Util Var Val Exp Env Map CSet AutoIndTac IL AllInRel Sawtooth.
-Require Export Sim SimTactics IL InRel.
+Require Export Util Var Val Exp Env Map CSet AutoIndTac IL AllInRel.
+Require Export Sim SimTactics IL BlockType.
 
 Set Implicit Arguments.
 Unset Printing Records.
@@ -69,8 +69,8 @@ Definition indexwise_indexes_exists A (PR:ProofRelationI A) (F F':〔params * st
 Definition labenv_sim t (r:irel)
            {A} (PR:ProofRelationI A) (AL:list A) L L' :=
   length AL = length L /\
-  sawtooth L' /\
-  sawtooth L /\
+  smaller L' /\
+  smaller L /\
   paramrel PR AL L L' /\
   indexes_exists PR AL L L' /\
   app_r t r PR AL L L'.
@@ -78,11 +78,7 @@ Definition labenv_sim t (r:irel)
 Lemma labenv_sim_nil t r A PR
   : @labenv_sim t r A PR nil nil nil.
 Proof.
-  do 4 (try split); eauto using @sawtooth.
-  - hnf; intros; isabsurd.
-  - split.
-    + hnf; intros; isabsurd.
-    + hnf; intros; isabsurd.
+  do 5 (try split); hnf; intros; isabsurd.
 Qed.
 
 Hint Immediate labenv_sim_nil.
@@ -253,7 +249,7 @@ Lemma labenv_sim_extension' t r A (PR:ProofRelationI A) (AL AL':list A) F F' L L
 Proof.
   intros SIM IPR IIE [Len2 [Img [Ilt Ige]]] [Len1 [STL [STL' [PAR [IE LSIM]]]]].
   hnf; do 5 (try split);
-    eauto 20 using sawtooth_I_mkBlocks, complete_paramrel, complete_indexes_exists with len.
+    eauto 20 using smaller_I_mkBlocks, complete_paramrel, complete_indexes_exists with len.
   intros f f' ? ? ? ? ? ? ? RN GetAL GetFL GetL'.
   assert (Len3:❬AL'❭ = ❬mapi I.mkBlock F❭) by eauto with len.
   eapply get_app_cases in GetFL. destruct GetFL as [GetFL'| [GetFL GE]].
@@ -280,9 +276,9 @@ Proof.
     eapply paco3_mon; [| eauto].
     eapply SIMR; eauto.
     econstructor; simpl; eauto with len. simpl. eauto with len.
-    eapply stepGoto_mapi; simpl in *; eauto using @sawtooth_smaller with len.
+    eapply stepGoto_mapi; simpl in *; eauto with len.
     econstructor; simpl; eauto. simpl. eauto with len.
-    eapply stepGoto_mapi; simpl in *; eauto using @sawtooth_smaller with len.
+    eapply stepGoto_mapi; simpl in *; eauto with len.
 Qed.
 
 Lemma fix_compatible_separate t A (PR:ProofRelationI A) AL' AL F F' L L'

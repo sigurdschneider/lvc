@@ -1,7 +1,7 @@
 Require Import CSet Le.
 
 Require Import Plus Util AllInRel Map.
-Require Import Val Var Env IL Annotation SimI Fresh Liveness Status.
+Require Import Val Var Env IL Annotation InRel SimI Fresh Liveness Status.
 
 Set Implicit Arguments.
 

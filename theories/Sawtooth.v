@@ -27,9 +27,6 @@ Inductive sawtooth {B} `{BlockType B}
       -> tooth 0 L
       -> sawtooth (L++L').
 
-Definition smaller {B} `{BlockType B} (L:list B) :=
-        forall f b, get L f b -> f >= block_n b.
-
 Definition resetting {B} `{BlockType B} (L:list B) :=
   (forall f n b b', get L f b -> get L (f - block_n b + n) b' -> n >= block_n b').
 
