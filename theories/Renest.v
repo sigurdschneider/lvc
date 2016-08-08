@@ -148,23 +148,48 @@ Proof.
     rewrite Len3; eauto.
 Qed.
 
+Definition labenv_sim t (r:irel)
+           {A} (PR:ProofRelationI A) (AL:list A) L L' :=
+  length AL = length L /\
+  sawtooth L /\
+  tooth 0 L' /\
+  paramrel PR AL L L' /\
+  app_r t r PR AL L L'.
+
+Lemma labenv_sim_nil t r A PR
+  : @labenv_sim t r A PR nil nil nil.
+Proof.
+  do 4 (try split); eauto using @sawtooth, @tooth.
+  - hnf; intros; isabsurd.
+  - hnf; intros; isabsurd.
+Qed.
+
+Hint Immediate labenv_sim_nil.
+
+Lemma labenv_sim_mon t (r r':irel) A (PR:ProofRelationI A) AL L L'
+  :  labenv_sim t r PR AL L L'
+    -> (forall t x y, r t x y -> r' t x y)
+    -> labenv_sim t r' PR AL L L'.
+Proof.
+  intros [LEN [STL [STL' [PAR SIM]]]] LE; hnf; do 5 (try split); eauto.
+  eapply app_r_mon; eauto.
+Qed.
+
 Lemma labenv_sim_extension' t (r:irel) A (PR:ProofRelationI A) (AL AL':list A) F L L'
       (Len1:length AL' = length F)
   : indexwise_r t (sim'r r \3/ r) PR AL' F AL L L'
     -> indexwise_paramrel PR F AL' L' AL
-    -> tooth 0 L'
     -> Image AL' = 0
     -> labenv_sim t (sim'r r) PR AL L L'
     -> labenv_sim t (sim'r r) PR (AL' ++ AL) (mapi I.mkBlock F ++ L) L'.
 Proof.
-  intros ISIM IP TT Img [Len2 [STL [STL' [PAR SIML]]]].
+  intros ISIM IP Img [Len2 [STL [TT [PAR SIML]]]].
   hnf. repeat split; eauto using sawtooth_I_mkBlocks, complete_paramrel with len.
   intros f f' ? ? ? ? ? ? ? RN GetAL GetFL GetL'.
   assert (❬AL'❭ = ❬mapi I.mkBlock F❭) by eauto with len.
   eapply get_app_cases in GetAL. destruct GetAL as [GetAL'| [GetAL LE]].
   - eapply get_app_lt_1 in GetFL; [| rewrite <- H; eauto using get_range].
     inv_get. destruct x as [Z s]. simpl in *. clear EQ.
-    exploit (ArgLengthMatchI); eauto; dcr.
     pone_step; eauto using get_app, get_mapi; eauto; simpl; eauto with len.
     exploit (tooth_index TT GetL'); eauto; simpl in *; subst.
     orewrite (f - f = 0). orewrite (f' - (f' + 0) = 0).
@@ -178,10 +203,9 @@ Proof.
     rewrite H; eauto.
     exploit (PAR (LabI (f - ❬AL'❭)) (LabI f')); simpl; eauto.
     rewrite H; eauto.
-    exploit (ArgLengthMatchI); eauto; dcr.
     eapply (@sim_Y_left I.state _ I.state _).
     eapply (@sim_Y_right I.state _ I.state _).
-    eapply H3.
+    eapply H5.
     econstructor; simpl; eauto with len. simpl. eauto with len.
     eapply (I.stepGoto _ _ _ GetL'); simpl; eauto with len.
     econstructor; simpl; eauto. rewrite H; eauto. simpl. eauto with len.
@@ -323,7 +347,7 @@ Proof.
         rewrite mapi_length in H2. dcr.
         split; eauto. split; eauto. split; eauto.
         destruct SIM; dcr.
-        pose proof (sawtooth_smaller H11 H4).
+        pose proof (sawtooth_smaller H9 H4).
         rewrite drop_app_gen. rewrite mapi_length.
         simpl in *.
         orewrite (f - I.block_n b - ❬F❭ = f - ❬F❭ - I.block_n b).
