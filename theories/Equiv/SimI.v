@@ -113,23 +113,20 @@ Qed.
 
 
 Lemma bodies_r_app_r t A (PR:ProofRelationI A) AL L L' r
-  : paramrel PR AL L L'
-    -> bodies_r t r PR AL L L' L L'
+  : bodies_r t r PR AL L L' L L'
     -> app_r t (sim'r r) PR AL L L'.
 Proof.
-  intros LP SIM.
+  intros SIM.
   hnf; intros.
-  exploit LP; eauto.
   pone_step; simpl; eauto with len.
 Qed.
 
 Lemma fix_compatible_bodies t A (PR:ProofRelationI A) AL L L'
   : (forall (r:irel) L1 L2, app_r t (sim'r r) PR AL L1 L2
           -> bodies_r t (sim'r r) PR AL L1 L2 L L')
-    -> paramrel PR AL L L'
     -> forall r, bodies_r t (sim'r r) PR AL L L' L L'.
 Proof.
-  intros ISIM LP r.
+  intros ISIM r.
   pcofix CIH;
   change (bodies_r t (sim'r r) PR AL L L' L L');
   change (bodies_r t r PR AL L L' L L') in CIH.
@@ -257,7 +254,6 @@ Proof.
     rewrite mapi_length in GetFL'; eauto.
     eapply get_app_lt_1 in GetL'; [| rewrite mapi_length; eauto ].
     inv_get. destruct x0 as [Z s], x as [Z' s']. simpl in *. clear EQ0 EQ.
-    exploit IPR; eauto.
     pone_step; simpl; eauto using get_app, get_mapi; simpl; eauto with len.
     orewrite (f-f=0). orewrite (f'-f'=0). simpl.
     exploit SIM; eauto.
@@ -267,8 +263,6 @@ Proof.
     rewrite mapi_length in *.
     eapply IndexRelDrop in RN; eauto; [| rewrite Len3; eauto].
     exploit (LSIM (LabI  (f - ❬AL'❭)) (LabI (f' - Image AL'))) as SIMR; eauto.
-    rewrite Len3; eauto. rewrite Img; eauto.
-    exploit (PAR (LabI  (f - ❬AL'❭)) (LabI (f' - Image AL'))); eauto.
     rewrite Len3; eauto. rewrite Img; eauto.
     eapply (@sim_Y_left I.state _ I.state _).
     eapply (@sim_Y_right I.state _ I.state _).
