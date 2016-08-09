@@ -254,7 +254,6 @@ Proof.
       * eapply sim_let_call; eauto using agree_on_update_same, agree_on_incl.
         erewrite <- omap_op_eval_live_agree; eauto. eapply agree_on_sym; eauto.
         left. eapply IH; eauto using agree_on_update_same, agree_on_incl.
-      * exfalso. eapply NOTCOND. right; simpl; eauto.
   - repeat cases.
     + edestruct (op2bool_val2bool V); eauto; dcr.
       pone_step_left.
@@ -400,7 +399,6 @@ Proof.
         destruct o.
         -- pextern_step; eauto using agree_on_update_same, agree_on_incl; try congruence.
         -- pno_step.
-      * exfalso. eapply NOTCOND. right; simpl; eauto.
   - repeat cases.
     + edestruct (op2bool_val2bool V); eauto; dcr.
       pone_step_left.

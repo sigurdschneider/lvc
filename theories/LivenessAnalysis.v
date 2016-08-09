@@ -97,7 +97,7 @@ Proof.
         eapply incl_list_union. eapply map_get_1.
         eapply H7. reflexivity. eauto. eauto.
         simpl. cases; eauto.
-        erewrite get_nth in NOTCOND; eauto. simpl in *.
+        erewrite get_nth in NOTCOND; [| eauto using map_get_1].
         eapply NOTCOND. eapply H1; eauto.
       * rewrite not_get_nth_default in H5. simpl in *.
         cases in H5; cset_tac.

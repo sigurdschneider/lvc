@@ -716,3 +716,11 @@ Qed.
 
 Hint Resolve minus_zero_eq.
 Hint Resolve min_l min_r : len.
+
+Hint Extern 5 =>
+match goal with
+| [ H : Is_true ?B, EQ : ?A = ?B |- Is_true ?A] => rewrite EQ; eapply H
+| [ H : Is_true ?B, EQ : ?B = ?A |- Is_true ?A] => rewrite <- EQ; eapply H
+end.
+
+Hint Resolve Is_true_eq_true Is_true_eq_left Is_true_eq_right.

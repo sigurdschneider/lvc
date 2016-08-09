@@ -146,12 +146,6 @@ match goal with
     specialize (H' H''); subst
 end.
 
-Hint Extern 5 =>
-match goal with
-| [ H : Is_true ?B, EQ : ?A = ?B |- Is_true ?A] => rewrite EQ; eapply H
-| [ H : Is_true ?B, EQ : ?B = ?A |- Is_true ?A] => rewrite <- EQ; eapply H
-end.
-
 Lemma compileF_nil_als_false RL F als (LEN:❬F❭ = ❬als❭)
   : nil = compileF compile RL F als
     -> forall n a, get als n a -> getAnn a = false.
@@ -175,7 +169,6 @@ Proof.
   - destruct x as [Z s]; simpl in *.
     cases in H.
     + eexists 0, y; split; eauto using get.
-      rewrite <- Heq; eauto.
     + edestruct IHLEN; dcr; eauto 20 using get.
 Qed.
 
@@ -286,7 +279,7 @@ Proof.
     rewrite take_app_lt; eauto 20 with len.
     rewrite <- map_take. eauto.
     simpl.
-    eapply IH in H0; eauto. rewrite <- H3. eauto.
+    eapply IH in H0; eauto.
     subst. eauto.
 Qed.
 
@@ -371,12 +364,12 @@ Proof.
     + intros. destruct Zs as [Z' s'].
       edestruct compileF_get_inv as [Zs' [a [n' ?]]]; eauto; dcr; subst; simpl.
       simpl in *.
-      eapply H2; eauto. rewrite H7; eauto.
+      eapply H2; eauto.
     + intros. simpl in *.
       edestruct get_in_range as [Zs ?]; eauto. destruct Zs as [Z' s'].
       edestruct compileF_get_inv as [Zs' [a [n' [lv' ?]]]]; eauto.
       dcr; subst; simpl.
-      exploit H3 as ICF; eauto. rewrite H8; eauto.
+      exploit H3 as ICF; eauto.
       eapply DCE_isCalledFrom; eauto with len.
 Qed.
 
@@ -403,7 +396,7 @@ Proof.
     econstructor.
     + intros ? [Z s] Get.
       eapply compileF_get_inv in Get; destruct Get; dcr; subst; simpl; eauto.
-      exploit H2; eauto. rewrite H8; eauto.
+      exploit H2; eauto.
       rewrite compileF_Z_filter_by, map_filter_by, <- filter_by_app; eauto with len.
     + rewrite compileF_Z_filter_by, map_filter_by, <- filter_by_app; eauto with len.
 Qed.
@@ -481,8 +474,6 @@ Proof.
             erewrite take_app_lt, <- map_take in H4; eauto with len.
             simpl in *. get_functional.
             exploit H5; eauto.
-            eapply (IH s0); eauto with len.
-            rewrite EQ; eauto.
           * hnf; intros.
             simpl in *; dcr; subst.
             rewrite get_app_lt in H8; eauto with len.

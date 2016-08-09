@@ -120,7 +120,6 @@ Proof.
   - eapply get_getT in H.
     inv H.
     + do 2 eexists; repeat split; eauto using get.
-      rewrite <- Heq; eauto.
     + eapply getT_get in X.
       edestruct IHZ as [? [? []]]; eauto; dcr.
       do 2 eexists; eauto using get.
