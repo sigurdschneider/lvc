@@ -1,6 +1,6 @@
 Require Import Util LengthEq AllInRel Map SetOperations.
 
-Require Import Val EqDec Computable Var Env IL Annotation.
+Require Import Val EqDec Computable Var Env IL Annotation AppExpFree.
 Require Import paco2 SimF Fresh.
 
 Set Implicit Arguments.
@@ -212,4 +212,20 @@ Proof.
   eapply sim'_sim. eapply sim_EAE'; eauto.
   hnf; intros; split; eauto using @sawtooth with len.
   isabsurd.
+Qed.
+
+Lemma list_to_stmt_app_expfree  ZL Y l ZL'
+  : app_expfree (list_to_stmt ZL Y (stmtApp l (Var ⊝ ZL'))).
+Proof.
+  general induction Y; destruct ZL; simpl;
+    econstructor; intros; inv_get; eauto using isVar.
+Qed.
+
+Lemma EAE_app_expfree s
+  : app_expfree (compile s).
+Proof.
+  sind s; destruct s; simpl; eauto using app_expfree.
+  - cases; eauto using app_expfree.
+    + eapply list_to_stmt_app_expfree.
+  - econstructor; intros; inv_get; eauto using app_expfree.
 Qed.

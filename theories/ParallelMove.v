@@ -160,7 +160,6 @@ Section GlueCode.
     /\ check_pmove vars p ((l1, l2) :: nil)
     /\ check_source_set p ((l1, l2) :: nil).
 
-
   Lemma validate_parallel_assignment_correct vars p l1 l2
     (VOK:validate_parallel_assignment vars p l1 l2)
     : forall M K cont (Src:forall x : var, x \In of_list l2 -> M x <> ⎣⎦), exists M',
