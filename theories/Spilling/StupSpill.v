@@ -76,7 +76,7 @@ general induction lvSound;
     rewrite seteq. eauto.
   + eauto.
   + eauto.
-  + simpl. eauto.
+  (* + simpl. eauto.*)
   + rewrite pir2_R. clear. cset_tac.
   + rewrite pir2_M. rewrite H1. rewrite <- ReqR'. eauto.
 - eapply SpillReturn with (K:= R).

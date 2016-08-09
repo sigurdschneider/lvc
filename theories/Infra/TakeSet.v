@@ -41,3 +41,13 @@ Proof.
   rewrite take_list_incl.
   hnf; intros. eapply elements_iff. cset_tac.
 Qed.
+
+Lemma take_of_list_cardinal X `{OrderedType X} n (l : list X)
+: cardinal (of_list (take n l)) <= n.
+Proof.
+revert n. induction l; intro n.
+- rewrite take_nil. simpl. rewrite empty_cardinal. omega.
+- destruct n; simpl.
+  + rewrite empty_cardinal. omega.
+  + rewrite add_cardinal. rewrite IHl. omega.
+Qed.

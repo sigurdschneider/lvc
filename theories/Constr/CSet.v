@@ -546,3 +546,10 @@ Lemma list_eq_app X (R: relation X) (l1 l2 l1' l2' : list X)
 Proof.
 intros eq1 eq2. general induction eq1; eauto using @list_eq.
 Qed.
+
+Lemma cardinal_union_difference X `{OrderedType X} (s t u : set X)
+: cardinal (s ∪ (t \ u)) <= cardinal (s ∪ t).
+Proof.
+assert (s ∪ (t \ u) ⊆ s ∪ t). { cset_tac. }
+rewrite H0. eauto.
+Qed.

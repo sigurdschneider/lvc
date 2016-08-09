@@ -1,16 +1,20 @@
 Require Import List Map Env AllInRel Exp.
-Require Import IL Annotation InRel AutoIndTac Liveness LabelsDefined.
+Require Import IL Annotation InRel AutoIndTac Liveness LabelsDefined AppExpFree.
 Require Import SimI.
 Require Import Spilling.
-Require Import Take.
+Require Import Take TakeSet.
+
+Set Implicit Arguments.
 
 Fixpoint simplSpill
 (k : nat)
+(ZL: list params)
 (Λ : list (set var * set var))
 (R : set var)
 (M : set var)
 (s : stmt)
 (Lv : ann (set var))
+{struct s}
 : ann (set var * set var * option (list (set var * set var))) :=
 match s,Lv with
 
@@ -21,13 +25,12 @@ match s,Lv with
      let R_e : set var  := R \ K ∪ L in
 
      let K_x  := if [(cardinal R_e) >= k]
-                 (*if [cardinal R >= k /\ cardinal L >= k]*)
                       then singleton (hd 0 (elements R_e))
                       else ∅ in
      let Sp   := getAnn lv ∩ (K ∪ K_x) in
      let R_s  := {x; R_e \ K_x} in
 
-     ann1 (Sp,L,None) (simplSpill k Λ R_s (Sp ∪ M) s lv)
+     ann1 (Sp,L,None) (simplSpill k ZL Λ R_s (Sp ∪ M) s lv)
 
 | stmtReturn e, _
   => let Fv_e := Op.freeVars e in
@@ -45,24 +48,36 @@ match s,Lv with
      let R_e  := R \ K ∪ L in
      let Sp   := (getAnn lv1 ∪ getAnn lv2) ∩ K in
 
-     ann2 (Sp,L,None) (simplSpill k Λ R_e (Sp ∪ M) s1 lv1)
-                      (simplSpill k Λ R_e (Sp ∪ M) s2 lv2)
+     ann2 (Sp,L,None) (simplSpill k ZL Λ R_e (Sp ∪ M) s1 lv1)
+                      (simplSpill k ZL Λ R_e (Sp ∪ M) s2 lv2)
 
 | stmtApp f Y, _
-  => let Fv_Y := list_union (Op.freeVars ⊝ Y) in
-     let L    := Fv_Y \ R in
-     let K    := of_list (take (cardinal L) (elements (R \ Fv_Y))) in
-     let Sp   := R in (* to avoid spilling R we would have to keep track on Λ *)
-     let R_e  := R \ K ∪ L in
+  => let R_f := fst (nth (counted f) Λ (∅,∅)) in
+     let M_f := snd (nth (counted f) Λ (∅,∅)) in
+     let Z   := nth (counted f) ZL nil in
+     let L   := R_f \ R \ of_list Z in
+     (*let K    := of_list (take (cardinal L) (elements (R \ R_f)) in*)
+     let Sp   := M_f \ M \ of_list Z in
 
      ann0 (Sp,L,None)
 
 | stmtFun F t, annF LV als lv_t
-  =>let Λ' :=   ((fun lv : ⦃var⦄ => (∅, lv)) ⊝ getAnn ⊝ als ++ Λ) in
-    annF (R, ∅, Some ((fun lv => (∅, lv)) ⊝ (List.map getAnn als)))
-             ((fun Zs lv => simplSpill k Λ' ∅ (getAnn lv) (snd Zs) lv) ⊜ F als)
-                      (simplSpill k Λ' R (R ∪ M) t lv_t)
+  => let rms:= (fun f al =>
+                  let Lv  := getAnn al in (* liveness in fn body *)
+                  let ZL  := fst f in    (* params of fn *)
+                  let R_f := of_list (take k (elements Lv)) in
+                  let M_f := Lv \ R_f in
+                     (R_f, M_f)
+               ) ⊜ F als in
+     let ZL':= (fun f => fst f) ⊝ F ++ ZL in
+     let Λ' := rms ++ Λ in
 
+
+     annF (∅, ∅, Some rms)
+          ((fun f rmlv => match rmlv with (rm, Lv)
+                       => simplSpill k ZL' Λ' (fst rm) (snd rm) (snd f) Lv end)
+           ⊜ F ((fun rm al => (rm,al)) ⊜ rms als))
+                        (simplSpill k ZL' Λ' R M t lv_t)
 
 | _,_ => ann0 (∅, ∅, None)
 end.
@@ -91,6 +106,11 @@ Proof.
 cset_tac.
 Qed.
 
+Lemma minus_union_minus X `{OrderedType X} (s t u : set X)
+: s \ t ∪ u \ t [=] (s ∪ u) \ t.
+Proof.
+cset_tac.
+Qed.
 
 Lemma fTake X `{OrderedType X} (s t : set X)
  : (t)
@@ -172,7 +192,7 @@ Proof.
 intros K K_x RleqK fvBcard kgeq1 sizeRL.
 rewrite add_cardinal. rewrite cardinal_difference'.
 - subst K_x. rewrite singleton_cardinal.
-  assert (rke := rke X s t k RleqK fvBcard).
+  assert (rke := @rke X _ s t k RleqK fvBcard).
   remember (cardinal (s \ K ∪ t \ s)).
   destruct n.
   + omega. (*uses kgt0*)
@@ -215,6 +235,17 @@ decide (a ∈ of_list (take
   cset_tac.
 Qed.
 
+Lemma nth_listeq X (R : relation X) `{Reflexive _ R} (L L' : list X) (x : X) n
+ : list_eq R L L' -> R (nth n L x) (nth n L' x).
+Proof.
+intro H0. revert n.
+induction H0; intros.
+- apply H.
+- destruct n; simpl.
+  + eauto.
+  + apply IHlist_eq.
+Qed.
+
 (**********************************************************************)
 
 Lemma simplSpill_sat_spillSound (k:nat) (s:stmt) (R R' M M': set var)
@@ -223,16 +254,19 @@ Lemma simplSpill_sat_spillSound (k:nat) (s:stmt) (R R' M M': set var)
 k > 0
 -> R [=] R'
 -> M [=] M'
--> Λ === Λ'(**Tοdo: we need another equlity relation here**)
+-> Λ === Λ'
 -> cardinal R' <= k
 -> getAnn alv ⊆ R ∪ M
 -> fv_e_bounded k s
 -> live_sound Imperative ZL Lv s alv
--> PIR2 (fun RMf G => fst RMf [=] ∅ /\ snd RMf [=] G) Λ Lv
--> spill_sound k ZL Λ (R,M) s (simplSpill k Λ' R' M' s alv).
+-> app_expfree s
+-> PIR2 (fun RMf G => match RMf with (R_f,M_f)
+                   => cardinal R_f <= k end) Λ Lv
+(*-> PIR2 (fun RMf G => fst RMf [=] ∅ /\ snd RMf [=] G) Λ Lv*)
+-> spill_sound k ZL Λ (R,M) s (simplSpill k ZL Λ' R' M' s alv).
 
 Proof.
-intros kgeq1 ReqR' MeqM' ΛeqΛ' RleqK fvRM fvBound lvSound pir2.
+intros kgeq1 ReqR' MeqM' ΛeqΛ' RleqK fvRM fvBound lvSound aeFree pir2.
 
 general induction lvSound;
   inversion_clear fvBound
@@ -241,12 +275,13 @@ general induction lvSound;
        |k0 e0 s0 t0 fvBcard fvBs fvBt
        |k0 f0 Y0
        |k0 Z0 s0 t0 fvBs fvBt];
+  inversion_clear aeFree;
    simpl.
 
 
 
-- assert (rke := rke var R' (Exp.freeVars e) k RleqK fvBcard).
-  assert (fTake := fTake var R' (Exp.freeVars e)).
+- assert (rke := @rke var _ R' (Exp.freeVars e) k RleqK fvBcard).
+  assert (fTake := @fTake var _ R' (Exp.freeVars e)).
   set (K := of_list (take
                        (cardinal (Exp.freeVars e \ R'))
                        (elements (R' \ Exp.freeVars e))
@@ -256,7 +291,7 @@ general induction lvSound;
     set (K_x:=singleton (hd 0 (elements (
                         R' \ K ∪ Exp.freeVars e \ R' )))).
 
-    assert (rkk := rkk var R' (Exp.freeVars e) k x).
+    assert (rkk := @rkk var _ R' (Exp.freeVars e) k x).
 
     eapply SpillLet with (K:= K) (Kx := K_x); eauto.
 
@@ -328,7 +363,6 @@ general induction lvSound;
             assert (a ∈ (getAnn al \ (singleton x))). { cset_tac. }
             rewrite minus_empty.
             assert (a ∈ R). { cset_tac. } rewrite ReqR' in H1. cset_tac.
-
   + rewrite ReqR'. eauto.
   + subst K... rewrite ReqR'. exact rke.
   + rewrite minus_empty. rewrite add_cardinal. apply not_ge in sizeRL.
@@ -348,19 +382,38 @@ general induction lvSound;
   [ rewrite <- seteq_1 | rewrite <- seteq_2 ];
   subst K; apply al_in_rkl; eauto;
   rewrite <- ReqR'; eauto with cset.
-- set (K := of_list (take
-                       (cardinal (list_union (Op.freeVars ⊝ Y) \ R'))
-                       (elements (R' \ list_union (Op.freeVars ⊝ Y)))
-                  )) in *.
-  eapply PIR2_nth_2 with (l:=counted l) in pir2; eauto using zip_get.
-  destruct pir2 as [[R_f M_f] [pir2_get [pir2_R pir2_M]]]. simpl in *.
+- eapply PIR2_nth_2 with (l:=counted l) in pir2; eauto using zip_get.
+  destruct pir2 as [[R_f M_f] [pir2_get pir2_R ]]. simpl in *.
+  set (K := of_list (take
+                      (cardinal (R_f \ R))
+                      (elements (R \ R_f))
+                     )) in *.
 
   eapply SpillApp with (K:= K); try rewrite ReqR'; try rewrite MeqM'; eauto.
-  + subst K. apply rke; eauto.
-  + subst K. apply fTake; eauto.
-  + rewrite pir2_R. clear. cset_tac.
-  + rewrite pir2_M. rewrite H1. rewrite fvRM.
-    rewrite ReqR'. rewrite MeqM'. cset_tac.
+  + subst K. assert (forall s t, nth l Λ (s,t) === nth l Λ' (s,t)).
+    { intros s t. clear - pir2_get ΛeqΛ'. apply nth_listeq.
+      apply equiv_reflexive. apply ΛeqΛ'. }
+    enough (fst (nth l Λ (∅,∅)) [=] R_f) as Rf_nth.
+    { rewrite <- Rf_nth in pir2_R. rewrite <- H6.
+      rewrite cardinal_union_difference. rewrite <- ReqR'. rewrite Rf_nth.
+      apply rke; [rewrite ReqR' | rewrite Rf_nth in pir2_R]; eauto.
+    }
+    clear - pir2_get. apply get_nth with (d:=(∅,∅)) in pir2_get.
+    rewrite pir2_get. eauto.
+  + erewrite <- (nth_listeq _ _ ΛeqΛ'). rewrite (get_nth _ pir2_get). simpl.
+    erewrite get_nth; eauto.
+    rewrite <- minus_incl with (s:=R'\K) (t:=of_list Z).
+    rewrite minus_union_minus.
+    apply incl_minus_lr with (s:=R_f) (s':=R'\K ∪ R_f \ R') (t:=of_list Z) (t':=of_list Z).
+    * subst K. rewrite <- ReqR'. apply fTake.
+    * eauto.
+  + erewrite <- (nth_listeq _ _ ΛeqΛ'). rewrite (get_nth _ pir2_get). simpl.
+    erewrite get_nth; eauto.
+    erewrite <- minus_incl with (s:=M') (t:=of_list Z) at 2.
+    rewrite minus_union_minus.
+    apply incl_minus_lr with (s:=M_f) (s':=M_f \M' ∪ M') (t:=of_list Z) (t':=of_list Z).
+    * clear. cset_tac.
+    * eauto.
 - set (K := of_list (take
                        (cardinal (Op.freeVars e \ R'))
                        (elements (R' \ Op.freeVars e))
@@ -371,21 +424,21 @@ general induction lvSound;
 - eapply SpillFun with (K:=∅); eauto.
   + assert (forall s:set var, s \ ∅ ∪ ∅ [=] s) as seteq'. { cset_tac. }
     rewrite (seteq' R). rewrite ReqR'. apply RleqK.
-  + intros ; inv_get. simpl. rewrite empty_cardinal. omega.
+  + intros ; inv_get. simpl. apply take_of_list_cardinal.
   + intros ; inv_get. eapply H1; eauto with cset.
     * apply list_eq_app; eauto. reflexivity.
-    * rewrite empty_cardinal. omega.
+    * simpl. apply take_of_list_cardinal.
+    * clear. cset_tac.
     * eapply PIR2_app; eauto.
       eapply PIR2_get; eauto with len.
-      intros ; inv_get. simpl. split; eauto with cset.
+      intros ; inv_get. apply take_of_list_cardinal.
   + eapply IHlvSound; eauto.
-    * cset_tac.
-    * rewrite MeqM'. eauto.
-    * apply list_eq_app; eauto. reflexivity.
-    * enough (R \ ∅ ∪ ∅ ∪ (R' ∪ M) [=] R ∪ M) as seteq'.
-      { rewrite seteq'. rewrite <- fvRM. eauto. }
-      rewrite ReqR'. clear. cset_tac.
+    * rewrite ReqR'. clear. cset_tac.
+    * apply list_eq_app.
+      -- reflexivity.
+      -- apply ΛeqΛ'.
+    * rewrite H3. simpl in fvRM. rewrite fvRM. clear. cset_tac.
     * eapply PIR2_app; eauto.
       eapply PIR2_get; eauto with len.
-      intros ; inv_get. simpl. split; eauto with cset.
+      intros ; inv_get. apply take_of_list_cardinal.
 Qed.
