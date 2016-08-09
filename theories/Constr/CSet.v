@@ -475,3 +475,74 @@ Proof.
   unfold Proper, respectful; intros.
   inversion H; simpl; eauto.
 Qed.
+
+
+
+Lemma card_in_of_list X `{OrderedType X} ( l: list X) :
+  NoDupA _eq l -> cardinal (of_list l) = length l.
+Proof.
+induction l; intro noDup; simpl; eauto.
+- rewrite add_cardinal_2.
+  + inversion_clear noDup. apply IHl in H1. rewrite H1. eauto.
+  + inversion_clear noDup. intro no. apply <- InA_in in no. contradiction.
+Qed.
+
+
+
+Lemma add_cardinal X `{OrderedType X} (s : set X) x
+  : cardinal {x; s} <= S (cardinal s).
+Proof.
+decide (x ∈ s);
+  [apply add_cardinal_1 in i; rewrite i
+  |apply add_cardinal_2 in n; rewrite n]; cset_tac.
+Qed.
+
+
+
+Lemma elements_length  X `{OrderedType X} (s : set X)
+: length (elements s) = cardinal s.
+Proof.
+  rewrite SetInterface.cardinal_1. reflexivity.
+Qed.
+
+
+
+Lemma elements_of_list_size X `{OrderedType X} ( l : list X) :
+  NoDupA _eq l -> length (elements (of_list l)) = length l.
+intro noDup. rewrite elements_length. apply card_in_of_list.
+exact noDup.
+Qed.
+
+Lemma hd_in_list  X `{OrderedType X} ( l : list X)  x :
+ l <> nil -> InA _eq (hd x l) l.
+intro nonNil.
+destruct l.
+- isabsurd.
+- constructor. simpl. eauto.
+Qed.
+
+
+Lemma hd_in_elements X `{OrderedType X} ( s : set X) x:
+ ~ s [=] ∅ -> hd x (elements s) ∈ s.
+intro nonEmpty.
+apply elements_iff.
+apply hd_in_list.
+rewrite <- elements_nil_eset.
+eauto with cset.
+Qed.
+
+
+
+Lemma of_list_elements X `{OrderedType X} (s : set X)
+ : of_list (elements s) [=] s.
+Proof.
+cset_tac; [apply of_list_1 in H0; rewrite elements_iff
+          |apply of_list_1; rewrite <- elements_iff] ; eauto.
+Qed.
+
+
+Lemma list_eq_app X (R: relation X) (l1 l2 l1' l2' : list X)
+: list_eq R l1 l1' -> list_eq R l2 l2' -> list_eq R (l1++l2) (l1'++l2').
+Proof.
+intros eq1 eq2. general induction eq1; eauto using @list_eq.
+Qed.

@@ -613,3 +613,21 @@ Proof.
       eexists; split; eauto. rewrite H2. cset_tac.
     + eexists x. rewrite H2. cset_tac.
 Qed.
+
+Lemma minus_minus X `{OrderedType X} (s t : set X) : s \ (s \ t) [=] s ∩ t.
+Proof.
+cset_tac.
+Qed.
+
+Lemma incl_minus_incl X `{OrderedType X} (s t u : set X) : s ⊆ t -> u \ t ⊆ u \ s.
+cset_tac.
+Qed.
+
+Lemma incl_add_eq X `{OrderedType X}(s t : set X ) (a : X) : {a; t} ⊆ s <-> a ∈ s /\ t ⊆ s.
+Proof.
+split; intros H0.
+- split.
+  + rewrite add_union_singleton in H0; unfold Subset in H0. apply H0; cset_tac.
+  + rewrite <- H0. cset_tac.
+- destruct H as [ain yx]. decide (a ∈ t); cset_tac.
+Qed.

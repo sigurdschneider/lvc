@@ -4,12 +4,6 @@ Require Import SimI.
 Require Import Spilling.
 Require Import Take.
 
-
-Instance ge_computable a b : Computable (a >= b).
-Proof.
-eapply ge_dec.
-Qed.
-
 Fixpoint simplSpill
 (k : nat)
 (Λ : list (set var * set var))
@@ -73,122 +67,6 @@ match s,Lv with
 | _,_ => ann0 (∅, ∅, None)
 end.
 
-Lemma minus_minus X `{OrderedType X} (s t : set X) : s \ (s \ t) [=] s ∩ t.
-Proof.
-cset_tac.
-Qed.
-
-Lemma incl_minus X `{OrderedType X} (s t u : set X) : s ⊆ t -> u \ t ⊆ u \ s.
-cset_tac.
-Qed.
-
-Lemma incl_add_eq X `{OrderedType X}(s t : set X ) (a : X) : {a; t} ⊆ s <-> a ∈ s /\ t ⊆ s.
-Proof.
-split; intros H0.
-- split.
-  + rewrite add_union_singleton in H0; unfold Subset in H0. apply H0; cset_tac.
-  + rewrite <- H0. cset_tac.
-- destruct H as [ain yx]. decide (a ∈ t); cset_tac.
-Qed.
-
-
-
-Lemma add_cardinal X `{OrderedType X} (s : set X) x
-  : cardinal {x; s} <= S (cardinal s).
-Proof.
-decide (x ∈ s);
-  [apply add_cardinal_1 in i; rewrite i
-  |apply add_cardinal_2 in n; rewrite n]; cset_tac.
-Qed.
-
-Lemma take_list_incl X `{OrderedType X} (n : nat) (L:list X) :
-        of_list (take n L) ⊆ of_list L.
-Proof.
-  general induction L; destruct n; simpl; eauto with cset.
-  rewrite IHL. reflexivity.
-Qed.
-
-Lemma take_set_incl X `{OrderedType X} (n : nat) (s : set X) :
-        of_list (take n (elements s)) ⊆ s.
-Proof.
-  rewrite take_list_incl.
-  hnf; intros. eapply elements_iff. cset_tac.
-Qed.
-
-
-Lemma elements_length  X `{OrderedType X} (s : set X)
-: length (elements s) = cardinal s.
-Proof.
-  rewrite SetInterface.cardinal_1. reflexivity.
-Qed.
-
-Lemma card_in_of_list X `{OrderedType X} ( l: list X) :
-  NoDupA _eq l -> cardinal (of_list l) = length l.
-Proof.
-induction l; intro noDup; simpl; eauto.
-- rewrite add_cardinal_2.
-  + inversion_clear noDup. apply IHl in H1. rewrite H1. eauto.
-  + inversion_clear noDup. intro no. apply <- InA_in in no. contradiction.
-Qed.
-
-Lemma elements_of_list_size X `{OrderedType X} ( l : list X) :
-  NoDupA _eq l -> length (elements (of_list l)) = length l.
-intro noDup. rewrite elements_length. apply card_in_of_list.
-exact noDup.
-Qed.
-
-Lemma hd_in_list  X `{OrderedType X} ( l : list X)  x :
- l <> nil -> InA _eq (hd x l) l.
-intro nonNil.
-destruct l.
-- isabsurd.
-- constructor. simpl. eauto.
-Qed.
-
-
-Lemma hd_in_elements X `{OrderedType X} ( s : set X) x:
- ~ s [=] ∅ -> hd x (elements s) ∈ s.
-intro nonEmpty.
-apply elements_iff.
-apply hd_in_list.
-rewrite <- elements_nil_eset.
-eauto with cset.
-Qed.
-
-Lemma in_take_list X `{OrderedType X} (l: list X) (n: nat) (x:X) :
-InA _eq x (take n l) -> InA _eq x l.
-Proof.
-revert n.
-induction l; destruct n; simpl; eauto; intros G.
-- inv G.
-- inv G.
-  + constructor; eauto.
-  + apply InA_cons_tl. eauto.
-Qed.
-
-Lemma take_dupFree_list X `{OrderedType X} ( l : list X ) (n : nat) :
-NoDupA _eq l -> NoDupA _eq (take n l).
-Proof.
-intro noDup. revert n.
-induction noDup; destruct n; simpl; eauto using NoDupA.
-econstructor; eauto.
-- intros no. apply in_take_list in no. contradiction.
-Qed.
-
-Lemma take_dupFree X `{OrderedType X} ( s : set X ) (n:nat) :
-NoDupA _eq (take n (elements s)).
-Proof.
-apply take_dupFree_list. apply elements_3w.
-Qed.
-
-
-
-Lemma of_list_elements X `{OrderedType X} (s : set X)
- : of_list (elements s) [=] s.
-Proof.
-cset_tac; [apply of_list_1 in H0; rewrite elements_iff
-          |apply of_list_1; rewrite <- elements_iff] ; eauto.
-Qed.
 
 (**********************************************************************)
 
@@ -232,7 +110,7 @@ Proof.
            )
            ⊆ s \ t
          ) as takeIncl. { rewrite take_set_incl. eauto with cset. }
-         apply incl_minus with (u:=s) in takeIncl.
+         apply incl_minus_incl with (u:=s) in takeIncl.
          rewrite <- takeIncl.
          rewrite seteq at 1.
          reflexivity.
@@ -338,25 +216,6 @@ decide (a ∈ of_list (take
 Qed.
 
 (**********************************************************************)
-
-Fixpoint eq_list_setset X `{OrderedType X} (l l' : list (set X * set X)) :=
-length l = length l' /\
-Forall (fun a => a) ((fun x y =>
-           match x,y with | (s,t), (u,v) => s [=] t /\ u [=] v end) ⊜ l l').
-
-Fixpoint eq_list_setset' {X} `{OrderedType X} (l l' : list (set X * set X)) :=
-match l , l' with
-| nil, nil => True
-| (s,t)::l , (s',t')::l'  => s [=] s' /\ t [=] t'
-| _ , _ => False
-end.
-
-
-Lemma list_eq_app X (R: relation X) (l1 l2 l1' l2' : list X)
-: list_eq R l1 l1' -> list_eq R l2 l2' -> list_eq R (l1++l2) (l1'++l2').
-Proof.
-intros eq1 eq2. general induction eq1; eauto using @list_eq.
-Qed.
 
 Lemma simplSpill_sat_spillSound (k:nat) (s:stmt) (R R' M M': set var)
   (Λ Λ': list (set var * set var)) (Lv : list (set var)) (ZL : list params)

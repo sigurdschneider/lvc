@@ -724,3 +724,8 @@ match goal with
 end.
 
 Hint Resolve Is_true_eq_true Is_true_eq_left Is_true_eq_right.
+
+Instance ge_computable a b : Computable (a >= b).
+Proof.
+eapply ge_dec.
+Qed.
