@@ -136,11 +136,28 @@ Proof.
     cases; f_equal; eauto.
 Qed.
 
+
+Lemma filter_get A p (Y:list A) y n
+: get (List.filter p Y) n y
+  -> get Y (posOfTrue n (p ⊝ Y)) y /\ p y.
+Proof.
+  intros.
+  general induction Y; simpl in * |- *; isabsurd.
+  cases in H.
+  - eapply get_getT in H.
+    inv H; eauto using get.
+    + eapply getT_get in X.
+      edestruct IHY as [? ?]; dcr; eauto using get.
+  - edestruct IHY; dcr; eauto using get.
+Qed.
+
 Ltac inv_get_step1 dummy :=
   first [inv_get_step |
          repeat (match goal with
          | [ H : get (filter_by ?p ?L ?L') ?n ?x |- _ ] =>
            eapply filter_by_get in H; try rewrite map_id in H; destruct H as [? [? [? ?]]]
+         | [ H : get (filter ?p ?L) ?n ?x |- _ ] =>
+           eapply filter_get in H; try rewrite map_id in H; destruct H as [H ?]
          | [ H : get _ (posOfTrue (countTrue (?f ⊝ take ?n ?L)) (?f ⊝ ?L)) _,
                  H' : get ?L ?n ?x, H'' : ?f ?x = true |- _ ] =>
            rewrite (@map_take _ _ f L) in H;

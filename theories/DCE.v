@@ -419,6 +419,47 @@ Instance SR : ProofRelationI bool := {
   + rewrite get_app_ge in H'; eauto.
 Defined.
 
+Lemma compileF_separates RL F als (Len:❬F❭ = ❬als❭)
+  : separates SR (getAnn ⊝ als) RL F (compileF compile (getAnn ⊝ als ++ RL) F als).
+Proof.
+  hnf; intros; split; [| split; [| split]].
+  - eauto with len.
+  - simpl. rewrite compileF_length; eauto.
+  - rewrite Len; intros; hnf in H; dcr; subst; inv_get.
+    rewrite compileF_length; eauto.
+    rewrite take_app_lt; eauto with len.
+    erewrite (take_eta n (getAnn ⊝ als)) at 2.
+    rewrite countTrue_app.
+    erewrite <- get_eq_drop; eauto using map_get_1.
+    rewrite EQ. simpl. omega.
+  - rewrite Len; intros; simpl in *; dcr; subst.
+    rewrite compileF_length; eauto.
+    rewrite take_app_ge; eauto with len.
+    rewrite countTrue_app. omega.
+Qed.
+
+Lemma compileF_indexwise_paramrel RL F als (Len:❬F❭ = ❬als❭)
+  : indexwise_paramrel SR F (compileF compile (getAnn ⊝ als ++ RL) F als) (getAnn ⊝ als) RL.
+Proof.
+  hnf; intros.
+  simpl in *; dcr; subst.
+  rewrite get_app_lt in H4; eauto with len.
+  inv_get; simpl.
+  exploit (compileF_get (getAnn ⊝ als ++ RL)); try eapply H2; eauto.
+  simpl in *.
+  erewrite take_app_lt, <- map_take in H1; eauto with len.
+  get_functional. eauto.
+Qed.
+
+Lemma compileF_indexes_exist RL F als (Len:❬F❭ = ❬als❭)
+  : indexwise_indexes_exists SR F (compileF compile (getAnn ⊝ als ++ RL) F als) (getAnn ⊝ als) RL.
+Proof.
+  hnf; intros; inv_get.
+  hnf in H; dcr; inv_get.
+  rewrite take_app_lt; eauto with len. rewrite <- map_take.
+  exploit compileF_get; eauto.
+Qed.
+
 Lemma sim_I i RL r L L' V s (a:ann bool) (Ann:getAnn a)
  (UC: unreachable_code i RL s a)
  (LSIM:labenv_sim Bisim (sim'r r) SR RL L L')
@@ -448,59 +489,26 @@ Proof.
       eapply (IH s); eauto with len.
       * eapply labenv_sim_extension with (F':=nil); eauto.
         -- intros; hnf; intros; isabsurd.
-        -- intros; hnf; intros; isabsurd.
-        -- hnf; intros; inv_get.
-           exfalso.
-           hnf in H; dcr; inv_get.
-           exploit compileF_nil_als_false; eauto. congruence.
-        -- hnf; split; eauto with len. split; [| split].
-           ++ simpl.
-             erewrite <- compileF_length; eauto. rewrite <- Heq. eauto.
-           ++ simpl; intros; dcr; subst.
-             rewrite H2 in H0. inv_get.
-             exploit compileF_nil_als_false; eauto.
-             exfalso; congruence.
-           ++ simpl; intros; dcr; subst. omega.
+        -- rewrite Heq.
+           eapply compileF_indexwise_paramrel; eauto.
+        -- rewrite Heq.
+           eapply compileF_indexes_exist; eauto.
+        -- rewrite Heq.
+           eapply compileF_separates; eauto.
     + rewrite Heq; clear Heq.
       pone_step. left.
       eapply (IH s); eauto with len.
-      {
-        + eapply labenv_sim_extension; eauto.
-          * intros. hnf; intros.
-            simpl in *; dcr; subst.
-            rewrite get_app_lt in H11; eauto using get_range.
-            inv_get.
-            exploit (compileF_get (getAnn ⊝ als ++ RL)); try eapply H3; eauto.
-            erewrite take_app_lt, <- map_take in H4; eauto with len.
-            simpl in *. get_functional.
-            exploit H5; eauto.
-          * hnf; intros.
-            simpl in *; dcr; subst.
-            rewrite get_app_lt in H8; eauto with len.
-            inv_get; simpl.
-            exploit (compileF_get (getAnn ⊝ als ++ RL)); try eapply H0; eauto.
-            erewrite take_app_lt, <- map_take in H3; eauto with len.
-            get_functional. eauto.
-          * hnf; intros; inv_get.
-            hnf in H; dcr; inv_get.
-            rewrite take_app_lt; eauto with len. rewrite <- map_take.
-            exploit compileF_get; eauto.
-          * hnf. split; eauto with len.
-            split.
-            rewrite compileF_length; eauto. simpl.
-            split. intros; dcr; subst.
-            rewrite compileF_length; eauto.
-            rewrite H2 in H0. inv_get.
-            rewrite take_app_lt; eauto with len.
-            erewrite (take_eta n (getAnn ⊝ als)) at 2.
-            rewrite countTrue_app.
-            erewrite <- get_eq_drop; eauto using map_get_1.
-            rewrite EQ. simpl. omega.
-            intros; dcr; subst. rewrite compileF_length; eauto.
-            rewrite take_app_ge.
-            rewrite countTrue_app. omega.
-            rewrite map_length. omega.
-      }
+      eapply labenv_sim_extension; eauto.
+      * intros. hnf; intros.
+        simpl in *; dcr; subst.
+        rewrite get_app_lt in H11; eauto using get_range. inv_get.
+        exploit (compileF_get (getAnn ⊝ als ++ RL)); try eapply H3; eauto.
+        erewrite take_app_lt, <- map_take in H4; eauto with len.
+        simpl in *. get_functional.
+        exploit H5; eauto.
+      * eapply compileF_indexwise_paramrel; eauto.
+      * eapply compileF_indexes_exist; eauto.
+      * eapply compileF_separates; eauto.
 Qed.
 
 Lemma sim_DCE i V s a
@@ -584,45 +592,46 @@ Proof.
     simpl. rewrite map_id in H5. eauto.
   - cases.
     + exploit IHLS; eauto.
-      assert (forall (n : nat) (b : bool), get (getAnn ⊝ als0) n b -> b = false).
-      intros; inv_get; eauto using compileF_nil_als_false.
+      assert (forall (n : nat) (b : bool), get (getAnn ⊝ als0) n b -> b = false). {
+        intros; inv_get; eauto using compileF_nil_als_false.
+      }
       rewrite !filter_by_app in H4; eauto with len.
       rewrite filter_by_nil in H4; eauto.
       setoid_rewrite filter_by_nil in H4 at 3; eauto.
       setoid_rewrite filter_by_nil at 3; eauto.
     + rewrite Heq. exploit compileF_not_nil_exists_true; eauto.
       rewrite <- Heq; congruence. clear Heq; dcr.
-      cases. exfalso. refine (filter_by_not_nil _ _ _ _ _ (eq_sym Heq));
+      cases.
+      * exfalso. refine (filter_by_not_nil _ _ _ _ _ (eq_sym Heq));
                         eauto 20 using Is_true_eq_true with len.
-      rewrite Heq; clear Heq.
-      econstructor; eauto.
-      rewrite compileF_Z_filter_by; eauto with len.
-      rewrite map_filter_by. rewrite <- !filter_by_app; eauto 20 with len.
-      eapply true_live_sound_monotone.
-      eapply IHLS; eauto 20 with len.
-      rewrite !filter_by_app; eauto 20 with len. eapply PIR2_app; [ | reflexivity ].
-      eapply PIR2_get; intros; inv_get.
-
-      simpl.
-      eapply compile_live_incl; eauto.
-      repeat rewrite filter_by_length; eauto 20 with len.
-      rewrite compileF_length; eauto. rewrite filter_by_length, map_id; eauto 20 with len.
-      intros; inv_get.
-      destruct Zs as [Z s].
-      edestruct compileF_get_inv; eauto; dcr; subst. simpl.
-      rewrite compileF_Z_filter_by; eauto with len.
-      inv_get. rewrite <- filter_by_app; eauto with len.
-      eapply true_live_sound_monotone.
-      eapply H1; eauto 20 with len.
-      rewrite !filter_by_app; eauto 20 with len. eapply PIR2_app; [ | reflexivity ].
-      eapply PIR2_get; intros; inv_get. simpl.
-      eapply compile_live_incl; eauto.
-      rewrite map_length.
-      repeat rewrite filter_by_length; eauto 20 with len.
-      intros. inv_get.
-      destruct Zs as [Z s].
-      edestruct compileF_get_inv; eauto; dcr; subst. simpl.
-      inv_get. cases; eauto.
-      rewrite compile_live_incl; eauto.
-      rewrite compile_live_incl; eauto.
+      * rewrite Heq; clear Heq.
+        econstructor; eauto.
+        -- rewrite compileF_Z_filter_by; eauto with len.
+           rewrite map_filter_by. rewrite <- !filter_by_app; eauto 20 with len.
+           eapply true_live_sound_monotone.
+           eapply IHLS; eauto 20 with len.
+           rewrite !filter_by_app; eauto 20 with len.
+           eapply PIR2_app; [ | reflexivity ].
+           eapply PIR2_get; intros; inv_get.
+           ++ simpl. eapply compile_live_incl; eauto.
+           ++ repeat rewrite filter_by_length; eauto 20 with len.
+        -- rewrite compileF_length; eauto. rewrite filter_by_length, map_id; eauto 20 with len.
+        -- intros; inv_get.
+           destruct Zs as [Z s].
+           edestruct compileF_get_inv; eauto; dcr; subst. simpl.
+           rewrite compileF_Z_filter_by; eauto with len.
+           inv_get. rewrite <- filter_by_app; eauto with len.
+           eapply true_live_sound_monotone.
+           ++ eapply H1; eauto 20 with len.
+           ++ rewrite !filter_by_app; eauto 20 with len. eapply PIR2_app; [ | reflexivity ].
+             eapply PIR2_get; intros; inv_get; simpl.
+             ** eapply compile_live_incl; eauto.
+             ** rewrite map_length.
+                repeat rewrite filter_by_length; eauto 20 with len.
+        -- intros. inv_get.
+           destruct Zs as [Z s].
+           edestruct compileF_get_inv; eauto; dcr; subst. simpl.
+           inv_get. cases; eauto.
+           rewrite compile_live_incl; eauto.
+        -- rewrite compile_live_incl; eauto.
 Qed.

@@ -60,14 +60,7 @@ Proof.
   revert Lv slv n.
   sind s; destruct s; intros Lv slv n UC IC; inv UC; inv IC;
     simpl in *; subst; simpl in *; eauto 20.
-  - (* If I admit this here, then eauto does the job:
-    assert (forall y, size s < size (stmtLet x e s) -> forall Lv slv n,
-                 unreachable_code i Lv y slv ->
-                 trueIsCalled y (LabI n) ->
-                 exists b : bool,
-                   get Lv n b /\ impb (getAnn slv) b) by admit.
-     *)
-    (* However, it refuses to apply IH. *)
+  - (* eauto refuses to apply IH. *)
     eapply (IH s); eauto.
   - exploit (IH s1); eauto.
   - exploit (IH s2); eauto.
