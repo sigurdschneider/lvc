@@ -1,5 +1,5 @@
-Require Import List Map Env AllInRel Exp.
-Require Import IL Annotation InRel AutoIndTac Liveness LabelsDefined AppExpFree.
+Require Import List Map Env AllInRel Exp MoreList.
+Require Import IL Annotation InRel AutoIndTac Liveness LabelsDefined.
 Require Import SimI.
 Require Import Spilling.
 Require Import Take TakeSet.
@@ -235,17 +235,6 @@ decide (a ∈ of_list (take
   cset_tac.
 Qed.
 
-Lemma nth_listeq X (R : relation X) `{Reflexive _ R} (L L' : list X) (x : X) n
- : list_eq R L L' -> R (nth n L x) (nth n L' x).
-Proof.
-intro H0. revert n.
-induction H0; intros.
-- apply H.
-- destruct n; simpl.
-  + eauto.
-  + apply IHlist_eq.
-Qed.
-
 (**********************************************************************)
 
 Lemma simplSpill_sat_spillSound (k:nat) (s:stmt) (R R' M M': set var)
@@ -259,14 +248,13 @@ k > 0
 -> getAnn alv ⊆ R ∪ M
 -> fv_e_bounded k s
 -> live_sound Imperative ZL Lv s alv
--> app_expfree s
 -> PIR2 (fun RMf G => match RMf with (R_f,M_f)
                    => cardinal R_f <= k end) Λ Lv
 (*-> PIR2 (fun RMf G => fst RMf [=] ∅ /\ snd RMf [=] G) Λ Lv*)
 -> spill_sound k ZL Λ (R,M) s (simplSpill k ZL Λ' R' M' s alv).
 
 Proof.
-intros kgeq1 ReqR' MeqM' ΛeqΛ' RleqK fvRM fvBound lvSound aeFree pir2.
+intros kgeq1 ReqR' MeqM' ΛeqΛ' RleqK fvRM fvBound lvSound (*aeFree*) pir2.
 
 general induction lvSound;
   inversion_clear fvBound
@@ -275,7 +263,7 @@ general induction lvSound;
        |k0 e0 s0 t0 fvBcard fvBs fvBt
        |k0 f0 Y0
        |k0 Z0 s0 t0 fvBs fvBt];
-  inversion_clear aeFree;
+  (*inversion_clear aeFree;*)
    simpl.
 
 
@@ -391,23 +379,23 @@ general induction lvSound;
 
   eapply SpillApp with (K:= K); try rewrite ReqR'; try rewrite MeqM'; eauto.
   + subst K. assert (forall s t, nth l Λ (s,t) === nth l Λ' (s,t)).
-    { intros s t. clear - pir2_get ΛeqΛ'. apply nth_listeq.
+    { intros s t. clear - pir2_get ΛeqΛ'. apply list_eq_nth.
       apply equiv_reflexive. apply ΛeqΛ'. }
     enough (fst (nth l Λ (∅,∅)) [=] R_f) as Rf_nth.
-    { rewrite <- Rf_nth in pir2_R. rewrite <- H6.
+    { rewrite <- Rf_nth in pir2_R. rewrite <- H5.
       rewrite cardinal_union_difference. rewrite <- ReqR'. rewrite Rf_nth.
       apply rke; [rewrite ReqR' | rewrite Rf_nth in pir2_R]; eauto.
     }
     clear - pir2_get. apply get_nth with (d:=(∅,∅)) in pir2_get.
     rewrite pir2_get. eauto.
-  + erewrite <- (nth_listeq _ _ ΛeqΛ'). rewrite (get_nth _ pir2_get). simpl.
+  + erewrite <- (list_eq_nth _ _ ΛeqΛ'). rewrite (get_nth _ pir2_get). simpl.
     erewrite get_nth; eauto.
     rewrite <- minus_incl with (s:=R'\K) (t:=of_list Z).
     rewrite minus_union_minus.
     apply incl_minus_lr with (s:=R_f) (s':=R'\K ∪ R_f \ R') (t:=of_list Z) (t':=of_list Z).
     * subst K. rewrite <- ReqR'. apply fTake.
     * eauto.
-  + erewrite <- (nth_listeq _ _ ΛeqΛ'). rewrite (get_nth _ pir2_get). simpl.
+  + erewrite <- (list_eq_nth _ _ ΛeqΛ'). rewrite (get_nth _ pir2_get). simpl.
     erewrite get_nth; eauto.
     erewrite <- minus_incl with (s:=M') (t:=of_list Z) at 2.
     rewrite minus_union_minus.

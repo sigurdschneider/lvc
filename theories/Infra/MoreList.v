@@ -304,6 +304,17 @@ Proof.
 Qed.
 
 
+Lemma list_eq_nth X (R : relation X) `{Reflexive _ R} (L L' : list X) (x : X) n
+ : list_eq R L L' -> R (nth n L x) (nth n L' x).
+Proof.
+intro H0. revert n.
+induction H0; intros.
+- apply H.
+- destruct n; simpl.
+  + eauto.
+  + apply IHlist_eq.
+Qed.
+
 Ltac inv_mapi H :=
   match type of H with
     | get (mapi ?f ?L) ?n ?x =>
