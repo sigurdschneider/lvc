@@ -1,12 +1,13 @@
 #!/usr/bin/ruby21
 require 'term/ansicolor'
 require 'open3'
+require 'io/console'
 require 'csv'
 
 include Term::ANSIColor
 
 @hostname=`hostname`.strip
-@times = nil
+@width = IO.console.winsize[1]
 
 def col(width, text)
   return text + "".ljust(width - uncolored(text).size)
@@ -16,23 +17,34 @@ def rcol(width, text)
   return "".ljust(width - uncolored(text).size) + text
 end
 
+def clr(s,l,h)
+  return s >= h ? (red (s.to_s)) : (s < l ? (green (s.to_s)) : (yellow (s.to_s)))
+end
+
+def clr_diff(s,t)
+  return s > t ? (green (s.to_s)) : ((s < (t * 0.95)) ? (red (s.to_s)) : (yellow (s.to_s)))
+end
+
+def avg(l)
+  a = l.inject(0.0) { |sum, el| sum + el } / l.size
+  return a.round(2)
+end
 
 def timefile(mod)
   return Dir.pwd + "/" + mod.gsub(/(.*)(\/)(.*)/, '\1/.\3') + ".time"
 end
 
 def readETA(mod)
-  times = []
+  @times = []
   if (File.readable?(timefile(mod))) then
     CSV.foreach(timefile(mod)) do |row|
       if row[1] != nil and row[1].strip == @hostname then
-	times << row[0].strip.to_f
+	@times << row[0].strip.to_f
       end
     end
   end
-  times = times.last(1)
-  avg = times.inject(0.0) { |sum, el| sum + el } / times.size
-  est = times.size > 0 ? avg.round(2).to_s : ""
+  #times = times.last(1)
+  est = @times.size > 0 ? @times[-1].round(2).to_s : ""
   eta = (Time.now + est.to_i).strftime("%H:%M:%S")
   return est, eta
 end
@@ -89,10 +101,10 @@ begin
   lps = (line_count / cpu).round(0)
   vosize = File.size?("#{mod}.vo").to_f
   vokps = (vosize / cpu / 1000).round(0)
-  clr = lambda { |s, l, h| s >= h ? (green (s.to_s)) : (s < l ? (red (s.to_s)) : (yellow (s.to_s)))  }
+
   speed = success ? rcol(9, "#{line_count} L,") +
-                    rcol( 9, "#{clr[lps, 15, 75]} L/s,") +
-		    rcol(11, "#{clr[vokps, 15, 75]} vok/s") : ""
+                    rcol( 9, "#{clr(lps, 15, 75)} L/s,") +
+		    rcol(11, "#{clr(vokps, 15, 75)} vok/s") : ""
   if success then
     writeETA(mod, cpu)
   end
@@ -110,8 +122,11 @@ begin
     print sout.gsub!(/^/, '  ')
   end
 
+  last_times = @times.last(7).map { |t| clr_diff(t.round(2), cpu.round(2))}.join(" ")
+
   if parallel then
-    print "#{Time.now.strftime("%H:%M:%S")} ", color[success ? "<<<" : "!!!"], " #{col(35, modname)}", col(12, color[timing]), col(15, change), speed, "\n"
+    print "#{Time.now.strftime("%H:%M:%S")} ", color[success ? "<<<" : "!!!"], " #{col(35, modname)}", col(12, color[timing]), col(15, change), speed,
+          (@width > 150 ? " #{last_times} avg #{clr_diff(avg(@times.last(7)), cpu.round(2))}" : "" ), "\n"
   end
 
   exit success
