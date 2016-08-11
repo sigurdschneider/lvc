@@ -126,7 +126,7 @@ begin
 
   if parallel then
     print "#{Time.now.strftime("%H:%M:%S")} ", color[success ? "<<<" : "!!!"], " #{col(35, modname)}", col(12, color[timing]), col(15, change), speed,
-          (@width > 150 ? " #{last_times} avg #{clr_diff(avg(@times.last(7)), cpu.round(2))}" : "" ), "\n"
+          ((@width > 150 && @times.size > 0) ? " #{last_times} avg #{clr_diff(avg(@times.last(7)), cpu.round(2))}" : "" ), "\n"
   end
 
   exit success
