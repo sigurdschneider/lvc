@@ -243,7 +243,8 @@ Proof.
   sind s; destruct s; simpl; intros; invt true_live_sound; simpl in * |- *.
   - destruct e.
     + cases. exploit H9; eauto. inv H2.
-      * eapply sim_let_op; intros; eauto 20 using op_eval_live, agree_on_update_same, agree_on_incl.
+      * eapply (sim_let_op il_statetype_I);
+          eauto 20 using op_eval_live, agree_on_update_same, agree_on_incl.
       * case_eq (op_eval V e); intros.
         -- pone_step_left.
            eapply (IH s); eauto. eapply agree_on_update_dead; eauto.
@@ -251,7 +252,7 @@ Proof.
            rewrite <- H10. cset_tac; intuition.
         -- pno_step_left.
     + cases. exploit H9; eauto. inv H2.
-      * eapply sim_let_call; eauto using agree_on_update_same, agree_on_incl.
+      * eapply (sim_let_call il_statetype_I); eauto using agree_on_update_same, agree_on_incl.
         erewrite <- omap_op_eval_live_agree; eauto. eapply agree_on_sym; eauto.
         left. eapply IH; eauto using agree_on_update_same, agree_on_incl.
   - repeat cases.
@@ -283,8 +284,6 @@ Proof.
         rewrite H12. eexists; split; eauto.
         repeat split; eauto using filter_filter_by_length.
         eapply agree_on_incl; eauto.
-      * inv H7.
-      * inv H7.
   - pno_step.
     simpl. erewrite <- op_eval_live_agree; eauto. eapply agree_on_sym; eauto.
   - Opaque SR.
@@ -378,15 +377,10 @@ Lemma sim_F ZL LV r L L' V V' s  lv
 Proof.
   unfold sim'r. revert_except s.
   sind s; destruct s; simpl; intros; invt true_live_sound; simpl in * |- *.
-  - destruct e.
+   - destruct e.
     + cases. exploit H10; eauto. inv H3.
-      * case_eq (op_eval V e); intros.
-        -- pone_step. instantiate (1:=v).
-           erewrite op_eval_live; eauto. eapply agree_on_sym; eauto.
-           left. eapply (IH s); eauto. eapply agree_on_update_same. reflexivity.
-           eapply agree_on_incl; eauto.
-        -- pno_step.
-           erewrite op_eval_live in H4; eauto. congruence.
+      * eapply (sim_let_op il_statetype_F);
+          eauto 20 using op_eval_live, agree_on_update_same, agree_on_incl.
       * case_eq (op_eval V e); intros.
         -- pone_step_left.
            eapply (IH s); eauto. eapply agree_on_update_dead; eauto.
@@ -394,11 +388,9 @@ Proof.
            rewrite <- H11. cset_tac; intuition.
         -- pno_step_left.
     + cases. exploit H10; eauto. inv H3.
-      * remember (omap (op_eval V) Y). symmetry in Heqo.
-        exploit omap_op_eval_live_agree; eauto.
-        destruct o.
-        -- pextern_step; eauto using agree_on_update_same, agree_on_incl; try congruence.
-        -- pno_step.
+      * eapply (sim_let_call il_statetype_F); eauto using agree_on_update_same, agree_on_incl.
+        erewrite <- omap_op_eval_live_agree; eauto. eapply agree_on_sym; eauto.
+        left. eapply IH; eauto using agree_on_update_same, agree_on_incl.
   - repeat cases.
     + edestruct (op2bool_val2bool V); eauto; dcr.
       pone_step_left.

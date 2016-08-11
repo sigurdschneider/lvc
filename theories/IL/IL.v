@@ -119,29 +119,29 @@ Module F.
     blockI E (fst f) (snd f) n.
 
   Inductive step : state -> event -> state -> Prop :=
-  | stepLet L E x e b v
+  | StepLet L E x e b v
     (def:op_eval E e = Some v)
     : step (L, E, stmtLet x (Operation e) b) EvtTau (L, E[x<-Some v], b)
 
-  | stepExtern L E x f Y s vl v
+  | StepExtern L E x f Y s vl v
     (def:omap (op_eval E) Y = Some vl)
     : step  (L, E, stmtLet x (Call f Y) s)
             (EvtExtern (ExternI f vl v))
             (L, E[x <- Some v], s)
 
-  | stepIfT L E
+  | StepIfT L E
     e (b1 b2 : stmt) v
     (def:op_eval E e = Some v)
     (condTrue: val2bool v = true)
     : step (L, E, stmtIf e b1 b2) EvtTau (L, E, b1)
 
-  | stepIfF L E
+  | StepIfF L E
     e (b1 b2:stmt) v
     (def:op_eval E e = Some v)
     (condFalse: val2bool v = false)
     : step (L, E, stmtIf e b1 b2) EvtTau (L, E, b2)
 
-  | stepGoto L E l Y blk vl
+  | StepGoto L E l Y blk vl
     (Ldef:get L (counted l) blk)
     (len:length (block_Z blk) = length Y)
     (def:omap (op_eval E) Y = Some vl) E'
@@ -150,7 +150,7 @@ Module F.
             EvtTau
             (drop (counted l - block_n blk) L, E', block_s blk)
 
-  | stepFun L E
+  | StepFun L E
     F (t:stmt)
     : step (L, E, stmtFun F t) EvtTau ((mapi (mkBlock E) F ++ L)%list, E, t).
 
@@ -205,29 +205,29 @@ Module I.
   Definition mkBlock n f := blockI (fst f) (snd f) n.
 
   Inductive step : state -> event -> state -> Prop :=
-  | stepLet L E x e b v
+  | StepLet L E x e b v
     (def:op_eval E e = Some v)
     : step (L, E, stmtLet x (Operation e) b) EvtTau (L, E[x<-Some v], b)
 
-  | stepExtern L E x f Y s vl v
+  | StepExtern L E x f Y s vl v
                (def:omap (op_eval E) Y = Some vl)
     : step  (L, E, stmtLet x (Call f Y) s)
             (EvtExtern (ExternI f vl v))
             (L, E[x <- Some v], s)
 
-  | stepIfT L E
+  | StepIfT L E
     e (b1 b2 : stmt) v
     (def:op_eval E e = Some v)
     (condTrue: val2bool v = true)
     : step (L, E, stmtIf e b1 b2) EvtTau (L, E, b1)
 
-  | stepIfF L E
+  | StepIfF L E
     e (b1 b2:stmt) v
     (def:op_eval E e = Some v)
     (condFalse: val2bool v = false)
     : step (L, E, stmtIf e b1 b2) EvtTau (L, E, b2)
 
-  | stepGoto L E l Y blk vl
+  | StepGoto L E l Y blk vl
     (Ldef:get L (counted l) blk)
     (len:length (block_Z blk) = length Y)
     (def:omap (op_eval E) Y = Some vl) E'
@@ -237,7 +237,7 @@ Module I.
             (drop (counted l - block_n blk) L, E', block_s blk)
 
 
-  | stepFun L E
+  | StepFun L E
     s (t:stmt)
     : step (L, E, stmtFun s t) EvtTau ((mapi mkBlock s ++ L)%list, E, t).
 

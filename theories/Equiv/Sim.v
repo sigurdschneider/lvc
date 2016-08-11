@@ -10,6 +10,12 @@ works only for internally deterministic semantics *)
 
 Inductive simtype := Bisim | Sim.
 
+Definition isBisim t :=
+  match t with
+  | Sim => false
+  | Bisim => true
+  end.
+
 CoInductive sim {S} `{StateType S} {S'} `{StateType S'}  : simtype -> S -> S' -> Prop :=
   | simSilent t (σ1 σ1':S) (σ2 σ2':S') : (* result σ1 = result σ2 -> *)
       plus2 step σ1 nil σ1'

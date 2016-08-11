@@ -99,7 +99,7 @@ Proof.
   orewrite (counted f - ❬mapi (F.mkBlock E) F❭ - block_n blk
             =  (counted f - block_n blk) - ❬mapi (F.mkBlock E) F❭).
   rewrite <- (drop_app_gen _ (mapi (F.mkBlock E) F)); eauto.
-  eapply F.stepGoto; eauto.
+  eapply F.StepGoto; eauto.
   rewrite get_app_ge. rewrite mapi_length. eauto. omega.
 Qed.
 

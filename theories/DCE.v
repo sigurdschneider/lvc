@@ -468,8 +468,8 @@ Proof.
   unfold sim'r. revert_except s.
   sind s; destruct s; simpl; intros; invt unreachable_code; simpl in * |- *.
   - destruct e.
-    + eapply sim_let_op; eauto.
-    + eapply sim_let_call; eauto.
+    + eapply (sim_let_op il_statetype_I); eauto.
+    + eapply (sim_let_call il_statetype_I); eauto.
   - repeat cases.
     + edestruct (op2bool_val2bool V); eauto; dcr.
       pone_step_left. eauto.

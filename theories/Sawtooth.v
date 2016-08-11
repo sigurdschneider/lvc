@@ -110,7 +110,7 @@ Proof.
   orewrite (l - block_n blk = block_n blk - block_n blk + (l - block_n blk)).
   rewrite <- drop_drop.
   eapply sawtooth_get in Ldef; eauto.
-  eapply (I.stepGoto E (LabI (block_n blk)) Y Ldef len def); eauto.
+  eapply (I.StepGoto E (LabI (block_n blk)) Y Ldef len def); eauto.
 Qed.
 
 Lemma stepGotoF' L E l Y blk vl
@@ -127,7 +127,7 @@ Proof.
   orewrite (l - block_n blk = block_n blk - block_n blk + (l - block_n blk)).
   rewrite <- drop_drop.
   eapply sawtooth_get in Ldef; eauto.
-  eapply (F.stepGoto E (LabI (block_n blk)) Y Ldef len def); eauto.
+  eapply (F.StepGoto E (LabI (block_n blk)) Y Ldef len def); eauto.
 Qed.
 
 
