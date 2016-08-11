@@ -207,7 +207,7 @@ Proof.
     eapply (@sim_Y_right I.state _ I.state _).
     eapply H5.
     econstructor; simpl; eauto with len. simpl. eauto with len.
-    eapply (I.stepGoto _ _ _ GetL'); simpl; eauto with len.
+    eapply (I.StepGoto _ _ _ GetL'); simpl; eauto with len.
     econstructor; simpl; eauto. rewrite H; eauto. simpl. eauto with len.
     eapply (stepGoto_mapi _ _ _ _ GetFL); simpl; eauto using @sawtooth_smaller with len.
     simpl in *; omega.
