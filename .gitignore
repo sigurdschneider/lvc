@@ -24,3 +24,7 @@ compiler/STAMP
 *.aux
 Makefile.coq
 _BLACKLIST
+*.d
+*.cmxa
+*.cmxs
+*.a
