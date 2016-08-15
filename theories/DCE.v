@@ -454,10 +454,54 @@ Qed.
 Lemma compileF_indexes_exist RL F als (Len:❬F❭ = ❬als❭)
   : indexwise_indexes_exists SR F (compileF compile (getAnn ⊝ als ++ RL) F als) (getAnn ⊝ als) RL.
 Proof.
-  hnf; intros; inv_get.
-  hnf in H; dcr; inv_get.
+  hnf; intros. inv_get.
+  hnf in H; dcr. inv_get.
   rewrite take_app_lt; eauto with len. rewrite <- map_take.
   exploit compileF_get; eauto.
+Qed.
+
+Lemma sim_compile_fun_cases r RL L V s L' F als alt
+  : sim'r r Bisim (mapi I.mkBlock F ++ L, V, s)
+   (mapi I.mkBlock (compileF compile (getAnn ⊝ als ++ RL) F als) ++ L', V,
+    compile (getAnn ⊝ als ++ RL) s alt)
+-> sim'r r Bisim (L, V, stmtFun F s)
+        (L', V,
+         match compileF compile (getAnn ⊝ als ++ RL) F als with
+         | nil => compile (getAnn ⊝ als ++ RL) s alt
+         | _ :: _ =>
+           stmtFun (compileF compile (getAnn ⊝ als ++ RL) F als) (compile (getAnn ⊝ als ++ RL) s alt)
+         end).
+Proof.
+  intros. cases.
+  - simpl in *. pone_step_left. eauto.
+  - rewrite Heq in *; clear Heq.
+    pone_step. left. eauto.
+Qed.
+
+Lemma sim_if_elim X (IST:ILStateType X) i r (L L':X) V V' e s1 s1' s2 s2'
+      (EQ: op_eval V e = op_eval V' e)
+      (SIM1: forall v, op_eval V e = Some v -> val2bool v = true -> op2bool e <> Some false ->
+                  (sim'r r) i (L, V, s1) (L', V', s1'))
+      (SIM2: forall v, op_eval V e = Some v -> val2bool v = false -> op2bool e <> Some true ->
+                  (sim'r r) i (L, V, s2) (L', V', s2'))
+  : sim'r r i (L, V, stmtIf e s1 s2)
+    (L', V',
+    if [op2bool e = ⎣ true ⎦] then s1' else if [
+    op2bool e = ⎣ false ⎦] then s2' else
+    stmtIf e s1' s2').
+Proof.
+  repeat cases.
+    + edestruct (op2bool_val2bool V); eauto; dcr.
+      eapply sim'_expansion_closed; [ eapply SIM1; eauto
+                                    | eapply star2_silent; [| eapply star2_refl]
+                                    | eapply star2_refl].
+      eapply step_cond_true; eauto.
+    + edestruct (op2bool_val2bool V); eauto; dcr.
+      eapply sim'_expansion_closed; [ eapply SIM2; eauto
+                                    | eapply star2_silent; [| eapply star2_refl]
+                                    | eapply star2_refl].
+      eapply step_cond_false; eauto.
+    + eapply (sim_cond IST); intros; try left; eauto.
 Qed.
 
 Lemma sim_I i RL r L L' V s (a:ann bool) (Ann:getAnn a)
@@ -470,45 +514,25 @@ Proof.
   - destruct e.
     + eapply (sim_let_op il_statetype_I); eauto.
     + eapply (sim_let_call il_statetype_I); eauto.
-  - repeat cases.
-    + edestruct (op2bool_val2bool V); eauto; dcr.
-      pone_step_left. eauto.
-    + edestruct (op2bool_val2bool V); eauto; dcr.
-      pone_step_left; eauto.
-    + remember (op_eval V e). symmetry in Heqo.
-      destruct o.
-      * case_eq (val2bool v); intros; pone_step; eauto.
-      * pno_step.
+  - eapply (sim_if_elim il_statetype_I); intros; eauto.
   - assert (b=true). destruct a0, b; isabsurd; eauto. subst.
     eapply labenv_sim_app; eauto.
     + hnf; simpl. split; eauto using zip_get.
     + intros; simpl in *; subst. eauto 20.
   - pno_step.
-  - cases.
-    + pone_step_left.
-      eapply (IH s); eauto with len.
-      * eapply labenv_sim_extension with (F':=nil); eauto.
-        -- intros; hnf; intros; isabsurd.
-        -- rewrite Heq.
-           eapply compileF_indexwise_paramrel; eauto.
-        -- rewrite Heq.
-           eapply compileF_indexes_exist; eauto.
-        -- rewrite Heq.
-           eapply compileF_separates; eauto.
-    + rewrite Heq; clear Heq.
-      pone_step. left.
-      eapply (IH s); eauto with len.
-      eapply labenv_sim_extension; eauto.
-      * intros. hnf; intros.
-        simpl in *; dcr; subst.
-        rewrite get_app_lt in H11; eauto using get_range. inv_get.
-        exploit (compileF_get (getAnn ⊝ als ++ RL)); try eapply H3; eauto.
-        erewrite take_app_lt, <- map_take in H4; eauto with len.
-        simpl in *. get_functional.
-        exploit H5; eauto.
-      * eapply compileF_indexwise_paramrel; eauto.
-      * eapply compileF_indexes_exist; eauto.
-      * eapply compileF_separates; eauto.
+  - eapply sim_compile_fun_cases.
+    eapply (IH s); eauto with len.
+    eapply labenv_sim_extension; eauto.
+    + intros. hnf; intros.
+      simpl in *; dcr; subst.
+      rewrite get_app_lt in H11; eauto using get_range. inv_get.
+      exploit (compileF_get (getAnn ⊝ als ++ RL)); try eapply H3; eauto.
+      erewrite take_app_lt, <- map_take in H4; eauto with len.
+      simpl in *. get_functional.
+      exploit H5; eauto.
+    + eapply compileF_indexwise_paramrel; eauto.
+    + eapply compileF_indexes_exist; eauto.
+    + eapply compileF_separates; eauto.
 Qed.
 
 Lemma sim_DCE i V s a

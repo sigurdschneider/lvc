@@ -1,5 +1,7 @@
 Require Import IL.
 
+Inductive isReturn : stmt -> Prop :=
+| ReturnIsReturn e : isReturn (stmtReturn e).
 
 Class ILStateType X :=
   {
@@ -17,33 +19,45 @@ Class ILStateType X :=
         -> exists vl v, omap (op_eval E) Y = Some vl
                 /\ evt = (EvtExtern (ExternI f vl v))
                 /\ σ = (L, E[x <- Some v], s);
-    let_result : forall L E x e s, result (L, E, stmtLet x e s) = None
+    step_cond_true : forall L E e b1 b2 v
+                  (def:op_eval E e = Some v) (condTrue: val2bool v = true),
+        step (L, E, stmtIf e b1 b2) EvtTau (L, E, b1);
+    step_cond_false : forall L E e b1 b2 v
+                   (def:op_eval E e = Some v) (condFalse: val2bool v = false),
+        step (L, E, stmtIf e b1 b2) EvtTau (L, E, b2);
+    cond_normal : forall L E e b1 b2 (def:op_eval E e = None),
+        normal2 step (L, E, stmtIf e b1 b2);
+    result_none : forall L E s, ~isReturn s -> result (L, E, s) = None
   }.
-
 
 Instance il_statetype_F : ILStateType F.labenv :=
   {
     statetype := statetype_F;
     step_let_op := F.StepLet;
-    step_let_call := F.StepExtern
+    step_let_call := F.StepExtern;
+    step_cond_true := F.StepIfT;
+    step_cond_false := F.StepIfF
   }.
 Proof.
   - intros. stuck2.
   - intros. stuck2.
   - intros; inv H; eauto.
-  - intros; simpl; eauto.
-
+  - intros. stuck2.
+  - intros; simpl; eauto; destruct s; eauto; exfalso; eauto using isReturn.
 Defined.
 
 Instance il_statetype_I : ILStateType I.labenv :=
   {
     statetype := statetype_I;
     step_let_op := I.StepLet;
-    step_let_call := I.StepExtern
+    step_let_call := I.StepExtern;
+    step_cond_true := I.StepIfT;
+    step_cond_false := I.StepIfF
   }.
 Proof.
   - intros. stuck2.
   - intros. stuck2.
   - intros; inv H; eauto.
-  - intros; simpl; eauto.
+  - intros; stuck2.
+  - intros; simpl; eauto; destruct s; eauto; exfalso; eauto using isReturn.
 Defined.

@@ -90,7 +90,7 @@ Proof.
     eapply SIM; eauto.
   * pfold. eapply sim'Term; [| eapply star2_refl | eapply star2_refl | | ];
              [ simpl | | ].
-    rewrite !let_result; eauto.
+    rewrite !result_none; isabsurd; eauto.
     eapply let_op_normal; eauto.
     eapply let_op_normal; rewrite <- EQ; eauto.
 Qed.
@@ -112,7 +112,54 @@ Proof.
     rewrite EQ; eauto.
   * pfold. eapply sim'Term; [| eapply star2_refl | eapply star2_refl | | ];
              [ simpl | | ].
-    rewrite !let_result; eauto.
+    rewrite !result_none; isabsurd; eauto.
     eapply let_call_normal; eauto.
     eapply let_call_normal; rewrite <- EQ; eauto.
+Qed.
+
+Lemma sim_cond X (IST:ILStateType X) i r (L L':X) V V' e e' s1 s1' s2 s2'
+      (EQ: op_eval V e = op_eval V' e')
+      (SIM1: forall v, op_eval V e = Some v -> val2bool v = true ->
+                  (sim'r r \3/ r) i (L, V, s1) (L', V', s1'))
+      (SIM2: forall v, op_eval V e = Some v -> val2bool v = false ->
+                 (sim'r r \3/ r) i (L, V, s2) (L', V', s2'))
+  : sim'r r i (L, V, stmtIf e s1 s2) (L', V', stmtIf e' s1' s2').
+Proof.
+  case_eq (op_eval V e); intros.
+  - case_eq (val2bool v); intros.
+    + pfold; eapply sim'Silent; [ eapply plus2O; [|eapply filter_tau_nil_eq]
+                                | eapply plus2O; [|eapply filter_tau_nil_eq]
+                                | eapply SIM1; eauto];
+      eapply step_cond_true; eauto. rewrite <- EQ; eauto.
+    + pfold; eapply sim'Silent; [ eapply plus2O; [|eapply filter_tau_nil_eq]
+                                | eapply plus2O; [|eapply filter_tau_nil_eq]
+                                | eapply SIM2; eauto];
+      eapply step_cond_false; eauto. rewrite <- EQ; eauto.
+  - pfold. eapply sim'Term; [| eapply star2_refl | eapply star2_refl | | ];
+             [ simpl | | ].
+    rewrite !result_none; isabsurd; eauto.
+    eapply cond_normal; eauto.
+    eapply cond_normal; eauto. rewrite <- EQ; eauto.
+Qed.
+
+Lemma sim_cond_left_true X (IST:ILStateType X) i r (L L':X) V V' e s1 s2 s1' v
+      (EQ: op_eval V e = Some v) (vt:val2bool v = true)
+      (SIM1: sim'r r i (L, V, s1) (L', V', s1'))
+  : sim'r r i (L, V, stmtIf e s1 s2) (L', V', s1').
+Proof.
+  eapply sim'_expansion_closed; [ eapply SIM1
+                                | eapply star2_silent; [| eapply star2_refl]
+                                | eapply star2_refl].
+  eapply step_cond_true; eauto.
+Qed.
+
+Lemma sim_cond_left_false X (IST:ILStateType X) i r (L L':X) V V' e s1 s2 s2' v
+      (EQ: op_eval V e = Some v) (vt:val2bool v = false)
+      (SIM1: sim'r r i (L, V, s2) (L', V', s2'))
+  : sim'r r i (L, V, stmtIf e s1 s2) (L', V', s2').
+Proof.
+  eapply sim'_expansion_closed; [ eapply SIM1
+                                | eapply star2_silent; [| eapply star2_refl]
+                                | eapply star2_refl].
+  eapply step_cond_false; eauto.
 Qed.
