@@ -331,3 +331,22 @@ match goal with
   rewrite (zip_app pair A C B D);
     [| eauto with len]
 end.
+
+Inductive noFun : stmt->Prop :=
+| NoFunLet x e s :
+   noFun s
+   -> noFun (stmtLet x (Operation e) s)
+| NoFunIf e s t :
+   noFun s
+   -> noFun t
+   -> noFun (stmtIf e s t)
+| NoFunCall l Y :
+   noFun (stmtApp l Y)
+| NoFunExp e :
+   noFun (stmtReturn e).
+
+Inductive notApp : stmt -> Prop :=
+| NotAppLet x e s : notApp (stmtLet x e s)
+| NotAppIf e s t : notApp (stmtIf e s t)
+| NotAppReturn e : notApp (stmtReturn e)
+| NotFun F t : notApp (stmtFun F t).

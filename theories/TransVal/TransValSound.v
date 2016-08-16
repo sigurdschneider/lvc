@@ -172,7 +172,7 @@ Proof.
             + simpl in *; destruct mod_Q_Q'; auto.
             + simpl in *; destruct mod_s'; auto.
         }
-    + specialize (H0 l Y); isabsurd.
+    + eauto.
     + isabsurd.
   - inv noFun_s.
     + inv H. inv ssa_s. specialize (IHterm_s L' an (E0 [x <- ⎣ v ⎦]) E'0 s' s'0 target).
@@ -288,7 +288,7 @@ Proof.
             + simpl in *; destruct mod_Q_Q'; auto.
             + simpl in *; destruct mod_s'; auto.
         }
-    + specialize (H0 l Y); isabsurd.
+    + eauto.
     + isabsurd.
 Qed.
 

@@ -94,8 +94,6 @@ Proof.
   general induction Terminates_s_ret; eauto using guard_true_if_eval.
   specialize (IHTerminates_s_ret L0 L'0 E' s' E'0 e).
   inversion H; subst; invt noFun; eauto using IHTerminates_s_ret; eauto.
-  specialize (H0 l Y).
-  isabsurd.
 Qed.
 
 (** Lemma 10 **)
@@ -109,8 +107,6 @@ Proof.
   intros. general induction H0; eauto using guardList_true_if_eval.
   specialize (IHTerminates L0 L'0  E' s' E'0 f el).
   inversion H; subst; invt noFun; eauto using IHTerminates; eauto.
-  specialize (H1 l Y).
-  isabsurd.
 Qed.
 
 (** Lemma 11 in the Thesis **)

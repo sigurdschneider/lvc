@@ -1,19 +1,5 @@
 Require Import IL.
 
-Inductive noFun : stmt->Prop :=
-|noFunLet x e s :
-   noFun s
-   -> noFun (stmtLet x (Operation e) s)
-|noFunIf e s t :
-   noFun s
-   -> noFun t
-   -> noFun (stmtIf e s t)
-|noFunCall l Y :
-   noFun (stmtApp l Y)
-|noFunExp e :
-   noFun (stmtReturn e).
-
-
 Inductive Terminates :F.state -> F.state -> Prop :=
 |TerminatesReturn L E e v:
    op_eval E e = ⎣v⎦
@@ -24,8 +10,46 @@ Inductive Terminates :F.state -> F.state -> Prop :=
 |TerminatesStep L E s L'  E' s'  L'' E'' s''  a:
    F.step (L, E, s) a (L', E', s')
    -> Terminates (L', E', s') (L'', E'', s'')
-   ->  (forall f xl, s <> stmtApp f xl)
+   -> notApp s
    -> Terminates (L,E,s) (L'', E'', s'') .
+
+Hint Extern 5 =>
+match goal with
+  [ H : notApp (stmtApp _ _ ) |- _ ] => exfalso; inv H
+end.
+
+Hint Constructors notApp.
+
+Lemma terminates_impl_star2:
+  forall L E s L' Es s',
+    noFun s
+    -> Terminates (L, E ,s ) (L', Es, s')
+    -> (star2 F.step (L, E, s) nil (L', Es, s'))
+       /\ ((exists e, s' = stmtReturn e) \/ (exists f X, s' = stmtApp f X)).
+
+Proof.
+  intros L E s L' Es s' noFun_s Terminates_s.
+  general induction Terminates_s; try invt F.step; invt noFun; eauto using star2_refl.
+  - edestruct IHTerminates_s as [step ?]; try reflexivity; eauto; dcr; split; eauto using star2_silent.
+  - edestruct IHTerminates_s as [step ?]; try reflexivity; eauto; dcr; split; eauto using star2_silent.
+  - edestruct IHTerminates_s as [step ?]; try reflexivity; eauto; dcr; split; eauto using star2_silent.
+Qed.
+
+(** Lemma 2 in Thesis
+Proves that Terminates ignores the label environment **)
+
+Lemma term_swap_fun L1 L2 L1'  V V' s s':
+Terminates (L1,V,s) (L1',V',s')
+-> exists L2', Terminates (L2, V, s) (L2', V', s').
+
+Proof.
+  intros term. general induction term; eauto using Terminates.
+  assert (exists L2', F.step (L2, V, s0) a (L2', E', s')). {
+    inv H; eexists; econstructor; eauto.
+  }
+  destruct H1; eauto. edestruct IHterm; eauto.
+  eexists; eauto using Terminates.
+Qed.
 
 Inductive Crash : F.state -> F.state -> Prop :=
 |CrashApp L E f Y:
@@ -59,7 +83,6 @@ Proof.
        destruct (termcrash L) as [ term | crash].
        * left. econstructor; eauto.
          { econstructor; eauto. }
-         { intros. hnf; isabsurd. }
        * right. econstructor; eauto; try  econstructor; eauto; intros; isabsurd.
      + exists E; exists (stmtLet x (Operation e) s); intros.
        right. econstructor; eauto; intros; try hnf; try isabsurd.
@@ -71,8 +94,7 @@ Proof.
         exists E'; exists s'; intros.
         destruct (termcrash L) as [term | crash].
         { left. econstructor; eauto.
-          - econstructor; eauto.
-          - hnf; intros; isabsurd. }
+          - econstructor; eauto. }
         { right. econstructor; eauto. econstructor; eauto.
           intros; isabsurd. }
       * destruct (IHnoFun_s2 E) as [E' [s' termcrash]];
@@ -80,7 +102,7 @@ Proof.
         destruct (termcrash L) as [ term | crash ].
         { left. econstructor; eauto.
           - econstructor; eauto.
-          - hnf; intros; isabsurd. }
+           }
         { right. econstructor; eauto. econstructor; eauto.
           intros; isabsurd. }
     +  exists E; exists (stmtIf e s t).

@@ -4,24 +4,6 @@ Require Import SetOperations Sim.
 Require Import SMT NoFun.
 Require Import Guards ILFtoSMT GuardProps.
 
-
-(** Lemma 2 in Thesis
-Proves that Terminates ignores the label environment **)
-
-Lemma term_swap_fun L1 L2 L1'  V V' s s':
-Terminates (L1,V,s) (L1',V',s')
--> exists L2', Terminates (L2, V, s) (L2', V', s').
-
-Proof.
-  intros term. general induction term; eauto using Terminates.
-  assert (exists L2', F.step (L2, V, s0) a (L2', E', s')). {
-    inv H; eexists; econstructor; eauto.
-    exfalso; eapply H0; eauto.
-  }
-  destruct H1; eauto. edestruct IHterm; eauto.
-  eexists; eauto using Terminates.
-Qed.
-
 (** Part 1 of Lemma 1 in the Thesis **)
 Lemma term_ssa_eval_agree L L' s D s' (E:onv val) (E':onv val)
  : renamedApart s D
@@ -32,7 +14,7 @@ Lemma term_ssa_eval_agree L L' s D s' (E:onv val) (E':onv val)
 Proof.
   intros RA NF Trm.
   general induction Trm; eauto using agree_on_refl.
-  invt renamedApart; try invt F.step;try invt noFun; simpl.
+  invt renamedApart; try invt F.step;try invt noFun; simpl; eauto.
   - exploit IHTrm; [ | | reflexivity | reflexivity |]; eauto.
     pe_rewrite.
     eapply agree_on_update_inv in H6.
@@ -41,23 +23,6 @@ Proof.
     pe_rewrite. eauto.
   - exploit IHTrm; [ | | reflexivity | reflexivity |]; eauto.
     pe_rewrite. eauto.
-  - exfalso; eapply H0; eauto.
-Qed.
-
-Lemma terminates_impl_star2:
-  forall L E s L' Es s',
-    noFun s
-    -> Terminates (L, E ,s ) (L', Es, s')
-    -> (star2 F.step (L, E, s) nil (L', Es, s'))
-       /\ ((exists e, s' = stmtReturn e) \/ (exists f X, s' = stmtApp f X)).
-
-Proof.
-  intros L E s L' Es s' noFun_s Terminates_s.
-  general induction Terminates_s; try invt F.step; invt noFun; eauto using star2_refl.
-  - edestruct IHTerminates_s as [step ?]; try reflexivity; eauto; dcr; split; eauto using star2_silent.
-  - edestruct IHTerminates_s as [step ?]; try reflexivity; eauto; dcr; split; eauto using star2_silent.
-  - edestruct IHTerminates_s as [step ?]; try reflexivity; eauto; dcr; split; eauto using star2_silent.
-  - exfalso; eapply H0; eauto.
 Qed.
 
 (** Lemma 13 in Thesis
@@ -79,7 +44,7 @@ general induction Term_s; simpl.
       eapply (guard_true_if_eval); eauto.
 - eapply models_guardGen_source; simpl; split; eauto.
   eapply (guardList_true_if_eval _ E0); eauto.
-- inv H; invt renamedApart; invt noFun; simpl in * |- *; subst.
+- inv H; invt renamedApart; invt noFun; simpl in * |- *; subst; eauto.
   + eapply models_guardGen_source; simpl; split; eauto.
     * eapply (guard_true_if_eval _ E'0 e v ); eauto.
       eapply op_eval_agree; eauto.
@@ -148,7 +113,6 @@ general induction Term_s; simpl.
              econstructor; eauto).
       eapply (op_eval_agree (E:=E') (E':=E'0)); eauto.
       eapply (agree_on_incl (bv:= Op.freeVars e) (lv:= fst (getAnn (ann2 (D0, D') ans ant)))); eauto.
- + specialize (H0 l Y); isabsurd.
 Qed.
 
 Lemma terminates_impl_eval L L' E s E' e
@@ -160,7 +124,6 @@ Proof.
   general induction Trm; eauto.
   eapply IHTrm; try reflexivity.
   inv NF; invt F.step; eauto.
-  exfalso; eapply H0; eauto.
 Qed.
 
 Lemma terminates_impl_evalList L  L' E s E' f el
@@ -172,7 +135,6 @@ Proof.
   general induction Trm; eauto.
   eapply IHTrm; try reflexivity.
   inv NF; invt F.step; eauto.
-  exfalso; eapply H0; eauto.
 Qed.
 
 (** Lemma cannot be proven with star2 step because in the
@@ -201,7 +163,7 @@ Proof.
     pe_rewrite. simpl.
     eexists; split; eauto.
     rewrite <- H6. eauto with cset.
-  - exfalso. eapply H0; eauto.
+  - eauto.
 Qed.
 
 (** See Lemma before **)
@@ -230,7 +192,7 @@ Proof.
     pe_rewrite. simpl.
     eexists; split; eauto.
     rewrite <- H3. eauto with cset.
-  - exfalso. eapply H0; eauto.
+  - eauto.
 Qed.
 
 (** Lemmata for Crash **)

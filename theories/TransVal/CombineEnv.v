@@ -76,7 +76,6 @@ Proof.
     rewrite IH. pe_rewrite. rewrite <- H8. clear_all; cset_tac.
   - exploit IHterm_s as IH; try reflexivity; eauto.
     rewrite IH. pe_rewrite. rewrite <- H8. clear_all; cset_tac.
-  - exfalso; eapply H0; eauto.
 Qed.
 
 Lemma agree_on_ssa_combine:
