@@ -1,7 +1,8 @@
 Require Import Util LengthEq AllInRel Map SetOperations.
 
 Require Import Val EqDec Computable Var Env IL Annotation AppExpFree.
-Require Import paco2 SimF Fresh.
+Require Import Liveness.
+Require Import SimF Fresh.
 
 Set Implicit Arguments.
 Unset Printing Records.
@@ -119,9 +120,9 @@ Fixpoint compile s {struct s}
     | stmtLet x e s => stmtLet x e (compile s)
     | stmtIf x s t => stmtIf x (compile s) (compile t)
     | stmtApp l Y  =>
-      let Y' := List.filter (fun e => B[~isVar e]) Y in
+      let Y' := List.filter NotVar Y in
       let xl := fresh_list fresh (list_union (List.map Op.freeVars Y)) (length Y') in
-      list_to_stmt xl Y' (stmtApp l (replace_if (fun e => B[~isVar e]) Y (Var ⊝ xl)))
+      list_to_stmt xl Y' (stmtApp l (replace_if NotVar Y (Var ⊝ xl)))
     | stmtReturn x => stmtReturn x
     | stmtFun F t => stmtFun (List.map (fun Zs => (fst Zs, compile (snd Zs))) F) (compile t)
   end.
@@ -329,3 +330,107 @@ Proof.
     destruct x; eauto using isVar; exfalso; eapply NOTCOND; intro; isabsurd.
   - econstructor; intros; inv_get; eauto using app_expfree.
 Qed.
+
+(*
+Fixpoint compile_live (LV:list (set var)) (s:stmt) (a:ann (set var)) : ann (set var) :=
+  match s, a with
+  | stmtLet x e s, ann1 lv an as a =>
+    let an' := compile_live LV s an in
+    ann1 (getAnn an' \ singleton x) an'
+  | stmtIf e s t, ann2 lv ans ant =>
+    let ans' := compile_live LV s ans in
+    let ant' := compile_live LV t ant in
+    ann2 (getAnn ans' ∪ getAnn ant') ans' ant'
+  | stmtApp f Y, ann0 lv =>
+    let lv := nth (counted f) LV ∅ in
+    ann0 (list_union (Op.freeVars ⊝ Y) ∪ lv)
+  | stmtReturn e, ann0 lv => ann0 (Op.freeVars e)
+  | stmtFun F t, annF lv ans ant =>
+    let ans' := zip (fun Zs a => compile_live (getAnn ⊝ ans ++ LV) (snd Zs) a) F ans in
+    annF lv ans' (compile_live (getAnn ⊝ ans ++ LV) t ant)
+  | _, a => a
+  end.
+*)
+
+(*
+Fixpoint live_for_stmts (Y:list op) (xl:list var) (lv:set var) : ann (set var) :=
+  match Y, xl with
+  | e::Y, x::xl =>
+    let an' := live_for_stmts Y xl lv in
+    ann1 (Op.freeVars e ∪ (getAnn an' \ singleton x)) an'
+  | _, _ => ann0 lv
+  end.
+
+Fixpoint compile_live (LV:list (set var)) (s:stmt) (a:ann (set var)) : ann (set var) :=
+  match s, a with
+  | stmtLet x e s, ann1 lv an as a => ann1 lv (compile_live LV s an)
+  | stmtIf e s t, ann2 lv ans ant =>
+    ann2 lv (compile_live LV s ans) (compile_live LV t ant)
+  | stmtApp f Y, ann0 lv =>
+    let lv_f := nth (counted f) LV ∅ in
+    let Y' := (List.filter NotVar Y) in
+    let xl := (fresh_list fresh (list_union (List.map Op.freeVars Y)) (length Y')) in
+    let lv' := list_union (Op.freeVars ⊝ (List.filter IsVar Y)) ∪ of_list xl ∪ lv_f in
+    setTopAnn (live_for_stmts Y' xl lv') lv
+  | stmtReturn e, ann0 lv => ann0 lv
+  | stmtFun F t, annF lv ans ant =>
+    let ans' := zip (fun Zs a => compile_live (getAnn ⊝ ans ++ LV) (snd Zs) a) F ans in
+    annF lv ans' (compile_live (getAnn ⊝ ans ++ LV) t ant)
+  | _, a => a
+  end.
+
+Lemma compile_live_getAnn LV s a
+  : getAnn (compile_live LV s a) [=] getAnn a.
+Proof.
+  general induction s; destruct a; simpl; eauto.
+  rewrite getAnn_setTopAnn; eauto.
+Qed.
+
+Lemma incl_set_right (X : Type) `{H : OrderedType X} s t
+  : s [=] t -> t ⊆ s.
+Proof.
+  intros. rewrite H0. reflexivity.
+Qed.
+
+Lemma EAE_live i ZL Lv s lv
+  : live_sound i ZL Lv s lv
+    -> live_sound i ZL Lv (compile s) (compile_live Lv s lv).
+Proof.
+  intros.
+  general induction H; simpl;
+    eauto 20 using live_sound, compile_live_getAnn.
+  - econstructor; eauto; rewrite compile_live_getAnn; eauto.
+  - econstructor; eauto; rewrite compile_live_getAnn; eauto.
+  -
+  - econstructor; eauto.
+    + rewrite !map_map; simpl.
+      eapply live_sound_monotone; eauto.
+      eapply PIR2_get; intros; inv_get; eauto with len.
+      rewrite map_zip in H5.
+      eapply get_app_cases in H6. destruct H6; dcr; inv_get.
+      rewrite get_app_lt in H5; eauto with len. inv_get.
+      rewrite compile_live_getAnn. eauto.
+      rewrite get_app_ge in H5; eauto with len.
+      rewrite zip_length2 in H5; eauto. rewrite map_length in H7.
+      rewrite H0 in H5. inv_get. eauto.
+      rewrite zip_length2; eauto. rewrite map_length in H8. omega.
+    + eauto with len.
+    + intros; inv_get. simpl.
+      rewrite !map_map; simpl.
+      eapply live_sound_monotone; eauto.
+      eapply PIR2_get; intros; inv_get; eauto with len.
+      rewrite map_zip in H5.
+      eapply get_app_cases in H8. destruct H8; dcr; inv_get.
+      rewrite get_app_lt in H5; eauto with len. inv_get.
+      rewrite compile_live_getAnn. eauto.
+      rewrite get_app_ge in H5; eauto with len.
+      rewrite zip_length2 in H5; eauto. rewrite map_length in H9.
+      rewrite H0 in H5. inv_get. eauto.
+      rewrite zip_length2; eauto. rewrite map_length in H10. omega.
+    + intros; inv_get; simpl.
+      exploit H3; eauto; dcr.
+      destruct i; simpl in *; rewrite compile_live_getAnn; eauto.
+    + rewrite compile_live_getAnn; eauto.
+
+Qed.
+*)
