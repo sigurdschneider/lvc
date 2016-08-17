@@ -385,16 +385,7 @@ Proof.
   - econstructor; eauto using ucc_sTA_inv, ann_R_setTopAnn_left.
     + eapply ucc_sTA_inv. eapply IHUCC; eauto.
       rewrite setTopAnn_eta; eauto.
-    + rewrite zip_length, map_length.
-      rewrite (@forwardF_length _ (fun _ => bool)).
-      rewrite fold_list_length'.
-      rewrite (@forward_length _ (fun _ => bool)).
-      rewrite app_length, map_length, <- H.
-      repeat rewrite min_l; eauto. omega.
-      intros; inv_get.
-      rewrite (@forward_length _ (fun _ => bool)).
-      rewrite (@forward_length _ (fun _ => bool)). reflexivity.
-      intros. rewrite zip_length. rewrite min_l; eauto.
+    + eauto with len.
     + intros. inv_get.
       rewrite <- (setTopAnn_eta x4 eq_refl).
       edestruct (@get_forwardF sT (fun _ => bool)); eauto.
