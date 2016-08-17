@@ -17,12 +17,12 @@ Inductive eqn_sound : list (params*set var*eqns*eqns)
   : eqn_sound Lv s s' {EqnEq (Var x) e ; { EqnEq (Var x) e' ; Gamma } } ang
     (* make sure the rest conforms to the new assignment *)
     -> entails Gamma {EqnApx e e'}
-    -> Exp.freeVars e' ⊆ G
-    -> eqn_sound Lv (stmtLet x e s) (stmtLet x e' s') Gamma
+    -> Op.freeVars e' ⊆ G
+    -> eqn_sound Lv (stmtLet x (Operation e) s) (stmtLet x (Operation e') s') Gamma
                 (ann1 (G,G') ang)
 | EqnIf Lv e e' s s' t t' Gamma G G' ang1 ang2
-  : eqn_sound Lv s s' {EqnEq (UnOp 0 e) (Con val_true); Gamma} ang1
-  -> eqn_sound Lv t t' {EqnEq (UnOp 0 e) (Con val_false); Gamma} ang2
+  : eqn_sound Lv s s' {EqnEq (UnOp UnOpToBool e) (Con val_true); Gamma} ang1
+  -> eqn_sound Lv t t' {EqnEq (UnOp UnOpToBool e) (Con val_false); Gamma} ang2
   -> entails Gamma {(EqnApx e e')}
   -> eqn_sound Lv (stmtIf e s t) (stmtIf e' s' t') Gamma
               (ann2 (G,G') ang1 ang2)
@@ -38,16 +38,16 @@ Inductive eqn_sound : list (params*set var*eqns*eqns)
 | EqnExtern x f Lv s s' Y Y' Gamma G G' ang
   : eqn_sound Lv s s' Gamma ang
     -> entails Gamma (list_EqnApx Y Y')
-    -> list_union (List.map Exp.freeVars Y') ⊆ G
+    -> list_union (List.map Op.freeVars Y') ⊆ G
     -> length Y = length Y'
-    -> eqn_sound Lv (stmtExtern x f Y s) (stmtExtern x f Y' s') Gamma
+    -> eqn_sound Lv (stmtLet x (Call f Y) s) (stmtLet x (Call f Y') s') Gamma
                 (ann1 (G,G') ang)
 | EqnLet Lv F F' t t'  Gamma Γ2 EqS G G' angs angb
   : (forall n Z s Z' s', get F n (Z, s) -> get F' n (Z', s') ->
                eqn_sound ((Z, G, Γ2, EqS)::Lv) s s' (EqS ∪ Γ2) angs)
-  -> eqn_sound ((Z, G ,Γ2, EqS)::Lv) t t' Gamma angb
-  -> eqns_freeVars EqS ⊆ G ++ of_list Z
-  -> eqns_freeVars Γ2  ⊆ G
+  -> eqn_sound ((*(Z, G ,Γ2, EqS)::*)Lv) t t' Gamma angb
+(*  -> eqns_freeVars EqS ⊆ G ++ of_list Z
+  -> eqns_freeVars Γ2  ⊆ G *)
   -> entails Gamma Γ2
   -> eqn_sound Lv (stmtFun F t) (stmtFun F' t') Gamma
               (ann2 (G,G') angs angb)
