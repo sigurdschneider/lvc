@@ -696,6 +696,15 @@ Proof.
   destruct x,y; simpl in *; hnf; eauto.
 Qed.
 
+Lemma impb_eq (a b:bool)
+  : impb a b
+    -> impb b a
+    -> a = b.
+Proof.
+  destruct a, b; simpl; intros; eauto.
+  exfalso; eauto.
+Qed.
+
 
 Ltac destr_sig H :=
   match type of H with

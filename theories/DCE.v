@@ -138,9 +138,9 @@ Qed.
 
 Local Hint Extern 0 =>
 match goal with
-| [ H : op2bool ?e <> Some ?t , H' : op2bool ?e <> Some ?t -> ?B = ?C |- _ ] =>
+| [ H : op2bool ?e <> Some ?t , H' : op2bool ?e <> Some ?t -> _ |- _ ] =>
   specialize (H' H); subst
-| [ H : op2bool ?e = Some true , H' : op2bool ?e <> Some false -> ?B = ?C |- _ ] =>
+| [ H : op2bool ?e = Some true , H' : op2bool ?e <> Some false -> _ |- _ ] =>
   let H'' := fresh "H" in
   assert (H'':op2bool e <> Some false) by congruence;
     specialize (H' H''); subst
@@ -172,9 +172,9 @@ Proof.
     + edestruct IHLEN; dcr; eauto 20 using get.
 Qed.
 
-Lemma trueIsCalled_compileF_not_nil (i : sc)
+Lemma trueIsCalled_compileF_not_nil
       (s : stmt) (slv : ann bool) k F als RL x
-  : unreachable_code i (getAnn ⊝ als ++ RL) s slv
+  : unreachable_code Sound (getAnn ⊝ als ++ RL) s slv
     -> getAnn slv
     -> trueIsCalled s (LabI k)
     -> get als k x
@@ -295,7 +295,7 @@ Proof.
     simpl in *; eauto using trueIsCalled.
   - repeat cases; eauto using trueIsCalled.
   - repeat cases; eauto using trueIsCalled.
-  - eapply callChain_cases in H6. destruct H6; subst.
+  - eapply callChain_cases in H8. destruct H8; subst.
     + cases.
       * exploit (IH t) as IHt; eauto.
         rewrite take_app_ge in IHt; eauto 20 with len.
@@ -311,13 +311,12 @@ Proof.
         rewrite map_length in IHt.
         orewrite (❬F❭ + n - ❬als❭ = n) in IHt. simpl.
         rewrite countTrue_app in IHt. eauto.
-    + destruct H2 as [? [? [? ?]]]; dcr.
+    + destruct H6 as [? [? [? ?]]]; dcr.
       destruct l' as [l'].
       cases.
       * exfalso. inv_get.
         eapply get_in_range in H2. destruct H2. inv_get.
-        eapply trueIsCalled_compileF_not_nil.
-        eapply H0. eauto. eauto. eauto. eauto. eauto.
+        eapply (@trueIsCalled_compileF_not_nil t); eauto.
       * rewrite Heq; clear Heq p b. inv_get.
         econstructor; eauto. simpl.
         rewrite compileF_length; eauto.
@@ -356,7 +355,7 @@ Lemma DCE_noUnreachableCode RL s lv
     -> noUnreachableCode trueIsCalled (compile RL s lv).
 Proof.
   intros Live GetAnn.
-  induction Live; simpl; repeat cases; eauto using noUnreachableCode.
+  induction Live; simpl in *; repeat cases; eauto using noUnreachableCode.
   - specialize (H NOTCOND0). specialize (H0 NOTCOND). subst.
     simpl in *. econstructor; eauto.
   - rewrite Heq; clear Heq.
@@ -374,14 +373,22 @@ Proof.
 Qed.
 
 
-Lemma DCE_paramsMatch i PL RL s lv
-  : unreachable_code i RL s lv
+Lemma impb_elim (a b:bool)
+  : impb a b -> a -> b.
+Proof.
+  intros. rewrite <- H. eauto.
+Qed.
+
+Hint Resolve impb_elim.
+
+Lemma DCE_paramsMatch PL RL s lv
+  : unreachable_code Sound RL s lv
     -> getAnn lv
     -> paramsMatch s PL
     -> paramsMatch (compile RL s lv) (filter_by (fun b => b) RL PL).
 Proof.
   intros UC Ann PM.
-  general induction UC; inv PM; simpl; repeat cases; eauto using paramsMatch.
+  general induction UC; inv PM; simpl in * |- *; repeat cases; eauto using paramsMatch.
   - specialize (H NOTCOND0). specialize (H0 NOTCOND). subst. simpl in *.
     econstructor; eauto.
   - simpl in *.
@@ -389,10 +396,10 @@ Proof.
     rewrite map_id in H1.
     econstructor; eauto.
   - exploit IHUC; eauto.
-    rewrite filter_by_app in H0; eauto with len.
-    rewrite filter_by_nil in H0; eauto.
+    rewrite filter_by_app in H4; eauto with len.
+    rewrite filter_by_nil in H4; eauto.
     intros; inv_get; eauto using compileF_nil_als_false.
-  - rewrite Heq; clear Heq p b.
+  - rewrite Heq; clear Heq p b0.
     econstructor.
     + intros ? [Z s] Get.
       eapply compileF_get_inv in Get; destruct Get; dcr; subst; simpl; eauto.
@@ -504,13 +511,13 @@ Proof.
     + eapply (sim_cond IST); intros; try left; eauto.
 Qed.
 
-Lemma sim_I i RL r L L' V s (a:ann bool) (Ann:getAnn a)
- (UC: unreachable_code i RL s a)
+Lemma sim_I RL r L L' V s (a:ann bool) (Ann:getAnn a)
+ (UC: unreachable_code Sound RL s a)
  (LSIM:labenv_sim Bisim (sim'r r) SR RL L L')
   : sim'r r Bisim (L,V, s) (L',V, compile RL s a).
 Proof.
   unfold sim'r. revert_except s.
-  sind s; destruct s; simpl; intros; invt unreachable_code; simpl in * |- *.
+  sind s; destruct s; simpl in *; intros; invt unreachable_code; simpl in * |- *.
   - destruct e.
     + eapply (sim_let_op il_statetype_I); eauto.
     + eapply (sim_let_call il_statetype_I); eauto.
@@ -523,25 +530,23 @@ Proof.
   - eapply sim_compile_fun_cases.
     eapply (IH s); eauto with len.
     eapply labenv_sim_extension; eauto.
-    + intros. hnf; intros.
-      simpl in *; dcr; subst.
-      rewrite get_app_lt in H11; eauto using get_range. inv_get.
-      exploit (compileF_get (getAnn ⊝ als ++ RL)); try eapply H3; eauto.
-      erewrite take_app_lt, <- map_take in H4; eauto with len.
+    + intros. hnf; intros; simpl in *; dcr; subst; inv_get.
+      exploit (compileF_get (getAnn ⊝ als ++ RL)); try eapply H5; eauto.
+      erewrite take_app_lt, <- map_take in H7; eauto with len.
       simpl in *. get_functional.
-      exploit H5; eauto.
+      exploit H4; eauto.
     + eapply compileF_indexwise_paramrel; eauto.
     + eapply compileF_indexes_exist; eauto.
     + eapply compileF_separates; eauto.
 Qed.
 
-Lemma sim_DCE i V s a
-  : unreachable_code i nil s a
+Lemma sim_DCE V s a
+  : unreachable_code Sound nil s a
     -> getAnn a
     -> @sim I.state _ I.state _ Bisim (nil,V, s) (nil,V, compile nil s a).
 Proof.
   intros. eapply sim'_sim.
-  eapply (@sim_I i nil); eauto; isabsurd.
+  eapply (@sim_I nil); eauto; isabsurd.
 Qed.
 
 End I.
@@ -586,8 +591,8 @@ Proof.
     + rewrite Heq. simpl; eauto.
 Qed.
 
-Lemma DCE_live uci i ZL LV RL s uc lv
-  : unreachable_code uci RL s uc
+Lemma DCE_live i ZL LV RL s uc lv
+  : unreachable_code Sound RL s uc
     -> getAnn uc
     -> true_live_sound i ZL LV s lv
     -> true_live_sound i (filter_by (fun b => b) RL ZL)
@@ -596,7 +601,7 @@ Lemma DCE_live uci i ZL LV RL s uc lv
                       (compile_live s lv uc).
 Proof.
   intros UC Ann LS.
-  general induction LS; inv UC; simpl; eauto using true_live_sound.
+  general induction LS; inv UC; simpl in *; eauto using true_live_sound.
   - econstructor; eauto using compile_live_incl with cset.
     intros. eapply H. destruct H1; eauto.
     left. eapply compile_live_incl; eauto.

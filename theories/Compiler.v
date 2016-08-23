@@ -92,8 +92,8 @@ Proof.
   unfold DCVE. simpl.
   eapply (@DVE.dve_live _ nil nil).
   eapply @LivenessAnalysisCorrect.correct; eauto.
-  eapply (@DCE.DCE_paramsMatch _ nil nil); eauto.
-  eapply UnreachableCodeAnalysisCorrect.correct; eauto.
+  eapply (@DCE.DCE_paramsMatch nil nil); eauto.
+  eapply UnreachableCode.unreachable_code_SC_S, UnreachableCodeAnalysisCorrect.correct; eauto.
   eapply UnreachableCodeAnalysisCorrect.unreachableCodeAnalysis_getAnn.
 Qed.
 
@@ -104,8 +104,8 @@ Proof.
   eapply LabelsDefined.noUnreachableCode_mono.
   - eapply (@DVE.DVE_noUnreachableCode _ nil nil).
     + eapply @LivenessAnalysisCorrect.correct; eauto.
-      eapply (@DCE.DCE_paramsMatch _ nil nil); eauto.
-      * eapply UnreachableCodeAnalysisCorrect.correct; eauto.
+      eapply (@DCE.DCE_paramsMatch nil nil); eauto.
+      * eapply UnreachableCode.unreachable_code_SC_S, UnreachableCodeAnalysisCorrect.correct; eauto.
       * eapply UnreachableCodeAnalysisCorrect.unreachableCodeAnalysis_getAnn.
     + eapply DCE.DCE_noUnreachableCode.
       * eapply UnreachableCodeAnalysisCorrect.correct; eauto.
@@ -121,8 +121,8 @@ Proof.
   rewrite LivenessAnalysisCorrect.livenessAnalysis_getAnn.
   eapply DCE.compile_occurVars.
   eapply @LivenessAnalysisCorrect.correct; eauto.
-  eapply (@DCE.DCE_paramsMatch _ nil nil); eauto.
-  * eapply UnreachableCodeAnalysisCorrect.correct; eauto.
+  eapply (@DCE.DCE_paramsMatch nil nil); eauto.
+  * eapply UnreachableCode.unreachable_code_SC_S, UnreachableCodeAnalysisCorrect.correct; eauto.
   * eapply UnreachableCodeAnalysisCorrect.unreachableCodeAnalysis_getAnn.
 Qed.
 
@@ -142,7 +142,7 @@ Proof.
   }
   assert (LabelsDefined.paramsMatch
             (DCE.compile nil ili (UnreachableCodeAnalysis.unreachableCodeAnalysis ili)) nil). {
-    eapply (@DCE.DCE_paramsMatch _ nil nil); eauto.
+    eapply (@DCE.DCE_paramsMatch nil nil); eauto.
   }
   assert (TrueLiveness.true_live_sound Liveness.Imperative nil nil
    (DCE.compile nil ili (UnreachableCodeAnalysis.unreachableCodeAnalysis ili))
@@ -153,7 +153,7 @@ Proof.
   eapply sim_trans with (S2:=I.state).
   eapply BisimSim.bisim_sim'.
   eapply DCE.I.sim_DCE.
-  eapply UnreachableCodeAnalysisCorrect.correct; eauto.
+  eapply UnreachableCode.unreachable_code_SC_S, UnreachableCodeAnalysisCorrect.correct; eauto.
   eapply UnreachableCodeAnalysisCorrect.unreachableCodeAnalysis_getAnn.
   eapply DVE.I.sim_DVE; [ reflexivity | eapply LivenessAnalysisCorrect.correct; eauto ].
 Qed.
