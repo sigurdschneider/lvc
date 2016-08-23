@@ -447,6 +447,24 @@ Proof.
     reflexivity.
 Qed.
 
+Lemma op_eval_op2bool_true V e v
+  : op_eval V e = Some v -> val2bool v = true -> op2bool e <> Some false.
+Proof.
+  intros. unfold op2bool.
+  exploit (@op_eval_mon (fun _ => None) V e).
+  hnf; intros; eauto using fstNoneOrR.
+  rewrite H in H1. inv H1; simpl; congruence.
+Qed.
+
+Lemma op_eval_op2bool_false V e v
+  : op_eval V e = Some v -> val2bool v = false -> op2bool e <> Some true.
+Proof.
+  intros. unfold op2bool.
+  exploit (@op_eval_mon (fun _ => None) V e).
+  hnf; intros; eauto using fstNoneOrR.
+  rewrite H in H1. inv H1; simpl; congruence.
+Qed.
+
 Lemma op2bool_val2bool E e b
   : op2bool e = Some b
     -> exists v, op_eval E e = Some v /\ val2bool v = b.
@@ -543,8 +561,8 @@ Proof.
 Qed.
 
 Lemma freeVars_rename_op_list ϱ Y
-  : list_union (List.map Op.freeVars (List.map (rename_op ϱ) Y))[=]
-               lookup_set ϱ (list_union (List.map Op.freeVars Y)).
+  : list_union (List.map freeVars (List.map (rename_op ϱ) Y))[=]
+               lookup_set ϱ (list_union (List.map freeVars Y)).
 Proof.
   rewrite lookup_set_list_union; eauto using lookup_set_empty.
   repeat rewrite map_map. eapply fold_left_union_morphism; [|reflexivity].
