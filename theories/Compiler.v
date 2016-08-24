@@ -6,8 +6,8 @@ Require TrueLiveness LivenessAnalysis LivenessAnalysisCorrect.
 Require Coherence Invariance.
 Require Delocation DelocationAlgo DelocationCorrect DelocationValidator.
 Require Allocation AllocationAlgo AllocationAlgoCorrect.
-Require DCE DVE EAE Alpha.
-Require DCE UnreachableCodeAnalysis UnreachableCodeAnalysisCorrect.
+Require UCE DVE EAE Alpha.
+Require UnreachableCodeAnalysis UnreachableCodeAnalysisCorrect.
 (* Require CopyPropagation ConstantPropagation ConstantPropagationAnalysis.*)
 
 Require Import String.
@@ -81,7 +81,7 @@ Arguments sim S {H} S' {H0} t _ _.
 
 Definition DCVE (s:IL.stmt) : stmt * ann (set var) :=
   let uc := UnreachableCodeAnalysis.unreachableCodeAnalysis s in
-  let s_uce := DCE.compile nil s uc in
+  let s_uce := UCE.compile nil s uc in
   let tlv := LivenessAnalysis.livenessAnalysis s_uce in
   let s_dve := DVE.compile nil s_uce tlv in
   (s_dve, DVE.compile_live s_uce tlv ∅).
@@ -92,7 +92,7 @@ Proof.
   unfold DCVE. simpl.
   eapply (@DVE.dve_live _ nil nil).
   eapply @LivenessAnalysisCorrect.correct; eauto.
-  eapply (@DCE.DCE_paramsMatch nil nil); eauto.
+  eapply (@UCE.UCE_paramsMatch nil nil); eauto.
   eapply UnreachableCode.unreachable_code_SC_S, UnreachableCodeAnalysisCorrect.correct; eauto.
   eapply UnreachableCodeAnalysisCorrect.unreachableCodeAnalysis_getAnn.
 Qed.
@@ -104,10 +104,10 @@ Proof.
   eapply LabelsDefined.noUnreachableCode_mono.
   - eapply (@DVE.DVE_noUnreachableCode _ nil nil).
     + eapply @LivenessAnalysisCorrect.correct; eauto.
-      eapply (@DCE.DCE_paramsMatch nil nil); eauto.
+      eapply (@UCE.UCE_paramsMatch nil nil); eauto.
       * eapply UnreachableCode.unreachable_code_SC_S, UnreachableCodeAnalysisCorrect.correct; eauto.
       * eapply UnreachableCodeAnalysisCorrect.unreachableCodeAnalysis_getAnn.
-    + eapply DCE.DCE_noUnreachableCode.
+    + eapply UCE.UCE_noUnreachableCode.
       * eapply UnreachableCodeAnalysisCorrect.correct; eauto.
       * eapply UnreachableCodeAnalysisCorrect.unreachableCodeAnalysis_getAnn.
   - eapply LabelsDefined.trueIsCalled_isCalled.
@@ -119,9 +119,9 @@ Proof.
   simpl.
   rewrite DVE.compile_live_incl_empty; eauto.
   rewrite LivenessAnalysisCorrect.livenessAnalysis_getAnn.
-  eapply DCE.compile_occurVars.
+  eapply UCE.compile_occurVars.
   eapply @LivenessAnalysisCorrect.correct; eauto.
-  eapply (@DCE.DCE_paramsMatch nil nil); eauto.
+  eapply (@UCE.UCE_paramsMatch nil nil); eauto.
   * eapply UnreachableCode.unreachable_code_SC_S, UnreachableCodeAnalysisCorrect.correct; eauto.
   * eapply UnreachableCodeAnalysisCorrect.unreachableCodeAnalysis_getAnn.
 Qed.
@@ -141,18 +141,18 @@ Proof.
     eapply UnreachableCodeAnalysisCorrect.unreachableCodeAnalysis_getAnn.
   }
   assert (LabelsDefined.paramsMatch
-            (DCE.compile nil ili (UnreachableCodeAnalysis.unreachableCodeAnalysis ili)) nil). {
-    eapply (@DCE.DCE_paramsMatch nil nil); eauto.
+            (UCE.compile nil ili (UnreachableCodeAnalysis.unreachableCodeAnalysis ili)) nil). {
+    eapply (@UCE.UCE_paramsMatch nil nil); eauto.
   }
   assert (TrueLiveness.true_live_sound Liveness.Imperative nil nil
-   (DCE.compile nil ili (UnreachableCodeAnalysis.unreachableCodeAnalysis ili))
+   (UCE.compile nil ili (UnreachableCodeAnalysis.unreachableCodeAnalysis ili))
    (LivenessAnalysis.livenessAnalysis
-      (DCE.compile nil ili (UnreachableCodeAnalysis.unreachableCodeAnalysis ili)))). {
+      (UCE.compile nil ili (UnreachableCodeAnalysis.unreachableCodeAnalysis ili)))). {
     eapply @LivenessAnalysisCorrect.correct; eauto.
   }
   eapply sim_trans with (S2:=I.state).
   eapply BisimSim.bisim_sim'.
-  eapply DCE.I.sim_DCE.
+  eapply UCE.I.sim_UCE.
   eapply UnreachableCode.unreachable_code_SC_S, UnreachableCodeAnalysisCorrect.correct; eauto.
   eapply UnreachableCodeAnalysisCorrect.unreachableCodeAnalysis_getAnn.
   eapply DVE.I.sim_DVE; [ reflexivity | eapply LivenessAnalysisCorrect.correct; eauto ].

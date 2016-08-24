@@ -196,7 +196,7 @@ Qed.
 
 Hint Resolve Is_true_eq_true.
 
-Lemma DCE_callChain RL F als t alt l' k ZsEnd aEnd n
+Lemma UCE_callChain RL F als t alt l' k ZsEnd aEnd n
       (IH : forall k Zs,
           get F k Zs ->
        forall (RL : 〔bool〕) (lv : ann bool) (n : nat),
@@ -247,7 +247,7 @@ Proof.
     eapply IHCC in H0; eauto.
 Qed.
 
-Lemma DCE_callChain' RL F als l' k
+Lemma UCE_callChain' RL F als l' k
       (IH : forall k Zs,
           get F k Zs ->
        forall (RL : 〔bool〕) (lv : ann bool) (n : nat),
@@ -283,7 +283,7 @@ Proof.
     subst. eauto.
 Qed.
 
-Lemma DCE_trueIsCalled RL s lv n
+Lemma UCE_trueIsCalled RL s lv n
   : unreachable_code SoundAndComplete RL s lv
     -> trueIsCalled s (LabI n)
     -> getAnn lv
@@ -320,11 +320,11 @@ Proof.
       * rewrite Heq; clear Heq p b. inv_get.
         econstructor; eauto. simpl.
         rewrite compileF_length; eauto.
-        eapply DCE_callChain; eauto.
+        eapply UCE_callChain; eauto.
 Qed.
 
 
-Lemma DCE_isCalledFrom RL F als t alt n (Len:❬F❭ = ❬als❭)
+Lemma UCE_isCalledFrom RL F als t alt n (Len:❬F❭ = ❬als❭)
   : (forall (n : nat) (Zs : params * stmt) (a : ann bool),
        get F n Zs ->
        get als n a ->
@@ -338,9 +338,9 @@ Lemma DCE_isCalledFrom RL F als t alt n (Len:❬F❭ = ❬als❭)
 Proof.
   intros UCF UCt gAt ICF.
   destruct ICF as [[l'] [? ?]].
-  exploit DCE_trueIsCalled; eauto.
+  exploit UCE_trueIsCalled; eauto.
   eexists; split; eauto.
-  exploit DCE_callChain'; eauto using DCE_trueIsCalled.
+  exploit UCE_callChain'; eauto using UCE_trueIsCalled.
   exploit unreachable_code_trueIsCalled; eauto.
   dcr; subst; simpl in *. rewrite H6 in gAt.
   destruct x; isabsurd; eauto.
@@ -349,7 +349,7 @@ Proof.
   eauto with len.
 Qed.
 
-Lemma DCE_noUnreachableCode RL s lv
+Lemma UCE_noUnreachableCode RL s lv
   : unreachable_code SoundAndComplete RL s lv
     -> getAnn lv
     -> noUnreachableCode trueIsCalled (compile RL s lv).
@@ -369,7 +369,7 @@ Proof.
       edestruct compileF_get_inv as [Zs' [a [n' [lv' ?]]]]; eauto.
       dcr; subst; simpl.
       exploit H3 as ICF; eauto.
-      eapply DCE_isCalledFrom; eauto with len.
+      eapply UCE_isCalledFrom; eauto with len.
 Qed.
 
 
@@ -381,7 +381,7 @@ Qed.
 
 Hint Resolve impb_elim.
 
-Lemma DCE_paramsMatch PL RL s lv
+Lemma UCE_paramsMatch PL RL s lv
   : unreachable_code Sound RL s lv
     -> getAnn lv
     -> paramsMatch s PL
@@ -540,7 +540,7 @@ Proof.
     + eapply compileF_separates; eauto.
 Qed.
 
-Lemma sim_DCE V s a
+Lemma sim_UCE V s a
   : unreachable_code Sound nil s a
     -> getAnn a
     -> @sim I.state _ I.state _ Bisim (nil,V, s) (nil,V, compile nil s a).
@@ -591,7 +591,7 @@ Proof.
     + rewrite Heq. simpl; eauto.
 Qed.
 
-Lemma DCE_live i ZL LV RL s uc lv
+Lemma UCE_live i ZL LV RL s uc lv
   : unreachable_code Sound RL s uc
     -> getAnn uc
     -> true_live_sound i ZL LV s lv
