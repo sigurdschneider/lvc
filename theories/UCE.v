@@ -458,15 +458,6 @@ Proof.
   get_functional. eauto.
 Qed.
 
-Lemma compileF_indexes_exist RL F als (Len:❬F❭ = ❬als❭)
-  : indexwise_indexes_exists SR F (compileF compile (getAnn ⊝ als ++ RL) F als) (getAnn ⊝ als) RL.
-Proof.
-  hnf; intros. inv_get.
-  hnf in H; dcr. inv_get.
-  rewrite take_app_lt; eauto with len. rewrite <- map_take.
-  exploit compileF_get; eauto.
-Qed.
-
 Lemma sim_compile_fun_cases r RL L V s L' F als alt
   : sim'r r Bisim (mapi I.mkBlock F ++ L, V, s)
    (mapi I.mkBlock (compileF compile (getAnn ⊝ als ++ RL) F als) ++ L', V,
@@ -536,7 +527,6 @@ Proof.
       simpl in *. get_functional.
       exploit H4; eauto.
     + eapply compileF_indexwise_paramrel; eauto.
-    + eapply compileF_indexes_exist; eauto.
     + eapply compileF_separates; eauto.
 Qed.
 

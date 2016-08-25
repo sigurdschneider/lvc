@@ -221,6 +221,7 @@ Module I.
 
   Require Import SimI.
 
+
 Instance SR : PointwiseProofRelationI ((set var) * params) := {
    ParamRelIP G Z Z' := Z' = (List.filter (fun x => B[x ∈ fst G]) Z) /\ snd G = Z;
    ArgRelIP V V' G VL VL' :=
@@ -228,10 +229,6 @@ Instance SR : PointwiseProofRelationI ((set var) * params) := {
      length (snd G) = length VL /\
      agree_on eq (fst G \ of_list (snd G)) V V';
 }.
-
-
-Arguments SR : simpl never.
-Opaque SR.
 
 Lemma sim_I ZL LV r L L' V V' s  lv
 : agree_on eq (getAnn lv) V V'
@@ -263,11 +260,9 @@ Proof.
       eapply (IH s2); eauto. eapply agree_on_incl; eauto.
     + eapply (sim_cond il_statetype_I); eauto 20 using op_eval_live, agree_on_incl.
   - eapply labenv_sim_app; eauto using zip_get.
-    + intros; simpl in *; subst.
-      Transparent SR.
-      hnf in H7; dcr; subst.
+    + intros; simpl in *; dcr; subst.
       split; [|split]; intros.
-      * exploit (@omap_filter_by _ _ _ _ (fun y : var => if [y \In blv] then true else false) _ _ Z H7);
+      * exploit (@omap_filter_by _ _ _ _ (fun y : var => if [y \In blv] then true else false) _ _ Z0 H7);
           eauto.
         exploit omap_op_eval_live_agree; eauto.
         intros. eapply argsLive_liveSound; eauto.
@@ -277,24 +272,18 @@ Proof.
         eapply agree_on_incl; eauto.
   - pno_step.
     simpl. erewrite <- op_eval_live_agree; eauto. eapply agree_on_sym; eauto.
-  - Opaque SR.
+  -
     pone_step. left. rewrite <- zip_app; eauto with len. eapply IH; eauto.
     + simpl in *; eapply agree_on_incl; eauto.
     + rewrite zip_app; eauto with len.
       eapply labenv_sim_extension_ptw; simpl; eauto 20 with len.
-      * intros. hnf; intros.
-        rewrite IndexRelIP_eq in H3; subst.
+      * intros. hnf; intros; simpl in *; dcr; subst.
         inv_get.
-        Transparent SR. hnf in H12.
-        simpl in H12; dcr; subst.
         rewrite <- zip_app; eauto with len.
         eapply IH; eauto.
         eapply agree_on_update_filter'; eauto.
-      * hnf; intros.
-        rewrite IndexRelIP_eq in H2; subst.
+      * hnf; intros; simpl in *; subst.
         inv_get; simpl; eauto.
-      * hnf; intros.
-        hnf in H2; subst. inv_get; simpl; eauto using zip_get.
 Qed.
 
 Lemma sim_DVE V V' s lv
