@@ -252,9 +252,8 @@ Proof.
            rewrite <- H10. cset_tac; intuition.
         -- pno_step_left.
     + cases. exploit H9; eauto. inv H2.
-      * eapply (sim_let_call il_statetype_I); eauto using agree_on_update_same, agree_on_incl.
+      * eapply (sim_let_call il_statetype_I); eauto 10 using agree_on_update_same, agree_on_incl.
         erewrite <- omap_op_eval_live_agree; eauto. eapply agree_on_sym; eauto.
-        left. eapply IH; eauto using agree_on_update_same, agree_on_incl.
   - repeat cases.
     + edestruct (op2bool_val2bool V); eauto; dcr.
       pone_step_left.
@@ -262,15 +261,7 @@ Proof.
     + edestruct (op2bool_val2bool V); eauto; dcr.
       pone_step_left.
       eapply (IH s2); eauto. eapply agree_on_incl; eauto.
-    + remember (op_eval V e). symmetry in Heqo.
-      exploit op_eval_live_agree; eauto.
-      destruct o.
-      * case_eq (val2bool v); intros.
-        -- pone_step.
-           left; eapply (IH s1); eauto using agree_on_incl.
-        -- pone_step.
-           left; eapply (IH s2); eauto using agree_on_incl.
-      * pno_step.
+    + eapply (sim_cond il_statetype_I); eauto 20 using op_eval_live, agree_on_incl.
   - eapply labenv_sim_app; eauto using zip_get.
     + intros; simpl in *; subst.
       Transparent SR.
@@ -398,15 +389,7 @@ Proof.
     + edestruct (op2bool_val2bool V); eauto; dcr.
       pone_step_left.
       eapply (IH s2); eauto. eapply agree_on_incl; eauto.
-    + remember (op_eval V e). symmetry in Heqo.
-      exploit op_eval_live_agree; eauto.
-      destruct o.
-      * case_eq (val2bool v); intros.
-        -- pone_step.
-           left; eapply (IH s1); eauto using agree_on_incl.
-        -- pone_step.
-           left; eapply (IH s2); eauto using agree_on_incl.
-      * pno_step.
+    + eapply (sim_cond il_statetype_F); eauto 20 using op_eval_live, agree_on_incl.
   - edestruct H2 as [? [? [GetL GetL']]]; eauto.
     remember (omap (op_eval V) Y). symmetry in Heqo.
     erewrite (get_nth); eauto using zip_get; simpl.
