@@ -272,18 +272,17 @@ Proof.
         eapply agree_on_incl; eauto.
   - pno_step.
     simpl. erewrite <- op_eval_live_agree; eauto. eapply agree_on_sym; eauto.
-  -
-    pone_step. left. rewrite <- zip_app; eauto with len. eapply IH; eauto.
-    + simpl in *; eapply agree_on_incl; eauto.
-    + rewrite zip_app; eauto with len.
-      eapply labenv_sim_extension_ptw; simpl; eauto 20 with len.
-      * intros. hnf; intros; simpl in *; dcr; subst.
-        inv_get.
-        rewrite <- zip_app; eauto with len.
-        eapply IH; eauto.
-        eapply agree_on_update_filter'; eauto.
-      * hnf; intros; simpl in *; subst.
-        inv_get; simpl; eauto.
+  - eapply sim_fun_ptw; eauto.
+    + intros. left. rewrite <- zip_app; eauto with len. eapply IH; eauto using agree_on_incl.
+    + intros. hnf; intros; simpl in *; dcr; subst.
+      inv_get.
+      rewrite <- zip_app; eauto with len.
+      eapply IH; eauto.
+      eapply agree_on_update_filter'; eauto.
+    + hnf; intros; simpl in *; subst.
+      inv_get; simpl; eauto.
+    + eauto with len.
+    + eauto with len.
 Qed.
 
 Lemma sim_DVE V V' s lv

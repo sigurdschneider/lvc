@@ -300,6 +300,23 @@ Proof.
   eapply fix_compatible_separate; eauto. eauto.
 Qed.
 
+Lemma sim_fun t A (PR:ProofRelationI A) (AL AL':list A) F F' L L' V V' s s'
+  : (forall r, labenv_sim t (sim'r r) PR (AL' ++ AL) (mapi I.mkBlock F ++ L) (mapi I.mkBlock F' ++ L')
+          -> (sim'r r \3/ r) t (mapi I.mkBlock F ++ L, V, s) (mapi I.mkBlock F' ++ L', V', s'))
+    -> (forall r,
+          labenv_sim t (sim'r r) PR (AL' ++ AL) (mapi I.mkBlock F ++ L) (mapi I.mkBlock F' ++ L')
+          -> indexwise_r t (sim'r r) PR AL' F F' AL (mapi I.mkBlock F ++ L) (mapi I.mkBlock F' ++ L'))
+    -> indexwise_paramrel PR F F' AL' AL
+    -> separates PR AL' AL F F'
+    -> forall r, labenv_sim t (sim'r r) PR AL L L'
+           -> sim'r r t (L, V, stmtFun F s) (L', V', stmtFun F' s').
+Proof.
+  intros SIM_s ISIM IP SEP r SIML.
+  pone_step.
+  eapply SIM_s.
+  eapply labenv_sim_extension; eauto.
+Qed.
+
 
 (* A proof relation is parameterized by analysis information A *)
 Class PointwiseProofRelationI (A:Type) := {
@@ -356,6 +373,24 @@ Proof.
   eapply labenv_sim_extension'; eauto.
   eapply indexwise_r_mon.
   eapply fix_compatible_separate; eauto. eauto.
+Qed.
+
+Lemma sim_fun_ptw t A (PR:PointwiseProofRelationI A) (AL AL':list A) F F' L L' V V' s s'
+  : (forall r, labenv_sim t (sim'r r) PR (AL' ++ AL) (mapi I.mkBlock F ++ L) (mapi I.mkBlock F' ++ L')
+          -> (sim'r r \3/ r) t (mapi I.mkBlock F ++ L, V, s) (mapi I.mkBlock F' ++ L', V', s'))
+    -> (forall r,
+          labenv_sim t (sim'r r) PR (AL' ++ AL) (mapi I.mkBlock F ++ L) (mapi I.mkBlock F' ++ L')
+          -> indexwise_r t (sim'r r) PR AL' F F' AL (mapi I.mkBlock F ++ L) (mapi I.mkBlock F' ++ L'))
+    -> indexwise_paramrel PR F F' AL' AL
+    -> length AL' = length F
+    -> length F = length F'
+    -> forall r, labenv_sim t (sim'r r) PR AL L L'
+           -> sim'r r t (L, V, stmtFun F s) (L', V', stmtFun F' s').
+Proof.
+  intros SIM_s ISIM IP Len1 Len2 r SIML.
+  pone_step.
+  eapply SIM_s.
+  eapply labenv_sim_extension_ptw; eauto.
 Qed.
 
 Lemma labenv_sim_app i A (PR:ProofRelationI A) AL L L' r V V' Y Y' (f f':lab) a
