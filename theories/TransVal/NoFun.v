@@ -1,17 +1,7 @@
-Require Import IL.
+Require Import IL Annotation RenamedApart.
 
-Inductive Terminates :F.state -> F.state -> Prop :=
-|TerminatesReturn L E e v:
-   op_eval E e = ⎣v⎦
-   -> Terminates (L, E, stmtReturn e)   (L  , E , stmtReturn e)
-|TerminatesApp L E f x vl:
-   omap (op_eval E) x = ⎣vl⎦
-   -> Terminates (L, E, stmtApp f x) (L, E, stmtApp f x)
-|TerminatesStep L E s L'  E' s'  L'' E'' s''  a:
-   F.step (L, E, s) a (L', E', s')
-   -> Terminates (L', E', s') (L'', E'', s'')
-   -> notApp s
-   -> Terminates (L,E,s) (L'', E'', s'') .
+Set Implicit Arguments.
+
 
 Hint Extern 5 =>
 match goal with
@@ -20,104 +10,244 @@ end.
 
 Hint Constructors notApp.
 
-Lemma terminates_impl_star2:
-  forall L E s L' Es s',
-    noFun s
-    -> Terminates (L, E ,s ) (L', Es, s')
-    -> (star2 F.step (L, E, s) nil (L', Es, s'))
-       /\ ((exists e, s' = stmtReturn e) \/ (exists f X, s' = stmtApp f X)).
+Inductive star (X : Type) (R : X -> X -> Prop) : X -> X -> Prop :=
+    star_refl : forall x : X, star R x x
+  | star_step : forall x x' z, R x x' -> star R x' z -> star R x z.
 
+Definition nc_step (σ: F.state) (σ': F.state) :=
+  step σ EvtTau σ' /\ notApp (snd σ).
+
+Lemma nc_step_step σ σ'
+  : nc_step σ σ' -> F.step σ EvtTau σ'.
 Proof.
-  intros L E s L' Es s' noFun_s Terminates_s.
-  general induction Terminates_s; try invt F.step; invt noFun; eauto using star2_refl.
-  - edestruct IHTerminates_s as [step ?]; try reflexivity; eauto; dcr; split; eauto using star2_silent.
-  - edestruct IHTerminates_s as [step ?]; try reflexivity; eauto; dcr; split; eauto using star2_silent.
-  - edestruct IHTerminates_s as [step ?]; try reflexivity; eauto; dcr; split; eauto using star2_silent.
+  firstorder.
 Qed.
 
-(** Lemma 2 in Thesis
-Proves that Terminates ignores the label environment **)
-
-Lemma term_swap_fun L1 L2 L1'  V V' s s':
-Terminates (L1,V,s) (L1',V',s')
--> exists L2', Terminates (L2, V, s) (L2', V', s').
-
+Lemma nc_star_step σ σ'
+  : star nc_step σ σ' -> star2 F.step σ nil σ'.
 Proof.
-  intros term. general induction term; eauto using Terminates.
-  assert (exists L2', F.step (L2, V, s0) a (L2', E', s')). {
-    inv H; eexists; econstructor; eauto.
-  }
-  destruct H1; eauto. edestruct IHterm; eauto.
-  eexists; eauto using Terminates.
+  intros. general induction H; eauto using star2.
+  eapply star2_silent; eauto using nc_step_step.
 Qed.
 
-Inductive Crash : F.state -> F.state -> Prop :=
-|CrashApp L E f Y:
-   omap (op_eval E) Y = None
-   -> Crash (L, E, stmtApp f Y) (L, E, stmtApp f Y)
-|CrashBase L E s :
-   ( forall f el, s <> stmtApp f el)
-   ->  normal2 F.step (L, E, s)
-   -> state_result (L,E,s) = None
-   -> Crash (L, E,s) (L,E,s)
-|CrashStep L E s sigma' sigma'' a:
-   F.step (L, E, s) a sigma'
-   ->  (forall f xl, s <> stmtApp f xl)
-   -> Crash sigma' sigma''
-   -> Crash (L,E,s) sigma''.
-
-(** Lemma 2 of the thesis
-It is decidable wether program leaf crashes or leaf terminates **)
-Lemma noFun_impl_term_crash :
-  forall E s,
-    noFun s
-    ->  exists E' s',
-    forall L,
-      Terminates (L, E, s)(L, E', s') \/ Crash (L, E, s) (L, E', s').
-
+Lemma nc_step_L L1 E s L1' E' s' L2
+  : nc_step (L1, E, s) (L1', E', s')
+    -> exists L2', nc_step (L2, E, s) (L2', E', s').
 Proof.
-  intros E s noFun_s; general induction noFun_s.
-  - case_eq (op_eval E e); intros.
-     + destruct (IHnoFun_s (E[x<- Some v])) as [E' [s' termcrash]].
-       exists E'; exists s'; intros.
-       destruct (termcrash L) as [ term | crash].
-       * left. econstructor; eauto.
-         { econstructor; eauto. }
-       * right. econstructor; eauto; try  econstructor; eauto; intros; isabsurd.
-     + exists E; exists (stmtLet x (Operation e) s); intros.
-       right. econstructor; eauto; intros; try hnf; try isabsurd.
-       intros. unfold reducible2 in H0. destruct H0 as [y [σ' H0]].
-       isabsurd.
+  intros [A B]; inv A; eexists; simpl; split; now (eauto; single_step).
+Qed.
+
+Lemma noFun_nc_step L E s σ
+  : noFun s
+    -> nc_step (L, E, s) σ
+    -> noFun (snd σ).
+Proof.
+  intros NF [Step NA]; inv NF; inv Step; inv NA; simpl; eauto.
+Qed.
+
+Lemma noFun_nc_step' L E s L' E' s'
+  : noFun s
+    -> nc_step (L, E, s) (L', E', s')
+    -> noFun s'.
+Proof.
+  intros NF [Step NA]; inv NF; inv Step; inv NA; simpl; eauto.
+Qed.
+
+Hint Resolve noFun_nc_step noFun_nc_step'.
+
+Lemma nc_step_agree L L' s D s' (E:onv val) (E':onv val)
+ : renamedApart s D
+   -> noFun s
+   -> star nc_step (L, E, s) (L', E', s')
+   -> agree_on eq (fst(getAnn D)) E E'.
+Proof.
+  intros RA NF Trm.
+  general induction Trm; eauto using agree_on_refl.
+  destruct x' as [[L'' E''] s'']. destruct H; simpl in *.
+  invt renamedApart; try invt F.step;try invt noFun; simpl; eauto.
+  - exploit IHTrm; [ | | reflexivity | reflexivity |]; eauto.
+    pe_rewrite.
+    eapply agree_on_update_inv in H6.
+    eapply agree_on_incl; eauto. cset_tac.
+  - exploit IHTrm; [ | | reflexivity | reflexivity |]; eauto.
+    pe_rewrite. eauto.
+  - exploit IHTrm; [ | | reflexivity | reflexivity |]; eauto.
+    pe_rewrite. eauto.
+Qed.
+
+Lemma nc_step_agree' σ σ' D
+  : star nc_step σ σ'
+    -> renamedApart (snd σ) D
+    -> noFun (snd σ)
+    -> agree_on eq (fst(getAnn D)) (snd (fst σ)) (snd (fst σ')).
+Proof.
+  destruct σ as [[L E] s], σ' as [[L' E'] s']; eauto using nc_step_agree.
+Qed.
+
+Lemma nc_step_agree_all L L' s D G s' (E:onv val) (E':onv val)
+ : renamedApart s D
+   -> noFun s
+   -> star nc_step (L, E, s) (L', E', s')
+   -> agree_on eq (G \ snd (getAnn D)) E E'.
+Proof.
+  intros RA NF Trm.
+  general induction Trm; eauto using agree_on_refl.
+  destruct x' as [[L'' E''] s'']. destruct H; simpl in *.
+  invt renamedApart; try invt F.step;try invt noFun; simpl; eauto.
+  - exploit IHTrm; [ | | reflexivity | reflexivity |]; eauto.
+    pe_rewrite.
+    eapply agree_on_update_inv in H6. rewrite H4.
+    eapply agree_on_incl; eauto. cset_tac.
+  - exploit IHTrm; [ | | reflexivity | reflexivity |]; eauto.
+    pe_rewrite. rewrite <- H3.
+    eapply agree_on_incl; eauto. cset_tac.
+  - exploit IHTrm; [ | | reflexivity | reflexivity |]; eauto.
+    pe_rewrite. rewrite <- H3.
+    eapply agree_on_incl; eauto. cset_tac.
+Qed.
+
+Inductive nc_terminal : F.state -> Prop :=
+| NcTerminalReturn L E e v
+  : op_eval E e = Some v -> nc_terminal (L, E, stmtReturn e)
+| NcTerminalApp L E f Y vl
+  : omap (op_eval E) Y = Some vl -> nc_terminal (L, E, stmtApp f Y).
+
+Inductive nc_stuck : F.state -> Prop :=
+| NcStuckApp L E f Y
+  : omap (op_eval E) Y = None -> nc_stuck (L, E, stmtApp f Y)
+| NcStuck L E s
+  : notApp s -> result (L,E,s) = None -> normal2 F.step (L,E,s) -> nc_stuck (L, E, s).
+
+Lemma nc_stuck_terminal σ
+  : nc_stuck σ -> normal2 F.step σ.
+Proof.
+  intros H. invc H; subst; eauto. stuck2.
+Qed.
+
+Lemma nc_stuck_result_none σ
+  : nc_stuck σ -> result σ = None.
+Proof.
+  intros H. invc H; subst; eauto.
+Qed.
+
+Definition nc_final σ := nc_terminal σ \/ nc_stuck σ.
+
+Definition Terminates σ σ' :=
+  star nc_step σ σ' /\ nc_terminal σ'.
+
+Definition Crash σ σ' :=
+  star nc_step σ σ' /\ nc_stuck σ'.
+
+Lemma noFun_impl_term_crash' E s
+  : noFun s
+    ->  exists E' s', forall L, star nc_step (L, E, s) (L, E', s') /\ nc_final (L, E', s').
+Proof.
+  intros. general induction s; invt noFun.
+  - case_eq (op_eval E e0); intros.
+    + edestruct IHs; eauto; dcr.
+      do 2 eexists; split; [| eapply H3]; eauto using star.
+      eapply star_step. split; simpl; eauto. single_step.
+      eapply H3; eauto.
+    + do 2 eexists; split; [ eapply star_refl|].
+      right; eauto using nc_stuck. econstructor; eauto. stuck.
   - case_eq (op_eval E e); intros.
     + case_eq (val2bool v); intros.
-      * destruct (IHnoFun_s1 E) as [E' [s' termcrash]].
-        exists E'; exists s'; intros.
-        destruct (termcrash L) as [term | crash].
-        { left. econstructor; eauto.
-          - econstructor; eauto. }
-        { right. econstructor; eauto. econstructor; eauto.
-          intros; isabsurd. }
-      * destruct (IHnoFun_s2 E) as [E' [s' termcrash]];
-          exists E'; exists s'; intros.
-        destruct (termcrash L) as [ term | crash ].
-        { left. econstructor; eauto.
-          - econstructor; eauto.
-           }
-        { right. econstructor; eauto. econstructor; eauto.
-          intros; isabsurd. }
-    +  exists E; exists (stmtIf e s t).
-       right. econstructor; eauto; intros; try hnf; try isabsurd.
-       intros. unfold reducible2 in H0. destruct H0 as [y [σ' H0]].
-       isabsurd.
+      * edestruct IHs1; eauto; dcr.
+        do 2 eexists; split; [| eapply H5].
+        eapply star_step. split; simpl; eauto. single_step.
+        eapply H5; eauto.
+      * edestruct IHs2; eauto; dcr.
+        do 2 eexists; split; [| eapply H5].
+        eapply star_step. split; simpl; eauto. single_step.
+        eapply H5; eauto.
+    + do 2 eexists; split; [ eapply star_refl|].
+      right. econstructor; eauto. stuck.
   - case_eq (omap (op_eval E) Y); intros.
-    + exists E; exists (stmtApp l Y); left; econstructor; eauto.
-    + exists E; exists (stmtApp l Y); right.
-      econstructor; eauto; intros; try hnf; try isabsurd.
-  - case_eq (op_eval E e).
-    + exists E; exists (stmtReturn e).
+    + do 2 eexists; split; [ eapply star_refl|].
+      left. econstructor; eauto.
+    + do 2 eexists; split; [ eapply star_refl|].
+      right. econstructor ; eauto.
+  - case_eq (op_eval E e); intros.
+    + do 2 eexists; split; [ eapply star_refl|].
       left; econstructor; eauto.
-    + exists E; exists (stmtReturn e). right.
-      econstructor; eauto; intros; try hnf; try isabsurd.
-      intros. unfold reducible2 in H0. destruct H0.
-      destruct H0. inversion H0.
+    + do 2 eexists; split; [ eapply star_refl|].
+      right; econstructor; eauto. stuck.
+Qed.
+
+Lemma noFun_impl_term_crash E s
+: noFun s
+  ->  exists E' s', forall L, Terminates (L, E, s)(L, E', s') \/ Crash (L, E, s) (L, E', s').
+Proof.
+  intros.
+  edestruct noFun_impl_term_crash'; eauto; dcr.
+  eexists x, x0; intros L. destruct (H1 L) as [A [B|B]].
+  - left; split; eauto.
+  - right; split; eauto.
+Qed.
+
+Lemma nc_step_renamedApart D (L:F.labenv) E s E' s'
+  : noFun s
+    -> renamedApart s D
+    -> star nc_step (L, E, s) (L, E', s')
+    -> exists D', renamedApart s' D'
+                  /\ fst (getAnn D) ⊆ fst (getAnn D')
+                  /\ snd (getAnn D') ⊆ snd (getAnn D).
+Proof.
+  intros NF RA STAR. general induction STAR; eauto.
+  destruct x' as [[L'' E''] s'']. destruct H; simpl in *.
+  invt renamedApart; invt noFun; invt notApp; try invt F.step; simpl.
+  - edestruct (IHSTAR an L'' (E[x<-Some v]) s'' ); eauto; dcr.
+    pe_rewrite. simpl. eexists; split; eauto.
+    rewrite <- H10, H11, H4. eauto with cset.
+  - edestruct (IHSTAR ans); eauto; dcr.
+    eexists; split; eauto.
+    pe_rewrite.
+    rewrite H13, H14, <- H3. eauto with cset.
+  - edestruct IHSTAR; eauto; dcr.
+    pe_rewrite.
+    eexists; split; eauto.
+    rewrite <- H13, H14, <- H3. eauto with cset.
+Qed.
+
+
+Lemma terminates_impl_eval L L' E s E' e
+  : noFun s
+    -> Terminates (L, E, s) (L', E',stmtReturn  e)
+    -> exists v, op_eval E' e = Some v.
+Proof.
+  intros NF [? Trm].
+  inv Trm. eauto.
+Qed.
+
+Lemma terminates_impl_evalList L  L' E s E' f el
+  : noFun s
+    -> Terminates (L, E, s) (L', E', stmtApp f el)
+    -> exists v, omap (op_eval E') el = Some v.
+Proof.
+  intros NF [? Trm].
+  inv Trm; eauto.
+Qed.
+
+Lemma nostep_let:
+  forall L E x e s,
+    normal2 F.step (L, E, stmtLet x (Operation e) s)
+    -> op_eval E e = None.
+
+Proof.
+  intros. case_eq (op_eval E e); intros; eauto.
+  exfalso; apply H. unfold reducible2.
+  exists EvtTau. exists (L, E[x<-Some v],s). econstructor; eauto.
+Qed.
+
+Lemma nostep_if:
+  forall L E e t f,
+    normal2 F.step (L, E, stmtIf e t f)
+    -> op_eval E e = None.
+Proof.
+  intros. case_eq (op_eval E e); intros; eauto.
+  exfalso; eapply H; unfold reducible2.
+  exists (EvtTau).
+  case_eq (val2bool v); intros.
+  - exists (L, E, t); econstructor; eauto.
+  - exists (L, E, f); econstructor; eauto.
 Qed.

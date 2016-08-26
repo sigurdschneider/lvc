@@ -186,6 +186,34 @@ Proof.
   erewrite op_eval_partial_total; eauto.
 Qed.
 
+
+Lemma smt_eval_op D E E' e v
+  : op_eval E e = Some v
+    -> agree_on eq D E E'
+    -> Op.freeVars e ⊆ D
+    -> smt_eval (to_total E') e = v.
+Proof.
+  intros.
+  repeat erewrite op_eval_smt_eval; eauto.
+  eauto using op_eval_agree with cset.
+Qed.
+
+Lemma smt_eval_var D1 D2 E1 E2 E' x e v
+  : op_eval E2 e = Some v
+    -> agree_on eq D1 (E1 [x <- Some v]) E'
+    -> agree_on eq D2 E2 E'
+    -> singleton x ⊆ D1
+    -> Op.freeVars e ⊆ D2
+    -> smt_eval (to_total E') (Var x) = smt_eval (to_total E') e.
+Proof.
+  intros.
+  repeat erewrite op_eval_smt_eval; eauto.
+  eauto using op_eval_agree with cset.
+  eapply op_eval_agree; eauto with cset.
+  simpl. lud; eauto.
+Qed.
+
+
 (** Next 2 Lemmata belong to Lemma 4 in subsection 3.4 in the thesis
 They prove that evaluation without a total environment is equal
 to evaluation under a total environment **)
@@ -306,27 +334,4 @@ intros agree; general  induction s; simpl in *; try reflexivity.
         eapply list_union_start_swap.
         eapply union_right; eauto. }
   + rewrite H.  split; eauto.
-Qed.
-
-Lemma op_freeVars_list_agree (E: onv val) e el:
-    (forall x, x ∈ list_union (Op.freeVars e:: List.map Op.freeVars el) -> exists v, E x = Some v)
-    ->(forall x, x ∈ Op.freeVars e -> (exists v, E x = Some v)) /\
-      (forall x, x ∈ list_union (List.map Op.freeVars el) -> exists v, E x = Some v).
-
-Proof.
-  intros. split;
-  intros; specialize (H x); destruct H; eauto;
-    simpl;
-    eapply list_union_start_swap;
-    cset_tac; eauto.
-Qed.
-
-Lemma op_freeVars_bin_agree (E:onv val) a b:
-  (forall x, x ∈ (union (Op.freeVars a) (Op.freeVars b)) -> exists v, E x = Some v)
-    ->(forall x, x ∈ Op.freeVars a -> (exists v, E x = Some v)) /\
-      (forall x, x ∈ Op.freeVars b -> exists v, E x = Some v).
-
-Proof.
-  intros.
-  split; intros; specialize (H x); destruct H; cset_tac; eauto.
 Qed.
