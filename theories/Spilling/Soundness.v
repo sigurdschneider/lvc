@@ -2,6 +2,9 @@ Require Import List Map Env AllInRel Exp AppExpFree.
 Require Import IL Annotation InRel AutoIndTac Liveness LabelsDefined.
 Require Import SimI Spilling.
 
+Set Implicit Arguments.
+
+
 Fixpoint write_spills (slot: var->var) (xs:list var) (s:stmt) : stmt :=
 match xs with
 | nil => s
@@ -57,6 +60,160 @@ mapAnn (fun (a : set var * set var * option (list (set var * set var)))
                                   end) ⊝ rms)
             end).
 
+Lemma discard_merge_sl_set_invariant
+      (slot : var -> var)
+      (a a' : ann (set var * set var * option(list(set var * set var))))
+  :
+    a === a'
+      -> discard_merge_sl slot a === discard_merge_sl slot a'.
+Proof.
+  intro aEq.
+  induction a, a'; try isabsurd.
+  - econstructor.
+
+    destruct a as [[Sp L] [rm |]];
+      destruct a0 as [[Sp0 L0] [rm0|]];
+      inversion_clear aEq; inversion_clear H; inversion_clear H1.
+    + econstructor. simpl. induction rm,rm0; try isabsurd.
+      * econstructor.
+      * econstructor.
+        -- admit.
+        -- admit.
+    + econstructor.
+  - econstructor.
+    + destruct a as [[Sp L] [rm |]];
+        destruct a1 as [[Sp1 L1] [rm1 |]];
+        inversion_clear aEq; inversion_clear H; inversion_clear H1; admit.
+    + admit.
+  - econstructor.
+    + destruct a as [[Sp L] [rm |]];
+        destruct a1 as [[Sp1 L1] [rm1 |]];
+        inversion_clear aEq; inversion_clear H; inversion_clear H1; admit.
+    + admit.
+    + admit.
+  - admit.
+Admitted.
+
+
+Lemma ann_R_seteq
+      (X : Type) `{OrderedType X}
+      (a b : ann X)
+  :
+    a === b
+    -> ann_R _eq a b.
+Proof.
+  intros eq_ab.
+  induction a,b ; try isabsurd; inversion eq_ab.
+  * apply annLt0. eauto.
+      * apply annLt1; eauto.
+      * apply annLt2; eauto.
+      * apply annLtF; eauto.
+Qed.
+
+Lemma ann_seteq_0
+      (X : Type) `{OrderedType X}
+      (x x' : X)
+  :
+    x === x'
+    -> ann0 x === ann0 x'.
+Proof.
+  intros eq_x.
+  apply ann_R_Equivalence.
+  - apply OT_Equivalence.
+  - econstructor. eauto.
+Qed.
+
+
+
+
+Lemma ann_seteq_1
+      (X : Type) `{OrderedType X}
+      (x x' : X)
+      (a b : ann X)
+  :
+    x === x'
+    -> a === b
+    -> ann1 x a === ann1 x' b.
+Proof.
+  intros eq_x eq_ab.
+  apply ann_R_Equivalence.
+  - apply OT_Equivalence.
+  - econstructor.
+    + eauto.
+    + apply ann_R_seteq. eauto.
+Qed.
+
+Lemma ann_seteq_2
+      (X : Type) `{OrderedType X}
+      (x x' : X)
+      (a a' b b': ann X)
+  :
+    x === x'
+    -> a === a'
+    -> b === b'
+    -> ann2 x a b === ann2 x' a' b'.
+Proof.
+  intros eq_x eq_a eq_b.
+  apply ann_R_Equivalence.
+  - apply OT_Equivalence.
+  - econstructor.
+    + eauto.
+    + apply ann_R_seteq. eauto.
+    + apply ann_R_seteq. eauto.
+Qed.
+
+
+Lemma ann_seteq_F
+      (X : Type) `{OrderedType X}
+      (x x' : X)
+      (a a': ann X)
+      (F F': list (ann X))
+  :
+    x === x'
+    -> a === a'
+    -> F === F'
+    -> annF x F a === annF x' F' a'.
+Proof.
+  intros eq_x eq_a eq_F.
+  apply ann_R_Equivalence.
+  - apply OT_Equivalence.
+  - econstructor.
+    + eauto.
+    + revert dependent F'. induction F.
+      * induction F'.
+        -- eauto.
+        -- isabsurd.
+      * intro F'. revert dependent F. induction F'.
+        -- isabsurd.
+        -- intros. eapply IHF'.
+    + intros n a0 b get_a0 get_b.
+      apply get_functional with (x:=a0) (x':=b) in get_a0 as eq_ab.
+      Focus 2. eauto.
+      rewrite eq_ab.
+      apply ann_R_refl.
+    + apply ann_R_seteq. eauto.
+Qed.
+
+
+Lemma ann_seteq_s_t_1
+      (s s' t t' : set var)
+      (rm : option(list(set var * set var)))
+      (sl : ann (set var * set var * option(list(set var * set var))))
+  :
+    s === s'
+    -> t === t'
+        -> ann1 (s,t,rm) sl === ann1 (s',t',rm) sl.
+Proof.
+  intros eq_s eq_t.
+  apply ann_R_Equivalence.
+      - apply OT_Equivalence.
+      - econstructor.
+        + econstructor.
+          * econstructor; eauto.
+          * eauto.
+        + eauto.
+Qed.
+
 Fixpoint do_spill_rm
 (slot : var -> var)
 (sl: ann (set var * set var * option (list (set var * set var ))))
@@ -80,6 +237,73 @@ match sl with
                                                   (do_spill_rm slot sl_t))
 end.
 
+
+
+Lemma do_spill_rm_empty'
+(slot : var -> var)
+(sl : ann (set var * set var * option (list (set var * set var ))))
+(rm : option(list(set var * set var)))
+  : getAnn sl === (∅,∅,rm)
+    -> do_spill_rm slot sl ===
+     match sl with
+     | ann0 _ => ann0 (∅,∅,rm)
+     | ann1 _ sl_s => ann1 (∅,∅,rm) (do_spill_rm slot sl_s)
+     | ann2 _ sl_s sl_t => ann2 (∅,∅,rm) (do_spill_rm slot sl_s)
+                                         (do_spill_rm slot sl_t)
+     | annF _ sl_F sl_t => annF (∅,∅,rm) (do_spill_rm slot ⊝ sl_F)
+                                         (do_spill_rm slot sl_t)
+     end.
+Proof.
+intros emptySpL.
+induction sl; simpl in *. (*+TODO+*)
+- eauto.
+- rewrite empty_cardinal. simpl. eauto.
+- rewrite empty_cardinal. simpl. eauto.
+- rewrite empty_cardinal. simpl. eauto.
+Qed.
+
+
+Lemma do_spill_rm_empty
+(slot : var -> var)
+(sl : ann (set var * set var * option (list (set var * set var ))))
+(rm : option(list(set var * set var)))
+  : getAnn sl = (∅,∅,rm)
+    -> do_spill_rm slot sl ===
+     match sl with
+     | ann0 _ => ann0 (∅,∅,rm)
+     | ann1 _ sl_s => ann1 (∅,∅,rm) (do_spill_rm slot sl_s)
+     | ann2 _ sl_s sl_t => ann2 (∅,∅,rm) (do_spill_rm slot sl_s)
+                                         (do_spill_rm slot sl_t)
+     | annF _ sl_F sl_t => annF (∅,∅,rm) (do_spill_rm slot ⊝ sl_F)
+                                         (do_spill_rm slot sl_t)
+     end.
+Proof.
+intros emptySpL.
+induction sl; simpl in *; rewrite emptySpL.
+- eauto.
+- rewrite empty_cardinal. simpl. eauto.
+- rewrite empty_cardinal. simpl. eauto.
+- rewrite empty_cardinal. simpl. eauto.
+Qed.
+
+Corollary do_spill_rm_empty_1
+          (slot : var -> var)
+          (s t : set var)
+          (sl : ann (set var * set var * option(list(set var * set var))))
+  : s === ∅
+    -> t === ∅
+    -> do_spill_rm slot (ann1 (s,t,None) sl)
+                === ann1 (s,t,None) (do_spill_rm slot sl)
+.
+Proof.
+  intros s_eq t_eq.
+  assert (tada := ann_seteq_s_t_1 (*s ∅ t ∅*) None (do_spill_rm slot sl) s_eq t_eq).
+  rewrite tada.
+  rewrite do_spill_rm_empty.
+  - eauto.
+  - simpl. apply injective_projections; simpl.
+    + apply injective_projections; simpl. eauto. rewrite s_eq. | rewrite t_eq]. eauto. reflexivity. eauto.
+Qed.
 
 Fixpoint spill_live
 (Lv : list (set var))
@@ -297,7 +521,7 @@ apply IHlvSound; simpl.
 - admit.
 Admitted.
 
-*)
+ *)
 
 Definition slot_merge slot := List.map (fun (RM : set var * set var)
                                            => fst RM ∪ map slot (snd RM)).
@@ -327,7 +551,7 @@ intros aeFree spillSound lvSound.
 (*induction (elements (fst (fst (getAnn sl)))).
 general induction spillSound; inversion_clear lvSound; inversion_clear aeFree;
 simpl.
-*)
+ *)
 
 general induction lvSound; inversion_clear spillSound;
 
@@ -335,19 +559,65 @@ inversion_clear aeFree as [x' e' s' eaFree_s
                           |e'
                           |e' s' t' aeFree_s eaFree_t
                           |f' Y' aeFree_var
-                          |F' t' aeFree_F aeFree_t]. simpl; eauto.
-(*
-induction (elements Sp); induction (elements L).
-- admit.
-- admit.
-- admit.
--
-try rewrite write_loads_empty; try rewrite write_spills_empty; simpl; eauto;*)
+                          |F' t' aeFree_F aeFree_t];
+clear sl; try rename sl0 into sl.
 
-- (*revert dependent sl.*) induction (elements Sp); induction (elements L).
+- remember (elements Sp) as xs. remember (elements L) as ys.
+  induction xs; induction ys. (* i need induction on Sp or L *)
   (*intros sl0 H7.*)
-  + rewrite write_spills_empty. rewrite write_loads_empty.
-    simpl. econstructor.
+  + assert (Sp [=] ∅) as emptySp.
+    { clear - Heqxs. symmetry in  Heqxs. apply elements_nil_eset. exact Heqxs. }
+    assert (L [=] ∅) as emptyL.
+    { clear - Heqys. symmetry in  Heqys. apply elements_nil_eset. exact Heqys. }
+    simpl.
+    rewrite <- Heqxs. rewrite write_spills_empty.
+    rewrite <- Heqys. rewrite write_loads_empty.
+
+    assert (((fix
+             f (n : nat) (b : ann (⦃var⦄ * ⦃var⦄ * ؟ 〔⦃var⦄ * ⦃var⦄〕)) {struct
+               n} : ann (⦃var⦄ * ⦃var⦄ * ؟ 〔⦃var⦄ * ⦃var⦄〕) :=
+               match n with
+               | 0 => b
+               | S n0 => ann1 (∅, ∅, ⎣⎦) (f n0 b)
+               end) (cardinal Sp + cardinal L)
+                    (ann1 (Sp, L, ⎣⎦) (do_spill_rm slot sl)))
+              = (do_spill_rm slot (ann1 (Sp,L,None) sl))) as dsr.
+    { eauto. }
+    rewrite dsr.
+
+    assert (  discard_merge_sl slot (do_spill_rm slot (ann1 (Sp,L,None) sl))
+          === discard_merge_sl slot((ann1 (∅,∅,None) (do_spill_rm slot sl))))
+                  as dms.
+    {
+      apply discard_merge_sl_set_invariant.
+      rewrite do_spill_rm_empty_1.
+    }
+
+
+
+    assert (ann1 (Sp, L, None) (do_spill_rm slot sl)
+                 === ann1 (∅,∅,None) (do_spill_rm slot sl)) as annEq.
+    { admit. }
+    apply discard_merge_sl_set_invariant with (slot:=slot) in annEq.
+
+
+
+
+
+(*+TODO+*)
+
+    rewrite annEq.
+    replace (((fix f (n : nat) (b : ann (⦃var⦄ * ⦃var⦄ * ؟ 〔⦃var⦄ * ⦃var⦄〕)) {struct n} :
+               ann (⦃var⦄ * ⦃var⦄ * ؟ 〔⦃var⦄ * ⦃var⦄〕) :=
+               match n with
+               | 0 => b
+               | S n0 => ann1 (∅, ∅, ⎣⎦) (f n0 b)
+               end) (cardinal Sp + cardinal L) (ann1 (Sp, L, ⎣⎦) (do_spill_rm slot sl)))) with (ann1 (∅,∅,None) (do_spill_rm slot sl)).
+    Focus 2. rewrite emptySp. rewrite emptyL.
+    apply do_spill_rm_empty.
+    simpl.
+    rewrite emptySp. rewrite emptyL.
+    econstructor.
     * eapply IHspillSound; eauto.
     * apply live_exp_sound_incl with (lv':=Exp.freeVars e).
       -- apply Exp.live_freeVars.
