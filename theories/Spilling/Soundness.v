@@ -657,8 +657,9 @@ inversion_clear aeFree as [x' e' s' eaFree_s
   remember (cardinal Sp + cardinal L) as n.
   revert dependent Sp.
   revert dependent L.
-  induction n; intros; simpl.
-  + assert (cardinal Sp = 0 /\ cardinal L = 0) as [card_Sp card_L].
+  induction n; intros.
+  + simpl.
+    assert (cardinal Sp = 0 /\ cardinal L = 0) as [card_Sp card_L].
     { clear - Heqn. split; omega. }
     assert (Empty Sp /\ Empty L) as [Empty_Sp Empty_L].
     { clear - card_Sp card_L. split; apply cardinal_Empty; eauto. }
@@ -675,14 +676,43 @@ inversion_clear aeFree as [x' e' s' eaFree_s
     * eapply IHlvSound; eauto.
     * apply live_exp_sound_incl with (lv':=Exp.freeVars e).
       -- apply Exp.live_freeVars.
-      -- cset_tac.
-    * cset_tac.
+      -- clear. cset_tac.
+    * clear. cset_tac.
     * apply spill_live_G.
 
-  + rewrite <- Heqxs. rewrite <- Heqys.
+  + assert (cardinal Sp > 0 \/ cardinal L > 0) as SpL_non_zero.
+    {
+      clear - Heqn. decide (cardinal Sp = 0).
+      - right. rewrite e in Heqn. simpl in Heqn. omega.
+      - left. omega.
+    }
+    simpl.
+    rewrite <- Heqxs. rewrite <- Heqys.
+    change (add_nones (cardinal Sp + cardinal L) (ann1 (Sp, L, ⎣⎦) (do_spill_rm slot sl)))
+           with (do_spill_rm slot (ann1 (Sp,L,None) sl)).
     rewrite do_spill_rm_s with (n:=cardinal Sp + cardinal L - 1).
-    Focus 2. (* unprovable ?! *)
-    (* *)
+
+    Focus 2.
+      simpl.
+      assert (cardinal Sp + cardinal L > 0) as SpL_gt0.
+      { clear - Heqn. omega. }
+      omega.
+
+    rewrite discard_merge_sl_1.
+    simpl.
+    destruct xs.
+    * simpl. destruct ys.
+      -- admit. (* see above *)
+      -- simpl. econstructor.
+         ++ replace (write_loads slot ys (stmtLet x e (do_spill slot s sl)))
+               with (do_spill slot (stmtLet x e s) (ann1 (∅,of_list ys,None) sl)).
+            (*change (add_nones (cardinal Sp + cardinal L - 1)
+                              (ann1 (Sp,L,None) (do_spill_rm slot sl)))
+                   with (do_spill_rm slot (ann1 (Sp,L,None) sl)).
+            apply IHn. *) admit. admit.
+         ++
+
+  (* *)
 
   induction xs,ys.
   + simpl.
