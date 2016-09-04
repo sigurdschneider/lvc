@@ -45,16 +45,49 @@ write_spills slot (elements Sp)
      end))
 .
 
+Fixpoint test
+         (s : set var)
+         (n : nat)
+         {struct n}
+  : set var
+  :=
+    match n with
+    | 0 => s
+    | S n => test (of_list (tl (elements s))) n
+    end.
+
 
 Fixpoint do_spill'
          (slot : var -> var)
          (s : stmt)
          (sl : ann (set var * set var * option(list(set var * set var))))
+         {struct s}
   : stmt :=
+
+
 
   let Sp := fst (fst (getAnn sl)) in
   let L  := snd (fst (getAnn sl)) in
   let rm := snd (getAnn sl) in
+
+(fix f sl n {struct n} :=
+  match n with
+    | 0 =>
+     match s,sl with
+     | stmtLet x e s, ann1 _ sl_s
+       => stmtLet x e (do_spill' slot s sl_s)
+     | stmtIf e s t, ann2 _ sl_s sl_t
+       => stmtIf e (do_spill' slot s sl_s) (do_spill' slot t sl_t)
+     | stmtFun F t, annF _ sl_F sl_t
+       => stmtFun
+            ((fun Zs sl_s => (fst Zs (* todo: really? I think it's fine *)
+                                    , do_spill' slot (snd Zs) sl_s)) ⊜ F sl_F)
+                           (do_spill' slot t sl_t)
+
+     | _,_
+       => s
+     end
+    | S n =>
 
   if
     [cardinal Sp = 0]
@@ -64,14 +97,14 @@ Fixpoint do_spill'
     then
      match s,sl with
      | stmtLet x e s, ann1 _ sl_s
-       => stmtLet x e (do_spill slot s sl_s)
+       => stmtLet x e (do_spill' slot s sl_s)
      | stmtIf e s t, ann2 _ sl_s sl_t
-       => stmtIf e (do_spill slot s sl_s) (do_spill slot t sl_t)
+       => stmtIf e (do_spill' slot s sl_s) (do_spill' slot t sl_t)
      | stmtFun F t, annF _ sl_F sl_t
        => stmtFun
             ((fun Zs sl_s => (fst Zs (* todo: really? I think it's fine *)
-                                    , do_spill slot (snd Zs) sl_s)) ⊜ F sl_F)
-            (do_spill slot t sl_t)
+                                    , do_spill' slot (snd Zs) sl_s)) ⊜ F sl_F)
+                           (do_spill' slot t sl_t)
 
      | _,_
        => s
@@ -80,15 +113,17 @@ Fixpoint do_spill'
     else
       let x := hd 0 (elements L) in
       let L':= of_list (tl (elements L)) in
-      stmtLet x (Operation (Var (slot x))) (do_spill slot s
-                                                 (setTopAnn sl (Sp,L',rm)))
+      stmtLet x (Operation (Var (slot x))) (f (setTopAnn sl (Sp,L',rm)) n)
 
   else
     let x  := hd 0 (elements Sp) in
     let Sp':= of_list (tl (elements Sp)) in
-    stmtLet (slot x) (Operation (Var x)) (do_spill slot s
-                                                   (setTopAnn sl (Sp',L,rm)))
+    stmtLet (slot x) (Operation (Var x)) (f (setTopAnn sl (Sp',L,rm)) n)
+  end
+) sl (cardinal Sp + cardinal L)
 .
+
+
 
 Lemma do_spill_empty
       (slot : var -> var)
@@ -102,13 +137,13 @@ Lemma do_spill_empty
 
       match s,sl with
      | stmtLet x e s, ann1 _ sl_s
-       => stmtLet x e (do_spill slot s sl_s)
+       => stmtLet x e (do_spill' slot s sl_s)
      | stmtIf e s t, ann2 _ sl_s sl_t
-       => stmtIf e (do_spill slot s sl_s) (do_spill slot t sl_t)
+       => stmtIf e (do_spill' slot s sl_s) (do_spill' slot t sl_t)
      | stmtFun F t, annF _ sl_F sl_t
        => stmtFun
-            ((fun Zs sl_s => (fst Zs, do_spill slot (snd Zs) sl_s)) ⊜ F sl_F)
-            (do_spill slot t sl_t)
+            ((fun Zs sl_s => (fst Zs, do_spill' slot (snd Zs) sl_s)) ⊜ F sl_F)
+            (do_spill' slot t sl_t)
 
      | _,_
        => s
@@ -124,7 +159,6 @@ Proof.
   induction sl, s; simpl in *; rewrite <- HeqSp; rewrite <- HeqL;
     simpl; rewrite zero_Sp; rewrite zero_L; simpl; eauto.
 Qed.
-
 
 Definition discard_sl := mapAnn (fun (a : (* = mapAnn ? snd *)
       set var * set var * option (list (set var * set var)))
@@ -157,7 +191,6 @@ Qed.
 
 Lemma discard_merge_sl_step
       (slot : var -> var)
-      (Sp L : set var)
       (sl : ann (set var * set var * option (list (set var * set var))))
   :
     discard_merge_sl slot sl =
@@ -515,7 +548,7 @@ Lemma do_spill_Sp
 Proof.
   intros Sp0 L0 x Sp' NEmpty_Sp.
   assert (~ cardinal Sp0 = 0) as Sp_nonzero.
-  { admit. }
+  { intro N. apply NEmpty_Sp. rewrite cardinal_Empty. eauto. }
   subst Sp0...
   subst L0...
   destruct (getAnn sl) as [[Sp L] rm].
@@ -645,6 +678,213 @@ Proof.
   induction a; simpl; eauto.
 Qed.
 
+Lemma do_spill_empty_invariant
+      (slot : var -> var)
+      (s : stmt)
+      (Sp' L' : set var)
+      (rm : option ( list (set var * set var)))
+      (sl sl' : ann (set var * set var * option ( list (set var * set var))))
+  :
+    sl' = setTopAnn sl (Sp',L',rm)
+    -> Empty (fst (fst (getAnn sl)))
+    -> Empty (snd (fst (getAnn sl)))
+    -> Empty Sp'
+    -> Empty L'
+    -> do_spill' slot s sl = do_spill' slot s sl'
+.
+Proof.
+  intros top_sl' Empty_Sp Empty_L Empty_Sp' Empty_L'.
+  rewrite top_sl'.
+  rewrite do_spill_empty;
+    try rewrite getAnn_setTopAnn; eauto.
+  rewrite do_spill_empty;
+    try rewrite getAnn_setTopAnn; eauto.
+  unfold setTopAnn.
+  induction sl; simpl; reflexivity.
+Qed.
+
+Lemma dms_dsr_empty_invariant
+      (slot : var -> var)
+      (Sp' L' : set var)
+      (rm : option (list (set var * set var)))
+      (sl sl' : ann (set var * set var * option (list (set var * set var))))
+:
+  sl' = setTopAnn sl (Sp',L',snd (getAnn sl))
+  -> Empty (fst (fst (getAnn sl)))
+  -> Empty (snd (fst (getAnn sl)))
+  -> Empty Sp'
+  -> Empty L'
+  -> discard_merge_sl slot (do_spill_rm slot sl)
+   = discard_merge_sl slot (do_spill_rm slot sl')
+.
+Proof.
+  intros top_sl' Empty_Sp Empty_L Empty_Sp' Empty_L'.
+  rewrite top_sl'.
+  rewrite do_spill_rm_empty'';
+    try rewrite getAnn_setTopAnn; eauto.
+  rewrite do_spill_rm_empty'';
+    try rewrite getAnn_setTopAnn; eauto.
+  unfold setTopAnn.
+  do 2 rewrite discard_merge_sl_step.
+  induction sl; simpl; destruct a; destruct p;
+    simpl; reflexivity.
+Qed.
+
+
+
+
+
+Lemma spill_live_sound_s
+(slot : var -> var) (*maybe needs restrictions*)
+(ZL : list params)
+(G : set var)
+(Λ : list (set var * set var))
+(Lv : list (set var))
+(s : stmt)
+(sl : ann (set var * set var * option (list (set var * set var))))
+  :
+  let sl' := setTopAnn sl (∅,∅,snd (getAnn sl)) in
+  (forall G', live_sound Imperative ZL Lv
+                (do_spill' slot s sl')
+                (spill_live (slot_merge slot Λ) ZL G'
+                            (do_spill' slot s sl')
+                            (discard_merge_sl slot (do_spill_rm slot sl')))
+  )
+-> live_sound Imperative ZL Lv
+              (do_spill' slot s sl)
+              (spill_live (slot_merge slot Λ) ZL G
+                          (do_spill' slot s sl)
+                          (discard_merge_sl slot (do_spill_rm slot sl))).
+Proof.
+
+set (Sp := fst (fst (getAnn sl))).
+set (L  := snd (fst (getAnn sl))).
+set (rm := snd (getAnn sl)).
+intros sl' strong_sls.
+
+
+remember (cardinal Sp) as n_Sp.
+symmetry in Heqn_Sp.
+revert dependent sl.
+revert G.
+induction n_Sp;
+  intros G sl Sp L rm sl' strong_sls card_Sp.
+
+- remember (cardinal L) as n_L.
+  symmetry in Heqn_L.
+  revert dependent sl.
+  revert G.
+  induction n_L;
+    intros G sl Sp L rm sl' strong_sls card_Sp card_L.
+
+  {
+    rewrite do_spill_empty_invariant
+    with (Sp':=∅) (L':=∅) (rm:=rm) (sl':=sl');
+      subst Sp; subst L; simpl; eauto; try apply empty_1;
+      try apply cardinal_Empty; eauto.
+    + rewrite dms_dsr_empty_invariant
+      with (Sp':=∅) (L':=∅) (sl':=sl');
+        eauto; try apply empty_1;
+        apply cardinal_Empty; assumption.
+  }
+
+  rewrite do_spill_rm_s with (n:=n_L).
+  Focus 2. subst Sp. rewrite card_Sp.
+           subst L. rewrite card_L.
+           omega.
+
+  rewrite do_spill_L.
+  Focus 2. subst Sp. rewrite cardinal_Empty. assumption.
+  Focus 2. subst L. clear - card_L. intro N.
+           apply cardinal_Empty in N. omega.
+
+  econstructor; fold spill_live.
+  * assert (forall sl, add_nones n_L
+              match sl with
+              | ann0 (Sp, L, rm) => ann0 (Sp, L, rm)
+              | ann1 (Sp, L, rm) sl_s => ann1 (Sp, L, rm) (do_spill_rm slot sl_s)
+              | ann2 (Sp, L, rm) sl_s sl_t =>
+                  ann2 (Sp, L, rm) (do_spill_rm slot sl_s) (do_spill_rm slot sl_t)
+              | annF (Sp, L, rm) sl_F sl_t =>
+                  annF (Sp, L, rm) (do_spill_rm slot ⊝ sl_F) (do_spill_rm slot sl_t)
+              end
+              = do_spill_rm slot
+                   (setTopAnn sl (fst (fst (getAnn sl)),
+                                  of_list (tl (elements (snd (fst (getAnn sl))))),
+                                  snd (getAnn sl)
+                                 )
+                   )
+             ) as eq_dsr.
+    {
+      admit. (* solvable, maybe complicated *)
+    }
+    rewrite eq_dsr. clear eq_dsr.
+    apply IHn_L.
+    -- rewrite setTopAnn_setTopAnn.
+       rewrite getAnn_setTopAnn.
+       subst sl'. subst rm.
+       simpl.
+       apply strong_sls.
+    -- rewrite getAnn_setTopAnn.
+       simpl. subst Sp. assumption.
+    -- rewrite getAnn_setTopAnn.
+       simpl. admit. (* okay, needs lemma:          cardinal L = S n_L
+                     -> cardinal (of_list (tl (elements (L)))) =   n_L *)
+    * apply live_exp_sound_incl
+        with (lv':=Exp.freeVars (Operation (Var (slot
+                         (hd 0 (elements (snd (fst (getAnn sl))))))))).
+      -- apply live_freeVars.
+      -- clear. cset_tac.
+    * clear. cset_tac.
+    * apply spill_live_G.
+
+- rewrite do_spill_rm_s with (n:=n_Sp + cardinal L).
+  Focus 2. subst Sp. rewrite card_Sp.
+           subst L. omega.
+
+  rewrite do_spill_Sp. (*Lemma not yet proven*)
+  Focus 2. subst Sp. clear - card_Sp. intro N.
+           apply cardinal_Empty in N. omega.
+
+  econstructor; fold spill_live.
+  * assert (forall sl, add_nones (n_Sp + cardinal L)
+              match sl with
+              | ann0 (Sp, L, rm) => ann0 (Sp, L, rm)
+              | ann1 (Sp, L, rm) sl_s => ann1 (Sp, L, rm) (do_spill_rm slot sl_s)
+              | ann2 (Sp, L, rm) sl_s sl_t =>
+                  ann2 (Sp, L, rm) (do_spill_rm slot sl_s) (do_spill_rm slot sl_t)
+              | annF (Sp, L, rm) sl_F sl_t =>
+                  annF (Sp, L, rm) (do_spill_rm slot ⊝ sl_F) (do_spill_rm slot sl_t)
+              end
+              = do_spill_rm slot
+                   (setTopAnn sl (of_list (tl (elements (fst (fst (getAnn sl))))),
+                                  snd (fst (getAnn sl)),
+                                  snd (getAnn sl)
+                                 )
+                   )
+             ) as eq_dsr.
+    {
+      admit. (* solvable, maybe complicated *)
+    }
+    rewrite eq_dsr. clear eq_dsr.
+    apply IHn_Sp.
+    -- rewrite setTopAnn_setTopAnn.
+       rewrite getAnn_setTopAnn.
+       subst sl'. subst rm.
+       simpl.
+       apply strong_sls.
+    -- rewrite getAnn_setTopAnn.
+       simpl. admit. (* okay, needs lemma:   cardinal L = S n_L
+                     -> cardinal (of_list (tl (elements (L)))) =   n_L *)
+    * apply live_exp_sound_incl
+        with (lv':=Exp.freeVars (Operation (Var (
+                         (hd 0 (elements (snd (fst (getAnn sl))))))))).
+      -- apply live_freeVars.
+      -- clear. cset_tac.
+    * clear. cset_tac.
+    * apply spill_live_G.
+Admitted.
+
 
 Lemma spill_live_sound
 (k : nat)
@@ -672,6 +912,7 @@ intros aeFree spillSound lvSound.
 general induction spillSound; inversion_clear lvSound; inversion_clear aeFree;
 simpl.
  *)
+(*
 set (Sp := fst (fst (getAnn sl))).
 set (L  := snd (fst (getAnn sl))).
 set (rm := snd (getAnn sl)).
@@ -679,6 +920,59 @@ assert (getAnn sl = (Sp,L,rm)) as gA_sl.
 { induction sl; simpl in *; destruct a as [[Sp' L'] rm'];
     subst Sp; subst L; subst rm; simpl; reflexivity.
 }
+ *)
+general induction lvSound;
+  inversion_clear aeFree;
+  inversion_clear spillSound;
+  apply spill_live_sound_s; intros G'.
+- rewrite do_spill_empty.
+  rewrite do_spill_rm_empty''.
+  rewrite discard_merge_sl_step; simpl.
+  Focus 2. simpl. apply empty_1.
+  Focus 2. simpl. apply empty_1.
+  Focus 2. simpl. apply empty_1.
+  Focus 2. simpl. apply empty_1.
+
+  econstructor.
+  + eapply IHlvSound; eauto.
+  + apply live_exp_sound_incl with (lv':=Exp.freeVars e).
+    * apply Exp.live_freeVars.
+    * clear. cset_tac.
+  +  clear. cset_tac.
+  + apply spill_live_G.
+- rewrite do_spill_empty.
+  rewrite do_spill_rm_empty''.
+  rewrite discard_merge_sl_step; simpl.
+  Focus 2. simpl. apply empty_1.
+  Focus 2. simpl. apply empty_1.
+  Focus 2. simpl. apply empty_1.
+  Focus 2. simpl. apply empty_1.
+
+  econstructor.
+  + eapply IHlvSound1; eauto.
+  + eapply IHlvSound2; eauto.
+  + apply live_op_sound_incl with (lv':=Op.freeVars e).
+    * apply Op.live_freeVars.
+    * clear. cset_tac.
+  + clear. cset_tac.
+  + clear. cset_tac.
+- admit.
+- rewrite do_spill_empty.
+  rewrite do_spill_rm_empty''.
+  rewrite discard_merge_sl_step; simpl.
+  Focus 2. simpl. apply empty_1.
+  Focus 2. simpl. apply empty_1.
+  Focus 2. simpl. apply empty_1.
+  Focus 2. simpl. apply empty_1.
+
+  econstructor.
+  + apply live_op_sound_incl with (lv':=Op.freeVars e).
+    * apply Op.live_freeVars.
+    * clear. cset_tac.
+- admit.
+
+Admitted.
+
 
 enough (forall Sp' sl', Sp' ⊆ Sp
           -> sl'= setTopAnn sl (Sp',L,rm)
@@ -730,19 +1024,38 @@ induction n_Sp'; intros G Sp' sub_Sp card_Sp' sl' top_sl' HeqSp' gA_sl'.
   revert dependent sl''.
   revert dependent L'.
   revert G.
-  induction n_L'; intros G L' sub_L' card_L' sl'' top_sl'' HeqL' HeqSp'' gA_sl''.
+  induction n_L'; intros G L' sub_L card_L' sl'' top_sl'' HeqL' HeqSp'' gA_sl''.
+
   + assert (sl'' = setTopAnn sl (Sp',L',rm)) as top_sl.
     { rewrite top_sl''. rewrite top_sl'. rewrite setTopAnn_setTopAnn. eauto. }
-    (*rewrite top_sl.
-    rewrite do_spill_rm_empty''.
-    rewrite do_spill_empty.
-    rewrite discard_merge_sl_step.
 
-      induction spillSound. simpl in IHspillSound.
+    revert dependent sl''.
+    revert spillSound.
+    revert G R M.
+    induction lvSound; intros G R M spillSound sl'';
+      inversion_clear spillSound; inversion_clear aeFree;
+        intros top_sl'' HeqL'' HeqSp'' gA_sl'' top_sl.
+    * (*cbn zeta. intros _ sub_Sp Heq_sl' gA_sl' sub_L top_sl'' gA_sl'' Heq_sl''.*)
+      simpl in sub_Sp, gA_sl', sub_L, top_sl'', gA_sl''.
+      rewrite do_spill_empty.
+      rewrite do_spill_rm_empty''.
+      rewrite discard_merge_sl_step; simpl.
+      rewrite top_sl.
       simpl.
-
-      induction s , sl.
-    *)
+      Focus 2. apply cardinal_Empty. rewrite <- HeqSp''. assumption.
+      Focus 2. apply cardinal_Empty. rewrite <- HeqL''.  assumption.
+      Focus 2. apply cardinal_Empty. rewrite <- HeqSp''. assumption.
+      Focus 2. apply cardinal_Empty. rewrite <- HeqL''.  assumption.
+      destruct rm ; econstructor.
+      -- apply IHlvSound with (R:={x; R\K∪L0}) (M:=Sp0∪M); eauto.
+         ++ econstructor.
+      -- admit.
+      -- admit.
+      -- admit.
+    * admit.
+    * admit.
+    * admit.
+    * admit.
     (*
     revert dependent R.
     revert dependent M.
@@ -769,7 +1082,6 @@ induction n_Sp'; intros G Sp' sub_Sp card_Sp' sl' top_sl' HeqSp' gA_sl'.
     * clear. cset_tac.
     * apply spill_live_G. *)
 
-    admit. (* prove idea: induction on lvSound, let already proven below *)
   + rewrite do_spill_rm_s with (n:=n_L').
     Focus 2. rewrite <- HeqL'. rewrite <- HeqSp''.
              rewrite card_Sp'. rewrite card_L'. omega.
@@ -822,12 +1134,14 @@ induction n_Sp'; intros G Sp' sub_Sp card_Sp' sl' top_sl' HeqSp' gA_sl'.
       (* this is not performant *)
     * apply spill_live_G.
 
-- rewrite do_spill_rm_s with (n:=n_Sp).
+- rewrite do_spill_rm_s with (n:=n_Sp').
   admit. admit. (* analogous *)
 
 Admitted.
 
 
+
+Print Syntax error: '.' expected after [vernac:command] (in [vernac_aux]).
 
 
 
