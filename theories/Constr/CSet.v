@@ -553,3 +553,51 @@ Proof.
 assert (s ∪ (t \ u) ⊆ s ∪ t). { cset_tac. }
 rewrite H0. eauto.
 Qed.
+
+
+Lemma cardinal_set_tl
+      (X : Type) `{OrderedType X}
+      (s : set X)
+      (n : nat)
+  :
+    cardinal (of_list (elements s)) = S n
+    -> cardinal (of_list (tl (elements s))) = n
+.
+Proof.
+  intro card_Sn.
+  remember (elements s) as L.
+  general induction L; simpl; eauto.
+  simpl in card_Sn.
+  rewrite add_cardinal_2 in card_Sn.
+  - omega.
+  - intro N.
+    assert (nn := (elements_3w s)).
+    rewrite <- HeqL in nn.
+    inversion_clear nn.
+    apply H0.
+    apply <- InA_in.
+    assumption.
+Qed.
+
+Lemma cardinal_tl
+      (X : Type) `{OrderedType X}
+      (n : nat)
+      (s : set X)
+  :
+    cardinal s = S n
+    -> cardinal (of_list (tl (elements s))) = n
+.
+Proof.
+  induction n; intros card_s.
+  - rewrite <- elements_length in card_s.
+    assert (tl (elements s) = nil) as tl_nil.
+    + destruct (elements s).
+      * simpl. reflexivity.
+      * simpl in *. assert (length l = 0). { omega. }
+        apply length_zero_iff_nil.
+        assumption.
+    + rewrite tl_nil. simpl. apply empty_cardinal.
+  - apply cardinal_set_tl.
+    rewrite of_list_elements.
+    assumption.
+Qed.
