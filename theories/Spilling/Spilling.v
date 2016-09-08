@@ -40,7 +40,9 @@ ann (set var * set var * option (list (set var * set var)))
     -> spill_sound k ZL Λ (R,M) (stmtApp f Y) (ann0 (Sp,L,None))
 
 | SpillFun (ZL:list params) Λ R M Sp L K t sl_F sl_t (F: list(params*stmt)) rms
-: cardinal (R\K ∪ L) <= k
+  : cardinal (R\K ∪ L) <= k
+  -> length F = length sl_F
+  -> length F = length rms
   -> (forall n rm, get rms n rm -> cardinal (fst rm) <= k)
   -> (forall n Zs rm sl_s, get rms n rm
      -> get F n Zs

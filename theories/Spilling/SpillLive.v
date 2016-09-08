@@ -5,6 +5,34 @@ Require Import SimI Spilling DoSpill DoSpillRm DiscardMergeSl SpillUtil.
 Set Implicit Arguments.
 
 
+
+
+Lemma spill_fun_is_live
+      (k : nat)
+      (slot : var -> var)
+      (ZL : list (params))
+      (Λ rms : list (set var * set var))
+      (R M Sp L : set var)
+      (s t : stmt)
+      (sl_F : list (ann (set var * set var * option (list (set var * set var)))))
+      (sl_t : ann (set var * set var * option (list (set var * set var))))
+      (F : list (params * stmt))
+       lv_t lv_F lv
+  :
+    spill_sound k ZL Λ (R,M) (stmtFun F t)
+                (annF (Sp,L,Some rms) sl_F sl_t)
+    -> live_sound Imperative ZL (slot_merge slot Λ)
+                                (stmtFun F t)
+                                (annF lv lv_F lv_t)
+    -> getAnn ⊝ lv_F = (fun rm => fst rm ∪ map slot (snd rm)) ⊝ rms
+
+.
+Proof.
+  intros spillSound lvSound.
+  induction lvSound; inversion_clear spillSound.
+Admitted.
+
+
 Fixpoint list_union'
          (X : Type) `{OrderedType X}
          (L : list (set X))
@@ -44,12 +72,16 @@ match s, rm with
         let Z   := nth (counted f) ZL nil in
         ann0 (list_union (Op.freeVars ⊝ Y) ∪ blv \ of_list Z ∪ G)
 
-| stmtFun F t, annF (Some Lv') rm_F rm_t (* checked *)
-     => let lv_t := spill_live (Lv' ++ Lv) (fst ⊝ F ++ ZL) ∅ t rm_t in
-        let lv_F := (fun ps rm_s
-                 => spill_live (Lv' ++ Lv) (fst ⊝ F ++ ZL) ∅
-                               (snd ps) rm_s) ⊜ F rm_F in
-        (* maybe i will need a guarantee of ❬F❭ = ❬als❭ somewhere *)
+| stmtFun F t, annF (Some rms) rm_F rm_t (* checked *)
+     => let Lv'  := (fun rm ps => rm ∪ of_list (fst ps)) ⊜ rms F in
+        let lv_t := spill_live (Lv' ++ Lv) (fst ⊝ F ++ ZL) ∅ t rm_t in
+        let lv_F := (fun ps rm_s => spill_live (Lv' ++ Lv)
+                                             (fst ⊝ F ++ ZL)
+                                             (of_list (fst ps))
+                                             (snd ps)
+                                              rm_s
+                    ) ⊜ F rm_F in
+        (* TODO: add ❬F❭ = ❬sl_F❭ = ❬rms❭ in SpillFun !! *)
         annF (getAnn lv_t ∪ G) lv_F lv_t
 
 | _,_ => ann0 G
@@ -72,9 +104,19 @@ Proof.
 Qed.
 
 
-
-
-
+Lemma spill_live_G_set
+      (Lv : list (set var))
+      (ZL : list (params))
+      (G : set var)
+      (s : stmt)
+      (a : ann (option (list (set var))))
+  :
+    G ⊆ getAnn (spill_live Lv ZL G s a)
+.
+Proof.
+  induction s,a; simpl; eauto with cset.
+  - destruct a; simpl; eauto.
+Qed.
 
 
 Lemma spill_live_sound_s
@@ -386,17 +428,37 @@ general induction lvSound;
       + isabsurd.
       + simpl. f_equal.
         apply IHF; simpl in *; omega.
-  }
+  } (*
   assert (slot_merge slot rms = getAnn ⊝ als) as maybe.
   { admit. }
+     *)
+  let elim_gets := (rewrite fst_F;
+                     eauto;
+                     intros n Zs a get_Zs_sls get_ps_rms;
+                     apply get_zip in get_Zs_sls;
+                     destruct get_Zs_sls as [Zs' [sl_s [get_Zs' [get_sls Zs_eq]]]];
+                     apply get_zip in get_ps_rms;
+                     destruct get_ps_rms as [ps [rm_s [get_ps [get_rms splv]]]];
+                     apply get_zip in get_ps;
+                     destruct get_ps as [ps' [rm_s' [get_ps' [get_rms' ps_eq]]]]) in
 
-  econstructor; fold spill_live; simpl in *; eauto.
-  + rewrite fst_F. rewrite maybe.
-    unfold spill_live at 1.
-    admit. admit.
-  + rewrite fst_F. admit. admit.
-  + admit.
-  + admit.
-
-
+  econstructor; fold spill_live; simpl in *; eauto; [ | | elim_gets | elim_gets ].
+  + rewrite fst_F; eauto. admit.
+  + set (A := (fun (Zs : params * stmt) (sl_s : ann (⦃var⦄ * ⦃var⦄ * ؟ 〔⦃var⦄ * ⦃var⦄〕)) =>
+                 (fst Zs, do_spill slot (snd Zs) sl_s)) ⊜ F sl_F).
+    symmetry. apply zip_length2.
+    repeat rewrite Coqlib.list_length_map.
+    subst A.
+    rewrite zip_length2; eauto.
+  + set (A := (fun (Zs0 : params * stmt) (sl_s : ann (⦃var⦄ * ⦃var⦄ * ؟ 〔⦃var⦄ * ⦃var⦄〕)) =>
+            (fst Zs0, do_spill slot (snd Zs0) sl_s)) ⊜ F sl_F). admit.
+  + assert (fst Zs = fst Zs') as fst_ZsZs'.
+    { rewrite <- Zs_eq. simpl. reflexivity. }
+    rewrite fst_ZsZs'.
+    rewrite <- splv.
+    rewrite <- ps_eq.
+    simpl.
+    rewrite get_get_eq with (L:=F) (n:=n) (x:=ps') (x':=Zs'); eauto.
+    split; [ | auto].
+    apply spill_live_G_set.
 Admitted.

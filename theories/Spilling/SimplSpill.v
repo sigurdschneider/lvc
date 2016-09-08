@@ -235,6 +235,26 @@ decide (a ∈ of_list (take
   cset_tac.
 Qed.
 
+(* move somewhere *)
+Lemma zip_length1
+      (X : Type)
+      (Y : Type)
+      (Z : Type)
+      (f : X -> Y -> Z)
+      (xl: list X)
+      (yl: list Y)
+  :
+    length xl = length yl -> length (f ⊜ xl yl) = length yl
+.
+Proof.
+  intro eq_len.
+  rewrite <- eq_len.
+  apply zip_length2.
+  assumption.
+Qed.
+
+
+
 (**********************************************************************)
 
 Lemma simplSpill_sat_spillSound (k:nat) (s:stmt) (R R' M M': set var)
@@ -412,6 +432,11 @@ general induction lvSound;
 - eapply SpillFun with (K:=∅); eauto.
   + assert (forall s:set var, s \ ∅ ∪ ∅ [=] s) as seteq'. { cset_tac. }
     rewrite (seteq' R). rewrite ReqR'. apply RleqK.
+  + symmetry. apply zip_length2. rewrite H.
+    symmetry. apply zip_length1.
+    apply zip_length1.
+    assumption.
+  + symmetry. apply zip_length2. assumption.
   + intros ; inv_get. simpl. apply take_of_list_cardinal.
   + intros ; inv_get. eapply H1; eauto with cset.
     * apply list_eq_app; eauto. reflexivity.

@@ -86,6 +86,8 @@ general induction lvSound;
 - eapply SpillFun with (K:=R).
   + assert (seteq : R \ R ∪ ∅ [=] ∅). { cset_tac. }
     rewrite seteq. rewrite empty_cardinal. omega.
+  + symmetry. apply zip_length2. eauto.
+  + repeat rewrite Coqlib.list_length_map. assumption.
   + intros ; inv_get. simpl. rewrite empty_cardinal. omega.
   + intros ; inv_get. eapply H1; eauto.
     eapply PIR2_app; eauto.
