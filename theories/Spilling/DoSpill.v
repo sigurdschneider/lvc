@@ -1,6 +1,6 @@
 Require Import List Map Env AllInRel Exp AppExpFree.
 Require Import IL Annotation InRel AutoIndTac Liveness LabelsDefined.
-Require Import SimI Spilling.
+Require Import SimI Spilling SpillUtil.
 
 Fixpoint do_spill
          (slot : var -> var)
@@ -192,4 +192,30 @@ Proof.
     rewrite card_Sp;
       simpl;
     reflexivity.
+Qed.
+
+
+Lemma do_spill_empty_invariant
+      (slot : var -> var)
+      (s : stmt)
+      (Sp' L' : set var)
+      (rm : option ( list (set var * set var)))
+      (sl sl' : ann (set var * set var * option ( list (set var * set var))))
+  :
+    sl' = setTopAnn sl (Sp',L',rm)
+    -> Empty (fst (fst (getAnn sl)))
+    -> Empty (snd (fst (getAnn sl)))
+    -> Empty Sp'
+    -> Empty L'
+    -> do_spill slot s sl = do_spill slot s sl'
+.
+Proof.
+  intros top_sl' Empty_Sp Empty_L Empty_Sp' Empty_L'.
+  rewrite top_sl'.
+  rewrite do_spill_empty;
+    try rewrite getAnn_setTopAnn; eauto.
+  rewrite do_spill_empty;
+    try rewrite getAnn_setTopAnn; eauto.
+  unfold setTopAnn.
+  induction sl; simpl; reflexivity.
 Qed.
