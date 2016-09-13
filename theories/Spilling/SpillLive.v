@@ -73,9 +73,8 @@ match s, rm with
         ann0 (list_union (Op.freeVars ⊝ Y) ∪ blv \ of_list Z ∪ G)
 
 | stmtFun F t, annF (Some rms) rm_F rm_t (* checked *)
-     => let Lv'  := (fun rm ps => rm ∪ of_list (fst ps)) ⊜ rms F in
-        let lv_t := spill_live (Lv' ++ Lv) (fst ⊝ F ++ ZL) ∅ t rm_t in
-        let lv_F := (fun ps rm_s => spill_live (Lv' ++ Lv)
+     => let lv_t := spill_live (rms ++ Lv) (fst ⊝ F ++ ZL) ∅ t rm_t in
+        let lv_F := (fun ps rm_s => spill_live (rms ++ Lv)
                                              (fst ⊝ F ++ ZL)
                                              (of_list (fst ps))
                                              (snd ps)
@@ -495,7 +494,7 @@ Inductive some_spill_live
                               (annF b lv_F lv_t)
 .
 
-
+(*
 Lemma spill_live_small_s
       sl Lv ZL G sl' lv slot s
   :
@@ -503,42 +502,46 @@ Lemma spill_live_small_s
                        (do_spill slot s (setTopAnn sl (∅,∅,snd (getAnn sl))))
                        (discard_merge_sl slot (do_spill_rm' slot 0 sl)))
                        ⊆ getAnn lv ∪ G
-    -> getAnn (spill_live Lv ZL G (do_spill slot s sl')
-                    (discard_merge_sl slot (do_spill_rm' slot (count sl') sl)))
-                         ⊆ getAnn lv ∪ G
+    -> getann
+   (spill_live (slot_merge slot (rms ++ λ)) (slot_lift_params slot ⊜ (fst ⊝ f ++ zl) (rms ++ λ))
+      (of_list (slot_lift_params slot z (r,m))) (do_spill slot s sl')
+      (discard_merge_sl slot (do_spill_rm' slot (count sl') sl))) ⊆ r ∪ map slot m
 .
-Admitted.
+admitted.
 
-(* This lemma seems to be wrong *)
-Lemma spill_live_small
-      ZL Λ s lv k R M sl G slot Lv
+(* this lemma seems to be wrong *)
+lemma spill_live_small
+      zl λ s lv k r m sl (z:params) slot lv n rm rms (f : list(params * stmt))
   :
-    Lv = (slot_merge slot Λ)
-    -> live_sound Imperative ZL Lv s lv
-    -> spill_sound k ZL Λ (R,M) s sl
+    lv = (slot_merge slot λ)
+    -> live_sound imperative zl lv s lv
+    -> spill_sound k zl λ (r,m) s sl
     -> some_spill_live sl lv
-    -> getAnn (spill_live Lv ZL G (do_spill slot s sl)
-                                  (discard_merge_sl slot (do_spill_rm slot sl)))
-      ⊆ getAnn lv ∪ G
+    -> get rms n rm
+    -> get f n (z,s)
+    -> getann
+   (spill_live (slot_merge slot (rms ++ λ)) (slot_lift_params slot ⊜ (fst ⊝ f ++ zl) (rms ++ λ))
+      (of_list (slot_lift_params slot z (r,m))) (do_spill slot s sl)
+      (discard_merge_sl slot (do_spill_rm slot sl))) ⊆ r ∪ map slot m
 .
-Proof.
-  intros Lv_Λ lvSnd spSnd ssl.
-  general induction lvSnd;
+proof.
+  intros lv_λ lvsnd spsnd ssl get_rms get_f.
+  general induction lvsnd;
     invt spill_sound;
     invt some_spill_live;
-    apply spill_live_small_s;
+(*    apply spill_live_small_s;*)
 
     simpl; eauto.
   - rewrite empty_cardinal. simpl.
-    rewrite IHlvSnd.
-    assert (Sp ⊆ R) as spr. { admit. }
-    assert (L  ⊆ M) as lm.  { admit. }
-    assert (lv [=] R ∪ M) as lvRM. { admit. }
-    rewrite lvRM.
-    rewrite H11.
+    rewrite ihlvsnd.
+    assert (sp ⊆ r) as spr. { admit. }
+    assert (l  ⊆ m) as lm.  { admit. }
+    assert (lv [=] r ∪ m) as lvrm. { admit. }
+    rewrite lvrm.
+    rewrite h11.
 
 Admitted.
-
+*)
 
 
 Lemma injective_ann
@@ -619,6 +622,67 @@ Proof.
   - isabsurd.
   - f_equal. apply IHrms; eauto.
 Qed.
+
+(*
+
+Lemma dscrd_sl_F'
+      rms F sl_F slot
+  :
+    length F = length sl_F
+    -> length F = length rms
+    -> (fun (rm : ⦃var⦄) (ps0 : params * stmt) => rm ∪ of_list (fst ps0))
+            ⊜ (slot_merge slot rms)
+            ((fun (Zs : params * stmt)
+                (sls_rm : ann (⦃var⦄ * ⦃var⦄ * ؟ 〔⦃var⦄ * ⦃var⦄〕) * (⦃var⦄ * ⦃var⦄)) =>
+              let (sl_s, rm) := sls_rm in
+              (slot_lift_params slot (fst Zs) rm, do_spill slot (snd Zs) sl_s)) ⊜ F
+             ((fun (sl_s : ann (⦃var⦄ * ⦃var⦄ * ؟ 〔⦃var⦄ * ⦃var⦄〕)) (rm : ⦃var⦄ * ⦃var⦄) =>
+                 (sl_s, rm)) ⊜ sl_F rms))
+    = (fun (rm : ⦃var⦄) (ps : params * stmt) => rm ∪ of_list (fst ps))
+        ⊜ (slot_merge slot rms) ((fun Zs rm => (slot_lift_params slot (fst Zs) rm,snd Zs))
+                                   ⊜ F rms)
+.
+Proof.
+  intros len_slF len_rms.
+  general induction rms;
+    simpl in *; eauto.
+  destruct F;
+    simpl in *; eauto.
+  destruct sl_F;
+    simpl in *; eauto.
+  - isabsurd.
+  - f_equal. apply IHrms; eauto.
+Qed.
+
+ *)
+
+
+Lemma slot_lift_params_app
+      L1 L2 L1' L2' slot
+  :
+    length L1 = length L1'
+    -> slot_lift_params slot ⊜ L1 L1' ++ slot_lift_params slot ⊜ L2 L2'
+      = slot_lift_params slot ⊜ (L1 ++ L2) (L1' ++ L2')
+.
+Proof.
+  intros.
+  rewrite zip_app; eauto with len.
+Qed.
+
+
+Lemma slot_merge_app
+      (L1 L2: list (set var * set var))
+      (slot : var -> var)
+  :
+    slot_merge slot L1 ++ slot_merge slot L2
+      = slot_merge slot (L1 ++ L2)
+.
+Proof.
+  intros.
+  unfold slot_merge.
+  rewrite map_app; eauto.
+Qed.
+
 
 Lemma spill_live_sound
       (k : nat)
@@ -740,7 +804,7 @@ general induction lvSound;
   intros G'.
 
   econstructor;  simpl in *; eauto.
-  + rewrite fst_F; eauto. rewrite dscrd_sl_F; eauto.
+  + rewrite fst_F; eauto.
     apply live_sound_monotone with (LV:= slot_merge slot rms ++ slot_merge slot Λ).
     * apply live_sound_ann_ext with (lv:= spill_live
         (slot_merge slot rms ++ slot_merge slot Λ)
@@ -752,26 +816,15 @@ general induction lvSound;
          apply PIR2_app.
          ++ apply PIR2_get.
             ** intros.
-               unfold slot_merge in H4.
-               inv_get.
-               exploit H2 as A; eauto; dcr.
-               unfold slot_lift_params.
-               simpl.
-               rewrite of_list_elements.
-               assert (forall s t, map slot (s ∩ t) [=] map slot s ∩ map slot t) as map7.
-               { admit. } (* we need assumptions on slot *)
-               rewrite map7.
-               revert H13; clear; cset_tac.
-           ** rewrite zip_length2; eauto with len.
+               erewrite get_get_eq with (x:=x)
+                                        (x':=x')
+                                        (L:=slot_merge slot rms)
+                                        (n:=n); eauto.
+           ** reflexivity.
          ++ apply PIR2_refl; eauto.
-      -- assert (slot_lift_params slot ⊜ (fst ⊝ F) rms ++ slot_lift_params slot ⊜ ZL Λ
-                 = slot_lift_params slot ⊜ (fst ⊝ F ++ ZL) (rms ++ Λ)) as rear_slp.
-         { rewrite zip_app; eauto with len. }
-         rewrite rear_slp.
-         assert (slot_merge slot rms ++ slot_merge slot Λ
-                 = slot_merge slot (rms ++ Λ)) as rear_sm.
-         { unfold slot_merge. rewrite map_app. reflexivity. }
-         rewrite rear_sm.
+      --
+         rewrite slot_lift_params_app; eauto with len.
+         rewrite slot_merge_app.
          eapply IHlvSound; eauto.
          ** unfold merge.
             rewrite map_app.
@@ -785,36 +838,58 @@ general induction lvSound;
             unfold slot_merge in H5.
             inv_get; simpl.
             admit.
-            (* TODO
-            apply ann_R_get.
-            apply spill_live_subset.
-            apply PIR2_app.
-            Focus 2. apply PIR2_refl. unfold Reflexive. apply subset_refl.
-            apply PIR2_get.
-            intros n0 a b get_a get_b.
-            apply get_zip in get_a.
-            destruct get_a as [x [y [get_x [get_y eq_a]]]].
-            apply map_get_4 in get_x.
-            destruct get_x as [x' [get_x' eq_x]].
-            apply map_get_4 in get_b.
-            destruct get_b as [y' [get_y' eq_b]].
-            apply get_get_eq with (x':=x') in get_y'; eauto.
-            ** subst.
-               specialize (H2 n0 y x' get_y get_x').
-               clear - H2. cset_tac.
-            ** rewrite zip_length2; eauto.
-               rewrite Coqlib.list_length_map; eauto. *)
-         ++ unfold slot_merge. eauto with len.
+         ++ unfold slot_merge.
             do 2 rewrite Coqlib.list_length_map; eauto.
             do 2 rewrite zip_length2; eauto with len.
       -- apply PIR2_refl; eauto.
-  + set (A := (fun (Zs : params * stmt) (sl_s : ann (⦃var⦄ * ⦃var⦄ * ؟ 〔⦃var⦄ * ⦃var⦄〕)) =>
-                 (fst Zs, do_spill slot (snd Zs) sl_s)) ⊜ F sl_F).
-    symmetry. apply zip_length2.
+  + symmetry. apply zip_length2.
     repeat rewrite Coqlib.list_length_map.
-    subst A.
     rewrite zip_length2; eauto with len.
-  + admit.
+  + intros.
+    inv_get.
+    simpl.
+    rewrite fst_F; eauto.
+    rewrite slot_merge_app.
+    rewrite slot_lift_params_app.
+    apply live_sound_monotone with (LV:=slot_merge slot rms ++ slot_merge slot Λ).
+     * apply live_sound_ann_ext with (lv:= spill_live
+        (slot_merge slot rms ++ slot_merge slot Λ)
+        (slot_lift_params slot ⊜ ((fst ⊝ F) ++ ZL) (rms ++ Λ))
+        (of_list (slot_lift_params slot (fst x) x3))
+        (do_spill slot (snd x) x2)
+        (discard_merge_sl slot (do_spill_rm slot x2))).
+       -- apply spill_live_equal.
+          rewrite <- slot_merge_app.
+          apply PIR2_app.
+          ++ apply PIR2_get.
+             ** intros.
+                erewrite get_get_eq with (x:=x1)
+                                           (x':=x')
+                                           (L:=slot_merge slot rms)
+                                           (n:=n0); eauto.
+           ** reflexivity.
+         ++ apply PIR2_refl; eauto.
+      -- rewrite slot_merge_app.
+         eapply H1 with (R:=fst x3) (M:=snd x3); eauto.
+         ** eapply H23 ; eauto.
+            rewrite injective_projections with (p2:=x3); eauto.
+         ** unfold merge.
+            rewrite map_app.
+            rewrite <- H10.
+            reflexivity.
+         ** apply PIR2_app; eauto.
+            apply PIR2_refl; eauto.
+    * apply PIR2_app with (L2:=slot_merge slot Λ).
+      -- apply PIR2_get.
+         ++ intros.
+            unfold slot_merge in H14.
+            inv_get; simpl.
+            admit.
+         ++ unfold slot_merge.
+            do 2 rewrite Coqlib.list_length_map; eauto.
+            do 2 rewrite zip_length2; eauto with len.
+      -- apply PIR2_refl; eauto.
+    * eauto with len.
   + intros.
     inv_get.
     simpl.
