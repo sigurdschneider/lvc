@@ -125,9 +125,9 @@ Qed.
 
 
 
-Lemma live_sound_monotone3 ZL Lv s lv lv'
+Lemma live_sound_ann_ext ZL Lv s lv lv'
   :
-    ann_R (Equal_pw ⦃var⦄ var In) lv lv'
+    ann_R Equal lv lv'
     -> live_sound Imperative ZL Lv s lv
     -> live_sound Imperative ZL Lv s lv'
 .
@@ -154,36 +154,22 @@ Proof.
     assert (PIR2 Subset (getAnn ⊝ bns ++ Lv) (getAnn ⊝ als ++ Lv))
       as pir2_als_bns.
     { apply PIR2_app.
-      - apply PIR2_get.
-        Focus 2. do 2 rewrite map_length. eauto.
-        intros n x x' get_x get_x'.
-        apply map_get_4 in get_x.
-        destruct get_x as [y [get_y xeq]].
-        apply map_get_4 in get_x'.
-        destruct get_x' as [y' [get_y' yeq]].
-        apply H6 with (b:=y) in get_y' as H6'; eauto.
-        apply ann_R_get in H6'.
-        subst.
-        rewrite H6'.
-        reflexivity.
-      - apply PIR2_refl.
-        unfold Reflexive.
-        apply subset_refl.
+      - apply PIR2_get; eauto with len.
+        intros; inv_get.
+        exploit H6 as EQ; eauto.
+        eapply ann_R_get in EQ. rewrite EQ. reflexivity.
+      - apply PIR2_refl; eauto.
     }
     econstructor; simpl; eauto;
       try rewrite <- H0; eauto.
     + apply live_sound_monotone with (LV:=getAnn ⊝ als ++ Lv); eauto.
     + rewrite <- H5. eauto.
-    + intros.
-      assert (exists a', get als n a') as [a' get_a'].
-      { apply get_length_eq with (L:=bns) (x:=a); eauto. }
+    + intros. inv_get.
       apply live_sound_monotone with (LV:=getAnn ⊝ als ++ Lv); eauto.
-    + intros. simpl in H2.
-      assert (exists a', get als n a') as [a' get_a'].
-      { apply get_length_eq with (L:=bns) (x:=a); eauto. }
-      apply H6 with (b:=a) in get_a' as H6'; eauto.
-      apply ann_R_get in H6'.
-      rewrite <- H6'.
+    + intros. simpl in H2. inv_get.
+      exploit H6 as EQ; eauto.
+      apply ann_R_get in EQ.
+      rewrite <- EQ.
       apply H2 with (n:=n); eauto.
     + rewrite <- H4. rewrite <- H7'. eauto.
 Qed.
@@ -205,170 +191,80 @@ Proof.
   - apply IHget_x. assumption.
 Qed.
 
-Lemma spill_live_setequal Lv Lv' ZL G s sl
-  :
-    PIR2 (Equal_pw ⦃var⦄ var In) Lv Lv'
-    -> ann_R (Equal_pw ⦃var⦄ var In)
-             (spill_live Lv  ZL G s sl)
-             (spill_live Lv' ZL G s sl)
-.
-Proof.
-  intros pir2.
-  apply PIR2_length in pir2 as pir2_len; eauto.
-  general induction s;
-    general induction sl;
-    unfold spill_live; simpl; eauto.
-  - econstructor; eauto.
-    specialize (IHs Lv Lv' ZL (singleton x) sl pir2).
-    apply ann_R_get in IHs; eauto.
-    rewrite IHs.
-    reflexivity.
-  - econstructor; eauto.
-    specialize (IHs1 Lv Lv' ZL ∅ sl1 pir2).
-    apply ann_R_get in IHs1; eauto.
-    rewrite IHs1.
-    specialize (IHs2 Lv Lv' ZL ∅ sl2 pir2).
-    apply ann_R_get in IHs2; eauto.
-    rewrite IHs2.
-    reflexivity.
-  - econstructor; simpl; eauto.
-    enough (nth l Lv ∅ [=] nth l Lv' ∅) as nth_eq.
-    + rewrite nth_eq.
-      reflexivity.
-    + decide (l >= length Lv).
-      * rewrite nth_overflow; eauto.
-        rewrite nth_overflow; eauto.
-        rewrite <- pir2_len. eauto.
-      * apply not_ge in n.
-        apply get_in_range in n as range.
-        rewrite pir2_len in n.
-        apply get_in_range in n as range'.
-        destruct range as [x get_x].
-        destruct range' as [x' get_x'].
-        apply PIR2_nth with (l:=l) (blk:=x)
-          in pir2 as [blk [get_blk blk_eq]]; eauto.
-        apply get_get_eq with (x':=x') in get_blk; eauto.
-        subst.
-        rewrite get_nth with (m:=x); eauto.
-        rewrite blk_eq.
-        symmetry.
-        rewrite get_nth with (m:=x'); eauto.
-  - destruct a; econstructor; eauto.
-    + specialize (IHs ((fun (rm : ⦃var⦄) (ps : params * stmt)
-                        => rm ∪ of_list (fst ps)) ⊜ l F ++ Lv)
-                      ((fun (rm : ⦃var⦄) (ps : params * stmt)
-                        => rm ∪ of_list (fst ps)) ⊜ l F ++ Lv')
-                      (fst ⊝ F ++ ZL) ∅ sl).
-      apply ann_R_get in IHs; eauto.
-      * rewrite IHs.
-        reflexivity.
-      * apply PIR2_app; eauto.
-      * do 2 rewrite app_length.
-        rewrite pir2_len.
-        reflexivity.
-    + do 2 rewrite zip_length.
-      reflexivity.
-    + intros.
-      apply get_zip in H.
-      destruct H as [x [y [get_x [get_y eq_a]]]].
-      apply get_zip in H0.
-      destruct H0 as [x' [y' [get_x' [get_y' eq_b]]]].
-      apply get_get_eq with (L:=F) (n:=n) (x':=x) in get_x'; eauto.
-      apply get_get_eq with (L:=sa)(n:=n) (x':=y) in get_y'; eauto.
-      admit.
-    + specialize (IHs ((fun (rm : ⦃var⦄) (ps : params * stmt)
-                        => rm ∪ of_list (fst ps)) ⊜ l F ++ Lv)
-                      ((fun (rm : ⦃var⦄) (ps : params * stmt)
-                        => rm ∪ of_list (fst ps)) ⊜ l F ++ Lv')
-                      (fst ⊝ F ++ ZL) ∅ sl).
-      apply IHs.
-      * apply PIR2_app; eauto.
-      * do 2 rewrite app_length.
-        rewrite pir2_len.
-        reflexivity.
-    + reflexivity.
-Admitted.
-
 Lemma spill_live_subset Lv Lv' ZL G s sl
   :
     PIR2 Subset Lv Lv'
-    -> ann_R  Subset
-             (spill_live Lv  ZL G s sl)
-             (spill_live Lv' ZL G s sl)
-.
-    intros pir2.
-  apply PIR2_length in pir2 as pir2_len; eauto.
-  general induction s;
-    general induction sl;
-    unfold spill_live; simpl; eauto.
-  - econstructor; eauto.
-    specialize (IHs Lv Lv' ZL (singleton x) sl pir2).
-    apply ann_R_get in IHs; eauto.
-    rewrite IHs.
+    -> ann_R Subset
+            (spill_live Lv  ZL G s sl)
+            (spill_live Lv' ZL G s sl).
+Proof.
+  intros H.
+  revert Lv Lv' H ZL G sl.
+  sind s; intros; destruct s, sl; simpl; try econstructor; eauto;
+    try eapply IH; eauto.
+  - exploit (IH s); eauto.
+    rewrite (ann_R_get H0); eauto.
+  - exploit (IH s1); eauto.
+    exploit (IH s2); eauto.
+    rewrite (ann_R_get H0); eauto.
+    rewrite (ann_R_get H1); eauto.
+  - destruct (get_dec Lv l) as [[? ?]|].
+    + PIR2_inv.
+      rewrite (get_nth _ g); eauto.
+      rewrite (get_nth _ H1); eauto.
+      rewrite H0. reflexivity.
+    + PIR2_inv.
+      rewrite not_get_nth_default; eauto.
+      rewrite (not_get_nth_default _ H0); eauto.
+  - destruct a; simpl; econstructor.
+    exploit (IH s). eauto. Focus 2.
+    rewrite (ann_R_get H0); eauto. reflexivity.
+    eapply PIR2_app; eauto with len.
+    repeat rewrite zip_length; eauto.
+    intros; inv_get.
+    eapply IH; eauto.
+    eapply PIR2_app; eauto with len.
+    eapply IH; eauto.
+    eapply PIR2_app; eauto with len.
     reflexivity.
-  - econstructor; eauto.
-    specialize (IHs1 Lv Lv' ZL ∅ sl1 pir2).
-    apply ann_R_get in IHs1; eauto.
-    rewrite IHs1.
-    specialize (IHs2 Lv Lv' ZL ∅ sl2 pir2).
-    apply ann_R_get in IHs2; eauto.
-    rewrite IHs2.
+Qed.
+
+Lemma spill_live_equal Lv Lv' ZL G s sl
+  : PIR2 Equal Lv Lv'
+    -> ann_R Equal
+            (spill_live Lv  ZL G s sl)
+            (spill_live Lv' ZL G s sl).
+Proof.
+  intros H.
+  revert Lv Lv' H ZL G sl.
+  sind s; intros; destruct s, sl; simpl; try econstructor; eauto;
+    try eapply IH; eauto.
+  - exploit (IH s); eauto.
+    rewrite (ann_R_get H0); eauto.
+  - exploit (IH s1); eauto.
+    exploit (IH s2); eauto.
+    rewrite (ann_R_get H0); eauto.
+    rewrite (ann_R_get H1); eauto.
+  - destruct (get_dec Lv l) as [[? ?]|].
+    + PIR2_inv.
+      rewrite (get_nth _ g); eauto.
+      rewrite (get_nth _ H1); eauto.
+      rewrite H0. reflexivity.
+    + PIR2_inv.
+      rewrite not_get_nth_default; eauto.
+      rewrite (not_get_nth_default _ H0); eauto.
+  - destruct a; simpl; econstructor.
+    exploit (IH s). eauto. Focus 2.
+    rewrite (ann_R_get H0); eauto. reflexivity.
+    eapply PIR2_app; eauto with len.
+    repeat rewrite zip_length; eauto.
+    intros; inv_get.
+    eapply IH; eauto.
+    eapply PIR2_app; eauto with len.
+    eapply IH; eauto.
+    eapply PIR2_app; eauto with len.
     reflexivity.
-  - econstructor; simpl; eauto.
-    enough (nth l Lv ∅ ⊆ nth l Lv' ∅) as nth_eq.
-    + rewrite nth_eq.
-      reflexivity.
-    + decide (l >= length Lv).
-      * rewrite nth_overflow; eauto.
-        rewrite nth_overflow; eauto.
-        rewrite <- pir2_len. eauto.
-      * apply not_ge in n.
-        apply get_in_range in n as range.
-        rewrite pir2_len in n.
-        apply get_in_range in n as range'.
-        destruct range as [x get_x].
-        destruct range' as [x' get_x'].
-        apply PIR2_nth with (l:=l) (blk:=x)
-          in pir2 as [blk [get_blk blk_eq]]; eauto.
-        apply get_get_eq with (x':=x') in get_blk; eauto.
-        subst.
-        rewrite get_nth with (m:=x); eauto.
-        rewrite blk_eq.
-        rewrite get_nth with (m:=x'); eauto.
-  - destruct a; econstructor; eauto.
-    + specialize (IHs ((fun (rm : ⦃var⦄) (ps : params * stmt)
-                        => rm ∪ of_list (fst ps)) ⊜ l F ++ Lv)
-                      ((fun (rm : ⦃var⦄) (ps : params * stmt)
-                        => rm ∪ of_list (fst ps)) ⊜ l F ++ Lv')
-                      (fst ⊝ F ++ ZL) ∅ sl).
-      apply ann_R_get in IHs; eauto.
-      * rewrite IHs.
-        reflexivity.
-      * apply PIR2_app; eauto.
-      * do 2 rewrite app_length.
-        rewrite pir2_len.
-        reflexivity.
-    + do 2 rewrite zip_length.
-      reflexivity.
-    + intros.
-      apply get_zip in H.
-      destruct H as [x [y [get_x [get_y eq_a]]]].
-      apply get_zip in H0.
-      destruct H0 as [x' [y' [get_x' [get_y' eq_b]]]].
-      apply get_get_eq with (L:=F) (n:=n) (x':=x) in get_x'; eauto.
-      apply get_get_eq with (L:=sa)(n:=n) (x':=y) in get_y'; eauto.
-      admit.
-    + specialize (IHs ((fun (rm : ⦃var⦄) (ps : params * stmt)
-                        => rm ∪ of_list (fst ps)) ⊜ l F ++ Lv)
-                      ((fun (rm : ⦃var⦄) (ps : params * stmt)
-                        => rm ∪ of_list (fst ps)) ⊜ l F ++ Lv')
-                      (fst ⊝ F ++ ZL) ∅ sl).
-      apply IHs.
-      * apply PIR2_app; eauto.
-      * do 2 rewrite app_length.
-        rewrite pir2_len.
-        reflexivity.
-Admitted.
+Qed.
 
 
 Lemma spill_live_G
@@ -615,9 +511,11 @@ Lemma spill_live_small
 Proof.
   intros Lv_Λ lvSnd spSnd ssl.
   general induction lvSnd;
-    inversion spSnd;
-    inversion ssl;
+    invt spill_sound;
+    invt some_spill_live;
     simpl; eauto.
+  -
+
 
 Admitted.
 
@@ -647,6 +545,9 @@ Proof.
     eauto.
 Qed.
 
+Definition merge := List.map (fun (RM : set var * set var)
+                                  => fst RM ∪ snd RM).
+
 Lemma spill_live_sound
       (k : nat)
       (slot : var -> var)
@@ -654,14 +555,15 @@ Lemma spill_live_sound
       (G : set var)
       (Λ : list (set var * set var))
       (R M : set var)
-      (Lv : list (set var))
       (s : stmt)
+      (Lv : list (set var))
       (sl : ann (set var * set var * option (list (set var * set var))))
       (alv : ann (set var))
   :  app_expfree s
    -> spill_sound k ZL Λ (R,M) s sl
    -> some_spill_live slot sl alv
-   -> live_sound Imperative ZL (slot_merge slot Λ) s alv
+   -> PIR2 Equal (merge Λ) Lv
+   -> live_sound Imperative ZL Lv s alv
    -> live_sound Imperative ZL (slot_merge slot Λ)
                 (do_spill slot s sl)
                 (spill_live (slot_merge slot Λ) ZL G
@@ -669,13 +571,12 @@ Lemma spill_live_sound
                             (discard_merge_sl slot (do_spill_rm slot sl))).
 
 Proof.
-intros aeFree spillSound sSpillLv lvSound.
+intros aeFree spillSound sSpillLv PEQ lvSound.
 
 general induction lvSound;
-  inversion_clear aeFree;
-  inversion sSpillLv;
-  inversion spillSound;
-  subst sl;
+  invc aeFree;
+  inv sSpillLv;
+  inv spillSound;
   apply spill_live_sound_s;
   try apply sub_spill_refl; eauto.
 
@@ -843,90 +744,24 @@ general induction lvSound;
   + rewrite fst_F; eauto. rewrite dscrd_sl_F.
     rewrite H10.
     apply live_sound_monotone with (LV:= getAnn ⊝ als ++ slot_merge slot Λ).
-    * apply live_sound_monotone3 with (lv:= spill_live
+    * apply live_sound_ann_ext with (lv:= spill_live
         (getAnn ⊝ als ++ slot_merge slot Λ)
         (fst ⊝ F ++ ZL) ∅ (do_spill slot t sl_t)
         (discard_merge_sl slot (do_spill_rm slot sl_t))).
-      -- apply spill_live_setequal.
+      -- apply spill_live_equal.
          apply PIR2_app.
          ++ apply PIR2_get.
-            ** intros n x x' get_x get_x'.
-               apply map_get_4 in get_x.
-               destruct get_x as [y [get_y x_eq]].
-               apply get_zip in get_x'.
-               destruct get_x' as [al [ps [get_al [get_ps x'_eq]]]].
-               apply map_get_4 in get_al.
-               destruct get_al as [a [get_a al_eq]].
-               apply get_get_eq with (x:=y) in get_a; eauto.
-               subst.
-               specialize (H2 n ps a get_ps get_y).
-               clear - H2. destruct H2.
-               change (Equal_pw ⦃var⦄ var In (getAnn a) (getAnn a ∪ of_list (fst ps)))
-               with (getAnn a [=] getAnn a ∪ of_list (fst ps)).
-               cset_tac.
-            ** rewrite zip_length2; eauto.
-               rewrite Coqlib.list_length_map.
-               eauto.
-         ++ apply PIR2_refl.
-            unfold Reflexive.
-            intros.
-            change (Equal_pw ⦃var⦄ var In x x)
-            with (x [=] x).
-            eauto with cset.
+           ** intros; inv_get.
+              exploit H2 as A; eauto; dcr.
+              revert H13; clear; cset_tac.
+           ** rewrite zip_length2; eauto with len.
+         ++ apply PIR2_refl; eauto.
       -- eapply IHlvSound; eauto.
          rewrite <- H10.
-         unfold slot_merge.
-         symmetry.
-         apply Coqlib.list_append_map.
+         unfold slot_merge. rewrite map_app. reflexivity.
     * apply PIR2_app with (L2:=slot_merge slot Λ).
       -- apply PIR2_get.
-         ++ intros n x x' get_x get_x'.
-            apply map_get_4 in get_x.
-            destruct get_x as [a [get_a eq_a]].
-            apply map_get_4 in get_x'.
-            destruct get_x' as [al [get_al eq_al]].
-            apply get_zip in get_a.
-            destruct get_a as [ps [rm_s [get_ps [get_rm_s eq_a']]]].
-            apply get_zip in get_ps.
-            destruct get_ps as [ps' [ sl' [get_ps' [get_sl' eq_ps]]]].
-            apply map_get_4 in get_rm_s.
-            destruct get_rm_s as [sl'' [ get_sl'' eq_rm_s]].
-            apply map_get_4 in get_sl''.
-            destruct get_sl'' as [sl''' [get_sl''' eq_sl'']].
-            subst.
-            simpl.
-            apply get_get_eq with (x':=sl') in get_sl'''; eauto.
-            subst.
-
-            (* the following conjecture might be unprovable/wrong *)
-            assert (getAnn (spill_live (getAnn ⊝ als ++ slot_merge slot Λ)
-                                       (fst ⊝ F ++ ZL)
-                                       (of_list (fst ps'))
-                                       (do_spill slot (snd ps') sl')
-                                       (discard_merge_sl slot (do_spill_rm slot sl')))
-                           ⊆ getAnn al) as splvsmall.
-            {
-              specialize (H2 n ps' al get_ps' get_al).
-              assert (exists rm, get rms n rm) as [rm get_rm].
-              {
-                apply get_length_eq with (L:=F) (x:=ps'); eauto.
-              }
-              erewrite spill_live_small with (lv:=al)
-                                             ( Λ:=rms ++ Λ )
-                                             ( k:=k )
-                                             ( R:=fst rm )
-                                             ( M:=snd rm );
-              eauto with cset.
-              ** unfold slot_merge.
-                 rewrite Coqlib.list_append_map.
-                 rewrite <- H10.
-                 unfold slot_merge.
-                 reflexivity.
-              ** apply H24 with (n:=n); eauto.
-                 replace (fst rm, snd rm) with rm; eauto.
-                 apply injective_projections; simpl; eauto.
-            }
-            rewrite <- splvsmall.
+         ++ intros; inv_get; simpl.
             apply ann_R_get.
             apply spill_live_subset.
             apply PIR2_app.
@@ -959,6 +794,7 @@ general induction lvSound;
     rewrite zip_length2; eauto.
   + assert (fst Zs = fst Zs') as fst_ZsZs'.
     { rewrite <- Zs_eq. simpl. reflexivity. }
+    eapply H1.
     admit.
   + assert (fst Zs = fst Zs') as fst_ZsZs'.
     { rewrite <- Zs_eq. simpl. reflexivity. }

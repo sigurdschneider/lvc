@@ -2,34 +2,25 @@ Require Import List Map Env AllInRel Exp AppExpFree.
 Require Import IL Annotation InRel AutoIndTac Liveness LabelsDefined.
 Require Import SimI Spilling SpillUtil.
 
-Fixpoint do_spill
-         (slot : var -> var)
-         (s : stmt)
-         (sl0 : ann (set var * set var * option(list(set var * set var))))
-         {struct s}
-  : stmt :=
 
-
-
-  let Sp0 := fst (fst (getAnn sl0)) in
-  let L0  := snd (fst (getAnn sl0)) in
-  let rm  := snd (getAnn sl0) in
-
-(fix f sl n {struct n} :=
+Definition do_spill' (slot : var -> var) (do_spill : forall
+                         (s : stmt)
+                         (sl0 : ann (set var * set var * option(list(set var * set var)))),
+                         stmt) s rm := fix f sl n {struct n} :=
   let Sp := fst (fst (getAnn sl)) in
   let L  := snd (fst (getAnn sl)) in
   match n with
     | 0 =>
      match s,sl with
      | stmtLet x e s, ann1 _ sl_s
-       => stmtLet x e (do_spill slot s sl_s)
+       => stmtLet x e (do_spill s sl_s)
      | stmtIf e s t, ann2 _ sl_s sl_t
-       => stmtIf e (do_spill slot s sl_s) (do_spill slot t sl_t)
+       => stmtIf e (do_spill s sl_s) (do_spill t sl_t)
      | stmtFun F t, annF _ sl_F sl_t
        => stmtFun
             ((fun Zs sl_s => (fst Zs (* todo: really? I think it's fine *)
-                                    , do_spill slot (snd Zs) sl_s)) ⊜ F sl_F)
-                           (do_spill slot t sl_t)
+                                    , do_spill (snd Zs) sl_s)) ⊜ F sl_F)
+                           (do_spill t sl_t)
 
      | _,_
        => s
@@ -44,14 +35,14 @@ Fixpoint do_spill
     then
      match s,sl with
      | stmtLet x e s, ann1 _ sl_s
-       => stmtLet x e (do_spill slot s sl_s)
+       => stmtLet x e (do_spill s sl_s)
      | stmtIf e s t, ann2 _ sl_s sl_t
-       => stmtIf e (do_spill slot s sl_s) (do_spill slot t sl_t)
+       => stmtIf e (do_spill s sl_s) (do_spill t sl_t)
      | stmtFun F t, annF _ sl_F sl_t
        => stmtFun
             ((fun Zs sl_s => (fst Zs (* todo: really? I think it's fine *)
-                                    , do_spill slot (snd Zs) sl_s)) ⊜ F sl_F)
-                           (do_spill slot t sl_t)
+                                    , do_spill (snd Zs) sl_s)) ⊜ F sl_F)
+                           (do_spill t sl_t)
 
      | _,_
        => s
@@ -66,8 +57,18 @@ Fixpoint do_spill
     let x  := hd 0 (elements Sp) in
     let Sp':= of_list (tl (elements Sp)) in
     stmtLet (slot x) (Operation (Var x)) (f (setTopAnn sl (Sp',L,rm)) n)
-  end
-) sl0 (cardinal Sp0 + cardinal L0)
+  end.
+
+Fixpoint do_spill
+         (slot : var -> var)
+         (s : stmt)
+         (sl0 : ann (set var * set var * option(list(set var * set var))))
+         {struct s}
+  : stmt :=
+  let Sp0 := fst (fst (getAnn sl0)) in
+  let L0  := snd (fst (getAnn sl0)) in
+  let rm  := snd (getAnn sl0) in
+  do_spill' slot (do_spill slot) s rm sl0 (cardinal Sp0 + cardinal L0)
 .
 
 
@@ -140,7 +141,7 @@ Proof.
     simpl;
     rewrite card_Sp;
     rewrite nL_card_S;
-    rewrite getAnn_setTopAnn;
+    rewrite getAnn_setTopAnn; simpl;
     rewrite card_Sp;
     simpl;
     subst x;
