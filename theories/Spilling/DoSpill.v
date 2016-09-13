@@ -3,6 +3,14 @@ Require Import IL Annotation InRel AutoIndTac Liveness LabelsDefined.
 Require Import SimI Spilling SpillUtil.
 
 
+Definition slot_lift_params
+           (slot : var -> var)
+           (Z : params)
+           (rm : set var * set var)
+  :=
+    elements (of_list Z ∩ fst rm ∪ map slot (of_list Z ∩ snd rm))
+.
+
 Definition do_spill' (slot : var -> var) (do_spill : forall
                          (s : stmt)
                          (sl0 : ann (set var * set var * option(list(set var * set var)))),
@@ -10,54 +18,66 @@ Definition do_spill' (slot : var -> var) (do_spill : forall
   let Sp := fst (fst (getAnn sl)) in
   let L  := snd (fst (getAnn sl)) in
   match n with
-    | 0 =>
-     match s,sl with
-     | stmtLet x e s, ann1 _ sl_s
-       => stmtLet x e (do_spill s sl_s)
-     | stmtIf e s t, ann2 _ sl_s sl_t
-       => stmtIf e (do_spill s sl_s) (do_spill t sl_t)
-     | stmtFun F t, annF _ sl_F sl_t
-       => stmtFun
-            ((fun Zs sl_s => (fst Zs (* todo: really? I think it's fine *)
-                                    , do_spill (snd Zs) sl_s)) ⊜ F sl_F)
-                           (do_spill t sl_t)
+  | 0 =>
+    match s,sl with
+    | stmtLet x e s, ann1 _ sl_s
+      => stmtLet x e (do_spill s sl_s)
+    | stmtIf e s t, ann2 _ sl_s sl_t
+      => stmtIf e (do_spill s sl_s) (do_spill t sl_t)
+    | stmtFun F t, annF (_,_,Some rms) sl_F sl_t
+      => stmtFun
+          ((fun Zs sls_rm
+            => let (sl_s,rm) := sls_rm
+                               : ann (set var * set var * option (list (set var * set var)))
+                                 * (set var * set var) in
+              (slot_lift_params slot (fst Zs) rm, do_spill (snd Zs) sl_s))
+             ⊜ F
+             ((fun sl_s rm => (sl_s,rm)) ⊜ sl_F rms))
+          (do_spill t sl_t)
 
-     | _,_
-       => s
-     end
-    | S n =>
+    | _,_
+      => s
+    end
 
-  if
-    [cardinal Sp = 0]
-  then
+  | S n =>
+
     if
-      [cardinal L = 0]
+      [cardinal Sp = 0]
     then
-     match s,sl with
-     | stmtLet x e s, ann1 _ sl_s
-       => stmtLet x e (do_spill s sl_s)
-     | stmtIf e s t, ann2 _ sl_s sl_t
-       => stmtIf e (do_spill s sl_s) (do_spill t sl_t)
-     | stmtFun F t, annF _ sl_F sl_t
-       => stmtFun
-            ((fun Zs sl_s => (fst Zs (* todo: really? I think it's fine *)
-                                    , do_spill (snd Zs) sl_s)) ⊜ F sl_F)
-                           (do_spill t sl_t)
+      if
+        [cardinal L = 0]
+      then
+        match s,sl with
+        | stmtLet x e s, ann1 _ sl_s
+          => stmtLet x e (do_spill s sl_s)
+        | stmtIf e s t, ann2 _ sl_s sl_t
+          => stmtIf e (do_spill s sl_s) (do_spill t sl_t)
+        | stmtFun F t, annF (_,_,Some rms) sl_F sl_t
+          => stmtFun
+              ((fun Zs sls_rm
+                => let (sl_s,rm) := sls_rm
+                                   : ann (set var * set var * option (list (set var * set var)))
+                                     * (set var * set var) in
+                  (slot_lift_params slot (fst Zs) rm, do_spill (snd Zs) sl_s))
+                 ⊜ F
+                 ((fun sl_s rm => (sl_s,rm)) ⊜ sl_F rms))
+              (do_spill t sl_t)
 
-     | _,_
-       => s
-     end
+        | _,_
+          => s
+        end
+
+      else
+        let x := hd 0 (elements L) in
+        let L':= of_list (tl (elements L)) in
+        stmtLet x (Operation (Var (slot x))) (f (setTopAnn sl (Sp,L',rm)) n)
 
     else
-      let x := hd 0 (elements L) in
-      let L':= of_list (tl (elements L)) in
-      stmtLet x (Operation (Var (slot x))) (f (setTopAnn sl (Sp,L',rm)) n)
-
-  else
-    let x  := hd 0 (elements Sp) in
-    let Sp':= of_list (tl (elements Sp)) in
-    stmtLet (slot x) (Operation (Var x)) (f (setTopAnn sl (Sp',L,rm)) n)
-  end.
+      let x  := hd 0 (elements Sp) in
+      let Sp':= of_list (tl (elements Sp)) in
+      stmtLet (slot x) (Operation (Var x)) (f (setTopAnn sl (Sp',L,rm)) n)
+  end
+.
 
 Fixpoint do_spill
          (slot : var -> var)
@@ -88,10 +108,16 @@ Lemma do_spill_empty
        => stmtLet x e (do_spill slot s sl_s)
      | stmtIf e s t, ann2 _ sl_s sl_t
        => stmtIf e (do_spill slot s sl_s) (do_spill slot t sl_t)
-     | stmtFun F t, annF _ sl_F sl_t
+     | stmtFun F t, annF (_,_,Some rms) sl_F sl_t
        => stmtFun
-            ((fun Zs sl_s => (fst Zs, do_spill slot (snd Zs) sl_s)) ⊜ F sl_F)
-            (do_spill slot t sl_t)
+           ((fun Zs sls_rm
+             => let (sl_s,rm) := sls_rm
+                                : ann (set var * set var * option (list (set var * set var)))
+                                  * (set var * set var) in
+               (slot_lift_params slot (fst Zs) rm, do_spill slot (snd Zs) sl_s))
+              ⊜ F
+              ((fun sl_s rm => (sl_s,rm)) ⊜ sl_F rms))
+           (do_spill slot t sl_t)
 
      | _,_
        => s
@@ -200,10 +226,9 @@ Lemma do_spill_empty_invariant
       (slot : var -> var)
       (s : stmt)
       (Sp' L' : set var)
-      (rm : option ( list (set var * set var)))
       (sl sl' : ann (set var * set var * option ( list (set var * set var))))
   :
-    sl' = setTopAnn sl (Sp',L',rm)
+    sl' = setTopAnn sl (Sp',L',snd (getAnn sl))
     -> Empty (fst (fst (getAnn sl)))
     -> Empty (snd (fst (getAnn sl)))
     -> Empty Sp'
@@ -218,5 +243,7 @@ Proof.
   rewrite do_spill_empty;
     try rewrite getAnn_setTopAnn; eauto.
   unfold setTopAnn.
-  induction sl; simpl; reflexivity.
+  destruct sl; eauto.
+  destruct a; destruct p.
+  destruct s; eauto.
 Qed.

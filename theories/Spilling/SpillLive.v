@@ -110,13 +110,10 @@ Proof.
       { econstructor. }
       assert (get (a::als) 0 a) as get_a.
       { econstructor. }
-      specialize (H2 0 p a get_p get_a).
-      destruct H2.
+      exploit H2; eauto.
       change (Equal_pw ⦃var⦄ var In (getAnn a ∪ of_list (fst p)) (getAnn a))
-      with (getAnn a ∪ of_list (fst p) === getAnn a).
-      apply set_incl.
-      -- cset_tac.
-      -- cset_tac.
+      with (getAnn a ∪ of_list (fst p) [=] getAnn a).
+      cset_tac.
     * apply IHals; eauto.
       intros.
       apply H2 with (n:= S(n)); econstructor; eauto.
@@ -350,7 +347,7 @@ induction n_Sp';
     { unfold count. subst Sp'. subst L'.
       rewrite card_Sp'. rewrite card_L'. omega. }
     rewrite do_spill_empty_invariant
-    with (Sp':=∅) (L':=∅) (rm:=rm') (sl':=sl0);
+    with (Sp':=∅) (L':=∅) (sl':=sl0);
       simpl; eauto; try apply empty_1;
       try apply cardinal_Empty; eauto.
 
@@ -469,32 +466,48 @@ Proof.
 Qed.
 
 
+Definition merge := List.map (fun (RM : set var * set var)
+                                  => fst RM ∪ snd RM).
+
 
 Inductive some_spill_live
-          (slot : var -> var)
   :
     ann (set var * set var * option (list (set var * set var))) -> ann (set var) -> Prop
   :=
   | SomeSpLv0 a b
-    : some_spill_live slot (ann0 a) (ann0 b)
+    : some_spill_live (ann0 a) (ann0 b)
   | SomeSpLv1 a b sl lv
-    : some_spill_live slot sl lv
-      -> some_spill_live slot (ann1 a sl) (ann1 b lv)
+    : some_spill_live sl lv
+      -> some_spill_live (ann1 a sl) (ann1 b lv)
   | SomeSpLv2 a b sl1 sl2 lv1 lv2
-    : some_spill_live slot sl1 lv1
-      -> some_spill_live slot sl2 lv2
-      -> some_spill_live slot (ann2 a sl1 sl2) (ann2 b lv1 lv2)
+    : some_spill_live sl1 lv1
+      -> some_spill_live sl2 lv2
+      -> some_spill_live (ann2 a sl1 sl2) (ann2 b lv1 lv2)
   | SomeSpLvF a b sl_F sl_t lv_F lv_t rms
-    : slot_merge slot rms = getAnn ⊝ lv_F
-      -> some_spill_live slot sl_t lv_t
+    : merge rms = getAnn ⊝ lv_F
+      -> some_spill_live sl_t lv_t
       -> (forall n sl_s lv_s,
             get sl_F n sl_s
             -> get lv_F n lv_s
-            -> some_spill_live slot sl_s lv_s
+            -> some_spill_live sl_s lv_s
         )
-      -> some_spill_live slot (annF (a,⎣ rms ⎦) sl_F sl_t)
+      -> some_spill_live (annF (a,⎣ rms ⎦) sl_F sl_t)
                               (annF b lv_F lv_t)
 .
+
+
+Lemma spill_live_small_s
+      sl Lv ZL G sl' lv slot s
+  :
+    getAnn (spill_live Lv ZL G
+                       (do_spill slot s (setTopAnn sl (∅,∅,snd (getAnn sl))))
+                       (discard_merge_sl slot (do_spill_rm' slot 0 sl)))
+                       ⊆ getAnn lv ∪ G
+    -> getAnn (spill_live Lv ZL G (do_spill slot s sl')
+                    (discard_merge_sl slot (do_spill_rm' slot (count sl') sl)))
+                         ⊆ getAnn lv ∪ G
+.
+Admitted.
 
 (* This lemma seems to be wrong *)
 Lemma spill_live_small
@@ -503,7 +516,7 @@ Lemma spill_live_small
     Lv = (slot_merge slot Λ)
     -> live_sound Imperative ZL Lv s lv
     -> spill_sound k ZL Λ (R,M) s sl
-    -> some_spill_live slot sl lv
+    -> some_spill_live sl lv
     -> getAnn (spill_live Lv ZL G (do_spill slot s sl)
                                   (discard_merge_sl slot (do_spill_rm slot sl)))
       ⊆ getAnn lv ∪ G
@@ -513,9 +526,16 @@ Proof.
   general induction lvSnd;
     invt spill_sound;
     invt some_spill_live;
-    simpl; eauto.
-  -
+    apply spill_live_small_s;
 
+    simpl; eauto.
+  - rewrite empty_cardinal. simpl.
+    rewrite IHlvSnd.
+    assert (Sp ⊆ R) as spr. { admit. }
+    assert (L  ⊆ M) as lm.  { admit. }
+    assert (lv [=] R ∪ M) as lvRM. { admit. }
+    rewrite lvRM.
+    rewrite H11.
 
 Admitted.
 
@@ -545,8 +565,60 @@ Proof.
     eauto.
 Qed.
 
-Definition merge := List.map (fun (RM : set var * set var)
-                                  => fst RM ∪ snd RM).
+
+Lemma fst_F
+      F sl_F slot rms
+  :
+    length F = length sl_F
+    -> length F = length rms
+    -> fst
+        ⊝ (fun (Zs : params * stmt)
+             (sls_rm : ann (⦃var⦄ * ⦃var⦄ * ؟ 〔⦃var⦄ * ⦃var⦄〕) * (⦃var⦄ * ⦃var⦄)) =>
+             let (sl_s, rm) := sls_rm in
+             (slot_lift_params slot (fst Zs) rm, do_spill slot (snd Zs) sl_s)) ⊜ F
+        ((fun (sl_s : ann (⦃var⦄ * ⦃var⦄ * ؟ 〔⦃var⦄ * ⦃var⦄〕)) (rm : ⦃var⦄ * ⦃var⦄) => (sl_s, rm))
+           ⊜ sl_F rms)
+        = (slot_lift_params slot ⊜ (fst ⊝ F) rms)
+.
+Proof.
+  intros len.
+
+  general induction F;
+    simpl in *; eauto.
+  destruct sl_F,rms; simpl in *; eauto.
+  + isabsurd.
+  + f_equal. apply IHF; eauto.
+Qed.
+
+
+Lemma dscrd_sl_F
+      rms F sl_F slot
+  :
+    length F = length sl_F
+    -> length F = length rms
+    -> (fun (rm : ⦃var⦄) (ps0 : params * stmt) => rm ∪ of_list (fst ps0))
+            ⊜ (slot_merge slot rms)
+            ((fun (Zs : params * stmt)
+                (sls_rm : ann (⦃var⦄ * ⦃var⦄ * ؟ 〔⦃var⦄ * ⦃var⦄〕) * (⦃var⦄ * ⦃var⦄)) =>
+              let (sl_s, rm) := sls_rm in
+              (slot_lift_params slot (fst Zs) rm, do_spill slot (snd Zs) sl_s)) ⊜ F
+             ((fun (sl_s : ann (⦃var⦄ * ⦃var⦄ * ؟ 〔⦃var⦄ * ⦃var⦄〕)) (rm : ⦃var⦄ * ⦃var⦄) =>
+                 (sl_s, rm)) ⊜ sl_F rms))
+    = (fun (rm : ⦃var⦄) (ps : params * stmt) => rm ∪ of_list (fst ps))
+        ⊜ (slot_merge slot rms) ((fun Zs rm => (slot_lift_params slot (fst Zs) rm,snd Zs))
+                                   ⊜ F rms)
+.
+Proof.
+  intros len_slF len_rms.
+  general induction rms;
+    simpl in *; eauto.
+  destruct F;
+    simpl in *; eauto.
+  destruct sl_F;
+    simpl in *; eauto.
+  - isabsurd.
+  - f_equal. apply IHrms; eauto.
+Qed.
 
 Lemma spill_live_sound
       (k : nat)
@@ -561,12 +633,16 @@ Lemma spill_live_sound
       (alv : ann (set var))
   :  app_expfree s
    -> spill_sound k ZL Λ (R,M) s sl
-   -> some_spill_live slot sl alv
+   -> some_spill_live sl alv
    -> PIR2 Equal (merge Λ) Lv
-   -> live_sound Imperative ZL Lv s alv
-   -> live_sound Imperative ZL (slot_merge slot Λ)
+   -> live_sound Imperative ZL (merge Λ) s alv
+   -> live_sound Imperative
+                (slot_lift_params slot ⊜ ZL Λ)
+                (slot_merge slot Λ)
                 (do_spill slot s sl)
-                (spill_live (slot_merge slot Λ) ZL G
+                (spill_live (slot_merge slot Λ)
+                            (slot_lift_params slot ⊜ ZL Λ)
+                             G
                             (do_spill slot s sl)
                             (discard_merge_sl slot (do_spill_rm slot sl))).
 
@@ -580,11 +656,7 @@ general induction lvSound;
   apply spill_live_sound_s;
   try apply sub_spill_refl; eauto.
 
-- (* tidy up the inversion mess *)
-  apply injective_ann in H15.
-  destruct H15.
-  subst.
-  rename sl0 into sl.
+- rename sl0 into sl.
 
   rewrite do_spill_empty;
     [ | simpl; apply empty_1 | simpl; apply empty_1].
@@ -599,12 +671,7 @@ general induction lvSound;
   +  clear. cset_tac.
   + apply spill_live_G.
 
-- apply injective_ann in H18.
-  repeat destruct H18.
-  subst.
-  rename sl_s into sl1.
-
-  rewrite do_spill_empty;
+- rewrite do_spill_empty;
     [ | simpl; apply empty_1 | simpl; apply empty_1].
   rewrite do_spill_rm_zero.
   rewrite discard_merge_sl_step; simpl.
@@ -618,43 +685,37 @@ general induction lvSound;
   + clear. cset_tac.
   + clear. cset_tac.
 
-- apply injective_ann in H16.
-  subst.
-
-  rewrite do_spill_empty;
+- rewrite do_spill_empty;
     [ | simpl; apply empty_1 | simpl; apply empty_1].
   rewrite do_spill_rm_zero.
   rewrite discard_merge_sl_step; simpl.
 
   intro G'.
-  rewrite get_nth with (m:=Z0).
+
+  assert (get (slot_lift_params slot ⊜ ZL Λ) l (slot_lift_params slot Z0 (R_f,M_f)))
+    as get_slp.
+  { apply zip_get; eauto. }
+  rewrite get_nth with (m:=slot_lift_params slot Z0 (R_f,M_f)); eauto.
   assert (Z = Z0) as eq_Z.
   { apply get_get_eq with (L:=ZL) (n:=counted l); eauto. }
-  assert (blv = R_f ∪ map slot M_f) as eq_blv.
-  {
-    clear - H0 H15.
-    unfold slot_merge in H0.
-    change (R_f ∪ map slot M_f)
-           with ((fun rm => fst rm ∪ map slot (snd rm)) (R_f,M_f)).
-    eapply map_get; eauto.
-  }
-  econstructor; simpl in *; eauto; rewrite <- eq_Z; eauto.
-  + rewrite get_nth with (m:=blv).
-    * cset_tac.
-    * assumption.
-  + subst Z0.
-    rewrite get_nth with (m:=blv); eauto.
-    intros n y get_y.
+  subst Z0.
+  assert (get (slot_merge slot Λ) l (R_f ∪ map slot M_f)) as get_rfmf.
+  { apply map_get_eq with (x:=(R_f,M_f)); simpl; eauto. }
+
+  econstructor; simpl in *; eauto;
+    [ erewrite get_nth
+    | unfold slot_lift_params; eauto with len
+    | erewrite get_nth ]
+    ; eauto.
+  + clear. cset_tac.
+  + admit. (* We need some new assumptions to prove this *)
+  + intros n y get_y.
     apply live_op_sound_incl with (lv':=Op.freeVars y).
     * apply Op.live_freeVars.
     * repeat apply incl_union_left.
       eapply get_list_union_map; eauto.
-  + eauto.
 
-- apply injective_ann in H8.
-  subst.
-
-  rewrite do_spill_empty;
+- rewrite do_spill_empty;
     [ | simpl; apply empty_1 | simpl; apply empty_1].
   rewrite do_spill_rm_zero.
   rewrite discard_merge_sl_step; simpl.
@@ -664,14 +725,10 @@ general induction lvSound;
     * apply Op.live_freeVars.
     * clear. cset_tac.
 
-- apply injective_ann in H23.
-  repeat destruct H23.
-  inversion H9.
-  clear H9.
-  subst.
-  rename sl_F0 into sl_F.
 
-  specialize (IHlvSound k slot).
+
+
+- specialize (IHlvSound k slot).
   change (snd (getAnn (annF (Sp, L, ⎣ rms ⎦) sl_F sl_t)))
     with (⎣ rms ⎦).
   change (setTopAnn (annF (Sp, L, ⎣ rms ⎦) sl_F sl_t) (∅, ∅, ⎣ rms ⎦))
@@ -682,86 +739,53 @@ general induction lvSound;
   rewrite discard_merge_sl_step; simpl.
   intros G'.
 
-  assert (forall F sl_F, length F = length sl_F -> fst
-      ⊝ (fun (Zs : params * stmt) (sl_s : ann (⦃var⦄ * ⦃var⦄ * ؟ 〔⦃var⦄ * ⦃var⦄〕)) =>
-           (fst Zs, do_spill slot (snd Zs) sl_s)) ⊜ F sl_F
-      = fst ⊝ F) as fst_F.
-  {
-    clear.
-    intros F sl_F eq_len.
-    assert (length F = length (
-                           (fun (Zs : params * stmt)
-                              (sl_s : ann (⦃var⦄ * ⦃var⦄ * ؟ 〔⦃var⦄ * ⦃var⦄〕))
-                            => (fst Zs, do_spill slot (snd Zs) sl_s)) ⊜ F sl_F)
-           ) as F_len.
-    { symmetry. apply zip_length2. assumption. }
-    revert dependent sl_F.
-    induction F; intros sl_F eq_F eq_zip.
-    - eauto.
-    - simpl. destruct sl_F.
-      + isabsurd.
-      + simpl. f_equal.
-        apply IHF; simpl in *; omega.
-  }
-
-  assert ((fun (rm : ⦃var⦄) (ps : params * stmt) => rm ∪ of_list (fst ps)) ⊜
-         (slot_merge slot rms)
-         ((fun (Zs : params * stmt) (sl_s : ann (⦃var⦄ * ⦃var⦄ * ؟ 〔⦃var⦄ * ⦃var⦄〕)) =>
-             (fst Zs, do_spill slot (snd Zs) sl_s)) ⊜ F sl_F)
-          = (fun (rm : ⦃var⦄) (ps : params * stmt) => rm ∪ of_list (fst ps))
-              ⊜ (slot_merge slot rms) F) as dscrd_sl_F.
-  {
-    clear - H18.
-    apply zip_ext_get2; eauto.
-    - apply zip_length2. eauto.
-    - intros.
-      rewrite get_get_eq with (L:=slot_merge slot rms)
-                                (n:=n)
-                                (x:=x1)
-                                (x':=x2); eauto.
-      apply get_zip in H0.
-      destruct H0 as [x [y [get_x [ get_y y1_eq]]]].
-      rewrite <- y1_eq.
-      simpl.
-      rewrite get_get_eq with (L:=F)
-                              (n:=n)
-                              (x:=y2)
-                              (x':=x); eauto.
-  }
-
-  let elim_gets := ( rewrite fst_F;
-                     eauto;
-                     intros n Zs a get_Zs_sls get_ps_rms;
-                     apply get_zip in get_Zs_sls;
-                     destruct get_Zs_sls as [Zs' [sl_s [get_Zs' [get_sls Zs_eq]]]];
-                     apply get_zip in get_ps_rms;
-                     destruct get_ps_rms as [ps [rm_s [get_ps [get_rms splv]]]];
-                     apply get_zip in get_ps;
-                     destruct get_ps as [ps' [rm_s' [get_ps' [get_rms' ps_eq]]]]
-                   ) in
-
-  econstructor;  simpl in *; eauto; [ | | elim_gets | elim_gets ].
-  + rewrite fst_F; eauto. rewrite dscrd_sl_F.
-    rewrite H10.
-    apply live_sound_monotone with (LV:= getAnn ⊝ als ++ slot_merge slot Λ).
+  econstructor;  simpl in *; eauto.
+  + rewrite fst_F; eauto. rewrite dscrd_sl_F; eauto.
+    apply live_sound_monotone with (LV:= slot_merge slot rms ++ slot_merge slot Λ).
     * apply live_sound_ann_ext with (lv:= spill_live
-        (getAnn ⊝ als ++ slot_merge slot Λ)
-        (fst ⊝ F ++ ZL) ∅ (do_spill slot t sl_t)
+        (slot_merge slot rms ++ slot_merge slot Λ)
+        (slot_lift_params slot ⊜ (fst ⊝ F) rms ++ slot_lift_params slot ⊜ ZL Λ)
+         ∅
+        (do_spill slot t sl_t)
         (discard_merge_sl slot (do_spill_rm slot sl_t))).
       -- apply spill_live_equal.
          apply PIR2_app.
          ++ apply PIR2_get.
-           ** intros; inv_get.
-              exploit H2 as A; eauto; dcr.
-              revert H13; clear; cset_tac.
+            ** intros.
+               unfold slot_merge in H4.
+               inv_get.
+               exploit H2 as A; eauto; dcr.
+               unfold slot_lift_params.
+               simpl.
+               rewrite of_list_elements.
+               assert (forall s t, map slot (s ∩ t) [=] map slot s ∩ map slot t) as map7.
+               { admit. } (* we need assumptions on slot *)
+               rewrite map7.
+               revert H13; clear; cset_tac.
            ** rewrite zip_length2; eauto with len.
          ++ apply PIR2_refl; eauto.
-      -- eapply IHlvSound; eauto.
-         rewrite <- H10.
-         unfold slot_merge. rewrite map_app. reflexivity.
+      -- assert (slot_lift_params slot ⊜ (fst ⊝ F) rms ++ slot_lift_params slot ⊜ ZL Λ
+                 = slot_lift_params slot ⊜ (fst ⊝ F ++ ZL) (rms ++ Λ)) as rear_slp.
+         { rewrite zip_app; eauto with len. }
+         rewrite rear_slp.
+         assert (slot_merge slot rms ++ slot_merge slot Λ
+                 = slot_merge slot (rms ++ Λ)) as rear_sm.
+         { unfold slot_merge. rewrite map_app. reflexivity. }
+         rewrite rear_sm.
+         eapply IHlvSound; eauto.
+         ** unfold merge.
+            rewrite map_app.
+            rewrite <- H10.
+            reflexivity.
+         ** apply PIR2_app; eauto.
+            apply PIR2_refl; eauto.
     * apply PIR2_app with (L2:=slot_merge slot Λ).
       -- apply PIR2_get.
-         ++ intros; inv_get; simpl.
+         ++ intros.
+            unfold slot_merge in H5.
+            inv_get; simpl.
+            admit.
+            (* TODO
             apply ann_R_get.
             apply spill_live_subset.
             apply PIR2_app.
@@ -779,29 +803,20 @@ general induction lvSound;
                specialize (H2 n0 y x' get_y get_x').
                clear - H2. cset_tac.
             ** rewrite zip_length2; eauto.
-               rewrite Coqlib.list_length_map; eauto.
-         ++ do 2 rewrite Coqlib.list_length_map; eauto.
-            do 2 rewrite zip_length2; eauto.
+               rewrite Coqlib.list_length_map; eauto. *)
+         ++ unfold slot_merge. eauto with len.
             do 2 rewrite Coqlib.list_length_map; eauto.
-      -- apply PIR2_refl.
-         unfold Reflexive.
-         apply subset_refl.
+            do 2 rewrite zip_length2; eauto with len.
+      -- apply PIR2_refl; eauto.
   + set (A := (fun (Zs : params * stmt) (sl_s : ann (⦃var⦄ * ⦃var⦄ * ؟ 〔⦃var⦄ * ⦃var⦄〕)) =>
                  (fst Zs, do_spill slot (snd Zs) sl_s)) ⊜ F sl_F).
     symmetry. apply zip_length2.
     repeat rewrite Coqlib.list_length_map.
     subst A.
-    rewrite zip_length2; eauto.
-  + assert (fst Zs = fst Zs') as fst_ZsZs'.
-    { rewrite <- Zs_eq. simpl. reflexivity. }
-    eapply H1.
-    admit.
-  + assert (fst Zs = fst Zs') as fst_ZsZs'.
-    { rewrite <- Zs_eq. simpl. reflexivity. }
-    rewrite fst_ZsZs'.
-    rewrite <- splv.
-    rewrite <- ps_eq.
+    rewrite zip_length2; eauto with len.
+  + admit.
+  + intros.
+    inv_get.
     simpl.
-    rewrite get_get_eq with (L:=F) (n:=n) (x:=ps') (x':=Zs'); eauto.
     split; [ | auto].
     apply spill_live_G_set.
