@@ -44,6 +44,15 @@ Proof.
   intros. general induction n; inv H0; inv H1; inv H; intuition; eauto.
 Qed.
 
+Lemma live_exp_sound_argsLive lv blv Y Z
+  : length Y = length Z
+    -> (forall n y z, get Y n y -> get Z n z -> z ∈ blv -> live_op_sound y lv)
+    -> argsLive lv blv Y Z.
+Proof.
+  intros. length_equify.
+  general induction H; eauto 20 using argsLive, get.
+Qed.
+
 Lemma argsLive_agree_on' (V E E':onv val) lv blv Y Z v v'
   :  argsLive lv blv Y Z
      -> agree_on eq lv E E'
