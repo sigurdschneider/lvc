@@ -494,36 +494,552 @@ Inductive some_spill_live
                               (annF b lv_F lv_t)
 .
 
-(*
-Lemma spill_live_small_s
-      sl Lv ZL G sl' lv slot s
-  :
-    getAnn (spill_live Lv ZL G
-                       (do_spill slot s (setTopAnn sl (∅,∅,snd (getAnn sl))))
-                       (discard_merge_sl slot (do_spill_rm' slot 0 sl)))
-                       ⊆ getAnn lv ∪ G
-    -> getann
-   (spill_live (slot_merge slot (rms ++ λ)) (slot_lift_params slot ⊜ (fst ⊝ f ++ zl) (rms ++ λ))
-      (of_list (slot_lift_params slot z (r,m))) (do_spill slot s sl')
-      (discard_merge_sl slot (do_spill_rm' slot (count sl') sl))) ⊆ r ∪ map slot m
-.
-admitted.
 
-(* this lemma seems to be wrong *)
-lemma spill_live_small
-      zl λ s lv k r m sl (z:params) slot lv n rm rms (f : list(params * stmt))
+(* TODO: I need some assumptions on slot
+   this doesn't hold in general *)
+Lemma map_slot_minus
+      (slot : var -> var)
+      (s t : ⦃var⦄)
   :
-    lv = (slot_merge slot λ)
-    -> live_sound imperative zl lv s lv
-    -> spill_sound k zl λ (r,m) s sl
-    -> some_spill_live sl lv
-    -> get rms n rm
-    -> get f n (z,s)
-    -> getann
-   (spill_live (slot_merge slot (rms ++ λ)) (slot_lift_params slot ⊜ (fst ⊝ f ++ zl) (rms ++ λ))
-      (of_list (slot_lift_params slot z (r,m))) (do_spill slot s sl)
-      (discard_merge_sl slot (do_spill_rm slot sl))) ⊆ r ∪ map slot m
+    map slot (s \ t) [=] map slot s \ map slot t
 .
+Admitted.
+
+
+Lemma map_slot_cut
+      (slot : var -> var)
+      (s t : ⦃var⦄)
+  :
+    map slot (s ∩ t) [=] map slot s ∩ map slot t
+.
+Admitted.
+
+
+Lemma map_slot_incl
+      (slot : var -> var)
+      (s t : ⦃var⦄)
+  :
+    s ⊆ t <-> map slot s ⊆ map slot t
+.
+Admitted.
+
+
+Lemma spill_live_remove_G
+      Lv ZL G s sl G'
+  :
+    getAnn (spill_live Lv ZL G s sl) \ G
+           ⊆ getAnn (spill_live Lv ZL G' s sl)
+.
+Proof.
+  destruct s, sl, a; simpl; cset_tac.
+Qed.
+
+
+Lemma of_list_tl_hd
+      (L : list var)
+  :
+    L <> nil
+    ->  of_list L [=] of_list (tl L) ∪ singleton (hd 0 L)
+.
+Proof.
+  intro N.
+  induction L; simpl; eauto.
+  - isabsurd.
+  - cset_tac.
+Qed.
+
+
+Lemma tl_hd_set_incl
+      (s t : ⦃var⦄)
+  :
+    s \ of_list (tl (elements t)) ⊆ s \ t ∪ singleton (hd 0 (elements t))
+.
+Proof.
+  hnf.
+  intros a H.
+  apply diff_iff in H.
+  destruct H as [in_s not_in_tl_t].
+  apply union_iff.
+  decide (a ∈ t).
+  - right.
+    rewrite <- of_list_elements in i.
+    rewrite of_list_tl_hd in i.
+    + apply union_iff in i.
+      destruct i.
+      * contradiction.
+      * eauto.
+    + intro N.
+      apply elements_nil_eset in N.
+      rewrite of_list_elements in i.
+      rewrite N in i.
+      isabsurd.
+  - left.
+    cset_tac.
+Qed.
+
+Lemma map_singleton
+      (f : var -> var)
+      (x : var)
+  :
+    map f (singleton x) [=] singleton (f x)
+.
+Proof.
+  apply set_incl.
+  - hnf.
+    intros a a_in_f.
+    rewrite singleton_iff in a_in_f.
+    rewrite <- a_in_f.
+    apply map_1; eauto.
+  - hnf.
+    intros a a_in_map.
+    apply map_2 in a_in_map; eauto.
+    destruct a_in_map as [a' [in_x a_eq]].
+    rewrite singleton_iff in in_x.
+    rewrite <- in_x in a_eq.
+    rewrite a_eq.
+    cset_tac.
+Qed.
+
+
+Lemma spill_live_small_s
+      (sl sl' : ann (⦃var⦄ * ⦃var⦄ * option (list (⦃var⦄ * ⦃var⦄))))
+      ZL G
+      slot s Λ R M
+  :
+    let Sp := fst (fst (getAnn sl )) in
+    let L  := snd (fst (getAnn sl )) in
+    let Sp':= fst (fst (getAnn sl')) in
+    let L' := snd (fst (getAnn sl')) in
+    sub_spill sl' sl
+    -> Sp ⊆ R
+    -> L  ⊆ Sp ∪ M
+    -> (forall G', getAnn
+        (spill_live
+           (slot_merge slot Λ)
+           (slot_lift_params slot ⊜ ZL Λ)
+            G'
+           (do_spill slot s (setTopAnn sl (∅,∅,snd (getAnn sl))))
+           (discard_merge_sl slot (do_spill_rm' slot 0 sl)))
+        ⊆ (R ∪ L) ∪ map slot (Sp ∪ M) ∪ G')
+    -> getAnn
+        (spill_live
+           (slot_merge slot Λ)
+           (slot_lift_params slot ⊜ ZL Λ)
+            G
+           (do_spill slot s sl')
+           (discard_merge_sl slot (do_spill_rm' slot (count sl') sl)))
+        ⊆ (R ∪ L \ L') ∪ map slot (Sp \ Sp' ∪ M) ∪ G
+.
+Proof.
+  intros Sp L Sp' L' sub spr lspm sls.
+
+  remember (cardinal Sp') as card_Sp'.
+  general induction card_Sp'.
+  - remember (cardinal L') as card_L'.
+    general induction card_L'.
+    + assert (((R ∪ L ∪ map slot (Sp ∪ M) ∪ G) \ (L ∩ L')) \ (map slot (Sp ∩ Sp'))
+                                                       ∪ R ∪ map slot M ∪ G
+          ⊆ R ∪ L \ L' ∪ map slot (Sp \ Sp' ∪ M) ∪ G) as set_EQ.
+      {
+        repeat rewrite SetOperations.map_app; eauto.
+        rewrite map_slot_cut; eauto.
+        rewrite map_slot_minus; eauto.
+        clear. cset_tac.
+      }
+      rewrite <- set_EQ.
+      rewrite <- sls.
+      assert (count sl' = 0) as count_zero.
+      { unfold count.
+        subst Sp'.
+        subst L'.
+        rewrite <- Heqcard_L'.
+        rewrite <- Heqcard_Sp'.
+        omega.
+      }
+      rewrite count_zero.
+      enough (do_spill slot s sl'
+              = do_spill slot s (setTopAnn sl (∅,∅, snd (getAnn sl))))
+        as do_spill_eq.
+      {
+        rewrite do_spill_eq.
+        symmetry in Heqcard_Sp'.
+        apply cardinal_Empty in Heqcard_Sp'.
+        apply empty_inter_2 with (s0:=Sp) in Heqcard_Sp'.
+        apply empty_is_empty_1 in Heqcard_Sp'.
+        rewrite Heqcard_Sp'.
+        symmetry in Heqcard_L'.
+        apply cardinal_Empty in Heqcard_L'.
+        apply empty_is_empty_1 in Heqcard_L'.
+        rewrite Heqcard_L'.
+        rewrite SetOperations.map_empty; eauto.
+        clear. cset_tac.
+      }
+      erewrite do_spill_empty_invariant
+      with (Sp':=∅) (L':=∅) ;
+        try apply cardinal_Empty;
+        try apply empty_1;
+        eauto.
+      unfold sub_spill in sub.
+      destruct sub as [top_sl' [sub_Sp [sub_L eq_rm]]].
+      rewrite top_sl'.
+      rewrite getAnn_setTopAnn.
+      rewrite setTopAnn_setTopAnn.
+      rewrite eq_rm.
+      reflexivity.
+    + assert (count sl' = S card_L') as count_sl'.
+      { unfold count.
+        subst Sp'.
+        subst L'.
+        rewrite <- Heqcard_L'.
+        rewrite <- Heqcard_Sp'.
+        omega.
+      }
+      rewrite do_spill_L;
+        [ | apply cardinal_Empty;
+            subst Sp'
+          | intro N ;
+            apply cardinal_Empty in N ;
+            subst L';
+            omega ];
+        eauto.
+      rewrite count_sl'.
+      rewrite do_spill_rm_s.
+      rewrite discard_merge_sl_step.
+      simpl.
+      assert (count (setTopAnn sl'
+                               (fst (fst (getAnn sl')),
+                                of_list (tl (elements (snd (fst (getAnn sl'))))),
+               snd (getAnn sl'))) = card_L') as count_L'.
+      { eapply count_reduce_L; eauto. }
+      rewrite <- count_L'.
+      assert (Sp' [=] ∅) as Sp'_empty.
+      {
+        clear - Heqcard_Sp'.
+        apply empty_is_empty_1.
+        apply cardinal_Empty.
+        eauto.
+      }
+      apply union_incl_split; [ apply union_incl_split | ].
+      * assert (forall s t u : set var, s ⊆ t ∪ u -> s \ u ⊆ t) as set_eq.
+        { clear. cset_tac.
+          hnf in H.
+          exploit H; eauto.
+          apply union_iff in H0.
+          destruct H0; eauto. contradiction.
+        }
+        assert (forall s t : set var, s \ t [=] s \ t \ t) as set_eq2.
+        { clear. cset_tac. }
+        rewrite set_eq2.
+        apply set_eq.
+        rewrite spill_live_remove_G with (G':=G).
+        set (sl'' := setTopAnn _ _).
+        let reset :=
+            (subst L; subst L'; subst Sp; subst Sp';
+             set (Sp := fst (fst (getAnn sl))) in *;
+             set (L := snd (fst (getAnn sl))) in *;
+             set (Sp' := fst (fst (getAnn sl'))) in *;
+             set (L' := snd (fst (getAnn sl'))) in *) in
+                 rewrite IHcard_L';
+             simpl; eauto; reset.
+        -- enough (L \ snd (fst (getAnn sl''))
+                          ⊆ L \ L' ∪ singleton (hd 0 (elements L'))) as enog.
+           {
+            rewrite enog.
+            subst sl''.
+            rewrite getAnn_setTopAnn.
+            simpl.
+            clear.
+            cset_tac.
+          }
+          subst sl''.
+          rewrite getAnn_setTopAnn.
+          simpl.
+          rewrite tl_hd_set_incl.
+          reflexivity.
+        -- subst sl''.
+           unfold sub_spill in *.
+           destruct sub as [top_sl' [sub_Sp [sub_L eq_rm]]].
+           repeat split.
+           ** rewrite top_sl'.
+              repeat rewrite getAnn_setTopAnn.
+              rewrite setTopAnn_setTopAnn.
+              reflexivity.
+           ** rewrite getAnn_setTopAnn.
+              simpl.
+              subst Sp'.
+              apply sub_Sp.
+           ** rewrite getAnn_setTopAnn.
+              simpl.
+              subst L'.
+              rewrite tl_set_incl.
+              apply sub_L.
+           ** rewrite getAnn_setTopAnn.
+              simpl.
+              apply eq_rm.
+        -- subst sl''.
+           rewrite getAnn_setTopAnn.
+           simpl.
+           eauto.
+        -- subst sl''.
+           rewrite getAnn_setTopAnn.
+           simpl.
+           symmetry.
+           apply cardinal_set_tl.
+           rewrite of_list_elements.
+           eauto.
+      * assert (hd 0 (elements (snd (fst (getAnn sl'))))
+                    ∈ (snd (fst (getAnn sl')))) as hd_in.
+        {
+          apply hd_in_elements.
+          intro N.
+          subst L'.
+          rewrite N in Heqcard_L'.
+          rewrite empty_cardinal in Heqcard_L'.
+          clear - Heqcard_L'. isabsurd.
+        }
+        apply incl_singleton in hd_in.
+        rewrite map_slot_incl with (slot:=slot) in hd_in.
+        assert (singleton (slot (hd 0 (elements (snd (fst (getAnn sl'))))))
+                          ⊆ map slot (snd (fst (getAnn sl')))) as hd_in_set.
+        { rewrite <- hd_in. clear. cset_tac. }
+        rewrite hd_in_set.
+        rewrite Sp'_empty.
+        enough (map slot (snd (fst (getAnn sl'))) ⊆ map slot (Sp ∪ M)) as enog.
+        { revert enog. clear.
+          repeat rewrite SetOperations.map_app; eauto.
+          rewrite map_slot_minus.
+          intros.
+          rewrite H.
+          rewrite SetOperations.map_empty; eauto.
+          apply union_incl_split; cset_tac.
+        }
+        apply map_slot_incl.
+        unfold sub_spill in sub.
+        destruct sub as [_ [_ [sub_L _]]].
+        rewrite sub_L.
+        subst L.
+        eauto.
+      * clear. cset_tac.
+  - assert (count sl' = S card_Sp' + cardinal L') as count_sl'.
+      { unfold count.
+        subst Sp'.
+        subst L'.
+        rewrite <- Heqcard_Sp'.
+        omega.
+      }
+      rewrite do_spill_Sp;
+        [ | intro N ;
+            apply cardinal_Empty in N ;
+            subst Sp';
+            omega ];
+        eauto.
+      rewrite count_sl'.
+      simpl.
+      rewrite do_spill_rm_s.
+      rewrite discard_merge_sl_step.
+      simpl.
+      assert (count (setTopAnn sl'
+                               (of_list (tl (elements (fst (fst (getAnn sl'))))),
+                                snd (fst (getAnn sl')),
+               snd (getAnn sl'))) = card_Sp' + cardinal L') as count_Sp'.
+      { eapply count_reduce_Sp; eauto. }
+      rewrite <- count_Sp'.
+      apply union_incl_split; [ apply union_incl_split | ].
+      * assert (forall s t u : set var, s ⊆ t ∪ u -> s \ u ⊆ t) as set_eq.
+        { clear. cset_tac.
+          hnf in H.
+          exploit H; eauto.
+          apply union_iff in H0.
+          destruct H0; eauto. contradiction.
+        }
+        assert (forall s t : set var, s \ t [=] s \ t \ t) as set_eq2.
+        { clear. cset_tac. }
+        rewrite set_eq2.
+        apply set_eq.
+        rewrite spill_live_remove_G with (G':=G).
+        set (sl'' := setTopAnn _ _).
+        let reset :=
+            (subst L; subst L'; subst Sp; subst Sp';
+             set (Sp := fst (fst (getAnn sl))) in *;
+             set (L := snd (fst (getAnn sl))) in *;
+             set (Sp' := fst (fst (getAnn sl'))) in *;
+             set (L' := snd (fst (getAnn sl'))) in *) in
+                 rewrite IHcard_Sp';
+             simpl; eauto; reset.
+        -- enough (Sp \ fst (fst (getAnn sl''))
+                          ⊆ Sp \ Sp' ∪ singleton ((hd 0 (elements Sp')))) as enog.
+           {
+            rewrite enog.
+            subst sl''.
+            rewrite getAnn_setTopAnn.
+            simpl.
+            clear.
+            repeat rewrite SetOperations.map_app; eauto.
+            rewrite map_singleton.
+            cset_tac.
+          }
+          subst sl''.
+          rewrite getAnn_setTopAnn.
+          simpl.
+          rewrite tl_hd_set_incl.
+          reflexivity.
+        -- subst sl''.
+           unfold sub_spill in *.
+           destruct sub as [top_sl' [sub_Sp [sub_L eq_rm]]].
+           repeat split.
+           ** rewrite top_sl'.
+              repeat rewrite getAnn_setTopAnn.
+              rewrite setTopAnn_setTopAnn.
+              reflexivity.
+           ** rewrite getAnn_setTopAnn.
+              simpl.
+              subst Sp'.
+              rewrite tl_set_incl.
+              apply sub_Sp.
+           ** rewrite getAnn_setTopAnn.
+              simpl.
+              subst L'.
+              apply sub_L.
+           ** rewrite getAnn_setTopAnn.
+              simpl.
+              apply eq_rm.
+        -- subst sl''.
+           rewrite getAnn_setTopAnn.
+           simpl.
+           symmetry.
+           apply cardinal_set_tl.
+           rewrite of_list_elements.
+           eauto.
+      * assert (hd 0 (elements (fst (fst (getAnn sl'))))
+                    ∈ (fst (fst (getAnn sl')))) as hd_in.
+        {
+          apply hd_in_elements.
+          intro N.
+          subst Sp'.
+          rewrite N in Heqcard_Sp'.
+          rewrite empty_cardinal in Heqcard_Sp'.
+          clear - Heqcard_Sp'. isabsurd.
+        }
+        apply incl_singleton in hd_in.
+        subst Sp Sp' L L'.
+        rewrite <- spr.
+        unfold sub_spill in sub.
+        destruct sub as [_ [sub_Sp' _]].
+        rewrite <- sub_Sp'.
+        rewrite hd_in.
+        clear.
+        cset_tac.
+      * clear. cset_tac.
+Qed.
+
+
+
+Corollary spill_live_small_s'
+      (sl : ann (⦃var⦄ * ⦃var⦄ * option (list (⦃var⦄ * ⦃var⦄))))
+      ZL G
+      slot s Λ R M
+  :
+    let Sp := fst (fst (getAnn sl )) in
+    let L  := snd (fst (getAnn sl )) in
+    Sp ⊆ R
+    -> L ⊆ Sp ∪ M
+    -> (forall G', getAnn
+        (spill_live
+           (slot_merge slot Λ)
+           (slot_lift_params slot ⊜ ZL Λ)
+            G'
+           (do_spill slot s (setTopAnn sl (∅,∅,snd (getAnn sl))))
+           (discard_merge_sl slot (do_spill_rm' slot 0 sl)))
+        ⊆ (R ∪ L) ∪ map slot (Sp ∪ M) ∪ G')
+    -> getAnn
+        (spill_live
+           (slot_merge slot Λ)
+           (slot_lift_params slot ⊜ ZL Λ)
+            G
+           (do_spill slot s sl)
+           (discard_merge_sl slot (do_spill_rm' slot (count sl) sl)))
+        ⊆ R ∪ map slot M ∪ G
+.
+Proof.
+  intros Sp L sp_sub l_sub.
+  assert (R [=] R ∪ L \ L).
+  { clear. cset_tac. }
+  assert (M [=] Sp \ Sp ∪ M).
+  { clear. cset_tac. }
+  rewrite H.
+  rewrite H0.
+  apply spill_live_small_s;
+    subst Sp; subst L;
+      [ apply sub_spill_refl | | ];
+      eauto.
+Qed.
+
+
+Lemma spill_live_small
+      ZL Λ Lv s G k R M sl slot al (F : list(params * stmt))
+  :
+    PIR2 Equal Lv (merge Λ)
+    -> live_sound Imperative ZL Lv s al
+    -> spill_sound k ZL Λ (R,M) s sl
+    -> some_spill_live sl al
+    -> getAnn
+        (spill_live
+           (slot_merge slot Λ)
+           (slot_lift_params slot ⊜ ZL Λ)
+            G
+           (do_spill slot s sl)
+           (discard_merge_sl slot (do_spill_rm slot sl)))
+        ⊆ R ∪ map slot M ∪ G
+.
+Proof.
+  intros pir2 lvSnd spSnd ssl.
+  general induction lvSnd;
+    invc spSnd;
+    invc ssl;
+    apply spill_live_small_s';
+    try apply sub_spill_refl;
+    simpl in *; eauto; intros G';
+      rewrite empty_cardinal;
+      simpl.
+  - rewrite IHlvSnd with (R:={x; (R \ K ∪ L) \ Kx})
+                         (M:=Sp ∪ M); eauto.
+    rewrite H13.
+    rewrite SetOperations.map_app; eauto.
+    clear.
+    cset_tac.
+  - rewrite IHlvSnd1 with (R:=R \ K ∪ L)
+                          (M:=Sp ∪ M); eauto.
+    rewrite IHlvSnd2 with (R:=R \ K ∪ L)
+                          (M:=Sp ∪ M); eauto.
+    rewrite H11.
+    rewrite SetOperations.map_app; eauto.
+    clear.
+    cset_tac.
+  - repeat apply union_incl_split.
+    + admit.
+    + eapply get_nth in H14.
+      assert (nth l (slot_merge slot Λ) ∅ [=] R_f ∪ map slot M_f).
+      {
+        admit.
+      }
+      rewrite H4.
+      assert (of_list (nth l (slot_lift_params slot ⊜ ZL Λ) nil) === of_list Z0).
+      {
+        admit.
+      }
+      rewrite H5.
+      rewrite SetOperations.map_app; eauto.
+      clear - H16 H17.
+      apply map_slot_incl with (slot:=slot) in H17.
+      rewrite map_slot_minus in H17.
+      admit.
+    + clear. cset_tac.
+  - rewrite H7.
+    cset_tac.
+  - rewrite IHlvSnd.
+Admitted.
+(*
+
 proof.
   intros lv_λ lvsnd spsnd ssl get_rms get_f.
   general induction lvsnd;
@@ -837,7 +1353,24 @@ general induction lvSound;
          ++ intros.
             unfold slot_merge in H5.
             inv_get; simpl.
-            admit.
+            rewrite slot_merge_app.
+            rewrite slot_lift_params_app; eauto with len.
+            erewrite spill_live_small with (R:=fst x0) (M:=snd x0); eauto.
+            ** exploit H2 as H2'; eauto.
+               destruct H2' as [H2' _].
+               unfold slot_lift_params.
+               rewrite of_list_elements.
+               rewrite H2'.
+               assert (forall s t, map slot (s ∩ t) [=] map slot s ∩ map slot t) as map_slot_cut.
+               { admit. } (* we need assumptions for this *)
+               rewrite map_slot_cut.
+               cset_tac.
+            ** unfold merge. rewrite map_app.
+               unfold merge in H10.
+               rewrite H10.
+               eapply H0; eauto.
+            ** eapply H23; eauto. admit. (* easy *)
+            ** admit. (* easy *)
          ++ unfold slot_merge.
             do 2 rewrite Coqlib.list_length_map; eauto.
             do 2 rewrite zip_length2; eauto with len.
@@ -884,7 +1417,22 @@ general induction lvSound;
          ++ intros.
             unfold slot_merge in H14.
             inv_get; simpl.
-            admit.
+            erewrite spill_live_small with (R:=fst x4) (M:=snd x4); eauto.
+            ** exploit H2 as H2'; eauto.
+               destruct H2' as [H2' _].
+               unfold slot_lift_params.
+               rewrite of_list_elements.
+               rewrite H2'.
+               assert (forall s t, map slot (s ∩ t) [=] map slot s ∩ map slot t) as map_slot_cut.
+               { admit. } (* we need assumptions for this *)
+               rewrite map_slot_cut.
+               cset_tac.
+            ** unfold merge. rewrite map_app.
+               unfold merge in H10.
+               rewrite H10.
+               eapply H0; eauto.
+            ** eapply H23; eauto. admit. (* easy *)
+            ** admit. (* easy *)
          ++ unfold slot_merge.
             do 2 rewrite Coqlib.list_length_map; eauto.
             do 2 rewrite zip_length2; eauto with len.
