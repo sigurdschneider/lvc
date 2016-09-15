@@ -2,7 +2,7 @@ Require Import Util LengthEq AllInRel Map SetOperations.
 
 Require Import Val EqDec Computable Var Env IL Annotation AppExpFree.
 Require Import Liveness.
-Require Import SimF Fresh.
+Require Import SimF Fresh Filter.
 
 Set Implicit Arguments.
 Unset Printing Records.
@@ -49,8 +49,6 @@ Fixpoint list_to_stmt (xl: list var) (Y : list op) (s : stmt) : stmt :=
   | x::xl, e :: Y => stmtLet x  (Operation e) (list_to_stmt xl Y s)
   | _, _ => s
   end.
-
-Require Import Filter.
 
 Lemma list_to_stmt_correct L E s xl Y vl
 : length xl = length Y
@@ -127,17 +125,6 @@ Fixpoint compile s {struct s}
     | stmtFun F t => stmtFun (List.map (fun Zs => (fst Zs, compile (snd Zs))) F) (compile t)
   end.
 
-Instance SR : ProofRelation params := {
-   ParamRel G VL VL' :=   VL = VL' /\ length VL = length G;
-   ArgRel G Z Z' := Z = Z' /\ length Z = length G;
-   IndexRel AL n n' := n = n';
-   Image AL := length AL
-}.
-- intros; dcr; subst; eauto with len.
-- intros; subst; eauto.
-Defined.
-
-
 Lemma omap_lookup_vars V xl vl
   : length xl = length vl
     -> unique xl
@@ -204,12 +191,18 @@ Proof.
       erewrite IHY; eauto. simpl; eauto.
 Qed.
 
+Instance SR : PointwiseProofRelationF params := {
+   ParamRelFP G VL VL' :=   VL = VL' /\ length VL = length G;
+   ArgRelFP G Z Z' := Z = Z' /\ length Z = length G
+}.
+
+
 Lemma sim_EAE' r L L' V s
-  : simLabenv Sim r SR (block_Z ⊝ L) L L'
+  : labenv_sim Sim (sim'r r) SR (block_Z ⊝ L) L L'
     -> ❬L❭ = ❬L'❭
     -> sim'r r Sim (L, V, s) (L',V, compile s).
 Proof.
-  revert_except s. unfold sim'r.
+  revert_except s.
   sind s; destruct s; simpl; intros; simpl in * |- *.
   - destruct e.
     + eapply (sim_let_op il_statetype_F); eauto.
@@ -217,44 +210,42 @@ Proof.
   - eapply (sim_cond il_statetype_F); eauto.
   - case_eq (omap (op_eval V) (List.filter NotVar Y)); intros.
     + destruct (get_dec L (counted l)) as [[[bE bZ bs n]]|].
-      * hnf in H; dcr. inv_get. destruct x as [bE' bZ' bs' n'].
-        decide (length Y = length bZ).
+      * decide (length Y = length bZ).
         -- eapply sim'_expansion_closed;
              [
              | eapply star2_refl
              | eapply list_to_stmt_correct;
                eauto using fresh_spec, fresh_list_unique, fresh_list_spec
              ]; eauto.
-           ++ case_eq (omap (op_eval V) (List.filter IsVar Y)); intros.
-             ** exploit (omap_filter_partitions _ _ _ H5 H1).
+           ++ eapply labenv_sim_app; eauto. simpl.
+             intros; split; intros; eauto; dcr; subst.
+             case_eq (omap (op_eval V) (List.filter IsVar Y)); intros.
+             ** exploit (omap_filter_partitions _ _ _ H4 H1).
                 intros; repeat cases; eauto.
-                edestruct H3; eauto. hnf; eauto.
-                eapply H9; eauto.
-                hnf. simpl. split; eauto with len.
-                eapply omap_replace_if.
-                erewrite omap_op_eval_agree; eauto.
-                rewrite <-  update_with_list_agree';
-                  eauto using fresh_spec, fresh_list_unique,
-                  fresh_list_spec with len.
-                eapply agree_on_incl.
-                symmetry.
-                eapply update_with_list_agree_minus; eauto.
-                eapply not_incl_minus. reflexivity.
-                symmetry.
-                eapply disj_2_incl.
-                eapply fresh_list_spec; eauto using fresh_spec.
-                eapply list_union_incl; intros; eauto with cset.
-                inv_get. eapply incl_list_union; eauto using map_get_1.
-                eapply omap_op_eval_agree; eauto.
-                Focus 2.
-                eapply omap_lookup_vars; eauto with len.
-                eauto using fresh_spec, fresh_list_unique,
-                fresh_list_spec with len.
-                rewrite <-  update_with_list_agree';
-                  eauto using fresh_spec, fresh_list_unique,
-                  fresh_list_spec with len. reflexivity.
-             ** perr.
-                erewrite omap_filter_none in def; eauto. congruence.
+                exists Yv; repeat split; eauto with len.
+                erewrite omap_replace_if.
+                --- rewrite <- H7; eauto.
+                --- erewrite omap_op_eval_agree; eauto.
+                    rewrite <-  update_with_list_agree';
+                      eauto using fresh_spec, fresh_list_unique,
+                      fresh_list_spec with len.
+                    eapply agree_on_incl.
+                    symmetry.
+                    eapply update_with_list_agree_minus; eauto.
+                    eapply not_incl_minus. reflexivity.
+                    symmetry.
+                    eapply disj_2_incl.
+                    eapply fresh_list_spec; eauto using fresh_spec.
+                    eapply list_union_incl; intros; eauto with cset.
+                    inv_get. repeat inv_get_step_filter idtac.
+                    eapply incl_list_union; eauto using map_get_1.
+                --- erewrite omap_op_eval_agree; [ eapply H1 | | ].
+                    Focus 2.
+                    rewrite omap_lookup_vars; eauto using fresh_list_unique, fresh_spec with len.
+                    rewrite <-  update_with_list_agree';
+                      eauto using fresh_spec, fresh_list_unique,
+                      fresh_list_spec with len. reflexivity.
+             ** exfalso. eapply omap_filter_none in H4. congruence.
            ++ eapply disj_2_incl.
              eapply fresh_list_spec; eauto using fresh_spec.
              eapply list_union_incl; intros; eauto with cset.
@@ -267,20 +258,18 @@ Proof.
   - pone_step.
     left. eapply IH; eauto 20 with len.
     + rewrite List.map_app.
-      eapply simLabenv_extension_len; eauto with len.
+      eapply labenv_sim_extension_ptw; eauto with len.
       * intros; hnf; intros; inv_get; simpl in *; dcr; subst.
         get_functional. eapply IH; eauto 20 with len.
         rewrite List.map_app. eauto.
       * hnf; intros; simpl in *; subst; inv_get; simpl; eauto.
-      * simpl. eauto with len.
 Qed.
 
 Lemma sim_EAE V s
   : @sim _ statetype_F _ statetype_F Sim (nil, V, s) (nil,V, compile s).
 Proof.
   eapply sim'_sim. eapply sim_EAE'; eauto.
-  hnf; intros; split; eauto using @sawtooth with len.
-  isabsurd.
+  eapply labenv_sim_nil.
 Qed.
 
 Lemma list_to_stmt_app_expfree  ZL Y Y' l

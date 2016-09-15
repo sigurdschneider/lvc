@@ -251,14 +251,7 @@ Proof.
     + cases. exploit H9; eauto. inv H2.
       * eapply (sim_let_call il_statetype_I); eauto 10 using agree_on_update_same, agree_on_incl.
         erewrite <- omap_op_eval_live_agree; eauto. eapply agree_on_sym; eauto.
-  - repeat cases.
-    + edestruct (op2bool_val2bool V); eauto; dcr.
-      pone_step_left.
-      eapply (IH s1); eauto. eapply agree_on_incl; eauto.
-    + edestruct (op2bool_val2bool V); eauto; dcr.
-      pone_step_left.
-      eapply (IH s2); eauto. eapply agree_on_incl; eauto.
-    + eapply (sim_cond il_statetype_I); eauto 20 using op_eval_live, agree_on_incl.
+  - eapply (sim_if_elim il_statetype_I); intros; eauto 20 using op_eval_live, agree_on_incl.
   - eapply labenv_sim_app; eauto using zip_get.
     + intros; simpl in *; dcr; subst.
       split; [|split]; intros.
@@ -301,119 +294,59 @@ Module F.
 
   Require Import SimF.
 
-Instance SR : ProofRelation ((set var) * params) := {
-   ParamRel G Z Z' := Z' = (List.filter (fun x => B[x ∈ fst G]) Z) /\ snd G = Z;
-   ArgRel G VL VL' :=
+Instance SR : PointwiseProofRelationF ((set var) * params) := {
+   ParamRelFP G Z Z' := Z' = (List.filter (fun x => B[x ∈ fst G]) Z) /\ snd G = Z;
+   ArgRelFP G VL VL' :=
      VL' = (filter_by (fun x => B[x ∈ fst G]) (snd G) VL) /\
-     length (snd G) = length VL;
-   Image AL := length AL;
-   IndexRel AL n n' := n = n'
+     length (snd G) = length VL
 }.
-- intros. hnf in H, H0; dcr; subst.
-  erewrite filter_filter_by_length; eauto.
-- intros AL' AL n n' H H'; subst; reflexivity.
-Defined.
-
-
-Lemma inv_extend s E E' L L' ZL LV als lv f
-(LEN: ❬s❭ = ❬als❭)
-(H: forall (f : nat) (lv : ⦃var⦄),
-       get LV f lv ->
-       exists b b' : F.block, get L f b /\ get L' f b')
-(Get : get (getAnn ⊝ als ++ LV) f lv)
-    :  exists b b' : F.block,
-      get (mapi (F.mkBlock E) s ++ L) f b /\
-      get (mapi (F.mkBlock E') (zip (fun Zs a =>
-                                  (filter (fst Zs) (getAnn a),
-                                   compile (pair ⊜ (getAnn ⊝ als ++ LV) (fst ⊝ s ++ ZL)) (snd Zs) a)) s als) ++ L')
-          f b'.
-Proof.
-  get_cases Get; inv_get.
-  - edestruct (get_length_eq _ H0 (eq_sym LEN)).
-    do 2 eexists; split; eauto using get_app, mapi_get_1, zip_get.
-  - edestruct H as [b [b' [? ?]]]; eauto.
-    exists b, b'; split.
-    + eapply get_app_right; eauto.
-      rewrite mapi_length.
-      rewrite map_length in *. omega.
-    + eapply get_app_right; eauto.
-      rewrite mapi_length.
-      rewrite zip_length2; eauto with len.
-      rewrite map_length in *. omega.
-Qed.
-
 
 Lemma sim_F ZL LV r L L' V V' s  lv
 : agree_on eq (getAnn lv) V V'
 -> true_live_sound Functional ZL LV s lv
--> simLabenv Sim r SR (zip pair LV ZL) L L'
--> (forall (f:nat) lv,
-      get LV f lv
-      -> exists (b b' : F.block),
-        get L f b /\
-        get L' f b')
+-> labenv_sim Sim (sim'r r) SR (zip pair LV ZL) L L'
 -> sim'r r Sim (L,V, s) (L',V', compile (zip pair LV ZL) s lv).
 Proof.
   unfold sim'r. revert_except s.
   sind s; destruct s; simpl; intros; invt true_live_sound; simpl in * |- *.
-   - destruct e.
-    + cases. exploit H10; eauto. inv H3.
+  - destruct e.
+    + cases. exploit H9; eauto. inv H2.
       * eapply (sim_let_op il_statetype_F);
           eauto 20 using op_eval_live, agree_on_update_same, agree_on_incl.
       * case_eq (op_eval V e); intros.
         -- pone_step_left.
            eapply (IH s); eauto. eapply agree_on_update_dead; eauto.
            eapply agree_on_incl; eauto.
-           rewrite <- H11. cset_tac; intuition.
+           rewrite <- H10. cset_tac; intuition.
         -- pno_step_left.
-    + cases. exploit H10; eauto. inv H3.
-      * eapply (sim_let_call il_statetype_F); eauto using agree_on_update_same, agree_on_incl.
+    + cases. exploit H9; eauto. inv H2.
+      * eapply (sim_let_call il_statetype_F); eauto 10 using agree_on_update_same, agree_on_incl.
         erewrite <- omap_op_eval_live_agree; eauto. eapply agree_on_sym; eauto.
-        left. eapply IH; eauto using agree_on_update_same, agree_on_incl.
-  - repeat cases.
-    + edestruct (op2bool_val2bool V); eauto; dcr.
-      pone_step_left.
-      eapply (IH s1); eauto. eapply agree_on_incl; eauto.
-    + edestruct (op2bool_val2bool V); eauto; dcr.
-      pone_step_left.
-      eapply (IH s2); eauto. eapply agree_on_incl; eauto.
-    + eapply (sim_cond il_statetype_F); eauto 20 using op_eval_live, agree_on_incl.
-  - edestruct H2 as [? [? [GetL GetL']]]; eauto.
-    remember (omap (op_eval V) Y). symmetry in Heqo.
-    erewrite (get_nth); eauto using zip_get; simpl.
-    destruct o.
-    + destruct x as [Z1 s1 n1], x0 as [Z2 s2 n2].
-      hnf in H1; dcr.
-      exploit (@omap_filter_by _ _ _ _ (fun y : var => if [y \In blv] then true else false) _ _ Z Heqo); eauto.
-      exploit omap_op_eval_live_agree; eauto.
-      intros. eapply argsLive_liveSound; eauto.
-      edestruct H4 as [[? ?] SIM]; eauto using zip_get. hnf; eauto.
-      hnf in H13; dcr; subst.
-      eapply SIM; [ | eapply Heqo | eapply H9 ].
-      hnf; simpl. split; eauto with len.
-    + pfold; econstructor 3; try eapply star2_refl; eauto; stuck2.
+  - eapply (sim_if_elim il_statetype_F); intros; eauto 20 using op_eval_live, agree_on_incl.
+  - eapply labenv_sim_app; eauto using zip_get.
+    + intros; simpl in *; dcr; subst.
+      split; [|split]; intros.
+      * exploit (@omap_filter_by _ _ _ _ (fun y : var => if [y \In blv] then true else false) _ _ Z0 H7);
+          eauto.
+        exploit omap_op_eval_live_agree; eauto.
+        intros. eapply argsLive_liveSound; eauto.
+        erewrite get_nth; eauto using zip_get; simpl.
+        rewrite H12. eexists; split; eauto.
+        repeat split; eauto using filter_filter_by_length.
   - pno_step.
     simpl. erewrite <- op_eval_live_agree; eauto. eapply agree_on_sym; eauto.
-  - pone_step. left. rewrite <- zip_app; eauto with len. eapply IH; eauto.
-    + simpl in *; eapply agree_on_incl; eauto.
-    + rewrite zip_app; eauto with len.
-      eapply simLabenv_extension_len; simpl; eauto 20 with len.
-      * intros. hnf; intros.
-        hnf in H4. subst n'. inv_get. simpl.
-        hnf in H13; dcr; subst. simpl.
-        rewrite <- zip_app; eauto with len.
-        eapply IH; eauto. simpl in *.
-        eapply agree_on_update_filter'; eauto.
-        exploit H10; eauto.
-        eauto using agree_on_incl.
-        exploit H7; eauto.
-        rewrite zip_app; eauto with len.
-        intros. rewrite <- zip_app; eauto with len.
-        eapply inv_extend; eauto.
-      * hnf; intros.
-        hnf in H3. dcr. inv_get.
-        simpl; unfold ParamRel; simpl; eauto.
-    + intros; eapply inv_extend; eauto.
+  - eapply sim_fun_ptw; eauto.
+    + intros. left. rewrite <- zip_app; eauto with len. eapply IH; eauto using agree_on_incl.
+    + intros. hnf; intros; simpl in *; dcr; subst.
+      inv_get.
+      rewrite <- zip_app; eauto with len.
+      eapply IH; eauto. simpl in *.
+      exploit H9; eauto.
+      eapply agree_on_update_filter'; eauto using agree_on_incl.
+    + hnf; intros; simpl in *; subst.
+      inv_get; simpl; eauto.
+    + eauto with len.
+    + eauto with len.
 Qed.
 
 Lemma sim_DVE V V' s lv
@@ -422,9 +355,7 @@ Lemma sim_DVE V V' s lv
 -> @sim F.state _ F.state _ Sim (nil,V, s) (nil,V', compile nil s lv).
 Proof.
   intros. eapply sim'_sim.
-  eapply (@sim_F nil nil); eauto.
-  hnf; simpl; split; eauto using @sawtooth; isabsurd.
-  isabsurd.
+  eapply (@sim_F nil nil); eauto. eapply labenv_sim_nil.
 Qed.
 
 End F.

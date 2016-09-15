@@ -151,7 +151,7 @@ Proof.
   - edestruct IHY; dcr; eauto using get.
 Qed.
 
-Ltac inv_get_step1 dummy :=
+Ltac inv_get_step_filter dummy :=
   first [inv_get_step |
          repeat (match goal with
          | [ H : get (filter_by ?p ?L ?L') ?n ?x |- _ ] =>
@@ -165,8 +165,8 @@ Ltac inv_get_step1 dummy :=
          end)
         ].
 
-Tactic Notation "inv_get_step" := inv_get_step1 idtac.
-Tactic Notation "inv_get" := inv_get' inv_get_step1.
+Tactic Notation "inv_get_step" := inv_get_step_filter idtac.
+Tactic Notation "inv_get" := inv_get' inv_get_step_filter.
 
 Lemma lookup_list_filter_by_commute A B C (V:A->B) (Z:list C) Y p
 : length Z = length Y

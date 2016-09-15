@@ -476,32 +476,6 @@ Proof.
     pone_step. left. eauto.
 Qed.
 
-Lemma sim_if_elim X (IST:ILStateType X) i r (L L':X) V V' e s1 s1' s2 s2'
-      (EQ: op_eval V e = op_eval V' e)
-      (SIM1: forall v, op_eval V e = Some v -> val2bool v = true -> op2bool e <> Some false ->
-                  (sim'r r) i (L, V, s1) (L', V', s1'))
-      (SIM2: forall v, op_eval V e = Some v -> val2bool v = false -> op2bool e <> Some true ->
-                  (sim'r r) i (L, V, s2) (L', V', s2'))
-  : sim'r r i (L, V, stmtIf e s1 s2)
-    (L', V',
-    if [op2bool e = ⎣ true ⎦] then s1' else if [
-    op2bool e = ⎣ false ⎦] then s2' else
-    stmtIf e s1' s2').
-Proof.
-  repeat cases.
-    + edestruct (op2bool_val2bool V); eauto; dcr.
-      eapply sim'_expansion_closed; [ eapply SIM1; eauto
-                                    | eapply star2_silent; [| eapply star2_refl]
-                                    | eapply star2_refl].
-      eapply step_cond_true; eauto.
-    + edestruct (op2bool_val2bool V); eauto; dcr.
-      eapply sim'_expansion_closed; [ eapply SIM2; eauto
-                                    | eapply star2_silent; [| eapply star2_refl]
-                                    | eapply star2_refl].
-      eapply step_cond_false; eauto.
-    + eapply (sim_cond IST); intros; try left; eauto.
-Qed.
-
 Lemma sim_I RL r L L' V s (a:ann bool) (Ann:getAnn a)
  (UC: unreachable_code Sound RL s a)
  (LSIM:labenv_sim Bisim (sim'r r) SR RL L L')
