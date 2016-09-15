@@ -143,6 +143,13 @@ Proof.
   eapply sim_sim'. eapply sim_refl.
 Qed.
 
+Lemma sim'r_refl {S} `{StateType S} (σ:S) t r
+      : sim'r r t σ σ.
+Proof.
+  eapply paco3_mon. eapply sim'_refl.
+  isabsurd.
+Qed.
+
 Lemma sim_Y_left S `{StateType S} S' `{StateType S'} r t σA1 σB1 σ1' σ2
   : paco3 (@sim_gen S _ S _) r t σA1 σ2
     -> step σA1 EvtTau σ1'
