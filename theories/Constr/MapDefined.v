@@ -41,3 +41,17 @@ Proof.
     exists x0. rewrite <- H3.
     eapply update_with_list_no_update; eauto.
 Qed.
+
+Instance defined_on_morph_incl X `{OrderedType X} Y
+  : Proper (flip Subset ==> eq ==> impl) (@defined_on X _ Y).
+Proof.
+  unfold Proper, respectful, impl; intros; subst.
+  eapply defined_on_incl; eauto.
+Qed.
+
+Instance defined_on_morph_equal X `{OrderedType X} Y
+  : Proper (Equal ==> eq ==> iff) (@defined_on X _ Y).
+Proof.
+  unfold Proper, respectful, flip, impl; intros; subst.
+  eapply eq_incl in H0; dcr; split; intros; eauto using defined_on_incl.
+Qed.

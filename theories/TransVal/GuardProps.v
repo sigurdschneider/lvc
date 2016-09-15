@@ -63,20 +63,6 @@ Proof.
    + eapply binop_eval_not_div; eauto.
 Qed.
 
-Instance defined_on_morph_incl X `{OrderedType X} Y
-  : Proper (flip Subset ==> eq ==> impl) (@defined_on X _ Y).
-Proof.
-  unfold Proper, respectful, impl; intros; subst.
-  eapply defined_on_incl; eauto.
-Qed.
-
-Instance defined_on_morph_equal X `{OrderedType X} Y
-  : Proper (Equal ==> eq ==> iff) (@defined_on X _ Y).
-Proof.
-  unfold Proper, respectful, flip, impl; intros; subst.
-  eapply eq_incl in H0; dcr; split; intros; eauto using defined_on_incl.
-Qed.
-
 (*  Lemma 8 lifted to lists**)
 Lemma guardlist_impl_eval F E el
   : defined_on (list_union (List.map Op.freeVars el)) E
