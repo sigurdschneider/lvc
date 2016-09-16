@@ -23,7 +23,6 @@ compiler/STAMP
 *.time
 *.aux
 Makefile.coq
-_BLACKLIST
 *.d
 *.cmxa
 *.cmxs
