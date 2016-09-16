@@ -40,7 +40,7 @@ ann (set var * set var * option (list (set var * set var)))
 : Sp ⊆ R
   -> L ⊆ Sp ∪ M
   -> cardinal (R\K ∪ L) <= k
-  (*-> list_union (Op.freeVars ⊝ Y) ⊆ R\K ∪ L*)
+  (*-> list_union (Op.freeVars ⊝ Y) ⊆ R ∪ M*)
   -> get ZL (counted f) Z
   -> get Λ (counted f) (R_f,M_f)
   -> R_f \ of_list Z ⊆ R\K ∪ L

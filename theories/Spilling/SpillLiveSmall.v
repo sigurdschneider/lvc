@@ -464,10 +464,35 @@ Proof.
       clear - H16 H17.
       apply map_slot_incl with (slot:=slot) in H17.
       rewrite map_slot_minus in H17.
-      admit.
+      assert ((R_f ∪ map slot M_f) \ of_list (slot_lift_params slot Z0 (R_f,M_f))
+                 ⊆ R_f \ of_list Z0 ∪ map slot M_f \ map slot (of_list Z0)).
+      { clear.
+        unfold slot_lift_params.
+        rewrite of_list_elements.
+        rewrite map_slot_cut.
+        simpl.
+        cset_tac. }
+      rewrite H.
+      rewrite H16.
+      rewrite H17.
+      rewrite SetOperations.map_app; eauto.
+      clear.
+      cset_tac.
     + clear. cset_tac.
   - rewrite H7.
     cset_tac.
-  - admit.
+  - rewrite fst_F; eauto.
+    rewrite slot_merge_app.
+    rewrite slot_lift_params_app; eauto with len.
+    rewrite IHlvSnd with (R:=R \ K ∪ L) (M:=Sp ∪ M); eauto.
+    + clear. cset_tac.
+    + unfold merge.
+      unfold merge in H7.
+      rewrite <- H7.
+      rewrite map_app.
+      apply PIR2_app.
+      * apply PIR2_refl; eauto.
+      * unfold merge in pir2.
+        eauto.
 
 Admitted.

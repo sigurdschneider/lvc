@@ -39,31 +39,6 @@ Proof.
 Qed.
 
 
-Lemma fst_F
-      F sl_F slot rms
-  :
-    length F = length sl_F
-    -> length F = length rms
-    -> fst
-        ⊝ (fun (Zs : params * stmt)
-             (sls_rm : ann (⦃var⦄ * ⦃var⦄ * ؟ 〔⦃var⦄ * ⦃var⦄〕) * (⦃var⦄ * ⦃var⦄)) =>
-             let (sl_s, rm) := sls_rm in
-             (slot_lift_params slot (fst Zs) rm, do_spill slot (snd Zs) sl_s)) ⊜ F
-        ((fun (sl_s : ann (⦃var⦄ * ⦃var⦄ * ؟ 〔⦃var⦄ * ⦃var⦄〕)) (rm : ⦃var⦄ * ⦃var⦄) => (sl_s, rm))
-           ⊜ sl_F rms)
-        = (slot_lift_params slot ⊜ (fst ⊝ F) rms)
-.
-Proof.
-  intros len.
-
-  general induction F;
-    simpl in *; eauto.
-  destruct sl_F,rms; simpl in *; eauto.
-  + isabsurd.
-  + f_equal. apply IHF; eauto.
-Qed.
-
-
 
 Lemma spill_live_sound_s
       (slot : var -> var)
