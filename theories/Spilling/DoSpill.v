@@ -11,6 +11,21 @@ Definition slot_lift_params
     elements (of_list Z ∩ fst rm ∪ map slot (of_list Z ∩ snd rm))
 .
 
+
+Lemma slot_lift_params_app
+      L1 L2 L1' L2' slot
+  :
+    length L1 = length L1'
+    -> slot_lift_params slot ⊜ L1 L1' ++ slot_lift_params slot ⊜ L2 L2'
+      = slot_lift_params slot ⊜ (L1 ++ L2) (L1' ++ L2')
+.
+Proof.
+  intros.
+  rewrite zip_app; eauto with len.
+Qed.
+
+
+
 Definition do_spill' (slot : var -> var) (do_spill : forall
                          (s : stmt)
                          (sl0 : ann (set var * set var * option(list(set var * set var)))),

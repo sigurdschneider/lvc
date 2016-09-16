@@ -13,6 +13,26 @@ Definition discard_sl := mapAnn (fun (a : (* = mapAnn ? snd *)
 Definition slot_merge slot := List.map (fun (RM : set var * set var)
                                            => fst RM ∪ map slot (snd RM)).
 
+
+
+
+
+
+Lemma slot_merge_app
+      (L1 L2: list (set var * set var))
+      (slot : var -> var)
+  :
+    slot_merge slot L1 ++ slot_merge slot L2
+      = slot_merge slot (L1 ++ L2)
+.
+Proof.
+  intros.
+  unfold slot_merge.
+  rewrite map_app; eauto.
+Qed.
+
+
+
 Definition discard_merge_sl (slot : var -> var) :=
 mapAnn (fun (a : set var * set var * option (list (set var * set var)))
          => match a with
