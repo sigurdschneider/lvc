@@ -6,8 +6,7 @@ Set Implicit Arguments.
 
 
 
-
-Fixpoint spill_live
+Fixpoint reconstr_live
 (Lv : list (set var))
 (ZL : list (params))
 (G : set var)
@@ -18,15 +17,15 @@ Fixpoint spill_live
 :=
 match s, rm with
 | stmtLet x e t, ann1 _ rm  (* checked *)
-     => let lv_t := spill_live Lv ZL (singleton x) t rm in
+     => let lv_t := reconstr_live Lv ZL (singleton x) t rm in
         ann1 ((getAnn lv_t) \ singleton x ∪ Exp.freeVars e ∪ G) lv_t
 
 | stmtReturn e, ann0 _ (* checked *)
      => ann0 (Op.freeVars e ∪ G)
 
 | stmtIf e t v, ann2 _ rm_t rm_v (* checked *)
-     => let lv_t := spill_live Lv ZL ∅ t rm_t in
-        let lv_v := spill_live Lv ZL ∅ v rm_v in
+     => let lv_t := reconstr_live Lv ZL ∅ t rm_t in
+        let lv_v := reconstr_live Lv ZL ∅ v rm_v in
         ann2 (getAnn lv_t ∪ getAnn lv_v ∪ Op.freeVars e ∪ G) lv_t lv_v
 
 | stmtApp f Y, ann0 _ (* checked *)
@@ -35,8 +34,8 @@ match s, rm with
         ann0 (list_union (Op.freeVars ⊝ Y) ∪ blv \ of_list Z ∪ G)
 
 | stmtFun F t, annF (Some rms) rm_F rm_t (* checked *)
-     => let lv_t := spill_live (rms ++ Lv) (fst ⊝ F ++ ZL) ∅ t rm_t in
-        let lv_F := (fun ps rm_s => spill_live (rms ++ Lv)
+     => let lv_t := reconstr_live (rms ++ Lv) (fst ⊝ F ++ ZL) ∅ t rm_t in
+        let lv_F := (fun ps rm_s => reconstr_live (rms ++ Lv)
                                              (fst ⊝ F ++ ZL)
                                              (of_list (fst ps))
                                              (snd ps)
@@ -104,12 +103,12 @@ Qed.
 
 
 
-Lemma spill_live_subset Lv Lv' ZL G s sl
+Lemma reconstr_live_subset Lv Lv' ZL G s sl
   :
     PIR2 Subset Lv Lv'
     -> ann_R Subset
-            (spill_live Lv  ZL G s sl)
-            (spill_live Lv' ZL G s sl).
+            (reconstr_live Lv  ZL G s sl)
+            (reconstr_live Lv' ZL G s sl).
 Proof.
   intros H.
   revert Lv Lv' H ZL G sl.
@@ -142,11 +141,11 @@ Proof.
     reflexivity.
 Qed.
 
-Lemma spill_live_equal Lv Lv' ZL G s sl
+Lemma reconstr_live_equal Lv Lv' ZL G s sl
   : PIR2 Equal Lv Lv'
     -> ann_R Equal
-            (spill_live Lv  ZL G s sl)
-            (spill_live Lv' ZL G s sl).
+            (reconstr_live Lv  ZL G s sl)
+            (reconstr_live Lv' ZL G s sl).
 Proof.
   intros H.
   revert Lv Lv' H ZL G sl.
@@ -180,29 +179,14 @@ Proof.
 Qed.
 
 
-Lemma spill_live_G
-      (Lv : list (set var))
-      (ZL : list (params))
-      (x : var)
-      (s : stmt)
-      (a : ann (option (list (set var))))
-  :
-    x ∈ getAnn (spill_live Lv ZL (singleton x) s a).
-Proof.
-  induction s,a ; simpl; eauto with cset.
-  - destruct a; simpl; eauto.
-    cset_tac.
-Qed.
-
-
-Lemma spill_live_G_set
+Lemma reconstr_live_G
       (Lv : list (set var))
       (ZL : list (params))
       (G : set var)
       (s : stmt)
       (a : ann (option (list (set var))))
   :
-    G ⊆ getAnn (spill_live Lv ZL G s a)
+    G ⊆ getAnn (reconstr_live Lv ZL G s a)
 .
 Proof.
   induction s,a; simpl; eauto with cset.
@@ -212,43 +196,53 @@ Qed.
 
 
 
-Inductive some_spill_live
+Inductive spill_live
   :
     ann (set var * set var * option (list (set var * set var))) -> ann (set var) -> Prop
   :=
   | SomeSpLv0 a b
-    : some_spill_live (ann0 a) (ann0 b)
+    : spill_live (ann0 a) (ann0 b)
   | SomeSpLv1 a b sl lv
-    : some_spill_live sl lv
-      -> some_spill_live (ann1 a sl) (ann1 b lv)
+    : spill_live sl lv
+      -> spill_live (ann1 a sl) (ann1 b lv)
   | SomeSpLv2 a b sl1 sl2 lv1 lv2
-    : some_spill_live sl1 lv1
-      -> some_spill_live sl2 lv2
-      -> some_spill_live (ann2 a sl1 sl2) (ann2 b lv1 lv2)
+    : spill_live sl1 lv1
+      -> spill_live sl2 lv2
+      -> spill_live (ann2 a sl1 sl2) (ann2 b lv1 lv2)
   | SomeSpLvF a b sl_F sl_t lv_F lv_t rms
     : merge rms = getAnn ⊝ lv_F
-      -> some_spill_live sl_t lv_t
+      -> spill_live sl_t lv_t
       -> (forall n sl_s lv_s,
             get sl_F n sl_s
             -> get lv_F n lv_s
-            -> some_spill_live sl_s lv_s
+            -> spill_live sl_s lv_s
         )
-      -> some_spill_live (annF (a,⎣ rms ⎦) sl_F sl_t)
+      -> spill_live (annF (a,⎣ rms ⎦) sl_F sl_t)
                               (annF b lv_F lv_t)
 .
 
 
-(* TODO: I need some assumptions on slot
-   this doesn't hold in general *)
-Lemma map_slot_minus
-      (slot : var -> var)
-      (s t : ⦃var⦄)
+Lemma injective_map_minus
+      (X Y : Type)
+      `{OrderedType X}
+      `{OrderedType Y}
+      (f : X -> Y)
+      (s t D : ⦃X⦄)
   :
-    map slot (s \ t) [=] map slot s \ map slot t
+    Proper (_eq ==> _eq) f
+    -> s ⊆ D
+    -> t ⊆ D
+    -> injective_on D f
+    -> map f (s \ t) [=] map f s \ map f t
 .
-Admitted.
+Proof.
+  intros H1 sD tD inj.
+  apply lookup_set_minus_eq; eauto.
+  apply injective_on_incl with (D:=D); eauto.
+  cset_tac.
+Qed.
 
-
+(*
 Lemma map_slot_cut
       (slot : var -> var)
       (s t : ⦃var⦄)
@@ -266,9 +260,9 @@ Lemma map_slot_incl
 .
 Admitted.
 
+*)
 
-
-
+(*
 Lemma fst_F
       F sl_F slot rms
   :
@@ -292,3 +286,4 @@ Proof.
   + isabsurd.
   + f_equal. apply IHF; eauto.
 Qed.
+*)
