@@ -3,64 +3,65 @@ Require Import CSet Le.
 Require Import Plus Util AllInRel Map.
 Require Import CSet Val Var Env Equiv.Sim IL Fresh Annotation Coherence RenamedApart.
 
-Require Import SetOperations Liveness Eqn.
+Require Import SetOperations Liveness Eqn SimF.
 
 Set Implicit Arguments.
 Unset Printing Records.
 
-Inductive eqn_sound : list (params*set var*eqns*eqns)
+Inductive eqn_sound : list params -> list (set var) -> list eqns  (*params*set var*eqns*)
                       -> stmt -> stmt
                       -> eqns
                       -> ann (set var * set var)
                       -> Prop :=
-| EqnOpr x Lv s s' e Gamma e' G G' ang
-  : eqn_sound Lv s s' {EqnEq (Var x) e ; { EqnEq (Var x) e' ; Gamma } } ang
+| EqnLet x ZL Δ Γ  s s' e Gamma e' G G' ang
+  : eqn_sound ZL Δ Γ s s' {EqnEq (Var x) e ; { EqnEq (Var x) e' ; Gamma } } ang
     (* make sure the rest conforms to the new assignment *)
     -> entails Gamma {EqnApx e e'}
     -> Op.freeVars e' ⊆ G
-    -> eqn_sound Lv (stmtLet x (Operation e) s) (stmtLet x (Operation e') s') Gamma
+    -> eqn_sound ZL Δ Γ (stmtLet x (Operation e) s) (stmtLet x (Operation e') s') Gamma
                 (ann1 (G,G') ang)
-| EqnIf Lv e e' s s' t t' Gamma G G' ang1 ang2
-  : eqn_sound Lv s s' {EqnEq (UnOp UnOpToBool e) (Con val_true); Gamma} ang1
-  -> eqn_sound Lv t t' {EqnEq (UnOp UnOpToBool e) (Con val_false); Gamma} ang2
+| EqnIf ZL Δ Γ e e' s s' t t' Gamma G G' ang1 ang2
+  : eqn_sound ZL Δ Γ s s' {EqnEq (UnOp UnOpToBool e) (Con val_true); Gamma} ang1
+  -> eqn_sound ZL Δ Γ t t' {EqnEq (UnOp UnOpToBool e) (Con val_false); Gamma} ang2
   -> entails Gamma {(EqnApx e e')}
-  -> eqn_sound Lv (stmtIf e s t) (stmtIf e' s' t') Gamma
+  -> eqn_sound ZL Δ Γ (stmtIf e s t) (stmtIf e' s' t') Gamma
               (ann2 (G,G') ang1 ang2)
-| EqnGoto l Y Y' Lv Gamma Z Γf EqS Gf G G'
-  : get Lv (counted l) (Z,Gf,Γf, EqS)
+| EqnApp l Y Y' ZL Δ Γ Gamma Z Γf EqS Gf G G'
+  : get ZL l Z -> get Δ l Gf -> get Γ l Γf
     -> length Y = length Y'
-    -> entails Gamma (subst_eqns (sid [Z <-- Y']) EqS)
+    -> entails Gamma (subst_eqns (sid [Z <-- Y']) Γf)
     -> entails Gamma (list_EqnApx Y Y')
-    -> eqn_sound Lv (stmtApp l Y) (stmtApp l Y') Gamma (ann0 (G,G'))
-| EqnReturn Lv e e' Gamma G G'
+    -> eqn_sound ZL Δ Γ (stmtApp l Y) (stmtApp l Y') Gamma (ann0 (G,G'))
+| EqnReturn ZL Δ Γ e e' Gamma G G'
   : entails Gamma {(EqnApx e e')}
-    -> eqn_sound Lv (stmtReturn e) (stmtReturn e') Gamma (ann0 (G,G'))
-| EqnExtern x f Lv s s' Y Y' Gamma G G' ang
-  : eqn_sound Lv s s' Gamma ang
+    -> eqn_sound ZL Δ Γ (stmtReturn e) (stmtReturn e') Gamma (ann0 (G,G'))
+| EqnExtern x f ZL Δ Γ s s' Y Y' Gamma G G' ang
+  : eqn_sound ZL Δ Γ s s' Gamma ang
     -> entails Gamma (list_EqnApx Y Y')
     -> list_union (List.map Op.freeVars Y') ⊆ G
     -> length Y = length Y'
-    -> eqn_sound Lv (stmtLet x (Call f Y) s) (stmtLet x (Call f Y') s') Gamma
+    -> eqn_sound ZL Δ Γ (stmtLet x (Call f Y) s) (stmtLet x (Call f Y') s') Gamma
                 (ann1 (G,G') ang)
-| EqnLet Lv F F' t t'  Gamma Γ2 EqS G G' angs angb
+| EqnFun ZL Δ Γ F F' t t'  Gamma Γ2 EqS G G' angs angb
+  (*: (forall n Z s Z' s', get F n (Z, s) -> get F' n (Z', s') ->
+                    eqn_sound ((Z, G, EqS)::Lv) s s' (EqS ∪ Γ2) angs)*)
   : (forall n Z s Z' s', get F n (Z, s) -> get F' n (Z', s') ->
-               eqn_sound ((Z, G, Γ2, EqS)::Lv) s s' (EqS ∪ Γ2) angs)
-  -> eqn_sound ((*(Z, G ,Γ2, EqS)::*)Lv) t t' Gamma angb
+                    eqn_sound (Z::ZL) (G::Δ) (EqS::Γ)  s s' (EqS ∪ Γ2) angs)
+    -> eqn_sound ((*(Z, G ,Γ2, EqS)::*)Lv) t t' Gamma angb
 (*  -> eqns_freeVars EqS ⊆ G ++ of_list Z
   -> eqns_freeVars Γ2  ⊆ G *)
   -> entails Gamma Γ2
   -> eqn_sound Lv (stmtFun F t) (stmtFun F' t') Gamma
               (ann2 (G,G') angs angb)
-| EqnUnsat Lv s s' Gamma ang
+| EqnUnsat ZL Δ Γ s s' Gamma ang
   : unsatisfiable Gamma
-    -> eqn_sound Lv s s' Gamma ang.
+    -> eqn_sound ZL Δ Γ s s' Gamma ang.
 
-
-Definition ArgRel' (E E':onv val) (a:list var*set var*eqns*eqns) (VL VL': list val) : Prop :=
+Definition ArgRel' (a:list var*set var*eqns*eqns) (VL VL': list val) : Prop :=
   let '(Z, G, Gamma, EqS) := a in
   length Z = length VL
   /\ VL = VL'
-  /\ satisfiesAll (E[Z <-- List.map Some VL]) (EqS ∪ Gamma).
+(*  /\ satisfiesAll ([Z <-- List.map Some VL]) (EqS ∪ Gamma)*).
 
 Definition ParamRel' (a:params*set var*eqns*eqns) (Z Z' : list var) : Prop :=
   let '(Zb, G, Gamma, EqS) := a in
@@ -76,17 +77,13 @@ Definition BlockRel' (G':set var) (V V':onv val) (a:params*set var*eqns*eqns) (b
   /\ agree_on eq G (F.block_E b') V'
   /\ eqns_freeVars Gamma ⊆ G.
 
-Instance AR lv V V' : ProofRelation (params*set var*eqns*eqns) := {
-  ArgRel := ArgRel';
-  ParamRel := ParamRel';
-  BlockRel := BlockRel' lv V V'
+Instance AR : PointwiseProofRelationF (params*set var*eqns*eqns) := {
+  ArgRelFP := ArgRel';
+  ParamRelFP := ParamRel'
 }.
-intros. hnf in H. hnf in H0.
-destruct a as [[[]]]; dcr; split; congruence.
-Defined.
 
 Instance subst_exp_Proper Z Y
-  : Proper (_eq ==> _eq) (subst_exp (sid [Z <-- Y])).
+  : Proper (_eq ==> _eq) (subst_op (sid [Z <-- Y])).
 Proof.
   hnf; intros. inv H. clear H.
   simpl. general induction y; simpl; eauto.
