@@ -70,7 +70,7 @@ Global Instance inst_eq_dec_lab : EqDec lab eq := {
 }.
 
 (** *** labels are counted *)
-Definition labN (x : lab) : nat :=
+Coercion labN (x : lab) : nat :=
   match x with
   | LabI x => x
   end.

@@ -23,8 +23,6 @@ Class ProofRelationF (A:Type) := {
 Definition frel := rel3 simtype (fun _ : simtype => F.state)
                        (fun (_ : simtype) (_ : F.state) => F.state).
 
-Coercion labN : lab >-> nat.
-
 Definition paramrel A (PR:ProofRelationF A) AL L L' :=
   forall (f f':lab) E Z s i E' Z' s' i' a,
     IndexRelF AL f f'
