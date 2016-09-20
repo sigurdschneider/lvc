@@ -11,7 +11,7 @@ Instance SR : PointwiseProofRelationF (params) := {
 Proof.
 
 Definition bisimeq t r s s' :=
-    forall L L' E, labenv_sim t (sim'r r) SR (block_Z ⊝ L) L L'
+    forall L L' E, labenv_sim t (sim'r r) SR (block_Z ⊝ L') L L'
             -> ❬L❭ = ❬L'❭
             -> sim'r r t (L, E, s) (L', E, s').
 
