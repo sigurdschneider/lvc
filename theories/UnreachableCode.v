@@ -6,6 +6,10 @@ Set Implicit Arguments.
 
 Local Hint Resolve incl_empty minus_incl incl_right incl_left.
 
+(** * Rechability Specification *)
+(** The reachability predicate is parameterized by a value of type [sc],
+    which indicates whether soundness, completeness, or both are desired. *)
+
 Inductive sc := Sound | Complete | SoundAndComplete.
 
 Definition isComplete (s:sc) :=
@@ -21,6 +25,9 @@ Definition isSound (s:sc) :=
   | Sound => true
   | _ => false
   end.
+
+(** Depending on whether soundness, completeness or both are desiered,
+    the relation [uceq] is instantiated differently. *)
 
 Definition uceq (i:sc) (a b:bool) :=
   match i with
@@ -50,6 +57,8 @@ Proof.
 Qed.
 
 Hint Resolve uceq_refl eq_uceq eq_uceq_sym.
+
+(** ** The inductive predicate *)
 
 Inductive unreachable_code (i:sc)
   : list bool -> stmt -> ann bool -> Prop :=
@@ -84,6 +93,8 @@ Inductive unreachable_code (i:sc)
                                 isCalledFrom trueIsCalled F t (LabI n)) else True)
     -> (if isComplete i then forall n a, get als n a -> impb (getAnn a) b else True)
     -> unreachable_code i BL (stmtFun F t) (annF b als alt).
+
+(** ** Some Properties of the Predicate *)
 
 Local Hint Extern 0 =>
 match goal with

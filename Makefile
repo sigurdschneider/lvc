@@ -50,8 +50,8 @@ doc-ind: clean-doc $(DOCS)
 	cp $(EXTRA_DIR)/resources/* $(DOCIND)
 	cp $(EXTRA_DIR)/index-ind.html $(DOCIND)/index.html
 
-doc-ind-publish: doc
-	scp -r $(DOCIND) ps:public_html/lvc-ind/
+doc-ind-publish: doc-ind
+	scp -r $(DOCIND)/* ps:public_html/lvc-ind/
 
 
 clean-doc:

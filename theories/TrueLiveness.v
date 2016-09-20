@@ -4,6 +4,8 @@ Require Export Liveness Filter LabelsDefined OUnion.
 
 Set Implicit Arguments.
 
+(** * Specification of True Liveness *)
+
 Local Hint Resolve incl_empty minus_incl incl_right incl_left.
 
 Inductive argsLive (Caller Callee:set var) : args -> params -> Prop :=
@@ -100,6 +102,8 @@ Proof.
       rewrite <- INCL. eauto with cset.
 Qed.
 
+(** ** The inductive predicate *)
+
 Inductive true_live_sound (i:overapproximation)
   : list params -> list (set var) -> stmt -> ann (set var) -> Prop :=
 | TLOpr ZL Lv x b lv e al
@@ -138,6 +142,8 @@ Inductive true_live_sound (i:overapproximation)
     -> true_live_sound i ZL Lv (stmtFun F t)(annF lv als alt).
 
 
+(** *** Some properties of the predicate *)
+
 Lemma true_live_sound_overapproximation_I ZL Lv s slv
   : true_live_sound FunctionalAndImperative ZL Lv s slv
     -> true_live_sound Imperative ZL Lv s slv.
@@ -175,10 +181,10 @@ Proof.
 Qed.
 
 (*
-Lemma true_live_sound_trueIsCalled i Lv s slv l
-  : true_live_sound i Lv s slv
+Lemma true_live_sound_trueIsCalled i ZL Lv s slv l
+  : true_live_sound i ZL Lv s slv
     -> trueIsCalled s l
-    -> exists lv Z, get Lv (counted l) (lv, Z).
+    -> exists lv, get Lv (counted l) lv.
 Proof.
   intros Live IC. destruct l; simpl in *.
   general induction IC; invt true_live_sound; eauto.
