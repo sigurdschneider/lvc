@@ -1,6 +1,6 @@
 Require Import List.
 Require Export Util Var Val Exp Env Map CSet AutoIndTac IL AllInRel.
-Require Export SmallStepRelations StateType Bisim Sim.
+Require Export SmallStepRelations StateType NonParametricBiSim Sim.
 
 Set Implicit Arguments.
 Unset Printing Records.
@@ -40,9 +40,9 @@ Proof.
   - eapply plus2_destr_nil in H4. dcr.
     econstructor. eauto.
     eapply COH; eauto.
-    eapply bisim'_bisim.
-    eapply bisim'_reduction_closed.
-    eapply bisim_bisim'. eapply H1. econstructor.
+    eapply simp_bisim.
+    eapply sim_reduction_closed.
+    eapply bisim_simp. eapply H1. econstructor.
     eapply (star2_step EvtTau); eauto. econstructor.
   - eapply diverges_reduction_closed in H3.
     + exfalso. eapply (diverges_never_activated H5); eauto.
@@ -121,25 +121,76 @@ Qed.
 
 (** *** Bisimilarity is sound for prefix inclusion *)
 
+Lemma bisim_terminate {S1} `{StateType S1} (σ1 σ1':S1)
+      {S2} `{StateType S2} (σ2:S2)
+: star2 step σ1 nil σ1'
+  -> normal2 step σ1'
+  -> sim bot3 Bisim σ1 σ2
+  -> exists σ2', star2 step σ2 nil σ2' /\ normal2 step σ2' /\ result σ1' = result σ2'.
+Proof.
+  intros. general induction H1.
+  - pinversion H3; subst.
+    + exfalso. eapply H2. inv H1; do 2 eexists; eauto.
+    + exfalso. eapply star2_normal in H1; eauto. subst.
+      eapply (activated_normal _ H5); eauto.
+    + eapply star2_normal in H4; eauto; subst.
+      eexists; split; eauto.
+  - destruct y; isabsurd. simpl.
+    eapply IHstar2; eauto.
+    eapply sim_reduction_closed_1; eauto using star2, star2_silent.
+Qed.
+
+
+Lemma bisim_activated {S1} `{StateType S1} (σ1:S1)
+      {S2} `{StateType S2} (σ2:S2)
+: activated σ1
+  -> sim bot3 Bisim σ1 σ2
+  -> exists σ2', star2 step σ2 nil σ2' /\ activated σ2' /\
+           ( forall (evt : event) (σ1'' : S1),
+               step σ1 evt σ1'' ->
+               exists σ2'' : S2,
+                 step σ2' evt σ2'' /\
+                 (sim bot3 Bisim σ1'' σ2''))
+           /\
+           ( forall (evt : event) (σ2'' : S2),
+               step σ2' evt σ2'' ->
+               exists σ1' : S1,
+                 step σ1 evt σ1' /\
+                 (sim bot3 Bisim σ1' σ2'')).
+Proof.
+  intros.
+  pinversion H2; subst.
+  -  exfalso. edestruct (plus2_destr_nil H3); dcr.
+     destruct H1 as [? []].
+     exploit (step_internally_deterministic _ _ _ _ H7 H1); dcr; congruence.
+  - assert (σ1 = σ0). eapply activated_star_eq; eauto. subst σ1.
+    eexists σ3; split; eauto. split; eauto. split.
+    intros. edestruct H7; eauto; dcr. destruct H12; isabsurd.
+    eexists; split; eauto.
+    intros. edestruct H8; eauto; dcr. destruct H12; isabsurd.
+    eexists; split; eauto.
+  - exfalso. refine (activated_normal_star _ H1 _ _); eauto using star2.
+Qed.
+
 Lemma bisim_prefix' {S} `{StateType S} {S'} `{StateType S'} (sigma:S) (σ':S')
 : bisim sigma σ' -> forall L, prefix sigma L -> prefix σ' L.
 Proof.
   intros. general induction H2.
-  - eapply bisim_bisim' in H3.
+  - eapply bisim_simp in H3.
     eapply IHprefix; eauto.
-    eapply bisim'_bisim. eapply bisim'_reduction_closed_1; eauto.
+    eapply simp_bisim. eapply sim_reduction_closed_1; eauto.
     eapply (star2_step _ _ H0). eapply star2_refl.
-  - eapply bisim_bisim' in H4.
-    eapply bisim'_activated in H4; eauto.
+  - eapply bisim_simp in H4.
+    eapply sim_activated in H4; eauto.
     destruct H4 as [? [? [? []]]].
     destruct evt.
     + eapply prefix_star2_silent; eauto.
       edestruct H6; eauto. destruct H8.
       econstructor 2. eauto. eapply H8.
       eapply IHprefix; eauto.
-      eapply bisim'_bisim. eapply H9.
+      eapply simp_bisim. eapply H9.
     + exfalso; eapply (no_activated_tau_step _ H0 H1); eauto.
-  - eapply bisim_bisim' in H4. eapply bisim'_terminate in H4; eauto.
+  - eapply (@bisim_simp Bisim) in H4. eapply bisim_terminate in H4; eauto.
     destruct H4 as [? [? []]]. econstructor 3; [ | eauto | eauto]. congruence.
   - econstructor 4.
 Qed.
@@ -347,24 +398,23 @@ Proof.
   eapply coproduces_reduction_closed_step; eauto.
 Qed.
 
-(** *** Bisimilarity is sound for maximal traces *)
 
+(** *** Bisimilarity is sound for maximal traces *)
 Lemma bisim_coproduces S `{StateType S} S' `{StateType S'} (sigma:S) (σ':S')
   : bisim sigma σ' -> forall L, coproduces sigma L -> coproduces σ' L.
 Proof.
   revert sigma σ'. cofix COH; intros.
   inv H2.
-  - assert (bisim' σ'0 σ').
-    eapply bisim'_reduction_closed. eapply (bisim_bisim' H1).
+  - assert (sim bot3 Bisim σ'0 σ').
+    eapply sim_reduction_closed. eapply (bisim_simp _ H1).
     eauto. econstructor.
-    exploit (bisim'_activated H4 H7). dcr.
+    exploit (bisim_activated H4 H7). dcr.
     edestruct H11. eauto. dcr.
-    econstructor; try eapply H8. eauto. eauto.
+    econstructor; try eapply H10. eauto. eauto.
     eapply COH; eauto.
-    destruct H8.
-    eapply bisim'_bisim. eapply H12.
+    eapply simp_bisim. eauto.
   - econstructor. eapply (bisim_sound_diverges H1); eauto.
-  - exploit (bisim'_terminate H4 H5 (bisim_bisim' H1)).
+  - exploit (bisim_terminate H4 H5 (bisim_simp _ H1)).
     dcr.
     econstructor; eauto.
 Qed.
