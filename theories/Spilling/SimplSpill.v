@@ -7,80 +7,83 @@ Require Import Take TakeSet.
 Set Implicit Arguments.
 
 Fixpoint simplSpill
-(k : nat)
-(ZL: list params)
-(Λ : list (set var * set var))
-(R : set var)
-(M : set var)
-(s : stmt)
-(Lv : ann (set var))
-{struct s}
-: ann (set var * set var * option (list (set var * set var))) :=
-match s,Lv with
+         (k : nat)
+         (ZL: list params)
+         (Λ : list (⦃var⦄ * ⦃var⦄))
+         (R M : ⦃var⦄)
+         (s : stmt)
+         (Lv : ann ⦃var⦄)
+         {struct s}
+  : spilling :=
+  match s,Lv with
 
-| stmtLet x e s, ann1 LV lv
-  => let Fv_e := Exp.freeVars e in
-     let L    := Fv_e \ R in
-     let K    := of_list (take (cardinal L) (elements (R \ Fv_e))) in
-     let R_e : set var  := R \ K ∪ L in
+  | stmtLet x e s, ann1 LV lv
+    => let Fv_e := Exp.freeVars e in
+       let L    := Fv_e \ R in
+       let K    := of_list (take (cardinal L) (elements (R \ Fv_e))) in
+       let R_e  := R \ K ∪ L in
 
-     let K_x  := if [(cardinal R_e) >= k]
-                      then singleton (hd 0 (elements R_e))
-                      else ∅ in
-     let Sp   := getAnn lv ∩ (K ∪ K_x) in
-     let R_s  := {x; R_e \ K_x} in
+       let K_x  := if [(cardinal R_e) >= k]
+                   then singleton (hd 0 (elements R_e))
+                   else ∅ in
+       let Sp   := getAnn lv ∩ (K ∪ K_x) in
+       let R_s  := {x; R_e \ K_x} in
 
-     ann1 (Sp,L,None) (simplSpill k ZL Λ R_s (Sp ∪ M) s lv)
+       ann1 (Sp,L,None) (simplSpill k ZL Λ R_s (Sp ∪ M) s lv)
 
-| stmtReturn e, _
-  => let Fv_e := Op.freeVars e in
-     let L    := Fv_e \ R in
-     let K    := of_list (take (cardinal L) (elements (R \ Fv_e))) in
-     let R_e  := R \ K ∪ L in
-     let Sp   := ∅ in
+  | stmtReturn e, _
+    => let Fv_e := Op.freeVars e in
+       let L    := Fv_e \ R in
+       let K    := of_list (take (cardinal L) (elements (R \ Fv_e))) in
+       let R_e  := R \ K ∪ L in
+       let Sp   := ∅ in
 
-     ann0 (Sp,L,None)
+       ann0 (Sp,L,None)
 
-| stmtIf e s1 s2, ann2 LV lv1 lv2
-  => let Fv_e := Op.freeVars e in
-     let L    := Fv_e \ R in
-     let K    := of_list (take (cardinal L) (elements (R \ Fv_e))) in
-     let R_e  := R \ K ∪ L in
-     let Sp   := (getAnn lv1 ∪ getAnn lv2) ∩ K in
+  | stmtIf e s1 s2, ann2 LV lv1 lv2
+    => let Fv_e := Op.freeVars e in
+       let L    := Fv_e \ R in
+       let K    := of_list (take (cardinal L) (elements (R \ Fv_e))) in
+       let R_e  := R \ K ∪ L in
+       let Sp   := (getAnn lv1 ∪ getAnn lv2) ∩ K in
 
-     ann2 (Sp,L,None) (simplSpill k ZL Λ R_e (Sp ∪ M) s1 lv1)
-                      (simplSpill k ZL Λ R_e (Sp ∪ M) s2 lv2)
+       ann2 (Sp,L,None) (simplSpill k ZL Λ R_e (Sp ∪ M) s1 lv1)
+            (simplSpill k ZL Λ R_e (Sp ∪ M) s2 lv2)
 
-| stmtApp f Y, _
-  => let R_f := fst (nth (counted f) Λ (∅,∅)) in
-     let M_f := snd (nth (counted f) Λ (∅,∅)) in
-     let Z   := nth (counted f) ZL nil in
-     let L   := R_f \ R \ of_list Z in
-     (*let K    := of_list (take (cardinal L) (elements (R \ R_f)) in*)
-     let Sp   := M_f \ M \ of_list Z in
+  | stmtApp f Y, _
+    => let R_f := fst (nth (counted f) Λ (∅,∅)) in
+       let M_f := snd (nth (counted f) Λ (∅,∅)) in
+       let Z   := nth (counted f) ZL nil in
+       let L   := R_f \ R \ of_list Z in
+       let K    := of_list (take (cardinal L) (elements (R \ R_f))) in
+       let Sp   := M_f \ M \ of_list Z ∪ ((list_union (Op.freeVars ⊝ Y) \ M) ∩ K) in
 
-     ann0 (Sp,L,None)
+       ann0 (Sp,L,Some (inr (list_union (Op.freeVars ⊝ Y) \ (R \ K ∪ L))))
 
-| stmtFun F t, annF LV als lv_t
-  => let rms:= (fun f al =>
-                  let Lv  := getAnn al in (* liveness in fn body *)
-                  let ZL  := fst f in    (* params of fn *)
-                  let R_f := of_list (take k (elements Lv)) in
-                  let M_f := Lv \ R_f in
-                     (R_f, M_f)
-               ) ⊜ F als in
-     let ZL':= (fun f => fst f) ⊝ F ++ ZL in
-     let Λ' := rms ++ Λ in
+  | stmtFun F t, annF LV als lv_t
+    => let rms:= (fun f al =>
+                   let Lv  := getAnn al in (* liveness in fn body *)
+                   let ZL  := fst f in    (* params of fn *)
+                   let R_f := of_list (take k (elements Lv)) in
+                   let M_f := Lv \ R_f in
+                   (R_f, M_f)
+                ) ⊜ F als in
+       let ZL':= (fun f => fst f) ⊝ F ++ ZL in
+       let Λ' := rms ++ Λ in
 
 
-     annF (∅, ∅, Some rms)
-          ((fun f rmlv => match rmlv with (rm, Lv)
-                       => simplSpill k ZL' Λ' (fst rm) (snd rm) (snd f) Lv end)
-           ⊜ F ((fun rm al => (rm,al)) ⊜ rms als))
-                        (simplSpill k ZL' Λ' R M t lv_t)
+       annF (∅, ∅, Some (inl rms))
+            ((fun f rmlv
+              => match rmlv with (rm, Lv)
+                                => simplSpill k ZL' Λ' (fst rm) (snd rm) (snd f) Lv
+                 end)
+               ⊜ F ((fun rm al => (rm,al)) ⊜ rms als))
+            (simplSpill k ZL' Λ' R M t lv_t)
 
-| _,_ => ann0 (∅, ∅, None)
-end.
+  | _,_ => ann0 (∅, ∅, None)
+
+  end
+.
 
 
 (**********************************************************************)
@@ -302,7 +305,16 @@ general induction lvSound;
     assert (rkk := @rkk var _ R' (Exp.freeVars e) k x).
 
     eapply SpillLet with (K:= K) (Kx := K_x); eauto.
-
+    + rewrite meet_comm.
+      apply meet_incl.
+      apply union_incl_split.
+      * subst K.
+        rewrite ReqR'.
+        rewrite take_set_incl.
+        clear.
+        cset_tac.
+      * admit.
+    + admit.
     + eapply IHlvSound;
       try rewrite ReqR'; try rewrite <- MeqM'; try rewrite ΛeqΛ'; eauto.
       * unfold Subset; intro a. decide (a = x); [cset_tac|].
@@ -344,7 +356,9 @@ general induction lvSound;
                             (elements (R' \ Exp.freeVars e))
                           )
             )
-            (Kx := ∅).
+              (Kx := ∅).
+  + admit.
+  + admit.
   + eapply IHlvSound; eauto.
     * rewrite ReqR'. cset_tac.
     * rewrite MeqM'. cset_tac.
@@ -381,7 +395,7 @@ general induction lvSound;
                        (elements (R' \ Op.freeVars e))
                   )) in *.
   eapply SpillIf with (K:= K);
-  [rewrite ReqR'; apply fTake
+  [ admit | admit | rewrite ReqR'; apply fTake
   | rewrite ReqR'; apply rke; eauto
   | eapply IHlvSound1
   | eapply IHlvSound2 ];
@@ -398,6 +412,8 @@ general induction lvSound;
                      )) in *.
 
   eapply SpillApp with (K:= K); try rewrite ReqR'; try rewrite MeqM'; eauto.
+  + admit.
+  + admit.
   + subst K. assert (forall s t, nth l Λ (s,t) === nth l Λ' (s,t)).
     { intros s t. clear - pir2_get ΛeqΛ'. apply list_eq_nth.
       apply equiv_reflexive. apply ΛeqΛ'. }
@@ -415,21 +431,29 @@ general induction lvSound;
     apply incl_minus_lr with (s:=R_f) (s':=R'\K ∪ R_f \ R') (t:=of_list Z) (t':=of_list Z).
     * subst K. rewrite <- ReqR'. apply fTake.
     * eauto.
-  + erewrite <- (list_eq_nth _ _ ΛeqΛ'). rewrite (get_nth _ pir2_get). simpl.
+  + enough (M_f \ of_list Z ⊆  (snd (nth l Λ' (∅, ∅)) \ M') \ of_list (nth l ZL nil) ∪ M')
+           as HH by (rewrite HH; clear; cset_tac).
+    erewrite <- (list_eq_nth _ _ ΛeqΛ') at 1. rewrite (get_nth _ pir2_get). simpl.
     erewrite get_nth; eauto.
     erewrite <- minus_incl with (s:=M') (t:=of_list Z) at 2.
     rewrite minus_union_minus.
     apply incl_minus_lr with (s:=M_f) (s':=M_f \M' ∪ M') (t:=of_list Z) (t':=of_list Z).
     * clear. cset_tac.
     * eauto.
+  + assert (forall (s t : ⦃var⦄), s ⊆ s \ t ∪ t) by (clear; cset_tac).
+    admit.
+  + admit.
 - set (K := of_list (take
                        (cardinal (Op.freeVars e \ R'))
                        (elements (R' \ Op.freeVars e))
                   )) in *.
   eapply SpillReturn with (K:= K); try rewrite ReqR'; eauto.
+  + cset_tac.
+  + admit.
   + apply fTake.
   + apply rke; eauto.
 - eapply SpillFun with (K:=∅); eauto.
+  + clear. cset_tac.
   + assert (forall s:set var, s \ ∅ ∪ ∅ [=] s) as seteq'. { cset_tac. }
     rewrite (seteq' R). rewrite ReqR'. apply RleqK.
   + symmetry. apply zip_length2. rewrite H.
@@ -454,4 +478,4 @@ general induction lvSound;
     * eapply PIR2_app; eauto.
       eapply PIR2_get; eauto with len.
       intros ; inv_get. apply take_of_list_cardinal.
-Qed.
+Admitted.
