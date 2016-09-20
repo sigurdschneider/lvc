@@ -515,6 +515,118 @@ Qed.
 
 End I.
 
+Module F.
+
+  Require Import SimF.
+
+  Instance SR : ProofRelationF bool := {
+   ParamRelF G Z Z' := Z' = Z;
+   ArgRelF G VL VL' := VL' = VL;
+   IndexRelF AL n n' :=
+     n' = countTrue (take n AL) /\ get AL n true;
+   Image AL := countTrue AL
+}.
+- intros AL' AL n n' [H H']; subst.
+  split.
+  + clear H' H.
+    general induction AL'; simpl.
+    * orewrite (n - 0 = n). omega.
+    * destruct n; simpl; eauto. cases; simpl; eauto.
+  + rewrite get_app_ge in H'; eauto.
+Defined.
+
+
+Lemma compileF_separates RL F als (Len:❬F❭ = ❬als❭)
+  : separates SR (getAnn ⊝ als) RL F (compileF compile (getAnn ⊝ als ++ RL) F als).
+Proof.
+  hnf; intros; split; [| split; [| split]].
+  - eauto with len.
+  - simpl. rewrite compileF_length; eauto.
+  - rewrite Len; intros; hnf in H; dcr; subst; inv_get.
+    rewrite compileF_length; eauto.
+    rewrite take_app_lt; eauto with len.
+    erewrite (take_eta n (getAnn ⊝ als)) at 2.
+    rewrite countTrue_app.
+    erewrite <- get_eq_drop; eauto using map_get_1.
+    rewrite EQ. simpl. omega.
+  - rewrite Len; intros; simpl in *; dcr; subst.
+    rewrite compileF_length; eauto.
+    rewrite take_app_ge; eauto with len.
+    rewrite countTrue_app. omega.
+Qed.
+
+Lemma compileF_indexwise_paramrel RL F als (Len:❬F❭ = ❬als❭)
+  : indexwise_paramrel SR F (compileF compile (getAnn ⊝ als ++ RL) F als) (getAnn ⊝ als) RL.
+Proof.
+  hnf; intros.
+  simpl in *; dcr; subst.
+  rewrite get_app_lt in H4; eauto with len.
+  inv_get; simpl.
+  exploit (compileF_get (getAnn ⊝ als ++ RL)); try eapply H2; eauto.
+  simpl in *.
+  erewrite take_app_lt, <- map_take in H1; eauto with len.
+  get_functional. eauto.
+Qed.
+
+Lemma sim_compile_fun_cases r RL L V s L' F als alt
+  : sim'r r Bisim (mapi (F.mkBlock V) F ++ L, V, s)
+   (mapi (F.mkBlock V) (compileF compile (getAnn ⊝ als ++ RL) F als) ++ L', V,
+    compile (getAnn ⊝ als ++ RL) s alt)
+-> sim'r r Bisim (L, V, stmtFun F s)
+        (L', V,
+         match compileF compile (getAnn ⊝ als ++ RL) F als with
+         | nil => compile (getAnn ⊝ als ++ RL) s alt
+         | _ :: _ =>
+           stmtFun (compileF compile (getAnn ⊝ als ++ RL) F als) (compile (getAnn ⊝ als ++ RL) s alt)
+         end).
+Proof.
+  intros. cases.
+  - simpl in *. pone_step_left. eauto.
+  - rewrite Heq in *; clear Heq.
+    pone_step. left. eauto.
+Qed.
+
+Lemma sim_F RL r L L' V s (a:ann bool) (Ann:getAnn a)
+ (UC: unreachable_code Sound RL s a)
+ (LSIM:labenv_sim Bisim (sim'r r) SR RL L L')
+  : sim'r r Bisim (L,V, s) (L',V, compile RL s a).
+Proof.
+  unfold sim'r. revert_except s.
+  sind s; destruct s; simpl in *; intros; invt unreachable_code; simpl in * |- *.
+  - destruct e.
+    + eapply (sim_let_op il_statetype_F); eauto.
+    + eapply (sim_let_call il_statetype_F); eauto.
+  - eapply (sim_if_elim il_statetype_F); intros; eauto.
+  - assert (b=true). destruct a0, b; isabsurd; eauto. subst.
+    eapply labenv_sim_app; eauto.
+    + hnf; simpl. split; eauto using zip_get.
+    + intros; simpl in *; subst. eauto 20.
+  - pno_step.
+  - eapply sim_compile_fun_cases.
+    eapply (IH s); eauto with len.
+    eapply labenv_sim_extension; eauto.
+    + intros. hnf; intros; simpl in *; dcr; subst; inv_get.
+      exploit (compileF_get (getAnn ⊝ als ++ RL)); try eapply H5; eauto.
+      erewrite take_app_lt, <- map_take in H7; eauto with len.
+      simpl in *. get_functional.
+      exploit H4; eauto.
+    + eapply compileF_indexwise_paramrel; eauto.
+    + eapply compileF_separates; eauto.
+Qed.
+
+Lemma sim_UCE V s a
+  : unreachable_code Sound nil s a
+    -> getAnn a
+    -> @sim F.state _ F.state _ Bisim (nil,V, s) (nil,V, compile nil s a).
+Proof.
+  intros. eapply sim'_sim.
+  eapply (@sim_F nil); eauto; isabsurd.
+Qed.
+
+
+End F.
+
+
 Fixpoint compile_live (s:stmt) (a:ann (set var)) (b:ann bool) : ann (set var) :=
   match s, a, b with
     | stmtLet x e s, ann1 lv an, ann1 _ bn =>
