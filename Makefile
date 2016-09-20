@@ -1,12 +1,12 @@
 DOC := doc/
+DOCIND := doc/
 EXTRA_DIR := extra
 HEADER := $(EXTRA_DIR)/header.html
 FOOTER := $(EXTRA_DIR)/footer.html
 COQDOCFLAGS := \
   --toc --toc-depth 2 --html --interpolate \
   --index indexpage --no-lib-name --parse-comments \
-  --with-header $(HEADER) --with-footer $(FOOTER) \
-  -d $(DOC)
+  --with-header $(HEADER) --with-footer $(FOOTER)
 COQMAKEFILE := Makefile.coq
 COQMAKE := +$(MAKE) -f $(COQMAKEFILE)
 CORES=$(shell cat /proc/cpuinfo | grep cpu\ cores | sed 's/.*:\ //' | head -n 1)
@@ -35,12 +35,21 @@ depclean: clean
 doc: clean-doc $(DOCS) 
 	- mkdir -p $(DOC)
 	make -f $(COQMAKEFILE) $(VS:.v=.vo) -j$(CORES)
-	coqdoc $(COQDOCFLAGS) $(shell cat _CoqProject | grep -v ^-I) $(VS)
+	coqdoc $(COQDOCFLAGS) -d $(DOC) $(shell cat _CoqProject | grep -v ^-I) $(VS)
 	cp $(EXTRA_DIR)/resources/* $(DOC)
-#	make -f $(COQMAKEFILE) html COQDOCFLAGS="$(COQDOCFLAGS)"
 
 doc-publish: doc
 	scp -r doc/ ps:public_html/LVC 
+
+doc-ind: clean-doc $(DOCS) 
+	- mkdir -p $(DOCIND)
+	make -f $(COQMAKEFILE) $(VS:.v=.vo) -j$(CORES)
+	coqdoc $(COQDOCFLAGS) -d $(DOCIND) $(shell cat _CoqProject | grep -v ^-I) $(VS)
+	cp $(EXTRA_DIR)/resources/* $(DOCIND)
+
+doc-ind-publish: doc
+	scp -r doc/ ps:public_html/LVC 
+
 
 clean-doc:
 	rm -rf $(DOC)
