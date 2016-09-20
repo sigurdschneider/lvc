@@ -4,17 +4,20 @@ Require Import Var Val Exp Env IL SimF.
 Set Implicit Arguments.
 Unset Printing Records.
 
+(** * Program Equivalence *)
+
 Instance SR : PointwiseProofRelationF (params) := {
    ParamRelFP G Z Z' := Z = Z' /\ Z = G;
    ArgRelFP G VL VL' := VL = VL' /\ length VL = length G;
 }.
-Proof.
+
 
 Definition bisimeq t r s s' :=
     forall L L' E, labenv_sim t (sim'r r) SR (block_Z ⊝ L') L L'
             -> ❬L❭ = ❬L'❭
             -> sim'r r t (L, E, s) (L', E, s').
 
+(** ** Reflexivity *)
 
 Lemma bisimeq_refl s t
   : forall L L' E r,
@@ -85,6 +88,8 @@ Fixpoint fillC (ctx:stmtCtx) (s':stmtCtx) : stmtCtx :=
     | ctxLetT F ctx => ctxLetT F (fillC ctx s')
     | ctxHole => s'
   end.
+
+(** ** Program Equivalence is contextual *)
 
 Lemma simeq_contextual s s' ctx r
 : (forall r, bisimeq Bisim r s s')
