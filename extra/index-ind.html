@@ -1,0 +1,219 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+  <head>
+    <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+    <link href="coqdoc.css" rel="stylesheet" type="text/css" />
+    <link href="coqdocjs.css" rel="stylesheet" type="text/css"/>
+    <script type="text/javascript" src="config.js"></script>
+    <script type="text/javascript" src="coqdocjs.js"></script>
+    <style>
+      h3 + div#toc {
+      margin-left: 2em;
+      }
+    </style>
+  </head>
+
+  <body onload="document.getElementById('content').focus()">
+    <div id="header">
+      <span class="left">
+	<span class="modulename"> <script> document.write(document.title) </script> </span>
+      </span>
+
+      <span class="button" id="toggle-proofs"></span>
+
+      <span class="right">
+	<a href="./">Intro Page</a>
+	<a href="./indexpage.html"> Index </a>
+	<a href="./toc.html"> Full Table of Contents </a>
+      </span>
+    </div>
+    <div id="content" tabindex="-1" onblur="document.getElementById('content').focus()">
+      <div id="main">
+	<h1>An Inductive Proof Method for Simulation-based Compiler Correctness</h1>
+	<p>
+	  This is the Coq development accompanying our <a href="todo">recent submission to CPP</a>.
+	</p>
+	<p>
+	  In <a href="http://www.ps.uni-saarland.de/~sdschn/publications/lvc15/"> previous work</a> we
+	  introduced the intermediate language IL with a functional and an imperative semantics.
+	  In this work we present an inductive proof method for simulation-based compiler correctness.
+	  We showcase the method with the proofs of the following two optimizations:
+	  <ol>
+	    <li>Unreachable Code Analysis and Unreachable Code Elimination</li>
+	    <li>Liveness Analysis and Dead Variable Elimination</li>
+	  </ol>
+	</p>
+	<p>
+	  The proofs for UCE and DVE require an interesting simulation argument: In both cases a step must be argued
+	  where the source program reduces (for example, a variable definition) while the target program does not reduce
+	  (because the variable definition has been removed).
+	  Our proof method is induction on the program structure, facilitated by a fixed-point lemma about our simulation,
+	  which we call the extension lemma.
+	  We prove the extension lemma for the <a href="Lvc.Equiv.SimI.html">imperative interpretation</a> and for the
+	  <a href="Lvc.Equiv.SimF.html">functional interpretation</a>.
+	</p>
+	<p>
+	  We <a href="Lvc.UnreachableCode.html">specify soundness of unreachable code</a>,
+	  implement <a href="Lvc.UCE.html">unreachable code elimination (UCE) and prove it correct</a> with respect to both semantic interpretations.
+	</p>
+	<p>
+	  We <a href="Lvc.TrueLiveness.html">specify soundness of liveness</a>,
+	  implement <a href="Lvc.DVE.html">dead variable elimination (DVE) and prove it correct</a> with respect to both semantic interpretations.
+	</p>
+	<h2> Selected Items from the Table of Contents </h2>
+	<div class="tocindent">
+	  <h3> The Language IL </h3>
+	  <div id="toc">
+      	    <!-- <a href="Lvc.Isa.Op.html"><h2>Lvc.Isa.Op</h2></a> -->
+	    <ul class="doclist">
+	      <li><a href="Lvc.Isa.Op.html#lab74">Operations</a>
+
+	      </li>
+	    </ul>
+      	    <!-- <a href="Lvc.IL.Exp.html"><h2>Lvc.IL.Exp</h2></a> -->
+	    <ul class="doclist">
+	      <li><a href="Lvc.IL.Exp.html#lab43">Extended Expressions</a>
+		<ul class="doclist">
+		  <li><a href="Lvc.IL.Exp.html#lab44">Renaming</a>
+
+		  </li>
+		  <li><a href="Lvc.IL.Exp.html#lab45">Liveness</a>
+
+		  </li>
+		  <li><a href="Lvc.IL.Exp.html#lab46">Alpha Equivalence</a>
+
+		  </li>
+		</ul>
+
+	      </li>
+	    </ul>
+      	    <!-- <a href="Lvc.IL.IL.html"><h2>Lvc.IL.IL</h2></a> -->
+	    <ul class="doclist">
+	      <li><a href="Lvc.IL.IL.html#lab34">Intermediate Language IL</a>
+		<ul class="doclist">
+		  <li><a href="Lvc.IL.IL.html#lab35">Syntax</a>
+
+		  </li>
+		  <li><a href="Lvc.IL.IL.html#lab37">Semantics</a>
+
+		  </li>
+		</ul>
+
+	      </li>
+	    </ul>
+	  </div>
+	  <h3> Program Equivalence </h3>
+	  <div id="toc">
+	    <a href="Lvc.Equiv.Bisim.html"><h2>Lvc.Equiv.Bisim</h2></a>
+	    <ul class="doclist">
+	      <li><a href="Lvc.Equiv.Bisim.html#lab57">Simulation</a>
+
+	      </li>
+	    </ul>
+	    <a href="Lvc.Equiv.BisimSim.html"><h2>Lvc.Equiv.BisimSim</h2></a>
+	    <a href="Lvc.Equiv.TraceEquiv.html"><h2>Lvc.Equiv.TraceEquiv</h2></a>
+	    <ul class="doclist">
+	      <li><a href="Lvc.Equiv.TraceEquiv.html#lab58">Divergence</a>
+
+	      </li>
+	      <li><a href="Lvc.Equiv.TraceEquiv.html#lab59">Three equivalent notions of program equivalence</a>
+		<ul class="doclist">
+		  <li><a href="Lvc.Equiv.TraceEquiv.html#lab60">Prefix Trace Equivalence (partial traces)</a>
+
+		  </li>
+		  <li><a href="Lvc.Equiv.TraceEquiv.html#lab66">Trace Equivalence (maximal traces)</a>
+
+		  </li>
+		  <li><a href="Lvc.Equiv.TraceEquiv.html#lab70">Bisimilarity is complete for prefix trace equivalence.</a>
+
+		  </li>
+		</ul>
+
+	      </li>
+	    </ul>
+	    <a href="Lvc.Equiv.SimI.html"><h2>Lvc.Equiv.SimI</h2></a>
+	    <a href="Lvc.Equiv.Sim.html"><h2>Lvc.Equiv.Sim</h2></a>
+	    <ul class="doclist">
+	      <li><a href="Lvc.Equiv.Sim.html#lab71">Simulation</a>
+
+	      </li>
+	    </ul>
+	    <a href="Lvc.Equiv.SimF.html"><h2>Lvc.Equiv.SimF</h2></a>
+	    <a href="Lvc.Equiv.SimTactics.html"><h2>Lvc.Equiv.SimTactics</h2></a>
+	    <a href="Lvc.Equiv.CtxEq.html"><h2>Lvc.Equiv.CtxEq</h2></a>
+	    <ul class="doclist">
+	      <li><a href="Lvc.Equiv.CtxEq.html#lab72">Program Equivalence</a>
+		<ul class="doclist">
+		  <li><a href="Lvc.Equiv.CtxEq.html#lab73">Reflexivity</a>
+
+		  </li>
+		</ul>
+
+	      </li>
+	      <li><a href="Lvc.Equiv.CtxEq.html#lab74">Contextual Equivalence</a>
+		<ul class="doclist">
+		  <li><a href="Lvc.Equiv.CtxEq.html#lab75">Program Equivalence is contextual</a>
+
+		  </li>
+		</ul>
+
+	      </li>
+	    </ul>
+	  </div>
+
+	  <h3> Dead Code Elimination </h3>
+	  <div id="toc">
+	    <!-- <a href="Lvc.UnreachableCode.html"><h2>Lvc.UnreachableCode</h2></a> -->
+	    <ul class="doclist">
+	      <li><a href="Lvc.UnreachableCode.html#lab12">Rechability Specification</a>
+		<ul class="doclist">
+		  <li><a href="Lvc.UnreachableCode.html#lab13">The inductive predicate</a> </li>
+		  <li><a href="Lvc.UnreachableCode.html#lab14">Some Properties of the Predicate</a></li>
+		</ul>
+
+	      </li>
+	    </ul>
+	    <!-- <a href="Lvc.UCE.html"><h2>Lvc.UCE</h2></a> -->
+	    <ul class="doclist">
+	      <li><a href="Lvc.UCE.html#lab143">Unreachable Code Elimination</a>
+		<ul class="doclist">
+		  <li><a href="Lvc.UCE.html#lab144">The transformer</a> </li>
+		  <li><a href="Lvc.UCE.html#lab146">Correctness with respect to the imperative semantics IL/I</a> </li>
+		  <li><a href="Lvc.UCE.html#lab147">Correctness with respect to the functional semantics IL</a> </li>
+		  <li><a href="Lvc.UCE.html#lab148">UCE respects parameter/argument matching</a> </li>
+		  <li><a href="Lvc.UCE.html#lab149">Reconstruction of Liveness Information after UCE</a> </li>
+		  <li><a href="Lvc.UCE.html#lab150">Completeness of Reachability</a> </li>
+		</ul>
+	      </li>
+	    </ul>
+	    <!-- <a href="Lvc.DVE.html"><h2>Lvc.DVE</h2></a> -->
+	    <ul class="doclist">
+	      <li><a href="Lvc.DVE.html#lab15">Dead Variable Elimination</a>
+		<ul class="doclist">
+		  <li><a href="Lvc.DVE.html#lab16">Correctness with respect to the imperative semantics IL/I</a> </li>
+		  <li><a href="Lvc.DVE.html#lab17">Correctness with respect to the functional semantics IL</a> </li>
+		  <li><a href="Lvc.DVE.html#lab18">Reconstruction of Liveness Information after DVE</a> </li>
+		  <li><a href="Lvc.DVE.html#lab19">DVE and Unreachable Code</a> </li>
+		</ul>
+	      </li>
+	    </ul>
+	    <!-- <a href="Lvc.TrueLiveness.html"><h2>Lvc.TrueLiveness</h2></a> -->
+	    <ul class="doclist">
+	      <li><a href="Lvc.TrueLiveness.html#lab54">Specification of True Liveness</a>
+		<ul class="doclist">
+		  <li><a href="Lvc.TrueLiveness.html#lab55">The inductive predicate</a></li>
+		</ul>
+	      </li>
+	    </ul>
+	  </div>
+	</div>
+      </div>
+    </div>
+    <div id="footer">
+      Generated by <a href="http://coq.inria.fr/">coqdoc</a> and improved with <a href="https://github.com/tebbi/coqdocjs">CoqdocJS</a>
+    </div>
+  </div>
+</body>
+
+</html>

@@ -164,6 +164,7 @@ function fixTitle(){
   modulename = modulename.substring(modulename.lastIndexOf('.')+1);
   if (modulename === "toc") {modulename = "Table of Contents";}
   else if (modulename === "indexpage") {modulename = "Index";}
+	else if (url.substr(url.length -1) == "/") {modulename = "Intro Page";}
   else {modulename = modulename + ".v";};
   document.title = modulename;
 }
