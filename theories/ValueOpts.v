@@ -856,23 +856,22 @@ Proof.
   unfold list_EqnApx; simpl in *.
   cset_tac; intuition.
 Qed.
-
+(*
 Definition ArgRel' (Z:params ) (VL VL': list val) : Prop :=
-  length Z = length VL
-  /\ VL = VL'
+  
 (*  /\ satisfiesAll ([Z <-- List.map Some VL]) (EqS ∪ Gamma)*).
 
 Definition ParamRel' (Zb:params) (Z Z' : list var) : Prop :=
-  Z = Z' /\ Zb = Z.
+ *)
 
 
 Instance AR : PointwiseProofRelationF params:= {
-  ArgRelFP := ArgRel';
-  ParamRelFP := ParamRel'
+  ArgRelFP Z VL VL' := length Z = length VL /\ VL = VL';
+  ParamRelFP Z Z' Zb := Z = Z' /\ Zb = Z'
 }.
  
 
-Lemma sim_let_op_RPX X (IST:ILStateType X) r (L L':X) V V' x x' e e' s s'
+Lemma sim_let_op_apx X (IST:ILStateType X) r (L L':X) V V' x x' e e' s s'
       (EQ: fstNoneOrR eq (op_eval V e) (op_eval V' e'))
       (SIM: forall v, op_eval V e = Some v
                  -> (sim'r r \3/ r) Sim (L, V [x <- ⎣ v ⎦], s) (L', V' [x' <- ⎣ v ⎦], s'))
@@ -881,8 +880,7 @@ Proof.
   inv EQ.
   -  pfold ; eapply sim'Err;
        [ | eapply star2_refl | ].
-     +  Print ILStateType.
-        apply result_none.  inversion 1.
+     + apply result_none.  inversion 1.
      + eapply let_op_normal. eauto.
   -  pfold; eapply sim'Silent; [ eapply plus2O
                               | eapply plus2O
@@ -892,13 +890,77 @@ Proof.
     eapply SIM; eauto.
 Qed.
 
-Lemma satisfies_fstNoneOrR_Apx V e e' :
+Lemma satisfies_fstNoneOrR_apx V e e' :
   satisfies V (EqnApx e e') -> fstNoneOrR eq (op_eval V e) (op_eval V e').
 Proof.
   intros. eauto.
 Qed.
 
-Lemma onvLe_fstNoneOrR_Apx V V' e :
+Lemma sim_cond_op_apx X (IST:ILStateType X) r (L L':X) V V' e e' s1 s1' s2 s2'
+      (EQ:  fstNoneOrR eq (op_eval V e) (op_eval V' e'))
+      (SIM1: forall v, op_eval V e = Some v -> val2bool v = true ->
+                  (sim'r r \3/ r) Sim (L, V, s1) (L', V', s1'))
+      (SIM2: forall v, op_eval V e = Some v -> val2bool v = false ->
+                 (sim'r r \3/ r) Sim (L, V, s2) (L', V', s2'))
+  : sim'r r Sim (L, V, stmtIf e s1 s2) (L', V', stmtIf e' s1' s2').
+Proof.
+  inv EQ.
+  - pfold; eapply sim'Err;
+      [|eapply star2_refl|].
+    + apply result_none. inversion 1.
+    + eapply cond_normal. eauto.
+  -  case_eq (val2bool y); intros.
+    + pfold; eapply sim'Silent; [ eapply plus2O; [|eapply filter_tau_nil_eq]
+                                | eapply plus2O; [|eapply filter_tau_nil_eq]
+                                | eapply SIM1; eauto];
+      eapply step_cond_true; eauto.    
+    + pfold; eapply sim'Silent; [ eapply plus2O; [|eapply filter_tau_nil_eq]
+                                | eapply plus2O; [|eapply filter_tau_nil_eq]
+                                | eapply SIM2; eauto];
+      eapply step_cond_false; eauto.
+Qed.
+
+Lemma sim_return_apx X (IST:ILStateType X) r (L L':X) V V' e e' 
+  :fstNoneOrR eq (op_eval V e) (op_eval V' e) -> sim'r r Sim (L, V, stmtReturn e) (L', V', stmtReturn e').
+Proof.
+  intros. inv H.
+  - pfold; eapply sim'Err; [|eapply star2_refl|].
+    + admit.
+    + admit.
+  - pfold; eapply sim'Term; [|eapply star2_refl|eapply star2_refl| | ].
+    + admit.
+    + admit.
+    + admit.
+Admitted.
+      
+  Lemma sim_let_call X (IST:ILStateType X) r (L L':X) V V' x x' f Y Y' s s'
+      (EQ: fstNoneOrR eq  (omap (op_eval V) Y)  (omap (op_eval V') Y'))
+      (SIM: forall v, (sim'r r \3/ r) Sim (L, V [x <- ⎣ v ⎦], s) (L', V' [x' <- ⎣ v ⎦], s'))
+  : sim'r r Sim (L, V, stmtLet x (Call f Y) s) (L', V', stmtLet x' (Call f Y') s').
+Proof.
+  inv EQ.
+  - pfold; eapply sim'Extern; eauto using star2_refl.
+Abort.
+    (*
+  case_eq (omap (op_eval V) Y); intros.
+  * pose proof H as H'. rewrite EQ in H'.
+    pfold; eapply sim'Extern;
+      [ eapply star2_refl
+      | eapply star2_refl
+      | step_activated; eauto using step_let_call
+      | step_activated; eauto using step_let_call | |];
+      intros ? ? STEP; eapply let_call_inversion in STEP; dcr; subst; eexists; split; try eapply step_let_call; eauto.
+    rewrite <- EQ; eauto.
+    rewrite EQ; eauto.
+  * pfold. eapply sim'Term; [| eapply star2_refl | eapply star2_refl | | ];
+             [ simpl | | ].
+    rewrite !result_none; isabsurd; eauto.
+    eapply let_call_normal; eauto.
+    eapply let_call_normal; rewrite <- EQ; eauto.
+Qed.
+
+*)
+Lemma onvLe_fstNoneOrR_apx V V' e :
   onvLe V V' -> fstNoneOrR eq (op_eval V e) (op_eval V' e).
 Proof with simpl; eauto using @fstNoneOrR.
   intros. general induction e...
@@ -912,18 +974,31 @@ Proof with simpl; eauto using @fstNoneOrR.
   reflexivity.
 Qed.
 
-Lemma tmp x e gamma V v:
-  EqnEq(Var x) e === gamma-> op_eval V e = ⎣ v ⎦  -> x ∉ Op.freeVars e  ->satisfies (V [x <- ⎣ v ⎦]) gamma.
+
+Lemma satisfies_EqnEq_on_update   (x:var) e V v:
+  op_eval V e = ⎣ v ⎦   -> x ∉ Op.freeVars e  ->satisfies (V [x <- ⎣ v ⎦]) (EqnEq(Var x) e).
   Proof.
-    intros. rewrite <- H. unfold satisfies. simpl. lud; eauto.
+    intros. unfold satisfies. simpl. lud; eauto.
     erewrite op_eval_live.
-    - rewrite H0. reflexivity.
+    -  rewrite <- H. reflexivity.
     - eapply Op.live_freeVars.
     - eapply agree_on_update_dead; eauto.
 Qed.
-    
 
 
+
+Lemma op_eval_true_satisfies  V e v 
+        : op_eval V e = ⎣ v ⎦ -> val2bool v = true -> satisfies V (EqnEq (UnOp UnOpToBool e) (Con val_true)).
+Proof.
+  intros. unfold satisfies. simpl. rewrite H. simpl. unfold option_lift1. rewrite H0. simpl. reflexivity.
+Qed.
+
+Lemma op_eval_false_satisfies V e v
+  : op_eval V e = ⎣ v ⎦ -> val2bool v = false -> satisfies V (EqnEq (UnOp UnOpToBool e) (Con val_false)).
+Proof.
+intros.  unfold satisfies. simpl. rewrite H. simpl. unfold option_lift1. rewrite H0. simpl. reflexivity.
+Qed.
+  
 Hint Resolve satisfies_fstNoneOrR_Apx onvLe_fstNoneOrR_Apx.
 
 Lemma sim_vopt r L L' V V' s s' ZL Δ Γ Gamma ang
@@ -938,36 +1013,33 @@ Proof.
   intros SAT EQN SIML REAPT FV OLE.
   general induction EQN; (try (now exfalso; eapply H; eauto))
   ; simpl; invt renamedApart; simpl in * |- *.
-  - eapply (sim_let_op_RPX il_statetype_F).
-    + exploit H; eauto. exploit H1; [cset_tac|].  etransitivity; eauto.
+  - exploit H; eauto. exploit H1; eauto; [cset_tac|].  eapply (sim_let_op_RPX il_statetype_F). 
+    +  etransitivity; eauto.
     + intros. left. eapply IHEQN; eauto.
       *  unfold satisfiesAll.  intros. cset_tac.
-         -- rewrite <- H3. unfold satisfies. simpl. lud; eauto. erewrite op_eval_live.
-           ++ erewrite H1. reflexivity.
-           ++ eapply Op.live_freeVars.                                                              
-           ++ apply agree_on_update_dead.
-              ** cset_tac.
-              ** reflexivity.
-         -- eapply (tmp x e'); eauto. 
-
-
-           rewrite <- H2. unfold satisfies. simpl. lud; eauto. erewrite op_eval_live.
-           ++ exploit H; eauto. exploit H4; eauto; [cset_tac|].
-              eapply satisfies_fstNoneOrR_Apx in H5.
-              rewrite H1 in H5.
-              inv H5.
-              erewrite <- H12. reflexivity.
-           ++ eapply Op.live_freeVars.
-           ++ eapply agree_on_update_dead.
-              ** cset_tac.
-              ** reflexivity.
+         -- rewrite <- H5. eauto using satisfies_EqnEq_on_update.
+         -- rewrite <- H4. eapply (@satisfies_EqnEq_on_update x e' V v); eauto. eapply satisfies_fstNoneOrR_Apx in H2.
+           rewrite H3 in H2.  inv H2. reflexivity.
         --  exploit SAT; eauto. apply satisfies_update_dead; eauto.
             intros X. apply H7. apply FV. eapply in_eqns_freeVars; eauto.
       * pe_rewrite. rewrite! eqns_freeVars_add. simpl. rewrite H0, H8, FV. clear. cset_tac.
       * eapply agree_on_onvLe; eauto.
-
-                                                   
-          
+  -  exploit H; eauto.  exploit H0; eauto; [cset_tac|].  eapply (sim_cond_op_RPX il_statetype_F).
+     + etransitivity; eauto.
+     + intros. left. eapply IHEQN1; clear IHEQN1 IHEQN2; eauto.
+       * apply satisfiesAll_add. eauto using  op_eval_true_satisfies.   
+       * rewrite eqns_freeVars_add. simpl. pe_rewrite. intros a0 A. cset_tac.
+     + intros. left. eapply IHEQN2; clear IHEQN1 IHEQN2; eauto.
+       * apply satisfiesAll_add. eauto using op_eval_false_satisfies.
+       * rewrite eqns_freeVars_add . pe_rewrite.  intros gamma A. cset_tac.
+  - eapply labenv_sim_app; eauto; simpl.
+    intros; split; intros; eauto.
+    simpl in *.  destruct H7; subst. exists Yv; split; eauto.  eapply omap_exp_eval_onvLe; eauto.
+    exploit H4; eauto. eapply omap_satisfies_list_EqnApx; eauto.
+  - pno_step. simpl. 
+  - eapply 
+     
+    
   - exploit H; eauto. exploit X; eauto. cset_tac; reflexivity. inv X0.
     inv H2.
     + pfold. econstructor 3; try eapply star2_refl; eauto. stuck2.
