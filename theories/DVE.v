@@ -4,7 +4,7 @@ Require Import IL Annotation LabelsDefined Sawtooth InRel Liveness TrueLiveness.
 Set Implicit Arguments.
 Unset Printing Records.
 
-(** ** Dead Variable Elimination *)
+(** * Dead Variable Elimination *)
 
 Definition filter_set (Z:params) (lv:set var) := List.filter (fun x => B[x ∈ lv]) Z.
 
@@ -51,10 +51,10 @@ Instance SR : PointwiseProofRelationI ((set var) * params) := {
 Lemma sim_I ZL LV r L L' V V' s  lv
 : agree_on eq (getAnn lv) V V'
 -> true_live_sound Imperative ZL LV s lv
--> labenv_sim Sim (sim'r r) SR (zip pair LV ZL) L L'
--> sim'r r Sim (L,V, s) (L',V', compile (zip pair LV ZL) s lv).
+-> labenv_sim Sim (sim r) SR (zip pair LV ZL) L L'
+-> sim r Sim (L,V, s) (L',V', compile (zip pair LV ZL) s lv).
 Proof.
-  unfold sim'r. revert_except s.
+  unfold sim. revert_except s.
   sind s; destruct s; simpl; intros; invt true_live_sound; simpl in * |- *.
   - destruct e.
     + cases. exploit H9; eauto. inv H2.
@@ -99,9 +99,9 @@ Qed.
 Lemma sim_DVE V V' s lv
 : agree_on eq (getAnn lv) V V'
 -> true_live_sound Imperative nil nil s lv
--> @sim I.state _ I.state _ Sim (nil,V, s) (nil,V', compile nil s lv).
+-> @sim I.state _ I.state _ bot3 Sim (nil,V, s) (nil,V', compile nil s lv).
 Proof.
-  intros. eapply sim'_sim.
+  intros.
   eapply (@sim_I nil nil); eauto.
   eapply labenv_sim_nil.
 Qed.
@@ -125,10 +125,10 @@ Instance SR : PointwiseProofRelationF ((set var) * params) := {
 Lemma sim_F ZL LV r L L' V V' s  lv
 : agree_on eq (getAnn lv) V V'
 -> true_live_sound Functional ZL LV s lv
--> labenv_sim Sim (sim'r r) SR (zip pair LV ZL) L L'
--> sim'r r Sim (L,V, s) (L',V', compile (zip pair LV ZL) s lv).
+-> labenv_sim Sim (sim r) SR (zip pair LV ZL) L L'
+-> sim r Sim (L,V, s) (L',V', compile (zip pair LV ZL) s lv).
 Proof.
-  unfold sim'r. revert_except s.
+  unfold sim. revert_except s.
   sind s; destruct s; simpl; intros; invt true_live_sound; simpl in * |- *.
   - destruct e.
     + cases. exploit H9; eauto. inv H2.
@@ -173,9 +173,9 @@ Qed.
 Lemma sim_DVE V V' s lv
 : agree_on eq (getAnn lv) V V'
 -> true_live_sound Functional nil nil s lv
--> @sim F.state _ F.state _ Sim (nil,V, s) (nil,V', compile nil s lv).
+-> @sim F.state _ F.state _ bot3 Sim (nil,V, s) (nil,V', compile nil s lv).
 Proof.
-  intros. eapply sim'_sim.
+  intros.
   eapply (@sim_F nil nil); eauto. eapply labenv_sim_nil.
 Qed.
 

@@ -41,39 +41,39 @@ Lemma delocation_sim DL ZL ZAL L L' (E E':onv val) s ans Lv' ans_lv ans_lv'
   (EDEF: defined_on (getAnn ans_lv') E')
   (LEN1: length DL = length ZL)
   (LEN2: length ZL = length Lv')
-  : sim Bisim (L, E, s) (L', E', compile ZAL s ans).
+  : sim bot3 Bisim (L, E, s) (L', E', compile ZAL s ans).
 Proof.
-  revert_all. cofix; intros.
+  revert_all. pcofix delocation_sim; intros.
   inv RD; invt live_sound; simpl.
   - destruct e.
     + remember (op_eval E e). symmetry in Heqo.
       pose proof Heqo. rewrite EQ in H0.
       destruct o.
-      * one_step. simpl in *.
-        eapply delocation_sim; eauto using approx_restrict with len.
+      * pone_step. simpl in *.
+        right; eapply delocation_sim; eauto using approx_restrict with len.
         -- rewrite EQ; reflexivity.
         -- eapply defined_on_update_some. eapply defined_on_incl; eauto.
-      * no_step.
+      * pno_step.
     + remember (omap (op_eval E) Y); intros. symmetry in Heqo.
       pose proof Heqo. erewrite omap_agree in H0. Focus 2.
       intros. rewrite EQ. reflexivity.
       destruct o.
-      * extern_step; try congruence.
-        -- eapply delocation_sim; eauto using approx_restrict with len.
+      * pextern_step; try congruence.
+        -- right; eapply delocation_sim; eauto using approx_restrict with len.
            hnf; intros. lud; eauto.
            eauto using defined_on_update_some, defined_on_incl.
-        -- eapply delocation_sim; eauto using approx_restrict with len.
+        -- right; eapply delocation_sim; eauto using approx_restrict with len.
            hnf; intros. lud; eauto.
            eauto using defined_on_update_some, defined_on_incl.
-      * no_step.
+      * pno_step.
   - remember (op_eval E e). symmetry in Heqo.
     pose proof Heqo. rewrite EQ in H1.
     destruct o.
     case_eq (val2bool v); intros.
-    + one_step. eapply delocation_sim; eauto using defined_on_incl.
-    + one_step. eapply delocation_sim; eauto using defined_on_incl.
-    + no_step.
-  - no_step. simpl. rewrite EQ; eauto.
+    + pone_step. right; eapply delocation_sim; eauto using defined_on_incl.
+    + pone_step. right; eapply delocation_sim; eauto using defined_on_incl.
+    + pno_step.
+  - pno_step. simpl. rewrite EQ; eauto.
   - simpl counted in *.
     erewrite get_nth in *; eauto.
     case_eq (omap (op_eval E) Y); intros.
@@ -86,26 +86,26 @@ Proof.
       edestruct (omap_var_defined_on Za); eauto.
       eapply get_in_incl. intros.
       exploit H10; eauto using get_app_right. inv H14; eauto.
-      one_step. rewrite omap_app.
+      pone_step. rewrite omap_app.
       erewrite omap_agree with (g:=op_eval E). rewrite H1.
       simpl. rewrite H9. reflexivity. intros. rewrite EQ; eauto.
       simpl. exploit RD0; eauto; dcr.
-      eapply delocation_sim; eauto using approx_restrict with len.
+      right; eapply delocation_sim; eauto using approx_restrict with len.
       * rewrite EQ. rewrite List.map_app.
         rewrite update_with_list_app; eauto with len.
         rewrite (omap_self_update _ _ H9); reflexivity.
       * eapply defined_on_update_list; eauto with len.
         eapply defined_on_incl; eauto.
-    + no_step.
+    + pno_step.
       rewrite omap_app in def. monad_inv def.
       erewrite omap_agree in H1. erewrite H1 in EQ0. congruence.
       intros. rewrite EQ. reflexivity.
-  - one_step.
+  - pone_step.
     assert (length F = length als).
     rewrite <- H7. eauto with len.
     rewrite fst_compileF_eq in H6; eauto with len.
     rewrite <- zip_app in H6; eauto with len.
-    eapply delocation_sim; eauto 20 with len.
+    right; eapply delocation_sim; eauto 20 with len.
     + repeat rewrite zip_app; eauto 30 with len.
       econstructor; eauto.
       eapply mutual_approx; eauto 20 using mkBlock_I_i with len.
@@ -123,7 +123,7 @@ Lemma correct E s ans ans_lv ans_lv'
   (RD: trs nil nil s ans_lv ans)
   (LV': live_sound Imperative nil nil (compile nil s ans) ans_lv')
   (EDEF: defined_on (getAnn ans_lv') E)
-  : sim Bisim (nil, E, s) (nil, E, compile nil s ans).
+  : sim bot3 Bisim (nil, E, s) (nil, E, compile nil s ans).
 Proof.
   eapply (@delocation_sim nil nil nil nil nil); eauto using @inRel; reflexivity.
 Qed.

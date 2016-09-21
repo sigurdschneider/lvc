@@ -1,5 +1,5 @@
 Require Import List CSet.
-Require Import Util AllInRel MapDefined IL Rename RenameApart Sim BisimSim Status Annotation.
+Require Import Util AllInRel MapDefined IL Rename RenameApart Sim Status Annotation.
 Require CMap.
 Require Liveness LivenessValidators ParallelMove ILN ILN_IL.
 Require TrueLiveness LivenessAnalysis LivenessAnalysisCorrect.
@@ -68,7 +68,7 @@ Definition toDeBruijn (ilin:ILN.nstmt) : status IL.stmt :=
 
 Lemma toDeBruijn_correct (ilin:ILN.nstmt) s (E:onv val)
  : toDeBruijn ilin = Success s
-   ->  @sim _ ILN.statetype_I _ _ Bisim
+   ->  @sim _ ILN.statetype_I _ _ bot3 Bisim
            (ILN.I.labenv_empty, E, ilin)
            (nil:list I.block, E, s).
 Proof.
@@ -77,7 +77,7 @@ Proof.
   econstructor; eauto; isabsurd. econstructor; isabsurd. constructor.
 Qed.
 
-Arguments sim S {H} S' {H0} t _ _.
+Arguments sim S {H} S' {H0} r t _ _.
 
 Definition DCVE (s:IL.stmt) : stmt * ann (set var) :=
   let uc := UnreachableCodeAnalysis.unreachableCodeAnalysis s in
@@ -129,7 +129,7 @@ Qed.
 Lemma DCVE_correct (ili:IL.stmt) (E:onv val)
   (PM:LabelsDefined.paramsMatch ili nil)
   : defined_on (IL.occurVars ili) E
-    -> sim I.state I.state Sim (nil, E, ili) (nil, E, fst (DCVE ili)).
+    -> sim I.state I.state bot3 Sim (nil, E, ili) (nil, E, fst (DCVE ili)).
 Proof.
   intros. subst. unfold DCVE.
   simpl in *; unfold ensure_f, additionalArguments in *.
@@ -151,7 +151,7 @@ Proof.
     eapply @LivenessAnalysisCorrect.correct; eauto.
   }
   eapply sim_trans with (S2:=I.state).
-  eapply BisimSim.bisim_sim'.
+  eapply bisim_sim.
   eapply UCE.I.sim_UCE.
   eapply UnreachableCode.unreachable_code_SC_S, UnreachableCodeAnalysisCorrect.correct; eauto.
   eapply UnreachableCodeAnalysisCorrect.unreachableCodeAnalysis_getAnn.
@@ -166,14 +166,14 @@ Definition toILF (ili:IL.stmt) : IL.stmt :=
 Lemma toILF_correct (ili:IL.stmt) (E:onv val)
   (PM:LabelsDefined.paramsMatch ili nil)
   : defined_on (IL.occurVars ili) E
-    -> sim I.state F.state Sim (nil, E, ili) (nil:list F.block, E, toILF ili).
+    -> sim I.state F.state bot3 Sim (nil, E, ili) (nil:list F.block, E, toILF ili).
 Proof with eauto using DCVE_live, DCVE_noUC.
   intros. subst. unfold toILF.
   eapply sim_trans with (S2:=I.state).
   eapply DCVE_correct; eauto. let_pair_case_eq; simpl_pair_eqs; subst.
   unfold fst at 1.
   eapply sim_trans with (S2:=I.state).
-  - eapply BisimSim.bisim_sim'.
+  - eapply bisim_sim.
     eapply DelocationCorrect.correct; eauto.
     + eapply DelocationAlgo.is_trs; eauto...
     + eapply (@Delocation.live_sound_compile nil)...
@@ -181,8 +181,8 @@ Proof with eauto using DCVE_live, DCVE_noUC.
       eapply DelocationAlgo.is_live...
     + eapply defined_on_incl; eauto.
       eapply DCVE_occurVars...
-  - eapply BisimSim.bisim_sim'.
-    eapply sim_sym.
+  - eapply bisim_sim.
+    eapply bisim_sym.
     eapply (@Invariance.srdSim_sim nil nil nil nil nil);
       [ | isabsurd | econstructor | reflexivity | | econstructor ].
     + eapply Delocation.trs_srd; eauto.

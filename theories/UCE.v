@@ -240,10 +240,10 @@ Proof.
 Qed.
 
 Lemma sim_compile_fun_cases r RL L V s L' F als alt
-  : sim'r r Bisim (mapi I.mkBlock F ++ L, V, s)
+  : sim r Bisim (mapi I.mkBlock F ++ L, V, s)
    (mapi I.mkBlock (compileF compile (getAnn ⊝ als ++ RL) F als) ++ L', V,
     compile (getAnn ⊝ als ++ RL) s alt)
--> sim'r r Bisim (L, V, stmtFun F s)
+-> sim r Bisim (L, V, stmtFun F s)
         (L', V,
          match compileF compile (getAnn ⊝ als ++ RL) F als with
          | nil => compile (getAnn ⊝ als ++ RL) s alt
@@ -259,10 +259,10 @@ Qed.
 
 Lemma sim_I RL r L L' V s (a:ann bool) (Ann:getAnn a)
  (UC: unreachable_code Sound RL s a)
- (LSIM:labenv_sim Bisim (sim'r r) SR RL L L')
-  : sim'r r Bisim (L,V, s) (L',V, compile RL s a).
+ (LSIM:labenv_sim Bisim (sim r) SR RL L L')
+  : sim r Bisim (L,V, s) (L',V, compile RL s a).
 Proof.
-  unfold sim'r. revert_except s.
+  unfold sim. revert_except s.
   sind s; destruct s; simpl in *; intros; invt unreachable_code; simpl in * |- *.
   - destruct e.
     + eapply (sim_let_op il_statetype_I); eauto.
@@ -288,9 +288,9 @@ Qed.
 Lemma sim_UCE V s a
   : unreachable_code Sound nil s a
     -> getAnn a
-    -> @sim I.state _ I.state _ Bisim (nil,V, s) (nil,V, compile nil s a).
+    -> @sim I.state _ I.state _ bot3 Bisim (nil,V, s) (nil,V, compile nil s a).
 Proof.
-  intros. eapply sim'_sim.
+  intros.
   eapply (@sim_I nil); eauto; isabsurd.
 Qed.
 
@@ -354,10 +354,10 @@ Proof.
 Qed.
 
 Lemma sim_compile_fun_cases r RL L V s L' F als alt
-  : sim'r r Bisim (mapi (F.mkBlock V) F ++ L, V, s)
+  : sim r Bisim (mapi (F.mkBlock V) F ++ L, V, s)
    (mapi (F.mkBlock V) (compileF compile (getAnn ⊝ als ++ RL) F als) ++ L', V,
     compile (getAnn ⊝ als ++ RL) s alt)
--> sim'r r Bisim (L, V, stmtFun F s)
+-> sim r Bisim (L, V, stmtFun F s)
         (L', V,
          match compileF compile (getAnn ⊝ als ++ RL) F als with
          | nil => compile (getAnn ⊝ als ++ RL) s alt
@@ -373,10 +373,10 @@ Qed.
 
 Lemma sim_F RL r L L' V s (a:ann bool) (Ann:getAnn a)
  (UC: unreachable_code Sound RL s a)
- (LSIM:labenv_sim Bisim (sim'r r) SR RL L L')
-  : sim'r r Bisim (L,V, s) (L',V, compile RL s a).
+ (LSIM:labenv_sim Bisim (sim r) SR RL L L')
+  : sim r Bisim (L,V, s) (L',V, compile RL s a).
 Proof.
-  unfold sim'r. revert_except s.
+  unfold sim. revert_except s.
   sind s; destruct s; simpl in *; intros; invt unreachable_code; simpl in * |- *.
   - destruct e.
     + eapply (sim_let_op il_statetype_F); eauto.
@@ -402,9 +402,9 @@ Qed.
 Lemma sim_UCE V s a
   : unreachable_code Sound nil s a
     -> getAnn a
-    -> @sim F.state _ F.state _ Bisim (nil,V, s) (nil,V, compile nil s a).
+    -> @sim F.state _ F.state _ bot3 Bisim (nil,V, s) (nil,V, compile nil s a).
 Proof.
-  intros. eapply sim'_sim.
+  intros.
   eapply (@sim_F nil); eauto; isabsurd.
 Qed.
 

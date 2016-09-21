@@ -177,11 +177,11 @@ Qed.
 
 Lemma labenv_sim_extension' t (r:irel) A (PR:ProofRelationI A) (AL AL':list A) F L L'
       (Len1:length AL' = length F)
-  : indexwise_r t (sim'r r \3/ r) PR AL' F AL L L'
+  : indexwise_r t (sim r \3/ r) PR AL' F AL L L'
     -> indexwise_paramrel PR F AL' L' AL
     -> Image AL' = 0
-    -> labenv_sim t (sim'r r) PR AL L L'
-    -> labenv_sim t (sim'r r) PR (AL' ++ AL) (mapi I.mkBlock F ++ L) L'.
+    -> labenv_sim t (sim r) PR AL L L'
+    -> labenv_sim t (sim r) PR (AL' ++ AL) (mapi I.mkBlock F ++ L) L'.
 Proof.
   intros ISIM IP Img [Len2 [STL [TT [PAR SIML]]]].
   hnf. repeat split; eauto using sawtooth_I_mkBlocks, complete_paramrel with len.
@@ -215,13 +215,13 @@ Qed.
 
 Lemma fix_compatible_I t A (PR:ProofRelationI A) AL F L L' AL'
 (LEN2:length AL' = length F)
-  : (forall r, labenv_sim t (sim'r r) PR (AL' ++ AL) (mapi I.mkBlock F ++ L) L'
-            -> indexwise_r t (sim'r r) PR AL' F AL L L')
+  : (forall r, labenv_sim t (sim r) PR (AL' ++ AL) (mapi I.mkBlock F ++ L) L'
+            -> indexwise_r t (sim r) PR AL' F AL L L')
     -> indexwise_paramrel PR F AL' L' AL
     -> tooth 0 L'
     -> Image AL' = 0
-    -> forall r, labenv_sim t (sim'r r) PR AL L L'
-           -> indexwise_r t (sim'r r) PR AL' F AL L L'.
+    -> forall r, labenv_sim t (sim r) PR AL L L'
+           -> indexwise_r t (sim r) PR AL' F AL L L'.
 Proof.
   intros ISIM IP TT Img r SIML; pcofix CIH.
   eapply ISIM; eauto.
@@ -231,13 +231,13 @@ Qed.
 
 Lemma simILabenv_extension t A (PR:ProofRelationI A) (AL AL':list A) F L L'
       (LEN1:length AL' = length F)
-  : (forall r, labenv_sim t (sim'r r) PR (AL' ++ AL) (mapi I.mkBlock F ++ L) L'
-          -> indexwise_r t (sim'r r) PR AL' F AL L L')
+  : (forall r, labenv_sim t (sim r) PR (AL' ++ AL) (mapi I.mkBlock F ++ L) L'
+          -> indexwise_r t (sim r) PR AL' F AL L L')
     -> indexwise_paramrel PR F AL' L' AL
     -> tooth 0 L'
     -> Image AL' = 0
-    -> forall r, labenv_sim t (sim'r r) PR AL L L'
-           -> labenv_sim t (sim'r r) PR (AL' ++ AL) (mapi I.mkBlock F ++ L) L'.
+    -> forall r, labenv_sim t (sim r) PR AL L L'
+           -> labenv_sim t (sim r) PR (AL' ++ AL) (mapi I.mkBlock F ++ L) L'.
 Proof.
   intros. eapply labenv_sim_extension'; eauto.
   eapply indexwise_r_mon.
@@ -277,11 +277,11 @@ Lemma renestSim_sim r L L' E s n D L'' ZL
             get ZL f Z /\
             approx L' Z (drop (f - block_n b) D) f' b b')
       (DEF:labelsDefined s (length D))
-      (SIM:labenv_sim Bisim (sim'r r) PR (zip pair ZL D) L L')
+      (SIM:labenv_sim Bisim (sim r) PR (zip pair ZL D) L L')
       (TT:tooth 0 L')
       (DROP:drop n L' = mapi_impl I.mkBlock n (snd (egalize D n s)) ++ L'')
       (LEN1:length L = length D) (LEN2:length L = length ZL)
-  : sim'r r Bisim (L, E, s) (L', E, fst (egalize D n s)).
+  : sim r Bisim (L, E, s) (L', E, fst (egalize D n s)).
 Proof.
   revert_except s.
   sind s; intros; destruct s; simpl in *; invt labelsDefined;
@@ -315,7 +315,7 @@ Proof.
     + pno_step; simpl in *.
       erewrite get_nth in Ldef; eauto. get_functional. eauto.
   - pno_step.
-  - rename s into t. eapply sim'_expansion_closed;
+  - rename s into t. eapply sim_expansion_closed;
                        [ | eapply star2_silent; [ econstructor | eapply star2_refl ]
                          | eapply star2_refl].
     assert (SL': forall f f' : nat,

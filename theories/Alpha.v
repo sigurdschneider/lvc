@@ -290,33 +290,33 @@ Inductive alphaSim : F.state -> F.state -> Prop :=
    : alphaSim (L, E, s) (L', E', s').
 
 Lemma alphaSim_sim σ1 σ2
-: alphaSim σ1 σ2 -> sim Bisim σ1 σ2.
+: alphaSim σ1 σ2 -> sim bot3 Bisim σ1 σ2.
 Proof.
-  revert σ1 σ2; cofix; intros.
-  destruct H; inversion AE; subst ra0 ira0; simpl in * |- *;
+  revert σ1 σ2; pcofix alphaSim_sim; intros.
+  destruct H0; inversion AE; subst ra0 ira0; simpl in * |- *;
   try subst s s'; simpl in * |- *.
-  - no_step. simpl. eapply alpha_op_eval; eauto.
+  - pno_step. simpl. eapply alpha_op_eval; eauto.
   - destruct (get_dec L (counted l)) as [[[Eb Zb sb]]|].
     decide (length Zb = length Y).
     case_eq (omap (op_eval E) X); intros.
     + edestruct PIR2_nth; eauto; dcr. inv H4.
       simpl in *.
-      one_step; simpl; try congruence; eauto.
+      pone_step; simpl; try congruence; eauto.
       erewrite omap_agree_2; eauto. intros. symmetry.
       eapply alpha_op_eval. eapply H0; eauto; eauto. hnf; intros; eauto.
-      simpl. eapply alphaSim_sim; econstructor; eauto using PIR2_drop.
+      simpl. right; eapply alphaSim_sim; econstructor; eauto using PIR2_drop.
       eapply envCorr_update_list; eauto with len.
-    + no_step. erewrite omap_agree_2 in H1; try eapply H.
+    + pno_step. erewrite omap_agree_2 in H1; try eapply H.
       erewrite H1 in def. congruence.
       intros. eapply alpha_op_eval. eapply H0; eauto. eauto.
     + edestruct PIR2_nth; eauto; dcr. inv H3.
-      no_step.
-    + no_step; eauto. edestruct PIR2_nth_2; eauto; dcr. eauto.
+      pno_step.
+    + pno_step; eauto. edestruct PIR2_nth_2; eauto; dcr. eauto.
   - inv H.
     + case_eq (op_eval E e0); intros.
-      * one_step. erewrite <- alpha_op_eval; eauto.
-        eapply alphaSim_sim; econstructor; eauto using envCorr_update.
-      * no_step.
+      * pone_step. erewrite <- alpha_op_eval; eauto.
+        right; eapply alphaSim_sim; econstructor; eauto using envCorr_update.
+      * pno_step.
         erewrite alpha_op_eval in H2; eauto. congruence.
     + remember (omap (op_eval E) Y); intros. symmetry in Heqo.
       assert (omap (op_eval E') Y' = o).
@@ -324,19 +324,19 @@ Proof.
       intros. symmetry.
       eapply alpha_op_eval; eauto.
       destruct o.
-      * extern_step; try congruence.
-        -- eapply alphaSim_sim; econstructor; eauto using envCorr_update.
-        -- eapply alphaSim_sim; econstructor; eauto using envCorr_update.
-      * no_step.
+      * pextern_step; try congruence.
+        -- right; eapply alphaSim_sim; econstructor; eauto using envCorr_update.
+        -- right; eapply alphaSim_sim; econstructor; eauto using envCorr_update.
+      * pno_step.
   - case_eq (op_eval E e); intros.
     case_eq (val2bool v); intros.
-    one_step. erewrite <- alpha_op_eval; eauto.
-    eapply alphaSim_sim; econstructor; eauto.
-    one_step. erewrite <- alpha_op_eval; eauto.
-    eapply alphaSim_sim; econstructor; eauto.
-    no_step; erewrite <- alpha_op_eval in def; eauto.
+    pone_step. erewrite <- alpha_op_eval; eauto.
+    right; eapply alphaSim_sim; econstructor; eauto.
+    pone_step. erewrite <- alpha_op_eval; eauto.
+    right; eapply alphaSim_sim; econstructor; eauto.
+    pno_step; erewrite <- alpha_op_eval in def; eauto.
     congruence. congruence.
-  - one_step. eapply alphaSim_sim.
+  - pone_step. right; eapply alphaSim_sim.
     econstructor; eauto.
     eapply PIR2_app; eauto.
     eapply PIR2_get; eauto with len.

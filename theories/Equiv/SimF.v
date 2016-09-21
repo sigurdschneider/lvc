@@ -105,7 +105,7 @@ Qed.
 
 Lemma bodies_r_app_r t A (PR:ProofRelationF A) AL L L' r
   : bodies_r t r PR AL L L' L L'
-    -> app_r t (sim'r r) PR AL L L'.
+    -> app_r t (sim r) PR AL L L'.
 Proof.
   intros SIM.
   hnf; intros.
@@ -113,13 +113,13 @@ Proof.
 Qed.
 
 Lemma fix_compatible_bodies t A (PR:ProofRelationF A) AL L L'
-  : (forall (r:frel) L1 L2, app_r t (sim'r r) PR AL L1 L2
-          -> bodies_r t (sim'r r) PR AL L1 L2 L L')
-    -> forall r, bodies_r t (sim'r r) PR AL L L' L L'.
+  : (forall (r:frel) L1 L2, app_r t (sim r) PR AL L1 L2
+          -> bodies_r t (sim r) PR AL L1 L2 L L')
+    -> forall r, bodies_r t (sim r) PR AL L L' L L'.
 Proof.
   intros ISIM r.
   pcofix CIH;
-  change (bodies_r t (sim'r r) PR AL L L' L L');
+  change (bodies_r t (sim r) PR AL L L' L L');
   change (bodies_r t r PR AL L L' L L') in CIH.
   eapply ISIM.
   eapply bodies_r_app_r; eauto.
@@ -227,11 +227,11 @@ Qed.
 Hint Unfold separates.
 
 Lemma labenv_sim_extension' t r A (PR:ProofRelationF A) (AL AL':list A) E E' F F' L L'
-  : indexwise_r t (sim'r r \3/ r) PR AL' E E' F F' AL L L'
+  : indexwise_r t (sim r \3/ r) PR AL' E E' F F' AL L L'
     -> indexwise_paramrel PR F F' AL' AL
     -> separates PR AL' AL F F'
-    -> labenv_sim t (sim'r r) PR AL L L'
-    -> labenv_sim t (sim'r r) PR (AL' ++ AL) (mapi (F.mkBlock E) F ++ L) (mapi (F.mkBlock E') F' ++ L').
+    -> labenv_sim t (sim r) PR AL L L'
+    -> labenv_sim t (sim r) PR (AL' ++ AL) (mapi (F.mkBlock E) F ++ L) (mapi (F.mkBlock E') F' ++ L').
 Proof.
   intros SIM IPR [Len2 [Img [Ilt Ige]]] [Len1 [STL [STL' [PAR [IE LSIM]]]]].
   hnf; do 5 (try split);
@@ -267,12 +267,12 @@ Qed.
 
 Lemma fix_compatible_separate t A (PR:ProofRelationF A) AL' AL E E' F F' L L'
   : (forall r,
-        labenv_sim t (sim'r r) PR (AL' ++ AL) (mapi (F.mkBlock E) F ++ L) (mapi (F.mkBlock E') F' ++ L')
-        -> indexwise_r t (sim'r r) PR AL' E E' F F' AL L L')
+        labenv_sim t (sim r) PR (AL' ++ AL) (mapi (F.mkBlock E) F ++ L) (mapi (F.mkBlock E') F' ++ L')
+        -> indexwise_r t (sim r) PR AL' E E' F F' AL L L')
     -> indexwise_paramrel PR F F' AL' AL
     -> separates PR AL' AL F F'
-    -> forall r, labenv_sim t (sim'r r) PR AL L L'
-           -> indexwise_r t (sim'r r) PR AL' E E' F F' AL L L'.
+    -> forall r, labenv_sim t (sim r) PR AL L L'
+           -> indexwise_r t (sim r) PR AL' E E' F F' AL L L'.
 Proof.
   intros ISIM LP SEP r SIML. pcofix CIH.
   eapply ISIM.
@@ -285,12 +285,12 @@ Qed.
 
 Lemma labenv_sim_extension t A (PR:ProofRelationF A) (AL AL':list A) E E' F F' L L'
   : (forall r,
-        labenv_sim t (sim'r r) PR (AL' ++ AL) (mapi (F.mkBlock E) F ++ L) (mapi (F.mkBlock E') F' ++ L')
-        -> indexwise_r t (sim'r r) PR AL' E E' F F' AL L L')
+        labenv_sim t (sim r) PR (AL' ++ AL) (mapi (F.mkBlock E) F ++ L) (mapi (F.mkBlock E') F' ++ L')
+        -> indexwise_r t (sim r) PR AL' E E' F F' AL L L')
     -> indexwise_paramrel PR F F' AL' AL
     -> separates PR AL' AL F F'
-    -> forall r, labenv_sim t (sim'r r) PR AL L L'
-           -> labenv_sim t (sim'r r) PR (AL' ++ AL) (mapi (F.mkBlock E) F ++ L) (mapi (F.mkBlock E') F' ++ L').
+    -> forall r, labenv_sim t (sim r) PR AL L L'
+           -> labenv_sim t (sim r) PR (AL' ++ AL) (mapi (F.mkBlock E) F ++ L) (mapi (F.mkBlock E') F' ++ L').
 Proof.
   intros ISIM IP SEP r SIML.
   eapply labenv_sim_extension'; eauto.
@@ -299,15 +299,15 @@ Proof.
 Qed.
 
 Lemma sim_fun t A (PR:ProofRelationF A) (AL AL':list A) E E' F F' L L' s s'
-  : (forall r, labenv_sim t (sim'r r) PR (AL' ++ AL) (mapi (F.mkBlock E) F ++ L) (mapi (F.mkBlock E') F' ++ L')
-          -> (sim'r r \3/ r) t (mapi (F.mkBlock E) F ++ L, E, s) (mapi (F.mkBlock E') F' ++ L', E', s'))
+  : (forall r, labenv_sim t (sim r) PR (AL' ++ AL) (mapi (F.mkBlock E) F ++ L) (mapi (F.mkBlock E') F' ++ L')
+          -> (sim r \3/ r) t (mapi (F.mkBlock E) F ++ L, E, s) (mapi (F.mkBlock E') F' ++ L', E', s'))
     -> (forall r,
-          labenv_sim t (sim'r r) PR (AL' ++ AL) (mapi (F.mkBlock E) F ++ L) (mapi (F.mkBlock E') F' ++ L')
-          -> indexwise_r t (sim'r r) PR AL' E E' F F' AL L L')
+          labenv_sim t (sim r) PR (AL' ++ AL) (mapi (F.mkBlock E) F ++ L) (mapi (F.mkBlock E') F' ++ L')
+          -> indexwise_r t (sim r) PR AL' E E' F F' AL L L')
     -> indexwise_paramrel PR F F' AL' AL
     -> separates PR AL' AL F F'
-    -> forall r, labenv_sim t (sim'r r) PR AL L L'
-           -> sim'r r t (L, E, stmtFun F s) (L', E', stmtFun F' s').
+    -> forall r, labenv_sim t (sim r) PR AL L L'
+           -> sim r t (L, E, stmtFun F s) (L', E', stmtFun F' s').
 
 Proof.
   intros SIM_s ISIM IP SEP r SIML.
@@ -356,13 +356,13 @@ Hint Resolve IndexRelFP_refl.
 
 Lemma labenv_sim_extension_ptw t A (PR:PointwiseProofRelationF A) (AL AL':list A) E E' F F' L L'
   : (forall r ,
-        labenv_sim t (sim'r r) PR (AL' ++ AL) (mapi (F.mkBlock E) F ++ L) (mapi (F.mkBlock E') F' ++ L')
-        -> indexwise_r t (sim'r r) PR AL' E E' F F' AL L L')
+        labenv_sim t (sim r) PR (AL' ++ AL) (mapi (F.mkBlock E) F ++ L) (mapi (F.mkBlock E') F' ++ L')
+        -> indexwise_r t (sim r) PR AL' E E' F F' AL L L')
     -> indexwise_paramrel PR F F' AL' AL
     -> length AL' = length F
     -> length F = length F'
-    -> forall r, labenv_sim t (sim'r r) PR AL L L'
-        -> labenv_sim t (sim'r r) PR (AL' ++ AL) (mapi (F.mkBlock E) F ++ L) (mapi (F.mkBlock E') F' ++ L').
+    -> forall r, labenv_sim t (sim r) PR AL L L'
+        -> labenv_sim t (sim r) PR (AL' ++ AL) (mapi (F.mkBlock E) F ++ L) (mapi (F.mkBlock E') F' ++ L').
 Proof.
   intros ISIM IP Len1 Len2 r SIML.
   assert (separates PR AL' AL F F'). {
@@ -375,16 +375,16 @@ Proof.
 Qed.
 
 Lemma sim_fun_ptw t A (PR:PointwiseProofRelationF A) (AL AL':list A) F F' L L' E E' s s'
-  : (forall r, labenv_sim t (sim'r r) PR (AL' ++ AL) (mapi (F.mkBlock E) F ++ L) (mapi (F.mkBlock E') F' ++ L')
-          -> (sim'r r \3/ r) t (mapi (F.mkBlock E) F ++ L, E, s) (mapi (F.mkBlock E') F' ++ L', E', s'))
+  : (forall r, labenv_sim t (sim r) PR (AL' ++ AL) (mapi (F.mkBlock E) F ++ L) (mapi (F.mkBlock E') F' ++ L')
+          -> (sim r \3/ r) t (mapi (F.mkBlock E) F ++ L, E, s) (mapi (F.mkBlock E') F' ++ L', E', s'))
     -> (forall r,
-          labenv_sim t (sim'r r) PR (AL' ++ AL) (mapi (F.mkBlock E) F ++ L) (mapi (F.mkBlock E') F' ++ L')
-          -> indexwise_r t (sim'r r) PR AL' E E' F F' AL L L')
+          labenv_sim t (sim r) PR (AL' ++ AL) (mapi (F.mkBlock E) F ++ L) (mapi (F.mkBlock E') F' ++ L')
+          -> indexwise_r t (sim r) PR AL' E E' F F' AL L L')
     -> indexwise_paramrel PR F F' AL' AL
     -> length AL' = length F
     -> length F = length F'
-    -> forall r, labenv_sim t (sim'r r) PR AL L L'
-           -> sim'r r t (L, E, stmtFun F s) (L', E', stmtFun F' s').
+    -> forall r, labenv_sim t (sim r) PR AL L L'
+           -> sim r t (L, E, stmtFun F s) (L', E', stmtFun F' s').
 Proof.
   intros SIM_s ISIM IP Len1 Len2 r SIML.
   pone_step.
@@ -393,7 +393,7 @@ Proof.
 Qed.
 
 Lemma labenv_sim_app i A (PR:ProofRelationF A) AL L L' r V V' Y Y' (f f':lab) a
-  : labenv_sim i (sim'r r) PR AL L L'
+  : labenv_sim i (sim r) PR AL L L'
     -> get AL f a
     -> IndexRelF AL f f'
     -> (forall E Z s n E' Z' s' n',
@@ -407,7 +407,7 @@ Lemma labenv_sim_app i A (PR:ProofRelationF A) AL L L' r V V' Y Y' (f f':lab) a
                 (omap (op_eval V) Y = None -> omap (op_eval V') Y' = None)
                 /\ (❬Z❭ <> ❬Y❭ -> ❬Z'❭ <> ❬Y'❭)
               else True))
-    -> sim'r r i (L, V, stmtApp f Y) (L', V', stmtApp f' Y').
+    -> sim r i (L, V, stmtApp f Y) (L', V', stmtApp f' Y').
 Proof.
   intros LSIM GetAL RN ALL.
   edestruct LSIM as [Len1 [STL [STL' [PAR [IE SIM]]]]]; eauto; dcr.

@@ -198,7 +198,7 @@ Lemma tval_term_sound L D D' E Es Et s s' t t'
     -> (forall x, x ∈ (fst(getAnn D)) -> exists v, E x = Some v)
     -> Terminates (L,E,s) (L,Es,s')
     -> Terminates (L,E,t) (L,Et,t')
-    -> @sim _ statetype_F _ statetype_F Sim (L, E, s) (L, E, t).
+    -> @sim _ statetype_F _ statetype_F bot3 Sim (L, E, s) (L, E, t).
 
 Proof.
   intros Unsat_check Eq_FVars RenApart ssa_s ssa_t nf_s nf_t val_def
@@ -278,7 +278,7 @@ Proof.
 
       inv trm_s; inv trm_t. simpl in *.
     (** s' = e /\ t' = e' --> must be sim **)
-      *  eapply (simTerm Sim);
+      * pfold. eapply (SimTerm);
            [| eapply s_star2 | eapply t_star2 |stuck2 | stuck2]; simpl.
          edestruct terminates_impl_eval; eauto. split; eauto.
          edestruct terminates_impl_eval; try eapply nf_s; eauto.
@@ -343,9 +343,7 @@ Proof.
               exploit renamedApart_contained; try eapply ssa_s; eauto.
           - unfold F. rewrite <- (beq_nat_refl (labN (labInc f 1))); constructor.
         }
-      * subst; eapply sim'_sim.
-        eapply sim'_expansion_closed; eauto.
-        eapply sim_sim'.
+      * eapply sim_expansion_closed; eauto.
         decide (f = f0).
         { subst.
           destruct (get_dec L (counted f0)) as [[[bE bZ bs]]|].
@@ -383,11 +381,11 @@ Proof.
                 exploit omap_length; eauto.
                 exploit omap_length; try eapply H; eauto.
                 decide (length Y = length bZ).
-                -- one_step.
+                -- pone_step.
                    ++ simpl. congruence.
-                   ++ simpl. eapply sim_refl.
-                -- no_step.
-          - no_step; eauto. }
+                   ++ simpl. left. eapply sim_refl.
+                -- pno_step.
+          - pno_step; eauto. }
         { exfalso.
           pose (F := (fun l => fun (_:list val) => if [labInc f 1 = l] then true else false)).
           specialize (Unsat_st F (combineEnv (fst(getAnn D) ∪ (snd (getAnn D))) Es Et)).
@@ -429,7 +427,7 @@ Lemma tval_sound L D D' E s t:
   -> noFun t (* same*)
   (* Free Variables must be defined *)
   -> (forall x, x ∈ (fst(getAnn D)) -> exists v, E x = Some v)
-  -> @sim _ statetype_F _ statetype_F Sim (L, E, s) (L, E, t).
+  -> @sim _ statetype_F _ statetype_F bot3 Sim (L, E, s) (L, E, t).
 
 Proof.
   intros Unsat_check Eq_FVars RenApart ssa_s ssa_t nf_s nf_t val_def.
@@ -478,5 +476,5 @@ Proof.
         }
   (** s crasht --> always sim *)
   - destruct crash_s.
-    eapply simErr; eauto using nc_star_step, nc_stuck_result_none, nc_stuck_terminal.
+    pfold. eapply SimErr; eauto using nc_star_step, nc_stuck_result_none, nc_stuck_terminal.
 Qed.

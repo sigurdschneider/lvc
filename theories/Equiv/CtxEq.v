@@ -13,18 +13,18 @@ Instance SR : PointwiseProofRelationF (params) := {
 
 
 Definition bisimeq t r s s' :=
-    forall L L' E, labenv_sim t (sim'r r) SR (block_Z ⊝ L') L L'
+    forall L L' E, labenv_sim t (sim r) SR (block_Z ⊝ L') L L'
             -> ❬L❭ = ❬L'❭
-            -> sim'r r t (L, E, s) (L', E, s').
+            -> sim r t (L, E, s) (L', E, s').
 
 (** ** Reflexivity *)
 
 Lemma bisimeq_refl s t
   : forall L L' E r,
-    labenv_sim t (sim'r r) SR (block_Z ⊝ L') L L'
-    -> sim'r r t (L, E, s) (L', E, s).
+    labenv_sim t (sim r) SR (block_Z ⊝ L') L L'
+    -> sim r t (L, E, s) (L', E, s).
 Proof.
-  unfold sim'r. sind s; destruct s; simpl in *; intros.
+  unfold sim. sind s; destruct s; simpl in *; intros.
   - destruct e.
     + eapply (sim_let_op il_statetype_F); eauto.
     + eapply (sim_let_call il_statetype_F); eauto.
@@ -47,7 +47,7 @@ Qed.
 
 Lemma simLabenv_refl r L
   : smaller L
-    -> labenv_sim Bisim (sim'r r) SR (List.map F.block_Z L) L L.
+    -> labenv_sim Bisim (sim r) SR (List.map F.block_Z L) L L.
 Proof.
   intros. hnf; dcr; do 4 try split; eauto with len.
   - intros [] []; intros; simpl in *; subst; inv_get; split; eauto.
@@ -55,7 +55,7 @@ Proof.
     hnf; intros; simpl in *. destruct f, f'; simpl in *; subst.
     get_functional; dcr; subst; inv_get.
     pone_step; simpl; eauto with len. left.
-    eapply sim'r_refl.
+    eapply sim_refl.
 Qed.
 
 (** * Contextual Equivalence *)

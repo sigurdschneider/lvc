@@ -243,29 +243,30 @@ Proof.
 Qed.
 
 Lemma stmt_idx_sim σ1 σ2
-  : stmtIdxSim σ1 σ2 -> sim Bisim σ1 σ2.
+  : stmtIdxSim σ1 σ2 -> sim bot3 Bisim σ1 σ2.
 Proof.
-  revert σ1 σ2. cofix; intros.
-  destruct H; destruct s; simpl in *; try monadS_inv EQ.
+  revert σ1 σ2. pcofix stmt_idx_sim; intros.
+  destruct H0; destruct s; simpl in *; try monadS_inv EQ.
   - destruct e; monadS_inv EQ.
     + case_eq (Op.op_eval E e); intros.
-      * one_step. erewrite <- exp_idx_ok; eauto.
-      eapply stmt_idx_sim; econstructor; eauto using vars_exist_update, defs_agree_update.
-      * no_step. erewrite <- exp_idx_ok in def; eauto. congruence.
+      * pone_step. erewrite <- exp_idx_ok; eauto.
+        right.
+        eapply stmt_idx_sim; econstructor; eauto using vars_exist_update, defs_agree_update.
+      * pno_step. erewrite <- exp_idx_ok in def; eauto. congruence.
     + case_eq (omap (Op.op_eval E) Y); intros.
       assert (omap (op_eval E') x0 = ⎣l ⎦).
       erewrite omap_agree_2; try eapply H; eauto using smap_length.
       intros. exploit (smap_spec _ EQ0); eauto. dcr. get_functional; subst.
       erewrite exp_idx_ok; eauto.
-      * extern_step.
+      * pextern_step.
         -- eexists (ExternI f l default_val); eexists; try (now (econstructor; eauto)).
         -- assert (vl = l) by congruence; subst.
            eauto using vars_exist_update, defs_agree_update.
-        -- apply stmt_idx_sim; econstructor; eauto using vars_exist_update, defs_agree_update.
+        -- right. apply stmt_idx_sim; econstructor; eauto using vars_exist_update, defs_agree_update.
         -- assert (vl = l) by congruence; subst.
            eauto using vars_exist_update, defs_agree_update.
-        -- eapply stmt_idx_sim; econstructor; eauto using vars_exist_update, defs_agree_update.
-      * no_step.
+        -- right. eapply stmt_idx_sim; econstructor; eauto using vars_exist_update, defs_agree_update.
+      * pno_step.
         pose proof (smap_spec _ EQ0).
         assert (omap (Op.op_eval E) Y = Some vl).
         erewrite omap_agree_2; eauto using smap_length.
@@ -273,12 +274,12 @@ Proof.
         get_functional; subst; eauto. symmetry; eapply smap_length; eauto.
         congruence.
   - case_eq (Op.op_eval E e); intros.
-    * case_eq (val2bool v); intros; one_step; eauto.
+    * case_eq (val2bool v); intros; pone_step; eauto.
       erewrite <- exp_idx_ok; eauto.
-      eapply stmt_idx_sim; econstructor; eauto.
+      right. eapply stmt_idx_sim; econstructor; eauto.
       erewrite <- exp_idx_ok; eauto.
-      eapply stmt_idx_sim; econstructor; eauto.
-    * no_step.
+      right. eapply stmt_idx_sim; econstructor; eauto.
+    * pno_step.
       erewrite <- exp_idx_ok in def; eauto. congruence.
       erewrite <- exp_idx_ok in def; eauto. congruence.
   - destruct (get_dec L (counted l)) as [[blk A]|?].
@@ -289,25 +290,25 @@ Proof.
       erewrite omap_agree_2; try eapply H; eauto using smap_length.
       intros. exploit (smap_spec _ EQ0); eauto. dcr. get_functional; subst.
       erewrite exp_idx_ok; eauto.
-      one_step; eauto. inv H1; eauto; simpl. exploit smap_length; eauto.
+      pone_step; eauto. inv H1; eauto; simpl. exploit smap_length; eauto.
       simpl in *. congruence.
       inv H1; simpl in *.
       assert (length Z = length l0) by eauto with len.
-      eapply stmt_idx_sim; econstructor;
+      right. eapply stmt_idx_sim; econstructor;
       eauto using PIR2_drop, vars_exist_update_list, defs_agree_update_list.
-    + no_step.
+    + pno_step.
       pose proof (smap_spec _ EQ0).
       assert (omap (Op.op_eval E) Y = Some vl).
       erewrite omap_agree_2; eauto using smap_length.
       intros. eapply exp_idx_ok; eauto. edestruct H2; eauto; dcr.
       get_functional; subst; eauto. symmetry; eapply smap_length; eauto.
       congruence.
-    + no_step.
+    + pno_step.
       invt approx; simpl in *; subst. exploit smap_length; eauto. congruence.
-    + no_step; eauto. edestruct PIR2_nth_2; eauto; dcr. eauto.
-  - no_step. simpl.
+    + pno_step; eauto. edestruct PIR2_nth_2; eauto; dcr. eauto.
+  - pno_step. simpl.
     erewrite <- exp_idx_ok; eauto.
-  - one_step. eapply stmt_idx_sim. econstructor; eauto.
+  - pone_step. right. eapply stmt_idx_sim. econstructor; eauto.
     eapply PIR2_app; eauto.
     pose proof (smap_spec _ EQ0). simpl in H.
     eapply smap_length in EQ0.

@@ -40,61 +40,61 @@ Inductive freeVarSimF : F.state -> F.state -> Prop :=
   : freeVarSimF (L, E, s) (L', E', s).
 
 Lemma freeVarSimF_sim σ1 σ2
-  : freeVarSimF σ1 σ2 -> sim Bisim σ1 σ2.
+  : freeVarSimF σ1 σ2 -> sim bot3 Bisim σ1 σ2.
 Proof.
-  revert σ1 σ2. cofix; intros.
-  destruct H; destruct s; simpl; simpl in *.
+  revert σ1 σ2. pcofix freeVarSimF_sim; intros.
+  destruct H0; destruct s; simpl; simpl in *.
   - destruct e.
     + case_eq (op_eval E e); intros.
       * exploit op_eval_agree; eauto. eauto using agree_on_incl with cset.
-        one_step.
-        eapply freeVarSimF_sim. econstructor; eauto.
+        pone_step.
+        right; eapply freeVarSimF_sim. econstructor; eauto.
         eapply agree_on_update_same; eauto using agree_on_incl with cset.
-      * no_step.
+      * pno_step.
         eapply op_eval_agree in H; eauto using agree_on_incl with cset.
         congruence.
     + case_eq (omap (op_eval E) Y); intros. simpl in *.
       exploit omap_op_eval_agree; eauto using agree_on_incl.
-      extern_step.
+      pextern_step.
       * exploit omap_op_eval_agree; eauto using agree_on_incl.
       * exploit omap_op_eval_agree.
         -- symmetry. eauto using agree_on_incl.
         -- eauto.
-        -- eapply freeVarSimF_sim. econstructor; eauto.
+        -- right; eapply freeVarSimF_sim. econstructor; eauto.
            eapply agree_on_update_same; eauto using agree_on_incl with cset.
       * exploit omap_op_eval_agree; eauto. symmetry; eauto using agree_on_incl with cset.
       * exploit omap_op_eval_agree.
         -- symmetry. eauto using agree_on_incl.
         -- eauto.
-        -- eapply freeVarSimF_sim. econstructor; eauto.
+        -- right; eapply freeVarSimF_sim. econstructor; eauto.
            eapply agree_on_update_same; eauto using agree_on_incl with cset.
-      * no_step. simpl in *.
+      * pno_step. simpl in *.
         symmetry in AG.
         exploit omap_op_eval_agree; eauto using agree_on_incl.
   - case_eq (op_eval E e); intros.
     exploit op_eval_agree; eauto using agree_on_incl.
     case_eq (val2bool v); intros.
-    + one_step; eauto using agree_on_incl, freeVarSimF.
-    + one_step; eauto using agree_on_incl, freeVarSimF.
+    + pone_step; eauto 20 using agree_on_incl, freeVarSimF.
+    + pone_step; eauto 20 using agree_on_incl, freeVarSimF.
     + exploit op_eval_agree; eauto using agree_on_incl.
-      no_step.
+      pno_step.
   - destruct (get_dec L (counted l)) as [[[Eb Zb sb]]|].
     PIR2_inv.
     decide (length Zb = length Y).
     case_eq (omap (op_eval E) Y); intros.
     + exploit omap_op_eval_agree; eauto.
-      one_step.
-      simpl. eapply freeVarSimF_sim. econstructor; eauto.
+      pone_step.
+      simpl. right; eapply freeVarSimF_sim. econstructor; eauto.
       eapply PIR2_drop; eauto.
       eapply update_with_list_agree; eauto with len.
     + exploit omap_op_eval_agree; eauto.
-      no_step; get_functional; subst.
-    + no_step; get_functional; subst; simpl in *; congruence.
-    + no_step; eauto.
+      pno_step; get_functional; subst.
+    + pno_step; get_functional; subst; simpl in *; congruence.
+    + pno_step; eauto.
       edestruct PIR2_nth_2; eauto; dcr; eauto.
-  - no_step. simpl. erewrite op_eval_agree; eauto. symmetry; eauto.
-  - one_step.
-    eapply freeVarSimF_sim; econstructor; eauto using agree_on_incl.
+  - pno_step. simpl. erewrite op_eval_agree; eauto. symmetry; eauto.
+  - pone_step.
+    right; eapply freeVarSimF_sim; econstructor; eauto using agree_on_incl.
     eapply PIR2_app; eauto. eapply mkBlocks_approxF; eauto.
 Qed.
 
@@ -111,44 +111,44 @@ Lemma liveSimI_sim ZL Lv (E E':onv val) L s lv
   (LS:live_sound Imperative ZL Lv s lv)
   (LA:inRel approxI ZL ZL ZL Lv L L)
   (AG:agree_on eq (getAnn lv) E E')
-  : sim Bisim (L, E, s) (L, E', s).
+  : sim bot3 Bisim (L, E, s) (L, E', s).
 Proof.
-  revert_all. cofix; intros.
+  revert_all. pcofix liveSimI_sim; intros.
   inv LS; simpl; simpl in *.
   - invt live_exp_sound.
     + case_eq (op_eval E e0); intros.
-      * one_step; eauto using op_eval_live_agree.
-        eapply liveSimI_sim; eauto.
+      * pone_step; eauto using op_eval_live_agree.
+        right; eapply liveSimI_sim; eauto.
         eapply agree_on_update_same; eauto using agree_on_incl.
-      * no_step; eauto.
+      * pno_step; eauto.
     + case_eq (omap (op_eval E) Y); intros;
         exploit omap_op_eval_live_agree; try eassumption.
-      * extern_step.
+      * pextern_step.
         -- exploit omap_op_eval_live_agree; eauto.
-        -- eapply liveSimI_sim; eauto.
+        -- right; eapply liveSimI_sim; eauto.
            eapply agree_on_update_same; eauto using agree_on_incl.
         -- symmetry in AG. exploit omap_op_eval_live_agree; eauto.
-        -- eapply liveSimI_sim; eauto.
+        -- right; eapply liveSimI_sim; eauto.
            eapply agree_on_update_same; eauto using agree_on_incl.
-      * no_step.
+      * pno_step.
   - case_eq (op_eval E e); intros.
-    case_eq (val2bool v); intros.
-    one_step; eauto using op_eval_live_agree.
-    eapply liveSimI_sim; eauto using agree_on_incl.
-    one_step; eauto using op_eval_live_agree.
-    eapply liveSimI_sim; eauto using agree_on_incl.
-    no_step; eauto.
+    + case_eq (val2bool v); intros.
+      * pone_step; eauto using op_eval_live_agree.
+        right; eapply liveSimI_sim; eauto using agree_on_incl.
+      * pone_step; eauto using op_eval_live_agree.
+        right; eapply liveSimI_sim; eauto using agree_on_incl.
+    + pno_step; eauto.
   - inRel_invs. inv H8; simpl in *.
     case_eq (omap (op_eval E) Y); intros.
     + exploit omap_op_eval_live_agree; try eassumption.
-      one_step; simpl; try congruence.
-      eapply liveSimI_sim; eauto.
+      pone_step; simpl; try congruence.
+      right; eapply liveSimI_sim; eauto.
       eapply update_with_list_agree; eauto using agree_on_incl with len.
     + exploit omap_op_eval_live_agree; try eassumption.
-      no_step.
-  - no_step. simpl. eapply op_eval_live; eauto.
-  - one_step.
-    eapply liveSimI_sim; eauto using agree_on_incl.
+      pno_step.
+  - pno_step. simpl. eapply op_eval_live; eauto.
+  - pone_step.
+    right; eapply liveSimI_sim; eauto using agree_on_incl.
     + econstructor; eauto using agree_on_incl.
       eapply mutual_approx; eauto using mkBlock_I_i, mkBlock_F_i with len.
       intros; inv_get. econstructor; eauto.

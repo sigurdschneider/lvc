@@ -9,7 +9,7 @@ Unset Printing Records.
 (** ** Definition of invariance *)
 
 Definition invariant (s:stmt) :=
-  forall (E:onv val), sim Bisim (nil:list F.block,E,s) (nil:list I.block,E,s).
+  forall (E:onv val), sim bot3 Bisim (nil:list F.block,E,s) (nil:list I.block,E,s).
 
 (** ** Agreement Invariant *)
 
@@ -127,53 +127,53 @@ Lemma srdSim_sim ZL AL Lv L L'
   (AG:agree_on eq (getAnn a) E EI)
   (LV:live_sound Imperative ZL Lv s a)
   (ER:PIR2 (ifFstR Equal) AL (Lv \\ ZL))
-  : sim Bisim (L, E, s) (L', EI,s).
+  : sim bot3 Bisim (L, E, s) (L', EI,s).
 Proof.
-  revert_all. cofix; intros.
+  revert_all. pcofix srdSim_sim; intros.
   inv SRD; inv LV; simpl in *.
   - invt live_exp_sound.
     + case_eq (op_eval E e0); intros.
-      *  one_step.
-         instantiate (1:=v). erewrite <- op_eval_live; eauto.
-         eapply srdSim_sim; eauto using rd_agree_update.
-         -- eapply inRel_map_A3; eauto using approx_restrict.
-         -- eapply agree_on_update_same; eauto with cset.
-         -- eauto using restrict_ifFstR.
-      * no_step.
+      * pone_step.
+        instantiate (1:=v). erewrite <- op_eval_live; eauto.
+        right; eapply srdSim_sim; eauto using rd_agree_update.
+        -- eapply inRel_map_A3; eauto using approx_restrict.
+        -- eapply agree_on_update_same; eauto with cset.
+        -- eauto using restrict_ifFstR.
+      * pno_step.
         erewrite <- op_eval_live in def; eauto. congruence.
     + case_eq (omap (op_eval E) Y); intros;
         exploit omap_op_eval_live_agree; try eassumption.
-      * extern_step; assert (vl = l) by congruence; subst; eauto.
-        -- eapply srdSim_sim; eauto using rd_agree_update, PIR2_length.
+      * pextern_step; assert (vl = l) by congruence; subst; eauto.
+        -- right; eapply srdSim_sim; eauto using rd_agree_update, PIR2_length.
            ++ eapply inRel_map_A3; eauto. eapply approx_restrict; eauto.
            ++ eapply agree_on_update_same. reflexivity.
            eapply agree_on_incl; eauto.
            ++ eauto using restrict_ifFstR; eauto.
         -- symmetry in AG.
            exploit omap_op_eval_live_agree; eauto.
-           eapply srdSim_sim; eauto using rd_agree_update, PIR2_length.
+           right; eapply srdSim_sim; eauto using rd_agree_update, PIR2_length.
            ++ eapply inRel_map_A3; eauto. eapply approx_restrict; eauto.
            ++ eapply agree_on_update_same. reflexivity.
              eapply agree_on_incl; eauto. symmetry; eauto.
            ++ eauto using restrict_ifFstR; eauto.
-      * no_step.
+      * pno_step.
   - case_eq (op_eval E e); intros;
       exploit op_eval_live_agree; try eassumption.
     + case_eq (val2bool v); intros.
-      one_step.
-      eapply srdSim_sim; eauto using agree_on_incl.
-      one_step.
-      eapply srdSim_sim; eauto using agree_on_incl.
-    + no_step.
-  - no_step. simpl. eapply op_eval_live; eauto.
+      pone_step.
+      right; eapply srdSim_sim; eauto using agree_on_incl.
+      pone_step.
+      right; eapply srdSim_sim; eauto using agree_on_incl.
+    + pno_step.
+  - pno_step. simpl. eapply op_eval_live; eauto.
   - decide (length Z = length Y).
     case_eq (omap (op_eval E) Y); intros;
       exploit omap_op_eval_live_agree; try eassumption.
     + inRel_invs. inv H11. simpl in *.
       exploit H2; try reflexivity; dcr.
-      one_step; simpl.
+      pone_step; simpl.
       exploit RA; eauto; simpl in *.
-      eapply srdSim_sim; eauto.
+      right; eapply srdSim_sim; eauto.
       * eapply rd_agree_update_list; eauto with len.
       * eapply inRel_map_A3; eauto using approx_restrict.
       * rewrite H15. eapply update_with_list_agree; eauto with len.
@@ -185,10 +185,10 @@ Proof.
         eapply restrict_ifFstR; eauto.
         eapply PIR2_drop; eauto.
     + exploit omap_op_eval_live_agree; try eassumption.
-      no_step.
-    + no_step.
-  - one_step.
-    eapply srdSim_sim;
+      pno_step.
+    + pno_step.
+  - pone_step.
+    right; eapply srdSim_sim;
       eauto using agree_on_incl, PIR2_app, rd_agree_extend.
     * econstructor; eauto.
       eapply mutual_approx; simpl;

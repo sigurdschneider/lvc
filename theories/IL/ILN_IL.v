@@ -152,24 +152,24 @@ Inductive labIndicesSim : I.state -> IL.I.state -> Prop :=
     : labIndicesSim (L, E, s) (L', E, s').
 
 Lemma labIndicesSim_sim σ1 σ2
-  : labIndicesSim σ1 σ2 -> sim Bisim σ1 σ2.
+  : labIndicesSim σ1 σ2 -> sim bot3 Bisim σ1 σ2.
 Proof.
-  revert σ1 σ2. cofix; intros.
-  destruct H; destruct s; simpl in *; try monadS_inv EQ.
+  revert σ1 σ2. pcofix labIndicesSim_sim; intros.
+  destruct H0; destruct s; simpl in *; try monadS_inv EQ.
   - destruct e.
     + case_eq (op_eval E e); intros.
-      * one_step. eapply labIndicesSim_sim; econstructor; eauto.
-      * no_step.
+      * pone_step. right. eapply labIndicesSim_sim; econstructor; eauto.
+      * pno_step.
     + case_eq (omap (op_eval E) Y); intros.
-      * extern_step.
+      * pextern_step.
         -- eexists (ExternI f l default_val); eexists; try (now (econstructor; eauto)).
-        -- eapply labIndicesSim_sim; econstructor; eauto.
-        -- eapply labIndicesSim_sim; econstructor; eauto.
-      * no_step.
+        -- right. eapply labIndicesSim_sim; econstructor; eauto.
+        -- right. eapply labIndicesSim_sim; econstructor; eauto.
+      * pno_step.
 
   - case_eq (op_eval E e); intros.
-    case_eq (val2bool v); intros; one_step; eapply labIndicesSim_sim; econstructor; eauto.
-    no_step.
+    case_eq (val2bool v); intros; pone_step; right; eapply labIndicesSim_sim; econstructor; eauto.
+    pno_step.
   - eapply option2status_inv in EQ0.
     edestruct EX as [[Lb F f]]; eauto. intros.
     edestruct BL as [i [A B]]; eauto.
@@ -187,11 +187,11 @@ Proof.
       eapply get_drop. rewrite H3.
       eapply get_app. eapply (map_get_1 (fst ∘ fst) H6).
     }
-    + one_step. orewrite (l + 0 = l). eauto. simpl.
+    + pone_step. orewrite (l + 0 = l). eauto. simpl.
       eapply get_drop in D1; eauto.
       orewrite (i - f + f = i) in D1. eauto.
       simpl. congruence.
-      eapply labIndicesSim_sim.
+      right. eapply labIndicesSim_sim.
       econstructor; eauto. simpl.
       * eapply lab_approx_drop; eauto.
       * intros.
@@ -218,8 +218,8 @@ Proof.
         erewrite (update_with_list_no_update _ _ _ n) in H3; eauto.
         edestruct C2; eauto; dcr.
         rewrite H4 in H7. eexists; eauto.
-    +  intros. no_step.
-    +  no_step.
+    +  intros. pno_step.
+    +  pno_step.
        rewrite Ldef in H. inv H. simpl in *. repeat get_functional; subst. eauto.
        repeat get_functional; subst. eauto.
        edestruct C5; eauto; dcr. simpl in *.
@@ -228,8 +228,8 @@ Proof.
        eapply get_app. eapply (map_get_1 (fst ∘ fst) H6).
        eapply get_drop in H3. orewrite (i - f + f = i) in H3.
        get_functional; subst. simpl in *. congruence.
-  - no_step.
-  - one_step. eapply labIndicesSim_sim. econstructor; eauto.
+  - pno_step.
+  - pone_step. right. eapply labIndicesSim_sim. econstructor; eauto.
     instantiate (1:=(mapi (I.mkBlock L F) F ++ LB)).
     econstructor. intros.
     eapply get_app_cases in H. destruct H.

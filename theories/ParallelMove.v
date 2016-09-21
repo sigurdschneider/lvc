@@ -274,35 +274,35 @@ Inductive pmSim : I.state -> I.state -> Prop :=
 Unset Printing Records.
 
 Lemma pmSim_sim σ1 σ2
-: pmSim σ1 σ2 -> sim Sim σ1 σ2.
+: pmSim σ1 σ2 -> sim bot3 Sim σ1 σ2.
 Proof.
-  revert σ1 σ2. cofix; intros.
-  inv H; inv LS; simpl in *; try monadS_inv pmlowerOk.
+  revert σ1 σ2. pcofix pmSim_sim; intros.
+  inv H0; inv LS; simpl in *; try monadS_inv pmlowerOk.
   - invt live_exp_sound.
     + case_eq (op_eval E e0); intros.
-      * one_step.
+      * pone_step.
         erewrite <- op_eval_live; eauto.
-        eapply pmSim_sim; econstructor; eauto.
+        right; eapply pmSim_sim; econstructor; eauto.
         eapply agree_on_update_same; eauto using agree_on_incl.
-      * no_step. erewrite <- op_eval_live in def; eauto. congruence.
+      * pno_step. erewrite <- op_eval_live in def; eauto. congruence.
     + remember (omap (op_eval E) Y). symmetry in Heqo.
       exploit omap_op_eval_live_agree; try eassumption.
       destruct o.
-      * extern_step; try congruence.
-        -- eapply pmSim_sim; econstructor; eauto.
+      * pextern_step; try congruence.
+        -- right; eapply pmSim_sim; econstructor; eauto.
            eapply agree_on_update_same; eauto using agree_on_incl.
-        -- eapply pmSim_sim; econstructor; eauto.
+        -- right; eapply pmSim_sim; econstructor; eauto.
            eapply agree_on_update_same; eauto using agree_on_incl.
-      * no_step.
+      * pno_step.
   - case_eq (op_eval E e); intros.
     exploit op_eval_live_agree; try eassumption.
     case_eq (val2bool v); intros.
-    + one_step.
-      eapply pmSim_sim; econstructor; eauto using agree_on_incl.
-    + one_step.
-      eapply pmSim_sim; econstructor; eauto using agree_on_incl.
+    + pone_step.
+      right; eapply pmSim_sim; econstructor; eauto using agree_on_incl.
+    + pone_step.
+      right; eapply pmSim_sim; econstructor; eauto using agree_on_incl.
     + exploit op_eval_live_agree; try eassumption.
-      no_step.
+      pno_step.
   - eapply option2status_inv in EQ. eapply nth_error_get in EQ.
     inRel_invs.
     inv_get. simpl in *.
@@ -311,11 +311,11 @@ Proof.
       edestruct (compile_parallel_assignment_correct _ _ _ _ _ EQ2 E' L')
         as [M' [X' X'']].
       eapply onlyVars_defined; eauto.
-      eapply simSilent.
+      pfold. eapply SimSilent.
       * eapply plus2O. econstructor; eauto. simpl. reflexivity.
       * eapply star2_plus2_plus2 with (A:=nil) (B:=nil); eauto.
         eapply plus2O. econstructor; eauto. reflexivity. reflexivity.
-      * eapply pmSim_sim; econstructor; try eapply LA1; eauto; simpl.
+      * right; eapply pmSim_sim; econstructor; try eapply LA1; eauto; simpl.
         eapply (inRel_drop LA H5).
         assert (getAnn al ⊆ blv) by eauto with cset.
         eapply agree_on_incl in X''; eauto. symmetry in X''. simpl.
@@ -323,10 +323,10 @@ Proof.
         erewrite onlyVars_lookup; eauto.
         eapply update_with_list_agree; eauto with len.
         eapply agree_on_incl; eauto. eauto with cset.
-    + err_step.
-  - no_step. simpl. eauto using op_eval_live.
-  - one_step.
-    eapply pmSim_sim. econstructor; eauto using agree_on_incl.
+    + perr.
+  - pno_step. simpl. eauto using op_eval_live.
+  - pone_step.
+    right; eapply pmSim_sim. econstructor; eauto using agree_on_incl.
     econstructor; eauto.
     eapply mutual_approx; eauto 20 using mkBlock_I_i with len.
     intros; inv_get.

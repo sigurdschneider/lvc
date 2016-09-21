@@ -69,6 +69,18 @@ Arguments sim_gen_mon [S] {H} [S'] {H0} [x0] [x1] [x2] r r' IN LE.
 
 Hint Resolve sim_gen_mon : paco.
 
+Lemma bisim_sim {S} `{StateType S} {S'} `{StateType S'} (σ:S) (σ':S')
+      : sim bot3 Bisim σ σ' -> sim bot3 Sim σ σ'.
+Proof.
+  revert σ σ'. pcofix CIH.
+  intros. pinversion H2; subst.
+  - pfold. eapply SimSilent; eauto 20 using plus2O.
+  - pfold. eapply SimExtern; intros; eauto using star2_refl.
+    + edestruct H6; eauto; dcr; pclearbot; eauto.
+    + edestruct H7; eauto; dcr; pclearbot; eauto.
+  - pfold. eapply SimTerm; eauto using star2_refl.
+Qed.
+
 Lemma sim_refl {S} `{StateType S} (σ:S) t r
       : sim r t σ σ.
 Proof.
@@ -77,6 +89,19 @@ Proof.
   intros. destruct (step_dec σ) as [[[] []]|].
   - pfold. eapply SimExtern; intros; eauto using star2_refl; eexists; eauto.
   - pfold. eapply SimSilent; eauto using plus2O.
+  - pfold. eapply SimTerm; eauto using star2_refl.
+Qed.
+
+
+Lemma bisim_sym {S} `{StateType S} {S'} `{StateType S'} (σ:S) (σ':S')
+  : sim bot3 Bisim σ σ' -> sim bot3 Bisim σ' σ.
+Proof.
+  revert σ σ'. pcofix CIH.
+  intros. pinversion H2; subst.
+  - pfold. eapply SimSilent; eauto using plus2O.
+  - pfold. eapply SimExtern; intros; eauto using star2_refl.
+    + edestruct H7; eauto; dcr; pclearbot; eauto.
+    + edestruct H6; eauto; dcr; pclearbot; eauto.
   - pfold. eapply SimTerm; eauto using star2_refl.
 Qed.
 

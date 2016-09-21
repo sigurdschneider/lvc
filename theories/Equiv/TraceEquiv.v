@@ -199,7 +199,7 @@ Lemma bisim_prefix {S} `{StateType S} {S'} `{StateType S'} (sigma:S) (σ':S')
   : bisim sigma σ' -> forall L, prefix sigma L <-> prefix σ' L.
 Proof.
   split; eapply bisim_prefix'; eauto.
-  eapply bisim_sym; eauto.
+  eapply NonParametricBiSim.bisim_sym; eauto.
 Qed.
 
 (** *** The only prefix is empty if and only if the state diverges *)

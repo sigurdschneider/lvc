@@ -1,4 +1,4 @@
-Require Import AllInRel Util Map Env Exp IL Annotation Coherence Bisim DecSolve.
+Require Import AllInRel Util Map Env Exp IL Annotation Coherence DecSolve.
 Require Import Liveness Restrict Allocation Indexwise.
 
 Set Implicit Arguments.

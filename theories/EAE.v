@@ -198,9 +198,9 @@ Instance SR : PointwiseProofRelationF params := {
 
 
 Lemma sim_EAE' r L L' V s
-  : labenv_sim Sim (sim'r r) SR (block_Z ⊝ L) L L'
+  : labenv_sim Sim (sim r) SR (block_Z ⊝ L) L L'
     -> ❬L❭ = ❬L'❭
-    -> sim'r r Sim (L, V, s) (L',V, compile s).
+    -> sim r Sim (L, V, s) (L',V, compile s).
 Proof.
   revert_except s.
   sind s; destruct s; simpl; intros; simpl in * |- *.
@@ -211,7 +211,7 @@ Proof.
   - case_eq (omap (op_eval V) (List.filter NotVar Y)); intros.
     + destruct (get_dec L (counted l)) as [[[bE bZ bs n]]|].
       * decide (length Y = length bZ).
-        -- eapply sim'_expansion_closed;
+        -- eapply sim_expansion_closed;
              [
              | eapply star2_refl
              | eapply list_to_stmt_correct;
@@ -266,9 +266,9 @@ Proof.
 Qed.
 
 Lemma sim_EAE V s
-  : @sim _ statetype_F _ statetype_F Sim (nil, V, s) (nil,V, compile s).
+  : @sim _ statetype_F _ statetype_F bot3 Sim (nil, V, s) (nil,V, compile s).
 Proof.
-  eapply sim'_sim. eapply sim_EAE'; eauto.
+  eapply sim_EAE'; eauto.
   eapply labenv_sim_nil.
 Qed.
 

@@ -1,7 +1,7 @@
 Require Import CSet Le.
 
 Require Import Plus Util AllInRel Map.
-Require Import Val Var Env IL Annotation Liveness Restrict Bisim SetOperations.
+Require Import Val Var Env IL Annotation Liveness Restrict SetOperations.
 Require Import DecSolve RenamedApart LabelsDefined.
 
 Set Implicit Arguments.
