@@ -1,5 +1,6 @@
 Require Import List Map Env AllInRel Exp AppExpFree.
 Require Import IL Annotation InRel AutoIndTac Liveness LabelsDefined.
+Require Import Spilling.
 
 
 
@@ -42,7 +43,7 @@ Qed.
 
 
 Definition sub_spill
-           (sl' sl : ann (set var * set var * option (list (set var * set var))))
+           (sl' sl : spilling)
   :=
     sl' = setTopAnn sl (getAnn sl') (*Note that rm=rm' *)
     /\ fst (fst (getAnn sl')) ⊆ fst (fst (getAnn sl))
@@ -52,13 +53,13 @@ Definition sub_spill
 
 
 Function count
-         (sl : ann (set var * set var * option (list (set var * set var))))
+         (sl : spilling)
   := cardinal (fst (fst (getAnn sl))) + cardinal (snd (fst (getAnn sl))).
 
 
 
 Lemma count_reduce_L
-      (sl : ann (set var * set var * option (list (set var * set var))))
+      (sl : spilling)
       (n m : nat)
   :
     count sl = S n
@@ -87,7 +88,7 @@ Definition merge := List.map (fun (RM : set var * set var)
 
 
 Lemma count_reduce_Sp
-      (sl : ann (set var * set var * option (list (set var * set var))))
+      (sl : spilling)
       (n m : nat)
   :
     count sl = S n
@@ -262,4 +263,264 @@ Proof.
     try split;
     inversion eq_ab;
     eauto.
+Qed.
+
+
+
+Lemma count_zero_Empty_Sp
+      (sl : spilling)
+  :
+    count sl = 0
+    -> Empty (getSp sl)
+.
+Proof.
+  intro count_zero.
+  apply cardinal_Empty.
+  unfold count in count_zero.
+  omega.
+Qed.
+
+Lemma count_zero_cardinal_Sp
+      (sl : spilling)
+  :
+    count sl = 0
+    -> cardinal (getSp sl) = 0
+.
+Proof.
+  intro count_zero.
+  unfold count in count_zero.
+  omega.
+Qed.
+
+
+
+
+Lemma count_zero_cardinal_L
+      (sl : spilling)
+  :
+    count sl = 0
+    -> cardinal (getL sl) = 0
+.
+Proof.
+  intro count_zero.
+  unfold count in count_zero.
+  omega.
+Qed.
+
+
+Lemma count_zero_Empty_L
+      (sl : spilling)
+  :
+    count sl = 0
+    -> Empty (getL sl)
+.
+Proof.
+  intro count_zero.
+  apply cardinal_Empty.
+  unfold count in count_zero.
+  omega.
+Qed.
+
+
+Lemma Empty_Sp_L_count_zero
+      (sl : spilling)
+  :
+    Empty (getSp sl)
+    -> Empty (getL sl)
+    -> count sl = 0
+.
+Proof.
+  intros Empty_Sp Empty_L.
+  apply cardinal_Empty in Empty_Sp.
+  apply cardinal_Empty in Empty_L.
+  unfold count.
+  omega.
+Qed.
+
+
+Definition clear_SpL
+           (sl : spilling)
+  :=
+    setTopAnn sl (∅,∅,snd (getAnn sl))
+.
+
+
+Definition reduce_Sp
+           (sl : spilling)
+  :=
+    setTopAnn sl (of_list (tl (elements (getSp sl))), getL sl, snd (getAnn sl))
+.
+
+
+Definition reduce_L
+           (sl : spilling)
+  :=
+    setTopAnn sl (getSp sl, of_list (tl (elements (getL sl))), snd (getAnn sl))
+.
+
+
+Lemma count_clear_zero
+      (sl : spilling)
+  :
+    count (clear_SpL sl) = 0
+.
+Proof.
+  unfold count.
+  unfold clear_SpL.
+  rewrite getAnn_setTopAnn.
+  simpl.
+  apply empty_cardinal.
+Qed.
+
+Definition clear_Sp
+           (sl : spilling)
+  :=
+    setTopAnn sl (∅,getL sl,getRm sl)
+.
+
+
+Lemma count_clearSp
+      (sl : spilling)
+  :
+    count (clear_Sp sl) = cardinal (getL sl)
+.
+Proof.
+  unfold count.
+  unfold clear_Sp.
+  rewrite getAnn_setTopAnn.
+  simpl.
+  rewrite empty_cardinal.
+  reflexivity.
+Qed.
+
+
+Lemma getSp_clearSp
+      (sl : spilling)
+  :
+    getSp clear_Sp sl = ∅
+.
+Proof.
+  unfold clear_Sp.
+  rewrite getAnn_setTopAnn.
+  simpl.
+  reflexivity.
+Qed.
+
+Lemma getL_clearSp
+      (sl : spilling)
+  :
+    getL clear_Sp sl = getL sl
+.
+Proof.
+  unfold clear_Sp.
+  rewrite getAnn_setTopAnn.
+  simpl.
+  reflexivity.
+Qed.
+
+
+
+Lemma getSp_clear
+      (sl : spilling)
+  :
+    getSp clear_SpL sl = ∅
+.
+Proof.
+  unfold clear_SpL.
+  rewrite getAnn_setTopAnn.
+  simpl.
+  reflexivity.
+Qed.
+
+Lemma getL_clear
+      (sl : spilling)
+  :
+    getL clear_SpL sl = ∅
+.
+Proof.
+  unfold clear_SpL.
+  rewrite getAnn_setTopAnn.
+  simpl.
+  reflexivity.
+Qed.
+
+
+Lemma getRm_clear
+      (sl : spilling)
+  :
+    getRm clear_SpL sl = getRm sl
+.
+Proof.
+  unfold clear_SpL.
+  rewrite getAnn_setTopAnn.
+  simpl.
+  reflexivity.
+Qed.
+
+
+
+
+Lemma getRm_clearSp
+      (sl : spilling)
+  :
+    getRm clear_Sp sl = getRm sl
+.
+Proof.
+  unfold clear_Sp.
+  rewrite getAnn_setTopAnn.
+  simpl.
+  reflexivity.
+Qed.
+
+Definition setSp
+           (sl : spilling)
+           (Sp : ⦃var⦄)
+  : spilling
+  :=
+    setTopAnn sl (Sp,getL sl,getRm sl)
+.
+
+
+Lemma clear_clearSp
+      (sl : spilling)
+  :
+    clear_SpL (clear_Sp sl) = clear_SpL sl
+.
+Proof.
+  unfold clear_SpL.
+  unfold clear_Sp.
+  rewrite setTopAnn_setTopAnn.
+  rewrite getAnn_setTopAnn.
+  simpl.
+  reflexivity.
+Qed.
+
+
+Lemma setSp_getSp
+      (sl : spilling)
+  :
+    setSp sl (getSp sl) = sl
+.
+Proof.
+  unfold setSp.
+  unfold setTopAnn.
+  destruct sl;
+    destruct a;
+    destruct p;
+    simpl;
+    reflexivity.
+Qed.
+
+
+Lemma getSp_setSp
+      (sl : spilling)
+      (Sp : ⦃var⦄)
+  :
+    getSp (setSp sl Sp) = Sp
+.
+Proof.
+  unfold setSp.
+  rewrite getAnn_setTopAnn.
+  simpl.
+  reflexivity.
 Qed.

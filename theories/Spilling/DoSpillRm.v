@@ -5,6 +5,9 @@ Require Import Spilling SpillUtil.
 Set Implicit Arguments.
 
 
+Notation "'lvness_fragment'" := (ann (option (list ⦃var⦄))).
+
+
 Definition add_anns
            (X : Type)
            (an : X)
@@ -13,6 +16,20 @@ Definition add_anns
   : ann X
   := iter n a (fun b => ann1 an b)
 .
+
+
+Lemma add_anns_zero
+      (X : Type)
+      (an : X)
+      (a : ann X)
+  :
+    add_anns an 0 a = a
+.
+Proof.
+  unfold add_anns.
+  simpl.
+  reflexivity.
+Qed.
 
 
 Lemma add_anns_S
@@ -31,6 +48,7 @@ Qed.
 
 Definition slot_merge
            (slot : var -> var)
+  : list (⦃var⦄ * ⦃var⦄) -> list ⦃var⦄
   := List.map (fun (RM : set var * set var)
                => fst RM ∪ map slot (snd RM))
 .
@@ -50,15 +68,26 @@ Proof.
   rewrite map_app; eauto.
 Qed.
 
+Definition transf_spill_ann
+           (slot : var -> var)
+           (rm : option (list (⦃var⦄ * ⦃var⦄) + ⦃var⦄))
+  : option (list ⦃var⦄)
+  :=
+    match rm with
+    | ⎣ inl rms ⎦ => ⎣ slot_merge slot rms ⎦
+    | ⎣ inr _ ⎦ => ⎣⎦
+    | ⎣⎦ => ⎣⎦
+    end
+.
 
 
 Fixpoint do_spill_rm
          (slot : var -> var)
          (sl : spilling)
-  : ann (option (list (⦃ var ⦄)))
+  : lvness_fragment
   :=
     add_anns None (count sl)
-             (let rm' := option_map (slot_merge slot) (snd (getAnn sl)) in
+             (let rm' := transf_spill_ann slot (getRm sl) in
               match sl with
               | ann0 _
                 => ann0 rm'
@@ -131,66 +160,43 @@ Definition do_spill_rm
                                             sl)
                           sl)
 .
+*)
 
 
-
-Lemma do_spill_rm_zero
+Lemma do_spill_rm_empty
       (slot : var -> var)
-      (sl : ann (set var * set var * option (list (set var * set var))))
+      (sl : spilling)
   :
     count sl = 0
     -> do_spill_rm slot sl
-      = match sl with
-        | ann0 (_,rm)
-          => ann0 (option_map (slot_merge slot) rm)
+      = let rm' := transf_spill_ann slot (getRm sl) in
+        match sl with
+        | ann0 _
+          => ann0 rm'
 
-        | ann1 (_,rm) sl1
-          => ann1 (option_map (slot_merge slot) rm)
+        | ann1 _ sl1
+          => ann1 rm'
                   (do_spill_rm slot sl1)
 
-        | ann2 (_,rm) sl1 sl2
-          => ann2 (option_map (slot_merge slot) rm)
+        | ann2 _ sl1 sl2
+          => ann2 rm'
                   (do_spill_rm slot sl1)
                   (do_spill_rm slot sl2)
-        | annF (_,rm) slF sl2
-          => annF (option_map (slot_merge slot) rm)
+        | annF _ slF sl2
+          => annF rm'
                   ((do_spill_rm slot) ⊝ slF)
                   ( do_spill_rm slot sl2)
         end
 .
 Proof.
   intros count_zero.
+  unfold do_spill_rm.
   destruct sl;
-    unfold do_spill_rm;
-    unfold discard_merge_sl;
-    unfold wrap_ann;
-    unfold count in *;
-    simpl in *;
     rewrite count_zero;
-    simpl;
+    rewrite add_anns_zero;
     destruct a;
-    destruct p;
+    destruct o;
     simpl;
-    try reflexivity.
-  fold wrap_ann.
-  enough (
-      (mapAnn (fun a : ⦃var⦄ * ⦃var⦄ * ؟ 〔⦃var⦄ * ⦃var⦄〕 => option_map (slot_merge slot) (snd a))
-      ⊝ wrap_ann
-          (fun sl0 : spilling => add_anns (∅, ∅, ⎣⎦) (cardinal (getSp sl0) + cardinal (getL sl0)) sl0)
-          ⊝ sa)
-      =
-      ((fun sl0 : spilling =>
-       mapAnn (fun a : ⦃var⦄ * ⦃var⦄ * ؟ 〔⦃var⦄ * ⦃var⦄〕 => option_map (slot_merge slot) (snd a))
-         (wrap_ann
-            (fun sl1 : spilling =>
-               add_anns (∅, ∅, ⎣⎦) (cardinal (getSp sl1) + cardinal (getL sl1)) sl1) sl0)) ⊝ sa)).
-  {
-    rewrite H.
+    fold do_spill_rm;
     reflexivity.
-  }
-  induction sa; simpl; eauto.
-  f_equal.
-  apply IHsa.
 Qed.
-
-*)

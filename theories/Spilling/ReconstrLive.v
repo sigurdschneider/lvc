@@ -1,51 +1,51 @@
 Require Import List Map Env AllInRel Exp AppExpFree.
 Require Import IL Annotation InRel AutoIndTac Liveness LabelsDefined.
-Require Import SimI Spilling DoSpill DoSpillRm DiscardMergeSl SpillUtil.
+Require Import Spilling SpillUtil.
 
 Set Implicit Arguments.
 
 
 
 Fixpoint reconstr_live
-(Lv : list (set var))
-(ZL : list (params))
-(G : set var)
-(s : stmt)
-(rm : ann (option (list (set var))))
-{struct s}
-: ann (set var)
-:=
-match s, rm with
-| stmtLet x e t, ann1 _ rm  (* checked *)
-     => let lv_t := reconstr_live Lv ZL (singleton x) t rm in
+         (Lv : list (set var))
+         (ZL : list (params))
+         (G : set var)
+         (s : stmt)
+         (rm : ann (option (list (set var))))
+         {struct s}
+  : ann (set var)
+  :=
+    match s, rm with
+    | stmtLet x e t, ann1 _ rm  (* checked *)
+      => let lv_t := reconstr_live Lv ZL (singleton x) t rm in
         ann1 ((getAnn lv_t) \ singleton x ∪ Exp.freeVars e ∪ G) lv_t
 
-| stmtReturn e, ann0 _ (* checked *)
-     => ann0 (Op.freeVars e ∪ G)
+    | stmtReturn e, ann0 _ (* checked *)
+      => ann0 (Op.freeVars e ∪ G)
 
-| stmtIf e t v, ann2 _ rm_t rm_v (* checked *)
-     => let lv_t := reconstr_live Lv ZL ∅ t rm_t in
+    | stmtIf e t v, ann2 _ rm_t rm_v (* checked *)
+      => let lv_t := reconstr_live Lv ZL ∅ t rm_t in
         let lv_v := reconstr_live Lv ZL ∅ v rm_v in
         ann2 (getAnn lv_t ∪ getAnn lv_v ∪ Op.freeVars e ∪ G) lv_t lv_v
 
-| stmtApp f Y, ann0 _ (* checked *)
-     => let blv := nth (counted f) Lv ∅ in
+    | stmtApp f Y, ann0 _ (* checked *)
+      => let blv := nth (counted f) Lv ∅ in
         let Z   := nth (counted f) ZL nil in
         ann0 (list_union (Op.freeVars ⊝ Y) ∪ blv \ of_list Z ∪ G)
 
-| stmtFun F t, annF (Some rms) rm_F rm_t (* checked *)
-     => let lv_t := reconstr_live (rms ++ Lv) (fst ⊝ F ++ ZL) ∅ t rm_t in
+    | stmtFun F t, annF (Some rms) rm_F rm_t (* checked *)
+      => let lv_t := reconstr_live (rms ++ Lv) (fst ⊝ F ++ ZL) ∅ t rm_t in
         let lv_F := (fun ps rm_s => reconstr_live (rms ++ Lv)
-                                             (fst ⊝ F ++ ZL)
-                                             (of_list (fst ps))
-                                             (snd ps)
-                                              rm_s
+                                               (fst ⊝ F ++ ZL)
+                                               (of_list (fst ps))
+                                               (snd ps)
+                                               rm_s
                     ) ⊜ F rm_F in
         annF (getAnn lv_t ∪ G) lv_F lv_t
 
-| _,_ => ann0 G
+    | _,_ => ann0 G
 
-end.
+    end.
 
 
 
@@ -120,14 +120,21 @@ Proof.
     exploit (IH s2); eauto.
     rewrite (ann_R_get H0); eauto.
     rewrite (ann_R_get H1); eauto.
-  - destruct (get_dec Lv l) as [[? ?]|].
-    + PIR2_inv.
-      rewrite (get_nth _ g); eauto.
-      rewrite (get_nth _ H1); eauto.
-      rewrite H0. reflexivity.
-    + PIR2_inv.
-      rewrite not_get_nth_default; eauto.
-      rewrite (not_get_nth_default _ H0); eauto.
+  - enough (nth (labN l) Lv ∅ ⊆ nth (labN l) Lv' ∅)
+      as HH by (rewrite HH; clear; cset_tac).
+    apply PIR2_length in H as Lv_len.
+    decide (labN l < length Lv).
+    + assert ({x : ⦃var⦄ & get Lv (labN l) x}) as [x get_x]
+          by (apply get_in_range; eauto).
+      rewrite Lv_len in l0.
+      assert ({y : ⦃var⦄ & get Lv' (labN l) y}) as [y get_y]
+          by (apply get_in_range; eauto).
+      erewrite get_nth; eauto.
+      erewrite get_nth; eauto.
+      eapply get_PIR2; eauto.
+    + apply not_le in n.
+      rewrite nth_overflow; eauto with cset.
+      omega.
   - destruct a; simpl; econstructor.
     exploit (IH s). eauto. Focus 2.
     rewrite (ann_R_get H0); eauto. reflexivity.
@@ -157,14 +164,24 @@ Proof.
     exploit (IH s2); eauto.
     rewrite (ann_R_get H0); eauto.
     rewrite (ann_R_get H1); eauto.
-  - destruct (get_dec Lv l) as [[? ?]|].
-    + PIR2_inv.
-      rewrite (get_nth _ g); eauto.
-      rewrite (get_nth _ H1); eauto.
-      rewrite H0. reflexivity.
-    + PIR2_inv.
-      rewrite not_get_nth_default; eauto.
-      rewrite (not_get_nth_default _ H0); eauto.
+  - enough (nth (labN l) Lv ∅ [=] nth (labN l) Lv' ∅)
+      as HH by (rewrite HH; clear; cset_tac).
+    apply PIR2_length in H as Lv_len.
+    decide (labN l < length Lv).
+    + assert ({x : ⦃var⦄ & get Lv (labN l) x}) as [x get_x]
+          by (apply get_in_range; eauto).
+      rewrite Lv_len in l0.
+      assert ({y : ⦃var⦄ & get Lv' (labN l) y}) as [y get_y]
+          by (apply get_in_range; eauto).
+      erewrite get_nth; eauto.
+      erewrite get_nth; eauto.
+      eapply get_PIR2; eauto.
+    + apply not_le in n.
+      rewrite nth_overflow; eauto with cset;
+        [ | omega].
+      rewrite Lv_len in n.
+      rewrite nth_overflow; eauto with cset.
+      omega.
   - destruct a; simpl; econstructor.
     exploit (IH s). eauto. Focus 2.
     rewrite (ann_R_get H0); eauto. reflexivity.
@@ -198,7 +215,7 @@ Qed.
 
 Inductive spill_live
   :
-    ann (set var * set var * option (list (set var * set var))) -> ann (set var) -> Prop
+    spilling -> ann (set var) -> Prop
   :=
   | SomeSpLv0 a b
     : spill_live (ann0 a) (ann0 b)
@@ -217,7 +234,7 @@ Inductive spill_live
             -> get lv_F n lv_s
             -> spill_live sl_s lv_s
         )
-      -> spill_live (annF (a,⎣ rms ⎦) sl_F sl_t)
+      -> spill_live (annF (a,⎣ inl rms ⎦) sl_F sl_t)
                               (annF b lv_F lv_t)
 .
 

@@ -1,12 +1,12 @@
 Require Import List Map Env AllInRel Exp AppExpFree.
 Require Import IL Annotation InRel AutoIndTac Liveness LabelsDefined.
-Require Import SimI Spilling SpillUtil.
+Require Import Spilling SpillUtil.
 
 
 Definition slot_lift_params
            (slot : var -> var)
-           (M : set var)
-  := (fun z => if [z ∈ M] then slot z else z)
+           (M : ⦃ var ⦄)
+  := List.map (fun z => if [z ∈ M] then slot z else z)
 .
 
 
@@ -111,7 +111,6 @@ Qed.
 
 Definition do_spill_rec
            (slot : var -> var)
-           (M : set var)
            (s : stmt)
            (sl : spilling)
            (do_spill' : forall (s' : stmt)
@@ -126,17 +125,19 @@ Definition do_spill_rec
     | stmtIf e s1 s2, ann2 _ sl1 sl2
       => stmtIf e (do_spill' s1 sl1) (do_spill' s2 sl2)
 
-    | stmtFun F t, annF (_,_,Some rms) sl_F sl_t
+    | stmtFun F t, annF (_,_,Some (inl rms)) sl_F sl_t
       => stmtFun
-          ((fun pf sf => (pf,sf))
-             ⊜ ((fun (Zs : params * stmt) (rm : set var * set var)
-                 => slot_lift_params slot (snd rm) ⊝ (fst Zs)) ⊜ F rms)
-             ((fun (Zs : params * stmt) (sl_s : spilling)
-               => do_spill' (snd Zs) sl_s) ⊜ F sl_F)
+          (pair ⊜
+                (slot_lift_params slot ⊜ (snd ⊝ rms) (fst ⊝ F))
+                 (* (fun (Zs : params * stmt) (rm : ⦃var⦄ * ⦃var⦄)
+                  => slot_lift_params slot (snd rm) (fst Zs)) ⊜ F rms)*)
+                ((fun (Zs : params * stmt) (sl_s : spilling)
+                  => do_spill' (snd Zs) sl_s) ⊜ F sl_F)
+  (* we can't write "(do_spill' ⊜ (snd ⊝ F) sl_F)" because termination wouldn't be obvious *)
           )
           (do_spill' t sl_t)
 
-    | stmtApp f Y, ann0 _
+    | stmtApp f Y, ann0 (_,_,Some (inr M))
       => stmtApp f ((slot_lift_args slot M) ⊝ Y)
 
     | _,_
@@ -149,15 +150,14 @@ Definition do_spill_rec
 (* this algorithm prefers variables in the memory in function applications *)
 Fixpoint do_spill
            (slot : var -> var)
-           (M : set var)
            (s : stmt)
            (sl : spilling)
+           {struct s}
   : stmt
   :=
     write_spills slot (elements (getSp sl)) (
         write_loads slot (elements (getL sl)) (
-            let do_spill' := do_spill slot (getSp sl ∪ M) in
-            do_spill_rec slot (getSp sl ∪ M) s sl do_spill'
+            do_spill_rec slot s sl (do_spill slot)
         )
      )
 .
@@ -202,77 +202,7 @@ Fixpoint do_spill
  *)
 
 
-Lemma count_zero_Empty_Sp
-      (sl : spilling)
-  :
-    count sl = 0
-    -> Empty (getSp sl)
-.
-Proof.
-  intro count_zero.
-  apply cardinal_Empty.
-  unfold count in count_zero.
-  omega.
-Qed.
-
-Lemma count_zero_cardinal_Sp
-      (sl : spilling)
-  :
-    count sl = 0
-    -> cardinal (getSp sl) = 0
-.
-Proof.
-  intro count_zero.
-  unfold count in count_zero.
-  omega.
-Qed.
-
-
-
-
-Lemma count_zero_cardinal_L
-      (sl : spilling)
-  :
-    count sl = 0
-    -> cardinal (getL sl) = 0
-.
-Proof.
-  intro count_zero.
-  unfold count in count_zero.
-  omega.
-Qed.
-
-
-Lemma count_zero_Empty_L
-      (sl : spilling)
-  :
-    count sl = 0
-    -> Empty (getL sl)
-.
-Proof.
-  intro count_zero.
-  apply cardinal_Empty.
-  unfold count in count_zero.
-  omega.
-Qed.
-
-
-Lemma Empty_Sp_L_count_zero
-      (sl : spilling)
-  :
-    Empty (getSp sl)
-    -> Empty (getL sl)
-    -> count sl = 0
-.
-Proof.
-  intros Empty_Sp Empty_L.
-  apply cardinal_Empty in Empty_Sp.
-  apply cardinal_Empty in Empty_L.
-  unfold count.
-  omega.
-Qed.
-
-
+(*
 
 Lemma slot_lift_args_Equal_M
       (slot : var -> var)
@@ -357,17 +287,23 @@ Lemma do_spill_Equal_M
 .
 Proof.
   intros eq_M.
-  general induction s;
+  revert M M' sl eq_M.
+  sind s;
+    intros;
+    destruct s;
     simpl;
     do 2 f_equal;
     destruct sl;
     eauto.
-  - rewrite IHs with (M':= getSp (ann1 a sl) ∪ M');
-      [ | rewrite eq_M ] ; eauto.
-  - erewrite IHs1 with (M':= getSp (ann2 a sl1 sl2) ∪ M');
-      [ | rewrite eq_M ] ; eauto.
-    erewrite IHs2 with (M':= getSp (ann2 a sl1 sl2) ∪ M');
-      [ | rewrite eq_M ] ; eauto.
+  - rewrite (IH s) with (M':= getSp (ann1 a sl) ∪ M'); eauto.
+    rewrite eq_M.
+    eauto.
+  - erewrite (IH s1) with (M':= getSp (ann2 a sl1 sl2) ∪ M'); eauto.
+    + erewrite (IH s2) with (M':= getSp (ann2 a sl1 sl2) ∪ M'); eauto.
+      rewrite eq_M.
+      eauto.
+    + rewrite eq_M.
+      eauto.
   - erewrite slot_lift_args_Equal_M_Y; eauto.
     rewrite eq_M.
     reflexivity.
@@ -375,16 +311,21 @@ Proof.
       destruct p;
       destruct o;
       eauto.
-    rewrite IHs with (M':= getSp (annF (s0,s1,⎣l⎦) sa sl) ∪ M');
-      [ | rewrite eq_M ] ; eauto.
-    assert (((fun (Zs : params * stmt) (sl_s : spilling) =>
-                do_spill slot (getSp annF (s0, s1, ⎣ l ⎦) sa sl ∪ M) (snd Zs) sl_s) ⊜ F sa)
-           = (fun (Zs : params * stmt) (sl_s : spilling) =>
-        do_spill slot (getSp annF (s0, s1, ⎣ l ⎦) sa sl ∪ M') (snd Zs) sl_s) ⊜ F sa).
-    { admit. }
-    rewrite H.
-    reflexivity.
-Admitted.
+    f_equal.
+    + eapply zip_ext_get2; eauto.
+      * rewrite !zip_length.
+        eauto.
+      * intros.
+        inv_get.
+        f_equal.
+        apply IH; eauto.
+        rewrite eq_M.
+        eauto.
+    + apply IH; eauto.
+      rewrite eq_M.
+      eauto.
+Qed.
+
 
 Lemma do_spill_rec_do_spill_Equal_M
       (slot : var -> var)
@@ -487,21 +428,23 @@ Proof.
 
 uecouiaeou
 *)
+*)
+
 
 Lemma do_spill_rec_s
       (slot : var -> var)
-      (M Sp' L': ⦃ var ⦄)
+      (Sp' L': ⦃ var ⦄)
       (s : stmt)
       (sl : spilling)
   :
-    do_spill_rec slot M s sl
-    = do_spill_rec slot M s (setTopAnn sl (Sp',L',snd (getAnn sl)))
+    do_spill_rec slot s sl
+    = do_spill_rec slot s (setTopAnn sl (Sp',L',snd (getAnn sl)))
 .
 Proof.
   destruct s, sl;
     simpl;
     unfold do_spill_rec;
-    try reflexivity.
+    try reflexivity;
   destruct a;
     destruct p;
     destruct o;
@@ -510,13 +453,12 @@ Qed.
 
 Lemma do_spill_empty
       (slot : var -> var)
-      (M : set var)
       (s : stmt)
       (sl : spilling)
   :
     count sl = 0
-    -> do_spill slot M s sl
-      = do_spill_rec slot M s sl (do_spill slot M)
+    -> do_spill slot s sl
+      = do_spill_rec slot s sl (do_spill slot)
 .
 Proof.
   intros count_zero.
@@ -525,20 +467,12 @@ Proof.
   unfold do_spill.
   rewrite elements_Empty in Empty_Sp.
   rewrite elements_Empty in Empty_L.
-  assert (getSp sl ∪ M [=] M) as H.
-  {
-    apply elements_nil_eset in Empty_Sp.
-    rewrite Empty_Sp.
-    cset_tac.
-  }
   induction s;
     rewrite Empty_Sp;
     rewrite Empty_L;
     rewrite write_spills_empty;
     rewrite write_loads_empty;
     fold do_spill;
-    apply do_spill_rec_do_spill_Equal_M; (* !! this is unproven !! *)
-    rewrite H;
     reflexivity.
 Qed.
 
@@ -546,25 +480,24 @@ Qed.
 
 Lemma do_spill_extract_writes
       (slot : var -> var)
-      (M : ⦃ var ⦄)
       (s : stmt)
       (sl : spilling)
   :
-    do_spill slot M s sl
+    do_spill slot s sl
     = write_spills slot (elements (getSp sl))
-                   (write_loads slot (elements (getL sl))
-                                (do_spill slot (getSp sl ∪ M) s (setTopAnn sl (∅,∅,snd (getAnn sl)))))
+         (write_loads slot (elements (getL sl))
+             (do_spill slot s (setTopAnn sl (∅,∅,snd (getAnn sl)))))
 .
 Proof.
   symmetry.
-  rewrite do_spill_empty. (* !! this uses an unproven lemma !! *)
+  rewrite do_spill_empty.
   - rewrite do_spill_rec_s with (Sp':=∅) (L':=∅).
     rewrite setTopAnn_setTopAnn.
     destruct s,sl;
-      simpl; eauto.
-    do 2 f_equal.
-    destruct a.
-    simpl.
+      simpl; eauto;
+    do 2 f_equal;
+    destruct a;
+    simpl;
     destruct o;
       destruct p;
       reflexivity.
@@ -578,19 +511,19 @@ Qed.
 
 Lemma do_spill_sub_empty_invariant
       (slot : var -> var)
-      (M Sp' L': ⦃ var ⦄)
+      (Sp' L': ⦃ var ⦄)
       (s : stmt)
       (sl : spilling)
   :
     count sl = 0
     -> Sp' [=] ∅
     -> L' [=] ∅
-    ->  do_spill slot M s sl
-       = do_spill slot M s (setTopAnn sl (Sp',L',snd (getAnn sl)))
+    ->  do_spill slot s sl
+       = do_spill slot s (setTopAnn sl (Sp',L',snd (getAnn sl)))
 .
 Proof.
   intros count_zero Sp_empty L_empty.
-  rewrite do_spill_empty; eauto. (* !! this uses an unproven lemma !! *)
+  rewrite do_spill_empty; eauto.
   rewrite do_spill_empty;
     swap 1 2.
   {
@@ -602,7 +535,7 @@ Proof.
     eauto.
   }
   destruct s, sl;
-    simpl; eauto.
+    simpl; eauto;
   destruct a;
     destruct p;
     destruct o;
