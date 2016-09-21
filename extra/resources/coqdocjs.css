@@ -120,7 +120,7 @@ body {
   outline: none; /* prevent glow in OS X */
 }
 
-#main {
+#main, .main {
     display: block;
     padding: 16px;
     padding-top: 1em;
