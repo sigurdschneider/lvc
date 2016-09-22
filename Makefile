@@ -10,7 +10,7 @@ COQDOCFLAGS := \
 COQMAKEFILE := Makefile.coq
 COQMAKE := +$(MAKE) -f $(COQMAKEFILE)
 CORES=$(shell cat /proc/cpuinfo | grep cpu\ cores | sed 's/.*:\ //' | head -n 1)
-VS=$(shell find theories/ -iname '*vo' | sed 's/\.vo/.v/' | grep -v `cat _BLACKLIST`)
+VS=$(shell find theories/ -iname '*.v' | grep -v '/\.' | grep -v `cat _BLACKLIST`)
 VSIND=$(shell find theories/ -iname '*vo' | sed 's/\.vo/.v/' | grep -v `cat _BLACKLIST` | grep -v 'Spilling')
 DOCS=$(shell find extra/ )
 
@@ -35,10 +35,11 @@ depclean: clean
 
 doc: clean-doc $(DOCS)
 	- mkdir -p $(DOC)
-	make -f $(COQMAKEFILE) $(VS:.v=.vo) -j$(CORES)
-	coqdoc $(COQDOCFLAGS) -d $(DOC) $(shell cat _CoqProject | grep -v ^-I) $(VS)
+	-make -f $(COQMAKEFILE) -j$(CORES) -k
+	coqdoc $(COQDOCFLAGS) -d $(DOC) $(shell cat _CoqProject | grep -v ^-I) $(shell find theories/ -iname '*.vo' | sed 's/\.vo/.v/')
 	cp $(EXTRA_DIR)/resources/* $(DOC)
-	cp $(EXTRA_DIR)/index.html $(DOCIND)/index.html
+	cp $(EXTRA_DIR)/index.html $(DOC)/index.html
+	cp $(EXTRA_DIR)/search-toc.html $(DOC)/search-toc.html
 
 doc-publish: doc
 	scp -r $(DOC) ps:public_html/LVC
