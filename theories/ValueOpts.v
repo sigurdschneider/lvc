@@ -1005,25 +1005,39 @@ Proof.
   congruence.
 Qed.  
 
-
-
-
-
-Lemma tmp V V' Y
+Lemma onvLe_omap_op_eval_fstNoneOrEq V V' Y
   : onvLe V V'
     -> fstNoneOrR eq (omap (op_eval V) Y) (omap (op_eval V') Y).
 Proof.
   intros.
   case_eq (omap (op_eval V) Y); eauto using @fstNoneOrR.
-  intros. 
-  general induction Y; eauto; simpl in * |- * ; [reflexivity|].
-  monad_inv H0. rewrite EQ. simpl. exploit onvLe_op_eval_some; eauto.
-  rewrite H0. simpl. erewrite EQ1. simpl.
-  
-  general induction Y; eauto; simpl; [reflexivity|].
-  exploit IHY; eauto.
-  inv H0; eauto. simpl. rewrite H2.  
+  intros. exploit onvLe_omap_op_eval_some  ; eauto. rewrite H1.
+  reflexivity.
+Qed.
 
+Lemma satisfies_omap_op_eval_some Gamma Y Y' V vl 
+  : entails Gamma (list_EqnApx Y Y')
+    -> satisfiesAll V Gamma
+    -> omap (op_eval V) Y = ⎣ vl ⎦
+    -> omap (op_eval V) Y' = ⎣ vl ⎦.
+Proof.
+  intros.
+  exploit H; eauto.
+  
+
+  
+  
+Lemma tmp Gamma V Y Y'
+  : entails Gamma (list_EqnApx Y Y')
+    -> satisfiesAll V Gamma
+    -> fstNoneOrR eq (omap (op_eval V) Y) (omap (op_eval V) Y').
+Proof.
+  intros.
+  case_eq (omap (op_eval V) Y); eauto.
+  - intros. exploit onvLe_omap_op_eval_some; eauto.
+
+
+  
   
 Lemma tmp V V' Y Y' Gamma
   : onvLe V V'
