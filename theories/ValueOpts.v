@@ -874,15 +874,15 @@ Instance AR : PointwiseProofRelationF params:= {
 Lemma sim_let_op_apx X (IST:ILStateType X) r (L L':X) V V' x x' e e' s s'
       (EQ: fstNoneOrR eq (op_eval V e) (op_eval V' e'))
       (SIM: forall v, op_eval V e = Some v
-                 -> (sim'r r \3/ r) Sim (L, V [x <- ⎣ v ⎦], s) (L', V' [x' <- ⎣ v ⎦], s'))
-  : sim'r r Sim (L, V, stmtLet x (Operation e) s) (L', V', stmtLet x' (Operation e') s').
+                 -> (sim r \3/ r) Sim (L, V [x <- ⎣ v ⎦], s) (L', V' [x' <- ⎣ v ⎦], s'))
+  : sim r Sim (L, V, stmtLet x (Operation e) s) (L', V', stmtLet x' (Operation e') s').
 Proof.
   inv EQ.
-  -  pfold ; eapply sim'Err;
+  -  pfold ; eapply SimErr;
        [ | eapply star2_refl | ].
      + apply result_none.  inversion 1.
      + eapply let_op_normal. eauto.
-  -  pfold; eapply sim'Silent; [ eapply plus2O
+  -  pfold; eapply SimSilent; [ eapply plus2O
                               | eapply plus2O
                               | ].
     eapply step_let_op; eauto. eauto.
@@ -899,81 +899,75 @@ Qed.
 Lemma sim_cond_op_apx X (IST:ILStateType X) r (L L':X) V V' e e' s1 s1' s2 s2'
       (EQ:  fstNoneOrR eq (op_eval V e) (op_eval V' e'))
       (SIM1: forall v, op_eval V e = Some v -> val2bool v = true ->
-                  (sim'r r \3/ r) Sim (L, V, s1) (L', V', s1'))
+                  (sim r \3/ r) Sim (L, V, s1) (L', V', s1'))
       (SIM2: forall v, op_eval V e = Some v -> val2bool v = false ->
-                 (sim'r r \3/ r) Sim (L, V, s2) (L', V', s2'))
-  : sim'r r Sim (L, V, stmtIf e s1 s2) (L', V', stmtIf e' s1' s2').
+                 (sim r \3/ r) Sim (L, V, s2) (L', V', s2'))
+  : sim r Sim (L, V, stmtIf e s1 s2) (L', V', stmtIf e' s1' s2').
 Proof.
   inv EQ.
-  - pfold; eapply sim'Err;
+  - pfold; eapply SimErr;
       [|eapply star2_refl|].
     + apply result_none. inversion 1.
     + eapply cond_normal. eauto.
   -  case_eq (val2bool y); intros.
-    + pfold; eapply sim'Silent; [ eapply plus2O; [|eapply filter_tau_nil_eq]
+    + pfold; eapply SimSilent; [ eapply plus2O; [|eapply filter_tau_nil_eq]
                                 | eapply plus2O; [|eapply filter_tau_nil_eq]
                                 | eapply SIM1; eauto];
       eapply step_cond_true; eauto.    
-    + pfold; eapply sim'Silent; [ eapply plus2O; [|eapply filter_tau_nil_eq]
+    + pfold; eapply SimSilent; [ eapply plus2O; [|eapply filter_tau_nil_eq]
                                 | eapply plus2O; [|eapply filter_tau_nil_eq]
                                 | eapply SIM2; eauto];
       eapply step_cond_false; eauto.
 Qed.
 
 Lemma sim_return_apx X (IST:ILStateType X) r (L L':X) V V' e e' 
-  :fstNoneOrR eq (op_eval V e) (op_eval V' e) -> sim'r r Sim (L, V, stmtReturn e) (L', V', stmtReturn e').
+  :fstNoneOrR eq (op_eval V e) (op_eval V' e') -> sim r Sim (L, V, stmtReturn e) (L', V', stmtReturn e').
 Proof.
   intros. inv H.
-  - pfold; eapply sim'Err; [|eapply star2_refl|].
-    + admit.
-    + admit.
-  - pfold; eapply sim'Term; [|eapply star2_refl|eapply star2_refl| | ].
-    + admit.
-    + admit.
-    + admit.
-Admitted.
+  - pfold; eapply SimErr; [|eapply star2_refl|].
+    + rewrite result_return. eauto.
+    + apply return_normal.
+  - pfold; eapply SimTerm; [|eapply star2_refl|eapply star2_refl| | ].
+    + rewrite! result_return. congruence.
+    + apply return_normal.
+    + apply return_normal.
+Qed.
+
       
-  Lemma sim_let_call X (IST:ILStateType X) r (L L':X) V V' x x' f Y Y' s s'
+  Lemma sim_let_call_apx X (IST:ILStateType X) r (L L':X) V V' x x' f Y Y' s s'
       (EQ: fstNoneOrR eq  (omap (op_eval V) Y)  (omap (op_eval V') Y'))
-      (SIM: forall v, (sim'r r \3/ r) Sim (L, V [x <- ⎣ v ⎦], s) (L', V' [x' <- ⎣ v ⎦], s'))
-  : sim'r r Sim (L, V, stmtLet x (Call f Y) s) (L', V', stmtLet x' (Call f Y') s').
-Proof.
-  inv EQ.
-  - pfold; eapply sim'Extern; eauto using star2_refl.
-Abort.
-    (*
-  case_eq (omap (op_eval V) Y); intros.
-  * pose proof H as H'. rewrite EQ in H'.
-    pfold; eapply sim'Extern;
+      (SIM: forall v, (sim r \3/ r) Sim (L, V [x <- ⎣ v ⎦], s) (L', V' [x' <- ⎣ v ⎦], s'))
+  : sim r Sim (L, V, stmtLet x (Call f Y) s) (L', V', stmtLet x' (Call f Y') s').
+  Proof.
+    inv EQ.
+    - pfold. eapply SimErr; [|eapply star2_refl | ]; [ simpl  | ].
+      + rewrite !result_none; isabsurd; eauto.
+      + eapply let_call_normal; eauto.
+    - symmetry in H0, H. 
+      pfold; eapply SimExtern;
       [ eapply star2_refl
       | eapply star2_refl
       | step_activated; eauto using step_let_call
       | step_activated; eauto using step_let_call | |];
-      intros ? ? STEP; eapply let_call_inversion in STEP; dcr; subst; eexists; split; try eapply step_let_call; eauto.
-    rewrite <- EQ; eauto.
-    rewrite EQ; eauto.
-  * pfold. eapply sim'Term; [| eapply star2_refl | eapply star2_refl | | ];
-             [ simpl | | ].
-    rewrite !result_none; isabsurd; eauto.
-    eapply let_call_normal; eauto.
-    eapply let_call_normal; rewrite <- EQ; eauto.
+      intros ? ? STEP; eapply let_call_inversion in STEP; dcr; subst; eexists; split; try eapply step_let_call; eauto; congruence.  
 Qed.
 
-*)
+Lemma onvLe_op_eval_some V V' e v
+    :onvLe V V' -> op_eval V e = ⎣ v ⎦ -> op_eval V' e = ⎣ v ⎦.
+Proof.
+  intros. general induction e; simpl in * |- * ; eauto using @fstNoneOrR.
+  - rewrite H0. exploit H; eauto.
+  - monad_inv H0. rewrite EQ. simpl. rewrite (IHe V V' x); eauto.
+  - monad_inv H0. rewrite EQ1. rewrite EQ. simpl. erewrite IHe1; eauto. erewrite IHe2; simpl; eauto.
+Qed.
+    
+
 Lemma onvLe_fstNoneOrR_apx V V' e :
   onvLe V V' -> fstNoneOrR eq (op_eval V e) (op_eval V' e).
-Proof with simpl; eauto using @fstNoneOrR.
-  intros. general induction e...
-  - case_eq (V v); intros...
-    erewrite H...
- - exploit IHe as X; eauto.
-   inv X... reflexivity.
-- exploit IHe1 as  X; eauto. 
-  exploit IHe2 as Y; eauto.
-  inv X... inv Y...
-  reflexivity.
+Proof with simpl; eauto using @fstNoneOrR, @onvLe_op_eval_some.
+  intros. case_eq (op_eval V e) ...
+  intros. erewrite onvLe_op_eval_some... 
 Qed.
-
 
 Lemma satisfies_EqnEq_on_update   (x:var) e V v:
   op_eval V e = ⎣ v ⎦   -> x ∉ Op.freeVars e  ->satisfies (V [x <- ⎣ v ⎦]) (EqnEq(Var x) e).
@@ -998,33 +992,79 @@ Lemma op_eval_false_satisfies V e v
 Proof.
 intros.  unfold satisfies. simpl. rewrite H. simpl. unfold option_lift1. rewrite H0. simpl. reflexivity.
 Qed.
+
+Lemma onvLe_omap_op_eval_some V V' Y vl
+ : onvLe V V' -> (omap (op_eval V) Y) = ⎣ vl ⎦ -> (omap (op_eval V') Y) = ⎣ vl ⎦.
+Proof.  
+  intros.
+  case_eq (omap (op_eval V) Y); simpl; eauto.
+  intros. general induction Y; simpl in * |- *; eauto.
+  monad_inv H0. monad_inv H1.
+  rewrite EQ,EQ1. simpl. exploit IHY; eauto.
+  rewrite H0. erewrite onvLe_op_eval_some; simpl in * |- *; eauto.
+  congruence.
+Qed.  
+
+
+
+
+
+Lemma tmp V V' Y
+  : onvLe V V'
+    -> fstNoneOrR eq (omap (op_eval V) Y) (omap (op_eval V') Y).
+Proof.
+  intros.
+  case_eq (omap (op_eval V) Y); eauto using @fstNoneOrR.
+  intros. 
+  general induction Y; eauto; simpl in * |- * ; [reflexivity|].
+  monad_inv H0. rewrite EQ. simpl. exploit onvLe_op_eval_some; eauto.
+  rewrite H0. simpl. erewrite EQ1. simpl.
   
-Hint Resolve satisfies_fstNoneOrR_Apx onvLe_fstNoneOrR_Apx.
+  general induction Y; eauto; simpl; [reflexivity|].
+  exploit IHY; eauto.
+  inv H0; eauto. simpl. rewrite H2.  
+
+  
+Lemma tmp V V' Y Y' Gamma
+  : onvLe V V'
+    -> entails Gamma (list_EqnApx Y Y')
+    -> satisfiesAll V Gamma
+    -> fstNoneOrR eq (omap (op_eval V) Y) (omap (op_eval V') Y').
+Proof.
+  intros.
+  exploit H0; eauto.  etransitivity.
+  - 
+  
+
+  omap_satisfies_list_EqnApx, omap_exp_eval_onvLe
+
+  
+Hint Resolve satisfies_fstNoneOrR_apx onvLe_fstNoneOrR_apx.
 
 Lemma sim_vopt r L L' V V' s s' ZL Δ Γ Gamma ang
   : satisfiesAll V Gamma
     -> eqn_sound ZL Δ Γ s s' Gamma ang
-    -> labenv_sim Sim (sim'r r) AR ZL L L'
+    -> labenv_sim Sim (sim r) AR ZL L L'
     -> renamedApart s ang
     -> eqns_freeVars Gamma ⊆ fst (getAnn ang)
     -> onvLe V V'
-    -> sim'r r Sim  (L,V, s) (L',V', s').
+    -> sim r Sim  (L,V, s) (L',V', s').
 Proof.
   intros SAT EQN SIML REAPT FV OLE.
   general induction EQN; (try (now exfalso; eapply H; eauto))
   ; simpl; invt renamedApart; simpl in * |- *.
-  - exploit H; eauto. exploit H1; eauto; [cset_tac|].  eapply (sim_let_op_RPX il_statetype_F). 
+  - exploit H; eauto. exploit H1; eauto; [cset_tac|].  eapply (sim_let_op_apx il_statetype_F). 
     +  etransitivity; eauto.
     + intros. left. eapply IHEQN; eauto.
       *  unfold satisfiesAll.  intros. cset_tac.
          -- rewrite <- H5. eauto using satisfies_EqnEq_on_update.
-         -- rewrite <- H4. eapply (@satisfies_EqnEq_on_update x e' V v); eauto. eapply satisfies_fstNoneOrR_Apx in H2.
+         -- rewrite <- H4. eapply (@satisfies_EqnEq_on_update x e' V v); eauto. eapply satisfies_fstNoneOrR_apx in H2.
            rewrite H3 in H2.  inv H2. reflexivity.
         --  exploit SAT; eauto. apply satisfies_update_dead; eauto.
             intros X. apply H7. apply FV. eapply in_eqns_freeVars; eauto.
       * pe_rewrite. rewrite! eqns_freeVars_add. simpl. rewrite H0, H8, FV. clear. cset_tac.
       * eapply agree_on_onvLe; eauto.
-  -  exploit H; eauto.  exploit H0; eauto; [cset_tac|].  eapply (sim_cond_op_RPX il_statetype_F).
+  -  exploit H; eauto.  exploit H0; eauto; [cset_tac|].  eapply (sim_cond_op_apx il_statetype_F).
      + etransitivity; eauto.
      + intros. left. eapply IHEQN1; clear IHEQN1 IHEQN2; eauto.
        * apply satisfiesAll_add. eauto using  op_eval_true_satisfies.   
@@ -1036,10 +1076,14 @@ Proof.
     intros; split; intros; eauto.
     simpl in *.  destruct H7; subst. exists Yv; split; eauto.  eapply omap_exp_eval_onvLe; eauto.
     exploit H4; eauto. eapply omap_satisfies_list_EqnApx; eauto.
-  - pno_step. simpl. 
-  - eapply 
-     
-    
+  - eapply (sim_return_apx il_statetype_F).
+    exploit H; eauto. exploit H0; eauto; [cset_tac|]. etransitivity; eauto.
+  - eapply (sim_let_call_apx il_statetype_F); eauto; simpl.
+    +
+      etransitivity; eauto using omap_satisfies_list_EqnApx, omap_exp_eval_onvLe.
+
+
+      
   - exploit H; eauto. exploit X; eauto. cset_tac; reflexivity. inv X0.
     inv H2.
     + pfold. econstructor 3; try eapply star2_refl; eauto. stuck2.
