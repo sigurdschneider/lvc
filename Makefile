@@ -49,6 +49,7 @@ doc-ind: clean-doc $(DOCS)
 	coqdoc $(COQDOCFLAGS) -d $(DOCIND) $(shell cat _CoqProject | grep -v ^-I) $(VSIND)
 	cp $(EXTRA_DIR)/resources/* $(DOCIND)
 	cp $(EXTRA_DIR)/index-ind.html $(DOCIND)/index.html
+	cp $(EXTRA_DIR)/search-toc.html $(DOCIND)/search-toc.html
 
 doc-ind-publish: doc-ind
 	scp -r $(DOCIND)/* ps:public_html/lvc-ind/

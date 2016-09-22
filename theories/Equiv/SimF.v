@@ -5,7 +5,11 @@ Require Export Sim SimTactics IL BlockType.
 Set Implicit Arguments.
 Unset Printing Records.
 
+(** * A Framework for Simulation Proofs by Induction: Functional Version *)
+
+(** ** Proof Relation *)
 (* A proof relation is parameterized by analysis information A *)
+
 Class ProofRelationF (A:Type) := {
     (* Relates parameter lists according to analysis information *)
     ParamRelF : A -> list var -> list var -> Prop;
@@ -23,6 +27,8 @@ Class ProofRelationF (A:Type) := {
 Definition frel := rel3 simtype (fun _ : simtype => F.state)
                        (fun (_ : simtype) (_ : F.state) => F.state).
 
+(** ** Parameter Relation and Separation *)
+
 Definition paramrel A (PR:ProofRelationF A) AL L L' :=
   forall (f f':lab) E Z s i E' Z' s' i' a,
     IndexRelF AL f f'
@@ -30,142 +36,6 @@ Definition paramrel A (PR:ProofRelationF A) AL L L' :=
     -> get L f (F.blockI E Z s i)
     -> get L' f' (F.blockI E' Z' s' i')
     -> ParamRelF a Z Z'.
-
-Definition app_r t (r:frel) A (PR:ProofRelationF A) AL L L' :=
-  forall (f f':lab) a E Z s i E' Z' s' i',
-    IndexRelF AL f f'
-    -> get AL f a
-    -> get L f (F.blockI E Z s i)
-    -> get L' f' (F.blockI E' Z' s' i')
-    -> forall E E' Yv Y'v Y Y',
-        ArgRelF a Yv Y'v
-        -> omap (op_eval E) Y = Some Yv
-        -> omap (op_eval E') Y' = Some Y'v
-        -> ❬Z❭ = ❬Yv❭
-        -> ❬Z'❭ = ❬Y'v❭
-        -> r t (L, E, stmtApp f Y)
-            (L', E', stmtApp f' Y').
-
-Lemma app_r_mon t (r r':frel) A (PR:ProofRelationF A) AL L L'
-  : app_r t r PR AL L L'
-    -> (forall t x y, r t x y -> r' t x y)
-    -> app_r t r' PR AL L L'.
-Proof.
-  intros Lr LE; hnf; intros; eauto.
-Qed.
-
-Definition indexes_exists {A} (PR:ProofRelationF A) AL (L L' : F.labenv) :=
-  forall n n' a b, IndexRelF AL n n' -> get AL n a -> get L n b -> exists b', get L' n' b'.
-
-Definition labenv_sim t (r:frel)
-           {A} (PR:ProofRelationF A) (AL:list A) L L' :=
-  length AL = length L /\
-  smaller L' /\
-  smaller L /\
-  paramrel PR AL L L' /\
-  indexes_exists PR AL L L' /\
-  app_r t r PR AL L L'.
-
-Lemma labenv_sim_nil t r A PR
-  : @labenv_sim t r A PR nil nil nil.
-Proof.
-  do 5 (try split); hnf; intros; isabsurd.
-Qed.
-
-Hint Immediate labenv_sim_nil.
-
-Lemma labenv_sim_mon t (r r':frel) A (PR:ProofRelationF A) AL L L'
-  :  labenv_sim t r PR AL L L'
-    -> (forall t x y, r t x y -> r' t x y)
-    -> labenv_sim t r' PR AL L L'.
-Proof.
-  intros [LEN [STL [STL' [PAR [IE SIM]]]]] LE; hnf; do 5 (try split); eauto.
-  eapply app_r_mon; eauto.
-Qed.
-
-Definition bodies_r t (r:frel) A (PR:ProofRelationF A) AL (L1 L2 L L':F.labenv) :=
-  forall f f' E Z s i E' Z' s' i' a,
-    IndexRelF AL f f'
-    -> get L f (F.blockI E Z s i)
-    -> get L' f' (F.blockI E' Z' s' i')
-    -> get AL f a
-    -> forall VL VL',
-        ArgRelF a VL VL'
-        -> r t (drop (f - i) L1, E[Z <-- List.map Some VL], s)
-            (drop (f' - i') L2, E'[Z' <-- List.map Some VL'], s').
-
-Lemma bodies_r_mon t (r r':frel) A (PR:ProofRelationF A) AL L1 L2 L L'
-  : bodies_r t r PR AL L1 L2 L L'
-    -> (forall t x y, r t x y -> r' t x y)
-    -> bodies_r t r' PR AL L1 L2 L L'.
-Proof.
-  intros Idx LE; hnf; intros; eauto.
-Qed.
-
-
-Lemma bodies_r_app_r t A (PR:ProofRelationF A) AL L L' r
-  : bodies_r t r PR AL L L' L L'
-    -> app_r t (sim r) PR AL L L'.
-Proof.
-  intros SIM.
-  hnf; intros.
-  pone_step; simpl; eauto with len.
-Qed.
-
-Lemma fix_compatible_bodies t A (PR:ProofRelationF A) AL L L'
-  : (forall (r:frel) L1 L2, app_r t (sim r) PR AL L1 L2
-          -> bodies_r t (sim r) PR AL L1 L2 L L')
-    -> forall r, bodies_r t (sim r) PR AL L L' L L'.
-Proof.
-  intros ISIM r.
-  pcofix CIH;
-  change (bodies_r t (sim r) PR AL L L' L L');
-  change (bodies_r t r PR AL L L' L L') in CIH.
-  eapply ISIM.
-  eapply bodies_r_app_r; eauto.
-Qed.
-
-Lemma stepGoto_mapi L blk Y E E'' vl f F k
-      (Ldef:get L (counted f - ❬F❭) blk)
-      (len:length (F.block_Z blk) = length Y)
-      (def:omap (op_eval E) Y = Some vl) E'
-      (updOk:F.block_E blk [F.block_Z blk <-- List.map Some vl] = E')
-      (ST:smaller L) (GE: counted f >= ❬F❭) (EQ:k = counted f - ❬F❭ - block_n blk)
-  : F.step (mapi (F.mkBlock E'') F ++ L, E, stmtApp f Y) EvtTau
-           (drop k L,
-            E', F.block_s blk).
-Proof.
-  subst.
-  rewrite <- (mapi_length (F.mkBlock E'')).
-  assert (counted f - block_n blk >= ❬mapi (F.mkBlock E'') F❭). {
-    exploit (ST _ _ Ldef).
-    rewrite mapi_length. simpl in *. omega.
-  }
-  orewrite (counted f - ❬mapi (F.mkBlock E'') F❭ - block_n blk
-            =  (counted f - block_n blk) - ❬mapi (F.mkBlock E'') F❭).
-  rewrite <- (drop_app_gen _ (mapi (F.mkBlock E'') F)); eauto.
-  eapply F.StepGoto; eauto.
-  rewrite get_app_ge. rewrite mapi_length. eauto. omega.
-Qed.
-
-Definition indexwise_r t (r:frel) A (PR:ProofRelationF A) AL' E E' F F' AL L L' :=
-  forall n n' Z s Z' s' a,
-    IndexRelF (AL' ++ AL) n n'
-    -> get F n (Z,s)
-    -> get F' n' (Z',s')
-    -> get AL' n a
-    -> forall VL VL',
-        ArgRelF a VL VL'
-        -> r t (mapi (F.mkBlock E) F ++ L, E[Z <-- List.map Some VL], s)
-            (mapi (F.mkBlock E') F' ++ L', E'[Z' <-- List.map Some VL'], s').
-
-Lemma indexwise_r_mon t (r r':frel) A (PR:ProofRelationF A) AL' E E' F F' AL L L'
-  : indexwise_r t r PR AL' E E' F F' AL L L'
-    -> (forall t x y, r t x y -> r' t x y)
-    -> indexwise_r t r' PR AL' E E' F F' AL L L'.
-Proof.
-  intros Idx LE; hnf; intros; eauto.
-Qed.
 
 Definition indexwise_paramrel A (PR:ProofRelationF A) (F F':〔params * stmt〕) AL' AL :=
   forall n n' Z s Z' s' a,
@@ -204,6 +74,9 @@ Proof.
     rewrite Len1; eauto. rewrite Img; rewrite mapi_length in *; eauto.
 Qed.
 
+Definition indexes_exists {A} (PR:ProofRelationF A) AL (L L' : F.labenv) :=
+  forall n n' a b, IndexRelF AL n n' -> get AL n a -> get L n b -> exists b', get L' n' b'.
+
 Lemma complete_indexes_exists A (PR:ProofRelationF A) E E' F F' AL' AL L L'
   : indexes_exists PR AL L L'
     -> separates PR AL' AL F F'
@@ -222,6 +95,79 @@ Proof.
     edestruct IE; eauto. erewrite Len3. eauto.
     rewrite Img in H0. eexists.
     eapply get_app_right; eauto. rewrite mapi_length in *. omega.
+Qed.
+
+(** ** Application Relation *)
+
+Definition app_r t (r:frel) A (PR:ProofRelationF A) AL L L' :=
+  forall (f f':lab) a E Z s i E' Z' s' i',
+    IndexRelF AL f f'
+    -> get AL f a
+    -> get L f (F.blockI E Z s i)
+    -> get L' f' (F.blockI E' Z' s' i')
+    -> forall E E' Yv Y'v Y Y',
+        ArgRelF a Yv Y'v
+        -> omap (op_eval E) Y = Some Yv
+        -> omap (op_eval E') Y' = Some Y'v
+        -> ❬Z❭ = ❬Yv❭
+        -> ❬Z'❭ = ❬Y'v❭
+        -> r t (L, E, stmtApp f Y)
+            (L', E', stmtApp f' Y').
+
+Lemma app_r_mon t (r r':frel) A (PR:ProofRelationF A) AL L L'
+  : app_r t r PR AL L L'
+    -> (forall t x y, r t x y -> r' t x y)
+    -> app_r t r' PR AL L L'.
+Proof.
+  intros Lr LE; hnf; intros; eauto.
+Qed.
+
+(** ** Label Environment Relation *)
+
+Definition labenv_sim t (r:frel)
+           {A} (PR:ProofRelationF A) (AL:list A) L L' :=
+  length AL = length L /\
+  smaller L' /\
+  smaller L /\
+  paramrel PR AL L L' /\
+  indexes_exists PR AL L L' /\
+  app_r t r PR AL L L'.
+
+Lemma labenv_sim_nil t r A PR
+  : @labenv_sim t r A PR nil nil nil.
+Proof.
+  do 5 (try split); hnf; intros; isabsurd.
+Qed.
+
+Hint Immediate labenv_sim_nil.
+
+Lemma labenv_sim_mon t (r r':frel) A (PR:ProofRelationF A) AL L L'
+  :  labenv_sim t r PR AL L L'
+    -> (forall t x y, r t x y -> r' t x y)
+    -> labenv_sim t r' PR AL L L'.
+Proof.
+  intros [LEN [STL [STL' [PAR [IE SIM]]]]] LE; hnf; do 5 (try split); eauto.
+  eapply app_r_mon; eauto.
+Qed.
+
+
+Definition indexwise_r t (r:frel) A (PR:ProofRelationF A) AL' E E' F F' AL L L' :=
+  forall n n' Z s Z' s' a,
+    IndexRelF (AL' ++ AL) n n'
+    -> get F n (Z,s)
+    -> get F' n' (Z',s')
+    -> get AL' n a
+    -> forall VL VL',
+        ArgRelF a VL VL'
+        -> r t (mapi (F.mkBlock E) F ++ L, E[Z <-- List.map Some VL], s)
+            (mapi (F.mkBlock E') F' ++ L', E'[Z' <-- List.map Some VL'], s').
+
+Lemma indexwise_r_mon t (r r':frel) A (PR:ProofRelationF A) AL' E E' F F' AL L L'
+  : indexwise_r t r PR AL' E E' F F' AL L L'
+    -> (forall t x y, r t x y -> r' t x y)
+    -> indexwise_r t r' PR AL' E E' F F' AL L L'.
+Proof.
+  intros Idx LE; hnf; intros; eauto.
 Qed.
 
 Hint Unfold separates.
@@ -259,11 +205,17 @@ Proof.
     eapply paco3_mon; [| eauto].
     eapply SIMR; eauto.
     econstructor; simpl; eauto with len. simpl. eauto with len.
-    eapply stepGoto_mapi; simpl in *; eauto with len.
+    eapply F.StepGoto_mapi; simpl in *; eauto with len.
+    rewrite mapi_length. exploit STL; eauto; simpl in *; omega.
     econstructor; simpl; eauto. simpl. eauto with len.
-    eapply stepGoto_mapi; simpl in *; eauto with len.
+    eapply F.StepGoto_mapi; simpl in *; eauto with len.
+    rewrite mapi_length. exploit STL'; eauto; simpl in *; omega.
     erewrite <- Len3, Len2; eauto.
 Qed.
+
+(** ** Key Lemmata *)
+
+(** ***  Fix Compatibility *)
 
 Lemma fix_compatible_separate t A (PR:ProofRelationF A) AL' AL E E' F F' L L'
   : (forall r,
@@ -282,6 +234,7 @@ Proof.
   intros. eapply paco3_mon; eauto.
 Qed.
 
+(** *** Extension Lemma *)
 
 Lemma labenv_sim_extension t A (PR:ProofRelationF A) (AL AL':list A) E E' F F' L L'
   : (forall r,
@@ -297,6 +250,8 @@ Proof.
   eapply indexwise_r_mon.
   eapply fix_compatible_separate; eauto. eauto.
 Qed.
+
+(** *** Fun Compatibility *)
 
 Lemma sim_fun t A (PR:ProofRelationF A) (AL AL':list A) E E' F F' L L' s s'
   : (forall r, labenv_sim t (sim r) PR (AL' ++ AL) (mapi (F.mkBlock E) F ++ L) (mapi (F.mkBlock E') F' ++ L')
@@ -316,6 +271,7 @@ Proof.
   eapply labenv_sim_extension; eauto.
 Qed.
 
+(** *** Specialized Version if function bindings are not changed *)
 
 (* A proof relation is parameterized by analysis information A *)
 Class PointwiseProofRelationF (A:Type) := {
@@ -425,4 +381,48 @@ Proof.
   - destruct i; simpl in *; dcr.
     + exploit H3; eauto. pno_step.
     + perr.
+Qed.
+
+(** *** A small study on IL fixed-points in general *)
+
+Definition bodies_r t (r:frel) A (PR:ProofRelationF A) AL (L1 L2 L L':F.labenv) :=
+  forall f f' E Z s i E' Z' s' i' a,
+    IndexRelF AL f f'
+    -> get L f (F.blockI E Z s i)
+    -> get L' f' (F.blockI E' Z' s' i')
+    -> get AL f a
+    -> forall VL VL',
+        ArgRelF a VL VL'
+        -> r t (drop (f - i) L1, E[Z <-- List.map Some VL], s)
+            (drop (f' - i') L2, E'[Z' <-- List.map Some VL'], s').
+
+Lemma bodies_r_mon t (r r':frel) A (PR:ProofRelationF A) AL L1 L2 L L'
+  : bodies_r t r PR AL L1 L2 L L'
+    -> (forall t x y, r t x y -> r' t x y)
+    -> bodies_r t r' PR AL L1 L2 L L'.
+Proof.
+  intros Idx LE; hnf; intros; eauto.
+Qed.
+
+
+Lemma bodies_r_app_r t A (PR:ProofRelationF A) AL L L' r
+  : bodies_r t r PR AL L L' L L'
+    -> app_r t (sim r) PR AL L L'.
+Proof.
+  intros SIM.
+  hnf; intros.
+  pone_step; simpl; eauto with len.
+Qed.
+
+Lemma fix_compatible_bodies t A (PR:ProofRelationF A) AL L L'
+  : (forall (r:frel) L1 L2, app_r t (sim r) PR AL L1 L2
+          -> bodies_r t (sim r) PR AL L1 L2 L L')
+    -> forall r, bodies_r t (sim r) PR AL L L' L L'.
+Proof.
+  intros ISIM r.
+  pcofix CIH;
+  change (bodies_r t (sim r) PR AL L L' L L');
+  change (bodies_r t r PR AL L L' L L') in CIH.
+  eapply ISIM.
+  eapply bodies_r_app_r; eauto.
 Qed.

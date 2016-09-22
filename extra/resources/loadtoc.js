@@ -29,11 +29,10 @@ function loadToC(callback) {
     client.send();
 }
 
-function tocmodules(str) {
+function tocmodules(regex) {
     var l = items.children().filter( function() {
-	return ($(this).find("h2.vfile").text() == str);
+	return (regex.test($(this).find("h2.vfile").text()));
     });
-//    var l = items.children().filter("div:has(h2.vfile:contains('" + str + "'))");
-    console.log(l);
+//    console.log(l);
     return l;
 }

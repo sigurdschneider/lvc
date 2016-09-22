@@ -2,40 +2,9 @@ Require NonParametricBiSim.
 Require Import Sim IL paco3.
 Require Export ILStateType.
 
+(** * Admissible Rules and Tactics *)
 
-Ltac one_step := eapply NonParametricBiSim.SimSilent; [ eapply plus2O; single_step
-                              | eapply plus2O; single_step
-                              | ].
-
-Ltac no_step := eapply NonParametricBiSim.SimTerm;
-               try eapply star2_refl; try get_functional; try subst;
-                [ try reflexivity
-                | stuck2
-                | stuck2  ].
-
-Ltac err_step := eapply NonParametricBiSim.SimErr;
-               try eapply star2_refl; try get_functional; try subst;
-                [ try reflexivity
-                | stuck2  ].
-
-Ltac step_activated :=
-  match goal with
-    | [ H : omap (op_eval ?E) ?Y = Some ?vl
-        |- activated (_, ?E, stmtLet ?x (Call ?f ?Y) ?s) ] =>
-      eexists (ExternI f vl default_val); eexists; try (now (econstructor; eauto))
-  end.
-
-Ltac extern_step :=
-  let STEP := fresh "STEP" in
-  eapply NonParametricBiSim.SimExtern;
-    [ eapply star2_refl
-    | eapply star2_refl
-    | try step_activated
-    | try step_activated
-    | intros ? ? STEP; inv STEP; eexists; split; [econstructor; eauto | ]
-    | intros ? ? STEP; inv STEP; eexists; split; [econstructor; eauto | ]
-    ].
-
+(** ** Tactics *)
 
 Ltac pone_step := pfold; eapply SimSilent; [ eapply plus2O; single_step
                               | eapply plus2O; single_step
@@ -53,6 +22,13 @@ Ltac pno_step :=
   [ repeat get_functional; try reflexivity
   | repeat get_functional; stuck2
   | repeat get_functional; stuck2 ].
+
+Ltac step_activated :=
+  match goal with
+  | [ H : omap (op_eval ?E) ?Y = Some ?vl
+      |- activated (_, ?E, stmtLet ?x (Call ?f ?Y) ?s) ] =>
+    eexists (ExternI f vl default_val); eexists; try (now (econstructor; eauto))
+  end.
 
 Ltac pextern_step :=
   let STEP := fresh "STEP" in
@@ -76,6 +52,8 @@ Ltac perr :=
   | repeat get_functional; stuck2 ].
 
 Set Implicit Arguments.
+
+(** ** Admissible Rules *)
 
 Lemma sim_let_op X (IST:ILStateType X) i r (L L':X) V V' x x' e e' s s'
       (EQ:op_eval V e = op_eval V' e')
@@ -165,6 +143,8 @@ Proof.
                                 | eapply star2_refl].
   eapply step_cond_false; eauto.
 Qed.
+
+(** *** Conditional Elimination *)
 
 Lemma sim_if_elim X (IST:ILStateType X) i r (L L':X) V V' e s1 s1' s2 s2'
       (EQ: op2bool e = None -> op_eval V e = op_eval V' e)

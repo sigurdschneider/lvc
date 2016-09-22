@@ -16,6 +16,8 @@ Definition isBisim t :=
   | Bisim => true
   end.
 
+(** ** Generating Function *)
+
 Inductive sim_gen
           {S} `{StateType S} {S'} `{StateType S'} (r: simtype -> S -> S' -> Prop)  : simtype -> S -> S' -> Prop :=
   | SimSilent t (σ1 σ1':S) (σ2 σ2':S') : (* result σ1 = result σ2 -> *)
@@ -81,6 +83,8 @@ Proof.
   - pfold. eapply SimTerm; eauto using star2_refl.
 Qed.
 
+(** ** Reflexivity, Symmetry *)
+
 Lemma sim_refl {S} `{StateType S} (σ:S) t r
       : sim r t σ σ.
 Proof.
@@ -104,6 +108,8 @@ Proof.
     + edestruct H6; eauto; dcr; pclearbot; eauto.
   - pfold. eapply SimTerm; eauto using star2_refl.
 Qed.
+
+(** ** Admissible Rules *)
 
 Lemma sim_Y_left S `{StateType S} S' `{StateType S'} r t σA1 σB1 σ1' σ2
   : paco3 (@sim_gen S _ S _) r t σA1 σ2
@@ -134,6 +140,8 @@ Ltac contr_trans :=
               pose proof (star2_trans H H') as H''; clear H; clear H';
               rename H'' into H
           end).
+
+(** ** Closedness under Expansion and Reduction *)
 
 Lemma sim_expansion_closed {S} `{StateType S}
       (σ1 σ1':S) {S'} `{StateType S'} (σ2 σ2':S') r t
@@ -172,6 +180,7 @@ Proof.
   - pfold. eapply star2n_star2 in StarN; relsimpl; eauto.
 Qed.
 
+(** ** Transitivity *)
 
 Lemma sim_reduction_closed_2 t {S} `{StateType S}
       (σ1:S) {S'} `{StateType S'} (σ2 σ2':S')
@@ -209,7 +218,6 @@ Proof.
   eapply sim_reduction_closed_1; [| eauto].
   eapply sim_reduction_closed_2; eauto.
 Qed.
-
 
 
 Lemma sim_terminate t {S1} `{StateType S1} (σ1 σ1':S1)
@@ -468,7 +476,6 @@ end.
 
 Local Hint Resolve plus2_star2.
 
-
 Lemma sim_zigzag t {S1} `{StateType S1}
       (σ1:S1) {S2} `{StateType S2} (σ2a σ2b:S2) {S3} `{StateType S3} (σ3:S3)
   : sim bot3 t σ1 σ2a
@@ -611,7 +618,6 @@ Proof.
         pfold. econstructor 4; eauto. congruence.
     }
 Qed.
-
 
 Lemma sim_trans t {S1} `{StateType S1}
       (σ1:S1) {S2} `{StateType S2} (σ2:S2) {S3} `{StateType S3} (σ3:S3)

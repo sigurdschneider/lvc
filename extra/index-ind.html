@@ -10,21 +10,29 @@
     <script type="text/javascript" src="jquery-3.1.0.min.js"></script>
     <script type="text/javascript" src="loadtoc.js"></script>
     <script type="text/javascript">
-      loadToC(function () {
-      $("#sectionIL").append(tocmodules("Lvc.Isa.Op"));
-      $("#sectionIL").append(tocmodules("Lvc.IL.Exp"));
-      $("#sectionIL").append(tocmodules("Lvc.IL.IL"));
+     loadToC(function () {
+       $("#sectionIL").append(tocmodules(/Lvc.Isa.Op/));
+       $("#sectionIL").append(tocmodules(/Lvc.IL.Exp/));
+       $("#sectionIL").append(tocmodules(/Lvc.IL.IL/));
 
-      $("#sectionDCE").append(tocmodules("Lvc.UnreachableCode"));
-      $("#sectionDCE").append(tocmodules("Lvc.UCE"));
-      $("#sectionDCE").append(tocmodules("Lvc.TrueLiveness"));
-      $("#sectionDCE").append(tocmodules("Lvc.DVE"));
+       $("#sectionEQ").append(tocmodules(/Lvc.Equiv.Sim$/));
+       $("#sectionEQ").append(tocmodules(/Lvc.Equiv.NonParametricBiSim/));
+       $("#sectionEQ").append(tocmodules(/Lvc.Equiv.SimTactics/));
 
-      });
+       $("#sectionInd").append(tocmodules(/Lvc.Equiv.SimF/));
+       $("#sectionInd").append(tocmodules(/Lvc.Equiv.SimI/));
+       $("#sectionInd").append(tocmodules(/Lvc.Equiv.CtxEq/));
+
+       $("#sectionDCE").append(tocmodules(/Lvc.UnreachableCode/));
+       $("#sectionDCE").append(tocmodules(/Lvc.UCE/));
+       $("#sectionDCE").append(tocmodules(/Lvc.TrueLiveness/));
+       $("#sectionDCE").append(tocmodules(/Lvc.DVE/));
+
+     });
     </script>
     <style>
      h3 + div#toc {
-	 margin-left: 2em;
+       margin-left: 2em;
      }
     </style>
   </head>
@@ -47,34 +55,40 @@
       <div id="main">
 	<h1>An Inductive Proof Method for Simulation-based Compiler Correctness</h1>
 	<p>
-	  This is the Coq development accompanying our <a href="todo">recent submission to CPP</a>.
+	  This is the Coq development accompanying our <a href="todo">recent submission</a> to <a href="http://cpp2017.mpi-sws.org/">CPP</a>.
+	  A full sources are available on github:
+	  <div style="align:center;text-align:center;">
+	    <a href="https://github.com/sigurdschneider/lvc" style="color:#4078c0;margin:auto;">https://github.com/sigurdschneider/lvc</a>
+	  </div>
 	</p>
 	<p>
 	  In <a href="http://www.ps.uni-saarland.de/~sdschn/publications/lvc15/"> previous work</a> we
-	  introduced the intermediate language IL with a functional and an imperative semantics.
-	  In this work we present an inductive proof method for simulation-based compiler correctness.
-	  We showcase the method with the proofs of the following two optimizations:
+	  introduced the intermediate language IL, a first-order language with system calls.
+	  IL has two <a href="Lvc.IL.IL">semantics</a>, which interpret variables differently, as binders or as <a href="http://www.cs.cmu.edu/~rwh/pfpl.html">assignables</a>.
+	  In this work we present an inductive proof method for <a href="Lvc.Equiv.Sim.html">simulation-based</a> compiler correctness.
+	  We showcase the method with the proofs dead code elimination (DCE), which consists of the following two optimizations:
 	  <ol>
-	    <li>Unreachable Code Analysis and Unreachable Code Elimination</li>
-	    <li>Liveness Analysis and Dead Variable Elimination</li>
+	    <li>Unreachable Code Elimination</li>
+	    <li>Dead Variable Elimination</li>
 	  </ol>
 	</p>
 	<p>
-	  The proofs for UCE and DVE require an interesting simulation argument: In both cases a step must be argued
-	  where the source program reduces (for example, a variable definition) while the target program does not reduce
-	  (because the variable definition has been removed).
-	  Our proof method is induction on the program structure, facilitated by a fixed-point lemma about our simulation,
-	  which we call the extension lemma.
+	  The correctness proofs of UCE and DVE require an interesting simulation argument:
+	  In both cases a step must be argued where the source program reduces (for example, a variable definition)
+	  whereas the target program does not reduce (because the variable definition has been removed).
+	  Our proof method is induction on the program structure, facilitated by a fixed-point lemma about our simulation, which we call the extension lemma.
 	  We prove the extension lemma for the <a href="Lvc.Equiv.SimI.html">imperative interpretation</a> and for the
 	  <a href="Lvc.Equiv.SimF.html">functional interpretation</a>.
 	</p>
 	<p>
 	  We <a href="Lvc.UnreachableCode.html">specify soundness of unreachable code</a>,
-	  implement <a href="Lvc.UCE.html">unreachable code elimination (UCE) and prove it correct</a> with respect to both semantic interpretations.
+	  implement <a href="Lvc.UCE.html">unreachable code elimination (UCE) and prove it correct</a>.
+	  We show correctness for both semantic interpretations of IL.
 	</p>
 	<p>
 	  We <a href="Lvc.TrueLiveness.html">specify soundness of liveness</a>,
-	  implement <a href="Lvc.DVE.html">dead variable elimination (DVE) and prove it correct</a> with respect to both semantic interpretations.
+	  implement <a href="Lvc.DVE.html">dead variable elimination (DVE) and prove it correct</a>.
+	  Again, we show correctness for both semantic interpretations of IL.
 	</p>
 	<h2> Selected Items from the Table of Contents </h2>
 	<div class="tocindent">
@@ -83,64 +97,11 @@
 	  </div>
 	  <h3> Program Equivalence </h3>
 	  <div class="toc novfile" id="sectionEQ">
-	    <a href="Lvc.Equiv.Bisim.html"><h2>Lvc.Equiv.Bisim</h2></a>
-	    <ul class="doclist">
-	      <li><a href="Lvc.Equiv.Bisim.html#lab57">Simulation</a>
-
-	      </li>
-	    </ul>
-	    <a href="Lvc.Equiv.BisimSim.html"><h2>Lvc.Equiv.BisimSim</h2></a>
-	    <a href="Lvc.Equiv.TraceEquiv.html"><h2>Lvc.Equiv.TraceEquiv</h2></a>
-	    <ul class="doclist">
-	      <li><a href="Lvc.Equiv.TraceEquiv.html#lab58">Divergence</a>
-
-	      </li>
-	      <li><a href="Lvc.Equiv.TraceEquiv.html#lab59">Three equivalent notions of program equivalence</a>
-		<ul class="doclist">
-		  <li><a href="Lvc.Equiv.TraceEquiv.html#lab60">Prefix Trace Equivalence (partial traces)</a>
-
-		  </li>
-		  <li><a href="Lvc.Equiv.TraceEquiv.html#lab66">Trace Equivalence (maximal traces)</a>
-
-		  </li>
-		  <li><a href="Lvc.Equiv.TraceEquiv.html#lab70">Bisimilarity is complete for prefix trace equivalence.</a>
-
-		  </li>
-		</ul>
-
-	      </li>
-	    </ul>
-	    <a href="Lvc.Equiv.SimI.html"><h2>Lvc.Equiv.SimI</h2></a>
-	    <a href="Lvc.Equiv.Sim.html"><h2>Lvc.Equiv.Sim</h2></a>
-	    <ul class="doclist">
-	      <li><a href="Lvc.Equiv.Sim.html#lab71">Simulation</a>
-
-	      </li>
-	    </ul>
-	    <a href="Lvc.Equiv.SimF.html"><h2>Lvc.Equiv.SimF</h2></a>
-	    <a href="Lvc.Equiv.SimTactics.html"><h2>Lvc.Equiv.SimTactics</h2></a>
-	    <a href="Lvc.Equiv.CtxEq.html"><h2>Lvc.Equiv.CtxEq</h2></a>
-	    <ul class="doclist">
-	      <li><a href="Lvc.Equiv.CtxEq.html#lab72">Program Equivalence</a>
-		<ul class="doclist">
-		  <li><a href="Lvc.Equiv.CtxEq.html#lab73">Reflexivity</a>
-
-		  </li>
-		</ul>
-
-	      </li>
-	      <li><a href="Lvc.Equiv.CtxEq.html#lab74">Contextual Equivalence</a>
-		<ul class="doclist">
-		  <li><a href="Lvc.Equiv.CtxEq.html#lab75">Program Equivalence is contextual</a>
-
-		  </li>
-		</ul>
-
-	      </li>
-	    </ul>
 	  </div>
-
-	  <h3> Dead Code Elimination </h3>
+	  <h3> Inductive Proof Method </h3>
+	  <div class="toc novfile" id="sectionInd">
+	  </div>
+	  <h3> Case Study: Dead Code Elimination </h3>
 	  <div class="toc novfile" id="sectionDCE">
 	  </div>
 	</div>
@@ -149,7 +110,7 @@
     <div id="footer">
       Generated by <a href="http://coq.inria.fr/">coqdoc</a> and improved with <a href="https://github.com/tebbi/coqdocjs">CoqdocJS</a>
     </div>
-	   </div>
+    </div>
   </body>
 
 </html>
