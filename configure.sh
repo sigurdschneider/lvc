@@ -20,7 +20,7 @@ while [ $# != 0 ]; do
 done
 
 if ! [[ $(ruby -v) =~ ^ruby\ 2.1 ]]; then
-	echo "Ruby 1.9 not in path, defaulting to vanilla"
+	echo "Ruby not in path, defaulting to vanilla"
 	VANILLA=yes
 fi
 
