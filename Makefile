@@ -61,8 +61,7 @@ ind-package:
 	mkdir $(PKGIND)
 	cp -r compiler ContainersPlugin extra Makefile configure.sh paco src theories $(PKGIND)
 	find $(PKGIND)/ -type f -iname '*.vo' -o -iname '*.glob' -o -iname '*.v.d' -o -iname '*.time' | xargs rm -rf 
-	rm -rf $(PKGIND)/theories/Spilling $(PKGIND)/theories/TransVal
-	rm -rf $(PKGIND)/theories/Spilling $(PKGIND)/theories/TransVal $(PKGIND)/ValueOpts/
+	rm -rf $(PKGIND)/theories/Spilling $(PKGIND)/theories/TransVal $(PKGIND)/ValueOpts/ $(PKGIND)/theories/Test*
 	$(MAKE) -C $(PKGIND) clean depclean
 
 clean-doc:
