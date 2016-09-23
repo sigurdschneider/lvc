@@ -1,5 +1,6 @@
 DOC := doc/
 DOCIND := doc-ind/
+PKGIND := pkg-ind/
 EXTRA_DIR := extra
 HEADER := $(EXTRA_DIR)/header.html
 FOOTER := $(EXTRA_DIR)/footer.html
@@ -55,6 +56,14 @@ doc-ind: clean-doc $(DOCS)
 doc-ind-publish: doc-ind
 	scp -r $(DOCIND)/* ps:public_html/lvc-ind/
 
+ind-package:
+	rm -rf $(PKGIND)
+	mkdir $(PKGIND)
+	cp -r compiler ContainersPlugin extra Makefile configure.sh paco src theories $(PKGIND)
+	find $(PKGIND)/ -type f -iname '*.vo' -o -iname '*.glob' -o -iname '*.v.d' -o -iname '*.time' | xargs rm -rf 
+	rm -rf $(PKGIND)/theories/Spilling $(PKGIND)/theories/TransVal
+	rm -rf $(PKGIND)/theories/Spilling $(PKGIND)/theories/TransVal $(PKGIND)/ValueOpts/
+	$(MAKE) -C $(PKGIND) clean depclean
 
 clean-doc:
 	rm -rf $(DOC)
