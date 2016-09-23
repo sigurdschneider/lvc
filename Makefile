@@ -34,6 +34,9 @@ depclean: clean
 	+$(MAKE) -C paco clean
 	+$(MAKE) -C ContainersPlugin clean
 
+distclean: clean depclean
+	find $(PKGIND)/ -type f -iname '*.vo' -o -iname '*.glob' -o -iname '*.v.d' | xargs rm -rf 
+
 doc: clean-doc $(DOCS)
 	- mkdir -p $(DOC)
 	-make -f $(COQMAKEFILE) -j$(CORES) -k
