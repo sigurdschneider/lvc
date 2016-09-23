@@ -60,39 +60,39 @@ Hint Resolve uceq_refl eq_uceq eq_uceq_sym.
 
 (** ** The inductive predicate *)
 
-Inductive unreachable_code (i:sc)
+Inductive reachability (i:sc)
   : list bool -> stmt -> ann bool -> Prop :=
 | UCPOpr BL x s b e al
-  :  unreachable_code i BL s al
+  :  reachability i BL s al
      -> uceq i b (getAnn al)
-     -> unreachable_code i BL (stmtLet x e s) (ann1 b al)
+     -> reachability i BL (stmtLet x e s) (ann1 b al)
 | UCPIf BL e b1 b2 b al1 al2
   :  (op2bool e <> Some false -> uceq i b (getAnn al1))
      -> (op2bool e <> Some true -> uceq i b (getAnn al2))
-     -> unreachable_code i BL b1 al1
-     -> unreachable_code i BL b2 al2
+     -> reachability i BL b1 al1
+     -> reachability i BL b2 al2
      -> (if isComplete i then op2bool e = ⎣ false ⎦ -> getAnn al1 = false else True)
      -> (if isComplete i then op2bool e = ⎣ true ⎦ -> getAnn al2 = false else True)
-     -> unreachable_code i BL (stmtIf e b1 b2) (ann2 b al1 al2)
+     -> reachability i BL (stmtIf e b1 b2) (ann2 b al1 al2)
 | UCPGoto BL l Y b a
   : get BL (counted l) b
     -> (if isSound i then impb a b else True)
-    -> unreachable_code i BL (stmtApp l Y) (ann0 a)
+    -> reachability i BL (stmtApp l Y) (ann0 a)
 | UCReturn BL e b
-  : unreachable_code i BL (stmtReturn e) (ann0 b)
+  : reachability i BL (stmtReturn e) (ann0 b)
 | UCLet BL F t b als alt
-  : unreachable_code i (getAnn ⊝ als ++ BL) t alt
+  : reachability i (getAnn ⊝ als ++ BL) t alt
     -> length F = length als
     -> uceq i b (getAnn alt)
     -> (forall n Zs a, get F n Zs ->
                  get als n a ->
-                 unreachable_code i (getAnn ⊝ als ++ BL) (snd Zs) a)
+                 reachability i (getAnn ⊝ als ++ BL) (snd Zs) a)
     -> (if isComplete i then (forall n a,
                                 get als n a ->
                                 getAnn a ->
                                 isCalledFrom trueIsCalled F t (LabI n)) else True)
     -> (if isComplete i then forall n a, get als n a -> impb (getAnn a) b else True)
-    -> unreachable_code i BL (stmtFun F t) (annF b als alt).
+    -> reachability i BL (stmtFun F t) (annF b als alt).
 
 (** ** Some Properties of the Predicate *)
 
@@ -102,29 +102,29 @@ match goal with
   specialize (H' H); subst
 end.
 
-Lemma unreachable_code_SC_S Lv s slv
-  : unreachable_code SoundAndComplete Lv s slv
-    -> unreachable_code Sound Lv s slv.
+Lemma reachability_SC_S Lv s slv
+  : reachability SoundAndComplete Lv s slv
+    -> reachability Sound Lv s slv.
 Proof.
   intros UC.
-  general induction UC; simpl in *; subst; eauto 20 using unreachable_code, uceq_refl.
+  general induction UC; simpl in *; subst; eauto 20 using reachability, uceq_refl.
   - econstructor; simpl; eauto using uceq_refl.
   - econstructor; simpl; eauto using uceq_refl.
 Qed.
 
-Hint Resolve unreachable_code_SC_S.
+Hint Resolve reachability_SC_S.
 
-Lemma ucc_sound_and_complete BL s a
-  : unreachable_code Complete BL s a
-    -> unreachable_code Sound BL s a
-    -> unreachable_code SoundAndComplete BL s a.
+Lemma reachability_sound_and_complete BL s a
+  : reachability Complete BL s a
+    -> reachability Sound BL s a
+    -> reachability SoundAndComplete BL s a.
 Proof.
-  intros UCC UCS.
-  general induction UCS; inv UCC; simpl in *; eauto 20 using unreachable_code, impb_eq.
+  intros RCH UCS.
+  general induction UCS; inv RCH; simpl in *; eauto 20 using reachability, impb_eq.
 Qed.
 
-Lemma unreachable_code_trueIsCalled Lv s slv l
-  : unreachable_code Sound Lv s slv
+Lemma reachability_trueIsCalled Lv s slv l
+  : reachability Sound Lv s slv
     -> trueIsCalled s l
     -> exists b, get Lv (counted l) b /\ impb (getAnn slv) b.
 Proof.
