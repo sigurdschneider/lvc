@@ -37,7 +37,7 @@ depclean: clean
 distclean: clean depclean
 	find $(PKGIND)/ -type f -iname '*.vo' -o -iname '*.glob' -o -iname '*.v.d' | xargs rm -rf 
 
-doc: clean-doc $(DOCS)
+doc: clean-doc $(DOCS) dep $(COQMAKEFILE)
 	- mkdir -p $(DOC)
 	-make -f $(COQMAKEFILE) -j$(CORES) -k
 	coqdoc $(COQDOCFLAGS) -d $(DOC) $(shell cat _CoqProject | grep -v ^-I) $(shell find theories/ -iname '*.vo' | sed 's/\.vo/.v/')
@@ -62,7 +62,7 @@ doc-ind-publish: doc-ind
 ind-package:
 	rm -rf $(PKGIND)
 	mkdir $(PKGIND)
-	cp -r compiler ContainersPlugin extra Makefile configure.sh paco src theories $(PKGIND)
+	cp -r _CoqProject compiler ContainersPlugin extra Makefile configure.sh paco src theories $(PKGIND)
 	find $(PKGIND)/ -type f -iname '*.vo' -o -iname '*.glob' -o -iname '*.v.d' -o -iname '*.time' | xargs rm -rf 
 	rm -rf $(PKGIND)/theories/Spilling $(PKGIND)/theories/TransVal $(PKGIND)/theories/ValueOpts $(PKGIND)/theories/Test*
 	$(MAKE) -C $(PKGIND) clean depclean
