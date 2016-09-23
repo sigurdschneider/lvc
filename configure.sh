@@ -29,8 +29,8 @@ SOURCES=$(find theories -name \*.v -print | grep -v /\.# | grep -v $BLACKLIST | 
 coq_makefile $(cat _CoqProject) src/lvc_plugin.ml4 $SOURCES  > ${MAKEFILE}
 echo "${MAKEFILE} generated."
 
-echo "Patching ${MAKEFILE} to reference external Containers documentation."
-sed -i -e 's%COQDOCFLAGS?=-interpolate -utf8%COQDOCFLAGS?=--interpolate --utf8 --external "http://www.lix.polytechnique.fr/coq/pylons/contribs/files/Containers/v8.4/" Containers --toc --toc-depth 3 --index indexpage --no-lib-name%' ${MAKEFILE}
+echo "Patching ${MAKEFILE} to include custom COQDOCFLAGS."
+sed -i -e 's%COQDOCFLAGS?=-interpolate -utf8%COQDOCFLAGS?=--interpolate --utf8 --toc --toc-depth 3 --index indexpage --no-lib-name%' ${MAKEFILE}
 
 
 if [ -z "$VANILLA" ]; then
