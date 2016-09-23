@@ -23,9 +23,9 @@
        $("#sectionInd").append(tocmodules(/Lvc.Equiv.SimI/));
        $("#sectionInd").append(tocmodules(/Lvc.Equiv.CtxEq/));
 
-       $("#sectionDCE").append(tocmodules(/Lvc.UnreachableCode/));
+       $("#sectionDCE").append(tocmodules(/Lvc.Reachability.Reachability$/));
        $("#sectionDCE").append(tocmodules(/Lvc.UCE/));
-       $("#sectionDCE").append(tocmodules(/Lvc.TrueLiveness/));
+       $("#sectionDCE").append(tocmodules(/Lvc.Liveness.TrueLiveness/));
        $("#sectionDCE").append(tocmodules(/Lvc.DVE/));
 
      });
@@ -51,7 +51,7 @@
       <span class="right">
 	<a href="./">Intro Page</a>
 	<a href="./indexpage.html"> Index </a>
-	<a href="./toc.html"> Full Table of Contents </a>
+	<a href="./search-toc.html"> Full Table of Contents </a>
       </span>
     </div>
     <div id="content" tabindex="-1" onblur="document.getElementById('content').focus()">
@@ -59,14 +59,14 @@
 	<h1>An Inductive Proof Method for Simulation-based Compiler Correctness</h1>
 	<p>
 	  This is the Coq development accompanying our <a href="todo" class="download">recent submission</a> to <a href="http://cpp2017.mpi-sws.org/">CPP</a>.
-	  Coq sources are <a href="todo" class="download">available for download</a>.
+	  Coq sources are <a href="lvc-ind.tbz" class="download">available for download</a>.
 	</p>
 	<p>
 	  In <a href="http://www.ps.uni-saarland.de/~sdschn/publications/lvc15/"> previous work</a> we
 	  introduced the intermediate language IL, a first-order language with system calls.
 	  IL has two <a href="Lvc.IL.IL">semantics</a>, which interpret variables differently, as binders or as <a href="http://www.cs.cmu.edu/~rwh/pfpl.html">assignables</a>.
 	  In this work we present an inductive proof method for <a href="Lvc.Equiv.Sim.html">simulation-based</a> compiler correctness.
-	  We showcase the method with the proofs dead code elimination (DCE), which consists of the following two optimizations:
+	  We showcase the method with the proof of dead code elimination (DCE), which consists of the following two optimizations:
 	  <ol>
 	    <li>Unreachable Code Elimination</li>
 	    <li>Dead Variable Elimination</li>
