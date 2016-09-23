@@ -1017,41 +1017,35 @@ Qed.
 
 Lemma satisfies_omap_op_eval_some Gamma Y Y' V vl 
   : entails Gamma (list_EqnApx Y Y')
+    -> ❬Y❭ = ❬Y'❭
     -> satisfiesAll V Gamma
     -> omap (op_eval V) Y = ⎣ vl ⎦
     -> omap (op_eval V) Y' = ⎣ vl ⎦.
 Proof.
   intros.
   exploit H; eauto.
+  case_eq (omap (op_eval V) Y); eauto.
+  intros. length_equify. general induction H0; simpl in * |- *; eauto using fstNoneOrR.
+  monad_inv H2. monad_inv H4. rewrite EQ0, EQ3. simpl. erewrite IHlength_eq; eauto.
+  - replace (op_eval V y) with ⎣x2⎦; simpl; eauto. 
+    
+   
   
-
   
-  
-Lemma tmp Gamma V Y Y'
-  : entails Gamma (list_EqnApx Y Y')
-    -> satisfiesAll V Gamma
+Lemma satisfies_omap_op_eval_fstNoneOrR V Y Y'
+  : ❬Y❭ = ❬Y'❭
+    -> satisfiesAll V (list_EqnApx Y Y')
     -> fstNoneOrR eq (omap (op_eval V) Y) (omap (op_eval V) Y').
 Proof.
   intros.
-  case_eq (omap (op_eval V) Y); eauto.
-  - intros. exploit onvLe_omap_op_eval_some; eauto.
-
-
+  case_eq (omap (op_eval V) Y); eauto using fstNoneOrR.
+  intros. length_equify. erewrite (@omap_satisfies_list_EqnApx V Y Y' l ) ; eauto using length_eq_length, fstNoneOrR.
+Qed.
+   
   
-  
-Lemma tmp V V' Y Y' Gamma
-  : onvLe V V'
-    -> entails Gamma (list_EqnApx Y Y')
-    -> satisfiesAll V Gamma
-    -> fstNoneOrR eq (omap (op_eval V) Y) (omap (op_eval V') Y').
-Proof.
-  intros.
-  exploit H0; eauto.  etransitivity.
-  - 
-  
-
+(*
   omap_satisfies_list_EqnApx, omap_exp_eval_onvLe
-
+*)
   
 Hint Resolve satisfies_fstNoneOrR_apx onvLe_fstNoneOrR_apx.
 
@@ -1092,12 +1086,21 @@ Proof.
     exploit H4; eauto. eapply omap_satisfies_list_EqnApx; eauto.
   - eapply (sim_return_apx il_statetype_F).
     exploit H; eauto. exploit H0; eauto; [cset_tac|]. etransitivity; eauto.
-  - eapply (sim_let_call_apx il_statetype_F); eauto; simpl.
-    +
-      etransitivity; eauto using omap_satisfies_list_EqnApx, omap_exp_eval_onvLe.
+  -  exploit H; eauto.   eapply (sim_let_call_apx il_statetype_F); eauto; simpl.
+    + etransitivity; eauto using  onvLe_omap_op_eval_fstNoneOrEq.
+        eapply satisfies_omap_op_eval_fstNoneOrR; eauto.
+        unfold satisfiesAll. intros. exploit H2; eauto. case_eq  gamma; eauto.
+
+        Lemma tmp V V' A gamma
+
+        
+             Lemma tmp V V' A :  onvLe V V' -> satisfiesAll V A -> satisfiesAll V' A.
+        Proof.
+          intros. unfold satisfiesAll. intros. unfold onvLe in H. exploit H0; eauto. destruct gamma; eauto.
+          - simpl. 
 
 
-      
+          
   - exploit H; eauto. exploit X; eauto. cset_tac; reflexivity. inv X0.
     inv H2.
     + pfold. econstructor 3; try eapply star2_refl; eauto. stuck2.
