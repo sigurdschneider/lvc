@@ -11,8 +11,8 @@ COQDOCFLAGS := \
 COQMAKEFILE := Makefile.coq
 COQMAKE := +$(MAKE) -f $(COQMAKEFILE)
 CORES=$(shell cat /proc/cpuinfo | grep cpu\ cores | sed 's/.*:\ //' | head -n 1)
-VS=$(shell find theories/ -iname '*.v' | grep -v '/\.' | grep -v `cat _BLACKLIST`)
-VSIND=$(shell find theories/ -iname '*vo' | sed 's/\.vo/.v/' | grep -v `cat _BLACKLIST` | grep -v 'Spilling')
+VS=$(shell find theories/ -iname '*.v' | grep -v '/\.')
+VSIND=$(shell find theories/ -iname '*vo' | sed 's/\.vo/.v/' | grep -v 'Spilling')
 DOCS=$(shell find extra/ )
 
 ifneq "$(COQBIN)" ""
