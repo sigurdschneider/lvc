@@ -24,8 +24,7 @@ if ! [[ $(ruby -v) =~ ^ruby\ 2.1 ]]; then
 	VANILLA=yes
 fi
 
-BLACKLIST=`cat _BLACKLIST`
-SOURCES=$(find theories -name \*.v -print | grep -v /\.# | grep -v $BLACKLIST | sed -e 's%^\./%%g')
+SOURCES=$(find theories -name \*.v -print | grep -v /\.# | sed -e 's%^\./%%g')
 coq_makefile $(cat _CoqProject) src/lvc_plugin.ml4 $SOURCES  > ${MAKEFILE}
 echo "${MAKEFILE} generated."
 
