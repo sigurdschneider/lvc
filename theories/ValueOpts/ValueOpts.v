@@ -1041,7 +1041,38 @@ Proof.
   case_eq (omap (op_eval V) Y); eauto using fstNoneOrR.
   intros. length_equify. erewrite (@omap_satisfies_list_EqnApx V Y Y' l ) ; eauto using length_eq_length, fstNoneOrR.
 Qed.
-   
+
+        Lemma onvLe_op_eval_satisfies V V' e e' v
+          : onvLe V V'
+            -> op_eval V e = Some v
+            -> satisfies V (EqnApx e e')
+            -> satisfies V' (EqnApx e e').
+        Proof.
+          intros.
+          unfold satisfies in *. rewrite H0 in H1. inv H1.
+          symmetry in H3. eapply onvLe_op_eval_some in H3; eauto. eapply onvLe_op_eval_some in H0; eauto.
+          rewrite H0,H3. reflexivity.
+Qed.            
+
+        Lemma onvLe_op_eval_satisfiesAll V V' Y Y' v
+          : onvLe V V'
+            -> ❬Y❭ = ❬Y'❭
+            -> (omap (op_eval V) Y) = Some v
+            -> satisfiesAll V (list_EqnApx Y Y')
+            -> satisfiesAll V' (list_EqnApx Y Y').
+        Proof.
+          intros.
+          unfold satisfiesAll in *. intros.
+          length_equify. general induction H0; simpl in * |- *;  eauto.
+          - unfold list_EqnApx in H3. simpl in *. cset_tac.
+          - unfold list_EqnApx in *. simpl in * |- *.
+            cset_tac.
+            + monad_inv H1.  rewrite <- H4. eapply onvLe_op_eval_satisfies; eauto.
+            + monad_inv H1.  eapply IHlength_eq; eauto. 
+Qed.
+
+
+
   
 (*
   omap_satisfies_list_EqnApx, omap_exp_eval_onvLe
@@ -1067,9 +1098,9 @@ Proof.
       *  unfold satisfiesAll.  intros. cset_tac.
          -- rewrite <- H5. eauto using satisfies_EqnEq_on_update.
          -- rewrite <- H4. eapply (@satisfies_EqnEq_on_update x e' V v); eauto. eapply satisfies_fstNoneOrR_apx in H2.
-           rewrite H3 in H2.  inv H2. reflexivity.
-        --  exploit SAT; eauto. apply satisfies_update_dead; eauto.
-            intros X. apply H7. apply FV. eapply in_eqns_freeVars; eauto.
+            rewrite H3 in H2.  inv H2. reflexivity.
+         --  exploit SAT; eauto. apply satisfies_update_dead; eauto.
+             intros X. apply H7. apply FV. eapply in_eqns_freeVars; eauto.
       * pe_rewrite. rewrite! eqns_freeVars_add. simpl. rewrite H0, H8, FV. clear. cset_tac.
       * eapply agree_on_onvLe; eauto.
   -  exploit H; eauto.  exploit H0; eauto; [cset_tac|].  eapply (sim_cond_op_apx il_statetype_F).
@@ -1087,13 +1118,46 @@ Proof.
   - eapply (sim_return_apx il_statetype_F).
     exploit H; eauto. exploit H0; eauto; [cset_tac|]. etransitivity; eauto.
   -  exploit H; eauto.   eapply (sim_let_call_apx il_statetype_F); eauto; simpl.
-    + etransitivity; eauto using  onvLe_omap_op_eval_fstNoneOrEq.
-        eapply satisfies_omap_op_eval_fstNoneOrR; eauto.
-        unfold satisfiesAll. intros. exploit H2; eauto. case_eq  gamma; eauto.
-
-        Lemma tmp V V' A gamma
-
+     + case_eq (omap (op_eval V) Y); eauto using fstNoneOrR.
+       intros. etransitivity; eauto using  onvLe_omap_op_eval_fstNoneOrEq.
+       rewrite <- H3. eapply satisfies_omap_op_eval_fstNoneOrR; eauto.
+     + intros. simpl.
+       
+        eapply satisfies_omap_op_eval_fstNoneOrR; eauto. eapply onvLe_op_eval_satisfiesAll; eauto.
         
+        Lemma onvLe_op_eval_satisfies V V' e e' v
+          : onvLe V V'
+            -> op_eval V e = Some v
+            -> satisfies V (EqnApx e e')
+            -> satisfies V' (EqnApx e e').
+        Proof.
+          intros.
+          unfold satisfies in *. rewrite H0 in H1. inv H1.
+          symmetry in H3. eapply onvLe_op_eval_some in H3; eauto. eapply onvLe_op_eval_some in H0; eauto.
+          rewrite H0,H3. reflexivity.
+Qed.            
+
+        Lemma onvLe_op_eval_satisfiesAll V V' Y Y' v
+          : onvLe V V'
+            -> ❬Y❭ = ❬Y'❭
+            -> (omap (op_eval V) Y) = Some v
+            -> satisfiesAll V (list_EqnApx Y Y')
+            -> satisfiesAll V' (list_EqnApx Y Y').
+        Proof.
+          intros.
+          unfold satisfiesAll in *. intros.
+          length_equify. general induction H0; simpl in * |- *;  eauto.
+          - unfold list_EqnApx in H3. simpl in *. cset_tac.
+          - unfold list_EqnApx in *. simpl in * |- *.
+            cset_tac.
+            + monad_inv H1.  rewrite <- H4. eapply onvLe_op_eval_satisfies; eauto.
+            + monad_inv H1.  eapply IHlength_eq; eauto. 
+Qed.
+
+
+
+  
+                                       
              Lemma tmp V V' A :  onvLe V V' -> satisfiesAll V A -> satisfiesAll V' A.
         Proof.
           intros. unfold satisfiesAll. intros. unfold onvLe in H. exploit H0; eauto. destruct gamma; eauto.
