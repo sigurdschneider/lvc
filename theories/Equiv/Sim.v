@@ -71,6 +71,16 @@ Arguments sim_gen_mon [S] {H} [S'] {H0} [x0] [x1] [x2] r r' IN LE.
 
 Hint Resolve sim_gen_mon : paco.
 
+Lemma sim_mon S `{StateType S} S' `{StateType S'}
+      (r r':rel3 simtype (fun _ : simtype => S) (fun (_ : simtype) (_ : S) => S'))
+  : (forall (x0 : simtype) (x1:S) (x2 : S'), r x0 x1 x2 -> r' x0 x1 x2)
+    -> forall (t0 : simtype) (x:S) (y : S'), sim r t0 x y -> sim r' t0 x y.
+Proof.
+  intros. eapply paco3_mon; eauto.
+Qed.
+
+Hint Resolve sim_mon.
+
 Lemma bisim_sim {S} `{StateType S} {S'} `{StateType S'} (σ:S) (σ':S')
       : sim bot3 Bisim σ σ' -> sim bot3 Sim σ σ'.
 Proof.

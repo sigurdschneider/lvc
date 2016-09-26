@@ -11,17 +11,7 @@ Instance SR : PointwiseProofRelationF (params) := {
    ArgRelFP G VL VL' := VL = VL' /\ length VL = length G;
 }.
 
-Lemma sim_mon (r r':frel)
-  : (forall (x0 : simtype) (x1 x2 : F.state), r x0 x1 x2 -> r' x0 x1 x2)
-    -> forall (t0 : simtype) (x y : F.state), sim r t0 x y -> sim r' t0 x y.
-Proof.
-  intros. eapply paco3_mon; eauto.
-Qed.
-
-Hint Resolve sim_mon labenv_sim_mon.
-
-
-Definition bisimeq t r s s' :=
+Definition bisimeq r t s s' :=
     forall L L' E, labenv_sim t (sim r) SR (F.block_Z ⊝ L') L L'
             -> ❬L❭ = ❬L'❭
             -> sim r t (L:F.labenv, E, s) (L', E, s').
@@ -67,10 +57,37 @@ Proof.
     eapply sim_refl.
 Qed.
 
+Lemma labenv_sim_sym L L'
+  : labenv_sim Bisim (sim bot3) SR (List.map F.block_Z L') L L'
+    -> labenv_sim Bisim (sim bot3) SR (List.map F.block_Z L) L' L.
+Proof.
+  intros []; intros; dcr; do 4 (try split; eauto with len).
+  - rewrite map_length in *. eauto.
+  - hnf; intros. destruct f,f'; simpl in *; subst.
+    exploit (H2 (LabI n0) (LabI n0)); eauto. simpl in *. dcr; subst; eauto.
+    inv_get. eauto.
+  - split.
+    + hnf; intros; simpl in *; inv_get; eauto.
+    + hnf; intros.
+      eapply bisim_sym. simpl in *; dcr; subst.
+      destruct f, f'; simpl in *; subst.
+      eapply H6; eauto. simpl. eauto with len.
+Qed.
+
+
+Lemma bisimeq_sym s1 s2
+  : bisimeq bot3 Bisim s1 s2
+    -> bisimeq bot3 Bisim s2 s1.
+Proof.
+  intros. hnf; intros.
+  eapply bisim_sym. eapply H; eauto.
+  eapply labenv_sim_sym; eauto.
+Qed.
+
 Lemma bisimeq_trans t s1 s2 s3
-  : bisimeq t bot3 s1 s2
-    -> bisimeq t bot3 s2 s3
-    -> bisimeq t bot3 s1 s3.
+  : bisimeq bot3 t s1 s2
+    -> bisimeq bot3 t s2 s3
+    -> bisimeq bot3 t s1 s3.
 Proof.
   intros. hnf; intros.
   eapply sim_trans with (S2:=F.state). eauto.
@@ -150,10 +167,9 @@ Fixpoint fillC (ctx:stmtCtx) (s':stmtCtx) : stmtCtx :=
 
 (** ** Program Equivalence is contextual *)
 
-
 Lemma simeq_contextual p r s s' ctx
-: (forall r, bisimeq p r s s')
-  -> bisimeq p r (fill ctx s) (fill ctx s').
+: (forall r, bisimeq r p s s')
+  -> bisimeq r p (fill ctx s) (fill ctx s').
 Proof.
   intros. general induction ctx; simpl; hnf; intros; eauto.
   - destruct e.
@@ -203,9 +219,9 @@ Proof.
 Qed.
 
 Lemma fun_congrunence p F F' t t' (LEN:length F = length F')
-  : (forall r, bisimeq p r t t')
-    -> (forall n Z s Z' s', get F n (Z, s) -> get F' n (Z', s') -> Z = Z' /\ forall r, bisimeq p r s s')
-    -> bisimeq p bot3 (stmtFun F t) (stmtFun F' t').
+  : (forall r, bisimeq r p t t')
+    -> (forall n Z s Z' s', get F n (Z, s) -> get F' n (Z', s') -> Z = Z' /\ forall r, bisimeq r p s s')
+    -> forall r, bisimeq r p (stmtFun F t) (stmtFun F' t').
 Proof.
   intros.
   hnf; intros.
