@@ -229,7 +229,6 @@ Proof.
   eapply labenv_sim_extension'; eauto.
   eauto using indexwise_r_mon; eauto.
   eapply labenv_sim_mon; eauto.
-  intros. eapply paco3_mon; eauto.
 Qed.
 
 (** *** Extension Lemma *)
