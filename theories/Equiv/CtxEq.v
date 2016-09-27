@@ -243,12 +243,17 @@ Proof.
   rewrite IHC; eauto.
 Qed.
 
-(*
+Definition lessDef (E E':onv val)
+  := forall x , E' x = None -> E x = None.
+
 Lemma ctx_constr_E (E':onv val) G G'
-  : exists C, forall E, exists EC, forall (L:list F.block) s, star2 step (L, E, fill C s) nil (L, EC, s)
-                    /\ agree_on eq G E' EC
-                    /\ agree_on eq (G'\G) EC E.
+  : exists C, forall E, lessDef E E' ->
+              exists EC, forall (L:list F.block) s,
+                  star2 step (L, E, fill C s) nil (L, EC, s)
+                  /\ agree_on eq G E' EC
+                  /\ agree_on eq (G'\G) EC E.
 Proof.
+  revert G'.
   pattern G. eapply set_induction.
   - intros. eexists ctxHole. intros. eexists E. split.
     + eapply star2_refl.
@@ -256,38 +261,48 @@ Proof.
       split.
       * hnf; intros; cset_tac; intuition.
       * eapply agree_on_refl; eauto.
-  - intros. eapply Add_Equal in H1. rewrite H1 in *.
-    edestruct H as [C' ?]; eauto using defined_on_incl with cset.
-    edestruct (DEF x) as [v]; eauto with cset.
-    eexists (fillC C' (ctxExp x (Operation (Con v)) ctxHole)).
-    intros. specialize (H2 E). destruct H2 as[EC' ?].
-    eexists (EC'[x<-E' x]). intros. rewrite fill_fillC.
-    split.
-    + simpl. eapply (@star2_trans _ _ _ _ _ nil nil).
-      eapply H2. rewrite H3. eapply star2_silent. single_step; simpl; eauto.
-      eapply star2_refl.
-    + split.
-      * hnf; intros. lud; eqs; eauto.
-        eapply H2; eauto. rewrite H1 in H4. cset_tac.
-      * eapply agree_on_update_dead. rewrite H1. cset_tac; intuition.
-        eapply agree_on_incl; eauto. eapply H2; eauto.
-        rewrite H1. cset_tac.
+  - intros. eapply Add_Equal in H1.
+    case_eq (E' x); intros.
+    + edestruct H as [C' ?]; eauto using defined_on_incl with cset.
+      eexists (fillC C' (ctxExp x (Operation (Con v)) ctxHole)).
+      intros. specialize (H3 E). destruct H3 as[EC' ?]; eauto.
+      eexists (EC'[x<-E' x]). intros. rewrite fill_fillC.
+      split.
+      * simpl. eapply (@star2_trans _ _ _ _ _ nil nil).
+        eapply H3. rewrite H2. eapply star2_silent. single_step; simpl; eauto.
+        eapply star2_refl.
+      * split.
+        -- hnf; intros. lud; eqs; eauto.
+           eapply H3; eauto. rewrite H1 in H5. cset_tac.
+        -- eapply agree_on_update_dead. rewrite H1. cset_tac; intuition.
+           eapply agree_on_incl; eauto. eapply H3; eauto.
+           rewrite H1. cset_tac.
+    + edestruct (H ({x; G'})) as [C' ?]; eauto using defined_on_incl with cset.
+      eexists C'.
+      intros. specialize (H3 E H4).
+      destruct H3 as[EC' ?]; eauto.
+      eexists (EC').
+      intros. edestruct H3; dcr; split; eauto.
+      split.
+      * rewrite H1.
+        hnf; intros. cset_tac. rewrite H2, H8. rewrite H4; eauto.
+        cset_tac.
+      * eapply agree_on_incl; eauto. rewrite H1. clear. cset_tac.
 Qed.
 
-Lemma ctx_constr t r (L:list F.block) (E:onv val) G L'
-  : exists C (E':onv val) LC, forall s, star2 step (L, E, fill C s) nil ((LC++L)%list, E', s)
-                    /\ agree_on eq G E E'
-                    /\ labenv_sim t (sim'r r) SR (block_Z ⊝ LC) LC L'.
+(*
+Lemma ctx_constr t r (L:list F.block) (E:onv val) L'
+  : exists C LC, forall s, star2 step (L, fun _ => None, fill C s) nil ((LC++L)%list, fun _ => None, s)
+                    /\ labenv_sim t (sim r) SR (block_Z ⊝ LC) LC L'.
 Proof.
   intros. general induction L'.
-  + eexists ctxHole, E, nil; simpl.
+  + eexists ctxHole, nil; simpl.
     split; eauto using star2_refl.
   + destruct a.
     edestruct (ctx_constr_E block_E (freeVars block_s) ∅) as [CE].
-    edestruct (ctx_constr_E E G) as [CE2]. instantiate (1:=∅) in H0.
-    edestruct (IHL' L E G) as [CR [ER [LC' ]]].
-    specialize (H ER). destruct H as [CEE ?].
-    specialize (H0 CEE). destruct H0 as [CEE2 ?].
+    edestruct (IHL' t r L E) as [CR [LC' ]].
+    specialize (H (fun _ => None)). destruct H as [CEE ?]. hnf; intros; eauto.
+    specialize (H0 ). destruct H0 as [CEE2 ?].
     eexists (fillC CR (fillC CE (ctxLetT block_Z block_s CE2))).
     eexists CEE2, (F.blockI CEE block_Z block_s:: LC').
     intros. rewrite fill_fillC.
