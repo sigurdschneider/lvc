@@ -141,14 +141,14 @@ Module F.
     (condFalse: val2bool v = false)
     : step (L, E, stmtIf e b1 b2) EvtTau (L, E, b2)
 
-  | StepGoto L E l Y blk vl
-    (Ldef:get L (counted l) blk)
+  | StepGoto L E (l:lab) Y blk vl
+    (Ldef:get L l blk)
     (len:length (block_Z blk) = length Y)
     (def:omap (op_eval E) Y = Some vl) E'
     (updOk:(block_E blk) [block_Z blk <-- List.map Some vl] = E')
     : step  (L, E, stmtApp l Y)
             EvtTau
-            (drop (counted l - block_n blk) L, E', block_s blk)
+            (drop (l - block_n blk) L, E', block_s blk)
 
   | StepFun L E
     F (t:stmt)
@@ -180,12 +180,31 @@ Module F.
     - case_eq (op_eval V e); intros.
       left. case_eq (val2bool v); intros; do 2 eexists; eauto using step.
       right. stuck.
-    - destruct (get_dec L (counted l)) as [[blk A]|?]; [ | right; stuck2 ].
+    - destruct (get_dec L l) as [[blk A]|?]; [ | right; stuck2 ].
       decide (length (block_Z blk) = length Y); [ | right; stuck2 ].
       case_eq (omap (op_eval V) Y); intros; [ | right; stuck2 ].
       left. do 2 eexists. econstructor; eauto.
     - right; stuck.
     - left. eexists. eauto using step.
+  Qed.
+
+  Lemma StepGoto_mapi L blk Y E E'' vl (f:lab) F k
+        (Ldef:get L (f - ❬F❭) blk)
+        (len:length (F.block_Z blk) = length Y)
+        (def:omap (op_eval E) Y = Some vl) E'
+        (updOk:F.block_E blk [F.block_Z blk <-- List.map Some vl] = E')
+        (ST:f - block_n blk >= ❬mapi (F.mkBlock E'') F❭) (GE: f >= ❬F❭) (EQ:k = f - ❬F❭ - block_n blk)
+    : F.step (mapi (F.mkBlock E'') F ++ L, E, stmtApp f Y) EvtTau
+             (drop k L,
+              E', F.block_s blk).
+  Proof.
+    subst.
+    rewrite <- (mapi_length (F.mkBlock E'')).
+    orewrite (f - ❬mapi (F.mkBlock E'') F❭ - block_n blk
+              =  (f - block_n blk) - ❬mapi (F.mkBlock E'') F❭).
+    rewrite <- (drop_app_gen _ (mapi (F.mkBlock E'') F)); eauto.
+    eapply F.StepGoto; eauto.
+    rewrite get_app_ge. rewrite mapi_length. eauto. omega.
   Qed.
 
 End F.
@@ -227,14 +246,14 @@ Module I.
     (condFalse: val2bool v = false)
     : step (L, E, stmtIf e b1 b2) EvtTau (L, E, b2)
 
-  | StepGoto L E l Y blk vl
-    (Ldef:get L (counted l) blk)
+  | StepGoto L E (l:lab) Y blk vl
+    (Ldef:get L l blk)
     (len:length (block_Z blk) = length Y)
     (def:omap (op_eval E) Y = Some vl) E'
     (updOk:E[block_Z blk  <-- List.map Some vl] = E')
     : step  (L, E, stmtApp l Y)
             EvtTau
-            (drop (counted l - block_n blk) L, E', block_s blk)
+            (drop (l - block_n blk) L, E', block_s blk)
 
 
   | StepFun L E
@@ -267,12 +286,32 @@ Module I.
     - case_eq (op_eval V e); intros.
       left. case_eq (val2bool v); intros; do 2 eexists; eauto using step.
       right. stuck.
-    - destruct (get_dec L (counted l)) as [[blk A]|?]; [| right; stuck2].
+    - destruct (get_dec L l) as [[blk A]|?]; [| right; stuck2].
       decide (length (block_Z blk) = length Y); [| right; stuck2].
       case_eq (omap (op_eval V) Y); intros; [| right; stuck2].
       left. do 2 eexists. econstructor; eauto.
     - right. stuck2.
     - left. eexists. eauto using step.
+  Qed.
+
+  Lemma StepGoto_mapi L blk Y E vl (f:lab) F k
+        (Ldef:get L (f - ❬F❭) blk)
+        (len:length (I.block_Z blk) = length Y)
+        (def:omap (op_eval E) Y = Some vl) E'
+        (updOk:E [I.block_Z blk <-- List.map Some vl] = E')
+        (ST:f - block_n blk >= ❬mapi I.mkBlock F❭)
+        (GE:f >= ❬F❭) (EQ:k = f - ❬F❭ - block_n blk)
+    : I.step (mapi I.mkBlock F ++ L, E, stmtApp f Y) EvtTau
+             (drop k L,
+              E', I.block_s blk).
+  Proof.
+    subst.
+    rewrite <- (mapi_length I.mkBlock).
+    orewrite (f - ❬mapi I.mkBlock F❭ - block_n blk
+              =  (f - block_n blk) - ❬mapi I.mkBlock F❭).
+    rewrite <- (drop_app_gen _ (mapi I.mkBlock F)); eauto.
+    eapply I.StepGoto; eauto.
+    rewrite get_app_ge. rewrite mapi_length. eauto. omega.
   Qed.
 
 End I.

@@ -17,7 +17,8 @@ a {
     font-weight: bold;
 }
 
-#main .code a, #main .inlinecode a, #toc a {
+#main .code a, #main .inlinecode a, #toc a,
+.main .code a, .main .inlinecode a, .toc a {
     font-weight: inherit;
 }
 
@@ -41,32 +42,33 @@ div + br {
 
 div:empty{ display: none;}
 
-#main h1 {
+#main h1, .main h1 {
 	font-size: 2em;
 }
 
-#main h2 {
+#main h2, .main h2 {
 	font-size: 1.667rem;
 }
 
-#main h3 {
+#main h3, .main h3 {
 	font-size: 1.333em;
 }
 
-#main h4, #main h5, #main h6 {
+#main h4, #main h5, #main h6,
+.main h4, .main h5, .main h6 {
 	font-size: 1em;
 }
 
-#toc h2 {
+#toc h2, .toc h2 {
     padding-bottom: 0;
 }
 
-#main .doc {
+#main .doc, .main .doc {
     margin: 0;
     text-align: justify;
 }
 
-.inlinecode, .code, #main pre {
+.inlinecode, .code, #main pre, .main pre {
     font-family: monospace;
 }
 
@@ -145,7 +147,7 @@ tr.infrulemiddle hr {
 
 /* TOC */
 
-#toc h2{
+#toc h2, .toc h2{
   letter-spacing: 0;
   font-size: 1.333em;
 }
@@ -182,16 +184,20 @@ ul.doclist {
     margin-bottom: 0em;
 }
 
-#toc > * {
+#toc > *, .toc > * {
     clear: both;
 }
 
-#toc > a {
+#toc > a, .toc > a {
     display: block;
     float: left;
     margin-top: 1em;
 }
 
-#toc a h2{
+#toc a h2, .toc a h2 {
     display: inline;
+}
+
+.novfile h2.vfile {
+    display: none;
 }

@@ -209,7 +209,8 @@ Proof.
     econstructor; simpl; eauto with len. simpl. eauto with len.
     eapply (I.StepGoto _ _ _ GetL'); simpl; eauto with len.
     econstructor; simpl; eauto. rewrite H; eauto. simpl. eauto with len.
-    eapply (stepGoto_mapi _ _ _ _ GetFL); simpl; eauto using @sawtooth_smaller with len.
+    eapply (I.StepGoto_mapi _ _ _ _ GetFL); simpl; eauto with len.
+    rewrite mapi_length. exploit (sawtooth_smaller STL); eauto; simpl in *; omega.
     simpl in *; omega.
 Qed.
 

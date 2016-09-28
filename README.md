@@ -47,7 +47,7 @@ The sources incorporate ideas and code from various sources.
 
 - The subdir `Containers` contains a copy of the [Containers library](http://www.lix.polytechnique.fr/coq/pylons/contribs/view/Containers/v8.4) which was slightly adapted for the needs of the project.
 - The subdir `paco` contains a copy of the [Paco Library](http://plv.mpi-sws.org/paco/).
-- The subdir TransVal/ contains Heiko Becker's Bachelor's Thesis: [Verified SMT-based Translation Validation](http://compilers.cs.uni-saarland.de/publications/theses/becker_bsc.pdf).
+- The subdir TransVal/ contains work based on Heiko Becker's Bachelor's Thesis: [Verified SMT-based Translation Validation](http://compilers.cs.uni-saarland.de/publications/theses/becker_bsc.pdf).
 - The file `Lattice.v` was inspired by the [Lattice development from Daniel W.H. James and Ralf Hinze](http://www.cs.ox.ac.uk/people/daniel.james/lattice.html).
 - The file `Infra/SizeInduction.v` contains the type-class based size-induction from [AutoSubst](https://www.ps.uni-saarland.de/autosubst/).
 

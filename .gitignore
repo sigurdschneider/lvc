@@ -27,3 +27,5 @@ Makefile.coq
 *.cmxa
 *.cmxs
 *.a
+doc*
+pkg*
