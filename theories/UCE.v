@@ -1,5 +1,5 @@
 Require Import CSet Util LengthEq Fresh Take MoreList Filter OUnion.
-Require Import IL Annotation LabelsDefined Sawtooth InRel Liveness TrueLiveness UnreachableCode.
+Require Import IL Annotation LabelsDefined Sawtooth InRel Liveness TrueLiveness Reachability.
 Require Import Sim SimTactics SimI.
 
 Set Implicit Arguments.
@@ -258,12 +258,12 @@ Proof.
 Qed.
 
 Lemma sim_I RL r L L' V s (a:ann bool) (Ann:getAnn a)
- (UC: unreachable_code Sound RL s a)
+ (RCH: reachability Sound RL s a)
  (LSIM:labenv_sim Bisim (sim r) SR RL L L')
   : sim r Bisim (L,V, s) (L',V, compile RL s a).
 Proof.
   unfold sim. revert_except s.
-  sind s; destruct s; simpl in *; intros; invt unreachable_code; simpl in * |- *.
+  sind s; destruct s; simpl in *; intros; invt reachability; simpl in * |- *.
   - destruct e.
     + eapply (sim_let_op il_statetype_I); eauto.
     + eapply (sim_let_call il_statetype_I); eauto.
@@ -286,7 +286,7 @@ Proof.
 Qed.
 
 Lemma sim_UCE V s a
-  : unreachable_code Sound nil s a
+  : reachability Sound nil s a
     -> getAnn a
     -> @sim I.state _ I.state _ bot3 Bisim (nil,V, s) (nil,V, compile nil s a).
 Proof.
@@ -372,12 +372,12 @@ Proof.
 Qed.
 
 Lemma sim_F RL r L L' V s (a:ann bool) (Ann:getAnn a)
- (UC: unreachable_code Sound RL s a)
+ (UC: reachability Sound RL s a)
  (LSIM:labenv_sim Bisim (sim r) SR RL L L')
   : sim r Bisim (L,V, s) (L',V, compile RL s a).
 Proof.
   unfold sim. revert_except s.
-  sind s; destruct s; simpl in *; intros; invt unreachable_code; simpl in * |- *.
+  sind s; destruct s; simpl in *; intros; invt reachability; simpl in * |- *.
   - destruct e.
     + eapply (sim_let_op il_statetype_F); eauto.
     + eapply (sim_let_call il_statetype_F); eauto.
@@ -400,7 +400,7 @@ Proof.
 Qed.
 
 Lemma sim_UCE V s a
-  : unreachable_code Sound nil s a
+  : reachability Sound nil s a
     -> getAnn a
     -> @sim F.state _ F.state _ bot3 Bisim (nil,V, s) (nil,V, compile nil s a).
 Proof.
@@ -414,7 +414,7 @@ End F.
 (** ** UCE respects parameter/argument matching *)
 
 Lemma UCE_paramsMatch PL RL s lv
-  : unreachable_code Sound RL s lv
+  : reachability Sound RL s lv
     -> getAnn lv
     -> paramsMatch s PL
     -> paramsMatch (compile RL s lv) (filter_by (fun b => b) RL PL).
@@ -473,7 +473,7 @@ Fixpoint compile_live (s:stmt) (a:ann (set var)) (b:ann bool) : ann (set var) :=
 
 Lemma compile_live_incl i uci ZL LV RL s lv uc
   : true_live_sound i ZL LV s lv
-    -> unreachable_code uci RL s uc
+    -> reachability uci RL s uc
     -> getAnn (compile_live s lv uc) ⊆ getAnn lv.
 Proof.
   intros LS UC.
@@ -487,7 +487,7 @@ Proof.
 Qed.
 
 Lemma UCE_live i ZL LV RL s uc lv
-  : unreachable_code Sound RL s uc
+  : reachability Sound RL s uc
     -> getAnn uc
     -> true_live_sound i ZL LV s lv
     -> true_live_sound i (filter_by (fun b => b) RL ZL)
@@ -565,7 +565,7 @@ Qed.
 
 Lemma trueIsCalled_compileF_not_nil
       (s : stmt) (slv : ann bool) k F als RL x
-  : unreachable_code Sound (getAnn ⊝ als ++ RL) s slv
+  : reachability Sound (getAnn ⊝ als ++ RL) s slv
     -> getAnn slv
     -> trueIsCalled s (LabI k)
     -> get als k x
@@ -577,7 +577,7 @@ Proof.
   assert (LenNEq:length (compileF compile (getAnn ⊝ als ++ RL) F als)
                  <> 0). {
     rewrite compileF_length; eauto.
-    edestruct (unreachable_code_trueIsCalled UC IC); eauto; simpl in *; dcr.
+    edestruct (reachability_trueIsCalled UC IC); eauto; simpl in *; dcr.
     inv_get.
     eapply countTrue_exists. eapply map_get_eq; eauto.
   }
@@ -590,17 +590,17 @@ Lemma UCE_callChain RL F als t alt l' k ZsEnd aEnd n
       (IH : forall k Zs,
           get F k Zs ->
        forall (RL : 〔bool〕) (lv : ann bool) (n : nat),
-       unreachable_code SoundAndComplete RL (snd Zs) lv ->
+       reachability SoundAndComplete RL (snd Zs) lv ->
        trueIsCalled (snd Zs) (LabI n) ->
        getAnn lv ->
        trueIsCalled (compile RL (snd Zs) lv)
                 (LabI (countTrue (take n RL))))
-  (UC:unreachable_code SoundAndComplete (getAnn ⊝ als ++ RL) t alt)
+  (UC:reachability SoundAndComplete (getAnn ⊝ als ++ RL) t alt)
   (LEN: ❬F❭ = ❬als❭)
   (UCF:forall (n : nat) (Zs : params * stmt) (a : ann bool),
        get F n Zs ->
        get als n a ->
-       unreachable_code SoundAndComplete (getAnn ⊝ als ++ RL) (snd Zs) a)
+       reachability SoundAndComplete (getAnn ⊝ als ++ RL) (snd Zs) a)
   (Ann: getAnn alt)
   (IC: trueIsCalled t (LabI l'))
   (CC: callChain trueIsCalled F (LabI l') (LabI k))
@@ -614,7 +614,7 @@ Lemma UCE_callChain RL F als t alt l' k ZsEnd aEnd n
                    countTrue (take n RL))).
 Proof.
   general induction CC.
-  - exploit unreachable_code_trueIsCalled as IMPL; try eapply IC; eauto.
+  - exploit reachability_trueIsCalled as IMPL; try eapply IC; eauto.
     simpl in *; dcr; inv_get. rewrite H1 in Ann.
     exploit compileF_get; eauto.
     econstructor 2; [ | | econstructor 1 ].
@@ -625,7 +625,7 @@ Proof.
     rewrite map_length in ICEnd.
     orewrite (❬F❭ + n - ❬als❭ = n) in ICEnd. simpl.
     rewrite countTrue_app in ICEnd. eauto.
-  - exploit unreachable_code_trueIsCalled; try eapply IC; eauto.
+  - exploit reachability_trueIsCalled; try eapply IC; eauto.
     simpl in *; dcr; inv_get. assert (getAnn x0).
     rewrite <- H4. eauto.
     exploit compileF_get; eauto.
@@ -641,7 +641,7 @@ Lemma UCE_callChain' RL F als l' k
       (IH : forall k Zs,
           get F k Zs ->
        forall (RL : 〔bool〕) (lv : ann bool) (n : nat),
-       unreachable_code SoundAndComplete RL (snd Zs) lv ->
+       reachability SoundAndComplete RL (snd Zs) lv ->
        trueIsCalled (snd Zs) (LabI n) ->
        getAnn lv ->
        trueIsCalled (compile RL (snd Zs) lv)
@@ -650,7 +650,7 @@ Lemma UCE_callChain' RL F als l' k
   (UCF:forall (n : nat) (Zs : params * stmt) (a : ann bool),
        get F n Zs ->
        get als n a ->
-       unreachable_code SoundAndComplete (getAnn ⊝ als ++ RL) (snd Zs) a)
+       reachability SoundAndComplete (getAnn ⊝ als ++ RL) (snd Zs) a)
   (Ann: get (getAnn ⊝ als ++ RL) l' true)
   (CC: callChain trueIsCalled F (LabI l') (LabI k))
 : callChain trueIsCalled
@@ -661,7 +661,7 @@ Proof.
   general induction CC.
   - econstructor.
   - inv_get.
-    exploit unreachable_code_trueIsCalled; try eapply H0; eauto.
+    exploit reachability_trueIsCalled; try eapply H0; eauto.
     simpl in *; dcr; inv_get. assert (x0 = true).
     destruct (getAnn x), x0; isabsurd; eauto.
     exploit compileF_get; eauto.
@@ -674,14 +674,14 @@ Proof.
 Qed.
 
 Lemma UCE_trueIsCalled RL s lv n
-  : unreachable_code SoundAndComplete RL s lv
+  : reachability SoundAndComplete RL s lv
     -> trueIsCalled s (LabI n)
     -> getAnn lv
     -> trueIsCalled (compile RL s lv) (LabI (countTrue (take n RL))).
 Proof.
   intros Live IC.
   revert RL lv n Live IC.
-  sind s; simpl; intros; invt unreachable_code; invt trueIsCalled;
+  sind s; simpl; intros; invt reachability; invt trueIsCalled;
     simpl in *; eauto using trueIsCalled.
   - repeat cases; eauto using trueIsCalled.
   - repeat cases; eauto using trueIsCalled.
@@ -718,8 +718,8 @@ Lemma UCE_isCalledFrom RL F als t alt n (Len:❬F❭ = ❬als❭)
   : (forall (n : nat) (Zs : params * stmt) (a : ann bool),
        get F n Zs ->
        get als n a ->
-       unreachable_code SoundAndComplete (getAnn ⊝ als ++ RL) (snd Zs) a)
-    -> unreachable_code SoundAndComplete (getAnn ⊝ als ++ RL) t alt
+       reachability SoundAndComplete (getAnn ⊝ als ++ RL) (snd Zs) a)
+    -> reachability SoundAndComplete (getAnn ⊝ als ++ RL) t alt
     -> getAnn alt
     -> isCalledFrom trueIsCalled F t (LabI n)
     -> n < ❬F❭
@@ -731,7 +731,7 @@ Proof.
   exploit UCE_trueIsCalled; eauto.
   eexists; split; eauto.
   exploit UCE_callChain'; eauto using UCE_trueIsCalled.
-  exploit unreachable_code_trueIsCalled; eauto.
+  exploit reachability_trueIsCalled; eauto.
   dcr; subst; simpl in *. rewrite H6 in gAt.
   destruct x; isabsurd; eauto.
   setoid_rewrite take_app_lt in H3 at 2.
@@ -740,7 +740,7 @@ Proof.
 Qed.
 
 Lemma UCE_noUnreachableCode RL s lv
-  : unreachable_code SoundAndComplete RL s lv
+  : reachability SoundAndComplete RL s lv
     -> getAnn lv
     -> noUnreachableCode trueIsCalled (compile RL s lv).
 Proof.

@@ -8,7 +8,7 @@ Remove Hints trans_eq_bool.
 
 Set Implicit Arguments.
 
-Definition unreachable_code_transform (sT:stmt)
+Definition reachability_transform (sT:stmt)
            (ZL:list params)
            (st:stmt) (ST:subTerm st sT)
            (d:bool)
@@ -24,20 +24,20 @@ Definition unreachable_code_transform (sT:stmt)
   end.
 
 
-Lemma unreachable_code_transform_monotone (sT s : stmt) (ST ST' : subTerm s sT)
+Lemma reachability_transform_monotone (sT s : stmt) (ST ST' : subTerm s sT)
       (ZL : 〔params〕) (a b : bool)
   : a ⊑ b
-    -> unreachable_code_transform ZL ST a ⊑ unreachable_code_transform ZL ST' b.
+    -> reachability_transform ZL ST a ⊑ reachability_transform ZL ST' b.
 Proof.
   intros; destruct s; simpl; try econstructor; simpl; eauto;
     repeat cases; simpl in *; eauto.
 Qed.
 
-Definition unreachable_code_analysis s :=
+Definition reachability_analysis s :=
   makeForwardAnalysis (fun s => bool ) _
-                      unreachable_code_transform
-                      unreachable_code_transform_monotone
+                      reachability_transform
+                      reachability_transform_monotone
                       (fun s => terminating_bool) s true.
 
-Definition unreachableCodeAnalysis s :=
-  proj1_sig (proj1_sig (safeFixpoint (unreachable_code_analysis s))).
+Definition reachabilityAnalysis s :=
+  proj1_sig (proj1_sig (safeFixpoint (reachability_analysis s))).

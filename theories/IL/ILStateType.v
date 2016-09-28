@@ -27,7 +27,9 @@ Class ILStateType X :=
         step (L, E, stmtIf e b1 b2) EvtTau (L, E, b2);
     cond_normal : forall L E e b1 b2 (def:op_eval E e = None),
         normal2 step (L, E, stmtIf e b1 b2);
-    result_none : forall L E s, ~isReturn s -> result (L, E, s) = None
+    result_none : forall L E s, ~isReturn s -> result (L, E, s) = None;
+    result_return: forall L E e, result(L,E, stmtReturn e) = op_eval E e;
+    return_normal: forall L E e, normal2 step (L,E, stmtReturn e)
   }.
 
 Instance il_statetype_F : ILStateType F.labenv :=
@@ -44,6 +46,8 @@ Proof.
   - intros; inv H; eauto.
   - intros. stuck2.
   - intros; simpl; eauto; destruct s; eauto; exfalso; eauto using isReturn.
+  - reflexivity.
+  - intros. stuck2.
 Defined.
 
 Instance il_statetype_I : ILStateType I.labenv :=
@@ -60,4 +64,6 @@ Proof.
   - intros; inv H; eauto.
   - intros; stuck2.
   - intros; simpl; eauto; destruct s; eauto; exfalso; eauto using isReturn.
+  - reflexivity.
+  - intros. stuck2.
 Defined.

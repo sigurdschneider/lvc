@@ -7,7 +7,8 @@ Notation "'spilling'"
 
 Notation "'getSp' sl" := (fst (fst (getAnn sl))) (at level 40).
 Notation "'getL' sl" := (snd (fst (getAnn sl))) (at level 40).
-Notation "'getRm' sl" := (snd (getAnn sl)) (at level 40).
+
+Notation "'getRm' sl" := (snd (getAnn sl)) (at level 40, only parsing).
 
 Inductive spill_sound (k:nat) :
   (list params)
@@ -95,6 +96,9 @@ Inductive spill_sound (k:nat) :
       -> length F = length sl_F
       -> length F = length rms
       -> (forall n rm, get rms n rm -> cardinal (fst rm) <= k)
+      -> (forall n rm Zs, get rms n rm 
+                          -> get F n Zs
+                          -> disj (fst rm ∩ of_list (fst Zs)) (snd rm ∩ of_list (fst Zs)))
       -> (forall n Zs rm sl_s, get rms n rm
                          -> get F n Zs
                          -> get sl_F n sl_s

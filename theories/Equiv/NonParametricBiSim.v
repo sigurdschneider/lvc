@@ -1,12 +1,12 @@
 Require Import List paco2.
-Require Import Util IL AllInRel Sawtooth.
+Require Import Util IL.
 Require Export SmallStepRelations StateType Sim.
 
 Set Implicit Arguments.
 Unset Printing Records.
 
 (** * Non-parametric Definitions of Simulation and Bisimulation *)
-(** * Bisimulation *)
+(** ** Bisimulation *)
 (** A characterization of bisimulation equivalence on states;
     works only for internally deterministic semantics. *)
 
@@ -34,7 +34,7 @@ CoInductive bisim {S} `{StateType S} {S'} `{StateType S'}  : S -> S' -> Prop :=
 
 Arguments bisim [S] {H} [S'] {H0} _ _.
 
-(** ** Bisimulation is an reflexive and symmetric *)
+(** *** Bisimulation is an reflexive and symmetric *)
 Lemma bisim_refl {S} `{StateType S} (σ:S)
       : bisim σ σ.
 Proof.
@@ -56,6 +56,8 @@ Proof.
     edestruct H6; eauto; dcr. eexists; eauto.
   - eapply BisimTerm; eauto using star2_refl.
 Qed.
+
+(** ** Relationship of bisimulation to the parametric definition *)
 
 Lemma bisim_simp t {S} `{StateType S} {S'} `{StateType S'}
   : forall (σ:S) (σ':S'), bisim σ σ' -> sim bot3 t σ σ'.
@@ -79,6 +81,8 @@ Proof.
     + intros. edestruct H8; eauto; dcr; pclearbot; eauto.
   - econstructor 3; eauto.
 Qed.
+
+(** *** Transitivity *)
 
 Lemma bisim_trans {S1} `{StateType S1}
       (σ1:S1) {S2} `{StateType S2} (σ2:S2) {S3} `{StateType S3} (σ3:S3)
@@ -123,7 +127,7 @@ CoInductive sim {S} `{StateType S} {S'} `{StateType S'}  : S -> S' -> Prop :=
 
 Arguments bisim [S] {H} [S'] {H0} _ _.
 
-(** ** Bisimulation is an reflexive and symmetric *)
+(** *** Simulation is an reflexive *)
 
 Lemma sim_refl {S} `{StateType S} (σ:S)
       : sim σ σ.
@@ -134,6 +138,8 @@ Proof.
   - eapply SimSilent; eauto using plus2O.
   - eapply SimTerm; eauto using star2_refl.
 Qed.
+
+(** ** Relationship of simulation to the parametric definition *)
 
 Lemma sim_simp {S} `{StateType S} {S'} `{StateType S'}
   : forall (σ:S) (σ':S'), sim σ σ' -> Sim.sim bot3 Sim σ σ'.
@@ -159,6 +165,8 @@ Proof.
   - econstructor 3; eauto.
 Qed.
 
+(** *** Transitivity *)
+
 Lemma sim_trans {S1} `{StateType S1}
       (σ1:S1) {S2} `{StateType S2} (σ2:S2) {S3} `{StateType S3} (σ3:S3)
   : sim σ1 σ2
@@ -174,7 +182,7 @@ Qed.
 Arguments sim_trans [S1] {H} σ1 [S2] {H0} σ2 [S3] {H1} σ3 _ _.
 
 
-(** Receptive and determinate according to CompCertTSO (Sevcík 2013)  *)
+(** Receptive and determinate according to CompCertTSO (Sevcík 2013) *)
 
 Definition same_call (e e':extern) := extern_fnc e = extern_fnc e' /\ extern_args e = extern_args e'.
 

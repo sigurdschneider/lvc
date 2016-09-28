@@ -20,20 +20,28 @@ while [ $# != 0 ]; do
 done
 
 if ! [[ $(ruby -v) =~ ^ruby\ 2.1 ]]; then
-	echo "Ruby 1.9 not in path, defaulting to vanilla"
+	echo "Ruby not in path, defaulting to vanilla"
 	VANILLA=yes
 fi
 
-BLACKLIST=`cat _BLACKLIST`
-SOURCES=$(find theories -name \*.v -print | grep -v /\.# | grep -v $BLACKLIST | sed -e 's%^\./%%g')
+coq_ver=$(${COQBIN}coqc -v 2>/dev/null | sed -n -e 's/The Coq Proof Assistant, version \([^ ]*\).*$/\1/p')
+case "$coq_ver" in
+  8.5pl2)
+		;;
+	*)
+    echo "Error: Need Coq 8.5pl2"
+		exit 1
+esac
+
+SOURCES=$(find theories -name \*.v -print | grep -v /\.# | sed -e 's%^\./%%g')
 coq_makefile $(cat _CoqProject) src/lvc_plugin.ml4 $SOURCES  > ${MAKEFILE}
 echo "${MAKEFILE} generated."
 
-echo "Patching ${MAKEFILE} to reference external Containers documentation."
-sed -i -e 's%COQDOCFLAGS?=-interpolate -utf8%COQDOCFLAGS?=--interpolate --utf8 --external "http://www.lix.polytechnique.fr/coq/pylons/contribs/files/Containers/v8.4/" Containers --toc --toc-depth 3 --index indexpage --no-lib-name%' ${MAKEFILE}
+echo "Patching ${MAKEFILE} to include custom COQDOCFLAGS."
+sed -i -e 's%COQDOCFLAGS?=-interpolate -utf8%COQDOCFLAGS?=--interpolate --utf8 --toc --toc-depth 3 --index indexpage --no-lib-name%' ${MAKEFILE}
 
 
-if [ -z "$VANILLA" ]; then
+if [[ -z "$VANILLA" && -e "time.rb" ]]; then
 	echo "Patching ${MAKEFILE} to use ruby-based timing scripts (use --vanilla if undesired)."
 	sed -i -e 's/TIMECMD=/TIMECMD=@.\/time.rb $(if $(findstring j,$(MAKEFLAGS)),--parallel,)/' ${MAKEFILE}
 fi

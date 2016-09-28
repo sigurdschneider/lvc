@@ -11,11 +11,10 @@ Instance SR : PointwiseProofRelationF (params) := {
    ArgRelFP G VL VL' := VL = VL' /\ length VL = length G;
 }.
 
-
-Definition bisimeq t r s s' :=
-    forall L L' E, labenv_sim t (sim r) SR (block_Z ⊝ L') L L'
+Definition bisimeq r t s s' :=
+    forall L L' E, labenv_sim t (sim r) SR (F.block_Z ⊝ L') L L'
             -> ❬L❭ = ❬L'❭
-            -> sim r t (L, E, s) (L', E, s').
+            -> sim r t (L:F.labenv, E, s) (L', E, s').
 
 (** ** Reflexivity *)
 
@@ -24,7 +23,7 @@ Lemma bisimeq_refl s t
     labenv_sim t (sim r) SR (block_Z ⊝ L') L L'
     -> sim r t (L, E, s) (L', E, s).
 Proof.
-  unfold sim. sind s; destruct s; simpl in *; intros.
+  sind s; destruct s; simpl in *; intros.
   - destruct e.
     + eapply (sim_let_op il_statetype_F); eauto.
     + eapply (sim_let_call il_statetype_F); eauto.
@@ -33,11 +32,11 @@ Proof.
     + eapply labenv_sim_app; eauto.
       simpl.
       intros; split; intros; dcr; inv_get; subst; try cases; eauto.
-    + pno_step. destruct H. rewrite map_length in H. inv_get. eauto.
+    + pno_step. edestruct H; eauto. rewrite map_length in H0. inv_get. eauto.
   - pno_step.
   - pone_step. left.
     eapply (IH s); eauto with len.
-    rewrite map_app.
+    rewrite map_app. intros.
     eapply labenv_sim_extension_ptw; eauto with len.
     + intros; hnf; intros; inv_get; eauto.
       simpl in *; dcr; subst. get_functional.
@@ -45,9 +44,9 @@ Proof.
     + hnf; intros; simpl in *; subst; inv_get; simpl; eauto.
 Qed.
 
-Lemma simLabenv_refl r L
+Lemma labenv_sim_refl t r L
   : smaller L
-    -> labenv_sim Bisim (sim r) SR (List.map F.block_Z L) L L.
+    -> labenv_sim t (sim r) SR (List.map F.block_Z L) L L.
 Proof.
   intros. hnf; dcr; do 4 try split; eauto with len.
   - intros [] []; intros; simpl in *; subst; inv_get; split; eauto.
@@ -56,6 +55,83 @@ Proof.
     get_functional; dcr; subst; inv_get.
     pone_step; simpl; eauto with len. left.
     eapply sim_refl.
+Qed.
+
+Lemma labenv_sim_sym L L'
+  : labenv_sim Bisim (sim bot3) SR (List.map F.block_Z L') L L'
+    -> labenv_sim Bisim (sim bot3) SR (List.map F.block_Z L) L' L.
+Proof.
+  intros []; intros; dcr; do 4 (try split; eauto with len).
+  - rewrite map_length in *. eauto.
+  - hnf; intros. destruct f,f'; simpl in *; subst.
+    exploit (H2 (LabI n0) (LabI n0)); eauto. simpl in *. dcr; subst; eauto.
+    inv_get. eauto.
+  - split.
+    + hnf; intros; simpl in *; inv_get; eauto.
+    + hnf; intros.
+      eapply bisim_sym. simpl in *; dcr; subst.
+      destruct f, f'; simpl in *; subst.
+      eapply H6; eauto. simpl. eauto with len.
+Qed.
+
+
+Lemma bisimeq_sym s1 s2
+  : bisimeq bot3 Bisim s1 s2
+    -> bisimeq bot3 Bisim s2 s1.
+Proof.
+  intros. hnf; intros.
+  eapply bisim_sym. eapply H; eauto.
+  eapply labenv_sim_sym; eauto.
+Qed.
+
+Lemma bisimeq_trans t s1 s2 s3
+  : bisimeq bot3 t s1 s2
+    -> bisimeq bot3 t s2 s3
+    -> bisimeq bot3 t s1 s3.
+Proof.
+  intros. hnf; intros.
+  eapply sim_trans with (S2:=F.state). eauto.
+  eapply H0; eauto.
+  intros. eapply labenv_sim_refl; eauto.
+  eapply H1; eauto.
+Qed.
+
+Lemma labenv_sim_trans t (L1 L2 L3:F.labenv)
+  : labenv_sim t (sim bot3) SR (List.map F.block_Z L2) L1 L2
+    -> labenv_sim t (sim bot3) SR (List.map F.block_Z L3) L2 L3
+    -> labenv_sim t (sim bot3) SR (List.map F.block_Z L3) L1 L3.
+Proof.
+  intros.
+  assert (❬L1❭ = ❬L2❭). {
+    destruct H; dcr. rewrite <- H. eauto with len.
+  }
+  assert (❬L2❭ = ❬L3❭). {
+    destruct H0; dcr. rewrite <- H0. eauto with len.
+  }
+  hnf; dcr; do 4 try split; eauto with len.
+  - destruct H, H0; dcr; eauto.
+  - eapply H.
+  - hnf; intros; simpl in *; destruct f,f'; simpl in *; subst; inv_get; repeat get_functional.
+    simpl. destruct x.
+    destruct H as [_ [_ [_ [PA1 _]]]]. destruct H0 as [_ [_ [_ [PA2 _]]]].
+    exploit (PA1 (LabI n0) (LabI n0)); eauto; simpl in *; dcr; subst.
+    exploit (PA2 (LabI n0) (LabI n0)); eauto; simpl in *; dcr; subst.
+  - split.
+    + hnf; intros; simpl in *; inv_get; eauto.
+    + hnf; intros; simpl in *. destruct f, f'; simpl in *; subst.
+      inv_get; dcr; subst; simpl in *.
+      eapply sim_trans with (S2:=F.state).
+      eapply labenv_sim_app; eauto.
+      Focus 2.
+      eapply labenv_sim_app; eauto.
+      intros; simpl in *; dcr; repeat subst; repeat get_functional.
+      split; intros; eauto. cases; eauto.
+      intros; simpl in *; dcr. destruct x; simpl in *.
+      repeat subst; repeat get_functional.
+      split; intros; eauto. eexists; split; eauto. split; eauto with len.
+      split; eauto with len. congruence.
+      cases; eauto. split; intros. congruence.
+      eauto with len.
 Qed.
 
 (** * Contextual Equivalence *)
@@ -91,9 +167,9 @@ Fixpoint fillC (ctx:stmtCtx) (s':stmtCtx) : stmtCtx :=
 
 (** ** Program Equivalence is contextual *)
 
-Lemma simeq_contextual s s' ctx r
-: (forall r, bisimeq Bisim r s s')
-  -> bisimeq Bisim r (fill ctx s) (fill ctx s').
+Lemma simeq_contextual p r s s' ctx
+: (forall r, bisimeq r p s s')
+  -> bisimeq r p (fill ctx s) (fill ctx s').
 Proof.
   intros. general induction ctx; simpl; hnf; intros; eauto.
   - destruct e.
@@ -109,10 +185,10 @@ Proof.
     + eapply IHctx; eauto.
   - pone_step. left.
     eapply bisimeq_refl; eauto 20 with len.
-    rewrite map_app.
+    rewrite map_app. intros.
     eapply labenv_sim_extension_ptw; simpl; eauto 20 with len.
     + intros; hnf; intros.
-      { destruct (get_subst _ _ _ H4) as [? |[?|?]].
+      { destruct (get_subst _ _ _ H5) as [? |[?|?]].
         - inv_get; simpl in *; dcr; subst.
           simpl; repeat split; eauto. inv_get.
           eapply bisimeq_refl; eauto 20 with len.
@@ -120,7 +196,7 @@ Proof.
         - simpl in *. dcr; subst. subst. invc H9.
           inv_get. simpl in *.
           eapply IHctx; eauto 20 with len.
-          rewrite map_app. eauto.
+          rewrite map_app. intros; eauto.
         - simpl in *; dcr; subst.
           inv_get. simpl in *.
           eapply bisimeq_refl; eauto 20 with len.
@@ -133,13 +209,31 @@ Proof.
       * simpl in *; dcr; subst. inv_get; eauto.
   - pone_step. left.
     eapply IHctx; eauto with len.
-    rewrite map_app.
+    rewrite map_app. intros.
     eapply labenv_sim_extension_ptw; simpl; eauto 20 with len.
     + intros; hnf; simpl; intros; dcr; subst; inv_get. simpl in *.
       eapply bisimeq_refl; eauto 20 with len.
       rewrite map_app; eauto.
     + hnf; simpl; intros; subst; inv_get; simpl; eauto.
   - eapply H; eauto.
+Qed.
+
+Lemma fun_congrunence p F F' t t' (LEN:length F = length F')
+  : (forall r, bisimeq r p t t')
+    -> (forall n Z s Z' s', get F n (Z, s) -> get F' n (Z', s') -> Z = Z' /\ forall r, bisimeq r p s s')
+    -> forall r, bisimeq r p (stmtFun F t) (stmtFun F' t').
+Proof.
+  intros.
+  hnf; intros.
+  eapply sim_fun_ptw; eauto using labenv_sim_refl.
+    + intros. left. eapply H; eauto with len.
+      intros. rewrite map_app. eauto.
+    + intros. hnf; intros. inv_get. simpl in *; subst; dcr; subst.
+      exploit H0; eauto; dcr; subst.
+      eapply H11; eauto with len. rewrite map_app; eauto with len.
+    + hnf; intros. simpl in *; subst. exploit H0; eauto; dcr; subst.
+      inv_get; eauto.
+    + eauto with len.
 Qed.
 
 Lemma fill_fillC C C' s
@@ -149,12 +243,17 @@ Proof.
   rewrite IHC; eauto.
 Qed.
 
-(*
+Definition lessDef (E E':onv val)
+  := forall x , E' x = None -> E x = None.
+
 Lemma ctx_constr_E (E':onv val) G G'
-  : exists C, forall E, exists EC, forall (L:list F.block) s, star2 step (L, E, fill C s) nil (L, EC, s)
-                    /\ agree_on eq G E' EC
-                    /\ agree_on eq (G'\G) EC E.
+  : exists C, forall E, lessDef E E' ->
+              exists EC, forall (L:list F.block) s,
+                  star2 step (L, E, fill C s) nil (L, EC, s)
+                  /\ agree_on eq G E' EC
+                  /\ agree_on eq (G'\G) EC E.
 Proof.
+  revert G'.
   pattern G. eapply set_induction.
   - intros. eexists ctxHole. intros. eexists E. split.
     + eapply star2_refl.
@@ -162,38 +261,48 @@ Proof.
       split.
       * hnf; intros; cset_tac; intuition.
       * eapply agree_on_refl; eauto.
-  - intros. eapply Add_Equal in H1. rewrite H1 in *.
-    edestruct H as [C' ?]; eauto using defined_on_incl with cset.
-    edestruct (DEF x) as [v]; eauto with cset.
-    eexists (fillC C' (ctxExp x (Operation (Con v)) ctxHole)).
-    intros. specialize (H2 E). destruct H2 as[EC' ?].
-    eexists (EC'[x<-E' x]). intros. rewrite fill_fillC.
-    split.
-    + simpl. eapply (@star2_trans _ _ _ _ _ nil nil).
-      eapply H2. rewrite H3. eapply star2_silent. single_step; simpl; eauto.
-      eapply star2_refl.
-    + split.
-      * hnf; intros. lud; eqs; eauto.
-        eapply H2; eauto. rewrite H1 in H4. cset_tac.
-      * eapply agree_on_update_dead. rewrite H1. cset_tac; intuition.
-        eapply agree_on_incl; eauto. eapply H2; eauto.
-        rewrite H1. cset_tac.
+  - intros. eapply Add_Equal in H1.
+    case_eq (E' x); intros.
+    + edestruct H as [C' ?]; eauto using defined_on_incl with cset.
+      eexists (fillC C' (ctxExp x (Operation (Con v)) ctxHole)).
+      intros. specialize (H3 E). destruct H3 as[EC' ?]; eauto.
+      eexists (EC'[x<-E' x]). intros. rewrite fill_fillC.
+      split.
+      * simpl. eapply (@star2_trans _ _ _ _ _ nil nil).
+        eapply H3. rewrite H2. eapply star2_silent. single_step; simpl; eauto.
+        eapply star2_refl.
+      * split.
+        -- hnf; intros. lud; eqs; eauto.
+           eapply H3; eauto. rewrite H1 in H5. cset_tac.
+        -- eapply agree_on_update_dead. rewrite H1. cset_tac; intuition.
+           eapply agree_on_incl; eauto. eapply H3; eauto.
+           rewrite H1. cset_tac.
+    + edestruct (H ({x; G'})) as [C' ?]; eauto using defined_on_incl with cset.
+      eexists C'.
+      intros. specialize (H3 E H4).
+      destruct H3 as[EC' ?]; eauto.
+      eexists (EC').
+      intros. edestruct H3; dcr; split; eauto.
+      split.
+      * rewrite H1.
+        hnf; intros. cset_tac. rewrite H2, H8. rewrite H4; eauto.
+        cset_tac.
+      * eapply agree_on_incl; eauto. rewrite H1. clear. cset_tac.
 Qed.
 
-Lemma ctx_constr t r (L:list F.block) (E:onv val) G L'
-  : exists C (E':onv val) LC, forall s, star2 step (L, E, fill C s) nil ((LC++L)%list, E', s)
-                    /\ agree_on eq G E E'
-                    /\ labenv_sim t (sim'r r) SR (block_Z ⊝ LC) LC L'.
+(*
+Lemma ctx_constr t r (L:list F.block) (E:onv val) L'
+  : exists C LC, forall s, star2 step (L, fun _ => None, fill C s) nil ((LC++L)%list, fun _ => None, s)
+                    /\ labenv_sim t (sim r) SR (block_Z ⊝ LC) LC L'.
 Proof.
   intros. general induction L'.
-  + eexists ctxHole, E, nil; simpl.
+  + eexists ctxHole, nil; simpl.
     split; eauto using star2_refl.
   + destruct a.
     edestruct (ctx_constr_E block_E (freeVars block_s) ∅) as [CE].
-    edestruct (ctx_constr_E E G) as [CE2]. instantiate (1:=∅) in H0.
-    edestruct (IHL' L E G) as [CR [ER [LC' ]]].
-    specialize (H ER). destruct H as [CEE ?].
-    specialize (H0 CEE). destruct H0 as [CEE2 ?].
+    edestruct (IHL' t r L E) as [CR [LC' ]].
+    specialize (H (fun _ => None)). destruct H as [CEE ?]. hnf; intros; eauto.
+    specialize (H0 ). destruct H0 as [CEE2 ?].
     eexists (fillC CR (fillC CE (ctxLetT block_Z block_s CE2))).
     eexists CEE2, (F.blockI CEE block_Z block_s:: LC').
     intros. rewrite fill_fillC.

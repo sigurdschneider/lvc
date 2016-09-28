@@ -262,7 +262,7 @@ Qed.
 
 Ltac simpl_forward_setTopAnn :=
   repeat match goal with
-         | [H : ann_R eq (fst (forward ?unreachable_code_transform ?ZL
+         | [H : ann_R eq (fst (forward ?reachability_transform ?ZL
                                        ?s ?ST ?a ?sa)) ?sa |- _ ] =>
            let X := fresh "H" in
            match goal with

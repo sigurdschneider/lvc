@@ -32,6 +32,8 @@ Proof.
   intros. invt diverges; relsimpl.
 Qed.
 
+(** ** Bisimilarity preserves silent divergence *)
+
 Lemma bisim_sound_diverges S `{StateType S} S' `{StateType S'} (σ:S) (σ':S')
 : bisim σ σ' -> diverges σ -> diverges σ'.
 Proof.
@@ -52,6 +54,8 @@ Proof.
     + eapply H2.
 Qed.
 
+(** ** Silently diverging programs are bisimlar *)
+
 Lemma bisim_complete_diverges S `{StateType S} S' `{StateType S'} (σ:S) (σ':S')
 : diverges σ -> diverges σ' -> bisim σ σ'.
 Proof.
@@ -62,9 +66,7 @@ Proof.
 Qed.
 
 
-(** * Three equivalent notions of program equivalence **)
-
-(** ** Prefix Trace Equivalence (partial traces) **)
+(** * Prefix Trace Equivalence (partial traces) **)
 
 (** A prefix is a list of [extevent] *)
 
@@ -92,7 +94,7 @@ Inductive prefix {S} `{StateType S} : S -> list extevent -> Prop :=
   | producesPrefixPrefix (σ:S)
     : prefix σ nil.
 
-(** *** Closedness under silent reduction/expansion *)
+(** ***Closedness under silent reduction/expansion *)
 
 Lemma prefix_star2_silent {S} `{StateType S} (σ σ':S) L
  : star2 step σ nil σ' ->
@@ -119,7 +121,7 @@ Proof.
     + econstructor 4.
 Qed.
 
-(** *** Bisimilarity is sound for prefix inclusion *)
+(** ** Bisimilarity is sound for prefix inclusion *)
 
 Lemma bisim_terminate {S1} `{StateType S1} (σ1 σ1':S1)
       {S2} `{StateType S2} (σ2:S2)
@@ -202,7 +204,7 @@ Proof.
   eapply NonParametricBiSim.bisim_sym; eauto.
 Qed.
 
-(** *** The only prefix is empty if and only if the state diverges *)
+(** ** The only prefix is empty if and only if the state diverges *)
 
 Lemma produces_only_nil_diverges S `{StateType S} (σ:S)
 : (forall L, prefix σ L -> L = nil) -> diverges σ.
@@ -255,7 +257,7 @@ Proof.
     exfalso. eapply diverges_never_terminates; eauto using diverges_reduction_closed.
 Qed.
 
-(** *** Prefix Equivalence is sound for divergence *)
+(** ** Prefix Equivalence is sound for divergence *)
 
 Lemma produces_diverges S `{StateType S} S' `{StateType S'} (σ:S) (σ':S')
 : (forall L, prefix σ L <-> prefix σ' L)
@@ -287,7 +289,7 @@ Proof.
     congruence.
 Qed.
 
-(** *** Several closedness properties *)
+(** ** Several closedness properties *)
 
 Lemma prefix_star_activated S `{StateType S} (σ1 σ1' σ1'':S) evt L
 : star2 step σ1 nil σ1'
@@ -350,7 +352,7 @@ Proof.
     eapply prefix_star2_silent; eauto.
 Qed.
 
-(** ** Trace Equivalence (maximal traces) *)
+(** * Trace Equivalence (maximal traces) *)
 
 CoInductive stream (A : Type) : Type :=
 | sil : stream A
@@ -374,7 +376,7 @@ CoInductive coproduces {S} `{StateType S} : S -> stream extevent -> Prop :=
     -> normal2 step σ'
     -> coproduces σ (sons (EEvtTerminate r) sil).
 
-(** *** Several closedness properties *)
+(** ** Several closedness properties *)
 
 Lemma coproduces_reduction_closed_step S `{StateType S} (σ σ':S) L
 : coproduces σ L -> step σ EvtTau σ'  -> coproduces σ' L.
@@ -399,7 +401,7 @@ Proof.
 Qed.
 
 
-(** *** Bisimilarity is sound for maximal traces *)
+(** ** Bisimilarity is sound for maximal traces *)
 Lemma bisim_coproduces S `{StateType S} S' `{StateType S'} (sigma:S) (σ':S')
   : bisim sigma σ' -> forall L, coproduces sigma L -> coproduces σ' L.
 Proof.
@@ -419,7 +421,7 @@ Proof.
     econstructor; eauto.
 Qed.
 
-(** *** Prefix trace equivalence coincides with maximal trace equivalence. *)
+(** ** Prefix trace equivalence coincides with maximal trace equivalence. *)
 
 Lemma produces_coproduces' S `{StateType S} S' `{StateType S'} (σ:S) (σ':S')
 : (forall L, prefix σ L <-> prefix σ' L)
