@@ -1,5 +1,6 @@
 Require Import List Map Env AllInRel Exp AppExpFree RenamedApart.
-Require Import IL Annotation InRel AutoIndTac Liveness LabelsDefined.
+Require Import IL Annotation InRel AutoIndTac.
+Require Import Liveness LabelsDefined.
 Require Import Spilling DoSpill DoSpillRm SpillUtil ReconstrLive.
 
 Set Implicit Arguments.
@@ -409,6 +410,22 @@ Inductive ann_P
       -> ann_P P (annF a anF an2)
 .
 
+
+
+Lemma union_incl_split2
+      (X : Type)
+      `{OrderedType X}
+      (s t u : ⦃X⦄)
+  :
+    s ∪ t ⊆ u -> s ⊆ u /\ t ⊆ u
+.
+Proof.
+  intros uni.
+  split;
+    rewrite <- uni;
+    cset_tac.
+Qed.
+
 Lemma ann_P_get
       (A : Type)
       (P : A -> Prop)
@@ -422,50 +439,68 @@ Proof.
 Qed.
 
 
+Definition union_fs
+           (a : ⦃var⦄ * ⦃var⦄)
+  : ⦃var⦄
+  :=
+    fst a ∪ snd a
+.
+
+
+(*
 Lemma inj_renamedApart_ann_P
       (s : stmt)
       (ra : ann (⦃var⦄ * ⦃var⦄))
+      (VD: ⦃var⦄)
       (f : var -> var)
   :
-      renamedApart s ra
-      -> injective_on (fst (getAnn ra) ∪ snd (getAnn ra)) f
-      -> ann_P (fun (a : ⦃var⦄ * ⦃var⦄) 
-                => injective_on (fst a ∪ snd a) f) ra
+    
+    -> renamedApart s ra
+    -> injective_on VD f
+    -> ann_P (fun (a : ⦃var⦄ * ⦃var⦄) 
+              => injective_on (RM ∪ fst a ∪ snd a) f) ra
 . 
 Proof.
   intros rena inj.
   induction rena;
     simpl in *; eauto.
+  - invc H2.
+    rewrite <- H3 in IHrena.
+    econstructor; eauto;
+      [ | apply IHrena ];
+      eapply injective_on_incl;
+      eauto;
+      unfold union_fs;
+      simpl;
+      [ | rewrite H6; rewrite H7; rewrite H1 ];
+        clear; cset_tac.
+  - invc H2; invc H3.
+    rewrite <- H4 in IHrena1.
+    rewrite <- H2 in IHrena2.
+    econstructor; eauto;
+      [ | apply IHrena1 | apply IHrena2 ];
+      eapply injective_on_incl;
+      eauto;
+      unfold union_fs;
+      simpl;
+      [
+      | rewrite H7; rewrite H8; rewrite <- H1
+      | rewrite H9; rewrite H10; rewrite <- H1 ];
+      clear; cset_tac.
   - econstructor; eauto.
-    apply IHrena.
     eapply injective_on_incl; eauto.
-    rewrite H1.
-    unfold pe in H2.
-    invc H2. 
-    rewrite H6.
-    rewrite H7.
-    simpl.
+    unfold union_fs; simpl.
     clear; cset_tac.
   - econstructor; eauto.
-    + apply IHrena1; eauto.
+    eapply injective_on_incl; eauto.
+    unfold union_fs; simpl.
+    clear; cset_tac.
+  - econstructor; eauto.
+    + invc H4.
       eapply injective_on_incl; eauto.
-      invc H2.
+      unfold union_fs.
       simpl.
-      rewrite H7.
-      rewrite H8.
-      rewrite <- H1.
       clear; cset_tac.
-    + apply IHrena2; eauto.
-      eapply injective_on_incl; eauto.
-      invc H3.
-      simpl.
-      rewrite H7.
-      rewrite H8.
-      rewrite <- H1.
-      clear; cset_tac.
-  - econstructor; eauto.
-  - econstructor; eauto.
-  - econstructor; eauto.
     + intros; inv_get.
       eapply H1; eauto.
       eapply injective_on_incl; eauto.
@@ -473,6 +508,7 @@ Proof.
       exploit H2; eauto.
       unfold funConstr in H8.
       destruct H8 as [fst_of [ uni [ disj_D disj_Dt]]].
+      unfold union_fs.
       rewrite fst_of.
       rewrite <- H5.
       enough (snd (getAnn an1) ∪ of_list (fst x)
@@ -481,7 +517,10 @@ Proof.
         rewrite union_assoc.
         rewrite union_comm.
         rewrite union_assoc.
-        rewrite enouf.
+        simpl.
+        eapply union_incl_split2 in enouf as [enouf_Rm enouf_ofl].
+        rewrite enouf_Rm.
+        rewrite enouf_ofl.
         clear; cset_tac.
       }
       eapply incl_list_union.
@@ -491,20 +530,16 @@ Proof.
     + invc H4.
       apply IHrena.
       eapply injective_on_incl; eauto.
+      unfold union_fs.
       rewrite <- H6.
+      simpl.
       rewrite H9.
       rewrite H10.
-      simpl.
       rewrite <- H5.
       clear; cset_tac.
 Qed.
+*)
 
-Definition union_fs
-           (a : ⦃var⦄ * ⦃var⦄)
-  : ⦃var⦄
-  :=
-    fst a ∪ snd a
-.
 
 Lemma disj_renamedApart_ann_P
       (ra : ann (⦃var⦄ * ⦃var⦄))
@@ -522,13 +557,106 @@ Proof.
     simpl in *; eauto.
   - econstructor; eauto.
     apply IHrena; eauto.
+    assert (union_fs (getAnn an) ⊆ union_fs (D, D')) as scd.
+    {
+      invc H2.
+      unfold union_fs.
+      simpl.
+      rewrite H1.
+      rewrite H6.
+      rewrite H7.
+      clear; cset_tac.
+    }
     eapply disj_1_incl;
       [ eapply disj_2_incl | ];
       eauto.
-    Focus 2.
-    unfold union_fs.
-    simpl.
-Admitted.
+    apply incl_lookup_set_morphism; eauto.
+    econstructor; econstructor; eauto.
+  - invc H2; invc H3.
+    econstructor; eauto.
+    + apply IHrena1; eauto.
+      assert (union_fs (getAnn ans)
+                       ⊆ union_fs (D, D')) as scd.
+      {
+        unfold union_fs.
+        rewrite <- H4.
+        simpl.
+        rewrite <- H1.
+        rewrite H7.
+        rewrite H8.
+        clear; cset_tac.
+      }
+      eapply disj_1_incl;
+        [ eapply disj_2_incl | ];
+        eauto.
+      apply incl_lookup_set_morphism; eauto.
+      econstructor; econstructor; eauto.
+    + apply IHrena2; eauto.
+      assert (union_fs (getAnn ant)
+                       ⊆ union_fs (D, D')) as scd.
+      {
+        unfold union_fs.
+        rewrite <- H2.
+        rewrite <- H1.
+        rewrite H9.
+        rewrite H10.
+        simpl.
+        clear; cset_tac.
+      }
+      eapply disj_1_incl;
+        [ eapply disj_2_incl | ];
+        eauto.
+      apply incl_lookup_set_morphism; eauto.
+      econstructor; econstructor; eauto.
+  - econstructor; eauto.
+  - econstructor; eauto.
+  - econstructor; eauto.
+    intros; inv_get.
+    + eapply H1; eauto.
+      assert (union_fs (getAnn an1) ⊆ union_fs (D, D')) as scd.
+      { 
+        unfold union_fs.
+        rewrite <- H5.
+        exploit H2; eauto.
+        destruct H8 as [fst_of [ uni [ disj_D disj_Dt]]].
+        rewrite fst_of.
+        simpl. 
+        enough (snd (getAnn an1) ∪ of_list (fst x)
+                    ⊆ list_union (defVars ⊜ F ans)) as enouf.
+        {
+          rewrite union_assoc.
+          rewrite union_comm.
+          rewrite union_assoc.
+          rewrite enouf.
+          clear; cset_tac.
+        }
+        eapply incl_list_union.
+        apply zip_get; eauto.
+        rewrite union_comm.
+        reflexivity.
+      }
+      eapply disj_1_incl;
+        [ eapply disj_2_incl | ];
+        eauto.
+      apply incl_lookup_set_morphism; eauto.
+      econstructor; econstructor; eauto.
+    + eapply IHrena; eauto.
+      assert (union_fs (getAnn ant) ⊆ union_fs (D, D')) as scd.
+      {
+        unfold union_fs.
+        rewrite <- H5.
+        invc H4.
+        rewrite H9.
+        rewrite H10.
+        simpl.
+        clear; cset_tac.
+      }
+      eapply disj_1_incl;
+        [ eapply disj_2_incl | ];
+        eauto.
+      apply incl_lookup_set_morphism; eauto.
+      econstructor; econstructor; eauto.
+Qed.
 (*
 Lemma inj_substmt
       (ra : ann (⦃var⦄ * ⦃var⦄))
@@ -562,19 +690,599 @@ Proof.
 
 
 
+Lemma Sp_sub_RM
+      (ZL : list params)
+      (k : nat)
+      (Λ : list (⦃var⦄ * ⦃var⦄))
+      (R M : ⦃var⦄)
+      (s : stmt)
+      (sl : spilling)
+  :
+    spill_sound k ZL Λ (R,M) s sl
+    -> getSp sl ⊆ R ∪ M
+.
+Proof.
+  intros spillSnd.
+  invc spillSnd;
+    cset_tac.
+Qed.
+
+
+(* There are some changes in the assumptions necessary 
+Lemma inj_ann_P_Sp
+      (ra : ann (⦃var⦄ * ⦃var⦄))
+      (s : stmt)
+      (sl : spilling)
+      (f : var -> var)
+      (ZL : list params)
+      (k : nat)
+      (Λ : list (⦃var⦄ * ⦃var⦄))
+      (R M VD : ⦃var⦄)
+  : R ∪ M ⊆ VD
+    -> union_fs (getAnn ra) ⊆ VD
+    -> renamedApart s ra
+    -> spill_sound k ZL Λ (R,M) s sl
+    -> injective_on VD f
+    -> ann_P (fun a => injective_on (fst (fst a)) f) sl 
+.
+Proof.
+  intros RM_VD uni_VD rena spillSnd inj_VD.
+  unfold union_fs in inj_VD.
+  unfold union_fs in uni_VD.
+  general induction spillSnd;
+    invc rena;
+    simpl in *;
+    eauto.
+  - invc H12.
+    apply union_incl_split2 in RM_VD as [R_VD M_VD].
+    econstructor; simpl; eauto.
+    + admit. 
+    + eapply IHspillSnd;
+        [ | | eauto | eauto | eauto];
+        [ rewrite H0; rewrite H
+        | rewrite <- H4; rewrite H10; rewrite H13;
+          unfold union_fs; simpl;
+          rewrite <- uni_VD; rewrite H11;
+          clear; cset_tac].
+      enough (VD [=] VD ∪ {x; Ds}) as VD_xDs.
+      { 
+        rewrite VD_xDs.
+        rewrite R_VD; rewrite M_VD.
+        clear; cset_tac.
+      }
+      symmetry.
+      rewrite union_comm.
+      eapply incl_union_absorption.
+      rewrite <- uni_VD.
+      rewrite H11.
+      clear; cset_tac.
+  - econstructor; simpl; eauto.
+
+Admitted.
+*)
+
+(*
+  intros rena spillSnd inj_ra.
+  unfold union_fs in inj_ra.
+  eapply inj_renamedApart_ann_P in inj_ra; eauto.
+  general induction spillSnd;
+    invc rena;
+    invc inj_ra;
+    simpl in *;
+    eauto.
+  - econstructor; simpl; eauto.
+    + eapply injective_on_incl; eauto.
+      rewrite H.
+      clear; cset_tac.
+    + eapply IHspillSnd. eauto.
+      invc H12.
+      econstructor; eauto.
+      eapply injective_on_incl; eauto.
+        e
+        rewrite H14; rewrite H15; simpl;
+          [ rewrite H0 | ];
+          rewrite H;
+          rewrite R_ra; rewrite M_ra;
+            rewrite H11;
+            clear; cset_tac.
+  - econstructor; simpl; eauto.
+    + eapply injective_on_incl; eauto.
+      rewrite H.
+      rewrite R_ra.
+      reflexivity.
+  - invc H12; invc H13.
+    econstructor; simpl; eauto.
+    + eapply injective_on_incl; eauto.
+      rewrite H.
+      rewrite R_ra.
+      reflexivity.
+    + eapply IHspillSnd1; eauto.
+        rewrite <- H3.
+        rewrite H16; rewrite H17; simpl.
+          [ rewrite H0 | ];
+          rewrite H;
+          rewrite R_ra; rewrite M_ra.
+            rewrite <- H8.
+            clear; cset_tac.
+                            
+      rewrite H0; rewrite H.
+      rewrite R_ra.
+      rewrite
+Admitted.
+
+
+ *)
+(*
+Lemma injective_on_map_incl
+      (X : Type)
+      `{OrderedType X}
+      (D s t : ⦃X⦄)
+      (f : X -> X)
+  :
+    injective_on D f
+    -> s ⊆ D
+    -> t ⊆ D
+    -> map f s ⊆ map f t
+    -> s ⊆ t
+.
+Proof.
+  intros.
+  unfold injective_on in H0.
+  hnf.
+  intros.
+  hnf in H3.
+
+Admitted.
+*)
+
+Lemma injective_on_map_inter
+      (X : Type)
+      `{OrderedType X}
+      (D s t : ⦃X⦄)
+      (f : X -> X)
+  :
+    Proper (_eq ==> _eq) f
+    -> injective_on D f
+    -> s ⊆ D
+    -> t ⊆ D
+    -> map f (s ∩ t) [=] map f s ∩ map f t
+.
+Proof.
+  intros.
+  apply incl_eq.
+  - hnf; intros.
+    apply inter_iff in H4 as [a_s a_t].
+    apply map_iff in a_s as [b [b_s b_eq]]; eauto.
+    apply map_iff in a_t as [c [c_s c_eq]]; eauto.
+    unfold injective_on in H1.
+    rewrite b_eq in c_eq.
+    assert (b ∈ D) as b_D by cset_tac.
+    assert (c ∈ D) as c_D by cset_tac.
+    apply (H1 b c) in b_D; eauto.
+    apply map_iff; eauto.
+    exists b.
+    rewrite <- b_D in c_s.
+    split; eauto.
+    cset_tac.
+  - hnf; intros.
+    apply map_iff in H4 as [b [b_s b_eq]]; eauto.
+    apply inter_iff in b_s as [b_s b_t].
+    apply inter_iff; split; eauto.
+    + eapply map_iff; eauto.
+    + eapply map_iff; eauto.
+Qed.
+    
+    
+
+
+Lemma add_incl
+      (X : Type)
+      `{OrderedType X}
+      (x : X)
+      (s t : ⦃X⦄)
+  :
+    {x; s} ⊆ t
+    -> x ∈ t /\ s ⊆ t
+.
+Proof.
+  intros.
+  hnf; intros;
+    split; rewrite <- H0;
+      cset_tac.
+Qed.
+
+
+
+Lemma slp_disj_union_incl
+      (s t VD : ⦃var⦄)
+      (Z : params)
+      (slot : var -> var)
+  :
+    injective_on VD slot
+    -> s ⊆ VD
+    -> t ⊆ VD
+    -> of_list Z ⊆ VD
+    -> disj (s ∩ of_list Z) (t ∩ of_list Z)
+    -> (s ∩ of_list Z) ∪ (map slot t ∩ map slot (of_list Z))
+                      ⊆ of_list (slot_lift_params slot t Z)
+.
+Proof.
+  intros inj_VD s_VD t_VD Z_VD H.
+  induction Z; simpl in *; eauto.
+  - rewrite SetOperations.map_empty; eauto.
+    cset_tac.
+  - assert (disj (s ∩ of_list Z) (t ∩ of_list Z)) as disj'.
+    {
+      eapply disj_1_incl; eauto;
+          [ eapply disj_2_incl; eauto | ];
+          clear; cset_tac.
+    }
+    apply add_incl in Z_VD as [a_VD Z_VD].
+    decide (a ∈ t).
+    + assert (a ∈ t ∩ {a; of_list Z}) as a_tZ
+          by (cset_tac).
+      assert (a ∉ s ∩ {a; of_list Z}) as an_sZ.
+      {
+        unfold disj in H.
+        intro N.
+        eapply H; eauto.
+      }
+      assert (s ∩ {a; of_list Z} ⊆ s ∩ (of_list Z)) as elim_a.
+      {
+        hnf; intros.
+        decide (a0 = a).
+        + subst a0. contradiction.
+        + cset_tac.
+      }
+      rewrite elim_a.
+      assert (map slot t ∩ map slot {a; of_list Z}
+                  ⊆ (map slot t ∩ map slot (of_list Z)) ∪ singleton (slot a))
+        as extr_a.
+      {
+        erewrite lookup_set_add; eauto.
+        unfold lookup_set.
+        clear; cset_tac.
+      }
+      rewrite extr_a.
+      rewrite <- union_assoc.
+      rewrite IHZ; eauto.
+      clear; cset_tac.
+        
+    + assert (s ∩ {a; of_list Z} ⊆ singleton a ∪ (s ∩ of_list Z)) as extr_a
+        by cset_tac.
+      rewrite extr_a.
+      assert (a ∉ t ∩ {a; of_list Z}) as an_tZ by cset_tac.
+      assert (map slot t ∩ map slot {a; of_list Z}
+                  ⊆ map slot t ∩ map slot (of_list Z)) as elim_a.
+      {
+        rewrite lookup_set_add; eauto.
+        unfold lookup_set.
+        assert (forall (u v : ⦃var⦄) (x : var),
+                   u ∩ {x; v} ⊆ (u ∩ v) ∪ (u ∩ singleton x))
+          as demo by (clear; cset_tac).
+        rewrite demo.
+        apply union_incl_split.
+        - reflexivity.
+        - rewrite <- map_singleton.
+          rewrite <- injective_on_map_inter; eauto.
+          + assert (t ∩ singleton a [=] ∅) as ta_empty by cset_tac.
+            rewrite ta_empty.
+            rewrite SetOperations.map_empty; eauto.
+            clear; cset_tac.
+          + clear - a_VD; cset_tac.
+      }
+      rewrite elim_a.
+      rewrite union_assoc.
+      rewrite IHZ; eauto.
+      clear; cset_tac.
+Qed.
+
+
+Lemma slp_disj_union_minus_incl
+      (s t VD : ⦃var⦄)
+      (Z : params)
+      (slot : var -> var)
+  :
+    injective_on VD slot
+    -> s ⊆ VD
+    -> t ⊆ VD
+    -> of_list Z ⊆ VD
+    -> disj (s ∩ of_list Z) (t ∩ of_list Z)
+    -> (s ∪ map slot t) \ of_list (slot_lift_params slot t Z)
+               ⊆ s \ of_list Z ∪ map slot t \ map slot (of_list Z)
+.
+Proof.
+  intros.
+  rewrite <- slp_disj_union_incl with (s:=s); eauto.
+  cset_tac.
+Qed.
+
+(*
+Lemma RfMf_lifted_params_sub_elim_lift
+      (R_
+
+  (R_f ∪ map slot M_f) \ of_list (slot_lift_params slot M_f Z0)
+  ⊆ R_f \ of_list Z0 ∪ map slot M_f \ map slot (of_list Z0)
+*)
+
+(*
+  ZL : 〔params〕
+  Lv : 〔⦃var⦄〕
+  l : lab
+  Y : args
+  lv, blv : ⦃var⦄
+  Z : params
+  H : get ZL l Z
+  H0 : get Lv l blv
+  H1 : blv \ of_list Z ⊆ lv
+  H2 : ❬Y❭ = ❬Z❭
+  H3 : forall (n : nat) (y : op), get Y n y -> live_op_sound y lv
+  Λ : 〔⦃var⦄ * ⦃var⦄〕
+  G, R, M : ⦃var⦄
+  k : nat
+  slot : var -> var
+  pir2 : PIR2 Equal Lv (merge Λ)
+  H5 : ❬Y❭ = ❬Z❭
+  D, D' : ⦃var⦄
+  H7 : list_union (Op.freeVars ⊝ Y) ⊆ D
+  H9 : D' [=] ∅
+  H6 : forall (n : nat) (y : op), get Y n y -> isVar y
+  Sp, L, K, R_f, M_f, Sl : ⦃var⦄
+  Z0 : params
+  H12 : Sp ⊆ R
+  H13 : L ⊆ Sp ∪ M
+  H14 : cardinal (R \ K ∪ L) <= k
+  H15 : get ZL l Z0
+  H16 : get Λ l (R_f, M_f)
+  H19 : R_f \ of_list Z0 ⊆ R \ K ∪ L
+  H20 : M_f \ of_list Z0 ⊆ Sp ∪ M
+  H22 : list_union (Op.freeVars ⊝ Y) ⊆ Sl ∪ (R \ K ∪ L)
+  H23 : Sl ⊆ Sp ∪ M
+  inj_R, H8 : injective_on Sp slot
+  H10 : disj (union_fs (D, D')) (map slot (union_fs (D, D')))
+  G' : ⦃var⦄
+  H4 : of_list (nth l (slot_lift_params slot ⊜ (snd ⊝ Λ) ZL) nil)
+       [=] of_list (slot_lift_params slot M_f Z0)
+  ============================
+
+ *)
+
+Lemma disj_incl
+      (X : Type)
+      `{OrderedType X}
+      (D1 D1' D2 D2' : ⦃X⦄)
+  :
+    disj D1 D2
+    -> D1' ⊆ D1
+    -> D2' ⊆ D2
+    -> disj D1' D2'
+.
+Proof.
+  intros.
+  eapply disj_1_incl; eauto.
+  eapply disj_2_incl; eauto.
+Qed.
+
+
+Lemma renamedApart_incl
+      (s : stmt)
+      (ra : ann (⦃var⦄ * ⦃var⦄))
+  :
+    renamedApart s ra
+    -> match ra with
+      | ann1 (D, D') an
+        => union_fs (getAnn an) ⊆ D ∪ D'
+      | ann2 (D, D') ans ant
+        => union_fs (getAnn ans) ⊆ D ∪ D'
+          /\ union_fs (getAnn ant) ⊆ D ∪ D'
+      | annF (D, D') anF ant
+        => (forall (ans : ann (⦃var⦄ * ⦃var⦄)) n,
+              get anF n ans
+              -> union_fs (getAnn ans) ⊆ D ∪ D')
+          /\ union_fs (getAnn ant) ⊆ D ∪ D'
+      | _ => True
+      end
+.
+Proof.
+  intros.
+  invc H; simpl; unfold union_fs; eauto.
+  - invc H4.
+    simpl.
+    rewrite H7.
+    rewrite H8.
+    rewrite H3.
+    clear; cset_tac.
+  - invc H5; invc H6.
+    simpl.
+    rewrite H9.
+    rewrite H10.
+    rewrite H11.
+    rewrite H12.
+    rewrite <- H2.
+    split; clear; cset_tac.
+  - invc H5.
+    split.
+    + intros; inv_get.
+      exploit H2; eauto.
+      destruct H8 as [A [B [C E]]].
+      rewrite A.
+      rewrite <- H6.
+      enough (snd (getAnn ans0) ∪ of_list (fst x) ⊆ list_union (defVars ⊜ F ans))
+        as enouf.
+      {
+        rewrite union_assoc.
+        rewrite union_comm.
+        rewrite union_assoc.
+        rewrite enouf.
+        simpl.
+        clear; cset_tac.
+      }
+      eapply incl_list_union.
+      apply zip_get; eauto.
+      rewrite union_comm.
+      reflexivity.
+    + rewrite H9.
+      rewrite H10.
+      rewrite <- H6.
+      simpl.
+      clear; cset_tac.
+Qed.
+
+
+
+
+
+Lemma x_VD
+      (x : var)
+      (VD D Ds D' : ⦃var⦄)
+      (H9 : D' [=] {x; Ds})
+      (ra_VD : D ∪ D' ⊆ VD)
+  :
+    x ∈ VD
+.
+Proof.
+  rewrite H9 in ra_VD.
+  rewrite <- incl_right in ra_VD.
+  apply add_incl in ra_VD as [x_VD _].
+  eauto.
+Qed.
+
+
+Lemma Rx_VD
+      (x : var)
+      (R M VD : ⦃var⦄)
+      (R_VD : R ⊆ VD)
+      (M_VD : M ⊆ VD)
+      (Sp L K Kx : ⦃var⦄)
+      (H13 : Sp ⊆ R)
+      (H16 : L ⊆ Sp ∪ M)
+      (x_VD : x ∈ VD)
+  :
+    {x; (R \ K ∪ L) \ Kx} ⊆ VD
+.
+Proof.
+  apply incl_add_eq.
+  split; eauto.
+  rewrite H16.
+  rewrite H13.
+  cset_tac.
+Qed.
+
+
+Lemma R'_VD
+      (R M VD : ⦃var⦄)
+      (R_VD : R ⊆ VD)
+      (M_VD : M ⊆ VD)
+      (Sp L K : ⦃var⦄)
+      (H16 : Sp ⊆ R)
+      (H19 : L ⊆ Sp ∪ M)
+  :
+    R \ K ∪ L ⊆ VD
+.
+Proof.
+  rewrite H19.
+  rewrite H16.
+  cset_tac.
+Qed.
+  
+
+
+
+Lemma M'_VD
+      (R M VD : ⦃var⦄)
+      (R_VD : R ⊆ VD)
+      (M_VD : M ⊆ VD)
+      (Sp : ⦃var⦄)
+      (H13 : Sp ⊆ R)
+  :
+    Sp ∪ M ⊆ VD
+.
+Proof.
+  cset_tac.
+Qed.
+
+
+
+Lemma Rf_VD
+      (R M VD : ⦃var⦄)
+      (R_VD : R ⊆ VD)
+      (M_VD : M ⊆ VD)
+      (Sp L K R_f : ⦃var⦄)
+      (Z0 : params)
+      (H11 : Sp ⊆ R)
+      (H12 : L ⊆ Sp ∪ M)
+      (H18 : R_f \ of_list Z0 ⊆ R \ K ∪ L)
+      (Z_VD : of_list Z0 ⊆ VD)
+  :
+    R_f ⊆ VD
+.
+Proof.
+  assert (R_f ⊆ R \ K ∪ L ∪ of_list Z0) as H18'.
+  {
+    rewrite <- H18.
+    clear; cset_tac.
+  }
+  rewrite H18'.
+  rewrite H12.
+  rewrite H11.
+  cset_tac.
+Qed.
+
+
+
+Lemma Mf_VD
+      (R M VD : ⦃var⦄)
+      (R_VD : R ⊆ VD)
+      (M_VD : M ⊆ VD)
+      (Sp M_f : ⦃var⦄)
+      (Z0 : params)
+      (H11 : Sp ⊆ R)
+      (H19 : M_f \ of_list Z0 ⊆ Sp ∪ M)
+      (Z_VD : of_list Z0 ⊆ VD)
+  :
+    M_f ⊆ VD
+.
+Proof.
+  assert (M_f ⊆ Sp ∪ M ∪ of_list Z0) as H19'.
+  {
+    rewrite <- H19.
+    clear; cset_tac.
+  }
+  rewrite H19'.
+  rewrite H11.
+  clear - R_VD M_VD Z_VD; cset_tac.
+Qed.
+
+
+
+
 
 Lemma reconstr_live_small
-      ZL Λ Lv s G k R M sl slot al ra
+      (ZL : list params)
+      (Λ : list (⦃var⦄ * ⦃var⦄))
+      (Lv : list ⦃var⦄)
+      (s : stmt)
+      (G R M VD: ⦃var⦄)
+      (k : nat)
+      (sl : spilling)
+      (slot : var -> var)
+      (al : ann ⦃var⦄)
+      (ra : ann (⦃var⦄ * ⦃var⦄))
   :
-    let DD := fst (getAnn ra) ∪ snd (getAnn ra) in
-    injective_on DD slot
-    -> disj DD (map slot DD)
+    R ⊆ VD
+    -> M ⊆ VD
+    -> union_fs (getAnn ra) ⊆ VD
+    -> injective_on VD slot
+    -> disj VD (map slot VD)
     -> renamedApart s ra
     -> PIR2 Equal Lv (merge Λ)
+    -> PIR2 (fun (rm : ⦃var⦄ * ⦃var⦄) (Z : params)
+            => disj (fst rm ∩ of_list Z) (snd rm ∩ of_list Z)
+              /\ of_list Z ⊆ VD) Λ ZL
     -> app_expfree s
     -> live_sound Imperative ZL Lv s al
     -> spill_sound k ZL Λ (R,M) s sl
-    -> spill_live sl al
+    -> spill_live VD sl al
     -> getAnn
         (reconstr_live
            (slot_merge slot Λ)
@@ -585,19 +1293,21 @@ Lemma reconstr_live_small
         ⊆ R ∪ map slot M ∪ G
 .
 Proof.
-  intros DD inj_slot DD_disj rena pir2 aeFree lvSnd spillSnd spilli.
-  eapply inj_renamedApart_ann_P in inj_slot; eauto.
-  eapply disj_renamedApart_ann_P in DD_disj; eauto.
+  intros R_VD M_VD ra_VD inj_VD VD_disj rena pir2 pir3 aeFree lvSnd spillSnd spilli.
+  
+  unfold union_fs in ra_VD.
   assert (injective_on (getSp sl) slot) 
-    as inj_R by admit.
-  (*eapply inj_substmt in rena as inj_sub; eauto.*)
+    as inj_Sp.
+  {
+    eapply injective_on_incl; eauto.
+    rewrite Sp_sub_RM; [ | eauto].
+    clear - R_VD M_VD; cset_tac.
+  }
   general induction lvSnd;
-    invc rena;
+    inv rena;
     invc aeFree;
     invc spillSnd;
     invc spilli;
-    invc inj_slot;
-    invc DD_disj;
     apply reconstr_live_small_s;
     eauto;
       intros G'; simpl;
@@ -608,27 +1318,55 @@ Proof.
         simpl;
         rewrite empty_cardinal;
         simpl in *.
-  - erewrite IHlvSnd with (R:={x; (R \K ∪ L) \Kx}) 
+  - assert (x ∈ VD) as x_VD by (eapply x_VD; eauto).
+    assert ({x; (R \ K ∪ L) \ Kx} ⊆ VD) as Rx_VD
+        by (eapply Rx_VD with (R:=R) (M:=M); eauto).
+    assert (Sp ∪ M ⊆ VD) as M'_VD
+        by (eapply M'_VD with (R:=R) (M:=M); eauto).
+    erewrite IHlvSnd with (R:={x; (R \K ∪ L) \Kx}) 
                           (M:=Sp ∪ M)
-                          (ra:=an);
+                          (ra:=an)
+                          (VD:=VD);
       eauto.
     + rewrite H19.
       clear; cset_tac.
-    + eapply injective_on_incl with (D:=DD); eauto.
-      subst DD.
-      admit.
-  - rewrite IHlvSnd1 with (R:=R \ K ∪ L)
+    + apply renamedApart_incl in rena.
+      rewrite rena.
+      eauto.
+    + eapply injective_on_incl with (D:=VD) ; eauto.
+      rewrite Sp_sub_RM; [ | eauto].
+      rewrite Rx_VD.
+      rewrite M'_VD.
+      clear; cset_tac.
+  - assert (R \ K ∪ L ⊆ VD) as R'_VD
+        by (eapply R'_VD with (R:=R) (M:=M); eauto).
+    assert (Sp ∪ M ⊆ VD) as M'_VD
+        by (eapply M'_VD with (R:=R) (M:=M); eauto).
+    apply renamedApart_incl in rena as [rena1 rena2].
+    rewrite IHlvSnd1 with (R:=R \ K ∪ L)
                           (M:=Sp ∪ M)
-                          (ra:=ans);
+                          (ra:=ans)
+                          (VD:=VD);
       eauto.
     + rewrite IHlvSnd2 with (R:=R \ K ∪ L)
                             (M:=Sp ∪ M)
-                            (ra:=ant);
+                            (ra:=ant)
+                            (VD:=VD);
         eauto.
-      rewrite H20.
+      * rewrite H20.
+        clear; cset_tac.
+      * rewrite rena2. eauto.
+      * eapply injective_on_incl with (D:=VD); eauto.
+        rewrite Sp_sub_RM; [| eauto].
+        rewrite R'_VD.
+        rewrite M'_VD.
+        clear; cset_tac.
+    + rewrite rena1. eauto.
+    + eapply injective_on_incl with (D:=VD); eauto.
+      rewrite Sp_sub_RM; [| eauto].
+      rewrite R'_VD.
+      rewrite M'_VD.
       clear; cset_tac.
-      * admit.
-    + admit.
   - repeat apply union_incl_split.
     + apply incl_union_left.
       eapply lifted_args_in_RL_slot_SpM; eauto.
@@ -641,73 +1379,23 @@ Proof.
         reflexivity.
       }
       rewrite H4.
-(*
-      assert ((R_f ∪ map slot M_f) 
-                \ of_list (slot_lift_params slot M_f Z0)
-           ⊆ R_f \ of_list Z0 ∪ map slot M_f \ map slot (of_list Z0)).
-      { 
-
-
-assert (of_list Z0 \ M_f ∪ map slot (of_list Z0 ∩ M_f)
-        ⊆ of_list (slot_lift_params slot M_f Z0)).
-      { clear - inj_slot.
-        - apply union_incl_split.
-          + hnf.
-            intros a a_in.
-            apply diff_iff in a_in as [a_in a_out].
-            apply of_list_1 in a_in.
-            induction a_in; simpl.
-            * rewrite H.
-              rewrite H in a_out.
-              decide (y ∈ M_f); simpl; eauto with cset.
-            * cset_tac.
-          + hnf.
-            intros a a_in.
-            assert (forall s t : ⦃var⦄,
-                       map slot (s ∩ t) [=] map slot s ∩ map slot t)
-                   as injective_set_inter.
-            {
-              clear - inj_slot.
-              intros s t a.
-              split; intros a_in.
-              - apply map_iff in a_in as [b [b_in b_eq]]; eauto.
-                rewrite b_eq.
-                apply inter_iff.
-                apply inter_iff in b_in as [bs bt].
-                split; apply map_1; eauto.
-              - apply inter_iff in a_in.
-                destruct a_in as [a_s a_t].
-                apply map_iff in a_s as [b [b_in b_eq]]; eauto.
-                apply map_iff in a_t as [b' [b'_in b'_eq]]; eauto.
-                rewrite b_eq in b'_eq.
-                apply inj_slot in b'_eq; [ | admit | admit].
-                rewrite <- b'_eq in b'_in.
-                rewrite b_eq.
-                apply map_1; eauto.
-                cset_tac.
-            }   
-            apply injective_set_inter in a_in.
-            unfold slot_lift_params.
-            general induction Z0; simpl; eauto.
-            admit. 
+      eapply get_PIR2 in pir3; eauto.
+      destruct pir3 as [disj' Z_VD].      
+      assert (R_f ⊆ VD) as Rf_VD
+          by (eapply Rf_VD with (R:=R) (M:=M) (L:=L); eauto).
+      assert (M_f ⊆ VD) as Mf_VD
+          by (eapply Mf_VD with (R:=R) (M:=M); eauto).
+      erewrite slp_disj_union_minus_incl with (VD:=VD); eauto.
+      * rewrite H18.
+        rewrite <- lookup_set_minus_eq; eauto; swap 1 2.
+        {
+          eapply injective_on_incl with (D:=VD); eauto.
+          rewrite Z_VD.
+          rewrite Mf_VD.
+          clear; cset_tac.
         }
-      rewrite <- H7.
-      assert (forall s t u : ⦃var⦄,
-                 (s ∪ t) \ u [=] s \ u ∪ t \ u) by cset_tac.
-      rewrite H9.
-      apply union_incl_split.
-      + clear; cset_tac.
-        admit. 
-      + admit.
-      }
-      rewrite H7.
-      rewrite H18.
-      eapply lookup_set_incl with (m:=slot) in H19; eauto.
-      unfold lookup_set in H19.
-      rewrite injective_map_minus in H19; eauto; [ | admit | admit ].
-      rewrite H19.
-      clear; cset_tac.*)
-      admit.
+        rewrite lookup_set_incl; eauto.
+        clear; cset_tac.
     + clear; cset_tac.
   - rewrite H9.
     clear; cset_tac.
@@ -716,140 +1404,53 @@ assert (of_list Z0 \ M_f ∪ map slot (of_list Z0 ∩ M_f)
     rewrite slot_lift_params_app; eauto with len.
     rewrite <- map_app.
     apply union_incl_split.
-    + rewrite IHlvSnd with (ra:=ant); eauto with len.
+    assert (R \ K ∪ L ⊆ VD) as R'_VD
+        by (eapply R'_VD with (R:=R) (M:=M); eauto).
+    assert (Sp ∪ M ⊆ VD) as M'_VD
+        by (eapply M'_VD with (R:=R) (M:=M); eauto).
+    + apply renamedApart_incl in rena as [renaF rena2].
+      rewrite IHlvSnd with (R:=R\K ∪ L)
+                           (M:=Sp ∪ M)
+                           (ra:=ant)
+                           (VD:=VD); eauto with len.
       * clear; cset_tac.
-      * admit.
-      * admit.
-    + clear; cset_tac.
-
-Qed.
-    + c
-      assert (of_list (slot_lift_params slot M_f Z0)
-              [=] of_list Z0 \ M_f ∪ map slot (of_list Z0 ∩ M_f)).
-      { clear - inj_slot.
-        apply set_incl.
-        - apply union_incl_split.
-          + hnf.
-            intros a a_in.
-            apply diff_iff in a_in as [a_in a_out].
-            apply of_list_1 in a_in.
-            induction a_in; simpl.
-            * rewrite H.
-              rewrite H in a_out.
-              decide (y ∈ M_f); simpl; eauto with cset.
-            * cset_tac.
-          + hnf.
-            intros a a_in.
-            assert (forall s t : ⦃var⦄,
-                       map slot (s ∩ t) [=] map slot s ∩ map slot t)
-                   as injective_set_inter.
-            {
-              clear - inj_slot.
-              intros s t a.
-              split; intros a_in.
-              - apply map_iff in a_in as [b [b_in b_eq]]; eauto.
-                rewrite b_eq.
-                apply inter_iff.
-                apply inter_iff in b_in as [bs bt].
-                split; apply map_1; eauto.
-              - apply inter_iff in a_in.
-                destruct a_in as [a_s a_t].
-                apply map_iff in a_s as [b [b_in b_eq]]; eauto.
-                apply map_iff in a_t as [b' [b'_in b'_eq]]; eauto.
-                rewrite b_eq in b'_eq.
-                apply inj_slot in b'_eq; [ | admit | admit].
-                rewrite <- b'_eq in b'_in.
-                rewrite b_eq.
-                apply map_1; eauto.
+      * rewrite rena2.
+        clear - ra_VD; cset_tac.
+      * unfold merge. (* TODO : to lemma *)
+        rewrite map_app.
+        unfold merge in H23.
+        rewrite H23.
+        apply PIR2_app.
+        -- apply PIR2_refl; eauto.
+        -- unfold merge in pir2.
+           eauto.
+      * apply PIR2_app; eauto.
+        eapply PIR2_get; eauto.
+        -- intros; inv_get.
+           split.
+           ++ exploit H25; eauto.
+           ++ exploit H8; eauto.
+              destruct H26 as [A [B [C E]]].
+              assert (of_list (fst x0) ⊆ fst (getAnn x2)) as ofl_x2.
+              {
+                clear - A.
+                apply eq_incl in A as [A _].
+                rewrite <- A.
                 cset_tac.
-            }   
-            apply injective_set_inter in a_in.
-            unfold slot_lift_params.
-            general induction Z0; simpl; eauto.
-            admit. 
-        - admit.
-      }
-      rewrite H7.
-
-      assert (forall s t : ⦃var⦄,
-                       map slot (s ∩ t) [=] map slot s ∩ map slot t)
-                   as injective_set_inter by admit.
-      rewrite injective_set_inter.
-      assert ((R_f ∪ map slot M_f)
-        \ (of_list Z0 \ M_f ∪ (map slot (of_list Z0) ∩ map slot M_f))
-        ⊆ R_f \ of_list Z0 ∪ map slot M_f \ map slot (of_list Z0)).
-      {
-        clear; cset_tac.
-      }
-
-            apply of_list_1 in a_in.
-            inv a_in.
-            * isabsurd.
-            * decide (a0 ∈ M_f); simpl.
-              -- isabsurd.
-              -- 
-            unfold slot_lift_params.
-          
-      rewrite SetOperations.map_app; eauto.
-      clear - H18 H19.
-      eapply lookup_set_incl with (m:=slot) in H19; eauto.
-      rewrite lookup_set_minus_eq in H19; eauto.
-      rewrite <- SetOperations.map_app; eauto.
-      rewrite <- H19.
-      assert ((R_f ∪ map slot M_f) 
-                \ of_list (slot_lift_params slot M_f Z0)
-                ⊆ R_f \ of_list Z0 
-                ∪ map slot M_f \ map slot (of_list Z0)).
-      { 
-        clear.
-        unfold slot_lift_params.
-        hnf.
-        intros a a_in.
-        apply diff_iff in a_in as [a_in a_out].
-        assert (forall b, 
-                   b ∈ of_list ((fun z => if [z ∈ M_f] 
-                                          then slot z
-                                          else z) ⊝ Z0)
-                   -> b <> a).
-        {
-          intros b b_in N.
-          apply a_out.
-          rewrite <- N.
-          exact b_in.
-        }
-        apply union_iff.
-        apply union_iff in a_in as [a_in | a_in].
-        - left.
-          apply diff_iff.
-          split; eauto.
-          intro N; apply a_out.
-          
-        
-        rewrite of_list_elements.
-        rewrite map_slot_cut.
-        simpl.
-        cset_tac. }
-      rewrite H.
-      rewrite H16.
-      rewrite H17.
-      rewrite SetOperations.map_app; eauto.
-      clear.
-      cset_tac.
-    + clear. cset_tac.
-  - rewrite H7.
-    cset_tac.
-  - rewrite fst_F; eauto.
-    rewrite slot_merge_app.
-    rewrite slot_lift_params_app; eauto with len.
-    rewrite IHlvSnd with (R:=R \ K ∪ L) (M:=Sp ∪ M); eauto.
-    + clear. cset_tac.
-    + unfold merge.
-      unfold merge in H7.
-      rewrite <- H7.
-      rewrite map_app.
-      apply PIR2_app.
-      * apply PIR2_refl; eauto.
-      * unfold merge in pir2.
-        eauto.
-
-Admitted.
+              }
+              rewrite ofl_x2.
+              
+              exploit renaF as renaF'; eauto.
+              unfold union_fs in renaF'.
+              apply union_incl_split2 in renaF' as [renaF' _].
+              rewrite renaF'.
+              eauto.           
+        -- eauto with len.
+           
+      * eapply injective_on_incl with (D:=VD); eauto.
+        rewrite Sp_sub_RM; [| eauto].
+        rewrite R'_VD.
+        rewrite M'_VD.
+        clear; cset_tac.        
+    + clear; cset_tac.
+Qed.
