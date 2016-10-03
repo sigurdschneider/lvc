@@ -87,7 +87,69 @@ Proof.
       cset_tac.
 Qed.
 
+Lemma ofl_slp_sub_rm:
+  forall (F : 〔params * stmt〕) (als : 〔ann ⦃var⦄〕) (slot : var -> var) 
+         (rms : 〔⦃var⦄ * ⦃var⦄〕) (sl_F : 〔spilling〕),
+    merge rms = getAnn ⊝ als ->
+    forall (ans : 〔ann (⦃var⦄ * ⦃var⦄)〕) (n : nat) (rm : ⦃var⦄ * ⦃var⦄),
+      get rms n rm ->
+      forall (Zs : params * stmt) (sl_s : spilling),
+        get F n Zs ->
+        get sl_F n sl_s ->
+        forall a : ann (⦃var⦄ * ⦃var⦄),
+          get ans n a ->
+          forall al : ann ⦃var⦄,
+            get als n al ->
+            of_list (fst Zs) ⊆ getAnn al ->
+            of_list (slot_lift_params slot (snd rm) (fst Zs)) ⊆ fst rm ∪ map slot (snd rm).
+Proof.
+  intros F als slot rms sl_F H16 ans n rm get_rm Zs sl_s get_Zs get_sls a get_a al get_al H2'.
+  
+  assert (of_list (fst Zs) ⊆ fst rm ∪ snd rm) as ofl_in_rm.
+  {
+    rewrite H2'.
+    clear - H16 get_al get_rm.
+    general induction get_rm;
+      invc get_al; invc H16;
+        simpl in *; eauto.
+  }
+  clear - H2' ofl_in_rm.
+  induction (fst Zs); simpl; eauto.
+  ** clear; cset_tac.
+  ** decide (a ∈ snd rm).
+     --- enough (singleton (slot a) ⊆ map slot (snd rm)) as enouf.
+         {
+           rewrite add_union_singleton.
+           rewrite IHl; eauto.
+           - rewrite enouf.
+             clear; cset_tac.
+           - rewrite <- H2'.
+             clear; eauto with cset.
+           - rewrite <- ofl_in_rm.
+             clear; eauto with cset.
+         }
+         rewrite <- map_singleton.
+         apply lookup_set_incl; eauto.
+         clear - i; cset_tac.
+     --- enough (singleton a ⊆ fst rm) as enouf.
+         {
+           rewrite add_union_singleton.
+           rewrite IHl; eauto.
+           - rewrite enouf.
+             clear; cset_tac.
+           - rewrite <- H2'.
+             clear; eauto with cset.
+           - rewrite <- ofl_in_rm.
+             clear; eauto with cset.
+         }
+         clear - n ofl_in_rm.
+         hnf in ofl_in_rm.
+         assert (a ∈ of_list (a :: l)) by eauto with cset.
+         exploit ofl_in_rm; eauto.
+         apply union_iff in H0 as [H0 | H0]; eauto with cset.
+Qed.
 
+         
 
 Lemma reconstr_live_sound
       (k : nat)
@@ -264,33 +326,10 @@ Proof.
         -- eapply R'_VD with (R:=R) (M:=M); eauto.
         -- eapply M'_VD with (R:=R) (M:=M); eauto.
         -- rewrite rena2; eauto.
-        -- unfold merge.
-           rewrite map_app.
-           rewrite <- H16.
-           apply PIR2_app; eauto.
-        -- (* Code duplication !!! *)
-           apply PIR2_app; eauto.
-           eapply PIR2_get; eauto.
-           ++ intros; inv_get.
-              split.
-              ** exploit H18; eauto.
-              ** exploit H15; eauto.
-                 destruct H31 as [A [B [C E]]].
-                 assert (of_list (fst x0) ⊆ fst (getAnn x1)) as ofl_x2.
-                 {
-                   clear - A.
-                   apply eq_incl in A as [A _].
-                   rewrite <- A.
-                   cset_tac.
-                 }
-                 rewrite ofl_x2.
-                 
-                 exploit renaF as renaF'; eauto.
-                 unfold union_fs in renaF'.
-                 apply union_incl_split2 in renaF' as [renaF' _].
-                 rewrite renaF'.
-                 eauto.
-           ++ eauto with len.
+        -- rewrite merge_app.
+           eapply getAnn_als_EQ_merge_rms; eauto.
+           
+        -- eapply disj_RfMf_pir2_app; eauto.      
       * rewrite <- slot_merge_app.
         apply PIR2_app with (L2:=slot_merge slot Λ);
           swap 1 2.
@@ -298,7 +337,7 @@ Proof.
           apply PIR2_refl; eauto.
         }
         apply PIR2_get.
-        -- intros.
+        -- intros n x x' H4 H5.
            unfold slot_merge in H5.
            inv_get; simpl.
            rename x into Zs.
@@ -306,102 +345,45 @@ Proof.
            rename x4 into sl_s.
            rename x1 into a.
            rename x2 into al.
+           rename H29 into get_al.
+           rename H4 into get_a.
+           rename H27 into get_sls.
+           rename H30 into get_Zs.
+           rename H5 into get_rm.
+                  
            rewrite slot_merge_app.
            rewrite <- map_app.
-           exploit H24; eauto.
-           exploit H20; eauto.
+           exploit H24 as H24'; eauto. (*H31*)
+           exploit H20 as H20'; eauto. (*H32*)
            exploit renaF as renaF'; eauto.
-           exploit H15; eauto.
-           destruct H33 as [A [B [C E]]].
+           exploit H15 as H15'; eauto. (*H33*)
+           exploit H2 as H2'; eauto.
+           destruct H2' as [H2' _].
+           destruct H15' as [A [B [C E]]].
            assert (rm = (fst rm, snd rm)) as rm_eta by apply pair_eta.
-           rewrite rm_eta in H31.
+           rewrite rm_eta in H24'.
            erewrite reconstr_live_small with (VD:=VD)
                                              (ra:=a)
                                              (R:=fst rm)
                                              (M:=snd rm); eauto.
-           ++ exploit H2 as H2'; eauto.
-              destruct H2' as [H2' _].
-              unfold slot_lift_params.
-              repeat apply union_incl_split; [clear; cset_tac | clear; cset_tac | ].
-           (* Code duplication *)
-              assert (of_list (fst Zs) ⊆ fst rm ∪ snd rm) as ofl_in_rm.
-              {
-                rewrite H2'.
-                clear - H16 H29 H5.
-                general induction H5;
-                  invc H29; invc H16;
-                  simpl in *; eauto.
-              }
-              clear - H2' ofl_in_rm.
-              induction (fst Zs); simpl; eauto.
-              ** clear; cset_tac.
-              ** decide (a ∈ snd rm).
-                 --- enough (singleton (slot a) ⊆ map slot (snd rm)) as enouf.
-                     {
-                       rewrite add_union_singleton.
-                       rewrite IHl; eauto.
-                       - rewrite enouf.
-                         clear; cset_tac.
-                       - rewrite <- H2'.
-                         clear; eauto with cset.
-                       - rewrite <- ofl_in_rm.
-                         clear; eauto with cset.
-                     }
-                     rewrite <- map_singleton.
-                     apply lookup_set_incl; eauto.
-                     clear - i; cset_tac.
-                 --- enough (singleton a ⊆ fst rm) as enouf.
-                     {
-                       rewrite add_union_singleton.
-                       rewrite IHl; eauto.
-                       - rewrite enouf.
-                         clear; cset_tac.
-                       - rewrite <- H2'.
-                         clear; eauto with cset.
-                       - rewrite <- ofl_in_rm.
-                         clear; eauto with cset.
-                     }
-                     clear - n ofl_in_rm.
-                     hnf in ofl_in_rm.
-                     assert (a ∈ of_list (a :: l)) by eauto with cset.
-                     exploit ofl_in_rm; eauto.
-                     apply union_iff in H0 as [H0 | H0]; eauto with cset.                
-                     
+           ++ (*clear - pir2_EQ pir3 renaF H24 H20 H15 H2 H16 H20 H8 H13 H14 H H9 H18 ra_VD.*)
+              clear - H2' get_al get_a get_sls get_rm get_Zs H16.
+              repeat apply union_incl_split;
+                [clear; cset_tac | clear; cset_tac
+                 | eapply ofl_slp_sub_rm; eauto ].              
            ++ rewrite renaF'; eauto.
-           ++ rewrite <- H16.
-              unfold merge.
-              rewrite map_app.
-              apply PIR2_app; eauto.
-              unfold merge in pir2_EQ.
-              apply PIR2_sym; eauto.
-              unfold Symmetric.
-              intros x y x_EQ_y; rewrite x_EQ_y; eauto.
-           ++ apply PIR2_app; eauto.
-              eapply PIR2_get; eauto with len.
-              intros; inv_get.
-              split; eauto.
-              ** exploit H15; eauto.
-                 destruct H38 as [A' [B' [C' E']]].
-                 assert (of_list (fst x0) ⊆ fst (getAnn x1)) as ofl_x2.
-                 {
-                   clear - A'.
-                   apply eq_incl in A' as [A' _].
-                   rewrite <- A'.
-                   cset_tac.
-                 }
-                 rewrite ofl_x2.
-                 
-                 exploit renaF as renaF''; eauto.
-                 unfold union_fs in renaF''.
-                 apply union_incl_split2 in renaF'' as [renaF'' _].
-                 rewrite renaF''.
-                 eauto.
+           ++ rewrite merge_app.
+              eapply getAnn_als_EQ_merge_rms; eauto.
+           ++ clear - pir3 H8 H9 H15 renaF H14 H18 ra_VD.
+              eapply disj_RfMf_pir2_app; eauto.
            ++ eapply H20; eauto.
               rewrite <- rm_eta; eauto.
         -- unfold slot_merge.
            do 2 rewrite Coqlib.list_length_map; eauto.
            do 2 rewrite zip_length2; eauto with len.
 
+           
+             
     + symmetry.
       apply zip_length2.
       repeat rewrite length_map.
@@ -422,32 +404,10 @@ Proof.
         eapply H1 with (ra:=x0) (R:=fst x) (M:=snd x); eauto.
         -- exploit renaF as renaF'; eauto.
            rewrite renaF'; eauto.
-        -- unfold merge.
-           rewrite map_app.
-           rewrite <- H16.
-           apply PIR2_app; eauto.
-        -- apply PIR2_app; eauto.
-           eapply PIR2_get; eauto with len.
-           intros; inv_get.
-           split.
-           ++ exploit H18; eauto.
-           ++ exploit H15; eauto.
-              destruct H38 as [A [B [C E]]].
-              assert (of_list (fst x5) ⊆ fst (getAnn x6)) as ofl_x2.
-              {
-                clear - A.
-                apply eq_incl in A as [A _].
-                rewrite <- A.
-                cset_tac.
-              }
-              rewrite ofl_x2.
-              
-              exploit renaF as renaF'; eauto.
-              unfold union_fs in renaF'.
-              apply union_incl_split2 in renaF' as [renaF' _].
-              rewrite renaF'.
-              eauto.           
-      * rewrite <- slot_merge_app.
+        -- rewrite merge_app.
+           eapply getAnn_als_EQ_merge_rms; eauto.
+        -- eapply disj_RfMf_pir2_app; eauto. 
+      *  rewrite <- slot_merge_app.
         apply PIR2_app with (L2:=slot_merge slot Λ);
           swap 1 2.
         {
@@ -477,83 +437,14 @@ Proof.
 
            ++ exploit H2 as H2'; eauto.
               destruct H2' as [H2' _].
-              unfold slot_lift_params.
               rewrite H37.
               repeat apply union_incl_split; [clear; cset_tac | clear; cset_tac | ].
-              (* todo: to lemma *)
-              assert (of_list (fst Zs) ⊆ fst rm ∪ snd rm) as ofl_in_rm.
-              {
-                rewrite H2'.
-                clear - H16 H34 H36.
-                general induction H36;
-                  invc H34; invc H16;
-                  simpl in *; eauto.
-              }
-              induction (fst Zs); simpl; eauto.
-              ** clear; cset_tac.
-              ** decide (a0 ∈ snd rm).
-                 --- enough (singleton (slot a0) ⊆ map slot (snd rm)) as enouf.
-                     {
-                       rewrite add_union_singleton.
-                       rewrite IHl; eauto.
-                       - rewrite enouf.
-                         clear; cset_tac.
-                       - rewrite <- H2'.
-                         clear; eauto with cset.
-                       - rewrite <- ofl_in_rm.
-                         clear; eauto with cset.
-                     }
-                     rewrite <- map_singleton.
-                     apply lookup_set_incl; eauto.
-                     clear - i; cset_tac.
-                 --- enough (singleton a0 ⊆ fst rm) as enouf.
-                     {
-                       rewrite add_union_singleton.
-                       rewrite IHl; eauto.
-                       - rewrite enouf.
-                         clear; cset_tac.
-                       - rewrite <- H2'.
-                         clear; eauto with cset.
-                       - rewrite <- ofl_in_rm.
-                         clear; eauto with cset.
-                     }
-                     clear - n1 ofl_in_rm.
-                     hnf in ofl_in_rm.
-                     assert (a0 ∈ of_list (a0 :: l)) by eauto with cset.
-                     exploit ofl_in_rm; eauto.
-                     apply union_iff in H0 as [H0 | H0]; eauto with cset.                
-                     
-                     
+              eapply ofl_slp_sub_rm; eauto.                     
            ++ exploit renaF as renaF'; eauto.
               rewrite renaF'; eauto.
-           ++ rewrite <- H16.
-              unfold merge.
-              rewrite map_app.
-              apply PIR2_app; eauto.
-              unfold merge in pir2_EQ.
-              apply PIR2_sym; eauto.
-              unfold Symmetric.
-              intros x'' y x_EQ_y; rewrite x_EQ_y; eauto.
-           ++ apply PIR2_app; eauto.
-              eapply PIR2_get; eauto with len.
-              intros; inv_get.
-              split; eauto.
-              ** exploit H15; eauto.
-                 destruct H37 as [A' [B' [C' E']]].
-                 assert (of_list (fst x5) ⊆ fst (getAnn x6)) as ofl_x2.
-                 {
-                   clear - A'.
-                   apply eq_incl in A' as [A' _].
-                   rewrite <- A'.
-                   cset_tac.
-                 }
-                 rewrite ofl_x2.
-                 
-                 exploit renaF as renaF''; eauto.
-                 unfold union_fs in renaF''.
-                 apply union_incl_split2 in renaF'' as [renaF'' _].
-                 rewrite renaF''.
-                 eauto.
+           ++ rewrite merge_app.
+              eapply getAnn_als_EQ_merge_rms; eauto.
+           ++ eapply disj_RfMf_pir2_app; eauto.
            ++ eapply H20; eauto.
               assert ((fst rm, snd rm) = rm)
                 by (destruct rm; simpl; reflexivity).
@@ -568,3 +459,5 @@ Proof.
       simpl.
       split; [ | auto].
       apply reconstr_live_G.
+Qed.
+
