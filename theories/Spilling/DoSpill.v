@@ -3,18 +3,30 @@ Require Import IL Annotation InRel AutoIndTac Liveness LabelsDefined.
 Require Import Spilling SpillUtil.
 
 
-Definition slot_lift_params
+Fixpoint slot_lift_params
            (slot : var -> var)
-           (M : ⦃ var ⦄)
-  := List.map (fun z => if [z ∈ M] then slot z else z)
+           (RM : ⦃var⦄ * ⦃var⦄)
+           (Z : params)
+  : params
+  :=
+    match Z with
+    | nil => nil
+    | z::Z => if [z ∈ fst RM ∩ snd RM]
+             then z::(slot z)::(slot_lift_params slot RM Z)
+             else if [z ∈ fst RM]
+                  then z::(slot_lift_params slot RM Z)
+                  else (slot z)::(slot_lift_params slot RM Z)
+    end
 .
+
 
 
 Lemma slot_lift_params_app
       L1 L2 L1' L2' slot
   :
     length L1 = length L1'
-    -> slot_lift_params slot ⊜ L1 L1' ++ slot_lift_params slot ⊜ L2 L2'
+    -> slot_lift_params slot ⊜ L1 L1'
+                       ++ slot_lift_params slot ⊜ L2 L2'
       = slot_lift_params slot ⊜ (L1 ++ L2) (L1' ++ L2')
 .
 Proof.
@@ -23,14 +35,26 @@ Proof.
 Qed.
 
 
-Definition slot_lift_args
-           (slot : var -> var)
-           (M : set var)
-  : op -> op
-  := (fun y => match y with
-            | Var v => if [v ∈ M] then Var (slot v) else Var v
-            | _ => y
-            end)
+
+Fixpoint slot_lift_args
+         (slot : var -> var)
+         (RM : ⦃var⦄ * ⦃var⦄)
+         (Y : args)
+  : args
+  := match Y with
+     | nil => nil
+     | y::Y
+       => match y with
+         | Var v => if [v ∈ fst RM ∩ snd RM]
+                   then (Var v)::(Var (slot v))
+                               ::(slot_lift_args slot RM Y)
+                   else if [v ∈ fst RM]
+                        then (Var v)::(slot_lift_args slot RM Y)
+                        else (Var (slot v))
+                               ::(slot_lift_args slot RM Y)
+         | _ => y::(slot_lift_args slot RM Y)
+         end
+     end
 .
 
 
@@ -138,7 +162,7 @@ Definition do_spill_rec
           (do_spill' t sl_t)
 
     | stmtApp f Y, ann0 (_,_,Some (inr M))
-      => stmtApp f ((slot_lift_args slot M) ⊝ Y)
+      => stmtApp f ((slot_lift_args slot M Y)
 
     | _,_
       => s
