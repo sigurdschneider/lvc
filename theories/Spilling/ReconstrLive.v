@@ -16,24 +16,24 @@ Fixpoint reconstr_live
   : ann (set var)
   :=
     match s, rm with
-    | stmtLet x e t, ann1 _ rm  (* checked *)
+    | stmtLet x e t, ann1 _ rm
       => let lv_t := reconstr_live Lv ZL (singleton x) t rm in
         ann1 ((getAnn lv_t) \ singleton x ∪ Exp.freeVars e ∪ G) lv_t
 
-    | stmtReturn e, ann0 _ (* checked *)
+    | stmtReturn e, ann0 _
       => ann0 (Op.freeVars e ∪ G)
 
-    | stmtIf e t v, ann2 _ rm_t rm_v (* checked *)
+    | stmtIf e t v, ann2 _ rm_t rm_v
       => let lv_t := reconstr_live Lv ZL ∅ t rm_t in
         let lv_v := reconstr_live Lv ZL ∅ v rm_v in
         ann2 (getAnn lv_t ∪ getAnn lv_v ∪ Op.freeVars e ∪ G) lv_t lv_v
 
-    | stmtApp f Y, ann0 _ (* checked *)
+    | stmtApp f Y, ann0 _
       => let blv := nth (counted f) Lv ∅ in
         let Z   := nth (counted f) ZL nil in
         ann0 (list_union (Op.freeVars ⊝ Y) ∪ blv \ of_list Z ∪ G)
 
-    | stmtFun F t, annF (Some rms) rm_F rm_t (* checked *)
+    | stmtFun F t, annF (Some rms) rm_F rm_t
       => let lv_t := reconstr_live (rms ++ Lv) (fst ⊝ F ++ ZL) ∅ t rm_t in
         let lv_F := (fun ps rm_s => reconstr_live (rms ++ Lv)
                                                (fst ⊝ F ++ ZL)
@@ -262,49 +262,3 @@ Proof.
   apply injective_on_incl with (D:=D); eauto.
   cset_tac.
 Qed.
-
-(*
-Lemma map_slot_cut
-      (slot : var -> var)
-      (s t : ⦃var⦄)
-  :
-    map slot (s ∩ t) [=] map slot s ∩ map slot t
-.
-Admitted.
-
-
-Lemma map_slot_incl
-      (slot : var -> var)
-      (s t : ⦃var⦄)
-  :
-    s ⊆ t <-> map slot s ⊆ map slot t
-.
-Admitted.
-
-*)
-
-(*
-Lemma fst_F
-      F sl_F slot rms
-  :
-    length F = length sl_F
-    -> length F = length rms
-    -> fst
-        ⊝ (fun (Zs : params * stmt)
-             (sls_rm : ann (⦃var⦄ * ⦃var⦄ * ؟ 〔⦃var⦄ * ⦃var⦄〕) * (⦃var⦄ * ⦃var⦄)) =>
-             let (sl_s, rm) := sls_rm in
-             (slot_lift_params slot (fst Zs) rm, do_spill slot (snd Zs) sl_s)) ⊜ F
-        ((fun (sl_s : ann (⦃var⦄ * ⦃var⦄ * ؟ 〔⦃var⦄ * ⦃var⦄〕)) (rm : ⦃var⦄ * ⦃var⦄) => (sl_s, rm))
-           ⊜ sl_F rms)
-        = (slot_lift_params slot ⊜ (fst ⊝ F) rms)
-.
-Proof.
-  intros len.
-
-  general induction F;
-    simpl in *; eauto.
-  destruct sl_F,rms; simpl in *; eauto.
-  + isabsurd.
-  + f_equal. apply IHF; eauto.
-Qed.
-*)
