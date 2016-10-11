@@ -1,6 +1,10 @@
 Require Import List Map Env AllInRel Exp AppExpFree.
 Require Import IL Annotation InRel AutoIndTac Liveness LabelsDefined.
 Require Import Spilling SpillUtil.
+Require Import ToBeOutsourced.
+
+(* this file is too long, should be splitted in DoSpill, DoSpillParams, DoSpillArgs *)
+
 
 
 Fixpoint slot_lift_params
@@ -45,6 +49,52 @@ Definition slot_lift_args
             end)
 .
 
+
+
+
+Lemma slot_lift_args_elem_eq_ext
+      (slot : var -> var)
+      (Sl : ⦃var⦄)
+      (Y Y' : args)
+  :
+    elem_eq Y Y'
+    -> elem_eq (slot_lift_args slot Sl ⊝ Y)
+               (slot_lift_args slot Sl ⊝ Y')
+.
+Proof.
+  apply elem_eq_sym_proof.
+  intros.
+  unfold elem_eq.
+  general induction xl;
+    simpl in *; eauto.
+  - cset_tac.
+  - rewrite IHxl with (xl':=xl');
+      simpl; eauto.
+    + assert (a ∈ of_list xl') as a_in.
+      {
+        rewrite <- H.
+        clear; cset_tac.
+      }
+      enough (slot_lift_args slot Sl a ∈ of_list (slot_lift_args slot Sl ⊝ xl')) as sla_in.
+      {
+        apply incl_singleton in sla_in.
+        rewrite add_union_singleton.
+        rewrite sla_in.
+        clear; cset_tac.
+      }
+      apply of_list_1.
+      apply of_list_1 in a_in.
+      clear H.
+      general induction a_in;
+        simpl; eauto.
+      rewrite H.
+      econstructor; eauto.
+    + rewrite <- H.
+      eauto with cset.
+Qed.
+
+
+
 Fixpoint extend_args
          (Y : args)
          (ib : list bool)
@@ -58,6 +108,26 @@ Fixpoint extend_args
                 end
      end
 .
+
+
+Lemma extend_args_elem_eq_ext
+      (Y : args)
+      (ib : list bool)
+  :
+    elem_eq Y (extend_args Y ib)
+.
+Proof.
+  general induction Y;
+    destruct ib;
+    unfold elem_eq;
+    simpl; eauto.
+  unfold elem_eq in IHY.
+  destruct b; simpl; eauto with cset.
+  rewrite <- IHY.
+  rewrite !add_union_singleton.
+  cset_tac.
+Qed.
+
 
 
 Definition write_spills

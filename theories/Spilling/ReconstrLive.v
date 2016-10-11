@@ -196,23 +196,6 @@ Proof.
 Qed.
 
 
-Lemma reconstr_live_G
-      (Lv : list (set var))
-      (ZL : list (params))
-      (G : set var)
-      (s : stmt)
-      (a : ann (option (list (set var))))
-  :
-    G ⊆ getAnn (reconstr_live Lv ZL G s a)
-.
-Proof.
-  induction s,a; simpl; eauto with cset.
-  - destruct a; simpl; eauto.
-Qed.
-
-
-
-
 Inductive spill_live
           (VD : ⦃var⦄)
   :

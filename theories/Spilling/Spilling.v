@@ -133,3 +133,41 @@ Inductive fv_e_bounded : nat -> stmt -> Prop :=
     -> fv_e_bounded k t
     -> fv_e_bounded k (stmtFun F t)
 .
+
+
+
+
+Lemma Sp_sub_R
+      (ZL : list params)
+      (k : nat)
+      (Λ : list (⦃var⦄ * ⦃var⦄))
+      (R M : ⦃var⦄)
+      (s : stmt)
+      (sl : spilling)
+  :
+    spill_sound k ZL Λ (R,M) s sl
+    -> getSp sl ⊆ R
+.
+Proof.
+  intros spillSnd.
+  invc spillSnd;
+    cset_tac.
+Qed.
+
+
+
+Lemma L_sub_SpM
+      (ZL : list params)
+      (k : nat)
+      (Λ : list (⦃var⦄ * ⦃var⦄))
+      (R M : ⦃var⦄)
+      (s : stmt)
+      (sl : spilling)
+  :
+    spill_sound k ZL Λ (R,M) s sl
+    -> getL sl ⊆ getSp sl ∪ M
+.
+Proof.
+  intros spillSnd.
+  invc spillSnd; cset_tac.
+Qed.

@@ -3,6 +3,8 @@ Require Import IL Annotation InRel AutoIndTac Liveness LabelsDefined.
 Require Import Spilling.
 
 
+(* this file is way too big *)
+
 
 (* move somewhere *)
 Lemma setTopAnn_setTopAnn
@@ -82,9 +84,22 @@ Qed.
 
 
 
-
+(* the name should be changed *)
 Definition merge := List.map (fun (RM : set var * set var)
                                   => fst RM ∪ snd RM).
+
+
+Lemma merge_app
+      (ll1 ll2 : list (⦃var⦄ * ⦃var⦄))
+       :
+         merge (ll1 ++ ll2) = merge ll1 ++ merge ll2
+.
+Proof.
+  unfold merge.
+  rewrite map_app.
+  reflexivity.
+Qed.
+
 
 
 Lemma count_reduce_Sp
@@ -267,6 +282,24 @@ Qed.
 
 
 
+Lemma disj_incl
+      (X : Type)
+      `{OrderedType X}
+      (D1 D1' D2 D2' : ⦃X⦄)
+  :
+    disj D1 D2
+    -> D1' ⊆ D1
+    -> D2' ⊆ D2
+    -> disj D1' D2'
+.
+Proof.
+  intros.
+  eapply disj_1_incl; eauto.
+  eapply disj_2_incl; eauto.
+Qed.
+
+
+
 Lemma count_zero_Empty_Sp
       (sl : spilling)
   :
@@ -338,6 +371,48 @@ Proof.
 Qed.
 
 
+
+Definition clear_L
+           (sl : spilling)
+  :=
+    setTopAnn sl (getSp sl, ∅, getRm sl)
+.
+
+Lemma count_clearL
+      (sl : spilling)
+  :
+    count (clear_L sl) = cardinal (getSp sl)
+.
+Proof.
+  unfold count.
+  unfold clear_L.
+  rewrite getAnn_setTopAnn.
+  simpl.
+  rewrite empty_cardinal.
+  omega.
+Qed.
+
+
+
+Lemma getAnn_als_EQ_merge_rms
+      (Lv : 〔⦃var⦄〕)
+      (als : 〔ann ⦃var⦄〕)
+      (Λ : 〔⦃var⦄ * ⦃var⦄〕)
+      (pir2 : PIR2 Equal (merge Λ) Lv)
+      (rms : 〔⦃var⦄ * ⦃var⦄〕)
+      (H23 : merge rms = getAnn ⊝ als)
+  :
+    PIR2 Equal (merge rms ++ merge Λ) (getAnn ⊝ als ++ Lv)
+.
+Proof.
+  rewrite H23.
+  apply PIR2_app.
+  -- apply PIR2_refl; eauto.
+  -- eauto.
+Qed.
+
+
+(* the following lemmata & definitions could be extracted *)
 Definition clear_SpL
            (sl : spilling)
   :=
