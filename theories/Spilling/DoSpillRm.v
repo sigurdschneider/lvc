@@ -54,6 +54,23 @@ Definition slot_merge
 .
 
 
+Lemma add_anns_add
+      (X : Type)
+      (n m : nat)
+      (x : X)
+      (an : ann X)
+  :
+    add_anns x (n + m) an = add_anns x n (add_anns x m an)
+.
+Proof.
+  general induction n;
+    simpl; eauto.
+  repeat rewrite add_anns_S.
+  rewrite IHn.
+  reflexivity.
+Qed.
+
+
 
 Lemma slot_merge_app
       (L1 L2: list (set var * set var))
@@ -121,46 +138,32 @@ Proof.
     eauto.
 Qed.
 
-
-(*
-
-Definition discard_merge_sl
-           (slot : var -> var)
-  : spilling -> ann (option (list (set var)))
-  :=
-    mapAnn (fun (a : set var * set var * option (list (set var * set var)))
-            => option_map (slot_merge slot) (snd a))
+Lemma do_spill_rm_s_Sp
+      (slot : var -> var)
+      (sl : spilling)
+  :
+    do_spill_rm slot sl
+    = add_anns None (cardinal (getSp sl)) (do_spill_rm slot (clear_Sp sl))
 .
+Proof.
+  rewrite <- count_clearL.
+  unfold clear_L.
+  unfold do_spill_rm.
+  unfold count.
+  rewrite getAnn_setTopAnn.
+  simpl.
+  rewrite add_anns_add.
+
+  destruct sl;
+    rewrite add_anns_add;
+    simpl;
+    rewrite empty_cardinal;
+    simpl;
+    eauto.
+Qed.
 
 
-Fixpoint wrap_ann
-         (X : Type)
-         (wrap : ann X -> ann X)
-         (a : ann X)
-  : ann X
-  :=
-    wrap
-    match a with
-    | ann0 an => ann0 an
-    | ann1 an a1 => ann1 an (wrap_ann wrap a1)
-    | ann2 an a1 a2 => ann2 an (wrap_ann wrap a1) (wrap_ann wrap a2)
-    | annF an aF a1 => annF an (wrap_ann wrap ⊝ aF) (wrap_ann wrap a1)
-    end
-.
 
-
-Definition do_spill_rm
-           (slot : var -> var)
-           (sl : spilling)
-  : ann (option (list (set var)))
-  := discard_merge_sl slot
-                      (wrap_ann
-                         (fun sl => add_anns (∅,∅,None)
-                                           (count sl)
-                                            sl)
-                          sl)
-.
-*)
 
 
 Lemma do_spill_rm_empty

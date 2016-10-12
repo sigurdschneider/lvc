@@ -317,6 +317,29 @@ Proof.
 Qed.
 
 
+Lemma do_spill_empty_Sp
+      (slot : var -> var)
+      (s : stmt)
+      (sl : spilling)
+      (IB : list (list bool))
+  :
+    cardinal (getSp sl) = 0
+    -> do_spill slot s sl IB
+      = write_loads slot (elements (getL sl))
+                    (do_spill_rec slot s sl IB (do_spill slot))
+.
+Proof.
+  intros card_zero.
+  unfold do_spill.
+  apply cardinal_Empty in card_zero.
+  rewrite elements_Empty in card_zero.
+  induction s;
+    rewrite card_zero;
+    rewrite write_spills_empty;
+    fold do_spill;
+    reflexivity.
+Qed.
+
 
 Lemma do_spill_extract_writes
       (slot : var -> var)
@@ -348,6 +371,36 @@ Proof.
     eauto.
 Qed.
 
+
+
+Lemma do_spill_extract_spill_writes
+      (slot : var -> var)
+      (s : stmt)
+      (sl : spilling)
+      (IB : list (list bool))
+  :
+    do_spill slot s sl IB
+    = write_spills slot (elements (getSp sl))
+                   (do_spill slot s (clear_Sp sl) IB)
+.
+Proof.
+  unfold clear_Sp.
+  symmetry.
+  rewrite do_spill_empty_Sp.
+  - rewrite do_spill_rec_s with (Sp':=∅) (L':=getL sl).
+    rewrite setTopAnn_setTopAnn.
+    destruct s,sl;
+      simpl; eauto;
+    do 2 f_equal;
+    destruct a;
+    simpl;
+    destruct o;
+      destruct p;
+      reflexivity.
+  - rewrite getAnn_setTopAnn.
+    simpl.
+    eauto.
+Qed.
 
 
 Lemma do_spill_sub_empty_invariant

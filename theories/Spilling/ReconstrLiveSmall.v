@@ -2,86 +2,80 @@ Require Import List Map Env AllInRel Exp AppExpFree RenamedApart.
 Require Import IL Annotation InRel AutoIndTac.
 Require Import Liveness LabelsDefined.
 Require Import Spilling DoSpill DoSpillRm SpillUtil ReconstrLive AnnP InVD SetUtil.
-Require Import ReconstrLiveUtil.
+Require Import ReconstrLiveUtil ReconstrLiveG.
 Require Import ToBeOutsourced.
 
 Set Implicit Arguments.
 
 
 
-
-(* remove this  *)
-Lemma reconstr_live_small_L'
-      (sl : spilling)
+Lemma reconstr_live_write_loads
+      (Lv : list ⦃var⦄)
       (ZL : list params)
-      (Λ : list (⦃var⦄ * ⦃var⦄))
-      (s : stmt)
       (slot : var -> var)
-      (ys : list var)
-      (R M R' G : ⦃var⦄)
-      (IB : list (list bool))
+      (xs : params)
+      (s : stmt)
+      (an : lvness_fragment)
+      (VD G : ⦃var⦄)
   :
-    getL sl ⊆ getSp sl ∪ M
-    -> of_list ys ⊆ getL sl
-    -> R' [=] R ∪ getL sl \ of_list ys
-    -> (forall G' : ⦃var⦄,
-           getAnn
-             (reconstr_live
-                (slot_merge slot Λ)
-                (slot_lift_params slot ⊜ Λ ZL) G'
-                (do_spill slot s (clear_SpL sl) IB)
-                (do_spill_rm slot (clear_SpL sl))
-             )
-             ⊆ R ∪ getL sl ∪ map slot (getSp sl ∪ M) ∪ G'
-       )
-    -> getAnn
-         (reconstr_live
-            (slot_merge slot Λ)
-            (slot_lift_params slot ⊜ Λ ZL) G
-            (write_loads slot ys
-                         (do_spill slot s (clear_SpL sl) IB)
-            )
-            (add_anns ⎣⎦ (length ys)
-                      (do_spill_rm slot (clear_SpL sl))
-            )
-         )
-            ⊆ R' ∪ map slot (getSp sl ∪ M) ∪ G
+    of_list xs ⊆ VD
+    -> disj VD (map slot VD)
+    -> getAnn (
+          reconstr_live Lv ZL G
+                        (write_loads slot xs s)
+                        (add_anns ⎣⎦ (length xs) an))
+             [=]
+             getAnn (reconstr_live Lv ZL ∅ s an)
+             \ of_list xs ∪ map slot (of_list xs) ∪ G
 .
 Proof.
-intros L_SpM ys_L RR base.
-  rewrite RR.
-  general induction ys;
-    simpl; eauto.
-  - rewrite add_anns_zero.
-    rewrite base.
+  intros xs_VD disj_VD.
+  general induction xs;
+    simpl in *; eauto.
+  - rewrite add_anns_zero, reconstr_live_G_eq.
+    rewrite lookup_set_empty; eauto.
     clear; cset_tac.
-  - rewrite add_anns_S.
-    simpl.
-    rewrite IHys; eauto.
-    + enough (singleton (slot a) ⊆ map slot (getSp sl ∪ M))
-        as a_in_SpM
-          by (rewrite a_in_SpM; clear; cset_tac).
-      rewrite <- map_singleton.
-      apply lookup_set_morphism.
-      rewrite <- L_SpM.
-      rewrite <- ys_L.
-      clear; eauto with cset.
-    + rewrite <- ys_L.
-      clear; eauto with cset.
-    + eauto with cset.
+  - rewrite add_anns_S; simpl.
+    rewrite lookup_set_add; eauto.
+    unfold lookup_set.
+    rewrite reconstr_live_G_eq.
+    rewrite add_union_singleton in xs_VD.
+    apply union_incl_split2 in xs_VD as [a_VD xs_VD].
+    rewrite IHxs; eauto.
+    apply incl_eq.
+    + setoid_rewrite add_union_singleton at 2.
+      repeat apply union_incl_split.
+      * clear; cset_tac.
+      * clear; cset_tac.
+      * assert (forall (s t u v w r : ⦃var⦄),
+                   t \ v ⊆ (s ∪ t ∪ u ∪ v) \ v ∪ w ∪ r)
+          as setsub by (clear; cset_tac).
+        rewrite <- setsub.
+        rewrite disj_minus_eq; eauto.
+        apply disj_sym.
+        eapply disj_incl; eauto.
+        eapply lookup_set_incl; eauto.
+      * clear; cset_tac.
+    + clear; cset_tac.
 Qed.
+
+
 
 (* this will be generalized by reconstr_live_write_loads *)
 Lemma reconstr_live_small_L
       (sl : spilling)
       (ZL : list (params))
-      (R M G D : ⦃var⦄)
+      (R M G VD : ⦃var⦄)
       (slot : var -> var)
       (s : stmt)
       (Λ : list (⦃var⦄ * ⦃var⦄))
       (IB : list (list bool))
   :
-    getL sl ⊆ getSp sl ∪ M
+    disj VD (map slot VD)
+    -> R ⊆ VD
+    -> M ⊆ VD
+    -> getSp sl ⊆ R
+    -> getL sl ⊆ getSp sl ∪ M
     -> (forall G', getAnn
         (reconstr_live
            (slot_merge slot Λ)
@@ -100,7 +94,7 @@ Lemma reconstr_live_small_L
         ⊆ R ∪ map slot (getSp sl ∪ M) ∪ G
 .
 Proof.
-  intros L_sub base.
+  intros disj_VD R_VD M_VD Sp_R L_SpM base.
 
   rewrite do_spill_extract_writes.
   rewrite do_spill_rm_s.
@@ -114,101 +108,26 @@ Proof.
   rewrite elements_empty.
   simpl.
   rewrite <- elements_length.
-  eapply reconstr_live_small_L'; eauto.
-  - rewrite of_list_elements.
-    reflexivity.
-  - rewrite of_list_elements.
-    clear; cset_tac.
-Qed.
 
-
-(* remove this *)
-Lemma reconstr_live_small_Sp'
-      (sl : spilling)
-      (ZL : list params)
-      (Λ : list (⦃var⦄ * ⦃var⦄))
-      (s : stmt)
-      (slot : var -> var)
-      (xs : list var)
-      (R M M' G : ⦃var⦄)
-      (IB : list (list bool))
-  :
-    injective_on (getSp sl) slot
-    -> getSp sl ⊆ R
-    -> of_list xs ⊆ getSp sl
-    -> M' [=] getSp sl \ of_list xs ∪ M
-    -> (forall G' : ⦃var⦄,
-           getAnn
-             (reconstr_live
-                (slot_merge slot Λ)
-                (slot_lift_params slot ⊜ Λ ZL) G'
-                (write_loads slot (elements (getL sl))
-                             (do_spill slot s (clear_SpL sl) IB)
-                )
-                (add_anns ⎣⎦ (cardinal (getL sl))
-                          (do_spill_rm slot (clear_SpL sl))
-                )
-             )
-             ⊆ R ∪ map slot (getSp sl ∪ M) ∪ G'
-       )
-    -> getAnn
-         (reconstr_live
-            (slot_merge slot Λ)
-            (slot_lift_params slot ⊜ Λ ZL) G
-            (write_spills slot xs
-                          (write_loads slot (elements (getL sl))
-                                       (do_spill slot s (clear_SpL sl) IB)
-                          )
-            )
-            (add_anns ⎣⎦ (length xs + cardinal (getL sl))
-                      (do_spill_rm slot (clear_SpL sl))
-            )
-         )
-            ⊆ R ∪ map slot M' ∪ G
-.
-Proof.
-  intros inj_slot Sp_R xs_Sp MM base.
-  rewrite MM.
-  general induction xs;
-    simpl; eauto.
-  - rewrite SetOperations.map_app; eauto.
-    assert (getSp sl \ ∅ [=] getSp sl)
-      as minus_empty by (clear; cset_tac).
-    rewrite minus_empty.
-    rewrite <- SetOperations.map_app; eauto.
-  - rewrite add_anns_S.
-    simpl.
-    rewrite IHxs; eauto.
-    + rewrite -> !SetOperations.map_app; eauto.
-      rewrite -> !lookup_set_minus_eq; eauto.
-      rewrite lookup_set_add; eauto.
-      * enough (singleton a ⊆ R)
-          as a_in_R
-            by (rewrite a_in_R; clear; cset_tac).
-        rewrite <- Sp_R.
-        rewrite <- xs_Sp.
-        clear; eauto with cset.
-      * eapply injective_on_incl; eauto.
-        apply union_incl_split.
-        -- reflexivity.
-        -- rewrite <- xs_Sp.
-           clear; eauto with cset.
-      * eapply injective_on_incl; eauto.
-        apply union_incl_split.
-        -- reflexivity.
-        -- rewrite <- xs_Sp.
-           clear; eauto with cset.
-    + rewrite <- xs_Sp.
-      clear; eauto with cset.
-    + eauto with cset.
+  rewrite reconstr_live_write_loads; eauto;
+    [ | rewrite of_list_elements, L_SpM, Sp_R, R_VD, M_VD;
+        clear; cset_tac].
+  rewrite base.
+  rewrite lookup_set_union; eauto.
+  rewrite of_list_elements.
+  setoid_rewrite lookup_set_incl at 3; eauto.
+  rewrite lookup_set_union; eauto.
+  clear; cset_tac.
 Qed.
 
 
 
+(* maybe I will need a lemma :
+  x ∈  s
+  ->   reconstr_live Lv ZL ∅ s an \ s
+   [=] reconstr_live Lv ZL (singleton x) s an \ s
+ *)
 
-
-
-(*
 Lemma reconstr_live_write_spills
       (Lv : list ⦃var⦄)
       (ZL : list params)
@@ -216,26 +135,56 @@ Lemma reconstr_live_write_spills
       (xs: params)
       (s : stmt)
       (an : lvness_fragment)
-      (x : var)
       (VD G : ⦃var⦄)
    :
     disj VD (map slot VD)
     -> of_list xs ⊆ VD
-    -> x ∈ VD
-    -> getAnn ( (* there is still a problemif G ∩ of_list xs <> ∅ *)
+    -> getAnn (
           reconstr_live Lv ZL G
-                        (write_spills slot (xs ++ x::nil) s)
-                        (add_anns ⎣⎦ (length (xs ++ x::nil)) an))
+                        (write_spills slot xs s)
+                        (add_anns ⎣⎦ (length xs) an))
              [=] getAnn (
-               reconstr_live Lv ZL (singleton x) s an)
-             \ map slot (of_list (xs ++ x::nil))
+               reconstr_live Lv ZL ∅ s an)
+             \ map slot (of_list xs)
              ∪ of_list xs
              ∪ G
 .
 Proof.
+  intros disj_VD xs_VD.
+  general induction xs;
+    simpl in *; eauto.
+  - rewrite reconstr_live_G_eq.
+    rewrite add_anns_zero.
+    rewrite lookup_set_empty; eauto.
+    clear; cset_tac.
+  - rewrite add_anns_S; simpl.
+    rewrite add_union_singleton in xs_VD.
+    apply union_incl_split2 in xs_VD as [a_VD xs_VD].
+    rewrite IHxs; eauto.
+    rewrite lookup_set_add; eauto.
+    unfold lookup_set.
+    apply incl_eq.
+    + setoid_rewrite add_union_singleton at 2.
+      repeat apply union_incl_split.
+      * clear; cset_tac.
+      * clear; cset_tac.
+      * assert (forall (s t u v w : ⦃var⦄),
+                   t \ u ⊆ (s ∪ t ∪ u) \ u ∪ v ∪ w)
+          as setsub by (clear; cset_tac).
+        rewrite <- setsub.
+        rewrite disj_minus_eq; eauto.
+        eapply disj_incl; eauto.
+        rewrite <- map_singleton.
+        rewrite lookup_set_incl; eauto.
+        unfold lookup_set; reflexivity.
+      * clear; cset_tac.
+    + clear; cset_tac.
+Qed.
 
 
-*)
+
+
+
 
 
 
@@ -243,13 +192,14 @@ Proof.
 Lemma reconstr_live_small_Sp
       (sl : spilling)
       (ZL : list (params))
-      (R M G D : ⦃var⦄)
+      (R M G VD : ⦃var⦄)
       (slot : var -> var)
       (s : stmt)
       (Λ : list (⦃var⦄ * ⦃var⦄))
       (IB : list (list bool))
   :
-    injective_on (getSp sl) slot
+    disj VD (map slot VD)
+    -> R ⊆ VD
     -> getSp sl ⊆ R
     -> (forall G', getAnn
         (reconstr_live
@@ -269,44 +219,36 @@ Lemma reconstr_live_small_Sp
         ⊆ R ∪ map slot M ∪ G
 .
 Proof.
-  intros inj_slot Sp_R base.
+  intros disj_VD R_VD Sp_R base.
 
-  rewrite do_spill_extract_writes.
-  rewrite do_spill_rm_s.
+  rewrite do_spill_extract_spill_writes.
+  rewrite do_spill_rm_s_Sp.
 
-  unfold count.
   rewrite <- elements_length.
-  eapply reconstr_live_small_Sp' with (M:=M); eauto.
-  - rewrite of_list_elements.
-    reflexivity.
-  - rewrite of_list_elements.
-    clear; cset_tac.
-  - rewrite do_spill_extract_writes in base.
-    rewrite do_spill_rm_s in base.
-    rewrite getSp_clearSp in base.
-    rewrite getL_clearSp in base.
-    rewrite elements_empty in base.
-    rewrite count_clearSp in base.
-    unfold clear_Sp in base.
-    rewrite setTopAnn_setTopAnn in base.
-    rewrite getAnn_setTopAnn in base.
-    simpl in base.
-    apply base.
+  rewrite reconstr_live_write_spills; eauto;
+    [ | rewrite of_list_elements, Sp_R; eauto ].
+  rewrite base.
+  rewrite of_list_elements.
+  rewrite lookup_set_union; eauto.
+  unfold lookup_set.
+  setoid_rewrite Sp_R at 3.
+  clear; cset_tac.
 Qed.
-
 
 
 (* proof has to be redone with new lemmata *)
 Lemma reconstr_live_small_s
       (sl : spilling)
       (ZL : list (params))
-      (R M G : ⦃var⦄)
+      (R M G VD : ⦃var⦄)
       (slot : var -> var)
       (s : stmt)
       (Λ : list (⦃var⦄ * ⦃var⦄))
       (IB : list (list bool))
   :
-    injective_on (getSp sl) slot
+    disj VD (map slot VD)
+    -> R ⊆ VD
+    -> M ⊆ VD
     -> getSp sl ⊆ R
     -> getL sl ⊆ getSp sl ∪ M
     -> (forall G', getAnn
@@ -327,10 +269,10 @@ Lemma reconstr_live_small_s
         ⊆ R ∪ map slot M ∪ G
 .
 Proof.
-  intros slot_inj Sp_sub L_sub base.
-  apply reconstr_live_small_Sp; eauto.
+  intros disj_VD R_VD M_VD Sp_R L_SpM base.
+  eapply reconstr_live_small_Sp; eauto.
   intros G''.
-  apply reconstr_live_small_L; eauto.
+  eapply reconstr_live_small_L; eauto.
 Qed.
 
 
@@ -390,7 +332,7 @@ Proof.
     invc aeFree;
     invc spillSnd;
     invc spilli;
-    apply reconstr_live_small_s;
+    apply reconstr_live_small_s with (VD:=VD);
     eauto;
       intros G'; simpl;
         rewrite elements_empty;
