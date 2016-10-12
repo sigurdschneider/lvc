@@ -50,7 +50,7 @@ let main () =
       let ilf =
 	if !toILF then
 	  let comp = Compiler.toILF ili in
-	  Printf.printf "\to ILF:\n%s\n\n" (print_stmt !ids 0 comp);
+	  Printf.printf "to ILF:\n%s\n\n" (print_stmt !ids 0 comp);
 	  comp
 	else
 	  ili in
