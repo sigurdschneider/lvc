@@ -35,6 +35,7 @@ esac
 
 SOURCES=$(find theories -name \*.v -print | grep -v /\.# | sed -e 's%^\./%%g')
 coq_makefile $(cat _CoqProject) src/lvc_plugin.ml4 $SOURCES  > ${MAKEFILE}
+echo $(cat _CoqProject) src/lvc_plugin.ml4 $SOURCES  > Make
 echo "${MAKEFILE} generated."
 
 echo "Patching ${MAKEFILE} to include custom COQDOCFLAGS."

@@ -65,13 +65,14 @@ doc-ind-publish: doc-ind ind-package
 ind-package:
 	rm -rf $(PKGIND)
 	mkdir $(PKGIND)
-	cp -r _CoqProject compiler ContainersPlugin extra Makefile configure.sh paco src theories $(PKGIND)
+	cp -r _CoqProject compiler ContainersPlugin extra Makefile configure.sh paco src theories README.md $(PKGIND)
 	find $(PKGIND)/ -type f -iname '*.vo' -o -iname '*.glob' -o -iname '*.v.d' -o -iname '*.time' -o -iname '*.aux' | xargs rm -rf 
 	rm -rf $(PKGIND)/theories/Spilling $(PKGIND)/theories/TransVal $(PKGIND)/theories/ValueOpts $(PKGIND)/theories/Test*
 	$(MAKE) -C $(PKGIND) clean depclean
+	cp Make Makefile.coq $(PKGIND)
 	rm -rf $(PKGIND)/src/*.cm* $(PKGIND)/src/*.o $(PKGIND)/src/*.ml4.d 
 	rm -rf $(PKGIND)/compiler/lvcc.native
-	tar cvjf lvc-ind.tbz $(PKGIND)
+	tar cvzf lvc-ind.tgz $(PKGIND)
 
 clean-doc:
 	rm -rf $(DOC)
@@ -81,7 +82,8 @@ clean: clean-doc
 	rm -f $(COQMAKEFILE)
 
 $(COQMAKEFILE): Makefile depmakefiles $(VS)
-	./configure.sh
+	$(COQBIN)coq_makefile -f Make -o Makefile.coq
+#	./configure.sh
 #	coq_makefile -f _CoqProject $(VS) -o $(COQMAKEFILE)
 
 

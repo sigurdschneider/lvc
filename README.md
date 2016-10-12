@@ -27,7 +27,8 @@ After installing the dependencies, you *can* (but do not have to) use
 
 	configure.sh
 
-to generate a Makefile (use `configure.sh --vanilla` if you don't have ruby installed). Then build LVC using
+to generate a Makefile (use `configure.sh --vanilla` if you don't have ruby installed). 
+As a failsafe, we also provide a Makefile.coq in this distibuition. Then build LVC using
 
 	make
 	make extraction
