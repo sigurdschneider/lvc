@@ -320,6 +320,7 @@ Proof.
   - econstructor; intros; inv_get; eauto using app_expfree.
 Qed.
 
+
 (*
 Fixpoint compile_live (LV:list (set var)) (s:stmt) (a:ann (set var)) : ann (set var) :=
   match s, a with
@@ -420,6 +421,5 @@ Proof.
       exploit H3; eauto; dcr.
       destruct i; simpl in *; rewrite compile_live_getAnn; eauto.
     + rewrite compile_live_getAnn; eauto.
-
 Qed.
 *)

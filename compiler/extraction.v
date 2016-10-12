@@ -13,4 +13,4 @@ Extraction Blacklist List String Int.
 
 Cd "compiler/extraction".
 
-Separate Extraction toILF (* fromILF AllocationAlgo.regAssign optimize *) toDeBruijn OrderedType.SOT_as_OT.
+Separate Extraction addParams DCVE toILF (* fromILF AllocationAlgo.regAssign optimize *) toDeBruijn OrderedType.SOT_as_OT.

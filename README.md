@@ -1,5 +1,5 @@
 # LVC Compiler Project
-LVC stands for Linear Verified Compiler. The compiler is based on the linear first-order language IL [1]. 
+LVC stands for Linear Verified Compiler. The compiler is based on the linear first-order language IL [1].
 
 ## Dependencies
 
@@ -29,6 +29,7 @@ After installing the dependencies, use
 to generate a Makefile (use `configure.sh --vanilla` if you don't have ruby installed). Then build LVC using
 
 	make
+	make extraction
 
 This will generate a binary
 
@@ -37,9 +38,10 @@ This will generate a binary
 There are some example files in extraction/examples. Run one by issuing the following command:
 
 	cd extraction
-	./lvcc.native -3 true examples/fib.il
+	./lvcc.native examples/dve.il
+	./lvcc.native examples/dve+dce.il
 
-Several phases are supported, -3 true activates the IL to IL/I phase (register assignment and parameter elimination).
+All source files are interpreted as IL/I. Translation to IL/F is supported via argument "-c true".
 
 ## Disclaimer
 

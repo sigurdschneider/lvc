@@ -158,10 +158,39 @@ Proof.
   eapply DVE.I.sim_DVE; [ reflexivity | eapply LivenessAnalysisCorrect.correct; eauto ].
 Qed.
 
-Definition toILF (ili:IL.stmt) : IL.stmt :=
-  let (s_dcve, lv) := DCVE ili in
-  let additional_params := additionalArguments s_dcve lv in
-  Delocation.compile nil s_dcve additional_params.
+Definition addParams (s:IL.stmt) (lv:ann (set var)) : IL.stmt :=
+  let additional_params := additionalArguments s lv in
+  Delocation.compile nil s additional_params.
+
+
+Lemma addParams_correct (E:onv val) (ili:IL.stmt) lv
+  : defined_on (getAnn lv) E
+    -> Liveness.live_sound Liveness.Imperative nil nil ili lv
+    -> LabelsDefined.noUnreachableCode LabelsDefined.isCalled ili
+    -> sim I.state F.state bot3 Sim (nil, E, ili) (nil:list F.block, E, addParams ili lv).
+Proof with eauto using DCVE_live, DCVE_noUC.
+  intros. subst. unfold addParams.
+  eapply sim_trans with (S2:=I.state).
+  - eapply bisim_sim.
+    eapply DelocationCorrect.correct; eauto.
+    + eapply DelocationAlgo.is_trs; eauto...
+    + eapply (@Delocation.live_sound_compile nil)...
+      eapply DelocationAlgo.is_trs...
+      eapply DelocationAlgo.is_live...
+  - eapply bisim_sim.
+    eapply bisim_sym.
+    eapply (@Invariance.srdSim_sim nil nil nil nil nil);
+      [ | isabsurd | econstructor | reflexivity | | econstructor ].
+    + eapply Delocation.trs_srd; eauto.
+      eapply DelocationAlgo.is_trs...
+    + eapply (@Delocation.live_sound_compile nil nil nil)...
+      eapply DelocationAlgo.is_trs...
+      eapply DelocationAlgo.is_live...
+Qed.
+
+Definition toILF (s:IL.stmt) : IL.stmt :=
+  let (s_dcve, lv) := DCVE s in
+  addParams s_dcve lv.
 
 Lemma toILF_correct (ili:IL.stmt) (E:onv val)
   (PM:LabelsDefined.paramsMatch ili nil)
@@ -172,24 +201,8 @@ Proof with eauto using DCVE_live, DCVE_noUC.
   eapply sim_trans with (S2:=I.state).
   eapply DCVE_correct; eauto. let_pair_case_eq; simpl_pair_eqs; subst.
   unfold fst at 1.
-  eapply sim_trans with (S2:=I.state).
-  - eapply bisim_sim.
-    eapply DelocationCorrect.correct; eauto.
-    + eapply DelocationAlgo.is_trs; eauto...
-    + eapply (@Delocation.live_sound_compile nil)...
-      eapply DelocationAlgo.is_trs...
-      eapply DelocationAlgo.is_live...
-    + eapply defined_on_incl; eauto.
-      eapply DCVE_occurVars...
-  - eapply bisim_sim.
-    eapply bisim_sym.
-    eapply (@Invariance.srdSim_sim nil nil nil nil nil);
-      [ | isabsurd | econstructor | reflexivity | | econstructor ].
-    + eapply Delocation.trs_srd; eauto.
-      eapply DelocationAlgo.is_trs...
-    + eapply (@Delocation.live_sound_compile nil nil nil)...
-      eapply DelocationAlgo.is_trs...
-      eapply DelocationAlgo.is_live...
+  eapply addParams_correct...
+  eauto using defined_on_incl, DCVE_occurVars.
 Qed.
 
 (*
@@ -208,13 +221,13 @@ Definition optimize (s':stmt) : status stmt :=
       ensure (TrueLiveness.true_live_sound Liveness.Functional nil s lv) "Liveness unsound (2)";
       Success (DVE.compile nil s lv)
   end.
-*)
 
-(*
+
+
 Definition fromILF (s:stmt) : status stmt :=
-  let (s_dcve, lv) := DCVE s in
-  let s_eae := EAE.compile s_dcve in
-  let s_ra := rename_apart s_eae in
+  let s_eae := EAE.compile s in
+  let (s_dcve, lv) := DCVE s_eae in
+  let s_ra := rename_apart s_dcve in
   let fvl := to_list (getAnn lv) in
   let ϱ := CMap.update_map_with_list fvl fvl (@MapInterface.empty var _ _ _) in
   sdo ϱ' <- AllocationAlgo.regAssign s_ra lv ϱ;
@@ -231,7 +244,7 @@ Opaque DelocationValidator.trs_dec.
 
 Lemma fromILF_correct (s s':stmt) E
   : fromILF s = Success s'
-  -> sim F.state I.state Sim (nil:list F.block, E, s) (nil:list I.block, E, s').
+  -> sim F.state I.state bot3 Sim (nil:list F.block, E, s) (nil:list I.block, E, s').
 Proof.
   unfold fromILF; intros.
   let_case_eq; simpl_pair_eqs; subst.
@@ -239,13 +252,20 @@ Proof.
 
   eapply sim_trans with (σ2:=(nil:list F.block, E, rename_apart (EAE.compile s))).
   eapply sim_trans with (σ2:=(nil:list F.block, E, EAE.compile s)).
-  eapply bisim_sim'. eapply EAE.sim_EAE.
-  eapply bisim_sim'.
+  eapply EAE.sim_EAE.
+  eapply bisim_sim.
   eapply (@Alpha.alphaSim_sim (nil, E, _) (nil, E, _)).
   econstructor; eauto using PIR2, Alpha.envCorr_idOn_refl.
   eapply Alpha.alpha_sym. eapply rename_apart_alpha.
+  exploit (@ParallelMove.correct parallel_move nil); try eapply EQ0; try now econstructor; eauto.
+  eapply (@Liveness.live_rename_sound _ nil nil); eauto.
+  admit.
+  eapply sim_trans with (σ2:=(nil, E, rename (CMap.findt x 0) (rename_apart (fst (DCVE (EAE.compile s)))))); eauto.
+  eapply Liveness.live_sound_overapproximation_I; eauto.
+  eauto.
+
   exploit rename_apart_renamedApart; eauto.
-  exploit AllocationAlgoCorrect.regAssign_correct'; eauto.
+  exploit AllocationAlgoCorrect.regAssign_correct' as XXX; eauto. admit. admit. admit. admit. admit.
   - eapply injective_on_agree; [| eapply CMap.map_update_list_update_agree; reflexivity].
     hnf; intros ? ? ? ? EqMap.
     rewrite lookup_update_same in EqMap.
