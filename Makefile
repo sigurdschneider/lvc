@@ -70,6 +70,7 @@ ind-package:
 	rm -rf $(PKGIND)/theories/Spilling $(PKGIND)/theories/TransVal $(PKGIND)/theories/ValueOpts $(PKGIND)/theories/Test*
 	$(MAKE) -C $(PKGIND) clean depclean
 	rm -rf $(PKGIND)/src/*.cm* $(PKGIND)/src/*.o $(PKGIND)/src/*.ml4.d 
+	rm -rf $(PKGIND)/compiler/lvcc.native
 	tar cvjf lvc-ind.tbz $(PKGIND)
 
 clean-doc:

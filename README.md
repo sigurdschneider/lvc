@@ -6,7 +6,7 @@ This is a stripped down version for submission to CPP 2017.
 
 - **Coq**
 
-    Sources compile with Coq version 8.4pl4 (May 2014).
+    Sources compile with Coq version 8.5pl2.
 
 - **OCaml** (including ocamlbuild)
 
@@ -23,7 +23,7 @@ This is a stripped down version for submission to CPP 2017.
 
 ## Building LVC
 
-After installing the dependencies, use
+After installing the dependencies, you *can* (but do not have to) use
 
 	configure.sh
 
@@ -32,7 +32,7 @@ to generate a Makefile (use `configure.sh --vanilla` if you don't have ruby inst
 	make
 	make extraction
 
-This will generate a binary
+This will generate a binary, and the following symbolic link will point to it
 
 	extraction/lvcc.native
 
