@@ -1,5 +1,6 @@
 # LVC Compiler Project
-LVC stands for Linear Verified Compiler. The compiler is based on the linear first-order language IL [1].
+LVC stands for Linear Verified Compiler. The compiler is based on the linear first-order language IL [1,2].
+This is a stripped down version for submission to CPP 2017.
 
 ## Dependencies
 
@@ -55,4 +56,5 @@ The sources incorporate ideas and code from various sources.
 
 ## References
 
-[1] Sigurd Schneider. 'Semantics of an Intermediate Language for Program Transformation'. Master's Thesis. Saarland University, 2013.
+[1] Sigurd Schneider: Semantics of an Intermediate Language for Program Transformation. Master's Thesis. Saarland University, 2013.
+[2] Sigurd Schneider, Gert Smolka, Sebastian Hack: A Linear First-Order Functional Intermediate Language for Verified Compilers. ITP 2015

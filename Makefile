@@ -84,8 +84,8 @@ $(COQMAKEFILE): Makefile depmakefiles $(VS)
 #	coq_makefile -f _CoqProject $(VS) -o $(COQMAKEFILE)
 
 
-extraction: compiler/STAMP compiler/extraction.v theories/Compiler.vo
-	+$(MAKE) -C compiler
+extraction: theories/Compiler.vo compiler/extraction.v compiler/STAMP  
+	+$(MAKE) -C compiler all
 
 compiler/STAMP: theories/Compiler.vo compiler/extraction.v
 	mkdir -p compiler/extraction
