@@ -10,25 +10,26 @@
     <script type="text/javascript" src="jquery-3.1.0.min.js"></script>
     <script type="text/javascript" src="loadtoc.js"></script>
     <script type="text/javascript">
-     loadToC(function () {
-       $("#sectionIL").append(tocmodules(/Lvc.Isa.Op/));
-       $("#sectionIL").append(tocmodules(/Lvc.IL.Exp/));
-       $("#sectionIL").append(tocmodules(/Lvc.IL.IL/));
+     function populate() {
+       loadToC(function () {
+         $("#sectionIL").append(tocmodules(/Lvc.Isa.Op/));
+         $("#sectionIL").append(tocmodules(/Lvc.IL.Exp/));
+         $("#sectionIL").append(tocmodules(/Lvc.IL.IL/));
 
-       $("#sectionEQ").append(tocmodules(/Lvc.Equiv.Sim$/));
-       $("#sectionEQ").append(tocmodules(/Lvc.Equiv.NonParametricBiSim/));
-       $("#sectionEQ").append(tocmodules(/Lvc.Equiv.SimTactics/));
+         $("#sectionEQ").append(tocmodules(/Lvc.Equiv.Sim$/));
+         $("#sectionEQ").append(tocmodules(/Lvc.Equiv.NonParametricBiSim/));
+         $("#sectionEQ").append(tocmodules(/Lvc.Equiv.SimTactics/));
 
-       $("#sectionInd").append(tocmodules(/Lvc.Equiv.SimF/));
-       $("#sectionInd").append(tocmodules(/Lvc.Equiv.SimI/));
-       $("#sectionInd").append(tocmodules(/Lvc.Equiv.CtxEq/));
+         $("#sectionInd").append(tocmodules(/Lvc.Equiv.SimF/));
+         $("#sectionInd").append(tocmodules(/Lvc.Equiv.SimI/));
+         $("#sectionInd").append(tocmodules(/Lvc.Equiv.CtxEq/));
 
-       $("#sectionDCE").append(tocmodules(/Lvc.Reachability.Reachability$/));
-       $("#sectionDCE").append(tocmodules(/Lvc.UCE/));
-       $("#sectionDCE").append(tocmodules(/Lvc.Liveness.TrueLiveness/));
-       $("#sectionDCE").append(tocmodules(/Lvc.DVE/));
-
-     });
+         $("#sectionDCE").append(tocmodules(/Lvc.Reachability.Reachability$/));
+         $("#sectionDCE").append(tocmodules(/Lvc.UCE/));
+         $("#sectionDCE").append(tocmodules(/Lvc.Liveness.TrueLiveness/));
+         $("#sectionDCE").append(tocmodules(/Lvc.DVE/));
+       });
+	  }
     </script>
     <style>
      h3 + div#toc {
@@ -40,7 +41,7 @@
     </style>
   </head>
 
-  <body onload="document.getElementById('content').focus()">
+  <body onload="populate(); document.getElementById('content').focus()">
     <div id="header">
       <span class="left">
 	<span class="modulename"> <script> document.write(document.title) </script> </span>
