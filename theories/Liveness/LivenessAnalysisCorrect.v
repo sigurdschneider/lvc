@@ -10,13 +10,13 @@ Local Arguments proj1_sig {A} {P} e.
 Local Arguments length {A} e.
 Local Arguments backward {sT} {Dom} btransform ZL AL st {ST} a.
 
-Definition liveness_analysis_correct sT ZL LV s a (ST:subTerm s sT)
-  : ann_R poEq (@backward _ _ liveness_transform_dep ZL LV s ST a) a
+Definition liveness_analysis_correct (i:overapproximation) sT ZL LV s a (ST:subTerm s sT)
+  : ann_R poEq (@backward _ _ (liveness_transform_dep i) ZL LV s ST a) a
     -> annotation s a
     -> labelsDefined s (length ZL)
     -> labelsDefined s (length LV)
     -> paramsMatch s (length ⊝ ZL)
-    -> true_live_sound Imperative ZL (proj1_sig ⊝ LV) s
+    -> true_live_sound i ZL (proj1_sig ⊝ LV) s
                       (mapAnn proj1_sig a).
 Proof.
   intros EQ Ann DefZL DefLV PM.
@@ -56,7 +56,7 @@ Proof.
     edestruct (get_in_range _ H2) as [Z ?]; eauto.
     edestruct (get_in_range _ H3) as [[Lv ?] ?]; eauto.
     econstructor; eauto.
-    + simpl. rewrite <- H4.
+    + simpl. cases; eauto. rewrite <- H4.
       repeat erewrite get_nth; eauto.
       eapply incl_left.
     + simpl in *.
@@ -74,12 +74,12 @@ Proof.
     + rewrite map_map.
       erewrite map_ext with (l:=sa);[| intros; rewrite getAnn_mapAnn; reflexivity].
       rewrite <- map_map with (l:=sa). rewrite <- map_app.
-      eapply (IHAnn (fst ⊝ s ++ ZL) (getAnn ⊝ sa ++ LV)
+      eapply (IHAnn i (fst ⊝ s ++ ZL) (getAnn ⊝ sa ++ LV)
              (subTerm_EQ_Fun1 eq_refl ST)); eauto.
       etransitivity; eauto.
       refine (@backward_ext sT (fun s => { x : ⦃var⦄ | x ⊆ occurVars s}) _
-                            (liveness_transform_dep)
-                            (@liveness_transform_dep_ext sT) _ _ _ _ _ _ _ _ _ _); eauto.
+                            (liveness_transform_dep i)
+                            (@liveness_transform_dep_ext i sT) _ _ _ _ _ _ _ _ _ _); eauto.
       eapply PIR2_app; eauto.
       eapply PIR2_get; eauto with len.
       intros; inv_get.
@@ -90,30 +90,42 @@ Proof.
       rewrite map_map.
       erewrite map_ext with (l:=sa);[| intros; rewrite getAnn_mapAnn; reflexivity].
       rewrite <- map_map with (l:=sa). rewrite <- map_app.
-      edestruct (@get_backwardF sT _ (@backward _ (fun s0 : stmt => {x1 : ⦃var⦄ | x1 ⊆ occurVars s0}) liveness_transform_dep)); eauto.
-      eapply (H1 _ _ _ H3 H2 (fst ⊝ s ++ ZL) (getAnn ⊝ sa ++ LV) x1); eauto.
-    + intros. inv_get. simpl. eauto.
+      edestruct (@get_backwardF sT _ (@backward _ (fun s0 : stmt => {x1 : ⦃var⦄ | x1 ⊆ occurVars s0})
+                                                (liveness_transform_dep i))); eauto.
+      eapply (H1 _ _ _ H3 H2 i (fst ⊝ s ++ ZL) (getAnn ⊝ sa ++ LV) x1); eauto.
+    + intros. inv_get. cases; eauto.
+      rewrite <- H13. eapply incl_union_left.
+      edestruct (@get_backwardF sT _ (@backward _ (fun s0 : stmt => {x1 : ⦃var⦄ | x1 ⊆ occurVars s0})
+                                                (liveness_transform_dep i))); eauto.
+      exploit H16; eauto.
+      eapply incl_list_union. eapply zip_get. eapply Take.get_take; eauto using get_range.
+      eapply map_get_1. eapply get_app_lt; eauto with len.
+      eapply Take.get_take; eauto using get_range. eapply get_app_lt; eauto with len.
+      rewrite getAnn_mapAnn.
+      eapply ann_R_get in H9.
+      eapply SigR.sig_R_proj1_sig in H9.
+      rewrite H9. eauto.
     + rewrite getAnn_mapAnn.
       eapply ann_R_get in H17.
       rewrite <- H17.
-      rewrite <- H13. reflexivity.
+      rewrite <- H13. cases; eauto with cset.
 Qed.
 
-Definition correct s
+Definition correct i s
   : paramsMatch s nil
-    -> true_live_sound Imperative nil nil s (livenessAnalysis s).
+    -> true_live_sound i nil nil s (livenessAnalysis i s).
 Proof.
   intros.
   unfold livenessAnalysis.
   destr_sig. destr_sig. dcr.
-  eapply (@liveness_analysis_correct s nil nil s); eauto.
+  eapply (@liveness_analysis_correct i s nil nil s); eauto.
   eapply H2.
 Qed.
 
 (* For now, settle for occur vars;
    TODO: Show that the fixpoint is contained in freeVars (and union of Lv) *)
-Lemma livenessAnalysis_getAnn s
-  : getAnn (livenessAnalysis s) ⊆ occurVars s.
+Lemma livenessAnalysis_getAnn i s
+  : getAnn (livenessAnalysis i s) ⊆ occurVars s.
 Proof.
   unfold livenessAnalysis. repeat destr_sig.
   rewrite getAnn_mapAnn. destr_sig; eauto.

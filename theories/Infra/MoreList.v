@@ -521,6 +521,7 @@ Create HintDb inv_get discriminated.
 Ltac inv_get_step0 dummy :=
   match goal with
   | [ H : get (take _ ?L) ?n ?x |- _ ] => eapply take_get in H; destruct H
+  | [ H : get (rev ?L) ?n ?x |- _ ] => eapply get_rev in H
   | [ H : get (drop _ ?L) ?n ?x |- _ ] => eapply get_drop in H
   | [ H : get (zip ?f ?L ?L') ?n ?x  |- _ ] =>
     let X := fresh "X" in

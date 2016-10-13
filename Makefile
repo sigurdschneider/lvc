@@ -15,7 +15,7 @@ VS=$(shell find theories/ -iname '*.v' | grep -v '/\.')
 VSIND=$(shell find theories/ -iname '*vo' | sed 's/\.vo/.v/' | grep -v 'Spilling' | grep -v 'ValueOpts' | grep -v 'TransVal')
 DOCS=$(shell find extra/ )
 
-ifeq ($(wildcard time.rb),) 
+ifeq ($(wildcard time.rb),time.rb) 
   export TIMECMD=@./time.rb $(if $(findstring j,$(MAKEFLAGS)),--parallel,)
 endif
 export COQDOCFLAGS=--interpolate --utf8 --toc --toc-depth 3 --index indexpage --no-lib-name

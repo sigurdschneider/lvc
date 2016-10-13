@@ -1,11 +1,12 @@
-Require Import Util CSet SetOperations Lattice SigR CSetPartialOrder Filter.
+Require Import Util CSet SetOperations Lattice SigR CSetPartialOrder Filter Take.
 Require Import IL Annotation Analysis AnalysisBackward Terminating Subterm.
+Require Import Liveness.
 
 Remove Hints trans_eq_bool.
 
 Set Implicit Arguments.
 
-Definition liveness_transform
+Definition liveness_transform (i:overapproximation)
            (ZL:list params) (DL:list (set var))
            (st:stmt)
            (a:anni (⦃var⦄))
@@ -24,25 +25,25 @@ Definition liveness_transform
   | stmtApp f Y, anni0 =>
     let lv := nth (counted f) DL ∅ in
     let Z :=  nth (counted f) ZL nil in
-    lv \ of_list Z ∪
+    (if isImperative i then lv \ of_list Z else ∅) ∪
        list_union (List.map Op.freeVars
                             (filter_by (fun x => B[x ∈ lv]) Z Y))
   | stmtReturn e, anni0 =>
     Op.freeVars e
   | stmtFun F t, anni1 dt =>
-    dt
+    (if isFunctional i then list_union ((take ❬F❭ DL) \\ (take ❬F❭ ZL)) else ∅) ∪ dt
   | _, _ => ∅
   end.
 
 
-Definition liveness_transform_dep (sT:stmt)
+Definition liveness_transform_dep (i:overapproximation) (sT:stmt)
            (ZL:list params)
            (DL:list ({ X : set var | X ⊆ occurVars sT}))
       (s:stmt) (ST:subTerm s sT)
       (a:anni ({X : ⦃var⦄ | X ⊆ occurVars sT}))
   : {X : ⦃var⦄ | X ⊆ occurVars sT}.
 Proof.
-  eapply (exist _ (liveness_transform ZL
+  eapply (exist _ (liveness_transform i ZL
                                       (@proj1_sig _ _ ⊝ DL) s
                                       (mapAnni (@proj1_sig _ _) a))).
   destruct s, a as [|[a ?]|[a ?] [a' ?]|a]; simpl in *;
@@ -54,24 +55,27 @@ Proof.
   - eapply union_incl_split.
     + destruct (get_dec DL (counted l)) as [[[D PD] GetDL]|].
       * erewrite get_nth; eauto using map_get_1; simpl in *.
-        cset_tac.
+        cases; cset_tac.
       * rewrite not_get_nth_default;
-          intros; inv_get; simpl in *; eauto using get. cset_tac.
+          intros; inv_get; simpl in *; eauto using get. cases; cset_tac.
     + rewrite <- (subTerm_occurVars ST); simpl.
       eapply list_union_incl; try eapply H0; eauto with cset.
       intros; inv_get. eapply filter_by_get in H; dcr.
       cases in H3.
       eapply incl_list_union; eauto using map_get_1.
   - eapply subTerm_occurVars in ST; simpl in *. eauto.
-  - eauto.
+  - cases; eauto.
+    eapply union_incl_split; eauto.
+    eapply list_union_incl; eauto with cset.
+    intros; inv_get. destruct x1; simpl in *. rewrite <- s1. eauto with cset.
 Defined.
 
-Lemma liveness_transform_dep_monotone (sT s : stmt) (ST : subTerm s sT)
+Lemma liveness_transform_dep_monotone (i:overapproximation) (sT s : stmt) (ST : subTerm s sT)
       (ZL : 〔params〕) (AL AL' : 〔{x : ⦃var⦄ | x ⊆ occurVars sT}〕)
   : AL ⊑ AL' ->
     forall a b : anni ({x : ⦃var⦄ | x ⊆ occurVars sT}),
       a ⊑ b
-      -> liveness_transform_dep ZL AL ST a ⊑ liveness_transform_dep ZL AL' ST b.
+      -> liveness_transform_dep i ZL AL ST a ⊑ liveness_transform_dep i ZL AL' ST b.
 Proof.
   intros.
   time (inv H0; destruct s; simpl in * |- *; try reflexivity;
@@ -80,7 +84,8 @@ Proof.
                      destruct x as [? ?]
                    end; simpl in * |- *; dcr).
   - eapply incl_union_lr.
-    + destruct (get_dec AL (counted l)) as [[[D PD] GetDL]|].
+    + cases; eauto.
+      destruct (get_dec AL (counted l)) as [[[D PD] GetDL]|].
       * erewrite get_nth; eauto using map_get_1; simpl in *.
         PIR2_inv. destruct x. simpl in *; dcr.
         erewrite (@get_nth _ (_ ⊝ AL') ); eauto using map_get_1; simpl in *.
@@ -104,17 +109,22 @@ Proof.
         intros; inv_get; eauto.
   - rewrite H1 at 1. repeat cases; eauto; cset_tac.
     exfalso; eauto.
-  - rewrite H1; reflexivity.
+  - cases; [| rewrite H1; reflexivity].
+    eapply incl_union_lr; eauto.
+    eapply list_union_incl; eauto with cset.
+    intros; inv_get. PIR2_inv.
+    eapply incl_list_union; eauto using get_take, zip_get.
+    eapply sig_R_proj1_sig in H4; eauto with cset.
   - repeat cases; try (now congruence); eauto.
     cset_tac.
 Qed.
 
-Lemma liveness_transform_dep_ext (sT s : stmt) (ST : subTerm s sT)
+Lemma liveness_transform_dep_ext (i:overapproximation) (sT s : stmt) (ST : subTerm s sT)
       (ZL : 〔params〕) (AL AL' : 〔{x : ⦃var⦄ | x ⊆ occurVars sT}〕)
   : AL ≣ AL' ->
     forall a b : anni ({x : ⦃var⦄ | x ⊆ occurVars sT}),
       a ≣ b
-      -> liveness_transform_dep ZL AL ST a ≣ liveness_transform_dep ZL AL' ST b.
+      -> liveness_transform_dep i ZL AL ST a ≣ liveness_transform_dep i ZL AL' ST b.
 Proof.
   intros.
   time (destruct s; eauto with cset; simpl; inv H0; simpl; try reflexivity;
@@ -135,6 +145,7 @@ Proof.
       * erewrite get_nth; eauto using map_get_1; simpl in *.
         PIR2_inv. destruct x. simpl in *; dcr.
         erewrite (@get_nth _ (_ ⊝ AL') ); eauto using map_get_1; simpl in *.
+        cases; eauto.
         rewrite H1. reflexivity.
       * rewrite not_get_nth_default; simpl; intros; inv_get; eauto.
         destruct (get_dec AL' (counted l)) as [[[D PD] GetDL]|].
@@ -148,17 +159,22 @@ Proof.
         erewrite get_nth; [| eauto using map_get_1]. simpl.
         repeat cases; eauto; exfalso; rewrite H2 in *; eauto.
         repeat erewrite not_get_nth_default; intros; inv_get; eauto.
-  - eauto.
+  - cases; eauto.
+    eapply eq_union_lr; eauto.
+    eapply list_union_eq; eauto with len.
+    + rewrite !zip_length, !take_length, !map_length. erewrite PIR2_length; eauto.
+    + intros; inv_get. PIR2_inv.
+      eapply sig_R_proj1_sig in H5; rewrite H5; eauto.
 Qed.
 
-Definition liveness_analysis :=
+Definition liveness_analysis i :=
   makeBackwardAnalysis (fun s => { x : ⦃var⦄ | x ⊆ occurVars s}) _
-                       liveness_transform_dep
-                       liveness_transform_dep_monotone
+                       (liveness_transform_dep i)
+                       (liveness_transform_dep_monotone i)
                        (fun s => (@bunded_set_terminating _ _ (occurVars s))).
 
 Require Import FiniteFixpointIteration.
 
-Definition livenessAnalysis s :=
-  let a := safeFixpoint (liveness_analysis s) in
+Definition livenessAnalysis i s :=
+  let a := safeFixpoint (liveness_analysis i s) in
   mapAnn (@proj1_sig _ _) (proj1_sig (proj1_sig a)).
