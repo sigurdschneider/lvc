@@ -15,6 +15,14 @@ VS=$(shell find theories/ -iname '*.v' | grep -v '/\.')
 VSIND=$(shell find theories/ -iname '*vo' | sed 's/\.vo/.v/' | grep -v 'Spilling' | grep -v 'ValueOpts' | grep -v 'TransVal')
 DOCS=$(shell find extra/ )
 
+ifeq ($(wildcard time.rb),) 
+  export TIMECMD=@./time.rb $(if $(findstring j,$(MAKEFLAGS)),--parallel,)
+endif
+export COQDOCFLAGS='--interpolate --utf8 --toc --toc-depth 3 --index indexpage --no-lib-name'
+
+#if [[ -z "$VANILLA" && -e "time.rb" ]]; then \
+#	echo "Patching ${MAKEFILE} to use ruby-based timing scripts (use --vanilla if undesired)."
+
 ifneq "$(COQBIN)" ""
         COQBIN := $(COQBIN)/
 endif
@@ -83,6 +91,7 @@ clean: clean-doc
 
 $(COQMAKEFILE): Makefile depmakefiles $(VS)
 	$(COQBIN)coq_makefile -f Make -o Makefile.coq
+	sed -i s/TIMECMD=/TIMECMD?=/ Makefile.coq 
 #	./configure.sh
 #	coq_makefile -f _CoqProject $(VS) -o $(COQMAKEFILE)
 
