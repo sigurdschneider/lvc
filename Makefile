@@ -60,7 +60,7 @@ doc-ind: clean-doc $(DOCS)
 
 doc-ind-publish: doc-ind ind-package
 	scp -r $(DOCIND)/* ps:public_html/lvc-ind/
-	scp -r lvc-ind.tbz ps:public_html/lvc-ind/
+	scp -r lvc-ind.tgz ps:public_html/lvc-ind/
 
 ind-package:
 	rm -rf $(PKGIND)
