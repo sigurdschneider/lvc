@@ -1,7 +1,8 @@
 Require Import Util CSet Map LengthEq.
-Require Import Env IL Alpha Fresh Annotation RenamedApart RenameApart SetOperations.
+Require Import Env IL Alpha Fresh Annotation RenamedApart RenameApart SetOperations Take.
 Require Import LabelsDefined PairwiseDisjoint Liveness.
 
+Set Implicit Arguments.
 
 Definition renameApartF_live
   (renameApart_live:env var -> set var -> stmt -> ann (set var) -> set var * ann (set var)) G ϱ :=
@@ -84,6 +85,64 @@ Proof.
   general induction Len; simpl; repeat let_pair_case_eq; simpl; subst; eauto.
 Qed.
 
+Lemma get_fst_renameApartF_live G G' ϱ F n anF ans
+  (Get: get (fst (renameApartF_live renameApart_live G ϱ G' F anF)) n ans)
+  (Len:❬F❭=❬anF❭)
+  :  exists  Zs a  ϱ' G',
+    get F n Zs /\ get anF n a
+    /\ ans = snd (renameApart_live ϱ' G' (snd Zs) a) /\
+    G' [=] snd (renameApartF_live renameApart_live G ϱ G' (take n F) (take n anF)).
+(*
+                 /\ G ⊆ G'
+                 /\ of_list (fst ans) ⊆ G'
+                 /\ agree_on eq (freeVars (snd Zs) ∪ of_list (fst Zs)) (ϱ [fst Zs <-- fst ans]) ϱ'
+                 /\ length (fst Zs) = length (fst ans)
+                 /\ disj G (of_list (fst ans))
+                 /\ unique (fst ans) *)
+Proof.
+  length_equify.
+  general induction Len; simpl in * |- *; [ isabsurd |].
+  - revert Get; let_pair_case_eq; simpl_pair_eqs; subst.
+    revert Get; let_pair_case_eq; simpl_pair_eqs; subst. simpl in *.
+    inv Get.
+    + eexists x, y; eauto 100 using get.
+      do 2 eexists; split; [| split]; eauto using get.
+      split; eauto using get.
+    + edestruct IHLen as [? [? ?]]; dcr; subst; eauto 20 using get.
+      subst.
+      do 4 eexists; split; [| split]; eauto 100 using get.
+      split. reflexivity.
+      rewrite H5.
+Qed.
+(*    + do 3 eexists; split; eauto using get.
+      eapply get_rev. rewrite <- Heql. econstructor.
+      simpl. split. reflexivity.
+      split. cset_tac; intuition.
+      split. eauto.
+      split. eauto.
+      split.
+      rewrite fresh_list_length; eauto.
+      split.
+      symmetry. eapply disj_2_incl.
+      eapply fresh_list_spec. eapply fresh_spec. eauto.
+      split.
+      eapply fresh_list_unique, fresh_spec.
+      eauto.
+    + edestruct IHl as [? [? [? [? ?]]]]; eauto.
+      instantiate (1:=rev (tl (rev F))). rewrite <- Heql. simpl. rewrite rev_involutive; eauto.
+      rewrite <- Heql in *. simpl in *.
+      assert (S (length (rev l)) = length (rev F)).
+      rewrite <- Heql. simpl. rewrite rev_length; eauto.
+      do 3 eexists; split; eauto using get.
+      assert (length F = S (length (rev l))).
+      rewrite rev_length.
+      rewrite <- rev_length. rewrite <- Heql. eauto.
+      exploit rev_swap. symmetry; eauto. simpl in *.
+      rewrite H4 at 1. eapply get_app.
+      rewrite H3. simpl. eauto.
+Qed.
+ *)
+
 Lemma renameApart_live_sound ZL LV ZL' LV' s lv ϱ G
       (LenZL:❬ZL❭ = ❬ZL'❭) (LenLV:❬LV❭=❬LV'❭)
       (ParamLen:forall n Z Z', get ZL n Z -> get ZL' n Z' -> ❬Z❭ = ❬Z'❭)
@@ -131,7 +190,13 @@ Proof.
     + rewrite rev_length, renameApartF_length, renameApartF_live_length; eauto.
     + intros; inv_get.
       edestruct (get_fst_renameApartF _ _ _ H4) as [? [? ?]]; eauto; dcr.
-      rewrite H7. admit.
+      rewrite H7.
+      edestruct (get_fst_renameApartF_live _ _ _ _ _ H5); eauto; dcr; subst.
+      rewrite renameApartF_length in H8.
+      assert (n < ❬F❭) by eauto using get_range.
+      orewrite (❬F❭ - S (❬F❭ - S n) = n) in H8. get_functional.
+      rewrite renameApartFRight_corr in H16.
+      eapply H1.
     + intros; inv_get; simpl.
       admit.
     + erewrite getAnn_snd_renameApart_live; eauto.
