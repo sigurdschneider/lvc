@@ -13,7 +13,7 @@ Definition renameApartF_live
        let ϱZ := ϱ [ fst Zs <-- Y ] in
        let (N', alv') := renameApart_live ϱZ (G ∪ N ∪ of_list Y) (snd Zs) a in
        let (anF', N'') := f (N' ∪ of_list Y ∪ N) F anF in
-       (alv'::anF', N'')
+       (setTopAnn alv' (getAnn alv' ∪ of_list Y)::anF', N'')
      | _, _ => (nil, N)
      end).
 
@@ -85,13 +85,18 @@ Proof.
   general induction Len; simpl; repeat let_pair_case_eq; simpl; subst; eauto.
 Qed.
 
+
+
 Lemma get_fst_renameApartF_live G G' ϱ F n anF ans
   (Get: get (fst (renameApartF_live renameApart_live G ϱ G' F anF)) n ans)
   (Len:❬F❭=❬anF❭)
-  :  exists  Zs a  ϱ' G',
+  :  exists Zs a  G'' (Y:list var) ans',
     get F n Zs /\ get anF n a
-    /\ ans = snd (renameApart_live ϱ' G' (snd Zs) a) /\
-    G' [=] snd (renameApartF_live renameApart_live G ϱ G' (take n F) (take n anF)).
+    /\ ans' = snd (renameApart_live (ϱ [fst Zs <-- Y]) G'' (snd Zs) a) /\
+    ans = setTopAnn ans' (getAnn ans' ∪ of_list Y)/\
+    G'' = G ∪ snd (renameApartF_live renameApart_live G ϱ G' (take n F) (take n anF))
+            ∪ of_list Y
+    /\ Y = (fresh_list fresh (snd (renameApartF_live renameApart_live G ϱ G' (take n F) (take n anF)) ∪ G) ❬fst Zs❭).
 (*
                  /\ G ⊆ G'
                  /\ of_list (fst ans) ⊆ G'
@@ -106,13 +111,13 @@ Proof.
     revert Get; let_pair_case_eq; simpl_pair_eqs; subst. simpl in *.
     inv Get.
     + eexists x, y; eauto 100 using get.
-      do 2 eexists; split; [| split]; eauto using get.
-      split; eauto using get.
     + edestruct IHLen as [? [? ?]]; dcr; subst; eauto 20 using get.
       subst.
-      do 4 eexists; split; [| split]; eauto 100 using get.
-      split. reflexivity.
-      rewrite H5.
+      do 5 eexists; split; [| split]; eauto 100 using get.
+      split. reflexivity. simpl.
+      repeat let_pair_case_eq; repeat simpl_pair_eqs; subst. simpl.
+      split.
+      reflexivity. split; reflexivity.
 Qed.
 (*    + do 3 eexists; split; eauto using get.
       eapply get_rev. rewrite <- Heql. econstructor.
@@ -142,6 +147,25 @@ Qed.
       rewrite H3. simpl. eauto.
 Qed.
  *)
+
+Lemma lookup_set_update_with_list {X} `{OrderedType X} {Y} `{OrderedType Y}
+  Z Z' (f:X->Y) D `{Proper _ (_eq ==> _eq) f}
+  : of_list Z ⊆ D
+    -> unique Z
+    -> length Z = length Z'
+    -> of_list Z' ⊆ lookup_set (update_with_list Z Z' f) (of_list Z).
+Proof.
+  intros; hnf; intros.
+  lset_tac.
+  length_equify.
+  general induction H4; simpl.
+  - exfalso. simpl in *. cset_tac.
+  - simpl in *. cset_tac.
+    + eexists x. lud; split; eauto.
+    + edestruct IHlength_eq; eauto. instantiate (1:=D).
+      erewrite <- H2. cset_tac. dcr.
+      eexists x0. lud; eauto.
+Qed.
 
 Lemma renameApart_live_sound ZL LV ZL' LV' s lv ϱ G
       (LenZL:❬ZL❭ = ❬ZL'❭) (LenLV:❬LV❭=❬LV'❭)
@@ -195,10 +219,69 @@ Proof.
       rewrite renameApartF_length in H8.
       assert (n < ❬F❭) by eauto using get_range.
       orewrite (❬F❭ - S (❬F❭ - S n) = n) in H8. get_functional.
-      rewrite renameApartFRight_corr in H16.
-      eapply H1.
-    + intros; inv_get; simpl.
-      admit.
+      rewrite H16.
+      rewrite drop_rev.
+      rewrite renameApartFRight_corr.
+      erewrite <- snd_renameApartF_live.
+      rewrite renameApartF_length. rewrite rev_rev. rewrite rev_length.
+      assert (n < ❬F❭) by eauto using get_range.
+      orewrite (❬F❭ - S (❬F❭ - S n) = n).
+      eapply live_sound_monotone2.
+      eapply H1; eauto.
+      rewrite !app_length, !map_length, rev_length, renameApartF_length; omega.
+      rewrite !app_length, !map_length, renameApartF_live_length; omega.
+      -- intros ? ? ? GetA GetB; inv_get.
+         eapply get_app_cases in GetA; destruct GetA.
+         ++ rewrite get_app_lt in GetB; inv_get.
+           edestruct (get_fst_renameApartF _ _ _ GetB) as [? [? ?]]; eauto; dcr. subst.
+           rewrite renameApartF_length in H21.
+           assert (n0 < ❬F❭) by eauto using get_range.
+           orewrite (❬F❭ - S (❬F❭ - S n0) = n0) in H21. get_functional. eauto.
+           rewrite map_length, rev_length, renameApartF_length; eauto using get_range.
+         ++ dcr. rewrite get_app_ge in GetB.
+           rewrite ?map_length,?rev_length in GetB.
+           rewrite ?map_length,?rev_length in H17.
+           rewrite renameApartF_length in GetB.
+           exploit ParamLen; eauto.
+           rewrite map_length in *. eauto.
+           rewrite rev_length, renameApartF_length; eauto.
+      -- eauto with cset.
+      -- rewrite rev_length, renameApartF_length, rev_rev.
+         assert (n < ❬F❭) by eauto using get_range.
+         orewrite (❬F❭ - S (❬F❭ - S n) = n).
+         repeat rewrite take_length_le; eauto; omega.
+      -- intros. inv_get.
+         assert (n0 < ❬F❭) by eauto using get_range.
+         rewrite rev_length in H15.
+         orewrite (❬F❭ - S (❬F❭ - S n0) = n0) in H15.
+         exploit H0; try eapply H15; eauto.
+         erewrite fst_renameApart_live; eauto.
+    + intros ? ? ? GetA GetB; inv_get; simpl.
+      edestruct (get_fst_renameApartF _ _ _ GetA) as [? [? ?]]; eauto; dcr. subst.
+      rewrite H14.
+      edestruct (get_fst_renameApartF_live _ _ _ _ _ GetB); eauto; dcr; subst.
+      erewrite getAnn_snd_renameApart_live; eauto.
+      exploit H2; eauto; dcr. simpl in H17.
+      rewrite renameApartF_length in H6.
+      assert (n < ❬F❭) by eauto using get_range.
+      orewrite (❬F❭ - S (❬F❭ - S n) = n) in H6.
+      get_functional.
+      rewrite renameApartF_length.
+      rewrite drop_rev.
+      rewrite rev_rev. rewrite rev_length.
+      assert (n < ❬F❭) by eauto using get_range.
+      orewrite (❬F❭ - S (❬F❭ - S n) = n).
+      rewrite renameApartFRight_corr.
+      erewrite <- snd_renameApartF_live.
+      instantiate (1:=take n als).
+      split.
+      rewrite getAnn_setTopAnn. eauto with cset.
+      rewrite getAnn_setTopAnn.
+      rewrite lookup_set_update_with_list_in_union_length; eauto.
+      rewrite H17. clear. cset_tac. rewrite !take_length_le; omega.
+      -- intros. inv_get.
+         exploit H0; eauto.
+         erewrite fst_renameApart_live; eauto.
     + erewrite getAnn_snd_renameApart_live; eauto.
       rewrite H3; eauto.
 Qed.

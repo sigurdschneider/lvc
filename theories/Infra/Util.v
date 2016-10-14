@@ -738,3 +738,11 @@ Instance ge_computable a b : Computable (a >= b).
 Proof.
 eapply ge_dec.
 Qed.
+
+
+Lemma rev_rev X (L:list X)
+  : rev (rev L) = L.
+Proof.
+  induction L; simpl; eauto.
+  rewrite rev_app_distr. rewrite IHL. reflexivity.
+Qed.

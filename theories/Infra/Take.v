@@ -1,5 +1,5 @@
 Require Import Arith Coq.Lists.List Setoid Coq.Lists.SetoidList Omega.
-Require Export Infra.Option EqDec AutoIndTac Util Get.
+Require Export Infra.Option EqDec AutoIndTac Util Get Drop.
 
 Set Implicit Arguments.
 
@@ -85,8 +85,8 @@ Proof.
   f_equal; eauto.
 Qed.
 
-Lemma take_app_lt n X (L L':list X)
-  : n < length L
+Lemma take_app_le n X (L L':list X)
+  : n <= length L
     -> take n (L ++ L') = take n L.
 Proof.
   intros. general induction n; simpl; eauto.
@@ -119,4 +119,18 @@ Lemma take_app_eq n X (L L':list X)
 Proof.
   intros. subst. general induction L; simpl; eauto.
   f_equal; eauto.
+Qed.
+
+
+Lemma drop_rev X (L:list X) k
+  : drop k L = rev (take (❬L❭ - k) (rev L)).
+Proof.
+  general induction k.
+  - simpl. rewrite take_eq_ge; eauto.
+    rewrite rev_rev; eauto. rewrite rev_length; omega.
+  - simpl. rewrite IHk.
+    f_equal. destruct L. simpl; eauto.
+    simpl.
+    rewrite !take_app_le. reflexivity.
+    rewrite rev_length. omega.
 Qed.

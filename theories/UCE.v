@@ -215,11 +215,12 @@ Proof.
   - simpl. rewrite compileF_length; eauto.
   - rewrite Len; intros; hnf in H; dcr; subst; inv_get.
     rewrite compileF_length; eauto.
-    rewrite take_app_lt; eauto with len.
+    rewrite take_app_le; eauto with len.
     erewrite (take_eta n (getAnn ⊝ als)) at 2.
     rewrite countTrue_app.
     erewrite <- get_eq_drop; eauto using map_get_1.
     rewrite EQ. simpl. omega.
+    rewrite map_length. omega.
   - rewrite Len; intros; simpl in *; dcr; subst.
     rewrite compileF_length; eauto.
     rewrite take_app_ge; eauto with len.
@@ -235,8 +236,8 @@ Proof.
   inv_get; simpl.
   exploit (compileF_get (getAnn ⊝ als ++ RL)); try eapply H2; eauto.
   simpl in *.
-  erewrite take_app_lt, <- map_take in H1; eauto with len.
-  get_functional. eauto.
+  erewrite take_app_le, <- map_take in H1; eauto with len.
+  get_functional. eauto. rewrite map_length. eapply get_range in H2. omega.
 Qed.
 
 Lemma sim_compile_fun_cases r RL L V s L' F als alt
@@ -278,9 +279,9 @@ Proof.
     eapply labenv_sim_extension; eauto.
     + intros. hnf; intros; simpl in *; dcr; subst; inv_get.
       exploit (compileF_get (getAnn ⊝ als ++ RL)); try eapply H5; eauto.
-      erewrite take_app_lt, <- map_take in H7; eauto with len.
+      erewrite take_app_le, <- map_take in H7; eauto with len.
       simpl in *. get_functional.
-      exploit H4; eauto.
+      exploit H4; eauto. rewrite map_length. eapply get_range in H9. omega.
     + eapply compileF_indexwise_paramrel; eauto.
     + eapply compileF_separates; eauto.
 Qed.
@@ -329,11 +330,12 @@ Proof.
   - simpl. rewrite compileF_length; eauto.
   - rewrite Len; intros; hnf in H; dcr; subst; inv_get.
     rewrite compileF_length; eauto.
-    rewrite take_app_lt; eauto with len.
+    rewrite take_app_le; eauto with len.
     erewrite (take_eta n (getAnn ⊝ als)) at 2.
     rewrite countTrue_app.
     erewrite <- get_eq_drop; eauto using map_get_1.
     rewrite EQ. simpl. omega.
+    rewrite map_length. omega.
   - rewrite Len; intros; simpl in *; dcr; subst.
     rewrite compileF_length; eauto.
     rewrite take_app_ge; eauto with len.
@@ -349,8 +351,8 @@ Proof.
   inv_get; simpl.
   exploit (compileF_get (getAnn ⊝ als ++ RL)); try eapply H2; eauto.
   simpl in *.
-  erewrite take_app_lt, <- map_take in H1; eauto with len.
-  get_functional. eauto.
+  erewrite take_app_le, <- map_take in H1; eauto with len.
+  get_functional. eauto. rewrite map_length. eapply get_range in H2. omega.
 Qed.
 
 Lemma sim_compile_fun_cases r RL L V s L' F als alt
@@ -392,9 +394,9 @@ Proof.
     eapply labenv_sim_extension; eauto.
     + intros. hnf; intros; simpl in *; dcr; subst; inv_get.
       exploit (compileF_get (getAnn ⊝ als ++ RL)); try eapply H5; eauto.
-      erewrite take_app_lt, <- map_take in H7; eauto with len.
+      erewrite take_app_le, <- map_take in H7; eauto with len.
       simpl in *. get_functional.
-      exploit H4; eauto.
+      exploit H4; eauto. rewrite map_length. eapply get_range in H9; omega.
     + eapply compileF_indexwise_paramrel; eauto.
     + eapply compileF_separates; eauto.
 Qed.
@@ -618,20 +620,22 @@ Proof.
     simpl in *; dcr; inv_get. rewrite H1 in Ann.
     exploit compileF_get; eauto.
     econstructor 2; [ | | econstructor 1 ].
-    rewrite take_app_lt; eauto 20 with len.
-    rewrite <- map_take. eauto. simpl.
-    eapply IH in ICEnd; eauto.
-    rewrite take_app_ge in ICEnd; eauto 20 with len.
-    rewrite map_length in ICEnd.
-    orewrite (❬F❭ + n - ❬als❭ = n) in ICEnd. simpl.
-    rewrite countTrue_app in ICEnd. eauto.
+    + rewrite take_app_le; eauto 20 with len.
+      rewrite <- map_take. eauto.
+      rewrite map_length. eapply get_range in GetAls. omega.
+    + simpl.
+      eapply IH in ICEnd; eauto.
+      rewrite take_app_ge in ICEnd; eauto 20 with len.
+      rewrite map_length in ICEnd.
+      orewrite (❬F❭ + n - ❬als❭ = n) in ICEnd. simpl.
+      rewrite countTrue_app in ICEnd. eauto.
   - exploit reachability_trueIsCalled; try eapply IC; eauto.
     simpl in *; dcr; inv_get. assert (getAnn x0).
     rewrite <- H4. eauto.
     exploit compileF_get; eauto.
     econstructor 2; [ | | ].
-    rewrite take_app_lt; eauto 20 with len.
-    rewrite <- map_take. eauto.
+    rewrite take_app_le; eauto 20 with len.
+    rewrite <- map_take. eauto. rewrite map_length. eapply get_range in H1. omega.
     simpl.
     eapply IH in H0; eauto.
     eapply IHCC in H0; eauto.
@@ -666,8 +670,8 @@ Proof.
     destruct (getAnn x), x0; isabsurd; eauto.
     exploit compileF_get; eauto.
     econstructor 2; [ | | ].
-    rewrite take_app_lt; eauto 20 with len.
-    rewrite <- map_take. eauto.
+    rewrite take_app_le; eauto 20 with len.
+    rewrite <- map_take. eauto. rewrite map_length. eapply get_range in H1. omega.
     simpl.
     eapply IH in H0; eauto.
     subst. eauto.
@@ -734,9 +738,9 @@ Proof.
   exploit reachability_trueIsCalled; eauto.
   dcr; subst; simpl in *. rewrite H6 in gAt.
   destruct x; isabsurd; eauto.
-  setoid_rewrite take_app_lt in H3 at 2.
+  setoid_rewrite take_app_le in H3 at 2.
   setoid_rewrite <- map_take in H3. eauto.
-  eauto with len.
+  rewrite map_length. omega.
 Qed.
 
 Lemma UCE_noUnreachableCode RL s lv

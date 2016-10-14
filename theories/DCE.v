@@ -237,7 +237,7 @@ Proof.
   - rewrite LENa; intros; hnf in H; destruct H as [? [? ?]]; dcr; subst; inv_get.
     rewrite compileF_length; eauto with len.
     rewrite map_app.
-    rewrite take_app_lt; eauto 20 with len.
+    rewrite take_app_le; eauto 20 with len.
     erewrite (take_eta n (getAnn ⊝ anF)) at 2.
     rewrite countTrue_app.
     rewrite fst_zip_pair; eauto with len.
@@ -267,7 +267,7 @@ Proof.
   simpl in *.
   rewrite <- !zip_app in H1; eauto with len.
   rewrite fst_zip_pair in H1.
-  erewrite take_app_lt, <- map_take in H1; eauto with len.
+  erewrite take_app_le, <- map_take in H1; eauto with len.
   get_functional. eauto. eauto 20 with len.
 Qed.
 
@@ -344,7 +344,7 @@ Proof.
       rewrite <- !zip_app in H11; eauto with len.
       rewrite <- !zip_app in H0; eauto with len.
       rewrite fst_zip_pair in H11; eauto 20 with len.
-      erewrite take_app_lt, <- map_take in H11; eauto with len.
+      erewrite take_app_le, <- map_take in H11; eauto with len.
       simpl in *. get_functional.
       exploit H4; eauto. exploit H9; eauto.
       eapply IH; eauto with len.
@@ -398,7 +398,7 @@ Proof.
   - simpl. rewrite compileF_length; eauto.
   - rewrite Len; intros; hnf in H; dcr; subst; inv_get.
     rewrite compileF_length; eauto.
-    rewrite take_app_lt; eauto with len.
+    rewrite take_app_le; eauto with len.
     erewrite (take_eta n (getAnn ⊝ als)) at 2.
     rewrite countTrue_app.
     erewrite <- get_eq_drop; eauto using map_get_1.
@@ -418,7 +418,7 @@ Proof.
   inv_get; simpl.
   exploit (compileF_get (getAnn ⊝ als ++ RL)); try eapply H2; eauto.
   simpl in *.
-  erewrite take_app_lt, <- map_take in H1; eauto with len.
+  erewrite take_app_le, <- map_take in H1; eauto with len.
   get_functional. eauto.
 Qed.
 
@@ -461,7 +461,7 @@ Proof.
     eapply labenv_sim_extension; eauto.
     + intros. hnf; intros; simpl in *; dcr; subst; inv_get.
       exploit (compileF_get (getAnn ⊝ als ++ RL)); try eapply H5; eauto.
-      erewrite take_app_lt, <- map_take in H7; eauto with len.
+      erewrite take_app_le, <- map_take in H7; eauto with len.
       simpl in *. get_functional.
       exploit H4; eauto.
     + eapply compileF_indexwise_paramrel; eauto.
@@ -687,7 +687,7 @@ Proof.
     simpl in *; dcr; inv_get. rewrite H1 in Ann.
     exploit compileF_get; eauto.
     econstructor 2; [ | | econstructor 1 ].
-    rewrite take_app_lt; eauto 20 with len.
+    rewrite take_app_le; eauto 20 with len.
     rewrite <- map_take. eauto. simpl.
     eapply IH in ICEnd; eauto.
     rewrite take_app_ge in ICEnd; eauto 20 with len.
@@ -699,7 +699,7 @@ Proof.
     rewrite <- H4. eauto.
     exploit compileF_get; eauto.
     econstructor 2; [ | | ].
-    rewrite take_app_lt; eauto 20 with len.
+    rewrite take_app_le; eauto 20 with len.
     rewrite <- map_take. eauto.
     simpl.
     eapply IH in H0; eauto.
@@ -735,7 +735,7 @@ Proof.
     destruct (getAnn x), x0; isabsurd; eauto.
     exploit compileF_get; eauto.
     econstructor 2; [ | | ].
-    rewrite take_app_lt; eauto 20 with len.
+    rewrite take_app_le; eauto 20 with len.
     rewrite <- map_take. eauto.
     simpl.
     eapply IH in H0; eauto.
@@ -803,7 +803,7 @@ Proof.
   exploit reachability_trueIsCalled; eauto.
   dcr; subst; simpl in *. rewrite H6 in gAt.
   destruct x; isabsurd; eauto.
-  setoid_rewrite take_app_lt in H3 at 2.
+  setoid_rewrite take_app_le in H3 at 2.
   setoid_rewrite <- map_take in H3. eauto.
   eauto with len.
 Qed.

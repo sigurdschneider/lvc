@@ -252,7 +252,9 @@ Lemma get_fst_renameApartF G ϱ F n ans
                  /\ length (fst Zs) = length (fst ans)
                  /\ disj G (of_list (fst ans))
                  /\ unique (fst ans)
-                 /\ G' [=] (G ∪ snd (renameApartFRight renameApart' G ϱ (nil, {}) (drop (S n) (rev F)))) ∪ (of_list (fst ans)).
+                 /\ G' = (G ∪ snd (renameApartFRight renameApart' G ϱ (nil, {}) (drop (S n) (rev F)))) ∪ (of_list (fst ans))
+                 /\ fst ans = fresh_list fresh (snd (renameApartFRight renameApart' G ϱ (nil, {}) (drop (S n) (rev F))) ∪ G) ❬fst Zs❭
+                 /\ ϱ' = ϱ [fst Zs <-- fst ans].
 Proof.
   rewrite <- renameApartFRight_corr.
   remember (rev F).
@@ -521,7 +523,6 @@ Proof.
                                                          freeVars (snd z) \ of_list (fst z)). {
             clear_all; cset_tac; intuition.
           }
-          rewrite H12 in H4.
           rewrite <- lookup_set_agree; eauto.
           intros. rewrite disj_minus_eq.
           - setoid_rewrite diff_subset_equal at 2.
@@ -534,6 +535,7 @@ Proof.
             rewrite <- H. eapply lookup_set_incl; eauto.
             eapply incl_union_left. eapply incl_list_union.
             eapply map_get_1; eauto. eauto.
+          - rewrite <- H12. eauto.
         }
       * assert (freeVars (snd z) ⊆ (freeVars (snd z) \ of_list (fst z)) ∪ of_list (fst z)). {
           clear_all; cset_tac; intuition.
@@ -543,7 +545,6 @@ Proof.
         assert (freeVars (snd z) \ of_list (fst z) ⊆ (freeVars (snd z) ∪ of_list (fst z)) \ of_list (fst z)). {
           cset_tac; intuition.
         }
-        rewrite <- H12 in H4.
         eapply union_subset_3; eauto.
         rewrite <- H5. rewrite <- H.
         rewrite <- lookup_set_agree; eauto.
@@ -551,8 +552,9 @@ Proof.
         eapply incl_union_left.
         eapply incl_list_union.
         eapply map_get_1; eauto. eauto.
+        eauto using agree_on_incl.
         rewrite <- H7.
-        rewrite <- incl_right in H8.
+        time (rewrite <- incl_right in H8).
         rewrite <- lookup_set_agree; eauto.
         eapply update_with_list_lookup_set_incl; eauto.
     + rewrite IH; eauto. eapply incl_union_left. rewrite <- H.
