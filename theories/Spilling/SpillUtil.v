@@ -571,6 +571,21 @@ Proof.
 Qed.
 
 
+Lemma clearSp_clearSp
+      (sl : spilling)
+  :
+    clear_Sp (clear_Sp sl) = clear_Sp sl
+.
+Proof.
+  unfold clear_Sp.
+  rewrite getAnn_setTopAnn.
+  rewrite setTopAnn_setTopAnn.
+  simpl.
+  reflexivity.
+Qed.
+
+
+
 Lemma setSp_getSp
       (sl : spilling)
   :

@@ -52,3 +52,30 @@ Proof.
   induction s,a; simpl; eauto with cset.
   - destruct a; simpl; eauto.
 Qed.
+
+
+Fixpoint reconstr_G
+         (G : ⦃var⦄)
+         (s : stmt)
+         {struct s}
+  : ann ⦃var⦄
+  :=
+    match s with
+    | stmtLet x e s
+      => ann1 G
+             (reconstr_G (singleton x) s)
+
+    | stmtIf e s t
+      => ann2 G
+             (reconstr_G ∅ s)
+             (reconstr_G ∅ t)
+
+    | stmtFun F t
+      => annF G
+             ((fun ps => reconstr_G (of_list (fst ps)) (snd ps))
+                ⊝ F)
+             (reconstr_G ∅ t)
+
+    | _ => ann0 G
+    end
+.

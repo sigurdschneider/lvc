@@ -215,3 +215,18 @@ Proof.
     + eapply map_iff; eauto.
     + eapply map_iff; eauto.
 Qed.
+
+
+(* move to cardinal *)
+Lemma card_inter_le_right
+      (X : Type)
+
+      `{OrderedType X}
+      (s t : ⦃X⦄)
+  :
+    cardinal (s ∩ t) <= cardinal t
+.
+Proof.
+  rewrite subset_cardinal with (s':=t);
+    [reflexivity | cset_tac].
+Qed.
