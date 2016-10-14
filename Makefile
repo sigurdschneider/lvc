@@ -15,6 +15,14 @@ VS=$(shell find theories/ -iname '*.v' | grep -v '/\.')
 VSIND=$(shell find theories/ -iname '*vo' | sed 's/\.vo/.v/' | grep -v 'Spilling' | grep -v 'ValueOpts' | grep -v 'TransVal')
 DOCS=$(shell find extra/ )
 
+ifeq ($(wildcard time.rb),time.rb) 
+  export TIMECMD=@./time.rb $(if $(findstring j,$(MAKEFLAGS)),--parallel,)
+endif
+export COQDOCFLAGS=--interpolate --utf8 --toc --toc-depth 3 --index indexpage --no-lib-name
+
+#if [[ -z "$VANILLA" && -e "time.rb" ]]; then \
+#	echo "Patching ${MAKEFILE} to use ruby-based timing scripts (use --vanilla if undesired)."
+
 ifneq "$(COQBIN)" ""
         COQBIN := $(COQBIN)/
 endif
@@ -60,17 +68,19 @@ doc-ind: clean-doc $(DOCS)
 
 doc-ind-publish: doc-ind ind-package
 	scp -r $(DOCIND)/* ps:public_html/lvc-ind/
-	scp -r lvc-ind.tbz ps:public_html/lvc-ind/
+	#scp -r lvc-ind.tgz ps:public_html/lvc-ind/
 
 ind-package:
 	rm -rf $(PKGIND)
 	mkdir $(PKGIND)
-	cp -r _CoqProject compiler ContainersPlugin extra Makefile configure.sh paco src theories $(PKGIND)
+	cp -r _CoqProject compiler ContainersPlugin extra Makefile configure.sh paco src theories README.md $(PKGIND)
 	find $(PKGIND)/ -type f -iname '*.vo' -o -iname '*.glob' -o -iname '*.v.d' -o -iname '*.time' -o -iname '*.aux' | xargs rm -rf 
 	rm -rf $(PKGIND)/theories/Spilling $(PKGIND)/theories/TransVal $(PKGIND)/theories/ValueOpts $(PKGIND)/theories/Test*
 	$(MAKE) -C $(PKGIND) clean depclean
+	cp Make Makefile.coq $(PKGIND)
 	rm -rf $(PKGIND)/src/*.cm* $(PKGIND)/src/*.o $(PKGIND)/src/*.ml4.d 
-	tar cvjf lvc-ind.tbz $(PKGIND)
+	rm -rf $(PKGIND)/compiler/lvcc.native
+	tar cvzf lvc-ind.tgz $(PKGIND)
 
 clean-doc:
 	rm -rf $(DOC)
@@ -80,12 +90,14 @@ clean: clean-doc
 	rm -f $(COQMAKEFILE)
 
 $(COQMAKEFILE): Makefile depmakefiles $(VS)
-	./configure.sh
+	$(COQBIN)coq_makefile -f Make -o Makefile.coq
+	sed -i s/TIMECMD=/TIMECMD?=/ Makefile.coq 
+#	./configure.sh
 #	coq_makefile -f _CoqProject $(VS) -o $(COQMAKEFILE)
 
 
-extraction: compiler/STAMP compiler/extraction.v theories/Compiler.vo
-	+$(MAKE) -C compiler
+extraction: theories/Compiler.vo compiler/extraction.v compiler/STAMP  
+	+$(MAKE) -C compiler all
 
 compiler/STAMP: theories/Compiler.vo compiler/extraction.v
 	mkdir -p compiler/extraction

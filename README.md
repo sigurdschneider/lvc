@@ -1,11 +1,12 @@
 # LVC Compiler Project
-LVC stands for Linear Verified Compiler. The compiler is based on the linear first-order language IL [1]. 
+LVC stands for Linear Verified Compiler. The compiler is based on the linear first-order language IL [1,2].
+This is a stripped down version for submission to CPP 2017.
 
 ## Dependencies
 
 - **Coq**
 
-    Sources compile with Coq version 8.4pl4 (May 2014).
+    Sources compile with Coq version 8.5pl2.
 
 - **OCaml** (including ocamlbuild)
 
@@ -22,24 +23,27 @@ LVC stands for Linear Verified Compiler. The compiler is based on the linear fir
 
 ## Building LVC
 
-After installing the dependencies, use
+After installing the dependencies, you *can* (but do not have to) use
 
 	configure.sh
 
-to generate a Makefile (use `configure.sh --vanilla` if you don't have ruby installed). Then build LVC using
+to generate a Makefile (use `configure.sh --vanilla` if you don't have ruby installed). 
+As a failsafe, we also provide a Makefile.coq in this distibuition. Then build LVC using
 
 	make
+	make extraction
 
-This will generate a binary
+This will generate a binary, and the following symbolic link will point to it
 
 	extraction/lvcc.native
 
 There are some example files in extraction/examples. Run one by issuing the following command:
 
 	cd extraction
-	./lvcc.native -3 true examples/fib.il
+	./lvcc.native examples/dve.il
+	./lvcc.native examples/dve+dce.il
 
-Several phases are supported, -3 true activates the IL to IL/I phase (register assignment and parameter elimination).
+All source files are interpreted as IL/I. Translation to IL/F is supported via argument "-c true".
 
 ## Disclaimer
 
@@ -53,4 +57,5 @@ The sources incorporate ideas and code from various sources.
 
 ## References
 
-[1] Sigurd Schneider. 'Semantics of an Intermediate Language for Program Transformation'. Master's Thesis. Saarland University, 2013.
+[1] Sigurd Schneider: Semantics of an Intermediate Language for Program Transformation. Master's Thesis. Saarland University, 2013.
+[2] Sigurd Schneider, Gert Smolka, Sebastian Hack: A Linear First-Order Functional Intermediate Language for Verified Compilers. ITP 2015

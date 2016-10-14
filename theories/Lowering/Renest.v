@@ -227,7 +227,7 @@ Proof.
   intros ISIM IP TT Img r SIML; pcofix CIH.
   eapply ISIM; eauto.
   eapply labenv_sim_extension'; eauto using indexwise_r_mon.
-  eapply labenv_sim_mon; eauto. intros. eapply paco3_mon; eauto.
+  eapply labenv_sim_mon; eauto.
 Qed.
 
 Lemma simILabenv_extension t A (PR:ProofRelationI A) (AL AL':list A) F L L'

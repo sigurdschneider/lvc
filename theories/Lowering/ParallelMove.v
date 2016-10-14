@@ -4,6 +4,8 @@ Require Import Plus Util AllInRel Map.
 Require Import Val Var Env IL Annotation InRel SimI Fresh Liveness Status.
 
 Set Implicit Arguments.
+Unset Printing Records.
+
 
 (** * Parallel Moves
 
@@ -262,47 +264,23 @@ Inductive approx
   (spm:lower (zip pair DL (I.block_Z ⊝ L)) s al = Success s')
   : approx DL L L' lv (I.blockI Z s n) (I.blockI nil s' n).
 
-Inductive pmSim : I.state -> I.state -> Prop :=
-  pmSimI Lv s (E E':onv val) L L' s'
-  (al: ann (set var))
-  (LS:live_sound Imperative (I.block_Z ⊝ L) Lv s al)
-  (pmlowerOk:lower (zip pair Lv (I.block_Z ⊝ L))  s al = Success s')
-  (LA:inRel approx Lv L L')
-  (EEQ:agree_on eq (getAnn al) E E')
-  : pmSim (L,E,s) (L', E', s').
 
-Unset Printing Records.
-
-Lemma pmSim_sim σ1 σ2
-: pmSim σ1 σ2 -> sim bot3 Sim σ1 σ2.
+Lemma correct Lv s (E E':onv val) L L' s' (al: ann (set var))
+ (LS:live_sound Imperative (I.block_Z ⊝ L) Lv s al)
+ (pmlowerOk:lower (zip pair Lv (I.block_Z ⊝ L))  s al = Success s')
+ (LA:inRel approx Lv L L')
+ (EEQ:agree_on eq (getAnn al) E E')
+  : sim bot3 Sim (L,E,s) (L', E', s').
 Proof.
-  revert σ1 σ2. pcofix pmSim_sim; intros.
-  inv H0; inv LS; simpl in *; try monadS_inv pmlowerOk.
+  revert_all. pcofix pmSim_sim; intros.
+  inv LS; simpl in *; try monadS_inv pmlowerOk.
   - invt live_exp_sound.
-    + case_eq (op_eval E e0); intros.
-      * pone_step.
-        erewrite <- op_eval_live; eauto.
-        right; eapply pmSim_sim; econstructor; eauto.
-        eapply agree_on_update_same; eauto using agree_on_incl.
-      * pno_step. erewrite <- op_eval_live in def; eauto. congruence.
-    + remember (omap (op_eval E) Y). symmetry in Heqo.
-      exploit omap_op_eval_live_agree; try eassumption.
-      destruct o.
-      * pextern_step; try congruence.
-        -- right; eapply pmSim_sim; econstructor; eauto.
-           eapply agree_on_update_same; eauto using agree_on_incl.
-        -- right; eapply pmSim_sim; econstructor; eauto.
-           eapply agree_on_update_same; eauto using agree_on_incl.
-      * pno_step.
-  - case_eq (op_eval E e); intros.
-    exploit op_eval_live_agree; try eassumption.
-    case_eq (val2bool v); intros.
-    + pone_step.
-      right; eapply pmSim_sim; econstructor; eauto using agree_on_incl.
-    + pone_step.
-      right; eapply pmSim_sim; econstructor; eauto using agree_on_incl.
-    + exploit op_eval_live_agree; try eassumption.
-      pno_step.
+    + eapply (sim_let_op il_statetype_I);
+        eauto 20 using op_eval_live, agree_on_update_same, agree_on_incl.
+    + eapply (sim_let_call il_statetype_I); eauto 10 using agree_on_update_same, agree_on_incl.
+        erewrite <- omap_op_eval_live_agree; eauto. eapply agree_on_sym; eauto.
+  - eapply (sim_cond il_statetype_I);
+      eauto 20 using op_eval_live, agree_on_update_same, agree_on_incl.
   - eapply option2status_inv in EQ. eapply nth_error_get in EQ.
     inRel_invs.
     inv_get. simpl in *.
@@ -315,8 +293,8 @@ Proof.
       * eapply plus2O. econstructor; eauto. simpl. reflexivity.
       * eapply star2_plus2_plus2 with (A:=nil) (B:=nil); eauto.
         eapply plus2O. econstructor; eauto. reflexivity. reflexivity.
-      * right; eapply pmSim_sim; econstructor; try eapply LA1; eauto; simpl.
-        eapply (inRel_drop LA H5).
+      * right; eapply pmSim_sim; try eapply LA1; eauto; simpl.
+        eapply (inRel_drop LA H4).
         assert (getAnn al ⊆ blv) by eauto with cset.
         eapply agree_on_incl in X''; eauto. symmetry in X''. simpl.
         eapply agree_on_trans; eauto. eapply equiv_transitive.
@@ -326,12 +304,12 @@ Proof.
     + perr.
   - pno_step. simpl. eauto using op_eval_live.
   - pone_step.
-    right; eapply pmSim_sim. econstructor; eauto using agree_on_incl.
+    right; eapply pmSim_sim; eauto using agree_on_incl.
     econstructor; eauto.
     eapply mutual_approx; eauto 20 using mkBlock_I_i with len.
     intros; inv_get.
     econstructor; eauto.
-    + exploit H3; eauto.
+    + exploit H2; eauto.
     + exploit szip_get; try eapply EQ; eauto.
 Qed.
 

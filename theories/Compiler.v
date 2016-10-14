@@ -8,6 +8,7 @@ Require Delocation DelocationAlgo DelocationCorrect DelocationValidator.
 Require Allocation AllocationAlgo AllocationAlgoCorrect.
 Require UCE DVE EAE Alpha.
 Require ReachabilityAnalysis ReachabilityAnalysisCorrect.
+Require Import DCVE.
 (* Require CopyPropagation ConstantPropagation ConstantPropagationAnalysis.*)
 
 Require Import String.
@@ -79,99 +80,18 @@ Qed.
 
 Arguments sim S {H} S' {H0} r t _ _.
 
-Definition DCVE (s:IL.stmt) : stmt * ann (set var) :=
-  let uc := ReachabilityAnalysis.reachabilityAnalysis s in
-  let s_uce := UCE.compile nil s uc in
-  let tlv := LivenessAnalysis.livenessAnalysis s_uce in
-  let s_dve := DVE.compile nil s_uce tlv in
-  (s_dve, DVE.compile_live s_uce tlv ∅).
+Definition addParams (s:IL.stmt) (lv:ann (set var)) : IL.stmt :=
+  let additional_params := additionalArguments s lv in
+  Delocation.compile nil s additional_params.
 
-Lemma DCVE_live (ili:IL.stmt) (PM:LabelsDefined.paramsMatch ili nil)
-  : Liveness.live_sound Liveness.Imperative nil nil (fst (DCVE ili)) (snd (DCVE ili)).
-Proof.
-  unfold DCVE. simpl.
-  eapply (@DVE.dve_live _ nil nil).
-  eapply @LivenessAnalysisCorrect.correct; eauto.
-  eapply (@UCE.UCE_paramsMatch nil nil); eauto.
-  eapply Reachability.reachability_SC_S, ReachabilityAnalysisCorrect.correct; eauto.
-  eapply ReachabilityAnalysisCorrect.reachabilityAnalysis_getAnn.
-Qed.
 
-Lemma DCVE_noUC ili (PM:LabelsDefined.paramsMatch ili nil)
-  : LabelsDefined.noUnreachableCode LabelsDefined.isCalled (fst (DCVE ili)).
-Proof.
-  intros. subst. simpl.
-  eapply LabelsDefined.noUnreachableCode_mono.
-  - eapply (@DVE.DVE_noUnreachableCode _ nil nil).
-    + eapply @LivenessAnalysisCorrect.correct; eauto.
-      eapply (@UCE.UCE_paramsMatch nil nil); eauto.
-      * eapply Reachability.reachability_SC_S, ReachabilityAnalysisCorrect.correct; eauto.
-      * eapply ReachabilityAnalysisCorrect.reachabilityAnalysis_getAnn.
-    + eapply UCE.UCE_noUnreachableCode.
-      * eapply ReachabilityAnalysisCorrect.correct; eauto.
-      * eapply ReachabilityAnalysisCorrect.reachabilityAnalysis_getAnn.
-  - eapply LabelsDefined.trueIsCalled_isCalled.
-Qed.
-
-Lemma DCVE_occurVars s (PM:LabelsDefined.paramsMatch s nil)
-  : getAnn (snd (DCVE s)) ⊆ occurVars s.
-Proof.
-  simpl.
-  rewrite DVE.compile_live_incl_empty; eauto.
-  rewrite LivenessAnalysisCorrect.livenessAnalysis_getAnn.
-  eapply UCE.compile_occurVars.
-  eapply @LivenessAnalysisCorrect.correct; eauto.
-  eapply (@UCE.UCE_paramsMatch nil nil); eauto.
-  * eapply Reachability.reachability_SC_S, ReachabilityAnalysisCorrect.correct; eauto.
-  * eapply ReachabilityAnalysisCorrect.reachabilityAnalysis_getAnn.
-Qed.
-
-Lemma DCVE_correct (ili:IL.stmt) (E:onv val)
-  (PM:LabelsDefined.paramsMatch ili nil)
-  : defined_on (IL.occurVars ili) E
-    -> sim I.state I.state bot3 Sim (nil, E, ili) (nil, E, fst (DCVE ili)).
-Proof.
-  intros. subst. unfold DCVE.
-  simpl in *; unfold ensure_f, additionalArguments in *.
-  assert (Reachability.reachability Reachability.SoundAndComplete nil ili
-                                           (ReachabilityAnalysis.reachabilityAnalysis ili)). {
-    eapply ReachabilityAnalysisCorrect.correct; eauto.
-  }
-  assert (getAnn (ReachabilityAnalysis.reachabilityAnalysis ili)). {
-    eapply ReachabilityAnalysisCorrect.reachabilityAnalysis_getAnn.
-  }
-  assert (LabelsDefined.paramsMatch
-            (UCE.compile nil ili (ReachabilityAnalysis.reachabilityAnalysis ili)) nil). {
-    eapply (@UCE.UCE_paramsMatch nil nil); eauto.
-  }
-  assert (TrueLiveness.true_live_sound Liveness.Imperative nil nil
-   (UCE.compile nil ili (ReachabilityAnalysis.reachabilityAnalysis ili))
-   (LivenessAnalysis.livenessAnalysis
-      (UCE.compile nil ili (ReachabilityAnalysis.reachabilityAnalysis ili)))). {
-    eapply @LivenessAnalysisCorrect.correct; eauto.
-  }
-  eapply sim_trans with (S2:=I.state).
-  eapply bisim_sim.
-  eapply UCE.I.sim_UCE.
-  eapply Reachability.reachability_SC_S, ReachabilityAnalysisCorrect.correct; eauto.
-  eapply ReachabilityAnalysisCorrect.reachabilityAnalysis_getAnn.
-  eapply DVE.I.sim_DVE; [ reflexivity | eapply LivenessAnalysisCorrect.correct; eauto ].
-Qed.
-
-Definition toILF (ili:IL.stmt) : IL.stmt :=
-  let (s_dcve, lv) := DCVE ili in
-  let additional_params := additionalArguments s_dcve lv in
-  Delocation.compile nil s_dcve additional_params.
-
-Lemma toILF_correct (ili:IL.stmt) (E:onv val)
-  (PM:LabelsDefined.paramsMatch ili nil)
-  : defined_on (IL.occurVars ili) E
-    -> sim I.state F.state bot3 Sim (nil, E, ili) (nil:list F.block, E, toILF ili).
+Lemma addParams_correct (E:onv val) (ili:IL.stmt) lv
+  : defined_on (getAnn lv) E
+    -> Liveness.live_sound Liveness.Imperative nil nil ili lv
+    -> LabelsDefined.noUnreachableCode LabelsDefined.isCalled ili
+    -> sim I.state F.state bot3 Sim (nil, E, ili) (nil:list F.block, E, addParams ili lv).
 Proof with eauto using DCVE_live, DCVE_noUC.
-  intros. subst. unfold toILF.
-  eapply sim_trans with (S2:=I.state).
-  eapply DCVE_correct; eauto. let_pair_case_eq; simpl_pair_eqs; subst.
-  unfold fst at 1.
+  intros. subst. unfold addParams.
   eapply sim_trans with (S2:=I.state).
   - eapply bisim_sim.
     eapply DelocationCorrect.correct; eauto.
@@ -179,8 +99,6 @@ Proof with eauto using DCVE_live, DCVE_noUC.
     + eapply (@Delocation.live_sound_compile nil)...
       eapply DelocationAlgo.is_trs...
       eapply DelocationAlgo.is_live...
-    + eapply defined_on_incl; eauto.
-      eapply DCVE_occurVars...
   - eapply bisim_sim.
     eapply bisim_sym.
     eapply (@Invariance.srdSim_sim nil nil nil nil nil);
@@ -190,6 +108,23 @@ Proof with eauto using DCVE_live, DCVE_noUC.
     + eapply (@Delocation.live_sound_compile nil nil nil)...
       eapply DelocationAlgo.is_trs...
       eapply DelocationAlgo.is_live...
+Qed.
+
+Definition toILF (s:IL.stmt) : IL.stmt :=
+  let (s_dcve, lv) := DCVE Liveness.Imperative s in
+  addParams s_dcve lv.
+
+Lemma toILF_correct (ili:IL.stmt) (E:onv val)
+  (PM:LabelsDefined.paramsMatch ili nil)
+  : defined_on (IL.occurVars ili) E
+    -> sim I.state F.state bot3 Sim (nil, E, ili) (nil:list F.block, E, toILF ili).
+Proof with eauto using DCVE_live, DCVE_noUC.
+  intros. subst. unfold toILF.
+  eapply sim_trans with (S2:=I.state).
+  eapply DCVE_correct_I; eauto. let_pair_case_eq; simpl_pair_eqs; subst.
+  unfold fst at 1.
+  eapply addParams_correct...
+  eauto using defined_on_incl, DCVE_occurVars.
 Qed.
 
 (*
@@ -210,11 +145,11 @@ Definition optimize (s':stmt) : status stmt :=
   end.
 *)
 
-(*
+
 Definition fromILF (s:stmt) : status stmt :=
-  let (s_dcve, lv) := DCVE s in
-  let s_eae := EAE.compile s_dcve in
-  let s_ra := rename_apart s_eae in
+  let s_eae := EAE.compile s in
+  let (s_dcve, lv) := DCVE Liveness.Functional s_eae in
+  let s_ra := rename_apart s_dcve in
   let fvl := to_list (getAnn lv) in
   let ϱ := CMap.update_map_with_list fvl fvl (@MapInterface.empty var _ _ _) in
   sdo ϱ' <- AllocationAlgo.regAssign s_ra lv ϱ;
@@ -231,7 +166,7 @@ Opaque DelocationValidator.trs_dec.
 
 Lemma fromILF_correct (s s':stmt) E
   : fromILF s = Success s'
-  -> sim F.state I.state Sim (nil:list F.block, E, s) (nil:list I.block, E, s').
+  -> sim F.state I.state bot3 Sim (nil:list F.block, E, s) (nil:list I.block, E, s').
 Proof.
   unfold fromILF; intros.
   let_case_eq; simpl_pair_eqs; subst.
@@ -239,13 +174,20 @@ Proof.
 
   eapply sim_trans with (σ2:=(nil:list F.block, E, rename_apart (EAE.compile s))).
   eapply sim_trans with (σ2:=(nil:list F.block, E, EAE.compile s)).
-  eapply bisim_sim'. eapply EAE.sim_EAE.
-  eapply bisim_sim'.
+  eapply EAE.sim_EAE.
+  eapply bisim_sim.
   eapply (@Alpha.alphaSim_sim (nil, E, _) (nil, E, _)).
   econstructor; eauto using PIR2, Alpha.envCorr_idOn_refl.
   eapply Alpha.alpha_sym. eapply rename_apart_alpha.
+  exploit (@ParallelMove.correct parallel_move nil); try eapply EQ0; try now econstructor; eauto.
+  eapply (@Liveness.live_rename_sound _ nil nil); eauto.
+  admit.
+  eapply sim_trans with (σ2:=(nil, E, rename (CMap.findt x 0) (rename_apart (fst (DCVE (EAE.compile s)))))); eauto.
+  eapply Liveness.live_sound_overapproximation_I; eauto.
+  eauto.
+
   exploit rename_apart_renamedApart; eauto.
-  exploit AllocationAlgoCorrect.regAssign_correct'; eauto.
+  exploit AllocationAlgoCorrect.regAssign_correct' as XXX; eauto. admit. admit. admit. admit. admit.
   - eapply injective_on_agree; [| eapply CMap.map_update_list_update_agree; reflexivity].
     hnf; intros ? ? ? ? EqMap.
     rewrite lookup_update_same in EqMap.
