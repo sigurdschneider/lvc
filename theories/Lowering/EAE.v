@@ -1,7 +1,7 @@
 Require Import Util LengthEq AllInRel Map SetOperations.
 
 Require Import Val EqDec Computable Var Env IL Annotation AppExpFree.
-Require Import Liveness.
+Require Import Liveness LabelsDefined.
 Require Import SimF Fresh Filter.
 
 Set Implicit Arguments.
@@ -320,6 +320,72 @@ Proof.
   - econstructor; intros; inv_get; eauto using app_expfree.
 Qed.
 
+Lemma EAE_paramsMatch_app Y'' L f Y Y'
+  :  get L (counted f) (❬Y''❭ + ❬Y❭)
+     -> disj (of_list Y') (list_union (Op.freeVars ⊝ Y)
+                                     ∪ list_union (Op.freeVars ⊝ Y''))
+     -> unique Y'
+     -> ❬Y'❭ = ❬List.filter NotVar Y❭
+     -> paramsMatch
+         (list_to_stmt Y'
+            (List.filter NotVar Y)
+            (stmtApp f (Y'' ++ replace_if NotVar Y (Var ⊝ Y')))) L.
+Proof.
+  intros. general induction Y.
+  - simpl. destruct Y'; isabsurd.
+    econstructor; eauto with len.
+  - simpl in *; cases.
+    destruct Y'; isabsurd; simpl.
+    econstructor.
+    + rewrite cons_app. rewrite app_assoc.
+      eapply IHY.
+      * rewrite app_length; simpl. rewrite <- plus_assoc; eauto.
+      * rewrite List.map_app. rewrite list_union_app.
+        simpl in *.
+        rewrite <- union_assoc.
+        rewrite disj_app.
+        split.
+        eapply disj_1_incl. eapply disj_2_incl. eapply H0.
+        setoid_rewrite list_union_start_swap at 3.
+        clear. cset_tac.
+        eauto with cset.
+        hnf; intros. dcr; cset_tac.
+        eapply H5. rewrite of_list_1 in H3.
+        eapply H3.
+      * eauto.
+      * eauto.
+    + rewrite cons_app, app_assoc.
+      eapply IHY.
+      * rewrite app_length; simpl. rewrite <- plus_assoc; eauto.
+      * rewrite List.map_app. rewrite list_union_app.
+        simpl in *.
+        rewrite <- union_assoc.
+        rewrite disj_app.
+        split.
+        eapply disj_1_incl. eapply disj_2_incl. eapply H0.
+        setoid_rewrite list_union_start_swap at 3.
+        clear. cset_tac.
+        eauto with cset.
+        eapply disj_2_incl; eauto.
+        rewrite list_union_start_swap.
+        clear; cset_tac.
+      * eauto.
+      * eauto.
+Qed.
+
+Lemma EAE_paramsMatch s L
+  : paramsMatch s L
+    -> paramsMatch (compile s) L.
+Proof.
+  intros.
+  general induction H; simpl; eauto using paramsMatch.
+  - eapply (EAE_paramsMatch_app nil); eauto.
+    + simpl. eapply disj_2_incl.
+      eapply fresh_list_spec; eauto using fresh_spec with cset.
+      eauto with cset.
+    + eapply fresh_list_unique; eauto using fresh_spec.
+  - econstructor; intros; inv_get; rewrite !map_map in *; simpl; eauto.
+Qed.
 
 (*
 Fixpoint compile_live (LV:list (set var)) (s:stmt) (a:ann (set var)) : ann (set var) :=

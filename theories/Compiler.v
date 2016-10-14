@@ -1,5 +1,6 @@
 Require Import List CSet.
-Require Import Util AllInRel MapDefined IL Rename RenameApart Sim Status Annotation.
+Require Import Util AllInRel MapDefined IL Sim Status Annotation.
+Require Import Rename RenameApart RenameApart_Liveness.
 Require CMap.
 Require Liveness LivenessValidators ParallelMove ILN ILN_IL.
 Require TrueLiveness LivenessAnalysis LivenessAnalysisCorrect.
@@ -145,14 +146,16 @@ Definition optimize (s':stmt) : status stmt :=
   end.
 *)
 
+Print all.
 
 Definition fromILF (s:stmt) : status stmt :=
   let s_eae := EAE.compile s in
   let (s_dcve, lv) := DCVE Liveness.Functional s_eae in
   let s_ra := rename_apart s_dcve in
-  let fvl := to_list (getAnn lv) in
+  let (_, nlv) := RenameApart_Liveness.renameApart_live id (freeVars s_dcve) s_dcve lv in
+  let fvl := to_list (getAnn nlv) in
   let ϱ := CMap.update_map_with_list fvl fvl (@MapInterface.empty var _ _ _) in
-  sdo ϱ' <- AllocationAlgo.regAssign s_ra lv ϱ;
+  sdo ϱ' <- AllocationAlgo.regAssign s_ra nlv ϱ;
     let s_allocated := rename (CMap.findt ϱ' 0) s_ra in
     let s_lowered := ParallelMove.lower parallel_move
                                        nil
@@ -164,22 +167,47 @@ Opaque LivenessValidators.live_sound_dec.
 Opaque DelocationValidator.trs_dec.
 
 
-Lemma fromILF_correct (s s':stmt) E
+Lemma fromILF_correct (s s':stmt) E (PM:LabelsDefined.paramsMatch s nil)
   : fromILF s = Success s'
-  -> sim F.state I.state bot3 Sim (nil:list F.block, E, s) (nil:list I.block, E, s').
+    -> sim F.state I.state bot3 Sim (nil:list F.block, E, s) (nil:list I.block, E, s').
 Proof.
   unfold fromILF; intros.
-  let_case_eq; simpl_pair_eqs; subst.
+  repeat let_case_eq; repeat simpl_pair_eqs; subst.
   monadS_inv H.
-
-  eapply sim_trans with (σ2:=(nil:list F.block, E, rename_apart (EAE.compile s))).
+  exploit (@ParallelMove.correct parallel_move nil); try eapply EQ0; try now econstructor; eauto.
+  eapply Liveness.live_sound_overapproximation_I; eauto.
+  eapply AllocationAlgo.regAssign_renamedApart_agree in EQ; eauto;
+    [|eapply rename_apart_renamedApart; eauto
+     |eapply RenameApart_Liveness.renameApart_live_sound].
+  Focus 5. eapply DCVE_live; eauto. eapply EAE.EAE_paramsMatch. eauto.
+  admit.
+  reflexivity. reflexivity. isabsurd.
+  eapply (sim_trans _ H).
+  Unshelve.
   eapply sim_trans with (σ2:=(nil:list F.block, E, EAE.compile s)).
   eapply EAE.sim_EAE.
+  eapply sim_trans with (σ2:=(nil:list F.block, E, fst (DCVE Liveness.Functional (EAE.compile s)))).
+  eapply DCVE_correct_F; eauto. eapply EAE.EAE_paramsMatch; eauto.
+  admit.
+  eapply sim_trans with (σ2:=(nil:list F.block, E, _)).
   eapply bisim_sim.
   eapply (@Alpha.alphaSim_sim (nil, E, _) (nil, E, _)).
   econstructor; eauto using PIR2, Alpha.envCorr_idOn_refl.
   eapply Alpha.alpha_sym. eapply rename_apart_alpha.
-  exploit (@ParallelMove.correct parallel_move nil); try eapply EQ0; try now econstructor; eauto.
+
+  eapply sim_trans with (σ2:=(nil:list F.block, E, _)).
+  eapply bisim_sim.
+  eapply Alpha.alphaSim_sim. econstructor; eauto using PIR2.
+  instantiate (2:=id).
+  eapply Allocation.renamedApart_locally_inj_alpha; eauto.
+  eapply rename_apart_renamedApart; eauto.
+  eapply AllocationAlgoCorrect.regAssign_correct; eauto.
+  admit.
+  eapply RenameApart_Liveness.renameApart_live_sound.
+  eapply Liveness.live_sound_overapproximation_F; eauto.
+  eapply AllocationAlgo.regAssign_renamedApart_agree in EQ1; eauto.
+  rewrite fst_renamedApartAnn in EQ1.
+
   eapply (@Liveness.live_rename_sound _ nil nil); eauto.
   admit.
   eapply sim_trans with (σ2:=(nil, E, rename (CMap.findt x 0) (rename_apart (fst (DCVE (EAE.compile s)))))); eauto.
