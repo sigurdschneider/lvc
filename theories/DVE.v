@@ -353,3 +353,181 @@ Proof.
       eapply DVE_isCalled; eauto.
       eapply DVE_callChain; eauto using DVE_isCalled.
 Qed.
+
+Require Import AppExpFree.
+
+Lemma DVE_app_expfree LVZL s lv
+: app_expfree s
+  -> app_expfree (compile LVZL s lv).
+Proof.
+  intros AEF.
+  general induction AEF; destruct lv; simpl;
+    repeat let_pair_case_eq; repeat simpl_pair_eqs; subst; simpl;
+      repeat cases; eauto using app_expfree.
+  - econstructor. intros; inv_get.
+    edestruct filter_by_get; eauto; dcr.
+    cases in H4. exploit H1; eauto.
+  - econstructor; intros; inv_get; eauto.
+    eapply H0; eauto.
+Qed.
+
+Require Import RenamedApart PE.
+
+Fixpoint compile_renamedApart (s:stmt) (lv:ann (set var)) (a:ann (set var * set var)) (D:set var)
+  : ann (set var * set var) :=
+  match s, lv, a with
+  | stmtLet x e s, ann1 lv alv, ann1 (_, _) an as a =>
+
+    if [x ∈ getAnn alv \/ isCall e] then
+      let an' := compile_renamedApart s alv an {x;D} in
+      ann1 (D, {x;snd (getAnn an')}) an'
+    else compile_renamedApart s alv an D
+  | stmtIf e s t, ann2 lv ans ant, ann2 (_,_) bns bnt =>
+    let bns' := compile_renamedApart s ans bns D in
+    let bnt' := compile_renamedApart t ant bnt D in
+      if [op2bool e = Some true] then bns'
+      else if [op2bool e = Some false ] then bnt'
+           else ann2 (D,
+                      snd (getAnn bns') ∪ snd (getAnn bnt'))
+                     bns' bnt'
+    | stmtApp f Y, ann0 lv, ann0 _ => ann0 (D, ∅)
+    | stmtReturn x, ann0 lv, ann0 _ => ann0 (D, ∅)
+    | stmtFun F t, annF lv anF ant, annF (_, _) bnF bnt =>
+      let abnF := (pair ⊜ anF bnF) in
+      let bnF' := zip (fun (Zs:params * stmt) ab =>
+                        compile_renamedApart (snd Zs) (fst ab) (snd ab) (of_list (filter_set (fst Zs) (getAnn (fst ab))) ∪ D)) F abnF in
+      let abnF' := (pair ⊜ anF bnF') in
+      let bnt' := compile_renamedApart t ant bnt D in
+      annF (D, list_union ((fun Zs ab => of_list (filter_set (fst Zs) (getAnn (fst ab))) ∪ snd (getAnn (snd ab))) ⊜ F abnF')
+                          ∪ snd (getAnn bnt'))
+           bnF' bnt'
+    | _, _, a => a
+  end.
+
+Lemma fst_getAnn_renamedApart i LV ZL s lv G D
+  : renamedApart s G
+    -> true_live_sound i ZL LV s lv
+    -> fst (getAnn (compile_renamedApart s lv G D)) = D.
+Proof.
+  intros RA TLS.
+  general induction TLS; invt renamedApart; simpl; repeat cases; simpl; eauto.
+Qed.
+
+Lemma fst_getAnn_renamedApart' i LV ZL s lv G D
+  : renamedApart s G
+    -> true_live_sound i ZL LV s lv
+    -> fst (getAnn (compile_renamedApart s lv G D)) [=] D.
+Proof.
+  intros RA TLS.
+  general induction TLS; invt renamedApart; simpl; repeat cases; simpl; eauto.
+Qed.
+
+Hint Resolve fst_getAnn_renamedApart fst_getAnn_renamedApart'.
+
+Lemma snd_getAnn_renamedApart i LV ZL s lv G D
+  : renamedApart s G
+    -> true_live_sound i ZL LV s lv
+    -> snd (getAnn (compile_renamedApart s lv G D)) ⊆ snd (getAnn G).
+Proof.
+  intros RA TLS.
+  general induction TLS; invt renamedApart; simpl; repeat cases; simpl; srewrite D'; eauto.
+  - rewrite IHTLS; eauto. rewrite H9; eauto.
+  - rewrite IHTLS; eauto. rewrite H9; eauto with cset.
+  - rewrite H0; eauto. rewrite H15; eauto with cset.
+  - rewrite H2; eauto. rewrite H16; eauto with cset.
+  - rewrite H0, H2; eauto. rewrite H15, H16; eauto.
+  - rewrite IHTLS, H11; eauto.
+    eapply incl_union_lr; eauto.
+    eapply list_union_incl; intros; inv_get; simpl.
+    eapply incl_list_union; eauto using zip_get.
+    rewrite H1; eauto.
+    unfold defVars, filter_set; rewrite of_list_filter; simpl.
+    clear. cset_tac. cset_tac.
+Qed.
+
+Lemma unique_filter X p (L:list X)
+  : unique L
+    -> unique (filter p L).
+Proof.
+  general induction L; simpl in *; dcr; eauto.
+  - cases; eauto.
+    constructor; eauto.
+    rewrite filter_InA; intuition.
+Qed.
+
+
+Lemma DVE_renamedApart i LV ZL s lv G D
+  : renamedApart s G
+    -> true_live_sound i ZL LV s lv
+    -> D ⊆ fst (getAnn G)
+    -> getAnn lv ⊆ D
+    -> renamedApart (compile (zip pair LV ZL)  s lv) (compile_renamedApart s lv G D).
+Proof.
+  intros RA TLS Dincl inclD.
+  general induction TLS; invt renamedApart; simpl; eauto using renamedApart.
+  - cases; simpl in *.
+    + econstructor; try reflexivity; eauto with cset.
+      exploit H; eauto. eapply Exp.freeVars_live in H1. eauto with cset.
+      eapply IHTLS; eauto.
+      rewrite H9, Dincl; simpl; eauto with cset.
+      rewrite <- inclD, <- H0. eauto with cset.
+      eapply pe_eta_split; econstructor; simpl; eauto.
+    + eapply IHTLS; eauto.
+      * rewrite H9; simpl; cset_tac.
+      * rewrite <- inclD, <- H0. revert NOTCOND; clear; cset_tac.
+  - repeat cases; eauto.
+    + exploit H4; eauto.
+      eapply H0; eauto with cset pe.
+    + exploit H5; eauto.
+      eapply H2; eauto with cset pe.
+    + econstructor; try reflexivity; eauto.
+      * exploit H3; eauto. eapply Op.freeVars_live in H6. eauto with cset.
+      * rewrite !snd_getAnn_renamedApart, H15, H16; eauto.
+      * exploit H4; eauto.
+        eapply H0; pe_rewrite; eauto with cset.
+      * exploit H5; eauto.
+        eapply H2; pe_rewrite; eauto with cset.
+      * eapply pe_eta_split; econstructor; simpl; eauto.
+      * eapply pe_eta_split; econstructor; simpl; eauto.
+  - econstructor; eauto.
+    eapply list_union_incl; intros; inv_get; eauto with cset. simpl in *.
+    edestruct filter_by_get; eauto. simpl in *.
+    erewrite get_nth in *; eauto using zip_get. simpl in *; dcr.
+    cases in H10.
+    exploit argsLive_live_exp_sound; eauto.
+    eapply Op.freeVars_live in H7. rewrite H7. eauto.
+  - econstructor; eauto.
+    eapply Op.freeVars_live in H. rewrite H. eauto.
+  - econstructor; eauto with len; (try eapply eq_union_lr); eauto.
+    * intros; inv_get. simpl in *.
+      rewrite <- zip_app; eauto with len.
+      eapply H1; eauto.
+      -- edestruct H8; eauto; dcr. rewrite H4. rewrite Dincl;  eauto.
+         unfold filter_set; rewrite of_list_filter. clear; cset_tac.
+      -- unfold filter_set; rewrite of_list_filter.
+    * hnf; intros; inv_get.
+      edestruct H8; eauto; dcr.
+      simpl. econstructor; unfold filter_set; simpl in *.
+      erewrite fst_getAnn_renamedApart; eauto with cset.
+      split. eapply unique_filter; eauto.
+      split. eapply disj_2_incl; eauto. rewrite of_list_filter.
+      eapply disj_1_incl; eauto. cset_tac.
+      erewrite fst_getAnn_renamedApart, !snd_getAnn_renamedApart; eauto.
+      pe_rewrite. rewrite of_list_filter. eapply disj_1_incl; eauto.
+      clear; cset_tac.
+    * hnf; intros. inv_get.
+      unfold defVars; simpl. exploit H9; try eapply H4; eauto using zip_get.
+      unfold defVars in*. rewrite !snd_getAnn_renamedApart; eauto.
+      unfold filter_set. rewrite !of_list_filter; eauto.
+      eapply disj_1_incl. eapply disj_2_incl. eauto.
+      clear; cset_tac.
+      clear; cset_tac.
+    * rewrite <- zip_app; eauto with len; simpl in *.
+      eapply IHTLS; eauto.
+      pe_rewrite. eauto. rewrite <- inclD; eauto.
+    * eapply pe_eta_split; econstructor; eauto.
+      erewrite fst_getAnn_renamedApart; eauto.
+    * eapply list_union_eq; intros; eauto 20 with len.
+      inv_get. unfold defVars; simpl.
+      unfold filter_set; simpl. reflexivity.
+Qed.
