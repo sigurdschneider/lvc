@@ -781,7 +781,7 @@ Proof.
     eapply H0; eauto.
 Qed.
 
-Require Import RenamedApart.
+Require Import RenamedApart PE.
 
 Fixpoint compile_renamedApart (s:stmt) (a:ann (set var * set var)) (b:ann bool)
   : ann (set var * set var) :=
