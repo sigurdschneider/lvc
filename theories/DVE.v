@@ -455,49 +455,52 @@ Proof.
     rewrite filter_InA; intuition.
 Qed.
 
+(*
+Lemma compile_freeVars LV ZL s lv
+  : freeVars (compile (zip pair LV ZL) s lv) ⊆ freeVars s.
+Proof.
+  revert LV ZL lv.
+  sind s; destruct lv; simpl; repeat cases; simpl; try rewrite IH; eauto.
+  -
+Qed.
+ *)
 
 Lemma DVE_renamedApart i LV ZL s lv G D
   : renamedApart s G
     -> true_live_sound i ZL LV s lv
     -> D ⊆ fst (getAnn G)
-    -> getAnn lv ⊆ D
+    -> freeVars (compile (zip pair LV ZL)  s lv) ⊆ D
     -> renamedApart (compile (zip pair LV ZL)  s lv) (compile_renamedApart s lv G D).
 Proof.
   intros RA TLS Dincl inclD.
-  general induction TLS; invt renamedApart; simpl; eauto using renamedApart.
+  general induction TLS; invt renamedApart; simpl in * |- *; eauto using renamedApart.
   - cases; simpl in *.
     + econstructor; try reflexivity; eauto with cset.
-      exploit H; eauto. eapply Exp.freeVars_live in H1. eauto with cset.
-      eapply IHTLS; eauto.
-      rewrite H9, Dincl; simpl; eauto with cset.
-      rewrite <- inclD, <- H0. eauto with cset.
-      eapply pe_eta_split; econstructor; simpl; eauto.
+      * rewrite <- inclD; eauto with cset.
+      * eapply IHTLS; eauto.
+        -- rewrite H9, Dincl; simpl; eauto with cset.
+        -- rewrite <- inclD. clear; cset_tac.
+           decide (x === a); eauto.
+      * eapply pe_eta_split; econstructor; simpl; eauto.
     + eapply IHTLS; eauto.
       * rewrite H9; simpl; cset_tac.
-      * rewrite <- inclD, <- H0. revert NOTCOND; clear; cset_tac.
   - repeat cases; eauto.
     + exploit H4; eauto.
       eapply H0; eauto with cset pe.
     + exploit H5; eauto.
       eapply H2; eauto with cset pe.
-    + econstructor; try reflexivity; eauto.
-      * exploit H3; eauto. eapply Op.freeVars_live in H6. eauto with cset.
+    + simpl in *.
+      econstructor; try reflexivity; eauto.
+      * rewrite <- inclD. eauto with cset.
       * rewrite !snd_getAnn_renamedApart, H15, H16; eauto.
       * exploit H4; eauto.
         eapply H0; pe_rewrite; eauto with cset.
+        rewrite <- inclD; eauto with cset.
       * exploit H5; eauto.
         eapply H2; pe_rewrite; eauto with cset.
+        rewrite <- inclD; eauto with cset.
       * eapply pe_eta_split; econstructor; simpl; eauto.
       * eapply pe_eta_split; econstructor; simpl; eauto.
-  - econstructor; eauto.
-    eapply list_union_incl; intros; inv_get; eauto with cset. simpl in *.
-    edestruct filter_by_get; eauto. simpl in *.
-    erewrite get_nth in *; eauto using zip_get. simpl in *; dcr.
-    cases in H10.
-    exploit argsLive_live_exp_sound; eauto.
-    eapply Op.freeVars_live in H7. rewrite H7. eauto.
-  - econstructor; eauto.
-    eapply Op.freeVars_live in H. rewrite H. eauto.
   - econstructor; eauto with len; (try eapply eq_union_lr); eauto.
     * intros; inv_get. simpl in *.
       rewrite <- zip_app; eauto with len.
@@ -505,6 +508,11 @@ Proof.
       -- edestruct H8; eauto; dcr. rewrite H4. rewrite Dincl;  eauto.
          unfold filter_set; rewrite of_list_filter. clear; cset_tac.
       -- unfold filter_set; rewrite of_list_filter.
+         rewrite <- inclD. rewrite <- incl_list_union; eauto using zip_get; [| reflexivity].
+         simpl. unfold filter_set; rewrite of_list_filter.
+         rewrite <- union_assoc. eapply incl_union_left.
+         rewrite zip_app; eauto with len.
+         clear; cset_tac. decide (a ∈ getAnn x1 /\ a ∈ of_list (fst x)); eauto.
     * hnf; intros; inv_get.
       edestruct H8; eauto; dcr.
       simpl. econstructor; unfold filter_set; simpl in *.
