@@ -15,20 +15,23 @@ open Tacticals
 
 DECLARE PLUGIN "smpl"
 
-(*
-let f l =
-  let ltacvars =
-    List.fold_left (fun accu x -> Id.Set.add x accu) Id.Set.empty l
-  in
-  Flags.with_option strict_check
-		    (intern_pure_tactic { (make_empty_glob_sign()) with ltacvars })
- *)
-
 let smpl_db = ref ([] : Tacexpr.glob_tactic_expr list)
+
+(* Summary *)
+
+let init    () = smpl_db := []
+let freeze   _ = !smpl_db
+let unfreeze t = smpl_db := t
+
+let _ = Summary.declare_summary "smpl"
+	{ Summary.freeze_function   = freeze;
+	  Summary.unfreeze_function = unfreeze;
+	  Summary.init_function     = init }
+
 
 let smpl_add raw_tac =
   let tacexp = glob_tactic raw_tac in
-  smpl_db := tacexp::(!smpl_db)
+  smpl_db := (!smpl_db)@[tacexp]
 
 let smpl_add_list lc =
   List.iter (smpl_add) lc
@@ -39,10 +42,8 @@ let smpl_print_entry tac =
       let (_, env) = Pfedit.get_current_goal_context () in
       env
     with e when Errors.noncritical e -> Global.env ()
-  in
-  let msg =
-    (str "(*external*) " ++ Pptactic.pr_glob_tactic env tac)
-  in msg_warning msg
+  in let msg = Pptactic.pr_glob_tactic env tac
+  in msg_info msg
 
 let smpl_print () =
   List.iter smpl_print_entry (!smpl_db)
@@ -54,6 +55,9 @@ let rec mk_smpl_tac l =
   match l with
   | tac::l -> Tacticals.New.tclORELSE (smpl_tac_entry tac) (mk_smpl_tac l)
   | _ -> Tacticals.New.tclFAIL 0 (str "no tactic applies")
+
+
+
 
 
 VERNAC COMMAND EXTEND SmplAdd CLASSIFIED AS SIDEFF
