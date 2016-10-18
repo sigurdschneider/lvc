@@ -39,7 +39,7 @@ esac
 echo "Found Coq version $coq_ver."
 
 SOURCES=$(find theories -name \*.v -print | grep -v /\.# | sed -e 's%^\./%%g')
-echo $(cat _CoqProject) src/lvc_plugin.ml4 $SOURCES  > Make
+echo $(cat _CoqProject) src/lvc_plugin.ml4 src/smpl.ml4 $SOURCES  > Make
 echo "Make generated."
 
 
