@@ -212,7 +212,13 @@ Definition mark_elements
   := (fun x => if [x ∈ s] then true else false) ⊝ L
 .
 
-
+Definition compute_ib
+           (Z : params)
+           (RM : ⦃var⦄ * ⦃var⦄)
+  : list bool
+  :=
+    mark_elements Z (fst RM ∩ snd RM)
+.
 
 Definition do_spill_rec
            (slot : var -> var)
@@ -233,7 +239,7 @@ Definition do_spill_rec
       => stmtIf e (do_spill' s1 sl1 IB) (do_spill' s2 sl2 IB)
 
     | stmtFun F t, annF (_,_,Some (inl rms)) sl_F sl_t
-      => let IB' := mark_elements ⊜ (fst ⊝ F) ((fun rm => fst rm ∩ snd rm) ⊝ rms) ++ IB in
+      => let IB' := compute_ib ⊜ (fst ⊝ F) rms ++ IB in
       stmtFun
           (pair ⊜
                 (slot_lift_params slot ⊜ rms (fst ⊝ F))

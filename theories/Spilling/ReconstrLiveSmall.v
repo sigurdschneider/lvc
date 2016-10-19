@@ -312,13 +312,13 @@ Lemma reconstr_live_small
            (slot_merge slot Λ)
            (slot_lift_params slot ⊜ Λ ZL)
             G
-            (do_spill slot s sl (mark_elements ⊜ ZL ((fun RM => fst RM ∩ snd RM) ⊝ Λ)))
+            (do_spill slot s sl (compute_ib ⊜ ZL Λ))
            (do_spill_rm slot sl))
         ⊆ R ∪ map slot M ∪ G
 .
 Proof.
   intros R_VD M_VD ra_VD inj_VD VD_disj rena pir2 Z_VD aeFree lvSnd spillSnd spilli.
-
+  unfold compute_ib.
   unfold union_fs in ra_VD.
   assert (injective_on (getSp sl) slot)
     as inj_Sp.
@@ -422,7 +422,6 @@ Proof.
     assert (Sp ∪ M ⊆ VD) as M'_VD
         by (eapply M'_VD with (R:=R) (M:=M); eauto).
     + apply renamedApart_incl in rena as [renaF rena2].
-      rewrite <- map_app.
       rewrite IHlvSnd with (R:=R\K ∪ L)
                            (M:=Sp ∪ M)
                            (ra:=ant)

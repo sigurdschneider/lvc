@@ -120,13 +120,11 @@ Lemma reconstr_live_sound
     -> live_sound Imperative
                  ((slot_lift_params slot) ⊜ Λ ZL)
                  (slot_merge slot Λ)
-                 (do_spill slot s sl (mark_elements
-                                        ⊜ ZL ((fun RM => fst RM ∩ snd RM) ⊝ Λ)))
+                 (do_spill slot s sl (compute_ib ⊜ ZL Λ))
                  (reconstr_live (slot_merge slot Λ)
                                 ((slot_lift_params slot) ⊜ Λ ZL)
                                  G
-                                 (do_spill slot s sl (mark_elements
-                                                        ⊜ ZL ((fun RM => fst RM ∩ snd RM) ⊝ Λ)))
+                                 (do_spill slot s sl (compute_ib ⊜ ZL Λ))
                                 (do_spill_rm slot sl))
 .
 Proof.
@@ -210,11 +208,12 @@ Proof.
         as nth_slp by (erewrite nth_zip; eauto; simpl; reflexivity).
       rewrite nth_slp.
       clear; cset_tac.
-    + erewrite nth_mark_elements; eauto.
+    + unfold compute_ib.
+      erewrite nth_zip; eauto.
       apply sla_extargs_slp_length; eauto.
     + intros; inv_get.
-      erewrite nth_mark_elements; eauto.
-      erewrite nth_mark_elements in H; eauto.
+      erewrite nth_zip; eauto.
+      erewrite nth_zip in H; eauto.
       assert (get_x := H).
       eapply get_Y_from_extargs in get_x as [n' get_x].
       exploit H5 as is_var; eauto.
@@ -264,7 +263,6 @@ Proof.
 
       apply live_sound_monotone with (LV:= slot_merge slot (rms ++ Λ)).
       * rewrite <- zip_app.
-        rewrite <- map_app.
         eapply IHlvSnd with (ra:=ant) (R:=R\K ∪ L) (M:=Sp ∪ M); eauto.
         -- eapply R'_VD with (R:=R) (M:=M); eauto.
         -- eapply M'_VD with (R:=R) (M:=M); eauto.
@@ -281,9 +279,8 @@ Proof.
           apply PIR2_refl; eauto.
         }
         apply PIR2_get.
-        rewrite <- zip_app.
-        rewrite <- map_app.
-        -- intros n x x' H4 H5.
+        -- rewrite <- zip_app.
+           intros n x x' H4 H5.
            unfold slot_merge in H5.
            inv_get; simpl.
            rename x into Zs.
@@ -324,10 +321,9 @@ Proof.
            ++ rewrite merge_app.
               eapply getAnn_als_EQ_merge_rms; eauto.
            ++ eapply get_ofl_VD; eauto.
-        -- unfold slot_merge.
-           do 2 rewrite Coqlib.list_length_map; eauto.
+           ++ eauto with len.
+
         -- rewrite <- zip_app.
-           rewrite <- map_app.
            rewrite map_length.
            ++ rewrite zip_length2.
               ** rewrite zip_length2; eauto with len.
@@ -347,7 +343,6 @@ Proof.
 
       apply live_sound_monotone with (LV:= slot_merge slot (rms ++ Λ)).
       * rewrite <- zip_app.
-        rewrite <- map_app.
         assert ((fst x1, snd x1) = x1)
           by (destruct x1; simpl; reflexivity).
         rewrite <- H30 in H29.
@@ -371,7 +366,6 @@ Proof.
            inv_get; simpl.
            rewrite slot_merge_app.
            rewrite <- zip_app.
-           rewrite <- map_app.
            rename x5 into a.
            rename x6 into al.
            rename x7 into rm.
