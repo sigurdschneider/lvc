@@ -19,11 +19,9 @@ Proof.
   intros. econstructor; eauto.
 Qed.
 
-Instance pe_refl X `{OrderedType X} : Symmetric (@pe _ _).
+Instance pe_refl X `{OrderedType X} : Reflexive (@pe _ _).
 Proof.
-  hnf; intros. inv H0; econstructor; eauto.
-  + rewrite H1; eauto; reflexivity.
-  + rewrite H2; eauto; reflexivity.
+  hnf; intros. destruct x; econstructor; reflexivity.
 Qed.
 
 Instance pe_sym X `{OrderedType X} : Symmetric (@pe _ _).

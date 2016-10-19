@@ -215,11 +215,12 @@ Proof.
   - simpl. rewrite compileF_length; eauto.
   - rewrite Len; intros; hnf in H; dcr; subst; inv_get.
     rewrite compileF_length; eauto.
-    rewrite take_app_lt; eauto with len.
+    rewrite take_app_le; eauto with len.
     erewrite (take_eta n (getAnn ⊝ als)) at 2.
     rewrite countTrue_app.
     erewrite <- get_eq_drop; eauto using map_get_1.
     rewrite EQ. simpl. omega.
+    rewrite map_length. omega.
   - rewrite Len; intros; simpl in *; dcr; subst.
     rewrite compileF_length; eauto.
     rewrite take_app_ge; eauto with len.
@@ -235,8 +236,8 @@ Proof.
   inv_get; simpl.
   exploit (compileF_get (getAnn ⊝ als ++ RL)); try eapply H2; eauto.
   simpl in *.
-  erewrite take_app_lt, <- map_take in H1; eauto with len.
-  get_functional. eauto.
+  erewrite take_app_le, <- map_take in H1; eauto with len.
+  get_functional. eauto. rewrite map_length. eapply get_range in H2. omega.
 Qed.
 
 Lemma sim_compile_fun_cases r RL L V s L' F als alt
@@ -278,9 +279,9 @@ Proof.
     eapply labenv_sim_extension; eauto.
     + intros. hnf; intros; simpl in *; dcr; subst; inv_get.
       exploit (compileF_get (getAnn ⊝ als ++ RL)); try eapply H5; eauto.
-      erewrite take_app_lt, <- map_take in H7; eauto with len.
+      erewrite take_app_le, <- map_take in H7; eauto with len.
       simpl in *. get_functional.
-      exploit H4; eauto.
+      exploit H4; eauto. rewrite map_length. eapply get_range in H9. omega.
     + eapply compileF_indexwise_paramrel; eauto.
     + eapply compileF_separates; eauto.
 Qed.
@@ -329,11 +330,12 @@ Proof.
   - simpl. rewrite compileF_length; eauto.
   - rewrite Len; intros; hnf in H; dcr; subst; inv_get.
     rewrite compileF_length; eauto.
-    rewrite take_app_lt; eauto with len.
+    rewrite take_app_le; eauto with len.
     erewrite (take_eta n (getAnn ⊝ als)) at 2.
     rewrite countTrue_app.
     erewrite <- get_eq_drop; eauto using map_get_1.
     rewrite EQ. simpl. omega.
+    rewrite map_length. omega.
   - rewrite Len; intros; simpl in *; dcr; subst.
     rewrite compileF_length; eauto.
     rewrite take_app_ge; eauto with len.
@@ -349,8 +351,8 @@ Proof.
   inv_get; simpl.
   exploit (compileF_get (getAnn ⊝ als ++ RL)); try eapply H2; eauto.
   simpl in *.
-  erewrite take_app_lt, <- map_take in H1; eauto with len.
-  get_functional. eauto.
+  erewrite take_app_le, <- map_take in H1; eauto with len.
+  get_functional. eauto. rewrite map_length. eapply get_range in H2. omega.
 Qed.
 
 Lemma sim_compile_fun_cases r RL L V s L' F als alt
@@ -392,9 +394,9 @@ Proof.
     eapply labenv_sim_extension; eauto.
     + intros. hnf; intros; simpl in *; dcr; subst; inv_get.
       exploit (compileF_get (getAnn ⊝ als ++ RL)); try eapply H5; eauto.
-      erewrite take_app_lt, <- map_take in H7; eauto with len.
+      erewrite take_app_le, <- map_take in H7; eauto with len.
       simpl in *. get_functional.
-      exploit H4; eauto.
+      exploit H4; eauto. rewrite map_length. eapply get_range in H9; omega.
     + eapply compileF_indexwise_paramrel; eauto.
     + eapply compileF_separates; eauto.
 Qed.
@@ -618,20 +620,22 @@ Proof.
     simpl in *; dcr; inv_get. rewrite H1 in Ann.
     exploit compileF_get; eauto.
     econstructor 2; [ | | econstructor 1 ].
-    rewrite take_app_lt; eauto 20 with len.
-    rewrite <- map_take. eauto. simpl.
-    eapply IH in ICEnd; eauto.
-    rewrite take_app_ge in ICEnd; eauto 20 with len.
-    rewrite map_length in ICEnd.
-    orewrite (❬F❭ + n - ❬als❭ = n) in ICEnd. simpl.
-    rewrite countTrue_app in ICEnd. eauto.
+    + rewrite take_app_le; eauto 20 with len.
+      rewrite <- map_take. eauto.
+      rewrite map_length. eapply get_range in GetAls. omega.
+    + simpl.
+      eapply IH in ICEnd; eauto.
+      rewrite take_app_ge in ICEnd; eauto 20 with len.
+      rewrite map_length in ICEnd.
+      orewrite (❬F❭ + n - ❬als❭ = n) in ICEnd. simpl.
+      rewrite countTrue_app in ICEnd. eauto.
   - exploit reachability_trueIsCalled; try eapply IC; eauto.
     simpl in *; dcr; inv_get. assert (getAnn x0).
     rewrite <- H4. eauto.
     exploit compileF_get; eauto.
     econstructor 2; [ | | ].
-    rewrite take_app_lt; eauto 20 with len.
-    rewrite <- map_take. eauto.
+    rewrite take_app_le; eauto 20 with len.
+    rewrite <- map_take. eauto. rewrite map_length. eapply get_range in H1. omega.
     simpl.
     eapply IH in H0; eauto.
     eapply IHCC in H0; eauto.
@@ -666,8 +670,8 @@ Proof.
     destruct (getAnn x), x0; isabsurd; eauto.
     exploit compileF_get; eauto.
     econstructor 2; [ | | ].
-    rewrite take_app_lt; eauto 20 with len.
-    rewrite <- map_take. eauto.
+    rewrite take_app_le; eauto 20 with len.
+    rewrite <- map_take. eauto. rewrite map_length. eapply get_range in H1. omega.
     simpl.
     eapply IH in H0; eauto.
     subst. eauto.
@@ -734,9 +738,9 @@ Proof.
   exploit reachability_trueIsCalled; eauto.
   dcr; subst; simpl in *. rewrite H6 in gAt.
   destruct x; isabsurd; eauto.
-  setoid_rewrite take_app_lt in H3 at 2.
+  setoid_rewrite take_app_le in H3 at 2.
   setoid_rewrite <- map_take in H3. eauto.
-  eauto with len.
+  rewrite map_length. omega.
 Qed.
 
 Lemma UCE_noUnreachableCode RL s lv
@@ -760,4 +764,153 @@ Proof.
       dcr; subst; simpl.
       exploit H3 as ICF; eauto.
       eapply UCE_isCalledFrom; eauto with len.
+Qed.
+
+Require Import AppExpFree.
+
+Lemma UCE_app_expfree LVZL s lv
+: app_expfree s
+  -> app_expfree (compile LVZL s lv).
+Proof.
+  intros AEF.
+  general induction AEF; destruct lv; simpl;
+    repeat let_pair_case_eq; repeat simpl_pair_eqs; subst; simpl;
+      repeat cases; eauto using app_expfree.
+  - rewrite Heq. econstructor; intros; inv_get; eauto.
+    destruct Zs; edestruct compileF_get_inv; eauto; dcr; subst.
+    eapply H0; eauto.
+Qed.
+
+Require Import RenamedApart PE.
+
+Fixpoint compile_renamedApart (s:stmt) (a:ann (set var * set var)) (b:ann bool)
+  : ann (set var * set var) :=
+  match s, a, b with
+  | stmtLet x e s, ann1 (D, _) an, ann1 _ bn =>
+    let an' := compile_renamedApart s an bn in
+    ann1 (D, {x; snd (getAnn an')}) an'
+  | stmtIf e s t, ann2 (D, _) ans ant, ann2 _ bns bnt =>
+    let ans' := compile_renamedApart s ans bns in
+    let ant' := compile_renamedApart t ant bnt in
+    if [op2bool e = Some true] then ans'
+    else if [op2bool e = Some false ] then ant'
+         else ann2 (D, snd (getAnn ans') ∪ snd (getAnn ant')) ans' ant'
+  | stmtApp f Y, ann0 lv, _ => ann0 lv
+  | stmtReturn x, ann0 lv, _ => ann0 lv
+  | stmtFun F t, annF (D, _) anF ant, annF _ bnF bnt =>
+    let anF'' := zip (fun (Zs:params * stmt) ab =>
+                       compile_renamedApart (snd Zs) (fst ab) (snd ab)) F (pair ⊜ anF bnF) in
+    let anF' := filter_by (fun b => b) (getAnn ⊝ bnF) anF'' in
+    let bnt' := compile_renamedApart t ant bnt in
+    match anF' with
+    | nil => bnt'
+    | _ => annF (D, list_union (defVars ⊜ (filter_by (fun b => b) (getAnn ⊝ bnF) F) anF') ∪ snd (getAnn bnt')) anF' bnt'
+    end
+  | _, a, _ => a
+  end.
+
+Lemma compile_renamedApart_pes RL s an al
+  : renamedApart s an
+    -> reachability Sound RL s al
+    -> prod_eq Equal Subset (getAnn (compile_renamedApart s an al)) (getAnn an).
+Proof.
+  intros RA RCH.
+  time (general induction RA; inv RCH; simpl in *; repeat cases; simpl; eauto).
+  - econstructor; eauto.
+    rewrite IHRA; eauto. rewrite H1, H2; eauto.
+  - rewrite IHRA1, H2; eauto.
+    econstructor; eauto. rewrite <- H1; eauto.
+  - rewrite IHRA2, H3; eauto. econstructor; eauto.
+    rewrite <- H1. eauto.
+  - econstructor; eauto.
+    rewrite IHRA1, IHRA2; eauto. rewrite <- H1, H2, H3; eauto.
+  - rewrite IHRA; eauto. rewrite H4. econstructor; eauto.
+    rewrite <- H5; eauto.
+  - econstructor; eauto.
+    rewrite Heq. clear Heq. rewrite IHRA, H4, <- H5; eauto. simpl.
+    eapply incl_union_lr; eauto.
+    eapply list_union_incl; intros; eauto with cset.
+    inv_get.
+    eapply incl_list_union.
+    instantiate (2:=posOfTrue n (getAnn ⊝ als)).
+    eauto using zip_get.
+    unfold defVars; simpl.
+    rewrite H1; eauto; eauto.
+Qed.
+
+Lemma UCE_renamedApart RL s lv G
+  : renamedApart s G
+    -> reachability Sound RL s lv
+    -> renamedApart (compile RL s lv) (compile_renamedApart s G lv).
+Proof.
+  intros RA RCH.
+  general induction RCH; inv RA; simpl; eauto using renamedApart.
+  - econstructor; eauto. reflexivity.
+    eapply pe_eta_split. econstructor; eauto.
+    rewrite compile_renamedApart_pes; eauto.
+    eapply (prod_eq_proj1 H8); eauto.
+  - repeat cases; eauto using renamedApart.
+    simpl in *.
+    econstructor; try reflexivity; eauto.
+    eapply disj_1_incl. eapply disj_2_incl. eauto.
+    rewrite compile_renamedApart_pes, H13; eauto.
+    rewrite compile_renamedApart_pes, H12; eauto.
+    eapply pe_eta_split; econstructor; eauto.
+    rewrite compile_renamedApart_pes, H12; eauto.
+    eapply pe_eta_split; econstructor; eauto.
+    rewrite compile_renamedApart_pes, H13; eauto.
+  - cases.
+    rewrite filter_by_nil; eauto.
+    intros; inv_get; eauto using compileF_nil_als_false.
+    rewrite Heq.
+    cases.
+    + exfalso. symmetry in Heq0.
+      edestruct compileF_not_nil_exists_true; eauto; dcr.
+      rewrite <- Heq. congruence.
+      eapply filter_by_not_nil in Heq0; eauto 20 with len.
+    + rewrite Heq0.
+      eapply renamedApartLet with (Dt:=snd (getAnn (compile_renamedApart t ant alt)));
+        eauto 20 with len.
+      rewrite compileF_length, filter_by_length; eauto 20 with len.
+      rewrite map_map; eauto.
+      intros; inv_get; eauto. destruct Zs.
+      edestruct (compileF_get_inv _ _ _ H4); eauto; dcr; subst.
+      rewrite map_take in *.
+      rewrite posOfTrue_countTrue in *; eauto using map_get_eq. repeat get_functional.
+      eapply H2; eauto.
+      * hnf; intros; inv_get. destruct a0.
+        edestruct (compileF_get_inv _ _ _ H4); eauto; dcr; subst.
+        rewrite map_take in *.
+        rewrite posOfTrue_countTrue in *; eauto using map_get_eq. repeat get_functional.
+        edestruct H9; dcr; eauto.
+        hnf; simpl in *.
+        split. rewrite compile_renamedApart_pes; eauto.
+        split; eauto. split; eauto.
+        rewrite !compile_renamedApart_pes, H12; eauto.
+      * hnf; intros; inv_get. destruct x, x1.
+        edestruct (compileF_get_inv _ _ _ H15); eauto; dcr; subst.
+        edestruct (compileF_get_inv _ _ _ H16); eauto; dcr; subst.
+        rewrite map_take in *.
+        rewrite posOfTrue_countTrue in *; eauto using map_get_eq.
+        repeat get_functional. simpl.
+        exploit (H10 x10 x3); eauto using zip_get.
+        intro; subst. rewrite map_take in *. congruence.
+        unfold defVars in *; simpl.
+        rewrite !compile_renamedApart_pes; eauto.
+      * eapply pe_eta_split; econstructor.
+        rewrite compile_renamedApart_pes, H12; eauto.
+        reflexivity.
+      * eapply eq_union_lr; eauto.
+        eapply list_union_eq; eauto 20 with len.
+        rewrite !zip_length2; eauto with len.
+        rewrite compileF_length, filter_by_length, map_map; eauto with len.
+        rewrite !filter_by_length, map_map; eauto with len.
+        rewrite zip_length2; eauto with len.
+        rewrite compileF_length, filter_by_length, map_map; eauto with len.
+        rewrite zip_length2; eauto with len.
+        intros; inv_get. unfold defVars; simpl. destruct x1.
+        edestruct (compileF_get_inv _ _ _ H15); eauto; dcr; subst.
+        rewrite map_take in *.
+        rewrite posOfTrue_countTrue in *; eauto using map_get_eq.
+        repeat get_functional. simpl. eauto.
 Qed.

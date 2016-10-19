@@ -1,8 +1,6 @@
-Require Import CSet Le.
-
-Require Import Plus Util Map.
+Require Import CSet Util Map.
 Require Import Env IL Alpha Fresh Annotation RenamedApart SetOperations.
-Require Import LabelsDefined PairwiseDisjoint.
+Require Import LabelsDefined PairwiseDisjoint AppExpFree.
 
 Set Implicit Arguments.
 
@@ -252,7 +250,9 @@ Lemma get_fst_renameApartF G ϱ F n ans
                  /\ length (fst Zs) = length (fst ans)
                  /\ disj G (of_list (fst ans))
                  /\ unique (fst ans)
-                 /\ G' [=] (G ∪ snd (renameApartFRight renameApart' G ϱ (nil, {}) (drop (S n) (rev F)))) ∪ (of_list (fst ans)).
+                 /\ G' = (G ∪ snd (renameApartFRight renameApart' G ϱ (nil, {}) (drop (S n) (rev F)))) ∪ (of_list (fst ans))
+                 /\ fst ans = fresh_list fresh (snd (renameApartFRight renameApart' G ϱ (nil, {}) (drop (S n) (rev F))) ∪ G) ❬fst Zs❭
+                 /\ ϱ' = ϱ [fst Zs <-- fst ans].
 Proof.
   rewrite <- renameApartFRight_corr.
   remember (rev F).
@@ -521,7 +521,6 @@ Proof.
                                                          freeVars (snd z) \ of_list (fst z)). {
             clear_all; cset_tac; intuition.
           }
-          rewrite H12 in H4.
           rewrite <- lookup_set_agree; eauto.
           intros. rewrite disj_minus_eq.
           - setoid_rewrite diff_subset_equal at 2.
@@ -534,6 +533,7 @@ Proof.
             rewrite <- H. eapply lookup_set_incl; eauto.
             eapply incl_union_left. eapply incl_list_union.
             eapply map_get_1; eauto. eauto.
+          - rewrite <- H12. eauto.
         }
       * assert (freeVars (snd z) ⊆ (freeVars (snd z) \ of_list (fst z)) ∪ of_list (fst z)). {
           clear_all; cset_tac; intuition.
@@ -543,7 +543,6 @@ Proof.
         assert (freeVars (snd z) \ of_list (fst z) ⊆ (freeVars (snd z) ∪ of_list (fst z)) \ of_list (fst z)). {
           cset_tac; intuition.
         }
-        rewrite <- H12 in H4.
         eapply union_subset_3; eauto.
         rewrite <- H5. rewrite <- H.
         rewrite <- lookup_set_agree; eauto.
@@ -551,8 +550,9 @@ Proof.
         eapply incl_union_left.
         eapply incl_list_union.
         eapply map_get_1; eauto. eauto.
+        eauto using agree_on_incl.
         rewrite <- H7.
-        rewrite <- incl_right in H8.
+        time (rewrite <- incl_right in H8).
         rewrite <- lookup_set_agree; eauto.
         eapply update_with_list_lookup_set_incl; eauto.
     + rewrite IH; eauto. eapply incl_union_left. rewrite <- H.
@@ -686,7 +686,8 @@ Proof.
       eapply incl_list_union.
       eapply map_get_1; eauto. eauto.
       eapply update_with_list_agree_inv; eauto using agree_on_incl with cset.
-      rewrite <- incl_right in H9.
+      Typeclasses eauto := debug.
+      time (rewrite <- incl_right in H9).
       rewrite <- lookup_set_agree; eauto.
       eapply incl_union_right.
       eapply update_with_list_lookup_set_incl; eauto.
@@ -763,89 +764,6 @@ Proof.
     eapply agree_on_incl; eauto with cset.
 Qed.
 
-
-
-
-Lemma rename_apart_alpha' G ϱ ϱ' s
-  : lookup_set ϱ (freeVars s) ⊆ G
-  -> inverse_on (freeVars s) ϱ ϱ'
-  -> alpha ϱ' ϱ (snd (renameApart' ϱ G s)) s.
-Proof.
-  revert G ϱ ϱ'.
-  sind s; destruct s; simpl; intros; repeat let_pair_case_eq; subst;
-  simpl in * |- *; eauto using alpha.
-
-  - econstructor. eapply alpha_exp_sym. eapply alpha_exp_rename_injective.
-    eapply inverse_on_incl; try eassumption. eauto with cset.
-    eapply IH; eauto.
-    + rewrite <- H at 3. rewrite lookup_set_update_in_union; eauto.
-      cset_tac; intuition. right.
-      eapply lookup_set_union_incl; eauto. lset_tac.
-    + eapply inverse_on_update_inverse. intuition.
-      eapply inverse_on_incl; try eassumption. cset_tac; eauto.
-      assert (lookup_set ϱ (freeVars s \ {{x}}) ⊆
-                         lookup_set ϱ ((freeVars s \ {{x}}) ∪ Exp.freeVars e)).
-      rewrite lookup_set_union; cset_tac; intuition.
-      rewrite H1, H. eapply fresh_spec; eauto.
-  - econstructor; eauto.
-    + eapply alpha_op_sym. eapply alpha_op_rename_injective.
-      eapply inverse_on_incl; try eassumption. eapply incl_right.
-    + eapply IH; eauto.
-      * eapply Subset_trans; try eassumption. eapply lookup_set_incl; [intuition|].
-        rewrite union_assoc, union_comm. eapply incl_right.
-      * eapply inverse_on_incl; try eassumption.
-        rewrite union_assoc, union_comm. eapply incl_right.
-    + eapply IH; eauto.
-      * rewrite <- H at 1. repeat rewrite lookup_set_union; cset_tac; intuition.
-      * eapply inverse_on_incl; try eassumption.
-        cset_tac; intuition.
-  - econstructor. rewrite map_length; eauto.
-    intros. edestruct map_get_4; eauto; dcr; get_functional; subst.
-    eapply alpha_op_sym. eapply alpha_op_rename_injective.
-    eapply inverse_on_incl; try eassumption. eapply incl_list_union; try reflexivity.
-    eapply map_get_1; eauto.
-
-  - econstructor; eauto. eapply alpha_op_sym.
-    eapply alpha_op_rename_injective.
-    eapply inverse_on_incl; try eassumption. reflexivity.
-  - econstructor.
-    + rewrite rev_length, renameApartF_length; eauto.
-    + intros. eapply get_rev in H1.
-      rewrite renameApartF_length in H1.
-      edestruct get_fst_renameApartF as [? [? [? ]]]; dcr; eauto.
-      exploit (get_range H2).
-      orewrite (length F - S (length F - S n) = n) in H4. get_functional; subst.
-      eauto.
-    + intros.
-      eapply get_rev in H1.
-      rewrite renameApartF_length in H1.
-      edestruct get_fst_renameApartF as [? [? [? ]]]; dcr; eauto.
-      exploit (get_range H2).
-      orewrite (length F - S (length F - S n) = n) in H4. get_functional; subst.
-      rewrite H6.
-      erewrite renameApart'_agree. eapply IH; eauto.
-      * rewrite lookup_set_update_with_list_in_union_length; eauto.
-        eapply union_subset_3; eauto.
-        rewrite <- H5.
-        rewrite <- H.
-        eapply lookup_set_incl; eauto.
-        eapply incl_union_left.
-        eapply incl_list_union. eapply map_get_1; eauto. reflexivity.
-      * eapply inverse_on_update_fresh; eauto.
-        eapply inverse_on_incl; try eassumption. eauto.
-        eapply incl_union_left.
-        eapply incl_list_union. eapply map_get_1; eauto. reflexivity.
-        symmetry. eapply disj_1_incl; eauto.
-        rewrite <- H. eapply lookup_set_incl; eauto.
-        eapply incl_union_left.
-        eapply incl_list_union. eapply map_get_1; eauto. reflexivity.
-      * symmetry. eapply agree_on_incl; eauto with cset.
-    + eapply IH; eauto.
-      * rewrite <- H at 1.
-        rewrite lookup_set_union; eauto with cset.
-      * eapply inverse_on_incl; try eassumption. eauto.
-Qed.
-
 (** Based on [rename_apart'], we can define a function that renames apart bound variables apart
     and keeps free variables the same *)
 Definition rename_apart s := snd (renameApart' id (freeVars s) s).
@@ -856,13 +774,6 @@ Lemma rename_apart_renamedApart (s:stmt)
   eapply renameApart'_renamedApart; eauto. eapply lookup_set_on_id; eauto.
 Qed.
 
-Lemma rename_apart_alpha s
-  : alpha id id (rename_apart s) s.
-Proof.
-  eapply rename_apart_alpha'.
-  + eapply lookup_set_on_id; reflexivity.
-  + eapply inverse_on_id.
-Qed.
 
 (*
 Lemma rename_apart_2 G ϱ ϱ' s s' f g
@@ -903,4 +814,22 @@ Proof.
     + rewrite rev_length.
       exploit IHlabelsDefined; eauto.
       rewrite renameApartF_length. eauto.
+Qed.
+
+Require Import AppExpFree.
+
+Lemma app_expfree_rename_apart s ϱ G
+: app_expfree s
+  -> app_expfree (snd (renameApart' ϱ G s)).
+Proof.
+  intros AEF.
+  general induction AEF; simpl;
+    repeat let_pair_case_eq; repeat simpl_pair_eqs; subst; simpl;
+      eauto using app_expfree.
+  - econstructor. intros; inv_get. exploit H; eauto.
+    inv H1; simpl; eauto using isVar.
+  - econstructor; intros; inv_get; eauto.
+    edestruct get_fst_renameApartF as [? [? ?]]; eauto; dcr; subst.
+    rewrite H3.
+    eapply H0; eauto.
 Qed.

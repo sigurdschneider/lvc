@@ -15,7 +15,7 @@ VS=$(shell find theories/ -iname '*.v' | grep -v '/\.')
 VSIND=$(shell find theories/ -iname '*vo' | sed 's/\.vo/.v/' | grep -v 'Spilling' | grep -v 'ValueOpts' | grep -v 'TransVal')
 DOCS=$(shell find extra/ )
 
-ifeq ($(wildcard time.rb),time.rb) 
+ifeq ($(wildcard time.rb)$(wildcard .timing),time.rb.timing)
   export TIMECMD=@./time.rb $(if $(findstring j,$(MAKEFLAGS)),--parallel,)
 endif
 export COQDOCFLAGS=--interpolate --utf8 --toc --toc-depth 3 --index indexpage --no-lib-name
@@ -45,7 +45,7 @@ depclean: clean
 	rm -rf compiler/extraction/*
 
 distclean: clean depclean
-	find $(PKGIND)/ -type f -iname '*.vo' -o -iname '*.glob' -o -iname '*.v.d' | xargs rm -rf 
+	find $(PKGIND)/ -type f -iname '*.vo' -o -iname '*.glob' -o -iname '*.v.d' | xargs rm -rf
 
 doc: clean-doc $(DOCS) dep $(COQMAKEFILE)
 	- mkdir -p $(DOC)
@@ -74,11 +74,11 @@ ind-package:
 	rm -rf $(PKGIND)
 	mkdir $(PKGIND)
 	cp -r _CoqProject compiler ContainersPlugin extra Makefile configure.sh paco src theories README.md $(PKGIND)
-	find $(PKGIND)/ -type f -iname '*.vo' -o -iname '*.glob' -o -iname '*.v.d' -o -iname '*.time' -o -iname '*.aux' | xargs rm -rf 
+	find $(PKGIND)/ -type f -iname '*.vo' -o -iname '*.glob' -o -iname '*.v.d' -o -iname '*.time' -o -iname '*.aux' | xargs rm -rf
 	rm -rf $(PKGIND)/theories/Spilling $(PKGIND)/theories/TransVal $(PKGIND)/theories/ValueOpts $(PKGIND)/theories/Test*
 	$(MAKE) -C $(PKGIND) clean depclean
 	cp Make Makefile.coq $(PKGIND)
-	rm -rf $(PKGIND)/src/*.cm* $(PKGIND)/src/*.o $(PKGIND)/src/*.ml4.d 
+	rm -rf $(PKGIND)/src/*.cm* $(PKGIND)/src/*.o $(PKGIND)/src/*.ml4.d
 	rm -rf $(PKGIND)/compiler/lvcc.native
 	tar cvzf lvc-ind.tgz $(PKGIND)
 
@@ -91,12 +91,12 @@ clean: clean-doc
 
 $(COQMAKEFILE): Makefile depmakefiles $(VS)
 	$(COQBIN)coq_makefile -f Make -o Makefile.coq
-	sed -i s/TIMECMD=/TIMECMD?=/ Makefile.coq 
+	sed -i s/TIMECMD=/TIMECMD?=/ Makefile.coq
 #	./configure.sh
 #	coq_makefile -f _CoqProject $(VS) -o $(COQMAKEFILE)
 
 
-extraction: theories/Compiler.vo compiler/extraction.v compiler/STAMP  
+extraction: theories/Compiler.vo compiler/extraction.v compiler/STAMP
 	+$(MAKE) -C compiler all
 
 compiler/STAMP: theories/Compiler.vo compiler/extraction.v
