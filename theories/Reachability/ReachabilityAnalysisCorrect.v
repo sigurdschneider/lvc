@@ -1,6 +1,6 @@
 Require Import CSet Le Var.
 
-Require Import Plus Util AllInRel Map CSet OptionR.
+Require Import Plus Util AllInRel Map CSet OptionR MoreList.
 Require Import Val Var Env IL Annotation Lattice DecSolve Analysis Filter Terminating.
 Require Import Analysis AnalysisForward FiniteFixpointIteration.
 Require Import Reachability ReachabilityAnalysis Subterm.
@@ -69,26 +69,24 @@ Proof.
     econstructor; eauto.
     + eapply IHAnn; eauto.
       erewrite (take_eta ❬s❭) at 1. eapply PIR2_app; eauto.
-      * eapply PIR2_get. intros. inv_get.
+      * eapply PIR2_get; eauto with len. intros. inv_get.
         edestruct (get_forwardF (fun _ => bool) (forward reachability_transform)
                                 (fst ⊝ s ++ ZL) (subTerm_EQ_Fun2 eq_refl ST) H11 H8).
         edestruct (@get_union_union_b bool _ _).
-        eapply H4.
+        eapply H4; eauto with len.
         Focus 2. dcr.
         exploit H15. eapply zip_get. eapply map_get_1; eauto.
         eapply H12. eauto. eapply ann_R_get in H3. rewrite <- H3.
         rewrite getAnn_setTopAnn. eauto.
         intros. inv_get.
-        edestruct (@forwardF_get _ _ _ _ _ _ _ _ _ _ _ H3). dcr. subst.
-        eauto with len.
-        rewrite Take.take_length_le. eauto with len.
-        repeat rewrite (@forward_length sT (fun _ => bool)); eauto with len.
+        edestruct (@forwardF_get _ _ _ _ _ _ _ _ _ _ _ H3); dcr; subst;
+          eauto with len.
       * etransitivity; eauto. eapply PIR2_drop.
         eapply PIR2_fold_zip_join_inv. reflexivity.
         intros.
         inv_get.
-        edestruct (@forwardF_get _ _ _ _ _ _ _ _ _ _ _ H4). dcr.
-        subst; repeat rewrite (@forward_length sT (fun _ => bool)); eauto with len.
+        edestruct (@forwardF_get _ _ _ _ _ _ _ _ _ _ _ H4). dcr. subst.
+        eauto with len.
     + intros.
       assert (n < ❬snd FWt❭). {
         subst FWt.
@@ -103,7 +101,7 @@ Proof.
       *
         assert (n <
                 ❬snd (
-             forward reachability_transform (fst ⊝ s ++ ZL) (snd Zs) x0 (getAnn a) a)❭). {
+                     forward reachability_transform (fst ⊝ s ++ ZL) (snd Zs) x0 (getAnn a) a)❭). {
           erewrite (@forward_length sT (fun _ => bool)). rewrite app_length,map_length.
           eapply get_range in H8. omega.
         }
@@ -121,8 +119,7 @@ Proof.
         eapply (@forward_getAnn' sT (fun _ => bool)).
 
         clear_all. intros. inv_get.
-        subst FWt.
-        repeat erewrite (@forward_length sT (fun _ => bool)); eauto with len.
+        subst FWt. eauto with len.
       * rewrite (take_eta ❬sa❭) at 1.
         eapply PIR2_app.
         protect g0.
@@ -139,7 +136,6 @@ Proof.
         clear_all. intros. inv_get.
         subst FWt. eauto with len.
         rewrite Take.take_length_le; eauto with len.
-        rewrite (@forward_length _ (fun _ => bool)). eauto with len.
         etransitivity; eauto.
         rewrite H. eapply PIR2_drop.
         subst FWF.

@@ -686,7 +686,6 @@ Proof.
       eapply incl_list_union.
       eapply map_get_1; eauto. eauto.
       eapply update_with_list_agree_inv; eauto using agree_on_incl with cset.
-      Typeclasses eauto := debug.
       time (rewrite <- incl_right in H9).
       rewrite <- lookup_set_agree; eauto.
       eapply incl_union_right.

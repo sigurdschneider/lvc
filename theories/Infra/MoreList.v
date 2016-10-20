@@ -720,9 +720,12 @@ Ltac len_simpl_basic :=
     rewrite (@min_idempotent_eq _ _ (eq_sym H))
   | [ H : ?x = ❬?L❭, H' : ?x = ❬?L'❭ |- context [Init.Nat.min ❬?L❭ ❬?L'❭] ] =>
     rewrite (@min_idempotent_eq _ _ (eq_trans (eq_sym H) H'))
+  | [ |- context [Init.Nat.min (?a + ?x) ?a] ] =>
+    rewrite (@min_r (a + x) a); [ | clear; omega ]
   end.
 
 Smpl Add len_simpl_basic : len.
+
 
 Smpl Add
      match goal with
@@ -734,4 +737,6 @@ Smpl Add
        rewrite take_eq_ge; [| rewrite <- H, <- H'; unfold ge; reflexivity]
      | |- context [ (fun x : ?A => x) ⊝ ?L ] =>
        rewrite (@map_id A L)
+     | |- context [ ❬@take ?k ?X ?L ❭ ] =>
+       rewrite (@take_length X L k)
      end : len.
