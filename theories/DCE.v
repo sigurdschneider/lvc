@@ -225,18 +225,6 @@ Instance SR : ProofRelationI (bool * ((set var) * params)) := {
     rewrite get_app_ge in H1; eauto.
 Defined.
 
-Print Scopes.
-
-Hint Immediate Nat.lt_le_incl : len.
-
-Lemma get_range_le (X : Type) (L : 〔X〕) (n : nat) (v : X)
-  : get L n v -> n <= ❬L❭.
-Proof.
-  intros. eapply get_range in H. omega.
-Qed.
-
-Hint Resolve get_range_le : len.
-
 Lemma compileF_separates RL LV (F:list (params*stmt)) (anF:list (ann bool)) bnF (LENa:❬F❭ = ❬anF❭) (LENb:❬F❭ = ❬bnF❭)
   : separates SR ((getAnn ⊝ anF) ⨝ ((getAnn ⊝ bnF) ⨝ (fst ⊝ F))) (RL ⨝ LV) F
               (compileF (compile (getAnn ⊝ anF ++ RL) ((getAnn ⊝ bnF) ⨝ (fst ⊝ F) ++ LV)) F anF bnF).
@@ -247,14 +235,13 @@ Proof.
   - rewrite LENa; intros; hnf in H; destruct H as [? [? ?]]; dcr; subst; inv_get.
     rewrite compileF_length; eauto with len.
     rewrite map_app.
-    rewrite take_app_le.
+    rewrite take_app_le; eauto with len.
     erewrite (take_eta n (getAnn ⊝ anF)) at 2.
     rewrite countTrue_app.
     rewrite fst_zip_pair; eauto with len.
     rewrite get_app_lt in H2; eauto 20 with len. inv_get; simpl in *.
     erewrite <- get_eq_drop; eauto using map_get_1.
     rewrite H3. simpl. omega.
-    rewrite !map_length, !zip_length2; eauto with len.
   - rewrite LENa; intros; simpl in *; dcr; subst.
     destruct H as [? [? ?]]; subst; dcr.
     rewrite compileF_length; eauto.
@@ -262,7 +249,6 @@ Proof.
     rewrite take_app_ge; eauto 20 with len.
     rewrite countTrue_app.
     rewrite fst_zip_pair; eauto with len. omega.
-    rewrite fst_zip_pair; eauto with len.
 Qed.
 
 

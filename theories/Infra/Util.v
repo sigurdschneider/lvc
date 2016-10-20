@@ -1,4 +1,4 @@
-Require Export List SetoidList Omega AutoIndTac Computable.
+Require Export List SetoidList Omega AutoIndTac Computable Smpl.
 
 Set Implicit Arguments.
 
@@ -439,6 +439,10 @@ Qed.
 
 Create HintDb len discriminated.
 
+Smpl Create len.
+Ltac len_simpl := smpl len; repeat (smpl len).
+Hint Extern 50 => len_simpl : len.
+
 Hint Resolve length_map_1 length_map_2 : len.
 
 Lemma rev_swap X (L L':list X)
@@ -746,3 +750,27 @@ Proof.
   induction L; simpl; eauto.
   rewrite rev_app_distr. rewrite IHL. reflexivity.
 Qed.
+
+Hint Immediate Nat.lt_le_incl : len.
+
+Lemma min_idempotent_eq n m
+  : n = m -> Init.Nat.min n m = n.
+Proof.
+  intros; subst. rewrite Min.min_idempotent; eauto.
+Qed.
+
+Lemma min_minus n m
+  : Init.Nat.min n m = n - (n - m).
+Proof.
+  decide (n < m).
+  - rewrite Nat.min_l; omega.
+  - rewrite Nat.min_r; omega.
+Qed.
+
+Ltac min_repl :=
+  match goal with
+  | [ H : context [ Init.Nat.min ?n ?m ] |- _ ] => rewrite (@min_minus n m) in H
+  | [ |- context [ Init.Nat.min ?n ?m ] ] => rewrite (@min_minus n m)
+  end.
+
+Ltac momega := repeat min_repl; omega.

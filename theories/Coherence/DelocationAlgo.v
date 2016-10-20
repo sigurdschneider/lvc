@@ -386,8 +386,7 @@ Lemma callChain_range' F f f'
     -> counted f < ❬F❭.
 Proof.
   intros.
-  inv H; eauto; simpl in *.
-  - eapply get_range in H1. omega.
+  inv H; eauto.
 Qed.
 
 Lemma computeParameters_isCalled_Some_F' Lv ZL AP als D Z F s alb l

@@ -657,6 +657,17 @@ Qed.
 
 Hint Resolve zip_length_le_ass_right : len.
 
+Lemma zip_length_le_ass_left (X Y Z : Type) (f : X -> Y -> Z) (L : list X) (L' : list Y) k
+  : length L = length L'
+    -> length L <= k
+    -> length (zip f L L') <= k.
+Proof.
+  intros; subst; rewrite zip_length2; eauto.
+Qed.
+
+Hint Resolve zip_length_le_ass_left : len.
+
+
 Lemma take_zip (X Y Z : Type) (f : X -> Y -> Z) (L : list X) (L' : list Y) n
   : take n (zip f L L') = zip f (take n L) (take n L').
 Proof.
@@ -697,3 +708,30 @@ Proof.
   length_equify.
   general induction LEN; simpl; f_equal; eauto.
 Qed.
+
+Ltac len_simpl_basic :=
+  match goal with
+  | [ |- context [ ❬?L ++ ?L'❭ ] ] => rewrite (@app_length _ L L')
+  | [ |- context [ ❬?f ⊝ ?L❭ ] ] => rewrite (@map_length _ _ f L)
+  | [ |- context [ ❬?f ⊜ ?L ?L'❭ ] ] => rewrite (@zip_length _ _ _ f L L')
+  | [ H : ❬?L❭ = ❬?L'❭ |- context [Init.Nat.min ❬?L❭ ❬?L'❭] ] =>
+    rewrite (@min_idempotent_eq _ _ H)
+  | [ H : ❬?L'❭ = ❬?L❭ |- context [Init.Nat.min ❬?L❭ ❬?L'❭] ] =>
+    rewrite (@min_idempotent_eq _ _ (eq_sym H))
+  | [ H : ?x = ❬?L❭, H' : ?x = ❬?L'❭ |- context [Init.Nat.min ❬?L❭ ❬?L'❭] ] =>
+    rewrite (@min_idempotent_eq _ _ (eq_trans (eq_sym H) H'))
+  end.
+
+Smpl Add len_simpl_basic : len.
+
+Smpl Add
+     match goal with
+     | [ |- context [ @take ?k ?X (?f ⊝ ?L)] ] =>
+       rewrite <- (@map_take _ X f L k)
+     | [ H : ?k = ❬?L❭  |- context [ @take ?k ?X ?L] ] =>
+       rewrite take_eq_ge; [| rewrite H; unfold ge; reflexivity]
+     | [ H : ?x = ?k, H' : ?x = ❬?L❭  |- context [ @take ?k ?X ?L] ] =>
+       rewrite take_eq_ge; [| rewrite <- H, <- H'; unfold ge; reflexivity]
+     | |- context [ (fun x : ?A => x) ⊝ ?L ] =>
+       rewrite (@map_id A L)
+     end : len.

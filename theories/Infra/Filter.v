@@ -102,6 +102,19 @@ Proof.
   cases; simpl; f_equal; eauto.
 Qed.
 
+Lemma filter_by_length' A B  (p: A -> bool) L (L':list B)
+  : ❬filter_by p L L'❭ = countTrue (p ⊝ (take ❬L'❭ L)).
+Proof.
+  general induction L; destruct L'; simpl; eauto.
+  cases; simpl; f_equal; eauto.
+Qed.
+
+Smpl Add
+     match goal with
+     | [ |- context [ ❬@filter_by ?T ?T' ?f ?A ?B❭ ] ] =>
+       rewrite (@filter_by_length' T T' f A B)
+     end : len.
+
 Fixpoint posOfTrue (n:nat) (L:list bool) :=
   match L, n with
   | nil, _ => 0

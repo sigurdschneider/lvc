@@ -142,6 +142,12 @@ Proof.
   cases; subst. cases; simpl; eauto.
 Qed.
 
+Smpl Add
+     match goal with
+     | [ H: ❬?B❭ = ❬?C❭ |- context [ ❬compileF compile ?A ?B ?C❭ ] ] =>
+       rewrite (@compileF_length A B C H)
+     end : len.
+
 Local Hint Extern 0 =>
 match goal with
 | [ H : op2bool ?e <> Some ?t , H' : op2bool ?e <> Some ?t -> _ |- _ ] =>
@@ -212,20 +218,20 @@ Lemma compileF_separates RL F als (Len:❬F❭ = ❬als❭)
 Proof.
   hnf; intros; split; [| split; [| split]].
   - eauto with len.
-  - simpl. rewrite compileF_length; eauto.
+  - simpl. eauto with len.
   - rewrite Len; intros; hnf in H; dcr; subst; inv_get.
-    rewrite compileF_length; eauto.
+    len_simpl.
     rewrite take_app_le; eauto with len.
     erewrite (take_eta n (getAnn ⊝ als)) at 2.
     rewrite countTrue_app.
     erewrite <- get_eq_drop; eauto using map_get_1.
     rewrite EQ. simpl. omega.
-    rewrite map_length. omega.
   - rewrite Len; intros; simpl in *; dcr; subst.
     rewrite compileF_length; eauto.
     rewrite take_app_ge; eauto with len.
     rewrite countTrue_app. omega.
 Qed.
+
 
 Lemma compileF_indexwise_paramrel RL F als (Len:❬F❭ = ❬als❭)
   : indexwise_paramrel SR F (compileF compile (getAnn ⊝ als ++ RL) F als) (getAnn ⊝ als) RL.
@@ -237,7 +243,7 @@ Proof.
   exploit (compileF_get (getAnn ⊝ als ++ RL)); try eapply H2; eauto.
   simpl in *.
   erewrite take_app_le, <- map_take in H1; eauto with len.
-  get_functional. eauto. rewrite map_length. eapply get_range in H2. omega.
+  get_functional. eauto.
 Qed.
 
 Lemma sim_compile_fun_cases r RL L V s L' F als alt
@@ -281,7 +287,7 @@ Proof.
       exploit (compileF_get (getAnn ⊝ als ++ RL)); try eapply H5; eauto.
       erewrite take_app_le, <- map_take in H7; eauto with len.
       simpl in *. get_functional.
-      exploit H4; eauto. rewrite map_length. eapply get_range in H9. omega.
+      exploit H4; eauto.
     + eapply compileF_indexwise_paramrel; eauto.
     + eapply compileF_separates; eauto.
 Qed.
@@ -335,7 +341,6 @@ Proof.
     rewrite countTrue_app.
     erewrite <- get_eq_drop; eauto using map_get_1.
     rewrite EQ. simpl. omega.
-    rewrite map_length. omega.
   - rewrite Len; intros; simpl in *; dcr; subst.
     rewrite compileF_length; eauto.
     rewrite take_app_ge; eauto with len.
@@ -352,7 +357,7 @@ Proof.
   exploit (compileF_get (getAnn ⊝ als ++ RL)); try eapply H2; eauto.
   simpl in *.
   erewrite take_app_le, <- map_take in H1; eauto with len.
-  get_functional. eauto. rewrite map_length. eapply get_range in H2. omega.
+  get_functional. eauto.
 Qed.
 
 Lemma sim_compile_fun_cases r RL L V s L' F als alt
@@ -396,7 +401,7 @@ Proof.
       exploit (compileF_get (getAnn ⊝ als ++ RL)); try eapply H5; eauto.
       erewrite take_app_le, <- map_take in H7; eauto with len.
       simpl in *. get_functional.
-      exploit H4; eauto. rewrite map_length. eapply get_range in H9; omega.
+      exploit H4; eauto.
     + eapply compileF_indexwise_paramrel; eauto.
     + eapply compileF_separates; eauto.
 Qed.
@@ -540,8 +545,8 @@ Proof.
            eapply PIR2_app; [ | reflexivity ].
            eapply PIR2_get; intros; inv_get.
            ++ simpl. eapply compile_live_incl; eauto.
-           ++ repeat rewrite filter_by_length; eauto 20 with len.
-        -- rewrite compileF_length; eauto. rewrite filter_by_length, map_id; eauto 20 with len.
+           ++ eauto with len.
+        -- eauto with len.
         -- intros; inv_get.
            destruct Zs as [Z s].
            edestruct compileF_get_inv; eauto; dcr; subst. simpl.
@@ -552,8 +557,7 @@ Proof.
            ++ rewrite !filter_by_app; eauto 20 with len. eapply PIR2_app; [ | reflexivity ].
              eapply PIR2_get; intros; inv_get; simpl.
              ** eapply compile_live_incl; eauto.
-             ** rewrite map_length.
-                repeat rewrite filter_by_length; eauto 20 with len.
+             ** eauto with len.
         -- intros. inv_get.
            destruct Zs as [Z s].
            edestruct compileF_get_inv; eauto; dcr; subst. simpl.
@@ -621,8 +625,6 @@ Proof.
     exploit compileF_get; eauto.
     econstructor 2; [ | | econstructor 1 ].
     + rewrite take_app_le; eauto 20 with len.
-      rewrite <- map_take. eauto.
-      rewrite map_length. eapply get_range in GetAls. omega.
     + simpl.
       eapply IH in ICEnd; eauto.
       rewrite take_app_ge in ICEnd; eauto 20 with len.
@@ -635,7 +637,6 @@ Proof.
     exploit compileF_get; eauto.
     econstructor 2; [ | | ].
     rewrite take_app_le; eauto 20 with len.
-    rewrite <- map_take. eauto. rewrite map_length. eapply get_range in H1. omega.
     simpl.
     eapply IH in H0; eauto.
     eapply IHCC in H0; eauto.
@@ -671,8 +672,6 @@ Proof.
     exploit compileF_get; eauto.
     econstructor 2; [ | | ].
     rewrite take_app_le; eauto 20 with len.
-    rewrite <- map_take. eauto. rewrite map_length. eapply get_range in H1. omega.
-    simpl.
     eapply IH in H0; eauto.
     subst. eauto.
 Qed.
@@ -871,13 +870,11 @@ Proof.
     + rewrite Heq0.
       eapply renamedApartLet with (Dt:=snd (getAnn (compile_renamedApart t ant alt)));
         eauto 20 with len.
-      rewrite compileF_length, filter_by_length; eauto 20 with len.
-      rewrite map_map; eauto.
-      intros; inv_get; eauto. destruct Zs.
-      edestruct (compileF_get_inv _ _ _ H4); eauto; dcr; subst.
-      rewrite map_take in *.
-      rewrite posOfTrue_countTrue in *; eauto using map_get_eq. repeat get_functional.
-      eapply H2; eauto.
+      * intros; inv_get; eauto. destruct Zs.
+        edestruct (compileF_get_inv _ _ _ H4); eauto; dcr; subst.
+        rewrite map_take in *.
+        rewrite posOfTrue_countTrue in *; eauto using map_get_eq. repeat get_functional.
+        eapply H2; eauto.
       * hnf; intros; inv_get. destruct a0.
         edestruct (compileF_get_inv _ _ _ H4); eauto; dcr; subst.
         rewrite map_take in *.
@@ -901,13 +898,7 @@ Proof.
         rewrite compile_renamedApart_pes, H12; eauto.
         reflexivity.
       * eapply eq_union_lr; eauto.
-        eapply list_union_eq; eauto 20 with len.
-        rewrite !zip_length2; eauto with len.
-        rewrite compileF_length, filter_by_length, map_map; eauto with len.
-        rewrite !filter_by_length, map_map; eauto with len.
-        rewrite zip_length2; eauto with len.
-        rewrite compileF_length, filter_by_length, map_map; eauto with len.
-        rewrite zip_length2; eauto with len.
+        eapply list_union_eq; eauto with len.
         intros; inv_get. unfold defVars; simpl. destruct x1.
         edestruct (compileF_get_inv _ _ _ H15); eauto; dcr; subst.
         rewrite map_take in *.

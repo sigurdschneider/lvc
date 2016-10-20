@@ -29,9 +29,6 @@ Proof.
     econstructor; simpl;
       eauto using live_op_sound_incl, Op.live_freeVars, get_list_union_map with cset.
   - econstructor; eauto with len.
-    + eapply IHrenamedApart.
-      repeat rewrite List.map_app; eauto with len.
-      eauto with len.
     + intros; inv_get. eapply H1; eauto with len.
     + intros; inv_get. edestruct H2; eauto; dcr.
       cases; split; pe_rewrite; eauto with cset pe ann.
@@ -83,7 +80,6 @@ Proof.
       rewrite bounded_app; split; eauto using indexwise_R_bounded.
     }
     econstructor; eauto with len.
-    + eapply IHrenamedApart; eauto with len; simpl.
     + intros. inv_get.
       eapply H1; eauto.
       * edestruct H2; eauto; dcr. rewrite H15.

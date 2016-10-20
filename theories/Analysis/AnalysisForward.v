@@ -38,6 +38,12 @@ Proof.
   destruct F as [|Zs F'], anF; simpl; eauto.
 Qed.
 
+Smpl Add
+     match goal with
+     | [ |- context [ ❬@forwardF ?sT ?Dom ?H ?BSL ?f ?ZL ?F ?anF ?ST❭ ] ] =>
+       rewrite (@forwardF_length sT Dom H BSL f ZL F anF ST)
+     end : len.
+
 Lemma forwardF_length_ass (sT:stmt) (Dom:stmt->Type) `{BoundedSemiLattice (Dom sT)}
       forward ZL F anF ST k
   : length F = k
@@ -187,6 +193,13 @@ Proof.
       eapply min_l; eauto.
 Qed.
 
+
+Smpl Add
+     match goal with
+     | [ |- context [ ❬snd (@forward ?sT ?Dom ?H ?BSL ?f ?ZL ?s ?ST ?d ?a)❭ ] ] =>
+       rewrite (@forward_length sT Dom H BSL f s ST ZL d a)
+     end : len.
+
 Lemma forward_length_ass
       (sT:stmt) (Dom : stmt -> Type) `{BoundedSemiLattice (Dom sT)}
       (f: forall sT, list params ->
@@ -229,13 +242,8 @@ Proof.
   sind s; intros ZL d a ST Ann; destruct s; inv Ann; simpl;
     repeat let_pair_case_eq; subst; eauto 20 using @annotation, setTopAnn_annotation.
   - econstructor; eauto using setTopAnn_annotation.
-    + rewrite zip_length. rewrite map_length.
-      rewrite forwardF_length; eauto with len.
-      rewrite fold_list_length'; intros; eauto with len.
-      * rewrite forward_length, app_length, map_length.
-        rewrite <- H3. repeat rewrite min_l; eauto; try omega.
-      * inv_get; eauto with len.
-      * rewrite zip_length; eauto with len.
+    + len_simpl.
+      rewrite fold_list_length'; intros; inv_get; eauto with len.
     + intros. inv_get.
       eauto using setTopAnn_annotation, setAnn_annotation.
 Qed.

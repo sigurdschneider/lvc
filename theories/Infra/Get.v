@@ -215,8 +215,18 @@ Proof.
   pose proof (IHL n H4). omega.
 Qed.
 
-
 Hint Resolve get_range : len.
+Hint Immediate get_range.
+
+
+Lemma get_range_le (X : Type) (L : 〔X〕) (n : nat) (v : X)
+  : get L n v -> n <= ❬L❭.
+Proof.
+  intros. eapply get_range in H. omega.
+Qed.
+
+Hint Resolve get_range_le : len.
+Hint Immediate get_range_le.
 
 
 Lemma get_in_range X (L:list X) n
@@ -393,7 +403,7 @@ Proof.
   - split; intros H; inv H.
     + destruct L; isabsurd. injection H0; intros; subst.
       econstructor. eapply IHn; eauto. simpl in *. omega.
-    + simpl. econstructor. eapply IHn; eauto. simpl in *; omega.
+    + simpl. econstructor. eapply IHn; eauto.
 Qed.
 
 Lemma get_app_lt_1 X (L L':list X) n x (LE:n < length L)
