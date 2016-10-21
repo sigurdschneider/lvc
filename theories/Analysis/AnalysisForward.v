@@ -152,17 +152,15 @@ Proof.
 Qed.
 
 
-Ltac inv_get_step1 dummy :=
-  first [inv_get_step |
-         match goal with
-         | [ H: get (@forwardF ?sT ?Dom ?PO ?BSL ?f ?ZL ?F ?anF ?ST) ?n ?x |- _ ]
-           => eapply (@forwardF_get sT Dom PO BSL f ZL F anF ST x n) in H;
-             destruct H as [? [? [? [? [? ]]]]]
-         end
-        ].
+Ltac inv_get_step_analysis_forward :=
+  match goal with
+  | [ H: get (@forwardF ?sT ?Dom ?PO ?BSL ?f ?ZL ?F ?anF ?ST) ?n ?x |- _ ]
+    => eapply (@forwardF_get sT Dom PO BSL f ZL F anF ST x n) in H;
+      destruct H as [? [? [? [? [? ]]]]]
+  end.
 
-Tactic Notation "inv_get_step" := inv_get_step1 idtac.
-Tactic Notation "inv_get" := inv_get' inv_get_step1.
+Smpl Add inv_get_step_analysis_forward : inv_get.
+
 
 Lemma fold_list_length' A B (f:list B -> (list A) -> list B) (a:list (list A)) (b: list B)
   : (forall n aa, get a n aa -> ❬b❭ <= ❬aa❭)

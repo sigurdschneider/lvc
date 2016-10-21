@@ -441,7 +441,7 @@ Create HintDb len discriminated.
 
 Smpl Create len.
 Ltac len_simpl := smpl len; repeat (smpl len).
-Hint Extern 50 => len_simpl : len.
+Hint Extern 0 => len_simpl : len.
 
 Hint Resolve length_map_1 length_map_2 : len.
 

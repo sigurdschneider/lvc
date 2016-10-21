@@ -144,16 +144,14 @@ Proof.
     eexists x0. econstructor. eauto.
 Qed.
 
-Ltac inv_get_step1 dummy := first [inv_get_step |
-                            match goal with
-                            | [ H: get (backwardF ?f ?ZL ?AL ?F ?anF ?ST) ?n ?x |- _ ]
-                              => eapply backwardF_get in H;
-                                destruct H as [? [? [? [? [? ]]]]]
-                            end
-                           ].
+Ltac inv_get_step_analysis_backward :=
+  match goal with
+  | [ H: get (backwardF ?f ?ZL ?AL ?F ?anF ?ST) ?n ?x |- _ ]
+    => eapply backwardF_get in H;
+      destruct H as [? [? [? [? [? ]]]]]
+  end.
 
-Tactic Notation "inv_get_step" := inv_get_step1 idtac.
-Tactic Notation "inv_get" := inv_get' inv_get_step1.
+Smpl Add inv_get_step_analysis_backward : inv_get.
 
 Lemma backward_monotone (sT:stmt) (Dom : stmt -> Type) `{PartialOrder (Dom sT)}
       (f: forall sT, list params -> list (Dom sT) ->

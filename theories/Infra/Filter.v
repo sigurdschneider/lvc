@@ -164,22 +164,30 @@ Proof.
   - edestruct IHY; dcr; eauto using get.
 Qed.
 
-Ltac inv_get_step_filter dummy :=
-  first [inv_get_step |
-         repeat (match goal with
-         | [ H : get (filter_by ?p ?L ?L') ?n ?x |- _ ] =>
-           eapply filter_by_get in H; try rewrite map_id in H; destruct H as [? [? [? ?]]]
-         | [ H : get (filter ?p ?L) ?n ?x |- _ ] =>
-           eapply filter_get in H; try rewrite map_id in H; destruct H as [H ?]
-         | [ H : get _ (posOfTrue (countTrue (?f ⊝ take ?n ?L)) (?f ⊝ ?L)) _,
-                 H' : get ?L ?n ?x, H'' : ?f ?x = true |- _ ] =>
-           rewrite (@map_take _ _ f L) in H;
-           rewrite (@posOfTrue_countTrue (f ⊝ L) n) in H;[| eauto using map_get_eq]
-         end)
-        ].
+Ltac inv_get_step_filter :=
+  repeat (match goal with
+          | [ H : get (filter_by ?p ?L ?L') ?n ?x |- _ ] =>
+            eapply filter_by_get in H; try rewrite map_id in H; destruct H as [? [? [? ?]]]
+          | [ H : get (filter ?p ?L) ?n ?x |- _ ] =>
+            eapply filter_get in H; try rewrite map_id in H; destruct H as [H ?]
+          | [ H : get _ (posOfTrue (countTrue (?f ⊝ take ?n ?L)) (?f ⊝ ?L)) _,
+                  H' : get ?L ?n ?x, H'' : ?f ?x = true |- _ ] =>
+            rewrite (@map_take _ _ f L) in H;
+            rewrite (@posOfTrue_countTrue (f ⊝ L) n) in H;[| eauto using map_get_eq]
+          end).
 
-Tactic Notation "inv_get_step" := inv_get_step_filter idtac.
-Tactic Notation "inv_get" := inv_get' inv_get_step_filter.
+Smpl Add  repeat (match goal with
+          | [ H : get (filter_by ?p ?L ?L') ?n ?x |- _ ] =>
+            eapply filter_by_get in H; try rewrite map_id in H; destruct H as [? [? [? ?]]]
+          | [ H : get (filter ?p ?L) ?n ?x |- _ ] =>
+            eapply filter_get in H; try rewrite map_id in H; destruct H as [H ?]
+          | [ H : get _ (posOfTrue (countTrue (?f ⊝ take ?n ?L)) (?f ⊝ ?L)) _,
+                  H' : get ?L ?n ?x, H'' : ?f ?x = true |- _ ] =>
+            rewrite (@map_take _ _ f L) in H;
+            rewrite (@posOfTrue_countTrue (f ⊝ L) n) in H;[| eauto using map_get_eq]
+          end)
+ : inv_get.
+
 
 Lemma lookup_list_filter_by_commute A B C (V:A->B) (Z:list C) Y p
 : length Z = length Y

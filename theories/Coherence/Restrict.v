@@ -351,15 +351,13 @@ Proof.
   - cases; eauto using get.
 Qed.
 
-Ltac inv_get_step_restrict dummy :=
-  first [
-         match goal with
-         | [ H : get (restr ?G ⊝ ?DL) ?n (Some ?lv) |- _ ] =>
-           eapply (@restrict_get DL G n lv) in H; destruct H as [H ?]
-         end | inv_get_step ].
+Ltac inv_get_step_restrict :=
+  match goal with
+  | [ H : get (restr ?G ⊝ ?DL) ?n (Some ?lv) |- _ ] =>
+    eapply (@restrict_get DL G n lv) in H; destruct H as [H ?]
+  end.
 
-Tactic Notation "inv_get_step" := inv_get_step_restrict idtac.
-Tactic Notation "inv_get" := inv_get' inv_get_step_restrict.
+Smpl Add inv_get_step_restrict : inv_get.
 
 Lemma restrict_ifFstR B (R:⦃var⦄->B->Prop) DL GL G
 : PIR2 (ifFstR R) DL GL

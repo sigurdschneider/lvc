@@ -9,32 +9,29 @@ Proof.
   omega.
 Qed.
 
-Ltac inv_get_step_some_minus dummy :=
-  first [inv_get_step |
-         match goal with
-         | [ H : get (?f ⊝ (?g1 ⊝ ?A) \\ (?g2 ⊝ ?B) ++ ?C) ?k _,
-                 H' : get ?A ?k _ |- _ ] =>
-           eapply get_app_lt_1 in H; [| eauto 20 with len]
-         | [ H : get (?f ⊝ (?g1 ⊝ ?A) \\ (?g2 ⊝ ?B) ++ ?C) ?k _,
-                 H' : get ?B ?k _ |- _ ] =>
-           eapply get_app_lt_1 in H; [| eauto 20 with len]
-         | [ H : get (?f ⊝ (?g1 ⊝ ?A) \\ (?g2 ⊝ ?B) ++ ?C) (❬?B❭ + ?n) _ |- _ ] =>
-           let LENEQ := fresh "LenEq" in
-           assert (LENEQ:❬f ⊝ (g1 ⊝ A) \\ (g2 ⊝ B)❭ = ❬B❭) by eauto with len;
-           rewrite get_app_ge in H;
-           [ rewrite LENEQ in H; rewrite plus_minus_eq in H
-           | rewrite LENEQ; omega]
-         | [ H : get (?f ⊝ (?g1 ⊝ ?A) \\ (?g2 ⊝ ?B) ++ ?C) (❬?A❭ + ?n) _ |- _ ] =>
-           let LENEQ := fresh "LenEq" in
-           assert (LENEQ:❬f ⊝ (g1 ⊝ A) \\ (g2 ⊝ B)❭ = ❬A❭) by eauto with len;
-           rewrite get_app_ge in H;
-           [ rewrite LENEQ in H; rewrite plus_minus_eq in H
-           | rewrite LENEQ; omega]
-         end
-        ].
+Ltac inv_get_step_some_minus :=
+  match goal with
+  | [ H : get (?f ⊝ (?g1 ⊝ ?A) \\ (?g2 ⊝ ?B) ++ ?C) ?k _,
+          H' : get ?A ?k _ |- _ ] =>
+    eapply get_app_lt_1 in H; [| eauto 20 with len]
+  | [ H : get (?f ⊝ (?g1 ⊝ ?A) \\ (?g2 ⊝ ?B) ++ ?C) ?k _,
+          H' : get ?B ?k _ |- _ ] =>
+    eapply get_app_lt_1 in H; [| eauto 20 with len]
+  | [ H : get (?f ⊝ (?g1 ⊝ ?A) \\ (?g2 ⊝ ?B) ++ ?C) (❬?B❭ + ?n) _ |- _ ] =>
+    let LENEQ := fresh "LenEq" in
+    assert (LENEQ:❬f ⊝ (g1 ⊝ A) \\ (g2 ⊝ B)❭ = ❬B❭) by eauto with len;
+    rewrite get_app_ge in H;
+    [ rewrite LENEQ in H; rewrite plus_minus_eq in H
+    | rewrite LENEQ; omega]
+  | [ H : get (?f ⊝ (?g1 ⊝ ?A) \\ (?g2 ⊝ ?B) ++ ?C) (❬?A❭ + ?n) _ |- _ ] =>
+    let LENEQ := fresh "LenEq" in
+    assert (LENEQ:❬f ⊝ (g1 ⊝ A) \\ (g2 ⊝ B)❭ = ❬A❭) by eauto with len;
+    rewrite get_app_ge in H;
+    [ rewrite LENEQ in H; rewrite plus_minus_eq in H
+    | rewrite LENEQ; omega]
+  end.
 
-Tactic Notation "inv_get_step" := inv_get_step_some_minus idtac.
-Tactic Notation "inv_get" := inv_get' inv_get_step_some_minus.
+Smpl Add inv_get_step_some_minus : inv_get.
 
 (** * Definition of Coherence: [srd] *)
 

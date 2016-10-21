@@ -517,8 +517,9 @@ Notation "f ⊜ L1 L2" := (zip f L1 L2) (at level 40, L1 at level 0, L2 at level
 
 
 Create HintDb inv_get discriminated.
+Smpl Create inv_get.
 
-Ltac inv_get_step0 dummy :=
+Ltac inv_get_step_basic :=
   match goal with
   | [ H : get (take _ ?L) ?n ?x |- _ ] => eapply take_get in H; destruct H
   | [ H : get (rev ?L) ?n ?x |- _ ] => eapply get_rev in H
@@ -589,13 +590,12 @@ Ltac inv_get_step0 dummy :=
     end
   end.
 
-Tactic Notation "inv_get_step" := inv_get_step0 idtac.
+Smpl Add inv_get_step_basic : inv_get.
 
-Ltac inv_get' tac :=
-  repeat (repeat get_functional; tac idtac; repeat get_functional);
+Ltac inv_get :=
+  repeat (repeat get_functional; (repeat smpl inv_get); repeat get_functional);
   clear_trivial_eqs; repeat clear_dup.
 
-Tactic Notation "inv_get" := inv_get' inv_get_step0.
 
 Lemma zip_length_lt_ass (X Y Z : Type) (f : X -> Y -> Z) (L : list X) (L' : list Y) k
   : length L = length L'

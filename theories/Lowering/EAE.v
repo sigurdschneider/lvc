@@ -1,8 +1,8 @@
 Require Import Util LengthEq AllInRel Map SetOperations.
-
 Require Import Val EqDec Computable Var Env IL Annotation AppExpFree.
 Require Import Liveness LabelsDefined.
 Require Import SimF Fresh Filter.
+
 
 Set Implicit Arguments.
 Unset Printing Records.
@@ -31,6 +31,7 @@ Section MapUpdate.
     - etransitivity; [eapply IHLEN|]; eauto; lud.
     - etransitivity; [eapply IHLEN|]; eauto; lud.
   Qed.
+
 
   Lemma update_with_list_agree' (XL:list X) (VL:list Y) E D
   : length XL = length VL
@@ -237,7 +238,56 @@ Proof.
                     eapply disj_2_incl.
                     eapply fresh_list_spec; eauto using fresh_spec.
                     eapply list_union_incl; intros; eauto with cset.
-                    inv_get. repeat inv_get_step_filter idtac.
+                    inv_get.
+                    repeat (repeat get_functional; (repeat smpl inv_get); repeat get_functional);
+                      clear_trivial_eqs; repeat clear_dup.
+
+                    repeat (smpl inv_get).  match goal with
+  | [ H : get ?XL ?n ?x, H' : get ?XL ?n ?y |- _ ] =>
+    let EQ := fresh "EQ" in
+    pose proof (get_functional H H') as EQ;
+    first [ is_var y; subst y; clear H'
+          (* | is_var x; subst x; clear H'
+          | simplify_eq EQ; intros; clear H'; clear_trivial_eqs *) ]
+  end.
+
+                    Smpl Print inv_get.
+                    repeat
+                      match goal with
+                      | H:get (List.filter ?p ?L) ?n ?x
+                        |- _ => eapply filter_get in H; try rewrite map_id in H; destruct H as (H, ?)
+                      end.
+
+                      repeat (match goal with
+          | [ H : get (filter_by ?p ?L ?L') ?n ?x |- _ ] =>
+            eapply filter_by_get in H; try rewrite map_id in H; destruct H as [? [? [? ?]]]
+          | [ H : get (filter ?p ?L) ?n ?x |- _ ] =>
+            eapply filter_get in H; try rewrite map_id in H; destruct H as [H ?]
+          | [ H : get _ (posOfTrue (countTrue (?f ⊝ Take.take ?n ?L)) (?f ⊝ ?L)) _,
+                  H' : get ?L ?n ?x, H'' : ?f ?x = true |- _ ] =>
+            rewrite (@map_take _ _ f L) in H;
+            rewrite (@posOfTrue_countTrue (f ⊝ L) n) in H;[| eauto using map_get_eq]
+          end).
+
+                    match goal with
+                    | [ H : get (filter ?p ?L) ?n ?x |- _ ] =>
+                      eapply filter_get in H; try rewrite map_id in H; destruct H as [H ?]
+                    end.
+                    Set Printing All. intros.
+                    inv_get. simpl in *. inv_get.
+                    simpl in *. inv_get.
+                    Lemma test Y n1 x
+                      : get (List.filter IsVar Y) n1 x
+                        -> False.
+                    Proof.
+                      intros.
+                      inv_get.
+                    Qed.
+                    smpl inv_get; get_functional.
+                    Smpl Print inv_get.
+                    inv_get_step_filter; repeat get_functional.
+                    repeat get_functional. smpl inv_get; get_functional.
+                      clear_trivial_eqs; repeat clear_dup.
                     eapply incl_list_union; eauto using map_get_1.
                 --- erewrite omap_op_eval_agree; [ eapply H1 | | ].
                     Focus 2.
