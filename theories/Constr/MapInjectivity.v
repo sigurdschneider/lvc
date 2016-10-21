@@ -312,8 +312,8 @@ Lemma injective_on_fresh_list X `{OrderedType X} Y `{OrderedType Y} XL YL (ϱ: X
 : injective_on lv ϱ
   -> length XL = length YL
   -> (of_list YL) ∩ (lookup_set ϱ lv) [=] ∅
-  -> unique XL
-  -> unique YL
+  -> NoDupA _eq XL
+  -> NoDupA _eq YL
   -> injective_on (lv ∪ of_list XL) (ϱ [XL <-- YL]).
 Proof.
   intros. eapply length_length_eq in H3.
@@ -326,9 +326,10 @@ Proof.
       * eapply injective_on_fresh; eauto.
         eapply injective_on_incl; eauto.
         lset_tac. eapply (H4 y). lset_tac.
-      * rewrite lookup_set_add; eauto. lud; eauto.
+      * inv H5; inv H6.
+        rewrite lookup_set_add; eauto. lud; eauto.
         split; [| clear_all; cset_tac].
         rewrite <- H4. lset_tac.
         lud; eauto.
-    + eapply update_unique_commute; eauto using length_eq_length.
+    + eapply update_nodup_commute; eauto using length_eq_length.
 Qed.

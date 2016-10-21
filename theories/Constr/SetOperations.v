@@ -163,8 +163,7 @@ Lemma fold_single {X} `{OrderedType X} Y `{Equivalence Y} (f:X->Y->Y)
         -> R (fold f {{x}} s) (f x s).
 Proof.
   hnf; intros.
-  rewrite fold_2; eauto. rewrite fold_empty. reflexivity.
-  cset_tac; intuition.
+  rewrite fold_2; eauto. simpl. rewrite fold_empty. reflexivity.
 Qed.
 
 

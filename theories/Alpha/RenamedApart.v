@@ -16,7 +16,7 @@ Hint Unfold defVars.
 
 Definition funConstr D Dt (Zs:params * stmt) a :=
   fst (getAnn a) [=] of_list (fst Zs) ∪ D
-  /\ unique (fst Zs)
+  /\ NoDupA eq (fst Zs)
   /\ disj (of_list (fst Zs)) D
   /\ disj (of_list (fst Zs) ∪ snd (getAnn a)) Dt.
 

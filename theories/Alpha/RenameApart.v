@@ -249,7 +249,7 @@ Lemma get_fst_renameApartF G ϱ F n ans
                  /\ agree_on eq (freeVars (snd Zs) ∪ of_list (fst Zs)) (ϱ [fst Zs <-- fst ans]) ϱ'
                  /\ length (fst Zs) = length (fst ans)
                  /\ disj G (of_list (fst ans))
-                 /\ unique (fst ans)
+                 /\ NoDupA _eq (fst ans)
                  /\ G' = (G ∪ snd (renameApartFRight renameApart' G ϱ (nil, {}) (drop (S n) (rev F)))) ∪ (of_list (fst ans))
                  /\ fst ans = fresh_list fresh (snd (renameApartFRight renameApart' G ϱ (nil, {}) (drop (S n) (rev F))) ∪ G) ❬fst Zs❭
                  /\ ϱ' = ϱ [fst Zs <-- fst ans].
@@ -272,7 +272,7 @@ Proof.
       symmetry. eapply disj_2_incl.
       eapply fresh_list_spec. eapply fresh_spec. eauto.
       split.
-      eapply fresh_list_unique, fresh_spec.
+      eapply fresh_list_nodup, fresh_spec.
       eauto.
     + edestruct IHl as [? [? [? [? ?]]]]; eauto.
       instantiate (1:=rev (tl (rev F))). rewrite <- Heql. simpl. rewrite rev_involutive; eauto.

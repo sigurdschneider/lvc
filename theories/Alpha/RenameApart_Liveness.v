@@ -151,7 +151,7 @@ Qed.
 Lemma lookup_set_update_with_list {X} `{OrderedType X} {Y} `{OrderedType Y}
   Z Z' (f:X->Y) D `{Proper _ (_eq ==> _eq) f}
   : of_list Z ⊆ D
-    -> unique Z
+    -> NoDupA _eq Z
     -> length Z = length Z'
     -> of_list Z' ⊆ lookup_set (update_with_list Z Z' f) (of_list Z).
 Proof.
@@ -163,8 +163,11 @@ Proof.
   - simpl in *. cset_tac.
     + eexists x. lud; split; eauto.
     + edestruct IHlength_eq; eauto. instantiate (1:=D).
-      erewrite <- H2. cset_tac. dcr.
-      eexists x0. lud; eauto.
+      * erewrite <- H2. cset_tac.
+      * dcr. invt NoDupA.
+        eexists x0. lud; eauto.
+        exfalso. eapply H10. rewrite InA_in.
+        rewrite e. eauto.
 Qed.
 
 Lemma renameApart_live_sound ZL LV ZL' LV' s lv ϱ G

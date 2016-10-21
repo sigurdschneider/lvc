@@ -60,8 +60,8 @@ Proof.
           intros; inv_get; simpl in *; eauto using get. cases; cset_tac.
     + rewrite <- (subTerm_occurVars ST); simpl.
       eapply list_union_incl; try eapply H0; eauto with cset.
-      intros; inv_get. eapply filter_by_get in H; dcr.
-      cases in H3.
+      intros; inv_get.
+      cases in H1.
       eapply incl_list_union; eauto using map_get_1.
   - eapply subTerm_occurVars in ST; simpl in *. eauto.
   - cases; eauto.
@@ -93,9 +93,9 @@ Proof.
       * rewrite not_get_nth_default; simpl; intros; inv_get; eauto.
         cset_tac.
     + eapply list_union_incl; eauto with cset.
-      intros; inv_get. eapply filter_by_get in H1. dcr.
+      intros; inv_get.
       destruct (get_dec AL (counted l)) as [[[D PD] GetDL]|].
-      * cases in H5.
+      * cases in H3.
         erewrite get_nth in COND; eauto; simpl in *.
         PIR2_inv. destruct x1. simpl in *.
         exploit get_filter_by. Focus 4.
@@ -103,9 +103,9 @@ Proof.
         eapply H7. reflexivity. eauto. eauto.
         simpl. cases; eauto.
         erewrite get_nth in NOTCOND; [| eauto using map_get_1].
-        eapply NOTCOND. eapply H1; eauto.
-      * rewrite not_get_nth_default in H5. simpl in *.
-        cases in H5; cset_tac.
+        eapply NOTCOND. simpl. eauto.
+      * rewrite not_get_nth_default in H3. simpl in *.
+        cases in H3; cset_tac.
         intros; inv_get; eauto.
   - rewrite H1 at 1. repeat cases; eauto; cset_tac.
     exfalso; eauto.
@@ -152,7 +152,7 @@ Proof.
         exfalso. edestruct PIR2_nth_2; eauto; dcr. eauto.
         rewrite (@not_get_nth_default _ (_ ⊝ AL')); simpl; intros; inv_get; eauto.
     + erewrite filter_by_ext; [reflexivity| eauto with len |].
-      * intros; inv_get. get_functional.
+      * intros; inv_get.
         destruct (get_dec AL (counted l)) as [[[D PD] GetDL]|]; PIR2_inv.
         erewrite get_nth; [| eauto using map_get_1].
         destruct x. simpl in *.
@@ -161,10 +161,10 @@ Proof.
         repeat erewrite not_get_nth_default; intros; inv_get; eauto.
   - cases; eauto.
     eapply eq_union_lr; eauto.
-    eapply list_union_eq; eauto with len.
-    + rewrite !zip_length, !take_length, !map_length. erewrite PIR2_length; eauto.
+    eapply list_union_eq; eauto.
+    + len_simpl. erewrite PIR2_length; eauto.
     + intros; inv_get. PIR2_inv.
-      eapply sig_R_proj1_sig in H5; rewrite H5; eauto.
+      eapply sig_R_proj1_sig in H2; rewrite H2; eauto.
 Qed.
 
 Definition liveness_analysis i :=

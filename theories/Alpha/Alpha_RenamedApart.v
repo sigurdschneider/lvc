@@ -313,7 +313,7 @@ Proof.
       destruct y as [Z' u']; simpl in *. f_equal.
       * erewrite lookup_list_agree.
         instantiate (1:=ra[Z <-- Z']).
-        eapply lookup_list_unique; eauto.
+        eapply lookup_list_nodup; eauto.
         exploit H0; eauto. edestruct H7; eauto.
         symmetry.
         etransitivity.

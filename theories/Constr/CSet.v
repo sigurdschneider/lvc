@@ -140,14 +140,28 @@ Proof.
   eapply subset_cardinal; eauto.
 Qed.
 
-Lemma cardinal_of_list_unique {X} `{OrderedType X} (Z:list X)
-: unique Z -> SetInterface.cardinal (of_list Z) = length Z.
+Lemma NoDupA_decons A (R:A->A->Prop) x L
+  : NoDupA R (x::L)
+    -> NoDupA R L.
+Proof.
+  inversion 1; eauto.
+Qed.
+
+Lemma NoDupA_decons_notin X `{OrderedType X} x L
+  :  NoDupA _eq (x :: L)
+     -> x ∉ of_list L.
+Proof.
+  inversion 1; subst. rewrite <- InA_in; eauto.
+Qed.
+
+Hint Resolve NoDupA_decons NoDupA_decons_notin.
+
+Lemma cardinal_of_list_nodup {X} `{OrderedType X} (Z:list X)
+: NoDupA _eq Z -> SetInterface.cardinal (of_list Z) = length Z.
 Proof.
   general induction Z; simpl in * |- *.
   - eapply empty_cardinal.
-  - dcr. erewrite cardinal_2. rewrite IHZ; eauto.
-    intro. eapply H1. eapply InA_in; eauto.
-    hnf; cset_tac; intuition.
+  - dcr. erewrite cardinal_2; eauto.
 Qed.
 
 

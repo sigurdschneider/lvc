@@ -29,25 +29,25 @@ Proof.
 Qed.
 
 
-Lemma injective_unique X `{OrderedType X} Y `{OrderedType Y} (f:X->Y) `{ Proper _ (_eq ==> _eq) f} xl
+Lemma injective_nodup X `{OrderedType X} Y `{OrderedType Y} (f:X->Y) `{ Proper _ (_eq ==> _eq) f} xl
   : injective_on (of_list xl) f
-    -> unique xl -> unique (lookup_list f xl).
+    -> NoDupA _eq xl -> NoDupA _eq (lookup_list f xl).
 Proof.
   intros Inj Uniq.
   general induction xl; simpl in *; dcr; eauto.
-  - split; eauto using injective_on_incl with cset.
-    rewrite InA_in. rewrite InA_in in H2.
+  - econstructor; eauto using injective_on_incl with cset.
+    rewrite InA_in. invt NoDupA. rewrite InA_in in H4.
     intro.
-    rewrite of_list_lookup_list in H4; eauto.
-    eapply lookup_set_spec in H4; eauto; dcr.
+    rewrite of_list_lookup_list in H2; eauto.
+    eapply lookup_set_spec in H2; eauto; dcr.
     exploit Inj; eauto; cset_tac.
 Qed.
 
-Lemma injective_unique_map X `{OrderedType X} Y `{OrderedType Y} (f:X->Y) `{ Proper _ (_eq ==> _eq) f} xl
+Lemma injective_nodup_map X `{OrderedType X} Y `{OrderedType Y} (f:X->Y) `{ Proper _ (_eq ==> _eq) f} xl
   : injective_on (of_list xl) f
-    -> unique xl -> unique (f ⊝ xl).
+    -> NoDupA _eq xl -> NoDupA _eq (f ⊝ xl).
 Proof.
-  rewrite <- lookup_list_map; eauto using injective_unique.
+  rewrite <- lookup_list_map; eauto using injective_nodup.
 Qed.
 
 
@@ -56,26 +56,35 @@ Lemma sim_write_moves r L V s L' V' s' xl yl (Len:❬xl❭ = ❬yl❭)
                         -> paco3 (sim_gen (S':=I.state)) r Sim (L, V, s) (L', V'', s'))
     -> defined_on (of_list yl) V'
     -> disj (of_list xl) (of_list yl)
-    -> unique xl
+    -> NoDupA _eq xl
     -> paco3 (sim_gen (S':=I.state)) r Sim (L, V, s)
             (L', V', write_moves xl yl s').
 Proof.
   intros SIM Def Disj Uniq.
   length_equify. general induction Len.
   - simpl in *. eapply (SIM ∅); eauto.
-  - simpl in *; dcr.
+  - simpl in *; dcr; invt NoDupA.
     edestruct Def; [cset_tac|].
-    pone_step_right; simpl. rewrite <- H1.
+    pone_step_right; simpl. rewrite <- H.
     eapply IHLen; intros; eauto using injective_on_incl with cset.
     eapply (SIM D).
-    rewrite <- update_unique_commute_eq; simpl; eauto with len.
+    rewrite <- update_nodup_commute_eq; simpl; eauto with len.
     erewrite lookup_list_agree; eauto.
     symmetry. eapply agree_on_update_dead; eauto.
     eapply disj_not_in.
     eapply disj_1_incl. eapply disj_2_incl; eauto with cset.
     eauto with cset.
-    rewrite H1; eapply defined_on_update_some;
+    rewrite H; eapply defined_on_update_some;
       eauto using defined_on_incl with cset.
+Qed.
+
+Lemma of_list_map X `{OrderedType X} Y `{OrderedType Y}
+      (f:X->Y) `{Proper _ (_eq ==> _eq) f} L
+  : of_list (f ⊝ L) [=] map f (of_list L).
+Proof.
+  general induction L; simpl; eauto.
+  - rewrite SetOperations.map_add; eauto.
+    rewrite IHL; eauto; reflexivity.
 Qed.
 
 Lemma sim_I k Λ ZL LV VD r L L' V V' G R M s lv sl ib
@@ -86,6 +95,7 @@ Lemma sim_I k Λ ZL LV VD r L L' V V' G R M s lv sl ib
   -> spill_sound k ZL Λ (R,M) s sl
   -> spill_live VD sl lv
   -> injective_on VD slot
+  -> disj VD (map slot VD)
   -> defined_on (R ∪ map slot M) V'
   -> getSp sl ∪ getL sl ⊆ VD
   -> labenv_sim Sim (sim r) SR (zip pair Λ ZL) L L'
@@ -93,23 +103,30 @@ Lemma sim_I k Λ ZL LV VD r L L' V V' G R M s lv sl ib
 Proof.
   simpl. unfold reconstr_live_do_spill. unfold sim. revert_except s.
   time (sind s).
-  intros ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? Agr1 Agr2 LS SLS SL Inj Def Incl LSim.
+  intros ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? Agr1 Agr2 LS SLS SL Inj Disj Def Incl LSim.
   rewrite do_spill_extract_writes.
   exploit L_sub_SpM; eauto.
   exploit Sp_sub_R; eauto.
-  eapply sim_write_moves; try rewrite of_list_elements; eauto with len.
+  eapply sim_write_moves; try rewrite ?of_list_map, of_list_elements; eauto with len.
   intros ? ? Agr3.
-  eapply sim_write_moves; try rewrite of_list_elements; eauto with len.
+  eapply sim_write_moves; try rewrite ?of_list_map, of_list_elements; eauto with len.
   intros ? ? Agr4.
+  - time (destruct s; simpl; intros; invt live_sound; invt spill_sound;
+          invt spill_live; simpl in * |- *).
+          simpl.
   - admit.
-  - admit.
-  - admit.
-  - admit.
+  - eapply disj_1_incl. eapply disj_2_incl. eauto.
+    rewrite <- Incl. admit.
+    rewrite <- Incl; eauto with cset.
+  - eapply elements_3w.
   - eauto using defined_on_incl with cset.
-  - admit.
-  - eapply injective_unique_map; eauto.
+  - symmetry.
+    eapply disj_1_incl. eapply disj_2_incl. eauto.
+    rewrite <- Incl. admit.
+    rewrite <- Incl; eauto with cset.
+  - eapply injective_nodup_map; eauto.
     rewrite of_list_elements. eauto using injective_on_incl with cset.
-    admit.
+    eapply elements_3w.
 Qed.
 
 

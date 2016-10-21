@@ -119,12 +119,15 @@ Lemma all_in_lv_cardinal (lv:set nat) n
 Proof.
   general induction n; simpl.
   - omega.
-  - exploit (IHn (lv \ {{n}})).
-    intros. cset_tac; omega.
-    assert (lv [=] {n; lv \ {{n}} }).
-    exploit (H (n)); eauto.
-    cset_tac. decide (n = a); subst; eauto.
-    rewrite H1. erewrite cardinal_2; eauto. omega. cset_tac.
+  - exploit (IHn (lv \ singleton n)).
+    + intros. cset_tac; omega.
+    + assert (lv [=] {n; lv \ singleton n }). {
+        exploit (H (n)); eauto.
+        cset_tac. decide (n = a); subst; eauto.
+      }
+      rewrite H1.
+      assert (n ∉ lv \ singleton n) by cset_tac.
+      erewrite cardinal_2; eauto. omega.
 Qed.
 
 
@@ -268,11 +271,11 @@ Section FreshList.
     unfold fresh_set. eapply fresh_list_spec.
   Qed.
 
-  Lemma fresh_list_unique (G: set var) n
-    : unique (fresh_list G n).
+  Lemma fresh_list_nodup (G: set var) n
+    : NoDupA eq (fresh_list G n).
   Proof.
     general induction n; simpl; eauto.
-    split; eauto. intro.
+    econstructor; eauto. intro.
     eapply fresh_list_spec.
     eapply InA_in. eapply H.
     cset_tac; eauto.
@@ -361,7 +364,7 @@ Lemma inverse_on_update_fresh_list (D:set var) (Z:list var) (ϱ ϱ' : var -> var
   -> inverse_on D (update_with_list Z (fresh_list fresh (lookup_set ϱ (D \ of_list Z)) (length Z)) ϱ)
                  (update_with_list (fresh_list fresh (lookup_set ϱ (D \ of_list Z)) (length Z)) Z ϱ').
 Proof.
-  intros. eapply inverse_on_update_fresh; eauto. Set Printing All. intros.
-  eapply fresh_list_unique, fresh_spec.
+  intros. eapply inverse_on_update_fresh; eauto. intros.
+  eapply fresh_list_nodup, fresh_spec.
   eapply fresh_list_spec, fresh_spec.
 Qed.

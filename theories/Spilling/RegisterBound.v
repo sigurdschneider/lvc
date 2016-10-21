@@ -158,7 +158,7 @@ Lemma register_bound_loads
     -> ann_P (bounded_in VD k)
             (reconstr_live Lv ZL
                            (singleton x)
-                           (write_loads slot xs s)
+                           (write_moves xs (slot ⊝ xs) s)
                            (add_anns ⎣⎦ (length xs) an)
             )
 .
@@ -227,7 +227,7 @@ Lemma register_bound_spills
     -> ann_P (bounded_in VD k)
             (reconstr_live Lv ZL
                            G
-                           (write_spills slot xs s)
+                           (write_moves (slot ⊝ xs) xs s)
                            (add_anns ⎣⎦ (length xs) an)
                  )
 .
@@ -316,8 +316,8 @@ Lemma register_bound_s
     -> ann_P (bounded_in VD k)
             (reconstr_live Lv ZL
                            G
-                           (write_spills slot xs
-                                         (write_loads slot ys s)
+                           (write_moves (slot ⊝ xs) xs
+                                         (write_moves ys (slot ⊝ ys) s)
                            )
                            (add_anns ⎣⎦ (length xs + length ys) an)
             )

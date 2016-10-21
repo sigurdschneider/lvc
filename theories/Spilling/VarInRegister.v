@@ -66,7 +66,7 @@ Lemma var_in_register_loads
     of_list xs ⊆ VD
     -> disj VD (map slot VD)
     -> var_in_register VD s
-    -> var_in_register VD (write_loads slot xs s)
+    -> var_in_register VD (write_moves xs (slot ⊝ xs) s)
 .
 Proof.
   intros xs_VD disj_VD vir_s.
@@ -89,7 +89,7 @@ Lemma var_in_register_spills
   :
     of_list xs ⊆ VD
     -> var_in_register VD s
-    -> var_in_register VD (write_spills slot xs s)
+    -> var_in_register VD (write_moves (slot ⊝ xs) xs s)
 .
 Proof.
   intros xs_VD vir_s.
@@ -194,17 +194,17 @@ Proof.
     + intros.
       inv_get.
       simpl.
-      rewrite <- zip_app; eauto with len.
-      exploit H25 as spillSnd'; eauto.
-      exploit renaF as renaF'; eauto.
-      exploit H2 as H2'; eauto.
-      exploit H11 as rm_VD; eauto.
+      rewrite <- zip_app; [| eauto with len].
+      exploit H25 as spillSnd'; try eassumption.
+      exploit renaF as renaF'; try eassumption.
+      exploit H2 as H2'; try eassumption.
+      exploit H11 as rm_VD; try eassumption.
       destruct H2' as [H2' _].
       destruct rm_VD as [f_x0_VD s_x0_VD].
       rewrite pair_eta with (p:=x0) in spillSnd'.
       eapply H1 with (R:=fst x0) (M:=snd x0); eauto.
       rewrite renaF', <- ra_VD; eauto.
-    + rewrite <- zip_app; eauto with len.
+    + rewrite <- zip_app; [| eauto with len].
       eapply IHlvSnd with (R:=R\K ∪ L) (M:=Sp ∪ M); eauto.
       * eapply R'_VD with (VD:=VD) (M:=M); eauto.
       * rewrite H19, R_VD, M_VD; clear; cset_tac.

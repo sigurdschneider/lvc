@@ -21,12 +21,13 @@ Section MapUpdate.
 
   Lemma update_with_list_agree' (XL:list X) (VL:list Y) E D
   : length XL = length VL
-    -> unique XL
+    -> NoDupA _eq XL
     -> agree_on eq D (E [XL <-- VL]) (update_with_list' XL VL E).
   Proof.
     intros LEN UNIQ. length_equify.
     general induction LEN; simpl in *; eauto.
-    - etransitivity. symmetry. eapply update_unique_commute_eq; eauto using length_eq_length.
+    - etransitivity. symmetry.
+      eapply update_nodup_commute_eq; eauto using length_eq_length.
       eapply IHLEN; eauto.
   Qed.
 End MapUpdate.
@@ -40,7 +41,7 @@ Fixpoint list_to_stmt (xl: list var) (Y : list op) (s : stmt) : stmt :=
 Lemma list_to_stmt_correct L E s xl Y vl
 : length xl = length Y
   -> omap (op_eval E) Y = Some vl
-  -> unique xl
+  -> NoDupA _eq xl
   -> disj (of_list xl) (list_union (List.map Op.freeVars Y))
   -> star2 F.step (L, E, list_to_stmt xl Y s) nil
           (L, update_with_list' xl (List.map Some vl) E, s).
@@ -62,7 +63,7 @@ Qed.
 Lemma list_to_stmt_crash L E xl Y s
 : length xl = length Y
   -> omap (op_eval E) Y = None
-  -> unique xl
+  -> NoDupA _eq xl
   -> disj (of_list xl) (list_union (List.map Op.freeVars Y))
   -> exists σ, star2 F.step (L, E, list_to_stmt xl Y s) nil σ
          /\ state_result σ = None
@@ -114,7 +115,7 @@ Fixpoint compile s {struct s}
 
 Lemma omap_lookup_vars V xl vl
   : length xl = length vl
-    -> unique xl
+    -> NoDupA _eq xl
     -> omap (op_eval (V[xl <-- List.map Some vl])) (List.map Var xl) = Some vl.
 Proof.
   intros. eapply length_length_eq in H.
@@ -122,7 +123,7 @@ Proof.
   lud; isabsurd; simpl.
   erewrite omap_op_eval_agree; try eapply IHlength_eq; eauto; simpl in *; intuition.
   instantiate (1:= V [x <- Some y]).
-  eapply update_unique_commute_eq; eauto; simpl; intuition.
+  eapply update_nodup_commute_eq; eauto; simpl; intuition.
 Qed.
 
 Fixpoint merge_cond (Y:Type) (K:list bool) (L:list Y) (L':list Y) :=
@@ -202,7 +203,7 @@ Proof.
              [
              | eapply star2_refl
              | eapply list_to_stmt_correct;
-               eauto using fresh_spec, fresh_list_unique, fresh_list_spec
+               eauto using fresh_spec, fresh_list_nodup, fresh_list_spec
              ]; eauto.
            ++ eapply labenv_sim_app; eauto. simpl.
              intros; split; intros; eauto; dcr; subst.
@@ -214,7 +215,7 @@ Proof.
                 --- rewrite <- H7; eauto.
                 --- erewrite omap_op_eval_agree; eauto.
                     rewrite <-  update_with_list_agree';
-                      eauto using fresh_spec, fresh_list_unique,
+                      eauto using fresh_spec, fresh_list_nodup,
                       fresh_list_spec with len.
                     eapply agree_on_incl.
                     symmetry.
@@ -225,61 +226,12 @@ Proof.
                     eapply fresh_list_spec; eauto using fresh_spec.
                     eapply list_union_incl; intros; eauto with cset.
                     inv_get.
-                    repeat (repeat get_functional; (repeat smpl inv_get); repeat get_functional);
-                      clear_trivial_eqs; repeat clear_dup.
-
-                    repeat (smpl inv_get).  match goal with
-  | [ H : get ?XL ?n ?x, H' : get ?XL ?n ?y |- _ ] =>
-    let EQ := fresh "EQ" in
-    pose proof (get_functional H H') as EQ;
-    first [ is_var y; subst y; clear H'
-          (* | is_var x; subst x; clear H'
-          | simplify_eq EQ; intros; clear H'; clear_trivial_eqs *) ]
-  end.
-
-                    Smpl Print inv_get.
-                    repeat
-                      match goal with
-                      | H:get (List.filter ?p ?L) ?n ?x
-                        |- _ => eapply filter_get in H; try rewrite map_id in H; destruct H as (H, ?)
-                      end.
-
-                      repeat (match goal with
-          | [ H : get (filter_by ?p ?L ?L') ?n ?x |- _ ] =>
-            eapply filter_by_get in H; try rewrite map_id in H; destruct H as [? [? [? ?]]]
-          | [ H : get (filter ?p ?L) ?n ?x |- _ ] =>
-            eapply filter_get in H; try rewrite map_id in H; destruct H as [H ?]
-          | [ H : get _ (posOfTrue (countTrue (?f ⊝ Take.take ?n ?L)) (?f ⊝ ?L)) _,
-                  H' : get ?L ?n ?x, H'' : ?f ?x = true |- _ ] =>
-            rewrite (@map_take _ _ f L) in H;
-            rewrite (@posOfTrue_countTrue (f ⊝ L) n) in H;[| eauto using map_get_eq]
-          end).
-
-                    match goal with
-                    | [ H : get (filter ?p ?L) ?n ?x |- _ ] =>
-                      eapply filter_get in H; try rewrite map_id in H; destruct H as [H ?]
-                    end.
-                    Set Printing All. intros.
-                    inv_get. simpl in *. inv_get.
-                    simpl in *. inv_get.
-                    Lemma test Y n1 x
-                      : get (List.filter IsVar Y) n1 x
-                        -> False.
-                    Proof.
-                      intros.
-                      inv_get.
-                    Qed.
-                    smpl inv_get; get_functional.
-                    Smpl Print inv_get.
-                    inv_get_step_filter; repeat get_functional.
-                    repeat get_functional. smpl inv_get; get_functional.
-                      clear_trivial_eqs; repeat clear_dup.
                     eapply incl_list_union; eauto using map_get_1.
                 --- erewrite omap_op_eval_agree; [ eapply H1 | | ].
                     Focus 2.
-                    rewrite omap_lookup_vars; eauto using fresh_list_unique, fresh_spec with len.
+                    rewrite omap_lookup_vars; eauto using fresh_list_nodup, fresh_spec with len.
                     rewrite <-  update_with_list_agree';
-                      eauto using fresh_spec, fresh_list_unique,
+                      eauto using fresh_spec, fresh_list_nodup,
                       fresh_list_spec with len. reflexivity.
              ** exfalso. eapply omap_filter_none in H4. congruence.
            ++ eapply disj_2_incl.
@@ -360,7 +312,7 @@ Lemma EAE_paramsMatch_app Y'' L f Y Y'
   :  get L (counted f) (❬Y''❭ + ❬Y❭)
      -> disj (of_list Y') (list_union (Op.freeVars ⊝ Y)
                                      ∪ list_union (Op.freeVars ⊝ Y''))
-     -> unique Y'
+     -> NoDupA _eq Y'
      -> ❬Y'❭ = ❬List.filter NotVar Y❭
      -> paramsMatch
          (list_to_stmt Y'
@@ -385,8 +337,8 @@ Proof.
         setoid_rewrite list_union_start_swap at 3.
         clear. cset_tac.
         eauto with cset.
-        hnf; intros. dcr; cset_tac.
-        eapply H5. rewrite of_list_1 in H3.
+        hnf; intros. invt NoDupA. dcr; cset_tac.
+        eapply H7. rewrite of_list_1 in H3.
         eapply H3.
       * eauto.
       * eauto.
@@ -419,7 +371,7 @@ Proof.
     + simpl. eapply disj_2_incl.
       eapply fresh_list_spec; eauto using fresh_spec with cset.
       eauto with cset.
-    + eapply fresh_list_unique; eauto using fresh_spec.
+    + eapply fresh_list_nodup; eauto using fresh_spec.
   - econstructor; intros; inv_get; rewrite !map_map in *; simpl; eauto.
 Qed.
 

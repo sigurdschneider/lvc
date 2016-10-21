@@ -74,30 +74,32 @@ Section MapUpdateList.
 
   Notation "f [ w <-- x ]" := (update_with_list w x f) (at level 29, left associativity).
 
-  Lemma update_unique_commute `{OrderedType Y} (XL:list X) (VL:list Y) E D x y
+  Lemma update_nodup_commute `{OrderedType Y} (XL:list X) (VL:list Y) E D x y
   : length XL = length VL
-    -> unique (x::XL)
+    -> NoDupA _eq (x::XL)
     -> agree_on _eq D (E [x <- y] [XL <-- VL]) (E [XL <-- VL] [x <- y]).
   Proof.
     intros. eapply length_length_eq in H1.
     general induction H1; simpl in * |- *; dcr; simpl in *; eauto.
-    hnf; intros. lud.
+    hnf; intros. lud; invt NoDupA.
     - exfalso; eauto.
-    - etransitivity; [eapply IHlength_eq|]; eauto; lud.
-    - etransitivity; [eapply IHlength_eq|]; eauto; lud.
+    - invt NoDupA.
+      etransitivity; [eapply IHlength_eq|]; eauto; lud.
+    - invt NoDupA.
+      etransitivity; [eapply IHlength_eq|]; eauto; lud.
   Qed.
 
-  Lemma update_unique_commute_eq (XL:list X) (VL:list Y) E D x y
+  Lemma update_nodup_commute_eq (XL:list X) (VL:list Y) E D x y
   : length XL = length VL
-    -> unique (x::XL)
+    -> NoDupA _eq (x::XL)
     -> agree_on eq D (E [x <- y] [XL <-- VL]) (E [XL <-- VL] [x <- y]).
   Proof.
     intros LEN UNIQ. length_equify.
     general induction LEN; simpl in * |- *; dcr; simpl in *; eauto.
-    hnf; intros. lud.
+    hnf; intros. lud; invt NoDupA.
     - exfalso; eauto.
-    - etransitivity; [eapply IHLEN|]; eauto; lud.
-    - etransitivity; [eapply IHLEN|]; eauto; lud.
+    - invt NoDupA; etransitivity; [eapply IHLEN|]; eauto; lud.
+    - invt NoDupA; etransitivity; [eapply IHLEN|]; eauto; lud.
   Qed.
 
   Lemma update_with_list_no_update (E:X -> Y) Y' Z x
@@ -391,7 +393,7 @@ Qed.
 Lemma update_with_list_lookup_list {X} `{OrderedType X} {Y} `{OrderedType Y} (f:X->Y)
       `{Proper _ (_eq ==> _eq) f} Z Z'
 : length Z = length Z'
-  -> unique Z
+  -> NoDupA _eq Z
   -> lookup_set (f [ Z <-- Z' ]) (of_list Z) ⊆ of_list Z'.
 Proof.
   intros L. eapply length_length_eq in L.
@@ -400,8 +402,8 @@ Proof.
   - rewrite lookup_set_add; eauto. lud.
     + rewrite lookup_set_agree.
       rewrite IHL; eauto.  eauto. eauto.
-      eapply agree_on_update_dead; eauto. intro. eapply InA_in in H2. eauto.
-    + exfalso; eapply H2; reflexivity.
+      eapply agree_on_update_dead; eauto.
+    + exfalso; eapply H3; reflexivity.
 Qed.
 
 Lemma lookup_set_update_disj {X} `{OrderedType X} {Y} `{OrderedType Y} (f:X->Y)

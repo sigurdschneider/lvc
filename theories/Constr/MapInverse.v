@@ -245,10 +245,9 @@ Proof.
   intros. hnf; intros. reflexivity.
 Qed.
 
-
 Lemma inverse_on_update_fresh X `{OrderedType X} (D:set X) (Z Z':list X) (ϱ ϱ' : X -> X) `{Proper _ (_eq ==> _eq) ϱ}
  : inverse_on (D \ of_list Z) ϱ ϱ'
-  -> unique Z'
+  -> NoDupA _eq Z'
   -> length Z = length Z'
   -> disj (of_list Z') (lookup_set ϱ (D \ of_list Z))
   -> inverse_on D (update_with_list Z Z' ϱ)
@@ -260,12 +259,12 @@ Proof.
   lud. eapply add_iff in i. destruct i; eauto.
   assert (y ∈ of_list YL). rewrite e.
   eapply update_with_list_lookup_in; eauto using length_eq_length.
-  exfalso. eapply (fresh_of_list H6 H11).
+  exfalso. eapply NoDupA_decons_notin; eauto.
   exfalso; eauto.
   eapply add_iff in i; destruct i; isabsurd.
   eapply IHlength_eq; try eassumption.
-  hnf; intros. exfalso; cset_tac; eauto.
-  hnf; intros. eapply lookup_set_spec in H13; dcr.
+  hnf; intros. exfalso; cset_tac; eauto. eauto.
+  hnf; intros. eapply lookup_set_spec in H12; dcr.
   cset_tac; intuition. intuition.
 
   erewrite update_with_list_no_update; eauto.
