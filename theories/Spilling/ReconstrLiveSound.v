@@ -342,18 +342,17 @@ Proof.
       rewrite slot_lift_params_app; eauto with len.
 
       apply live_sound_monotone with (LV:= slot_merge slot (rms ++ Λ)).
-      * rewrite <- zip_app.
-        assert ((fst x1, snd x1) = x1)
-          by (destruct x1; simpl; reflexivity).
-        rewrite <- H30 in H29.
+      * rewrite <- zip_app; eauto with len.
+        assert ((fst x2, snd x2) = x2)
+          by (destruct x2; simpl; reflexivity).
+        rewrite <- H4 in H30.
         exploit H23; eauto.
-        eapply H1 with (ra:=x) (R:=fst x1) (M:=snd x1); eauto.
+        eapply H1 with (ra:=x0) (R:=fst x2) (M:=snd x2); eauto.
         -- exploit renaF as renaF'; eauto.
            rewrite renaF'; eauto.
         -- rewrite merge_app.
            eapply getAnn_als_EQ_merge_rms; eauto.
         -- eapply get_ofl_VD; eauto.
-        -- eauto with len.
       * rewrite <- slot_merge_app.
         apply PIR2_app with (L2:=slot_merge slot Λ);
           swap 1 2.
@@ -401,10 +400,7 @@ Proof.
               rewrite H39; eauto.
            ++ eauto with len.
 
-        -- unfold slot_merge.
-           do 2 rewrite Coqlib.list_length_map; eauto.
-           do 2 rewrite zip_length2; eauto with len.
-
+        -- unfold slot_merge. eauto with len.
     + intros.
       inv_get.
       simpl.

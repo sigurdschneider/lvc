@@ -19,20 +19,6 @@ Section MapUpdate.
       | _, _ => m
     end.
 
-  Lemma update_unique_commute (XL:list X) (VL:list Y) E D x y
-  : length XL = length VL
-    -> unique (x::XL)
-    -> agree_on eq D (E [x <- y] [XL <-- VL]) (E [XL <-- VL] [x <- y]).
-  Proof.
-    intros LEN UNIQ. length_equify.
-    general induction LEN; simpl in * |- *; dcr; simpl in *; eauto.
-    hnf; intros. lud.
-    - exfalso; eauto.
-    - etransitivity; [eapply IHLEN|]; eauto; lud.
-    - etransitivity; [eapply IHLEN|]; eauto; lud.
-  Qed.
-
-
   Lemma update_with_list_agree' (XL:list X) (VL:list Y) E D
   : length XL = length VL
     -> unique XL
@@ -40,7 +26,7 @@ Section MapUpdate.
   Proof.
     intros LEN UNIQ. length_equify.
     general induction LEN; simpl in *; eauto.
-    - etransitivity. symmetry. eapply update_unique_commute; eauto using length_eq_length.
+    - etransitivity. symmetry. eapply update_unique_commute_eq; eauto using length_eq_length.
       eapply IHLEN; eauto.
   Qed.
 End MapUpdate.
@@ -136,7 +122,7 @@ Proof.
   lud; isabsurd; simpl.
   erewrite omap_op_eval_agree; try eapply IHlength_eq; eauto; simpl in *; intuition.
   instantiate (1:= V [x <- Some y]).
-  eapply update_unique_commute; eauto; simpl; intuition.
+  eapply update_unique_commute_eq; eauto; simpl; intuition.
 Qed.
 
 Fixpoint merge_cond (Y:Type) (K:list bool) (L:list Y) (L':list Y) :=

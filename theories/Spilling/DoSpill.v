@@ -95,10 +95,10 @@ Qed.
 
 
 
-Fixpoint extend_args
-         (Y : args)
+Fixpoint extend_args {X}
+         (Y : list X)
          (ib : list bool)
-  : args
+  : list X
   := match Y with
      | nil => nil
      | y :: Y => match ib with
@@ -128,79 +128,15 @@ Proof.
   cset_tac.
 Qed.
 
-
-
-Definition write_spills
-           (slot : var -> var)
-           (Z : params)
+Fixpoint write_moves
+           (Z Z' : params)
            (s : stmt)
   : stmt
-  := fold_right (fun x s => stmtLet (slot x) (Operation (Var x)) s) s Z
-.
-
-Definition write_loads
-           (slot : var -> var)
-           (Z : params)
-           (s : stmt)
-  : stmt
-  := fold_right (fun x s => stmtLet x (Operation (Var (slot x))) s) s Z
-.
-
-
-Lemma write_spills_empty
-      (slot : var -> var)
-      (s : stmt)
-  :
-    write_spills slot nil s = s
-.
-Proof.
-  simpl.
-  reflexivity.
-Qed.
-
-
-Lemma write_loads_empty
-      (slot : var -> var)
-      (s : stmt)
-  :
-    write_loads slot nil s = s
-.
-Proof.
-  simpl.
-  reflexivity.
-Qed.
-
-
-Lemma write_spills_s
-      (slot : var -> var)
-      (xs : list var)
-      (x : var)
-      (s : stmt)
-  :
-    write_spills slot (x::xs) s
-    = stmtLet (slot x) (Operation (Var x)) (write_spills slot xs s)
-.
-Proof.
-  simpl.
-  reflexivity.
-Qed.
-
-
-
-
-Lemma write_loads_s
-      (slot : var -> var)
-      (xs : list var)
-      (x : var)
-      (s : stmt)
-  :
-    write_loads slot (x::xs) s
-    = stmtLet x (Operation (Var (slot x))) (write_loads slot xs s)
-.
-Proof.
-  simpl.
-  reflexivity.
-Qed.
+  := match Z, Z' with
+    | x::Z, x'::Z' =>
+      stmtLet x (Operation (Var x')) (write_moves Z Z' s)
+    | _, _ => s
+    end.
 
 
 Definition mark_elements
@@ -266,9 +202,10 @@ Fixpoint do_spill
            (IB : list (list bool))
            {struct s}
   : stmt
-  :=
-    write_spills slot (elements (getSp sl)) (
-        write_loads slot (elements (getL sl)) (
+  := let sp := elements (getSp sl) in
+    let ld := elements (getL sl) in
+    write_moves (slot ⊝ sp) sp (
+        write_moves ld (slot ⊝ ld) (
             do_spill_rec slot s sl IB (do_spill slot)
         )
      )
@@ -316,10 +253,7 @@ Proof.
   induction s;
     rewrite Empty_Sp;
     rewrite Empty_L;
-    rewrite write_spills_empty;
-    rewrite write_loads_empty;
-    fold do_spill;
-    reflexivity.
+    simpl; reflexivity.
 Qed.
 
 
@@ -331,7 +265,7 @@ Lemma do_spill_empty_Sp
   :
     cardinal (getSp sl) = 0
     -> do_spill slot s sl IB
-      = write_loads slot (elements (getL sl))
+      = write_moves (elements (getL sl)) (slot ⊝ elements (getL sl))
                     (do_spill_rec slot s sl IB (do_spill slot))
 .
 Proof.
@@ -341,7 +275,6 @@ Proof.
   rewrite elements_Empty in card_zero.
   induction s;
     rewrite card_zero;
-    rewrite write_spills_empty;
     fold do_spill;
     reflexivity.
 Qed.
@@ -354,8 +287,8 @@ Lemma do_spill_extract_writes
       (IB : list (list bool))
   :
     do_spill slot s sl IB
-    = write_spills slot (elements (getSp sl))
-         (write_loads slot (elements (getL sl))
+    = write_moves (slot ⊝ elements (getSp sl)) (elements (getSp sl))
+         (write_moves (elements (getL sl)) (slot ⊝ elements (getL sl))
              (do_spill slot s (setTopAnn sl (∅,∅,snd (getAnn sl))) IB))
 .
 Proof.
@@ -364,7 +297,7 @@ Proof.
   - rewrite do_spill_rec_s with (Sp':=∅) (L':=∅).
     rewrite setTopAnn_setTopAnn.
     destruct s,sl;
-      simpl; eauto;
+      simpl; eauto; try reflexivity;
     do 2 f_equal;
     destruct a;
     simpl;
@@ -386,7 +319,7 @@ Lemma do_spill_extract_spill_writes
       (IB : list (list bool))
   :
     do_spill slot s sl IB
-    = write_spills slot (elements (getSp sl))
+    = write_moves (slot ⊝ (elements (getSp sl))) (elements (getSp sl))
                    (do_spill slot s (clear_Sp sl) IB)
 .
 Proof.

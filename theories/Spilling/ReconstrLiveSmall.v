@@ -22,7 +22,7 @@ Lemma reconstr_live_write_loads
     -> disj VD (map slot VD)
     -> getAnn (
           reconstr_live Lv ZL G
-                        (write_loads slot xs s)
+                        (write_moves xs (slot ⊝ xs) s)
                         (add_anns ⎣⎦ (length xs) an))
              [=]
              getAnn (reconstr_live Lv ZL ∅ s an)
@@ -141,7 +141,7 @@ Lemma reconstr_live_write_spills
     -> of_list xs ⊆ VD
     -> getAnn (
           reconstr_live Lv ZL G
-                        (write_spills slot xs s)
+                        (write_moves (slot ⊝ xs) xs s)
                         (add_anns ⎣⎦ (length xs) an))
              [=] getAnn (
                reconstr_live Lv ZL ∅ s an)

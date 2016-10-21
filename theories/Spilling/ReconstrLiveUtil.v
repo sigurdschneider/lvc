@@ -7,7 +7,21 @@ Require Import ToBeOutsourced.
 
 Set Implicit Arguments.
 
-
+Definition reconstr_live_do_spill
+           (slot : var -> var)
+           (Λ : list (⦃var⦄ * ⦃var⦄))
+           (ZL : list params)
+           (G : ⦃var⦄)
+           (s : stmt)
+           (sl : spilling)
+  : ann ⦃var⦄
+  :=
+    reconstr_live (slot_merge slot Λ)
+                  ((slot_lift_params slot) ⊜ Λ ZL)
+                  G
+                  (do_spill slot s sl (compute_ib ⊜ ZL Λ))
+                  (do_spill_rm slot sl)
+.
 
 Lemma slp_union_incl
       (s t VD : ⦃var⦄)

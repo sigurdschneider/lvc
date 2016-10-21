@@ -87,6 +87,19 @@ Section MapUpdateList.
     - etransitivity; [eapply IHlength_eq|]; eauto; lud.
   Qed.
 
+  Lemma update_unique_commute_eq (XL:list X) (VL:list Y) E D x y
+  : length XL = length VL
+    -> unique (x::XL)
+    -> agree_on eq D (E [x <- y] [XL <-- VL]) (E [XL <-- VL] [x <- y]).
+  Proof.
+    intros LEN UNIQ. length_equify.
+    general induction LEN; simpl in * |- *; dcr; simpl in *; eauto.
+    hnf; intros. lud.
+    - exfalso; eauto.
+    - etransitivity; [eapply IHLEN|]; eauto; lud.
+    - etransitivity; [eapply IHLEN|]; eauto; lud.
+  Qed.
+
   Lemma update_with_list_no_update (E:X -> Y) Y' Z x
     : x ∉ of_list Z
     -> (E [ Z <-- Y' ]) x = E x.
