@@ -120,7 +120,7 @@ Proof.
             eapply disj_2_incl. eapply fresh_list_spec. eapply least_fresh_spec.
             reflexivity.
             edestruct H8; eauto.
-            eapply fresh_list_unique, least_fresh_spec.
+            eapply fresh_list_nodup, least_fresh_spec.
           - edestruct H8; eauto; dcr. rewrite H17.
             exploit H2; eauto; dcr. rewrite incl in H26; simpl in *.
             rewrite <- H26. clear_all; cset_tac; intuition.

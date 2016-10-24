@@ -24,7 +24,8 @@ Lemma rd_agree_update DL L E G x v
   : rd_agree (restr (G \ singleton x) ⊝ DL) L (E [x <- v]).
 Proof.
   intros. hnf; intros; inv_get.
-  eapply agree_on_update_dead. rewrite H1. cset_tac.
+  eapply agree_on_update_dead.
+  rewrite H1. cset_tac.
   eapply RA; eauto.
 Qed.
 

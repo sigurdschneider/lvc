@@ -113,9 +113,9 @@ Proof.
         exploit H8; eauto.
         unfold I.mkBlock. unfold compileF in H15. inv_get. simpl in *.
         eapply blk_approxI; eauto 20 with len.
-        intros. invc H15. split; eauto.
-        rewrite fst_compileF_eq in H10; eauto with len.
-        rewrite <- zip_app in H10; eauto with len.
+        intros. invc H10. split; eauto.
+        rewrite fst_compileF_eq in H5; eauto with len.
+        rewrite <- zip_app in H5; eauto with len.
     + simpl in *. eapply defined_on_incl; eauto.
 Qed.
 

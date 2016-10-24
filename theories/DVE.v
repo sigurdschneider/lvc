@@ -157,10 +157,11 @@ Proof.
   - pno_step.
     simpl. erewrite <- op_eval_live_agree; eauto. eapply agree_on_sym; eauto.
   - eapply sim_fun_ptw; eauto.
-    + intros. left. rewrite <- zip_app; eauto with len. eapply IH; eauto using agree_on_incl.
+    + intros. left. rewrite <- zip_app; eauto with len.
+      eapply IH; eauto using agree_on_incl.
     + intros. hnf; intros; simpl in *; dcr; subst.
       inv_get.
-      rewrite <- zip_app; eauto with len.
+      rewrite <- zip_app; [| eauto with len].
       eapply IH; eauto. simpl in *.
       exploit H9; eauto.
       eapply agree_on_update_filter'; eauto using agree_on_incl.
@@ -364,9 +365,7 @@ Proof.
   general induction AEF; destruct lv; simpl;
     repeat let_pair_case_eq; repeat simpl_pair_eqs; subst; simpl;
       repeat cases; eauto using app_expfree.
-  - econstructor. intros; inv_get.
-    edestruct filter_by_get; eauto; dcr.
-    cases in H4. exploit H1; eauto.
+  - econstructor. intros; inv_get; eauto.
   - econstructor; intros; inv_get; eauto.
     eapply H0; eauto.
 Qed.
@@ -445,12 +444,13 @@ Proof.
     clear. cset_tac. cset_tac.
 Qed.
 
-Lemma unique_filter X p (L:list X)
-  : unique L
-    -> unique (filter p L).
+Lemma nodup_filter X R p `{Proper _ (R ==> eq) p} (L:list X)
+  : NoDupA R L
+    -> NoDupA R (filter p L).
 Proof.
-  general induction L; simpl in *; dcr; eauto.
-  - cases; eauto.
+  intros ND.
+  general induction ND; simpl in *; dcr; eauto.
+  - cases; eauto using NoDupA.
     constructor; eauto.
     rewrite filter_InA; intuition.
 Qed.
@@ -517,7 +517,7 @@ Proof.
       edestruct H8; eauto; dcr.
       simpl. econstructor; unfold filter_set; simpl in *.
       erewrite fst_getAnn_renamedApart; eauto with cset.
-      split. eapply unique_filter; eauto.
+      split. eapply nodup_filter. clear; intuition. eauto.
       split. eapply disj_2_incl; eauto. rewrite of_list_filter.
       eapply disj_1_incl; eauto. cset_tac.
       erewrite fst_getAnn_renamedApart, !snd_getAnn_renamedApart; eauto.

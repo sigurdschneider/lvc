@@ -548,7 +548,8 @@ Proof.
         as [? [? ?]]; try eapply GETpF.
       eapply computeParametersF_length; eauto.
       get_functional.
-      eexists; split; try reflexivity. rewrite <- H4, <- H8, <- H5.
+      eexists; split; try reflexivity.
+      rewrite <- H0, <- H8, <- H4.
       clear_all; cset_tac.
     + inv_get.
       destruct (@get_in_range _ (snd
@@ -926,11 +927,11 @@ Proof.
               inv_get.
               Opaque to_list.
 
-              pose proof (H10 _ H7).
+              pose proof (H10 _ H12).
               edestruct computeParameters_isCalledFrom_get_Some; try eapply H6;
                 eauto with len; dcr; subst.
               pose proof (H10 _ H15).
-              edestruct computeParameters_isCalledFrom_get_Some; try eapply H11;
+              edestruct computeParameters_isCalledFrom_get_Some; try eapply H7;
                 eauto with len; dcr; subst.
 
               simpl.
@@ -947,12 +948,13 @@ Proof.
               clear_all; cset_tac.
               clear_all; cset_tac.
               eapply incl_union_incl_minus. eapply incl_union_left.
-              revert H6 H7. clear_all. cset_tac. left.
+              revert H12 H6. clear_all. cset_tac. left.
               eapply incl_list_union.
-              eapply map_get_1. eapply get_take; eauto. reflexivity. eauto.
+              eapply map_get_1. eapply get_take; eauto.
+              reflexivity. eauto.
 
           - rewrite restrict_comp_meet.
-            pose proof (H10 _ H7).
+            pose proof (H10 _ H12).
             edestruct computeParameters_isCalledFrom_get_Some; try eapply H6;
               eauto with len; dcr; subst.
             simpl.

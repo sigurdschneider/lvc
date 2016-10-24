@@ -189,13 +189,13 @@ Proof.
         eapply vars_up_to_incl.
         rewrite cardinal_map; eauto.
         rewrite cardinal_difference'.
-        rewrite cardinal_of_list_unique; eauto.
+        rewrite cardinal_of_list_nodup; eauto.
         etransitivity; [|eapply Max.le_max_l].
         assert (length (fst x1) <= SetInterface.cardinal (getAnn x0)).
         rewrite <- (diff_inter_cardinal (getAnn x0) (of_list (fst x1))).
         assert (getAnn x0 ∩ of_list (fst x1) [=] of_list (fst x1)).
         revert H16; clear_all; cset_tac; intuition.
-        rewrite H24. rewrite cardinal_of_list_unique; eauto. omega.
+        rewrite H24. rewrite cardinal_of_list_nodup; eauto. omega.
         etransitivity;[| eapply list_max_get; eauto; eapply map_get_1; eauto].
         rewrite <- size_of_largest_live_set_live_set. omega.
         eauto. eauto. eauto. eauto. eauto.
@@ -272,12 +272,12 @@ Proof.
         eapply vars_up_to_incl.
         rewrite cardinal_map; eauto.
         rewrite cardinal_difference'.
-        rewrite cardinal_of_list_unique; eauto.
+        rewrite cardinal_of_list_nodup; eauto.
         assert (length (fst x1) <= SetInterface.cardinal (getAnn x0)).
         rewrite <- (diff_inter_cardinal (getAnn x0) (of_list (fst x1))).
         assert (getAnn x0 ∩ of_list (fst x1) [=] of_list (fst x1)).
         revert H16; clear_all; cset_tac; intuition.
-        rewrite H24. rewrite cardinal_of_list_unique; eauto. omega.
+        rewrite H24. rewrite cardinal_of_list_nodup; eauto. omega.
         etransitivity;[| eapply list_max_get; eauto; eapply map_get_1; eauto].
         rewrite <- size_of_largest_live_set_live_set. omega.
         eauto.

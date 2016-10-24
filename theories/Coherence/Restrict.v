@@ -357,7 +357,7 @@ Ltac inv_get_step_restrict :=
     eapply (@restrict_get DL G n lv) in H; destruct H as [H ?]
   end.
 
-Smpl Add inv_get_step_restrict : inv_get.
+Smpl Add 10 inv_get_step_restrict : inv_get.
 
 Lemma restrict_ifFstR B (R:⦃var⦄->B->Prop) DL GL G
 : PIR2 (ifFstR R) DL GL
