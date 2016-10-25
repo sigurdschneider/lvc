@@ -1,4 +1,4 @@
-Require Import CSet Util Fresh Filter Take MoreList OUnion AllInRel MapDefined.
+Require Import CSet Util Fresh Filter Take MoreList OUnion AllInRel MapDefined MapUpdate Position.
 Require Import IL Annotation LabelsDefined Liveness TrueLiveness SimI.
 Require Import RenamedApart.
 Require Import SetUtil Spilling ReconstrLive DoSpill ReconstrLiveUtil.
@@ -217,7 +217,338 @@ Proof.
     eapply elements_3w.
 Qed.
 
-Lemma sim_I k Λ ZL LV VD r L L' V V' R M s lv sl ib
+Lemma in_add_right X `{OrderedType X} s x x'
+  : x ∈ s -> x ∈ {x'; s}.
+Proof.
+  cset_tac; intuition.
+Qed.
+
+Hint Resolve in_add_right : cset.
+
+Instance proper_onv (ϱ:var -> option val)
+  : (@Proper (forall _ : var, option val)
+             (@respectful var (option val) (@_eq var (@SOT_as_OT var (@eq nat) nat_OrderedType))
+                          (@eq (option val))) ϱ) | 0.
+Proof.
+  intuition.
+Qed.
+
+Instance proper_onv' (ϱ:var -> option val)
+  : @Proper (forall _ : var, option val)
+            (@respectful var (option val) (@_eq var (@SOT_as_OT var (@eq nat) nat_OrderedType))
+                         (@_eq (option val) (@option_OrderedType val OrderedType_int))) ϱ | 0.
+Proof.
+  intuition.
+Qed.
+
+Lemma set_decomp X `{OrderedType X} t s
+  : s [=] s ∩ t ∪ (s \ t).
+Proof.
+  cset_tac. decide (a ∈ t); eauto.
+Qed.
+
+Lemma agree_on_update_list X `{OrderedType X} Y (L:list X) (L':list Y) (V:X->Y)
+      `{Proper _ (_eq ==> eq) V} V' D (Len:❬L❭= ❬L'❭)
+  :  agree_on eq (D \ of_list L) V V'
+     -> lookup_list V L = L'
+     -> agree_on eq D V (V'[L <-- L']).
+Proof.
+  intros. hnf; intros.
+  decide (x ∈ of_list L).
+  - edestruct update_with_list_lookup_in_list; try eapply i; dcr.
+    Focus 2. rewrite H7.
+    rewrite lookup_list_map in H2. subst. inv_get.
+    eapply H0; eauto. eauto.
+  - rewrite lookup_set_update_not_in_Z; eauto.
+    eapply H1; cset_tac.
+Qed.
+
+Lemma agree_on_update_list_dead X `{OrderedType X} Y (L:list X) (L':list Y) (V:X->Y)
+      V' D
+  :  agree_on eq D V V'
+     -> disj (of_list L) D
+     -> agree_on eq D V (V'[L <-- L']).
+Proof.
+  intros. hnf; intros.
+  rewrite lookup_set_update_not_in_Z; eauto.
+Qed.
+
+Lemma agree_on_update_list_dead_slot X `{OrderedType X} Y (L:list X) (L':list Y) (V:X->Y) (f:X->X)
+      `{Proper _ (_eq ==> _eq) f} V' D
+  :  agree_on eq D V (fun x => V' (f x))
+     -> disj (of_list L) (map f D)
+     -> agree_on eq D V (fun x => V'[L <-- L'] (f x)).
+Proof.
+  intros. hnf; intros.
+  rewrite lookup_set_update_not_in_Z; eauto.
+  intro. eapply H2; eauto. eapply map_iff; eauto.
+Qed.
+
+Lemma get_map_first X `{OrderedType X} Y `{OrderedType Y} (L:list X) (f:X->Y) n x
+  : injective_on (of_list L) f
+    -> get L n x
+    -> (forall n' z', n' < n -> get L n' z' -> z' =/= x)
+    -> get (f ⊝ L) n (f x) /\
+      (forall n' z', n' < n -> get (f ⊝ L) n' z' -> z' =/= f x).
+Proof.
+  intros. general induction H2; simpl.
+  - split; eauto using get.
+    intros. invt get; omega.
+  - split; eauto using get.
+    intros. invt get.
+    + intro A.
+      eapply H1 in A; simpl; eauto with cset.
+      eapply H3; eauto using get.
+      cset_tac. right. eapply get_in_of_list; eauto.
+    + simpl in *.
+      exploit IHget; intros; eauto using injective_on_incl, get with cset.
+      eapply H3;[| eauto using get]. omega. dcr.
+      eapply H8; eauto. omega.
+Qed.
+
+Lemma injective_on_not_in_map X `{OrderedType X} Y `{OrderedType Y} (f:X->Y) L x
+      `{Proper _ (_eq ==> _eq) f}
+  : x ∉ of_list L
+    -> injective_on ({x; of_list L}) f
+    -> f x ∉ of_list (f ⊝ L).
+Proof.
+  intros. lset_tac.
+  rewrite of_list_map in H4; eauto.
+  eapply map_iff in H4; eauto; dcr.
+  eapply H3 in H7; eauto with cset.
+Qed.
+
+
+Lemma agree_on_update_map X `{OrderedType X} Y `{OrderedType Y} (V:X->Y)
+      (L:list X) (L':list Y)
+      (Len:❬L❭=❬L'❭) (f:X->X) D `{Proper _ (_eq ==> _eq) f} `{Proper _ (_eq ==> _eq) V}
+  : injective_on (D ∪ of_list L) f
+    -> agree_on _eq D ((f ∘ V)[L <-- L'])  (fun x => V[f ⊝ L <-- L'] (f x)).
+Proof.
+  intros Inj.
+  hnf; intros.
+  decide (x ∈ of_list L).
+  - edestruct (of_list_get_first _ i) as [n]; eauto. dcr.
+    edestruct update_with_list_lookup_in_list_first; eauto; dcr.
+    intros; intro. eapply H8; eauto. rewrite H9; eauto.
+    instantiate (1:=f ∘ V) in H9.
+    pose proof (proper_update_with_list _ _ (f ∘ V) L L') as PEQ.
+    unfold respectful, Proper, feq in PEQ.
+    rewrite PEQ; [| intros; unfold comp; rewrite H4; reflexivity | eapply H5]; clear PEQ.
+    rewrite H9.
+    setoid_rewrite H5 in H8.
+    eapply injective_on_incl in Inj; [| eapply incl_right].
+    edestruct (get_map_first Inj H6 H8); dcr.
+    edestruct update_with_list_lookup_in_list_first; try eapply H4; dcr.
+    Focus 3. rewrite H5. rewrite H13. inv_get.
+    rewrite EQ. reflexivity. eauto with len.
+    eauto.
+  - rewrite lookup_set_update_not_in_Z; eauto.
+    exploit (@injective_on_not_in_map _ _ _ _ f _ _ H1 n); eauto.
+    eapply injective_on_incl; eauto.
+    cset_tac.
+    rewrite lookup_set_update_not_in_Z; eauto.
+Qed.
+
+Lemma agree_on_eq_oval (D:set var) (f g: var -> option val)
+  : agree_on _eq D f g
+    -> agree_on eq D f g.
+Proof.
+  intros; hnf; intros.
+  eapply H in H0. inv H0; eauto; simpl in *; congruence.
+Qed.
+
+Lemma agree_on_empty X `{OrderedType X} Y D (f g:X->Y) R
+  : D ⊆ ∅
+    -> agree_on R D f g.
+Proof.
+  unfold agree_on; intros; exfalso; cset_tac.
+Qed.
+
+Lemma map_incl X `{OrderedType X} Y `{OrderedType Y} D D' (f:X->Y)
+      `{Proper _ (_eq ==> _eq) f}
+  : D ⊆ D'
+    -> map f D ⊆ map f D'.
+Proof.
+  intros; hnf; intros.
+  eapply map_iff in H3; dcr; eauto.
+  eapply map_iff; eauto.
+Qed.
+
+Hint Resolve map_incl.
+
+Lemma load_agree_after_spill_load (V V':var->option val) VD R M Sp L0
+      (Inj : injective_on VD slot)
+      (Agr1 : agree_on eq R V V')
+      (Agr2 : agree_on eq M V (fun x : var => V' (slot x)))
+      (VDincl:Sp ∪ L0 [<=] VD) (SpR:Sp [<=] R) (LSpM:L0 [<=] Sp ∪ M)
+  : agree_on eq L0 V
+             (V' [slot ⊝ elements Sp <-- V' ⊝ elements Sp]
+                 [elements L0 <-- V' [slot ⊝ elements Sp <-- V' ⊝ elements Sp]
+                           ⊝ slot ⊝ elements L0]).
+Proof.
+  eapply agree_on_update_list; try eapply proper_onv; eauto with len.
+  rewrite of_list_elements. eapply agree_on_empty; eauto with cset.
+  rewrite !lookup_list_map. rewrite map_map. rewrite <- !lookup_list_map.
+  eapply lookup_list_agree. rewrite lookup_list_map.
+  rewrite of_list_elements.
+  etransitivity; [| eapply agree_on_eq_oval, agree_on_update_map];
+    [ | eauto with len | eapply proper_var | eapply proper_onv'
+      | eapply injective_on_incl; eauto; rewrite <- VDincl, of_list_elements; clear; cset_tac ].
+  rewrite (set_decomp Sp).
+  eapply agree_on_union.
+  ++ rewrite lookup_list_map.
+    etransitivity; [eapply agree_on_incl; [ eapply Agr1| rewrite <- SpR; clear; cset_tac]|].
+    eapply agree_on_update_list; [ eapply proper_onv | eauto with len |
+                                   | rewrite lookup_list_map; reflexivity ].
+    rewrite of_list_elements. eapply agree_on_empty; clear; cset_tac.
+  ++ rewrite lookup_list_map.
+    eapply agree_on_update_list_dead.
+    eapply agree_on_incl; eauto. rewrite LSpM. clear; cset_tac.
+    rewrite of_list_elements. hnf; intros; cset_tac.
+Qed.
+
+Lemma regs_untouched_after_spill_load (V V':var->option val) VD R M K Sp L0
+      (Disj : disj VD (map slot VD)) (Incl : R ∪ M [<=] VD)
+      (Agr1 : agree_on eq R V V')
+      (VDincl:Sp ∪ L0 [<=] VD)
+  :  agree_on eq ((R \ K) \ L0) V
+              (V' [slot ⊝ elements Sp <-- V' ⊝ elements Sp]
+                  [elements L0 <-- V' [slot ⊝ elements Sp <-- V' ⊝ elements Sp]
+                            ⊝ slot ⊝ elements L0]).
+Proof.
+  etransitivity; [eapply agree_on_incl; [eapply Agr1| clear; cset_tac]|].
+  eapply agree_on_update_list_dead.
+  eapply agree_on_update_list_dead. reflexivity.
+  rewrite of_list_map, of_list_elements; eauto.
+  symmetry. eapply disj_1_incl. eapply disj_2_incl; eauto.
+  eapply map_incl; eauto. rewrite <- VDincl; eauto with cset.
+  rewrite <- Incl. clear; cset_tac.
+  rewrite of_list_elements. clear; hnf; intros; cset_tac.
+Qed.
+
+Lemma regs_agree_after_spill_load (V V':var->option val) VD R M K Sp L0
+      (Inj : injective_on VD slot) (Disj : disj VD (map slot VD)) (Incl : R ∪ M [<=] VD)
+      (Agr1 : agree_on eq R V V')
+      (Agr2 : agree_on eq M V (fun x : var => V' (slot x)))
+      (VDincl:Sp ∪ L0 [<=] VD) (SpR:Sp [<=] R) (LSpM:L0 [<=] Sp ∪ M)
+  : agree_on eq (R \ K ∪ L0) V
+             (V' [slot ⊝ elements Sp <-- V' ⊝ elements Sp]
+                 [elements L0 <-- V' [slot ⊝ elements Sp <-- V' ⊝ elements Sp]
+                           ⊝ slot ⊝ elements L0]).
+Proof.
+  rewrite union_comm, union_exclusive.
+  eapply agree_on_union.
+  -- eapply load_agree_after_spill_load; eauto.
+  -- eapply regs_untouched_after_spill_load; eauto.
+Qed.
+
+
+Lemma agree_on_comp X `{OrderedType X} Y
+      (V V' V'':X->Y) (f:X->X) D `{Proper _ (_eq ==> _eq) f}
+  : agree_on eq (map f D) V' V''
+    -> agree_on eq D V (fun x => V'' (f x))
+    -> agree_on eq D V (fun x => V' (f x)).
+Proof.
+  intros.
+  hnf; intros. rewrite H1; eauto.
+  eapply map_iff; eauto.
+Qed.
+
+Lemma agree_on_comp_both X `{OrderedType X} Y
+      (V V':X->Y) (f:X->X) D `{Proper _ (_eq ==> _eq) f}
+  : agree_on eq (map f D) V V'
+    -> agree_on eq D (fun x => V (f x)) (fun x => V' (f x)).
+Proof.
+  intros.
+  hnf; intros. rewrite H1; eauto.
+  eapply map_iff; eauto.
+Qed.
+
+Lemma injective_disj X `{OrderedType X} s t (f:X->X) `{Proper _ (_eq ==> _eq) f}
+  : disj s t
+    -> injective_on (s ∪ t) f
+    -> disj (map f s) (map f t).
+Proof.
+  intros Disj Inj; hnf; intros.
+  eapply map_iff in H1; eauto; dcr.
+  eapply map_iff in H2; eauto; dcr.
+  rewrite H6 in H5. eapply Inj in H5; cset_tac.
+  eapply Disj; eauto. cset_tac.
+Qed.
+
+Lemma spills_agree_after_spill_load (V V' V'':var->option val) VD R M Sp L0
+      (Inj : injective_on VD slot) (Disj : disj VD (map slot VD)) (Incl : R ∪ M [<=] VD)
+      (Agr1 : agree_on eq R V V')
+      (Agr2 : agree_on eq M V (fun x : var => V' (slot x)))
+      (VDincl:Sp ∪ L0 [<=] VD) (SpR:Sp [<=] R) (LSpM:L0 [<=] Sp ∪ M)
+      (Agr3 : agree_on eq (R ∪ map slot M ∪ map slot Sp ∪ L0)
+                       (V' [slot ⊝ elements Sp <-- V' ⊝ elements Sp]
+                           [elements L0 <-- V' [slot ⊝ elements Sp <-- V' ⊝ elements Sp]
+                                     ⊝ slot ⊝ elements L0]) V'')
+  : agree_on eq Sp V (fun x : var => V'' (slot x)).
+Proof.
+  eapply agree_on_comp; eauto; [ symmetry; eapply agree_on_incl; eauto with cset | ].
+  etransitivity; [eapply agree_on_incl; [eapply Agr1| eauto with cset]|].
+  eapply agree_on_update_list_dead_slot; eauto.
+  etransitivity; [| eapply agree_on_eq_oval, agree_on_update_map];
+    [ | eauto with len | eapply proper_var | eapply proper_onv'
+      | eapply injective_on_incl; eauto; rewrite <- VDincl, of_list_elements;
+        clear; cset_tac ].
+  eapply agree_on_update_list; [ eapply proper_onv | eauto with len |
+                                 | rewrite lookup_list_map; reflexivity ].
+  eapply agree_on_empty. rewrite of_list_elements. cset_tac.
+  eapply disj_1_incl. eapply disj_2_incl. eauto.
+  eapply map_incl; eauto. rewrite <- Incl, <- SpR. eauto with cset.
+  rewrite of_list_elements, <- Incl, LSpM, <- SpR; reflexivity.
+Qed.
+
+Lemma mem_untouched_after_spill_load (V V' V'':var->option val) VD R M Sp L0
+      (Inj : injective_on VD slot) (Disj : disj VD (map slot VD)) (Incl : R ∪ M [<=] VD)
+      (Agr1 : agree_on eq R V V')
+      (Agr2 : agree_on eq M V (fun x : var => V' (slot x)))
+      (VDincl:Sp ∪ L0 [<=] VD) (SpR:Sp [<=] R) (LSpM:L0 [<=] Sp ∪ M)
+      (Agr3 : agree_on eq (R ∪ map slot M ∪ map slot Sp ∪ L0)
+                       (V' [slot ⊝ elements Sp <-- V' ⊝ elements Sp]
+                           [elements L0 <-- V' [slot ⊝ elements Sp <-- V' ⊝ elements Sp]
+                                     ⊝ slot ⊝ elements L0]) V'')
+  : agree_on eq (M \ Sp) V (fun x : var => V'' (slot x)).
+Proof.
+  etransitivity; [eapply agree_on_incl; [eapply Agr2| eauto with cset ]|].
+  eapply agree_on_comp_both; eauto.
+  etransitivity; [| eapply agree_on_incl; [eapply Agr3| eauto with cset]].
+  eapply agree_on_update_list_dead.
+  eapply agree_on_update_list_dead. reflexivity.
+  rewrite of_list_map, of_list_elements; eauto.
+  intros.
+  eapply injective_disj; eauto.
+  hnf; intros; cset_tac.
+  eapply injective_on_incl; eauto. rewrite <- Incl. cset_tac.
+  rewrite of_list_elements.
+  eapply disj_1_incl. eapply disj_2_incl. eauto.
+  eapply map_incl; eauto. rewrite <- Incl. clear; cset_tac.
+  rewrite <- Incl, LSpM, <- SpR. eauto.
+Qed.
+
+Lemma mem_agrees_after_spill_load (V V' V'':var->option val) VD R M Sp L0
+      (Inj : injective_on VD slot) (Disj : disj VD (map slot VD)) (Incl : R ∪ M [<=] VD)
+      (Agr1 : agree_on eq R V V')
+      (Agr2 : agree_on eq M V (fun x : var => V' (slot x)))
+      (VDincl:Sp ∪ L0 [<=] VD) (SpR:Sp [<=] R) (LSpM:L0 [<=] Sp ∪ M)
+      (Agr3 : agree_on eq (R ∪ map slot M ∪ map slot Sp ∪ L0)
+                       (V' [slot ⊝ elements Sp <-- V' ⊝ elements Sp]
+                           [elements L0 <-- V' [slot ⊝ elements Sp <-- V' ⊝ elements Sp]
+                                     ⊝ slot ⊝ elements L0]) V'')
+  : agree_on eq (Sp ∪ M) V (fun x : var => V'' (slot x)).
+Proof.
+  rewrite union_exclusive.
+  eapply agree_on_union.
+  -- eapply spills_agree_after_spill_load; try eapply Agr3; eauto.
+  -- eapply mem_untouched_after_spill_load; try eapply Agr3; eauto.
+Qed.
+
+
+Lemma sim_I k Λ ZL LV VD r L L' V V' R M s lv sl ib ra
   : agree_on eq R V V'
     -> agree_on eq M V (fun x => V' (slot x))
   -> live_sound Imperative ZL LV s lv
@@ -228,68 +559,79 @@ Lemma sim_I k Λ ZL LV VD r L L' V V' R M s lv sl ib
   -> defined_on (R ∪ map slot M) V'
   -> R ∪ M ⊆ VD
   -> labenv_sim Sim (sim r) SR (zip pair Λ ZL) L L'
+  -> (fst (getAnn ra) ∪ snd (getAnn ra)) ⊆ VD
+  -> renamedApart s ra
   -> sim r Sim (L, V, s) (L', V', do_spill slot s sl ib).
 Proof.
   simpl. unfold reconstr_live_do_spill. unfold sim. revert_except s.
   time (sind s).
-  intros ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? Agr1 Agr2 LS SLS SL Inj Disj Def Incl LSim.
-  exploit L_sub_SpM; eauto.
-  exploit Sp_sub_R; eauto.
+  intros ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? Agr1 Agr2 LS SLS SL Inj Disj Def Incl LSim RAincl RA.
+  exploit L_sub_SpM as LSpM; eauto.
+  exploit Sp_sub_R as SpR; eauto.
   assert (VDincl:getSp sl ∪ getL sl [<=] VD). {
-    rewrite H, H0. rewrite <- Incl. eauto with cset.
+    rewrite LSpM, SpR. rewrite <- Incl. eauto with cset.
   }
   eapply sim_I_moves; eauto.
   eapply injective_on_incl; eauto with cset.
   eapply disj_1_incl. eapply disj_2_incl. eauto. rewrite VDincl; eauto. eauto.
   eapply defined_on_incl; eauto.
-   rewrite H0 at 1. rewrite H.
+  rewrite SpR at 1. rewrite LSpM.
   rewrite map_union; eauto. clear; cset_tac.
-  intros.
-  time (destruct s; invt spill_sound; invt spill_live; invt live_sound).
+  intros ? Agr3.
+  time (destruct s; invt spill_sound; invt spill_live; invt live_sound; invt renamedApart).
   - simpl in *. simpl. rewrite elements_empty; simpl.
     destruct e.
     + eapply (sim_let_op il_statetype_I); eauto.
       * eapply op_eval_live; eauto. eapply Op.live_freeVars.
         simpl in *. admit.
       * intros. left. eapply IH; eauto.
-        eapply agree_on_update_same; eauto.
-        admit. admit.
-        eapply defined_on_update_some.
-        admit.
-        exploit L_sub_SpM; try eapply H9; eauto.
-        exploit Sp_sub_R; try eapply H9; eauto.
-        admit.
+        -- eapply agree_on_update_same; eauto.
+           eapply agree_on_incl. instantiate (1:=R \ K ∪ L0).
+           etransitivity; [| eapply agree_on_incl; [eapply Agr3| clear; cset_tac]].
+           rewrite !lookup_list_map.
+           eapply regs_agree_after_spill_load; eauto.
+           clear; cset_tac.
+        -- admit.
+        -- eapply defined_on_update_some. admit.
+        -- rewrite LSpM, SpR. assert (x ∈ VD).
+           rewrite <- RAincl, H17; clear; cset_tac.
+           revert H0 Incl. clear; cset_tac; eapply Incl; cset_tac.
+        -- pe_rewrite. rewrite <- RAincl. rewrite H17. clear; cset_tac.
     + eapply (sim_let_call il_statetype_I); eauto.
       * admit.
       * intros. left. eapply IH; eauto.
-        eapply agree_on_update_same; eauto.
-        admit. admit.
-        eapply defined_on_update_some.
-        admit.
-        exploit L_sub_SpM; try eapply H9; eauto.
-        exploit Sp_sub_R; try eapply H9; eauto.
-        admit.
+        -- eapply agree_on_update_same; eauto.
+           eapply agree_on_incl. instantiate (1:=R \ K ∪ L0).
+           etransitivity; [| eapply agree_on_incl; [eapply Agr3| clear; cset_tac]].
+           rewrite !lookup_list_map.
+           eapply regs_agree_after_spill_load; eauto.
+           clear; cset_tac.
+        -- admit.
+        -- eapply defined_on_update_some. admit.
+        -- rewrite LSpM, SpR. assert (x ∈ VD).
+           rewrite <- RAincl, H17; clear; cset_tac.
+           revert H Incl. clear; cset_tac; eapply Incl; cset_tac.
+        -- pe_rewrite. rewrite <- RAincl. rewrite H17. clear; cset_tac.
   - simpl in *. rewrite elements_empty; simpl.
     eapply (sim_cond il_statetype_I); eauto.
     + eapply op_eval_live; eauto.
       admit.
     + intros; left. eapply IH; eauto.
       * etransitivity; [| eapply agree_on_incl; [eapply H1| clear; cset_tac]].
-        rewrite union_comm, union_exclusive.
-        eapply agree_on_union.
-        -- admit.
-        -- etransitivity; [eapply agree_on_incl; [eapply Agr1| clear; cset_tac]|].
-           admit.
-      * rewrite union_exclusive.
-        eapply agree_on_union.
-        -- etransitivity; [ eapply agree_on_incl; [ eapply Agr1 | eauto with cset]|].
-           admit.
-        -- etransitivity; [ eapply agree_on_incl; [ eapply Agr2 | eauto with cset]|].
-           admit.
+        rewrite !lookup_list_map.
+        eapply regs_agree_after_spill_load; eauto.
+      * rewrite !lookup_list_map in H1.
+        eapply mem_agrees_after_spill_load; try eapply H1; eauto.
       * admit.
       * rewrite H10, H0. rewrite <- Incl. clear; cset_tac.
     + intros; left. eapply IH; eauto.
-      admit. admit. admit. admit.
+      * etransitivity; [| eapply agree_on_incl; [eapply H1| clear; cset_tac]].
+        rewrite !lookup_list_map.
+        eapply regs_agree_after_spill_load; eauto.
+      * rewrite !lookup_list_map in H1.
+        eapply mem_agrees_after_spill_load; try eapply H1; eauto.
+      * admit.
+      * rewrite H10, H0. rewrite <- Incl. clear; cset_tac.
   - simpl in *. rewrite elements_empty; simpl.
     eapply labenv_sim_app; eauto using zip_get.
     intros; simpl in *; dcr; subst.
@@ -297,25 +639,28 @@ Proof.
     admit.
   - simpl in *. rewrite elements_empty; simpl.
     pno_step. simpl.
-    admit.
+    erewrite <- op_eval_agree; [reflexivity| |reflexivity].
+    symmetry. admit.
   - simpl in *. rewrite elements_empty; simpl.
     eapply sim_fun_ptw; eauto.
     + intros. left.
       eapply IH; eauto using agree_on_incl.
-      admit.
-      admit.
-      admit.
-      admit.
+      * etransitivity; [| eapply agree_on_incl; [eapply H1| clear; cset_tac]].
+        rewrite !lookup_list_map.
+        eapply regs_agree_after_spill_load; eauto.
+      * rewrite !lookup_list_map in H1.
+        eapply mem_agrees_after_spill_load; try eapply H1; eauto.
+      * admit.
+      * rewrite H, H0. rewrite <- Incl. clear; cset_tac.
     + intros. hnf; intros; simpl in *; dcr. subst.
       inv_get. simpl.
       exploit H23; eauto.
       exploit H15; eauto.
       exploit H18; eauto. destruct x.
+      exploit H17; eauto; simpl in *; dcr.
+      exploit al_sub_RfMf; eauto.
       eapply IH; eauto.
-      admit.
-      admit.
-      admit.
-      admit.
+      admit. admit. admit. admit.
     + hnf; intros; simpl in *; subst.
       inv_get; simpl; eauto.
     + eauto with len.

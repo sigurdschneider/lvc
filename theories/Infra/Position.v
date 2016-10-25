@@ -54,7 +54,7 @@ Lemma update_with_list_lookup_in_list_first X `{OrderedType X} B E n
 : length Z = length Y
   -> get Z n z
   -> (forall n' z', n' < n -> get Z n' z' -> z' =/= z)
-  -> exists y, get Y n y /\ E [Z <-- Y] z === y.
+  -> exists y, get Y n y /\ E [Z <-- Y] z = y.
 Proof.
   intros. eapply length_length_eq in H0.
   general induction H0; simpl in *; isabsurd.
