@@ -53,7 +53,7 @@ Require Import paco.
     We believe this combination of compositionality, incrementality,
     robustness, and ease of use makes [pcofix] a superior alternative
     to [cofix] for proofs about coinductive predicates.
-
+ 
     The rest of this tutorial illustrates the use of the [paco]
     library with the help of three examples.
 *)(* *)
@@ -165,7 +165,7 @@ Qed.
     checking cannot inspect their proofs and thus fails.  This is a
     great example of two of the previously mentioned problems with the
     [cofix] approach, namely lack of compositionality and poor
-    interaction with standard tactics.
+    interaction with standard tactics.  
 *)(* *)
 
 
@@ -177,7 +177,7 @@ Qed.
     equality and the new proof of the example, and then explain what
     is going on behind the scenes.  In both, we use [paco] constructs
     with suffix "2" because we are dealing with predicates of arity 2
-    here.
+    here. 
 
     _Note_: [Paco] supports predicates of arity up to 8.  Also, it
     supports up to three mutually coinductive predicates (see the last
@@ -194,7 +194,7 @@ Qed.
     specifically, [paco2 f] is well defined for an arbitrary generating
     function [f] regardless of whether it is monotone or not. However,
     in order to ensure that [paco2 f bot2] is the greatest fixed point
-    of [f], we need monotonicity of [f].
+    of [f], we need monotonicity of [f]. 
 *)
 
 Definition seq' s1 s2 := paco2 seq_gen bot2 s1 s2.
@@ -204,7 +204,6 @@ Hint Resolve seq_gen_mon : paco.
 
 Theorem example' : forall n, seq' (enumerate n) (cons n (map S (enumerate n))).
 Proof.
-  unfold seq'.
   pcofix CIH.
   intros; pfold.
   rewrite sunf_eq at 1; simpl.
@@ -245,18 +244,18 @@ Qed.
     clear why our definition of [seq'] is equivalent to [seq].
 
     To fold and unfold parameterized fixed points, we provide two
-    tactics:
+    tactics, where [upaco2 f r := paco2 f r \2/ r]:
 
     - [pfold] : when the conclusion is [paco2 f r] for some [f] and
-      [r], [pfold] converts it to [f (paco2 f r \2/ r)]
+      [r], [pfold] converts it to [f (upaco2 f r)]
     - [punfold H] : when the hypothesis [H] is [paco2 f r] for some
-      [f] and [r], [punfold H] converts it to [f (paco2 f r \2/ r)]
+      [f] and [r], [punfold H] converts it to [f (upaco2 f r)]
 
     Other useful lemmas are:
 
     - [paco2_mon f : monotone2 (paco2 f)]
     - [paco2_mult f : forall r, paco2 f (paco2 f r) <2= paco2 f r]
-    - [paco2_mult_strong f : forall r, paco2 f (paco2 f r \2/ r) <2= paco2 f r]
+    - [paco2_mult_strong f : forall r, paco2 f (upaco2 f r) <2= paco2 f r]
 
 
     We will see an example involving [paco2_mult] in a moment.  But
@@ -273,16 +272,16 @@ Qed.
     goal directly.  Of course, if one were to do that, one's "proof"
     would be subsequently rejected by [Qed] for failing to obey
     syntactic guardedness.
-
+ 
     Calling [pcofix] results in a similar state, except that the added
     hypothesis [CIH] now governs a fresh relation variable [r], which
-    represents the current coinduction hypothesis relating [enumerate n]
+    represents the current coinduction hypothesis relating [enumerate n] 
     and [cons n (map S (enumerate n))] for all [n].  The new goal
     then says that, in proving the two streams equal, we can use [r]
     coinductively, but only in a semantically guarded position,
     i.e. after unfolding [paco2 seq_gen r].  In particular, one
     _cannot_ apply [CIH] immediately to "solve" the goal:
-
+ 
     [r : stream -> stream -> Prop] #<br>#
     [CIH : forall n : nat, r (enumerate n) (cons n (map S (enumerate n)))] #<br>#
     [============================] #<br>#
@@ -298,9 +297,9 @@ Qed.
     [============================] #<br>#
     [seq_gen seq (cons n (enumerate (S n))) (cons n (map S (enumerate n)))] #<br>#
 
-    By the definition of [seq_gen] and unfolding [map S (enumerate n)],
+    By the definition of [seq_gen] and unfolding [map S (enumerate n)], 
     this reduces to showing
-
+ 
     [CIH : forall n : nat, seq (enumerate n) (cons n (map S (enumerate n)))] #<br>#
     [n : nat] #<br>#
     [============================] #<br>#
@@ -312,7 +311,7 @@ Qed.
     First, we use the tactic [pfold] rather than [apply seq_fold],
     simply because we now reason about [seq'] rather than [seq].
     After applying [pfold] and unfolding [enumerate n], we have:
-
+  
     [r : stream -> stream -> Prop] #<br>#
     [CIH : forall n : nat, r (enumerate n) (cons n (map S (enumerate n)))] #<br>#
     [n : nat] #<br>#
@@ -324,7 +323,7 @@ Qed.
     (enumerate n)], we need to show [enumerate (S n)] and [cons (S n)
     (map S (enumerate (S n)))] are related by either [paco2 seq_gen r]
     or [r]:
-
+   
     [r : stream -> stream -> Prop] #<br>#
     [CIH : forall n : nat, r (enumerate n) (cons n (map S (enumerate n)))] #<br>#
     [n : nat] #<br>#
@@ -365,14 +364,13 @@ Qed.
 
 (** And here is the corresponding proof for [seq'].
 
-  Note that the tactic [pclearbot] simplifies all hypotheses of the form [P \/
-  bot{n}] to [P].
+  Note that the tactic [pclearbot] simplifies all hypotheses of the form [upaco{n} gf bot{n}] to [paco{n} gf bot{n}].
 *)
 
 Theorem seq'_cons : forall n1 n2 s1 s2 (SEQ : seq' (cons n1 s1) (cons n2 s2)),
   n1 = n2 /\ seq' s1 s2.
 Proof.
-  intros.
+  intros. 
   punfold SEQ.
   inversion_clear SEQ; pclearbot; auto.
 Qed.
@@ -383,7 +381,7 @@ Qed.
     - [pdestruct H] := [punfold H; destruct H; pclearbot]
     - [pinversion H] := [punfold H; inversion H; pclearbot]
 
-    Using this the proof of the above theorem [seq'_cons] can be
+    Using this the proof of the above theorem [seq'_cons] can be 
     simplified as [intros; pinversion SEQ; auto.]
 *)(* *)
 
@@ -402,13 +400,13 @@ Qed.
 
 
 (** As before, we first define the coinductive type and the unfolding
-    trick.
+    trick.  
 *)
 
 CoInductive inftree :=
   | node : nat -> inftree -> inftree -> inftree.
 
-Definition tunf t : inftree :=
+Definition tunf t : inftree := 
   match t with node n tl tr => node n tl tr end.
 
 Lemma tunf_eq : forall t, t = tunf t.
@@ -465,7 +463,7 @@ Proof.
   apply teq_fold.
   rewrite (tunf_eq two); simpl.
   constructor; auto.
-  cofix CIH'.
+  cofix CIH'. 
   apply teq_fold.
   rewrite (tunf_eq two), (tunf_eq zwei); simpl.
   constructor; auto.
@@ -582,7 +580,7 @@ Defined.
 
 Lemma teq_one_two : teq one eins -> teq two zwei.
 Proof.
-  intros; cofix CIH.
+  intros; cofix CIH. 
   apply teq_fold.
   rewrite (tunf_eq two), (tunf_eq zwei); simpl.
   constructor; auto.
@@ -628,7 +626,7 @@ Abort.
 Lemma teq'_two_one : forall r,
   (r two zwei : Prop) -> paco2 teq_gen r one eins.
 Proof.
-  intros; pcofix CIH.
+  intros; pcofix CIH. 
   pfold.
   rewrite (tunf_eq one), (tunf_eq eins); simpl.
   constructor; auto.
@@ -650,7 +648,7 @@ Qed.
 (** We now compose them with the help of the lemma [paco2_mult]:
     - [paco2_mult f : paco2 f (paco2 f r) <2= paco2 f r]
 
-    The tactic [pmult] applies [paco{n}_mult] to the conclusion
+    The tactic [pmult] applies [paco{n}_mult] to the conclusion 
     for an appropriate [n].
 *)
 
@@ -735,7 +733,7 @@ Hint Resolve eqone_gen_mon eqtwo_gen_mon : paco.
 Lemma eqone'_eins: eqone' eins.
 Proof.
   pcofix CIH0; pfold.
-  rewrite tunf_eq; simpl; constructor.
+  rewrite tunf_eq; simpl; constructor. 
     right; apply CIH0.
   left; pcofix CIH1; pfold.
   constructor.

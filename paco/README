@@ -1,0 +1,11 @@
+
+                             Paco v1.2.8
+
+    Chung-Kil Hur, Georg Neis, Derek Dreyer and Viktor Vafeiadis
+          Max Planck Institute for Software Systems (MPI-SWS)
+
+
+ * Paco v1.2.8 is compatible with Coq8.3, Coq8.4 and Coq8.5.
+
+ * See doc/index.html for details.
+

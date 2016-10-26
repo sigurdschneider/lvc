@@ -1,0 +1,45 @@
+changes from v1.2.7 to v1.2.8
+=========================
+- add the definition "upaco".
+
+changes from v1.2.6 to v1.2.7
+=========================
+- remove "repeat red" from the tactics "punfold", "pfold" and "pmult".
+
+changes from v1.2.5 to v1.2.6
+=========================
+- change the name of the tactic "clearbot" to "pclearbot"
+- add new tactics: "pdestruct" and "pinversion"
+
+changes from v1.2.4 to v1.2.5
+=========================
+- support up to arity 15.
+
+changes from v1.2.3 to v1.2.4
+=========================
+- define the predicates bot{n} using "pacoid".
+
+changes from v1.2.2 to v1.2.3
+=========================
+- define the predicates bot{n} using Notation for performance gains
+
+changes from v1.2.1 to v1.2.2
+=========================
+- support relations of arity up to 14
+- add a new tactic: pmult
+
+changes from v1.2 to v1.2.1
+=========================
+- bug fixes
+
+changes from v1.1 to v1.2
+=========================
+- add new tactics: pfold, punfold, pmonauto
+- update the tutorial accordingly
+
+changes from v1.0 to v1.1
+=========================
+- bug fixes
+- add a new tactic: clearbot
+- "pcofix" does not change the order of hypotheses
+

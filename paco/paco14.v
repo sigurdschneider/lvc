@@ -40,7 +40,7 @@ Theorem paco14_mon: monotone14 (paco14 gf).
 Proof. paco_cofix_auto; repeat (left; do 15 paco_revert; paco_cofix_auto). Qed.
 
 Theorem paco14_mult_strong: forall r,
-  paco14 gf (paco14 gf r \14/ r) <14= paco14 gf r.
+  paco14 gf (upaco14 gf r) <14= paco14 gf r.
 Proof. paco_cofix_auto; repeat (left; do 15 paco_revert; paco_cofix_auto). Qed.
 
 Corollary paco14_mult: forall r,
@@ -48,11 +48,11 @@ Corollary paco14_mult: forall r,
 Proof. intros; eapply paco14_mult_strong, paco14_mon; eauto. Qed.
 
 Theorem paco14_fold: forall r,
-  gf (paco14 gf r \14/ r) <14= paco14 gf r.
+  gf (upaco14 gf r) <14= paco14 gf r.
 Proof. intros; econstructor; [ |eauto]; eauto. Qed.
 
 Theorem paco14_unfold: forall (MON: monotone14 gf) r,
-  paco14 gf r <14= gf (paco14 gf r \14/ r).
+  paco14 gf r <14= gf (upaco14 gf r).
 Proof. unfold monotone14; intros; destruct PR; eauto. Qed.
 
 End Arg14_1.
@@ -121,11 +121,11 @@ Theorem paco14_2_1_mon: monotone14_2 (paco14_2_1 gf_0 gf_1).
 Proof. paco_cofix_auto; repeat (left; do 15 paco_revert; paco_cofix_auto). Qed.
 
 Theorem paco14_2_0_mult_strong: forall r_0 r_1,
-  paco14_2_0 gf_0 gf_1 (paco14_2_0 gf_0 gf_1 r_0 r_1 \14/ r_0) (paco14_2_1 gf_0 gf_1 r_0 r_1 \14/ r_1) <14= paco14_2_0 gf_0 gf_1 r_0 r_1.
+  paco14_2_0 gf_0 gf_1 (upaco14_2_0 gf_0 gf_1 r_0 r_1) (upaco14_2_1 gf_0 gf_1 r_0 r_1) <14= paco14_2_0 gf_0 gf_1 r_0 r_1.
 Proof. paco_cofix_auto; repeat (left; do 15 paco_revert; paco_cofix_auto). Qed.
 
 Theorem paco14_2_1_mult_strong: forall r_0 r_1,
-  paco14_2_1 gf_0 gf_1 (paco14_2_0 gf_0 gf_1 r_0 r_1 \14/ r_0) (paco14_2_1 gf_0 gf_1 r_0 r_1 \14/ r_1) <14= paco14_2_1 gf_0 gf_1 r_0 r_1.
+  paco14_2_1 gf_0 gf_1 (upaco14_2_0 gf_0 gf_1 r_0 r_1) (upaco14_2_1 gf_0 gf_1 r_0 r_1) <14= paco14_2_1 gf_0 gf_1 r_0 r_1.
 Proof. paco_cofix_auto; repeat (left; do 15 paco_revert; paco_cofix_auto). Qed.
 
 Corollary paco14_2_0_mult: forall r_0 r_1,
@@ -137,19 +137,19 @@ Corollary paco14_2_1_mult: forall r_0 r_1,
 Proof. intros; eapply paco14_2_1_mult_strong, paco14_2_1_mon; eauto. Qed.
 
 Theorem paco14_2_0_fold: forall r_0 r_1,
-  gf_0 (paco14_2_0 gf_0 gf_1 r_0 r_1 \14/ r_0) (paco14_2_1 gf_0 gf_1 r_0 r_1 \14/ r_1) <14= paco14_2_0 gf_0 gf_1 r_0 r_1.
+  gf_0 (upaco14_2_0 gf_0 gf_1 r_0 r_1) (upaco14_2_1 gf_0 gf_1 r_0 r_1) <14= paco14_2_0 gf_0 gf_1 r_0 r_1.
 Proof. intros; econstructor; [ | |eauto]; eauto. Qed.
 
 Theorem paco14_2_1_fold: forall r_0 r_1,
-  gf_1 (paco14_2_0 gf_0 gf_1 r_0 r_1 \14/ r_0) (paco14_2_1 gf_0 gf_1 r_0 r_1 \14/ r_1) <14= paco14_2_1 gf_0 gf_1 r_0 r_1.
+  gf_1 (upaco14_2_0 gf_0 gf_1 r_0 r_1) (upaco14_2_1 gf_0 gf_1 r_0 r_1) <14= paco14_2_1 gf_0 gf_1 r_0 r_1.
 Proof. intros; econstructor; [ | |eauto]; eauto. Qed.
 
 Theorem paco14_2_0_unfold: forall (MON: monotone14_2 gf_0) (MON: monotone14_2 gf_1) r_0 r_1,
-  paco14_2_0 gf_0 gf_1 r_0 r_1 <14= gf_0 (paco14_2_0 gf_0 gf_1 r_0 r_1 \14/ r_0) (paco14_2_1 gf_0 gf_1 r_0 r_1 \14/ r_1).
+  paco14_2_0 gf_0 gf_1 r_0 r_1 <14= gf_0 (upaco14_2_0 gf_0 gf_1 r_0 r_1) (upaco14_2_1 gf_0 gf_1 r_0 r_1).
 Proof. unfold monotone14_2; intros; destruct PR; eauto. Qed.
 
 Theorem paco14_2_1_unfold: forall (MON: monotone14_2 gf_0) (MON: monotone14_2 gf_1) r_0 r_1,
-  paco14_2_1 gf_0 gf_1 r_0 r_1 <14= gf_1 (paco14_2_0 gf_0 gf_1 r_0 r_1 \14/ r_0) (paco14_2_1 gf_0 gf_1 r_0 r_1 \14/ r_1).
+  paco14_2_1 gf_0 gf_1 r_0 r_1 <14= gf_1 (upaco14_2_0 gf_0 gf_1 r_0 r_1) (upaco14_2_1 gf_0 gf_1 r_0 r_1).
 Proof. unfold monotone14_2; intros; destruct PR; eauto. Qed.
 
 End Arg14_2.
@@ -243,15 +243,15 @@ Theorem paco14_3_2_mon: monotone14_3 (paco14_3_2 gf_0 gf_1 gf_2).
 Proof. paco_cofix_auto; repeat (left; do 15 paco_revert; paco_cofix_auto). Qed.
 
 Theorem paco14_3_0_mult_strong: forall r_0 r_1 r_2,
-  paco14_3_0 gf_0 gf_1 gf_2 (paco14_3_0 gf_0 gf_1 gf_2 r_0 r_1 r_2 \14/ r_0) (paco14_3_1 gf_0 gf_1 gf_2 r_0 r_1 r_2 \14/ r_1) (paco14_3_2 gf_0 gf_1 gf_2 r_0 r_1 r_2 \14/ r_2) <14= paco14_3_0 gf_0 gf_1 gf_2 r_0 r_1 r_2.
+  paco14_3_0 gf_0 gf_1 gf_2 (upaco14_3_0 gf_0 gf_1 gf_2 r_0 r_1 r_2) (upaco14_3_1 gf_0 gf_1 gf_2 r_0 r_1 r_2) (upaco14_3_2 gf_0 gf_1 gf_2 r_0 r_1 r_2) <14= paco14_3_0 gf_0 gf_1 gf_2 r_0 r_1 r_2.
 Proof. paco_cofix_auto; repeat (left; do 15 paco_revert; paco_cofix_auto). Qed.
 
 Theorem paco14_3_1_mult_strong: forall r_0 r_1 r_2,
-  paco14_3_1 gf_0 gf_1 gf_2 (paco14_3_0 gf_0 gf_1 gf_2 r_0 r_1 r_2 \14/ r_0) (paco14_3_1 gf_0 gf_1 gf_2 r_0 r_1 r_2 \14/ r_1) (paco14_3_2 gf_0 gf_1 gf_2 r_0 r_1 r_2 \14/ r_2) <14= paco14_3_1 gf_0 gf_1 gf_2 r_0 r_1 r_2.
+  paco14_3_1 gf_0 gf_1 gf_2 (upaco14_3_0 gf_0 gf_1 gf_2 r_0 r_1 r_2) (upaco14_3_1 gf_0 gf_1 gf_2 r_0 r_1 r_2) (upaco14_3_2 gf_0 gf_1 gf_2 r_0 r_1 r_2) <14= paco14_3_1 gf_0 gf_1 gf_2 r_0 r_1 r_2.
 Proof. paco_cofix_auto; repeat (left; do 15 paco_revert; paco_cofix_auto). Qed.
 
 Theorem paco14_3_2_mult_strong: forall r_0 r_1 r_2,
-  paco14_3_2 gf_0 gf_1 gf_2 (paco14_3_0 gf_0 gf_1 gf_2 r_0 r_1 r_2 \14/ r_0) (paco14_3_1 gf_0 gf_1 gf_2 r_0 r_1 r_2 \14/ r_1) (paco14_3_2 gf_0 gf_1 gf_2 r_0 r_1 r_2 \14/ r_2) <14= paco14_3_2 gf_0 gf_1 gf_2 r_0 r_1 r_2.
+  paco14_3_2 gf_0 gf_1 gf_2 (upaco14_3_0 gf_0 gf_1 gf_2 r_0 r_1 r_2) (upaco14_3_1 gf_0 gf_1 gf_2 r_0 r_1 r_2) (upaco14_3_2 gf_0 gf_1 gf_2 r_0 r_1 r_2) <14= paco14_3_2 gf_0 gf_1 gf_2 r_0 r_1 r_2.
 Proof. paco_cofix_auto; repeat (left; do 15 paco_revert; paco_cofix_auto). Qed.
 
 Corollary paco14_3_0_mult: forall r_0 r_1 r_2,
@@ -267,27 +267,27 @@ Corollary paco14_3_2_mult: forall r_0 r_1 r_2,
 Proof. intros; eapply paco14_3_2_mult_strong, paco14_3_2_mon; eauto. Qed.
 
 Theorem paco14_3_0_fold: forall r_0 r_1 r_2,
-  gf_0 (paco14_3_0 gf_0 gf_1 gf_2 r_0 r_1 r_2 \14/ r_0) (paco14_3_1 gf_0 gf_1 gf_2 r_0 r_1 r_2 \14/ r_1) (paco14_3_2 gf_0 gf_1 gf_2 r_0 r_1 r_2 \14/ r_2) <14= paco14_3_0 gf_0 gf_1 gf_2 r_0 r_1 r_2.
+  gf_0 (upaco14_3_0 gf_0 gf_1 gf_2 r_0 r_1 r_2) (upaco14_3_1 gf_0 gf_1 gf_2 r_0 r_1 r_2) (upaco14_3_2 gf_0 gf_1 gf_2 r_0 r_1 r_2) <14= paco14_3_0 gf_0 gf_1 gf_2 r_0 r_1 r_2.
 Proof. intros; econstructor; [ | | |eauto]; eauto. Qed.
 
 Theorem paco14_3_1_fold: forall r_0 r_1 r_2,
-  gf_1 (paco14_3_0 gf_0 gf_1 gf_2 r_0 r_1 r_2 \14/ r_0) (paco14_3_1 gf_0 gf_1 gf_2 r_0 r_1 r_2 \14/ r_1) (paco14_3_2 gf_0 gf_1 gf_2 r_0 r_1 r_2 \14/ r_2) <14= paco14_3_1 gf_0 gf_1 gf_2 r_0 r_1 r_2.
+  gf_1 (upaco14_3_0 gf_0 gf_1 gf_2 r_0 r_1 r_2) (upaco14_3_1 gf_0 gf_1 gf_2 r_0 r_1 r_2) (upaco14_3_2 gf_0 gf_1 gf_2 r_0 r_1 r_2) <14= paco14_3_1 gf_0 gf_1 gf_2 r_0 r_1 r_2.
 Proof. intros; econstructor; [ | | |eauto]; eauto. Qed.
 
 Theorem paco14_3_2_fold: forall r_0 r_1 r_2,
-  gf_2 (paco14_3_0 gf_0 gf_1 gf_2 r_0 r_1 r_2 \14/ r_0) (paco14_3_1 gf_0 gf_1 gf_2 r_0 r_1 r_2 \14/ r_1) (paco14_3_2 gf_0 gf_1 gf_2 r_0 r_1 r_2 \14/ r_2) <14= paco14_3_2 gf_0 gf_1 gf_2 r_0 r_1 r_2.
+  gf_2 (upaco14_3_0 gf_0 gf_1 gf_2 r_0 r_1 r_2) (upaco14_3_1 gf_0 gf_1 gf_2 r_0 r_1 r_2) (upaco14_3_2 gf_0 gf_1 gf_2 r_0 r_1 r_2) <14= paco14_3_2 gf_0 gf_1 gf_2 r_0 r_1 r_2.
 Proof. intros; econstructor; [ | | |eauto]; eauto. Qed.
 
 Theorem paco14_3_0_unfold: forall (MON: monotone14_3 gf_0) (MON: monotone14_3 gf_1) (MON: monotone14_3 gf_2) r_0 r_1 r_2,
-  paco14_3_0 gf_0 gf_1 gf_2 r_0 r_1 r_2 <14= gf_0 (paco14_3_0 gf_0 gf_1 gf_2 r_0 r_1 r_2 \14/ r_0) (paco14_3_1 gf_0 gf_1 gf_2 r_0 r_1 r_2 \14/ r_1) (paco14_3_2 gf_0 gf_1 gf_2 r_0 r_1 r_2 \14/ r_2).
+  paco14_3_0 gf_0 gf_1 gf_2 r_0 r_1 r_2 <14= gf_0 (upaco14_3_0 gf_0 gf_1 gf_2 r_0 r_1 r_2) (upaco14_3_1 gf_0 gf_1 gf_2 r_0 r_1 r_2) (upaco14_3_2 gf_0 gf_1 gf_2 r_0 r_1 r_2).
 Proof. unfold monotone14_3; intros; destruct PR; eauto. Qed.
 
 Theorem paco14_3_1_unfold: forall (MON: monotone14_3 gf_0) (MON: monotone14_3 gf_1) (MON: monotone14_3 gf_2) r_0 r_1 r_2,
-  paco14_3_1 gf_0 gf_1 gf_2 r_0 r_1 r_2 <14= gf_1 (paco14_3_0 gf_0 gf_1 gf_2 r_0 r_1 r_2 \14/ r_0) (paco14_3_1 gf_0 gf_1 gf_2 r_0 r_1 r_2 \14/ r_1) (paco14_3_2 gf_0 gf_1 gf_2 r_0 r_1 r_2 \14/ r_2).
+  paco14_3_1 gf_0 gf_1 gf_2 r_0 r_1 r_2 <14= gf_1 (upaco14_3_0 gf_0 gf_1 gf_2 r_0 r_1 r_2) (upaco14_3_1 gf_0 gf_1 gf_2 r_0 r_1 r_2) (upaco14_3_2 gf_0 gf_1 gf_2 r_0 r_1 r_2).
 Proof. unfold monotone14_3; intros; destruct PR; eauto. Qed.
 
 Theorem paco14_3_2_unfold: forall (MON: monotone14_3 gf_0) (MON: monotone14_3 gf_1) (MON: monotone14_3 gf_2) r_0 r_1 r_2,
-  paco14_3_2 gf_0 gf_1 gf_2 r_0 r_1 r_2 <14= gf_2 (paco14_3_0 gf_0 gf_1 gf_2 r_0 r_1 r_2 \14/ r_0) (paco14_3_1 gf_0 gf_1 gf_2 r_0 r_1 r_2 \14/ r_1) (paco14_3_2 gf_0 gf_1 gf_2 r_0 r_1 r_2 \14/ r_2).
+  paco14_3_2 gf_0 gf_1 gf_2 r_0 r_1 r_2 <14= gf_2 (upaco14_3_0 gf_0 gf_1 gf_2 r_0 r_1 r_2) (upaco14_3_1 gf_0 gf_1 gf_2 r_0 r_1 r_2) (upaco14_3_2 gf_0 gf_1 gf_2 r_0 r_1 r_2).
 Proof. unfold monotone14_3; intros; destruct PR; eauto. Qed.
 
 End Arg14_3.

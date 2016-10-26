@@ -16,8 +16,11 @@ CoInductive paco0( r: rel0) : Prop :=
     (LE : pco <0= (paco0 r \0/ r))
     (SIM: gf pco)
 .
+Definition upaco0( r: rel0) := paco0 r \0/ r.
 End Arg0_def.
 Implicit Arguments paco0 [ ].
+Implicit Arguments upaco0 [ ].
+Hint Unfold upaco0.
 
 Section Arg0_2_def.
 Variable gf_0 gf_1 : rel0 -> rel0 -> rel0.
@@ -35,9 +38,15 @@ with paco0_2_1( r_0 r_1: rel0) : Prop :=
     (LE : pco_1 <0= (paco0_2_1 r_0 r_1 \0/ r_1))
     (SIM: gf_1 pco_0 pco_1)
 .
+Definition upaco0_2_0( r_0 r_1: rel0) := paco0_2_0 r_0 r_1 \0/ r_0.
+Definition upaco0_2_1( r_0 r_1: rel0) := paco0_2_1 r_0 r_1 \0/ r_1.
 End Arg0_2_def.
 Implicit Arguments paco0_2_0 [ ].
+Implicit Arguments upaco0_2_0 [ ].
+Hint Unfold upaco0_2_0.
 Implicit Arguments paco0_2_1 [ ].
+Implicit Arguments upaco0_2_1 [ ].
+Hint Unfold upaco0_2_1.
 
 Section Arg0_3_def.
 Variable gf_0 gf_1 gf_2 : rel0 -> rel0 -> rel0 -> rel0.
@@ -64,10 +73,19 @@ with paco0_3_2( r_0 r_1 r_2: rel0) : Prop :=
     (LE : pco_2 <0= (paco0_3_2 r_0 r_1 r_2 \0/ r_2))
     (SIM: gf_2 pco_0 pco_1 pco_2)
 .
+Definition upaco0_3_0( r_0 r_1 r_2: rel0) := paco0_3_0 r_0 r_1 r_2 \0/ r_0.
+Definition upaco0_3_1( r_0 r_1 r_2: rel0) := paco0_3_1 r_0 r_1 r_2 \0/ r_1.
+Definition upaco0_3_2( r_0 r_1 r_2: rel0) := paco0_3_2 r_0 r_1 r_2 \0/ r_2.
 End Arg0_3_def.
 Implicit Arguments paco0_3_0 [ ].
+Implicit Arguments upaco0_3_0 [ ].
+Hint Unfold upaco0_3_0.
 Implicit Arguments paco0_3_1 [ ].
+Implicit Arguments upaco0_3_1 [ ].
+Hint Unfold upaco0_3_1.
 Implicit Arguments paco0_3_2 [ ].
+Implicit Arguments upaco0_3_2 [ ].
+Hint Unfold upaco0_3_2.
 
 Section Arg1_def.
 Variable T0 : Type.
@@ -79,8 +97,11 @@ CoInductive paco1( r: rel1 T0) x0 : Prop :=
     (LE : pco <1= (paco1 r \1/ r))
     (SIM: gf pco x0)
 .
+Definition upaco1( r: rel1 T0) := paco1 r \1/ r.
 End Arg1_def.
 Implicit Arguments paco1 [ T0 ].
+Implicit Arguments upaco1 [ T0 ].
+Hint Unfold upaco1.
 
 Section Arg1_2_def.
 Variable T0 : Type.
@@ -99,9 +120,15 @@ with paco1_2_1( r_0 r_1: rel1 T0) x0 : Prop :=
     (LE : pco_1 <1= (paco1_2_1 r_0 r_1 \1/ r_1))
     (SIM: gf_1 pco_0 pco_1 x0)
 .
+Definition upaco1_2_0( r_0 r_1: rel1 T0) := paco1_2_0 r_0 r_1 \1/ r_0.
+Definition upaco1_2_1( r_0 r_1: rel1 T0) := paco1_2_1 r_0 r_1 \1/ r_1.
 End Arg1_2_def.
 Implicit Arguments paco1_2_0 [ T0 ].
+Implicit Arguments upaco1_2_0 [ T0 ].
+Hint Unfold upaco1_2_0.
 Implicit Arguments paco1_2_1 [ T0 ].
+Implicit Arguments upaco1_2_1 [ T0 ].
+Hint Unfold upaco1_2_1.
 
 Section Arg1_3_def.
 Variable T0 : Type.
@@ -129,10 +156,19 @@ with paco1_3_2( r_0 r_1 r_2: rel1 T0) x0 : Prop :=
     (LE : pco_2 <1= (paco1_3_2 r_0 r_1 r_2 \1/ r_2))
     (SIM: gf_2 pco_0 pco_1 pco_2 x0)
 .
+Definition upaco1_3_0( r_0 r_1 r_2: rel1 T0) := paco1_3_0 r_0 r_1 r_2 \1/ r_0.
+Definition upaco1_3_1( r_0 r_1 r_2: rel1 T0) := paco1_3_1 r_0 r_1 r_2 \1/ r_1.
+Definition upaco1_3_2( r_0 r_1 r_2: rel1 T0) := paco1_3_2 r_0 r_1 r_2 \1/ r_2.
 End Arg1_3_def.
 Implicit Arguments paco1_3_0 [ T0 ].
+Implicit Arguments upaco1_3_0 [ T0 ].
+Hint Unfold upaco1_3_0.
 Implicit Arguments paco1_3_1 [ T0 ].
+Implicit Arguments upaco1_3_1 [ T0 ].
+Hint Unfold upaco1_3_1.
 Implicit Arguments paco1_3_2 [ T0 ].
+Implicit Arguments upaco1_3_2 [ T0 ].
+Hint Unfold upaco1_3_2.
 
 Section Arg2_def.
 Variable T0 : Type.
@@ -145,8 +181,11 @@ CoInductive paco2( r: rel2 T0 T1) x0 x1 : Prop :=
     (LE : pco <2= (paco2 r \2/ r))
     (SIM: gf pco x0 x1)
 .
+Definition upaco2( r: rel2 T0 T1) := paco2 r \2/ r.
 End Arg2_def.
 Implicit Arguments paco2 [ T0 T1 ].
+Implicit Arguments upaco2 [ T0 T1 ].
+Hint Unfold upaco2.
 
 Section Arg2_2_def.
 Variable T0 : Type.
@@ -166,9 +205,15 @@ with paco2_2_1( r_0 r_1: rel2 T0 T1) x0 x1 : Prop :=
     (LE : pco_1 <2= (paco2_2_1 r_0 r_1 \2/ r_1))
     (SIM: gf_1 pco_0 pco_1 x0 x1)
 .
+Definition upaco2_2_0( r_0 r_1: rel2 T0 T1) := paco2_2_0 r_0 r_1 \2/ r_0.
+Definition upaco2_2_1( r_0 r_1: rel2 T0 T1) := paco2_2_1 r_0 r_1 \2/ r_1.
 End Arg2_2_def.
 Implicit Arguments paco2_2_0 [ T0 T1 ].
+Implicit Arguments upaco2_2_0 [ T0 T1 ].
+Hint Unfold upaco2_2_0.
 Implicit Arguments paco2_2_1 [ T0 T1 ].
+Implicit Arguments upaco2_2_1 [ T0 T1 ].
+Hint Unfold upaco2_2_1.
 
 Section Arg2_3_def.
 Variable T0 : Type.
@@ -197,10 +242,19 @@ with paco2_3_2( r_0 r_1 r_2: rel2 T0 T1) x0 x1 : Prop :=
     (LE : pco_2 <2= (paco2_3_2 r_0 r_1 r_2 \2/ r_2))
     (SIM: gf_2 pco_0 pco_1 pco_2 x0 x1)
 .
+Definition upaco2_3_0( r_0 r_1 r_2: rel2 T0 T1) := paco2_3_0 r_0 r_1 r_2 \2/ r_0.
+Definition upaco2_3_1( r_0 r_1 r_2: rel2 T0 T1) := paco2_3_1 r_0 r_1 r_2 \2/ r_1.
+Definition upaco2_3_2( r_0 r_1 r_2: rel2 T0 T1) := paco2_3_2 r_0 r_1 r_2 \2/ r_2.
 End Arg2_3_def.
 Implicit Arguments paco2_3_0 [ T0 T1 ].
+Implicit Arguments upaco2_3_0 [ T0 T1 ].
+Hint Unfold upaco2_3_0.
 Implicit Arguments paco2_3_1 [ T0 T1 ].
+Implicit Arguments upaco2_3_1 [ T0 T1 ].
+Hint Unfold upaco2_3_1.
 Implicit Arguments paco2_3_2 [ T0 T1 ].
+Implicit Arguments upaco2_3_2 [ T0 T1 ].
+Hint Unfold upaco2_3_2.
 
 Section Arg3_def.
 Variable T0 : Type.
@@ -214,8 +268,11 @@ CoInductive paco3( r: rel3 T0 T1 T2) x0 x1 x2 : Prop :=
     (LE : pco <3= (paco3 r \3/ r))
     (SIM: gf pco x0 x1 x2)
 .
+Definition upaco3( r: rel3 T0 T1 T2) := paco3 r \3/ r.
 End Arg3_def.
 Implicit Arguments paco3 [ T0 T1 T2 ].
+Implicit Arguments upaco3 [ T0 T1 T2 ].
+Hint Unfold upaco3.
 
 Section Arg3_2_def.
 Variable T0 : Type.
@@ -236,9 +293,15 @@ with paco3_2_1( r_0 r_1: rel3 T0 T1 T2) x0 x1 x2 : Prop :=
     (LE : pco_1 <3= (paco3_2_1 r_0 r_1 \3/ r_1))
     (SIM: gf_1 pco_0 pco_1 x0 x1 x2)
 .
+Definition upaco3_2_0( r_0 r_1: rel3 T0 T1 T2) := paco3_2_0 r_0 r_1 \3/ r_0.
+Definition upaco3_2_1( r_0 r_1: rel3 T0 T1 T2) := paco3_2_1 r_0 r_1 \3/ r_1.
 End Arg3_2_def.
 Implicit Arguments paco3_2_0 [ T0 T1 T2 ].
+Implicit Arguments upaco3_2_0 [ T0 T1 T2 ].
+Hint Unfold upaco3_2_0.
 Implicit Arguments paco3_2_1 [ T0 T1 T2 ].
+Implicit Arguments upaco3_2_1 [ T0 T1 T2 ].
+Hint Unfold upaco3_2_1.
 
 Section Arg3_3_def.
 Variable T0 : Type.
@@ -268,10 +331,19 @@ with paco3_3_2( r_0 r_1 r_2: rel3 T0 T1 T2) x0 x1 x2 : Prop :=
     (LE : pco_2 <3= (paco3_3_2 r_0 r_1 r_2 \3/ r_2))
     (SIM: gf_2 pco_0 pco_1 pco_2 x0 x1 x2)
 .
+Definition upaco3_3_0( r_0 r_1 r_2: rel3 T0 T1 T2) := paco3_3_0 r_0 r_1 r_2 \3/ r_0.
+Definition upaco3_3_1( r_0 r_1 r_2: rel3 T0 T1 T2) := paco3_3_1 r_0 r_1 r_2 \3/ r_1.
+Definition upaco3_3_2( r_0 r_1 r_2: rel3 T0 T1 T2) := paco3_3_2 r_0 r_1 r_2 \3/ r_2.
 End Arg3_3_def.
 Implicit Arguments paco3_3_0 [ T0 T1 T2 ].
+Implicit Arguments upaco3_3_0 [ T0 T1 T2 ].
+Hint Unfold upaco3_3_0.
 Implicit Arguments paco3_3_1 [ T0 T1 T2 ].
+Implicit Arguments upaco3_3_1 [ T0 T1 T2 ].
+Hint Unfold upaco3_3_1.
 Implicit Arguments paco3_3_2 [ T0 T1 T2 ].
+Implicit Arguments upaco3_3_2 [ T0 T1 T2 ].
+Hint Unfold upaco3_3_2.
 
 Section Arg4_def.
 Variable T0 : Type.
@@ -286,8 +358,11 @@ CoInductive paco4( r: rel4 T0 T1 T2 T3) x0 x1 x2 x3 : Prop :=
     (LE : pco <4= (paco4 r \4/ r))
     (SIM: gf pco x0 x1 x2 x3)
 .
+Definition upaco4( r: rel4 T0 T1 T2 T3) := paco4 r \4/ r.
 End Arg4_def.
 Implicit Arguments paco4 [ T0 T1 T2 T3 ].
+Implicit Arguments upaco4 [ T0 T1 T2 T3 ].
+Hint Unfold upaco4.
 
 Section Arg4_2_def.
 Variable T0 : Type.
@@ -309,9 +384,15 @@ with paco4_2_1( r_0 r_1: rel4 T0 T1 T2 T3) x0 x1 x2 x3 : Prop :=
     (LE : pco_1 <4= (paco4_2_1 r_0 r_1 \4/ r_1))
     (SIM: gf_1 pco_0 pco_1 x0 x1 x2 x3)
 .
+Definition upaco4_2_0( r_0 r_1: rel4 T0 T1 T2 T3) := paco4_2_0 r_0 r_1 \4/ r_0.
+Definition upaco4_2_1( r_0 r_1: rel4 T0 T1 T2 T3) := paco4_2_1 r_0 r_1 \4/ r_1.
 End Arg4_2_def.
 Implicit Arguments paco4_2_0 [ T0 T1 T2 T3 ].
+Implicit Arguments upaco4_2_0 [ T0 T1 T2 T3 ].
+Hint Unfold upaco4_2_0.
 Implicit Arguments paco4_2_1 [ T0 T1 T2 T3 ].
+Implicit Arguments upaco4_2_1 [ T0 T1 T2 T3 ].
+Hint Unfold upaco4_2_1.
 
 Section Arg4_3_def.
 Variable T0 : Type.
@@ -342,10 +423,19 @@ with paco4_3_2( r_0 r_1 r_2: rel4 T0 T1 T2 T3) x0 x1 x2 x3 : Prop :=
     (LE : pco_2 <4= (paco4_3_2 r_0 r_1 r_2 \4/ r_2))
     (SIM: gf_2 pco_0 pco_1 pco_2 x0 x1 x2 x3)
 .
+Definition upaco4_3_0( r_0 r_1 r_2: rel4 T0 T1 T2 T3) := paco4_3_0 r_0 r_1 r_2 \4/ r_0.
+Definition upaco4_3_1( r_0 r_1 r_2: rel4 T0 T1 T2 T3) := paco4_3_1 r_0 r_1 r_2 \4/ r_1.
+Definition upaco4_3_2( r_0 r_1 r_2: rel4 T0 T1 T2 T3) := paco4_3_2 r_0 r_1 r_2 \4/ r_2.
 End Arg4_3_def.
 Implicit Arguments paco4_3_0 [ T0 T1 T2 T3 ].
+Implicit Arguments upaco4_3_0 [ T0 T1 T2 T3 ].
+Hint Unfold upaco4_3_0.
 Implicit Arguments paco4_3_1 [ T0 T1 T2 T3 ].
+Implicit Arguments upaco4_3_1 [ T0 T1 T2 T3 ].
+Hint Unfold upaco4_3_1.
 Implicit Arguments paco4_3_2 [ T0 T1 T2 T3 ].
+Implicit Arguments upaco4_3_2 [ T0 T1 T2 T3 ].
+Hint Unfold upaco4_3_2.
 
 Section Arg5_def.
 Variable T0 : Type.
@@ -361,8 +451,11 @@ CoInductive paco5( r: rel5 T0 T1 T2 T3 T4) x0 x1 x2 x3 x4 : Prop :=
     (LE : pco <5= (paco5 r \5/ r))
     (SIM: gf pco x0 x1 x2 x3 x4)
 .
+Definition upaco5( r: rel5 T0 T1 T2 T3 T4) := paco5 r \5/ r.
 End Arg5_def.
 Implicit Arguments paco5 [ T0 T1 T2 T3 T4 ].
+Implicit Arguments upaco5 [ T0 T1 T2 T3 T4 ].
+Hint Unfold upaco5.
 
 Section Arg5_2_def.
 Variable T0 : Type.
@@ -385,9 +478,15 @@ with paco5_2_1( r_0 r_1: rel5 T0 T1 T2 T3 T4) x0 x1 x2 x3 x4 : Prop :=
     (LE : pco_1 <5= (paco5_2_1 r_0 r_1 \5/ r_1))
     (SIM: gf_1 pco_0 pco_1 x0 x1 x2 x3 x4)
 .
+Definition upaco5_2_0( r_0 r_1: rel5 T0 T1 T2 T3 T4) := paco5_2_0 r_0 r_1 \5/ r_0.
+Definition upaco5_2_1( r_0 r_1: rel5 T0 T1 T2 T3 T4) := paco5_2_1 r_0 r_1 \5/ r_1.
 End Arg5_2_def.
 Implicit Arguments paco5_2_0 [ T0 T1 T2 T3 T4 ].
+Implicit Arguments upaco5_2_0 [ T0 T1 T2 T3 T4 ].
+Hint Unfold upaco5_2_0.
 Implicit Arguments paco5_2_1 [ T0 T1 T2 T3 T4 ].
+Implicit Arguments upaco5_2_1 [ T0 T1 T2 T3 T4 ].
+Hint Unfold upaco5_2_1.
 
 Section Arg5_3_def.
 Variable T0 : Type.
@@ -419,10 +518,19 @@ with paco5_3_2( r_0 r_1 r_2: rel5 T0 T1 T2 T3 T4) x0 x1 x2 x3 x4 : Prop :=
     (LE : pco_2 <5= (paco5_3_2 r_0 r_1 r_2 \5/ r_2))
     (SIM: gf_2 pco_0 pco_1 pco_2 x0 x1 x2 x3 x4)
 .
+Definition upaco5_3_0( r_0 r_1 r_2: rel5 T0 T1 T2 T3 T4) := paco5_3_0 r_0 r_1 r_2 \5/ r_0.
+Definition upaco5_3_1( r_0 r_1 r_2: rel5 T0 T1 T2 T3 T4) := paco5_3_1 r_0 r_1 r_2 \5/ r_1.
+Definition upaco5_3_2( r_0 r_1 r_2: rel5 T0 T1 T2 T3 T4) := paco5_3_2 r_0 r_1 r_2 \5/ r_2.
 End Arg5_3_def.
 Implicit Arguments paco5_3_0 [ T0 T1 T2 T3 T4 ].
+Implicit Arguments upaco5_3_0 [ T0 T1 T2 T3 T4 ].
+Hint Unfold upaco5_3_0.
 Implicit Arguments paco5_3_1 [ T0 T1 T2 T3 T4 ].
+Implicit Arguments upaco5_3_1 [ T0 T1 T2 T3 T4 ].
+Hint Unfold upaco5_3_1.
 Implicit Arguments paco5_3_2 [ T0 T1 T2 T3 T4 ].
+Implicit Arguments upaco5_3_2 [ T0 T1 T2 T3 T4 ].
+Hint Unfold upaco5_3_2.
 
 Section Arg6_def.
 Variable T0 : Type.
@@ -439,8 +547,11 @@ CoInductive paco6( r: rel6 T0 T1 T2 T3 T4 T5) x0 x1 x2 x3 x4 x5 : Prop :=
     (LE : pco <6= (paco6 r \6/ r))
     (SIM: gf pco x0 x1 x2 x3 x4 x5)
 .
+Definition upaco6( r: rel6 T0 T1 T2 T3 T4 T5) := paco6 r \6/ r.
 End Arg6_def.
 Implicit Arguments paco6 [ T0 T1 T2 T3 T4 T5 ].
+Implicit Arguments upaco6 [ T0 T1 T2 T3 T4 T5 ].
+Hint Unfold upaco6.
 
 Section Arg6_2_def.
 Variable T0 : Type.
@@ -464,9 +575,15 @@ with paco6_2_1( r_0 r_1: rel6 T0 T1 T2 T3 T4 T5) x0 x1 x2 x3 x4 x5 : Prop :=
     (LE : pco_1 <6= (paco6_2_1 r_0 r_1 \6/ r_1))
     (SIM: gf_1 pco_0 pco_1 x0 x1 x2 x3 x4 x5)
 .
+Definition upaco6_2_0( r_0 r_1: rel6 T0 T1 T2 T3 T4 T5) := paco6_2_0 r_0 r_1 \6/ r_0.
+Definition upaco6_2_1( r_0 r_1: rel6 T0 T1 T2 T3 T4 T5) := paco6_2_1 r_0 r_1 \6/ r_1.
 End Arg6_2_def.
 Implicit Arguments paco6_2_0 [ T0 T1 T2 T3 T4 T5 ].
+Implicit Arguments upaco6_2_0 [ T0 T1 T2 T3 T4 T5 ].
+Hint Unfold upaco6_2_0.
 Implicit Arguments paco6_2_1 [ T0 T1 T2 T3 T4 T5 ].
+Implicit Arguments upaco6_2_1 [ T0 T1 T2 T3 T4 T5 ].
+Hint Unfold upaco6_2_1.
 
 Section Arg6_3_def.
 Variable T0 : Type.
@@ -499,10 +616,19 @@ with paco6_3_2( r_0 r_1 r_2: rel6 T0 T1 T2 T3 T4 T5) x0 x1 x2 x3 x4 x5 : Prop :=
     (LE : pco_2 <6= (paco6_3_2 r_0 r_1 r_2 \6/ r_2))
     (SIM: gf_2 pco_0 pco_1 pco_2 x0 x1 x2 x3 x4 x5)
 .
+Definition upaco6_3_0( r_0 r_1 r_2: rel6 T0 T1 T2 T3 T4 T5) := paco6_3_0 r_0 r_1 r_2 \6/ r_0.
+Definition upaco6_3_1( r_0 r_1 r_2: rel6 T0 T1 T2 T3 T4 T5) := paco6_3_1 r_0 r_1 r_2 \6/ r_1.
+Definition upaco6_3_2( r_0 r_1 r_2: rel6 T0 T1 T2 T3 T4 T5) := paco6_3_2 r_0 r_1 r_2 \6/ r_2.
 End Arg6_3_def.
 Implicit Arguments paco6_3_0 [ T0 T1 T2 T3 T4 T5 ].
+Implicit Arguments upaco6_3_0 [ T0 T1 T2 T3 T4 T5 ].
+Hint Unfold upaco6_3_0.
 Implicit Arguments paco6_3_1 [ T0 T1 T2 T3 T4 T5 ].
+Implicit Arguments upaco6_3_1 [ T0 T1 T2 T3 T4 T5 ].
+Hint Unfold upaco6_3_1.
 Implicit Arguments paco6_3_2 [ T0 T1 T2 T3 T4 T5 ].
+Implicit Arguments upaco6_3_2 [ T0 T1 T2 T3 T4 T5 ].
+Hint Unfold upaco6_3_2.
 
 Section Arg7_def.
 Variable T0 : Type.
@@ -520,8 +646,11 @@ CoInductive paco7( r: rel7 T0 T1 T2 T3 T4 T5 T6) x0 x1 x2 x3 x4 x5 x6 : Prop :=
     (LE : pco <7= (paco7 r \7/ r))
     (SIM: gf pco x0 x1 x2 x3 x4 x5 x6)
 .
+Definition upaco7( r: rel7 T0 T1 T2 T3 T4 T5 T6) := paco7 r \7/ r.
 End Arg7_def.
 Implicit Arguments paco7 [ T0 T1 T2 T3 T4 T5 T6 ].
+Implicit Arguments upaco7 [ T0 T1 T2 T3 T4 T5 T6 ].
+Hint Unfold upaco7.
 
 Section Arg7_2_def.
 Variable T0 : Type.
@@ -546,9 +675,15 @@ with paco7_2_1( r_0 r_1: rel7 T0 T1 T2 T3 T4 T5 T6) x0 x1 x2 x3 x4 x5 x6 : Prop 
     (LE : pco_1 <7= (paco7_2_1 r_0 r_1 \7/ r_1))
     (SIM: gf_1 pco_0 pco_1 x0 x1 x2 x3 x4 x5 x6)
 .
+Definition upaco7_2_0( r_0 r_1: rel7 T0 T1 T2 T3 T4 T5 T6) := paco7_2_0 r_0 r_1 \7/ r_0.
+Definition upaco7_2_1( r_0 r_1: rel7 T0 T1 T2 T3 T4 T5 T6) := paco7_2_1 r_0 r_1 \7/ r_1.
 End Arg7_2_def.
 Implicit Arguments paco7_2_0 [ T0 T1 T2 T3 T4 T5 T6 ].
+Implicit Arguments upaco7_2_0 [ T0 T1 T2 T3 T4 T5 T6 ].
+Hint Unfold upaco7_2_0.
 Implicit Arguments paco7_2_1 [ T0 T1 T2 T3 T4 T5 T6 ].
+Implicit Arguments upaco7_2_1 [ T0 T1 T2 T3 T4 T5 T6 ].
+Hint Unfold upaco7_2_1.
 
 Section Arg7_3_def.
 Variable T0 : Type.
@@ -582,10 +717,19 @@ with paco7_3_2( r_0 r_1 r_2: rel7 T0 T1 T2 T3 T4 T5 T6) x0 x1 x2 x3 x4 x5 x6 : P
     (LE : pco_2 <7= (paco7_3_2 r_0 r_1 r_2 \7/ r_2))
     (SIM: gf_2 pco_0 pco_1 pco_2 x0 x1 x2 x3 x4 x5 x6)
 .
+Definition upaco7_3_0( r_0 r_1 r_2: rel7 T0 T1 T2 T3 T4 T5 T6) := paco7_3_0 r_0 r_1 r_2 \7/ r_0.
+Definition upaco7_3_1( r_0 r_1 r_2: rel7 T0 T1 T2 T3 T4 T5 T6) := paco7_3_1 r_0 r_1 r_2 \7/ r_1.
+Definition upaco7_3_2( r_0 r_1 r_2: rel7 T0 T1 T2 T3 T4 T5 T6) := paco7_3_2 r_0 r_1 r_2 \7/ r_2.
 End Arg7_3_def.
 Implicit Arguments paco7_3_0 [ T0 T1 T2 T3 T4 T5 T6 ].
+Implicit Arguments upaco7_3_0 [ T0 T1 T2 T3 T4 T5 T6 ].
+Hint Unfold upaco7_3_0.
 Implicit Arguments paco7_3_1 [ T0 T1 T2 T3 T4 T5 T6 ].
+Implicit Arguments upaco7_3_1 [ T0 T1 T2 T3 T4 T5 T6 ].
+Hint Unfold upaco7_3_1.
 Implicit Arguments paco7_3_2 [ T0 T1 T2 T3 T4 T5 T6 ].
+Implicit Arguments upaco7_3_2 [ T0 T1 T2 T3 T4 T5 T6 ].
+Hint Unfold upaco7_3_2.
 
 Section Arg8_def.
 Variable T0 : Type.
@@ -604,8 +748,11 @@ CoInductive paco8( r: rel8 T0 T1 T2 T3 T4 T5 T6 T7) x0 x1 x2 x3 x4 x5 x6 x7 : Pr
     (LE : pco <8= (paco8 r \8/ r))
     (SIM: gf pco x0 x1 x2 x3 x4 x5 x6 x7)
 .
+Definition upaco8( r: rel8 T0 T1 T2 T3 T4 T5 T6 T7) := paco8 r \8/ r.
 End Arg8_def.
 Implicit Arguments paco8 [ T0 T1 T2 T3 T4 T5 T6 T7 ].
+Implicit Arguments upaco8 [ T0 T1 T2 T3 T4 T5 T6 T7 ].
+Hint Unfold upaco8.
 
 Section Arg8_2_def.
 Variable T0 : Type.
@@ -631,9 +778,15 @@ with paco8_2_1( r_0 r_1: rel8 T0 T1 T2 T3 T4 T5 T6 T7) x0 x1 x2 x3 x4 x5 x6 x7 :
     (LE : pco_1 <8= (paco8_2_1 r_0 r_1 \8/ r_1))
     (SIM: gf_1 pco_0 pco_1 x0 x1 x2 x3 x4 x5 x6 x7)
 .
+Definition upaco8_2_0( r_0 r_1: rel8 T0 T1 T2 T3 T4 T5 T6 T7) := paco8_2_0 r_0 r_1 \8/ r_0.
+Definition upaco8_2_1( r_0 r_1: rel8 T0 T1 T2 T3 T4 T5 T6 T7) := paco8_2_1 r_0 r_1 \8/ r_1.
 End Arg8_2_def.
 Implicit Arguments paco8_2_0 [ T0 T1 T2 T3 T4 T5 T6 T7 ].
+Implicit Arguments upaco8_2_0 [ T0 T1 T2 T3 T4 T5 T6 T7 ].
+Hint Unfold upaco8_2_0.
 Implicit Arguments paco8_2_1 [ T0 T1 T2 T3 T4 T5 T6 T7 ].
+Implicit Arguments upaco8_2_1 [ T0 T1 T2 T3 T4 T5 T6 T7 ].
+Hint Unfold upaco8_2_1.
 
 Section Arg8_3_def.
 Variable T0 : Type.
@@ -668,10 +821,19 @@ with paco8_3_2( r_0 r_1 r_2: rel8 T0 T1 T2 T3 T4 T5 T6 T7) x0 x1 x2 x3 x4 x5 x6 
     (LE : pco_2 <8= (paco8_3_2 r_0 r_1 r_2 \8/ r_2))
     (SIM: gf_2 pco_0 pco_1 pco_2 x0 x1 x2 x3 x4 x5 x6 x7)
 .
+Definition upaco8_3_0( r_0 r_1 r_2: rel8 T0 T1 T2 T3 T4 T5 T6 T7) := paco8_3_0 r_0 r_1 r_2 \8/ r_0.
+Definition upaco8_3_1( r_0 r_1 r_2: rel8 T0 T1 T2 T3 T4 T5 T6 T7) := paco8_3_1 r_0 r_1 r_2 \8/ r_1.
+Definition upaco8_3_2( r_0 r_1 r_2: rel8 T0 T1 T2 T3 T4 T5 T6 T7) := paco8_3_2 r_0 r_1 r_2 \8/ r_2.
 End Arg8_3_def.
 Implicit Arguments paco8_3_0 [ T0 T1 T2 T3 T4 T5 T6 T7 ].
+Implicit Arguments upaco8_3_0 [ T0 T1 T2 T3 T4 T5 T6 T7 ].
+Hint Unfold upaco8_3_0.
 Implicit Arguments paco8_3_1 [ T0 T1 T2 T3 T4 T5 T6 T7 ].
+Implicit Arguments upaco8_3_1 [ T0 T1 T2 T3 T4 T5 T6 T7 ].
+Hint Unfold upaco8_3_1.
 Implicit Arguments paco8_3_2 [ T0 T1 T2 T3 T4 T5 T6 T7 ].
+Implicit Arguments upaco8_3_2 [ T0 T1 T2 T3 T4 T5 T6 T7 ].
+Hint Unfold upaco8_3_2.
 
 Section Arg9_def.
 Variable T0 : Type.
@@ -691,8 +853,11 @@ CoInductive paco9( r: rel9 T0 T1 T2 T3 T4 T5 T6 T7 T8) x0 x1 x2 x3 x4 x5 x6 x7 x
     (LE : pco <9= (paco9 r \9/ r))
     (SIM: gf pco x0 x1 x2 x3 x4 x5 x6 x7 x8)
 .
+Definition upaco9( r: rel9 T0 T1 T2 T3 T4 T5 T6 T7 T8) := paco9 r \9/ r.
 End Arg9_def.
 Implicit Arguments paco9 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 ].
+Implicit Arguments upaco9 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 ].
+Hint Unfold upaco9.
 
 Section Arg9_2_def.
 Variable T0 : Type.
@@ -719,9 +884,15 @@ with paco9_2_1( r_0 r_1: rel9 T0 T1 T2 T3 T4 T5 T6 T7 T8) x0 x1 x2 x3 x4 x5 x6 x
     (LE : pco_1 <9= (paco9_2_1 r_0 r_1 \9/ r_1))
     (SIM: gf_1 pco_0 pco_1 x0 x1 x2 x3 x4 x5 x6 x7 x8)
 .
+Definition upaco9_2_0( r_0 r_1: rel9 T0 T1 T2 T3 T4 T5 T6 T7 T8) := paco9_2_0 r_0 r_1 \9/ r_0.
+Definition upaco9_2_1( r_0 r_1: rel9 T0 T1 T2 T3 T4 T5 T6 T7 T8) := paco9_2_1 r_0 r_1 \9/ r_1.
 End Arg9_2_def.
 Implicit Arguments paco9_2_0 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 ].
+Implicit Arguments upaco9_2_0 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 ].
+Hint Unfold upaco9_2_0.
 Implicit Arguments paco9_2_1 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 ].
+Implicit Arguments upaco9_2_1 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 ].
+Hint Unfold upaco9_2_1.
 
 Section Arg9_3_def.
 Variable T0 : Type.
@@ -757,10 +928,19 @@ with paco9_3_2( r_0 r_1 r_2: rel9 T0 T1 T2 T3 T4 T5 T6 T7 T8) x0 x1 x2 x3 x4 x5 
     (LE : pco_2 <9= (paco9_3_2 r_0 r_1 r_2 \9/ r_2))
     (SIM: gf_2 pco_0 pco_1 pco_2 x0 x1 x2 x3 x4 x5 x6 x7 x8)
 .
+Definition upaco9_3_0( r_0 r_1 r_2: rel9 T0 T1 T2 T3 T4 T5 T6 T7 T8) := paco9_3_0 r_0 r_1 r_2 \9/ r_0.
+Definition upaco9_3_1( r_0 r_1 r_2: rel9 T0 T1 T2 T3 T4 T5 T6 T7 T8) := paco9_3_1 r_0 r_1 r_2 \9/ r_1.
+Definition upaco9_3_2( r_0 r_1 r_2: rel9 T0 T1 T2 T3 T4 T5 T6 T7 T8) := paco9_3_2 r_0 r_1 r_2 \9/ r_2.
 End Arg9_3_def.
 Implicit Arguments paco9_3_0 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 ].
+Implicit Arguments upaco9_3_0 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 ].
+Hint Unfold upaco9_3_0.
 Implicit Arguments paco9_3_1 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 ].
+Implicit Arguments upaco9_3_1 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 ].
+Hint Unfold upaco9_3_1.
 Implicit Arguments paco9_3_2 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 ].
+Implicit Arguments upaco9_3_2 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 ].
+Hint Unfold upaco9_3_2.
 
 Section Arg10_def.
 Variable T0 : Type.
@@ -781,8 +961,11 @@ CoInductive paco10( r: rel10 T0 T1 T2 T3 T4 T5 T6 T7 T8 T9) x0 x1 x2 x3 x4 x5 x6
     (LE : pco <10= (paco10 r \10/ r))
     (SIM: gf pco x0 x1 x2 x3 x4 x5 x6 x7 x8 x9)
 .
+Definition upaco10( r: rel10 T0 T1 T2 T3 T4 T5 T6 T7 T8 T9) := paco10 r \10/ r.
 End Arg10_def.
 Implicit Arguments paco10 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 ].
+Implicit Arguments upaco10 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 ].
+Hint Unfold upaco10.
 
 Section Arg10_2_def.
 Variable T0 : Type.
@@ -810,9 +993,15 @@ with paco10_2_1( r_0 r_1: rel10 T0 T1 T2 T3 T4 T5 T6 T7 T8 T9) x0 x1 x2 x3 x4 x5
     (LE : pco_1 <10= (paco10_2_1 r_0 r_1 \10/ r_1))
     (SIM: gf_1 pco_0 pco_1 x0 x1 x2 x3 x4 x5 x6 x7 x8 x9)
 .
+Definition upaco10_2_0( r_0 r_1: rel10 T0 T1 T2 T3 T4 T5 T6 T7 T8 T9) := paco10_2_0 r_0 r_1 \10/ r_0.
+Definition upaco10_2_1( r_0 r_1: rel10 T0 T1 T2 T3 T4 T5 T6 T7 T8 T9) := paco10_2_1 r_0 r_1 \10/ r_1.
 End Arg10_2_def.
 Implicit Arguments paco10_2_0 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 ].
+Implicit Arguments upaco10_2_0 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 ].
+Hint Unfold upaco10_2_0.
 Implicit Arguments paco10_2_1 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 ].
+Implicit Arguments upaco10_2_1 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 ].
+Hint Unfold upaco10_2_1.
 
 Section Arg10_3_def.
 Variable T0 : Type.
@@ -849,10 +1038,19 @@ with paco10_3_2( r_0 r_1 r_2: rel10 T0 T1 T2 T3 T4 T5 T6 T7 T8 T9) x0 x1 x2 x3 x
     (LE : pco_2 <10= (paco10_3_2 r_0 r_1 r_2 \10/ r_2))
     (SIM: gf_2 pco_0 pco_1 pco_2 x0 x1 x2 x3 x4 x5 x6 x7 x8 x9)
 .
+Definition upaco10_3_0( r_0 r_1 r_2: rel10 T0 T1 T2 T3 T4 T5 T6 T7 T8 T9) := paco10_3_0 r_0 r_1 r_2 \10/ r_0.
+Definition upaco10_3_1( r_0 r_1 r_2: rel10 T0 T1 T2 T3 T4 T5 T6 T7 T8 T9) := paco10_3_1 r_0 r_1 r_2 \10/ r_1.
+Definition upaco10_3_2( r_0 r_1 r_2: rel10 T0 T1 T2 T3 T4 T5 T6 T7 T8 T9) := paco10_3_2 r_0 r_1 r_2 \10/ r_2.
 End Arg10_3_def.
 Implicit Arguments paco10_3_0 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 ].
+Implicit Arguments upaco10_3_0 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 ].
+Hint Unfold upaco10_3_0.
 Implicit Arguments paco10_3_1 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 ].
+Implicit Arguments upaco10_3_1 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 ].
+Hint Unfold upaco10_3_1.
 Implicit Arguments paco10_3_2 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 ].
+Implicit Arguments upaco10_3_2 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 ].
+Hint Unfold upaco10_3_2.
 
 Section Arg11_def.
 Variable T0 : Type.
@@ -874,8 +1072,11 @@ CoInductive paco11( r: rel11 T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10) x0 x1 x2 x3 x4 x
     (LE : pco <11= (paco11 r \11/ r))
     (SIM: gf pco x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10)
 .
+Definition upaco11( r: rel11 T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10) := paco11 r \11/ r.
 End Arg11_def.
 Implicit Arguments paco11 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 ].
+Implicit Arguments upaco11 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 ].
+Hint Unfold upaco11.
 
 Section Arg11_2_def.
 Variable T0 : Type.
@@ -904,9 +1105,15 @@ with paco11_2_1( r_0 r_1: rel11 T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10) x0 x1 x2 x3 x
     (LE : pco_1 <11= (paco11_2_1 r_0 r_1 \11/ r_1))
     (SIM: gf_1 pco_0 pco_1 x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10)
 .
+Definition upaco11_2_0( r_0 r_1: rel11 T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10) := paco11_2_0 r_0 r_1 \11/ r_0.
+Definition upaco11_2_1( r_0 r_1: rel11 T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10) := paco11_2_1 r_0 r_1 \11/ r_1.
 End Arg11_2_def.
 Implicit Arguments paco11_2_0 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 ].
+Implicit Arguments upaco11_2_0 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 ].
+Hint Unfold upaco11_2_0.
 Implicit Arguments paco11_2_1 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 ].
+Implicit Arguments upaco11_2_1 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 ].
+Hint Unfold upaco11_2_1.
 
 Section Arg11_3_def.
 Variable T0 : Type.
@@ -944,10 +1151,19 @@ with paco11_3_2( r_0 r_1 r_2: rel11 T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10) x0 x1 x2 
     (LE : pco_2 <11= (paco11_3_2 r_0 r_1 r_2 \11/ r_2))
     (SIM: gf_2 pco_0 pco_1 pco_2 x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10)
 .
+Definition upaco11_3_0( r_0 r_1 r_2: rel11 T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10) := paco11_3_0 r_0 r_1 r_2 \11/ r_0.
+Definition upaco11_3_1( r_0 r_1 r_2: rel11 T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10) := paco11_3_1 r_0 r_1 r_2 \11/ r_1.
+Definition upaco11_3_2( r_0 r_1 r_2: rel11 T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10) := paco11_3_2 r_0 r_1 r_2 \11/ r_2.
 End Arg11_3_def.
 Implicit Arguments paco11_3_0 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 ].
+Implicit Arguments upaco11_3_0 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 ].
+Hint Unfold upaco11_3_0.
 Implicit Arguments paco11_3_1 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 ].
+Implicit Arguments upaco11_3_1 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 ].
+Hint Unfold upaco11_3_1.
 Implicit Arguments paco11_3_2 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 ].
+Implicit Arguments upaco11_3_2 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 ].
+Hint Unfold upaco11_3_2.
 
 Section Arg12_def.
 Variable T0 : Type.
@@ -970,8 +1186,11 @@ CoInductive paco12( r: rel12 T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11) x0 x1 x2 x3 
     (LE : pco <12= (paco12 r \12/ r))
     (SIM: gf pco x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11)
 .
+Definition upaco12( r: rel12 T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11) := paco12 r \12/ r.
 End Arg12_def.
 Implicit Arguments paco12 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 ].
+Implicit Arguments upaco12 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 ].
+Hint Unfold upaco12.
 
 Section Arg12_2_def.
 Variable T0 : Type.
@@ -1001,9 +1220,15 @@ with paco12_2_1( r_0 r_1: rel12 T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11) x0 x1 x2 
     (LE : pco_1 <12= (paco12_2_1 r_0 r_1 \12/ r_1))
     (SIM: gf_1 pco_0 pco_1 x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11)
 .
+Definition upaco12_2_0( r_0 r_1: rel12 T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11) := paco12_2_0 r_0 r_1 \12/ r_0.
+Definition upaco12_2_1( r_0 r_1: rel12 T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11) := paco12_2_1 r_0 r_1 \12/ r_1.
 End Arg12_2_def.
 Implicit Arguments paco12_2_0 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 ].
+Implicit Arguments upaco12_2_0 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 ].
+Hint Unfold upaco12_2_0.
 Implicit Arguments paco12_2_1 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 ].
+Implicit Arguments upaco12_2_1 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 ].
+Hint Unfold upaco12_2_1.
 
 Section Arg12_3_def.
 Variable T0 : Type.
@@ -1042,10 +1267,19 @@ with paco12_3_2( r_0 r_1 r_2: rel12 T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11) x0 x1
     (LE : pco_2 <12= (paco12_3_2 r_0 r_1 r_2 \12/ r_2))
     (SIM: gf_2 pco_0 pco_1 pco_2 x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11)
 .
+Definition upaco12_3_0( r_0 r_1 r_2: rel12 T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11) := paco12_3_0 r_0 r_1 r_2 \12/ r_0.
+Definition upaco12_3_1( r_0 r_1 r_2: rel12 T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11) := paco12_3_1 r_0 r_1 r_2 \12/ r_1.
+Definition upaco12_3_2( r_0 r_1 r_2: rel12 T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11) := paco12_3_2 r_0 r_1 r_2 \12/ r_2.
 End Arg12_3_def.
 Implicit Arguments paco12_3_0 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 ].
+Implicit Arguments upaco12_3_0 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 ].
+Hint Unfold upaco12_3_0.
 Implicit Arguments paco12_3_1 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 ].
+Implicit Arguments upaco12_3_1 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 ].
+Hint Unfold upaco12_3_1.
 Implicit Arguments paco12_3_2 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 ].
+Implicit Arguments upaco12_3_2 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 ].
+Hint Unfold upaco12_3_2.
 
 Section Arg13_def.
 Variable T0 : Type.
@@ -1069,8 +1303,11 @@ CoInductive paco13( r: rel13 T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12) x0 x1 x2
     (LE : pco <13= (paco13 r \13/ r))
     (SIM: gf pco x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12)
 .
+Definition upaco13( r: rel13 T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12) := paco13 r \13/ r.
 End Arg13_def.
 Implicit Arguments paco13 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 ].
+Implicit Arguments upaco13 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 ].
+Hint Unfold upaco13.
 
 Section Arg13_2_def.
 Variable T0 : Type.
@@ -1101,9 +1338,15 @@ with paco13_2_1( r_0 r_1: rel13 T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12) x0 x1
     (LE : pco_1 <13= (paco13_2_1 r_0 r_1 \13/ r_1))
     (SIM: gf_1 pco_0 pco_1 x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12)
 .
+Definition upaco13_2_0( r_0 r_1: rel13 T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12) := paco13_2_0 r_0 r_1 \13/ r_0.
+Definition upaco13_2_1( r_0 r_1: rel13 T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12) := paco13_2_1 r_0 r_1 \13/ r_1.
 End Arg13_2_def.
 Implicit Arguments paco13_2_0 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 ].
+Implicit Arguments upaco13_2_0 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 ].
+Hint Unfold upaco13_2_0.
 Implicit Arguments paco13_2_1 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 ].
+Implicit Arguments upaco13_2_1 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 ].
+Hint Unfold upaco13_2_1.
 
 Section Arg13_3_def.
 Variable T0 : Type.
@@ -1143,10 +1386,19 @@ with paco13_3_2( r_0 r_1 r_2: rel13 T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12) x
     (LE : pco_2 <13= (paco13_3_2 r_0 r_1 r_2 \13/ r_2))
     (SIM: gf_2 pco_0 pco_1 pco_2 x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12)
 .
+Definition upaco13_3_0( r_0 r_1 r_2: rel13 T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12) := paco13_3_0 r_0 r_1 r_2 \13/ r_0.
+Definition upaco13_3_1( r_0 r_1 r_2: rel13 T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12) := paco13_3_1 r_0 r_1 r_2 \13/ r_1.
+Definition upaco13_3_2( r_0 r_1 r_2: rel13 T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12) := paco13_3_2 r_0 r_1 r_2 \13/ r_2.
 End Arg13_3_def.
 Implicit Arguments paco13_3_0 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 ].
+Implicit Arguments upaco13_3_0 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 ].
+Hint Unfold upaco13_3_0.
 Implicit Arguments paco13_3_1 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 ].
+Implicit Arguments upaco13_3_1 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 ].
+Hint Unfold upaco13_3_1.
 Implicit Arguments paco13_3_2 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 ].
+Implicit Arguments upaco13_3_2 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 ].
+Hint Unfold upaco13_3_2.
 
 Section Arg14_def.
 Variable T0 : Type.
@@ -1171,8 +1423,11 @@ CoInductive paco14( r: rel14 T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 T13) x0 x
     (LE : pco <14= (paco14 r \14/ r))
     (SIM: gf pco x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13)
 .
+Definition upaco14( r: rel14 T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 T13) := paco14 r \14/ r.
 End Arg14_def.
 Implicit Arguments paco14 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 T13 ].
+Implicit Arguments upaco14 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 T13 ].
+Hint Unfold upaco14.
 
 Section Arg14_2_def.
 Variable T0 : Type.
@@ -1204,9 +1459,15 @@ with paco14_2_1( r_0 r_1: rel14 T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 T13) x
     (LE : pco_1 <14= (paco14_2_1 r_0 r_1 \14/ r_1))
     (SIM: gf_1 pco_0 pco_1 x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13)
 .
+Definition upaco14_2_0( r_0 r_1: rel14 T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 T13) := paco14_2_0 r_0 r_1 \14/ r_0.
+Definition upaco14_2_1( r_0 r_1: rel14 T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 T13) := paco14_2_1 r_0 r_1 \14/ r_1.
 End Arg14_2_def.
 Implicit Arguments paco14_2_0 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 T13 ].
+Implicit Arguments upaco14_2_0 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 T13 ].
+Hint Unfold upaco14_2_0.
 Implicit Arguments paco14_2_1 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 T13 ].
+Implicit Arguments upaco14_2_1 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 T13 ].
+Hint Unfold upaco14_2_1.
 
 Section Arg14_3_def.
 Variable T0 : Type.
@@ -1247,10 +1508,19 @@ with paco14_3_2( r_0 r_1 r_2: rel14 T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 T1
     (LE : pco_2 <14= (paco14_3_2 r_0 r_1 r_2 \14/ r_2))
     (SIM: gf_2 pco_0 pco_1 pco_2 x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13)
 .
+Definition upaco14_3_0( r_0 r_1 r_2: rel14 T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 T13) := paco14_3_0 r_0 r_1 r_2 \14/ r_0.
+Definition upaco14_3_1( r_0 r_1 r_2: rel14 T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 T13) := paco14_3_1 r_0 r_1 r_2 \14/ r_1.
+Definition upaco14_3_2( r_0 r_1 r_2: rel14 T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 T13) := paco14_3_2 r_0 r_1 r_2 \14/ r_2.
 End Arg14_3_def.
 Implicit Arguments paco14_3_0 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 T13 ].
+Implicit Arguments upaco14_3_0 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 T13 ].
+Hint Unfold upaco14_3_0.
 Implicit Arguments paco14_3_1 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 T13 ].
+Implicit Arguments upaco14_3_1 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 T13 ].
+Hint Unfold upaco14_3_1.
 Implicit Arguments paco14_3_2 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 T13 ].
+Implicit Arguments upaco14_3_2 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 T13 ].
+Hint Unfold upaco14_3_2.
 
 Section Arg15_def.
 Variable T0 : Type.
@@ -1276,8 +1546,11 @@ CoInductive paco15( r: rel15 T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 T13 T14) 
     (LE : pco <15= (paco15 r \15/ r))
     (SIM: gf pco x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14)
 .
+Definition upaco15( r: rel15 T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 T13 T14) := paco15 r \15/ r.
 End Arg15_def.
 Implicit Arguments paco15 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 T13 T14 ].
+Implicit Arguments upaco15 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 T13 T14 ].
+Hint Unfold upaco15.
 
 Section Arg15_2_def.
 Variable T0 : Type.
@@ -1310,9 +1583,15 @@ with paco15_2_1( r_0 r_1: rel15 T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 T13 T1
     (LE : pco_1 <15= (paco15_2_1 r_0 r_1 \15/ r_1))
     (SIM: gf_1 pco_0 pco_1 x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14)
 .
+Definition upaco15_2_0( r_0 r_1: rel15 T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 T13 T14) := paco15_2_0 r_0 r_1 \15/ r_0.
+Definition upaco15_2_1( r_0 r_1: rel15 T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 T13 T14) := paco15_2_1 r_0 r_1 \15/ r_1.
 End Arg15_2_def.
 Implicit Arguments paco15_2_0 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 T13 T14 ].
+Implicit Arguments upaco15_2_0 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 T13 T14 ].
+Hint Unfold upaco15_2_0.
 Implicit Arguments paco15_2_1 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 T13 T14 ].
+Implicit Arguments upaco15_2_1 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 T13 T14 ].
+Hint Unfold upaco15_2_1.
 
 Section Arg15_3_def.
 Variable T0 : Type.
@@ -1354,8 +1633,17 @@ with paco15_3_2( r_0 r_1 r_2: rel15 T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 T1
     (LE : pco_2 <15= (paco15_3_2 r_0 r_1 r_2 \15/ r_2))
     (SIM: gf_2 pco_0 pco_1 pco_2 x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14)
 .
+Definition upaco15_3_0( r_0 r_1 r_2: rel15 T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 T13 T14) := paco15_3_0 r_0 r_1 r_2 \15/ r_0.
+Definition upaco15_3_1( r_0 r_1 r_2: rel15 T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 T13 T14) := paco15_3_1 r_0 r_1 r_2 \15/ r_1.
+Definition upaco15_3_2( r_0 r_1 r_2: rel15 T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 T13 T14) := paco15_3_2 r_0 r_1 r_2 \15/ r_2.
 End Arg15_3_def.
 Implicit Arguments paco15_3_0 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 T13 T14 ].
+Implicit Arguments upaco15_3_0 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 T13 T14 ].
+Hint Unfold upaco15_3_0.
 Implicit Arguments paco15_3_1 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 T13 T14 ].
+Implicit Arguments upaco15_3_1 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 T13 T14 ].
+Hint Unfold upaco15_3_1.
 Implicit Arguments paco15_3_2 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 T13 T14 ].
+Implicit Arguments upaco15_3_2 [ T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 T13 T14 ].
+Hint Unfold upaco15_3_2.
 
