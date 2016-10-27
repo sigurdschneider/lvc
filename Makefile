@@ -19,6 +19,7 @@ ifeq ($(wildcard time.rb)$(wildcard .timing),time.rb.timing)
   export TIMECMD=@./time.rb $(if $(findstring j,$(MAKEFLAGS)),--parallel,)
 endif
 export COQDOCFLAGS=--interpolate --utf8 --toc --toc-depth 3 --index indexpage --no-lib-name
+export VERBOSE=false
 
 #if [[ -z "$VANILLA" && -e "time.rb" ]]; then \
 #	echo "Patching ${MAKEFILE} to use ruby-based timing scripts (use --vanilla if undesired)."

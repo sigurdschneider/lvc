@@ -110,8 +110,7 @@ Proof.
   - rewrite H, IHrenamedApart1, IHrenamedApart2. cset_tac.
   - rewrite IHrenamedApart.
     rewrite (@list_union_incl _ _ _ _ D); eauto with cset.
-    intros ? ? GET. inv_map GET.
-    edestruct (get_length_eq _ H7 H); eauto.
+    intros ? ? GET. inv_get.
     rewrite H1; eauto.
     edestruct H2; eauto; dcr; eauto with cset.
 Qed.
@@ -125,7 +124,7 @@ Proof.
   - rewrite IHrenamedApart.
     eapply eq_union_lr; eauto.
     eapply list_union_eq; eauto with len.
-    intros. inv_map H7. inv_zip H8. get_functional; subst.
+    intros; inv_get.
     rewrite H1; eauto. unfold defVars. eauto with cset.
 Qed.
 
@@ -148,7 +147,7 @@ Instance mapAnn_pminus_morphism G'
 Proof.
   unfold Proper, respectful; intros.
   general induction H; simpl; constructor; eauto with len pe.
-  - intros. inv_map H4. inv_map H5. eauto.
+  - intros; inv_get; eauto.
 Qed.
 
 Lemma renamedApart_minus D an an' s
@@ -164,29 +163,30 @@ Proof.
   - econstructor; eauto with cset.
   - econstructor; eauto with cset.
   - econstructor; eauto with cset len.
-    + intros ? ? ? GET1 GET2. inv_map GET2. eapply H1; eauto.
+    + intros ? ? ? GET1 GET2. inv_get. eapply H1; eauto.
       eapply disj_1_incl; eauto.
       rewrite <- get_list_union_map; eauto. cset_tac.
-    + hnf; intros ? ? ? GET1 GET2.
-      inv_map GET2. edestruct H2; eauto; dcr. instantiate (1:=Dt).
+    + hnf; intros ? ? ? GET1 GET2; inv_get.
+      edestruct H2; dcr; eauto.
+      instantiate (1:=Dt).
       hnf. rewrite getAnn_mapAnn.
       destruct (getAnn x); simpl in *.
       assert (disj (of_list (fst a)) D).
       eapply disj_1_incl; eauto.
       rewrite <- get_list_union_map; eauto. cset_tac; intuition.
-      split. rewrite H7.
-      revert H8; unfold disj; clear_all; cset_tac; intuition; eauto.
-      eauto with cset.
+      split.
+      * rewrite H6.
+        revert H7; unfold disj; clear_all; cset_tac; intuition; eauto.
+      * eauto with cset.
     + eapply pairwise_disj_PIR2; eauto.
       eapply zip_ext_PIR2; eauto. rewrite map_length; eauto.
-      intros ? ? ? ? ? GET1 GET2 GET3 GET4. get_functional; subst.
-      inv_map GET4.
+      intros ? ? ? ? ? GET1 GET2 GET3 GET4. inv_get.
       unfold defVars. rewrite getAnn_mapAnn. destruct (getAnn y); reflexivity.
     + eauto with cset pe ann.
     + rewrite list_union_eq; eauto with len.
-      intros ? ? ? GET1 GET2. inv_zip GET1. inv_zip GET2. inv_map H7.
-      get_functional; subst. unfold defVars.
-      rewrite getAnn_mapAnn. destruct (getAnn x2); simpl. reflexivity.
+      intros ? ? ? GET1 GET2; inv_get.
+      unfold defVars. rewrite getAnn_mapAnn.
+      destruct (getAnn x0); simpl. reflexivity.
 Qed.
 
 (** ** The two annotating sets are disjoint. *)

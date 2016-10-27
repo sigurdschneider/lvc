@@ -9,6 +9,8 @@ Set Implicit Arguments.
 Unset Printing Records.
 Print Coercions.
 
+Qed.
+
 Inductive eqn_sound : list params -> list (set var) -> list eqns  (*params*set var*eqns*)
                       -> stmt -> stmt
                       -> eqns

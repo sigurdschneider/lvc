@@ -88,8 +88,8 @@ Proof.
   intros. pinversion H2; subst.
   - pfold. eapply SimSilent; eauto 20 using plus2O.
   - pfold. eapply SimExtern; intros; eauto using star2_refl.
-    + edestruct H6; eauto; dcr; pclearbot; eauto.
-    + edestruct H7; eauto; dcr; pclearbot; eauto.
+    + edestruct H6; eauto; dcr; pclearbot; eauto 20.
+    + edestruct H7; eauto; dcr; pclearbot; eauto 20.
   - pfold. eapply SimTerm; eauto using star2_refl.
 Qed.
 
@@ -114,8 +114,8 @@ Proof.
   intros. pinversion H2; subst.
   - pfold. eapply SimSilent; eauto using plus2O.
   - pfold. eapply SimExtern; intros; eauto using star2_refl.
-    + edestruct H7; eauto; dcr; pclearbot; eauto.
-    + edestruct H6; eauto; dcr; pclearbot; eauto.
+    + edestruct H7; eauto; dcr; pclearbot; eauto 20.
+    + edestruct H6; eauto; dcr; pclearbot; eauto 20.
   - pfold. eapply SimTerm; eauto using star2_refl.
 Qed.
 
@@ -498,13 +498,13 @@ Proof.
   - {
       pinversion H3; pinversion H5; subst.
       - (* plus <-> plus *)
-        pfold. zzsimpl. zzcases; eauto.
+        pfold. zzsimpl. zzcases; eauto 20.
       - (* plus step <-> activated *)
         pfold. zzsimpl.
         zzcases. zzsimpl.
         + econstructor 2; eauto using plus2_star2.
-          * intros. zzsimpl; eauto 30 using star2_refl.
-          * intros. zzsimpl; eauto 30 using star2_refl.
+          * intros. unfold upaco3 in *; zzsimpl; eauto 10 using star2_refl.
+          * intros. unfold upaco3 in *; zzsimpl; eauto 10 using star2_refl.
         + zzsimpl. assert (t = Sim).
           eapply (@sim_t_Sim_activated t _ _ _ H10 H9 _ _ _ H7); eauto.
           subst.
@@ -528,14 +528,16 @@ Proof.
       - (* activated <-> plus step *)
         pfold. zzsimpl.
         zzcases. zzsimpl.
-        + econstructor 2; eauto using plus2_star2.
-          * intros. zzsimpl; eauto 30 using star2_refl.
-          * intros. zzsimpl; eauto 30 using star2_refl.
+        + unfold upaco3 in *.
+          econstructor 2; eauto using plus2_star2.
+          * intros. zzsimpl; eauto 10 using star2_refl.
+          * intros. zzsimpl; eauto 10 using star2_refl.
       - (* activated <-> activated *)
         pfold. zzsimpl.
+        unfold upaco3 in *.
         econstructor 2; eauto using plus2_star2.
-        * intros. zzsimpl; eauto 30 using star2_refl.
-        * intros. zzsimpl; eauto 30 using star2_refl.
+        * intros. zzsimpl; eauto 10 using star2_refl.
+        * intros. zzsimpl; eauto 10 using star2_refl.
       - (* activated <-> err *)
         zzsimpl.
       - (* activated <-> term *)
@@ -564,13 +566,15 @@ Proof.
   - {
       pinversion H3; pinversion H5; subst.
       - (* plus <-> plus *)
-        pfold. zzsimpl. zzcases; eauto.
+        pfold. zzsimpl.
+        zzcases; unfold upaco3 in *; eauto.
       - (* plus step <-> activated *)
         pfold. zzsimpl.
         zzcases. zzsimpl.
-        + econstructor 2; eauto using plus2_star2.
-          * intros. zzsimpl; eauto 30 using star2_refl.
-          * intros. zzsimpl; eauto 30 using star2_refl.
+        + unfold upaco3 in *.
+          econstructor 2; eauto using plus2_star2.
+          * intros. zzsimpl; eauto 10 using star2_refl.
+          * intros. zzsimpl; eauto 10 using star2_refl.
         + zzsimpl. assert (t = Sim).
           eapply (@sim_t_Sim_activated t _ _ _ H10 H9 _ _ _ H7); eauto.
           subst.
@@ -594,14 +598,16 @@ Proof.
       - (* activated <-> plus step *)
         pfold. zzsimpl.
         zzcases. zzsimpl.
-        + econstructor 2; eauto using plus2_star2.
-          * intros. zzsimpl; eauto 30 using star2_refl.
-          * intros. zzsimpl; eauto 30 using star2_refl.
+        + unfold upaco3 in *.
+          econstructor 2; eauto using plus2_star2.
+          * intros. zzsimpl; eauto 10 using star2_refl.
+          * intros. zzsimpl; eauto 10 using star2_refl.
       - (* activated <-> activated *)
         pfold. zzsimpl.
+        unfold upaco3 in *.
         econstructor 2; eauto using plus2_star2.
-        * intros. zzsimpl; eauto 30 using star2_refl.
-        * intros. zzsimpl; eauto 30 using star2_refl.
+        * intros. zzsimpl; eauto 10 using star2_refl.
+        * intros. zzsimpl; eauto 10 using star2_refl.
       - (* activated <-> err *)
         zzsimpl.
       - (* activated <-> term *)

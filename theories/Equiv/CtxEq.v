@@ -111,7 +111,7 @@ Proof.
   hnf; dcr; do 4 try split; eauto with len.
   - destruct H, H0; dcr; eauto.
   - eapply H.
-  - hnf; intros; simpl in *; destruct f,f'; simpl in *; subst; inv_get; repeat get_functional.
+  - hnf; intros; simpl in *; destruct f,f'; simpl in *; subst; inv_get.
     simpl. destruct x.
     destruct H as [_ [_ [_ [PA1 _]]]]. destruct H0 as [_ [_ [_ [PA2 _]]]].
     exploit (PA1 (LabI n0) (LabI n0)); eauto; simpl in *; dcr; subst.

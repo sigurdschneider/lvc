@@ -3,8 +3,8 @@ Require Import EqDec Computable Util.
 Require Export CSet MapAgreement MapUpdate LengthEq.
 
 Require Export OrderedTypeEx.
-Require Export MapInterface MapNotations.
-Require MapFacts MapNotations.
+Require Export MapInterface.
+Require Import MapFacts MapNotations.
 Require MapAVLInstance.
 
 

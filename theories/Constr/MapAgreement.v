@@ -5,6 +5,8 @@ Require Export MapBasics MapLookup.
 
 Set Implicit Arguments.
 
+Hint Resolve Equivalence_Reflexive Equivalence_Symmetric Equivalence_Transitive.
+
 Section MapAgreement.
   Open Scope fmap_scope.
 
@@ -16,19 +18,19 @@ Section MapAgreement.
   Definition agree_on (R:relation Y) (D:set X) (E E':X -> Y) :=
     forall x, x ∈ D -> R (E x) (E' x).
 
-  Global Instance agree_on_refl `{Reflexive Y} L
+  Global Instance agree_on_refl R `{Reflexive Y R} L
     : Reflexive (agree_on R L).
   Proof.
     firstorder.
   Qed.
 
-  Global Instance agree_on_sym `{Symmetric Y} L
+  Global Instance agree_on_sym  R `{Symmetric Y R} L
     : Symmetric (agree_on R L).
   Proof.
     intros; hnf; firstorder.
   Qed.
 
-  Lemma agree_on_trans `{Transitive Y} L
+  Lemma agree_on_trans R `{Transitive Y R} L
     : Transitive (agree_on R L).
   Proof.
     hnf; intros; hnf; intros. transitivity (y x0); eauto.

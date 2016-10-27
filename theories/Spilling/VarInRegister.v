@@ -195,10 +195,10 @@ Proof.
       inv_get.
       simpl.
       rewrite <- zip_app; [| eauto with len].
-      exploit H25 as spillSnd'; try eassumption.
+      exploit H24 as spillSnd'; try eassumption.
       exploit renaF as renaF'; try eassumption.
       exploit H2 as H2'; try eassumption.
-      exploit H11 as rm_VD; try eassumption.
+      exploit H10 as rm_VD; try eassumption.
       destruct H2' as [H2' _].
       destruct rm_VD as [f_x0_VD s_x0_VD].
       rewrite pair_eta with (p:=x0) in spillSnd'.
@@ -207,6 +207,6 @@ Proof.
     + rewrite <- zip_app; [| eauto with len].
       eapply IHlvSnd with (R:=R\K ∪ L) (M:=Sp ∪ M); eauto.
       * eapply R'_VD with (VD:=VD) (M:=M); eauto.
-      * rewrite H19, R_VD, M_VD; clear; cset_tac.
+      * rewrite H18, R_VD, M_VD; clear; cset_tac.
       * rewrite rena2, <- ra_VD; eauto.
 Qed.

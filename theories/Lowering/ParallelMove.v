@@ -191,7 +191,7 @@ Section GlueCode.
         agree_on eq vars M' (M[ l1 <-- lookup_list M l2]).
   Proof.
     unfold compile_parallel_assignment; intros.
-    cases in H; try discriminate. inv H.
+    cases in H; try discriminate.
     eapply validate_parallel_assignment_correct; eauto.
   Qed.
 
@@ -213,7 +213,7 @@ Lemma onlyVars_defined (E:onv val) Y Y' v
     -> forall x, x ∈ of_list Y' -> E x <> None.
 Proof.
   intros. general induction Y; simpl in * |- *; eauto.
-  - cset_tac; intuition.
+  - inv H; simpl in *. cset_tac; intuition.
   - destruct a; isabsurd. monadS_inv H. monad_inv H0.
     simpl in * |- *.
     cset_tac; congruence.
@@ -225,8 +225,9 @@ Lemma onlyVars_lookup (E:onv val) Y Y' v
     -> lookup_list E Y' = List.map Some v.
 Proof.
   intros. general induction Y; simpl in * |- *; eauto.
-  destruct a; isabsurd. monadS_inv H. monad_inv H0.
-  simpl in * |- *. inv EQ0. f_equal; eauto.
+  - inv H; eauto.
+  - destruct a; isabsurd. monadS_inv H. monad_inv H0.
+    simpl in * |- *. inv EQ0. f_equal; eauto.
 Qed.
 
 Fixpoint lower DL s (an:ann (set var))
@@ -297,7 +298,7 @@ Proof.
         eapply (inRel_drop LA H4).
         assert (getAnn al ⊆ blv) by eauto with cset.
         eapply agree_on_incl in X''; eauto. symmetry in X''. simpl.
-        eapply agree_on_trans; eauto. eapply equiv_transitive.
+        eapply agree_on_trans; eauto.
         erewrite onlyVars_lookup; eauto.
         eapply update_with_list_agree; eauto with len.
         eapply agree_on_incl; eauto. eauto with cset.

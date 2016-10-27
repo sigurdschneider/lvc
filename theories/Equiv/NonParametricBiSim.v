@@ -63,7 +63,7 @@ Lemma bisim_simp t {S} `{StateType S} {S'} `{StateType S'}
   : forall (σ:S) (σ':S'), bisim σ σ' -> sim bot3 t σ σ'.
 Proof.
   pcofix CIH; intros. invt bisim; pfold; eauto using sim_gen.
-  - econstructor 2; eauto.
+  - unfold upaco3. econstructor 2; eauto.
     + intros. edestruct H6; eauto; dcr; eauto.
     + intros. edestruct H7; eauto; dcr; eauto.
 Qed.
@@ -72,7 +72,7 @@ Lemma simp_bisim {S} `{StateType S} {S'} `{StateType S'}
   : forall (σ:S) (σ':S'), sim bot3 Bisim σ σ' -> bisim σ σ'.
 Proof.
   cofix CIH; intros.
-  assert (sim_gen (paco3 (sim_gen (S:=S) (S':=S')) bot3 \3/ bot3) Bisim σ σ').
+  assert (sim_gen (upaco3 (sim_gen (S:=S) (S':=S')) bot3) Bisim σ σ').
   punfold H1.
   inv H2; pclearbot.
   - econstructor 1; eauto.
@@ -146,15 +146,15 @@ Lemma sim_simp {S} `{StateType S} {S'} `{StateType S'}
 Proof.
   pcofix CIH; intros. inv H2; pfold; eauto using sim_gen.
   - econstructor 2; eauto.
-    + intros. edestruct H6; eauto; dcr; eauto.
-    + intros. edestruct H7; eauto; dcr; eauto.
+    + intros. edestruct H6; eauto; dcr; eauto 10.
+    + intros. edestruct H7; eauto; dcr; eauto 10.
 Qed.
 
 Lemma simp_sim t {S} `{StateType S} {S'} `{StateType S'}
   : forall (σ:S) (σ':S'), Sim.sim bot3 t σ σ' -> sim σ σ'.
 Proof.
   cofix CIH; intros.
-  assert (sim_gen (paco3 (sim_gen (S:=S) (S':=S')) bot3 \3/ bot3) t σ σ').
+  assert (sim_gen (upaco3 (sim_gen (S:=S) (S':=S')) bot3) t σ σ').
   punfold H1.
   inversion H2; pclearbot.
   - econstructor 1; eauto.

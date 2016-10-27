@@ -257,9 +257,11 @@ Ltac inv_map H :=
     | get (List.map ?f ?L) ?n ?x =>
       match goal with
         | [H' : get ?L ?n ?y |- _ ] =>
-          let EQ := fresh "EQ" in pose proof (map_get f H' H) as EQ; invcs EQ
+          let EQ := fresh "EQ" in pose proof (map_get f H' H) as EQ;
+                                 invcs EQ; clear_trivial_eqs
         | _ => let X := fresh "X" in let EQ := fresh "EQ" in
-              pose proof (map_get_4 _ f H) as X; destruct X as [? [? EQ]]; invcs EQ
+                                   pose proof (map_get_4 _ f H) as X; destruct X as [? [? EQ]];
+                                     invcs EQ; clear_trivial_eqs
       end
   end.
 
@@ -442,7 +444,6 @@ Lemma fold_zip_length_ass (X Y Z : Type) (f : X -> Y -> Y) DL a AP k
     -> length (fold_left (fun AP0 (z:Z) => zip f DL AP0) a AP) = k.
 Proof.
   intros. subst. general induction a; simpl; eauto with len.
-  rewrite IHa; eauto with len.
 Qed.
 
 Hint Resolve fold_zip_length_ass : len.
@@ -628,7 +629,7 @@ Lemma zip_map_fst X Y (L:list X) (L':list Y)
     -> zip (fun x _ => x) L L' = L.
 Proof.
   intros. length_equify.
-  general induction H; eauto; simpl in *.
+  general induction H; simpl; eauto.
   f_equal; eauto.
 Qed.
 

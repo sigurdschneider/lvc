@@ -303,7 +303,6 @@ Proof.
     intros.
     eapply replace_if_get_inv in H; dcr.
     destruct H2; dcr; cases in H0; isabsurd; inv_get; eauto using isVar.
-    exfalso; eapply H0; eauto.
     destruct x; eauto using isVar; exfalso; eapply NOTCOND; intro; isabsurd.
   - econstructor; intros; inv_get; eauto using app_expfree.
 Qed.

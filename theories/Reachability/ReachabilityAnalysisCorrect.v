@@ -355,16 +355,15 @@ Proof.
       eapply zip_get_eq. eauto. eauto. reflexivity.
       eapply H2. eauto. rewrite setTopAnn_eta. eauto.
       eauto.
-      rewrite !app_length, !map_length.
-      rewrite H14. eauto.
+      eauto with len.
+      eauto.
+      eapply ann_R_get in H8. rewrite getAnn_setTopAnn in H8.
       eauto.
       etransitivity; eauto.
       rewrite (setTopAnn_eta _ eq_refl). eauto.
       pose proof (@poLe_setTopAnn bool _ x0 x0).
       eapply H10; eauto. assert (x = x6) by eapply subTerm_PI.
       subst. rewrite setTopAnn_eta. reflexivity. eauto.
-      eapply ann_R_get in H8. rewrite getAnn_setTopAnn in H8.
-      eauto.
     + intros. inv_get.
       rewrite getAnn_setTopAnn in H6.
       destruct x0; isabsurd.

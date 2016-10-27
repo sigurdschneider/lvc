@@ -5,9 +5,9 @@ Set Implicit Arguments.
 Set Regular Subst Tactic.
 
 Tactic Notation "inv" hyp(A) := inversion A; subst.
-Tactic Notation "invc" hyp(A) := inversion A; subst; clear A.
+Tactic Notation "invc" hyp(A) := inversion A; subst; (try clear A).
 Tactic Notation "invs" hyp(A) := inversion A; subst; clear_trivial_eqs.
-Tactic Notation "invcs" hyp(A) := inversion A; subst; clear A; clear_trivial_eqs.
+Tactic Notation "invcs" hyp(A) := inversion A; subst; (try clear A); clear_trivial_eqs.
 
 Tactic Notation "dcr" :=
   repeat (

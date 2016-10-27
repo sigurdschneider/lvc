@@ -448,7 +448,7 @@ Proof.
     }
     revert H; clear_all; cset_tac.
   - inv_get.
-    exploit IHCC; eauto.
+    exploit IHCC; try eapply H0; eauto.
     dcr. eexists; split; eauto.
     rewrite H5.
     destruct (@get_in_range _ (snd
@@ -476,7 +476,7 @@ Proof.
       rewrite computeParameters_length; eauto with len.
       dcr.
       eapply incl_list_union. eapply map_get_1.
-      eapply get_take; try eapply H14; eauto using get_range. eauto.
+      eapply get_take; try eapply H6; eauto using get_range. eauto.
     }
     rewrite H2.
     assert (of_list (fst Zs0) ⊆ list_union (fst ∘ of_list ⊝ F)). {
@@ -991,8 +991,8 @@ Proof.
                 [ | eauto with len | eauto using zip_get_eq | reflexivity].
               eapply computeParametersF_length_pair; eauto with len.
             + intros. inv_get.
-              unfold ominus', lminus in EQ.
-              destruct x3; invc EQ. simpl in *.
+              unfold ominus', lminus in H15.
+              destruct x3; invc H15. simpl in *.
               subst XX.
               revert H5 H6. clear_all.
               intros; hnf; intros. cset_tac.

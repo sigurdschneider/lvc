@@ -7,29 +7,30 @@
 	Class Size (A : Type) := size : A -> nat.
 
 	Ltac gen_Size :=
-	hnf; match goal with [ |- ?A -> nat] =>
-	fix size' 1; intros s;
-	assert(size_inst : Size A);[exact size' | idtac];
-	destruct s eqn:E;
-	let term := type of s in
-	match goal with
-			[E : s = ?s' |- _] =>
-			let rec map s :=
-					(match s with
-							 ?s1 ?s2 =>
-							 let size_s1 := map s1 in
-							 let s2_T := type of s2 in
-							 let size_s2 := match s2_T with
-													 | A => constr:(size' s2)
-													 | _ => constr:(size s2)
-												 end in
-							 constr:(size_s1 + size_s2)
-						 | _ => constr:(O) end) in
-			let t' := map s' in
-			let t'' := eval simpl plus in t' in
-			exact (S t'')
-	end
-	end.
+	  hnf; match goal with [ |- ?A -> nat] =>
+                         let size' := fresh "size'" in
+	                       fix size' 1; intros s;
+	                       assert(size_inst : Size A);[exact size' | idtac];
+	                       destruct s eqn:E;
+	                       let term := type of s in
+	                       match goal with
+			                     [E : s = ?s' |- _] =>
+			                     let rec map s :=
+					                     (match s with
+							                    ?s1 ?s2 =>
+							                    let size_s1 := map s1 in
+							                    let s2_T := type of s2 in
+							                    let size_s2 := match s2_T with
+													                      | A => constr:(size' s2)
+													                      | _ => constr:(size s2)
+												                        end in
+							                    constr:(size_s1 + size_s2)
+						                    | _ => constr:(O) end) in
+			                     let t' := map s' in
+			                     let t'' := eval simpl plus in t' in
+			                         exact (S t'')
+	                       end
+	       end.
 
 	Require Import Omega.
 
@@ -46,9 +47,9 @@
 			| [y : ?Y |- ?claim] =>
 				try(match x with y => idtac end; fail 1);
 					match goal with [z : _ |- _] =>
-						match claim with appcontext[z] =>
+						match claim with context[z] =>
 							first[
-									match Y with appcontext[z] => revert y; autorevert x end
+									match Y with context[z] => revert y; autorevert x end
 								| match y with z => revert y; autorevert x end]
 						end
 					end

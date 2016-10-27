@@ -199,7 +199,7 @@ Proof.
   - edestruct (IHSTAR an L'' (E[x<-Some v]) s'' ); eauto; dcr.
     pe_rewrite. simpl. eexists; split; eauto.
     rewrite <- H10, H11, H4. eauto with cset.
-  - edestruct (IHSTAR ans); eauto; dcr.
+  - edestruct (IHSTAR ans); try reflexivity; eauto; dcr.
     eexists; split; eauto.
     pe_rewrite.
     rewrite H13, H14, <- H3. eauto with cset.

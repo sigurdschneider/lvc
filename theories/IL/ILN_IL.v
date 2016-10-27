@@ -73,7 +73,6 @@ Proof.
   destruct symb; simpl.
   + inv H.
   + eapply IHn; eauto. simpl in H; cases in H.
-    * inv H.
     * eapply (pos_sub 1); eauto.
 Qed.
 
@@ -235,7 +234,7 @@ Proof.
     eapply get_app_cases in H. destruct H.
     * {
         inv_mapi H.
-        exploit @get_length; eauto. rewrite mapi_length in H2.
+        exploit @get_length; eauto.
         eapply get_in_range_app in H0.
         orewrite (f' - f' = 0); simpl.
         split.

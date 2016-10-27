@@ -1,6 +1,7 @@
-Require Import CSet Util LengthEq Fresh Take MoreList Filter OUnion.
+Require Import CSet Util LengthEq Fresh Take MoreList Filter OUnion AllInRel.
 Require Import IL Annotation LabelsDefined Sawtooth InRel Liveness TrueLiveness Reachability.
-Require Import Sim SimTactics SimI.
+Require Import Sim SimTactics.
+Require SimI SimF.
 
 Set Implicit Arguments.
 Unset Printing Records.
@@ -197,6 +198,8 @@ Hint Resolve impb_elim.
 
 Module I.
 
+  Import SimI.
+
 Instance SR : ProofRelationI bool := {
    ParamRelI G Z Z' := Z' = Z;
    ArgRelI V V' G VL VL' := VL' = VL /\ V = V';
@@ -307,9 +310,11 @@ End I.
 (** ** Correctness with respect to the functional semantics IL *)
 (** Functional here means that variables are lexically scoped binders instead of assignables. *)
 
+
+
 Module F.
 
-  Require Import SimF.
+  Import SimF.
 
   Instance SR : ProofRelationF bool := {
    ParamRelF G Z Z' := Z' = Z;
@@ -434,9 +439,9 @@ Proof.
     exploit (get_filter_by (fun b => b) H H3). destruct a,b; isabsurd; eauto.
     rewrite map_id in H1.
     econstructor; eauto.
-  - exploit IHUC; eauto.
-    rewrite filter_by_app in H4; eauto with len.
-    rewrite filter_by_nil in H4; eauto.
+  - exploit IHUC as IH; eauto.
+    rewrite filter_by_app in IH; eauto with len.
+    rewrite filter_by_nil in IH; eauto.
     intros; inv_get; eauto using compileF_nil_als_false.
   - rewrite Heq; clear Heq p b0.
     econstructor.
@@ -632,9 +637,11 @@ Proof.
       orewrite (❬F❭ + n - ❬als❭ = n) in ICEnd. simpl.
       rewrite countTrue_app in ICEnd. eauto.
   - exploit reachability_trueIsCalled; try eapply IC; eauto.
-    simpl in *; dcr; inv_get. assert (getAnn x0).
-    rewrite <- H4. eauto.
-    exploit compileF_get; eauto.
+    simpl in *; dcr; inv_get.
+    assert (getAnn x0). {
+      rewrite <- H4. eauto.
+    }
+    exploit compileF_get; try eapply H1; eauto.
     econstructor 2; [ | | ].
     rewrite take_app_le; eauto 20 with len.
     simpl.
@@ -871,12 +878,12 @@ Proof.
       eapply renamedApartLet with (Dt:=snd (getAnn (compile_renamedApart t ant alt)));
         eauto 20 with len.
       * intros; inv_get; eauto. destruct Zs.
-        edestruct (compileF_get_inv _ _ _ H4); eauto; dcr; subst.
+        edestruct (compileF_get_inv _ _ _ H5); eauto; dcr; subst.
         rewrite map_take in *.
         rewrite posOfTrue_countTrue in *; eauto using map_get_eq. repeat get_functional.
         eapply H2; eauto.
       * hnf; intros; inv_get. destruct a0.
-        edestruct (compileF_get_inv _ _ _ H4); eauto; dcr; subst.
+        edestruct (compileF_get_inv _ _ _ H5); eauto; dcr; subst.
         rewrite map_take in *.
         rewrite posOfTrue_countTrue in *; eauto using map_get_eq. repeat get_functional.
         edestruct H9; dcr; eauto.

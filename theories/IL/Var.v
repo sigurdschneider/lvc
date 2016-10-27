@@ -99,7 +99,7 @@ LabI (1 + n1) = LabI (1 + n2)
 -> LabI n1  = LabI n2.
 
 Proof.
-intros; general induction n1; eauto.
+  intros; general induction n1; eauto.
 Qed.
 
 Definition lt (l l':lab) :=

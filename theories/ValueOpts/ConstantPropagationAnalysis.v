@@ -9,6 +9,8 @@ Set Implicit Arguments.
 
 Open Scope map_scope.
 
+Qed.
+
 Definition Dom := Map [var, withTop val].
 
 Definition join (v v' : option (withTop val)) : option (withTop val) :=

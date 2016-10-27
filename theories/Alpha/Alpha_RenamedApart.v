@@ -450,12 +450,12 @@ Proof.
       erewrite IHalpha; eauto with cset.
       simpl; intros.
       lud; repeat cases; try congruence.
-      exploit H1; eauto. eapply pos_inc with (k':=1); eauto.
+      exploit H1; try eapply H5; eauto. eapply pos_inc with (k':=1); eauto.
     + erewrite smap_agree_2; eauto; [| intros; erewrite op_alpha_real; eauto].
       erewrite IHalpha; eauto.
       simpl; intros.
       lud; repeat cases; try congruence.
-      exploit H1; eauto. eapply pos_inc with (k':=1); eauto.
+      exploit H1; try eapply H5; eauto. eapply pos_inc with (k':=1); eauto.
   - erewrite op_alpha_real; eauto with cset.
     erewrite IHalpha1; eauto with cset.
     erewrite IHalpha2; eauto with cset.
@@ -466,11 +466,13 @@ Proof.
     intros.
     exploit H0; eauto. simpl in *.
     decide (x ∈ of_list Z).
-    + edestruct (of_list_get_first _ i) as [n]; eauto. dcr. hnf in H11. subst x0.
+    + edestruct (of_list_get_first _ i) as [n]; eauto; dcr.
+      hnf in H11. subst x0.
       rewrite pos_app_in; eauto.
       exploit (update_with_list_lookup_in_list_first ra _ H9 H12 H14); eauto; dcr.
       assert (x0 = y) by congruence. subst x0. clear_dup.
-      edestruct (list_lookup_in_list_first _ _ _ (eq_sym H9) H8) as [n'];
+      rewrite H7 in H13.
+      edestruct (list_lookup_in_list_first _ _ Z (eq_sym H9) H8) as [n'];
         eauto using get_in_of_list; dcr.
       hnf in H11; subst x0.
       rewrite pos_app_in; eauto.

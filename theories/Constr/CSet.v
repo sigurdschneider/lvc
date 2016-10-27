@@ -578,17 +578,16 @@ Lemma cardinal_set_tl
 Proof.
   intro card_Sn.
   remember (elements s) as L.
-  general induction L; simpl; eauto.
-  simpl in card_Sn.
-  rewrite add_cardinal_2 in card_Sn.
-  - omega.
-  - intro N.
-    assert (nn := (elements_3w s)).
-    rewrite <- HeqL in nn.
-    inversion_clear nn.
-    apply H0.
-    apply <- InA_in.
-    assumption.
+  general induction L; simpl in *; eauto.
+  - rewrite add_cardinal_2 in card_Sn.
+    + omega.
+    + intro N.
+      assert (nn := (elements_3w s)).
+      rewrite <- HeqL in nn.
+      inversion_clear nn.
+      apply H0.
+      apply <- InA_in.
+      assumption.
 Qed.
 
 Lemma cardinal_tl

@@ -1,3 +1,4 @@
+Require Import Smpl List.
 
 (* fail 1 will break from the 'match H with', and indicate to
    the outer match that it should consider finding another
@@ -115,29 +116,51 @@ Ltac inv_eqs :=
             end).
 
 (* this is a standard tactic *)
+
+
+Smpl Create inv_trivial.
+
+Ltac inv_trivial_base :=
+  match goal with
+  | [ H : @eq _ ?x ?x |- _ ] => clear H
+  | [ H : @eq _ ?x ?y |- _ ] => first [ is_var x; subst x | is_var y; subst y ]
+  | [ H : true = false |- _ ] => exfalso; inversion H
+  | [ H : false = true |- _ ] => exfalso; inversion H
+  | [ H : ?A = ?B |- _ ] => first [ is_constructor_app A;
+                                  match B with
+                                  | (if _ then _ else _) => fail 1
+                                  | _ => inversion H; subst
+                                  end
+                                | is_constructor_app B;
+                                  match A with
+                                  | (if _ then _ else _) => fail 1
+                                  | _ => inversion H; subst
+                                  end
+                                ]
+(*  | [ H : nil = _ :: _ |- _ ] => exfalso; discriminate H
+  | [ H : _ :: _ = _ :: _ |- _ ] => inversion H; subst *)
+  | [ H : ?n <= 0 |- _ ] => is_var n; inversion H; subst; clear H
+  | [ H : @eq _ (Some ?x) (Some ?y) |- _ ]
+    => let H' := fresh "H" in assert (H':x = y) by congruence; clear H;
+                            first [ is_var x; subst x; clear H'
+                                  | is_var y; subst y; clear H'
+                                  | rename H' into H ]
+  end.
+
+Smpl Add inv_trivial_base : inv_trivial.
+
 Ltac clear_trivial_eqs :=
-  repeat (progress (match goal with
-                    | [ H : @eq _ ?x ?x |- _ ] => clear H
-                    | [ H : @eq _ ?x ?y |- _ ] => first [ is_var x; subst x | is_var y; subst y ]
-                    | [ H : true = false |- _ ] => exfalso; inversion H
-                    | [ H : @eq _ (Some ?x) (Some ?y) |- _ ]
-                      => let H' := fresh "H" in assert (H':x = y) by congruence; clear H;
-                                              first [ is_var x; subst x; clear H'
-                                                    | is_var y; subst y; clear H'
-                                                    | rename H' into H ]
-                    end)).
+  repeat (smpl inv_trivial; repeat clear_dup).
 
 Tactic Notation "general" "induction" hyp(H) :=
   remember_arguments H; revert_except H;
-  induction H; intros; (try inv_eqs); (try clear_trivial_eqs).
+  induction H; intros; (try clear_trivial_eqs).
 
 Tactic Notation "indros" :=
   intros; (try inv_eqs); (try clear_trivial_eqs).
 
 
 Module Test.
-
-  Require Import List.
 
   Inductive decreasing : list nat -> Prop :=
   | base : decreasing nil
@@ -156,7 +179,7 @@ Module Test.
     : decreasing (0::L) -> forall x, In x L -> x = 0.
   Proof.
     intros. general induction H.
-    inversion H0; subst; firstorder.
+    firstorder.
   Qed.
 
 End Test.

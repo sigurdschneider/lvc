@@ -358,7 +358,7 @@ Proof.
             specialize (equal_goto (smtAnd (smtAnd smtTrue Q) Q')).
             exploit (combineEnv_omap_exp_eval_left Y (fst(getAnn D) ∪ (snd (getAnn D))) Es Et)
               as val_agree_left.
-            + exploit renamedApart_contained as a_in_fst_snd; try eapply term_s; eauto.
+            + exploit renamedApart_contained as a_in_fst_snd; try eapply star_s; eauto.
             + exploit (combineEnv_omap_exp_eval_right Y0 (fst(getAnn D) ∪ (snd (getAnn D))) Es Et)
                 as val_agree_right.
               * (* freeVars ∩ Ds' agree *)

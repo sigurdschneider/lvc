@@ -759,7 +759,7 @@ Proof.
            revert RAincl; clear; cset_tac. eapply RAincl; cset_tac.
         -- eapply defined_on_update_some.
            eapply defined_on_incl.
-           eapply defined_on_after_spill_load; eauto.
+           eapply defined_on_after_spill_load;  eauto.
            clear; cset_tac.
         -- pe_rewrite. rewrite LSpM, SpR, <- Incl'. clear; cset_tac.
         -- pe_rewrite. rewrite <- RAincl. rewrite H17. clear; cset_tac.
