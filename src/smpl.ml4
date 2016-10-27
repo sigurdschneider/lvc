@@ -12,8 +12,10 @@ open Hints
 open Tacintern
 open Tacinterp
 open Tacticals
-open Errors
 open Libobject
+open Stdarg
+open Extraargs
+open Constrarg
 
 DECLARE PLUGIN "smpl"
 
@@ -36,7 +38,7 @@ let _ = Summary.declare_summary "smpl"
 
 let intern_smpl_create db =
  try let _ = StringMap.find db (!smpl_db) in
-     errorlabstrm "Smpl" (str "Smpl Database " ++ str db ++ str " already exists.")
+     CErrors.errorlabstrm "Smpl" (str "Smpl Database " ++ str db ++ str " already exists.")
  with Not_found -> smpl_db := StringMap.add db [] (!smpl_db)
 
 let rec insert (n,tac) l =
@@ -52,7 +54,7 @@ let intern_smpl_add entry db =
   try let db_list = StringMap.find db (!smpl_db) in
       let db_list' = insert entry db_list in
       smpl_db := StringMap.add db db_list' (!smpl_db)
-  with Not_found -> errorlabstrm "Smpl" (str "Unknown Smpl Database " ++ str db ++ str ".")
+  with Not_found -> CErrors.errorlabstrm "Smpl" (str "Unknown Smpl Database " ++ str db ++ str ".")
 
 type smpl_action =
   | CreateDb of string
@@ -104,19 +106,19 @@ let smpl_print_entry (pri,tac) =
     try
       let (_, env) = Pfedit.get_current_goal_context () in
       env
-    with e when Errors.noncritical e -> Global.env ()
+    with e when CErrors.noncritical e -> Global.env ()
   in let msg = str "Priority " ++ Pp.int pri ++ str ": " ++ Pptactic.pr_glob_tactic env tac
-  in msg_info msg
+  in Feedback.msg_info msg
 
 let smpl_print db =
   try let db_list = StringMap.find db (!smpl_db) in
-      let a = msg_info (str "Tactics in Smpl DB " ++ str db ++ str " (in order):") in
+      let a = Feedback.msg_info (str "Tactics in Smpl DB " ++ str db ++ str " (in order):") in
       List.iter smpl_print_entry db_list; a
-  with Not_found -> errorlabstrm "Smpl" (str "Unknown Smpl Database " ++ str db ++ str ".")
+  with Not_found -> CErrors.errorlabstrm "Smpl" (str "Unknown Smpl Database " ++ str db ++ str ".")
 
 let smpl_print_dbs () =
-  let _ = msg_info (str "Smpl DBs:") in
-  StringMap.iter (fun key entry -> msg_info (str key)) (!smpl_db)
+  let _ = Feedback.msg_info (str "Smpl DBs:") in
+  StringMap.iter (fun key entry -> Feedback.msg_info (str key)) (!smpl_db)
 
 (*** Appling the tactic ***)
 
@@ -136,7 +138,7 @@ let smpl_tac db =
 (*** Syntax Extensions ***)
 
 VERNAC COMMAND EXTEND SmplCreate CLASSIFIED AS SIDEFF
-   | [ "Smpl" "Create" preident (db) ] ->
+   | [ "Smpl" "Create" preident(db) ] ->
       [ smpl_create db ]
 END
 

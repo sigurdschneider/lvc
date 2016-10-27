@@ -4,6 +4,8 @@
 open Term
 open Declarations
 open Pp
+open Constrarg
+open Extraargs
 
 DECLARE PLUGIN "lvc_plugin"
 
@@ -23,5 +25,20 @@ TACTIC EXTEND is_param
        if is_param c n
        then Proofview.tclUNIT ()
        else Tacticals.New.tclFAIL 0 (str "not a parameter")
+     ]
+END
+
+let rec is_constructor_app c =
+      match kind_of_term c with
+      | Construct _ -> true
+      | App (c, args) -> is_constructor_app c
+      | _ -> false
+
+TACTIC EXTEND is_constructor_app
+  | [ "is_constructor_app" constr(c) ] ->
+     [
+       if is_constructor_app c
+       then Proofview.tclUNIT ()
+       else Tacticals.New.tclFAIL 0 (str "not a constructor app")
      ]
 END
