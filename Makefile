@@ -35,8 +35,8 @@ depmakefiles:
 	+$(MAKE) -C ContainersPlugin Makefile.coq
 
 dep:
-	+$(MAKE) -C paco all
-	+$(MAKE) -C ContainersPlugin all
+	+$(MAKE) -C paco all TIMECMD=
+	+$(MAKE) -C ContainersPlugin all TIMECMD=
 
 depclean: clean
 	+$(MAKE) -C paco clean
