@@ -145,12 +145,12 @@ VERNAC COMMAND EXTEND SmplAdd CLASSIFIED AS SIDEFF
       [ smpl_add n (glob_tactic tac) db ]
 END
 
-VERNAC COMMAND EXTEND SmplPrint
+VERNAC COMMAND EXTEND SmplPrint CLASSIFIED AS QUERY
    | [ "Smpl" "Print" preident(db) ] ->
       [ smpl_print db ]
 END
 
-VERNAC COMMAND EXTEND SmplPrintAll
+VERNAC COMMAND EXTEND SmplPrintAll CLASSIFIED AS QUERY
    | [ "Smpl" "Databases" ] ->
       [ smpl_print_dbs () ]
 END
