@@ -790,6 +790,7 @@ Proof.
   - eapply labenv_sim_app; eauto using zip_get.
     intros; simpl in *; dcr; subst.
     split; eauto; intros.
+    exploit omap_op_eval_agree; eauto using agree_on_incl.
     admit.
   - pno_step. simpl.
     erewrite op_eval_agree; [reflexivity| |reflexivity]. symmetry.
