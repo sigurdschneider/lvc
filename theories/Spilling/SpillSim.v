@@ -698,17 +698,75 @@ Proof.
 Qed.
 
 
+Lemma op_eval_var Y
+  : (forall (n : nat) (y : op), get Y n y -> isVar y)
+    -> { xl : list var | Y = Var ⊝ xl }.
+Proof.
+  intros. general induction Y.
+  - eexists nil; eauto.
+  - exploit H; eauto using get.
+    destruct a; try now (exfalso; inv H0).
+    edestruct IHY; eauto using get; subst.
+    exists (v::x); eauto.
+Qed.
+
+Lemma omap_slotlift (V V'':onv val) xl Yv ib (Len:❬xl❭=❬ib❭) Sl R K L0 Sp M
+      (Agr4 : agree_on eq (R \ K ∪ L0) V V'')
+      (Agr5 : agree_on eq (Sp ∪ M) V (fun x : var => V'' (slot x)))
+      (FVincl: of_list xl [<=] Sl ∪ (R \ K ∪ L0))
+      (Slincl:Sl [<=] Sp ∪ M)
+  : omap (op_eval V) (Var ⊝ xl) = Some Yv
+    -> omap (op_eval V'') (slot_lift_args slot Sl ⊝ extend_args (Var ⊝ xl) ib)
+      = Some (extend_args Yv ib).
+Proof.
+  intros.
+  length_equify.
+  general induction Len; simpl in *; eauto;
+    monad_inv H; simpl in *.
+  repeat (cases; simpl).
+  - rewrite <- Agr5; [ rewrite EQ | rewrite <- Slincl; eauto]; simpl.
+    erewrite IHLen; eauto; [ | rewrite <- FVincl; eauto with cset ]; eauto.
+  - rewrite <- Agr4; [ rewrite EQ | ]; simpl.
+    erewrite IHLen; eauto; [ | rewrite <- FVincl; eauto with cset ]; eauto.
+    assert (x ∈ Sl ∪ (R \ K ∪ L0)) by (rewrite <- FVincl; cset_tac).
+    revert NOTCOND H. clear; cset_tac.
+  - rewrite <- Agr5; [ rewrite EQ | rewrite <- Slincl; eauto]; simpl.
+    erewrite IHLen; eauto; [ | rewrite <- FVincl; eauto with cset ]; eauto.
+  - rewrite <- Agr4; [ rewrite EQ | ]; simpl.
+    erewrite IHLen; eauto; [ | rewrite <- FVincl; eauto with cset ]; eauto.
+    assert (x ∈ Sl ∪ (R \ K ∪ L0)) by (rewrite <- FVincl; cset_tac).
+    revert NOTCOND H. clear; cset_tac.
+Qed.
+
+Lemma slot_lift_params_length f RM Z
+  : ❬slot_lift_params f RM Z❭ = ❬Z❭ + cardinal (snd RM ∩ of_list Z).
+Proof.
+  general induction Z; simpl; eauto.
+  - admit.
+  - cases; simpl. rewrite IHZ; eauto. admit.
+    cases; simpl. rewrite IHZ; eauto. admit.
+    rewrite IHZ; eauto. admit.
+Admitted.
+
 Instance SR (VD:set var) : PointwiseProofRelationI (((set var) * (set var)) * params) := {
    ParamRelIP RMZ Z Z' := Z' = slot_lift_params slot (fst RMZ) Z /\ Z = snd RMZ;
    ArgRelIP V V' RMZ VL VL' :=
      VL' = extend_args VL (mark_elements (snd RMZ) (fst (fst RMZ) ∩ snd (fst RMZ))) /\
-     agree_on eq (fst (fst RMZ)) V V' /\
-     agree_on eq (snd (fst RMZ)) V (fun x => V' (slot x)) /\
-     (fst (fst RMZ) ∪ snd (fst RMZ)) ⊆ VD
+     agree_on eq (fst (fst RMZ) \ of_list (snd RMZ)) V V' /\
+     agree_on eq (snd (fst RMZ) \ of_list (snd RMZ)) V (fun x => V' (slot x))
 }.
 
+Require Import AppExpFree.
 
-Lemma sim_I k Λ ZL LV VD r L L' V V' R M s lv sl ib ra
+Lemma of_list_freeVars_vars xl
+  : of_list xl [<=] list_union (Op.freeVars ⊝ Var ⊝ xl).
+Proof.
+  clear slot.
+  general induction xl; simpl; eauto. rewrite list_union_start_swap.
+  rewrite IHxl; eauto. cset_tac.
+Qed.
+
+Lemma sim_I k Λ ZL LV VD r L L' V V' R M s lv sl ra
   : agree_on eq R V V'
     -> agree_on eq M V (fun x => V' (slot x))
     -> live_sound Imperative ZL LV s lv
@@ -721,12 +779,13 @@ Lemma sim_I k Λ ZL LV VD r L L' V V' R M s lv sl ib ra
     -> labenv_sim Sim (sim r) (SR VD) (zip pair Λ ZL) L L'
     -> (fst (getAnn ra) ∪ snd (getAnn ra)) ⊆ VD
     -> renamedApart s ra
-    -> sim r Sim (L, V, s) (L', V', do_spill slot s sl ib).
+    -> app_expfree s
+    -> sim r Sim (L, V, s) (L', V', do_spill slot s sl (compute_ib ⊜ ZL Λ)).
 Proof.
   simpl. unfold reconstr_live_do_spill. unfold sim.
   move VD before k. move s before VD. revert_until s.
   time (sind s).
-  intros ? ? ? ? ? ? ? ? ? ? ? ? ? ? Agr1 Agr2 LS SLS SL Inj Disj Def Incl' LSim RAincl RA.
+  intros ? ? ? ? ? ? ? ? ? ? ? ? ? Agr1 Agr2 LS SLS SL Inj Disj Def Incl' LSim RAincl RA AEF.
   assert (Incl:R ∪ M [<=] VD). {
     rewrite <- RAincl, <- Incl'. eauto with cset.
   }
@@ -742,7 +801,8 @@ Proof.
   rewrite SpR at 1. rewrite LSpM.
   rewrite map_union; eauto. clear; cset_tac.
   rewrite !lookup_list_map. intros ? Agr3.
-  time (destruct s; invt spill_sound; invt spill_live; invt live_sound; invt renamedApart);
+  time (destruct s; invt spill_sound; invt spill_live; invt live_sound;
+        invt renamedApart; invt app_expfree);
     exploit regs_agree_after_spill_load as Agr4; eauto;
       exploit mem_agrees_after_spill_load as Agr5; eauto;
         simpl in *; rewrite !elements_empty; simpl.
@@ -759,8 +819,8 @@ Proof.
            revert RAincl; clear; cset_tac. eapply RAincl; cset_tac.
         -- eapply defined_on_update_some.
            eapply defined_on_incl.
-           eapply defined_on_after_spill_load;  eauto.
-           clear; cset_tac.
+           eapply defined_on_after_spill_load; eauto.
+           instantiate (1:=K). clear; cset_tac.
         -- pe_rewrite. rewrite LSpM, SpR, <- Incl'. clear; cset_tac.
         -- pe_rewrite. rewrite <- RAincl. rewrite H17. clear; cset_tac.
     + eapply (sim_let_call il_statetype_I); eauto.
@@ -773,7 +833,10 @@ Proof.
            rewrite SpR, Incl'; eauto.
            rewrite H17 in RAincl.
            revert RAincl; clear; cset_tac. eapply RAincl; cset_tac.
-        -- eapply defined_on_update_some. admit.
+        -- eapply defined_on_update_some.
+           eapply defined_on_incl.
+           eapply defined_on_after_spill_load; eauto.
+           instantiate (1:=K). clear; cset_tac.
         -- pe_rewrite. rewrite LSpM, SpR, <- Incl'. clear; cset_tac.
         -- pe_rewrite. rewrite <- RAincl. rewrite H17. clear; cset_tac.
   - simpl in *.
@@ -788,10 +851,18 @@ Proof.
       * pe_rewrite. rewrite LSpM, SpR, <- Incl'. clear; cset_tac.
       * pe_rewrite. rewrite <- RAincl, <- H9. clear; cset_tac.
   - eapply labenv_sim_app; eauto using zip_get.
-    intros; simpl in *; dcr; subst.
+    intros; simpl in *. dcr; subst; repeat get_functional.
     split; eauto; intros.
-    exploit omap_op_eval_agree; eauto using agree_on_incl.
-    admit.
+    erewrite get_nth; eauto using zip_get. unfold compute_ib. simpl.
+    edestruct op_eval_var; eauto; subst.
+    erewrite omap_slotlift; eauto.
+    eexists; split; eauto. split; eauto.
+    erewrite <- sla_extargs_slp_length; eauto. instantiate (1:=Sl).
+    simpl. len_simpl. admit.
+    split; eauto.
+    split; eauto using agree_on_incl.
+    unfold mark_elements. len_simpl. rewrite <- H16. eauto with len.
+    rewrite <- H13. eapply of_list_freeVars_vars.
   - pno_step. simpl.
     erewrite op_eval_agree; [reflexivity| |reflexivity]. symmetry.
     eapply agree_on_incl; eauto using regs_agree_after_spill_load; eauto.
