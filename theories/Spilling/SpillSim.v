@@ -784,7 +784,7 @@ Lemma sim_I k Λ ZL LV VD r L L' V V' R M s lv sl ra
 Proof.
   simpl. unfold reconstr_live_do_spill. unfold sim.
   move VD before k. move s before VD. revert_until s.
-  time (sind s).
+  sind s.
   intros ? ? ? ? ? ? ? ? ? ? ? ? ? Agr1 Agr2 LS SLS SL Inj Disj Def Incl' LSim RAincl RA AEF.
   assert (Incl:R ∪ M [<=] VD). {
     rewrite <- RAincl, <- Incl'. eauto with cset.
@@ -857,20 +857,22 @@ Proof.
     edestruct op_eval_var; eauto; subst.
     erewrite omap_slotlift; eauto.
     eexists; split; eauto. split; eauto.
-    erewrite <- sla_extargs_slp_length; eauto. instantiate (1:=Sl).
+    erewrite <- sla_extargs_slp_length; eauto. instantiate (1:=M').
     simpl. len_simpl. admit.
     split; eauto.
     split; eauto using agree_on_incl.
-    unfold mark_elements. len_simpl. rewrite <- H16. eauto with len.
-    rewrite <- H13. eapply of_list_freeVars_vars.
+    unfold mark_elements. len_simpl. rewrite <- H17. eauto with len.
+    rewrite union_comm.
+    rewrite <- H12. eapply of_list_freeVars_vars.
   - pno_step. simpl.
     erewrite op_eval_agree; [reflexivity| |reflexivity]. symmetry.
     eapply agree_on_incl; eauto using regs_agree_after_spill_load; eauto.
   - eapply sim_fun_ptw; try eapply LSim; eauto.
-    + intros. left.
+    + intros. left. rewrite <- zip_app; [| eauto with len].
       eapply (IH s); eauto using agree_on_incl.
       * eapply defined_on_after_spill_load; eauto.
       * pe_rewrite. rewrite LSpM, SpR, <- Incl'. clear; cset_tac.
+      * rewrite !zip_app; eauto with len.
       * pe_rewrite. rewrite <- RAincl, <- H25. clear; cset_tac.
     + intros. hnf; intros; simpl in *; dcr. subst.
       inv_get. simpl.
@@ -879,22 +881,27 @@ Proof.
       exploit H15; eauto. destruct x.
       exploit H14; eauto; simpl in *; dcr.
       exploit H2; eauto.
-      exploit al_sub_RfMf; eauto.
+      exploit al_eq_RfMf; eauto.
+      exploit H21; eauto; dcr. simpl in *.
+      rewrite <- zip_app; [| eauto with len].
       eapply IH; eauto.
-      * admit.
+      *
+
       * admit.
       * admit.
       * edestruct H8; eauto; dcr.
-        rewrite H39. simpl. simpl in *.
-        admit.
+        rewrite H38. simpl. simpl in *.
+        rewrite <- H37. admit.
+      * rewrite !zip_app; eauto with len.
       * edestruct H8; eauto; dcr.
-        rewrite H39. simpl. rewrite union_comm. rewrite <- union_assoc.
+        rewrite H38. simpl. rewrite union_comm. rewrite <- union_assoc.
         eapply union_incl_split.
         -- rewrite <- RAincl. eapply incl_union_right.
            rewrite <- H25. eapply incl_union_left.
            eapply incl_list_union; eauto using zip_get.
            unfold defVars. simpl. clear; eauto with cset.
         -- rewrite <- RAincl. eauto with cset.
+      * exploit H24; eauto.
     + hnf; intros; simpl in *; subst.
       inv_get; simpl; eauto.
     + eauto with len.

@@ -296,6 +296,26 @@ Proof.
       simpl in *; eauto.
 Qed.
 
+Lemma al_eq_RfMf
+
+      (als : list (ann ⦃var⦄))
+      (rms : list (⦃var⦄ * ⦃var⦄))
+      (al : ann ⦃var⦄)
+      (R M : ⦃var⦄)
+      (n : nat)
+  :
+    get rms n (R,M)
+    -> get als n al
+    -> merge rms = getAnn ⊝ als
+    -> getAnn al [=] R ∪ M
+.
+Proof.
+  intros get_rm get_al H16.
+  general induction get_rm;
+    invc get_al; invc H16;
+      simpl in *; eauto.
+Qed.
+
 
 Lemma ofl_slp_sub_rm
       (al : ann ⦃var⦄)
