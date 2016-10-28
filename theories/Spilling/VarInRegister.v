@@ -154,8 +154,7 @@ Lemma var_in_register_sound
 .
 Proof.
   intros R_VD M_VD disj_VD ra_VD rena lvSnd spilli spillSnd.
-
-  general induction lvSnd;
+  time (general induction lvSnd;
     invc spilli;
     invc spillSnd;
     inv rena;
@@ -164,7 +163,7 @@ Proof.
       eapply var_in_register_spills;
       simpl; eauto using ofl_el_Sp_VD;
         eapply var_in_register_loads;
-        simpl; eauto using ofl_el_L_VD.
+        try   eapply (ofl_el_L_VD _ _ _ _ _ R_VD M_VD); eauto).
   - econstructor 2; eauto.
     + rewrite H15, H13, H12, R_VD, M_VD.
       clear; cset_tac.

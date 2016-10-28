@@ -174,7 +174,7 @@ Definition do_spill_rec
     | stmtIf e s1 s2, ann2 _ sl1 sl2
       => stmtIf e (do_spill' s1 sl1 IB) (do_spill' s2 sl2 IB)
 
-    | stmtFun F t, annF (_,_,Some (inl rms)) sl_F sl_t
+    | stmtFun F t, annF (_,_, rms) sl_F sl_t
       => let IB' := compute_ib ⊜ (fst ⊝ F) rms ++ IB in
       stmtFun
           (pair ⊜
@@ -185,8 +185,8 @@ Definition do_spill_rec
           )
           (do_spill' t sl_t IB')
 
-    | stmtApp f Y, ann0 (_,_,Some (inr Sl))
-      => stmtApp f (slot_lift_args slot Sl
+    | stmtApp f Y, ann0 (_,_, (R,M)::nil)
+      => stmtApp f (slot_lift_args slot M
                                   ⊝ (extend_args Y (nth f IB nil)))
 
     | _,_
@@ -229,7 +229,6 @@ Proof.
     try reflexivity;
   destruct a;
     destruct p;
-    destruct o;
     eauto.
 Qed.
 
@@ -301,7 +300,6 @@ Proof.
     do 2 f_equal;
     destruct a;
     simpl;
-    destruct o;
       destruct p;
       reflexivity.
   - unfold count.
@@ -333,7 +331,6 @@ Proof.
     do 2 f_equal;
     destruct a;
     simpl;
-    destruct o;
       destruct p;
       reflexivity.
   - rewrite getAnn_setTopAnn.
@@ -372,6 +369,5 @@ Proof.
     simpl; eauto;
   destruct a;
     destruct p;
-    destruct o;
     simpl; eauto.
 Qed.

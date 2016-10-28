@@ -221,7 +221,7 @@ Inductive spill_live
             -> get lv_F n lv_s
             -> spill_live VD sl_s lv_s
         )
-      -> spill_live VD (annF (a,⎣ inl rms ⎦) sl_F sl_t)
+      -> spill_live VD (annF (a, rms) sl_F sl_t)
                               (annF b lv_F lv_t)
 .
 

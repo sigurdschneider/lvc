@@ -29,7 +29,7 @@ Fixpoint simplSpill
        let Sp   := getAnn lv ∩ (K ∪ K_x) in
        let R_s  := {x; R_e \ K_x} in
 
-       ann1 (Sp,L,None) (simplSpill k ZL Λ R_s (Sp ∪ M) s lv)
+       ann1 (Sp,L,nil) (simplSpill k ZL Λ R_s (Sp ∪ M) s lv)
 
   | stmtReturn e, _
     => let Fv_e := Op.freeVars e in
@@ -38,7 +38,7 @@ Fixpoint simplSpill
        let R_e  := R \ K ∪ L in
        let Sp   := ∅ in
 
-       ann0 (Sp,L,None)
+       ann0 (Sp,L,nil)
 
   | stmtIf e s1 s2, ann2 LV lv1 lv2
     => let Fv_e := Op.freeVars e in
@@ -47,7 +47,7 @@ Fixpoint simplSpill
        let R_e  := R \ K ∪ L in
        let Sp   := (getAnn lv1 ∪ getAnn lv2) ∩ K in
 
-       ann2 (Sp,L,None) (simplSpill k ZL Λ R_e (Sp ∪ M) s1 lv1)
+       ann2 (Sp,L,nil) (simplSpill k ZL Λ R_e (Sp ∪ M) s1 lv1)
             (simplSpill k ZL Λ R_e (Sp ∪ M) s2 lv2)
 
   | stmtApp f Y, _
@@ -58,7 +58,7 @@ Fixpoint simplSpill
        let K    := of_list (take (cardinal L) (elements (R \ R_f))) in
        let Sp   := M_f \ M \ of_list Z ∪ ((list_union (Op.freeVars ⊝ Y) \ M) ∩ K) in
 
-       ann0 (Sp,L,Some (inr (list_union (Op.freeVars ⊝ Y) \ (R \ K ∪ L))))
+       ann0 (Sp,L, (R \ K ∪ L, list_union (Op.freeVars ⊝ Y) \ (R \ K ∪ L))::nil)
 
   | stmtFun F t, annF LV als lv_t
     => let rms:= (fun f al =>
@@ -72,7 +72,7 @@ Fixpoint simplSpill
        let Λ' := rms ++ Λ in
 
 
-       annF (∅, ∅, Some (inl rms))
+       annF (∅, ∅, rms)
             ((fun f rmlv
               => match rmlv with (rm, Lv)
                                 => simplSpill k ZL' Λ' (fst rm) (snd rm) (snd f) Lv
@@ -80,7 +80,7 @@ Fixpoint simplSpill
                ⊜ F ((fun rm al => (rm,al)) ⊜ rms als))
             (simplSpill k ZL' Λ' R M t lv_t)
 
-  | _,_ => ann0 (∅, ∅, None)
+  | _,_ => ann0 (∅, ∅, nil)
 
   end
 .
@@ -442,6 +442,7 @@ general induction lvSound;
     * eauto.
   + assert (forall (s t : ⦃var⦄), s ⊆ s \ t ∪ t) by (clear; cset_tac).
     admit.
+  + admit.
   + admit.
 - set (K := of_list (take
                        (cardinal (Op.freeVars e \ R'))

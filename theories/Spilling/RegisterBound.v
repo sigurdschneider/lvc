@@ -670,19 +670,15 @@ Proof.
       rewrite slp_union_minus_incl; eauto.
       * rewrite H20, H22.
         rewrite lookup_set_union; eauto.
-        rewrite of_list_elements.
+        rewrite of_list_elements. unfold lookup_set.
         rewrite union_empty_r.
-        assert (forall (t u : ⦃var⦄),
-                 (u ∪ t) \ u ⊆ t)
-          as simpl_set by (clear; cset_tac).
-        rewrite simpl_set.
         repeat rewrite union_meet_distr_l.
-        assert (VD ∩ lookup_set slot Sl ⊆ R \ K ∪ L)
+        assert (VD ∩ lookup_set slot M' ⊆ R \ K ∪ L)
           as Sl_in.
         {
           rewrite disj_empty_cut; eauto.
           - clear; cset_tac.
-          - rewrite H23, H12, R_VD, M_VD; clear; cset_tac.
+          - rewrite H24, H12, R_VD, M_VD; clear; cset_tac.
         }
         assert (VD ∩ lookup_set slot (R \ K ∪ L) ⊆ R \ K ∪ L)
           as rkl_in.
@@ -712,17 +708,13 @@ Proof.
         rewrite lookup_set_union; eauto.
         rewrite of_list_elements.
         rewrite union_empty_r.
-        assert (forall (t u : ⦃var⦄),
-                 (u ∪ t) \ u ⊆ t)
-          as simpl_set by (clear; cset_tac).
-        rewrite simpl_set.
         repeat rewrite union_meet_distr_l.
-        assert (VD ∩ lookup_set slot Sl ⊆ R ∪ L)
+        assert (VD ∩ lookup_set slot M' ⊆ R ∪ L)
           as Sl_in.
         {
           rewrite disj_empty_cut; eauto.
           - clear; cset_tac.
-          - rewrite H23, H12, R_VD, M_VD; clear; cset_tac.
+          - rewrite H24, H12, R_VD, M_VD; clear; cset_tac.
         }
         assert (VD ∩ lookup_set slot (R \ K ∪ L) ⊆ R ∪ L)
           as rkl_in.
@@ -742,7 +734,7 @@ Proof.
         repeat apply union_incl_split; eauto; clear; cset_tac.
       * rewrite Rf_VD with (R:=R) (M:=M) (VD:=VD) (L:=L); eauto.
       * rewrite Mf_VD with (R:=R) (M:=M) (VD:=VD); eauto.
-    + intros G' R' G'_R' L_R' al_R' bound_R'.
+    + intros G' R'' G'_R' L_R' al_R' bound_R'.
       econstructor.
       unfold bounded_in.
       rewrite subset_cardinal; eauto.

@@ -3,7 +3,7 @@ Require Import IL Annotation InRel AutoIndTac Liveness LabelsDefined.
 
 
 Notation "'spilling'"
-  := (ann (⦃var⦄ * ⦃var⦄ * option (list (⦃var⦄ * ⦃var⦄) + ⦃var⦄))).
+  := (ann (⦃var⦄ * ⦃var⦄ * list (⦃var⦄ * ⦃var⦄))).
 
 Notation "'getSp' sl" := (fst (fst (getAnn sl))) (at level 40).
 Notation "'getL' sl" := (snd (fst (getAnn sl))) (at level 40).
@@ -33,7 +33,7 @@ Inductive spill_sound (k:nat) :
       -> Exp.freeVars e ⊆ R\K ∪ L
       -> cardinal (R\K ∪ L) <= k
       -> cardinal ({x;((R\K) ∪ L)\Kx }) <= k
-      -> spill_sound k ZL Λ (R,M) (stmtLet x e s) (ann1 (Sp,L,None) sl)
+      -> spill_sound k ZL Λ (R,M) (stmtLet x e s) (ann1 (Sp,L,nil) sl)
 
   | SpillReturn
       (ZL : list (params))
@@ -45,7 +45,7 @@ Inductive spill_sound (k:nat) :
       -> Op.freeVars e ⊆ R\K ∪ L
       -> cardinal ((R\K) ∪ L) <= k
       -> spill_sound k ZL Λ (R,M) (stmtReturn e)
-                    (ann0 (Sp,L,None))
+                    (ann0 (Sp,L,nil))
 
   | SpillIf
       (ZL : list (params))
@@ -61,12 +61,12 @@ Inductive spill_sound (k:nat) :
       -> cardinal (R\K ∪ L) <= k
       -> spill_sound k ZL Λ (R\K ∪ L, Sp ∪ M) s sl_s
       -> spill_sound k ZL Λ (R\K ∪ L, Sp ∪ M) t sl_t
-      -> spill_sound k ZL Λ (R,M) (stmtIf e s t) (ann2 (Sp,L,None) sl_s sl_t)
+      -> spill_sound k ZL Λ (R,M) (stmtIf e s t) (ann2 (Sp,L,nil) sl_s sl_t)
 
   | SpillApp
       (ZL : list params)
       (Λ : list (⦃var⦄ * ⦃var⦄))
-      (R M Sp L K R_f M_f Sl : ⦃var⦄)
+      (R M Sp L K R_f M_f R' M' : ⦃var⦄)
       (f : lab)
       (Z : params)
       (Y : args)
@@ -77,10 +77,11 @@ Inductive spill_sound (k:nat) :
       -> get Λ (counted f) (R_f,M_f)
       -> R_f \ of_list Z ⊆ R\K ∪ L
       -> M_f \ of_list Z ⊆ Sp ∪ M
-      -> list_union (Op.freeVars ⊝ Y) ⊆ Sl ∪ (R\K ∪ L)
-      -> Sl ⊆ Sp ∪ M
+      -> list_union (Op.freeVars ⊝ Y) ⊆ (R\K ∪ L) ∪ M'
+      -> R' [=] R\K ∪ L
+      -> M' ⊆ Sp ∪ M
       -> spill_sound k ZL Λ (R,M) (stmtApp f Y)
-                     (ann0 (Sp,L,(Some (inr Sl))))
+                     (ann0 (Sp,L, (R', M')::nil))
 
   | SpillFun
       (ZL : list params)
@@ -104,7 +105,7 @@ Inductive spill_sound (k:nat) :
         )
       -> spill_sound k ((fst ⊝ F) ++ ZL) (rms ++ Λ) (R\K ∪ L, Sp ∪ M) t sl_t
       -> spill_sound k ZL Λ (R,M) (stmtFun F t)
-                    (annF (Sp,L,Some (inl rms)) sl_F sl_t)
+                    (annF (Sp,L,rms) sl_F sl_t)
 .
 
 Inductive fv_e_bounded : nat -> stmt -> Prop :=

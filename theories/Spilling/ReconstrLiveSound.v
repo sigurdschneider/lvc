@@ -219,18 +219,18 @@ Proof.
       exploit H5 as is_var; eauto.
       invc is_var.
       apply live_op_sound_incl
-      with (lv':= match slot_lift_args slot Sl (Var v) with
+      with (lv':= match slot_lift_args slot M' (Var v) with
                   | Var v => singleton v
                   | _ => ∅
                   end
            );
         unfold slot_lift_args;
         simpl.
-      * decide (v ∈ Sl);
+      * decide (v ∈ M');
           econstructor;
           eauto with cset.
       * repeat apply incl_union_left.
-        decide (v ∈ Sl);
+        decide (v ∈ M');
           unfold slot_lift_args;
           simpl;
           [ change (singleton (slot v)) with (Op.freeVars (Var (slot v)))
@@ -238,7 +238,7 @@ Proof.
           eapply get_list_union_map; eauto;
           eapply map_get_eq; eauto;
           simpl;
-          decide (v ∈ Sl); simpl; eauto.
+          decide (v ∈ M'); simpl; eauto.
   - rewrite do_spill_empty by apply count_clear_zero.
     unfold do_spill_rec.
     rewrite do_spill_rm_empty by apply count_clear_zero.

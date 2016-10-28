@@ -400,7 +400,7 @@ Proof.
       assert (M_f ⊆ VD) as Mf_VD
           by (eapply Mf_VD with (R:=R) (M:=M); eauto).
       erewrite slp_union_minus_incl with (VD:=VD); eauto.
-      rewrite H18.
+      rewrite H16.
       rewrite <- lookup_set_minus_eq; eauto; swap 1 2.
       {
         eapply injective_on_incl with (D:=VD); eauto.

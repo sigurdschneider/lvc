@@ -85,38 +85,25 @@ Proof.
   rewrite map_app; eauto.
 Qed.
 
-Definition transf_spill_ann
-           (slot : var -> var)
-           (rm : option (list (⦃var⦄ * ⦃var⦄) + ⦃var⦄))
-  : option (list ⦃var⦄)
-  :=
-    match rm with
-    | ⎣ inl rms ⎦ => ⎣ slot_merge slot rms ⎦
-    | ⎣ inr _ ⎦ => ⎣⎦
-    | ⎣⎦ => ⎣⎦
-    end
-.
-
-
 Fixpoint do_spill_rm
          (slot : var -> var)
          (sl : spilling)
   : lvness_fragment
   :=
     add_anns None (count sl)
-             (let rm' := transf_spill_ann slot (getRm sl) in
+             (
               match sl with
               | ann0 _
-                => ann0 rm'
+                => ann0 None
 
               | ann1 _ sl0
-                => ann1 rm' (do_spill_rm slot sl0)
+                => ann1 None (do_spill_rm slot sl0)
 
               | ann2 _ sl1 sl2
-                => ann2 rm' (do_spill_rm slot sl1) (do_spill_rm slot sl2)
+                => ann2 None (do_spill_rm slot sl1) (do_spill_rm slot sl2)
 
-              | annF _ slF sl2
-                => annF rm' (do_spill_rm slot ⊝ slF) (do_spill_rm slot sl2)
+              | annF a slF sl2
+                => annF (Some (slot_merge slot (snd a))) (do_spill_rm slot ⊝ slF) (do_spill_rm slot sl2)
               end
              )
 .
@@ -172,21 +159,20 @@ Lemma do_spill_rm_empty
   :
     count sl = 0
     -> do_spill_rm slot sl
-      = let rm' := transf_spill_ann slot (getRm sl) in
-        match sl with
+      = match sl with
         | ann0 _
-          => ann0 rm'
+          => ann0 None
 
         | ann1 _ sl1
-          => ann1 rm'
+          => ann1 None
                   (do_spill_rm slot sl1)
 
         | ann2 _ sl1 sl2
-          => ann2 rm'
+          => ann2 None
                   (do_spill_rm slot sl1)
                   (do_spill_rm slot sl2)
-        | annF _ slF sl2
-          => annF rm'
+        | annF a slF sl2
+          => annF (Some (slot_merge slot (snd a)))
                   ((do_spill_rm slot) ⊝ slF)
                   ( do_spill_rm slot sl2)
         end
@@ -198,8 +184,7 @@ Proof.
     rewrite count_zero;
     rewrite add_anns_zero;
     destruct a;
-    destruct o;
+    destruct p;
     simpl;
-    fold do_spill_rm;
-    reflexivity.
+    fold do_spill_rm; simpl; eauto.
 Qed.

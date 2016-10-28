@@ -174,11 +174,11 @@ Lemma lifted_args_in_RL_slot_SpM
       (R M : ⦃var⦄)
       (slot : var -> var)
       (H5 : forall (n : nat) (y : op), get Y n y -> isVar y)
-      (Sp L K Sl : ⦃var⦄)
-      (H21 : list_union (Op.freeVars ⊝ Y) ⊆ Sl ∪ (R \ K ∪ L))
-      (H22 : Sl ⊆ Sp ∪ M)
+      (Sp L K M' : ⦃var⦄)
+      (H21 : list_union (Op.freeVars ⊝ Y) ⊆ (R \ K ∪ L) ∪ M')
+      (H22 : M' ⊆ Sp ∪ M)
   :
-    list_union (Op.freeVars ⊝ slot_lift_args slot Sl ⊝ Y)
+    list_union (Op.freeVars ⊝ slot_lift_args slot M' ⊝ Y)
                ⊆ R ∪ L ∪ map slot (Sp ∪ M)
 .
 Proof.
@@ -188,7 +188,7 @@ Proof.
   exploit H5; eauto.
   destruct x0;
     isabsurd.
-  * decide (v ∈ Sl); simpl.
+  * decide (v ∈ M'); simpl.
     -- rewrite <- map_singleton.
        apply incl_union_right.
        apply lookup_set_incl; eauto.

@@ -11,24 +11,24 @@ Fixpoint stupSpill
   :=
     match s,Lv with
     | stmtLet x e t, ann1 LV lv
-      => ann1 (R, Exp.freeVars e, None) (stupSpill (singleton x) t lv)
+      => ann1 (R, Exp.freeVars e, nil) (stupSpill (singleton x) t lv)
 
     | stmtReturn e, _
-      => ann0 (R, Op.freeVars e, None)
+      => ann0 (R, Op.freeVars e, nil)
 
     | stmtIf e t v, ann2 LV lv_s lv_t
-      => ann2 (R, Op.freeVars e, None) (stupSpill (Op.freeVars e) t lv_s)
+      => ann2 (R, Op.freeVars e, nil) (stupSpill (Op.freeVars e) t lv_s)
                                        (stupSpill (Op.freeVars e) v lv_t)
 
     | stmtApp f Y, _
-      => ann0 (R, ∅, Some (inr (list_union (Op.freeVars ⊝ Y))))
+      => ann0 (R, ∅, (∅, list_union (Op.freeVars ⊝ Y))::nil)
 
     | stmtFun F t, annF LV als lv_t
-      => annF (R, ∅, Some (inl ((fun lv => (∅, lv)) ⊝ getAnn ⊝ als)))
+      => annF (R, ∅, ((fun lv => (∅, lv)) ⊝ getAnn ⊝ als))
               ((fun Zs lv => stupSpill ∅ (snd Zs) lv) ⊜ F als)
               (stupSpill ∅ t lv_t)
 
-    | _,_ => ann0 (∅, ∅, None)
+    | _,_ => ann0 (∅, ∅, nil)
 
     end
 .
@@ -97,21 +97,16 @@ Proof.
   - eapply PIR2_nth_2 with (l:=counted l) in pir2; eauto using zip_get.
     destruct pir2 as [[R_f M_f] [pir2_get [pir2_R pir2_M]]]. simpl in *.
     eapply SpillApp with (K:= R) (R_f:= R_f) (M_f:=M_f);
-      [rewrite <- ReqR' | rewrite <- ReqR' | | | | | | | rewrite <- ReqR'];
-      eauto.
-    + cset_tac.
+      try rewrite <- ReqR'; eauto.
+    + eauto with cset.
     + assert (R \ R ∪ ∅ [=] ∅) by cset_tac.
       rewrite H5.
       rewrite empty_cardinal.
       omega.
     + rewrite pir2_R. clear. cset_tac.
-    + rewrite pir2_M. rewrite H1. rewrite <- ReqR'. eauto.
-    + apply list_union_incl; eauto with cset.
-      intros.
-      inv_get.
-      rewrite <- fvRM.
-      exploit H3; eauto.
-      apply Op.freeVars_live; eauto.
+    + rewrite pir2_M. rewrite H1. eauto.
+    + clear; cset_tac.
+    + rewrite Op.freeVars_live_list; eauto.
   - eapply SpillReturn with (K:= R);
       [ rewrite <- ReqR' | rewrite <- ReqR' | | ]; eauto with cset.
     + rewrite <- fvRM.
