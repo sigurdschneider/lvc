@@ -1,5 +1,6 @@
 Require Import Util CSet Map LengthEq.
-Require Import Env IL Alpha Fresh Annotation RenamedApart RenameApart SetOperations Take.
+Require Import Env IL Alpha Fresh Subset1.
+Require Import Annotation RenamedApart RenameApart SetOperations Take.
 Require Import LabelsDefined PairwiseDisjoint Liveness.
 
 Set Implicit Arguments.

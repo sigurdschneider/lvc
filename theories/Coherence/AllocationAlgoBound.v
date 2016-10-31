@@ -1,6 +1,6 @@
 Require Import CSet Le Arith.Compare_dec.
 
-Require Import Plus Util Map CMap Status Take.
+Require Import Plus Util Map CMap Status Take Subset1.
 Require Import Val Var Env IL Annotation Liveness Fresh MoreList SetOperations.
 Require Import Coherence Allocation RenamedApart AllocationAlgo.
 Require Import RenamedApart_Liveness LabelsDefined Restrict.

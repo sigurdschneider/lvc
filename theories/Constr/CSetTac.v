@@ -338,8 +338,11 @@ Qed.
                   is_var a; is_var b; invc H; clear_trivial_eqs
               end)).
 
+  Smpl Create cset.
+  Smpl Add cset_assumption : cset.
+
   Ltac cset_tac_step f :=
-    intros; (try subst); dcr; destr; mycleartrivial; (try cset_assumption);
+    intros; (try subst); dcr; destr; mycleartrivial; (try (smpl cset));
     (try (f tt)); (try bool_to_prop); (try (bool_to_prop in *)); mycleartrivial.
 
   Ltac set_tac f :=

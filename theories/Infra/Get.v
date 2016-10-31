@@ -297,7 +297,7 @@ Lemma map_get_2 X Y (L:list X) (f:X -> Y) n x
   : get (List.map f L) n x -> exists x' : X, get L n x'.
 Proof.
   intros. general induction H; simpl in *;
-          destruct L; simpl in *; inv Heql; try now (econstructor; eauto using get).
+  destruct L; simpl in *; inv Heql; try now (econstructor; eauto using get).
   edestruct IHget; eauto using get.
 Qed.
 

@@ -657,13 +657,13 @@ Proof.
     dcr. destruct p; simpl in *; invc H8.
     eexists; split; [ reflexivity | ].
     rewrite H2.
-    assert (x ⊆  (list_union (oget ⊝ take ❬F❭ (olu F alv Lv ZL AP s lv))
+    assert (Incl:x ⊆  (list_union (oget ⊝ take ❬F❭ (olu F alv Lv ZL AP s lv))
                              ∪ list_union (fst ∘ of_list ⊝ F))). {
       eapply incl_union_left.
       eapply incl_list_union.
       eapply map_get_1. eapply get_take; eauto using get_range. reflexivity.
     }
-    rewrite H6. rewrite <- H9.
+    rewrite Incl. rewrite <- H9.
     rewrite union_comm.
     rewrite <- minus_union.
     clear_all; cset_tac.

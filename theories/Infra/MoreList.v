@@ -536,7 +536,7 @@ Ltac inv_get_step_basic :=
   | [ H : get (List.map ?f ?L) ?n ?x |- _ ]=>
     match goal with
     | [H' : get ?L ?n ?y |- _ ] =>
-      let EQ := fresh "EQ" in pose proof (map_get f H' H) as EQ; clear H; invcs EQ
+      let EQ := fresh "EQ" in pose proof (map_get f H' H) as EQ; clear H; invc EQ
     | _ => let X := fresh "X" in
           let EQ := fresh "EQ" in
           let GET := fresh "GET" in
@@ -595,7 +595,7 @@ Smpl Add inv_get_step_basic : inv_get.
 
 Ltac inv_get :=
   repeat (repeat get_functional; (repeat smpl inv_get); repeat get_functional);
-  clear_trivial_eqs; repeat clear_dup.
+  clear_trivial_eqs; repeat clear_dup_fast.
 
 
 Lemma zip_length_lt_ass (X Y Z : Type) (f : X -> Y -> Z) (L : list X) (L' : list Y) k

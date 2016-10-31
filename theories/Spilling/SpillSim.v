@@ -21,6 +21,42 @@ Proof.
   induction L; simpl; f_equal; eauto.
 Qed.
 
+Lemma in_dneg X `{OrderedType X} M x
+  : x ∈ M <-> ~x ∉ M.
+Proof.
+  split; repeat intro; eauto.
+  decide (x ∈ M); eauto.
+  exfalso; eauto.
+Qed.
+
+Lemma in_dneg' X `{OrderedType X} M x
+  : x ∈ M <-> ((x ∈ M -> False )->False).
+Proof.
+  split; repeat intro; eauto.
+  decide (x ∈ M); eauto.
+  exfalso; eauto.
+Qed.
+
+Lemma minus_de_morgan X `{OrderedType X} x s t
+  : (x \In s /\ (x \In t -> False) -> False)
+    <-> ((x \In s -> False) \/ (x \In t)).
+Proof.
+  split; intros; dcr.
+  - decide (x ∈ s); decide (x ∈ t); eauto.
+  - intuition.
+Qed.
+
+Smpl Add match goal with
+         | [ |- context [(_ \In _ -> False) -> False] ] =>
+           setoid_rewrite <- in_dneg'
+         | [ |- context [(_ \In _ /\ (_ \In _ -> False) -> False)] ] =>
+           setoid_rewrite minus_de_morgan
+         | [ H : ?x ∈ map ?f ?s |- _ ] =>
+           rewrite (map_iff f) in H; destruct H as [? [? ?]]
+         | [ |- context [ _ ∈ map ?f _ ] ] =>
+           rewrite (map_iff f)
+         end : cset.
+
 
 Lemma injective_nodup X `{OrderedType X} Y `{OrderedType Y} (f:X->Y) `{ Proper _ (_eq ==> _eq) f} xl
   : injective_on (of_list xl) f
@@ -82,13 +118,7 @@ Qed.
 Lemma map_union X `{OrderedType X} Y `{OrderedType Y} (f:X->Y) `{Proper _ (_eq ==> _eq) f} s t
   : map f (s ∪ t) [=] map f s ∪ map f t.
 Proof.
-  cset_tac; rewrite !map_iff in *; eauto.
-  - rewrite map_iff in H2; eauto.
-    cset_tac.
-  - rewrite map_iff in H3; eauto.
-    cset_tac.
-  - rewrite map_iff in H3; eauto.
-    cset_tac.
+  cset_tac; eauto.
 Qed.
 
 Lemma union_exclusive X `{OrderedType X} s t
@@ -266,6 +296,9 @@ Proof.
   rewrite lookup_set_update_not_in_Z; eauto.
 Qed.
 
+Hint Resolve <- map_iff : cset.
+Hint Resolve -> map_iff : cset.
+
 Lemma agree_on_update_list_dead_slot X `{OrderedType X} Y (L:list X) (L':list Y) (V:X->Y) (f:X->X)
       `{Proper _ (_eq ==> _eq) f} V' D
   :  agree_on eq D V (fun x => V' (f x))
@@ -274,7 +307,7 @@ Lemma agree_on_update_list_dead_slot X `{OrderedType X} Y (L:list X) (L':list Y)
 Proof.
   intros. hnf; intros.
   rewrite lookup_set_update_not_in_Z; eauto.
-  intro. eapply H2; eauto. eapply map_iff; eauto.
+  intro. eauto with cset.
 Qed.
 
 Lemma get_map_first X `{OrderedType X} Y `{OrderedType Y} (L:list X) (f:X->Y) n x
@@ -374,9 +407,7 @@ Lemma map_incl X `{OrderedType X} Y `{OrderedType Y} D D' (f:X->Y)
   : D ⊆ D'
     -> map f D ⊆ map f D'.
 Proof.
-  intros; hnf; intros.
-  eapply map_iff in H3; dcr; eauto.
-  eapply map_iff; eauto.
+  intros; hnf; intros. cset_tac.
 Qed.
 
 Hint Resolve map_incl.
@@ -738,26 +769,6 @@ Proof.
     revert NOTCOND H. clear; cset_tac.
 Qed.
 
-Lemma slot_lift_params_length f RM Z
-  : ❬slot_lift_params f RM Z❭ = ❬Z❭ + cardinal (snd RM ∩ of_list Z).
-Proof.
-  general induction Z; simpl; eauto.
-  - admit.
-  - cases; simpl. rewrite IHZ; eauto. admit.
-    cases; simpl. rewrite IHZ; eauto. admit.
-    rewrite IHZ; eauto. admit.
-Admitted.
-
-Instance SR (VD:set var) : PointwiseProofRelationI (((set var) * (set var)) * params) := {
-   ParamRelIP RMZ Z Z' := Z' = slot_lift_params slot (fst RMZ) Z /\ Z = snd RMZ;
-   ArgRelIP V V' RMZ VL VL' :=
-     VL' = extend_args VL (mark_elements (snd RMZ) (fst (fst RMZ) ∩ snd (fst RMZ))) /\
-     agree_on eq (fst (fst RMZ) \ of_list (snd RMZ)) V V' /\
-     agree_on eq (snd (fst RMZ) \ of_list (snd RMZ)) V (fun x => V' (slot x))
-}.
-
-Require Import AppExpFree.
-
 Lemma of_list_freeVars_vars xl
   : of_list xl [<=] list_union (Op.freeVars ⊝ Var ⊝ xl).
 Proof.
@@ -765,6 +776,225 @@ Proof.
   general induction xl; simpl; eauto. rewrite list_union_start_swap.
   rewrite IHxl; eauto. cset_tac.
 Qed.
+
+Lemma extend_args_length X (L:list X) ib (Len:❬L❭=❬ib❭)
+  : ❬extend_args L ib❭ = ❬L❭ + countTrue ib.
+Proof.
+  length_equify. clear slot.
+  general induction Len; simpl; eauto.
+  cases; simpl.
+  - rewrite IHLen. omega.
+  - rewrite IHLen; eauto.
+Qed.
+
+Lemma update_with_list_lookup_in_list_first_slot A (E:onv A) n (R M:set var)
+      Z (Y:list A) z
+: length Z = length Y
+  -> get Z n z
+  -> z ∈ R
+  -> disj (of_list Z) (map slot (of_list Z))
+  -> (forall n' z', n' < n -> get Z n' z' -> z' =/= z)
+  -> exists y, get Y n y /\ E [slot_lift_params slot (R, M) Z <--
+                  Some ⊝ extend_args Y (mark_elements Z (R ∩ M))] z = Some y.
+Proof.
+  intros Len Get In Disj First. length_equify.
+  general induction Len; simpl in *; isabsurd.
+  inv Get.
+  - exists y; repeat split; eauto using get.
+    cases; simpl.
+    + lud; eauto using get.
+    + cases; simpl.
+      * lud; eauto using get.
+  - edestruct (IHLen slot E n0) as [? [? ]]; eauto using get; dcr.
+    + eapply disj_1_incl. eapply disj_2_incl; eauto with cset.
+      eauto with cset.
+    + intros. eapply (First (S n')); eauto using get. omega.
+    + exists x0. eexists; repeat split; eauto using get.
+      exploit (First 0); eauto using get; try omega.
+      cases; simpl.
+      * rewrite lookup_nequiv; eauto.
+        rewrite lookup_nequiv; eauto.
+        intro.
+        eapply (Disj z). eapply get_in_of_list in H3.
+        cset_tac. rewrite <- H2.
+        eapply map_iff; eauto. eexists x; split; eauto with cset.
+      * cases; simpl; lud.
+        -- rewrite lookup_nequiv; eauto.
+        -- exfalso.
+           eapply (Disj (slot x)). eapply get_in_of_list in H3.
+           rewrite <- H5. cset_tac.
+           eapply map_iff; eauto. eexists x; split; eauto with cset.
+        -- eauto.
+Qed.
+
+Lemma of_list_slot_lift_params R M (Z:params) (Incl:of_list Z ⊆ R ∪ M)
+  : of_list (slot_lift_params slot (R, M) Z)
+            [=] of_list Z \ (M \ R)
+            ∪ map slot (of_list Z \ (R \ M)).
+Proof.
+  intros. general induction Z; simpl in *.
+  - cset_tac.
+  - cases; simpl.
+    + rewrite IHZ.
+      cset_tac; eauto 20.
+      * right. decide (x ∈ M); eauto 20.
+      * right. right. right.
+        decide (x ∈ M); eauto 20.
+      * rewrite <- Incl; cset_tac.
+    + cases; simpl; rewrite IHZ; eauto.
+      * cset_tac.
+        -- decide (x ∈ M); eauto 20.
+        -- decide (x ∈ M); eauto 20.
+      * rewrite <- Incl. eauto with cset.
+      * decide (a ∈ M).
+        -- cset_tac; eauto 20.
+           ++ decide (x ∈ M); eauto 20.
+           ++ decide (x ∈ M); eauto 20.
+        -- exfalso. exploit Incl; cset_tac.
+      * rewrite <- Incl. cset_tac.
+Qed.
+
+
+Lemma slot_lift_params_agree X (E:onv X) E' R M Z VL (Len:❬Z❭=❬VL❭)
+      (Agr2:agree_on eq (R \ of_list Z) E E')
+      (Disj:disj (R ∪ of_list Z) (map slot (R ∪ of_list Z)))
+      (Incl:of_list Z [<=] R ∪ M)
+  : agree_on eq R (E [Z <-- Some ⊝ VL])
+             (E' [slot_lift_params slot (R, M) Z <--
+                  Some ⊝ extend_args VL (mark_elements Z (R ∩ M))]).
+Proof.
+  hnf; intros.
+  decide (x ∈ of_list Z).
+  - assert (❬Z❭=❬Some ⊝ VL❭) by eauto with len.
+    edestruct (of_list_get_first _ i) as [n]; eauto; dcr.
+    edestruct update_with_list_lookup_in_list_first; eauto; dcr.
+    intros; rewrite <- H2. eauto.
+    rewrite H2. rewrite H6. inv_get.
+    edestruct update_with_list_lookup_in_list_first_slot; try eapply Len; eauto; dcr.
+    Focus 4. erewrite H7. get_functional. eauto.
+    rewrite <- H2; eauto.
+    eapply disj_1_incl. eapply disj_2_incl; eauto. eauto with cset.
+    intros. rewrite <- H2; eauto.
+  - rewrite lookup_set_update_not_in_Z; eauto.
+    rewrite lookup_set_update_not_in_Z; eauto.
+    eapply Agr2. cset_tac.
+    rewrite of_list_slot_lift_params.
+    intro. eapply (Disj x). cset_tac. cset_tac.
+    eauto.
+Qed.
+
+Lemma update_with_list_lookup_in_list_first_slot' A (E:onv A) n (R M:set var)
+      Z (Y:list A) z
+: length Z = length Y
+  -> get Z n z
+  -> z ∈ M
+  -> disj (of_list Z ∪ R ∪ M) (map slot (of_list Z ∪ R ∪ M))
+  -> injective_on (of_list Z ∪ R ∪ M) slot
+  -> (forall n' z', n' < n -> get Z n' z' -> z' =/= z)
+  -> exists y, get Y n y /\ E [slot_lift_params slot (R, M) Z <--
+                  Some ⊝ extend_args Y (mark_elements Z (R ∩ M))] (slot z) = Some y.
+Proof.
+  intros Len Get In Disj Inj First. length_equify.
+  general induction Len; simpl in *; isabsurd.
+  inv Get.
+  - exists y; repeat split; eauto using get.
+    cases; simpl.
+    + lud; eauto using get.
+    + cases; simpl.
+      * exfalso. cset_tac.
+      * lud; eauto using get.
+  - edestruct (IHLen slot E n0 R M) as [? [? ]]; eauto using get; dcr.
+    + eapply disj_1_incl. eapply disj_2_incl; eauto with cset.
+      eauto with cset.
+    + eapply injective_on_incl; eauto.
+      clear; cset_tac.
+    + intros. eapply (First (S n')); eauto using get. omega.
+    + exists x0. eexists; repeat split; eauto using get.
+      exploit (First 0); eauto using get; try omega.
+      cases; simpl.
+      * rewrite lookup_nequiv; eauto.
+        rewrite lookup_nequiv; eauto.
+        -- intro. eapply Inj in H2; eauto with cset.
+        -- intro. hnf in H2; subst.
+           eapply (Disj (slot z)); eauto with cset.
+      * cases; simpl; lud.
+        -- exfalso. hnf in e; subst.
+           eapply (Disj (slot z)); eauto with cset.
+        -- exfalso. eapply H2. eapply Inj; eauto with cset.
+        -- eauto.
+Qed.
+
+Lemma slot_lift_params_agree_slot X (E:onv X) E' R M Z VL (Len:❬Z❭=❬VL❭)
+      (Agr2:agree_on eq (M \ of_list Z) E (fun x => E' (slot x)))
+      (Disj:disj (of_list Z ∪ R ∪ M) (map slot (of_list Z ∪ R ∪ M)))
+      (Inj:injective_on (of_list Z ∪ R ∪ M) slot)
+      (Incl:of_list Z [<=] R ∪ M)
+        : agree_on eq M (E [Z <-- Some ⊝ VL])
+             (fun x => E' [slot_lift_params slot (R, M) Z <--
+                        Some ⊝ extend_args VL (mark_elements Z (R ∩ M))] (slot x)).
+Proof.
+  hnf; intros.
+  decide (x ∈ of_list Z).
+  - assert (❬Z❭=❬Some ⊝ VL❭) by eauto with len.
+    edestruct (of_list_get_first _ i) as [n]; eauto; dcr. hnf in H2; subst.
+    edestruct update_with_list_lookup_in_list_first; eauto; dcr.
+    rewrite H4. inv_get.
+    edestruct update_with_list_lookup_in_list_first_slot'; try eapply Len; eauto; dcr.
+    rewrite H6. get_functional. eauto.
+  - rewrite lookup_set_update_not_in_Z; eauto.
+    rewrite lookup_set_update_not_in_Z; eauto.
+    eapply Agr2. cset_tac.
+    rewrite of_list_slot_lift_params; eauto.
+    intro. eapply union_iff in H0; destruct H0.
+    + eapply (Disj (slot x)). cset_tac. cset_tac.
+    + eapply (Disj x). cset_tac. cset_tac.
+      eapply Inj in H1; eauto with cset.
+Qed.
+
+Lemma countTrue_mark_elements Z D
+      (NoDup:NoDupA eq Z)
+  : countTrue(mark_elements Z D) = cardinal (of_list Z ∩ D).
+Proof.
+  clear slot.
+  general induction NoDup; simpl.
+  - assert ({} ∩ D [=] {}) by (clear; cset_tac).
+    rewrite H. eauto.
+  - cases.
+    + assert ({x; of_list l} ∩ D [=] {x; of_list l ∩ D}) as EQ by (cset_tac).
+      rewrite EQ. rewrite IHNoDup; eauto.
+      rewrite add_cardinal_2; eauto. cset_tac. rewrite <- InA_in in H1; eauto.
+    + assert ({x; of_list l} ∩ D [=] of_list l ∩ D) as EQ by (cset_tac).
+      rewrite EQ. rewrite IHNoDup; eauto.
+Qed.
+
+Lemma slot_lift_params_length R_f M_f Z
+      (NoDup:NoDupA eq Z)
+  : ❬slot_lift_params slot (R_f, M_f) Z❭ = ❬Z❭ + cardinal (of_list Z ∩ (R_f ∩ M_f)).
+Proof.
+  general induction NoDup; simpl.
+  - assert ({} ∩ (R_f ∩ M_f) [=] {}) by (clear; cset_tac).
+    rewrite H. eauto.
+  - cases; simpl.
+    + assert (forall D, x ∈ D -> {x; of_list l} ∩ D [=] {x; of_list l ∩ D}) as EQ by (cset_tac).
+      rewrite EQ; eauto. rewrite IHNoDup; eauto.
+      rewrite add_cardinal_2; eauto. cset_tac. rewrite <- InA_in in H3; eauto.
+    + assert (forall D, x ∉ D -> {x; of_list l} ∩ D [=] of_list l ∩ D) as EQ by (cset_tac).
+      cases; simpl; rewrite EQ; eauto.
+Qed.
+
+Instance SR (VD:set var) : PointwiseProofRelationI (((set var) * (set var)) * params) := {
+   ParamRelIP RMZ Z Z' := Z' = slot_lift_params slot (fst RMZ) Z /\ Z = snd RMZ;
+   ArgRelIP V V' RMZ VL VL' :=
+     VL' = extend_args VL (mark_elements (snd RMZ) (fst (fst RMZ) ∩ snd (fst RMZ))) /\
+     agree_on eq (fst (fst RMZ) \ of_list (snd RMZ)) V V' /\
+     agree_on eq (snd (fst RMZ) \ of_list (snd RMZ)) V (fun x => V' (slot x)) /\
+     ❬VL❭ = ❬snd RMZ❭ /\
+     defined_on (fst (fst RMZ) \ of_list (snd RMZ)
+                     ∪ map slot (snd (fst RMZ) \ of_list (snd RMZ))) V'
+}.
+
+Require Import AppExpFree Subset1.
+
 
 Lemma sim_I k Λ ZL LV VD r L L' V V' R M s lv sl ra
   : agree_on eq R V V'
@@ -780,12 +1010,13 @@ Lemma sim_I k Λ ZL LV VD r L L' V V' R M s lv sl ra
     -> (fst (getAnn ra) ∪ snd (getAnn ra)) ⊆ VD
     -> renamedApart s ra
     -> app_expfree s
+    -> ann_R Subset1 lv ra
     -> sim r Sim (L, V, s) (L', V', do_spill slot s sl (compute_ib ⊜ ZL Λ)).
 Proof.
   simpl. unfold reconstr_live_do_spill. unfold sim.
   move VD before k. move s before VD. revert_until s.
   sind s.
-  intros ? ? ? ? ? ? ? ? ? ? ? ? ? Agr1 Agr2 LS SLS SL Inj Disj Def Incl' LSim RAincl RA AEF.
+  intros ? ? ? ? ? ? ? ? ? ? ? ? ? Agr1 Agr2 LS SLS SL Inj Disj Def Incl' LSim RAincl RA AEF Sub1.
   assert (Incl:R ∪ M [<=] VD). {
     rewrite <- RAincl, <- Incl'. eauto with cset.
   }
@@ -802,14 +1033,15 @@ Proof.
   rewrite map_union; eauto. clear; cset_tac.
   rewrite !lookup_list_map. intros ? Agr3.
   time (destruct s; invt spill_sound; invt spill_live; invt live_sound;
-        invt renamedApart; invt app_expfree);
+        invt renamedApart; invt app_expfree; invt (@ann_R _ _ Subset1));
     exploit regs_agree_after_spill_load as Agr4; eauto;
       exploit mem_agrees_after_spill_load as Agr5; eauto;
         simpl in *; rewrite !elements_empty; simpl.
   - destruct e; simpl in *.
     + eapply (sim_let_op il_statetype_I); eauto.
       * symmetry; eapply op_eval_agree; eauto using agree_on_incl.
-      * intros. left. eapply IH; eauto.
+      * intros. left.
+        eapply IH; eauto.
         -- eapply agree_on_update_same; eauto.
            eapply agree_on_incl; eauto.
            clear; cset_tac.
@@ -858,9 +1090,16 @@ Proof.
     erewrite omap_slotlift; eauto.
     eexists; split; eauto. split; eauto.
     erewrite <- sla_extargs_slp_length; eauto. instantiate (1:=M').
-    simpl. len_simpl. admit.
+    simpl. len_simpl.
+    time (rewrite !extend_args_length). f_equal. eauto with len.
+    eauto with len. eauto with len.
     split; eauto.
     split; eauto using agree_on_incl.
+    split; eauto using agree_on_incl.
+    split; eauto.
+    eapply defined_on_incl.
+    eapply defined_on_after_spill_load; eauto. instantiate (1:=K).
+    rewrite H8, H11. reflexivity.
     unfold mark_elements. len_simpl. rewrite <- H17. eauto with len.
     rewrite union_comm.
     rewrite <- H12. eapply of_list_freeVars_vars.
@@ -875,26 +1114,51 @@ Proof.
       * rewrite !zip_app; eauto with len.
       * pe_rewrite. rewrite <- RAincl, <- H25. clear; cset_tac.
     + intros. hnf; intros; simpl in *; dcr. subst.
-      inv_get. simpl.
+      inv_get.
       exploit H12; eauto.
       exploit H20; eauto.
-      exploit H15; eauto. destruct x.
+      exploit H15; eauto. destruct x as (R_f,M_f).
       exploit H14; eauto; simpl in *; dcr.
       exploit H2; eauto.
       exploit al_eq_RfMf; eauto.
       exploit H21; eauto; dcr. simpl in *.
       rewrite <- zip_app; [| eauto with len].
       eapply IH; eauto.
-      *
-
-      * admit.
-      * admit.
+      * eapply slot_lift_params_agree; eauto.
+        -- eapply disj_1_incl. eapply disj_2_incl.
+           eauto. rewrite H45, H41, H35, H39; eauto with cset.
+           rewrite H45, H41, H35, H39; eauto with cset.
+        -- rewrite <- H41; eauto.
+      * eapply slot_lift_params_agree_slot; eauto.
+        eapply disj_1_incl. eapply disj_2_incl. eauto.
+        eapply map_incl; eauto.
+        rewrite H45, H41, H35, H39; eauto with cset.
+        rewrite H45, H41, H35, H39; eauto with cset.
+        eapply injective_on_incl; eauto.
+        rewrite H45, H41, H35, H39; eauto with cset.
+        rewrite <- H41; eauto.
+      * eapply defined_on_update_list'.
+        -- len_simpl. rewrite extend_args_length.
+           edestruct H8; eauto; dcr. simpl in *.
+           rewrite countTrue_mark_elements; eauto.
+           rewrite slot_lift_params_length; eauto.
+           unfold mark_elements. eauto with len.
+        -- rewrite of_list_slot_lift_params; eauto.
+           eapply defined_on_incl; eauto.
+           rewrite H41 in H45; revert H45; clear.
+           intros.
+           cset_tac. decide (a ∈ R_f \ of_list Z); cset_tac.
+           right.
+           eexists x; split; eauto. split; eauto.
+           intro. eapply H2. cset_tac.
+           rewrite <- H41; eauto.
+        -- eapply get_defined; intros; inv_get; eauto.
       * edestruct H8; eauto; dcr.
-        rewrite H38. simpl. simpl in *.
-        rewrite <- H37. admit.
+        exploit H33; eauto. eapply ann_R_get in H46.
+        rewrite <- H46, H41; eauto.
       * rewrite !zip_app; eauto with len.
       * edestruct H8; eauto; dcr.
-        rewrite H38. simpl. rewrite union_comm. rewrite <- union_assoc.
+        rewrite H42. simpl. rewrite union_comm. rewrite <- union_assoc.
         eapply union_incl_split.
         -- rewrite <- RAincl. eapply incl_union_right.
            rewrite <- H25. eapply incl_union_left.
@@ -907,3 +1171,5 @@ Proof.
     + eauto with len.
     + eauto with len.
 Qed.
+
+End Correctness.

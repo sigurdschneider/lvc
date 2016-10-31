@@ -1,5 +1,5 @@
 Require Import Util LengthEq AllInRel Map CSet SetOperations MoreList Indexwise.
-Require Import Val Var Env IL LabelsDefined Annotation.
+Require Import Val Var Env IL LabelsDefined Annotation Subset1.
 Require Import Liveness Restrict RenamedApart.
 
 Set Implicit Arguments.
@@ -136,17 +136,6 @@ Lemma disjoint_if2 D D' Ds Dt ZL Lv an
   -> disjoint (Some ⊝ Lv \\ ZL) (snd (getAnn an)).
 Proof.
   intros. rewrite H1. rewrite <- H in *. simpl. rewrite incl_right; eauto.
-Qed.
-
-
-Notation "'Subset1'" := (fun (x : set var) (y : set var * set var) => x[<=] fst y).
-
-
-Instance Subset1_morph
-: Proper (Equal ==> @pe _ _ ==> iff) Subset1.
-Proof.
-  unfold Proper, respectful; intros.
-  inv H0; simpl. rewrite H, H1. reflexivity.
 Qed.
 
 Lemma disjoint_app L L' D
@@ -337,9 +326,9 @@ Proof.
       }
       eapply get_app_cases in H8. destruct H8; dcr; inv_get.
       * eapply not_incl_minus; [ reflexivity | ].
-        exploit Sub; eauto. eapply ann_R_get in H11.
+        exploit Sub; eauto. eapply ann_R_get in H6.
         edestruct IW; eauto; dcr.
-        rewrite H11. rewrite H12.
+        rewrite H6. rewrite H12.
         eapply disj_1_incl. eapply disj_2_incl. eapply Disj.
         eauto. eauto with cset.
       * assert (LEQ:❬getAnn ⊝ als❭ = ❬fst ⊝ F❭) by eauto with len.

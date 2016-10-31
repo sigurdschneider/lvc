@@ -288,8 +288,8 @@ Proof.
            rename x4 into sl_s.
            rename x1 into a.
            rename x2 into al.
-           rename H28 into get_al.
-           rename H4 into get_a.
+           rename H32 into get_al.
+           rename H31 into get_a.
            rename H26 into get_sls.
            rename H29 into get_Zs.
            rename H5 into get_rm.
@@ -364,42 +364,24 @@ Proof.
            unfold slot_merge in H5.
            inv_get; simpl.
            rewrite slot_merge_app.
-           rewrite <- zip_app.
-           rename x5 into a.
-           rename x6 into al.
-           rename x7 into rm.
-           rename x8 into sl_s.
-           rename x4 into Zs.
-           assert (x' = fst rm ∪ map slot (snd rm)).
-           {
-             unfold slot_merge in H31.
-             eapply map_get in H31; eauto.
-           }
+           rewrite <- zip_app; eauto with len.
            exploit H19; eauto.
            exploit H23; eauto.
-           erewrite reconstr_live_small with (ra:=a)
+           exploit H9; eauto.
+           destruct x5 as [R_f M_f].
+           erewrite reconstr_live_small with (ra:=x6)
                                              (VD:=VD)
-                                             (R:=fst rm)
-                                             (M:=snd rm); eauto.
+                                             (R:=R_f)
+                                             (M:=M_f); eauto.
+           ++ exploit H2 as H2'; eauto; dcr; simpl in *.
 
-           ++ exploit H2 as H2'; eauto.
-              destruct H2' as [H2' _].
-              rewrite H36.
-              rewrite pair_eta with (p:=rm); simpl.
-              rewrite pair_eta with (p:=rm) in H35.
-              eapply al_sub_RfMf in H35; eauto.
-              repeat apply union_incl_split; [clear; cset_tac | clear; cset_tac | ].
-              eapply ofl_slp_sub_rm; eauto.
-           ++ exploit renaF as renaF'; eauto.
-              rewrite renaF'; eauto.
+             rewrite ofl_slp_sub_rm; eauto. simpl.
+             clear; cset_tac.
+             eapply al_sub_RfMf; eauto.
+           ++ rewrite renaF; eauto.
            ++ rewrite merge_app.
               eapply getAnn_als_EQ_merge_rms; eauto.
            ++ eapply get_ofl_VD; eauto.
-           ++ assert ((fst rm, snd rm) = rm)
-               by (destruct rm; simpl; reflexivity).
-              rewrite H39; eauto.
-           ++ eauto with len.
-
         -- unfold slot_merge. eauto with len.
     + intros.
       inv_get.

@@ -1,6 +1,6 @@
 Require Import CSet Le.
 
-Require Import Plus Util Map DecSolve AllInRel OptionR.
+Require Import Plus Util Map DecSolve AllInRel OptionR Subset1.
 Require Import Env IL Annotation Liveness Coherence Alpha Restrict RenamedApart.
 Require Import Rename RenamedApart_Liveness.
 
@@ -629,7 +629,7 @@ Proof.
         eapply renamedApart_disj in RA. eauto.
         simpl in *. inv_get. rewrite H30; eauto.
       * {
-          edestruct H8; eauto; dcr. rewrite H21.
+          edestruct H8; eauto; dcr. rewrite H5.
           rewrite zip_app; eauto with len.
           rewrite map_app.
           rewrite bounded_app; split; eauto using bounded_incl with cset.

@@ -97,6 +97,11 @@ Ltac clear_dup :=
     end
   end.
 
+Ltac clear_dup_fast :=
+  match goal with
+  | [ H : ?X, H' : ?X |- _ ] => first [clear H' || clear H]
+  end.
+
 Ltac clear_if_dup H :=
   match type of H with
     | ?X =>
@@ -150,7 +155,7 @@ Ltac inv_trivial_base :=
 Smpl Add inv_trivial_base : inv_trivial.
 
 Ltac clear_trivial_eqs :=
-  repeat (smpl inv_trivial; repeat clear_dup).
+  repeat (smpl inv_trivial; repeat clear_dup_fast).
 
 Tactic Notation "general" "induction" hyp(H) :=
   remember_arguments H; revert_except H;
