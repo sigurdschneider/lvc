@@ -836,7 +836,7 @@ Proof.
   - cset_tac.
   - cases; simpl.
     + rewrite IHZ.
-      cset_tac; eauto 20.
+      time (cset_tac; eauto 20).
       * right. decide (x ∈ M); eauto 20.
       * right. right. right.
         decide (x ∈ M); eauto 20.
@@ -904,7 +904,8 @@ Proof.
       * exfalso. cset_tac.
       * lud; eauto using get.
   - edestruct (IHLen slot E n0 R M) as [? [? ]]; eauto using get; dcr.
-    + eapply disj_1_incl. eapply disj_2_incl; eauto with cset.
+    + eapply disj_1_incl.
+      eapply disj_2_incl; eauto with cset.
       eauto with cset.
     + eapply injective_on_incl; eauto.
       clear; cset_tac.
@@ -1023,7 +1024,8 @@ Proof.
   exploit L_sub_SpM as LSpM; eauto.
   exploit Sp_sub_R as SpR; eauto.
   assert (VDincl:getSp sl ∪ getL sl [<=] VD). {
-    rewrite LSpM, SpR. rewrite <- Incl. eauto with cset.
+    rewrite LSpM, SpR.
+    rewrite <- Incl. eauto with cset.
   }
   eapply sim_I_moves; eauto.
   eapply injective_on_incl; eauto with cset.

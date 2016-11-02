@@ -151,7 +151,7 @@ Print all.
 Definition fromILF (s:stmt) : status stmt :=
   let s_eae := EAE.compile s in
   let s_ra := rename_apart s_eae in
-  let (s_dcve, lv) := DCVE Liveness.Functional s_ra in
+  let (s_dcve, lv) := DCVE Liveness.Imperative s_ra in
   let fvl := to_list (getAnn lv) in
   let ϱ := CMap.update_map_with_list fvl fvl (@MapInterface.empty var _ _ _) in
   sdo ϱ' <- AllocationAlgo.regAssign s_ra lv ϱ;
