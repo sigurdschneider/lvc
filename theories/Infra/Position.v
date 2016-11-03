@@ -49,53 +49,6 @@ Proof.
   orewrite (k' + (i - k') = i). eauto.
 Qed.
 
-Lemma update_with_list_lookup_in_list_first X `{OrderedType X} B E n
-      (Z:list X) (Y:list B) z
-: length Z = length Y
-  -> get Z n z
-  -> (forall n' z', n' < n -> get Z n' z' -> z' =/= z)
-  -> exists y, get Y n y /\ E [Z <-- Y] z = y.
-Proof.
-  intros. eapply length_length_eq in H0.
-  general induction H0; simpl in *; isabsurd.
-  inv H1.
-  - exists y; repeat split; eauto using get. lud. exfalso; eauto.
-  - edestruct (IHlength_eq _ E n0 z) as [? [? ]]; eauto using get; dcr.
-    + intros. eapply (H2 (S n')); eauto using get. omega.
-    + exists x0. eexists; repeat split; eauto using get.
-      exploit (H2 0); eauto using get; try omega.
-      lud.
-Qed.
-
-Lemma list_lookup_in_list_first X `{OrderedType X} B E
-      (Z:list X) (Y:list B) x y
-: length Z = length Y
-  -> (E [Z <-- Y]) x = y
-  -> x ∈ of_list Z
-  -> exists n y', get Y n y' /\ y === y' /\ (forall n' x', n' < n -> get Z n' x' -> x' =/= x).
-Proof.
-  intros. length_equify.
-  general induction H0; simpl in *; isabsurd. decide (x0 === x).
-  - exists 0, y; repeat split; eauto using get. lud. intros; exfalso; omega.
-  - cset_tac; intuition.
-    edestruct (IHlength_eq _ E x0) as [? [? ]]; eauto using get; dcr.
-    + exists (S x1), x2. repeat split; eauto using get. lud; intuition.
-      intros. inv H4. intro; intuition. eapply H6; eauto. omega.
-Qed.
-
-Lemma of_list_get_first X `{OrderedType X} (Z:list X) z
-: z ∈ of_list Z
-  -> exists n z', get Z n z' /\ z === z' /\ (forall n' z', n' < n -> get Z n' z' -> z' =/= z).
-Proof.
-  intros. general induction Z; simpl in *. cset_tac; intuition.
-  decide (z === a).
-  - eexists 0, a; repeat split; eauto using get.
-    + intros. exfalso. omega.
-  - cset_tac; intuition. edestruct IHZ; eauto. dcr.
-    eexists (S x), x0; repeat split; eauto using get.
-    + intros. inv H4; intro; eauto. eapply H5; eauto. omega.
-Qed.
-
 Lemma get_first_pos X `{OrderedType X} n
       (Z:list X) z
 : get Z n z
@@ -108,7 +61,6 @@ Proof.
     intros; eapply (H1 (S n')); eauto using get. omega.
     eapply pos_add with (k':=1) in H2. eauto.
 Qed.
-
 
 Lemma pos_get X  `{OrderedType X} (symb:list X) v x i
 :  pos symb v i = ⎣x ⎦
@@ -212,7 +164,6 @@ Proof.
     eexists; split. econstructor; eauto. repeat split; eauto; try omega.
     + intros. inv H5; intro; eauto. eapply H6; eauto. omega.
 Qed.
-
 
 Instance trivial_pos_instance X `{OrderedType X}
   : Proper (eq ==> eq ==> eq ==> eq) (@pos X _).

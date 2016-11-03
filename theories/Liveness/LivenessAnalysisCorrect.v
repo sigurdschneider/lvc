@@ -73,7 +73,7 @@ Proof.
     econstructor.
     + rewrite map_map.
       erewrite map_ext with (l:=sa);[| intros; rewrite getAnn_mapAnn; reflexivity].
-      rewrite <- map_map with (l:=sa). rewrite <- map_app.
+      rewrite <- map_map with (l:=sa). rewrite <- List.map_app.
       eapply (IHAnn i (fst ⊝ s ++ ZL) (getAnn ⊝ sa ++ LV)
              (subTerm_EQ_Fun1 eq_refl ST)); eauto.
       etransitivity; eauto.
@@ -89,7 +89,7 @@ Proof.
     + intros. inv_get.
       rewrite map_map.
       erewrite map_ext with (l:=sa);[| intros; rewrite getAnn_mapAnn; reflexivity].
-      rewrite <- map_map with (l:=sa). rewrite <- map_app.
+      rewrite <- map_map with (l:=sa). rewrite <- List.map_app.
       edestruct (@get_backwardF sT _ (@backward _ (fun s0 : stmt => {x1 : ⦃var⦄ | x1 ⊆ occurVars s0})
                                                 (liveness_transform_dep i))); eauto.
       eapply (H1 _ _ _ H3 H2 i (fst ⊝ s ++ ZL) (getAnn ⊝ sa ++ LV) x1); eauto.

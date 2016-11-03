@@ -1,7 +1,7 @@
 Require Export Setoid Coq.Classes.Morphisms.
 Require Import EqDec Computable Util LengthEq AutoIndTac.
 Require Export CSet Containers.SetDecide.
-Require Export MapBasics MapLookup MapLookupList MapInverse.
+Require Export MapBasics MapLookup MapLookupList MapInverse MapInjectivity.
 
 Set Implicit Arguments.
 
@@ -82,4 +82,61 @@ Proof.
       unfold comp in *. lud; exfalso; eauto.
     + cset_tac; intuition.
   - hnf; intros. cset_tac. unfold comp. lud. exfalso; eauto.
+Qed.
+
+
+
+Lemma agree_on_update_dead_both_comp_right X `{OrderedType X} Y R
+      (lv:set X) (E E':X -> Y) (f:X->X) `{Proper _ (_eq ==> _eq) f} x v v'
+  : ~x ∈ lv
+    -> disj {x; lv} (map f lv)
+    -> agree_on R lv E (f ∘ E')
+    -> agree_on R lv (E [x <- v]) (f ∘ (E'[x <- v'])).
+Proof.
+  intros NotIn Disj Agr; unfold comp.
+  hnf; intros. lud; eauto.
+  exfalso. eapply (Disj x); eauto with cset.
+Qed.
+
+
+Lemma agree_on_update_map X `{OrderedType X} Y `{OrderedType Y} (V:X->Y) (x:X) (v:Y)
+      (f:X->X) D `{Proper _ (_eq ==> _eq) f} `{Proper _ (_eq ==> _eq) V}
+  : injective_on {x; D} f
+    -> agree_on _eq D ((f ∘ V)[x <- v])  (fun y => V[f x <- v] (f y)).
+Proof.
+  intros Inj.
+  hnf; intros. lud; eauto.
+  - exfalso. rewrite H4 in *. eauto.
+  - exfalso. eapply Inj in e; eauto with cset.
+Qed.
+
+Lemma agree_on_update_list_map X `{OrderedType X} Y `{OrderedType Y} (V:X->Y)
+      (L:list X) (L':list Y)
+      (Len:❬L❭=❬L'❭) (f:X->X) D `{Proper _ (_eq ==> _eq) f} `{Proper _ (_eq ==> _eq) V}
+  : injective_on (D ∪ of_list L) f
+    -> agree_on _eq D ((f ∘ V)[L <-- L'])  (fun x => V[f ⊝ L <-- L'] (f x)).
+Proof.
+  intros Inj.
+  hnf; intros.
+  decide (x ∈ of_list L).
+  - edestruct (of_list_get_first _ i) as [n]; eauto. dcr.
+    edestruct update_with_list_lookup_in_list_first; eauto; dcr.
+    intros; intro. eapply H8; eauto. rewrite H9; eauto.
+    instantiate (1:=f ∘ V) in H9.
+    pose proof (proper_update_with_list _ _ (f ∘ V) L L') as PEQ.
+    unfold respectful, Proper, feq in PEQ.
+    rewrite PEQ; [| intros; unfold comp; rewrite H4; reflexivity | eapply H5]; clear PEQ.
+    rewrite H9.
+    setoid_rewrite H5 in H8.
+    eapply injective_on_incl in Inj; [| eapply incl_right].
+    edestruct (get_map_first Inj H6 H8); dcr.
+    edestruct update_with_list_lookup_in_list_first; try eapply H4; dcr.
+    Focus 3. rewrite H5. rewrite H13. inv_get.
+    rewrite EQ. reflexivity. eauto with len.
+    eauto.
+  - rewrite lookup_set_update_not_in_Z; eauto.
+    exploit (@injective_on_not_in_map _ _ _ _ f _ _ H1 n); eauto.
+    eapply injective_on_incl; eauto.
+    cset_tac.
+    rewrite lookup_set_update_not_in_Z; eauto.
 Qed.

@@ -98,13 +98,6 @@ Lemma get_fst_renameApartF_live G G' ϱ F n anF ans
     G'' = G ∪ snd (renameApartF_live renameApart_live G ϱ G' (take n F) (take n anF))
             ∪ of_list Y
     /\ Y = (fresh_list fresh (snd (renameApartF_live renameApart_live G ϱ G' (take n F) (take n anF)) ∪ G) ❬fst Zs❭).
-(*
-                 /\ G ⊆ G'
-                 /\ of_list (fst ans) ⊆ G'
-                 /\ agree_on eq (freeVars (snd Zs) ∪ of_list (fst Zs)) (ϱ [fst Zs <-- fst ans]) ϱ'
-                 /\ length (fst Zs) = length (fst ans)
-                 /\ disj G (of_list (fst ans))
-                 /\ unique (fst ans) *)
 Proof.
   length_equify.
   general induction Len; simpl in * |- *; [ isabsurd |].
@@ -120,34 +113,6 @@ Proof.
       split.
       reflexivity. split; reflexivity.
 Qed.
-(*    + do 3 eexists; split; eauto using get.
-      eapply get_rev. rewrite <- Heql. econstructor.
-      simpl. split. reflexivity.
-      split. cset_tac; intuition.
-      split. eauto.
-      split. eauto.
-      split.
-      rewrite fresh_list_length; eauto.
-      split.
-      symmetry. eapply disj_2_incl.
-      eapply fresh_list_spec. eapply fresh_spec. eauto.
-      split.
-      eapply fresh_list_unique, fresh_spec.
-      eauto.
-    + edestruct IHl as [? [? [? [? ?]]]]; eauto.
-      instantiate (1:=rev (tl (rev F))). rewrite <- Heql. simpl. rewrite rev_involutive; eauto.
-      rewrite <- Heql in *. simpl in *.
-      assert (S (length (rev l)) = length (rev F)).
-      rewrite <- Heql. simpl. rewrite rev_length; eauto.
-      do 3 eexists; split; eauto using get.
-      assert (length F = S (length (rev l))).
-      rewrite rev_length.
-      rewrite <- rev_length. rewrite <- Heql. eauto.
-      exploit rev_swap. symmetry; eauto. simpl in *.
-      rewrite H4 at 1. eapply get_app.
-      rewrite H3. simpl. eauto.
-Qed.
- *)
 
 Lemma lookup_set_update_with_list {X} `{OrderedType X} {Y} `{OrderedType Y}
   Z Z' (f:X->Y) D `{Proper _ (_eq ==> _eq) f}
@@ -188,9 +153,7 @@ Proof.
   - econstructor; eauto using live_op_rename_sound.
     + erewrite fst_renameApart_live; eauto.
     + erewrite getAnn_snd_renameApart_live; eauto.
-      rewrite H0; eauto.
     + erewrite getAnn_snd_renameApart_live; eauto.
-      rewrite H1; eauto.
   - inv_get. exploit ParamLen; eauto.
     econstructor; eauto with len.
     intros; inv_get; eauto using live_op_rename_sound.
@@ -287,5 +250,4 @@ Proof.
          exploit H0; eauto.
          erewrite fst_renameApart_live; eauto.
     + erewrite getAnn_snd_renameApart_live; eauto.
-      rewrite H3; eauto.
 Qed.

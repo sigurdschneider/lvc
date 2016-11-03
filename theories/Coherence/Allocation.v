@@ -167,7 +167,7 @@ Proof.
   rewrite map_fst_zip. rewrite <- map_map with (f:=fst).
   rewrite of_list_lookup_list; eauto.
   rewrite zip_app; eauto with len.
-  repeat rewrite map_app.
+  repeat rewrite List.map_app.
   eapply PIR2_app.
   - eapply PIR2_get; [ intros; inv_get | eauto 20 with len].
     repeat rewrite lookup_seto_restr.
@@ -237,7 +237,7 @@ Proof.
   rewrite zip_app; eauto with len.
   rewrite map_fst_zip. rewrite <- map_map with (f:=fst).
   rewrite getAnn_mapAnn_map.
-  repeat rewrite map_app.
+  repeat rewrite List.map_app.
   eapply PIR2_app.
   - eapply PIR2_get; [ intros; inv_get | eauto 20 with len ].
     repeat rewrite lookup_seto_restr.
@@ -269,7 +269,7 @@ Proof.
         eapply list_eq_special; eauto with cset.
         rewrite lookup_set_minus_incl_inj; eauto. rewrite <- minus_inane_set.
         instantiate (1:={ϱ x}). eapply incl_minus_lr; eauto.
-        rewrite lookup_set_minus_incl; eauto. eapply lookup_set_incl; eauto.
+        rewrite lookup_set_minus_incl; eauto.
         rewrite lookup_set_singleton'; eauto.
         rewrite meet_comm. eapply meet_minus.
         assert (getAnn al [=] getAnn al ∪ singleton x). cset_tac; intuition.
@@ -299,7 +299,7 @@ Proof.
         rewrite <- INCL. rewrite <- H24.
         clear_all; cset_tac; intuition.
         rewrite H12. rewrite <- incl_right.
-        rewrite zip_app; eauto with len; rewrite map_app.
+        rewrite zip_app; eauto with len; rewrite List.map_app.
         rewrite bounded_app; split; eauto.
         eapply get_bounded; intros; inv_get.
         exploit H14; eauto; dcr. eauto with cset.
@@ -385,7 +385,7 @@ Proof.
         eapply list_eq_special. rewrite <- H9. cset_tac; intuition.
         rewrite lookup_set_minus_incl_inj; eauto. rewrite <- minus_inane_set.
         instantiate (1:={ϱ x}). eapply incl_minus_lr; eauto.
-        rewrite lookup_set_minus_incl; eauto. eapply lookup_set_incl; eauto.
+        rewrite lookup_set_minus_incl; eauto.
         rewrite lookup_set_singleton'; eauto.
         rewrite meet_comm. eapply meet_minus. eauto.
         assert (getAnn al [=] getAnn al ∪ singleton x). cset_tac; intuition.
@@ -411,7 +411,7 @@ Proof.
     + intros. inv_get.
       eapply srd_monotone.
       * eapply H1; eauto. simpl in *. edestruct H7; eauto; dcr. rewrite H11.
-        rewrite zip_app; eauto with len. rewrite map_app.
+        rewrite zip_app; eauto with len. rewrite List.map_app.
         rewrite bounded_app; split; eauto using bounded_incl with cset.
         eapply live_globals_bounded.
         intros. split. eapply H13; eauto. inv_get.
@@ -435,7 +435,7 @@ Proof.
       eapply IHRI; eauto.
       rewrite H15; simpl in * |- *; eauto.
       rewrite zip_app; eauto with len.
-      rewrite map_app. rewrite bounded_app. split; eauto.
+      rewrite List.map_app. rewrite bounded_app. split; eauto.
       eapply live_globals_bounded; intros; split.
       * eapply H13; eauto.
       * inv_get.
@@ -631,7 +631,7 @@ Proof.
       * {
           edestruct H8; eauto; dcr. rewrite H5.
           rewrite zip_app; eauto with len.
-          rewrite map_app.
+          rewrite List.map_app.
           rewrite bounded_app; split; eauto using bounded_incl with cset.
           eapply live_globals_bounded; intros. inv_get.
           edestruct H8; eauto; dcr.
@@ -644,7 +644,7 @@ Proof.
     + eapply IHLS; eauto using inverse_on_incl.
       pe_rewrite.
       rewrite zip_app; eauto with len.
-      rewrite map_app. rewrite bounded_app; split; eauto.
+      rewrite List.map_app. rewrite bounded_app; split; eauto.
       eapply live_globals_bounded2; eauto.
 Qed.
 

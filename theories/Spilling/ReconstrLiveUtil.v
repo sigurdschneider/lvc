@@ -38,7 +38,7 @@ Lemma slp_union_incl
 Proof.
   intros inj_VD s_VD t_VD Z_VD.
   induction Z; simpl in *; eauto.
-  - rewrite SetOperations.map_empty; eauto.
+  - rewrite map_empty; eauto.
     cset_tac.
   - apply add_incl in Z_VD as [a_VD Z_VD].
     specialize (IHZ Z_VD).
@@ -48,7 +48,7 @@ Proof.
       * rewrite <- IHZ.
         clear; cset_tac.
       * rewrite lookup_set_add; eauto.
-        rewrite <- IHZ.
+        rewrite <- IHZ. unfold lookup_set.
         clear; cset_tac.
     + decide (a ∈ s).
       * assert (a ∉ t ∩ {a; of_list Z}) as an_tZ by cset_tac.
@@ -67,7 +67,7 @@ Proof.
             rewrite <- injective_on_map_inter; eauto.
             + assert (t ∩ singleton a [=] ∅) as ta_empty by cset_tac.
               rewrite ta_empty.
-              rewrite SetOperations.map_empty; eauto.
+              rewrite map_empty; eauto.
               clear; cset_tac.
             + clear - a_VD; cset_tac.
         }
@@ -85,7 +85,7 @@ Proof.
         }
         rewrite elim_a; simpl.
         rewrite <- IHZ.
-        rewrite lookup_set_add; eauto.
+        rewrite lookup_set_add; eauto. unfold lookup_set.
         clear; cset_tac.
 Qed.
 
@@ -105,7 +105,7 @@ Lemma slp_union_minus_incl
 Proof.
   intros.
   rewrite <- slp_union_incl with (s:=s); eauto.
-  cset_tac.
+  unfold lookup_set. cset_tac; eauto 20 with cset.
 Qed.
 
 
@@ -352,6 +352,7 @@ Proof.
       rewrite IHZ.
       apply slot_a_in in a_snd.
       clear - a_fst a_snd; cset_tac.
+      rewrite H1 in H; eauto.
     + decide (a ∈ R); simpl.
       * rewrite IHZ.
         clear - i; cset_tac.
@@ -363,6 +364,7 @@ Proof.
         apply slot_a_in in a_in.
         rewrite IHZ.
         clear - a_in; cset_tac.
+        rewrite H1 in H2; eauto.
 Qed.
 
 Lemma nth_mark_elements

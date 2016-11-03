@@ -452,8 +452,8 @@ Proof.
                       ⊆ Op.freeVars a \ Sl ∪ map slot (Op.freeVars a))
     as enouf.
   {
-    rewrite !SetOperations.map_app; eauto.
-    rewrite SetOperations.map_empty; eauto.
+    rewrite !map_app; eauto.
+    rewrite map_empty; eauto.
     rewrite enouf.
     clear; cset_tac.
   }

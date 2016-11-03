@@ -243,3 +243,40 @@ Proof.
   eapply incl_list_union. eauto using get_drop. reflexivity. eauto.
   cset_tac; intuition.
 Qed.
+
+Lemma get_InA_OT X `{OrderedType X} (L:list X) n x
+  :  get L n x
+     -> InA _eq x L.
+Proof.
+  intros Get. general induction Get; eauto using InA.
+Qed.
+
+Lemma get_InA X (L:list X) n x
+  :  get L n x
+     -> InA eq x L.
+Proof.
+  intros Get. general induction Get; eauto using InA.
+Qed.
+
+Lemma get_elements_in X `{OrderedType X} s n x
+  :  get (elements s) n x
+     -> x ∈ s.
+Proof.
+  intros Get. eapply get_InA_OT in Get.
+  rewrite (@InA_in X H) in Get.
+  rewrite of_list_elements in Get. eauto.
+Qed.
+
+
+Lemma of_list_get_first X `{OrderedType X} (Z:list X) z
+: z ∈ of_list Z
+  -> exists n z', get Z n z' /\ z === z' /\ (forall n' z', n' < n -> get Z n' z' -> z' =/= z).
+Proof.
+  intros. general induction Z; simpl in *. cset_tac; intuition.
+  decide (z === a).
+  - eexists 0, a; repeat split; eauto using get.
+    + intros. exfalso. omega.
+  - cset_tac; intuition. edestruct IHZ; eauto. dcr.
+    eexists (S x), x0; repeat split; eauto using get.
+    + intros. inv H4; intro; eauto. eapply H5; eauto. omega.
+Qed.

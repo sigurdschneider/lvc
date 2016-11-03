@@ -1,6 +1,6 @@
 Require Import EqDec Computable Util AutoIndTac LengthEq.
 Require Export CSet Containers.SetDecide.
-Require Export MapBasics MapUpdate MapLookup OrderedTypeEx.
+Require Export MapBasics MapUpdate MapLookup MapLookupList OrderedTypeEx.
 
 Set Implicit Arguments.
 
@@ -332,4 +332,73 @@ Proof.
         rewrite <- H4. lset_tac.
         lud; eauto.
     + eapply update_nodup_commute; eauto using length_eq_length.
+Qed.
+
+Lemma injective_nodup X `{OrderedType X} Y `{OrderedType Y} (f:X->Y) `{ Proper _ (_eq ==> _eq) f} xl
+  : injective_on (of_list xl) f
+    -> NoDupA _eq xl -> NoDupA _eq (lookup_list f xl).
+Proof.
+  intros Inj Uniq.
+  general induction xl; simpl in *; dcr; eauto.
+  - econstructor; eauto using injective_on_incl with cset.
+    rewrite InA_in. invt NoDupA. rewrite InA_in in H4.
+    intro.
+    rewrite of_list_lookup_list in H2; eauto.
+    eapply lookup_set_spec in H2; eauto; dcr.
+    exploit Inj; eauto; cset_tac.
+Qed.
+
+Lemma injective_nodup_map X `{OrderedType X} Y `{OrderedType Y} (f:X->Y) `{ Proper _ (_eq ==> _eq) f} xl
+  : injective_on (of_list xl) f
+    -> NoDupA _eq xl -> NoDupA _eq (f ⊝ xl).
+Proof.
+  rewrite <- lookup_list_map; eauto using injective_nodup.
+Qed.
+
+Lemma injective_on_not_in_map X `{OrderedType X} Y `{OrderedType Y} (f:X->Y) L x
+      `{Proper _ (_eq ==> _eq) f}
+  : x ∉ of_list L
+    -> injective_on ({x; of_list L}) f
+    -> f x ∉ of_list (f ⊝ L).
+Proof.
+  intros. lset_tac.
+  rewrite of_list_map in H4; eauto.
+  eapply map_iff in H4; eauto; dcr.
+  eapply H3 in H7; eauto with cset.
+Qed.
+
+
+
+Lemma injective_disj X `{OrderedType X} s t (f:X->X) `{Proper _ (_eq ==> _eq) f}
+  : disj s t
+    -> injective_on (s ∪ t) f
+    -> disj (map f s) (map f t).
+Proof.
+  intros Disj Inj; hnf; intros.
+  eapply map_iff in H1; eauto; dcr.
+  eapply map_iff in H2; eauto; dcr.
+  rewrite H6 in H5. eapply Inj in H5; cset_tac.
+  eapply Disj; eauto. cset_tac.
+Qed.
+
+Lemma get_map_first X `{OrderedType X} Y `{OrderedType Y} (L:list X) (f:X->Y) n x
+  : injective_on (of_list L) f
+    -> get L n x
+    -> (forall n' z', n' < n -> get L n' z' -> z' =/= x)
+    -> get (f ⊝ L) n (f x) /\
+      (forall n' z', n' < n -> get (f ⊝ L) n' z' -> z' =/= f x).
+Proof.
+  intros. general induction H2; simpl.
+  - split; eauto using get.
+    intros. invt get; omega.
+  - split; eauto using get.
+    intros. invt get.
+    + intro A.
+      eapply H1 in A; simpl; eauto with cset.
+      eapply H3; eauto using get.
+      cset_tac. right. eapply get_in_of_list; eauto.
+    + simpl in *.
+      exploit IHget; intros; eauto using injective_on_incl, get with cset.
+      eapply H3;[| eauto using get]. omega. dcr.
+      eapply H8; eauto. omega.
 Qed.

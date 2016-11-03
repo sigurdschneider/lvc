@@ -226,8 +226,7 @@ Lemma inverse_on_agree_on {X} `{OrderedType X} {Y} `{OrderedType Y}
 Proof.
   intros; hnf; intros.
   hnf in H4. rewrite <- H4; eauto.
-  hnf in H5. rewrite <- H5; eauto.
-  eapply lookup_set_spec; eauto.
+  hnf in H5. rewrite <- H5; eauto with cset.
 Qed.
 
 Lemma inverse_on_injective_on {X} `{OrderedType X} {Y} `{OrderedType Y}
@@ -271,9 +270,9 @@ Proof.
   erewrite update_with_list_no_update; eauto.
   eapply H1; eauto. cset_tac ; eauto.
   erewrite update_with_list_no_update; eauto. intro.
-  specialize (H4 (ϱ x)). cset_tac; intuition; eauto.
+  specialize (H4 (ϱ x)). cset_tac; eauto.
   eapply H7.
-  eapply lookup_set_spec; cset_tac; intuition.
+  eapply lookup_set_spec; cset_tac.
 Qed.
 
 Lemma inverse_on_dead_update X `{OrderedType X} Y `{OrderedType Y} (ra:X->Y) ira (x:X) (y:Y) s

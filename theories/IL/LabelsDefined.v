@@ -86,7 +86,7 @@ Lemma paramsMatch_app A B C (f:list A * B -> list C) (L:list (list A * B))
   : paramsMatch t (length ⊝ (f ⊝ L) ++ length ⊝ L')
     -> paramsMatch t (length ⊝ (f ⊝ L ++ L')).
 Proof.
-  rewrite map_app. eauto.
+  rewrite List.map_app. eauto.
 Qed.
 
 Hint Resolve paramsMatch_app.

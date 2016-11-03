@@ -1,6 +1,6 @@
 Require Export Setoid Coq.Classes.Morphisms.
 Require Import EqDec Computable Util LengthEq AutoIndTac.
-Require Export CSet Containers.SetDecide.
+Require Export CSet Containers.SetDecide MoreList.
 Require Export MapBasics MapLookup MapUpdate.
 
 Set Implicit Arguments.
@@ -116,3 +116,87 @@ Proof.
 Qed.
 
 Hint Resolve lookup_list_agree : cset.
+
+Lemma lookup_list_map X Y (f:X->Y) L
+  : lookup_list f L = f ⊝ L.
+Proof.
+  induction L; simpl; f_equal; eauto.
+Qed.
+
+Smpl Add match goal with
+         | [ |- context [ ❬@lookup_list ?X ?Y ?f ?L❭ ] ] =>
+           rewrite (@lookup_list_length X Y f L)
+         end : len.
+
+
+Lemma map_app X `{OrderedType X} Y `{OrderedType Y} (f:X->Y)
+      `{Proper _ (_eq ==> _eq) f} s t
+: map f (s ∪ t) [=] map f s ∪ map f t.
+Proof.
+  cset_tac.
+Qed.
+
+Lemma map_add X `{OrderedType X} Y `{OrderedType Y} (f:X->Y)
+      `{Proper _ (_eq ==> _eq) f} x t
+: map f ({x; t}) [=] {f x; map f t}.
+Proof.
+  cset_tac. left; rewrite H2; eauto.
+Qed.
+
+Lemma map_empty X `{OrderedType X} Y `{OrderedType Y} (f:X->Y)
+      `{Proper _ (_eq ==> _eq) f}
+: map f ∅ [=] ∅.
+Proof.
+  cset_tac.
+Qed.
+
+Instance map_Proper X `{OrderedType X} Y `{OrderedType Y}
+  : Proper (@fpeq X Y _eq _ _ ==> _eq ==> _eq) map.
+Proof.
+  unfold Proper, respectful; intros. inv H1; dcr.
+  hnf; intros. cset_tac.
+  eexists x1. rewrite <- H2, H9. split; eauto. eapply H3.
+  eexists x1. rewrite H2, H9. split; eauto. symmetry. eapply H3.
+Qed.
+
+Lemma map_single {X} `{OrderedType X} Y `{OrderedType Y} (f:X->Y)
+      `{Proper _ (_eq ==> _eq) f} x
+      : map f {{x}} [=] {{f x}}.
+Proof.
+  hnf; intros. rewrite map_iff; eauto.
+  split; intros.
+  - destruct H2; dcr. cset_tac. rewrite H3; eauto.
+  - cset_tac.
+Qed.
+
+Lemma of_list_map X `{OrderedType X} Y `{OrderedType Y}
+      (f:X->Y) `{Proper _ (_eq ==> _eq) f} L
+  : of_list (f ⊝ L) [=] map f (of_list L).
+Proof.
+  general induction L; simpl; eauto.
+  - rewrite map_add; eauto.
+    rewrite IHL; eauto; reflexivity.
+Qed.
+
+Lemma map_union X `{OrderedType X} Y `{OrderedType Y} (f:X->Y) `{Proper _ (_eq ==> _eq) f} s t
+  : map f (s ∪ t) [=] map f s ∪ map f t.
+Proof.
+  cset_tac; eauto.
+Qed.
+
+
+Lemma agree_on_update_list X `{OrderedType X} Y (L:list X) (L':list Y) (V:X->Y)
+      `{Proper _ (_eq ==> eq) V} V' D (Len:❬L❭= ❬L'❭)
+  :  agree_on eq (D \ of_list L) V V'
+     -> lookup_list V L = L'
+     -> agree_on eq D V (V'[L <-- L']).
+Proof.
+  intros. hnf; intros.
+  decide (x ∈ of_list L).
+  - edestruct update_with_list_lookup_in_list; try eapply i; dcr.
+    Focus 2. rewrite H7.
+    rewrite lookup_list_map in H2. subst. inv_get.
+    eapply H0; eauto. eauto.
+  - rewrite lookup_set_update_not_in_Z; eauto.
+    eapply H1; cset_tac.
+Qed.

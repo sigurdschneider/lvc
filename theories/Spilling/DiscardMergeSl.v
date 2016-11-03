@@ -28,7 +28,7 @@ Lemma slot_merge_app
 Proof.
   intros.
   unfold slot_merge.
-  rewrite map_app; eauto.
+  rewrite List.map_app; eauto.
 Qed.
 
 

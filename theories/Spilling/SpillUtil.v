@@ -96,7 +96,7 @@ Lemma merge_app
 .
 Proof.
   unfold merge.
-  rewrite map_app.
+  rewrite List.map_app.
   reflexivity.
 Qed.
 

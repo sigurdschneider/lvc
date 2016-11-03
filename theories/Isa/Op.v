@@ -186,8 +186,7 @@ Lemma live_op_rename_sound e lv (ϱ:env var)
   : live_op_sound e lv
     -> live_op_sound (rename_op ϱ e) (lookup_set ϱ lv).
 Proof.
-  intros. general induction H; simpl; eauto using live_op_sound.
-  + econstructor. eapply lookup_set_spec; eauto.
+  intros. general induction H; simpl; eauto using live_op_sound with cset.
 Qed.
 
 
@@ -346,10 +345,8 @@ Instance opLt_irr : Irreflexive opLt.
 hnf; intros; unfold complement.
 - induction x; inversion 1; subst;
     try now eauto using StrictOrder_Irreflexive with typeclass_instances.
-  * eapply (StrictOrder_Irreflexive _ H2).
-  * eapply (StrictOrder_Irreflexive _ H2).
-    Grab Existential Variables.
-    eauto with typeclass_instances.
+  * eapply StrictOrder_Irreflexive in H2; eauto.
+  * eapply StrictOrder_Irreflexive in H2; eauto.
 Qed.
 
 Instance opLt_trans : Transitive opLt.
@@ -359,10 +356,6 @@ general induction H; invt opLt; eauto using opLt.
 - econstructor. eapply StrictOrder_Transitive.  eapply H. eapply H2.
 - econstructor; eauto. eapply StrictOrder_Transitive. eapply H. eapply H4.
 - econstructor; eauto. eapply StrictOrder_Transitive. eapply H. eapply H5.
-  Grab Existential Variables.
-  + eauto with typeclass_instances.
-  + eauto with typeclass_instances.
-  + eauto with typeclass_instances.
 Qed.
 
 Notation "'Compare' x 'next' y" :=
@@ -567,4 +560,23 @@ Proof.
   rewrite lookup_set_list_union; eauto using lookup_set_empty.
   repeat rewrite map_map. eapply fold_left_union_morphism; [|reflexivity].
   clear_all. general induction Y; simpl; eauto using AllInRel.PIR2, freeVars_renameOp.
+Qed.
+
+Lemma op_eval_var Y
+  : (forall (n : nat) (y : op), get Y n y -> isVar y)
+    -> { xl : list var | Y = Var ⊝ xl }.
+Proof.
+  intros. general induction Y.
+  - eexists nil; eauto.
+  - exploit H; eauto using get.
+    destruct a; try now (exfalso; inv H0).
+    edestruct IHY; eauto using get; subst.
+    exists (v::x); eauto.
+Qed.
+
+Lemma of_list_freeVars_vars xl
+  : of_list xl [<=] list_union (freeVars ⊝ Var ⊝ xl).
+Proof.
+  general induction xl; simpl; eauto. rewrite list_union_start_swap.
+  rewrite IHxl; eauto. cset_tac.
 Qed.

@@ -6,78 +6,17 @@ Require Import SetUtil Spilling ReconstrLive DoSpill ReconstrLiveUtil.
 Set Implicit Arguments.
 Unset Printing Records.
 
+Lemma agree_on_eq_oval (D:set var) (f g: var -> option val)
+  : agree_on _eq D f g
+    -> agree_on eq D f g.
+Proof.
+  intros; hnf; intros.
+  eapply H in H0. inv H0; eauto; simpl in *; congruence.
+Qed.
+
 Section Correctness.
 
   Variable slot : var -> var.
-
-Smpl Add match goal with
-         | [ |- context [ ❬@lookup_list ?X ?Y ?f ?L❭ ] ] =>
-           rewrite (@lookup_list_length X Y f L)
-         end : len.
-
-Lemma lookup_list_map X Y (f:X->Y) L
-  : lookup_list f L = f ⊝ L.
-Proof.
-  induction L; simpl; f_equal; eauto.
-Qed.
-
-Lemma in_dneg X `{OrderedType X} M x
-  : x ∈ M <-> ~x ∉ M.
-Proof.
-  split; repeat intro; eauto.
-  decide (x ∈ M); eauto.
-  exfalso; eauto.
-Qed.
-
-Lemma in_dneg' X `{OrderedType X} M x
-  : x ∈ M <-> ((x ∈ M -> False )->False).
-Proof.
-  split; repeat intro; eauto.
-  decide (x ∈ M); eauto.
-  exfalso; eauto.
-Qed.
-
-Lemma minus_de_morgan X `{OrderedType X} x s t
-  : (x \In s /\ (x \In t -> False) -> False)
-    <-> ((x \In s -> False) \/ (x \In t)).
-Proof.
-  split; intros; dcr.
-  - decide (x ∈ s); decide (x ∈ t); eauto.
-  - intuition.
-Qed.
-
-Smpl Add match goal with
-         | [ |- context [(_ \In _ -> False) -> False] ] =>
-           setoid_rewrite <- in_dneg'
-         | [ |- context [(_ \In _ /\ (_ \In _ -> False) -> False)] ] =>
-           setoid_rewrite minus_de_morgan
-         | [ H : ?x ∈ map ?f ?s |- _ ] =>
-           rewrite (map_iff f) in H; destruct H as [? [? ?]]
-         | [ |- context [ _ ∈ map ?f _ ] ] =>
-           rewrite (map_iff f)
-         end : cset.
-
-
-Lemma injective_nodup X `{OrderedType X} Y `{OrderedType Y} (f:X->Y) `{ Proper _ (_eq ==> _eq) f} xl
-  : injective_on (of_list xl) f
-    -> NoDupA _eq xl -> NoDupA _eq (lookup_list f xl).
-Proof.
-  intros Inj Uniq.
-  general induction xl; simpl in *; dcr; eauto.
-  - econstructor; eauto using injective_on_incl with cset.
-    rewrite InA_in. invt NoDupA. rewrite InA_in in H4.
-    intro.
-    rewrite of_list_lookup_list in H2; eauto.
-    eapply lookup_set_spec in H2; eauto; dcr.
-    exploit Inj; eauto; cset_tac.
-Qed.
-
-Lemma injective_nodup_map X `{OrderedType X} Y `{OrderedType Y} (f:X->Y) `{ Proper _ (_eq ==> _eq) f} xl
-  : injective_on (of_list xl) f
-    -> NoDupA _eq xl -> NoDupA _eq (f ⊝ xl).
-Proof.
-  rewrite <- lookup_list_map; eauto using injective_nodup.
-Qed.
 
 Lemma sim_write_moves D r L V s L' V' s' xl yl (Len:❬xl❭ = ❬yl❭)
   : (forall (V'':onv val), agree_on eq D (V'[xl <-- lookup_list V' yl]) V''
@@ -104,80 +43,6 @@ Proof.
     eauto with cset.
     rewrite H; eapply defined_on_update_some;
       eauto using defined_on_incl with cset.
-Qed.
-
-Lemma of_list_map X `{OrderedType X} Y `{OrderedType Y}
-      (f:X->Y) `{Proper _ (_eq ==> _eq) f} L
-  : of_list (f ⊝ L) [=] map f (of_list L).
-Proof.
-  general induction L; simpl; eauto.
-  - rewrite SetOperations.map_add; eauto.
-    rewrite IHL; eauto; reflexivity.
-Qed.
-
-Lemma map_union X `{OrderedType X} Y `{OrderedType Y} (f:X->Y) `{Proper _ (_eq ==> _eq) f} s t
-  : map f (s ∪ t) [=] map f s ∪ map f t.
-Proof.
-  cset_tac; eauto.
-Qed.
-
-Lemma union_exclusive X `{OrderedType X} s t
-  : s ∪ t [=] s ∪ (t \ s).
-Proof.
-  cset_tac.
-Qed.
-
-Lemma get_InA_OT X `{OrderedType X} (L:list X) n x
-  :  get L n x
-     -> InA _eq x L.
-Proof.
-  intros Get. general induction Get; eauto using InA.
-Qed.
-
-Lemma get_InA X (L:list X) n x
-  :  get L n x
-     -> InA eq x L.
-Proof.
-  intros Get. general induction Get; eauto using InA.
-Qed.
-
-Lemma get_elements_in X `{OrderedType X} s n x
-  :  get (elements s) n x
-     -> x ∈ s.
-Proof.
-  intros Get. eapply get_InA_OT in Get.
-  rewrite (@InA_in X H) in Get.
-  rewrite of_list_elements in Get. eauto.
-Qed.
-
-Lemma defined_on_agree X `{OrderedType X} Y R D (f g:X->option Y)
-  : defined_on D f
-    -> agree_on (option_eq R) D f g
-    -> defined_on D g.
-Proof.
-  intros; hnf; intros.
-  edestruct H0; eauto.
-  exploit H1; eauto.
-  rewrite H3 in H4. inv H4. eauto.
-Qed.
-
-Lemma defined_on_agree_eq X `{OrderedType X} Y D (f g:X->option Y)
-  : defined_on D f
-    -> agree_on eq D f g
-    -> defined_on D g.
-Proof.
-  intros; hnf; intros.
-  edestruct H0; eauto.
-  exploit H1; eauto.
-  rewrite H3 in H4. inv H4. eauto.
-Qed.
-
-Lemma defined_on_union X `{OrderedType X} Y (f:X -> option Y) s t
-  : defined_on s f
-    -> defined_on t f
-    -> defined_on (s ∪ t) f.
-Proof.
-  intros; hnf; intros. cset_tac.
 Qed.
 
 Lemma sim_I_moves k Λ ZL r L L' V V' R M s sl ib
@@ -213,7 +78,7 @@ Proof.
     rewrite (incl_union_minus _ _ (map slot (getSp sl))).
     eapply defined_on_union.
     + hnf; intros.
-      rewrite <- (of_list_elements (getSp sl)) in H1.
+      rewrite <- (of_list_elements _ (getSp sl)) in H1.
       rewrite <- of_list_map in H1; eauto.
       edestruct update_with_list_lookup_in_list; try eapply H1; dcr.
       Focus 2. rewrite H5. inv_get. eapply get_elements_in in H3.
@@ -233,20 +98,11 @@ Proof.
   - eauto using defined_on_incl with cset.
   - symmetry.
     eapply disj_1_incl. eapply disj_2_incl; eauto with cset.
-    rewrite map_union; eauto with cset.
     eauto with cset.
   - eapply injective_nodup_map; eauto.
     rewrite of_list_elements. eauto using injective_on_incl with cset.
     eapply elements_3w.
 Qed.
-
-Lemma in_add_right X `{OrderedType X} s x x'
-  : x ∈ s -> x ∈ {x'; s}.
-Proof.
-  cset_tac; intuition.
-Qed.
-
-Hint Resolve in_add_right : cset.
 
 Instance proper_onv (ϱ:var -> option val)
   : (@Proper (forall _ : var, option val)
@@ -263,154 +119,6 @@ Instance proper_onv' (ϱ:var -> option val)
 Proof.
   intuition.
 Qed.
-
-Lemma set_decomp X `{OrderedType X} t s
-  : s [=] s ∩ t ∪ (s \ t).
-Proof.
-  cset_tac. decide (a ∈ t); eauto.
-Qed.
-
-Lemma agree_on_update_list X `{OrderedType X} Y (L:list X) (L':list Y) (V:X->Y)
-      `{Proper _ (_eq ==> eq) V} V' D (Len:❬L❭= ❬L'❭)
-  :  agree_on eq (D \ of_list L) V V'
-     -> lookup_list V L = L'
-     -> agree_on eq D V (V'[L <-- L']).
-Proof.
-  intros. hnf; intros.
-  decide (x ∈ of_list L).
-  - edestruct update_with_list_lookup_in_list; try eapply i; dcr.
-    Focus 2. rewrite H7.
-    rewrite lookup_list_map in H2. subst. inv_get.
-    eapply H0; eauto. eauto.
-  - rewrite lookup_set_update_not_in_Z; eauto.
-    eapply H1; cset_tac.
-Qed.
-
-Lemma agree_on_update_list_dead X `{OrderedType X} Y (L:list X) (L':list Y) (V:X->Y)
-      V' D
-  :  agree_on eq D V V'
-     -> disj (of_list L) D
-     -> agree_on eq D V (V'[L <-- L']).
-Proof.
-  intros. hnf; intros.
-  rewrite lookup_set_update_not_in_Z; eauto.
-Qed.
-
-Hint Resolve <- map_iff : cset.
-Hint Resolve -> map_iff : cset.
-
-Lemma agree_on_update_list_dead_slot X `{OrderedType X} Y (L:list X) (L':list Y) (V:X->Y) (f:X->X)
-      `{Proper _ (_eq ==> _eq) f} V' D
-  :  agree_on eq D V (fun x => V' (f x))
-     -> disj (of_list L) (map f D)
-     -> agree_on eq D V (fun x => V'[L <-- L'] (f x)).
-Proof.
-  intros. hnf; intros.
-  rewrite lookup_set_update_not_in_Z; eauto.
-  intro. eauto with cset.
-Qed.
-
-Lemma get_map_first X `{OrderedType X} Y `{OrderedType Y} (L:list X) (f:X->Y) n x
-  : injective_on (of_list L) f
-    -> get L n x
-    -> (forall n' z', n' < n -> get L n' z' -> z' =/= x)
-    -> get (f ⊝ L) n (f x) /\
-      (forall n' z', n' < n -> get (f ⊝ L) n' z' -> z' =/= f x).
-Proof.
-  intros. general induction H2; simpl.
-  - split; eauto using get.
-    intros. invt get; omega.
-  - split; eauto using get.
-    intros. invt get.
-    + intro A.
-      eapply H1 in A; simpl; eauto with cset.
-      eapply H3; eauto using get.
-      cset_tac. right. eapply get_in_of_list; eauto.
-    + simpl in *.
-      exploit IHget; intros; eauto using injective_on_incl, get with cset.
-      eapply H3;[| eauto using get]. omega. dcr.
-      eapply H8; eauto. omega.
-Qed.
-
-Lemma injective_on_not_in_map X `{OrderedType X} Y `{OrderedType Y} (f:X->Y) L x
-      `{Proper _ (_eq ==> _eq) f}
-  : x ∉ of_list L
-    -> injective_on ({x; of_list L}) f
-    -> f x ∉ of_list (f ⊝ L).
-Proof.
-  intros. lset_tac.
-  rewrite of_list_map in H4; eauto.
-  eapply map_iff in H4; eauto; dcr.
-  eapply H3 in H7; eauto with cset.
-Qed.
-
-
-Lemma agree_on_update_map X `{OrderedType X} Y `{OrderedType Y} (V:X->Y) (x:X) (v:Y)
-      (f:X->X) D `{Proper _ (_eq ==> _eq) f} `{Proper _ (_eq ==> _eq) V}
-  : injective_on {x; D} f
-    -> agree_on _eq D ((f ∘ V)[x <- v])  (fun y => V[f x <- v] (f y)).
-Proof.
-  intros Inj.
-  hnf; intros. lud; eauto.
-  - exfalso. rewrite H4 in *. eauto.
-  - exfalso. eapply Inj in e; eauto with cset.
-Qed.
-
-Lemma agree_on_update_list_map X `{OrderedType X} Y `{OrderedType Y} (V:X->Y)
-      (L:list X) (L':list Y)
-      (Len:❬L❭=❬L'❭) (f:X->X) D `{Proper _ (_eq ==> _eq) f} `{Proper _ (_eq ==> _eq) V}
-  : injective_on (D ∪ of_list L) f
-    -> agree_on _eq D ((f ∘ V)[L <-- L'])  (fun x => V[f ⊝ L <-- L'] (f x)).
-Proof.
-  intros Inj.
-  hnf; intros.
-  decide (x ∈ of_list L).
-  - edestruct (of_list_get_first _ i) as [n]; eauto. dcr.
-    edestruct update_with_list_lookup_in_list_first; eauto; dcr.
-    intros; intro. eapply H8; eauto. rewrite H9; eauto.
-    instantiate (1:=f ∘ V) in H9.
-    pose proof (proper_update_with_list _ _ (f ∘ V) L L') as PEQ.
-    unfold respectful, Proper, feq in PEQ.
-    rewrite PEQ; [| intros; unfold comp; rewrite H4; reflexivity | eapply H5]; clear PEQ.
-    rewrite H9.
-    setoid_rewrite H5 in H8.
-    eapply injective_on_incl in Inj; [| eapply incl_right].
-    edestruct (get_map_first Inj H6 H8); dcr.
-    edestruct update_with_list_lookup_in_list_first; try eapply H4; dcr.
-    Focus 3. rewrite H5. rewrite H13. inv_get.
-    rewrite EQ. reflexivity. eauto with len.
-    eauto.
-  - rewrite lookup_set_update_not_in_Z; eauto.
-    exploit (@injective_on_not_in_map _ _ _ _ f _ _ H1 n); eauto.
-    eapply injective_on_incl; eauto.
-    cset_tac.
-    rewrite lookup_set_update_not_in_Z; eauto.
-Qed.
-
-Lemma agree_on_eq_oval (D:set var) (f g: var -> option val)
-  : agree_on _eq D f g
-    -> agree_on eq D f g.
-Proof.
-  intros; hnf; intros.
-  eapply H in H0. inv H0; eauto; simpl in *; congruence.
-Qed.
-
-Lemma agree_on_empty X `{OrderedType X} Y D (f g:X->Y) R
-  : D ⊆ ∅
-    -> agree_on R D f g.
-Proof.
-  unfold agree_on; intros; exfalso; cset_tac.
-Qed.
-
-Lemma map_incl X `{OrderedType X} Y `{OrderedType Y} D D' (f:X->Y)
-      `{Proper _ (_eq ==> _eq) f}
-  : D ⊆ D'
-    -> map f D ⊆ map f D'.
-Proof.
-  intros; hnf; intros. cset_tac.
-Qed.
-
-Hint Resolve map_incl.
 
 Lemma load_agree_after_spill_load (V V':var->option val) VD R M Sp L0
       (Inj : injective_on VD slot)
@@ -483,45 +191,6 @@ Proof.
      reflexivity.
 Qed.
 
-
-Lemma agree_on_comp X `{OrderedType X} Y
-      (V V' V'':X->Y) (f:X->X) D `{Proper _ (_eq ==> _eq) f}
-  : agree_on eq (map f D) V' V''
-    -> agree_on eq D V (fun x => V'' (f x))
-    -> agree_on eq D V (fun x => V' (f x)).
-Proof.
-  intros.
-  hnf; intros. rewrite H1; eauto.
-  eapply map_iff; eauto.
-Qed.
-
-Lemma agree_on_comp_both X `{OrderedType X} Y
-      (V V':X->Y) (f:X->X) D `{Proper _ (_eq ==> _eq) f}
-      `{Proper _ (_eq ==> eq) V}
-      `{Proper _ (_eq ==> eq) V'}
-  : agree_on eq (map f D) V V'
-    <-> agree_on eq D (fun x => V (f x)) (fun x => V' (f x)).
-Proof.
-  split; intros Agr; hnf; intros.
-  + rewrite Agr; eauto.
-    eapply map_iff; eauto.
-  + eapply map_iff in H3; eauto; dcr.
-    exploit (Agr x0); eauto.
-    rewrite <- H6 in H3. eauto.
-Qed.
-
-Lemma injective_disj X `{OrderedType X} s t (f:X->X) `{Proper _ (_eq ==> _eq) f}
-  : disj s t
-    -> injective_on (s ∪ t) f
-    -> disj (map f s) (map f t).
-Proof.
-  intros Disj Inj; hnf; intros.
-  eapply map_iff in H1; eauto; dcr.
-  eapply map_iff in H2; eauto; dcr.
-  rewrite H6 in H5. eapply Inj in H5; cset_tac.
-  eapply Disj; eauto. cset_tac.
-Qed.
-
 Lemma spills_agree_after_spill_load (V V' V'':var->option val) VD R M Sp L0
       (Inj : injective_on VD slot) (Disj : disj VD (map slot VD)) (Incl : R ∪ M [<=] VD)
       (Agr1 : agree_on eq R V V')
@@ -592,76 +261,6 @@ Proof.
   -- eapply mem_untouched_after_spill_load; try eapply Agr3; eauto.
 Qed.
 
-Inductive defined X : list (option X) -> Prop :=
-| NilDefined : defined nil
-| ConsDefined x xs: defined xs -> defined (Some x::xs).
-
-Lemma defined_get X (L:list (option X)) n x
-  : defined L
-    -> get L n x
-    -> exists y, x = Some y.
-Proof.
-  intros. general induction H0; invt defined; eauto.
-Qed.
-
-Lemma defined_on_update_list' X `{OrderedType X} Y (E:X -> option Y) L L' (Len:❬L❭=❬L'❭) s
-  : defined_on (s \ of_list L) E
-    -> defined L'
-    -> defined_on s (E [L <-- L']).
-Proof.
-  intros.
-  hnf; intros. decide (x ∈ of_list L).
-  - edestruct update_with_list_lookup_in_list; try eapply i; dcr; eauto.
-    rewrite H6. exploit defined_get; eauto.
-  - rewrite lookup_set_update_not_in_Z; eauto.
-    eapply H0; cset_tac.
-Qed.
-
-Lemma get_defined X (L:list (option X))
-  : (forall n x, get L n x -> exists y, x = Some y)
-    -> defined L.
-Proof.
-  intros. general induction L; eauto using defined, get.
-  edestruct H; dcr; eauto using get. subst.
-  eauto using defined, get.
-Qed.
-
-Lemma defined_on_defined X `{OrderedType X} Y (V:X->option Y) L
-      `{Proper _ (_eq ==> eq) V}
-  : defined_on (of_list L) V
-    <-> defined (V ⊝ L).
-Proof.
-  split; intros.
-  - eapply get_defined; intros; inv_get.
-    eapply get_in_of_list in H2. eauto.
-  - hnf; intros.
-    edestruct of_list_get_first; eauto; dcr.
-    eapply defined_get; eauto.
-    rewrite H4. eapply map_get_1; eauto.
-Qed.
-
-Lemma defined_on_comp X `{OrderedType X} Y (f:X->X) D (V:X -> option Y)
-      `{Proper _ (_eq ==> _eq) f}  `{Proper _ (_eq ==> eq) V}
-  : defined_on (map f D) V <-> defined_on D (f ∘ V).
-Proof.
-  split; intros; hnf; intros.
-  - exploit H2; eauto. eapply map_iff; eauto.
-  - eapply map_iff in H3; dcr; eauto.
-    setoid_rewrite H6; eauto.
-Qed.
-
-Lemma agree_on_update_dead_both_comp_right X `{OrderedType X} Y R
-      (lv:set X) (E E':X -> Y) (f:X->X) `{Proper _ (_eq ==> _eq) f} x v v'
-  : ~x ∈ lv
-    -> disj {x; lv} (map f lv)
-    -> agree_on R lv E (f ∘ E')
-    -> agree_on R lv (E [x <- v]) (f ∘ (E'[x <- v'])).
-Proof.
-  intros NotIn Disj Agr; unfold comp.
-  hnf; intros. lud; eauto.
-  exfalso. eapply (Disj x); eauto. cset_tac.
-  eapply map_iff; eauto.
-Qed.
 
 Lemma mem_agrees_after_spill_load_update (V V' V'':var->option val) VD R M Sp L0 x v
       (Agr5 : agree_on eq (Sp ∪ M) V (fun x : var => V'' (slot x)))
@@ -728,19 +327,6 @@ Proof.
      rewrite of_list_elements. clear; hnf; intros; cset_tac.
 Qed.
 
-
-Lemma op_eval_var Y
-  : (forall (n : nat) (y : op), get Y n y -> isVar y)
-    -> { xl : list var | Y = Var ⊝ xl }.
-Proof.
-  intros. general induction Y.
-  - eexists nil; eauto.
-  - exploit H; eauto using get.
-    destruct a; try now (exfalso; inv H0).
-    edestruct IHY; eauto using get; subst.
-    exists (v::x); eauto.
-Qed.
-
 Lemma omap_slotlift (V V'':onv val) xl Yv ib (Len:❬xl❭=❬ib❭) Sl R K L0 Sp M
       (Agr4 : agree_on eq (R \ K ∪ L0) V V'')
       (Agr5 : agree_on eq (Sp ∪ M) V (fun x : var => V'' (slot x)))
@@ -767,14 +353,6 @@ Proof.
     erewrite IHLen; eauto; [ | rewrite <- FVincl; eauto with cset ]; eauto.
     assert (x ∈ Sl ∪ (R \ K ∪ L0)) by (rewrite <- FVincl; cset_tac).
     revert NOTCOND H. clear; cset_tac.
-Qed.
-
-Lemma of_list_freeVars_vars xl
-  : of_list xl [<=] list_union (Op.freeVars ⊝ Var ⊝ xl).
-Proof.
-  clear slot.
-  general induction xl; simpl; eauto. rewrite list_union_start_swap.
-  rewrite IHxl; eauto. cset_tac.
 Qed.
 
 Lemma extend_args_length X (L:list X) ib (Len:❬L❭=❬ib❭)
@@ -906,7 +484,7 @@ Proof.
   - edestruct (IHLen slot E n0 R M) as [? [? ]]; eauto using get; dcr.
     + eapply disj_1_incl.
       eapply disj_2_incl; eauto with cset.
-      eauto with cset.
+      clear; cset_tac.
     + eapply injective_on_incl; eauto.
       clear; cset_tac.
     + intros. eapply (First (S n')); eauto using get. omega.

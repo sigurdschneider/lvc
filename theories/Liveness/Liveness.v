@@ -163,7 +163,6 @@ Proof.
     + rewrite getAnn_mapAnn.
       rewrite <- lookup_set_singleton'; eauto.
       rewrite lookup_set_minus_incl; eauto.
-      eapply lookup_set_incl; eauto.
     + rewrite getAnn_mapAnn.
       eapply lookup_set_spec; eauto.
   - econstructor; eauto using live_op_rename_sound.
@@ -174,7 +173,6 @@ Proof.
       rewrite of_list_lookup_list; eauto.
       etransitivity. eapply lookup_set_minus_incl; eauto.
       eapply lookup_set_incl; eauto.
-    + rewrite lookup_list_length; eauto with len.
     + intros; inv_get; eauto using live_op_rename_sound.
   - econstructor; eauto using live_op_rename_sound.
   - econstructor; eauto; try rewrite getAnn_mapAnn; eauto with len.
@@ -197,6 +195,4 @@ Proof.
         rewrite getAnn_mapAnn.
         rewrite of_list_lookup_list; eauto.
         rewrite lookup_set_minus_incl; eauto.
-        eapply lookup_set_incl; eauto.
-    + eapply lookup_set_incl; eauto.
 Qed.

@@ -107,8 +107,7 @@ Lemma lookup_set_single X `{OrderedType X} Y `{OrderedType Y} (ϱ:X->Y)
   -> lookup_set ϱ D ⊆ D'
   -> {{ ϱ v }} ⊆ D'.
 Proof.
-  intros. lset_tac.
-  eapply H3. lset_tac.
+  intros. lset_tac; eauto with cset.
 Qed.
 
 Lemma lookup_set_add X `{OrderedType X} Y `{OrderedType Y} x s (m:X -> Y) `{Proper _ (_eq ==> _eq) m}
@@ -148,3 +147,13 @@ Qed.
 (*  This hint Resolve will slow everything down by 100x *)
 (* Hint Resolve lookup_set_union_incl. *)
 Hint Resolve lookup_set_single_fact.
+
+Lemma map_incl X `{OrderedType X} Y `{OrderedType Y} D D' (f:X->Y)
+      `{Proper _ (_eq ==> _eq) f}
+  : D ⊆ D'
+    -> map f D ⊆ map f D'.
+Proof.
+  intros; hnf; intros. cset_tac.
+Qed.
+
+Hint Resolve map_incl.

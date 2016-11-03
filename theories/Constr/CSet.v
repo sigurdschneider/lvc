@@ -544,15 +544,6 @@ eauto with cset.
 Qed.
 
 
-
-Lemma of_list_elements X `{OrderedType X} (s : set X)
- : of_list (elements s) [=] s.
-Proof.
-cset_tac; [apply of_list_1 in H0; rewrite elements_iff
-          |apply of_list_1; rewrite <- elements_iff] ; eauto.
-Qed.
-
-
 Lemma list_eq_app X (R: relation X) (l1 l2 l1' l2' : list X)
 : list_eq R l1 l1' -> list_eq R l2 l2' -> list_eq R (l1++l2) (l1'++l2').
 Proof.
@@ -612,3 +603,80 @@ Proof.
     rewrite of_list_elements.
     assumption.
 Qed.
+
+Lemma in_dneg X `{OrderedType X} M x
+  : x ∈ M <-> ~x ∉ M.
+Proof.
+  split; repeat intro; eauto.
+  decide (x ∈ M); eauto.
+  exfalso; eauto.
+Qed.
+
+Lemma in_dneg' X `{OrderedType X} M x
+  : x ∈ M <-> ((x ∈ M -> False )->False).
+Proof.
+  split; repeat intro; eauto.
+  decide (x ∈ M); eauto.
+  exfalso; eauto.
+Qed.
+
+Lemma minus_de_morgan X `{OrderedType X} x s t
+  : (x \In s /\ (x \In t -> False) -> False)
+    <-> ((x \In s -> False) \/ (x \In t)).
+Proof.
+  split; intros; dcr.
+  - decide (x ∈ s); decide (x ∈ t); eauto.
+  - intuition.
+Qed.
+
+Smpl Add match goal with
+         | [ |- context [(_ \In _ -> False) -> False] ] =>
+           setoid_rewrite <- in_dneg'
+         | [ |- context [(_ \In _ /\ (_ \In _ -> False) -> False)] ] =>
+           setoid_rewrite minus_de_morgan
+         | [ H : ?x ∈ map ?f ?s |- _ ] =>
+           rewrite (map_iff f) in H; destruct H as [? [? ?]]
+         | [ |- context [ _ ∈ map ?f _ ] ] =>
+           rewrite (map_iff f)
+         end : cset.
+
+
+Lemma union_exclusive X `{OrderedType X} s t
+  : s ∪ t [=] s ∪ (t \ s).
+Proof.
+  cset_tac.
+Qed.
+
+
+Lemma in_add_right X `{OrderedType X} s x x'
+  : x ∈ s -> x ∈ {x'; s}.
+Proof.
+  cset_tac; intuition.
+Qed.
+
+Hint Resolve in_add_right : cset.
+
+
+Lemma set_decomp X `{OrderedType X} t s
+  : s [=] s ∩ t ∪ (s \ t).
+Proof.
+  cset_tac. decide (a ∈ t); eauto.
+Qed.
+
+(* Hint Resolve <- / -> is implicitly local *)
+Hint Resolve <- map_iff : cset.
+Hint Resolve -> map_iff : cset.
+
+Lemma map_spec_1 : forall (A : Type) (HA : OrderedType A) (B : Type) (HB : OrderedType B) (f : A -> B),
+       Proper (_eq ==> _eq) f ->
+       forall (s : ⦃A⦄) (b : B), b ∈ map f s -> (exists a : A, a ∈ s /\ b === f a).
+  intros; eauto with cset.
+Qed.
+
+Lemma map_spec_2 : forall (A : Type) (HA : OrderedType A) (B : Type) (HB : OrderedType B) (f : A -> B),
+       Proper (_eq ==> _eq) f ->
+       forall (s : ⦃A⦄) (b : B), (exists a : A, a ∈ s /\ b === f a) -> b ∈ map f s.
+  intros; eauto with cset.
+Qed.
+
+Hint Resolve map_spec_1 map_spec_2 : cset.

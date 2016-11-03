@@ -631,3 +631,10 @@ split; intros H0.
   + rewrite <- H0. cset_tac.
 - destruct H as [ain yx]. decide (a ∈ t); cset_tac.
 Qed.
+
+Lemma of_list_elements X `{OrderedType X} (s : set X)
+ : of_list (elements s) [=] s.
+Proof.
+cset_tac; [apply of_list_1 in H0; rewrite elements_iff
+          |apply of_list_1; rewrite <- elements_iff] ; eauto.
+Qed.

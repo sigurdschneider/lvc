@@ -148,13 +148,26 @@ Definition optimize (s':stmt) : status stmt :=
 
 Print all.
 
-Definition fromILF (s:stmt) : status stmt :=
+Require Import SimplSpill SpillSim DoSpill DoSpillRm ReconstrLive ReconstrLiveSound Take Drop.
+
+Definition slot k n x := if [x < k] then x else x + n.
+
+Definition fromILF (k:nat) (s:stmt) : status stmt :=
   let s_eae := EAE.compile s in
   let s_ra := rename_apart s_eae in
   let (s_dcve, lv) := DCVE Liveness.Imperative s_ra in
   let fvl := to_list (getAnn lv) in
+  let (R,M) := (of_list (take k fvl), of_list (drop k fvl)) in
+  let spl := @simplSpill k nil nil R M
+                        s_dcve lv in
+  let s_spilled := do_spill (slot k 100) s_dcve spl nil in
+  let lv_spilled := reconstr_live nil nil ∅ s_spilled (do_spill_rm (slot k 100) spl) in
+  let s_fun := addParams s_spilled lv_spilled in
+  let s_ren := rename_apart s_fun in
+  let lv_ren := snd (renameApart_live id ∅ s lv_spilled) in
+  let fvl := to_list (getAnn lv_ren) in
   let ϱ := CMap.update_map_with_list fvl fvl (@MapInterface.empty var _ _ _) in
-  sdo ϱ' <- AllocationAlgo.regAssign s_ra lv ϱ;
+  sdo ϱ' <- AllocationAlgo.regAssign s_ren lv_ren ϱ;
     let s_allocated := rename (CMap.findt ϱ' 0) s_ra in
     let s_lowered := ParallelMove.lower parallel_move
                                        nil
@@ -166,8 +179,8 @@ Opaque LivenessValidators.live_sound_dec.
 Opaque DelocationValidator.trs_dec.
 
 
-Lemma fromILF_correct (s s':stmt) E (PM:LabelsDefined.paramsMatch s nil)
-  : fromILF s = Success s'
+Lemma fromILF_correct k (s s':stmt) E (PM:LabelsDefined.paramsMatch s nil)
+  : fromILF k s = Success s'
     -> sim F.state I.state bot3 Sim (nil:list F.block, E, s) (nil:list I.block, E, s').
 Proof.
   unfold fromILF; intros.
@@ -177,7 +190,7 @@ Proof.
   eapply Liveness.live_sound_overapproximation_I; eauto.
   eapply AllocationAlgo.regAssign_renamedApart_agree in EQ; eauto;
     [|eapply rename_apart_renamedApart; eauto
-     |eapply RenameApart_Liveness.renameApart_live_sound].
+     |].
   Focus 5. eapply DCVE_live; eauto. eapply EAE.EAE_paramsMatch. eauto.
   admit.
   reflexivity. reflexivity. isabsurd.

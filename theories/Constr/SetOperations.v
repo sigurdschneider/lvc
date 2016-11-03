@@ -53,44 +53,6 @@ Proof.
     cset_tac.
 Qed.
 
-Ltac rewrite_map_iff dummy := match goal with
-           | [ H : context [ In ?y (map ?f ?s) ] |- _ ] =>
-             setoid_rewrite (@map_iff _ _ _ _ f _ s y) in H
-           | [ |- context [ In ?y (map ?f ?s) ]] =>
-             setoid_rewrite (@map_iff _ _ _ _ f _ s y)
-           end.
-Ltac mset_tac := set_tac rewrite_map_iff.
-
-Lemma map_app X `{OrderedType X} Y `{OrderedType Y} (f:X->Y)
-      `{Proper _ (_eq ==> _eq) f} s t
-: map f (s ∪ t) [=] map f s ∪ map f t.
-Proof.
-  mset_tac.
-Qed.
-
-Lemma map_add X `{OrderedType X} Y `{OrderedType Y} (f:X->Y)
-      `{Proper _ (_eq ==> _eq) f} x t
-: map f ({x; t}) [=] {f x; map f t}.
-Proof.
-  mset_tac.
-Qed.
-
-Lemma map_empty X `{OrderedType X} Y `{OrderedType Y} (f:X->Y)
-      `{Proper _ (_eq ==> _eq) f}
-: map f ∅ [=] ∅.
-Proof.
-  mset_tac.
-Qed.
-
-Instance map_Proper X `{OrderedType X} Y `{OrderedType Y}
-  : Proper (@fpeq X Y _eq _ _ ==> _eq ==> _eq) map.
-Proof.
-  unfold Proper, respectful; intros. inv H1; dcr.
-  hnf; intros. mset_tac.
-  eexists x1. rewrite <- H2, H9. split; eauto. eapply H3.
-  eexists x1. rewrite H2, H9. split; eauto. symmetry. eapply H3.
-Qed.
-
 Instance fold_union_Proper X `{OrderedType X}
   : Proper (_eq ==> _eq ==> _eq) (fold union).
 Proof.
@@ -147,15 +109,6 @@ Proof.
 Qed.
 
 
-Lemma map_single {X} `{OrderedType X} Y `{OrderedType Y} (f:X->Y)
-      `{Proper _ (_eq ==> _eq) f} x
-      : map f {{x}} [=] {{f x}}.
-Proof.
-  hnf; intros. rewrite map_iff; eauto.
-  split; intros.
-  - destruct H2; dcr. cset_tac; intuition.
-  - cset_tac; intuition.
-Qed.
 
 Lemma fold_single {X} `{OrderedType X} Y `{Equivalence Y} (f:X->Y->Y)
       `{Proper _ (_eq ==> R ==> R) f} (x:X) (s:Y)

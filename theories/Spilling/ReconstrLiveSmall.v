@@ -54,7 +54,6 @@ Proof.
         rewrite disj_minus_eq; eauto.
         apply disj_sym.
         eapply disj_incl; eauto.
-        eapply lookup_set_incl; eauto.
       * clear; cset_tac.
     + clear; cset_tac.
 Qed.
@@ -166,7 +165,7 @@ Proof.
     apply incl_eq.
     + setoid_rewrite add_union_singleton at 2.
       repeat apply union_incl_split.
-      * clear; cset_tac.
+      * clear; cset_tac. eauto 20 with cset.
       * clear; cset_tac.
       * assert (forall (s t u v w : ⦃var⦄),
                    t \ u ⊆ (s ∪ t ∪ u) \ u ∪ v ∪ w)
@@ -175,10 +174,9 @@ Proof.
         rewrite disj_minus_eq; eauto.
         eapply disj_incl; eauto.
         rewrite <- map_singleton.
-        rewrite lookup_set_incl; eauto.
-        unfold lookup_set; reflexivity.
+        eauto with cset.
       * clear; cset_tac.
-    + clear; cset_tac.
+    + clear; cset_tac. eauto 20 with cset.
 Qed.
 
 
@@ -408,6 +406,7 @@ Proof.
         clear; cset_tac.
       }
       rewrite lookup_set_incl; eauto.
+      unfold lookup_set.
       clear; cset_tac.
     + clear; cset_tac.
   - rewrite H9.

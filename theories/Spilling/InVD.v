@@ -144,5 +144,4 @@ Proof.
   intros sub disj.
   apply disj_intersection.
   eapply disj_2_incl; eauto.
-  apply lookup_set_incl; eauto using M'_VD.
 Qed.

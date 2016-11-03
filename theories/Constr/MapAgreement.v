@@ -246,3 +246,35 @@ Proof.
 Qed.
 
 Hint Resolve agree_on_incl : cset.
+
+
+Lemma agree_on_comp X `{OrderedType X} Y
+      (V V' V'':X->Y) (f:X->X) D `{Proper _ (_eq ==> _eq) f}
+  : agree_on eq (map f D) V' V''
+    -> agree_on eq D V (fun x => V'' (f x))
+    -> agree_on eq D V (fun x => V' (f x)).
+Proof.
+  intros.
+  hnf; intros. rewrite H1; eauto with cset.
+Qed.
+
+Lemma agree_on_comp_both X `{OrderedType X} Y
+      (V V':X->Y) (f:X->X) D `{Proper _ (_eq ==> _eq) f}
+      `{Proper _ (_eq ==> eq) V}
+      `{Proper _ (_eq ==> eq) V'}
+  : agree_on eq (map f D) V V'
+    <-> agree_on eq D (fun x => V (f x)) (fun x => V' (f x)).
+Proof.
+  split; intros Agr; hnf; intros.
+  + rewrite Agr; eauto with cset.
+  + eapply map_iff in H3; eauto; dcr.
+    exploit (Agr x0); eauto.
+    rewrite <- H6 in H3. eauto.
+Qed.
+
+Lemma agree_on_empty X `{OrderedType X} Y D (f g:X->Y) R
+  : D ⊆ ∅
+    -> agree_on R D f g.
+Proof.
+  unfold agree_on; intros; exfalso; cset_tac.
+Qed.
