@@ -93,24 +93,6 @@ Proof.
     + eauto with cset pe ann.
 Qed.
 
-Definition disjoint (DL:list (option (set var))) (G:set var) :=
-  forall n s, get DL n (Some s) -> disj s G.
-
-Instance disjoint_morphism_subset
-  : Proper (eq ==> Subset ==> flip impl) disjoint.
-Proof.
-  unfold Proper, respectful, impl, flip, disj, disjoint; intros; subst.
-  rewrite H0; eauto.
-Qed.
-
-Instance disjoint_morphism
-  : Proper (eq ==> Equal ==> iff) disjoint.
-Proof.
-  unfold Proper, respectful, iff, disjoint; split; intros; subst.
-  - rewrite <- H0; eauto.
-  - rewrite H0; eauto.
-Qed.
-
 Lemma disjoint_let D D' D'' x ZL (Lv:list (set var)) an
 : D''[=]{x; D'}
   -> disjoint (Some ⊝ Lv \\ ZL) (D'')
@@ -187,36 +169,6 @@ Qed.
 
 Hint Resolve disjoint_funF1 lv_incl : cset.
 
-Lemma incl_minus_incl_union X `{OrderedType X} s t u
-  : s \ t ⊆ u
-    -> s ⊆ t ∪ u.
-Proof.
-  intros. rewrite <- H0. cset_tac.
-Qed.
-
-Lemma incl_union_lr_eq X `{OrderedType X} s t u v
-  : s ∪ t [=] u
-    -> v ∪ t ⊆ v ∪ u.
-Proof.
-  intros. rewrite <- H0. eauto with cset.
-Qed.
-
-Lemma incl_union_eq X `{OrderedType X} s t u
-  : s ∪ t [=] u
-    -> t ⊆ u.
-Proof.
-  intros. rewrite <- H0. eauto with cset.
-Qed.
-
-Lemma incl_add_union_union X `{OrderedType X} s x t u
-  : s [=] {x; t}
-    -> {x; u} ∪ t ⊆ u ∪ s.
-Proof.
-  intros. rewrite H0. cset_tac.
-Qed.
-
-Hint Immediate incl_minus_incl_union incl_union_lr_eq incl_union_eq incl_add_union_union : cset.
-
 (* Coq ist so doof *)
 Lemma renamedApart_disj_F s D D' ans ant
   :  renamedApart s (annF (D, D') ans ant)
@@ -235,35 +187,6 @@ Proof.
 Qed.
 
 Hint Immediate incl_minus_disj renamedApart_disj_F : cset.
-
-Lemma funConstr_disjoint_fun_defs F ans alvs D Dt k a
-  : length F = length ans
-    -> length F = length alvs
-    -> (forall (n : nat) (a : ann (set var)) (b : ann (set var * set var)),
-          get alvs n a -> get ans n b -> ann_R Subset1 a b)
-    -> Indexwise.indexwise_R (funConstr D Dt) F ans
-    -> PairwiseDisjoint.pairwise_ne disj (defVars ⊜ F ans)
-    -> disj D (list_union (defVars ⊜ F ans) ∪ Dt)
-    -> get ans k a
-    -> disj (fst (getAnn a)) (snd (getAnn a))
-    -> disjoint (Some ⊝ (getAnn ⊝ alvs) \\ (fst ⊝ F)) (snd (getAnn a)).
-Proof.
-  intros. hnf; intros; inv_get.
-  edestruct H2; eauto; dcr.
-  exploit H1 as A; eauto. eapply ann_R_get in A.
-  decide (k = n); subst.
-  - repeat get_functional. eauto with cset.
-  - exploit H3 as B; [ eauto | eauto using zip_get | eauto using zip_get|].
-    unfold defVars in B.
-    exploit H1 as C; try eapply H10; eauto. eapply ann_R_get in C.
-    edestruct H2; try eapply H10; eauto; dcr.
-    rewrite C. rewrite H13.
-    eapply disj_1_incl. eapply disj_2_incl. eapply H4.
-    + eapply incl_union_left.
-      eapply incl_list_union; eauto using zip_get.
-      unfold defVars. eapply incl_right.
-    + clear_all; cset_tac.
-Qed.
 
 Lemma renamedApart_globals_live_F ZL Lv F ans als D Dt D' f lv' Z' l'
       (LEN1 : ❬F❭ = ❬als❭)

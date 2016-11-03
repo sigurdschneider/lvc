@@ -680,3 +680,34 @@ Lemma map_spec_2 : forall (A : Type) (HA : OrderedType A) (B : Type) (HB : Order
 Qed.
 
 Hint Resolve map_spec_1 map_spec_2 : cset.
+
+
+Lemma incl_minus_incl_union X `{OrderedType X} s t u
+  : s \ t ⊆ u
+    -> s ⊆ t ∪ u.
+Proof.
+  intros. rewrite <- H0. cset_tac.
+Qed.
+
+Lemma incl_union_lr_eq X `{OrderedType X} s t u v
+  : s ∪ t [=] u
+    -> v ∪ t ⊆ v ∪ u.
+Proof.
+  intros. rewrite <- H0. eauto with cset.
+Qed.
+
+Lemma incl_union_eq X `{OrderedType X} s t u
+  : s ∪ t [=] u
+    -> t ⊆ u.
+Proof.
+  intros. rewrite <- H0. eauto with cset.
+Qed.
+
+Lemma incl_add_union_union X `{OrderedType X} s x t u
+  : s [=] {x; t}
+    -> {x; u} ∪ t ⊆ u ∪ s.
+Proof.
+  intros. rewrite H0. cset_tac.
+Qed.
+
+Hint Immediate incl_minus_incl_union incl_union_lr_eq incl_union_eq incl_add_union_union : cset.

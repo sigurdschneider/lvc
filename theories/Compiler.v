@@ -149,6 +149,7 @@ Definition optimize (s':stmt) : status stmt :=
 Print all.
 
 Require Import SimplSpill SpillSim DoSpill DoSpillRm ReconstrLive ReconstrLiveSound Take Drop.
+Require Import RenameApart_Liveness.
 
 Definition slot k n x := if [x < k] then x else x + n.
 
@@ -172,7 +173,7 @@ Definition fromILF (k:nat) (s:stmt) : status stmt :=
     let s_lowered := ParallelMove.lower parallel_move
                                        nil
                                        s_allocated
-                                       (mapAnn (map (CMap.findt ϱ' 0)) lv) in
+                                       (mapAnn (map (CMap.findt ϱ' 0)) lv_ren) in
     s_lowered.
 
 Opaque LivenessValidators.live_sound_dec.
@@ -187,10 +188,14 @@ Proof.
   repeat let_case_eq; repeat simpl_pair_eqs; subst.
   monadS_inv H.
   exploit (@ParallelMove.correct parallel_move nil); try eapply EQ0; try now econstructor; eauto.
-  eapply Liveness.live_sound_overapproximation_I; eauto.
+  eapply (@Liveness.live_rename_sound _ nil nil).
+  eapply (@renameApart_live_sound nil nil).
+
+
   eapply AllocationAlgo.regAssign_renamedApart_agree in EQ; eauto;
     [|eapply rename_apart_renamedApart; eauto
      |].
+
   Focus 5. eapply DCVE_live; eauto. eapply EAE.EAE_paramsMatch. eauto.
   admit.
   reflexivity. reflexivity. isabsurd.

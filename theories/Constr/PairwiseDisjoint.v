@@ -62,3 +62,37 @@ Proof.
     eapply drop_get. instantiate (2:=n - S m).
     orewrite (S m + (n - S m) = n); eauto. eauto.
 Qed.
+
+Definition disjoint X `{OrderedType X} (DL:list (option (set X))) (G:set X) :=
+  forall n s, get DL n (Some s) -> disj s G.
+
+Lemma disjoint_incl X `{OrderedType X} L D D'
+  : disjoint L D
+    -> D' ⊆ D
+    -> disjoint L D'.
+Proof.
+  firstorder.
+Qed.
+
+Instance disjoint_morphism_subset X `{OrderedType X}
+  : Proper (eq ==> Subset ==> flip impl) (@disjoint X _).
+Proof.
+  unfold Proper, respectful, impl, flip, disj, disjoint; intros; subst.
+  rewrite H1; eauto.
+Qed.
+
+Instance disjoint_morphism X `{OrderedType X}
+  : Proper (eq ==> Equal ==> iff) (@disjoint X _).
+Proof.
+  unfold Proper, respectful, iff, disjoint; split; intros; subst.
+  - rewrite <- H1; eauto.
+  - rewrite H1; eauto.
+Qed.
+
+Lemma disjoint_app X `{OrderedType X} L L' D
+: disjoint (L ++ L') D <-> disjoint L D /\ disjoint L' D.
+Proof.
+  split; unfold disjoint.
+  - split; intros; eauto using get_shift, get_app.
+  -intros. eapply get_app_cases in H1; intuition; eauto.
+Qed.
