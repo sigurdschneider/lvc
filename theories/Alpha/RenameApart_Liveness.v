@@ -1,9 +1,21 @@
 Require Import Util CSet Map LengthEq.
-Require Import Env IL Alpha Fresh Subset1.
+Require Import Env IL Alpha Fresh Subset1 OptionR.
 Require Import Annotation RenamedApart RenameApart SetOperations Take.
-Require Import LabelsDefined PairwiseDisjoint Liveness.
+Require Import LabelsDefined PairwiseDisjoint Liveness Coherence Restrict.
 
 Set Implicit Arguments.
+
+Smpl Add match goal with
+         | [ H : context [ ❬@rev ?A ?L❭ ] |- _ ] => rewrite (@rev_length A L) in H
+         | [ |- context [ ❬@rev ?A ?L❭ ] ] => rewrite (@rev_length A L)
+         end : len.
+
+Smpl Add match goal with
+         | [ H : context [ ❬fst (renameApartF _ ?G ?ϱ ?F ?p)❭ ] |- _ ] =>
+           rewrite (@renameApartF_length G ϱ F) in H
+         | [ |- context [ ❬fst (renameApartF _ ?G ?ϱ ?F ?p)❭ ] ] =>
+           rewrite (@renameApartF_length G ϱ F)
+         end : len.
 
 Definition renameApartF_live
   (renameApart_live:env var -> set var -> stmt -> ann (set var) -> set var * ann (set var)) G ϱ :=
@@ -40,15 +52,15 @@ match s, alv with
    | _ , _ => (∅, alv)
    end.
 
-Lemma getAnn_snd_renameApart_live ZL LV ϱ G s lv
-  : live_sound Functional ZL LV s lv
+Lemma getAnn_snd_renameApart_live o ZL LV ϱ G s lv
+  : live_sound o ZL LV s lv
     -> getAnn (snd (renameApart_live ϱ G s lv)) = lookup_set ϱ (getAnn lv).
 Proof.
   intros LS; inv LS; simpl; repeat let_pair_case_eq; simpl; subst; eauto.
 Qed.
 
 
-Lemma snd_renameApartF_live L X G ϱ F als (Len:❬F❭ = ❬als❭)
+Lemma snd_renameApartF_live als L X G ϱ F (Len:❬F❭ = ❬als❭)
       (IH:forall n Zs a, get F n Zs -> get als n a ->
                     forall (ϱ : env var) (G : ⦃var⦄),
                       fst (renameApart_live ϱ G (snd Zs) a) = fst (renameApart' ϱ G (snd Zs)))
@@ -66,8 +78,8 @@ Proof.
 Qed.
 
 
-Lemma fst_renameApart_live ZL LV ϱ G s lv
-  : live_sound Functional ZL LV s lv
+Lemma fst_renameApart_live o ZL LV ϱ G s lv
+  : live_sound o ZL LV s lv
     -> fst (renameApart_live ϱ G s lv) = fst (renameApart' ϱ G s).
 Proof.
   intros LS.
@@ -86,7 +98,12 @@ Proof.
   general induction Len; simpl; repeat let_pair_case_eq; simpl; subst; eauto.
 Qed.
 
-
+Smpl Add match goal with
+         | [ H : context [ ❬fst (renameApartF_live ?renameApart' ?G ?ϱ ?s ?F ?anF)❭ ] |- _ ] =>
+           rewrite (@renameApartF_live_length G s ϱ F anF) in H
+         | [ |- context [ ❬fst (renameApartF_live ?renameApart' ?G ?ϱ ?s ?F ?anF)❭ ] ] =>
+           rewrite (@renameApartF_live_length G s ϱ F anF)
+         end : len.
 
 Lemma get_fst_renameApartF_live G G' ϱ F n anF ans
   (Get: get (fst (renameApartF_live renameApart_live G ϱ G' F anF)) n ans)
@@ -136,6 +153,15 @@ Proof.
         rewrite e. eauto.
 Qed.
 
+Smpl Add match goal with
+         | [ H : context [ ❬?L ++ ?L'❭ ] |- _ ] => rewrite (@app_length _ L L') in H
+         | [ H : context [ ❬?f ⊝ ?L❭ ] |- _ ] => rewrite (@map_length _ _ f L) in H
+         | [ H : context [ ❬?f ⊜ ?L ?L'❭ ] |- _ ] => rewrite (@zip_length _ _ _ f L L') in H
+         end : len.
+
+Tactic Notation "orewrite" constr(A) "all" :=
+  let X := fresh "OX" in assert A as X by omega; rewrite X in *; clear X.
+
 Lemma renameApart_live_sound ZL LV ZL' LV' s lv ϱ G
       (LenZL:❬ZL❭ = ❬ZL'❭) (LenLV:❬LV❭=❬LV'❭)
       (ParamLen:forall n Z Z', get ZL n Z -> get ZL' n Z' -> ❬Z❭ = ❬Z'❭)
@@ -165,20 +191,13 @@ Proof.
         -- rewrite !app_length, !map_length, renameApartF_live_length; eauto.
         -- intros; inv_get.
            eapply get_app_cases in H4; destruct H4.
-           ++ rewrite get_app_lt in H5; inv_get.
+           ++ rewrite get_app_lt in H5; inv_get; len_simpl; [|eauto with len].
              edestruct (get_fst_renameApartF _ _ _ H5) as [? [? ?]]; eauto; dcr.
-             rewrite renameApartF_length in H9.
              assert (n < ❬F❭) by eauto using get_range.
-             orewrite (❬F❭ - S (❬F❭ - S n) = n) in H9. get_functional. eauto.
-             rewrite map_length, rev_length, renameApartF_length; eauto using get_range.
-           ++ dcr. rewrite get_app_ge in H5.
-             rewrite ?map_length,?rev_length in *.
-             rewrite renameApartF_length in H5.
-             exploit ParamLen; eauto.
-             rewrite map_length in *.
-             rewrite rev_length, renameApartF_length; eauto.
+             orewrite (❬F❭ - S (❬F❭ - S n) = n) in H9. get_functional; eauto.
+           ++ dcr. rewrite get_app_ge in H5; eauto with len.
       * intros. erewrite fst_renameApart_live; eauto.
-    + rewrite rev_length, renameApartF_length, renameApartF_live_length; eauto.
+    + eauto with len.
     + intros; inv_get.
       edestruct (get_fst_renameApartF _ _ _ H4) as [? [? ?]]; eauto; dcr.
       rewrite H7.
@@ -195,8 +214,8 @@ Proof.
       orewrite (❬F❭ - S (❬F❭ - S n) = n).
       eapply live_sound_monotone2.
       eapply H1; eauto.
-      rewrite !app_length, !map_length, rev_length, renameApartF_length; omega.
-      rewrite !app_length, !map_length, renameApartF_live_length; omega.
+      eauto with len.
+      eauto with len.
       -- intros ? ? ? GetA GetB; inv_get.
          eapply get_app_cases in GetA; destruct GetA.
          ++ rewrite get_app_lt in GetB; inv_get.
@@ -205,22 +224,15 @@ Proof.
            assert (n0 < ❬F❭) by eauto using get_range.
            orewrite (❬F❭ - S (❬F❭ - S n0) = n0) in H21. get_functional. eauto.
            rewrite map_length, rev_length, renameApartF_length; eauto using get_range.
-         ++ dcr. rewrite get_app_ge in GetB.
-           rewrite ?map_length,?rev_length in GetB.
-           rewrite ?map_length,?rev_length in H17.
-           rewrite renameApartF_length in GetB.
-           exploit ParamLen; eauto.
-           rewrite map_length in *. eauto.
-           rewrite rev_length, renameApartF_length; eauto.
+         ++ dcr. rewrite get_app_ge in GetB; eauto with len.
       -- eauto with cset.
       -- rewrite rev_length, renameApartF_length, rev_rev.
          assert (n < ❬F❭) by eauto using get_range.
          orewrite (❬F❭ - S (❬F❭ - S n) = n).
          repeat rewrite take_length_le; eauto; omega.
-      -- intros. inv_get.
+      -- intros. inv_get. len_simpl.
          assert (n0 < ❬F❭) by eauto using get_range.
-         rewrite rev_length in H15.
-         orewrite (❬F❭ - S (❬F❭ - S n0) = n0) in H15.
+         orewrite (❬F❭ - S (❬F❭ - S n0) = n0) all.
          exploit H0; try eapply H15; eauto.
          erewrite fst_renameApart_live; eauto.
     + intros ? ? ? GetA GetB; inv_get; simpl.
@@ -239,13 +251,220 @@ Proof.
       assert (n < ❬F❭) by eauto using get_range.
       orewrite (❬F❭ - S (❬F❭ - S n) = n).
       rewrite renameApartFRight_corr.
-      erewrite <- snd_renameApartF_live.
-      instantiate (1:=take n als).
+      erewrite <- (@snd_renameApartF_live (take n als)).
       split.
       rewrite getAnn_setTopAnn. eauto with cset.
       rewrite getAnn_setTopAnn.
       rewrite lookup_set_update_with_list_in_union_length; eauto.
       rewrite H17. clear. cset_tac. rewrite !take_length_le; omega.
+      -- intros. inv_get.
+         exploit H0; eauto.
+         erewrite fst_renameApart_live; eauto.
+    + erewrite getAnn_snd_renameApart_live; eauto.
+Qed.
+
+Lemma map_incl_incl X `{OrderedType X} Y `{OrderedType Y} (f:X->Y)
+      `{Proper _ (_eq ==> _eq) f} (s t:set X) (u: set Y)
+  : map f s ⊆ u
+    -> t ⊆ s
+    -> map f t ⊆ u.
+Proof.
+  intros. rewrite map_incl; eauto.
+Qed.
+
+Hint Resolve map_incl_incl : cset.
+
+Lemma renameApart_live_sound_srd o DL ZL LV (ZL':list params) LV' s lv ϱ G
+      (ParamLen:forall n Z Z', get ZL n Z -> get ZL' n Z' -> ❬Z❭ = ❬Z'❭)
+  (LS: live_sound o ZL LV s lv)
+  (SRD:srd DL s lv)
+  (iEQ:PIR2 (ifFstR Equal) DL (LV \\ ZL))
+  (iEQ':PIR2 (ifFstR Equal) (option_map (fun (s:set var) => map ϱ s) ⊝ DL) (LV' \\ ZL'))
+  (NUC:noUnreachableCode isCalled s)
+  (LenZL:❬ZL❭ = ❬ZL'❭) (LenLV:❬LV❭=❬LV'❭) (LenDL:❬DL❭=❬ZL❭) (LenLV2:❬LV❭=❬ZL❭)
+  (Incl:map ϱ (getAnn lv) ⊆ G) (isImp:isImperative o)
+  : live_sound o ZL' LV' (snd (renameApart' ϱ G s)) (snd (renameApart_live ϱ G s lv)).
+Proof.
+  general induction LS; invt srd; invt noUnreachableCode; simpl;
+    repeat let_pair_case_eq; simpl; subst; eauto.
+  - econstructor; eauto 20 using live_exp_rename_sound, restrict_ifFstR.
+    + eapply IHLS; eauto using live_exp_rename_sound, restrict_ifFstR with len.
+      eapply PIR2_get.
+      * intros; inv_get. unfold restr; repeat (cases; simpl); eauto using @ifFstR.
+        edestruct PIR2_nth as [? [? iF]]; eauto; invc iF; inv_get.
+        econstructor. rewrite <- H11. revert COND; clear.
+        cset_tac; lud; cset_tac.
+        -- exfalso. exploit COND; eauto. cset_tac.
+        -- eexists x0; lud; eauto. exfalso. exploit COND; eauto.
+           cset_tac.
+      * len_simpl. rewrite min_l; try omega.
+      * simpl in *. revert Incl H0; clear; cset_tac; lud; eauto.
+        right; eapply Incl. rewrite <- H0. cset_tac.
+    + erewrite getAnn_snd_renameApart_live; eauto.
+      rewrite lookup_set_update_union_minus_single; eauto.
+      rewrite <- H0. eauto with cset.
+    + erewrite getAnn_snd_renameApart_live; eauto.
+      lset_tac. eexists x; lud; eauto.
+  - simpl in *.
+    econstructor; eauto using live_op_rename_sound, restrict_ifFstR.
+    + eapply IHLS1; eauto with cset.
+    + erewrite fst_renameApart_live; eauto.
+      eapply IHLS2; eauto with cset.
+    + erewrite getAnn_snd_renameApart_live; eauto.
+    + erewrite getAnn_snd_renameApart_live; eauto.
+  - inv_get. exploit ParamLen; eauto.
+    econstructor; eauto with len.
+    + cases; cases in H1; eauto.
+      edestruct PIR2_nth as [? [? iF]]; eauto using zip_get; invc iF; inv_get.
+      edestruct PIR2_nth as [? [? iF]]; try eapply iEQ; eauto using zip_get; invc iF; inv_get.
+      rewrite <- H10, H11. rewrite map_incl; eauto.
+    + intros; inv_get; eauto using live_op_rename_sound.
+  - econstructor; eauto using live_op_rename_sound.
+  - econstructor; eauto.
+    + erewrite snd_renameApartF_live; eauto.
+      * eapply IHLS; eauto using restrict_ifFstR with len.
+        -- intros; inv_get.
+           eapply get_app_cases in H4; destruct H4.
+           ++ rewrite get_app_lt in H5; inv_get.
+             edestruct (get_fst_renameApartF _ _ _ H5) as [? [? ?]]; eauto; dcr.
+             rewrite renameApartF_length in H14.
+             assert (n < ❬F❭) by eauto using get_range.
+             orewrite (❬F❭ - S (❬F❭ - S n) = n) in H14. get_functional. eauto.
+             rewrite map_length, rev_length, renameApartF_length; eauto using get_range.
+           ++ dcr. rewrite get_app_ge in H5; eauto with len.
+        -- rewrite zip_app; eauto with len.
+           eauto using PIR2_app, PIR2_ifFstR_refl.
+        -- rewrite !zip_app, List.map_app; eauto with len.
+           apply PIR2_app; eauto with len.
+           eapply PIR2_get; intros; inv_get; simpl; [|eauto with len].
+           econstructor. len_simpl. destruct x2 as [Z s], x as [Z' s'].
+           exploit H0; eauto.
+           edestruct (get_fst_renameApartF _ _ _ H5) as [? [? ?]]; eauto; dcr.
+           edestruct (get_fst_renameApartF_live _ _ _ _ _ H10); eauto; dcr; subst.
+           assert (n < ❬F❭) by eauto using get_range.
+           orewrite (❬F❭ - S (❬F❭ - S n) = n) in H16. get_functional.
+           inv_get.
+           rewrite getAnn_setTopAnn. erewrite getAnn_snd_renameApart_live; eauto.
+           rewrite drop_rev in *.
+           rewrite renameApartFRight_corr in *.
+           simpl in *. subst.
+           len_simpl. rewrite rev_rev in *.
+           orewrite (❬F❭ - S (❬F❭ - S n) = n) all.
+           erewrite (snd_renameApartF_live nil); eauto;
+             intros; inv_get; eauto using fst_renameApart_live with len.
+           rewrite minus_dist_union.
+           rewrite lookup_set_update_union_minus_list; eauto with len.
+           setoid_rewrite disj_minus_eq at 2.
+           unfold lookup_set. clear; cset_tac.
+           symmetry. eapply disj_2_incl. eapply fresh_list_spec. eapply fresh_spec.
+           exploit H8; eauto.
+           edestruct srd_globals_live_From; eauto; dcr.
+           destruct o; simpl in *; isabsurd; eauto using live_sound_overapproximation_I.
+           destruct o; simpl in *; isabsurd; eauto using live_sound_overapproximation_I.
+           inv_get. simpl in *.
+           eapply incl_union_right.
+           rewrite <- Incl. rewrite  <- H3. eauto with cset.
+        -- simpl in *. rewrite <- Incl at 1.
+           eauto with cset.
+      * intros. erewrite fst_renameApart_live; eauto.
+    + rewrite rev_length, renameApartF_length, renameApartF_live_length; eauto.
+    + intros; inv_get. len_simpl.
+      edestruct (get_fst_renameApartF _ _ _ H4) as [? [? ?]]; eauto; dcr. subst.
+      clear H15 H14.
+      edestruct (get_fst_renameApartF_live _ _ _ _ _ H5); eauto; dcr; subst.
+      assert (n < ❬F❭) by eauto using get_range.
+      orewrite (❬F❭ - S (❬F❭ - S n) = n) all. get_functional.
+      rewrite H10, H21.
+      rewrite drop_rev. rewrite rev_rev. len_simpl.
+      orewrite (❬F❭ - S (❬F❭ - S n) = n).
+      rewrite renameApartFRight_corr.
+      erewrite <- (@snd_renameApartF_live (take n als));
+        intros; inv_get; eauto using fst_renameApart_live with len.
+      eapply live_sound_monotone2.
+      eapply H1; eauto with len.
+      -- intros ? ? ? GetA GetB; inv_get.
+         eapply get_app_cases in GetA; destruct GetA.
+         ++ rewrite get_app_lt in GetB; inv_get.
+           edestruct (get_fst_renameApartF _ _ _ GetB) as [? [? ?]]; eauto; dcr. subst.
+           len_simpl.
+           assert (n0 < ❬F❭) by eauto using get_range.
+           orewrite (❬F❭ - S (❬F❭ - S n0) = n0) all. get_functional. eauto.
+           eauto with len.
+         ++ dcr. rewrite  get_app_ge in GetB;[|eauto with len ].
+           len_simpl.
+           exploit ParamLen; eauto.
+      -- rewrite !zip_app; eauto with len.
+         eauto using PIR2_app, PIR2_ifFstR_refl, restrict_ifFstR.
+      -- rewrite !zip_app, !List.map_app; eauto with len.
+         apply PIR2_app; eauto with len.
+         ++ eapply PIR2_get; intros; inv_get; simpl; [|eauto with len].
+           repeat cases; simpl; econstructor.
+           len_simpl. destruct x4 as [Z s], x2 as [Z' s'], x0 as [Z'' s''].
+           edestruct (get_fst_renameApartF _ _ _ H20) as [? [? ?]]; eauto; dcr.
+           edestruct (get_fst_renameApartF_live _ _ _ _ _ H22); eauto; dcr; subst.
+           clear H28 H27.
+           assert (n0 < ❬F❭) by eauto using get_range.
+           orewrite (❬F❭ - S (❬F❭ - S n0) = n0) all. get_functional.
+           inv_get.
+           rewrite getAnn_setTopAnn. erewrite getAnn_snd_renameApart_live; eauto.
+           rewrite drop_rev in *.
+           rewrite renameApartFRight_corr in *. rewrite rev_rev in *.
+           simpl in *. subst. len_simpl.
+           orewrite (❬F❭ - S (❬F❭ - S n0) = n0) all.
+           erewrite <- (@snd_renameApartF_live (take n0 als));
+             intros; inv_get; eauto using fst_renameApart_live with len.
+           assert (MME:forall (s t:set var), (t ∪ s) \ s [=] t \ s) by (clear; intros; cset_tac).
+           rewrite MME.
+           rewrite lookup_set_update_union_minus_list; eauto with len.
+           setoid_rewrite disj_minus_eq at 2.
+           rewrite lookup_set_update_disj; eauto.
+           rewrite COND. clear; hnf; cset_tac.
+           exploit (H8 n0); eauto.
+           edestruct srd_globals_live_From; eauto; dcr.
+           destruct o; simpl in *; isabsurd; eauto using live_sound_overapproximation_I.
+           destruct o; simpl in *; isabsurd; eauto using live_sound_overapproximation_I.
+           inv_get.
+           simpl in *. eapply disj_1_incl. symmetry. eapply fresh_list_spec. eapply fresh_spec.
+           eapply incl_union_right. rewrite <- Incl. eapply map_incl; eauto.
+           rewrite H34; eauto.
+         ++ eapply PIR2_get; intros; inv_get; simpl.
+           ** destruct x; simpl; try now econstructor.
+              unfold restr. cases; simpl; econstructor.
+              rewrite lookup_set_update_disj; eauto.
+              exploit PIR2_nth; try eapply iEQ'; eauto using map_get_eq. dcr.
+              inv_get. simpl in *. inv H28. eauto.
+              rewrite COND. clear; hnf; cset_tac.
+           ** len_simpl. exploit PIR2_length; eauto. len_simpl. eauto.
+      -- rewrite lookup_set_update_with_list_in_union_length; eauto with len.
+         exploit (H8 n); eauto.
+         edestruct srd_globals_live_From; eauto; dcr.
+         destruct o; simpl in *; isabsurd; eauto using live_sound_overapproximation_I.
+         destruct o; simpl in *; isabsurd; eauto using live_sound_overapproximation_I.
+         inv_get.
+         rewrite H25. unfold lookup_set. rewrite H3. rewrite Incl.
+         clear; cset_tac.
+      -- eauto with cset.
+    + intros ? ? ? GetA GetB; inv_get; simpl.
+      edestruct (get_fst_renameApartF _ _ _ GetA) as [? [? ?]]; eauto; dcr. subst.
+      rewrite H19. len_simpl.
+      edestruct (get_fst_renameApartF_live _ _ _ _ _ GetB); eauto; dcr; subst.
+      erewrite getAnn_snd_renameApart_live; eauto.
+      exploit H2; eauto; dcr.
+      assert (n < ❬F❭) by eauto using get_range.
+      orewrite (❬F❭ - S (❬F❭ - S n) = n) all.
+      get_functional.
+      rewrite drop_rev in *.
+      rewrite rev_rev in *. len_simpl.
+      assert (n < ❬F❭) by eauto using get_range.
+      orewrite (❬F❭ - S (❬F❭ - S n) = n) all.
+      rewrite renameApartFRight_corr.
+      erewrite <- (@snd_renameApartF_live (take n als)).
+      split.
+      -- rewrite getAnn_setTopAnn. eauto with cset.
+      -- rewrite getAnn_setTopAnn. cases; eauto.
+         rewrite lookup_set_update_with_list_in_union_length; eauto.
+         rewrite H22. clear. cset_tac.
+      -- eauto with len.
       -- intros. inv_get.
          exploit H0; eauto.
          erewrite fst_renameApart_live; eauto.

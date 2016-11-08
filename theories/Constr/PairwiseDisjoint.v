@@ -89,7 +89,7 @@ Proof.
   - rewrite H1; eauto.
 Qed.
 
-Lemma disjoint_app X `{OrderedType X} L L' D
+Lemma disjoint_app X `{OrderedType X} L L' (D:set X)
 : disjoint (L ++ L') D <-> disjoint L D /\ disjoint L' D.
 Proof.
   split; unfold disjoint.

@@ -235,37 +235,3 @@ Proof.
       * cases; eauto. rewrite of_list_app.
         rewrite <- minus_union. rewrite <- H11. eauto with cset.
 Qed.
-
-Lemma live_sound_compile' ZL ZAL Lv DL s ans_lv ans
-  (RD:trs DL ZAL s ans_lv ans)
-  (LV:live_sound Imperative ZL Lv s ans_lv)
-  (APL: additionalParameters_live (of_list ⊝ ZAL) s ans_lv ans)
-  : live_sound FunctionalAndImperative (zip (@List.app _) ZL ZAL) Lv (compile ZAL s ans) ans_lv.
-Proof.
-  general induction LV; inv RD; inv APL; simpl in *; eauto using live_sound.
-  - simpl. erewrite get_nth; eauto.
-    inv_get.
-    econstructor; simpl; eauto using zip_get with len.
-    + rewrite <- H1. rewrite of_list_app. eauto with cset.
-    + intros ? ? Get.
-      eapply get_app_cases in Get. destruct Get; dcr; eauto.
-      inv_get.
-      econstructor. rewrite <- H10. eauto using get_in_of_list.
-  - simpl. rewrite <- List.map_app in H20.
-    rewrite <- List.map_app in H19.
-    econstructor; eauto with len.
-    + rewrite fst_compileF_eq; eauto.
-      rewrite <- zip_app; eauto with len.
-    + intros.
-      unfold compileF in H4. inv_get. simpl.
-      rewrite fst_compileF_eq; eauto. rewrite <- zip_app; eauto with len.
-    + intros.
-      unfold compileF in H4. inv_get; simpl.
-      exploit H2; eauto. exploit H13; eauto. dcr.
-      rewrite of_list_app at 1.
-      split.
-      * rewrite H10, H9. eauto with cset.
-      * rewrite of_list_app.
-        rewrite <- minus_union.
-
-Qed.

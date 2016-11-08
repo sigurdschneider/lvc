@@ -1,5 +1,5 @@
 Require Import Util LengthEq AllInRel Map CSet SetOperations MoreList Indexwise.
-Require Import Val Var Env IL LabelsDefined Annotation Subset1.
+Require Import Val Var Env IL LabelsDefined Annotation Subset1 CSetDisjoint PairwiseDisjoint.
 Require Import Liveness Restrict RenamedApart.
 
 Set Implicit Arguments.
@@ -93,39 +93,33 @@ Proof.
     + eauto with cset pe ann.
 Qed.
 
-Lemma disjoint_let D D' D'' x ZL (Lv:list (set var)) an
+Lemma disjoint_let X `{OrderedType X} (D D' D'':set X) x ZL (Lv:list (set X)) an
 : D''[=]{x; D'}
   -> disjoint (Some ⊝ Lv \\ ZL) (D'')
   -> pe (getAnn an) ({x; D}, D')
   -> disjoint (Some ⊝ Lv \\ ZL) (snd (getAnn an)).
 Proof.
-  intros. rewrite H1. rewrite H in *. simpl. rewrite incl_add'; eauto.
+  intros EQ Disj PE. rewrite PE. rewrite EQ in *. eauto using disjoint_incl with cset.
 Qed.
 
-Lemma disjoint_if1 D D' Ds Dt  ZL Lv an
+Lemma disjoint_if1 X `{OrderedType X} (D D':⦃X⦄) Ds Dt  ZL Lv an
 :  Ds ∪ Dt [=] D'
   -> disjoint (Some ⊝ Lv \\ ZL) D'
   -> pe (getAnn an) (D, Ds)
   -> disjoint (Some ⊝ Lv \\ ZL) (snd (getAnn an)).
 Proof.
-  intros. rewrite H1. rewrite <- H in *. simpl. rewrite incl_left; eauto.
+  intros EQ Disj PE. rewrite PE. rewrite <- EQ in *. simpl.
+  eauto using disjoint_incl with cset.
 Qed.
 
-Lemma disjoint_if2 D D' Ds Dt ZL Lv an
+Lemma disjoint_if2 X `{OrderedType X} (D D':⦃X⦄) Ds Dt ZL Lv an
 :  Ds ∪ Dt [=] D'
   -> disjoint (Some ⊝ Lv \\ ZL) D'
   -> pe (getAnn an) (D, Dt)
   -> disjoint (Some ⊝ Lv \\ ZL) (snd (getAnn an)).
 Proof.
-  intros. rewrite H1. rewrite <- H in *. simpl. rewrite incl_right; eauto.
-Qed.
-
-Lemma disjoint_app L L' D
-: disjoint (L ++ L') D <-> disjoint L D /\ disjoint L' D.
-Proof.
-  split; unfold disjoint.
-  - split; intros; eauto using get_shift, get_app.
-  -intros. eapply get_app_cases in H0; intuition; eauto.
+  intros EQ Disj PE. rewrite PE. rewrite <- EQ in *. simpl.
+  eauto using disjoint_incl with cset.
 Qed.
 
 Lemma disjoint_funF1 ZL Lv D D' F ans Dt lv als
@@ -187,6 +181,35 @@ Proof.
 Qed.
 
 Hint Immediate incl_minus_disj renamedApart_disj_F : cset.
+
+Lemma funConstr_disjoint_fun_defs F ans alvs D Dt k a
+  : length F = length ans
+    -> length F = length alvs
+    -> (forall (n : nat) (a : ann (set var)) (b : ann (set var * set var)),
+          get alvs n a -> get ans n b -> ann_R Subset1 a b)
+    -> Indexwise.indexwise_R (funConstr D Dt) F ans
+    -> PairwiseDisjoint.pairwise_ne disj (defVars ⊜ F ans)
+    -> disj D (list_union (defVars ⊜ F ans) ∪ Dt)
+    -> get ans k a
+    -> disj (fst (getAnn a)) (snd (getAnn a))
+    -> disjoint (Some ⊝ (getAnn ⊝ alvs) \\ (fst ⊝ F)) (snd (getAnn a)).
+Proof.
+  intros. hnf; intros; inv_get.
+  edestruct H2; eauto; dcr.
+  exploit H1 as A; eauto. eapply ann_R_get in A.
+  decide (k = n); subst.
+  - repeat get_functional. eauto with cset.
+  - exploit H3 as B; [ eauto | eauto using zip_get | eauto using zip_get|].
+    unfold defVars in B.
+    exploit H1 as C; try eapply H10; eauto. eapply ann_R_get in C.
+    edestruct H2; try eapply H10; eauto; dcr.
+    rewrite C. rewrite H13.
+    eapply disj_1_incl. eapply disj_2_incl. eapply H4.
+    + eapply incl_union_left.
+      eapply incl_list_union; eauto using zip_get.
+      unfold defVars. eapply incl_right.
+    + clear_all; cset_tac.
+Qed.
 
 Lemma renamedApart_globals_live_F ZL Lv F ans als D Dt D' f lv' Z' l'
       (LEN1 : ❬F❭ = ❬als❭)

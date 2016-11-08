@@ -1,6 +1,6 @@
 Require Import CSet Le.
 
-Require Import Plus Util Map DecSolve AllInRel OptionR Subset1.
+Require Import Plus Util Map DecSolve AllInRel OptionR Subset1 PairwiseDisjoint.
 Require Import Env IL Annotation Liveness Coherence Alpha Restrict RenamedApart.
 Require Import Rename RenamedApart_Liveness.
 
@@ -612,7 +612,7 @@ Proof.
 
   - constructor.
     + eauto with len.
-    + intros. inv_get. simpl. rewrite lookup_list_length; eauto.
+    + intros. inv_get. simpl. eauto with len.
     + intros. inv_get. simpl. rewrite update_with_list_lookup_list; eauto.
       eapply H1; eauto.
       * assert (fpeq _eq ϱ ϱ). split. reflexivity. split; intuition.

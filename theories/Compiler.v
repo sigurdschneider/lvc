@@ -189,6 +189,7 @@ Proof.
   monadS_inv H.
   exploit (@ParallelMove.correct parallel_move nil); try eapply EQ0; try now econstructor; eauto.
   eapply (@Liveness.live_rename_sound _ nil nil).
+  eapply Liveness.live_sound_overapproximation_I.
   eapply (@renameApart_live_sound nil nil).
 
 
