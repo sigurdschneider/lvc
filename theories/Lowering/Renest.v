@@ -259,8 +259,6 @@ eapply get_app_ge; eauto.
 Defined.
 
 
-Definition R D n n' := n' = get D n n'.
-
 Inductive approx (L':list I.block) (Z:params) (D:list nat)
   : nat -> I.block -> I.block -> Prop :=
   Approx s n m s' F f
@@ -288,13 +286,8 @@ Proof.
   sind s; intros; destruct s; simpl in *; invt labelsDefined;
     repeat let_case_eq; repeat simpl_pair_eqs; subst; simpl in *.
   - destruct e.
-    + case_eq (op_eval E e); intros.
-      * pone_step. left. eapply IH; eauto.
-      * pno_step.
-    + case_eq (omap (op_eval E) Y); [intros | intros; pno_step ].
-      pextern_step.
-      * left. eapply IH; eauto.
-      * left. eapply IH; eauto.
+    + eapply (sim_let_op il_statetype_I); eauto.
+    + eapply (sim_let_call il_statetype_I); eauto.
   - case_eq (op_eval E e); [ intros | intros; pno_step ].
     rewrite mapi_app in DROP. rewrite <- app_assoc in DROP.
     case_eq (val2bool v); intros.
