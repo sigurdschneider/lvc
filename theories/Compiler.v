@@ -151,28 +151,78 @@ Print all.
 Require Import SimplSpill SpillSim DoSpill DoSpillRm ReconstrLive ReconstrLiveSound Take Drop.
 Require Import RenameApart_Liveness.
 
+Definition max := max.
 Definition slot k n x := if [x < k] then x else x + n.
 
-Definition spill (k:nat) (s:stmt) (lv:ann (set var)) : stmt * ann (set var) :=
+Definition spill (k:nat) (s:stmt) (lv:ann (set var)) (VD:set var) : stmt * ann (set var) :=
   let fvl := to_list (getAnn lv) in
   let (R,M) := (of_list (take k fvl), of_list (drop k fvl)) in
   let spl := @simplSpill k nil nil R M s lv in
-  let s_spilled := do_spill (slot k 100) s spl nil in
-  let lv_spilled := reconstr_live nil nil ∅ s_spilled (do_spill_rm (slot k 100) spl) in
+  let n := fold max VD 0 in
+  let slt := slot k n in
+  let s_spilled := do_spill slt s spl nil in
+  let lv_spilled := reconstr_live nil nil ∅ s_spilled (do_spill_rm slt spl) in
   let s_fun := addParams s_spilled lv_spilled in
   (s_fun, lv_spilled).
 
-Lemma spill_correct k (s:stmt) lv E (PM:LabelsDefined.paramsMatch s nil)
+Lemma spill_correct k (s:stmt) lv ra E (PM:LabelsDefined.paramsMatch s nil)
       (LV:Liveness.live_sound Liveness.Imperative nil nil s lv)
-  : sim I.state F.state bot3 Sim (nil, E, s) (nil, E, fst (spill k s lv)).
+      (AEF:AppExpFree.app_expfree s)
+      (RA:RenamedApart.renamedApart s ra)
+      (Def:defined_on (getAnn lv) E)
+      (Bnd:Spilling.fv_e_bounded k s)
+      (Incl:getAnn lv ⊆ fst (getAnn ra))
+  : sim I.state F.state bot3 Sim
+        (nil, E, s)
+        (nil, E [slot k (fold max (fst (getAnn ra) ∪ snd (getAnn ra)) 0) ⊝ drop k (to_list (getAnn lv)) <-- lookup_list E (drop k (to_list (getAnn lv)))], fst (spill k s lv (fst (getAnn ra) ∪ snd (getAnn ra)))).
 Proof.
-  unfold spill; simpl.
-  set (R:=of_list (take k (SetAVL.elements (getAnn lv)))).
-  set (M:=of_list (drop k (SetAVL.elements (getAnn lv)))).
+  unfold spill.
+  set (R:=of_list (take k (to_list (getAnn lv)))).
+  set (M:=of_list (drop k (to_list (getAnn lv)))).
   set (spl:=(simplSpill k nil nil R M s lv)).
+  set (VD:=fst (getAnn ra) ∪ snd (getAnn ra)).
+  set (n := fold max VD 0) in *.
+  set (slt:=(slot k n)).
+  subst n.
+  assert (lvRM:getAnn lv [=] R ∪ M). {
+    subst R M. rewrite <- of_list_app. rewrite <- take_eta.
+    rewrite of_list_3. eauto.
+  }
   eapply sim_trans with (S2:=I.state).
-  - eapply sim_I with (R:=R) (M:=M) (sl:=spl); eauto.
-  [|eapply addParams_correct; eauto].
+  - eapply sim_I with (slot:=slt) (k:=k) (R:=R) (M:=M) (sl:=spl) (Λ:=nil)
+      (VD:=VD)
+      (V':=E [slt ⊝ drop k (elements (getAnn lv)) <-- lookup_list E (drop k (elements (getAnn lv)))]);
+      eauto.
+    + eapply agree_on_update_list_dead; eauto.
+      subst R. admit.
+    + admit.
+    + eapply simplSpill_sat_spillSound; eauto using PIR2. admit.
+      subst R. rewrite TakeSet.take_of_list_cardinal; eauto.
+      rewrite lvRM; eauto.
+    + admit.
+    + admit.
+    + admit.
+    + eapply defined_on_union.
+      * admit.
+      * admit.
+    + rewrite <- Incl, lvRM; eauto.
+    + eapply SimI.labenv_sim_nil.
+    + eauto.
+    + admit.
+  - eapply addParams_correct; eauto.
+    + admit.
+    + eapply (@reconstr_live_sound k slt nil _ nil R M VD); eauto using PIR2.
+      ** admit.
+      ** admit.
+      ** admit.
+      ** admit.
+      ** reflexivity.
+      ** eapply simplSpill_sat_spillSound; eauto using PIR2. admit.
+         subst R. rewrite TakeSet.take_of_list_cardinal; eauto.
+         rewrite lvRM; eauto.
+      ** admit.
+      ** isabsurd.
+    + admit.
 Qed.
 
 
