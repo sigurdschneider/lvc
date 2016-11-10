@@ -153,23 +153,41 @@ Require Import RenameApart_Liveness.
 
 Definition slot k n x := if [x < k] then x else x + n.
 
+Definition spill (k:nat) (s:stmt) (lv:ann (set var)) : stmt * ann (set var) :=
+  let fvl := to_list (getAnn lv) in
+  let (R,M) := (of_list (take k fvl), of_list (drop k fvl)) in
+  let spl := @simplSpill k nil nil R M s lv in
+  let s_spilled := do_spill (slot k 100) s spl nil in
+  let lv_spilled := reconstr_live nil nil ∅ s_spilled (do_spill_rm (slot k 100) spl) in
+  let s_fun := addParams s_spilled lv_spilled in
+  (s_fun, lv_spilled).
+
+Lemma spill_correct k (s:stmt) lv E (PM:LabelsDefined.paramsMatch s nil)
+      (LV:Liveness.live_sound Liveness.Imperative nil nil s lv)
+  : sim I.state F.state bot3 Sim (nil, E, s) (nil, E, fst (spill k s lv)).
+Proof.
+  unfold spill; simpl.
+  set (R:=of_list (take k (SetAVL.elements (getAnn lv)))).
+  set (M:=of_list (drop k (SetAVL.elements (getAnn lv)))).
+  set (spl:=(simplSpill k nil nil R M s lv)).
+  eapply sim_trans with (S2:=I.state).
+  - eapply sim_I with (R:=R) (M:=M) (sl:=spl); eauto.
+  [|eapply addParams_correct; eauto].
+Qed.
+
+
+
 Definition fromILF (k:nat) (s:stmt) : status stmt :=
   let s_eae := EAE.compile s in
   let s_ra := rename_apart s_eae in
   let (s_dcve, lv) := DCVE Liveness.Imperative s_ra in
   let fvl := to_list (getAnn lv) in
-  let (R,M) := (of_list (take k fvl), of_list (drop k fvl)) in
-  let spl := @simplSpill k nil nil R M
-                        s_dcve lv in
-  let s_spilled := do_spill (slot k 100) s_dcve spl nil in
-  let lv_spilled := reconstr_live nil nil ∅ s_spilled (do_spill_rm (slot k 100) spl) in
-  let s_fun := addParams s_spilled lv_spilled in
   let s_ren := rename_apart s_fun in
-  let lv_ren := snd (renameApart_live id ∅ s lv_spilled) in
+  let lv_ren := snd (renameApart_live id (freeVars s_fun) s_fun lv_spilled) in
   let fvl := to_list (getAnn lv_ren) in
   let ϱ := CMap.update_map_with_list fvl fvl (@MapInterface.empty var _ _ _) in
   sdo ϱ' <- AllocationAlgo.regAssign s_ren lv_ren ϱ;
-    let s_allocated := rename (CMap.findt ϱ' 0) s_ra in
+    let s_allocated := rename (CMap.findt ϱ' 0) s_ren in
     let s_lowered := ParallelMove.lower parallel_move
                                        nil
                                        s_allocated
@@ -189,8 +207,11 @@ Proof.
   monadS_inv H.
   exploit (@ParallelMove.correct parallel_move nil); try eapply EQ0; try now econstructor; eauto.
   eapply (@Liveness.live_rename_sound _ nil nil).
-  eapply Liveness.live_sound_overapproximation_I.
-  eapply (@renameApart_live_sound nil nil).
+  eapply (@renameApart_live_sound_srd _ nil nil nil nil nil); eauto.
+  clear; isabsurd.
+  eapply (@Delocation.live_sound_compile nil nil nil nil); eauto.
+  eapply DelocationAlgo.is_trs; eauto.
+  eapply (@ReconstrLiveSound.reconstr_live_sound _ _ nil _ nil).
 
 
   eapply AllocationAlgo.regAssign_renamedApart_agree in EQ; eauto;

@@ -126,8 +126,7 @@ Inductive fv_e_bounded : nat -> stmt -> Prop :=
     -> fv_e_bounded k (stmtIf e s t)
 
 | BoundApp k f Y
-  : cardinal (list_union (Op.freeVars ⊝ Y)) <= k
-    -> fv_e_bounded k (stmtApp f Y)
+  : fv_e_bounded k (stmtApp f Y)
 
 | BoundFun k F t
   : (forall n Zs, get F n Zs -> fv_e_bounded k (snd Zs))
