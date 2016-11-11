@@ -18,7 +18,7 @@ def rcol(width, text)
 end
 
 def clr(s,l,h)
-  return s >= h ? (red (s.to_s)) : (s < l ? (green (s.to_s)) : (yellow (s.to_s)))
+  return s <= h ? (red (s.to_s)) : (s > l ? (green (s.to_s)) : (yellow (s.to_s)))
 end
 
 def clr_diff(s,t)
