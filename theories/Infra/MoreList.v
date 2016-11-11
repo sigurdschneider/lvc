@@ -715,14 +715,25 @@ Ltac len_simpl_basic :=
   | [ |- context [ ❬?L ++ ?L'❭ ] ] => rewrite (@app_length _ L L')
   | [ |- context [ ❬?f ⊝ ?L❭ ] ] => rewrite (@map_length _ _ f L)
   | [ |- context [ ❬?f ⊜ ?L ?L'❭ ] ] => rewrite (@zip_length _ _ _ f L L')
+  | [ H : context [ ❬?L ++ ?L'❭ ] |- _ ] => rewrite (@app_length _ L L') in H
+  | [ H : context [ ❬?f ⊝ ?L❭ ] |- _ ] => rewrite (@map_length _ _ f L) in H
+  | [ H : context [ ❬?f ⊜ ?L ?L'❭ ] |- _ ] => rewrite (@zip_length _ _ _ f L L') in H
   | [ H : ❬?L❭ = ❬?L'❭ |- context [Init.Nat.min ❬?L❭ ❬?L'❭] ] =>
     rewrite (@min_idempotent_eq _ _ H)
+  | [ H : ❬?L❭ = ❬?L'❭, H' : context [Init.Nat.min ❬?L❭ ❬?L'❭] |- _ ] =>
+    rewrite (@min_idempotent_eq _ _ H) in H'
   | [ H : ❬?L'❭ = ❬?L❭ |- context [Init.Nat.min ❬?L❭ ❬?L'❭] ] =>
     rewrite (@min_idempotent_eq _ _ (eq_sym H))
+  | [ H : ❬?L'❭ = ❬?L❭, H' : context [Init.Nat.min ❬?L❭ ❬?L'❭] |- _ ] =>
+    rewrite (@min_idempotent_eq _ _ (eq_sym H)) in H'
   | [ H : ?x = ❬?L❭, H' : ?x = ❬?L'❭ |- context [Init.Nat.min ❬?L❭ ❬?L'❭] ] =>
     rewrite (@min_idempotent_eq _ _ (eq_trans (eq_sym H) H'))
+  | [ H : ?x = ❬?L❭, H' : ?x = ❬?L'❭, H'' : context [Init.Nat.min ❬?L❭ ❬?L'❭] |- _ ] =>
+    rewrite (@min_idempotent_eq _ _ (eq_trans (eq_sym H) H')) in H''
   | [ |- context [Init.Nat.min (?a + ?x) ?a] ] =>
     rewrite (@min_r (a + x) a); [ | clear; omega ]
+  | [ H : context [Init.Nat.min (?a + ?x) ?a] |- _ ] =>
+    rewrite (@min_r (a + x) a) in H; [ | clear; omega ]
   end.
 
 Smpl Add len_simpl_basic : len.
@@ -740,4 +751,6 @@ Smpl Add
        rewrite (@map_id A L)
      | |- context [ ❬@take ?k ?X ?L ❭ ] =>
        rewrite (@take_length X L k)
+     | [ H : context [ ❬@take ?k ?X ?L ❭ ] |- _ ] =>
+       rewrite (@take_length X L k) in H
      end : len.

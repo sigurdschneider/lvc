@@ -148,7 +148,8 @@ Definition optimize (s':stmt) : status stmt :=
 
 Print all.
 
-Require Import SimplSpill SpillSim DoSpill DoSpillRm ReconstrLive ReconstrLiveSound Take Drop.
+Require Import SimplSpill SpillSim DoSpill DoSpillRm Take Drop.
+Require Import ReconstrLive ReconstrLiveSound.
 Require Import RenameApart_Liveness.
 
 Definition max := max.
@@ -172,6 +173,7 @@ Lemma spill_correct k (s:stmt) lv ra E (PM:LabelsDefined.paramsMatch s nil)
       (Def:defined_on (getAnn lv) E)
       (Bnd:Spilling.fv_e_bounded k s)
       (Incl:getAnn lv ⊆ fst (getAnn ra))
+      (NUC:LabelsDefined.noUnreachableCode LabelsDefined.isCalled s)
   : sim I.state F.state bot3 Sim
         (nil, E, s)
         (nil, E [slot k (fold max (fst (getAnn ra) ∪ snd (getAnn ra)) 0) ⊝ drop k (to_list (getAnn lv)) <-- lookup_list E (drop k (to_list (getAnn lv)))], fst (spill k s lv (fst (getAnn ra) ∪ snd (getAnn ra)))).
@@ -222,7 +224,7 @@ Proof.
          rewrite lvRM; eauto.
       ** admit.
       ** isabsurd.
-    + admit.
+    + eapply (@do_spill_no _ _ _ nil nil).
 Qed.
 
 

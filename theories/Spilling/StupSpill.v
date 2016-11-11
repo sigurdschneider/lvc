@@ -99,8 +99,8 @@ Proof.
     eapply SpillApp with (K:= R) (R_f:= R_f) (M_f:=M_f);
       try rewrite <- ReqR'; eauto.
     + eauto with cset.
-    + assert (R \ R ∪ ∅ [=] ∅) by cset_tac.
-      rewrite H5.
+    + assert (EQ: R \ R ∪ ∅ [=] ∅) by cset_tac.
+      rewrite EQ.
       rewrite empty_cardinal.
       omega.
     + rewrite pir2_R. clear. cset_tac.

@@ -49,7 +49,12 @@ Definition slot_lift_args
             end)
 .
 
-
+Lemma slot_lift_args_isVar (slot:var -> var) (M:set var) op
+  : isVar op
+    -> isVar (slot_lift_args slot M op).
+Proof.
+  intros []; simpl; cases; eauto using isVar.
+Qed.
 
 
 Lemma slot_lift_args_elem_eq_ext
@@ -109,6 +114,19 @@ Fixpoint extend_args {X}
      end
 .
 
+Lemma extend_args_get X (Y : list X) (ib : list bool) n x
+  : get (extend_args Y ib) n x
+    -> exists n, get Y n x.
+Proof.
+  intros.
+  general induction H; destruct Y, ib; simpl in *;
+    clear_trivial_eqs; isabsurd;
+      eauto using get.
+  - cases in Heql; clear_trivial_eqs; eauto using get.
+  - cases in Heql; clear_trivial_eqs; eauto using get.
+    + edestruct (IHget (x0::Y) (false::ib)); eauto.
+    + edestruct IHget; eauto using get.
+Qed.
 
 Lemma extend_args_elem_eq_ext
       (Y : args)
@@ -370,4 +388,148 @@ Proof.
   destruct a;
     destruct p;
     simpl; eauto.
+Qed.
+
+Lemma write_moves_app_expfree xl xl' s
+  : app_expfree s
+    -> app_expfree (write_moves xl xl' s).
+Proof.
+  intros AEF.
+  general induction xl; destruct xl'; simpl; eauto using app_expfree.
+Qed.
+
+Lemma extend_args_app_expfree (slot:var -> var) Y s l f
+  (IV : forall (n : nat) (y : op), get Y n y -> isVar y)
+  : app_expfree (stmtApp f (slot_lift_args slot s ⊝ extend_args Y l)).
+Proof.
+  econstructor.
+  intros; inv_get.
+  edestruct extend_args_get; eauto using slot_lift_args_isVar.
+Qed.
+
+Lemma do_spill_app_expfree (slot:var -> var) s spl ib
+  : app_expfree s
+    -> app_expfree (do_spill slot s spl ib).
+Proof.
+  intros AEF.
+  general induction AEF;
+    destruct spl, ib; simpl;
+      repeat let_pair_case_eq; subst; simpl;
+          eauto using app_expfree, write_moves_app_expfree.
+  - do 2 apply write_moves_app_expfree;
+      repeat cases; clear_trivial_eqs;
+        eauto using app_expfree, extend_args_app_expfree.
+  - do 2 apply write_moves_app_expfree;
+      repeat cases; clear_trivial_eqs;
+        eauto using app_expfree, extend_args_app_expfree.
+  - do 2 apply write_moves_app_expfree;
+      repeat cases; clear_trivial_eqs;
+        eauto using app_expfree, extend_args_app_expfree.
+    econstructor; intros; inv_get; simpl; eauto.
+  - do 2 apply write_moves_app_expfree;
+      repeat cases; clear_trivial_eqs;
+        eauto using app_expfree, extend_args_app_expfree.
+    econstructor; intros; inv_get; simpl; eauto.
+Qed.
+
+Lemma write_moves_labels_defined xl xl' s n
+  : labelsDefined s n
+    -> labelsDefined (write_moves xl xl' s) n.
+Proof.
+  intros AEF.
+  general induction xl; destruct xl'; simpl; eauto using labelsDefined.
+Qed.
+
+Lemma do_spill_labels_defined (slot:var -> var) k RM ZL Λ spl s n
+  : labelsDefined s n
+    -> spill_sound k ZL Λ RM s spl
+    -> labelsDefined (do_spill slot s spl (compute_ib ⊜ ZL Λ)) n.
+Proof.
+  intros.
+  general induction H; invt spill_sound; simpl;
+    repeat cases; simpl; clear_trivial_eqs;
+      eauto 20 using labelsDefined, write_moves_labels_defined.
+  - do 2 eapply write_moves_labels_defined.
+    econstructor; intros; inv_get; simpl; len_simpl; eauto using labelsDefined.
+    + exploit H16; eauto.
+      rewrite <- H9. rewrite <- zip_app; eauto with len.
+    + rewrite <- H9, <- zip_app; eauto with len.
+Qed.
+
+Lemma write_moves_no_unreachable_code xl xl' s
+  : noUnreachableCode isCalled s
+    -> noUnreachableCode isCalled (write_moves xl xl' s).
+Proof.
+  intros AEF.
+  general induction xl; destruct xl'; simpl; eauto using noUnreachableCode.
+Qed.
+
+Lemma write_moves_isCalled xl xl' s f
+  : isCalled s f
+    -> isCalled (write_moves xl xl' s) f.
+Proof.
+  intros AEF.
+  general induction xl; destruct xl'; simpl; eauto using isCalled.
+Qed.
+
+
+
+Lemma do_spill_callChain (slot: var -> var) k ZL Λ F sl_F rms f l'
+  (IH : forall n Zs, get F n Zs ->
+       forall (ZL : 〔params〕) (Λ : 〔⦃var⦄ * ⦃var⦄〕) (RM : ⦃var⦄ * ⦃var⦄)
+         (sl_t : spilling) (f : lab),
+       spill_sound k ZL Λ RM (snd Zs) sl_t ->
+       isCalled (snd Zs) f
+       -> isCalled (do_spill slot (snd Zs) sl_t (compute_ib ⊜ ZL Λ)) f)
+  (Len1: ❬F❭ = ❬sl_F❭)
+  (Len2: ❬F❭ = ❬rms❭)
+  (SPS: forall (n : nat) (Zs : params * stmt) (rm : ⦃var⦄ * ⦃var⦄) (sl_s : spilling),
+       get rms n rm ->
+       get F n Zs ->
+       get sl_F n sl_s -> spill_sound k (fst ⊝ F ++ ZL) (rms ++ Λ) rm (snd Zs) sl_s)
+  (CC: callChain isCalled F l' f)
+  : callChain isCalled
+    (pair ⊜ (slot_lift_params slot ⊜ rms (fst ⊝ F))
+     ((fun (Zs : params * stmt) (sl_s : spilling) =>
+       do_spill slot (snd Zs) sl_s (compute_ib ⊜ (fst ⊝ F ++ ZL) (rms ++ Λ))) ⊜ F
+      sl_F)) l' f.
+Proof.
+  general induction CC.
+  + econstructor.
+  + inv_get.
+    econstructor; eauto using zip_get_eq.
+    * eapply IH; eauto.
+Qed.
+
+
+Lemma do_spill_isCalled (slot: var -> var) k ZL Λ RM t sl_t f
+  (SPS : spill_sound k ZL Λ RM t sl_t)
+  (IC : isCalled t f)
+  : isCalled (do_spill slot t sl_t (compute_ib ⊜ ZL Λ)) f.
+Proof.
+  move t before k.
+  revert_until t.
+  sind t; intros; invt spill_sound; invt isCalled; simpl;
+    eauto using write_moves_isCalled, isCalled.
+  - do 2 eapply write_moves_isCalled.
+    rewrite <- zip_app; eauto with len.
+    econstructor; eauto.
+    len_simpl. rewrite <- H3; eauto using do_spill_callChain.
+Qed.
+
+Lemma do_spill_no_unreachable_code (slot:var -> var) k RM ZL Λ spl s
+  : noUnreachableCode isCalled s
+    -> spill_sound k ZL Λ RM s spl
+    -> noUnreachableCode isCalled (do_spill slot s spl (compute_ib ⊜ ZL Λ)).
+Proof.
+  intros.
+  general induction H; invt spill_sound; simpl;
+    repeat cases; simpl; clear_trivial_eqs;
+      eauto 20 using noUnreachableCode, write_moves_no_unreachable_code.
+  - do 2 eapply write_moves_no_unreachable_code.
+    rewrite <- zip_app; eauto with len.
+    econstructor; intros; inv_get; simpl; eauto using noUnreachableCode.
+    + len_simpl. rewrite <- H10 in H4. exploit H2; eauto.
+      destruct H5; dcr.
+      eexists x; split; eauto using do_spill_isCalled, do_spill_callChain.
 Qed.

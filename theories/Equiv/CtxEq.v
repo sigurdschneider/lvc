@@ -62,7 +62,6 @@ Lemma labenv_sim_sym L L'
     -> labenv_sim Bisim (sim bot3) SR (List.map F.block_Z L) L' L.
 Proof.
   intros []; intros; dcr; do 4 (try split; eauto with len).
-  - rewrite map_length in *. eauto.
   - hnf; intros. destruct f,f'; simpl in *; subst.
     exploit (H2 (LabI n0) (LabI n0)); eauto. simpl in *. dcr; subst; eauto.
     inv_get. eauto.
