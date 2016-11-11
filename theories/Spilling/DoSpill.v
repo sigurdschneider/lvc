@@ -1,6 +1,6 @@
 Require Import List Map Env AllInRel Exp AppExpFree.
 Require Import IL Annotation InRel AutoIndTac Liveness LabelsDefined.
-Require Import Spilling SpillUtil.
+Require Import SpillSound SpillUtil.
 Require Import ToBeOutsourced.
 
 (* this file is too long, should be splitted in DoSpill, DoSpillParams, DoSpillArgs *)

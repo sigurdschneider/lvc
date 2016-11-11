@@ -1,7 +1,7 @@
 Require Import CSet Util Fresh Filter Take MoreList OUnion AllInRel MapDefined MapUpdate Position.
 Require Import IL Annotation LabelsDefined Liveness TrueLiveness SimI.
 Require Import RenamedApart.
-Require Import SetUtil Spilling ReconstrLive DoSpill ReconstrLiveUtil.
+Require Import SetUtil SpillSound ReconstrLive DoSpill ReconstrLiveUtil.
 
 Set Implicit Arguments.
 Unset Printing Records.

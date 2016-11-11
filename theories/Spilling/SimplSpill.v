@@ -1,7 +1,7 @@
 Require Import List Map Env AllInRel Exp MoreList.
 Require Import IL Annotation InRel AutoIndTac Liveness LabelsDefined.
 Require Import SimI.
-Require Import Spilling.
+Require Import SpillSound.
 Require Import Take TakeSet.
 
 Set Implicit Arguments.

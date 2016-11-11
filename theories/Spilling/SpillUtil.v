@@ -1,6 +1,6 @@
 Require Import List Map Env AllInRel Exp AppExpFree.
 Require Import IL Annotation InRel AutoIndTac Liveness LabelsDefined.
-Require Import Spilling.
+Require Import SpillSound.
 
 
 (* this file is way too big *)
