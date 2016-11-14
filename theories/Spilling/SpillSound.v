@@ -1,5 +1,5 @@
 Require Import List Map Env AllInRel Exp.
-Require Import IL Annotation InRel AutoIndTac Liveness LabelsDefined.
+Require Import IL Annotation AnnP InRel AutoIndTac Liveness LabelsDefined.
 
 
 Notation "'spilling'"
@@ -171,3 +171,35 @@ Proof.
   intros spillSnd.
   invc spillSnd; cset_tac.
 Qed.
+
+Definition merge (RM : set var * set var) :=
+  fst RM ∪ snd RM.
+
+Inductive spill_live
+          (VD : ⦃var⦄)
+  :
+    spilling -> ann (set var) -> Prop
+  :=
+  | SomeSpLv0 a b
+    : spill_live VD (ann0 a) (ann0 b)
+  | SomeSpLv1 a b sl lv
+    : spill_live VD sl lv
+      -> spill_live VD (ann1 a sl) (ann1 b lv)
+  | SomeSpLv2 a b sl1 sl2 lv1 lv2
+    : spill_live VD sl1 lv1
+      -> spill_live VD sl2 lv2
+      -> spill_live VD (ann2 a sl1 sl2) (ann2 b lv1 lv2)
+  | SomeSpLvF a b sl_F sl_t lv_F lv_t rms
+    : PIR2 Equal (merge ⊝ rms) (getAnn ⊝ lv_F)
+      -> spill_live VD sl_t lv_t
+      -> (forall n rm,
+            get rms n rm
+            -> fst rm ⊆ VD /\ snd rm ⊆ VD)
+      -> (forall n sl_s lv_s,
+            get sl_F n sl_s
+            -> get lv_F n lv_s
+            -> spill_live VD sl_s lv_s
+        )
+      -> spill_live VD (annF (a, rms) sl_F sl_t)
+                              (annF b lv_F lv_t)
+.

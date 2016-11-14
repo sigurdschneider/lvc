@@ -493,7 +493,7 @@ Lemma register_bounded
     -> spill_sound k ZL Λ (R,M) s sl
     -> spill_live VD sl al
     -> live_sound Imperative ZL Lv s al
-    -> PIR2 Equal (merge Λ) Lv
+    -> PIR2 Equal (merge ⊝ Λ) Lv
     -> (forall (Z : params) n,
           get ZL n Z
           -> of_list Z ⊆ VD)
@@ -784,8 +784,7 @@ Proof.
       * eapply R'_VD with (VD:=VD) (L:=L) (M:=M); eauto.
       * rewrite H28, R_VD, M_VD; clear; cset_tac.
       * rewrite rena2, <- ra_VD; eauto.
-      * rewrite merge_app.
-        eapply getAnn_als_EQ_merge_rms; eauto.
+      * eapply getAnn_als_EQ_merge_rms; eauto.
       * intros.
         eapply get_ofl_VD; eauto.
     + rewrite fst_zip_pair; eauto with len.
@@ -803,8 +802,7 @@ Proof.
       * eapply R'_VD with (VD:=VD) (L:=L) (M:=M); eauto.
       * rewrite H28, R_VD, M_VD; clear; cset_tac.
       * rewrite rena2, <- ra_VD; eauto.
-      * rewrite merge_app.
-        eapply getAnn_als_EQ_merge_rms; eauto.
+      * eapply getAnn_als_EQ_merge_rms; eauto.
       * intros.
         eapply get_ofl_VD; eauto.
     + intros G' R' G'_R' L_R' al_R' bound_R'.
@@ -837,8 +835,7 @@ Proof.
         simpl.
         eapply H1 with (R:=fst x2) (M:=snd x2); eauto.
         -- rewrite renaF', <- ra_VD; eauto.
-        -- rewrite merge_app.
-           eapply getAnn_als_EQ_merge_rms; eauto.
+        -- eapply getAnn_als_EQ_merge_rms; eauto.
         -- intros.
            eapply get_ofl_VD; eauto.
         -- setoid_rewrite pair_eta with (p:=x2) at 1.
@@ -856,8 +853,7 @@ Proof.
         -- rewrite H28, R_VD, M_VD; eauto.
            clear; cset_tac.
         -- rewrite rena2, <- ra_VD; eauto.
-        -- rewrite merge_app.
-           apply getAnn_als_EQ_merge_rms; eauto.
+        -- apply getAnn_als_EQ_merge_rms; eauto.
         -- intros.
            eapply get_ofl_VD; eauto.
         -- clear; cset_tac.

@@ -1,7 +1,7 @@
 Require Import List Map Env AllInRel Exp MoreList.
-Require Import IL Annotation InRel AutoIndTac Liveness LabelsDefined.
+Require Import IL Annotation AnnP InRel AutoIndTac Liveness LabelsDefined.
 Require Import SimI.
-Require Import SpillSound.
+Require Import SpillSound ReconstrLive.
 Require Import Take TakeSet.
 
 Set Implicit Arguments.
@@ -565,4 +565,24 @@ general induction lvSound;
       intros ; inv_get. split.
       -- apply take_of_list_cardinal.
       -- rewrite take_set_incl at 1. eauto with cset.
+Qed.
+
+
+Lemma simplSpill_spill_live VD k ZL Lv Λ R M s alv
+      (LS:live_sound Imperative ZL Lv s alv)
+      (lvIncl:ann_P (fun lv => lv ⊆ VD) alv)
+  : spill_live VD (simplSpill k ZL Λ R M s alv) alv.
+Proof.
+  move s before k.
+  revert_until s.
+  sind s.
+  intros; destruct s; simpl; invt live_sound; invt ann_P;
+    eauto using spill_live.
+  - econstructor; intros; inv_get; simpl in *; eauto using spill_live.
+    + eapply PIR2_get; intros; inv_get; unfold merge; simpl; eauto with len.
+      rewrite union_comm. rewrite <- equiv_minus_union;
+                            eauto using take_set_incl with cset.
+    + simpl.
+      exploit H7; eauto. eapply ann_P_get in H4. rewrite <- H4.
+      rewrite take_set_incl at 1; simpl; eauto 20 with cset.
 Qed.

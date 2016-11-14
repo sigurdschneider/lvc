@@ -1,6 +1,12 @@
-Require Import SimplSpill SpillSim DoSpill DoSpillRm Take Drop.
+Require Import Util CSet MapDefined AllInRel.
+Require Import Var MapInjectivity IL Annotation AnnP Sim.
+Require Import SimplSpill SpillSound SpillSim DoSpill DoSpillRm Take Drop.
 Require Import ReconstrLive ReconstrLiveSound.
-Require Import RenameApart_Liveness.
+Require Import RenameApart_Liveness AddParams.
+
+Set Implicit Arguments.
+
+Arguments sim S {H} S' {H0} r t _ _.
 
 Definition max := max.
 Definition slot n x := x + n.
@@ -8,7 +14,7 @@ Definition slot n x := x + n.
 Inductive Slot (VD:set var) :=
   {
     Slot_slot :> var -> var;
-    Slot_Disj : disj VD (map Slot_slot VD);
+    Slot_Disj : disj VD (SetConstructs.map Slot_slot VD);
     Slot_Inj : injective_on VD Slot_slot
   }.
 
@@ -33,7 +39,7 @@ Definition Slot_p (VD:set var) n (EQ:n = S (fold max VD 0)): Slot VD.
   refine (@Build_Slot VD (fun x => x + n) _ _).
   - hnf; intros. cset_tac.
     exploit Fresh.fresh_spec'; try eapply H; eauto.
-    unfold max in H2. omega.
+    unfold max in H1. omega.
   - hnf; intros. cset_tac. omega.
 Qed.
 
@@ -125,7 +131,6 @@ Lemma defined_on_update_list_disj X `{OrderedType X} Y lv (E: X -> option Y) (Z:
   -> disj (of_list Z) lv
   -> defined_on lv (E [Z <-- vl]).
 Proof.
-  revert_until toString_list. clear.
   unfold defined_on; intros.
   general induction Z; destruct vl; simpl in *; eauto.
   - lud.
@@ -140,7 +145,6 @@ Lemma agree_on_update_list_slot X `{OrderedType X} Y (L:list X) (L':list Y) (V:X
      -> injective_on (D ∪ of_list L) f
      -> agree_on eq D V (fun x => V'[f ⊝ L <-- L'] (f x)).
 Proof.
-  revert_until toString_list. clear.
   intros. hnf; intros.
   decide (x ∈ of_list L).
   - assert (In:f x ∈ of_list (f ⊝ L)).
@@ -161,7 +165,7 @@ Lemma spill_correct k (kGT:k > 0) (s:stmt) lv ra E
       (AEF:AppExpFree.app_expfree s)
       (RA:RenamedApart.renamedApart s ra)
       (Def:defined_on (getAnn lv) E)
-      (Bnd:Spilling.fv_e_bounded k s)
+      (Bnd:fv_e_bounded k s)
       (Incl:getAnn lv ⊆ fst (getAnn ra))
       (NUC:LabelsDefined.noUnreachableCode LabelsDefined.isCalled s)
       (slt:Slot (fst (getAnn ra) ∪ snd (getAnn ra)))
@@ -179,7 +183,7 @@ Proof.
     subst R M. rewrite <- of_list_app. rewrite <- take_eta.
     rewrite of_list_3. eauto.
   }
-  assert (SPS:Spilling.spill_sound k nil nil (R, M) s spl). {
+  assert (SPS:spill_sound k nil nil (R, M) s spl). {
     eapply simplSpill_sat_spillSound; eauto using PIR2.
     subst R. rewrite TakeSet.take_of_list_cardinal; eauto.
     rewrite lvRM; eauto.
@@ -220,6 +224,10 @@ Proof.
       rewrite of_list_drop_elements_incl; eauto.
       clear; intuition.
   }
+  assert (spl_lv:spill_live VD spl lv). {
+    eapply simplSpill_spill_live; eauto.
+    admit.
+  }
   eapply sim_trans with (S2:=I.state).
   - eapply sim_I with (slot:=slt) (k:=k) (R:=R) (M:=M) (sl:=spl) (Λ:=nil)
       (VD:=VD)
@@ -242,7 +250,6 @@ Proof.
       eapply injective_on_incl; eauto.
       unfold to_list.
       rewrite of_list_drop_elements_incl. cset_tac.
-    + admit.
     + rewrite <- Incl, lvRM; eauto.
     + eapply SimI.labenv_sim_nil.
     + eauto.
@@ -251,10 +258,8 @@ Proof.
       * rewrite union_comm, empty_neutral_union. eauto.
       * reflexivity.
       * isabsurd.
-      * admit.
     + eapply (@reconstr_live_sound k slt nil _ nil R M VD); eauto using PIR2.
       ** reflexivity.
-      ** admit.
       ** isabsurd.
     + eapply (@do_spill_no_unreachable_code _ _ _ nil nil); eauto.
 Admitted.

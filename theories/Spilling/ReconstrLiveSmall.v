@@ -297,7 +297,7 @@ Lemma reconstr_live_small
     -> injective_on VD slot
     -> disj VD (map slot VD)
     -> renamedApart s ra
-    -> PIR2 Equal (merge Λ) Lv
+    -> PIR2 Equal (merge ⊝ Λ) Lv
     -> (forall (Z : params) n,
           get ZL n Z
           -> of_list Z ⊆ VD)
@@ -428,8 +428,7 @@ Proof.
       * clear; cset_tac.
       * rewrite rena2.
         clear - ra_VD; cset_tac.
-      * rewrite merge_app.
-        apply getAnn_als_EQ_merge_rms; eauto.
+      * apply getAnn_als_EQ_merge_rms; eauto.
       * clear - ra_VD H6 H8 H13 Z_VD.
         eapply get_ofl_VD; eauto.
       * eapply injective_on_incl with (D:=VD); eauto.

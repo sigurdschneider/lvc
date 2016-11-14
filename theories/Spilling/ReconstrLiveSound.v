@@ -112,7 +112,7 @@ Lemma reconstr_live_sound
     -> renamedApart s ra
     -> spill_sound k ZL Λ (R,M) s sl
     -> spill_live VD sl alv
-    -> PIR2 Equal (merge Λ) Lv
+    -> PIR2 Equal (merge ⊝ Λ) Lv
     -> (forall (Z : params) n,
           get ZL n Z
           -> of_list Z ⊆ VD)
@@ -267,9 +267,7 @@ Proof.
         -- eapply R'_VD with (R:=R) (M:=M); eauto.
         -- eapply M'_VD with (R:=R) (M:=M); eauto.
         -- rewrite rena2; eauto.
-        -- rewrite merge_app.
-           eapply getAnn_als_EQ_merge_rms; eauto.
-
+        -- eapply getAnn_als_EQ_merge_rms; eauto.
         -- eapply get_ofl_VD; eauto.
         -- eauto with len.
       * rewrite <- slot_merge_app.
@@ -318,8 +316,7 @@ Proof.
                 [clear; cset_tac | clear; cset_tac
                  | eapply ofl_slp_sub_rm; eauto ].
            ++ rewrite renaF'; eauto.
-           ++ rewrite merge_app.
-              eapply getAnn_als_EQ_merge_rms; eauto.
+           ++ eapply getAnn_als_EQ_merge_rms; eauto.
            ++ eapply get_ofl_VD; eauto.
            ++ eauto with len.
 
@@ -350,8 +347,7 @@ Proof.
         eapply H1 with (ra:=x0) (R:=fst x2) (M:=snd x2); eauto.
         -- exploit renaF as renaF'; eauto.
            rewrite renaF'; eauto.
-        -- rewrite merge_app.
-           eapply getAnn_als_EQ_merge_rms; eauto.
+        -- eapply getAnn_als_EQ_merge_rms; eauto.
         -- eapply get_ofl_VD; eauto.
       * rewrite <- slot_merge_app.
         apply PIR2_app with (L2:=slot_merge slot Λ);
@@ -379,8 +375,7 @@ Proof.
              clear; cset_tac.
              eapply al_sub_RfMf; eauto.
            ++ rewrite renaF; eauto.
-           ++ rewrite merge_app.
-              eapply getAnn_als_EQ_merge_rms; eauto.
+           ++ eapply getAnn_als_EQ_merge_rms; eauto.
            ++ eapply get_ofl_VD; eauto.
         -- unfold slot_merge. eauto with len.
     + intros.

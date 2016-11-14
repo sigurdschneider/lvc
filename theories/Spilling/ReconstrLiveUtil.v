@@ -286,14 +286,15 @@ Lemma al_sub_RfMf
   :
     get rms n (R,M)
     -> get als n al
-    -> merge rms = getAnn ⊝ als
+    -> PIR2 Equal (merge ⊝ rms) (getAnn ⊝ als)
     -> getAnn al ⊆ R ∪ M
 .
 Proof.
   intros get_rm get_al H16.
   general induction get_rm;
     invc get_al; invc H16;
-      simpl in *; eauto.
+      unfold merge in *; simpl in *; eauto.
+  rewrite pf; eauto.
 Qed.
 
 Lemma al_eq_RfMf
@@ -306,7 +307,7 @@ Lemma al_eq_RfMf
   :
     get rms n (R,M)
     -> get als n al
-    -> merge rms = getAnn ⊝ als
+    -> merge ⊝ rms = getAnn ⊝ als
     -> getAnn al [=] R ∪ M
 .
 Proof.

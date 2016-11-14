@@ -33,16 +33,18 @@ Proof.
   - simpl in *; dcr; invt NoDupA.
     edestruct Def; [cset_tac|].
     pone_step_right; simpl. rewrite <- H.
-    eapply IHLen; intros; eauto using injective_on_incl with cset.
+    eapply IHLen; intros; eauto using injective_on_incl.
     eapply SIM.
-    rewrite <- update_nodup_commute_eq; simpl; eauto with len.
-    erewrite lookup_list_agree; eauto.
-    symmetry. eapply agree_on_update_dead; eauto.
-    eapply disj_not_in.
-    eapply disj_1_incl. eapply disj_2_incl; eauto with cset.
-    eauto with cset.
-    rewrite H; eapply defined_on_update_some;
-      eauto using defined_on_incl with cset.
+    + rewrite <- update_nodup_commute_eq; simpl; eauto with len.
+      erewrite lookup_list_agree; eauto.
+      symmetry. eapply agree_on_update_dead; eauto.
+      eapply disj_not_in.
+      eapply disj_1_incl. eapply disj_2_incl; eauto with cset.
+      eauto with cset.
+    + rewrite H; eapply defined_on_update_some;
+        eauto using defined_on_incl with cset.
+    + eapply disj_1_incl. eapply disj_2_incl. eauto.
+      eauto with cset. eauto with cset.
 Qed.
 
 Lemma sim_I_moves k Λ ZL r L L' V V' R M s sl ib
@@ -700,23 +702,25 @@ Proof.
       exploit H15; eauto. destruct x as (R_f,M_f).
       exploit H14; eauto; simpl in *; dcr.
       exploit H2; eauto.
-      exploit al_eq_RfMf; eauto.
-      exploit H21; eauto; dcr. simpl in *.
+      exploit (get_PIR2 H7); eauto.
+      exploit H21; eauto; dcr. unfold merge in H41. simpl in *.
       rewrite <- zip_app; [| eauto with len].
       eapply IH; eauto.
       * eapply slot_lift_params_agree; eauto.
         -- eapply disj_1_incl. eapply disj_2_incl.
-           eauto. rewrite H45, H41, H35, H39; eauto with cset.
-           rewrite H45, H41, H35, H39; eauto with cset.
-        -- rewrite <- H41; eauto.
+           eauto.
+           ++ rewrite H45, H35, <- H41, H35, H39.
+             clear; eauto with cset.
+           ++ rewrite H45, <- H41, H35, H39; eauto with cset.
+        -- rewrite H41; eauto.
       * eapply slot_lift_params_agree_slot; eauto.
         eapply disj_1_incl. eapply disj_2_incl. eauto.
         eapply map_incl; eauto.
-        rewrite H45, H41, H35, H39; eauto with cset.
-        rewrite H45, H41, H35, H39; eauto with cset.
+        rewrite H45, <- H41, H35, H39; eauto with cset.
+        rewrite H45, <- H41, H35, H39; eauto with cset.
         eapply injective_on_incl; eauto.
-        rewrite H45, H41, H35, H39; eauto with cset.
-        rewrite <- H41; eauto.
+        rewrite H45, <- H41, H35, H39; eauto with cset.
+        rewrite H41; eauto.
       * eapply defined_on_update_list'.
         -- len_simpl. rewrite extend_args_length.
            edestruct H8; eauto; dcr. simpl in *.
@@ -725,17 +729,17 @@ Proof.
            unfold mark_elements. eauto with len.
         -- rewrite of_list_slot_lift_params; eauto.
            eapply defined_on_incl; eauto.
-           rewrite H41 in H45; revert H45; clear.
+           rewrite <- H41 in H45; revert H45; clear.
            intros.
            cset_tac. decide (a ∈ R_f \ of_list Z); cset_tac.
            right.
            eexists x; split; eauto. split; eauto.
            intro. eapply H2. cset_tac.
-           rewrite <- H41; eauto.
+           rewrite H41; eauto.
         -- eapply get_defined; intros; inv_get; eauto.
       * edestruct H8; eauto; dcr.
         exploit H33; eauto. eapply ann_R_get in H46.
-        rewrite <- H46, H41; eauto.
+        rewrite <- H46, <- H41; eauto.
       * rewrite !zip_app; eauto with len.
       * edestruct H8; eauto; dcr.
         rewrite H42. simpl. rewrite union_comm. rewrite <- union_assoc.

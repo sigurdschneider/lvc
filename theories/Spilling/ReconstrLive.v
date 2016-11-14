@@ -195,37 +195,6 @@ Proof.
     reflexivity.
 Qed.
 
-
-Inductive spill_live
-          (VD : ⦃var⦄)
-  :
-    spilling -> ann (set var) -> Prop
-  :=
-  | SomeSpLv0 a b
-    : spill_live VD (ann0 a) (ann0 b)
-  | SomeSpLv1 a b sl lv
-    : spill_live VD sl lv
-      -> spill_live VD (ann1 a sl) (ann1 b lv)
-  | SomeSpLv2 a b sl1 sl2 lv1 lv2
-    : spill_live VD sl1 lv1
-      -> spill_live VD sl2 lv2
-      -> spill_live VD (ann2 a sl1 sl2) (ann2 b lv1 lv2)
-  | SomeSpLvF a b sl_F sl_t lv_F lv_t rms
-    : merge rms = getAnn ⊝ lv_F
-      -> spill_live VD sl_t lv_t
-      -> (forall n rm,
-            get rms n rm
-            -> fst rm ⊆ VD /\ snd rm ⊆ VD)
-      -> (forall n sl_s lv_s,
-            get sl_F n sl_s
-            -> get lv_F n lv_s
-            -> spill_live VD sl_s lv_s
-        )
-      -> spill_live VD (annF (a, rms) sl_F sl_t)
-                              (annF b lv_F lv_t)
-.
-
-
 Lemma injective_map_minus
       (X Y : Type)
       `{OrderedType X}

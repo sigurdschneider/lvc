@@ -29,9 +29,6 @@ Arguments first {A} _ _.
 Analysis.fixpoint ConstantPropagationAnalysis.constant_propagation_analysis first. *)
 
 
-Definition additionalArguments s lv :=
-  fst (DelocationAlgo.computeParameters nil nil nil s lv).
-
 Class ToString (T:Type) := toString : T -> string.
 
 Hypothesis OutputStream : Type.
@@ -80,35 +77,6 @@ Proof.
 Qed.
 
 Arguments sim S {H} S' {H0} r t _ _.
-
-Definition addParams (s:IL.stmt) (lv:ann (set var)) : IL.stmt :=
-  let additional_params := additionalArguments s lv in
-  Delocation.compile nil s additional_params.
-
-Lemma addParams_correct (E:onv val) (ili:IL.stmt) lv
-  : defined_on (getAnn lv) E
-    -> Liveness.live_sound Liveness.Imperative nil nil ili lv
-    -> LabelsDefined.noUnreachableCode LabelsDefined.isCalled ili
-    -> sim I.state F.state bot3 Sim (nil, E, ili) (nil:list F.block, E, addParams ili lv).
-Proof with eauto using DCVE_live, DCVE_noUC.
-  intros. subst. unfold addParams.
-  eapply sim_trans with (S2:=I.state).
-  - eapply bisim_sim.
-    eapply DelocationCorrect.correct; eauto.
-    + eapply DelocationAlgo.is_trs; eauto...
-    + eapply (@Delocation.live_sound_compile nil)...
-      eapply DelocationAlgo.is_trs...
-      eapply DelocationAlgo.is_live...
-  - eapply bisim_sim.
-    eapply bisim_sym.
-    eapply (@Invariance.srdSim_sim nil nil nil nil nil);
-      [ | isabsurd | econstructor | reflexivity | | econstructor ].
-    + eapply Delocation.trs_srd; eauto.
-      eapply DelocationAlgo.is_trs...
-    + eapply (@Delocation.live_sound_compile nil nil nil)...
-      eapply DelocationAlgo.is_trs...
-      eapply DelocationAlgo.is_live...
-Qed.
 
 Definition toILF (s:IL.stmt) : IL.stmt :=
   let (s_dcve, lv) := DCVE Liveness.Imperative s in

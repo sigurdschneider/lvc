@@ -85,21 +85,6 @@ Qed.
 
 
 (* the name should be changed *)
-Definition merge := List.map (fun (RM : set var * set var)
-                                  => fst RM ∪ snd RM).
-
-
-Lemma merge_app
-      (ll1 ll2 : list (⦃var⦄ * ⦃var⦄))
-       :
-         merge (ll1 ++ ll2) = merge ll1 ++ merge ll2
-.
-Proof.
-  unfold merge.
-  rewrite List.map_app.
-  reflexivity.
-Qed.
-
 
 
 Lemma count_reduce_Sp
@@ -398,17 +383,14 @@ Lemma getAnn_als_EQ_merge_rms
       (Lv : 〔⦃var⦄〕)
       (als : 〔ann ⦃var⦄〕)
       (Λ : 〔⦃var⦄ * ⦃var⦄〕)
-      (pir2 : PIR2 Equal (merge Λ) Lv)
+      (pir2 : PIR2 Equal (merge ⊝ Λ) Lv)
       (rms : 〔⦃var⦄ * ⦃var⦄〕)
-      (H23 : merge rms = getAnn ⊝ als)
+      (H23 : PIR2 Equal (merge ⊝ rms) (getAnn ⊝ als))
   :
-    PIR2 Equal (merge rms ++ merge Λ) (getAnn ⊝ als ++ Lv)
+    PIR2 Equal (merge ⊝ (rms ++ Λ)) (getAnn ⊝ als ++ Lv)
 .
 Proof.
-  rewrite H23.
-  apply PIR2_app.
-  -- apply PIR2_refl; eauto.
-  -- eauto.
+  rewrite List.map_app. apply PIR2_app; eauto.
 Qed.
 
 
