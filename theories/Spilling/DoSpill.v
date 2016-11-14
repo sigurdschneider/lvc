@@ -1,11 +1,9 @@
-Require Import List Map Env AllInRel Exp AppExpFree.
+Require Import List Map Env AllInRel Exp AppExpFree Filter LengthEq.
 Require Import IL Annotation InRel AutoIndTac Liveness LabelsDefined.
 Require Import SpillSound SpillUtil.
 Require Import ToBeOutsourced.
 
 (* this file is too long, should be splitted in DoSpill, DoSpillParams, DoSpillArgs *)
-
-
 
 Fixpoint slot_lift_params
            (slot : var -> var)
@@ -20,10 +18,7 @@ Fixpoint slot_lift_params
              else if [z ∈ fst RM]
                   then z::(slot_lift_params slot RM Z)
                   else (slot z)::(slot_lift_params slot RM Z)
-    end
-.
-
-
+    end.
 
 Lemma slot_lift_params_app
       L1 L2 L1' L2' slot
@@ -34,8 +29,22 @@ Lemma slot_lift_params_app
       = slot_lift_params slot ⊜ (L1 ++ L2) (L1' ++ L2')
 .
 Proof.
-  intros.
-  rewrite zip_app; eauto with len.
+  intros. rewrite zip_app; eauto with len.
+Qed.
+
+Lemma slot_lift_params_length (slot:var -> var) R_f M_f Z
+      (NoDup:NoDupA eq Z)
+  : ❬slot_lift_params slot (R_f, M_f) Z❭ = ❬Z❭ + cardinal (of_list Z ∩ (R_f ∩ M_f)).
+Proof.
+  general induction NoDup; simpl.
+  - assert ({} ∩ (R_f ∩ M_f) [=] {}) by (clear; cset_tac).
+    rewrite H. eauto.
+  - cases; simpl.
+    + assert (forall D, x ∈ D -> {x; of_list l} ∩ D [=] {x; of_list l ∩ D}) as EQ by (cset_tac).
+      rewrite EQ; eauto. rewrite IHNoDup; eauto.
+      rewrite add_cardinal_2; eauto. cset_tac. rewrite <- InA_in in H3; eauto.
+    + assert (forall D, x ∉ D -> {x; of_list l} ∩ D [=] of_list l ∩ D) as EQ by (cset_tac).
+      cases; simpl; rewrite EQ; eauto.
 Qed.
 
 
@@ -46,8 +55,7 @@ Definition slot_lift_args
   := (fun y => match y with
             | Var v => if [v ∈ M] then Var (slot v) else Var v
             | _ => y
-            end)
-.
+            end) .
 
 Lemma slot_lift_args_isVar (slot:var -> var) (M:set var) op
   : isVar op
@@ -55,7 +63,6 @@ Lemma slot_lift_args_isVar (slot:var -> var) (M:set var) op
 Proof.
   intros []; simpl; cases; eauto using isVar.
 Qed.
-
 
 Lemma slot_lift_args_elem_eq_ext
       (slot : var -> var)
@@ -98,8 +105,6 @@ Proof.
       eauto with cset.
 Qed.
 
-
-
 Fixpoint extend_args {X}
          (Y : list X)
          (ib : list bool)
@@ -111,8 +116,7 @@ Fixpoint extend_args {X}
                  | true  :: ib => y :: y :: extend_args Y ib
                  | false :: ib => y :: extend_args Y ib
                 end
-     end
-.
+     end.
 
 Lemma extend_args_get X (Y : list X) (ib : list bool) n x
   : get (extend_args Y ib) n x
@@ -128,12 +132,21 @@ Proof.
     + edestruct IHget; eauto using get.
 Qed.
 
+
+Lemma extend_args_length X (L:list X) ib (Len:❬L❭=❬ib❭)
+  : ❬extend_args L ib❭ = ❬L❭ + countTrue ib.
+Proof.
+  length_equify.
+  general induction Len; simpl; eauto.
+  cases; simpl.
+  - rewrite IHLen. omega.
+  - rewrite IHLen; eauto.
+Qed.
+
 Lemma extend_args_elem_eq_ext
       (Y : args)
       (ib : list bool)
-  :
-    elem_eq Y (extend_args Y ib)
-.
+  : elem_eq Y (extend_args Y ib).
 Proof.
   general induction Y;
     destruct ib;
@@ -163,16 +176,72 @@ Definition mark_elements
            (L : list var)
            (s : ⦃var⦄)
   : list bool
-  := (fun x => if [x ∈ s] then true else false) ⊝ L
-.
+  := (fun x => if [x ∈ s] then true else false) ⊝ L.
 
 Definition compute_ib
            (Z : params)
            (RM : ⦃var⦄ * ⦃var⦄)
   : list bool
   :=
-    mark_elements Z (fst RM ∩ snd RM)
-.
+    mark_elements Z (fst RM ∩ snd RM).
+
+
+Lemma countTrue_mark_elements Z D
+      (NoDup:NoDupA eq Z)
+  : countTrue (mark_elements Z D) = cardinal (of_list Z ∩ D).
+Proof.
+  general induction NoDup; simpl.
+  - assert ({} ∩ D [=] {}) by (clear; cset_tac).
+    rewrite H. eauto.
+  - cases.
+    + assert ({x; of_list l} ∩ D [=] {x; of_list l ∩ D}) as EQ by (cset_tac).
+      rewrite EQ. rewrite IHNoDup; eauto.
+      rewrite add_cardinal_2; eauto. cset_tac. rewrite <- InA_in in H1; eauto.
+    + assert ({x; of_list l} ∩ D [=] of_list l ∩ D) as EQ by (cset_tac).
+      rewrite EQ. rewrite IHNoDup; eauto.
+Qed.
+
+
+Lemma update_with_list_lookup_in_list_first_slot (slot:var->var)
+      A (E:onv A) n (R M:set var)
+      Z (Y:list A) z
+: length Z = length Y
+  -> get Z n z
+  -> z ∈ R
+  -> disj (of_list Z) (map slot (of_list Z))
+  -> (forall n' z', n' < n -> get Z n' z' -> z' =/= z)
+  -> exists y, get Y n y /\ E [slot_lift_params slot (R, M) Z <--
+                  Some ⊝ extend_args Y (mark_elements Z (R ∩ M))] z = Some y.
+Proof.
+  intros Len Get In Disj First. length_equify.
+  general induction Len; simpl in *; isabsurd.
+  inv Get.
+  - exists y; repeat split; eauto using get.
+    cases; simpl.
+    + lud; eauto using get.
+    + cases; simpl.
+      * lud; eauto using get.
+  - edestruct (IHLen slot E n0) as [? [? ]]; eauto using get; dcr.
+    + eapply disj_1_incl. eapply disj_2_incl; eauto with cset.
+      eauto with cset.
+    + intros. eapply (First (S n')); eauto using get. omega.
+    + exists x0. eexists; repeat split; eauto using get.
+      exploit (First 0); eauto using get; try omega.
+      cases; simpl.
+      * rewrite lookup_nequiv; eauto.
+        rewrite lookup_nequiv; eauto.
+        intro.
+        eapply (Disj z). eapply get_in_of_list in H3.
+        cset_tac. rewrite <- H2.
+        eapply map_iff; eauto. eexists x; split; eauto with cset.
+      * cases; simpl; lud.
+        -- rewrite lookup_nequiv; eauto.
+        -- exfalso.
+           eapply (Disj (slot x)). eapply get_in_of_list in H3.
+           rewrite <- H5. cset_tac.
+           eapply map_iff; eauto. eexists x; split; eauto with cset.
+        -- eauto.
+Qed.
 
 Definition do_spill_rec
            (slot : var -> var)

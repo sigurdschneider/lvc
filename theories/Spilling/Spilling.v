@@ -169,7 +169,7 @@ Lemma spill_correct k (kGT:k > 0) (s:stmt) lv ra E
       (Incl:getAnn lv ⊆ fst (getAnn ra))
       (NUC:LabelsDefined.noUnreachableCode LabelsDefined.isCalled s)
       (slt:Slot (fst (getAnn ra) ∪ snd (getAnn ra)))
-      (aIncl:ann_R (fun (x : ⦃var⦄) (y : ⦃var⦄ * ⦃var⦄) => x ⊆ fst y) lv ra)
+      (aIncl:(* ann_R (fun (x : ⦃var⦄) (y : ⦃var⦄ * ⦃var⦄) => x ⊆ fst y) lv ra*) True)
   : sim I.state F.state bot3 Sim
         (nil, E, s)
         (nil, E [slt ⊝ drop k (to_list (getAnn lv)) <-- lookup_list E (drop k (to_list (getAnn lv)))], fst (spill k slt s lv )).
@@ -253,6 +253,7 @@ Proof.
     + rewrite <- Incl, lvRM; eauto.
     + eapply SimI.labenv_sim_nil.
     + eauto.
+    + admit.
   - eapply addParams_correct; eauto.
     + rewrite (@ReconstrLiveSmall.reconstr_live_small nil nil nil s _ R M VD); eauto.
       * rewrite union_comm, empty_neutral_union. eauto.
