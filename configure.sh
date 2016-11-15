@@ -5,7 +5,7 @@ function display_help {
 	echo "               generate Makefile.coq for this directory"
   echo ""
   echo -e "  --help\t Show this text"
-  echo -e "  --timing\t Use timing scripts" 
+  echo -e "  --timing\t Use timing scripts"
 }
 
 TIMING=
@@ -13,7 +13,7 @@ while [ $# != 0 ]; do
   case "$1" in
   --help)  display_help;;
   --timing) TIMING=yes;;
-  *)         
+  *)
   esac
   shift
 done
@@ -32,7 +32,7 @@ coq_ver=$(${COQBIN}coqc -v 2>/dev/null | sed -n -e 's/The Coq Proof Assistant, v
 case "$coq_ver" in
   8.5pl2)
 		;;
-  8.6.0)
+  8.6*)
     echo "Warning: You are using an unsupported Coq version"
 		;;
 	*)
@@ -44,5 +44,3 @@ echo "Found Coq version $coq_ver."
 SOURCES=$(find theories -name \*.v -print | grep -v /\.# | sed -e 's%^\./%%g')
 echo $(cat _CoqProject) src/lvc_plugin.ml4 src/smpl.ml4 $SOURCES  > Make
 echo "Make generated."
-
-
