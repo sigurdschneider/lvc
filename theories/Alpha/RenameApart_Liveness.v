@@ -1,9 +1,40 @@
 Require Import Util CSet Map LengthEq.
 Require Import Env IL Alpha Fresh Subset1 OptionR.
-Require Import Annotation RenamedApart RenameApart SetOperations Take.
+Require Import Annotation AnnP RenamedApart RenameApart SetOperations Take.
 Require Import LabelsDefined PairwiseDisjoint Liveness Coherence Restrict.
 
 Set Implicit Arguments.
+
+Lemma incl_union_incl X `{OrderedType X} s t u w
+  : t ∪ u ⊆ w -> s ⊆ t -> s ⊆ w.
+  intros A B. rewrite <- A. eauto with cset.
+Qed.
+
+Hint Immediate incl_union_incl : cset.
+
+Lemma lv_ra_lv_bnd ZL Lv lv ra VD s
+      (aIncl:ann_R (fun (x : ⦃var⦄) (y : ⦃var⦄ * ⦃var⦄) => x [<=] fst y) lv ra)
+      (LV:live_sound Imperative ZL Lv s lv)
+      (RA:renamedApart s ra)
+      (Incl:fst (getAnn ra) ∪ snd (getAnn ra) ⊆ VD)
+  : ann_P (fun lv0 : ⦃var⦄ => lv0 [<=] VD) lv.
+Proof.
+  general induction aIncl; invt live_sound; invt renamedApart;
+    econstructor; pe_rewrite; simpl in *; eauto with cset.
+  - eapply IHaIncl; eauto.
+    rewrite <- Incl, H12. clear; cset_tac.
+  - eapply IHaIncl1; eauto.
+    rewrite <- Incl, <- H13. clear; cset_tac.
+  - eapply IHaIncl2; eauto.
+    rewrite <- Incl, <- H13. clear; cset_tac.
+  - intros. inv_get. eapply H2; eauto.
+    edestruct H15; eauto; dcr. rewrite H8.
+    rewrite <- Incl, <- H19.
+    rewrite <- incl_list_union; eauto using zip_get;[|reflexivity].
+    unfold defVars. clear; cset_tac.
+  - eapply IHaIncl; eauto.
+    rewrite <- Incl, <- H19. clear; cset_tac.
+Qed.
 
 Smpl Add match goal with
          | [ H : context [ ❬@rev ?A ?L❭ ] |- _ ] => rewrite (@rev_length A L) in H

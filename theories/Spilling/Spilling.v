@@ -2,7 +2,7 @@ Require Import Util CSet MapDefined AllInRel.
 Require Import Var MapInjectivity IL Annotation AnnP Sim.
 Require Import SimplSpill SpillSound SpillSim DoSpill DoSpillRm Take Drop.
 Require Import ReconstrLive ReconstrLiveSound.
-Require Import RenameApart_Liveness AddParams.
+Require Import Liveness RenamedApart RenameApart_Liveness AddParams.
 
 Set Implicit Arguments.
 
@@ -169,7 +169,7 @@ Lemma spill_correct k (kGT:k > 0) (s:stmt) lv ra E
       (Incl:getAnn lv ⊆ fst (getAnn ra))
       (NUC:LabelsDefined.noUnreachableCode LabelsDefined.isCalled s)
       (slt:Slot (fst (getAnn ra) ∪ snd (getAnn ra)))
-      (aIncl:(* ann_R (fun (x : ⦃var⦄) (y : ⦃var⦄ * ⦃var⦄) => x ⊆ fst y) lv ra*) True)
+      (aIncl:ann_R (fun (x : ⦃var⦄) (y : ⦃var⦄ * ⦃var⦄) => x ⊆ fst y) lv ra)
   : sim I.state F.state bot3 Sim
         (nil, E, s)
         (nil, E [slt ⊝ drop k (to_list (getAnn lv)) <-- lookup_list E (drop k (to_list (getAnn lv)))], fst (spill k slt s lv )).
@@ -225,8 +225,7 @@ Proof.
       clear; intuition.
   }
   assert (spl_lv:spill_live VD spl lv). {
-    eapply simplSpill_spill_live; eauto.
-    admit.
+    eapply simplSpill_spill_live; eauto using lv_ra_lv_bnd.
   }
   eapply sim_trans with (S2:=I.state).
   - eapply sim_I with (slot:=slt) (k:=k) (R:=R) (M:=M) (sl:=spl) (Λ:=nil)
@@ -253,7 +252,6 @@ Proof.
     + rewrite <- Incl, lvRM; eauto.
     + eapply SimI.labenv_sim_nil.
     + eauto.
-    + admit.
   - eapply addParams_correct; eauto.
     + rewrite (@ReconstrLiveSmall.reconstr_live_small nil nil nil s _ R M VD); eauto.
       * rewrite union_comm, empty_neutral_union. eauto.
@@ -263,4 +261,4 @@ Proof.
       ** reflexivity.
       ** isabsurd.
     + eapply (@do_spill_no_unreachable_code _ _ _ nil nil); eauto.
-Admitted.
+Qed.
