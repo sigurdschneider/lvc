@@ -124,14 +124,14 @@ Definition slt (s:stmt) : Slot (occurVars s) :=
 Definition fromILF (k:nat) (s:stmt) :=
   let s_eae := EAE.compile s in
   let s_ra := rename_apart s_eae in
-  let (s_dcve, lv_dcve) := DCVE Liveness.Imperative s_ra in
-  let fvl := to_list (getAnn lv_dcve) in
-  let s_ren := rename_apart s_dcve in
-  let lv_ren := snd (renameApart_live id (freeVars s_dcve) s_dcve lv_dcve) in
-  let (s_spilled, lv_spilled) := spill k (slt s_ren) s_ren lv_ren in
-  (s_spilled, lv_spilled).
+  let dcve := DCVE Liveness.Imperative s_ra in
+  let fvl := to_list (getAnn (snd dcve)) in
+  let spilled := spill k (slt (fst dcve)) (fst dcve) (snd dcve) in
+  spilled.
 
 (*
+  let s_ren := rename_apart (fst dcve) in
+  let lv_ren := snd (renameApart_live id (freeVars (fst dcve)) (fst dcve) (snd dcve)) in
 
 
   let fvl := to_list (getAnn lv_ren) in
@@ -147,23 +147,57 @@ Definition fromILF (k:nat) (s:stmt) :=
 Opaque LivenessValidators.live_sound_dec.
 Opaque DelocationValidator.trs_dec.
 
-
-Ltac let_pair_case_eq :=
-  match goal with
-    | [ |- context [let (_, _) := ?e in _] ] => case_eq e; intros
-    | [ H : ?x = (?s, ?t) |- _ ] =>
-      assert (fst x = s) by (rewrite H; eauto);
-      assert (snd x = t) by (rewrite H; eauto); clear H
-  end.
+Require Import MoreTac Alpha RenameApart_Alpha RenameApart_Liveness RenamedApart_Liveness
+        Coherence Invariance.
 
 Lemma fromILF_correct k (s s':stmt) E (PM:LabelsDefined.paramsMatch s nil)
-  : sim F.state I.state bot3 Sim (nil:list F.block, E, s) (nil:list I.block, E, fst (fromILF k s)).
+  : sim F.state F.state bot3 Sim (nil, E, s) (nil, E, fst (fromILF k s)).
 Proof.
-  unfold fromILF; intros.
-  match goal with
-  | [ |- context [let (a, b) := ?e in _] ] => case_eq e; intros b a ?
-  end.
+  let_unfold fromILF.
+  eapply sim_trans with (S2:=F.state). {
+    eapply EAE.sim_EAE.
+  }
+  refold.
+  assert (AEF:AppExpFree.app_expfree s_eae) by eapply EAE.EAE_app_expfree.
 
+  eapply sim_trans with (S2:=F.state). {
+    eapply bisim_sim. eapply bisim_sym.
+    eapply Alpha.alphaSim_sim. econstructor; eauto using PIR2.
+    - eapply rename_apart_alpha.
+    - hnf; intros; unfold id in *; subst; reflexivity.
+  }
+  refold.
+  exploit (rename_apart_renamedApart s_eae) as RA; eauto.
+  assert (LabelsDefined.paramsMatch s_ra nil). {
+    admit.
+  }
+
+  eapply sim_trans with (S2:=I.state). {
+     eapply bisim_sim.
+     eapply Invariance.srdSim_sim; simpl; eauto using PIR2.
+     - eapply renamedApart_coherent with (DL:=nil); simpl; eauto.
+     - hnf; intros; isabsurd.
+     - econstructor.
+     - reflexivity.
+     - eapply renamedApart_live; simpl; eauto.
+     - econstructor.
+  }
+
+  eapply sim_trans with (S2:=I.state). {
+    eapply DCVE_correct_I; eauto. admit.
+  }
+  refold.
+
+  eapply sim_trans with (S2:=F.state). {
+    eapply (@spill_correct k); eauto using DCVE_live, DCVE_noUC.
+    admit. admit. admit. admit. admit.
+    admit. admit. admit.
+  }
+  admit.
+Admitted.
+
+  eapply (@sim_trans _ I.state _ I.state).
+  eapply
   repeat let_case_eq; repeat let_pair_case_eq; repeat simpl_pair_eqs; subst.
   set (s_ren := rename_apart (EAE.compile s)).
   set (s_dcve :=
