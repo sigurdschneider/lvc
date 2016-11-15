@@ -258,8 +258,9 @@ Proof.
   remember (rev F).
   general induction l; simpl in * |- *; [ isabsurd |].
   - unfold renameApartFStep in *.
-    revert H; let_pair_case_eq; simpl_pair_eqs.
-    inv H0; subst.
+    revert H; let_pair_case_eq; simpl_pair_eqs. subst.
+    intros.
+    inv H; subst.
     + do 3 eexists; split; eauto using get.
       eapply get_rev. rewrite <- Heql. econstructor.
       simpl. split. reflexivity.
@@ -284,7 +285,7 @@ Proof.
       rewrite rev_length.
       rewrite <- rev_length. rewrite <- Heql. eauto.
       exploit rev_swap. symmetry; eauto. simpl in *.
-      rewrite H4 at 1. eapply get_app.
+      rewrite H5 at 1. eapply get_app.
       rewrite H3. simpl. eauto.
 Qed.
 
@@ -598,7 +599,8 @@ Proof.
       * right. rewrite H4. eapply H. lset_tac.
       * rewrite H0; eauto.
     + reflexivity.
-  - subst s0 s4. simpl in H. simpl. rename s3 into Gs2. rename s into Gs1.
+  - subst s1' s2'.
+    simpl in H. simpl. rename G'' into Gs2. rename G'0 into Gs1.
     eapply renamedApartIf with (Ds := Gs1) (Dt := Gs2).
     + rewrite <- H. rewrite rename_op_freeVars; eauto using lookup_set_union_incl.
     + eapply disj_1_incl; eauto. eapply disj_2_incl.
@@ -643,7 +645,7 @@ Proof.
     eapply lookup_set_empty; eauto.
   - econstructor; eauto. simpl in H. rewrite <- H.
     rewrite rename_op_freeVars; eauto.
-  - simpl. subst s1.
+  - simpl. subst s2'.
     let_pair_case_eq. simpl_pair_eqs.
     subst. econstructor; eauto.
     Focus 7.

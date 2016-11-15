@@ -264,14 +264,15 @@ Definition fresh {X} `{Equivalence X} (x:X) (Y:list X) : Prop :=
 
 Ltac let_case_eq :=
   match goal with
-    | [ H : context [let (_, _) := ?e in _] |- _ ] =>
-      let a := fresh "a" in let b := fresh "b" in let eq := fresh "eq" in
-        case_eq e; intros a b eq; rewrite eq in H
+    | [ H : context [let (a, b) := ?e in _] |- _ ] =>
+      let a := fresh a in let b := fresh b in let eq := fresh "eq" in
+      case_eq e; intros b a eq; rewrite eq in H
   end.
 
 Ltac let_pair_case_eq :=
   match goal with
-    | [ |- context [let (_, _) := ?e in _] ] => case_eq e; intros
+  | [ |- context [let (a, b) := ?e in _] ] =>
+    let a := fresh a in let b := fresh b in case_eq e; intros b a ?
     | [ H : ?x = (?s, ?t) |- _ ] =>
       assert (fst x = s) by (rewrite H; eauto);
       assert (snd x = t) by (rewrite H; eauto); clear H

@@ -78,6 +78,8 @@ Qed.
 
 Arguments sim S {H} S' {H0} r t _ _.
 
+Require Import AddParams Spilling.
+
 Definition toILF (s:IL.stmt) : IL.stmt :=
   let (s_dcve, lv) := DCVE Liveness.Imperative s in
   addParams s_dcve lv.
@@ -115,35 +117,56 @@ Definition optimize (s':stmt) : status stmt :=
 
 Print all.
 
+Definition slt (s:stmt) : Slot (occurVars s) :=
+  let VD := (occurVars s) in
+  @Slot_p VD (S (fold max VD 0)) eq_refl.
 
-
-Definition fromILF (k:nat) (s:stmt) : status stmt :=
+Definition fromILF (k:nat) (s:stmt) :=
   let s_eae := EAE.compile s in
   let s_ra := rename_apart s_eae in
-  let (s_dcve, lv) := DCVE Liveness.Imperative s_ra in
-  let fvl := to_list (getAnn lv) in
-  let s_ren := rename_apart s_fun in
-  let lv_ren := snd (renameApart_live id (freeVars s_fun) s_fun lv_spilled) in
+  let (s_dcve, lv_dcve) := DCVE Liveness.Imperative s_ra in
+  let fvl := to_list (getAnn lv_dcve) in
+  let s_ren := rename_apart s_dcve in
+  let lv_ren := snd (renameApart_live id (freeVars s_dcve) s_dcve lv_dcve) in
+  let (s_spilled, lv_spilled) := spill k (slt s_ren) s_ren lv_ren in
+  (s_spilled, lv_spilled).
+
+(*
+
+
   let fvl := to_list (getAnn lv_ren) in
   let ϱ := CMap.update_map_with_list fvl fvl (@MapInterface.empty var _ _ _) in
-  sdo ϱ' <- AllocationAlgo.regAssign s_ren lv_ren ϱ;
+  sdo ϱ' <- AllocationAlgo.regAssign s_ra lv_ren ϱ;
     let s_allocated := rename (CMap.findt ϱ' 0) s_ren in
     let s_lowered := ParallelMove.lower parallel_move
                                        nil
                                        s_allocated
                                        (mapAnn (map (CMap.findt ϱ' 0)) lv_ren) in
     s_lowered.
-
+*)
 Opaque LivenessValidators.live_sound_dec.
 Opaque DelocationValidator.trs_dec.
 
 
+Ltac let_pair_case_eq :=
+  match goal with
+    | [ |- context [let (_, _) := ?e in _] ] => case_eq e; intros
+    | [ H : ?x = (?s, ?t) |- _ ] =>
+      assert (fst x = s) by (rewrite H; eauto);
+      assert (snd x = t) by (rewrite H; eauto); clear H
+  end.
+
 Lemma fromILF_correct k (s s':stmt) E (PM:LabelsDefined.paramsMatch s nil)
-  : fromILF k s = Success s'
-    -> sim F.state I.state bot3 Sim (nil:list F.block, E, s) (nil:list I.block, E, s').
+  : sim F.state I.state bot3 Sim (nil:list F.block, E, s) (nil:list I.block, E, fst (fromILF k s)).
 Proof.
   unfold fromILF; intros.
-  repeat let_case_eq; repeat simpl_pair_eqs; subst.
+  match goal with
+  | [ |- context [let (a, b) := ?e in _] ] => case_eq e; intros b a ?
+  end.
+
+  repeat let_case_eq; repeat let_pair_case_eq; repeat simpl_pair_eqs; subst.
+  set (s_ren := rename_apart (EAE.compile s)).
+  set (s_dcve :=
   monadS_inv H.
   exploit (@ParallelMove.correct parallel_move nil); try eapply EQ0; try now econstructor; eauto.
   eapply (@Liveness.live_rename_sound _ nil nil).

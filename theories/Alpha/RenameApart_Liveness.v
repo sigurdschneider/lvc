@@ -10,7 +10,7 @@ Lemma incl_union_incl X `{OrderedType X} s t u w
   intros A B. rewrite <- A. eauto with cset.
 Qed.
 
-Hint Immediate incl_union_incl : cset.
+Local Hint Immediate incl_union_incl : cset.
 
 Lemma lv_ra_lv_bnd ZL Lv lv ra VD s
       (aIncl:ann_R (fun (x : ⦃var⦄) (y : ⦃var⦄ * ⦃var⦄) => x [<=] fst y) lv ra)
@@ -149,8 +149,8 @@ Lemma get_fst_renameApartF_live G G' ϱ F n anF ans
 Proof.
   length_equify.
   general induction Len; simpl in * |- *; [ isabsurd |].
-  - revert Get; let_pair_case_eq; simpl_pair_eqs; subst.
-    revert Get; let_pair_case_eq; simpl_pair_eqs; subst. simpl in *.
+  - revert Get; let_pair_case_eq; simpl_pair_eqs; subst; intros Get.
+    revert Get; let_pair_case_eq; simpl_pair_eqs; subst; intros Get. simpl in *.
     inv Get.
     + eexists x, y; eauto 100 using get.
     + edestruct IHLen as [? [? ?]]; dcr; subst; eauto 20 using get.

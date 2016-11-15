@@ -28,7 +28,7 @@ Definition backwardF (sT:stmt) (Dom:stmt->Type)
       * eapply (g F' anF'); eauto using get.
 Defined.
 
-Arguments backwardF [sT] [Dom] backward ZL AL F anF ST : clear implicits.
+Arguments backwardF [sT] [Dom] backward ZL AL F anF ST.
 
 Fixpoint backwardF_length (sT:stmt) (Dom:stmt->Type)
            (backward:〔params〕 -> 〔Dom sT〕 ->

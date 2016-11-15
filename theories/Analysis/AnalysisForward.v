@@ -27,7 +27,7 @@ Definition forwardF (sT:stmt) (Dom:stmt->Type) `{BoundedSemiLattice (Dom sT)}
         eauto using get.
 Defined.
 
-Arguments forwardF [sT] [Dom] {H} {H0} forward ZL F anF ST : clear implicits.
+Arguments forwardF [sT] [Dom] {H} {H0} forward ZL F anF ST.
 
 Fixpoint forwardF_length (sT:stmt) (Dom:stmt->Type) `{BoundedSemiLattice (Dom sT)} forward
            (ZL:list params)
