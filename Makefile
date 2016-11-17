@@ -38,6 +38,7 @@ depmakefiles:
 dep:
 	+$(MAKE) -C paco all TIMECMD=
 	+$(MAKE) -C ContainersPlugin all TIMECMD=
+	+$(MAKE) -C smpl all TIMECMD=
 
 depclean: clean
 	+$(MAKE) -C paco clean

@@ -1,0 +1,3 @@
+[submodule "smpl"]
+	path = smpl
+	url = git@github.com:sigurdschneider/smpl.git
