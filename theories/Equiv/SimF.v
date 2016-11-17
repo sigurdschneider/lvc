@@ -192,7 +192,7 @@ Proof.
     pone_step; simpl; eauto using get_app, get_mapi; simpl; eauto with len.
     orewrite (f-f=0). orewrite (f'-f'=0). simpl.
     exploit SIM; eauto.
-  - exploit Ige; eauto. rewrite mapi_length in GE; eauto.
+  - intros. exploit Ige; eauto. rewrite mapi_length in GE; eauto.
     eapply get_app_right_ge in GetAL; [ | rewrite (Len3 E); eauto ].
     eapply get_app_right_ge in GetL'; [ | rewrite mapi_length; eauto ].
     rewrite mapi_length in *.

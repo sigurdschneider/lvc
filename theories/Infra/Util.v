@@ -295,6 +295,7 @@ repeat match goal with
            end
        end; cofix; intros.
 
+
 Lemma modus_ponens P Q
 : P -> (P -> Q) -> Q.
 tauto.
@@ -303,13 +304,17 @@ Defined.
 Tactic Notation "exploiT" tactic(tac) :=
   eapply modus_ponens;[ tac | intros].
 
-Ltac exploit H :=
+Tactic Notation "exploit'" uconstr(H) simple_intropattern(H') :=
   eapply modus_ponens;
   [
     let H' := fresh "exploitH" in
     pose proof H as H'; hnf in H';
       eapply H'; clear H'
-  | intros].
+  | intro H'].
+
+Tactic Notation "exploit" uconstr(X) := let H := fresh "H" in exploit' X H.
+Tactic Notation "exploit" uconstr(X) "as" simple_intropattern(H) := exploit' X H.
+
 
 Tactic Notation "exploiT" constr(ty) :=
   match goal with
@@ -324,19 +329,6 @@ Tactic Notation "exploiT" constr(ty) :=
       | H: ty _ _ _ _ _ _ _ _ |- _ => exploit H
       | H: ty _ _ _ _ _ _ _ _ _ |- _ => exploit H
   end.
-
-
-Ltac exploit2 H H' :=
-  eapply modus_ponens;
-  [
-    let H' := fresh "exploitH" in
-    pose proof H as H'; hnf in H';
-      eapply H'; clear H'
-  | intros H'].
-
-
-Tactic Notation "exploit" uconstr(X) := exploit X.
-Tactic Notation "exploit" uconstr(X) "as" ident(H) := exploit2 X H.
 
 
 Definition foo A B C := (A -> ~ B \/ C).

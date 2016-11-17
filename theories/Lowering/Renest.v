@@ -321,8 +321,8 @@ Proof.
       intros. eapply get_app_cases in H. destruct H as [H|[H ?]].
       - inv_get. destruct x as [Z s].
         exploit (@get_in_range _ (snd (fst (egalize_funs egalize (mapi (plus' n) F ++ D) (❬F❭ + n) F)))
-                               f).
-        rewrite egalize_funs_length1; eauto using get_range. destruct X as [[Z' s'] ?].
+                               f) as Get.
+        rewrite egalize_funs_length1; eauto using get_range. destruct Get as [[Z' s'] ?].
         do 2 eexists. eexists Z.
         split; eauto using get_app, mapi_get_1.
         split. unfold plus'. eapply get_drop.
