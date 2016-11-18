@@ -121,19 +121,10 @@ Definition slt (s:stmt) : Slot (occurVars s) :=
   let VD := (occurVars s) in
   @Slot_p VD (S (fold max VD 0)) eq_refl.
 
-Definition fromILF (k:nat) (s:stmt) :=
-  let s_eae := EAE.compile s in
-  let s_ra := rename_apart s_eae in
-  let dcve := DCVE Liveness.Imperative s_ra in
-  let fvl := to_list (getAnn (snd dcve)) in
-  let spilled := spill k (slt (fst dcve)) (fst dcve) (snd dcve) in
-  spilled.
 
-(*
-  let s_ren := rename_apart (fst dcve) in
-  let lv_ren := snd (renameApart_live id (freeVars (fst dcve)) (fst dcve) (snd dcve)) in
-
-
+Definition rassign (spilled:
+  let s_ren := rename_apart (fst spilled) in
+  let lv_ren := snd (renameApart_live id (freeVars (fst spilled)) (fst spilled) (snd spilled)) in
   let fvl := to_list (getAnn lv_ren) in
   let ϱ := CMap.update_map_with_list fvl fvl (@MapInterface.empty var _ _ _) in
   sdo ϱ' <- AllocationAlgo.regAssign s_ra lv_ren ϱ;
@@ -143,7 +134,15 @@ Definition fromILF (k:nat) (s:stmt) :=
                                        s_allocated
                                        (mapAnn (map (CMap.findt ϱ' 0)) lv_ren) in
     s_lowered.
-*)
+
+
+Definition fromILF (k:nat) (s:stmt) :=
+  let s_eae := EAE.compile s in
+  let s_ra := rename_apart s_eae in
+  let dcve := DCVE Liveness.Imperative s_ra in
+  let fvl := to_list (getAnn (snd dcve)) in
+  let spilled := spill k (slt (fst dcve)) (fst dcve) (snd dcve) in
+
 Opaque LivenessValidators.live_sound_dec.
 Opaque DelocationValidator.trs_dec.
 

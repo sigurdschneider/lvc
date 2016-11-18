@@ -1,18 +1,145 @@
-Require Import CSet Le Arith.Compare_dec.
+Require Import CMap MapNotations CSet Le Arith.Compare_dec.
 
-Require Import Plus Util Map CMap Status Take Subset1.
+Require Import Plus Util Status Take Subset1.
 Require Import Val Var Env IL Annotation Liveness Fresh MoreList SetOperations.
 Require Import Coherence Allocation RenamedApart AllocationAlgo.
 
 Set Implicit Arguments.
 
+Lemma least_fresh_P_spec c G x
+  : (~ x <= c -> x ∉ G)
+    -> least_fresh_P c G x ∉ G.
+Proof.
+  unfold least_fresh_P; cases; eauto using least_fresh_spec.
+Qed.
+
+Lemma least_fresh_P_gt c G x
+  : ~ x <= c
+    -> least_fresh_P c G x = x.
+Proof.
+  intros; unfold least_fresh_P; cases; try omega; eauto.
+Qed.
+
+Lemma least_fresh_P_le c G x
+  : x <= c
+    -> least_fresh_P c G x = least_fresh G.
+Proof.
+  intros; unfold least_fresh_P; cases; try omega; eauto.
+Qed.
+
+Definition sep (c:var) (G:set var) (ϱ:Map [var,var]) :=
+  (forall x, x ∈ G -> ~ x <= c -> findt ϱ 0 x === x)
+  /\ (forall x, x ∈ G -> x <= c -> findt ϱ 0 x <= c).
+
+Instance sep_morphism_impl
+  : Proper (eq ==> Equal ==> eq ==> impl) sep.
+Proof.
+  unfold Proper, respectful, impl; intros; subst.
+  destruct H2; split; intros.
+  eapply H; eauto. rewrite H0; eauto.
+  eapply H1; eauto. rewrite H0; eauto.
+Qed.
+
+Instance sep_morphism_iff
+  : Proper (eq ==> Equal ==> eq ==> iff) sep.
+Proof.
+  unfold Proper, respectful; intros; subst.
+  split; rewrite H0; eauto.
+Qed.
+
+Instance sep_morphism_Subset_impl
+  : Proper (eq ==> Subset ==> eq ==> flip impl) sep.
+Proof.
+  unfold Proper, respectful, flip, impl; intros; subst.
+  destruct H2; split; intros; eauto.
+Qed.
+
+Instance sep_morphism_Subset_impl'
+  : Proper (eq ==> flip Subset ==> eq ==> impl) sep.
+Proof.
+  unfold Proper, respectful, flip, impl; intros; subst.
+  destruct H2; split; intros; eauto.
+Qed.
+
+Lemma sep_incl c lv lv' ϱ
+  : sep c lv ϱ
+    -> lv' ⊆ lv
+    -> sep c lv' ϱ.
+Proof.
+  intros A B. rewrite B; eauto.
+Qed.
+
+Lemma sep_agree c D ϱ ϱ'
+  : agree_on eq D (findt ϱ 0) (findt ϱ' 0)
+    -> sep c D ϱ
+    -> sep c D ϱ'.
+Proof.
+  intros AGR [GT LE]; split; intros.
+  - rewrite <- AGR; eauto.
+  - rewrite <- AGR; eauto.
+Qed.
+
+Hint Resolve sep_incl sep_agree.
+
+Lemma sep_lookup_set c (G:set var) (ϱ:Map [var,var]) x
+      (SEP:sep c G ϱ) (NotIn:x ∉ G)
+  : ~ x <= c -> x ∉ lookup_set (findt ϱ 0) G.
+Proof.
+  destruct SEP as [GT LE].
+  intros Gt. unfold lookup_set; intro In.
+  eapply map_iff in In; eauto.
+  destruct In as [y [In EQ]]. hnf in EQ; subst.
+  decide (y <= c).
+  - exfalso. eauto.
+  - exploit GT; eauto.
+Qed.
+
+Lemma sep_update c lv x ϱ
+      (SEP : sep c (lv \ singleton x) ϱ)
+      (CARD : cardinal (map (findt ϱ 0) (lv \ singleton x)) <= c)
+  : sep c lv (ϱ [-x <- least_fresh_P c (map (findt ϱ 0) (lv \ singleton x)) x -]).
+Proof.
+  destruct SEP as [GT LE].
+  split; intros.
+  - unfold findt.
+    decide (x === x0).
+    + rewrite MapFacts.add_eq_o; eauto.
+      rewrite least_fresh_P_gt. eauto.
+      hnf in e; congruence.
+    + rewrite MapFacts.add_neq_o; eauto.
+      exploit GT; eauto. cset_tac.
+  - unfold findt.
+    decide (x === x0).
+    + rewrite MapFacts.add_eq_o; eauto.
+      rewrite least_fresh_P_le.
+      * rewrite least_fresh_small.
+        eapply CARD.
+      * hnf in e; congruence.
+    + rewrite MapFacts.add_neq_o; eauto.
+      cases; try omega.
+      rewrite <- LE; eauto.
+      unfold findt. rewrite <- Heq; eauto.
+      cset_tac.
+Qed.
+
+Lemma sep_nd c G ϱ G'
+      (SEP:sep c G ϱ) (Disj: disj G' G)
+  : forall x : nat, x > c -> x ∈ G' -> x ∈ map (findt ϱ 0) G -> False.
+Proof.
+  intros. cset_tac. destruct SEP as [GT LE].
+  decide (x0 <= c).
+  - exploit LE; eauto; try omega.
+  - exploit GT; eauto. cset_tac.
+    eapply Disj; eauto; congruence.
+Qed.
 
 (** ** the algorithm produces a locally injective renaming *)
 
-Lemma regAssign_correct (ϱ:Map [var,var]) ZL Lv s alv ϱ' al
+Lemma regAssign_correct c (ϱ:Map [var,var]) ZL Lv s alv ϱ' al
       (LS:live_sound FunctionalAndImperative ZL Lv s alv)
       (inj:injective_on (getAnn alv) (findt ϱ 0))
-      (allocOK:regAssign s alv ϱ = Success ϱ')
+      (SEP:sep c (getAnn alv) ϱ)
+      (allocOK:regAssign c s alv ϱ = Success ϱ')
       (incl:getAnn alv ⊆ fst (getAnn al))
       (sd:renamedApart s al)
 : locally_inj (findt ϱ' 0) s alv.
@@ -23,9 +150,12 @@ Proof.
   - exploit IHLS; try eapply allocOK; pe_rewrite; eauto with cset.
     + eapply injective_on_agree; [| eapply map_update_update_agree].
       eapply injective_on_incl.
-      eapply injective_on_fresh;
-        eauto using injective_on_incl, least_fresh_spec with cset.
+      eapply injective_on_fresh; eauto using injective_on_incl.
+      eapply least_fresh_P_spec; eauto.
+      eapply sep_lookup_set; eauto.
       eauto with cset.
+    + eapply sep_update; eauto.
+      admit.
     + pe_rewrite. eauto with cset.
     + exploit regAssign_renamedApart_agree;
       try eapply allocOK; simpl; eauto using live_sound.
@@ -48,6 +178,7 @@ Proof.
     exploit IHLS2; try eapply EQ0; eauto using injective_on_incl.
     eapply injective_on_incl; eauto.
     eapply injective_on_agree; eauto using agree_on_incl.
+    eapply sep_agree; eauto using agree_on_incl.
     rewrite H12; simpl. rewrite <- incl; eauto.
     econstructor; eauto.
     assert (agree_on eq D (findt ϱ 0) (findt ϱ' 0)). etransitivity; eauto.
@@ -66,20 +197,22 @@ Proof.
     eauto using regAssign_renamedApart_agree'. reflexivity.
     exploit regAssign_renamedApart_agree;
       try eapply EQ0; simpl; eauto using live_sound.
-    exploit IHLS; eauto.
-    + eapply injective_on_incl; eauto.
-      eapply injective_on_agree; eauto.
-      eapply agree_on_incl; eauto. instantiate (1:=D).
+    instantiate (1:=D) in H4.
+    assert (AGR:agree_on _eq lv (findt ϱ 0) (findt x 0)). {
+      eapply agree_on_incl; eauto.
       rewrite disj_minus_eq; eauto. simpl in *.
       symmetry. rewrite <- list_union_disjunct.
-      intros. inv_zip H12. edestruct H8; eauto; dcr.
+      intros; inv_get. edestruct H8; eauto; dcr.
       unfold defVars. symmetry. eapply disj_app; split; eauto.
       symmetry; eauto.
       exploit H7; eauto. eapply renamedApart_disj in H17.
       eapply disj_1_incl; eauto. rewrite H16. eauto with cset.
+    }
+    exploit IHLS; try eapply EQ0; eauto.
+    + eapply injective_on_incl; eauto.
+      eapply injective_on_agree; eauto.
     + pe_rewrite. etransitivity; eauto.
-    +
-      assert (DDISJ:forall n  DD' Zs, get F n Zs -> get ans n DD' ->
+    + assert (DDISJ:forall n  DD' Zs, get F n Zs -> get ans n DD' ->
                               disj D (defVars Zs DD')).
       {
         eapply renamedApart_disj in sd. eauto using defVars_disj_D.
@@ -88,7 +221,7 @@ Proof.
       econstructor; eauto.
       * {
           intros. edestruct get_length_eq; try eapply H6; eauto.
-          edestruct (regAssignF_get (fst (getAnn x0) ∪ snd (getAnn x0) ∪ getAnn alv)); eauto; dcr.
+          edestruct (regAssignF_get c (fst (getAnn x0) ∪ snd (getAnn x0) ∪ getAnn alv)); eauto; dcr.
           rewrite <- map_update_list_update_agree in H21; eauto.
           exploit H1; try eapply H19; eauto.
           - assert (getAnn alv \ of_list (fst Zs) ∪ of_list (fst Zs) [=] getAnn alv).
@@ -113,14 +246,25 @@ Proof.
             eapply defVars_take_disj; eauto. unfold defVars.
             eauto with cset.
             setoid_rewrite <- H17 at 1.
-            eapply injective_on_fresh_list; eauto.
+            eapply injective_on_fresh_list; eauto with len.
             eapply injective_on_incl; eauto.
             eapply H2; eauto.
             eapply disj_intersection.
-            eapply disj_2_incl. eapply fresh_list_spec. eapply least_fresh_spec.
+            eapply disj_2_incl. eapply fresh_list_P_spec.
+            eapply sep_nd; eauto.
+            edestruct H2; eauto. clear; hnf; intros; cset_tac.
+            edestruct H8; eauto.
+            admit.
             reflexivity.
             edestruct H8; eauto.
-            eapply fresh_list_nodup, least_fresh_spec.
+            eapply fresh_list_nodup; eauto.
+            eapply sep_nd; eauto.
+            edestruct H2; eauto. clear; hnf; intros; cset_tac.
+            edestruct H8; eauto.
+            admit.
+          - edestruct H2; eauto.
+            rewrite map_update_list_update_agree' in H21; eauto with len.
+            admit.
           - edestruct H8; eauto; dcr. rewrite H17.
             exploit H2; eauto; dcr. rewrite incl in H26; simpl in *.
             rewrite <- H26. clear_all; cset_tac; intuition.
@@ -157,17 +301,10 @@ Proof.
               exploit H2; eauto; dcr. rewrite incl in H27. simpl in *.
               revert H27; clear_all; cset_tac; intuition.
               decide (a ∈ of_list (fst Zs)); intuition.
+          - eauto with len.
         }
       * eapply injective_on_agree; try eapply inj; eauto.
-        etransitivity; eapply agree_on_incl; eauto.
-        rewrite disj_minus_eq; eauto. simpl in *.
-        symmetry. rewrite <- list_union_disjunct.
-        intros. inv_zip H14. edestruct H8; eauto; dcr.
-        unfold defVars. symmetry. eapply disj_app; split; eauto.
-        symmetry; eauto.
-        exploit H7; eauto. eapply renamedApart_disj in H18.
-        eapply disj_1_incl; eauto. rewrite H17. eauto with cset.
-        pe_rewrite. eauto.
+        etransitivity; eapply agree_on_incl; eauto. pe_rewrite. eauto.
 Qed.
 
 
@@ -193,4 +330,4 @@ Proof.
   eapply renamedApart_live_imperative_is_functional in H0; eauto using bounded_disjoint, renamedApart_disj, meet1_Subset1, live_sound_annotation, renamedApart_annotation.
   eapply regAssign_correct; eauto using locally_inj_subset, meet1_Subset, live_sound_annotation, renamedApart_annotation.
   eapply ann_R_get in H2. destruct (getAnn ang); simpl; cset_tac.
-Qed.
+Qed.u

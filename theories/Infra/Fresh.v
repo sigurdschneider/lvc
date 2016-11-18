@@ -182,6 +182,42 @@ Instance le_dec x y : Computable (x <= y).
 eapply le_dec.
 Defined.
 
+Lemma small_fresh_variable_exists_filter c (lv:set nat) n
+: (forall m, m < n -> m ∈ (filter (fun x => B[x <= c]) lv))
+  -> le n (cardinal (filter (fun x => B[x <= c]) lv))
+  -> (cardinal (filter (fun x => B[x <= c]) lv)) < c
+  -> safe (fun x => x ∉ lv /\ x <= cardinal (filter (fun x => B[x <= c]) lv)) n.
+Proof.
+  intros. general induction H0.
+  - decide (cardinal (filter (fun x => B[x <= c]) lv) ∈ (filter (fun x => B[x <= c]) lv)).
+    + exfalso; eapply (@neg_pidgeon_hole (filter (fun x => B[x <= c]) lv)); eauto.
+      intros. decide (m = cardinal (filter (fun x => B[x <= c]) lv)).
+      * subst; eauto.
+      * eapply H; intros. omega.
+    + econstructor 1; split; eauto.
+      intro. eapply n.
+      eapply filter_iff. intuition. split; eauto.
+      cases; eauto. omega.
+  - decide (n ∈ filter (fun x => B[x <= c]) lv).
+    * exploit (IHle).
+      intros. decide (m = n).
+      subst; eauto.
+      eapply H; eauto. omega. eauto. eauto.
+      econstructor 2; eauto.
+    * econstructor 1. split; eauto.
+      intro. eapply n0.
+      eapply filter_iff. intuition. split; eauto.
+      cases; eauto.  eapply le_is_le in H0. omega.
+      eapply le_is_le in H0. omega.
+Qed.
+
+Definition least_fresh_filter (c:nat) (lv:set var) (LE:cardinal (filter (fun x : nat => if [x <= c] then true else false) lv) < c)
+  : var.
+  refine (@safe_first (fun x => x ∉ lv /\ x <= cardinal (filter (fun x => B[x <= c]) lv)) _ 0 _).
+  - eapply (@small_fresh_variable_exists_filter c lv).
+    intros. omega. eapply le_is_le; omega. eauto.
+Defined.
+
 Definition least_fresh (lv:set var) : var.
   refine (@safe_first (fun x => x ∉ lv /\ x <= cardinal lv) _ 0 _).
   - eapply small_fresh_variable_exists.
@@ -206,10 +242,29 @@ Proof.
   eapply safe_first_spec.
 Qed.
 
+Lemma least_fresh_filter_full_spec c G (LE:cardinal (filter (fun x : nat => if [x <= c] then true else false) G) < c)
+: @least_fresh_filter c G LE ∉ G /\ @least_fresh_filter c G LE <= cardinal (filter (fun x : nat => if [x <= c] then true else false) G).
+Proof.
+  unfold least_fresh_filter.
+  eapply safe_first_spec.
+Qed.
+
+Lemma least_fresh_filter_spec c G LE
+: @least_fresh_filter c G LE ∉ G.
+Proof.
+  eapply least_fresh_filter_full_spec.
+Qed.
+
 Lemma least_fresh_spec G
 : least_fresh G ∉ G.
 Proof.
   eapply least_fresh_full_spec.
+Qed.
+
+Lemma least_fresh_small_filter c G LE
+: @least_fresh_filter c G LE <= cardinal (filter (fun x : nat => if [x <= c] then true else false) G).
+Proof.
+  eapply least_fresh_filter_full_spec.
 Qed.
 
 Lemma least_fresh_small G
