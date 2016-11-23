@@ -36,10 +36,9 @@ Qed.
 
 Section SafeFirst.
 
-  Hypothesis P : nat -> Prop.
-
+  Hypothesis Q : nat -> Prop.
   Inductive safe : nat -> Prop :=
-  | safe_here n : P n -> safe n
+  | safe_here n : Q n -> safe n
   | safe_after n : safe (S n) -> safe n.
 
   Lemma safe_antitone m n
@@ -51,15 +50,15 @@ Section SafeFirst.
   Qed.
 
   Lemma exists_is_safe
-  : (exists x, P x) -> exists n, safe n.
+  : (exists x, Q x) -> exists n, safe n.
   Proof.
     intros. destruct H; eexists; eauto using safe.
   Qed.
 
-  Hypothesis comp  : forall n, Computable (P n).
+  Hypothesis comp  : forall n, Computable (Q n).
 
   Lemma safe_upward n
-  : safe n -> ~ P n -> safe (S n).
+  : safe n -> ~ Q n -> safe (S n).
   Proof.
     intros; destruct H.
     - destruct (H0 H).
@@ -67,17 +66,22 @@ Section SafeFirst.
   Defined.
 
   Fixpoint safe_first n (s:safe n) : nat.
-  refine (if [ P n ] then n else safe_first (S n) _).
+  refine (if [ Q n ] then n else safe_first (S n) _).
   destruct s; eauto. destruct (n0 H).
   Defined.
 
+  Hypothesis P : nat -> Prop.
+  Hypothesis I : nat -> Prop.
+  Hypothesis PQ : forall n, P n -> Q n.
+  Hypothesis Step : forall n, I n -> ~ Q n -> I (S n).
+  Hypothesis Final : forall n , I n -> Q n -> P n.
 
   Fixpoint safe_first_spec n s
-  : P (@safe_first n s).
+    : I n -> P (@safe_first n s).
   Proof.
     unfold safe_first.
     destruct s.
-    - simpl. destruct (decision_procedure (P n)); eauto.
+    - simpl. destruct (decision_procedure (Q n)); eauto.
     - cases; eauto.
   Qed.
 
@@ -114,6 +118,11 @@ Proof.
       omega.
 Qed.
 
+Definition least_fresh (lv:set var) : var.
+  refine (@safe_first (fun x => x ∉ lv) _ 0 _).
+  - eapply fresh_variable_always_exists.
+Defined.
+
 Lemma all_in_lv_cardinal (lv:set nat) n
 : (forall m : nat, m < n -> m \In lv) -> cardinal lv >= n.
 Proof.
@@ -130,7 +139,6 @@ Proof.
       erewrite cardinal_2; eauto. omega.
 Qed.
 
-
 Lemma neg_pidgeon_hole (lv:set nat)
 : (forall m : nat, m <= cardinal lv -> m \In lv) -> False.
 Proof.
@@ -138,91 +146,22 @@ Proof.
   intros; eapply H; eauto. omega. omega.
 Qed.
 
-
-(* This definition is handy in the following proof. *)
-
-Inductive le (n : nat) : nat -> Prop :=
-  le_n : le n n | le_S : forall m : nat, le (S n) m -> le n m.
-
-Lemma le_is_le n m
-: le n m <-> n <= m.
+Lemma least_fresh_full_spec G
+: least_fresh G ∉ G /\ least_fresh G <= cardinal G /\ forall m, m < least_fresh G -> m ∈ G.
 Proof.
-  split; intros.
-  - general induction H; eauto.
-    inv H; omega.
-  - general induction H; eauto using le.
-    inv IHle; eauto using le.
-    clear H0 H.
-    general induction IHle; eauto using le.
+  unfold least_fresh.
+  eapply safe_first_spec with (I:= fun n => le n (cardinal G) /\ forall m, m < n -> m ∈ G).
+  - intros; dcr.
+    assert (n ∈ G) by cset_tac; clear H0.
+    split.
+    + eapply all_in_lv_cardinal.
+      intros. decide (m = n); subst; eauto.
+      eapply H2. omega.
+    + intros. decide (m = n); subst; eauto.
+      eapply H2; omega.
+  - intuition.
+  - split; intros; omega.
 Qed.
-
-Lemma small_fresh_variable_exists (lv:set nat) n
-: (forall m, m < n -> m ∈ lv)
-  -> le n (cardinal lv)
-  -> safe (fun x => x ∉ lv /\ x <= cardinal lv) n.
-Proof.
-  intros. general induction H0.
-  - decide (cardinal lv ∈ lv).
-    + exfalso; eapply neg_pidgeon_hole; eauto.
-      intros. decide (m = cardinal lv).
-      * subst; eauto.
-      * eapply H; intros. omega.
-    + econstructor 1; eauto.
-  - decide (n ∈ lv).
-    * exploit (IHle).
-      intros. decide (m = n).
-      subst; eauto.
-      eapply H; eauto. omega. eauto.
-      econstructor 2; eauto.
-    * econstructor 1. split; eauto.
-      eapply le_is_le in H0. omega.
-Qed.
-
-Instance le_dec x y : Computable (x <= y).
-eapply le_dec.
-Defined.
-
-Lemma small_fresh_variable_exists_filter c (lv:set nat) n
-: (forall m, m < n -> m ∈ (filter (fun x => B[x <= c]) lv))
-  -> le n (cardinal (filter (fun x => B[x <= c]) lv))
-  -> (cardinal (filter (fun x => B[x <= c]) lv)) < c
-  -> safe (fun x => x ∉ lv /\ x <= cardinal (filter (fun x => B[x <= c]) lv)) n.
-Proof.
-  intros. general induction H0.
-  - decide (cardinal (filter (fun x => B[x <= c]) lv) ∈ (filter (fun x => B[x <= c]) lv)).
-    + exfalso; eapply (@neg_pidgeon_hole (filter (fun x => B[x <= c]) lv)); eauto.
-      intros. decide (m = cardinal (filter (fun x => B[x <= c]) lv)).
-      * subst; eauto.
-      * eapply H; intros. omega.
-    + econstructor 1; split; eauto.
-      intro. eapply n.
-      eapply filter_iff. intuition. split; eauto.
-      cases; eauto. omega.
-  - decide (n ∈ filter (fun x => B[x <= c]) lv).
-    * exploit (IHle).
-      intros. decide (m = n).
-      subst; eauto.
-      eapply H; eauto. omega. eauto. eauto.
-      econstructor 2; eauto.
-    * econstructor 1. split; eauto.
-      intro. eapply n0.
-      eapply filter_iff. intuition. split; eauto.
-      cases; eauto.  eapply le_is_le in H0. omega.
-      eapply le_is_le in H0. omega.
-Qed.
-
-Definition least_fresh_filter (c:nat) (lv:set var) (LE:cardinal (filter (fun x : nat => if [x <= c] then true else false) lv) < c)
-  : var.
-  refine (@safe_first (fun x => x ∉ lv /\ x <= cardinal (filter (fun x => B[x <= c]) lv)) _ 0 _).
-  - eapply (@small_fresh_variable_exists_filter c lv).
-    intros. omega. eapply le_is_le; omega. eauto.
-Defined.
-
-Definition least_fresh (lv:set var) : var.
-  refine (@safe_first (fun x => x ∉ lv /\ x <= cardinal lv) _ 0 _).
-  - eapply small_fresh_variable_exists.
-    intros. omega. eapply le_is_le; omega.
-Defined.
 
 Lemma least_fresh_ext (G G':set var)
 : G [=] G'
@@ -235,40 +174,20 @@ Proof.
   - rewrite H; eauto.
 Qed.
 
-Lemma least_fresh_full_spec G
-: least_fresh G ∉ G /\ least_fresh G <= cardinal G.
-Proof.
-  unfold least_fresh.
-  eapply safe_first_spec.
-Qed.
-
-Lemma least_fresh_filter_full_spec c G (LE:cardinal (filter (fun x : nat => if [x <= c] then true else false) G) < c)
-: @least_fresh_filter c G LE ∉ G /\ @least_fresh_filter c G LE <= cardinal (filter (fun x : nat => if [x <= c] then true else false) G).
-Proof.
-  unfold least_fresh_filter.
-  eapply safe_first_spec.
-Qed.
-
-Lemma least_fresh_filter_spec c G LE
-: @least_fresh_filter c G LE ∉ G.
-Proof.
-  eapply least_fresh_filter_full_spec.
-Qed.
-
 Lemma least_fresh_spec G
 : least_fresh G ∉ G.
 Proof.
   eapply least_fresh_full_spec.
 Qed.
 
-Lemma least_fresh_small_filter c G LE
-: @least_fresh_filter c G LE <= cardinal (filter (fun x : nat => if [x <= c] then true else false) G).
-Proof.
-  eapply least_fresh_filter_full_spec.
-Qed.
-
 Lemma least_fresh_small G
 : least_fresh G <= cardinal G.
+Proof.
+  eapply least_fresh_full_spec.
+Qed.
+
+Lemma least_fresh_smallest G
+: forall m, m < least_fresh G -> m ∈ G.
 Proof.
   eapply least_fresh_full_spec.
 Qed.

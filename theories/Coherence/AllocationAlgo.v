@@ -10,15 +10,34 @@ Set Implicit Arguments.
 Smpl Add
      match goal with
      | [ |- @Equivalence.equiv
-             _
-             (@_eq _ (@SOT_as_OT _ (@eq nat) nat_OrderedType))
-             (@OT_Equivalence _ (@SOT_as_OT _ (@eq nat) nat_OrderedType))
+             _ (@_eq _ (@SOT_as_OT _ (@eq _) _))
+             (@OT_Equivalence _ (@SOT_as_OT _ (@eq _) _))
              ?x ?y ] => hnf
      | [ H : @Equivalence.equiv
-               _
-               (@_eq _ (@SOT_as_OT _ (@eq nat) nat_OrderedType))
-               (@OT_Equivalence _ (@SOT_as_OT _ (@eq nat) nat_OrderedType))
+               _ (@_eq _ (@SOT_as_OT _ (@eq _) _))
+               (@OT_Equivalence _ (@SOT_as_OT _ (@eq _) _))
                ?x ?y |- _ ] => hnf in H; clear_trivial_eqs
+     end : cset.
+
+Lemma proper_le X Y (f:X->Y) H
+  : Proper ((@_eq X (@SOT_as_OT X (@eq X) H)) ==> eq) f.
+  intuition.
+Qed.
+
+Hint Resolve proper_le.
+
+Smpl Add
+     match goal with
+     | [ |- ?a ∈ filter ?p ?lv ] => eapply filter_iff; [try eapply proper_le|]
+     | [ H : ?a ∈ filter ?p ?lv |- _ ] => eapply filter_iff in H; [|try eapply proper_le]
+     | [ H : (if [?P] then true else false) = true |- _ ] => cases in H
+     | [ |- (if [?P] then true else false) = true ] => cases
+     | [ |- (@Equivalence.equiv ?X (@_eq ?X ?H) (@OT_Equivalence ?X ?H) ?x ?a) \/ _ ] =>
+       decide (@Equivalence.equiv X (@_eq X H) (@OT_Equivalence X H) x a);
+         [ left; assumption | right ]
+     | [ H : Is_true (?p ?x),
+             H' : @Equivalence.equiv ?X (@_eq ?X ?H) (@OT_Equivalence ?X ?H) ?x ?a,
+                    PR: Proper (@_eq ?X ?H ==> eq) ?p |- ?p ?a = true] => rewrite <- H'
      end : cset.
 
 (** * SSA-based register assignment formulated for IL *)
@@ -37,25 +56,14 @@ Qed.
 Lemma filter_add_in X `{OrderedType X} (p:X -> bool) `{Proper _ (_eq ==> eq) p} x s
   : p x -> filter p {x;s} [=] {x; filter p s}.
 Proof.
-  intros P; split; intros In.
-  - eapply filter_iff in In; eauto.
-    cset_tac. decide (x === a); eauto. right.
-    eapply filter_iff; eauto.
-  - cset_tac; eapply filter_iff; eauto.
-    + cset_tac. rewrite <- H1. eauto.
-    + eapply filter_iff in H1; eauto. cset_tac.
+  intros P; split; intros In; cset_tac.
 Qed.
 
 Lemma filter_add_notin X `{OrderedType X} (p:X -> bool) `{Proper _ (_eq ==> eq) p} x s
   : ~ p x -> filter p {x;s} [=] filter p s.
 Proof.
-  intros P; split; intros In.
-  - eapply filter_iff in In; eauto.
-    cset_tac.
-    + exfalso; eapply P. rewrite H3; eauto.
-    + eapply filter_iff; eauto.
-  - cset_tac; eapply filter_iff; eauto.
-    + eapply filter_iff in In; eauto. cset_tac.
+  intros P; split; intros In; cset_tac.
+  - exfalso; eapply P. rewrite H3; eauto.
 Qed.
 
 Lemma filter_incl X `{OrderedType X} (p:X -> bool) `{Proper _ (_eq ==> eq) p} s
@@ -92,132 +100,177 @@ Proof.
   - eauto.
 Qed.
 
-Lemma decons c G x xl
-      (Card:crd c G (x::xl)) (LE: x <= c) (ND:NoDupA eq (x::xl))
-  : crd c {least_fresh_filter G (lt_minus_lt _ _ Card); G} xl.
+Lemma least_fresh_filter_small c G
+      (Card:SetInterface.cardinal (filter (fun x : nat => if [x <= c] then true else false) G) < c)
+: least_fresh G <= SetInterface.cardinal (filter (fun x : nat => if [x <= c] then true else false) G).
 Proof.
-  unfold crd in *; simpl in *.
-  rewrite filter_add_incl, add_cardinal; [| intuition].
-  cases in Card. simpl in *.
-  rewrite add_cardinal_2 in Card. unfold var in *. omega.
-  intro. inv ND.
-  apply of_list_get_first in H; dcr; inv_get. cset_tac.
-  eapply H2.
-  eapply get_InA; eauto.
+  set (F:=(filter (fun x : nat => if [x <= c] then true else false) G)) in *.
+  assert (SetInterface.cardinal F <= SetInterface.cardinal G). {
+    subst F; rewrite filter_incl; eauto.
+  }
+  pose proof (least_fresh_smallest G).
+  pose proof (least_fresh_small G).
+  eapply (@all_in_lv_cardinal F (least_fresh G)).
+  intros. eapply filter_iff; cset_tac.
+  exfalso.
+  exploit (@all_in_lv_cardinal F c); [| omega].
+  intros. eapply filter_iff; cset_tac.
+  eapply H0. omega.
+  exfalso. omega.
 Qed.
-
 
 Section FreshListP.
   Variable c : var.
 
   Fixpoint fresh_list_P (G:set var) (xl:list var)
-           (LE:crd c G xl) (NoDup:NoDupA eq xl)
     : list var :=
-    match xl as L return
-          NoDupA eq L -> crd c G L -> list var with
-      | nil => fun _ _ => nil
-      | x::xl => fun ND LE =>
-        match (@decision_procedure (x <= c) _) with
-          | left pf => let y := @least_fresh_filter c G (lt_minus_lt _ _ LE)
-                      in y::@fresh_list_P {y ; G} xl (@decons c G x xl LE pf ND) (NoDupA_decons ND)
-          | right _ => x::@fresh_list_P G xl (@decons_noext c G x xl LE) (NoDupA_decons ND)
-        end
-    end NoDup LE.
+    match xl with
+      | nil => nil
+      | x::xl =>
+        if [x <= c] then
+          let y := least_fresh G in
+          y::fresh_list_P {y;G} xl
+        else
+          x::fresh_list_P G xl
+    end.
 
-
-  Lemma fresh_list_P_length (G:set var) L (LE:crd c G L) (ND:NoDupA eq L)
-  : length (fresh_list_P LE ND) = length L.
+  Lemma fresh_list_P_length (G:set var) L
+  : length (fresh_list_P G L) = length L.
   Proof.
-    general induction L; eauto. simpl fresh_list_P.
-    destruct (@decision_procedure (a <= c) _); simpl.
-    cases; simpl; f_equal; eauto.
+    general induction L; eauto.
+    case_eq (@decision_procedure (a <= c) _); simpl; intros ? EQ;
+    rewrite EQ at 1; simpl;
+    f_equal; eauto.
   Qed.
 
   Lemma fresh_list_P_spec (G:set var) L
-    : (forall x, x > c -> x ∈ of_list L -> x ∈ G -> False)
-      -> NoDupA eq L
-      -> SetInterface.cardinal (filter (fun x => B[x <= c]) G)
-        < c - SetInterface.cardinal (of_list (List.filter (fun x => B[x <= c]) L))
-      -> disj (of_list (fresh_list_P G L)) G.
+        (AL:forall x, x > c -> x ∈ of_list L -> x ∈ G -> False)
+        (ND: NoDupA eq L)
+        (Card: crd c G L)
+    : disj (of_list (fresh_list_P G L)) G.
   Proof.
-    intros Disj NoDup Card.
-    general induction L; simpl in *; intros; eauto.
-    - hnf; intros. cases in H; simpl in *.
-      + cset_tac.
+    general induction L.
+    - simpl in *; intros; eauto.
+    - unfold crd in *. simpl in *.
+      cases; eauto; simpl.
+      + hnf; intros. cset_tac.
         * eapply least_fresh_spec; eauto.
         * specialize (IHL {least_fresh G; G}).
-          eapply IHL; eauto with cset.
-          -- intros. cset_tac.
-             exploit (least_fresh_small G); eauto.
-             assert (SetInterface.cardinal (filter (fun x : nat => if [x <= c] then true else false) G) <=
-                     SetInterface.cardinal G).
-             rewrite filter_incl; eauto. intuition. unfold var in *. omega.
-          -- rewrite filter_add_incl, add_cardinal.
-             rewrite add_cardinal_2 in Card. unfold var in *. omega.
-             intro. inv NoDup. eapply H4.
+          simpl in *. rewrite add_cardinal_2 in Card.
+          -- eapply IHL; eauto with cset.
+             ++ intros. simpl in *. cset_tac.
+               exploit (@least_fresh_filter_small c G); eauto.
+               rewrite Card. omega.
+               rewrite <- H3 in Card. omega.
+             ++ rewrite filter_add_incl, add_cardinal; [|clear; intuition].
+               unfold var in *. simpl in *.
+               omega.
+          -- intro. inv ND. eapply H4.
              apply of_list_get_first in H; dcr; inv_get.
-             hnf in H3; subst.
-             eapply get_InA; eauto. clear; intuition.
-      + cset_tac.
-        * eapply (Disj x); eauto. omega.
+             cset_tac.
+             eapply get_InA; eauto.
+      + hnf; intros. simpl in *. cset_tac.
+        * eapply (AL x); eauto. omega.
         * specialize (IHL G).
           eapply IHL; eauto with cset.
   Qed.
 
-   Lemma fresh_list_InA (G: set var) L x
+  Lemma fresh_list_get (G: set var) L x n
     : (forall x, x > c -> x ∈ of_list L -> x ∈ G -> False)
       -> NoDupA eq L
-      -> SetInterface.cardinal G < c - SetInterface.cardinal (of_list (List.filter (fun x => B[x <= c]) L))
+      -> crd c G L
+      -> get (fresh_list_P G L) n x
+      -> get L n x \/ (x <= c /\ exists y, get L n y /\ y <= c).
+  Proof.
+    intros. general induction H0; simpl in *.
+    - isabsurd.
+    - unfold crd in *; simpl in *.
+      cases in H3; simpl in *; invt get; eauto using get.
+      + right.
+        rewrite (@least_fresh_filter_small c G); eauto.
+        unfold var in *; simpl in *. split. omega. eauto using get.
+        unfold var in *; simpl in *. omega.
+      + rewrite add_cardinal_2 in H2; try omega.
+        edestruct (IHNoDupA {least_fresh G; G}); eauto using get.
+        * intros. eapply H1; cset_tac.
+          exploit (@least_fresh_filter_small c G); eauto.
+          unfold var in *; simpl in *.
+          rewrite H2. omega.
+          rewrite <- H6 in H2. omega.
+        * rewrite filter_add_incl; [|intuition].
+          rewrite add_cardinal.
+          unfold var in *; simpl in *. omega.
+        * dcr. right. split; eauto using get.
+        * intro. eapply H.
+          apply of_list_get_first in H4; dcr; inv_get.
+          cset_tac.
+          eapply get_InA; eauto.
+      + edestruct (IHNoDupA G); eauto using get.
+        * intros. eapply H1; cset_tac.
+        * dcr; right; eauto using get.
+  Qed.
+
+  Lemma InA_get X `{EqDec X eq} (L:list X) x
+    : InA eq x L
+      -> { n:nat | get L n x }.
+  Proof.
+    general induction L; isabsurd.
+    decide (x === a).
+    + hnf in e; subst; eauto using get.
+    + edestruct IHL; eauto. inv H0; eauto. exfalso. eauto.
+      eauto using get.
+  Qed.
+
+  Lemma fresh_list_InA (G: set var) L x
+    : (forall x, x > c -> x ∈ of_list L -> x ∈ G -> False)
+      -> NoDupA eq L
+      -> crd c G L
       -> InA eq x (fresh_list_P G L)
       -> InA eq x L \/ x <= c.
-   Proof.
-     intros. general induction H0; simpl in *.
-     - isabsurd.
-     - cases in H2; simpl in *; invt InA; eauto.
-       + right.
-         rewrite least_fresh_small; eauto. omega.
-       + edestruct (IHNoDupA {least_fresh G; G}); eauto.
-         * intros. eapply H1; cset_tac.
-           exploit (least_fresh_small G); eauto. omega.
-         * rewrite add_cardinal.
-           rewrite add_cardinal_2 in H2; try omega.
-           intro. eapply H.
-           apply of_list_get_first in H4; dcr; inv_get.
-           cset_tac. eapply get_InA; eauto.
-       + edestruct (IHNoDupA G); eauto.
-         * intros. eapply H1; cset_tac.
-   Qed.
+  Proof.
+    intros. eapply InA_get in H2; dcr.
+    edestruct fresh_list_get; eauto using get_InA.
+    hnf; intros. decide (x0 === y); eauto.
+  Qed.
 
   Lemma fresh_list_nodup (G: set var) L
     : (forall x, x > c -> x ∈ of_list L -> x ∈ G -> False)
       -> NoDupA eq L
-      -> SetInterface.cardinal G < c - SetInterface.cardinal (of_list (List.filter (fun x => B[x <= c]) L))
+      -> crd c G L
       -> NoDupA eq (fresh_list_P G L).
   Proof.
     intros Disj NoDup Card.
     general induction NoDup; simpl in *; eauto.
-    cases.
-    - econstructor. intro.
-      eapply (@fresh_list_P_spec {least_fresh G; G}); eauto with cset.
-      + intros. cset_tac.
-        exploit (least_fresh_small G); eauto. omega.
-      + rewrite add_cardinal. simpl in *.
-        rewrite add_cardinal_2 in Card.
-        omega.
-        intro. eapply H.
-        apply of_list_get_first in H1; dcr; inv_get.
-        hnf in H3; subst.
+    unfold crd in Card; simpl in *.
+    cases; simpl in *.
+    - rewrite add_cardinal_2 in Card.
+      + econstructor.
+        * intro.
+          eapply (@fresh_list_P_spec {least_fresh G; G}); eauto with cset.
+          -- intros. cset_tac.
+             exploit (@least_fresh_filter_small c G); eauto.
+             unfold var in *; simpl in *.
+             rewrite Card. omega.
+             rewrite <- H3 in Card. omega.
+          -- hnf.
+             rewrite filter_add_incl; [|intuition].
+             rewrite add_cardinal.
+             unfold var in *; simpl in *. omega.
+          -- eapply InA_in; eauto.
+        * eapply IHNoDup; eauto.
+          --  intros. cset_tac.
+              exploit (@least_fresh_filter_small c G); eauto.
+              unfold var in *; simpl in *.
+              rewrite Card. omega.
+              rewrite <- H2 in Card. omega.
+          -- hnf; simpl.
+             rewrite filter_add_incl; [|intuition].
+             rewrite add_cardinal.
+             unfold var in *; simpl in *. omega.
+      + intro. eapply H.
+        apply of_list_get_first in H0; dcr; inv_get.
+        cset_tac.
         eapply get_InA; eauto.
-      + eapply InA_in; eauto.
-      + eapply IHNoDup; eauto.
-        * intros. cset_tac.
-          exploit (least_fresh_small G); eauto. omega.
-        * rewrite add_cardinal. simpl in *.
-          rewrite add_cardinal_2 in Card. omega.
-          intro. eapply H.
-          apply of_list_get_first in H0; dcr; inv_get.
-          hnf in H2; subst.
-          eapply get_InA; eauto.
     - econstructor.
       + intro. edestruct fresh_list_InA; eauto.
         cset_tac.
@@ -453,4 +506,23 @@ Proof.
   intros.
   eapply disj_2_incl; eauto. rewrite <- D'def.
   eapply incl_union_left. eapply incl_list_union; eauto using zip_get.
+Qed.
+
+Lemma list_union_take_incl X `{OrderedType X} (L:list (set X)) n
+  : list_union (take n L) ⊆ list_union L.
+Proof.
+  eapply list_union_incl; intros; inv_get; eauto with cset.
+  eapply incl_list_union; eauto.
+Qed.
+
+Lemma D_take_disj F t ans n D D' ant
+  : renamedApart (stmtFun F t) (annF (D, D') ans ant)
+    -> disj D (list_union zip defVars (take n F) (take n ans)).
+Proof.
+  intros.
+  exploit renamedApart_disj; eauto; simpl in *.
+  eapply disj_2_incl; eauto.
+  invt renamedApart.
+  rewrite <- take_zip, list_union_take_incl.
+  rewrite <- H13; eauto with cset.
 Qed.
