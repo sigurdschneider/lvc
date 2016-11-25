@@ -39,29 +39,51 @@ Proof.
   - rewrite <- list_max_swap. rewrite <- Max.le_max_l; eauto.
 Qed.
 
-Fixpoint size_of_largest_live_set (a:ann (set var)) : nat :=
+Fixpoint size_of_largest_live_set (c:nat) (a:ann (set var)) : nat :=
+  let sz := (fun gamma => SetInterface.cardinal (filter (fun x => B[x <= c]) gamma)) in
   match a with
     | ann0 gamma => SetInterface.cardinal gamma
-    | ann1 gamma a => max (SetInterface.cardinal gamma) (size_of_largest_live_set a)
-    | ann2 gamma a b => max (SetInterface.cardinal gamma)
-                       (max (size_of_largest_live_set a)
-                            (size_of_largest_live_set b))
-    | annF gamma a b => max (SetInterface.cardinal gamma)
-                       (max (list_max (List.map size_of_largest_live_set a))
-                            (size_of_largest_live_set b))
+    | ann1 gamma a => max (sz gamma) (size_of_largest_live_set c a)
+    | ann2 gamma a b => max (sz gamma)
+                       (max (size_of_largest_live_set c a)
+                            (size_of_largest_live_set c b))
+    | annF gamma a b => max (sz gamma)
+                       (max (list_max (List.map (size_of_largest_live_set c) a))
+                            (size_of_largest_live_set c b))
   end.
 
-Lemma size_of_largest_live_set_live_set al
-: SetInterface.cardinal (getAnn al) <= size_of_largest_live_set al.
+Lemma cardinal_filter X `{OrderedType X} (p:X->bool) `{Proper _ (_eq ==> eq) p} (s:set X)
+  : SetInterface.cardinal (filter p s) <= SetInterface.cardinal s.
+Proof.
+  eapply subset_cardinal, filter_incl; eauto.
+Qed.
+
+Lemma size_of_largest_live_set_live_set c al
+  : SetInterface.cardinal (filter (fun x => B[x <= c]) (getAnn al))
+    <= size_of_largest_live_set c al.
 Proof.
   destruct al; simpl; eauto using Max.le_max_l.
+  rewrite cardinal_filter; eauto.
+Qed.
+
+Lemma filter_singleton_in X `{OrderedType X} (p:X -> bool) `{Proper _ (_eq ==> eq) p} x
+  : p x -> filter p (singleton x) [=] singleton x.
+Proof.
+  intros P; split; intros In; cset_tac.
+Qed.
+
+Lemma filter_singleton_notin X `{OrderedType X} (p:X -> bool) `{Proper _ (_eq ==> eq) p} x
+  : ~ p x -> filter p (singleton x) [=] ∅.
+Proof.
+  intros P; split; intros In; cset_tac.
+  - exfalso; eapply P. rewrite H1; eauto.
 Qed.
 
 Lemma add_minus_single_eq X `{OrderedType X} x s
   : x ∈ s
     -> {x; s \ singleton x} [=] s.
 Proof.
-  cset_tac. decide (x === a); eauto.
+  cset_tac.
 Qed.
 
 Hint Resolve add_minus_single_eq : cset.
@@ -82,45 +104,80 @@ Qed.
 
 Hint Resolve minus_incl_incl_union | 10: cset.
 
-Lemma regAssign_assignment_small (ϱ:Map [var,var]) ZL Lv s alv ϱ' al n
-      (LS:live_sound Functional ZL Lv s alv)
-      (allocOK:regAssign s alv ϱ = Success ϱ')
+Require Import AllocationAlgoCorrect AnnP.
+
+Lemma regAssign_assignment_small n k c (LE:k < c) (ϱ:Map [var,var]) ZL Lv s alv ϱ' al
+      (LS:live_sound FunctionalAndImperative ZL Lv s alv)
+      (inj:injective_on (getAnn alv) (findt ϱ 0))
+      (SEP:sep c (getAnn alv) (findt ϱ 0))
+      (allocOK:regAssign c s alv ϱ = Success ϱ')
       (incl:getAnn alv ⊆ fst (getAnn al))
       (sd:renamedApart s al)
-      (up:lookup_set (findt ϱ 0) (fst (getAnn al)) ⊆ vars_up_to n)
-: lookup_set (findt ϱ' 0) (snd (getAnn al)) ⊆ vars_up_to (max (size_of_largest_live_set alv) n).
+      (BND:ann_P (bounded_below c k) alv)
+      (up:lookup_set (findt ϱ 0) (filter (fun x => B[x <= c]) (fst (getAnn al)))
+                     ⊆ vars_up_to n)
+  : lookup_set (findt ϱ' 0) (filter (fun x => B[x <= c]) (snd (getAnn al)))
+               ⊆ vars_up_to (max (size_of_largest_live_set c alv) n).
 Proof.
   exploit regAssign_renamedApart_agree; eauto using live_sound.
-  rewrite lookup_set_agree in up; eauto. clear H.
+  rewrite lookup_set_agree in up; eauto. Focus 2.
+  eapply agree_on_incl; eauto. eapply filter_incl. intuition.
+  clear H.
   general induction LS; invt renamedApart; simpl in * |- *.
-  - assert ( singleton (findt ϱ' 0 x)
-                       ⊆ vars_up_to (size_of_largest_live_set al)). {
+  - assert (x <= c -> singleton (findt ϱ' 0 x)
+                              ⊆ vars_up_to (size_of_largest_live_set c al)). {
+      intros.
       eapply regAssign_renamedApart_agree in allocOK; eauto.
       rewrite <- allocOK; [|pe_rewrite; eauto with cset].
       unfold findt at 1. rewrite MapFacts.add_eq_o; eauto.
       eapply incl_singleton. eapply in_vars_up_to.
-      rewrite least_fresh_small.
-      rewrite cardinal_map; eauto.
-      rewrite cardinal_difference'; [|eauto with cset].
+      unfold least_fresh_P. cases.
+      rewrite (@least_fresh_filter_small c).
       rewrite <- size_of_largest_live_set_live_set.
+      rewrite <- sep_filter_map_comm.
+      rewrite filter_difference; eauto.
+      rewrite cardinal_map; eauto.
+      rewrite filter_singleton_in; try cases; eauto.
+      rewrite cardinal_difference'; [|eauto with cset].
       rewrite singleton_cardinal.
-      assert (SetInterface.cardinal (getAnn al) > 0).
+      assert (SetInterface.cardinal
+                (filter (fun x0 : nat => if [x0 <= c] then true else false)
+                        (getAnn al)) > 0). {
+        rewrite <- (add_minus_single_eq H1).
+        rewrite filter_add_in.
+        rewrite add_cardinal_2. omega. cset_tac; intuition.
+        intuition. cases; eauto.
+      }
+      unfold var in *. omega.
       rewrite <- (add_minus_single_eq H1).
-      rewrite add_cardinal_2. omega. cset_tac; intuition. omega.
+      rewrite filter_add_in; try cases; eauto.
+      cset_tac. admit.
+      admit.
     }
     exploit IHLS; eauto.
     + pe_rewrite.
       rewrite <- incl. eauto with cset.
     + pe_rewrite.
-      instantiate (1:=(max (size_of_largest_live_set al) n)).
-      rewrite lookup_set_add; eauto.
-      rewrite up.
-      rewrite vars_up_to_max, add_union, H2; eauto.
+      instantiate (1:=(max (size_of_largest_live_set c al) n)).
+      decide (x <= c).
+      * rewrite filter_add_in; try cases; eauto.
+        rewrite lookup_set_add; eauto.
+        rewrite up.
+        rewrite vars_up_to_max, add_union; eauto.
+        rewrite H2; eauto.
+      * rewrite filter_add_notin; try cases; eauto.
+        rewrite up.
+        rewrite vars_up_to_max; eauto.
     + pe_rewrite. rewrite H9.
-      rewrite lookup_set_add; eauto. rewrite H3.
-      repeat rewrite vars_up_to_max.
-      rewrite add_union, H2.
-      clear_all. cset_tac.
+      decide (x <= c).
+      * rewrite filter_add_in; try cases; eauto.
+        rewrite lookup_set_add; eauto. rewrite H3.
+        repeat rewrite vars_up_to_max.
+        rewrite add_union, H2.
+        clear_all. cset_tac. eauto.
+      * rewrite filter_add_notin; try cases; eauto.
+        rewrite H3. repeat rewrite vars_up_to_max.
+        clear_all. cset_tac.
   - monadS_inv allocOK.
     exploit IHLS1; eauto; pe_rewrite.
     + rewrite <- incl; eauto.

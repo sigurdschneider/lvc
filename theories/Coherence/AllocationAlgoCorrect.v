@@ -306,6 +306,34 @@ Proof.
     unfold var in *. rewrite of_list_filter. omega. clear; intuition.
   - eapply subset_filter; eauto.
 Qed.
+
+Lemma injective_on_update_cmap_fresh c lv x (ϱ:Map[var, var])
+      (inj : injective_on (lv \ singleton x) (findt ϱ 0))
+      (SEP:sep c (lv \ singleton x) (findt ϱ 0))
+  : injective_on lv
+                 (findt (ϱ [-x <- least_fresh_P c (map (findt ϱ 0)
+                                                      (lv \ singleton x)) x -]) 0).
+  eapply injective_on_agree; [| eapply map_update_update_agree].
+  eapply injective_on_incl.
+  eapply injective_on_fresh; eauto using injective_on_incl.
+  eapply least_fresh_P_spec; eauto.
+  eapply sep_lookup_set; eauto. cset_tac.
+  eauto with cset.
+Qed.
+
+Lemma sep_update_cmap k c (LE : k < c) x lv lv' (ϱ:Map[var,var])
+      (BND:bounded_below c k lv')
+      (SEP:sep c (lv \ singleton x) (findt ϱ 0))
+      (incl:lv \ singleton x ⊆ lv')
+  : sep c lv
+        (findt (ϱ [-x <- least_fresh_P c (map (findt ϱ 0)
+                                             (lv \ singleton x)) x -]) 0).
+  eapply sep_update; eauto.
+  hnf in BND. rewrite <- sep_filter_map_comm; eauto.
+  rewrite cardinal_map; eauto.
+  rewrite incl. unfold var in *. omega.
+Qed.
+
 Lemma regAssign_correct k c (LE:k < c) (ϱ:Map [var,var]) ZL Lv s alv ϱ' al
       (LS:live_sound FunctionalAndImperative ZL Lv s alv)
       (inj:injective_on (getAnn alv) (findt ϱ 0))
@@ -319,17 +347,9 @@ Proof.
   intros.
   general induction LS; simpl in *; try monadS_inv allocOK; invt renamedApart; invt ann_P;
     pe_rewrite; simpl in *.
-  - exploit IHLS; try eapply allocOK; pe_rewrite; eauto with cset.
-    + eapply injective_on_agree; [| eapply map_update_update_agree].
-      eapply injective_on_incl.
-      eapply injective_on_fresh; eauto using injective_on_incl.
-      eapply least_fresh_P_spec; eauto.
-      eapply sep_lookup_set; eauto.
-      eauto with cset.
-    + eapply sep_update; eauto.
-      hnf in H4. rewrite <- sep_filter_map_comm; eauto.
-      rewrite cardinal_map; eauto.
-      rewrite H0. unfold var in *. omega.
+  - exploit IHLS; try eapply allocOK; pe_rewrite;
+      eauto using injective_on_update_cmap_fresh, sep_update_cmap,
+      injective_on_incl with cset.
     + pe_rewrite. eauto with cset.
     + exploit regAssign_renamedApart_agree;
       try eapply allocOK; simpl; eauto using live_sound.
