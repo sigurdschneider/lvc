@@ -222,8 +222,7 @@ Proof.
     + cases; simpl.
       * lud; eauto using get.
   - edestruct (IHLen slot E n0) as [? [? ]]; eauto using get; dcr.
-    + eapply disj_1_incl. eapply disj_2_incl; eauto with cset.
-      eauto with cset.
+    + eapply disj_incl; eauto with cset.
     + intros. eapply (First (S n')); eauto using get. omega.
     + exists x0. eexists; repeat split; eauto using get.
       exploit (First 0); eauto using get; try omega.

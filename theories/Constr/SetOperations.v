@@ -1,5 +1,5 @@
 Require Export Setoid Coq.Classes.Morphisms.
-Require Export EqDec Get CSet Map AllInRel.
+Require Export EqDec Get CSet Take Map AllInRel.
 
 Lemma transpose_union X `{OrderedType X}
       : transpose Equal union.
@@ -159,4 +159,11 @@ Proof.
   general induction l; simpl; eauto.
   eapply IHl; eauto. rewrite lookup_set_union; eauto.
   rewrite H2. reflexivity.
+Qed.
+
+Lemma list_union_take_incl X `{OrderedType X} (L:list (set X)) n
+  : list_union (take n L) ⊆ list_union L.
+Proof.
+  eapply list_union_incl; intros; inv_get; eauto with cset.
+  eapply incl_list_union; eauto.
 Qed.

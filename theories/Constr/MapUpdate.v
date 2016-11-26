@@ -200,12 +200,11 @@ Proof.
   general induction H0; simpl in *; [ isabsurd |].
   decide (z === x).
   - exists 0, y, x; repeat split; eauto using get. lud.
-  - cset_tac; [ exfalso; eauto| ].
+  - cset_tac.
     edestruct (IHlength_eq _ E z) as [? [? ]]; eauto; dcr.
     exists (S x0), x1, x2. eexists; repeat split; eauto using get.
     lud. exfalso; eauto.
 Qed.
-
 
 Instance update_inst X `{OrderedType X} Y `{OrderedType Y} :
   Proper ((@feq _ _ _eq) ==> _eq ==> _eq ==> (@feq _ _ _eq)) (@update X Y _).

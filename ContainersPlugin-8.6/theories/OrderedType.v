@@ -480,6 +480,12 @@ Proof.
   intuition.
 Qed.
 
+Lemma proper_eq_fun_eq X Y (f:X->Y) H
+  : Proper ((@_eq X (@SOT_as_OT X (@eq X) H)) ==> eq) f.
+  intuition.
+Qed.
+
+
 Hint Extern 5 (_eq _ _) => reflexivity.
 Hint Extern 5 (_ === _) => reflexivity.
 Hint Extern 10 (_eq _ _) => symmetry; assumption.
@@ -490,7 +496,9 @@ Hint Extern 11 (StrictOrder _) => apply OT_StrictOrder.
 Hint Extern 11 (RelationClasses.StrictOrder _) =>
 constructor; repeat intro; order.
 Hint Extern 9 (Proper _ _) =>
-first [ eassumption | apply lt_m | apply Proper_eq_fun | repeat intro; intuition order ].
+first [ eassumption | apply lt_m
+        | apply Proper_eq_fun | apply proper_eq_fun_eq
+        | repeat intro; intuition order ].
 
 
 (** * Facts about setoid list membership

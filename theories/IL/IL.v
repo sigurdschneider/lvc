@@ -93,9 +93,9 @@ Lemma definedVars_occurVars s
 : definedVars s ⊆ occurVars s.
 Proof.
   sind s; destruct s; simpl in * |- *; eauto with cset.
-  - rewrite IH; cset_tac.
-  - rewrite IH, list_union_f_incl; eauto. reflexivity.
-    intros. destruct y; simpl. rewrite IH; cset_tac.
+  - rewrite IH, list_union_f_incl; eauto.
+    + reflexivity.
+    + intros. destruct y; simpl. rewrite IH; cset_tac.
 Qed.
 
 

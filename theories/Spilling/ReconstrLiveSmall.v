@@ -53,7 +53,7 @@ Proof.
         rewrite <- setsub.
         rewrite disj_minus_eq; eauto.
         apply disj_sym.
-        eapply disj_incl; eauto.
+        eapply disj_incl; eauto with cset.
       * clear; cset_tac.
     + clear; cset_tac.
 Qed.

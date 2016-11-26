@@ -353,7 +353,6 @@ Proof.
       rewrite IHZ.
       apply slot_a_in in a_snd.
       clear - a_fst a_snd; cset_tac.
-      rewrite H1 in H; eauto.
     + decide (a ∈ R); simpl.
       * rewrite IHZ.
         clear - i; cset_tac.
@@ -365,7 +364,6 @@ Proof.
         apply slot_a_in in a_in.
         rewrite IHZ.
         clear - a_in; cset_tac.
-        rewrite H1 in H2; eauto.
 Qed.
 
 Lemma nth_mark_elements

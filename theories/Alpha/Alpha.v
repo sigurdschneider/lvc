@@ -61,7 +61,7 @@ Proof.
       hnf; intros. eapply lookup_set_spec; eauto.
       cset_tac; eqs. eapply lookup_set_spec in H4; eauto.
       destruct H4; dcr. eexists x0.
-      lud; split; eqs; cset_tac. intuition.
+      lud; split; eqs; cset_tac.
     + eapply agree_on_update_same. reflexivity.
       eapply agree_on_incl; eauto with cset.
   - econstructor; eauto.
@@ -72,17 +72,11 @@ Proof.
   - econstructor; eauto.
     + intros.
       eapply H2; eauto.
-      * eapply update_with_list_agree; eauto using length_eq_sym.
+      * eapply update_with_list_agree; eauto using length_eq_sym with len.
         eapply agree_on_incl; eauto.
-        hnf; intros. eapply lookup_set_spec. eauto.
-        lset_tac.
-        exists x. cset_tac. left. eapply incl_list_union. eapply map_get_1; eauto. reflexivity.
-        rewrite H12 in H10.
-        eapply lookup_set_update_not_in_Z'_not_in_Z in H10.
-        cset_tac. eapply H0; eauto.
-        eauto.
-        rewrite H12 in H10. eapply lookup_set_update_not_in_Z' in H10.
-        rewrite <- H10; eauto. symmetry. eapply H0; eauto.
+        rewrite lookup_set_update_with_list_in_union_length; eauto with len.
+        rewrite <- incl_list_union; eauto using map_get with len; try reflexivity.
+        clear. lset_tac.
       * eapply update_with_list_agree; eauto.
         eapply agree_on_incl; eauto. eapply incl_union_left.
         eapply incl_list_union. eapply map_get_1; eauto. reflexivity.

@@ -140,7 +140,7 @@ Lemma map_add X `{OrderedType X} Y `{OrderedType Y} (f:X->Y)
       `{Proper _ (_eq ==> _eq) f} x t
 : map f ({x; t}) [=] {f x; map f t}.
 Proof.
-  cset_tac. left; rewrite H2; eauto.
+  cset_tac.
 Qed.
 
 Lemma map_empty X `{OrderedType X} Y `{OrderedType Y} (f:X->Y)

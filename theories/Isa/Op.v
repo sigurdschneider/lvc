@@ -266,7 +266,6 @@ Proof.
   intros. general induction H.
   + isabsurd.
   + simpl. hnf; intros; cset_tac.
-    rewrite <- H0. rewrite H. rewrite H0. reflexivity.
   + simpl; eauto.
   + simpl. eapply inverse_on_union; eauto.
 Qed.

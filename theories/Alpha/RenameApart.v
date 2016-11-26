@@ -432,6 +432,13 @@ Proof.
   let_pair_case_eq; simpl_pair_eqs; subst; simpl; eauto.
 Qed.
 
+Smpl Add match goal with
+         | [ H : context [ ❬fst (renameApartF _ ?G ?ϱ ?F ?p)❭ ] |- _ ] =>
+           rewrite (@renameApartF_length G ϱ F) in H
+         | [ |- context [ ❬fst (renameApartF _ ?G ?ϱ ?F ?p)❭ ] ] =>
+           rewrite (@renameApartF_length G ϱ F)
+         end : len.
+
 Lemma fst_renamedApartAnnF_app G F F'
   : fst (renamedApartAnnF renamedApartAnn G (nil, {}) (F ++ F'))
     = fst (renamedApartAnnF renamedApartAnn G (nil, {}) F)
@@ -596,16 +603,15 @@ Proof.
       eapply lookup_set_incl; eauto.
     + eapply IH; eauto with cset.
       lset_tac; lud; eauto.
-      * right. rewrite H4. eapply H. lset_tac.
-      * rewrite H0; eauto.
+      eapply H; lset_tac.
     + reflexivity.
   - subst s1' s2'.
     simpl in H. simpl. rename G'' into Gs2. rename G'0 into Gs1.
     eapply renamedApartIf with (Ds := Gs1) (Dt := Gs2).
     + rewrite <- H. rewrite rename_op_freeVars; eauto using lookup_set_union_incl.
-    + eapply disj_1_incl; eauto. eapply disj_2_incl.
+    + eapply disj_incl.
       eapply (@renameApart'_disj ϱ (G' ∪ Gs1) s2).
-      subst; eauto. eauto.
+      subst; eauto. subst; eauto.
     + repeat rewrite snd_renameApartAnn_fst. subst; reflexivity.
     + subst. eapply (IH s1); eauto.
       etransitivity; eauto. eapply lookup_set_incl; eauto with cset.
@@ -718,8 +724,6 @@ Proof.
       eapply renameApartF_pw_disj.
       rewrite length_fst_renamedApartAnnF; eauto.
     + eapply IH; eauto with cset.
-      rewrite <- H.
-      eapply lookup_set_incl; eauto.
     + eapply renameApartAnn_decomp.
 Qed.
 

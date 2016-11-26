@@ -162,7 +162,7 @@ Proof.
   - econstructor; eauto using live_exp_rename_sound.
     + rewrite getAnn_mapAnn.
       rewrite <- lookup_set_singleton'; eauto.
-      rewrite lookup_set_minus_incl; eauto.
+      rewrite lookup_set_minus_incl; eauto with cset.
     + rewrite getAnn_mapAnn.
       eapply lookup_set_spec; eauto.
   - econstructor; eauto using live_op_rename_sound.
@@ -175,7 +175,7 @@ Proof.
       eapply lookup_set_incl; eauto.
     + intros; inv_get; eauto using live_op_rename_sound.
   - econstructor; eauto using live_op_rename_sound.
-  - econstructor; eauto; try rewrite getAnn_mapAnn; eauto with len.
+  - econstructor; eauto; try rewrite getAnn_mapAnn; eauto with cset len.
     + repeat rewrite map_map; simpl. rewrite <- map_map.
       rewrite <- map_app.
       setoid_rewrite getAnn_mapAnn.
@@ -186,7 +186,7 @@ Proof.
       setoid_rewrite getAnn_mapAnn.
       setoid_rewrite <- map_map at 3. rewrite <- map_app. eauto.
     + intros; inv_get; simpl.
-      exploit H3; eauto; dcr. simpl.
+      exploit H3; eauto with cset; dcr.
       split.
       * rewrite of_list_lookup_list; eauto.
         rewrite getAnn_mapAnn.
@@ -194,5 +194,5 @@ Proof.
       * cases; eauto.
         rewrite getAnn_mapAnn.
         rewrite of_list_lookup_list; eauto.
-        rewrite lookup_set_minus_incl; eauto.
+        rewrite lookup_set_minus_incl; eauto with cset.
 Qed.

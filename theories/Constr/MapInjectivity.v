@@ -92,7 +92,6 @@ Proof.
   - exfalso. lset_tac. eapply H3.
     eexists y. cset_tac; eauto.
   - eapply H2; lset_tac; eauto.
-    eapply H3; eauto.
 Qed.
 
 Lemma injective_on_update_fresh {X} `{OrderedType X} {Y} `{OrderedType Y}
@@ -396,7 +395,7 @@ Proof.
     + intro A.
       eapply H1 in A; simpl; eauto with cset.
       eapply H3; eauto using get.
-      cset_tac. right. eapply get_in_of_list; eauto.
+      cset_tac. eapply get_in_of_list; eauto.
     + simpl in *.
       exploit IHget; intros; eauto using injective_on_incl, get with cset.
       eapply H3;[| eauto using get]. omega. dcr.

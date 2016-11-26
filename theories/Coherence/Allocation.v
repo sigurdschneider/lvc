@@ -264,17 +264,18 @@ Proof.
       * eapply IHRI; eauto; pe_rewrite.
         rewrite <- INCL; eauto with cset.
         eauto using bounded_incl with cset.
-      * erewrite (@restrict_incl_ext _ (getAnn al)); eauto.
-        instantiate (1:=getAnn al \ singleton x).
-        eapply list_eq_special; eauto with cset.
-        rewrite lookup_set_minus_incl_inj; eauto. rewrite <- minus_inane_set.
-        instantiate (1:={ϱ x}). eapply incl_minus_lr; eauto.
-        rewrite lookup_set_minus_incl; eauto.
-        rewrite lookup_set_singleton'; eauto.
-        rewrite meet_comm. eapply meet_minus.
-        assert (getAnn al [=] getAnn al ∪ singleton x). cset_tac; intuition.
-        rewrite <- H1. eauto using locally_injective.
-        cset_tac; intuition.
+      * erewrite (@restrict_incl_ext _ (getAnn al) (getAnn al \ singleton x));
+          eauto with cset.
+        -- eapply list_eq_special; [ eauto with cset | ].
+           rewrite lookup_set_minus_incl_inj; eauto.
+           ++ rewrite <- minus_inane_set.
+             instantiate (1:={ϱ x}). eapply incl_minus_lr; eauto.
+             rewrite lookup_set_minus_incl; eauto with cset.
+             rewrite lookup_set_singleton'; eauto.
+             rewrite meet_comm. eapply meet_minus.
+           ++ assert (getAnn al [=] getAnn al ∪ singleton x) by cset_tac.
+             rewrite <- H1. eauto using locally_injective.
+        -- cset_tac.
   - econstructor. simpl in *.
     + eapply srd_monotone.
       eapply IHRI1; eauto using Subset_trans, lookup_set_incl; eauto;
@@ -385,7 +386,7 @@ Proof.
         eapply list_eq_special. rewrite <- H9. cset_tac; intuition.
         rewrite lookup_set_minus_incl_inj; eauto. rewrite <- minus_inane_set.
         instantiate (1:={ϱ x}). eapply incl_minus_lr; eauto.
-        rewrite lookup_set_minus_incl; eauto.
+        rewrite lookup_set_minus_incl; eauto with cset.
         rewrite lookup_set_singleton'; eauto.
         rewrite meet_comm. eapply meet_minus. eauto.
         assert (getAnn al [=] getAnn al ∪ singleton x). cset_tac; intuition.

@@ -132,7 +132,7 @@ Proof.
     + intros. cset_tac; omega.
     + assert (lv [=] {n; lv \ singleton n }). {
         exploit (H (n)); eauto.
-        cset_tac. decide (n = a); subst; eauto.
+        cset_tac.
       }
       rewrite H1.
       assert (n ∉ lv \ singleton n) by cset_tac.
@@ -233,7 +233,6 @@ Section FreshList.
   Proof.
     intros. general induction n; simpl; intros; eauto.
     - hnf; intros. cset_tac.
-      + eapply fresh_spec. rewrite H1; eauto.
       + specialize (H (G ∪ {{fresh G}})).
         eapply H; eauto.
         intuition (cset_tac; eauto).
@@ -330,7 +329,7 @@ Proof.
         rewrite max_l; eauto.
         cset_tac.
         decide (n = a); subst; eauto.
-        right. left. eapply in_vars_up_to. omega.
+        left. eapply in_vars_up_to. omega.
 Qed.
 
 Lemma inverse_on_update_fresh_list (D:set var) (Z:list var) (ϱ ϱ' : var -> var)

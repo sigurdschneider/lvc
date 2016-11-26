@@ -519,12 +519,39 @@ Proof.
   cset_tac; intros; firstorder.
 Qed.
 
+Lemma add_struct_incl X `{OrderedType X} x s t
+: s ⊆ t
+  -> {x; s} ⊆ {x; t}.
+Proof.
+  intros. rewrite H0; eauto.
+Qed.
+
+Lemma add_struct_incl' X `{OrderedType X} x y s t
+  : x === y
+    -> s ⊆ t
+    -> {x; s} ⊆ {y; t}.
+Proof.
+  intros. rewrite H0, H1; eauto.
+Qed.
+
+Hint Resolve add_struct_incl add_struct_incl' : cset.
+
 Lemma add_struct_eq X `{OrderedType X} x s t
 : s [=] t
   -> {x; s} [=] {x; t}.
 Proof.
   intros. rewrite H0; eauto.
 Qed.
+
+Lemma add_struct_eq' X `{OrderedType X} x y s t
+  : x === y
+     -> s [=] t
+  -> {x; s} [=] {y; t}.
+Proof.
+  intros. rewrite H0, H1; eauto.
+Qed.
+
+Hint Resolve add_struct_eq add_struct_eq' : cset.
 
 Lemma union_struct_eq_1 X `{OrderedType X} s t u
 : s [=] t
@@ -637,4 +664,9 @@ Lemma of_list_elements X `{OrderedType X} (s : set X)
 Proof.
 cset_tac; [apply of_list_1 in H0; rewrite elements_iff
           |apply of_list_1; rewrite <- elements_iff] ; eauto.
+Qed.
+
+Lemma incl_union_incl X `{OrderedType X} s t u w
+  : t ∪ u ⊆ w -> s ⊆ t -> s ⊆ w.
+  cset_tac. eapply H0; cset_tac.
 Qed.

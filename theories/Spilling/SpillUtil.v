@@ -266,25 +266,6 @@ Proof.
 Qed.
 
 
-
-Lemma disj_incl
-      (X : Type)
-      `{OrderedType X}
-      (D1 D1' D2 D2' : ⦃X⦄)
-  :
-    disj D1 D2
-    -> D1' ⊆ D1
-    -> D2' ⊆ D2
-    -> disj D1' D2'
-.
-Proof.
-  intros.
-  eapply disj_1_incl; eauto.
-  eapply disj_2_incl; eauto.
-Qed.
-
-
-
 Lemma count_zero_Empty_Sp
       (sl : spilling)
   :

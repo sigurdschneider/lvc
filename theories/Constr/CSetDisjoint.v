@@ -72,6 +72,19 @@ Proof.
   intros. rewrite H1; eauto.
 Qed.
 
+Lemma disj_incl X `{OrderedType X} (D1 D1' D2 D2':set X)
+  : disj D1' D2'
+    -> D1 ⊆ D1'
+    -> D2 ⊆ D2'
+    -> disj D1 D2.
+Proof.
+  intros.
+  eapply disj_1_incl. eapply disj_2_incl; eauto.
+  eauto.
+Qed.
+
+Hint Resolve disj_incl : cset.
+
 Lemma in_disj_absurd X `{OrderedType X} (s t: set X) x
 : x ∈ s -> x ∈ t -> disj s t -> False.
 Proof.

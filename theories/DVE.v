@@ -480,7 +480,6 @@ Proof.
       * eapply IHTLS; eauto.
         -- rewrite H9, Dincl; simpl; eauto with cset.
         -- rewrite <- inclD. clear; cset_tac.
-           decide (x === a); eauto.
       * eapply pe_eta_split; econstructor; simpl; eauto.
     + eapply IHTLS; eauto.
       * rewrite H9; simpl; cset_tac.
@@ -527,7 +526,7 @@ Proof.
       unfold defVars; simpl. exploit H9; try eapply H4; eauto using zip_get.
       unfold defVars in*. rewrite !snd_getAnn_renamedApart; eauto.
       unfold filter_set. rewrite !of_list_filter; eauto.
-      eapply disj_1_incl. eapply disj_2_incl. eauto.
+      eapply disj_incl; eauto.
       clear; cset_tac.
       clear; cset_tac.
     * rewrite <- zip_app; eauto with len; simpl in *.

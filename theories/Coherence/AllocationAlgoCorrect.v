@@ -1,31 +1,10 @@
 Require Import CMap MapNotations CSet Le Arith.Compare_dec.
 
-Require Import Plus Util Status Take Subset1.
+Require Import Plus Util Status Take Subset1 Filter.
 Require Import Val Var Env IL Annotation Liveness Fresh MoreList SetOperations.
 Require Import Coherence Allocation RenamedApart AllocationAlgo.
 
 Set Implicit Arguments.
-
-Lemma least_fresh_P_spec c G x
-  : (~ x <= c -> x ∉ G)
-    -> least_fresh_P c G x ∉ G.
-Proof.
-  unfold least_fresh_P; cases; eauto using least_fresh_spec.
-Qed.
-
-Lemma least_fresh_P_gt c G x
-  : ~ x <= c
-    -> least_fresh_P c G x = x.
-Proof.
-  intros; unfold least_fresh_P; cases; try omega; eauto.
-Qed.
-
-Lemma least_fresh_P_le c G x
-  : x <= c
-    -> least_fresh_P c G x = least_fresh G.
-Proof.
-  intros; unfold least_fresh_P; cases; try omega; eauto.
-Qed.
 
 Definition sep (c:var) (G:set var) (ϱ:var -> var) :=
   (forall x, x ∈ G -> ~ x <= c -> ϱ x === x)
@@ -94,8 +73,6 @@ Proof.
   - exfalso. eauto.
   - exploit GT; eauto.
 Qed.
-
-Print Scopes.
 
 Require Import MapNotations.
 
@@ -223,30 +200,6 @@ Proof.
   eauto.
 Qed.
 
-Instance ann_P_impl A
-  : Proper (@pointwise_relation _ _ impl ==> eq ==> impl) (@ann_P A).
-Proof.
-  unfold Proper, respectful, impl; intros; subst.
-  general induction H1; eauto using ann_P.
-Qed.
-
-Instance ann_P_iff A
-  : Proper (@pointwise_relation _ _ iff ==> eq ==> iff) (@ann_P A).
-Proof.
-  unfold Proper, respectful, impl; intros; subst; split; intros.
-  eapply ann_P_impl; eauto.
-  eapply pointwise_subrelation; eauto using iff_impl_subrelation.
-  eapply ann_P_impl; eauto.
-  eapply pointwise_subrelation; eauto using iff_impl_subrelation.
-  eapply pointwise_symmetric; eauto using CRelationClasses.iff_Symmetric.
-Qed.
-
-Lemma filter_difference X `{OrderedType X} (p:X->bool) `{Proper _ (_eq ==> eq) p} s t
-  : filter p (s \ t) [=] filter p s \ filter p t.
-Proof.
-  cset_tac. eapply H3; cset_tac.
-Qed.
-
 Lemma sep_filter_map_comm (c:var) lv (ϱ:var -> var)
   : sep c lv ϱ
     -> map ϱ (filter (fun x => B[x <= c]) lv) [=] filter (fun x => B[x <= c]) (map ϱ lv).
@@ -254,37 +207,6 @@ Proof.
   intros [GT LE]. cset_tac.
   - eexists x; cset_tac.
     exploit GT; eauto. cset_tac. omega.
-Qed.
-
-Lemma subset_filter X `{OrderedType X} (p:X->bool) `{Proper _ (_eq ==> eq) p} (lv lv':set X)
-  : lv ⊆ lv'
-    -> filter p lv ⊆ filter p lv'.
-Proof.
-  cset_tac.
-Qed.
-
-Lemma filter_get X (p:X->bool) (Z:list X) x n
-  : get Z n x
-    -> p x
-    -> { n : nat | get (List.filter p Z) n x }.
-Proof.
-  intros. eapply get_getT in H.
-  general induction H; simpl; cases; eauto using get.
-  edestruct IHgetT; eauto using get.
-Qed.
-
-Lemma of_list_filter X `{OrderedType X} (p:X->bool) `{Proper _ (_eq ==> eq) p} L
-  : of_list (List.filter p L) [=] filter p (of_list L).
-Proof.
-  cset_tac.
-  - eapply of_list_get_first in H1; dcr; cset_tac; inv_get.
-    rewrite H3. eapply get_in_of_list; eauto.
-  - eapply of_list_get_first in H1; dcr; cset_tac; inv_get.
-    rewrite H3. cset_tac.
-  - eapply of_list_get_first in H2; dcr; cset_tac; inv_get.
-    rewrite H4 in *.
-    edestruct filter_get; eauto.
-    eapply get_in_of_list; eauto.
 Qed.
 
 
@@ -303,7 +225,7 @@ Proof.
             cardinal (filter (fun x => B[x <= c]) (of_list Z))). {
       eapply subset_cardinal. eapply subset_filter. clear; intuition. eauto.
     }
-    unfold var in *. rewrite of_list_filter. omega. clear; intuition.
+    unfold var in *. rewrite of_list_filter_set. omega. clear; intuition.
   - eapply subset_filter; eauto.
 Qed.
 

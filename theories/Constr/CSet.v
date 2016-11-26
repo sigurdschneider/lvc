@@ -208,8 +208,14 @@ Hint Extern 20 ( ?s ⊆ _ ∪ ?s ) =>  eapply incl_right.
 Hint Extern 20 => match goal with
                  | [ H: ?x ∈ ?s, H': ?x ∉ ?s |- _ ] => exfalso; eapply H', H
                  | [ H: ?x === ?y, H': ?x =/= ?y |- _ ] => exfalso; eapply H', H
-                 | [ H: ?y === ?x, H': ?x =/= ?y |- _ ] => exfalso; eapply H'; symmetry; eapply H
+                 | [ H: ?x === ?y, H': ?x === ?y -> False |- _ ]
+                   => exfalso; eapply H', H
+                 | [ H: ?y === ?x, H': ?x =/= ?y |- _ ] =>
+                   exfalso; eapply H'; symmetry; eapply H
+                 | [ H: ?y === ?x, H': ?x === ?y -> False |- _ ] =>
+                   exfalso; eapply H'; symmetry; eapply H
                  | [ H: ?x =/= ?x |- _ ] => exfalso; eapply H; reflexivity
+                 | [ H: ?x === ?x -> False |- _ ] => exfalso; eapply H; reflexivity
                  end.
 
 Lemma incl_union_right X `{OrderedType X} s t u
@@ -249,10 +255,8 @@ Proof.
 Qed.
 
 
-Create HintDb cset discriminated.
-
 Hint Resolve incl_union_left incl_union_right incl_add_right in_add_left
-             union_left union_right get_list_union_map : cset.
+     union_left union_right get_list_union_map : cset.
 Hint Resolve prod_eq_intro : cset.
 Hint Resolve disj_not_in incl_singleton: cset.
 Hint Resolve incl_empty : cset.
@@ -711,3 +715,76 @@ Proof.
 Qed.
 
 Hint Immediate incl_minus_incl_union incl_union_lr_eq incl_union_eq incl_add_union_union : cset.
+
+
+Smpl Add
+     match goal with
+     | [ |- @Equivalence.equiv
+             _ (@_eq _ (@SOT_as_OT _ (@eq _) _))
+             (@OT_Equivalence _ (@SOT_as_OT _ (@eq _) _))
+             ?x ?y ] => hnf
+     | [ H : @Equivalence.equiv
+               _ (@_eq _ (@SOT_as_OT _ (@eq _) _))
+               (@OT_Equivalence _ (@SOT_as_OT _ (@eq _) _))
+               ?x ?y |- _ ] => hnf in H; clear_trivial_eqs
+     | [ H1 : ?a === ?f ?y, H2 : ?f ?x === ?a -> False,
+                               H3 : ?x === ?y, PR : Proper (_ ==> _) ?f |- _ ]
+       => exfalso; eapply H2; rewrite H1, H3; reflexivity
+     end : cset.
+
+Smpl Add
+     match goal with
+     | [ |- ?a ∈ filter ?p ?lv ] => eapply filter_iff; [eauto|]
+     | [ H : ?a ∈ filter ?p ?lv |- _ ] => eapply filter_iff in H; [|eauto]
+     | [ H : (if [?P] then true else false) = true |- _ ] => cases in H
+     | [ |- (if [?P] then true else false) = true ] => cases
+     | [ |- (@Equivalence.equiv ?X (@_eq ?X ?H) (@OT_Equivalence ?X ?H) ?x ?a) \/ _ ] =>
+       decide (@Equivalence.equiv X (@_eq X H) (@OT_Equivalence X H) x a);
+         [ left; assumption | right ]
+     | [ H : Is_true (?p ?x),
+             H' : @Equivalence.equiv ?X (@_eq ?X ?H) (@OT_Equivalence ?X ?H) ?x ?a,
+                    PR: Proper (@_eq ?X ?H ==> eq) ?p |- ?p ?a = true] => rewrite <- H'
+     end : cset.
+
+
+
+Lemma filter_add_in X `{OrderedType X} (p:X -> bool) `{Proper _ (_eq ==> eq) p} x s
+  : p x -> SetInterface.filter p {x;s} [=] {x; SetInterface.filter p s}.
+Proof.
+  intros P; split; intros In; cset_tac.
+Qed.
+
+Lemma filter_add_notin X `{OrderedType X} (p:X -> bool) `{Proper _ (_eq ==> eq) p} x s
+  : ~ p x -> SetInterface.filter p {x;s} [=] SetInterface.filter p s.
+Proof.
+  intros P; split; intros In; cset_tac.
+  - exfalso; eapply P. rewrite H3; eauto.
+Qed.
+
+Lemma filter_incl X `{OrderedType X} (p:X -> bool) `{Proper _ (_eq ==> eq) p} s
+  : SetInterface.filter p s ⊆ s.
+Proof.
+  hnf; intros. eapply zfilter_1; eauto.
+Qed.
+
+Lemma filter_add_incl X `{OrderedType X} (p:X -> bool) `{Proper _ (_eq ==> eq) p} s x
+  : SetInterface.filter p {x; s} ⊆ {x; SetInterface.filter p s}.
+Proof.
+  decide (p x).
+  - rewrite filter_add_in; eauto.
+  - rewrite filter_add_notin; eauto with cset.
+Qed.
+
+
+Lemma filter_difference X `{OrderedType X} (p:X->bool) `{Proper _ (_eq ==> eq) p} s t
+  : filter p (s \ t) [=] filter p s \ filter p t.
+Proof.
+  cset_tac. eapply H3; cset_tac.
+Qed.
+
+Lemma subset_filter X `{OrderedType X} (p:X->bool) `{Proper _ (_eq ==> eq) p} (lv lv':set X)
+  : lv ⊆ lv'
+    -> filter p lv ⊆ filter p lv'.
+Proof.
+  cset_tac.
+Qed.

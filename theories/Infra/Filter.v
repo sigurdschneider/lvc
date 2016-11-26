@@ -1,4 +1,4 @@
-Require Import Util List OptionMap LengthEq Map Get Take MoreList.
+Require Import Util List OptionMap LengthEq Map Get Take MoreList CSet.
 
 Set Implicit Arguments.
 
@@ -168,7 +168,7 @@ Ltac inv_get_step_filter :=
   repeat (match goal with
           | [ H : get (filter_by ?p ?L ?L') ?n ?x |- _ ] =>
             eapply filter_by_get in H; try rewrite map_id in H; destruct H as [? [? [? ?]]]
-          | [ H : get (filter ?p ?L) ?n ?x |- _ ] =>
+          | [ H : get (List.filter ?p ?L) ?n ?x |- _ ] =>
             eapply filter_get in H; try rewrite map_id in H; destruct H as [H ?]
           | [ H : get _ (posOfTrue (countTrue (?f ⊝ take ?n ?L)) (?f ⊝ ?L)) _,
                   H' : get ?L ?n ?x, H'' : ?f ?x = true |- _ ] =>
@@ -179,7 +179,7 @@ Ltac inv_get_step_filter :=
 Smpl Add  repeat (match goal with
           | [ H : get (filter_by ?p ?L ?L') ?n ?x |- _ ] =>
             eapply filter_by_get in H; try rewrite map_id in H; destruct H as [? [? [? ?]]]
-          | [ H : get (filter ?p ?L) ?n ?x |- _ ] =>
+          | [ H : get (List.filter ?p ?L) ?n ?x |- _ ] =>
             eapply filter_get in H; try rewrite map_id in H; destruct H as [H ?]
           | [ H : get _ (posOfTrue (countTrue (?f ⊝ take ?n ?L)) (?f ⊝ ?L)) _,
                   H' : get ?L ?n ?x, H'' : ?f ?x = true |- _ ] =>
@@ -294,4 +294,27 @@ Proof.
   eapply agree_on_trans. eapply H0.
   eapply update_with_list_agree; eauto. rewrite map_length; eauto.
   eapply agree_on_update_filter; eauto.
+Qed.
+
+Lemma get_filter X (p:X->bool) (Z:list X) x n
+  : get Z n x
+    -> p x
+    -> { n : nat | get (List.filter p Z) n x }.
+Proof.
+  intros. eapply get_getT in H.
+  general induction H; simpl; cases; eauto using get.
+  edestruct IHgetT; eauto using get.
+Qed.
+
+Lemma of_list_filter_set X `{OrderedType X} (p:X->bool) `{Proper _ (_eq ==> eq) p} L
+  : of_list (List.filter p L) [=] SetInterface.filter p (of_list L).
+Proof.
+  cset_tac.
+  - eapply of_list_get_first in H1; dcr; cset_tac; inv_get.
+    rewrite H3. eapply get_in_of_list; eauto.
+  - eapply of_list_get_first in H1; dcr; cset_tac; inv_get.
+    rewrite H3. cset_tac.
+  - eapply of_list_get_first in H2; dcr; cset_tac; inv_get.
+    rewrite H4 in *.  edestruct get_filter; eauto.
+    eapply get_in_of_list; eauto.
 Qed.

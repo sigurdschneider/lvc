@@ -114,7 +114,6 @@ Lemma lookup_set_add X `{OrderedType X} Y `{OrderedType Y} x s (m:X -> Y) `{Prop
 : (lookup_set m {x; s}) [=] {m x; lookup_set m s}.
 Proof.
   intro. lset_tac.
-  rewrite H2; eauto.
 Qed.
 
 Lemma lookup_set_empty X `{OrderedType X} Y `{OrderedType Y} (ϱ:X->Y)
@@ -146,7 +145,8 @@ Qed.
 
 (*  This hint Resolve will slow everything down by 100x *)
 (* Hint Resolve lookup_set_union_incl. *)
-Hint Resolve lookup_set_single_fact.
+Hint Immediate lookup_set_union_incl : cset.
+Hint Resolve lookup_set_single_fact : cset.
 
 Lemma map_incl X `{OrderedType X} Y `{OrderedType Y} D D' (f:X->Y)
       `{Proper _ (_eq ==> _eq) f}
@@ -156,4 +156,15 @@ Proof.
   intros; hnf; intros. cset_tac.
 Qed.
 
-Hint Resolve map_incl.
+Hint Resolve map_incl : cset.
+
+Lemma map_incl_incl X `{OrderedType X} Y `{OrderedType Y} (f:X->Y)
+      `{Proper _ (_eq ==> _eq) f} (s t:set X) (u: set Y)
+  : map f s ⊆ u
+    -> t ⊆ s
+    -> map f t ⊆ u.
+Proof.
+  intros. rewrite map_incl; eauto.
+Qed.
+
+Hint Resolve map_incl_incl : cset.

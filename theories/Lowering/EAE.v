@@ -57,7 +57,7 @@ Proof.
     eapply omap_op_eval_agree; eauto.
     symmetry. eapply agree_on_update_dead; [|reflexivity].
     eauto with cset.
-    eapply disj_1_incl; [ eapply disj_2_incl |]; eauto with cset.
+    eapply disj_incl; eauto with cset.
 Qed.
 
 Lemma list_to_stmt_crash L E xl Y s
@@ -79,7 +79,7 @@ Proof.
       * eapply omap_op_eval_agree; eauto. symmetry.
         eapply agree_on_update_dead; [|reflexivity].
         intro. eapply (H2 x); cset_tac.
-      * eapply disj_1_incl; [ eapply disj_2_incl |]; eauto with cset.
+      * eapply disj_incl; eauto with cset.
       * dcr. eexists. split; eauto.
         eapply star2_silent.
         econstructor; eauto. eauto.
@@ -332,10 +332,10 @@ Proof.
         rewrite <- union_assoc.
         rewrite disj_app.
         split.
-        eapply disj_1_incl. eapply disj_2_incl. eapply H0.
+        eapply (disj_incl H0).
+        eauto with cset.
         setoid_rewrite list_union_start_swap at 3.
         clear. cset_tac.
-        eauto with cset.
         hnf; intros. invt NoDupA. dcr; cset_tac.
         eapply H7. rewrite of_list_1 in H3.
         eapply H3.
@@ -349,10 +349,10 @@ Proof.
         rewrite <- union_assoc.
         rewrite disj_app.
         split.
-        eapply disj_1_incl. eapply disj_2_incl. eapply H0.
+        eapply (disj_incl H0).
+        eauto with cset.
         setoid_rewrite list_union_start_swap at 3.
         clear. cset_tac.
-        eauto with cset.
         eapply disj_2_incl; eauto.
         rewrite list_union_start_swap.
         clear; cset_tac.

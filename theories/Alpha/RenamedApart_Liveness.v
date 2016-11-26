@@ -204,11 +204,11 @@ Proof.
     exploit H1 as C; try eapply H10; eauto. eapply ann_R_get in C.
     edestruct H2; try eapply H10; eauto; dcr.
     rewrite C. rewrite H13.
-    eapply disj_1_incl. eapply disj_2_incl. eapply H4.
+    eapply (disj_incl H4).
+    + clear_all; cset_tac.
     + eapply incl_union_left.
       eapply incl_list_union; eauto using zip_get.
       unfold defVars. eapply incl_right.
-    + clear_all; cset_tac.
 Qed.
 
 Lemma renamedApart_globals_live_F ZL Lv F ans als D Dt D' f lv' Z' l'
@@ -275,8 +275,7 @@ Proof.
         exploit Sub; eauto. eapply ann_R_get in H6.
         edestruct IW; eauto; dcr.
         rewrite H6. rewrite H12.
-        eapply disj_1_incl. eapply disj_2_incl. eapply Disj.
-        eauto. eauto with cset.
+        eapply (disj_incl Disj); eauto with cset.
       * assert (LEQ:❬getAnn ⊝ als❭ = ❬fst ⊝ F❭) by eauto with len.
         rewrite LEQ in *. rewrite get_app_ge in H6; eauto.
         assert (disj (x3 \ of_list x4) D'). {
@@ -285,7 +284,7 @@ Proof.
           eapply zip_get; eauto.
           reflexivity. reflexivity.
         }
-        eauto with cset.
+        eapply not_incl_minus; eauto with cset.
 Qed.
 
 Lemma renamedApart_globals_live s ZL Lv alv f ang

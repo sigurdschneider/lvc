@@ -380,10 +380,11 @@ Proof.
 
         exploit renamedApart_freeVars; try eapply RA; eauto. simpl in *.
         exploit renamedApart_disj; try eapply RA; eauto. simpl in *.
-        symmetry. eapply disj_1_incl; [ eapply disj_2_incl | ]. eapply H22.
-        rewrite <- H12. eapply incl_union_left, incl_list_union; eauto using zip_get.
+        symmetry. eapply (disj_incl H22).
         rewrite <- H21. eapply incl_union_left, incl_list_union.
         eapply map_get_1; try eapply H4. simpl. reflexivity.
+        rewrite <- H12. eapply incl_union_left, incl_list_union; eauto using zip_get.
+
 
         rewrite OC. unfold defVars in H20 at 2. simpl in *. eauto.
 
@@ -394,10 +395,10 @@ Proof.
 
         exploit renamedApart_freeVars; try eapply RA; eauto. simpl in *.
         exploit renamedApart_disj; try eapply RA; eauto. simpl in *.
-        symmetry. eapply disj_1_incl; [ eapply disj_2_incl | ]. eapply H20.
-        rewrite <- H12. eapply incl_union_left, incl_list_union; eauto using zip_get.
+        symmetry. eapply (disj_incl H20).
         rewrite <- H19. eapply incl_union_left, incl_list_union.
         eapply map_get_1; try eapply H4. simpl. reflexivity.
+        rewrite <- H12. eapply incl_union_left, incl_list_union; eauto using zip_get.
 
         exploit (H8 (S n + n0) n); eauto using zip_get. omega.
         eapply disj_2_incl; eauto.  unfold defVars. simpl.
@@ -412,12 +413,12 @@ Proof.
       eapply agree_on_incl. symmetry.
       eapply alpha_rho_agree_F; eauto using alpha_rho_agree.
       setoid_rewrite disj_minus_eq at 2; [ reflexivity | ].
-      eapply disj_1_incl. eapply disj_2_incl.
+      eapply disj_incl.
       eapply (renamedApart_disj RA).
-      simpl. rewrite <- H12. eauto with cset.
       simpl. rewrite occurVars_freeVars_definedVars.
       eapply renamedApart_freeVars in RA. simpl in *.
       rewrite <- RA. clear_all; cset_tac.
+      simpl. rewrite <- H12. eauto with cset.
 Qed.
 
 

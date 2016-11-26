@@ -2,6 +2,8 @@ Require Export Setoid Coq.Classes.Morphisms.
 Require Import EqDec CSetNotation Util.
 Require Export Sets SetInterface SetConstructs SetProperties Get.
 
+Create HintDb cset discriminated.
+
 Lemma In_add_empty {X} `{OrderedType X} x y
   : In x (add y empty) <-> x === y.
 Proof.

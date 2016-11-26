@@ -73,7 +73,6 @@ Proof.
       * rewrite seteq. reflexivity.
       * rewrite <- seteq. rewrite <- ReqR'. rewrite <- fvRM.
         rewrite <- H0. clear. cset_tac.
-        decide (x === a); eauto with cset.
     + assert (seteq : R \ R ∪ Exp.freeVars e [=] Exp.freeVars e).
       { cset_tac. }
       rewrite seteq. rewrite fvBcard. trivial.

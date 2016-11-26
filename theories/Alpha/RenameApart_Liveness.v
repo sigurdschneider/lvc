@@ -5,11 +5,6 @@ Require Import LabelsDefined PairwiseDisjoint Liveness Coherence Restrict.
 
 Set Implicit Arguments.
 
-Lemma incl_union_incl X `{OrderedType X} s t u w
-  : t ∪ u ⊆ w -> s ⊆ t -> s ⊆ w.
-  intros A B. rewrite <- A. eauto with cset.
-Qed.
-
 Local Hint Immediate incl_union_incl : cset.
 
 Lemma lv_ra_lv_bnd ZL Lv lv ra VD s
@@ -35,18 +30,6 @@ Proof.
   - eapply IHaIncl; eauto.
     rewrite <- Incl, <- H19. clear; cset_tac.
 Qed.
-
-Smpl Add match goal with
-         | [ H : context [ ❬@rev ?A ?L❭ ] |- _ ] => rewrite (@rev_length A L) in H
-         | [ |- context [ ❬@rev ?A ?L❭ ] ] => rewrite (@rev_length A L)
-         end : len.
-
-Smpl Add match goal with
-         | [ H : context [ ❬fst (renameApartF _ ?G ?ϱ ?F ?p)❭ ] |- _ ] =>
-           rewrite (@renameApartF_length G ϱ F) in H
-         | [ |- context [ ❬fst (renameApartF _ ?G ?ϱ ?F ?p)❭ ] ] =>
-           rewrite (@renameApartF_length G ϱ F)
-         end : len.
 
 Definition renameApartF_live
   (renameApart_live:env var -> set var -> stmt -> ann (set var) -> set var * ann (set var)) G ϱ :=
@@ -184,12 +167,6 @@ Proof.
         rewrite e. eauto.
 Qed.
 
-Smpl Add match goal with
-         | [ H : context [ ❬?L ++ ?L'❭ ] |- _ ] => rewrite (@app_length _ L L') in H
-         | [ H : context [ ❬?f ⊝ ?L❭ ] |- _ ] => rewrite (@map_length _ _ f L) in H
-         | [ H : context [ ❬?f ⊜ ?L ?L'❭ ] |- _ ] => rewrite (@zip_length _ _ _ f L L') in H
-         end : len.
-
 Tactic Notation "orewrite" constr(A) "all" :=
   let X := fresh "OX" in assert A as X by omega; rewrite X in *; clear X.
 
@@ -209,8 +186,8 @@ Proof.
       lset_tac. eexists x; lud; eauto.
   - econstructor; eauto using live_op_rename_sound.
     + erewrite fst_renameApart_live; eauto.
-    + erewrite getAnn_snd_renameApart_live; eauto.
-    + erewrite getAnn_snd_renameApart_live; eauto.
+    + erewrite getAnn_snd_renameApart_live; eauto with cset.
+    + erewrite getAnn_snd_renameApart_live; eauto with cset.
   - inv_get. exploit ParamLen; eauto.
     econstructor; eauto with len.
     intros; inv_get; eauto using live_op_rename_sound.
@@ -291,19 +268,8 @@ Proof.
       -- intros. inv_get.
          exploit H0; eauto.
          erewrite fst_renameApart_live; eauto.
-    + erewrite getAnn_snd_renameApart_live; eauto.
+    + erewrite getAnn_snd_renameApart_live; eauto with cset.
 Qed.
-
-Lemma map_incl_incl X `{OrderedType X} Y `{OrderedType Y} (f:X->Y)
-      `{Proper _ (_eq ==> _eq) f} (s t:set X) (u: set Y)
-  : map f s ⊆ u
-    -> t ⊆ s
-    -> map f t ⊆ u.
-Proof.
-  intros. rewrite map_incl; eauto.
-Qed.
-
-Hint Resolve map_incl_incl : cset.
 
 Lemma renameApart_live_sound_srd o DL ZL LV (ZL':list params) LV' s lv ϱ G
       (ParamLen:forall n Z Z', get ZL n Z -> get ZL' n Z' -> ❬Z❭ = ❬Z'❭)
@@ -330,7 +296,7 @@ Proof.
            cset_tac.
       * len_simpl. rewrite min_l; try omega.
       * simpl in *. revert Incl H0; clear; cset_tac; lud; eauto.
-        right; eapply Incl. rewrite <- H0. cset_tac.
+        eapply Incl. rewrite <- H0. cset_tac.
     + erewrite getAnn_snd_renameApart_live; eauto.
       rewrite lookup_set_update_union_minus_single; eauto.
       rewrite <- H0. eauto with cset.
@@ -341,14 +307,14 @@ Proof.
     + eapply IHLS1; eauto with cset.
     + erewrite fst_renameApart_live; eauto.
       eapply IHLS2; eauto with cset.
-    + erewrite getAnn_snd_renameApart_live; eauto.
-    + erewrite getAnn_snd_renameApart_live; eauto.
+    + erewrite getAnn_snd_renameApart_live; eauto with cset.
+    + erewrite getAnn_snd_renameApart_live; eauto with cset.
   - inv_get. exploit ParamLen; eauto.
     econstructor; eauto with len.
     + cases; cases in H1; eauto.
       edestruct PIR2_nth as [? [? iF]]; eauto using zip_get; invc iF; inv_get.
       edestruct PIR2_nth as [? [? iF]]; try eapply iEQ; eauto using zip_get; invc iF; inv_get.
-      rewrite <- H10, H11. rewrite map_incl; eauto.
+      rewrite <- H10, H11. rewrite map_incl; eauto with cset.
     + intros; inv_get; eauto using live_op_rename_sound.
   - econstructor; eauto using live_op_rename_sound.
   - econstructor; eauto.
@@ -390,11 +356,13 @@ Proof.
            symmetry. eapply disj_2_incl. eapply fresh_list_spec. eapply fresh_spec.
            exploit H8; eauto.
            edestruct srd_globals_live_From; eauto; dcr.
-           destruct o; simpl in *; isabsurd; eauto using live_sound_overapproximation_I.
-           destruct o; simpl in *; isabsurd; eauto using live_sound_overapproximation_I.
+           destruct o; simpl in *;
+             [ isabsurd | |]; eauto using live_sound_overapproximation_I.
+           destruct o; simpl in *;
+             [ isabsurd | |]; eauto using live_sound_overapproximation_I.
            inv_get. simpl in *.
            eapply incl_union_right.
-           rewrite <- Incl. rewrite  <- H3. eauto with cset.
+           rewrite <- Incl. eauto with cset.
         -- simpl in *. rewrite <- Incl at 1.
            eauto with cset.
       * intros. erewrite fst_renameApart_live; eauto.
@@ -452,8 +420,10 @@ Proof.
            rewrite COND. clear; hnf; cset_tac.
            exploit (H8 n0); eauto.
            edestruct srd_globals_live_From; eauto; dcr.
-           destruct o; simpl in *; isabsurd; eauto using live_sound_overapproximation_I.
-           destruct o; simpl in *; isabsurd; eauto using live_sound_overapproximation_I.
+           destruct o; simpl in *;
+             [ isabsurd | |]; eauto using live_sound_overapproximation_I.
+           destruct o; simpl in *;
+             [ isabsurd | |]; eauto using live_sound_overapproximation_I.
            inv_get.
            simpl in *. eapply disj_1_incl. symmetry. eapply fresh_list_spec. eapply fresh_spec.
            eapply incl_union_right. rewrite <- Incl. eapply map_incl; eauto.
@@ -469,8 +439,10 @@ Proof.
       -- rewrite lookup_set_update_with_list_in_union_length; eauto with len.
          exploit (H8 n); eauto.
          edestruct srd_globals_live_From; eauto; dcr.
-         destruct o; simpl in *; isabsurd; eauto using live_sound_overapproximation_I.
-         destruct o; simpl in *; isabsurd; eauto using live_sound_overapproximation_I.
+         destruct o; simpl in *;
+             [ isabsurd | |]; eauto using live_sound_overapproximation_I.
+         destruct o; simpl in *;
+           [ isabsurd | |]; eauto using live_sound_overapproximation_I.
          inv_get.
          rewrite H25. unfold lookup_set. rewrite H3. rewrite Incl.
          clear; cset_tac.
@@ -499,5 +471,5 @@ Proof.
       -- intros. inv_get.
          exploit H0; eauto.
          erewrite fst_renameApart_live; eauto.
-    + erewrite getAnn_snd_renameApart_live; eauto.
+    + erewrite getAnn_snd_renameApart_live; eauto with cset.
 Qed.

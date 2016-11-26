@@ -858,9 +858,9 @@ Proof.
   - repeat cases; eauto using renamedApart.
     simpl in *.
     econstructor; try reflexivity; eauto.
-    eapply disj_1_incl. eapply disj_2_incl. eauto.
-    rewrite compile_renamedApart_pes, H13; eauto.
+    eapply disj_incl; eauto.
     rewrite compile_renamedApart_pes, H12; eauto.
+    rewrite compile_renamedApart_pes, H13; eauto.
     eapply pe_eta_split; econstructor; eauto.
     rewrite compile_renamedApart_pes, H12; eauto.
     eapply pe_eta_split; econstructor; eauto.

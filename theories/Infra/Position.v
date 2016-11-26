@@ -144,7 +144,6 @@ Proof.
   intros.
   general induction L; simpl in * |- *; cset_tac.
   cases; try congruence; eauto.
-  - exfalso; eauto.
   - rewrite IHL; eauto.
 Qed.
 

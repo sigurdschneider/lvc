@@ -211,3 +211,48 @@ Proof.
       symmetry; eauto.
       eauto with cset.
 Qed.
+
+Lemma defVars_take_disj F ans n Zs a
+:  pairwise_ne disj (zip defVars F ans)
+   -> get F n Zs
+   -> get ans n a
+   -> disj (defVars Zs a) (list_union zip defVars (take n F) (take n ans)).
+Proof.
+  intros.
+  symmetry. rewrite <- list_union_disjunct; intros; inv_get.
+  eapply (H n0 n); eauto using zip_get. omega.
+Qed.
+
+Lemma defVars_drop_disj F ans n Zs a
+:  pairwise_ne disj (zip defVars F ans)
+   -> get F n Zs
+   -> get ans n a
+   -> disj (defVars Zs a) (list_union zip defVars (drop (S n) F) (drop (S n) ans)).
+Proof.
+  intros.
+  symmetry. rewrite <- list_union_disjunct; intros; inv_get.
+  eapply (H (S n + n0) n); eauto using zip_get. omega.
+Qed.
+
+Lemma defVars_disj_D F ans D Dt D'
+      (D'def:list_union zip defVars F ans ∪ Dt[=]D')
+      (Ddisj: disj D D')
+: forall n  DD' Zs, get F n Zs -> get ans n DD' ->
+               disj D (defVars Zs DD').
+Proof.
+  intros.
+  eapply disj_2_incl; eauto. rewrite <- D'def.
+  eapply incl_union_left. eapply incl_list_union; eauto using zip_get.
+Qed.
+
+Lemma D_take_disj F t ans n D D' ant
+  : renamedApart (stmtFun F t) (annF (D, D') ans ant)
+    -> disj D (list_union zip defVars (take n F) (take n ans)).
+Proof.
+  intros.
+  exploit renamedApart_disj; eauto; simpl in *.
+  eapply disj_2_incl; eauto.
+  invt renamedApart.
+  rewrite <- take_zip, list_union_take_incl.
+  rewrite <- H13; eauto with cset.
+Qed.

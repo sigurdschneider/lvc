@@ -143,5 +143,5 @@ Lemma disj_empty_cut
 Proof.
   intros sub disj.
   apply disj_intersection.
-  eapply disj_2_incl; eauto.
+  eapply disj_2_incl; eauto with cset.
 Qed.

@@ -32,7 +32,6 @@ Lemma take_list_incl X `{OrderedType X} (n : nat) (L:list X) :
         of_list (take n L) ⊆ of_list L.
 Proof.
   general induction L; destruct n; simpl; eauto with cset.
-  rewrite IHL. reflexivity.
 Qed.
 
 Lemma take_set_incl X `{OrderedType X} (n : nat) (s : set X) :

@@ -39,12 +39,10 @@ Proof.
       erewrite lookup_list_agree; eauto.
       symmetry. eapply agree_on_update_dead; eauto.
       eapply disj_not_in.
-      eapply disj_1_incl. eapply disj_2_incl; eauto with cset.
-      eauto with cset.
+      eapply disj_incl; eauto with cset.
     + rewrite H; eapply defined_on_update_some;
         eauto using defined_on_incl with cset.
-    + eapply disj_1_incl. eapply disj_2_incl. eauto.
-      eauto with cset. eauto with cset.
+    + eapply disj_incl; eauto with cset.
 Qed.
 
 Lemma sim_I_moves k Λ ZL r L L' V V' R M s sl ib
@@ -93,14 +91,11 @@ Proof.
       eapply Def; eauto with cset.
       rewrite of_list_map, of_list_elements; eauto.
       cset_tac.
-  - eapply disj_1_incl. eapply disj_2_incl. eauto.
-    rewrite map_union; eauto with cset.
-    eauto with cset.
+  - eapply disj_incl; eauto with cset.
   - eapply elements_3w.
   - eauto using defined_on_incl with cset.
   - symmetry.
-    eapply disj_1_incl. eapply disj_2_incl; eauto with cset.
-    eauto with cset.
+    eapply disj_incl; eauto with cset.
   - eapply injective_nodup_map; eauto.
     rewrite of_list_elements. eauto using injective_on_incl with cset.
     eapply elements_3w.
@@ -168,8 +163,7 @@ Proof.
   eapply agree_on_update_list_dead.
   eapply agree_on_update_list_dead. reflexivity.
   rewrite of_list_map, of_list_elements; eauto.
-  symmetry. eapply disj_1_incl. eapply disj_2_incl; eauto.
-  eapply map_incl; eauto. rewrite <- VDincl; eauto with cset.
+  symmetry. eapply disj_incl; eauto with cset.
   rewrite <- Incl. clear; cset_tac.
   rewrite of_list_elements. clear; hnf; intros; cset_tac.
 Qed.
@@ -214,8 +208,7 @@ Proof.
   eapply agree_on_update_list; [ eapply proper_onv | eauto with len |
                                  | rewrite lookup_list_map; reflexivity ].
   eapply agree_on_empty. rewrite of_list_elements. cset_tac.
-  eapply disj_1_incl. eapply disj_2_incl. eauto.
-  eapply map_incl; eauto. rewrite <- Incl, <- SpR. eauto with cset.
+  eapply disj_incl; eauto with cset.
   rewrite of_list_elements, <- Incl, LSpM, <- SpR; reflexivity.
 Qed.
 
@@ -241,8 +234,7 @@ Proof.
   hnf; intros; cset_tac.
   eapply injective_on_incl; eauto. rewrite <- Incl. cset_tac.
   rewrite of_list_elements.
-  eapply disj_1_incl. eapply disj_2_incl. eauto.
-  eapply map_incl; eauto. rewrite <- Incl. clear; cset_tac.
+  eapply disj_incl; eauto with cset.
   rewrite <- Incl, LSpM, <- SpR. eauto.
 Qed.
 
@@ -278,8 +270,7 @@ Lemma mem_agrees_after_spill_load_update (V V' V'':var->option val) VD R M Sp L0
   : agree_on eq (Sp ∪ M) (V [x <- ⎣ v ⎦]) (fun x0 : var => (V'' [x <- ⎣ v ⎦]) (slot x0)).
 Proof.
   eapply agree_on_update_dead_both_comp_right; eauto.
-  eapply disj_1_incl. eapply disj_2_incl; eauto.
-  eapply map_incl; eauto. rewrite <- Incl, SpR; reflexivity.
+  eapply disj_incl; eauto with cset.
   rewrite SpR, Incl. cset_tac.
 Qed.
 
@@ -368,7 +359,7 @@ Proof.
     + rewrite IHZ.
       time (cset_tac; eauto 20).
       * right. decide (x ∈ M); eauto 20.
-      * right. right. right.
+      * right.
         decide (x ∈ M); eauto 20.
       * rewrite <- Incl; cset_tac.
     + cases; simpl; rewrite IHZ; eauto.
@@ -398,13 +389,14 @@ Proof.
   - assert (❬Z❭=❬Some ⊝ VL❭) by eauto with len.
     edestruct (of_list_get_first _ i) as [n]; eauto; dcr.
     edestruct update_with_list_lookup_in_list_first; eauto; dcr.
-    intros; rewrite <- H2. eauto.
-    rewrite H2. rewrite H6. inv_get.
-    edestruct update_with_list_lookup_in_list_first_slot; try eapply Len; eauto; dcr.
-    Focus 4. erewrite H7. get_functional. eauto.
-    rewrite <- H2; eauto.
-    eapply disj_1_incl. eapply disj_2_incl; eauto. eauto with cset.
-    intros. rewrite <- H2; eauto.
+    + intros; rewrite <- H2. eauto.
+    + rewrite H2. rewrite H6. inv_get.
+      edestruct update_with_list_lookup_in_list_first_slot;
+        try eapply Len; eauto; dcr.
+      Focus 4. erewrite H7. get_functional. eauto.
+      rewrite <- H2; eauto.
+      eapply disj_incl; eauto with cset.
+      intros. rewrite <- H2; eauto.
   - rewrite lookup_set_update_not_in_Z; eauto.
     rewrite lookup_set_update_not_in_Z; eauto.
     eapply Agr2. cset_tac.
@@ -434,9 +426,9 @@ Proof.
       * exfalso. cset_tac.
       * lud; eauto using get.
   - edestruct (IHLen slot E n0 R M) as [? [? ]]; eauto using get; dcr.
-    + eapply disj_1_incl.
-      eapply disj_2_incl; eauto with cset.
+    + eapply disj_incl; eauto.
       clear; cset_tac.
+      clear; cset_tac; eauto 20.
     + eapply injective_on_incl; eauto.
       clear; cset_tac.
     + intros. eapply (First (S n')); eauto using get. omega.
@@ -529,7 +521,7 @@ Proof.
   }
   eapply sim_I_moves; eauto.
   eapply injective_on_incl; eauto with cset.
-  eapply disj_1_incl. eapply disj_2_incl. eauto. rewrite VDincl; eauto. eauto.
+  eapply disj_incl; eauto with cset.
   eapply defined_on_incl; eauto.
   rewrite SpR at 1. rewrite LSpM.
   rewrite map_union; eauto. clear; cset_tac.
@@ -630,17 +622,16 @@ Proof.
       rewrite <- zip_app; [| eauto with len].
       eapply IH; eauto.
       * eapply slot_lift_params_agree; eauto.
-        -- eapply disj_1_incl. eapply disj_2_incl.
-           eauto.
+        -- eapply disj_incl; eauto.
            ++ rewrite In3, <- EQ, In1, In2.
              clear; eauto with cset.
            ++ rewrite In3, <- EQ, In1, In2.
              clear; eauto with cset.
         -- rewrite EQ; eauto.
       * eapply slot_lift_params_agree_slot; eauto.
-        eapply disj_1_incl. eapply disj_2_incl. eauto.
-        eapply map_incl; eauto.
+        eapply disj_incl; eauto.
         rewrite In3, <- EQ, In1, In2; eauto with cset.
+        eapply map_incl; eauto.
         rewrite In3, <- EQ, In1, In2; eauto with cset.
         eapply injective_on_incl; eauto.
         rewrite In3, <- EQ, In1, In2; eauto with cset.
@@ -655,7 +646,7 @@ Proof.
            eapply defined_on_incl; eauto.
            rewrite <- EQ in In3; revert In3; clear.
            intros.
-           cset_tac. decide (a ∈ R_f \ of_list Z); cset_tac.
+           cset_tac. decide (x ∈ R_f \ of_list Z); cset_tac.
            right.
            eexists x; split; eauto. split; eauto.
            intro. eapply H2. cset_tac.

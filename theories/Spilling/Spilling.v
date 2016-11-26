@@ -67,17 +67,6 @@ Proof.
   rewrite of_list_elements; eauto.
 Qed.
 
-Lemma disj_incl X `{OrderedType X} (D1 D1' D2 D2':set X)
-  : disj D1' D2'
-    -> D1 ⊆ D1'
-    -> D2 ⊆ D2'
-    -> disj D1 D2.
-Proof.
-  intros.
-  eapply disj_1_incl. eapply disj_2_incl; eauto.
-  eauto.
-Qed.
-
 Lemma get_InA_R X (R:X -> X -> Prop) `{Reflexive X R} (L:list X) n x
   :  Get.get L n x
      -> InA R x L.

@@ -52,3 +52,21 @@ Proof.
   intro annP.
   induction annP; eauto.
 Qed.
+
+Instance ann_P_impl A
+  : Proper (@pointwise_relation _ _ impl ==> eq ==> impl) (@ann_P A).
+Proof.
+  unfold Proper, respectful, impl; intros; subst.
+  general induction H1; eauto using ann_P.
+Qed.
+
+Instance ann_P_iff A
+  : Proper (@pointwise_relation _ _ iff ==> eq ==> iff) (@ann_P A).
+Proof.
+  unfold Proper, respectful, impl; intros; subst; split; intros.
+  eapply ann_P_impl; eauto.
+  eapply pointwise_subrelation; eauto using iff_impl_subrelation.
+  eapply ann_P_impl; eauto.
+  eapply pointwise_subrelation; eauto using iff_impl_subrelation.
+  eapply pointwise_symmetric; eauto using CRelationClasses.iff_Symmetric.
+Qed.

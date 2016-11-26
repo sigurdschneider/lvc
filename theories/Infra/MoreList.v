@@ -718,6 +718,8 @@ Ltac len_simpl_basic :=
   | [ H : context [ ❬?L ++ ?L'❭ ] |- _ ] => rewrite (@app_length _ L L') in H
   | [ H : context [ ❬?f ⊝ ?L❭ ] |- _ ] => rewrite (@map_length _ _ f L) in H
   | [ H : context [ ❬?f ⊜ ?L ?L'❭ ] |- _ ] => rewrite (@zip_length _ _ _ f L L') in H
+  | [ H : context [ ❬@rev ?A ?L❭ ] |- _ ] => rewrite (@rev_length A L) in H
+  | [ |- context [ ❬@rev ?A ?L❭ ] ] => rewrite (@rev_length A L)
   | [ H : ❬?L❭ = ❬?L'❭ |- context [Init.Nat.min ❬?L❭ ❬?L'❭] ] =>
     rewrite (@min_idempotent_eq _ _ H)
   | [ H : ❬?L❭ = ❬?L'❭, H' : context [Init.Nat.min ❬?L❭ ❬?L'❭] |- _ ] =>

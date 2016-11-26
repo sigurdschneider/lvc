@@ -6,40 +6,6 @@ Require Import Coherence Allocation RenamedApart MapNotations.
 
 Set Implicit Arguments.
 
-
-Smpl Add
-     match goal with
-     | [ |- @Equivalence.equiv
-             _ (@_eq _ (@SOT_as_OT _ (@eq _) _))
-             (@OT_Equivalence _ (@SOT_as_OT _ (@eq _) _))
-             ?x ?y ] => hnf
-     | [ H : @Equivalence.equiv
-               _ (@_eq _ (@SOT_as_OT _ (@eq _) _))
-               (@OT_Equivalence _ (@SOT_as_OT _ (@eq _) _))
-               ?x ?y |- _ ] => hnf in H; clear_trivial_eqs
-     end : cset.
-
-Lemma proper_le X Y (f:X->Y) H
-  : Proper ((@_eq X (@SOT_as_OT X (@eq X) H)) ==> eq) f.
-  intuition.
-Qed.
-
-Hint Resolve proper_le.
-
-Smpl Add
-     match goal with
-     | [ |- ?a ∈ filter ?p ?lv ] => eapply filter_iff; [try eapply proper_le|]
-     | [ H : ?a ∈ filter ?p ?lv |- _ ] => eapply filter_iff in H; [|try eapply proper_le]
-     | [ H : (if [?P] then true else false) = true |- _ ] => cases in H
-     | [ |- (if [?P] then true else false) = true ] => cases
-     | [ |- (@Equivalence.equiv ?X (@_eq ?X ?H) (@OT_Equivalence ?X ?H) ?x ?a) \/ _ ] =>
-       decide (@Equivalence.equiv X (@_eq X H) (@OT_Equivalence X H) x a);
-         [ left; assumption | right ]
-     | [ H : Is_true (?p ?x),
-             H' : @Equivalence.equiv ?X (@_eq ?X ?H) (@OT_Equivalence ?X ?H) ?x ?a,
-                    PR: Proper (@_eq ?X ?H ==> eq) ?p |- ?p ?a = true] => rewrite <- H'
-     end : cset.
-
 (** * SSA-based register assignment formulated for IL *)
 
 
@@ -47,37 +13,24 @@ Definition least_fresh_P (c : var) (G:set var) x :=
   if [ x <= c ] then least_fresh G else x.
 
 Lemma least_fresh_P_spec c G x
-  : (forall x, x ∈ G -> x <= c)
+  : (~ x <= c -> x ∉ G)
     -> least_fresh_P c G x ∉ G.
 Proof.
   unfold least_fresh_P; cases; eauto using least_fresh_spec.
 Qed.
 
-Lemma filter_add_in X `{OrderedType X} (p:X -> bool) `{Proper _ (_eq ==> eq) p} x s
-  : p x -> filter p {x;s} [=] {x; filter p s}.
+Lemma least_fresh_P_gt c G x
+  : ~ x <= c
+    -> least_fresh_P c G x = x.
 Proof.
-  intros P; split; intros In; cset_tac.
+  intros; unfold least_fresh_P; cases; try omega; eauto.
 Qed.
 
-Lemma filter_add_notin X `{OrderedType X} (p:X -> bool) `{Proper _ (_eq ==> eq) p} x s
-  : ~ p x -> filter p {x;s} [=] filter p s.
+Lemma least_fresh_P_le c G x
+  : x <= c
+    -> least_fresh_P c G x = least_fresh G.
 Proof.
-  intros P; split; intros In; cset_tac.
-  - exfalso; eapply P. rewrite H3; eauto.
-Qed.
-
-Lemma filter_incl X `{OrderedType X} (p:X -> bool) `{Proper _ (_eq ==> eq) p} s
-  : filter p s ⊆ s.
-Proof.
-  hnf; intros. eapply zfilter_1; eauto.
-Qed.
-
-Lemma filter_add_incl X `{OrderedType X} (p:X -> bool) `{Proper _ (_eq ==> eq) p} s x
-  : filter p {x; s} ⊆ {x; filter p s}.
-Proof.
-  decide (p x).
-  - rewrite filter_add_in; eauto.
-  - rewrite filter_add_notin; eauto with cset.
+  intros; unfold least_fresh_P; cases; try omega; eauto.
 Qed.
 
 Lemma lt_minus_lt x y z
@@ -473,56 +426,4 @@ Proof.
         }
         setoid_rewrite disj_minus_eq at 2; eauto.
     + norm_lunion. clear_all; cset_tac; intuition.
-Qed.
-
-Lemma defVars_take_disj F ans n Zs a
-:  pairwise_ne disj (zip defVars F ans)
-   -> get F n Zs
-   -> get ans n a
-   -> disj (defVars Zs a) (list_union zip defVars (take n F) (take n ans)).
-Proof.
-  intros.
-  symmetry. rewrite <- list_union_disjunct; intros; inv_get.
-  eapply (H n0 n); eauto using zip_get. omega.
-Qed.
-
-Lemma defVars_drop_disj F ans n Zs a
-:  pairwise_ne disj (zip defVars F ans)
-   -> get F n Zs
-   -> get ans n a
-   -> disj (defVars Zs a) (list_union zip defVars (drop (S n) F) (drop (S n) ans)).
-Proof.
-  intros.
-  symmetry. rewrite <- list_union_disjunct; intros; inv_get.
-  eapply (H (S n + n0) n); eauto using zip_get. omega.
-Qed.
-
-Lemma defVars_disj_D F ans D Dt D'
-      (D'def:list_union zip defVars F ans ∪ Dt[=]D')
-      (Ddisj: disj D D')
-: forall n  DD' Zs, get F n Zs -> get ans n DD' ->
-               disj D (defVars Zs DD').
-Proof.
-  intros.
-  eapply disj_2_incl; eauto. rewrite <- D'def.
-  eapply incl_union_left. eapply incl_list_union; eauto using zip_get.
-Qed.
-
-Lemma list_union_take_incl X `{OrderedType X} (L:list (set X)) n
-  : list_union (take n L) ⊆ list_union L.
-Proof.
-  eapply list_union_incl; intros; inv_get; eauto with cset.
-  eapply incl_list_union; eauto.
-Qed.
-
-Lemma D_take_disj F t ans n D D' ant
-  : renamedApart (stmtFun F t) (annF (D, D') ans ant)
-    -> disj D (list_union zip defVars (take n F) (take n ans)).
-Proof.
-  intros.
-  exploit renamedApart_disj; eauto; simpl in *.
-  eapply disj_2_incl; eauto.
-  invt renamedApart.
-  rewrite <- take_zip, list_union_take_incl.
-  rewrite <- H13; eauto with cset.
 Qed.

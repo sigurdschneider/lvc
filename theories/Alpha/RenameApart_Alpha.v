@@ -17,8 +17,8 @@ Proof.
     eapply inverse_on_incl; try eassumption. eauto with cset.
     eapply IH; eauto.
     + rewrite <- H at 3. rewrite lookup_set_update_in_union; eauto.
-      cset_tac; intuition. right.
-      eapply lookup_set_union_incl; eauto. lset_tac.
+      rewrite <- lookup_set_union_incl; eauto; try reflexivity.
+      cset_tac.
     + eapply inverse_on_update_inverse. intuition.
       eapply inverse_on_incl; try eassumption. cset_tac; eauto.
       assert (lookup_set ϱ (freeVars s \ {{x}}) ⊆
