@@ -41,6 +41,10 @@ case "$coq_ver" in
 esac
 echo "Found Coq version $coq_ver."
 
-SOURCES=$(find theories -name \*.v -print | grep -v /\.# | sed -e 's%^\./%%g')
-echo $(cat _CoqProject) src/lvc_plugin.ml4 src/smpl.ml4 $SOURCES  > Make
+SOURCES=$(find theories -name \*.v -print | grep -v /\.# | sed -e 's%^\./%%g' | sort)
+RM=$(for pat in $(cat _blacklist); do echo "$SOURCES" | grep -e $pat ; done | sort)
+FILTERSOURCES=$(comm -23 <(echo "$SOURCES") <(echo "$RM"))
+echo "Removed due to blacklist:"
+echo "$RM"
+echo $(cat _CoqProject) src/lvc_plugin.ml4 src/smpl.ml4 $FILTERSOURCES  > Make
 echo "Make generated."
