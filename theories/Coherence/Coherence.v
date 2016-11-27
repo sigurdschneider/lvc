@@ -220,12 +220,13 @@ Proof.
     + do 2 eexists; eexists x5; split; [| split ]; eauto.
       assert (Len4:❬Some ⊝ (getAnn ⊝ als) \\ (fst ⊝ F)❭ = ❬F❭) by eauto with len.
       rewrite get_app_ge in H1; eauto with len.
-      rewrite get_app_ge in H4; rewrite Len4, map_length, <- LEN1 in *; eauto.
-      inv_get. split.
-      eapply map_get_eq; eauto. simpl; cases; eauto.
-      split; eauto.
-      rewrite <- H5, H9. eauto.
-      rewrite map_length in *; rewrite  <- LEN1; eauto.
+      rewrite get_app_ge in H4. len_simpl. inv_get.
+      split.
+      * eapply map_get_eq; eauto. simpl; cases; eauto.
+      * split; eauto.
+        rewrite <- H5, H9. eauto.
+      * len_simpl. omega.
+      * len_simpl. omega.
 Qed.
 
 Lemma srd_globals_live s ZL Lv DL alv f

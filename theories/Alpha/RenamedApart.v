@@ -245,14 +245,104 @@ Proof.
   eapply incl_union_left. eapply incl_list_union; eauto using zip_get.
 Qed.
 
-Lemma D_take_disj F t ans n D D' ant
+
+Lemma disj_D_defVars F t ans D D' ant
   : renamedApart (stmtFun F t) (annF (D, D') ans ant)
-    -> disj D (list_union zip defVars (take n F) (take n ans)).
+    -> disj D (list_union zip defVars F ans).
 Proof.
   intros.
   exploit renamedApart_disj; eauto; simpl in *.
   eapply disj_2_incl; eauto.
   invt renamedApart.
-  rewrite <- take_zip, list_union_take_incl.
   rewrite <- H13; eauto with cset.
+Qed.
+
+Lemma disj_D_defVars_take F t ans n D D' ant
+  : renamedApart (stmtFun F t) (annF (D, D') ans ant)
+    -> disj D (list_union zip defVars (take n F) (take n ans)).
+Proof.
+  intros.
+  rewrite <- take_zip, list_union_take_incl.
+  eapply disj_D_defVars; eauto.
+Qed.
+
+Lemma disj_D_defVars_drop F t ans n D D' ant
+  : renamedApart (stmtFun F t) (annF (D, D') ans ant)
+    -> disj D (list_union zip defVars (drop n F) (drop n ans)).
+Proof.
+  intros.
+  rewrite <- drop_zip, list_union_drop_incl.
+  eapply disj_D_defVars; eauto.
+Qed.
+
+Hint Extern 5 =>
+      match goal with
+      | [ H : renamedApart ?s ?an, H' : pe (getAnn ?an) (?D, ?D') |- disj ?D' ?D ]
+        => let H'' := fresh "tmp" in
+          pose proof (renamedApart_disj H) as H''; rewrite H' in H''; simpl in H'';
+            symmetry; eapply H''
+      | [ H : renamedApart ?s ?an, H' : pe (getAnn ?an) (?D, ?D') |- disj ?D ?D' ]
+        => let H'' := fresh "tmp" in
+          pose proof (renamedApart_disj H) as H''; rewrite H' in H''; simpl in H'';
+            eapply H''
+      end : cset.
+
+
+Lemma lv_incl_fst_ra D Dt F ans n a Zs als alv lv
+  : Indexwise.indexwise_R (funConstr D Dt) F ans
+    -> ( forall (n : nat) (Zs : params * stmt) (a : ann ⦃var⦄),
+          get F n Zs ->
+          get als n a ->
+          of_list (fst Zs) ⊆ getAnn a /\ getAnn a \ of_list (fst Zs) ⊆ lv)
+    -> get ans n a
+    -> get F n Zs
+    -> get als n alv
+    -> lv ⊆ D
+    -> getAnn alv ⊆ fst (getAnn a).
+Proof.
+  intros IDW ZlvIncl Get1 Get2 Get3 incl. edestruct IDW; eauto; dcr.
+  rewrite H.
+  exploit ZlvIncl; eauto; dcr. rewrite <- incl, <- H5.
+  clear; cset_tac; intuition.
+Qed.
+
+Lemma disj_lv_take lv n F ans als (Zs:params*stmt) alv t D D' ant a
+  : PairwiseDisjoint.pairwise_ne disj (defVars ⊜ F ans)
+    -> get als n alv
+    -> get F n Zs
+    -> get ans n a
+    -> (forall (n : nat) (Zs : params * stmt) (a : ann ⦃var⦄),
+          get F n Zs ->
+          get als n a ->
+          of_list (fst Zs) ⊆ getAnn a /\ getAnn a \ of_list (fst Zs) ⊆ lv)
+    -> lv ⊆ D
+    -> renamedApart (stmtFun F t) (annF (D, D') ans ant)
+    -> disj (getAnn alv) (list_union (defVars ⊜ (take n F) (take n ans))).
+Proof.
+  intros. exploit H3; eauto; dcr.
+  assert (EQ:getAnn alv \ of_list (fst Zs) ∪ of_list (fst Zs)
+                    [=] getAnn alv) by cset_tac.
+  rewrite <- EQ. symmetry. rewrite disj_app. split; symmetry.
+  - eapply disj_1_incl.
+    eapply disj_D_defVars_take; eauto using renamedApart.
+    eauto with cset.
+  - eapply disj_1_incl.
+    eapply defVars_take_disj; eauto. unfold defVars.
+    eauto with cset.
+Qed.
+
+Lemma disj_fst_snd_ra F t D D' ans ant n Zs a
+  : renamedApart (stmtFun F t) (annF (D, D') ans ant)
+    -> get F n Zs
+    -> get ans n a
+    -> disj (fst (getAnn a) ∪ snd (getAnn a))
+           (list_union (defVars ⊜ (drop (S n) F) (drop (S n) ans))).
+Proof.
+  intros RA Get1 Get2. invt renamedApart.
+  edestruct H7; eauto; dcr. rewrite H.
+  rewrite union_comm. rewrite <- union_assoc.
+  symmetry; rewrite disj_app; split; symmetry.
+  - eapply disj_1_incl. eapply defVars_drop_disj; eauto.
+    unfold defVars. clear; cset_tac.
+  - eapply disj_D_defVars_drop; eauto.
 Qed.

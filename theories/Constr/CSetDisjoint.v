@@ -1,6 +1,6 @@
 Require Export Setoid Coq.Classes.Morphisms.
 Require Export Sets SetInterface SetConstructs SetProperties.
-Require Import EqDec CSetNotation CSetTac CSetComputable.
+Require Import EqDec CSetNotation CSetTac CSetBasic CSetComputable.
 
 Set Implicit Arguments.
 
@@ -12,6 +12,14 @@ Proof.
   unfold Symmetric, disj; intros.
   cset_tac; intuition; eauto.
 Qed.
+
+Lemma disj_sym' X `{OrderedType X} s t
+  : disj s t -> disj t s.
+Proof.
+  symmetry; eauto.
+Qed.
+
+Hint Immediate disj_sym' : cset.
 
 Instance disj_eq_eq_iff {X} `{OrderedType X}
 : Proper (Equal ==> Equal ==> iff) disj.
@@ -83,7 +91,7 @@ Proof.
   eauto.
 Qed.
 
-Hint Resolve disj_incl : cset.
+Hint Resolve disj_incl disj_1_incl disj_2_incl : cset.
 
 Lemma in_disj_absurd X `{OrderedType X} (s t: set X) x
 : x ∈ s -> x ∈ t -> disj s t -> False.
@@ -173,3 +181,50 @@ Proof.
   intros. hnf; intros. specialize (H0 x).
   cset_tac.
 Qed.
+
+Lemma disj_union_left X `{OrderedType X} s t u
+  : disj s t -> disj s u -> disj (t ∪ u) s.
+Proof.
+  intros. symmetry. eapply disj_app; eauto.
+Qed.
+
+Lemma disj_union_right X `{OrderedType X} s t u
+  : disj s t -> disj s u -> disj s (t ∪ u).
+Proof.
+  intros. eapply disj_app; eauto.
+Qed.
+
+Hint Resolve disj_union_left disj_union_right : cset.
+
+Lemma disj_add_swap X `{OrderedType X} x D Ds :
+  x ∉ D
+  -> disj {x; D} Ds
+  -> disj D {x; Ds}.
+Proof.
+  unfold disj. cset_tac.
+Qed.
+
+Hint Resolve disj_add_swap : cset.
+
+Lemma minus_incl_disj_eq X `{OrderedType X} s t u
+  : s [=] t ∪ u
+    -> disj t u
+    -> s \ t ⊆ u.
+Proof.
+  cset_tac; firstorder.
+Qed.
+
+Hint Resolve minus_incl_disj_eq : cset.
+
+Hint Resolve disj_not_in disj_struct_1
+     disj_struct_1_r disj_struct_2 disj_struct_2_r : cset.
+
+Hint Extern 0 =>
+match goal with
+| [ H : disj ?s ?t |- disj ?s' ?t ] => eapply disj_1_incl
+| [ H : disj ?s ?t |- disj ?s' (?t \ _)  ] => eapply (disj_2_incl H); eapply incl_minus
+| [ H : disj ({ _ ; ?s} ∪ _) _ |- disj ?s ?t ] =>
+  is_evar t; eapply (disj_1_incl H); eapply incl_union_left, incl_add_right, reflexivity
+| [ H : disj ?s ?t |- disj ?s (_ ∪ ?t ∪ _) ] =>
+  eapply (disj_2_incl H); eapply incl_union_left; eapply incl_right
+end : cset.

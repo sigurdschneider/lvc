@@ -233,14 +233,12 @@ Qed.
 
 Require Import Drop.
 
-Lemma list_union_drop_incl X `{OrderedType X} (L L':list (set X)) n
-: list_union (drop n L) ⊆ list_union (drop n L')
-  -> list_union (drop n L) ⊆ list_union L'.
+Lemma list_union_drop_incl X `{OrderedType X} (L:list (set X)) n
+: list_union (drop n L) ⊆ list_union L.
 Proof.
   intros; hnf; intros.
-  eapply H0 in H1.
   edestruct list_union_get; eauto; dcr.
-  eapply incl_list_union. eauto using get_drop. reflexivity. eauto.
+  eapply incl_list_union; eauto using get_drop. reflexivity.
   cset_tac; intuition.
 Qed.
 

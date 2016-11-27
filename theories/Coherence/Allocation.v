@@ -383,15 +383,15 @@ Proof.
         rewrite <- incl_add'; eauto.
       * erewrite (@restrict_incl_ext _ (getAnn al)); eauto.
         instantiate (1:=getAnn al \ singleton x).
-        eapply list_eq_special. rewrite <- H9. cset_tac; intuition.
+        eapply list_eq_special. eauto.
         rewrite lookup_set_minus_incl_inj; eauto. rewrite <- minus_inane_set.
         instantiate (1:={ϱ x}). eapply incl_minus_lr; eauto.
         rewrite lookup_set_minus_incl; eauto with cset.
         rewrite lookup_set_singleton'; eauto.
-        rewrite meet_comm. eapply meet_minus. eauto.
+        rewrite meet_comm. eapply meet_minus.
         assert (getAnn al [=] getAnn al ∪ singleton x). cset_tac; intuition.
         rewrite <- H0. eauto using locally_injective.
-        cset_tac; intuition.
+        simpl; cset_tac; intuition.
   - econstructor. simpl in *.
     + eapply srd_monotone.
       eapply IHRI1; eauto using Subset_trans, lookup_set_incl; eauto;
@@ -426,12 +426,9 @@ Proof.
         inv_get.
         exploit H19; eauto using get_range.
         edestruct renamedApart_globals_live_From; try eapply H27; eauto.
-        pe_rewrite. eauto with cset.
-        eapply renamedApart_disj in SSA. eauto.
-        eapply bounded_disjoint; eauto.
-        eapply renamedApart_disj in SSA. eauto.
-        dcr; simpl in *. inv_get.
-        rewrite H32. eauto.
+        pe_rewrite. eauto with cset. eauto with cset.
+        eapply bounded_disjoint; eauto. eauto with cset.
+        dcr; simpl in *. inv_get. eauto with cset.
     + eapply srd_monotone2. simpl in * |- *.
       eapply IHRI; eauto.
       rewrite H15; simpl in * |- *; eauto.

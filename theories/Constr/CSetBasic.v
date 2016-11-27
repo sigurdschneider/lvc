@@ -516,7 +516,7 @@ Qed.
 Lemma union_eq_decomp X `{OrderedType X} s s' t t'
 : s [=] s' -> t [=] t' -> s ∪ t [=] s' ∪ t'.
 Proof.
-  cset_tac; intros; firstorder.
+  intros A B; rewrite A, B; eauto.
 Qed.
 
 Lemma add_struct_incl X `{OrderedType X} x s t
@@ -669,4 +669,40 @@ Qed.
 Lemma incl_union_incl X `{OrderedType X} s t u w
   : t ∪ u ⊆ w -> s ⊆ t -> s ⊆ w.
   cset_tac. eapply H0; cset_tac.
+Qed.
+
+Lemma incl_union_right X `{OrderedType X} s t u
+: s ⊆ t -> s ⊆ u ∪ t.
+Proof.
+  cset_tac; intuition.
+Qed.
+
+Arguments incl_union_right X [H] s t u _ _ _ .
+
+Lemma incl_union_left X `{OrderedType X} s t u
+: s ⊆ t -> s ⊆ t ∪ u.
+Proof.
+  cset_tac; intuition.
+Qed.
+
+Arguments incl_union_left X [H] s t u _ _ _ .
+
+Lemma incl_add_right X `{OrderedType X} s t x
+: s ⊆ t -> s ⊆ {x; t}.
+Proof.
+  cset_tac; intuition.
+Qed.
+
+
+Lemma in_add_left X `{OrderedType X} s x
+: x ∈ {x; s}.
+Proof.
+  cset_tac; intuition.
+Qed.
+
+Lemma to_list_nil {X} `{OrderedType X}
+  : to_list ∅ = nil.
+Proof.
+  eapply elements_Empty.
+  cset_tac; intuition.
 Qed.

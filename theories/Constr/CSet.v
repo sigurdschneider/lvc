@@ -164,7 +164,6 @@ Proof.
   - dcr. erewrite cardinal_2; eauto.
 Qed.
 
-
 Lemma cardinal_map {X} `{OrderedType X} {Y} `{OrderedType Y} (s: set X) (f:X -> Y) `{Proper _ (_eq ==> _eq) f}
 : SetInterface.cardinal (SetConstructs.map f s) <= SetInterface.cardinal s.
 Proof.
@@ -218,58 +217,15 @@ Hint Extern 20 => match goal with
                  | [ H: ?x === ?x -> False |- _ ] => exfalso; eapply H; reflexivity
                  end.
 
-Lemma incl_union_right X `{OrderedType X} s t u
-: s ⊆ t -> s ⊆ u ∪ t.
-Proof.
-  cset_tac; intuition.
-Qed.
-
-Arguments incl_union_right X [H] s t u _ _ _ .
-
-Lemma incl_union_left X `{OrderedType X} s t u
-: s ⊆ t -> s ⊆ t ∪ u.
-Proof.
-  cset_tac; intuition.
-Qed.
-
-Arguments incl_union_left X [H] s t u _ _ _ .
-
-Lemma incl_add_right X `{OrderedType X} s t x
-: s ⊆ t -> s ⊆ {x; t}.
-Proof.
-  cset_tac; intuition.
-Qed.
-
-
-Lemma in_add_left X `{OrderedType X} s x
-: x ∈ {x; s}.
-Proof.
-  cset_tac; intuition.
-Qed.
-
-Lemma to_list_nil {X} `{OrderedType X}
-  : to_list ∅ = nil.
-Proof.
-  eapply elements_Empty.
-  cset_tac; intuition.
-Qed.
-
-
 Hint Resolve incl_union_left incl_union_right incl_add_right in_add_left
      union_left union_right get_list_union_map : cset.
 Hint Resolve prod_eq_intro : cset.
-Hint Resolve disj_not_in incl_singleton: cset.
+Hint Resolve incl_singleton: cset.
 Hint Resolve incl_empty : cset.
-
-Hint Resolve add_struct_eq union_struct_eq_1 union_struct_eq_2 disj_struct_1
-     disj_struct_1_r disj_struct_2 disj_struct_2_r : cset.
-
+Hint Resolve add_struct_eq union_struct_eq_1 union_struct_eq_2 : cset.
 Hint Resolve union_incl_split : cset.
-
-
 Hint Resolve not_in_minus : cset.
 Hint Resolve not_incl_minus : cset.
-Hint Resolve disj_1_incl disj_2_incl : cset.
 
 (* general hints *)
 
@@ -305,12 +261,6 @@ Qed.
 
 Hint Extern 0 =>
 match goal with
-| [ H : disj ?s ?t |- disj ?s' ?t ] => eapply disj_1_incl
-| [ H : disj ?s ?t |- disj ?s' (?t \ _)  ] => eapply (disj_2_incl H); eapply incl_minus
-| [ H : disj ({ _ ; ?s} ∪ _) _ |- disj ?s ?t ] =>
-  is_evar t; eapply (disj_1_incl H); eapply incl_union_left, incl_add_right, reflexivity
-| [ H : disj ?s ?t |- disj ?s (_ ∪ ?t ∪ _) ] =>
-  eapply (disj_2_incl H); eapply incl_union_left; eapply incl_right
 | [ H1 : ?s ⊆ ?t, H2: ?t ⊆ ?u |- ?s ⊆ ?u] => eapply (Subset_trans H1 H2)
 | [ H : ?t [=] ?s ∪ ?u |- ?s ⊆ ?t] => eapply (incl_from_union_eq H)
 end : cset.
@@ -341,36 +291,10 @@ match goal with
 |  [ |- pe (_, _) (_,_) ] => constructor
 end : pe.
 
-Lemma disj_add_swap X `{OrderedType X} x D Ds :
-  x ∉ D
-  -> disj {x; D} Ds
-  -> disj D {x; Ds}.
-Proof.
-  unfold disj. cset_tac.
-Qed.
-
-Lemma disj_union_right X `{OrderedType X} s t u
-  : disj s t -> disj s u -> disj s (t ∪ u).
-Proof.
-  intros. eapply disj_app; eauto.
-Qed.
-
-Hint Resolve disj_add_swap disj_union_right : cset.
-
-Hint Immediate disj_sym : cset.
-
 Lemma add_single_rm_single_incl X `{OrderedType X} x D
   : {x; D} \ singleton x ⊆ D.
 Proof.
   cset_tac.
-Qed.
-
-Lemma minus_incl_disj_eq X `{OrderedType X} s t u
-  : s [=] t ∪ u
-    -> disj t u
-    -> s \ t ⊆ u.
-Proof.
-  cset_tac; firstorder.
 Qed.
 
 Lemma minus_incl_add X `{OrderedType X} x (s t:set X)
@@ -394,7 +318,7 @@ Proof.
   cset_tac.
 Qed.
 
-Hint Resolve minus_incl_add add_single_rm_single_incl minus_incl_disj_eq
+Hint Resolve minus_incl_add add_single_rm_single_incl
      incl_minus_single_not_in minus_minus_minus_add equiv_minus_union
   : cset.
 

@@ -256,6 +256,23 @@ Lemma sep_update_cmap k c (LE : k < c) x lv lv' (ϱ:Map[var,var])
   rewrite incl. unfold var in *. omega.
 Qed.
 
+Lemma disj_fst_snd_Dt D Dt F ans t ant a n Zs
+  : Indexwise.indexwise_R (funConstr D Dt) F ans
+    -> renamedApart t ant
+    -> pe (getAnn ant) (D, Dt)
+    -> get F n Zs
+    -> get ans n a
+    -> disj (fst (getAnn a) ∪ snd (getAnn a)) Dt.
+Proof.
+  intros IDW RA PE Get1 Get2.
+  edestruct IDW; eauto; dcr. rewrite H.
+  rewrite union_comm. rewrite <- union_assoc.
+  symmetry; rewrite disj_app; split;
+    symmetry.
+  - rewrite union_comm; eauto.
+  - eauto with cset.
+Qed.
+
 Lemma regAssign_correct k c (LE:k < c) (ϱ:Map [var,var]) ZL Lv s alv ϱ' al
       (LS:live_sound FunctionalAndImperative ZL Lv s alv)
       (inj:injective_on (getAnn alv) (findt ϱ 0))
@@ -267,8 +284,9 @@ Lemma regAssign_correct k c (LE:k < c) (ϱ:Map [var,var]) ZL Lv s alv ϱ' al
 : locally_inj (findt ϱ' 0) s alv.
 Proof.
   intros.
-  general induction LS; simpl in *; try monadS_inv allocOK; invt renamedApart; invt ann_P;
-    pe_rewrite; simpl in *.
+  general induction LS; simpl in *;
+    try monadS_inv allocOK; invt renamedApart; invt ann_P;
+      pe_rewrite; simpl in *.
   - exploit IHLS; try eapply allocOK; pe_rewrite;
       eauto using injective_on_update_cmap_fresh, sep_update_cmap,
       injective_on_incl with cset.
@@ -288,7 +306,6 @@ Proof.
     exploit regAssign_renamedApart_agree;
       try eapply EQ0; simpl; eauto using live_sound.
     pe_rewrite.
-    simpl in *.
     exploit IHLS1; try eapply EQ; eauto using injective_on_incl.
     rewrite H11; simpl. rewrite <- incl; eauto.
     exploit IHLS2; try eapply EQ0; eauto using injective_on_incl.
@@ -297,20 +314,17 @@ Proof.
     eapply sep_agree; eauto using agree_on_incl.
     rewrite H12; simpl. rewrite <- incl; eauto.
     econstructor; eauto.
-    assert (agree_on eq D (findt ϱ 0) (findt ϱ' 0)). etransitivity; eauto.
-    eapply injective_on_agree; eauto. eauto using agree_on_incl.
-    eapply locally_inj_live_agree. eauto. eauto. eauto.
-    rewrite H11; simpl; eauto.
-    exploit regAssign_renamedApart_agree'; try eapply EQ0; simpl; eauto using live_sound.
-    pe_rewrite.
-    eapply agree_on_incl. eauto. instantiate (1:=D ∪ Ds).
-    pose proof (renamedApart_disj H9).
-    pe_rewrite.
-    revert H6 H17; clear_all; cset_tac; intuition; eauto.
-    pe_rewrite. rewrite <- incl; eauto.
+    + assert (agree_on eq D (findt ϱ 0) (findt ϱ' 0)). {
+        etransitivity; eauto.
+      }
+      eapply injective_on_agree; eauto using agree_on_incl.
+    + eapply locally_inj_live_agree; eauto; pe_rewrite;[| eauto with cset].
+      exploit regAssign_renamedApart_agree';
+        try eapply EQ0; simpl; eauto using live_sound.
+      pe_rewrite. instantiate (1:=D ∪ Ds) in H16.
+      eapply agree_on_incl; eauto with cset.
   - econstructor; eauto.
   - econstructor; eauto.
-
   - exploit regAssign_renamedApart_agreeF;
     eauto using regAssign_renamedApart_agree'. reflexivity.
     exploit regAssign_renamedApart_agree;
@@ -318,28 +332,22 @@ Proof.
     instantiate (1:=D) in H4.
     assert (AGR:agree_on _eq lv (findt ϱ 0) (findt x 0)). {
       eapply agree_on_incl; eauto.
-      rewrite disj_minus_eq; eauto. simpl in *.
-      symmetry. rewrite <- list_union_disjunct.
-      intros; inv_get. edestruct H8; eauto; dcr.
-      unfold defVars. symmetry. eapply disj_app; split; eauto.
-      symmetry; eauto.
-      exploit H7; eauto. eapply renamedApart_disj in H20.
-      eapply disj_1_incl; eauto. rewrite H19. eauto with cset.
+      rewrite disj_minus_eq; eauto using disj_D_defVars.
     }
     exploit (IHLS k c); try eapply EQ0; eauto.
     + eapply injective_on_incl; eauto.
       eapply injective_on_agree; eauto.
     + pe_rewrite. etransitivity; eauto.
     + assert (DDISJ:forall n  DD' Zs, get F n Zs -> get ans n DD' ->
-                              disj D (defVars Zs DD')).
-      {
+                              disj D (defVars Zs DD')). {
         eapply renamedApart_disj in sd. eauto using defVars_disj_D.
       }
 
       econstructor; eauto.
       * {
           intros. edestruct get_length_eq; try eapply H6; eauto.
-          edestruct (regAssignF_get c (fst (getAnn x0) ∪ snd (getAnn x0) ∪ getAnn alv)); eauto; dcr.
+          edestruct (regAssignF_get c (fst (getAnn x0) ∪ snd (getAnn x0)
+                                           ∪ getAnn alv)); eauto; dcr.
           rewrite <- map_update_list_update_agree in H24; eauto.
           exploit (H1 _ _ _ H17 H18 k c); try eapply H19; eauto.
           - assert (getAnn alv \ of_list (fst Zs) ∪ of_list (fst Zs) [=] getAnn alv).
@@ -350,99 +358,56 @@ Proof.
             eapply agree_on_incl.
             eauto. rewrite <- incl_right.
             rewrite disj_minus_eq; eauto.
-            eapply renamedApart_disj in sd.
+            eapply disj_lv_take; eauto.
             simpl in *.
-            rewrite <- H20. symmetry. rewrite disj_app. split; symmetry.
-            eapply disj_1_incl. eapply disj_2_incl. eapply sd.
-            rewrite <- H13. eapply incl_union_left.
-            hnf; intros ? A. eapply list_union_get in A. destruct A. dcr.
-            inv_get.
-            eapply incl_list_union; eauto using zip_get.
-            reflexivity. cset_tac.
-            edestruct H2; eauto; dcr. rewrite <- incl. eauto.
-            eapply disj_1_incl.
-            eapply defVars_take_disj; eauto. unfold defVars.
-            eauto with cset.
             setoid_rewrite <- H20 at 1.
             eapply injective_on_fresh_list; eauto with len.
-            eapply injective_on_incl; eauto.
-            eapply H2; eauto.
-            eapply disj_intersection.
-            eapply disj_2_incl. eapply fresh_list_P_spec.
-            eapply sep_nd; eauto.
-            edestruct H2; eauto. clear; hnf; intros; cset_tac.
-            edestruct H8; eauto.
-            edestruct H2; eauto; dcr.
-            exploit H15; eauto. eapply ann_P_get in H26. hnf in H26.
-            eapply crd_of_list; eauto.
-            reflexivity.
-            edestruct H8; eauto.
-            eapply fresh_list_nodup; eauto.
-            eapply sep_nd; eauto.
-            edestruct H2; eauto. clear; hnf; intros; cset_tac.
-            edestruct H8; eauto.
-            edestruct H2; eauto; dcr.
-            eapply crd_of_list; eauto.
-            exploit H15; eauto. eapply ann_P_get in H26. eauto.
+            + eapply injective_on_incl; eauto.
+              eapply H2; eauto.
+            + eapply disj_intersection.
+              eapply disj_2_incl. eapply fresh_list_P_spec.
+              eapply sep_nd; eauto.
+              edestruct H2; eauto. clear; hnf; intros; cset_tac.
+              edestruct H8; eauto.
+              edestruct H2; eauto; dcr.
+              exploit H15; eauto. eapply ann_P_get in H26. hnf in H26.
+              eapply crd_of_list; eauto.
+              reflexivity.
+            + edestruct H8; eauto.
+            + eapply fresh_list_nodup; eauto.
+              eapply sep_nd; eauto.
+              edestruct H2; eauto. clear; hnf; intros; cset_tac.
+              edestruct H8; eauto.
+              edestruct H2; eauto; dcr.
+              eapply crd_of_list; eauto.
+              exploit H15; eauto. eapply ann_P_get in H26. eauto.
           - edestruct H2; eauto.
             rewrite map_update_list_update_agree' in H24; eauto with len.
             eapply sep_agree.
             eapply agree_on_incl; eauto.
-            edestruct H8; eauto; dcr. rewrite H25. rewrite <- incl. rewrite <- H23.
+            edestruct H8; eauto; dcr. rewrite H25, <- incl, <- H23.
             eapply not_incl_minus. clear; cset_tac.
-            assert (getAnn alv [=] of_list (fst Zs) ∪ getAnn alv \ of_list (fst Zs)). {
-              revert H20; clear; cset_tac.
-            }
-            rewrite H26. symmetry; eapply disj_app; split.
-            symmetry. eapply disj_1_incl.
-            eapply defVars_take_disj; eauto. unfold defVars. cset_tac.
-            symmetry.
-
-            eapply disj_1_incl. eapply D_take_disj; eauto.
-            rewrite <- incl, <- H23. eauto.
-            edestruct H8; eauto; dcr.
+            eapply disj_lv_take; eauto.
             eapply sep_update_list; eauto.
             intros ? ? ?.
             eapply sep_lookup_list; eauto using sep_incl.
-            edestruct H2; eauto; dcr.
+            edestruct H8; eauto; dcr.
             eapply crd_of_list; eauto.
-            exploit H15; eauto. eapply ann_P_get in H31. eauto.
-          - edestruct H8; eauto; dcr. rewrite H20.
-            exploit H2; eauto; dcr. rewrite incl in H29; simpl in *.
-            rewrite <- H29. clear_all; cset_tac; intuition.
+            exploit H15 as AN; eauto. eapply ann_P_get in AN. eauto.
+          - eapply lv_incl_fst_ra; eauto.
           - eapply locally_inj_live_agree; try eapply H20; eauto.
             eapply regAssign_renamedApart_agreeF in H21;
               eauto using get_drop, drop_length_stable; try reflexivity.
             + eapply regAssign_renamedApart_agree' in EQ0; simpl; eauto using live_sound.
               etransitivity; eapply agree_on_incl; try eassumption.
               * rewrite disj_minus_eq. reflexivity.
-                {
-                  edestruct H8; eauto; dcr. rewrite H23.
-                  rewrite union_comm. rewrite <- union_assoc.
-                  symmetry; rewrite disj_app; split; symmetry.
-                  - eapply disj_1_incl. eapply defVars_drop_disj; eauto.
-                    unfold defVars. eauto with cset.
-                  - eapply renamedApart_disj in sd; simpl in sd.
-                    eapply disj_2_incl; eauto.
-                    rewrite <- H13. eapply incl_union_left.
-                    rewrite <- drop_zip; eauto.
-                    eapply list_union_drop_incl; eauto.
-                }
+                eapply disj_fst_snd_ra; eauto.
               * pe_rewrite.
                 rewrite disj_minus_eq. reflexivity.
-                {
-                  edestruct H8; eauto; dcr. rewrite H23.
-                  rewrite union_comm. rewrite <- union_assoc.
-                  symmetry; rewrite disj_app; split; symmetry.
-                  rewrite union_comm; eauto.
-                  eapply renamedApart_disj in H10. pe_rewrite. eapply H10.
-                }
+                eapply disj_fst_snd_Dt; eauto.
             + intros.
               eapply regAssign_renamedApart_agree'; eauto using get_drop, drop_get.
-            + intros. edestruct H8; eauto; dcr. rewrite H23.
-              exploit H2; eauto; dcr. rewrite incl in H30. simpl in *.
-              revert H30; clear_all; cset_tac; intuition.
-              decide (a ∈ of_list (fst Zs)); intuition.
+            + eapply lv_incl_fst_ra; eauto.
           - eauto with len.
         }
       * eapply injective_on_agree; try eapply inj; eauto.

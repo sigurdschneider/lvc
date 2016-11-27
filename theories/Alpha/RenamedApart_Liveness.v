@@ -26,8 +26,7 @@ Proof.
     with ann pe cset.
   - eauto using live_sound, live_op_sound_incl, Op.live_freeVars.
   - inv_get.
-    econstructor; simpl;
-      eauto using live_op_sound_incl, Op.live_freeVars, get_list_union_map with cset.
+    econstructor; simpl; eauto using get_live_op_sound.
   - econstructor; eauto with len.
     + intros; inv_get. eapply H1; eauto with len.
     + intros; inv_get. edestruct H2; eauto; dcr.
@@ -69,8 +68,7 @@ Proof.
   - econstructor; eauto using live_op_sound_incl, Op.live_freeVars with cset pe ann.
   - econstructor; eauto using live_op_sound_incl, Op.live_freeVars with cset.
   - inv_get.
-    econstructor; simpl;
-    eauto using live_op_sound_incl, Op.live_freeVars, get_list_union_map with cset.
+    econstructor; simpl; eauto using get_live_op_sound.
     + cases; eauto.
       eapply bounded_get; eauto using map_get_1.
   - assert (bounded (Some ⊝ (getAnn ⊝ mapAnn fst ⊝ ans ++ Lv) \\ (fst ⊝ F ++ ZL)) D). {
@@ -284,7 +282,8 @@ Proof.
           eapply zip_get; eauto.
           reflexivity. reflexivity.
         }
-        eapply not_incl_minus; eauto with cset.
+        eapply not_incl_minus; eauto.
+        eapply disj_2_incl; eauto.
 Qed.
 
 Lemma renamedApart_globals_live s ZL Lv alv f ang
