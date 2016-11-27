@@ -302,9 +302,9 @@ Proof.
     repeat let_case_eq; repeat let_pair_case_eq; simpl in * |- *; subst.
     decide (length Z = length Y).
     + case_eq (omap (op_eval E) Y); [ intros | intros; pno_step; eauto ].
-      exploit (SIML l (LabI f')); eauto using zip_get with len.
+      exploit (SIML l (LabI f')); eauto using zip_get.
       simpl. eauto using zip_get.
-      simpl. eauto with len.
+      simpl. eauto with len. eauto with len. eauto with len.
       erewrite get_nth; [| eauto]; eauto using zip_get.
     + pno_step; simpl in *.
       erewrite get_nth in Ldef; eauto. get_functional. eauto.
@@ -346,18 +346,16 @@ Proof.
         simpl in *.
         orewrite (f - I.block_n b - ❬F❭ = f - ❬F❭ - I.block_n b).
         eauto. rewrite mapi_length. simpl in *. omega.
-        rewrite map_length; eauto.
-        rewrite mapi_length. eauto.
+        eauto with len. eauto with len.
     }
     eapply IH; eauto with len.
-    + rewrite app_length, mapi_length; eauto.
     + rewrite zip_app; eauto with len.
       eapply simILabenv_extension; eauto 10 with len.
       intros.
       intros ? ? ? ? ? ? ? ? RN GetF GetL' GetA. simpl.
       inv_get. simpl in *; dcr; subst.
       destruct RN; dcr. subst.
-      rewrite get_app_lt in H2; eauto 20 using get_range with len.
+      rewrite get_app_lt in H2; eauto.
       inv_get; simpl in *. unfold plus' in GetL'.
       eapply drop_get in GetL'.
       rewrite DROP in GetL'. repeat rewrite mapi_app in GetL'.
@@ -382,6 +380,7 @@ Proof.
         rewrite egalize_funs_length1 in DROP.
         rewrite drop_drop in DROP.
         rewrite DROP. f_equal. f_equal. rewrite plus_comm. eauto.
+      * eauto with len.
       * hnf; intros. simpl.
         inv_get. simpl. destruct H; dcr.
         rewrite get_app_lt in H4; eauto 20 using get_range with len.

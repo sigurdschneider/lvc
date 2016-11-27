@@ -719,7 +719,17 @@ Ltac len_simpl_basic :=
   | [ H : context [ ❬?f ⊝ ?L❭ ] |- _ ] => rewrite (@map_length _ _ f L) in H
   | [ H : context [ ❬?f ⊜ ?L ?L'❭ ] |- _ ] => rewrite (@zip_length _ _ _ f L L') in H
   | [ H : context [ ❬@rev ?A ?L❭ ] |- _ ] => rewrite (@rev_length A L) in H
+  | [ H : context [ ❬@mapi ?X ?Y ?f ?L❭ ] |- _ ] => rewrite (@mapi_length X Y f L) in H
+  | [ |- context [ ❬@mapi ?X ?Y ?f ?L❭ ] ] => rewrite (@mapi_length X Y f L)
+  | [ H : context [ ❬@mapi_impl ?X ?Y ?f ?n ?L❭ ] |- _ ] =>
+    rewrite (@mapi_impl_length X Y f L n) in H
+  | [ |- context [ ❬@mapi_impl ?X ?Y ?f ?n ?L❭ ] ] =>
+    rewrite (@mapi_impl_length X Y f L n)
   | [ |- context [ ❬@rev ?A ?L❭ ] ] => rewrite (@rev_length A L)
+  | [ |- context [Init.Nat.min ?n ?n] ] =>
+    rewrite (@min_idempotent_eq _ _ (eq_refl n))
+  | [ H : context [Init.Nat.min ?n ?n] |- _ ] =>
+    rewrite (@min_idempotent_eq _ _ (eq_refl n)) in H
   | [ H : ❬?L❭ = ❬?L'❭ |- context [Init.Nat.min ❬?L❭ ❬?L'❭] ] =>
     rewrite (@min_idempotent_eq _ _ H)
   | [ H : ❬?L❭ = ❬?L'❭, H' : context [Init.Nat.min ❬?L❭ ❬?L'❭] |- _ ] =>
