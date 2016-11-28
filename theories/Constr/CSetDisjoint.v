@@ -126,10 +126,7 @@ Lemma disj_eq_minus X `{OrderedType X} (s t u: set X)
   -> s [=] t \ u.
 Proof.
   unfold disj.
-  cset_tac; intuition; eauto.
-  - eapply H0; eauto.
-  - eapply H1; intuition; eauto. eapply H0; eauto.
-  - eapply H0; eauto.
+  cset_tac.
 Qed.
 
 Lemma disj_struct_1 X `{OrderedType X} s t u
@@ -163,7 +160,7 @@ Qed.
 Lemma disj_intersection X `{OrderedType X} s t
   : disj s t <-> s ∩ t [=] ∅.
 Proof.
-  intros. split; cset_tac; firstorder.
+  cset_tac. hnf; intros. cset_tac.
 Qed.
 
 Lemma not_incl_minus X `{OrderedType X} (s t u: set X)
@@ -211,7 +208,7 @@ Lemma minus_incl_disj_eq X `{OrderedType X} s t u
     -> disj t u
     -> s \ t ⊆ u.
 Proof.
-  cset_tac; firstorder.
+  intros A B. rewrite A; cset_tac.
 Qed.
 
 Hint Resolve minus_incl_disj_eq : cset.

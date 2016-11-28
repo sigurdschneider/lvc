@@ -9,20 +9,20 @@ Section theorems.
   Lemma in_add_case s (x y:X)
     : y ∈ {{x}} ∪ s -> x===y \/ (x =/= y /\ y ∈ s).
   Proof.
-    decide (x===y); cset_tac; firstorder.
+    cset_tac.
   Qed.
 
   Lemma in_in_neq s (x y:X)
     : x ∈ s -> ~y ∈ s -> x =/= y.
   Proof.
-    cset_tac; firstorder.
+    cset_tac.
   Qed.
 
   Lemma minus_inane s (x:X)
     : x ∉ s
     -> s [=] (s\{{x}}).
   Proof.
-    repeat (cset_tac; firstorder).
+    cset_tac.
   Qed.
 
   Lemma incl_set_decomp (s t:set X)
@@ -34,27 +34,26 @@ Section theorems.
   Lemma incl_union_minus (s t:set X)
     : s ⊆ (t ∪ (s \ t)).
   Proof.
-    cset_tac; firstorder.
+    cset_tac.
   Qed.
 
   Lemma union_minus s (x:X)
     : x ∉ s -> s [=] ({{x}} ∪ s) \ {{x}}.
   Proof.
-    repeat (cset_tac; firstorder).
+    cset_tac.
   Qed.
 
   Lemma set_fact_1 s t (x:X)
     : x ∉ t
     -> {{x}} ∪ (s \ ({{x}} ∪ t)) [=] {{x}} ∪ s \ t.
   Proof.
-    intros. cset_tac; firstorder. cset_tac.
-    decide (a===x); firstorder.
+    cset_tac.
   Qed.
 
   Lemma incl_not_in (x:X) s t
     : x ∉ s -> s\{{x}} ⊆ t -> s ⊆ t.
   Proof.
-    cset_tac. specialize (H1 a). cset_tac; firstorder.
+    cset_tac. specialize (H1 a). cset_tac.
   Qed.
 
 
@@ -63,9 +62,7 @@ Section theorems.
     -> c ∪ (c' \ (c \ d)) [=] c'.
   Proof.
     cset_tac.
-    decide(a ∈ c). firstorder.
-    set (b:=c\d). assert (a ∉ b). subst b. cset_tac; firstorder.
-    cset_tac; firstorder.
+    decide(a ∈ c); cset_tac.
   Qed.
 
   Lemma minus_incl_meet_special (c c' d : set X)

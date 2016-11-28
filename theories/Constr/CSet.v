@@ -8,6 +8,40 @@ Set Implicit Arguments.
 (* idk who added this *)
 Remove Hints trans_eq_bool.
 
+Lemma minus_de_morgan X `{OrderedType X} x s t
+  : (x \In s /\ (x \In t -> False) -> False)
+    <-> ((x \In s -> False) \/ (x \In t)).
+Proof.
+  split; intros; dcr.
+  - decide (x ∈ s); decide (x ∈ t); eauto.
+  - intuition.
+Qed.
+
+Lemma in_dneg X `{OrderedType X} M x
+  : x ∈ M <-> ~x ∉ M.
+Proof.
+  split; repeat intro; eauto.
+  decide (x ∈ M); eauto.
+  exfalso; eauto.
+Qed.
+
+Lemma in_dneg' X `{OrderedType X} M x
+  : x ∈ M <-> ((x ∈ M -> False )->False).
+Proof.
+  split; repeat intro; eauto.
+  decide (x ∈ M); eauto.
+  exfalso; eauto.
+Qed.
+
+Smpl Add match goal with
+         | [ |- context [(_ \In _ -> False) -> False] ] =>
+           setoid_rewrite <- in_dneg'
+         | [ |- context [(_ \In _ -> False) -> False] ] =>
+           setoid_rewrite <- in_dneg'
+         | [ |- context [(_ ∉ _) -> False] ] =>
+           setoid_rewrite <- in_dneg
+         end : cset.
+
 Hint Resolve incl_empty minus_incl incl_right incl_left : auto.
 
 Definition pe X `{OrderedType X} := prod_eq (@Equal X _ _) (@Equal X _ _).
@@ -164,6 +198,38 @@ Proof.
   - dcr. erewrite cardinal_2; eauto.
 Qed.
 
+Instance map_morph_Equal X `{OrderedType X} Y `{OrderedType Y}
+         (f : X -> Y) `{Proper _ (_eq ==> _eq) f}
+  : Proper (Equal ==> Equal) (map f).
+Proof.
+  unfold Proper, respectful; intros.
+  cset_tac.
+Qed.
+
+Instance map_morph_Subset X `{OrderedType X} Y `{OrderedType Y}
+         (f : X -> Y) `{Proper _ (_eq ==> _eq) f}
+  : Proper (Subset ==> Subset) (map f).
+Proof.
+  unfold Proper, respectful; intros.
+  cset_tac.
+Qed.
+
+
+Instance In_morph_Subset Y `{OrderedType Y}
+  : Proper (_eq ==> Subset ==> impl) In.
+Proof.
+  unfold Proper, respectful, impl; intros.
+  eapply H1. rewrite <- H0; eauto.
+Qed.
+
+Instance In_morph_Equal Y `{OrderedType Y}
+  : Proper (_eq ==> Equal ==> iff) In.
+Proof.
+  unfold Proper, respectful, impl; intros.
+  rewrite H0. cset_tac.
+Qed.
+
+
 Lemma cardinal_map {X} `{OrderedType X} {Y} `{OrderedType Y} (s: set X) (f:X -> Y) `{Proper _ (_eq ==> _eq) f}
 : SetInterface.cardinal (SetConstructs.map f s) <= SetInterface.cardinal s.
 Proof.
@@ -174,30 +240,27 @@ Proof.
   - intros.
     erewrite (SetProperties.cardinal_2 H3 H4); eauto.
     decide (f x ∈ SetConstructs.map f s0).
-    + assert (SetConstructs.map f s0 [=] {f x; SetConstructs.map f s0}) by cset_tac.
+    + assert (SetConstructs.map f s0 [=] {f x; SetConstructs.map f s0}). {
+        cset_tac. setoid_rewrite <- H8. eauto.
+      }
       rewrite <- H2. rewrite H5.
-      assert (SetConstructs.map f s' ⊆ {f x; SetConstructs.map f s0}).
-      hnf; intros.
-      eapply map_iff in H6.
-      cset_tac; intuition; eauto.
-      specialize (H4 x0). eapply H4 in H8. destruct H8.
-      left. rewrite H6; eauto.
-      right. eapply map_iff; eauto. eauto.
+      assert (SetConstructs.map f s' ⊆ {f x; SetConstructs.map f s0}). {
+        hnf; intros. rewrite H5. eapply Add_Equal in H4.
+        rewrite H4 in H6.
+        cset_tac.
+      }
       rewrite <- H6. omega.
     + rewrite <- H2. erewrite <- cardinal_2; eauto.
       split; intros.
-      decide (f x === y); eauto.
-      eapply map_iff in H5; dcr.
-      right. eapply map_iff; eauto.
-      decide (x0 === x). exfalso. eapply n0. rewrite <- e. eauto.
-      eexists x0. split; eauto. specialize (H4 x0).
-      rewrite H4 in H7. destruct H7; eauto. exfalso. eapply n1; eauto.
-      eauto. eapply map_iff; eauto.
-      destruct H5.
-      eexists x; split; eauto. eapply H4. eauto.
-      eapply map_iff in H5; eauto. dcr.
-      eexists x0; split; eauto.
-      eapply H4. eauto.
+      * decide (f x === y); eauto. cset_tac.
+        decide (x0 === x).
+        -- exfalso. eapply n0. rewrite <- e. eauto.
+        -- eexists x0. split; eauto. specialize (H4 x0).
+           cset_tac.
+      * cset_tac.
+        -- eexists x; split; eauto. eapply H4; cset_tac.
+        -- eexists x0; split; eauto.
+           eapply H4. eauto.
 Qed.
 
 
@@ -301,8 +364,7 @@ Lemma minus_incl_add X `{OrderedType X} x (s t:set X)
 :  s \ singleton x ⊆ t
    -> s [<=]{x; t}.
 Proof.
-  cset_tac; intuition. decide (x === a); eauto. right. eapply H0.
-  cset_tac; intuition.
+  cset_tac. eapply H0; cset_tac.
 Qed.
 
 Lemma incl_minus_single_not_in X `{OrderedType X} x D
@@ -532,43 +594,6 @@ Proof.
     assumption.
 Qed.
 
-Lemma in_dneg X `{OrderedType X} M x
-  : x ∈ M <-> ~x ∉ M.
-Proof.
-  split; repeat intro; eauto.
-  decide (x ∈ M); eauto.
-  exfalso; eauto.
-Qed.
-
-Lemma in_dneg' X `{OrderedType X} M x
-  : x ∈ M <-> ((x ∈ M -> False )->False).
-Proof.
-  split; repeat intro; eauto.
-  decide (x ∈ M); eauto.
-  exfalso; eauto.
-Qed.
-
-Lemma minus_de_morgan X `{OrderedType X} x s t
-  : (x \In s /\ (x \In t -> False) -> False)
-    <-> ((x \In s -> False) \/ (x \In t)).
-Proof.
-  split; intros; dcr.
-  - decide (x ∈ s); decide (x ∈ t); eauto.
-  - intuition.
-Qed.
-
-Smpl Add match goal with
-         | [ |- context [(_ \In _ -> False) -> False] ] =>
-           setoid_rewrite <- in_dneg'
-         | [ |- context [(_ \In _ /\ (_ \In _ -> False) -> False)] ] =>
-           setoid_rewrite minus_de_morgan
-         | [ H : ?x ∈ map ?f ?s |- _ ] =>
-           rewrite (map_iff f) in H; destruct H as [? [? ?]]
-         | [ |- context [ _ ∈ map ?f _ ] ] =>
-           rewrite (map_iff f)
-         end : cset.
-
-
 Lemma union_exclusive X `{OrderedType X} s t
   : s ∪ t [=] s ∪ (t \ s).
 Proof.
@@ -639,37 +664,6 @@ Proof.
 Qed.
 
 Hint Immediate incl_minus_incl_union incl_union_lr_eq incl_union_eq incl_add_union_union : cset.
-
-
-Smpl Add
-     match goal with
-     | [ |- @Equivalence.equiv
-             _ (@_eq _ (@SOT_as_OT _ (@eq _) _))
-             (@OT_Equivalence _ (@SOT_as_OT _ (@eq _) _))
-             ?x ?y ] => hnf
-     | [ H : @Equivalence.equiv
-               _ (@_eq _ (@SOT_as_OT _ (@eq _) _))
-               (@OT_Equivalence _ (@SOT_as_OT _ (@eq _) _))
-               ?x ?y |- _ ] => hnf in H; clear_trivial_eqs
-     | [ H1 : ?a === ?f ?y, H2 : ?f ?x === ?a -> False,
-                               H3 : ?x === ?y, PR : Proper (_ ==> _) ?f |- _ ]
-       => exfalso; eapply H2; rewrite H1, H3; reflexivity
-     end : cset.
-
-Smpl Add
-     match goal with
-     | [ |- ?a ∈ filter ?p ?lv ] => eapply filter_iff; [eauto|]
-     | [ H : ?a ∈ filter ?p ?lv |- _ ] => eapply filter_iff in H; [|eauto]
-     | [ H : (if [?P] then true else false) = true |- _ ] => cases in H
-     | [ |- (if [?P] then true else false) = true ] => cases
-     | [ |- (@Equivalence.equiv ?X (@_eq ?X ?H) (@OT_Equivalence ?X ?H) ?x ?a) \/ _ ] =>
-       decide (@Equivalence.equiv X (@_eq X H) (@OT_Equivalence X H) x a);
-         [ left; assumption | right ]
-     | [ H : Is_true (?p ?x),
-             H' : @Equivalence.equiv ?X (@_eq ?X ?H) (@OT_Equivalence ?X ?H) ?x ?a,
-                    PR: Proper (@_eq ?X ?H ==> eq) ?p |- ?p ?a = true] => rewrite <- H'
-     end : cset.
-
 
 
 Lemma filter_add_in X `{OrderedType X} (p:X -> bool) `{Proper _ (_eq ==> eq) p} x s

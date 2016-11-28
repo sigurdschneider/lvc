@@ -132,11 +132,12 @@ Proof.
     decide (x ∈ s0).
     + rewrite fold_add in H3; eauto using union_m, transpose_union_subset.
     + rewrite fold_add with (eqA:=Equal) in H3; eauto using union_m, transpose_union, Equal_ST.
-      cset_tac. left; eexists x; split; eauto.
-      eapply H2. cset_tac; intuition.
-      eapply H0 in H4. cset_tac; eauto.
-      left; eexists x1; split; eauto.
-      eapply H2. cset_tac; intuition.
+      cset_tac.
+      * left; eexists x; split; eauto.
+        eapply H2. cset_tac.
+      * eapply H0 in H6; cset_tac.
+        left; eexists x1; split; eauto.
+        eapply H2. cset_tac.
 Qed.
 
 Instance fold_union_morphism X `{OrderedType X}

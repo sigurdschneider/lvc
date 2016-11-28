@@ -91,6 +91,12 @@ Proof.
     repeat rewrite of_list_1 in H0. intuition.
 Qed.
 
+Lemma eq_incl X `{OrderedType X} (s t:set X)
+  : t [=] s -> s ⊆ t /\ t ⊆ s.
+Proof.
+  rewrite double_inclusion; eauto.
+Qed.
+
   Ltac cset_assumption :=
     match goal with
       | [ H : context [ In _ (union ?s ?t) ] |- _ ] =>
@@ -183,6 +189,7 @@ Qed.
         rewrite (@empty_spec _ _ x)
       | [ |- context [ Is_true (@member _ _ ?x (@single _ ?y)) ]] =>
         rewrite (@single_spec _ _ x y) *)
+      | [ H: Empty ?s, H' : ?a ∈ ?s |- _ ] => destruct (H a H')
       | [ H : ?x === ?y, H' : In ?x ?s, H'' : ~In ?y ?s |- _ ] =>
         now (exfalso; rewrite H in H'; eauto)
       | [ H : ?x === ?y, H' : In ?y ?s, H'' : ~In ?x ?s |- _ ] =>
@@ -327,7 +334,19 @@ Qed.
                 end
               end
         end
-      | [ H : ?s [=] ?t |- _ ] => unfold Equal in H
+      | [ H : ?s [=] ?t |- _ ] =>
+        first [ match goal with
+                | [ _ : s ⊆ t |- _ ] =>
+                  match goal with
+                  | [ _ : t ⊆ s |- _ ] => idtac
+                  | _ => destruct (eq_incl _ _ _ H) as [? _]
+                  end
+                end
+              | match goal with
+                | [ _ : t ⊆ s |- _ ] => destruct (eq_incl _ _ _ H) as [_ ?]
+                end
+              | destruct (eq_incl _ _ _ H)
+              ]
     end.
 
   Ltac mycleartrivial :=
@@ -375,3 +394,44 @@ Ltac srewrite s :=
   | [ H : s [=] _ |- _ ] => rewrite H
   | [ H : _ [=] s |- _ ] => rewrite <- H
   end.
+
+
+Smpl Add
+     match goal with
+     | [ |- @Equivalence.equiv
+             _ (@_eq _ (@SOT_as_OT _ (@eq _) _))
+             (@OT_Equivalence _ (@SOT_as_OT _ (@eq _) _))
+             ?x ?y ] => hnf
+     | [ H : @Equivalence.equiv
+               _ (@_eq _ (@SOT_as_OT _ (@eq _) _))
+               (@OT_Equivalence _ (@SOT_as_OT _ (@eq _) _))
+               ?x ?y |- _ ] => hnf in H; clear_trivial_eqs
+     | [ H1 : ?a === ?f ?y, H2 : ?f ?x === ?a -> False,
+                               H3 : ?x === ?y, PR : Proper (_ ==> _) ?f |- _ ]
+       => exfalso; eapply H2; rewrite H1, H3; reflexivity
+     | [ H1 : ?y === ?a -> False, H2 : ?x === ?a, H3 : ?x === ?y |- _ ] =>
+       exfalso; eapply H1; rewrite <- H2, H3; reflexivity
+     | [ H1 : ?y === ?a -> False, H2 : ?x === ?a, H3 : ?y === ?x |- _ ] =>
+       exfalso; eapply H1; rewrite <- H2, H3; reflexivity
+     end : cset.
+
+Smpl Add
+     match goal with
+     | [ |- ?a ∈ filter ?p ?lv ] => eapply filter_iff; [eauto|]
+     | [ H : ?a ∈ filter ?p ?lv |- _ ] => eapply filter_iff in H; [|eauto]
+     | [ H : (if [?P] then true else false) = true |- _ ] => cases in H
+     | [ |- (if [?P] then true else false) = true ] => cases
+     | [ |- (@Equivalence.equiv ?X (@_eq ?X ?H) (@OT_Equivalence ?X ?H) ?x ?a) \/ _ ] =>
+       decide (@Equivalence.equiv X (@_eq X H) (@OT_Equivalence X H) x a);
+         [ left; assumption | right ]
+     | [ H : Is_true (?p ?x),
+             H' : @Equivalence.equiv ?X (@_eq ?X ?H) (@OT_Equivalence ?X ?H) ?x ?a,
+                    PR: Proper (@_eq ?X ?H ==> eq) ?p |- ?p ?a = true] => rewrite <- H'
+     end : cset.
+
+Smpl Add match goal with
+         | [ H : ?x ∈ map ?f ?s |- _ ] =>
+           rewrite (map_iff f) in H; destruct H as [? [? ?]]
+         | [ |- context [ _ ∈ map ?f _ ] ] =>
+           rewrite (map_iff f)
+         end : cset.
