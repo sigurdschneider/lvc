@@ -15,7 +15,8 @@ Lemma lv_ra_lv_bnd ZL Lv lv ra VD s
   : ann_P (fun lv0 : ⦃var⦄ => lv0 [<=] VD) lv.
 Proof.
   general induction aIncl; invt live_sound; invt renamedApart;
-    econstructor; pe_rewrite; simpl in *; eauto with cset.
+    econstructor; simpl in *;
+      try (rewrite <- Incl; eauto with cset); pe_rewrite.
   - eapply IHaIncl; eauto.
     rewrite <- Incl, H12. clear; cset_tac.
   - eapply IHaIncl1; eauto.
@@ -222,8 +223,8 @@ Proof.
       orewrite (❬F❭ - S (❬F❭ - S n) = n).
       eapply live_sound_monotone2.
       eapply H1; eauto.
-      eauto with len.
-      eauto with len.
+      revert LenZL; clear; eauto with len.
+      revert H LenLV; clear; eauto with len.
       -- intros ? ? ? GetA GetB; inv_get.
          eapply get_app_cases in GetA; destruct GetA.
          ++ rewrite get_app_lt in GetB; inv_get.
@@ -296,7 +297,7 @@ Proof.
            cset_tac.
       * len_simpl. rewrite min_l; try omega.
       * simpl in *. revert Incl H0; clear; cset_tac; lud; eauto.
-        eapply Incl. rewrite <- H0. cset_tac.
+        eapply Incl. exploit H0; cset_tac.
     + erewrite getAnn_snd_renameApart_live; eauto.
       rewrite lookup_set_update_union_minus_single; eauto.
       rewrite <- H0. eauto with cset.
@@ -319,7 +320,7 @@ Proof.
   - econstructor; eauto using live_op_rename_sound.
   - econstructor; eauto.
     + erewrite snd_renameApartF_live; eauto.
-      * eapply IHLS; eauto using restrict_ifFstR with len.
+      * eapply IHLS; eauto using restrict_ifFstR.
         -- intros; inv_get.
            eapply get_app_cases in H4; destruct H4.
            ++ rewrite get_app_lt in H5; inv_get.
@@ -331,7 +332,7 @@ Proof.
            ++ dcr. rewrite get_app_ge in H5; eauto with len.
         -- rewrite zip_app; eauto with len.
            eauto using PIR2_app, PIR2_ifFstR_refl.
-        -- rewrite !zip_app, List.map_app; eauto with len.
+        -- rewrite !zip_app, List.map_app;[| eauto with len].
            apply PIR2_app; eauto with len.
            eapply PIR2_get; intros; inv_get; simpl; [|eauto with len].
            econstructor. len_simpl. destruct x2 as [Z s], x as [Z' s'].
@@ -363,6 +364,10 @@ Proof.
            inv_get. simpl in *.
            eapply incl_union_right.
            rewrite <- Incl. eauto with cset.
+        -- revert LenZL; clear; eauto with len.
+        -- revert H LenLV; clear; eauto with len.
+        -- revert H LenDL; clear; eauto with len.
+        -- revert H LenLV2; clear; eauto with len.
         -- simpl in *. rewrite <- Incl at 1.
            eauto with cset.
       * intros. erewrite fst_renameApart_live; eauto.
