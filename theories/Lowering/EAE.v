@@ -336,9 +336,9 @@ Proof.
         eauto with cset.
         setoid_rewrite list_union_start_swap at 3.
         clear. cset_tac.
-        hnf; intros. invt NoDupA. dcr; cset_tac.
-        eapply H7. rewrite of_list_1 in H3.
-        eapply H3.
+        hnf; intros. invt NoDupA.
+        rewrite of_list_1 in H3.
+        cset_tac.
       * eauto.
       * eauto.
     + rewrite cons_app, app_assoc.

@@ -260,8 +260,8 @@ Lemma filter_in X `{OrderedType X} (p:X->bool) `{Proper _ (_eq ==> eq) p} a Z
     -> a \In of_list (List.filter p Z).
 Proof.
   general induction Z; simpl in * |- *; eauto.
-  - cset_tac. rewrite <- H3 in H1.
-    cases; isabsurd. rewrite <- H3. simpl. cset_tac; intuition.
+  - cset_tac'. rewrite <- H3 in H1.
+    cases; isabsurd. simpl. cset_tac.
     cases; eauto. simpl. exploit IHZ; eauto. cset_tac; intuition.
 Qed.
 
@@ -309,12 +309,12 @@ Qed.
 Lemma of_list_filter_set X `{OrderedType X} (p:X->bool) `{Proper _ (_eq ==> eq) p} L
   : of_list (List.filter p L) [=] SetInterface.filter p (of_list L).
 Proof.
-  cset_tac.
-  - eapply of_list_get_first in H1; dcr; cset_tac; inv_get.
+  cset_tac'.
+  - eapply of_list_get_first in H1; dcr; cset_tac'; inv_get.
     rewrite H3. eapply get_in_of_list; eauto.
-  - eapply of_list_get_first in H1; dcr; cset_tac; inv_get.
-    rewrite H3. cset_tac.
-  - eapply of_list_get_first in H2; dcr; cset_tac; inv_get.
+  - eapply of_list_get_first in H1; dcr; cset_tac'; inv_get.
+    rewrite H3. cset_tac'.
+  - eapply of_list_get_first in H2; dcr; cset_tac'; inv_get.
     rewrite H4 in *.  edestruct get_filter; eauto.
     eapply get_in_of_list; eauto.
 Qed.

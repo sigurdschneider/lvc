@@ -59,9 +59,7 @@ Proof.
     eapply IHalpha; eauto.
     + eapply agree_on_update_same. reflexivity. eapply agree_on_incl; eauto.
       hnf; intros. eapply lookup_set_spec; eauto.
-      cset_tac; eqs. eapply lookup_set_spec in H4; eauto.
-      destruct H4; dcr. eexists x0.
-      lud; split; eqs; cset_tac.
+      lset_tac. lud; eauto.
     + eapply agree_on_update_same. reflexivity.
       eapply agree_on_incl; eauto with cset.
   - econstructor; eauto.

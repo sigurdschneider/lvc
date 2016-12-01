@@ -73,7 +73,6 @@ Proof.
   sind s; destruct s; simpl in * |- *; eauto with cset.
   - rewrite IH; eauto.
     clear_all; cset_tac.
-    decide (x === a); eauto.
   - repeat rewrite IH; eauto.
     clear_all; cset_tac.
   - cset_tac.
@@ -85,8 +84,7 @@ Proof.
     erewrite list_union_f_union.
     rewrite list_union_f_eq. cset_tac.
     simpl. intros. rewrite IH; eauto.
-    clear_all; cset_tac. simpl in *.
-    decide (a ∈ of_list a0); eauto.
+    clear; cset_tac.
 Qed.
 
 Lemma definedVars_occurVars s

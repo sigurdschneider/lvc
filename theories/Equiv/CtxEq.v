@@ -284,7 +284,8 @@ Proof.
       intros. edestruct H3; dcr; split; eauto.
       split.
       * rewrite H1.
-        hnf; intros. cset_tac. rewrite H2, H8. rewrite H4; eauto.
+        hnf; intros.
+        cset_tac'. rewrite H2, H8. rewrite H4; eauto.
         cset_tac.
       * eapply agree_on_incl; eauto. rewrite H1. clear. cset_tac.
 Qed.

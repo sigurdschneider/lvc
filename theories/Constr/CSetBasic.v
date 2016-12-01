@@ -583,7 +583,7 @@ Lemma incl_union_incl_minus X `{OrderedType X} s t u
   : s \ t ⊆ u
     -> s ⊆ t ∪ u.
 Proof.
-  cset_tac. decide (a ∈ t); cset_tac.
+  cset_tac.
 Qed.
 
 Lemma incl_meet_split X `{OrderedType X} s t u
@@ -595,7 +595,7 @@ Qed.
 Lemma equiv_minus_union X `{OrderedType X} s t
   : s ⊆ t -> t [=] t \ s ∪ s.
 Proof.
-  cset_tac.
+  cset_tac'.
 Qed.
 
 
@@ -603,8 +603,6 @@ Lemma diff_subset_equal' X `{OrderedType X} s s'
   : s \ s' [=] {} -> s ⊆ s'.
 Proof.
   cset_tac.
-  decide (a ∈ s'); eauto.
-  exfalso; eauto.
 Qed.
 
 Smpl Add
@@ -612,18 +610,32 @@ Smpl Add
      | [ H : Empty ?s |- _ ] => apply empty_is_empty_1 in H
      end : cset.
 
+Lemma not_incl_exists X `{OrderedType X} s t
+  :  (s ⊆ t -> False)
+     -> exists x, x ∈ s /\ x ∉ t.
+Proof.
+  pattern s. eapply set_induction; intros.
+  - exfalso. eapply H1. cset_tac.
+  - rewrite Add_Equal in H2. rewrite H2 in H3.
+    decide (x ∈ t).
+    + edestruct H0; eauto.
+      * intros. eapply H3. cset_tac.
+      * cset_tac.
+    + eexists x; cset_tac.
+Qed.
+
+Smpl Add
+     match goal with
+     | [ H : ?s ⊆ ?t -> False |- _ ] => eapply not_incl_exists in H
+     end : cset.
+
+
 Lemma not_incl_element X `{OrderedType X} s
   : forall s', ~ s ⊆ s' -> exists x, x ∈ s /\ x ∉ s'.
 Proof.
   pattern s. eapply set_induction; intros.
   - cset_tac.
-    exfalso. eapply H1. cset_tac. exfalso; eauto.
-  - rewrite Add_Equal in H2.
-    decide (x ∈ s'0).
-    + edestruct H0 as [y [? ?]]. instantiate (1:=s'0). rewrite H2 in H3.
-      intro. eapply H3. cset_tac.
-      eexists; split; eauto. rewrite H2. cset_tac.
-    + eexists x. rewrite H2. cset_tac.
+  - rewrite Add_Equal in H2. cset_tac.
 Qed.
 
 Lemma minus_minus X `{OrderedType X} (s t : set X) : s \ (s \ t) [=] s ∩ t.
@@ -647,8 +659,9 @@ Qed.
 Lemma of_list_elements X `{OrderedType X} (s : set X)
  : of_list (elements s) [=] s.
 Proof.
-cset_tac; [apply of_list_1 in H0; rewrite elements_iff
-          |apply of_list_1; rewrite <- elements_iff] ; eauto.
+  cset_tac'.
+  - apply of_list_1 in H0; rewrite <- elements_iff in H0; eauto.
+  - rewrite of_list_1; rewrite <- elements_iff; eauto.
 Qed.
 
 Lemma incl_union_incl X `{OrderedType X} s t u w

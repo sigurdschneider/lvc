@@ -944,7 +944,8 @@ Proof.
               clear_all; cset_tac.
               clear_all; cset_tac.
               eapply incl_union_incl_minus. eapply incl_union_left.
-              revert H12 H6. clear_all. cset_tac. left.
+              revert H12 H6. clear_all. cset_tac'.
+              exfalso; eapply n0.
               eapply incl_list_union.
               eapply map_get_1. eapply get_take; eauto.
               reflexivity. eauto.
@@ -991,11 +992,11 @@ Proof.
               destruct x3; invc H15. simpl in *.
               subst XX.
               revert H5 H6. clear_all.
-              intros; hnf; intros. cset_tac.
+              intros; hnf; intros. cset_tac'.
               * eapply H8; eauto.
                 eapply incl_list_union. eapply map_get_1; eauto. reflexivity.
                 eauto.
-              * eapply H; eauto.
+              * eapply H0; eauto.
                 eapply incl_list_union.
                 eapply map_get_1.
                 eapply get_take; eauto using get_range. reflexivity.

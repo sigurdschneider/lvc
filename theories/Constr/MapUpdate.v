@@ -24,7 +24,7 @@ Section MapUpdate.
     intros. general induction XL; simpl.
     rewrite minus_empty. eassumption.
     rewrite add_union_singleton. rewrite union_comm. rewrite <- minus_union.
-    eapply agree_on_update_dead; cset_tac.
+    eapply agree_on_update_dead. cset_tac.
     eauto using agree_on_incl, incl_minus.
   Qed.
 
@@ -200,7 +200,7 @@ Proof.
   general induction H0; simpl in *; [ isabsurd |].
   decide (z === x).
   - exists 0, y, x; repeat split; eauto using get. lud.
-  - cset_tac.
+  - cset_tac'.
     edestruct (IHlength_eq _ E z) as [? [? ]]; eauto; dcr.
     exists (S x0), x1, x2. eexists; repeat split; eauto using get.
     lud. exfalso; eauto.
@@ -380,12 +380,12 @@ Lemma lookup_set_update_union_minus_list X `{OrderedType X} Y `{OrderedType Y}
 Proof.
   split; intros; lset_tac; eauto.
   - rewrite H7 in H5.
-    eexists x; cset_tac; eauto.
-    eapply lookup_set_update_not_in_Z'_not_in_Z in H5; eauto.
-    eapply lookup_set_update_not_in_Z' in H5; eauto.
-    rewrite <- H5; eauto.
-  - lud; cset_tac.
-    eexists x; cset_tac; eauto.
+    eexists x; cset_tac'.
+    + eapply lookup_set_update_not_in_Z'_not_in_Z in H5; eauto.
+    + eapply lookup_set_update_not_in_Z' in H5; eauto.
+      rewrite <- H5; eauto.
+  - lud; cset_tac'.
+    eexists x; cset_tac'; eauto.
     erewrite lookup_set_update_not_in_Z; eauto.
 Qed.
 
@@ -482,7 +482,7 @@ Proof.
   intros. length_equify.
   general induction H0; simpl in *; isabsurd. decide (x0 === x).
   - exists 0, y; repeat split; eauto using get. lud. intros; exfalso; omega.
-  - cset_tac; intuition.
+  - cset_tac'.
     edestruct (IHlength_eq _ E x0) as [? [? ]]; eauto using get; dcr.
     + exists (S x1), x2. repeat split; eauto using get. lud; intuition.
       intros. inv H4. intro; intuition. eapply H6; eauto. omega.

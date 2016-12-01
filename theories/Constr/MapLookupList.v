@@ -154,9 +154,9 @@ Instance map_Proper X `{OrderedType X} Y `{OrderedType Y}
   : Proper (@fpeq X Y _eq _ _ ==> _eq ==> _eq) map.
 Proof.
   unfold Proper, respectful; intros. inv H1; dcr.
-  hnf; intros. cset_tac.
-  eexists x1. rewrite <- H2, H9. split; eauto. eapply H3.
-  eexists x1. rewrite H2, H9. split; eauto. symmetry. eapply H3.
+  hnf; intros. cset_tac'.
+  - eexists x1. rewrite <- H2, H9. split; eauto. eapply H3.
+  - eexists x1. rewrite H2, H9. split; eauto. symmetry. eapply H3.
 Qed.
 
 Lemma map_single {X} `{OrderedType X} Y `{OrderedType Y} (f:X->Y)
@@ -165,7 +165,7 @@ Lemma map_single {X} `{OrderedType X} Y `{OrderedType Y} (f:X->Y)
 Proof.
   hnf; intros. rewrite map_iff; eauto.
   split; intros.
-  - destruct H2; dcr. cset_tac. rewrite H3; eauto.
+  - destruct H2; dcr. cset_tac'. rewrite H2; eauto.
   - cset_tac.
 Qed.
 

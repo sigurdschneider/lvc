@@ -274,7 +274,7 @@ Proof.
   decide (z === a).
   - eexists 0, a; repeat split; eauto using get.
     + intros. exfalso. omega.
-  - cset_tac; intuition. edestruct IHZ; eauto. dcr.
+  - cset_tac'; intuition. edestruct IHZ; eauto. dcr.
     eexists (S x), x0; repeat split; eauto using get.
     + intros. inv H4; intro; eauto. eapply H5; eauto. omega.
 Qed.

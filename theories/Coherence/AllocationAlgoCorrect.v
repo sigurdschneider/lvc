@@ -108,10 +108,10 @@ Lemma sep_nd c G ϱ G'
       (SEP:sep c G (findt ϱ 0)) (Disj: disj G' G)
   : forall x : nat, x > c -> x ∈ G' -> x ∈ map (findt ϱ 0) G -> False.
 Proof.
-  intros. cset_tac. destruct SEP as [GT LE].
+  intros. cset_tac'. destruct SEP as [GT LE].
   decide (x0 <= c).
   - exploit LE; eauto; try omega.
-  - exploit GT; eauto. cset_tac.
+  - exploit GT; eauto. cset_tac'.
     eapply Disj; eauto; congruence.
 Qed.
 
@@ -143,7 +143,7 @@ Proof.
   - decide (x ∈ of_list Z).
     + edestruct update_with_list_lookup_in_list; try eapply i; dcr.
       Focus 2.
-      rewrite H4. cset_tac.
+      rewrite H4. cset_tac'.
       edestruct fresh_list_get; try eapply H3; inv_get; eauto.
       dcr. inv_get. exfalso; eauto.
       eauto with len.
@@ -152,7 +152,7 @@ Proof.
   - decide (x ∈ of_list Z).
     + edestruct update_with_list_lookup_in_list; try eapply i; dcr.
       Focus 2.
-      rewrite H4. cset_tac.
+      rewrite H4. cset_tac'.
       edestruct fresh_list_get; try eapply H3; inv_get; eauto.
       dcr. inv_get.
       eauto with len.
@@ -204,9 +204,8 @@ Lemma sep_filter_map_comm (c:var) lv (ϱ:var -> var)
   : sep c lv ϱ
     -> map ϱ (filter (fun x => B[x <= c]) lv) [=] filter (fun x => B[x <= c]) (map ϱ lv).
 Proof.
-  intros [GT LE]. cset_tac.
-  - eexists x; cset_tac.
-    exploit GT; eauto. cset_tac. omega.
+  intros [GT LE]. cset_tac'.
+  - eexists x; cset_tac'. omega.
 Qed.
 
 

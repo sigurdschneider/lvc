@@ -213,7 +213,7 @@ decide (cardinal (t \ s \ u) <= cardinal (s \ t)).
   + rewrite of_list_elements. rewrite minus_minus.
     enough (s ∩ t ∪ t \ s \ u [=] t \ (u \ s ∩ t)).
     { rewrite H0. intros; rewrite cardinal_difference; eauto. }
-    clear. cset_tac. decide (a ∈ s); cset_tac.
+    clear. cset_tac.
   + clear - n. rewrite elements_length. omega.
 Qed.
 
@@ -449,9 +449,7 @@ general induction lvSound;
               \/ a ∈ M'
              ).
       -- right. cset_tac.
-      -- subst K. decide (a ∈ R'); cset_tac.
-         exfalso.
-         exploit H0; eauto; cset_tac.
+      -- subst K. cset_tac.
   + rewrite ReqR'. eauto.
   + subst K... rewrite ReqR'. exact rke.
   + rewrite minus_empty. rewrite add_cardinal. apply not_ge in sizeRL.
@@ -491,10 +489,10 @@ general induction lvSound;
     rewrite fvRM. rewrite ReqR', MeqM'.
     rewrite H1, fvRM in Incl. revert Incl.
     rewrite ReqR', MeqM'.
-    clear; cset_tac. exploit H1; cset_tac.
+    clear; cset_tac.
   + rewrite H1, fvRM in Incl. revert Incl.
     rewrite ReqR', MeqM'.
-    clear; cset_tac. exploit H; cset_tac.
+    clear; cset_tac.
   + subst K.
     eauto using rke'.
   + rewrite <- minus_incl with (s:=R'\K) (t:=of_list Z).
@@ -502,7 +500,7 @@ general induction lvSound;
     apply incl_minus_lr with (s:=R_f) (s':=R'\K ∪ R_f \ R') (t:=of_list Z) (t':=of_list Z).
     * subst K. eapply fTake.
     * eauto.
-  + cset_tac; decide (a ∈ M'); cset_tac.
+  + cset_tac.
   + subst K.
     assert (forall (s t : ⦃var⦄), s ⊆ s \ t ∪ t) by (clear; cset_tac).
 
@@ -514,10 +512,7 @@ general induction lvSound;
     rewrite H1, fvRM, ReqR', MeqM' in Incl.
     exploit Op.freeVars_live_list; eauto. rewrite fvRM in H4.
     rewrite ReqR' in H4. rewrite MeqM' in H4.
-    cset_tac. decide (a ∈ M'); eauto. left.
-    decide (a ∈ K); eauto. left.
-    subst K.
-    exfalso. decide (a ∈ R'); eauto.
+    revert H4. clear. subst K. cset_tac.
 - set (K := of_list (take
                        (cardinal (Op.freeVars e \ R'))
                        (elements (R' \ Op.freeVars e))

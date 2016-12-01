@@ -23,14 +23,55 @@ Qed.
 Tactic Notation "protect" hyp(H) := apply protect in H.
 Tactic Notation "unprotect" hyp(H) := apply unprotect in H.
 
+Inductive protected_setin_fnc X (L:list X) (P:Prop) :=
+  ProtectedSetInFnc (p:P) : @protected_setin_fnc X L P.
+
+Lemma protect_setin_fnc X (x:X) (P:Prop) : P -> @protected_setin_fnc X (x::nil) P.
+  intros. econstructor. eauto.
+Qed.
+
+Lemma protect_setin_fnc_ext X (x:X) (P:Prop) L
+  : protected_setin_fnc L P -> protected_setin_fnc (x::L) P.
+  inversion 1. econstructor. eauto.
+Qed.
+
+Tactic Notation "protectf" hyp(x) hyp(H) :=
+  let PR := fresh "prtct" in
+  pose proof (@protect_setin_fnc _ x _ H) as PR; move PR before H.
+
+
+Ltac lst_not_contains L x :=
+  match L with
+  | ?y :: ?L' =>
+    match y with
+    | x => fail 1
+    | _ => lst_not_contains L' x
+    end
+  | nil => idtac
+  end.
+
+Ltac record_instance H x :=
+  match type of H with
+  | ?T =>
+    lazymatch goal with
+    | [ H : @protected_setin_fnc _ ?L T |- _ ] =>
+      lst_not_contains L x;
+      eapply (@protect_setin_fnc_ext _ x _ L) in H
+    | _ => protectf x H
+    end
+  end.
+
+Ltac not_ignored H :=
+  lazymatch type of H with
+  | protected _ => fail
+  | @protected_setin_fnc _ _ _ => fail
+  | _ => idtac
+  end.
+
 Tactic Notation "dcr" :=
   repeat (
     match goal with
-    | H: _ |- _ =>
-      match type of H with
-      | protected _ => fail 1
-      | _ => progress (decompose record H); clear H
-      end
+    | H: _ |- _ => not_ignored H; progress (decompose record H); clear H
     end).
 
 

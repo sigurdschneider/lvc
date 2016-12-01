@@ -129,7 +129,7 @@ Proof.
   general induction n; simpl.
   - omega.
   - exploit (IHn (lv \ singleton n)).
-    + intros. cset_tac; omega.
+    + intros. cset_tac'; omega.
     + assert (lv [=] {n; lv \ singleton n }). {
         exploit (H (n)); eauto.
         cset_tac.
@@ -232,7 +232,7 @@ Section FreshList.
   Lemma fresh_list_spec : forall (G:set var) n, disj (of_list (fresh_list G n)) G.
   Proof.
     intros. general induction n; simpl; intros; eauto.
-    - hnf; intros. cset_tac.
+    - hnf; intros. cset_tac'.
       + specialize (H (G ∪ {{fresh G}})).
         eapply H; eauto.
         intuition (cset_tac; eauto).
@@ -327,9 +327,11 @@ Proof.
         cset_tac.
       * assert (m <= n) by omega.
         rewrite max_l; eauto.
-        cset_tac.
-        decide (n = a); subst; eauto.
-        left. eapply in_vars_up_to. omega.
+        cset_tac'. exfalso.
+        assert (n <> a). intro. eapply n1; subst; eauto.
+        idtac "improve".
+        exploit (@in_vars_up_to a n); eauto.
+        omega.
 Qed.
 
 Lemma inverse_on_update_fresh_list (D:set var) (Z:list var) (ϱ ϱ' : var -> var)

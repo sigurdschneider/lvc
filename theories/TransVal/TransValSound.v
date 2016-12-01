@@ -244,10 +244,10 @@ Proof.
         { eapply models_agree; eauto.
           hnf; intros.
           symmetry.
-          eapply (agree_on_total (lv:={x})); cset_tac; eauto.
-          eapply (agree_on_incl (lv:= freeVars Q)); cset_tac; eauto.
+          eapply (agree_on_total (lv:={x})); [|eauto with cset].
+          eapply (agree_on_incl (lv:= freeVars Q)); [|eauto with cset].
           eapply (agree_on_incl (lv:= fst(getAnn D) ∪ snd(getAnn D)));
-            cset_tac; eauto. decide (a ∈ fst (getAnn D)); eauto.
+            cset_tac; eauto.
         }
       * specialize (mod_Q' F).
         assert (agree_on eq
@@ -255,7 +255,7 @@ Proof.
                          (combineEnv (fst (getAnn D) ∪ snd (getAnn D)) Es Et)).
         { hnf; intros.
           unfold combineEnv; cases; try eauto.
-          cset_tac.
+          cset_tac'.
           - rewrite <- (@nc_step_agree L L s D s' E Es); auto.
             rewrite <- (@nc_step_agree L L t D' t' E Et); auto.
           - pose proof (renamedApart_disj ssa_s).
@@ -266,10 +266,10 @@ Proof.
         { eapply models_agree; eauto.
           hnf; intros.
           symmetry.
-          eapply (agree_on_total (lv:={x})); cset_tac; eauto.
-          eapply (agree_on_incl (lv:= freeVars Q')); cset_tac; eauto.
+          eapply (agree_on_total (lv:={x})); [|eauto with cset].
+          eapply (agree_on_incl (lv:= freeVars Q')); [| eauto with cset].
           eapply (agree_on_incl (lv:= fst (getAnn D') ∪ snd(getAnn D')));
-            cset_tac; eauto. decide (a ∈ fst (getAnn D')); eauto.
+            cset_tac; eauto.
         }
     + pose proof (nc_star_step star_s) as s_star2.
       pose proof (nc_star_step star_t) as t_star2.
@@ -457,7 +457,7 @@ Proof.
         { eapply models_agree; eauto.
           eapply agree_on_total.
           eapply (agree_on_incl (lv:= fst (getAnn D) ∪ snd(getAnn D) )); eauto.
-          cset_tac.
+          cset_tac'.
           pose proof (freeVars_incl s D source ssa_s nf_s a H0); cset_tac. }
         { pose proof (freeVars_incl t D' target ssa_t nf_t).
           rewrite <- models_agree; eauto.

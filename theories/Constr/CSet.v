@@ -117,7 +117,7 @@ Lemma fresh_of_list {X} `{OrderedType X} (L:list X) (y:X)
   : Util.fresh y L -> y ∉ of_list L.
 Proof.
   general induction L; simpl in *. intro; cset_tac; eauto.
-  intro. cset_tac; intuition.
+  intro. cset_tac'; intuition.
   eapply IHL; eauto. intro. eapply H0. constructor 2. eauto.
 Qed.
 
@@ -241,7 +241,7 @@ Proof.
     erewrite (SetProperties.cardinal_2 H3 H4); eauto.
     decide (f x ∈ SetConstructs.map f s0).
     + assert (SetConstructs.map f s0 [=] {f x; SetConstructs.map f s0}). {
-        cset_tac. setoid_rewrite <- H8. eauto.
+        cset_tac'. setoid_rewrite <- H10. eauto.
       }
       rewrite <- H2. rewrite H5.
       assert (SetConstructs.map f s' ⊆ {f x; SetConstructs.map f s0}). {
@@ -251,16 +251,8 @@ Proof.
       }
       rewrite <- H6. omega.
     + rewrite <- H2. erewrite <- cardinal_2; eauto.
-      split; intros.
-      * decide (f x === y); eauto. cset_tac.
-        decide (x0 === x).
-        -- exfalso. eapply n0. rewrite <- e. eauto.
-        -- eexists x0. split; eauto. specialize (H4 x0).
-           cset_tac.
-      * cset_tac.
-        -- eexists x; split; eauto. eapply H4; cset_tac.
-        -- eexists x0; split; eauto.
-           eapply H4. eauto.
+      split; intros. cset_tac'. eexists x0; split; eauto.
+      eapply H9. cset_tac. cset_tac.
 Qed.
 
 
@@ -399,8 +391,7 @@ Lemma incl_minus_both X `{OrderedType X} (s t u: set X)
     -> u ⊆ t
     -> s ⊆ t.
 Proof.
-  intros. cset_tac. specialize (H0 a). specialize (H1 a).
-  cset_tac. decide (a ∈ u); eauto.
+  intros. cset_tac'. decide (a ∈ u); eauto.
 Qed.
 
 Hint Extern 5 =>
@@ -613,7 +604,7 @@ Hint Resolve in_add_right : cset.
 Lemma set_decomp X `{OrderedType X} t s
   : s [=] s ∩ t ∪ (s \ t).
 Proof.
-  cset_tac. decide (a ∈ t); eauto.
+  cset_tac.
 Qed.
 
 (* Hint Resolve <- / -> is implicitly local *)
@@ -676,7 +667,6 @@ Lemma filter_add_notin X `{OrderedType X} (p:X -> bool) `{Proper _ (_eq ==> eq) 
   : ~ p x -> SetInterface.filter p {x;s} [=] SetInterface.filter p s.
 Proof.
   intros P; split; intros In; cset_tac.
-  - exfalso; eapply P. rewrite H3; eauto.
 Qed.
 
 Lemma filter_incl X `{OrderedType X} (p:X -> bool) `{Proper _ (_eq ==> eq) p} s
@@ -697,7 +687,7 @@ Qed.
 Lemma filter_difference X `{OrderedType X} (p:X->bool) `{Proper _ (_eq ==> eq) p} s t
   : filter p (s \ t) [=] filter p s \ filter p t.
 Proof.
-  cset_tac. eapply H3; cset_tac.
+  cset_tac.
 Qed.
 
 Lemma subset_filter X `{OrderedType X} (p:X->bool) `{Proper _ (_eq ==> eq) p} (lv lv':set X)

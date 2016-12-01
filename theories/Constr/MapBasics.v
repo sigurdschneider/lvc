@@ -128,6 +128,10 @@ Ltac lookup_neq_tac :=
       => rewrite (lookup_nequiv f y H)
     | [H : ?x =/= ?x', H' : context[update ?f ?x ?y ?x'] |- _ ]
       => rewrite (lookup_nequiv f y H) in H'
+    | [H : ?x === ?x' -> False |- context[update ?f ?x ?y ?x'] ]
+      => rewrite (lookup_nequiv f y H)
+    | [H : ?x === ?x' -> False, H' : context[update ?f ?x ?y ?x'] |- _ ]
+      => rewrite (lookup_nequiv f y H) in H'
   end.
 
 (* from Ralf's thesis *)
@@ -141,6 +145,7 @@ Ltac lud :=
       =>  match goal with
           | [H' : x === x' |- _ ] => fail 1
           | [H' : ~x === x' |- _ ] => fail 1
+          | [H' : x === x' -> False |- _ ] => fail 1
           | [H' : x =/= x' |- _ ] => fail 1
           | [ |- _ ] => decide(x === x')
           end
@@ -148,6 +153,7 @@ Ltac lud :=
       => match goal with
           | [H' : x === x' |- _ ] => fail 1
           | [H' : ~x === x' |- _ ] => fail 1
+          | [H' : x === x' -> False |- _ ] => fail 1
           | [H' : x =/= x' |- _ ] => fail 1
           | [ |- _ ] => decide(x === x')
           end

@@ -51,7 +51,7 @@ Proof.
   - destruct (IHe F E); subst; eauto; rewrite H1; simpl.
     eapply unop_eval_total.
   - simpl in *.
-    repeat (rewrite models_combine in H0; simpl in H0); intuition; cset_tac.
+    repeat (rewrite models_combine in H0; simpl in H0); intuition.
     edestruct (IHe1 F); eauto using defined_on_incl with cset.
     edestruct (IHe2 F); eauto using defined_on_incl with cset.
     rewrite H1, H4; simpl.
@@ -150,10 +150,9 @@ Qed.
 Lemma undef_vars_subset e:
   freeVars (undef e) ⊆ Op.freeVars e.
 Proof.
-  cset_tac.
+  cset_tac'.
   induction e; simpl in *; try isabsurd; eauto.
   - rewrite models_combine_vars in H; simpl in H.
     rewrite models_combine_vars in H; simpl in H.
-    cset_tac.
-    cases in H0; simpl in *; cset_tac.
+    cases in H; simpl in *; cset_tac'.
 Qed.

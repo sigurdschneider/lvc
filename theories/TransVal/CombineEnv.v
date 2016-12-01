@@ -21,8 +21,8 @@ Lemma combineEnv_agree_meet D D' Es Et
     -> agree_on eq D' (combineEnv D Es Et) Et.
 Proof.
  intros.
- - hnf. cset_tac. unfold combineEnv. cases; eauto.
-   rewrite H; eauto. cset_tac; intuition.
+ - hnf. cset_tac'. unfold combineEnv. cases; eauto.
+   rewrite H; eauto. cset_tac.
 Qed.
 
 Lemma combineEnv_agree_minus D D' Es Et
@@ -30,8 +30,8 @@ Lemma combineEnv_agree_minus D D' Es Et
     -> agree_on eq D' (combineEnv D Es Et) Es.
 Proof.
  intros.
- - hnf. cset_tac. unfold combineEnv. cases; eauto.
-   rewrite H; eauto. cset_tac; intuition.
+ - hnf. cset_tac'. unfold combineEnv. cases; eauto.
+   rewrite H; eauto. cset_tac.
 Qed.
 
 Lemma combineEnv_models F s D Es Et

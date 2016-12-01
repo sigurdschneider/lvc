@@ -16,10 +16,10 @@ Qed.
 
 
 Ltac rewrite_lookup_set dummy := match goal with
-                                | [ H : context [ In ?y (lookup_set ?f ?s) ] |- _ ] =>
-                                  rewrite (@lookup_set_spec _ _ _ _ f s y) in H
-                                | [ |- context [ In ?y (lookup_set ?f ?s) ]] =>
-                                  rewrite (@lookup_set_spec _ _ _ _ f s y)
+                                | [ H : context [ In _ (lookup_set ?f ?s) ] |- _ ] =>
+                                  rewrite (@lookup_set_spec _ _ _ _ f s) in H
+                                | [ |- context [ In _ (lookup_set ?f ?s) ]] =>
+                                  rewrite (@lookup_set_spec _ _ _ _ f s)
                                 end.
 Ltac lset_tac := set_tac rewrite_lookup_set.
 
@@ -49,7 +49,6 @@ Lemma lookup_set_minus_incl X `{OrderedType X} Y `{OrderedType Y}
   : lookup_set m s \ (lookup_set m t) ⊆ lookup_set m (s \ t).
 Proof.
   lset_tac.
-  eexists x; split; eauto.
 Qed.
 
 Lemma lookup_set_minus_single_incl X `{OrderedType X} Y `{OrderedType Y}
@@ -65,7 +64,8 @@ Arguments lookup_set {X} {H} {Y} {H0} m s.
 Lemma lookup_set_on_id {X} `{OrderedType X} (s t : set X)
   : s ⊆ t -> (lookup_set (fun x => x) s) ⊆ t.
 Proof.
-  lset_tac. rewrite H4; eauto.
+  intros. rewrite <- H0.
+  lset_tac.
 Qed.
 
 
@@ -107,7 +107,7 @@ Lemma lookup_set_single X `{OrderedType X} Y `{OrderedType Y} (ϱ:X->Y)
   -> lookup_set ϱ D ⊆ D'
   -> {{ ϱ v }} ⊆ D'.
 Proof.
-  intros. lset_tac; eauto with cset.
+  intros. rewrite <- H3. lset_tac.
 Qed.
 
 Lemma lookup_set_add X `{OrderedType X} Y `{OrderedType Y} x s (m:X -> Y) `{Proper _ (_eq ==> _eq) m}

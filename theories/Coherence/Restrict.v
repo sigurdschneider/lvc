@@ -323,7 +323,7 @@ Proof.
   - exfalso. rewrite COND in NOTCOND. cset_tac.
   - exfalso. eapply NOTCOND.
     intros a aIns.
-    cset_tac. eapply H0; eauto. cset_tac.
+    cset_tac.
 Qed.
 
 

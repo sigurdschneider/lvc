@@ -165,7 +165,7 @@ Proof.
     apply incl_eq.
     + setoid_rewrite add_union_singleton at 2.
       repeat apply union_incl_split.
-      * clear; cset_tac. eauto 20 with cset.
+      * clear; cset_tac.
       * clear; cset_tac.
       * assert (forall (s t u v w : ⦃var⦄),
                    t \ u ⊆ (s ∪ t ∪ u) \ u ∪ v ∪ w)
@@ -176,7 +176,7 @@ Proof.
         rewrite <- map_singleton.
         eauto with cset.
       * clear; cset_tac.
-    + clear; cset_tac. eauto 20 with cset.
+    + clear; cset_tac.
 Qed.
 
 

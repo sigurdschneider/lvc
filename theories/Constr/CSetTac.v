@@ -38,48 +38,6 @@ Proof.
   hnf; intros. eapply empty_iff in H0; eauto.
 Qed.
 
-Lemma de_morgan_dec {A} `{Computable A} {B} `{Computable B}
-: not (A /\ B) <-> (not A \/ not B).
-Proof.
-  decide A; decide B; intuition.
-Qed.
-
-Lemma dneg_dec {A} `{Computable A}
-: not (not A) <-> A.
-Proof.
-  decide A; intuition.
-Qed.
-
-Lemma P_or_False P
-: (P \/ False) <-> P.
-Proof.
-  intuition.
-Qed.
-
-Lemma not_or_dist A B
-: not (A \/ B) <-> not A /\ not B.
-Proof.
-  intuition.
-Qed.
-
-Lemma not_False_is_True
-: not False <-> True.
-Proof.
-  intuition.
-Qed.
-
-Lemma and_True_away_right A
-: A /\ True <-> A.
-Proof.
-  intuition.
-Qed.
-
-Lemma and_True_away_left A
-: True /\ A <-> A.
-Proof.
-  intuition.
-Qed.
-
 Lemma of_list_app X `{OrderedType X} (A B: list X)
   : of_list (A ++ B) [=] of_list A ∪ of_list B.
 Proof.
@@ -99,24 +57,17 @@ Qed.
 
   Ltac cset_assumption :=
     match goal with
-      | [ H : context [ In _ (union ?s ?t) ] |- _ ] =>
-        setoid_rewrite (union_iff s t _) in H
+    | [ H : Add ?x ?s ?t |- _ ] => rewrite (Add_Equal x s t) in H
+    | [ H : context [ In _ (union ?s ?t) ] |- _ ] =>
+      not_ignored H; setoid_rewrite (union_iff s t _) in H
       | [ H : context [ In _ (diff ?s ?t) ] |- _ ] =>
-        setoid_rewrite (diff_iff s t) in H
+        not_ignored H; setoid_rewrite (diff_iff s t) in H
       | [ |- context [ In _ (diff ?s ?t) ] ] =>
         setoid_rewrite (diff_iff s t)
       | [ H : context [ In _ (add ?s ?t) ] |- _ ] =>
-        setoid_rewrite (add_iff t s) in H
+        not_ignored H; setoid_rewrite (add_iff t s) in H
       | [ H : context [ In _ (inter ?s ?t) ] |- _ ] =>
-        setoid_rewrite (inter_iff s t _) in H
-      | [ H : context [ (?P \/ False) ] |- _ ] =>
-        setoid_rewrite (P_or_False P) in H
-      | [ |- context [ (?P \/ False) ] ] =>
-        setoid_rewrite (P_or_False P)
-      | [ H : context [ not (_ \/ _) ] |- _ ] =>
-        setoid_rewrite not_or_dist in H
-      | [ |- context [ not (_ \/ _) ] ] =>
-        setoid_rewrite not_or_dist
+        not_ignored H; setoid_rewrite (inter_iff s t _) in H
       | [ |- context [ In _ (add ?s ?t) ] ] =>
         setoid_rewrite (add_iff t s)
 (*      | [ H : context [ member ?x (minus ?s ?t) ] |- _ ] =>
@@ -132,35 +83,24 @@ Qed.
           | [ H'' : x === y |- _ ] => fail 1
           | [ H'' : ~x === y |- _ ] => fail 1
           | [ H'' : ~y === x |- _ ] => fail 1
+          | [ H'' : x === y -> False |- _ ] => fail 1
+          | [ H'' : y === x -> False |- _ ] => fail 1
           | [ H'' : y =/= x |- _ ] => fail 1
           | [ H'' : y === x |- _ ] => fail 1
           | [ |- _ ] => decide(x === y)
         end
-      | [ H : context [ not False ] |- _ ] =>
-        setoid_rewrite not_False_is_True in H
-      | [ |- context [ not False ] ] =>
-        setoid_rewrite not_False_is_True
 
       | [ H : context [ In _ empty ] |- _ ] =>
-        setoid_rewrite empty_iff in H
+        not_ignored H; setoid_rewrite empty_iff in H
       | [ |- context [ In _ empty ] ] =>
         setoid_rewrite empty_iff
 
-      | [ H : context [ _ /\ True ] |- _ ] =>
-        setoid_rewrite and_True_away_right in H
-      | [ |- context [ _ /\ True ] ] =>
-        setoid_rewrite and_True_away_right
-      | [ H : context [ True /\ _ ] |- _ ] =>
-        setoid_rewrite and_True_away_left in H
-      | [ |- context [ True /\ _ ] ] =>
-        setoid_rewrite and_True_away_left
-
       | [ H : context [ In _ (add _ empty) ] |- _ ] =>
-        setoid_rewrite In_add_empty in H
+        not_ignored H; setoid_rewrite In_add_empty in H
       | [ |- context [ In _ (add _ empty) ] ] =>
         setoid_rewrite In_add_empty
       | [ H : context [ In _ (singleton _) ] |- _ ] =>
-        setoid_rewrite In_single in H
+        not_ignored H; setoid_rewrite In_single in H
       | [ |- context [ In _ (singleton _) ] ] =>
         setoid_rewrite In_single
 (*      | [ H : context [ Is_true (@member _ _ ?x (@single _ ?y)) ] |- _ ] =>
@@ -235,7 +175,7 @@ Qed.
       | [ |- context [~In _ (singleton _)] ] =>
         setoid_rewrite (not_In_single)
       | [ H : context [~In _ (singleton _)] |- _ ] =>
-        setoid_rewrite not_In_single in H
+        not_ignored H; setoid_rewrite not_In_single in H
       | [ |- context [In ?x (add ?y empty)] ] =>
         setoid_rewrite (In_add_empty x y)
       | [ |- context [In ?x empty] ] =>
@@ -248,7 +188,7 @@ Qed.
       | [ |- context [ In ?x (singleton ?y) ]] =>
         setoid_rewrite (singleton_iff y x)
       | [ H : context [ In ?x (singleton ?y) ] |- _ ] =>
-        setoid_rewrite (singleton_iff y x) in H
+        not_ignored H; setoid_rewrite (singleton_iff y x) in H
       | [ |- context [ In ?y (add ?x ?s) ]] =>
         setoid_rewrite (add_iff s x y )
       | [ H : context [ In ?y (add ?x ?s) ] |- _ ] =>
@@ -262,37 +202,8 @@ Qed.
             let a := fresh "a" in let C := fresh "H" in
                                   intros a C;
                                     eapply (@not_in_empty _ _ a (H _ C))| clear H]
-      | [ |- ?a ∈ ?s \/ ( _ /\ ?a ∉ ?s) ] =>
-        lazymatch goal with
-          | [ H : a ∈ s |- _ ] => fail
-          | [ H : a ∉ s |- _ ] => fail
-          | [ H : a ∈ s -> False |- _ ] => fail
-          | _ => decide (a ∈ s)
-        end
-      | [ |- ?a ∈ ?s \/ ( _ /\ (?a ∈ ?s -> False) ) ] =>
-        lazymatch goal with
-        | [ H : a ∈ s |- _ ] => fail
-        | [ H : a ∉ s |- _ ] => fail
-        | [ H : a ∈ s -> False |- _ ] => fail
-        | _ => decide (a ∈ s)
-        end
-      | [ |- ( _ /\ (?a ∈ ?s -> False) \/ ?a ∈ ?s) ] =>
-        lazymatch goal with
-        | [ H : a ∈ s |- _ ] => fail
-        | [ H : a ∉ s |- _ ] => fail
-        | [ H : a ∈ s -> False |- _ ] => fail
-        | _ => decide (a ∈ s)
-        end
-      | [ H: (not ?A) -> False |- ?A ] => try now (eapply dneg_dec; intuition)
       | [ H : context [ InA _ ?x ?l ] |- _ ] => setoid_rewrite <- of_list_1 in H
       | [ |- context [ InA _ ?x ?l ] ] => setoid_rewrite <- of_list_1
-      | [ H : (?x ∈ ?s -> False) -> False |- _ ] =>
-        lazymatch goal with
-        | [ H : x ∈ s |- _ ] => fail
-        | [ H : x ∉ s |- _ ] => fail
-        | [ H : x ∈ s -> False |- _ ] => fail
-        | _ => decide (x ∈ s)
-        end
       | [ INCL: ?s1 ⊆ ?s2, NINCL : ~ ?t1 ⊆ ?t2 |- _ ] =>
         match s1 with
         | t1 =>
@@ -367,11 +278,13 @@ Qed.
     intros; (try subst); dcr; destr; mycleartrivial; (try (smpl cset));
     (try (f tt)); (try bool_to_prop); (try (bool_to_prop in *)); mycleartrivial.
 
-  Ltac set_tac f :=
-    repeat ((repeat (eauto using get; cset_tac_step f))
-            || intuition (eauto using get; cset_tac_step f)).
+  Ltac cset_tac_step_A f := eauto using get; cset_tac_step f.
+  Ltac cset_tac_step_B f := ((repeat (cset_tac_step_A f)) || intuition (cset_tac_step_A f)).
 
-  Ltac cset_tac := set_tac idtac.
+  Ltac set_tac f := repeat (cset_tac_step_B f; repeat clear_dup_fast).
+
+  Ltac cset_tac' := set_tac idtac.
+  Ltac cset_tac := solve [ cset_tac' ].
 
 Hint Extern 9 =>
      match goal with
@@ -419,7 +332,7 @@ Smpl Add
 Smpl Add
      match goal with
      | [ |- ?a ∈ filter ?p ?lv ] => eapply filter_iff; [eauto|]
-     | [ H : ?a ∈ filter ?p ?lv |- _ ] => eapply filter_iff in H; [|eauto]
+     | [ H : context [ ?a ∈ filter ?p ?lv ] |- _ ] => setoid_rewrite filter_iff in H; [|eauto]
      | [ H : (if [?P] then true else false) = true |- _ ] => cases in H
      | [ |- (if [?P] then true else false) = true ] => cases
      | [ |- (@Equivalence.equiv ?X (@_eq ?X ?H) (@OT_Equivalence ?X ?H) ?x ?a) \/ _ ] =>
@@ -427,12 +340,18 @@ Smpl Add
          [ left; assumption | right ]
      | [ H : Is_true (?p ?x),
              H' : @Equivalence.equiv ?X (@_eq ?X ?H) (@OT_Equivalence ?X ?H) ?x ?a,
-                    PR: Proper (@_eq ?X ?H ==> eq) ?p |- ?p ?a = true] => rewrite <- H'
+                  PR: Proper (@_eq ?X ?H ==> eq) ?p |- ?p ?a = true] => rewrite <- H'
+     | [ H : Is_true (?p ?a), H'' : Is_true (?p ?x) -> False,
+             H' : @Equivalence.equiv ?X (@_eq ?X ?H) (@OT_Equivalence ?X ?H) ?x ?a,
+                    PR: Proper (@_eq ?X ?H ==> eq) ?p |- _ ] => exfalso; eapply H''; rewrite H'; eauto
+     | [ H : _ = true |- _ ] => eapply Is_true_eq_left in H
      end : cset.
 
 Smpl Add match goal with
          | [ H : ?x ∈ map ?f ?s |- _ ] =>
            rewrite (map_iff f) in H; destruct H as [? [? ?]]
+         | [ H : context [ _ ∈ map ?f _ ] |- _ ] =>
+           rewrite (map_iff f) in H
          | [ |- context [ _ ∈ map ?f _ ] ] =>
            rewrite (map_iff f)
          end : cset.
@@ -467,25 +386,45 @@ Proof.
   split; intros; edestruct H; eauto; exfalso; eauto.
 Qed.
 
-Smpl Add match goal with
+Lemma exists_to_forall X (P:X->Prop) (Q:Prop)
+  : ((exists x, P x) -> Q) <-> (forall x, P x -> Q).
+Proof.
+  firstorder.
+Qed.
+
+Smpl Add 70 match goal with
          | [ H : forall _, _ -> _ /\ _ |- _ ] =>
            rewrite conclusion_and_to_two in H;
              let I := fresh H in destruct H as [H I]
          | [ H : forall _, _ \/ _ -> _ |- _ ] =>
            rewrite premise_or_to_two in H;
              let I := fresh H in destruct H as [H I]
+         | [ H : (exists x, @?P x) -> ?Q |- _ ] => setoid_rewrite (@exists_to_forall _ P Q) in H
          end : cset.
 
-Smpl Add match goal with
+Smpl Add 71 match goal with
          | [ H : forall _, _ /\ _ -> _ |- _ ] => rewrite premise_and_to_impl in H
          | [ H : forall _, _  -> _ \/ _ |- _ ] => eapply conclusion_or_to_two in H
          end : cset.
+
+Smpl Add 120 match goal with
+            | [ H : ?x ∈ ?s, H' : forall y, _ ∈ ?s -> @?P y |- _ ] =>
+              let P' := eval cbv beta in (P x) in
+                  lazymatch goal with
+                  | [ H : P' |- _ ] => fail
+                  | _ =>
+                    record_instance H' x;
+                    let H'' := fresh H' in pose proof (H' x H) as H''
+                  end
+            end : cset.
+
 
 Lemma P_P_False_False (P:Prop)
   : P -> ((P -> False) <-> False).
 Proof.
   firstorder.
 Qed.
+
 Lemma P_P_True (P:Prop)
   : P -> (P <-> True).
 Proof.
@@ -517,18 +456,182 @@ Proof.
 Qed.
 
 Lemma True_and_right (P:Prop)
-  : True /\ P <-> P.
+  : P /\ True <-> P.
 Proof.
   firstorder.
 Qed.
 
-Smpl Add
+Lemma P_or_False_right P
+: (P \/ False) <-> P.
+Proof.
+  intuition.
+Qed.
+
+Lemma P_or_False_left P
+: (False \/ P) <-> P.
+Proof.
+  intuition.
+Qed.
+
+Lemma not_or_dist A B
+: not (A \/ B) <-> not A /\ not B.
+Proof.
+  intuition.
+Qed.
+
+Lemma not_False_is_True
+: not False <-> True.
+Proof.
+  intuition.
+Qed.
+
+Lemma de_morgan_dec {A} `{Computable A} {B} `{Computable B}
+: not (A /\ B) <-> (not A \/ not B).
+Proof.
+  decide A; decide B; intuition.
+Qed.
+
+Lemma de_morgan_dec' {A} `{Computable A} {B} `{Computable B}
+: (A /\ B -> False) <-> ((A -> False) \/ (B -> False)).
+Proof.
+  decide A; decide B; intuition.
+Qed.
+
+Lemma dneg_dec {A} `{Computable A}
+: not (not A) <-> A.
+Proof.
+  decide A; intuition.
+Qed.
+
+Lemma dneg_dec' {A} `{Computable A}
+  : ((A -> False) -> False) <-> A.
+Proof.
+  decide A; intuition.
+Qed.
+
+
+Smpl Add 50
      match goal with
      | [ H : ?x ∈ ?s |- context [?x ∈ ?s -> False ] ] => rewrite (@P_P_False_False _ H)
+     | [ H : ?x ∈ ?s, H' : context [?x ∈ ?s -> False ] |- _ ] => rewrite (@P_P_False_False _ H) in H'
      | [ H : ?x ∈ ?s |- context [?x ∈ ?s] ] => rewrite (@P_P_True _ H)
+     | [ H : ?x ∈ ?s, H' : context [?x ∈ ?s] |- _ ] => rewrite (@P_P_True _ H) in H'
      | [ |- context [ ?x === ?x ] ] => rewrite (@equiv_True _ x)
+     | [ H : context [ ?x === ?x ] |- _ ] => rewrite (@equiv_True _ x) in H
      | [ |- context [ True \/ _ ] ] => setoid_rewrite True_or_left
+     | [ H : context [ True \/ _ ] |- _ ] => setoid_rewrite True_or_left in H
      | [ |- context [ _ \/ True ] ] => setoid_rewrite True_or_right
+     | [ H : context [ _ \/ True ] |- _ ] => setoid_rewrite True_or_right in H
      | [ |- context [ True /\ _ ] ] => setoid_rewrite True_and_left
+     | [ H : context [ True /\ _ ] |- _ ] => setoid_rewrite True_and_left in H
      | [ |- context [ _ /\ True ] ] => setoid_rewrite True_and_right
+     | [ H : context [ _ /\ True ] |- _ ] => setoid_rewrite True_and_right in H
+     | [ |- context [ _ \/ False ] ] => setoid_rewrite P_or_False_right
+     | [ H : context [ _ \/ False ] |- _ ] => setoid_rewrite P_or_False_left in H
+     | [ |- context [ False \/ _ ] ] => setoid_rewrite P_or_False_right
+     | [ H : context [ False \/ _ ] |- _ ] => setoid_rewrite P_or_False_left in H
+     | [ |- context [ not (_ \/ _) ] ] => setoid_rewrite not_or_dist
+     | [ H : context [ not (_ \/ _) ] |- _ ] => setoid_rewrite not_or_dist in H
+     | [ |- context [ not False ] ] => setoid_rewrite not_False_is_True
+     | [ H : context [ not False ] |- _ ] => setoid_rewrite not_False_is_True in H
+     | [ |- context [ not (not _) ] ] => setoid_rewrite dneg_dec
+     | [ H : context [ not (not (_)) ] |- _ ] => setoid_rewrite dneg_dec in H
+     | [ |- context [ (_ -> False) -> False ] ] => setoid_rewrite dneg_dec
+     | [ H : context [ (_ -> False) -> False ] |- _ ] => setoid_rewrite dneg_dec' in H
+     | [ |- context [ not (_ /\ _) ] ] => setoid_rewrite de_morgan_dec
+     | [ H : context [ not (_ /\ _) ] |- _ ] => setoid_rewrite de_morgan_dec in H
+     | [ |- context [ (_ /\ _) -> False ] ] => rewrite de_morgan_dec'
+     | [ H : context [ (_ /\ _) -> False ] |- _ ] => rewrite de_morgan_dec in H
+     | [ H : False -> _ |- _ ] => clear H
+     | [ H : _ -> True |- _ ] => clear H
+     end : cset.
+
+(*
+      | [ |- ?a ∈ ?s \/ ( _ /\ ?a ∉ ?s) ] =>
+        lazymatch goal with
+          | [ H : a ∈ s |- _ ] => fail
+          | [ H : a ∉ s |- _ ] => fail
+          | [ H : a ∈ s -> False |- _ ] => fail
+          | _ => decide (a ∈ s)
+        end
+      | [ |- ?a ∈ ?s \/ ( _ /\ (?a ∈ ?s -> False) ) ] =>
+        lazymatch goal with
+        | [ H : a ∈ s |- _ ] => fail
+        | [ H : a ∉ s |- _ ] => fail
+        | [ H : a ∈ s -> False |- _ ] => fail
+        | _ => decide (a ∈ s)
+        end
+      | [ |- ( _ /\ (?a ∈ ?s -> False) \/ ?a ∈ ?s) ] =>
+        lazymatch goal with
+        | [ H : a ∈ s |- _ ] => fail
+        | [ H : a ∉ s |- _ ] => fail
+        | [ H : a ∈ s -> False |- _ ] => fail
+        | _ => decide (a ∈ s)
+        end
+
+      | [ H : (?x ∈ ?s -> False) -> False |- _ ] =>
+        lazymatch goal with
+        | [ H : x ∈ s |- _ ] => fail
+        | [ H : x ∉ s |- _ ] => fail
+        | [ H : x ∈ s -> False |- _ ] => fail
+        | _ => decide (x ∈ s)
+        end
+*)
+
+Smpl Add
+     match goal with
+     | [ |- ?a ∈ ?s \/ _ ] =>
+       lazymatch goal with
+       | [ H : a ∉ s |- _ ] => right
+       | [ H : a ∈ s -> False |- _ ] => right
+       | _ => decide (a ∈ s); [ left; eassumption | right ]
+       end
+     | [ |- _ \/ ?a ∈ ?s ] =>
+       lazymatch goal with
+       | [ H : a ∉ s |- _ ] => left
+       | [ H : a ∈ s -> False |- _ ] => left
+       | _ => decide (a ∈ s); [ right; eassumption | left ]
+       end
+     | [ |- ?P \/ ?Q ] =>
+       match P with
+       | context [ ?a ∈ ?s ] =>
+         match Q with
+         | context [ a ∈ s -> False ] => decide (a ∈ s)
+         end
+       | context [ ?a === ?b ] =>
+         match Q with
+         | context [ a === b -> False ] => decide (a === b)
+         end
+       | context [ ?a ∈ ?s -> False ] =>
+         match Q with
+         | context [ a ∈ s ] => decide (a ∈ s)
+         end
+       | context [ ?a === ?b -> False ] =>
+         match Q with
+         | context [ a === b ] => decide (a === b)
+         end
+       | context [ ?A -> False ] =>
+         match Q with
+         | context [ A ] => decide A
+         end
+       | context [ ?A ] =>
+         match Q with
+         | context [ A -> False ] => decide A
+         end
+       end
+
+(*     | [ |- ?a ∈ ?s ] =>
+       lazymatch goal with
+       | [ H : a ∉ s |- _ ] => exfalso
+       | [ H : a ∈ s -> False |- _ ] => exfalso
+       | _ => decide (a ∈ s); [ eassumption | exfalso ]
+       end*)
+(*
+    match goal with
+    | [ |- exists _, _ ] =>
+      match goal with
+        [ |- ?P ] => decide P; [ eassumption| exfalso]
+      end
+    end
+*)
      end : cset.

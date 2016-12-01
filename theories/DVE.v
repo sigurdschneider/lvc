@@ -84,10 +84,10 @@ Proof.
   - pno_step.
     simpl. erewrite <- op_eval_live_agree; eauto. eapply agree_on_sym; eauto.
   - eapply sim_fun_ptw; eauto.
-    + intros. left. rewrite <- zip_app; eauto with len. eapply IH; eauto using agree_on_incl.
+    + intros. left. rewrite <- zip_app;[| eauto with len]. eapply IH; eauto using agree_on_incl.
     + intros. hnf; intros; simpl in *; dcr; subst.
       inv_get.
-      rewrite <- zip_app; eauto with len.
+      rewrite <- zip_app;[| eauto with len].
       eapply IH; eauto.
       eapply agree_on_update_filter'; eauto.
     + hnf; intros; simpl in *; subst.
@@ -157,7 +157,7 @@ Proof.
   - pno_step.
     simpl. erewrite <- op_eval_live_agree; eauto. eapply agree_on_sym; eauto.
   - eapply sim_fun_ptw; eauto.
-    + intros. left. rewrite <- zip_app; eauto with len.
+    + intros. left. rewrite <- zip_app;[| eauto with len].
       eapply IH; eauto using agree_on_incl.
     + intros. hnf; intros; simpl in *; dcr; subst.
       inv_get.
@@ -502,7 +502,7 @@ Proof.
       * eapply pe_eta_split; econstructor; simpl; eauto.
   - econstructor; eauto with len; (try eapply eq_union_lr); eauto.
     * intros; inv_get. simpl in *.
-      rewrite <- zip_app; eauto with len.
+      rewrite <- zip_app;[| eauto with len].
       eapply H1; eauto.
       -- edestruct H8; eauto; dcr. rewrite H4. rewrite Dincl;  eauto.
          unfold filter_set; rewrite of_list_filter. clear; cset_tac.
@@ -511,7 +511,7 @@ Proof.
          simpl. unfold filter_set; rewrite of_list_filter.
          rewrite <- union_assoc. eapply incl_union_left.
          rewrite zip_app; eauto with len.
-         clear; cset_tac. decide (a ∈ getAnn x1 /\ a ∈ of_list (fst x)); eauto.
+         clear; cset_tac'.
     * hnf; intros; inv_get.
       edestruct H8; eauto; dcr.
       simpl. econstructor; unfold filter_set; simpl in *.

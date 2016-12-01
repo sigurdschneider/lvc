@@ -225,3 +225,8 @@ match goal with
 | [ H : disj ?s ?t |- disj ?s (_ ∪ ?t ∪ _) ] =>
   eapply (disj_2_incl H); eapply incl_union_left; eapply incl_right
 end : cset.
+
+Smpl Add 40 match goal with
+         | [ H : disj _ _ |- _ ] => hnf in H
+         | [ |- disj _ _ ] => hnf
+         end : cset.

@@ -89,7 +89,7 @@ Section MapAgreement.
     -> agree_on R (lv \ singleton x) E E'.
   Proof.
     intros A B.
-    hnf; intros. cset_tac.
+    hnf; intros. cset_tac'.
     exploit A; eauto. lud; cset_tac.
   Qed.
 

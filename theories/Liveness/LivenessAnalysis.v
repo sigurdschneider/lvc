@@ -49,7 +49,7 @@ Proof.
   destruct s, a as [|[a ?]|[a ?] [a' ?]|a]; simpl in *;
     try now eapply incl_empty.
   - cases; [| cset_tac].
-    cset_tac; eauto; eapply subTerm_occurVars; eauto; simpl; cset_tac.
+    cset_tac'; eauto; eapply subTerm_occurVars; eauto; simpl; cset_tac.
   - repeat cases; eauto. eapply subTerm_occurVars in ST; simpl in *.
     cset_tac.
   - eapply union_incl_split.
@@ -108,7 +108,6 @@ Proof.
         cases in H3; cset_tac.
         intros; inv_get; eauto.
   - rewrite H1 at 1. repeat cases; eauto; cset_tac.
-    exfalso; eauto.
   - cases; [| rewrite H1; reflexivity].
     eapply incl_union_lr; eauto.
     eapply list_union_incl; eauto with cset.

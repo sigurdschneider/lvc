@@ -81,7 +81,7 @@ Proof.
           hnf; intros.
           decide (a0 = a).
           + subst a0. contradiction.
-          + cset_tac.
+          + cset_tac'. destruct H1; eauto.
         }
         rewrite elim_a; simpl.
         rewrite <- IHZ.
@@ -105,7 +105,7 @@ Lemma slp_union_minus_incl
 Proof.
   intros.
   rewrite <- slp_union_incl with (s:=s); eauto.
-  unfold lookup_set. cset_tac; eauto 20 with cset.
+  unfold lookup_set. cset_tac'; eauto 20 with cset.
 Qed.
 
 

@@ -1,8 +1,8 @@
-Require Export Setoid Coq.Classes.Morphisms.
+Require Export Setoid Coq.Classes.Morphisms Util.
 Require Export Sets SetInterface SetConstructs SetProperties.
 Require Export SetDecide.
 
-Require Import EqDec CSetNotation.
+Require Import EqDec CSetNotation CSetTac.
 
 
 Global Instance inst_eq_dec_ordered_type X `(OrderedType X)
@@ -48,3 +48,45 @@ destruct (_cmp x y); intros.
 Defined.
 
 Extraction Inline inst_computable_In Subset_computable Equal_computable.
+
+Instance exists_in_set_computable X `{OrderedType X} (s:set X) (P:X->Prop)
+         `{forall x, Computable (P x)} `{Proper _ (_eq ==> iff) P}
+  : Computable (exists x, x ∈ s /\ P x).
+Proof.
+  hnf. pattern s. eapply set_induction; intros.
+  - right; intro; dcr. eapply empty_is_empty_1 in H2. cset_tac.
+  - destruct H2;[left|]; dcr.
+    + rewrite Add_Equal in H4. cset_tac.
+    + rewrite Add_Equal in H4.
+      decide (P x).
+      * left. exists x. cset_tac.
+      * right. intro; eapply n. dcr.
+        rewrite H4 in *; clear H4. cset_tac'.
+        exfalso. eapply n0. rewrite H2. eauto.
+Qed.
+
+Instance set_not_in_proper X `{OrderedType X} (s:set X)
+  : Proper (_eq ==> iff) (fun x : X => x ∈ s -> False).
+Proof.
+  unfold Proper, respectful;
+  intros x y EQ; rewrite EQ; reflexivity.
+Qed.
+
+Instance set_not_in_proper' X `{OrderedType X} (s:set X)
+  : Proper (_eq ==> iff) (fun x : X => x ∉ s).
+Proof.
+  unfold Proper, respectful;
+  intros x y EQ; rewrite EQ; reflexivity.
+Qed.
+
+Instance set_in_proper X `{OrderedType X} (s:set X)
+  : Proper (_eq ==> iff) (fun x : X => x ∈ s).
+Proof.
+  unfold Proper, respectful;
+  intros x y EQ; rewrite EQ; reflexivity.
+Qed.
+
+Hint Extern 5 (Proper (_eq ==> iff) _) => unfold Proper, respectful;
+                                         let x := fresh "x" in let y := fresh "y" in
+                                                              let EQ := fresh "EQ" in
+                                                              intros x y EQ; rewrite EQ; reflexivity.

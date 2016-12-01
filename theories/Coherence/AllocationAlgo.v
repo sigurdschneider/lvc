@@ -64,10 +64,10 @@ Proof.
   pose proof (least_fresh_smallest G).
   pose proof (least_fresh_small G).
   eapply (@all_in_lv_cardinal F (least_fresh G)).
-  intros. eapply filter_iff; cset_tac.
+  intros. eapply filter_iff; cset_tac'.
   exfalso.
   exploit (@all_in_lv_cardinal F c); [| omega].
-  intros. eapply filter_iff; cset_tac.
+  intros. eapply filter_iff; cset_tac'.
   eapply H0. omega.
   exfalso. omega.
 Qed.
@@ -106,12 +106,12 @@ Section FreshListP.
     - simpl in *; intros; eauto.
     - unfold crd in *. simpl in *.
       cases; eauto; simpl.
-      + hnf; intros. cset_tac.
+      + hnf; intros. cset_tac'.
         * eapply least_fresh_spec; eauto.
         * specialize (IHL {least_fresh G; G}).
           simpl in *. rewrite add_cardinal_2 in Card.
           -- eapply IHL; eauto with cset.
-             ++ intros. simpl in *. cset_tac.
+             ++ intros. simpl in *. cset_tac'.
                exploit (@least_fresh_filter_small c G); eauto.
                rewrite Card. omega.
                rewrite <- H3 in Card. omega.
@@ -120,9 +120,9 @@ Section FreshListP.
                omega.
           -- intro. inv ND. eapply H4.
              apply of_list_get_first in H; dcr; inv_get.
-             cset_tac.
+             cset_tac'.
              eapply get_InA; eauto.
-      + hnf; intros. simpl in *. cset_tac.
+      + hnf; intros. simpl in *. cset_tac'.
         * eapply (AL x); eauto. omega.
         * specialize (IHL G).
           eapply IHL; eauto with cset.
@@ -145,7 +145,7 @@ Section FreshListP.
         unfold var in *; simpl in *. omega.
       + rewrite add_cardinal_2 in H2; try omega.
         edestruct (IHNoDupA {least_fresh G; G}); eauto using get.
-        * intros. eapply H1; cset_tac.
+        * intros. eapply H1; cset_tac'.
           exploit (@least_fresh_filter_small c G); eauto.
           unfold var in *; simpl in *.
           rewrite H2. omega.
@@ -156,7 +156,7 @@ Section FreshListP.
         * dcr. right. split; eauto using get.
         * intro. eapply H.
           apply of_list_get_first in H4; dcr; inv_get.
-          cset_tac.
+          cset_tac'.
           eapply get_InA; eauto.
       + edestruct (IHNoDupA G); eauto using get.
         * intros. eapply H1; cset_tac.
@@ -200,7 +200,7 @@ Section FreshListP.
       + econstructor.
         * intro.
           eapply (@fresh_list_P_spec {least_fresh G; G}); eauto with cset.
-          -- intros. cset_tac.
+          -- intros. cset_tac'.
              exploit (@least_fresh_filter_small c G); eauto.
              unfold var in *; simpl in *.
              rewrite Card. omega.
@@ -211,7 +211,7 @@ Section FreshListP.
              unfold var in *; simpl in *. omega.
           -- eapply InA_in; eauto.
         * eapply IHNoDup; eauto.
-          --  intros. cset_tac.
+          --  intros. cset_tac'.
               exploit (@least_fresh_filter_small c G); eauto.
               unfold var in *; simpl in *.
               rewrite Card. omega.
@@ -222,7 +222,7 @@ Section FreshListP.
              unfold var in *; simpl in *. omega.
       + intro. eapply H.
         apply of_list_get_first in H0; dcr; inv_get.
-        cset_tac.
+        cset_tac'.
         eapply get_InA; eauto.
     - econstructor.
       + intro. edestruct fresh_list_InA; eauto.

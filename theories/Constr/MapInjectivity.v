@@ -63,7 +63,7 @@ Section MapInjectivity.
     -> lookup_set m (s \ t) ⊆ lookup_set m s \ (lookup_set m t).
   Proof.
     intros; hnf; intros. lset_tac.
-    eapply H4. rewrite H2; cset_tac. eqs.
+    eapply H4. rewrite H2; eauto with cset. eqs.
   Qed.
 
 
@@ -76,7 +76,7 @@ Proof.
   split; intros; hnf; intros.
   + eapply H2; try rewrite H0 ; eauto.
     hnf in H1. repeat rewrite H1. eauto.
-  + rewrite H0 in *. eapply H2; cset_tac; eauto.
+  + rewrite H0 in *. eapply H2; eauto with cset.
     hnf in H1. repeat rewrite <- H1. eauto.
 Qed.
 
@@ -89,8 +89,7 @@ Lemma injective_on_update_not_in {X} `{OrderedType X} {Y} `{OrderedType Y}
 Proof.
   intros; hnf; intros.
   decide(x0 === x); decide (x0 === y); eauto.
-  - exfalso. lset_tac. eapply H3.
-    eexists y. cset_tac; eauto.
+  - exfalso. lset_tac.
   - eapply H2; lset_tac; eauto.
 Qed.
 
@@ -100,10 +99,10 @@ Lemma injective_on_update_fresh {X} `{OrderedType X} {Y} `{OrderedType Y}
   -> y ∉ lookup_set f (D \ singleton x)
   -> injective_on D (update f x y).
 Proof.
-  intros; hnf; intros. lset_tac. lud.
-  - exfalso; eauto.
-  - exfalso; eauto.
-  - eapply H2; cset_tac; eauto.
+  intros; hnf; intros. lud.
+  - lset_tac.
+  - lset_tac.
+  - eapply H2; cset_tac.
 Qed.
 
 Lemma injective_on_not_in_lookup_set {X} `{OrderedType X} {Y} `{OrderedType Y} f D D' x
@@ -200,7 +199,6 @@ Proof.
 
   - eapply empty_is_empty_1 in H2.
     lset_tac.
-    exfalso; eauto.
   - destruct a; simpl in *.
     rewrite <- H5; clear H5. eapply Add_Equal in H4.
     rewrite H4; clear H4.
@@ -274,19 +272,18 @@ Global Instance injective_on_computable {X} `{OrderedType X} {Y} `{OrderedType Y
 : Computable (injective_on D f).
 Proof.
   case_eq (@injective_on_compute X _ Y _ D f _); eauto; intros.
-  left. pose proof (@injective_on_iff X _ Y _ f _ D ∅ ∅).
-  destruct H4; eauto. cset_tac; intuition. isabsurd.
-  unfold injective_on_compute in H3.
-  rewrite H3 in H4. specialize (H4 I). eapply injective_on_incl ;eauto.
-  cset_tac; eauto.
-  right. intro.
-  pose proof (@injective_on_iff X _ Y _ f _ D ∅ ∅).
-  edestruct H5. cset_tac; intuition. cset_tac; intuition.
-  isabsurd.
-  change False with (Is_true false). rewrite <- H3.
-  unfold injective_on_compute in H3. rewrite H3 in H7.
-  unfold injective_on_compute. rewrite H3. eapply H7.
-  eapply injective_on_incl; eauto with cset.
+  + left. pose proof (@injective_on_iff X _ Y _ f _ D ∅ ∅).
+    destruct H4; eauto. cset_tac; intuition. isabsurd.
+    unfold injective_on_compute in H3.
+    rewrite H3 in H4. specialize (H4 I). eapply injective_on_incl ;eauto.
+  + right. intro.
+    pose proof (@injective_on_iff X _ Y _ f _ D ∅ ∅).
+    edestruct H5. cset_tac; intuition. cset_tac; intuition.
+    isabsurd.
+    change False with (Is_true false). rewrite <- H3.
+    unfold injective_on_compute in H3. rewrite H3 in H7.
+    unfold injective_on_compute. rewrite H3. eapply H7.
+    eapply injective_on_incl; eauto with cset.
 Defined.
 
 Lemma lookup_set_minus_eq X `{OrderedType X} Y `{OrderedType Y} s t (m:X -> Y) `{Proper _ (_eq ==> _eq) m}
@@ -323,12 +320,12 @@ Proof.
       rewrite H7. dcr.
       eapply IHlength_eq; eauto.
       * eapply injective_on_fresh; eauto.
-        eapply injective_on_incl; eauto.
-        lset_tac. eapply (H4 y). lset_tac. lset_tac.
+        eapply injective_on_incl; eauto. clear IHlength_eq.
+        clear H7. lset_tac. eapply (H4 y). lset_tac. lset_tac.
       * inv H5; inv H6.
         rewrite lookup_set_add; eauto. lud; eauto.
         split; [| clear_all; cset_tac].
-        rewrite <- H4. lset_tac.
+        rewrite <- H4. clear H7. lset_tac.
         lud; eauto.
     + eapply update_nodup_commute; eauto using length_eq_length.
 Qed.
@@ -376,8 +373,8 @@ Proof.
   intros Disj Inj; hnf; intros.
   eapply map_iff in H1; eauto; dcr.
   eapply map_iff in H2; eauto; dcr.
-  rewrite H6 in H5. eapply Inj in H5; cset_tac.
-  eapply Disj; eauto. cset_tac.
+  rewrite H6 in H5. eapply Inj in H5.
+  eapply Disj; eauto. cset_tac. cset_tac. cset_tac.
 Qed.
 
 Lemma get_map_first X `{OrderedType X} Y `{OrderedType Y} (L:list X) (f:X->Y) n x
@@ -395,7 +392,8 @@ Proof.
     + intro A.
       eapply H1 in A; simpl; eauto with cset.
       eapply H3; eauto using get.
-      cset_tac. eapply get_in_of_list; eauto.
+      cset_tac'. exfalso. eapply n0.
+      eapply H1; try eapply get_in_of_list; eauto using get.
     + simpl in *.
       exploit IHget; intros; eauto using injective_on_incl, get with cset.
       eapply H3;[| eauto using get]. omega. dcr.

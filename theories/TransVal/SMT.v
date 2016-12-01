@@ -324,14 +324,13 @@ intros agree; general  induction s; simpl in *; try reflexivity.
       eapply (agree_on_incl (bv:=Op.freeVars a)
                             (lv:=list_union (Op.freeVars a ::
                                                           List.map Op.freeVars l))); eauto.
-      cset_tac; simpl.
+      cset_tac'; simpl.
       eapply list_union_start_swap.
-      cset_tac; eauto. }
+      cset_tac. }
       { rewrite H. f_equal. eapply IHl; eauto.
         eapply (agree_on_incl (bv:=list_union (List.map Op.freeVars l))
-               (lv:=list_union (List.map Op.freeVars (a::l)))); eauto.
-        cset_tac; simpl.
-        eapply list_union_start_swap.
-        eapply union_right; eauto. }
+                              (lv:=list_union (List.map Op.freeVars (a::l)))); eauto.
+        simpl in *. setoid_rewrite list_union_start_swap at 2. cset_tac.
+      }
   + rewrite H.  split; eauto.
 Qed.

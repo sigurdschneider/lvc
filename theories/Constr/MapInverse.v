@@ -181,7 +181,7 @@ Lemma update_with_list_inverse_on {X} `{OrderedType X} {Y} `{OrderedType Y} (f:X
   -> inverse_on (D \ of_list Z) f g.
 Proof.
   intros.
-  hnf; intros. cset_tac.
+  hnf; intros. cset_tac'.
   pose proof (H2 _ H4).
   erewrite update_with_list_no_update in H3; eauto.
   erewrite update_with_list_no_update in H3; eauto.
@@ -270,7 +270,7 @@ Proof.
   erewrite update_with_list_no_update; eauto.
   eapply H1; eauto. cset_tac ; eauto.
   erewrite update_with_list_no_update; eauto. intro.
-  specialize (H4 (ϱ x)). cset_tac; eauto.
+  specialize (H4 (ϱ x)). cset_tac'.
   eapply H7.
   eapply lookup_set_spec; cset_tac.
 Qed.
@@ -279,7 +279,7 @@ Lemma inverse_on_dead_update X `{OrderedType X} Y `{OrderedType Y} (ra:X->Y) ira
 : inverse_on s (update ra x y) (update ira y x)
   -> inverse_on (s \ singleton x) ra ira.
 Proof.
-  intros. hnf; intros. cset_tac; dcr.
+  intros. hnf; intros. cset_tac'.
   specialize (H1 _ H3). lud; intuition.
 Qed.
 

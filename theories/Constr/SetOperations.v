@@ -33,8 +33,8 @@ Proof.
     | eapply transpose_union
     | eapply H1
     | eapply H2 ].
-    eapply Add_Equal in H2. rewrite H2 in H4; clear H1 H2.
-    cset_tac.
+    eapply Add_Equal in H2. rewrite H2 in H4. clear H2.
+    cset_tac'. rewrite H2 in n. exfalso; eauto.
 Qed.
 
 Lemma fold_union_incl_start X `{OrderedType.OrderedType X} s u (x:X)
@@ -132,7 +132,7 @@ Proof.
     decide (x ∈ s0).
     + rewrite fold_add in H3; eauto using union_m, transpose_union_subset.
     + rewrite fold_add with (eqA:=Equal) in H3; eauto using union_m, transpose_union, Equal_ST.
-      cset_tac.
+      cset_tac'.
       * eapply H0 in H6; cset_tac.
 Qed.
 

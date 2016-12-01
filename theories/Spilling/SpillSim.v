@@ -348,6 +348,7 @@ Proof.
     revert NOTCOND H. clear; cset_tac.
 Qed.
 
+
 Lemma of_list_slot_lift_params R M (Z:params) (Incl:of_list Z ⊆ R ∪ M)
   : of_list (slot_lift_params slot (R, M) Z)
             [=] of_list Z \ (M \ R)
@@ -357,15 +358,30 @@ Proof.
   - cset_tac.
   - cases; simpl.
     + rewrite IHZ; clear IHZ.
-      time (cset_tac; eauto 20).
-      * right. eexists a; cset_tac.
-      * rewrite <- Incl; cset_tac.
-    + cases; simpl; rewrite IHZ; eauto.
+      time (cset_tac_step_B idtac).
+      time (cset_tac_step_B idtac).
       * cset_tac.
-        -- decide (x ∈ M); eauto 20.
+      * right. eexists a; cset_tac.
+      * right. eexists x; cset_tac'.
+      * cset_tac.
+      * rewrite <- Incl; cset_tac.
+    + cases; simpl; rewrite IHZ; clear IHZ; eauto.
+      * hnf; split; intros.
+        -- time (cset_tac_step_B idtac).
+           time (cset_tac_step_B idtac).
+           time (cset_tac_step_B idtac).
+           destruct H7. eauto 20.
+           time (cset_tac_step_B idtac).
+           right. eexists x. cset_tac.
+        -- cset_tac.
       * rewrite <- Incl. eauto with cset.
       * decide (a ∈ M).
-        -- cset_tac; eauto 20.
+        -- time (cset_tac_step_B idtac).
+           time (cset_tac_step_B idtac).
+           time (cset_tac_step_B idtac).
+           right. eexists a. cset_tac.
+           right. cset_tac.
+           cset_tac.
         -- exfalso. cset_tac.
       * rewrite <- Incl. cset_tac.
 Qed.
@@ -423,7 +439,7 @@ Proof.
   - edestruct (IHLen slot E n0 R M) as [? [? ]]; eauto using get; dcr.
     + eapply disj_incl; eauto.
       clear; cset_tac.
-      clear; cset_tac; eauto 20.
+      clear; cset_tac'; eauto 20.
     + eapply injective_on_incl; eauto.
       clear; cset_tac.
     + intros. eapply (First (S n')); eauto using get. omega.
@@ -465,8 +481,9 @@ Proof.
     rewrite of_list_slot_lift_params; eauto.
     intro. eapply union_iff in H0; destruct H0.
     + eapply (Disj (slot x)). cset_tac. cset_tac.
-    + eapply (Disj x). cset_tac. cset_tac.
-      eapply Inj in H1; eauto with cset.
+    + eapply (Disj x). cset_tac.
+      eapply map_iff in H0; eauto. dcr.
+      eapply Inj in H3; eauto with cset. cset_tac. cset_tac.
 Qed.
 
 Instance SR (VD:set var) : PointwiseProofRelationI (((set var) * (set var)) * params) := {
@@ -641,11 +658,10 @@ Proof.
            eapply defined_on_incl; eauto.
            rewrite <- EQ in In3; revert In3; clear.
            intros.
-           cset_tac. decide (x ∈ R_f \ of_list Z); cset_tac.
-           right.
-           eexists x; split; eauto. split; eauto.
-           intro. eapply H2. cset_tac. eexists x; cset_tac.
-           rewrite EQ; eauto.
+           cset_tac'.
+           ++ right. eexists x. cset_tac.
+           ++ right. eexists x; eauto.
+           ++ rewrite EQ; eauto.
         -- eapply get_defined; intros; inv_get; eauto.
       * edestruct H8; eauto; dcr.
         simpl in *. rewrite EQ.

@@ -131,7 +131,7 @@ Lemma pos_app_in X `{OrderedType X} x k L L'
   -> pos (L ++ L') x k = pos L x k.
 Proof.
   intros.
-  general induction L; simpl in * |- *; cset_tac.
+  general induction L; simpl in * |- *; cset_tac'.
   - cases; try congruence; exfalso; eauto.
   - cases; try congruence; eauto.
 Qed.
@@ -142,7 +142,7 @@ Lemma pos_app_not_in X `{OrderedType X} x k L L'
   -> pos (L ++ L') x k = pos L' x (length L + k).
 Proof.
   intros.
-  general induction L; simpl in * |- *; cset_tac.
+  general induction L; simpl in * |- *; cset_tac'.
   cases; try congruence; eauto.
   - rewrite IHL; eauto.
 Qed.

@@ -75,14 +75,16 @@ Proof.
   specialize (IHLEN1 _ _ _ _ _ _ _ _ _ _ _ _ YL0 (D\ singleton x) X0).
   assert (D ⊆ (D \ singleton x) ∪ singleton x) by eauto with cset.
   eapply agree_on_incl; eauto. eapply agree_on_union.
-  - hnf; intros. cset_tac. lud; [ intuition |].
+  - hnf; intros. clear H6.
+    cset_tac'. lud.
     unfold agree_on in IHLEN1. symmetry. rewrite <- IHLEN1.
     + unfold comp in *. lud. exfalso. exploit INV; eauto. lud; eauto.
-    + hnf; intros. cset_tac.
+    + hnf; intros.
+      cset_tac'.
       exploit INV; eauto.
       unfold comp in *. lud; exfalso; eauto.
-    + cset_tac; intuition.
-  - hnf; intros. cset_tac. unfold comp. lud. exfalso; eauto.
+    + cset_tac.
+  - hnf; intros. cset_tac'. unfold comp. lud. exfalso; eauto.
 Qed.
 
 

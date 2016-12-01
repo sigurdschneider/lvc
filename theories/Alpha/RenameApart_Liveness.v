@@ -158,7 +158,7 @@ Proof.
   length_equify.
   general induction H4; simpl.
   - exfalso. simpl in *. cset_tac.
-  - simpl in *. cset_tac.
+  - simpl in *. cset_tac'.
     + eexists x. lud; split; eauto.
     + edestruct IHlength_eq; eauto; dcr.
       * invt NoDupA.
@@ -288,12 +288,10 @@ Proof.
       * intros; inv_get. unfold restr; repeat (cases; simpl); eauto using @ifFstR.
         edestruct PIR2_nth as [? [? iF]]; eauto; invc iF; inv_get.
         econstructor. rewrite <- H11. revert COND; clear.
-        cset_tac; lud; cset_tac.
-        -- exfalso. exploit COND; eauto.
-        -- eexists x0; lud; eauto. exfalso. exploit COND; eauto.
+        cset_tac'. lud; cset_tac'. eexists x0; lud; eauto.
       * len_simpl. rewrite min_l; try omega.
-      * simpl in *. revert Incl H0; clear; cset_tac; lud; eauto.
-        eapply Incl. exploit H0; cset_tac.
+      * simpl in *. rewrite <- Incl at 3.
+        revert H0; clear; cset_tac'; lud; eauto.
     + erewrite getAnn_snd_renameApart_live; eauto.
       rewrite lookup_set_update_union_minus_single; eauto.
       rewrite <- H0. eauto with cset.
@@ -326,7 +324,7 @@ Proof.
              orewrite (❬F❭ - S (❬F❭ - S n) = n) in H14. get_functional. eauto.
              rewrite map_length, rev_length, renameApartF_length; eauto using get_range.
            ++ dcr. rewrite get_app_ge in H5; eauto with len.
-        -- rewrite zip_app; eauto with len.
+        -- rewrite zip_app;[| eauto with len].
            eauto using PIR2_app, PIR2_ifFstR_refl.
         -- rewrite !zip_app, List.map_app;[| eauto with len].
            apply PIR2_app; eauto with len.

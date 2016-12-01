@@ -61,8 +61,7 @@ Section theorems.
     : c ⊆ c'
     -> c ∪ (c' \ (c \ d)) [=] c'.
   Proof.
-    cset_tac.
-    decide(a ∈ c); cset_tac.
+    cset_tac'.
   Qed.
 
   Lemma minus_incl_meet_special (c c' d : set X)
