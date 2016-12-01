@@ -53,7 +53,7 @@ Section theorems.
   Lemma incl_not_in (x:X) s t
     : x ∉ s -> s\{{x}} ⊆ t -> s ⊆ t.
   Proof.
-    cset_tac. specialize (H1 a). cset_tac.
+    cset_tac.
   Qed.
 
 

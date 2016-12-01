@@ -51,7 +51,7 @@ Proof.
   - cases; [| cset_tac].
     cset_tac; eauto; eapply subTerm_occurVars; eauto; simpl; cset_tac.
   - repeat cases; eauto. eapply subTerm_occurVars in ST; simpl in *.
-    cset_tac. eapply ST; cset_tac.
+    cset_tac.
   - eapply union_incl_split.
     + destruct (get_dec DL (counted l)) as [[[D PD] GetDL]|].
       * erewrite get_nth; eauto using map_get_1; simpl in *.

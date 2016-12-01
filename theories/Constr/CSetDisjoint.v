@@ -160,7 +160,7 @@ Qed.
 Lemma disj_intersection X `{OrderedType X} s t
   : disj s t <-> s ∩ t [=] ∅.
 Proof.
-  cset_tac. hnf; intros. cset_tac.
+  cset_tac.
 Qed.
 
 Lemma not_incl_minus X `{OrderedType X} (s t u: set X)

@@ -510,10 +510,6 @@ Proof.
     PIR2_inv. unfold addParam in H3. inv_get.
     rewrite <- H7.
     revert H10 B. clear_all; cases; intros; cset_tac.
-    idtac "improve".
-    eapply B; cset_tac.
-    eapply H3. eapply H10. cset_tac.
-    eapply B. cset_tac.
   - inv_get.
     edestruct (IH s1) as [? [? SUB]]; eauto; subst.
     setoid_rewrite <- H8. setoid_rewrite <- SUB.

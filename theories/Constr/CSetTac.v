@@ -339,14 +339,15 @@ Qed.
                 | [ _ : s ⊆ t |- _ ] =>
                   match goal with
                   | [ _ : t ⊆ s |- _ ] => idtac
-                  | _ => destruct (eq_incl _ _ _ H) as [? _]
+                  | _ => let I := fresh "eq_incl" in destruct (eq_incl _ _ _ H) as [I _]
                   end
                 end
               | match goal with
-                | [ _ : t ⊆ s |- _ ] => destruct (eq_incl _ _ _ H) as [_ ?]
+                | [ _ : t ⊆ s |- _ ] => let I := fresh "eq_incl" in destruct (eq_incl _ _ _ H) as [_ I]
                 end
-              | destruct (eq_incl _ _ _ H)
-              ]
+              | let I := fresh "eq_incl" in let I' := fresh "eq_incl" in destruct (eq_incl _ _ _ H) as [I I']
+              ]; eapply protect in H
+      | [ H : ?s ⊆ ?t |- _ ] => unfold Subset in H
     end.
 
   Ltac mycleartrivial :=
@@ -435,3 +436,99 @@ Smpl Add match goal with
          | [ |- context [ _ ∈ map ?f _ ] ] =>
            rewrite (map_iff f)
          end : cset.
+
+Lemma premise_and_to_impl X (P Q R: X -> Prop)
+  :(forall x, P x /\ Q x -> R x)
+    <-> (forall x, P x -> Q x -> R x).
+Proof.
+  firstorder.
+Qed.
+
+Lemma premise_or_to_two X (P Q R: X -> Prop)
+  :(forall x, P x \/ Q x -> R x)
+    <-> ((forall x, P x -> R x) /\ (forall x, Q x -> R x)).
+Proof.
+  firstorder.
+Qed.
+
+Lemma conclusion_and_to_two X (P Q R: X -> Prop)
+  : (forall x, P x -> Q x /\ R x)
+    <-> ((forall x, P x -> Q x) /\ (forall x, P x -> R x)).
+Proof.
+  split.
+  - intros Incl; split; intros; exploit Incl; cset_tac.
+  - cset_tac.
+Qed.
+
+Lemma conclusion_or_to_two X (P Q R: X -> Prop)
+  : (forall x, P x -> Q x \/ R x)
+    -> ((forall x, P x -> (R x -> False) -> Q x) /\ (forall x, P x -> (Q x -> False) -> R x)).
+Proof.
+  split; intros; edestruct H; eauto; exfalso; eauto.
+Qed.
+
+Smpl Add match goal with
+         | [ H : forall _, _ -> _ /\ _ |- _ ] =>
+           rewrite conclusion_and_to_two in H;
+             let I := fresh H in destruct H as [H I]
+         | [ H : forall _, _ \/ _ -> _ |- _ ] =>
+           rewrite premise_or_to_two in H;
+             let I := fresh H in destruct H as [H I]
+         end : cset.
+
+Smpl Add match goal with
+         | [ H : forall _, _ /\ _ -> _ |- _ ] => rewrite premise_and_to_impl in H
+         | [ H : forall _, _  -> _ \/ _ |- _ ] => eapply conclusion_or_to_two in H
+         end : cset.
+
+Lemma P_P_False_False (P:Prop)
+  : P -> ((P -> False) <-> False).
+Proof.
+  firstorder.
+Qed.
+Lemma P_P_True (P:Prop)
+  : P -> (P <-> True).
+Proof.
+  firstorder.
+Qed.
+
+Lemma equiv_True X (x:X)
+  : x === x <-> True.
+Proof.
+  firstorder.
+Qed.
+
+Lemma True_or_left (P:Prop)
+  : True \/ P <-> True.
+Proof.
+  firstorder.
+Qed.
+
+Lemma True_or_right (P:Prop)
+  : True \/ P <-> True.
+Proof.
+  firstorder.
+Qed.
+
+Lemma True_and_left (P:Prop)
+  : True /\ P <-> P.
+Proof.
+  firstorder.
+Qed.
+
+Lemma True_and_right (P:Prop)
+  : True /\ P <-> P.
+Proof.
+  firstorder.
+Qed.
+
+Smpl Add
+     match goal with
+     | [ H : ?x ∈ ?s |- context [?x ∈ ?s -> False ] ] => rewrite (@P_P_False_False _ H)
+     | [ H : ?x ∈ ?s |- context [?x ∈ ?s] ] => rewrite (@P_P_True _ H)
+     | [ |- context [ ?x === ?x ] ] => rewrite (@equiv_True _ x)
+     | [ |- context [ True \/ _ ] ] => setoid_rewrite True_or_left
+     | [ |- context [ _ \/ True ] ] => setoid_rewrite True_or_right
+     | [ |- context [ True /\ _ ] ] => setoid_rewrite True_and_left
+     | [ |- context [ _ /\ True ] ] => setoid_rewrite True_and_right
+     end : cset.

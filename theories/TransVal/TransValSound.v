@@ -247,9 +247,8 @@ Proof.
           eapply (agree_on_total (lv:={x})); cset_tac; eauto.
           eapply (agree_on_incl (lv:= freeVars Q)); cset_tac; eauto.
           eapply (agree_on_incl (lv:= fst(getAnn D) ∪ snd(getAnn D)));
-            cset_tac; eauto.
-          hnf in fv_Q. specialize (fv_Q a H1).
-          cset_tac. }
+            cset_tac; eauto. decide (a ∈ fst (getAnn D)); eauto.
+        }
       * specialize (mod_Q' F).
         assert (agree_on eq
                          (fst (getAnn D') ∪ snd(getAnn D')) Et
@@ -260,19 +259,18 @@ Proof.
           - rewrite <- (@nc_step_agree L L s D s' E Es); auto.
             rewrite <- (@nc_step_agree L L t D' t' E Et); auto.
           - pose proof (renamedApart_disj ssa_s).
-            rewrite <- (Eq_FVars x) in H0;
-              exfalso; eauto.
+            exfalso; eauto.
           - pose proof (renamedApart_disj ssa_t).
-            rewrite (Eq_FVars x) in H;
-              exfalso; eauto. }
+            exfalso; eauto.
+        }
         { eapply models_agree; eauto.
           hnf; intros.
           symmetry.
           eapply (agree_on_total (lv:={x})); cset_tac; eauto.
           eapply (agree_on_incl (lv:= freeVars Q')); cset_tac; eauto.
           eapply (agree_on_incl (lv:= fst (getAnn D') ∪ snd(getAnn D')));
-            cset_tac; eauto.
-          specialize (fv_Q' a H1); cset_tac. }
+            cset_tac; eauto. decide (a ∈ fst (getAnn D')); eauto.
+        }
     + pose proof (nc_star_step star_s) as s_star2.
       pose proof (nc_star_step star_t) as t_star2.
 
@@ -372,8 +370,8 @@ Proof.
                 exploit (renamedApart_contained L E t); eauto.
                 simpl in *.
                 rewrite H6, Eq_FVars.
-                pose proof (renamedApart_disj ssa_s).
-                cset_tac.
+                revert RenApart.
+                clear; cset_tac.
               * exploit equal_goto; eauto; clear equal_goto.
                 rewrite val_agree_right; eauto.
                 rewrite val_agree_left; eauto.

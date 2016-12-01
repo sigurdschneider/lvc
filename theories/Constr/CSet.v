@@ -364,7 +364,7 @@ Lemma minus_incl_add X `{OrderedType X} x (s t:set X)
 :  s \ singleton x ⊆ t
    -> s [<=]{x; t}.
 Proof.
-  cset_tac. eapply H0; cset_tac.
+  cset_tac.
 Qed.
 
 Lemma incl_minus_single_not_in X `{OrderedType X} x D
@@ -706,3 +706,17 @@ Lemma subset_filter X `{OrderedType X} (p:X->bool) `{Proper _ (_eq ==> eq) p} (l
 Proof.
   cset_tac.
 Qed.
+
+Lemma decide_mem_1 X `{OrderedType X} x (s:set X)
+  : (x ∈ s -> False) \/ x ∈ s.
+Proof.
+  decide (x ∈ s); eauto.
+Qed.
+
+Lemma decide_mem_2 X `{OrderedType X} x (s:set X)
+  : x ∈ s \/ (x ∈ s -> False).
+Proof.
+  decide (x ∈ s); eauto.
+Qed.
+
+Hint Resolve decide_mem_1 decide_mem_2.

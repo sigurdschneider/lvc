@@ -112,7 +112,7 @@ Lemma injective_on_not_in_lookup_set {X} `{OrderedType X} {Y} `{OrderedType Y} f
       -> D' ⊆ D\ singleton x -> x ∈ D
       -> f x ∉ lookup_set f D'.
 Proof.
-  intros. lset_tac. specialize (H3 _ H7). cset_tac.
+  intros. lset_tac.
 Qed.
 
 
@@ -324,7 +324,7 @@ Proof.
       eapply IHlength_eq; eauto.
       * eapply injective_on_fresh; eauto.
         eapply injective_on_incl; eauto.
-        lset_tac. eapply (H4 y). lset_tac.
+        lset_tac. eapply (H4 y). lset_tac. lset_tac.
       * inv H5; inv H6.
         rewrite lookup_set_add; eauto. lud; eauto.
         split; [| clear_all; cset_tac].

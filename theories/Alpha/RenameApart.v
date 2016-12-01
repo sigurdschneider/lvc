@@ -518,8 +518,7 @@ Proof.
       * { assert (freeVars (snd z) [=]
                            (freeVars (snd z) \ of_list (fst z))
                            ∪ (of_list (fst z) ∩ freeVars (snd z))). {
-            clear_all; cset_tac; intuition. simpl in *.
-            decide (a ∈ of_list a0); intuition.
+            clear_all; cset_tac.
           }
           rewrite H3 at 1.
           repeat rewrite lookup_set_union; eauto.

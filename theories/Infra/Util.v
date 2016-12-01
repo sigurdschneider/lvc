@@ -9,12 +9,6 @@ Tactic Notation "invc" hyp(A) := inversion A; subst; (try clear A).
 Tactic Notation "invs" hyp(A) := inversion A; subst; clear_trivial_eqs.
 Tactic Notation "invcs" hyp(A) := inversion A; subst; (try clear A); clear_trivial_eqs.
 
-Tactic Notation "dcr" :=
-  repeat (
-    match goal with
-      | H: _ |- _ => progress (decompose record H); clear H
-    end).
-
 Inductive protected (P:Prop) :=
   Protected (p:P) : protected P.
 
@@ -28,6 +22,17 @@ Qed.
 
 Tactic Notation "protect" hyp(H) := apply protect in H.
 Tactic Notation "unprotect" hyp(H) := apply unprotect in H.
+
+Tactic Notation "dcr" :=
+  repeat (
+    match goal with
+    | H: _ |- _ =>
+      match type of H with
+      | protected _ => fail 1
+      | _ => progress (decompose record H); clear H
+      end
+    end).
+
 
 Ltac invt ty :=
   match goal with

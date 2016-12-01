@@ -42,7 +42,7 @@ Proof.
   - cases; simpl.
     + assert (forall D, x ∈ D -> {x; of_list l} ∩ D [=] {x; of_list l ∩ D}) as EQ by (cset_tac).
       rewrite EQ; eauto. rewrite IHNoDup; eauto.
-      rewrite add_cardinal_2; eauto. cset_tac. rewrite <- InA_in in H3; eauto.
+      rewrite add_cardinal_2; eauto. cset_tac.
     + assert (forall D, x ∉ D -> {x; of_list l} ∩ D [=] of_list l ∩ D) as EQ by (cset_tac).
       cases; simpl; rewrite EQ; eauto.
 Qed.
@@ -196,7 +196,7 @@ Proof.
   - cases.
     + assert ({x; of_list l} ∩ D [=] {x; of_list l ∩ D}) as EQ by (cset_tac).
       rewrite EQ. rewrite IHNoDup; eauto.
-      rewrite add_cardinal_2; eauto. cset_tac. rewrite <- InA_in in H1; eauto.
+      rewrite add_cardinal_2; eauto. cset_tac.
     + assert ({x; of_list l} ∩ D [=] of_list l ∩ D) as EQ by (cset_tac).
       rewrite EQ. rewrite IHNoDup; eauto.
 Qed.

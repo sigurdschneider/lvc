@@ -122,10 +122,7 @@ Fixpoint simplSpill
 Lemma seteq X `{OrderedType X} (s t : set X)
 :  s \ (s \ t) ∪ t \ s [=] t.
 Proof.
-rewrite minus_minus. clear. cset_tac.
-decide (a ∈ s).
-* left. split; eauto with cset.
-* right. split; eauto with cset.
+  rewrite minus_minus. clear. cset_tac.
 Qed.
 
 Lemma seteq_1 X `{OrderedType X} s t u1 u2 v w :
@@ -185,7 +182,7 @@ decide (cardinal (t \ s) <= cardinal (s \ t)).
   + rewrite of_list_elements. rewrite minus_minus.
     enough (s ∩ t ∪ t \ s [=] t).
     { rewrite H0. eauto. }
-    clear. cset_tac. decide (a ∈ s); cset_tac.
+    clear. cset_tac.
   + clear - n. rewrite elements_length. omega.
 Qed.
 
@@ -402,7 +399,7 @@ general induction lvSound;
               unfold Subset in H0. specialize (H0 a).
               unfold Subset in fvRM. specialize (fvRM a).
               assert (a ∈ (getAnn al \ (singleton x))). { cset_tac. }
-              assert (a ∈ R'). { cset_tac. rewrite <- ReqR'. eauto. }
+              assert (a ∈ R'). { cset_tac. }
               assert (a ∈ R' \ K).
               { cset_tac. } cset_tac.
     + rewrite ReqR'. apply fTake.
@@ -452,7 +449,6 @@ general induction lvSound;
               \/ a ∈ M'
              ).
       -- right. cset_tac.
-         decide (a ∈ M'); cset_tac.
       -- subst K. decide (a ∈ R'); cset_tac.
          exfalso.
          exploit H0; eauto; cset_tac.
@@ -495,7 +491,7 @@ general induction lvSound;
     rewrite fvRM. rewrite ReqR', MeqM'.
     rewrite H1, fvRM in Incl. revert Incl.
     rewrite ReqR', MeqM'.
-    clear; cset_tac. exploit H; cset_tac.
+    clear; cset_tac. exploit H1; cset_tac.
   + rewrite H1, fvRM in Incl. revert Incl.
     rewrite ReqR', MeqM'.
     clear; cset_tac. exploit H; cset_tac.
@@ -522,9 +518,6 @@ general induction lvSound;
     decide (a ∈ K); eauto. left.
     subst K.
     exfalso. decide (a ∈ R'); eauto.
-    rewrite H4 in H7.
-    cset_tac.
-
 - set (K := of_list (take
                        (cardinal (Op.freeVars e \ R'))
                        (elements (R' \ Op.freeVars e))

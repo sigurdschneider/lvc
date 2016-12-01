@@ -160,12 +160,9 @@ Proof.
   - exfalso. simpl in *. cset_tac.
   - simpl in *. cset_tac.
     + eexists x. lud; split; eauto.
-    + edestruct IHlength_eq; eauto. instantiate (1:=D).
-      * erewrite <- H2. cset_tac.
-      * dcr. invt NoDupA.
-        eexists x0. lud; eauto.
-        exfalso. eapply H10. rewrite InA_in.
-        rewrite e. eauto.
+    + edestruct IHlength_eq; eauto; dcr.
+      * invt NoDupA.
+        eexists x0. lud; eauto. cset_tac.
 Qed.
 
 Tactic Notation "orewrite" constr(A) "all" :=
@@ -292,9 +289,8 @@ Proof.
         edestruct PIR2_nth as [? [? iF]]; eauto; invc iF; inv_get.
         econstructor. rewrite <- H11. revert COND; clear.
         cset_tac; lud; cset_tac.
-        -- exfalso. exploit COND; eauto. cset_tac.
+        -- exfalso. exploit COND; eauto.
         -- eexists x0; lud; eauto. exfalso. exploit COND; eauto.
-           cset_tac.
       * len_simpl. rewrite min_l; try omega.
       * simpl in *. revert Incl H0; clear; cset_tac; lud; eauto.
         eapply Incl. exploit H0; cset_tac.

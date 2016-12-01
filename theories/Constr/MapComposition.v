@@ -53,6 +53,7 @@ Lemma incl_minus_union2 X `{OrderedType X} s t
   : s ⊆ (s \ t) ∪ t.
 Proof.
   cset_tac.
+
 Qed.
 
 Hint Resolve incl_minus_union2 : cset.

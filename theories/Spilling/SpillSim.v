@@ -356,22 +356,17 @@ Proof.
   intros. general induction Z; simpl in *.
   - cset_tac.
   - cases; simpl.
-    + rewrite IHZ.
+    + rewrite IHZ; clear IHZ.
       time (cset_tac; eauto 20).
-      * right. decide (x ∈ M); eauto 20.
-      * right.
-        decide (x ∈ M); eauto 20.
+      * right. eexists a; cset_tac.
       * rewrite <- Incl; cset_tac.
     + cases; simpl; rewrite IHZ; eauto.
       * cset_tac.
         -- decide (x ∈ M); eauto 20.
-        -- decide (x ∈ M); eauto 20.
       * rewrite <- Incl. eauto with cset.
       * decide (a ∈ M).
         -- cset_tac; eauto 20.
-           ++ decide (x ∈ M); eauto 20.
-           ++ decide (x ∈ M); eauto 20.
-        -- exfalso. exploit Incl; cset_tac.
+        -- exfalso. cset_tac.
       * rewrite <- Incl. cset_tac.
 Qed.
 
@@ -542,7 +537,7 @@ Proof.
         -- eapply mem_agrees_after_spill_load_update; eauto.
            rewrite SpR, Incl'; eauto.
            rewrite H17 in RAincl.
-           revert RAincl; clear; cset_tac. eapply RAincl; cset_tac.
+           revert RAincl; clear; cset_tac.
         -- eapply defined_on_update_some.
            eapply defined_on_incl.
            eapply defined_on_after_spill_load; eauto.
@@ -559,7 +554,7 @@ Proof.
         -- eapply mem_agrees_after_spill_load_update; eauto.
            rewrite SpR, Incl'; eauto.
            rewrite H17 in RAincl.
-           revert RAincl; clear; cset_tac. eapply RAincl; cset_tac.
+           revert RAincl; clear; cset_tac.
         -- eapply defined_on_update_some.
            eapply defined_on_incl.
            eapply defined_on_after_spill_load; eauto.
@@ -649,7 +644,7 @@ Proof.
            cset_tac. decide (x ∈ R_f \ of_list Z); cset_tac.
            right.
            eexists x; split; eauto. split; eauto.
-           intro. eapply H2. cset_tac.
+           intro. eapply H2. cset_tac. eexists x; cset_tac.
            rewrite EQ; eauto.
         -- eapply get_defined; intros; inv_get; eauto.
       * edestruct H8; eauto; dcr.

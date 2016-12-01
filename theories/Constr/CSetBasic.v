@@ -455,8 +455,6 @@ Lemma meet_incl_eq {X} `{OrderedType X} (s s' t t':set X)
 : t' ⊆ t -> s ∩ t [=] s' ∩ t -> s ∩ t' [=] s' ∩ t'.
 Proof.
   cset_tac.
-  - exploit H3; cset_tac.
-  - exploit H2; cset_tac.
 Qed.
 
 Lemma InA_in {X} `{OrderedType X} x L
@@ -492,8 +490,6 @@ Lemma minus_inter_empty X `{OrderedType X} s t u
   -> s \ t [=] s \ u.
 Proof.
   cset_tac.
-  exploit H1; cset_tac.
-  exploit H2; cset_tac.
 Qed.
 
 Lemma union_eq_decomp X `{OrderedType X} s s' t t'
@@ -587,7 +583,7 @@ Lemma incl_union_incl_minus X `{OrderedType X} s t u
   : s \ t ⊆ u
     -> s ⊆ t ∪ u.
 Proof.
-  cset_tac. decide (a ∈ t); cset_tac. right. intuition.
+  cset_tac. decide (a ∈ t); cset_tac.
 Qed.
 
 Lemma incl_meet_split X `{OrderedType X} s t u
@@ -657,7 +653,7 @@ Qed.
 
 Lemma incl_union_incl X `{OrderedType X} s t u w
   : t ∪ u ⊆ w -> s ⊆ t -> s ⊆ w.
-  cset_tac. eapply H0; cset_tac.
+  cset_tac.
 Qed.
 
 Lemma incl_union_right X `{OrderedType X} s t u
