@@ -132,7 +132,7 @@ Section GlueCode.
     eapply star2_silent.
     constructor; eauto. eapply IHp. intros. apply H. simpl; eauto.
     intros. lud. eauto. eapply H0; try reflexivity.
-    simpl. cset_tac; intuition.
+    simpl. cset_tac.
   Qed.
 
   Hypothesis parallel_move : var -> list var -> list var -> (list(list var * list var)).

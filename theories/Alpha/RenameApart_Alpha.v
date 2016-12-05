@@ -4,10 +4,10 @@ Require Import LabelsDefined PairwiseDisjoint RenameApart.
 
 Set Implicit Arguments.
 
-Lemma rename_apart_alpha' G ϱ ϱ' s
+Lemma rename_apart_alpha' fresh G ϱ ϱ' s
   : lookup_set ϱ (freeVars s) ⊆ G
   -> inverse_on (freeVars s) ϱ ϱ'
-  -> alpha ϱ' ϱ (snd (renameApart' ϱ G s)) s.
+  -> alpha ϱ' ϱ (snd (renameApart' fresh ϱ G s)) s.
 Proof.
   revert G ϱ ϱ'.
   sind s; destruct s; simpl; intros; repeat let_pair_case_eq; subst;
@@ -24,7 +24,7 @@ Proof.
       assert (lookup_set ϱ (freeVars s \ {{x}}) ⊆
                          lookup_set ϱ ((freeVars s \ {{x}}) ∪ Exp.freeVars e)).
       rewrite lookup_set_union; cset_tac; intuition.
-      rewrite H1, H. eapply fresh_spec; eauto.
+      rewrite H1, H. eauto.
   - econstructor; eauto.
     + eapply alpha_op_sym. eapply alpha_op_rename_injective.
       eapply inverse_on_incl; try eassumption. eapply incl_right.
@@ -56,12 +56,12 @@ Proof.
       eauto.
     + intros.
       eapply get_rev in H1.
-      rewrite renameApartF_length in H1.
+      rewrite renameApartF_length in H1; eauto.
       edestruct get_fst_renameApartF as [? [? [? ]]]; dcr; eauto.
       exploit (get_range H2).
       orewrite (length F - S (length F - S n) = n) in H4. get_functional; subst.
       rewrite H6.
-      erewrite renameApart'_agree. eapply IH; eauto.
+      erewrite renameApart'_agree; eauto. eapply IH; eauto.
       * rewrite lookup_set_update_with_list_in_union_length; eauto.
         eapply union_subset_3; eauto.
         rewrite <- H5.
@@ -84,8 +84,8 @@ Proof.
       * eapply inverse_on_incl; try eassumption. eauto.
 Qed.
 
-Lemma rename_apart_alpha s
-  : alpha id id (rename_apart s) s.
+Lemma rename_apart_alpha fresh s
+  : alpha id id (rename_apart fresh s) s.
 Proof.
   eapply rename_apart_alpha'.
   + eapply lookup_set_on_id; reflexivity.

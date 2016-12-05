@@ -234,6 +234,7 @@ Proof.
                       eauto using fresh_spec, fresh_list_nodup,
                       fresh_list_spec with len. reflexivity.
              ** exfalso. eapply omap_filter_none in H4. congruence.
+           ++ eauto with len.
            ++ eapply disj_2_incl.
              eapply fresh_list_spec; eauto using fresh_spec.
              eapply list_union_incl; intros; eauto with cset.
@@ -371,6 +372,7 @@ Proof.
       eapply fresh_list_spec; eauto using fresh_spec with cset.
       eauto with cset.
     + eapply fresh_list_nodup; eauto using fresh_spec.
+    + eauto with len.
   - econstructor; intros; inv_get; rewrite !map_map in *; simpl; eauto.
 Qed.
 
