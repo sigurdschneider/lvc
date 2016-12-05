@@ -1,4 +1,4 @@
-Require Export List SetoidList Omega AutoIndTac Computable Smpl.
+Require Export List SetoidList Omega AutoIndTac Computable Smpl Len.
 
 Set Implicit Arguments.
 
@@ -461,12 +461,6 @@ Lemma length_map_1 X Y Z (L:list Y) (L':list X) (f:Y->Z)
 Proof.
   intros. rewrite map_length; eauto.
 Qed.
-
-Create HintDb len discriminated.
-
-Smpl Create len.
-Ltac len_simpl := smpl len; repeat (smpl len).
-Hint Extern 0 => len_simpl : len.
 
 Hint Resolve length_map_1 length_map_2 : len.
 

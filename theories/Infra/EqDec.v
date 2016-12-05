@@ -231,3 +231,11 @@ Qed.
 Global Instance inst_eq_dec_list {A} `{EqDec A eq} : EqDec (list A) eq.
 hnf. eapply list_eq_dec. eapply equiv_dec.
 Defined.
+
+Lemma length_eq_dec {X} (L L' : list X)
+  : length_eq L L' + (length_eq L L' -> False).
+Proof.
+  decide(length L = length L').
+  left. eapply length_length_eq; eauto.
+  right. intro. eapply length_eq_length in X0. congruence.
+Defined.

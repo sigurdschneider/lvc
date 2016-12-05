@@ -1,4 +1,7 @@
 Require Import Smpl List.
+Require Export LengthEq.
+
+Set Implicit Arguments.
 
 (* fail 1 will break from the 'match H with', and indicate to
    the outer match that it should consider finding another
@@ -157,7 +160,13 @@ Smpl Add inv_trivial_base : inv_trivial.
 Ltac clear_trivial_eqs :=
   repeat (smpl inv_trivial; repeat clear_dup_fast).
 
+Ltac inductify H :=
+  match type of H with
+  | length _ = length _ => eapply length_length_eq in H
+  end.
+
 Tactic Notation "general" "induction" hyp(H) :=
+  (try inductify H);
   remember_arguments H; revert_except H;
   induction H; intros; (try clear_trivial_eqs).
 
