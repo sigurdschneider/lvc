@@ -1,108 +1,40 @@
 Require Import CSet Le Arith.Compare_dec.
-
-Require Import Plus Util Map Var Get.
-
+Require Import Plus Util Map Var Get LengthEq SafeFirst.
 
 Set Implicit Arguments.
 
 Definition fresh (s : set var) : var :=
   S(fold max s 0).
 
+Lemma max_transpose
+  : transpose eq max.
+Proof.
+  hnf; intros. rewrite Max.max_assoc. rewrite (Max.max_comm x).
+  rewrite Max.max_assoc. reflexivity.
+Qed.
+
 Lemma fresh_spec' (G:set var)
   : forall (x:var), x ∈ G -> x <= fold max G 0.
 Proof.
   pattern G. pattern (fold max G 0). eapply fold_rec; intros.
-  fsetdec.
-  eapply H1 in H3. destruct H3.
-  pattern (fold max s'' 0). rewrite fold_2; eauto.
-  rewrite H3. pose proof (Max.le_max_l x0 (fold max s' 0)).
-  eapply H4.
-  intuition.
-  hnf; intros. rewrite Max.max_assoc. rewrite (Max.max_comm x1).
-  rewrite Max.max_assoc. reflexivity.
-  pattern (fold max s'' 0). rewrite fold_2; eauto.
-  pose proof (Max.le_max_r x (fold max s' 0)).
-  specialize (H2 _ H3). unfold max in H2. rewrite <- H4. eapply H2.
-  clear_all; intuition.
-  hnf; intros. rewrite Max.max_assoc. rewrite (Max.max_comm x1).
-  rewrite Max.max_assoc. reflexivity.
+  - cset_tac.
+  - eapply H1 in H3. destruct H3.
+    + pattern (fold max s'' 0). rewrite fold_2; eauto.
+      * rewrite H3. pose proof (Max.le_max_l x0 (fold max s' 0)).
+        eapply H4.
+      * intuition.
+      * eapply max_transpose.
+    + pattern (fold max s'' 0). rewrite fold_2; eauto.
+      * pose proof (Max.le_max_r x (fold max s' 0)).
+        specialize (H2 _ H3). unfold max in H2. rewrite <- H4. eapply H2.
+      * intuition.
+      * eapply max_transpose.
 Qed.
 
 Lemma fresh_spec G : fresh G ∉ G.
 Proof.
   intro. unfold fresh in H.
   pose proof (fresh_spec' H). omega.
-Qed.
-
-Section SafeFirst.
-
-  Hypothesis Q : nat -> Prop.
-  Inductive safe : nat -> Prop :=
-  | safe_here n : Q n -> safe n
-  | safe_after n : safe (S n) -> safe n.
-
-  Lemma safe_antitone m n
-  : safe n
-    -> m < n
-    -> safe m.
-  Proof.
-    intros. general induction H0; eauto using safe.
-  Qed.
-
-  Lemma exists_is_safe
-  : (exists x, Q x) -> exists n, safe n.
-  Proof.
-    intros. destruct H; eexists; eauto using safe.
-  Qed.
-
-  Hypothesis comp  : forall n, Computable (Q n).
-
-  Lemma safe_upward n
-  : safe n -> ~ Q n -> safe (S n).
-  Proof.
-    intros; destruct H.
-    - destruct (H0 H).
-    - eapply H.
-  Defined.
-
-  Fixpoint safe_first n (s:safe n) : nat.
-  refine (if [ Q n ] then n else safe_first (S n) _).
-  destruct s; eauto. destruct (n0 H).
-  Defined.
-
-  Hypothesis P : nat -> Prop.
-  Hypothesis I : nat -> Prop.
-  Hypothesis PQ : forall n, P n -> Q n.
-  Hypothesis Step : forall n, I n -> ~ Q n -> I (S n).
-  Hypothesis Final : forall n , I n -> Q n -> P n.
-
-  Fixpoint safe_first_spec n s
-    : I n -> P (@safe_first n s).
-  Proof.
-    unfold safe_first.
-    destruct s.
-    - simpl. destruct (decision_procedure (Q n)); eauto.
-    - cases; eauto.
-  Qed.
-
-End SafeFirst.
-
-Fixpoint safe_first_ext P Q n
-      (PC:forall n, Computable (P n))
-      (QC:forall n, Computable (Q n))
-      (PS:safe P n)
-      (QS:safe Q n)
-      (EXT:(forall x, P x <-> Q x)) {struct PS}
-: safe_first PC PS = safe_first QC QS.
-Proof.
-  destruct PS; destruct QS; simpl; repeat cases; eauto;
-  exfalso; firstorder.
-Qed.
-
-Lemma safe_impl (P Q: nat -> Prop) n
-: safe P n -> (forall x, P x -> Q x) -> safe Q n.
-Proof.
-  intros. general induction H; eauto using safe.
 Qed.
 
 Lemma fresh_variable_always_exists (lv:set nat) n
@@ -147,7 +79,9 @@ Proof.
 Qed.
 
 Lemma least_fresh_full_spec G
-: least_fresh G ∉ G /\ least_fresh G <= cardinal G /\ forall m, m < least_fresh G -> m ∈ G.
+  : least_fresh G ∉ G
+    /\ least_fresh G <= cardinal G
+    /\ forall m, m < least_fresh G -> m ∈ G.
 Proof.
   unfold least_fresh.
   eapply safe_first_spec with (I:= fun n => le n (cardinal G) /\ forall m, m < n -> m ∈ G).
@@ -193,8 +127,7 @@ Proof.
 Qed.
 
 Definition fresh_stable (lv:set var) (x:var) : var :=
-  if [x ∉ lv] then x else
-    fresh lv.
+  if [x ∉ lv] then x else fresh lv.
 
 Lemma fresh_stable_spec G x
       : fresh_stable G x ∉ G.
@@ -209,7 +142,7 @@ Section FreshList.
   Fixpoint fresh_list (G:set var) (n:nat) : list var :=
     match n with
       | 0 => nil
-      | S n => let x := fresh G in x::fresh_list (G ∪ {{x}}) n
+      | (S n) => let y := fresh G in y::fresh_list {y;G} n
     end.
 
   Lemma fresh_list_length (G:set var) n
@@ -218,28 +151,22 @@ Section FreshList.
     general induction n; eauto. simpl. f_equal; eauto.
   Qed.
 
-  Lemma fresh_list_length2 (G:set var) n
-  : n = length (fresh_list G n).
-  Proof.
-    general induction n; eauto. simpl. f_equal; eauto.
-  Qed.
-
   Hypothesis fresh_spec : forall G, fresh G ∉ G.
 
-  Definition fresh_set (G:set var) (n:nat) : set var :=
-    of_list (fresh_list G n).
+  Definition fresh_set (G:set var) L : set var :=
+    of_list (fresh_list G L).
 
   Lemma fresh_list_spec : forall (G:set var) n, disj (of_list (fresh_list G n)) G.
   Proof.
     intros. general induction n; simpl; intros; eauto.
     - hnf; intros. cset_tac'.
-      + specialize (H (G ∪ {{fresh G}})).
+      + specialize (H ({fresh G; G})).
         eapply H; eauto.
-        intuition (cset_tac; eauto).
+        cset_tac.
   Qed.
 
   Lemma fresh_set_spec
-  : forall (G:set var) n, disj (fresh_set G n) G.
+  : forall (G:set var) L, disj (fresh_set G L) G.
   Proof.
     unfold fresh_set. eapply fresh_list_spec.
   Qed.
@@ -253,29 +180,82 @@ Section FreshList.
     eapply InA_in. eapply H.
     cset_tac; eauto.
   Qed.
+
 End FreshList.
 
-Hint Resolve fresh_list_length fresh_list_length2.
+Hint Resolve fresh_list_length : len.
+
+Section FreshListStable.
+
+  Variable fresh : set var -> var -> var.
+
+  Fixpoint fresh_list_stable (G:set var) (xl:list var) : list var :=
+    match xl with
+      | nil => nil
+      | x::xl => let y := fresh G x in y::fresh_list_stable {y;G} xl
+    end.
+
+  Lemma fresh_list_stable_length (G:set var) xl
+  : length (fresh_list_stable G xl) = length xl.
+  Proof.
+    general induction xl; eauto. simpl. f_equal; eauto.
+  Qed.
+
+  Hypothesis fresh_spec : forall G x, fresh G x ∉ G.
+
+  Definition fresh_set_stable (G:set var) L : set var :=
+    of_list (fresh_list_stable G L).
+
+  Lemma fresh_list_stable_spec
+    : forall (G:set var) L, disj (of_list (fresh_list_stable G L)) G.
+  Proof.
+    intros. general induction L; simpl; intros; eauto.
+    - hnf; intros. cset_tac'.
+      + specialize (H ({fresh G a; G})).
+        eapply H; eauto.
+        cset_tac.
+  Qed.
+
+  Lemma fresh_set_stable_spec
+  : forall (G:set var) L, disj (fresh_set_stable G L) G.
+  Proof.
+    unfold fresh_set. eapply fresh_list_stable_spec.
+  Qed.
+
+  Lemma fresh_list_stable_nodup (G: set var) L
+    : NoDupA eq (fresh_list_stable G L).
+  Proof.
+    general induction L; simpl; eauto.
+    econstructor; eauto. intro.
+    eapply fresh_list_stable_spec.
+    eapply InA_in. eapply H.
+    cset_tac; eauto.
+  Qed.
+
+End FreshListStable.
+
+Hint Resolve fresh_list_stable_length : len.
 
 Lemma least_fresh_list_small G n
 : forall i x, get (fresh_list least_fresh G n) i x -> x < cardinal G + n.
 Proof.
   general induction n; simpl in *; isabsurd.
-  - inv H. exploit (least_fresh_small G). omega.
-    exploit IHn; eauto.
-    erewrite cardinal_2 with (s:=G) in H0. omega.
-    eapply least_fresh_spec.
-    hnf; cset_tac; intuition.
+  - inv H.
+    + exploit (least_fresh_small G). omega.
+    + exploit IHn; eauto.
+      erewrite cardinal_2 with (s:=G) in H0. omega.
+      eapply (least_fresh_spec). cset_tac.
 Qed.
 
 Lemma least_fresh_list_ext n G G'
-: G [=] G'
-  -> fresh_list least_fresh G n = fresh_list least_fresh G' n.
+  : G [=] G'
+    -> fresh_list least_fresh G n = fresh_list least_fresh G' n.
 Proof.
-  intros. general induction n; simpl; eauto.
-  f_equal; eauto using least_fresh_ext.
-  erewrite least_fresh_ext; eauto. eapply IHn.
-  rewrite H; eauto.
+  intros EQ. general induction n; simpl.
+  - reflexivity.
+  - f_equal; eauto using least_fresh_ext.
+    eapply IHn.
+    erewrite least_fresh_ext, EQ; eauto; reflexivity.
 Qed.
 
 Fixpoint vars_up_to (n:nat) :=
@@ -337,9 +317,17 @@ Qed.
 Lemma inverse_on_update_fresh_list (D:set var) (Z:list var) (ϱ ϱ' : var -> var)
  : inverse_on (D \ of_list Z) ϱ ϱ'
   -> inverse_on D (update_with_list Z (fresh_list fresh (lookup_set ϱ (D \ of_list Z)) (length Z)) ϱ)
-                 (update_with_list (fresh_list fresh (lookup_set ϱ (D \ of_list Z)) (length Z)) Z ϱ').
+                 (update_with_list (fresh_list fresh (lookup_set ϱ (D \ of_list Z)) ((length Z))) Z ϱ').
 Proof.
   intros. eapply inverse_on_update_fresh; eauto. intros.
-  eapply fresh_list_nodup, fresh_spec.
+  eapply fresh_list_nodup, fresh_spec. eauto with len.
   eapply fresh_list_spec, fresh_spec.
 Qed.
+
+Record StableFresh :=
+  {
+    stable_fresh :> set var -> var -> var;
+    stable_fresh_spec : forall G x, stable_fresh G x ∉ G
+  }.
+
+Hint Resolve stable_fresh_spec.

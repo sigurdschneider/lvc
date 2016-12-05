@@ -1,13 +1,9 @@
-Require Export List SetoidList Omega AutoIndTac Computable Smpl Len.
+Require Export List SetoidList Omega.
+Require Export LvcPlugin AutoIndTac Computable EqDec Smpl Len MoreInversion.
 
 Set Implicit Arguments.
 
 Set Regular Subst Tactic.
-
-Tactic Notation "inv" hyp(A) := inversion A; subst.
-Tactic Notation "invc" hyp(A) := inversion A; subst; (try clear A).
-Tactic Notation "invs" hyp(A) := inversion A; subst; clear_trivial_eqs.
-Tactic Notation "invcs" hyp(A) := inversion A; subst; (try clear A); clear_trivial_eqs.
 
 Inductive protected (P:Prop) :=
   Protected (p:P) : protected P.
@@ -73,35 +69,6 @@ Tactic Notation "dcr" :=
     match goal with
     | H: _ |- _ => not_ignored H; progress (decompose record H); clear H
     end).
-
-
-Ltac invt ty :=
-  match goal with
-      | h: ty |- _ => inv h
-      | h: ty _ |- _ => inv h
-      | h: ty _ _ |- _ => inv h
-      | h: ty _ _ _ |- _ => inv h
-      | h: ty _ _ _ _ |- _ => inv h
-      | h: ty _ _ _ _ _ |- _ => inv h
-      | h: ty _ _ _ _ _ _ |- _ => inv h
-      | h: ty _ _ _ _ _ _ _ |- _ => inv h
-      | h: ty _ _ _ _ _ _ _ _ |- _ => inv h
-      | h: ty _ _ _ _ _ _ _ _ _ |- _ => inv h
-  end.
-
-Ltac invts ty :=
-  match goal with
-      | h: ty |- _ => invs h
-      | h: ty _ |- _ => invs h
-      | h: ty _ _ |- _ => invs h
-      | h: ty _ _ _ |- _ => invs h
-      | h: ty _ _ _ _ |- _ => invs h
-      | h: ty _ _ _ _ _ |- _ => invs h
-      | h: ty _ _ _ _ _ _ |- _ => invs h
-      | h: ty _ _ _ _ _ _ _ |- _ => invs h
-      | h: ty _ _ _ _ _ _ _ _ |- _ => invs h
-      | h: ty _ _ _ _ _ _ _ _ _ |- _ => invs h
-  end.
 
 Definition iffT (A B : Type) := ((A -> B) * (B -> A))%type.
 
