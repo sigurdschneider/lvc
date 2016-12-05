@@ -122,18 +122,48 @@ Definition slt (s:stmt) : Slot (occurVars s) :=
   @Slot_p VD (S (fold max VD 0)) eq_refl.
 
 
-Definition rassign (spilled:
-  let s_ren := rename_apart (fst spilled) in
-  let lv_ren := snd (renameApart_live id (freeVars (fst spilled)) (fst spilled) (snd spilled)) in
-  let fvl := to_list (getAnn lv_ren) in
+Definition rassign (spilled:stmt * ann (set var)) :=
+  let fvl := to_list (getAnn (snd spilled)) in
   let ϱ := CMap.update_map_with_list fvl fvl (@MapInterface.empty var _ _ _) in
-  sdo ϱ' <- AllocationAlgo.regAssign s_ra lv_ren ϱ;
-    let s_allocated := rename (CMap.findt ϱ' 0) s_ren in
+  sdo ϱ' <- AllocationAlgo.regAssign (S (fold max (occurVars (fst spilled)) 0))
+                                       (fst spilled) (snd spilled) ϱ;
+    let s_allocated := rename (CMap.findt ϱ' 0) (fst spilled) in
     let s_lowered := ParallelMove.lower parallel_move
                                        nil
                                        s_allocated
-                                       (mapAnn (map (CMap.findt ϱ' 0)) lv_ren) in
+                                       (mapAnn (map (CMap.findt ϱ' 0)) (snd spilled)) in
     s_lowered.
+
+Opaque to_list.
+
+Lemma rassign_correct (spilled:stmt * ann (set var)) s ra
+      (SC: rassign spilled = Success s) (PM:LabelsDefined.paramsMatch s nil)
+      (RA:RenamedApart.renamedApart (fst spilled) ra)
+      (LV:Liveness.live_sound Liveness.FunctionalAndImperative
+                              nil nil (fst spilled) (snd spilled))
+  : forall E, sim F.state I.state bot3 Sim (nil, E, (fst spilled)) (nil, E, s).
+Proof.
+  intros. unfold rassign in SC.
+  monadS_inv SC.
+  eapply sim_trans
+  with (σ2:=(nil, E, rename (CMap.findt x 0) (fst spilled)):F.state).
+  {
+    eapply bisim_sim.
+    exploit AllocationAlgoCorrect.regAssign_correct; eauto.
+    - admit.
+    - admit.
+    - admit.
+    - admit.
+    -
+    eapply Alpha.alphaSim_sim.
+    econstructor with (ra:=id); eauto using PIR2.
+    + eapply Allocation.renamedApart_locally_inj_alpha;
+        eauto using Liveness.live_sound_overapproximation_F.
+      admit.
+    +
+
+
+Qed.
 
 
 Definition fromILF (k:nat) (s:stmt) :=
@@ -146,8 +176,8 @@ Definition fromILF (k:nat) (s:stmt) :=
 Opaque LivenessValidators.live_sound_dec.
 Opaque DelocationValidator.trs_dec.
 
-Require Import MoreTac Alpha RenameApart_Alpha RenameApart_Liveness RenamedApart_Liveness
-        Coherence Invariance.
+Require Import MoreTac Alpha RenameApart_Alpha RenameApart_Liveness
+        RenamedApart_Liveness Coherence Invariance.
 
 Lemma fromILF_correct k (s s':stmt) E (PM:LabelsDefined.paramsMatch s nil)
   : sim F.state F.state bot3 Sim (nil, E, s) (nil, E, fst (fromILF k s)).

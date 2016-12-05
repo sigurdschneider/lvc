@@ -37,10 +37,10 @@ Smpl Add
 
 Definition Slot_p (VD:set var) n (EQ:n = S (fold max VD 0)): Slot VD.
   refine (@Build_Slot VD (fun x => x + n) _ _).
-  - hnf; intros. cset_tac.
+  - hnf; intros. cset_tac'.
     exploit Fresh.fresh_spec'; try eapply H; eauto.
     unfold max in H1. omega.
-  - hnf; intros. cset_tac. omega.
+  - hnf; intros. cset_tac'. omega.
 Qed.
 
 Definition spill (k:nat) (VD:set var) (slt:Slot VD)
@@ -144,8 +144,8 @@ Proof.
     eapply H4 in H10; eauto with cset.
     eapply get_in_of_list in H7. cset_tac. eauto with len.
   - rewrite lookup_set_update_not_in_Z; eauto.
-    eapply H2; cset_tac. rewrite of_list_map; eauto. cset_tac.
-    eapply H4 in H8; eauto; cset_tac.
+    eapply H2; cset_tac. rewrite of_list_map; eauto.
+    cset_tac'. eapply H4 in H8; eauto; cset_tac.
 Qed.
 
 Lemma spill_correct k (kGT:k > 0) (s:stmt) lv ra E
@@ -179,8 +179,8 @@ Proof.
   }
   assert (Disj: disj R M). {
     subst R M. clear. hnf; intros.
-    eapply of_list_get_first in H; dcr; cset_tac.
-    eapply of_list_get_first in H0; dcr; cset_tac.
+    eapply of_list_get_first in H; dcr. cset_tac'.
+    eapply of_list_get_first in H0; dcr; cset_tac'.
     inv_get.
     refine (NoDupA_get_neq' _ _ H0 H _); eauto.
     eapply (elements_3w (getAnn lv)).
