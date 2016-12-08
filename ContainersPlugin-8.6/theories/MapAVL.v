@@ -1612,8 +1612,9 @@ Module MapAVL.
         inversion_clear H.
         destruct H7; simpl in *.
         order.
-        destruct ((proj1 (elements_aux_mapsto r acc x e0)) H7); eauto.
-        transitivity y; eauto.
+        destruct ((proj1 (elements_aux_mapsto r acc x e0)) H7).
+        - transitivity y; eauto.
+        - eauto.
       Qed.
 
       Lemma elements_sort : forall s : t elt, bst s -> sort ltk (elements s).
