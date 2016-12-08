@@ -9,16 +9,184 @@ Set Implicit Arguments.
 (** * SSA-based register assignment formulated for IL *)
 
 
-Definition least_fresh_P (c : var) (G:set var) x :=
-  if [ x <= c ] then least_fresh G else x.
+Fixpoint even (n:nat) : bool :=
+  match n with
+  | 0 => true
+  | S 0 => false
+  | S (S n) => even n
+  end.
 
-Lemma least_fresh_P_spec c G x
-  : (~ x <= c -> x ∉ G)
-    -> least_fresh_P c G x ∉ G.
+Lemma even_or_successor x
+  : even x \/ even (1 + x).
 Proof.
-  unfold least_fresh_P; cases; eauto using least_fresh_spec.
+  induction x; eauto.
+  destruct IHx; eauto.
 Qed.
 
+Record inf_subset :=
+  {
+    inf_subset_P :> var -> bool;
+    inf_subset_inf : forall x, exists y, inf_subset_P y /\ y > x
+  }.
+
+Record inf_partition :=
+  { part_1 : inf_subset;
+    part_2 : inf_subset;
+    part_disj : forall x, part_1 x -> part_2 x -> False;
+    part_cover : forall x, part_1 x + part_2 x;
+  }.
+
+Definition even_inf_subset : inf_subset.
+Proof.
+  refine (Build_inf_subset even _).
+  - intros. destruct (even_or_successor (S x)); eauto.
+    eexists (2+x); simpl; split; eauto.
+Defined.
+
+Definition odd := (fun x => negb (even x)).
+
+Lemma even_not_even x
+  : even x = negb (even (S x)).
+Proof.
+  general induction x; eauto.
+  - simpl even at 2.
+    destruct (even x); destruct (even (S x)); simpl in *; intuition.
+Qed.
+
+Definition odd_inf_subset : inf_subset.
+Proof.
+  refine (Build_inf_subset odd _).
+  - unfold odd. intros.
+    destruct (even_or_successor x); eauto.
+    + eexists (S x). rewrite <- even_not_even.
+      split; eauto.
+    + eexists (S (S x)); simpl.
+      rewrite even_not_even in H. eauto.
+Defined.
+
+Definition even_part : inf_partition.
+Proof.
+  refine (Build_inf_partition even_inf_subset odd_inf_subset _ _).
+  - intros.
+    unfold even_inf_subset in H. simpl in H.
+    unfold odd_inf_subset in H0. simpl in H0.
+    unfold odd in H0. unfold negb in H0. cases in H0; eauto.
+  - intros.
+    unfold even_inf_subset, odd_inf_subset, odd, negb; simpl.
+    cases; eauto.
+Qed.
+
+Require Import SafeFirst.
+
+Hint Resolve inf_subset_inf.
+
+Lemma fresh_variable_always_exists_in_inf_subset (lv:set nat) (p:inf_subset) n
+: safe (fun x => x ∉ lv /\ p x) n.
+Proof.
+  - decide (n > SetInterface.fold max lv 0).
+    + decide (p n).
+      * econstructor. split; eauto.
+        intro. exploit fresh_spec'; eauto. unfold var in *. omega.
+      * edestruct (inf_subset_inf p n); dcr.
+        eapply (@safe_antitone _ _ x);[|omega].
+        econstructor; split; eauto.
+        intro. exploit fresh_spec'; eauto. unfold var in *. omega.
+    + decide (p (S (SetInterface.fold max lv 0))).
+      * eapply safe_antitone. instantiate (1:=S (SetInterface.fold max lv 0)).
+        econstructor. split; eauto. intro.
+        exploit fresh_spec'; eauto. unfold var in *. omega.
+        omega.
+      * edestruct (inf_subset_inf p (S (SetInterface.fold Init.Nat.max lv 0)));
+          dcr.
+        eapply (@safe_antitone _ _ x);[|omega].
+        econstructor; split; eauto.
+        intro. exploit fresh_spec'; eauto. unfold var in *. omega.
+Qed.
+
+Definition least_fresh_P (p:inf_subset) (lv:set var) : var.
+  refine (@safe_first (fun x => x ∉ lv /\ p x) _ 0 _).
+  - eapply fresh_variable_always_exists_in_inf_subset.
+Defined.
+
+(*
+Lemma all_in_lv_cardinal_p (p:inf_subset) (lv:set nat) n
+: (forall m : nat, p m -> m < n -> m \In lv) -> SetInterface.cardinal (filter p lv) >= n.
+Proof.
+  general induction n; simpl.
+  - omega.
+  - exploit (IHn p (lv \ singleton n)).
+    + intros. cset_tac'; omega.
+    + decide (p n).
+      * assert (lv [=] {n; lv \ singleton n }). {
+          exploit (H (n)); eauto.
+          cset_tac.
+        }
+        rewrite H1.
+        rewrite filter_add_in; eauto.
+        assert (n ∉ lv \ singleton n) by cset_tac.
+        erewrite cardinal_2 with (s:=filter p (lv \ singleton n)). omega.
+        instantiate (1:=n). cset_tac.
+        cset_tac.
+      *
+Admitted.
+*)
+
+Lemma semantic_branch (P Q:Prop) `{Computable Q}
+  : P \/ Q -> ((~ Q /\ P) \/ Q).
+Proof.
+  decide Q; clear H; intros; intuition.
+Qed.
+
+Lemma least_fresh_P_full_spec p G
+  : least_fresh_P p G ∉ G
+    /\ (forall m, p m ->  m < least_fresh_P p G -> m ∈ filter p G)
+    /\ p (least_fresh_P p G).
+Proof.
+  unfold least_fresh_P.
+  eapply safe_first_spec with
+  (I:= fun n => forall m, p m -> m < n -> m ∈ filter p G).
+  - intros; dcr. rewrite de_morgan_dec, <- in_dneg in H0.
+    destruct H0; dcr.
+    + decide (m = n); subst; eauto.
+      * cset_tac.
+      * exploit (H m); eauto. unfold var in *. omega.
+    + decide (m = n); subst; eauto.
+      * cset_tac.
+      * exploit (H m); eauto. unfold var in *. omega.
+  - intros. cset_tac.
+  - intros; omega.
+Qed.
+
+Definition least_fresh_part (p:inf_partition) (G:set var) x :=
+  if part_1 p x then least_fresh_P (part_1 p) G
+  else least_fresh_P (part_2 p) G.
+
+Lemma least_fresh_part_fresh p G x
+  : least_fresh_part p G x ∉ G.
+Proof.
+  unfold least_fresh_part; cases; eauto.
+  - eapply least_fresh_P_full_spec.
+  - eapply least_fresh_P_full_spec.
+Qed.
+
+Lemma least_fresh_part_1 (p:inf_partition) G x
+  : part_1 p x
+    -> part_1 p (least_fresh_part p G x).
+Proof.
+  unfold least_fresh_part; intros; cases.
+  eapply least_fresh_P_full_spec.
+Qed.
+
+Lemma least_fresh_part_2 (p:inf_partition) G x
+  : part_2 p x
+    -> part_2 p (least_fresh_part p G x).
+Proof.
+  unfold least_fresh_part; intros. cases.
+  - exfalso. eapply part_disj; eauto.
+  - eapply least_fresh_P_full_spec.
+Qed.
+
+(*
 Lemma least_fresh_P_gt c G x
   : ~ x <= c
     -> least_fresh_P c G x = x.
@@ -232,6 +400,8 @@ Section FreshListP.
   Qed.
 End FreshListP.
 
+
+
 Lemma least_fresh_P_ext c (G G' : ⦃var⦄) Z
   : G [=] G' -> least_fresh_P c G Z = least_fresh_P c G' Z.
 Proof.
@@ -253,8 +423,43 @@ Smpl Add match goal with
          | [ H : context [ length (fresh_list_P ?c ?G ?Z) ] |- _ ] =>
            rewrite (@fresh_list_P_length c G Z) in H
          end : len.
+ *)
 
-Definition regAssignF (c : var)
+Lemma least_fresh_P_ext p (G G' : ⦃var⦄)
+  : G [=] G' -> least_fresh_P p G = least_fresh_P p G'.
+Proof.
+  intros. unfold least_fresh_P; eauto.
+  eapply safe_first_ext. intros. rewrite H. reflexivity.
+Qed.
+
+Lemma least_fresh_part_ext p (G G' : ⦃var⦄) x
+  : G [=] G' -> least_fresh_part p G x = least_fresh_part p G' x.
+Proof.
+  intros. unfold least_fresh_part; cases; eauto using least_fresh_P_ext.
+Qed.
+
+Lemma least_fresh_list_ext n G G' f
+  : (forall x G G', G [=] G' -> f G x = f G' x)
+    -> G [=] G'
+    -> fresh_list_stable f G n = fresh_list_stable f G' n.
+Proof.
+  intros EXT EQ. general induction n; simpl.
+  - reflexivity.
+  - f_equal; eauto using least_fresh_ext.
+    eapply IHn; eauto.
+    erewrite EXT, EQ; eauto; reflexivity.
+Qed.
+
+Lemma least_fresh_list_part_ext p n G G'
+  : G [=] G'
+    -> fresh_list_stable (least_fresh_part p) G n = fresh_list_stable (least_fresh_part p) G' n.
+Proof.
+  eapply least_fresh_list_ext.
+  intros. eapply least_fresh_part_ext; eauto.
+Qed.
+
+
+Definition regAssignF p
            (regAssign : stmt -> ann (set var) -> Map [var, var] -> status (Map [var, var]))
   := fix regAssignF
            (ϱ:Map [var, var]) (F:list (list var * stmt)) (ans: list (ann (set var)))
@@ -262,27 +467,27 @@ Definition regAssignF (c : var)
   match F, ans with
     | Zs::F, a::ans =>
       let Z := fst Zs in let s := snd Zs in
-      let Z' := fresh_list_P c (SetConstructs.map (findt ϱ 0) (getAnn a\of_list Z)) Z in
+      let Z' := fresh_list_stable (least_fresh_part p) (SetConstructs.map (findt ϱ 0) (getAnn a\of_list Z)) Z in
       sdo ϱ' <- regAssign s a (ϱ[- Z <-- Z'-]);
         regAssignF ϱ' F ans
 
     | _, _ => Success ϱ
   end.
 
-Fixpoint regAssign (c : var) (st:stmt) (an: ann (set var)) (ϱ:Map [var, var])
+Fixpoint regAssign p (st:stmt) (an: ann (set var)) (ϱ:Map [var, var])
   : status (Map [var, var]) :=
  match st, an with
     | stmtLet x e s, ann1 lv ans =>
-      let xv := least_fresh_P c (SetConstructs.map (findt ϱ 0) (getAnn ans\ singleton x)) x
-      in regAssign c s ans ( ϱ[- x <- xv -])
+      let xv := least_fresh_part p (SetConstructs.map (findt ϱ 0) (getAnn ans\ singleton x)) x
+      in regAssign p s ans (ϱ[- x <- xv -])
     | stmtIf _ s t, ann2 lv ans ant =>
-      sdo ϱ' <- regAssign c s ans ϱ;
-        regAssign c t ant ϱ'
+      sdo ϱ' <- regAssign p s ans ϱ;
+        regAssign p t ant ϱ'
     | stmtApp _ _, ann0 _ => Success ϱ
     | stmtReturn _, ann0 _ => Success ϱ
     | stmtFun F t, annF _ ans ant =>
-      sdo ϱ' <- regAssignF c (regAssign c) ϱ F ans;
-        regAssign c t ant ϱ'
+      sdo ϱ' <- regAssignF p (regAssign p) ϱ F ans;
+        regAssign p t ant ϱ'
     | _, _ => Error "regAssign: Annotation mismatch"
  end.
 
@@ -352,9 +557,9 @@ Proof.
 Qed.
 
 Lemma regAssign_renamedApart_agree c i s al ϱ ϱ' ZL Lv alv
+      (allocOK:regAssign c s alv ϱ = Success ϱ')
       (sd:renamedApart s al)
       (LS:live_sound i ZL Lv s alv)
-      (allocOK:regAssign c s alv ϱ = Success ϱ')
 : agree_on eq (fst (getAnn al)) (findt ϱ 0) (findt ϱ' 0).
 Proof.
   eapply agree_on_incl.
@@ -365,8 +570,8 @@ Proof.
   clear_all; cset_tac; intuition; eauto.
 Qed.
 
-Lemma regAssignF_get c G F ans alv n Zs a ϱ ϱ' an ZL Lv i D Dt lv
-: regAssignF c (regAssign c) ϱ F alv = Success ϱ'
+Lemma regAssignF_get p G F ans alv n Zs a ϱ ϱ' an ZL Lv i D Dt lv
+: regAssignF p (regAssign p) ϱ F alv = Success ϱ'
   -> (forall n Zs a, get F n Zs -> get ans n a -> renamedApart (snd Zs) a)
   -> (forall n Zs a, get F n Zs ->
                get alv n a ->
@@ -382,10 +587,10 @@ Lemma regAssignF_get c G F ans alv n Zs a ϱ ϱ' an ZL Lv i D Dt lv
   -> get alv n a
   -> get ans n an
   -> lv ⊆ D
-  -> exists ϱ1 ϱ2, regAssign c (snd Zs) a ϱ1 = Success ϱ2
-             /\ regAssignF c (regAssign c) ϱ2 (drop (S n) F) (drop (S n) alv) = Success ϱ'
+  -> exists ϱ1 ϱ2, regAssign p (snd Zs) a ϱ1 = Success ϱ2
+             /\ regAssignF p (regAssign p) ϱ2 (drop (S n) F) (drop (S n) alv) = Success ϱ'
              /\ agree_on eq (G \ list_union (zip defVars (take n F) (take n ans)))
-                        (findt (ϱ[-fst Zs <-- fresh_list_P c
+                        (findt (ϱ[-fst Zs <-- fresh_list_stable (least_fresh_part p)
                                       (SetConstructs.map (findt ϱ 0) (getAnn a \ of_list (fst Zs)))
                                       (fst Zs)-]) 0)
                         (findt ϱ1 0).
@@ -394,12 +599,12 @@ Proof.
   intros EQ REN LV LVINC DDISJ FUNC PWDISJ GET1 GET2 GET3 incl.
   general induction GET1; inv GET2; inv GET3; simpl in * |- *; monadS_inv EQ; eauto.
   - do 2 eexists; split; eauto. split. rewrite EQ0. reflexivity. reflexivity.
-  - exploit (IHGET1 c G); hnf; intros; eauto using get; dcr.
+  - exploit (IHGET1 p G); hnf; intros; eauto using get; dcr.
     do 2 eexists; split; eauto. split; eauto.
     rewrite EQ0. simpl. rewrite EQ1; eauto.
     etransitivity; eapply agree_on_incl; [ | reflexivity | eassumption | eauto ].
     + repeat rewrite <- map_update_list_update_agree; eauto with len.
-      erewrite fresh_list_P_ext; eauto.
+      erewrite least_fresh_list_part_ext; eauto.
       * eapply update_with_list_agree; eauto with len.
         eapply regAssign_renamedApart_agree' in EQ0; eauto using get.
         rewrite <- map_update_list_update_agree in EQ0; eauto with len.

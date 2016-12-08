@@ -67,66 +67,6 @@ Proof.
   rewrite of_list_elements; eauto.
 Qed.
 
-Lemma get_InA_R X (R:X -> X -> Prop) `{Reflexive X R} (L:list X) n x
-  :  Get.get L n x
-     -> InA R x L.
-Proof.
-  revert_until X. clear.
-  intros. general induction H0; eauto using InA.
-Qed.
-
-Lemma NoDupA_get_neq' X (R:X -> X -> Prop) `{Reflexive X R}
-      `{Transitive X R}
-      (L:list X) n x m y
-  : NoDupA R L
-    -> n < m
-    -> Get.get L n x
-    -> Get.get L m y
-    -> ~ R x y.
-Proof.
-  revert_until X. clear.
-  intros.
-  general induction H3; invt NoDupA.
-  inv H4; try omega.
-  eapply get_InA_R in H10; eauto.
-  - revert H0 H6 H10 ; clear.
-    intros. general induction H10.
-    + intro. eapply H6. econstructor; eauto.
-    + intro. eapply IHInA; eauto.
-  - inv H4; try omega.
-    eapply IHget; try eapply H11; eauto; omega.
-Qed.
-
-Lemma NoDupA_get_neq X (R:X -> X -> Prop) `{Reflexive X R}
-      `{Symmetric X R}
-      `{Transitive X R}
-      (L:list X) n x m y
-  : NoDupA R L
-    -> n <> m
-    -> Get.get L n x
-    -> Get.get L m y
-    -> ~ R x y.
-Proof.
-  intros.
-  decide (n < m).
-  - eapply NoDupA_get_neq'; eauto.
-  - assert (m < n) by omega.
-    intro. symmetry in H7.
-    eapply NoDupA_get_neq'; eauto.
-Qed.
-
-Lemma defined_on_update_list_disj X `{OrderedType X} Y lv (E: X -> option Y) (Z:list X) vl
-: defined_on lv E
-  -> disj (of_list Z) lv
-  -> defined_on lv (E [Z <-- vl]).
-Proof.
-  unfold defined_on; intros.
-  general induction Z; destruct vl; simpl in *; eauto.
-  - lud.
-    + exfalso. eapply H1; eauto. simpl. cset_tac.
-    + eapply IHZ; eauto with cset.
-Qed.
-
 Lemma agree_on_update_list_slot X `{OrderedType X} Y (L:list X) (L':list Y) (V:X->Y)
       `{Proper _ (_eq ==> eq) V} f `{Proper _ (_eq ==> _eq) f} V' D (Len:❬L❭= ❬L'❭)
   :  agree_on eq (D \ of_list L) V (fun x => V' (f x))

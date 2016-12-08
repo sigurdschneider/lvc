@@ -145,3 +145,15 @@ Proof.
   - eapply map_iff in H3; dcr; eauto.
     setoid_rewrite H6; eauto.
 Qed.
+
+Lemma defined_on_update_list_disj X `{OrderedType X} Y lv (E: X -> option Y) (Z:list X) vl
+: defined_on lv E
+  -> disj (of_list Z) lv
+  -> defined_on lv (E [Z <-- vl]).
+Proof.
+  unfold defined_on; intros.
+  general induction Z; destruct vl; simpl in *; eauto.
+  - lud.
+    + exfalso. eapply H1; eauto. simpl. cset_tac.
+    + eapply IHZ; eauto with cset.
+Qed.

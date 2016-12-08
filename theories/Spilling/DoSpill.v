@@ -47,6 +47,44 @@ Proof.
       cases; simpl; rewrite EQ; eauto.
 Qed.
 
+Lemma of_list_slot_lift_params (slot:var -> var) R M (Z:params)
+      (Incl:of_list Z ⊆ R ∪ M)
+  : of_list (slot_lift_params slot (R, M) Z)
+            [=] of_list Z \ (M \ R)
+            ∪ map slot (of_list Z \ (R \ M)).
+Proof.
+  intros. general induction Z; simpl in *.
+  - cset_tac.
+  - cases; simpl.
+    + rewrite IHZ; clear IHZ.
+      time (cset_tac_step_B idtac).
+      time (cset_tac_step_B idtac).
+      * cset_tac.
+      * right. eexists a; cset_tac.
+      * right. eexists x; cset_tac'.
+      * cset_tac.
+      * rewrite <- Incl; cset_tac.
+    + cases; simpl; rewrite IHZ; clear IHZ; eauto.
+      * hnf; split; intros.
+        -- time (cset_tac_step_B idtac).
+           time (cset_tac_step_B idtac).
+           time (cset_tac_step_B idtac).
+           destruct H7. eauto 20.
+           time (cset_tac_step_B idtac).
+           right. eexists x. cset_tac.
+        -- cset_tac.
+      * rewrite <- Incl. eauto with cset.
+      * decide (a ∈ M).
+        -- time (cset_tac_step_B idtac).
+           time (cset_tac_step_B idtac).
+           time (cset_tac_step_B idtac).
+           right. eexists a. cset_tac.
+           right. cset_tac.
+           cset_tac.
+        -- exfalso. cset_tac.
+      * rewrite <- Incl. cset_tac.
+Qed.
+
 
 Definition slot_lift_args
            (slot : var -> var)

@@ -348,45 +348,6 @@ Proof.
     revert NOTCOND H. clear; cset_tac.
 Qed.
 
-
-Lemma of_list_slot_lift_params R M (Z:params) (Incl:of_list Z ⊆ R ∪ M)
-  : of_list (slot_lift_params slot (R, M) Z)
-            [=] of_list Z \ (M \ R)
-            ∪ map slot (of_list Z \ (R \ M)).
-Proof.
-  intros. general induction Z; simpl in *.
-  - cset_tac.
-  - cases; simpl.
-    + rewrite IHZ; clear IHZ.
-      time (cset_tac_step_B idtac).
-      time (cset_tac_step_B idtac).
-      * cset_tac.
-      * right. eexists a; cset_tac.
-      * right. eexists x; cset_tac'.
-      * cset_tac.
-      * rewrite <- Incl; cset_tac.
-    + cases; simpl; rewrite IHZ; clear IHZ; eauto.
-      * hnf; split; intros.
-        -- time (cset_tac_step_B idtac).
-           time (cset_tac_step_B idtac).
-           time (cset_tac_step_B idtac).
-           destruct H7. eauto 20.
-           time (cset_tac_step_B idtac).
-           right. eexists x. cset_tac.
-        -- cset_tac.
-      * rewrite <- Incl. eauto with cset.
-      * decide (a ∈ M).
-        -- time (cset_tac_step_B idtac).
-           time (cset_tac_step_B idtac).
-           time (cset_tac_step_B idtac).
-           right. eexists a. cset_tac.
-           right. cset_tac.
-           cset_tac.
-        -- exfalso. cset_tac.
-      * rewrite <- Incl. cset_tac.
-Qed.
-
-
 Lemma slot_lift_params_agree X (E:onv X) E' R M Z VL (Len:❬Z❭=❬VL❭)
       (Agr2:agree_on eq (R \ of_list Z) E E')
       (Disj:disj (R ∪ of_list Z) (map slot (R ∪ of_list Z)))

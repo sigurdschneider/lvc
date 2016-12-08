@@ -278,3 +278,52 @@ Proof.
     eexists (S x), x0; repeat split; eauto using get.
     + intros. inv H4; intro; eauto. eapply H5; eauto. omega.
 Qed.
+
+
+Lemma get_InA_R X (R:X -> X -> Prop) `{Reflexive X R} (L:list X) n x
+  :  Get.get L n x
+     -> InA R x L.
+Proof.
+  revert_until X. clear.
+  intros. general induction H0; eauto using InA.
+Qed.
+
+Lemma NoDupA_get_neq' X (R:X -> X -> Prop) `{Reflexive X R}
+      `{Transitive X R}
+      (L:list X) n x m y
+  : NoDupA R L
+    -> n < m
+    -> Get.get L n x
+    -> Get.get L m y
+    -> ~ R x y.
+Proof.
+  revert_until X. clear.
+  intros.
+  general induction H3; invt NoDupA.
+  inv H4; try omega.
+  eapply get_InA_R in H10; eauto.
+  - revert H0 H6 H10 ; clear.
+    intros. general induction H10.
+    + intro. eapply H6. econstructor; eauto.
+    + intro. eapply IHInA; eauto.
+  - inv H4; try omega.
+    eapply IHget; try eapply H11; eauto; omega.
+Qed.
+
+Lemma NoDupA_get_neq X (R:X -> X -> Prop) `{Reflexive X R}
+      `{Symmetric X R}
+      `{Transitive X R}
+      (L:list X) n x m y
+  : NoDupA R L
+    -> n <> m
+    -> Get.get L n x
+    -> Get.get L m y
+    -> ~ R x y.
+Proof.
+  intros.
+  decide (n < m).
+  - eapply NoDupA_get_neq'; eauto.
+  - assert (m < n) by omega.
+    intro. symmetry in H7.
+    eapply NoDupA_get_neq'; eauto.
+Qed.
