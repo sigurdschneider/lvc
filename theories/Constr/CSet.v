@@ -697,6 +697,24 @@ Proof.
   cset_tac.
 Qed.
 
+Lemma filter_singleton_in X `{OrderedType X} (p:X -> bool) `{Proper _ (_eq ==> eq) p} x
+  : p x -> filter p (singleton x) [=] singleton x.
+Proof.
+  intros P; split; intros In; cset_tac.
+Qed.
+
+Lemma filter_singleton_notin X `{OrderedType X} (p:X -> bool) `{Proper _ (_eq ==> eq) p} x
+  : ~ p x -> filter p (singleton x) [=] ∅.
+Proof.
+  intros P; split; intros In; cset_tac.
+Qed.
+
+Lemma cardinal_filter X `{OrderedType X} (p:X->bool) `{Proper _ (_eq ==> eq) p} (s:set X)
+  : SetInterface.cardinal (filter p s) <= SetInterface.cardinal s.
+Proof.
+  eapply subset_cardinal, filter_incl; eauto.
+Qed.
+
 Lemma decide_mem_1 X `{OrderedType X} x (s:set X)
   : (x ∈ s -> False) \/ x ∈ s.
 Proof.

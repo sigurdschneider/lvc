@@ -52,12 +52,6 @@ Fixpoint size_of_largest_live_set (c:nat) (a:ann (set var)) : nat :=
                             (size_of_largest_live_set c b))
   end.
 
-Lemma cardinal_filter X `{OrderedType X} (p:X->bool) `{Proper _ (_eq ==> eq) p} (s:set X)
-  : SetInterface.cardinal (filter p s) <= SetInterface.cardinal s.
-Proof.
-  eapply subset_cardinal, filter_incl; eauto.
-Qed.
-
 Lemma size_of_largest_live_set_live_set c al
   : SetInterface.cardinal (filter (fun x => B[x <= c]) (getAnn al))
     <= size_of_largest_live_set c al.
@@ -65,44 +59,6 @@ Proof.
   destruct al; simpl; eauto using Max.le_max_l.
   rewrite cardinal_filter; eauto.
 Qed.
-
-Lemma filter_singleton_in X `{OrderedType X} (p:X -> bool) `{Proper _ (_eq ==> eq) p} x
-  : p x -> filter p (singleton x) [=] singleton x.
-Proof.
-  intros P; split; intros In; cset_tac.
-Qed.
-
-Lemma filter_singleton_notin X `{OrderedType X} (p:X -> bool) `{Proper _ (_eq ==> eq) p} x
-  : ~ p x -> filter p (singleton x) [=] ∅.
-Proof.
-  intros P; split; intros In; cset_tac.
-  - exfalso; eapply P. rewrite H1; eauto.
-Qed.
-
-Lemma add_minus_single_eq X `{OrderedType X} x s
-  : x ∈ s
-    -> {x; s \ singleton x} [=] s.
-Proof.
-  cset_tac.
-Qed.
-
-Hint Resolve add_minus_single_eq : cset.
-
-Lemma add_union X `{OrderedType X} x s
-  : {x; s} [=] singleton x ∪ s.
-Proof.
-  cset_tac.
-Qed.
-
-Lemma minus_incl_incl_union X `{OrderedType X} s t u
-  : s \ t ⊆ u
-    -> s ⊆ t ∪ u.
-Proof.
-  intros H1. rewrite <- H1. clear H1.
-  cset_tac.
-Qed.
-
-Hint Resolve minus_incl_incl_union | 10: cset.
 
 Require Import AllocationAlgoCorrect AnnP.
 

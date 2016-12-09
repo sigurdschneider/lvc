@@ -703,3 +703,27 @@ Lemma to_list_nil {X} `{OrderedType X}
 Proof.
   cset_tac.
 Qed.
+
+
+Lemma add_minus_single_eq X `{OrderedType X} x s
+  : x ∈ s
+    -> {x; s \ singleton x} [=] s.
+Proof.
+  cset_tac.
+Qed.
+
+Hint Resolve add_minus_single_eq : cset.
+
+Lemma add_union X `{OrderedType X} x s
+  : {x; s} [=] singleton x ∪ s.
+Proof.
+  cset_tac.
+Qed.
+
+Lemma minus_incl_incl_union X `{OrderedType X} s t u
+  : s \ t ⊆ u
+    -> s ⊆ t ∪ u.
+Proof.
+  intros H1. rewrite <- H1. clear H1.
+  cset_tac.
+Qed.
