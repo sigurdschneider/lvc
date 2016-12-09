@@ -19,7 +19,7 @@ Lemma renamedApart_live_functional s ang ZL Lv
   -> length ZL = length Lv
   -> live_sound Functional ZL Lv s (mapAnn fst ang).
 Proof.
-  intros. general induction H; invt paramsMatch; simpl.
+  intros. general induction H; invt paramsMatch; simpl; set_simpl.
   - eauto 9 using @live_sound, live_exp_sound_incl, live_freeVars
             with ann pe cset.
   - eauto 9 using @live_sound, live_op_sound_incl, Op.live_freeVars
@@ -63,7 +63,7 @@ Lemma renamedApart_live s ang ZL Lv i
   -> length ZL = length Lv
   -> live_sound i ZL Lv s (mapAnn fst ang).
 Proof.
-  intros. general induction H; invt paramsMatch; simpl in * |- *; pe_rewrite.
+  intros. general induction H; invt paramsMatch; simpl in * |- *; pe_rewrite; set_simpl.
   - econstructor; eauto using live_exp_sound_incl, live_freeVars with cset pe ann.
   - econstructor; eauto using live_op_sound_incl, Op.live_freeVars with cset pe ann.
   - econstructor; eauto using live_op_sound_incl, Op.live_freeVars with cset.
@@ -80,9 +80,9 @@ Proof.
     econstructor; eauto with len.
     + intros. inv_get.
       eapply H1; eauto.
-      * edestruct H2; eauto; dcr. rewrite H15.
+      * edestruct H2; eauto; dcr.
         rewrite zip_app; eauto with len.
-        rewrite List.map_app. rewrite <- incl_right.
+        rewrite List.map_app. rewrite H13.
         rewrite getAnn_mapAnn_map.
         rewrite bounded_app; split; eauto using indexwise_R_bounded.
       * eauto with len.
@@ -91,44 +91,40 @@ Proof.
     + eauto with cset pe ann.
 Qed.
 
-Lemma disjoint_let X `{OrderedType X} (D D' D'':set X) x ZL (Lv:list (set X)) an
-: D''[=]{x; D'}
-  -> disjoint (Some ⊝ Lv \\ ZL) (D'')
+Lemma disjoint_let X `{OrderedType X} (D D':set X) x ZL (Lv:list (set X)) an
+: disjoint (Some ⊝ Lv \\ ZL) {x; D'}
   -> pe (getAnn an) ({x; D}, D')
   -> disjoint (Some ⊝ Lv \\ ZL) (snd (getAnn an)).
 Proof.
-  intros EQ Disj PE. rewrite PE. rewrite EQ in *. eauto using disjoint_incl with cset.
+  intros Disj PE. rewrite PE. eauto using disjoint_incl with cset.
 Qed.
 
-Lemma disjoint_if1 X `{OrderedType X} (D D':⦃X⦄) Ds Dt  ZL Lv an
-:  Ds ∪ Dt [=] D'
-  -> disjoint (Some ⊝ Lv \\ ZL) D'
+Lemma disjoint_if1 X `{OrderedType X} (D:⦃X⦄) Ds Dt  ZL Lv an
+  : disjoint (Some ⊝ Lv \\ ZL) (Ds ∪ Dt)
   -> pe (getAnn an) (D, Ds)
   -> disjoint (Some ⊝ Lv \\ ZL) (snd (getAnn an)).
 Proof.
-  intros EQ Disj PE. rewrite PE. rewrite <- EQ in *. simpl.
+  intros Disj PE. rewrite PE.  simpl.
   eauto using disjoint_incl with cset.
 Qed.
 
-Lemma disjoint_if2 X `{OrderedType X} (D D':⦃X⦄) Ds Dt ZL Lv an
-:  Ds ∪ Dt [=] D'
-  -> disjoint (Some ⊝ Lv \\ ZL) D'
+Lemma disjoint_if2 X `{OrderedType X} (D:⦃X⦄) Ds Dt ZL Lv an
+: disjoint (Some ⊝ Lv \\ ZL) (Ds ∪ Dt)
   -> pe (getAnn an) (D, Dt)
   -> disjoint (Some ⊝ Lv \\ ZL) (snd (getAnn an)).
 Proof.
-  intros EQ Disj PE. rewrite PE. rewrite <- EQ in *. simpl.
+  intros Disj PE. rewrite PE. simpl.
   eauto using disjoint_incl with cset.
 Qed.
 
-Lemma disjoint_funF1 ZL Lv D D' F ans Dt lv als
-: disjoint (Some ⊝ Lv \\ ZL) D'
-  -> list_union (zip defVars F ans) ∪ Dt[=]D'
+Lemma disjoint_funF1 ZL Lv D F ans Dt lv als
+: disjoint (Some ⊝ Lv \\ ZL) (list_union (zip defVars F ans) ∪ Dt)
   -> indexwise_R (funConstr D Dt) F ans
   -> (forall n a b, get als n a -> get ans n b -> ann_R Subset1 a b)
-  -> lv ⊆ D'
+  -> lv ⊆ list_union (zip defVars F ans) ∪ Dt
   -> length F = length ans
   -> length F = length als
-  -> disj D D'
+  -> disj D (list_union (zip defVars F ans) ∪ Dt)
   -> disjoint (Some ⊝ ((getAnn ⊝ als ++ Lv) \\ (fst ⊝ F ++ ZL))) lv.
 Proof.
   intros.
@@ -137,24 +133,22 @@ Proof.
   rewrite disjoint_app; split.
   - hnf; intros n s A.
     inv_get; subst; simpl in *.
-    edestruct (get_length_eq _ A H4).
-    edestruct H1; eauto; dcr. exploit H2; eauto.
-    eapply ann_R_get in H11.
-    destruct (getAnn x2); simpl in *.
+    edestruct H0; eauto; dcr. exploit H1; eauto.
+    eapply ann_R_get in H9.
+    destruct (getAnn x0); simpl in *; set_simpl.
     repeat get_functional.
-    rewrite H3. rewrite H11. rewrite H10.
+    rewrite H9, H2.
     eauto with cset.
-  - rewrite H3; eauto.
+  - rewrite H2; eauto.
 Qed.
 
-Lemma lv_incl F ans Dt D' k a Zs
-: list_union (zip defVars F ans) ∪ Dt[=]D'
-  -> get ans k a
+Lemma lv_incl F ans Dt k a Zs
+: get ans k a
   -> get F k Zs
-  -> snd (getAnn a) ⊆ D'.
+  -> snd (getAnn a) ⊆ list_union (zip defVars F ans) ∪ Dt.
 Proof.
   intros.
-  rewrite <- H. eapply incl_union_left.
+  eapply incl_union_left.
   eapply incl_list_union. eapply zip_get; try eapply H3; eauto.
   unfold defVars; eapply incl_right.
 Qed.
@@ -169,10 +163,9 @@ Proof.
   intros H. eapply (renamedApart_disj H).
 Qed.
 
-Lemma incl_minus_disj X `{OrderedType X} s t D Ds x
+Lemma incl_minus_disj X `{OrderedType X} s t Ds x
   : s ⊆ t
-    -> disj s D
-    -> D [=] {x; Ds}
+    -> disj s {x; Ds}
     -> s ⊆ t \ singleton x.
 Proof.
   intros. eauto with cset.
@@ -209,7 +202,7 @@ Proof.
       unfold defVars. eapply incl_right.
 Qed.
 
-Lemma renamedApart_globals_live_F ZL Lv F ans als D Dt D' f lv' Z' l'
+Lemma renamedApart_globals_live_F ZL Lv F ans als D Dt f lv' Z' l'
       (LEN1 : ❬F❭ = ❬als❭)
       (LEN2 : ❬F❭ = ❬ans❭)
       (IH : forall k Zs, get F k Zs ->
@@ -231,9 +224,8 @@ Lemma renamedApart_globals_live_F ZL Lv F ans als D Dt D' f lv' Z' l'
           get F n Zs -> get ans n a -> renamedApart (snd Zs) a)
       (IW:indexwise_R (funConstr D Dt) F ans)
       (PWD:PairwiseDisjoint.pairwise_ne disj (defVars ⊜ F ans))
-      (DEQ:list_union (defVars ⊜ F ans) ∪ Dt [=] D')
-      (Disj : disj D D')
-      (DisjZL : disjoint (Some ⊝ Lv \\ ZL) D')
+      (Disj : disj D (list_union (defVars ⊜ F ans) ∪ Dt))
+      (DisjZL : disjoint (Some ⊝ Lv \\ ZL) (list_union (defVars ⊜ F ans) ∪ Dt))
       (Sub: forall (n : nat) (a : ann ⦃var⦄) (b : ann (⦃var⦄ * ⦃var⦄)),
           get als n a -> get ans n b -> ann_R Subset1 a b)
       (CC:callChain isCalled F l' f)
@@ -250,21 +242,18 @@ Proof.
     + rewrite zip_app, List.map_app; [| eauto with len].
       eapply disjoint_app. split.
       eapply funConstr_disjoint_fun_defs; eauto.
-      rewrite DEQ. eauto.
       eapply renamedApart_disj. eauto.
-      assert (D'Incl:snd (getAnn x) ⊆ D'). {
-        rewrite <- DEQ. eapply incl_union_left.
-        eapply incl_list_union; eauto using zip_get.
-        unfold defVars. eapply incl_right.
-      }
-      rewrite D'Incl. eauto.
+      eapply disjoint_incl; eauto.
+      eapply incl_union_left.
+      eapply incl_list_union; eauto using zip_get.
+      unfold defVars. eapply incl_right.
     + dcr.
       exploit IHCC; eauto. dcr.
       do 2 eexists; split; [| split ]; eauto.
       rewrite <- H7, <- H10.
       simpl in *.
-      assert ((of_list (fst Zs)) ⊆ D'). {
-        rewrite <- DEQ. eapply incl_union_left.
+      assert (of_list (fst Zs) [<=] list_union (defVars ⊜ F ans) ∪ Dt). {
+        eapply incl_union_left.
         eapply incl_list_union. eapply zip_get; eauto.
         unfold defVars. eauto with cset.
       }
@@ -272,18 +261,28 @@ Proof.
       * eapply not_incl_minus; [ reflexivity | ].
         exploit Sub; eauto. eapply ann_R_get in H6.
         edestruct IW; eauto; dcr.
-        rewrite H6. rewrite H12.
+        rewrite H6.
         eapply (disj_incl Disj); eauto with cset.
       * assert (LEQ:❬getAnn ⊝ als❭ = ❬fst ⊝ F❭) by eauto with len.
         rewrite LEQ in *. rewrite get_app_ge in H6; eauto.
-        assert (disj (x3 \ of_list x4) D'). {
-          eapply disj_1_incl; [ eapply DisjZL | ].
-          eapply map_get_eq.
-          eapply zip_get; eauto.
-          reflexivity. reflexivity.
-        }
         eapply not_incl_minus; eauto.
         eapply disj_2_incl; eauto.
+Qed.
+
+Lemma pe_fst_incl X `{OrderedType X} a b
+  : pe a b -> fst a ⊆ fst b.
+Proof.
+  intros EQ. rewrite EQ; reflexivity.
+Qed.
+
+Hint Resolve pe_fst_incl : cset.
+
+Instance ann_R_ann0_pe_morphism a
+: Proper (ann_R (@pe _ _) ==> impl) (ann_R Subset1 a).
+Proof.
+  unfold Proper, respectful, impl; intros.
+  general induction H0; invt @ann_R;
+    econstructor; intros; inv_get; try rewrite H; eauto with cset len.
 Qed.
 
 Lemma renamedApart_globals_live s ZL Lv alv f ang
@@ -298,9 +297,9 @@ Lemma renamedApart_globals_live s ZL Lv alv f ang
 Proof.
   revert ZL Lv alv f ang.
   sind s; destruct s; simpl; intros; invt live_sound;
-    invt renamedApart; invt (@ann_R); invt isCalled; simpl in * |- *.
+    invt renamedApart; invt (@ann_R); invt isCalled; simpl in * |- *; set_simpl.
   - edestruct (IH s); dcr; eauto using disjoint_let.
-    + do 2 eexists; split; [| split]; eauto with cset.
+    + do 2 eexists; split; [| split]; eauto.
       exploit H3; eauto.
       rewrite <- H12.
       eauto with cset.
@@ -309,21 +308,22 @@ Proof.
   - edestruct (IH s2); dcr; eauto using disjoint_if2 with cset.
   - eauto.
   - clear H H1. eapply renamedApart_disj in H0. simpl in *.
-    exploit (IH s); eauto. pe_rewrite. eauto with cset.
-    dcr. simpl in *; inv_get.
-    setoid_rewrite <- H13; setoid_rewrite <- H19.
-    exploit renamedApart_globals_live_F; eauto.
-    intros. eapply (IH (snd Zs)); eauto.
-    dcr. destruct f; simpl in *. inv_get.
-    eauto.
+    exploit (IH s); eauto.
+    + pe_rewrite. eapply disjoint_funF1; eauto.
+    + dcr. simpl in *; inv_get.
+      setoid_rewrite <- H13; setoid_rewrite <- H18.
+      exploit renamedApart_globals_live_F; eauto; eauto.
+      * intros. eapply (IH (snd Zs)); eauto.
+      * dcr. destruct f; simpl in *. inv_get.
+        eauto.
 Qed.
 
-Lemma renamedApart_globals_live_From s F als ans D Dt D' ZL Lv alv f ang
+Lemma renamedApart_globals_live_From s F als ans D Dt ZL Lv alv f ang
       (ICF:isCalledFrom isCalled F s f)
       (LS:live_sound Imperative (fst ⊝ F ++ ZL) (getAnn ⊝ als ++ Lv) s alv)
       (RA:renamedApart s ang)
       (AnnR:ann_R Subset1 alv ang)
-      (Incl: snd (getAnn ang) ⊆ D')
+      (Incl: snd (getAnn ang) ⊆ list_union (defVars ⊜ F ans) ∪ Dt)
       (LEN1 : ❬F❭ = ❬als❭)
       (LEN2 : ❬F❭ = ❬ans❭)
       (LSF: forall (n : nat) (Zs : params * stmt) (a : ann ⦃var⦄),
@@ -334,9 +334,8 @@ Lemma renamedApart_globals_live_From s F als ans D Dt D' ZL Lv alv f ang
           get F n Zs -> get ans n a -> renamedApart (snd Zs) a)
       (IW:indexwise_R (funConstr D Dt) F ans)
       (PWD:PairwiseDisjoint.pairwise_ne disj (defVars ⊜ F ans))
-      (DEQ:list_union (defVars ⊜ F ans) ∪ Dt [=] D')
-      (Disj : disj D D')
-      (DisjZL : disjoint (Some ⊝ Lv \\ ZL) D')
+      (Disj : disj D (list_union (defVars ⊜ F ans) ∪ Dt))
+      (DisjZL : disjoint (Some ⊝ Lv \\ ZL) (list_union (defVars ⊜ F ans) ∪ Dt))
       (Sub: forall (n : nat) (a : ann ⦃var⦄) (b : ann (⦃var⦄ * ⦃var⦄)),
           get als n a -> get ans n b -> ann_R Subset1 a b)
   : exists (lv : ⦃var⦄) (Z : params),
@@ -344,7 +343,7 @@ Lemma renamedApart_globals_live_From s F als ans D Dt D' ZL Lv alv f ang
     get (getAnn ⊝ als ++ Lv) (labN f) lv
     /\ (lv \ of_list Z) ⊆ getAnn alv.
 Proof.
-  destruct ICF as [? [IC CC]]; dcr.
+  destruct ICF as [? [IC CC]]; dcr. set_simpl.
   exploit renamedApart_globals_live; eauto using disjoint_funF1.
   dcr.
   setoid_rewrite <- H3.
@@ -363,11 +362,12 @@ Lemma renamedApart_live_imperative_is_functional s ang ZL Lv alv
 Proof.
   intros RA NUC LS AR DISJ.
   general induction LS; invt noUnreachableCode; invt renamedApart; invt (@ann_R);
+    set_simpl;
     eauto 50 using live_sound, disjoint_let, disjoint_if1, disjoint_if2.
   - econstructor; simpl; eauto.
     + eapply IHLS; eauto using disjoint_funF1.
       eapply disjoint_funF1; eauto.
-      * simpl. pe_rewrite. rewrite <- H16. eapply incl_right.
+      * simpl. pe_rewrite. eapply incl_right.
       * simpl. eapply renamedApart_disj in RA. eauto.
     + intros. inv_get.
       eapply H1; eauto.
@@ -379,16 +379,14 @@ Proof.
       simpl in *.
       edestruct (@renamedApart_globals_live);
           eauto using get_range; simpl in *; dcr.
-      * eapply disjoint_funF1; eauto. pe_rewrite.
-        rewrite <- H16; eapply incl_right.
-        eapply renamedApart_disj in RA; eauto.
+      * eapply disjoint_funF1; eauto with pe cset.
       * edestruct (@renamedApart_globals_live_F);
           eauto using get_range, renamedApart_globals_live; simpl in *; dcr.
         eapply renamedApart_disj in RA; eauto.
-        rewrite <- H3, <- H27. split; eauto.
-        exploit H2; eauto.
-        eapply get_in_range_app in H28; eauto using get_range.
-        inv_get. eauto.
+        rewrite <- H3, <- H26. split; eauto.
+        -- exploit H2; eauto.
+        -- eapply get_in_range_app in H27; eauto using get_range.
+           inv_get. eauto.
 Qed.
 
 Fixpoint mapAnn2 X X' Y (f:X -> X' -> Y) (a:ann X) (b:ann X') : ann Y :=
@@ -503,7 +501,7 @@ Lemma live_sound_renamedApart_minus s ang ZL Lv alv i
   -> live_sound i ZL Lv s (mapAnn2 meet1 alv ang).
 Proof.
   intros RA LS.
-  general induction RA; invt live_sound; simpl in * |- *; pe_rewrite.
+  general induction RA; invt live_sound; simpl in * |- *; pe_rewrite; set_simpl.
 
   - econstructor; eauto using live_exp_sound_meet.
     eapply IHRA; eauto using disjoint_let, bounded_incl with cset ann.
@@ -546,10 +544,8 @@ Proof.
         erewrite getAnn_mapAnn2;
           eauto using live_sound_annotation, renamedApart_annotation.
         edestruct H2; eauto; dcr.
-        destruct (getAnn x3); simpl in *.
-        unfold lminus.
-        rewrite H8.
-        clear_all; cset_tac; intuition.
+        destruct (getAnn x3); simpl in *; set_simpl.
+        clear_all; cset_tac.
     + intros. inv_get.
       eapply H1; eauto.
       * eapply live_sound_monotone; eauto.
@@ -566,20 +562,20 @@ Proof.
         erewrite getAnn_mapAnn2;
           eauto using live_sound_annotation, renamedApart_annotation.
         edestruct H2; eauto; dcr.
-        destruct (getAnn x5); unfold lminus; simpl in *.
-        rewrite H15.
-        edestruct (H2 _ _ _ H7 H8); eauto; dcr. rewrite H19.
-        clear_all; cset_tac; intuition.
-        edestruct H2; eauto; dcr. rewrite H13.
+        destruct (getAnn x5); unfold lminus; simpl in *; set_simpl.
+        edestruct (H2 _ _ _ H5 H7); eauto; dcr. rewrite H13.
+        clear_all; cset_tac.
+        edestruct H2; eauto; dcr. rewrite H12.
         rewrite <- incl_right; eauto.
     + intros. inv_get.
       erewrite getAnn_mapAnn2;
         eauto using live_sound_annotation, renamedApart_annotation.
       edestruct H2; eauto; dcr. destruct (getAnn x0); simpl in *.
       exploit H14; eauto; dcr.
-      split. eauto with cset.
-      cases; eauto. rewrite H13. rewrite <- H21.
-      clear_all; cset_tac; intuition.
+      split.
+      * eauto with cset.
+      * cases; eauto; set_simpl. rewrite <- H20.
+        clear_all; cset_tac.
     + erewrite getAnn_mapAnn2;
         eauto using live_sound_annotation, renamedApart_annotation with cset.
 Qed.

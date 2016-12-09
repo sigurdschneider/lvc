@@ -60,7 +60,7 @@ Proof.
       edestruct get_fst_renameApartF as [? [? [? ]]]; dcr; eauto.
       exploit (get_range H2).
       orewrite (length F - S (length F - S n) = n) in H4. get_functional; subst.
-      rewrite H6.
+      setoid_rewrite H6.
       erewrite renameApart'_agree; eauto. eapply IH; eauto.
       * rewrite lookup_set_update_with_list_in_union_length; eauto.
         eapply union_subset_3; eauto.

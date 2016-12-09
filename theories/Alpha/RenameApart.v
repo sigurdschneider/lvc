@@ -109,43 +109,6 @@ Fixpoint renamedApartAnn (s:stmt) (G:set var) : ann (set var * set var) :=
       annF (G, G' ∪ (snd (getAnn ant))) ans ant
   end.
 
-(*
-Instance renamedApart_ann_morph
-: Proper (eq ==> Equal ==> ann_R (@pe _ _ )) renamedApartAnn.
-Proof.
-  unfold Proper, respectful; intros. subst.
-  revert x0 y0 H0. sind y; destruct y; simpl; intros; eauto using ann_R.
-  - econstructor. rewrite H0 at 1. rewrite (IH y); eauto. reflexivity.
-    rewrite H0; reflexivity.
-    eapply IH; eauto. rewrite H0; reflexivity.
-  - econstructor; eauto.
-    rewrite H0 at 1. rewrite (IH y1), (IH y2); eauto. reflexivity.
-  - econstructor; rewrite H0; reflexivity.
-  - econstructor; rewrite H0; reflexivity.
-  - econstructor. rewrite H0 at 1. rewrite (IH y); eauto. reflexivity.
-    rewrite H0; reflexivity.
-    eapply IH; eauto. rewrite H0; reflexivity.
-  - repeat (let_pair_case_eq; simpl_pair_eqs); subst.
-    econstructor; eauto with len.
-    + rewrite H0 at 1.
-      econstructor; eauto. rewrite IH; eauto.
-      eapply union_eq_decomp; eauto.
-      .
-    + .
-    + intros.
-      inv_map H. inv_map H1.
-    pose proof (IH (snd x)).
-    eapply ann_R_get in H5.
-    unfold comp.
-    erewrite H5. reflexivity. eauto. rewrite H0; eauto.
-    pose proof (IH y).
-    eapply ann_R_get in H; eauto.
-    rewrite H; eauto.
-    intros. inv_map H. inv_map H1.
-    eapply IH; eauto. rewrite H0; eauto.
-Qed.
- *)
-
 Lemma fst_renamedApartAnn s G
  : fst (getAnn (renamedApartAnn s G)) = G.
 Proof.
@@ -269,7 +232,7 @@ Proof.
       eapply get_rev. rewrite <- Heql. econstructor.
       simpl. split. reflexivity.
       split. cset_tac; intuition.
-      split. eauto.
+      split. cset_tac.
       split. eauto.
       split.
       rewrite fresh_list_stable_length; eauto.
@@ -297,22 +260,21 @@ Lemma snd_renameApartAnn_fst fresh s G ϱ G'
 : snd (getAnn (renamedApartAnn (snd (renameApart' fresh ϱ G s)) G')) [=] fst (renameApart' fresh ϱ G s).
 Proof.
   revert G ϱ G'.
-  sind s; destruct s; simpl; intros; repeat let_pair_case_eq; simpl; eauto.
-  - subst. rewrite (IH s); eauto.
-  - subst. rewrite (IH s1); eauto. rewrite (IH s2); eauto.
-  - subst.
-    let_pair_case_eq; simpl_pair_eqs; subst. simpl.
+  sind s; destruct s; simpl; intros; repeat let_pair_case_eq; simpl; eauto; subst.
+  - rewrite (IH s); eauto.
+  - rewrite (IH s1); eauto. rewrite (IH s2); eauto.
+  - let_pair_case_eq; simpl_pair_eqs; subst. simpl.
     rewrite (IH s); eauto.
     eapply union_eq_decomp; eauto.
     rewrite snd_renamedApartAnnF'; eauto.
-    rewrite <- definedVars_renameApartF; eauto using definedVars_renamedApart'.
-    rewrite map_rev.
-    rewrite <- list_union_rev; eauto.
-    intros.
-    eapply get_rev in H.
-    edestruct get_fst_renameApartF as [? [? [? ?]]]; dcr; eauto.
-    rewrite H3. rewrite definedVars_renamedApart'.
-    eapply IH; eauto.
+    + rewrite <- definedVars_renameApartF; eauto using definedVars_renamedApart'.
+      rewrite map_rev.
+      rewrite <- list_union_rev; eauto.
+    + intros.
+      inv_get.
+      edestruct get_fst_renameApartF as [? [? [? ?]]]; dcr; eauto; subst.
+      setoid_rewrite H3. rewrite definedVars_renamedApart'.
+      eapply IH; eauto.
 Qed.
 
 
@@ -515,7 +477,7 @@ Proof.
       edestruct get_fst_renameApartF as [? [? [? ?]]]; dcr; eauto.
       orewrite (length F - S (length F - S n) = n) in H4. get_functional; subst.
 
-      rewrite H6.
+      setoid_rewrite H6.
       rewrite IH; eauto.
       * { assert (freeVars (snd z) [=]
                            (freeVars (snd z) \ of_list (fst z))
@@ -681,7 +643,7 @@ Proof.
       eapply get_rev in H1.
       rewrite renameApartF_length in H1.
       edestruct get_fst_renameApartF as [? [? []]]; eauto; dcr.
-      rewrite H7. eapply IH; eauto with cset.
+      setoid_rewrite H7. eapply IH; eauto with cset.
       assert (freeVars (snd x0) ⊆ (freeVars (snd x0) \ of_list (fst x0)) ∪ of_list (fst x0)). {
         clear_all; cset_tac; intuition.
       }
@@ -816,7 +778,7 @@ Proof.
       exploit H0; eauto.
       rewrite rev_length.
       rewrite renameApartF_length.
-      rewrite H5. eauto.
+      setoid_rewrite H5. eauto.
     + rewrite rev_length.
       exploit IHlabelsDefined; eauto.
       rewrite renameApartF_length. eauto.
@@ -836,7 +798,7 @@ Proof.
     inv H1; simpl; eauto using isVar.
   - econstructor; intros; inv_get; eauto.
     edestruct get_fst_renameApartF as [? [? ?]]; eauto; dcr; subst.
-    rewrite H3.
+    setoid_rewrite H3.
     eapply H0; eauto.
 Qed.
 

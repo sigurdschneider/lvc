@@ -16,20 +16,20 @@ Lemma lv_ra_lv_bnd ZL Lv lv ra VD s
 Proof.
   general induction aIncl; invt live_sound; invt renamedApart;
     econstructor; simpl in *;
-      try (rewrite <- Incl; eauto with cset); pe_rewrite.
+      try (rewrite <- Incl; eauto with cset); pe_rewrite; set_simpl.
   - eapply IHaIncl; eauto.
-    rewrite <- Incl, H12. clear; cset_tac.
+    rewrite <- Incl. clear; cset_tac.
   - eapply IHaIncl1; eauto.
-    rewrite <- Incl, <- H13. clear; cset_tac.
+    rewrite <- Incl. clear; cset_tac.
   - eapply IHaIncl2; eauto.
-    rewrite <- Incl, <- H13. clear; cset_tac.
+    rewrite <- Incl. clear; cset_tac.
   - intros. inv_get. eapply H2; eauto.
     edestruct H15; eauto; dcr. rewrite H8.
-    rewrite <- Incl, <- H19.
+    rewrite <- Incl.
     rewrite <- incl_list_union; eauto using zip_get;[|reflexivity].
     unfold defVars. clear; cset_tac.
   - eapply IHaIncl; eauto.
-    rewrite <- Incl, <- H19. clear; cset_tac.
+    rewrite <- Incl. clear; cset_tac.
 Qed.
 
 Definition renameApartF_live (fresh:StableFresh)
@@ -144,25 +144,6 @@ Proof.
       repeat let_pair_case_eq; repeat simpl_pair_eqs; subst. simpl.
       split.
       reflexivity. split; reflexivity.
-Qed.
-
-Lemma lookup_set_update_with_list {X} `{OrderedType X} {Y} `{OrderedType Y}
-  Z Z' (f:X->Y) D `{Proper _ (_eq ==> _eq) f}
-  : of_list Z ⊆ D
-    -> NoDupA _eq Z
-    -> length Z = length Z'
-    -> of_list Z' ⊆ lookup_set (update_with_list Z Z' f) (of_list Z).
-Proof.
-  intros; hnf; intros.
-  lset_tac.
-  length_equify.
-  general induction H4; simpl.
-  - exfalso. simpl in *. cset_tac.
-  - simpl in *. cset_tac'.
-    + eexists x. lud; split; eauto.
-    + edestruct IHlength_eq; eauto; dcr.
-      * invt NoDupA.
-        eexists x0. lud; eauto. cset_tac.
 Qed.
 
 Tactic Notation "orewrite" constr(A) "all" :=

@@ -161,7 +161,7 @@ Proof.
   - eauto using PIR2_ifSndR_keep.
   - eapply PIR2_get; eauto with len.
     intros; inv_get; eauto using @ifSndR.
-  - rewrite <- zip_app; eauto.
+  - rewrite <- zip_app; eauto. len_simpl.
     eapply PIR2_ifSndR_Subset_left.
     eapply PIR2_drop.
     eapply ifSndR_zip_addAdd.

@@ -190,12 +190,38 @@ Proof.
   intros ? ? B C. general induction B; inv C; eauto 20 using @ann_R.
 Qed.
 
+Instance ann_R_ann0_pe_morphism X `{OrderedType X}
+: Proper (@pe X _ ==> ann_R (@pe X _)) (@ann0 _).
+Proof.
+  unfold Proper, respectful; intros.
+  econstructor; eauto.
+Qed.
+
+
 Instance ann_R_ann1_pe_morphism X `{OrderedType X}
 : Proper (@pe X _ ==> ann_R (@pe X _) ==> ann_R (@pe X _)) (@ann1 _).
 Proof.
   unfold Proper, respectful; intros.
   econstructor; eauto.
 Qed.
+
+
+Instance ann_R_ann2_pe_morphism X `{OrderedType X}
+: Proper (@pe X _ ==> ann_R (@pe X _) ==> ann_R (@pe X _) ==> ann_R (@pe X _)) (@ann2 _).
+Proof.
+  unfold Proper, respectful; intros.
+  econstructor; eauto.
+Qed.
+
+Instance ann_R_annF_pe_morphism X `{OrderedType X}
+: Proper (@pe X _ ==> list_eq (ann_R (@pe X _)) ==> ann_R (@pe X _) ==> ann_R (@pe X _)) (@annF _).
+Proof.
+  unfold Proper, respectful; intros.
+  econstructor; eauto using list_eq_length.
+  intros.
+  edestruct @list_eq_get; eauto; dcr. get_functional. eauto.
+Qed.
+
 
 Instance ordered_type_lt_dec A `{OrderedType A} (a b: A)
 : Computable (_lt a b).

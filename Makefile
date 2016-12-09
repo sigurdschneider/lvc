@@ -44,6 +44,7 @@ depclean: clean
 	+$(MAKE) -C paco clean
 	+$(MAKE) -C ContainersPlugin clean
 	+$(MAKE) -C compiler clean
+	+$(MAKE) -C smpl clean
 	rm -rf compiler/extraction/*
 
 distclean: clean depclean

@@ -376,7 +376,7 @@ Lemma rename_renamedApart_srd'' s ang ϱ (alv:ann (set var)) ZL Lv
           (mapAnn (lookup_set ϱ) alv).
 Proof.
   intros SSA LS INCL RI BOUND UNREACH.
-  general induction RI; inv LS; subst; inv SSA; inv INCL; inv UNREACH; simpl.
+  general induction RI; inv LS; subst; inv SSA; inv INCL; inv UNREACH; simpl; set_simpl.
   - econstructor.
     + eapply srd_monotone.
       * eapply IHRI; eauto. pe_rewrite.
@@ -417,18 +417,21 @@ Proof.
         eapply live_globals_bounded.
         intros. split. eapply H13; eauto. inv_get.
         edestruct H7; eauto.
-        exploit H23; eauto. eapply ann_R_get in H33.
-        rewrite H33.
-        rewrite H31. simpl. clear_all; cset_tac; intuition.
+        exploit H23; eauto. eapply ann_R_get in H32.
+        rewrite H32.
+        rewrite H30. simpl. clear_all; cset_tac; intuition.
       * eapply PIR2_rename; eauto.
         simpl in *.
-        split. eapply H13; eauto.
-        inv_get.
-        exploit H19; eauto using get_range.
-        edestruct renamedApart_globals_live_From; try eapply H27; eauto.
-        pe_rewrite. eauto with cset. eauto with cset.
-        eapply bounded_disjoint; eauto. eauto with cset.
-        dcr; simpl in *. inv_get. eauto with cset.
+        split.
+        -- eapply H13; eauto.
+        -- inv_get.
+           exploit H19; eauto using get_range.
+           edestruct renamedApart_globals_live_From; try eapply H26; eauto.
+           ++ pe_rewrite. eauto with cset.
+           ++ eauto with cset.
+           ++ eapply bounded_disjoint. eauto.
+             eauto with cset.
+           ++ dcr; simpl in *. inv_get. eauto with cset.
     + eapply srd_monotone2. simpl in * |- *.
       eapply IHRI; eauto.
       rewrite H15; simpl in * |- *; eauto.
@@ -438,8 +441,8 @@ Proof.
       * eapply H13; eauto.
       * inv_get.
         edestruct H7; eauto.
-        exploit H23; eauto. eapply ann_R_get in H26.
-        rewrite H26. simpl.
+        exploit H23; eauto. eapply ann_R_get in H25.
+        rewrite H25. simpl.
         rewrite H11. clear_all; cset_tac; intuition.
       * eapply PIR2_oglobals; eauto.
 Qed.
@@ -454,13 +457,14 @@ Lemma renamedApart_locally_inj_alpha s ϱ ϱ' ZL Lv (slv:ann (set var)) ang
   -> inverse_on (getAnn slv) ϱ ϱ'
   -> alpha ϱ ϱ' s (rename ϱ s).
 Proof.
-  intros. general induction H; simpl; invt locally_inj; invt live_sound.
+  intros. general induction H; simpl; invt locally_inj; invt live_sound;
+            set_simpl.
   - econstructor. simpl in *. eapply alpha_exp_rename_injective.
     eapply inverse_on_incl. eapply Exp.freeVars_live; eauto. eauto.
-    assert (rename ϱ s = rename (update ϱ x (ϱ x)) s). {
+    assert (REQ:rename ϱ s = rename (update ϱ x (ϱ x)) s). {
       rewrite update_id; eauto.
     }
-    rewrite H7. eapply IHrenamedApart; eauto.
+    rewrite REQ. eapply IHrenamedApart; eauto.
     assert (fpeq _eq ϱ (update ϱ x (ϱ x))). {
     split; eauto. rewrite update_id. reflexivity. intuition.
     }
@@ -484,11 +488,9 @@ Proof.
 
   - constructor.
     + rewrite map_length; eauto.
-    + intros. inv_map H11; simpl. rewrite lookup_list_length; eauto.
-    + intros. inv_map H11. simpl.
+    + intros. inv_get; simpl. rewrite lookup_list_length; eauto.
+    + intros. inv_get. simpl.
       rewrite update_with_list_lookup_list; eauto.
-      edestruct get_length_eq; try eapply H; eauto.
-      edestruct get_length_eq; try eapply H12; eauto.
       eapply H1; eauto.
       eapply inverse_on_update_with_list; eauto.
       * eapply injective_on_incl. eapply locally_injective.
@@ -578,7 +580,7 @@ Lemma renamedApart_locally_inj_alpha'' s ϱ ϱ' ZL Lv (slv:ann (set var)) ang
 Proof.
   intros RA INJ LS IOn AnnR BND NUC.
   general induction LS; simpl; invt locally_inj; invt renamedApart;
-          invt @ann_R; invt noUnreachableCode.
+          invt @ann_R; invt noUnreachableCode; set_simpl.
   - econstructor. simpl in *. eapply alpha_exp_rename_injective.
     eapply inverse_on_incl. eapply Exp.freeVars_live; eauto. eauto.
     assert (rename ϱ s = rename (update ϱ x (ϱ x)) s). {
@@ -625,7 +627,7 @@ Proof.
         eapply renamedApart_disj in RA. eauto.
         eapply bounded_disjoint; eauto. simpl.
         eapply renamedApart_disj in RA. eauto.
-        simpl in *. inv_get. rewrite H30; eauto.
+        simpl in *. inv_get. rewrite H29; eauto.
       * {
           edestruct H8; eauto; dcr. rewrite H5.
           rewrite zip_app; eauto with len.
@@ -636,7 +638,7 @@ Proof.
           exploit H23 as AnnR'; eauto. eapply ann_R_get in AnnR'.
           exploit H2; eauto. simpl in *; dcr.
           split; eauto.
-          rewrite AnnR', H31.
+          rewrite AnnR', H30.
           clear_all; cset_tac; intuition.
         }
     + eapply IHLS; eauto using inverse_on_incl.
@@ -658,18 +660,17 @@ Lemma locally_inj_live_agree s ϱ ϱ' ara alv ZL Lv
 : locally_inj ϱ' s alv.
 Proof.
   intros.
-  general induction inj; invt renamedApart; invt live_sound; simpl in *.
+  general induction inj; invt renamedApart; invt live_sound; simpl in *;
+    set_simpl.
   - econstructor; eauto.
-    + eapply IHinj; eauto; pe_rewrite; eauto with cset.
+    + eapply IHinj; eauto; pe_rewrite.
+      eapply agree_on_incl; eauto.
+      clear; cset_tac. eauto with cset.
     + eapply injective_on_agree; eauto with cset.
   - econstructor; eauto.
     eapply injective_on_agree; eauto with cset.
-    + eapply IHinj1; eauto; pe_rewrite.
-      eapply agree_on_incl; eauto. rewrite <- H5; eauto with cset.
-      eauto with cset.
-    + eapply IHinj2; eauto; pe_rewrite.
-      eapply agree_on_incl; eauto. rewrite <- H5; eauto with cset.
-      eauto with cset.
+    + eapply IHinj1; eauto; pe_rewrite; eauto with cset.
+    + eapply IHinj2; eauto; pe_rewrite; eauto with cset.
   - econstructor; eauto.
     eapply injective_on_agree; eauto.
     eapply agree_on_incl; eauto with cset.
@@ -680,13 +681,14 @@ Proof.
     + intros. inv_get.
       eapply H1; eauto; pe_rewrite.
       * eapply agree_on_incl; eauto.
-        edestruct H7; eauto; dcr. rewrite H13.
+        edestruct H7; eauto; dcr.
+        rewrite H12.
         setoid_rewrite union_comm at 2. rewrite union_assoc.
         eapply incl_union_lr; eauto.
-        rewrite <- H12. eapply incl_union_left.
+        eapply incl_union_left.
         eapply incl_list_union. eapply zip_get; eauto.
         reflexivity.
-      * edestruct H7; eauto; dcr. rewrite H13.
+      * edestruct H7; eauto; dcr. rewrite H12.
         edestruct H20; eauto. rewrite <- incl.
         eauto with cset.
     + eapply IHinj; eauto; pe_rewrite.

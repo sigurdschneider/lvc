@@ -161,7 +161,7 @@ Proof.
   - cases; eauto.
     eapply eq_union_lr; eauto.
     eapply list_union_eq; eauto.
-    + len_simpl. erewrite PIR2_length; eauto.
+    + eapply PIR2_length in H. eauto with len.
     + intros; inv_get. PIR2_inv.
       eapply sig_R_proj1_sig in H2; rewrite H2; eauto.
 Qed.

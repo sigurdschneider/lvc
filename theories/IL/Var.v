@@ -16,14 +16,15 @@ Class Counted (A : Type) := {
 
 (** ** Variables *)
 (* We take naturals directly as variables *)
-Definition var : Type := nat.
+Notation "'var'" := nat (only parsing).
+(*Definition var : Type := nat.
 Definition default_var : var := 0%nat.
 
 Global Instance inst_defaulted_var : Defaulted var := Build_Defaulted default_var.
 Global Instance inst_eq_dec_var : EqDec var eq := nat_eq_eqdec.
 Global Program Instance inst_counted_var : Counted var :=
   Build_Counted (fun x => x) _ (fun x => fun y => x + y).
-
+*)
 (** ** Locations *)
 
 Inductive loc : Type :=

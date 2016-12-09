@@ -2,64 +2,10 @@ Require Import CMap MapNotations CSet Le Arith.Compare_dec.
 
 Require Import Plus Util Status Take Subset1 Filter.
 Require Import Val Var Env IL Annotation Liveness Fresh MoreList SetOperations.
-Require Import Coherence Allocation RenamedApart AllocationAlgo.
+Require Import Coherence Allocation RenamedApart AllocationAlgo InfinitePartition.
 
 Set Implicit Arguments.
 
-Definition sep (p:inf_partition) (G:set var) (ϱ:var -> var) :=
-  (forall x, x ∈ G -> part_1 p x -> part_1 p (ϱ x))
-  /\ (forall x, x ∈ G -> part_2 p x -> part_2 p (ϱ x)).
-
-Instance sep_morphism_impl
-  : Proper (eq ==> Equal ==> eq ==> impl) sep.
-Proof.
-  unfold Proper, respectful, impl. intros ? p ? x ? EQ ? ϱ ? SEP; subst.
-  destruct SEP; split; intros.
-  - eapply H; eauto. rewrite EQ; eauto.
-  - eapply H0; eauto. rewrite EQ; eauto.
-Qed.
-
-Instance sep_morphism_iff
-  : Proper (eq ==> Equal ==> eq ==> iff) sep.
-Proof.
-  unfold Proper, respectful; intros; subst.
-  split; rewrite H0; eauto.
-Qed.
-
-Instance sep_morphism_Subset_impl
-  : Proper (eq ==> Subset ==> eq ==> flip impl) sep.
-Proof.
-  unfold Proper, respectful, flip, impl; intros; subst.
-  destruct H2; split; intros; eauto.
-Qed.
-
-Instance sep_morphism_Subset_impl'
-  : Proper (eq ==> flip Subset ==> eq ==> impl) sep.
-Proof.
-  unfold Proper, respectful, flip, impl; intros; subst.
-  destruct H2; split; intros; eauto.
-Qed.
-
-Lemma sep_incl p lv lv' ϱ
-  : sep p lv ϱ
-    -> lv' ⊆ lv
-    -> sep p lv' ϱ.
-Proof.
-  intros A B. rewrite B; eauto.
-Qed.
-
-Lemma sep_agree p D ϱ ϱ'
-  : agree_on eq D ϱ ϱ'
-    -> sep p D ϱ
-    -> sep p D ϱ'.
-Proof.
-  intros AGR [GT LE]; split; intros.
-  - rewrite <- AGR; eauto.
-  - rewrite <- AGR; eauto.
-Qed.
-
-
-Hint Resolve sep_incl sep_agree.
 
 (*
 Lemma sep_lookup_set c p (G:set var) (ϱ:var -> var) x
@@ -164,44 +110,6 @@ Qed.
 *)
 (** ** the algorithm produces a locally injective renaming *)
 
-Require Import AnnP.
-Definition bounded_below
-           (c : nat)
-           (k : nat)
-  : ⦃nat⦄ -> Prop
-  :=
-    fun a => cardinal (filter (fun x => B[x <= c]) a) <= k.
-
-
-Instance bounded_in_equal_morph
-  : Proper (eq ==> eq ==> Equal ==> iff) bounded_below.
-Proof.
-  unfold Proper, respectful, bounded_below; intros; subst.
-  rewrite H1. reflexivity.
-Qed.
-
-Instance bounded_in_subset_morph
-  : Proper (eq ==> eq ==> Equal ==> impl) bounded_below.
-Proof.
-  unfold Proper, respectful, bounded_below, impl, flip; intros; subst.
-  rewrite <- H1. rewrite <- H2. reflexivity.
-Qed.
-
-
-Instance bounded_in_equal_ptw
-  : Proper (eq ==> eq ==> pointwise_relation _ iff) bounded_below.
-Proof.
-  unfold Proper, respectful, pointwise_relation; intros; subst.
-  reflexivity.
-Qed.
-
-Instance bounded_in_impl_ptw'
-  : Proper (eq ==> eq ==> pointwise_relation _ impl) bounded_below.
-Proof.
-  unfold Proper, respectful, pointwise_relation, impl, flip; intros; subst.
-  eauto.
-Qed.
-
 (*
 Lemma sep_filter_map_comm (c:var) lv (ϱ:var -> var)
   : sep c lv ϱ
@@ -245,61 +153,6 @@ Lemma sep_update_cmap k c (LE : k < c) x lv lv' (ϱ:Map[var,var])
 Qed.
 
  *)
-
-Lemma disj_fst_snd_Dt D Dt F ans t ant a n Zs
-  : Indexwise.indexwise_R (funConstr D Dt) F ans
-    -> renamedApart t ant
-    -> pe (getAnn ant) (D, Dt)
-    -> get F n Zs
-    -> get ans n a
-    -> disj (fst (getAnn a) ∪ snd (getAnn a)) Dt.
-Proof.
-  intros IDW RA PE Get1 Get2.
-  edestruct IDW; eauto; dcr. rewrite H.
-  rewrite union_comm. rewrite <- union_assoc.
-  symmetry; rewrite disj_app; split;
-    symmetry.
-  - rewrite union_comm; eauto.
-  - eauto with cset.
-Qed.
-
-Instance ann_R_ann0_pe_morphism X `{OrderedType X}
-: Proper (@pe X _ ==> ann_R (@pe X _)) (@ann0 _).
-Proof.
-  unfold Proper, respectful; intros.
-  econstructor; eauto.
-Qed.
-
-Instance ann_R_ann2_pe_morphism X `{OrderedType X}
-: Proper (@pe X _ ==> ann_R (@pe X _) ==> ann_R (@pe X _) ==> ann_R (@pe X _)) (@ann2 _).
-Proof.
-  unfold Proper, respectful; intros.
-  econstructor; eauto.
-Qed.
-
-Instance ann_R_annF_pe_morphism X `{OrderedType X}
-: Proper (@pe X _ ==> list_eq (ann_R (@pe X _)) ==> ann_R (@pe X _) ==> ann_R (@pe X _)) (@annF _).
-Proof.
-  unfold Proper, respectful; intros.
-  econstructor; eauto using list_eq_length.
-  intros.
-  edestruct @list_eq_get; eauto; dcr. get_functional. eauto.
-Qed.
-
-Ltac set_simpl :=
-  repeat
-  match goal with
-  | [ EQ : ?D [=] ?D', H : context [ ?D ] |- _ ]
-    => is_var D; setoid_rewrite EQ in H
-  | [ EQ : ?D [=] ?D' |- context [ ?D ] ]
-    => is_var D; setoid_rewrite EQ
-  | [ EQ : ?D [=] ?D' |- _ ] => is_var D; clear D EQ
-  | [ EQ : ?D' [=] ?D, H : context [ ?D ] |- _ ]
-    => is_var D; setoid_rewrite <- EQ in H
-  | [ EQ : ?D' [=] ?D |- context [ ?D ] ]
-    => is_var D; setoid_rewrite <- EQ
-  | [ EQ : ?D' [=] ?D |- _ ] => is_var D; clear D EQ
-  end.
 
 Lemma injective_on_update_cmap_fresh p lv x (ϱ:Map[var, var])
       (inj : injective_on (lv \ singleton x) (findt ϱ 0))
@@ -371,9 +224,8 @@ Proof.
       eapply injective_on_agree; eauto.
     + pe_rewrite. etransitivity; eauto.
     + assert (DDISJ:forall n  DD' Zs, get F n Zs -> get ans n DD' ->
-                              disj D (defVars Zs DD')). {
-        eapply renamedApart_disj in sd. eapply defVars_disj_D; eauto.
-        simpl. reflexivity.
+                                 disj D (defVars Zs DD')). {
+        eapply defVars_disj_D; eauto with cset.
       }
       econstructor; eauto.
       * {

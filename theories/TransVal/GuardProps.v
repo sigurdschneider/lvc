@@ -110,7 +110,7 @@ Lemma undef_models F E e
 Proof.
   intros;  hnf;  intros.
   general induction e; simpl in *; try isabsurd.
-  - specialize (H v); destruct H; cset_tac; eauto; isabsurd.
+  - specialize (H n); destruct H; cset_tac; eauto; isabsurd.
   - monad_inv H0.
     + eapply IHe; eauto.
     + destruct u; isabsurd.

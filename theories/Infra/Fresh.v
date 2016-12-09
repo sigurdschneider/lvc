@@ -1,9 +1,9 @@
 Require Import CSet Le Arith.Compare_dec.
-Require Import Plus Util Map Var Get LengthEq SafeFirst.
+Require Import Plus Util Map Get LengthEq SafeFirst.
 
 Set Implicit Arguments.
 
-Definition fresh (s : set var) : var :=
+Definition fresh (s : set nat) : nat :=
   S(fold max s 0).
 
 Lemma max_transpose
@@ -13,8 +13,8 @@ Proof.
   rewrite Max.max_assoc. reflexivity.
 Qed.
 
-Lemma fresh_spec' (G:set var)
-  : forall (x:var), x ∈ G -> x <= fold max G 0.
+Lemma fresh_spec' (G:set nat)
+  : forall (x:nat), x ∈ G -> x <= fold max G 0.
 Proof.
   pattern G. pattern (fold max G 0). eapply fold_rec; intros.
   - cset_tac.
@@ -42,15 +42,12 @@ Lemma fresh_variable_always_exists (lv:set nat) n
 Proof.
   - decide (n > fold max lv 0).
     + econstructor; intro.
-      exploit fresh_spec'; eauto. unfold var in *.
-      omega.
-    + eapply safe_antitone. instantiate (1:=S (fold max lv 0)).
-      econstructor. intro.
-      exploit fresh_spec'; eauto. unfold var in *. omega.
-      omega.
+      exploit fresh_spec'; eauto. omega.
+    + eapply safe_antitone with (n:=S (fold max lv 0)); [|omega].
+      econstructor. intro. exploit fresh_spec'; eauto; omega.
 Qed.
 
-Definition least_fresh (lv:set var) : var.
+Definition least_fresh (lv:set nat) : nat.
   refine (@safe_first (fun x => x ∉ lv) _ 0 _).
   - eapply fresh_variable_always_exists.
 Defined.
@@ -97,7 +94,7 @@ Proof.
   - split; intros; omega.
 Qed.
 
-Lemma least_fresh_ext (G G':set var)
+Lemma least_fresh_ext (G G':set nat)
 : G [=] G'
   -> least_fresh G = least_fresh G'.
 Proof.
@@ -126,7 +123,7 @@ Proof.
   eapply least_fresh_full_spec.
 Qed.
 
-Definition fresh_stable (lv:set var) (x:var) : var :=
+Definition fresh_stable (lv:set nat) (x:nat) : nat :=
   if [x ∉ lv] then x else fresh lv.
 
 Lemma fresh_stable_spec G x
@@ -137,15 +134,15 @@ Qed.
 
 Section FreshList.
 
-  Variable fresh : set var -> var.
+  Variable fresh : set nat -> nat.
 
-  Fixpoint fresh_list (G:set var) (n:nat) : list var :=
+  Fixpoint fresh_list (G:set nat) (n:nat) : list nat :=
     match n with
       | 0 => nil
       | (S n) => let y := fresh G in y::fresh_list {y;G} n
     end.
 
-  Lemma fresh_list_length (G:set var) n
+  Lemma fresh_list_length (G:set nat) n
   : length (fresh_list G n) = n.
   Proof.
     general induction n; eauto. simpl. f_equal; eauto.
@@ -153,10 +150,10 @@ Section FreshList.
 
   Hypothesis fresh_spec : forall G, fresh G ∉ G.
 
-  Definition fresh_set (G:set var) L : set var :=
+  Definition fresh_set (G:set nat) L : set nat :=
     of_list (fresh_list G L).
 
-  Lemma fresh_list_spec : forall (G:set var) n, disj (of_list (fresh_list G n)) G.
+  Lemma fresh_list_spec : forall (G:set nat) n, disj (of_list (fresh_list G n)) G.
   Proof.
     intros. general induction n; simpl; intros; eauto.
     - hnf; intros. cset_tac'.
@@ -166,12 +163,12 @@ Section FreshList.
   Qed.
 
   Lemma fresh_set_spec
-  : forall (G:set var) L, disj (fresh_set G L) G.
+  : forall (G:set nat) L, disj (fresh_set G L) G.
   Proof.
     unfold fresh_set. eapply fresh_list_spec.
   Qed.
 
-  Lemma fresh_list_nodup (G: set var) n
+  Lemma fresh_list_nodup (G: set nat) n
     : NoDupA eq (fresh_list G n).
   Proof.
     general induction n; simpl; eauto.
@@ -183,19 +180,33 @@ Section FreshList.
 
 End FreshList.
 
+
+Lemma fresh_list_ext n G G' f
+  : (forall G G', G [=] G' -> f G = f G')
+    -> G [=] G'
+    -> fresh_list f G n = fresh_list f G' n.
+Proof.
+  intros EXT EQ. general induction n; simpl.
+  - reflexivity.
+  - f_equal; eauto using least_fresh_ext.
+    eapply IHn; eauto.
+    erewrite EXT, EQ; eauto; reflexivity.
+Qed.
+
+
 Hint Resolve fresh_list_length : len.
 
 Section FreshListStable.
 
-  Variable fresh : set var -> var -> var.
+  Variable fresh : set nat -> nat -> nat.
 
-  Fixpoint fresh_list_stable (G:set var) (xl:list var) : list var :=
+  Fixpoint fresh_list_stable (G:set nat) (xl:list nat) : list nat :=
     match xl with
       | nil => nil
       | x::xl => let y := fresh G x in y::fresh_list_stable {y;G} xl
     end.
 
-  Lemma fresh_list_stable_length (G:set var) xl
+  Lemma fresh_list_stable_length (G:set nat) xl
   : length (fresh_list_stable G xl) = length xl.
   Proof.
     general induction xl; eauto. simpl. f_equal; eauto.
@@ -203,11 +214,11 @@ Section FreshListStable.
 
   Hypothesis fresh_spec : forall G x, fresh G x ∉ G.
 
-  Definition fresh_set_stable (G:set var) L : set var :=
+  Definition fresh_set_stable (G:set nat) L : set nat :=
     of_list (fresh_list_stable G L).
 
   Lemma fresh_list_stable_spec
-    : forall (G:set var) L, disj (of_list (fresh_list_stable G L)) G.
+    : forall (G:set nat) L, disj (of_list (fresh_list_stable G L)) G.
   Proof.
     intros. general induction L; simpl; intros; eauto.
     - hnf; intros. cset_tac'.
@@ -217,12 +228,12 @@ Section FreshListStable.
   Qed.
 
   Lemma fresh_set_stable_spec
-  : forall (G:set var) L, disj (fresh_set_stable G L) G.
+  : forall (G:set nat) L, disj (fresh_set_stable G L) G.
   Proof.
     unfold fresh_set. eapply fresh_list_stable_spec.
   Qed.
 
-  Lemma fresh_list_stable_nodup (G: set var) L
+  Lemma fresh_list_stable_nodup (G: set nat) L
     : NoDupA eq (fresh_list_stable G L).
   Proof.
     general induction L; simpl; eauto.
@@ -233,6 +244,19 @@ Section FreshListStable.
   Qed.
 
 End FreshListStable.
+
+Lemma fresh_list_stable_ext n G G' f
+  : (forall x G G', G [=] G' -> f G x = f G' x)
+    -> G [=] G'
+    -> fresh_list_stable f G n = fresh_list_stable f G' n.
+Proof.
+  intros EXT EQ. general induction n; simpl.
+  - reflexivity.
+  - f_equal; eauto using least_fresh_ext.
+    eapply IHn; eauto.
+    erewrite EXT, EQ; eauto; reflexivity.
+Qed.
+
 
 Hint Resolve fresh_list_stable_length : len.
 
@@ -258,43 +282,43 @@ Proof.
     erewrite least_fresh_ext, EQ; eauto; reflexivity.
 Qed.
 
-Fixpoint vars_up_to (n:nat) :=
+Fixpoint nats_up_to (n:nat) :=
   match n with
-    | S n => {n; vars_up_to n}
+    | S n => {n; nats_up_to n}
     | 0 => ∅
   end.
 
-Lemma in_vars_up_to n m
-: n < m -> n ∈ vars_up_to m.
+Lemma in_nats_up_to n m
+: n < m -> n ∈ nats_up_to m.
 Proof.
   intros. general induction H.
   - simpl. cset_tac; intuition.
   - inv H; simpl in * |- *; cset_tac; intuition.
 Qed.
 
-Lemma in_vars_up_to' n m
-: n <= m -> n ∈ vars_up_to (m + 1).
+Lemma in_nats_up_to' n m
+: n <= m -> n ∈ nats_up_to (m + 1).
 Proof.
-  intros. eapply in_vars_up_to. omega.
+  intros. eapply in_nats_up_to. omega.
 Qed.
 
-Lemma vars_up_to_incl n m
-: n <= m -> vars_up_to n ⊆ vars_up_to m.
+Lemma nats_up_to_incl n m
+: n <= m -> nats_up_to n ⊆ nats_up_to m.
 Proof.
   intros. general induction H; eauto.
   simpl. rewrite IHle. cset_tac; intuition.
 Qed.
 
-Lemma least_fresh_list_small_vars_up_to G n
-: of_list (fresh_list least_fresh G n) ⊆ vars_up_to (cardinal G + n).
+Lemma least_fresh_list_small_nats_up_to G n
+: of_list (fresh_list least_fresh G n) ⊆ nats_up_to (cardinal G + n).
 Proof.
   eapply get_in_incl; intros.
-  eapply in_vars_up_to.
+  eapply in_nats_up_to.
   eapply least_fresh_list_small; eauto.
 Qed.
 
-Lemma vars_up_to_max n m
-: vars_up_to (max n m) [=] vars_up_to n ∪ vars_up_to m.
+Lemma nats_up_to_max n m
+: nats_up_to (max n m) [=] nats_up_to n ∪ nats_up_to m.
 Proof.
   general induction n; simpl.
   - cset_tac.
@@ -303,18 +327,18 @@ Proof.
     + rewrite IHn.
       decide (n < m).
       * rewrite max_r; eauto; try omega.
-        assert (n ∈ vars_up_to m); eauto using in_vars_up_to.
+        assert (n ∈ nats_up_to m); eauto using in_nats_up_to.
         cset_tac.
       * assert (m <= n) by omega.
         rewrite max_l; eauto.
         cset_tac'. exfalso.
         assert (n <> a). intro. eapply n1; subst; eauto.
         idtac "improve".
-        exploit (@in_vars_up_to a n); eauto.
+        exploit (@in_nats_up_to a n); eauto.
         omega.
 Qed.
 
-Lemma inverse_on_update_fresh_list (D:set var) (Z:list var) (ϱ ϱ' : var -> var)
+Lemma inverse_on_update_fresh_list (D:set nat) (Z:list nat) (ϱ ϱ' : nat -> nat)
  : inverse_on (D \ of_list Z) ϱ ϱ'
   -> inverse_on D (update_with_list Z (fresh_list fresh (lookup_set ϱ (D \ of_list Z)) (length Z)) ϱ)
                  (update_with_list (fresh_list fresh (lookup_set ϱ (D \ of_list Z)) ((length Z))) Z ϱ').
@@ -326,7 +350,7 @@ Qed.
 
 Record StableFresh :=
   {
-    stable_fresh :> set var -> var -> var;
+    stable_fresh :> set nat -> nat -> nat;
     stable_fresh_spec : forall G x, stable_fresh G x ∉ G
   }.
 

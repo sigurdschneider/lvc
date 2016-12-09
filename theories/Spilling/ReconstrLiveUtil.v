@@ -38,8 +38,7 @@ Lemma slp_union_incl
 Proof.
   intros inj_VD s_VD t_VD Z_VD.
   induction Z; simpl in *; eauto.
-  - rewrite map_empty; eauto.
-    cset_tac.
+  - rewrite map_empty; eauto. cset_tac.
   - apply add_incl in Z_VD as [a_VD Z_VD].
     specialize (IHZ Z_VD).
     decide (a ∈ s ∩ t).
@@ -53,15 +52,13 @@ Proof.
     + decide (a ∈ s).
       * assert (a ∉ t ∩ {a; of_list Z}) as an_tZ by cset_tac.
         assert (map slot t ∩ map slot {a; of_list Z}
-                    ⊆ map slot t ∩ map slot (of_list Z)) as elim_a.
-        {
+                    ⊆ map slot t ∩ map slot (of_list Z)) as elim_a. {
           rewrite lookup_set_add; eauto.
           unfold lookup_set.
           assert (forall (u v : ⦃var⦄) (x : var),
                      u ∩ {x; v} ⊆ (u ∩ v) ∪ (u ∩ singleton x))
             as demo by (clear; cset_tac).
-          rewrite demo.
-          apply union_incl_split.
+          rewrite demo. apply union_incl_split.
           - reflexivity.
           - rewrite <- map_singleton.
             rewrite <- injective_on_map_inter; eauto.
@@ -76,10 +73,8 @@ Proof.
         rewrite <- IHZ.
         clear; cset_tac.
       * assert (a ∉ s ∩ {a; of_list Z}) as an_sZ by cset_tac.
-        assert (s ∩ {a; of_list Z} ⊆ s ∩ (of_list Z)) as elim_a.
-        {
-          hnf; intros.
-          decide (a0 = a).
+        assert (s ∩ {a; of_list Z} ⊆ s ∩ (of_list Z)) as elim_a. {
+          hnf; intros. decide (a0 = a).
           + subst a0. contradiction.
           + cset_tac'. destruct H1; eauto.
         }
@@ -94,8 +89,7 @@ Lemma slp_union_minus_incl
       (s t VD : ⦃var⦄)
       (Z : params)
       (slot : var -> var)
-  :
-    injective_on VD slot
+  : injective_on VD slot
     -> s ⊆ VD
     -> t ⊆ VD
     -> of_list Z ⊆ VD
@@ -123,9 +117,7 @@ Lemma get_ofl_VD
       (H8 : Indexwise.indexwise_R (funConstr D Dt) F ans)
       (H13 : list_union (defVars ⊜ F ans) ∪ Dt [=] D')
       (ra_VD : D ∪ D' ⊆ VD)
-  :
-    forall (Z : params) (n : nat), get (fst ⊝ F ++ ZL) n Z -> of_list Z ⊆ VD
-.
+  : forall (Z : params) (n : nat), get (fst ⊝ F ++ ZL) n Z -> of_list Z ⊆ VD.
 Proof.
   intros.
   decide (n < length F).
@@ -136,8 +128,7 @@ Proof.
      exploit H8 as fnCnstr; eauto.
      destruct fnCnstr as [fnCnstr _].
 
-     assert (of_list (fst Zs) ⊆ fst (getAnn a)) as ofl.
-     {
+     assert (of_list (fst Zs) ⊆ fst (getAnn a)) as ofl. {
        clear - fnCnstr.
        apply eq_incl in fnCnstr as [fnCnstr _].
        rewrite <- fnCnstr.
@@ -152,8 +143,7 @@ Proof.
      rewrite <- ra_VD, <- H13.
      assert (of_list (fst Zs) ⊆ of_list (fst Zs) ∪ fst (getAnn a))
        as ofl' by (clear - ofl; cset_tac).
-     assert (of_list (fst Zs) ⊆ list_union (defVars ⊜ F ans)) as ofl_def.
-     {
+     assert (of_list (fst Zs) ⊆ list_union (defVars ⊜ F ans)) as ofl_def. {
        eapply incl_list_union.
        apply zip_get; eauto.
        unfold defVars.
@@ -166,9 +156,6 @@ Proof.
      eapply get_app_right_ge with (L':=ZL) in n0; eauto.
 Qed.
 
-
-
-
 Lemma lifted_args_in_RL_slot_SpM
       (Y : args)
       (R M : ⦃var⦄)
@@ -177,10 +164,7 @@ Lemma lifted_args_in_RL_slot_SpM
       (Sp L K M' : ⦃var⦄)
       (H21 : list_union (Op.freeVars ⊝ Y) ⊆ (R \ K ∪ L) ∪ M')
       (H22 : M' ⊆ Sp ∪ M)
-  :
-    list_union (Op.freeVars ⊝ slot_lift_args slot M' ⊝ Y)
-               ⊆ R ∪ L ∪ map slot (Sp ∪ M)
-.
+  : list_union (Op.freeVars ⊝ slot_lift_args slot M' ⊝ Y) ⊆ R ∪ L ∪ map slot (Sp ∪ M) .
 Proof.
   apply list_union_incl.
   intros; inv_get.
@@ -188,7 +172,7 @@ Proof.
   exploit H5; eauto.
   destruct x0;
     isabsurd.
-  * decide (v ∈ M'); simpl.
+  * decide (n0 ∈ M'); simpl.
     -- rewrite <- map_singleton.
        apply incl_union_right.
        apply lookup_set_incl; eauto.
@@ -197,7 +181,7 @@ Proof.
     -- apply incl_singleton.
        eapply get_live_op_sound in H21; eauto.
        inv H21.
-       revert H2. revert n0.
+       revert H2. revert n1.
        clear; cset_tac.
   * clear; cset_tac.
 Qed.
@@ -209,9 +193,7 @@ Lemma nth_rfmf
       (slot : var -> var)
       (R_f M_f : ⦃var⦄)
       (H15 : get Λ (counted l) (R_f, M_f))
-  :
-    nth (counted l) (slot_merge slot Λ) ∅ [=] R_f ∪ map slot M_f
-.
+  : nth (counted l) (slot_merge slot Λ) ∅ [=] R_f ∪ map slot M_f .
 Proof.
   eapply get_nth with (d:=(∅,∅)) in H15 as H15'.
   simpl in H15'.
@@ -219,8 +201,7 @@ Proof.
            => fst RM ∪ map slot (snd RM)) (nth l Λ (∅,∅))
           = (fun RM
              => fst RM ∪ map slot (snd RM)) (R_f,M_f))
-    as H_sms.
-  {
+    as H_sms. {
     f_equal; simpl; [ | f_equal];
       rewrite H15'; simpl; eauto.
   }
@@ -229,16 +210,14 @@ Proof.
   simpl in H_sms.
   assert (l < length ((fun RM : ⦃var⦄ * ⦃var⦄
                        => fst RM ∪ map slot (snd RM)) ⊝ Λ))
-    as l_len.
-  {
+    as l_len. {
     apply get_length in H15.
     clear - H15; eauto with len.
   }
   assert (nth l ((fun RM : ⦃var⦄ * ⦃var⦄
                   => fst RM ∪ map slot (snd RM)) ⊝ Λ) ∅
           = R_f ∪ map slot M_f)
-    as H_sms'.
-  {
+    as H_sms'. {
     rewrite nth_indep with (d':=∅ ∪ map slot ∅).
     * exact H_sms.
     * eauto with len.
@@ -248,21 +227,15 @@ Proof.
   reflexivity.
 Qed.
 
-
-
-
-
 Lemma sla_list_union_EQ_extended_args
       (slot : var -> var)
       (Sl : ⦃var⦄)
       (Y : args)
       (ib : list bool)
 
-  :
-    list_union (Op.freeVars ⊝ slot_lift_args slot Sl ⊝ Y)
+  : list_union (Op.freeVars ⊝ slot_lift_args slot Sl ⊝ Y)
                [=] list_union (Op.freeVars ⊝ slot_lift_args slot Sl
-                                           ⊝ (extend_args Y ib))
-.
+                                           ⊝ (extend_args Y ib)).
 Proof.
   apply list_union_elem_eq_ext.
   apply op_freeVars_elem_eq_ext.
@@ -277,18 +250,15 @@ Qed.
 
 
 Lemma al_sub_RfMf
-
       (als : list (ann ⦃var⦄))
       (rms : list (⦃var⦄ * ⦃var⦄))
       (al : ann ⦃var⦄)
       (R M : ⦃var⦄)
       (n : nat)
-  :
-    get rms n (R,M)
+  : get rms n (R,M)
     -> get als n al
     -> PIR2 Equal (merge ⊝ rms) (getAnn ⊝ als)
-    -> getAnn al ⊆ R ∪ M
-.
+    -> getAnn al ⊆ R ∪ M.
 Proof.
   intros get_rm get_al H16.
   general induction get_rm;
@@ -304,12 +274,10 @@ Lemma al_eq_RfMf
       (al : ann ⦃var⦄)
       (R M : ⦃var⦄)
       (n : nat)
-  :
-    get rms n (R,M)
+  : get rms n (R,M)
     -> get als n al
     -> merge ⊝ rms = getAnn ⊝ als
-    -> getAnn al [=] R ∪ M
-.
+    -> getAnn al [=] R ∪ M .
 Proof.
   intros get_rm get_al H16.
   general induction get_rm;
@@ -323,11 +291,9 @@ Lemma ofl_slp_sub_rm
       (R M : ⦃var⦄)
       (Z : params)
       (slot : var -> var)
-  :
-    getAnn al ⊆ R ∪ M
+  : getAnn al ⊆ R ∪ M
     -> of_list Z ⊆ getAnn al
-    -> of_list (slot_lift_params slot (R,M) Z) ⊆ R ∪ map slot M
-.
+    -> of_list (slot_lift_params slot (R,M) Z) ⊆ R ∪ map slot M .
 Proof.
   intros ofl_in_rm H2'.
   rewrite <- H2' in ofl_in_rm.
@@ -339,8 +305,7 @@ Proof.
     assert (of_list Z ⊆ R ∪ M) as ofl_rm
         by (rewrite <- ofl_in_rm; clear; cset_tac).
     assert (a ∈ M -> slot a ∈ map slot M)
-      as slot_a_in.
-    {
+      as slot_a_in. {
       intro a_in.
       apply in_singleton.
       rewrite <- map_singleton.

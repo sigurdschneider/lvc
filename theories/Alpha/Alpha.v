@@ -244,7 +244,7 @@ Proof.
   eapply length_length_eq in LC''.
   general induction LC; simpl; eauto.
   - inversion LC'; subst x0 XL0. inv LC''.
-    simpl in *; injection LL. injection H; intros.
+    simpl in *; injection LL. injection H2; intros.
     subst y0 YL0.
     erewrite EC'; eauto using envCorr_update.
 Qed.

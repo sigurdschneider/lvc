@@ -710,3 +710,19 @@ Proof.
 Qed.
 
 Hint Resolve decide_mem_1 decide_mem_2.
+
+
+Ltac set_simpl :=
+  repeat
+  match goal with
+  | [ EQ : ?D [=] ?D', H : context [ ?D ] |- _ ]
+    => is_var D; setoid_rewrite EQ in H
+  | [ EQ : ?D [=] ?D' |- context [ ?D ] ]
+    => is_var D; setoid_rewrite EQ
+  | [ EQ : ?D [=] ?D' |- _ ] => is_var D; clear D EQ
+  | [ EQ : ?D' [=] ?D, H : context [ ?D ] |- _ ]
+    => is_var D; setoid_rewrite <- EQ in H
+  | [ EQ : ?D' [=] ?D |- context [ ?D ] ]
+    => is_var D; setoid_rewrite <- EQ
+  | [ EQ : ?D' [=] ?D |- _ ] => is_var D; clear D EQ
+  end.

@@ -77,7 +77,7 @@ Instance live_op_sound_dec e lv
   : Computable (live_op_sound e lv).
 Proof.
   induction e; try dec_solve.
-  - decide (v ∈ lv); try dec_solve.
+  - decide (n ∈ lv); try dec_solve.
   - edestruct IHe; dec_solve.
   - edestruct IHe1, IHe2; dec_solve.
 Defined.
@@ -399,7 +399,7 @@ pose proof (_compare_spec v v0).
   + econstructor. eauto using opLt.
   + econstructor. f_equal. eapply compare_spec_int_eq; eauto.
   + econstructor; eauto using opLt.
-- pose proof (_compare_spec v v0).
+- pose proof (_compare_spec n n0).
   inv H; now (econstructor; eauto using opLt).
 - pose proof (_compare_spec u u0).
   specialize (IHx y).
@@ -570,7 +570,7 @@ Proof.
   - exploit H; eauto using get.
     destruct a; try now (exfalso; inv H0).
     edestruct IHY; eauto using get; subst.
-    exists (v::x); eauto.
+    exists (n::x); eauto.
 Qed.
 
 Lemma of_list_freeVars_vars xl

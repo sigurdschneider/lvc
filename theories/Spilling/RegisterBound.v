@@ -381,7 +381,7 @@ Proof.
         clear - R_VD; cset_tac.
     + eapply register_bound_loads
       with (R:=VD ∩ getAnn (reconstr_live Lv ZL ∅ s an)
-                  ∪ {v; of_list ys}); eauto.
+                  ∪ {n; of_list ys}); eauto.
       * rewrite add_union_singleton, v_VD, ys_VD.
         clear; cset_tac.
       * clear; cset_tac.
@@ -421,7 +421,7 @@ Lemma Op_freeVars_sla
 Proof.
   intros isvar.
   destruct y; isabsurd; simpl; eauto.
-  decide (v ∈ Sl); simpl; eauto with cset.
+  decide (n ∈ Sl); simpl; eauto with cset.
   cset_tac.
 Qed.
 
@@ -626,7 +626,7 @@ Proof.
              - rewrite H24, R_VD, M_VD; cset_tac.
            }
            repeat apply union_incl_split; eauto;
-             try rewrite H26; cset_tac.
+             try rewrite H26; clear; cset_tac.
         -- rewrite H25, H24, R_VD, M_VD. clear; cset_tac.
         -- rewrite H24, R_VD, M_VD; clear; cset_tac.
         -- rewrite rena2, <- ra_VD; eauto.

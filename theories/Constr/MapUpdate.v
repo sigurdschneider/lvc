@@ -487,3 +487,22 @@ Proof.
     + exists (S x1), x2. repeat split; eauto using get. lud; intuition.
       intros. inv H4. intro; intuition. eapply H6; eauto. omega.
 Qed.
+
+Lemma lookup_set_update_with_list {X} `{OrderedType X} {Y} `{OrderedType Y}
+  Z Z' (f:X->Y) D `{Proper _ (_eq ==> _eq) f}
+  : of_list Z ⊆ D
+    -> NoDupA _eq Z
+    -> length Z = length Z'
+    -> of_list Z' ⊆ lookup_set (update_with_list Z Z' f) (of_list Z).
+Proof.
+  intros; hnf; intros.
+  lset_tac.
+  length_equify.
+  general induction H4; simpl.
+  - exfalso. simpl in *. cset_tac.
+  - simpl in *. cset_tac'.
+    + eexists x. lud; split; eauto.
+    + edestruct IHlength_eq; eauto; dcr.
+      * invt NoDupA.
+        eexists x0. lud; eauto. cset_tac.
+Qed.
