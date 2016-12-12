@@ -65,6 +65,7 @@ Inductive live_sound (i:overapproximation)
     -> (forall n Zs a, get F n Zs ->
                  get als n a ->
                  (of_list (fst Zs)) ⊆ getAnn a
+                 /\ NoDupA eq (fst Zs)
                  /\ (if isFunctional i then (getAnn a \ of_list (fst Zs)) ⊆ lv else True))
     -> getAnn alb ⊆ lv
     -> live_sound i ZL Lv (stmtFun F t)(annF lv als alb).
@@ -134,7 +135,7 @@ Proof.
   - econstructor; eauto using live_op_sound_incl.
     cases; eauto with cset.
   - econstructor; eauto with cset.
-    + intros. edestruct H3; eauto.
+    + intros. edestruct H3; dcr; eauto.
       cases; eauto with cset.
 Qed.
 
@@ -148,10 +149,11 @@ Proof.
                       Op.freeVars_live_list with cset.
   - eapply union_subset_3; eauto with cset.
     + eapply list_union_incl; intros; inv_get; eauto.
-      edestruct H3; eauto; simpl in *. exploit H2; eauto.
+      edestruct H3; dcr; eauto; simpl in *. exploit H2; eauto.
       eauto with cset.
 Qed.
 
+(*
 (** ** Liveness is stable under renaming *)
 
 Lemma live_rename_sound i ZL Lv s an (ϱ:env var)
@@ -196,3 +198,17 @@ Proof.
         rewrite of_list_lookup_list; eauto.
         rewrite lookup_set_minus_incl; eauto with cset.
 Qed.
+ *)
+
+Lemma adapt_premise F als lv
+: (forall (n : nat) (Zs : params * stmt) (a : ann ⦃nat⦄),
+   get F n Zs ->
+   get als n a ->
+   of_list (fst Zs) ⊆ getAnn a /\ NoDupA eq (fst Zs) /\ getAnn a \ of_list (fst Zs) ⊆ lv)
+  -> forall (n0 : nat) (Zs0 : params * stmt) (a : ann ⦃nat⦄),
+    get F n0 Zs0 -> get als n0 a -> of_list (fst Zs0) ⊆ getAnn a /\ getAnn a \ of_list (fst Zs0) ⊆ lv.
+Proof.
+  intros A; intros; edestruct A; dcr; eauto.
+Qed.
+
+Hint Resolve adapt_premise.

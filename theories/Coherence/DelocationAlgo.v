@@ -577,6 +577,7 @@ Proof.
       intros. eapply (IH (snd Zs0)); eauto.
       eapply get_app_right; eauto. orewrite (n + 0 = n); eauto.
       eapply get_app_right; eauto. eauto with len.
+      intros; edestruct H6; eauto.
 Qed.
 
 Lemma computeParameters_isCalled_get_Some Lv ZL AP s lv n p A D Z
@@ -926,9 +927,11 @@ Proof.
               pose proof (H10 _ H12).
               edestruct computeParameters_isCalledFrom_get_Some; try eapply H6;
                 eauto with len; dcr; subst.
+              intros; edestruct H2; eauto.
               pose proof (H10 _ H15).
               edestruct computeParameters_isCalledFrom_get_Some; try eapply H7;
                 eauto with len; dcr; subst.
+              intros; edestruct H2; eauto.
 
               simpl.
               repeat rewrite of_list_app.
@@ -954,6 +957,7 @@ Proof.
             pose proof (H10 _ H12).
             edestruct computeParameters_isCalledFrom_get_Some; try eapply H6;
               eauto with len; dcr; subst.
+            intros; edestruct H2; eauto.
             simpl.
 
             repeat rewrite of_list_app. repeat rewrite of_list_3.
@@ -1076,6 +1080,20 @@ Proof.
       * cset_tac; intuition.
 Qed.
 
+(*TODO move these lemmas *)
+Lemma nodup_to_list_var (s: set var)
+  : NoDupA eq (to_list s).
+Proof.
+  pose proof (elements_3w s). eauto.
+Qed.
+
+Lemma InA_In_var (L:list var) (x:var)
+  : InA eq x L <-> InA _eq x L.
+Proof.
+  split; eauto.
+Qed.
+
+
 Lemma computeParameters_live ZL Lv AP s lv
 : live_sound Imperative ZL Lv s lv
   -> PIR2 Subset AP (Lv \\ ZL)
@@ -1105,12 +1123,22 @@ Proof.
       pose proof (H8 _ H10).
       edestruct computeParameters_isCalledFrom_get_Some; try eapply H9;
         eauto using map_get_1, get_app with len; dcr; subst.
+      intros; edestruct H2; eauto.
       simpl. rewrite of_list_3.
       exploit (@computeParameters_LV_DL (fst ⊝ F ++ ZL) (getAnn ⊝ als ++ Lv) (tab {}  ‖F‖ ++ AP));
         eauto using PIR2_Subset_tab_extend with len.
       exploit computeParametersF_LV_DL; try rewrite <- zip_app; eauto with len.
       eapply PIR2_nth in H13; eauto. dcr; inv_get. inv H17.
+      split.
       rewrite H15. clear_all; cset_tac.
+      edestruct H2; eauto.
+      eapply NoDupA_app; eauto.
+      eapply nodup_to_list_var.
+      intros.
+      rewrite InA_In_var in H18. rewrite InA_in in H18.
+      rewrite InA_In_var in H19. rewrite InA_in in H19.
+      rewrite of_list_3 in H19. revert H15 H18 H19; clear.
+      cset_tac'.
     + intros. inv_get.
       exploit H1; eauto using pair_eta, PIR2_Subset_tab_extend with len.
       eapply additionalParameters_live_monotone; try eapply H9; eauto.

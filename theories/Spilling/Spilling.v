@@ -2,23 +2,11 @@ Require Import Util CSet MapDefined AllInRel.
 Require Import Var MapInjectivity IL Annotation AnnP Sim.
 Require Import SimplSpill SpillSound SpillSim DoSpill DoSpillRm Take Drop.
 Require Import ReconstrLive ReconstrLiveSound.
-Require Import Liveness RenamedApart RenameApart_Liveness AddParams.
+Require Import Liveness RenamedApart RenameApart_Liveness AddParams Slot.
 
 Set Implicit Arguments.
 
 Arguments sim S {H} S' {H0} r t _ _.
-
-Definition max := max.
-Definition slot n x := x + n.
-
-Inductive Slot (VD:set var) :=
-  {
-    Slot_slot :> var -> var;
-    Slot_Disj : disj VD (SetConstructs.map Slot_slot VD);
-    Slot_Inj : injective_on VD Slot_slot
-  }.
-
-Hint Immediate Slot_Disj Slot_Inj.
 
 Smpl Add
     match goal with
@@ -144,7 +132,7 @@ Proof.
       eapply TakeSet.take_set_incl.
       unfold to_list. rewrite TakeSet.take_set_incl.
       rewrite of_list_map; eauto. symmetry.
-      eapply disj_incl; [ eapply (Slot_Disj slt); eauto | |]; eauto with cset.
+      eapply disj_incl; [ eapply (Slot_Disj _ slt); eauto | |]; eauto with cset.
     - eapply defined_on_update_list'; eauto with len.
       rewrite of_list_map; eauto. clear; hnf; intros. exfalso; cset_tac.
       rewrite lookup_list_map; eauto.
@@ -163,7 +151,7 @@ Proof.
       eauto.
     + eapply agree_on_update_list_dead; eauto.
       rewrite of_list_map. symmetry.
-      eapply disj_incl; [ eapply (Slot_Disj slt); eauto | subst R |].
+      eapply disj_incl; [ eapply (Slot_Disj _ slt); eauto | subst R |].
       * unfold to_list.
         rewrite TakeSet.take_set_incl. eauto with cset.
       * rewrite of_list_drop_elements_incl, Incl.
@@ -186,7 +174,7 @@ Proof.
       * rewrite union_comm, empty_neutral_union. eauto.
       * reflexivity.
       * isabsurd.
-    + eapply (@reconstr_live_sound k slt nil _ nil R M VD); eauto using PIR2.
+    + eapply (@reconstr_live_sound k VD slt nil _ nil R M); eauto using PIR2.
       ** reflexivity.
       ** isabsurd.
     + eapply (@do_spill_no_unreachable_code _ _ _ nil nil); eauto.

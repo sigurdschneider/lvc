@@ -235,7 +235,7 @@ Proof.
       edestruct (get_fst_renameApartF_live _ _ _ _ _ _ GetB);
         eauto; dcr; subst.
       erewrite getAnn_snd_renameApart_live; eauto.
-      exploit H2; eauto; dcr. simpl in H17.
+      exploit H2; eauto; dcr. simpl in H19.
       rewrite renameApartF_length in H6.
       assert (n < ❬F❭) by eauto using get_range.
       orewrite (❬F❭ - S (❬F❭ - S n) = n) in H6.
@@ -250,8 +250,10 @@ Proof.
       split.
       rewrite getAnn_setTopAnn. eauto with cset.
       rewrite getAnn_setTopAnn.
+      split.
+      eapply fresh_list_stable_nodup; eauto.
       rewrite lookup_set_update_with_list_in_union_length; eauto.
-      rewrite H17. clear. cset_tac. eauto with len.
+      rewrite H19. clear. cset_tac. eauto with len.
       rewrite take_length; eauto with len.
       -- intros. inv_get.
          exploit H0; eauto.
@@ -457,9 +459,11 @@ Proof.
       erewrite <- (@snd_renameApartF_live _ (take n als)).
       split.
       -- rewrite getAnn_setTopAnn. eauto with cset.
-      -- rewrite getAnn_setTopAnn. cases; eauto.
-         rewrite lookup_set_update_with_list_in_union_length; eauto.
-         rewrite H22. clear. cset_tac. eauto with len.
+      -- split.
+         ++ eapply fresh_list_stable_nodup; eauto.
+         ++ rewrite getAnn_setTopAnn. cases; eauto.
+           rewrite lookup_set_update_with_list_in_union_length; eauto.
+           rewrite H24. clear. cset_tac. eauto with len.
       -- eauto with len.
       -- intros. inv_get.
          exploit H0; eauto.

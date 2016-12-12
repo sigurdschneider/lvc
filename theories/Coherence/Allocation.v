@@ -297,8 +297,8 @@ Proof.
       * edestruct H8; eauto; dcr.
         eapply H1; eauto.
         rewrite H12. exploit H14; eauto; dcr.
-        rewrite <- INCL. rewrite <- H24.
-        clear_all; cset_tac; intuition.
+        rewrite <- INCL. rewrite <- H26.
+        clear_all; cset_tac.
         rewrite H12. rewrite <- incl_right.
         rewrite zip_app; eauto with len; rewrite List.map_app.
         rewrite bounded_app; split; eauto.
@@ -646,6 +646,7 @@ Proof.
       rewrite zip_app; eauto with len.
       rewrite List.map_app. rewrite bounded_app; split; eauto.
       eapply live_globals_bounded2; eauto.
+      intros; edestruct H2; dcr; repeat split; eauto.
 Qed.
 
 
@@ -689,7 +690,7 @@ Proof.
         eapply incl_list_union. eapply zip_get; eauto.
         reflexivity.
       * edestruct H7; eauto; dcr. rewrite H12.
-        edestruct H20; eauto. rewrite <- incl.
+        edestruct H20; dcr; eauto. rewrite <- incl.
         eauto with cset.
     + eapply IHinj; eauto; pe_rewrite.
       eapply agree_on_incl; eauto with cset.

@@ -247,6 +247,7 @@ Proof.
             + edestruct H8; eauto.
             + eapply fresh_list_stable_nodup; eauto using least_fresh_part_fresh.
           - eapply lv_incl_fst_ra; eauto.
+
           - eapply locally_inj_live_agree; try eapply H20; eauto.
             eapply regAssign_renamedApart_agreeF in H17;
               eauto using get_drop, drop_length_stable; try reflexivity.

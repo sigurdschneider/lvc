@@ -68,27 +68,6 @@ Proof.
     cset_tac.
 Qed.
 
-(*
-Lemma sep_cardinal_filter_map_inane p (ϱ:var -> var) lv
-  : sep p lv ϱ
-    -> cardinal (map ϱ (filter (part_1 p) lv)) = cardinal (filter (part_1 p) lv).
-Proof.
-  pattern lv. eapply set_induction; intros.
-  - assert (s [=] ∅). cset_tac.
-    rewrite H1. reflexivity.
-  - eapply Add_Equal in H1. set_simpl.
-    destruct (part_dich p x); dcr.
-    rewrite !filter_add_in; eauto.
-    rewrite map_add; eauto.
-
-  intros [GT LE]. cset_tac'.
-  - eexists x; cset_tac'.
-    pose proof (part_dich p x).
-    pose proof (part_disj p (ϱ x)).
-    cset_tac.
-Qed.
- *)
-
 Lemma part_bounded_sep p ϱ k lv
   (BND:part_bounded (part_1 p) k lv)
   (SEP:sep p lv ϱ)
@@ -260,27 +239,26 @@ Proof.
       * eapply H1; eauto.
         -- exploit H2; eauto; dcr.
            eapply sep_update_list; eauto.
-           admit.
-           cases in H12. eauto.
+           cases in H16. eauto.
         -- rewrite !zip_app; eauto with len.
            eauto using PIR2_app, PIR2_ifFstR_refl, restrict_ifFstR.
         -- exploit H2; eauto; dcr.
-           cases in H12.
+           cases in H16.
            rewrite lookup_set_update_with_list_in_union_length; eauto with len.
-           rewrite H12. unfold lookup_set. rewrite Incl.
+           rewrite H16. unfold lookup_set. rewrite Incl.
            clear; cset_tac.
       * exploit H8; eauto.
         exploit H2; eauto; dcr.
-        cases in H13.
+        cases in H17.
         rewrite lookup_set_update_with_list_in_union_length; eauto with len.
         eapply ann_P_get in H5.
         rewrite union_comm.
         rewrite union_subset_equal; eauto with cset.
         eapply bnd_update_list; eauto.
-        rewrite H13. rewrite Incl.
+        rewrite H17. rewrite Incl.
         clear; cset_tac.
-        admit.
     + eapply IHLS; eauto using restrict_ifFstR.
       * rewrite zip_app;[| eauto with len].
         eauto using PIR2_app, PIR2_ifFstR_refl.
-Admitted.
+      * rewrite H3, Incl. eauto with cset.
+Qed.

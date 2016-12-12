@@ -196,7 +196,7 @@ Inductive additionalParameters_live : list (set var)   (* additional params *)
     -> additionalParameters_live ZL (stmtApp f Y) (ann0 lv) (ann0 nil)
 | additionalParameters_liveLet ZL F t (Za:〔〔var〕〕) ans ant lv ans_lv ant_lv
   : (forall Za' lv Zs n, get F n Zs -> get ans_lv n lv -> get Za n Za' ->
-       of_list Za' ⊆ getAnn lv \ of_list (fst Zs))
+       of_list Za' ⊆ getAnn lv \ of_list (fst Zs) /\ NoDupA eq (fst Zs ++ Za'))
     -> (forall Zs lv a n, get F n Zs -> get ans_lv n lv -> get ans n a ->
                     additionalParameters_live (of_list ⊝ Za ++ ZL) (snd Zs) lv a)
     -> additionalParameters_live ((of_list ⊝ Za) ++ ZL) t ant_lv ant
@@ -231,7 +231,8 @@ Proof.
       exploit H2; eauto. exploit H13; eauto. dcr.
       rewrite of_list_app at 1.
       split.
-      * rewrite H10, H9. eauto with cset.
-      * cases; eauto. rewrite of_list_app.
-        rewrite <- minus_union. rewrite <- H11. eauto with cset.
+      * rewrite H10. rewrite H9 at 1. eauto with cset.
+      * cases; eauto. split; eauto.
+        rewrite of_list_app.
+        rewrite <- minus_union. rewrite <- H22. eauto with cset.
 Qed.

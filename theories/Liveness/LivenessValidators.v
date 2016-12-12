@@ -50,10 +50,13 @@ Proof.
     destruct H; [| dec_solve].
     exploit (@indexwise_R_dec' _ _
                                (fun Zs a0 =>  of_list (fst Zs)[<=]getAnn a0 /\
+                                           NoDupA eq (fst Zs) /\
                                              (if isFunctional i then
                                                 getAnn a0 \ of_list (fst Zs)[<=]a
                                               else True)) F sa).
-    + intros. ensure (of_list (fst a0)[<=]getAnn b).
+    + intros.
+      ensure (of_list (fst a0)[<=]getAnn b).
+      ensure (NoDupA _eq (fst a0)).
       cases; [| dec_solve].
       ensure ( getAnn b \ of_list (fst a0)[<=]a); dec_solve.
     + destruct H; dec_solve.

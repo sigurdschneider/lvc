@@ -362,13 +362,13 @@ Proof.
     edestruct (of_list_get_first _ i) as [n]; eauto; dcr.
     edestruct update_with_list_lookup_in_list_first; eauto; dcr.
     + intros; rewrite <- H2. eauto.
-    + rewrite H2. rewrite H6. inv_get.
+    + rewrite H2. rewrite H6. inv_get. hnf in H2; subst.
       edestruct update_with_list_lookup_in_list_first_slot;
-        try eapply Len; eauto; dcr.
-      Focus 4. erewrite H7. get_functional. eauto.
-      rewrite <- H2; eauto.
+        try eapply Len; try eapply H3; try eapply H; dcr.
+      Focus 3.
+      erewrite H6. get_functional. eauto.
       eapply disj_incl; eauto with cset.
-      intros. rewrite <- H2; eauto.
+      intros. eauto.
   - rewrite lookup_set_update_not_in_Z; eauto.
     rewrite lookup_set_update_not_in_Z; eauto.
     eapply Agr2. cset_tac.
@@ -444,7 +444,8 @@ Proof.
     + eapply (Disj (slot x)). cset_tac. cset_tac.
     + eapply (Disj x). cset_tac.
       eapply map_iff in H0; eauto. dcr.
-      eapply Inj in H3; eauto with cset. cset_tac. cset_tac.
+      eapply Inj in H3; eauto with cset.
+      cset_tac. cset_tac.
 Qed.
 
 Instance SR (VD:set var) : PointwiseProofRelationI (((set var) * (set var)) * params) := {

@@ -1,12 +1,134 @@
 Require Import CSet Util Fresh Filter Take MoreList OUnion AllInRel.
 Require Import IL Annotation LabelsDefined Sawtooth InRel Liveness TrueLiveness.
+Require SimF SimI.
 
 Set Implicit Arguments.
 Unset Printing Records.
 
 (** * Dead Variable Elimination *)
 
-Definition filter_set (Z:params) (lv:set var) := List.filter (fun x => B[x ∈ lv]) Z.
+
+Fixpoint flt (lv:set var) X (Z:params) (L:list X) :=
+  match Z, L with
+  | x::Z, a::L => if [ x ∈ lv ] then a::flt (lv \ singleton x) Z L
+                 else flt (lv \ singleton x) Z L
+  | _, _  => nil
+  end.
+
+Lemma flt_length X Y Z lv (L:list X) (L':list Y)
+  (LEN:length L = length L')
+  : ❬flt lv Z L❭ = ❬flt lv Z L'❭.
+Proof.
+  general induction LEN; destruct Z; simpl; eauto.
+  cases; simpl; rewrite IHLEN; eauto.
+Qed.
+
+Local Hint Resolve flt_length.
+Hint Resolve flt_length : len.
+
+Lemma get_flt X lv Z (Y:list X) n y
+      (Get:get (flt lv Z Y) n y)
+  : exists z k, get Z k z /\ get Y k y /\ z ∈ lv.
+Proof.
+  general induction Z; destruct Y; simpl in *; isabsurd.
+  - cases in Get; eauto 20 using get.
+    + inv Get; eauto using get.
+      edestruct IHZ; dcr; eauto.
+      exists x0, (S x1). repeat split; eauto using get. cset_tac.
+    + edestruct IHZ; dcr; eauto.
+      exists x0, (S x1). repeat split; eauto using get. cset_tac.
+Qed.
+
+
+Lemma omap_flt A B Z (Y:list A) lv f (l:list B)
+: omap f Y = Some l
+  -> length Y = length Z
+  -> omap f (flt lv Z Y) = Some (flt lv Z l).
+Proof.
+  intros.
+  general induction H0; simpl in * |- *; eauto.
+  monad_inv H. cases; simpl; eauto.
+  rewrite EQ. erewrite IHlength_eq; simpl; eauto.
+Qed.
+
+Lemma flt_InA (A : Type) (eqA : A -> A -> Prop) lv Z Y x
+  : InA eqA x (flt lv Z Y) -> InA eqA x Y.
+Proof.
+  intros.
+  general induction Z; destruct Y; isabsurd; simpl in *.
+  cases in H.
+  - inv H; eauto using InA.
+  - edestruct IHZ; eauto.
+Qed.
+
+Lemma nodup_flt X lv (R:X->X->Prop) Z (Y:list X)
+  : NoDupA R Y
+    -> NoDupA R (flt lv Z Y).
+Proof.
+  general induction Z; destruct Y; simpl in *; dcr; eauto.
+  - cases; eauto using NoDupA.
+    constructor; eauto.
+    intro XX. eapply flt_InA in XX.
+    inv H. eauto.
+Qed.
+
+Lemma of_list_flt lv Z
+  : of_list (flt lv Z Z) [=] lv ∩ of_list Z.
+Proof.
+  general induction Z; simpl.
+  - cset_tac.
+  - cases; simpl.
+    + rewrite IHZ; eauto. cset_tac.
+    + rewrite IHZ; eauto. cset_tac.
+Qed.
+
+Lemma nodup_flt' lv Z
+  : NoDupA _eq (flt lv Z Z).
+Proof.
+  general induction Z; dcr; eauto.
+  - eauto using NoDupA.
+  - simpl flt. cases; eauto using NoDupA.
+    constructor; eauto.
+    rewrite <- of_list_1.
+    rewrite of_list_flt.
+    cset_tac.
+Qed.
+
+Lemma argsLive_liveSound lv blv Y Z
+  : argsLive lv blv Y Z
+    -> forall (n : nat) (y : op) blv',
+      get (flt blv' Z Y) n y ->
+      blv' ⊆ blv ->
+      live_op_sound y lv.
+Proof.
+  intros. general induction H; simpl in * |- *.
+  - isabsurd.
+  - cases in H1; eauto with cset.
+    + inv H1; eauto with cset.
+Qed.
+
+Lemma agree_on_update_flt Y `{Equivalence (option Y)} (lv:set nat) (V V':nat -> option Y) (Z:list nat) VL
+
+: length Z = length VL
+  -> agree_on R (lv \ of_list Z) V V'
+  -> agree_on R lv
+             (V [Z <-- List.map Some VL])
+             (V' [(flt lv Z Z) <-- (List.map Some (flt lv Z VL))]).
+Proof.
+  intros.
+  eapply agree_on_trans. eapply H.
+  eapply update_with_list_agree; eauto with len.
+  general induction Z; destruct VL; simpl; eauto.
+  - exfalso; isabsurd.
+  - cases; simpl in *.
+    + eapply agree_on_update_same. reflexivity.
+      eapply IHZ; eauto.
+      eapply agree_on_incl; eauto. clear; cset_tac.
+    + eapply agree_on_update_dead; eauto.
+      assert (lv [=] lv \ singleton a) by cset_tac.
+      rewrite H2 at 1. eapply IHZ; eauto.
+      eapply agree_on_incl; eauto. clear; cset_tac.
+Qed.
 
 Fixpoint compile (LV:list ((set var) * params)) (s:stmt) (a:ann (set var)) :=
   match s, a with
@@ -23,11 +145,11 @@ Fixpoint compile (LV:list ((set var) * params)) (s:stmt) (a:ann (set var)) :=
         stmtIf e (compile LV s ans) (compile LV t ant)
     | stmtApp f Y, ann0 _ =>
       let lvZ := nth (counted f) LV (∅, nil) in
-      stmtApp f (filter_by (fun y => B[y ∈ fst lvZ]) (snd lvZ) Y)
+      stmtApp f (flt (fst lvZ) (snd lvZ) Y)
     | stmtReturn x, ann0 _ => stmtReturn x
     | stmtFun F t, annF lv ans ant =>
       let LV' := pair ⊜ (getAnn ⊝ ans) (fst ⊝ F) ++ LV in
-      stmtFun (zip (fun Zs a => (filter_set (fst Zs) (getAnn a), compile LV' (snd Zs) a)) F ans)
+      stmtFun (zip (fun Zs a => (flt (getAnn a) (fst Zs) (fst Zs), compile LV' (snd Zs) a)) F ans)
               (compile LV' t ant)
     | s, _ => s
   end.
@@ -37,13 +159,13 @@ Fixpoint compile (LV:list ((set var) * params)) (s:stmt) (a:ann (set var)) :=
 
 Module I.
 
-  Require Import SimI.
+  Import SimI.
 
 
 Instance SR : PointwiseProofRelationI ((set var) * params) := {
-   ParamRelIP G Z Z' := Z' = (filter (fun x => B[x ∈ fst G]) Z) /\ snd G = Z;
+   ParamRelIP G Z Z' := Z' = flt (fst G) (snd G) Z /\ snd G = Z;
    ArgRelIP V V' G VL VL' :=
-     VL' = (filter_by (fun x => B[x ∈ fst G]) (snd G) VL) /\
+     VL' = (flt (fst G) (snd G) VL) /\
      length (snd G) = length VL /\
      agree_on eq (fst G \ of_list (snd G)) V V';
 }.
@@ -73,11 +195,11 @@ Proof.
   - eapply labenv_sim_app; eauto using zip_get.
     + intros; simpl in *; dcr; subst.
       split; [|split]; intros.
-      * exploit (@omap_filter_by _ _ _ _ (fun y : var => if [y \In blv] then true else false) _ _ Z0 H7);
+      * erewrite get_nth; eauto using zip_get; simpl.
+        exploit (@omap_flt _ _ Z0 _ blv _ _ H7);
           eauto.
         exploit omap_op_eval_live_agree; eauto.
-        intros. eapply argsLive_liveSound; eauto.
-        erewrite get_nth; eauto using zip_get; simpl.
+        intros; eapply argsLive_liveSound; eauto.
         rewrite H12. eexists; split; eauto.
         repeat split; eauto using filter_filter_by_length.
         eapply agree_on_incl; eauto.
@@ -88,8 +210,8 @@ Proof.
     + intros. hnf; intros; simpl in *; dcr; subst.
       inv_get.
       rewrite <- zip_app;[| eauto with len].
-      eapply IH; eauto.
-      eapply agree_on_update_filter'; eauto.
+      eapply IH; eauto. simpl.
+      eapply agree_on_update_flt; eauto.
     + hnf; intros; simpl in *; subst.
       inv_get; simpl; eauto.
     + eauto with len.
@@ -113,12 +235,12 @@ End I.
 
 Module F.
 
-  Require Import SimF.
+  Import SimF.
 
 Instance SR : PointwiseProofRelationF ((set var) * params) := {
-   ParamRelFP G Z Z' := Z' = (filter (fun x => B[x ∈ fst G]) Z) /\ snd G = Z;
+   ParamRelFP G Z Z' := Z' = (flt (fst G) (snd G) Z) /\ snd G = Z;
    ArgRelFP G VL VL' :=
-     VL' = (filter_by (fun x => B[x ∈ fst G]) (snd G) VL) /\
+     VL' = (flt (fst G) (snd G) VL) /\
      length (snd G) = length VL
 }.
 
@@ -147,13 +269,12 @@ Proof.
   - eapply labenv_sim_app; eauto using zip_get.
     + intros; simpl in *; dcr; subst.
       split; [|split]; intros.
-      * exploit (@omap_filter_by _ _ _ _ (fun y : var => if [y \In blv] then true else false) _ _ Z0 H7);
+      * erewrite get_nth; eauto using zip_get; simpl.
+        exploit (@omap_flt _ _ Z0 _ blv _ _ H7);
           eauto.
         exploit omap_op_eval_live_agree; eauto.
-        intros. eapply argsLive_liveSound; eauto.
-        erewrite get_nth; eauto using zip_get; simpl.
+        intros; eapply argsLive_liveSound; eauto.
         rewrite H12. eexists; split; eauto.
-        repeat split; eauto using filter_filter_by_length.
   - pno_step.
     simpl. erewrite <- op_eval_live_agree; eauto. eapply agree_on_sym; eauto.
   - eapply sim_fun_ptw; eauto.
@@ -164,7 +285,7 @@ Proof.
       rewrite <- zip_app; [| eauto with len].
       eapply IH; eauto. simpl in *.
       exploit H9; eauto.
-      eapply agree_on_update_filter'; eauto using agree_on_incl.
+      eapply agree_on_update_flt; eauto using agree_on_incl.
     + hnf; intros; simpl in *; subst.
       inv_get; simpl; eauto.
     + eauto with len.
@@ -205,7 +326,7 @@ Fixpoint compile_live (s:stmt) (a:ann (set var)) (G:set var) : ann (set var) :=
     | stmtReturn x, ann0 lv => ann0 (G ∪ lv)
     | stmtFun F t, annF lv ans ant =>
       let ans' := zip (fun Zs a => let a' := compile_live (snd Zs) a ∅ in
-                               setTopAnn a' (getAnn a' ∪ of_list (filter_set (fst Zs) (getAnn a)))) F ans
+                               setTopAnn a' (getAnn a' ∪ of_list (flt (getAnn a) (fst Zs) (fst Zs)))) F ans
       in annF (G ∪ lv) ans' (compile_live t ant ∅)
     | _, a => a
   end.
@@ -243,7 +364,7 @@ Qed.
 
 Lemma dve_live i ZL LV s lv G
   : true_live_sound i ZL LV s lv
-    -> live_sound i (filter_set ⊜ ZL LV) LV (compile (zip pair LV ZL) s lv) (compile_live s lv G).
+    -> live_sound i ((fun Z lv => flt lv Z Z) ⊜ ZL LV) LV (compile (zip pair LV ZL) s lv) (compile_live s lv G).
 Proof.
   intros. general induction H; simpl; eauto using live_sound, compile_live_incl.
   - cases; eauto. econstructor; eauto.
@@ -259,12 +380,11 @@ Proof.
   - econstructor; eauto using zip_get.
     + simpl. cases; eauto.
       rewrite <- H1. rewrite minus_inter_empty. eapply incl_right.
-      unfold filter_set. rewrite of_list_filter.
-      cset_tac; intuition.
+      rewrite of_list_flt. cset_tac.
     + erewrite get_nth; eauto using zip_get.
       simpl. eauto with len.
     + intros ? ? Get. erewrite get_nth in Get; eauto using zip_get. simpl in *.
-      edestruct filter_by_get as [? [? []]]; eauto; dcr. simpl in *; cases in H6.
+      edestruct get_flt; eauto; dcr.
       eapply live_op_sound_incl.
       eapply argsLive_live_exp_sound; eauto. eauto with cset.
   - econstructor; eauto.
@@ -278,8 +398,8 @@ Proof.
       eapply PIR2_app; eauto.
       eapply PIR2_get; eauto 30 with len.
       intros; inv_get. simpl. rewrite getAnn_setTopAnn.
-      rewrite compile_live_incl_empty; eauto. unfold filter_set.
-      rewrite of_list_filter. cset_tac.
+      rewrite compile_live_incl_empty; eauto.
+      rewrite of_list_flt. clear. cset_tac.
     + intros; inv_get. simpl.
       eapply live_sound_monotone.
       eapply live_sound_monotone2; eauto.
@@ -291,13 +411,16 @@ Proof.
       eapply PIR2_get; eauto 30 with len.
       intros; inv_get. simpl. rewrite getAnn_setTopAnn.
       rewrite compile_live_incl_empty; eauto.
-      unfold filter_set. rewrite of_list_filter. cset_tac.
+      rewrite of_list_flt. clear. cset_tac.
     + intros; inv_get.
       repeat rewrite getAnn_setTopAnn; simpl.
       split; eauto. cases; eauto.
       exploit H3; eauto.
       rewrite compile_live_incl_empty; eauto. rewrite <- H5.
-      unfold filter_set. rewrite of_list_filter. clear_all; cset_tac.
+      rewrite of_list_flt.
+      split. eapply nodup_flt'.
+      clear_all; cset_tac.
+      split. eapply nodup_flt'. eauto.
     + rewrite compile_live_incl; eauto with cset.
 Qed.
 
@@ -315,7 +438,7 @@ Lemma DVE_callChain Lv ZL F als n l'
      -> callChain trueIsCalled F (LabI l') (LabI n)
      -> callChain trueIsCalled
                  ((fun (Zs : params * stmt) (a : ann ⦃var⦄) =>
-                     (filter_set (fst Zs) (getAnn a),
+                     (flt (getAnn a) (fst Zs) (fst Zs),
                       compile (pair ⊜ (getAnn ⊝ als ++ Lv) (fst ⊝ F ++ ZL)) (snd Zs) a)) ⊜ F als)
                  (LabI l') (LabI n).
 Proof.
@@ -366,6 +489,7 @@ Proof.
     repeat let_pair_case_eq; repeat simpl_pair_eqs; subst; simpl;
       repeat cases; eauto using app_expfree.
   - econstructor. intros; inv_get; eauto.
+    edestruct get_flt; eauto; dcr. eauto.
   - econstructor; intros; inv_get; eauto.
     eapply H0; eauto.
 Qed.
@@ -394,10 +518,11 @@ Fixpoint compile_renamedApart (s:stmt) (lv:ann (set var)) (a:ann (set var * set 
     | stmtFun F t, annF lv anF ant, annF (_, _) bnF bnt =>
       let abnF := (pair ⊜ anF bnF) in
       let bnF' := zip (fun (Zs:params * stmt) ab =>
-                        compile_renamedApart (snd Zs) (fst ab) (snd ab) (of_list (filter_set (fst Zs) (getAnn (fst ab))) ∪ D)) F abnF in
+                        compile_renamedApart (snd Zs) (fst ab) (snd ab)
+                                             (of_list (flt (getAnn (fst ab)) (fst Zs) (fst Zs)) ∪ D)) F abnF in
       let abnF' := (pair ⊜ anF bnF') in
       let bnt' := compile_renamedApart t ant bnt D in
-      annF (D, list_union ((fun Zs ab => of_list (filter_set (fst Zs) (getAnn (fst ab))) ∪ snd (getAnn (snd ab))) ⊜ F abnF')
+      annF (D, list_union ((fun Zs ab => of_list (flt (getAnn (fst ab)) (fst Zs) (fst Zs)) ∪ snd (getAnn (snd ab))) ⊜ F abnF')
                           ∪ snd (getAnn bnt'))
            bnF' bnt'
     | _, _, a => a
@@ -440,8 +565,8 @@ Proof.
     eapply list_union_incl; intros; inv_get; simpl.
     eapply incl_list_union; eauto using zip_get.
     rewrite H1; eauto.
-    unfold defVars, filter_set; rewrite of_list_filter; simpl.
-    clear. cset_tac. cset_tac.
+    unfold defVars; rewrite of_list_flt; simpl.
+    clear. cset_tac. clear; cset_tac.
 Qed.
 
 Lemma nodup_filter X R p `{Proper _ (R ==> eq) p} (L:list X)
@@ -454,16 +579,6 @@ Proof.
     constructor; eauto.
     rewrite filter_InA; intuition.
 Qed.
-
-(*
-Lemma compile_freeVars LV ZL s lv
-  : freeVars (compile (zip pair LV ZL) s lv) ⊆ freeVars s.
-Proof.
-  revert LV ZL lv.
-  sind s; destruct lv; simpl; repeat cases; simpl; try rewrite IH; eauto.
-  -
-Qed.
- *)
 
 Lemma DVE_renamedApart i LV ZL s lv G D
   : renamedApart s G
@@ -505,27 +620,28 @@ Proof.
       rewrite <- zip_app;[| eauto with len].
       eapply H1; eauto.
       -- edestruct H8; eauto; dcr. rewrite H4. rewrite Dincl;  eauto.
-         unfold filter_set; rewrite of_list_filter. clear; cset_tac.
-      -- unfold filter_set; rewrite of_list_filter.
-         rewrite <- inclD. rewrite <- incl_list_union; eauto using zip_get; [| reflexivity].
-         simpl. unfold filter_set; rewrite of_list_filter.
+         rewrite of_list_flt. clear; cset_tac.
+      -- rewrite of_list_flt.
+         rewrite <- inclD.
+         rewrite <- incl_list_union; eauto using zip_get; [| reflexivity].
+         simpl. rewrite of_list_flt.
          rewrite <- union_assoc. eapply incl_union_left.
          rewrite zip_app; eauto with len.
-         clear; cset_tac'.
+         clear; cset_tac.
     * hnf; intros; inv_get.
       edestruct H8; eauto; dcr.
-      simpl. econstructor; unfold filter_set; simpl in *.
+      simpl. econstructor; simpl in *.
       erewrite fst_getAnn_renamedApart; eauto with cset.
-      split. eapply nodup_filter. clear; intuition. eauto.
-      split. eapply disj_2_incl; eauto. rewrite of_list_filter.
+      split. eapply nodup_flt; eauto.
+      split. eapply disj_2_incl; eauto. rewrite of_list_flt.
       eapply disj_1_incl; eauto. cset_tac.
       erewrite fst_getAnn_renamedApart, !snd_getAnn_renamedApart; eauto.
-      pe_rewrite. rewrite of_list_filter. eapply disj_1_incl; eauto.
+      pe_rewrite. rewrite of_list_flt. eapply disj_1_incl; eauto.
       clear; cset_tac.
     * hnf; intros. inv_get.
       unfold defVars; simpl. exploit H9; try eapply H4; eauto using zip_get.
       unfold defVars in*. rewrite !snd_getAnn_renamedApart; eauto.
-      unfold filter_set. rewrite !of_list_filter; eauto.
+      rewrite !of_list_flt; eauto.
       eapply disj_incl; eauto.
       clear; cset_tac.
       clear; cset_tac.
@@ -536,5 +652,5 @@ Proof.
       erewrite fst_getAnn_renamedApart; eauto.
     * eapply list_union_eq; intros; eauto 20 with len.
       inv_get. unfold defVars; simpl.
-      unfold filter_set; simpl. reflexivity.
+      simpl. reflexivity.
 Qed.

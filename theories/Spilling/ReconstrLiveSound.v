@@ -3,7 +3,7 @@ Require Import IL Annotation InRel AutoIndTac Liveness LabelsDefined.
 Require Import SpillSound DoSpill DoSpillRm.
 Require Import SpillUtil ReconstrLive ReconstrLiveSmall.
 Require Import ReconstrLiveG SetUtil InVD ReconstrLiveUtil.
-Require Import ToBeOutsourced.
+Require Import ToBeOutsourced Slot.
 
 Set Implicit Arguments.
 
@@ -92,20 +92,18 @@ Qed.
 
 
 Lemma reconstr_live_sound
-      (k : nat)
-      (slot : var -> var)
+      (k : nat) VD
+      (slot : Slot VD)
       (ZL : list params)
       (G : ⦃var⦄)
       (Λ : list (⦃var⦄ * ⦃var⦄))
-      (R M VD : ⦃var⦄)
+      (R M : ⦃var⦄)
       (s : stmt)
       (Lv : list ⦃var⦄)
       (sl : spilling)
       (alv : ann ⦃var⦄)
       (ra : ann (⦃var⦄ * ⦃var⦄))
-  : injective_on VD slot
-    -> disj VD (map slot VD)
-    -> R ⊆ VD
+  : R ⊆ VD
     -> M ⊆ VD
     -> union_fs (getAnn ra) ⊆ VD
     -> app_expfree s
@@ -128,7 +126,7 @@ Lemma reconstr_live_sound
                                 (do_spill_rm slot sl))
 .
 Proof.
-  intros inj_VD disj_VD R_VD M_VD ra_VD aeFree renAp spillSnd spilli pir2_EQ Z_VD lvSnd.
+  intros disj_VD R_VD M_VD aeFree renAp spillSnd spilli pir2_EQ Z_VD lvSnd.
 
   general induction lvSnd;
     invc aeFree;
@@ -382,5 +380,15 @@ Proof.
       inv_get.
       simpl.
       split; [ | auto].
-      apply reconstr_live_G.
+      * apply reconstr_live_G.
+      * split; eauto.
+        exploit H2; eauto; dcr.
+        eapply PIR2_nth in H15; eauto; dcr.
+        destruct x2. eapply NoDupA_slot_lift_params; eauto.
+        unfold merge in H33.
+        exploit H23; eauto; dcr. eauto with cset.
+        rewrite <- M_VD. unfold union_fs. simpl.
+        rewrite <- H27.
+        rewrite <- incl_list_union; eauto using zip_get; [|reflexivity].
+        unfold defVars. clear; cset_tac.
 Qed.

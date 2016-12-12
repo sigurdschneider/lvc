@@ -383,10 +383,12 @@ Proof.
       * edestruct (@renamedApart_globals_live_F);
           eauto using get_range, renamedApart_globals_live; simpl in *; dcr.
         eapply renamedApart_disj in RA; eauto.
-        rewrite <- H3, <- H26. split; eauto.
-        -- exploit H2; eauto.
-        -- eapply get_in_range_app in H27; eauto using get_range.
-           inv_get. eauto.
+        rewrite <- H3, <- H26.
+        edestruct H2; dcr; eauto.
+        split; eauto.
+        split; eauto.
+        eapply get_in_range_app in H27; eauto using get_range.
+        inv_get. eauto.
 Qed.
 
 Fixpoint mapAnn2 X X' Y (f:X -> X' -> Y) (a:ann X) (b:ann X') : ann Y :=
@@ -574,7 +576,9 @@ Proof.
       exploit H14; eauto; dcr.
       split.
       * eauto with cset.
-      * cases; eauto; set_simpl. rewrite <- H20.
+      * cases; eauto; set_simpl.
+        split; eauto.
+        rewrite <- H22.
         clear_all; cset_tac.
     + erewrite getAnn_mapAnn2;
         eauto using live_sound_annotation, renamedApart_annotation with cset.

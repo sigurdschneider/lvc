@@ -1,7 +1,7 @@
 Require Import List Map Env AllInRel Exp AppExpFree Filter LengthEq.
 Require Import IL Annotation InRel AutoIndTac Liveness LabelsDefined.
 Require Import SpillSound SpillUtil.
-Require Import ToBeOutsourced.
+Require Import ToBeOutsourced Slot.
 
 (* this file is too long, should be splitted in DoSpill, DoSpillParams, DoSpillArgs *)
 
@@ -83,6 +83,82 @@ Proof.
            cset_tac.
         -- exfalso. cset_tac.
       * rewrite <- Incl. cset_tac.
+Qed.
+
+Lemma InA_slot_lift_params VD RM Z (slot:Slot VD) x
+      (In:InA eq x (slot_lift_params slot RM Z))
+  : InA _eq x Z \/ exists y, InA _eq y Z /\ x = slot y.
+Proof.
+  general induction Z; simpl in *; isabsurd.
+  cases in In.
+  - inv In; eauto.
+    inv H0; eauto.
+    edestruct IHZ; dcr; eauto.
+  - cases in In; eauto.
+    * inv In; eauto.
+      edestruct IHZ; dcr; eauto.
+    * inv In; eauto.
+      edestruct IHZ; dcr; eauto.
+Qed.
+
+Lemma Slot_absurd VD x
+      (slot:Slot VD) (EQ:slot x = x)
+      (In: x ∈ VD)
+  : False.
+Proof.
+  eapply (Slot_Disj _ slot x); eauto. cset_tac.
+Qed.
+
+Lemma NoDupA_slot_lift_params VD R M Z (slot:Slot VD)
+      (ND:NoDupA eq Z) (Incl:R ∪ M ⊆ VD)
+      (Incl2: of_list Z ⊆ VD)
+  : NoDupA _eq (slot_lift_params slot (R,M) Z).
+Proof.
+  general induction ND; eauto using NoDupA.
+  simpl slot_lift_params. cases.
+  - econstructor.
+    + intro A. inv A.
+      * cset_tac'. eauto using Slot_absurd.
+      * eapply InA_slot_lift_params in H1.
+        destruct H1; dcr; eauto; subst.
+        rewrite InA_in in H2. simpl in *.
+        eapply (Slot_Disj _ slot (slot x0)); eauto;
+          cset_tac.
+    + econstructor.
+      * intro A.
+        eapply InA_slot_lift_params in A.
+        rewrite InA_in in A. simpl in *.
+        destruct A; dcr.
+        -- eapply (Slot_Disj _ slot (slot x));
+             eauto; cset_tac.
+        -- eapply Slot_Inj in H3; eauto.
+           cset_tac. cset_tac.
+           eapply Incl2. cset_tac'.
+           rewrite <- InA_in. eauto.
+      * eapply IHND; eauto.
+        simpl in *. cset_tac.
+  - cases.
+    + econstructor; eauto.
+      * intro A. eapply InA_slot_lift_params in A.
+        destruct A; dcr; eauto; subst.
+        rewrite InA_in in H2. simpl in *.
+        eapply (Slot_Disj _ slot (slot x0)); eauto;
+          cset_tac.
+      * eapply IHND; eauto. simpl in *. cset_tac.
+    + econstructor; eauto.
+      * intro A. eapply InA_slot_lift_params in A.
+        destruct A; dcr; eauto; subst.
+        -- rewrite InA_in in H0. simpl in *.
+           eapply (Slot_Disj _ slot (slot x)); eauto;
+             cset_tac.
+        -- simpl in *.
+           eapply Slot_Inj in H3; eauto.
+           cset_tac. cset_tac.
+           rewrite <- Incl2.
+           eapply in_add_right.
+           eapply InA_in. eauto.
+      * eapply IHND; eauto.
+        simpl in *. cset_tac.
 Qed.
 
 

@@ -347,5 +347,5 @@ Proof.
       exploit H6; eauto using get_range.
       edestruct srd_globals_live_From as [lv' [Z' ?]]; eauto with len; dcr.
       inv_get.
-      rewrite <- H13, <- H19. eauto.
+      rewrite <- H13, <- H20. eauto.
 Qed.
