@@ -1,5 +1,5 @@
 Require Import CSet Le Arith.Compare_dec.
-Require Import Plus Util Map Get LengthEq SafeFirst.
+Require Import Plus Util Map Get Take LengthEq SafeFirst.
 
 Set Implicit Arguments.
 
@@ -257,6 +257,22 @@ Proof.
     erewrite EXT, EQ; eauto; reflexivity.
 Qed.
 
+Lemma fresh_list_stable_get (fresh : ⦃nat⦄ -> nat -> nat) (G: set nat) L x n
+      (fresh_ext: forall x G G', G [=] G' -> fresh G x = fresh G' x)
+  : NoDupA eq L
+    -> get (fresh_list_stable fresh G L) n x
+    -> exists y, get L n y /\
+           x = fresh (of_list (take n (fresh_list_stable fresh G L)) ∪ G) y.
+Proof.
+  intros ND Get. general induction ND; simpl in *.
+  - isabsurd.
+  - inv Get.
+    + simpl. erewrite fresh_ext; eauto.
+      eexists; split; eauto with get. clear; cset_tac.
+    + edestruct IHND; eauto; dcr; subst.
+      eexists; split; eauto using get.
+      simpl. eapply fresh_ext. clear; cset_tac.
+Qed.
 
 Hint Resolve fresh_list_stable_length : len.
 
