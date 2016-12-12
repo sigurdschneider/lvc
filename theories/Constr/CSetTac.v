@@ -49,6 +49,30 @@ Proof.
     repeat rewrite of_list_1 in H0. intuition.
 Qed.
 
+Lemma Is_true_eq_right_eq x
+  :  x = true <-> x.
+Proof.
+  destruct x; firstorder.
+Qed.
+
+Lemma Is_true_eq_left_eq x
+  :  true = x <-> x.
+Proof.
+  destruct x; firstorder.
+Qed.
+
+Lemma Is_not_true_eq_right_eq x
+  :  x = false <-> (x -> False).
+Proof.
+  destruct x; firstorder.
+Qed.
+
+Lemma Is_not_true_eq_left_eq x
+  :  false = x <-> (x -> False).
+Proof.
+  destruct x; firstorder.
+Qed.
+
 Lemma eq_incl X `{OrderedType X} (s t:set X)
   : t [=] s -> s ⊆ t /\ t ⊆ s.
 Proof.
@@ -341,6 +365,12 @@ Smpl Add
      | [ H : Is_true (?p ?x),
              H' : @Equivalence.equiv ?X (@_eq ?X ?H) (@OT_Equivalence ?X ?H) ?x ?a,
                   PR: Proper (@_eq ?X ?H ==> eq) ?p |- ?p ?a = true] => rewrite <- H'
+     | [ H : Is_true (?p ?x),
+             H' : @Equivalence.equiv ?X (@_eq ?X ?H) (@OT_Equivalence ?X ?H) ?x ?a,
+                  PR: Proper (@_eq ?X ?H ==> eq) ?p |- Is_true (?p ?a)] => rewrite <- H'
+     | [ H : Is_true (?p ?x),
+             H' : @Equivalence.equiv ?X (@_eq ?X ?H) (@OT_Equivalence ?X ?H) ?a ?x,
+                  PR: Proper (@_eq ?X ?H ==> eq) ?p |- Is_true (?p ?a)] => rewrite H'
      | [ H : Is_true (?p ?a), H'' : Is_true (?p ?x) -> False,
              H' : @Equivalence.equiv ?X (@_eq ?X ?H) (@OT_Equivalence ?X ?H) ?x ?a,
                     PR: Proper (@_eq ?X ?H ==> eq) ?p |- _ ] => exfalso; eapply H''; rewrite H'; eauto
@@ -544,6 +574,14 @@ Smpl Add 50
      | [ H : context [ (_ /\ _) -> False ] |- _ ] => rewrite de_morgan_dec in H
      | [ H : False -> _ |- _ ] => clear H
      | [ H : _ -> True |- _ ] => clear H
+     | [ H : context [ _ = true ] |- _ ] => setoid_rewrite Is_true_eq_right_eq in H
+     | [ |- context [ _ = true ] ] => setoid_rewrite Is_true_eq_right_eq
+     | [ H : context [ true = _ ] |- _ ] => setoid_rewrite Is_true_eq_left_eq in H
+     | [ |- context [ true = _] ] => setoid_rewrite Is_true_eq_left_eq
+     | [ H : context [ _ = false ] |- _ ] => setoid_rewrite Is_not_true_eq_right_eq in H
+     | [ |- context [ _ = false ] ] => setoid_rewrite Is_not_true_eq_right_eq
+     | [ H : context [ false = _ ] |- _ ] => setoid_rewrite Is_not_true_eq_left_eq in H
+     | [ |- context [ false = _] ] => setoid_rewrite Is_not_true_eq_left_eq
      end : cset.
 
 (*
