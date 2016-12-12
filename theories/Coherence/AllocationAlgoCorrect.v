@@ -111,13 +111,6 @@ Qed.
 (** ** the algorithm produces a locally injective renaming *)
 
 (*
-Lemma sep_filter_map_comm (c:var) lv (ϱ:var -> var)
-  : sep c lv ϱ
-    -> map ϱ (filter (fun x => B[x <= c]) lv) [=] filter (fun x => B[x <= c]) (map ϱ lv).
-Proof.
-  intros [GT LE]. cset_tac'.
-  - eexists x; cset_tac'. omega.
-Qed.
 
 
 Lemma crd_of_list (c:var) k (LT:k < c) (lv:set var) Z ϱ

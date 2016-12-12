@@ -429,13 +429,13 @@ Proof.
               inv_get. simpl in *. inv H28. eauto.
               rewrite COND. clear; hnf; cset_tac.
            ** len_simpl. exploit PIR2_length; eauto. len_simpl. eauto.
-      -- rewrite lookup_set_update_with_list_in_union_length; eauto with len.
-         exploit (H8 n); eauto.
+      -- exploit (H8 n); eauto.
          edestruct srd_globals_live_From; eauto; dcr.
          destruct o; simpl in *;
-             [ isabsurd | |]; eauto using live_sound_overapproximation_I.
+           [ isabsurd | |]; eauto using live_sound_overapproximation_I.
          destruct o; simpl in *;
            [ isabsurd | |]; eauto using live_sound_overapproximation_I.
+         rewrite lookup_set_update_with_list_in_union_length; eauto with len.
          inv_get.
          rewrite H25. unfold lookup_set. rewrite H3. rewrite Incl.
          clear; cset_tac.
