@@ -744,3 +744,22 @@ Ltac set_simpl :=
     => is_var D; setoid_rewrite <- EQ
   | [ EQ : ?D' [=] ?D |- _ ] => is_var D; clear D EQ
   end.
+
+Instance InA_computable X `{OrderedType X} (L:list X) x
+  : Computable (InA _eq x L).
+Proof.
+  hnf.
+  general induction L.
+  - right; inversion 1.
+  - decide (x === a); edestruct IHL; eauto.
+    right; inversion 1; eauto.
+Qed.
+
+Instance NoDupA_computable X `{OrderedType X} (L:list X)
+  : Computable (NoDupA _eq L).
+Proof.
+  hnf. general induction L.
+  - eauto using NoDupA.
+  - decide (InA _eq a L); edestruct IHL; eauto.
+    right; inversion 1; eauto.
+Qed.
