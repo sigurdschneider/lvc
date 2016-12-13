@@ -80,7 +80,7 @@ Proof.
     + decide (p n).
       * econstructor. split; eauto.
         intro. exploit fresh_spec'; eauto.
-        Set Printing All. intros. omega.
+        intros. omega.
       * edestruct (inf_subset_inf p n); dcr.
         eapply (@safe_antitone _ _ x);[|omega].
         econstructor; split; eauto.
@@ -102,14 +102,6 @@ Definition least_fresh_P (p:inf_subset) (lv:set nat) : nat.
   - eapply fresh_variable_always_exists_in_inf_subset.
 Defined.
 
-
-
-Lemma semantic_branch (P Q:Prop) `{Computable Q}
-  : P \/ Q -> ((~ Q /\ P) \/ Q).
-Proof.
-  decide Q; clear H; intros; intuition.
-Qed.
-
 Lemma least_fresh_P_full_spec p G
   : least_fresh_P p G ∉ G
     /\ (forall m, p m ->  m < least_fresh_P p G -> m ∈ filter p G)
@@ -128,6 +120,25 @@ Proof.
       * exploit (H m); eauto. omega.
   - intros. cset_tac.
   - intros; omega.
+Qed.
+
+Lemma least_fresh_P_ext p (G G' : ⦃nat⦄)
+  : G [=] G' -> least_fresh_P p G = least_fresh_P p G'.
+Proof.
+  intros. unfold least_fresh_P; eauto.
+  eapply safe_first_ext. intros. rewrite H. reflexivity.
+Qed.
+
+Definition stable_fresh_P (isub:inf_subset) : StableFresh.
+  refine (Build_StableFresh (fun lv _ => least_fresh_P isub lv) _ _).
+  - intros. eapply least_fresh_P_full_spec.
+  - intros. eapply least_fresh_P_ext; eauto.
+Defined.
+
+Lemma semantic_branch (P Q:Prop) `{Computable Q}
+  : P \/ Q -> ((~ Q /\ P) \/ Q).
+Proof.
+  decide Q; clear H; intros; intuition.
 Qed.
 
 Definition least_fresh_part (p:inf_partition) (G:set nat) x :=
@@ -159,22 +170,21 @@ Proof.
   - eapply least_fresh_P_full_spec.
 Qed.
 
-Lemma least_fresh_P_ext p (G G' : ⦃nat⦄)
-  : G [=] G' -> least_fresh_P p G = least_fresh_P p G'.
-Proof.
-  intros. unfold least_fresh_P; eauto.
-  eapply safe_first_ext. intros. rewrite H. reflexivity.
-Qed.
-
 Lemma least_fresh_part_ext p (G G' : ⦃nat⦄) x
   : G [=] G' -> least_fresh_part p G x = least_fresh_part p G' x.
 Proof.
   intros. unfold least_fresh_part; cases; eauto using least_fresh_P_ext.
 Qed.
 
+Definition stable_fresh_part (p:inf_partition) : StableFresh.
+  refine (Build_StableFresh (least_fresh_part p) _ _).
+  - intros. eapply least_fresh_part_fresh.
+  - intros. eapply least_fresh_part_ext; eauto.
+Defined.
+
 Lemma least_fresh_list_part_ext p n G G'
   : G [=] G'
-    -> fresh_list_stable (least_fresh_part p) G n = fresh_list_stable (least_fresh_part p) G' n.
+    -> fresh_list_stable (stable_fresh_part p) G n = fresh_list_stable (stable_fresh_part p) G' n.
 Proof.
   eapply fresh_list_stable_ext.
   intros. eapply least_fresh_part_ext; eauto.

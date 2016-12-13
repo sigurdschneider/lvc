@@ -54,9 +54,6 @@ Proof.
     pose proof (part_disj p x); cset_tac.
 Qed.
 
-Definition StableFresh_part (p:inf_partition) : StableFresh :=
-  Build_StableFresh (least_fresh_part p) (least_fresh_part_fresh p).
-
 Lemma sep_filter_map_comm p (ϱ:var -> var) lv
   : sep p lv ϱ
     -> map ϱ (filter (part_1 p) lv) [=] filter (part_1 p) (map ϱ lv).
@@ -107,25 +104,23 @@ Qed.
 Lemma cardinal_filter_part p G Z
       (UNIQ:NoDupA eq Z)
   : cardinal (filter (part_1 p)
-                     (of_list (fresh_list_stable (StableFresh_part p) G Z)))
+                     (of_list (fresh_list_stable (stable_fresh_part p) G Z)))
     = cardinal (filter (part_1 p) (of_list Z)).
 Proof.
   general induction Z; simpl.
   - reflexivity.
   - decide (part_1 p a).
-    rewrite filter_add_in; eauto using least_fresh_part_1.
-    rewrite filter_add_in; eauto.
-    rewrite !add_cardinal_2; eauto.
-    f_equal; eauto. eapply IHZ; eauto.
-    + intro. inv UNIQ. cset_tac'.
-      rewrite <- InA_in in H0. eauto.
-    + exploit (fresh_list_stable_spec (least_fresh_part p));
+    + rewrite filter_add_in; eauto using least_fresh_part_1.
+      rewrite filter_add_in; eauto.
+      rewrite !add_cardinal_2; eauto.
+      * intro. inv UNIQ. cset_tac'.
+        rewrite <- InA_in in H0. eauto.
+      * exploit (fresh_list_stable_spec (stable_fresh_part p));
         eauto using least_fresh_part_fresh.
-      cset_tac'.
-      eapply H; cset_tac.
+        cset_tac'.
+        eapply H; cset_tac.
     + rewrite filter_add_notin; eauto.
       rewrite filter_add_notin; eauto.
-      eapply IHZ; eauto.
       eauto using least_fresh_part_1_back.
 Qed.
 
@@ -138,7 +133,7 @@ Lemma bnd_update_list p ϱ k a Z G
   : part_bounded (part_1 p) k
     (lookup_set ϱ (getAnn a \ of_list Z)
      ∪ of_list
-         (fresh_list_stable (StableFresh_part p) G Z)).
+         (fresh_list_stable (stable_fresh_part p) G Z)).
 Proof.
   unfold part_bounded, lookup_set in *.
   rewrite filter_union; eauto.
@@ -158,7 +153,7 @@ Proof.
   - eapply empty_is_empty_2.
     eapply disj_intersection.
     hnf; intros. eapply fresh_list_stable_spec.
-    eapply stable_fresh_spec. cset_tac.
+    cset_tac.
     rewrite <- incl2. cset_tac.
 Qed.
 
@@ -185,9 +180,9 @@ Lemma sep_update_list p ϱ (Z:params) (lv:set nat) F als n G
       (ND:NoDupA eq Z) (SEP:sep p (lv \ of_list Z) ϱ) (incl:of_list Z [<=] lv)
   : sep p lv
         (ϱ [Z <--
-              fresh_list_stable (StableFresh_part p)
+              fresh_list_stable (stable_fresh_part p)
               (snd
-                 (renameApartF_live (StableFresh_part p) renameApart_live G ϱ
+                 (renameApartF_live (stable_fresh_part p) renameApart_live G ϱ
                                     {} (take n F) (take n als)) ∪ G) Z]).
 Proof.
   hnf; split; intros; decide (x ∈ of_list Z).
@@ -195,8 +190,7 @@ Proof.
     Focus 2.
     rewrite H4. cset_tac'.
     exploit fresh_list_stable_get; try eapply H3; eauto; dcr.
-    intros. simpl. eapply least_fresh_part_ext; eauto.
-    dcr. subst. get_functional. eapply least_fresh_part_1; eauto.
+    subst. get_functional. eapply least_fresh_part_1; eauto.
     eauto with len.
   - rewrite lookup_set_update_not_in_Z; eauto.
     eapply SEP; cset_tac.
@@ -204,7 +198,6 @@ Proof.
     Focus 2.
     rewrite H4. cset_tac'.
     exploit fresh_list_stable_get; try eapply H3; eauto; dcr.
-    intros. simpl. eapply least_fresh_part_ext; eauto.
     dcr. subst. get_functional. eapply least_fresh_part_2; eauto.
     eauto with len.
   - rewrite lookup_set_update_not_in_Z; eauto.
@@ -219,7 +212,7 @@ Lemma renameApart_sep o ZL LV DL p ϱ k lv G s (isFnc:isFunctional o)
   (iEQ:PIR2 (ifFstR Equal) DL (LV \\ ZL))
   (Incl:map ϱ (getAnn lv) ⊆ G)
   : ann_P (part_bounded (part_1 p) k)
-          (snd (renameApart_live (StableFresh_part p) ϱ G s lv)).
+          (snd (renameApart_live (stable_fresh_part p) ϱ G s lv)).
 Proof.
   general induction LS; invt ann_P; invt srd; simpl;
     repeat let_pair_case_eq; repeat simpl_pair_eqs; subst; simpl in *.

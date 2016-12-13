@@ -1,5 +1,5 @@
 Require Import CSet Util Map.
-Require Import Env IL Alpha Fresh Annotation RenamedApart SetOperations.
+Require Import Env IL Alpha StableFresh Annotation RenamedApart SetOperations.
 Require Import LabelsDefined PairwiseDisjoint AppExpFree.
 
 Set Implicit Arguments.
@@ -560,7 +560,7 @@ Proof.
   revert ϱ G G'.
   sind s; destruct s; simpl; intros; repeat let_pair_case_eq; simpl.
   - subst. econstructor; eauto using renameApartAnn_decomp.
-    + rewrite H0. eauto using fresh_spec.
+    + rewrite H0; eauto.
     + simpl in H.
       rewrite rename_exp_freeVars; eauto. etransitivity; eauto.
       eapply lookup_set_incl; eauto.

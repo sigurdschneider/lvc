@@ -242,7 +242,8 @@ Proof.
             + eapply injective_on_incl; eauto.
               eapply H2; eauto.
             + eapply disj_intersection.
-              eapply disj_2_incl. eapply fresh_list_stable_spec, least_fresh_part_fresh.
+              eapply disj_2_incl.
+              eapply fresh_list_stable_spec.
               reflexivity.
             + edestruct H8; eauto.
             + eapply fresh_list_stable_nodup; eauto using least_fresh_part_fresh.

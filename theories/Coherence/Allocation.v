@@ -698,3 +698,53 @@ Proof.
     + eapply injective_on_agree; eauto.
       eapply agree_on_incl; eauto with cset.
 Qed.
+
+(** ** Liveness is stable under renaming with locally injective renaming *)
+
+Lemma live_inj_rename_sound i ZL Lv s an (ϱ:env var)
+  (LS:live_sound i ZL Lv s an)
+  (LI:locally_inj ϱ s an)
+  : live_sound i (lookup_list ϱ ⊝ ZL) (lookup_set ϱ ⊝ Lv) (rename ϱ s) (mapAnn (lookup_set ϱ) an).
+Proof.
+  general induction LS; invt locally_inj; simpl.
+  - econstructor; eauto using live_exp_rename_sound.
+    + rewrite getAnn_mapAnn.
+      rewrite <- lookup_set_singleton'; eauto.
+      rewrite lookup_set_minus_incl; eauto with cset.
+    + rewrite getAnn_mapAnn.
+      eapply lookup_set_spec; eauto.
+  - econstructor; eauto using live_op_rename_sound.
+    + rewrite getAnn_mapAnn. eapply lookup_set_incl; eauto.
+    + rewrite getAnn_mapAnn. eapply lookup_set_incl; eauto.
+  - econstructor; eauto with len.
+    + cases; eauto.
+      rewrite of_list_lookup_list; eauto.
+      etransitivity. eapply lookup_set_minus_incl; eauto.
+      eapply lookup_set_incl; eauto.
+    + intros; inv_get; eauto using live_op_rename_sound.
+  - econstructor; eauto using live_op_rename_sound.
+  - econstructor; eauto; try rewrite getAnn_mapAnn; eauto with cset len.
+    + repeat rewrite map_map; simpl. rewrite <- map_map. rewrite <- List.map_app.
+      setoid_rewrite getAnn_mapAnn.
+      setoid_rewrite <- map_map at 3. rewrite <- List.map_app.
+      eapply IHLS; eauto.
+    + intros; inv_get. simpl.
+      repeat rewrite map_map; simpl. rewrite <- map_map.
+      rewrite <- List.map_app.
+      setoid_rewrite getAnn_mapAnn.
+      setoid_rewrite <- map_map at 3. rewrite <- List.map_app. eauto.
+    + intros; inv_get; simpl.
+      exploit H2; eauto with cset; dcr.
+      split.
+      * rewrite of_list_lookup_list; eauto.
+        rewrite getAnn_mapAnn.
+        eapply lookup_set_incl; eauto.
+      * split.
+        -- exploit H10 as INJ; eauto. eapply locally_injective in INJ.
+           eapply injective_on_incl in INJ; eauto.
+           eapply (injective_nodup INJ); eauto.
+        -- cases; eauto.
+           rewrite getAnn_mapAnn.
+           rewrite of_list_lookup_list; eauto.
+           rewrite lookup_set_minus_incl; eauto with cset.
+Qed.

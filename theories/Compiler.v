@@ -9,7 +9,7 @@ Require Delocation DelocationAlgo DelocationCorrect DelocationValidator.
 Require Allocation AllocationAlgo AllocationAlgoCorrect.
 Require UCE DVE EAE Alpha.
 Require ReachabilityAnalysis ReachabilityAnalysisCorrect.
-Require Import DCVE.
+Require Import DCVE Slot InfinitePartition RegAssign.
 (* Require CopyPropagation ConstantPropagation ConstantPropagationAnalysis.*)
 
 Require Import String.
@@ -121,57 +121,13 @@ Definition slt (s:stmt) : Slot (occurVars s) :=
   let VD := (occurVars s) in
   @Slot_p VD (S (fold max VD 0)) eq_refl.
 
-
-Definition rassign (spilled:stmt * ann (set var)) :=
-  let fvl := to_list (getAnn (snd spilled)) in
-  let ϱ := CMap.update_map_with_list fvl fvl (@MapInterface.empty var _ _ _) in
-  sdo ϱ' <- AllocationAlgo.regAssign (S (fold max (occurVars (fst spilled)) 0))
-                                       (fst spilled) (snd spilled) ϱ;
-    let s_allocated := rename (CMap.findt ϱ' 0) (fst spilled) in
-    let s_lowered := ParallelMove.lower parallel_move
-                                       nil
-                                       s_allocated
-                                       (mapAnn (map (CMap.findt ϱ' 0)) (snd spilled)) in
-    s_lowered.
-
-Opaque to_list.
-
-Lemma rassign_correct (spilled:stmt * ann (set var)) s ra
-      (SC: rassign spilled = Success s) (PM:LabelsDefined.paramsMatch s nil)
-      (RA:RenamedApart.renamedApart (fst spilled) ra)
-      (LV:Liveness.live_sound Liveness.FunctionalAndImperative
-                              nil nil (fst spilled) (snd spilled))
-  : forall E, sim F.state I.state bot3 Sim (nil, E, (fst spilled)) (nil, E, s).
-Proof.
-  intros. unfold rassign in SC.
-  monadS_inv SC.
-  eapply sim_trans
-  with (σ2:=(nil, E, rename (CMap.findt x 0) (fst spilled)):F.state).
-  {
-    eapply bisim_sim.
-    exploit AllocationAlgoCorrect.regAssign_correct; eauto.
-    - admit.
-    - admit.
-    - admit.
-    - admit.
-    -
-    eapply Alpha.alphaSim_sim.
-    econstructor with (ra:=id); eauto using PIR2.
-    + eapply Allocation.renamedApart_locally_inj_alpha;
-        eauto using Liveness.live_sound_overapproximation_F.
-      admit.
-    +
-
-
-Qed.
-
-
 Definition fromILF (k:nat) (s:stmt) :=
   let s_eae := EAE.compile s in
-  let s_ra := rename_apart s_eae in
+  let s_ra := rename_apart (stable_fresh_P even_inf_subset) s_eae in
   let dcve := DCVE Liveness.Imperative s_ra in
   let fvl := to_list (getAnn (snd dcve)) in
   let spilled := spill k (slt (fst dcve)) (fst dcve) (snd dcve) in
+  spilled.
 
 Opaque LivenessValidators.live_sound_dec.
 Opaque DelocationValidator.trs_dec.

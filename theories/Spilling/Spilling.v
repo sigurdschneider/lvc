@@ -132,7 +132,7 @@ Proof.
       eapply TakeSet.take_set_incl.
       unfold to_list. rewrite TakeSet.take_set_incl.
       rewrite of_list_map; eauto. symmetry.
-      eapply disj_incl; [ eapply (Slot_Disj _ slt); eauto | |]; eauto with cset.
+      eapply disj_incl; [ eapply (@Slot_Disj _ slt); eauto | |]; eauto with cset.
     - eapply defined_on_update_list'; eauto with len.
       rewrite of_list_map; eauto. clear; hnf; intros. exfalso; cset_tac.
       rewrite lookup_list_map; eauto.
@@ -151,7 +151,7 @@ Proof.
       eauto.
     + eapply agree_on_update_list_dead; eauto.
       rewrite of_list_map. symmetry.
-      eapply disj_incl; [ eapply (Slot_Disj _ slt); eauto | subst R |].
+      eapply disj_incl; [ eapply (@Slot_Disj _ slt); eauto | subst R |].
       * unfold to_list.
         rewrite TakeSet.take_set_incl. eauto with cset.
       * rewrite of_list_drop_elements_incl, Incl.

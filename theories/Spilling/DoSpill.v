@@ -106,7 +106,7 @@ Lemma Slot_absurd VD x
       (In: x ∈ VD)
   : False.
 Proof.
-  eapply (Slot_Disj _ slot x); eauto. cset_tac.
+  eapply (@Slot_Disj _ slot x); eauto. cset_tac.
 Qed.
 
 Lemma NoDupA_slot_lift_params VD R M Z (slot:Slot VD)
@@ -122,14 +122,14 @@ Proof.
       * eapply InA_slot_lift_params in H1.
         destruct H1; dcr; eauto; subst.
         rewrite InA_in in H2. simpl in *.
-        eapply (Slot_Disj _ slot (slot x0)); eauto;
+        eapply (@Slot_Disj _ slot (slot x0)); eauto;
           cset_tac.
     + econstructor.
       * intro A.
         eapply InA_slot_lift_params in A.
         rewrite InA_in in A. simpl in *.
         destruct A; dcr.
-        -- eapply (Slot_Disj _ slot (slot x));
+        -- eapply (@Slot_Disj _ slot (slot x));
              eauto; cset_tac.
         -- eapply Slot_Inj in H3; eauto.
            cset_tac. cset_tac.
@@ -142,14 +142,14 @@ Proof.
       * intro A. eapply InA_slot_lift_params in A.
         destruct A; dcr; eauto; subst.
         rewrite InA_in in H2. simpl in *.
-        eapply (Slot_Disj _ slot (slot x0)); eauto;
+        eapply (@Slot_Disj _ slot (slot x0)); eauto;
           cset_tac.
       * eapply IHND; eauto. simpl in *. cset_tac.
     + econstructor; eauto.
       * intro A. eapply InA_slot_lift_params in A.
         destruct A; dcr; eauto; subst.
         -- rewrite InA_in in H0. simpl in *.
-           eapply (Slot_Disj _ slot (slot x)); eauto;
+           eapply (@Slot_Disj _ slot (slot x)); eauto;
              cset_tac.
         -- simpl in *.
            eapply Slot_Inj in H3; eauto.
