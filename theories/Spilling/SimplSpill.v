@@ -1,7 +1,7 @@
 Require Import List Map Env AllInRel Exp MoreList.
 Require Import IL Annotation AnnP InRel AutoIndTac Liveness LabelsDefined.
 Require Import SimI.
-Require Import SpillSound ReconstrLive.
+Require Import ExpVarsBounded SpillSound ReconstrLive.
 Require Import Take TakeSet.
 
 Set Implicit Arguments.
@@ -339,7 +339,7 @@ k > 0
 -> Λ === Λ'
 -> cardinal R' <= k
 -> getAnn alv ⊆ R ∪ M
--> fv_e_bounded k s
+-> exp_vars_bounded k s
 -> live_sound Imperative ZL Lv s alv
 -> PIR2 (fun RMf G => match RMf with (R_f,M_f)
                    => cardinal R_f <= k /\ R_f ∪ M_f ⊆ G end) Λ Lv

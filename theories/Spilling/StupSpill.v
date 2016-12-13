@@ -1,6 +1,6 @@
 Require Import List Map Env AllInRel Exp.
 Require Import IL Annotation InRel AutoIndTac Liveness LabelsDefined.
-Require Import SpillSound.
+Require Import ExpVarsBounded SpillSound.
 
 
 Fixpoint stupSpill
@@ -47,7 +47,7 @@ Lemma stupSpill_sat_spillSound
     k > 0
     -> R [=] R'
     -> getAnn alv ⊆ R ∪ M
-    -> fv_e_bounded k s
+    -> exp_vars_bounded k s
     -> live_sound Imperative ZL Lv s alv
     -> PIR2 (fun RMf G => fst RMf [=] ∅ /\ snd RMf [=] G) Λ Lv
     -> spill_sound k ZL Λ (R,M) s (stupSpill R' s alv)

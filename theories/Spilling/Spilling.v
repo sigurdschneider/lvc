@@ -1,7 +1,7 @@
 Require Import Util CSet MapDefined AllInRel.
 Require Import Var MapInjectivity IL Annotation AnnP Sim.
 Require Import SimplSpill SpillSound SpillSim DoSpill DoSpillRm Take Drop.
-Require Import ReconstrLive ReconstrLiveSound.
+Require Import ExpVarsBounded ReconstrLive ReconstrLiveSound.
 Require Import Liveness RenamedApart RenameApart_Liveness AddParams Slot.
 
 Set Implicit Arguments.
@@ -82,7 +82,7 @@ Lemma spill_correct k (kGT:k > 0) (s:stmt) lv ra E
       (AEF:AppExpFree.app_expfree s)
       (RA:RenamedApart.renamedApart s ra)
       (Def:defined_on (getAnn lv) E)
-      (Bnd:fv_e_bounded k s)
+      (Bnd:exp_vars_bounded k s)
       (Incl:getAnn lv ⊆ fst (getAnn ra))
       (NUC:LabelsDefined.noUnreachableCode LabelsDefined.isCalled s)
       (slt:Slot (fst (getAnn ra) ∪ snd (getAnn ra)))

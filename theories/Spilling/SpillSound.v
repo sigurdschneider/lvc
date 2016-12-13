@@ -1,5 +1,6 @@
 Require Import List Map Env AllInRel Exp.
 Require Import IL Annotation AnnP InRel AutoIndTac Liveness LabelsDefined.
+Require Import ExpVarsBounded.
 
 
 Notation "'spilling'"
@@ -107,33 +108,6 @@ Inductive spill_sound (k:nat) :
       -> spill_sound k ZL Λ (R,M) (stmtFun F t)
                     (annF (Sp,L,rms) sl_F sl_t)
 .
-
-Inductive fv_e_bounded : nat -> stmt -> Prop :=
-
-| BoundLet k x e s
-  : cardinal (Exp.freeVars e) <= k
-    -> fv_e_bounded k s
-    -> fv_e_bounded k (stmtLet x e s)
-
-| BoundReturn k e
-  : cardinal (Op.freeVars e) <= k
-    -> fv_e_bounded k (stmtReturn e)
-
-| BoundIf k e s t
-  : cardinal (Op.freeVars e) <= k
-    -> fv_e_bounded k s
-    -> fv_e_bounded k t
-    -> fv_e_bounded k (stmtIf e s t)
-
-| BoundApp k f Y
-  : fv_e_bounded k (stmtApp f Y)
-
-| BoundFun k F t
-  : (forall n Zs, get F n Zs -> fv_e_bounded k (snd Zs))
-    -> fv_e_bounded k t
-    -> fv_e_bounded k (stmtFun F t)
-.
-
 
 
 
