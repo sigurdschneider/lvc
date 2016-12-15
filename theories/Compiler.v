@@ -80,6 +80,7 @@ Arguments sim S {H} S' {H0} r t _ _.
 
 Require Import AddParams Spilling.
 
+(*
 Definition toILF (s:IL.stmt) : IL.stmt :=
   let (s_dcve, lv) := DCVE Liveness.Imperative s in
   addParams s_dcve lv.
@@ -96,6 +97,7 @@ Proof with eauto using DCVE_live, DCVE_noUC.
   eapply addParams_correct...
   eauto using defined_on_incl, DCVE_occurVars.
 Qed.
+ *)
 
 (*
 Definition optimize (s':stmt) : status stmt :=
@@ -117,18 +119,60 @@ Definition optimize (s':stmt) : status stmt :=
 
 Print all.
 
-Definition slt (s:stmt) : Slot (occurVars s) :=
-  let VD := (occurVars s) in
-  @Slot_p VD (S (fold max VD 0)) eq_refl.
+Require Import RenameApart_VarP.
+
+Lemma var_P_occurVars (P:var -> Prop) s
+  : var_P P s
+    -> For_all P (occurVars s).
+Proof.
+  induction 1; unfold For_all in *; intros; simpl in *; cset_tac'.
+  eapply list_union_get in H4. destruct H4; dcr; inv_get; cset_tac.
+Qed.
+
+Definition to_even (x:nat) :=
+  if even x then x else S x.
+
+Lemma to_even_even x
+  : even (to_even x).
+Proof.
+  unfold to_even. cases; eauto.
+  rewrite even_not_even. unfold negb. simpl. cases; eauto.
+Qed.
+
+Lemma rename_to_subset_even (s:stmt)
+  : For_all (inf_subset_P even_inf_subset)
+            (occurVars (co_ra (renameApart' (stable_fresh_P even_inf_subset) to_even (freeVars s) s))).
+Proof.
+  eapply var_P_occurVars.
+  eapply renameApart_var_P.
+  - intros. eapply least_fresh_P_full_spec.
+  - intros. eapply to_even_even.
+Qed.
+
+Definition slt (s:stmt)
+  : Slot (occurVars (co_ra (renameApart' (stable_fresh_P even_inf_subset) to_even (freeVars s) s))).
+  refine (@Build_Slot _ S _ _).
+  - hnf; intros.
+    exploit (rename_to_subset_even _ H); eauto.
+    eapply map_iff in H0; dcr; eauto. hnf in H4. subst.
+    exploit (rename_to_subset_even _ H3); eauto.
+    Opaque even. simpl in *.
+    rewrite even_not_even in H0. cases in H1; simpl in *; eauto.
+  - hnf; intros. cset_tac.
+Qed.
+
+Require Import RegAssign.
 
 Definition fromILF (s:stmt) :=
   let s_eae := EAE.compile s in
-  let s_ra := rename_apart (stable_fresh_P even_inf_subset) s_eae in
-  let dcve := DCVE Liveness.Imperative s_ra in
-  let fvl := to_list (getAnn (snd dcve)) in
-  let k := exp_vars_bound (fst dcve) in
-  let spilled := spill k (slt (fst dcve)) (fst dcve) (snd dcve) in
-  spilled.
+  let s_ra := co_ra (renameApart' (stable_fresh_P even_inf_subset) to_even (freeVars s) s) in
+  let ra := renamedApartAnn s_ra (map to_even (freeVars s_ra)) in
+  let dcve := DCVE Liveness.Imperative s_ra ra in
+  let fvl := to_list (getAnn (co_lv dcve)) in
+  let k := exp_vars_bound (co_s dcve) in
+  let spilled := spill k (slt (co_s dcve)) (co_s dcve) (co_lv dcve) in
+  let ras := rassign parallel_move spilled in
+  ras.
 
 Opaque LivenessValidators.live_sound_dec.
 Opaque DelocationValidator.trs_dec.
