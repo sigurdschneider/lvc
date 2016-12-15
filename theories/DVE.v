@@ -712,3 +712,85 @@ Proof.
     set (X:=compile (pair ⊜ (getAnn ⊝ als ++ Lv) (fst ⊝ F ++ ZL)) (snd x0) x1) in *.
     revert H7 H8; clear. cset_tac.
 Qed.
+
+Lemma DVE_paramsMatch i ZL LV s lv
+  : true_live_sound i ZL LV s lv
+    -> paramsMatch s (@length _ ⊝ ZL)
+    -> paramsMatch (compile (zip pair LV ZL) s lv) (@length _ ⊝ ((fun Z lv => flt lv Z Z) ⊜ ZL LV)).
+Proof.
+  intros TLS PM.
+  general induction PM; invt true_live_sound; simpl in * |- *; repeat cases;
+    eauto 10 using paramsMatch.
+  - erewrite !get_nth; eauto using zip_get.
+    econstructor; eauto with get. simpl.
+    eapply map_get_eq; eauto using zip_get.
+    erewrite flt_length; eauto.
+  - econstructor; intros; inv_get; simpl.
+    + rewrite <- !zip_app; eauto with len.
+      rewrite <- !List.map_app.
+      exploit H0; eauto.
+      * rewrite <- !List.map_app; eauto.
+      * eqassumption.
+        rewrite map_zip; simpl.
+        rewrite zip_app. f_equal. f_equal.
+        rewrite zip_map_l, zip_map_r. reflexivity.
+        eauto with len.
+    + rewrite <- !zip_app; eauto.
+      exploit IHPM; eauto.
+      * rewrite <- !List.map_app; eauto.
+      * eqassumption.
+        rewrite <- List.map_app.
+        rewrite map_zip; simpl.
+        rewrite zip_app. f_equal. f_equal.
+        rewrite zip_map_l, zip_map_r. reflexivity.
+        eauto with len.
+      *  eauto with len.
+Qed.
+
+Lemma DCVE_live_incl i (FNC:isFunctional i) ZL LV s ra (RA:renamedApart s ra) lv (G D:set var)
+      (TLS:true_live_sound i ZL LV s lv)
+      (AN:ann_R (fun (x : ⦃nat⦄) (y : ⦃nat⦄ * ⦃nat⦄) => x ⊆ fst y) lv ra)
+      (Incl1:getAnn lv ⊆ D)
+      (Incl3:D ⊆ fst (getAnn ra))
+      (Incl2:G ⊆ D)
+  : ann_R (fun (x : ⦃nat⦄) (y : ⦃nat⦄ * ⦃nat⦄) => x ⊆ fst y)
+          (compile_live s lv G)
+          (compile_renamedApart s lv ra D).
+Proof.
+  general induction AN; invt true_live_sound; invt renamedApart; simpl in *; set_simpl;
+    try econstructor; eauto with cset len.
+  - cases; simpl in *; try econstructor; eauto with cset.
+    + eapply IHAN; eauto. cset_tac. pe_rewrite. cset_tac.
+      cset_tac.
+    + eapply IHAN; eauto. cset_tac. pe_rewrite. cset_tac.
+  - repeat cases; simpl in *; try econstructor; eauto with cset.
+    + eapply IHAN1; eauto. rewrite H9; eauto. pe_rewrite. eauto.
+    + eapply IHAN2; eauto. rewrite H10; eauto. pe_rewrite; eauto.
+    + eapply IHAN1; eauto with cset. rewrite H9; eauto with cset.
+      pe_rewrite; eauto.
+    + eapply IHAN2; eauto with cset. rewrite H10; eauto.
+      pe_rewrite; eauto.
+  - intros; inv_get.
+    eapply ann_R_setTopAnn_left; eauto; simpl.
+    + rewrite fst_getAnn_renamedApart';eauto.
+      rewrite compile_live_incl_empty; eauto. rewrite of_list_flt.
+      exploit H12; eauto.
+      cases in H3. rewrite Incl1 in H3.
+      rewrite <- H3. clear; cset_tac.
+    + exploit H1; eauto.
+      eapply ann_R_get in H3.
+      edestruct H15; dcr; eauto.
+      rewrite H9 in H3.
+      exploit H14; eauto.
+      exploit H12; eauto. cases in H21.
+      rewrite Incl1 in H21.
+      eapply H2; eauto with cset.
+      * rewrite of_list_flt.
+        rewrite <- H21.
+        clear; cset_tac.
+      * rewrite of_list_flt.
+        rewrite H9. rewrite <- Incl3.
+        clear; cset_tac.
+  - eapply IHAN; eauto with cset.
+    pe_rewrite; eauto.
+Qed.
