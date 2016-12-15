@@ -134,7 +134,7 @@ Proof.
   - hnf; intros n s A.
     inv_get; subst; simpl in *.
     edestruct H0; eauto; dcr. exploit H1; eauto.
-    eapply ann_R_get in H9.
+    apply ann_R_get in H9.
     destruct (getAnn x0); simpl in *; set_simpl.
     repeat get_functional.
     rewrite H9, H2.
@@ -202,7 +202,9 @@ Proof.
       unfold defVars. eapply incl_right.
 Qed.
 
-Lemma renamedApart_globals_live_F ZL Lv F ans als D Dt f lv' Z' l'
+Lemma renamedApart_globals_live_F (isCalled : stmt -> lab -> Prop)
+      (live_sound : overapproximation -> 〔params〕 -> 〔⦃nat⦄〕 -> stmt -> ann ⦃nat⦄ -> Prop)
+      ZL Lv F ans als D Dt f lv' Z' l'
       (LEN1 : ❬F❭ = ❬als❭)
       (LEN2 : ❬F❭ = ❬ans❭)
       (IH : forall k Zs, get F k Zs ->
@@ -312,7 +314,7 @@ Proof.
     + pe_rewrite. eapply disjoint_funF1; eauto.
     + dcr. simpl in *; inv_get.
       setoid_rewrite <- H13; setoid_rewrite <- H18.
-      exploit renamedApart_globals_live_F; eauto; eauto.
+      exploit (@renamedApart_globals_live_F isCalled); eauto; eauto.
       * intros. eapply (IH (snd Zs)); eauto.
       * dcr. destruct f; simpl in *. inv_get.
         eauto.
@@ -348,7 +350,7 @@ Proof.
   dcr.
   setoid_rewrite <- H3.
   simpl in *.
-  exploit renamedApart_globals_live_F; eauto using get_app_right.
+  exploit (@renamedApart_globals_live_F isCalled); eauto using get_app_right.
   intros. eapply renamedApart_globals_live; eauto.
 Qed.
 
@@ -380,7 +382,7 @@ Proof.
       edestruct (@renamedApart_globals_live);
           eauto using get_range; simpl in *; dcr.
       * eapply disjoint_funF1; eauto with pe cset.
-      * edestruct (@renamedApart_globals_live_F);
+      * edestruct (@renamedApart_globals_live_F isCalled);
           eauto using get_range, renamedApart_globals_live; simpl in *; dcr.
         eapply renamedApart_disj in RA; eauto.
         rewrite <- H3, <- H26.
@@ -389,6 +391,113 @@ Proof.
         split; eauto.
         eapply get_in_range_app in H27; eauto using get_range.
         inv_get. eauto.
+Qed.
+
+Require Import TrueLiveness.
+
+Lemma renamedApart_globals_true_live s ZL Lv alv f ang
+  : true_live_sound Imperative ZL Lv s alv
+    -> renamedApart s ang
+    -> trueIsCalled s f
+    -> ann_R Subset1 alv ang
+    -> disjoint (Some ⊝ Lv \\ ZL) (snd (getAnn ang))
+    -> exists lv Z, get ZL (counted f) Z
+              /\ get Lv (counted f) lv
+              /\ (lv \ of_list Z) ⊆ getAnn alv.
+Proof.
+  revert ZL Lv alv f ang.
+  sind s; destruct s; simpl; intros; invt true_live_sound;
+    invt renamedApart; invt (@ann_R); invt trueIsCalled; simpl in * |- *; set_simpl.
+  - edestruct (IH s); dcr; eauto using disjoint_let.
+    + do 2 eexists; split; [| split]; eauto.
+      exploit H3; eauto.
+      rewrite <- H12.
+      eauto with cset.
+  - edestruct (IH s1); dcr; eauto using disjoint_if1.
+    do 2 eexists; split; [| split]; eauto. rewrite <- H13; eauto.
+  - edestruct (IH s2); dcr; eauto using disjoint_if2 with cset.
+    do 2 eexists; split; [| split]; eauto. rewrite <- H14; eauto.
+  - eauto.
+  - clear H H1. eapply renamedApart_disj in H0. simpl in *.
+    exploit (IH s); eauto.
+    + pe_rewrite. eapply disjoint_funF1; eauto.
+    + dcr. simpl in *; inv_get.
+      setoid_rewrite <- H13; setoid_rewrite <- H18.
+      exploit (@renamedApart_globals_live_F trueIsCalled);
+        try eapply H8; eauto.
+      * intros. eapply (IH (snd Zs)); eauto.
+      * dcr. destruct f; simpl in *. inv_get.
+        eauto.
+Qed.
+
+Lemma renamedApart_globals_true_live_From s F als ans D Dt ZL Lv alv f ang
+      (ICF:isCalledFrom trueIsCalled F s f)
+      (LS:true_live_sound Imperative (fst ⊝ F ++ ZL) (getAnn ⊝ als ++ Lv) s alv)
+      (RA:renamedApart s ang)
+      (AnnR:ann_R Subset1 alv ang)
+      (Incl: snd (getAnn ang) ⊆ list_union (defVars ⊜ F ans) ∪ Dt)
+      (LEN1 : ❬F❭ = ❬als❭)
+      (LEN2 : ❬F❭ = ❬ans❭)
+      (LSF: forall (n : nat) (Zs : params * stmt) (a : ann ⦃var⦄),
+          get F n Zs ->
+          get als n a ->
+          true_live_sound Imperative (fst ⊝ F ++ ZL) (getAnn ⊝ als ++ Lv) (snd Zs) a)
+      (RAF:forall (n : nat) (Zs : params * stmt) (a : ann (⦃var⦄ * ⦃var⦄)),
+          get F n Zs -> get ans n a -> renamedApart (snd Zs) a)
+      (IW:indexwise_R (funConstr D Dt) F ans)
+      (PWD:PairwiseDisjoint.pairwise_ne disj (defVars ⊜ F ans))
+      (Disj : disj D (list_union (defVars ⊜ F ans) ∪ Dt))
+      (DisjZL : disjoint (Some ⊝ Lv \\ ZL) (list_union (defVars ⊜ F ans) ∪ Dt))
+      (Sub: forall (n : nat) (a : ann ⦃var⦄) (b : ann (⦃var⦄ * ⦃var⦄)),
+          get als n a -> get ans n b -> ann_R Subset1 a b)
+  : exists (lv : ⦃var⦄) (Z : params),
+    get (fst ⊝ F ++ ZL) (labN f) Z /\
+    get (getAnn ⊝ als ++ Lv) (labN f) lv
+    /\ (lv \ of_list Z) ⊆ getAnn alv.
+Proof.
+  destruct ICF as [? [IC CC]]; dcr. set_simpl.
+  exploit renamedApart_globals_true_live; eauto using disjoint_funF1.
+  dcr.
+  setoid_rewrite <- H3.
+  simpl in *.
+  exploit renamedApart_globals_live_F; eauto using get_app_right.
+  intros. eapply renamedApart_globals_true_live; eauto.
+Qed.
+
+Lemma renamedApart_true_live_imperative_is_functional s ang ZL Lv alv
+  : renamedApart s ang
+    -> noUnreachableCode trueIsCalled s
+    -> true_live_sound Imperative ZL Lv s alv
+    -> ann_R Subset1 alv ang
+    -> disjoint (Some ⊝ Lv \\ ZL) (snd (getAnn ang))
+    -> true_live_sound FunctionalAndImperative ZL Lv s alv.
+Proof.
+  intros RA NUC LS AR DISJ.
+  general induction LS; invt noUnreachableCode; invt renamedApart; invt (@ann_R);
+    set_simpl;
+    eauto 50 using true_live_sound, disjoint_let, disjoint_if1, disjoint_if2.
+  - econstructor; simpl; eauto.
+    + eapply IHLS; eauto using disjoint_funF1.
+      eapply disjoint_funF1; eauto.
+      * simpl. pe_rewrite. eapply incl_right.
+      * simpl. eapply renamedApart_disj in RA. eauto.
+    + intros. inv_get.
+      eapply H1; eauto.
+      eapply disjoint_funF1; eauto. simpl.
+      eapply lv_incl; eauto. simpl.
+      eapply renamedApart_disj in RA. eauto.
+    + intros. inv_get.
+      edestruct H8; eauto using get_range; dcr.
+      simpl in *.
+      edestruct (@renamedApart_globals_true_live);
+          eauto using get_range; simpl in *; dcr.
+      * eapply disjoint_funF1; eauto with pe cset.
+      * edestruct (@renamedApart_globals_live_F trueIsCalled true_live_sound);
+          eauto using get_range, renamedApart_globals_true_live; simpl in *; dcr.
+        -- eapply renamedApart_disj in RA; eauto.
+        -- rewrite <- H3, <- H26.
+           eapply get_in_range_app in H27; eauto using get_range.
+           inv_get. eauto.
 Qed.
 
 Fixpoint mapAnn2 X X' Y (f:X -> X' -> Y) (a:ann X) (b:ann X') : ann Y :=
@@ -407,13 +516,6 @@ Lemma getAnn_mapAnn2 A A' A'' (a:ann A) (b:ann A') (f:A->A'->A'') s
   -> getAnn (mapAnn2 f a b) = f (getAnn a) (getAnn b).
 Proof.
   intros ANa ANb. general induction ANa; inv ANb; simpl; eauto.
-Qed.
-
-Lemma renamedApart_annotation s ang
-: renamedApart s ang
-  -> annotation s ang.
-Proof.
-  intros. general induction H; eauto 20 using @annotation.
 Qed.
 
 Lemma live_op_sound_meet e D lv

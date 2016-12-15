@@ -654,3 +654,61 @@ Proof.
       inv_get. unfold defVars; simpl.
       simpl. reflexivity.
 Qed.
+
+Require Import RenamedApart_Liveness.
+
+Lemma DVE_freeVars_live ZL LV s lv
+      (LS:true_live_sound Functional ZL LV s lv)
+  : freeVars (compile (zip pair LV ZL) s lv) ⊆ getAnn lv.
+Proof.
+  general induction LS; simpl; repeat cases; simpl;
+    eauto using Op.freeVars_live; set_simpl.
+  - exploit Exp.freeVars_live; eauto with cset.
+  - cset_tac.
+  - rewrite H0; eauto.
+  - rewrite H2; eauto.
+  - exploit Op.freeVars_live; eauto with cset.
+    rewrite H0, H2; eauto with cset.
+  - erewrite get_nth; eauto using zip_get; simpl.
+    eapply list_union_incl; intros; inv_get; eauto with cset.
+    edestruct get_flt; eauto; dcr.
+    exploit argsLive_live_exp_sound; eauto.
+    exploit Op.freeVars_live; eauto with cset.
+  - rewrite <- zip_app; eauto with len.
+    rewrite IHLS; eauto.
+    eapply union_incl_split; eauto.
+    eapply list_union_incl; intros; inv_get; [|eauto with cset]; simpl.
+    rewrite of_list_flt. rewrite H1; eauto.
+    exploit H2 as INCL; dcr; eauto; simpl in *.
+    rewrite <- INCL. clear; cset_tac.
+Qed.
+
+Lemma DVE_freeVars ZL LV s lv
+      (LS:true_live_sound Functional ZL LV s lv)
+  : freeVars (compile (zip pair LV ZL) s lv) ⊆ freeVars s.
+Proof.
+  general induction LS; simpl; repeat cases; simpl; eauto.
+  - rewrite IHLS; eauto.
+  - rewrite not_or_dist in NOTCOND; dcr.
+    assert (x ∉ freeVars (compile (pair ⊜ Lv ZL) b al)). {
+      exploit DVE_freeVars_live; eauto.
+    }
+    cset_tac.
+  - rewrite H0; eauto with cset.
+  - rewrite H2; eauto with cset.
+  - rewrite H0, H2; eauto with cset.
+  - erewrite get_nth; eauto using zip_get; simpl.
+    eapply list_union_incl; intros; inv_get; eauto with cset.
+    eapply get_flt in H4; eauto; dcr.
+    eapply incl_list_union; eauto using get.
+  - rewrite <- zip_app; eauto with len.
+    rewrite IHLS; eauto. eapply incl_union_lr; eauto.
+    eapply list_union_incl; intros; inv_get;[|eauto with cset]; simpl.
+    eapply incl_list_union; eauto using get.
+    rewrite of_list_flt.
+    exploit H0; eauto. simpl in *.
+    exploit DVE_freeVars_live; eauto.
+    exploit H1; eauto.
+    set (X:=compile (pair ⊜ (getAnn ⊝ als ++ Lv) (fst ⊝ F ++ ZL)) (snd x0) x1) in *.
+    revert H7 H8; clear. cset_tac.
+Qed.

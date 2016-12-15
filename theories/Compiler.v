@@ -9,7 +9,7 @@ Require Delocation DelocationAlgo DelocationCorrect DelocationValidator.
 Require Allocation AllocationAlgo AllocationAlgoCorrect.
 Require UCE DVE EAE Alpha.
 Require ReachabilityAnalysis ReachabilityAnalysisCorrect.
-Require Import DCVE Slot InfinitePartition RegAssign.
+Require Import DCVE Slot InfinitePartition RegAssign ExpVarsBounded.
 (* Require CopyPropagation ConstantPropagation ConstantPropagationAnalysis.*)
 
 Require Import String.
@@ -121,11 +121,12 @@ Definition slt (s:stmt) : Slot (occurVars s) :=
   let VD := (occurVars s) in
   @Slot_p VD (S (fold max VD 0)) eq_refl.
 
-Definition fromILF (k:nat) (s:stmt) :=
+Definition fromILF (s:stmt) :=
   let s_eae := EAE.compile s in
   let s_ra := rename_apart (stable_fresh_P even_inf_subset) s_eae in
   let dcve := DCVE Liveness.Imperative s_ra in
   let fvl := to_list (getAnn (snd dcve)) in
+  let k := exp_vars_bound (fst dcve) in
   let spilled := spill k (slt (fst dcve)) (fst dcve) (snd dcve) in
   spilled.
 

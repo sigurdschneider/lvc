@@ -410,3 +410,10 @@ Proof.
   - rewrite union_comm; eauto.
   - eauto with cset.
 Qed.
+
+Lemma renamedApart_annotation s ang
+: renamedApart s ang
+  -> annotation s ang.
+Proof.
+  intros. general induction H; eauto 20 using @annotation.
+Qed.
