@@ -7,9 +7,9 @@ Require LivenessAnalysis LivenessAnalysisCorrect.
 
 Arguments sim S {H} S' {H0} r t _ _.
 
-Notation "'co_s' x" := (fst (fst x)) (at level 50).
-Notation "'co_lv' x" := (snd (fst x)) (at level 50).
-Notation "'co_ra' x" := (snd x) (at level 50).
+Notation "'co_s' x" := (fst (fst x)) (at level 10).
+Notation "'co_lv' x" := (snd (fst x)) (at level 10).
+Notation "'co_ra' x" := (snd x) (at level 10, only parsing).
 
 Definition DCVE i (s:IL.stmt) (ra:ann (⦃var⦄ * ⦃var⦄)) : stmt * ann ⦃var⦄ * ann (⦃var⦄ * ⦃var⦄) :=
   let uc := reachabilityAnalysis s in
@@ -62,8 +62,7 @@ Qed.
 
 Lemma DCVE_correct_I (ili:IL.stmt) (E:onv val) ra
   (PM:LabelsDefined.paramsMatch ili nil)
-  : defined_on (IL.occurVars ili) E
-    -> sim I.state I.state bot3 Sim (nil, E, ili) (nil, E, co_s (DCVE Liveness.Imperative ili ra)).
+  : sim I.state I.state bot3 Sim (nil, E, ili) (nil, E, co_s (DCVE Liveness.Imperative ili ra)).
 Proof.
   intros. subst. unfold DCVE.
   simpl in *.
@@ -84,11 +83,12 @@ Proof.
       (UCE.compile nil ili (reachabilityAnalysis ili)))). {
     eapply @LivenessAnalysisCorrect.correct; eauto.
   }
-  eapply sim_trans with (S2:=I.state).
-  eapply bisim_sim.
-  eapply UCE.I.sim_UCE.
-  eapply reachability_SC_S, correct; eauto.
-  eapply reachabilityAnalysis_getAnn.
+  eapply sim_trans with (S2:=I.state). {
+    eapply bisim_sim.
+    eapply UCE.I.sim_UCE.
+    eapply reachability_SC_S, correct; eauto.
+    eapply reachabilityAnalysis_getAnn.
+  }
   eapply DVE.I.sim_DVE; [ reflexivity | eapply LivenessAnalysisCorrect.correct; eauto ].
 Qed.
 
@@ -171,3 +171,23 @@ Proof.
              ** eapply reachabilityAnalysis_getAnn.
         -- isabsurd.
 Qed.
+
+Lemma DCVE_live_incl i s ra (RA:renamedApart s ra)
+  : ann_R (fun (x : ⦃nat⦄) (y : ⦃nat⦄ * ⦃nat⦄) => x ⊆ fst y)
+          (co_lv (DCVE i s ra)) (co_ra (DCVE i s ra)).
+Proof.
+  unfold DCVE; simpl.
+  (*eapply LivenessAnalysisCorrect.livenessAnalysis_renamedApart_incl.
+           ++ eapply UCE.UCE_renamedApart; eauto.
+             ** eapply reachability_SC_S, correct; eauto.
+           ++ eapply (@paramsMatch_labelsDefined _ nil).
+             eapply (@UCE.UCE_paramsMatch nil nil); eauto.
+             ** eapply reachability_SC_S, correct; eauto.
+             ** eapply reachabilityAnalysis_getAnn.*)
+Admitted.
+
+Lemma DCVE_paramsMatch i s ra (RA:renamedApart s ra) L (PM:LabelsDefined.paramsMatch s L)
+  : LabelsDefined.paramsMatch (co_s (DCVE i s ra)) L.
+Proof.
+  unfold DCVE; simpl.
+Admitted.

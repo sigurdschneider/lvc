@@ -129,30 +129,64 @@ Proof.
   eapply list_union_get in H4. destruct H4; dcr; inv_get; cset_tac.
 Qed.
 
-Definition to_even (x:nat) :=
-  if even x then x else S x.
+Require Import StableFresh.
 
-Lemma to_even_even x
-  : even (to_even x).
+Definition rename_apart_to_part1 (s:stmt) :=
+  let xl := (fresh_list_stable (stable_fresh_P even_inf_subset)
+                              ∅
+                              (to_list (freeVars s))) in
+  let s' := (renameApart' (stable_fresh_P even_inf_subset)
+                       (id [to_list (freeVars s) <-- xl])
+                       (of_list xl)
+                       s) in
+  (co_ra s', renamedApartAnn (co_ra s') (of_list xl)).
+
+Opaque to_list.
+
+Lemma rename_apart_to_part1_renamedApart s
+  : RenamedApart.renamedApart (fst (rename_apart_to_part1 s))
+                              (snd (rename_apart_to_part1 s)).
 Proof.
-  unfold to_even. cases; eauto.
-  rewrite even_not_even. unfold negb. simpl. cases; eauto.
+  unfold rename_apart_to_part1. simpl.
+  eapply renameApart'_renamedApart.
+  - rewrite update_with_list_lookup_set_incl; eauto with len.
+    rewrite of_list_3; eauto.
+  - reflexivity.
 Qed.
+
+Lemma rename_apart_to_part1_occurVars s
+  : fst (getAnn (snd (rename_apart_to_part1 s))) ∪ snd (getAnn (snd (rename_apart_to_part1 s)))
+        [=] occurVars (fst (rename_apart_to_part1 s)).
+Proof.
+  unfold rename_apart_to_part1; simpl.
+  rewrite occurVars_freeVars_definedVars.
+  rewrite snd_renamedApartAnn.
+  eapply eq_union_lr; eauto.
+  rewrite fst_renamedApartAnn.
+  rewrite freeVars_renamedApart'. admit.
+  admit.
+Admitted.
 
 Lemma rename_to_subset_even (s:stmt)
   : For_all (inf_subset_P even_inf_subset)
-            (occurVars (co_ra (renameApart' (stable_fresh_P even_inf_subset) to_even (freeVars s) s))).
+            (occurVars (fst (rename_apart_to_part1 s))).
 Proof.
   eapply var_P_occurVars.
   eapply renameApart_var_P.
   - intros. eapply least_fresh_P_full_spec.
-  - intros. eapply to_even_even.
+  - intros.
+    edestruct update_with_list_lookup_in_list; dcr.
+    Focus 3. rewrite H3. hnf in H5. subst.
+    exploit fresh_list_stable_get; eauto; dcr; subst.
+    eapply least_fresh_P_full_spec.
+    eauto with len. rewrite of_list_3; eauto.
 Qed.
 
-Definition slt (s:stmt)
-  : Slot (occurVars (co_ra (renameApart' (stable_fresh_P even_inf_subset) to_even (freeVars s) s))).
+Definition slt (s:stmt) (ra:ann (set var * set var))
+           (VP:var_P even s)
+  : Slot (fst (getAnn (snd (rename_apart_to_part1 s))) ∪ snd (getAnn (snd (rename_apart_to_part1 s)))).
   refine (@Build_Slot _ S _ _).
-  - hnf; intros.
+  - hnf; intros. rewrite rename_apart_to_part1_occurVars in *.
     exploit (rename_to_subset_even _ H); eauto.
     eapply map_iff in H0; dcr; eauto. hnf in H4. subst.
     exploit (rename_to_subset_even _ H3); eauto.
@@ -165,12 +199,11 @@ Require Import RegAssign.
 
 Definition fromILF (s:stmt) :=
   let s_eae := EAE.compile s in
-  let s_ra := co_ra (renameApart' (stable_fresh_P even_inf_subset) to_even (freeVars s) s) in
-  let ra := renamedApartAnn s_ra (map to_even (freeVars s_ra)) in
-  let dcve := DCVE Liveness.Imperative s_ra ra in
+  let sra := rename_apart_to_part1 s_eae in
+  let dcve := DCVE Liveness.Imperative (fst sra) (snd sra) in
   let fvl := to_list (getAnn (co_lv dcve)) in
   let k := exp_vars_bound (co_s dcve) in
-  let spilled := spill k (slt (co_s dcve)) (co_s dcve) (co_lv dcve) in
+  let spilled := spill k (slt (co_s dcve) (co_ra dcve)) (co_s dcve) (co_lv dcve) in
   let ras := rassign parallel_move spilled in
   ras.
 
@@ -180,47 +213,83 @@ Opaque DelocationValidator.trs_dec.
 Require Import MoreTac Alpha RenameApart_Alpha RenameApart_Liveness
         RenamedApart_Liveness Coherence Invariance.
 
-Lemma fromILF_correct k (s s':stmt) E (PM:LabelsDefined.paramsMatch s nil)
-  : sim F.state F.state bot3 Sim (nil, E, s) (nil, E, fst (fromILF k s)).
+Lemma fromILF_correct (s s':stmt) E (PM:LabelsDefined.paramsMatch s nil)
+      (OK:fromILF s = Success s')
+  : sim F.state F.state bot3 Sim (nil, E, s)
+        (nil, id[fresh_list_stable (stable_fresh_P even_inf_subset) ∅ (to_list (freeVars (EAE.compile s))) <-- to_list (freeVars (EAE.compile s))] ∘ E, s').
 Proof.
-  let_unfold fromILF.
+  set (E':=id [fresh_list_stable (stable_fresh_P even_inf_subset) ∅ (to_list (freeVars (EAE.compile s))) <-- to_list (freeVars (EAE.compile s))]∘ E).
+  let_unfold' fromILF OK. subst ras.
   eapply sim_trans with (S2:=F.state). {
     eapply EAE.sim_EAE.
   }
   refold.
   assert (AEF:AppExpFree.app_expfree s_eae) by eapply EAE.EAE_app_expfree.
 
-  eapply sim_trans with (S2:=F.state). {
+  eapply sim_trans with (σ2:=(nil, E', fst sra):F.state). {
     eapply bisim_sim. eapply bisim_sym.
     eapply Alpha.alphaSim_sim. econstructor; eauto using PIR2.
-    - eapply rename_apart_alpha.
-    - hnf; intros; unfold id in *; subst; reflexivity.
+    - eapply rename_apart_alpha'; eauto.
+      rewrite update_with_list_lookup_set_incl; eauto with len.
+      rewrite of_list_3; eauto.
+      instantiate (1:=id[fresh_list_stable (stable_fresh_P even_inf_subset)
+                                           ∅ (to_list (freeVars s_eae)) <--to_list (freeVars s_eae)]).
+      hnf; intros.
+      rewrite <- of_list_3 in H.
+      edestruct (of_list_get_first _ H) as [n]; eauto; dcr. hnf in H1. subst x0.
+      eapply update_with_list_lookup_in_list_first in H4; dcr.
+      rewrite H3.
+      edestruct update_with_list_lookup_in_list_first; dcr.
+      Focus 4. rewrite H5. hnf. instantiate (1:=n) in H4. get_functional.
+      symmetry; eauto. eauto with len. eauto.
+      intros.
+      eapply NoDupA_get_neq'; [ eauto | eauto | | | eapply H4 | eapply H1 ].
+      eapply fresh_list_stable_nodup. eauto.
+      eauto with len.
+      eauto.
+    - hnf; intros.
+      decide (y ∈ freeVars s_eae).
+      + unfold E'.
+        unfold comp.
+        rewrite H. eauto.
+      + rewrite lookup_set_update_not_in_Z in H0; eauto.
+        subst; reflexivity.
+        rewrite of_list_3; eauto.
   }
-  refold.
-  exploit (rename_apart_renamedApart s_eae) as RA; eauto.
-  assert (LabelsDefined.paramsMatch s_ra nil). {
+  assert (RA:RenamedApart.renamedApart (fst sra) (snd sra)). {
+    eapply rename_apart_to_part1_renamedApart.
+  }
+  assert (LabelsDefined.paramsMatch (fst sra) nil). {
     admit.
   }
-
-  eapply sim_trans with (S2:=I.state). {
+  eapply sim_trans with (σ2:=(nil, E', fst sra):I.state). {
      eapply bisim_sim.
      eapply Invariance.srdSim_sim; simpl; eauto using PIR2.
      - eapply renamedApart_coherent with (DL:=nil); simpl; eauto.
      - hnf; intros; isabsurd.
      - econstructor.
-     - reflexivity.
      - eapply renamedApart_live; simpl; eauto.
      - econstructor.
   }
-
-  eapply sim_trans with (S2:=I.state). {
-    eapply DCVE_correct_I; eauto. admit.
+  eapply sim_trans with (σ2:=(nil, E', co_s dcve):I.state). {
+    eapply DCVE_correct_I; eauto.
   }
-  refold.
-
   eapply sim_trans with (S2:=F.state). {
-    eapply (@spill_correct k); eauto using DCVE_live, DCVE_noUC.
-    admit. admit. admit. admit. admit.
+    eapply spill_correct with (k:=k) (slt:=(slt (co_s dcve)));
+      eauto using DCVE_live, DCVE_noUC, DCVE_renamedApart, DCVE_live_incl, DCVE_paramsMatch.
+    - admit.
+    - admit.
+    - eapply DCVE_renamedApart.
+
+    - eapply exp_vars_bound_sound.
+    - exploit DCVE_live_incl as INCL; eauto.
+      eapply ann_R_get in INCL; eauto.
+  }
+  instantiate (1:=(Slot_slot (slt (co_s dcve)))).
+  change (DCVE Liveness.Imperative (fst sra) (snd sra)) with dcve.
+
+    admit.
+
     admit. admit. admit.
   }
   admit.
