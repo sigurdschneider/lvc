@@ -42,6 +42,8 @@ Smpl Add
      match goal with
      | [ |- context [ ❬@forwardF ?sT ?Dom ?H ?BSL ?f ?ZL ?F ?anF ?ST❭ ] ] =>
        rewrite (@forwardF_length sT Dom H BSL f ZL F anF ST)
+     | [ H : context [ ❬@forwardF ?sT ?Dom ?H ?BSL ?f ?ZL ?F ?anF ?ST❭ ] |- _ ] =>
+       rewrite (@forwardF_length sT Dom H BSL f ZL F anF ST) in H
      end : len.
 
 Lemma forwardF_length_ass (sT:stmt) (Dom:stmt->Type) `{BoundedSemiLattice (Dom sT)}

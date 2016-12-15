@@ -43,6 +43,14 @@ Proof.
   destruct F as [|Zs F'], anF; simpl; eauto.
 Qed.
 
+Smpl Add
+     match goal with
+     | [ |- context [ ❬@backwardF ?sT ?Dom ?f ?ZL ?AL ?F ?anF ?ST❭ ] ] =>
+       rewrite (@backwardF_length sT Dom f ZL AL F anF ST)
+     | [ H : context [ ❬@backwardF ?sT ?Dom ?f ?ZL ?AL ?F ?anF ?ST❭ ] |- _ ] =>
+       rewrite (@backwardF_length sT Dom f ZL AL F anF ST) in H
+     end : len.
+
 Lemma backwardF_length_ass sT (Dom:stmt->Type)
       backward ZL (AL:list (Dom sT)) F anF ST k
   : length F = k

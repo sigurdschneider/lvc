@@ -3,6 +3,7 @@ Require Import CSet Le Var.
 Require Import Plus Util AllInRel Map CSet.
 Require Import Val Var Env IL Annotation Lattice DecSolve Analysis Filter Terminating.
 Require Import Analysis AnalysisBackward LivenessAnalysis TrueLiveness Subterm.
+Require Import FiniteFixpointIteration.
 
 Set Implicit Arguments.
 
@@ -129,4 +130,175 @@ Lemma livenessAnalysis_getAnn i s
 Proof.
   unfold livenessAnalysis. repeat destr_sig.
   rewrite getAnn_mapAnn. destr_sig; eauto.
+Qed.
+
+
+Require Import RenamedApart.
+
+Lemma extend_incl sT ZL LV D Dt s ans sa
+      (IFC:Indexwise.indexwise_R (funConstr D Dt) s ans)
+      (Len: ❬s❭ = ❬sa❭) (Len2 : ❬s❭ = ❬ans❭)
+      (LE:forall (n : nat) (a : ann ⦃nat⦄) (b : ann (⦃nat⦄ * ⦃nat⦄)),
+          get (mapAnn proj1_sig ⊝ sa) n a ->
+          get ans n b -> ann_R (fun (x : ⦃nat⦄) (y : ⦃nat⦄ * ⦃nat⦄) => x ⊆ fst y) a b)
+      (BND : forall (n : nat) (lv : {X : ⦃nat⦄ | X ⊆ occurVars sT}) (Z : params),
+          get ZL n Z -> get LV n lv -> proj1_sig lv \ of_list Z ⊆ D)
+  : forall n x0 x2, get sa n x2 -> get ans n x0 -> forall (n0 : nat) (lv : {X : ⦃nat⦄ | X ⊆ occurVars sT}) (Z : params),
+                   get (fst ⊝ s ++ ZL) n0 Z -> get (getAnn ⊝ sa ++ LV) n0 lv
+                   -> proj1_sig lv \ of_list Z ⊆ fst (getAnn x0).
+  intros ? ? ? Get1 Get2 ? ? ? Get4 Get5.
+  eapply get_app_cases in Get4; len_simpl; destruct Get4; dcr; inv_get.
+  - edestruct IFC; eauto; dcr. rewrite H2.
+    exploit LE as GET; eauto.
+    eapply ann_R_get in GET. rewrite getAnn_mapAnn in GET.
+    rewrite GET.
+    edestruct IFC; try eapply H0; eauto; dcr.
+    rewrite H4.
+    clear; cset_tac.
+  - rewrite get_app_ge in Get5; len_simpl; try rewrite <- Len in *; eauto with len.
+    exploit BND; eauto.
+    rewrite H2.
+    edestruct IFC; eauto; dcr.
+    rewrite H3. eauto with cset.
+Qed.
+
+Lemma extend_incl' i sT s t (ST:subTerm (stmtFun s t) sT) ZL LV D Dt ans sa
+      (IFC:Indexwise.indexwise_R (funConstr D Dt) s ans)
+      (Len: ❬s❭ = ❬sa❭) (Len2 : ❬s❭ = ❬ans❭)
+      (LE:forall (n : nat) (a : ann ⦃nat⦄) (b : ann (⦃nat⦄ * ⦃nat⦄)),
+          get (mapAnn proj1_sig ⊝ sa) n a ->
+          get ans n b -> ann_R (fun (x : ⦃nat⦄) (y : ⦃nat⦄ * ⦃nat⦄) => x ⊆ fst y) a b)
+      (BND : forall (n : nat) (lv : {X : ⦃nat⦄ | X ⊆ occurVars sT}) (Z : params),
+          get ZL n Z -> get LV n lv -> proj1_sig lv \ of_list Z ⊆ D)
+      (RA: forall (n : nat) (Zs : params * stmt) (a : ann (⦃nat⦄ * ⦃nat⦄)),
+          get s n Zs -> get ans n a -> renamedApart (snd Zs) a)
+      (IH:forall (n : nat) (s' : params * stmt) (sa' : ann {X : ⦃nat⦄ | X ⊆ occurVars sT}),
+          get sa n sa' ->
+          get s n s' ->
+          forall (i : overapproximation) (ZL : 〔params〕) (LV : 〔{X : ⦃nat⦄ | X ⊆ occurVars sT}〕)
+            (ST : subTerm (snd s') sT) (ra : ann (⦃nat⦄ * ⦃nat⦄)),
+            renamedApart (snd s') ra ->
+            labelsDefined (snd s') ❬ZL❭ ->
+            labelsDefined (snd s') ❬LV❭ ->
+            (forall (n0 : nat) (lv : {X : ⦃nat⦄ | X ⊆ occurVars sT}) (Z : params),
+                get ZL n0 Z -> get LV n0 lv -> proj1_sig lv \ of_list Z ⊆ fst (getAnn ra)) ->
+            ann_R (fun (x : ⦃nat⦄) (y : ⦃nat⦄ * ⦃nat⦄) => x ⊆ fst y) (mapAnn proj1_sig sa') ra ->
+            ann_R (fun (x : ⦃nat⦄) (y : ⦃nat⦄ * ⦃nat⦄) => x ⊆ fst y)
+                  (mapAnn proj1_sig (@backward _ _ (liveness_transform_dep i) ZL LV (snd s') ST sa')) ra)
+      (LDef:forall (n : nat) (Zs : params * stmt), get s n Zs -> labelsDefined (snd Zs) (❬s❭ + ❬ZL❭))
+      (LDef':forall (n : nat) (Zs : params * stmt), get s n Zs -> labelsDefined (snd Zs) (❬s❭ + ❬LV❭))
+  :forall (n : nat) (lv : {X : ⦃nat⦄ | X ⊆ occurVars sT}) (Z : params),
+    get (fst ⊝ s ++ ZL) n Z ->
+    get
+      (getAnn
+         ⊝ backwardF (backward (liveness_transform_dep i)) (fst ⊝ s ++ ZL) (getAnn ⊝ sa ++ LV) s sa
+         (subTerm_EQ_Fun2 eq_refl ST) ++ LV) n lv -> proj1_sig lv \ of_list Z ⊆ D.
+Proof.
+  intros ? ? ? Get1 Get2.
+  eapply get_app_cases in Get1; destruct Get1; dcr; inv_get.
+  - rewrite get_app_lt in Get2; eauto with len. inv_get.
+    edestruct (@backwardF_get sT _ (@backward _ (fun s0 : stmt => {x1 : ⦃var⦄ | x1 ⊆ occurVars s0})
+                                              (liveness_transform_dep i))); eauto; dcr; subst.
+    exploit RA; eauto.
+    exploit IH; try eapply H2. Focus 7.
+    eapply ann_R_get in H3. rewrite getAnn_mapAnn in H3.
+    rewrite H3. edestruct IFC; eauto; dcr.
+    rewrite H4. repeat get_functional. clear; cset_tac.
+    eauto. eauto. eauto. len_simpl.
+    rewrite <- Len. eauto. eauto using extend_incl. eauto.
+  - rewrite get_app_ge in Get2; eauto with len.
+Qed.
+
+Lemma live_ann_incl_ra  (i:overapproximation) sT ZL LV s a (ST:subTerm s sT) ra
+      (RA:renamedApart s ra)
+      (Ann:annotation s a)
+      (DefZL:labelsDefined s (length ZL))
+      (DefLV:labelsDefined s (length LV))
+      (BND:forall n lv Z, get ZL n Z -> get LV n lv -> proj1_sig lv \ of_list Z ⊆ fst (getAnn ra))
+      (LE:ann_R (fun (x : ⦃nat⦄) (y : ⦃nat⦄ * ⦃nat⦄) => x ⊆ fst y) (mapAnn proj1_sig a) ra)
+  : ann_R (fun (x : ⦃nat⦄) (y : ⦃nat⦄ * ⦃nat⦄) => x ⊆ fst y) (mapAnn proj1_sig (@backward _ _ (liveness_transform_dep i) ZL LV s ST a)) ra.
+Proof.
+  general induction Ann; invt renamedApart;
+    invt @ann_R; inv DefZL; inv DefLV; simpl; econstructor; simpl; eauto;
+    simpl in *.
+  - exploit (IHAnn i ZL LV) as IH; eauto.
+    + intros; pe_rewrite. rewrite BND; eauto with cset.
+    + eapply ann_R_get in IH. rewrite getAnn_mapAnn in IH.
+      cases; erewrite IH; pe_rewrite; try rewrite H3;
+        revert H2; clear; cset_tac.
+  - eapply IHAnn; eauto.
+    + intros. pe_rewrite. rewrite BND; eauto with cset.
+  - exploit (IHAnn1 i ZL LV) as IH1; eauto.
+    + intros. pe_rewrite. rewrite BND; eauto with cset.
+    + eapply ann_R_get in IH1. rewrite getAnn_mapAnn in IH1.
+      exploit (IHAnn2 i ZL LV) as IH2; eauto.
+      * intros. pe_rewrite. rewrite BND; eauto with cset.
+      * eapply ann_R_get in IH2. rewrite getAnn_mapAnn in IH2.
+        repeat cases; try rewrite IH1; try rewrite IH2; pe_rewrite; eauto.
+        cset_tac.
+  - eapply IHAnn1; eauto.
+    + intros. pe_rewrite. rewrite BND; eauto with cset.
+  - eapply IHAnn2; eauto.
+    + intros. pe_rewrite. rewrite BND; eauto with cset.
+  - edestruct (get_in_range _ H5) as [Z ?]; eauto.
+    edestruct (get_in_range _ H6) as [[Lv ?] ?]; eauto.
+    repeat erewrite get_nth; eauto.
+    rewrite list_union_incl with (s':=D); eauto with cset.
+    cases; eauto with cset.
+    intros; inv_get. rewrite <- H1.
+    eapply incl_list_union; eauto using get.
+  - exploit (IHAnn i) as IH; try eapply H8; try assumption. eauto.
+    Focus 3.
+    eapply ann_R_get in IH. rewrite getAnn_mapAnn in IH.
+    rewrite IH.
+    pe_rewrite. cases; eauto with cset.
+    eapply union_incl_split; eauto.
+    eapply list_union_incl; eauto with cset; intros; inv_get.
+
+    rewrite get_app_lt in H3; eauto with len.
+    inv_get.
+
+    edestruct (@backwardF_get sT _ (@backward _ (fun s0 : stmt => {x1 : ⦃var⦄ | x1 ⊆ occurVars s0})
+                                              (liveness_transform_dep i))); eauto; dcr; subst.
+    exploit H5; eauto.
+    exploit H1 as IH'; try eapply H15.
+    Focus 7.
+    eapply ann_R_get in IH'. rewrite getAnn_mapAnn in IH'.
+    rewrite IH'.
+    edestruct H6; eauto; dcr.
+    rewrite H23. repeat get_functional. clear; cset_tac.
+    eauto. eauto. eauto. eauto. eauto using extend_incl.
+    eapply H17; eauto. eauto. eauto with len.
+    pe_rewrite. eapply extend_incl'; eauto.
+  - eauto with len.
+  - intros; inv_get.
+    edestruct (@backwardF_get sT _ (@backward _ (fun s0 : stmt => {x1 : ⦃var⦄ | x1 ⊆ occurVars s0})
+                                              (liveness_transform_dep i))); eauto; dcr; subst.
+    eapply H1; eauto using extend_incl.
+  - eapply IHAnn; eauto with len.
+    pe_rewrite. eapply extend_incl'; eauto.
+Qed.
+
+Lemma renamedApart_annotation s ang
+: renamedApart s ang
+  -> annotation s ang.
+Proof.
+  intros. general induction H; eauto 20 using @annotation.
+Qed.
+
+Lemma livenessAnalysis_renamedApart_incl i s ra
+      (RA:renamedApart s ra) (LD:labelsDefined s 0)
+  : ann_R (fun (x : ⦃nat⦄) (y : ⦃nat⦄ * ⦃nat⦄) => x ⊆ fst y) (livenessAnalysis i s) ra.
+Proof.
+  unfold livenessAnalysis. destr_sig.
+  destruct e as [n [Iter _]]. subst.
+  intros. eapply safeFixpoint_induction.
+  - clear LD.
+    unfold initial_value. simpl.
+    generalize (occurVars s).
+    general induction RA; simpl; econstructor; simpl; set_simpl; eauto with cset len.
+    intros; inv_get. eapply H1; eauto.
+  - intros. simpl. destruct a; simpl.
+    eapply live_ann_incl_ra; eauto.
+    isabsurd.
 Qed.
