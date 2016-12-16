@@ -214,3 +214,14 @@ Proof.
   unfold DCVE; simpl.
   exploit (@DVE.DVE_paramsMatch i nil nil); eauto.
 Qed.
+
+Require Import AppExpFree.
+
+Lemma DCVE_app_expfree i s ra
+      (AEF:app_expfree s)
+  : app_expfree (co_s (DCVE i s ra)).
+Proof.
+  simpl.
+  eapply DVE.DVE_app_expfree.
+  eapply UCE.UCE_app_expfree; eauto.
+Qed.

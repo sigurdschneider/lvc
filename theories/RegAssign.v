@@ -11,26 +11,26 @@ Require Import Slot InfinitePartition.
 Arguments sim S {H} S' {H0} r t _ _.
 
 Definition rassign (parallel_move : var -> list var -> list var -> (list(list var * list var)))
-           (spilled:stmt * ann (set var)) :=
-  let fvl := to_list (getAnn (snd spilled)) in
+           (s:stmt) (lv: ann (set var)) :=
+  let fvl := to_list (getAnn lv) in
   let ϱ := CMap.update_map_with_list fvl fvl (@MapInterface.empty var _ _ _) in
-  sdo ϱ' <- regAssign even_part (fst spilled) (snd spilled) ϱ;
-    let s_allocated := rename (CMap.findt ϱ' 0) (fst spilled) in
+  sdo ϱ' <- regAssign even_part s lv ϱ;
+    let s_allocated := rename (CMap.findt ϱ' 0) s in
     let s_lowered := ParallelMove.lower parallel_move
                                        nil
                                        s_allocated
-                                       (mapAnn (lookup_set (CMap.findt ϱ' 0)) (snd spilled)) in
+                                       (mapAnn (lookup_set (CMap.findt ϱ' 0)) lv) in
     s_lowered.
 
 Opaque to_list.
 
 
-Lemma rassign_correct parallel_move (spilled:stmt * ann (set var)) s ra
-      (SC: rassign parallel_move spilled = Success s) (PM:paramsMatch s nil)
-      (RA: renamedApart (fst spilled) ra)
-      (LV:live_sound FunctionalAndImperative nil nil (fst spilled) (snd spilled))
-      (Incl:getAnn (snd spilled) ⊆ fst (getAnn ra))
-  : forall E, sim F.state I.state bot3 Sim (nil, E, (fst spilled)) (nil, E, s).
+Lemma rassign_correct parallel_move (s:stmt) (lv:ann (set var)) s' ra
+      (SC: rassign parallel_move s lv = Success s') (PM:paramsMatch s nil)
+      (RA: renamedApart s ra)
+      (LV:live_sound FunctionalAndImperative nil nil s lv)
+      (Incl:getAnn lv ⊆ fst (getAnn ra))
+  : forall E, sim F.state I.state bot3 Sim (nil, E, s) (nil, E, s').
 Proof.
   intros. unfold rassign in SC.
   monadS_inv SC.
@@ -45,14 +45,14 @@ Proof.
     eauto using Liveness.live_sound_overapproximation_I.
   simpl in *.
   eapply sim_trans
-  with (σ2:=(nil, E, rename (CMap.findt x 0) (fst spilled)):F.state).
+  with (σ2:=(nil, E, rename (CMap.findt x 0) s):F.state).
   {
     eapply bisim_sim.
     - eapply alphaSim_sim.
       eapply alphaSimI with (ra:=id) (ira:=id); eauto using PIR2, envCorr_idOn_refl.
       exploit regAssign_renamedApart_agree as AGR; eauto.
       rewrite <- map_update_list_update_agree in AGR; eauto with len.
-      assert (AGR2:agree_on _eq (freeVars (fst spilled)) id (findt x 0)). {
+      assert (AGR2:agree_on _eq (freeVars s) id (findt x 0)). {
         exploit renamedApart_freeVars as Incl2; eauto.
         pose proof (freeVars_live (live_sound_overapproximation_F LV)) as Incl3.
         etransitivity; eauto using agree_on_incl.
@@ -63,9 +63,9 @@ Proof.
       }
       exploit renamedApart_freeVars as Incl2; eauto.
       pose proof (freeVars_live (live_sound_overapproximation_F LV)) as Incl3.
-      assert (AGR3:agree_on _eq (getAnn (snd (spilled))) id
-                            (findt (empty nat) 0 [to_list (getAnn (snd spilled)) <--
-                                                        to_list (getAnn (snd spilled))])). {
+      assert (AGR3:agree_on _eq (getAnn lv) id
+                            (findt (empty nat) 0 [to_list (getAnn lv) <--
+                                                        to_list (getAnn lv)])). {
         hnf; intros ? IN.
         edestruct update_with_list_lookup_in_list; eauto.
         Focus 2. dcr. setoid_rewrite H3. hnf in H5. subst.
@@ -76,7 +76,7 @@ Proof.
       + eapply renamedApart_locally_inj_alpha;
           eauto using live_sound_overapproximation_F.
         instantiate (1:=(findt (empty nat) 0
-                               [to_list (getAnn (snd spilled)) <-- to_list (getAnn (snd spilled))])).
+                               [to_list (getAnn lv) <-- to_list (getAnn lv)])).
         hnf; intros ? IN.
         rewrite <- AGR; eauto.
         edestruct update_with_list_lookup_in_list; eauto.
@@ -89,7 +89,7 @@ Proof.
       + eauto.
   }
   eapply sim_trans
-  with (σ2:=(nil, E, rename (CMap.findt x 0) (fst spilled)):I.state).
+  with (σ2:=(nil, E, rename (CMap.findt x 0) s):I.state).
   {
     eapply bisim_sim.
     eapply Invariance.srdSim_sim.
