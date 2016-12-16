@@ -762,26 +762,57 @@ Proof.
   specialize (H0 x0 y).
  *)
 
-Lemma labelsDefined_rename_apart fresh L s ϱ G
-: labelsDefined s L
-  -> labelsDefined (snd (renameApart' fresh ϱ G s)) L.
+
+Smpl Add match goal with
+         | [ H : context [ ❬fst (renameApartF ?fresh _ ?G ?ϱ ?F ?p)❭ ] |- _ ] =>
+           rewrite (@renameApartF_length fresh G ϱ F) in H
+         | [ |- context [ ❬fst (renameApartF ?fresh _ ?G ?ϱ ?F ?p)❭ ] ] =>
+           rewrite (@renameApartF_length fresh G ϱ F)
+         end : len.
+
+Lemma get_list_eq X (R:relation X) (L L':list X) (Len:❬L❭ = ❬L'❭)
+  : (forall n x y, get L n x -> get L' n y -> R x y)
+    -> list_eq R L L'.
+Proof.
+  general induction Len; eauto 20 using @list_eq, get.
+Qed.
+
+Lemma fst_renameApartF_length fresh G ϱ F
+  : ((length (A:=nat) ⊝ fst ⊝ F
+      = length (A:=nat) ⊝ fst ⊝ rev (fst (renameApartF fresh renameApart' G ϱ F (nil, {}))))).
+Proof.
+  eapply list_eq_eq.
+  eapply get_list_eq; intros. eauto with len.
+  inv_get.
+  eapply get_fst_renameApartF in H0. simpl in *.
+  destruct H0 as [? [? [? ?]]]; dcr; subst.
+  rewrite H10.
+  rewrite fresh_list_stable_length. eauto.
+  len_simpl.
+  assert (n < ❬F❭) by eauto with len.
+  orewrite (❬F❭ - S (❬F❭ - S n) = n) in H1. get_functional. eauto.
+Qed.
+
+Lemma labelsDefined_paramsMatch fresh L s ϱ G
+: paramsMatch s L
+  -> paramsMatch (snd (renameApart' fresh ϱ G s)) L.
 Proof.
   intros.
   general induction H; simpl; repeat (let_pair_case_eq; simpl); try now econstructor; eauto; simpl_pair_eqs; instantiate; subst; eauto; subst.
-  - subst. exploit IHlabelsDefined; eauto. econstructor. eapply H0.
-  - subst. eauto using labelsDefined.
+  - subst. exploit IHparamsMatch; eauto. econstructor. eapply H0.
+  - subst. eauto using paramsMatch.
+  - subst. econstructor; eauto.
+    len_simpl; eauto.
   - subst. econstructor.
-    + intros.
-      eapply get_rev in H2.
+    + intros. inv_get.
       eapply get_fst_renameApartF in H2. simpl in *.
       destruct H2 as [? [? [? ?]]]; dcr.
-      exploit H0; eauto.
-      rewrite rev_length.
-      rewrite renameApartF_length.
-      setoid_rewrite H5. eauto.
-    + rewrite rev_length.
-      exploit IHlabelsDefined; eauto.
-      rewrite renameApartF_length. eauto.
+      rewrite H5.
+      exploit H0; eauto. eqassumption.
+      erewrite <- fst_renameApartF_length; eauto.
+    + exploit IHparamsMatch; eauto.
+      eqassumption.
+      erewrite <- fst_renameApartF_length; eauto.
 Qed.
 
 Require Import AppExpFree.
@@ -801,10 +832,3 @@ Proof.
     setoid_rewrite H3.
     eapply H0; eauto.
 Qed.
-
-Smpl Add match goal with
-         | [ H : context [ ❬fst (renameApartF ?fresh _ ?G ?ϱ ?F ?p)❭ ] |- _ ] =>
-           rewrite (@renameApartF_length fresh G ϱ F) in H
-         | [ |- context [ ❬fst (renameApartF ?fresh _ ?G ?ϱ ?F ?p)❭ ] ] =>
-           rewrite (@renameApartF_length fresh G ϱ F)
-         end : len.
