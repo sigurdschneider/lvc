@@ -31,13 +31,13 @@ Definition Slot_p (VD:set var) n (EQ:n = S (fold max VD 0)): Slot VD.
   - hnf; intros. cset_tac'. omega.
 Qed.
 
-Definition spill (k:nat) (VD:set var) (slt:Slot VD)
+Definition spill (k:nat) (slot:var -> var)
            (s:stmt) (lv:ann (set var)) : stmt * ann (set var) :=
   let fvl := to_list (getAnn lv) in
   let (R,M) := (of_list (take k fvl), of_list (drop k fvl)) in
   let spl := @simplSpill k nil nil R M s lv in
-  let s_spilled := do_spill slt s spl nil in
-  let lv_spilled := reconstr_live nil nil ∅ s_spilled (do_spill_rm slt spl) in
+  let s_spilled := do_spill slot s spl nil in
+  let lv_spilled := reconstr_live nil nil ∅ s_spilled (do_spill_rm slot spl) in
   let s_fun := addParams s_spilled lv_spilled in
   (s_fun, lv_spilled).
 
