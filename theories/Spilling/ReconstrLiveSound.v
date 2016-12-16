@@ -10,7 +10,7 @@ Set Implicit Arguments.
 
 
 Lemma reconstr_live_sound_s
-      (slot : var -> var)
+      (slot : var -> var) o
       (ZL : list params)
       (G : ⦃var⦄)
       (Λ : list (⦃var⦄ * ⦃var⦄))
@@ -20,12 +20,12 @@ Lemma reconstr_live_sound_s
       (IB : list (list bool))
   :
     (forall G',
-        live_sound Imperative ZL Lv
+        live_sound o ZL Lv
                    (do_spill slot s (clear_SpL sl) IB)
                    (reconstr_live (slot_merge slot Λ) ZL G'
                                   (do_spill slot s (clear_SpL sl) IB)
                                   (do_spill_rm slot (clear_SpL sl))))
-   -> live_sound Imperative ZL Lv
+   -> live_sound o ZL Lv
                 (do_spill slot s sl IB)
                 (reconstr_live (slot_merge slot Λ) ZL G
                                (do_spill slot s sl IB)
@@ -382,13 +382,13 @@ Proof.
       split; [ | auto].
       * apply reconstr_live_G.
       * split; eauto.
-        exploit H2; eauto; dcr.
-        eapply PIR2_nth in H15; eauto; dcr.
-        destruct x2. eapply NoDupA_slot_lift_params; eauto.
-        unfold merge in H33.
-        exploit H23; eauto; dcr. eauto with cset.
-        rewrite <- M_VD. unfold union_fs. simpl.
-        rewrite <- H27.
-        rewrite <- incl_list_union; eauto using zip_get; [|reflexivity].
-        unfold defVars. clear; cset_tac.
+        -- exploit H2; eauto; dcr.
+           eapply PIR2_nth in H15; eauto; dcr.
+           destruct x2. eapply NoDupA_slot_lift_params; eauto.
+           unfold merge in H33.
+           exploit H23; eauto; dcr. eauto with cset.
+           rewrite <- M_VD. unfold union_fs. simpl.
+           rewrite <- H27.
+           rewrite <- incl_list_union; eauto using zip_get; [|reflexivity].
+           unfold defVars. clear; cset_tac.
 Qed.

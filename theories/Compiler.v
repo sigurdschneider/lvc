@@ -286,7 +286,8 @@ Proof.
     eapply rename_apart_to_part1_renamedApart.
   }
   assert (LabelsDefined.paramsMatch (fst sra) nil). {
-    admit.
+    eapply labelsDefined_paramsMatch; eauto.
+    eapply EAE.EAE_paramsMatch; eauto.
   }
   eapply sim_trans with (σ2:=(nil, E', fst sra):I.state). {
      eapply bisim_sim.
@@ -340,9 +341,10 @@ Proof.
     - eapply envCorr_idOn_refl.
   }
   eapply rassign_correct; eauto.
-  - admit.
+  - eapply labelsDefined_paramsMatch; eauto.
+    admit.
   - eapply rename_apart_renamedApart.
-  - admit.
+  -
   - erewrite getAnn_snd_renameApart_live; eauto.
     rewrite fst_renamedApartAnn.
     exploit DCVE_live_incl as INCL; eauto.

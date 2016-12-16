@@ -279,7 +279,7 @@ Qed.
 
 
 
-Lemma reconstr_live_small
+Lemma reconstr_live_small o
       (ZL : list params)
       (Λ : list (⦃var⦄ * ⦃var⦄))
       (Lv : list ⦃var⦄)
@@ -302,7 +302,7 @@ Lemma reconstr_live_small
           get ZL n Z
           -> of_list Z ⊆ VD)
     -> app_expfree s
-    -> live_sound Imperative ZL Lv s al
+    -> live_sound o ZL Lv s al
     -> spill_sound k ZL Λ (R,M) s sl
     -> spill_live VD sl al
     -> getAnn
