@@ -747,7 +747,7 @@ Proof.
       *  eauto with len.
 Qed.
 
-Lemma DCVE_live_incl i (FNC:isFunctional i) ZL LV s ra (RA:renamedApart s ra) lv (G D:set var)
+Lemma DVE_live_incl i (FNC:isFunctional i) ZL LV s ra (RA:renamedApart s ra) lv (G D:set var)
       (TLS:true_live_sound i ZL LV s lv)
       (AN:ann_R (fun (x : ⦃nat⦄) (y : ⦃nat⦄ * ⦃nat⦄) => x ⊆ fst y) lv ra)
       (Incl1:getAnn lv ⊆ D)

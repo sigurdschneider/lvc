@@ -20,27 +20,53 @@ Definition DCVE i (s:IL.stmt) (ra:ann (⦃var⦄ * ⦃var⦄)) : stmt * ann ⦃v
   let ra_dve := DVE.compile_renamedApart s_uce tlv ra_uce (fst (getAnn ra_uce)) in
   (s_dve, DVE.compile_live s_uce tlv ∅, ra_dve).
 
+
+Lemma DCVE_true_live_sound i s (PM:LabelsDefined.paramsMatch s nil)
+  : true_live_sound i nil nil (UCE.compile nil s (reachabilityAnalysis s))
+                    (LivenessAnalysis.livenessAnalysis i (UCE.compile nil s (reachabilityAnalysis s))).
+Proof.
+  eapply @LivenessAnalysisCorrect.correct; eauto.
+  - eapply (@UCE.UCE_paramsMatch nil nil); eauto.
+    + eapply reachability_SC_S, correct; eauto.
+    + eapply reachabilityAnalysis_getAnn.
+Qed.
+
+Hint Resolve DCVE_true_live_sound.
+
+Lemma DCVE_UCE_params_match s (PM:LabelsDefined.paramsMatch s nil)
+  : paramsMatch (UCE.compile nil s (reachabilityAnalysis s)) nil.
+Proof.
+  eapply (@UCE.UCE_paramsMatch nil nil); eauto.
+  eapply reachability_SC_S, correct; eauto.
+  eapply reachabilityAnalysis_getAnn.
+Qed.
+
+Hint Resolve DCVE_UCE_params_match.
+
 Lemma DCVE_live i (ili:IL.stmt) (PM:LabelsDefined.paramsMatch ili nil) ra
   : Liveness.live_sound i nil nil (co_s (DCVE i ili ra)) (co_lv (DCVE i ili ra)).
 Proof.
   unfold DCVE. simpl.
   eapply (@DVE.dve_live _ nil nil).
   eapply @LivenessAnalysisCorrect.correct; eauto.
-  eapply (@UCE.UCE_paramsMatch nil nil); eauto.
-  eapply reachability_SC_S, correct; eauto.
-  eapply reachabilityAnalysis_getAnn.
 Qed.
+
+Lemma DCVE_UCE_renamedApart s ra (PM:LabelsDefined.paramsMatch s nil) (RA:renamedApart s ra)
+  :  renamedApart (UCE.compile nil s (reachabilityAnalysis s))
+                  (UCE.compile_renamedApart s ra (reachabilityAnalysis s)).
+Proof.
+  eapply UCE.UCE_renamedApart; eauto.
+  eapply reachability_SC_S, correct; eauto.
+Qed.
+
+Hint Resolve DCVE_UCE_renamedApart.
 
 Lemma DCVE_noUC i ili (PM:LabelsDefined.paramsMatch ili nil) ra
   : LabelsDefined.noUnreachableCode LabelsDefined.isCalled (co_s (DCVE i ili ra)).
 Proof.
   intros. subst. simpl.
   eapply LabelsDefined.noUnreachableCode_mono.
-  - eapply (@DVE.DVE_noUnreachableCode _ nil nil).
-    + eapply @LivenessAnalysisCorrect.correct; eauto.
-      eapply (@UCE.UCE_paramsMatch nil nil); eauto.
-      * eapply reachability_SC_S, correct; eauto.
-      * eapply reachabilityAnalysis_getAnn.
+  - eapply (@DVE.DVE_noUnreachableCode _ nil nil); eauto.
     + eapply UCE.UCE_noUnreachableCode.
       * eapply correct; eauto.
       * eapply reachabilityAnalysis_getAnn.
@@ -54,10 +80,6 @@ Proof.
   rewrite DVE.compile_live_incl_empty; eauto.
   rewrite LivenessAnalysisCorrect.livenessAnalysis_getAnn.
   eapply UCE.compile_occurVars.
-  eapply @LivenessAnalysisCorrect.correct; eauto.
-  eapply (@UCE.UCE_paramsMatch nil nil); eauto.
-  * eapply reachability_SC_S, correct; eauto.
-  * eapply reachabilityAnalysis_getAnn.
 Qed.
 
 Lemma DCVE_correct_I (ili:IL.stmt) (E:onv val) ra
@@ -72,10 +94,6 @@ Proof.
   }
   assert (getAnn (reachabilityAnalysis ili)). {
     eapply reachabilityAnalysis_getAnn.
-  }
-  assert (LabelsDefined.paramsMatch
-            (UCE.compile nil ili (reachabilityAnalysis ili)) nil). {
-    eapply (@UCE.UCE_paramsMatch nil nil); eauto.
   }
   assert (TrueLiveness.true_live_sound Liveness.Imperative nil nil
    (UCE.compile nil ili (reachabilityAnalysis ili))
@@ -107,10 +125,6 @@ Proof.
   assert (getAnn (reachabilityAnalysis ilf)). {
     eapply reachabilityAnalysis_getAnn.
   }
-  assert (LabelsDefined.paramsMatch
-            (UCE.compile nil ilf (reachabilityAnalysis ilf)) nil). {
-    eapply (@UCE.UCE_paramsMatch nil nil); eauto.
-  }
   assert (TrueLiveness.true_live_sound Liveness.Imperative nil nil
    (UCE.compile nil ilf (reachabilityAnalysis ilf))
    (LivenessAnalysis.livenessAnalysis Liveness.Imperative
@@ -138,17 +152,8 @@ Lemma DCVE_renamedApart i s ra (PM:LabelsDefined.paramsMatch s nil)
     -> renamedApart (co_s (DCVE i s ra)) (co_ra (DCVE i s ra)).
 Proof.
   intros. simpl.
-  assert (true_live_sound i nil nil (UCE.compile nil s (reachabilityAnalysis s))
-          (LivenessAnalysis.livenessAnalysis i (UCE.compile nil s (reachabilityAnalysis s)))). {
-    eapply @LivenessAnalysisCorrect.correct; eauto.
-    - eapply (@UCE.UCE_paramsMatch nil nil); eauto.
-      + eapply reachability_SC_S, correct; eauto.
-      + eapply reachabilityAnalysis_getAnn.
-  }
   exploit (@LivenessAnalysisCorrect.correct i); eauto.
   eapply (@DVE.DVE_renamedApart i nil nil); eauto.
-  - eapply UCE.UCE_renamedApart; eauto.
-    + eapply reachability_SC_S, correct; eauto.
   - rewrite <- renamedApart_freeVars.
     Focus 2.
     eapply UCE.UCE_renamedApart; eauto.
@@ -157,37 +162,55 @@ Proof.
       destruct i; eauto using TrueLiveness.true_live_sound_overapproximation_F.
       * eapply TrueLiveness.true_live_sound_overapproximation_F.
         eapply renamedApart_true_live_imperative_is_functional; eauto.
-        -- eapply UCE.UCE_renamedApart; eauto.
-           ++ eapply reachability_SC_S, correct; eauto.
         -- eapply UCE.UCE_noUnreachableCode; eauto.
            ++ eapply correct; eauto.
            ++ eapply reachabilityAnalysis_getAnn.
         -- eapply LivenessAnalysisCorrect.livenessAnalysis_renamedApart_incl.
            ++ eapply UCE.UCE_renamedApart; eauto.
              ** eapply reachability_SC_S, correct; eauto.
-           ++ eapply (@paramsMatch_labelsDefined _ nil).
-             eapply (@UCE.UCE_paramsMatch nil nil); eauto.
-             ** eapply reachability_SC_S, correct; eauto.
-             ** eapply reachabilityAnalysis_getAnn.
+           ++ eapply (@paramsMatch_labelsDefined _ nil); eauto.
         -- isabsurd.
 Qed.
 
-Lemma DCVE_live_incl i s ra (RA:renamedApart s ra)
+
+Lemma DCVE_true_live_sound_F i s ra (PM:LabelsDefined.paramsMatch s nil) (RA:renamedApart s ra)
+  : true_live_sound Functional nil nil (UCE.compile nil s (reachabilityAnalysis s))
+                    (LivenessAnalysis.livenessAnalysis i (UCE.compile nil s (reachabilityAnalysis s))).
+Proof.
+  destruct i; eauto using TrueLiveness.true_live_sound_overapproximation_F.
+  * eapply TrueLiveness.true_live_sound_overapproximation_F.
+    eapply renamedApart_true_live_imperative_is_functional; eauto.
+  - eapply UCE.UCE_noUnreachableCode; eauto.
+     + eapply correct; eauto.
+     + eapply reachabilityAnalysis_getAnn.
+  - eapply LivenessAnalysisCorrect.livenessAnalysis_renamedApart_incl.
+     + eapply UCE.UCE_renamedApart; eauto.
+       eapply reachability_SC_S, correct; eauto.
+     + eapply (@paramsMatch_labelsDefined _ nil); eauto.
+  - isabsurd.
+Qed.
+
+Lemma DCVE_live_incl i s ra (RA:renamedApart s ra) (PM:LabelsDefined.paramsMatch s nil)
   : ann_R (fun (x : ⦃nat⦄) (y : ⦃nat⦄ * ⦃nat⦄) => x ⊆ fst y)
           (co_lv (DCVE i s ra)) (co_ra (DCVE i s ra)).
 Proof.
   unfold DCVE; simpl.
-  (*eapply LivenessAnalysisCorrect.livenessAnalysis_renamedApart_incl.
-           ++ eapply UCE.UCE_renamedApart; eauto.
-             ** eapply reachability_SC_S, correct; eauto.
-           ++ eapply (@paramsMatch_labelsDefined _ nil).
-             eapply (@UCE.UCE_paramsMatch nil nil); eauto.
-             ** eapply reachability_SC_S, correct; eauto.
-             ** eapply reachabilityAnalysis_getAnn.*)
-Admitted.
+  eapply DVE.DVE_live_incl.
+  - instantiate (1:=Functional). eauto.
+  - eapply UCE.UCE_renamedApart; eauto.
+    + eapply reachability_SC_S, correct; eauto.
+  - eapply DCVE_true_live_sound_F; eauto.
+  - eapply LivenessAnalysisCorrect.livenessAnalysis_renamedApart_incl; eauto.
+  - exploit (@LivenessAnalysisCorrect.livenessAnalysis_renamedApart_incl
+               i (UCE.compile nil s (reachabilityAnalysis s))); eauto.
+    eapply ann_R_get in H. eauto.
+  - reflexivity.
+  - eauto with cset.
+Qed.
 
-Lemma DCVE_paramsMatch i s ra (RA:renamedApart s ra) L (PM:LabelsDefined.paramsMatch s L)
-  : LabelsDefined.paramsMatch (co_s (DCVE i s ra)) L.
+Lemma DCVE_paramsMatch i s ra (RA:renamedApart s ra) (PM:LabelsDefined.paramsMatch s nil)
+  : LabelsDefined.paramsMatch (co_s (DCVE i s ra)) nil.
 Proof.
   unfold DCVE; simpl.
-Admitted.
+  exploit (@DVE.DVE_paramsMatch i nil nil); eauto.
+Qed.
