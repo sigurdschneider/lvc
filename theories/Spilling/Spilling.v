@@ -1,7 +1,7 @@
 Require Import Util CSet MapDefined AllInRel.
 Require Import Var MapInjectivity IL Annotation AnnP Sim.
 Require Import SimplSpill SpillSound SpillSim DoSpill DoSpillRm Take Drop.
-Require Import ExpVarsBounded ReconstrLive ReconstrLiveSound.
+Require Import ExpVarsBounded ReconstrLive ReconstrLiveSmall ReconstrLiveSound.
 Require Import Liveness RenamedApart RenameApart_Liveness AddParams Slot.
 
 Set Implicit Arguments.
@@ -76,7 +76,7 @@ Proof.
     cset_tac'. eapply H4 in H8; eauto; cset_tac.
 Qed.
 
-Lemma spill_correct k (kGT:k > 0) (s:stmt) lv ra E
+Lemma spill_correct b k (kGT:k > 0) (s:stmt) lv ra E
       (PM:LabelsDefined.paramsMatch s nil)
       (LV:Liveness.live_sound Liveness.Imperative nil nil s lv)
       (AEF:AppExpFree.app_expfree s)
@@ -84,7 +84,7 @@ Lemma spill_correct k (kGT:k > 0) (s:stmt) lv ra E
       (Def:defined_on (getAnn lv) E)
       (Bnd:exp_vars_bounded k s)
       (Incl:getAnn lv ⊆ fst (getAnn ra))
-      (NUC:LabelsDefined.noUnreachableCode LabelsDefined.isCalled s)
+      (NUC:LabelsDefined.noUnreachableCode (LabelsDefined.isCalled b) s)
       (slt:Slot (fst (getAnn ra) ∪ snd (getAnn ra)))
       (aIncl:ann_R (fun (x : ⦃var⦄) (y : ⦃var⦄ * ⦃var⦄) => x ⊆ fst y) lv ra)
   : sim I.state F.state bot3 Sim
@@ -170,12 +170,68 @@ Proof.
     + eapply SimI.labenv_sim_nil.
     + eauto.
   - eapply addParams_correct; eauto.
-    + rewrite (@ReconstrLiveSmall.reconstr_live_small nil nil nil s _ R M VD); eauto.
+    + rewrite (@ReconstrLiveSmall.reconstr_live_small Imperative nil nil nil s _ R M VD); eauto.
       * rewrite union_comm, empty_neutral_union. eauto.
       * reflexivity.
       * isabsurd.
     + eapply (@reconstr_live_sound k VD slt nil _ nil R M); eauto using PIR2.
       ** reflexivity.
       ** isabsurd.
-    + eapply (@do_spill_no_unreachable_code _ _ _ nil nil); eauto.
+    + eapply (@do_spill_no_unreachable_code _ _ _ _ nil nil); eauto.
+Qed.
+
+Lemma spill_live b k (kGT:k > 0) (s:stmt) lv ra
+      (PM:LabelsDefined.paramsMatch s nil)
+      (LV:Liveness.live_sound Liveness.Imperative nil nil s lv)
+      (AEF:AppExpFree.app_expfree s)
+      (RA:RenamedApart.renamedApart s ra)
+      (Bnd:exp_vars_bounded k s)
+      (Incl:getAnn lv ⊆ fst (getAnn ra))
+      (NUC:LabelsDefined.noUnreachableCode (LabelsDefined.isCalled b) s)
+      (slt:Slot (fst (getAnn ra) ∪ snd (getAnn ra)))
+      (aIncl:ann_R (fun (x : ⦃var⦄) (y : ⦃var⦄ * ⦃var⦄) => x ⊆ fst y) lv ra)
+  : live_sound FunctionalAndImperative
+               nil
+               nil
+               (fst (spill k slt s lv)) (snd (spill k slt s lv)).
+Proof.
+    unfold spill.
+  set (R:=of_list (take k (to_list (getAnn lv)))).
+  set (M:=of_list (drop k (to_list (getAnn lv)))).
+  set (spl:=(simplSpill k nil nil R M s lv)).
+  set (VD:=fst (getAnn ra) ∪ snd (getAnn ra)).
+  assert (lvRM:getAnn lv [=] R ∪ M). {
+    subst R M. rewrite <- of_list_app. rewrite <- take_eta.
+    rewrite of_list_3. eauto.
+  }
+  assert (SPS:spill_sound k nil nil (R, M) s spl). {
+    eapply simplSpill_sat_spillSound; eauto using PIR2.
+    subst R. rewrite TakeSet.take_of_list_cardinal; eauto.
+    rewrite lvRM; eauto.
+  }
+  assert (Disj: disj R M). {
+    subst R M. clear. hnf; intros.
+    eapply of_list_get_first in H; dcr. cset_tac'.
+    eapply of_list_get_first in H0; dcr; cset_tac'.
+    inv_get.
+    refine (NoDupA_get_neq' _ _ H0 H _); eauto.
+    eapply (elements_3w (getAnn lv)).
+    omega.
+  }
+  assert (InclR: R ⊆ VD). {
+    subst R VD. unfold to_list.
+    rewrite TakeSet.take_set_incl. eauto with cset.
+  }
+  assert (InclM: M ⊆ VD). {
+    subst M VD. unfold to_list.
+    rewrite of_list_drop_elements_incl. eauto with cset.
+  }
+  assert (spl_lv:spill_live VD spl lv). {
+    eapply simplSpill_spill_live; eauto using lv_ra_lv_bnd.
+  }
+  eapply addParams_live.
+  - eapply (@reconstr_live_sound k VD slt nil _ nil R M); eauto using PIR2.
+    ** reflexivity.
+    ** isabsurd.
+  - eapply (@do_spill_no_unreachable_code _ _ _ _ nil nil); eauto.
 Qed.

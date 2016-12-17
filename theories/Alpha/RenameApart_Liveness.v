@@ -261,13 +261,13 @@ Proof.
     + erewrite getAnn_snd_renameApart_live; eauto with cset.
 Qed.
 
-Lemma renameApart_live_sound_srd fresh o DL ZL LV (ZL':list params) LV' s lv ϱ G
+Lemma renameApart_live_sound_srd b fresh o DL ZL LV (ZL':list params) LV' s lv ϱ G
       (ParamLen:forall n Z Z', get ZL n Z -> get ZL' n Z' -> ❬Z❭ = ❬Z'❭)
   (LS: live_sound o ZL LV s lv)
   (SRD:srd DL s lv)
   (iEQ:PIR2 (ifFstR Equal) DL (LV \\ ZL))
   (iEQ':PIR2 (ifFstR Equal) (option_map (fun (s:set var) => map ϱ s) ⊝ DL) (LV' \\ ZL'))
-  (NUC:noUnreachableCode isCalled s)
+  (NUC:noUnreachableCode (isCalled b) s)
   (LenZL:❬ZL❭ = ❬ZL'❭) (LenLV:❬LV❭=❬LV'❭) (LenDL:❬DL❭=❬ZL❭) (LenLV2:❬LV❭=❬ZL❭)
   (Incl:map ϱ (getAnn lv) ⊆ G) (isImp:isImperative o)
   : live_sound o ZL' LV' (snd (renameApart' fresh ϱ G s)) (snd (renameApart_live fresh ϱ G s lv)).

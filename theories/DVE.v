@@ -427,16 +427,16 @@ Qed.
 (** ** DVE and Unreachable Code *)
 (** We show that DVE does not introduce unreachable code. *)
 
-Lemma DVE_callChain Lv ZL F als n l'
+Lemma DVE_callChain b Lv ZL F als n l'
   : ❬F❭ = ❬als❭
     -> (forall (n : nat) (Zs : params * stmt) (a : ann ⦃var⦄),
          get F n Zs ->
          get als n a ->
          forall n0 : nat,
-           trueIsCalled (snd Zs) (LabI n0) ->
-           trueIsCalled (compile (pair ⊜ (getAnn ⊝ als ++ Lv) (fst ⊝ F ++ ZL)) (snd Zs) a) (LabI n0))
-     -> callChain trueIsCalled F (LabI l') (LabI n)
-     -> callChain trueIsCalled
+           isCalled b (snd Zs) (LabI n0) ->
+           isCalled b (compile (pair ⊜ (getAnn ⊝ als ++ Lv) (fst ⊝ F ++ ZL)) (snd Zs) a) (LabI n0))
+     -> callChain (isCalled b) F (LabI l') (LabI n)
+     -> callChain (isCalled b)
                  ((fun (Zs : params * stmt) (a : ann ⦃var⦄) =>
                      (flt (getAnn a) (fst Zs) (fst Zs),
                       compile (pair ⊜ (getAnn ⊝ als ++ Lv) (fst ⊝ F ++ ZL)) (snd Zs) a)) ⊜ F als)
@@ -453,11 +453,11 @@ Qed.
 
 Lemma DVE_isCalled i ZL LV s lv n
   : true_live_sound i ZL LV s lv
-    -> trueIsCalled s (LabI n)
-    -> trueIsCalled (compile (zip pair LV ZL) s lv) (LabI n).
+    -> isCalled true s (LabI n)
+    -> isCalled true (compile (zip pair LV ZL) s lv) (LabI n).
 Proof.
   intros LS IC.
-  general induction LS; invt trueIsCalled; simpl; repeat cases; eauto using trueIsCalled;
+  general induction LS; invt isCalled; simpl; repeat cases; eauto using isCalled;
     try congruence.
   - destruct l' as [l'].
     econstructor; rewrite <- zip_app; eauto with len.
@@ -466,8 +466,8 @@ Qed.
 
 Lemma DVE_noUnreachableCode i ZL LV s lv
   : true_live_sound i ZL LV s lv
-    -> noUnreachableCode trueIsCalled s
-    -> noUnreachableCode trueIsCalled (compile (zip pair LV ZL) s lv).
+    -> noUnreachableCode (isCalled true) s
+    -> noUnreachableCode (isCalled true) (compile (zip pair LV ZL) s lv).
 Proof.
   intros LS UC.
   general induction LS; inv UC; simpl; repeat cases; eauto using noUnreachableCode.

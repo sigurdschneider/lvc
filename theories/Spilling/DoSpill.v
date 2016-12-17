@@ -638,39 +638,37 @@ Proof.
     + rewrite <- H9, <- zip_app; eauto with len.
 Qed.
 
-Lemma write_moves_no_unreachable_code xl xl' s
-  : noUnreachableCode isCalled s
-    -> noUnreachableCode isCalled (write_moves xl xl' s).
+Lemma write_moves_no_unreachable_code b xl xl' s
+  : noUnreachableCode (isCalled b) s
+    -> noUnreachableCode (isCalled b) (write_moves xl xl' s).
 Proof.
   intros AEF.
   general induction xl; destruct xl'; simpl; eauto using noUnreachableCode.
 Qed.
 
-Lemma write_moves_isCalled xl xl' s f
-  : isCalled s f
-    -> isCalled (write_moves xl xl' s) f.
+Lemma write_moves_isCalled b xl xl' s f
+  : isCalled b s f
+    -> isCalled b (write_moves xl xl' s) f.
 Proof.
   intros AEF.
   general induction xl; destruct xl'; simpl; eauto using isCalled.
 Qed.
 
-
-
-Lemma do_spill_callChain (slot: var -> var) k ZL Λ F sl_F rms f l'
+Lemma do_spill_callChain b (slot: var -> var) k ZL Λ F sl_F rms f l'
   (IH : forall n Zs, get F n Zs ->
        forall (ZL : 〔params〕) (Λ : 〔⦃var⦄ * ⦃var⦄〕) (RM : ⦃var⦄ * ⦃var⦄)
          (sl_t : spilling) (f : lab),
        spill_sound k ZL Λ RM (snd Zs) sl_t ->
-       isCalled (snd Zs) f
-       -> isCalled (do_spill slot (snd Zs) sl_t (compute_ib ⊜ ZL Λ)) f)
+       isCalled b (snd Zs) f
+       -> isCalled b (do_spill slot (snd Zs) sl_t (compute_ib ⊜ ZL Λ)) f)
   (Len1: ❬F❭ = ❬sl_F❭)
   (Len2: ❬F❭ = ❬rms❭)
   (SPS: forall (n : nat) (Zs : params * stmt) (rm : ⦃var⦄ * ⦃var⦄) (sl_s : spilling),
        get rms n rm ->
        get F n Zs ->
        get sl_F n sl_s -> spill_sound k (fst ⊝ F ++ ZL) (rms ++ Λ) rm (snd Zs) sl_s)
-  (CC: callChain isCalled F l' f)
-  : callChain isCalled
+  (CC: callChain (isCalled b) F l' f)
+  : callChain (isCalled b)
     (pair ⊜ (slot_lift_params slot ⊜ rms (fst ⊝ F))
      ((fun (Zs : params * stmt) (sl_s : spilling) =>
        do_spill slot (snd Zs) sl_s (compute_ib ⊜ (fst ⊝ F ++ ZL) (rms ++ Λ))) ⊜ F
@@ -684,10 +682,10 @@ Proof.
 Qed.
 
 
-Lemma do_spill_isCalled (slot: var -> var) k ZL Λ RM t sl_t f
+Lemma do_spill_isCalled b (slot: var -> var) k ZL Λ RM t sl_t f
   (SPS : spill_sound k ZL Λ RM t sl_t)
-  (IC : isCalled t f)
-  : isCalled (do_spill slot t sl_t (compute_ib ⊜ ZL Λ)) f.
+  (IC : isCalled b t f)
+  : isCalled b (do_spill slot t sl_t (compute_ib ⊜ ZL Λ)) f.
 Proof.
   move t before k.
   revert_until t.
@@ -699,15 +697,18 @@ Proof.
     len_simpl. rewrite <- H3; eauto using do_spill_callChain.
 Qed.
 
-Lemma do_spill_no_unreachable_code (slot:var -> var) k RM ZL Λ spl s
-  : noUnreachableCode isCalled s
+Lemma do_spill_no_unreachable_code b (slot:var -> var) k RM ZL Λ spl s
+  : noUnreachableCode (isCalled b) s
     -> spill_sound k ZL Λ RM s spl
-    -> noUnreachableCode isCalled (do_spill slot s spl (compute_ib ⊜ ZL Λ)).
+    -> noUnreachableCode (isCalled b) (do_spill slot s spl (compute_ib ⊜ ZL Λ)).
 Proof.
   intros.
   general induction H; invt spill_sound; simpl;
-    repeat cases; simpl; clear_trivial_eqs;
-      eauto 20 using noUnreachableCode, write_moves_no_unreachable_code.
+    clear_trivial_eqs.
+  - eauto 20 using noUnreachableCode, write_moves_no_unreachable_code.
+  - eauto 20 using noUnreachableCode, write_moves_no_unreachable_code.
+  - eauto 20 using noUnreachableCode, write_moves_no_unreachable_code.
+  - eauto 20 using noUnreachableCode, write_moves_no_unreachable_code.
   - do 2 eapply write_moves_no_unreachable_code.
     rewrite <- zip_app; eauto with len.
     econstructor; intros; inv_get; simpl; eauto using noUnreachableCode.

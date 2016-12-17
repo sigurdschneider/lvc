@@ -261,21 +261,21 @@ Lemma reachability_analysis_complete_isCalled sT ZL BL s a b
   : reachability Complete BL s a
     -> forall n, get (snd (forward reachability_transform ZL s ST b a)) n true
            -> poLe (getAnn a) b
-           -> trueIsCalled s (LabI n).
+           -> isCalled true s (LabI n).
 Proof.
   intros.
   general induction H; simpl in *;
     repeat let_case_eq; repeat simpl_pair_eqs; subst;
-      simpl in *; eauto using trueIsCalled.
+      simpl in *; eauto using isCalled.
   - inv_get.
     cases in H7; cases in H5; try congruence;
       destruct x,x0;
       try solve [
             inv EQ
-          | eapply TrueIsCalledIf2;
+          | eapply IsCalledIf2;
             [ eapply IHreachability2; eauto
             | congruence ]
-          | eapply TrueIsCalledIf1;
+          | eapply IsCalledIf1;
             [ eapply IHreachability1; eauto
             | congruence ]
           ].
@@ -297,7 +297,7 @@ Proof.
     + exploit forward_snd_poLe; try eapply Get; eauto.
       etransitivity; eauto.
       exploit IHreachability; eauto.
-      eapply TrueIsCalledLet; eauto.
+      eapply IsCalledLet; eauto.
       econstructor 1.
     + inv_get.
       exploit H2; eauto.

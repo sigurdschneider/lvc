@@ -90,7 +90,7 @@ Inductive reachability (i:sc)
     -> (if isComplete i then (forall n a,
                                 get als n a ->
                                 getAnn a ->
-                                isCalledFrom trueIsCalled F t (LabI n)) else True)
+                                isCalledFrom (isCalled true) F t (LabI n)) else True)
     -> (if isComplete i then forall n a, get als n a -> impb (getAnn a) b else True)
     -> reachability i BL (stmtFun F t) (annF b als alt).
 
@@ -125,7 +125,7 @@ Qed.
 
 Lemma reachability_trueIsCalled Lv s slv l
   : reachability Sound Lv s slv
-    -> trueIsCalled s l
+    -> isCalled true s l
     -> exists b, get Lv (counted l) b /\ impb (getAnn slv) b.
 Proof.
   destruct l; simpl.

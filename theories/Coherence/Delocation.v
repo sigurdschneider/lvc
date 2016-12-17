@@ -236,3 +236,61 @@ Proof.
         rewrite of_list_app.
         rewrite <- minus_union. rewrite <- H22. eauto with cset.
 Qed.
+
+
+
+(** ** DVE and Unreachable Code *)
+(** We show that DVE does not introduce unreachable code. *)
+
+
+Lemma compile_callChain (trueIsCalled : stmt -> lab -> Prop)  ZL Za F ans n l'
+  : ❬F❭ = ❬ans❭ -> ❬F❭ = ❬Za❭
+    -> (forall (n : nat) (Zs : params * stmt) (a : ann 〔params〕),
+         get F n Zs ->
+         get ans n a ->
+         forall n0 : nat,
+           trueIsCalled (snd Zs) (LabI n0) ->
+           trueIsCalled (compile (Za ++ ZL) (snd Zs) a) (LabI n0))
+     -> callChain trueIsCalled F (LabI l') (LabI n)
+     -> callChain trueIsCalled (compileF compile ZL F Za Za ans)
+    (LabI l') (LabI n).
+Proof.
+  intros Len1 Len2 IH CC.
+  general induction CC.
+  + econstructor.
+  + inv_get. econstructor 2.
+    eapply zip_get; eauto using zip_get.
+    simpl.
+    eapply IH; eauto.
+    eauto.
+Qed.
+
+Lemma compile_isCalled b AL ZL s ans_lv ans n
+      (RD:trs AL ZL s ans_lv ans)
+      (TIC: isCalled b s (LabI n))
+  : isCalled b (compile ZL s ans) (LabI n).
+Proof.
+  general induction RD;
+    invt isCalled; simpl; repeat cases; eauto using isCalled;
+    try congruence.
+  - destruct l' as [l'].
+    econstructor; eauto.
+    unfold compileF at 2; len_simpl.
+    eapply compile_callChain; intros; eauto.
+    inv_get. eauto.
+Qed.
+
+Lemma compile_noUnreachableCode b AL ZL s ans_lv ans
+      (RD:trs AL ZL s ans_lv ans)
+      (NUC: noUnreachableCode (isCalled b) s)
+  : noUnreachableCode (isCalled b) (compile ZL s ans).
+Proof.
+  general induction NUC; invt trs; simpl;
+    eauto using noUnreachableCode.
+  - econstructor; try (unfold compileF at 1); intros; inv_get; simpl in *; try len_simpl; eauto with len.
+    + edestruct H1 as [[l] [IC CC]]; eauto.
+      eexists (LabI l); split; eauto.
+      * eapply compile_isCalled; eauto.
+      * eapply compile_callChain; intros; eauto using compile_isCalled.
+        inv_get. eapply compile_isCalled; eauto.
+Qed.

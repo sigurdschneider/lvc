@@ -339,12 +339,12 @@ Qed.
 
 Require Import LabelsDefined.
 
-Lemma rename_renamedApart_srd' s ang ϱ (alv:ann (set var)) ZL Lv
+Lemma rename_renamedApart_srd' b s ang ϱ (alv:ann (set var)) ZL Lv
   : renamedApart s ang
   -> live_sound Imperative ZL Lv s alv
   -> locally_inj ϱ s alv
   -> bounded (Some ⊝ Lv \\ ZL) (fst (getAnn ang))
-  -> noUnreachableCode isCalled s
+  -> noUnreachableCode (isCalled b) s
   -> srd (lookup_seto ϱ ⊝
                      (restr (getAnn (mapAnn2 meet1 alv ang)) ⊝ (Some ⊝ Lv \\ ZL)))
         (rename ϱ s)
@@ -364,13 +364,13 @@ Qed.
     the free variables and is disjoint with any variables occuring in binding
     positions in [s]; this set is [fst (getAnn ang)] *)
 
-Lemma rename_renamedApart_srd'' s ang ϱ (alv:ann (set var)) ZL Lv
+Lemma rename_renamedApart_srd'' b s ang ϱ (alv:ann (set var)) ZL Lv
   : renamedApart s ang
     -> live_sound Imperative ZL Lv s alv
     -> ann_R Subset1 alv ang
     -> locally_inj ϱ s alv
     -> bounded (Some ⊝ Lv \\ ZL) (fst (getAnn ang))
-    -> noUnreachableCode isCalled s
+    -> noUnreachableCode (isCalled b) s
     -> srd (lookup_seto ϱ ⊝ (restr (getAnn alv) ⊝ (Some ⊝ Lv \\ ZL)))
           (rename ϱ s)
           (mapAnn (lookup_set ϱ) alv).
@@ -502,12 +502,12 @@ Proof.
     + eapply IHrenamedApart; eauto using inverse_on_incl.
 Qed.
 
-Lemma renamedApart_locally_inj_alpha' s ϱ ϱ' ZL Lv alv ang
+Lemma renamedApart_locally_inj_alpha' b s ϱ ϱ' ZL Lv alv ang
   : renamedApart s ang
   -> live_sound Imperative ZL Lv s alv
   -> locally_inj ϱ s alv
   -> bounded (Some ⊝ Lv \\ ZL) (fst (getAnn ang))
-  -> LabelsDefined.noUnreachableCode isCalled s
+  -> LabelsDefined.noUnreachableCode (isCalled b) s
   -> inverse_on (getAnn alv) ϱ ϱ'
   -> alpha ϱ ϱ' s (rename ϱ s).
 Proof.
@@ -568,14 +568,14 @@ Qed.
 (** ** Theorem 7 from the paper *)
 (** the generalization is analogous to the generalization in Theorem 6 *)
 
-Lemma renamedApart_locally_inj_alpha'' s ϱ ϱ' ZL Lv (slv:ann (set var)) ang
+Lemma renamedApart_locally_inj_alpha'' b s ϱ ϱ' ZL Lv (slv:ann (set var)) ang
   : renamedApart s ang
   -> locally_inj ϱ s slv
   -> live_sound Imperative ZL Lv s slv
   -> inverse_on (getAnn slv) ϱ ϱ'
   -> ann_R Subset1 slv ang
   -> bounded (Some ⊝ Lv \\ ZL) (fst (getAnn ang))
-  -> noUnreachableCode isCalled s
+  -> noUnreachableCode (isCalled b) s
   -> alpha ϱ ϱ' s (rename ϱ s).
 Proof.
   intros RA INJ LS IOn AnnR BND NUC.

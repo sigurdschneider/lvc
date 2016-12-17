@@ -578,7 +578,7 @@ Lemma trueIsCalled_compileF_not_nil
       (s : stmt) (slv : ann bool) k F als RL x
   : reachability Sound (getAnn ⊝ als ++ RL) s slv
     -> getAnn slv
-    -> trueIsCalled s (LabI k)
+    -> isCalled true s (LabI k)
     -> get als k x
     -> ❬F❭ = ❬als❭
     -> nil = compileF compile (getAnn ⊝ als ++ RL) F als
@@ -602,9 +602,9 @@ Lemma UCE_callChain RL F als t alt l' k ZsEnd aEnd n
           get F k Zs ->
        forall (RL : 〔bool〕) (lv : ann bool) (n : nat),
        reachability SoundAndComplete RL (snd Zs) lv ->
-       trueIsCalled (snd Zs) (LabI n) ->
+       (isCalled true) (snd Zs) (LabI n) ->
        getAnn lv ->
-       trueIsCalled (compile RL (snd Zs) lv)
+       (isCalled true) (compile RL (snd Zs) lv)
                 (LabI (countTrue (take n RL))))
   (UC:reachability SoundAndComplete (getAnn ⊝ als ++ RL) t alt)
   (LEN: ❬F❭ = ❬als❭)
@@ -613,12 +613,12 @@ Lemma UCE_callChain RL F als t alt l' k ZsEnd aEnd n
        get als n a ->
        reachability SoundAndComplete (getAnn ⊝ als ++ RL) (snd Zs) a)
   (Ann: getAnn alt)
-  (IC: trueIsCalled t (LabI l'))
-  (CC: callChain trueIsCalled F (LabI l') (LabI k))
+  (IC: isCalled true t (LabI l'))
+  (CC: callChain (isCalled true) F (LabI l') (LabI k))
   (GetF: get F k ZsEnd)
-  (ICEnd: trueIsCalled (snd ZsEnd) (LabI (❬F❭ + n)))
+  (ICEnd: (isCalled true) (snd ZsEnd) (LabI (❬F❭ + n)))
   (GetAls: get als k aEnd)
-: callChain trueIsCalled
+: callChain (isCalled true)
             (compileF compile (getAnn ⊝ als ++ RL) F als)
             (LabI (countTrue (take l' (getAnn ⊝ als ++ RL))))
             (LabI (countTrue (getAnn ⊝ als) +
@@ -654,9 +654,9 @@ Lemma UCE_callChain' RL F als l' k
           get F k Zs ->
        forall (RL : 〔bool〕) (lv : ann bool) (n : nat),
        reachability SoundAndComplete RL (snd Zs) lv ->
-       trueIsCalled (snd Zs) (LabI n) ->
+       (isCalled true) (snd Zs) (LabI n) ->
        getAnn lv ->
-       trueIsCalled (compile RL (snd Zs) lv)
+       (isCalled true) (compile RL (snd Zs) lv)
                 (LabI (countTrue (take n RL))))
   (LEN: ❬F❭ = ❬als❭)
   (UCF:forall (n : nat) (Zs : params * stmt) (a : ann bool),
@@ -664,8 +664,8 @@ Lemma UCE_callChain' RL F als l' k
        get als n a ->
        reachability SoundAndComplete (getAnn ⊝ als ++ RL) (snd Zs) a)
   (Ann: get (getAnn ⊝ als ++ RL) l' true)
-  (CC: callChain trueIsCalled F (LabI l') (LabI k))
-: callChain trueIsCalled
+  (CC: callChain (isCalled true) F (LabI l') (LabI k))
+: callChain (isCalled true)
             (compileF compile (getAnn ⊝ als ++ RL) F als)
             (LabI (countTrue (take l' (getAnn ⊝ als ++ RL))))
             (LabI (countTrue (take k (getAnn ⊝ als ++ RL)))).
@@ -685,16 +685,16 @@ Qed.
 
 Lemma UCE_trueIsCalled RL s lv n
   : reachability SoundAndComplete RL s lv
-    -> trueIsCalled s (LabI n)
+    -> isCalled true s (LabI n)
     -> getAnn lv
-    -> trueIsCalled (compile RL s lv) (LabI (countTrue (take n RL))).
+    -> isCalled true (compile RL s lv) (LabI (countTrue (take n RL))).
 Proof.
   intros Live IC.
   revert RL lv n Live IC.
-  sind s; simpl; intros; invt reachability; invt trueIsCalled;
-    simpl in *; eauto using trueIsCalled.
-  - repeat cases; eauto using trueIsCalled.
-  - repeat cases; eauto using trueIsCalled.
+  sind s; simpl; intros; invt reachability; invt isCalled;
+    simpl in *; eauto using isCalled.
+  - repeat cases; eauto using isCalled.
+  - repeat cases; eauto using isCalled.
   - eapply callChain_cases in H8. destruct H8; subst.
     + cases.
       * exploit (IH t) as IHt; eauto.
@@ -731,9 +731,9 @@ Lemma UCE_isCalledFrom RL F als t alt n (Len:❬F❭ = ❬als❭)
        reachability SoundAndComplete (getAnn ⊝ als ++ RL) (snd Zs) a)
     -> reachability SoundAndComplete (getAnn ⊝ als ++ RL) t alt
     -> getAnn alt
-    -> isCalledFrom trueIsCalled F t (LabI n)
+    -> isCalledFrom (isCalled true) F t (LabI n)
     -> n < ❬F❭
-    -> isCalledFrom trueIsCalled (compileF compile (getAnn ⊝ als ++ RL) F als)
+    -> isCalledFrom (isCalled true) (compileF compile (getAnn ⊝ als ++ RL) F als)
                    (compile (getAnn ⊝ als ++ RL) t alt) (LabI (countTrue (getAnn ⊝ take n als))).
 Proof.
   intros UCF UCt gAt ICF.
@@ -752,7 +752,7 @@ Qed.
 Lemma UCE_noUnreachableCode RL s lv
   : reachability SoundAndComplete RL s lv
     -> getAnn lv
-    -> noUnreachableCode trueIsCalled (compile RL s lv).
+    -> noUnreachableCode (isCalled true) (compile RL s lv).
 Proof.
   intros Live GetAnn.
   induction Live; simpl in *; repeat cases; eauto using noUnreachableCode.

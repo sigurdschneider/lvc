@@ -370,8 +370,8 @@ Proof.
     eapply IHA; eauto using get with len.
 Qed.
 
-Lemma callChain_range F f f'
-  : callChain isCalled F f f'
+Lemma callChain_range b F f f'
+  : callChain (isCalled b) F f f'
     -> ❬F❭ <= counted f'
     -> counted f <= counted f'.
 Proof.
@@ -380,8 +380,8 @@ Proof.
   - rewrite <- H0. eapply get_range in H1. omega.
 Qed.
 
-Lemma callChain_range' F f f'
-  : callChain isCalled F f f'
+Lemma callChain_range' b F f f'
+  : callChain (isCalled b) F f f'
     -> counted f' < ❬F❭
     -> counted f < ❬F❭.
 Proof.
@@ -389,7 +389,7 @@ Proof.
   inv H; eauto.
 Qed.
 
-Lemma computeParameters_isCalled_Some_F' Lv ZL AP als D Z F s alb l
+Lemma computeParameters_isCalled_Some_F' b Lv ZL AP als D Z F s alb l
       k k' x0 x1 Zs
       (IH : forall k Zs,
           get F k Zs ->
@@ -398,7 +398,7 @@ Lemma computeParameters_isCalled_Some_F' Lv ZL AP als D Z F s alb l
             live_sound Imperative ZL Lv (snd Zs) lv ->
             ❬AP❭ = ❬Lv❭ ->
             ❬Lv❭ = ❬ZL❭ ->
-            isCalled (snd Zs) (LabI n) ->
+            isCalled b (snd Zs) (LabI n) ->
             get Lv n D ->
             get ZL n Z ->
             get (snd (computeParameters (Lv \\ ZL) ZL AP (snd Zs) lv)) n p ->
@@ -414,8 +414,8 @@ Lemma computeParameters_isCalled_Some_F' Lv ZL AP als D Z F s alb l
           get F n Zs -> get als n a -> of_list (fst Zs) ⊆ getAnn a /\ True)
       (GetLV : get (olu F als Lv ZL AP s alb) l x0)
       (GetF : get F k Zs) (GetAls : get als k x1)
-      (IC : isCalled (snd Zs) (LabI k'))
-      (CC: callChain isCalled F (LabI k') (LabI l))
+      (IC : isCalled b (snd Zs) (LabI k'))
+      (CC: callChain (isCalled b) F (LabI k') (LabI l))
   :  exists Za : ⦃var⦄,
      addAdd
        (list_union (oget ⊝ take ❬F❭ (olu F als Lv ZL AP s alb))
@@ -486,11 +486,11 @@ Proof.
     revert H3; clear_all; cset_tac.
 Qed.
 
-Lemma computeParameters_isCalled_Some ZL Lv AP s lv n D Z p
+Lemma computeParameters_isCalled_Some b ZL Lv AP s lv n D Z p
   : live_sound Imperative ZL Lv s lv
     -> length AP = length Lv
     -> length Lv = length ZL
-    -> isCalled s (LabI n)
+    -> isCalled b s (LabI n)
     -> get Lv n D
     -> get ZL n Z
     -> get (snd (computeParameters (Lv \\ ZL) ZL AP s lv)) n p
@@ -580,11 +580,11 @@ Proof.
       intros; edestruct H6; eauto.
 Qed.
 
-Lemma computeParameters_isCalled_get_Some Lv ZL AP s lv n p A D Z
+Lemma computeParameters_isCalled_get_Some b Lv ZL AP s lv n p A D Z
   : live_sound Imperative ZL Lv s lv
     -> length AP = length Lv
     -> length Lv = length ZL
-    -> isCalled s (LabI n)
+    -> isCalled b s (LabI n)
     -> n < ❬snd (computeParameters (Lv \\ ZL) ZL AP s lv)❭
     -> get Lv n D
     -> get ZL n Z
@@ -601,7 +601,7 @@ Proof.
   eexists; split; try reflexivity. rewrite <- H1, <- H2; eauto.
 Qed.
 
-Lemma computeParameters_isCalledFrom_get_Some Lv ZL AP F alv s lv p Da Zs l
+Lemma computeParameters_isCalledFrom_get_Some b Lv ZL AP F alv s lv p Da Zs l
       (LSF : forall (n : nat) (Zs : params * stmt) (a : ann ⦃var⦄),
           get F n Zs ->
           get alv n a ->
@@ -612,7 +612,7 @@ Lemma computeParameters_isCalledFrom_get_Some Lv ZL AP F alv s lv p Da Zs l
     -> length AP = length Lv
     -> length Lv = length ZL
     -> length F = length alv
-    -> isCalledFrom isCalled F s (LabI l)
+    -> isCalledFrom (isCalled b) F s (LabI l)
     -> get alv l Da
     -> get F l Zs
     -> get (olist_union (snd ⊝ computeParametersF F alv Lv ZL AP)
@@ -852,9 +852,9 @@ Proof.
       rewrite H0. reflexivity.
 Qed.
 
-Lemma computeParameters_trs ZL Lv AP s lv
+Lemma computeParameters_trs b ZL Lv AP s lv
 : live_sound Imperative ZL Lv s lv
-  -> noUnreachableCode isCalled s
+  -> noUnreachableCode (isCalled b) s
   -> PIR2 Subset AP (Lv \\ ZL)
   -> length Lv = length ZL
   -> length ZL = length AP
@@ -1094,12 +1094,12 @@ Proof.
 Qed.
 
 
-Lemma computeParameters_live ZL Lv AP s lv
+Lemma computeParameters_live b ZL Lv AP s lv
 : live_sound Imperative ZL Lv s lv
   -> PIR2 Subset AP (Lv \\ ZL)
   -> length Lv = length ZL
   -> length ZL = length AP
-  -> noUnreachableCode isCalled s
+  -> noUnreachableCode (isCalled b) s
   -> additionalParameters_live (oget ⊝ (snd (computeParameters (Lv \\ ZL) ZL AP s lv)))
                               s lv (fst (computeParameters (Lv \\ ZL) ZL AP s lv)).
 Proof.
@@ -1164,9 +1164,9 @@ Proof.
       eapply computeParametersF_length; try eapply H5; eauto with len.
 Qed.
 
-Lemma is_trs s lv
+Lemma is_trs b s lv
 : live_sound Imperative nil nil s lv
-  -> noUnreachableCode isCalled s
+  -> noUnreachableCode (isCalled b) s
   -> trs nil nil s lv (fst (computeParameters nil nil nil s lv)).
 Proof.
   intros.
@@ -1178,9 +1178,9 @@ Proof.
   simpl in *. rewrite H1 in H2. eauto.
 Qed.
 
-Lemma is_live s lv
+Lemma is_live b s lv
 : live_sound Imperative nil nil s lv
-  -> noUnreachableCode isCalled s
+  -> noUnreachableCode (isCalled b) s
   -> additionalParameters_live nil s lv (fst (computeParameters nil nil nil s lv)).
 Proof.
   intros.

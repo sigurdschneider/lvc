@@ -186,47 +186,30 @@ Proof.
     + eexists x, x0; eauto using callChain.
 Qed.
 
-Inductive isCalled : stmt -> lab -> Prop :=
+Inductive isCalled (b:bool) : stmt -> lab -> Prop :=
   | IsCalledExp x e s l
-    : isCalled s l
-      -> isCalled (stmtLet x e s) l
+    : isCalled b s l
+      -> isCalled b (stmtLet x e s) l
   | IsCalledIf1 e s t l
-    : isCalled s l
-      -> isCalled (stmtIf e s t) l
+    : isCalled b s l
+      -> (if b then op2bool e <> Some false else True)
+      -> isCalled b (stmtIf e s t) l
   | IsCalledIf2 e s t l
-    : isCalled t l
-      -> isCalled (stmtIf e s t) l
+    : isCalled b t l
+      -> (if b then op2bool e <> Some true else True)
+      -> isCalled b (stmtIf e s t) l
   | IsCalledGoto f Y
-    : isCalled (stmtApp f Y) f
+    : isCalled b (stmtApp f Y) f
   | IsCalledLet F t l l'
-    : callChain isCalled F l' (incc l (length F))
-      -> isCalled t l'
-      -> isCalled (stmtFun F t) l.
+    : callChain (isCalled b) F l' (incc l (length F))
+      -> isCalled b t l'
+      -> isCalled b (stmtFun F t) l.
 
-
-Inductive trueIsCalled : stmt -> lab -> Prop :=
-  | TrueIsCalledExp x e s l
-    : trueIsCalled s l
-      -> trueIsCalled (stmtLet x e s) l
-  | TrueIsCalledIf1 e s t l
-    : trueIsCalled s l
-      -> op2bool e <> Some false
-      -> trueIsCalled (stmtIf e s t) l
-  | TrueIsCalledIf2 e s t l
-    : trueIsCalled t l
-      -> op2bool e <> Some true
-      -> trueIsCalled (stmtIf e s t) l
-  | TrueIsCalledGoto f Y
-    : trueIsCalled (stmtApp f Y) f
-  | TrueIsCalledLet F t l l'
-    : callChain trueIsCalled F l' (incc l (length F))
-      -> trueIsCalled t l'
-      -> trueIsCalled (stmtFun F t) l.
-
-Lemma trueIsCalled_isCalled s l
-  : trueIsCalled s l -> isCalled s l.
+Lemma trueIsCalled_isCalled s l b
+  : isCalled true s l -> isCalled b s l.
 Proof.
-  revert l; sind s; destruct s; intros; invt trueIsCalled; eauto using isCalled.
+  revert l; sind s; destruct s; intros; invt isCalled;
+    try destruct b; simpl in *; eauto using isCalled.
   - econstructor; eauto.
     clear H4 H.
     general induction H2; eauto using callChain.
@@ -258,3 +241,13 @@ Proof.
   intros NOC LE.
   general induction NOC; eauto 20 using noUnreachableCode, isCalledFrom_mono.
 Qed.
+
+Lemma noUnreachableCode_trueIsCalled_isCalled s b
+  : noUnreachableCode (isCalled true) s
+    -> noUnreachableCode (isCalled b) s.
+Proof.
+  intros. eapply noUnreachableCode_mono; eauto.
+  eauto using trueIsCalled_isCalled.
+Qed.
+
+Hint Resolve noUnreachableCode_trueIsCalled_isCalled.

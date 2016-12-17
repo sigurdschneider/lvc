@@ -287,10 +287,10 @@ Proof.
     econstructor; intros; inv_get; try rewrite H; eauto with cset len.
 Qed.
 
-Lemma renamedApart_globals_live s ZL Lv alv f ang
+Lemma renamedApart_globals_live b s ZL Lv alv f ang
   : live_sound Imperative ZL Lv s alv
     -> renamedApart s ang
-    -> isCalled s f
+    -> isCalled b s f
     -> ann_R Subset1 alv ang
     -> disjoint (Some ⊝ Lv \\ ZL) (snd (getAnn ang))
     -> exists lv Z, get ZL (counted f) Z
@@ -314,14 +314,14 @@ Proof.
     + pe_rewrite. eapply disjoint_funF1; eauto.
     + dcr. simpl in *; inv_get.
       setoid_rewrite <- H13; setoid_rewrite <- H18.
-      exploit (@renamedApart_globals_live_F isCalled); eauto; eauto.
+      exploit (@renamedApart_globals_live_F (isCalled b)); eauto; eauto.
       * intros. eapply (IH (snd Zs)); eauto.
       * dcr. destruct f; simpl in *. inv_get.
         eauto.
 Qed.
 
-Lemma renamedApart_globals_live_From s F als ans D Dt ZL Lv alv f ang
-      (ICF:isCalledFrom isCalled F s f)
+Lemma renamedApart_globals_live_From b s F als ans D Dt ZL Lv alv f ang
+      (ICF:isCalledFrom (isCalled b) F s f)
       (LS:live_sound Imperative (fst ⊝ F ++ ZL) (getAnn ⊝ als ++ Lv) s alv)
       (RA:renamedApart s ang)
       (AnnR:ann_R Subset1 alv ang)
@@ -350,13 +350,13 @@ Proof.
   dcr.
   setoid_rewrite <- H3.
   simpl in *.
-  exploit (@renamedApart_globals_live_F isCalled); eauto using get_app_right.
+  exploit (@renamedApart_globals_live_F (isCalled b)); eauto using get_app_right.
   intros. eapply renamedApart_globals_live; eauto.
 Qed.
 
-Lemma renamedApart_live_imperative_is_functional s ang ZL Lv alv
+Lemma renamedApart_live_imperative_is_functional b s ang ZL Lv alv
   : renamedApart s ang
-    -> noUnreachableCode isCalled s
+    -> noUnreachableCode (isCalled b) s
     -> live_sound Imperative ZL Lv s alv
     -> ann_R Subset1 alv ang
     -> disjoint (Some ⊝ Lv \\ ZL) (snd (getAnn ang))
@@ -382,7 +382,7 @@ Proof.
       edestruct (@renamedApart_globals_live);
           eauto using get_range; simpl in *; dcr.
       * eapply disjoint_funF1; eauto with pe cset.
-      * edestruct (@renamedApart_globals_live_F isCalled);
+      * edestruct (@renamedApart_globals_live_F (isCalled b));
           eauto using get_range, renamedApart_globals_live; simpl in *; dcr.
         eapply renamedApart_disj in RA; eauto.
         rewrite <- H3, <- H26.
@@ -398,7 +398,7 @@ Require Import TrueLiveness.
 Lemma renamedApart_globals_true_live s ZL Lv alv f ang
   : true_live_sound Imperative ZL Lv s alv
     -> renamedApart s ang
-    -> trueIsCalled s f
+    -> isCalled true s f
     -> ann_R Subset1 alv ang
     -> disjoint (Some ⊝ Lv \\ ZL) (snd (getAnn ang))
     -> exists lv Z, get ZL (counted f) Z
@@ -407,7 +407,7 @@ Lemma renamedApart_globals_true_live s ZL Lv alv f ang
 Proof.
   revert ZL Lv alv f ang.
   sind s; destruct s; simpl; intros; invt true_live_sound;
-    invt renamedApart; invt (@ann_R); invt trueIsCalled; simpl in * |- *; set_simpl.
+    invt renamedApart; invt (@ann_R); invt isCalled; simpl in * |- *; set_simpl.
   - edestruct (IH s); dcr; eauto using disjoint_let.
     + do 2 eexists; split; [| split]; eauto.
       exploit H3; eauto.
@@ -423,7 +423,7 @@ Proof.
     + pe_rewrite. eapply disjoint_funF1; eauto.
     + dcr. simpl in *; inv_get.
       setoid_rewrite <- H13; setoid_rewrite <- H18.
-      exploit (@renamedApart_globals_live_F trueIsCalled);
+      exploit (@renamedApart_globals_live_F (isCalled true));
         try eapply H8; eauto.
       * intros. eapply (IH (snd Zs)); eauto.
       * dcr. destruct f; simpl in *. inv_get.
@@ -431,7 +431,7 @@ Proof.
 Qed.
 
 Lemma renamedApart_globals_true_live_From s F als ans D Dt ZL Lv alv f ang
-      (ICF:isCalledFrom trueIsCalled F s f)
+      (ICF:isCalledFrom (isCalled true) F s f)
       (LS:true_live_sound Imperative (fst ⊝ F ++ ZL) (getAnn ⊝ als ++ Lv) s alv)
       (RA:renamedApart s ang)
       (AnnR:ann_R Subset1 alv ang)
@@ -466,7 +466,7 @@ Qed.
 
 Lemma renamedApart_true_live_imperative_is_functional s ang ZL Lv alv
   : renamedApart s ang
-    -> noUnreachableCode trueIsCalled s
+    -> noUnreachableCode (isCalled true) s
     -> true_live_sound Imperative ZL Lv s alv
     -> ann_R Subset1 alv ang
     -> disjoint (Some ⊝ Lv \\ ZL) (snd (getAnn ang))
@@ -492,7 +492,7 @@ Proof.
       edestruct (@renamedApart_globals_true_live);
           eauto using get_range; simpl in *; dcr.
       * eapply disjoint_funF1; eauto with pe cset.
-      * edestruct (@renamedApart_globals_live_F trueIsCalled true_live_sound);
+      * edestruct (@renamedApart_globals_live_F (isCalled true) true_live_sound);
           eauto using get_range, renamedApart_globals_true_live; simpl in *; dcr.
         -- eapply renamedApart_disj in RA; eauto.
         -- rewrite <- H3, <- H26.

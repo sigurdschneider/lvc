@@ -277,12 +277,12 @@ Require Import Restrict RenamedApart_Liveness LabelsDefined.
     sound for functional liveness and we can thus rely on theorem [regAssign_correct]
     above, which we did prove by induction. *)
 
-Lemma regAssign_correct' p s ang ϱ ϱ' (alv:ann (set var)) ZL Lv
+Lemma regAssign_correct' b p s ang ϱ ϱ' (alv:ann (set var)) ZL Lv
   : renamedApart s ang
   -> live_sound Imperative ZL Lv s alv
   -> bounded (Some ⊝ Lv \\ ZL) (fst (getAnn ang))
   -> ann_R Subset1 alv ang
-  -> noUnreachableCode isCalled s
+  -> noUnreachableCode (isCalled b) s
   -> injective_on (getAnn alv) (findt ϱ 0)
   -> regAssign p s alv ϱ = Success ϱ'
   -> locally_inj (findt ϱ' 0) s alv.

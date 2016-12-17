@@ -165,7 +165,7 @@ Qed.
 
 (** *** In a coherent program, the globals of every function that can eventually be called are live *)
 
-Lemma srd_globals_live_F ZL Lv F als f lv' Z' l DL
+Lemma srd_globals_live_F (isCalled:stmt -> lab -> Prop)  ZL Lv F als f lv' Z' l DL
       (LEN1 : ❬F❭ = ❬als❭) (Len2:❬ZL❭=❬Lv❭) (Len3:❬ZL❭=❬DL❭)
       (IH : forall k Zs, get F k Zs ->
                     forall (ZL : 〔params〕) (Lv : 〔⦃var⦄〕) (DL : 〔؟ ⦃var⦄〕) (alv : ann ⦃var⦄) (f : lab),
@@ -229,11 +229,11 @@ Proof.
       * len_simpl. omega.
 Qed.
 
-Lemma srd_globals_live s ZL Lv DL alv f
+Lemma srd_globals_live b s ZL Lv DL alv f
   (LS:live_sound Imperative ZL Lv s alv)
   (SRD:srd DL s alv)
   (PE:PIR2 (ifFstR Equal) DL (Lv \\ ZL))
-  (IC:isCalled s f)
+  (IC:isCalled b s f)
   (Len1:❬ZL❭=❬Lv❭) (Len2:❬ZL❭=❬DL❭)
   : exists lv Z, get ZL (counted f) Z
             /\ get DL (counted f) (Some lv)
@@ -271,8 +271,8 @@ Proof.
 Qed.
 
 
-Lemma srd_globals_live_From ZL Lv DL s F als f alv
-      (ICF:isCalledFrom isCalled F s f)
+Lemma srd_globals_live_From b ZL Lv DL s F als f alv
+      (ICF:isCalledFrom (isCalled b) F s f)
       (LS:live_sound Imperative (fst ⊝ F ++ ZL) (getAnn ⊝ als ++ Lv) s alv)
       (SRD:srd ((Some ⊝ (getAnn ⊝ als) \\ (fst ⊝ F) ++ DL)) s alv)
       (Len1 : ❬F❭ = ❬als❭)
@@ -323,11 +323,11 @@ match goal with
   rewrite (@List.map_app _ _ (restr G) A B)
 end.
 
-Lemma srd_live_functional s ZL Lv DL alv  (Len2 : ❬ZL❭ = ❬Lv❭) (Len3 : ❬ZL❭ = ❬DL❭)
+Lemma srd_live_functional b s ZL Lv DL alv  (Len2 : ❬ZL❭ = ❬Lv❭) (Len3 : ❬ZL❭ = ❬DL❭)
 : live_sound Imperative ZL Lv s alv
   -> srd DL s alv
   -> PIR2 (ifFstR Equal) DL (Lv \\ ZL)
-  -> noUnreachableCode isCalled s
+  -> noUnreachableCode (isCalled b) s
   -> live_sound FunctionalAndImperative ZL Lv s alv.
 Proof.
   intros LS SRD PE NUC.

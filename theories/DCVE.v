@@ -61,8 +61,9 @@ Qed.
 
 Hint Resolve DCVE_UCE_renamedApart.
 
-Lemma DCVE_noUC i ili (PM:LabelsDefined.paramsMatch ili nil) ra
-  : LabelsDefined.noUnreachableCode LabelsDefined.isCalled (co_s (DCVE i ili ra)).
+Lemma DCVE_noUC b i ili (PM:LabelsDefined.paramsMatch ili nil) ra
+  : LabelsDefined.noUnreachableCode (LabelsDefined.isCalled b)
+                                    (co_s (DCVE i ili ra)).
 Proof.
   intros. subst. simpl.
   eapply LabelsDefined.noUnreachableCode_mono.
@@ -70,7 +71,7 @@ Proof.
     + eapply UCE.UCE_noUnreachableCode.
       * eapply correct; eauto.
       * eapply reachabilityAnalysis_getAnn.
-  - eapply LabelsDefined.trueIsCalled_isCalled.
+  - intros; eapply LabelsDefined.trueIsCalled_isCalled; eauto.
 Qed.
 
 Lemma DCVE_occurVars i s (PM:LabelsDefined.paramsMatch s nil) ra

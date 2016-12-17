@@ -211,7 +211,9 @@ Definition fromILF (s:stmt) :=
   let ren2 := rename_apart (stable_fresh_part even_part) (fst (spilled)) in
   let ras := rassign parallel_move ren2
                     (snd (renameApart_live (stable_fresh_part even_part)
-                                           id ∅ (fst (spilled)) (snd (spilled)))) in
+                                           id (freeVars (fst (spilled)))
+                                           (fst (spilled))
+                                           (snd (spilled)))) in
   ras.
 
 Opaque LivenessValidators.live_sound_dec.
@@ -345,6 +347,11 @@ Proof.
     admit.
   - eapply rename_apart_renamedApart.
   -
+    eapply (@renameApart_live_sound _ _ nil nil nil nil nil); eauto.
+    + isabsurd.
+    +
+    + admit.
+    +
   - erewrite getAnn_snd_renameApart_live; eauto.
     rewrite fst_renamedApartAnn.
     exploit DCVE_live_incl as INCL; eauto.
