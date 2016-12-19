@@ -294,3 +294,33 @@ Proof.
       * eapply compile_callChain; intros; eauto using compile_isCalled.
         inv_get. eapply compile_isCalled; eauto.
 Qed.
+
+Lemma compileF_map_length ZL F Za' Za ans (Len1:❬F❭=❬Za❭) (Len2:❬F❭=❬ans❭)
+  : length (A:=nat) ⊝ fst ⊝ compileF compile ZL F Za Za' ans =
+    (fun (Z : 〔nat〕) (n0 : nat) => n0 + ❬Z❭) ⊜ Za (length (A:=nat) ⊝ fst ⊝ F).
+Proof.
+  unfold compileF. rewrite map_map.
+  general induction Len1; destruct ans; isabsurd; simpl; eauto.
+  f_equal. eauto with len.
+  erewrite <- IHLen1; eauto.
+Qed.
+
+Lemma compile_paramsMatch DL ZAL s L lv ans
+      (PM:paramsMatch s L)
+      (TRS:trs DL ZAL s lv ans)
+  : paramsMatch (compile ZAL s ans) ((fun Z n => n + ❬Z❭) ⊜ ZAL L).
+Proof.
+  general induction TRS; invt paramsMatch; simpl in *; eauto using paramsMatch.
+  - econstructor; eauto using zip_get.
+    erewrite get_nth; eauto with len.
+  - econstructor; eauto.
+    + unfold compileF at 1; intros; inv_get; simpl.
+      exploit H3; eauto.
+      eqassumption. rewrite zip_app; eauto with len.
+      f_equal.
+      eapply compileF_map_length; eauto with len.
+    + exploit IHTRS; eauto.
+      eqassumption. rewrite zip_app; eauto with len.
+      f_equal.
+      eapply compileF_map_length; eauto with len.
+Qed.

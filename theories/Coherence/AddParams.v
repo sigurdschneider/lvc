@@ -49,3 +49,37 @@ Proof.
   - eauto using trs_srd, is_trs.
   - exploit compile_noUnreachableCode; eauto using is_trs.
 Qed.
+
+Lemma addParams_srd b s lv
+      (LV:Liveness.live_sound Liveness.Imperative nil nil s lv)
+      (NUC:noUnreachableCode (isCalled b) s)
+  : srd nil (addParams s lv) lv.
+Proof.
+  unfold addParams; simpl.
+  eapply trs_srd.
+  exploit (@computeParameters_trs b nil nil nil); eauto.
+  exploit computeParameters_length; eauto.
+  simpl in *.
+  destruct (snd (computeParameters nil nil nil s lv)); isabsurd.
+  eauto.
+Qed.
+
+Lemma addParams_paramsMatch b s lv
+      (PM:paramsMatch s nil)
+      (LS:live_sound Imperative nil nil s lv)
+      (NUC:noUnreachableCode (isCalled b) s)
+  : paramsMatch (addParams s lv) nil.
+Proof.
+  unfold addParams.
+  eapply (@compile_paramsMatch nil nil); eauto using is_trs.
+Qed.
+
+Lemma addParams_noUnreachableCode b s lv
+      (PM:paramsMatch s nil)
+      (LS:live_sound Imperative nil nil s lv)
+      (NUC:noUnreachableCode (isCalled b) s)
+  : noUnreachableCode (isCalled b) (addParams s lv).
+Proof.
+  unfold addParams.
+  eapply compile_noUnreachableCode; eauto using is_trs.
+Qed.
