@@ -376,6 +376,105 @@ Proof.
   - econstructor; intros; inv_get; rewrite !map_map in *; simpl; eauto.
 Qed.
 
+Lemma list_to_stmt_freeVars xl Y s (Len:❬xl❭ = ❬Y❭)
+      (Disj:disj (of_list xl) (list_union (Op.freeVars ⊝ Y)))
+  : freeVars (list_to_stmt xl Y s) [=] list_union (Op.freeVars ⊝ Y) ∪ (freeVars s \ of_list xl).
+Proof.
+  general induction Len; simpl in *.
+  - cset_tac.
+  - setoid_rewrite list_union_start_swap.
+    setoid_rewrite list_union_start_swap in Disj.
+    rewrite IHLen.
+    clear IHLen. cset_tac.
+    eapply disj_incl; eauto with cset.
+Qed.
+
+Lemma freeVars_filter_Var Y
+  : list_union (Op.freeVars ⊝ Y) [=]
+               list_union (Op.freeVars ⊝ List.filter NotVar Y)
+               ∪ list_union (Op.freeVars ⊝ List.filter IsVar Y).
+Proof.
+  general induction Y; simpl; norm_lunion; eauto with cset.
+  - cset_tac.
+  - repeat cases; simpl; norm_lunion; try now (exfalso; eauto).
+    + rewrite IHY. clear; cset_tac.
+    + rewrite IHY. clear IHY n. cset_tac.
+Qed.
+
+Ltac norm_lunion :=
+ repeat match goal with
+      | [ |- context [ fold_left union ?A ?B ]] =>
+        match B with
+          | empty => fail 1
+          | _ => rewrite (list_union_start_swap A B)
+        end
+      | [ H : context [ fold_left union ?A ?B ] |- _ ] =>
+        match B with
+          | empty => fail 1
+          | _ => rewrite (list_union_start_swap A B) in H
+        end
+    end.
+
+Ltac clr_prtct :=
+        repeat match goal with
+               | [ H : protected_setin_fnc _ _ |- _ ] => clear H
+               | [ H : protected _ |- _ ] => clear H
+               end.
+
+
+Lemma minus_minus_add X `{OrderedType X} (s t:set X) x
+  : s \ {x;t} [=] s \ t \ singleton x.
+Proof.
+  cset_tac.
+Qed.
+
+Lemma freeVars_replaceIf Y (xl:list var) (Len:❬List.filter NotVar Y❭ = ❬xl❭)
+      (Disj:disj (of_list xl) (list_union (Op.freeVars ⊝ Y)))
+  : list_union (Op.freeVars ⊝ replace_if NotVar Y (Var ⊝ xl)) \ of_list xl
+               [=] list_union (Op.freeVars ⊝ List.filter IsVar Y).
+
+Proof.
+  rewrite freeVars_filter_Var in Disj.
+  general induction Y; simpl in *; eauto with cset.
+  - cset_tac.
+  - do 2 cases; simpl in *; try now (exfalso; eauto).
+    + destruct xl; simpl in *; clear_trivial_eqs;
+      norm_lunion; simpl in *.
+      * rewrite minus_dist_union.
+        setoid_rewrite minus_minus_add at 2.
+        rewrite IHY; eauto.
+        -- revert Disj; clear; cset_tac.
+        -- eapply disj_incl; eauto with cset.
+    + norm_lunion.
+      rewrite minus_dist_union.
+      rewrite (IHY (xl)); eauto.
+      * revert Disj; clear; cset_tac.
+      * eapply disj_incl; eauto with cset.
+Qed.
+
+
+Lemma EAE_freeVars s
+  : freeVars (compile s) [=] freeVars s.
+Proof.
+  sind s; destruct s; simpl;
+    try rewrite !IH; eauto with cset.
+  - rewrite list_to_stmt_freeVars; eauto with len.
+    + simpl.
+      setoid_rewrite freeVars_filter_Var at 5.
+      eapply eq_union_lr; eauto.
+      rewrite freeVars_replaceIf; eauto.
+      rewrite fresh_list_length; eauto.
+      eapply fresh_list_spec, fresh_spec.
+    + eapply disj_2_incl.
+      eapply fresh_list_spec.
+      eapply fresh_spec.
+      setoid_rewrite freeVars_filter_Var at 2; eauto with cset.
+  - eapply eq_union_lr; eauto.
+    eapply list_union_eq; eauto with len.
+    intros; inv_get; simpl.
+    rewrite IH; eauto.
+Qed.
+
 (*
 Fixpoint compile_live (LV:list (set var)) (s:stmt) (a:ann (set var)) : ann (set var) :=
   match s, a with

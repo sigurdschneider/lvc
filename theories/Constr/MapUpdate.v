@@ -389,6 +389,23 @@ Proof.
     erewrite lookup_set_update_not_in_Z; eauto.
 Qed.
 
+Lemma update_with_list_lookup_list_eq {X} `{OrderedType X} {Y} `{OrderedType Y}
+      (f:X->Y) `{Proper _ (_eq ==> _eq) f} (Z:list X) Z' L
+: ❬Z❭ = ❬L❭
+  -> NoDupA _eq Z
+  -> of_list Z [=] Z'
+  -> lookup_set (f [ Z <-- L ]) Z' [=] of_list L.
+Proof.
+  intros Len ND EQ. rewrite <- EQ. clear EQ.
+  general induction Len; simpl in * |- *; dcr.
+  - rewrite lookup_set_empty; eauto.
+  - rewrite lookup_set_add; eauto. lud.
+    + rewrite lookup_set_agree.
+      rewrite IHLen; eauto. eauto. eauto. eauto.
+      eapply agree_on_update_dead; eauto.
+    + exfalso; eapply H2; reflexivity.
+Qed.
+
 Lemma update_with_list_lookup_list {X} `{OrderedType X} {Y} `{OrderedType Y} (f:X->Y)
       `{Proper _ (_eq ==> _eq) f} Z Z'
 : length Z = length Z'

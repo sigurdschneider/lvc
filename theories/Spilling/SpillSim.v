@@ -560,9 +560,7 @@ Proof.
     erewrite omap_slotlift; eauto.
     eexists; split; eauto. split; eauto.
     erewrite <- sla_extargs_slp_length; eauto. instantiate (1:=M').
-    simpl. len_simpl.
-    time (rewrite !extend_args_length). f_equal. eauto with len.
-    eauto with len. eauto with len.
+    simpl. eauto with len.
     split; eauto.
     split; eauto using agree_on_incl.
     split; eauto using agree_on_incl.
@@ -611,7 +609,7 @@ Proof.
         rewrite In3, <- EQ, In1, In2; eauto with cset.
         rewrite EQ; eauto.
       * eapply defined_on_update_list'.
-        -- len_simpl. rewrite extend_args_length.
+        -- len_simpl.
            edestruct H8; eauto; dcr. simpl in *.
            rewrite countTrue_mark_elements; eauto.
            rewrite slot_lift_params_length; eauto.

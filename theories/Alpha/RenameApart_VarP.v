@@ -1,43 +1,6 @@
 Require Import Util CSet Var.
 Require Import StableFresh.
-Require Import IL RenameApart.
-
-Inductive var_P (P:var -> Prop)
-  : stmt -> Prop :=
-| VarPOpr x b e
-  :  var_P P b
-     -> P x
-     -> For_all P (Exp.freeVars e)
-     -> var_P P (stmtLet x e b)
-| VarPIf e b1 b2
-  :  For_all P (Op.freeVars e)
-     -> var_P P b1
-     -> var_P P b2
-     -> var_P P (stmtIf e b1 b2)
-| VarPGoto l Y
-  : For_all P (list_union (Op.freeVars ⊝ Y))
-    -> var_P P (stmtApp l Y)
-| VarPReturn e
-  : For_all P (Op.freeVars e)
-    -> var_P P (stmtReturn e)
-| VarPLet F b
-  : (forall n Zs, get F n Zs -> var_P P (snd Zs))
-    -> (forall n Zs, get F n Zs -> For_all P (of_list (fst Zs)))
-    -> var_P P b
-    -> var_P P (stmtFun F b).
-
-
-Instance For_all_P_Equal X `{OrderedType X} (P:X->Prop) `{Proper _ (_eq ==> iff) P}
-  : Proper (Equal ==> iff) (For_all P).
-Proof.
-  unfold Proper, respectful, For_all; split; intros; eapply H2; cset_tac.
-Qed.
-
-Instance For_all_P_Subset X `{OrderedType X} (P:X->Prop) `{Proper _ (_eq ==> iff) P}
-  : Proper (Subset ==> flip impl) (For_all P).
-Proof.
-  unfold Proper, respectful, For_all, flip, impl; intros; eapply H2; eauto.
-Qed.
+Require Import IL VarP RenameApart.
 
 Lemma renameApart_var_P (fresh:StableFresh) (P:var -> Prop) (ϱ:env var) G s
       (freshP:forall x G, P (fresh G x))

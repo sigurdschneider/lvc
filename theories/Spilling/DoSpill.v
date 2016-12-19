@@ -257,6 +257,13 @@ Proof.
   - rewrite IHLen; eauto.
 Qed.
 
+Smpl Add match goal with
+         | [ H : context [ ❬extend_args ?L ?ib❭ ] |- _ ]
+           => rewrite (@extend_args_length _ L ib) in H
+         | [ |- context [ ❬extend_args ?L ?ib❭ ] ]
+           => rewrite (@extend_args_length _ L ib)
+         end : len.
+
 Lemma extend_args_elem_eq_ext
       (Y : args)
       (ib : list bool)
@@ -299,6 +306,18 @@ Definition compute_ib
   :=
     mark_elements Z (fst RM ∩ snd RM).
 
+Lemma compute_ib_length Z RM
+  : ❬compute_ib Z RM❭ = ❬Z❭.
+Proof.
+  unfold compute_ib, mark_elements; eauto with len.
+Qed.
+
+Smpl Add match goal with
+         | [ H : context [ ❬compute_ib ?Z ?RM❭ ] |- _ ]
+           => rewrite (@compute_ib_length Z RM) in H
+         | [ |- context [ ❬compute_ib ?Z ?RM❭ ] ]
+           => rewrite (@compute_ib_length Z RM)
+         end : len.
 
 Lemma countTrue_mark_elements Z D
       (NoDup:NoDupA eq Z)
@@ -622,6 +641,14 @@ Proof.
   general induction xl; destruct xl'; simpl; eauto using labelsDefined.
 Qed.
 
+Lemma write_moves_paramsMatch xl xl' s L
+  : paramsMatch s L
+    -> paramsMatch (write_moves xl xl' s) L.
+Proof.
+  intros AEF.
+  general induction xl; destruct xl'; simpl; eauto using paramsMatch.
+Qed.
+
 Lemma do_spill_labels_defined (slot:var -> var) k RM ZL Λ spl s n
   : labelsDefined s n
     -> spill_sound k ZL Λ RM s spl
@@ -636,6 +663,68 @@ Proof.
     + exploit H16; eauto.
       rewrite <- H9. rewrite <- zip_app; eauto with len.
     + rewrite <- H9, <- zip_app; eauto with len.
+Qed.
+
+Lemma zip_map_fst_f X Y (L:list X) (L':list Y) Z (f:X -> Z)
+  : length L = length L'
+    -> zip (fun x _ => f x) L L' = f ⊝ L.
+Proof.
+  intros. length_equify.
+  general induction H; simpl; eauto.
+  f_equal; eauto.
+Qed.
+
+Lemma ZL_NoDupA_ext ZL F ans D Dt
+      (Len: ❬F❭ = ❬ans❭)
+      (IFC:Indexwise.indexwise_R (RenamedApart.funConstr D Dt) F ans)
+      (H:forall (n : nat) (Z : params), get ZL n Z -> NoDupA eq Z)
+  : forall (n0 : nat) (Z : params), get (fst ⊝ F ++ ZL) n0 Z -> NoDupA eq Z.
+Proof.
+  intros. eapply get_app_cases in H0; destruct H0; dcr; inv_get; eauto.
+  edestruct IFC; eauto.
+Qed.
+
+Lemma do_spill_paramsMatch (slot:var -> var) k RM ZL Λ spl s ra
+  : paramsMatch s (@length _ ⊝ ZL)
+    -> spill_sound k ZL Λ RM s spl
+    -> RenamedApart.renamedApart  s ra
+    -> (forall n Z, get ZL n Z -> NoDupA eq Z)
+    -> paramsMatch (do_spill slot s spl (compute_ib ⊜ ZL Λ))
+                                   (@length _ ⊝ (slot_lift_params slot) ⊜ Λ ZL).
+Proof.
+  intros.
+  general induction H; invt spill_sound; invt RenamedApart.renamedApart; simpl;
+    repeat cases; simpl; clear_trivial_eqs;
+      eauto 20 using paramsMatch, write_moves_paramsMatch.
+  - do 2 eapply write_moves_paramsMatch. inv_get.
+    econstructor; eauto.
+    erewrite get_nth; eauto using zip_get.
+    len_simpl; eauto.
+    eapply map_get_eq; eauto using zip_get.
+    exploit H3; eauto.
+    rewrite slot_lift_params_length; eauto.
+    unfold compute_ib. rewrite countTrue_mark_elements; simpl; eauto.
+    omega.
+  - do 2 eapply write_moves_paramsMatch.
+    econstructor; intros; inv_get; simpl; try len_simpl; eauto using paramsMatch.
+    + rewrite <- !zip_app; eauto with len.
+      exploit H0; eauto.
+      * rewrite List.map_app; eauto.
+      * eapply ZL_NoDupA_ext; eauto.
+      * eqassumption.
+        -- rewrite !map_zip; eauto with len. simpl.
+           rewrite !zip_app; eauto with len. f_equal.
+           rewrite zip_map_fst_f; eauto with len.
+           rewrite map_zip; eauto.
+    + rewrite <- !zip_app; eauto with len.
+      exploit IHparamsMatch; eauto.
+      * rewrite List.map_app; eauto.
+      * eapply ZL_NoDupA_ext; eauto.
+      * eqassumption.
+        -- rewrite !map_zip; eauto with len. simpl.
+           rewrite !zip_app; eauto with len. f_equal.
+           rewrite zip_map_fst_f; eauto with len.
+           rewrite map_zip; eauto.
 Qed.
 
 Lemma write_moves_no_unreachable_code b xl xl' s

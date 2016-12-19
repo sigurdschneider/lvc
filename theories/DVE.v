@@ -794,3 +794,29 @@ Proof.
   - eapply IHAN; eauto with cset.
     pe_rewrite; eauto.
 Qed.
+
+Require Import VarP.
+
+Lemma DVE_var_P o (P:nat -> Prop) LV ZL (s:stmt) lv
+      (VP:var_P P s)
+      (TLS:true_live_sound o ZL LV s lv)
+  : var_P P (compile (zip pair LV ZL) s lv).
+Proof.
+  general induction VP; invt true_live_sound; simpl;
+    repeat cases; eauto 10 using var_P.
+  - econstructor; eauto.
+    erewrite get_nth; eauto using zip_get. simpl.
+    hnf; intros.
+    eapply list_union_get in H0; destruct H0; dcr; inv_get; [|cset_tac].
+    eapply get_flt in H0; dcr.
+    eapply H; eauto. eapply incl_list_union; eauto using zip_get.
+    reflexivity.
+  - econstructor; eauto.
+    + intros; inv_get; simpl.
+      rewrite <- zip_app; eauto with len.
+    + intros; inv_get; simpl.
+      rewrite of_list_flt.
+      rewrite meet_comm.
+      rewrite meet_incl; eauto.
+    + rewrite <- zip_app; eauto with len.
+Qed.

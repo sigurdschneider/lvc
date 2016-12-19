@@ -189,3 +189,23 @@ Proof.
   eapply fresh_list_stable_ext.
   intros. eapply least_fresh_part_ext; eauto.
 Qed.
+
+Lemma fresh_list_stable_P_ext p G L L'
+  : ❬L❭ = ❬L'❭
+    -> of_list (fresh_list_stable (stable_fresh_P p) G L)
+              ⊆ of_list (fresh_list_stable (stable_fresh_P p) G L').
+Proof.
+  intros. hnf; intros ? In.
+  general induction H; simpl in *; eauto.
+  - cset_tac.
+Qed.
+
+Lemma fresh_list_stable_P_ext_eq p G L L'
+  : ❬L❭ = ❬L'❭
+    -> of_list (fresh_list_stable (stable_fresh_P p) G L)
+              [=] of_list (fresh_list_stable (stable_fresh_P p) G L').
+Proof.
+  split; intros.
+  - eapply fresh_list_stable_P_ext; eauto.
+  - eapply fresh_list_stable_P_ext; [symmetry|]; eauto.
+Qed.

@@ -912,3 +912,24 @@ Proof.
         rewrite posOfTrue_countTrue in *; eauto using map_get_eq.
         repeat get_functional. simpl. eauto.
 Qed.
+
+Require Import VarP.
+
+Lemma UCE_var_P (P:nat -> Prop) RL (s:stmt) a
+      (VP:var_P P s)
+      (RCH: reachability Sound RL s a)
+  : var_P P (compile RL s a).
+Proof.
+  general induction VP; invt reachability; simpl;
+    repeat cases; eauto 10 using var_P.
+  - rewrite Heq; clear Heq p b1.
+    econstructor; eauto.
+    + intros; inv_get; simpl; eauto.
+      destruct Zs as [Z s].
+      eapply compileF_get_inv in H2; destruct H2; dcr;
+        subst; simpl; eauto.
+    + intros; inv_get; simpl.
+      destruct Zs as [Z s].
+      eapply compileF_get_inv in H2; destruct H2; dcr;
+        subst; simpl; eauto.
+Qed.

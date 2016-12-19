@@ -1,6 +1,6 @@
 Require Export Setoid Coq.Classes.Morphisms Omega.
 Require Export Sets SetInterface SetConstructs SetProperties.
-Require Export EqDec Computable Util.
+Require Export EqDec Computable Util Drop.
 Require Export CSetTac CSetBasic CSetCases CSetGet CSetComputable CSetDisjoint CSetNotation.
 
 Set Implicit Arguments.
@@ -762,4 +762,31 @@ Proof.
   - eauto using NoDupA.
   - decide (InA _eq a L); edestruct IHL; eauto.
     right; inversion 1; eauto.
+Qed.
+
+
+Instance For_all_P_Equal X `{OrderedType X} (P:X->Prop) `{Proper _ (_eq ==> iff) P}
+  : Proper (Equal ==> iff) (For_all P).
+Proof.
+  unfold Proper, respectful, For_all; split; intros; eapply H2; cset_tac.
+Qed.
+
+Instance For_all_P_Subset X `{OrderedType X} (P:X->Prop) `{Proper _ (_eq ==> iff) P}
+  : Proper (Subset ==> flip impl) (For_all P).
+Proof.
+  unfold Proper, respectful, For_all, flip, impl; intros; eapply H2; eauto.
+Qed.
+
+Lemma of_list_drop_incl X `{OrderedType X} (n : nat) (L:list X)
+  : of_list (drop n L) ⊆ of_list L.
+Proof.
+  general induction L; destruct n; simpl; eauto with cset.
+  rewrite drop_nil; eauto.
+Qed.
+
+Lemma of_list_drop_elements_incl X `{OrderedType X} (n : nat) (s : set X)
+  : of_list (drop n (elements s)) ⊆ s.
+Proof.
+  rewrite of_list_drop_incl.
+  rewrite of_list_elements; eauto.
 Qed.
