@@ -333,8 +333,7 @@ Qed.
 Lemma simplSpill_sat_spillSound (k:nat) (s:stmt) (R R' M M': set var)
   (Λ Λ': list (set var * set var)) (Lv : list (set var)) (ZL : list params)
   (alv : ann (set var)) :
-k > 0
--> R [=] R'
+R [=] R'
 -> M [=] M'
 -> Λ === Λ'
 -> cardinal R' <= k
@@ -347,7 +346,7 @@ k > 0
 -> spill_sound k ZL Λ (R,M) s (simplSpill k ZL Λ R' M' s alv).
 
 Proof.
-intros kgeq1 ReqR' MeqM' ΛeqΛ' RleqK fvRM fvBound lvSound (*aeFree*) pir2.
+intros ReqR' MeqM' ΛeqΛ' RleqK fvRM fvBound lvSound (*aeFree*) pir2.
 
 general induction lvSound;
   inversion_clear fvBound
@@ -358,9 +357,6 @@ general induction lvSound;
        |k0 Z0 s0 t0 fvBs fvBt];
   (*inversion_clear aeFree;*)
    simpl.
-
-
-
 - assert (rke := @rke var _ R' (Exp.freeVars e) k RleqK fvBcard).
   assert (fTake := @fTake var _ R' (Exp.freeVars e) (cardinal (Exp.freeVars e \ R'))).
   set (K := of_list (take
@@ -383,7 +379,7 @@ general induction lvSound;
     + rewrite Exp.freeVars_live; eauto.
       rewrite fvRM. rewrite ReqR', MeqM'. clear; cset_tac.
     + eapply IHlvSound;
-      try rewrite ReqR'; try rewrite <- MeqM'; try rewrite ΛeqΛ'; eauto.
+        try rewrite ReqR'; try rewrite <- MeqM'; try rewrite ΛeqΛ'; eauto.
       * unfold Subset; intro a. decide (a = x); [cset_tac|].
         intro aInAnn. rewrite union_iff.
         (** this can be simplified using al_in_rkl **)
