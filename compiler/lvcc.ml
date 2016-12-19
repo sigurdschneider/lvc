@@ -2,10 +2,26 @@ open Parser
 open Lexer
 open List
 open Util
+open Lvcutil
 open Names
 open Pmove
 open Camlcoq
 open Status
+open DCVE
+open Liveness
+open Compiler
+
+let explode s =
+  let rec exp i l =
+    if i < 0 then l else exp (i - 1) (s.[i] :: l) in
+  exp (String.length s - 1) [];;
+
+let implode l =
+  let res = Bytes.create (List.length l) in
+  let rec imp i = function
+    | [] -> res
+    | c :: l -> res.[i] <- c; imp (i + 1) l in
+  imp 0 l;;
 
 let main () =
   (* Give identifiert i, n the lowest indexes, do force
@@ -42,17 +58,19 @@ let main () =
 		 | Success ili -> ili
 		 | Error e -> raise (Compiler_error "Converting to de bruijn failed (did you define all functions?)"))
 		 in
-      let (s_dce, lv_dce) =
-	(let x = Compiler.coq_DCVE ili in
-	 Printf.printf "after DCE (functions de-bruijn):\n%s\n\n" (print_stmt !ids 0 (fst x));
-	 x)
+      let s_dce =
+	(match fromILF parallel_move ili with
+	 | Success x -> Printf.printf "after reg alloc (functions de-bruijn):\n%s\n\n" (print_stmt !ids 0 x);
+	   x
+	 | Error e -> raise (Compiler_error "reg alloc failed")
+	)
       in
       let ilf =
-	if !do_addParams then
+(*	if !do_addParams then
 	  let x = Compiler.addParams s_dce lv_dce in
 	  Printf.printf "as IL/F program (functions de-bruijn):\n%s\n\n" (print_stmt !ids 0 x);
 	  x
-	else
+	else *)
 	  (Printf.printf "to IL/F program translation disabled, enable with argument -c true\n";
 	  s_dce)
 (*      in

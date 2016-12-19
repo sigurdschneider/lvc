@@ -4,6 +4,9 @@
 all:
 	ocamlbuild -classic-display -use-ocamlfind -use-menhir -menhir "menhir --explain --infer -la 1" lvcc.native
 
+debug:
+	ocamlbuild -classic-display -use-ocamlfind -use-menhir -menhir "menhir --explain --infer -la 1" lvcc.d.byte
+
 clean:
 	ocamlbuild -clean
 
