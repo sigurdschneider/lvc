@@ -29,4 +29,4 @@ Makefile.coq
 *.a
 doc*
 pkg*
-.d.byte
+*.d.byte
