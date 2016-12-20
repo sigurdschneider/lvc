@@ -7,7 +7,7 @@ Require Import Compiler OrderedType.
 
 Definition foo := True.
 
-Extraction Inline Status.bind Option.bind toString.
+Extraction Inline Status.bind Option.bind.
 
 Extraction Blacklist List String Int.
 

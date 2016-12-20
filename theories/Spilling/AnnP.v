@@ -70,3 +70,12 @@ Proof.
   eapply pointwise_subrelation; eauto using iff_impl_subrelation.
   eapply pointwise_symmetric; eauto using CRelationClasses.iff_Symmetric.
 Qed.
+
+
+Lemma ann_P_setTopAnn A (P:A->Prop) an a
+  : ann_P P an
+    -> P a
+    -> ann_P P (setTopAnn an a).
+Proof.
+  intros AN PA; inv AN; simpl; econstructor; eauto.
+Qed.

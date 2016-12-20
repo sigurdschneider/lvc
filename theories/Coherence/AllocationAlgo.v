@@ -8,6 +8,17 @@ Set Implicit Arguments.
 
 (** * SSA-based register assignment formulated for IL *)
 
+Lemma injective_on_update_cmap_fresh p lv x (ϱ:Map[var, var])
+      (inj : injective_on (lv \ singleton x) (findt ϱ 0))
+  : injective_on lv
+                 (findt (ϱ [-x <- least_fresh_part p (lookup_set (findt ϱ 0) (lv \ singleton x)) x -]) 0).
+Proof.
+  eapply injective_on_agree; [| eapply map_update_update_agree].
+  eapply injective_on_incl.
+  eapply injective_on_fresh; eauto using injective_on_incl.
+  eapply least_fresh_part_fresh; eauto.
+  eauto with cset.
+Qed.
 
 Definition regAssignF p
            (regAssign : stmt -> ann (set var) -> Map [var, var] -> status (Map [var, var]))

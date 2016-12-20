@@ -790,3 +790,9 @@ Proof.
   rewrite of_list_drop_incl.
   rewrite of_list_elements; eauto.
 Qed.
+
+Lemma filter_union X `{OrderedType X} (p:X->bool) s t `{Proper _ (_eq ==> eq) p}
+  : filter p (s ∪ t) [=] filter p s ∪ filter p t.
+Proof.
+  cset_tac.
+Qed.

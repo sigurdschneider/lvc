@@ -12,53 +12,24 @@ Require ReachabilityAnalysis ReachabilityAnalysisCorrect.
 Require Import DCVE Slot InfinitePartition RegAssign ExpVarsBounded.
 (* Require CopyPropagation ConstantPropagation ConstantPropagationAnalysis.*)
 
-Require Import String.
+Require String.
 
 Set Implicit Arguments.
 
 Section Compiler.
-
-Hypothesis ssa_construction : stmt -> ann (option (set var)) * ann (list var).
-Hypothesis parallel_move : var -> list var -> list var -> (list(list var * list var)).
-Hypothesis first : forall (A:Type), A -> ( A -> status (A * bool)) -> status A.
-
-Arguments first {A} _ _.
-
+  Hypothesis parallel_move : var -> list var -> list var -> (list(list var * list var)).
 
 (*Definition constantPropagationAnalysis :=
 Analysis.fixpoint ConstantPropagationAnalysis.constant_propagation_analysis first. *)
 
-
-Class ToString (T:Type) := toString : T -> string.
-
-Hypothesis OutputStream : Type.
-Hypothesis print_string : OutputStream -> string -> OutputStream.
-
-Hypothesis toString_nstmt : ILN.nstmt -> string.
-Instance ToString_nstmt : ToString ILN.nstmt := toString_nstmt.
-
-Hypothesis toString_stmt : stmt -> string.
-Instance ToString_stmt : ToString stmt := toString_stmt.
-
-Hypothesis toString_ann : forall A, (A -> string) -> ann A -> string.
-Instance ToString_ann {A} `{ToString A} : ToString (ann A) :=
-  toString_ann (@toString A _).
-
-Hypothesis toString_live : set var -> string.
-Instance ToString_live : ToString (set var) := toString_live.
-
-Hypothesis toString_list : list var -> string.
-Instance ToString_list : ToString (list var) := toString_list.
-
-Notation "S '<<' x '<<' y ';' s" := (let S := print_string S (x ++ "\n" ++ toString y ++ "\n\n") in s) (at level 1, left associativity).
-
-Definition ensure_f P `{Computable P} (s: string) {A} (cont:status A) : status A :=
+Definition ensure_f P `{Computable P} (s: String.string) {A} (cont:status A) : status A :=
 if [P] then cont else Error s.
 
 Arguments ensure_f P [H] s {A} cont.
 
 Notation "'ensure' P s ; cont " := (ensure_f P s cont)
-                                    (at level 20, P at level 0, s at level 0, cont at level 200, left associativity).
+                                    (at level 20, P at level 0, s at level 0,
+                                     cont at level 200, left associativity).
 
 (* Print Grammar operconstr. *)
 
@@ -495,7 +466,10 @@ Qed.
 
 End Compiler.
 
+(*
 Print Assumptions toDeBruijn_correct.
-Print Assumptions toILF_correct.
+Print Assumptions fromILF_correct.
+*)
+
 (* Print Assumptions fromILF_correct.
    Print Assumptions optimize_correct. *)

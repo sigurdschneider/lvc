@@ -17,6 +17,14 @@ Record inf_partition :=
     part_cover : forall x, part_1 x + part_2 x;
   }.
 
+Lemma part_dich (p:inf_partition) x
+  : (part_1 p x /\ (part_2 p x -> False)) \/ (part_2 p x /\ (part_1 p x -> False)).
+Proof.
+  destruct (part_cover p x);
+    pose proof (part_disj p x); cset_tac.
+Qed.
+
+
 Fixpoint even (n:nat) : bool :=
   match n with
   | 0 => true
@@ -208,4 +216,48 @@ Proof.
   split; intros.
   - eapply fresh_list_stable_P_ext; eauto.
   - eapply fresh_list_stable_P_ext; [symmetry|]; eauto.
+Qed.
+
+
+Lemma least_fresh_part_1_back (p:inf_partition) G x
+  : part_1 p (least_fresh_part p G x) -> part_1 p x.
+Proof.
+  intros.
+  decide (part_1 p x); eauto.
+  destruct (part_cover p x); eauto.
+  eapply least_fresh_part_2 in i.
+  edestruct (part_disj p); eauto.
+Qed.
+
+Lemma least_fresh_part_2_back (p:inf_partition) G x
+  : part_2 p (least_fresh_part p G x) -> part_2 p x.
+Proof.
+  intros.
+  decide (part_2 p x); eauto.
+  destruct (part_cover p x); eauto.
+  eapply least_fresh_part_1 in i.
+  edestruct (part_disj p); eauto.
+Qed.
+
+Lemma cardinal_filter_part p G Z
+      (UNIQ:NoDupA eq Z)
+  : cardinal (filter (part_1 p)
+                     (of_list (fresh_list_stable (stable_fresh_part p) G Z)))
+    = cardinal (filter (part_1 p) (of_list Z)).
+Proof.
+  general induction Z; simpl.
+  - reflexivity.
+  - decide (part_1 p a).
+    + rewrite filter_add_in; eauto using least_fresh_part_1.
+      rewrite filter_add_in; eauto.
+      rewrite !add_cardinal_2; eauto.
+      * intro. inv UNIQ. cset_tac'.
+        rewrite <- InA_in in H0. eauto.
+      * exploit (fresh_list_stable_spec (stable_fresh_part p));
+        eauto using least_fresh_part_fresh.
+        cset_tac'.
+        eapply H; cset_tac.
+    + rewrite filter_add_notin; eauto.
+      rewrite filter_add_notin; eauto.
+      eauto using least_fresh_part_1_back.
 Qed.

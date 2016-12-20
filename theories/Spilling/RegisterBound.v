@@ -3,92 +3,22 @@ Require Import IL Annotation InRel AutoIndTac.
 Require Import Liveness LabelsDefined.
 Require Import SpillSound DoSpill DoSpillRm SpillUtil ReconstrLive.
 Require Import ReconstrLiveSmall ReconstrLiveSound InVD AnnP ReconstrLiveUtil SetUtil.
-Require Import ReconstrLiveG ToBeOutsourced.
+Require Import ReconstrLiveG ToBeOutsourced BoundedIn.
 
 
 Set Implicit Arguments.
 (* TODO: outsource *)
 
-Lemma union_empty_r
-      (X : Type)
-      `{OrderedType X}
-      (s : ⦃X⦄)
-  :
-    s ∪ ∅ [=] s
-.
-Proof.
-  cset_tac.
-Qed.
-
-Lemma union_empty_l
-      (X : Type)
-      `{OrderedType X}
-      (s : ⦃X⦄)
-  :
-    ∅ ∪ s [=] s
-.
-Proof.
-  cset_tac.
-Qed.
-
-
-
-Lemma union_meet_distr_l
-      (X : Type)
-      `{OrderedType X}
-      (s t u : ⦃X⦄)
-  :
-    s ∩ (t ∪ u) [=] (s ∩ t) ∪ (s ∩ u)
-.
-Proof.
-  cset_tac.
-Qed.
-
-Lemma meet_union_distr_r
-      (X : Type)
-      `{OrderedType X}
-      (s t u : ⦃X⦄)
-  :
-    (s ∩ t) ∪ u [=] (s ∪ u) ∩ (t ∪ u)
-.
-Proof.
-  cset_tac.
-Qed.
-
-Lemma meet_union_distr_l
-      (X : Type)
-      `{OrderedType X}
-      (s t u : ⦃X⦄)
-  :
-    s ∪ (t ∩ u) [=] (s ∪ t) ∩ (s ∪ u)
-.
-Proof.
-  cset_tac.
-Qed.
-
 
 (***************************************************************************)
-
-
-Definition bounded_in
-           (X : Type)
-           `{OrderedType X}
-           (D : ⦃X⦄)
-           (k : nat)
-  : ⦃X⦄ -> Prop
-  :=
-    fun a => cardinal (D ∩ a) <= k
-.
-
-
 
 Lemma bounded_in_incl
       (VD G G' : ⦃var⦄)
       (k : nat)
       (Lv : list ⦃var⦄)
-      (ZL : list params)
+      (ZL : list (list var))
       (s : stmt)
-      (an : lvness_fragment)
+      (an :  (ann (option (list ⦃var⦄))))
   :
     VD ∩ G' ⊆ VD ∩ G
     -> ann_P (bounded_in VD k) (reconstr_live Lv ZL G s an)
@@ -122,11 +52,6 @@ Proof.
   rewrite Gincl;
   clear; cset_tac.
 Qed.
-
-
-
-
-
 
 
 Lemma register_bound_loads
@@ -421,7 +346,8 @@ Lemma Op_freeVars_sla
 Proof.
   intros isvar.
   destruct y; isabsurd; simpl; eauto.
-  decide (n ∈ Sl); simpl; eauto with cset.
+  decide (n ∈ Sl); simpl.
+  eauto with cset.
   cset_tac.
 Qed.
 
@@ -578,7 +504,7 @@ Proof.
         rewrite subset_cardinal with (s':=R'); eauto.
         -- rewrite union_meet_distr_l.
            rewrite G'_R'.
-           rewrite union_empty_r in al_R'.
+           rewrite empty_neutral_union_r in al_R'.
            rewrite al_R'.
            clear; cset_tac.
       * eapply IHlvSnd with (R:={x; (R\K ∪ L) \ Kx})
@@ -607,7 +533,8 @@ Proof.
              - clear; cset_tac.
              - rewrite H24, R_VD, M_VD; cset_tac.
            }
-           repeat apply union_incl_split; eauto; cset_tac.
+           repeat apply union_incl_split; eauto; try rewrite H26;
+            clear; cset_tac.
         -- rewrite H25, H24, R_VD, M_VD. clear; cset_tac.
         -- rewrite H24, R_VD, M_VD; clear; cset_tac.
         -- rewrite rena2, <- ra_VD; eauto.
@@ -640,7 +567,7 @@ Proof.
         rewrite subset_cardinal with (s':=R'); eauto.
         -- rewrite union_meet_distr_l.
            rewrite G'_R'.
-           rewrite union_empty_r in al_R'.
+           rewrite empty_neutral_union_r in al_R'.
            rewrite al_R'.
            clear; cset_tac.
       * eapply IHlvSnd1 with (R:=R\K ∪ L)
@@ -671,7 +598,7 @@ Proof.
       * rewrite H20, H22.
         rewrite lookup_set_union; eauto.
         rewrite of_list_elements. unfold lookup_set.
-        rewrite union_empty_r.
+        rewrite empty_neutral_union_r.
         repeat rewrite union_meet_distr_l.
         assert (VD ∩ lookup_set slot M' ⊆ R \ K ∪ L)
           as Sl_in.
@@ -707,7 +634,7 @@ Proof.
       * rewrite H20, H22.
         rewrite lookup_set_union; eauto.
         rewrite of_list_elements.
-        rewrite union_empty_r.
+        rewrite empty_neutral_union_r.
         repeat rewrite union_meet_distr_l.
         assert (VD ∩ lookup_set slot M' ⊆ R ∪ L)
           as Sl_in.
@@ -739,7 +666,7 @@ Proof.
       unfold bounded_in.
       rewrite subset_cardinal; eauto.
       rewrite union_meet_distr_l.
-      rewrite union_empty_r in al_R'.
+      rewrite empty_neutral_union_r in al_R'.
       rewrite al_R', G'_R'.
       clear; cset_tac.
   - eapply register_bound_s with (VD:=VD) (R:=R); simpl; eauto.
@@ -754,7 +681,7 @@ Proof.
     + rewrite H10, of_list_elements.
       clear; cset_tac.
     + intros G' R' G'_R' L_R' al_R' bound_R'.
-      rewrite union_empty_r in al_R'.
+      rewrite empty_neutral_union_r in al_R'.
       econstructor.
       unfold bounded_in.
       rewrite subset_cardinal; eauto.
@@ -772,7 +699,7 @@ Proof.
       rewrite slot_merge_app.
       rewrite subset_cardinal; eauto.
       rewrite reconstr_live_small with (VD:=VD) (R:=R\K∪L) (M:=Sp ∪ M); eauto.
-      * rewrite of_list_elements, !union_empty_r.
+      * rewrite of_list_elements, !empty_neutral_union_r.
         repeat rewrite union_meet_distr_l.
         repeat apply union_incl_split.
         -- clear; cset_tac.
@@ -791,7 +718,7 @@ Proof.
       rewrite slot_lift_params_app; eauto with len.
       rewrite slot_merge_app.
       rewrite reconstr_live_small with (VD:=VD) (R:=R\K∪L) (M:=Sp ∪ M); eauto.
-      * rewrite of_list_elements, !union_empty_r.
+      * rewrite of_list_elements, !empty_neutral_union_r.
         repeat rewrite union_meet_distr_l.
         repeat apply union_incl_split.
         -- clear; cset_tac.
@@ -818,7 +745,7 @@ Proof.
       * unfold bounded_in.
         rewrite subset_cardinal; eauto.
         rewrite union_meet_distr_l.
-        rewrite union_empty_r in al_R'.
+        rewrite empty_neutral_union_r in al_R'.
         rewrite G'_R', al_R'.
         clear; cset_tac.
       * intros; inv_get.

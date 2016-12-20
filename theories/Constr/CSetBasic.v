@@ -727,3 +727,28 @@ Proof.
   intros H1. rewrite <- H1. clear H1.
   cset_tac.
 Qed.
+
+
+Lemma empty_neutral_union_r (X : Type) `{OrderedType X} (s : ⦃X⦄)
+  : s ∪ ∅ [=] s.
+Proof.
+  cset_tac.
+Qed.
+
+Lemma union_meet_distr_l (X : Type) `{OrderedType X} (s t u : ⦃X⦄)
+  : s ∩ (t ∪ u) [=] (s ∩ t) ∪ (s ∩ u).
+Proof.
+  cset_tac.
+Qed.
+
+Lemma meet_union_distr_r (X : Type) `{OrderedType X} (s t u : ⦃X⦄)
+  : (s ∩ t) ∪ u [=] (s ∪ u) ∩ (t ∪ u).
+Proof.
+  cset_tac.
+Qed.
+
+Lemma meet_union_distr_l (X : Type) `{OrderedType X} (s t u : ⦃X⦄)
+  : s ∪ (t ∩ u) [=] (s ∪ t) ∩ (s ∪ u).
+Proof.
+  cset_tac.
+Qed.
