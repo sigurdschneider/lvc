@@ -78,7 +78,7 @@ Proof.
       edestruct (IHlength_eq L (E [x <- Some x0])); eauto.
       * eapply omap_op_eval_agree; eauto. symmetry.
         eapply agree_on_update_dead; [|reflexivity].
-        intro. eapply (H2 x); cset_tac.
+        intro. eapply (H2 x); eauto with cset.
       * eapply disj_incl; eauto with cset.
       * dcr. eexists. split; eauto.
         eapply star2_silent.
@@ -339,7 +339,7 @@ Proof.
         clear. cset_tac.
         hnf; intros. invt NoDupA.
         rewrite of_list_1 in H3.
-        cset_tac.
+        revert H4 H7 H3. clear. cset_tac.
       * eauto.
       * eauto.
     + rewrite cons_app, app_assoc.
@@ -444,12 +444,15 @@ Proof.
         setoid_rewrite minus_minus_add at 2.
         rewrite IHY; eauto.
         -- revert Disj; clear; cset_tac.
-        -- eapply disj_incl; eauto with cset.
+        -- eapply disj_incl; eauto.
+           eauto with cset.
+           clear. cset_tac.
     + norm_lunion.
       rewrite minus_dist_union.
       rewrite (IHY (xl)); eauto.
       * revert Disj; clear; cset_tac.
-      * eapply disj_incl; eauto with cset.
+      * eapply disj_incl; eauto.
+        clear; cset_tac.
 Qed.
 
 
