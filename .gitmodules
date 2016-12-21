@@ -1,3 +1,6 @@
 [submodule "smpl"]
 	path = smpl
 	url = git@github.com:sigurdschneider/smpl.git
+[submodule "ContainersPlugin"]
+	path = ContainersPlugin
+	url = github:sigurdschneider/containers.git
