@@ -43,8 +43,10 @@ def readETA(mod)
       end
     end
   end
-  #times = times.last(1)
-  est = @times.size > 0 ? @times[-1].round(2).to_s : ""
+  times = times.last(5)
+	avg = times.inject(0.0) { |sum, el| sum + el } / times.size
+	est = times.size > 0 ? avg.round(2).to_s : ""
+  #est = @times.size > 0 ? @times[-1].round(2).to_s : ""
   eta = (Time.now + est.to_i).strftime("%H:%M:%S")
   return est, eta
 end
