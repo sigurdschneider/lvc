@@ -177,15 +177,6 @@ Proof.
   eapply get_in_of_list. change x0 with (fst (x0, y)). eapply map_get_1; eauto.
 Qed.
 
-Lemma InA_map X Y (R:X->X->Prop) (R':Y->Y->Prop) `{Reflexive _ R'} (f:Y->X) L x
-: InA R x (List.map f L)
-  -> exists y, InA R' y L /\ R x (f y).
-Proof.
-  intros. general induction H0; destruct L; simpl in *; inv Heql.
-  - eexists y0; split; eauto using InA.
-  - edestruct IHInA; try reflexivity; eauto; dcr. eexists; split; eauto.
-Qed.
-
 Lemma domain_find {X} `{OrderedType X} {Y} (d:Map [X, Y]) x
 : x ∈ domain d -> exists v, find x d = Some v.
 Proof.

@@ -2,7 +2,7 @@ Require Import List Map Env AllInRel Exp MoreList.
 Require Import IL Annotation AnnP InRel AutoIndTac Liveness LabelsDefined.
 Require Import SimI.
 Require Import ExpVarsBounded SpillSound ReconstrLive.
-Require Import Take TakeSet.
+Require Import Take TakeSet MoreTac.
 
 Set Implicit Arguments.
 
@@ -387,17 +387,24 @@ general induction lvSound;
               \/ a ∈ K_x
               \/ a ∈ M
              ).
-        -- right. cset_tac; decide (a ∈ M); cset_tac.
+        -- right. revert n aInAnn o; clear; cset_tac.
         -- left. apply not_or_dist in n0. destruct n0 as [nK nM].
            decide (a = x).
            ++ cset_tac.
            ++ apply add_iff. right.
               unfold Subset in H0. specialize (H0 a).
               unfold Subset in fvRM. specialize (fvRM a).
-              assert (a ∈ (getAnn al \ (singleton x))). { cset_tac. }
-              assert (a ∈ R'). { cset_tac. }
-              assert (a ∈ R' \ K).
-              { cset_tac. } cset_tac.
+              assert (a ∈ (getAnn al \ (singleton x))). {
+                revert aInAnn n0; clear; cset_tac.
+              }
+              assert (a ∈ R'). {
+                rewrite <- ReqR'.
+                revert nM H3 H0 fvRM. clear; cset_tac.
+              }
+              assert (a ∈ R' \ K). {
+                revert H4 nK; clear; cset_tac.
+              }
+              revert nM H5; clear; cset_tac.
     + rewrite ReqR'. apply fTake.
     + rewrite ReqR'. apply rke.
 
@@ -444,8 +451,9 @@ general induction lvSound;
         decide (   a ∈ K
               \/ a ∈ M'
              ).
-      -- right. cset_tac.
-      -- subst K. cset_tac.
+      -- right. revert aInAnn o. clear. cset_tac.
+      -- refold. clearbody K.
+         revert aInAnn n0 n H0. clear; cset_tac.
   + rewrite ReqR'. eauto.
   + subst K... rewrite ReqR'. exact rke.
   + rewrite minus_empty. rewrite add_cardinal. apply not_ge in sizeRL.
@@ -508,7 +516,7 @@ general induction lvSound;
     rewrite H1, fvRM, ReqR', MeqM' in Incl.
     exploit Op.freeVars_live_list; eauto. rewrite fvRM in H4.
     rewrite ReqR' in H4. rewrite MeqM' in H4.
-    revert H4. clear. subst K. cset_tac.
+    revert H4. clear. clearbody K. cset_tac.
 - set (K := of_list (take
                        (cardinal (Op.freeVars e \ R'))
                        (elements (R' \ Op.freeVars e))
@@ -529,15 +537,16 @@ general induction lvSound;
     assumption.
   + symmetry. apply zip_length2. assumption.
   + intros ; inv_get. simpl. apply take_of_list_cardinal.
-  + intros ; inv_get. eapply H1; eauto with cset.
-(*     * apply list_eq_app; eauto. reflexivity. *)
+  + intros ; inv_get.
+    eapply H1; eauto.
     * simpl. apply take_of_list_cardinal.
     * clear. cset_tac.
     * eapply PIR2_app; eauto.
       eapply PIR2_get; eauto with len.
       intros ; inv_get. split.
       -- apply take_of_list_cardinal.
-      -- rewrite take_set_incl at 1. eauto with cset.
+      -- rewrite take_set_incl at 1.
+         clear; eauto with cset.
   + eapply IHlvSound; eauto.
     * rewrite ReqR'. clear. cset_tac.
    (* * (8 apply list_eq_app.
@@ -548,7 +557,9 @@ general induction lvSound;
       eapply PIR2_get; eauto with len.
       intros ; inv_get. split.
       -- apply take_of_list_cardinal.
-      -- rewrite take_set_incl at 1. eauto with cset.
+      -- rewrite take_set_incl at 1.
+         clear; eauto with cset.
+         Grab Existential Variables. eauto. eauto.
 Qed.
 
 

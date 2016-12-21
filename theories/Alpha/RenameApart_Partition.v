@@ -113,28 +113,6 @@ Proof.
       * rewrite H3, Incl. eauto with cset.
 Qed.
 
-Lemma ra_incl1 X `{OrderedType X} (D Ds VD:set X) x
-  : D ∪ {x; Ds} [<=] VD
-    -> {x; D} ∪ Ds [<=] VD.
-Proof.
-  cset_tac.
-Qed.
-
-Lemma ra_incl2 X `{OrderedType X} (D Ds Dt VD:set X)
-  : D ∪ (Ds ∪ Dt) [<=] VD
-    -> D ∪ Ds [<=] VD.
-  cset_tac.
-Qed.
-
-Lemma ra_incl3 X `{OrderedType X} (D Ds Dt VD:set X)
-  : D ∪ (Ds ∪ Dt) [<=] VD
-    -> D ∪ Dt [<=] VD.
-  cset_tac.
-Qed.
-
-Hint Resolve ra_incl1 ra_incl2 ra_incl3 : cset.
-
-
 Lemma renamedApart_incl VD s ra
       (RA:renamedApart s ra)
       (Incl:fst (getAnn ra) ∪ snd (getAnn ra) ⊆ VD)

@@ -1,6 +1,7 @@
 Require Export Setoid Coq.Classes.Morphisms.
 Require Export Sets SetInterface SetConstructs SetProperties.
-Require Import Util LengthEq EqDec Get CSetNotation CSetTac CSetBasic CSetComputable AllInRel.
+Require Import Util LengthEq EqDec Get AllInRel.
+Require Import CSetNotation CSetTac CSetBasic CSetComputable ElemEq.
 
 Set Implicit Arguments.
 
@@ -326,4 +327,61 @@ Proof.
   - assert (m < n) by omega.
     intro. symmetry in H7.
     eapply NoDupA_get_neq'; eauto.
+Qed.
+
+
+Lemma of_list_list_union
+      (X : Type)
+      `{OrderedType X}
+      (s : ⦃X⦄)
+      (L : list ⦃X⦄)
+  :
+    s ∈ of_list L -> s ⊆ list_union L
+.
+Proof.
+  intro s_in.
+  apply of_list_1 in s_in.
+  induction s_in;
+    simpl in *; eauto.
+  - rewrite H0.
+    apply list_union_start.
+    cset_tac.
+  - rewrite list_union_start_swap, IHs_in.
+    cset_tac.
+Qed.
+
+Lemma list_union_elem_eq_ext
+      (X : Type)
+      `{OrderedType X}
+      (L L' : list ⦃X⦄)
+  :
+    elem_eq L L'
+    -> list_union L [=] list_union L'
+.
+Proof.
+  intros. unfold elem_eq in H0.
+  enough (forall (l l' : list ⦃X⦄),
+                    of_list l ⊆ of_list l'
+                    -> list_union l ⊆ list_union l') as enouf.
+  {
+    unfold elem_eq.
+    apply eq_incl in H0 as [incl1 incl2].
+    apply incl_eq; eauto.
+  }
+  clear L L' H0.
+  intros.
+  general induction l;
+    simpl in *; eauto.
+  - cset_tac.
+  - norm_lunion.
+    rewrite add_union_singleton in H0.
+    assert (a ⊆ list_union l') as a_sub.
+    {
+      apply of_list_list_union; eauto.
+      clear IHl; cset_tac.
+    }
+    rewrite a_sub.
+    rewrite IHl with (l':=l'); eauto.
+    clear; cset_tac.
+    cset_tac.
 Qed.

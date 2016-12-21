@@ -1,9 +1,9 @@
 Require Import List Map Env AllInRel Exp Rename.
-Require Import IL Annotation InRel AutoIndTac .
+Require Import IL Annotation InRel AutoIndTac MoreListSet.
+
+Export MoreListSet.
 
 Set Implicit Arguments.
-
-Notation "DL \\ ZL" := (zip (fun s L => s \ of_list L) DL ZL) (at level 50).
 
 Local Hint Resolve incl_empty minus_incl incl_right incl_left.
 
@@ -165,3 +165,21 @@ Proof.
 Qed.
 
 Hint Resolve adapt_premise.
+
+Lemma live_globals_zip (F:〔params*stmt〕) (als:〔ann ⦃var⦄〕) DL ZL (LEN1:length F = length als)
+  : zip pair (getAnn ⊝ als) (fst ⊝ F) ++ zip pair DL ZL =
+    zip pair (List.map getAnn als ++ DL) (List.map fst F ++ ZL).
+Proof with eauto with len.
+  rewrite zip_app...
+Qed.
+
+Lemma PIR2_Subset_tab_extend AP DL ZL (F:list (params*stmt)) als
+  : PIR2 Subset AP (DL \\ ZL)
+    -> ❬F❭ = ❬als❭
+    -> PIR2 Subset (tab {} ‖F‖ ++ AP) ((getAnn ⊝ als ++ DL) \\ (fst ⊝ F ++ ZL)).
+Proof.
+  intros P LEN.
+  rewrite zip_app; eauto using PIR2_length with len.
+  eapply PIR2_app; eauto.
+  eapply PIR2_get; try (intros ? ? ? GET; inv_map GET); eauto with cset len.
+Qed.

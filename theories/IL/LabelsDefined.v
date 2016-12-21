@@ -251,3 +251,23 @@ Proof.
 Qed.
 
 Hint Resolve noUnreachableCode_trueIsCalled_isCalled.
+
+
+Lemma callChain_range b F f f'
+  : callChain (isCalled b) F f f'
+    -> ❬F❭ <= counted f'
+    -> counted f <= counted f'.
+Proof.
+  intros.
+  inv H; eauto; simpl in *.
+  - rewrite <- H0. eapply get_range in H1. omega.
+Qed.
+
+Lemma callChain_range' b F f f'
+  : callChain (isCalled b) F f f'
+    -> counted f' < ❬F❭
+    -> counted f < ❬F❭.
+Proof.
+  intros.
+  inv H; eauto.
+Qed.

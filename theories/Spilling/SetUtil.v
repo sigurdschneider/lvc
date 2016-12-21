@@ -82,26 +82,3 @@ Proof.
     rewrite <- uni;
     cset_tac.
 Qed.
-
-
-
-
-Lemma of_list_list_union
-      (X : Type)
-      `{OrderedType X}
-      (s : ⦃X⦄)
-      (L : list ⦃X⦄)
-  :
-    s ∈ of_list L -> s ⊆ list_union L
-.
-Proof.
-  intro s_in.
-  apply of_list_1 in s_in.
-  induction s_in;
-    simpl in *; eauto.
-  - rewrite H0.
-    apply list_union_start.
-    cset_tac.
-  - rewrite list_union_start_swap, IHs_in.
-    cset_tac.
-Qed.

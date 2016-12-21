@@ -1,4 +1,4 @@
-Require Import CSet Util Get Drop Var Map OptionR AllInRel OUnion MoreList.
+Require Import CSet Util Get Drop Var Map OptionR AllInRel OUnion MoreList MoreListSet.
 
 Set Implicit Arguments.
 
@@ -373,4 +373,42 @@ Lemma PIR2_ifFstR_refl A (R:A->A->Prop) `{Reflexive _ R} L
   : PIR2 (ifFstR R) (Some ⊝ L) L.
 Proof.
   eapply PIR2_get; intros; inv_get; eauto using @ifFstR with len.
+Qed.
+
+Lemma restrict_zip_ominus' DL LV lv x al
+:  length DL = length LV
+-> (forall n lv dl, get LV n (Some lv) -> get DL n dl -> x ∉ lv -> x ∉ dl)
+-> al \ singleton x ⊆ lv
+->  restr al ⊝ (zip ominus' DL LV)
+ ≿ restr (lv \ singleton x) ⊝ (zip ominus' DL LV).
+Proof.
+  intros. eapply length_length_eq in H.
+  general induction H; simpl in *.
+  - econstructor.
+  - econstructor; eauto using get.
+    destruct y; intros; simpl; try now econstructor.
+    repeat cases; try now econstructor.
+    exfalso. eapply NOTCOND. rewrite <- H1, <- COND.
+    decide (x0 ∈ s).
+    + cset_tac.
+    + exploit H0; eauto using get.
+      cset_tac.
+Qed.
+
+Lemma zip_bounded DL LV lv x
+: length DL = length LV
+  -> bounded (List.map Some DL) lv
+  -> (forall n lv dl, get LV n (Some lv) -> get DL n dl -> x ∉ lv -> x ∉ dl)
+  -> bounded (zip (fun (s : set var) (t : option (set var)) => mdo t' <- t; ⎣s \ t' ⎦) DL LV) (lv \ {{ x }} ).
+Proof.
+  intros. eapply length_length_eq in H.
+  general induction H; simpl; eauto.
+  destruct y; simpl in * |- *.
+  + split.
+    - decide (x0 ∈ s).
+      * cset_tac; intuition.
+      * exploit H1; eauto using get. cset_tac; intuition.
+    - destruct H0; eapply IHlength_eq; eauto.
+      intros. eauto using get.
+  + eapply IHlength_eq; eauto using get.
 Qed.

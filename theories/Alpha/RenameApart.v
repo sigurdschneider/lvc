@@ -2,6 +2,8 @@ Require Import CSet Util Map.
 Require Import Env IL Alpha StableFresh Annotation RenamedApart SetOperations.
 Require Import LabelsDefined PairwiseDisjoint AppExpFree.
 
+Export RenamedApart.
+
 Set Implicit Arguments.
 
 (** We first define [rename_apart' ϱ G s], a function that chooses

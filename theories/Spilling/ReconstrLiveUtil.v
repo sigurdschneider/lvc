@@ -238,7 +238,7 @@ Lemma sla_list_union_EQ_extended_args
                                            ⊝ (extend_args Y ib)).
 Proof.
   apply list_union_elem_eq_ext.
-  apply op_freeVars_elem_eq_ext.
+  eapply elem_eq_map. intuition.
   apply slot_lift_args_elem_eq_ext.
   apply extend_args_elem_eq_ext.
 Qed.

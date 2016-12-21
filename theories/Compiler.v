@@ -12,6 +12,8 @@ Require ReachabilityAnalysis ReachabilityAnalysisCorrect.
 Require Import DCVE Slot InfinitePartition RegAssign ExpVarsBounded.
 (* Require CopyPropagation ConstantPropagation ConstantPropagationAnalysis.*)
 
+Require Import RenameApartToPart StableFresh.
+
 Require String.
 
 Set Implicit Arguments.
@@ -90,67 +92,6 @@ Definition optimize (s':stmt) : status stmt :=
 
 Print all.
 
-Require Import RenameApart_VarP.
-
-Require Import StableFresh.
-
-Definition rename_apart_to_part1 (s:stmt) :=
-  let xl := (fresh_list_stable (stable_fresh_P even_inf_subset)
-                              ∅
-                              (to_list (freeVars s))) in
-  let s' := (renameApart' (stable_fresh_P even_inf_subset)
-                       (id [to_list (freeVars s) <-- xl])
-                       (of_list xl)
-                       s) in
-  (co_ra s', renamedApartAnn (co_ra s') (of_list xl)).
-
-Opaque to_list.
-
-Lemma rename_apart_to_part1_renamedApart s
-  : RenamedApart.renamedApart (fst (rename_apart_to_part1 s))
-                              (snd (rename_apart_to_part1 s)).
-Proof.
-  unfold rename_apart_to_part1. simpl.
-  eapply renameApart'_renamedApart.
-  - rewrite update_with_list_lookup_set_incl; eauto with len.
-    rewrite of_list_3; eauto.
-  - reflexivity.
-Qed.
-
-
-Lemma rename_apart_to_part1_occurVars s
-  : fst (getAnn (snd (rename_apart_to_part1 s)))
-        ∪ snd (getAnn (snd (rename_apart_to_part1 s)))
-        [=] occurVars (fst (rename_apart_to_part1 s)).
-Proof.
-  unfold rename_apart_to_part1; simpl.
-  rewrite occurVars_freeVars_definedVars.
-  rewrite snd_renamedApartAnn.
-  eapply eq_union_lr; eauto.
-  rewrite fst_renamedApartAnn.
-  rewrite freeVars_renamedApart'.
-  - rewrite update_with_list_lookup_list_eq; eauto with len.
-    + eapply DelocationAlgo.nodup_to_list_var.
-    + rewrite of_list_3; eauto.
-  - rewrite update_with_list_lookup_list_eq; eauto with len.
-    + eapply DelocationAlgo.nodup_to_list_var.
-    + rewrite of_list_3; eauto.
-Qed.
-
-Lemma rename_to_subset_even (s:stmt)
-  : For_all (inf_subset_P even_inf_subset)
-            (occurVars (fst (rename_apart_to_part1 s))).
-Proof.
-  eapply var_P_occurVars.
-  eapply renameApart_var_P.
-  - intros. eapply least_fresh_P_full_spec.
-  - intros.
-    edestruct update_with_list_lookup_in_list; dcr.
-    Focus 3. rewrite H3. hnf in H5. subst.
-    exploit fresh_list_stable_get; eauto; dcr; subst.
-    eapply least_fresh_P_full_spec.
-    eauto with len. rewrite of_list_3; eauto.
-Qed.
 
 Definition slt (D:set var) (EV:For_all even D)
   : Slot D.
@@ -166,7 +107,7 @@ Require Import RegAssign.
 
 Definition fromILF (s:stmt) :=
   let s_eae := EAE.compile s in
-  let sra := rename_apart_to_part1 s_eae in
+  let sra := rename_apart_to_part s_eae in
   let dcve := DCVE Liveness.Imperative (fst sra) (snd sra) in
   let fvl := to_list (getAnn (co_lv dcve)) in
   let k := exp_vars_bound (co_s dcve) in
@@ -188,7 +129,7 @@ Require Import MoreTac Alpha RenameApart_Alpha RenameApart_Liveness
 
 Definition slotted_vars (s:stmt) :=
   let s_eae := EAE.compile s in
-  let sra := rename_apart_to_part1 s_eae in
+  let sra := rename_apart_to_part s_eae in
   let dcve := DCVE Liveness.Imperative (fst sra) (snd sra) in
   let k := exp_vars_bound (co_s dcve) in
   drop k (to_list (getAnn (co_lv dcve))).
@@ -213,6 +154,20 @@ Qed.
 
 Opaque to_list.
 
+Lemma rename_apart_to_part_freeVars s
+  : fst (getAnn (snd (rename_apart_to_part s)))
+        [=] of_list (fromILF_fvl_ren s).
+Proof.
+  unfold rename_apart_to_part; simpl.
+  rewrite fst_renamedApartAnn.
+  unfold fromILF_fvl_ren.
+  eapply fresh_list_stable_P_ext_eq.
+  eapply length_to_list_morphism.
+  rewrite <- EAE.EAE_freeVars; eauto.
+Qed.
+
+Opaque to_list.
+
 Lemma fromILF_fvl_ren_EAE s
   : of_list (fromILF_fvl_ren (EAE.compile s)) [=] of_list (fromILF_fvl_ren s).
 Proof.
@@ -222,17 +177,6 @@ Proof.
   rewrite EAE.EAE_freeVars; eauto.
 Qed.
 
-Lemma rename_apart_to_part1_freeVars s
-  : fst (getAnn (snd (rename_apart_to_part1 s)))
-        [=] of_list (fromILF_fvl_ren s).
-Proof.
-  unfold rename_apart_to_part1; simpl.
-  rewrite fst_renamedApartAnn.
-  unfold fromILF_fvl_ren.
-  eapply fresh_list_stable_P_ext_eq.
-  eapply length_to_list_morphism.
-  rewrite EAE.EAE_freeVars; eauto.
-Qed.
 
 Lemma fromILF_correct (s s':stmt) E (PM:LabelsDefined.paramsMatch s nil)
       (OK:fromILF s = Success s')
@@ -261,7 +205,7 @@ Proof.
   }
 
   assert (RA:RenamedApart.renamedApart (fst sra) (snd sra)). {
-    eapply rename_apart_to_part1_renamedApart.
+    eapply rename_apart_to_part_renamedApart.
   }
 
   assert (EVB:exp_vars_bounded k (co_s dcve)). {
@@ -283,7 +227,7 @@ Proof.
     pose proof (rename_to_subset_even s_eae) as HY1.
     rewrite DCVE_ra_fst; eauto.
     rewrite DCVE_ra_snd; eauto.
-    subst sra. rewrite rename_apart_to_part1_occurVars.
+    subst sra. rewrite rename_apart_to_part_occurVars.
     eapply rename_to_subset_even.
   }
   pose (@slt _ EV) as slt.
@@ -372,7 +316,7 @@ Proof.
       unfold dcve, sra, s_eae in Incl1.
       rewrite Incl1 in H.
       rewrite DCVE_ra_fst in H; eauto.
-      rewrite rename_apart_to_part1_freeVars in H.
+      rewrite rename_apart_to_part_freeVars in H.
       edestruct update_with_list_lookup_in_list.
       Focus 3.
       destruct H0 as [? [? [? [? [? ?]]]]].

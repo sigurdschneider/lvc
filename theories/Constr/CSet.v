@@ -2,6 +2,7 @@ Require Export Setoid Coq.Classes.Morphisms Omega.
 Require Export Sets SetInterface SetConstructs SetProperties.
 Require Export EqDec Computable Util Drop.
 Require Export CSetTac CSetBasic CSetCases CSetGet CSetComputable CSetDisjoint CSetNotation.
+Require Export ElemEq.
 
 Set Implicit Arguments.
 
@@ -230,7 +231,8 @@ Proof.
 Qed.
 
 
-Lemma cardinal_map {X} `{OrderedType X} {Y} `{OrderedType Y} (s: set X) (f:X -> Y) `{Proper _ (_eq ==> _eq) f}
+Lemma cardinal_map {X} `{OrderedType X} {Y} `{OrderedType Y} (s: set X) (f:X -> Y)
+      `{Proper _ (_eq ==> _eq) f}
 : SetInterface.cardinal (SetConstructs.map f s) <= SetInterface.cardinal s.
 Proof.
   pattern s. eapply set_induction.
@@ -247,12 +249,13 @@ Proof.
       assert (SetConstructs.map f s' ⊆ {f x; SetConstructs.map f s0}). {
         hnf; intros. rewrite H5. eapply Add_Equal in H4.
         rewrite H4 in H6.
-        cset_tac.
+        revert H1 H6; clear; cset_tac'.
       }
       rewrite <- H6. omega.
     + rewrite <- H2. erewrite <- cardinal_2; eauto.
-      split; intros. cset_tac'. eexists x0; split; eauto.
-      eapply H9. cset_tac. cset_tac.
+      hnf; intros.
+      eapply Add_Equal in H4. rewrite H4 in *; clear H4.
+      split; intros; revert n; cset_tac'.
 Qed.
 
 
@@ -398,18 +401,6 @@ Hint Extern 5 =>
 match goal with
   | [ H1 : ?s \ ?u ⊆ ?t, H2 : ?u ⊆ ?t |- ?s ⊆ ?t ] => eapply (incl_minus_both H1 H2)
 end : cset.
-
-Definition elem_eq {X} `{OrderedType X} (x y: list X) := of_list x [=] of_list y.
-
-Instance elem_eq_refl X `{OrderedType X} : Reflexive (@elem_eq X _).
-hnf; intros. hnf. cset_tac; intuition.
-Qed.
-
-Definition elem_incl {X} `{OrderedType X} (x y: list X) := of_list x [<=] of_list y.
-
-Instance elem_incl_refl X `{OrderedType X} : Reflexive (@elem_incl _ _).
-hnf; intros. hnf. cset_tac; intuition.
-Qed.
 
 Instance instance_option_eq_trans_R X {R: relation X} `{Transitive _ R}
  : Transitive (option_eq R).
@@ -795,4 +786,70 @@ Lemma filter_union X `{OrderedType X} (p:X->bool) s t `{Proper _ (_eq ==> eq) p}
   : filter p (s ∪ t) [=] filter p s ∪ filter p t.
 Proof.
   cset_tac.
+Qed.
+
+Lemma nodup_to_list X `{OrderedType X} (s: set X)
+  : NoDupA _eq (to_list s).
+Proof.
+  pose proof (elements_3w s). eauto.
+Qed.
+
+Lemma nodup_to_list_eq X `{UsualOrderedType X} (s: set X)
+  : NoDupA eq (to_list s).
+Proof.
+  pose proof (elements_3w s). eauto.
+Qed.
+
+Lemma InA_In_eq X `{UsualOrderedType X} (L:list X) (x:X)
+  : InA eq x L <-> InA _eq x L.
+Proof.
+  split; eauto.
+Qed.
+
+Lemma union_incl_union_swap X `{OrderedType X} s t
+  : s ∪ t ⊆ t ∪ s.
+Proof.
+  cset_tac.
+Qed.
+
+Lemma minus_incl_comm X `{OrderedType X} s t u
+  : (s \ t) \ u ⊆ (s \ u) \ t.
+Proof.
+  cset_tac.
+Qed.
+
+Lemma minus_union_incl_minus_minus X `{OrderedType X} s t u
+  : (s \ (t ∪ u)) ⊆ (s \ t) \ u.
+Proof.
+  cset_tac.
+Qed.
+
+Hint Resolve union_incl_union_swap minus_incl_comm minus_union_incl_minus_minus : cset.
+
+(* move to cardinal *)
+Lemma card_inter_le_right
+      (X : Type)
+
+      `{OrderedType X}
+      (s t : ⦃X⦄)
+  :
+    cardinal (s ∩ t) <= cardinal t
+.
+Proof.
+  rewrite subset_cardinal with (s':=t);
+    [reflexivity | cset_tac].
+Qed.
+
+(* move to cardinal *)
+Lemma card_inter_le_left
+      (X : Type)
+
+      `{OrderedType X}
+      (s t : ⦃X⦄)
+  :
+    cardinal (s ∩ t) <= cardinal s
+.
+Proof.
+  rewrite subset_cardinal with (s':=s);
+    [reflexivity | cset_tac].
 Qed.

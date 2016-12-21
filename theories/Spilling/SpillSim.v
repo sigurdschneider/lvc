@@ -274,6 +274,14 @@ Proof.
   rewrite SpR, Incl. cset_tac.
 Qed.
 
+Lemma RKL_incl X `{OrderedType X} (R K L D D':set X)
+  :  R \ K ∪ L ⊆ R ∪ D ∪ D' ∪ L.
+Proof.
+  cset_tac.
+Qed.
+
+Hint Resolve RKL_incl | 0: cset.
+
 Lemma defined_on_after_spill_load (V V' V'':var->option val) VD R M Sp L0  K
       (Agr5 : agree_on eq (Sp ∪ M) V (fun x : var => V'' (slot x)))
       (Disj : disj VD (map slot VD)) (Incl : R ∪ M [<=] VD)
@@ -289,7 +297,7 @@ Proof.
   assert (defined_on Sp V') as DefSp by eauto using defined_on_incl with cset.
   rewrite union_exclusive.
   eapply defined_on_union.
-  -- eapply defined_on_agree_eq; [|eapply agree_on_incl;[eapply Agr3| eauto with cset]].
+  -- eapply defined_on_agree_eq; [|eapply agree_on_incl;[eapply Agr3|eauto with cset]].
      rewrite union_comm, union_exclusive. eapply defined_on_union.
      ++ eapply defined_on_update_list'; eauto with len.
        rewrite of_list_elements. clear; hnf; intros; cset_tac.
@@ -372,9 +380,10 @@ Proof.
   - rewrite lookup_set_update_not_in_Z; eauto.
     rewrite lookup_set_update_not_in_Z; eauto.
     eapply Agr2. cset_tac.
-    rewrite of_list_slot_lift_params.
-    intro. eapply (Disj x). cset_tac. cset_tac.
-    eauto.
+    rewrite of_list_slot_lift_params; eauto.
+    intro. eapply (Disj x);
+    eauto with cset.
+    revert n H0; clear; cset_tac.
 Qed.
 
 Lemma update_with_list_lookup_in_list_first_slot' A (E:onv A) n (R M:set var)
@@ -445,7 +454,8 @@ Proof.
     + eapply (Disj x). cset_tac.
       eapply map_iff in H0; eauto. dcr.
       eapply Inj in H3; eauto with cset.
-      cset_tac. cset_tac.
+      exfalso; cset_tac.
+      cset_tac.
 Qed.
 
 Instance SR (VD:set var) : PointwiseProofRelationI (((set var) * (set var)) * params) := {
@@ -491,7 +501,8 @@ Proof.
   exploit Sp_sub_R as SpR; eauto.
   assert (VDincl:getSp sl ∪ getL sl [<=] VD). {
     rewrite LSpM, SpR.
-    rewrite <- Incl. eauto with cset.
+    rewrite <- Incl.
+    clear; cset_tac.
   }
   eapply sim_I_moves; eauto.
   eapply injective_on_incl; eauto with cset.
@@ -601,13 +612,13 @@ Proof.
              clear; eauto with cset.
         -- rewrite EQ; eauto.
       * eapply slot_lift_params_agree_slot; eauto.
-        eapply disj_incl; eauto.
-        rewrite In3, <- EQ, In1, In2; eauto with cset.
-        eapply map_incl; eauto.
-        rewrite In3, <- EQ, In1, In2; eauto with cset.
-        eapply injective_on_incl; eauto.
-        rewrite In3, <- EQ, In1, In2; eauto with cset.
-        rewrite EQ; eauto.
+        -- eapply disj_incl; eauto.
+           rewrite In3, <- EQ, In1, In2. clear; cset_tac.
+           eapply map_incl; eauto.
+           rewrite In3, <- EQ, In1, In2. clear; cset_tac.
+        -- eapply injective_on_incl; eauto.
+           rewrite In3, <- EQ, In1, In2. clear; cset_tac.
+        -- rewrite EQ; eauto.
       * eapply defined_on_update_list'.
         -- len_simpl.
            edestruct H8; eauto; dcr. simpl in *.
@@ -640,6 +651,7 @@ Proof.
       inv_get; simpl; eauto.
     + eauto with len.
     + eauto with len.
+      Grab Existential Variables. eapply 0.
 Qed.
 
 End Correctness.

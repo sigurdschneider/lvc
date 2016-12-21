@@ -417,3 +417,62 @@ Lemma renamedApart_annotation s ang
 Proof.
   intros. general induction H; eauto 20 using @annotation.
 Qed.
+
+
+Lemma ra_incl1 X `{OrderedType X} (D Ds VD:set X) x
+  : D ∪ {x; Ds} [<=] VD
+    -> {x; D} ∪ Ds [<=] VD.
+Proof.
+  cset_tac.
+Qed.
+
+Lemma ra_incl2 X `{OrderedType X} (D Ds Dt VD:set X)
+  : D ∪ (Ds ∪ Dt) [<=] VD
+    -> D ∪ Ds [<=] VD.
+  cset_tac.
+Qed.
+
+Lemma ra_incl3 X `{OrderedType X} (D Ds Dt VD:set X)
+  : D ∪ (Ds ∪ Dt) [<=] VD
+    -> D ∪ Dt [<=] VD.
+  cset_tac.
+Qed.
+
+Hint Resolve ra_incl1 ra_incl2 ra_incl3 : cset.
+
+Lemma ra_incl4 X `{OrderedType X} (D Ds VD:set X) x
+  :  {x; D} ∪ Ds [<=] D ∪ {x; Ds}.
+Proof.
+  cset_tac.
+Qed.
+
+Lemma ra_incl5 X `{OrderedType X} (D Ds VD:set X) x
+  :  {x; D} ∪ Ds [<=] D ∪ {x; Ds}.
+Proof.
+  cset_tac.
+Qed.
+
+Lemma ra_incl6 X `{OrderedType X} (D Ds Dt VD:set X)
+  : D ∪ Ds [<=] D ∪ (Ds ∪ Dt).
+  cset_tac.
+Qed.
+
+Lemma ra_incl7 X `{OrderedType X} (D Ds Dt VD:set X)
+  : D ∪ Dt [<=] D ∪ (Ds ∪ Dt).
+  cset_tac.
+Qed.
+
+Hint Resolve ra_incl4 ra_incl5 ra_incl6 ra_incl7 : cset.
+
+Lemma ans_incl_D_union D Dt F ans a n
+      (IFC:Indexwise.indexwise_R (funConstr D Dt) F ans)
+      (GetAns:get ans n a)
+      (Len:❬F❭ = ❬ans❭)
+  : fst (getAnn a) ∪ snd (getAnn a) [<=] D ∪ (list_union (defVars ⊜ F ans) ∪ Dt).
+Proof.
+  inv_get. edestruct IFC; eauto; dcr.
+  rewrite H0. rewrite <- incl_list_union; eauto using zip_get;[|reflexivity].
+  unfold defVars. clear; cset_tac.
+Qed.
+
+Hint Resolve ans_incl_D_union | 0 : cset .

@@ -92,34 +92,32 @@ Proof.
     * rewrite list_union_start_swap. clear_all; cset_tac.
 Qed.
 
-
 Lemma alpha_rho_agree D s u ang ϱ ϱ'
   : renamedApart s ang
     -> agree_on eq (D \ snd (getAnn ang)) ϱ ϱ'
     -> agree_on eq (D \ snd (getAnn ang)) ϱ (alpha_rho ϱ' s u).
 Proof.
   intros RA.
-  general induction RA; destruct u; simpl; eauto.
-  - pe_rewrite; simpl in *. rewrite H1 in *.
-    eapply agree_on_incl.
+  general induction RA; destruct u; simpl; eauto;
+    set_simpl; pe_rewrite.
+  - eapply agree_on_incl.
     + eapply IHRA.
       symmetry. instantiate (1:=D0 \ singleton x).
       eapply agree_on_update_dead; [ cset_tac | ].
       symmetry. eapply agree_on_incl; cset_tac.
     + cset_tac.
-  - simpl in *. rewrite <- H1 in *.
-    pe_rewrite.
-    eapply agree_on_incl. eapply (IHRA2 (D0 \ Ds)).
+  - eapply agree_on_incl. eapply (IHRA2 (D0 \ Ds)).
     eapply agree_on_incl. eapply (IHRA1 (D0 \ Dt)).
     eapply agree_on_incl; eauto with cset.
-    cset_tac; intuition. cset_tac; intuition.
+    eauto with cset. eauto with cset.
   - pe_rewrite. simpl in *.
     eapply agree_on_incl. eapply IHRA.
     eapply agree_on_incl. eapply alpha_rho_agree_F; eauto.
-    eapply agree_on_incl; eauto. rewrite <- H5.
-    instantiate (1:=D0 \ Dt). cset_tac; intuition.
-    instantiate (1:=D0 \ list_union zip defVars F ans). cset_tac; intuition.
-    rewrite <- H5. cset_tac; intuition.
+    eapply agree_on_incl; eauto.
+    + instantiate (1:=D0 \ Dt); eauto with cset.
+    + instantiate (1:=D0 \ list_union zip defVars F ans).
+      eauto with cset.
+    + eauto with cset.
 Qed.
 
 Lemma alpha_rho_agrees_snd2_F F F' ans ϱ ϱ' D
@@ -166,7 +164,6 @@ Proof.
   exploit H1; eauto using get. rewrite H2, H3; eauto using get.
 Qed.
 
-
 Lemma alpha_rho_agrees_snd2 s u ang ϱ ϱ' D ρ ρ'
   : renamedApart s ang
     -> alpha ρ ρ' s u
@@ -184,7 +181,8 @@ Proof.
       eapply incl_minus_lr; eauto.
       eapply list_union_incl; eauto with len.
       * intros; inv_get.
-        rewrite <- renamedApart_occurVars; eauto. eauto with cset.
+        rewrite <- renamedApart_occurVars; eauto.
+        eauto with cset.
 Qed.
 
 Lemma funConstr_disjoint_defVars F ans D Dt
