@@ -29,7 +29,7 @@ Proof.
     rewrite <- get_list_union_map; eauto using get.
     eapply IHs.
     eapply agree_on_incl; eauto. simpl.
-    norm_lunion. clear_all; cset_tac.
+    norm_lunion. clear_all; cset_tac'. idtac "improve cset_tac". cset_tac.
 Qed.
 
 

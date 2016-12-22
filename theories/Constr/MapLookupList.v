@@ -165,7 +165,7 @@ Lemma map_single {X} `{OrderedType X} Y `{OrderedType Y} (f:X->Y)
 Proof.
   hnf; intros. rewrite map_iff; eauto.
   split; intros.
-  - destruct H2; dcr. cset_tac'. rewrite H2; eauto.
+  - destruct H2; dcr. cset_tac'. rewrite H3; eauto.
   - cset_tac.
 Qed.
 
