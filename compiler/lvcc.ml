@@ -28,6 +28,7 @@ let main () =
      heuristic to pick them. *)
   let _ = register_name "i" in
   let _ = register_name "n" in
+  let debug = false in
   let infile = ref "" in
   let outfile = ref "a.s" in
   let do_addParams = ref false in
@@ -59,7 +60,7 @@ let main () =
 		 | Error e -> raise (Compiler_error "Converting to de bruijn failed (did you define all functions?)"))
 		 in
       let s_dce =
-	(match fromILF parallel_move ili with
+	(match fromILF (parallel_move debug) ili with
 	 | Success x -> Printf.printf "after reg alloc (functions de-bruijn, regs lowercase, slots uppercase):\n%s\n\n" (print_stmt true !ids 0 x);
 	   x
 	 | Error e -> raise (Compiler_error "reg alloc failed")

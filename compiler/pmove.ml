@@ -9,6 +9,7 @@ of a compilation algorithm for parallel moves. Journal of Automated Reasoning 40
 *)
 
 open String
+open Camlcoq
 
 type status = To_move | Being_moved | Moved
 
@@ -17,18 +18,19 @@ let rec zip lst1 lst2 = match lst1,lst2 with
   | _, []-> []
   | (x::xs),(y::ys) -> (x,y) :: (zip xs ys);;
 
-let print_pair op (src,dst) = string_of_int (List.hd src) ^ op ^ (string_of_int (List.hd dst))
-;;
+let print_pair op (src,dst) = string_of_int (Nat.to_int (List.hd src))
+			      ^ op
+			      ^ (string_of_int (Nat.to_int (List.hd dst)));;
 
 
 let print_moves srcl dstl =
   concat "\n" (List.map (print_pair " <- ") (List.map (fun (a,b) -> ([a], [b])) (zip srcl dstl))) ^ ";"
 ;;
 
-let parallel_move tmp srcl dstl =
+let parallel_move (debug:bool) tmp srcl dstl =
   let src = Array.of_list srcl in
   let dst = Array.of_list dstl in
-  (* let _ = Printf.printf "moves:\n%s\n" (print_moves srcl dstl) in *)
+  let _ = if debug then Printf.printf "moves:\n%s\n" (print_moves srcl dstl) else () in
   let n = Array.length src in
   let status = Array.make n To_move in
   let res = ref [] in
@@ -52,5 +54,5 @@ let parallel_move tmp srcl dstl =
   for i = 0 to n - 1 do
     if status.(i) = To_move then move_one i
   done;
-  (* let _ = Printf.printf "res:\n%s\n" (concat "\n" (List.map (print_pair " = ") !res)) in *)
+  let _ = if debug then Printf.printf "res:\n%s\n" (concat "\n" (List.map (print_pair " = ") !res)) else () in
   (* List.rev *) !res

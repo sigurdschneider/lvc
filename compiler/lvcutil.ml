@@ -17,7 +17,7 @@ let rec discard_dead lv m =
 let rec first f x =
   if f x then x else first f (x + 1)
 
-let print_var has_slots ids v =
+let print_var has_slots ids (v:int) =
   let is_slot = v mod 2 == 1 && has_slots in
   try
     let c = (IntMap.find v ids) in
