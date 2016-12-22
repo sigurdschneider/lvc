@@ -557,8 +557,8 @@ Smpl Add 50
      | [ |- context [ _ /\ True ] ] => setoid_rewrite True_and_right
      | [ H : context [ _ /\ True ] |- _ ] => setoid_rewrite True_and_right in H
      | [ |- context [ _ \/ False ] ] => setoid_rewrite P_or_False_right
-     | [ H : context [ _ \/ False ] |- _ ] => setoid_rewrite P_or_False_left in H
-     | [ |- context [ False \/ _ ] ] => setoid_rewrite P_or_False_right
+     | [ H : context [ _ \/ False ] |- _ ] => setoid_rewrite P_or_False_right in H
+     | [ |- context [ False \/ _ ] ] => setoid_rewrite P_or_False_left
      | [ H : context [ False \/ _ ] |- _ ] => setoid_rewrite P_or_False_left in H
      | [ |- context [ not (_ \/ _) ] ] => setoid_rewrite not_or_dist
      | [ H : context [ not (_ \/ _) ] |- _ ] => setoid_rewrite not_or_dist in H
