@@ -307,7 +307,7 @@ Qed.
 
   Ltac set_tac f := repeat (cset_tac_step_B f; repeat clear_dup_fast).
 
-  Ltac cset_tac' := set_tac idtac.
+  Ltac cset_tac' := warntime 2000 "cset_tac" (set_tac idtac).
   Ltac cset_tac := solve [ cset_tac' ].
 
 Hint Extern 9 =>
