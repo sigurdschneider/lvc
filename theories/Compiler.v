@@ -19,7 +19,6 @@ Require String.
 Set Implicit Arguments.
 
 Section Compiler.
-  Hypothesis parallel_move : var -> list var -> list var -> (list(list var * list var)).
 
 (*Definition constantPropagationAnalysis :=
 Analysis.fixpoint ConstantPropagationAnalysis.constant_propagation_analysis first. *)
@@ -114,7 +113,7 @@ Definition fromILF (s:stmt) :=
   let spilled := spill k S (co_s dcve) (co_lv dcve) in
   let ren2 := snd (renameApart' (stable_fresh_part even_part)
                                id (getAnn (snd (spilled))) (fst spilled)) in
-  let ras := rassign parallel_move ren2
+  let ras := rassign ren2
                     (snd (renameApart_live (stable_fresh_part even_part)
                                            id (getAnn (snd (spilled)))
                                            (fst (spilled))

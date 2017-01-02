@@ -1,7 +1,9 @@
 Require Import CSet Le.
 
-Require Import Plus Util AllInRel Map.
-Require Import Val Var Env IL Annotation InRel SimI Fresh Liveness Status.
+Require Import Plus Util AllInRel Map MapUpdate MapDefined.
+Require Import Val Var Env IL Annotation InRel SimI Fresh.
+Require Import Liveness Status.
+Require CompCert.Parmov.
 
 Set Implicit Arguments.
 Unset Printing Records.
@@ -13,10 +15,18 @@ Unset Printing Records.
    part its initial version was developed by Tobias Tebbi.
 *)
 
-Definition pmov := list (list var * list var).
+Definition pmov := list (var * var).
 
 Definition pmov_source_set (p:pmov) : set var
-  := fold_right (fun p s => s \ of_list (fst p) ∪ of_list (snd p)) ∅ p.
+  := fold_right (fun p s => s \ singleton (fst p) ∪ singleton (snd p)) ∅ p.
+
+Lemma pmov_source_set_incl p
+  : pmov_source_set p ⊆ of_list (snd ⊝ p).
+Proof.
+  general induction p; simpl.
+  - eauto with cset.
+  - rewrite IHp; clear. cset_tac.
+Qed.
 
 Section Parallel_Move.
   Variable X:Type.
@@ -25,7 +35,7 @@ Section Parallel_Move.
   Fixpoint upd_list p M : env X :=
     match p with
       | nil => M
-      | (l1, l2) :: p' => upd_list p' (M[ l1 <-- lookup_list M l2])
+      | (l1, l2) :: p' => upd_list p' (M[ l1 <- M l2])
     end.
 
   Fixpoint par_move (E E': var -> var) (Z : params) (Y : params)
@@ -43,6 +53,7 @@ Section Parallel_Move.
       | (l1, l2) :: p' => par_list p' (par_move M M l1 l2)
     end.
 
+  (*
 Section Translate.
 
   Definition check_pmove (vars : set var) (p1 p2 : pmov) :=
@@ -105,101 +116,43 @@ Section Translate.
   Qed.
 
   End Translate.
-
+*)
 End Parallel_Move.
 
+Notation "f [ // p ]" := (upd_list p f) (at level 29, left associativity).
+
 Section GlueCode.
-  Fixpoint list_to_stmt (p : list (list var * list var)) (s : stmt) {struct p} : stmt :=
+  Fixpoint list_to_stmt (p : list (var * var)) (s : stmt) {struct p} : stmt :=
     match p with
       | nil => s
-      | (x :: nil, y:: nil) :: p' => stmtLet x (Operation (var_to_op y)) (list_to_stmt p' s)
-      | _ => s
+      | (x, y) :: p' => stmtLet x (Operation (var_to_op y)) (list_to_stmt p' s)
     end.
 
-  Lemma list_to_stmt_correct p s :
-    (forall ass, List.In ass p -> exists x, exists y, ass = (x :: nil, y :: nil)) ->
-    forall M,
-    (forall x, x ∈ pmov_source_set p -> M x <> None) ->
-    forall K, star2 I.step (K, M, list_to_stmt p s) nil (K, upd_list p M, s).
+  Lemma list_to_stmt_correct (p:pmov) s (M:onv val) K
+        (Def:defined_on (pmov_source_set p) M)
+    : star2 I.step (K, M, list_to_stmt p s) nil
+        (K, M [ // p ], s).
   Proof.
-    general induction p. firstorder using star2.
-    pose proof (H a). assert (List.In a (a :: p)) by (simpl; eauto).
-    destruct (H1 H2) as [? [? ?]].
-    subst. simpl.
-    exploit (var_to_op_correct M x0).
-    exploit (H0 x0); eauto. simpl. cset_tac; intuition.
-    destruct (M x0); isabsurd.
-    eapply star2_silent.
-    constructor; eauto. eapply IHp. intros. apply H. simpl; eauto.
-    intros. lud. eauto. eapply H0; try reflexivity.
-    simpl. cset_tac.
+    general induction p.
+    - firstorder using star2.
+    - destruct a as [x y]. simpl in *.
+      edestruct (Def y); eauto with cset.
+      exploit (var_to_op_correct M y).
+      eapply star2_silent.
+      + constructor; eauto.
+      + rewrite H.
+        eapply IHp; eauto using defined_on_update_some,
+                    defined_on_incl with cset.
   Qed.
 
-  Hypothesis parallel_move : var -> list var -> list var -> (list(list var * list var)).
+  Hypothesis parallel_move : var -> list var -> list var -> (list(var * var)).
 
   Definition linearize_parallel_assignment (vars:set var) (l1 l2:list var) :=
     parallel_move (least_fresh vars) l1 l2.
 
-  Function check_is_simple_ass (p : list(list var * list var)) {struct p} : bool :=
-    match p with
-      | nil => true
-      | (_ :: nil, _ :: nil):: p' => check_is_simple_ass p'
-      | _ => false
-    end.
-
-  Lemma check_is_simple_ass_correct (p : list (list var * list var)) :
-    check_is_simple_ass p ->
-    forall ass, List.In ass p -> exists x, exists y, ass = (x :: nil, y :: nil).
-  Proof.
-    functional induction (check_is_simple_ass p); intros; simpl in *.
-    - intuition.
-    - intuition. subst; eauto.
-    - intuition.
-  Qed.
-
-  Definition validate_parallel_assignment vars p l1 l2 :=
-    check_is_simple_ass p
-    /\ check_pmove vars p ((l1, l2) :: nil)
-    /\ check_source_set p ((l1, l2) :: nil).
-
-  Lemma validate_parallel_assignment_correct vars p l1 l2
-    (VOK:validate_parallel_assignment vars p l1 l2)
-    : forall M K cont (Src:forall x : var, x \In of_list l2 -> M x <> ⎣⎦), exists M',
-        star2 I.step (K, M, list_to_stmt p cont) nil (K, M', cont) /\
-        agree_on eq vars M' (M[ l1 <-- lookup_list M l2]).
-  Proof.
-    unfold validate_parallel_assignment in *; dcr; intros.
-    eexists; split.
-    eapply list_to_stmt_correct; eauto.
-    eapply check_is_simple_ass_correct; eauto.
-    eapply check_source_set_correct; eauto.
-    eapply (check_pmove_correct H1 M).
-  Qed.
-
-  Definition compile_parallel_assignment
-    (vars:set var)  (l1 l2 : list var) (s : stmt) : status stmt :=
-    let p := linearize_parallel_assignment vars l1 l2 in
-    if [validate_parallel_assignment vars p l1 l2] then
-      Success (list_to_stmt p s) else
-        Error "compile parallel assignment failed".
-
-  Lemma compile_parallel_assignment_correct
-    : forall vars l1 l2 s s',
-      compile_parallel_assignment vars l1 l2 s = Success s' ->
-      forall M K (Src:forall x : var, x \In (of_list l2) -> M x <> ⎣⎦), exists M',
-        star2 I.step (K, M, s') nil (K, M', s) /\
-        agree_on eq vars M' (M[ l1 <-- lookup_list M l2]).
-  Proof.
-    unfold compile_parallel_assignment; intros.
-    cases in H; try discriminate.
-    eapply validate_parallel_assignment_correct; eauto.
-  Qed.
-
 End GlueCode.
 
 Section Implementation.
-  Hypothesis parallel_move : var -> list var -> list var -> (list(list var * list var)).
-
 Fixpoint onlyVars (Y:args) : status params :=
   match Y with
     | nil => Success nil
@@ -219,6 +172,19 @@ Proof.
     cset_tac; congruence.
 Qed.
 
+Lemma onlyVars_defined_on (E:onv val) Y Y' v
+  : onlyVars Y = Success Y'
+    -> omap (op_eval E) Y = Some v
+    -> defined_on (of_list Y') E.
+Proof.
+  intros. general induction Y; simpl in * |- *; eauto.
+  - inv H; simpl in *. hnf; cset_tac.
+  - destruct a; isabsurd. monadS_inv H. monad_inv H0.
+    simpl in * |- *.
+    exploit IHY; eauto.
+    hnf; cset_tac.
+Qed.
+
 Lemma onlyVars_lookup (E:onv val) Y Y' v
   : onlyVars Y = Success Y'
     -> omap (op_eval E) Y = Some v
@@ -230,7 +196,7 @@ Proof.
     simpl in * |- *. inv EQ0. f_equal; eauto.
 Qed.
 
-Fixpoint lower DL s (an:ann (set var))
+Fixpoint lower (DL:〔⦃nat⦄ * params〕) s (an:ann (set var))
   : status stmt :=
   match s, an with
     | stmtLet x e s, ann1 lv ans =>
@@ -244,7 +210,8 @@ Fixpoint lower DL s (an:ann (set var))
        sdo Lve <- option2status (nth_error DL (counted l)) "lower: No annotation for function";
         sdo Y <- onlyVars Y;
         let '(lv', Z) := Lve in
-        compile_parallel_assignment parallel_move lv' Z Y (stmtApp l nil)
+        let mvs := Parmov.parmove2 var Nat.eq_dec (fun _ => (least_fresh lv')) Z Y in
+        Success (list_to_stmt mvs (stmtApp l nil))
 
     | stmtReturn x, ann0 lv => Success (stmtReturn x)
     | stmtFun F t, annF lv ans ant =>
@@ -284,24 +251,26 @@ Proof.
       eauto 20 using op_eval_live, agree_on_update_same, agree_on_incl.
   - eapply option2status_inv in EQ. eapply nth_error_get in EQ.
     inRel_invs.
-    inv_get. simpl in *.
+    inv_get. simpl in *. invc EQ2.
     case_eq (omap (op_eval E) Y); intros.
     + exploit omap_op_eval_live_agree; try eassumption.
-      edestruct (compile_parallel_assignment_correct _ _ _ _ _ EQ2 E' L')
-        as [M' [X' X'']].
-      eapply onlyVars_defined; eauto.
+      exploit (@list_to_stmt_correct
+                 (Parmov.parmove2 nat Nat.eq_dec (fun _ : nat => least_fresh blv) Z0 x0)
+                 (stmtApp l nil) E' L').
+      admit.
       pfold. eapply SimSilent.
       * eapply plus2O. econstructor; eauto. simpl. reflexivity.
       * eapply star2_plus2_plus2 with (A:=nil) (B:=nil); eauto.
         eapply plus2O. econstructor; eauto. reflexivity. reflexivity.
       * right; eapply pmSim_sim; try eapply LA1; eauto; simpl.
-        eapply (inRel_drop LA H4).
-        assert (getAnn al ⊆ blv) by eauto with cset.
-        eapply agree_on_incl in X''; eauto. symmetry in X''. simpl.
-        eapply agree_on_trans; eauto.
-        erewrite onlyVars_lookup; eauto.
-        eapply update_with_list_agree; eauto with len.
-        eapply agree_on_incl; eauto. eauto with cset.
+        -- eapply (inRel_drop LA H4).
+        -- assert (getAnn al ⊆ blv) by eauto with cset.
+           admit.
+           (*eapply agree_on_incl in X''; eauto. symmetry in X''. simpl.
+           eapply agree_on_trans; eauto.
+           erewrite onlyVars_lookup; eauto.
+           eapply update_with_list_agree; eauto with len.
+           eapply agree_on_incl; eauto. eauto with cset.*)
     + perr.
   - pno_step. simpl. eauto using op_eval_live.
   - pone_step.
@@ -312,6 +281,6 @@ Proof.
     econstructor; eauto.
     + exploit H2; eauto.
     + exploit szip_get; try eapply EQ; eauto.
-Qed.
+Admitted.
 
 End Implementation.

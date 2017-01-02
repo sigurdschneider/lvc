@@ -3,34 +3,8 @@ Require Import Val EqDec Computable Var Env IL Annotation AppExpFree.
 Require Import Liveness LabelsDefined.
 Require Import SimF Fresh Filter.
 
-
 Set Implicit Arguments.
 Unset Printing Records.
-
-Section MapUpdate.
-  Open Scope fmap_scope.
-  Variable X : Type.
-  Context `{OrderedType X}.
-  Variable Y : Type.
-
-  Fixpoint update_with_list' XL YL (m:X -> Y) :=
-    match XL, YL with
-      | x::XL, y::YL => update_with_list' XL YL (m[x <- y])
-      | _, _ => m
-    end.
-
-  Lemma update_with_list_agree' (XL:list X) (VL:list Y) E D
-  : length XL = length VL
-    -> NoDupA _eq XL
-    -> agree_on eq D (E [XL <-- VL]) (update_with_list' XL VL E).
-  Proof.
-    intros LEN UNIQ. length_equify.
-    general induction LEN; simpl in *; eauto.
-    - etransitivity. symmetry.
-      eapply update_nodup_commute_eq; eauto using length_eq_length.
-      eapply IHLEN; eauto.
-  Qed.
-End MapUpdate.
 
 Fixpoint list_to_stmt (xl: list var) (Y : list op) (s : stmt) : stmt :=
   match xl, Y with

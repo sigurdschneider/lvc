@@ -1,7 +1,7 @@
 Require Import ExtrOcamlBasic ExtrOcamlString.
 (*Require Import ExtrOcamlZInt.
 Require Import ExtrOcamlNatInt.*)
-Require Import Compiler OrderedType.
+Require Import Compiler OrderedType Parmov.
 
 (* Unset Extraction AccessOpaque. *)
 
@@ -13,4 +13,4 @@ Extraction Blacklist List String Int.
 
 Cd "compiler/extraction".
 
-Separate Extraction AddParams.addParams DCVE (* toILF *) fromILF (* AllocationAlgo.regAssign optimize *) toDeBruijn OrderedType.SOT_as_OT.
+Separate Extraction AddParams.addParams DCVE (* toILF *) fromILF (* AllocationAlgo.regAssign optimize *) toDeBruijn OrderedType.SOT_as_OT parmove2.

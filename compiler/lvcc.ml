@@ -10,6 +10,7 @@ open Status
 open DCVE
 open Liveness
 open Compiler
+open Parmov
 
 let explode s =
   let rec exp i l =
@@ -60,7 +61,7 @@ let main () =
 		 | Error e -> raise (Compiler_error "Converting to de bruijn failed (did you define all functions?)"))
 		 in
       let s_dce =
-	(match fromILF (parallel_move debug) ili with
+	(match fromILF ili with
 	 | Success x -> Printf.printf "after reg alloc (functions de-bruijn, regs lowercase, slots uppercase):\n%s\n\n" (print_stmt true !ids 0 x);
 	   x
 	 | Error e -> raise (Compiler_error "reg alloc failed")

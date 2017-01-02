@@ -10,14 +10,13 @@ Require Import Slot InfinitePartition.
 
 Arguments sim S {H} S' {H0} r t _ _.
 
-Definition rassign (parallel_move : var -> list var -> list var -> (list(list var * list var)))
+Definition rassign
            (s:stmt) (lv: ann (set var)) :=
   let fvl := to_list (getAnn lv) in
   let ϱ := CMap.update_map_with_list fvl fvl (@MapInterface.empty var _ _ _) in
   sdo ϱ' <- regAssign even_part s lv ϱ;
     let s_allocated := rename (CMap.findt ϱ' 0) s in
-    let s_lowered := ParallelMove.lower parallel_move
-                                       nil
+    let s_lowered := ParallelMove.lower nil
                                        s_allocated
                                        (mapAnn (lookup_set (CMap.findt ϱ' 0)) lv) in
     s_lowered.
@@ -25,8 +24,8 @@ Definition rassign (parallel_move : var -> list var -> list var -> (list(list va
 Opaque to_list.
 
 
-Lemma rassign_correct parallel_move (s:stmt) (lv:ann (set var)) s' ra
-      (SC: rassign parallel_move s lv = Success s') (PM:paramsMatch s nil)
+Lemma rassign_correct (s:stmt) (lv:ann (set var)) s' ra
+      (SC: rassign s lv = Success s') (PM:paramsMatch s nil)
       (RA: renamedApart s ra)
       (LV:live_sound FunctionalAndImperative nil nil s lv)
       (Incl:getAnn lv ⊆ fst (getAnn ra))
@@ -102,7 +101,7 @@ Proof.
     - eauto using Liveness.live_sound_overapproximation_I.
     - econstructor.
   }
-  exploit (@ParallelMove.correct parallel_move nil);
+  exploit (@ParallelMove.correct nil);
     try eapply EQ0; try now econstructor; eauto using Liveness.live_sound_overapproximation_I.
   eauto using Liveness.live_sound_overapproximation_I.
   eauto.
