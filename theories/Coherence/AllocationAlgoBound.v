@@ -313,8 +313,8 @@ Proof.
       unfold var in *. omega.
       rewrite <- (add_minus_single_eq H1).
       rewrite filter_add_in; try cases; eauto.
-      cset_tac. admit.
-      admit.
+      cset_tac.
+
     }
     exploit IHLS; eauto.
     + pe_rewrite.
