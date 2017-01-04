@@ -18,10 +18,10 @@ Unset Printing Records.
 Definition pmov := list (var * var).
 
 Definition pmov_source_set (p:pmov) : set var
-  := fold_right (fun p s => s \ singleton (fst p) ∪ singleton (snd p)) ∅ p.
+  := fold_right (fun p s => s \ singleton (snd p) ∪ singleton (fst p)) ∅ p.
 
 Lemma pmov_source_set_incl p
-  : pmov_source_set p ⊆ of_list (snd ⊝ p).
+  : pmov_source_set p ⊆ of_list (fst ⊝ p).
 Proof.
   general induction p; simpl.
   - eauto with cset.
@@ -119,13 +119,36 @@ Section Translate.
 *)
 End Parallel_Move.
 
-Notation "f [ // p ]" := (upd_list p f) (at level 29, left associativity).
+Lemma eq_dec_comm X (x y:X)
+  : { x = y } + { ~ x = y }
+    -> { y = x } + { ~ y = x } .
+Proof.
+  firstorder.
+Qed.
+
+Let nat_dec := @equiv_computable nat (@SOT_as_OT nat (@eq nat) nat_OrderedType).
+
+Lemma nat_dec_if_eq (x y:nat) X (A B:X)
+  : (if [x === y] then A else B) = (if [ y === x] then A else B).
+Proof.
+  repeat cases; eauto; isabsurd.
+Qed.
+
+Notation "f [ // p ]" := (@Parmov.exec_seq nat nat_dec _ p f) (at level 29, left associativity).
+
+Lemma Parmov_update_eq M x y
+  : Parmov.update nat nat_dec (؟ val) x y M = M [x <- y].
+Proof.
+  unfold Parmov.update, update.
+  eapply FunctionalExtensionality.functional_extensionality.
+  intros. eapply nat_dec_if_eq.
+Qed.
 
 Section GlueCode.
   Fixpoint list_to_stmt (p : list (var * var)) (s : stmt) {struct p} : stmt :=
     match p with
       | nil => s
-      | (x, y) :: p' => stmtLet x (Operation (var_to_op y)) (list_to_stmt p' s)
+      | (x, y) :: p' => stmtLet y (Operation (var_to_op x)) (list_to_stmt p' s)
     end.
 
   Lemma list_to_stmt_correct (p:pmov) s (M:onv val) K
@@ -136,14 +159,57 @@ Section GlueCode.
     general induction p.
     - firstorder using star2.
     - destruct a as [x y]. simpl in *.
-      edestruct (Def y); eauto with cset.
-      exploit (var_to_op_correct M y).
+      edestruct (Def x); eauto with cset.
+      exploit (var_to_op_correct M x).
       eapply star2_silent.
       + constructor; eauto.
       + rewrite H.
+        rewrite Parmov_update_eq.
         eapply IHp; eauto using defined_on_update_some,
                     defined_on_incl with cset.
   Qed.
+
+  Lemma exec_par_eq p (E:onv val)
+    : Parmov.exec_par nat nat_dec _ p E =
+      E [ snd ⊝ p <-- lookup_list E (fst ⊝ p) ].
+  Proof.
+    general induction p; simpl; eauto.
+    cases; subst; simpl.
+    rewrite IHp. simpl.
+    intros. eapply Parmov_update_eq.
+  Qed.
+
+  Lemma NoDup_is_mill m
+    : NoDupA eq (snd ⊝ m)
+      -> Parmov.is_mill nat m.
+  Proof.
+    intros ND. hnf. unfold Parmov.dests.
+    general induction m; invt NoDupA; simpl;
+      eauto using Coqlib.list_norepet.
+    econstructor; eauto.
+    intro; eapply H1.
+    eapply In_InA; eauto.
+  Qed.
+
+  Lemma list_to_stmt_correct' D (m:pmov) (M M':onv val) x
+        (ND:NoDupA eq (snd ⊝ m))
+        (NOTIN : Parmov.move_no_temp nat (fun _ : nat => x) m)
+    : agree_on eq (D \ singleton x)
+               (M[ // Parmov.parmove nat nat_dec (fun _ => x) m])
+               (M [ snd ⊝ m <-- lookup_list M (fst ⊝ m) ]).
+  Proof.
+    intros.
+    exploit (@Parmov.parmove_correctness nat nat_dec (fun _ => x) (option val) m).
+    - eauto.
+    - eapply NoDup_is_mill; eauto.
+    - rewrite <- exec_par_eq.
+      hnf; intros.
+      rewrite <- H.
+      + reflexivity.
+      + hnf; cset_tac.
+  Qed.
+
+
 
   Hypothesis parallel_move : var -> list var -> list var -> (list(var * var)).
 
@@ -196,6 +262,16 @@ Proof.
     simpl in * |- *. inv EQ0. f_equal; eauto.
 Qed.
 
+Lemma onlyVars_length Y Y'
+      (EQ:onlyVars Y = Success Y')
+  : ❬Y❭ = ❬Y'❭.
+Proof.
+  general induction Y; eauto.
+  destruct a; simpl in *; monadS_inv EQ; simpl. eauto.
+Qed.
+
+Hint Resolve onlyVars_length : len.
+
 Fixpoint lower (DL:〔⦃nat⦄ * params〕) s (an:ann (set var))
   : status stmt :=
   match s, an with
@@ -210,7 +286,7 @@ Fixpoint lower (DL:〔⦃nat⦄ * params〕) s (an:ann (set var))
        sdo Lve <- option2status (nth_error DL (counted l)) "lower: No annotation for function";
         sdo Y <- onlyVars Y;
         let '(lv', Z) := Lve in
-        let mvs := Parmov.parmove2 var Nat.eq_dec (fun _ => (least_fresh lv')) Z Y in
+        let mvs := Parmov.parmove2 var nat_dec (fun _ => (least_fresh (lv' ∪ lv))) Y Z in
         Success (list_to_stmt mvs (stmtApp l nil))
 
     | stmtReturn x, ann0 lv => Success (stmtReturn x)
@@ -228,6 +304,7 @@ Inductive approx
   (al:ann (set var))
   (LS:live_sound Imperative (I.block_Z ⊝ L) DL s al)
   (AL:(of_list Z) ⊆ lv)
+  (ND:NoDupA eq Z)
   (INCL:getAnn al \ of_list Z ⊆ lv)
   (spm:lower (zip pair DL (I.block_Z ⊝ L)) s al = Success s')
   : approx DL L L' lv (I.blockI Z s n) (I.blockI nil s' n).
@@ -255,9 +332,10 @@ Proof.
     case_eq (omap (op_eval E) Y); intros.
     + exploit omap_op_eval_live_agree; try eassumption.
       exploit (@list_to_stmt_correct
-                 (Parmov.parmove2 nat Nat.eq_dec (fun _ : nat => least_fresh blv) Z0 x0)
+                 (Parmov.parmove2 nat nat_dec (fun _ : nat => least_fresh (blv ∪ lv)) x0 Z0)
                  (stmtApp l nil) E' L').
-      admit.
+      unfold Parmov.parmove2.
+
       pfold. eapply SimSilent.
       * eapply plus2O. econstructor; eauto. simpl. reflexivity.
       * eapply star2_plus2_plus2 with (A:=nil) (B:=nil); eauto.
@@ -265,12 +343,20 @@ Proof.
       * right; eapply pmSim_sim; try eapply LA1; eauto; simpl.
         -- eapply (inRel_drop LA H4).
         -- assert (getAnn al ⊆ blv) by eauto with cset.
-           admit.
-           (*eapply agree_on_incl in X''; eauto. symmetry in X''. simpl.
-           eapply agree_on_trans; eauto.
-           erewrite onlyVars_lookup; eauto.
-           eapply update_with_list_agree; eauto with len.
-           eapply agree_on_incl; eauto. eauto with cset.*)
+           exploit onlyVars_length; eauto.
+           exploit (Parmov.srcs_dests_combine _ x0 Z0); eauto with len; dcr.
+           unfold Parmov.srcs, Parmov.dests in *.
+           symmetry. etransitivity.
+           eapply agree_on_incl.
+           eapply (@list_to_stmt_correct' (getAnn al)); eauto.
+           ++ rewrite H11. eauto.
+           ++ admit.
+           ++ admit.
+           ++ rewrite H10, H11.
+             erewrite onlyVars_lookup; eauto.
+             eapply update_with_list_agree; eauto with len.
+             symmetry.
+             eapply agree_on_incl; eauto. eauto with cset.
     + perr.
   - pno_step. simpl. eauto using op_eval_live.
   - pone_step.
