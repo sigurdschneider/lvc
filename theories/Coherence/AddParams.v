@@ -1,5 +1,5 @@
 Require Import Util CSet IL Annotation MapDefined AllInRel.
-Require Import Sim LabelsDefined Liveness.
+Require Import Sim LabelsDefined Liveness AppExpFree.
 Require Import Coherence Invariance Delocation DelocationCorrect.
 Require Import DelocationAlgo DelocationAlgoCorrect DelocationAlgoLive.
 Require Import Liveness LabelsDefined.
@@ -83,4 +83,13 @@ Lemma addParams_noUnreachableCode b s lv
 Proof.
   unfold addParams.
   eapply compile_noUnreachableCode; eauto using is_trs.
+Qed.
+
+
+Lemma addParams_app_expfree s lv
+      (AEF:app_expfree s)
+  : app_expfree (addParams s lv).
+Proof.
+  unfold addParams.
+  eapply compile_app_expfree; eauto.
 Qed.

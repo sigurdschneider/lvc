@@ -1,6 +1,6 @@
 Require Import List.
 Require Export Util Get Drop Var Val Exp Env Map CSet AutoIndTac MoreList OptionMap Events.
-Require Import SetOperations IL.
+Require Import SetOperations IL AppExpFree.
 
 Set Implicit Arguments.
 
@@ -38,4 +38,12 @@ Proof with eauto 50 using rename_op_agree, rename_exp_agree, map_ext_get_eq2 wit
     + eapply IH; eauto.
       eapply agree_on_incl; eauto.
       rewrite <- (get_list_union_map _ H0); eauto with cset.
+Qed.
+
+Lemma rename_app_expfree ϱ s
+  : app_expfree s
+    -> app_expfree (rename ϱ s).
+Proof.
+  induction 1; simpl; econstructor; eauto; intros; inv_get; simpl in *; eauto.
+  exploit H as IV; eauto. inv IV; simpl. eauto using isVar.
 Qed.

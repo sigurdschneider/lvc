@@ -1,4 +1,4 @@
-Require Import Util LengthEq IL InRel RenamedApart LabelsDefined.
+Require Import Util LengthEq IL InRel RenamedApart LabelsDefined AppExpFree.
 Require Import Restrict SetOperations OUnion OptionR.
 Require Import Annotation Liveness Coherence.
 
@@ -323,4 +323,17 @@ Proof.
       eqassumption. rewrite zip_app; eauto with len.
       f_equal.
       eapply compileF_map_length; eauto with len.
+Qed.
+
+Lemma compile_app_expfree DL s lv
+      (AEF:app_expfree s)
+  : app_expfree (compile DL s lv).
+Proof.
+  general induction AEF; destruct lv; simpl; eauto using app_expfree.
+  - econstructor; intros ? ? Get.
+    eapply get_app_cases in Get.
+    destruct Get; dcr; eauto; inv_get;
+      eauto using isVar.
+  - econstructor; eauto.
+    unfold compileF; intros; inv_get; simpl; eauto.
 Qed.

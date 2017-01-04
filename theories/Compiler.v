@@ -113,7 +113,7 @@ Definition fromILF (s:stmt) :=
   let spilled := spill k S (co_s dcve) (co_lv dcve) in
   let ren2 := snd (renameApart' (stable_fresh_part even_part)
                                id (getAnn (snd (spilled))) (fst spilled)) in
-  let ras := rassign ren2
+  let ras := rassign even_part ren2
                     (snd (renameApart_live (stable_fresh_part even_part)
                                            id (getAnn (snd (spilled)))
                                            (fst (spilled))
@@ -346,6 +346,8 @@ Proof.
       instantiate (1:=(getAnn (snd spilled))).
       eapply Liveness.freeVars_live; eauto.
     + reflexivity.
+  - eapply app_expfree_rename_apart.
+    eapply spill_app_expfree; eauto.
   - unfold rename_apart.
     eapply (@renameApart_live_sound_srd _ _ Liveness.FunctionalAndImperative
                                         nil nil nil nil nil); eauto using PIR2.

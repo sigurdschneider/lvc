@@ -4,29 +4,30 @@ Require Import Rename RenameApart RenamedApart RenameApart_Liveness.
 Require Import Liveness ParallelMove.
 Require Import Coherence Invariance.
 Require Import Allocation AllocationAlgo AllocationAlgoCorrect.
-Require Import Alpha.
+Require Import Alpha AppExpFree.
 Require Import Slot InfinitePartition.
 (* Require CopyPropagation ConstantPropagation ConstantPropagationAnalysis.*)
 
 Arguments sim S {H} S' {H0} r t _ _.
 
-Definition rassign
+Definition rassign (p:inf_partition)
            (s:stmt) (lv: ann (set var)) :=
   let fvl := to_list (getAnn lv) in
   let ϱ := CMap.update_map_with_list fvl fvl (@MapInterface.empty var _ _ _) in
   sdo ϱ' <- regAssign even_part s lv ϱ;
     let s_allocated := rename (CMap.findt ϱ' 0) s in
-    let s_lowered := ParallelMove.lower nil
+    let s_lowered := ParallelMove.lower p nil
                                        s_allocated
                                        (mapAnn (lookup_set (CMap.findt ϱ' 0)) lv) in
-    s_lowered.
+    Success s_lowered.
 
 Opaque to_list.
 
 
-Lemma rassign_correct (s:stmt) (lv:ann (set var)) s' ra
-      (SC: rassign s lv = Success s') (PM:paramsMatch s nil)
+Lemma rassign_correct p (s:stmt) (lv:ann (set var)) s' ra
+      (SC: rassign p s lv = Success s') (PM:paramsMatch s nil)
       (RA: renamedApart s ra)
+      (AEF: app_expfree s)
       (LV:live_sound FunctionalAndImperative nil nil s lv)
       (Incl:getAnn lv ⊆ fst (getAnn ra))
   : forall E, sim F.state I.state bot3 Sim (nil, E, s) (nil, E, s').
@@ -101,8 +102,7 @@ Proof.
     - eauto using Liveness.live_sound_overapproximation_I.
     - econstructor.
   }
-  exploit (@ParallelMove.correct nil);
-    try eapply EQ0; try now econstructor; eauto using Liveness.live_sound_overapproximation_I.
-  eauto using Liveness.live_sound_overapproximation_I.
-  eauto.
+  exploit (@ParallelMove.correct p nil nil nil); eauto using Liveness.live_sound_overapproximation_I;
+    eauto using @InRel.LPM_nil.
+  - eapply rename_app_expfree; eauto.
 Qed.

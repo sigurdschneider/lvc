@@ -1,5 +1,5 @@
 Require Import Util CSet MapDefined AllInRel.
-Require Import Var MapInjectivity IL Annotation AnnP Sim LabelsDefined.
+Require Import Var MapInjectivity IL Annotation AnnP Sim LabelsDefined AppExpFree.
 Require Import SimplSpill SpillSound SpillSim DoSpill DoSpillRm Take Drop.
 Require Import Coherence.
 Require Import ExpVarsBounded ReconstrLive ReconstrLiveSmall ReconstrLiveSound.
@@ -41,6 +41,16 @@ Definition spill (k:nat) (slot:var -> var)
   let lv_spilled := reconstr_live nil nil ∅ s_spilled (do_spill_rm slot spl) in
   let s_fun := addParams s_spilled lv_spilled in
   (s_fun, lv_spilled).
+
+
+Lemma spill_app_expfree k slot s lv
+      (AEF:app_expfree s)
+  : app_expfree (fst (spill k slot s lv)).
+Proof.
+  simpl.
+  eapply addParams_app_expfree.
+  eapply do_spill_app_expfree; eauto.
+Qed.
 
 Lemma agree_on_update_list_slot X `{OrderedType X} Y (L:list X) (L':list Y) (V:X->Y)
       `{Proper _ (_eq ==> eq) V} f `{Proper _ (_eq ==> _eq) f} V' D (Len:❬L❭= ❬L'❭)

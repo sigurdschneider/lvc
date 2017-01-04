@@ -2,12 +2,13 @@ Require Import CSet Le.
 
 Require Import Plus Util AllInRel Map MapUpdate MapDefined.
 Require Import Val Var Env IL Annotation InRel SimI Fresh.
-Require Import Liveness Status.
+Require Import Liveness Status InfinitePartition AppExpFree.
 Require CompCert.Parmov.
 
 Set Implicit Arguments.
 Unset Printing Records.
 
+Let nat_dec := @equiv_computable nat (@SOT_as_OT nat (@eq nat) nat_OrderedType).
 
 (** * Parallel Moves
 
@@ -15,109 +16,84 @@ Unset Printing Records.
    part its initial version was developed by Tobias Tebbi.
 *)
 
-Definition pmov := list (var * var).
-
-Definition pmov_source_set (p:pmov) : set var
+Definition moves_source_set (p:Parmov.moves var) : set var
   := fold_right (fun p s => s \ singleton (snd p) ∪ singleton (fst p)) ∅ p.
 
-Lemma pmov_source_set_incl p
-  : pmov_source_set p ⊆ of_list (fst ⊝ p).
+Definition moves_dest_set (p:Parmov.moves var) : set var
+  := of_list (snd ⊝ p).
+
+Lemma moves_source_set_app mv1 mv2
+  : moves_source_set (mv1 ++ mv2) [=]
+                     moves_source_set mv1 ∪ moves_source_set mv2 \ moves_dest_set mv1.
+Proof.
+  unfold moves_dest_set.
+  general induction mv1; simpl.
+  - cset_tac.
+  - rewrite IHmv1. clear. cset_tac.
+Qed.
+
+Lemma moves_source_set_incl p
+  : moves_source_set p ⊆ of_list (fst ⊝ p).
 Proof.
   general induction p; simpl.
   - eauto with cset.
   - rewrite IHp; clear. cset_tac.
 Qed.
 
-Section Parallel_Move.
-  Variable X:Type.
-  Context `{OrderedType X}.
+Lemma of_list_rev X `{OrderedType X} L
+  : of_list (rev L) [=] of_list L.
+Proof.
+  general induction L; simpl; eauto.
+  rewrite of_list_app; simpl; rewrite IHL.
+  cset_tac.
+Qed.
 
-  Fixpoint upd_list p M : env X :=
-    match p with
-      | nil => M
-      | (l1, l2) :: p' => upd_list p' (M[ l1 <- M l2])
+Section ParmovSourceSet.
+  Import Parmov.
+
+  Definition st_source_set (st:state var) :=
+    match st with
+    | State mv1 mv2 mvs => of_list (fst ⊝ (mv1 ++ mv2)) \ moves_dest_set mvs ∪ moves_source_set (rev mvs)
     end.
 
-  Fixpoint par_move (E E': var -> var) (Z : params) (Y : params)
-    : var -> var :=
-    match Z, Y with
-      | nil, nil  => E
-      | y::Z', a :: Y' =>
-        (fun x => if [ x = y ] then E' a else par_move E E' Z' Y' x)
-      | _, _ => E
-    end.
+  Tactic Notation "stsmpl" :=
+    repeat (rewrite List.map_app || rewrite of_list_app
+            || simpl || rewrite moves_source_set_app || unfold moves_dest_set || rewrite map_rev
+            || rewrite of_list_rev).
 
-  Fixpoint par_list p M :=
-    match p with
-      | nil => M
-      | (l1, l2) :: p' => par_list p' (par_move M M l1 l2)
-    end.
-
-  (*
-Section Translate.
-
-  Definition check_pmove (vars : set var) (p1 p2 : pmov) :=
-    let M1 := par_list p1 (fun x => x) in
-    let M2 := par_list p2 (fun x => x) in
-      for_all
-        (fun x => if [M1 x = M2 x] then true else false) vars.
-  Hint Unfold check_pmove.
-
-  Lemma par_move_eq (M1 M2 MC:env X) f fC Z Y
-    :  (forall y : var, MC y = M1 (fC y))
-    -> (forall y : var, M2 y = M1 (f y))
-    -> forall y : var, M2 [ Z <-- (lookup_list MC Y) ] y = (M1 (par_move f fC Z Y y)).
+  Lemma dtransition_source_set t st st'
+    : dtransition var t st st' ->
+      st_source_set st' ⊆ st_source_set st.
   Proof.
-    general induction Z; destruct Y; isabsurd; eauto.
-    simpl. cases; lud; intuition.
+    intros TR.
+    general induction TR; simpl in *; eauto; stsmpl.
+    - cset_tac.
+    - cset_tac.
+    - cset_tac.
+    - cset_tac.
+    - cset_tac.
+    - cset_tac.
   Qed.
 
-  Lemma symb_eval p (M1 M2 : env X) f
-    :  (forall y, M2 y = (M1 (f y)))
-    -> forall x, upd_list p M2 x = (M1 (par_list p f x)).
+  Lemma dtransitions_source_set t st st'
+    : dtransitions var t st st' ->
+      st_source_set st' ⊆ st_source_set st.
   Proof.
-    general induction p; simpl; eauto.
-    destruct a; simpl; eauto; intros.
-    erewrite IHp; eauto.
-    intros. erewrite <- par_move_eq; simpl in *; eauto.
+    intros TR.
+    general induction TR; simpl in *; eauto using dtransition_source_set.
+    - etransitivity; eauto.
   Qed.
 
-  Corollary symb_eval_id : forall p (M : env X) x,
-    upd_list p M x = (M (par_list p (fun x => x) x)).
+  Lemma parmove_src_set t mu
+    : moves_source_set (parmove nat nat_dec t mu) ⊆ of_list (fst ⊝ mu).
   Proof.
-    intros. eapply symb_eval; eauto.
+    pose proof (parmove_aux_transitions _ nat_dec t (State _ mu nil nil)).
+    eapply dtransitions_source_set in H.
+    simpl in *. revert H; stsmpl.
+    unfold parmove. cset_tac.
   Qed.
 
-  Lemma check_pmove_correct {vars} {p1} {p2}
-    (COK:check_pmove vars p1 p2) (M : env X)
-    : agree_on eq vars (upd_list p1 M) (upd_list p2 M).
-  Proof.
-    assert (check_pmove vars p1 p2 = true) by cbool. clear COK.
-    unfold agree_on,check_pmove in *; intros.
-    eapply (@for_all_2 var _ _ _ vars) in H0.
-    specialize (H0 x H1); simpl in *.
-    cases in H0; simpl in *; try congruence.
-    erewrite symb_eval with (M1:=M) (f:=fun x => x); eauto.
-    erewrite symb_eval with (M1:=M) (f:=fun x => x); eauto.
-    intuition.
-  Qed.
-
-  Definition check_source_set (p1 p2 : pmov) :=
-    if [ pmov_source_set p1 ⊆ pmov_source_set p2 ] then true else false.
-
-  Lemma check_source_set_correct p1 l1 l2
-    (COK:check_source_set p1 ((l1,l2)::nil)) (M : onv X)
-    (Src:forall x : var, x \In of_list l2 -> M x <> ⎣⎦)
-    : forall x : var, x \In pmov_source_set p1 -> M x <> ⎣⎦.
-  Proof.
-    unfold check_source_set in COK. cases in COK; isabsurd.
-    simpl in *.
-    intros. eapply Src. rewrite COND in H0. cset_tac; intuition.
-  Qed.
-
-  End Translate.
-*)
-End Parallel_Move.
+End ParmovSourceSet.
 
 Lemma eq_dec_comm X (x y:X)
   : { x = y } + { ~ x = y }
@@ -125,8 +101,6 @@ Lemma eq_dec_comm X (x y:X)
 Proof.
   firstorder.
 Qed.
-
-Let nat_dec := @equiv_computable nat (@SOT_as_OT nat (@eq nat) nat_OrderedType).
 
 Lemma nat_dec_if_eq (x y:nat) X (A B:X)
   : (if [x === y] then A else B) = (if [ y === x] then A else B).
@@ -151,8 +125,8 @@ Section GlueCode.
       | (x, y) :: p' => stmtLet y (Operation (var_to_op x)) (list_to_stmt p' s)
     end.
 
-  Lemma list_to_stmt_correct (p:pmov) s (M:onv val) K
-        (Def:defined_on (pmov_source_set p) M)
+  Lemma list_to_stmt_correct (p:Parmov.moves var) s (M:onv val) K
+        (Def:defined_on (moves_source_set p) M)
     : star2 I.step (K, M, list_to_stmt p s) nil
         (K, M [ // p ], s).
   Proof.
@@ -191,7 +165,7 @@ Section GlueCode.
     eapply In_InA; eauto.
   Qed.
 
-  Lemma list_to_stmt_correct' D (m:pmov) (M M':onv val) x
+  Lemma list_to_stmt_correct' D (m:Parmov.moves var) (M M':onv val) x
         (ND:NoDupA eq (snd ⊝ m))
         (NOTIN : Parmov.move_no_temp nat (fun _ : nat => x) m)
     : agree_on eq (D \ singleton x)
@@ -219,15 +193,15 @@ Section GlueCode.
 End GlueCode.
 
 Section Implementation.
-Fixpoint onlyVars (Y:args) : status params :=
+Fixpoint onlyVars (Y:args) : params :=
   match Y with
-    | nil => Success nil
-    | (Var x)::Y => sdo Y' <- onlyVars Y; Success (x::Y')
-    | _ => Error "onlyVars: argument list contains expressions"
+    | nil => nil
+    | (Var x)::Y => x::onlyVars Y
+    | _::Y => onlyVars Y
   end.
-
+(*
 Lemma onlyVars_defined (E:onv val) Y Y' v
-  : onlyVars Y = Success Y'
+  : onlyVars Y = Y'
     -> omap (op_eval E) Y = Some v
     -> forall x, x ∈ of_list Y' -> E x <> None.
 Proof.
@@ -250,75 +224,95 @@ Proof.
     exploit IHY; eauto.
     hnf; cset_tac.
 Qed.
+ *)
 
-Lemma onlyVars_lookup (E:onv val) Y Y' v
-  : onlyVars Y = Success Y'
-    -> omap (op_eval E) Y = Some v
-    -> lookup_list E Y' = List.map Some v.
+Lemma onlyVars_lookup (E:onv val) Y v
+      (AEF:forall (n : nat) (y : op), get Y n y -> isVar y)
+  : omap (op_eval E) Y = Some v
+    -> lookup_list E (onlyVars Y) = List.map Some v.
 Proof.
   intros. general induction Y; simpl in * |- *; eauto.
-  - inv H; eauto.
-  - destruct a; isabsurd. monadS_inv H. monad_inv H0.
-    simpl in * |- *. inv EQ0. f_equal; eauto.
+  monad_inv H.
+  exploit AEF as IV; eauto using get. inv IV; eauto; simpl.
+  simpl in *.
+  f_equal; eauto. eapply IHY; eauto using get.
 Qed.
 
-Lemma onlyVars_length Y Y'
-      (EQ:onlyVars Y = Success Y')
-  : ❬Y❭ = ❬Y'❭.
+
+Lemma onlyVars_length Y
+      (AEF:forall (n : nat) (y : op), get Y n y -> isVar y)
+  : ❬onlyVars Y❭ = ❬Y❭.
 Proof.
-  general induction Y; eauto.
-  destruct a; simpl in *; monadS_inv EQ; simpl. eauto.
+  general induction Y; simpl; eauto.
+  exploit AEF; eauto using get. inv H; simpl.
+  rewrite IHY; eauto using get.
+Qed.
+
+Lemma onlyVars_eq Y
+      (AEF:forall (n : nat) (y : op), get Y n y -> isVar y)
+  : Y = Var ⊝ onlyVars Y.
+Proof.
+  general induction Y; simpl; eauto.
+  exploit AEF; eauto using get. inv H; simpl.
+  rewrite <- IHY; eauto using get.
 Qed.
 
 Hint Resolve onlyVars_length : len.
 
-Fixpoint lower (DL:〔⦃nat⦄ * params〕) s (an:ann (set var))
-  : status stmt :=
-  match s, an with
-    | stmtLet x e s, ann1 lv ans =>
-      sdo sl <- lower DL s ans;
-        Success (stmtLet x e sl)
-    | stmtIf x s t, ann2 lv ans ant =>
-      sdo sl <- lower DL s ans;
-        sdo tl <- lower DL t ant;
-            Success (stmtIf x sl tl)
-    | stmtApp l Y, ann0 lv  =>
-       sdo Lve <- option2status (nth_error DL (counted l)) "lower: No annotation for function";
-        sdo Y <- onlyVars Y;
-        let '(lv', Z) := Lve in
-        let mvs := Parmov.parmove2 var nat_dec (fun _ => (least_fresh (lv' ∪ lv))) Y Z in
-        Success (list_to_stmt mvs (stmtApp l nil))
 
-    | stmtReturn x, ann0 lv => Success (stmtReturn x)
+Fixpoint lower (p:inf_partition) (DL:〔⦃nat⦄ * params〕) s (an:ann (set var))
+  : stmt :=
+  match s, an with
+    | stmtLet x e s, ann1 lv ans => stmtLet x e (lower p DL s ans)
+    | stmtIf x s t, ann2 lv ans ant => stmtIf x (lower p DL s ans) (lower p DL t ant)
+    | stmtApp l Y, ann0 lv  =>
+      let '(lv', Z) := nth_default (∅, nil) DL (counted l) in
+      let x := least_fresh_P (part_2 p) (lv' ∪ lv) in
+      let mvs := Parmov.parmove2 var nat_dec (fun _ => x) (onlyVars Y) Z in
+      list_to_stmt mvs (stmtApp l nil)
+    | stmtReturn x, ann0 lv => stmtReturn x
     | stmtFun F t, annF lv ans ant =>
       let DL' := pair ⊜ (getAnn ⊝ ans) (fst ⊝ F) in
-      sdo s' <- szip (fun Zs a => lower (DL' ++ DL) (snd Zs) a) F ans;
-        sdo t' <- lower (DL' ++ DL) t ant;
-        Success (stmtFun ((fun s => (nil, s)) ⊝ s') t')
-    | s, _ => Error "lower: Annotation mismatch"
+      let s' := zip (fun Zs a => lower p (DL' ++ DL) (snd Zs) a) F ans in
+      let t' := lower p (DL' ++ DL) t ant in
+      (stmtFun ((fun s => (nil, s)) ⊝ s') t')
+    | _, _ => s
   end.
 
 Inductive approx
 : list (set var) -> list I.block -> list I.block -> ⦃var⦄ -> I.block -> I.block -> Prop :=
-  approxI L L' DL Z s s' lv n
+  approxI L L' DL Z s s' lv n p
   (al:ann (set var))
   (LS:live_sound Imperative (I.block_Z ⊝ L) DL s al)
   (AL:(of_list Z) ⊆ lv)
+  (AEF:app_expfree s)
   (ND:NoDupA eq Z)
   (INCL:getAnn al \ of_list Z ⊆ lv)
-  (spm:lower (zip pair DL (I.block_Z ⊝ L)) s al = Success s')
+  (spm:lower p (zip pair DL (I.block_Z ⊝ L)) s al = s')
   : approx DL L L' lv (I.blockI Z s n) (I.blockI nil s' n).
 
 
-Lemma correct Lv s (E E':onv val) L L' s' (al: ann (set var))
- (LS:live_sound Imperative (I.block_Z ⊝ L) Lv s al)
- (pmlowerOk:lower (zip pair Lv (I.block_Z ⊝ L))  s al = Success s')
+Lemma omap_var_defined_on Za E vl
+: omap (op_eval E) (List.map Var Za) = Some vl
+  -> defined_on (of_list Za) E.
+Proof.
+  intros. general induction Za; simpl.
+  - hnf; intros. cset_tac.
+  - simpl in *.
+    monad_inv H.
+    exploit IHZa; eauto.
+    hnf; intros. cset_tac.
+Qed.
+
+Lemma correct p Lv L L' s (E E':onv val) (al: ann (set var))
+      (LS:live_sound Imperative (I.block_Z ⊝ L) Lv s al)
+      (AEF:app_expfree s)
  (LA:inRel approx Lv L L')
  (EEQ:agree_on eq (getAnn al) E E')
-  : sim bot3 Sim (L,E,s) (L', E', s').
+  : sim bot3 Sim (L,E,s) (L', E', lower p (zip pair Lv (I.block_Z ⊝ L))  s al).
 Proof.
   revert_all. pcofix pmSim_sim; intros.
-  inv LS; simpl in *; try monadS_inv pmlowerOk.
+  inv LS; inv AEF; simpl in *.
   - invt live_exp_sound.
     + eapply (sim_let_op il_statetype_I);
         eauto 20 using op_eval_live, agree_on_update_same, agree_on_incl.
@@ -326,16 +320,22 @@ Proof.
         erewrite <- omap_op_eval_live_agree; eauto. eapply agree_on_sym; eauto.
   - eapply (sim_cond il_statetype_I);
       eauto 20 using op_eval_live, agree_on_update_same, agree_on_incl.
-  - eapply option2status_inv in EQ. eapply nth_error_get in EQ.
+  - rewrite nth_default_eq. erewrite get_nth; eauto using zip_get; simpl.
     inRel_invs.
-    inv_get. simpl in *. invc EQ2.
+    inv_get. simpl in *.
     case_eq (omap (op_eval E) Y); intros.
-    + exploit omap_op_eval_live_agree; try eassumption.
+    + exploit onlyVars_length as Len; eauto.
+      exploit (Parmov.srcs_dests_combine _ (onlyVars Y) Z0) as Eq; eauto with len.
+      destruct Eq as [SrcEq DstEq]. unfold Parmov.srcs, Parmov.dests in *.
+      exploit omap_op_eval_live_agree; try eassumption.
       exploit (@list_to_stmt_correct
-                 (Parmov.parmove2 nat nat_dec (fun _ : nat => least_fresh (blv ∪ lv)) x0 Z0)
+                 (Parmov.parmove2 nat nat_dec (fun _ : nat => least_fresh_P (part_2 p) (blv ∪ lv)) (onlyVars Y) Z0)
                  (stmtApp l nil) E' L').
-      unfold Parmov.parmove2.
 
+      unfold Parmov.parmove2.
+      rewrite parmove_src_set. rewrite SrcEq.
+      rewrite (onlyVars_eq H5) in H6.
+      eapply omap_var_defined_on; eauto.
       pfold. eapply SimSilent.
       * eapply plus2O. econstructor; eauto. simpl. reflexivity.
       * eapply star2_plus2_plus2 with (A:=nil) (B:=nil); eauto.
@@ -343,30 +343,59 @@ Proof.
       * right; eapply pmSim_sim; try eapply LA1; eauto; simpl.
         -- eapply (inRel_drop LA H4).
         -- assert (getAnn al ⊆ blv) by eauto with cset.
-           exploit onlyVars_length; eauto.
-           exploit (Parmov.srcs_dests_combine _ x0 Z0); eauto with len; dcr.
-           unfold Parmov.srcs, Parmov.dests in *.
            symmetry. etransitivity.
            eapply agree_on_incl.
            eapply (@list_to_stmt_correct' (getAnn al)); eauto.
-           ++ rewrite H11. eauto.
-           ++ admit.
-           ++ admit.
-           ++ rewrite H10, H11.
+           ++ rewrite DstEq. eauto.
+           ++ assert (of_list (onlyVars Y) ⊆ lv). {
+               eapply Op.freeVars_live_list in H3.
+               rewrite <- H3. rewrite (onlyVars_eq H5) at 2.
+               rewrite of_list_freeVars_vars. reflexivity.
+             }
+             hnf; intros ? ? IN.
+             split.
+             eapply in_combine_l in IN.
+             hnf. intros.
+             intro; subst.
+             eapply In_InA in IN.
+             eapply of_list_1 in IN.
+             rewrite H9 in IN. rewrite (incl_right _ lv blv) in IN at 2.
+             eapply least_fresh_P_full_spec in IN; eauto. eauto.
+             eapply in_combine_r in IN.
+             hnf. intros.
+             intro; subst.
+             eapply In_InA in IN.
+             eapply of_list_1 in IN.
+             rewrite AL in IN. rewrite (incl_left _ blv lv) in IN at 2.
+             eapply least_fresh_P_full_spec in IN; eauto. eauto.
+           ++ rewrite disj_minus_eq; eauto.
+             rewrite H8; clear.
+             intro; hnf; intros.
+             eapply (incl_left _ blv lv) in H.
+             eapply (least_fresh_P_full_spec (part_2 p) (blv ∪ lv)).
+             cset_tac.
+           ++ rewrite SrcEq, DstEq.
              erewrite onlyVars_lookup; eauto.
              eapply update_with_list_agree; eauto with len.
              symmetry.
              eapply agree_on_incl; eauto. eauto with cset.
     + perr.
   - pno_step. simpl. eauto using op_eval_live.
-  - pone_step.
-    right; eapply pmSim_sim; eauto using agree_on_incl.
+  - pone_step. right.
+    rewrite <- zip_app in *; eauto with len.
+    assert (EQ:fst ⊝ F ++ I.block_Z ⊝ L = I.block_Z ⊝ (mapi I.mkBlock F ++ L)). {
+      unfold mapi. generalize 0.
+      clear. general induction F; simpl; f_equal; eauto.
+    }
+    rewrite EQ in *.
+    eapply pmSim_sim; try eapply H; eauto using agree_on_incl.
     econstructor; eauto.
     eapply mutual_approx; eauto 20 using mkBlock_I_i with len.
     intros; inv_get.
     econstructor; eauto.
     + exploit H2; eauto.
-    + exploit szip_get; try eapply EQ; eauto.
-Admitted.
+    + eapply H2; eauto.
+    + simpl. reflexivity.
+Qed.
 
 End Implementation.
