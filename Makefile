@@ -98,6 +98,7 @@ $(COQMAKEFILE): Makefile depmakefiles $(VS)
 #	./configure.sh
 #	coq_makefile -f _CoqProject $(VS) -o $(COQMAKEFILE)
 
+Make: ;
 
 extraction: theories/Compiler.vo compiler/extraction.v compiler/STAMP
 	+$(MAKE) -C compiler all
