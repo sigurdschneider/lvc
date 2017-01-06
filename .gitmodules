@@ -4,3 +4,6 @@
 [submodule "ContainersPlugin"]
 	path = ContainersPlugin
 	url = github:sigurdschneider/containers.git
+[submodule "CompCert"]
+	path = CompCert
+	url = https://github.com/AbsInt/CompCert

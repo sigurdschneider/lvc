@@ -1,3 +1,4 @@
+-R CompCert compcert
 -R theories Lvc
 -R ContainersPlugin/theories Containers
 -R paco Paco
