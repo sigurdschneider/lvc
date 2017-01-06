@@ -1,4 +1,4 @@
--R CompCert compcert
+-R CompCert/lib compcert.lib -R CompCert/common compcert.common -R CompCert/arm compcert.arm -R CompCert/backend compcert.backend -R CompCert/cfrontend compcert.cfrontend -R CompCert/driver compcert.driver -R CompCert/flocq compcert.flocq -R CompCert/exportclight compcert.exportclight -R CompCert/cparser compcert.cparser
 -R theories Lvc
 -R ContainersPlugin/theories Containers
 -R paco Paco
