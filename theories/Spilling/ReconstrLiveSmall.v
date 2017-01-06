@@ -1,6 +1,6 @@
 Require Import List Map Env AllInRel Exp AppExpFree RenamedApart.
 Require Import IL Annotation InRel AutoIndTac.
-Require Import Liveness LabelsDefined.
+Require Import Liveness.Liveness LabelsDefined.
 Require Import SpillSound DoSpill DoSpillRm SpillUtil ReconstrLive AnnP InVD SetUtil.
 Require Import ReconstrLiveUtil ReconstrLiveG.
 Require Import ToBeOutsourced.
@@ -290,8 +290,7 @@ Lemma reconstr_live_small o
       (slot : var -> var)
       (al : ann ⦃var⦄)
       (ra : ann (⦃var⦄ * ⦃var⦄))
-  :
-    R ⊆ VD
+  : R ⊆ VD
     -> M ⊆ VD
     -> union_fs (getAnn ra) ⊆ VD
     -> injective_on VD slot
@@ -323,7 +322,7 @@ Proof.
   {
     eapply injective_on_incl; eauto.
     rewrite Sp_sub_R; [ | eauto].
-    clear - R_VD ; cset_tac.
+    clear - R_VD ; cset_tac'.
   }
   general induction lvSnd;
     inv rena;
@@ -350,7 +349,7 @@ Proof.
                           (ra:=an)
                           (VD:=VD);
       eauto.
-    + rewrite H19.
+    + rewrite H18.
       clear; cset_tac.
     + apply renamedApart_incl in rena.
       rewrite rena.

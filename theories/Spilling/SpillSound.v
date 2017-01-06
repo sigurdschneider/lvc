@@ -32,6 +32,7 @@ Inductive spill_sound (k:nat) :
       -> L ⊆ Sp ∪ M
       -> spill_sound k ZL Λ ({x;(R\K ∪ L)\Kx }, Sp ∪ M) s sl
       -> Exp.freeVars e ⊆ R\K ∪ L
+      -> k > 0
       -> cardinal (R\K ∪ L) <= k
       -> cardinal ({x;((R\K) ∪ L)\Kx }) <= k
       -> spill_sound k ZL Λ (R,M) (stmtLet x e s) (ann1 (Sp,L,nil) sl)

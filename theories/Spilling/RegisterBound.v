@@ -1,6 +1,6 @@
 Require Import List Map Env AllInRel Exp AppExpFree RenamedApart.
 Require Import IL Annotation InRel AutoIndTac.
-Require Import Liveness LabelsDefined.
+Require Import Liveness.Liveness LabelsDefined.
 Require Import SpillSound DoSpill DoSpillRm SpillUtil ReconstrLive.
 Require Import ReconstrLiveSmall ReconstrLiveSound InVD AnnP ReconstrLiveUtil SetUtil.
 Require Import ReconstrLiveG ToBeOutsourced BoundedIn.
@@ -65,8 +65,7 @@ Lemma register_bound_loads
       (an : lvness_fragment)
       (x : var)
   :
-    k >= 1
-    -> disj VD (map slot VD)
+    disj VD (map slot VD)
     -> R ⊆ VD
     -> singleton x ⊆ R
     -> of_list xs ⊆ R
@@ -88,7 +87,7 @@ Lemma register_bound_loads
             )
 .
 Proof.
-  intros k_ge1 disj_VD R_VD x_R xs_R
+  intros disj_VD R_VD x_R xs_R
          bound_R H  base.
   unfold bounded_in in bound_R.
   general induction xs;
@@ -221,8 +220,7 @@ Lemma register_bound_s
       (xs ys : list var)
       (an : lvness_fragment)
   :
-    k >= 1
-    -> disj VD (map slot VD)
+    disj VD (map slot VD)
     -> R ⊆ VD
     -> of_list xs ⊆ R
     -> of_list ys ⊆ VD
@@ -248,7 +246,7 @@ Lemma register_bound_s
             )
 .
 Proof.
-  intros k_ge1 disj_VD R_VD xs_R ys_VD bound_R2 bound_al_L G_R al_R base.
+  intros disj_VD R_VD xs_R ys_VD bound_R2 bound_al_L G_R al_R base.
   assert (bounded_in VD k R) as bound_R.
   {
     clear - bound_R2.
@@ -407,8 +405,7 @@ Lemma register_bounded
       (al : ann ⦃var⦄)
       (ra : ann (⦃var⦄ * ⦃var⦄))
   :
-    k >= 1
-    -> cardinal R <= k
+    cardinal R <= k
     -> injective_on VD slot
     -> disj VD (map slot VD)
     -> R ⊆ VD
@@ -428,7 +425,7 @@ Lemma register_bounded
             (reconstr_live_do_spill slot Λ ZL G s sl)
 .
 Proof.
-  intros kge1 card_R inj_VD disj_VD R_VD M_VD ra_VD
+  intros card_R inj_VD disj_VD R_VD M_VD ra_VD
          aeFree rena spillSnd spilli lvSnd
          H16 Z_VD G_R.
   unfold reconstr_live_do_spill.

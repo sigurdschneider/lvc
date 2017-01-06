@@ -1,5 +1,6 @@
 Require Import CSet Util Fresh Filter Take MoreList OUnion AllInRel MapDefined MapUpdate Position.
-Require Import IL Annotation LabelsDefined Liveness TrueLiveness SimI.
+Require Import IL Annotation LabelsDefined.
+Require Import Liveness.Liveness TrueLiveness SimI.
 Require Import RenamedApart.
 Require Import SetUtil SpillSound ReconstrLive DoSpill ReconstrLiveUtil.
 
@@ -526,7 +527,7 @@ Proof.
            clear; cset_tac.
         -- eapply mem_agrees_after_spill_load_update; eauto.
            rewrite SpR, Incl'; eauto.
-           rewrite H17 in RAincl.
+           rewrite H18 in RAincl.
            revert RAincl; clear; cset_tac.
         -- eapply defined_on_update_some.
            eapply defined_on_incl.
@@ -534,7 +535,8 @@ Proof.
            instantiate (1:=K). clear; cset_tac.
         -- pe_rewrite.
            rewrite LSpM, SpR, <- Incl'. clear; cset_tac.
-        -- pe_rewrite. rewrite <- RAincl. rewrite H17. clear; cset_tac.
+        -- pe_rewrite. rewrite <- RAincl.
+           rewrite H18. clear; cset_tac.
     + eapply (sim_let_call il_statetype_I); eauto.
       * symmetry; eapply omap_op_eval_agree; eauto using agree_on_incl.
       * intros. left. eapply IH; eauto.
@@ -543,7 +545,7 @@ Proof.
            clear; cset_tac.
         -- eapply mem_agrees_after_spill_load_update; eauto.
            rewrite SpR, Incl'; eauto.
-           rewrite H17 in RAincl.
+           rewrite H18 in RAincl.
            revert RAincl; clear; cset_tac.
         -- eapply defined_on_update_some.
            eapply defined_on_incl.
@@ -551,7 +553,8 @@ Proof.
            instantiate (1:=K). clear; cset_tac.
         -- pe_rewrite. rewrite LSpM, SpR, <- Incl'.
            clear; cset_tac.
-        -- pe_rewrite. rewrite <- RAincl. rewrite H17. clear; cset_tac.
+        -- pe_rewrite. rewrite <- RAincl.
+           rewrite H18. clear; cset_tac.
   - simpl in *.
     eapply (sim_cond il_statetype_I); eauto.
     + symmetry; eapply op_eval_agree; eauto using agree_on_incl.

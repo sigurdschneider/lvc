@@ -1,5 +1,6 @@
 Require Import List Map Env AllInRel Exp MoreList.
-Require Import IL Annotation AnnP InRel AutoIndTac Liveness LabelsDefined.
+Require Import IL Annotation AnnP InRel AutoIndTac.
+Require Import Liveness.Liveness LabelsDefined.
 Require Import SimI.
 Require Import ExpVarsBounded SpillSound ReconstrLive.
 Require Import Take TakeSet MoreTac.
@@ -455,6 +456,7 @@ general induction lvSound;
       -- refold. clearbody K.
          revert aInAnn n0 n H0. clear; cset_tac.
   + rewrite ReqR'. eauto.
+  + eauto.
   + subst K... rewrite ReqR'. exact rke.
   + rewrite minus_empty. rewrite add_cardinal. apply not_ge in sizeRL.
     rewrite ReqR'. clear - sizeRL. subst K... omega.

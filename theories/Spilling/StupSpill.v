@@ -1,5 +1,5 @@
 Require Import List Map Env AllInRel Exp.
-Require Import IL Annotation InRel AutoIndTac Liveness LabelsDefined.
+Require Import IL Annotation InRel AutoIndTac Liveness.Liveness LabelsDefined.
 Require Import ExpVarsBounded SpillSound.
 
 
@@ -44,8 +44,7 @@ Lemma stupSpill_sat_spillSound
       (ZL : list params)
       (alv : ann ⦃var⦄)
   :
-    k > 0
-    -> R [=] R'
+    R [=] R'
     -> getAnn alv ⊆ R ∪ M
     -> exp_vars_bounded k s
     -> live_sound Imperative ZL Lv s alv
@@ -53,7 +52,7 @@ Lemma stupSpill_sat_spillSound
     -> spill_sound k ZL Λ (R,M) s (stupSpill R' s alv)
 .
 Proof.
-  intros kgeq1 ReqR' fvRM fvBound lvSound pir2.
+  intros ReqR' fvRM fvBound lvSound pir2.
   general induction lvSound;
     inversion_clear fvBound
       as [k0 x0 e0 s0 fvBcard fvBs
@@ -64,7 +63,7 @@ Proof.
     simpl in *.
 
   - eapply SpillLet with (K:= R) (Kx := Exp.freeVars e);
-      [ rewrite <- ReqR' | rewrite <- ReqR' | | | | ]; eauto.
+      [ rewrite <- ReqR' | rewrite <- ReqR' | | | | | ]; eauto.
     + rewrite <- fvRM.
       apply Exp.freeVars_live; eauto.
     + assert (seteq : singleton x [=] {x; (R\R ∪Exp.freeVars e) \Exp.freeVars e}).
