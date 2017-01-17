@@ -6,4 +6,4 @@
 	url = git@github.com:sigurdschneider/containers.git
 [submodule "CompCert"]
 	path = CompCert
-	url = https://github.com/AbsInt/CompCert
+	url = git@github.com:sigurdschneider/CompCert.git
