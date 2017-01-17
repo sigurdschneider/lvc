@@ -8,7 +8,7 @@ Unset Printing Records.
 
 Instance SR : PointwiseProofRelationF (params) := {
    ParamRelFP G Z Z' := Z = Z' /\ Z = G;
-   ArgRelFP G VL VL' := VL = VL' /\ length VL = length G;
+   ArgRelFP E E' G VL VL' := VL = VL' /\ length VL = length G;
 }.
 
 Definition bisimeq r t s s' :=

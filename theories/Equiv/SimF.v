@@ -15,7 +15,7 @@ Class ProofRelationF (A:Type) := {
     ParamRelF : A -> list var -> list var -> Prop;
     (* Relates argument lists according to analysis information
        and closure environments *)
-    ArgRelF : A -> list val -> list val -> Prop;
+    ArgRelF : onv val -> onv val -> A -> list val -> list val -> Prop;
     (* Relates environments according to analysis information *)
     IndexRelF : 〔A〕 -> nat -> nat -> Prop;
     Image : 〔A〕 -> nat;
@@ -105,14 +105,14 @@ Definition app_r t (r:frel) A (PR:ProofRelationF A) AL L L' :=
     -> get AL f a
     -> get L f (F.blockI E Z s i)
     -> get L' f' (F.blockI E' Z' s' i')
-    -> forall E E' Yv Y'v Y Y',
-        ArgRelF a Yv Y'v
-        -> omap (op_eval E) Y = Some Yv
-        -> omap (op_eval E') Y' = Some Y'v
+    -> forall V V' Yv Y'v Y Y',
+        ArgRelF E E' a Yv Y'v
+        -> omap (op_eval V) Y = Some Yv
+        -> omap (op_eval V') Y' = Some Y'v
         -> ❬Z❭ = ❬Yv❭
         -> ❬Z'❭ = ❬Y'v❭
-        -> r t (L, E, stmtApp f Y)
-            (L', E', stmtApp f' Y').
+        -> r t (L, V, stmtApp f Y)
+            (L', V', stmtApp f' Y').
 
 Lemma app_r_mon t (r r':frel) A (PR:ProofRelationF A) AL L L'
   : app_r t r PR AL L L'
@@ -158,7 +158,7 @@ Definition indexwise_r t (r:frel) A (PR:ProofRelationF A) AL' E E' F F' AL L L' 
     -> get F' n' (Z',s')
     -> get AL' n a
     -> forall VL VL',
-        ArgRelF a VL VL'
+        ArgRelF E E' a VL VL'
         -> r t (mapi (F.mkBlock E) F ++ L, E[Z <-- List.map Some VL], s)
             (mapi (F.mkBlock E') F' ++ L', E'[Z' <-- List.map Some VL'], s').
 
@@ -278,7 +278,7 @@ Class PointwiseProofRelationF (A:Type) := {
     ParamRelFP : A -> list var -> list var -> Prop;
     (* Relates argument lists according to analysis information
        and closure environments *)
-    ArgRelFP :  A -> list val -> list val -> Prop;
+    ArgRelFP :  onv val -> onv val -> A -> list val -> list val -> Prop;
     (* Relates environments according to analysis information *)
 }.
 
@@ -357,7 +357,7 @@ Lemma labenv_sim_app i A (PR:ProofRelationF A) AL L L' r V V' Y Y' (f f':lab) a
          -> ParamRelF a Z Z'
          -> (forall Yv, omap (op_eval V) Y = ⎣ Yv ⎦ -> ❬Z❭ = ❬Yv❭
                  -> exists Y'v, omap (op_eval V') Y' = ⎣ Y'v ⎦ /\
-                          ❬Z'❭ = ❬Y'v❭ /\ ArgRelF a Yv Y'v)
+                          ❬Z'❭ = ❬Y'v❭ /\ ArgRelF E E' a Yv Y'v)
            /\ (if isBisim i then
                 (omap (op_eval V) Y = None -> omap (op_eval V') Y' = None)
                 /\ (❬Z❭ <> ❬Y❭ -> ❬Z'❭ <> ❬Y'❭)
@@ -391,7 +391,7 @@ Definition bodies_r t (r:frel) A (PR:ProofRelationF A) AL (L1 L2 L L':F.labenv) 
     -> get L' f' (F.blockI E' Z' s' i')
     -> get AL f a
     -> forall VL VL',
-        ArgRelF a VL VL'
+        ArgRelF E E' a VL VL'
         -> r t (drop (f - i) L1, E[Z <-- List.map Some VL], s)
             (drop (f' - i') L2, E'[Z' <-- List.map Some VL'], s').
 

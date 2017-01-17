@@ -239,7 +239,7 @@ Module F.
 
 Instance SR : PointwiseProofRelationF ((set var) * params) := {
    ParamRelFP G Z Z' := Z' = (flt (fst G) (snd G) Z) /\ snd G = Z;
-   ArgRelFP G VL VL' :=
+   ArgRelFP E E' G VL VL' :=
      VL' = (flt (fst G) (snd G) VL) /\
      length (snd G) = length VL
 }.

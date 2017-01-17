@@ -155,7 +155,7 @@ Qed.
 
 Instance SR : PointwiseProofRelationF params := {
    ParamRelFP G VL VL' :=   VL = VL' /\ length VL = length G;
-   ArgRelFP G Z Z' := Z = Z' /\ length Z = length G
+   ArgRelFP E E' G Z Z' := Z = Z' /\ length Z = length G
 }.
 
 

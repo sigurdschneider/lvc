@@ -1,7 +1,8 @@
 Require Import CSet Le Var.
 
 Require Import Plus Util AllInRel Map CSet OptionR MoreList.
-Require Import Val Var Env IL Annotation Lattice DecSolve Analysis Filter Terminating.
+Require Import Val Var Env IL Annotation Infra.Lattice.
+Require Import DecSolve Analysis Filter Terminating.
 Require Import Analysis AnalysisForward FiniteFixpointIteration.
 Require Import Reachability ReachabilityAnalysis Subterm.
 
@@ -10,6 +11,8 @@ Set Implicit Arguments.
 Local Arguments proj1_sig {A} {P} e.
 Local Arguments length {A} e.
 Local Arguments forward {sT} {Dom} {H} {H0} ftransform ZL st ST d a.
+
+Opaque poLe.
 
 (* Coq can't figure out the instantiation (fun _ => bool) via unification,
    so we have to add this specialized lemma *)
@@ -25,10 +28,6 @@ Lemma forward_length_ass_UC
 Qed.
 
 Hint Resolve forward_length_ass_UC.
-
-Opaque poLe.
-
-
 
 Definition reachability_sound sT ZL BL s d a (ST:subTerm s sT)
   : poEq (fst (forward reachability_transform ZL s ST d a)) a
@@ -119,7 +118,9 @@ Proof.
         eapply (@forward_getAnn' sT (fun _ => bool)).
 
         clear_all. intros. inv_get.
-        subst FWt. eauto with len.
+        subst FWt.
+        len_simpl. eauto with len.
+
       * rewrite (take_eta ❬sa❭) at 1.
         eapply PIR2_app.
         protect g0.

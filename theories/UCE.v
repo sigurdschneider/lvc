@@ -318,7 +318,7 @@ Module F.
 
   Instance SR : ProofRelationF bool := {
    ParamRelF G Z Z' := Z' = Z;
-   ArgRelF G VL VL' := VL' = VL;
+   ArgRelF E E' G VL VL' := VL' = VL;
    IndexRelF AL n n' :=
      n' = countTrue (take n AL) /\ get AL n true;
    Image AL := countTrue AL

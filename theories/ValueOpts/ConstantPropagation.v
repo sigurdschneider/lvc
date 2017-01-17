@@ -3,7 +3,7 @@ Require Import CSet Le.
 Require Import Plus Util AllInRel Map.
 Require Import CSet Val Var Env IL Sim Fresh Annotation Coherence LabelsDefined DecSolve.
 
-Require Import RenamedApart SetOperations Eqn ValueOpts Lattice.
+Require Import RenamedApart SetOperations Eqn ValueOpts Infra.Lattice.
 
 Set Implicit Arguments.
 Unset Printing Records.
@@ -14,34 +14,40 @@ Unset Printing Records.
 (* None is top *)
 Definition aval := withTop val.
 
-Fixpoint exp_eval (E:onv aval) (e:exp) : aval :=
+Fixpoint op_eval (E:onv aval) (e:op) : aval :=
   match e with
     | Con v => wTA v
     | Var x => match E x with
                 | Some v => v
                 | None => Top
               end
-    | UnOp o e => match exp_eval E e with
+    | UnOp o e => match op_eval E e with
                    | Top => Top
-                   | wTA v => match Exp.unop_eval o v with
+                   | wTA v => match Val.unop_eval o v with
                                | Some v => wTA v
                                | None => Top
                              end
                  end
     | BinOp o e1 e2 =>
-       match exp_eval E e1 with
+       match op_eval E e1 with
                    | Top => Top
                    | wTA v1 =>
-                     match exp_eval E e2 with
+                     match op_eval E e2 with
                        | Top => Top
                        | wTA v2 =>
-                         match Exp.binop_eval o v1 v2 with
+                         match Val.binop_eval o v1 v2 with
                            | Some v => wTA v
                            | None => Top
                          end
                      end
        end
 
+  end.
+
+Definition exp_eval (E:onv aval) (e:exp) : aval :=
+  match e with
+  | Operation e => op_eval E e
+  | _ => Top
   end.
 
 Inductive le_precise : option aval -> option aval -> Prop :=
@@ -56,32 +62,32 @@ decide (a = a0); subst; try dec_solve.
 destruct a; try dec_solve.
 Defined.
 
-Inductive isEqCmp : exp -> Prop :=
-  IisEqCmp x c : isEqCmp (BinOp 3 (Var x) (Con c)).
+Inductive isEqCmp : op -> Prop :=
+  IisEqCmp x c : isEqCmp (BinOp BinOpEq (Var x) (Con c)).
 
 Instance isEqCmp_dec e : Computable (isEqCmp e).
 Proof.
   destruct e; try dec_solve.
-  destruct e1, e2; decide (b = 3); subst; try dec_solve.
+  destruct e1, e2; decide (b = BinOpEq); subst; try dec_solve.
 Defined.
 
-Definition getEqCmpVar (e:exp) :=
+Definition getEqCmpVar (e:op) :=
   match e with
-    | BinOp 3 (Var x) (Con c) => x
+    | BinOp BinOpEq (Var x) (Con c) => x
     | _ => 0
   end.
 
-Definition getEqCmpCon (e:exp) :=
+Definition getEqCmpCon (e:op) :=
   match e with
-    | BinOp 3 (Var x) (Con c) => c
-    | _ => 0
+    | BinOp BinOpEq (Var x) (Con c) => c
+    | _ => default_val
   end.
 
-Definition update_cond (AE:onv aval) (e:exp) (v:bool) :=
+Definition update_cond (AE:onv aval) (e:op) (v:bool) :=
   match v with
     | false =>
       if [ isVar e ] then
-        AE [getVar e <- Some (wTA 0)]
+        AE [getVar e <- Some (wTA default_val)]
       else
         AE
     | true =>
@@ -114,38 +120,35 @@ Inductive cp_sound : onv aval
     -> cp_sound AE Cp (stmtLet x e b)
 | CPIf AE Cp e b1 b2
   : (* these conditions make it conditional constant propagation *)
-    (aval2bool (exp_eval AE e) <> (Some false) -> cp_sound (update_cond AE e true) Cp b1)
-    -> (aval2bool (exp_eval AE e) <> (Some true) -> cp_sound (update_cond AE e false) Cp b2)
+    (aval2bool (op_eval AE e) <> (Some false) -> cp_sound (update_cond AE e true) Cp b1)
+    -> (aval2bool (op_eval AE e) <> (Some true) -> cp_sound (update_cond AE e false) Cp b2)
     -> cp_sound AE Cp (stmtIf e b1 b2)
 | CPGoto AE l Y Cp Z aY
   : get Cp (counted l) (Z,aY)
     -> length Z = length Y
-    -> PIR2 le_precise aY (List.map (exp_eval AE ∘ Some) Y)
+    -> PIR2 le_precise aY (List.map (op_eval AE ∘ Some) Y)
     -> cp_sound AE Cp (stmtApp l Y)
 | CPReturn AE Cp e
   : cp_sound AE Cp (stmtReturn e)
-| CPLet AE Cp s Z b
-  : cp_sound AE ((Z,lookup_list AE Z)::Cp) s
-  -> cp_sound AE ((Z,lookup_list AE Z)::Cp) b
-  -> cp_sound AE Cp (stmtFun Z s b).
+| CPLet AE Cp F t
+  : cp_sound AE (List.map (fun Zs => (fst Zs,lookup_list AE (fst Zs))) F ++ Cp) t
+  -> cp_sound AE Cp (stmtFun F t).
 
 Instance cp_sound_dec AE ZL s : Computable (cp_sound AE ZL s).
 Proof.
   hnf. general induction s; try dec_solve.
   - edestruct IHs; decide (Some (exp_eval AE e) = AE x); dec_solve.
-  - decide (aval2bool (exp_eval AE e) = Some false);
-    decide (aval2bool (exp_eval AE e) = Some true).
+  - decide (aval2bool (op_eval AE e) = Some false);
+    decide (aval2bool (op_eval AE e) = Some true).
     + unfold val_false, val_true in *. congruence.
     + edestruct IHs2; try dec_solve.
-      left; econstructor; intros. rewrite e0 in H; congruence. eauto.
     + edestruct IHs1; try dec_solve.
-      left; econstructor; intros. eauto.  rewrite e0 in H; congruence.
     + edestruct IHs1; edestruct IHs2; try dec_solve.
   - destruct (get_dec ZL (counted l)) as [[[]]|]; try dec_solve.
     decide (length l0 = length Y); try dec_solve.
-    decide (PIR2 le_precise l1 (List.map (exp_eval AE ∘ Some) Y));
+    decide (PIR2 le_precise l1 (List.map (op_eval AE ∘ Some) Y));
       try dec_solve.
-  - edestruct (IHs1 AE ((Z,lookup_list AE Z)::ZL));
+  - edestruct (IHs s1 AE (List.map (fun Zs => (fst Zs,lookup_list AE (fst Zs))) F ++ ZL));
     edestruct (IHs2 AE ((Z,lookup_list AE Z)::ZL)); try dec_solve.
 Defined.
 
