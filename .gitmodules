@@ -3,7 +3,7 @@
 	url = git@github.com:sigurdschneider/smpl.git
 [submodule "ContainersPlugin"]
 	path = ContainersPlugin
-	url = github:sigurdschneider/containers.git
+	url = git@github.com:sigurdschneider/containers.git
 [submodule "CompCert"]
 	path = CompCert
 	url = https://github.com/AbsInt/CompCert
