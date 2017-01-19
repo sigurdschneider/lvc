@@ -1,5 +1,5 @@
 Require NonParametricBiSim.
-Require Import Sim IL paco3.
+Require Import Sim IL paco3 OptionR.
 Require Export ILStateType.
 
 (** * Admissible Rules and Tactics *)
@@ -170,4 +170,80 @@ Proof.
                                     | eapply star2_refl].
       eapply step_cond_false; eauto.
     + eapply (sim_cond IST); intros; try left; eauto.
+Qed.
+
+
+Lemma sim_let_op_apx X (IST:ILStateType X) r (L L':X) V V' x x' e e' s s'
+      (EQ: fstNoneOrR eq (op_eval V e) (op_eval V' e'))
+      (SIM: forall v, op_eval V e = Some v
+                 -> (sim r \3/ r) Sim (L, V [x <- ⎣ v ⎦], s) (L', V' [x' <- ⎣ v ⎦], s'))
+  : sim r Sim (L, V, stmtLet x (Operation e) s) (L', V', stmtLet x' (Operation e') s').
+Proof.
+  inv EQ.
+  -  pfold ; eapply SimErr;
+       [ | eapply star2_refl | ].
+     + apply result_none.  inversion 1.
+     + eapply let_op_normal. eauto.
+  -  pfold; eapply SimSilent; [ eapply plus2O
+                              | eapply plus2O
+                              | ].
+     eapply step_let_op; eauto. eauto.
+     eapply step_let_op.  eauto. eauto.
+     eapply SIM; eauto.
+Qed.
+
+Lemma sim_cond_op_apx X (IST:ILStateType X) r (L L':X) V V' e e' s1 s1' s2 s2'
+      (EQ:  fstNoneOrR eq (op_eval V e) (op_eval V' e'))
+      (SIM1: forall v, op_eval V e = Some v -> val2bool v = true ->
+                  (sim r \3/ r) Sim (L, V, s1) (L', V', s1'))
+      (SIM2: forall v, op_eval V e = Some v -> val2bool v = false ->
+                  (sim r \3/ r) Sim (L, V, s2) (L', V', s2'))
+  : sim r Sim (L, V, stmtIf e s1 s2) (L', V', stmtIf e' s1' s2').
+Proof.
+  inv EQ.
+  - pfold; eapply SimErr;
+      [|eapply star2_refl|].
+    + apply result_none. inversion 1.
+    + eapply cond_normal. eauto.
+  -  case_eq (val2bool y); intros.
+     + pfold; eapply SimSilent; [ eapply plus2O; [|eapply filter_tau_nil_eq]
+                                | eapply plus2O; [|eapply filter_tau_nil_eq]
+                                | eapply SIM1; eauto];
+       eapply step_cond_true; eauto.
+     + pfold; eapply SimSilent; [ eapply plus2O; [|eapply filter_tau_nil_eq]
+                                | eapply plus2O; [|eapply filter_tau_nil_eq]
+                                | eapply SIM2; eauto];
+       eapply step_cond_false; eauto.
+Qed.
+
+Lemma sim_return_apx X (IST:ILStateType X) r (L L':X) V V' e e'
+  :fstNoneOrR eq (op_eval V e) (op_eval V' e') -> sim r Sim (L, V, stmtReturn e) (L', V', stmtReturn e').
+Proof.
+  intros. inv H.
+  - pfold; eapply SimErr; [|eapply star2_refl|].
+    + rewrite result_return. eauto.
+    + apply return_normal.
+  - pfold; eapply SimTerm; [|eapply star2_refl|eapply star2_refl| | ].
+    + rewrite! result_return. congruence.
+    + apply return_normal.
+    + apply return_normal.
+Qed.
+
+
+Lemma sim_let_call_apx X (IST:ILStateType X) r (L L':X) V V' x x' f Y Y' s s'
+      (EQ: fstNoneOrR eq  (omap (op_eval V) Y)  (omap (op_eval V') Y'))
+      (SIM: forall v, (sim r \3/ r) Sim (L, V [x <- ⎣ v ⎦], s) (L', V' [x' <- ⎣ v ⎦], s'))
+  : sim r Sim (L, V, stmtLet x (Call f Y) s) (L', V', stmtLet x' (Call f Y') s').
+Proof.
+  inv EQ.
+  - pfold. eapply SimErr; [|eapply star2_refl | ]; [ simpl  | ].
+    + rewrite !result_none; isabsurd; eauto.
+    + eapply let_call_normal; eauto.
+  - symmetry in H0, H.
+    pfold; eapply SimExtern;
+      [ eapply star2_refl
+      | eapply star2_refl
+      | step_activated; eauto using step_let_call
+      | step_activated; eauto using step_let_call | |];
+      intros ? ? STEP; eapply let_call_inversion in STEP; dcr; subst; eexists; split; try eapply step_let_call; eauto; congruence.
 Qed.
