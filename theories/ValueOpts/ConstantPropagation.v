@@ -652,35 +652,6 @@ Proof.
   - simpl in *. isabsurd.
 Qed.
 
-Lemma satisfies_single E gamma
-  : satisfies E gamma
-    -> satisfiesAll E {gamma}.
-Proof.
-  intros; hnf; intros.
-  cset_tac'. rewrite <- H0; eauto.
-Qed.
-
-Lemma satisfies_single' E gamma
-  : satisfiesAll E {gamma}
-    -> satisfies E gamma.
-Proof.
-  intros. eapply H. cset_tac.
-Qed.
-
-Lemma satisfies_add_extr E gamma Gamma
-  : satisfiesAll E {gamma; Gamma}
-    -> satisfies E gamma.
-Proof.
-  intros. eapply H. cset_tac.
-Qed.
-
-Lemma satisfies_add_drop E gamma Gamma
-  : satisfiesAll E {gamma; Gamma}
-    -> satisfiesAll E Gamma.
-Proof.
-  intros. hnf; intros. eapply H. cset_tac.
-Qed.
-
 
 Lemma cp_sound_eqn AE Cp ZL GL ΓL s (ang:ann (set var * set var))
  (CP:cp_sound AE Cp s)

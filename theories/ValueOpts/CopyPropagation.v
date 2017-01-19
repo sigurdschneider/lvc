@@ -10,62 +10,67 @@ Unset Printing Records.
 
 Fixpoint copyPropagate (ϱ:var -> var) (s:stmt) : stmt :=
   match s with
-   | stmtLet x e s =>
+   | stmtLet x (Operation e) s =>
      if [ isVar e] then
-       stmtLet x e (copyPropagate (ϱ[x <- ϱ (getVar e)]) s)
+       stmtLet x (Operation e) (copyPropagate (ϱ[x <- ϱ (getVar e)]) s)
      else
-       stmtLet x (rename_exp ϱ e) (copyPropagate (ϱ[x <- x]) s)
-   | stmtIf e s1 s2 => stmtIf (rename_exp ϱ e)
+       stmtLet x (Operation (rename_op ϱ e)) (copyPropagate (ϱ[x <- x]) s)
+   | stmtLet x (Call f Y) s =>
+     stmtLet x (Call f (List.map (rename_op ϱ) Y)) (copyPropagate (ϱ[x <- x]) s)
+   | stmtIf e s1 s2 => stmtIf (rename_op ϱ e)
                              (copyPropagate ϱ s1)
                              (copyPropagate ϱ s2)
-   | stmtApp l Y => stmtApp l (List.map (rename_exp ϱ) Y)
-   | stmtReturn e => stmtReturn (rename_exp ϱ e)
-   | stmtExtern x f Y s => stmtExtern x f (List.map (rename_exp ϱ) Y) (copyPropagate (ϱ[x <- x]) s)
-   | stmtFun Z s1 s2 =>
-     stmtFun Z (copyPropagate (ϱ[Z <-- Z]) s1) (copyPropagate ϱ s2)
+   | stmtApp l Y => stmtApp l (List.map (rename_op ϱ) Y)
+   | stmtReturn e => stmtReturn (rename_op ϱ e)
+   | stmtFun F s2 =>
+     stmtFun (List.map (fun '(Z, s) => (Z, copyPropagate (ϱ[Z <-- Z]) s)) F) (copyPropagate ϱ s2)
    end.
 
 Definition cp_eqn (ϱ:var -> var) (x:var) := EqnApx (Var x) (Var (ϱ x)).
 
+Instance cq_eqn_proper f
+  : Proper (_eq ==> _eq) (cp_eqn f).
+Proof.
+  unfold Proper, respectful, _eq, cp_eqn; intros; subst. simpl in *; subst.
+  reflexivity.
+Qed.
 
 Lemma cp_moreDefined ϱ D e
-  : Exp.freeVars e[<=]D
-    -> entails (map (cp_eqn ϱ) D) {EqnApx e (rename_exp ϱ e)}.
+  : Op.freeVars e[<=]D
+    -> entails (map (cp_eqn ϱ) D) {EqnApx e (rename_op ϱ e)}.
 Proof.
   general induction e; simpl.
   - eapply entails_eqns_apx_refl.
-  - eapply entails_subset.
-    eapply incl_singleton.
-    eapply map_iff; intuition.
-    eexists v; split; eauto.
-    rewrite <- H; simpl; cset_tac; eauto.
+  - eapply entails_subset. simpl in *.
+    rewrite <- H. cset_tac.
   - simpl in H.
     exploit (IHe ϱ); eauto.
-    hnf; intros; hnf; intros. cset_tac. rewrite <- H1.
-    exploit X; eauto.
-    exploit X0. cset_tac; reflexivity.
-    simpl. inv X1; simpl; eauto.
+    hnf; intros. eapply H0 in H1.
+    eapply satisfies_single.
+    eapply satisfies_single' in H1.
+    simpl in *. inv H1; simpl.
     + econstructor.
     + reflexivity.
   - simpl in H.
-    exploit (IHe1 ϱ); eauto. instantiate (1:=D). rewrite <- H. cset_tac; intuition.
-    exploit (IHe2 ϱ); eauto. instantiate (1:=D). rewrite <- H. cset_tac; intuition.
-    hnf; intros; hnf; intros. cset_tac. invc H1. simpl.
-    exploit X; eauto. exploit X1; eauto. cset_tac; reflexivity.
-    exploit X0; eauto. exploit X3; eauto. cset_tac; reflexivity.
-    simpl in *.
-    inv X2; inv X4; try now econstructor.
-    simpl. reflexivity.
+    exploit (IHe1 ϱ); eauto. instantiate (1:=D). rewrite <- H. cset_tac.
+    exploit (IHe2 ϱ); eauto. instantiate (1:=D). rewrite <- H. cset_tac.
+    hnf; intros.
+    specialize (H0 _ H2). specialize (H1 _ H2).
+    eapply satisfies_single.
+    eapply satisfies_single' in H0.
+    eapply satisfies_single' in H1.
+    simpl in *. inv H0; inv H1; simpl; try econstructor.
+    reflexivity.
 Qed.
 
 
 Lemma cp_moreDefinedArgs ϱ D Y
-  : list_union (List.map Exp.freeVars Y) [<=]D
-    -> entails (map (cp_eqn ϱ) D) (list_EqnApx Y (List.map (rename_exp ϱ) Y)).
+  : list_union (List.map Op.freeVars Y) [<=]D
+    -> entails (map (cp_eqn ϱ) D) (list_EqnApx Y (List.map (rename_op ϱ) Y)).
 Proof.
   general induction Y; simpl.
   - eapply entails_empty.
-  - assert (Exp.freeVars a ⊆ D). {
+  - assert (Op.freeVars a ⊆ D). {
       rewrite <- H. eapply incl_list_union.
       - simpl; econstructor.
       - reflexivity.
@@ -76,10 +81,9 @@ Proof.
     rewrite add_union_singleton; reflexivity.
     eauto.
     eapply IHY.
-    rewrite <- H.
-    unfold list_union. simpl.
-    rewrite (list_union_start_swap _ _ ({} ++ Exp.freeVars a)).
-    cset_tac; intuition.
+    rewrite <- H. simpl.
+    setoid_rewrite (list_union_start_swap) at 2.
+    cset_tac.
 Qed.
 
 
@@ -88,8 +92,8 @@ Lemma cp_eqns_agree_incl E E' lv
   -> map (cp_eqn E) lv ⊆ map (cp_eqn E') lv.
 Proof.
   intros; hnf; intros.
-  eapply map_iff in H0; intuition. dcr.
-  eapply map_iff; intuition.
+  eapply map_iff in H0; eauto. dcr.
+  eapply map_iff; eauto.
   eexists; split; eauto.
   unfold cp_eqn; rewrite <- H; eauto.
 Qed.
@@ -110,9 +114,10 @@ Lemma cp_eqns_add_update ϱ D x y
             [=] {EqnApx (Var x) (Var y); map (cp_eqn ϱ) D}.
 Proof.
   intros.
-  rewrite map_add; intuition.
+  rewrite map_add; eauto.
   unfold cp_eqn at 1.
-  lud; isabsurd. rewrite cp_eqns_agree with (E':=ϱ).
+  lud; isabsurd.
+  rewrite cp_eqns_agree with (E':=ϱ).
   reflexivity.
   eapply agree_on_update_dead; eauto.
 Qed.
@@ -127,10 +132,9 @@ Proof.
   destruct H0 as [[? [? ?]]|]; isabsurd.
   eapply map_iff in H0; eauto using freeVars_Proper.
   dcr.
-  eapply map_iff in H3; intuition. dcr.
+  eapply map_iff in H3; eauto. dcr.
   invc H5. unfold cp_eqn in *; simpl in *.
-  rewrite H4 in H1. cset_tac; intuition.
-  invc H0; eauto.
+  rewrite H4 in H1. cset_tac'.
   eapply H. eapply lookup_set_spec; eauto.
 Qed.
 
@@ -140,8 +144,8 @@ Lemma single_in_cp_eqns x ϱ D
   -> {{ EqnApx (Var x) (Var (ϱ x)) }} ⊆ map (cp_eqn ϱ) D.
 Proof.
   intros. hnf; intros.
-  eapply map_iff; intuition.
-  eexists x; split; eauto. cset_tac; intuition.
+  eapply map_iff; eauto.
+  eexists x; split; eauto. cset_tac.
 Qed.
 
 
@@ -149,7 +153,7 @@ Lemma entails_cp_eqns_trivial ϱ Z
 : entails {} (map (cp_eqn (ϱ [Z <-- Z])) (of_list Z)).
 Proof.
   hnf; intros. hnf; intros.
-  eapply map_iff in H0; intuition.
+  eapply map_iff in H0; eauto.
   dcr. invc H3.
   unfold cp_eqn.
   rewrite lookup_update_same; eauto.
@@ -163,134 +167,140 @@ Lemma entails_eqns_trans' Gamma e e' e''
   -> entails Gamma {EqnApx e e''}.
 Proof.
   intros. hnf; intros.
-  hnf; intros. cset_tac. rewrite <- H2.
+  hnf; intros. cset_tac'. rewrite <- H2.
   simpl. exploit (H1 _ H); eauto.
   exploit (H1 _ H0); eauto.
-  simpl in *. inv X; inv X0.
+  simpl in *. inv H3; inv H4; try now (econstructor; eauto).
   - congruence.
   - econstructor; eauto. congruence.
 Qed.
 
 
-Lemma copyPropagate_sound_eqn s ang Es ϱ
-: renamedApart s ang
-  -> lookup_set ϱ (fst (getAnn ang)) ⊆ (fst (getAnn ang))
-  -> labelsDefined s (length Es)
-  -> (forall n a, get Es n a -> snd a [=] ∅)
-  -> eqn_sound Es
+Lemma copyPropagate_sound_eqn ZL (Delta:〔⦃nat⦄〕) ΓL s ang ϱ
+      (RA:renamedApart s ang)
+      (Incl: lookup_set ϱ (fst (getAnn ang)) ⊆ (fst (getAnn ang)))
+(LD: labelsDefined s (length ZL))
+(EQE: (forall n a, get ΓL n a -> a [=] ∅))
+ (Len1: ❬ZL❭ = ❬Delta❭)
+ (Len2: ❬ZL❭ = ❬ΓL❭)
+  : eqn_sound ZL Delta ΓL
               s (copyPropagate ϱ s)
               (map (cp_eqn ϱ) (fst (getAnn ang)))
               ang.
 Proof.
-  intros. general induction H; invt labelsDefined; simpl.
-  - cases.
-    + inv i; simpl in *. econstructor; eauto.
-      * { eapply eqn_sound_entails_monotone; eauto.
-          - eapply IHrenamedApart; eauto.
-            rewrite H2; simpl.
-            rewrite lookup_set_add_update; eauto.
-            assert (v ∈ D) by (cset_tac; intuition).
-            pose proof (lookup_set_single H7 H4); eauto.
-            revert H4 H8; clear_all; cset_tac; intuition.
-          - rewrite H2; simpl.
-            rewrite cp_eqns_add_update; eauto.
-            rewrite add_union_singleton.
+  intros. general induction RA; invt labelsDefined; simpl.
+  - destruct e.
+    + cases.
+      * inv COND; simpl in *. econstructor; eauto.
+        -- eapply eqn_sound_entails_monotone; eauto.
+           ++ eapply IHRA; eauto.
+             pe_rewrite.
+             rewrite lookup_set_add_update; eauto.
+             assert (v ∈ D) by cset_tac.
+             pose proof (lookup_set_single H3 Incl); eauto.
+             cset_tac.
+           ++ pe_rewrite.
+             rewrite cp_eqns_add_update; eauto.
+             rewrite add_union_singleton.
+             eapply entails_union'.
+             ** rewrite add_union_singleton; reflexivity.
+             ** eapply entails_eqns_trans' with (e':=Var v).
+                cset_tac. cset_tac.
+             ** eapply entails_monotone; [ reflexivity | ].
+                cset_tac.
+        -- hnf; intros.
+           eapply satisfies_single.
+           simpl. reflexivity.
+      *  econstructor; eauto.
+         eapply eqn_sound_entails_monotone; eauto.
+         -- eapply IHRA; eauto.
+            pe_rewrite.
+            rewrite lookup_set_add_update; eauto. simpl in *.
+            eauto with cset.
+         -- pe_rewrite. rewrite cp_eqns_add_update; eauto.
             eapply entails_union'.
-            + rewrite add_union_singleton; reflexivity.
-            + eapply entails_eqns_trans' with (e':=Var v).
-              cset_tac; intuition.
-              rewrite <- (@single_in_cp_eqns v).
-              cset_tac; intuition.
-              cset_tac; intuition.
-            + eapply entails_monotone; [ reflexivity | ].
-              cset_tac; intuition.
-        }
-      * hnf; intros; hnf; intros. cset_tac; intuition. rewrite <- H8.
-        simpl. reflexivity.
-    + econstructor; eauto.
-      eapply eqn_sound_entails_monotone; eauto.
-      * eapply IHrenamedApart; eauto. rewrite H2; simpl.
-        intros.
-        rewrite lookup_set_add_update; eauto. simpl in *.
-        rewrite H4. reflexivity.
-      * rewrite H2; simpl. rewrite cp_eqns_add_update; eauto.
-        eapply entails_union'.
-        rewrite add_union_singleton; reflexivity.
-        eapply entails_eqns_apx_refl.
-        eapply entails_monotone. reflexivity.
-        cset_tac; intuition.
-      * eapply cp_moreDefined; eauto.
-      * rewrite rename_exp_freeVars; eauto. rewrite H0; eauto.
-  - econstructor; intros. eauto.
+            rewrite add_union_singleton; reflexivity.
+            eapply entails_eqns_apx_refl.
+            eapply entails_monotone. reflexivity.
+            cset_tac.
+         -- eapply cp_moreDefined; eauto.
+         -- rewrite rename_op_freeVars; eauto. rewrite H0; eauto.
+    + econstructor.
+      * eapply eqn_sound_entails_monotone; eauto.
+        eapply IHRA; eauto.
+        -- pe_rewrite.
+           rewrite lookup_set_add_update; eauto.
+           simpl in *. eauto with cset.
+        -- pe_rewrite.
+           rewrite cp_eqns_add_update; eauto.
+           eapply entails_union'.
+           rewrite add_union_singleton; reflexivity.
+           eapply entails_eqns_apx_refl.
+           reflexivity.
+      * eauto using cp_moreDefinedArgs.
+      * simpl in *.
+        rewrite rename_op_list_freeVars; eauto.
+        rewrite H0; eauto.
+      * eauto with len.
+  - econstructor; intros.
     + eapply eqn_sound_entails_monotone; eauto.
-      eapply IHrenamedApart1; eauto.
-      * rewrite H4; simpl; eauto.
-      * rewrite H4; simpl.
-        eapply entails_monotone; try reflexivity; cset_tac; intuition.
+      eapply IHRA1; eauto.
+      * pe_rewrite. eauto.
+      * pe_rewrite. eapply entails_monotone; eauto.
+        reflexivity. cset_tac.
     + eapply eqn_sound_entails_monotone; eauto.
-      eapply IHrenamedApart2; eauto.
-      * rewrite H5; simpl; eauto.
-      * rewrite H5; simpl.
+      eapply IHRA2; eauto.
+      * pe_rewrite. eauto.
+      * pe_rewrite.
         eapply entails_monotone; try reflexivity; cset_tac; intuition.
     + eapply cp_moreDefined; eauto.
   - econstructor; eauto using cp_moreDefined.
   - edestruct get_in_range as [a ?]; eauto.
-    destruct a as [[[]]].
-    exploit H3; eauto. simpl in *; dcr.
-    econstructor; eauto.
-    + rewrite map_length; eauto.
-    + rewrite X. eapply entails_empty.
+    inv_get.
+    econstructor; eauto with len.
+    + erewrite (EQE _ _ H1). eapply entails_empty.
     + eapply cp_moreDefinedArgs; eauto.
-  - econstructor.
-    + eapply eqn_sound_entails_monotone; eauto.
-      eapply IHrenamedApart; eauto.
-      * rewrite H2; simpl.
-        rewrite lookup_set_add_update; eauto.
-        simpl in *. rewrite H4; reflexivity.
-      * rewrite H2; simpl.
-        rewrite cp_eqns_add_update; eauto.
-        eapply entails_union'.
-        rewrite add_union_singleton; reflexivity.
-        eapply entails_eqns_apx_refl.
-        reflexivity.
-    + eauto using cp_moreDefinedArgs.
-    + simpl in *.
-      hnf; intros ? A.
-      unfold list_union in A.
-      eapply list_union_get in A. destruct A as [[n [t []]]|]; isabsurd.
-      edestruct map_get_4; eauto; dcr. subst.
-      edestruct map_get_4; try eapply H9; eauto; dcr; subst.
-      exploit (get_list_union_map _ _ Exp.freeVars); try eapply H10; eauto.
-      rewrite H0 in X.
-      rewrite rename_exp_freeVars in H8; eauto. rewrite X in H8. eauto.
-    + rewrite map_length; reflexivity.
-  - econstructor. instantiate (1:=map (cp_eqn ϱ) D). instantiate (1:=∅).
-    + eapply eqn_sound_entails_monotone; eauto.
-      eapply IHrenamedApart1; eauto. rewrite H3; simpl.
-      * rewrite lookup_set_union; eauto.
+  - eapply EqnFun with (Γ2:=map (cp_eqn ϱ) D) (ΓF:= List.map (fun _=> ∅) F);
+      eauto with len.
+    + intros; inv_get; eauto.
+    + intros; inv_get. exploit H0; eauto.
+      eapply eqn_sound_entails_monotone; eauto.
+      eapply (H1 _ _ _ H6 H11); eauto.
+      * edestruct H2; eauto; dcr; simpl in *.
+        rewrite H9.
+        rewrite lookup_set_union; eauto.
         rewrite update_with_list_lookup_set_incl; eauto; try reflexivity.
         rewrite lookup_set_update_with_list_in_union; eauto.
-        simpl in *. rewrite H7. clear_all; cset_tac; intuition.
-      * intros. inv H10; simpl in *. reflexivity.
-        eapply H9; eauto.
-      * rewrite H3; simpl.
-        rewrite map_app; [| clear_all; intuition].
+        simpl in *. rewrite Incl.
+        clear_all; cset_tac.
+      * intros. eapply get_app_cases in H9. destruct H9; dcr.
+        -- inv_get; eauto.
+        -- eapply EQE; eauto.
+      * eauto with len.
+      * eauto with len.
+      * edestruct H2; eauto; dcr; simpl in *.
+        rewrite H9.
+        rewrite map_app; eauto.
         rewrite (@cp_eqns_agree (ϱ [Z <-- Z]) ϱ D).
         eapply entails_union'.
         reflexivity.
         eapply entails_monotone.
         eapply entails_cp_eqns_trivial. eapply incl_left.
         eapply entails_monotone. reflexivity. eapply incl_right.
-        assert (D [=] D \ of_list Z). revert H.
-        clear_all; cset_tac; intuition; eauto.
-        rewrite H10. eapply update_with_list_agree_minus; eauto.
+        assert (D [=] D \ of_list Z). revert H15.
+        clear_all; cset_tac.
+        rewrite H12. eapply update_with_list_agree_minus; eauto.
     + eapply eqn_sound_entails_monotone; eauto.
-      eapply IHrenamedApart2; simpl; eauto.
-      * rewrite H5. simpl. eauto.
-      * intros. inv H10; simpl in *. reflexivity.
-        eapply H9; eauto.
-      * rewrite H5. simpl. reflexivity.
-    + eapply incl_empty.
+      eapply IHRA; simpl; eauto.
+      * pe_rewrite; eauto.
+      * intros ? ? GET. eapply get_app_cases in GET. destruct GET; dcr.
+        -- inv_get; eauto.
+        -- eapply EQE; eauto.
+      * eauto with len.
+      * eauto with len.
+      * pe_rewrite. reflexivity.
+    + intros; inv_get.
+      eapply incl_empty.
     + rewrite cp_eqns_freeVars; eauto; reflexivity.
     + reflexivity.
 Qed.
