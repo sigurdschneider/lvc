@@ -1,5 +1,5 @@
 Require Import Util EqDec LengthEq Get Coq.Classes.RelationClasses MoreList AllInRel ListUpdateAt.
-Require Import SizeInduction Lattice OptionR DecSolve Annotation.
+Require Import SizeInduction Infra.Lattice OptionR DecSolve Annotation.
 
 Set Implicit Arguments.
 
@@ -436,4 +436,27 @@ Proof.
   hnf in H. general induction H; simpl; eauto.
   - eapply IHPIR2; eauto.
     eapply (@zip_orb_impb (list bool)); eauto with typeclass_instances.
+Qed.
+
+
+Lemma fold_list_length A B (f:list B -> (list A * bool) -> list B) (a:list (list A * bool)) (b: list B)
+  : (forall n aa, get a n aa -> ❬b❭ <= ❬fst aa❭)
+    -> (forall aa b, ❬b❭ <= ❬fst aa❭ -> ❬f b aa❭ = ❬b❭)
+    -> length (fold_left f a b) = ❬b❭.
+Proof.
+  intros LEN.
+  general induction a; simpl; eauto.
+  erewrite IHa; eauto 10 using get with len.
+  intros. rewrite H; eauto using get.
+Qed.
+
+Lemma fold_list_length' A B (f:list B -> (list A) -> list B) (a:list (list A)) (b: list B)
+  : (forall n aa, get a n aa -> ❬b❭ <= ❬aa❭)
+    -> (forall aa b, ❬b❭ <= ❬aa❭ -> ❬f b aa❭ = ❬b❭)
+    -> length (fold_left f a b) = ❬b❭.
+Proof.
+  intros LEN.
+  general induction a; simpl; eauto.
+  erewrite IHa; eauto 10 using get with len.
+  intros. rewrite H; eauto using get.
 Qed.

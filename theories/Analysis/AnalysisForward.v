@@ -1,7 +1,7 @@
 Require Import CSet Le ListUpdateAt Coq.Classes.RelationClasses.
 
 Require Import Plus Util AllInRel Map Terminating.
-Require Import Val Var Env IL Annotation Lattice DecSolve LengthEq MoreList Status AllInRel OptionR.
+Require Import Val Var Env IL Annotation Infra.Lattice DecSolve LengthEq MoreList Status AllInRel OptionR.
 Require Import Keep Subterm Analysis.
 
 Set Implicit Arguments.
@@ -101,18 +101,6 @@ Fixpoint forward (sT:stmt) (Dom: stmt -> Type) `{BoundedSemiLattice (Dom sT)}
     | _, an => fun EQ => (ann0 d, (fun _ => bottom) ⊝ ZL)
   end eq_refl.
 
-Lemma fold_list_length A B (f:list B -> (list A * bool) -> list B) (a:list (list A * bool)) (b: list B)
-  : (forall n aa, get a n aa -> ❬b❭ <= ❬fst aa❭)
-    -> (forall aa b, ❬b❭ <= ❬fst aa❭ -> ❬f b aa❭ = ❬b❭)
-    -> length (fold_left f a b) = ❬b❭.
-Proof.
-  intros LEN.
-  general induction a; simpl; eauto.
-  erewrite IHa; eauto 10 using get with len.
-  intros. rewrite H; eauto using get.
-Qed.
-
-
 Lemma forwardF_get  (sT:stmt) (Dom:stmt->Type) `{BoundedSemiLattice (Dom sT)}
            (forward:〔params〕 ->
                      forall s (ST:subTerm s sT) (d:Dom sT) (a:ann (Dom sT)),
@@ -162,18 +150,6 @@ Ltac inv_get_step_analysis_forward :=
   end.
 
 Smpl Add inv_get_step_analysis_forward : inv_get.
-
-
-Lemma fold_list_length' A B (f:list B -> (list A) -> list B) (a:list (list A)) (b: list B)
-  : (forall n aa, get a n aa -> ❬b❭ <= ❬aa❭)
-    -> (forall aa b, ❬b❭ <= ❬aa❭ -> ❬f b aa❭ = ❬b❭)
-    -> length (fold_left f a b) = ❬b❭.
-Proof.
-  intros LEN.
-  general induction a; simpl; eauto.
-  erewrite IHa; eauto 10 using get with len.
-  intros. rewrite H; eauto using get.
-Qed.
 
 Lemma forward_length (sT:stmt) (Dom : stmt -> Type) `{BoundedSemiLattice (Dom sT)}
       (f: forall sT, list params ->
