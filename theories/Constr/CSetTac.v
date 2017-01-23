@@ -295,7 +295,7 @@ Qed.
                   is_var a; is_var b; invc H; clear_trivial_eqs
               end)).
 
-  Smpl Create cset.
+  Smpl Create cset [progress].
   Smpl Add cset_assumption : cset.
 
   Ltac cset_tac_step f :=

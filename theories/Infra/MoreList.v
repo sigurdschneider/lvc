@@ -518,7 +518,7 @@ Notation "f ⊜ L1 L2" := (zip f L1 L2) (at level 40, L1 at level 0, L2 at level
 
 
 Create HintDb inv_get discriminated.
-Smpl Create inv_get.
+Smpl Create inv_get [progress].
 
 Ltac inv_get_step_basic :=
   match goal with

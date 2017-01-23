@@ -16,7 +16,7 @@ Ltac inv_eqs :=
             end).
 
 
-Smpl Create inv_trivial.
+Smpl Create inv_trivial [progress].
 
 Ltac inv_trivial_base :=
   match goal with
