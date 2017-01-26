@@ -1,0 +1,122 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+  <head>
+    <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+    <link href="coqdoc.css" rel="stylesheet" type="text/css" />
+    <link href="coqdocjs.css" rel="stylesheet" type="text/css"/>
+    <script type="text/javascript" src="config.js"></script>
+    <script type="text/javascript" src="coqdocjs.js"></script>
+    <script type="text/javascript" src="jquery-3.1.0.min.js"></script>
+    <script type="text/javascript" src="loadtoc.js"></script>
+    <script type="text/javascript">
+     function populate() {
+       loadToC(function () {
+         $("#sectionIL").append(tocmodules(/Lvc.Isa.Op/));
+         $("#sectionIL").append(tocmodules(/Lvc.IL.Exp/));
+         $("#sectionIL").append(tocmodules(/Lvc.IL.IL$/));
+
+         $("#sectionEQ").append(tocmodules(/Lvc.Equiv.Sim$/));
+         $("#sectionEQ").append(tocmodules(/Lvc.Equiv.NonParametricBiSim/));
+         $("#sectionEQ").append(tocmodules(/Lvc.Equiv.SimTactics/));
+
+         $("#sectionSpill").append(tocmodules(/Lvc.Spilling.Spilling/));
+
+         $("#sectionInd").append(tocmodules(/Lvc.Equiv.SimF/));
+         $("#sectionInd").append(tocmodules(/Lvc.Equiv.SimI/));
+         $("#sectionInd").append(tocmodules(/Lvc.Equiv.CtxEq/));
+
+         $("#sectionDCE").append(tocmodules(/Lvc.Reachability.Reachability$/));
+         $("#sectionDCE").append(tocmodules(/Lvc.UCE/));
+         $("#sectionDCE").append(tocmodules(/Lvc.Liveness.TrueLiveness/));
+         $("#sectionDCE").append(tocmodules(/Lvc.DVE/));
+       });
+	  }
+    </script>
+    <style>
+     h3 + div#toc {
+       margin-left: 2em;
+     }
+     .download {
+       color:#4078c0;
+     }
+    </style>
+  </head>
+
+  <body onload="populate(); document.getElementById('content').focus()">
+    <div id="header">
+      <span class="left">
+	<span class="modulename"> <script> document.write(document.title) </script> </span>
+      </span>
+
+      <span class="button" id="toggle-proofs"></span>
+
+      <span class="right">
+	<a href="./">Intro Page</a>
+	<a href="./indexpage.html"> Index </a>
+	<a href="./search-toc.html"> Full Table of Contents </a>
+      </span>
+    </div>
+    <div id="content" tabindex="-1" onblur="document.getElementById('content').focus()">
+      <div id="main">
+	<h1>Verification of a family of spilling algorithms</h1>
+<!--	<p>
+	  This is the Coq development accompanying our <a href="todo" class="download">recent submission</a> to <a href="http://cpp2017.mpi-sws.org/">CPP</a>.
+	  Coq sources are <a href="lvc-ind.tgz" class="download">available for download</a>.
+	</p>
+	<p>
+	  In <a href="http://www.ps.uni-saarland.de/~sdschn/publications/lvc15/"> previous work</a> we
+	  introduced the intermediate language IL, a first-order language with system calls.
+	  IL has two <a href="Lvc.IL.IL">semantics</a>, which interpret variables differently, as binders or as <a href="http://www.cs.cmu.edu/~rwh/pfpl.html">assignables</a>.
+	  In this work we present an inductive proof method for <a href="Lvc.Equiv.Sim.html">simulation-based</a> compiler correctness.
+	  We showcase the method with the proof of dead code elimination (DCE), which consists of the following two optimizations:
+	  <ol>
+	    <li>Unreachable Code Elimination</li>
+	    <li>Dead Variable Elimination</li>
+	  </ol>
+	</p>
+	<p>
+	  The correctness proofs of UCE and DVE require an interesting simulation argument:
+	  In both cases a step must be argued where the source program reduces (for example, a variable definition)
+	  whereas the target program does not reduce (because the variable definition has been removed).
+	  Our proof method is induction on the program structure, facilitated by a fixed-point lemma about our simulation, which we call the extension lemma.
+	  We prove the extension lemma for the <a href="Lvc.Equiv.SimI.html">imperative interpretation</a> and for the
+	  <a href="Lvc.Equiv.SimF.html">functional interpretation</a>.
+	</p>
+	<p>
+	  We <a href="Lvc.UnreachableCode.html">specify soundness of unreachable code</a>,
+	  implement <a href="Lvc.UCE.html">unreachable code elimination (UCE) and prove it correct</a>.
+	  We show correctness for both semantic interpretations of IL.
+	</p>
+	<p>
+	  We <a href="Lvc.TrueLiveness.html">specify soundness of liveness</a>,
+	  implement <a href="Lvc.DVE.html">dead variable elimination (DVE) and prove it correct</a>.
+	  Again, we show correctness for both semantic interpretations of IL.
+	</p>-->
+	<h2> Selected Items from the Table of Contents </h2>
+	<div class="tocindent">
+      <h3> Spilling </h3>
+      <div class="toc novfile" id="sectionSpill">
+        </div>
+	  <h3> The Language IL </h3>
+	  <div class="toc novfile" id="sectionIL">
+	  </div>
+	  <h3> Program Equivalence </h3>
+	  <div class="toc novfile" id="sectionEQ">
+	  </div>
+	  <h3> Inductive Proof Method </h3>
+	  <div class="toc novfile" id="sectionInd">
+	  </div>
+	  <h3> Case Study: Dead Code Elimination </h3>
+	  <div class="toc novfile" id="sectionDCE">
+	  </div>
+	</div>
+      </div>
+    </div>
+    <div id="footer">
+      Generated by <a href="http://coq.inria.fr/">coqdoc</a> and improved with <a href="https://github.com/tebbi/coqdocjs">CoqdocJS</a>
+    </div>
+    </div>
+  </body>
+
+</html>

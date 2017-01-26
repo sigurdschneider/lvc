@@ -1,5 +1,6 @@
 DOC := doc/
 DOCIND := doc-ind/
+DOCSPILL := doc-spill/
 PKGIND := pkg-lvc-ind/
 EXTRA_DIR := extra
 HEADER := $(EXTRA_DIR)/header.html
@@ -13,6 +14,7 @@ COQMAKE := +$(MAKE) -f $(COQMAKEFILE)
 CORES=$(shell cat /proc/cpuinfo | grep cpu\ cores | sed 's/.*:\ //' | head -n 1)
 VS=$(shell find theories/ -iname '*.v' | grep -v '/\.')
 VSIND=$(shell find theories/ -iname '*vo' | sed 's/\.vo/.v/' | grep -v 'Spilling' | grep -v 'ValueOpts' | grep -v 'TransVal')
+VSSPILL=$(shell find theories/ -iname '*vo' | sed 's/\.vo/.v/' | grep -v 'ValueOpts' | grep -v 'TransVal')
 DOCS=$(shell find extra/ )
 
 ifeq ($(wildcard time.rb)$(wildcard .timing),time.rb.timing)
@@ -84,6 +86,17 @@ ind-package:
 	rm -rf $(PKGIND)/src/*.cm* $(PKGIND)/src/*.o $(PKGIND)/src/*.ml4.d
 	rm -rf $(PKGIND)/compiler/lvcc.native
 	tar cvzf lvc-ind.tgz $(PKGIND)
+
+doc-spill: clean-doc $(DOCS)
+	- mkdir -p $(DOCSPILL)
+	make -f $(COQMAKEFILE) $(VSSPILL:.v=.vo) -j$(CORES)
+	coqdoc $(COQDOCFLAGS) -d $(DOCSPILL) $(shell cat _CoqProject | grep -v ^-I) $(VSSPILL)
+	cp $(EXTRA_DIR)/resources/* $(DOCSPILL)
+	cp $(EXTRA_DIR)/index-spill.html $(DOCSPILL)/index.html
+	cp $(EXTRA_DIR)/search-toc.html $(DOCSPILL)/search-toc.html
+
+doc-spill-publish: doc-spill
+	scp -r $(DOCSPILL)/* ps:public_html/lvc-spill/
 
 clean-doc:
 	rm -rf $(DOC)
