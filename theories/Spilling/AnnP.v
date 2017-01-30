@@ -4,6 +4,7 @@ Require Import Liveness LabelsDefined.
 
 Set Implicit Arguments.
 
+(** * AnnP *)
 
 Inductive ann_P
            (A : Type)

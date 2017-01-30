@@ -1,5 +1,7 @@
 Require Import Nat Util CSet IL ListMax.
 
+(** * ExpVarsBounded *)
+
 Inductive exp_vars_bounded : nat -> stmt -> Prop :=
 | BoundLet k x e s
   : cardinal (Exp.freeVars e) <= k

@@ -3,8 +3,7 @@ Require Import IL Annotation InRel AutoIndTac Liveness LabelsDefined.
 Require Import SpillSound.
 
 
-(* this file is way too big *)
-
+(** * SpillUtil *)
 
 (* move somewhere *)
 Lemma setTopAnn_setTopAnn

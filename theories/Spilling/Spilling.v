@@ -7,6 +7,8 @@ Require Import Liveness RenamedApart RenameApart_Liveness AddParams Slot.
 
 Set Implicit Arguments.
 
+(** * Spilling *)
+
 Arguments sim S {H} S' {H0} r t _ _.
 
 Smpl Add

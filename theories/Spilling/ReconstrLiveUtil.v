@@ -7,6 +7,8 @@ Require Import ToBeOutsourced.
 
 Set Implicit Arguments.
 
+(** * ReconstrLiveUtil *)
+
 Definition reconstr_live_do_spill
            (slot : var -> var)
            (Λ : list (⦃var⦄ * ⦃var⦄))

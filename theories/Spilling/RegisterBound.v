@@ -7,8 +7,9 @@ Require Import ReconstrLiveG ToBeOutsourced BoundedIn.
 
 
 Set Implicit Arguments.
-(* TODO: outsource *)
 
+
+(** * RegisterBound *)
 
 (***************************************************************************)
 

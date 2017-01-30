@@ -7,6 +7,8 @@ Require Import Take TakeSet MoreTac.
 
 Set Implicit Arguments.
 
+(** * SimplSpill *)
+
 Definition one_or_empty_if k X `{OrderedType X} (s:set X) : set X
   := if [cardinal s >= k] then
       match choose s with

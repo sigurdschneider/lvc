@@ -4,6 +4,7 @@ Require Import Liveness LabelsDefined.
 Require Import SpillSound DoSpill DoSpillRm SpillUtil ReconstrLive AnnP InVD SetUtil.
 
 
+(** * ReconstrLiveG *)
 
 Lemma reconstr_live_G_eq
       (G : ⦃var⦄)

@@ -5,7 +5,7 @@ Require Import SpillSound DoSpill DoSpillRm SpillUtil ReconstrLive.
 Require Import ReconstrLiveSmall ReconstrLiveSound SetUtil InVD.
 Require Import ToBeOutsourced.
 
-
+(** * VarInRegister *)
 
 Inductive var_in_register
           (VD : ⦃var⦄)

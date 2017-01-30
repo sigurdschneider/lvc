@@ -7,6 +7,8 @@ Require Import SetUtil SpillSound ReconstrLive DoSpill ReconstrLiveUtil.
 Set Implicit Arguments.
 Unset Printing Records.
 
+(** * SpillSim *)
+
 Lemma agree_on_eq_oval (D:set var) (f g: var -> option val)
   : agree_on _eq D f g
     -> agree_on eq D f g.

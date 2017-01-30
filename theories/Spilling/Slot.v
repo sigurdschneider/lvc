@@ -2,6 +2,8 @@ Require Import Nat CSet Var MapInjectivity.
 
 Set Implicit Arguments.
 
+(** * Slot *)
+
 Definition slot n x := x + n.
 
 Inductive Slot (VD:set var) :=

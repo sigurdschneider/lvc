@@ -3,6 +3,8 @@ Require Import IL Annotation AnnP InRel AutoIndTac Liveness LabelsDefined.
 Require Import ExpVarsBounded.
 
 
+(** * SpillSound *)
+
 Notation "'spilling'"
   := (ann (⦃var⦄ * ⦃var⦄ * list (⦃var⦄ * ⦃var⦄))).
 

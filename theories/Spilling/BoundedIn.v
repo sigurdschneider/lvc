@@ -2,6 +2,7 @@ Require Import Util CSet IL Annotation AnnP MapSep InfinitePartition.
 
 Set Implicit Arguments.
 
+(** * BoundedIn *)
 Definition bounded_in (X : Type) `{OrderedType X} (D : ⦃X⦄) (k : nat)
   : ⦃X⦄ -> Prop
   := fun a => cardinal (D ∩ a) <= k .
