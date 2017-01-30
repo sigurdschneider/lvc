@@ -12,24 +12,25 @@
     <script type="text/javascript">
      function populate() {
        loadToC(function () {
+         $("#sectionCocri").append(tocmodules(/Lvc.Spilling.SpillSound/));
+
+         $("#sectionAlgo").append(tocmodules(/Lvc.Spilling.StupSpill/));
+         $("#sectionAlgo").append(tocmodules(/Lvc.Spilling.SimplSpill/));
+
+         $("#sectionRcnstr").append(tocmodules(/Lvc.Spilling.ReconstrLive/));
+         $("#sectionRcnstr").append(tocmodules(/Lvc.Spilling.ReconstrLiveSound/));
+
+         $("#sectionSound").append(tocmodules(/Lvc.Spilling.VarInRegister/));
+         $("#sectionSound").append(tocmodules(/Lvc.Spilling.RegisterBound/));
+         $("#sectionSound").append(tocmodules(/Lvc.Spilling.SpillSim/));
+
+         $("#sectionSpill").append(tocmodules(/Lvc.Spilling.DoSpill/));
+
          $("#sectionIL").append(tocmodules(/Lvc.Isa.Op/));
          $("#sectionIL").append(tocmodules(/Lvc.IL.Exp/));
          $("#sectionIL").append(tocmodules(/Lvc.IL.IL$/));
 
-         $("#sectionEQ").append(tocmodules(/Lvc.Equiv.Sim$/));
-         $("#sectionEQ").append(tocmodules(/Lvc.Equiv.NonParametricBiSim/));
-         $("#sectionEQ").append(tocmodules(/Lvc.Equiv.SimTactics/));
-
-         $("#sectionSpill").append(tocmodules(/Lvc.Spilling.Spilling/));
-
-         $("#sectionInd").append(tocmodules(/Lvc.Equiv.SimF/));
-         $("#sectionInd").append(tocmodules(/Lvc.Equiv.SimI/));
-         $("#sectionInd").append(tocmodules(/Lvc.Equiv.CtxEq/));
-
-         $("#sectionDCE").append(tocmodules(/Lvc.Reachability.Reachability$/));
-         $("#sectionDCE").append(tocmodules(/Lvc.UCE/));
-         $("#sectionDCE").append(tocmodules(/Lvc.Liveness.TrueLiveness/));
-         $("#sectionDCE").append(tocmodules(/Lvc.DVE/));
+         $("#sectionLiveness").append(tocmodules(/Lvc.Liveness.Liveness/));
        });
 	  }
     </script>
@@ -95,21 +96,27 @@
 	</p>-->
 	<h2> Selected Items from the Table of Contents </h2>
 	<div class="tocindent">
-      <h3> Spilling </h3>
-      <div class="toc novfile" id="sectionSpill">
-        </div>
-	  <h3> The Language IL </h3>
+	  <!--<h3> The Language IL </h3>
 	  <div class="toc novfile" id="sectionIL">
 	  </div>
-	  <h3> Program Equivalence </h3>
-	  <div class="toc novfile" id="sectionEQ">
-	  </div>
-	  <h3> Inductive Proof Method </h3>
-	  <div class="toc novfile" id="sectionInd">
-	  </div>
-	  <h3> Case Study: Dead Code Elimination </h3>
-	  <div class="toc novfile" id="sectionDCE">
-	  </div>
+	  <h3> Liveness </h3>
+	  <div class="toc novfile" id="sectionLiveness">
+	  </div>-->
+      <h3> doSpill </h3>
+      <div class="toc novfile" id="sectionSpill">
+        </div>
+      <h3> Correctness Criterion </h3>
+      <div class="toc novfile" id="sectionCocri">
+        </div>
+      <h3> Reconstruction of Liveness </h3>
+      <div class="toc novfile" id="sectionRcnstr">
+        </div>
+      <h3> Soundness of the Predicate </h3>
+      <div class="toc novfile" id="sectionSound">
+        </div>
+      <h3> Spilling Algorithms </h3>
+      <div class="toc novfile" id="sectionAlgo">
+        </div>
 	</div>
       </div>
     </div>
