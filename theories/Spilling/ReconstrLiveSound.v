@@ -7,7 +7,7 @@ Require Import ToBeOutsourced Slot.
 
 Set Implicit Arguments.
 
-
+(** * ReconstrLiveSound *)
 
 Lemma reconstr_live_sound_s
       (slot : var -> var) o
