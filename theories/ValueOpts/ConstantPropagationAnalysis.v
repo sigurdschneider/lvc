@@ -2,7 +2,7 @@ Require Import CSet Le.
 
 Require Import Plus Util AllInRel CSet.
 Require Import Val Var Env IL Annotation Infra.Lattice DecSolve.
-Require Import Analysis.Analysis AnalysisForwardSSA.
+Require Import Analysis.Analysis AnalysisForwardSSA ConstantPropagation.
 
 Require Import CMap.
 
@@ -478,46 +478,44 @@ Defined.
 
 Require Import MapNotations ListUpdateAt Subterm.
 
-Definition domupd (d:Dom) x (o:option val) : Dom :=
+Definition domupd (d:Dom) x (o:option aval) : Dom :=
   match o with
-    | Some xv => (d [- x <- wTA xv -])
-    | None => (d [- x <- Top -])
+    | Some xv => (d [- x <- xv -])
+    | None => remove x d
   end.
 
-Definition domenv (d:Dom) (x:var) : option val :=
-  match find x d with
-    | Some (wTA v) => Some v
-    | _ => None
+Fixpoint domupd_list (m:Dom) (A:list var) (B:list (option aval)) :=
+  match A, B with
+  | x::A, y::B => domupd (domupd_list m A B) x y
+  | _, _ => m
   end.
+
+Definition domenv (d:Dom) (x:var) : option aval :=
+  find x d.
 
   Definition constant_propagation_transform sT ZL st (ST:subTerm st sT)
   (a:Dom)
   : anni Dom st :=
   match st as st', a return anni Dom st'  with
     | stmtLet x (Operation e) s as st, d =>
-      let d' := d in
-      let d'' := domupd d' x (op_eval (domenv d') e) in
-       d''
+      let d' := domupd d x (op_eval (domenv d) e) in
+       d'
     | stmtLet x (Call f Y) s as st, d =>
       (* we assume renamed apart here, and dont zero x *)
       d
     | stmtIf e s t as st, d =>
-      if [op_eval (domenv d) e = Some val_true] then
+      if [op_eval (domenv d) e = Some (wTA val_true)] then
         (Some d, None)
-      else if [op_eval (domenv d) e = Some val_false] then
+      else if [op_eval (domenv d) e = Some (wTA val_false)] then
              (None, Some d)
            else
              (Some d, Some d)
     | stmtApp f Y as st, d =>
-      let Z := nth (counted f) ZL (nil) in
-      let Yc := List.map (fun e => match op_eval (domenv d) e with
-                        | Some v => wTA v
-                        | None => Top
-                        end ) Y in
+      let Z := nth (counted f) ZL (nil:list var) in
+      let Yc := List.map (op_eval (domenv d)) Y in
       (* we assume renamed apart here, so it's ok to leave definitions
        in d[X <-- Yc] that are /not/ defined at the point where f is defined *)
-      d [- Z <-- Yc -]
-
+      domupd_list d Z Yc
     | stmtReturn e as st, d =>
       d
     | stmtFun F t as st, d =>
@@ -557,7 +555,7 @@ Admitted.
 Require Import Terminating OptionR.
 
 
-Lemma leDom_op_eval a b e
+Lemma leDom_op_eval e a b
   : leDom a b
     -> fstNoneOrR eq (op_eval (domenv a) e) (op_eval (domenv b) e).
 Proof.
@@ -580,24 +578,21 @@ Lemma domupd_le a b e x
     -> leDom (domupd a x (op_eval (domenv a) e)) (domupd b x (op_eval (domenv b) e)).
 Proof.
   unfold leDom, domupd; intros.
-  repeat cases.
+  exploit (leDom_op_eval e); eauto.
+  repeat cases; invt fstNoneOrR.
   - decide (x === x0).
     + rewrite !MapFacts.add_eq_o; eauto.
-      hnf in e0; subst.
-      admit.
+      hnf in e0; subst; eauto using le.
     + rewrite !MapFacts.add_neq_o; eauto.
   - decide (x === x0).
     + rewrite !MapFacts.add_eq_o; eauto using le.
+      rewrite MapFacts.remove_eq_o; eauto using le.
     + rewrite !MapFacts.add_neq_o; eauto.
+      rewrite MapFacts.remove_neq_o; eauto using le.
   - decide (x === x0).
-    + rewrite !MapFacts.add_eq_o; eauto using le.
-      admit.
-    + rewrite !MapFacts.add_neq_o; eauto.
-  - decide (x === x0).
-    + rewrite !MapFacts.add_eq_o; eauto using le.
-    + rewrite !MapFacts.add_neq_o; eauto.
-Admitted.
-
+    + rewrite !MapFacts.remove_eq_o; eauto using le.
+    + rewrite !MapFacts.remove_neq_o; eauto using le.
+Qed.
 
 Lemma transf_mon
   : (forall (sT s : stmt) (ST ST' : subTerm s sT) (ZL : 〔params〕) (a b : Dom),
@@ -609,15 +604,17 @@ Proof.
   general induction s; simpl in *; eauto.
   - destruct e; eauto.
     eapply domupd_le; eauto.
-  - repeat cases; simpl; split; eauto using @OptionR.fstNoneOrR;
-      try congruence.
-    admit. admit. admit. admit.
+  - exploit (leDom_op_eval e); eauto.
+    repeat cases; simpl; split; eauto using @OptionR.fstNoneOrR;
+      try congruence;
+    invt fstNoneOrR; try congruence.
+
   - destruct (get_dec ZL l); dcr.
     + erewrite get_nth; eauto; simpl.
       hnf; intros.
       admit.
     + rewrite not_get_nth_default; eauto.
-Admitted.
+Qed.
 
 Lemma terminating_Dom
   : Terminating.Terminating Dom poLt.
