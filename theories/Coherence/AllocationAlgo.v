@@ -1,8 +1,8 @@
 Require Import CSet Le Arith.Compare_dec.
 
 Require Import Plus Util Map CMap Status Take Filter.
-Require Import Val Var Env IL Annotation Liveness Fresh MoreList SetOperations PairwiseDisjoint.
-Require Import Coherence Allocation RenamedApart MapNotations InfinitePartition.
+Require Import Val Var Env IL Annotation Liveness.Liveness Fresh MoreList SetOperations PairwiseDisjoint.
+Require Import Coherence Coherence.Allocation RenamedApart MapNotations InfinitePartition.
 
 Set Implicit Arguments.
 
@@ -159,10 +159,8 @@ Lemma regAssignF_get p G F ans alv n Zs a ϱ ϱ' an ZL Lv i D Dt lv
 Proof.
   intros EQ REN LV LVINC DDISJ FUNC PWDISJ GET1 GET2 GET3 incl.
   general induction GET1; inv GET2; inv GET3; simpl in * |- *; monadS_inv EQ; eauto.
-  - do 2 eexists; split; eauto. split. rewrite EQ0. reflexivity. reflexivity.
   - exploit (IHGET1 p G); hnf; intros; eauto using get; dcr.
     do 2 eexists; split; eauto. split; eauto.
-    rewrite EQ0. simpl. rewrite EQ1; eauto.
     etransitivity; eapply agree_on_incl; [ | reflexivity | eassumption | eauto ].
     + repeat rewrite <- map_update_list_update_agree; eauto with len.
       erewrite least_fresh_list_part_ext; eauto.

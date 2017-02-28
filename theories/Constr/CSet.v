@@ -542,6 +542,7 @@ Proof.
   intro card_Sn.
   remember (elements s) as L.
   general induction L; simpl in *; eauto.
+  - inv card_Sn.
   - rewrite add_cardinal_2 in card_Sn.
     + omega.
     + intro N.

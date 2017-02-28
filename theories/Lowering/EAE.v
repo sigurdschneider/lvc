@@ -1,6 +1,6 @@
 Require Import Util LengthEq AllInRel Map SetOperations.
 Require Import Val EqDec Computable Var Env IL Annotation AppExpFree.
-Require Import Liveness LabelsDefined.
+Require Import Liveness.Liveness LabelsDefined.
 Require Import SimF Fresh Filter.
 
 Set Implicit Arguments.
@@ -114,7 +114,7 @@ Proof.
   general induction L; intros; simpl in *.
   cases in H; simpl in *; try monad_inv H.
   - rewrite H0; simpl; eauto.
-  - rewrite EQ; simpl. erewrite H, IHL; eauto.
+  - rewrite EQ; simpl. erewrite IHL; eauto.
   - destruct (f a); simpl; eauto.
     erewrite IHL; eauto.
 Qed.

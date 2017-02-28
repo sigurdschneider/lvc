@@ -24,7 +24,7 @@ Ltac inv_trivial_base :=
   | [ H : @eq _ ?x ?y |- _ ] => first [ is_var x; subst x | is_var y; subst y ]
   | [ H : true = false |- _ ] => exfalso; inversion H
   | [ H : false = true |- _ ] => exfalso; inversion H
-  | [ H : ?A = ?B |- _ ] => first [ is_constructor_app A;
+(*  | [ H : ?A = ?B |- _ ] => first [ is_constructor_app A;
                                   match B with
                                   | (if _ then _ else _) => fail 1
                                   | _ => inversion H; subst
@@ -34,9 +34,11 @@ Ltac inv_trivial_base :=
                                   | (if _ then _ else _) => fail 1
                                   | _ => inversion H; subst
                                   end
-                                ]
-(*  | [ H : nil = _ :: _ |- _ ] => exfalso; discriminate H
-  | [ H : _ :: _ = _ :: _ |- _ ] => inversion H; subst *)
+                                ]*)
+  | [ H : ?A = ?B |- _ ] =>
+    let A' := eval hnf in A in
+        let B' := eval hnf in B in
+            is_constructor_app A'; is_constructor_app B'; inversion H; subst
   | [ H : ?n <= 0 |- _ ] => is_var n; inversion H; subst; clear H
   | [ H : @eq _ (Some ?x) (Some ?y) |- _ ]
     => let H' := fresh "H" in assert (H':x = y) by congruence; clear H;

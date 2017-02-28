@@ -171,11 +171,10 @@ Proof.
   general induction e; simpl in * |- *; eauto.
   - erewrite to_partial_to_total; eauto.
   - monad_inv H; simpl; eauto.
-    erewrite IHe, EQ; eauto.
+    erewrite IHe; eauto.
   - intros.
     monad_inv H; simpl.
     erewrite IHe1, IHe2; eauto; simpl.
-    rewrite EQ, EQ1; eauto.
 Qed.
 
 Lemma op_eval_smt_eval E e v
@@ -225,8 +224,7 @@ Proof.
   intros. general induction el; eauto using op_eval_partial_total.
   - simpl in H. monad_inv H. simpl.
     erewrite op_eval_partial_total; eauto; simpl.
-    erewrite IHel; eauto; simpl.
-    rewrite EQ, EQ1; eauto.
+    erewrite IHel; simpl; eauto.
 Qed.
 
 Lemma list_eval_agree E el v:

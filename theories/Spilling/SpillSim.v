@@ -424,11 +424,10 @@ Proof.
         -- intro. eapply Inj in H2; eauto with cset.
         -- intro. hnf in H2; subst.
            eapply (Disj (slot z)); eauto with cset.
-      * cases; simpl; lud.
+      * cases; simpl; lud; eauto.
         -- exfalso. hnf in e; subst.
            eapply (Disj (slot z)); eauto with cset.
         -- exfalso. eapply H2. eapply Inj; eauto with cset.
-        -- eauto.
 Qed.
 
 Lemma slot_lift_params_agree_slot X (E:onv X) E' R M Z VL (Len:❬Z❭=❬VL❭)

@@ -79,8 +79,7 @@ Lemma pos_none X `{OrderedType X} symb (x:X) k k'
   -> pos symb x k' = None.
 Proof.
   general induction symb; eauto; simpl in *.
-  cases; try congruence.
-  rewrite H0; eauto.
+  cases; try congruence; eauto.
 Qed.
 
 Lemma pos_eq X `{OrderedType X} symb y k

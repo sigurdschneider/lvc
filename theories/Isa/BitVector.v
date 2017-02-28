@@ -382,7 +382,7 @@ toBool (bvEq b b) = true.
 Proof.
 intros. general induction b.
 + simpl. rewrite (sext'_nil_true); reflexivity.
-+ destruct a; simpl; reflexivity.
++ simpl. destruct a; simpl; eauto.
 Qed.
 
 (** Division wrapper function. Starts the bvDiv' function with the size argument b1.

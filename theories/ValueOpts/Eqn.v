@@ -144,10 +144,9 @@ Lemma exp_eval_onvLe e E E' v
   -> op_eval E' e = Some v.
 Proof.
   intros. general induction e; simpl in * |- *; eauto.
-  simpl in H0. rewrite H0. eapply H in H0. eauto.
-  - monad_inv H0. rewrite EQ.
+  - monad_inv H0.
     erewrite IHe; eauto.
-  - monad_inv H0. rewrite EQ, EQ1.
+  - monad_inv H0.
     erewrite IHe1, IHe2; eauto.
 Qed.
 
@@ -562,10 +561,8 @@ Lemma onvLe_op_eval_some V V'
   :onvLe V V' -> forall e v, op_eval V e = ⎣ v ⎦ -> op_eval V' e = ⎣ v ⎦.
 Proof.
   intros. general induction e; simpl in * |- * ; eauto using @fstNoneOrR.
-  - rewrite H0. exploit H; eauto.
-  - monad_inv H0. rewrite EQ. simpl. erewrite (IHe V V' H _ EQ); eauto.
-  - monad_inv H0. rewrite EQ1. rewrite EQ. simpl.
-    erewrite IHe1; eauto. erewrite IHe2; simpl; eauto.
+  - monad_inv H0. simpl. erewrite (IHe V V' H _ EQ); eauto.
+  - monad_inv H0. erewrite IHe1; eauto. erewrite IHe2; simpl; eauto.
 Qed.
 
 
@@ -606,7 +603,7 @@ Proof.
   intros.
   general induction Y; simpl in * |- *; eauto.
   monad_inv H0.
-  rewrite EQ, EQ1. simpl.
+ simpl.
   exploit (onvLe_op_eval_some H) as EV; eauto. rewrite EV.
   simpl. erewrite IHY; eauto.
   reflexivity.
@@ -632,7 +629,7 @@ Proof.
   general induction H; simpl in * |- *; eauto.
   monad_inv H1.
   exploit H0. eapply add_1. reflexivity. inv H1. congruence.
-  simpl. erewrite IHlength_eq; eauto. rewrite EQ1. reflexivity.
+  simpl. erewrite IHlength_eq; eauto. simpl; congruence.
   eapply satisfiesAll_monotone; eauto.
   unfold list_EqnApx; simpl in *.
   cset_tac; intuition.
@@ -705,7 +702,7 @@ Lemma omap_exp_eval_onvLe Y E E' v
     -> omap (op_eval E') Y = Some v.
 Proof.
   intros. general induction Y; simpl in * |- *; eauto.
-  simpl in H0. rewrite H0.
+  simpl in H0.
   monad_inv H0.
   erewrite exp_eval_onvLe; try eapply H; eauto. simpl.
   erewrite IHY; eauto; simpl; eauto.
@@ -809,11 +806,8 @@ Lemma agree_on_onvLe_update_list {X} `{OrderedType.OrderedType X} (V V':onv X) Z
 Proof.
   intros; hnf; intros.
   decide (x ∈ of_list Z).
-  - general induction Z; simpl in * |- *; eauto.
-    + cset_tac; intuition.
-    + destruct vl.
-      * rewrite H1. eapply H0 in H1. eauto.
-      * lud. erewrite IHZ; eauto. cset_tac; intuition.
+  - general induction Z; destruct vl; simpl in * |- *; eauto.
+    lud. cset_tac.
   - rewrite lookup_set_update_not_in_Z; eauto.
     rewrite lookup_set_update_not_in_Z in H1; eauto.
 Qed.

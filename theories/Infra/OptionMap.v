@@ -73,6 +73,7 @@ Lemma omap_length X Y L' (f: X -> option Y) L
   -> length L = length L'.
 Proof.
   general induction L; simpl in * |- *; eauto.
+  clear_trivial_eqs.
 
   monad_inv H; simpl; eauto.
 Qed.

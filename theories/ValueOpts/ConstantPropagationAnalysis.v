@@ -10,6 +10,7 @@ Set Implicit Arguments.
 
 Open Scope map_scope.
 
+
 Definition Dom := Map [var, withTop val].
 
 Definition join (v v' : option (withTop val)) : option (withTop val) :=
@@ -336,8 +337,6 @@ Proof.
     intros; clear_trivial_eqs; eexists; eauto using le.
 Qed.
 
-
-
 Lemma leDom_join x y x' y'
   : leDom y x
     -> leDom y' x'
@@ -503,23 +502,12 @@ Definition domenv (d:Dom) (x:var) : option val :=
       (* we assume renamed apart here, and dont zero x *)
       d
     | stmtIf e s t as st, d =>
-      let ai :=
-          if [op_eval (domenv d) e = Some val_true] then
-              match e with
-              | BinOp BinOpEq (Var x) (Con c) =>
-                (Some (d[-x <- wTA c -]), None)
-                | _ => (Some d, None)
-              end
-          else if [op_eval (domenv d) e = Some val_false] then
-            match e with
-              | Var x => (None, Some (d[- x <- wTA val_false -]))
-(*            | BinOp 4 (Var x) (Con c) => anni2opt None (Some (Some (d[x <- c]))) *)
-              | _ => (None, Some d)
-            end
-          else
-            (Some d, Some d)
-      in
-      ai
+      if [op_eval (domenv d) e = Some val_true] then
+        (Some d, None)
+      else if [op_eval (domenv d) e = Some val_false] then
+             (None, Some d)
+           else
+             (Some d, Some d)
     | stmtApp f Y as st, d =>
       let Z := nth (counted f) ZL (nil) in
       let Yc := List.map (fun e => match op_eval (domenv d) e with
@@ -561,6 +549,8 @@ Proof.
   - hnf; intros; dcr; split; eauto.
     etransitivity; eauto.
   - hnf; intros; dcr; split; eauto.
+    hnf; intros.
+
     admit.
 Admitted.
 
@@ -573,7 +563,8 @@ Lemma leDom_op_eval a b e
 Proof.
   general induction e; simpl; eauto using @fstNoneOrR.
   - specialize (H n).
-    unfold domenv. inv H; eauto using fstNoneOrR; try reflexivity.
+    unfold domenv.
+    inv H; eauto using fstNoneOrR; try reflexivity.
     admit.
   - exploit IHe as FNOE; eauto.
     inv FNOE; simpl; eauto using fstNoneOrR.
@@ -592,6 +583,7 @@ Proof.
   repeat cases.
   - decide (x === x0).
     + rewrite !MapFacts.add_eq_o; eauto.
+      hnf in e0; subst.
       admit.
     + rewrite !MapFacts.add_neq_o; eauto.
   - decide (x === x0).
@@ -617,9 +609,9 @@ Proof.
   general induction s; simpl in *; eauto.
   - destruct e; eauto.
     eapply domupd_le; eauto.
-  - (*repeat cases; simpl; split; eauto using @OptionR.fstNoneOrR;
-      try congruence.*)
-    admit.
+  - repeat cases; simpl; split; eauto using @OptionR.fstNoneOrR;
+      try congruence.
+    admit. admit. admit. admit.
   - destruct (get_dec ZL l); dcr.
     + erewrite get_nth; eauto; simpl.
       hnf; intros.
