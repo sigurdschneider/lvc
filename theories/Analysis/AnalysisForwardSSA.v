@@ -85,12 +85,11 @@ Defined.
 
 Arguments anni_if {A} {st} {e} {s} {t} EQ d.
 
-Definition option_extr A B (o:option A) f (x:B) :=
+Definition option_extr A (o:option A) (x:A) :=
   match o with
-  | Some a => f a
+  | Some a => a
   | _ => x
   end.
-
 
 Fixpoint forward (sT:stmt) (Dom: stmt -> Type) `{BoundedSemiLattice (Dom sT)}
            (ftransform :
@@ -107,19 +106,20 @@ Fixpoint forward (sT:stmt) (Dom: stmt -> Type) `{BoundedSemiLattice (Dom sT)}
       | stmtIf x s t =>
         fun EQ =>
           let an := anni_if EQ (ftransform sT ZL st ST d) in
-          let (ans', ALs) :=
-              option_extr (fst an)
-                          (fun d => @forward sT Dom _ H0 ftransform ZL s
-                                          (subTerm_EQ_If1 EQ ST) d)
-                          (d, (fun _ => bottom) ⊝ ZL)
+          let ans'ALs :=
+              option_map (fun d => @forward sT Dom _ H0 ftransform ZL s
+                                         (subTerm_EQ_If1 EQ ST) d)
+                         (fst an)
           in
-          let (ant', ALt) :=
-              option_extr (snd an)
-                          (fun d => @forward sT Dom _ H0 ftransform ZL t
-                                          (subTerm_EQ_If2 EQ ST) d)
-                          (d, (fun _ => bottom) ⊝ ZL)
+          let ant'ALt :=
+              option_map (fun d => @forward sT Dom _ H0 ftransform ZL t
+                                         (subTerm_EQ_If2 EQ ST) d)
+                         (snd an)
           in
-          (join ans' ant', zip join ALs ALt)
+          option_extr (
+          ojoin _ (fun x y => (join (fst x) (fst y), zip join (snd x) (snd y)))
+                ans'ALs ant'ALt)
+                      (d, (fun _ => bottom) ⊝ ZL)
       | stmtApp f Y as st =>
         fun EQ =>
           let d := anni_app (Dom sT) EQ (ftransform sT ZL st ST d) in
@@ -221,8 +221,12 @@ Proof.
     repeat let_pair_case_eq; subst; simpl in *; eauto.
   - unfold option_extr.
     repeat cases; repeat simpl_pair_eqs; subst; simpl; eauto with len.
+    unfold option_map in Heq.
+    revert Heq. repeat cases; intros; simpl in *;
+                  try clear_trivial_eqs; simpl.
     simpl. rewrite zip_length2; eauto.
     repeat rewrite IH; eauto.
+    eauto with len. eauto with len.
   - intros. rewrite list_update_at_length. eauto with len.
   - intros.
     rewrite length_drop_minus.
@@ -330,15 +334,35 @@ Qed.
 
 Require Import FiniteFixpointIteration.
 
-Lemma option_extr_mon T `{PartialOrder T} U `{PartialOrder U} (a a':option T) f (b b':U)
-  : Monotone f
-    -> a ⊑ a'
+Lemma option_extr_mon T `{PartialOrder T} (a a':option T) b b'
+  : a ⊑ a'
     -> b ⊑ b'
-    -> (forall a'', a' = Some a'' -> b ⊑ f a'')
-    -> option_extr a f b ⊑ option_extr a' f b'.
+    -> Some b ⊑ a'
+    -> option_extr a b ⊑ option_extr a' b'.
 Proof.
-  intros Mon A B; inv A; simpl; eauto.
-  destruct a'; simpl; eauto.
+  intros A B C; inv A; simpl; eauto.
+  destruct a'; clear_trivial_eqs; simpl; eauto.
+Qed.
+
+Lemma ojoin_mon T `{PartialOrder T} (a a':option T) b b' f
+  : a ⊑ a'
+    -> b ⊑ b'
+    -> ojoin _ f a b ⊑ ojoin _ f a' b'.
+Proof.
+  intros A B; inv A; inv B; simpl; try destruct a'; try destruct b';
+    clear_trivial_eqs; simpl; eauto using fstNoneOrR.
+  econstructor. admit.
+  econstructor. admit.
+  econstructor. admit.
+Admitted.
+
+Lemma option_map_mon T `{PartialOrder T}  U `{PartialOrder U} (a a':option T) (f f': T -> U)
+  : a ⊑ a'
+    -> (forall x y, x ⊑ y -> f x ⊑ f' y)
+    -> option_map f a ⊑ option_map f' a'.
+Proof.
+  intros A; inv A; simpl;
+    clear_trivial_eqs; simpl; eauto using fstNoneOrR.
 Qed.
 
 Lemma forward_monotone (sT:stmt) (Dom : stmt -> Type) `{BoundedSemiLattice (Dom sT)}
@@ -358,17 +382,14 @@ Proof with eauto using poLe_setTopAnn, poLe_getAnni.
     (* Coq can't find the instantiation *)
     eapply (fMon (stmtLet x e s)); eauto.
   - pose proof (fMon (stmtIf e s1 s2) ST ST' ZL _ _ LE_d).
-
-    inv H1; split; simpl snd.
-    + eapply join_struct; eauto.
-      eapply option_extr_mon.
-      admit. admit.
-    + simpl snd.
-      eapply PIR2_get.
-      * repeat cases; intros; inv_get.
-        intros; inv_get.
-        repeat cases.
-      * repeat cases; eauto with len.
+    eapply option_extr_mon; eauto.
+    + eapply ojoin_mon.
+      eapply option_map_mon; eauto.
+      eapply H1.
+      eapply option_map_mon; eauto.
+      eapply H1.
+    + simpl; split; eauto.
+    + admit.
   - econstructor; eauto. simpl.
     + eapply (fMon (stmtApp l Y)); eauto.
     + eapply update_at_poLe.
