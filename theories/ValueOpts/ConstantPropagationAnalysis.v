@@ -148,6 +148,12 @@ Proof.
   hnf; intros. rewrite H0. eapply leRefl; eauto.
 Qed.
 
+Lemma le_antisymmetric x y
+  : le x y -> le y x -> x = y.
+Proof.
+  intros A B; inv A; inv B; eauto.
+Qed.
+
 Instance leDom_ref : Reflexive leDom.
 Proof.
   hnf; intros. hnf; intros. reflexivity.
@@ -493,34 +499,36 @@ Fixpoint domupd_list (m:Dom) (A:list var) (B:list (option aval)) :=
 Definition domenv (d:Dom) (x:var) : option aval :=
   find x d.
 
-  Definition constant_propagation_transform sT ZL st (ST:subTerm st sT)
-  (a:Dom)
+Definition constant_propagation_transform sT ZL st (ST:subTerm st sT)
+           (a:Dom)
   : anni Dom st :=
   match st as st', a return anni Dom st'  with
-    | stmtLet x (Operation e) s as st, d =>
-      let d' := domupd d x (op_eval (domenv d) e) in
-       d'
-    | stmtLet x (Call f Y) s as st, d =>
-      (* we assume renamed apart here, and dont zero x *)
-      d
-    | stmtIf e s t as st, d =>
-      if [op_eval (domenv d) e = Some (wTA val_true)] then
-        (Some d, None)
-      else if [op_eval (domenv d) e = Some (wTA val_false)] then
-             (None, Some d)
-           else
-             (Some d, Some d)
-    | stmtApp f Y as st, d =>
-      let Z := nth (counted f) ZL (nil:list var) in
-      let Yc := List.map (op_eval (domenv d)) Y in
-      (* we assume renamed apart here, so it's ok to leave definitions
+  | stmtLet x (Operation e) s as st, d =>
+    let d' := domupd d x (op_eval (domenv d) e) in
+    d'
+  | stmtLet x (Call f Y) s as st, d =>
+    (* we assume renamed apart here, and dont zero x *)
+    d
+  | stmtIf e s t as st, d =>
+    if [op_eval (domenv d) e = Some (wTA val_true)] then
+      (Some d, None)
+    else if [op_eval (domenv d) e = Some (wTA val_false)] then
+           (None, Some d)
+         else if [op_eval (domenv d) e = None] then
+                (None, None)
+              else
+                (Some d, Some d)
+  | stmtApp f Y as st, d =>
+    let Z := nth (counted f) ZL (nil:list var) in
+    let Yc := List.map (op_eval (domenv d)) Y in
+    (* we assume renamed apart here, so it's ok to leave definitions
        in d[X <-- Yc] that are /not/ defined at the point where f is defined *)
-      domupd_list d Z Yc
-    | stmtReturn e as st, d =>
-      d
-    | stmtFun F t as st, d =>
-      (* we assume renamed apart here, and dont zero Z *)
-      d
+    domupd_list d Z Yc
+  | stmtReturn e as st, d =>
+    d
+  | stmtFun F t as st, d =>
+    (* we assume renamed apart here, and dont zero Z *)
+    d
   end.
 
 Instance list_equal_computable X `{@EqDec X eq _}
@@ -534,6 +542,26 @@ Proof.
 Qed.
 
 
+Instance eq_Refl
+  : Reflexive (fun p p' : Dom * params => fst p ≣ fst p' /\ snd p = snd p').
+Proof.
+  intuition.
+Qed.
+
+Instance eq_Symm
+  : Symmetric (fun p p' : Dom * params => fst p ≣ fst p' /\ snd p = snd p').
+Proof.
+  firstorder.
+Qed.
+
+Instance eq_Trans
+  : Transitive (fun p p' : Dom * params => fst p ≣ fst p' /\ snd p = snd p').
+Proof.
+  hnf; intros; dcr; destruct y; simpl in *; subst; split; eauto.
+  rewrite <- H1. eauto.
+Qed.
+
+
 Instance Dom_params_semilattice : PartialOrder (Dom * params) := {
   poLe p p' := poLe (fst p) (fst p') /\ snd p = snd p';
   poLe_dec := _;
@@ -541,57 +569,111 @@ Instance Dom_params_semilattice : PartialOrder (Dom * params) := {
   poEq_dec := _
 }.
 Proof.
-  - admit.
+  - econstructor; eauto with typeclass_instances.
   - intros; dcr; split; eauto.
     rewrite H0. eauto.
   - hnf; intros; dcr; split; eauto.
     etransitivity; eauto.
   - hnf; intros; dcr; split; eauto.
     hnf; intros.
-
-    admit.
-Admitted.
+    specialize (H1 y0).
+    specialize (H0 y0).
+    eapply le_antisymmetric; eauto.
+Qed.
 
 Require Import Terminating OptionR.
 
 
 Lemma leDom_op_eval e a b
   : leDom a b
-    -> fstNoneOrR eq (op_eval (domenv a) e) (op_eval (domenv b) e).
+    -> le (op_eval (domenv a) e) (op_eval (domenv b) e).
 Proof.
-  general induction e; simpl; eauto using @fstNoneOrR.
-  - specialize (H n).
-    unfold domenv.
-    inv H; eauto using fstNoneOrR; try reflexivity.
-    admit.
-  - exploit IHe as FNOE; eauto.
-    inv FNOE; simpl; eauto using fstNoneOrR.
-    reflexivity.
-  - exploit IHe1 as F1; eauto.
-    exploit IHe2 as F2; eauto.
-    inv F1; inv F2; simpl; try reflexivity;
-      eauto using fstNoneOrR.
-Admitted.
+  general induction e; simpl; eauto using le.
+  - specialize (IHe _ _ H).
+    inv IHe; repeat cases; eauto using le.
+  - specialize (IHe1 _ _ H).
+    specialize (IHe2 _ _ H).
+    inv IHe1; inv IHe2; repeat cases; eauto using le.
+Qed.
 
-Lemma domupd_le a b e x
+
+Ltac mlookup_eq_tac :=
+  match goal with
+  | [H : ?x === ?x' |- context[@find ?key ?OT ?FM ?elt ?x' (add ?x _ ?m) ] ]
+    => rewrite (@MapFacts.add_eq_o key OT FM _ elt m x x' _ H)
+  | [H : ?x === ?x', H' : context[@find ?key ?OT ?FM ?elt ?x' (add ?x _ ?m) ] |- _ ]
+    => rewrite (@MapFacts.add_eq_o key OT FM _ elt m x x' _ H) in H'
+  | [H : ?x === ?x' |- context[@find ?key ?OT ?FM ?elt ?x' (remove ?x ?m) ] ]
+    => rewrite (@MapFacts.remove_eq_o key OT FM _ elt m x x' H)
+  | [H : ?x === ?x', H' : context[@find ?key ?OT ?FM ?elt ?x' (remove ?x ?m) ]  |- _ ]
+    => rewrite (@MapFacts.remove_eq_o key OT FM _ elt m x x' H) in H'
+  end.
+
+Ltac mlookup_neq_tac :=
+   match goal with
+    | [ H : ~ ?x === ?x' |- context[@find ?key ?OT ?FM ?elt ?x' (add ?x _ ?m)] ]
+      => rewrite (@MapFacts.add_neq_o key OT FM _ elt m x x' _ H)
+    | [ H : ~ ?x === ?x', H' : context[@find ?key ?OT ?FM ?elt ?x' (add ?x _ ?m)] |- _ ]
+      => rewrite (@MapFacts.add_neq_o key OT FM _ elt m x x' _ H) in H'
+    | [ H : ~ ?x === ?x' |- context[@find ?key ?OT ?FM ?elt ?x' (remove ?x ?m)] ]
+      => rewrite (@MapFacts.remove_neq_o key OT FM _ elt m x x' H)
+    | [ H : ~ ?x === ?x', H' : context[@find ?key ?OT ?FM ?elt ?x' (remove ?x ?m)] |- _ ]
+      => rewrite (@MapFacts.remove_neq_o key OT FM _ elt m x x' H) in H'
+   end.
+
+
+Tactic Notation "smplmap" :=
+  repeat (repeat (subst || mlookup_eq_tac || mlookup_neq_tac)).
+
+
+Ltac lud :=
+  repeat (smplmap ||
+          match goal with
+          | [ x: _, x': _ |- context [@find ?key ?OT ?FM ?elt ?x' (add ?x _ ?m) ] ]
+      =>  match goal with
+          | [H' : x === x' |- _ ] => fail 1
+          | [H' : ~x === x' |- _ ] => fail 1
+          | [H' : x === x' -> False |- _ ] => fail 1
+          | [H' : x =/= x' |- _ ] => fail 1
+          | [ |- _ ] => decide(x === x')
+          end
+    | [ x: _, x': _, H : context[find ?x (add ?x' _ _)] |- _ ]
+      => match goal with
+          | [H' : x === x' |- _ ] => fail 1
+          | [H' : ~x === x' |- _ ] => fail 1
+          | [H' : x === x' -> False |- _ ] => fail 1
+          | [H' : x =/= x' |- _ ] => fail 1
+          | [ |- _ ] => decide(x === x')
+        end
+    | [ x: _, x': _ |- context [find ?x' (remove ?x _)] ]
+      => match goal with
+        | [H' : x === x' |- _ ] => fail 1
+        | [H' : ~x === x' |- _ ] => fail 1
+        | [H' : x === x' -> False |- _ ] => fail 1
+        | [H' : x =/= x' |- _ ] => fail 1
+        | [ |- _ ] => decide(x === x')
+        end
+          end).
+
+Lemma domupd_le a b v v' x
   : leDom a b
-    -> leDom (domupd a x (op_eval (domenv a) e)) (domupd b x (op_eval (domenv b) e)).
+    -> le v v'
+    -> leDom (domupd a x v) (domupd b x v').
 Proof.
   unfold leDom, domupd; intros.
-  exploit (leDom_op_eval e); eauto.
-  repeat cases; invt fstNoneOrR.
-  - decide (x === x0).
-    + rewrite !MapFacts.add_eq_o; eauto.
-      hnf in e0; subst; eauto using le.
-    + rewrite !MapFacts.add_neq_o; eauto.
-  - decide (x === x0).
-    + rewrite !MapFacts.add_eq_o; eauto using le.
-      rewrite MapFacts.remove_eq_o; eauto using le.
-    + rewrite !MapFacts.add_neq_o; eauto.
-      rewrite MapFacts.remove_neq_o; eauto using le.
-  - decide (x === x0).
-    + rewrite !MapFacts.remove_eq_o; eauto using le.
-    + rewrite !MapFacts.remove_neq_o; eauto using le.
+  invt le; repeat cases; lud; eauto using le.
+Qed.
+
+Lemma domupd_list_le a b Z Y
+  : leDom a b
+    -> leDom (domupd_list a Z (op_eval (domenv a) ⊝ Y))
+            (domupd_list b Z (op_eval (domenv b) ⊝ Y)).
+Proof.
+  unfold leDom, domupd; intros.
+  general induction Z; destruct Y; simpl; eauto.
+  eapply domupd_le; eauto.
+  hnf. eapply IHZ; eauto.
+  eapply (leDom_op_eval o); eauto.
 Qed.
 
 Lemma transf_mon
@@ -604,15 +686,16 @@ Proof.
   general induction s; simpl in *; eauto.
   - destruct e; eauto.
     eapply domupd_le; eauto.
+    eapply (leDom_op_eval e); eauto.
   - exploit (leDom_op_eval e); eauto.
     repeat cases; simpl; split; eauto using @OptionR.fstNoneOrR;
       try congruence;
-    invt fstNoneOrR; try congruence.
-
+      invt le; try congruence.
+    exfalso; eauto. exfalso; eauto.
   - destruct (get_dec ZL l); dcr.
     + erewrite get_nth; eauto; simpl.
       hnf; intros.
-      admit.
+      eapply domupd_list_le; eauto.
     + rewrite not_get_nth_default; eauto.
 Qed.
 

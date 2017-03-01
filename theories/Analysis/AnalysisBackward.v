@@ -1,7 +1,8 @@
 Require Import CSet Le ListUpdateAt Coq.Classes.RelationClasses.
 
 Require Import Plus Util AllInRel Map Terminating.
-Require Import Val Var Env IL Annotation Lattice DecSolve LengthEq MoreList Status AllInRel OptionR.
+Require Import Val Var IL.Env IL Annotation Infra.Lattice.
+Require Import DecSolve LengthEq MoreList Status AllInRel OptionR.
 Require Import Keep Subterm Analysis.
 
 Set Implicit Arguments.
@@ -312,9 +313,9 @@ Instance makeBackwardAnalysis (Dom:stmt -> Type)
             (setAnn_annotation bottom s)
   }.
 Proof.
-  - intros [d Ann]; simpl.
-    pose proof (@ann_bottom s (Dom s) _ _ _ Ann).
-    eapply H0.
+  - simpl. eapply ann_bottom.
+    eapply backward_annotation; eauto.
+    eapply setAnn_annotation.
   - intros. eapply terminating_sig.
     eapply terminating_ann. eauto.
   - intros [a Ann] [b Bnn] LE; simpl in *.

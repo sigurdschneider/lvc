@@ -364,9 +364,9 @@ Instance makeForwardAnalysis (Dom:stmt -> Type)
   }.
 Proof.
   - destruct X; eauto.
-  - intros [d Ann]; simpl.
-    pose proof (@ann_bottom s (Dom s) _ _ _ Ann).
-    eapply H0.
+  - simpl. eapply ann_bottom.
+    eapply forward_annotation; eauto.
+    eapply setAnn_annotation.
   - intros. eapply terminating_sig.
     eapply terminating_ann. eauto.
   - intros [a Ann] [b Bnn] LE; simpl in *.

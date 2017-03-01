@@ -1,4 +1,4 @@
-Require Import Util Coq.Classes.RelationClasses Lattice Terminating.
+Require Import Util Coq.Classes.RelationClasses Infra.Lattice Terminating.
 
 Set Implicit Arguments.
 
@@ -11,7 +11,7 @@ Class Iteration (Dom: Type) := makeIteration {
   dom_po :> PartialOrder Dom;
   step : Dom -> Dom;
   initial_value : Dom;
-  initial_value_bottom : forall d, poLe initial_value d;
+  initial_value_small : initial_value ⊑ step initial_value;
   finite_height : Terminating Dom poLt;
   step_monotone : Monotone step
 }.
@@ -42,7 +42,7 @@ Section FixpointAlgorithm.
     : { d' : Dom | exists n : nat, d' = iter n initial_value step
                             /\ poEq (step d') d' }.
     eapply @safeFirst.
-    - eapply initial_value_bottom.
+    - eapply initial_value_small.
     - eapply finite_height.
   Defined.
 
@@ -51,7 +51,7 @@ Section FixpointAlgorithm.
            ⊑ iter (S n) initial_value step.
   Proof.
     induction n.
-    - simpl. eapply initial_value_bottom.
+    - simpl. eapply initial_value_small.
     - do 2 rewrite iter_comm.
       eapply step_monotone. eauto.
   Qed.
