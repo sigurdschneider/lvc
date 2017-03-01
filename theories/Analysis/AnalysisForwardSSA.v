@@ -1,6 +1,6 @@
 Require Import CSet Le ListUpdateAt Coq.Classes.RelationClasses.
 
-Require Import Plus Util AllInRel Map Terminating.
+Require Import Plus Util AllInRel Map Terminating MoreInversion.
 Require Import Val Var Env IL Annotation Infra.Lattice.
 Require Import DecSolve LengthEq MoreList Status AllInRel OptionR.
 Require Import Keep Subterm Analysis.
@@ -85,7 +85,7 @@ Defined.
 
 Arguments anni_if {A} {st} {e} {s} {t} EQ d.
 
-Definition option_extr A (o:option A) f (x:A) :=
+Definition option_extr A B (o:option A) f (x:B) :=
   match o with
   | Some a => f a
   | _ => x
@@ -108,17 +108,17 @@ Fixpoint forward (sT:stmt) (Dom: stmt -> Type) `{BoundedSemiLattice (Dom sT)}
         fun EQ =>
           let an := anni_if EQ (ftransform sT ZL st ST d) in
           let (ans', ALs) :=
-              match fst an with
-              | Some d => @forward sT Dom _ H0 ftransform ZL s
-                                     (subTerm_EQ_If1 EQ ST) d
-              | _ => (d, (fun _ => bottom) ⊝ ZL)
-              end in
+              option_extr (fst an)
+                          (fun d => @forward sT Dom _ H0 ftransform ZL s
+                                          (subTerm_EQ_If1 EQ ST) d)
+                          (d, (fun _ => bottom) ⊝ ZL)
+          in
           let (ant', ALt) :=
-              match snd an with
-              | Some d => @forward sT Dom _ H0 ftransform ZL t
-                                  (subTerm_EQ_If2 EQ ST) d
-              | _ => (d, (fun _ => bottom) ⊝ ZL)
-              end in
+              option_extr (snd an)
+                          (fun d => @forward sT Dom _ H0 ftransform ZL t
+                                          (subTerm_EQ_If2 EQ ST) d)
+                          (d, (fun _ => bottom) ⊝ ZL)
+          in
           (join ans' ant', zip join ALs ALt)
       | stmtApp f Y as st =>
         fun EQ =>
@@ -219,7 +219,8 @@ Lemma forward_length (sT:stmt) (Dom : stmt -> Type) `{BoundedSemiLattice (Dom sT
 Proof.
   sind s; destruct s; simpl; intros; eauto with len;
     repeat let_pair_case_eq; subst; simpl in *; eauto.
-  - repeat cases; repeat simpl_pair_eqs; subst; simpl; eauto with len.
+  - unfold option_extr.
+    repeat cases; repeat simpl_pair_eqs; subst; simpl; eauto with len.
     simpl. rewrite zip_length2; eauto.
     repeat rewrite IH; eauto.
   - intros. rewrite list_update_at_length. eauto with len.
@@ -288,6 +289,58 @@ Proof.
   destruct s; simpl; eauto with typeclass_instances.
 Defined.
 
+Lemma poLe_opt_inv T H a b
+  : @poLe (option T) (@PartialOrder_option_fstNoneOrR T H)
+          (@Some T a) (@Some T b)
+    -> poLe a b.
+Proof.
+  inversion 1; eauto.
+Qed.
+
+
+Smpl Add
+     match goal with
+     | [ H : @poLe (option ?T) (@PartialOrder_option_fstNoneOrR ?T ?H')
+                   (@Some ?T ?a) (@Some ?T ?b) |- _ ] =>
+       eapply (@poLe_opt_inv T H' a b) in H
+     | [ H : @poLe (option ?T) (@PartialOrder_option_fstNoneOrR ?T ?H')
+                   (@Some ?T ?a) None |- _ ] =>
+       exfalso; inv H
+     end : inv_trivial.
+
+
+Lemma join_struct T `{BoundedSemiLattice T} (a b a' b':T)
+  : a ⊑ a'
+    -> b ⊑ b'
+    -> a ⊔ b ⊑ (a' ⊔ b').
+Proof.
+  intros A B. rewrite A, B. reflexivity.
+Qed.
+
+Lemma fold_left_join_struct T `{BoundedSemiLattice T} (A A':list T) (b b':T)
+  : PIR2 poLe A A'
+    -> b ⊑ b'
+    -> fold_left join A b ⊑ fold_left join A' b'.
+Proof.
+  intros pir.
+  general induction pir; simpl; eauto.
+  eapply IHpir.
+  eapply join_struct; eauto.
+Qed.
+
+Require Import FiniteFixpointIteration.
+
+Lemma option_extr_mon T `{PartialOrder T} U `{PartialOrder U} (a a':option T) f (b b':U)
+  : Monotone f
+    -> a ⊑ a'
+    -> b ⊑ b'
+    -> (forall a'', a' = Some a'' -> b ⊑ f a'')
+    -> option_extr a f b ⊑ option_extr a' f b'.
+Proof.
+  intros Mon A B; inv A; simpl; eauto.
+  destruct a'; simpl; eauto.
+Qed.
+
 Lemma forward_monotone (sT:stmt) (Dom : stmt -> Type) `{BoundedSemiLattice (Dom sT)}
       (f: forall sT, list params ->
                 forall s, subTerm s sT -> Dom sT -> anni (Dom sT) s)
@@ -305,13 +358,27 @@ Proof with eauto using poLe_setTopAnn, poLe_getAnni.
     (* Coq can't find the instantiation *)
     eapply (fMon (stmtLet x e s)); eauto.
   - pose proof (fMon (stmtIf e s1 s2) ST ST' ZL _ _ LE_d).
-    inv H1; simpl. split. admit. admit.
+
+    inv H1; split; simpl snd.
+    + eapply join_struct; eauto.
+      eapply option_extr_mon.
+      admit. admit.
+    + simpl snd.
+      eapply PIR2_get.
+      * repeat cases; intros; inv_get.
+        intros; inv_get.
+        repeat cases.
+      * repeat cases; eauto with len.
   - econstructor; eauto. simpl.
     + eapply (fMon (stmtApp l Y)); eauto.
     + eapply update_at_poLe.
       eapply (fMon (stmtApp l Y)); eauto.
   - split; simpl; fold_po.
-    + admit.
+    + eapply fold_left_join_struct; eauto.
+      * eapply PIR2_get; eauto with len.
+        intros; inv_get.
+        eapply IH; eauto.
+      * eapply IH; eauto.
     + eapply PIR2_drop. eapply PIR2_fold_zip_join.
       * eapply PIR2_get; eauto with len.
         intros; inv_get.
