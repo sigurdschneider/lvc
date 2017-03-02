@@ -130,21 +130,6 @@ Proof.
 Defined.
  *)
 
-Inductive withTop (A:Type) :=
-| Top : withTop A
-| wTA (a:A) : withTop A.
-
-Arguments Top [A].
-Arguments wTA [A] a.
-
-Instance withTop_eq_dec A `{EqDec A eq} : EqDec (withTop A) eq.
-Proof.
-  hnf. destruct x,y; eauto; try dec_solve.
-  destruct (H a a0); try dec_solve.
-  hnf in e. subst. left; eauto.
-Qed.
-
-
 (*
 Class Lattice (A : Type) `{OrderedType A} := {
   meet : A -> A -> A;

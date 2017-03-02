@@ -2,7 +2,7 @@ Require Import CSet Le.
 
 Require Import Plus Util AllInRel CSet.
 Require Import Val Var Env IL Annotation Infra.Lattice DecSolve.
-Require Import Analysis.Analysis AnalysisForwardSSA ConstantPropagation.
+Require Import Analysis.Analysis AnalysisForwardSSA ValueOpts.ConstantPropagation.
 
 Require Import CMap.
 
@@ -11,19 +11,27 @@ Set Implicit Arguments.
 Open Scope map_scope.
 
 
-Definition Dom := Map [var, withTop val].
+Definition Dom := Map [var, aval].
 
-Definition join (v v' : option (withTop val)) : option (withTop val) :=
-  match v, v' with
-    | Some (wTA v), Some (wTA v') => if [v = v'] then Some (wTA v) else Some Top
-    | Some (Top), _ => Some Top
-    | _, Some Top => Some Top
-    | Some (wTA v), None => Some (wTA v)
-    | None, Some (wTA v) => Some (wTA v)
-    | None, None => None
+Definition join (v v' : aval) : aval :=
+  match v with
+  | Top => Top
+  | wTA (Known v0) =>
+    match v' with
+    | Top => Top
+    | wTA (Known v'0) => if [v0 = v'0] then wTA (Known v0) else Top
+    | wTA Unknown => v
+    end
+  | wTA Unknown => v'
   end.
 
-Definition joinDom (d d':Dom) : Dom := map2 join d d'.
+Definition join' (a b : option aval) :=
+  match a, b with
+  | None, None => None
+  | _, _ => Some (join (oaval_to_aval a) (oaval_to_aval b))
+  end.
+
+Definition joinDom (d d':Dom) : Dom := map2 join' d d'.
 
 Definition domain {X} `{OrderedType X} {Y} (d:Map [X, Y])
 : set X := of_list (List.map fst (elements d)).
@@ -39,8 +47,9 @@ Proof.
   - econstructor 2; eauto.
 Qed.
 
+(*
 Lemma domain_join (d d':Dom)
-: domain (map2 join d d') [=] domain d ∪ domain d'.
+: domain (map2 join' d d') [=] domain d ∪ domain d'.
 Proof.
   unfold domain. split; intros.
   - eapply of_list_1 in H.
@@ -91,7 +100,9 @@ Proof.
       destruct (find n d); simpl; repeat cases; eauto; subst;
         discriminate.
 Qed.
+ *)
 
+(*
 Inductive le : option (withTop val) -> option (withTop val) -> Prop :=
   | leTop v : le (Some (wTA v)) (Some Top)
   | leBot' w : le None (Some w)
@@ -137,21 +148,17 @@ Instance le_find_dec d d' x : Computable ((fun x0 : var => le (find x0 d) (find 
 Proof.
   hnf; intros. eapply le_dec.
 Defined.
+ *)
 
 Definition leDom (d d': Dom) : Prop :=
- (forall x, le (find x d) (find x d')).
+ (forall x, poLe (oaval_to_aval (find x d)) (oaval_to_aval (find x d'))).
 
 Lemma leDom_irreflexive x y
 : ~leDom x y -> ~Equal x y.
 Proof.
   intros. intro. eapply H.
-  hnf; intros. rewrite H0. eapply leRefl; eauto.
-Qed.
-
-Lemma le_antisymmetric x y
-  : le x y -> le y x -> x = y.
-Proof.
-  intros A B; inv A; inv B; eauto.
+  hnf; intros. rewrite H0.
+  reflexivity.
 Qed.
 
 Instance leDom_ref : Reflexive leDom.
@@ -269,24 +276,34 @@ Proof.
   exfalso. eapply not_domain_find in n. congruence.
 Qed.
 
-Lemma le_domain_find x y' x'
-  : (forall x : nat, x \In domain y' ∪ domain x' -> le (find x y') (find x x'))
-    -> le (find x y') (find x x').
+
+Lemma le_domain_find x d d'
+  : (forall x : nat, x \In domain d ∪ domain d' -> poLe (oaval_to_aval (find x d))
+                                               (oaval_to_aval (find x d')))
+    -> poLe (oaval_to_aval (find x d)) (oaval_to_aval (find x d')).
 Proof.
   intros. specialize (H x). revert H.
-  case_eq (find x y'); intros; eauto using le_bot.
+  case_eq (find x d'); intros; eauto.
   - eapply find_domain' in H; eauto.
     eapply H0. cset_tac.
+  - simpl. case_eq (find x d); intros; eauto; simpl.
+    pose proof H1. eapply find_domain' in H1.
+    exploit H0; eauto. cset_tac. simpl in *.
+    rewrite H2 in H3. simpl in *. eauto.
+    econstructor. reflexivity.
 Qed.
 
 Instance leDom_dec
   :  forall d d' : Dom, Computable (leDom d d').
 Proof.
   intros; hnf; intros.
-  edestruct (@set_quant_computable _ _ (domain d ∪ domain d') (fun x => le (find x d) (find x d'))).
+  edestruct (@set_quant_computable _ _ (domain d ∪ domain d')
+                                   (fun x => poLe (oaval_to_aval (find x d))
+                                               (oaval_to_aval (find x d')))).
   - unfold Proper, respectful; intros.
     hnf in H; subst; intuition.
-  - intros; eapply le_dec.
+  - hnf; intros.
+    eauto with typeclass_instances.
   - left; eauto.
     hnf; intros. eapply le_domain_find; eauto.
   - right; eauto.
@@ -308,22 +325,39 @@ Proof.
   destruct (withTop_eq_dec val e e'); intuition.
 Defined.
 
-Lemma lt_join x y x' y'
-: le y x
-  -> le y' x'
-  -> le (join y y') (join x x').
+
+Lemma wua_poLe_inv (x y : withUnknown val)
+  : poLe x y -> x = y.
 Proof.
-  intros.
-  inv H; inv H0; simpl; eauto using le;
-  try destruct x'; try destruct x; simpl; try destruct w; try cases; try destruct w0;
-    try cases; subst; eauto using le.
+  intros A; inv A.
+  - inv H; eauto.
+  - eauto.
 Qed.
 
+Smpl Add 100 match goal with
+             | [ H : @poLe (withUnknown val) _ ?x ?y  |- _ ] =>
+               eapply wua_poLe_inv in H; subst
+             | [ H : ?a <> ?a |- _ ] => exfalso; eapply H; reflexivity
+             end : inv_trivial.
+
+
+Lemma lt_join (x y x' y':aval)
+: poLe y x
+  -> poLe y' x'
+  -> poLe (join y y') (join x x').
+Proof.
+  intros.
+  inv H; inv H0; simpl; repeat cases; eauto using withTop_le;
+    clear_trivial_eqs.
+Qed.
+
+(*
 Lemma join_bot_right (y:Dom) x0
-  : join (find x0 y) ⎣⎦ = find x0 y.
+  : join' (find x0 y) ⎣⎦ = find x0 y.
 Proof.
   destruct (find x0 y); simpl; eauto.
-  destruct w; eauto.
+  destruct a; eauto. destruct a; reflexivity.
+  reflexivity.
 Qed.
 
 Lemma join_bot_left (y:Dom) x0
@@ -342,6 +376,7 @@ Proof.
   destruct (find x y); destruct (find x y'); simpl; repeat cases; subst;
     intros; clear_trivial_eqs; eexists; eauto using le.
 Qed.
+ *)
 
 Lemma leDom_join x y x' y'
   : leDom y x
@@ -351,7 +386,15 @@ Proof.
   unfold leDom, joinDom.
   intros.
   repeat rewrite MapFacts.map2_1bis; eauto.
-  eapply lt_join; eauto.
+  specialize (H x0). specialize (H0 x0).
+  destruct (find x0 y); destruct (find x0 x);
+    destruct (find x0 y'); destruct (find x0 x'); simpl in *;
+      try clear_trivial_eqs; try eapply lt_join; eauto;
+        repeat (try match goal with
+            | [ H : withTop_le ?a (wTA Unknown) |- _ ] => inv H; clear_trivial_eqs
+                    end; simpl in *; eauto using withTop_le);
+        inv H; inv H0; clear_trivial_eqs; eauto.
+  simpl. econstructor.
 Qed.
 
 Instance leDom_tran : Transitive leDom.
@@ -360,11 +403,55 @@ Proof.
   etransitivity; eauto.
 Qed.
 
-Instance leDom_anti : Antisymmetric Dom Equal leDom.
+Definition eqDom (d d': Dom) : Prop :=
+ (forall x, poEq (oaval_to_aval (find x d)) (oaval_to_aval (find x d'))).
+
+Instance eqDom_Equiv : Equivalence eqDom.
+Proof.
+  constructor; unfold eqDom; hnf; intros.
+  - reflexivity.
+  - rewrite H. eauto.
+  - rewrite H, H0. reflexivity.
+Qed.
+
+
+Lemma eq_domain_find x d d'
+  : (forall x : nat, x \In domain d ∪ domain d' -> poEq (oaval_to_aval (find x d))
+                                               (oaval_to_aval (find x d')))
+    -> poEq (oaval_to_aval (find x d)) (oaval_to_aval (find x d')).
+Proof.
+  intros. specialize (H x). revert H.
+  case_eq (find x d'); intros; eauto.
+  - eapply find_domain' in H; eauto.
+    eapply H0. cset_tac.
+  - simpl. case_eq (find x d); intros; eauto; simpl.
+    pose proof H1. eapply find_domain' in H1.
+    exploit H0; eauto. cset_tac. simpl in *.
+    rewrite H2 in H3. simpl in *. eauto.
+    econstructor. reflexivity.
+Qed.
+
+Instance eqDom_dec
+  :  forall d d' : Dom, Computable (eqDom d d').
+Proof.
+  intros; hnf; intros.
+  edestruct (@set_quant_computable _ _ (domain d ∪ domain d')
+                                   (fun x => poEq (oaval_to_aval (find x d))
+                                               (oaval_to_aval (find x d')))).
+  - unfold Proper, respectful; intros.
+    hnf in H; subst; intuition.
+  - hnf; intros.
+    eauto with typeclass_instances.
+  - left; eauto.
+    hnf; intros. eapply eq_domain_find; eauto.
+  - right; eauto.
+Defined.
+
+Instance leDom_anti : Antisymmetric Dom eqDom leDom.
 Proof.
   hnf. unfold leDom, Equal.
-  intros.
-  eapply le_anti; eauto.
+  intros. hnf; intros.
+  eapply poLe_antisymmetric in H; eauto.
 Qed.
 
 Set Implicit Arguments.
@@ -372,19 +459,24 @@ Set Implicit Arguments.
 Instance Dom_semilattice_ltDom : PartialOrder Dom := {
   poLe := leDom;
   poLe_dec := leDom_dec;
-  poEq := Equal;
+  poEq := eqDom;
   poEq_dec := _
 }.
 Proof.
-  intros. hnf in H. hnf.
-  intros. rewrite H. reflexivity.
+  intros. hnf; intros.
+  hnf in H.
+  rewrite H. reflexivity.
 Defined.
 
+
+
+Definition Dom := Map [var, aval].
+
 Lemma empty_bottom
-  :  forall a : Dom, empty (withTop val) ⊑ a.
+  :  forall a : Dom, empty (withTop (withUnknown val)) ⊑ a.
 Proof.
-  intros. hnf; intros.
-  rewrite MapFacts.empty_o.
+  intros. hnf; intros. simpl.
+  rewrite MapFacts.empty_o. simpl.
   eapply le_bot.
 Qed.
 
@@ -473,7 +565,8 @@ Qed.
 Instance map_semilattice : BoundedSemiLattice Dom := {
   bottom := (@empty var _ _ (withTop val));
   join := joinDom
-}.
+                                                    }.
+
 - eapply empty_bottom.
 - eapply joinDom_idem.
 - eapply joinDom_sym.
@@ -483,12 +576,6 @@ Defined.
 
 
 Require Import MapNotations ListUpdateAt Subterm.
-
-Definition domupd (d:Dom) x (o:option aval) : Dom :=
-  match o with
-    | Some xv => (d [- x <- xv -])
-    | None => remove x d
-  end.
 
 Fixpoint domupd_list (m:Dom) (A:list var) (B:list (option aval)) :=
   match A, B with

@@ -241,6 +241,14 @@ Proof.
     + eapply H; eauto.
 Qed.
 
+Lemma entails_add'' Gamma gamma Γ'
+: entails Gamma {gamma ; Γ'}
+  -> entails Gamma Γ'.
+Proof.
+  unfold entails; intros; dcr; intros.
+  - hnf; intros. eapply H; eauto. cset_tac; intuition.
+Qed.
+
 
 Lemma entails_monotonic_add Gamma Γ' gamma
 : entails Gamma Γ' -> entails (gamma ∪ Gamma) Γ'.

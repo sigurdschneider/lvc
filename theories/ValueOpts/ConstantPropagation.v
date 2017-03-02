@@ -11,28 +11,60 @@ Unset Printing Records.
 (* Constant Propagation *)
 
 
-(* None is top *)
-Definition aval := withTop val.
+Instance PartialOrder_val : PartialOrder val :=
+    {
+    poLe := eq;
+    poEq := eq
+    }.
+Proof.
+  - eauto.
+  - hnf; intros; subst; eauto.
+Defined.
 
-Fixpoint op_eval (E:onv aval) (e:op) : option aval :=
+(* None is top *)
+Definition aval := withTop (withUnknown val).
+
+Coercion option_as_unkown A (a:option A) :=
+  match a with
+  | Some a => Known a
+  | None => Unknown
+  end.
+
+Definition oaval_to_aval (a:option aval) :=
+  match a with
+  | Some a => a
+  | None => wTA Unknown
+  end.
+
+Lemma oaval_inv a v
+  : oaval_to_aval a = wTA (Known v)
+    -> a = Some (wTA (Known v)).
+Proof.
+  destruct a; inversion 1; simpl in *; subst.
+  reflexivity.
+Qed.
+
+
+Fixpoint op_eval (E:onv aval) (e:op) : aval :=
   match e with
-    | Con v => Some (wTA v)
-    | Var x => E x
+    | Con v => wTA (Known v)
+    | Var x => oaval_to_aval (E x)
     | UnOp o e => match op_eval E e with
-                   | Some (wTA v) => match Val.unop_eval o v with
-                               | Some v => Some (wTA v)
-                               | None => None
-                             end
+                 | wTA (Known v) =>
+                   match Val.unop_eval o v with
+                   | Some v => wTA (Known v)
+                   | None => wTA (Unknown)
+                   end
                    | v => v
                  end
     | BinOp o e1 e2 =>
        match op_eval E e1 with
-       | Some (wTA v1) =>
+       | wTA (Known v1) =>
          match op_eval E e2 with
-         | Some (wTA v2) =>
+         | wTA (Known v2) =>
            match Val.binop_eval o v1 v2 with
-           | Some v => Some (wTA v)
-           | None => None
+           | Some v => wTA (Known v)
+           | None => wTA Unknown
            end
          | v => v
          end
@@ -41,23 +73,11 @@ Fixpoint op_eval (E:onv aval) (e:op) : option aval :=
 
   end.
 
-Definition exp_eval (E:onv aval) (e:exp) : option aval :=
+Definition exp_eval (E:onv aval) (e:exp) : aval :=
   match e with
   | Operation e => op_eval E e
-  | _ => Some Top
+  | _ => Top
   end.
-
-Inductive le_precise : option aval -> option aval -> Prop :=
-  | leTop x : le_precise (Some Top) x
-  | leValVal y : le_precise (Some (wTA y)) (Some (wTA y))
-  | leBot  : le_precise None None.
-
-Instance le_precise_computable a b : Computable (le_precise a b).
-destruct a, b; try dec_solve.
-destruct a, a0; try dec_solve.
-decide (a = a0); subst; try dec_solve.
-destruct a; try dec_solve.
-Defined.
 
 Inductive isEqCmp : op -> Prop :=
   IisEqCmp x c : isEqCmp (BinOp BinOpEq (Var x) (Con c)).
@@ -80,57 +100,43 @@ Definition getEqCmpCon (e:op) :=
     | _ => default_val
   end.
 
-Definition update_cond (AE:onv aval) (e:op) (v:bool) :=
+Definition aval2bool (v:aval) :=
   match v with
-    | false =>
-      if [ isVar e ] then
-        AE [getVar e <- Some (wTA default_val)]
-      else
-        AE
-    | true =>
-      if [ isEqCmp e ] then
-        AE [getEqCmpVar e <- Some (wTA (getEqCmpCon e))]
-      else
-        AE
-  end.
-
-Definition aval2bool (v:option aval) :=
-  match v with
-    | Some (wTA v) => Some (val2bool v)
+    | wTA (Known v) => Some (val2bool v)
     | _ => None
   end.
 
 Lemma oval2bool_some v b
 : aval2bool v = Some b ->
-  exists v', v = Some (wTA v') /\ val2bool v' = b.
+  exists v', v = (wTA (Known v')) /\ val2bool v' = b.
 Proof.
   destruct v; try destruct a; simpl; intros; inv H; eauto.
 Qed.
 
 Inductive cp_sound : onv aval
-                     -> list (params*list (option aval))
+                     -> list (params*list aval)
                      -> stmt
                      -> Prop :=
 | CPOpr AE (x:var) Cp b e
   : cp_sound AE Cp b
-    -> exp_eval AE e = AE x
+    -> exp_eval AE e = oaval_to_aval (AE x)
     -> cp_sound AE Cp (stmtLet x e b)
 | CPIf AE Cp e b1 b2
   : (* these conditions make it conditional constant propagation *)
-    (aval2bool (op_eval AE e) <> (Some false) -> cp_sound (update_cond AE e true) Cp b1)
-    -> (aval2bool (op_eval AE e) <> (Some true) -> cp_sound (update_cond AE e false) Cp b2)
+    (aval2bool (op_eval AE e) <> (Some false) -> cp_sound AE Cp b1)
+    -> (aval2bool (op_eval AE e) <> (Some true) -> cp_sound AE Cp b2)
     -> cp_sound AE Cp (stmtIf e b1 b2)
 | CPGoto AE l Y Cp Z aY
   : get Cp (counted l) (Z,aY)
     -> length Z = length Y
-    -> PIR2 le_precise aY (List.map (op_eval AE) Y)
+    -> PIR2 poLe (List.map (op_eval AE) Y) aY
     -> cp_sound AE Cp (stmtApp l Y)
 | CPReturn AE Cp e
   : cp_sound AE Cp (stmtReturn e)
 | CPLet AE Cp F t
   : (forall n Zs, get F n Zs
-             -> cp_sound AE (List.map (fun Zs => (fst Zs,lookup_list AE (fst Zs))) F ++ Cp) (snd Zs))
-    -> cp_sound AE (List.map (fun Zs => (fst Zs,lookup_list AE (fst Zs))) F ++ Cp) t
+             -> cp_sound AE (List.map (fun Zs => (fst Zs,oaval_to_aval ⊝ lookup_list AE (fst Zs))) F ++ Cp) (snd Zs))
+    -> cp_sound AE (List.map (fun Zs => (fst Zs,oaval_to_aval ⊝ lookup_list AE (fst Zs))) F ++ Cp) t
     -> cp_sound AE Cp (stmtFun F t).
 
 Definition indexwise_R1 {A} (P:A->Prop) LA :=
@@ -151,28 +157,30 @@ Defined.
 Instance cp_sound_dec AE ZL s : Computable (cp_sound AE ZL s).
 Proof.
   hnf. revert AE ZL; sind s; intros; destruct s; try dec_solve.
-  - edestruct (IH s); eauto; decide (exp_eval AE e = AE x); try dec_solve.
+  - edestruct (IH s); eauto;
+      decide (exp_eval AE e = oaval_to_aval (AE x)); try dec_solve.
   - decide (aval2bool (op_eval AE e) = Some false);
     decide (aval2bool (op_eval AE e) = Some true).
     + unfold val_false, val_true in *. congruence.
-    + edestruct (IH s2 ltac:(eauto) (update_cond AE e false) ZL); eauto; try dec_solve.
-    + edestruct (IH s1 ltac:(eauto) (update_cond AE e true) ZL); eauto; dec_solve.
-    + edestruct (IH s1 ltac:(eauto) (update_cond AE e true) ZL);
-        edestruct (IH s2 ltac:(eauto) (update_cond AE e false) ZL); eauto; try dec_solve.
+    + edestruct (IH s2 ltac:(eauto) AE ZL); eauto; try dec_solve.
+    + edestruct (IH s1 ltac:(eauto) AE ZL); eauto; dec_solve.
+    + edestruct (IH s1 ltac:(eauto) AE ZL);
+        edestruct (IH s2 ltac:(eauto) AE ZL); eauto; try dec_solve.
   - destruct (get_dec ZL (counted l)) as [[[]]|]; try dec_solve.
     decide (length l0 = length Y); try dec_solve.
-    decide (PIR2 le_precise l1 (List.map (op_eval AE) Y));
+    decide (PIR2 poLe (List.map (op_eval AE) Y) l1);
       try dec_solve.
   - assert (SZ:size s < size (stmtFun F s)) by eauto.
-    edestruct (IH s SZ AE (List.map (fun Zs => (fst Zs,lookup_list AE (fst Zs))) F ++ ZL)).
-    exploit (@indexwise_R1_dec _ (fun Zs => cp_sound AE ((fun Zs0 : params * stmt => (fst Zs0, lookup_list AE (fst Zs0))) ⊝ F ++ ZL) (snd Zs)) F); eauto.
+    edestruct (IH s SZ AE (List.map (fun Zs => (fst Zs,oaval_to_aval ⊝ lookup_list AE (fst Zs))) F ++ ZL)).
+    exploit (@indexwise_R1_dec _ (fun Zs => cp_sound AE ((fun Zs0 : params * stmt => (fst Zs0,
+        oaval_to_aval ⊝ lookup_list AE (fst Zs0))) ⊝ F ++ ZL) (snd Zs)) F); eauto.
     intros. eapply IH; eauto. destruct H.
     dec_solve. dec_solve. dec_solve.
 Defined.
 
 Definition cp_eqn (E:onv aval) x :=
   match E x with
-    | Some (wTA c) => singleton (EqnEq (Var x) (Con c))
+    | Some (wTA (Known c)) => singleton (EqnEq (Var x) (Con c))
     | _ => ∅
   end.
 
@@ -275,7 +283,7 @@ Definition cp_eqns_ann (a:ann (onv aval)) (b:ann (set var)) : ann eqns :=
 
 Definition cp_choose_op E e :=
   match op_eval E e with
-    | Some (wTA c) => Con c
+    | (wTA (Known c)) => Con c
     | _ => e
   end.
 
@@ -289,8 +297,8 @@ Fixpoint constantPropagate (AE:onv aval) s {struct s} : stmt :=
               (constantPropagate AE s)
     | stmtIf e s t =>
       stmtIf (cp_choose_op AE e)
-             (constantPropagate (update_cond AE e true) s)
-             (constantPropagate (update_cond AE e false) t)
+             (constantPropagate AE s)
+             (constantPropagate AE t)
     | stmtApp f Y =>
       stmtApp f (List.map (cp_choose_op AE) Y)
     | stmtReturn e => stmtReturn (cp_choose_op AE e)
@@ -318,7 +326,7 @@ Qed.
 
 Lemma in_cp_eqns AE x lv v
   : x \In lv
-    -> AE x = ⎣wTA v ⎦
+    -> AE x = ⎣wTA (Known v) ⎦
     -> EqnEq (Var x) (Con v) ∈ cp_eqns AE lv.
 Proof.
   intros. unfold cp_eqns.
@@ -333,7 +341,7 @@ Qed.
 
 Lemma cp_eqns_satisfies_env AE E x v lv
 : x ∈ lv
-  -> AE x = ⎣wTA v ⎦
+  -> AE x = ⎣wTA (Known v) ⎦
   -> satisfiesAll E (cp_eqns AE lv)
   -> E x = ⎣v ⎦.
 Proof.
@@ -362,14 +370,13 @@ Ltac imatch := try dmatch; try smatch; try clear_trivial_eqs; isabsurd.
 
 Lemma op_eval_same e lv AE E v
 :   Op.freeVars e ⊆ lv
-    -> op_eval AE e = Some (wTA v)
+    -> op_eval AE e = (wTA (Known v))
     -> satisfiesAll E (cp_eqns AE lv)
     -> exists v', Op.op_eval E e = Some v' /\ option_eq eq ⎣v' ⎦ ⎣v ⎦.
 Proof.
   intros. general induction e; simpl in * |- *; eauto 20 using @option_eq.
-  - exploit cp_eqns_satisfies_env; eauto.
-    + rewrite <- H. cset_tac.
-    + eexists v; eauto using @option_eq.
+  - exploit cp_eqns_satisfies_env; eauto using @option_eq, oaval_inv.
+    + cset_tac.
   - repeat imatch.
     edestruct IHe; eauto; dcr.
     rewrite H5; simpl.
@@ -386,7 +393,7 @@ Qed.
 
 Lemma op_eval_entails AE e v x lv
 : Op.freeVars e ⊆ lv
-  -> op_eval AE e = Some (wTA v)
+  -> op_eval AE e = (wTA (Known v))
   -> entails ({EqnEq (Var x) e ; { EqnEq (Var x) (cp_choose_op AE e) ;
                                      cp_eqns AE lv } }) (singleton (EqnEq (Var x) (Con v))).
 Proof.
@@ -465,8 +472,8 @@ Proof.
 Qed.
 
 Lemma cp_choose_exp_eval_exp AE e v
-: op_eval AE e = Some (wTA v)
-  -> op_eval AE (cp_choose_op AE e) = Some (wTA v).
+: op_eval AE e = (wTA (Known v))
+  -> op_eval AE (cp_choose_op AE e) = (wTA (Known v)).
 Proof.
   intros. unfold cp_choose_op. rewrite H; eauto.
 Qed.
@@ -512,8 +519,10 @@ Proof.
   - rewrite H in *.
     destruct a0.
     + isabsurd.
-    + cset_tac'. hnf in H4; subst; simpl in *.
-      rewrite H0 in H1. cset_tac.
+    + destruct a0.
+      * cset_tac'. hnf in H4; subst; simpl in *.
+        rewrite H0 in H1. cset_tac.
+      * cset_tac.
   - rewrite H in H4. isabsurd.
 Qed.
 
@@ -522,7 +531,7 @@ Lemma in_subst_eqns gamma Z Y AE
   -> gamma \In subst_eqns (sid [Z <-- Y]) (cp_eqns AE (of_list Z))
   -> exists n x c,
       gamma = subst_eqn (sid [Z <-- Y]) (EqnEq (Var x) (Con c))
-      /\ AE x = Some (wTA c)
+      /\ AE x = Some (wTA (Known c))
       /\ get Z n x
       /\ get Y n ((sid [Z <-- Y]) x).
 Proof.
@@ -531,6 +540,7 @@ Proof.
   edestruct cp_eqns_in as [x ?]; eauto; dcr.
   unfold cp_eqn in H4. case_eq (AE x); intros.
   - rewrite H1 in H4. destruct a; isabsurd.
+    destruct a; isabsurd.
     cset_tac'. invc H4.
     unfold subst_eqn; simpl.
     edestruct (update_with_list_lookup_in_list sid Z Y) as [? [? ]]; eauto; dcr.
@@ -541,7 +551,7 @@ Qed.
 
 Lemma entails_cp_eqns_subst AE D Z Y
 : length Z = length Y
-  -> PIR2 le_precise (lookup_list AE Z) (List.map (op_eval AE) Y)
+  -> PIR2 poLe (List.map (op_eval AE) Y) (oaval_to_aval ⊝ lookup_list AE Z)
   -> list_union (List.map Op.freeVars Y)[<=]D
   -> entails (cp_eqns AE D)
             (subst_eqns (sid [Z <-- Y]) (cp_eqns AE (of_list Z))).
@@ -551,22 +561,28 @@ Proof.
 
   edestruct in_subst_eqns as [? [? []]]; eauto; dcr.
   edestruct PIR2_nth_2; eauto; dcr.
-  exploit lookup_list_get; eauto. subst.
-  inversion H7; try congruence.
-  edestruct op_eval_same; eauto; dcr.
-  - rewrite <- INCL.
-    eapply incl_list_union. eapply map_get_1; eauto. reflexivity.
-  - simpl. rewrite H9.
-    econstructor. inv H10. congruence.
+  - eapply map_get_1. rewrite lookup_list_map.
+    eapply map_get_1. eauto.
+  - rewrite H4 in H7; simpl in *.
+    inv H7. inv H9.
+    edestruct op_eval_same; eauto; dcr.
+    + rewrite <- INCL.
+      eapply incl_list_union. eapply map_get_1; eauto. reflexivity.
+    + inv_get. reflexivity.
+    + inv H10.
+      hnf. rewrite H2. simpl.
+      econstructor. hnf in H8.
+      eapply H8.
 Qed.
 
 
 Lemma entails_cp_eqns_subst_choose AE AE' D Z Y
 : length Z = length Y
-  -> PIR2 le_precise (lookup_list AE' Z) (List.map (op_eval AE) Y)
+  -> PIR2 poLe (List.map (op_eval AE) Y) (oaval_to_aval ⊝ lookup_list AE' Z)
   -> list_union (List.map Op.freeVars Y)[<=]D
   -> entails (cp_eqns AE D)
-            (subst_eqns (sid [Z <-- List.map (cp_choose_op AE) Y]) (cp_eqns AE' (of_list Z))).
+            (subst_eqns (sid [Z <-- List.map (cp_choose_op AE) Y])
+                        (cp_eqns AE' (of_list Z))).
 Proof.
   intros LEQ le_prec INCL.
   hnf. intros. hnf. intros.
@@ -574,19 +590,22 @@ Proof.
   edestruct in_subst_eqns as [? [? []]]; try eapply H0; eauto; dcr; subst.
   edestruct map_get_4; eauto; dcr.
   edestruct PIR2_nth_2; eauto; dcr.
-  exploit lookup_list_get; eauto. subst.
-  inversion H8; try congruence.
-  edestruct op_eval_same; eauto; dcr.
-  rewrite <- INCL.
-  eapply incl_list_union. eapply map_get_1; eauto. reflexivity.
-  hnf; simpl. inv_get.
-  rewrite H6. unfold cp_choose_op. rewrite <- H10. simpl.
-  constructor. inv H12. congruence.
+  eapply map_get_1. rewrite lookup_list_map.
+  eapply map_get_1. eauto. rewrite H4 in *; simpl in *.
+  inv H8; try congruence.
+  - inv H10.
+    edestruct op_eval_same; eauto; dcr.
+    + rewrite <- INCL.
+      eapply incl_list_union. eapply map_get_1; eauto. reflexivity.
+    + hnf; simpl. inv_get. reflexivity.
+    + hnf. simpl. rewrite <- H2.
+      unfold cp_choose_op. inv_get. simpl.
+      econstructor. eapply H11.
 Qed.
 
 Lemma cp_eqns_update D x c AE
 : x ∈ D
-  -> cp_eqns (AE [x <- ⎣ wTA c ⎦]) D [=] singleton (EqnEq (Var x) (Con c)) ∪ cp_eqns AE (D \ {{x}}).
+  -> cp_eqns (AE [x <- ⎣ wTA (Known c) ⎦]) D [=] singleton (EqnEq (Var x) (Con c)) ∪ cp_eqns AE (D \ {{x}}).
 Proof.
   intros.
   assert (D [=] {{x}} ∪ (D \ {{x}})). {
@@ -616,11 +635,12 @@ Lemma aval2bool_inv_val b AE e lv (FV:Op.freeVars e [<=] lv)
 Proof.
   intros.
   case_eq (op_eval AE e); intros.
-  - rewrite H1 in H; eauto. destruct a; simpl in *; try congruence.
-    inv H. eexists; split; eauto.
+  - rewrite H1 in H; eauto. destruct b; simpl in *; try congruence.
+  - rewrite H1 in H. inv H.
+    destruct a; clear_trivial_eqs.
+    eexists; split; eauto.
     edestruct op_eval_same; eauto; dcr.
     inv H4. eauto.
-  - rewrite H1 in H. inv H.
 Qed.
 
 Lemma satisfies_BinOpEq_inv_true E e e'
@@ -660,7 +680,7 @@ Lemma cp_sound_eqn AE Cp ZL GL ΓL s (ang:ann (set var * set var))
                    -> get GL n G
                    -> get ΓL n Γ
                    -> get Cp n (Z',aY)
-                   -> (exists AE', aY = lookup_list AE' Z
+                   -> (exists AE', aY = oaval_to_aval ⊝ lookup_list AE' Z
                              /\ Γ [=] cp_eqns AE' (of_list Z)) /\ Z' = Z))
   :  eqn_sound ZL GL ΓL s (constantPropagate AE s) (cp_eqns AE (fst (getAnn ang))) ang.
 Proof.
@@ -674,7 +694,7 @@ Proof.
         -- unfold cp_eqn.
            case_eq (AE x); intros; eauto using entails_empty.
            rewrite H0 in H. inv H.
-           cases; eauto using entails_empty.
+           repeat cases; eauto using entails_empty.
            eapply op_eval_entails; eauto.
         -- eapply entails_monotone. reflexivity.
            cset_tac.
@@ -687,7 +707,9 @@ Proof.
         -- unfold cp_eqn.
            case_eq (AE x); intros; eauto using entails_empty.
            rewrite H0 in H. inv H.
-           eauto using entails_empty.
+           repeat cases;
+             eauto using entails_empty.
+           inv H1.
         -- reflexivity.
       * eapply cp_choose_approx_list; eauto.
       * simpl in *. rewrite <- H4.
@@ -708,17 +730,7 @@ Proof.
           eapply val_true_false_neq. congruence.
         - eapply eqn_sound_entails_monotone; eauto.
           pe_rewrite.
-          hnf. intros. cases.
-          + inv COND; simpl in *.
-            rewrite cp_eqns_update.
-            * eapply satisfiesAll_union; split.
-              -- eapply satisfies_single.
-                 eapply satisfies_BinOpEq_inv_true.
-                 eapply satisfies_add_extr; eauto.
-              -- rewrite minus_incl.
-                 eapply satisfies_add_drop; eauto.
-            * eauto with cset.
-          + eapply satisfies_add_drop; eauto.
+          eapply entails_add''. reflexivity.
       }
     + {
         decide (aval2bool (op_eval AE e) = Some true).
@@ -731,17 +743,7 @@ Proof.
           eapply val_true_false_neq. congruence.
         - eapply eqn_sound_entails_monotone; eauto.
           pe_rewrite.
-          hnf. intros. cases.
-          + inv COND; simpl in *.
-            rewrite cp_eqns_update.
-            * eapply satisfiesAll_union; split.
-              -- eapply satisfies_single.
-                 eapply satisfies_UnOpToBool_inv_false.
-                 eapply satisfies_add_extr; eauto.
-              -- rewrite minus_incl.
-                 eapply satisfies_add_drop; eauto.
-            * eauto with cset.
-          + eapply satisfies_add_drop; eauto.
+          eapply entails_add''. reflexivity.
       }
     + eapply cp_choose_approx; eauto.
   - edestruct get_in_range as [a ?]; eauto.
@@ -752,12 +754,12 @@ Proof.
       eapply entails_cp_eqns_subst_choose; eauto.
     + eapply cp_choose_approx_list; eauto.
   - econstructor; eauto using cp_choose_approx.
-  - assert (INV:forall (n : nat) (aY : 〔؟ aval〕) (Z : params) (G : ⦃nat⦄) (Γ : ⦃eqn⦄) Z',
+  - assert (INV:forall (n : nat) aY (Z : params) (G : ⦃nat⦄) (Γ : ⦃eqn⦄) Z',
                get (fst ⊝ F ++ ZL) n Z ->
                get (tab D ‖F‖ ++ GL) n G ->
                get ((fun '(Z1, _) => cp_eqns AE (of_list Z1)) ⊝ F ++ ΓL) n Γ ->
-               get ((fun Zs : params * stmt => (fst Zs, lookup_list AE (fst Zs))) ⊝ F ++ Cp) n (Z', aY) ->
-               (exists AE' : nat -> ؟ aval, aY = lookup_list AE' Z /\ Γ [=] cp_eqns AE' (of_list Z)) /\ Z' = Z). {
+               get ((fun Zs : params * stmt => (fst Zs, oaval_to_aval ⊝ lookup_list AE (fst Zs))) ⊝ F ++ Cp) n (Z', aY) ->
+               (exists AE' : nat -> ؟ aval, aY = oaval_to_aval ⊝ lookup_list AE' Z /\ Γ [=] cp_eqns AE' (of_list Z)) /\ Z' = Z). {
       intros.
       eapply get_app_cases in H1. destruct H1; dcr.
       - inv_get. split; eauto. eexists; split; eauto.

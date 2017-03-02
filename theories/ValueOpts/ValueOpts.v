@@ -3,7 +3,7 @@ Require Import CSet Le.
 Require Import Plus Util AllInRel Map LengthEq.
 Require Import CSet Val Var Env SimF IL Fresh Annotation Coherence RenamedApart.
 
-Require Import SetOperations Liveness Eqn OptionR.
+Require Import SetOperations Liveness.Liveness Eqn OptionR.
 
 Set Implicit Arguments.
 Unset Printing Records.
