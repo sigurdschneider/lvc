@@ -7,7 +7,7 @@ Require Import Keep Subterm Analysis.
 Set Implicit Arguments.
 
 
-Definition forwardF (sT:stmt) (Dom:stmt->Type) `{BoundedSemiLattice (Dom sT)}
+Definition forwardF (sT:stmt) (Dom:stmt->Type) `{JoinSemiLattice (Dom sT)}
            (forward:〔params〕 ->
                     forall s (ST:subTerm s sT) (d:Dom sT) (a:ann (Dom sT)), ann (Dom sT) * 〔Dom sT〕)
            (ZL:list params)
@@ -29,7 +29,7 @@ Defined.
 
 Arguments forwardF [sT] [Dom] {H} {H0} forward ZL F anF ST.
 
-Fixpoint forwardF_length (sT:stmt) (Dom:stmt->Type) `{BoundedSemiLattice (Dom sT)} forward
+Fixpoint forwardF_length (sT:stmt) (Dom:stmt->Type) `{JoinSemiLattice (Dom sT)} forward
            (ZL:list params)
            (F:list (params * stmt)) (anF:list (ann (Dom sT)))
            (ST:forall n s, get F n s -> subTerm (snd s) sT) {struct F}
@@ -46,7 +46,7 @@ Smpl Add
        rewrite (@forwardF_length sT Dom H BSL f ZL F anF ST) in H
      end : len.
 
-Lemma forwardF_length_ass (sT:stmt) (Dom:stmt->Type) `{BoundedSemiLattice (Dom sT)}
+Lemma forwardF_length_ass (sT:stmt) (Dom:stmt->Type) `{JoinSemiLattice (Dom sT)}
       forward ZL F anF ST k
   : length F = k
     -> length F = length anF
@@ -58,7 +58,9 @@ Qed.
 
 Hint Resolve @forwardF_length_ass : len.
 
-Fixpoint forward (sT:stmt) (Dom: stmt -> Type) `{BoundedSemiLattice (Dom sT)}
+Fixpoint forward (sT:stmt) (Dom: stmt -> Type)
+         `{JoinSemiLattice (Dom sT)}
+         `{@LowerBounded (Dom sT) H}
            (ftransform :
               forall sT, list params ->
                     forall s, subTerm s sT -> Dom sT -> anni (Dom sT))
@@ -101,7 +103,7 @@ Fixpoint forward (sT:stmt) (Dom: stmt -> Type) `{BoundedSemiLattice (Dom sT)}
     | _, an => fun EQ => (ann0 d, (fun _ => bottom) ⊝ ZL)
   end eq_refl.
 
-Lemma forwardF_get  (sT:stmt) (Dom:stmt->Type) `{BoundedSemiLattice (Dom sT)}
+Lemma forwardF_get  (sT:stmt) (Dom:stmt->Type) `{JoinSemiLattice (Dom sT)}
            (forward:〔params〕 ->
                      forall s (ST:subTerm s sT) (d:Dom sT) (a:ann (Dom sT)),
                        ann (Dom sT) * list (Dom sT))
@@ -122,7 +124,7 @@ Proof.
     exists Zs. do 4 (eexists; eauto 20 using get).
 Qed.
 
-Lemma get_forwardF  (sT:stmt) (Dom:stmt->Type) `{BoundedSemiLattice (Dom sT)}
+Lemma get_forwardF  (sT:stmt) (Dom:stmt->Type) `{JoinSemiLattice (Dom sT)}
            (forward:〔params〕 ->
                      forall s (ST:subTerm s sT) (d:Dom sT) (a:ann (Dom sT)),
                        ann (Dom sT) * list (Dom sT))
@@ -151,7 +153,8 @@ Ltac inv_get_step_analysis_forward :=
 
 Smpl Add inv_get_step_analysis_forward : inv_get.
 
-Lemma forward_length (sT:stmt) (Dom : stmt -> Type) `{BoundedSemiLattice (Dom sT)}
+Lemma forward_length (sT:stmt) (Dom : stmt -> Type) `{JoinSemiLattice (Dom sT)}
+      `{@LowerBounded (Dom sT) H}
       (f: forall sT, list params ->
                 forall s, subTerm s sT -> Dom sT -> anni (Dom sT))
   : forall (s : stmt) (ST:subTerm s sT) (ZL:list params),
@@ -172,12 +175,12 @@ Qed.
 
 Smpl Add
      match goal with
-     | [ |- context [ ❬snd (@forward ?sT ?Dom ?H ?BSL ?f ?ZL ?s ?ST ?d ?a)❭ ] ] =>
-       rewrite (@forward_length sT Dom H BSL f s ST ZL d a)
+     | [ |- context [ ❬snd (@forward ?sT ?Dom ?H ?BSL ?LB ?f ?ZL ?s ?ST ?d ?a)❭ ] ] =>
+       rewrite (@forward_length sT Dom H BSL LB f s ST ZL d a)
      end : len.
 
 Lemma forward_length_ass
-      (sT:stmt) (Dom : stmt -> Type) `{BoundedSemiLattice (Dom sT)}
+      (sT:stmt) (Dom : stmt -> Type) `{JoinSemiLattice (Dom sT)} `{@LowerBounded (Dom sT) H}
       (f: forall sT, list params ->
                 forall s, subTerm s sT -> Dom sT -> anni (Dom sT))
   : forall (s : stmt) (ST:subTerm s sT) (ZL:list params) k,
@@ -187,7 +190,8 @@ Proof.
 Qed.
 
 Lemma forward_length_le_ass
-      (sT:stmt) (Dom : stmt -> Type) `{BoundedSemiLattice (Dom sT)}
+      (sT:stmt) (Dom : stmt -> Type)
+      `{JoinSemiLattice (Dom sT)} `{@LowerBounded (Dom sT) H}
       (f: forall sT, list params ->
                 forall s, subTerm s sT -> Dom sT -> anni (Dom sT))
   : forall (s : stmt) (ST:subTerm s sT) (ZL:list params) k,
@@ -197,7 +201,8 @@ Proof.
 Qed.
 
 Lemma forward_length_le_ass_right
-      (sT:stmt) (Dom : stmt -> Type) `{BoundedSemiLattice (Dom sT)}
+      (sT:stmt) (Dom : stmt -> Type)
+      `{JoinSemiLattice (Dom sT)} `{@LowerBounded (Dom sT) H}
       (f: forall sT, list params ->
                 forall s, subTerm s sT -> Dom sT -> anni (Dom sT))
   : forall (s : stmt) (ST:subTerm s sT) (ZL:list params) k,
@@ -209,7 +214,8 @@ Qed.
 
 Hint Resolve @forward_length_ass forward_length_le_ass forward_length_le_ass_right : len.
 
-Lemma forward_annotation sT (Dom:stmt->Type) `{BoundedSemiLattice (Dom sT)} s
+Lemma forward_annotation sT (Dom:stmt->Type)
+      `{JoinSemiLattice (Dom sT)} s `{@LowerBounded (Dom sT) H}
       (f: forall sT, list params ->
                 forall s, subTerm s sT -> Dom sT -> anni (Dom sT))
   : forall ZL d a (ST:subTerm s sT), annotation s a
@@ -224,23 +230,25 @@ Proof.
       eauto using setTopAnn_annotation, setAnn_annotation.
 Qed.
 
-Lemma forward_getAnn' (sT:stmt) (Dom : stmt -> Type) `{BoundedSemiLattice (Dom sT)}
+Lemma forward_getAnn' (sT:stmt) (Dom : stmt -> Type)
+      `{JoinSemiLattice (Dom sT)} `{@LowerBounded (Dom sT) H}
       (f: forall sT, list params ->
                 forall s, subTerm s sT -> Dom sT -> anni (Dom sT)) s (ST:subTerm s sT) ZL d an
-  : getAnn (fst (@forward sT Dom _ _ f ZL s ST d an)) = d.
+  : getAnn (fst (@forward sT Dom _ _ _ f ZL s ST d an)) = d.
 Proof.
   intros. destruct s, an; simpl in *; eauto;
   repeat let_pair_case_eq; simpl; eauto.
 Qed.
 
-Lemma forward_getAnn (sT:stmt) (Dom : stmt -> Type) `{BoundedSemiLattice (Dom sT)}
+Lemma forward_getAnn (sT:stmt) (Dom : stmt -> Type)
+      `{JoinSemiLattice (Dom sT)} `{@LowerBounded (Dom sT) H}
       (f: forall sT, list params ->
                 forall s, subTerm s sT -> Dom sT -> anni (Dom sT)) s (ST:subTerm s sT) ZL a an
-  : ann_R eq (fst (@forward sT Dom _ _ f ZL s ST a an)) an
+  : ann_R eq (fst (@forward sT Dom _ _ _ f ZL s ST a an)) an
     -> getAnn an = a.
 Proof.
-  intros. eapply ann_R_get in H1.
-  rewrite forward_getAnn' in H1. eauto.
+  intros. eapply ann_R_get in H2.
+  rewrite forward_getAnn' in H2. eauto.
 Qed.
 
 
@@ -265,7 +273,8 @@ Ltac fold_po :=
            change (ann_R poLe x y) with (poLe x y)
   end.
 
-Lemma forward_monotone (sT:stmt) (Dom : stmt -> Type) `{BoundedSemiLattice (Dom sT)}
+Lemma forward_monotone (sT:stmt) (Dom : stmt -> Type)
+      `{JoinSemiLattice (Dom sT)} `{@LowerBounded (Dom sT) H}
       (f: forall sT, list params ->
                 forall s, subTerm s sT -> Dom sT -> anni (Dom sT))
       (fMon:forall s (ST ST':subTerm s sT) ZL,
@@ -304,6 +313,7 @@ Proof with eauto using poLe_setTopAnn, poLe_getAnni.
       eapply IH; eauto.
       exploit H3; eauto.
       eapply ann_R_get; eauto.
+      eapply H4; eauto.
     }
     econstructor; simpl; eauto.
     + econstructor; eauto.
@@ -311,40 +321,41 @@ Proof with eauto using poLe_setTopAnn, poLe_getAnni.
         repeat rewrite map_length.
         repeat rewrite forwardF_length.
         repeat rewrite fold_list_length'.
-        repeat rewrite forward_length. rewrite H2; reflexivity.
+        repeat rewrite forward_length. eauto with len.
         intros; inv_get; eauto with len.
         intros; rewrite zip_length; eauto with len.
         intros; inv_get; eauto with len.
         intros; rewrite zip_length; eauto with len.
       * intros.
-        inv_zip H6; clear H6. inv_map H8; clear H8.
-        inv_zip H7; clear H7. inv_map H8; clear H8.
-        exploit H5; eauto.
-        exploit get_PIR2; [ eapply PIR2_fold_zip_join | eapply H9 | eapply H10 | ].
-        eapply PIR2_get. intros. inv_map H12; clear H12. inv_map H11; clear H11.
-        eapply H5; eauto.
+        inv_zip H7; clear H7. inv_map H9; clear H9.
+        inv_zip H8; clear H8. inv_map H9; clear H9.
+        exploit H6; eauto.
+        exploit get_PIR2; [ eapply PIR2_fold_zip_join | eapply H10 | eapply H11 | ].
+        eapply PIR2_get. intros. inv_map H13; clear H13. inv_map H12; clear H12.
+        eapply H6; eauto.
         repeat rewrite map_length.
         repeat rewrite forwardF_length.
-        repeat rewrite forward_length. rewrite H2; reflexivity.
+        repeat rewrite forward_length. rewrite H3; reflexivity.
         eapply IH; eauto.
         eapply ann_R_setTopAnn; eauto.
-        eapply H8.
+        eapply H9.
       * eapply IH; eauto.
     + eapply PIR2_drop. eapply PIR2_fold_zip_join.
       * eapply PIR2_get; eauto.
-        intros. inv_map H6. inv_map H7.
-        exploit H5; eauto. eapply H10.
+        intros. inv_map H7. inv_map H8.
+        exploit H6; eauto. eapply H11.
         repeat rewrite map_length.
         repeat rewrite forwardF_length.
-        repeat rewrite forward_length. rewrite H2; reflexivity.
+        repeat rewrite forward_length. rewrite H3; reflexivity.
       * eapply IH; eauto.
 Qed.
 
 Require Import FiniteFixpointIteration.
 
 Instance makeForwardAnalysis (Dom:stmt -> Type)
-         `{forall s, PartialOrder (Dom s) }
-         (BSL:forall s, BoundedSemiLattice (Dom s))
+         (PO:forall s, PartialOrder (Dom s))
+         (BSL:forall s, JoinSemiLattice (Dom s))
+         (LB:forall s, @LowerBounded (Dom s) (PO s))
          (f: forall sT, list params ->
                    forall s, subTerm s sT -> Dom sT -> anni (Dom sT))
          (fMon:forall sT s (ST ST':subTerm s sT) ZL,

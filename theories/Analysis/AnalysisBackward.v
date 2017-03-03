@@ -293,7 +293,7 @@ Require Import FiniteFixpointIteration.
 
 Instance makeBackwardAnalysis (Dom:stmt -> Type)
          `{forall s, PartialOrder (Dom s) }
-         (BSL:forall s, BoundedSemiLattice (Dom s))
+         (BSL:forall s, LowerBounded (Dom s))
          (f: forall sT, list params -> list (Dom sT) ->
                    forall s, subTerm s sT -> anni (Dom sT) -> Dom sT)
          (fMon:forall sT s (ST:subTerm s sT) ZL AL AL',

@@ -1,6 +1,6 @@
-Require Import Util CSet SetOperations Lattice SigR CSetPartialOrder Filter Take.
+Require Import Util CSet SetOperations Infra.Lattice SigR CSetPartialOrder Filter Take.
 Require Import IL Annotation Analysis AnalysisBackward Terminating Subterm.
-Require Import Liveness.
+Require Import Liveness.Liveness.
 
 Remove Hints trans_eq_bool.
 

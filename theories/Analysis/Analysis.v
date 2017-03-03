@@ -133,7 +133,7 @@ Proof.
   intros LE LE'; inv LE'; simpl; eauto.
 Qed.
 
-Lemma ann_bottom s' (Dom:Type) `{BoundedSemiLattice Dom}
+Lemma ann_bottom s' (Dom:Type) `{LowerBounded Dom}
   :  forall (d : ann Dom), annotation s' d -> setAnn bottom s' ⊑ d.
 Proof.
   sind s'; destruct s'; simpl; intros d' Ann; inv Ann; simpl; eauto using @ann_R, bottom_least.
@@ -147,14 +147,14 @@ Proof.
     + eapply IH; eauto.
 Qed.
 
-Definition setTopAnnO {A} `{BoundedSemiLattice A} a (al:option A) :=
+Definition setTopAnnO {A} `{LowerBounded A} a (al:option A) :=
   match al with
   | None => setTopAnn a bottom
   | Some al' => setTopAnn a al'
   end.
 
 
-Lemma PIR2_ojoin_zip A `{BoundedSemiLattice A} (a:list A) a' b b'
+Lemma PIR2_ojoin_zip A `{JoinSemiLattice A} (a:list A) a' b b'
   : poLe a a'
     -> poLe b b'
     -> PIR2 poLe (join ⊜ a b) (join ⊜ a' b').
@@ -164,7 +164,7 @@ Proof.
   rewrite pf, pf0. reflexivity.
 Qed.
 
-Lemma update_at_poLe A `{BoundedSemiLattice A} B (L:list B) n (a:A) b
+Lemma update_at_poLe A `{LowerBounded A} B (L:list B) n (a:A) b
   : poLe a b
     -> poLe (list_update_at (tab bottom ‖L‖) n a)
             (list_update_at (tab bottom ‖L‖) n b).
@@ -177,7 +177,7 @@ Proof.
 Qed.
 
 
-Lemma PIR2_fold_zip_join X `{BoundedSemiLattice X} (A A':list (list X)) (B B':list X)
+Lemma PIR2_fold_zip_join X `{JoinSemiLattice X} (A A':list (list X)) (B B':list X)
   : poLe A A'
     -> poLe B B'
     -> poLe (fold_left (zip join) A B)
@@ -192,7 +192,7 @@ Proof.
   rewrite pf, pf1. reflexivity.
 Qed.
 
-Lemma PIR2_zip_setTopAnnO X `{BoundedSemiLattice X} (A A':list (ann X)) (B B':list X)
+Lemma PIR2_zip_setTopAnnO X `{JoinSemiLattice X} (A A':list (ann X)) (B B':list X)
   : poLe A A'
     -> poLe B B'
     -> poLe ((@setTopAnn _) ⊜ A B) (@setTopAnn _ ⊜ A' B').
@@ -275,7 +275,7 @@ Proof.
 Qed.
 
 
-Lemma PIR2_zip_join_inv_left X `{BoundedSemiLattice X} A B C
+Lemma PIR2_zip_join_inv_left X `{JoinSemiLattice X} A B C
   : poLe (join ⊜ A B) C
     -> length A = length B
     -> poLe A C.
@@ -286,7 +286,7 @@ Proof.
     + rewrite <- pf. eapply join_poLe.
 Qed.
 
-Lemma PIR2_zip_join_inv_right X `{BoundedSemiLattice X} A B C
+Lemma PIR2_zip_join_inv_right X `{JoinSemiLattice X} A B C
   : poLe (join ⊜ A B) C
     -> length A = length B
     -> poLe B C.
@@ -297,7 +297,7 @@ Proof.
     + rewrite <- pf. rewrite join_commutative. eapply join_poLe.
 Qed.
 
-Lemma PIR2_poLe_zip_join_left X `{BoundedSemiLattice X} A B
+Lemma PIR2_poLe_zip_join_left X `{JoinSemiLattice X} A B
   : length A = length B
     -> poLe A (join ⊜ A B).
 Proof.
@@ -306,7 +306,7 @@ Proof.
   - econstructor; eauto using join_poLe.
 Qed.
 
-Lemma PIR2_zip_join_commutative X `{BoundedSemiLattice X} A B
+Lemma PIR2_zip_join_commutative X `{JoinSemiLattice X} A B
   : poLe (join ⊜ B A) (join ⊜ A B).
 Proof.
   intros.
@@ -314,7 +314,7 @@ Proof.
   econstructor; eauto. rewrite join_commutative; eauto.
 Qed.
 
-Lemma PIR2_poLe_zip_join_right X `{BoundedSemiLattice X} A B
+Lemma PIR2_poLe_zip_join_right X `{JoinSemiLattice X} A B
   : length A = length B
     -> poLe B (join ⊜ A B).
 Proof.
@@ -322,7 +322,7 @@ Proof.
   eapply PIR2_poLe_zip_join_left; congruence.
 Qed.
 
-Lemma PIR2_fold_zip_join_inv X `{BoundedSemiLattice X} A B C
+Lemma PIR2_fold_zip_join_inv X `{JoinSemiLattice X} A B C
   : poLe (fold_left (zip join) A B) C
     -> (forall n a, get A n a -> length a = length B)
     -> poLe B C.
@@ -336,7 +336,7 @@ Proof.
   symmetry. eauto using get.
 Qed.
 
-Lemma PIR2_fold_zip_join_right X `{BoundedSemiLattice X} (A:list X) B C
+Lemma PIR2_fold_zip_join_right X `{JoinSemiLattice X} (A:list X) B C
   : (forall n a, get B n a -> length a = length C)
     -> poLe A C
     -> poLe A (fold_left (zip join) B C).
@@ -347,7 +347,7 @@ Proof.
   - rewrite H2. eapply PIR2_poLe_zip_join_left. symmetry. eauto using get.
 Qed.
 
-Lemma PIR2_fold_zip_join_left X `{BoundedSemiLattice X} (A:list X) B C a k
+Lemma PIR2_fold_zip_join_left X `{JoinSemiLattice X} (A:list X) B C a k
   : get B k a
     -> poLe A a
     -> (forall n a, get B n a -> length a = length C)
@@ -366,7 +366,7 @@ Proof.
 Qed.
 
 
-Lemma get_union_union_b X `{BoundedSemiLattice X} (A:list (list X)) (b:list X) n x
+Lemma get_union_union_b X `{JoinSemiLattice X} (A:list (list X)) (b:list X) n x
   : get b n x
     -> (forall n a, get A n a -> ❬a❭ = ❬b❭)
     -> exists y, get (fold_left (zip join) A b) n y /\ poLe x y.
@@ -394,7 +394,7 @@ Proof.
 Qed.
 
 
-Lemma get_union_union_A X `{BoundedSemiLattice X} (A:list (list X)) a b n k x
+Lemma get_union_union_A X `{JoinSemiLattice X} (A:list (list X)) a b n k x
   : get A k a
     -> get a n x
     -> (forall n a, get A n a -> ❬a❭ = ❬b❭)

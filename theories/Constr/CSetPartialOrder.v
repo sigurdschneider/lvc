@@ -1,4 +1,4 @@
-Require Import Util CSet PartialOrder Terminating Lattice SigR.
+Require Import Util CSet Infra.PartialOrder Terminating Infra.Lattice SigR.
 
 Remove Hints trans_eq_bool.
 
@@ -16,12 +16,10 @@ Proof.
   - hnf; intros. split; eauto.
 Defined.
 
-Instance set_var_semilattice X `{OrderedType X} : BoundedSemiLattice (set X) := {
-  bottom := ∅;
+Instance set_var_semilattice X `{OrderedType X} : JoinSemiLattice (set X) := {
   join := union
 }.
 Proof.
-  - intros; hnf; simpl. cset_tac.
   - hnf; intros. eapply union_idem.
   - hnf; intros. eapply union_comm.
   - hnf; intros. eapply union_assoc.
@@ -40,13 +38,11 @@ Proof.
   - hnf; intros [a ?] [b ?]; simpl; intros. split; eauto.
 Defined.
 
-Instance set_var_semilattice_bounded X `{OrderedType X} U : BoundedSemiLattice ({ s : set X | s ⊆ U}) := {
-  bottom := exist _ ∅ (@incl_empty X _ U);
+Instance set_var_semilattice_bound X `{OrderedType X} U : JoinSemiLattice ({ s : set X | s ⊆ U}) := {
   join x y := exist _ (union (proj1_sig x) (proj1_sig y)) _
 }.
 Proof.
   - destruct x,y; simpl. cset_tac.
-  - intros [a ?]; simpl. cset_tac.
   - hnf; intros [a ?]. eapply union_idem.
   - hnf; intros [a ?] [b ?]. eapply union_comm.
   - hnf; intros [a ?] [b ?] [c ?]. eapply union_assoc.
@@ -56,6 +52,16 @@ Proof.
   - simpl. unfold Proper, respectful; intros. destruct x,y,x0,y0; simpl in * |- *.
     rewrite H0, H1. reflexivity.
 Defined.
+
+Instance set_var_lower_bounded X `{OrderedType X} U : LowerBounded { s : set X | s ⊆ U} :=
+  {
+    bottom := exist _ ∅ _
+  }.
+Proof.
+  - cset_tac.
+  - simpl; intros []. cset_tac.
+Defined.
+
 
 Lemma bunded_set_terminating X `{OrderedType X} U
   : Terminating {s : ⦃X⦄ | s ⊆ U} poLt.

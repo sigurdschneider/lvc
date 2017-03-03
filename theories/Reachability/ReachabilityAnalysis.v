@@ -1,7 +1,7 @@
 Require Import CSet Le Var.
 
 Require Import Plus Util AllInRel Map CSet ListUpdateAt.
-Require Import Val Var Env IL Annotation Lattice DecSolve Filter.
+Require Import Val Var Env IL Annotation Infra.Lattice DecSolve Filter.
 Require Import Analysis AnalysisForward FiniteFixpointIteration Terminating Subterm.
 
 Remove Hints trans_eq_bool.
@@ -34,7 +34,7 @@ Proof.
 Qed.
 
 Definition reachability_analysis s :=
-  makeForwardAnalysis (fun s => bool ) _
+  makeForwardAnalysis (fun s => bool ) _ _ _
                       reachability_transform
                       reachability_transform_monotone
                       (fun s => terminating_bool) s true.

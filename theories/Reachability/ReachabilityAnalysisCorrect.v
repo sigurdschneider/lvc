@@ -10,7 +10,7 @@ Set Implicit Arguments.
 
 Local Arguments proj1_sig {A} {P} e.
 Local Arguments length {A} e.
-Local Arguments forward {sT} {Dom} {H} {H0} ftransform ZL st ST d a.
+Local Arguments forward {sT} {Dom} {H} {H0} {H1} ftransform ZL st ST d a.
 
 Opaque poLe.
 
@@ -34,7 +34,7 @@ Definition reachability_sound sT ZL BL s d a (ST:subTerm s sT)
     -> annotation s a
     -> labelsDefined s (length ZL)
     -> labelsDefined s (length BL)
-    -> poLe (snd (@forward sT _ _ _ reachability_transform ZL s ST d a)) BL
+    -> poLe (snd (@forward sT _ _ _ _ reachability_transform ZL s ST d a)) BL
     -> reachability Sound BL s a.
 Proof.
   intros EQ Ann DefZL DefBL.
@@ -179,7 +179,7 @@ Proof.
     + eapply ListUpdateAt.list_update_at_get_2 in H1; eauto; subst.
       reflexivity.
     + eapply ListUpdateAt.list_update_at_get_1 in H1; eauto; subst.
-      inv_get. destruct a; simpl; eauto.
+      inv_get. hnf. destruct c; simpl; eauto.
   - destruct b; [| destruct c; simpl; eauto].
     eapply fold_left_zip_orb_inv in H1. destruct H1.
     + eapply IH in H1; eauto.
@@ -233,7 +233,7 @@ Proof.
   intros LEN Ant AnF LE1 LE2 LE3.
   eapply fold_left_mono.
   - eapply PIR2_get; intros; inv_get.
-    + eapply (@forward_monotone sT (fun _ => bool) _ _ reachability_transform ); eauto.
+    + eapply (@forward_monotone sT (fun _ => bool) _ _ _ reachability_transform ); eauto.
       eapply reachability_transform_monotone; eauto.
       eapply ann_R_get.
       eapply get_PIR2; eauto.
@@ -241,7 +241,7 @@ Proof.
     + rewrite !map_length.
       rewrite !(@forwardF_length _ (fun _ => bool)).
       rewrite (PIR2_length LE1). reflexivity.
-  - exploit (@forward_monotone sT (fun _ => bool) _ _ reachability_transform );
+  - exploit (@forward_monotone sT (fun _ => bool) _ _ _ reachability_transform );
       try eapply H; eauto.
     eapply reachability_transform_monotone.
 Qed.

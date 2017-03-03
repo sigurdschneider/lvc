@@ -1,7 +1,7 @@
 Require Import CSet Le Var.
 
 Require Import Plus Util AllInRel Map CSet.
-Require Import Val Var Env IL Annotation Lattice DecSolve Analysis Filter Terminating.
+Require Import Val Var Env IL Annotation Infra.Lattice DecSolve Analysis Filter Terminating.
 Require Import Analysis AnalysisBackward LivenessAnalysis TrueLiveness Subterm.
 Require Import FiniteFixpointIteration.
 

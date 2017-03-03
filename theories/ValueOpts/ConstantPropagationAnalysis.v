@@ -4,7 +4,7 @@ Require Import Plus Util AllInRel CSet.
 Require Import Val Var Env IL Annotation Infra.Lattice DecSolve.
 Require Import Analysis.Analysis AnalysisForwardSSA ValueOpts.ConstantPropagation.
 
-Require Import CMap.
+Require Import CMap WithTop.
 
 Set Implicit Arguments.
 
@@ -28,7 +28,9 @@ Definition join (v v' : aval) : aval :=
 Definition join' (a b : option aval) :=
   match a, b with
   | None, None => None
-  | _, _ => Some (join (oaval_to_aval a) (oaval_to_aval b))
+  | Some a, None => Some a
+  | None, Some b => Some b
+  | Some a, Some b => Some (join a b)
   end.
 
 Definition joinDom (d d':Dom) : Dom := map2 join' d d'.
@@ -393,8 +395,8 @@ Proof.
         repeat (try match goal with
             | [ H : withTop_le ?a (wTA Unknown) |- _ ] => inv H; clear_trivial_eqs
                     end; simpl in *; eauto using withTop_le);
-        inv H; inv H0; clear_trivial_eqs; eauto.
-  simpl. econstructor.
+        inv H; inv H0; clear_trivial_eqs; eauto; simpl;
+          try destruct b; simpl; eauto using withTop_le.
 Qed.
 
 Instance leDom_tran : Transitive leDom.
@@ -468,16 +470,12 @@ Proof.
   rewrite H. reflexivity.
 Defined.
 
-
-
-Definition Dom := Map [var, aval].
+Definition ODom := withBot (Map [var, aval]).
 
 Lemma empty_bottom
-  :  forall a : Dom, empty (withTop (withUnknown val)) ⊑ a.
+  :  forall a : ODom, Bot ⊑ a.
 Proof.
-  intros. hnf; intros. simpl.
-  rewrite MapFacts.empty_o. simpl.
-  eapply le_bot.
+  intros. econstructor.
 Qed.
 
 Lemma join_idem
@@ -492,14 +490,22 @@ Proof.
   unfold joinDom. intros.
   hnf; intros.
   rewrite MapFacts.map2_1bis; eauto.
-  rewrite join_idem; eauto.
+  unfold join'. repeat cases.
+  rewrite join_idem; eauto. reflexivity.
 Qed.
 
 Lemma join_sym
   : forall a b, join a b = join b a.
 Proof.
   unfold join; intros; repeat cases; eauto.
-  congruence.
+Qed.
+
+Lemma join'_sym a b
+  : join' a b === join' b a.
+Proof.
+  destruct a, b; simpl; eauto.
+  rewrite join_sym. reflexivity.
+
 Qed.
 
 Lemma joinDom_sym
@@ -507,18 +513,24 @@ Lemma joinDom_sym
 Proof.
   unfold joinDom; intros. hnf; intros.
   rewrite !MapFacts.map2_1bis; eauto.
-  rewrite join_sym; auto.
+  unfold join'; repeat cases; simpl;
+    try rewrite join_sym; auto using withTop_eq; reflexivity.
 Qed.
 
 Lemma join_assoc
   : forall a b c, join (join a b) c = join a (join b c).
 Proof.
   intros. rewrite join_sym.
-  unfold join; repeat (cases; subst); eauto;
-    destruct b; try destruct w; try destruct w0;
-      try destruct w1; subst; eauto; isabsurd;
-        repeat cases in Heq; repeat cases in Heq0;
-          eauto; try congruence.
+  destruct a as [|[]], b as [|[]], c as [|[]]; simpl;
+    eauto; repeat (cases; subst); eauto.
+Qed.
+
+Lemma join'_assoc
+  : forall a b c, join' (join' a b) c = join' a (join' b c).
+Proof.
+  intros.
+  destruct a as [[|[]]|], b as [[|[]]|], c as [[|[]]|]; simpl;
+    eauto; repeat (cases; subst; simpl); eauto.
 Qed.
 
 Lemma joinDom_assoc
@@ -526,14 +538,15 @@ Lemma joinDom_assoc
 Proof.
   unfold joinDom; intros. hnf; intros.
   rewrite !MapFacts.map2_1bis; eauto.
-  rewrite join_assoc. reflexivity.
+  rewrite join'_assoc. reflexivity.
 Qed.
 
 Lemma join_exp
-  : forall a b, le a (join a b).
+  : forall a b, poLe a (join a b).
 Proof.
-  unfold join; intros;
-    repeat cases; eauto using le.
+  unfold join; intros [|[]] [|[]];
+    repeat cases; hnf; eauto using withTop_le.
+
 Qed.
 
 Lemma joinDom_exp
