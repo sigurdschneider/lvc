@@ -107,20 +107,21 @@ Fixpoint forward (sT:stmt) (Dom: stmt -> Type) `{JoinSemiLattice (Dom sT)}
       | stmtIf x s t =>
         fun EQ =>
           let an := anni_if EQ (ftransform sT ZL st ST d) in
-          let ans'ALs :=
-              option_map (fun d => @forward sT Dom _ H0 _ ftransform ZL s
-                                         (subTerm_EQ_If1 EQ ST) d)
-                         (fst an)
-          in
-          let ant'ALt :=
-              option_map (fun d => @forward sT Dom _ H0 _ ftransform ZL t
-                                         (subTerm_EQ_If2 EQ ST) d)
-                         (snd an)
-          in
-          option_extr (
-          ojoin _ (fun x y => (join (fst x) (fst y), zip join (snd x) (snd y)))
-                ans'ALs ant'ALt)
-                      (d, (fun _ => bottom) ⊝ ZL)
+          match an with
+          | (Some a, Some b) =>
+            let a' := @forward sT Dom _ H0 _ ftransform ZL s
+                               (subTerm_EQ_If1 EQ ST) a in
+            let b' := @forward sT Dom _ H0 _ ftransform ZL t
+                              (subTerm_EQ_If2 EQ ST) b in
+            (join (fst a') (fst b'), zip join (snd a') (snd b'))
+            | (Some a, None) =>
+              @forward sT Dom _ H0 _ ftransform ZL s
+                       (subTerm_EQ_If1 EQ ST) a
+            | (None, Some b) =>
+              @forward sT Dom _ H0 _ ftransform ZL t
+                       (subTerm_EQ_If2 EQ ST) b
+            | (None, None) => (bottom, (fun _ => bottom) ⊝ ZL)
+          end
       | stmtApp f Y as st =>
         fun EQ =>
           let d := anni_app (Dom sT) EQ (ftransform sT ZL st ST d) in
@@ -228,7 +229,6 @@ Proof.
                   try clear_trivial_eqs; simpl.
     simpl. rewrite zip_length2; eauto.
     repeat rewrite IH; eauto.
-    eauto with len. eauto with len.
   - intros. rewrite list_update_at_length. eauto with len.
   - intros.
     rewrite length_drop_minus.
@@ -242,8 +242,8 @@ Qed.
 
 Smpl Add
      match goal with
-     | [ |- context [ ❬snd (@forward ?sT ?Dom ?H ?BSL ?f ?ZL ?s ?ST ?d)❭ ] ] =>
-       rewrite (@forward_length sT Dom H BSL f s ST ZL d)
+     | [ |- context [ ❬snd (@forward ?sT ?Dom ?H ?JSL ?LB ?f ?ZL ?s ?ST ?d)❭ ] ] =>
+       rewrite (@forward_length sT Dom H JSL LB f s ST ZL d)
      end : len.
 
 Lemma forward_length_ass
@@ -339,7 +339,7 @@ Require Import FiniteFixpointIteration.
 Lemma option_extr_mon T `{PartialOrder T} (a a':option T) b b'
   : a ⊑ a'
     -> b ⊑ b'
-    -> Some b ⊑ a'
+    -> (forall x, a' = Some x -> b ⊑ x)
     -> option_extr a b ⊑ option_extr a' b'.
 Proof.
   intros A B C; inv A; simpl; eauto.
@@ -367,6 +367,26 @@ Proof.
     clear_trivial_eqs; simpl; eauto using fstNoneOrR.
 Qed.
 
+Lemma PIR2_bottom_least A B `{LowerBounded A} (ZL:list B) (l:list A)
+  : ❬ZL❭ = ❬l❭
+    -> PIR2 poLe (tab (⊥) ‖ZL‖) l.
+Proof.
+  intros. eapply PIR2_get; intros; inv_get; eauto with len.
+  eapply bottom_least.
+Qed.
+
+
+Ltac inv_if_ctor H A B :=
+  let A' := eval hnf in A in
+      let B' := eval hnf in B in
+          is_constructor_app A'; is_constructor_app B'; inv H.
+
+Smpl Add 100 match goal with
+             | [ H : ?A === ?B |- _ ] => inv_if_ctor H A B
+             | [ H : poEq ?A ?B |- _ ] => inv_if_ctor H A B
+             | [ H : poLe ?A ?B |- _ ] => inv_if_ctor H A B
+             end : inv_trivial.
+
 Lemma forward_monotone (sT:stmt) (Dom : stmt -> Type) `{JoinSemiLattice (Dom sT)}
       `{@LowerBounded (Dom sT) H}
       (f: forall sT, list params ->
@@ -385,14 +405,26 @@ Proof with eauto using poLe_setTopAnn, poLe_getAnni.
     (* Coq can't find the instantiation *)
     eapply (fMon (stmtLet x e s)); eauto.
   - pose proof (fMon (stmtIf e s1 s2) ST ST' ZL _ _ LE_d).
-    eapply option_extr_mon; eauto.
-    + eapply ojoin_mon.
-      eapply option_map_mon; eauto.
-      eapply H2.
-      eapply option_map_mon; eauto.
-      eapply H2.
-    + simpl; split; eauto.
-    + admit.
+    pose proof (IH s1 ltac:(eauto) (subTerm_EQ_If1 eq_refl ST)
+                                (subTerm_EQ_If1 eq_refl ST') ZL) as LE1; eauto.
+    pose proof (IH s2 ltac:(eauto) (subTerm_EQ_If2 eq_refl ST)
+                                (subTerm_EQ_If2 eq_refl ST') ZL) as LE2; eauto.
+    destruct (f sT ZL (stmtIf e s1 s2) ST d);
+      destruct (f sT ZL (stmtIf e s1 s2) ST' d'); simpl; invc H2;
+        simpl snd in *; simpl fst in *; clear_trivial_eqs.
+
+    repeat cases; subst; clear_trivial_eqs; simpl;
+      try (specialize (LE1 _ _ H3); inv LE1);
+      try (specialize (LE2 _ _ H4); inv LE2);
+      split;
+      eauto using bottom_least, join_struct, PIR2_bottom_least with len.
+    + eapply PIR2_ojoin_zip; eauto.
+    + rewrite H2. eapply join_poLe.
+    + rewrite H5.
+      eapply PIR2_poLe_zip_join_left; eauto with len.
+    + rewrite H2. rewrite join_commutative. eapply join_poLe.
+    + rewrite H5.
+      eapply PIR2_poLe_zip_join_right; eauto with len.
   - econstructor; eauto. simpl.
     + eapply (fMon (stmtApp l Y)); eauto.
     + eapply update_at_poLe.
@@ -408,7 +440,7 @@ Proof with eauto using poLe_setTopAnn, poLe_getAnni.
         intros; inv_get.
         eapply IH; eauto.
       * eapply IH; eauto.
-Admitted.
+Qed.
 
 Require Import FiniteFixpointIteration.
 

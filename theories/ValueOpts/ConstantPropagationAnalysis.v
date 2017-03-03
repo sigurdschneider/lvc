@@ -34,7 +34,7 @@ Definition join' (a b : option aval) :=
   | Some a, Some b => Some (join a b)
   end.
 
-Definition joinDom (d d':Dom) : Dom := map2 join' d d'.
+Definition joinDom (d d':Dom) : Dom := map2 join d d'.
 
 Definition domain {X} `{OrderedType X} {Y} (d:Map [X, Y])
 : set X := of_list (List.map fst (elements d)).
@@ -154,7 +154,7 @@ Defined.
  *)
 
 Definition leDom (d d': Dom) : Prop :=
- (forall x, poLe (find x d) (find x d')).
+ (forall x, poLe (oaval_to_aval (find x d)) (oaval_to_aval (find x d'))).
 
 Lemma leDom_irreflexive x y
 : ~leDom x y -> ~Equal x y.
@@ -420,13 +420,18 @@ Proof.
   intros.
   repeat rewrite MapFacts.map2_1bis; eauto.
   specialize (H x0). specialize (H0 x0).
-  destruct (find x0 y); destruct (find x0 x);
-    destruct (find x0 y'); destruct (find x0 x'); simpl in *;
+  revert H H0.
+  case_eq (find x0 y); case_eq (find x0 x);
+    case_eq (find x0 y'); case_eq (find x0 x'); intros; simpl in *;
+      clear_trivial_eqs; simpl; eauto using withTop_le; try reflexivity.
+  oaval_to_aval (find x0 y ⊔ find x0 y') ⊑ oaval_to_aval (find x0 x ⊔ find x0 x')
+
       try clear_trivial_eqs; try eapply lt_join; eauto;
         repeat (try match goal with
             | [ H : withTop_le ?a (wTA Unknown) |- _ ] => inv H; clear_trivial_eqs
                     end; simpl in *; eauto using withTop_le);
-        inv H; inv H0; clear_trivial_eqs; eauto; simpl;
+        try reflexivity.
+
           try destruct b; simpl; eauto using withTop_le.
   invc H. invc H0. repeat clear_dup.
   econstructor.
