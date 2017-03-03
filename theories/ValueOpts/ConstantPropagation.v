@@ -10,16 +10,17 @@ Unset Printing Records.
 
 (* Constant Propagation *)
 
+Require compcert.lib.Integers.
 
-Instance PartialOrder_val : PartialOrder val :=
-    {
-    poLe := eq;
-    poEq := eq
-    }.
+Lemma int_eq_eq x y
+  : int_eq x y -> x = y.
 Proof.
-  - eauto.
-  - hnf; intros; subst; eauto.
-Defined.
+  unfold int_eq; destruct x,y; simpl; intros; subst.
+  eapply Integers.Int.mkint_eq. reflexivity.
+Qed.
+
+Hint Resolve int_eq_eq.
+
 
 (* None is top *)
 Definition aval := withTop (withUnknown val).
@@ -569,10 +570,8 @@ Proof.
     + rewrite <- INCL.
       eapply incl_list_union. eapply map_get_1; eauto. reflexivity.
     + inv_get. reflexivity.
-    + inv H10.
-      hnf. rewrite H2. simpl.
-      econstructor. hnf in H8.
-      eapply H8.
+    + hnf. rewrite H2. simpl. inv H8; eauto.
+      econstructor. inv H10. eauto.
 Qed.
 
 
@@ -600,7 +599,7 @@ Proof.
     + hnf; simpl. inv_get. reflexivity.
     + hnf. simpl. rewrite <- H2.
       unfold cp_choose_op. inv_get. simpl.
-      econstructor. eapply H11.
+      econstructor. inv H12. eauto.
 Qed.
 
 Lemma cp_eqns_update D x c AE

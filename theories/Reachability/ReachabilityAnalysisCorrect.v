@@ -282,10 +282,8 @@ Proof.
           ].
     + eapply H3 in COND.
       eapply forward_snd_poLe in H7; eauto. inv H7.
-      rewrite COND; eauto.
     + eapply H4 in COND.
       eapply forward_snd_poLe in H5; eauto. inv H5.
-      rewrite COND; eauto.
   - decide (labN l = n); subst.
     + eapply ListUpdateAt.list_update_at_get_2 in H1; eauto; subst.
       destruct l; simpl. econstructor.

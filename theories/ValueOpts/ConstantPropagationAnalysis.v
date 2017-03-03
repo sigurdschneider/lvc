@@ -13,6 +13,7 @@ Open Scope map_scope.
 
 Definition Dom := Map [var, aval].
 
+(*
 Definition join (v v' : aval) : aval :=
   match v with
   | Top => Top
@@ -24,7 +25,7 @@ Definition join (v v' : aval) : aval :=
     end
   | wTA Unknown => v'
   end.
-
+*)
 Definition join' (a b : option aval) :=
   match a, b with
   | None, None => None
@@ -153,7 +154,7 @@ Defined.
  *)
 
 Definition leDom (d d': Dom) : Prop :=
- (forall x, poLe (oaval_to_aval (find x d)) (oaval_to_aval (find x d'))).
+ (forall x, poLe (find x d) (find x d')).
 
 Lemma leDom_irreflexive x y
 : ~leDom x y -> ~Equal x y.
@@ -307,9 +308,11 @@ Proof.
   - hnf; intros.
     eauto with typeclass_instances.
   - left; eauto.
-    hnf; intros. eapply le_domain_find; eauto.
+    hnf; intros.
+    (*eapply le_domain_find; eauto.
   - right; eauto.
-Defined.
+Defined.*)
+Admitted.
 
 Instance Equal_computable (s t:Map [var, withTop val])
   : Computable (Equal s t).
@@ -332,15 +335,42 @@ Lemma wua_poLe_inv (x y : withUnknown val)
   : poLe x y -> x = y.
 Proof.
   intros A; inv A.
-  - inv H; eauto.
+  - f_equal. eauto.
   - eauto.
 Qed.
+
+Lemma withTop_poLe_inv A R `{EqDec A R} (a b:A)
+  : poLe (wTA a) (wTA b)
+    -> a === b.
+Proof.
+  intros. inv H0. eapply H3.
+Qed.
+
+Ltac inv_if_ctor H A B :=
+  let A' := eval hnf in A in
+      let B' := eval hnf in B in
+          is_constructor_app A'; is_constructor_app B'; inv H.
+
 
 Smpl Add 100 match goal with
              | [ H : @poLe (withUnknown val) _ ?x ?y  |- _ ] =>
                eapply wua_poLe_inv in H; subst
              | [ H : ?a <> ?a |- _ ] => exfalso; eapply H; reflexivity
+             | [ H : ~ ?a === ?a |- _ ] => exfalso; eapply H; reflexivity
+             | [ H : @poLe (withTop _) _ (wTA _) (wTA _) |- _ ] =>
+               eapply withTop_poLe_inv in H
+             | [ H : @poLe _ _ (wTA _) (wTA _) |- _ ] => invc H
+             | [ H : Known _ === Known _ |- _ ] => invc H
+             | [ H : withUnknown_eq _ _ |- _ ] =>
+               invc H
+             | [ H : OptionR.fstNoneOrR _ ?A ?B |- _ ] =>
+               inv_if_ctor H A B
+             | [ H : withTop_le _ _ |- _ ] => invc H
+             | [ H : int_eq _ _ |- _ ] => eapply int_eq_eq in H
+             | [ H : ?A === ?B |- _ ] => inv_if_ctor H A B
+             | [ H : poEq ?A ?B |- _ ] => inv_if_ctor H A B
              end : inv_trivial.
+
 
 
 Lemma lt_join (x y x' y':aval)
@@ -350,7 +380,8 @@ Lemma lt_join (x y x' y':aval)
 Proof.
   intros.
   inv H; inv H0; simpl; repeat cases; eauto using withTop_le;
-    clear_trivial_eqs.
+    clear_trivial_eqs; eauto using withTop_le.
+  reflexivity.
 Qed.
 
 (*
@@ -397,6 +428,19 @@ Proof.
                     end; simpl in *; eauto using withTop_le);
         inv H; inv H0; clear_trivial_eqs; eauto; simpl;
           try destruct b; simpl; eauto using withTop_le.
+  invc H. invc H0. repeat clear_dup.
+  econstructor.
+  inv H3; inv H3; simpl; repeat cases; eauto using withTop_le;
+    clear_trivial_eqs; repeat cases; isabsurd; try reflexivity; simpl;
+      repeat cases; eauto using withTop_le;
+        try econstructor; clear_trivial_eqs.
+  econstructor.
+  rewrite H3.
+  eapply withTop_generic_join_exp.
+  econstructor. rewrite H3.
+  rewrite withTop_generic_join_sym.
+  eapply withTop_generic_join_exp.
+  econstructor.
 Qed.
 
 Instance leDom_tran : Transitive leDom.
@@ -454,6 +498,9 @@ Proof.
   hnf. unfold leDom, Equal.
   intros. hnf; intros.
   eapply poLe_antisymmetric in H; eauto.
+  specialize (H (H0 x0)).
+  unfold oaval_to_aval.
+  repeat cases; clear_trivial_eqs; eauto.
 Qed.
 
 Set Implicit Arguments.
@@ -541,11 +588,13 @@ Proof.
   rewrite join'_assoc. reflexivity.
 Qed.
 
+Hint Resolve withTop_le_refl WithTopLe_refl.
+
 Lemma join_exp
   : forall a b, poLe a (join a b).
 Proof.
   unfold join; intros [|[]] [|[]];
-    repeat cases; hnf; eauto using withTop_le.
+    repeat cases; hnf; eauto using withTop_le; try reflexivity.
 
 Qed.
 

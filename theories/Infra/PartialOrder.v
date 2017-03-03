@@ -43,7 +43,7 @@ Proof.
   exfalso; eapply H1; eapply poLe_refl; symmetry; eauto.
 Qed.
 
-Hint Resolve poLt_intro poLt_poLe.
+Hint Resolve poLt_intro poLt_poLe poLe_refl poLe_antisymmetric.
 
 Notation "s '⊑' t" := (poLe s t) (at level 70, no associativity).
 Notation "s '⊏' t" := (poLt s t) (at level 70, no associativity).
