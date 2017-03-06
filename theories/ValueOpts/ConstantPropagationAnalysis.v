@@ -613,7 +613,7 @@ Definition constant_propagation_transform sT ZL st (ST:subTerm st sT)
     d'
   | stmtLet x (Call f Y) s as st, d =>
     (* we assume renamed apart here, and dont zero x *)
-    d
+    domupd d x (Some Top)
   | stmtIf e s t as st, d =>
     if [op_eval (domenv d) e = Some (wTA val_true)] then
       (Some d, None)
@@ -821,8 +821,9 @@ Proof.
   intros.
   general induction s; simpl in *; eauto.
   - destruct e; eauto.
-    eapply domupd_le; eauto.
-    eapply (leDom_op_eval e); eauto.
+    + eapply domupd_le; eauto.
+      eapply (leDom_op_eval e); eauto.
+    + hnf; intros. lud; eauto.
   - exploit (leDom_op_eval e); eauto.
     repeat cases; split; eauto using @fstNoneOrR;
       try congruence; rewrite COND in *; try rewrite COND0 in *;

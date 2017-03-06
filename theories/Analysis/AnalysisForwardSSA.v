@@ -17,11 +17,11 @@ Definition anni A (s:stmt) : Type :=
 Definition forwardF (sT:stmt) (Dom:stmt->Type) `{JoinSemiLattice (Dom sT)}
            (forward:〔params〕 ->
                     forall s (ST:subTerm s sT) (d:Dom sT),
-                      Dom sT * 〔Dom sT〕)
+                      Dom sT)
            (ZL:list params)
            (F:list (params * stmt)) (a:Dom sT)
            (ST:forall n s, get F n s -> subTerm (snd s) sT)
-  : list (Dom sT * 〔Dom sT〕).
+  : list (Dom sT).
   revert F ST.
   fix g 1. intros.
   destruct F as [|Zs F'].
@@ -97,9 +97,9 @@ Fixpoint forward (sT:stmt) (Dom: stmt -> Type) `{JoinSemiLattice (Dom sT)}
               forall sT, list params ->
                     forall s, subTerm s sT -> Dom sT -> anni (Dom sT) s)
            (ZL:list (params)) (st:stmt) (ST:subTerm st sT) (d:Dom sT) {struct st}
-  :  Dom sT * list (Dom sT).
+  :  Dom sT.
   refine (
-      match st as st' return st = st' -> Dom sT * list (Dom sT) with
+      match st as st' return st = st' -> Dom sT with
       | stmtLet x e s as st =>
         fun EQ =>
           let d:Dom sT := anni_let (Dom sT) EQ (ftransform sT ZL st ST d) in
@@ -113,33 +113,32 @@ Fixpoint forward (sT:stmt) (Dom: stmt -> Type) `{JoinSemiLattice (Dom sT)}
                                (subTerm_EQ_If1 EQ ST) a in
             let b' := @forward sT Dom _ H0 _ ftransform ZL t
                               (subTerm_EQ_If2 EQ ST) b in
-            (join (fst a') (fst b'), zip join (snd a') (snd b'))
+            (join a' b')
             | (Some a, None) =>
               @forward sT Dom _ H0 _ ftransform ZL s
                        (subTerm_EQ_If1 EQ ST) a
             | (None, Some b) =>
               @forward sT Dom _ H0 _ ftransform ZL t
                        (subTerm_EQ_If2 EQ ST) b
-            | (None, None) => (bottom, (fun _ => bottom) ⊝ ZL)
+            | (None, None) => bottom
           end
       | stmtApp f Y as st =>
         fun EQ =>
           let d := anni_app (Dom sT) EQ (ftransform sT ZL st ST d) in
-          (d, list_update_at ((fun _ => bottom) ⊝ ZL) (counted f) d)
+          d
 
     | stmtReturn x as st =>
-      fun EQ => (d, (fun _ => bottom) ⊝ ZL)
+      fun EQ => d
 
     | stmtFun F t as st =>
       fun EQ =>
         let ZL' := List.map fst F ++ ZL in
-        let (ant', ALt) :=
+        let ant' :=
             @forward sT Dom _ _ _ ftransform ZL' t (subTerm_EQ_Fun1 EQ ST)
                                   d in
         let anF' := forwardF (forward sT Dom _ _ _ ftransform) ZL' F d
                             (subTerm_EQ_Fun2 EQ ST) in
-        let AL' := fold_left (zip join) (snd ⊝ anF') ALt in
-        (fold_left join (fst ⊝ anF') ant', drop ❬F❭ AL')
+        fold_left join anF' ant'
       end eq_refl).
 Defined.
 
@@ -157,7 +156,7 @@ Qed.
 Lemma forwardF_get  (sT:stmt) (Dom:stmt->Type) `{JoinSemiLattice (Dom sT)}
            (forward:〔params〕 ->
                      forall s (ST:subTerm s sT) (d:Dom sT),
-                       Dom sT * list (Dom sT))
+                       Dom sT)
            (ZL:list params)
            (F:list (params * stmt)) a
            (ST:forall n s, get F n s -> subTerm (snd s) sT) aa n
@@ -177,7 +176,7 @@ Qed.
 Lemma get_forwardF  (sT:stmt) (Dom:stmt->Type) `{JoinSemiLattice (Dom sT)}
            (forward:〔params〕 ->
                      forall s (ST:subTerm s sT) (d:Dom sT),
-                       Dom sT * list (Dom sT))
+                       Dom sT)
            (ZL:list params)
            (F:list (params * stmt)) (a:Dom sT)
            (ST:forall n s, get F n s -> subTerm (snd s) sT) n Zs
@@ -212,72 +211,6 @@ Proof.
   erewrite IHa; eauto 10 using get with len.
   intros. rewrite H; eauto using get.
 Qed.
-
-Lemma forward_length (sT:stmt) (Dom : stmt -> Type) `{JoinSemiLattice (Dom sT)}
-      `{@LowerBounded (Dom sT) H}
-      (f: forall sT, list params ->
-                forall s, subTerm s sT -> Dom sT -> anni (Dom sT) s)
-  : forall (s : stmt) (ST:subTerm s sT) (ZL:list params),
-    forall d, ❬snd (forward Dom f ZL ST d)❭ = ❬ZL❭.
-Proof.
-  sind s; destruct s; simpl; intros; eauto with len;
-    repeat let_pair_case_eq; subst; simpl in *; eauto.
-  - unfold option_extr.
-    repeat cases; repeat simpl_pair_eqs; subst; simpl; eauto with len.
-    unfold option_map in Heq.
-    revert Heq. repeat cases; intros; simpl in *;
-                  try clear_trivial_eqs; simpl.
-    simpl. rewrite zip_length2; eauto.
-    repeat rewrite IH; eauto.
-  - intros. rewrite list_update_at_length. eauto with len.
-  - intros.
-    rewrite length_drop_minus.
-    rewrite fold_list_length'.
-    + rewrite IH; eauto. rewrite app_length, map_length. omega.
-    + intros. inv_get. repeat rewrite IH; eauto.
-    + intros. rewrite zip_length; eauto.
-      eapply min_l; eauto.
-Qed.
-
-
-Smpl Add
-     match goal with
-     | [ |- context [ ❬snd (@forward ?sT ?Dom ?H ?JSL ?LB ?f ?ZL ?s ?ST ?d)❭ ] ] =>
-       rewrite (@forward_length sT Dom H JSL LB f s ST ZL d)
-     end : len.
-
-Lemma forward_length_ass
-      (sT:stmt) (Dom : stmt -> Type) `{JoinSemiLattice (Dom sT)} `{@LowerBounded (Dom sT) H}
-      (f: forall sT, list params ->
-                forall s, subTerm s sT -> Dom sT -> anni (Dom sT) s)
-  : forall (s : stmt) (ST:subTerm s sT) (ZL:list params) k,
-    forall d, ❬ZL❭ = k -> ❬snd (forward Dom f ZL ST d)❭ = k.
-Proof.
-  intros. rewrite forward_length; eauto.
-Qed.
-
-Lemma forward_length_le_ass
-      (sT:stmt) (Dom : stmt -> Type) `{JoinSemiLattice (Dom sT)}  `{@LowerBounded (Dom sT) H}
-      (f: forall sT, list params ->
-                forall s, subTerm s sT -> Dom sT -> anni (Dom sT) s)
-  : forall (s : stmt) (ST:subTerm s sT) (ZL:list params) k,
-    forall d, ❬ZL❭ <= k -> ❬snd (forward Dom f ZL ST d)❭ <= k.
-Proof.
-  intros. rewrite forward_length; eauto.
-Qed.
-
-Lemma forward_length_le_ass_right
-      (sT:stmt) (Dom : stmt -> Type) `{JoinSemiLattice (Dom sT)}  `{@LowerBounded (Dom sT) H}
-      (f: forall sT, list params ->
-                forall s, subTerm s sT -> Dom sT -> anni (Dom sT) s)
-  : forall (s : stmt) (ST:subTerm s sT) (ZL:list params) k,
-    forall d, k <= ❬ZL❭ -> k <= ❬snd (forward Dom f ZL ST d)❭.
-Proof.
-  intros. rewrite forward_length; eauto.
-Qed.
-
-
-Hint Resolve @forward_length_ass forward_length_le_ass forward_length_le_ass_right : len.
 
 Ltac fold_po :=
   repeat match goal with
@@ -412,34 +345,18 @@ Proof with eauto using poLe_setTopAnn, poLe_getAnni.
     destruct (f sT ZL (stmtIf e s1 s2) ST d);
       destruct (f sT ZL (stmtIf e s1 s2) ST' d'); simpl; invc H2;
         simpl snd in *; simpl fst in *; clear_trivial_eqs.
-
     repeat cases; subst; clear_trivial_eqs; simpl;
-      try (specialize (LE1 _ _ H3); inv LE1);
-      try (specialize (LE2 _ _ H4); inv LE2);
-      split;
+      try (specialize (LE1 _ _ H3));
+      try (specialize (LE2 _ _ H4));
       eauto using bottom_least, join_struct, PIR2_bottom_least with len.
-    + eapply PIR2_ojoin_zip; eauto.
-    + rewrite H2. eapply join_poLe.
-    + rewrite H5.
-      eapply PIR2_poLe_zip_join_left; eauto with len.
-    + rewrite H2. rewrite join_commutative. eapply join_poLe.
-    + rewrite H5.
-      eapply PIR2_poLe_zip_join_right; eauto with len.
-  - econstructor; eauto. simpl.
-    + eapply (fMon (stmtApp l Y)); eauto.
-    + eapply update_at_poLe.
-      eapply (fMon (stmtApp l Y)); eauto.
-  - split; simpl; fold_po.
+    + rewrite LE1. eapply join_poLe.
+    + rewrite LE2. rewrite join_commutative. eapply join_poLe.
+  - eapply (fMon (stmtApp l Y)); eauto.
+  - simpl; fold_po.
     + eapply fold_left_join_struct; eauto.
       * eapply PIR2_get; eauto with len.
         intros; inv_get.
         eapply IH; eauto.
-      * eapply IH; eauto.
-    + eapply PIR2_drop. eapply PIR2_fold_zip_join.
-      * eapply PIR2_get; eauto with len.
-        intros; inv_get.
-        eapply IH; eauto.
-      * eapply IH; eauto.
 Qed.
 
 Require Import FiniteFixpointIteration.
@@ -456,7 +373,7 @@ Instance makeForwardAnalysis (Dom:stmt -> Type)
 
   : forall s, Iteration (Dom s) :=
   {
-    step := fun X : Dom s => fst (forward Dom f nil (subTerm_refl _) X);
+    step := fun X : Dom s => forward Dom f nil (subTerm_refl _) X;
     initial_value := bottom
   }.
 Proof.
