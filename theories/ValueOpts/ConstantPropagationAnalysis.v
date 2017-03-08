@@ -34,7 +34,9 @@ Definition join' (a b : option aval) :=
   | Some a, Some b => Some (join a b)
   end.
 
-Definition joinDom (d d':Dom) : Dom := map2 join d d'.
+
+Definition joinMap X `{OrderedType X} Y `{JoinSemiLattice Y}
+           (d d':Map [X, Y]) := @map2 _ H _ Y Y Y join d d'.
 
 Definition domain {X} `{OrderedType X} {Y} (d:Map [X, Y])
 : set X := of_list (List.map fst (elements d)).
@@ -153,18 +155,18 @@ Proof.
 Defined.
  *)
 
-Definition leDom (d d': Dom) : Prop :=
+Definition leMap X `{OrderedType X} Y `{PartialOrder Y} (d d': Map [X, Y]) : Prop :=
  (forall x, poLe (find x d) (find x d')).
 
-Lemma leDom_irreflexive x y
-: ~leDom x y -> ~Equal x y.
+Lemma leMap_irreflexive X `{OrderedType X} Y `{PartialOrder Y} (x y:Map [X,Y])
+: ~leMap x y -> ~Equal x y.
 Proof.
-  intros. intro. eapply H.
-  hnf; intros. rewrite H0.
+  intros. intro. eapply H1.
+  hnf; intros. rewrite H2.
   reflexivity.
 Qed.
 
-Instance leDom_ref : Reflexive leDom.
+Instance leMap_ref X `{OrderedType X} Y `{PartialOrder Y} : Reflexive (@leMap X _ Y _).
 Proof.
   hnf; intros. hnf; intros. reflexivity.
 Qed.
@@ -271,6 +273,14 @@ Proof.
   exfalso. eapply not_domain_find in n. congruence.
 Qed.
 
+Lemma not_find_domain (X : Type) (H : OrderedType X) (Y : Type) (d : Map [X, Y]) (x : X)
+  : find x d = None -> x ∉ domain d.
+Proof.
+  intros.
+  decide (x ∈ domain d); eauto.
+  exfalso. eapply domain_find in i. dcr; congruence.
+Qed.
+
 Lemma find_domain' (X : Type) (H : OrderedType X) (Y : Type) (d : Map [X, Y]) x v
   : find x d = Some v -> x \In domain d.
 Proof.
@@ -280,31 +290,39 @@ Proof.
 Qed.
 
 
-Lemma le_domain_find x (d d':Dom)
-  : (forall x : nat, x \In domain d ∪ domain d' ->
+Lemma le_domain_find X `{OrderedType X} Y `{PartialOrder Y} x (d d':Map [X, Y])
+  : (forall x, x \In domain d ∪ domain d' ->
               poLe ((find x d)) ((find x d')))
     -> poLe (find x d) (find x d').
 Proof.
-  intros. specialize (H x). revert H.
+  intros DEQ. specialize (DEQ x). revert DEQ.
   case_eq (find x d'); intros; eauto.
-  - eapply find_domain' in H; eauto.
-    eapply H0. cset_tac.
+  - eapply find_domain' in H1; eauto.
+    eapply DEQ. cset_tac.
   - simpl. case_eq (find x d); intros; eauto; simpl.
-    pose proof H1. eapply find_domain' in H1.
-    exploit H0; eauto. cset_tac. simpl in *.
-    rewrite H2 in H3. simpl in *. eauto.
-    econstructor.
+    + pose proof H2. eapply find_domain' in H2.
+    exploit DEQ; eauto. cset_tac. simpl in *.
+    rewrite H3 in H4. eauto.
+    + econstructor.
 Qed.
 
-Instance leDom_dec
-  :  forall d d' : Dom, Computable (leDom d d').
+Instance leMap_proper X `{OrderedType X} Y `{PartialOrder Y} (d d':Map [X, Y])
+  : Proper (_eq ==> iff) (fun x => find x d ⊑ find x d').
+Proof.
+  unfold Proper, respectful; intros.
+  split; intros.
+  - rewrite <- H1; eauto.
+  - rewrite H1; eauto.
+Qed.
+
+Instance leMap_dec X `{OrderedType X} Y `{PartialOrder Y}
+  :  forall d d' : Map [X, Y], Computable (leMap d d').
 Proof.
   intros; hnf; intros.
   edestruct (@set_quant_computable _ _ (domain d ∪ domain d')
                                    (fun x => poLe ((find x d))
                                                (find x d'))).
-  - unfold Proper, respectful; intros.
-    hnf in H; subst; intuition.
+  - eapply leMap_proper.
   - hnf; intros.
     eauto with typeclass_instances.
   - left; eauto.
@@ -314,7 +332,9 @@ Proof.
 Defined.
 
 
-Instance Equal_computable (s t:Map [var, withTop val])
+(*
+Instance Equal_computable X `{OrderedType X} Y `{OrderedType Y}
+         (s t:Map [X, Y])
   : Computable (Equal s t).
 Proof.
   pose (R:=@withTop_eq_dec _ _ inst_eq_dec_val).
@@ -329,6 +349,7 @@ Proof.
   intros; simpl. subst R.
   destruct (withTop_eq_dec val e e'); intuition.
 Defined.
+ *)
 
 
 Lemma wua_poLe_inv (x y : withUnknown val)
@@ -414,68 +435,72 @@ Smpl Add 100 match goal with
              | [ H : poEq ?A ?B |- _ ] => inv_if_ctor H A B
              end : inv_trivial.
 
-Lemma leDom_join x y x' y'
-  : leDom y x
-    -> leDom y' x'
-    -> leDom (joinDom y y') (joinDom x x').
+Lemma leMap_join X `{OrderedType X} Y `{JoinSemiLattice Y} (x y x' y':Map[X, Y])
+  : leMap y x
+    -> leMap y' x'
+    -> leMap (joinMap y y') (joinMap x x').
 Proof.
-  unfold leDom, joinDom.
-  intros.
+  unfold leMap, joinMap.
+  intros LE1 LE2 z.
   repeat rewrite MapFacts.map2_1bis; eauto.
-  specialize (H x0). specialize (H0 x0).
-  revert H H0.
-  case_eq (find x0 y); case_eq (find x0 x);
-    case_eq (find x0 y'); case_eq (find x0 x'); intros; simpl in *;
+  specialize (LE1 z). specialize (LE2 z).
+  revert LE1 LE2.
+  case_eq (find z y); case_eq (find z x);
+    case_eq (find z y'); case_eq (find z x'); intros; simpl in *;
       clear_trivial_eqs; simpl; repeat cases; try reflexivity;
-        eauto using withTop_le, fstNoneOrR.
-  - destruct w1; simpl; repeat cases; eauto using withTop_le, fstNoneOrR.
-    econstructor. econstructor. rewrite COND; reflexivity.
-  - destruct w1; simpl; repeat cases; eauto using withTop_le, fstNoneOrR.
+        eauto using fstNoneOrR, join_struct, join_poLe.
+  - econstructor. rewrite H8. eapply join_poLe.
+  - econstructor. rewrite H8. rewrite join_commutative. eapply join_poLe.
 Qed.
 
-Instance leDom_tran : Transitive leDom.
+Instance leMap_tran X `{OrderedType X} Y `{PartialOrder Y}
+  : Transitive (@leMap X _ Y _).
 Proof.
-  hnf. unfold leDom; intros.
+  hnf. unfold leMap; intros.
   etransitivity; eauto.
 Qed.
 
-Definition eqDom (d d': Dom) : Prop :=
+Definition eqMap X `{OrderedType X} Y `{PartialOrder Y}
+           (d d' : Map [X, Y]) : Prop :=
  (forall x, poEq (find x d) (find x d')).
 
-Instance eqDom_Equiv : Equivalence eqDom.
+Instance eqMap_Equiv  X `{OrderedType X} Y `{PartialOrder Y}
+  : Equivalence (@eqMap X _ Y _).
 Proof.
-  constructor; unfold eqDom; hnf; intros.
+  constructor; unfold eqMap; hnf; intros.
   - reflexivity.
-  - rewrite H. eauto.
-  - rewrite H, H0. reflexivity.
+  - symmetry; eauto.
+  - etransitivity; eauto.
 Qed.
 
 
-Lemma eq_domain_find x (d d':Dom)
-  : (forall x : nat, x \In domain d ∪ domain d' -> poEq (find x d)
+Lemma eq_domain_find X `{OrderedType X} Y `{PartialOrder Y} x (d d':Map [X, Y])
+  : (forall x, x \In domain d ∪ domain d' -> poEq (find x d)
                                                (find x d'))
     -> poEq (find x d) (find x d').
 Proof.
-  intros. specialize (H x). revert H.
+  intros DEQ. specialize (DEQ x). revert DEQ.
   case_eq (find x d'); intros; eauto.
-  - eapply find_domain' in H; eauto.
-    eapply H0. cset_tac.
+  - eapply find_domain' in H1; eauto.
+    eapply DEQ. cset_tac.
   - simpl. case_eq (find x d); intros; eauto; simpl.
-    pose proof H1. eapply find_domain' in H1.
-    exploit H0; eauto. cset_tac. simpl in *.
-    rewrite H2 in H3. simpl in *. eauto.
-    econstructor.
+    + pose proof H2. eapply find_domain' in H2.
+    exploit DEQ; eauto. cset_tac. simpl in *.
+    rewrite H3 in H4. eauto.
+    + econstructor.
 Qed.
 
-Instance eqDom_dec
-  :  forall d d' : Dom, Computable (eqDom d d').
+Instance eqDom_dec X `{OrderedType X} Y `{PartialOrder Y}
+  :  forall d d' : Map [X, Y], Computable (eqMap d d').
 Proof.
   intros; hnf; intros.
   edestruct (@set_quant_computable _ _ (domain d ∪ domain d')
                                    (fun x => poEq ((find x d))
                                                ((find x d')))).
   - unfold Proper, respectful; intros.
-    hnf in H; subst; intuition.
+    split; intros.
+    rewrite <- H1; eauto.
+    rewrite H1; eauto.
   - hnf; intros.
     eauto with typeclass_instances.
   - left; eauto.
@@ -483,88 +508,98 @@ Proof.
   - right; eauto.
 Defined.
 
-Instance leDom_anti : Antisymmetric Dom eqDom leDom.
+Instance leMap_anti X `{OrderedType X} Y `{PartialOrder Y}
+  : Antisymmetric (Map [X, Y]) (@eqMap X _ Y _) (@leMap X _ Y _).
 Proof.
-  hnf. unfold leDom, Equal.
+  hnf. unfold leMap, Equal.
   intros. hnf; intros.
-  eapply poLe_antisymmetric in H; eauto.
+  eapply poLe_antisymmetric in H1; eauto.
 Qed.
 
 Set Implicit Arguments.
 
-Instance Dom_semilattice_ltDom : PartialOrder Dom := {
-  poLe := leDom;
-  poLe_dec := leDom_dec;
-  poEq := eqDom;
+Instance find_eqMap_proper  X `{OrderedType X} Y `{PartialOrder Y}
+  : Proper (_eq ==> @eqMap X _ Y _  ==> poEq) find.
+Proof.
+  unfold Proper, respectful, eqMap.
+  intros. rewrite H2, H1. reflexivity.
+Qed.
+
+Instance Dom_semilattice_ltDom  X `{OrderedType X} Y `{PartialOrder Y}
+  : PartialOrder (Map [X, Y]) := {
+  poLe := @leMap X _ Y _;
+  poLe_dec := (@leMap_dec X _ Y _);
+  poEq := @eqMap X _ Y _;
   poEq_dec := _
 }.
 Proof.
   intros. hnf; intros.
-  hnf in H.
-  rewrite H. reflexivity.
+  rewrite H1. reflexivity.
 Defined.
 
-Lemma empty_bottom
-  :  forall a : Dom, @empty _ _ _ _ ⊑ a.
+
+Lemma empty_bottom X `{OrderedType X} Y `{JoinSemiLattice Y}
+  :  forall a : Map [X, Y], @empty _ _ _ _ ⊑ a.
 Proof.
   intros. econstructor.
 Qed.
 
-Lemma joinDom_idem
-  : forall a : Dom, joinDom a a ≣ a.
+Lemma joinDom_idem X `{OrderedType X} Y `{JoinSemiLattice Y}
+  : forall a : Map [X, Y], joinMap a a ≣ a.
 Proof.
-  unfold joinDom. intros.
+  unfold joinMap. intros.
   hnf; intros.
   rewrite MapFacts.map2_1bis; eauto.
   rewrite join_idempotent; eauto.
 Qed.
 
-Lemma joinDom_sym
-  : forall a b : Dom, joinDom a b ≣ joinDom b a.
+Lemma joinDom_sym X `{OrderedType X} Y `{JoinSemiLattice Y}
+  : forall a b : Map [X, Y], joinMap a b ≣ joinMap b a.
 Proof.
-  unfold joinDom; intros. hnf; intros.
+  unfold joinMap; intros. hnf; intros.
   rewrite !MapFacts.map2_1bis; eauto.
   rewrite join_commutative. reflexivity.
 Qed.
 
-Lemma joinDom_assoc
-  : forall a b c : Dom, joinDom (joinDom a b) c ≣ joinDom a (joinDom b c).
+Lemma joinDom_assoc X `{OrderedType X} Y `{JoinSemiLattice Y}
+  : forall a b c : Map [X, Y], joinMap (joinMap a b) c ≣ joinMap a (joinMap b c).
 Proof.
-  unfold joinDom; intros. hnf; intros.
+  unfold joinMap; intros. hnf; intros.
   rewrite !MapFacts.map2_1bis; eauto.
   rewrite join_associative. reflexivity.
 Qed.
 
 Hint Resolve withTop_le_refl WithTopLe_refl.
 
-Lemma joinDom_exp
-  : forall a b : Dom, a ⊑ joinDom a b.
+Lemma joinDom_exp X `{OrderedType X} Y `{JoinSemiLattice Y}
+  : forall a b : Map [X, Y], a ⊑ joinMap a b.
 Proof.
-  intros. unfold joinDom. hnf; intros.
+  intros. unfold joinMap. hnf; intros.
   rewrite !MapFacts.map2_1bis; eauto.
   eapply join_poLe.
 Qed.
 
-Instance joinDom_eq
-  : Proper (poEq ==> poEq ==> poEq) joinDom.
+Instance joinDom_eq X `{OrderedType X} Y `{JoinSemiLattice Y}
+  : Proper (poEq ==> poEq ==> poEq) (@joinMap X _ Y _ _).
 Proof.
   unfold Proper, respectful; intros.
   hnf in H, H0.
-  unfold joinDom.
+  unfold joinMap.
   hnf; intros.
   rewrite !MapFacts.map2_1bis; eauto.
-  rewrite H, H0. reflexivity.
+  rewrite H2, H3. reflexivity.
 Qed.
 
-Instance joinDom_poLe
-  : Proper (poLe ==> poLe ==> poLe) joinDom.
+Instance joinDom_poLe X `{OrderedType X} Y `{JoinSemiLattice Y}
+  : Proper (poLe ==> poLe ==> poLe) (@joinMap X _ Y _ _).
 Proof.
   unfold Proper, respectful; intros.
-  eapply leDom_join; eauto.
+  eapply leMap_join; eauto.
 Qed.
 
-Instance map_semilattice : JoinSemiLattice Dom := {
-  join := joinDom
+Instance map_semilattice X `{OrderedType X} Y `{JoinSemiLattice Y}
+  : JoinSemiLattice (Map [X, Y]) := {
+  join := @joinMap X _ Y _ _
                                                     }.
 
 - eapply joinDom_idem.
@@ -574,18 +609,265 @@ Instance map_semilattice : JoinSemiLattice Dom := {
 Defined.
 
 
-Instance map_lower_bounded : LowerBounded Dom :=
+Instance map_lower_bounded X `{OrderedType X} Y `{JoinSemiLattice Y}
+  : LowerBounded (Map [X, Y]) :=
   {
-    bottom := (@empty var _ _ (withTop val))
+    bottom := (@empty X _ _ Y)
   }.
 Proof.
-  - eapply empty_bottom.
+  - eapply empty_bottom; eauto.
+Qed.
+
+
+Import Terminating.
+
+(*
+Lemma Terminating_subtype_incl X `{OrderedType X} Y `{PartialOrder Y} U U' x p p'
+      (T:terminates (@poLt {x : Map [X, Y] | domain x ⊆ U} _) (exist _ x p))
+      (Incl: domain x [<=] U)
+  : terminates (@poLt {x : Map [X, Y] | domain x ⊆ U' } _) (exist _ x p').
+Proof.
+  general induction T.
+  econstructor; intros [] LE.
+  eapply H2;[|reflexivity]. eauto.
+  Unshelve.
+Qed.
+
+
+Lemma Terminating_subtype_incl X `{OrderedType X} Y `{PartialOrder Y} U U'
+      (T:Terminating ({ x : Map [X, Y] | domain x ⊆ U }) poLt)
+ : Terminating ({ x  : Map [X, Y] | domain x ⊆ U' }) poLt.
+Proof.
+  hnf; intros. destruct x.
+  specialize (T (exist _ x (INCL x p))).
+  general induction T.
+  econstructor; intros.
+  destruct y. eapply H1;[|reflexivity].
+  instantiate (1:=INCL).
+  destruct H2.
+  econstructor; eauto.
+Qed.
+*)
+
+Lemma leMap_domain X `{OrderedType X} Y `{PartialOrder Y} x y
+  : leMap x y -> domain x ⊆ domain y.
+Proof.
+  unfold leMap. intros.
+  hnf; intros.
+  specialize (H1 a).
+  eapply domain_find in H2. dcr.
+  rewrite H3 in H1. inv H1.
+  eapply find_domain. congruence.
+Qed.
+
+Instance poLt_poLe_impl Dom `{PartialOrder Dom}
+  : Proper (poEq ==> poEq ==> iff) poLt.
+Proof.
+  unfold Proper, respectful, flip, impl; intros.
+  unfold poLt. rewrite H0, H1. reflexivity.
+Qed.
+
+Instance ltMap_proper X `{OrderedType X} Y `{PartialOrder Y} (d d':Map [X, Y])
+  : Proper (_eq ==> iff) (fun x => find x d ⊏ find x d').
+Proof.
+  unfold Proper, respectful; intros.
+  split; intros.
+  - rewrite <- H1; eauto.
+  - rewrite H1; eauto.
 Qed.
 
 
 
+Tactic Notation "decide_goal" :=
+  match goal with
+    [ |- ?s ] => decide s
+  end.
+
+Lemma not_poLt_poLe_poEq X `{PartialOrder X} x y
+  : ~ x ⊏ y -> poLe x y -> x === y.
+Proof.
+  intros.
+  eapply poLe_antisymmetric; eauto.
+  decide_goal; eauto.
+  exfalso. eapply H0. split; eauto.
+  intro. eapply n. rewrite H2. eauto.
+Qed.
+
+Lemma leMap_remove X `{OrderedType X} Y `{PartialOrder Y} (m m':Map [X, Y]) x
+  : leMap m m'
+    -> leMap (remove x m) (remove x m').
+Proof.
+  unfold leMap; intros LE y.
+  specialize (LE y).
+  decide (x === y).
+  - rewrite !MapFacts.remove_eq_o; eauto.
+  - rewrite !MapFacts.remove_neq_o; eauto.
+Qed.
+
+Lemma domain_remove X `{OrderedType X} Y `{PartialOrder Y} (m:Map [X,Y]) x
+  : domain (remove x m) [=] domain m \ singleton x.
+Proof.
+  eapply incl_eq.
+  - hnf; intros.
+    cset_tac'.
+    eapply find_domain.
+    rewrite !MapFacts.remove_neq_o; eauto.
+    eapply domain_find in H2; dcr; congruence.
+  - hnf; intros.
+    eapply domain_find in H1; dcr.
+    decide (x === a).
+    + rewrite !MapFacts.remove_eq_o in H2; eauto. congruence.
+    + rewrite !MapFacts.remove_neq_o in H2; eauto.
+      eapply find_domain' in H2. cset_tac.
+Qed.
+
+Lemma terminating_Dom_eq_add_some X `{OrderedType X} Y `{PartialOrder Y} U x (NIN:x ∉ U)
+      (TRM:Terminating Y poLt)
+      (T:Terminating ({ X : Map [X, Y] | domain X ⊆ U }) poLt)
+  : forall (y : Y) m p,
+    find x m === ⎣ y ⎦ ->
+    terminates poLt (exist (fun X0 : Map [X, Y] => domain X0 [<=] {x; U}) m p).
+Proof.
+  intros y m pr FEQ.
+  pose proof (TRM y).
+  revert dependent m.
+  induction H1; intros.
+
+  assert (RD:domain (remove x m) ⊆ U). {
+    rewrite domain_remove; eauto. cset_tac.
+  }
+  specialize (T (exist _ (remove x m) RD)).
+  remember_arguments T. revert dependent m.
+  induction T; intros; clear_trivial_eqs.
+
+  econstructor; intros [m' d'] [LE1 LE2]. simpl in *.
+
+  decide (poLt (find x m) (find x m')).
+  - rewrite FEQ in p. destruct p as [p1 p2]. inv p1.
+    eapply H2; eauto.
+    split; eauto. rewrite <- H6 in *. clear_trivial_eqs.
+    intro; eapply p2; eauto. econstructor; eauto.
+    rewrite H6; eauto.
+  - assert (RD':domain (remove x m') ⊆ U). {
+      rewrite domain_remove; eauto. cset_tac.
+    }
+    eapply H4; try reflexivity. instantiate (1:=RD').
+    split; simpl.
+    + eapply leMap_remove; eauto.
+    + intro.
+      specialize (LE1 x).
+      eapply not_poLt_poLe_poEq in n; eauto.
+      eapply LE2.
+      hnf; intros.
+      decide (x1 === x). rewrite e. eauto.
+      specialize (H5 x1). lud.
+      rewrite !MapFacts.remove_neq_o in H5; eauto.
+    + specialize (LE1 x).
+      rewrite FEQ in *.
+      inv LE1.  econstructor.
+      eapply poLe_antisymmetric; eauto.
+      decide (y ⊑ x0); eauto.
+      exfalso. eapply n.
+      rewrite <- H6. split; try econstructor. eauto.
+      intro. eapply n0. inv H5. rewrite H10. eauto.
+Qed.
+
+Lemma terminating_Dom_eq_add_none X `{OrderedType X} Y `{PartialOrder Y} U x (NIN:x ∉ U)
+      (TRM:Terminating Y poLt)
+      (TA:Terminating ({ X : Map [X, Y] | domain X ⊆ U }) poLt)
+  : forall m p,
+    find x m = None ->
+    terminates poLt (exist (fun X0 : Map [X, Y] => domain X0 [<=] {x; U}) m p).
+Proof.
+  intros m pr FEQ.
+  assert (RD:domain m ⊆ U). {
+    eapply not_find_domain in FEQ. cset_tac.
+  }
+  pose proof (TA (exist _ m RD)) as T.
+  remember_arguments T. revert dependent m.
+  induction T; intros; clear_trivial_eqs.
+
+  econstructor; intros [m' d'] [LE1 LE2]. simpl in *.
+
+  decide (poLt (find x m) (find x m')).
+  - rewrite FEQ in p. destruct p as [p1 p2].
+    case_eq (find x m').
+    + intros.
+      eapply terminating_Dom_eq_add_some; eauto.
+      rewrite H3; eauto.
+    + intros.
+      assert (RD':domain m' ⊆ U). {
+        eapply not_find_domain in H3. cset_tac.
+      }
+      eapply H2; eauto. instantiate (1:=RD').
+      split; eauto.
+  - pose proof (LE1 x) as LE1x.
+    eapply not_poLt_poLe_poEq in n; eauto.
+    rewrite FEQ in n. inv n.
+    symmetry in H3.
+    assert (RD':domain m' ⊆ U). {
+      eapply not_find_domain in H3. cset_tac.
+    }
+    eapply H2; eauto.
+    + instantiate (1:=RD'). split; simpl; eauto.
+Qed.
+
+Lemma terminating_Dom_eq_add X `{OrderedType X} Y `{PartialOrder Y} U x (NIN:x ∉ U)
+      (TRM:Terminating Y poLt)
+      (T:Terminating ({ X : Map [X, Y] | domain X ⊆ U }) poLt)
+  : Terminating ({ X : Map [X, Y] | domain X ⊆ {x; U} }) poLt.
+Proof.
+  hnf; intros [m d].
+  case_eq (find x m).
+  - intros.
+    eapply terminating_Dom_eq_add_some; eauto.
+    rewrite H1; eauto.
+  - intros.
+    eapply terminating_Dom_eq_add_none; eauto.
+Qed.
+
+Lemma terminates_bound_inv X `{OrderedType X} Y `{PartialOrder Y} (P P':Map [X, Y] -> Prop)
+      (IMPL: forall x, P' x -> P x )
+      (x: Map [X, Y]) (px:P x) (py:P' x)
+  : terminates (@poLt { x : Map [X, Y] | P x } _ ) (exist _ x px)
+    -> terminates (@poLt { x : Map [X, Y] | P' x } _ ) (exist _ x py).
+Proof.
+  intros T.
+  general induction T.
+  econstructor; intros [] [LE1 LE2]; simpl in *.
+  eapply H2; eauto. instantiate (1:=IMPL x p).
+  split; eauto.
+Qed.
+
+Lemma terminating_bound_inv X `{OrderedType X} Y `{PartialOrder Y} (P P':Map [X, Y] -> Prop)
+      (IMPL: forall x, P' x -> P x )
+  : Terminating ({ x : Map [X, Y] | P x }) poLt
+    -> Terminating ({ x : Map [X, Y] | P' x }) poLt.
+Proof.
+  intros T. hnf; intros [x p].
+  eapply terminates_bound_inv; eauto.
+  Unshelve. eauto.
+Qed.
 
 
+Lemma terminating_Dom X `{OrderedType X} Y `{PartialOrder Y} U
+      (TRM:Terminating Y poLt)
+  : Terminating ({ X : Map [X, Y] | domain X ⊆ U }) poLt.
+Proof.
+  pattern U.
+  eapply set_induction; intros.
+  - eapply empty_is_empty_1 in H1.
+    hnf; intros [m d].
+    econstructor; intros [m' d'] [LE1 LE2].
+    simpl in *.
+    exfalso. eapply LE2. hnf; intros.
+    eapply eq_domain_find; intros.
+    cset_tac.
+  - eapply terminating_bound_inv.
+    instantiate (1:=fun x0 => domain x0 ⊆ {x; s}); simpl.
+    cset_tac.
+    eapply terminating_Dom_eq_add; eauto.
+Qed.
 
 Require Import MapNotations ListUpdateAt Subterm.
 
@@ -688,8 +970,8 @@ Qed.
 Require Import Terminating OptionR.
 
 
-Lemma leDom_op_eval e a b
-  : leDom a b
+Lemma leMap_op_eval e a b
+  : leMap a b
     -> poLe (op_eval (domenv a) e) (op_eval (domenv b) e).
 Proof.
   general induction e; simpl; eauto using @fstNoneOrR, @withTop_le.
@@ -841,11 +1123,6 @@ Proof.
     + rewrite not_get_nth_default; eauto.
 Qed.
 
-Lemma terminating_Dom
-  : Terminating.Terminating Dom poLt.
-Proof.
-  unfold Dom.
-Admitted.
 
 Definition constant_propagation_analysis :=
   makeForwardAnalysis _ _ _ constant_propagation_transform transf_mon
