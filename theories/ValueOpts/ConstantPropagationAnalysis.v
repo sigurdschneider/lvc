@@ -1,4 +1,4 @@
-Require Import CSet Le.
+Require Import CSet Le CMap CMapDomain CMapPartialOrder CMapJoinSemiLattice.
 
 Require Import Plus Util AllInRel CSet OptionR.
 Require Import Val Var Env IL Annotation Infra.Lattice DecSolve.
