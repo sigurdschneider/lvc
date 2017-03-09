@@ -36,8 +36,8 @@ Instance restr_morphism
 Proof.
   unfold Proper, respectful; intros.
   destruct x0,y0; unfold restr;
-  repeat cases; try econstructor;
-  inv H0; eauto; cset_tac.
+    repeat cases; try econstructor; eauto with cset;
+  cset_tac.
 Qed.
 
 Instance restr_morphism_eq

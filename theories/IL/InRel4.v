@@ -65,7 +65,7 @@ Lemma mutual_approx k {A1 A2 A3 A4} {B} `{BlockType B} {C} `{BlockType C}
     -> mutual_block (R AL1 AL2 AL3 AL4 L1 L2) k AL1' AL2' AL3' AL4' F1 F2.
 Proof.
   intros. length_equify.
-  general induction H1; inv H2; inv H3; inv H4; inv H5; eauto using @mutual_block.
+  general induction H1; eauto using @mutual_block.
   econstructor; eauto using get. eapply IHlength_eq; eauto 20 using get.
   intros. exploit H7. econstructor 2. eauto. omega.
   intros. exploit H8. econstructor 2. eauto. omega.
@@ -89,7 +89,7 @@ Lemma inRel_less {A1 A2 A3 A4:Type} {B} `{BlockType B} {C} `{BlockType C}
       AL1 AL2 AL3 AL4 (L:list B) (L':list C) n b
 : inRel R AL1 AL2 AL3 AL4 L L' -> get L n b -> block_n b <= n.
 Proof.
-  intros. general induction H1. inv H2; eauto.
+  intros. general induction H1.
   eapply get_app_cases in H3; destruct H3; dcr.
   erewrite mutual_block_zero; eauto. omega.
   rewrite IHinRel; try eapply H4. omega.

@@ -27,6 +27,15 @@ Ltac isabsurd :=
               end)
   end.
 
+Smpl Add 100
+     match goal with
+     | [ H : get ?L ?n _, H' : (forall _, get ?L ?n _ -> False) |- _ ] =>
+       exfalso; eapply H'; eapply H
+     | [ H : get nil _ _ |- _ ] => exfalso; inv H
+     | [ H : get _ 0 _ |- _ ] => invc H
+     | [ H : get (_ :: _) (S _) _ |- _ ] => invc H
+     end : inv_trivial.
+
 (** Get is informative anyway. *)
 
 Lemma get_getT X (x:X) n L
@@ -45,6 +54,14 @@ Proof.
   intros. general induction X0; eauto using get.
 Qed.
 
+Lemma get_S_inv X L n (x y:X)
+  : get (y :: L) (S n) x
+    -> get L n x.
+Proof.
+  intros; clear_trivial_eqs; eauto.
+Qed.
+
+Hint Immediate get_S_inv.
 
 (** * Properties of get *)
 
@@ -63,13 +80,14 @@ Qed.
 Lemma shift_get X (L:list X) k L1 blk :
   get (L1 ++ L) (length L1+k) blk -> get L k blk.
 Proof.
-  intros. induction L1; simpl; eauto using get. eapply IHL1. simpl in H. inv H. eauto.
+  intros. induction L1; simpl; eauto using get.
 Qed.
 
 Lemma get_app X (L L':list X) k x
   : get L k x -> get (L ++ L') k x.
 Proof.
-  revert k. induction L. inversion 1.
+  revert k.
+  general induction L.
   intros; simpl; inv H; eauto using get.
 Qed.
 
@@ -323,7 +341,7 @@ Lemma map_get X Y (L:list X) (f:X -> Y) n blk Z
   -> get (List.map f L) n Z
   -> Z = f blk.
 Proof.
-  intros. general induction H; simpl in *; inv H0; eauto.
+  intros. general induction H; simpl in *; eauto.
 Qed.
 
 

@@ -264,7 +264,7 @@ Lemma al_sub_RfMf
 Proof.
   intros get_rm get_al H16.
   general induction get_rm;
-    invc get_al; invc H16;
+    try invc get_al; invc H16;
       unfold merge in *; simpl in *; eauto.
   rewrite pf; eauto.
 Qed.
@@ -283,7 +283,7 @@ Lemma al_eq_RfMf
 Proof.
   intros get_rm get_al H16.
   general induction get_rm;
-    invc get_al; invc H16;
+    try invc get_al; invc H16;
       simpl in *; eauto.
 Qed.
 

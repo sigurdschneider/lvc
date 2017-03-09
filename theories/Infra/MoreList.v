@@ -35,7 +35,10 @@ Section ParametricZip.
   Lemma zip_get L L' n (x:X) (y:Y)
   : get L n x -> get L' n y -> get (zip L L') n (f x y).
   Proof.
-    intros. general induction n; inv H; inv H0; simpl; eauto using get.
+    intros. general induction n.
+    - econstructor.
+    - inv H; inv H0; simpl.
+      eauto using get.
   Qed.
 
   Lemma get_zip L L' n (z:Z)
@@ -269,8 +272,8 @@ Lemma list_eq_get {X:Type} (L L':list X) eqA n x
   : list_eq eqA L L' -> get L n x -> exists x', get L' n x' /\ eqA x x'.
 Proof.
   intros. general induction H.
-  inv H0.
-  inv H1. eauto using get.
+  inv H1.
+  eauto using get.
   edestruct IHlist_eq; eauto. firstorder using get.
 Qed.
 
@@ -473,7 +476,8 @@ Qed.
 Lemma zip_get_eq X Y Z (f:X -> Y -> Z) L L' n (x:X) (y:Y)
   : get L n x -> get L' n y -> forall fxy, fxy = f x y -> get (zip f L L') n fxy.
 Proof.
-  intros. general induction n; inv H; inv H0; simpl; eauto using get.
+  intros.
+  general induction n; try inv H; try inv H0; simpl; eauto using get.
 Qed.
 
 Lemma zip_ext_PIR2 X Y Z (f:X -> Y -> Z) X' Y' Z' (f':X'->Y'->Z') (R:Z->Z'->Prop) L1 L2 L1' L2'
@@ -484,7 +488,8 @@ Lemma zip_ext_PIR2 X Y Z (f:X -> Y -> Z) X' Y' Z' (f':X'->Y'->Z') (R:Z->Z'->Prop
   -> PIR2 R (zip f L1 L2) (zip f' L1' L2').
 Proof.
   intros A B C.
-  length_equify. general induction A; inv B; inv C; simpl; eauto 50 using PIR2, get.
+  length_equify.
+  general induction A; simpl; eauto 50 using PIR2, get.
 Qed.
 
 
@@ -766,3 +771,13 @@ Smpl Add
      | [ H : context [ ❬@take ?k ?X ?L ❭ ] |- _ ] =>
        rewrite (@take_length X L k) in H
      end : len.
+
+Instance list_equal_computable X `{@EqDec X eq _}
+: forall (L L':list X), Computable (eq L L').
+Proof.
+  intros. decide (length L = length L').
+  - general induction L; destruct L'; isabsurd; try dec_solve.
+    decide (a = x); try dec_solve.
+    edestruct IHL with (L':=L'); eauto; subst; try dec_solve.
+  - right; intro; subst. eauto.
+Qed.

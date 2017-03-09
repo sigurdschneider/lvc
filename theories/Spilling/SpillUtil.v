@@ -230,12 +230,11 @@ Lemma nth_zip
 .
 Proof.
   intros get_x get_x'.
-  general induction n; destruct L, L';
+  general induction n;
     simpl; eauto; isabsurd;
       inv get_x;
       inv get_x'.
-  - reflexivity.
-  - apply IHn; eauto.
+  - simpl. apply IHn; eauto.
 Qed.
 
 

@@ -65,7 +65,6 @@ Lemma egalize_funs_get F f Zb sb n D s p
 Proof.
   intros GetF GetE nF.
   general induction F.
-  - inv GetF.
   - simpl in *. subst nF. inv GetF.
     + simpl in *.
       repeat let_case_eq. subst. simpl in *. inv GetE. rewrite eq1; eauto.
@@ -86,7 +85,7 @@ Lemma egalize_funs_get2 D n' F L' f Zb sb
                               (length (snd (h (drop (f + 1) F))) + n') sb)) ++
                 L''.
 Proof.
-  intros. general induction f. inv H.
+  intros. general induction f.
   - simpl in *.
     repeat let_pair_case_eq; subst; simpl.
     rewrite <- egalize_funs_length2.

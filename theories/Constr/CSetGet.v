@@ -32,7 +32,6 @@ Lemma incl_list_union {X} `{OrderedType X} (s: set X) L n t u
   -> s ⊆ fold_left union L u.
 Proof.
   intros. general induction L.
-  + inv H0.
   + simpl. inv H0; eauto.
     - eapply list_union_start; cset_tac; intuition.
 Qed.

@@ -112,7 +112,7 @@ Module F.
           left. eexists EvtTau. econstructor. econstructor; eauto.
           orewrite (l' + 0=l'). eauto.
           right; stuck2. rewrite Ldef in H. inv H. get_functional; subst. congruence.
-          right; stuck2. rewrite Ldef in H. inv H. get_functional; subst. congruence.
+          right; stuck2. rewrite Ldef in H. inv H. get_functional; subst.
         * right; stuck2. rewrite Ldef in H. inv H. eauto.
       + right. stuck.
     - right. stuck.
@@ -215,7 +215,7 @@ Module I.
           case_eq (omap (op_eval V) Y); intros;[| now (right; stuck2)].
           left. eexists EvtTau. econstructor. econstructor; eauto.
           right; stuck2. rewrite Ldef in H. inv H. get_functional; subst. congruence.
-          right; stuck2. rewrite Ldef in H. inv H. get_functional; subst. congruence.
+          right; stuck2. rewrite Ldef in H. inv H. get_functional; subst.
         * right; stuck2. rewrite Ldef in H. inv H. eauto.
       + right. stuck.
     - right. stuck.

@@ -75,7 +75,7 @@ Lemma PIR2_ounion {X} `{OrderedType X} (A B C:list (option (set X)))
   -> PIR2 ≽ (zip ounion A B) C.
 Proof.
   intros. length_equify.
-  general induction H0; inv H1; simpl.
+  general induction H0; simpl.
   - econstructor.
   - simpl in *. inv H2; inv H3.
     exploit IHlength_eq; eauto.
@@ -92,7 +92,7 @@ Lemma PIR2_ounion' {X} `{OrderedType X} (A B C:list (option (set X)))
   -> PIR2 ≼ C (zip ounion A B).
 Proof.
   intros. length_equify.
-  general induction H0; inv H1; simpl.
+  general induction H0; simpl.
   - econstructor.
   - simpl in *. inv H2; inv H3.
     exploit IHlength_eq; eauto.
@@ -109,12 +109,12 @@ Lemma PIR2_ounion_AB {X} `{OrderedType X} (A A' B B':list (option (set X)))
   -> PIR2 ≼ (zip ounion A B) (zip ounion A' B').
 Proof.
   intros. length_equify.
-  general induction H0; inv H1; inv H2; simpl; econstructor.
+  general induction H0; simpl; econstructor.
   - inv H3; inv H4.
     inv pf; inv pf0; simpl; try econstructor.
-    destruct y; simpl; eauto. econstructor. cset_tac; intuition.
-    destruct y0; simpl; eauto. econstructor. cset_tac; intuition.
-    cset_tac; intuition.
+    + destruct y; simpl; eauto. econstructor. cset_tac; intuition.
+    + destruct y1; simpl; eauto. econstructor. cset_tac; intuition.
+    + cset_tac; intuition.
   - inv H3; inv H4. eapply IHlength_eq; eauto.
 Qed.
 
@@ -126,7 +126,7 @@ Lemma PIR2_option_eq_Subset_zip {X} `{OrderedType X} (A B C:list (option (set X)
   -> PIR2 (option_eq Subset) C (zip ounion A B).
 Proof.
   intros. length_equify.
-  general induction H0; inv H1; simpl.
+  general induction H0; simpl.
   - econstructor.
   - simpl in *. inv H2; inv H3.
     exploit IHlength_eq; eauto.

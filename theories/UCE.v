@@ -1,5 +1,6 @@
 Require Import CSet Util LengthEq Fresh Take MoreList Filter OUnion AllInRel.
-Require Import IL Annotation LabelsDefined Sawtooth InRel Liveness.Liveness TrueLiveness Reachability.
+Require Import IL Annotation LabelsDefined Sawtooth InRel.
+Require Import Liveness.Liveness TrueLiveness Reachability.
 Require Import Sim SimTactics.
 Require SimI SimF.
 
@@ -165,8 +166,8 @@ Lemma compileF_nil_als_false RL F als (LEN:❬F❭ = ❬als❭)
 Proof.
   length_equify.
   general induction LEN; simpl in *.
-  - isabsurd.
   - destruct x as [Z s]; simpl in *.
+
     cases in H.
     + inv H.
     + inv H0; eauto.

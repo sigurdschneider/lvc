@@ -128,6 +128,14 @@ Proof.
     etransitivity; eauto. rewrite <- H4. eauto.
 Qed.
 
+
+Instance poLt_poLe_iff Dom `{PartialOrder Dom}
+  : Proper (poEq ==> poEq ==> iff) poLt.
+Proof.
+  unfold Proper, respectful, flip, impl; intros.
+  unfold poLt. rewrite H0, H1. reflexivity.
+Qed.
+
 Instance PartialOrder_ann Dom `{PartialOrder Dom}
 : PartialOrder (list Dom) := {
   poLe := PIR2 poLe;
@@ -237,3 +245,22 @@ Proof.
   unfold Proper, respectful; intros.
   inv H1; simpl; eauto.
 Qed.
+
+
+Lemma not_poLt_poLe_poEq X `{PartialOrder X} x y
+  : ~ x ⊏ y -> poLe x y -> x === y.
+Proof.
+  intros.
+  eapply poLe_antisymmetric; eauto.
+  decide_goal; eauto.
+  exfalso. eapply H0. split; eauto.
+  intro. eapply n. rewrite H2. eauto.
+Qed.
+
+Smpl Add 200
+     match goal with
+     | [ H : ?A === ?B |- _ ] => inv_if_ctor H A B
+     | [ H : @poEq _ _ ?A ?B |- _ ] => inv_if_ctor H A B
+     | [ H : @poLe _ _ ?A ?B |- _ ] => inv_if_ctor H A B
+     | [ H : ~ ?a === ?a |- _ ] => exfalso; eapply H; reflexivity
+     end : inv_trivial.

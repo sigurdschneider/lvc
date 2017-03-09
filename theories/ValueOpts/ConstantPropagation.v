@@ -12,15 +12,6 @@ Unset Printing Records.
 
 Require compcert.lib.Integers.
 
-Lemma int_eq_eq x y
-  : int_eq x y -> x = y.
-Proof.
-  unfold int_eq; destruct x,y; simpl; intros; subst.
-  eapply Integers.Int.mkint_eq. reflexivity.
-Qed.
-
-Hint Resolve int_eq_eq.
-
 
 (* None is top *)
 Definition aval := option (withTop val).
@@ -490,7 +481,7 @@ Lemma lookup_list_get (AE:onv aval) Z n x z
   -> get Z n z
   -> x = AE z.
 Proof.
-  intros. general induction H0; simpl in *; inv H; eauto.
+  intros. general induction H0; simpl in *; eauto.
 Qed.
 
 Lemma cp_eqns_freeVars AE lv
@@ -550,12 +541,11 @@ Proof.
   - rewrite lookup_list_map.
     eapply map_get_1. eauto.
   - inv_get.
-    rewrite H4 in H7; simpl in *.
-    inv H7. inv H5. inv_get. simpl.
-    edestruct op_eval_same; eauto; dcr.
+    rewrite H4 in H7; simpl in *; clear_trivial_eqs.
+    edestruct op_eval_same; eauto; dcr; clear_trivial_eqs.
     + rewrite <- INCL.
       eapply incl_list_union. eapply map_get_1; eauto. reflexivity.
-    + rewrite H8. inv H10. econstructor. eauto.
+    + rewrite <- H5. reflexivity.
 Qed.
 
 
@@ -575,15 +565,13 @@ Proof.
   edestruct PIR2_nth_2; eauto; dcr.
   rewrite lookup_list_map.
   eapply map_get_1. eauto. rewrite H4 in *; simpl in *.
-  inv H8; try congruence.
-  - inv H10.
-    edestruct op_eval_same; eauto; dcr.
-    + rewrite <- INCL.
-      eapply incl_list_union. eapply map_get_1; eauto. reflexivity.
-    + hnf; simpl. inv_get. reflexivity.
-    + hnf. simpl. rewrite <- H2.
-      unfold cp_choose_op. inv_get. simpl.
-      econstructor. inv H12. eauto.
+  clear_trivial_eqs.
+  edestruct op_eval_same; eauto; dcr.
+  + rewrite <- INCL.
+    eapply incl_list_union. eapply map_get_1; eauto. reflexivity.
+  + hnf; simpl. inv_get. reflexivity.
+  + hnf. simpl. rewrite <- H2.
+    unfold cp_choose_op. inv_get. simpl. reflexivity.
 Qed.
 
 Lemma cp_eqns_update D x c AE
@@ -621,7 +609,7 @@ Proof.
   - rewrite H1 in H; eauto.
     simpl in *. destruct w; isabsurd.
     edestruct op_eval_same; eauto; dcr.
-    clear_trivial_eqs. inv H4; eauto.
+    clear_trivial_eqs. eauto.
   - rewrite H1 in H. inv H.
 Qed.
 

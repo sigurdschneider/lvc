@@ -2,6 +2,12 @@ Require Import List Coq.Classes.Equivalence Containers.OrderedTypeEx MoreInversi
 
 (** Cast option in the framework of Monad. The code in this file is taken from CompCert. *)
 
+Smpl Add 100
+     match goal with
+     | [ H : @option_eq _ _ ?A ?B |- _ ] => inv_if_one_ctor H A B
+     end : inv_trivial.
+
+
 Notation "⎣ x ⎦" := (Some x) (at level 0, x at level 200).
 Notation "⎣⎦" := (None) (at level 0).
 

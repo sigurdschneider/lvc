@@ -1,6 +1,6 @@
 Require Import Util LengthEq IL InRel RenamedApart LabelsDefined OptionR.
 Require Import Keep Drop Take Restrict SetOperations OUnion.
-Require Import Annotation Liveness.
+Require Import Annotation Liveness.Liveness.
 
 Set Implicit Arguments.
 
@@ -68,10 +68,10 @@ Lemma PIR2_not_in LV x DL AP
 Proof.
   intros LEQ LEN. intros. eapply length_length_eq in LEN.
   general induction n; simpl in *.
-  - inv H; inv H0. invc LEN. simpl in LEQ. invc LEQ.
-    cases in pf; inv pf.
+  - invc LEQ.
+    cases in pf.
     + exfalso; cset_tac; intuition.
     + eauto.
-  - invc H; invc H0. invc LEN. simpl in LEQ. invc LEQ.
+  - inv H; inv H0; inv LEN; simpl in *. invc LEQ.
     eauto.
 Qed.

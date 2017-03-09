@@ -61,7 +61,7 @@ Proof.
   intros LenEq1 LenEq2 LenF1' LenF2' LenAL' GET I1 I2.
   assert (LenAL1:length_eq AL' F1'). subst; eauto using drop_length_stable with len.
   assert (LenAL2:length_eq AL' F2'). subst; eauto using drop_length_stable with len.
-  general induction LenAL1; inv LenAL2; eauto using @mutual_block.
+  general induction LenAL1; eauto using @mutual_block.
   - econstructor; eauto using drop_eq.
     eapply IHLenAL1; eauto using drop_shift_1.
 Qed.
@@ -113,7 +113,7 @@ Lemma inRel_less {A} {B} `{BlockType B} {C} `{BlockType C} R
       (AL:list A) (L:list B) (L':list C) n b
 : inRel R AL L L' -> get L n b -> block_n b <= n.
 Proof.
-  intros. general induction H1. inv H2; eauto.
+  intros. general induction H1.
   eapply get_app_cases in H3; destruct H3; dcr.
   erewrite mutual_block_zero; eauto. omega.
   rewrite IHinRel; try eapply H4. omega.
@@ -129,7 +129,6 @@ Lemma inRel_drop {A} {B} `{BlockType B} {C} `{BlockType C} R
            (drop (n - block_n b) L').
 Proof.
   intros. general induction H1; simpl; eauto.
-  - inv H2.
   - eapply get_app_cases in H3; destruct H3; dcr.
     + exploit (mutual_block_zero H2 H3); eauto.
       rewrite H4. orewrite (n - (n + 0)= 0). simpl; econstructor; eauto.

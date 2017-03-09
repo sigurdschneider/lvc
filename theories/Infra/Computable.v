@@ -103,6 +103,12 @@ Ltac decide_tac P :=
 
 Tactic Notation "decide" constr(P) := decide_tac P.
 
+Tactic Notation "decide_goal" :=
+  match goal with
+    [ |- ?s ] => decide s
+  end.
+
+
 (** Programming with computable Props. *)
 Notation "'if' [ P ] 'then' s 'else' t" :=
   (if (@decision_procedure P _) then s else t) (at level 200, right associativity, format

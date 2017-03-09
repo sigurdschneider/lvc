@@ -38,7 +38,6 @@ Section ParametricOptionMap.
     -> forall n x, get L n x -> { y : Y | get L' n y /\ f x = Some y }.
   Proof.
     intros. general induction L.
-    - isabsurd.
     - simpl in H. monad_inv H.
       eapply get_getT in H0. inv H0.
       + eauto using get.

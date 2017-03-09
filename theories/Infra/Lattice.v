@@ -115,3 +115,11 @@ Proof.
   - intros [a1|] [b1|] [c1|]; simpl; eauto using option_R, join_associative.
   - intros [a|] [b|]; simpl; eauto using fstNoneOrR, join_poLe.
 Defined.
+
+Lemma join_struct T `{JoinSemiLattice T} (a b a' b':T)
+  : a ⊑ a'
+    -> b ⊑ b'
+    -> a ⊔ b ⊑ (a' ⊔ b').
+Proof.
+  intros A B. rewrite A, B. reflexivity.
+Qed.

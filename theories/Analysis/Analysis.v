@@ -355,7 +355,6 @@ Lemma PIR2_fold_zip_join_left X `{JoinSemiLattice X} (A:list X) B C a k
 Proof.
   intros.
   general induction B; simpl in *; eauto.
-  - isabsurd.
   - inv H1.
     + eapply PIR2_fold_zip_join_right.
       intros. rewrite zip_length2; eauto using eq_sym, get.

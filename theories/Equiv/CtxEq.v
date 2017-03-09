@@ -32,7 +32,7 @@ Proof.
     + eapply labenv_sim_app; eauto.
       simpl.
       intros; split; intros; dcr; inv_get; simpl in *; subst; try cases; eauto.
-    + pno_step. edestruct H; eauto. rewrite map_length in H0. inv_get. eauto.
+    + pno_step. edestruct H; eauto. rewrite map_length in H0. inv_get.
   - pno_step.
   - pone_step. left.
     eapply (IH s); eauto with len.

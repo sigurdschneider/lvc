@@ -18,6 +18,15 @@ Ltac inv_eqs :=
 
 Smpl Create inv_trivial [progress].
 
+Ltac inv_if_ctor H A B :=
+  let A' := eval hnf in A in
+      let B' := eval hnf in B in
+          is_constructor_app A'; is_constructor_app B'; inversion H; subst.
+
+Ltac inv_if_one_ctor H A B :=
+  first [ is_constructor_app A; inversion H; subst; clear H
+        | is_constructor_app B; inversion H; subst; clear H ].
+
 Ltac inv_trivial_base :=
   match goal with
   | [ H : @eq _ ?x ?x |- _ ] => clear H
@@ -35,16 +44,14 @@ Ltac inv_trivial_base :=
                                   | _ => inversion H; subst
                                   end
                                 ]*)
-  | [ H : ?A = ?B |- _ ] =>
-    let A' := eval hnf in A in
-        let B' := eval hnf in B in
-            is_constructor_app A'; is_constructor_app B'; inversion H; subst
+  | [ H : ?A = ?B |- _ ] => inv_if_ctor H A B
   | [ H : ?n <= 0 |- _ ] => is_var n; inversion H; subst; clear H
   | [ H : @eq _ (Some ?x) (Some ?y) |- _ ]
     => let H' := fresh "H" in assert (H':x = y) by congruence; clear H;
                             first [ is_var x; subst x; clear H'
                                   | is_var y; subst y; clear H'
                                   | rename H' into H ]
+  | [ H : ?a <> ?a |- _ ] => exfalso; eapply H; reflexivity
   end.
 
 Smpl Add inv_trivial_base : inv_trivial.

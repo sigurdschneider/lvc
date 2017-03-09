@@ -21,7 +21,6 @@ Lemma keep_None X n m AP (x:option X)
 Proof.
   intros. edestruct (mapi_get _ _ H) as [y [A B]].
   cases in B.
-  - exfalso; eauto.
   - congruence.
 Qed.
 

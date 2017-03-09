@@ -53,10 +53,10 @@ Proof.
     econstructor; intros; try solve [congruence];
       eauto using @PIR2_zip_join_inv_left, @PIR2_zip_join_inv_right; simpl; eauto.
   - edestruct get_in_range; eauto.
-    edestruct get_in_range; try eapply H3; eauto.
+    edestruct get_in_range; try eapply H4; eauto.
     Transparent poLe. hnf in H.
     edestruct PIR2_nth; eauto using ListUpdateAt.list_update_at_get_3; dcr.
-    econstructor; simpl; eauto. inv EQ. eauto.
+    econstructor; simpl; eauto.
   - econstructor.
   - invc EQ. simpl_forward_setTopAnn.
     revert H2 H16 H16 H15.

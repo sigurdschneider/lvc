@@ -43,7 +43,7 @@ Lemma argsLive_live_exp_sound lv blv Y Z y z n
     -> z ∈ blv
     -> live_op_sound y lv.
 Proof.
-  intros. general induction n; inv H0; inv H1; inv H; intuition; eauto.
+  intros. general induction n; invt argsLive; isabsurd; eauto.
 Qed.
 
 Lemma live_exp_sound_argsLive lv blv Y Z

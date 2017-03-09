@@ -228,33 +228,7 @@ Proof.
   destruct s; simpl; eauto with typeclass_instances.
 Defined.
 
-Lemma poLe_opt_inv T H a b
-  : @poLe (option T) (@PartialOrder_option_fstNoneOrR T H)
-          (@Some T a) (@Some T b)
-    -> poLe a b.
-Proof.
-  inversion 1; eauto.
-Qed.
 
-
-Smpl Add
-     match goal with
-     | [ H : @poLe (option ?T) (@PartialOrder_option_fstNoneOrR ?T ?H')
-                   (@Some ?T ?a) (@Some ?T ?b) |- _ ] =>
-       eapply (@poLe_opt_inv T H' a b) in H
-     | [ H : @poLe (option ?T) (@PartialOrder_option_fstNoneOrR ?T ?H')
-                   (@Some ?T ?a) None |- _ ] =>
-       exfalso; inv H
-     end : inv_trivial.
-
-
-Lemma join_struct T `{JoinSemiLattice T} (a b a' b':T)
-  : a ⊑ a'
-    -> b ⊑ b'
-    -> a ⊔ b ⊑ (a' ⊔ b').
-Proof.
-  intros A B. rewrite A, B. reflexivity.
-Qed.
 
 Lemma fold_left_join_struct T `{JoinSemiLattice T} (A A':list T) (b b':T)
   : PIR2 poLe A A'
@@ -307,12 +281,6 @@ Proof.
   intros. eapply PIR2_get; intros; inv_get; eauto with len.
   eapply bottom_least.
 Qed.
-
-
-Ltac inv_if_ctor H A B :=
-  let A' := eval hnf in A in
-      let B' := eval hnf in B in
-          is_constructor_app A'; is_constructor_app B'; inv H.
 
 Smpl Add 100 match goal with
              | [ H : ?A === ?B |- _ ] => inv_if_ctor H A B

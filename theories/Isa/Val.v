@@ -182,6 +182,21 @@ hnf; intros. destruct x,y.
 eapply Z.eq_dec.
 Defined.
 
+Lemma int_eq_eq x y
+  : int_eq x y -> x = y.
+Proof.
+  unfold int_eq; destruct x,y; simpl; intros; subst.
+  eapply Integers.Int.mkint_eq. reflexivity.
+Qed.
+
+Hint Resolve int_eq_eq.
+
+Smpl Add 100
+     match goal with
+     | [ H : int_eq _ _ |- _ ] => eapply int_eq_eq in H
+     end : inv_trivial.
+
+
 
 Instance OrderedType_int : OrderedType int.
 Proof.
@@ -256,7 +271,6 @@ Lemma binop_eval_div_nonzero x y
     -> exists v, binop_eval BinOpDiv x y = Some v.
 Proof.
   intros; simpl; cases; eauto.
-  exfalso; eauto.
 Qed.
 
 Lemma binop_eval_not_div op x y
@@ -271,8 +285,8 @@ Definition unop_eval (o:unop) :=
   match o with
   | UnOpToBool => option_lift1 (fun a => bool2val(val2bool a))
   | UnOpNeg => option_lift1 Int.notbool
-  end.
-
+  end
+.
 Lemma unop_eval_total op x
   : exists v, unop_eval op x = Some v.
 Proof.
@@ -311,3 +325,9 @@ Opaque val_true.
 Opaque val_false.
 Opaque val_zero.
 Opaque val2bool.
+
+Lemma int_eq_true_false_absurd
+  : int_eq val_true val_false -> False.
+Proof.
+  intros. eapply int_eq_eq in H. inv H.
+Qed.

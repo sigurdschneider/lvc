@@ -180,8 +180,10 @@ Lemma szip_get X Y Z (f:X->Y-> status Z) A B C n a b c
     -> f a b = Success c.
 Proof.
   intros EQ GetA GetB GetC.
-  general induction GetA; inv GetB; inv GetC; simpl in *;
-    monadS_inv EQ; eauto.
+  general induction GetA.
+  - simpl in *. monadS_inv EQ; eauto.
+  - simpl in *. inv GetB; simpl in *.
+    monadS_inv EQ. eapply IHGetA; eauto.
 Qed.
 
 Inductive status_eq {A} (eqA : relation A) : status A -> status A -> Prop :=

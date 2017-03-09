@@ -73,7 +73,7 @@ Lemma regAssign_renamedApart_agreeF c G F ans als ϱ ϱ'
     agree_on eq (G \ G') (findt ϱ 0) (findt ϱ' 0).
 Proof.
  intros G' INCL.
- length_equify. general induction LEN1; inv LEN2; simpl in * |- *; try monadS_inv allocOK; eauto.
+ length_equify. general induction LEN1; simpl in * |- *; try monadS_inv allocOK; eauto.
  exploit IHLEN1; eauto using get.
  - etransitivity; try eapply INCL.
    norm_lunion. eauto with cset.
@@ -158,7 +158,7 @@ Lemma regAssignF_get p G F ans alv n Zs a ϱ ϱ' an ZL Lv i D Dt lv
 
 Proof.
   intros EQ REN LV LVINC DDISJ FUNC PWDISJ GET1 GET2 GET3 incl.
-  general induction GET1; inv GET2; inv GET3; simpl in * |- *; monadS_inv EQ; eauto.
+  general induction GET1; try inv GET2; try inv GET3; simpl in * |- *; monadS_inv EQ; eauto.
   - exploit (IHGET1 p G); hnf; intros; eauto using get; dcr.
     do 2 eexists; split; eauto. split; eauto.
     etransitivity; eapply agree_on_incl; [ | reflexivity | eassumption | eauto ].

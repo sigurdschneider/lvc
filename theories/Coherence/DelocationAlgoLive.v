@@ -68,7 +68,7 @@ Proof.
       exploit (@computeParameters_LV_DL (fst ⊝ F ++ ZL) (getAnn ⊝ als ++ Lv) (tab {}  ‖F‖ ++ AP));
         eauto using PIR2_Subset_tab_extend with len.
       exploit computeParametersF_LV_DL; try rewrite <- zip_app; eauto with len.
-      eapply PIR2_nth in H13; eauto. dcr; inv_get. inv H17.
+      eapply PIR2_nth in H13; eauto. dcr; inv_get.
       split.
       rewrite H15. clear_all; cset_tac.
       edestruct H2; eauto.
@@ -76,9 +76,9 @@ Proof.
       eapply nodup_to_list_eq.
       intros.
       rewrite InA_In_eq in H18. rewrite InA_in in H18.
-      rewrite InA_In_eq in H19. rewrite InA_in in H19.
-      rewrite of_list_3 in H19.
-      revert H15 H18 H19. clear_all. cset_tac.
+      rewrite InA_In_eq in H17. rewrite InA_in in H17.
+      rewrite of_list_3 in H18.
+      revert H15 H17 H18. clear_all. cset_tac.
     + intros. inv_get.
       exploit H1; eauto using pair_eta, PIR2_Subset_tab_extend with len.
       eapply additionalParameters_live_monotone; try eapply H9; eauto.

@@ -242,9 +242,10 @@ Proof.
   eapply length_length_eq in LC.
   eapply length_length_eq in LC'.
   eapply length_length_eq in LC''.
-  general induction LC; simpl; eauto.
-  - inversion LC'; subst x0 XL0. inv LC''.
-    simpl in *; injection LL. injection H2; intros.
+  revert_except LC.
+  induction LC; simpl; intros; eauto.
+  - inversion LC'; subst x0 XL0 X. inv LC''.
+    simpl in *; injection LL. injection H0; intros.
     subst y0 YL0.
     erewrite EC'; eauto using envCorr_update.
 Qed.
@@ -260,7 +261,7 @@ Lemma envCorr_update_list bra bira block_E block_E' block_Z block_Z' ra ira
 Proof.
   eapply length_length_eq in LC.
   eapply length_length_eq in LC'.
-  general induction LC; inv LC'; simpl; eauto.
+  general induction LC; simpl; eauto.
   eapply envCorr_update; eauto.
 Qed.
 

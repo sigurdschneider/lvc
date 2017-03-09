@@ -122,10 +122,10 @@ Section MapUpdateList.
   Proof.
     intros. eapply length_length_eq in H2.
     general induction XL; simpl in * |- *.
-    rewrite (@minus_empty _ _ lv) in H1; eauto.
-    inv H2. eapply agree_on_update_same. eapply H0; eauto.
-    eapply IHXL; eauto.
-    eapply agree_on_incl; eauto. cset_tac; intuition.
+    - rewrite (@minus_empty _ _ lv) in H1; eauto.
+    - eapply agree_on_update_same. reflexivity.
+      eapply IHXL; eauto.
+      eapply agree_on_incl; eauto. cset_tac; intuition.
   Qed.
 
   Lemma update_with_list_agree_preserve lv (E E':X -> Y) XL YL

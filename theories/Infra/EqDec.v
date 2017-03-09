@@ -120,7 +120,7 @@ Tactic Notation "cases" :=
     let EQ := fresh "Heq" in
     let b := fresh "b" in
     remember P as b eqn:EQ; destruct b
-  end.
+  end; try clear_trivial_eqs.
 
 Extraction Inline sum_option.
 

@@ -39,7 +39,6 @@ Lemma to_partial_to_total (E:onv val) x v
 Proof.
   intros.
   unfold to_partial, to_total. cases; eauto.
-  inv H.
 Qed.
 
 (** Define what uninterpreted function symbols are **)

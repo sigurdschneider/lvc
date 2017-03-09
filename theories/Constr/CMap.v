@@ -57,3 +57,28 @@ Proof.
       repeat rewrite MapFacts.add_eq_o; eauto.
       repeat rewrite MapFacts.add_neq_o; eauto.
 Qed.
+
+
+Lemma InA_eq_key_elt X `{OrderedType X} Y (x:X) (y:Y) L
+  : InA eq_key_elt (x, y) L
+    -> InA _eq x (fst ⊝ L).
+Proof.
+  intros IN.
+  general induction IN; simpl.
+  - inv H0; simpl in *; subst.
+    econstructor; eauto.
+  - econstructor 2; eauto.
+Qed.
+
+
+Lemma findA_get A B (L:list (A * B)) f v
+  : findA f L = Some v
+    -> exists x n, get L n x /\ snd x = v /\ f (fst x).
+Proof.
+  general induction L; simpl; eauto.
+  - simpl in H. destruct a. cases in H.
+    + inv H.
+      eexists (a,v). eexists 0. repeat split; eauto using get.
+    + edestruct IHL as [? [? ]]; dcr; eauto.
+      do 2 eexists; eauto using get.
+Qed.

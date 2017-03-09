@@ -30,13 +30,10 @@ fi
 
 coq_ver=$(${COQBIN}coqc -v 2>/dev/null | sed -n -e 's/The Coq Proof Assistant, version \([^ ]*\).*$/\1/p')
 case "$coq_ver" in
-  8.5pl2)
-		;;
   8.6*)
-    echo "Warning: You are using an unsupported Coq version"
 		;;
 	*)
-    echo "Error: Need Coq 8.5pl2"
+    echo "Error: Need Coq 8.6"
 		exit 1
 esac
 echo "Found Coq version $coq_ver."

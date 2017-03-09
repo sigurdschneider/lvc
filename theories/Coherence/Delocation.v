@@ -153,7 +153,7 @@ Lemma fst_compileF_eq ZL F Za Za' ans
 Proof.
   length_equify.
   unfold compileF.
-  general induction LEN1; inv LEN2; simpl; eauto using PIR2.
+  general induction LEN1; simpl; eauto using PIR2.
   - f_equal. eauto.
 Qed.
 

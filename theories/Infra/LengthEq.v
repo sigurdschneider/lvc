@@ -1,4 +1,4 @@
-Require Import Arith Coq.Lists.List Setoid Coq.Lists.SetoidList Omega.
+Require Import Arith MoreInversion Coq.Lists.List Setoid Coq.Lists.SetoidList Omega.
 Require Import Len.
 (*Require Import EqDec AutoIndTac.*)
 
@@ -7,6 +7,12 @@ Set Implicit Arguments.
 Inductive length_eq X Y : list X -> list Y -> Type :=
   | LenEq_nil : length_eq nil nil
   | LenEq_cons x XL y YL : length_eq XL YL -> length_eq (x::XL) (y::YL).
+
+Smpl Add 100
+     match goal with
+     | [ H : @length_eq _ _ ?L ?L' |- _ ]
+       => inv_if_one_ctor H L L'
+     end : inv_trivial.
 
 Lemma length_eq_refl X (XL:list X)
   : length_eq XL XL.

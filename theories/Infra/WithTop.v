@@ -100,6 +100,26 @@ Proof.
   - eapply withTop_le_refl.
 Defined.
 
+Lemma withTop_poLe_inv A R `{EqDec A R} (a b:A)
+  : poLe (wTA a) (wTA b)
+    -> a === b.
+Proof.
+  intros. inv H0. eapply H3.
+Qed.
+
+Smpl Add 100 match goal with
+             | [ H : @poLe _ _ (wTA _) (wTA _) |- _ ] =>
+               eapply withTop_poLe_inv in H
+             | [ H : @poLe _ _ Top _ |- _ ] => invc H
+             | [ H : @poLe _ _ _ (wTA _) |- _ ] => invc H
+             | [ H : @poEq _ _ Top _ |- _ ] => invc H
+             | [ H : @poEq _ _ _ Top |- _ ] => invc H
+             | [ H : @poEq _ _ _ (wTA _) |- _ ] => invc H
+             | [ H : @poEq _ _ (wTA _) _ |- _ ] => invc H
+             | [ H : @withTop_le _ _ _ _ _ _ |- _ ] => invc H
+             end : inv_trivial.
+
+
 Definition withTop_generic_join A R `{EqDec A R} (a b:withTop A) :=
   match a, b with
   | Top, _ => Top
@@ -147,11 +167,10 @@ Proof.
   unfold Proper, respectful; intros.
   destruct x,y,x0,y0; simpl; eauto using withTop_eq;
     repeat (cases; simpl); eauto using withTop_eq;
-      clear_trivial_eqs; try inv H1.
-  - exfalso. eapply NOTCOND. inv H0.
-    rewrite <- H5. rewrite COND. eauto.
-  - exfalso. eapply NOTCOND. inv H0. rewrite H5.
-    rewrite COND. symmetry. eauto.
+      clear_trivial_eqs.
+  - exfalso. eapply NOTCOND.
+    rewrite <- H3, <- H4. eauto.
+  - exfalso. eapply NOTCOND. rewrite H4, H3. eauto.
 Qed.
 
 Instance withTop_generic_join_poLe A R `{EqDec A R}
@@ -160,11 +179,7 @@ Proof.
   unfold Proper, respectful; intros.
   destruct x,y,x0,y0; simpl; eauto using withTop_le;
     repeat (cases; simpl); eauto using withTop_le.
-  - inv H1.
-  - exfalso. eapply NOTCOND.
-    invc H0; invc H1.
-    hnf in *. rewrite H3.
-    rewrite H4. eauto.
+  - exfalso. eapply NOTCOND. rewrite H0, H1. eauto.
 Qed.
 
 Instance withTop_JSL A R `{EqDec A R} : JoinSemiLattice (withTop A) :=
@@ -196,6 +211,12 @@ Qed.
 Inductive withUnknown_eq A R `{EqDec A R} : withUnknown A -> withUnknown A -> Prop :=
 | WithUnknownEq_refl a b : R a b -> withUnknown_eq (Known a) (Known b)
 | WithUnknownEq_top : withUnknown_eq Unknown Unknown.
+
+
+Smpl Add 100 match goal with
+             | [ H : Known _ === Known _ |- _ ] => invc H
+             | [ H : withUnknown_eq _ _ |- _ ] => invc H
+             end : inv_trivial.
 
 Lemma withUnknownEq_refl_sym A `{PartialOrder A} a b
   : poEq a b -> withUnknown_eq (Known b) (Known a).

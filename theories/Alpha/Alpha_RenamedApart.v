@@ -139,7 +139,7 @@ Lemma alpha_rho_agrees_snd2_F F F' ans ϱ ϱ' D
     -> agree_on eq D (alpha_rho_F alpha_rho ϱ F F') (alpha_rho_F alpha_rho ϱ' F F').
 Proof.
   intros AR LENF RA LEN1 LEN2 AGR. length_equify.
-  general induction LEN1; inv LEN2; simpl in *; eauto using agree_on_incl with cset.
+  general induction LEN1; simpl in *; eauto using agree_on_incl with cset.
   - destruct x as [Z u], y0 as [Z' u']; eauto.
     eapply IHLEN1; eauto using get.
     + rewrite list_union_start_swap in AGR.
@@ -213,7 +213,7 @@ Lemma alpha_rho_agree_F_get D F F' ans ϱ ϱ' n Z Z' u u'
 
 Proof.
   intros RA ZLEN LEN1 LEN2 AGR GetF GetF'. length_equify.
-  general induction LEN1; inv LEN2; simpl; [ isabsurd|]; inv GetF; inv GetF'.
+  general induction LEN1; simpl; inv GetF; inv GetF'.
   - simpl in *.
     + exploit RA; eauto using get; simpl in *.
       eapply alpha_rho_agree_F; eauto using get, alpha_rho_agree with len.

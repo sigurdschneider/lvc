@@ -144,7 +144,7 @@ Lemma posOfTrue_countTrue L (n:nat)
 : get L n true
   -> posOfTrue (countTrue (take n L)) L = n.
 Proof.
-  intros. general induction L; [ isabsurd |].
+  intros. general induction L.
   - invc H; simpl; eauto.
     cases; f_equal; eauto.
 Qed.
