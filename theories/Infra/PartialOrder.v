@@ -259,8 +259,8 @@ Qed.
 
 Smpl Add 200
      match goal with
-     | [ H : ?A === ?B |- _ ] => inv_if_ctor H A B
-     | [ H : @poEq _ _ ?A ?B |- _ ] => inv_if_ctor H A B
-     | [ H : @poLe _ _ ?A ?B |- _ ] => inv_if_ctor H A B
+     | [ H : ?A === ?B |- _ ] => inv_if_ctor H A B; clear H
+     | [ H : @poEq _ _ ?A ?B |- _ ] => inv_if_ctor H A B; clear H
+     | [ H : @poLe _ _ ?A ?B |- _ ] => inv_if_ctor H A B; clear H
      | [ H : ~ ?a === ?a |- _ ] => exfalso; eapply H; reflexivity
      end : inv_trivial.

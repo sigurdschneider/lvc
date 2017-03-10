@@ -1,62 +1,7 @@
-Require Import CMap MoreList.
+Require Import CMap MoreList MapNotations.
 
 Definition domain {X} `{OrderedType X} {Y} (d:Map [X, Y])
 : set X := of_list (List.map fst (elements d)).
-
-(*
-Lemma domain_join (d d':Dom)
-: domain (map2 join' d d') [=] domain d ∪ domain d'.
-Proof.
-  unfold domain. split; intros.
-  - eapply of_list_1 in H.
-    eapply InA_map_inv with (R':=eq_key_elt) in H; eauto.
-    destruct H; dcr. destruct x. simpl in *; subst.
-    assert (IN:In n (map2 join d d')). {
-      rewrite MapFacts.elements_in_iff; eauto.
-    }
-    eapply map2_2 in IN.
-    destruct IN; eauto.
-    + eapply MapFacts.elements_in_iff in H; dcr.
-      eapply InA_eq_key_elt in H1. cset_tac.
-    + eapply MapFacts.elements_in_iff in H; dcr.
-      eapply InA_eq_key_elt in H1. cset_tac.
-  - eapply of_list_1.
-    cset_tac'.
-    + eapply of_list_1 in H0.
-      eapply InA_map_inv with (R':=eq_key_elt) in H0; eauto.
-      destruct H0; dcr. destruct x. simpl in *; subst.
-      assert (IN:In n d). {
-        rewrite MapFacts.elements_in_iff; eauto.
-      }
-      eapply of_list_1.
-      enough (exists y, InA eq_key_elt (n,y) (elements (map2 join d d'))). {
-        dcr. eapply InA_eq_key_elt; eauto.
-      }
-      eapply MapFacts.elements_in_iff.
-      rewrite MapFacts.in_find_iff.
-      rewrite map2_1; eauto.
-      eapply MapFacts.in_find_iff in IN.
-      destruct (find n d); simpl in *; isabsurd.
-      repeat cases; eauto; discriminate.
-    + eapply of_list_1 in H0.
-      eapply InA_map_inv with (R':=eq_key_elt) in H0; eauto.
-      destruct H0; dcr. destruct x. simpl in *; subst.
-      assert (IN:In n d'). {
-        rewrite MapFacts.elements_in_iff; eauto.
-      }
-      eapply of_list_1.
-      enough (exists y, InA eq_key_elt (n,y) (elements (map2 join d d'))). {
-        dcr. eapply InA_eq_key_elt; eauto.
-      }
-      eapply MapFacts.elements_in_iff.
-      rewrite MapFacts.in_find_iff.
-      rewrite map2_1; eauto.
-      eapply MapFacts.in_find_iff in IN.
-      destruct (find n d'); simpl in *; isabsurd.
-      destruct (find n d); simpl; repeat cases; eauto; subst;
-        discriminate.
-Qed.
- *)
 
 
 Lemma not_domain_find {X} `{OrderedType X} {Y} (d:Map [X, Y]) x
@@ -129,4 +74,19 @@ Proof.
     + rewrite !MapFacts.remove_eq_o in H1; eauto. congruence.
     + rewrite !MapFacts.remove_neq_o in H1; eauto.
       eapply find_domain' in H1. cset_tac.
+Qed.
+
+
+Lemma domain_add (X : Type) (H : OrderedType X) (Y : Type) (m : Map [X, Y]) (x : X) v
+  : domain (m [- x <- v -]) [=] {x; domain m}.
+Proof.
+  eapply incl_eq.
+  - hnf; intros. cset_tac'.
+    + eapply find_domain. mlud. congruence.
+    + eapply find_domain. mlud. congruence.
+      eapply domain_find in H1; dcr. congruence.
+  - hnf; intros. cset_tac'.
+    + eapply find_domain.
+      eapply domain_find in H0; dcr.
+      rewrite MapFacts.add_neq_o in H1; try congruence.
 Qed.

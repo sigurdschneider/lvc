@@ -1,7 +1,7 @@
 Require Import CSet Le.
 
 Require Import Plus Util AllInRel Map.
-Require Import CSet Val Var Env IL Sim Fresh Annotation Coherence LabelsDefined DecSolve OptionR.
+Require Import CSet Val Var Env IL Sim Fresh Annotation LabelsDefined DecSolve OptionR.
 
 Require Import RenamedApart SetOperations Eqn ValueOpts Infra.Lattice WithTop.
 
@@ -560,7 +560,7 @@ Proof.
   intros LEQ le_prec INCL.
   hnf. intros. hnf. intros.
 
-  edestruct in_subst_eqns as [? [? []]]; try eapply H0; eauto; dcr; subst.
+  edestruct in_subst_eqns as [? [? []]]; try eapply H0; eauto with len; dcr; subst.
   edestruct map_get_4; eauto; dcr.
   edestruct PIR2_nth_2; eauto; dcr.
   rewrite lookup_list_map.

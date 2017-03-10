@@ -1,7 +1,7 @@
 Require Import CSet Le.
 
 Require Import Plus Util AllInRel Map LengthEq.
-Require Import CSet Val Var Env SimF IL Fresh Annotation Coherence RenamedApart.
+Require Import CSet Val Var Env SimF IL Fresh Annotation RenamedApart.
 
 Require Import SetOperations Liveness.Liveness Eqn OptionR.
 

@@ -1,6 +1,7 @@
 Require Import CSet CMap CMapDomain CMapPartialOrder.
 Require Import Infra.PartialOrder Infra.Lattice Infra.OptionR.
 
+Require Import MapNotations.
 Set Implicit Arguments.
 
 Definition joinMap X `{OrderedType X} Y `{JoinSemiLattice Y}
@@ -100,7 +101,7 @@ Instance map_lower_bounded X `{OrderedType X} Y `{JoinSemiLattice Y}
   }.
 Proof.
   - eapply empty_bottom; eauto.
-Qed.
+Defined.
 
 
 Import Terminating.
@@ -137,4 +138,28 @@ Proof.
   decide (x === y).
   - rewrite !MapFacts.remove_eq_o; eauto.
   - rewrite !MapFacts.remove_neq_o; eauto.
+Qed.
+
+Lemma domain_join X `{OrderedType X} Y `{JoinSemiLattice Y} (d d':Map[X,Y])
+: domain (map2 join d d') [=] domain d ∪ domain d'.
+Proof.
+  split; intros.
+  - eapply domain_find in H2; dcr.
+    rewrite MapFacts.map2_1bis in H3; eauto.
+    revert H3.
+    case_eq (find a d); intros.
+    + eapply find_domain' in H2. cset_tac.
+    + revert H3.
+      case_eq (find a d'); intros; simpl in *;
+        clear_trivial_eqs.
+      * eapply find_domain' in H3. cset_tac.
+  - eapply find_domain.
+    rewrite MapFacts.map2_1bis; eauto.
+    cset_tac'.
+    + eapply domain_find in H4. dcr.
+      rewrite H2 in H3.
+      destruct (find a d'); clear_trivial_eqs.
+    + eapply domain_find in H4. dcr.
+      rewrite H2 in H3.
+      destruct (find a d); clear_trivial_eqs.
 Qed.

@@ -82,3 +82,62 @@ Proof.
     + edestruct IHL as [? [? ]]; dcr; eauto.
       do 2 eexists; eauto using get.
 Qed.
+
+
+Ltac mlookup_eq_tac :=
+  match goal with
+  | [H : ?x === ?x' |- context[@find ?key ?OT ?FM ?elt ?x' (add ?x _ ?m) ] ]
+    => rewrite (@MapFacts.add_eq_o key OT FM _ elt m x x' _ H)
+  | [H : ?x === ?x', H' : context[@find ?key ?OT ?FM ?elt ?x' (add ?x _ ?m) ] |- _ ]
+    => rewrite (@MapFacts.add_eq_o key OT FM _ elt m x x' _ H) in H'
+  | [H : ?x === ?x' |- context[@find ?key ?OT ?FM ?elt ?x' (remove ?x ?m) ] ]
+    => rewrite (@MapFacts.remove_eq_o key OT FM _ elt m x x' H)
+  | [H : ?x === ?x', H' : context[@find ?key ?OT ?FM ?elt ?x' (remove ?x ?m) ]  |- _ ]
+    => rewrite (@MapFacts.remove_eq_o key OT FM _ elt m x x' H) in H'
+  end.
+
+Ltac mlookup_neq_tac :=
+   match goal with
+    | [ H : ~ ?x === ?x' |- context[@find ?key ?OT ?FM ?elt ?x' (add ?x _ ?m)] ]
+      => rewrite (@MapFacts.add_neq_o key OT FM _ elt m x x' _ H)
+    | [ H : ~ ?x === ?x', H' : context[@find ?key ?OT ?FM ?elt ?x' (add ?x _ ?m)] |- _ ]
+      => rewrite (@MapFacts.add_neq_o key OT FM _ elt m x x' _ H) in H'
+    | [ H : ~ ?x === ?x' |- context[@find ?key ?OT ?FM ?elt ?x' (remove ?x ?m)] ]
+      => rewrite (@MapFacts.remove_neq_o key OT FM _ elt m x x' H)
+    | [ H : ~ ?x === ?x', H' : context[@find ?key ?OT ?FM ?elt ?x' (remove ?x ?m)] |- _ ]
+      => rewrite (@MapFacts.remove_neq_o key OT FM _ elt m x x' H) in H'
+   end.
+
+
+Tactic Notation "smplmap" :=
+  repeat (repeat (subst || mlookup_eq_tac || mlookup_neq_tac)).
+
+
+Ltac mlud :=
+  repeat (smplmap ||
+          match goal with
+          | [ x: _, x': _ |- context [@find ?key ?OT ?FM ?elt ?x' (add ?x _ ?m) ] ]
+      =>  match goal with
+          | [H' : x === x' |- _ ] => fail 1
+          | [H' : ~x === x' |- _ ] => fail 1
+          | [H' : x === x' -> False |- _ ] => fail 1
+          | [H' : x =/= x' |- _ ] => fail 1
+          | [ |- _ ] => decide(x === x')
+          end
+    | [ x: _, x': _, H : context[find ?x (add ?x' _ _)] |- _ ]
+      => match goal with
+          | [H' : x === x' |- _ ] => fail 1
+          | [H' : ~x === x' |- _ ] => fail 1
+          | [H' : x === x' -> False |- _ ] => fail 1
+          | [H' : x =/= x' |- _ ] => fail 1
+          | [ |- _ ] => decide(x === x')
+        end
+    | [ x: _, x': _ |- context [find ?x' (remove ?x _)] ]
+      => match goal with
+        | [H' : x === x' |- _ ] => fail 1
+        | [H' : ~x === x' |- _ ] => fail 1
+        | [H' : x === x' -> False |- _ ] => fail 1
+        | [H' : x =/= x' |- _ ] => fail 1
+        | [ |- _ ] => decide(x === x')
+        end
+          end).
