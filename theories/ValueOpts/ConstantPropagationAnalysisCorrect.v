@@ -6,7 +6,7 @@ Require Import ConstantPropagation ConstantPropagationAnalysis.
 
 Local Arguments proj1_sig {A} {P} e.
 Local Arguments length {A} e.
-Local Arguments forward {sT} {Dom} {H} {H0} {H1} ftransform ZL st ST d.
+Local Arguments forward {sT} {Dom} {H} {H0} {H1} ftransform ZL ZLIncl st ST d.
 
 Lemma option_R_inv x y
   : @OptionR.option_R (withTop Val.val) (withTop Val.val)
@@ -20,6 +20,7 @@ Proof.
 Qed.
 
 
+(*
 Lemma cp_forward_agree sT ZL AE G s (ST:subTerm s sT) ra
   (RA:renamedApart s ra)
   : agree_on poLe (G \ snd (getAnn ra))
@@ -52,17 +53,26 @@ Proof.
   - admit.
 
 Qed.
+ *)
 
-Definition cp_sound sT AE Cp ZL s (ST:subTerm s sT)
-  : poEq (forward constant_propagation_transform ZL s ST AE) AE
+Opaque cp_trans_domain'.
+
+Definition cp_sound sT AE Cp ZL s (ST:subTerm s sT) ZLIncl
+  : poEq (forward cp_trans_dep ZL ZLIncl s ST AE) AE
     -> labelsDefined s (length ZL)
-    -> cp_sound (domenv AE) Cp s.
+    -> cp_sound (domenv (proj1_sig AE)) Cp s.
 Proof.
   intros EQ LD.
-  general induction LD; simpl in *.
+  general induction LD; simpl in *; destruct AE as [AE DIncl]; simpl.
   - destruct e; simpl.
-    + specialize (EQ x).
-      admit.
+    + econstructor; eauto.
+      * admit.
+      * simpl in *.
+        pose proof (EQ x).
+
+      eapply IHLD; eauto. hnf; intros.
+      rewrite <- EQ; eauto.
+
 
     + econstructor; eauto.
       simpl. admit.

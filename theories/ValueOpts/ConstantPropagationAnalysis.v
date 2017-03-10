@@ -147,6 +147,8 @@ Smpl Add match goal with
            exfalso; eapply int_eq_true_false_absurd in H; eauto
          | [ H : val_true = val_false |- _ ] => inv H
          | [ H : val_false = val_true |- _ ] => inv H
+         | [ H : val_true === val_false |- _ ] => inv H
+         | [ H : val_false === val_true |- _ ] => inv H
          end : inv_trivial.
 
 Definition constant_propagation_transform sT ZL st (ST:subTerm st sT)
@@ -160,14 +162,12 @@ Definition constant_propagation_transform sT ZL st (ST:subTerm st sT)
     (* we assume renamed apart here, and dont zero x *)
     domupd d x (Some Top)
   | stmtIf e s t as st, d =>
-    if [op_eval (domenv d) e = Some (wTA val_true)] then
-      (Some d, None)
-    else if [op_eval (domenv d) e = Some (wTA val_false)] then
-           (None, Some d)
-         else if [op_eval (domenv d) e = None] then
-                (None, None)
-              else
-                (Some d, Some d)
+      (if [op_eval (domenv d) e = Some (wTA val_false)
+           \/ op_eval (domenv d) e = None ] then
+         None else Some d,
+       if [op_eval (domenv d) e = Some (wTA val_true)
+           \/ op_eval (domenv d) e = None ] then
+         None else Some d)
   | stmtApp f Y as st, d =>
     let Z := nth (counted f) ZL (nil:list var) in
     let Yc := List.map (op_eval (domenv d)) Y in
@@ -194,15 +194,13 @@ Proof.
       eapply (leMap_op_eval e); eauto.
     + hnf; intros. mlud; eauto.
   - exploit (leMap_op_eval e); eauto.
-    repeat cases; split; eauto using @fstNoneOrR;
-      try congruence; rewrite COND in *; try rewrite COND0 in *;
-        simpl in *;
-        clear_trivial_eqs.
-    inv H0; try congruence. clear_trivial_eqs.
-    rewrite <- H1 in *. isabsurd.
-    inv H0; try congruence. clear_trivial_eqs.
-    rewrite <- H1 in *. isabsurd.
-    inv H0; try congruence. inv H0; congruence.
+    repeat (cases; try split; eauto using @fstNoneOrR).
+    + exfalso; destruct COND, COND0; try rewrite H1 in *; try rewrite H2 in *;
+        clear_trivial_eqs; eauto.
+    + exfalso; destruct COND; try rewrite H1 in *; try rewrite H2 in *; try inv H0;
+        clear_trivial_eqs; eauto.
+    + exfalso; destruct COND; try rewrite H1 in *; try rewrite H2 in *; try inv H0;
+        clear_trivial_eqs; eauto.
   - destruct (get_dec ZL l); dcr.
     + erewrite get_nth; eauto; simpl.
       hnf; intros.
@@ -236,39 +234,104 @@ Proof.
     rewrite IHx; eauto. cset_tac.
 Qed.
 
-Definition cp_trans_dep sT (ZL:list params) st (ST:subTerm st sT)
-           (ZLIncl: list_union (of_list ⊝ ZL) ⊆ occurVars sT) (a:DDom sT)
-  : anni (DDom sT) st.
+
+Definition anni_dom sT (a:anni Dom sT) : set var.
+  destruct sT; simpl in *;
+    try eapply (domain a).
+  - eapply (match (fst a) with Some d => domain d | None => ∅ end
+              ∪ match (snd a) with Some d => domain d | None => ∅ end).
+Defined.
+
+Lemma cp_trans_domain  sT (ZL:list params) st (ST:subTerm st sT)
+       (ZLIncl: list_union (of_list ⊝ ZL) ⊆ occurVars sT) (a:DDom sT)
+  : anni_dom _ (constant_propagation_transform ZL ST (proj1_sig a)) ⊆ occurVars sT.
 Proof.
-  set (res:=(@constant_propagation_transform sT ZL st ST (proj1_sig a))).
   pose proof (subTerm_occurVars ST) as Incl. destruct a; simpl in *.
-  destruct st; simpl in *.
-  - destruct e.
-    + refine (exist _ res _); subst res.
-      rewrite domain_domupd_incl.
-      revert s Incl; cset_tac.
-    + refine (exist _ res _); subst res.
-      rewrite domain_add.
-      revert s Incl; cset_tac.
-  - refine (match res return
-                  (res = if [op_eval (domenv x) e = ⎣ wTA val_true ⎦] then (⎣ x ⎦, ⎣⎦) else if [op_eval (domenv x) e = ⎣ wTA val_false ⎦] then (⎣⎦, ⎣ x ⎦) else if [op_eval (domenv x) e = ⎣⎦] then (⎣⎦, ⎣⎦) else (⎣ x ⎦, ⎣ x ⎦)) -> ؟ (DDom sT) * ؟ (DDom sT)
-            with
-            | (Some x, Some y) => fun EQ => (Some (exist _ x _) , Some (exist _ y _))
-            | (Some x, None) => fun EQ => (Some (exist _ x _) ,None)
-            | (None, Some y) => fun EQ => (None, Some (exist _ y _))
-            | (None, None) => fun EQ => (None,None)
-            end eq_refl);
-      repeat cases in EQ; clear_trivial_eqs; eauto.
-  - refine (exist _ res _); subst res.
-    destruct (get_dec ZL l); dcr.
+  destruct st; simpl in *; eauto.
+  - destruct e; eauto.
+    rewrite domain_domupd_incl. cset_tac.
+    rewrite domain_add. cset_tac.
+  - repeat cases; simpl; cset_tac.
+  - destruct (get_dec ZL l); dcr.
     + erewrite get_nth; eauto.
       rewrite domain_domupd_list_incl.
       eapply union_incl_split; eauto.
       rewrite <- ZLIncl.
       eapply incl_list_union; eauto using map_get_1.
     + rewrite not_get_nth_default; eauto.
-  - refine (exist _ res _); subst res. eauto.
-  - refine (exist _ res _); subst res. eauto.
+Qed.
+
+Definition anni_incl sT (a:anni Dom sT) (U:set var)
+  := match sT as s return anni Dom s -> Prop with
+    | stmtIf _ _ _ => fun x =>
+                       match fst x with
+                       | Some d => domain d ⊆ U
+                       | None => True
+                       end /\
+                       match snd x with
+                       | Some d => domain d ⊆ U
+                       | None => True
+                       end
+    | _ => fun x => domain x ⊆ U
+    end a.
+
+
+Lemma cp_trans_domain'  sT (ZL:list params) st (ST:subTerm st sT)
+      (ZLIncl: list_union (of_list ⊝ ZL) ⊆ occurVars sT) (a:DDom sT)
+  : anni_incl _ (@constant_propagation_transform sT ZL st ST (proj1_sig a)) (occurVars sT).
+Proof.
+  pose proof (subTerm_occurVars ST) as Incl. destruct a; simpl in *.
+  destruct st; simpl in *; eauto.
+  - destruct e; eauto.
+    rewrite domain_domupd_incl. cset_tac.
+    rewrite domain_add. cset_tac.
+  - repeat cases; simpl; cset_tac.
+  - destruct (get_dec ZL l); dcr.
+    + erewrite get_nth; eauto.
+      rewrite domain_domupd_list_incl.
+      eapply union_incl_split; eauto.
+      rewrite <- ZLIncl.
+      eapply incl_list_union; eauto using map_get_1.
+    + rewrite not_get_nth_default; eauto.
+Defined.
+
+Lemma conv sT (a:DDom sT)  e
+  : match
+      (if [op_eval (domenv (proj1_sig a)) e = ⎣ wTA val_false ⎦ \/ op_eval (domenv (proj1_sig a)) e = ⎣⎦]
+       then ⎣⎦ else ⎣ proj1_sig a ⎦)
+    with
+    | ⎣ d ⎦ => domain d [<=] occurVars sT
+    | ⎣⎦ => True
+    end -> option (DDom sT).
+Proof.
+  cases; intros. eapply None.
+  econstructor. econstructor; eauto.
+Defined.
+
+Lemma conv' sT (a:DDom sT)  e
+  : match
+      (if [op_eval (domenv (proj1_sig a)) e = ⎣ wTA val_true ⎦ \/ op_eval (domenv (proj1_sig a)) e = ⎣⎦]
+       then ⎣⎦ else ⎣ proj1_sig a ⎦)
+    with
+    | ⎣ d ⎦ => domain d [<=] occurVars sT
+    | ⎣⎦ => True
+    end -> option (DDom sT).
+Proof.
+  cases; intros. eapply None.
+  econstructor. econstructor; eauto.
+Defined.
+
+Definition cp_trans_dep sT (ZL:list params) st (ST:subTerm st sT)
+           (ZLIncl: list_union (of_list ⊝ ZL) ⊆ occurVars sT) (a:DDom sT)
+  : anni (DDom sT) st.
+Proof.
+  set (res:=(@constant_propagation_transform sT ZL st ST (proj1_sig a))).
+  set (pf:=cp_trans_domain' ZL ST ZLIncl a).
+  destruct st; try eapply (exist _ res pf).
+  simpl.
+  simpl in *.
+  split. eapply (@conv sT a). eapply (proj1 pf).
+  eapply (@conv' sT a). eapply (proj2 pf).
 Defined.
 
 
@@ -281,9 +344,7 @@ Proof.
   intros. destruct a as [a aBound], b as [b bBound]; simpl in H.
   pose proof (@transf_mon sT s ST ST' ZL a b H) as LE.
   destruct s; clear_trivial_eqs; simpl in *; eauto.
-  - destruct e; simpl; eauto.
-  - repeat (cases in LE; simpl in *); dcr;
-            clear_trivial_eqs; eauto using fstNoneOrR.
+  - unfold conv, conv'. simpl. repeat cases; try split; eauto using @fstNoneOrR.
 Qed.
 
 Instance map_sig_semilattice_bound X `{OrderedType X} Y `{JoinSemiLattice Y}  U
