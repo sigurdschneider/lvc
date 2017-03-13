@@ -347,17 +347,52 @@ Proof.
   - unfold conv, conv'. simpl. repeat cases; try split; eauto using @fstNoneOrR.
 Qed.
 
+Lemma domain_join_sig X `{OrderedType X} Y `{JoinSemiLattice Y}  U
+  (x y : {m : Map [X, Y] | domain m [<=] U})
+  : domain (proj1_sig x ⊔ proj1_sig y) [<=] U.
+Proof.
+  destruct x,y; simpl.
+  unfold joinMap. rewrite domain_join. cset_tac.
+Qed.
+
+Definition joinsig X `{OrderedType X} Y `{JoinSemiLattice Y}  U
+           (x y : {m : Map [X, Y] | domain m ⊆ U}) :=
+  exist (fun m => domain m ⊆ U) (join (proj1_sig x) (proj1_sig y)) (domain_join_sig x y).
+
+Definition joinsig_idem X `{OrderedType X} Y `{JoinSemiLattice Y}  U
+  : forall a : {m : Map [X, Y] | domain m [<=] U}, joinsig a a ≣ a.
+Proof.
+  - hnf; intros [a ?]. simpl. eapply joinDom_idem.
+Qed.
+
+Definition joinsig_sym X `{OrderedType X} Y `{JoinSemiLattice Y}  U
+  : forall a b : {m : Map [X, Y] | domain m [<=] U}, joinsig a b ≣ joinsig b a.
+Proof.
+  - hnf; intros [a ?] [b ?]. eapply joinDom_sym.
+Qed.
+
+Definition joinsig_assoc X `{OrderedType X} Y `{JoinSemiLattice Y}  U
+  : forall a b c : {m : Map [X, Y] | domain m [<=] U}, joinsig (joinsig a b) c ≣ joinsig a (joinsig b c).
+Proof.
+  hnf; intros [a ?] [b ?] [c ?]. eapply joinDom_assoc.
+Qed.
+
+Definition joinsig_exp X `{OrderedType X} Y `{JoinSemiLattice Y}  U
+  : forall a b : {m : Map [X, Y] | domain m [<=] U}, a ⊑ joinsig a b.
+Proof.
+  hnf; intros [a ?] [b ?]; simpl. eapply joinDom_exp.
+Qed.
+
+
 Instance map_sig_semilattice_bound X `{OrderedType X} Y `{JoinSemiLattice Y}  U
   : JoinSemiLattice ({ m : Map [X, Y] | domain m ⊆ U}) := {
-  join x y := exist _ (join (proj1_sig x) (proj1_sig y)) _
+  join x y := joinsig x y
 }.
 Proof.
-  - destruct x,y; simpl.
-    unfold joinMap. rewrite domain_join. cset_tac.
-  - hnf; intros [a ?]. simpl. eapply joinDom_idem.
-  - hnf; intros [a ?] [b ?]. eapply joinDom_sym.
-  - hnf; intros [a ?] [b ?] [c ?]. eapply joinDom_assoc.
-  - hnf; intros [a ?] [b ?]; simpl. eapply joinDom_exp.
+  - eapply joinsig_idem.
+  - eapply joinsig_sym.
+  - eapply joinsig_assoc.
+  - eapply joinsig_exp.
   - simpl. unfold Proper, respectful; intros. destruct x,y,x0,y0; simpl in * |- *.
     rewrite H2, H3. reflexivity.
   - simpl. unfold Proper, respectful; intros. destruct x,y,x0,y0; simpl in * |- *.

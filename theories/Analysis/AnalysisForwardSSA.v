@@ -268,18 +268,6 @@ Proof.
   destruct a'; clear_trivial_eqs; simpl; eauto.
 Qed.
 
-Lemma ojoin_mon T `{PartialOrder T} (a a':option T) b b' f
-  : a ⊑ a'
-    -> b ⊑ b'
-    -> ojoin _ f a b ⊑ ojoin _ f a' b'.
-Proof.
-  intros A B; inv A; inv B; simpl; try destruct a'; try destruct b';
-    clear_trivial_eqs; simpl; eauto using fstNoneOrR.
-  econstructor. admit.
-  econstructor. admit.
-  econstructor. admit.
-Admitted.
-
 Lemma option_map_mon T `{PartialOrder T}  U `{PartialOrder U} (a a':option T) (f f': T -> U)
   : a ⊑ a'
     -> (forall x y, x ⊑ y -> f x ⊑ f' y)
