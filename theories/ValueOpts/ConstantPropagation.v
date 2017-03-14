@@ -1,6 +1,6 @@
-Require Import CSet Le.
+Require Import CSet Le Coq.Classes.RelationClasses.
 
-Require Import Plus Util AllInRel Map.
+Require Import Plus Util AllInRel Map Indexwise.
 Require Import CSet Val Var Env IL Sim Fresh Annotation LabelsDefined DecSolve OptionR.
 
 Require Import RenamedApart SetOperations Eqn ValueOpts Infra.Lattice WithTop.
@@ -92,29 +92,41 @@ Qed.
 
 Inductive cp_sound : onv (withTop val)
                      -> list (params*list aval)
+                     -> list bool
                      -> stmt
+                     -> ann bool
                      -> Prop :=
-| CPOpr AE (x:var) Cp b e
-  : cp_sound AE Cp b
-    -> exp_eval AE e = AE x
-    -> cp_sound AE Cp (stmtLet x e b)
-| CPIf AE Cp e b1 b2
-  : (* these conditions make it conditional constant propagation *)
-    (aval2bool (op_eval AE e) <> (Some false) -> cp_sound AE Cp b1)
-    -> (aval2bool (op_eval AE e) <> (Some true) -> cp_sound AE Cp b2)
-    -> cp_sound AE Cp (stmtIf e b1 b2)
-| CPGoto AE l Y Cp Z aY
+| CPOpr AE (x:var) Cp Rch (b:bool) r e s
+  : cp_sound AE Cp Rch s r
+    -> (b -> exp_eval AE e = AE x)
+    -> (b -> getAnn r)
+    -> cp_sound AE Cp Rch (stmtLet x e s) (ann1 b r)
+| CPIf AE Cp Rch e (b:bool) s1 s2 (r1 r2:ann bool)
+       (Cond1:cp_sound AE Cp Rch s1 r1)
+       (Cond2:cp_sound AE Cp Rch s2 r2)
+       (Reach1:b -> aval2bool (op_eval AE e) <> (Some false) -> getAnn r1)
+       (Reach2:b -> aval2bool (op_eval AE e) <> (Some true) -> getAnn r2)
+  : cp_sound AE Cp Rch (stmtIf e s1 s2) (ann2 b r1 r2)
+| CPGoto AE l Y Cp Rch Z aY (b bf:bool)
   : get Cp (counted l) (Z,aY)
+    -> get Rch (counted l) bf
     -> length Z = length Y
-    -> PIR2 (@poLe _ (PartialOrder_option _)) (List.map (op_eval AE) Y) aY
-    -> cp_sound AE Cp (stmtApp l Y)
-| CPReturn AE Cp e
-  : cp_sound AE Cp (stmtReturn e)
-| CPLet AE Cp F t
-  : (forall n Zs, get F n Zs
-             -> cp_sound AE (List.map (fun Zs => (fst Zs, lookup_list AE (fst Zs))) F ++ Cp) (snd Zs))
-    -> cp_sound AE (List.map (fun Zs => (fst Zs, lookup_list AE (fst Zs))) F ++ Cp) t
-    -> cp_sound AE Cp (stmtFun F t).
+    -> (b -> PIR2 (@poLe _ (PartialOrder_option _)) (List.map (op_eval AE) Y) aY)
+    -> (b -> bf)
+    -> cp_sound AE Cp Rch (stmtApp l Y) (ann0 b)
+| CPReturn AE Cp Rch e b
+  : cp_sound AE Cp Rch (stmtReturn e) (ann0 b)
+| CPLet AE Cp Rch F t (b:bool) (rF:list (ann bool)) (r:ann bool) (rfLen:❬F❭=❬rF❭)
+   (Reach1:b -> getAnn r)
+  : (forall n Zs r,
+        get F n Zs ->
+        get rF n r ->
+        cp_sound AE (List.map (fun Zs => (fst Zs, lookup_list AE (fst Zs))) F ++ Cp)
+                 (getAnn ⊝ rF ++ Rch)
+                 (snd Zs) r)
+    -> cp_sound AE (List.map (fun Zs => (fst Zs, lookup_list AE (fst Zs))) F ++ Cp)
+               (getAnn ⊝ rF ++ Rch) t r
+    -> cp_sound AE Cp Rch (stmtFun F t) (annF b rF r).
 
 Definition indexwise_R1 {A} (P:A->Prop) LA :=
 forall n a, get LA n a -> P a.
@@ -131,28 +143,30 @@ intros. destruct (Rdec 0 a).
 - right; intro HH. eapply n; hnf; intros; eapply HH; eauto using get.
 Defined.
 
-Instance cp_sound_dec AE ZL s : Computable (cp_sound AE ZL s).
+Instance cp_sound_dec AE Rch ZL s r : Computable (cp_sound AE ZL Rch s r).
 Proof.
-  hnf. revert AE ZL; sind s; intros; destruct s; try dec_solve.
+  hnf. revert AE Rch ZL r; sind s; intros; destruct s; destruct r; try dec_solve.
   - edestruct (IH s); eauto;
-      decide (exp_eval AE e = AE x); try dec_solve.
-  - decide (aval2bool (op_eval AE e) = Some false);
-    decide (aval2bool (op_eval AE e) = Some true).
-    + unfold val_false, val_true in *. congruence.
-    + edestruct (IH s2 ltac:(eauto) AE ZL); eauto; try dec_solve.
-    + edestruct (IH s1 ltac:(eauto) AE ZL); eauto; dec_solve.
-    + edestruct (IH s1 ltac:(eauto) AE ZL);
-        edestruct (IH s2 ltac:(eauto) AE ZL); eauto; try dec_solve.
+      decide (a -> exp_eval AE e = AE x); try dec_solve;
+        decide (a -> getAnn r); try dec_solve.
+  - edestruct (IH s2 ltac:(eauto) AE Rch ZL); eauto; [| dec_solve];
+      edestruct (IH s1 ltac:(eauto) AE Rch ZL); eauto; [| dec_solve];
+    decide (aval2bool (op_eval AE e) = Some false);
+    (decide (aval2bool (op_eval AE e) = Some true));
+    decide (a); decide (getAnn r1); decide (getAnn r2); try dec_solve.
   - destruct (get_dec ZL (counted l)) as [[[]]|]; try dec_solve.
+    destruct (get_dec Rch (counted l)) as [[]|]; try dec_solve.
     decide (length l0 = length Y); try dec_solve.
-    decide (PIR2 (@poLe _ (PartialOrder_option _)) (List.map (op_eval AE) Y) l1);
+    decide (a -> PIR2 (@poLe _ (PartialOrder_option _)) (List.map (op_eval AE) Y) l1);
       try dec_solve.
+    decide (a -> x); try dec_solve.
   - assert (SZ:size s < size (stmtFun F s)) by eauto.
-    edestruct (IH s SZ AE (List.map (fun Zs => (fst Zs, lookup_list AE (fst Zs))) F ++ ZL)).
-    exploit (@indexwise_R1_dec _ (fun Zs => cp_sound AE ((fun Zs0 : params * stmt => (fst Zs0,
-        lookup_list AE (fst Zs0))) ⊝ F ++ ZL) (snd Zs)) F); eauto.
-    intros. eapply IH; eauto. destruct H.
-    dec_solve. dec_solve. dec_solve.
+    decide (❬F❭=❬sa❭); [|dec_solve].
+    edestruct (IH s SZ AE (getAnn ⊝ sa ++ Rch) (List.map (fun Zs => (fst Zs, lookup_list AE (fst Zs))) F ++ ZL) r); [|dec_solve].
+    exploit (@indexwise_R2_dec _ _ (fun Zs r => cp_sound AE ((fun Zs0 : params * stmt => (fst Zs0,
+        lookup_list AE (fst Zs0))) ⊝ F ++ ZL)(getAnn ⊝ sa ++ Rch)  (snd Zs) r) F); eauto.
+    intros. eapply IH; eauto. destruct H;[|dec_solve].
+    decide (a -> getAnn r); dec_solve.
 Defined.
 
 Definition cp_eqn (E:onv (withTop val)) x :=
@@ -639,49 +653,115 @@ Proof.
 Qed.
 
 
-Lemma cp_sound_eqn AE Cp ZL GL ΓL s (ang:ann (set var * set var))
- (CP:cp_sound AE Cp s)
+Lemma entails_bot Γ Γ'
+  : EqnBot ∈ Γ
+    -> entails Γ Γ'.
+Proof.
+  intros. hnf; intros.
+  exfalso. exploit H0; eauto.
+Qed.
+
+
+Lemma fold_union_singleton X `{OrderedType X} x
+: fold union ({x}) {} [=] x.
+Proof.
+  assert (singleton x [=] {x; ∅ }).
+  cset_tac; intuition. rewrite H0.
+  rewrite fold_single; eauto using Equal_ST, union_m, transpose_union.
+  clear; cset_tac.
+Qed.
+
+Lemma map_singleton {X} `{OrderedType X} Y `{OrderedType Y} (f:X->Y)
+      `{Proper _ (_eq ==> _eq) f} x
+      : map f (singleton x) [=] (singleton (f x)).
+Proof.
+  hnf; intros. rewrite map_iff; eauto.
+  split; intros.
+  - destruct H2; dcr. cset_tac'.
+  - cset_tac.
+Qed.
+
+Lemma eqns_freeVars_singleton e
+  : eqns_freeVars {e} [=] freeVars e.
+Proof.
+  intros. unfold eqns_freeVars.
+  rewrite map_singleton; eauto using freeVars_Proper.
+  rewrite fold_union_singleton.
+  cset_tac.
+Qed.
+
+Lemma val_false_true_neq: (val_false <> val_true)%type.
+Proof.
+  intro. eapply val_true_false_neq. eauto.
+Qed.
+
+
+
+Smpl Add 100
+     match goal with
+     | [ H : true -> false |- _ ] =>
+       exfalso; eapply H; eauto
+     | [ H : forall _ : Is_true true, Is_true false |- _ ] =>
+       exfalso; eapply H; eauto
+     end : inv_trivial.
+
+Lemma cp_sound_eqn AE Cp Rch ZL GL ΓL s r (ang:ann (set var * set var))
+ (CP:cp_sound AE Cp Rch s r)
  (RA: renamedApart s ang)
  (LD: labelsDefined s (length ZL))
  (Len1: ❬ZL❭ = ❬GL❭)
  (Len2: ❬ZL❭ = ❬ΓL❭)
  (Len3: ❬ZL❭ = ❬Cp❭)
-  (LINV:(forall n aY Z G Γ Z', get ZL n Z
+ (Len4: ❬ZL❭ = ❬Rch❭)
+  (LINV:(forall n aY Z G Γ Z' b, get ZL n Z
                    -> get GL n G
                    -> get ΓL n Γ
                    -> get Cp n (Z',aY)
+                   -> get Rch n b
                    -> (exists AE', aY = lookup_list AE' Z
-                             /\ Γ [=] cp_eqns AE' (of_list Z)) /\ Z' = Z))
-  :  eqn_sound ZL GL ΓL s (constantPropagate AE s) (cp_eqns AE (fst (getAnn ang))) ang.
+                             /\ Γ [=]
+                                 if b then cp_eqns AE' (of_list Z)
+                                 else singleton EqnBot) /\ Z' = Z))
+  :  eqn_sound ZL GL ΓL s (constantPropagate AE s)
+               (if getAnn r then cp_eqns AE (fst (getAnn ang)) else singleton EqnBot) ang.
 Proof.
   general induction CP; invt renamedApart; invt labelsDefined; simpl.
   - simpl in *.
     destruct e.
     + econstructor. set_simpl.
       * eapply eqn_sound_entails_monotone; eauto.
-        pe_rewrite. rewrite cp_eqns_add.
-        eapply entails_union; split.
-        -- unfold cp_eqn.
+        repeat cases; pe_rewrite; eauto using entails_empty.
+        -- rewrite cp_eqns_add.
+           eapply entails_union; split.
+           unfold cp_eqn.
            case_eq (AE x); intros; eauto using entails_empty.
-           rewrite H0 in H. inv H.
+           rewrite H1 in H. exploit H; eauto. inv H2.
            repeat cases; eauto using entails_empty.
            eapply op_eval_entails; eauto.
-        -- eapply entails_monotone. reflexivity.
+           eapply entails_monotone. reflexivity.
            cset_tac.
-      * eapply cp_choose_approx; eauto.
+        -- eapply entails_bot. cset_tac.
+        -- eapply entails_bot. cset_tac.
+      * cases.
+        -- eapply cp_choose_approx; eauto.
+        -- eapply entails_bot; eauto.
       * eapply cp_choose_exp_freeVars; eauto.
     + econstructor. set_simpl.
       * eapply eqn_sound_entails_monotone; eauto.
-        pe_rewrite. rewrite cp_eqns_add.
+         repeat cases; pe_rewrite; eauto using entails_empty.
+        rewrite cp_eqns_add.
         eapply entails_union; split.
         -- unfold cp_eqn.
            case_eq (AE x); intros; eauto using entails_empty.
-           rewrite H0 in H. inv H.
-           repeat cases;
-             eauto using entails_empty.
+           rewrite H1 in H. exploit H; eauto. inv H2.
+           repeat cases; eauto using entails_empty.
         -- reflexivity.
-      * eapply cp_choose_approx_list; eauto.
-      * simpl in *. rewrite <- H4.
+        -- eapply entails_bot. cset_tac.
+        -- eapply entails_bot. cset_tac.
+      * cases.
+        -- eapply cp_choose_approx_list; eauto.
+        -- eapply entails_bot; eauto.
+      * simpl in *. rewrite <- H5.
         eapply list_union_incl; eauto with cset.
         intros; inv_get.
         eapply cp_choose_exp_freeVars; eauto.
@@ -689,71 +769,112 @@ Proof.
       * eauto with len.
   - econstructor; intros; eauto.
     + {
-        decide (aval2bool (op_eval AE e) = Some false).
-        - eapply EqnUnsat.
-          eapply unsatisfiable_add_left. intros.
-          eapply unsat_bool_eq_val; intros.
-          edestruct aval2bool_inv_val; eauto; dcr.
-          assert (w = x) by congruence; subst.
-          rewrite H16. simpl. intro.
-          eapply val_true_false_neq. congruence.
+        cases.
+        - decide (aval2bool (op_eval AE e) = Some false).
+          + eapply EqnUnsat.
+            eapply unsatisfiable_add_left. intros.
+            eapply unsat_bool_eq_val; intros.
+
+            edestruct aval2bool_inv_val; eauto; dcr.
+            assert (w = x) by congruence; subst.
+            rewrite H12. simpl. eapply val_false_true_neq.
+          + eapply eqn_sound_entails_monotone; eauto.
+            cases.
+            * pe_rewrite. eapply entails_add''. reflexivity.
+            * exfalso. eapply Reach1; eauto.
         - eapply eqn_sound_entails_monotone; eauto.
-          pe_rewrite.
-          eapply entails_add''. reflexivity.
+          eapply entails_bot. cset_tac.
       }
     + {
-        decide (aval2bool (op_eval AE e) = Some true).
-        - eapply EqnUnsat.
-          eapply unsatisfiable_add_left. intros.
-          eapply unsat_bool_eq_val; intros.
-          edestruct aval2bool_inv_val; eauto; dcr.
-          assert (w = x) by congruence; subst.
-          rewrite H16. intro. simpl in *.
-          eapply val_true_false_neq. congruence.
+        cases.
+        - decide (aval2bool (op_eval AE e) = Some true).
+          +eapply EqnUnsat.
+           eapply unsatisfiable_add_left. intros.
+           eapply unsat_bool_eq_val; intros.
+           edestruct aval2bool_inv_val; eauto; dcr.
+           assert (w = x) by congruence; subst.
+           rewrite H12. eapply val_true_false_neq.
+          + eapply eqn_sound_entails_monotone; eauto.
+            cases.
+            * pe_rewrite. eapply entails_add''. reflexivity.
+            * exfalso. eapply Reach2; eauto.
         - eapply eqn_sound_entails_monotone; eauto.
-          pe_rewrite.
-          eapply entails_add''. reflexivity.
+          eapply entails_bot. cset_tac.
       }
-    + eapply cp_choose_approx; eauto.
+    + cases.
+      * eapply cp_choose_approx; eauto.
+      * eapply entails_bot; eauto.
   - edestruct get_in_range as [a ?]; eauto.
     inv_get.
     edestruct LINV; eauto; dcr; simpl in *. subst.
     econstructor; eauto with len.
-    + rewrite H11.
-      eapply entails_cp_eqns_subst_choose; eauto.
-    + eapply cp_choose_approx_list; eauto.
-  - econstructor; eauto using cp_choose_approx.
-  - assert (INV:forall (n : nat) aY (Z : params) (G : ⦃nat⦄) (Γ : ⦃eqn⦄) Z',
+    + cases.
+      * rewrite H13. cases.
+        eapply entails_cp_eqns_subst_choose; eauto.
+
+      * eapply entails_bot; eauto.
+    + cases.
+      * eapply cp_choose_approx_list; eauto.
+      * eapply entails_bot; eauto.
+  - econstructor; cases; eauto using cp_choose_approx, entails_bot.
+  - assert (INV:forall (n : nat) aY (Z : params) (G : ⦃nat⦄) (Γ : ⦃eqn⦄) Z' b,
                get (fst ⊝ F ++ ZL) n Z ->
                get (tab D ‖F‖ ++ GL) n G ->
-               get ((fun '(Z1, _) => cp_eqns AE (of_list Z1)) ⊝ F ++ ΓL) n Γ ->
+               get ((fun '(Z1, _) (x:ann bool) => if getAnn x then cp_eqns AE (of_list Z1) else
+                    singleton EqnBot) ⊜ F rF ++ ΓL) n Γ ->
                get ((fun Zs : params * stmt => (fst Zs, lookup_list AE (fst Zs))) ⊝ F ++ Cp) n (Z', aY) ->
-               (exists AE', aY = lookup_list AE' Z /\ Γ [=] cp_eqns AE' (of_list Z)) /\ Z' = Z). {
+               get (getAnn ⊝ rF ++ Rch) n b ->
+               (exists AE', aY = lookup_list AE' Z /\
+                       Γ [=] if b then cp_eqns AE' (of_list Z) else singleton EqnBot) /\ Z' = Z). {
       intros.
       eapply get_app_cases in H1. destruct H1; dcr.
       - inv_get. split; eauto. eexists; split; eauto.
-        destruct x; reflexivity.
+        rewrite get_app_lt in H11; eauto with len.
+        inv_get.
+        destruct x; try reflexivity.
       - len_simpl.
         rewrite get_app_ge in H11; eauto with len.
         rewrite get_app_ge in H13; eauto with len.
+        rewrite get_app_ge in H14; eauto with len.
         rewrite get_app_ge in H2; eauto with len.
+        edestruct LINV; dcr; eauto with len.
+        rewrite rfLen. eauto with len.
+        len_simpl. rewrite <- rfLen. eauto.
     }
-    eapply EqnFun with (Γ2:=cp_eqns AE D) (ΓF:=List.map (fun '(Z,s) => cp_eqns AE (of_list Z)) F);
-      eauto with len.
+    eapply EqnFun with (Γ2:=if getAnn r then cp_eqns AE D else singleton EqnBot) (ΓF:=(fun '(Z1, _) (x:ann bool) => if getAnn x then cp_eqns AE (of_list Z1) else
+                                                                                                                singleton EqnBot) ⊜ F rF); eauto with len.
     + intros; inv_get; eauto.
     + intros; inv_get; eauto.
       exploit H0; eauto; eauto with len.
+      repeat cases in H2; pe_rewrite; eauto.
       edestruct H5; eauto; dcr; eauto with len.
       simpl in *.
-      rewrite H11 in H2. rewrite cp_eqns_union in H2.
-      eapply H2.
+      rewrite H14 in H2. rewrite cp_eqns_union in H2.
+      cases; eauto. destruct b; clear_trivial_eqs.
+      exploit H4; eauto.
+      eapply eqn_sound_entails_monotone; eauto.
+      eapply entails_bot. cset_tac.
+      exploit H4; eauto.
+      eapply eqn_sound_entails_monotone; eauto.
+      eapply entails_bot. cset_tac.
+
     + eapply eqn_sound_entails_monotone; eauto.
       * eapply IHCP; eauto; eauto with len.
-      * pe_rewrite. reflexivity.
+      * cases; eauto.
+        -- cases. pe_rewrite. reflexivity.
+        -- eapply entails_bot. cset_tac.
     + intros; inv_get; destruct Zs; simpl.
-      rewrite cp_eqns_freeVars. eapply incl_right.
-    + rewrite cp_eqns_freeVars. eauto.
-    + reflexivity.
+      cases.
+      * rewrite cp_eqns_freeVars. eapply incl_right.
+      * rewrite eqns_freeVars_singleton. simpl.
+        eauto with cset.
+    + cases.
+      * rewrite cp_eqns_freeVars. reflexivity.
+      * rewrite eqns_freeVars_singleton. simpl.
+        eauto with cset.
+    + cases.
+      * cases; reflexivity.
+      * eapply entails_bot; eauto.
 Qed.
 
 Require Import CMap.
