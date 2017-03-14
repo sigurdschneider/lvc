@@ -23,29 +23,29 @@ Qed.
 
 Opaque cp_trans_domain'.
 
-Lemma add_dead G (AE:Dom) x Ds v
-  : agree_on (OptionR.option_R (withTop_eq (R:=Val.int_eq))) (G \ {x; Ds}) (domenv AE)
+Lemma add_dead (G:set var) (AE:Dom) x v (NOTIN:x ∉ G)
+  : agree_on (OptionR.option_R (withTop_eq (R:=Val.int_eq))) G (domenv AE)
              (domenv (add x v AE)).
 Proof.
   hnf; intros. unfold domenv.
   mlud. cset_tac. reflexivity.
 Qed.
 
-Lemma remove_dead G (AE:Dom) x Ds
-  : agree_on (OptionR.option_R (withTop_eq (R:=Val.int_eq))) (G \ {x; Ds}) (domenv AE)
+Lemma remove_dead (G:set var) (AE:Dom) x (NOTIN:x ∉ G)
+  : agree_on (OptionR.option_R (withTop_eq (R:=Val.int_eq))) G (domenv AE)
              (domenv (remove x AE)).
 Proof.
   hnf; intros. unfold domenv.
   mlud. cset_tac. reflexivity.
 Qed.
 
-Lemma domupd_dead G x Ds AE v
-  : agree_on (OptionR.option_R (withTop_eq (R:=Val.int_eq))) (G \ {x; Ds}) (domenv AE)
+Lemma domupd_dead (G:set var) x AE v (NOTIN:x ∉ G)
+  : agree_on (OptionR.option_R (withTop_eq (R:=Val.int_eq))) G (domenv AE)
              (domenv (domupd AE x v)).
 Proof.
   unfold domupd; cases.
-  + eapply add_dead.
-  + eapply remove_dead.
+  + eapply add_dead; eauto.
+  + eapply remove_dead; eauto.
 Qed.
 
 Lemma fold_left_join_start_swap X `{JoinSemiLattice X} (a b:X) A
@@ -88,121 +88,232 @@ Proof.
   rewrite A, B. rewrite join_idempotent. reflexivity.
 Qed.
 
+Class JoinRespectsLowerBound (A : Type) `{JoinSemiLattice A} `{@LowerBounded A H} :=
+  {
+    bottom_neutral : forall (a:A), poEq (join bottom a) a
+  }.
+
+Instance Dom_JRLB
+  : JoinRespectsLowerBound Dom.
+Proof.
+  econstructor.
+  intros. hnf; intros.
+  simpl. unfold joinMap.
+  rewrite MapFacts.map2_1bis; eauto.
+  rewrite MapFacts.empty_o. simpl.
+  cases; reflexivity.
+Qed.
+
+Instance DDom_JRLB sT
+  : JoinRespectsLowerBound (DDom sT).
+Proof.
+  econstructor.
+  intros. hnf; intros.
+  simpl. unfold joinMap.
+  rewrite MapFacts.map2_1bis; eauto.
+  rewrite MapFacts.empty_o. simpl.
+  cases; reflexivity.
+Qed.
+
+Lemma agree_domenv_join_bot sT (G:set var) (a b:DDom sT) c
+      : a === bottom
+        -> agree_on poEq G (domenv (proj1_sig b)) (domenv c)
+        -> agree_on poEq G (domenv (proj1_sig (join a b))) (domenv c).
+Proof.
+  destruct a,b;
+    unfold domenv, poEq at 1; simpl proj1_sig.
+  intros A B.
+  hnf; intros z IN.
+  unfold joinMap.
+  rewrite MapFacts.map2_1bis; eauto.
+  specialize (B z IN). cbv beta in *.
+  rewrite B.
+  hnf in A. simpl proj1_sig in *.
+  rewrite A, <- B.
+  setoid_rewrite <- bottom_neutral at 3.
+  simpl join at 2. unfold joinMap.
+  rewrite MapFacts.map2_1bis; eauto.
+Qed.
+
+Lemma agree_domenv_join_bot2 sT (G:set var) (a b:DDom sT) c
+      : agree_on poEq G (domenv (proj1_sig a)) (domenv c)
+        -> b === bottom
+        -> agree_on poEq G (domenv (proj1_sig (join a b))) (domenv c).
+Proof.
+  destruct a,b;
+    unfold domenv, poEq at 2; simpl proj1_sig.
+  intros A B.
+  hnf; intros z IN.
+  unfold joinMap.
+  rewrite MapFacts.map2_1bis; eauto.
+  specialize (A z IN). cbv beta in *.
+  rewrite A.
+  hnf in B. simpl proj1_sig in *.
+  rewrite <- A, B.
+  setoid_rewrite <- bottom_neutral at 3.
+  simpl join at 2. unfold joinMap.
+  rewrite MapFacts.map2_1bis; eauto.
+  rewrite join_commutative. eauto.
+Qed.
+
+
 Lemma agree_on_fold_left (sT:IL.stmt) (ZL:list (list var)) F ans (LEN:❬F❭ = ❬ans❭)
       (ZLIncl: list_union (of_list ⊝ ZL) [<=] IL.occurVars sT) t
-      (G:set var) (Dt:set var) (AE:Dom) ZL' ZL'Incl
-      (pf : domain AE [<=] IL.occurVars sT) STF
-      (H1:forall ST, agree_on (OptionR.option_R (withTop_eq (R:=int_eq)))
+      (G:set var) (Dt:set var) (AE:DDom sT) ZL' ZL'Incl
+      (pf : domain (proj1_sig AE) [<=] IL.occurVars sT) STF
+      (H1:forall ST, agree_on poEq
                    (G \ (list_union (defVars ⊜ F ans) ∪ Dt ∪ list_union (of_list ⊝ (fst ⊝ F ++ ZL))))
-                   (domenv AE)
-                   (domenv
-                      (proj1_sig
-                         (forward cp_trans_dep ZL' ZL'Incl t
-                                  ST
-                                  (exist (fun m : Map [nat, withTop val] => domain m [<=] occurVars sT) AE pf)))))
+                   (domenv (proj1_sig AE))
+                   (domenv (proj1_sig (forward cp_trans_dep ZL' ZL'Incl t ST AE)))
+                \/ (forward cp_trans_dep ZL' ZL'Incl t ST AE === bottom))
       (H2:forall n Zs y ST, get F n Zs -> get ans n y ->
                        agree_on poEq
                                 (G \ (list_union (defVars ⊜ F ans) ∪ Dt ∪ defVars Zs y
                                                  ∪ list_union (of_list ⊝ ZL)))
                            (domenv
                               (proj1_sig
-                                 (forward cp_trans_dep ZL' ZL'Incl (snd Zs) ST
-                                          (exist (fun m : Map [nat, withTop val] =>
-                                                    domain m [<=] occurVars sT) AE pf))))
-                           (domenv AE))
-  : forall ST, agree_on (OptionR.option_R (withTop_eq (R:=Val.int_eq)))
+                                 (forward cp_trans_dep ZL' ZL'Incl (snd Zs) ST AE)))
+                           (domenv (proj1_sig AE)) \/
+                       (forward cp_trans_dep ZL' ZL'Incl (snd Zs) ST AE === bottom))
+  : forall ST, agree_on poEq
              (G \ (list_union (defVars ⊜ F ans) ∪ Dt ∪ list_union (of_list ⊝ ZL)))
-             (domenv AE)
+             (domenv (proj1_sig AE))
              (domenv
                 (proj1_sig
                    (fold_left
                       join
-                      (forwardF (forward cp_trans_dep ZL' ZL'Incl) F
-                                (exist (fun m : Map [nat, withTop Val.val] => domain m [<=] IL.occurVars sT) AE pf)
-                                STF)
-                      (forward cp_trans_dep ZL' ZL'Incl t
-                               ST
-                               (exist (fun m : Map [nat, withTop Val.val] =>
-                                         domain m [<=] IL.occurVars sT) AE pf))))).
+                      (forwardF (forward cp_trans_dep ZL' ZL'Incl) F AE STF)
+                      (forward cp_trans_dep ZL' ZL'Incl t ST AE)))) \/
+          fold_left join
+                    (forwardF (forward cp_trans_dep ZL' ZL'Incl) F AE STF)
+                    (forward cp_trans_dep ZL' ZL'Incl t ST AE) === bottom.
 Proof.
+  Opaque poEq bottom.
   general induction LEN.
   - eapply H1.
-  - Opaque join. simpl. symmetry.
-    etransitivity.
-    eapply domenv_proper.
-    eapply proj1_sig_poEq.
-    eapply fold_left_join_start_swap.
-    eapply agree_domenv_join.
-    + exploit H2; eauto using get. simpl in *.
-      eapply agree_on_incl; eauto.
-      setoid_rewrite list_union_start_swap at 1 3 4.
-      unfold defVars at 1 3 5.
+  - Opaque join. simpl.
+    edestruct (IHLEN sT ZL ZLIncl t) as [AGRF|BOTF]; eauto.
+    + intros.
+      edestruct H1; eauto.
+      left. eapply agree_on_incl; eauto.
+      instantiate (1:=defVars x y ∪ Dt).
+      instantiate (1:=G). simpl.
+      unfold defVars at 2 4. clear.
+      setoid_rewrite list_union_start_swap at 3 4.
+      cset_tac.
+    + intros. exploit (H2 (S n)) as IH; eauto using get.
+      destruct IH; eauto. left.
+      eapply agree_on_incl; eauto. simpl.
+      setoid_rewrite list_union_start_swap at 3.
       clear; cset_tac'.
-    + Transparent join.
-      simpl in *.
-      eapply agree_on_incl.
-      symmetry.
-      eapply (IHLEN sT ZL ZLIncl t).
-      * intros. eapply agree_on_incl.
-        eapply H1. instantiate (1:=defVars x y ∪ Dt).
-        instantiate (1:=G).
-        unfold defVars at 2 4. clear.
-        setoid_rewrite list_union_start_swap at 3 4.
-        cset_tac.
-      * setoid_rewrite list_union_start_swap at 1.
-        intros. exploit (H2 (S n)); eauto using get.
-        eapply agree_on_incl; eauto.
-        setoid_rewrite list_union_start_swap at 3.
-        clear; cset_tac'.
-      * setoid_rewrite list_union_start_swap at 1.
-        clear. cset_tac.
+    + edestruct H2 as [AGRsndx|BOTsndx]; eauto using get;
+      try instantiate (1:=STF _ _ ltac:(eauto using get)) in AGRsndx.
+      * left.
+        symmetry.
+        etransitivity.
+        eapply domenv_proper.
+        eapply proj1_sig_poEq.
+        eapply fold_left_join_start_swap.
+        eapply agree_domenv_join.
+        -- eapply agree_on_incl; eauto. simpl.
+           setoid_rewrite list_union_start_swap at 1 3 4.
+           unfold defVars at 1 3 5.
+           clear; cset_tac'.
+        -- eapply agree_on_incl.
+           symmetry. eauto.
+           setoid_rewrite list_union_start_swap at 1.
+           clear. cset_tac.
+      * left. symmetry.
+        etransitivity.
+        eapply domenv_proper.
+        eapply proj1_sig_poEq.
+        eapply fold_left_join_start_swap.
+        eapply agree_domenv_join_bot; eauto.
+        -- eapply agree_on_incl.
+           symmetry. eauto.
+           setoid_rewrite list_union_start_swap at 1.
+           clear. cset_tac.
+    + edestruct H2 as [AGRsndx|BOTsndx]; eauto using get;
+      try instantiate (1:=STF _ _ ltac:(eauto using get)) in AGRsndx.
+      * left.
+        symmetry.
+        etransitivity.
+        eapply domenv_proper.
+        eapply proj1_sig_poEq.
+        eapply fold_left_join_start_swap.
+        eapply agree_domenv_join_bot2.
+        -- eapply agree_on_incl; eauto. simpl.
+           setoid_rewrite list_union_start_swap at 1 3 4.
+           unfold defVars at 1 3 5.
+           clear; cset_tac'.
+        -- eauto.
+      * right.
+        rewrite fold_left_join_start_swap.
+        rewrite BOTF. rewrite BOTsndx.
+        eapply bottom_neutral.
 Qed.
 
 Lemma cp_forward_agree sT ZL (AE:Dom) pf G s (ST:subTerm s sT) ra ZLIncl
-  (RA:renamedApart s ra) (Def:defined
+  (RA:renamedApart s ra)
   : agree_on poEq (G \ (snd (getAnn ra) ∪ list_union (of_list ⊝ ZL)))
              (domenv AE)
-             (domenv (proj1_sig (forward cp_trans_dep ZL ZLIncl s ST (exist _ AE pf)))) \/ AE === bottom.
+             (domenv (proj1_sig (forward cp_trans_dep ZL ZLIncl s ST (exist _ AE pf))))
+    \/ (forward cp_trans_dep ZL ZLIncl s ST (exist _ AE pf) === bottom
+       /\ ~ defined_on (fst (getAnn ra)) (domenv AE)).
 Proof.
   general induction RA; simpl in *.
   - destruct e.
     + rewrite H1.
-      edestruct IHRA; eauto.
-      left.
-      symmetry.
-      etransitivity.
-      eapply agree_on_incl.
-      eapply IHRA.
-      * pe_rewrite. admit.
-      * hnf; intros. cset_tac'.
-        eapply domupd_dead. instantiate (2:=G). cset_tac.
-      * pe_rewrite. instantiate (1:=G\ singleton x). clear. cset_tac.
+      edestruct IHRA.
+      * left.
+        symmetry.
+        etransitivity.
+        symmetry.
+        eapply agree_on_incl.
+        eapply H3.
+        -- rewrite H2. simpl.
+           instantiate (1:=G). clear; cset_tac.
+        -- symmetry.
+           eapply domupd_dead. cset_tac.
+      * right; dcr. split; eauto.
+        admit.
     + rewrite H1.
-      etransitivity.
-      Focus 2.
-      eapply agree_on_incl.
-      eapply IHRA.
-      * pe_rewrite. admit.
-      * hnf; intros. cset_tac'.
-        eapply add_dead. instantiate (2:=G). cset_tac.
-      * pe_rewrite. instantiate (1:=G\ singleton x). clear. cset_tac.
+      edestruct IHRA.
+      * left.
+        symmetry.
+        etransitivity.
+        symmetry.
+        eapply agree_on_incl.
+        eapply H3.
+        -- rewrite H2. simpl.
+           instantiate (1:=G). clear; cset_tac.
+        -- symmetry.
+           eapply add_dead. cset_tac.
+      * right; dcr; split; eauto. admit.
   - repeat cases.
     + admit.
     + clear Heq0. admit.
     + admit.
-    +
-  - reflexivity.
-  - destruct (get_dec ZL (Var.labN f)); dcr.
+    + right. split; eauto. admit.
+  - left; eauto.
+  - left.
+    destruct (get_dec ZL (Var.labN f)); dcr.
     + erewrite get_nth; eauto.
       admit.
     + erewrite not_get_nth_default; eauto. simpl. reflexivity.
-  - rewrite <- H5.
+  - (*rewrite <- H5.
     eapply agree_on_fold_left; eauto.
     + intros. eapply agree_on_incl.
       eapply IHRA; eauto.
       * pe_rewrite. eauto.
       * pe_rewrite. instantiate (1:=G); clear. cset_tac.
-    + intros. symmetry.
+    + intros.
+      decide (forward cp_trans_dep (fst ⊝ F ++ ZL) (ZLIncl_ext ZL eq_refl ST ZLIncl)
+                      (snd Zs) ST0
+                      (exist (fun m : Map [nat, withTop val] => domain m [<=] occurVars sT) AE pf) ===
+                      (⊥)); eauto.
+
+      symmetry.
       eapply agree_on_incl.
       eapply H1; eauto.
       * edestruct H2; eauto; dcr.
@@ -214,9 +325,18 @@ Proof.
         clear. cset_tac'.
         eapply list_union_get in H2. destruct H2; dcr. inv_get.
         eapply H4. eapply incl_list_union; eauto using zip_get, map_get_1.
-        unfold defVars. eauto with cset. cset_tac.
+        unfold defVars. eauto with cset. cset_tac.*)
 Admitted.
 
+Lemma cp_forward_agree_def sT ZL (AE:Dom) pf G s (ST:subTerm s sT) ra ZLIncl
+  (RA:renamedApart s ra) (Def:defined_on (fst (getAnn ra)) (domenv AE))
+  : agree_on poEq (G \ (snd (getAnn ra) ∪ list_union (of_list ⊝ ZL)))
+             (domenv AE)
+             (domenv (proj1_sig (forward cp_trans_dep ZL ZLIncl s ST (exist _ AE pf)))).
+Proof.
+  edestruct cp_forward_agree; dcr; eauto.
+  exfalso. eauto.
+Qed.
 
 Definition cp_sound sT AE Cp ZL s (ST:subTerm s sT) ZLIncl ra
   : poEq (forward cp_trans_dep ZL ZLIncl s ST AE) AE
@@ -226,9 +346,21 @@ Definition cp_sound sT AE Cp ZL s (ST:subTerm s sT) ZLIncl ra
 Proof.
   intros EQ RA LD.
   general induction LD; invt renamedApart; simpl in *; destruct AE as [AE DIncl]; simpl.
-  - destruct e; simpl.
-    + econstructor; eauto.
-      * exploit (IHLD sT (exist _ AE DIncl) Cp); eauto. simpl. simpl in *.
+  - exploit cp_forward_agree_def; eauto.
+    estruct e; simpl in *.
+    +
+      econstructor; eauto.
+      *
+        exploit (IHLD sT  (exist (fun m : Map [nat, withTop val] => domain m [<=] occurVars sT)
+            (domupd AE x (op_eval (domenv AE) e))
+            (cp_trans_domain' ZL ST ZLIncl
+               (exist (fun m : Map [nat, withTop val] => domain m [<=] occurVars sT) AE
+                      DIncl)))); eauto.
+        rewrite EQ.
+        Transparent poEq. simpl. admit.
+        eapply EQ.
+        etransitivity.. eapply EQ.
+        simpl. simpl in *.
         admit.
       * simpl in *.
         pose proof (EQ x).
