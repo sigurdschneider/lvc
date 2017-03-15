@@ -582,10 +582,10 @@ Proof.
     split; eauto.
     eapply defined_on_incl.
     eapply defined_on_after_spill_load; eauto. instantiate (1:=K).
-    rewrite H8, H11. reflexivity.
-    unfold mark_elements. len_simpl. rewrite <- H17. eauto with len.
+    rewrite H10, H11. reflexivity.
+    unfold mark_elements. len_simpl. rewrite <- H16. eauto with len.
     rewrite union_comm.
-    rewrite <- H12. eapply of_list_freeVars_vars.
+    rewrite <- H13. eapply of_list_freeVars_vars.
   - pno_step. simpl.
     erewrite op_eval_agree; [reflexivity| |reflexivity]. symmetry.
     eapply agree_on_incl; eauto using regs_agree_after_spill_load; eauto.

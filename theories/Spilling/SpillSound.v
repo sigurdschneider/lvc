@@ -1,5 +1,5 @@
 Require Import List Map Env AllInRel Exp.
-Require Import IL Annotation AnnP InRel AutoIndTac Liveness LabelsDefined.
+Require Import IL Annotation AnnP InRel AutoIndTac Liveness.Liveness LabelsDefined.
 Require Import ExpVarsBounded.
 
 
@@ -82,7 +82,6 @@ Inductive spill_sound (k:nat) :
       -> R_f \ of_list Z ⊆ R\K ∪ L
       -> M_f \ of_list Z ⊆ Sp ∪ M
       -> list_union (Op.freeVars ⊝ Y) ⊆ (R\K ∪ L) ∪ M'
-      -> R' [=] R\K ∪ L
       -> M' ⊆ Sp ∪ M
       -> spill_sound k ZL Λ (R,M) (stmtApp f Y)
                      (ann0 (Sp,L, (R', M')::nil))

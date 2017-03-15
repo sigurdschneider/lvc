@@ -4,43 +4,12 @@ Require Import Liveness.Liveness LabelsDefined.
 Require Import SimI.
 Require Import ExpVarsBounded SpillSound ReconstrLive.
 Require Import Take TakeSet MoreTac.
+Require Import OneOrEmpty.
 
 Set Implicit Arguments.
 
 (** * SimplSpill *)
 
-Definition one_or_empty_if k X `{OrderedType X} (s:set X) : set X
-  := if [cardinal s >= k] then
-      match choose s with
-      | Some x => singleton x
-      | None => ∅
-      end
-    else
-      ∅.
-
-Lemma one_or_empty_of_incl k X `{OrderedType X} (s:set X)
-  : one_or_empty_if k s ⊆ s.
-Proof.
-  unfold one_or_empty_if. repeat cases; eauto with cset.
-  exploit choose_1; eauto. cset_tac.
-Qed.
-
-Lemma one_or_empty_cardinal_ge k X `{OrderedType X} (s:set X)
-  : k > 0 -> cardinal s >= k -> cardinal (one_or_empty_if k s) = 1.
-Proof.
-  unfold one_or_empty_if. repeat cases; eauto with cset.
-  - intros; exfalso.
-    exploit choose_2; eauto.
-    exploit cardinal_1; eauto. omega.
-  - intros; omega.
-Qed.
-
-Lemma one_or_empty_cardinal_lt k X `{OrderedType X} (s:set X)
-  : cardinal s < k -> one_or_empty_if k s = ∅.
-Proof.
-  unfold one_or_empty_if. repeat cases; eauto with cset.
-  - intros; exfalso. omega.
-Qed.
 
 Fixpoint simplSpill
          (k : nat)

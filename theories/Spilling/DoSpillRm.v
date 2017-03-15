@@ -1,5 +1,5 @@
 Require Import List Map Env AllInRel Exp AppExpFree.
-Require Import IL Annotation InRel AutoIndTac Liveness LabelsDefined.
+Require Import IL Annotation InRel AutoIndTac Liveness.Liveness LabelsDefined.
 Require Import SpillSound SpillUtil.
 
 Set Implicit Arguments.

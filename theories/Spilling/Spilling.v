@@ -3,7 +3,7 @@ Require Import Var MapInjectivity IL Annotation AnnP Sim LabelsDefined AppExpFre
 Require Import SimplSpill SpillSound SpillSim DoSpill DoSpillRm Take Drop.
 Require Import Coherence.
 Require Import ExpVarsBounded ReconstrLive ReconstrLiveSmall ReconstrLiveSound.
-Require Import Liveness RenamedApart RenameApart_Liveness AddParams Slot.
+Require Import Liveness.Liveness RenamedApart RenameApart_Liveness AddParams Slot.
 
 Set Implicit Arguments.
 

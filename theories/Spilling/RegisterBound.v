@@ -603,7 +603,7 @@ Proof.
         {
           rewrite disj_empty_cut; eauto.
           - clear; cset_tac.
-          - rewrite H24, H12, R_VD, M_VD; clear; cset_tac.
+          - rewrite H23, H12, R_VD, M_VD; clear; cset_tac.
         }
         assert (VD ∩ lookup_set slot (R \ K ∪ L) ⊆ R \ K ∪ L)
           as rkl_in.
@@ -639,7 +639,7 @@ Proof.
         {
           rewrite disj_empty_cut; eauto.
           - clear; cset_tac.
-          - rewrite H24, H12, R_VD, M_VD; clear; cset_tac.
+          - rewrite H23, H12, R_VD, M_VD; clear; cset_tac.
         }
         assert (VD ∩ lookup_set slot (R \ K ∪ L) ⊆ R ∪ L)
           as rkl_in.
