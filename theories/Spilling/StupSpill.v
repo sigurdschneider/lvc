@@ -104,7 +104,6 @@ Proof.
       omega.
     + rewrite pir2_R. clear. cset_tac.
     + rewrite pir2_M. rewrite H1. eauto.
-    + clear; cset_tac.
     + rewrite Op.freeVars_live_list; eauto.
   - eapply SpillReturn with (K:= R);
       [ rewrite <- ReqR' | rewrite <- ReqR' | | ]; eauto with cset.
