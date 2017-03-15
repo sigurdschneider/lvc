@@ -1,4 +1,4 @@
-Require Import DecSolve IL Annotation Liveness TrueLiveness LengthEq.
+Require Import DecSolve IL Annotation Liveness.Liveness TrueLiveness LengthEq.
 
 Instance argsLive_dec Caller Callee Y Z
       : Computable (argsLive Caller Callee Y Z).

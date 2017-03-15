@@ -2,7 +2,7 @@ Require Import List CSet.
 Require Import Util AllInRel MapDefined IL Sim Status Annotation VarP.
 Require Import Rename RenameApart RenameApart_Liveness RenameApart_VarP.
 Require CMap.
-Require Liveness LivenessValidators ParallelMove ILN ILN_IL.
+Require Liveness.Liveness LivenessValidators ParallelMove ILN ILN_IL.
 Require TrueLiveness LivenessAnalysis LivenessAnalysisCorrect.
 Require Coherence Invariance.
 Require Delocation DelocationAlgo DelocationCorrect DelocationValidator.

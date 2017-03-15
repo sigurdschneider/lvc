@@ -1,5 +1,5 @@
 Require Import AllInRel List Map Env Exp Rename SetOperations OptionMap.
-Require Import IL Annotation AutoIndTac Liveness InRel4.
+Require Import IL Annotation AutoIndTac Liveness.Liveness InRel4.
 Require Import Sim SimTactics.
 
 Set Implicit Arguments.

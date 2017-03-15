@@ -1,5 +1,5 @@
 Require Import CSet Util LengthEq Fresh Take MoreList Filter OUnion AllInRel.
-Require Import IL Annotation LabelsDefined Sawtooth InRel Liveness TrueLiveness Reachability.
+Require Import IL Annotation LabelsDefined Sawtooth InRel Liveness.Liveness TrueLiveness Reachability.
 Require Import Sim SimTactics.
 Require SimI SimF.
 

@@ -1,6 +1,6 @@
 Require Import Util LengthEq IL InRel RenamedApart LabelsDefined AppExpFree.
 Require Import Restrict SetOperations OUnion OptionR.
-Require Import Annotation Liveness Coherence.
+Require Import Annotation Liveness.Liveness Coherence.
 
 Set Implicit Arguments.
 Unset Printing Records.

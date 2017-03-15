@@ -1,6 +1,6 @@
 Require Import Util LengthEq AllInRel Map CSet SetOperations MoreList Indexwise.
 Require Import Val Var Env IL LabelsDefined Annotation Subset1 CSetDisjoint PairwiseDisjoint.
-Require Import Liveness Restrict RenamedApart.
+Require Import Liveness.Liveness Restrict RenamedApart.
 
 Set Implicit Arguments.
 

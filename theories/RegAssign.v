@@ -1,7 +1,7 @@
 Require Import List CSet CMap.
 Require Import Util AllInRel MapDefined IL Sim Status Annotation LabelsDefined.
 Require Import Rename RenameApart RenamedApart RenameApart_Liveness.
-Require Import Liveness ParallelMove.
+Require Import Liveness.Liveness ParallelMove.
 Require Import Coherence Invariance.
 Require Import Allocation AllocationAlgo AllocationAlgoCorrect.
 Require Import Alpha AppExpFree.

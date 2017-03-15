@@ -1,6 +1,6 @@
 Require Import Util CSet CMap MapDefined SetOperations OUnion OptionR.
 Require Import IL InRel4 RenamedApart LabelsDefined Restrict.
-Require Import Annotation Liveness Coherence Delocation.
+Require Import Annotation Liveness.Liveness Coherence Delocation.
 Require Import Sim SimTactics.
 
 (*  IL_Types. *)

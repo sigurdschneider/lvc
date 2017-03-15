@@ -1,5 +1,5 @@
 Require Import CSet Util Fresh Filter Take MoreList OUnion AllInRel.
-Require Import IL Annotation LabelsDefined Sawtooth InRel Liveness TrueLiveness.
+Require Import IL Annotation LabelsDefined Sawtooth InRel Liveness.Liveness TrueLiveness.
 Require SimF SimI.
 
 Set Implicit Arguments.

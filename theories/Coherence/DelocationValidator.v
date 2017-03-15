@@ -1,5 +1,5 @@
 Require Import AllInRel Util Map Env Exp IL Annotation Coherence DecSolve.
-Require Import Liveness Restrict Delocation Indexwise.
+Require Import Liveness.Liveness Restrict Delocation Indexwise.
 
 Set Implicit Arguments.
 Unset Printing Records.

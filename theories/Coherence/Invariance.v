@@ -1,5 +1,5 @@
 Require Import Util IL InRel4 RenamedApart LabelsDefined OptionR.
-Require Import Annotation Liveness Restrict SetOperations Coherence.
+Require Import Annotation Liveness.Liveness Restrict SetOperations Coherence.
 Require Import Sim SimTactics.
 
 Set Implicit Arguments.

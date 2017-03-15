@@ -1,8 +1,8 @@
 Require Import Util CSet IL Annotation MapDefined AllInRel.
-Require Import Sim LabelsDefined Liveness AppExpFree.
+Require Import Sim LabelsDefined Liveness.Liveness AppExpFree.
 Require Import Coherence Invariance Delocation DelocationCorrect.
 Require Import DelocationAlgo DelocationAlgoCorrect DelocationAlgoLive.
-Require Import Liveness LabelsDefined.
+Require Import LabelsDefined.
 
 Arguments sim S {H} S' {H0} r t _ _.
 

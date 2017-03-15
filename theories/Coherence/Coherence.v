@@ -1,5 +1,5 @@
 Require Import Util IL InRel RenamedApart LabelsDefined OptionR.
-Require Import Annotation Exp SetOperations Liveness Restrict.
+Require Import Annotation Exp SetOperations Liveness.Liveness Restrict.
 
 Set Implicit Arguments.
 

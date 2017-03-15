@@ -1,6 +1,6 @@
 Require Import CSet Util Map SetOperations.
 Require Import Env IL Alpha Fresh Annotation OptionR.
-Require Import Liveness Coherence Restrict RenamedApart RenameApart_Liveness.
+Require Import Liveness.Liveness Coherence Restrict RenamedApart RenameApart_Liveness.
 Require Import LabelsDefined PairwiseDisjoint AppExpFree.
 Require Import InfinitePartition MapSep AnnP.
 
