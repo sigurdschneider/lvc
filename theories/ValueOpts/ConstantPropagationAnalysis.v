@@ -152,7 +152,7 @@ Smpl Add match goal with
          end : inv_trivial.
 
 Definition constant_propagation_transform sT ZL st (ST:subTerm st sT)
-           (a:Dom)
+           (a:Dom) (b:bool)
   : anni Dom st :=
   match st as st', a return anni Dom st'  with
   | stmtLet x (Operation e) s as st, d =>
@@ -162,12 +162,13 @@ Definition constant_propagation_transform sT ZL st (ST:subTerm st sT)
     (* we assume renamed apart here, and dont zero x *)
     domupd d x (Some Top)
   | stmtIf e s t as st, d =>
-      (if [op_eval (domenv d) e = Some (wTA val_false)
-           \/ op_eval (domenv d) e = None ] then
-         None else Some d,
-       if [op_eval (domenv d) e = Some (wTA val_true)
-           \/ op_eval (domenv d) e = None ] then
-         None else Some d)
+    (if [op_eval (domenv d) e = None] then false
+     else if [op_eval (domenv d) e = Some (wTA val_false)] then
+            false else true,
+     if [op_eval (domenv d) e = None] then false
+     else if [op_eval (domenv d) e = Some (wTA val_true)] then
+            false else true,
+     d)
   | stmtApp f Y as st, d =>
     let Z := nth (counted f) ZL (nil:list var) in
     let Yc := List.map (op_eval (domenv d)) Y in
@@ -183,9 +184,9 @@ Definition constant_propagation_transform sT ZL st (ST:subTerm st sT)
 
 Lemma transf_mon
   : (forall (sT s : stmt) (ST ST' : subTerm s sT) (ZL : 〔params〕) (a b : Dom),
-        a ⊑ b ->
-        constant_propagation_transform ZL ST a
-                                       ⊑ constant_propagation_transform ZL ST' b).
+        a ⊑ b -> forall (c d:bool), c ⊑ d ->
+        constant_propagation_transform ZL ST a c
+                                       ⊑ constant_propagation_transform ZL ST' b d).
 Proof.
   intros.
   general induction s; simpl in *; eauto.
@@ -194,13 +195,14 @@ Proof.
       eapply (leMap_op_eval e); eauto.
     + hnf; intros. mlud; eauto.
   - exploit (leMap_op_eval e); eauto.
-    repeat (cases; try split; eauto using @fstNoneOrR).
-    + exfalso; destruct COND, COND0; try rewrite H1 in *; try rewrite H2 in *;
-        clear_trivial_eqs; eauto.
-    + exfalso; destruct COND; try rewrite H1 in *; try rewrite H2 in *; try inv H0;
-        clear_trivial_eqs; eauto.
-    + exfalso; destruct COND; try rewrite H1 in *; try rewrite H2 in *; try inv H0;
-        clear_trivial_eqs; eauto.
+    repeat (cases; try split; eauto using @fstNoneOrR); simpl;
+      try congruence;
+    repeat (match goal with
+           | [ H : _ = None |- _ ] => rewrite H in *
+           | [ H : _ = Some _ |- _ ] => rewrite H in *
+            end; clear_trivial_eqs; try inv H1; try congruence).
+    clear_trivial_eqs. eapply NOTCOND0. rewrite <- H2. reflexivity.
+    clear_trivial_eqs. eapply NOTCOND1. rewrite <- H2. reflexivity.
   - destruct (get_dec ZL l); dcr.
     + erewrite get_nth; eauto; simpl.
       hnf; intros.
@@ -238,20 +240,18 @@ Qed.
 Definition anni_dom sT (a:anni Dom sT) : set var.
   destruct sT; simpl in *;
     try eapply (domain a).
-  - eapply (match (fst a) with Some d => domain d | None => ∅ end
-              ∪ match (snd a) with Some d => domain d | None => ∅ end).
+  - eapply (domain (snd a)).
 Defined.
 
 Lemma cp_trans_domain  sT (ZL:list params) st (ST:subTerm st sT)
-       (ZLIncl: list_union (of_list ⊝ ZL) ⊆ occurVars sT) (a:DDom sT)
-  : anni_dom _ (constant_propagation_transform ZL ST (proj1_sig a)) ⊆ occurVars sT.
+       (ZLIncl: list_union (of_list ⊝ ZL) ⊆ occurVars sT) (a:DDom sT) b
+  : anni_dom _ (constant_propagation_transform ZL ST (proj1_sig a) b) ⊆ occurVars sT.
 Proof.
   pose proof (subTerm_occurVars ST) as Incl. destruct a; simpl in *.
   destruct st; simpl in *; eauto.
   - destruct e; eauto.
     rewrite domain_domupd_incl. cset_tac.
     rewrite domain_add. cset_tac.
-  - repeat cases; simpl; cset_tac.
   - destruct (get_dec ZL l); dcr.
     + erewrite get_nth; eauto.
       rewrite domain_domupd_list_incl.
@@ -261,90 +261,28 @@ Proof.
     + rewrite not_get_nth_default; eauto.
 Qed.
 
-Definition anni_incl sT (a:anni Dom sT) (U:set var)
-  := match sT as s return anni Dom s -> Prop with
-    | stmtIf _ _ _ => fun x =>
-                       match fst x with
-                       | Some d => domain d ⊆ U
-                       | None => True
-                       end /\
-                       match snd x with
-                       | Some d => domain d ⊆ U
-                       | None => True
-                       end
-    | _ => fun x => domain x ⊆ U
-    end a.
-
-
-Lemma cp_trans_domain'  sT (ZL:list params) st (ST:subTerm st sT)
-      (ZLIncl: list_union (of_list ⊝ ZL) ⊆ occurVars sT) (a:DDom sT)
-  : anni_incl _ (@constant_propagation_transform sT ZL st ST (proj1_sig a)) (occurVars sT).
-Proof.
-  pose proof (subTerm_occurVars ST) as Incl. destruct a; simpl in *.
-  destruct st; simpl in *; eauto.
-  - destruct e; eauto.
-    rewrite domain_domupd_incl. cset_tac.
-    rewrite domain_add. cset_tac.
-  - repeat cases; simpl; cset_tac.
-  - destruct (get_dec ZL l); dcr.
-    + erewrite get_nth; eauto.
-      rewrite domain_domupd_list_incl.
-      eapply union_incl_split; eauto.
-      rewrite <- ZLIncl.
-      eapply incl_list_union; eauto using map_get_1.
-    + rewrite not_get_nth_default; eauto.
-Defined.
-
-Lemma conv sT (a:DDom sT)  e
-  : match
-      (if [op_eval (domenv (proj1_sig a)) e = ⎣ wTA val_false ⎦ \/ op_eval (domenv (proj1_sig a)) e = ⎣⎦]
-       then ⎣⎦ else ⎣ proj1_sig a ⎦)
-    with
-    | ⎣ d ⎦ => domain d [<=] occurVars sT
-    | ⎣⎦ => True
-    end -> option (DDom sT).
-Proof.
-  cases; intros. eapply None.
-  econstructor. econstructor; eauto.
-Defined.
-
-Lemma conv' sT (a:DDom sT)  e
-  : match
-      (if [op_eval (domenv (proj1_sig a)) e = ⎣ wTA val_true ⎦ \/ op_eval (domenv (proj1_sig a)) e = ⎣⎦]
-       then ⎣⎦ else ⎣ proj1_sig a ⎦)
-    with
-    | ⎣ d ⎦ => domain d [<=] occurVars sT
-    | ⎣⎦ => True
-    end -> option (DDom sT).
-Proof.
-  cases; intros. eapply None.
-  econstructor. econstructor; eauto.
-Defined.
 
 Definition cp_trans_dep sT (ZL:list params) st (ST:subTerm st sT)
-           (ZLIncl: list_union (of_list ⊝ ZL) ⊆ occurVars sT) (a:DDom sT)
+           (ZLIncl: list_union (of_list ⊝ ZL) ⊆ occurVars sT) (a:DDom sT) (b:bool)
   : anni (DDom sT) st.
 Proof.
-  set (res:=(@constant_propagation_transform sT ZL st ST (proj1_sig a))).
-  set (pf:=cp_trans_domain' ZL ST ZLIncl a).
+  set (res:=(@constant_propagation_transform sT ZL st ST (proj1_sig a) b)).
+  set (pf:=cp_trans_domain ZL ST ZLIncl a b).
   destruct st; try eapply (exist _ res pf).
   simpl.
-  simpl in *.
-  split. eapply (@conv sT a). eapply (proj1 pf).
-  eapply (@conv' sT a). eapply (proj2 pf).
+  eapply (fst (fst res), snd (fst res), exist _ (snd res) pf).
 Defined.
 
 
 Lemma transf_mon_dep
   : (forall (sT s : stmt) (ST ST' : subTerm s sT) (ZL : 〔params〕)
        (ZLIncl ZLIncl': list_union (of_list ⊝ ZL) ⊆ occurVars sT) (a b : DDom sT),
-        a ⊑ b ->
-        cp_trans_dep ZL ST ZLIncl a ⊑ cp_trans_dep ZL ST' ZLIncl' b).
+        a ⊑ b -> forall (c d:bool), c ⊑ d ->
+        cp_trans_dep ZL ST ZLIncl a c ⊑ cp_trans_dep ZL ST' ZLIncl' b d).
 Proof.
   intros. destruct a as [a aBound], b as [b bBound]; simpl in H.
   pose proof (@transf_mon sT s ST ST' ZL a b H) as LE.
   destruct s; clear_trivial_eqs; simpl in *; eauto.
-  - unfold conv, conv'. simpl. repeat cases; try split; eauto using @fstNoneOrR.
 Qed.
 
 Lemma domain_join_sig X `{OrderedType X} Y `{JoinSemiLattice Y}  U

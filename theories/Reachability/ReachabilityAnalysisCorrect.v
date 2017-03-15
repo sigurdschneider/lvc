@@ -324,7 +324,7 @@ Lemma reachability_analysis_complete sT ZL BL BL' (Len:❬BL❭ = ❬BL'❭) s a
 Proof.
   subst c.
   intros RCH.
-  general induction RCH; simpl in *; repeat let_pair_case_eq; repeat let_case_eq; repeat simpl_pair_eqs; subst; simpl in *; invt labelsDefined; inv LE;
+  general induction RCH; simpl in *; repeat let_pair_case_eq; repeat let_case_eq; repeat simpl_pair_eqs; subst; simpl in *; invt labelsDefined; try inv LE;
     eauto using reachability, subTerm, reachability_sTA_inv,
     ann_R_setTopAnn_left.
   - econstructor. eapply reachability_sTA_inv.

@@ -8,7 +8,7 @@ Require Import ConstantPropagation ConstantPropagationAnalysis.
 
 Local Arguments proj1_sig {A} {P} e.
 Local Arguments length {A} e.
-Local Arguments forward {sT} {Dom} {H} {H0} {H1} ftransform ZL ZLIncl st ST d.
+Local Arguments forward {sT} {Dom} ftransform ZL ZLIncl st.
 
 Lemma option_R_inv x y
   : @OptionR.option_R (withTop Val.val) (withTop Val.val)
@@ -21,7 +21,7 @@ Proof.
   do 2 f_equal. eauto.
 Qed.
 
-Opaque cp_trans_domain'.
+Opaque cp_trans_domain.
 
 Lemma add_dead (G:set var) (AE:Dom) x v (NOTIN:x ∉ G)
   : agree_on (OptionR.option_R (withTop_eq (R:=Val.int_eq))) G (domenv AE)
@@ -156,7 +156,7 @@ Proof.
   rewrite join_commutative. eauto.
 Qed.
 
-
+(*
 Lemma agree_on_fold_left (sT:IL.stmt) (ZL:list (list var)) F ans (LEN:❬F❭ = ❬ans❭)
       (ZLIncl: list_union (of_list ⊝ ZL) [<=] IL.occurVars sT) t
       (G:set var) (Dt:set var) (AE:DDom sT) ZL' ZL'Incl
@@ -252,7 +252,9 @@ Proof.
         rewrite BOTF. rewrite BOTsndx.
         eapply bottom_neutral.
 Qed.
+ *)
 
+(*
 Lemma cp_forward_agree sT ZL (AE:Dom) pf G s (ST:subTerm s sT) ra ZLIncl
   (RA:renamedApart s ra)
   : agree_on poEq (G \ (snd (getAnn ra) ∪ list_union (of_list ⊝ ZL)))
@@ -327,7 +329,9 @@ Proof.
         eapply H4. eapply incl_list_union; eauto using zip_get, map_get_1.
         unfold defVars. eauto with cset. cset_tac.*)
 Admitted.
+*)
 
+(*
 Lemma cp_forward_agree_def sT ZL (AE:Dom) pf G s (ST:subTerm s sT) ra ZLIncl
   (RA:renamedApart s ra) (Def:defined_on (fst (getAnn ra)) (domenv AE))
   : agree_on poEq (G \ (snd (getAnn ra) ∪ list_union (of_list ⊝ ZL)))
@@ -337,18 +341,33 @@ Proof.
   edestruct cp_forward_agree; dcr; eauto.
   exfalso. eauto.
 Qed.
+ *)
 
-Definition cp_sound sT AE Cp ZL s (ST:subTerm s sT) ZLIncl ra
-  : poEq (forward cp_trans_dep ZL ZLIncl s ST AE) AE
-    -> renamedApart s ra
+Arguments exist {A} {P} x _.
+
+Definition cp_sound sT AE AE' DIncl Cp ZL s (ST:subTerm s sT) ZLIncl ra anr
+  : let X := forward cp_trans_dep ZL ZLIncl s ST (@exist _ _ AE DIncl) anr in
+    renamedApart s ra
+    -> annotation s anr
     -> labelsDefined s (length ZL)
-    -> cp_sound (domenv (proj1_sig AE)) Cp s.
+    -> poEq (fst X) ((@exist _ _ AE DIncl),anr)
+    -> poEq AE' AE
+    -> cp_sound (domenv AE') Cp (snd X) s anr.
 Proof.
-  intros EQ RA LD.
-  general induction LD; invt renamedApart; simpl in *; destruct AE as [AE DIncl]; simpl.
-  - exploit cp_forward_agree_def; eauto.
-    estruct e; simpl in *.
-    +
+  intros LET RA ANN LD EQ1 EQ2. subst LET.
+  general induction LD; invt @renamedApart;
+    try invt @annotation; simpl in *; simpl;
+      simpl in *; dcr;
+        repeat let_pair_case_eq; repeat let_case_eq; repeat simpl_pair_eqs; subst;
+          simpl in *; try invt @ann_R; subst.
+  - destruct e; simpl in *; simpl in *.
+    + econstructor; eauto.
+      assert (eqMap AE (domupd AE x (op_eval (domenv AE) e))).
+      * eapply IHLD; eauto.
+
+        split; eauto.
+        -- etransitivity; eauto. admit.
+        -- etransitivity; eauto.
       econstructor; eauto.
       *
         exploit (IHLD sT  (exist (fun m : Map [nat, withTop val] => domain m [<=] occurVars sT)
