@@ -38,7 +38,7 @@ Definition domupd (d:Dom) x (o:aval) : Dom :=
 
 Fixpoint domupd_list (m:Dom) (A:list var) (B:list aval) :=
   match A, B with
-  | x::A, y::B => domupd (domupd_list m A B) x y
+  | x::A, y::B => domupd (domupd_list m A B) x (join (find x m) y)
   | _, _ => m
   end.
 
@@ -135,11 +135,13 @@ Lemma domupd_list_le a b Z Y
             (domupd_list b Z (op_eval (domenv b) ⊝ Y)).
 Proof.
   unfold leMap, domupd; intros.
-  general induction Z; destruct Y; simpl; eauto.
-  eapply H. eapply H. eapply H.
-  eapply domupd_le; eauto.
-  hnf. eapply IHZ; eauto.
-  eapply (leMap_op_eval o); eauto.
+  general induction Z; destruct Y; simpl domupd_list; eauto.
+  simple eapply domupd_le.
+  - hnf. eapply IHZ; eauto.
+  - exploit (@join_struct (option (withTop val)) _).
+    Focus 3. eapply H0.
+    eauto.
+    eapply (leMap_op_eval o); eauto.
 Qed.
 
 Smpl Add match goal with

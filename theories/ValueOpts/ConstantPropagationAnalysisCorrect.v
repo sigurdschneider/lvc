@@ -1,5 +1,5 @@
-Require Import Util SizeInduction Get MapDefined.
-Require Import IL Var Val.
+Require Import Util SizeInduction Get MapDefined Coq.Classes.RelationClasses.
+Require Import IL Var Val OptionR.
 Require Import CMap CMapDomain CMapPartialOrder CMapJoinSemiLattice.
 Require Import AnalysisForwardSSA Subterm CSet MapAgreement RenamedApart.
 Require Import Infra.PartialOrder Infra.Lattice Infra.WithTop.
@@ -254,55 +254,219 @@ Proof.
 Qed.
  *)
 
-(*
-Lemma cp_forward_agree sT ZL (AE:Dom) pf G s (ST:subTerm s sT) ra ZLIncl
-  (RA:renamedApart s ra)
-  : agree_on poEq (G \ (snd (getAnn ra) ∪ list_union (of_list ⊝ ZL)))
-             (domenv AE)
-             (domenv (proj1_sig (forward cp_trans_dep ZL ZLIncl s ST (exist _ AE pf))))
-    \/ (forward cp_trans_dep ZL ZLIncl s ST (exist _ AE pf) === bottom
-       /\ ~ defined_on (fst (getAnn ra)) (domenv AE)).
+Local Arguments exist {A} {P} x _.
+Local Arguments forward {sT} {Dom} ftransform ZL {ZLIncl} st {ST}.
+Local Arguments cp_trans_dep {sT} ZL st {ST} {ZLIncl}.
+Local Arguments cp_trans_domain {sT} ZL st {ST} {ZLIncl} a b.
+
+Lemma agree_on_R_impl  (X : Type) `{OrderedType X} (Y : Type)
+      (R R':Y -> Y -> Prop) (D:set X) (f g:X -> Y)
+  : agree_on R D f g
+    -> (forall x, x ∈ D -> R (f x) (g x) -> R' (f x) (g x))
+    -> agree_on R' D f g.
 Proof.
-  general induction RA; simpl in *.
-  - destruct e.
-    + rewrite H1.
-      edestruct IHRA.
-      * left.
-        symmetry.
-        etransitivity.
-        symmetry.
-        eapply agree_on_incl.
-        eapply H3.
-        -- rewrite H2. simpl.
-           instantiate (1:=G). clear; cset_tac.
-        -- symmetry.
-           eapply domupd_dead. cset_tac.
-      * right; dcr. split; eauto.
-        admit.
-    + rewrite H1.
-      edestruct IHRA.
-      * left.
-        symmetry.
-        etransitivity.
-        symmetry.
-        eapply agree_on_incl.
-        eapply H3.
-        -- rewrite H2. simpl.
-           instantiate (1:=G). clear; cset_tac.
-        -- symmetry.
-           eapply add_dead. cset_tac.
-      * right; dcr; split; eauto. admit.
-  - repeat cases.
-    + admit.
-    + clear Heq0. admit.
-    + admit.
-    + right. split; eauto. admit.
-  - left; eauto.
-  - left.
+  intros; hnf; intros; eauto.
+Qed.
+
+Lemma option_eq_option_R X (R:relation X) x y
+  : option_eq R x y <-> OptionR.option_R R x y.
+Proof.
+  split; inversion 1; econstructor; eauto.
+Qed.
+
+
+Notation "'getAE' X" := (proj1_sig (fst (fst X))) (at level 10, X at level 0).
+
+(*
+Lemma forward_defined_on sT ZL (AE:DDom sT) s (ST:subTerm s sT) ZLIncl anr D
+      (Def:defined_on D (domenv (proj1_sig AE)))
+  : defined_on D  (domenv (proj1_sig
+                             (fst (fst (@forward _ _ (@cp_trans_dep) ZL ZLIncl
+                                                 s ST AE anr))))).
+Proof.
+  pose proof (forward_monotone DDom (@cp_trans_dep) (@transf_mon_dep sT) ST ST ZL ZLIncl ZLIncl AE AE ltac:(reflexivity) ltac:(reflexivity) (r:=anr)).
+  hnf; intros. destruct (Def _ H0).
+  destruct H as [[LE1 LE2] LE3].
+  specialize (LE1 x).
+Qed.
+ *)
+
+Lemma agree_on_option_R_fstNoneOrR  (X : Type) `{OrderedType X} (Y : Type)
+      (R R':Y -> Y -> Prop) (D:set X) (f g h:X -> option Y)
+  : agree_on (option_R R) D f g
+    -> agree_on (fstNoneOrR R') D g h
+    -> (forall a b c, R a b -> R' b c -> R' a c)
+    -> agree_on (fstNoneOrR R') D f h.
+Proof.
+  intros AGR1 AGR2 Trans; hnf; intros.
+  exploit AGR1 as EQ1; eauto.
+  exploit AGR2 as EQ2; eauto.
+  inv EQ1; inv EQ2; clear_trivial_eqs; try econstructor; try congruence.
+  assert (x0 = b) by congruence; subst.
+  eauto.
+Qed.
+
+
+Instance agree_inst (X : Type) `{H : OrderedType X} (Y : Type) (R : relation Y)
+  : Proper (SetInterface.Equal ==> eq ==> eq ==> iff) (agree_on R).
+Proof.
+  unfold Proper, respectful; intros; subst.
+  split; intros; hnf; intros; eauto; cset_tac.
+Qed.
+
+Instance agree_inst_impl (X : Type) `{H : OrderedType X} (Y : Type) (R : relation Y)
+  : Proper (SetInterface.Subset ==> eq ==> eq ==> flip impl) (agree_on R).
+Proof.
+  unfold Proper, respectful, flip, impl; intros; subst.
+  intros; hnf; intros; eauto.
+Qed.
+
+Lemma defined_on_agree_fstNoneOrR (X : Type) `{H : OrderedType X}
+      (Y : Type) (R : relation Y) (D : ⦃X⦄) (f g : X -> ؟ Y)
+  : defined_on D f -> agree_on (fstNoneOrR R) D f g -> defined_on D g.
+Proof.
+  intros Def Agr.
+  hnf; intros. edestruct Def; eauto.
+  exploit Agr; eauto. rewrite H1 in H2. inv H2; eauto.
+Qed.
+
+Instance int_eq_trans : Transitive (int_eq).
+Proof.
+  hnf; intros. rewrite H ;eauto.
+Qed.
+
+Instance int_eq_sym : Symmetric (int_eq).
+Proof.
+  hnf; intros. rewrite H ;eauto. reflexivity.
+Qed.
+
+Lemma domupd_poLe (m m' : Map [nat, withTop val]) a v
+  : poLe (find a m) v
+    -> leMap m m'
+    -> leMap m (domupd m' a v).
+Proof.
+  intros. hnf; intros.
+  unfold domupd; cases.
+  - mlud; eauto. rewrite <- e. eauto.
+  - mlud; eauto. rewrite <- e. eauto.
+Qed.
+
+
+Lemma domupd_list_exp (a : Map [nat, withTop val]) (Z : params) (Y : args)
+  : leMap a (domupd_list a Z (op_eval (domenv a) ⊝ Y)).
+Proof.
+  general induction Z; destruct Y; simpl domupd_list; try reflexivity.
+  eapply domupd_poLe; eauto.
+  unfold ojoin; repeat cases; eauto.
+  econstructor. eapply withTop_generic_join_exp.
+Qed.
+
+
+Lemma cp_forward_agree sT ZL (AE:DDom sT) G s (ST:subTerm s sT) ra ZLIncl anr
+      (RA:renamedApart s ra) (Def:defined_on (fst (getAnn ra)) (domenv (proj1_sig AE)))
+  : agree_on poEq (G \ (snd (getAnn ra) ∪ list_union (of_list ⊝ ZL)))
+             (domenv (proj1_sig AE))
+             (domenv (proj1_sig
+                        (fst (fst (@forward _ _ (@cp_trans_dep) ZL ZLIncl
+                                            s ST AE anr))))) /\
+    agree_on poLe (G \ (snd (getAnn ra)))
+             (domenv (proj1_sig AE))
+             (domenv (proj1_sig
+                        (fst (fst (@forward _ _ (@cp_trans_dep) ZL ZLIncl
+                                            s ST AE anr))))).
+Proof.
+  general induction RA; destruct anr; simpl in *;
+    try now (split; reflexivity); simpl.
+  - destruct e;
+      repeat let_pair_case_eq; repeat simpl_pair_eqs; subst; simpl;
+        pe_rewrite; set_simpl.
+    + edestruct @IHRA; clear IHRA; dcr.
+      Focus 2.
+      dcr; split.
+      * etransitivity; [|eapply agree_on_incl; eauto]; simpl.
+        eapply domupd_dead. cset_tac.
+        cset_tac.
+      * simpl. admit.
+      * simpl in *.
+
+        eapply agree_on_option_R_fstNoneOrR.
+        Focus 2.
+        eapply agree_on_incl; eauto.
+        cset_tac.
+        eapply domupd_dead. cset_tac.
+        intros. etransitivity; eauto using withTop_le_refl.
+    + edestruct @IHRA; clear IHRA; dcr.
+      Focus 2.
+      dcr; split.
+      * etransitivity; [|eapply agree_on_incl; eauto]; simpl.
+        set_simpl.
+        eapply add_dead. cset_tac.
+        cset_tac.
+      * simpl.  admit.
+      * simpl in *.
+        eapply agree_on_option_R_fstNoneOrR.
+        Focus 2.
+        eapply agree_on_incl; eauto. cset_tac.
+        eapply add_dead. cset_tac.
+        intros. etransitivity; eauto using withTop_le_refl.
+  - repeat let_pair_case_eq; repeat simpl_pair_eqs; subst; simpl;
+      pe_rewrite; set_simpl.
+    split.
+    + symmetry; etransitivity; symmetry.
+      * eapply agree_on_incl.
+        -- eapply IHRA2; eauto.
+           eapply defined_on_agree_fstNoneOrR; eauto.
+           instantiate (1:=withTop_le (R:=int_eq)).
+           edestruct @IHRA1 with (ZL:=ZL) (AE:=(@exist Dom
+                    (fun m : Map [nat, withTop val] => domain m [<=] occurVars sT)
+                    (proj1_sig AE) (@cp_trans_domain sT ZL (stmtIf e s t) ST ZLIncl AE a)))
+           (anr:=anr1) (G:=D) (ST:= (@subTerm_EQ_If1 sT (stmtIf e s t) e s t
+                      (@eq_refl stmt (stmtIf e s t)) ST)) (ZLIncl:=ZLIncl).
+           simpl; eauto.
+           eapply agree_on_incl.
+           simpl in *.
+           eapply H4. eapply renamedApart_disj in RA2; pe_rewrite.
+           eauto with cset.
+        -- cset_tac.
+      * symmetry; etransitivity; symmetry.
+        -- eapply agree_on_incl. eapply IHRA1; eauto.
+           cset_tac.
+        -- simpl. reflexivity.
+    + etransitivity.
+      Focus 2.
+      eapply agree_on_incl.
+      eapply IHRA2.
+      eapply defined_on_agree_fstNoneOrR; eauto.
+      instantiate (1:=withTop_le (R:=int_eq)).
+      edestruct @IHRA1 with (ZL:=ZL) (AE:=(@exist Dom
+                    (fun m : Map [nat, withTop val] => domain m [<=] occurVars sT)
+                    (proj1_sig AE) (@cp_trans_domain sT ZL (stmtIf e s t) ST ZLIncl AE a)))
+           (anr:=anr1) (G:=D) (ST:= (@subTerm_EQ_If1 sT (stmtIf e s t) e s t
+                      (@eq_refl stmt (stmtIf e s t)) ST)) (ZLIncl:=ZLIncl).
+      simpl; eauto.
+      eapply agree_on_incl. eapply H4.
+      eapply renamedApart_disj in RA2; pe_rewrite.
+      eauto with cset. instantiate (1:=G\Ds).
+      cset_tac.
+      eapply agree_on_incl.
+      edestruct @IHRA1 with (ZL:=ZL) (AE:=(@exist Dom
+                    (fun m : Map [nat, withTop val] => domain m [<=] occurVars sT)
+                    (proj1_sig AE) (@cp_trans_domain sT ZL (stmtIf e s t) ST ZLIncl AE a)))
+           (anr:=anr1) (G:=G) (ST:= (@subTerm_EQ_If1 sT (stmtIf e s t) e s t
+                      (@eq_refl stmt (stmtIf e s t)) ST)) (ZLIncl:=ZLIncl).
+      eauto. eapply H4. cset_tac.
+  - set_simpl.
     destruct (get_dec ZL (Var.labN f)); dcr.
-    + erewrite get_nth; eauto.
-      admit.
-    + erewrite not_get_nth_default; eauto. simpl. reflexivity.
+    + erewrite get_nth; eauto. split.
+      * admit.
+      * hnf; intros.
+        eapply domupd_list_exp.
+    + admit.
+  - repeat let_pair_case_eq; repeat simpl_pair_eqs; subst; simpl;
+        pe_rewrite; set_simpl.
+
+    + erewrite not_get_nth_default; eauto. simpl.
+      split; reflexivity.
   - (*rewrite <- H5.
     eapply agree_on_fold_left; eauto.
     + intros. eapply agree_on_incl.
@@ -329,7 +493,7 @@ Proof.
         eapply H4. eapply incl_list_union; eauto using zip_get, map_get_1.
         unfold defVars. eauto with cset. cset_tac.*)
 Admitted.
-*)
+
 
 (*
 Lemma cp_forward_agree_def sT ZL (AE:Dom) pf G s (ST:subTerm s sT) ra ZLIncl
@@ -343,7 +507,6 @@ Proof.
 Qed.
  *)
 
-Arguments exist {A} {P} x _.
 
 Definition cp_sound sT AE AE' DIncl Cp ZL s (ST:subTerm s sT) ZLIncl ra anr
   : let X := forward cp_trans_dep ZL ZLIncl s ST (@exist _ _ AE DIncl) anr in

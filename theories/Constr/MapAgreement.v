@@ -30,7 +30,7 @@ Section MapAgreement.
     intros; hnf; firstorder.
   Qed.
 
-  Lemma agree_on_trans R `{Transitive Y R} L
+  Global Instance agree_on_trans R `{Transitive Y R} L
     : Transitive (agree_on R L).
   Proof.
     hnf; intros; hnf; intros. transitivity (y x0); eauto.
