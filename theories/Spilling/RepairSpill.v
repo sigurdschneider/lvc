@@ -2,9 +2,8 @@ Require Import List Map Env AllInRel Exp MoreList.
 Require Import IL Annotation.
 Require Import Liveness.Liveness.
 Require Import ExpVarsBounded SpillSound OneOrEmpty.
-Require Import Take TakeSet MoreTac.
+Require Import Take TakeSet.
 
-(*Goal forall s t u v w : ⦃var⦄, (s ∪ t) ∩ v [=] s ∪ t ∩ v.*)
 
 Set Implicit Arguments.
 
@@ -24,30 +23,34 @@ Fixpoint stretch_rms (X : Type) (k : nat) (F : list X) (rms : list (⦃var⦄ * 
   end
 .
 
-Fixpoint repairSpill
+Fixpoint repair_spill
          (k : nat)
          (ZL: list params)
          (Λ : list (⦃var⦄ * ⦃var⦄))
          (R M : ⦃var⦄)
          (s : stmt)
-         (lv : ann ⦃var⦄)
+         (rlv : ann ⦃var⦄) (* liveness of register variables *)
+         (lv : ann ⦃var⦄)  (* normal liveness *)
          (sl : spilling)
          {struct s}
   : spilling :=
-  match s,lv,sl with
+  match s,rlv,lv,sl with
 
-  | stmtLet x e s, ann1 _ lv', ann1 (Sp,L,_) sl'
+  | stmtLet x e s, ann1 _ rlv', ann1 _ lv', ann1 (Sp,L,_) sl'
     => let Fv_e := Exp.freeVars e in
       let L'   := (M ∩ L) ∪ (Fv_e \ R) in
-      let K    := of_list (take (cardinal (R ∪ L') - k) (elements (R \ Fv_e \ getAnn lv')
-                                                                  ++ elements (R \ Fv_e))) in
+      (* we only use register liveness at 2 points to make some preferences in the selection of the kill set: (here)
+         if the register liveness is incorrect we will still get a correct spilling *)
+      let K    := of_list (take (cardinal (R ∪ L') - k) (elements (R \ Fv_e \ getAnn rlv')
+                                                                  ++ elements (getAnn rlv' ∩ R \ Fv_e))) in
       let R_e  := R \ K ∪ L' in
-      let K_x  := one_or_empty_if' k R_e (R_e \ getAnn lv') in
+      let K_x  := one_or_empty_if' k R_e (R_e \ getAnn rlv') in
+      (* here we need normal liveness, because we have to spilled variables that are loaded later on *)
       let Sp'  := (R ∩ Sp) ∪ (getAnn lv' ∩ (K ∪ K_x) \ M) in
       let R_s  := {x; R_e \ K_x} in
-      ann1 (Sp',L',nil) (repairSpill k ZL Λ R_s (Sp' ∪ M) s lv' sl')
-
-  | stmtReturn e, _, ann0 (Sp,L,_)
+      ann1 (Sp',L',nil) (repair_spill k ZL Λ R_s (Sp' ∪ M) s rlv' lv' sl')
+           
+  | stmtReturn e, _, _, ann0 (Sp,L,_)
     => let Fv_e := Op.freeVars e in
       let L'   := (M ∩ L) ∪ Fv_e \ R in
       let K    := set_take (cardinal (R ∪ L') - k) (R \ Fv_e) in
@@ -55,19 +58,20 @@ Fixpoint repairSpill
       let Sp'  := R ∩ Sp in
       ann0 (Sp',L',nil)
 
-  | stmtIf e s1 s2, ann2 _ lv1 lv2, ann2 (Sp,L,_) sl1 sl2
+  | stmtIf e s1 s2, ann2 _ rlv1 rlv2, ann2 _ lv1 lv2, ann2 (Sp,L,_) sl1 sl2
     => let Fv_e := Op.freeVars e in
       let L'   := (M ∩ L) ∪ Fv_e \ R in
+      (* here is the second use of register liveness *)
       let K    := of_list (take (cardinal (R ∪ L') - k)
-                                (elements (R \ Fv_e \ getAnn lv1 \ getAnn lv2)
-                                          ++ elements (R \ Fv_e))) in
+                                (elements (R \ Fv_e \ getAnn rlv1 \ getAnn rlv2)
+                                          ++ elements ((getAnn rlv1 ∪ getAnn rlv2) ∩ R \ Fv_e))) in
        let R_e  := R \ K ∪ L' in
        let Sp'  := (R ∩ Sp) ∪ ((getAnn lv1 ∪ getAnn lv2) ∩ K \ M) in
        ann2 (Sp',L',nil)
-            (repairSpill k ZL Λ R_e (Sp' ∪ M) s1 lv1 sl1)
-            (repairSpill k ZL Λ R_e (Sp' ∪ M) s2 lv2 sl2)
+            (repair_spill k ZL Λ R_e (Sp' ∪ M) s1 rlv1 lv1 sl1)
+            (repair_spill k ZL Λ R_e (Sp' ∪ M) s2 rlv2 lv2 sl2)
 
-  | stmtApp f Y, _, ann0 (Sp,L,(R',M')::nil)
+  | stmtApp f Y, _, _, ann0 (Sp,L,(R',M')::nil)
     => let R_f := fst (nth (counted f) Λ (∅,∅)) in
       let M_f := snd (nth (counted f) Λ (∅,∅)) in
       let Z   := nth (counted f) ZL nil in
@@ -76,22 +80,27 @@ Fixpoint repairSpill
       let Sp' := Sp ∪ M_f \ M \ of_list Z in
       ann0 (Sp',L',(R',((Sp' ∪ M) ∩ M') ∪ list_union (Op.freeVars ⊝ Y) \ (R \ K ∪ L'))::nil)
 
-  | stmtFun F t, annF LV lv_F lv_t, annF (Sp,L,rms) sl_F sl_t
+  | stmtFun F t, annF rLV rlv_F rlv_t, annF LV lv_F lv_t, annF (Sp,L,rms) sl_F sl_t
     => let rms' := stretch_rms k F rms (getAnn ⊝ lv_F) in
-      let ZL'  := (fun f => fst f) ⊝ F ++ ZL in
+      let ZL'  := fst ⊝ F ++ ZL in
       let Λ'   := rms' ++ Λ in
+      let L'   := M ∩ L in
+      (* here is the third use of register liveness *)
+      let K    := of_list (take (cardinal (R ∪ L') - k)
+                                (elements (R \ getAnn rlv_t) ++ elements (getAnn rlv_t ∩ R))) in
+      let Sp'  := (R ∩ Sp) ∪ ((getAnn lv_t) ∩ K \ M) in
 
        annF (Sp, L, rms)
             ((fun f rmlvsl
-              => match rmlvsl with ((rm, Lv),sl)
-                                => repairSpill k ZL' Λ' (fst rm) (snd rm) (snd f) Lv sl
+              => match rmlvsl with (rm, rLv, Lv, sl)
+                                => repair_spill k ZL' Λ' (fst rm) (snd rm) (snd f) rLv Lv sl
                  end)
-               ⊜ F (pair ⊜ (pair ⊜ rms lv_F) sl_F))
-            (repairSpill k ZL' Λ' R M t lv_t sl_t)
+               ⊜ F (pair ⊜ (pair ⊜ (pair ⊜ rms rlv_F) lv_F) sl_F))
+            (repair_spill k ZL' Λ' (R \ K ∪ L) M t rlv_t lv_t sl_t)
 
-  | _,_,_ => ann0 (∅, ∅, nil)
+  | _,_,_,_ => ann0 (∅, ∅, nil)
 
   end
-  .
+.
 
           
