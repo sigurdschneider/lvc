@@ -17,10 +17,15 @@ Proof.
   general induction sl; invc liveSnd; invc spillSnd; econstructor.
   - econstructor; econstructor; symmetry;
       apply inter_subset_equal in H9; apply inter_subset_equal in H10;
-    assert (((R_f \ of_list Z0) \ R ∪ (L ∩ (Sp ∩ R ∪ M))) [=] L) as Leq
-        by (rewrite H9, H10; apply union_subset_equal;
+    assert (set_take_prefer k (L ∩ (Sp ∩ R ∪ M))
+                              ((fst (nth (counted l) Λ ({},{}))
+                                    \ of_list (nth (counted l) ZL nil)) \ R) [=] L) as Leq.
+    {
+      apply ..
+      rewrite H9, H10. apply union_subset_equal;
             rewrite H16; clear; cset_tac).
-    + rewrite H9; erewrite !get_nth; eauto. unfold snd. apply union_subset_equal.
+    + 
+      rewrite H9; erewrite !get_nth; eauto. unfold snd. apply union_subset_equal.
       rewrite H17. clear; cset_tac.
     + erewrite !get_nth; eauto. unfold fst. apply Leq.
     + erewrite !get_nth; eauto. unfold snd, fst. econstructor; eauto.
