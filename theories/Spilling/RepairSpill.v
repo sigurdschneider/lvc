@@ -11,6 +11,73 @@ Definition set_take (X:Type) `{OrderedType X} (k:nat) (x:⦃X⦄)
   := of_list (take k (elements x))
 .
 
+Definition set_take_prefer (X:Type) `{OrderedType X} (k:nat) (x y : ⦃X⦄)
+  := of_list (take k (elements (x ∩ y) ++ elements (x \ y)))
+.
+
+Definition set_take_avoid (X:Type) `{OrderedType X} (k:nat) (x y : ⦃X⦄)
+  := of_list (take k (elements (x \ y) ++ elements (x ∩ y)))
+.
+
+
+Lemma set_take_incl (X:Type) `{OrderedType X} k (x:⦃X⦄)
+  : set_take k x ⊆ x
+.
+Proof.
+  apply take_set_incl.
+Qed.
+
+
+Lemma set_take_prefer_incl (X:Type) `{OrderedType X} k (x y:⦃X⦄)
+  : set_take_prefer k x y ⊆ x
+.
+Proof.
+  decide (k < cardinal (x ∩ y)); unfold set_take_prefer; try rewrite <-elements_length in *;
+    [rewrite take_app_le|rewrite take_app_ge]; [|omega| |omega].
+  - rewrite take_set_incl. cset_tac.
+  - rewrite of_list_app.
+    apply union_incl_split; [rewrite of_list_elements|rewrite take_set_incl]; cset_tac.
+Qed.
+
+
+Lemma set_take_avoid_incl (X:Type) `{OrderedType X} k (x y:⦃X⦄)
+  : set_take_avoid k x y ⊆ x
+.
+Proof.
+  decide (k < cardinal (x \ y)); unfold set_take_avoid; try rewrite <-elements_length in *;
+    [rewrite take_app_le|rewrite take_app_ge]; [|omega| |omega].
+  - rewrite take_set_incl. cset_tac.
+  - rewrite of_list_app.
+    apply union_incl_split; [rewrite of_list_elements|rewrite take_set_incl]; cset_tac.
+Qed.
+
+
+Lemma set_take_prefer_eq (X:Type) `{OrderedType X} k (x y:⦃X⦄)
+  : cardinal x <= k -> set_take_prefer k x y [=] x
+.
+Proof.
+  intros card.
+  decide (x ⊆ y); unfold set_take_prefer; try rewrite <-elements_length in *.
+  - rewrite take_app_ge, of_list_app, of_list_elements, union_comm, union_subset_equal;
+      [cset_tac|rewrite take_set_incl; cset_tac|rewrite elements_length, inter_subset_equal];
+      eauto; rewrite <-elements_length; eauto.
+  - rewrite take_app_ge; [|rewrite elements_length in *;rewrite <-meet_in_left in card; eauto].
+    rewrite of_list_app, take_eq_ge, !of_list_elements; [cset_tac|].
+    unfold ge. rewrite !elements_length in *.
+    enough (cardinal (x ∩ y) + cardinal (x \ y) <= cardinal x); [rewrite <-H0 in card; omega|].
+    rewrite <-union_cardinal; [rewrite <-set_decomp; eauto|].
+    cset_tac.
+Qed.
+
+Lemma set_take_avoid_incl2 (X:Type) `{OrderedType X} k (x y:⦃X⦄)
+  : k <= cardinal (x \ y) -> set_take_avoid k x y ⊆ x \ y
+.
+Proof.
+  intros card.
+  unfold set_take_avoid. rewrite <-elements_length in card. rewrite take_app_le; eauto.
+  apply set_take_incl.
+Qed.
+
 
 Fixpoint stretch_rms (X : Type) (k : nat) (F : list X) (rms : list (⦃var⦄ * ⦃var⦄)) (lvF : list ⦃var⦄)
   {struct F} : list (⦃var⦄ * ⦃var⦄) :=
@@ -52,7 +119,7 @@ Fixpoint repair_spill
            
   | stmtReturn e, _, _, ann0 (Sp,L,_)
     => let Fv_e := Op.freeVars e in
-      let L'   := Fv_e \ R ∪ (L ∩ ((Sp ∩ R) ∪ M))in
+      let L'   := set_take_prefer k (Fv_e \ R ∪ (L ∩ ((Sp ∩ R) ∪ M))) Fv_e in
       let K    := set_take (cardinal (R ∪ L') - k) (R \ Fv_e) in
       let R_e  := R \ K ∪ L' in
       let Sp'  := Sp ∩ R in

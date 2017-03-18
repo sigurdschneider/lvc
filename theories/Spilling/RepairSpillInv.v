@@ -16,14 +16,21 @@ Proof.
   intros liveSnd spillSnd.
   general induction sl; invc liveSnd; invc spillSnd; econstructor.
   - econstructor; econstructor; symmetry;
-      apply inter_subset_equal in H9; apply inter_subset_equal in H10.
+      apply inter_subset_equal in H9; apply inter_subset_equal in H10;
+    assert (((R_f \ of_list Z0) \ R ∪ (L ∩ (Sp ∩ R ∪ M))) [=] L) as Leq
+        by (rewrite H9, H10; apply union_subset_equal;
+            rewrite H16; clear; cset_tac).
     + rewrite H9; erewrite !get_nth; eauto. unfold snd. apply union_subset_equal.
       rewrite H17. clear; cset_tac.
-    + erewrite !get_nth; eauto. rewrite H9, H10. unfold fst. apply union_subset_equal.
-      rewrite H16. clear; cset_tac.
+    + erewrite !get_nth; eauto. unfold fst. apply Leq.
     + erewrite !get_nth; eauto. unfold snd, fst. econstructor; eauto.
-      apply union_subset_equal. rewrite H17. unfold set_take; rewrite take_set_incl. admit. (*
-      rewrite meet_comm. apply meet_incl. rewrite H18. cset_tac. rewrite H16.
+      apply union_subset_equal. rewrite Leq.
+      rewrite meet_comm; apply meet_incl. rewrite H18.
+      enough (R \ K ∪ L [<=] R \ set_take (cardinal (R ∪ L) -k) (R \ R_f) ∪ L) as H'.
+      rewrite H'. clear. cset_tac. admit. (*
+      unfold set_take; rewrite take_set_incl. rewrite minus_minus.
+      rewrite meet_comm. apply meet_incl. rewrite Leq. rewrite H18, H9, H10. rewrite minus_minus.
+      assert (forall s t u : ⦃var⦄, s \ (s \ t)
       apply incl_eq.
       * admit.
       * rewrite H17. apply union_incl_split.
@@ -34,8 +41,13 @@ Proof.
     + econstructor; eauto.      
   - econstructor; econstructor; symmetry; apply inter_subset_equal in H6;
       eauto.
-    apply inter_subset_equal in H7. rewrite H6, H7. apply union_subset_equal.
-    clear - H8. cset_tac.
+    assert (Op.freeVars e \ R ∪ (L ∩ (Sp ∩ R ∪ M)) [=] L) as Hypo.
+    {
+      apply inter_subset_equal in H7. rewrite H6, H7. apply union_subset_equal.
+      clear - H8. cset_tac.
+    }
+    rewrite set_take_prefer_eq; eauto.
+    rewrite Hypo. rewrite subset_cardinal with (s':=R \ K ∪ L); eauto; clear; cset_tac.
   - econstructor; econstructor; symmetry;
       apply inter_subset_equal in H12; apply inter_subset_equal in H13.
     + rewrite H12 at 6. apply union_subset_equal. admit. 
