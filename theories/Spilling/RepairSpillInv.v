@@ -21,11 +21,14 @@ Proof.
                               ((fst (nth (counted l) Λ ({},{}))
                                     \ of_list (nth (counted l) ZL nil)) \ R) [=] L) as Leq.
     {
-      apply ..
+      admit. (*
       rewrite H9, H10. apply union_subset_equal;
-            rewrite H16; clear; cset_tac).
-    + 
-      rewrite H9; erewrite !get_nth; eauto. unfold snd. apply union_subset_equal.
+            rewrite H16; clear; cset_tac).*)
+    }
+    + rewrite H9 at 2. apply union_subset_equal. rewrite set_take_incl at 1. rewrite Leq.
+      erewrite !get_nth; eauto. unfold fst,snd. rewrite H17.
+      apply union_incl_split; [|clear;cset_tac].
+      apply meet_incl. 
       rewrite H17. clear; cset_tac.
     + erewrite !get_nth; eauto. unfold fst. apply Leq.
     + erewrite !get_nth; eauto. unfold snd, fst. econstructor; eauto.

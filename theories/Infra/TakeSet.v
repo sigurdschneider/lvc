@@ -50,3 +50,69 @@ revert n. induction l; intro n.
   + rewrite empty_cardinal. omega.
   + rewrite add_cardinal. rewrite IHl. omega.
 Qed.
+
+Set Implicit Arguments.
+
+Definition set_take (X:Type) `{OrderedType X} (k:nat) (s:⦃X⦄)
+  := of_list (take k (elements s))
+.
+
+Definition set_take_prefer (X:Type) `{OrderedType X} (k:nat) (s t : ⦃X⦄)
+  := of_list (take k (elements s ++ elements (t \ s)))
+.
+
+Definition set_take_avoid (X:Type) `{OrderedType X} (k:nat) (s t : ⦃X⦄)
+  := of_list (take k (elements (s \ t) ++ elements (s ∩ t)))
+.
+
+
+
+Lemma set_take_incl (X:Type) `{OrderedType X} (k:nat) (s:⦃X⦄)
+  : set_take k s ⊆ s
+.
+Proof.
+  apply take_set_incl.
+Qed.
+
+
+Lemma set_take_prefer_incl (X:Type) `{OrderedType X} k (s t:⦃X⦄)
+  : set_take_prefer k s t ⊆ s ∪ t
+.
+Proof.
+  decide (k < cardinal s); unfold set_take_prefer; try rewrite <-elements_length in *;
+    [rewrite take_app_le|rewrite take_app_ge]; [|omega| |omega].
+  - rewrite take_set_incl. cset_tac.
+  - rewrite of_list_app.
+    apply union_incl_split; [rewrite of_list_elements|rewrite take_set_incl]; cset_tac.
+Qed.
+
+
+Lemma set_take_avoid_incl (X:Type) `{OrderedType X} k (s t:⦃X⦄)
+  : set_take_avoid k s t ⊆ s
+.
+Proof.
+  decide (k < cardinal (s \ t)); unfold set_take_avoid; try rewrite <-elements_length in *;
+    [rewrite take_app_le|rewrite take_app_ge]; [|omega| |omega].
+  - rewrite take_set_incl. cset_tac.
+  - rewrite of_list_app.
+    apply union_incl_split; [rewrite of_list_elements|rewrite take_set_incl]; cset_tac.
+Qed.
+
+
+Lemma set_take_prefer_card_incl (X:Type) `{OrderedType X} k (s t:⦃X⦄)
+  : cardinal s <= k -> s ⊆ set_take_prefer k s t
+.
+Proof.
+  intros card.
+  unfold set_take_prefer; rewrite <-elements_length in card. rewrite take_app_ge; eauto.
+  rewrite of_list_app, of_list_elements, union_comm. cset_tac.
+Qed.
+
+Lemma set_take_avoid_incl2 (X:Type) `{OrderedType X} k (s t:⦃X⦄)
+  : k <= cardinal (s \ t) -> set_take_avoid k s t ⊆ s \ t
+.
+Proof.
+  intros card.
+  unfold set_take_avoid. rewrite <-elements_length in card. rewrite take_app_le; eauto.
+  apply set_take_incl.
+Qed.
