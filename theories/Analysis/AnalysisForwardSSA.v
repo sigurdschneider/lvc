@@ -126,17 +126,17 @@ Fixpoint forward (sT:stmt) (Dom: stmt -> Type)
         fun EQ =>
           let d:Dom sT := anni_let (Dom sT) EQ (ftransform sT ZL st ST ZLIncl d b) in
           let '(d', ans', AL) :=
-              forward sT Dom ftransform ZL ZLIncl s (subTerm_EQ_Let EQ ST) d anr' in
+              forward sT Dom ftransform ZL ZLIncl s (subTerm_EQ_Let EQ ST) d (setTopAnn anr' b) in
           (d', ann1 b ans', AL)
       | stmtIf x s t, ann2 b anr1 anr2 =>
         fun EQ =>
           let '(b1, b2, a) := anni_if EQ (ftransform sT ZL st ST ZLIncl d b) in
           let '(a', an1, AL1) :=
               @forward sT Dom ftransform ZL ZLIncl s
-                       (subTerm_EQ_If1 EQ ST) a anr1 in
+                       (subTerm_EQ_If1 EQ ST) a (setTopAnn anr1 b1) in
           let '(a'', an2, AL2) :=
               @forward sT Dom ftransform ZL ZLIncl t
-                       (subTerm_EQ_If2 EQ ST) a' anr2 in
+                       (subTerm_EQ_If2 EQ ST) a' (setTopAnn anr2 b2) in
           (a'', ann2 b an1 an2, zip join AL1 AL2)
       | stmtApp f Y as st, ann0 b =>
         fun EQ =>
@@ -153,7 +153,7 @@ Fixpoint forward (sT:stmt) (Dom: stmt -> Type)
         let '(a', r', AL) :=
             @forward sT Dom ftransform ZL'
                      (@ZLIncl_ext sT _ F t ZL EQ ST ZLIncl)
-                     t (subTerm_EQ_Fun1 EQ ST) d r in
+                     t (subTerm_EQ_Fun1 EQ ST) d (setTopAnn r b) in
         let '(a'', rF', AL') := forwardF AL (forward sT Dom ftransform ZL'
                                      (@ZLIncl_ext sT _ F t ZL EQ ST ZLIncl))
                             F (zip (@setTopAnn _) rF AL) a' (subTerm_EQ_Fun2 EQ ST) in
@@ -181,6 +181,14 @@ Proof.
   - rewrite length_drop_minus.
     erewrite forwardF_snd_length; eauto with len.
     + len_simpl. omega.
+Qed.
+
+Lemma forward_fst_snd_getAnn sT Dom f ZL ZLIncl s (ST:subTerm s sT) d r
+  : getAnn (snd (fst (forward Dom f ZL ZLIncl ST d r))) = getAnn r.
+Proof.
+  revert_except s.
+  sind s; destruct s, r; simpl; eauto with len;
+    repeat let_pair_case_eq; subst; simpl; eauto.
 Qed.
 
 Smpl Add 100
@@ -389,13 +397,13 @@ Proof with eauto using poLe_setTopAnn, poLe_getAnni.
         eauto 10 using @ann_R;
         try now (econstructor; simpl; eauto using @ann_R).
   - pose proof (fMon (stmtLet x e s) ST ST' ZL ZLIncl ZLIncl' _ _ LE_d _ _ H3); eauto.
-    pose proof (@IH s ltac:(eauto)
-                             (subTerm_EQ_Let eq_refl ST)
-                             (subTerm_EQ_Let eq_refl ST')
-                             ZL ZLIncl ZLIncl'
-                             _ _ H1 _ _ H5); eauto.
-    simpl in *. split; dcr; eauto.
-    split; eauto. econstructor; eauto.
+    simpl in *. split; dcr; eauto; [split; eauto|].
+    + eapply IH; eauto.
+      eauto using ann_R_setTopAnn.
+    + econstructor; eauto. eapply IH; eauto.
+      eauto using ann_R_setTopAnn.
+    + eapply IH; eauto.
+      eauto using ann_R_setTopAnn.
   - pose proof (fMon (stmtIf e s1 s2) ST ST' ZL ZLIncl ZLIncl' _ _ LE_d) as LE_f.
     pose proof (IH s1 ltac:(eauto) (subTerm_EQ_If1 eq_refl ST)
                                 (subTerm_EQ_If1 eq_refl ST') ZL) as LE1; eauto.
@@ -403,13 +411,21 @@ Proof with eauto using poLe_setTopAnn, poLe_getAnni.
                                    (subTerm_EQ_If2 eq_refl ST') ZL) as LE2; eauto.
     split; [split|];simpl.
     + eapply LE2; eauto. eapply LE1; eauto. eapply LE_f; eauto.
+      eapply ann_R_setTopAnn; eauto. eapply LE_f; eauto.
+      eapply ann_R_setTopAnn; eauto. eapply LE_f; eauto.
     + econstructor; eauto.
       eapply LE1; eauto. eapply LE_f; eauto.
+      eapply ann_R_setTopAnn; eauto. eapply LE_f; eauto.
       eapply LE2; eauto. eapply LE1; eauto.
+      eapply LE_f; eauto. eapply ann_R_setTopAnn; eauto.
+      eapply LE_f; eauto. eapply ann_R_setTopAnn; eauto.
       eapply LE_f; eauto.
     + eapply PIR2_impb_orb; eauto with len.
       * eapply LE1; eauto. eapply LE_f; eauto.
+        eapply ann_R_setTopAnn; eauto. eapply LE_f; eauto.
       * eapply LE2; eauto. eapply LE1; eauto.
+        eapply LE_f; eauto. eapply ann_R_setTopAnn; eauto.
+        eapply LE_f; eauto. eapply ann_R_setTopAnn; eauto.
         eapply LE_f; eauto.
   - split; [split|]; simpl.
     + eapply (fMon (stmtApp l Y)); eauto.
@@ -429,27 +445,37 @@ Proof with eauto using poLe_setTopAnn, poLe_getAnni.
     split; [split|]; simpl.
     + eapply forwardF_monotone; eauto.
       eapply IH; eauto.
+      eapply ann_R_setTopAnn; eauto.
       eapply PIR2_zip_setTopAnnO; eauto.
       hnf. eapply PIR2_get; eauto.
       eapply IH; eauto.
+      eapply ann_R_setTopAnn; eauto.
       eapply IH; eauto.
+      eapply ann_R_setTopAnn; eauto.
     + econstructor; eauto.
       * eauto with len.
       * eapply get_PIR2.
         eapply forwardF_monotone; eauto.
         eapply IH; eauto.
+        eapply ann_R_setTopAnn; eauto.
         eapply PIR2_zip_setTopAnnO; eauto.
         hnf. eapply PIR2_get; eauto.
         eapply IH; eauto.
+        eapply ann_R_setTopAnn; eauto.
         eapply IH; eauto.
+        eapply ann_R_setTopAnn; eauto.
       * eapply IH; eauto.
+        eapply ann_R_setTopAnn; eauto.
     + eapply PIR2_drop.
       eapply forwardF_monotone; eauto.
       eapply IH; eauto.
+      eapply ann_R_setTopAnn; eauto.
       eapply PIR2_zip_setTopAnnO; eauto.
       hnf. eapply PIR2_get; eauto.
       eapply IH; eauto.
+      eapply ann_R_setTopAnn; eauto.
       eapply IH; eauto.
+      eapply ann_R_setTopAnn; eauto.
 Qed.
 
 Require Import FiniteFixpointIteration.
@@ -479,8 +505,8 @@ Proof.
   revert ST ZL ZLIncl d r AN.
   sind s; intros; invt @annotation; simpl;
     repeat let_pair_case_eq; subst; simpl;
-      eauto using @annotation.
-  - econstructor; eauto.
+      eauto 20 using @annotation, setTopAnn_annotation.
+  - econstructor; eauto 20 using setTopAnn_annotation.
     + rewrite forwardF_length.
       rewrite zip_length.
       rewrite forward_length.

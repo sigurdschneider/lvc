@@ -104,8 +104,8 @@ Inductive cp_sound : onv (withTop val)
 | CPIf AE Cp Rch e (b:bool) s1 s2 (r1 r2:ann bool)
        (Cond1:cp_sound AE Cp Rch s1 r1)
        (Cond2:cp_sound AE Cp Rch s2 r2)
-       (Reach1:b -> aval2bool (op_eval AE e) <> (Some false) -> getAnn r1)
-       (Reach2:b -> aval2bool (op_eval AE e) <> (Some true) -> getAnn r2)
+       (Reach1:b -> aval2bool (op_eval AE e) <> None -> aval2bool (op_eval AE e) <> (Some false) -> getAnn r1)
+       (Reach2:b -> aval2bool (op_eval AE e) <> None -> aval2bool (op_eval AE e) <> (Some true) -> getAnn r2)
   : cp_sound AE Cp Rch (stmtIf e s1 s2) (ann2 b r1 r2)
 | CPGoto AE l Y Cp Rch Z aY (b bf:bool)
   : get Cp (counted l) (Z,aY)
@@ -778,10 +778,13 @@ Proof.
             edestruct aval2bool_inv_val; eauto; dcr.
             assert (w = x) by congruence; subst.
             rewrite H12. simpl. eapply val_false_true_neq.
-          + eapply eqn_sound_entails_monotone; eauto.
-            cases.
-            * pe_rewrite. eapply entails_add''. reflexivity.
-            * exfalso. eapply Reach1; eauto.
+          + decide (aval2bool (op_eval AE e) = None).
+            *
+            * eapply eqn_sound_entails_monotone; eauto.
+              cases.
+              -- pe_rewrite. eapply entails_add''. reflexivity.
+              -- exfalso. eapply Reach1; eauto.
+
         - eapply eqn_sound_entails_monotone; eauto.
           eapply entails_bot. cset_tac.
       }
