@@ -85,14 +85,14 @@ Inductive rlive_sound
 | RLiveFun ZL Lv F t lv Sp L rms sl_F sl_t als alb
   : Sp ⊆ lv
     -> rlive_sound (fst ⊝ F ++ ZL) (getAnn ⊝ als ++ Lv) t sl_t alb
+    -> length F = length als
     -> (forall n Zs a sl_s, get F n Zs ->
                  get als n a ->
                  get sl_F n sl_s ->
                  rlive_sound (fst ⊝ F ++ ZL) (getAnn ⊝ als ++ Lv) (snd Zs) sl_s a)
     -> (forall n Zs a, get F n Zs -> (* do I need this? *)
                  get als n a ->
-                 (of_list (fst Zs)) ⊆ getAnn a (* don't add L here *)
-                 /\ NoDupA eq (fst Zs))
+                 (of_list (fst Zs)) ⊆ getAnn a) (* don't add L here *)
     -> getAnn alb ⊆ lv ∪ L
     -> rlive_sound ZL Lv (stmtFun F t) (annF (Sp,L,rms) sl_F sl_t) (annF lv als alb)
 .
@@ -180,7 +180,7 @@ Lemma reg_live_sound k ZL Λ rlv (R M : ⦃var⦄) G s sl
               forall Zs sl_s rm' n, get rlv n rm'
                               -> get F n Zs
                               -> get sl_F n sl_s
-                              -> rm' = getAnn (reg_live ZL rlv ∅ (snd Zs) sl_s)
+                              -> rm' = getAnn (reg_live ZL rlv (of_list (fst Zs)) (snd Zs) sl_s)
             | _,_ => True
             end)
     -> PIR2 Subset rlv (fst ⊝ Λ) 
@@ -227,8 +227,28 @@ Proof.
     + eauto.
   - econstructor.
     + setoid_rewrite <-incl_right at 3. clear; cset_tac.
-    + admit.
+    + assert (PIR2 Subset (rlv) (fst ⊝  Λ)) as pir2 by admit.
+      set (fix1 := fun (ps : params * stmt) (sl_s : spilling) => _ ).
+     Lemma rlive_sound_monotone
+     : forall (ZL : 〔params〕) (LV LV' : 〔⦃nat⦄〕) (s : stmt) (sl : spilling) (rlv : ann ⦃nat⦄),
+          rlive_sound ZL LV s sl rlv -> PIR2 Subset LV' LV -> rlive_sound ZL LV' s sl rlv.
+       Admitted.
+
+     eapply rlive_sound_monotone with (LV := fst ⊝ rms ++ rlv).
+     eapply IHspillSnd; eauto.
+      * admit.
+      * rewrite List.map_app. apply PIR2_app; [apply PIR2_refl|]; eauto.
+      * apply PIR2_app; [|apply PIR2_refl;eauto].
+        apply PIR2_get. intros; inv_get.
+        -- destruct x. destruct s, x2; subst fix1; simpl. simpl.
+        assert (fix1 ⊜ F sl_F = rms
+        (*apply map_ext_get.*)  apply zip_ext_PIR2. subst fix1. destruct 
+        
+      specialize (inR (stmtFun F t) (annF (Sp,L,rms) sl_F sl_t)). simpl in inR.
+      Require Import ReconstrLiveSmall.
+      rewrite <- inR.
+    + admit. (* THIS will most likely need another invariant *)
     + intros; inv_get. admit.
-    + intros; inv_get. split. admit. (* THIS will most likely need another invariant *) admit.
+    + intros; inv_get. apply reg_live_G. 
     + clear; cset_tac.
 
