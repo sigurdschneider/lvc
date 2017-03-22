@@ -116,3 +116,12 @@ Proof.
   unfold set_take_avoid. rewrite <-elements_length in card. rewrite take_app_le; eauto.
   apply set_take_incl.
 Qed.
+
+Lemma set_take_prefer_eq (X:Type) `{OrderedType X} k (s t : ⦃X⦄)
+  : cardinal s <= k -> t ⊆ s -> set_take_prefer k s t [=] s
+.
+Proof.
+  intros card sub. apply incl_eq.
+  - apply set_take_prefer_card_incl; eauto.
+  - setoid_rewrite <-union_subset_equal at 4; eauto. rewrite set_take_prefer_incl. cset_tac.
+Qed.

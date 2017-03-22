@@ -40,7 +40,7 @@ Fixpoint repair_spill
          if the register liveness is incorrect we will still get a correct spilling *)
       let K    := set_take_avoid (cardinal (R ∪ L') - k) (R \ Fv_e) (getAnn rlv') in
       let R_e  := R \ K ∪ L' in
-      let K_x  := one_or_empty_if' k R_e (R_e \ getAnn rlv') in
+      let K_x  := set_take_avoid (1 + cardinal R_e - k) R_e (getAnn rlv') in
       (* here we need normal liveness, because we have to spilled variables that are loaded later on *)
       let Sp'  := (getAnn lv' ∩ (K ∪ K_x) \ M) ∪ (Sp ∩ R) in
       let R_s  := {x; R_e \ K_x} in
@@ -72,7 +72,7 @@ Fixpoint repair_spill
       let Z   := nth (counted f) ZL nil in
       let L'  := set_take_prefer k (L ∩ ((Sp ∩ R) ∪ M)) (R_f \ of_list Z \ R) in
       let K   := set_take (cardinal (R ∪ L') - k) (R \ R_f) in
-      let M'' := (M \ R ∪ K) ∩ fv_Y ∪ (M' ∩ (Sp ∪ M)) in
+      let M'' := (M \ (R \ K ∪ L)) ∩ fv_Y ∪ (M' ∩ (Sp ∪ M)) in
       let Sp' := ((fv_Y ∩ K \ M) ∪ (M_f  \ of_list Z \ M)) ∪ (Sp ∩ R) in
       ann0 (Sp',L',(R', M'')::nil)
 
