@@ -30,14 +30,14 @@ Inductive eqn_sound : list params -> list (set var) -> list eqns  (*params*set v
 | EqnApp (l:lab) Y Y' ZL Δ Γ Gamma Z Γf Gf G G'
   : get ZL  l Z -> get Δ l Gf -> get Γ l Γf
     -> length Y = length Y'
-    -> entails Gamma (subst_eqns (sid [Z <-- Y']) Γf)
+    -> entails (of_list ((fun y => EqnEq y y) ⊝ Y') ∪ Gamma) (subst_eqns (sid [Z <-- Y']) Γf)
     -> entails Gamma (list_EqnApx Y Y')
     -> eqn_sound ZL Δ Γ (stmtApp l Y) (stmtApp l Y') Gamma (ann0 (G,G'))
 | EqnReturn ZL Δ Γ e e' Gamma G G'
   : entails Gamma {(EqnApx e e')}
     -> eqn_sound ZL Δ Γ (stmtReturn e) (stmtReturn e') Gamma (ann0 (G,G'))
 | EqnExtern x f ZL Δ Γ s s' Y Y' Gamma G G' ang
-  : eqn_sound ZL Δ Γ s s' Gamma ang
+  : eqn_sound ZL Δ Γ s s' {EqnEq (Var x) (Var x) ; Gamma} ang
     -> entails Gamma (list_EqnApx Y Y')
     -> list_union (List.map Op.freeVars Y') ⊆ G
     -> length Y = length Y'
@@ -351,8 +351,11 @@ Proof.
     eapply IHeqn_sound1; eauto using not_entails_antitone. rewrite H1; reflexivity.
     eapply IHeqn_sound2; eauto using not_entails_antitone. rewrite H1. reflexivity.
   - econstructor; eauto using entails_monotone.
+    eapply entails_monotone; eauto. cset_tac.
   - econstructor; eauto using entails_monotone.
   - econstructor; eauto using entails_monotone.
+    eapply IHeqn_sound; eauto.
+    cset_tac.
   - econstructor; eauto.
     + rewrite <- H2; eauto.
 Qed.
@@ -376,8 +379,15 @@ Proof.
     + eapply IHeqn_sound2; eauto using not_entails_entails_antitone.
       rewrite H1. reflexivity.
   - econstructor; eauto using entails_transitive.
+    etransitivity; eauto.
+    eapply entails_union; split.
+    + eapply entails_subset. cset_tac.
+    + etransitivity; eauto.
+      eapply entails_subset. cset_tac.
   - econstructor; eauto using entails_transitive.
   - econstructor; eauto using entails_transitive, entails_monotone.
+    eapply IHeqn_sound; eauto.
+    rewrite H4. reflexivity.
   - econstructor; eauto.
     + etransitivity; eauto.
 Qed.
@@ -425,10 +435,12 @@ Hint Resolve satisfies_fstNoneOrR_apx onvLe_fstNoneOrR_apx.
 
 Instance PR : PointwiseProofRelationF (params*eqns):=
   {
-    ArgRelFP := fun E E' '(Z,Γ2) VL VL' => length Z = length VL /\ VL = VL'
-    /\ exists Γ Y V, entails Γ (subst_eqns (sid [Z <-- Y]) Γ2)
-               /\ satisfiesAll V Γ /\ omap (op_eval V) Y = Some VL
-               /\ agree_on eq (eqns_freeVars Γ2 \ of_list Z) V E;
+    ArgRelFP := fun E E' '(Z,Γ2) VL VL'
+               => length Z = length VL /\ VL = VL'
+                 /\ exists Γ Y V, entails (of_list ((fun y : op => EqnEq y y) ⊝ Y) ∪ Γ)
+                                    (subst_eqns (sid [Z <-- Y]) Γ2)
+                            /\ satisfiesAll V Γ /\ omap (op_eval V) Y = Some VL
+                            /\ agree_on eq (eqns_freeVars Γ2 \ of_list Z) V E;
     ParamRelFP := fun '(Z,_) Z' Zb => Z = Z' /\ Zb = Z'
   }.
 
@@ -488,10 +500,11 @@ Proof.
     }
     simpl in *; dcr; subst.
     exists Yv; repeat split; eauto using omap_exp_eval_onvLe.
-    exists Gamma, Y', V. repeat split; eauto.
+    exists Gamma, Y', V.
     exploit EEQ; eauto; dcr. simpl in *.
-    symmetry; eapply agree_on_incl; eauto.
-    rewrite H14; eauto. clear; cset_tac.
+    repeat split; eauto.
+    + symmetry; eapply agree_on_incl; eauto.
+      rewrite H14; eauto. clear; cset_tac.
   - eapply (sim_return_apx il_statetype_F).
     exploit H; eauto. exploit H0; eauto; [cset_tac|]. etransitivity; eauto.
   - exploit H; eauto. eapply (sim_let_call_apx il_statetype_F); eauto; simpl.
@@ -500,7 +513,8 @@ Proof.
       rewrite <- H3. eapply satisfies_omap_op_eval_fstNoneOrR; eauto.
     + intros. simpl. left. eapply IHEQN; eauto.
       * eauto using satisfiesAll_EqnEq_on_update.
-      * pe_rewrite. cset_tac.
+      * pe_rewrite. rewrite eqns_freeVars_add. simpl.
+        rewrite FV.  clear_all. cset_tac.
       * eauto using agree_on_onvLe.
       * intros. exploit EEQ; dcr; eauto.
         pe_rewrite. do 2 try split; eauto with cset.
@@ -522,6 +536,12 @@ Proof.
              with (G:=eqns_freeVars x0 \ of_list Z); eauto.
              eauto with len.
              eauto with cset.
+             eapply satisfiesAll_union; split; eauto.
+             hnf; intros.
+             eapply of_list_get_first in H5; dcr. invc H26.
+             inv_get. simpl.
+             eapply omap_inversion in H23; eauto; dcr.
+             rewrite H21. econstructor; eauto.
            ++ eapply satisfiesAll_agree; eauto.
              eapply agree_on_update_list_dead; eauto.
              ** edestruct H8; eauto; dcr.

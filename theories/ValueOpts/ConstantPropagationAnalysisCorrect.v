@@ -488,8 +488,11 @@ Lemma domupd_list_agree (R:relation aval) `{Reflexive _ R} G AE Z Y
 Proof.
   general induction Z; destruct Y; simpl; try reflexivity.
   hnf; intros. cset_tac'.
-  admit.
-Admitted.
+  unfold domenv.
+  rewrite domupd_ne; [|symmetry; eauto].
+  exploit IHZ; eauto.
+  exploit H2; eauto. cset_tac.
+Qed.
 
 
 Lemma cp_forward_agree sT ZL (AE:DDom sT) G s (ST:subTerm s sT) ra ZLIncl anr
@@ -678,35 +681,46 @@ Proof.
   cset_tac.
 Qed.
 
+Lemma PIR2_impb_orb_left A B B'
+  : length B <= length A
+    -> PIR2 impb B B'
+    -> PIR2 impb B (orb ⊜ A B').
+Proof.
+  intros LEN AA.
+  general induction AA; destruct A; simpl in *; isabsurd; eauto using @PIR2.
+  econstructor; eauto.
+  destruct x, y, b; inv pf; simpl; eauto.
+  eapply IHAA; eauto. omega.
+Qed.
 
-Definition cp_sound sT AE AE' RCH DIncl AV ZL s (ST:subTerm s sT) ZLIncl ra anr
-  : let X := @forward sT _ (@cp_trans_dep) ZL ZLIncl s ST (@exist _ _ AE DIncl) anr in
+Definition cp_sound sT AE AE' RCH AV ZL s (ST:subTerm s sT) ZLIncl ra anr
+  : let X := @forward sT _ (@cp_trans_dep) ZL ZLIncl s ST AE anr in
     renamedApart s ra
     -> annotation s anr
     -> labelsDefined s (length ZL)
-    -> poEq (fst X) ((@exist _ _ AE DIncl),anr)
+    -> poEq (fst X) (AE,anr)
     -> poEq AE' AE
-    -> (getAnn anr -> defined_on (fst (getAnn ra)) (domenv AE'))
     -> disj (list_union (of_list ⊝ ZL)) (snd (getAnn ra))
     -> ❬ZL❭ = ❬AV❭
     -> paramsMatch s (length ⊝ ZL)
-    -> PIR2 eq AV (List.map (fun Z => lookup_list (domenv AE') Z) ZL)
+    -> PIR2 eq AV (List.map (fun Z => lookup_list (domenv (proj1_sig AE')) Z) ZL)
     -> PIR2 poLe (snd X) RCH
-    -> cp_sound (domenv AE') (zip pair ZL AV) RCH s (snd (fst X)).
+    -> cp_sound (domenv (proj1_sig AE')) (zip pair ZL AV) RCH s (snd (fst X)).
 Proof.
-  intros LET RA ANN LD EQ1 EQ2 RCHDEF DISJ LEN PM AVREL RCHREL. subst LET.
+  intros LET RA ANN LD EQ1 EQ2 DISJ LEN PM AVREL RCHREL. subst LET.
   general induction LD; invt @renamedApart;
     try invt @annotation; simpl in *; simpl; invt @paramsMatch;
       simpl in *; dcr;
         repeat let_pair_case_eq; repeat let_case_eq; repeat simpl_pair_eqs; subst;
           simpl in *; try invtc @ann_R; subst.
   - destruct e; simpl in *; simpl in *; clear_trivial_eqs.
-    + assert (EVALEQ:op_eval (domenv AE') e = domenv AE x). {
+    + assert (EVALEQ:op_eval (domenv (proj1_sig AE')) e = domenv (proj1_sig AE) x). {
         set_simpl.
         exploit cp_forward_agree_def as AGR. eauto.
         eapply setTopAnn_annotation; eauto.
-        instantiate (3:=(domupd AE x (op_eval (domenv AE) e))) in AGR.
-        instantiate (2:=(cp_trans_domain ZL (stmtLet x (Operation e) s) (exist AE DIncl) a)) in AGR.
+        instantiate (3:=(domupd (proj1_sig AE) x (op_eval (domenv (proj1_sig AE)) e)))
+          in AGR.
+        instantiate (2:=(cp_trans_domain ZL (stmtLet x (Operation e) s) AE a)) in AGR.
         exploit (AGR x). pe_rewrite. instantiate (2:={x; Ds}).
         eapply renamedApart_disj in H4. pe_rewrite.
         revert H4 DISJ; clear_all. cset_tac.
@@ -720,7 +734,8 @@ Proof.
         exploit  eqMap_op_eval. eapply EQ2.
         eapply option_R_inv in H5. eauto.
       }
-      assert (MAPEQ:eqMap AE' (domupd AE x (op_eval (domenv AE) e))). {
+      assert (MAPEQ:eqMap (proj1_sig AE')
+                          (domupd (proj1_sig AE) x (op_eval (domenv (proj1_sig AE)) e))). {
         rewrite EQ2.
         eapply eqMap_domupd.
         unfold domenv in EVALEQ.
@@ -735,9 +750,6 @@ Proof.
         eapply ann_R_setTopAnn_right; eauto.
         rewrite forward_fst_snd_getAnn.
         rewrite getAnn_setTopAnn; eauto.
-      * pe_rewrite.
-        rewrite getAnn_setTopAnn; eauto; intros.
-        admit.
       * pe_rewrite. set_simpl.
         eapply disj_incl; eauto with cset.
       * intros; simpl; eauto.
@@ -747,12 +759,12 @@ Proof.
       * intros.
         rewrite forward_fst_snd_getAnn.
         rewrite getAnn_setTopAnn; eauto.
-    + assert (find x AE' = ⎣ Top ⎦). {
+    + assert (find x (proj1_sig AE') = ⎣ Top ⎦). {
         set_simpl.
         exploit cp_forward_agree_def as AGR. eauto.
         eapply setTopAnn_annotation; eauto.
-        instantiate (3:=add x Top AE) in AGR.
-        instantiate (2:=cp_trans_domain ZL (stmtLet x (Call f Y) s) (exist AE DIncl) a) in AGR.
+        instantiate (3:=add x Top (proj1_sig AE)) in AGR.
+        instantiate (2:=cp_trans_domain ZL (stmtLet x (Call f Y) s) AE a) in AGR.
         exploit (AGR x). pe_rewrite. instantiate (2:={x; Ds}).
         eapply renamedApart_disj in H4. pe_rewrite.
         revert H4 DISJ; clear_all. cset_tac.
@@ -764,7 +776,7 @@ Proof.
         rewrite <- H1. rewrite <- H0.
         mlud; eauto. exfalso; eauto.
       }
-      assert (eqMap AE' (add x Top AE)). {
+      assert (eqMap (proj1_sig AE') (add x Top (proj1_sig AE))). {
         hnf; intros. mlud; eauto. rewrite <- e.
         rewrite <- H0. reflexivity.
       }
@@ -775,49 +787,113 @@ Proof.
         eapply ann_R_setTopAnn_right; eauto.
         rewrite forward_fst_snd_getAnn.
         rewrite getAnn_setTopAnn; eauto.
-      * pe_rewrite.
-        rewrite getAnn_setTopAnn.
-        admit.
       * pe_rewrite. set_simpl.
         eapply disj_incl; eauto with cset.
       * intros.
         rewrite forward_fst_snd_getAnn.
         rewrite getAnn_setTopAnn; eauto.
-  - econstructor; eauto.
+  - assert (MEQ: eqMap (proj1_sig AE')
+    (getAE (@forward sT DDom (@cp_trans_dep) ZL ZLIncl s (subTerm_EQ_If1 eq_refl ST)
+              (exist (proj1_sig AE) (@cp_trans_domain sT ZL (stmtIf e s t) ST ZLIncl AE a))
+              (setTopAnn sa
+                 (if [op_eval (domenv (proj1_sig AE)) e = ⎣⎦] then false else if [
+                  op_eval (domenv (proj1_sig AE)) e = ⎣ wTA val_false ⎦] then false else a))))). {
+        hnf; intros.
+        edestruct (@cp_forward_agree sT ZL (fst
+                     (fst
+                        (@forward sT DDom (@cp_trans_dep) ZL ZLIncl s
+                                  (subTerm_EQ_If1 eq_refl ST)
+                           (exist (proj1_sig AE)
+                              (@cp_trans_domain sT ZL (stmtIf e s t) ST ZLIncl AE a))
+                           (setTopAnn sa
+                              (if [op_eval (domenv (proj1_sig AE)) e = ⎣⎦] then false else if [
+                               op_eval (domenv (proj1_sig AE)) e =
+                               ⎣ wTA val_false ⎦] then false else a)))))). eauto.
+        eapply setTopAnn_annotation; eauto.
+        instantiate (4:=singleton x) in H1. pe_rewrite.
+        decide (x ∈ (Dt ∪ list_union (of_list ⊝ ZL))).
+        -- edestruct (@cp_forward_agree sT ZL (exist (proj1_sig AE) (@cp_trans_domain sT ZL (stmtIf e s t) ST ZLIncl AE a)) (singleton x) s). eauto.
+           eapply setTopAnn_annotation; eauto.
+           pe_rewrite.
+           assert ((x ∈ Dt /\ x ∉ list_union (of_list ⊝ ZL))
+                   \/ (x ∈ list_union (of_list ⊝ ZL) /\ x ∉ Dt /\ x ∉ Ds)). {
+             revert i DISJ H4.
+             clear_all; cset_tac.
+           } destruct H15; dcr.
+           ++ exploit (H7 x). cset_tac.
+             unfold domenv in H15.
+             etransitivity; eauto.
+           ++ etransitivity; eauto.
+             eapply poLe_antisymmetric.
+             eapply H14. cset_tac.
+             etransitivity.
+             eapply H1. cset_tac.
+             exploit (H x).
+             rewrite <- H15. unfold domenv. reflexivity.
+        -- exploit (H0 x). cset_tac.
+           rewrite H7.
+           etransitivity. eapply EQ2.
+           symmetry. exploit (H x).
+           rewrite <- H14.
+           unfold domenv. reflexivity.
+        }
+    econstructor; eauto.
     + eapply IHLD1; eauto.
       * eapply setTopAnn_annotation; eauto.
       * split.
-        -- admit.
+        -- clear_trivial_eqs.
+           simpl.
+           symmetry. etransitivity; eauto.
+           symmetry; eauto.
         -- eapply ann_R_setTopAnn_right; eauto.
            ++ rewrite forward_fst_snd_getAnn.
              rewrite getAnn_setTopAnn; eauto.
-      * rewrite getAnn_setTopAnn; simpl; intros.
-        pe_rewrite. repeat cases in H0; eauto.
-      * pe_rewrite. set_simpl.
+      * pe_rewrite. clear MEQ. set_simpl.
         eapply disj_incl. eapply DISJ.
         eauto. eauto with cset.
       * etransitivity; eauto.
         eapply Analysis.PIR2_impb_orb_right.
         eauto with len. reflexivity.
-    + admit.
+    + eapply IHLD2; eauto.
+      * eapply setTopAnn_annotation. eauto.
+      * split.
+        -- etransitivity; eauto.
+           etransitivity; eauto.
+           symmetry; eauto.
+        -- etransitivity; eauto.
+           eapply ann_R_setTopAnn_right; eauto.
+           eapply ann_R_get in H20.
+           rewrite forward_fst_snd_getAnn in H20.
+           rewrite getAnn_setTopAnn in H20; eauto.
+      * clear MEQ.
+        pe_rewrite. set_simpl.
+        eapply disj_incl. eapply DISJ.
+        reflexivity. eauto with cset.
+      * etransitivity; eauto.
+        eapply PIR2_impb_orb_left.
+        eauto with len. reflexivity.
     + intros.
       rewrite forward_fst_snd_getAnn.
       rewrite getAnn_setTopAnn; eauto.
       repeat cases; eauto.
-      * admit.
       * eapply H1.
         exploit eqMap_op_eval; try eapply EQ2.
-        eapply option_R_inv in H7. rewrite H7.
+        eapply option_R_inv in H14. rewrite H14.
         rewrite COND. reflexivity.
+      * exploit eqMap_op_eval; try eapply EQ2.
+        eapply option_R_inv in H14. rewrite H14 in H7.
+        rewrite COND in H7. simpl in H7.
+        unfold val2bool in H7. cases in H7.
     + intros.
       rewrite forward_fst_snd_getAnn.
       rewrite getAnn_setTopAnn; eauto.
       repeat cases; eauto.
-      * admit.
-      * eapply H1.
-        exploit eqMap_op_eval; try eapply EQ2.
-        eapply option_R_inv in H7. rewrite H7.
-        rewrite COND. reflexivity.
+      * exploit eqMap_op_eval; try eapply EQ2.
+        eapply option_R_inv in H7. rewrite H7 in H1.
+        rewrite COND in H1. inv H1.
+      * exploit eqMap_op_eval; try eapply EQ2.
+        eapply option_R_inv in H7. rewrite H7 in H1.
+        rewrite COND in H1. clear_trivial_eqs.
   - econstructor.
   - clear_trivial_eqs. set_simpl.
     edestruct get_in_range; eauto.
@@ -835,12 +911,17 @@ Proof.
         cases.
         exploit domupd_list_get; [|eapply H8| eapply map_get_1; eapply H7|].
         -- admit.
-        --
-
+        -- instantiate (2:=proj1_sig AE) in H9.
+           instantiate (1:=op_eval (domenv (proj1_sig AE))) in H9.
+           etransitivity; eauto.
+           exploit eqMap_op_eval; try eapply EQ2.
+           unfold domenv in H10.
+           eapply option_R_inv in H10.
+           rewrite  H10. reflexivity.
       * rewrite map_length. rewrite lookup_list_length; eauto.
     + destruct a, x1; isabsurd; eauto.
   -
-    assert (ZipEq:((fun Zs0 : params * stmt => (fst Zs0, lookup_list (domenv AE') (fst Zs0))) ⊝ F ++ pair ⊜ ZL AV) = (zip pair (fst ⊝ F ++ ZL) ((fun Zs => lookup_list (domenv AE') (fst Zs)) ⊝ F ++ AV))). {
+    assert (ZipEq:((fun Zs0 : params * stmt => (fst Zs0, lookup_list (domenv (proj1_sig AE')) (fst Zs0))) ⊝ F ++ pair ⊜ ZL AV) = (zip pair (fst ⊝ F ++ ZL) ((fun Zs => lookup_list (domenv (proj1_sig AE')) (fst Zs)) ⊝ F ++ AV))). {
       clear_all. general induction F; simpl; eauto.
       f_equal. eapply IHF.
     }
@@ -859,7 +940,22 @@ Proof.
       * eauto with len.
       * admit.
       * admit.
-      * admit.
+      * rewrite List.map_app.
+        rewrite list_union_app.
+        eapply disj_union_left.
+        -- symmetry.
+           hnf; intros.
+           eapply list_union_get in H18. destruct H18; dcr; inv_get.
+           edestruct H5; try eapply H17; eauto; dcr.
+           exploit H4; try eapply H2; eauto.
+           eapply renamedApart_disj in H27.
+           admit.
+           cset_tac.
+        -- symmetry.
+           eapply disj_incl. eapply DISJ; eauto. eauto.
+           rewrite <- H10. eapply incl_union_left.
+           eapply incl_list_union. eapply zip_get; eauto.
+           unfold defVars. clear. cset_tac.
       * eauto with len.
       * rewrite List.map_app.
         eapply PIR2_app; eauto.

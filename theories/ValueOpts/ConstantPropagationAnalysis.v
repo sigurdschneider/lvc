@@ -147,7 +147,7 @@ Qed.
 
 Lemma domupd_ne m x y a
   : x =/= y
-    -> find x (domupd m y a) === find x m.
+    -> find x (domupd m y a) = find x m.
 Proof.
   unfold domupd; cases; intros; mlud; eauto.
 Qed.
