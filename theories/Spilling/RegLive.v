@@ -21,8 +21,6 @@ Fixpoint reg_live
     match s, sl with
     | stmtLet x e s, ann1 (Sp, L, _) sl'
       => let lv_s := reg_live ZL Lv (singleton x) s sl' in
-        (* subtracting L might lead to unnecessary gaps in the liveness, but this is ok:
-           variables are killed from the register directly after their last use *)
         ann1 (G ∪ Sp ∪ (((getAnn lv_s) \ singleton x ∪ Exp.freeVars e) \ L)) lv_s
 
     | stmtReturn e, ann0 (Sp, L, _)
@@ -40,12 +38,14 @@ Fixpoint reg_live
 
     | stmtFun F t, annF (Sp, L, rms) sl_F sl_t
       => let lv_t := reg_live (fst ⊝ F ++ ZL) (fst ⊝ rms ++ Lv) ∅ t sl_t in
-        let lv_F := (fun ps sl_s => reg_live (fst ⊝ F   ++ ZL)
-                                          (fst ⊝ rms ++ Lv)
-                                          (of_list (fst ps))
-                                          (snd ps)
-                                           sl_s
-                    ) ⊜ F sl_F in
+        let lv_F := (fun ps (rmsl : spilling * ⦃var⦄)
+                     => let (sl_s, Rf) := rmsl in
+                       reg_live (fst ⊝ F   ++ ZL)
+                                (fst ⊝ rms ++ Lv)
+                                (of_list (fst ps) ∩ Rf)
+                                (snd ps)
+                                 sl_s
+                    ) ⊜ F (pair ⊜ sl_F (fst ⊝ rms)) in
         annF (G ∪ Sp ∪ ((getAnn lv_t ∪ G) \ L)) lv_F lv_t
 
     | _,_ => ann0 G
@@ -90,9 +90,10 @@ Inductive rlive_sound
                  get als n a ->
                  get sl_F n sl_s ->
                  rlive_sound (fst ⊝ F ++ ZL) (getAnn ⊝ als ++ Lv) (snd Zs) sl_s a)
-    -> (forall n Zs a, get F n Zs -> (* do I need this? *)
-                 get als n a ->
-                 (of_list (fst Zs)) ⊆ getAnn a) (* don't add L here *)
+    -> (forall n Zs a rm, get F n Zs ->
+                    get als n a ->
+                    get rms n rm -> 
+                    (of_list (fst Zs) ∩ fst rm) ⊆ getAnn a) (* don't add L here *)
     -> getAnn alb ⊆ lv ∪ L
     -> rlive_sound ZL Lv (stmtFun F t) (annF (Sp,L,rms) sl_F sl_t) (annF lv als alb)
 .
@@ -121,21 +122,6 @@ Proof.
 Qed.
 
 
-
-(* remove ? 
-Lemma reconstr_live_remove_G
-      Lv ZL G s sl G'
-  :
-    getAnn (reconstr_live Lv ZL G s sl) \ G
-           ⊆ getAnn (reconstr_live Lv ZL G' s sl)
-.
-Proof.
-  destruct s, sl, a; simpl; cset_tac.
-Qed.
-*)
-
-
-
 Lemma reg_live_G
       (Lv : list (set var))
       (ZL : list (params))
@@ -152,47 +138,59 @@ Proof.
     destruct a,l0; simpl; cset_tac.
 Qed.
 
-Require Import Subterm.
 
-Inductive subAnno (X:Type) : ann X -> ann X -> Prop :=
-    subAnno_refl (a : ann X) : subAnno a a
-  | subAnno1 (a b : ann X) (x : X) :
-      subAnno a b -> subAnno a (ann1 x b)
-  | subAnno21 (a b b' : ann X) (x : X) :
-      subAnno a b -> subAnno a (ann2 x b b')
-  | subAnno22 (a b b' : ann X) (x : X) :
-      subAnno a b'-> subAnno a (ann2 x b b')
-  | subAnnoF1 (a b : ann X) (bF : list (ann X)) (x : X) :
-      subAnno a b -> subAnno a (annF x bF b)
-  | subAnnoF2 (a b b' : ann X) (bF : list (ann X)) (x : X) (n : nat) :
-      get bF n b' -> subAnno a b' -> subAnno a (annF x bF b)
+Lemma reg_live_R k ZL Λ RM G s sl rlv:
+  spill_sound k ZL Λ RM s sl
+  -> PIR2 Subset rlv (fst ⊝ Λ)
+  -> getAnn (reg_live ZL rlv G s sl) ⊆ G ∪ fst RM
 .
+Proof.
+  intros spillSnd pir2. general induction spillSnd; simpl.
+  - rewrite IHspillSnd; simpl; eauto.
+    rewrite H1, H. clear; cset_tac.
+  - rewrite H1, H. clear; cset_tac.
+  - rewrite H, H1, IHspillSnd1, IHspillSnd2; simpl; eauto. clear; cset_tac.
+  - eapply PIR2_nth_2 in pir2 as [Rl [get_Rl Rl_sub]].
+    + erewrite !get_nth; eauto. simpl. rewrite Rl_sub, H, H4, H6. clear; cset_tac.
+    + eapply map_get_eq; eauto.
+  - rewrite H, IHspillSnd; eauto.
+    + simpl; clear; cset_tac.
+    + rewrite List.map_app. apply PIR2_app; eauto. 
+Qed.
+
+
+
+
+Lemma rlive_sound_monotone
+  : forall (ZL : 〔params〕) (LV LV' : 〔⦃nat⦄〕) (s : stmt) (sl : spilling) (rlv : ann ⦃nat⦄),
+    rlive_sound ZL LV s sl rlv -> PIR2 Subset LV' LV -> rlive_sound ZL LV' s sl rlv.
+Proof.
+  intros ? ? ? ? ? ? rlvSnd pir2.
+  general induction rlvSnd.
+  - econstructor; eauto.
+  - econstructor; eauto.
+  - eapply PIR2_nth_2 in pir2 as [lv' [get_lv' lv'_sub]]; eauto.
+    econstructor; eauto. rewrite lv'_sub. eauto.
+  - econstructor; eauto.
+  - econstructor; eauto.
+    + eapply IHrlvSnd. apply PIR2_app; [apply PIR2_refl|]; eauto.
+    + intros; inv_get. eapply H2; eauto. apply PIR2_app; [apply PIR2_refl|]; eauto.
+Qed.
+
 
 
 
 Lemma reg_live_sound k ZL Λ rlv (R M : ⦃var⦄) G s sl
   : spill_sound k ZL Λ (R,M) s sl
-    -> (forall s' sl',
-          subTerm s' s
-          -> subAnno sl' sl
-          -> match s',sl' with
-            | stmtFun F t, annF (_,rms) sl_F _ =>
-              forall Zs sl_s rm' n, get rlv n rm'
-                              -> get F n Zs
-                              -> get sl_F n sl_s
-                              -> rm' = getAnn (reg_live ZL rlv (of_list (fst Zs)) (snd Zs) sl_s)
-            | _,_ => True
-            end)
     -> PIR2 Subset rlv (fst ⊝ Λ) 
     -> rlive_sound ZL rlv s sl (reg_live ZL rlv G s sl)
 .
 Proof.
-  intros spillSnd inR.
+  intros spillSnd pir2.
   general induction spillSnd.
   - econstructor.
     + apply union_incl_left; clear;cset_tac.
     + eapply IHspillSnd; eauto.
-      intros; apply inR; econstructor; eauto.
     + apply live_exp_sound_incl with (lv':=Exp.freeVars e).
       * apply live_freeVars.
       * setoid_rewrite <-incl_right at 4. clear;cset_tac.
@@ -205,17 +203,15 @@ Proof.
       * clear; cset_tac.
   - econstructor.
     + setoid_rewrite <-incl_right at 3. clear; cset_tac.
-    + eapply IHspillSnd1; eauto.
-      intros; apply inR; econstructor; eauto.
+     + eapply IHspillSnd1; eauto.
     + eapply IHspillSnd2; eauto.
-      intros; apply inR; econstructor 4; eauto.
     + apply live_op_sound_incl with (lv':=Op.freeVars e).
       * apply Op.live_freeVars.
       * setoid_rewrite <-incl_right at 4. clear; cset_tac.
     + setoid_rewrite <-incl_right at 2. clear; cset_tac.
     + setoid_rewrite <-incl_right at 2. clear; cset_tac.
-  - assert (H8' := H8). eapply PIR2_flip in H8'. eapply PIR2_nth in H8'.
-    destruct H8', H9.
+  - assert (pir2' := pir2). eapply PIR2_flip in pir2'. eapply PIR2_nth in pir2'.
+    destruct pir2', H8.
     econstructor; eauto.
     + clear; cset_tac.
     + simpl. erewrite !get_nth; eauto. clear; cset_tac.
@@ -225,30 +221,30 @@ Proof.
       * erewrite !get_nth; eauto. 
         erewrite <-incl_list_union with (s:=Op.freeVars y); eauto; clear; cset_tac.
     + eauto.
-  - econstructor.
+  - simpl.
+    econstructor.
     + setoid_rewrite <-incl_right at 3. clear; cset_tac.
-    + assert (PIR2 Subset (rlv) (fst ⊝  Λ)) as pir2 by admit.
-      set (fix1 := fun (ps : params * stmt) (sl_s : spilling) => _ ).
-     Lemma rlive_sound_monotone
-     : forall (ZL : 〔params〕) (LV LV' : 〔⦃nat⦄〕) (s : stmt) (sl : spilling) (rlv : ann ⦃nat⦄),
-          rlive_sound ZL LV s sl rlv -> PIR2 Subset LV' LV -> rlive_sound ZL LV' s sl rlv.
-       Admitted.
-
-     eapply rlive_sound_monotone with (LV := fst ⊝ rms ++ rlv).
-     eapply IHspillSnd; eauto.
-      * admit.
-      * rewrite List.map_app. apply PIR2_app; [apply PIR2_refl|]; eauto.
+    + set (fix1 := fun (ps : params * stmt) (rmsl : spilling * ⦃var⦄) => _ ).
+      eapply rlive_sound_monotone with (LV := fst ⊝ rms ++ rlv).
+      eapply IHspillSnd; eauto.
+     * rewrite List.map_app. apply PIR2_app; [apply PIR2_refl|]; eauto.
+     * apply PIR2_app; [|apply PIR2_refl;eauto].
+       apply PIR2_get. intros; inv_get.
+       -- subst fix1. simpl. rewrite reg_live_R.
+          ++ instantiate (1:=x0). clear; cset_tac. 
+          ++ eauto.
+          ++ rewrite List.map_app. apply PIR2_app; eauto.
+       -- eauto with len.
+    + eauto with len.
+    + intros; inv_get. eapply rlive_sound_monotone. eapply H6; eauto.
+      * apply pair_eta.
+      * rewrite List.map_app. apply PIR2_app; eauto. 
       * apply PIR2_app; [|apply PIR2_refl;eauto].
         apply PIR2_get. intros; inv_get.
-        -- destruct x. destruct s, x2; subst fix1; simpl. simpl.
-        assert (fix1 ⊜ F sl_F = rms
-        (*apply map_ext_get.*)  apply zip_ext_PIR2. subst fix1. destruct 
-        
-      specialize (inR (stmtFun F t) (annF (Sp,L,rms) sl_F sl_t)). simpl in inR.
-      Require Import ReconstrLiveSmall.
-      rewrite <- inR.
-    + admit. (* THIS will most likely need another invariant *)
-    + intros; inv_get. admit.
-    + intros; inv_get. apply reg_live_G. 
+        -- rewrite reg_live_R; eauto.
+           ++ clear; cset_tac.
+           ++ rewrite List.map_app. apply PIR2_app; [apply PIR2_refl|]; eauto.
+        -- eauto with len.
+    + intros; inv_get. rewrite <-reg_live_G. clear; cset_tac.
     + clear; cset_tac.
-
+Qed.
