@@ -199,6 +199,29 @@ Smpl Add 100
        rewrite (@forward_length sT Dom f ZL ZLIncl s ST d r)
      end : len.
 
+Lemma forwardF_mon (sT:stmt) (Dom:stmt->Type) f ZL ZLIncl BL (Len:❬BL❭ <= ❬ZL❭)
+      (F:list (params * stmt)) rF a
+      (ST:forall n Zs, get F n Zs -> subTerm (snd Zs) sT)
+  : PIR2 poLe BL (snd (@forwardF sT Dom BL (@forward sT Dom f ZL ZLIncl) F rF a ST)).
+Proof.
+  revert rF a ST.
+  induction F; intros; destruct rF; simpl; eauto.
+  eapply PIR2_impb_orb_left; eauto with len.
+Qed.
+
+Lemma forwardF_mon' (sT:stmt) (Dom:stmt->Type) f ZL (F:list (params * stmt)) rF ZLIncl BL
+       (Len:❬F❭ = ❬rF❭) a
+      (ST:forall n Zs, get F n Zs -> subTerm (snd Zs) sT)
+: PIR2 poLe (getAnn ⊝ rF) (getAnn ⊝ snd (fst (@forwardF sT Dom BL
+                                             (@forward sT Dom f ZL ZLIncl) F rF a ST))).
+Proof.
+  revert a ST.
+  general induction Len; intros; simpl; eauto.
+  econstructor.
+  - rewrite forward_fst_snd_getAnn. reflexivity.
+  - eapply IHLen.
+Qed.
+
 Lemma fold_list_length A B (f:list B -> (list A * bool) -> list B) (a:list (list A * bool)) (b: list B)
   : (forall n aa, get a n aa -> ❬b❭ <= ❬fst aa❭)
     -> (forall aa b, ❬b❭ <= ❬fst aa❭ -> ❬f b aa❭ = ❬b❭)
@@ -210,28 +233,6 @@ Proof.
   intros. rewrite H; eauto using get.
 Qed.
 
-
-Lemma forwardF_get  (sT:stmt) (Dom:stmt->Type) BL
-      forward
-      (F:list (params * stmt)) rF a
-      (ST:forall n s, get F n s -> subTerm (snd s) sT) n aa
-           (GetBW:get (snd (fst (@forwardF sT Dom BL forward F rF a ST))) n aa)
-  :
-    { Zs : params * stmt &
-           {GetF : get F n Zs &
-                   { r : ann bool &
-                         {GetrF : get rF n r &
-                                  { ST' : subTerm (snd Zs) sT &
-                                          { a : Dom sT
-                                          | aa = snd (fst (forward (snd Zs) ST' a r))
-    } } } } } }.
-Proof.
-  eapply get_getT in GetBW.
-  general induction F; destruct rF; simpl in *; inv GetBW.
-  - exists a. simpl. do 4 (eexists; eauto 20 using get).
-  - edestruct IHF as [Zs [? [? ]]]; eauto; dcr; subst.
-    exists Zs. do 3 (eexists; eauto 20 using get).
-Qed.
 
 
 (*
@@ -478,6 +479,49 @@ Proof with eauto using poLe_setTopAnn, poLe_getAnni.
       eapply ann_R_setTopAnn; eauto.
 Qed.
 
+Require Import Take.
+
+Lemma forwardF_get  (sT:stmt) (Dom:stmt->Type) BL ZL
+      (F:list (params * stmt)) rF a ZLIncl
+      (f : forall (sT : stmt) (ZL : 〔params〕) (s : stmt),
+          subTerm s sT ->
+          list_union (of_list ⊝ ZL) [<=] occurVars sT
+          -> Dom sT -> bool -> anni (Dom sT) s)
+      (ST:forall n s, get F n s -> subTerm (snd s) sT) n aa
+           (GetBW:get (snd (fst (@forwardF sT Dom BL (@forward sT Dom f ZL ZLIncl) F rF a ST))) n aa)
+  :
+    { Zs : params * stmt &
+           {GetF : get F n Zs &
+                   { r : ann bool &
+                         {GetrF : get rF n r &
+                                  { ST' : subTerm (snd Zs) sT &
+                                          { ST'' : forall (n0 : nat) (s : params * stmt), get (take n F) n0 s -> subTerm (snd s) sT | aa = snd (fst (forward Dom f ZL ZLIncl ST' (fst (fst (@forwardF sT Dom BL (@forward sT Dom f ZL ZLIncl) (take n F) (take n rF) a ST''))) r))
+                                            (*                                            /\ PIR2 impb aa (getAnn ⊝ snd (fst (@forwardF sT Dom BL forward F rF a ST)))*)
+    } } } } } }.
+Proof.
+  eapply get_getT in GetBW.
+  general induction n.
+  - destruct F,rF; inv GetBW; simpl in *.
+    simpl. do 6 (eexists; eauto 20 using get).
+    + isabsurd.
+  - destruct F, rF; isabsurd. inv GetBW.
+    edestruct IHn as [Zs [? [? [? [? [? ]]]]]]; eauto; subst. simpl in *. subst.
+    assert (STx:forall (n1 : nat) (s : params * stmt),
+               get (p::take n F) n1 s -> subTerm (snd s) sT). {
+      intros. inv H; eauto using get.
+    }
+    assert (STEQ1:(ST 0 p (getLB F p) = (STx 0 p (getLB (take n F) p))))
+      by eapply ProofIrrelevance.proof_irrelevance.
+    assert (STEQ2:x3 =
+            (fun (n' : nat) (Zs : params * stmt) (H1 : get (take n F) n' Zs) =>
+               STx (S n') Zs (getLS p H1)))
+      by eapply ProofIrrelevance.proof_irrelevance.
+
+    do 6 (eexists; eauto using get).
+    repeat f_equal. eapply STEQ1.
+    eapply STEQ2.
+Qed.
+
 Require Import FiniteFixpointIteration.
 
 Instance LowerBounded_ann (s:stmt) A `{LowerBounded A}
@@ -516,7 +560,7 @@ Proof.
       rewrite min_l; eauto. omega.
     + intros; inv_get.
       eapply forwardF_get in H2. destruct H2; dcr; subst.
-      inv_get. eapply IH; try eapply H4; eauto.
+      inv_get. eapply IH; eauto.
       eapply setTopAnn_annotation; eauto.
 Qed.
 

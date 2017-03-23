@@ -1,7 +1,7 @@
 Require Import Util SizeInduction Get MapDefined Coq.Classes.RelationClasses.
 Require Import IL Var Val OptionR AllInRel.
 Require Import CMap CMapDomain CMapPartialOrder CMapJoinSemiLattice.
-Require Import AnalysisForwardSSA Subterm CSet MapAgreement RenamedApart.
+Require Import Analysis AnalysisForwardSSA Subterm CSet MapAgreement RenamedApart.
 Require Import Infra.PartialOrder Infra.Lattice Infra.WithTop.
 Require Import LabelsDefined Annotation.
 Require Import ConstantPropagation ConstantPropagationAnalysis.
@@ -681,18 +681,6 @@ Proof.
   cset_tac.
 Qed.
 
-Lemma PIR2_impb_orb_left A B B'
-  : length B <= length A
-    -> PIR2 impb B B'
-    -> PIR2 impb B (orb ⊜ A B').
-Proof.
-  intros LEN AA.
-  general induction AA; destruct A; simpl in *; isabsurd; eauto using @PIR2.
-  econstructor; eauto.
-  destruct x, y, b; inv pf; simpl; eauto.
-  eapply IHAA; eauto. omega.
-Qed.
-
 Definition cp_sound sT AE AE' RCH AV ZL s (ST:subTerm s sT) ZLIncl ra anr
   : let X := @forward sT _ (@cp_trans_dep) ZL ZLIncl s ST AE anr in
     renamedApart s ra
@@ -705,9 +693,10 @@ Definition cp_sound sT AE AE' RCH AV ZL s (ST:subTerm s sT) ZLIncl ra anr
     -> paramsMatch s (length ⊝ ZL)
     -> PIR2 eq AV (List.map (fun Z => lookup_list (domenv (proj1_sig AE')) Z) ZL)
     -> PIR2 poLe (snd X) RCH
+    -> (forall n Z, get ZL n Z -> NoDupA eq Z)
     -> cp_sound (domenv (proj1_sig AE')) (zip pair ZL AV) RCH s (snd (fst X)).
 Proof.
-  intros LET RA ANN LD EQ1 EQ2 DISJ LEN PM AVREL RCHREL. subst LET.
+  intros LET RA ANN LD EQ1 EQ2 DISJ LEN PM AVREL RCHREL NODUP. subst LET.
   general induction LD; invt @renamedApart;
     try invt @annotation; simpl in *; simpl; invt @paramsMatch;
       simpl in *; dcr;
@@ -852,7 +841,7 @@ Proof.
         eapply disj_incl. eapply DISJ.
         eauto. eauto with cset.
       * etransitivity; eauto.
-        eapply Analysis.PIR2_impb_orb_right.
+        eapply PIR2_impb_orb_right.
         eauto with len. reflexivity.
     + eapply IHLD2; eauto.
       * eapply setTopAnn_annotation. eauto.
@@ -910,7 +899,7 @@ Proof.
         rewrite EQB.
         cases.
         exploit domupd_list_get; [|eapply H8| eapply map_get_1; eapply H7|].
-        -- admit.
+        -- exploit NODUP; eauto.
         -- instantiate (2:=proj1_sig AE) in H9.
            instantiate (1:=op_eval (domenv (proj1_sig AE))) in H9.
            etransitivity; eauto.
@@ -934,7 +923,7 @@ Proof.
     + intros; inv_get.
       setoid_rewrite ZipEq.
       edestruct forwardF_get; eauto; dcr. subst.
-      inv_get. destruct x6.
+      inv_get.
       eapply H0; eauto.
       * eapply setTopAnn_annotation. eauto.
       * eauto with len.
@@ -961,7 +950,14 @@ Proof.
         eapply PIR2_app; eauto.
         eapply PIR2_get; intros; inv_get. reflexivity.
         eauto with len.
-      * admit.
+      * rewrite (take_eta (❬F❭)) at 1.
+        eapply PIR2_app.
+        -- admit.
+        -- etransitivity; eauto.
+           eapply PIR2_drop.
+      * intros. eapply get_app_cases in H18. destruct H18.
+        inv_get. edestruct H5; eauto.
+        dcr. inv_get. eapply NODUP; eauto.
     + setoid_rewrite ZipEq.
       eapply IHLD; eauto.
       * apply setTopAnn_annotation; eauto.
@@ -982,5 +978,17 @@ Proof.
         eapply PIR2_app; eauto.
         eapply PIR2_get; intros; inv_get. reflexivity.
         eauto with len.
-      * admit.
+      * rewrite (take_eta (❬F❭)) at 1.
+        eapply PIR2_app.
+        etransitivity; [|eapply forwardF_mon'].
+        -- eapply PIR2_get; intros; inv_get.
+           rewrite getAnn_setTopAnn. reflexivity.
+           len_simpl. rewrite H9. eauto with len.
+        -- len_simpl. rewrite H9. eauto with len.
+        -- etransitivity; eauto.
+           eapply PIR2_drop.
+           eapply forwardF_mon. eauto with len.
+      * intros ? ? GET. eapply get_app_cases in GET. destruct GET.
+        inv_get. edestruct H5; eauto.
+        dcr. inv_get. eapply NODUP; eauto.
 Qed.

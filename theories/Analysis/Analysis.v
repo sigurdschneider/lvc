@@ -256,6 +256,18 @@ Proof.
   eapply IHAA; eauto. omega.
 Qed.
 
+Lemma PIR2_impb_orb_left A B B'
+  : length B <= length A
+    -> PIR2 impb B B'
+    -> PIR2 impb B (orb ⊜ A B').
+Proof.
+  intros LEN AA.
+  general induction AA; destruct A; simpl in *; isabsurd; eauto using @PIR2.
+  econstructor; eauto.
+  destruct x, y, b; inv pf; simpl; eauto.
+  eapply IHAA; eauto. omega.
+Qed.
+
 Lemma PIR2_impb_fold (A A':list (list bool * bool)) (B B':list bool)
   : poLe A A'
     -> poLe B B'
