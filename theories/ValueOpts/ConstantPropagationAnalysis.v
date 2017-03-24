@@ -229,10 +229,10 @@ Definition constant_propagation_transform sT ZL st (ST:subTerm st sT)
   end.
 
 Lemma transf_mon
-  : (forall (sT s : stmt) (ST ST' : subTerm s sT) (ZL : 〔params〕) (a b : Dom),
+  : (forall (sT s : stmt) (ST : subTerm s sT) (ZL : 〔params〕) (a b : Dom),
         a ⊑ b -> forall (c d:bool), c ⊑ d ->
         constant_propagation_transform ZL ST a c
-                                       ⊑ constant_propagation_transform ZL ST' b d).
+                                       ⊑ constant_propagation_transform ZL ST b d).
 Proof.
   intros.
   general induction s; simpl in *; eauto.
@@ -326,13 +326,13 @@ Defined.
 
 
 Lemma transf_mon_dep
-  : (forall (sT s : stmt) (ST ST' : subTerm s sT) (ZL : 〔params〕)
-       (ZLIncl ZLIncl': list_union (of_list ⊝ ZL) ⊆ occurVars sT) (a b : DDom sT),
+  : (forall (sT s : stmt) (ST : subTerm s sT) (ZL : 〔params〕)
+       (ZLIncl : list_union (of_list ⊝ ZL) ⊆ occurVars sT) (a b : DDom sT),
         a ⊑ b -> forall (c d:bool), c ⊑ d ->
-        cp_trans_dep ZL ST ZLIncl a c ⊑ cp_trans_dep ZL ST' ZLIncl' b d).
+        cp_trans_dep ZL ST ZLIncl a c ⊑ cp_trans_dep ZL ST ZLIncl b d).
 Proof.
   intros. destruct a as [a aBound], b as [b bBound]; simpl in H.
-  pose proof (@transf_mon sT s ST ST' ZL a b H) as LE.
+  pose proof (@transf_mon sT s ST ZL a b H) as LE.
   destruct s; clear_trivial_eqs; simpl in *; eauto.
 Qed.
 

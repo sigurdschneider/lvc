@@ -463,24 +463,6 @@ Proof.
     clear_all; cset_tac.
 Qed.
 
-Lemma subTermF_occurVars F t sT
-  : subTerm (stmtFun F t) sT
-    -> list_union (of_list ⊝ fst ⊝ F) ⊆ occurVars sT.
-Proof.
-  intros. general induction H; simpl.
-  - eapply list_union_incl; intros; eauto with cset.
-    inv_get.
-    rewrite <- incl_list_union; eauto using map_get_1.
-    cset_tac. cset_tac.
-  - rewrite IHsubTerm; eauto. cset_tac.
-  - rewrite IHsubTerm; eauto. cset_tac.
-  - rewrite IHsubTerm; eauto. cset_tac.
-  - rewrite IHsubTerm; eauto.
-  - rewrite IHsubTerm; eauto.
-    rewrite <- incl_list_union; eauto using map_get_1.
-    instantiate (1:=occurVars (snd Zs)). cset_tac. cset_tac.
-Qed.
-
 Lemma domupd_list_agree (R:relation aval) `{Reflexive _ R} G AE Z Y
   : agree_on R (G \ of_list Z)
              (domenv AE)
@@ -681,6 +663,49 @@ Proof.
   cset_tac.
 Qed.
 
+Lemma setTopAnn_eta' A (a:ann A)
+  : (setTopAnn a (getAnn a)) = a.
+Proof.
+  destruct a; simpl; eauto.
+Qed.
+
+Ltac simpl_forward_setTopAnn :=
+  repeat match goal with
+         | [H : ann_R _ (snd (fst (@forward ?sT ?Dom ?f ?ZL ?ZLIncl
+                                            ?s ?ST ?a ?sa))) ?sa' |- _ ] =>
+           let X := fresh "HEQ" in
+           match goal with
+           | [ H' : getAnn sa = getAnn sa' |- _ ] => fail 1
+           | _ => exploit (@forward_getAnn sT Dom f ZL ZLIncl s ST a sa sa' H) as X;
+                 subst
+           end
+         end; subst; try eassumption;
+  try rewrite getAnn_setTopAnn in *;
+  repeat rewrite setTopAnn_eta' in *.
+
+Lemma PIR2_ann_R_get X Y (R:X->Y->Prop) A B
+  : PIR2 (ann_R R) A B
+    -> PIR2 R (getAnn ⊝ A) (getAnn ⊝ B).
+Proof.
+  intros. general induction H; simpl; eauto using PIR2.
+  econstructor; eauto.
+  eapply ann_R_get in pf; eauto.
+Qed.
+Lemma PIR2_eq X (A:list X) (B:list X)
+  : PIR2 eq A B
+    -> A = B.
+Proof.
+  intros. general induction H; simpl; eauto.
+Qed.
+
+Lemma getAnn_setTopAnn_zip X A (B:list X) (Len:❬A❭<=❬B❭)
+  : getAnn ⊝ (@setTopAnn _ ⊜ A B) = Take.take ❬A❭ B.
+Proof.
+  general induction A; destruct B; isabsurd; simpl in *; eauto.
+  rewrite getAnn_setTopAnn; f_equal; eauto.
+  eapply IHA; eauto. omega.
+Qed.
+
 Definition cp_sound sT AE AE' RCH AV ZL s (ST:subTerm s sT) ZLIncl ra anr
   : let X := @forward sT _ (@cp_trans_dep) ZL ZLIncl s ST AE anr in
     renamedApart s ra
@@ -694,7 +719,7 @@ Definition cp_sound sT AE AE' RCH AV ZL s (ST:subTerm s sT) ZLIncl ra anr
     -> PIR2 eq AV (List.map (fun Z => lookup_list (domenv (proj1_sig AE')) Z) ZL)
     -> PIR2 poLe (snd X) RCH
     -> (forall n Z, get ZL n Z -> NoDupA eq Z)
-    -> cp_sound (domenv (proj1_sig AE')) (zip pair ZL AV) RCH s (snd (fst X)).
+    -> cp_sound (domenv (proj1_sig AE')) (zip pair ZL AV) RCH s anr.
 Proof.
   intros LET RA ANN LD EQ1 EQ2 DISJ LEN PM AVREL RCHREL NODUP. subst LET.
   general induction LD; invt @renamedApart;
@@ -732,22 +757,21 @@ Proof.
         rewrite <- eqMap_op_eval; [|eapply EQ2].
         reflexivity.
       }
+      simpl_forward_setTopAnn. subst. repeat rewrite setTopAnn_eta' in *.
       econstructor; eauto.
-      eapply IHLD; eauto using setTopAnn_annotation.
+      eapply IHLD with (AE:=(exist (domupd (proj1_sig AE) x (op_eval (domenv (proj1_sig AE)) e))
+                      (cp_trans_domain ZL (stmtLet x (Operation e) s) AE (getAnn sa)))); eauto.
       * split; eauto.
-        rewrite H. rewrite <- EQ2 at 1. eauto.
-        eapply ann_R_setTopAnn_right; eauto.
-        rewrite forward_fst_snd_getAnn.
-        rewrite getAnn_setTopAnn; eauto.
+        -- simpl.
+           etransitivity; eauto.
+           etransitivity; eauto.
+           symmetry; eauto.
       * pe_rewrite. set_simpl.
         eapply disj_incl; eauto with cset.
       * intros; simpl; eauto.
         rewrite EVALEQ.
         exploit (EQ2 x). eapply option_R_inv in H1.
         unfold domenv. congruence.
-      * intros.
-        rewrite forward_fst_snd_getAnn.
-        rewrite getAnn_setTopAnn; eauto.
     + assert (find x (proj1_sig AE') = ⎣ Top ⎦). {
         set_simpl.
         exploit cp_forward_agree_def as AGR. eauto.
@@ -769,18 +793,16 @@ Proof.
         hnf; intros. mlud; eauto. rewrite <- e.
         rewrite <- H0. reflexivity.
       }
+      simpl_forward_setTopAnn. subst. repeat rewrite setTopAnn_eta' in *.
       econstructor; eauto.
-      eapply IHLD; eauto using setTopAnn_annotation.
-      * split; eauto.
-        rewrite H. rewrite <- EQ2 at 1. eauto.
-        eapply ann_R_setTopAnn_right; eauto.
-        rewrite forward_fst_snd_getAnn.
-        rewrite getAnn_setTopAnn; eauto.
+      eapply IHLD with (AE:=(exist (add x Top (proj1_sig AE))
+                     (cp_trans_domain ZL (stmtLet x (Call f Y) s) AE (getAnn sa)))); eauto.
+      * split; eauto; simpl.
+        etransitivity; eauto.
+        etransitivity; eauto.
+        symmetry; eauto.
       * pe_rewrite. set_simpl.
         eapply disj_incl; eauto with cset.
-      * intros.
-        rewrite forward_fst_snd_getAnn.
-        rewrite getAnn_setTopAnn; eauto.
   - assert (MEQ: eqMap (proj1_sig AE')
     (getAE (@forward sT DDom (@cp_trans_dep) ZL ZLIncl s (subTerm_EQ_If1 eq_refl ST)
               (exist (proj1_sig AE) (@cp_trans_domain sT ZL (stmtIf e s t) ST ZLIncl AE a))
@@ -825,24 +847,34 @@ Proof.
            symmetry. exploit (H x).
            rewrite <- H14.
            unfold domenv. reflexivity.
-        }
+    }
+    simpl_forward_setTopAnn. subst. repeat rewrite setTopAnn_eta' in *.
+    symmetry in HEQ. symmetry in HEQ0.
+    rewrite <- (setTopAnn_eta _ HEQ0).
+    rewrite <- (setTopAnn_eta _ HEQ).
     econstructor; eauto.
-    + eapply IHLD1; eauto.
-      * eapply setTopAnn_annotation; eauto.
+    + eapply IHLD1.
+      * eauto.
+      * eauto using setTopAnn_annotation.
+      * eauto.
       * split.
-        -- clear_trivial_eqs.
-           simpl.
-           symmetry. etransitivity; eauto.
-           symmetry; eauto.
+        -- etransitivity.
+           symmetry.
+           eapply MEQ. simpl. eauto.
         -- eapply ann_R_setTopAnn_right; eauto.
            ++ rewrite forward_fst_snd_getAnn.
              rewrite getAnn_setTopAnn; eauto.
+      * simpl. eauto.
       * pe_rewrite. clear MEQ. set_simpl.
         eapply disj_incl. eapply DISJ.
         eauto. eauto with cset.
+      * eauto.
+      * eauto.
+      * eauto.
       * etransitivity; eauto.
         eapply PIR2_impb_orb_right.
         eauto with len. reflexivity.
+      * eauto.
     + eapply IHLD2; eauto.
       * eapply setTopAnn_annotation. eauto.
       * split.
@@ -851,9 +883,6 @@ Proof.
            symmetry; eauto.
         -- etransitivity; eauto.
            eapply ann_R_setTopAnn_right; eauto.
-           eapply ann_R_get in H20.
-           rewrite forward_fst_snd_getAnn in H20.
-           rewrite getAnn_setTopAnn in H20; eauto.
       * clear MEQ.
         pe_rewrite. set_simpl.
         eapply disj_incl. eapply DISJ.
@@ -862,7 +891,6 @@ Proof.
         eapply PIR2_impb_orb_left.
         eauto with len. reflexivity.
     + intros.
-      rewrite forward_fst_snd_getAnn.
       rewrite getAnn_setTopAnn; eauto.
       repeat cases; eauto.
       * eapply H1.
@@ -874,7 +902,6 @@ Proof.
         rewrite COND in H7. simpl in H7.
         unfold val2bool in H7. cases in H7.
     + intros.
-      rewrite forward_fst_snd_getAnn.
       rewrite getAnn_setTopAnn; eauto.
       repeat cases; eauto.
       * exploit eqMap_op_eval; try eapply EQ2.
@@ -914,47 +941,109 @@ Proof.
       clear_all. general induction F; simpl; eauto.
       f_equal. eapply IHF.
     }
-
-    econstructor.
-    + eauto with len.
-    + intros.
-      rewrite forward_fst_snd_getAnn.
-      rewrite getAnn_setTopAnn; eauto.
+    simpl_forward_setTopAnn. subst. repeat rewrite setTopAnn_eta' in *.
+    econstructor; eauto.
     + intros; inv_get.
       setoid_rewrite ZipEq.
-      edestruct forwardF_get; eauto; dcr. subst.
-      inv_get.
+      pose proof H16 as GET.
       eapply H0; eauto.
-      * eapply setTopAnn_annotation. eauto.
-      * eauto with len.
-      * admit.
+      * clear_all; eauto with len.
       * admit.
       * rewrite List.map_app.
         rewrite list_union_app.
         eapply disj_union_left.
-        -- symmetry.
-           hnf; intros.
-           eapply list_union_get in H18. destruct H18; dcr; inv_get.
-           edestruct H5; try eapply H17; eauto; dcr.
-           exploit H4; try eapply H2; eauto.
-           eapply renamedApart_disj in H27.
-           admit.
-           cset_tac.
+        -- symmetry. admit.
         -- symmetry.
            eapply disj_incl. eapply DISJ; eauto. eauto.
            rewrite <- H10. eapply incl_union_left.
            eapply incl_list_union. eapply zip_get; eauto.
            unfold defVars. clear. cset_tac.
-      * eauto with len.
+      * revert LEN; clear_all; eauto with len.
       * rewrite List.map_app.
         eapply PIR2_app; eauto.
         eapply PIR2_get; intros; inv_get. reflexivity.
+        clear_all.
         eauto with len.
       * rewrite (take_eta (❬F❭)) at 1.
         eapply PIR2_app.
-        -- admit.
+        -- eapply PIR2_get in H23.
+           ++ eapply PIR2_ann_R_get in H23.
+             eapply PIR2_eq in H23.
+             rewrite <- H23.
+             rewrite getAnn_setTopAnn_zip.
+             ** rewrite forwardF_length, zip_length.
+                rewrite forward_length, app_length, map_length.
+                assert (LEQ:Init.Nat.min ❬F❭ (Init.Nat.min ❬sa❭ (❬F❭ + ❬ZL❭))
+                        = ❬F❭). {
+                  rewrite H9.
+                  clear_all; intros; eauto with len.
+                }
+                rewrite LEQ. eapply PIR2_take.
+                admit.
+             ** revert H9.
+                clear_all. intros.
+                len_simpl; [| | reflexivity].
+                rewrite H9.
+                repeat rewrite min_l; eauto with len.
+                intros; eauto with len.
+           ++ revert H9.
+             clear_all. intros. len_simpl; try reflexivity.
+             rewrite H9. repeat rewrite min_l; eauto with len.
+             intros; len_simpl; eauto.
         -- etransitivity; eauto.
            eapply PIR2_drop.
+
+
+Lemma forwardF_PIR2  (sT:stmt) (Dom:stmt->Type) BL ZL
+      (F:list (params * stmt)) sa a ZLIncl (Len1:❬F❭ = ❬sa❭)
+      (Len2:❬BL❭ = ❬ZL❭)
+      (f : forall sT (ZL : 〔params〕) (s : stmt),
+          subTerm s sT ->
+          list_union (of_list ⊝ ZL) [<=] occurVars sT
+          -> Dom sT -> bool -> anni (Dom sT) s)
+      (EQ: forall n Zs r ST, get F n Zs -> get sa n r ->
+                 fst (fst (@forward sT Dom f ZL ZLIncl (snd Zs) ST a r)) = a)
+      (ST:forall n s, get F n s -> subTerm (snd s) sT) r Zs ST' n
+      (Getsa:get sa n r) (GetF:get F n Zs)
+:
+  PIR2 impb
+       (snd (@forward sT Dom f ZL ZLIncl (snd Zs) ST' a r))
+       (snd
+          (forwardF BL (@forward sT Dom f ZL ZLIncl) F
+                    sa
+             a
+             ST)).
+Proof.
+  general induction n; isabsurd; simpl.
+  - eapply PIR2_impb_orb_right.
+    + len_simpl; eauto. intros. eauto with len.
+    +
+  - inv Getsa; inv GetF. simpl.
+    eapply PIR2_impb_orb_left. eauto with len.
+    etransitivity; [| eapply IHn; eauto using get].
+    + erewrite EQ; eauto using get. admit.
+    + intros.
+      erewrite EQ at 1; eauto using get.
+      erewrite EQ at 1; eauto using get.
+      erewrite EQ at 1; eauto using get.
+
+
+
+  general induction Len1; destruct rF, BL; isabsurd; simpl.
+
+  general induction F; destruct rF; isabsurd. simpl.
+  cases. exfalso. admit.
+  destruct sa, BL. simpl. exfalso. admit.
+  exfalso; admit. simpl. exfalso; admit.
+  simpl. econstructor.
+  rewrite forward_fst_snd_getAnn. rewrite getAnn_setTopAnn.
+  admit.
+
+  rewrite
+  - simpl.
+Qed.
+)
+
       * intros. eapply get_app_cases in H18. destruct H18.
         inv_get. edestruct H5; eauto.
         dcr. inv_get. eapply NODUP; eauto.

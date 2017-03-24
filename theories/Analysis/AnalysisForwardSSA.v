@@ -96,6 +96,7 @@ Definition option_extr A (o:option A) (x:A) :=
   | _ => x
   end.
 
+
 Lemma ZLIncl_ext sT st F t (ZL:list params)
     (EQ:st = stmtFun F t) (ST:subTerm st sT)
     (ZLIncl:list_union (of_list ⊝ ZL) [<=] occurVars sT)
@@ -157,7 +158,7 @@ Fixpoint forward (sT:stmt) (Dom: stmt -> Type)
         let '(a'', rF', AL') := forwardF AL (forward sT Dom ftransform ZL'
                                      (@ZLIncl_ext sT _ F t ZL EQ ST ZLIncl))
                             F (zip (@setTopAnn _) rF AL) a' (subTerm_EQ_Fun2 EQ ST) in
-        (a'', annF b rF' r', drop (length F) AL')
+        (a'', annF b (zip (@setTopAnn _) rF' AL') r', drop (length F) AL')
     | _, _ => fun _ => (d, anr, ((fun _ => false) ⊝ ZL))
       end eq_refl).
 Defined.
@@ -189,6 +190,14 @@ Proof.
   revert_except s.
   sind s; destruct s, r; simpl; eauto with len;
     repeat let_pair_case_eq; subst; simpl; eauto.
+Qed.
+
+Lemma forward_getAnn sT Dom f ZL ZLIncl s (ST:subTerm s sT) b r r'
+  : ann_R poEq (snd (fst (forward Dom f ZL ZLIncl ST b r))) r'
+    -> getAnn r = getAnn r'.
+Proof.
+  intros. eapply ann_R_get in H.
+  rewrite forward_fst_snd_getAnn in H. eauto.
 Qed.
 
 Smpl Add 100
@@ -335,13 +344,13 @@ Qed.
 Lemma forwardF_monotone (sT:stmt) (Dom : stmt -> Type) `{PartialOrder (Dom sT)}
       (forward forward' : forall s : stmt,
           subTerm s sT -> Dom sT -> ann bool -> Dom sT * ann bool * 〔bool〕) F
-      (fwdMon:forall  n Zs (GET:get F n Zs) (ST ST':subTerm (snd Zs) sT),
+      (fwdMon:forall  n Zs (GET:get F n Zs) (ST:subTerm (snd Zs) sT),
           forall (d d' : Dom sT),
             d ⊑ d'
             -> forall (r r':ann bool),
               r ⊑ r'
-              -> forward (snd Zs) ST d r ⊑ forward' (snd Zs) ST' d' r')
-  : forall ST ST',
+              -> forward (snd Zs) ST d r ⊑ forward' (snd Zs) ST d' r')
+  : forall ST,
     forall (d d' : Dom sT),
       d ⊑ d'
       -> forall (rF rF':list (ann bool)),
@@ -349,9 +358,9 @@ Lemma forwardF_monotone (sT:stmt) (Dom : stmt -> Type) `{PartialOrder (Dom sT)}
         -> forall (BL BL':list bool),
           BL ⊑ BL'
         -> forwardF BL forward F rF d ST
-                   ⊑  forwardF BL' forward' F rF' d' ST'.
+                   ⊑  forwardF BL' forward' F rF' d' ST.
 Proof.
-  intros ST ST' d d' LE_d rF rF' LE_rf.
+  intros ST d d' LE_d rF rF' LE_rf.
   general induction F; inv LE_rf; simpl;
     try now (econstructor; simpl; eauto using @ann_R, @PIR2).
   split; [split|].
@@ -381,23 +390,23 @@ Lemma forward_monotone (sT:stmt) (Dom : stmt -> Type) `{PartialOrder (Dom sT)}
       (f: forall sT (ZL:list params),
           forall s, subTerm s sT -> list_union (of_list ⊝ ZL) [<=] occurVars sT
                -> Dom sT -> bool -> anni (Dom sT) s)
-      (fMon:forall s (ST ST':subTerm s sT) ZL
-          (ZLIncl ZLIncl':list_union (of_list ⊝ ZL) [<=] occurVars sT),
+      (fMon:forall s (ST:subTerm s sT) ZL
+          (ZLIncl:list_union (of_list ⊝ ZL) [<=] occurVars sT),
           forall a a',
-            a ⊑ a' -> forall b b', b ⊑ b' -> f sT ZL s ST ZLIncl a b ⊑ f sT ZL s ST' ZLIncl' a' b')
-  : forall (s : stmt) (ST ST':subTerm s sT) (ZL:list params)
-      (ZLIncl ZLIncl':list_union (of_list ⊝ ZL) [<=] occurVars sT),
+            a ⊑ a' -> forall b b', b ⊑ b' -> f sT ZL s ST ZLIncl a b ⊑ f sT ZL s ST ZLIncl a' b')
+  : forall (s : stmt) (ST:subTerm s sT) (ZL:list params)
+      (ZLIncl:list_union (of_list ⊝ ZL) [<=] occurVars sT),
     forall (d d' : Dom sT), d ⊑ d'
       -> forall (r r':ann bool), r ⊑ r'
-      -> forward Dom f ZL ZLIncl ST d r ⊑ forward Dom f ZL ZLIncl' ST' d' r'.
+      -> forward Dom f ZL ZLIncl ST d r ⊑ forward Dom f ZL ZLIncl ST d' r'.
 Proof with eauto using poLe_setTopAnn, poLe_getAnni.
   intros s.
-  sind s; destruct s; intros ST ST' ZL ZLIncl ZLIncl' d d' LE_d r r'  LE_r;
+  sind s; destruct s; intros ST ZL ZLIncl d d' LE_d r r'  LE_r;
     destruct r; inv LE_r;
       simpl forward; repeat let_pair_case_eq; subst;
         eauto 10 using @ann_R;
         try now (econstructor; simpl; eauto using @ann_R).
-  - pose proof (fMon (stmtLet x e s) ST ST' ZL ZLIncl ZLIncl' _ _ LE_d _ _ H3); eauto.
+  - pose proof (fMon (stmtLet x e s) ST ZL ZLIncl  _ _ LE_d _ _ H3); eauto.
     simpl in *. split; dcr; eauto; [split; eauto|].
     + eapply IH; eauto.
       eauto using ann_R_setTopAnn.
@@ -405,11 +414,9 @@ Proof with eauto using poLe_setTopAnn, poLe_getAnni.
       eauto using ann_R_setTopAnn.
     + eapply IH; eauto.
       eauto using ann_R_setTopAnn.
-  - pose proof (fMon (stmtIf e s1 s2) ST ST' ZL ZLIncl ZLIncl' _ _ LE_d) as LE_f.
-    pose proof (IH s1 ltac:(eauto) (subTerm_EQ_If1 eq_refl ST)
-                                (subTerm_EQ_If1 eq_refl ST') ZL) as LE1; eauto.
-    pose proof (IH s2 ltac:(eauto) (subTerm_EQ_If2 eq_refl ST)
-                                   (subTerm_EQ_If2 eq_refl ST') ZL) as LE2; eauto.
+  - pose proof (fMon (stmtIf e s1 s2) ST ZL ZLIncl _ _ LE_d) as LE_f.
+    pose proof (IH s1 ltac:(eauto) (subTerm_EQ_If1 eq_refl ST) ZL) as LE1; eauto.
+    pose proof (IH s2 ltac:(eauto) (subTerm_EQ_If2 eq_refl ST) ZL) as LE2; eauto.
     split; [split|];simpl.
     + eapply LE2; eauto. eapply LE1; eauto. eapply LE_f; eauto.
       eapply ann_R_setTopAnn; eauto. eapply LE_f; eauto.
@@ -454,13 +461,24 @@ Proof with eauto using poLe_setTopAnn, poLe_getAnni.
       eapply IH; eauto.
       eapply ann_R_setTopAnn; eauto.
     + econstructor; eauto.
-      * eauto with len.
+      * len_simpl; try reflexivity;
+        eauto with len.
       * eapply get_PIR2.
+        eapply (@PIR2_zip_setTopAnnO bool PartialOrder_bool).
         eapply forwardF_monotone; eauto.
         eapply IH; eauto.
         eapply ann_R_setTopAnn; eauto.
-        eapply PIR2_zip_setTopAnnO; eauto.
-        hnf. eapply PIR2_get; eauto.
+        eapply (@PIR2_zip_setTopAnnO bool PartialOrder_bool); eauto.
+        eapply PIR2_get; eauto.
+        eapply IH; eauto.
+        eapply ann_R_setTopAnn; eauto.
+        eapply IH; eauto.
+        eapply ann_R_setTopAnn; eauto.
+        eapply forwardF_monotone; eauto.
+        eapply IH; eauto.
+        eapply ann_R_setTopAnn; eauto.
+        eapply (@PIR2_zip_setTopAnnO bool PartialOrder_bool); eauto.
+        eapply PIR2_get; eauto.
         eapply IH; eauto.
         eapply ann_R_setTopAnn; eauto.
         eapply IH; eauto.
@@ -496,8 +514,7 @@ Lemma forwardF_get  (sT:stmt) (Dom:stmt->Type) BL ZL
                          {GetrF : get rF n r &
                                   { ST' : subTerm (snd Zs) sT &
                                           { ST'' : forall (n0 : nat) (s : params * stmt), get (take n F) n0 s -> subTerm (snd s) sT | aa = snd (fst (forward Dom f ZL ZLIncl ST' (fst (fst (@forwardF sT Dom BL (@forward sT Dom f ZL ZLIncl) (take n F) (take n rF) a ST''))) r))
-                                            (*                                            /\ PIR2 impb aa (getAnn ⊝ snd (fst (@forwardF sT Dom BL forward F rF a ST)))*)
-    } } } } } }.
+  } } } } } }.
 Proof.
   eapply get_getT in GetBW.
   general induction n.
@@ -511,7 +528,7 @@ Proof.
       intros. inv H; eauto using get.
     }
     assert (STEQ1:(ST 0 p (getLB F p) = (STx 0 p (getLB (take n F) p))))
-      by eapply ProofIrrelevance.proof_irrelevance.
+      by eapply subTerm_PI.
     assert (STEQ2:x3 =
             (fun (n' : nat) (Zs : params * stmt) (H1 : get (take n F) n' Zs) =>
                STx (S n') Zs (getLS p H1)))
@@ -521,6 +538,51 @@ Proof.
     repeat f_equal. eapply STEQ1.
     eapply STEQ2.
 Qed.
+
+(*
+Lemma forwardF_PIR2  (sT:stmt) (Dom:stmt->Type) BL ZL
+      (F:list (params * stmt)) rF a ZLIncl
+      (f : forall sT (ZL : 〔params〕) (s : stmt),
+          subTerm s sT ->
+          list_union (of_list ⊝ ZL) [<=] occurVars sT
+          -> Dom sT -> bool -> anni (Dom sT) s) sa
+      (ST:forall n s, get F n s -> subTerm (snd s) sT) r Zs ST' n ST''
+      (GetrF:get rF n r) (GetF:get F n Zs)
+:
+  PIR2 impb
+       (Take.take ❬F❭
+                  (snd
+                     (@forward sT Dom f ZL ZLIncl (snd Zs) ST'
+                              (fst
+                                 (fst
+                                    (@forwardF sT Dom
+                                       BL
+                                       (forward Dom f ZL ZLIncl)
+                                       (Take.take n F)
+                                       (Take.take n (setTopAnn (A:=bool) ⊜ sa BL))
+                                       a ST''))) r)))
+       (@getAnn bool
+          ⊝ snd
+          (fst
+             (forwardF
+                BL
+                (forward Dom f ZL ZLIncl) F
+                (setTopAnn (A:=bool) ⊜ sa BL)
+                a
+                ST))).
+Proof.
+  general induction F; destruct rF; isabsurd. simpl.
+  cases. exfalso. admit.
+  destruct sa, BL. simpl. exfalso. admit.
+  exfalso; admit. simpl. exfalso; admit.
+  simpl. econstructor.
+  rewrite forward_fst_snd_getAnn. rewrite getAnn_setTopAnn.
+  admit.
+
+  rewrite
+  - simpl.
+Qed.
+ *)
 
 Require Import FiniteFixpointIteration.
 
@@ -551,15 +613,16 @@ Proof.
     repeat let_pair_case_eq; subst; simpl;
       eauto 20 using @annotation, setTopAnn_annotation.
   - econstructor; eauto 20 using setTopAnn_annotation.
-    + rewrite forwardF_length.
-      rewrite zip_length.
-      rewrite forward_length.
-      len_simpl.
-      rewrite <- H.
-      rewrite min_l; eauto.
-      rewrite min_l; eauto. omega.
+    + len_simpl; try reflexivity.
+      rewrite H.
+      rewrite !min_l; eauto with len.
+      rewrite !min_l; eauto with len.
+      rewrite !min_l; eauto with len.
+      rewrite !min_l; eauto with len.
+      eauto with len.
     + intros; inv_get.
-      eapply forwardF_get in H2. destruct H2; dcr; subst.
+      eapply setTopAnn_annotation; eauto.
+      eapply forwardF_get in H4. destruct H4; dcr; subst.
       inv_get. eapply IH; eauto.
       eapply setTopAnn_annotation; eauto.
 Qed.
@@ -572,11 +635,11 @@ Instance makeForwardAnalysis (Dom:stmt -> Type)
          (f: forall (sT : stmt) (ZL : 〔params〕) (s : stmt),
              subTerm s sT ->
              list_union (of_list ⊝ ZL) [<=] occurVars sT -> Dom sT -> bool -> anni (Dom sT) s)
-         (fMon:forall sT s (ST ST':subTerm s sT) ZL
-                 (ZLIncl ZLIncl':list_union (of_list ⊝ ZL) [<=] occurVars sT),
+         (fMon:forall sT s (ST:subTerm s sT) ZL
+                 (ZLIncl:list_union (of_list ⊝ ZL) [<=] occurVars sT),
              forall a b, a ⊑ b ->
                     forall r r', r ⊑ r' ->
-                            f sT ZL s ST ZLIncl a r ⊑ f sT ZL s ST' ZLIncl' b r')
+                            f sT ZL s ST ZLIncl a r ⊑ f sT ZL s ST ZLIncl b r')
          (Trm: forall s, Terminating (Dom s) poLt)
 
   : forall s, Iteration (Dom s * { a : ann bool | annotation s a }) :=
