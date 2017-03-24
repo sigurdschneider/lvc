@@ -31,8 +31,9 @@ Inductive spill_min_kill (k:nat) :
       (s : stmt)
       (sl : spilling)
       (rlv : ann ⦃var⦄)
-    : let K := set_take_avoid (cardinal (R ∪ L) - k) (R \ Exp.freeVars e) (getAnn rlv) in
-      let Kx:= set_take_avoid (1 + cardinal (R \ K ∪ L) - k) (R \ K ∪ L) (getAnn rlv) in
+    : let K := set_take ((cardinal R + cardinal L) - k)
+                        (R \ ((Exp.freeVars e ∪ getAnn rlv) \ L)) in
+      let Kx:= set_take (1 + cardinal (R \ K ∪ L) - k) ((R \ K ∪ L) \ getAnn rlv) in
       Sp ⊆ R
       -> L ⊆ Sp ∪ M
       -> spill_min_kill k ZL Λ ({x;(R\K ∪ L)\Kx }, Sp ∪ M) s rlv sl
@@ -47,7 +48,7 @@ Inductive spill_min_kill (k:nat) :
       (Λ : list (⦃var⦄ * ⦃var⦄))
       (R M Sp L Rlv: ⦃var⦄)
       (e : op)
-    : let K := set_take (cardinal (R ∪ L) - k) (R \ Op.freeVars e) in 
+    : let K := set_take ((cardinal R + cardinal L) - k) (R \ Op.freeVars e) in 
       Sp ⊆ R
       -> L ⊆ Sp ∪ M
       -> Op.freeVars e ⊆ R\K ∪ L
@@ -62,7 +63,7 @@ Inductive spill_min_kill (k:nat) :
       (s t : stmt)
       (sl_s sl_t : spilling)
       (rlv1 rlv2 : ann ⦃var⦄)
-    : let K := set_take_avoid (cardinal (R ∪ L) - k) (R \ Op.freeVars e ) (getAnn rlv1 ∪ getAnn rlv2) in
+    : let K := set_take ((cardinal R + cardinal L) - k) ((R \ Op.freeVars e) \ (getAnn rlv1 ∪ getAnn rlv2)) in
       Sp ⊆ R
       -> L ⊆ Sp ∪ M
       -> Op.freeVars e ⊆ R\K ∪ L
@@ -78,7 +79,7 @@ Inductive spill_min_kill (k:nat) :
       (f : lab)
       (Z : params)
       (Y : args)
-    : let K := set_take (cardinal (R ∪ L) - k) (R \ R_f) in
+    : let K := set_take ((cardinal R + cardinal L) - k) (R \ R_f) in
       Sp ⊆ R
       -> L ⊆ Sp ∪ M
       -> cardinal (R\K ∪ L) <= k
@@ -100,7 +101,7 @@ Inductive spill_min_kill (k:nat) :
       (sl_t : spilling)
       (rlv_t : ann ⦃var⦄)
       (rlv_F : list (ann ⦃var⦄))
-    : let K := set_take_avoid (cardinal (R ∪ L) - k) R (getAnn rlv_t) in
+    : let K := set_take ((cardinal R + cardinal L) - k) (R \ getAnn rlv_t) in
       Sp ⊆ R
       -> L ⊆ Sp ∪ M
       -> cardinal (R\K ∪ L) <= k
@@ -118,6 +119,34 @@ Inductive spill_min_kill (k:nat) :
       -> spill_min_kill k ZL Λ (R,M) (stmtFun F t) (annF Rlv rlv_F rlv_t) (annF (Sp,L,rms) sl_F sl_t)
 .
 
+Lemma Sp_sub_rlv k ZL Λ R M s sl rlv :
+  spill_sound k ZL Λ (R,M) s sl
+  -> rlive_sound ZL (fst ⊝ Λ) s sl rlv
+  -> getSp sl ⊆ getAnn rlv
+.
+Proof.
+  intros spillSnd rlive. general induction spillSnd; invc rlive; simpl; eauto.
+Qed.
+
+Lemma card_diff (X:Type) `{OrderedType X} (s t : ⦃X⦄) :
+  cardinal (s \ t) = cardinal s - cardinal (s ∩ t)
+.
+Proof.
+  setoid_rewrite <-diff_inter_cardinal with (s':=t) at 2. omega.
+Qed.
+
+Lemma card_RKL (X:Type) `{OrderedType X} k (s t u : ⦃X⦄) :
+  t ⊆ s
+  -> cardinal u <= k
+  -> cardinal t = cardinal s + cardinal u - k
+  -> cardinal (s \ t ∪ u) <= k
+.
+Proof.
+  intros sub ucard card.
+  rewrite union_cardinal_inter. rewrite card_diff. rewrite meet_comm, inter_subset_equal; eauto.
+  rewrite card. omega.
+Qed.
+
 
 Lemma spill_sound_spill_min_kill k ZL Λ R R' M s sl rlv :
   spill_sound k ZL Λ (R,M) s sl
@@ -126,15 +155,32 @@ Lemma spill_sound_spill_min_kill k ZL Λ R R' M s sl rlv :
   -> spill_min_kill k ZL Λ (R',M) s rlv sl
 .
 Proof.
-  intros spillSnd rlive rlv_sub. general induction spillSnd; invc rlive; cbn in rlv_sub.
+  intros spillSnd rlive rlv_sub.
+  general induction spillSnd; invc rlive; cbn in rlv_sub.
   - econstructor; eauto;
-      set (K' := set_take_avoid (cardinal (R' ∪ L) - k) (R' \ Exp.freeVars e) (getAnn al));
-      set (Kx':= set_take_avoid (1 + cardinal (R' \ K' ∪ L) - k) (R' \ K' ∪ L) (getAnn al)).
-    + admit. (* Sp ⊆ getAnn rlv Lemma *)
-    + eapply IHspillSnd; eauto. admit. (* disj (set_take_avoid s t) t Lemma *)
-    + rewrite <-rlv_sub. admit. (* solvable *)
-    + admit. (* Lemma *)
-    + admit. (* analogous *)
+      set (K' := set_take ((cardinal R' + cardinal L) - k)
+                          (R' \ ((Exp.freeVars e ∪ getAnn al) \ L)));
+      set (Kx':= set_take (1 + cardinal (R' \ K' ∪ L) - k) ((R' \ K' ∪ L) \ getAnn al)).
+    + rewrite H13. eauto.
+    + eapply IHspillSnd; eauto.
+      enough (getAnn al \ singleton x ⊆ (R' \ K' ∪ L) \ Kx') as Hypo.
+      { rewrite <-Hypo. clear; cset_tac. }
+      rewrite <-inter_subset_equal with (s':=getAnn al);[| clear; cset_tac]. rewrite H17.
+      subst K'. rewrite set_take_incl. rewrite minus_minus. setoid_rewrite <-incl_right at 3.
+      rewrite <-rlv_sub.
+      subst Kx'. rewrite set_take_incl. clear;cset_tac.
+    + subst K'. rewrite set_take_incl. rewrite minus_minus. rewrite <-rlv_sub.
+      setoid_rewrite <-incl_left at 2. 
+      apply Exp.freeVars_live in H16. clear - H16; cset_tac.
+    + 
+
+
+      apply card_RKL; eauto.
+      * subst K'. rewrite set_take_incl. clear;cset_tac.
+      * clear - H3. rewrite subset_cardinal; eauto.
+      * admit. (* card *)
+    + admit. (* card Kx *)
+      
   -           
   
       

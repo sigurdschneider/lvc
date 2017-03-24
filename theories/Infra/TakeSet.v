@@ -125,3 +125,28 @@ Proof.
   - apply set_take_prefer_card_incl; eauto.
   - setoid_rewrite <-union_subset_equal at 4; eauto. rewrite set_take_prefer_incl. cset_tac.
 Qed.
+
+
+Lemma set_take_avoid_disj (X:Type) `{OrderedType X} k (s t : ⦃X⦄) :
+  cardinal (s \ t) >= k
+  -> disj (set_take_avoid k s t) t
+.
+Proof.
+  intros card x inS inT. unfold set_take_avoid in inS.
+  rewrite take_app_le in inS.
+  - rewrite take_set_incl in inS. cset_tac.
+  - rewrite elements_length. eauto.
+Qed.
+
+
+Lemma set_take_cardinal_eq (X:Type) `{OrderedType X} k (s : ⦃X⦄) :
+  k <= cardinal s
+  -> cardinal (set_take k s) = k
+.
+Proof.
+  intros card. unfold set_take. rewrite card_in_of_list.
+  - rewrite take_length_le; eauto. rewrite elements_length; eauto.
+  - apply take_dupFree.
+Qed.
+  
+  

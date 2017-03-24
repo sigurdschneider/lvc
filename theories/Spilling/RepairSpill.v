@@ -38,7 +38,7 @@ Fixpoint repair_spill
       let L'   := set_take_prefer k (L ∩ ((Sp ∩ R) ∪ M)) (Fv_e \ R) in
       (* we only use register liveness at 2 points to make some preferences in the selection of the kill set: (here)
          if the register liveness is incorrect we will still get a correct spilling *)
-      let K    := set_take_avoid (cardinal (R ∪ L') - k) (R \ Fv_e) (getAnn rlv') in
+      let K    := set_take_avoid ((cardinal R + cardinal L') - k) (R \ Fv_e) (getAnn rlv') in
       let R_e  := R \ K ∪ L' in
       let K_x  := set_take_avoid (1 + cardinal R_e - k) R_e (getAnn rlv') in
       (* here we need normal liveness, because we have to spilled variables that are loaded later on *)
@@ -58,7 +58,7 @@ Fixpoint repair_spill
     => let Fv_e := Op.freeVars e in
       let L'   := set_take_prefer k (L ∩ ((Sp ∩ R) ∪ M)) (Fv_e \ R) in
       (* here is the second use of register liveness *)
-      let K    := set_take_avoid (cardinal (R ∪ L') - k) (R \ Fv_e) (getAnn rlv1 ∪ getAnn rlv2) in
+      let K    := set_take_avoid ((cardinal R + cardinal L') - k) (R \ Fv_e) (getAnn rlv1 ∪ getAnn rlv2) in
       let R_e  := R \ K ∪ L' in
       let Sp'  := ((getAnn lv1 ∪ getAnn lv2) ∩ K \ M) ∪ (Sp ∩ R) in
       ann2 (Sp',L',nil)
@@ -71,7 +71,7 @@ Fixpoint repair_spill
       let M_f := snd (nth (counted f) Λ (∅,∅)) in
       let Z   := nth (counted f) ZL nil in
       let L'  := set_take_prefer k (L ∩ ((Sp ∩ R) ∪ M)) (R_f \ of_list Z \ R) in
-      let K   := set_take (cardinal (R ∪ L') - k) (R \ R_f) in
+      let K   := set_take ((cardinal R + cardinal L') - k) (R \ R_f) in
       let M'' := (M \ (R \ K ∪ L)) ∩ fv_Y ∪ (M' ∩ (Sp ∪ M)) in
       let Sp' := ((fv_Y ∩ K \ M) ∪ (M_f  \ of_list Z \ M)) ∪ (Sp ∩ R) in
       ann0 (Sp',L',(R', M'')::nil)
@@ -82,7 +82,7 @@ Fixpoint repair_spill
       let Λ'   := rms' ++ Λ in
       let L'   := set_take k (L ∩ ((Sp ∩ R) ∪ M)) in
       (* here is the third use of register liveness *)
-      let K    := set_take_avoid (cardinal (R ∪ L') - k) R (getAnn rlv_t) in
+      let K    := set_take_avoid ((cardinal R + cardinal L') - k) R (getAnn rlv_t) in
       let Sp'  := ((getAnn lv_t) ∩ K \ M) ∪ (Sp ∩ R) in
 
        annF (Sp, L, rms)
