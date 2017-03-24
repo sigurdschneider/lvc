@@ -12,7 +12,7 @@ Set Implicit Arguments.
           - prove spill_sound -> spill_min_kill *)
 
 
-Inductive spill_min_kill (k:nat) :
+Inductive spill_max_kill (k:nat) :
   (list params)
   -> (list (⦃var⦄ * ⦃var⦄))
   -> (⦃var⦄ * ⦃var⦄)
@@ -31,17 +31,15 @@ Inductive spill_min_kill (k:nat) :
       (s : stmt)
       (sl : spilling)
       (rlv : ann ⦃var⦄)
-    : let K := set_take ((cardinal R + cardinal L) - k)
-                        (R \ ((Exp.freeVars e ∪ getAnn rlv) \ L)) in
-      let Kx:= set_take (1 + cardinal (R \ K ∪ L) - k) ((R \ K ∪ L) \ getAnn rlv) in
+    : let K := (R \ (Exp.freeVars e ∪ getAnn rlv)) ∪ (R ∩ L) in
       Sp ⊆ R
       -> L ⊆ Sp ∪ M
-      -> spill_min_kill k ZL Λ ({x;(R\K ∪ L)\Kx }, Sp ∪ M) s rlv sl
+      -> spill_max_kill k ZL Λ (getAnn rlv, Sp ∪ M) s rlv sl
       -> Exp.freeVars e ⊆ R\K ∪ L
       -> k > 0
       -> cardinal (R\K ∪ L) <= k
-      -> cardinal ({x;((R\K) ∪ L)\Kx }) <= k
-      -> spill_min_kill k ZL Λ (R,M) (stmtLet x e s) (ann1 Rlv rlv) (ann1 (Sp,L,nil) sl)
+      -> cardinal (getAnn rlv) <= k
+      -> spill_max_kill k ZL Λ (R,M) (stmtLet x e s) (ann1 Rlv rlv) (ann1 (Sp,L,nil) sl)
                        
   | SpillReturn
       (ZL : list (params))
@@ -53,7 +51,7 @@ Inductive spill_min_kill (k:nat) :
       -> L ⊆ Sp ∪ M
       -> Op.freeVars e ⊆ R\K ∪ L
       -> cardinal ((R\K) ∪ L) <= k
-      -> spill_min_kill k ZL Λ (R,M) (stmtReturn e) (ann0 Rlv) (ann0 (Sp,L,nil))
+      -> spill_max_kill k ZL Λ (R,M) (stmtReturn e) (ann0 Rlv) (ann0 (Sp,L,nil))
 
   | SpillIf
       (ZL : list (params))
@@ -68,9 +66,9 @@ Inductive spill_min_kill (k:nat) :
       -> L ⊆ Sp ∪ M
       -> Op.freeVars e ⊆ R\K ∪ L
       -> cardinal (R\K ∪ L) <= k
-      -> spill_min_kill k ZL Λ (R\K ∪ L, Sp ∪ M) s rlv1 sl_s
-      -> spill_min_kill k ZL Λ (R\K ∪ L, Sp ∪ M) t rlv2 sl_t
-      -> spill_min_kill k ZL Λ (R,M) (stmtIf e s t) (ann2 Rlv rlv1 rlv2) (ann2 (Sp,L,nil) sl_s sl_t)
+      -> spill_max_kill k ZL Λ (R\K ∪ L, Sp ∪ M) s rlv1 sl_s
+      -> spill_max_kill k ZL Λ (R\K ∪ L, Sp ∪ M) t rlv2 sl_t
+      -> spill_max_kill k ZL Λ (R,M) (stmtIf e s t) (ann2 Rlv rlv1 rlv2) (ann2 (Sp,L,nil) sl_s sl_t)
 
   | SpillApp
       (ZL : list params)
@@ -89,7 +87,7 @@ Inductive spill_min_kill (k:nat) :
       -> M_f \ of_list Z ⊆ Sp ∪ M
       -> list_union (Op.freeVars ⊝ Y) ⊆ (R\K ∪ L) ∪ M'
       -> M' ⊆ Sp ∪ M
-      -> spill_min_kill k ZL Λ (R,M) (stmtApp f Y) (ann0 Rlv) (ann0 (Sp,L, (R', M')::nil))
+      -> spill_max_kill k ZL Λ (R,M) (stmtApp f Y) (ann0 Rlv) (ann0 (Sp,L, (R', M')::nil))
 
   | SpillFun
       (ZL : list params)
@@ -112,11 +110,11 @@ Inductive spill_min_kill (k:nat) :
                          -> get F n Zs
                          -> get rlv_F n rlv_s
                          -> get sl_F n sl_s
-                         -> spill_min_kill k ((fst ⊝ F) ++ ZL)
+                         -> spill_max_kill k ((fst ⊝ F) ++ ZL)
                                           (rms ++ Λ) rm (snd Zs) rlv_s sl_s
         )
-      -> spill_min_kill k ((fst ⊝ F) ++ ZL) (rms ++ Λ) (R\K ∪ L, Sp ∪ M) t rlv_t sl_t
-      -> spill_min_kill k ZL Λ (R,M) (stmtFun F t) (annF Rlv rlv_F rlv_t) (annF (Sp,L,rms) sl_F sl_t)
+      -> spill_max_kill k ((fst ⊝ F) ++ ZL) (rms ++ Λ) (R\K ∪ L, Sp ∪ M) t rlv_t sl_t
+      -> spill_max_kill k ZL Λ (R,M) (stmtFun F t) (annF Rlv rlv_F rlv_t) (annF (Sp,L,rms) sl_F sl_t)
 .
 
 Lemma Sp_sub_rlv k ZL Λ R M s sl rlv :
@@ -148,40 +146,68 @@ Proof.
 Qed.
 
 
-Lemma spill_sound_spill_min_kill k ZL Λ R R' M s sl rlv :
-  spill_sound k ZL Λ (R,M) s sl
+Lemma spill_sound_spill_max_kill k ZL Λ R R' M G s sl rlv :
+  rlv === reg_live ZL (fst ⊝ Λ) G s sl
+  -> spill_sound k ZL Λ (R,M) s sl
   -> rlive_sound ZL (fst ⊝ Λ) s sl rlv
   -> getAnn rlv ⊆ R'
-  -> spill_min_kill k ZL Λ (R',M) s rlv sl
+  -> spill_max_kill k ZL Λ (R',M) s rlv sl
 .
 Proof.
-  intros spillSnd rlive rlv_sub.
-  general induction spillSnd; invc rlive; cbn in rlv_sub.
+  intros rlv_eq spillSnd rlive rlv_sub'.
+  general induction spillSnd; invc rlive; invc rlv_eq; cbn in rlv_sub'.
   - econstructor; eauto;
       set (K' := set_take ((cardinal R' + cardinal L) - k)
                           (R' \ ((Exp.freeVars e ∪ getAnn al) \ L)));
       set (Kx':= set_take (1 + cardinal (R' \ K' ∪ L) - k) ((R' \ K' ∪ L) \ getAnn al)).
     + rewrite H13. eauto.
-    + eapply IHspillSnd; eauto.
-      enough (getAnn al \ singleton x ⊆ (R' \ K' ∪ L) \ Kx') as Hypo.
+  (*  + eapply IHspillSnd; eauto.
+      assert (getAnn al ⊆ {x;(R0 \ K ∪ L) \ Kx}) by admit.
+      rewrite H5. eauto. 
+      enough (getAnn al \ singleton x ⊆ (R0 \ K ∪ L) \ Kx) as Hypo.
       { rewrite <-Hypo. clear; cset_tac. }
       rewrite <-inter_subset_equal with (s':=getAnn al);[| clear; cset_tac]. rewrite H17.
-      subst K'. rewrite set_take_incl. rewrite minus_minus. setoid_rewrite <-incl_right at 3.
+
+      rewrite H5.
+      rewrite set_take_incl. rewrite minus_minus. setoid_rewrite <-incl_right at 3.
       rewrite <-rlv_sub.
-      subst Kx'. rewrite set_take_incl. clear;cset_tac.
-    + subst K'. rewrite set_take_incl. rewrite minus_minus. rewrite <-rlv_sub.
-      setoid_rewrite <-incl_left at 2. 
+      subst Kx'. rewrite set_take_incl. clear;cset_tac. *)
+    + rewrite <-minus_union.
+      assert (forall s t u : ⦃var⦄, t ⊆ u -> s \ t ∪ u [=] s ∪ u) as seteq
+          by (clear; intros; cset_tac).
+      rewrite seteq;[|clear;cset_tac].
+      rewrite minus_minus, <-rlv_sub'.
       apply Exp.freeVars_live in H16. clear - H16; cset_tac.
-    + 
-
-
+    + rewrite <-minus_union.
+      assert (forall s t u : ⦃var⦄, t ⊆ u -> s \ t ∪ u [=] s ∪ u) as seteq
+          by (clear; intros; cset_tac).
+      rewrite seteq;[|clear;cset_tac].
+      eapply reg_live_R in spillSnd; [|eapply PIR2_refl; eauto].
+      rewrite minus_minus. rewrite H1.
+      apply ann_R_get in H10. rewrite H10, reg_live_G_eq, spillSnd. cbn.
+      (* we need a guarantee that x ∉ R', then everything will be fine. *)
+      rewrite meet_comm, meet_in_left. admit. (*
+      rewrite <-rlv_sub'.
+      invc H10.
+      assert (getAnn al ⊆ (R0 \ K ∪ L)) by admit.
+      rewrite H5. clear - H3.
+      enough (R' ∩ (R0 \ K ∪ L ∪ (R0 \ K ∪ L)) ∪ L ⊆ R0 \ K ∪ L) as enaf by (rewrite enaf; eauto).
+      clear; cset_tac.
+      
       apply card_RKL; eauto.
+      * clear; cset_tac.
+      * clear - H3. rewrite subset_cardinal;eauto.
+      * 
       * subst K'. rewrite set_take_incl. clear;cset_tac.
       * clear - H3. rewrite subset_cardinal; eauto.
       * admit. (* card *)
-    + admit. (* card Kx *)
-      
-  -           
+    + admit. (* card Kx *) *)
+    + eapply reg_live_R in spillSnd; [|eapply PIR2_refl; eauto].
+      apply ann_R_get in H10. rewrite H10, reg_live_G_eq, spillSnd. cbn.
+      clear - H4. rewrite union_comm, union_subset_equal; eauto. cset_tac.
+  - econstructor; eauto.
+    + rewrite H8; eauto.
+    + 
   
       
 

@@ -20,6 +20,9 @@ Fixpoint reg_live
   :=
     match s, sl with
     | stmtLet x e s, ann1 (Sp, L, _) sl'
+                          (* maybe we have to add Exp.freeVars e and etc. 
+                             getAnn al [<=] {x; R
+*)
       => let lv_s := reg_live ZL Lv (singleton x) s sl' in
         ann1 (G ∪ Sp ∪ (((getAnn lv_s) \ singleton x ∪ Exp.freeVars e) \ L)) lv_s
 
@@ -51,7 +54,6 @@ Fixpoint reg_live
     | _,_ => ann0 G
     end
 .
-
 
 
 Inductive rlive_sound
@@ -138,12 +140,49 @@ Proof.
     destruct a,l0; simpl; cset_tac.
 Qed.
 
-
-Lemma reg_live_R k ZL Λ RM G s sl rlv:
-  spill_sound k ZL Λ RM s sl
-  -> PIR2 Subset rlv (fst ⊝ Λ)
-  -> getAnn (reg_live ZL rlv G s sl) ⊆ G ∪ fst RM
+Definition rlive_R rlive
+  := forall k ZL Λ RM  s sl rLv,
+    spill_sound k ZL Λ RM s sl
+    -> PIR2 Subset rLv (fst ⊝ Λ)
+    -> getAnn (rlive ZL rLv (∅:⦃var⦄) s sl) ⊆ fst RM
 .
+  
+Definition rlive_min k ZL Λ RM  s sl rlv
+  :=
+    spill_sound k ZL Λ RM s sl
+    -> getAnn rlv ⊆ fst RM
+.
+
+
+Lemma reg_live_R k ZL Λ RM  s sl rLv :
+    spill_sound k ZL Λ RM s sl
+    -> PIR2 Subset rLv (fst ⊝ Λ)
+    -> getAnn (reg_live ZL rLv (∅:⦃var⦄) s sl) ⊆ fst RM
+.
+Proof.
+  unfold rlive_R. intros spillSnd pir2. general induction spillSnd; simpl.
+  - rewrite reg_live_G_eq. rewrite IHspillSnd; simpl; eauto.
+    rewrite H1, H. clear; cset_tac.
+  - rewrite H1, H. clear; cset_tac.
+  - rewrite H, H1, IHspillSnd1, IHspillSnd2; simpl; eauto. clear; cset_tac.
+  - eapply PIR2_nth_2 in pir2 as [Rl [get_Rl Rl_sub]].
+    + erewrite !get_nth; eauto. simpl. rewrite Rl_sub, H, H4, H6. clear; cset_tac.
+    + eapply map_get_eq; eauto.
+  - rewrite reg_live_G_eq. rewrite H, IHspillSnd; eauto.
+    + simpl; clear; cset_tac.
+    + rewrite List.map_app. apply PIR2_app; eauto. 
+Qed.
+
+Corollary reg_live_R' k ZL Λ RM s sl rLv  :
+  PIR2 Subset rLv (fst ⊝ Λ)
+  -> rlive_min k ZL Λ RM s sl (reg_live ZL rLv (∅:⦃var⦄) s sl)
+.
+Proof.
+  unfold rlive_min. intros. eapply reg_live_R; eauto.
+Qed.
+
+  
+(*
 Proof.
   intros spillSnd pir2. general induction spillSnd; simpl.
   - rewrite IHspillSnd; simpl; eauto.
@@ -157,7 +196,7 @@ Proof.
     + simpl; clear; cset_tac.
     + rewrite List.map_app. apply PIR2_app; eauto. 
 Qed.
-
+*)
 
 
 
@@ -230,8 +269,8 @@ Proof.
      * rewrite List.map_app. apply PIR2_app; [apply PIR2_refl|]; eauto.
      * apply PIR2_app; [|apply PIR2_refl;eauto].
        apply PIR2_get. intros; inv_get.
-       -- subst fix1. simpl. rewrite reg_live_R.
-          ++ instantiate (1:=x0). clear; cset_tac. 
+       -- subst fix1. simpl. rewrite reg_live_G_eq. rewrite reg_live_R.
+          ++ instantiate (1:=x0). clear; cset_tac.
           ++ eauto.
           ++ rewrite List.map_app. apply PIR2_app; eauto.
        -- eauto with len.
@@ -241,10 +280,12 @@ Proof.
       * rewrite List.map_app. apply PIR2_app; eauto. 
       * apply PIR2_app; [|apply PIR2_refl;eauto].
         apply PIR2_get. intros; inv_get.
-        -- rewrite reg_live_R; eauto.
+        -- rewrite reg_live_G_eq, reg_live_R; eauto.
            ++ clear; cset_tac.
            ++ rewrite List.map_app. apply PIR2_app; [apply PIR2_refl|]; eauto.
         -- eauto with len.
     + intros; inv_get. rewrite <-reg_live_G. clear; cset_tac.
     + clear; cset_tac.
 Qed.
+
+
