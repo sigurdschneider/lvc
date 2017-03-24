@@ -1,4 +1,4 @@
-Require Import CSet Le.
+Require Import CSet Le DecSolve.
 
 Require Import Plus Util AllInRel Map OptionR.
 Require Import CSet Val Var Env Equiv.Sim IL Fresh Annotation.
@@ -13,9 +13,44 @@ Inductive eqn :=
   | EqnApx (e e':op)
   | EqnBot.
 
+Inductive option_RS A B (R: A -> B -> Prop) : option A -> option B -> Prop :=
+| option_RS_Some a b : R a b -> option_RS R (Some a) (Some b).
+
+Smpl Add 100
+     match goal with
+     | [ H : @option_RS _ _ _ ?A ?B |- _ ] => inv_if_one_ctor H A B
+     end : inv_trivial.
+
+Instance option_RS_sym A R `{Symmetric A R} : Symmetric (option_RS R).
+Proof.
+  unfold Symmetric in *; intros; inv H0; eauto using option_RS.
+Qed.
+
+Instance option_RS_trans A R `{Transitive A R} : Transitive (option_RS R).
+Proof.
+  hnf; intros ? ? ? B C.
+  inv B; inv C; econstructor; eauto.
+Qed.
+
+Instance option_RS_anti A R Eq `{EqA:Equivalence _ Eq} `{@Antisymmetric A Eq EqA R}
+  : @Antisymmetric _ (option_R Eq) (option_R_equivalence _ _) (option_RS R).
+
+Proof.
+  intros ? ? B C. inv B; inv C; eauto using option_R.
+Qed.
+
+Instance option_R_dec A B (R:A->B->Prop)
+         `{forall a b, Computable (R a b)} (a:option A) (b:option B) :
+  Computable (option_RS R a b).
+Proof.
+  destruct a,b; try dec_solve.
+  decide (R a b); dec_solve.
+Defined.
+
+
 Definition satisfies (E:onv val) (gamma:eqn) : Prop :=
 match gamma with
-| EqnEq e e' => option_R eq (op_eval E e) (op_eval E e')
+| EqnEq e e' => option_RS eq (op_eval E e) (op_eval E e')
 | EqnApx e e' => fstNoneOrR eq (op_eval E e) (op_eval E e')
 | EqnBot => False
 end.
@@ -586,7 +621,7 @@ Lemma satisfies_EqnEq_on_update   (x:var) e V v:
 Proof.
   intros. unfold satisfies. simpl. lud; eauto.
     erewrite op_eval_live.
-    -  rewrite <- H. reflexivity.
+    - rewrite H. econstructor; eauto.
     - eapply Op.live_freeVars.
     - eapply agree_on_update_dead; eauto.
 Qed.
@@ -596,13 +631,15 @@ Qed.
 Lemma op_eval_true_satisfies  V e v
         : op_eval V e = ⎣ v ⎦ -> val2bool v = true -> satisfies V (EqnEq (UnOp UnOpToBool e) (Con val_true)).
 Proof.
-  intros. unfold satisfies. simpl. rewrite H. simpl. unfold option_lift1. rewrite H0. simpl. reflexivity.
+  intros. unfold satisfies. simpl. rewrite H. simpl.
+  unfold option_lift1. rewrite H0. simpl. econstructor; eauto.
 Qed.
 
 Lemma op_eval_false_satisfies V e v
   : op_eval V e = ⎣ v ⎦ -> val2bool v = false -> satisfies V (EqnEq (UnOp UnOpToBool e) (Con val_false)).
 Proof.
-intros.  unfold satisfies. simpl. rewrite H. simpl. unfold option_lift1. rewrite H0. simpl. reflexivity.
+  intros.  unfold satisfies. simpl. rewrite H. simpl. unfold option_lift1.
+  rewrite H0. simpl. econstructor; eauto.
 Qed.
 
 Lemma onvLe_omap_op_eval_some V V' Y vl
@@ -695,13 +732,16 @@ Qed.
 Lemma satisfiesAll_EqnEq_on_update V v x Gamma
   : satisfiesAll V Gamma
     -> x ∉ eqns_freeVars Gamma
-    -> satisfiesAll (V [x <- ⎣ v ⎦] ) Gamma.
+    -> satisfiesAll (V [x <- ⎣ v ⎦] ) {EqnEq (Var x) (Var x); Gamma}.
 Proof.
   intros.
   unfold satisfiesAll in *.
-  intros.
-  eapply satisfies_update_dead; eauto.
-  intros A. eapply H0. eapply in_eqns_freeVars; eauto.
+  intros. cset_tac'.
+  - invc H2. simpl. lud.
+    + econstructor; eauto.
+    + exfalso; cset_tac.
+  - eapply satisfies_update_dead; eauto.
+    intros A. eapply H0. eapply in_eqns_freeVars; eauto.
 Qed.
 
 Lemma omap_exp_eval_onvLe Y E E' v

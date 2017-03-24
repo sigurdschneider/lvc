@@ -38,7 +38,8 @@ Definition domupd (d:Dom) x (o:aval) : Dom :=
 
 Fixpoint domupd_list (m:Dom) (A:list var) (B:list aval) :=
   match A, B with
-  | x::A, y::B => domupd (domupd_list m A B) x (join (find x m) y)
+  | x::A, y::B =>
+    domupd (domupd_list m A B) x (join (find x m) y)
   | _, _ => m
   end.
 
@@ -144,6 +145,46 @@ Proof.
     eapply (leMap_op_eval o); eauto.
 Qed.
 
+Lemma domupd_ne m x y a
+  : x =/= y
+    -> find x (domupd m y a) = find x m.
+Proof.
+  unfold domupd; cases; intros; mlud; eauto.
+Qed.
+
+Lemma domupd_list_ne m x Z Y
+  : ~ InA eq x Z
+    -> find x (domupd_list m Z Y) === find x m.
+Proof.
+  intros NI.
+  general induction Z; destruct Y; simpl; eauto.
+  rewrite domupd_ne; eauto.
+  intro; eapply NI; econstructor. eapply H.
+Qed.
+
+Lemma domupd_list_exp m Z Y
+  : leMap m (domupd_list m Z Y).
+Proof.
+  general induction Z; destruct Y; simpl domupd_list; eauto;
+    try reflexivity.
+  unfold ojoin; repeat cases; simpl domupd; eauto.
+  - hnf; intros. mlud.
+    + rewrite <- e, <- Heq.
+      econstructor.
+      unfold withTop_generic_join; repeat cases; try econstructor; eauto.
+      reflexivity.
+    + eapply IHZ.
+  - hnf; intros; mlud.
+    rewrite Heq, e; eauto.
+    eapply IHZ.
+  - hnf; intros; mlud.
+    rewrite <- e, <- Heq; eauto.
+    eapply IHZ.
+  - hnf; intros; mlud.
+    rewrite <- e, <- Heq; eauto.
+    eapply IHZ.
+Qed.
+
 Smpl Add match goal with
          | [ H : int_eq val_true val_false |- _ ] =>
            exfalso; eapply int_eq_true_false_absurd in H; eauto
@@ -166,17 +207,20 @@ Definition constant_propagation_transform sT ZL st (ST:subTerm st sT)
   | stmtIf e s t as st, d =>
     (if [op_eval (domenv d) e = None] then false
      else if [op_eval (domenv d) e = Some (wTA val_false)] then
-            false else true,
+            false else b,
      if [op_eval (domenv d) e = None] then false
      else if [op_eval (domenv d) e = Some (wTA val_true)] then
-            false else true,
+            false else b,
      d)
   | stmtApp f Y as st, d =>
     let Z := nth (counted f) ZL (nil:list var) in
     let Yc := List.map (op_eval (domenv d)) Y in
     (* we assume renamed apart here, so it's ok to leave definitions
        in d[X <-- Yc] that are /not/ defined at the point where f is defined *)
-    domupd_list d Z Yc
+    if b then
+      domupd_list d Z Yc
+    else
+      d
   | stmtReturn e as st, d =>
     d
   | stmtFun F t as st, d =>
@@ -203,13 +247,18 @@ Proof.
            | [ H : _ = None |- _ ] => rewrite H in *
            | [ H : _ = Some _ |- _ ] => rewrite H in *
             end; clear_trivial_eqs; try inv H1; try congruence).
-    clear_trivial_eqs. eapply NOTCOND0. rewrite <- H2. reflexivity.
-    clear_trivial_eqs. eapply NOTCOND1. rewrite <- H2. reflexivity.
+    + clear_trivial_eqs. rewrite <- H2 in *.
+      exfalso; eapply NOTCOND0. reflexivity.
+    + clear_trivial_eqs. rewrite <- H2 in *.
+      exfalso. eapply NOTCOND1. reflexivity.
   - destruct (get_dec ZL l); dcr.
     + erewrite get_nth; eauto; simpl.
-      hnf; intros.
-      eapply domupd_list_le; eauto.
+      repeat cases; isabsurd; eauto;
+        try (eapply domupd_list_le; eauto).
+      etransitivity; eauto.
+      eapply domupd_list_exp.
     + rewrite not_get_nth_default; eauto.
+      simpl; repeat cases; eauto.
 Qed.
 
 Definition DDom (sT:stmt) := { m : Map [var, withTop val] | domain m ⊆ occurVars sT}.
@@ -255,12 +304,12 @@ Proof.
     rewrite domain_domupd_incl. cset_tac.
     rewrite domain_add. cset_tac.
   - destruct (get_dec ZL l); dcr.
-    + erewrite get_nth; eauto.
+    + erewrite get_nth; eauto; cases; eauto.
       rewrite domain_domupd_list_incl.
       eapply union_incl_split; eauto.
       rewrite <- ZLIncl.
       eapply incl_list_union; eauto using map_get_1.
-    + rewrite not_get_nth_default; eauto.
+    + rewrite not_get_nth_default; eauto; simpl; cases; eauto.
 Qed.
 
 
