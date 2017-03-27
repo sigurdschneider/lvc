@@ -149,4 +149,32 @@ Proof.
   - apply take_dupFree.
 Qed.
   
-  
+
+Definition set_take_least_avoid (X:Type) `{OrderedType X} k (s t : ⦃X⦄) : ⦃X⦄
+  :=
+    s \ t ∪ set_take (k - cardinal (s \ t)) (s ∩ t)
+.
+
+Lemma set_take_least_avoid_incl (X:Type) `{OrderedType X} k (s t : ⦃X⦄) :
+  set_take_least_avoid k s t ⊆ s
+.
+Proof.
+  unfold set_take_least_avoid. rewrite set_take_incl. cset_tac.
+Qed.
+
+
+Lemma incl_set_take_least_avoid (X:Type) `{OrderedType X} k (s t : ⦃X⦄) :
+  s \ t ⊆ set_take_least_avoid k s t
+.
+Proof.
+  unfold set_take_least_avoid. cset_tac.
+Qed.
+
+Lemma set_take_least_avoid_eq (X:Type) `{OrderedType X} k (s t : ⦃X⦄) :
+  k <= cardinal (s \ t)
+  -> set_take_least_avoid k s t [=] s \ t
+.
+Proof.
+  intros card. unfold set_take_least_avoid. 
+  replace (k - cardinal (s \ t)) with 0 by omega. cbn. cset_tac.
+Qed.

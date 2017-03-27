@@ -36,21 +36,21 @@ Fixpoint repair_spill
   | stmtLet x e s, ann1 _ rlv', ann1 _ lv', ann1 (Sp,L,_) sl'
     => let Fv_e := Exp.freeVars e in
       let L'   := set_take_prefer k (L ∩ ((Sp ∩ R) ∪ M)) (Fv_e \ R) in
-      (* we only use register liveness at 2 points to make some preferences in the selection of the kill set: (here)
+      (* we only use register liveness at 3 points to make some preferences
+         in the selection of the kill set: (here)
          if the register liveness is incorrect we will still get a correct spilling *)
-      let K    := set_take_avoid ((cardinal R + cardinal L') - k) (R \ Fv_e) (getAnn rlv') in
+      let K    := set_take_least_avoid (cardinal (R ∪ L') - k)
+                                       (R \ (Exp.freeVars e ∪ L'))
+                                       (getAnn rlv) in
       let R_e  := R \ K ∪ L' in
-      let K_x  := set_take_avoid (1 + cardinal R_e - k) R_e (getAnn rlv') in
-      (* here we need normal liveness, because we have to spilled variables that are loaded later on *)
-      let Sp'  := (getAnn lv' ∩ (K ∪ K_x) \ M) ∪ (Sp ∩ R) in
-      let R_s  := {x; R_e \ K_x} in
-      ann1 (Sp',L',nil) (repair_spill k ZL Λ R_s (Sp' ∪ M) s rlv' lv' sl')
+      let K_x  := set_take_least_avoid (cardinal {x; R_e} - k) R (getAnn rlv) in
+   (* here we need normal liveness, because we have to spill variables that are loaded later on *)
+      let Sp'  := (getAnn lv' ∩ (K ∪ K_x) \ M) ∪ (Sp ∩ R) in 
+      ann1 (Sp',L',nil) (repair_spill k ZL Λ (getAnn rlv') (*ERROR*) (Sp' ∪ M) s rlv' lv' sl')
            
   | stmtReturn e, _, _, ann0 (Sp,L,_)
     => let Fv_e := Op.freeVars e in
       let L'   := set_take_prefer k (L ∩ ((Sp ∩ R) ∪ M)) (Fv_e \ R) in
-      let K    := set_take (cardinal (R ∪ L') - k) (R \ Fv_e) in
-      let R_e  := R \ K ∪ L' in
       let Sp'  := Sp ∩ R in
       ann0 (Sp',L',nil)
 
@@ -58,12 +58,13 @@ Fixpoint repair_spill
     => let Fv_e := Op.freeVars e in
       let L'   := set_take_prefer k (L ∩ ((Sp ∩ R) ∪ M)) (Fv_e \ R) in
       (* here is the second use of register liveness *)
-      let K    := set_take_avoid ((cardinal R + cardinal L') - k) (R \ Fv_e) (getAnn rlv1 ∪ getAnn rlv2) in
-      let R_e  := R \ K ∪ L' in
+      let K    := set_take_least_avoid (cardinal (R ∪ L) - k)
+                                       (R \ (Op.freeVars e ∪ L'))
+                                       (getAnn rlv1 ∪ getAnn rlv2) in
       let Sp'  := ((getAnn lv1 ∪ getAnn lv2) ∩ K \ M) ∪ (Sp ∩ R) in
       ann2 (Sp',L',nil)
-           (repair_spill k ZL Λ R_e (Sp' ∪ M) s1 rlv1 lv1 sl1)
-           (repair_spill k ZL Λ R_e (Sp' ∪ M) s2 rlv2 lv2 sl2)
+           (repair_spill k ZL Λ (getAnn rlv1) (Sp' ∪ M) s1 rlv1 lv1 sl1)
+           (repair_spill k ZL Λ (getAnn rlv2) (Sp' ∪ M) s2 rlv2 lv2 sl2)
 
   | stmtApp f Y, _, _, ann0 (Sp,L,(R',M')::nil)
     => let fv_Y:= list_union (Op.freeVars ⊝ Y) in

@@ -1,7 +1,7 @@
 Require Import List Map Env AllInRel Exp MoreList.
 Require Import IL Annotation.
 Require Import Liveness.Liveness.
-Require Import ExpVarsBounded SpillSound OneOrEmpty.
+Require Import ExpVarsBounded SpillSound.
 
 
 
@@ -140,12 +140,7 @@ Proof.
     destruct a,l0; simpl; cset_tac.
 Qed.
 
-Definition rlive_R rlive
-  := forall k ZL Λ RM  s sl rLv,
-    spill_sound k ZL Λ RM s sl
-    -> PIR2 Subset rLv (fst ⊝ Λ)
-    -> getAnn (rlive ZL rLv (∅:⦃var⦄) s sl) ⊆ fst RM
-.
+
   
 Definition rlive_min k ZL Λ RM  s sl rlv
   :=
@@ -160,7 +155,7 @@ Lemma reg_live_R k ZL Λ RM  s sl rLv :
     -> getAnn (reg_live ZL rLv (∅:⦃var⦄) s sl) ⊆ fst RM
 .
 Proof.
-  unfold rlive_R. intros spillSnd pir2. general induction spillSnd; simpl.
+  intros spillSnd pir2. general induction spillSnd; simpl.
   - rewrite reg_live_G_eq. rewrite IHspillSnd; simpl; eauto.
     rewrite H1, H. clear; cset_tac.
   - rewrite H1, H. clear; cset_tac.
