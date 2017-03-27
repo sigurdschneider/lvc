@@ -100,6 +100,27 @@ Inductive rlive_sound
     -> rlive_sound ZL Lv (stmtFun F t) (annF (Sp,L,rms) sl_F sl_t) (annF lv als alb)
 .
 
+Definition is_rlive_min k s sl Rlv
+  := forall ZL Λ R M, spill_sound k ZL Λ (R,M) s sl
+                 -> Rlv ⊆ R
+.
+
+
+Inductive rlive_min (k:nat)
+  : stmt -> spilling -> ann ⦃var⦄ -> Prop :=
+| RMinLet x e s an sl Rlv rlv
+  : rlive_min k s sl rlv
+    -> is_rlive_min k (stmtLet x e s) (ann1 an sl) Rlv
+    -> rlive_min k (stmtLet x e s) (ann1 an sl) (ann1 Rlv rlv)
+| RMinIf e s1 s2 an sl1 sl2 Rlv rlv1 rlv2
+  : rlive_min k s1 sl1 rlv1
+    -> rlive_min k s2 sl2 rlv2
+    -> is_rlive_min k (stmtIf e s1 s2) (ann2 an sl1 sl2) Rlv
+    -> rlive_min k (stmtIf e s1 s2) (ann2 an sl1 sl2) (ann2 Rlv rlv1 rlv2)
+| RMinReturn e an Rlv
+  : rlive_min k (stmtReturn e) (ann0 an) Rlv
+.
+
 
 Lemma reg_live_G_eq
       (G : ⦃var⦄)
@@ -140,13 +161,20 @@ Proof.
     destruct a,l0; simpl; cset_tac.
 Qed.
 
-
+(*
+Definition rlive_min
+  := ann_P (fun (Rlv: ⦃var⦄)
+            => forall k ZL Λ RM  s sl,
+                spill_sound k ZL Λ RM s sl
+                -> Rlv ⊆ fst RM)
+.
+*)
   
-Definition rlive_min k ZL Λ RM  s sl rlv
+(*Definition rlive_min k ZL Λ RM  s sl rlv
   :=
     spill_sound k ZL Λ RM s sl
     -> getAnn rlv ⊆ fst RM
-.
+.*)
 
 
 Lemma reg_live_R k ZL Λ RM  s sl rLv :
@@ -167,6 +195,23 @@ Proof.
     + simpl; clear; cset_tac.
     + rewrite List.map_app. apply PIR2_app; eauto. 
 Qed.
+
+
+Lemma reg_live_R' k ZL Λ RM s sl rLv :
+  let rlv := reg_live ZL rLv (∅:⦃var⦄) s sl in
+  spill_sound k ZL Λ RM s sl
+  -> PIR2 Subset rLv (fst ⊝ Λ)
+  -> annotation s rlv
+  -> rlive_min k s sl rlv
+.
+Proof.
+  intros rlv spillSnd pir2 anno. general induction spillSnd; invc anno.
+  - cbn. econstructor; eauto.
+    + rewrite reg_live_G_eq.
+    + unfold is_rlive_min. intros. rewrite reg_live_
+  
+  
+
 
 Corollary reg_live_R' k ZL Λ RM s sl rLv  :
   PIR2 Subset rLv (fst ⊝ Λ)
