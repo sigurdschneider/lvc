@@ -363,3 +363,49 @@ Proof.
 Qed.
 
 
+
+Lemma rlive_min_getAnn k ZL Λ s sl rlv R M :
+  rlive_min k ZL Λ ∅ s sl rlv
+  -> spill_sound k ZL Λ (R,M) s sl
+  -> getAnn rlv ⊆ R
+.
+Proof.
+  intros rliveMin spillSnd. general induction rliveMin; cbn; unfold is_rlive_min in H;
+                              rewrite <-minus_empty; try eapply H; eauto.
+Qed.
+
+Lemma rlive_min_getAnn_G k ZL Λ G s sl rlv :
+  rlive_min k ZL Λ G s sl rlv
+  -> (forall R M, spill_sound k ZL Λ (R,M) s sl -> getAnn rlv ⊆ R)
+  -> rlive_min k ZL Λ ∅ s sl rlv
+.
+Proof.
+  intros rliveMin isMin.
+  general induction rliveMin; econstructor; cbn in *; eauto;
+    unfold is_rlive_min; intros; rewrite minus_empty; eapply isMin; eauto.
+Qed.
+
+Lemma rlive_min_incl_R k ZL Λ s sl rlv R M G :
+  G ⊆ R
+  -> spill_sound k ZL Λ (R, M) s sl
+  -> rlive_min k ZL Λ G s sl rlv
+  -> getAnn rlv ⊆ R
+.
+Proof.
+  intros Geq spillSnd rlive.
+  general induction rlive; cbn;
+    unfold is_rlive_min in *; rewrite <-union_subset_equal with (s':=R); eauto;
+      apply incl_minus_incl_union; [| | | |eapply H1;eauto]; eapply H; eauto.
+Qed.
+
+Lemma rlive_min_monotone k ZL Λ s sl G G' rlv :
+  G ⊆ G'
+  -> rlive_min k ZL Λ G  s sl rlv
+  -> rlive_min k ZL Λ G' s sl rlv
+.
+Proof.
+  intros Geq rliveMin.
+  general induction rliveMin; econstructor; eauto; unfold is_rlive_min in *; intros; rewrite <-Geq;
+    eauto.
+Qed.
+      

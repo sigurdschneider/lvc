@@ -6,22 +6,107 @@ Set Implicit Arguments.
 
 (** * Invariance on correct spillings *)
 
+Lemma spill_max_kill_ext k ZL Λ R R' M M' s rlv sl :
+  R [=] R'
+  -> M [=] M'
+  -> spill_max_kill k ZL Λ (R , M ) s rlv sl
+  -> spill_max_kill k ZL Λ (R', M') s rlv sl
+.
+Proof.
+  intros Req Meq spillKill.
+  general induction spillKill.
+  - econstructor; eauto; [| |eapply IHspillKill| | |];
+      try rewrite <-Req; try rewrite <-Meq; eauto; eauto.
+  - econstructor; eauto; try rewrite <-Req; try rewrite <-Meq; eauto.
+  - econstructor; eauto; [| | | |eapply IHspillKill1|eapply IHspillKill2];
+      try rewrite <-Req; try rewrite <-Meq; eauto; eauto.
+  - econstructor; eauto; try rewrite <-Req; try rewrite <-Meq; eauto.
+  - econstructor; eauto; [| | |eapply IHspillKill]; try rewrite <-Req; try rewrite <-Meq; eauto; eauto.
+Qed.
+    
 
+
+      
 Lemma repair_spill_inv k ZL Λ s lv sl R M G ra rlv
   : renamedApart s ra
     -> rlive_min k ZL Λ G s sl rlv
     -> rlive_sound ZL (fst ⊝ Λ) s sl rlv
-    -> getAnn rlv ∪ M ⊆ fst (getAnn ra)
+    -> R ∪ M ⊆ fst (getAnn ra)
     -> getAnn rlv ⊆ R
     -> live_sound Imperative ZL (merge ⊝ Λ) s lv
     -> spill_sound k ZL Λ (R,M) s sl
     -> sl === repair_spill k ZL Λ R M s rlv lv sl
 .
 Proof.
-  intros rena rliveMin rliveSnd rlv_ra sub_R liveSnd spillSnd. 
-  eapply spill_sound_spill_max_kill in spillSnd; eauto.
-  clear rena rlv_ra.
-  general induction spillSnd; invc liveSnd; invc rliveSnd; invc rliveMin.
+  intros rena rliveMin rliveSnd rm_ra sub_R liveSnd spillSnd. 
+  eapply spill_sound_spill_max_kill with (R':=R) (M:=M) in spillSnd; eauto.
+  clear rena rm_ra ra.
+(*  general induction spillSnd; invc liveSnd; invc rliveSnd; invc rliveMin. *)
+  general induction rliveSnd; invc liveSnd; invc spillSnd; invc rliveMin. 
+  - cbn. econstructor. admit. eapply IHrliveSnd; eauto. admit.
+    eapply spill_max_kill_ext; eauto. admit. admit.
+  - cbn in sub_R. 
+    assert (Sp ∩ R [=] Sp) as Speq.
+    { apply inter_subset_equal. rewrite H19. eauto. } 
+    assert (L ∩ (Sp ∩ R ∪ M) [=] L) as Leq
+        by (apply inter_subset_equal in H23; rewrite Speq, H23; eauto).
+    assert (L [=] (set_take_prefer k (L ∩ (Sp ∩ R ∪ M)) (Op.freeVars e \ R))) as Leq'.
+    {
+      rewrite set_take_prefer_eq; rewrite Leq; eauto.
+      * clear - H25; rewrite subset_cardinal; eauto.
+      * clear - H24 sub_R. cset_tac.
+    }
+    set (K' := set_take_least_avoid (cardinal (R ∪ set_take_prefer k (L ∩ (Sp ∩ R ∪ M))
+                                                         (Op.freeVars e \ R)) - k)
+                                    (R \ (Op.freeVars e ∪ set_take_prefer k (L ∩ (Sp ∩ R ∪ M))
+                                                       (Op.freeVars e \ R)))
+                                    (getAnn al1 ∪ getAnn al2)).
+    assert (K [=] K') as Keq by admit.
+(* ATTENTION: you are killing L in spill_max_kill but you are not killing it in repair_spill !!! *)
+    set (Sp':= (getAnn al0 ∪ getAnn al3 ∩ K' \ M ∪ (Sp ∩ R))).
+    assert (Sp [=] Sp') as Speq'.
+    {
+      subst Sp'. rewrite union_comm. setoid_rewrite Speq at 1. rewrite union_comm.
+      symmetry. rewrite union_subset_equal; eauto. rewrite <-Keq. subst K. admit.
+      (* we need MINIMAL liveness!! *)
+    } 
+    econstructor; [econstructor| |]; eauto; [econstructor | |]; eauto;
+      subst K' Sp';
+      set (K' := set_take_least_avoid (cardinal (R ∪ set_take_prefer k (L ∩ (Sp ∩ R ∪ M))
+                                                         (Op.freeVars e \ R)) - k)
+                                      (R \ (Op.freeVars e ∪ set_take_prefer k (L ∩ (Sp ∩ R ∪ M))
+                                                         (Op.freeVars e \ R)))
+                                      (getAnn al1 ∪ getAnn al2)) in *;
+      set (Sp':= (getAnn al0 ∪ getAnn al3 ∩ K' \ M ∪ (Sp ∩ R))) in *.
+    + eapply IHrliveSnd1; eauto.
+      * rewrite <-Keq, <-Leq'. rewrite <-sub_R. subst K. clear - H1; cset_tac.
+      * eapply spill_max_kill_ext; eauto; [|rewrite Speq';eauto].
+        rewrite <-Keq, <-Leq'. eauto.
+    + eapply IHrliveSnd2; eauto.
+      * rewrite <-Keq, <-Leq'. rewrite <-sub_R. subst K. clear - H2; cset_tac.
+      * eapply spill_max_kill_ext; eauto; [|rewrite Speq';eauto].
+        rewrite <-Keq, <-Leq'. eauto.
+  - admit.
+  - cbn in sub_R.
+    assert (Sp ∩ R [=] Sp) as Speq.
+    { apply inter_subset_equal. rewrite H; eauto. }
+    econstructor; econstructor; [econstructor|]; eauto.
+    assert ((L ∩ (Sp ∩ R ∪ M)) [=] L) as Leq.
+    { apply inter_subset_equal in H11. rewrite Speq. eauto. }
+    rewrite set_take_prefer_eq; rewrite Leq; eauto.
+    + clear - H13. rewrite subset_cardinal; eauto.
+    + rewrite H12. clear; cset_tac.
+  - admit.
+    
+#####################################################################################################
+#####################################################################################################
+#####################################################################################################
+#####################################################################################################
+#####################################################################################################
+#####################################################################################################
+#####################################################################################################
+  - econstructor. admit. eapply IHrliveSnd; eauto. admit. admit.
+  - econstructor. admit. eapply IHrliveSnd1; eauto.
   - admit. (* assert (H10' := H10). assert (H9' := H9).
     assert (set_take_prefer k (L ∩ (Sp ∩ R ∪ M))
                               ((fst (nth (counted l) Λ ({},{}))
@@ -50,26 +135,53 @@ Proof.
   - cbn in sub_R, Heqp.
     assert (Sp ∩ R0 [=] Sp) as Speq.
     { apply inter_subset_equal. rewrite H10; eauto. }
-    econstructor; econstructor; [econstructor|]; eauto.
+    econstructor; econstructor; [econstructor|]; eauto; [rewrite <-Req;eauto|].
     assert ((L ∩ (Sp ∩ R0 ∪ M0)) [=] L) as Leq.
     { apply inter_subset_equal in H0. rewrite Speq. eauto. }
-    rewrite set_take_prefer_eq; rewrite Leq; eauto.
+    rewrite set_take_prefer_eq; rewrite <-Req, <-Meq, Leq; eauto.
     + clear - H2. rewrite subset_cardinal; eauto.
     + rewrite H1, sub_R. clear; cset_tac.
-  - 
-
-    assert (Rlv = getAnn rlv) as Rlv_eq.
-    { clear - H8. destruct rlv; isabsurd. rewrite <-H8. cbn. reflexivity. }
-    cbn in H13, H18, Kx, H16. rewrite <-Rlv_eq in *.
-    assert (Sp ∩ R [=] Sp) as Speq by (apply inter_subset_equal; rewrite H13, sub_R; eauto).
-    assert (L ∩ (Sp ∩ R ∪ M) [=] L) as Leq
-        by (apply inter_subset_equal in H14; rewrite Speq, H14; eauto).
-    assert (L [=] (set_take_prefer k (L ∩ (Sp ∩ R ∪ M)) (Exp.freeVars e \ R))) as Leq'.
+  - cbn in sub_R.
+    assert (Sp ∩ R0 [=] Sp) as Speq.
+    { apply inter_subset_equal. rewrite H18. eauto. }
+    assert (L ∩ (Sp ∩ R0 ∪ M0) [=] L) as Leq
+        by (apply inter_subset_equal in H0; rewrite Speq, H0; eauto).
+    assert (L [=] (set_take_prefer k (L ∩ (Sp ∩ R0 ∪ M0)) (Op.freeVars e \ R0))) as Leq'.
     {
       rewrite set_take_prefer_eq; rewrite Leq; eauto.
-      * clear - H18. rewrite subset_cardinal; eauto.
-      * rewrite H16, sub_R. clear; cset_tac.
+      * clear - H2; rewrite subset_cardinal; eauto.
+      * clear - H1 sub_R. cset_tac.
     }
+    set (K' := set_take_least_avoid (cardinal (R0 ∪ L) - k)
+                                    (R0 \ (Op.freeVars e ∪ set_take_prefer k (L ∩ (Sp ∩ R0 ∪ M0))
+                                                       (Op.freeVars e \ R0)))
+                                    (getAnn rlv1 ∪ getAnn rlv2)).
+    assert (K [=] K') as Keq by admit.
+    set (Sp':= (getAnn al1 ∪ getAnn al2 ∩ K' \ M0 ∪ (Sp ∩ R0))).
+    assert (Sp [=] Sp') as Speq'.
+    {
+      subst Sp'. rewrite union_comm. setoid_rewrite Speq at 1. rewrite union_comm.
+      symmetry. rewrite union_subset_equal; eauto. rewrite <-Keq. admit.
+      (* we need MINIMAL liveness!! *)
+    }
+    econstructor; [econstructor| |]; eauto; [econstructor | |]; eauto;
+      subst K' Sp';
+      set (K' := set_take_least_avoid (cardinal (R0 ∪ L) - k)
+                                      (R0 \ (Op.freeVars e ∪ set_take_prefer k (L ∩ (Sp ∩ R0 ∪ M0))
+                                                         (Op.freeVars e \ R0)))
+                                      (getAnn rlv1 ∪ getAnn rlv2));
+      set (Sp':= (getAnn al1 ∪ getAnn al2 ∩ K' \ M0 ∪ (Sp ∩ R0))).
+    + admit.
+    + admit.
+    + eapply IHspillSnd1. eauto.
+    + eapply IHspillSnd2; eauto.
+
+      
+      rewrite !set_take_least_avoid_eq.
+      * rewrite <-Leq'. setoid_rewrite minus_union at 2. cset_tac.
+
+
+    ######%%%%%%%
     econstructor; [econstructor|]; [econstructor| |]; eauto.
     + rewrite union_comm. setoid_rewrite Speq at 1. rewrite union_comm.
       symmetry. rewrite union_subset_equal; eauto.

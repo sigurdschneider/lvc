@@ -7,7 +7,7 @@ Require Import Take TakeSet.
 
 Set Implicit Arguments.
 
-
+(* ATTENTION: you are killing L in spill_max_kill but you are not killing it in repair_spill !!! *)
 
 Fixpoint stretch_rms (X : Type) (k : nat) (F : list X) (rms : list (⦃var⦄ * ⦃var⦄)) (lvF : list ⦃var⦄)
   {struct F} : list (⦃var⦄ * ⦃var⦄) :=
@@ -46,7 +46,7 @@ Fixpoint repair_spill
       let K_x  := set_take_least_avoid (cardinal {x; R_e} - k) R (getAnn rlv) in
    (* here we need normal liveness, because we have to spill variables that are loaded later on *)
       let Sp'  := (getAnn lv' ∩ (K ∪ K_x) \ M) ∪ (Sp ∩ R) in 
-      ann1 (Sp',L',nil) (repair_spill k ZL Λ (getAnn rlv') (*ERROR*) (Sp' ∪ M) s rlv' lv' sl')
+      ann1 (Sp',L',nil) (repair_spill k ZL Λ {x; R_e \ K_x} (Sp' ∪ M) s rlv' lv' sl')
            
   | stmtReturn e, _, _, ann0 (Sp,L,_)
     => let Fv_e := Op.freeVars e in
@@ -58,13 +58,13 @@ Fixpoint repair_spill
     => let Fv_e := Op.freeVars e in
       let L'   := set_take_prefer k (L ∩ ((Sp ∩ R) ∪ M)) (Fv_e \ R) in
       (* here is the second use of register liveness *)
-      let K    := set_take_least_avoid (cardinal (R ∪ L) - k)
+      let K    := set_take_least_avoid (cardinal (R ∪ L') - k)
                                        (R \ (Op.freeVars e ∪ L'))
                                        (getAnn rlv1 ∪ getAnn rlv2) in
       let Sp'  := ((getAnn lv1 ∪ getAnn lv2) ∩ K \ M) ∪ (Sp ∩ R) in
       ann2 (Sp',L',nil)
-           (repair_spill k ZL Λ (getAnn rlv1) (Sp' ∪ M) s1 rlv1 lv1 sl1)
-           (repair_spill k ZL Λ (getAnn rlv2) (Sp' ∪ M) s2 rlv2 lv2 sl2)
+           (repair_spill k ZL Λ (R \ K ∪ L') (Sp' ∪ M) s1 rlv1 lv1 sl1)
+           (repair_spill k ZL Λ (R \ K ∪ L') (Sp' ∪ M) s2 rlv2 lv2 sl2)
 
   | stmtApp f Y, _, _, ann0 (Sp,L,(R',M')::nil)
     => let fv_Y:= list_union (Op.freeVars ⊝ Y) in
