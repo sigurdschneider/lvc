@@ -176,10 +176,11 @@ Lemma spill_sound_spill_max_kill k ZL Λ R R' M G s sl rlv ra :
   -> rlive_sound ZL (fst ⊝ Λ) s sl rlv
   -> R' ∪ M ⊆ fst (getAnn ra)
   -> getAnn rlv ⊆ R'
+  -> (forall Rf Mf n, get Λ n (Rf,Mf) -> cardinal Rf <= k)
   -> spill_max_kill k ZL Λ (R',M) s rlv sl
 .
 Proof.
-  intros rena spillSnd rliveMin rlive R_sub rlv_sub'.
+  intros rena spillSnd rliveMin rlive R_sub rlv_sub' card_Rf.
   general induction spillSnd; invc rlive; invc rena; invc rliveMin; cbn in rlv_sub'.
   - set (K' := R' \ (Exp.freeVars e ∪ getAnn al) ∪ (R' ∩ L)).
     assert (R' \ K' ∪ L ⊆ R0 \ K ∪ L) as rkl'_in_rkl2.
@@ -251,7 +252,19 @@ Proof.
         rewrite H19. clear - R_sub. cbn. cset_tac.
       * rewrite <-inter_subset_equal with (s':=getAnn al2); [|clear;cset_tac]. setoid_rewrite H18 at 1.
         rewrite <-minus_union, minus_minus. setoid_rewrite rlv_sub' at 1. clear; cset_tac.
-  - admit.
+  - inv_get. cbn in *.
+    econstructor; eauto.
+    + rewrite H16; eauto.
+    + rewrite <-minus_union, minus_minus. rewrite subset_cardinal; eauto.
+      exploit card_Rf; eauto. admit. (*
+      rewrite subset_cardinal; eauto. clear; cset_tac.
+      cbn in *. rewrite <-H4.*)
+    + rewrite <-minus_union, minus_minus. rewrite <-inter_subset_equal with (s':=R_f);[|clear;cset_tac].
+      rewrite H20. setoid_rewrite <-rlv_sub' at 1. clear; cset_tac.
+    + rewrite H6. admit.
   - admit.
 Admitted.
+
+
+
 
