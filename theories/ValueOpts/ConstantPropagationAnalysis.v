@@ -110,6 +110,25 @@ Proof.
     + econstructor; econstructor. congruence.
 Qed.
 
+Lemma eqMap_op_eval e a b
+  : eqMap a b
+    -> poEq (op_eval (domenv a) e) (op_eval (domenv b) e).
+Proof.
+  general induction e; simpl; eauto using @fstNoneOrR, @withTop_eq, @option_R.
+  - reflexivity.
+  - unfold domenv.
+    specialize (H n).
+    destruct (find n a); eauto using fstNoneOrR.
+  - specialize (IHe _ _ H); repeat cases; eauto using fstNoneOrR, @withTop_eq, @option_R.
+    reflexivity.
+  - specialize (IHe1 _ _ H).
+    specialize (IHe2 _ _ H).
+    inv IHe1; inv IHe2; repeat cases;
+      simpl in *; clear_trivial_eqs;
+        eauto using fstNoneOrR, withTop_eq, option_R.
+    + econstructor; econstructor. congruence.
+Qed.
+
 
 Lemma poLe_option_None X `{PartialOrder X} (x:option X)
   :  ⎣⎦ ⊑ x.
@@ -143,6 +162,40 @@ Proof.
     Focus 3. eapply H0.
     eauto.
     eapply (leMap_op_eval o); eauto.
+Qed.
+
+Lemma domupd_eq a b v v' x
+  : eqMap a b
+    -> poEq v v'
+    -> eqMap (domupd a x v) (domupd b x v').
+Proof.
+  unfold eqMap, domupd; intros.
+  inv H0.
+  - repeat cases; clear_trivial_eqs; mlud; eauto.
+  - mlud; eauto.
+Qed.
+
+Lemma join_struct T `{JoinSemiLattice T} (a b a' b':T)
+  : a ≣ a'
+    -> b ≣ b'
+    -> a ⊔ b ≣ (a' ⊔ b').
+Proof.
+  intros A B. rewrite A, B. reflexivity.
+Qed.
+
+Lemma domupd_list_eq a b Z Y
+  : eqMap a b
+    -> eqMap (domupd_list a Z (op_eval (domenv a) ⊝ Y))
+            (domupd_list b Z (op_eval (domenv b) ⊝ Y)).
+Proof.
+  unfold eqMap, domupd; intros.
+  general induction Z; destruct Y; simpl domupd_list; eauto.
+  simple eapply domupd_eq.
+  - hnf. eapply IHZ; eauto.
+  - exploit (@join_struct (option (withTop val)) _).
+    Focus 3. eapply H0.
+    eauto.
+    eapply (eqMap_op_eval o); eauto.
 Qed.
 
 Lemma domupd_ne m x y a
@@ -261,6 +314,7 @@ Proof.
       simpl; repeat cases; eauto.
 Qed.
 
+
 Definition DDom (sT:stmt) := { m : Map [var, withTop val] | domain m ⊆ occurVars sT}.
 
 Smpl Add 100
@@ -334,6 +388,32 @@ Proof.
   intros. destruct a as [a aBound], b as [b bBound]; simpl in H.
   pose proof (@transf_mon sT s ST ZL a b H) as LE.
   destruct s; clear_trivial_eqs; simpl in *; eauto.
+Qed.
+
+
+Lemma transf_ext sT (s : stmt) (ST : subTerm s sT) (ZL : 〔params〕)
+    (ZLIncl : list_union (of_list ⊝ ZL) [<=] occurVars sT)
+  : forall (a0 a' : DDom sT),
+    a0 ≣ a' ->
+    forall b b' : bool, b ≣ b' -> cp_trans_dep ZL ST ZLIncl a0 b ≣ cp_trans_dep ZL ST ZLIncl a' b'.
+Proof.
+  intros. unfold cp_trans_dep; cases; simpl; eauto.
+  - cases; eauto.
+    + eapply domupd_eq; eauto.
+      eapply eqMap_op_eval; eauto.
+    + hnf; intros. mlud; eauto.
+  - pose proof(eqMap_op_eval e H).  hnf in H1.
+    cases; inv H1; simpl.
+    repeat split; eauto.
+    repeat cases; try congruence.
+    exfalso; eauto.
+    repeat cases; repeat split; eauto.
+    exfalso; eauto.
+  - repeat cases; eauto.
+    destruct (get_dec ZL l); dcr.
+    + erewrite get_nth; eauto.
+      eapply domupd_list_eq; eauto.
+    + rewrite not_get_nth_default; eauto; simpl; cases; eauto.
 Qed.
 
 Lemma domain_join_sig X `{OrderedType X} Y `{JoinSemiLattice Y}  U

@@ -242,8 +242,6 @@ Proof.
   intros. rewrite H; eauto using get.
 Qed.
 
-
-
 (*
 Lemma get_forwardF  (sT:stmt) (Dom:stmt->Type) `{JoinSemiLattice (Dom sT)}
            (forward: forall s (ST:subTerm s sT) (d:Dom sT),
@@ -374,10 +372,63 @@ Proof.
     eapply IHF; eauto using get. eapply fwdMon; eauto using get.
 Qed.
 
+Lemma PIR2_eq_zip X Y Z (f:X -> Y -> Z) l1 l2 l1' l2'
+  : PIR2 eq l1 l1'
+    -> PIR2 eq l2 l2'
+    -> PIR2 eq (zip f l1 l2) (zip f l1' l2').
+Proof.
+  intros P1 P2.
+  general induction P1; inv P2; simpl; econstructor; eauto.
+Qed.
+
+Lemma forwardF_ext (sT:stmt) (Dom : stmt -> Type) `{PartialOrder (Dom sT)}
+      (forward forward' : forall s : stmt,
+          subTerm s sT -> Dom sT -> ann bool -> Dom sT * ann bool * 〔bool〕) F
+      (fwdMon:forall  n Zs (GET:get F n Zs) (ST:subTerm (snd Zs) sT),
+          forall (d d' : Dom sT),
+            poEq d d'
+            -> forall (r r':ann bool),
+              poEq r r'
+              -> poEq (forward (snd Zs) ST d r) (forward' (snd Zs) ST d' r'))
+  : forall ST,
+    forall (d d' : Dom sT),
+      poEq d d'
+      -> forall (rF rF':list (ann bool)),
+        poEq rF rF'
+        -> forall (BL BL':list bool),
+          poEq BL BL'
+        -> poEq (forwardF BL forward F rF d ST)
+               (forwardF BL' forward' F rF' d' ST).
+Proof.
+  intros ST d d' LE_d rF rF' LE_rf.
+  general induction F; inv LE_rf; simpl;
+    try now (econstructor; simpl; eauto using @ann_R, @PIR2).
+  split; [split|].
+  - eapply IHF; eauto using get.
+    eapply fwdMon; eauto using get.
+  - econstructor; eauto.
+    eapply fwdMon; eauto using get.
+    eapply IHF; eauto using get. eapply fwdMon; eauto using get.
+  - eapply PIR2_eq_zip; eauto with len.
+    eapply fwdMon; eauto using get.
+    eapply IHF; eauto using get. eapply fwdMon; eauto using get.
+Qed.
+
 Lemma PIR2_zip_setTopAnnO X `{PartialOrder X} (A A':list (ann X)) (B B':list X)
   : poLe A A'
     -> poLe B B'
     -> poLe ((@setTopAnn _) ⊜ A B) (@setTopAnn _ ⊜ A' B').
+Proof.
+  intros LE_A LE_B; simpl in *.
+  general induction LE_A; inv LE_B; simpl; eauto using PIR2.
+  - econstructor; eauto.
+    eauto using ann_R_setTopAnn.
+Qed.
+
+Lemma PIR2_poEq_zip_setTopAnnO X `{PartialOrder X} (A A':list (ann X)) (B B':list X)
+  : poEq A A'
+    -> poEq B B'
+    -> poEq ((@setTopAnn _) ⊜ A B) (@setTopAnn _ ⊜ A' B').
 Proof.
   intros LE_A LE_B; simpl in *.
   general induction LE_A; inv LE_B; simpl; eauto using PIR2.
@@ -440,17 +491,7 @@ Proof with eauto using poLe_setTopAnn, poLe_getAnni.
     + eauto.
     + pose proof (@update_at_poLe bool _ _ _ ZL l _ _ H2).
       simpl in *. eauto.
-  - (*assert (MON:
-              forall n Zs (GET:get F n Zs) (ST ST'0 : subTerm (snd Zs) sT) (d d' : Dom sT),
-                d ⊑ d' ->
-                forall r r' : ann bool,
-                  r ⊑ r' ->
-                  forward Dom f (fst ⊝ F ++ ZL) (ZLIncl_ext ZL eq_refl ST' ZLIncl') ST d r
-                          ⊑ forward Dom f (fst ⊝ F ++ ZL) (ZLIncl_ext ZL eq_refl ST' ZLIncl') ST'0 d' r'). {
-      intros. eapply IH; eauto.
-    }
-    pose proof (@forwardF_monotone sT Dom _ (forward Dom f (fst ⊝ F ++ ZL) (ZLIncl_ext ZL eq_refl ST' ZLIncl')) F MON (subTerm_EQ_Fun2 eq_refl ST) (subTerm_EQ_Fun2 eq_refl ST')).*)
-    split; [split|]; simpl.
+  - split; [split|]; simpl.
     + eapply forwardF_monotone; eauto.
       eapply IH; eauto.
       eapply ann_R_setTopAnn; eauto.
@@ -497,6 +538,161 @@ Proof with eauto using poLe_setTopAnn, poLe_getAnni.
       eapply ann_R_setTopAnn; eauto.
 Qed.
 
+
+Lemma forward_ext (sT:stmt) (Dom : stmt -> Type) `{PartialOrder (Dom sT)}
+      (f: forall sT (ZL:list params),
+          forall s, subTerm s sT -> list_union (of_list ⊝ ZL) [<=] occurVars sT
+               -> Dom sT -> bool -> anni (Dom sT) s)
+      (fMon:forall s (ST:subTerm s sT) ZL
+          (ZLIncl:list_union (of_list ⊝ ZL) [<=] occurVars sT),
+          forall a a',
+            poEq a a' -> forall b b', poEq b b' ->
+                                poEq (f sT ZL s ST ZLIncl a b)  (f sT ZL s ST ZLIncl a' b'))
+  : forall (s : stmt) (ST:subTerm s sT) (ZL:list params)
+      (ZLIncl:list_union (of_list ⊝ ZL) [<=] occurVars sT),
+    forall (d d' : Dom sT), poEq d d'
+      -> forall (r r':ann bool), poEq r r'
+      -> poEq (forward Dom f ZL ZLIncl ST d r) (forward Dom f ZL ZLIncl ST d' r').
+Proof with eauto using poLe_setTopAnn, poLe_getAnni.
+  intros s.
+  sind s; destruct s; intros ST ZL ZLIncl d d' LE_d r r'  LE_r;
+    destruct r; inv LE_r;
+      simpl forward; repeat let_pair_case_eq; subst;
+        eauto 10 using @ann_R;
+        try now (econstructor; simpl; eauto using @ann_R).
+  - pose proof (fMon (stmtLet x e s) ST ZL ZLIncl  _ _ LE_d _ _ H2); eauto.
+    simpl in *. split; dcr; eauto; [split; eauto|].
+    + eapply IH; eauto.
+      eauto using ann_R_setTopAnn.
+    + econstructor; eauto. eapply IH; eauto.
+      eauto using ann_R_setTopAnn.
+    + eapply IH; eauto.
+      eauto using ann_R_setTopAnn.
+  - pose proof (fMon (stmtIf e s1 s2) ST ZL ZLIncl _ _ LE_d _ _ H3) as LE_f.
+    pose proof (IH s1 ltac:(eauto) (subTerm_EQ_If1 eq_refl ST) ZL) as LE1; eauto.
+    pose proof (IH s2 ltac:(eauto) (subTerm_EQ_If2 eq_refl ST) ZL) as LE2; eauto.
+    split; [split|];simpl.
+    + eapply LE2; eauto. eapply LE1; eauto. eapply LE_f; eauto.
+      eapply ann_R_setTopAnn; eauto. eapply LE_f; eauto.
+      eapply ann_R_setTopAnn; eauto. eapply LE_f; eauto.
+    + econstructor; eauto.
+      eapply LE1; eauto. eapply LE_f; eauto.
+      eapply ann_R_setTopAnn; eauto. eapply LE_f; eauto.
+      eapply LE2; eauto. eapply LE1; eauto.
+      eapply LE_f; eauto. eapply ann_R_setTopAnn; eauto.
+      eapply LE_f; eauto. eapply ann_R_setTopAnn; eauto.
+      eapply LE_f; eauto.
+    + eapply PIR2_eq_zip; eauto.
+      * eapply LE1; eauto. eapply LE_f; eauto.
+        eapply ann_R_setTopAnn; eauto. eapply LE_f; eauto.
+      * eapply LE2; eauto. eapply LE1; eauto.
+        eapply LE_f; eauto. eapply ann_R_setTopAnn; eauto.
+        eapply LE_f; eauto. eapply ann_R_setTopAnn; eauto.
+        eapply LE_f; eauto.
+  - split; [split|]; simpl.
+    + eapply (fMon (stmtApp l Y)); eauto.
+    + eauto.
+    + simpl in *. subst. eauto.
+  - split; [split|]; simpl.
+    + eapply forwardF_ext; eauto.
+      eapply IH; eauto.
+      eapply ann_R_setTopAnn; eauto.
+      eapply PIR2_poEq_zip_setTopAnnO; eauto.
+      hnf. eapply PIR2_get; eauto.
+      eapply IH; eauto.
+      eapply ann_R_setTopAnn; eauto.
+      eapply IH; eauto.
+      eapply ann_R_setTopAnn; eauto.
+    + econstructor; eauto.
+      * len_simpl; try reflexivity;
+        eauto with len.
+      * eapply get_PIR2.
+        eapply (@PIR2_poEq_zip_setTopAnnO bool PartialOrder_bool).
+        eapply forwardF_ext; eauto.
+        eapply IH; eauto.
+        eapply ann_R_setTopAnn; eauto.
+        eapply (@PIR2_poEq_zip_setTopAnnO bool PartialOrder_bool); eauto.
+        eapply PIR2_get; eauto.
+        eapply IH; eauto.
+        eapply ann_R_setTopAnn; eauto.
+        eapply IH; eauto.
+        eapply ann_R_setTopAnn; eauto.
+        eapply forwardF_ext; eauto.
+        eapply IH; eauto.
+        eapply ann_R_setTopAnn; eauto.
+        eapply (@PIR2_poEq_zip_setTopAnnO bool PartialOrder_bool); eauto.
+        eapply PIR2_get; eauto.
+        eapply IH; eauto.
+        eapply ann_R_setTopAnn; eauto.
+        eapply IH; eauto.
+        eapply ann_R_setTopAnn; eauto.
+      * eapply IH; eauto.
+        eapply ann_R_setTopAnn; eauto.
+    + eapply PIR2_drop.
+      eapply forwardF_ext; eauto.
+      eapply IH; eauto.
+      eapply ann_R_setTopAnn; eauto.
+      eapply PIR2_poEq_zip_setTopAnnO; eauto.
+      hnf. eapply PIR2_get; eauto.
+      eapply IH; eauto.
+      eapply ann_R_setTopAnn; eauto.
+      eapply IH; eauto.
+      eapply ann_R_setTopAnn; eauto.
+Qed.
+
+
+
+Lemma forwardF_PIR2  (sT:stmt) (Dom:stmt->Type) `{PartialOrder (Dom sT)} BL ZL
+      (F:list (params * stmt)) sa a ZLIncl (Len1:❬F❭ = ❬sa❭)
+      (Len2:❬BL❭ = ❬ZL❭)
+      (f : forall sT (ZL : 〔params〕) (s : stmt),
+          subTerm s sT ->
+          list_union (of_list ⊝ ZL) [<=] occurVars sT
+          -> Dom sT -> bool -> anni (Dom sT) s)
+      (EQ: forall n Zs r ST, get F n Zs -> get sa n r ->
+                        poEq (fst (fst (@forward sT Dom f ZL ZLIncl (snd Zs) ST a r))) a)
+      (Ext: forall (s : stmt) (ST0 : subTerm s sT) (ZL0 : 〔params〕)
+              (ZLIncl0 : list_union (of_list ⊝ ZL0) [<=] occurVars sT)
+              (a0 a' : Dom sT),
+          a0 ≣ a' ->
+          forall b b' : bool,
+            b ≣ b' -> f sT ZL0 s ST0 ZLIncl0 a0 b ≣ f sT ZL0 s ST0 ZLIncl0 a' b')
+      (ST:forall n s, get F n s -> subTerm (snd s) sT) r Zs ST' n
+      (Getsa:get sa n r) (GetF:get F n Zs)
+:
+  PIR2 impb
+       (snd (@forward sT Dom f ZL ZLIncl (snd Zs) ST' a r))
+       (snd
+          (forwardF BL (@forward sT Dom f ZL ZLIncl) F
+                    sa
+             a
+             ST)).
+Proof.
+  general induction n; isabsurd; simpl.
+  - eapply PIR2_impb_orb_right.
+    + len_simpl; eauto. intros. eauto with len.
+    + match goal with
+      | [ |- PIR2 _ ?a ?b ] =>
+        let X := fresh "EQ" in enough (X:a = b); [rewrite X; reflexivity|]
+      end.
+      repeat f_equal. eapply subTerm_PI.
+  - inv Getsa; inv GetF. simpl.
+    eapply PIR2_impb_orb_left; eauto with len.
+    etransitivity; [| eapply IHn; eauto using get].
+    + setoid_rewrite forward_ext at 2; eauto.
+      reflexivity.
+      rewrite EQ; eauto using get.
+      reflexivity.
+    + intros.
+      setoid_rewrite EQ at 2; eauto using get.
+      rewrite (@forward_ext sT Dom H f Ext).
+      eapply EQ; eauto using get.
+      eapply EQ; eauto using get.
+      reflexivity.
+Qed.
+
+
+
 Require Import Take.
 
 Lemma forwardF_get  (sT:stmt) (Dom:stmt->Type) BL ZL
@@ -539,50 +735,6 @@ Proof.
     eapply STEQ2.
 Qed.
 
-(*
-Lemma forwardF_PIR2  (sT:stmt) (Dom:stmt->Type) BL ZL
-      (F:list (params * stmt)) rF a ZLIncl
-      (f : forall sT (ZL : 〔params〕) (s : stmt),
-          subTerm s sT ->
-          list_union (of_list ⊝ ZL) [<=] occurVars sT
-          -> Dom sT -> bool -> anni (Dom sT) s) sa
-      (ST:forall n s, get F n s -> subTerm (snd s) sT) r Zs ST' n ST''
-      (GetrF:get rF n r) (GetF:get F n Zs)
-:
-  PIR2 impb
-       (Take.take ❬F❭
-                  (snd
-                     (@forward sT Dom f ZL ZLIncl (snd Zs) ST'
-                              (fst
-                                 (fst
-                                    (@forwardF sT Dom
-                                       BL
-                                       (forward Dom f ZL ZLIncl)
-                                       (Take.take n F)
-                                       (Take.take n (setTopAnn (A:=bool) ⊜ sa BL))
-                                       a ST''))) r)))
-       (@getAnn bool
-          ⊝ snd
-          (fst
-             (forwardF
-                BL
-                (forward Dom f ZL ZLIncl) F
-                (setTopAnn (A:=bool) ⊜ sa BL)
-                a
-                ST))).
-Proof.
-  general induction F; destruct rF; isabsurd. simpl.
-  cases. exfalso. admit.
-  destruct sa, BL. simpl. exfalso. admit.
-  exfalso; admit. simpl. exfalso; admit.
-  simpl. econstructor.
-  rewrite forward_fst_snd_getAnn. rewrite getAnn_setTopAnn.
-  admit.
-
-  rewrite
-  - simpl.
-Qed.
- *)
 
 Require Import FiniteFixpointIteration.
 
