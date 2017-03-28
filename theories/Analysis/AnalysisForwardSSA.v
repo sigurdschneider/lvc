@@ -14,6 +14,9 @@ Definition anni A (s:stmt) : Type :=
   | _ => A
   end.
 
+Definition joinTopAnn A `{JoinSemiLattice A} (a:ann A) (b:A) :=
+  setTopAnn a (join (getAnn a) b).
+
 Definition forwardF (sT:stmt) (Dom:stmt->Type) (BL:list bool)
            (forward: forall s (ST:subTerm s sT) (d:Dom sT) (anr:ann bool), Dom sT * ann bool * list bool)
            (F:list (params * stmt)) (rF:list (ann bool)) (a:Dom sT)
@@ -52,6 +55,21 @@ Lemma forwardF_snd_length (sT:stmt) (Dom:stmt->Type) BL
 Proof.
   general induction F; destruct rF; simpl; eauto.
   len_simpl. erewrite IHF; eauto using get.
+  erewrite LEN; eauto using get with len.
+Qed.
+
+Lemma forwardF_snd_length' (sT:stmt) (Dom:stmt->Type) BL
+      (forward: forall s (ST:subTerm s sT) (d:Dom sT) (anr:ann bool), Dom sT * ann bool * list bool)
+      (F:list (params * stmt)) rF a
+      (ST:forall n Zs, get F n Zs -> subTerm (snd Zs) sT) k
+      (LEN:forall n Zs ST d r, get F n Zs -> length (snd (@forward (snd Zs) ST d r)) = k)
+      (Leq: k <= length BL) (LenF:❬F❭ > 0) (LenrF:❬rF❭ > 0)
+  : length (snd (@forwardF sT Dom BL forward F rF a ST)) = k.
+Proof.
+  general induction F; destruct rF; simpl in *; eauto; try omega.
+  len_simpl.
+  destruct F,rF; try now (simpl; try erewrite LEN; try rewrite min_l; eauto using get with len).
+  erewrite IHF; eauto using get.
   erewrite LEN; eauto using get with len.
 Qed.
 
@@ -157,7 +175,7 @@ Fixpoint forward (sT:stmt) (Dom: stmt -> Type)
                      t (subTerm_EQ_Fun1 EQ ST) d (setTopAnn r b) in
         let '(a'', rF', AL') := forwardF AL (forward sT Dom ftransform ZL'
                                      (@ZLIncl_ext sT _ F t ZL EQ ST ZLIncl))
-                            F (zip (@setTopAnn _) rF AL) a' (subTerm_EQ_Fun2 EQ ST) in
+                            F (zip (@joinTopAnn _ _ _) rF AL) a' (subTerm_EQ_Fun2 EQ ST) in
         (a'', annF b (zip (@setTopAnn _) rF' AL') r', drop (length F) AL')
     | _, _ => fun _ => (d, anr, ((fun _ => false) ⊝ ZL))
       end eq_refl).
@@ -425,6 +443,37 @@ Proof.
     eauto using ann_R_setTopAnn.
 Qed.
 
+Lemma ann_poLe_joinTopAnn A `{JoinSemiLattice A} (a:A) (b:A) an bn
+  : poLe a b
+    -> ann_R poLe an bn
+    -> ann_R poLe (joinTopAnn an a) (joinTopAnn bn b).
+Proof.
+  intros.
+  inv H2; simpl; econstructor; try eapply join_struct; eauto.
+Qed.
+
+Lemma ann_poEq_joinTopAnn A `{JoinSemiLattice A} (a:A) (b:A) an bn
+  : poEq a b
+    -> ann_R poEq an bn
+    -> ann_R poEq (joinTopAnn an a) (joinTopAnn bn b).
+Proof.
+  intros.
+  inv H2; simpl; econstructor; eauto;
+    rewrite H1, H3; reflexivity.
+Qed.
+
+
+Lemma PIR2_zip_joinTopAnnO X `{JoinSemiLattice X} (A A':list (ann X)) (B B':list X)
+  : poLe A A'
+    -> poLe B B'
+    -> poLe ((@joinTopAnn _ _ _) ⊜ A B) (@joinTopAnn _ _ _ ⊜ A' B').
+Proof.
+  intros LE_A LE_B; simpl in *.
+  general induction LE_A; inv LE_B; simpl; eauto using PIR2.
+  - econstructor; eauto.
+    eauto using ann_poLe_joinTopAnn.
+Qed.
+
 Lemma PIR2_poEq_zip_setTopAnnO X `{PartialOrder X} (A A':list (ann X)) (B B':list X)
   : poEq A A'
     -> poEq B B'
@@ -434,6 +483,17 @@ Proof.
   general induction LE_A; inv LE_B; simpl; eauto using PIR2.
   - econstructor; eauto.
     eauto using ann_R_setTopAnn.
+Qed.
+
+Lemma PIR2_poEq_zip_joinTopAnnO X `{JoinSemiLattice X} (A A':list (ann X)) (B B':list X)
+  : poEq A A'
+    -> poEq B B'
+    -> poEq ((@joinTopAnn _ _ _) ⊜ A B) (@joinTopAnn _ _ _ ⊜ A' B').
+Proof.
+  intros LE_A LE_B; simpl in *.
+  general induction LE_A; inv LE_B; simpl; eauto using PIR2.
+  - econstructor; eauto.
+    eauto using ann_poEq_joinTopAnn.
 Qed.
 
 Lemma forward_monotone (sT:stmt) (Dom : stmt -> Type) `{PartialOrder (Dom sT)}
@@ -495,7 +555,7 @@ Proof with eauto using poLe_setTopAnn, poLe_getAnni.
     + eapply forwardF_monotone; eauto.
       eapply IH; eauto.
       eapply ann_R_setTopAnn; eauto.
-      eapply PIR2_zip_setTopAnnO; eauto.
+      eapply PIR2_zip_joinTopAnnO; eauto.
       hnf. eapply PIR2_get; eauto.
       eapply IH; eauto.
       eapply ann_R_setTopAnn; eauto.
@@ -509,7 +569,7 @@ Proof with eauto using poLe_setTopAnn, poLe_getAnni.
         eapply forwardF_monotone; eauto.
         eapply IH; eauto.
         eapply ann_R_setTopAnn; eauto.
-        eapply (@PIR2_zip_setTopAnnO bool PartialOrder_bool); eauto.
+        eapply (@PIR2_zip_joinTopAnnO bool PartialOrder_bool); eauto.
         eapply PIR2_get; eauto.
         eapply IH; eauto.
         eapply ann_R_setTopAnn; eauto.
@@ -518,7 +578,7 @@ Proof with eauto using poLe_setTopAnn, poLe_getAnni.
         eapply forwardF_monotone; eauto.
         eapply IH; eauto.
         eapply ann_R_setTopAnn; eauto.
-        eapply (@PIR2_zip_setTopAnnO bool PartialOrder_bool); eauto.
+        eapply (@PIR2_zip_joinTopAnnO bool PartialOrder_bool); eauto.
         eapply PIR2_get; eauto.
         eapply IH; eauto.
         eapply ann_R_setTopAnn; eauto.
@@ -530,7 +590,7 @@ Proof with eauto using poLe_setTopAnn, poLe_getAnni.
       eapply forwardF_monotone; eauto.
       eapply IH; eauto.
       eapply ann_R_setTopAnn; eauto.
-      eapply PIR2_zip_setTopAnnO; eauto.
+      eapply PIR2_zip_joinTopAnnO; eauto.
       hnf. eapply PIR2_get; eauto.
       eapply IH; eauto.
       eapply ann_R_setTopAnn; eauto.
@@ -597,7 +657,7 @@ Proof with eauto using poLe_setTopAnn, poLe_getAnni.
     + eapply forwardF_ext; eauto.
       eapply IH; eauto.
       eapply ann_R_setTopAnn; eauto.
-      eapply PIR2_poEq_zip_setTopAnnO; eauto.
+      eapply PIR2_poEq_zip_joinTopAnnO; eauto.
       hnf. eapply PIR2_get; eauto.
       eapply IH; eauto.
       eapply ann_R_setTopAnn; eauto.
@@ -611,7 +671,7 @@ Proof with eauto using poLe_setTopAnn, poLe_getAnni.
         eapply forwardF_ext; eauto.
         eapply IH; eauto.
         eapply ann_R_setTopAnn; eauto.
-        eapply (@PIR2_poEq_zip_setTopAnnO bool PartialOrder_bool); eauto.
+        eapply (@PIR2_poEq_zip_joinTopAnnO bool PartialOrder_bool); eauto.
         eapply PIR2_get; eauto.
         eapply IH; eauto.
         eapply ann_R_setTopAnn; eauto.
@@ -620,7 +680,7 @@ Proof with eauto using poLe_setTopAnn, poLe_getAnni.
         eapply forwardF_ext; eauto.
         eapply IH; eauto.
         eapply ann_R_setTopAnn; eauto.
-        eapply (@PIR2_poEq_zip_setTopAnnO bool PartialOrder_bool); eauto.
+        eapply (@PIR2_poEq_zip_joinTopAnnO bool PartialOrder_bool); eauto.
         eapply PIR2_get; eauto.
         eapply IH; eauto.
         eapply ann_R_setTopAnn; eauto.
@@ -632,7 +692,7 @@ Proof with eauto using poLe_setTopAnn, poLe_getAnni.
       eapply forwardF_ext; eauto.
       eapply IH; eauto.
       eapply ann_R_setTopAnn; eauto.
-      eapply PIR2_poEq_zip_setTopAnnO; eauto.
+      eapply PIR2_poEq_zip_joinTopAnnO; eauto.
       hnf. eapply PIR2_get; eauto.
       eapply IH; eauto.
       eapply ann_R_setTopAnn; eauto.

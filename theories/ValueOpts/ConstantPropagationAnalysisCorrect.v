@@ -1159,11 +1159,11 @@ Proof.
       f_equal. eapply IHF.
     }
     simpl_forward_setTopAnn. subst. repeat rewrite setTopAnn_eta' in *.
-    assert (setTopAnn (A:=bool) ⊜ sa (snd (@forward _ _ (@cp_trans_dep) (fst ⊝ F ++ ZL) (ZLIncl_ext ZL eq_refl ST ZLIncl) t (subTerm_EQ_Fun1 eq_refl ST) AE ta)) = sa). {
+    assert (joinTopAnn (A:=bool) ⊜ sa (snd (@forward _ _ (@cp_trans_dep) (fst ⊝ F ++ ZL) (ZLIncl_ext ZL eq_refl ST ZLIncl) t (subTerm_EQ_Fun1 eq_refl ST) AE ta)) = sa). {
       eapply PIR2_eq.
       eapply PIR2_R_impl. intros.
       eapply ann_R_eq. eapply H2.
-      eapply PIR2_setTopAnn_zip_left; eauto.
+      (*eapply PIR2_setTopAnn_zip_left; eauto.
       eapply PIR2_get; intros; inv_get.
       symmetry in H22.
       eapply (get_length_eq _ H14) in H22. dcr.
@@ -1172,7 +1172,8 @@ Proof.
       rewrite getAnn_setTopAnn.
       admit.
       revert H9. clear.
-      len_simpl. admit.
+      len_simpl.*)
+      admit.
     }
     exploit eqMap_forwardF_t; eauto.
     clear. len_simpl. omega.
@@ -1199,7 +1200,7 @@ Proof.
       * clear_all; eauto with len.
       * split.
         -- eapply H14; eauto.
-           admit.
+           rewrite H2; eauto.
         -- admit.
       * set_simpl. eauto.
         eapply disj_2_incl.
@@ -1226,23 +1227,23 @@ Proof.
                   clear_all; intros; eauto with len.
                 }
                 rewrite LEQ. eapply PIR2_take.
+                destruct H14.
                 rewrite (@forwardF_ext sT DDom _
                                        (@forward _ _ (@cp_trans_dep) (fst ⊝ F ++ ZL) (@ZLIncl_ext sT (stmtFun F t) F t ZL (@eq_refl stmt (stmtFun F t)) ST
                    ZLIncl)) (@forward _ _ (@cp_trans_dep) (fst ⊝ F ++ ZL) (@ZLIncl_ext sT (stmtFun F t) F t ZL (@eq_refl stmt (stmtFun F t)) ST
                    ZLIncl)));
-                  try eapply H2; intros; try reflexivity.
-                --- admit.
-                (*eapply forwardF_PIR2.
-                --- revert H9. clear_all; intros; len_simpl.
-                    rewrite H9. eauto with len.
-                --- clear_all. eauto with len.
-                --- intros.
-                    inv_get.
-                    admit.
-                --- eapply transf_ext.
-                --- eapply zip_get_eq; eauto.
-                    admit. admit.
-                --- eauto.*)
+                  try eapply e; intros; try reflexivity.
+                --- eapply forwardF_PIR2.
+                    +++ revert H9. clear_all; intros; len_simpl.
+                       rewrite H9. eauto with len.
+                    +++ clear_all. eauto with len.
+                    +++ intros.
+                       inv_get.
+                       eapply p; eauto.
+                       eapply zip_get; eauto.
+                    +++ eapply transf_ext.
+                    +++ rewrite H2. eauto.
+                    +++ eauto.
                 --- eapply forward_ext; eauto.
                     eapply transf_ext.
              ** revert H9.
@@ -1264,6 +1265,7 @@ Proof.
     + setoid_rewrite ZipEq.
       eapply IHLD; eauto.
       * clear; eauto with len.
+      * split; dcr. eauto. eauto.
       * pe_rewrite. set_simpl.
         rewrite List.map_app. rewrite list_union_app.
         eapply disj_union_left.
@@ -1294,7 +1296,12 @@ Proof.
               }
               rewrite LEQ. eapply PIR2_take.
               eapply forwardF_mon. clear; eauto with len.
-           ** admit.
+           ** revert H9. clear. intros.
+              erewrite forwardF_snd_length; [| | reflexivity].
+              --- len_simpl. rewrite H9.
+                  rewrite min_l; try omega.
+                  rewrite min_l; try omega.
+              --- eauto with len.
         -- etransitivity; eauto.
            eapply PIR2_drop.
            eapply forwardF_mon.
