@@ -1,7 +1,7 @@
 Require Import List Map Env AllInRel Exp MoreList.
 Require Import IL Annotation.
 Require Import Liveness.Liveness.
-Require Import ExpVarsBounded SpillSound.
+Require Import ExpVarsBounded SpillSound SpillUtil.
 
 
 
@@ -100,25 +100,39 @@ Inductive rlive_sound
     -> rlive_sound ZL Lv (stmtFun F t) (annF (Sp,L,rms) sl_F sl_t) (annF lv als alb)
 .
 
-Definition is_rlive_min k s sl Rlv
-  := forall ZL Λ R M, spill_sound k ZL Λ (R,M) s sl
+Definition is_rlive_min k ZL Λ s sl Rlv
+  := forall R M, spill_sound k ZL Λ (R,M) s sl
                  -> Rlv ⊆ R
 .
 
 
 Inductive rlive_min (k:nat)
-  : stmt -> spilling -> ann ⦃var⦄ -> Prop :=
-| RMinLet x e s an sl Rlv rlv
-  : rlive_min k s sl rlv
-    -> is_rlive_min k (stmtLet x e s) (ann1 an sl) Rlv
-    -> rlive_min k (stmtLet x e s) (ann1 an sl) (ann1 Rlv rlv)
-| RMinIf e s1 s2 an sl1 sl2 Rlv rlv1 rlv2
-  : rlive_min k s1 sl1 rlv1
-    -> rlive_min k s2 sl2 rlv2
-    -> is_rlive_min k (stmtIf e s1 s2) (ann2 an sl1 sl2) Rlv
-    -> rlive_min k (stmtIf e s1 s2) (ann2 an sl1 sl2) (ann2 Rlv rlv1 rlv2)
-| RMinReturn e an Rlv
-  : rlive_min k (stmtReturn e) (ann0 an) Rlv
+  : list params -> list (⦃var⦄ * ⦃var⦄) -> ⦃var⦄ -> stmt -> spilling -> ann ⦃var⦄ -> Prop :=
+| RMinLet ZL Λ x e s an sl Rlv rlv G
+  : rlive_min k ZL Λ (singleton x) s sl rlv
+    -> is_rlive_min k ZL Λ (stmtLet x e s) (ann1 an sl) (Rlv \ G)
+    -> rlive_min k ZL Λ G (stmtLet x e s) (ann1 an sl) (ann1 Rlv rlv)
+| RMinIf ZL Λ e s1 s2 an sl1 sl2 Rlv rlv1 rlv2 G
+  : rlive_min k ZL Λ ∅ s1 sl1 rlv1
+    -> rlive_min k ZL Λ ∅ s2 sl2 rlv2
+    -> is_rlive_min k ZL Λ (stmtIf e s1 s2) (ann2 an sl1 sl2) (Rlv \ G)
+    -> rlive_min k ZL Λ G (stmtIf e s1 s2) (ann2 an sl1 sl2) (ann2 Rlv rlv1 rlv2)
+| RMinReturn ZL Λ e an Rlv G
+  : is_rlive_min k ZL Λ (stmtReturn e) (ann0 an) (Rlv \ G)
+    -> rlive_min k ZL Λ G (stmtReturn e) (ann0 an) (ann0 Rlv)
+| RMinApp ZL Λ f Y an Rlv G
+  : is_rlive_min k ZL Λ (stmtApp f Y) (ann0 an) (Rlv \ G)
+    -> rlive_min k ZL Λ G (stmtApp f Y) (ann0 an) (ann0 Rlv)
+| RSpillFun ZL Λ G F t spl rms sl_F sl_t Rlv rlv_F rlv_t
+  : (forall n Zs sl_s rlv_s rm,
+        get F n Zs
+        -> get sl_F n sl_s
+        -> get rlv_F n rlv_s
+        -> get rms n rm
+        -> rlive_min k (fst ⊝ F ++ ZL) (rms ++ Λ) (of_list (fst Zs) ∩ fst rm) (snd Zs) sl_s rlv_s)
+    -> rlive_min k (fst ⊝ F ++ ZL) (rms ++ Λ) ∅ t sl_t rlv_t
+    -> is_rlive_min k ZL Λ (stmtFun F t) (annF (spl, rms) sl_F sl_t) (Rlv \ G)
+    -> rlive_min k ZL Λ G (stmtFun F t) (annF (spl, rms) sl_F sl_t) (annF Rlv rlv_F rlv_t)
 .
 
 
@@ -197,29 +211,49 @@ Proof.
 Qed.
 
 
-Lemma reg_live_R' k ZL Λ RM s sl rLv :
-  let rlv := reg_live ZL rLv (∅:⦃var⦄) s sl in
+Lemma reg_live_rlive_min k G ZL Λ RM s sl rLv :
+  let rlv := reg_live ZL rLv G s sl in
   spill_sound k ZL Λ RM s sl
   -> PIR2 Subset rLv (fst ⊝ Λ)
   -> annotation s rlv
-  -> rlive_min k s sl rlv
+  -> rlive_min k ZL Λ G s sl rlv
 .
 Proof.
-  intros rlv spillSnd pir2 anno. general induction spillSnd; invc anno.
-  - cbn. econstructor; eauto.
-    + rewrite reg_live_G_eq.
-    + unfold is_rlive_min. intros. rewrite reg_live_
-  
+  intros rlv spillSnd pir2 anno. subst rlv. general induction spillSnd; invc anno; cbn.
+  - econstructor; eauto.
+    unfold is_rlive_min in *. intros. rewrite reg_live_G_eq. clear spillSnd.
+    invc H5. rewrite reg_live_R; eauto. cbn. clear - H17 H20; cset_tac.
+  - econstructor; eauto.
+    unfold is_rlive_min. intros. invc H3. clear - H13 H11. cset_tac.
+  - econstructor; eauto. clear spillSnd1 spillSnd2. unfold is_rlive_min. intros.
+    invc H3. rewrite !reg_live_R; eauto. cbn. clear - H19 H16. cset_tac.
+  - eapply PIR2_nth_2 with (blk:=R_f) in pir2 as [Rl [get_Rl Rl_sub]]; [|eapply map_get_eq;eauto].
+    erewrite !get_nth; eauto. 
+    econstructor; eauto. unfold is_rlive_min.
+    intros. rewrite Rl_sub. invc H8. eapply get_get_eq with (x:=Z) in H22;eauto. subst Z0.
+    eapply get_get_eq with (x':=(R_f,M_f)) in H23; eauto. invc H23. 
+    rewrite H17, H24, H26. clear; cset_tac.
+  - econstructor; eauto.
+    + intros. inv_get. eapply H6; eauto.
+      * rewrite List.map_app. eapply PIR2_app; eauto.
+      * eapply H13; eauto.
+        (* replace
+          (reg_live (fst ⊝ F ++ ZL) (fst ⊝ rms ++ rLv) (of_list (fst Zs) ∩ fst rm) (snd Zs) sl_s)
+          with
+            ((fun (ps : params * stmt) (rmsl : spilling * ⦃var⦄) =>
+                let (sl_s0, Rf) := rmsl in
+                reg_live (fst ⊝ F ++ ZL) (fst ⊝ rms ++ rLv) (of_list (fst ps:params) ∩ Rf) (snd ps) sl_s0)
+               Zs
+               (pair sl_s (fst rm))).*)
+        admit.
+    + eapply IHspillSnd; eauto.
+      rewrite List.map_app. eapply PIR2_app; eauto.
+    + unfold is_rlive_min. intros. clear H6 IHspillSnd spillSnd H13 H11 H5. invc H7.
+      rewrite reg_live_R; eauto; cbn; [clear - H18; cset_tac|].
+      rewrite List.map_app. eapply PIR2_app; eauto.
+Admitted.  
   
 
-
-Corollary reg_live_R' k ZL Λ RM s sl rLv  :
-  PIR2 Subset rLv (fst ⊝ Λ)
-  -> rlive_min k ZL Λ RM s sl (reg_live ZL rLv (∅:⦃var⦄) s sl)
-.
-Proof.
-  unfold rlive_min. intros. eapply reg_live_R; eauto.
-Qed.
 
   
 (*

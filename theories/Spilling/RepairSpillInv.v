@@ -6,11 +6,10 @@ Set Implicit Arguments.
 
 (** * Invariance on correct spillings *)
 
-(* assumptions missing *)
-Lemma repair_spill_inv k ZL Λ s lv sl R M ra rlv
-  : (*let rlv := reg_live ZL (fst ⊝ Λ) G s sl in*)
-    renamedApart s ra
-    -> rlive_min k ZL Λ (R,M) s sl rlv
+
+Lemma repair_spill_inv k ZL Λ s lv sl R M G ra rlv
+  : renamedApart s ra
+    -> rlive_min k ZL Λ G s sl rlv
     -> rlive_sound ZL (fst ⊝ Λ) s sl rlv
     -> getAnn rlv ∪ M ⊆ fst (getAnn ra)
     -> getAnn rlv ⊆ R
@@ -20,10 +19,9 @@ Lemma repair_spill_inv k ZL Λ s lv sl R M ra rlv
 .
 Proof.
   intros rena rliveMin rliveSnd rlv_ra sub_R liveSnd spillSnd. 
-  eapply spill_sound_spill_max_kill in spillSnd; eauto;
-    [|reflexivity].
+  eapply spill_sound_spill_max_kill in spillSnd; eauto.
   clear rena rlv_ra.
-  general induction sl; invc liveSnd; invc spillSnd; invc rlive.
+  general induction spillSnd; invc liveSnd; invc rliveSnd; invc rliveMin.
   - admit. (* assert (H10' := H10). assert (H9' := H9).
     assert (set_take_prefer k (L ∩ (Sp ∩ R ∪ M))
                               ((fst (nth (counted l) Λ ({},{}))
@@ -49,14 +47,18 @@ Proof.
       rewrite <-Keq.
       rewrite H18. clear; cset_tac.
     + econstructor; eauto. *)
-  - assert (Sp ∩ R [=] Sp) as Speq by (apply inter_subset_equal; rewrite H7, H3, sub_R; eauto).
+  - cbn in sub_R, Heqp.
+    assert (Sp ∩ R0 [=] Sp) as Speq.
+    { apply inter_subset_equal. rewrite H10; eauto. }
     econstructor; econstructor; [econstructor|]; eauto.
-    assert ((L ∩ (Sp ∩ R ∪ M)) [=] L) as Leq
-        by (apply inter_subset_equal in H8; rewrite Speq, H8; eauto).
+    assert ((L ∩ (Sp ∩ R0 ∪ M0)) [=] L) as Leq.
+    { apply inter_subset_equal in H0. rewrite Speq. eauto. }
     rewrite set_take_prefer_eq; rewrite Leq; eauto.
-    + clear - H10. rewrite subset_cardinal; eauto.
-    + rewrite H9, H3, sub_R. clear; cset_tac.
-  - assert (Rlv = getAnn rlv) as Rlv_eq.
+    + clear - H2. rewrite subset_cardinal; eauto.
+    + rewrite H1, sub_R. clear; cset_tac.
+  - 
+
+    assert (Rlv = getAnn rlv) as Rlv_eq.
     { clear - H8. destruct rlv; isabsurd. rewrite <-H8. cbn. reflexivity. }
     cbn in H13, H18, Kx, H16. rewrite <-Rlv_eq in *.
     assert (Sp ∩ R [=] Sp) as Speq by (apply inter_subset_equal; rewrite H13, sub_R; eauto).

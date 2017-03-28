@@ -172,7 +172,7 @@ Proof.
       cbn in R_sub; clear - R_sub H9. cset_tac.*)
 Qed.
 
-Lemma spill_sound_spill_max_kill k ZL Λ R R' M G s sl rlv ra :
+Lemma spill_sound_spill_max_kill' k ZL Λ R R' M G s sl rlv ra :
   rlv === reg_live ZL (fst ⊝ Λ) G s sl
   -> renamedApart s ra
   -> spill_sound k ZL Λ (R,M) s sl
@@ -189,7 +189,6 @@ Proof.
     {
       clear - H1 H10 spillSnd R_sub H9.
       eapply reg_live_R in spillSnd; [|eapply PIR2_refl; eauto]. cbn in spillSnd.
-
       apply ann_R_get in H10. rewrite reg_live_G_eq in H10.
       eapply rkl'_incl_rkl; eauto.
       - rewrite H10. apply union_incl_split; [eauto|clear;cset_tac].
@@ -227,6 +226,7 @@ Proof.
       subst Kx'. rewrite minus_minus.
       rewrite rkl'_in_rkl2. apply incl_add_eq; split; [clear;cset_tac|].
       rewrite H10, reg_live_G_eq, spillSnd. cbn. clear. cset_tac.
+Admitted. (*
   - econstructor; eauto.
     + rewrite H8; eauto.
     + rewrite <-minus_union.
@@ -267,6 +267,148 @@ Proof.
       * invc  H22. cbn. rewrite H20. cbn in R_sub.
         rewrite <-minus_union, minus_minus, H6, H17, H18, rlv_sub', H12.
         setoid_rewrite H0 at 4. rewrite H12, rlv_sub'. clear - R_sub. cset_tac.
+      * rewrite <-inter_subset_equal with (s':=getAnn al2); [|clear;cset_tac]. setoid_rewrite H18 at 1.
+        rewrite <-minus_union, minus_minus. setoid_rewrite rlv_sub' at 1. clear; cset_tac.
+  - admit.
+  - admit.
+Admitted.*)
+
+
+Lemma rlive_min_getAnn k ZL Λ s sl rlv R M :
+  rlive_min k ZL Λ ∅ s sl rlv
+  -> spill_sound k ZL Λ (R,M) s sl
+  -> getAnn rlv ⊆ R
+.
+Proof.
+  intros rliveMin spillSnd. general induction rliveMin; cbn; unfold is_rlive_min in H;
+                              rewrite <-minus_empty; try eapply H; eauto.
+Qed.
+
+Lemma rlive_min_getAnn_G k ZL Λ G s sl rlv :
+  rlive_min k ZL Λ G s sl rlv
+  -> (forall R M, spill_sound k ZL Λ (R,M) s sl -> getAnn rlv ⊆ R)
+  -> rlive_min k ZL Λ ∅ s sl rlv
+.
+Proof.
+  intros rliveMin isMin.
+  general induction rliveMin; econstructor; cbn in *; eauto;
+    unfold is_rlive_min; intros; rewrite minus_empty; eapply isMin; eauto.
+Qed.
+
+Lemma rlive_min_incl_R k ZL Λ s sl rlv R M G :
+  G ⊆ R
+  -> spill_sound k ZL Λ (R, M) s sl
+  -> rlive_min k ZL Λ G s sl rlv
+  -> getAnn rlv ⊆ R
+.
+Proof.
+  intros Geq spillSnd rlive.
+  general induction rlive; cbn;
+    unfold is_rlive_min in *; rewrite <-union_subset_equal with (s':=R); eauto;
+      apply incl_minus_incl_union; [| | | |eapply H1;eauto]; eapply H; eauto.
+Qed.
+
+Lemma rlive_min_monotone k ZL Λ s sl G G' rlv :
+  G ⊆ G'
+  -> rlive_min k ZL Λ G  s sl rlv
+  -> rlive_min k ZL Λ G' s sl rlv
+.
+Proof.
+  intros Geq rliveMin.
+  general induction rliveMin; econstructor; eauto; unfold is_rlive_min in *; intros; rewrite <-Geq;
+    eauto.
+Qed.
+      
+
+
+Lemma spill_sound_spill_max_kill k ZL Λ R R' M G s sl rlv ra :
+  renamedApart s ra
+  -> spill_sound k ZL Λ (R,M) s sl
+  -> rlive_min k ZL Λ G s sl rlv
+  -> rlive_sound ZL (fst ⊝ Λ) s sl rlv
+  -> R' ∪ M ⊆ fst (getAnn ra)
+  -> getAnn rlv ⊆ R'
+  -> spill_max_kill k ZL Λ (R',M) s rlv sl
+.
+Proof.
+  intros rena spillSnd rliveMin rlive R_sub rlv_sub'.
+  general induction spillSnd; invc rlive; invc rena; invc rliveMin; cbn in rlv_sub'.
+  - set (K' := R' \ (Exp.freeVars e ∪ getAnn al) ∪ (R' ∩ L)).
+    assert (R' \ K' ∪ L ⊆ R0 \ K ∪ L) as rkl'_in_rkl2.
+    {
+      eapply rkl'_incl_rkl; eauto.
+      - eapply rlive_min_incl_R; eauto. clear; cset_tac.
+        (* + instantiate (1:=singleton x). clear; cset_tac.
+        + specialize (rliveMin (singleton x)). invc rliveMin. eauto.*)
+      - cbn in R_sub. clear - R_sub; cset_tac.
+    }
+    subst K'.
+    econstructor; eauto;
+      set (K' := R' \ (Exp.freeVars e ∪ getAnn al) ∪ (R' ∩ L)) in *;
+      set (Kx':= (R' \ K' ∪ L) \ getAnn al) in *.
+    + rewrite H13. eauto.
+    + eapply IHspillSnd; eauto.
+      * rewrite H14.
+        cbn in R_sub. apply union_incl_split.
+        -- apply add_struct_incl. rewrite !minus_incl. rewrite H0, H13, rlv_sub'.
+           clear - R_sub. cset_tac.
+        -- rewrite H13, rlv_sub', R_sub. cbn. clear; cset_tac.
+      * enough (getAnn al \ singleton x ⊆ (R' \ K' ∪ L) \ Kx') as Hypo.
+        { rewrite <-Hypo. clear; cset_tac. }
+        rewrite <-inter_subset_equal with (s':=getAnn al);[| clear; cset_tac]. rewrite H17.
+        subst K'. rewrite <-minus_union, minus_minus.
+        setoid_rewrite <-rlv_sub' at 1. apply not_incl_minus; [clear; cset_tac|].
+        subst Kx'. clear; cset_tac.
+    (*
+      setoid_rewrite <-union_subset_equal with (s0:=lv) at 8;[|eauto].
+      setoid_rewrite <-union_subset_equal with (s0:=M0) at 11;[|eauto].
+      setoid_rewrite <-H13 at 2. setoid_rewrite <-union_assoc at 2. setoid_rewrite union_assoc at 2.
+      setoid_rewrite <-H0 at 2.
+      rewrite H13. clear - H17. cset_tac.*)
+    + subst K'. rewrite <-minus_union. rewrite incl_minus_union;[|clear;cset_tac].
+      rewrite minus_minus, <-rlv_sub'.
+      apply Exp.freeVars_live in H16. clear - H16; cset_tac.
+    + rewrite subset_cardinal with (s':=R0 \ K ∪ L); eauto.
+    + rewrite subset_cardinal with (s':={x; (R0 \ K ∪ L) \ Kx}); eauto.
+      subst Kx'. rewrite minus_minus. apply incl_add_eq; split; [clear;cset_tac|].
+      rewrite rkl'_in_rkl2. eapply rlive_min_incl_R in H20.
+      * rewrite H20. clear; cset_tac.
+      * clear; cset_tac.
+      * eauto. 
+  - econstructor; eauto.
+    + rewrite H8; eauto.
+    + rewrite <-minus_union.
+      rewrite incl_minus_union;[|clear;cset_tac].
+      rewrite minus_minus, <-rlv_sub'.
+      apply Op.freeVars_live in H10. clear - H10. cset_tac.
+    + rewrite <-minus_union. rewrite incl_minus_union;[|clear;cset_tac].
+      rewrite minus_minus. rewrite H1. rewrite subset_cardinal with (s':=R0 \ K ∪ L); eauto.
+      clear; cset_tac.
+  - eapply rlive_min_incl_R with (G:=∅) in spillSnd1 as spillSnd1'; [|clear;cset_tac|eauto].
+    eapply rlive_min_incl_R with (G:=∅) in spillSnd2 as spillSnd2'; [|clear;cset_tac|eauto].
+    econstructor; eauto.
+    + rewrite H12; eauto.
+    + rewrite <-minus_union. rewrite incl_minus_union;[|clear;cset_tac].
+      rewrite minus_minus, <-rlv_sub'.
+      apply Op.freeVars_live in H16. clear - H16; cset_tac.
+    + rewrite <-minus_union. rewrite incl_minus_union;[|clear;cset_tac].
+      rewrite minus_minus. rewrite H1.
+      rewrite spillSnd1'. cbn.
+      rewrite spillSnd2'. cbn.
+      rewrite subset_cardinal with (s':=R0 \ K ∪ L); eauto. 
+      cbn in R_sub; clear - R_sub H9; cset_tac.
+    + eapply IHspillSnd1; eauto.
+      * cbn in R_sub.
+        rewrite <-minus_union, minus_minus, H6, H17, H18, rlv_sub', H12.
+        setoid_rewrite H0 at 4. rewrite H12, rlv_sub'.
+        rewrite H13. clear - R_sub. cbn. cset_tac.
+      * rewrite <-inter_subset_equal with (s':=getAnn al1); [|clear;cset_tac]. setoid_rewrite H17 at 1.
+        rewrite <-minus_union, minus_minus. setoid_rewrite rlv_sub' at 1. clear; cset_tac.
+    + eapply IHspillSnd2; eauto.      
+      * cbn in R_sub.
+        rewrite <-minus_union, minus_minus, H6, H17, H18, rlv_sub', H12.
+        setoid_rewrite H0 at 4. rewrite H12, rlv_sub'.
+        rewrite H19. clear - R_sub. cbn. cset_tac.
       * rewrite <-inter_subset_equal with (s':=getAnn al2); [|clear;cset_tac]. setoid_rewrite H18 at 1.
         rewrite <-minus_union, minus_minus. setoid_rewrite rlv_sub' at 1. clear; cset_tac.
   - admit.
