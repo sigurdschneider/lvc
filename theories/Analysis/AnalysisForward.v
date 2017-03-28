@@ -273,18 +273,25 @@ Ltac fold_po :=
            change (ann_R poLe x y) with (poLe x y)
   end.
 
+Ltac PI_simpl :=
+  match goal with
+    [ H : subTerm ?s ?t, H' : subTerm ?s ?t |- _ ]
+    => assert (H = H') by eapply subTerm_PI; try subst H'; try subst H
+  end.
+
+
 Lemma forward_monotone (sT:stmt) (Dom : stmt -> Type)
       `{JoinSemiLattice (Dom sT)} `{@LowerBounded (Dom sT) H}
       (f: forall sT, list params ->
                 forall s, subTerm s sT -> Dom sT -> anni (Dom sT))
-      (fMon:forall s (ST ST':subTerm s sT) ZL,
-          forall a b, a ⊑ b -> f sT ZL s ST a ⊑ f sT ZL s ST' b)
-  : forall (s : stmt) (ST ST':subTerm s sT) (ZL:list params),
+      (fMon:forall s (ST:subTerm s sT) ZL,
+          forall a b, a ⊑ b -> f sT ZL s ST a ⊑ f sT ZL s ST b)
+  : forall (s : stmt) (ST:subTerm s sT) (ZL:list params),
     forall (d d' : Dom sT) (a b : ann (Dom sT)), d ⊑ d' -> a ⊑ b ->
-                           forward Dom f ZL ST d a ⊑ forward Dom f ZL ST' d' b.
+                           forward Dom f ZL ST d a ⊑ forward Dom f ZL ST d' b.
 Proof with eauto using poLe_setTopAnn, poLe_getAnni.
   intros s.
-  sind s; destruct s; intros ST ST' ZL d d' a b LE_d LE; simpl forward; inv LE;
+  sind s; destruct s; intros ST ZL d d' a b LE_d LE; simpl forward; inv LE;
     simpl forward; repeat let_pair_case_eq; subst; eauto 10 using @ann_R;
       try now (econstructor; simpl; eauto using @ann_R).
   - econstructor; simpl; eauto; fold_po.
@@ -307,9 +314,10 @@ Proof with eauto using poLe_setTopAnn, poLe_getAnni.
                get (forwardF (forward Dom f) (fst ⊝ F ++ ZL) F ans
                              (subTerm_EQ_Fun2 eq_refl ST)) n x ->
                get (forwardF (forward Dom f) (fst ⊝ F ++ ZL) F bns
-                             (subTerm_EQ_Fun2 eq_refl ST')) n x' ->
+                             (subTerm_EQ_Fun2 eq_refl ST)) n x' ->
                x ⊑ x'). {
       intros; inv_get; dcr; eauto.
+      PI_simpl.
       eapply IH; eauto.
       exploit H3; eauto.
       eapply ann_R_get; eauto.
@@ -358,8 +366,8 @@ Instance makeForwardAnalysis (Dom:stmt -> Type)
          (LB:forall s, @LowerBounded (Dom s) (PO s))
          (f: forall sT, list params ->
                    forall s, subTerm s sT -> Dom sT -> anni (Dom sT))
-         (fMon:forall sT s (ST ST':subTerm s sT) ZL,
-             forall a b, a ⊑ b -> f sT ZL s ST a ⊑ f sT ZL s ST' b)
+         (fMon:forall sT s (ST:subTerm s sT) ZL,
+             forall a b, a ⊑ b -> f sT ZL s ST a ⊑ f sT ZL s ST b)
          (Trm: forall s, Terminating (Dom s) poLt)
 
   : forall s (i:Dom s), Iteration { a : ann (Dom s) | annotation s a } :=

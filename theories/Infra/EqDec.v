@@ -239,3 +239,49 @@ Proof.
   left. eapply length_length_eq; eauto.
   right. intro. eapply length_eq_length in X0. congruence.
 Defined.
+
+Set Implicit Arguments.
+
+Let comp A (x y y':A) (eq1:x = y) (eq2:x = y') : y = y' :=
+  eq_ind _ (fun a => a = y') eq2 _ eq1.
+
+Remark trans_sym_eq : forall (A:Type) (x y:A) (u:x = y), comp u u = eq_refl y.
+Proof.
+  intros.
+  case u; trivial.
+Qed.
+
+Let nu' (A:Type) `{EqDec A eq} (x y:A) (u:x = y) : x = y :=
+  match equiv_dec x y with
+  | left eqxy => eqxy
+  | right neqxy => False_ind _ (neqxy u)
+  end.
+
+Let nu'_constant : forall (A:Type) `{EqDec A eq} (x y:A) (u v:x = y), nu' u = nu' v.
+  intros.
+  unfold nu'.
+  destruct (equiv_dec x y) as [Heq|Hneq].
+  reflexivity.
+  case Hneq; trivial.
+Qed.
+
+
+Let nu'_inv (A:Type) `{EqDec A eq} (x y:A) (v:x = y) : x = y := comp (nu' (eq_refl x)) v.
+
+
+Remark nu'_left_inv_on : forall (A:Type) `{EqDec A eq} (x y:A) (u:x = y), nu'_inv (nu' u) = u.
+Proof.
+  intros.
+  case u; unfold nu'_inv.
+  apply trans_sym_eq.
+Qed.
+
+
+Theorem dec_UIP : forall (A:Type) `{EqDec A eq} (x y:A) (p1 p2:x = y), p1 = p2.
+Proof.
+  intros.
+  elim (@nu'_left_inv_on A equiv0 H) with (u := p1).
+  elim (@nu'_left_inv_on A equiv0 H) with (u := p2).
+  elim (@nu'_constant A equiv0 H x) with y p1 p2.
+  reflexivity.
+Qed.
