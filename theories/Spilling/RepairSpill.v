@@ -7,7 +7,7 @@ Require Import Take TakeSet.
 
 Set Implicit Arguments.
 
-(* ATTENTION: you are killing L in spill_max_kill but you are not killing it in repair_spill !!! *)
+(** * Repair Spill  *)
 
 Fixpoint stretch_rms (X : Type) (k : nat) (F : list X) (rms : list (⦃var⦄ * ⦃var⦄)) (lvF : list ⦃var⦄)
   {struct F} : list (⦃var⦄ * ⦃var⦄) :=
@@ -34,32 +34,32 @@ Fixpoint repair_spill
   match s,rlv,lv,sl with
 
   | stmtLet x e s, ann1 _ rlv', ann1 _ lv', ann1 (Sp,L,_) sl'
-    => let Fv_e := Exp.freeVars e in
-      let L'   := set_take_prefer k (L ∩ ((Sp ∩ R) ∪ M)) (Fv_e \ R) in
+    => let Fv_e := Exp.freeVars e in (* this v has to be done also elsewhere !!!! *)
+      let L'   := set_take_prefer (k - cardinal (Fv_e ∩ R \ L)) (L ∩ ((Sp ∩ R) ∪ M)) (Fv_e \ R) in
       (* we only use register liveness at 3 points to make some preferences
          in the selection of the kill set: (here)
          if the register liveness is incorrect we will still get a correct spilling *)
-      let K    := set_take_least_avoid (cardinal (R ∪ L') - k)
-                                       (R \ (Exp.freeVars e ∪ L'))
+      let K    := set_take_least_avoid ((cardinal R + cardinal L') - k)
+                                       ((R \ (Exp.freeVars e)) ∪ (R ∩ L'))
                                        (getAnn rlv) in
       let R_e  := R \ K ∪ L' in
-      let K_x  := set_take_least_avoid (cardinal {x; R_e} - k) R (getAnn rlv) in
+      let K_x  := set_take_least_avoid (cardinal {x; R_e} - k) (R \ K ∪ L') (getAnn rlv) in
    (* here we need normal liveness, because we have to spill variables that are loaded later on *)
       let Sp'  := (getAnn lv' ∩ (K ∪ K_x) \ M) ∪ (Sp ∩ R) in 
       ann1 (Sp',L',nil) (repair_spill k ZL Λ {x; R_e \ K_x} (Sp' ∪ M) s rlv' lv' sl')
            
   | stmtReturn e, _, _, ann0 (Sp,L,_)
     => let Fv_e := Op.freeVars e in
-      let L'   := set_take_prefer k (L ∩ ((Sp ∩ R) ∪ M)) (Fv_e \ R) in
+      let L'   := set_take_prefer (k - cardinal (Fv_e ∩ R \ L)) (L ∩ ((Sp ∩ R) ∪ M)) (Fv_e \ R) in
       let Sp'  := Sp ∩ R in
       ann0 (Sp',L',nil)
 
   | stmtIf e s1 s2, ann2 _ rlv1 rlv2, ann2 _ lv1 lv2, ann2 (Sp,L,_) sl1 sl2
     => let Fv_e := Op.freeVars e in
-      let L'   := set_take_prefer k (L ∩ ((Sp ∩ R) ∪ M)) (Fv_e \ R) in
+      let L'   := set_take_prefer (k - cardinal (Fv_e ∩ R \ L)) (L ∩ ((Sp ∩ R) ∪ M)) (Fv_e \ R) in
       (* here is the second use of register liveness *)
-      let K    := set_take_least_avoid (cardinal (R ∪ L') - k)
-                                       (R \ (Op.freeVars e ∪ L'))
+      let K    := set_take_least_avoid ((cardinal R + cardinal L') - k)
+                                       ((R \ Op.freeVars e) ∪ (R ∩ L'))
                                        (getAnn rlv1 ∪ getAnn rlv2) in
       let Sp'  := ((getAnn lv1 ∪ getAnn lv2) ∩ K \ M) ∪ (Sp ∩ R) in
       ann2 (Sp',L',nil)
@@ -72,8 +72,9 @@ Fixpoint repair_spill
       let M_f := snd (nth (counted f) Λ (∅,∅)) in
       let Z   := nth (counted f) ZL nil in
       let L'  := set_take_prefer k (L ∩ ((Sp ∩ R) ∪ M)) (R_f \ of_list Z \ R) in
-      let K   := set_take ((cardinal R + cardinal L') - k) (R \ R_f) in (*ERROR*)
-(*from spillkill: let K := R \ (list_union (Op.freeVars ⊝ Y) \ M' ∪  (R_f \ of_list Z)) ∪ (R ∩ L) in*)
+      let K   := set_take_least_avoid ((cardinal R + cardinal L') - k)
+                                      ((R \ (R_f \ of_list Z)) ∪ (R ∩ L'))
+                                      (list_union (Op.freeVars ⊝ Y) \ M') in
       let M'' := (M \ (R \ K ∪ L)) ∩ fv_Y ∪ (M' ∩ (Sp ∪ M)) in
       let Sp' := ((fv_Y ∩ K \ M) ∪ (M_f  \ of_list Z \ M)) ∪ (Sp ∩ R) in
       ann0 (Sp',L',(R', M'')::nil)
@@ -84,7 +85,7 @@ Fixpoint repair_spill
       let Λ'   := rms' ++ Λ in
       let L'   := set_take k (L ∩ ((Sp ∩ R) ∪ M)) in
       (* here is the third use of register liveness *)
-      let K    := set_take_avoid ((cardinal R + cardinal L') - k) R (getAnn rlv_t) in
+      let K    := set_take_least_avoid ((cardinal R + cardinal L') - k) R (getAnn rlv_t) in
       let Sp'  := ((getAnn lv_t) ∩ K \ M) ∪ (Sp ∩ R) in
 
        annF (Sp, L, rms)
@@ -99,5 +100,3 @@ Fixpoint repair_spill
 
   end
 .
-
-          

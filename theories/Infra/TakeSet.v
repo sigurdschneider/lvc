@@ -58,7 +58,7 @@ Definition set_take (X:Type) `{OrderedType X} (k:nat) (s:⦃X⦄)
 .
 
 Definition set_take_prefer (X:Type) `{OrderedType X} (k:nat) (s t : ⦃X⦄)
-  := of_list (take k (elements s ++ elements (t \ s)))
+  := of_list (take k (elements t ++ elements (s \ t)))
 .
 
 Definition set_take_avoid (X:Type) `{OrderedType X} (k:nat) (s t : ⦃X⦄)
@@ -79,7 +79,7 @@ Lemma set_take_prefer_incl (X:Type) `{OrderedType X} k (s t:⦃X⦄)
   : set_take_prefer k s t ⊆ s ∪ t
 .
 Proof.
-  decide (k < cardinal s); unfold set_take_prefer; try rewrite <-elements_length in *;
+  decide (k < cardinal t); unfold set_take_prefer; try rewrite <-elements_length in *;
     [rewrite take_app_le|rewrite take_app_ge]; [|omega| |omega].
   - rewrite take_set_incl. cset_tac.
   - rewrite of_list_app.
@@ -100,7 +100,7 @@ Qed.
 
 
 Lemma set_take_prefer_card_incl (X:Type) `{OrderedType X} k (s t:⦃X⦄)
-  : cardinal s <= k -> s ⊆ set_take_prefer k s t
+  : cardinal t <= k -> t ⊆ set_take_prefer k s t
 .
 Proof.
   intros card.
@@ -122,7 +122,11 @@ Lemma set_take_prefer_eq (X:Type) `{OrderedType X} k (s t : ⦃X⦄)
 .
 Proof.
   intros card sub. apply incl_eq.
-  - apply set_take_prefer_card_incl; eauto.
+  - unfold set_take_prefer. rewrite take_app_ge.
+    + rewrite of_list_app, of_list_elements. rewrite take_eq_ge.
+      * rewrite of_list_elements. cset_tac.
+      * rewrite !elements_length. rewrite cardinal_difference'; eauto. omega.
+    + rewrite elements_length. unfold ">=". rewrite subset_cardinal;eauto.
   - setoid_rewrite <-union_subset_equal at 4; eauto. rewrite set_take_prefer_incl. cset_tac.
 Qed.
 
@@ -177,4 +181,42 @@ Lemma set_take_least_avoid_eq (X:Type) `{OrderedType X} k (s t : ⦃X⦄) :
 Proof.
   intros card. unfold set_take_least_avoid. 
   replace (k - cardinal (s \ t)) with 0 by omega. cbn. cset_tac.
+Qed.
+
+Lemma set_take_size (X:Type) `{OrderedType X} k (s : ⦃X⦄) :
+  cardinal (set_take k s) <= k
+.
+Proof.
+  unfold set_take. rewrite cardinal_of_list_nodup; [|apply take_dupFree]. decide (cardinal s <= k).
+  - rewrite take_length_ge; rewrite elements_length; omega.
+  - rewrite take_length_le; eauto. rewrite elements_length; omega.
+Qed.
+
+Lemma set_take_least_avoid_size (X:Type) `{OrderedType X} k (s t : ⦃X⦄) :
+  k <= cardinal s
+  -> k <= cardinal (set_take_least_avoid k s t)
+.
+Proof.
+  intros card. unfold set_take_least_avoid.
+  rewrite union_cardinal.
+  - unfold set_take. rewrite cardinal_of_list_nodup; [|apply take_dupFree]. rewrite take_length_le.
+    + omega. 
+    + rewrite elements_length. apply Nat.le_sub_le_add_r. rewrite <-union_cardinal; [|cset_tac].
+      rewrite <-subset_cardinal; eauto. cset_tac.
+  - intros. rewrite set_take_incl. cset_tac.
+Qed.
+
+
+Lemma set_take_prefer_size (X:Type) `{OrderedType X} k (s t : ⦃X⦄) :
+  cardinal (set_take_prefer k s t) <= k
+.
+Proof.
+  unfold set_take_prefer. rewrite cardinal_of_list_nodup.
+  - decide (length (elements t ++ elements (s \ t))  <= k).
+    + rewrite take_length_ge; eauto.
+    + rewrite take_length_le; eauto. omega.
+  - apply take_dupFree_list. apply NoDupA_app; eauto.
+    + apply elements_3w.
+    + apply elements_3w.
+    + intros. apply <-elements_iff in H0. apply <-elements_iff in H1. cset_tac.
 Qed.

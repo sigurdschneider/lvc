@@ -281,12 +281,11 @@ Proof.
     + intros. inv_get. destruct rm as [R M]. eapply H6; eauto.
       * rewrite List.map_app.
         assert (fst ⊝ rms = getAnn ⊝ als) as cheat by admit.
-        (*we need ^ such a pir2 relation *)
         rewrite cheat. eapply H20; eauto.
+        (*we need ^ such a pir2 relation *)
       * exploit H11; eauto. unfold funConstr in H25. destruct H25 as [of_fst _]. rewrite of_fst.
-        cbn in R_sub.
-        (* we need some invariant like "get rms n (R,M) -> ... -> R ∪ M [<=] of_list (fst Zs) ∪ D *)
-        admit.
+        cbn in R_sub. admit.
+      (* we need some invariant like "get rms n (R,M) -> ... -> R ∪ M [<=] of_list (fst Zs) ∪ D" *)
       * exploit H5; eauto. eapply rlive_min_incl_R in H25; eauto. cbn. clear; cset_tac.
       * intros; eauto. decide (n0 >= length rms).
         -- eapply card_Rf; eauto. eapply get_app_right_ge; eauto.
@@ -295,11 +294,10 @@ Proof.
     + eapply IHspillSnd; eauto.
       * rewrite List.map_app.
         assert (fst ⊝ rms = getAnn ⊝ als) as cheat by admit.
-        (*we need ^ such a pir2 relation *)
         rewrite cheat. eapply  H18. 
-      * 
-        (* we need some invariant like "R ∪ M [<=] of_list (fst Zs) ∪ D ? ? *)
-        admit.
+        (*we need such a pir2 relation *)
+      * admit.
+        (* we need some invariant like "R ∪ M [<=] of_list (fst Zs) ∪ D ? ?" *)
       * rewrite <-minus_union, minus_minus. setoid_rewrite <-rlv_sub' at 1. clear - H22; cset_tac.
       * intros; eauto. decide (n >= length rms).
         -- eapply card_Rf; eauto. eapply get_app_right_ge; eauto.
