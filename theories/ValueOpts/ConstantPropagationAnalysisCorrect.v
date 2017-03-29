@@ -913,10 +913,10 @@ Proof.
 Qed.
 
 Lemma PIR2_setTopAnn_zip_left X (R:X->X->Prop) `{Reflexive _ R} (A:list (ann X)) B
-  : PIR2 R B (getAnn ⊝ A)
+  : PIR2 R (Take.take ❬A❭ B) (getAnn ⊝ A)
     -> PIR2 (ann_R R) (@setTopAnn _ ⊜ A B) A.
 Proof.
-  intros P. general induction P; destruct A; isabsurd; eauto using PIR2.
+  intros P. general induction P; destruct A, B; isabsurd; eauto using PIR2.
   simpl in *. clear_trivial_eqs.
   econstructor; eauto.
   eapply ann_R_setTopAnn_left; eauto.
@@ -978,6 +978,100 @@ Proof.
     + intros; len_simpl; eauto.
   }
   rewrite H. reflexivity.
+Qed.
+
+Lemma snd_forwarF_inv' sT BL ZL ZLIncl F sa AE STF
+      (Len1:❬F❭ = ❬sa❭) (Len2:❬F❭ <= ❬BL❭) (Len3:❬ZL❭ = ❬BL❭)
+      (P1:PIR2 (ann_R eq)
+               (setTopAnn (A:=bool)
+                          ⊜ (snd (fst (forwardF BL (@forward sT _ (@cp_trans_dep) ZL ZLIncl) F
+                                                (joinTopAnn (A:=bool) ⊜ sa BL) AE STF)))
+                          (snd (forwardF BL
+                                         (@forward _ _ (@cp_trans_dep) ZL ZLIncl) F
+                                         (joinTopAnn (A:=bool) ⊜ sa BL) AE STF))) sa)
+  : PIR2 (ann_R eq)
+              (snd (fst (forwardF BL (@forward sT _ (@cp_trans_dep) ZL ZLIncl) F
+                                                (joinTopAnn (A:=bool) ⊜ sa BL) AE STF))) sa.
+Proof.
+  assert (P2:PIR2 poLe (Take.take ❬sa❭
+                               (snd (forwardF BL (@forward _ _ (@cp_trans_dep) ZL ZLIncl) F
+                                              (joinTopAnn (A:=bool) ⊜ sa BL) AE
+                                              STF))) (getAnn ⊝ sa)). {
+    eapply PIR2_ann_R_get in P1.
+    rewrite getAnn_setTopAnn_zip in P1.
+     etransitivity. Focus 2.
+    eapply PIR2_R_impl; try eapply P1; eauto.
+    assert (❬sa❭ = (Init.Nat.min
+                      ❬snd
+                         (fst
+                            (forwardF BL (@forward _ _ (@cp_trans_dep) ZL ZLIncl) F
+                                      (joinTopAnn (A:=bool) ⊜ sa BL) AE STF))❭
+                      ❬snd
+                         (forwardF BL (@forward _ _ (@cp_trans_dep) ZL ZLIncl) F (joinTopAnn (A:=bool) ⊜ sa BL)
+                                   AE STF)❭)). {
+      clear P1.
+      rewrite forwardF_length.
+      erewrite forwardF_snd_length; try reflexivity.
+      + repeat rewrite min_l; eauto; len_simpl;
+          rewrite Len1; rewrite min_l; omega.
+      + intros; len_simpl; eauto.
+    }
+    rewrite H. reflexivity.
+  }
+  assert (PIR2 (ann_R eq) (joinTopAnn (A:=bool) ⊜ sa BL) sa). {
+    pose proof (PIR2_joinTopAnn_zip_left bool sa BL).
+    eapply H; clear H.
+    etransitivity.
+    eapply PIR2_take.
+    eapply (@forwardF_mon sT _ (@cp_trans_dep) ZL ZLIncl BL ltac:(omega) F (joinTopAnn (A:=bool) ⊜ sa BL) AE STF). eauto.
+  }
+  etransitivity; try eapply P1.
+  symmetry.
+  eapply (PIR2_setTopAnn_zip_left bool); eauto.
+  rewrite <- forwardF_mon';[|len_simpl; rewrite min_l; eauto; omega].
+  - len_simpl. rewrite min_r, min_l; eauto; try rewrite Len1; try rewrite min_l; try omega.
+    eapply PIR2_ann_R_get in H.
+    rewrite H.
+    eapply PIR2_ann_R_get in P1.
+    etransitivity; try eapply P1.
+    eapply PIR2_get; intros; inv_get.
+    rewrite getAnn_setTopAnn; eauto.
+    len_simpl;[| | reflexivity].
+    rewrite min_r; try omega.
+    repeat rewrite min_l; try omega.
+    intros; eauto with len.
+Qed.
+
+
+
+Lemma snd_forwarF_inv_get sT BL ZL ZLIncl F sa AE STF
+      (Len1:❬F❭ = ❬sa❭) (Len2:❬F❭ <= ❬BL❭) (Len3:❬ZL❭ = ❬BL❭)
+      (P1:PIR2 (ann_R eq)
+              (snd (fst (forwardF BL (@forward sT _ (@cp_trans_dep) ZL ZLIncl) F
+                                  (joinTopAnn (A:=bool) ⊜ sa BL) AE STF))) sa)
+      (P2:PIR2 (ann_R eq) (joinTopAnn (A:=bool) ⊜ sa BL) sa)
+      n r Zs (Getsa:get sa n r)
+      (GetF:get F n Zs) STZs
+      (EQ: forall n Zs r ST, get F n Zs -> get sa n r ->
+                        poEq (fst (fst (@forward sT _ (@cp_trans_dep)  ZL ZLIncl (snd Zs) ST AE r))) AE)
+
+  : ann_R eq (snd (fst (@forward _ _ (@cp_trans_dep) ZL ZLIncl (snd Zs) STZs AE r))) r.
+Proof.
+  rewrite forwardF_ext in P1; try eapply P2; try reflexivity.
+  Focus 2. intros. eapply forward_ext; eauto.
+  eapply transf_ext; eauto. clear Len3 P2.
+  general induction Len1; simpl in *.
+  destruct BL; isabsurd; simpl in *. inv Getsa; inv GetF.
+  - inv P1.
+    assert((STF 0 Zs (@getLB (params * stmt) XL Zs)) = STZs).
+    eapply subTerm_PI. rewrite <- H.
+    eapply pf.
+  - inv P1.
+    eapply IHLen1; eauto using get.
+    Focus 2.
+    rewrite forwardF_ext; eauto.
+    intros. eapply forward_ext; eauto. eapply transf_ext; eauto.
+    symmetry. eapply EQ; eauto using get. reflexivity. simpl. omega.
 Qed.
 
 
@@ -1274,7 +1368,28 @@ Proof.
       * split.
         -- eapply H14; eauto.
            rewrite H2; eauto.
-        -- admit.
+        -- eapply PIR2_get in H23; eauto.
+           exploit snd_forwarF_inv; eauto.
+           clear; eauto with len.
+           clear; eauto with len.
+           exploit snd_forwarF_inv'; eauto.
+           clear; eauto with len.
+           clear; eauto with len.
+           destruct H14.
+           rewrite (@forwardF_ext sT DDom _
+                                  (@forward _ _ (@cp_trans_dep) (fst ⊝ F ++ ZL) (@ZLIncl_ext sT (stmtFun F t) F t ZL (@eq_refl stmt (stmtFun F t)) ST
+                                                                                            ZLIncl)) (@forward _ _ (@cp_trans_dep) (fst ⊝ F ++ ZL) (@ZLIncl_ext sT (stmtFun F t) F t ZL (@eq_refl stmt (stmtFun F t)) ST
+                   ZLIncl))) in H20;
+             try eapply e; intros; try reflexivity.
+           eapply snd_forwarF_inv_get; try eapply H20; eauto.
+           clear; eauto with len.
+           clear; eauto with len.
+           intros.
+           eapply PIR2_nth_2 in H19; eauto; dcr.
+           intros. eapply p; eauto.
+           rewrite ann_R_eq in H27. subst. eauto.
+           eapply forward_ext; eauto.
+           eapply transf_ext; eauto.
       * set_simpl. eauto.
         eapply disj_2_incl.
         eapply funConstr_disj_ZL_getAnn; eauto.
@@ -1365,14 +1480,12 @@ Proof.
                 rewrite H9.
                 clear_all; intros; eauto with len.
               }
-              rewrite LEQ. eapply PIR2_take.
+              rewrite LEQ. rewrite min_l.
+              eapply PIR2_take.
               eapply forwardF_mon. clear; eauto with len.
-           ** revert H9. clear. intros.
-              erewrite forwardF_snd_length; [| | reflexivity].
-              --- len_simpl. rewrite H9.
-                  rewrite min_l; try omega.
-                  rewrite min_l; try omega.
-              --- eauto with len.
+              erewrite forwardF_snd_length;[| | reflexivity].
+              rewrite forward_length. clear; len_simpl. omega.
+              intros. clear. eauto with len.
         -- etransitivity; eauto.
            eapply PIR2_drop.
            eapply forwardF_mon.
@@ -1380,4 +1493,6 @@ Proof.
       * intros ? ? GET. eapply get_app_cases in GET. destruct GET.
         inv_get. edestruct H5; eauto.
         dcr. inv_get. eapply NODUP; eauto.
+        Grab Existential Variables.
+        eapply subTerm_EQ_Fun2; eauto.
 Qed.
