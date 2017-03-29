@@ -24,10 +24,10 @@ Definition reachability_transform (sT:stmt)
   end.
 
 
-Lemma reachability_transform_monotone (sT s : stmt) (ST ST' : subTerm s sT)
+Lemma reachability_transform_monotone (sT s : stmt) (ST : subTerm s sT)
       (ZL : 〔params〕) (a b : bool)
   : a ⊑ b
-    -> reachability_transform ZL ST a ⊑ reachability_transform ZL ST' b.
+    -> reachability_transform ZL ST a ⊑ reachability_transform ZL ST b.
 Proof.
   intros; destruct s; simpl; try econstructor; simpl; eauto;
     repeat cases; simpl in *; eauto.
