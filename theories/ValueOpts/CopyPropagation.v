@@ -236,7 +236,7 @@ Proof.
            eapply entails_union'.
            rewrite add_union_singleton; reflexivity.
            eapply entails_eqns_apx_refl.
-           reflexivity.
+           eapply entails_subset; eauto with cset.
       * eauto using cp_moreDefinedArgs.
       * simpl in *.
         rewrite rename_op_list_freeVars; eauto.
