@@ -72,7 +72,8 @@ Fixpoint repair_spill
       let M_f := snd (nth (counted f) Λ (∅,∅)) in
       let Z   := nth (counted f) ZL nil in
       let L'  := set_take_prefer k (L ∩ ((Sp ∩ R) ∪ M)) (R_f \ of_list Z \ R) in
-      let K   := set_take ((cardinal R + cardinal L') - k) (R \ R_f) in
+      let K   := set_take ((cardinal R + cardinal L') - k) (R \ R_f) in (*ERROR*)
+(*from spillkill: let K := R \ (list_union (Op.freeVars ⊝ Y) \ M' ∪  (R_f \ of_list Z)) ∪ (R ∩ L) in*)
       let M'' := (M \ (R \ K ∪ L)) ∩ fv_Y ∪ (M' ∩ (Sp ∪ M)) in
       let Sp' := ((fv_Y ∩ K \ M) ∪ (M_f  \ of_list Z \ M)) ∪ (Sp ∩ R) in
       ann0 (Sp',L',(R', M'')::nil)

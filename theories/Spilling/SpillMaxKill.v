@@ -78,7 +78,7 @@ Inductive spill_max_kill (k:nat) :
       (f : lab)
       (Z : params)
       (Y : args)
-    : let K := (R \ R_f) ∪ (R ∩ L) in
+    : let K := R \ (list_union (Op.freeVars ⊝ Y) \ M' ∪  (R_f \ of_list Z)) ∪ (R ∩ L) in
       Sp ⊆ R
       -> L ⊆ Sp ∪ M
       -> cardinal (R\K ∪ L) <= k
@@ -253,16 +253,58 @@ Proof.
       * rewrite <-inter_subset_equal with (s':=getAnn al2); [|clear;cset_tac]. setoid_rewrite H18 at 1.
         rewrite <-minus_union, minus_minus. setoid_rewrite rlv_sub' at 1. clear; cset_tac.
   - inv_get. cbn in *.
-    econstructor; eauto.
+    econstructor; eauto;
+      set (K':= R'0 \ (list_union (Op.freeVars ⊝ Y) \ M' ∪ R_f) ∪ (R'0 ∩ of_list Z) ∪ (R'0 ∩ L)) in *.
     + rewrite H16; eauto.
-    + rewrite <-minus_union, minus_minus. rewrite subset_cardinal; eauto.
-      exploit card_Rf; eauto. admit. (*
-      rewrite subset_cardinal; eauto. clear; cset_tac.
-      cbn in *. rewrite <-H4.*)
-    + rewrite <-minus_union, minus_minus. rewrite <-inter_subset_equal with (s':=R_f);[|clear;cset_tac].
-      rewrite H20. setoid_rewrite <-rlv_sub' at 1. clear; cset_tac.
-    + rewrite H6. admit.
-  - admit.
+    + rewrite subset_cardinal; eauto.
+      subst K'. setoid_rewrite union_comm at 4. rewrite <-minus_union, minus_minus.
+      rewrite H6. rewrite H4. clear - H4 H6. cset_tac.
+    + subst K'. rewrite <-minus_union, minus_minus.
+      setoid_rewrite <-rlv_sub' at 1.
+      rewrite <-inter_subset_equal with (s':=R_f \ of_list Z);[|clear;cset_tac].
+      setoid_rewrite H20 at 2. clear. cset_tac. 
+    + subst K'. rewrite <-minus_union, minus_minus.
+      rewrite incl_minus_union; [|clear; cset_tac].
+      setoid_rewrite <-inter_subset_equal with (s':=list_union (Op.freeVars ⊝ Y)) at 1;
+        [|clear;cset_tac].
+      setoid_rewrite list_union_incl at 1; eauto.
+      * instantiate(1:=R'0 ∪ L ∪ M').
+        clear;cset_tac.
+      * intros. inv_get. exploit H21; eauto. apply Op.freeVars_live in H9. rewrite H9, <-rlv_sub'.
+        clear; cset_tac.
+      * clear; cset_tac.
+  - econstructor; eauto.
+    + rewrite <-rlv_sub'. eauto.
+    + rewrite <-minus_union, minus_minus. eapply rlive_min_incl_R in spillSnd; eauto;
+                                           [|clear;cset_tac].
+      rewrite spillSnd. rewrite subset_cardinal; eauto. clear; cset_tac.
+    + intros. inv_get. destruct rm as [R M]. eapply H6; eauto.
+      * rewrite List.map_app.
+        assert (fst ⊝ rms = getAnn ⊝ als) as cheat by admit.
+        (*we need ^ such a pir2 relation *)
+        rewrite cheat. eapply H20; eauto.
+      * exploit H11; eauto. unfold funConstr in H25. destruct H25 as [of_fst _]. rewrite of_fst.
+        cbn in R_sub.
+        (* we need some invariant like "get rms n (R,M) -> ... -> R ∪ M [<=] of_list (fst Zs) ∪ D *)
+        admit.
+      * exploit H5; eauto. eapply rlive_min_incl_R in H25; eauto. cbn. clear; cset_tac.
+      * intros; eauto. decide (n0 >= length rms).
+        -- eapply card_Rf; eauto. eapply get_app_right_ge; eauto.
+        -- replace Rf with (fst (Rf,Mf)); eauto. eapply H4; eauto.
+           eapply get_app_lt_1; swap 1 2. eauto. omega.
+    + eapply IHspillSnd; eauto.
+      * rewrite List.map_app.
+        assert (fst ⊝ rms = getAnn ⊝ als) as cheat by admit.
+        (*we need ^ such a pir2 relation *)
+        rewrite cheat. eapply  H18. 
+      * 
+        (* we need some invariant like "R ∪ M [<=] of_list (fst Zs) ∪ D ? ? *)
+        admit.
+      * rewrite <-minus_union, minus_minus. setoid_rewrite <-rlv_sub' at 1. clear - H22; cset_tac.
+      * intros; eauto. decide (n >= length rms).
+        -- eapply card_Rf; eauto. eapply get_app_right_ge; eauto.
+        -- replace Rf with (fst (Rf,Mf)); eauto. eapply H4; eauto.
+           eapply get_app_lt_1; swap 1 2. eauto. omega.
 Admitted.
 
 
