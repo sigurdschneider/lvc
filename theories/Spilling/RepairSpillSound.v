@@ -1,7 +1,7 @@
 Require Import RepairSpill RegLive ExpVarsBounded.
 Require Import SpillSound Annotation Liveness.Liveness RenamedApart.
 Require Import List Map IL.
-Require Import Take TakeSet.
+Require Import Take TakeSet PickLK.
 
 Set Implicit Arguments.
 
@@ -40,16 +40,16 @@ Proof.
   - destruct a,p. rename s0 into Sp. rename s1 into L. rename a0 into Rlv.
     set (L' := set_take_prefer (k - cardinal (Exp.freeVars e ∩ R \ L))
                                (L ∩ (Sp ∩ R ∪ M)) (Exp.freeVars e \ R)) in *.
-    set (K' := set_take_least_avoid ((cardinal R + cardinal L') - k)
-                                    ((R \ Exp.freeVars e) ∪ (R ∩ L')) Rlv) in *.
-    set (Kx' := set_take_least_avoid (cardinal {x; R \ K' ∪ L'} - k) (R \ K' ∪ L') Rlv) in *.
+    set (K' := pick_kill k R L' (Exp.freeVars e) Rlv) in *.
+    set (Kx' := pick_killx k x (R \ K' ∪ L') Rlv) in *.
     set (Sp':= (getAnn al ∩ (K' ∪ Kx') \ M ∪ (Sp ∩ R))) in *.
     assert (Sp ∩ R ⊆ Sp') as Spincl.
     { subst Sp'. clear; cset_tac. }
     econstructor; eauto.
     + subst Sp'. apply incl_minus_incl_union in H0. rewrite H0.
-      subst Kx'. rewrite set_take_least_avoid_incl. subst K'.
-      setoid_rewrite set_take_least_avoid_incl at 1.
+      subst Kx'. rewrite pick_killx_incl. subst K'.
+      setoid_rewrite pick_kill_incl at 1.
+      subst L'. setoid_rewrite set_take_prefer_incl at 1.
       clear; cset_tac.
     + subst L'. rewrite set_take_prefer_incl. rewrite Spincl.
       cbn in *. apply Exp.freeVars_live in H. rewrite H. clear - lv_RM. cset_tac.
@@ -63,10 +63,10 @@ Proof.
       apply union_incl_split; [|cset_tac]. setoid_rewrite <-incl_right at 2.
       setoid_rewrite set_decomp with (t:=M) at 1; cset_tac.
     + subst L'. cbn in *. 
-      subst K'. rewrite set_take_least_avoid_incl. rewrite <-set_take_prefer_card_incl.
+      subst K'. rewrite set_take_least_avoid_incl. admit. (*rewrite <-set_take_prefer_card_incl.
       * rewrite <-minus_union. clear; cset_tac.
       * apply Nat.le_add_le_sub_l. rewrite <-union_cardinal; [|clear;cset_tac].
-        rewrite <-set_decomp. eauto.
+        rewrite <-set_decomp. eauto. *)
     + assert (K' ⊆ R) as KReq.
       { subst K'. rewrite set_take_least_avoid_incl. clear; cset_tac. }
       assert (disj (R \ K') L') as RKLdisj.
