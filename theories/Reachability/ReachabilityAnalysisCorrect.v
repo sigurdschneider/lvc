@@ -233,7 +233,8 @@ Proof.
   intros LEN Ant AnF LE1 LE2 LE3.
   eapply fold_left_mono.
   - eapply PIR2_get; intros; inv_get.
-    + eapply (@forward_monotone sT (fun _ => bool) _ _ _ reachability_transform ); eauto.
+    + PI_simpl.
+      eapply (@forward_monotone sT (fun _ => bool) _ _ _ reachability_transform ); eauto.
       eapply reachability_transform_monotone; eauto.
       eapply ann_R_get.
       eapply get_PIR2; eauto.
@@ -341,6 +342,7 @@ Proof.
     + eapply reachability_sTA_inv. eapply IHRCH2; eauto.
       rewrite setTopAnn_eta; eauto.
   - inv_get. econstructor; eauto.
+  - econstructor; eauto.
   - econstructor; simpl; eauto using reachability_sTA_inv, ann_R_setTopAnn_left.
     + eapply reachability_sTA_inv. eapply IHRCH; eauto.
       rewrite !app_length, !map_length.

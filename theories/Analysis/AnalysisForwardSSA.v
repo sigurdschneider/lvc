@@ -239,7 +239,7 @@ Qed.
 Lemma forwardF_mon' (sT:stmt) (Dom:stmt->Type) f ZL (F:list (params * stmt)) rF ZLIncl BL
        (Len:❬F❭ = ❬rF❭) a
       (ST:forall n Zs, get F n Zs -> subTerm (snd Zs) sT)
-: PIR2 poLe (getAnn ⊝ rF) (getAnn ⊝ snd (fst (@forwardF sT Dom BL
+: PIR2 poEq (getAnn ⊝ rF) (getAnn ⊝ snd (fst (@forwardF sT Dom BL
                                              (@forward sT Dom f ZL ZLIncl) F rF a ST))).
 Proof.
   revert a ST.
