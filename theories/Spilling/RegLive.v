@@ -45,7 +45,7 @@ Fixpoint reg_live
                      => let (sl_s, Rf) := rmsl in
                        reg_live (fst ⊝ F   ++ ZL)
                                 (fst ⊝ rms ++ Lv)
-                                (of_list (fst ps) ∩ Rf)
+                                (Rf)
                                 (snd ps)
                                  sl_s
                     ) ⊜ F (pair ⊜ sl_F (fst ⊝ rms)) in
@@ -95,7 +95,7 @@ Inductive rlive_sound
     -> (forall n Zs a rm, get F n Zs ->
                     get als n a ->
                     get rms n rm ->
-                    (of_list (fst Zs) ∩ fst rm) ⊆ getAnn a) (* don't add L here *)
+                    (fst rm) ⊆ getAnn a) (* don't add L here *)
     -> getAnn alb ⊆ lv ∪ L
     -> rlive_sound ZL Lv (stmtFun F t) (annF (Sp,L,rms) sl_F sl_t) (annF lv als alb)
 .
@@ -129,12 +129,21 @@ Inductive rlive_min (k:nat)
         -> get sl_F n sl_s
         -> get rlv_F n rlv_s
         -> get rms n rm
-        -> rlive_min k (fst ⊝ F ++ ZL) (rms ++ Λ) (of_list (fst Zs) ∩ fst rm) (snd Zs) sl_s rlv_s)
+        -> rlive_min k (fst ⊝ F ++ ZL) (rms ++ Λ) (fst rm) (snd Zs) sl_s rlv_s)
     -> rlive_min k (fst ⊝ F ++ ZL) (rms ++ Λ) ∅ t sl_t rlv_t
     -> is_rlive_min k ZL Λ (stmtFun F t) (annF (spl, rms) sl_F sl_t) (Rlv \ G)
     -> rlive_min k ZL Λ G (stmtFun F t) (annF (spl, rms) sl_F sl_t) (annF Rlv rlv_F rlv_t)
 .
 
+Lemma rlive_min_G_anti k ZL Λ G G' s sl rlv
+  : rlive_min k ZL Λ G s sl rlv
+    -> G ⊆ G'
+    -> rlive_min k ZL Λ G' s sl rlv.
+Proof.
+  intros RLM Incl.
+  general induction RLM; econstructor; intros; eauto;
+    hnf; intros; rewrite <- Incl; eauto.
+Qed.
 
 Lemma reg_live_G_eq
       (G : ⦃var⦄)
@@ -234,10 +243,13 @@ Proof.
     eapply get_get_eq with (x':=(R_f,M_f)) in H23; eauto. invc H23.
     rewrite H17, H24, H26. clear; cset_tac.
   - econstructor; eauto.
-    + intros. inv_get. eapply H6; eauto.
+    + intros. inv_get.
+      eapply rlive_min_G_anti.
+      eapply H6; eauto.
       * rewrite List.map_app. eapply PIR2_app; eauto.
       * eapply H13; eauto.
         eapply zip_get_eq; eauto using zip_get.
+      * reflexivity.
     + eapply IHspillSnd; eauto.
       rewrite List.map_app. eapply PIR2_app; eauto.
     + unfold is_rlive_min. intros. clear H6 IHspillSnd spillSnd H13 H11 H5. invc H7.
