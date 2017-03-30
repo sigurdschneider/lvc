@@ -101,43 +101,48 @@ Qed.
   
 (* pick_killx *)
 
-Definition pick_killx (X:Type) `{OrderedType X} (k:nat) (x:X) (s t : ⦃X⦄) : ⦃X⦄
-  := pick (cardinal {x; s} - k) (s \ t) (s ∩ t)
+Definition pick_killx (X:Type) `{OrderedType X} (k:nat) (s t : ⦃X⦄) : ⦃X⦄
+  := pick (S (cardinal s) - k) (s \ t) (s ∩ t)
 .
 
-Lemma incl_pick_killx (X:Type) `{OrderedType X} (k:nat) (x:X) (s t : ⦃X⦄) :
-  s \ t ⊆ pick_killx k x s t
+Lemma incl_pick_killx (X:Type) `{OrderedType X} (k:nat) (s t : ⦃X⦄) :
+  s \ t ⊆ pick_killx k s t
 .
 Proof.
   eapply incl_pick.
 Qed.
 
-Lemma pick_killx_incl (X:Type) `{OrderedType X} (k:nat) (x:X) (s t : ⦃X⦄) :
-  pick_killx k x s t ⊆ s
+Lemma pick_killx_incl (X:Type) `{OrderedType X} (k:nat) (s t : ⦃X⦄) :
+  pick_killx k s t ⊆ s
 .
 Proof.
   unfold pick_killx. rewrite pick_incl. clear;cset_tac.
 Qed.
 
+Lemma pick_killx_card (X:Type) `{OrderedType X} (k:nat) (s t : ⦃X⦄) :
+  S (cardinal s) - k <= cardinal (s \t ∪ (s ∩ t))
+  -> S (cardinal s) - k  <= cardinal (pick_killx k s t)
+.
+Proof.
+  intros card.
+  unfold pick_killx. rewrite <-pick_card; eauto.
+Qed.
+
 
 (* pick_load *)
 
-Definition pick_load (X:Type) `{OrderedType X} (k:nat)  (r m sp l fv : ⦃X⦄) : ⦃X⦄ 
-  := pick (k - cardinal (fv ∩ r \ (l ∩ (sp ∪ m)))) (fv \ r) (l ∩ (sp ∩ r ∪ m))
+Definition pick_load (X:Type) `{OrderedType X} (k:nat)  (r m sp l fv : ⦃X⦄) : ⦃X⦄
+  := let l' := l ∩ (sp ∩ r ∪ m) in
+     (fv ∩ r ∩ l') ∪ pick (k - cardinal (fv ∩ r)) (fv \ r) (l' \ (fv ∩ r))
 .
 
 
 Lemma incl_pick_load (X:Type) `{OrderedType X} (k:nat)  (r m sp l fv : ⦃X⦄) :
-  fv \ r ⊆ pick_load k r m sp l fv
+  fv ∩ r ∩ (l ∩ (sp ∩ r ∪ m)) ∪ fv \ r ⊆ pick_load k r m sp l fv
 .
 Proof.
-  eapply incl_pick.
+  unfold pick_load. rewrite <-incl_pick. reflexivity.
 Qed.
-(*
-Lemma incl_pick_load' (X:Type) `{OrderedType X} (k:nat)  (r m sp l fv : ⦃X⦄) :
-  cardinal fv -> fv \ r ⊆ pick_load k r m sp l fv
-.
-*)
 
 Lemma pick_load_eq (X:Type) `{OrderedType X} (k:nat)  (r m sp l fv : ⦃X⦄) :
   sp ⊆ r
@@ -156,7 +161,6 @@ Proof.
   - rewrite leq. clear - fvrl. cset_tac.
   - rewrite leq. rewrite <-union_cardinal.
     + apply Nat.le_add_le_sub_r.
-      setoid_rewrite inter_subset_equal at 2;eauto.
       rewrite <-union_cardinal.
       * rewrite subset_cardinal; eauto. clear; cset_tac.
       * clear. intros. intro N. cset_tac.
@@ -184,9 +188,19 @@ Lemma pick_load_card (X:Type) `{OrderedType X} (k:nat) (r m sp l fv : ⦃X⦄) :
   cardinal fv <= k -> cardinal (pick_load k r m sp l fv) <= k - cardinal (fv ∩ r \ (l ∩ (sp ∪ m)))
 .
 Proof.
-  intros card. unfold pick_load. rewrite pick_card'; eauto.
-  - apply Nat.le_add_le_sub_r. rewrite <-union_cardinal; [|clear;intros;cset_tac].
-    rewrite subset_cardinal; eauto. clear; cset_tac.
+  assert (fv ∩ r \ (l ∩ (sp ∪ m)) [=] (fv ∩ r) \ (l ∩ (sp ∩ r ∪ m))) as seteq by (clear; cset_tac).
+  intros card. unfold pick_load. rewrite union_cardinal.
+  - rewrite pick_card'; eauto. 
+    + apply Nat.le_add_le_sub_r. setoid_rewrite plus_comm at 2. rewrite <-plus_assoc.
+      rewrite seteq.
+      rewrite <-union_cardinal; [|clear;intros;intro N;cset_tac].
+      setoid_rewrite <-set_decomp with (s:=fv ∩ r).
+      assert (cardinal (fv ∩ r) <= k).
+      { rewrite subset_cardinal; eauto. clear;cset_tac. }
+      omega.
+    + apply Nat.le_add_le_sub_r. rewrite <-union_cardinal; [|clear;cset_tac].
+      rewrite union_comm, <-set_decomp. eauto.
+  - clear. intros. intro N. dcr. rewrite pick_incl in H1. cset_tac. 
 Qed.
 
   
