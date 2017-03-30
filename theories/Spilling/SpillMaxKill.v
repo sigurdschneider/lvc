@@ -2,7 +2,7 @@ Require Import List Map Env AllInRel Exp MoreList.
 Require Import IL Annotation.
 Require Import Liveness.Liveness RenamedApart.
 Require Import ExpVarsBounded SpillSound OneOrEmpty RegLive.
-Require Import Take TakeSet.
+Require Import Take TakeSet SetUtil.
 
 
 
@@ -146,12 +146,6 @@ Proof.
   rewrite card. omega.
 Qed.
 
-Lemma incl_minus_union (X:Type) `{OrderedType X} (s t u : ⦃X⦄) :
-  t ⊆ u -> s \ t ∪ u [=] s ∪ u
-.
-Proof.
-  intros; cset_tac.
-Qed.
 
 Lemma rkl'_incl_rkl (X:Type) `{OrderedType X} (s s' t t1 t2 u v w : ⦃X⦄) (x : X) :
   let t' := s' \ (t1 ∪ t2) ∪ (s' ∩ v) in

@@ -82,22 +82,18 @@ Proof.
     assert (Sp ∩ R [=] Sp) as Speq by (apply inter_subset_equal; eauto).
     assert (L ∩ (Sp ∩ R ∪ M) [=] L) as Leq
         by (apply inter_subset_equal in H20; rewrite Speq, H20; eauto).
-    set (L' := set_take_prefer (k - cardinal (Exp.freeVars e ∩ R \ L))
-                               (L ∩ (Sp ∩ R ∪ M)) (Exp.freeVars e \ R)).
+    set (L' := pick_load k R M Sp L (Exp.freeVars e)).
     set (K' := pick_kill k R L' (Exp.freeVars e) lv).
     set (Kx':= pick_killx k x (R \ K' ∪ L') lv).
     set (Sp':= (getAnn al0 ∩ (K' ∪ Kx') \ M ∪ (Sp ∩ R))).
     assert (L [=] L') as Leq'.
-    { 
-      subst L'. rewrite set_take_prefer_eq; rewrite Leq; eauto.
-      * apply Nat.le_add_le_sub_r. rewrite <-union_cardinal; [|clear;cset_tac].
-        rewrite H22. rewrite subset_cardinal; eauto. clear; cset_tac.
-      * clear - H22 sub_R. cset_tac.
+    {
+      symmetry. subst L'. eapply pick_load_eq; eauto.
+      - clear - H22. cset_tac.
+      - clear - H22 H24. rewrite H22, union_assoc, union_idem. eauto.
     }
-
     assert (K0 [=] K') as Keq.
     { admit. }
-
     assert (Kx [=] Kx') as Kxeq by admit.
     assert (Sp [=] Sp') as Speq'.
     {
@@ -110,8 +106,7 @@ Proof.
     subst K' Kx' L' Sp'.
     eapply IHrliveSnd; eauto;
       [unfold getAnn at 2 3 4| unfold getAnn at 1 2 3 5 6 7];
-    set (L' := set_take_prefer (k - cardinal (Exp.freeVars e ∩ R \ L))
-                               (L ∩ (Sp ∩ R ∪ M)) (Exp.freeVars e \ R)) in *;
+      set (L' := pick_load k R M Sp L (Exp.freeVars e)) in *;
     set (K' := pick_kill k R L' (Exp.freeVars e) lv) in *;
     set (Kx':= pick_killx k x (R \ K' ∪ L') lv) in *;
     set (Sp':= (getAnn al0 ∩ (K' ∪ Kx') \ M ∪ (Sp ∩ R))) in *.
@@ -123,16 +118,14 @@ Proof.
     { apply inter_subset_equal. rewrite H19. eauto. } 
     assert (L ∩ (Sp ∩ R ∪ M) [=] L) as Leq
         by (apply inter_subset_equal in H23; rewrite Speq, H23; eauto).
-    set (L' := set_take_prefer (k - cardinal (Op.freeVars e ∩ R \ L))
-                               (L ∩ (Sp ∩ R ∪ M)) (Op.freeVars e \ R)).
+    set (L' := pick_load k R M Sp L (Op.freeVars e)).
     set (K' := pick_kill k R L' (Op.freeVars e) (getAnn al1 ∪ getAnn al2)).
     set (Sp':= (getAnn al0 ∪ getAnn al3 ∩ K' \ M ∪ (Sp ∩ R))).
     assert (L [=] L') as Leq'.
     {
-      subst L'. rewrite set_take_prefer_eq; rewrite Leq; eauto.
-      * apply Nat.le_add_le_sub_r. rewrite <-union_cardinal; [|clear;cset_tac].
-        rewrite H24. rewrite subset_cardinal; eauto. clear; cset_tac.
-      * clear - H24 sub_R. cset_tac.
+      symmetry. subst L'. eapply pick_load_eq; eauto.
+      - clear - H24; cset_tac.
+      - rewrite H24, union_assoc, union_idem. eauto.
     }
     assert (K [=] K') as Keq by admit.
     assert (Sp [=] Sp') as Speq'.
@@ -144,10 +137,9 @@ Proof.
     } 
     econstructor; [econstructor| |]; eauto; [econstructor | |]; eauto;
       subst L' K' Sp';
-    set (L' := set_take_prefer (k - cardinal (Op.freeVars e ∩ R \ L))
-                               (L ∩ (Sp ∩ R ∪ M)) (Op.freeVars e \ R)) in *;
-    set (K' := pick_kill k R L' (Op.freeVars e) (getAnn al1 ∪ getAnn al2)) in *;
-    set (Sp':= (getAnn al0 ∪ getAnn al3 ∩ K' \ M ∪ (Sp ∩ R))) in *.
+      set (L' := pick_load k R M Sp L (Op.freeVars e)) in *;
+      set (K' := pick_kill k R L' (Op.freeVars e) (getAnn al1 ∪ getAnn al2)) in *;
+      set (Sp':= (getAnn al0 ∪ getAnn al3 ∩ K' \ M ∪ (Sp ∩ R))) in *.
     + eapply IHrliveSnd1; eauto.
       * rewrite <-Keq, <-Leq'. rewrite <-sub_R. subst K. clear - H1; cset_tac.
       * eapply spill_max_kill_ext; eauto; [|rewrite Speq';eauto].
@@ -162,9 +154,9 @@ Proof.
     { apply inter_subset_equal. rewrite H; eauto. }
     econstructor; econstructor; [econstructor|]; eauto.
     assert ((L ∩ (Sp ∩ R ∪ M)) [=] L) as Leq.
-    { apply inter_subset_equal in H11. rewrite Speq. eauto. }
+    { apply inter_subset_equal in H11. rewrite Speq. eauto. } admit. (*
     rewrite set_take_prefer_eq; rewrite Leq; eauto.
     + apply Nat.le_add_le_sub_r. rewrite <-union_cardinal; [|clear;cset_tac].
         rewrite H12. rewrite subset_cardinal; eauto. clear; cset_tac.
-    + rewrite H12. clear; cset_tac.
+    + rewrite H12. clear; cset_tac.*)
   - admit.

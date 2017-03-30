@@ -82,3 +82,11 @@ Proof.
     rewrite <- uni;
     cset_tac.
 Qed.
+
+
+Lemma incl_minus_union (X:Type) `{OrderedType X} (s t u : ⦃X⦄) :
+  t ⊆ u -> s \ t ∪ u [=] s ∪ u
+.
+Proof.
+  intros; cset_tac.
+Qed.
