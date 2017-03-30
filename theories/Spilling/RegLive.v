@@ -9,7 +9,7 @@ Set Implicit Arguments.
 
 (** * Register Liveness *)
 
-Fixpoint reg_live 
+Fixpoint reg_live
          (ZL : list params)
          (Lv : list ⦃var⦄)
          (G : ⦃var⦄)
@@ -20,7 +20,7 @@ Fixpoint reg_live
   :=
     match s, sl with
     | stmtLet x e s, ann1 (Sp, L, _) sl'
-                          (* maybe we have to add Exp.freeVars e and etc. 
+                          (* maybe we have to add Exp.freeVars e and etc.
                              getAnn al [<=] {x; R
 *)
       => let lv_s := reg_live ZL Lv (singleton x) s sl' in
@@ -94,7 +94,7 @@ Inductive rlive_sound
                  rlive_sound (fst ⊝ F ++ ZL) (getAnn ⊝ als ++ Lv) (snd Zs) sl_s a)
     -> (forall n Zs a rm, get F n Zs ->
                     get als n a ->
-                    get rms n rm -> 
+                    get rms n rm ->
                     (of_list (fst Zs) ∩ fst rm) ⊆ getAnn a) (* don't add L here *)
     -> getAnn alb ⊆ lv ∪ L
     -> rlive_sound ZL Lv (stmtFun F t) (annF (Sp,L,rms) sl_F sl_t) (annF lv als alb)
@@ -155,7 +155,7 @@ Proof.
     simpl; eauto; try cset_tac.
   induction l0; simpl; eauto.
   - cset_tac.
-  - destruct a. destruct l0; simpl; cset_tac. 
+  - destruct a. destruct l0; simpl; cset_tac.
 Qed.
 
 
@@ -183,7 +183,7 @@ Definition rlive_min
                 -> Rlv ⊆ fst RM)
 .
 *)
-  
+
 (*Definition rlive_min k ZL Λ RM  s sl rlv
   :=
     spill_sound k ZL Λ RM s sl
@@ -207,7 +207,7 @@ Proof.
     + eapply map_get_eq; eauto.
   - rewrite reg_live_G_eq. rewrite H, IHspillSnd; eauto.
     + simpl; clear; cset_tac.
-    + rewrite List.map_app. apply PIR2_app; eauto. 
+    + rewrite List.map_app. apply PIR2_app; eauto.
 Qed.
 
 
@@ -228,34 +228,24 @@ Proof.
   - econstructor; eauto. clear spillSnd1 spillSnd2. unfold is_rlive_min. intros.
     invc H3. rewrite !reg_live_R; eauto. cbn. clear - H19 H16. cset_tac.
   - eapply PIR2_nth_2 with (blk:=R_f) in pir2 as [Rl [get_Rl Rl_sub]]; [|eapply map_get_eq;eauto].
-    erewrite !get_nth; eauto. 
+    erewrite !get_nth; eauto.
     econstructor; eauto. unfold is_rlive_min.
     intros. rewrite Rl_sub. invc H8. eapply get_get_eq with (x:=Z) in H22;eauto. subst Z0.
-    eapply get_get_eq with (x':=(R_f,M_f)) in H23; eauto. invc H23. 
+    eapply get_get_eq with (x':=(R_f,M_f)) in H23; eauto. invc H23.
     rewrite H17, H24, H26. clear; cset_tac.
   - econstructor; eauto.
     + intros. inv_get. eapply H6; eauto.
       * rewrite List.map_app. eapply PIR2_app; eauto.
       * eapply H13; eauto.
-        (* replace
-          (reg_live (fst ⊝ F ++ ZL) (fst ⊝ rms ++ rLv) (of_list (fst Zs) ∩ fst rm) (snd Zs) sl_s)
-          with
-            ((fun (ps : params * stmt) (rmsl : spilling * ⦃var⦄) =>
-                let (sl_s0, Rf) := rmsl in
-                reg_live (fst ⊝ F ++ ZL) (fst ⊝ rms ++ rLv) (of_list (fst ps:params) ∩ Rf) (snd ps) sl_s0)
-               Zs
-               (pair sl_s (fst rm))).*)
-        admit.
+        eapply zip_get_eq; eauto using zip_get.
     + eapply IHspillSnd; eauto.
       rewrite List.map_app. eapply PIR2_app; eauto.
     + unfold is_rlive_min. intros. clear H6 IHspillSnd spillSnd H13 H11 H5. invc H7.
       rewrite reg_live_R; eauto; cbn; [clear - H18; cset_tac|].
       rewrite List.map_app. eapply PIR2_app; eauto.
-Admitted.  
-  
+Qed.
 
 
-  
 (*
 Proof.
   intros spillSnd pir2. general induction spillSnd; simpl.
@@ -268,7 +258,7 @@ Proof.
     + eapply map_get_eq; eauto.
   - rewrite H, IHspillSnd; eauto.
     + simpl; clear; cset_tac.
-    + rewrite List.map_app. apply PIR2_app; eauto. 
+    + rewrite List.map_app. apply PIR2_app; eauto.
 Qed.
 *)
 
@@ -295,7 +285,7 @@ Qed.
 
 Lemma reg_live_sound k ZL Λ rlv (R M : ⦃var⦄) G s sl
   : spill_sound k ZL Λ (R,M) s sl
-    -> PIR2 Subset rlv (fst ⊝ Λ) 
+    -> PIR2 Subset rlv (fst ⊝ Λ)
     -> rlive_sound ZL rlv s sl (reg_live ZL rlv G s sl)
 .
 Proof.
@@ -331,7 +321,7 @@ Proof.
     + intros. inv_get.
       apply live_op_sound_incl with (lv':=Op.freeVars y).
       * apply Op.live_freeVars.
-      * erewrite !get_nth; eauto. 
+      * erewrite !get_nth; eauto.
         erewrite <-incl_list_union with (s:=Op.freeVars y); eauto; clear; cset_tac.
     + eauto.
   - simpl.
@@ -351,7 +341,7 @@ Proof.
     + eauto with len.
     + intros; inv_get. eapply rlive_sound_monotone. eapply H6; eauto.
       * apply pair_eta.
-      * rewrite List.map_app. apply PIR2_app; eauto. 
+      * rewrite List.map_app. apply PIR2_app; eauto.
       * apply PIR2_app; [|apply PIR2_refl;eauto].
         apply PIR2_get. intros; inv_get.
         -- rewrite reg_live_G_eq, reg_live_R; eauto.
@@ -408,4 +398,3 @@ Proof.
   general induction rliveMin; econstructor; eauto; unfold is_rlive_min in *; intros; rewrite <-Geq;
     eauto.
 Qed.
-      
