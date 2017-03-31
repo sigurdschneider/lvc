@@ -455,6 +455,12 @@ Proof.
   firstorder.
 Qed.
 
+Lemma P_False_P_False (P:Prop)
+  : (P -> False) -> (P <-> False).
+Proof.
+  split; intros; eauto. inv H0.
+Qed.
+
 Lemma P_P_True (P:Prop)
   : P -> (P <-> True).
 Proof.
@@ -475,6 +481,18 @@ Qed.
 
 Lemma True_or_right (P:Prop)
   : True \/ P <-> True.
+Proof.
+  firstorder.
+Qed.
+
+Lemma False_and_right (P:Prop)
+  : P /\ False <-> False.
+Proof.
+  firstorder.
+Qed.
+
+Lemma False_and_left (P:Prop)
+  : False /\ P <-> False.
 Proof.
   firstorder.
 Qed.
@@ -543,9 +561,18 @@ Qed.
 Smpl Add 50
      match goal with
      | [ H : ?x ∈ ?s |- context [?x ∈ ?s -> False ] ] => rewrite (@P_P_False_False _ H)
+     | [ H : ?x ∈ ?s |- context [?x ∉ ?s ] ] => rewrite (@P_P_False_False _ H)
      | [ H : ?x ∈ ?s, H' : context [?x ∈ ?s -> False ] |- _ ] => rewrite (@P_P_False_False _ H) in H'
+     | [ H : ?x ∈ ?s, H' : context [?x ∉ ?s ] |- _ ] => rewrite (@P_P_False_False _ H) in H'
+
+     | [ H : ?x ∉ ?s |- context [?x ∈ ?s] ] => rewrite (@P_False_P_False _ H)
+     | [ H : ?x ∈ ?s -> False  |- context [?x ∈ ?s] ] => rewrite (@P_False_P_False _ H)
      | [ H : ?x ∈ ?s |- context [?x ∈ ?s] ] => rewrite (@P_P_True _ H)
      | [ H : ?x ∈ ?s, H' : context [?x ∈ ?s] |- _ ] => rewrite (@P_P_True _ H) in H'
+     | [ H : ?x ∉ ?s |- context [?x ∉ ?s] ] => rewrite (@P_P_True _ H)
+     | [ H : ?x ∉ ?s |- context [?x ∈ ?s -> False] ] => rewrite (@P_P_True _ H)
+     | [ H : ?x ∈ ?s -> False  |- context [?x ∈ ?s -> False] ] => rewrite (@P_P_True _ H)
+     | [ H : ?x ∈ ?s -> False  |- context [?x ∉ ?s] ] => rewrite (@P_P_True _ H)
      | [ |- context [ ?x === ?x ] ] => rewrite (@equiv_True _ x)
      | [ H : context [ ?x === ?x ] |- _ ] => rewrite (@equiv_True _ x) in H
      | [ |- context [ True \/ _ ] ] => setoid_rewrite True_or_left
@@ -556,6 +583,10 @@ Smpl Add 50
      | [ H : context [ True /\ _ ] |- _ ] => setoid_rewrite True_and_left in H
      | [ |- context [ _ /\ True ] ] => setoid_rewrite True_and_right
      | [ H : context [ _ /\ True ] |- _ ] => setoid_rewrite True_and_right in H
+     | [ |- context [ False /\ _ ] ] => setoid_rewrite False_and_left
+     | [ H : context [ False /\ _ ] |- _ ] => setoid_rewrite False_and_left in H
+     | [ |- context [ _ /\ False ] ] => setoid_rewrite False_and_right
+     | [ H : context [ _ /\ False ] |- _ ] => setoid_rewrite False_and_right in H
      | [ |- context [ _ \/ False ] ] => setoid_rewrite P_or_False_right
      | [ H : context [ _ \/ False ] |- _ ] => setoid_rewrite P_or_False_right in H
      | [ |- context [ False \/ _ ] ] => setoid_rewrite P_or_False_left

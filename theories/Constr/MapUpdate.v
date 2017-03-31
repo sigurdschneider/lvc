@@ -106,11 +106,8 @@ Section MapUpdateList.
     : x ∉ of_list Z
     -> (E [ Z <-- Y' ]) x = E x.
   Proof.
-    intros. general induction Z; simpl; destruct Y'; eauto.
-    lud.
-    + exfalso. eapply H0. simpl; cset_tac; intuition.
-    + simpl in H0. assert (x ∉ of_list Z); eauto.
-      - cset_tac; intuition.
+    intros. general induction Z; simpl in *; destruct Y'; eauto.
+    lud; cset_tac.
   Qed.
 
   Context `{Equivalence Y}.

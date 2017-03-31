@@ -212,9 +212,9 @@ Lemma satisfiesAll_add E gamma Gamma
     <-> satisfies E gamma /\ satisfiesAll E Gamma.
 Proof.
   split.
-  intros H; split; hnf; intros; eapply H; cset_tac; intuition.
-  intros [A B]; hnf; intros. cset_tac'.
-  destruct H0; dcr; subst; eauto.
+  - intros H; split; hnf; intros; eapply H; cset_tac.
+  - intros [A B]; hnf; intros. cset_tac'.
+    destruct H0; dcr; subst; eauto.
 Qed.
 
 Lemma unsatisfiable_add_left gamma Gamma
@@ -300,8 +300,8 @@ Lemma entails_union_split Gamma Γ' Γ''
 Proof.
   unfold entails, satisfiesAll.
   split; intros; dcr.
-    + eapply H; eauto. cset_tac; intuition.
-    + eapply H; eauto. cset_tac; intuition.
+    + eapply H; eauto. cset_tac.
+    + eapply H; eauto. cset_tac.
 Qed.
 
 Lemma entails_union Gamma Γ' Γ''
@@ -357,8 +357,8 @@ Instance entails_morphism_add gamma
 Proof.
   unfold Proper, respectful; intros.
   eapply entails_add'.
-  - eapply entails_monotone; cset_tac; eauto.
-  - eapply entails_subset; cset_tac; eauto.
+  - eapply entails_monotone; cset_tac.
+  - eapply entails_subset; cset_tac.
 Qed.
 
 
@@ -412,7 +412,7 @@ Lemma entails_empty s
   : entails s ∅.
 Proof.
   hnf; intros. intros.
-  - hnf; intros. cset_tac; intuition.
+  - hnf; intros. cset_tac.
 Qed.
 
 Lemma entails_eqns_trans Gamma e e' e''
@@ -441,8 +441,8 @@ Lemma satisfiesAll_union E Gamma Γ'
     <-> satisfiesAll E Gamma /\ satisfiesAll E Γ'.
 Proof.
   split.
-  intros H; split; hnf; intros; eapply H; cset_tac; intuition.
-  intros [A B]; hnf; intros. cset_tac.
+  - intros H; split; hnf; intros; eapply H; cset_tac.
+  - intros [A B]; hnf; intros. cset_tac.
 Qed.
 
 Lemma satisfies_agree E E' gamma
@@ -677,7 +677,7 @@ Proof.
   simpl. erewrite IHlength_eq; eauto. simpl; congruence.
   eapply satisfiesAll_monotone; eauto.
   unfold list_EqnApx; simpl in *.
-  cset_tac; intuition.
+  cset_tac.
 Qed.
 
 Lemma satisfies_omap_op_eval_fstNoneOrR V Y Y'
@@ -770,8 +770,10 @@ Lemma fold_union_add X `{OrderedType X} x Γ
 : fold union ({x; Γ}) {}[=]
   x ∪ fold union Γ {}.
 Proof.
-  assert ({x; Γ} [=] {{x}} ∪ Γ).
-  cset_tac; intuition. rewrite H0.
+  assert ({x; Γ} [=] {{x}} ∪ Γ). {
+    cset_tac.
+  }
+  rewrite H0.
   rewrite fold_union_app.
   rewrite fold_single; eauto using Equal_ST, union_m, transpose_union.
   clear; cset_tac.
@@ -800,7 +802,7 @@ Lemma eqns_freeVars_add' Gamma e
 Proof.
   intros. unfold eqns_freeVars.
   rewrite map_add, fold_union_add.
-  cset_tac; intuition. intuition.
+  cset_tac. intuition.
 Qed.
 
 

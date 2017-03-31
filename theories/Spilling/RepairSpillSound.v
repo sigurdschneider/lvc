@@ -101,7 +101,7 @@ Proof.
     { subst K'. rewrite pick_kill_incl. clear; cset_tac. }
     assert (disj (R \ K') L') as RKLdisj.
     { subst K'. rewrite <-incl_pick_kill. clear. cset_tac. }
-    econstructor; eauto; cbn in *.    
+    econstructor; eauto; cbn in *.
     + subst Sp'. subst K'. rewrite pick_kill_incl. setoid_rewrite meet_in_left at 2.
       setoid_rewrite minus_incl at 2 3.
       rewrite H0, H1. rewrite lv_RM. clear; cset_tac.
@@ -135,12 +135,40 @@ Proof.
       clear - lv_RM. cbn in *. rewrite lv_RM. rewrite union_meet_distr_r.
       apply union_incl_split; [cset_tac|].
       clear; cset_tac.
-  - admit.
+  - repeat let_pair_case_eq; subst. inv_get. simpl in *.
+    eapply Op.freeVars_live_list in H3.
+    destruct x as [Rf Mf]. unfold merge in H1; simpl in *.
+    destruct (get_dec (snd a) 0) as [[[R' M'] ?]|].
+    + repeat erewrite get_nth; eauto using get; simpl.
+      econstructor; eauto.
+      * rewrite pick_kill_incl.
+        rewrite H3 at 1. rewrite lv_RM in *.
+        revert H1. clear_all. cset_tac.
+      * rewrite pick_load_incl at 1.
+        rewrite lv_RM in *. revert H1.
+        clear_all; cset_tac.
+      * admit.
+      * admit.
+      * admit.
+      * admit.
+      * rewrite lv_RM in *.
+        rewrite pick_kill_incl at 1.
+        (*rewrite H3 at 1.*)
+        eapply union_incl_split.
+        -- admit.
+        -- rewrite <- incl_pick_kill.
+           rewrite <- incl_pick_load.
+           revert H1.
+           clear_all.
+           admit.
+    + repeat rewrite (not_get_nth_default _ f); eauto. simpl.
+      repeat erewrite get_nth; eauto using get; simpl.
+      admit.
   - destruct a. destruct p as [Sp L]. cbn in *.
     set (L' := pick_load k R M Sp L (Op.freeVars e)) in *.
     econstructor; eauto.
     + cset_tac.
-    + subst L'. rewrite pick_load_incl. 
+    + subst L'. rewrite pick_load_incl.
       apply Op.freeVars_live in H. rewrite H. clear - lv_RM. cset_tac.
     + instantiate (1:=(R \ Op.freeVars e) ∪ (R ∩ L')). rewrite <-minus_union.
       rewrite incl_minus_union; [|clear;cset_tac]. rewrite minus_minus.
@@ -152,6 +180,6 @@ Proof.
       assert (forall n1 n2 n3 n4 : nat, n1 <= n3 -> n3 <= n2 -> n1 + (n2 - n3) <= n2) as nateq.
         { clear. intros. omega. }
         apply nateq; eauto.
-        -- apply subset_cardinal;eauto. clear; cset_tac. 
+        -- apply subset_cardinal;eauto. clear; cset_tac.
         -- rewrite subset_cardinal;eauto. clear; cset_tac.
   - admit.

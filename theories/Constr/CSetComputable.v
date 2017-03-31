@@ -62,7 +62,7 @@ Proof.
       * left. exists x. cset_tac.
       * right. intro; eapply n. dcr.
         rewrite H4 in *; clear H4. cset_tac'.
-        exfalso. eapply n0. rewrite H2. eauto.
+        rewrite <- H2 in H7. exfalso; eauto.
 Qed.
 
 Instance set_not_in_proper X `{OrderedType X} (s:set X)
@@ -105,13 +105,14 @@ Proof.
   - left.
     revert H2. pattern s. eapply set_induction.
     + intros. eapply empty_is_empty_1 in H2. rewrite H2 in H4.
-      cset_tac; intuition.
+      cset_tac.
     + unfold set_quant_dec. intros.
       rewrite fold_2 in H5; eauto.
       * decide (P x); try congruence.
         eapply Add_Equal in H4.
-        eapply H4 in H6. cset_tac'.
-        rewrite <- H9; eauto.
+        eapply H4 in H6. eapply add_iff in H6.
+        destruct H6; eauto.
+        rewrite <- H6; eauto.
       * unfold Proper, respectful, flip; intros; subst.
         repeat cases; eauto.
         exfalso. rewrite H7 in NOTCOND; eauto.
@@ -129,7 +130,7 @@ Proof.
       * decide (P x).
         eapply H2; eauto. intros. eapply H6.
         eapply Add_Equal in H4. rewrite H4.
-        cset_tac; intuition.
+        cset_tac.
         eapply Add_Equal in H4. eapply n, H6.
         rewrite H4. cset_tac; intuition.
       * unfold Proper, respectful, flip; intros; subst.

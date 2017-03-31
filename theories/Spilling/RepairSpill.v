@@ -43,9 +43,9 @@ Fixpoint repair_spill
       let R_e  := R \ K ∪ L' in
       let K_x  := pick_killx k R_e (getAnn rlv') in
    (* here we need normal liveness, because we have to spill variables that are loaded later on *)
-      let Sp'  := (getAnn lv' ∩ (K ∪ K_x) \ M) ∪ (Sp ∩ R) in 
+      let Sp'  := (getAnn lv' ∩ (K ∪ K_x) \ M) ∪ (Sp ∩ R) in
       ann1 (Sp',L',nil) (repair_spill k ZL Λ {x; R_e \ K_x} (Sp' ∪ M) s rlv' lv' sl')
-           
+
   | stmtReturn e, _, _, ann0 (Sp,L,_)
     => let Fv_e := Op.freeVars e in
       let L'   := pick_load k R M Sp L Fv_e in
@@ -62,16 +62,17 @@ Fixpoint repair_spill
            (repair_spill k ZL Λ (R \ K ∪ L') (Sp' ∪ M) s1 rlv1 lv1 sl1)
            (repair_spill k ZL Λ (R \ K ∪ L') (Sp' ∪ M) s2 rlv2 lv2 sl2)
 
-  | stmtApp f Y, _, _, ann0 (Sp,L,(R',M')::nil)
-    => let fv_Y:= list_union (Op.freeVars ⊝ Y) in
+  | stmtApp f Y, _, _, ann0 (Sp,L,RMappL)
+    => let RMapp := nth 0 RMappL (∅,∅) in
+      let fv_Y:= list_union (Op.freeVars ⊝ Y) in
       let R_f := fst (nth (counted f) Λ (∅,∅)) in
       let M_f := snd (nth (counted f) Λ (∅,∅)) in
       let Z   := nth (counted f) ZL nil in
       let L'  := pick_load k R M Sp L (R_f \ of_list Z) in
-      let K   := pick_kill k R L' (R_f \ of_list Z) (list_union (Op.freeVars ⊝ Y) \ M') in
-      let M'' := (M \ (R \ K ∪ L)) ∩ fv_Y ∪ (M' ∩ (Sp ∪ M)) in
+      let K   := pick_kill k R L' (R_f \ of_list Z) (list_union (Op.freeVars ⊝ Y) \ snd RMapp) in
+      let M'' := (M \ (R \ K ∪ L)) ∩ fv_Y ∪ (snd RMapp ∩ (Sp ∪ M)) in
       let Sp' := ((fv_Y ∩ K \ M) ∪ (M_f  \ of_list Z \ M)) ∪ (Sp ∩ R) in
-      ann0 (Sp',L',(R', M'')::nil)
+      ann0 (Sp',L',(fst RMapp, M'')::nil)
 
   | stmtFun F t, annF rLV rlv_F rlv_t, annF LV lv_F lv_t, annF (Sp,L,rms) sl_F sl_t
     => let rms' := stretch_rms k F rms (getAnn ⊝ lv_F) in
