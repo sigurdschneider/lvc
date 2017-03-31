@@ -67,6 +67,17 @@ Proof.
     omega.
 Qed.
 
+
+Lemma pick_eq' (X:Type) `{OrderedType X} (k:nat) (s t : ⦃X⦄) :
+  k <= cardinal s
+  -> pick k s t [=] s
+.
+Proof.
+  intros card. unfold pick. replace (k - cardinal s) with 0 by omega.
+  cbn. clear; cset_tac.
+Qed.
+
+
 (* pick_kill *)
              
 Definition pick_kill (X:Type) `{OrderedType X} (k:nat) (s t u v : ⦃X⦄) : ⦃X⦄
@@ -98,7 +109,22 @@ Proof.
   rewrite seteq in card. rewrite cardinal_difference' in card; [|clear;cset_tac].
   eapply pick_card. omega.
 Qed.
-  
+
+
+Lemma pick_kill_eq (X:Type) `{OrderedType X} (k:nat) (s t u v : ⦃X⦄) :
+  let w := s \ (u ∪ v) ∪ (s ∩ t) in 
+  cardinal (s \ w ∪ t) <= k
+  -> pick_kill k s t u v [=] s \ (u ∪ v) ∪ (s ∩ t)
+.
+Proof.
+  intros w card. subst w.
+  rewrite union_cardinal in card; [|clear;cset_tac].
+  unfold pick_kill. apply pick_eq'.
+  assert (forall l m n o : nat, (l - o) + m <= n -> l + m - n <= o) as nateq by (intros;omega).
+  apply nateq. rewrite <-cardinal_difference'; [|clear;intros;intro N;cset_tac].
+  eauto.
+Qed.
+
 (* pick_killx *)
 
 Definition pick_killx (X:Type) `{OrderedType X} (k:nat) (s t : ⦃X⦄) : ⦃X⦄
@@ -126,6 +152,14 @@ Lemma pick_killx_card (X:Type) `{OrderedType X} (k:nat) (s t : ⦃X⦄) :
 Proof.
   intros card.
   unfold pick_killx. rewrite <-pick_card; eauto.
+Qed.
+
+Lemma pick_killx_eq (X:Type) `{OrderedType X} (k:nat) (s t : ⦃X⦄) :
+  S (cardinal s) - k <= cardinal (s \ t)
+  -> pick_killx k s t [=] (s \ t)
+.
+Proof.
+  apply pick_eq'.
 Qed.
 
 

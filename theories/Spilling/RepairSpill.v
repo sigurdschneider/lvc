@@ -39,9 +39,9 @@ Fixpoint repair_spill
       (* we only use register liveness at 3 points to make some preferences
          in the selection of the kill set: (here)
          if the register liveness is incorrect we will still get a correct spilling *)
-      let K    := pick_kill k R L' (Exp.freeVars e) (getAnn rlv) in
+      let K    := pick_kill k R L' (Exp.freeVars e) (getAnn rlv') in
       let R_e  := R \ K ∪ L' in
-      let K_x  := pick_killx k R_e (getAnn rlv) in
+      let K_x  := pick_killx k R_e (getAnn rlv') in
    (* here we need normal liveness, because we have to spill variables that are loaded later on *)
       let Sp'  := (getAnn lv' ∩ (K ∪ K_x) \ M) ∪ (Sp ∩ R) in 
       ann1 (Sp',L',nil) (repair_spill k ZL Λ {x; R_e \ K_x} (Sp' ∪ M) s rlv' lv' sl')

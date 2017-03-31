@@ -83,8 +83,8 @@ Proof.
     assert (L ∩ (Sp ∩ R ∪ M) [=] L) as Leq
         by (apply inter_subset_equal in H20; rewrite Speq, H20; eauto).
     set (L' := pick_load k R M Sp L (Exp.freeVars e)).
-    set (K' := pick_kill k R L' (Exp.freeVars e) lv).
-    set (Kx':= pick_killx k x (R \ K' ∪ L') lv).
+    set (K' := pick_kill k R L' (Exp.freeVars e) (getAnn al)).
+    set (Kx':= pick_killx k (R \ K' ∪ L') (getAnn al)).
     set (Sp':= (getAnn al0 ∩ (K' ∪ Kx') \ M ∪ (Sp ∩ R))).
     assert (L [=] L') as Leq'.
     {
@@ -93,8 +93,15 @@ Proof.
       - clear - H22 H24. rewrite H22, union_assoc, union_idem. eauto.
     }
     assert (K0 [=] K') as Keq.
-    { admit. }
-    assert (Kx [=] Kx') as Kxeq by admit.
+    { subst K' K0. symmetry. rewrite Leq'. apply pick_kill_eq. rewrite <-Leq'. eauto. }
+    assert (Kx [=] Kx') as Kxeq.
+    {
+      symmetry. subst Kx Kx'. rewrite Keq, Leq'. apply pick_killx_eq. rewrite <-Keq, <-Leq'.
+      assert ((R \ K0 ∪ L) \ getAnn al [=] {x; R \ K0 ∪ L} \ getAnn al) as seteq.
+      { clear - H1 H2. apply incl_eq; [|cset_tac]. cset_tac. }
+      rewrite seteq. rewrite cardinal_difference'.
+      admit. admit.
+    }
     assert (Sp [=] Sp') as Speq'.
     {
       subst Sp'. rewrite union_comm. setoid_rewrite Speq at 1. rewrite union_comm.
@@ -105,10 +112,9 @@ Proof.
     econstructor; [econstructor| ]; eauto; [econstructor | ]; eauto.
     subst K' Kx' L' Sp'.
     eapply IHrliveSnd; eauto;
-      [unfold getAnn at 2 3 4| unfold getAnn at 1 2 3 5 6 7];
       set (L' := pick_load k R M Sp L (Exp.freeVars e)) in *;
-    set (K' := pick_kill k R L' (Exp.freeVars e) lv) in *;
-    set (Kx':= pick_killx k x (R \ K' ∪ L') lv) in *;
+    set (K' := pick_kill k R L' (Exp.freeVars e) (getAnn al)) in *;
+    set (Kx':= pick_killx k (R \ K' ∪ L') (getAnn al)) in *;
     set (Sp':= (getAnn al0 ∩ (K' ∪ Kx') \ M ∪ (Sp ∩ R))) in *.
     + rewrite <-Kxeq, <-Keq, <-Leq'. subst K0 Kx. rewrite minus_minus. rewrite <-minus_union.
       rewrite minus_minus. setoid_rewrite <-sub_R at 1. clear - H1. cset_tac.
@@ -127,7 +133,12 @@ Proof.
       - clear - H24; cset_tac.
       - rewrite H24, union_assoc, union_idem. eauto.
     }
-    assert (K [=] K') as Keq by admit.
+    assert (K [=] K') as Keq.
+    {
+      symmetry. subst K K'. rewrite pick_kill_eq.
+      - rewrite Leq'. clear; cset_tac.
+      - rewrite <-Leq'. rewrite <-union_assoc. eauto.
+    }
     assert (Sp [=] Sp') as Speq'.
     {
       subst Sp'. rewrite union_comm. setoid_rewrite Speq at 1. rewrite union_comm.
@@ -154,9 +165,8 @@ Proof.
     { apply inter_subset_equal. rewrite H; eauto. }
     econstructor; econstructor; [econstructor|]; eauto.
     assert ((L ∩ (Sp ∩ R ∪ M)) [=] L) as Leq.
-    { apply inter_subset_equal in H11. rewrite Speq. eauto. } admit. (*
-    rewrite set_take_prefer_eq; rewrite Leq; eauto.
-    + apply Nat.le_add_le_sub_r. rewrite <-union_cardinal; [|clear;cset_tac].
-        rewrite H12. rewrite subset_cardinal; eauto. clear; cset_tac.
-    + rewrite H12. clear; cset_tac.*)
+    { apply inter_subset_equal in H11. rewrite Speq. eauto. }
+    rewrite pick_load_eq; eauto.
+    + clear - H12. cset_tac.
+    + rewrite subset_cardinal; eauto. clear - H12; cset_tac.
   - admit.

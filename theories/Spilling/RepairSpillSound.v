@@ -39,8 +39,8 @@ Proof.
   general induction lvSnd; invc anno_sl; invc anno_rlv; invc expB; (*invc rena;*) cbn.
   - destruct a,p. rename s0 into Sp. rename s1 into L. rename a0 into Rlv.
     set (L' := pick_load k R M Sp L (Exp.freeVars e)) in *.
-    set (K' := pick_kill k R L' (Exp.freeVars e) Rlv) in *.
-    set (Kx' := pick_killx k (R \ K' ∪ L') Rlv) in *.
+    set (K' := pick_kill k R L' (Exp.freeVars e) (getAnn sa0)) in *.
+    set (Kx' := pick_killx k (R \ K' ∪ L') (getAnn sa0)) in *.
     set (Sp':= (getAnn al ∩ (K' ∪ Kx') \ M ∪ (Sp ∩ R))) in *.
     assert (Sp ∩ R ⊆ Sp') as Spincl.
     { subst Sp'. clear; cset_tac. }
