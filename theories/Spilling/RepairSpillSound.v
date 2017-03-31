@@ -28,7 +28,7 @@ Lemma repair_spill_sound k ZL Λ R M s rlv lv sl (*ra*)
   : live_sound Imperative ZL (merge ⊝ Λ) s lv
     -> annotation s sl
     -> annotation s rlv
-(*    -> renamedApart s ra
+    (*    -> renamedApart s ra
     -> R ∪ M [=] fst (getAnn ra)*)
     -> getAnn lv ⊆ R ∪ M
     -> exp_vars_bounded k s
@@ -163,7 +163,41 @@ Proof.
            admit.
     + repeat rewrite (not_get_nth_default _ f); eauto. simpl.
       repeat erewrite get_nth; eauto using get; simpl.
-      admit.
+      econstructor; eauto.
+      * rewrite pick_kill_incl.
+        rewrite H3 at 1. rewrite lv_RM in *.
+        revert H1. clear_all. cset_tac.
+      * rewrite pick_load_incl at 1.
+        rewrite lv_RM in *. revert H1.
+        clear_all; cset_tac.
+      * instantiate (1:=pick_kill k R
+                                  (pick_load k R M (fst (fst a)) (snd (fst a)) (Rf \ of_list Z))
+                                  (Rf \ of_list Z) (list_union (Op.freeVars ⊝ Y) \ {})).
+        admit.
+      * rewrite pick_kill_incl.
+        rewrite pick_load_incl at 1.
+        rewrite <- incl_pick_load.
+        rewrite lv_RM in *.
+        revert H1.
+        destruct a as [[Sp L] c]. simpl in *.
+        admit.
+      * clear_all; cset_tac.
+      * rewrite <- incl_pick_kill at 2.
+        rewrite pick_kill_incl.
+        rewrite pick_load_incl at 1.
+        rewrite <- incl_pick_load.
+        rewrite lv_RM in *.
+        revert H3. clear_all.
+        admit.
+      * rewrite lv_RM in *.
+        rewrite pick_kill_incl at 1.
+        (*rewrite H3 at 1.*)
+        eapply union_incl_split.
+        -- clear_all. cset_tac.
+        -- rewrite <- incl_pick_kill.
+           rewrite <- incl_pick_load.
+           revert H1.
+           clear_all. cset_tac.
   - destruct a. destruct p as [Sp L]. cbn in *.
     set (L' := pick_load k R M Sp L (Op.freeVars e)) in *.
     econstructor; eauto.
