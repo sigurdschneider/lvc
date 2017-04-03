@@ -31,3 +31,4 @@ compiler/STAMP
 Makefile.coq
 doc*
 pkg*
+.timing

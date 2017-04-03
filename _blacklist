@@ -1,5 +1,4 @@
 theories/ValueOpts/ConstantPropagationAnalysisCorrect*
-theories/Spilling/RepairSpill.v
 theories/ValueOpts/GVN*
 theories/Lowering/ToMach.v
 theories/DCE.v
