@@ -1,0 +1,14 @@
+[alias]
+  lg = log --graph --decorate --name-status --date-order
+  bvv = branch -vv
+  cat = -p cat-file -p
+  dx = diff --cached
+  cx = commit -v
+  st = status
+  br = branch
+  co = checkout
+  conflict = !$EDITOR -c '/^[<=|>]\\{7\\}\\( \\|$\\)' `git ls-files --unmerged | cut -c 51- | uniq`
+  pop = stash pop --index -q
+
+[pull]
+  rebase = true
