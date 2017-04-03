@@ -70,8 +70,8 @@ Fixpoint repair_spill
       let Z   := nth (counted f) ZL nil in
       let L'  := pick_load k R M Sp L (R_f \ of_list Z) in
       let K   := pick_kill k R L' (R_f \ of_list Z) (list_union (Op.freeVars ⊝ Y) \ snd RMapp) in
-      let M'' := (M \ (R \ K ∪ L)) ∩ fv_Y ∪ (snd RMapp ∩ (Sp ∪ M)) in
-      let Sp' := ((fv_Y ∩ K \ M) ∪ (M_f  \ of_list Z \ M)) ∪ (Sp ∩ R) in
+      let Sp' := ((fv_Y ∩ K) ∪ (M_f \ of_list Z)) \ M ∪ (Sp ∩ R) in
+      let M'' := ((Sp' ∪ M) \ (R \ K ∪ L')) ∩ fv_Y ∪ (snd RMapp ∩ (Sp' ∪ M)) in
       ann0 (Sp',L',(fst RMapp, M'')::nil)
 
   | stmtFun F t, annF rLV rlv_F rlv_t, annF LV lv_F lv_t, annF (Sp,L,rms) sl_F sl_t

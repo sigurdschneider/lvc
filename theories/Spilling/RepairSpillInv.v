@@ -75,9 +75,8 @@ Lemma repair_spill_inv k ZL Λ s lv sl R M G ra rlv
 Proof.
   intros rena rliveMin rliveSnd rm_ra sub_R liveSnd (*liveMin*) spillSnd. 
   eapply spill_sound_spill_max_kill with (R':=R) (M:=M) in spillSnd; eauto.
-  clear rena rm_ra ra.
-(*  general induction spillSnd; invc liveSnd; invc rliveSnd; invc rliveMin. *)
-  general induction rliveSnd; invc liveSnd; invc spillSnd; invc rliveMin. (*; invc liveMin. *)
+  general induction rliveSnd; invc liveSnd; invc spillSnd; invc rliveMin; invc rena.
+  (*; invc liveMin. *)
   - cbn in sub_R.
     assert (Sp ∩ R [=] Sp) as Speq by (apply inter_subset_equal; eauto).
     assert (L ∩ (Sp ∩ R ∪ M) [=] L) as Leq
@@ -97,10 +96,14 @@ Proof.
     assert (Kx [=] Kx') as Kxeq.
     {
       symmetry. subst Kx Kx'. rewrite Keq, Leq'. apply pick_killx_eq. rewrite <-Keq, <-Leq'.
-      assert ((R \ K0 ∪ L) \ getAnn al [=] {x; R \ K0 ∪ L} \ getAnn al) as seteq.
-      { clear - H1 H2. apply incl_eq; [|cset_tac]. cset_tac. }
-      rewrite seteq. rewrite cardinal_difference'.
-      admit. admit.
+      decide (cardinal (R \ K0 ∪ L) = k).
+      - clear - H24 H25 e0 H7 rm_ra H20 H19.
+        assert (x ∉ R \ K0 ∪ L) as x_nin.
+        { cbn in rm_ra. rewrite H20, H19, rm_ra. clear - rm_ra H7. cset_tac. }
+        rewrite add_cardinal_2 in H25; [| clear - x_nin; cset_tac]. rewrite e0.
+        rewrite cardinal_difference' in H25; [|clear;intros; intro N; cset_tac].
+        rewrite e0 in H25. omega.
+      - omega.
     }
     assert (Sp [=] Sp') as Speq'.
     {
@@ -116,6 +119,9 @@ Proof.
     set (K' := pick_kill k R L' (Exp.freeVars e) (getAnn al)) in *;
     set (Kx':= pick_killx k (R \ K' ∪ L') (getAnn al)) in *;
     set (Sp':= (getAnn al0 ∩ (K' ∪ Kx') \ M ∪ (Sp ∩ R))) in *.
+    + rewrite <-Kxeq, <-Keq, <-Leq'. subst K0 Kx. rewrite minus_minus. rewrite <-minus_union.
+      rewrite minus_minus. apply Exp.freeVars_live in H9. rewrite H9.
+      rewrite minus_incl, meet_comm, meet_in_left. admit.
     + rewrite <-Kxeq, <-Keq, <-Leq'. subst K0 Kx. rewrite minus_minus. rewrite <-minus_union.
       rewrite minus_minus. setoid_rewrite <-sub_R at 1. clear - H1. cset_tac.
     + eapply spill_max_kill_ext; eauto; [|rewrite Speq';eauto]. rewrite Keq, Kxeq, Leq'. eauto.
@@ -152,10 +158,12 @@ Proof.
       set (K' := pick_kill k R L' (Op.freeVars e) (getAnn al1 ∪ getAnn al2)) in *;
       set (Sp':= (getAnn al0 ∪ getAnn al3 ∩ K' \ M ∪ (Sp ∩ R))) in *.
     + eapply IHrliveSnd1; eauto.
+      * admit.
       * rewrite <-Keq, <-Leq'. rewrite <-sub_R. subst K. clear - H1; cset_tac.
       * eapply spill_max_kill_ext; eauto; [|rewrite Speq';eauto].
         rewrite <-Keq, <-Leq'. eauto.
     + eapply IHrliveSnd2; eauto.
+      * admit.
       * rewrite <-Keq, <-Leq'. rewrite <-sub_R. subst K. clear - H2; cset_tac.
       * eapply spill_max_kill_ext; eauto; [|rewrite Speq';eauto].
         rewrite <-Keq, <-Leq'. eauto.
