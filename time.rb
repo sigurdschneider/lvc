@@ -21,8 +21,16 @@ def clr(s,l,h)
   return s >= h ? (green (s.to_s)) : (s < l ? (red (s.to_s)) : (yellow (s.to_s)))
 end
 
+def clr_diff_str(s,t, epsilon, str)
+  if ((s.to_f-t.to_f).abs < epsilon) then
+    return str
+  end
+  return s > t ? (green str)
+         : (s < t) ? (red str) : str
+end
+
 def clr_diff(s,t)
-  return s > t ? (green (s.to_s)) : ((s < (t * 0.95)) ? (red (s.to_s)) : (yellow (s.to_s)))
+  return clr_diff_str(s,t,s.to_f*0.01,s.to_s)
 end
 
 def avg(l)
@@ -97,8 +105,9 @@ begin
   cpu = user[1].to_f * 60 + user[2].to_f + sys[1].to_f * 60 + sys[2].to_f
   timing = "#{cpu.round(2)}"
   changesec = (time - est.to_f)
-  changesecstr = sprintf("%+.2f (%+.1f%%)", changesec, (100*changesec/est.to_f))
-  change = est == "" ? blue("n/a") : (changesec <= 0 ? green(changesecstr) : red(changesecstr))
+  changeperc = 100*changesec/est.to_f
+  changesecstr = sprintf("%+.2f (%+.1f%%)", changesec, changeperc)
+  change = est == "" ? blue("n/a") : (clr_diff_str(-changeperc, 0, 1, changesecstr))
   line_count = `wc -l "#{mod}.v"`.strip.split(' ')[0].to_i
   lps = (line_count / cpu).round(0)
   vosize = File.size?("#{mod}.vo").to_f
