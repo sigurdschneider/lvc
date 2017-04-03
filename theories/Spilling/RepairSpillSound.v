@@ -213,7 +213,6 @@ Proof.
            exploit cardRf as cardRf'; eauto.
            subst K'. apply pick_kill_card. subst L'.
            rewrite pick_load_card;[| rewrite subset_cardinal; eauto; clear; cset_tac].
-           (* we need the invariant cardinal Rf <= k *)
            assert (forall n1 n2 n3 : nat, n1 <= n3 -> n3 <= n2 -> n1 + (n2 - n3) <= n2) as nateq.
            { clear. intros. omega. }
            rewrite nateq; eauto.
