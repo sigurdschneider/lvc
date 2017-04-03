@@ -1,4 +1,3 @@
-theories/ValueOpts/ConstantPropagationAnalysisCorrect*
 theories/ValueOpts/GVN*
 theories/Lowering/ToMach.v
 theories/DCE.v
