@@ -16,6 +16,7 @@
 *.time
 *.aux
 *.d.byte
+*.bak
 .depend
 html
 compiler/lvcc.native
