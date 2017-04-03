@@ -862,3 +862,48 @@ Proof.
   intros. eapply union_cardinal.
   cset_tac.
 Qed.
+
+
+Lemma eq_empty X `{OrderedType X} (G:set X)
+  : G [=] {} ∪ G.
+Proof.
+  cset_tac.
+Qed.
+
+Hint Resolve eq_empty : cset.
+
+
+Smpl Add 30
+     match goal with
+     | [ I : context [ @union ?A ?H _ _ {} ] |- _ ]
+       => rewrite (@empty_neutral_union_r A H) in I
+     | [ I : context [ @union ?A ?H _ {} _ ] |- _ ]
+       => rewrite (@empty_neutral_union A H) in I
+     | [ |- context [ @union ?A ?H _ _ {} ] ] => rewrite (@empty_neutral_union_r A H)
+     | [ |- context [ @union ?A ?H _ {} _ ] ] => rewrite (@empty_neutral_union A H)
+     end : cset.
+
+
+Lemma InA_In_eq_eq X `{OrderedType X} (L:list X) (x:X)
+  : InA eq x L -> InA _eq x L.
+Proof.
+  intros. general induction H0; eauto using InA.
+Qed.
+
+Lemma InA_eq_of_list X `{OrderedType X} x L
+  : InA eq x L -> x ∈ of_list L.
+Proof.
+  intros.
+  eapply InA_In_eq_eq in H0; eauto.
+  cset_tac.
+Qed.
+
+Smpl Add 40
+     match goal with
+     | [ H : InA eq ?x0 ?l |- _ ]
+       => lazymatch goal with
+         | [ I : x0 ∈ of_list l |- _ ]
+           => fail
+         | _ => pose proof (@InA_eq_of_list _ _ _ _ H)
+         end
+     end : cset.

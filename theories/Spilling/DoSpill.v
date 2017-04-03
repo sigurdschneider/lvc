@@ -56,34 +56,19 @@ Lemma of_list_slot_lift_params (slot:var -> var) R M (Z:params)
 Proof.
   intros. general induction Z; simpl in *.
   - cset_tac.
-  - cases; simpl.
-    + rewrite IHZ; clear IHZ.
-      time (cset_tac_step_B idtac).
-      time (cset_tac_step_B idtac).
-      * cset_tac.
-      * right. eexists a; cset_tac.
-      * right. eexists x; cset_tac'.
-      * cset_tac.
-      * rewrite <- Incl; cset_tac.
-    + cases; simpl; rewrite IHZ; clear IHZ; eauto.
-      * hnf; split; intros.
-        -- time (cset_tac_step_B idtac).
-           time (cset_tac_step_B idtac).
-           time (cset_tac_step_B idtac).
-           destruct H7. eauto 20.
-           time (cset_tac_step_B idtac).
-           right. eexists x. cset_tac.
-        -- cset_tac.
-      * rewrite <- Incl. eauto with cset.
-      * decide (a ∈ M).
-        -- time (cset_tac_step_B idtac).
-           time (cset_tac_step_B idtac).
-           time (cset_tac_step_B idtac).
-           right. eexists a. cset_tac.
-           right. cset_tac.
-           cset_tac.
-        -- exfalso. cset_tac.
-      * rewrite <- Incl. cset_tac.
+  - assert (of_list Z [<=] R ∪ M /\ a ∈ R ∪ M) by cset_tac.
+    cases; simpl.
+    + rewrite IHZ; eauto; clear IHZ Incl.
+      assert (a ∉ R \ M) by cset_tac.
+      assert ({a; of_list Z} \ (R \ M) [=] {a; of_list Z \ (R \ M)}) by cset_tac.
+      rewrite H1. clear H1. rewrite map_add; eauto.
+      cset_tac.
+    + cases; simpl; rewrite IHZ; eauto; clear IHZ.
+      * assert ({a; of_list Z} \ (R \ M) [=] of_list Z \ (R \ M)) by cset_tac.
+        rewrite H0. clear H0. clear H Incl. cset_tac.
+      * assert ({a; of_list Z} \ (R \ M) [=] {a; of_list Z \ (R \ M)}) by cset_tac.
+        rewrite H0. clear H0. rewrite map_add; eauto.
+        cset_tac.
 Qed.
 
 Lemma InA_slot_lift_params VD RM Z (slot:Slot VD) x
@@ -119,7 +104,7 @@ Proof.
   simpl slot_lift_params. cases.
   - econstructor.
     + intro A. inv A.
-      * cset_tac'. eauto using Slot_absurd.
+      * eapply Slot_absurd; eauto. cset_tac.
       * eapply InA_slot_lift_params in H1.
         destruct H1; dcr; eauto; subst.
         rewrite InA_in in H2. simpl in *.
@@ -133,9 +118,7 @@ Proof.
         -- eapply (@Slot_Disj _ slot (slot x));
              eauto; cset_tac.
         -- eapply Slot_Inj in H3; eauto.
-           cset_tac. cset_tac.
-           eapply Incl2. cset_tac'.
-           rewrite <- InA_in. eauto.
+           cset_tac. cset_tac. cset_tac.
       * eapply IHND; eauto.
         simpl in *. cset_tac.
   - cases.
@@ -330,7 +313,8 @@ Proof.
   - cases.
     + assert ({x; of_list l} ∩ D [=] {x; of_list l ∩ D}) as EQ by (cset_tac).
       rewrite EQ. rewrite IHNoDup; eauto.
-      rewrite add_cardinal_2; eauto. cset_tac.
+      rewrite add_cardinal_2; eauto. clear IHNoDup.
+      cset_tac.
     + assert ({x; of_list l} ∩ D [=] of_list l ∩ D) as EQ by (cset_tac).
       rewrite EQ. rewrite IHNoDup; eauto.
 Qed.

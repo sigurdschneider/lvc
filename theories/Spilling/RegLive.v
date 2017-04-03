@@ -56,7 +56,6 @@ Fixpoint reg_live
     end
 .
 
-
 Lemma reg_live_G_eq
       (G : ⦃var⦄)
       (Lv : list ⦃var⦄)
@@ -73,10 +72,15 @@ Proof.
     destruct sl;
     try destruct a;
     try destruct p;
-    simpl; eauto; try cset_tac.
-  induction l0; simpl; eauto.
+    simpl; eauto with cset.
+  - rewrite IHs. clear. cset_tac.
+  - rewrite IHs1; rewrite IHs2.
+    clear. cset_tac.
+  - induction l0; simpl; eauto with cset.
+    + let_pair_case_eq; subst; simpl in *; cases; simpl; eauto with cset.
+      clear. cset_tac.
   - cset_tac.
-  - destruct a. destruct l0; simpl; cset_tac.
+  - rewrite IHs; eauto. clear. cset_tac.
 Qed.
 
 
@@ -164,14 +168,15 @@ Lemma reg_live_sound k ZL Λ rlv (R M : ⦃var⦄) G s sl
 .
 Proof.
   intros spillSnd pir2.
-  general induction spillSnd.
+  general induction spillSnd; simpl.
   - econstructor.
     + apply union_incl_left; clear;cset_tac.
     + eapply IHspillSnd; eauto.
     + apply live_exp_sound_incl with (lv':=Exp.freeVars e).
       * apply live_freeVars.
       * setoid_rewrite <-incl_right at 4. clear;cset_tac.
-    + setoid_rewrite <-incl_right at 3. clear; cset_tac.
+    + setoid_rewrite <-incl_right at 3.
+      clear; cset_tac.
     + apply reg_live_G. clear; cset_tac.
   - econstructor.
     + clear; cset_tac.
@@ -225,4 +230,3 @@ Proof.
     + intros; inv_get. rewrite <-reg_live_G. clear; cset_tac.
     + clear; cset_tac.
 Qed.
-

@@ -477,13 +477,14 @@ general induction lvSound;
     apply incl_minus_lr with (s:=R_f) (s':=R'\K ∪ R_f \ R') (t:=of_list Z) (t':=of_list Z).
     * subst K. eapply fTake.
     * eauto.
-  + cset_tac.
+  + clearbody K. clear_all. cset_tac.
   + subst K.
     assert (forall (s t : ⦃var⦄), s ⊆ s \ t ∪ t) by (clear; cset_tac).
 
     intro a. decide (a ∈ (R' \ of_list (take (cardinal ((R_f \ R') \ of_list Z)) (elements (R' \ R_f)))
-          ∪ (R_f \ R') \ of_list Z));
-               cset_tac.
+                             ∪ (R_f \ R') \ of_list Z)).
+    * revert i. clear_all. cset_tac.
+    * revert n. clear_all. cset_tac.
   + edestruct @list_eq_get; eauto; dcr. destruct x as [R_f' M_f']; invc H6.
     repeat erewrite get_nth; eauto; simpl.
     rewrite H1, fvRM, ReqR', MeqM' in Incl.
@@ -495,14 +496,17 @@ general induction lvSound;
                        (elements (R' \ Op.freeVars e))
                   )) in *.
   eapply SpillReturn with (K:= K); try rewrite ReqR'; eauto.
-  + cset_tac.
+  + clear_all. cset_tac.
   + rewrite Op.freeVars_live; eauto.
     rewrite <- ReqR'. rewrite fvRM. cset_tac.
   + apply fTake.
   + apply rke; eauto.
 - eapply SpillFun with (K:=∅); eauto.
   + clear. cset_tac.
-  + assert (forall s:set var, s \ ∅ ∪ ∅ [=] s) as seteq'. { cset_tac. }
+  + assert (forall s:set var, s \ ∅ ∪ ∅ [=] s) as seteq'. {
+      clear_all.
+      cset_tac.
+    }
     rewrite (seteq' R). rewrite ReqR'. apply RleqK.
   + symmetry. apply zip_length2. rewrite H.
     symmetry. apply zip_length1.

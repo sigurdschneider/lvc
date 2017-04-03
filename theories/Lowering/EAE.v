@@ -369,7 +369,6 @@ Lemma freeVars_filter_Var Y
                ∪ list_union (Op.freeVars ⊝ List.filter IsVar Y).
 Proof.
   general induction Y; simpl; norm_lunion; eauto with cset.
-  - cset_tac.
   - repeat cases; simpl; norm_lunion; try now (exfalso; eauto).
     + rewrite IHY. clear; cset_tac.
     + rewrite IHY. clear IHY n. cset_tac.
