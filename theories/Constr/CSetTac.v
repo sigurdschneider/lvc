@@ -560,6 +560,8 @@ Qed.
 
 Smpl Add 50
      match goal with
+     | [ |- not _ ] => intro
+     | [ |- _ -> False ] => intro
      | [ H : ?x ∈ ?s |- context [?x ∈ ?s -> False ] ] => rewrite (@P_P_False_False _ H)
      | [ H : ?x ∈ ?s |- context [?x ∉ ?s ] ] => rewrite (@P_P_False_False _ H)
      | [ H : ?x ∈ ?s, H' : context [?x ∈ ?s -> False ] |- _ ] => rewrite (@P_P_False_False _ H) in H'

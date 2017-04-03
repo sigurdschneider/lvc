@@ -854,3 +854,11 @@ Proof.
   rewrite subset_cardinal with (s':=s);
     [reflexivity | cset_tac].
 Qed.
+
+Lemma union_cardinal X `{OrderedType X} s s'
+  :  disj s s'
+     -> cardinal (s ∪ s') = cardinal s + cardinal s'.
+Proof.
+  intros. eapply union_cardinal.
+  cset_tac.
+Qed.

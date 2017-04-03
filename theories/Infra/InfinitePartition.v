@@ -252,7 +252,6 @@ Proof.
       rewrite filter_add_in; eauto.
       rewrite !add_cardinal_2; eauto.
       * intro. inv UNIQ. cset_tac'.
-        rewrite <- InA_in in H0. eauto.
       * exploit (fresh_list_stable_spec (stable_fresh_part p));
         eauto using least_fresh_part_fresh.
         cset_tac'.

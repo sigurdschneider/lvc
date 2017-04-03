@@ -72,7 +72,7 @@ Proof.
     eapply get_in_of_list in H7. cset_tac. eauto with len.
   - rewrite lookup_set_update_not_in_Z; eauto.
     eapply H2; cset_tac. rewrite of_list_map; eauto.
-    cset_tac'. eapply H4 in H8; eauto; cset_tac.
+    cset_tac'. eapply H4 in H6; eauto; cset_tac.
 Qed.
 
 Lemma spill_correct b k (s:stmt) lv ra E

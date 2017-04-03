@@ -465,6 +465,12 @@ Proof.
   general induction L; cset_tac.
 Qed.
 
+Smpl Add 50
+     match goal with
+      | [ H : @SetInterface.In _ (@SOT_as_OT _ _ _ ) _ ?x (of_list ?l), I : InA eq ?x ?l -> False |- _ ]
+        => exfalso; eapply InA_in in H; simpl in H; eapply I; eapply H
+     end : cset.
+
 
 Lemma minus_minus_eq {X} `{OrderedType X} (s t : set X)
   : s [=] s \ (t \ s).

@@ -44,14 +44,14 @@ Proof.
     set (Kx' := pick_killx k (R \ K' ∪ L') (getAnn sa0)) in *.
     set (Sp':= (getAnn al ∩ (K' ∪ Kx') \ M ∪ (Sp ∩ R))) in *.
     assert (Sp ∩ R ⊆ Sp') as Spincl.
-    { subst Sp'. clear; cset_tac. }
+    { subst Sp'. clear. cset_tac. }
     assert (K' ⊆ R) as KReq.
     { subst K'. rewrite pick_kill_incl. clear; cset_tac. }
     assert (disj (R \ K') L') as RKLdisj.
     { subst K'. rewrite <-incl_pick_kill. clear. cset_tac. }
     assert (cardinal (R \ K' ∪ L') <= k) as card_RKL.
     {
-      rewrite union_cardinal; [|clear - RKLdisj;intros;intro N;cset_tac].
+      rewrite union_cardinal; eauto.
       rewrite cardinal_difference'; eauto.
       rewrite <-Nat.add_sub_swap; [|rewrite subset_cardinal; eauto].
       apply Nat.le_sub_le_add_r.
@@ -112,7 +112,7 @@ Proof.
       setoid_rewrite union_comm at 2. rewrite <-minus_union, minus_minus.
       rewrite incl_minus_union; [|clear;cset_tac].
       subst L'. rewrite <-incl_pick_load. clear; cset_tac.
-    + rewrite union_cardinal; [|clear - RKLdisj;intros;intro N;cset_tac].
+    + rewrite union_cardinal; eauto.
       rewrite cardinal_difference'; eauto.
       rewrite <-Nat.add_sub_swap; [|rewrite subset_cardinal; eauto].
       apply Nat.le_sub_le_add_r.
@@ -168,9 +168,8 @@ Proof.
            { clear. intros. omega. }
            rewrite nateq; eauto.
            ++ apply subset_cardinal; eauto. rewrite <-incl_pick_load; eauto. clear;cset_tac.
-           ++ rewrite subset_cardinal; eauto; clear; cset_tac. 
-        -- clear. subst K'. intros. intro N. dcr.
-           rewrite <-incl_pick_kill in H. rewrite <-minus_union, minus_minus in H. cset_tac.
+           ++ rewrite subset_cardinal; eauto; clear; cset_tac.
+        -- clear. subst K'. rewrite <-incl_pick_kill. cset_tac.
       * subst K'. rewrite pick_kill_incl. setoid_rewrite union_comm at 2.
         rewrite  <-minus_union, minus_minus. rewrite incl_minus_union; [|clear; cset_tac].
         subst L'. rewrite <-incl_pick_load. clear. cset_tac.
@@ -218,8 +217,7 @@ Proof.
            rewrite nateq; eauto.
            ++ apply subset_cardinal; eauto. rewrite <-incl_pick_load; eauto. clear;cset_tac.
            ++ rewrite subset_cardinal; eauto; clear; cset_tac.
-        -- clear. subst K'. intros. intro N. dcr.
-           rewrite <-incl_pick_kill in H. rewrite <-minus_union, minus_minus in H. cset_tac.
+        -- clear. subst K'. rewrite <-incl_pick_kill. cset_tac.
       * subst K'. rewrite pick_kill_incl. setoid_rewrite union_comm at 2.
         rewrite  <-minus_union, minus_minus. rewrite incl_minus_union; [|clear; cset_tac].
         subst L'. rewrite <-incl_pick_load. clear. cset_tac.
@@ -248,7 +246,7 @@ Proof.
       rewrite incl_minus_union; [|clear;cset_tac]. rewrite minus_minus.
       subst L'. setoid_rewrite <-incl_pick_load. clear; cset_tac'.
     + rewrite <-minus_union.
-      rewrite union_cardinal; [|clear;intros;intro N;cset_tac].
+      rewrite union_cardinal; [| clear; cset_tac].
       subst L'. rewrite pick_load_card; eauto. rewrite <-incl_pick_load.
       rewrite minus_minus.
       assert (forall n1 n2 n3 n4 : nat, n1 <= n3 -> n3 <= n2 -> n1 + (n2 - n3) <= n2) as nateq.
