@@ -1,4 +1,4 @@
-Require Import RepairSpill RLiveMin RLiveSound SpillMaxKill.
+Require Import RepairSpill RLiveMin RLiveSound LiveMin SpillMaxKill.
 Require Import SpillSound Annotation Liveness.Liveness RenamedApart.
 Require Import List Map IL Take TakeSet OneOrEmpty AllInRel PickLK.
 
@@ -23,43 +23,7 @@ Proof.
   - econstructor; eauto; try rewrite <-Req; try rewrite <-Meq; eauto.
   - econstructor; eauto; [| | |eapply IHspillKill]; try rewrite <-Req; try rewrite <-Meq; eauto; eauto.
 Qed.
-    
-(*
-
-
-Inductive live_min (k:nat)
-  : list params -> list (⦃var⦄ * ⦃var⦄) -> ⦃var⦄ -> stmt -> spilling -> ann ⦃var⦄ -> Prop :=
-| RMinLet ZL Λ x e s an sl Rlv rlv G
-  : live_min k ZL Λ (singleton x) s sl rlv
-    -> (forall R M, spill_max_kill k ZL Λ (R,M) (stmtLet x e s) (ann1 Rlv rlv) (ann1 (Sp,L,rm) sl)
-             -> getAnn lv ⊆ R \ K ∪ M ∪ Sp)
-    -> live_min k ZL Λ G (stmtLet x e s) (ann1 (Sp,L,rm) sl) (ann1 Rlv rlv) (ann1 LV lv)
-.
-
-| RMinIf ZL Λ e s1 s2 an sl1 sl2 Rlv rlv1 rlv2 G
-  : live_min k ZL Λ ∅ s1 sl1 rlv1
-    -> live_min k ZL Λ ∅ s2 sl2 rlv2
-    -> is_live_min k ZL Λ (stmtIf e s1 s2) (ann2 an sl1 sl2) (Rlv \ G)
-    -> live_min k ZL Λ G (stmtIf e s1 s2) (ann2 an sl1 sl2) (ann2 Rlv rlv1 rlv2)
-| RMinReturn ZL Λ e an Rlv G
-  : is_live_min k ZL Λ (stmtReturn e) (ann0 an) (Rlv \ G)
-    -> live_min k ZL Λ G (stmtReturn e) (ann0 an) (ann0 Rlv)
-| RMinApp ZL Λ f Y an Rlv G
-  : is_live_min k ZL Λ (stmtApp f Y) (ann0 an) (Rlv \ G)
-    -> live_min k ZL Λ G (stmtApp f Y) (ann0 an) (ann0 Rlv)
-| RSpillFun ZL Λ G F t spl rms sl_F sl_t Rlv rlv_F rlv_t
-  : (forall n Zs sl_s rlv_s rm,
-        get F n Zs
-        -> get sl_F n sl_s
-        -> get rlv_F n rlv_s
-        -> get rms n rm
-        -> live_min k (fst ⊝ F ++ ZL) (rms ++ Λ) (of_list (fst Zs) ∩ fst rm) (snd Zs) sl_s rlv_s)
-    -> live_min k (fst ⊝ F ++ ZL) (rms ++ Λ) ∅ t sl_t rlv_t
-    -> is_live_min k ZL Λ (stmtFun F t) (annF (spl, rms) sl_F sl_t) (Rlv \ G)
-    -> live_min k ZL Λ G (stmtFun F t) (annF (spl, rms) sl_F sl_t) (annF Rlv rlv_F rlv_t)
-.
-
- *)
+   
       
 Lemma repair_spill_inv k ZL Λ s lv sl R M G ra rlv
   : renamedApart s ra
@@ -68,15 +32,16 @@ Lemma repair_spill_inv k ZL Λ s lv sl R M G ra rlv
     -> R ∪ M ⊆ fst (getAnn ra)
     -> getAnn rlv ⊆ R
     -> live_sound Imperative ZL (merge ⊝ Λ) s lv
-(*    -> live_min k ZL Λ G s sl rlv*)
+    -> live_min k ZL Λ G s sl lv
     -> spill_sound k ZL Λ (R,M) s sl
     -> sl === repair_spill k ZL Λ R M s rlv lv sl
 .
 Proof.
-  intros rena rliveMin rliveSnd rm_ra sub_R liveSnd (*liveMin*) spillSnd. 
+  intros rena rliveMin rliveSnd rm_ra sub_R liveSnd liveMin spillSnd.
+(*  assert (spillSnd':=spillSnd).*)
   eapply spill_sound_spill_max_kill with (R':=R) (M:=M) in spillSnd; eauto.
-  general induction rliveSnd; invc liveSnd; invc spillSnd; invc rliveMin; invc rena.
-  (*; invc liveMin. *)
+  general induction rliveSnd; invc liveSnd; invc spillSnd; invc rliveMin; invc rena;
+    invc liveMin. (*; invc spillSnd'. *)
   - cbn in sub_R.
     assert (Sp ∩ R [=] Sp) as Speq by (apply inter_subset_equal; eauto).
     assert (L ∩ (Sp ∩ R ∪ M) [=] L) as Leq
@@ -108,7 +73,10 @@ Proof.
     assert (Sp [=] Sp') as Speq'.
     {
       subst Sp'. rewrite union_comm. setoid_rewrite Speq at 1. rewrite union_comm.
-      symmetry. rewrite union_subset_equal; eauto. rewrite <-Keq. subst K0.
+      symmetry. rewrite union_subset_equal; eauto. rewrite <-Keq.
+      apply spill_max_kill_spill_sound in H21.
+      eapply live_min_incl_R in H35; eauto; [|clear;cset_tac]. rewrite H35.
+      rewrite <-Kxeq. subst Kx.
       admit.
       (* we need MINIMAL liveness!! *)
     }

@@ -115,6 +115,7 @@ Inductive spill_max_kill (k:nat) :
                                           (rms ++ Λ) rm (snd Zs) rlv_s sl_s
         )
       -> spill_max_kill k ((fst ⊝ F) ++ ZL) (rms ++ Λ) (R\K ∪ L, Sp ∪ M) t rlv_t sl_t
+      -> length F = length rlv_F
       -> spill_max_kill k ZL Λ (R,M) (stmtFun F t) (annF Rlv rlv_F rlv_t) (annF (Sp,L,rms) sl_F sl_t)
 .
 
@@ -161,6 +162,14 @@ Proof.
   cset_tac.
 Qed.
 
+Lemma spill_max_kill_spill_sound k ZL Λ R M s sl rlv :
+  spill_max_kill k ZL Λ (R,M) s rlv sl
+  -> spill_sound k ZL Λ (R,M) s sl
+.
+Proof.
+  intros spillSnd. general induction spillSnd; econstructor; eauto.
+  intros. inv_get. eapply H6; eauto. apply surjective_pairing.
+Qed.
 
 
 Lemma spill_sound_spill_max_kill k ZL Λ R R' M G s sl rlv ra :
