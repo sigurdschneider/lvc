@@ -231,8 +231,6 @@ Proof.
         unfold defVars. rewrite getAnn_mapAnn.
         destruct (getAnn x0); simpl. reflexivity.
       * eauto.
-        Grab Existential Variables.
-        eauto.
 Qed.
 
 
