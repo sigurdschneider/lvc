@@ -16,6 +16,7 @@ VS=$(shell find theories/ -iname '*.v' | grep -v '/\.')
 VSIND=$(shell find theories/ -iname '*vo' | sed 's/\.vo/.v/' | grep -v 'Spilling' | grep -v 'ValueOpts' | grep -v 'TransVal')
 VSSPILL=$(shell find theories/ -iname '*vo' | sed 's/\.vo/.v/' | grep -v 'ValueOpts' | grep -v 'TransVal')
 DOCS=$(shell find extra/ )
+COMPCERTCFG=ppc-linux
 
 ifeq ($(wildcard time.rb)$(wildcard .timing),time.rb.timing)
   export TIMECMD=@./time.rb $(if $(findstring j,$(MAKEFLAGS)),--parallel,)
@@ -37,7 +38,13 @@ depmakefiles:
 	+$(MAKE) -C paco Makefile.coq
 	+$(MAKE) -C ContainersPlugin Makefile.coq
 
-dep:
+CompCert/Makefile.config: 
+	cd CompCert && ./configure $(COMPCERTCFG) 
+
+compcert: CompCert/Makefile.config
+	+$(MAKE) -C CompCert 
+
+dep: compcert
 	+$(MAKE) -C paco all TIMECMD=
 	+$(MAKE) -C ContainersPlugin all TIMECMD=
 	+$(MAKE) -C smpl all TIMECMD=
