@@ -9,7 +9,7 @@ Set Implicit Arguments.
 
 (** * Repair Spill  *)
 
-Fixpoint stretch_rms (X : Type) (k : nat) (F : list X) (rms : list (⦃var⦄ * ⦃var⦄)) (lvF : list ⦃var⦄)
+Fixpoint stretch_rms (k : nat) (F : list params) (rms : list (⦃var⦄ * ⦃var⦄)) (lvF : list ⦃var⦄)
   {struct F} : list (⦃var⦄ * ⦃var⦄) :=
   match F,rms,lvF with
     | (x::F) , nil          , (LV::lvF) => (∅, LV) :: stretch_rms k F nil lvF
@@ -74,7 +74,7 @@ Fixpoint repair_spill
       ann0 (Sp',L',(fst RMapp, M'')::nil)
 
   | stmtFun F t, annF rLV rlv_F rlv_t, annF LV lv_F lv_t, annF (Sp,L,rms) sl_F sl_t
-    => let rms' := stretch_rms k F rms (getAnn ⊝ lv_F) in
+    => let rms' := stretch_rms k (fst ⊝ F) rms (getAnn ⊝ lv_F) in
       let ZL'  := fst ⊝ F ++ ZL in
       let Λ'   := rms' ++ Λ in
       let L'   := pick_load k R M Sp L ∅ in

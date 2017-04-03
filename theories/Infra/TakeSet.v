@@ -86,6 +86,16 @@ Proof.
     apply union_incl_split; [rewrite of_list_elements|rewrite take_set_incl]; cset_tac.
 Qed.
 
+Lemma set_take_eq (X:Type) `{OrderedType X} k (s :⦃X⦄) :
+  cardinal s <= k -> set_take k s [=] s
+.
+Proof.
+  intros card. unfold set_take. rewrite take_eq_ge.
+  - rewrite of_list_elements. eauto.
+  - rewrite elements_length. eauto.
+Qed.
+
+      
 
 Lemma set_take_avoid_incl (X:Type) `{OrderedType X} k (s t:⦃X⦄)
   : set_take_avoid k s t ⊆ s

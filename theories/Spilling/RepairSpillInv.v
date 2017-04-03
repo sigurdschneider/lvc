@@ -24,13 +24,37 @@ Proof.
   - econstructor; eauto; [| | |eapply IHspillKill]; try rewrite <-Req; try rewrite <-Meq; eauto; eauto.
 Qed.
 
-(*
-Lemma stretch_rms_inv k ZL Λ R M F t Rlv rlv_F rlv_t Sp L rms sl_F sl_t :
-  spill_max_kill k ZL Λ (R,M) (stmtFun F t) (annF Rlv rlv_F rlv_t) (annF (Sp,L,rms) sl_F sl_t)
+  
+
+
+
+Lemma stretch_rms_inv  F rms k lvF :
+  length F = length rms
+  -> (forall n rm, get rms n rm -> cardinal (fst rm) <= k)
+  -> PIR2 Equal (merge ⊝ rms) lvF
   -> rms === stretch_rms k F rms lvF
 .
 Proof.
-*)
+  intros lenF card pir2.
+  general induction rms; destruct F; isabsurd; destruct lvF; isabsurd.
+  - unfold stretch_rms. eauto.
+  - unfold stretch_rms. destruct a as [Rf Mf].
+    assert (cardinal (Rf ∩ s) <= k).
+    {
+      rewrite subset_cardinal.
+      - eapply card. econstructor.
+      - cbn. clear; cset_tac.
+    }
+    cbn in pir2. invc pir2. unfold merge in pf. cbn in pf.
+    econstructor; [econstructor|].
+    + rewrite set_take_eq; eauto. clear - pf.
+      symmetry. apply inter_subset_equal. cset_tac.
+    + rewrite set_take_eq; eauto.
+      clear - pf. rewrite <- pf. apply incl_eq; cset_tac.
+      (* shouldn't cset_tac try this by itself? *)
+    + apply IHrms; eauto. intros. inv_get. exploit card; eauto. instantiate (1:=S n).
+      econstructor; eauto.
+Qed.
    
       
 Lemma repair_spill_inv k ZL Λ s lv sl R M G ra rlv
@@ -242,13 +266,31 @@ Proof.
       eapply live_min_incl_R in H42; eauto; [|clear;cset_tac].
       rewrite H42, H25. clear; cset_tac.
     }
+    assert (rms === stretch_rms k (fst ⊝ F) rms (getAnn ⊝ als0)) as rms_eq.
+    {
+      eapply stretch_rms_inv; eauto.
+      - eauto with len.
+      - admit. (* We need spill_live !! *)
+    } 
     econstructor; eauto;
       subst L' Sp' K';
       set (L' := pick_load k R M Sp L ∅) in *;
       set (K' := pick_kill k R L' ∅ (getAnn alb)) in *;
       set (Sp':= ((getAnn alb0) ∩ K' \ M) ∪ (Sp ∩ R)) in *.
     + eauto with len.
-    + intros. inv_get. admit.
+    + intros. inv_get.
+      exploit H36; eauto. exploit H17; eauto. exploit H30; eauto.
+      eapply H2; eauto.
+      * eapply rlive_min_ext.
+        -- instantiate (1:= rms ++ Λ). admit.
+        -- apply H32.
+      * admit. (*spill_live*)
+      * admit.
+      * admit.
+      * admit.
+      * admit.
+      * admit.
+      * admit.
     + admit.
 Admitted.
 

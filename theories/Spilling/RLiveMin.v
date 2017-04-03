@@ -101,3 +101,17 @@ Proof.
   general induction rliveMin; econstructor; eauto; unfold is_rlive_min in *; intros; rewrite <-Geq;
     eauto.
 Qed.
+
+
+Lemma rlive_min_ext k ZL Λ Λ' s sl rlv G :
+  Λ === Λ'
+  -> rlive_min k ZL Λ  G s sl rlv
+  -> rlive_min k ZL Λ' G s sl rlv
+.
+Proof.
+  intros Λeq rlvMin. general induction rlvMin.
+  - econstructor; eauto. unfold is_rlive_min.
+    intros. admit.
+Admitted.
+
+  
