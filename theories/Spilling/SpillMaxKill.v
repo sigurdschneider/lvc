@@ -1,7 +1,7 @@
 Require Import List Map Env AllInRel Exp MoreList.
 Require Import IL Annotation.
 Require Import Liveness.Liveness RenamedApart.
-Require Import ExpVarsBounded SpillSound OneOrEmpty RegLive.
+Require Import ExpVarsBounded SpillSound OneOrEmpty RLiveMin RLiveSound.
 Require Import Take TakeSet SetUtil.
 
 
@@ -9,7 +9,7 @@ Require Import Take TakeSet SetUtil.
 Set Implicit Arguments.
 
 
-(* ATTENTION: you are killing L in spill_max_kill but you are not killing it in repair_spill !!! *)
+
 
 
 Inductive spill_max_kill (k:nat) :
@@ -160,7 +160,6 @@ Proof.
   subst t'.
   cset_tac.
 Qed.
-
 
 
 

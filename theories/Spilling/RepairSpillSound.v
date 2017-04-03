@@ -1,4 +1,4 @@
-Require Import RepairSpill RegLive ExpVarsBounded.
+Require Import RepairSpill ExpVarsBounded.
 Require Import SpillSound Annotation Liveness.Liveness RenamedApart.
 Require Import List Map IL.
 Require Import Take TakeSet PickLK SetUtil.
