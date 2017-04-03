@@ -12,9 +12,8 @@ Set Implicit Arguments.
 Fixpoint stretch_rms (X : Type) (k : nat) (F : list X) (rms : list (⦃var⦄ * ⦃var⦄)) (lvF : list ⦃var⦄)
   {struct F} : list (⦃var⦄ * ⦃var⦄) :=
   match F,rms,lvF with
-    | (x::F) , nil          , (LV::lvF) => let Rf := set_take k LV in
-                                          (Rf, LV \ Rf) :: stretch_rms k F nil lvF
-    | (x::F), ((Rf,Mf)::rms), (LV::lvF) => let Rf':= set_take_prefer k Rf LV in
+    | (x::F) , nil          , (LV::lvF) => (∅, LV) :: stretch_rms k F nil lvF
+    | (x::F), ((Rf,Mf)::rms), (LV::lvF) => let Rf' := set_take k (Rf ∩ LV) in
                                           (Rf', (LV \ Rf') ∪ (Mf ∩ LV)):: stretch_rms k F rms lvF
     | _,_,_ => nil
   end

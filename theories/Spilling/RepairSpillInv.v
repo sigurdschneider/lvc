@@ -23,6 +23,14 @@ Proof.
   - econstructor; eauto; try rewrite <-Req; try rewrite <-Meq; eauto.
   - econstructor; eauto; [| | |eapply IHspillKill]; try rewrite <-Req; try rewrite <-Meq; eauto; eauto.
 Qed.
+
+(*
+Lemma stretch_rms_inv k ZL Λ R M F t Rlv rlv_F rlv_t Sp L rms sl_F sl_t :
+  spill_max_kill k ZL Λ (R,M) (stmtFun F t) (annF Rlv rlv_F rlv_t) (annF (Sp,L,rms) sl_F sl_t)
+  -> rms === stretch_rms k F rms lvF
+.
+Proof.
+*)
    
       
 Lemma repair_spill_inv k ZL Λ s lv sl R M G ra rlv
@@ -207,6 +215,40 @@ Proof.
     rewrite pick_load_eq; eauto.
     + clear - H12. cset_tac.
     + rewrite subset_cardinal; eauto. clear - H12; cset_tac.
-  - admit.
-  - admit.
-  - admit.
+  - assert (Sp ∩ R [=] Sp) as Speq.
+    { apply inter_subset_equal. rewrite H24. eauto. } 
+     assert (L ∩ (Sp ∩ R ∪ M) [=] L) as Leq
+        by (apply inter_subset_equal in H25; rewrite Speq, H25; eauto).
+    set (L' := pick_load k R M Sp L ∅).     
+    set (K' := pick_kill k R L' ∅ (getAnn alb)).
+    set (Sp':= ((getAnn alb0) ∩ K' \ M) ∪ (Sp ∩ R)).
+    assert (L [=] L') as Leq'.
+    {
+      symmetry. subst L'. eapply pick_load_eq; eauto.
+      - clear; cset_tac.
+      - rewrite subset_cardinal; eauto. clear; cset_tac.
+    }
+    assert (K [=] K') as Keq.
+    {
+      symmetry. subst K K'. rewrite pick_kill_eq.
+      - rewrite Leq'. clear; cset_tac.
+      - rewrite <-Leq'. rewrite subset_cardinal; eauto. clear; cset_tac.
+    }
+    assert (Sp [=] Sp') as Speq'.
+    {
+      subst Sp'. rewrite union_comm. setoid_rewrite Speq at 1. rewrite union_comm.
+      symmetry. rewrite union_subset_equal; eauto. rewrite <-Keq.
+      apply spill_max_kill_spill_sound in H31; eauto.
+      eapply live_min_incl_R in H42; eauto; [|clear;cset_tac].
+      rewrite H42, H25. clear; cset_tac.
+    }
+    econstructor; eauto;
+      subst L' Sp' K';
+      set (L' := pick_load k R M Sp L ∅) in *;
+      set (K' := pick_kill k R L' ∅ (getAnn alb)) in *;
+      set (Sp':= ((getAnn alb0) ∩ K' \ M) ∪ (Sp ∩ R)) in *.
+    + eauto with len.
+    + intros. inv_get. admit.
+    + admit.
+Admitted.
+
