@@ -42,7 +42,7 @@ CompCert/Makefile.config:
 	cd CompCert && ./configure $(COMPCERTCFG) 
 
 compcert: CompCert/Makefile.config
-	+$(MAKE) -C CompCert 
+	-+$(MAKE) -C CompCert 
 
 dep: compcert
 	+$(MAKE) -C paco all TIMECMD=
