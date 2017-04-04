@@ -88,9 +88,18 @@ Fixpoint repair_spill
                                 => repair_spill k ZL' Λ' (fst rm) (snd rm) (snd f) rLv Lv sl
                  end)
                ⊜ F (pair ⊜ (pair ⊜ (pair ⊜ rms rlv_F) lv_F) sl_F))
-            (repair_spill k ZL' Λ' (R \ K ∪ L) M t rlv_t lv_t sl_t)
+            (repair_spill k ZL' Λ' (R \ K ∪ L) (Sp' ∪ M) t rlv_t lv_t sl_t)
 
   | _,_,_,_ => ann0 (∅, ∅, nil)
 
   end
 .
+
+Lemma stretch_rms_length alv rms k F :
+  length F = length alv -> length alv = length rms -> length (stretch_rms k F rms alv) = length rms
+.
+Proof.
+  intros lenF lenrms. general induction F; destruct rms; destruct alv; isabsurd.
+  - cbn. reflexivity.
+  - cbn. destruct p as [Rf Mf]. cbn. rewrite IHF; eauto.
+Qed.

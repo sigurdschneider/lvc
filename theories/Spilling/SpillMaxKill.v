@@ -22,7 +22,7 @@ Inductive spill_max_kill (k:nat) :
   -> Prop
   :=
 
-  | SpillLet
+  | SpillMKLet
       (ZL : list params)
       (Λ : list (⦃var⦄ * ⦃var⦄))
       (R M Sp L Rlv : ⦃var⦄)
@@ -42,7 +42,7 @@ Inductive spill_max_kill (k:nat) :
       -> cardinal {x; (R\K ∪ L) \ Kx} <= k
       -> spill_max_kill k ZL Λ (R,M) (stmtLet x e s) (ann1 Rlv rlv) (ann1 (Sp,L,nil) sl)
 
-  | SpillReturn
+  | SpillMKReturn
       (ZL : list (params))
       (Λ : list (⦃var⦄ * ⦃var⦄))
       (R M Sp L Rlv: ⦃var⦄)
@@ -54,7 +54,7 @@ Inductive spill_max_kill (k:nat) :
       -> cardinal (R\K ∪ L) <= k
       -> spill_max_kill k ZL Λ (R,M) (stmtReturn e) (ann0 Rlv) (ann0 (Sp,L,nil))
 
-  | SpillIf
+  | SpillMKIf
       (ZL : list (params))
       (Λ : list (⦃var⦄ * ⦃var⦄))
       (R M Sp L Rlv: ⦃var⦄)
@@ -71,7 +71,7 @@ Inductive spill_max_kill (k:nat) :
       -> spill_max_kill k ZL Λ (R \ K ∪ L, Sp ∪ M) t rlv2 sl_t
       -> spill_max_kill k ZL Λ (R,M) (stmtIf e s t) (ann2 Rlv rlv1 rlv2) (ann2 (Sp,L,nil) sl_s sl_t)
 
-  | SpillApp
+  | SpillMKApp
       (ZL : list params)
       (Λ : list (⦃var⦄ * ⦃var⦄))
       (R M Sp L R_f M_f R' M' Rlv : ⦃var⦄)
@@ -90,7 +90,7 @@ Inductive spill_max_kill (k:nat) :
       -> M' ⊆ Sp ∪ M
       -> spill_max_kill k ZL Λ (R,M) (stmtApp f Y) (ann0 Rlv) (ann0 (Sp,L, (R', M')::nil))
 
-  | SpillFun
+  | SpillMKFun
       (ZL : list params)
       (Λ rms : list (⦃var⦄ * ⦃var⦄))
       (R M Sp L Rlv : ⦃var⦄)
@@ -317,4 +317,51 @@ Proof.
         -- eapply card_Rf; eauto. eapply get_app_right_ge; eauto.
         -- replace Rf with (fst (Rf,Mf)); eauto. eapply H4; eauto.
            eapply get_app_lt_1; swap 1 2. eauto. omega.
+Qed.
+
+
+Lemma spill_max_kill_ext' ZL Λ Λ' s rlv RM sl k :        
+  PIR2 _eq Λ' Λ
+  -> spill_max_kill k ZL Λ  RM  s rlv sl
+  -> spill_max_kill k ZL Λ' RM  s rlv sl
+.
+Proof.
+  intros Λeq spillSnd. general induction spillSnd.
+  - econstructor; eauto.
+  - econstructor; eauto.
+  - econstructor; eauto.
+  - eapply PIR2_nth_2 in Λeq as [[R_f' M_f'] [get_blk' blk'_eq]]; eauto. cbn in *. invc blk'_eq.
+    eapply SpillMKApp with (R_f:=R_f') (M_f:=M_f'); eauto.
+    + rewrite subset_cardinal; eauto. rewrite H11. cset_tac.
+    + rewrite H11. cset_tac.
+    + rewrite H13. cset_tac.
+    + rewrite H11. cset_tac.
+  - econstructor; eauto.
+    + intros. inv_get. eapply H6; eauto.
+      * apply PIR2_app; eauto. 
+    + eapply IHspillSnd; eauto.
+      apply PIR2_app; eauto. 
+Qed.
+
+Lemma spill_max_kill_monotone ZL Λ Λ' s rlv RM sl k :        
+  PIR2 (fun x y => fst x ⊆ fst y /\ snd x ⊆ snd y) Λ' Λ
+  -> spill_max_kill k ZL Λ  RM  s rlv sl
+  -> spill_max_kill k ZL Λ' RM  s rlv sl
+.
+Proof.
+  intros Λeq spillSnd. general induction spillSnd.
+  - econstructor; eauto.
+  - econstructor; eauto.
+  - econstructor; eauto.
+  - eapply PIR2_nth_2 in Λeq as [[R_f' M_f'] [get_blk' blk'_eq]]; eauto. cbn in *. invc blk'_eq.
+    eapply SpillMKApp with (R_f:=R_f') (M_f:=M_f'); eauto.
+    + rewrite subset_cardinal; eauto. cset_tac.
+    + cset_tac.
+    + cset_tac.
+    + cset_tac.
+  - econstructor; eauto.
+    + intros. inv_get. eapply H6; eauto.
+      * apply PIR2_app; eauto. eapply PIR2_refl. split; reflexivity.
+    + eapply IHspillSnd; eauto.
+      apply PIR2_app; eauto. eapply PIR2_refl. split; reflexivity.
 Qed.

@@ -179,3 +179,50 @@ Inductive spill_live
       -> spill_live VD (annF (a, rms) sl_F sl_t)
                               (annF b lv_F lv_t)
 .
+
+
+Lemma spill_sound_ext Λ Λ' k ZL R M s sl :
+  PIR2 _eq Λ Λ'
+  -> spill_sound k ZL Λ  (R,M) s sl
+  -> spill_sound k ZL Λ' (R,M) s sl
+.
+Proof.
+  intros Λeq spillSnd. general induction spillSnd.
+  - econstructor; eauto.
+  - econstructor; eauto.
+  - econstructor; eauto.
+  - eapply PIR2_nth in Λeq as [[R_f' M_f'] [get_blk' blk'_eq]]; eauto. invc blk'_eq.
+    econstructor; eauto; clear - H11 H13 H4 H5.
+    + rewrite <-H11. eauto.
+    + rewrite <-H13. eauto.
+  - econstructor; eauto.
+    + intros. inv_get. eapply H6; eauto.
+      * apply PIR2_app; eauto.
+      * apply surjective_pairing.
+    + eapply IHspillSnd; eauto.
+      apply PIR2_app; eauto.
+Qed.
+
+
+Lemma spill_sound_monotone Λ Λ' k ZL R M s sl :
+  PIR2 (fun x y => fst x ⊆ fst y /\ snd x ⊆ snd y) Λ' Λ
+  -> spill_sound k ZL Λ  (R,M) s sl
+  -> spill_sound k ZL Λ' (R,M) s sl
+.
+Proof.
+  intros Λeq spillSnd. general induction spillSnd.
+  - econstructor; eauto.
+  - econstructor; eauto.
+  - econstructor; eauto.
+  - eapply PIR2_nth_2 in Λeq as [[R_f' M_f'] [get_blk' blk'_eq]]; eauto. cbn in *. invc blk'_eq.
+    econstructor; eauto; cbn in *.
+    + rewrite H8. eauto.
+    + rewrite H9. eauto.
+  - econstructor; eauto.
+    + intros. inv_get. eapply H6; eauto.
+      * apply PIR2_app; eauto. eapply PIR2_refl. split; reflexivity.
+      * apply surjective_pairing.
+    + eapply IHspillSnd; eauto.
+      apply PIR2_app; eauto. eapply PIR2_refl. split; reflexivity.
+Qed.
+
