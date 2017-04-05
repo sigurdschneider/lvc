@@ -102,3 +102,36 @@ Proof.
   intros lenF. general induction F; destruct rms; destruct alv; isabsurd; cbn; eauto.
   destruct p as [Rf Mf]. cbn. rewrite IHF; eauto.
 Qed.
+
+
+Lemma stretch_rms_cardinal k F rms lvs n rm :
+  get (stretch_rms k F rms lvs) n rm
+  -> cardinal (fst rm) <= k
+.
+Proof.
+  intros gett. general induction gett; destruct F; cbn; eauto; isabsurd.
+  - cbn in *. destruct rms, lvs; isabsurd.
+    + invc Heql. cbn. rewrite empty_cardinal. omega.
+    + destruct p. isabsurd.
+    + destruct p as [Rf Mf]. invc Heql. cbn. apply set_take_size.
+  - cbn in *. destruct rms, lvs; invc Heql; isabsurd.
+    + eapply IHgett; eauto.
+    + destruct p; isabsurd.
+    + destruct p as [Rf Mf]. invc H0. eapply IHgett; eauto.
+Qed.
+
+
+
+Lemma stretch_rms_lv k F rms lvs :
+  length F = length lvs
+  -> PIR2 Equal lvs (merge ⊝ stretch_rms k F rms lvs)
+.
+Proof.
+  intros lenF. general induction F; destruct lvs; isabsurd; cbn in lenF; eauto.
+  apply eq_add_S in lenF. destruct rms; cbn.
+  - econstructor; unfold merge; cbn; eauto. cset_tac.
+  - destruct p as [Rf Mf]. econstructor; eauto; unfold merge. cbn.
+    setoid_rewrite <-inter_subset_equal at 3; swap 1 2.
+    + rewrite set_take_incl, meet_comm. apply meet_in_left.
+    + cset_tac.
+Qed.

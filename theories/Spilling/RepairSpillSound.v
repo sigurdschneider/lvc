@@ -1,7 +1,7 @@
 Require Import RepairSpill ExpVarsBounded.
 Require Import SpillSound Annotation Liveness.Liveness RenamedApart.
 Require Import List Map IL.
-Require Import Take TakeSet PickLK SetUtil.
+Require Import Take TakeSet PickLK SetUtil AllInRel.
 
 Set Implicit Arguments.
 
@@ -24,8 +24,8 @@ Proof.
 Qed.
 
 
-Lemma repair_spill_sound k ZL Λ R M s rlv lv sl (*ra*)
-  : live_sound Imperative ZL (merge ⊝ Λ) s lv
+Lemma repair_spill_sound k ZL Λ Λ' Lv R M s rlv lv sl (*ra*)
+  : live_sound Imperative ZL Lv s lv
     -> annotation s sl
     -> annotation s rlv
     (*    -> renamedApart s ra
@@ -33,10 +33,12 @@ Lemma repair_spill_sound k ZL Λ R M s rlv lv sl (*ra*)
     -> getAnn lv ⊆ R ∪ M
     -> exp_vars_bounded k s
     -> (forall n Rf Mf, get Λ n (Rf,Mf) -> cardinal Rf <= k)
-    -> spill_sound k ZL Λ (R,M) s (repair_spill k ZL Λ R M s rlv lv sl)
+    -> PIR2 _eq Λ Λ'
+    -> PIR2 Equal Lv (merge ⊝ Λ')
+    -> spill_sound k ZL Λ' (R,M) s (repair_spill k ZL Λ R M s rlv lv sl)
 .
 Proof.
-  intros lvSnd anno_sl anno_rlv lv_RM expB cardRf(*rena RM_ra*).
+  intros lvSnd anno_sl anno_rlv lv_RM expB cardRf (*Λeq LvΛ*) .
   general induction lvSnd; invc anno_sl; invc anno_rlv; invc expB; (*invc rena;*) cbn.
   - destruct a,p. rename s0 into Sp. rename s1 into L. rename a0 into Rlv.
     set (L' := pick_load k R M Sp L (Exp.freeVars e)) in *.
@@ -136,23 +138,25 @@ Proof.
       clear - lv_RM. cbn in *. rewrite lv_RM. rewrite union_meet_distr_r.
       apply union_incl_split; [cset_tac|].
       clear; cset_tac.
-  - repeat let_pair_case_eq; subst. inv_get. simpl in *.
+  - repeat let_pair_case_eq; subst. inv_get. 
     eapply Op.freeVars_live_list in H3.
-    destruct x as [Rf Mf]. unfold merge in H1; simpl in *.
     destruct (get_dec (snd a) 0) as [[[R' M'] ?]|].
-    + repeat erewrite get_nth; eauto using get; simpl.
+    + eapply PIR2_nth in H5; eauto. dcr. inv_get. destruct x0 as [Rf' Mf'].
+      eapply PIR2_nth_2 in H4; eauto. destruct H4 as [[Rf Mf] [getrfmf rfmf_eq]]. invc rfmf_eq.
+      repeat erewrite get_nth; eauto using get; simpl.
       destruct a as [[Sp L] RMappL]. unfold fst, snd in *.
       set (L':=pick_load k R M Sp L (Rf \ of_list Z)).
       set (K':=pick_kill k R L' (Rf \ of_list Z) (list_union (Op.freeVars ⊝ Y) \ M')).
       set (Sp':= (list_union (Op.freeVars ⊝ Y) ∩ K' ∪ Mf \ of_list Z) \ M ∪ (Sp ∩ R)).
       assert (K' ⊆ R) as KsubR.
       { subst K'. rewrite pick_kill_incl. clear; cset_tac. }
+      cbn in H1, lv_RM. unfold merge in H8. cbn in H8. rewrite H8 in H1. rewrite <-H10, <-H12 in H1.
       econstructor; eauto.
       * subst K' Sp'. rewrite pick_kill_incl.
         rewrite H3 at 1. rewrite lv_RM in *.
-        revert H1. clear_all. cset_tac.
+        clear - H1 lv_RM. cset_tac.
       * subst L'. rewrite pick_load_incl at 1.
-        rewrite lv_RM in *. revert H1. subst Sp'.
+        rewrite lv_RM in *. revert H1. cbn. subst Sp'.
         clear_all; cset_tac.
       * instantiate (1:=K'). rewrite union_cardinal.
         -- rewrite cardinal_difference'; eauto.
@@ -172,8 +176,8 @@ Proof.
         -- clear. subst K'. rewrite <-incl_pick_kill. cset_tac.
       * subst K'. rewrite pick_kill_incl. setoid_rewrite union_comm at 2.
         rewrite  <-minus_union, minus_minus. rewrite incl_minus_union; [|clear; cset_tac].
-        subst L'. rewrite <-incl_pick_load. clear. cset_tac.
-      * subst Sp'. clear; cset_tac.
+        subst L'. rewrite <-incl_pick_load. rewrite <-H10. clear. cset_tac.
+      * subst Sp'. rewrite <-H12. clear; cset_tac.
       * setoid_rewrite set_decomp with (t:=R \ K' ∪ L') at 1.
         apply union_incl_split;[clear;cset_tac|].
         setoid_rewrite <-incl_right at 2. setoid_rewrite <-incl_left at 2.
@@ -189,6 +193,8 @@ Proof.
       * rewrite lv_RM in *. subst K'.
         rewrite pick_kill_incl at 1. clear; cset_tac.
     + repeat rewrite (not_get_nth_default _ f); eauto. simpl.
+      eapply PIR2_nth in H5; eauto. dcr. inv_get. destruct x0 as [Rf' Mf'].
+      eapply PIR2_nth_2 in H4; eauto. destruct H4 as [[Rf Mf] [getrfmf rfmf_eq]]. invc rfmf_eq.
       repeat erewrite get_nth; eauto using get; simpl.
       destruct a as [[Sp L] RMappL]. unfold fst, snd in *.
       set (L':=pick_load k R M Sp L (Rf \ of_list Z)).
@@ -196,6 +202,7 @@ Proof.
       set (Sp':= (list_union (Op.freeVars ⊝ Y) ∩ K' ∪ Mf \ of_list Z) \ M ∪ (Sp ∩ R)).
       assert (K' ⊆ R) as KsubR.
       { subst K'. rewrite pick_kill_incl. clear; cset_tac. }
+      cbn in H1, lv_RM. unfold merge in H8. cbn in H8. rewrite H8 in H1. rewrite <-H9, <-H11 in H1.
       econstructor; eauto.
       * subst K' Sp'. rewrite pick_kill_incl.
         rewrite H3 at 1. rewrite lv_RM in *.
@@ -220,8 +227,8 @@ Proof.
         -- clear. subst K'. rewrite <-incl_pick_kill. cset_tac.
       * subst K'. rewrite pick_kill_incl. setoid_rewrite union_comm at 2.
         rewrite  <-minus_union, minus_minus. rewrite incl_minus_union; [|clear; cset_tac].
-        subst L'. rewrite <-incl_pick_load. clear. cset_tac.
-      * subst Sp'. clear; cset_tac.
+        subst L'. rewrite <-incl_pick_load. rewrite <-H9. clear. cset_tac.
+      * subst Sp'. rewrite <-H11. clear; cset_tac.
       * setoid_rewrite set_decomp with (t:=R \ K' ∪ L') at 1.
         apply union_incl_split;[clear;cset_tac|].
         setoid_rewrite <-incl_right at 2. setoid_rewrite <-incl_left at 2.
@@ -290,25 +297,27 @@ Proof.
     + rewrite !zip_length. rewrite stretch_rms_length; eauto; eauto with len.
     + rewrite stretch_rms_length; eauto with len.
     + intros. inv_get.
-
-Lemma stretch_rms_cardinal k F rms lvs n rm :
-  get (stretch_rms k F rms lvs) n rm
-  -> cardinal (fst rm) <= k
-.
-Proof.
-  intros gett. general induction gett; destruct F; cbn; eauto; isabsurd.
-  - cbn in *. destruct rms, lvs; isabsurd.
-    + invc Heql. cbn. rewrite empty_cardinal. omega.
-    + destruct p. isabsurd.
-    + destruct p as [Rf Mf]. invc Heql. cbn. apply set_take_size.
-  - cbn in *. destruct rms, lvs; invc Heql; isabsurd.
-    + eapply IHgett; eauto.
-    + destruct p; isabsurd.
-    + destruct p as [Rf Mf]. invc H0. eapply IHgett; eauto.
-Qed.
- 
       eapply stretch_rms_cardinal; eauto.
     + intros. inv_get. rewrite surjective_pairing at 1.
-      eapply H1; eauto; admit.
-    + eapply IHlvSnd; eauto; admit.
-Admitted.
+      eapply H1; eauto.
+      * exploit H2; eauto. dcr. cbn in H23.
+        assert (length (fst ⊝ F) = length (getAnn ⊝ lv_F)) by eauto with len.
+        eapply stretch_rms_lv with (k:=k) (rms:=rms) in H17.
+        eapply get_PIR2 in H17; eauto. unfold merge in H17. rewrite H17. reflexivity.
+      * intros. eapply get_app_cases in H17. destruct H17.
+        -- replace Rf with (fst (Rf,Mf)). eapply stretch_rms_cardinal; eauto. cbn. eauto.
+        -- destruct H17. eapply cardRf; eauto.
+      * eapply PIR2_app; eauto.
+      * rewrite map_app. eapply PIR2_app; eauto.
+        apply stretch_rms_lv. eauto with len.
+    + eapply IHlvSnd; eauto.
+      * cbn in lv_RM.
+        rewrite <-inter_subset_equal with (s':= R ∪ M) at 1; [|rewrite H3,lv_RM; eauto].
+        clear - KReq. cset_tac.
+      * intros. eapply get_app_cases in H6. destruct H6.
+        -- replace Rf with (fst (Rf,Mf)). eapply stretch_rms_cardinal; eauto. cbn. eauto.
+        -- destruct H6. eapply cardRf; eauto.
+      * eapply PIR2_app; eauto.
+      * rewrite map_app. eapply PIR2_app; eauto.
+        apply stretch_rms_lv. eauto with len.
+Qed.
