@@ -82,13 +82,13 @@ Fixpoint repair_spill
       let K    := pick_kill k R L' ∅ (getAnn rlv_t) in
       let Sp'  := ((getAnn lv_t) ∩ K \ M) ∪ (Sp ∩ R) in
 
-       annF (Sp, L, rms)
+       annF (Sp', L', rms')
             ((fun f rmlvsl
               => match rmlvsl with (rm, rLv, Lv, sl)
                                 => repair_spill k ZL' Λ' (fst rm) (snd rm) (snd f) rLv Lv sl
                  end)
-               ⊜ F (pair ⊜ (pair ⊜ (pair ⊜ rms rlv_F) lv_F) sl_F))
-            (repair_spill k ZL' Λ' (R \ K ∪ L) (Sp' ∪ M) t rlv_t lv_t sl_t)
+               ⊜ F (pair ⊜ (pair ⊜ (pair ⊜ rms' rlv_F) lv_F) sl_F))
+            (repair_spill k ZL' Λ' (R \ K ∪ L') (Sp' ∪ M) t rlv_t lv_t sl_t)
 
   | _,_,_,_ => ann0 (∅, ∅, nil)
 

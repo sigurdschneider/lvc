@@ -56,7 +56,14 @@ Proof.
       econstructor; eauto.
 Qed.
 
-
+Lemma PIR2_eq (X:Type) `{OrderedType X} (L L' : list X)  :
+  PIR2 _eq L L'
+  -> _eq L L'
+.
+Proof.
+  intros. general induction H0; eauto.
+  econstructor; eauto.
+Qed.
 
 
 Lemma PIR2_Equal_Subset (X:Type) `{OrderedType X} (L L' : list ⦃X⦄) :
@@ -301,7 +308,6 @@ Proof.
       eapply stretch_rms_inv; eauto.
       - eauto with len.
     }
-    simpl.
     assert (PIR2 _eq rms (pair ⊜ (getAnn ⊝ rlvF) (snd ⊝ rms))) as pir2_rlvF.
     {
       eapply PIR2_get; [|eauto with len].
@@ -311,43 +317,47 @@ Proof.
         eapply rlive_min_incl_R in H6; eauto.
       - exploit H3; eauto.
     }
+    cbn. 
     econstructor; eauto;
       subst L' Sp' K';
       set (L' := pick_load k R M Sp L ∅) in *;
       set (K' := pick_kill k R L' ∅ (getAnn rlv_t)) in *;
-      set (Sp':= ((getAnn lv_t) ∩ K' \ M) ∪ (Sp ∩ R)) in *.
-    + reflexivity.
-    + eauto with len.
+      set (Sp':= ((getAnn lv_t) ∩ K' \ M) ∪ (Sp ∩ R)) in *; [econstructor| | |];
+        [econstructor| | | |]; eauto.
+    + eapply PIR2_eq in rms_eq; eauto.
+    + rewrite !zip_length. rewrite stretch_rms_length; eauto with len.
     + intros. inv_get.
       exploit H36; eauto. exploit H17; eauto. exploit H30; eauto.
       eapply H2 with (Λ0:=pair ⊜ (getAnn ⊝ rlvF) (snd ⊝ rms) ++ Λ); eauto.
       * eapply rlive_min_ext; eauto. eapply PIR2_app; eauto. 
       * rewrite map_app. rewrite fst_zip_pair. reflexivity. eauto with len.
-      * edestruct H13; eauto. dcr. rewrite H48. rewrite <-H35. cbn.
+      * edestruct H13; eauto. dcr. rewrite H49. rewrite <-H35. cbn.
         apply incl_union_right. eapply incl_list_union; eauto.
-      * destruct x1 as [Rf Mf]. eapply spill_max_kill_spill_sound in H47. cbn.
-        eapply rlive_min_incl_R in H47; eauto; cbn; eauto.
+        unfold merge. eapply get_PIR2 in rms_eq; eauto. rewrite rms_eq. reflexivity.
+      * destruct x5 as [Rf Mf]. eapply spill_max_kill_spill_sound in H48. cbn.
+        eapply rlive_min_incl_R in H32; [|cbn;eauto |eapply H48]; eauto.
+        rewrite H32.
+        eapply get_PIR2 in rms_eq; eauto. rewrite <-rms_eq; cbn; eauto.
       * exploit H9; eauto. rewrite map_app. eapply live_sound_monotone.
-        -- apply H48.
+        -- apply H49.
         -- apply PIR2_app; eauto. eapply PIR2_get; eauto; [|eauto with len].
            intros. inv_get. unfold merge. cbn.
            clear H22. exploit H17; eauto. exploit H30; eauto.
-           destruct x6 as [Rf Mf]. eapply spill_max_kill_spill_sound in H55.
+           destruct x7 as [Rf Mf]. eapply spill_max_kill_spill_sound in H56.
            rewrite rlive_min_incl_R with (R:=Rf); eauto; cbn; eauto.
-           clear - H34 H49 H50. eapply get_PIR2; eauto.
+           eapply get_PIR2; eauto.
            ++ apply PIR2_Equal_Subset; eauto.
-           ++ eapply map_get_eq; eauto.
-              
+           ++ eapply map_get_eq; eauto.   
       * eapply live_min_ext; eauto. eapply PIR2_app; eauto. 
       * intros. decide (n0 >= length rms).
-        -- eapply cardRf; eauto. eapply get_app_right_ge; [|eapply H48].
+        -- eapply cardRf; eauto. eapply get_app_right_ge; [|eapply H49].
            assert (length rms = length (pair ⊜ (getAnn ⊝ rlvF) (snd ⊝ rms))) by eauto with len.
            omega.
-        -- eapply get_app_lt_1 in H48.
-           ++ inv_get. exploit H17; eauto. exploit H30; eauto. destruct x6 as [x61 x62].
-              eapply spill_max_kill_spill_sound in H51.
-              eapply rlive_min_incl_R in H51; eauto; cbn; eauto.
-              apply subset_cardinal in H51. rewrite H51.
+        -- eapply get_app_lt_1 in H49.
+           ++ inv_get. exploit H17; eauto. exploit H30; eauto. destruct x7 as [x61 x62].
+              eapply spill_max_kill_spill_sound in H52.
+              eapply rlive_min_incl_R in H52; eauto; cbn; eauto.
+              apply subset_cardinal in H52. rewrite H52.
               exploit H29; eauto.
            ++ assert (length rms = length (pair ⊜ (getAnn ⊝ rlvF) (snd ⊝ rms))).
               { clear - H0 H28. eauto with len. }
@@ -358,19 +368,23 @@ Proof.
            eapply get_PIR2 in rms_eq; [|eauto|eauto]. destruct x' as [x'1 x'2].
            split; [| rewrite surjective_pairing in rms_eq at 1; invc rms_eq; eauto].
            apply incl_eq; destruct x2 as [x21 x22]. 
-           ++ invc rms_eq. rewrite <-H59. exploit H3; eauto.
+           ++ invc rms_eq. rewrite <-H60. exploit H3; eauto.
            ++ exploit H30; eauto.
-              eapply spill_max_kill_spill_sound in H56.
-              eapply rlive_min_incl_R in H56; eauto; cbn; eauto. rewrite H56.
-              invc rms_eq. rewrite H60. reflexivity.
+              eapply spill_max_kill_spill_sound in H57.
+              eapply rlive_min_incl_R in H57; eauto; cbn; eauto. rewrite H57.
+              invc rms_eq. rewrite H61. reflexivity.
         -- rewrite stretch_rms_length; eauto with len.
-      * destruct x1 as [x11 x12]. eapply spill_max_kill_ext'; eauto. eapply PIR2_app; eauto.
-        eapply PIR2_sym; eauto.
+      * destruct x5 as [x11 x12].
+        eapply spill_max_kill_ext' with (Λ:=rms ++ Λ); eauto.
+        -- eapply PIR2_app; eauto. apply PIR2_sym; eauto.
+        -- eapply spill_max_kill_ext; eauto;
+             eapply get_PIR2 in rms_eq; eauto; rewrite <-rms_eq; cbn; eauto.
     + eapply IHrliveSnd with (Λ0:=pair ⊜ (getAnn ⊝ rlvF) (snd ⊝ rms) ++ Λ); eauto.
       * eapply rlive_min_ext; eauto. eapply PIR2_app; eauto. 
       * rewrite map_app. rewrite fst_zip_pair. reflexivity. eauto with len.
-      * rewrite H25, H24. cbn in rm_ra. pe_rewrite. rewrite <-Speq', H24. clear - rm_ra. cset_tac.
-      * rewrite <-Keq. clear - H4 sub_R. cbn in sub_R. subst K. cset_tac.
+      * rewrite <-Leq', <-Speq', <-Keq. rewrite H25, H24.
+        cbn in rm_ra. pe_rewrite. clear - rm_ra. cset_tac.
+      * rewrite <-Keq, <-Leq'. clear - H4 sub_R. cbn in sub_R. subst K. cset_tac.
       * rewrite map_app. eapply live_sound_monotone.
         -- apply H7.
         -- apply PIR2_app; eauto. eapply PIR2_get; eauto; [|eauto with len].
@@ -410,5 +424,5 @@ Proof.
       * eapply spill_max_kill_ext'; eauto. eapply PIR2_app; eauto.
         eapply PIR2_sym; eauto. eapply spill_max_kill_ext'; eauto.
         -- instantiate (1:=rms ++ Λ). eapply PIR2_app; eauto. apply PIR2_sym; eauto.
-        -- eapply spill_max_kill_ext; [| |apply H31]; clear - Keq Speq'; cset_tac.
+        -- eapply spill_max_kill_ext; [| |apply H31]; clear - Keq Leq' Speq'; cset_tac.
 Qed.
