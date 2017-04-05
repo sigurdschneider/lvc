@@ -254,5 +254,61 @@ Proof.
         apply nateq; eauto.
         -- apply subset_cardinal;eauto. clear; cset_tac.
         -- rewrite subset_cardinal;eauto. clear; cset_tac.
-  - admit.
+  - destruct a as [[Sp L] rms]. rename als into lv_F. rename alb into lv_t.
+    rename sa0 into rlv_F. rename ta0 into rlv_t. rename sa into sl_F. rename ta into sl_t.
+    set (L' := pick_load k R M Sp L ∅) in *.
+    set (K' := pick_kill k R L' ∅ (getAnn rlv_t)) in *.
+    set (Kx' := pick_killx k (R \ K' ∪ L') (getAnn rlv_t)) in *.
+    set (Sp':= (getAnn lv_t ∩ (K' ∪ Kx') \ M ∪ (Sp ∩ R))) in *.
+    assert (Sp ∩ R ⊆ Sp') as Spincl.
+    { subst Sp'. clear. cset_tac. }
+    assert (K' ⊆ R) as KReq.
+    { subst K'. rewrite pick_kill_incl. clear; cset_tac. }
+    assert (disj (R \ K') L') as RKLdisj.
+    { subst K'. rewrite <-incl_pick_kill. clear. cset_tac. }
+    assert (cardinal (R \ K' ∪ L') <= k) as card_RKL.
+    {
+      rewrite union_cardinal; eauto.
+      rewrite cardinal_difference'; eauto.
+      rewrite <-Nat.add_sub_swap; [|rewrite subset_cardinal; eauto].
+      apply Nat.le_sub_le_add_r.
+      subst K'. rewrite <-pick_kill_card; [omega|].
+      subst L'. rewrite pick_load_card; eauto.
+      assert (forall n1 n2 n3 : nat, n1 <= n3 -> n3 <= n2 -> n1 + (n2 - n3) <= n2) as nateq.
+      { clear. intros. omega. }
+      apply nateq; eauto.
+      * apply subset_cardinal;eauto. rewrite <-incl_pick_load; eauto.
+        clear;cset_tac.
+      * rewrite subset_cardinal with (s':=∅); eauto.
+        -- rewrite empty_cardinal. omega.
+        -- clear; cset_tac.
+      * rewrite empty_cardinal. omega.
+    }
+    econstructor; eauto.
+    + subst Sp'. subst K'. rewrite pick_kill_incl. clear; cset_tac.
+    + subst L'. rewrite pick_load_incl. clear; cset_tac.
+    + rewrite !zip_length. rewrite stretch_rms_length; eauto; eauto with len.
+    + rewrite stretch_rms_length; eauto with len.
+    + intros. inv_get.
+
+Lemma stretch_rms_cardinal k F rms lvs n rm :
+  get (stretch_rms k F rms lvs) n rm
+  -> cardinal (fst rm) <= k
+.
+Proof.
+  intros gett. general induction gett; destruct F; cbn; eauto; isabsurd.
+  - cbn in *. destruct rms, lvs; isabsurd.
+    + invc Heql. cbn. rewrite empty_cardinal. omega.
+    + destruct p. isabsurd.
+    + destruct p as [Rf Mf]. invc Heql. cbn. apply set_take_size.
+  - cbn in *. destruct rms, lvs; invc Heql; isabsurd.
+    + eapply IHgett; eauto.
+    + destruct p; isabsurd.
+    + destruct p as [Rf Mf]. invc H0. eapply IHgett; eauto.
+Qed.
+ 
+      eapply stretch_rms_cardinal; eauto.
+    + intros. inv_get. rewrite surjective_pairing at 1.
+      eapply H1; eauto; admit.
+    + eapply IHlvSnd; eauto; admit.
 Admitted.

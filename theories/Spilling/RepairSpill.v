@@ -96,10 +96,9 @@ Fixpoint repair_spill
 .
 
 Lemma stretch_rms_length alv rms k F :
-  length F = length alv -> length alv = length rms -> length (stretch_rms k F rms alv) = length rms
+  length F = length alv -> length (stretch_rms k F rms alv) = length F
 .
 Proof.
-  intros lenF lenrms. general induction F; destruct rms; destruct alv; isabsurd.
-  - cbn. reflexivity.
-  - cbn. destruct p as [Rf Mf]. cbn. rewrite IHF; eauto.
+  intros lenF. general induction F; destruct rms; destruct alv; isabsurd; cbn; eauto.
+  destruct p as [Rf Mf]. cbn. rewrite IHF; eauto.
 Qed.
