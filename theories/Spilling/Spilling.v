@@ -1,6 +1,6 @@
 Require Import Util CSet MapDefined AllInRel.
 Require Import Var MapInjectivity IL Annotation AnnP Sim LabelsDefined AppExpFree.
-Require Import SimplSpill SpillSound SpillSim DoSpill DoSpillRm Take Drop.
+Require Import SplitSpill SpillSound SpillSim DoSpill DoSpillRm Take Drop.
 Require Import Coherence.
 Require Import ExpVarsBounded ReconstrLive ReconstrLiveSmall ReconstrLiveSound.
 Require Import Liveness.Liveness RenamedApart RenameApart_Liveness AddParams Slot.
@@ -38,7 +38,7 @@ Definition spill (k:nat) (slot:var -> var)
            (s:stmt) (lv:ann (set var)) : stmt * ann (set var) :=
   let fvl := to_list (getAnn lv) in
   let (R,M) := (of_list (take k fvl), of_list (drop k fvl)) in
-  let spl := @simplSpill k nil nil R M s lv in
+  let spl := @splitSpill k nil nil R M s lv in
   let s_spilled := do_spill slot s spl nil in
   let lv_spilled := reconstr_live nil nil ∅ s_spilled (do_spill_rm slot spl) in
   let s_fun := addParams s_spilled lv_spilled in
@@ -93,14 +93,14 @@ Proof.
   unfold spill.
   set (R:=of_list (take k (to_list (getAnn lv)))).
   set (M:=of_list (drop k (to_list (getAnn lv)))).
-  set (spl:=(simplSpill k nil nil R M s lv)).
+  set (spl:=(splitSpill k nil nil R M s lv)).
   set (VD:=fst (getAnn ra) ∪ snd (getAnn ra)).
   assert (lvRM:getAnn lv [=] R ∪ M). {
     subst R M. rewrite <- of_list_app. rewrite <- take_eta.
     rewrite of_list_3. eauto.
   }
   assert (SPS:spill_sound k nil nil (R, M) s spl). {
-    eapply simplSpill_sat_spillSound; eauto using PIR2.
+    eapply splitSpill_sat_spillSound; eauto using PIR2.
     subst R. rewrite TakeSet.take_of_list_cardinal; eauto.
     rewrite lvRM; eauto.
   }
@@ -141,7 +141,7 @@ Proof.
       clear; intuition.
   }
   assert (spl_lv:spill_live VD spl lv). {
-    eapply simplSpill_spill_live; eauto using lv_ra_lv_bnd.
+    eapply splitSpill_spill_live; eauto using lv_ra_lv_bnd.
   }
   eapply sim_trans with (S2:=I.state).
   - eapply sim_I with (slot:=slt) (k:=k) (R:=R) (M:=M) (sl:=spl) (Λ:=nil)
@@ -197,14 +197,14 @@ Proof.
     unfold spill.
   set (R:=of_list (take k (to_list (getAnn lv)))).
   set (M:=of_list (drop k (to_list (getAnn lv)))).
-  set (spl:=(simplSpill k nil nil R M s lv)).
+  set (spl:=(splitSpill k nil nil R M s lv)).
   set (VD:=fst (getAnn ra) ∪ snd (getAnn ra)).
   assert (lvRM:getAnn lv [=] R ∪ M). {
     subst R M. rewrite <- of_list_app. rewrite <- take_eta.
     rewrite of_list_3. eauto.
   }
   assert (SPS:spill_sound k nil nil (R, M) s spl). {
-    eapply simplSpill_sat_spillSound; eauto using PIR2.
+    eapply splitSpill_sat_spillSound; eauto using PIR2.
     subst R. rewrite TakeSet.take_of_list_cardinal; eauto.
     rewrite lvRM; eauto.
   }
@@ -226,7 +226,7 @@ Proof.
     rewrite of_list_drop_elements_incl. eauto with cset.
   }
   assert (spl_lv:spill_live VD spl lv). {
-    eapply simplSpill_spill_live; eauto using lv_ra_lv_bnd.
+    eapply splitSpill_spill_live; eauto using lv_ra_lv_bnd.
   }
   eapply addParams_live.
   - eapply (@reconstr_live_sound k VD slt nil _ nil R M); eauto using PIR2.
@@ -252,14 +252,14 @@ Proof.
   unfold spill.
   set (R:=of_list (take k (to_list (getAnn lv)))).
   set (M:=of_list (drop k (to_list (getAnn lv)))).
-  set (spl:=(simplSpill k nil nil R M s lv)).
+  set (spl:=(splitSpill k nil nil R M s lv)).
   set (VD:=fst (getAnn ra) ∪ snd (getAnn ra)).
   assert (lvRM:getAnn lv [=] R ∪ M). {
     subst R M. rewrite <- of_list_app. rewrite <- take_eta.
     rewrite of_list_3. eauto.
   }
   assert (SPS:spill_sound k nil nil (R, M) s spl). {
-    eapply simplSpill_sat_spillSound; eauto using PIR2.
+    eapply splitSpill_sat_spillSound; eauto using PIR2.
     subst R. rewrite TakeSet.take_of_list_cardinal; eauto.
     rewrite lvRM; eauto.
   }
@@ -281,7 +281,7 @@ Proof.
     rewrite of_list_drop_elements_incl. eauto with cset.
   }
   assert (spl_lv:SpillSound.spill_live VD spl lv). {
-    eapply simplSpill_spill_live; eauto using lv_ra_lv_bnd.
+    eapply splitSpill_spill_live; eauto using lv_ra_lv_bnd.
   }
   eapply addParams_srd; eauto.
   - eapply (@reconstr_live_sound k _ slt nil _ nil R M); eauto using PIR2.
@@ -305,14 +305,14 @@ Proof.
   unfold spill; simpl.
   set (R:=of_list (take k (to_list (getAnn lv)))).
   set (M:=of_list (drop k (to_list (getAnn lv)))).
-  set (spl:=(simplSpill k nil nil R M s lv)).
+  set (spl:=(splitSpill k nil nil R M s lv)).
   set (VD:=fst (getAnn ra) ∪ snd (getAnn ra)).
   assert (lvRM:getAnn lv [=] R ∪ M). {
     subst R M. rewrite <- of_list_app. rewrite <- take_eta.
     rewrite of_list_3. eauto.
   }
   assert (SPS:spill_sound k nil nil (R, M) s spl). {
-    eapply simplSpill_sat_spillSound; eauto using PIR2.
+    eapply splitSpill_sat_spillSound; eauto using PIR2.
     subst R. rewrite TakeSet.take_of_list_cardinal; eauto.
     rewrite lvRM; eauto.
   }
@@ -334,7 +334,7 @@ Proof.
     rewrite of_list_drop_elements_incl. eauto with cset.
   }
   assert (spl_lv:SpillSound.spill_live VD spl lv). {
-    eapply simplSpill_spill_live; eauto using lv_ra_lv_bnd.
+    eapply splitSpill_spill_live; eauto using lv_ra_lv_bnd.
   }
   eapply addParams_paramsMatch; eauto.
   - eapply (@do_spill_paramsMatch _ _ _ nil nil); eauto.
@@ -361,14 +361,14 @@ Proof.
   unfold spill; simpl.
   set (R:=of_list (take k (to_list (getAnn lv)))).
   set (M:=of_list (drop k (to_list (getAnn lv)))).
-  set (spl:=(simplSpill k nil nil R M s lv)).
+  set (spl:=(splitSpill k nil nil R M s lv)).
   set (VD:=fst (getAnn ra) ∪ snd (getAnn ra)).
   assert (lvRM:getAnn lv [=] R ∪ M). {
     subst R M. rewrite <- of_list_app. rewrite <- take_eta.
     rewrite of_list_3. eauto.
   }
   assert (SPS:spill_sound k nil nil (R, M) s spl). {
-    eapply simplSpill_sat_spillSound; eauto using PIR2.
+    eapply splitSpill_sat_spillSound; eauto using PIR2.
     subst R. rewrite TakeSet.take_of_list_cardinal; eauto.
     rewrite lvRM; eauto.
   }
@@ -390,7 +390,7 @@ Proof.
     rewrite of_list_drop_elements_incl. eauto with cset.
   }
   assert (spl_lv:SpillSound.spill_live VD spl lv). {
-    eapply simplSpill_spill_live; eauto using lv_ra_lv_bnd.
+    eapply splitSpill_spill_live; eauto using lv_ra_lv_bnd.
   }
   eapply addParams_noUnreachableCode; eauto.
   - eapply (@do_spill_paramsMatch _ _ _ nil nil); eauto.
