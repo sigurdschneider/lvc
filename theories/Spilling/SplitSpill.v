@@ -8,10 +8,10 @@ Require Import OneOrEmpty.
 
 Set Implicit Arguments.
 
-(** * SimplSpill *)
+(** * SplitSpill *)
 
 
-Fixpoint simplSpill
+Fixpoint splitSpill
          (k : nat)
          (ZL: list params)
          (Λ : list (⦃var⦄ * ⦃var⦄))
@@ -32,7 +32,7 @@ Fixpoint simplSpill
        let Sp   := getAnn lv ∩ (K ∪ K_x) \ M in
        let R_s  := {x; R_e \ K_x} in
 
-       ann1 (Sp,L,nil) (simplSpill k ZL Λ R_s (Sp ∪ M) s lv)
+       ann1 (Sp,L,nil) (splitSpill k ZL Λ R_s (Sp ∪ M) s lv)
 
   | stmtReturn e, _
     => let Fv_e := Op.freeVars e in
@@ -50,8 +50,8 @@ Fixpoint simplSpill
        let R_e  := R \ K ∪ L in
        let Sp   := (getAnn lv1 ∪ getAnn lv2) ∩ K in
 
-       ann2 (Sp,L,nil) (simplSpill k ZL Λ R_e (Sp ∪ M) s1 lv1)
-            (simplSpill k ZL Λ R_e (Sp ∪ M) s2 lv2)
+       ann2 (Sp,L,nil) (splitSpill k ZL Λ R_e (Sp ∪ M) s1 lv1)
+            (splitSpill k ZL Λ R_e (Sp ∪ M) s2 lv2)
 
   | stmtApp f Y, _
     => let R_f := fst (nth (counted f) Λ (∅,∅)) in
@@ -78,10 +78,10 @@ Fixpoint simplSpill
        annF (∅, ∅, rms)
             ((fun f rmlv
               => match rmlv with (rm, Lv)
-                                => simplSpill k ZL' Λ' (fst rm) (snd rm) (snd f) Lv
+                                => splitSpill k ZL' Λ' (fst rm) (snd rm) (snd f) Lv
                  end)
                ⊜ F ((fun rm al => (rm,al)) ⊜ rms als))
-            (simplSpill k ZL' Λ' R M t lv_t)
+            (splitSpill k ZL' Λ' R M t lv_t)
 
   | _,_ => ann0 (∅, ∅, nil)
 
@@ -302,7 +302,7 @@ Qed.
 
 (**********************************************************************)
 
-Lemma simplSpill_sat_spillSound (k:nat) (s:stmt) (R R' M M': set var)
+Lemma splitSpill_sat_spillSound (k:nat) (s:stmt) (R R' M M': set var)
   (Λ Λ': list (set var * set var)) (Lv : list (set var)) (ZL : list params)
   (alv : ann (set var)) :
 R [=] R'
@@ -315,7 +315,7 @@ R [=] R'
 -> PIR2 (fun RMf G => match RMf with (R_f,M_f)
                    => cardinal R_f <= k /\ R_f ∪ M_f ⊆ G end) Λ Lv
 (*-> PIR2 (fun RMf G => fst RMf [=] ∅ /\ snd RMf [=] G) Λ Lv*)
--> spill_sound k ZL Λ (R,M) s (simplSpill k ZL Λ R' M' s alv).
+-> spill_sound k ZL Λ (R,M) s (splitSpill k ZL Λ R' M' s alv).
 
 Proof.
 intros ReqR' MeqM' ΛeqΛ' RleqK fvRM fvBound lvSound (*aeFree*) pir2.
@@ -540,10 +540,10 @@ general induction lvSound;
 Qed.
 
 
-Lemma simplSpill_spill_live VD k ZL Lv Λ R M s alv
+Lemma splitSpill_spill_live VD k ZL Lv Λ R M s alv
       (LS:live_sound Imperative ZL Lv s alv)
       (lvIncl:ann_P (fun lv => lv ⊆ VD) alv)
-  : spill_live VD (simplSpill k ZL Λ R M s alv) alv.
+  : spill_live VD (splitSpill k ZL Λ R M s alv) alv.
 Proof.
   move s before k.
   revert_until s.

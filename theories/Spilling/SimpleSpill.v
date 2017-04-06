@@ -2,9 +2,9 @@ Require Import List Map Env AllInRel Exp.
 Require Import IL Annotation InRel AutoIndTac Liveness.Liveness LabelsDefined.
 Require Import ExpVarsBounded SpillSound.
 
-(** * StupSpill *)
+(** * SimpleSpill *)
 
-Fixpoint stupSpill
+Fixpoint simpleSpill
          (R : ⦃var⦄)
          (s : stmt)
          (Lv : ann (⦃var⦄))
@@ -12,22 +12,22 @@ Fixpoint stupSpill
   :=
     match s,Lv with
     | stmtLet x e t, ann1 LV lv
-      => ann1 (R, Exp.freeVars e, nil) (stupSpill (singleton x) t lv)
+      => ann1 (R, Exp.freeVars e, nil) (simpleSpill (singleton x) t lv)
 
     | stmtReturn e, _
       => ann0 (R, Op.freeVars e, nil)
 
     | stmtIf e t v, ann2 LV lv_s lv_t
-      => ann2 (R, Op.freeVars e, nil) (stupSpill (Op.freeVars e) t lv_s)
-                                       (stupSpill (Op.freeVars e) v lv_t)
+      => ann2 (R, Op.freeVars e, nil) (simpleSpill (Op.freeVars e) t lv_s)
+                                       (simpleSpill (Op.freeVars e) v lv_t)
 
     | stmtApp f Y, _
       => ann0 (R, ∅, (∅, list_union (Op.freeVars ⊝ Y))::nil)
 
     | stmtFun F t, annF LV als lv_t
       => annF (R, ∅, ((fun lv => (∅, lv)) ⊝ getAnn ⊝ als))
-              ((fun Zs lv => stupSpill ∅ (snd Zs) lv) ⊜ F als)
-              (stupSpill ∅ t lv_t)
+              ((fun Zs lv => simpleSpill ∅ (snd Zs) lv) ⊜ F als)
+              (simpleSpill ∅ t lv_t)
 
     | _,_ => ann0 (∅, ∅, nil)
 
@@ -36,7 +36,7 @@ Fixpoint stupSpill
 
 
 
-Lemma stupSpill_sat_spillSound
+Lemma simpleSpill_sat_spillSound
       (k:nat)
       (s:stmt)
       (R R' M : ⦃var⦄)
@@ -50,7 +50,7 @@ Lemma stupSpill_sat_spillSound
     -> exp_vars_bounded k s
     -> live_sound Imperative ZL Lv s alv
     -> PIR2 (fun RMf G => fst RMf [=] ∅ /\ snd RMf [=] G) Λ Lv
-    -> spill_sound k ZL Λ (R,M) s (stupSpill R' s alv)
+    -> spill_sound k ZL Λ (R,M) s (simpleSpill R' s alv)
 .
 Proof.
   intros ReqR' fvRM fvBound lvSound pir2.
