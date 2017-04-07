@@ -104,7 +104,10 @@ doc-spill: clean-doc $(DOCS)
 	cp $(EXTRA_DIR)/search-toc.html $(DOCSPILL)/search-toc.html
 
 doc-spill-publish: doc-spill
+	ssh ps rm public_html/lvc-spill/*
 	scp -r $(DOCSPILL)/* ps:public_html/lvc-spill/
+	ssh ps chmod -R g+w public_html/lvc-spill
+	ssh ps chown -R :gosarights public_html/lvc-spill
 
 clean-doc:
 	rm -rf $(DOC)
