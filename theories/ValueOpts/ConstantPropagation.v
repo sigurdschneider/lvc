@@ -771,16 +771,6 @@ Proof.
   intro. eapply val_true_false_neq. eauto.
 Qed.
 
-
-
-Smpl Add 100
-     match goal with
-     | [ H : true -> false |- _ ] =>
-       exfalso; eapply H; eauto
-     | [ H : forall _ : Is_true true, Is_true false |- _ ] =>
-       exfalso; eapply H; eauto
-     end : inv_trivial.
-
 Lemma cp_sound_eqn AE Cp Rch ZL GL ΓL s r (ang:ann (set var * set var))
  (CP:cp_sound AE Cp Rch s r)
  (RA: renamedApart s ang)

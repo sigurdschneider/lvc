@@ -735,6 +735,17 @@ Ltac set_simpl :=
   | [ EQ : ?D' [=] ?D |- context [ ?D ] ]
     => is_var D; setoid_rewrite <- EQ
   | [ EQ : ?D' [=] ?D |- _ ] => is_var D; clear D EQ
+  | [ I : context [ @union ?A ?H _ _ {} ] |- _ ]
+    => rewrite (@empty_neutral_union_r A H) in I
+  | [ I : context [ @union ?A ?H _ {} _ ] |- _ ]
+       => rewrite (@empty_neutral_union A H) in I
+  | [ |- context [ @union ?A ?H _ _ {} ] ] => rewrite (@empty_neutral_union_r A H)
+  | [ |- context [ @union ?A ?H _ {} _ ] ] => rewrite (@empty_neutral_union A H)
+  | [ I : context [ @diff ?A ?H _ _ {} ] |- _ ]
+       => rewrite (@minus_empty A H) in I
+  | [ |- context [ @diff ?A ?H _ _ {} ] ]
+    => rewrite (@minus_empty A H)
+  | [ H : {} ⊆ _ |- _ ] => clear H
   end.
 
 Instance InA_computable X `{OrderedType X} (L:list X) x
@@ -907,3 +918,50 @@ Smpl Add 40
          | _ => pose proof (@InA_eq_of_list _ _ _ _ H)
          end
      end : cset.
+
+
+Smpl Add
+     match goal with
+     | [ H : nil = snd ?a |- _ ] => destruct a; simpl snd in H
+     | [ H : _ :: _ = snd ?a |- _ ] => destruct a; simpl snd in H
+     end : inv_trivial.
+
+Smpl Add
+     match goal with
+     | [ H : @_eq (@prod _ _) _ ?A ?B |- _ ] => inv_if_one_ctor H A B
+     | [ H : @_eq (@list _) _ ?A ?B |- _ ] => inv_if_one_ctor H A B
+     | [ H : @list_eq _ _ ?A ?B |- _ ] => inv_if_one_ctor H A B
+     end : inv_trivial.
+
+Smpl Add 100
+     match goal with
+     | [ H : (_, _) = (_,_) |- _ ] => invc H
+     end : inv_trivial.
+
+Lemma polyid
+  : forall A:Prop, (A -> A) <-> True.
+Proof.
+  split; eauto.
+Qed.
+
+Smpl Add 49
+     match goal with
+     | [ H : context [?x -> ?x] |- _ ] => rewrite polyid in H
+     | [ |- context [?x -> ?x] ] => rewrite polyid
+     | [ H : context [?x -> ?x] |- _ ] => setoid_rewrite polyid in H
+     | [ |- context [?x -> ?x] ] => setoid_rewrite polyid
+     end : cset.
+
+Smpl Add
+    match goal with
+    | [ |- @Equivalence.equiv
+            _
+            (@_eq _ (@SOT_as_OT _ (@eq nat) nat_OrderedType))
+            (@OT_Equivalence _ (@SOT_as_OT _ (@eq nat) nat_OrderedType))
+            ?x ?y ] => hnf
+    | [ H : @Equivalence.equiv
+              _
+              (@_eq _ (@SOT_as_OT _ (@eq nat) nat_OrderedType))
+              (@OT_Equivalence _ (@SOT_as_OT _ (@eq nat) nat_OrderedType))
+              ?x ?y |- _ ] => hnf in H; clear_trivial_eqs
+    end : cset.

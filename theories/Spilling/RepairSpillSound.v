@@ -138,19 +138,20 @@ Proof.
       clear - lv_RM. cbn in *. rewrite lv_RM. rewrite union_meet_distr_r.
       apply union_incl_split; [cset_tac|].
       clear; cset_tac.
-  - repeat let_pair_case_eq; subst. inv_get. 
+  - repeat let_pair_case_eq; subst. inv_get.
     eapply Op.freeVars_live_list in H3.
     destruct (get_dec (snd a) 0) as [[[R' M'] ?]|].
     + eapply PIR2_nth in H5; eauto. dcr. inv_get. destruct x0 as [Rf' Mf'].
       eapply PIR2_nth_2 in H4; eauto. destruct H4 as [[Rf Mf] [getrfmf rfmf_eq]]. invc rfmf_eq.
       repeat erewrite get_nth; eauto using get; simpl.
-      destruct a as [[Sp L] RMappL]. unfold fst, snd in *.
+      destruct p as [Sp L]. unfold fst, snd in *.
       set (L':=pick_load k R M Sp L (Rf \ of_list Z)).
       set (K':=pick_kill k R L' (Rf \ of_list Z) (list_union (Op.freeVars ⊝ Y) \ M')).
       set (Sp':= (list_union (Op.freeVars ⊝ Y) ∩ K' ∪ Mf \ of_list Z) \ M ∪ (Sp ∩ R)).
       assert (K' ⊆ R) as KsubR.
       { subst K'. rewrite pick_kill_incl. clear; cset_tac. }
-      cbn in H1, lv_RM. unfold merge in H8. cbn in H8. rewrite H8 in H1. rewrite <-H10, <-H12 in H1.
+      cbn in H1, lv_RM. unfold merge in H8. cbn in H8. rewrite H8 in H1.
+      rewrite <-H9, <-H11 in H1.
       econstructor; eauto.
       * subst K' Sp'. rewrite pick_kill_incl.
         rewrite H3 at 1. rewrite lv_RM in *.
@@ -176,8 +177,8 @@ Proof.
         -- clear. subst K'. rewrite <-incl_pick_kill. cset_tac.
       * subst K'. rewrite pick_kill_incl. setoid_rewrite union_comm at 2.
         rewrite  <-minus_union, minus_minus. rewrite incl_minus_union; [|clear; cset_tac].
-        subst L'. rewrite <-incl_pick_load. rewrite <-H10. clear. cset_tac.
-      * subst Sp'. rewrite <-H12. clear; cset_tac.
+        subst L'. rewrite <-incl_pick_load. rewrite <-H9. clear. cset_tac.
+      * subst Sp'. rewrite <-H11. clear; cset_tac.
       * setoid_rewrite set_decomp with (t:=R \ K' ∪ L') at 1.
         apply union_incl_split;[clear;cset_tac|].
         setoid_rewrite <-incl_right at 2. setoid_rewrite <-incl_left at 2.

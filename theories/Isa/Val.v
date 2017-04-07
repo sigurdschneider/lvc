@@ -331,3 +331,18 @@ Lemma int_eq_true_false_absurd
 Proof.
   intros. eapply int_eq_eq in H. inv H.
 Qed.
+
+Smpl Add 100
+     match goal with
+     | [ H : @Equivalence.equiv val int_eq Equivalence_eq_int' _ _ |- _ ] =>
+       eapply int_eq_eq in H
+     end : inv_trivial.
+
+Smpl Add match goal with
+         | [ H : int_eq val_true val_false |- _ ] =>
+           exfalso; eapply int_eq_true_false_absurd in H; eauto
+         | [ H : val_true = val_false |- _ ] => inv H
+         | [ H : val_false = val_true |- _ ] => inv H
+         | [ H : val_true === val_false |- _ ] => inv H
+         | [ H : val_false === val_true |- _ ] => inv H
+         end : inv_trivial.
