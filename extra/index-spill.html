@@ -110,11 +110,11 @@
 	  </p>
 	  <p>
 	    Finally, we exploit that our correctness predicate is decidable, and give a translation validator.
-	    The <a href="Lvc.Spilling.RepairSpilll.html">translation validator</a> has a twist: It is able to repair incorrect spilling information in a non-invasive way.
+	    The <a href="Lvc.Spilling.RepairSpill.html">translation validator</a> has a twist: It is able to repair incorrect spilling information in a non-invasive way.
 	    We show two theorems about our translation validator.
-	    First, that every spilling it produces is <a href="Lvc.Spilling.RepairSpilllSound.html">correct</a>.
+	    First, that every spilling it produces is <a href="Lvc.Spilling.RepairSpillSound.html">correct</a>.
 	    This means that the translation validator is effectively a spilling algorithm.
-	    And second, that the translation validator <a href="Lvc.Spilling.RepairSpilllInv.html">does not alter correct spillings</a>.
+	    And second, that the translation validator <a href="Lvc.Spilling.RepairSpillInv.html">does not alter correct spillings</a>.
 	    This is the translation validation part of the algorithm.
 	    From the structure of the theorem, it follows that the repair mechanism only introduces changes
 	    in the sub-trees where spilling information is incorrect. This is what we mean by non-invasive repair.
