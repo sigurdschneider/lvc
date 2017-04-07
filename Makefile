@@ -2,6 +2,7 @@ DOC := doc/
 DOCIND := doc-ind/
 DOCSPILL := doc-spill/
 PKGIND := pkg-lvc-ind/
+PKGSPILL := pkg-lvc-spill/
 EXTRA_DIR := extra
 HEADER := $(EXTRA_DIR)/header.html
 FOOTER := $(EXTRA_DIR)/footer.html
@@ -54,6 +55,7 @@ depclean: clean
 	+$(MAKE) -C ContainersPlugin clean
 	+$(MAKE) -C compiler clean
 	+$(MAKE) -C smpl clean
+	+$(MAKE) -C CompCert clean distclean
 	rm -rf compiler/extraction/*
 
 distclean: clean depclean
@@ -94,17 +96,31 @@ ind-package:
 	rm -rf $(PKGIND)/compiler/lvcc.native
 	tar cvzf lvc-ind.tgz $(PKGIND)
 
+spill-package:
+	rm -rf $(PKGSPILL)
+	mkdir $(PKGSPILL)
+	cp -r _CoqProject compiler ContainersPlugin smpl extra Makefile configure.sh paco src theories README.md CompCert $(PKGSPILL)
+	touch $(PKGSPILL)/_blacklist
+	find $(PKGSPILL)/ -type f -iname '*.vo' -o -iname '*.glob' -o -iname '*.v.d' -o -iname '*.time' -o -iname '*.aux' | xargs rm -rf
+	rm -rf $(PKGSPILL)/theories/TransVal $(PKGSPILL)/theories/ValueOpts $(PKGSPILL)/theories/Test* $(PKGSPILL)/theories/Lowering/ToMach.v $(PKGSPILL)/theories/DCE.v
+	$(MAKE) -C $(PKGSPILL) clean depclean
+	cp Makefile.coq $(PKGSPILL)
+	rm -rf $(PKGSPILL)/src/*.cm* $(PKGSPILL)/src/*.o $(PKGSPILL)/src/*.ml4.d
+	rm -rf $(PKGSPILL)/compiler/lvcc.native
+	cd $(PKGSPILL); ./configure.sh
+	tar cvzf lvc-spill.tgz $(PKGSPILL)
+
 doc-spill: clean-doc $(DOCS)
 	- mkdir -p $(DOCSPILL)
 	make -f $(COQMAKEFILE) $(VSSPILL:.v=.vo) -j$(CORES)
 	coqdoc $(COQDOCFLAGS) -d $(DOCSPILL) $(shell cat _CoqProject | grep -v ^-I) $(VSSPILL)
-	find theories/ -iname '*vo' | sed 's/\.vo/.v/' | grep -v 'ValueOpts' | grep -v 'TransVal' | tar -cvzf $(DOCSPILL)/lvc-spill.tgz -T -
 	cp $(EXTRA_DIR)/resources/* $(DOCSPILL)
 	cp $(EXTRA_DIR)/index-spill.html $(DOCSPILL)/index.html
 	cp $(EXTRA_DIR)/search-toc.html $(DOCSPILL)/search-toc.html
 
-doc-spill-publish: doc-spill
-	ssh ps rm public_html/lvc-spill/*
+doc-spill-publish: doc-spill spill-package
+	cp lvc-spill.tgz $(DOCSPILL)/
+	-ssh ps rm public_html/lvc-spill/*
 	scp -r $(DOCSPILL)/* ps:public_html/lvc-spill/
 	ssh ps chmod -R g+w public_html/lvc-spill
 	ssh ps chown -R :gosarights public_html/lvc-spill
