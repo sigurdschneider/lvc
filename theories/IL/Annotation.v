@@ -467,3 +467,8 @@ Lemma ann_R_setTopAnn_left (A B : Type) (R : A -> B -> Prop) (a : A)
 Proof.
   intros. inv H0; simpl; eauto using @ann_R.
 Qed.
+
+Smpl Add
+     match goal with
+     | [ H : @equiv (@ann _) _ _ ?A ?B |- _ ] => inv_if_one_ctor H A B
+     end : inv_trivial.

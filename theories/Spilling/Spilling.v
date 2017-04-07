@@ -11,21 +11,6 @@ Set Implicit Arguments.
 
 Arguments sim S {H} S' {H0} r t _ _.
 
-Smpl Add
-    match goal with
-    | [ |- @Equivalence.equiv
-            _
-            (@_eq _ (@SOT_as_OT _ (@eq nat) nat_OrderedType))
-            (@OT_Equivalence _ (@SOT_as_OT _ (@eq nat) nat_OrderedType))
-            ?x ?y ] => hnf
-    | [ H : @Equivalence.equiv
-              _
-              (@_eq _ (@SOT_as_OT _ (@eq nat) nat_OrderedType))
-              (@OT_Equivalence _ (@SOT_as_OT _ (@eq nat) nat_OrderedType))
-              ?x ?y |- _ ] => hnf in H; clear_trivial_eqs
-    end : cset.
-
-
 Definition Slot_p (VD:set var) n (EQ:n = S (fold max VD 0)): Slot VD.
   refine (@Build_Slot VD (fun x => x + n) _ _).
   - hnf; intros. cset_tac'.

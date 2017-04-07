@@ -473,20 +473,6 @@ Instance SR (VD:set var) : PointwiseProofRelationI (((set var) * (set var)) * pa
 
 Require Import AppExpFree Subset1.
 
-Lemma polyid
-  : forall A:Prop, (A -> A) <-> True.
-Proof.
-  split; eauto.
-Qed.
-
-Smpl Add 49
-     match goal with
-     | [ H : context [?x -> ?x] |- _ ] => rewrite polyid in H
-     | [ |- context [?x -> ?x] ] => rewrite polyid
-     | [ H : context [?x -> ?x] |- _ ] => setoid_rewrite polyid in H
-     | [ |- context [?x -> ?x] ] => setoid_rewrite polyid
-     end : cset.
-
 Lemma sim_I k Λ ZL LV VD r L L' V V' R M s lv sl ra
   : agree_on eq R V V'
     -> agree_on eq M V (fun x => V' (slot x))

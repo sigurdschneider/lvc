@@ -1,4 +1,4 @@
-Require Import Smpl LvcPlugin.
+Require Import Smpl LvcPlugin Coq.Bool.Bool.
 
 Set Implicit Arguments.
 
@@ -91,3 +91,11 @@ Ltac invts ty :=
       | h: ty _ _ _ _ _ _ _ _ |- _ => invs h
       | h: ty _ _ _ _ _ _ _ _ _ |- _ => invs h
   end.
+
+Smpl Add 100
+     match goal with
+     | [ H : true -> false |- _ ] =>
+       exfalso; eapply H; eauto
+     | [ H : forall _ : Is_true true, Is_true false |- _ ] =>
+       exfalso; eapply H; eauto
+     end : inv_trivial.

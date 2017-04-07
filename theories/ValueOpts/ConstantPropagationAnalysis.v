@@ -27,7 +27,6 @@ Smpl Add 100 match goal with
                eapply wua_poLe_inv in H; subst
              end : inv_trivial.
 
-
 Require Import MapNotations ListUpdateAt Subterm.
 
 Definition domupd (d:Dom) x (o:aval) : Dom :=
@@ -84,12 +83,6 @@ Proof.
 Qed.
 
 Require Import Terminating OptionR.
-
-Smpl Add 100
-     match goal with
-     | [ H : @Equivalence.equiv val int_eq Equivalence_eq_int' _ _ |- _ ] =>
-       eapply int_eq_eq in H
-     end : inv_trivial.
 
 Lemma leMap_op_eval e a b
   : leMap a b
@@ -238,14 +231,6 @@ Proof.
     eapply IHZ.
 Qed.
 
-Smpl Add match goal with
-         | [ H : int_eq val_true val_false |- _ ] =>
-           exfalso; eapply int_eq_true_false_absurd in H; eauto
-         | [ H : val_true = val_false |- _ ] => inv H
-         | [ H : val_false = val_true |- _ ] => inv H
-         | [ H : val_true === val_false |- _ ] => inv H
-         | [ H : val_false === val_true |- _ ] => inv H
-         end : inv_trivial.
 
 Definition constant_propagation_transform sT ZL st (ST:subTerm st sT)
            (a:Dom) (b:bool)
@@ -316,11 +301,6 @@ Qed.
 
 
 Definition DDom (sT:stmt) := { m : Map [var, withTop val] | domain m ⊆ occurVars sT}.
-
-Smpl Add 100
-     match goal with
-     | [ H : (_, _) = (_,_) |- _ ] => invc H
-     end : inv_trivial.
 
 Lemma domain_domupd_incl m x v
   : domain (domupd m x v) ⊆ {x; domain m}.
