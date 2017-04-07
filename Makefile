@@ -98,6 +98,7 @@ doc-spill: clean-doc $(DOCS)
 	- mkdir -p $(DOCSPILL)
 	make -f $(COQMAKEFILE) $(VSSPILL:.v=.vo) -j$(CORES)
 	coqdoc $(COQDOCFLAGS) -d $(DOCSPILL) $(shell cat _CoqProject | grep -v ^-I) $(VSSPILL)
+	find theories/ -iname '*vo' | sed 's/\.vo/.v/' | grep -v 'ValueOpts' | grep -v 'TransVal' | tar -cvzf $(DOCSPILL)/lvc-spill.tgz -T -
 	cp $(EXTRA_DIR)/resources/* $(DOCSPILL)
 	cp $(EXTRA_DIR)/index-spill.html $(DOCSPILL)/index.html
 	cp $(EXTRA_DIR)/search-toc.html $(DOCSPILL)/search-toc.html

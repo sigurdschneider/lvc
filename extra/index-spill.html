@@ -14,8 +14,8 @@
        loadToC(function () {
          $("#sectionCocri").append(tocmodules(/Lvc.Spilling.SpillSound/));
 
-         $("#sectionAlgo").append(tocmodules(/Lvc.Spilling.StupSpill/));
-         $("#sectionAlgo").append(tocmodules(/Lvc.Spilling.SimplSpill/));
+         $("#sectionAlgo").append(tocmodules(/Lvc.Spilling.SimpleSpill/));
+         $("#sectionAlgo").append(tocmodules(/Lvc.Spilling.SplitSpill/));
 
          $("#sectionRcnstr").append(tocmodules(/Lvc.Spilling.ReconstrLive/));
          $("#sectionRcnstr").append(tocmodules(/Lvc.Spilling.ReconstrLiveSound/));
@@ -34,8 +34,13 @@
          $("#sectionUtil").append(tocmodules(/Lvc.Spilling.InVD/));
          $("#sectionUtil").append(tocmodules(/Lvc.Spilling.BoundedIn/));
          $("#sectionUtil").append(tocmodules(/Lvc.Spilling.AnnP/));
-
-
+     
+         $("#sectionRepair").append(tocmodules(/Lvc.Spilling.RepairSpill/));
+         $("#sectionRepair").append(tocmodules(/Lvc.Spilling.RegLive/));
+         $("#sectionRepair").append(tocmodules(/Lvc.Spilling.RLiveMin/));
+         $("#sectionRepair").append(tocmodules(/Lvc.Spilling.LiveMin/));
+         $("#sectionRepair").append(tocmodules(/Lvc.Spilling.RLiveSound/));
+         $("#sectionRepair").append(tocmodules(/Lvc.Spilling.PickLK/));
 
 
          $("#sectionIL").append(tocmodules(/Lvc.Isa.Op/));
@@ -74,12 +79,12 @@
       <div id="main">
 	<h1>Verification of Spilling Algorithms</h1>
 	<p>
-	  This is the Coq development accompanying our <a href="todo" class="download">submission</a> to <a href="http://itp2017.cic.unb.br/">ITP 2017</a>.
+	  This is the Coq development accompanying our <!--<a href="todo" class="download">-->submission<!--</a>--> to <a href="http://itp2017.cic.unb.br/">ITP 2017</a>.
 	  Coq sources are <a href="lvc-spill.tgz" class="download">available for download</a>.
 	  The development is a part of the LVC verified compiler.
 	  In <a href="http://www.ps.uni-saarland.de/~sdschn/publications/lvc15/"> previous work,</a> we
 	  introduced LVC's intermediate language IL, a first-order language with system calls.
-	  IL has two <a href="Lvc.IL.IL">semantics</a>, which interpret variables differently, as binders or as <a href="http://www.cs.cmu.edu/~rwh/pfpl.html">assignables</a>.
+	  IL has two <a href="Lvc.IL.IL.html">semantics</a>, which interpret variables differently, as binders or as <a href="http://www.cs.cmu.edu/~rwh/pfpl.html">assignables</a>.
 	  Using a correspondence between the two semantic interpretations, IL in the binder representation realizes term-based static single assignment (SSA).
 	</p>
 	<p>
@@ -96,20 +101,20 @@
 	  <p>
 	    To show a spilling algorithm correct, it now suffices to show that all annotations it produces satisfy the predicate.
 	    We verify two spilling algoithms using our predicate.
-	    The <a href="Lvc.Spilling.StupSpill.html">first algorithm</a> produces a trivial spilling, that maintains the invariant that all values are kept in spill slots.
+	    The <a href="Lvc.Spilling.SimpleSpill.html">first algorithm</a> produces a trivial spilling, that maintains the invariant that all values are kept in spill slots.
 	    The algorithm inserts the neccessary loads and spills to ensure register availability if required by an instruction.
-	    The <a href="Lvc.Spilling.StupSpill.html">correctness proof</a> of the algorithm is short.
-	    The <a href="Lvc.Spilling.SimplSpill.html">second algorithm</a> is a little bit more clever, and only spills and reloads when required by register pressure,
+	    The <a href="Lvc.Spilling.SimpleSpill.html">correctness proof</a> of the algorithm is short.
+	    The <a href="Lvc.Spilling.SplitSpill.html">second algorithm</a> is a little bit more clever, and only spills and reloads when required by register pressure,
 	    but makes no effort to avoid spilling and reloading inside loops.
-	    The <a href="Lvc.Spilling.StupSpill.html">correctness proof</a> is still compact.
+	    The <a href="Lvc.Spilling.SimpleSpill.html">correctness proof</a> is still compact.
 	  </p>
 	  <p>
 	    Finally, we exploit that our correctness predicate is decidable, and give a translation validator.
-	    The translation validator has a twist: It is able to repair incorrect spilling information in a non-invasive way.
+	    The <a href="Lvc.Spilling.RepairSpilll.html">translation validator</a> has a twist: It is able to repair incorrect spilling information in a non-invasive way.
 	    We show two theorems about our translation validator.
-	    First, that every spilling it produces is correct.
+	    First, that every spilling it produces is <a href="Lvc.Spilling.RepairSpilllSound.html">correct</a>.
 	    This means that the translation validator is effectively a spilling algorithm.
-	    And second, that the translation validator does not alter correct spillings.
+	    And second, that the translation validator <a href="Lvc.Spilling.RepairSpilllInv.html">does not alter correct spillings</a>.
 	    This is the translation validation part of the algorithm.
 	    From the structure of the theorem, it follows that the repair mechanism only introduces changes
 	    in the sub-trees where spilling information is incorrect. This is what we mean by non-invasive repair.
@@ -136,6 +141,9 @@
         </div>
       <h3> Spilling Algorithms </h3>
       <div class="toc novfile" id="sectionAlgo">
+        </div>
+      <h3> Translation Validator with Repair </h3>
+      <div class="toc novfile" id="sectionRepair">
         </div>
       <h3> Utilities </h3>
       <div class="toc novfile" id="sectionUtil">
