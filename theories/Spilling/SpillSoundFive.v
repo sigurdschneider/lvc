@@ -233,6 +233,12 @@ Inductive spill_sound (k:nat) :
 .
 
 
+Smpl Add
+     match goal with
+     | [ H : @equiv (@ann _) _ _ ?A ?B |- _ ] => inv_if_one_ctor H A B
+     end : inv_trivial.
+
+
 Instance clear_Sp_morph
   : Proper (@equiv _ (ann_R _eq) _ ==> equiv) clear_Sp.
 Proof.
