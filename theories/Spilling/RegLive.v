@@ -230,3 +230,16 @@ Proof.
     + intros; inv_get. rewrite <-reg_live_G. clear; cset_tac.
     + clear; cset_tac.
 Qed.
+
+
+Lemma reg_live_anno ZL R M G sl s Λ k :
+  spill_sound k ZL Λ (R,M) s sl
+  -> annotation s (reg_live ZL (fst ⊝ Λ) G s sl)
+.
+Proof.
+  intros spillSnd.
+  general induction spillSnd; cbn;try econstructor; eauto.
+  - eauto with len.
+  - intros. inv_get. rewrite <-List.map_app. eapply H6; eauto. rewrite <-surjective_pairing. reflexivity.
+  - rewrite <-List.map_app. eapply IHspillSnd; eauto.
+Qed.
