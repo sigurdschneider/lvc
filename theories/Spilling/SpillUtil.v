@@ -1,6 +1,13 @@
-Require Import List Map Env AllInRel Exp AppExpFree.
+Require Import List Map CSet Env AllInRel Exp AppExpFree.
 Require Import IL Annotation InRel AutoIndTac Liveness.Liveness LabelsDefined.
-Require Import SpillSound.
+
+Notation "'spilling'"
+  := (ann (⦃var⦄ * ⦃var⦄ * list (⦃var⦄ * ⦃var⦄))).
+
+Notation "'getSp' sl" := (fst (fst (getAnn sl))) (at level 40).
+Notation "'getL' sl" := (snd (fst (getAnn sl))) (at level 40).
+
+Notation "'getRm' sl" := (snd (getAnn sl)) (at level 40, only parsing).
 
 
 (** * SpillUtil *)
@@ -356,6 +363,9 @@ Proof.
   omega.
 Qed.
 
+
+Definition merge (RM : set var * set var) :=
+  fst RM ∪ snd RM.
 
 
 Lemma getAnn_als_EQ_merge_rms
