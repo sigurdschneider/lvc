@@ -263,30 +263,10 @@ Lemma produces_diverges S `{StateType S} S' `{StateType S'} (σ:S) (σ':S')
 : (forall L, prefix σ L <-> prefix σ' L)
   -> diverges σ -> diverges σ'.
 Proof.
-  revert σ σ'.
-  cofix f; intros.
-  inv H2.
-  edestruct (@step_dec _ H0 σ').
-  inv H5; dcr.
-  destruct x.
-  - exfalso.
-    pose proof (diverges_produces_only_nil H2).
-    exploit H6. eapply H1.
-    econstructor 2. eexists; eauto. eauto. econstructor 4.
-    congruence.
-  - econstructor. eapply H7.
-    eapply f; intros; try eapply H4.
-    split; intros.
-    + eapply prefix_star2_silent'.
-      eapply star2_silent. eapply H7. econstructor.
-      eapply H1. econstructor; eauto.
-    + eapply prefix_star2_silent'.
-      eapply star2_silent. eapply H3. econstructor.
-      eapply H1. econstructor; eauto.
-  - exfalso.
-    exploit (diverges_produces_only_nil H2).
-    eapply H1. econstructor 3; eauto. constructor.
-    congruence.
+  intros.
+  pose proof (diverges_produces_only_nil H2).
+  eapply produces_only_nil_diverges.
+  intros. eapply H3. rewrite H1. eauto.
 Qed.
 
 (** ** Several closedness properties *)
