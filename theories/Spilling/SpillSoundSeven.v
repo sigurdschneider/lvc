@@ -3,7 +3,7 @@ Require Import IL Annotation AnnP InRel.
 Require Import LabelsDefined SpillSound SpillUtil.
 
 
-(** * Correctness Predicate with 7 rules *)
+(** * Correctness Predicate with 7 inference rules *)
 
 
 Inductive spill_sound7 (k:nat) :
