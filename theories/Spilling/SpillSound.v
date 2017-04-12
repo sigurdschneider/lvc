@@ -4,7 +4,7 @@ Require Import ExpVarsBounded.
 Require Export SpillUtil.
 
 
-(** * SpillSound *)
+(** * Correctness Predicate with 5 inference rules *)
 
 Inductive spill_sound (k:nat) :
   (list params)

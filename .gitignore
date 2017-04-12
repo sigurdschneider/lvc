@@ -32,3 +32,4 @@ Makefile.coq
 doc*
 pkg*
 .timing
+*.tgz
