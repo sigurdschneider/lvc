@@ -6,11 +6,12 @@ This is a stripped down version for submission to CPP 2017.
 
 - **Coq**
 
-    Sources compile with Coq version 8.5pl2.
+    Sources compile with Coq version 8.6 (April 2017).
 
 - **OCaml** (including ocamlbuild)
 
-    Sources compile with ocaml version 3.12.1. OCaml should include ocamlbuild.
+    Sources compile with ocaml version 4.04.0, other versions might work.
+    OCaml should include ocamlbuild.
 
 - **menhir**
 
@@ -25,9 +26,9 @@ This is a stripped down version for submission to CPP 2017.
 
 After installing the dependencies, you *can* (but do not have to) use
 
-	configure.sh
+	./configure.sh
 
-to generate a Makefile (use `configure.sh --vanilla` if you don't have ruby installed). 
+to generate a Makefile (use `configure.sh --vanilla` if you don't have ruby installed).
 As a failsafe, we also provide a Makefile.coq in this distibuition. Then build LVC using
 
 	make
