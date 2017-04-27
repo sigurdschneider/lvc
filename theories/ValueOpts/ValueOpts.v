@@ -347,9 +347,9 @@ Proof.
     eapply IHeqn_sound; eauto.
     + rewrite H3; reflexivity.
     + eapply entails_monotone; eauto.
-  - econstructor; intros; eauto using entails_monotone, not_entails_antitone.
-    eapply IHeqn_sound1; eauto using not_entails_antitone. rewrite H1; reflexivity.
-    eapply IHeqn_sound2; eauto using not_entails_antitone. rewrite H1. reflexivity.
+  - econstructor; intros; eauto using entails_monotone.
+    eapply IHeqn_sound1; eauto. rewrite H1; reflexivity.
+    eapply IHeqn_sound2; eauto. rewrite H1. reflexivity.
   - econstructor; eauto using entails_monotone.
     eapply entails_monotone; eauto. cset_tac.
   - econstructor; eauto using entails_monotone.
@@ -372,11 +372,10 @@ Proof.
   - econstructor; eauto.
     eapply IHeqn_sound; eauto. rewrite <- H3. reflexivity.
     + etransitivity; eauto.
-  - econstructor; intros; eauto using entails_transitive,
-                          not_entails_entails_antitone.
-    + eapply IHeqn_sound1; eauto using not_entails_entails_antitone.
+  - econstructor; intros; eauto using entails_transitive.
+    + eapply IHeqn_sound1; eauto.
       rewrite H1. reflexivity.
-    + eapply IHeqn_sound2; eauto using not_entails_entails_antitone.
+    + eapply IHeqn_sound2; eauto.
       rewrite H1. reflexivity.
   - econstructor; eauto using entails_transitive.
     etransitivity; eauto.

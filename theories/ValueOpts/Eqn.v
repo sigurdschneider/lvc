@@ -153,20 +153,6 @@ Definition eqns_freeVars (Gamma:eqns) := fold union (map freeVars Gamma) ∅.
 
 Definition entails Gamma Γ' := forall E, satisfiesAll E Gamma -> satisfiesAll E Γ'.
 
-Definition not_entails Gamma gamma := exists E, satisfiesAll E Gamma /\ ~ satisfies E gamma.
-
-
-Lemma not_entails_antitone Gamma Γ' gamma
-: not_entails Γ' gamma
-  -> Gamma ⊆ Γ'
-  -> not_entails Gamma gamma.
-Proof.
-  intros. hnf; intros.
-  edestruct H as [E ?]; dcr.
-  eexists E; intros; split; eauto using satisfiesAll_monotone; eauto.
-Qed.
-
-
 
 Definition onvLe X (E E':onv X)
 := forall x v, E x = Some v -> E' x = Some v.
@@ -573,16 +559,6 @@ Instance entails_trans : Transitive entails.
 Proof.
   hnf.
   eapply entails_transitive.
-Qed.
-
-Lemma not_entails_entails_antitone Gamma Γ' gamma
-  : not_entails Γ' gamma
-    -> entails Γ' Gamma
-    -> not_entails Gamma gamma.
-Proof.
-  intros. hnf; intros.
-  edestruct H as [E ?]; dcr.
-  eexists E; intros; split; eauto.
 Qed.
 
 Lemma unsatisfiable_entails_monotone Gamma Γ'
