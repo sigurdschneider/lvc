@@ -190,14 +190,6 @@ Proof.
   intros. eapply H3. eauto.
 Qed.
 
-Lemma allPrefixes_stuck S `{StateType S} σ
-  : (forall L, prefixSpec true σ L)
-    -> exists σ', star2 step σ nil σ' /\ normal2 step σ' /\ result σ' = ⎣⎦.
-Proof.
-  intros.
-Admitted.
-
-
 Lemma sim_complete_diverges S `{StateType S} S' `{StateType S'} (σ:S) (σ':S') p r
 : diverges σ -> diverges σ' -> sim r p σ σ'.
 Proof.
