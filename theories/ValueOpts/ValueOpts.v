@@ -15,10 +15,10 @@ Inductive eqn_sound : list params -> list (set var) -> list eqns  (*params*set v
                       -> ann (set var * set var)
                       -> Prop :=
 | EqnLet x ZL Δ Γ  s s' e Gamma e' G G' ang
-  : eqn_sound ZL Δ Γ s s' {EqnEq (Var x) e ; { EqnEq (Var x) e' ; Gamma } } ang
+  : eqn_sound ZL Δ Γ s s' {EqnEq (Var x) e ; Gamma } ang
     (* make sure the rest conforms to the new assignment *)
     -> entails Gamma {EqnApx e e'}
-    -> Op.freeVars e' ⊆ G
+    -> True (* Op.freeVars e' ⊆ G *)
     -> eqn_sound ZL Δ Γ (stmtLet x (Operation e) s) (stmtLet x (Operation e') s') Gamma
                 (ann1 (G,G') ang)
 | EqnIf ZL Δ Γ e e' s s' t t' Gamma G G' ang1 ang2
@@ -43,7 +43,7 @@ Inductive eqn_sound : list params -> list (set var) -> list eqns  (*params*set v
     -> length Y = length Y'
     -> eqn_sound ZL Δ Γ (stmtLet x (Call f Y) s) (stmtLet x (Call f Y') s') Gamma
                 (ann1 (G,G') ang)
-| EqnFun ZL Δ Γ ΓF F F' t t'  Gamma Γ2 G G' angs angb
+| EqnFun ZL Δ Γ ΓF F F' t t'  Gamma G G' angs angb
          (Len1:length(ΓF) = length F)
          (Len2: length F = length F')
          (ParamEq:forall n Z s Z' s' , get F n (Z, s) -> get F' n (Z', s') -> Z = Z')
@@ -51,11 +51,11 @@ Inductive eqn_sound : list params -> list (set var) -> list eqns  (*params*set v
                                         -> get ΓF n EqS -> get angs n angn
                                         -> eqn_sound (List.map fst F ++ ZL)
                                                     ((List.map (fun _ => G) F) ++ Δ)
-                                                    (ΓF ++Γ)  s s' (EqS ∪ Γ2) angn)
+                                                    (ΓF ++Γ)  s s' (EqS ∪ Gamma) angn)
          (Indt:eqn_sound (List.map fst F ++ ZL) ((List.map (fun _ => G) F) ++ Δ) (ΓF ++Γ)  t t' Gamma angb)
          (EqnFVF: forall n EqS Zs, get F n Zs -> get ΓF n EqS -> eqns_freeVars EqS ⊆ G ∪ of_list (fst Zs))
-         (EqnFV:eqns_freeVars Γ2  ⊆ G)
-         (Ent: entails Gamma Γ2)
+(*         (EqnFV:eqns_freeVars Γ2  ⊆ G) *)
+(*         (Ent: entails Gamma Γ2) *)
   : eqn_sound ZL Δ Γ (stmtFun F t) (stmtFun F' t') Gamma
               (annF (G,G') angs angb)
 | EqnUnsat ZL Δ Γ s s' Gamma ang
@@ -73,12 +73,12 @@ Proof.
 Qed.
 
 Instance eqn_sound_Proper
-  : Proper (eq ==> list_eq Equal ==> eq ==> eq ==> eq ==> Equal ==> ann_R (@pe var _) ==> impl) eqn_sound.
+  : Proper (eq ==> list_eq Equal ==> eq ==> eq ==> eq ==> Equal ==> ann_R (@pe var _) ==> impl)
+           eqn_sound.
 Proof.
   unfold Proper, respectful, impl; intros; subst. symmetry in H5.
   general induction H6; only 1-6:(invt @ann_R; invt @pe).
   - econstructor 1; eauto with cset; try rewrite <- H4; eauto.
-    rewrite H10; eauto.
   - econstructor 2; eauto with cset; try rewrite <- H4; eauto.
   - edestruct @list_eq_get; eauto; dcr.
     econstructor 3; eauto with cset; try rewrite <- H6; eauto.
@@ -92,6 +92,7 @@ Proof.
       revert H8; clear.
       induction F; simpl; eauto using @list_eq.
       intros; econstructor; eauto. symmetry; eauto.
+      rewrite H4; eauto.
     + eapply IHeqn_sound; eauto.
       eapply list_eq_app; eauto.
       revert H8; clear.
@@ -99,8 +100,6 @@ Proof.
       intros; econstructor; eauto. symmetry; eauto.
     + intros; inv_get.
       rewrite EqnFVF; eauto. rewrite H8. reflexivity.
-    + rewrite H8; eauto.
-    + rewrite <- H4; eauto.
   - econstructor.
     rewrite <- H4; eauto.
 Qed.
@@ -357,7 +356,17 @@ Proof.
     eapply IHeqn_sound; eauto.
     cset_tac.
   - econstructor; eauto.
-    + rewrite <- H2; eauto.
+    + intros.
+      exploit H10; eauto.
+      eapply H; eauto.
+      rewrite <- H2; eauto.
+Qed.
+
+Lemma entails_incl Γ Γ'
+  : Γ' ⊆ Γ
+    -> entails Γ Γ'.
+Proof.
+  intros. rewrite H. reflexivity.
 Qed.
 
 Lemma eqn_sound_entails_monotone ZL Δ Γ Γ1 Γ1' s s' ang
@@ -388,7 +397,13 @@ Proof.
     eapply IHeqn_sound; eauto.
     rewrite H4. reflexivity.
   - econstructor; eauto.
-    + etransitivity; eauto.
+    + intros.
+      exploit H10; eauto.
+      eapply H; eauto.
+      eapply entails_union; eauto; split.
+      eapply entails_incl. eauto with cset.
+      etransitivity; eauto.
+      eapply entails_incl. eauto with cset.
 Qed.
 
 
@@ -430,7 +445,41 @@ Proof.
 
 Hint Resolve satisfies_fstNoneOrR_apx onvLe_fstNoneOrR_apx.
 
+Require Import MapDefined.
 
+(*
+we don't want to use this, because then we can't have if in the expression
+language anymore
+Lemma op_eval_fv_defined V e v
+  : op_eval V e = Some v
+    -> defined_on (Op.freeVars e) V.
+Proof.
+  unfold defined_on.
+  general induction e; simpl in *; cset_tac'.
+  - monad_inv H. cset_tac'.
+  - monad_inv H. cset_tac'.
+  - monad_inv H. cset_tac'.
+Qed.
+
+Lemma test Gamma e e'
+  : entails Gamma {EqnApx e e'}
+    -> (exists V v, satisfiesAll V Gamma /\ op_eval V e = Some v)
+    -> Op.freeVars e' ⊆ Op.freeVars e ∪ eqns_freeVars Gamma.
+Proof.
+  intros. decide (Op.freeVars e' ⊆ Op.freeVars e ∪ eqns_freeVars Gamma); eauto.
+  eapply not_incl_exists in n. dcr. exfalso.
+  assert (satisfiesAll (fun y => if [y === x] then None else x0 y) Gamma). {
+    eapply satisfiesAll_agree; eauto.
+    hnf; intros. cases; eauto. cset_tac.
+  }
+  eapply H in H0.
+  eapply satisfies_single' in H0. simpl in *.
+  erewrite op_eval_agree in H0; eauto.
+  inv H0. exploit op_eval_fv_defined. symmetry. eauto.
+  exploit H4; eauto. dcr. cases in H8; isabsurd.
+  hnf; intros. cases; eauto. cset_tac.
+Qed.
+*)
 
 Instance PR : PointwiseProofRelationF (params*eqns):=
   {
@@ -466,16 +515,26 @@ Proof.
     eapply (sim_let_op_apx il_statetype_F).
     + etransitivity; eauto.
     + intros. left. eapply IHEQN; eauto.
-      *  unfold satisfiesAll. intros. cset_tac'.
-         -- rewrite <- H12. eauto using satisfies_EqnEq_on_update.
-         -- rewrite <- H4.
-            eapply (@satisfies_EqnEq_on_update x e' V v); eauto.
-            eapply satisfies_fstNoneOrR_apx in H2.
-            rewrite H3 in H2. inv H2. reflexivity.
-         -- exploit SAT; eauto. apply satisfies_update_dead; eauto.
-            intros X. apply H7. apply FV. eapply in_eqns_freeVars; eauto.
+      * assert (satisfies (V [x <- ⎣ v ⎦]) (EqnEq (Var x) e)). {
+          eauto using satisfies_EqnEq_on_update.
+        }
+        rewrite !satisfiesAll_add; split; eauto.
+(*         -- revert H4. simpl. lud; [|isabsurd]. intros.
+            assert (satisfiesAll (V [x <- ⎣ v ⎦]) Gamma). {
+              eapply satisfiesAll_agree; eauto.
+              symmetry.
+              eapply agree_on_update_dead; eauto.
+            }
+            eapply H in H5. simpl in *.
+            eapply satisfies_single' in H5. simpl in H5.
+            revert H4 H5. clear. intros. inv H4.
+            rewrite <- H0 in *. inv H5.
+            econstructor. reflexivity.*)
+         -- eapply satisfiesAll_agree; eauto.
+            symmetry.
+            eapply agree_on_update_dead; eauto.
       * pe_rewrite. rewrite! eqns_freeVars_add. simpl.
-        rewrite H0, H8, FV. clear. cset_tac.
+        rewrite H8, FV. clear. cset_tac.
       * eapply agree_on_onvLe; eauto.
       * intros. exploit EEQ; dcr; eauto.
         pe_rewrite. do 2 try split; eauto with cset.
@@ -525,10 +584,7 @@ Proof.
       * intros. hnf. intros. simpl in * |- *. dcr. subst. inv_get.
         exploit H7; eauto.
         eapply H; eauto.
-        -- assert (SAT2:satisfiesAll V Γ2). {
-             eapply Ent in SAT; eauto.
-           }
-           rewrite satisfiesAll_union; split.
+        -- rewrite satisfiesAll_union; split.
            ++ exploit EqnFVF; eauto.
              edestruct H8; eauto; dcr. simpl in *.
              eapply satisfiesAll_subst
@@ -544,9 +600,9 @@ Proof.
            ++ eapply satisfiesAll_agree; eauto.
              eapply agree_on_update_list_dead; eauto.
              ** edestruct H8; eauto; dcr.
-                rewrite EqnFV. eauto.
+                rewrite FV. eauto.
         -- rewrite eqns_freeVars_union.
-           rewrite EqnFV. edestruct H8; eauto; dcr. simpl in *.
+           rewrite FV. edestruct H8; eauto; dcr. simpl in *.
            rewrite H14.
            exploit EqnFVF as EQ; eauto.
            rewrite EQ. simpl.

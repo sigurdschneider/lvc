@@ -429,20 +429,15 @@ Qed.
 Lemma op_eval_entails AE e v x lv
 : Op.freeVars e ⊆ lv
   -> op_eval AE e = Some (wTA v)
-  -> entails ({EqnEq (Var x) e ; { EqnEq (Var x) (cp_choose_op AE e) ;
-                                     cp_eqns AE lv } }) (singleton (EqnEq (Var x) (Con v))).
+  -> entails ({EqnEq (Var x) e ; cp_eqns AE lv }) (singleton (EqnEq (Var x) (Con v))).
 Proof.
   intros.
   unfold entails; intros. unfold satisfiesAll; intros.
-  exploit (H1 (EqnEq (Var x) e)); eauto.
-  - cset_tac.
-  - cset_tac'.
-    invc H2; simpl in *; subst; simpl.
-    eapply satisfiesAll_add in H1; dcr.
-    eapply satisfiesAll_add in H4; dcr.
-    edestruct op_eval_same; try eapply H0; eauto; dcr.
-    unfold cp_choose_op in *; simpl in *.
-    rewrite H0 in H1. eauto.
+  cset_tac'.
+  invc H2; simpl in *; subst; simpl.
+  eapply satisfiesAll_add in H1; dcr.
+  eapply op_eval_same in H0; eauto. simpl in *.
+  rewrite H0 in H2. eauto.
 Qed.
 
 Lemma cp_eqns_single AE x
@@ -806,10 +801,8 @@ Proof.
              eapply op_eval_entails; eauto.
            ++ simpl in *. hnf; intros.
              exfalso. exploit H2.
-             instantiate (1:=EqnEq (Var x) (cp_choose_op AE e)). cset_tac.
-             unfold cp_choose_op in H3.
-             rewrite H in H3; eauto. rewrite H1 in H3.
-             simpl in H3. rewrite H1 in H.
+             instantiate (1:=EqnEq (Var x) e). cset_tac.
+             rewrite H1 in H. simpl in *.
              erewrite op_eval_None in H3; eauto.
              inv H3. hnf; intros. eapply H2. cset_tac.
            ++ eapply entails_subset. cset_tac.
@@ -818,7 +811,8 @@ Proof.
       * cases.
         -- eapply cp_choose_approx; eauto.
         -- eapply entails_bot; eauto.
-      * eapply cp_choose_exp_freeVars; eauto.
+      * eauto.
+(*      * eapply cp_choose_exp_freeVars; eauto. *)
     + econstructor. set_simpl.
       * eapply eqn_sound_entails_monotone; eauto.
          repeat cases; pe_rewrite; eauto using entails_empty.
@@ -947,8 +941,7 @@ Proof.
         rewrite rfLen. eauto with len.
         len_simpl. rewrite <- rfLen. eauto.
     }
-    eapply EqnFun with (Γ2:=if getAnn r then cp_eqns AE D else singleton EqnBot) (ΓF:=(fun '(Z1, _) (x:ann bool) => if getAnn x then cp_eqns AE (of_list Z1) else
-                                                                                                                singleton EqnBot) ⊜ F rF); eauto with len.
+    eapply EqnFun with (ΓF:=(fun '(Z1, _) (x:ann bool) => if getAnn x then cp_eqns AE (of_list Z1) else singleton EqnBot) ⊜ F rF); eauto with len.
     + intros; inv_get; eauto.
     + intros; inv_get; eauto.
       exploit H0; eauto; eauto with len.
@@ -956,7 +949,7 @@ Proof.
       edestruct H5; eauto; dcr; eauto with len.
       simpl in *.
       rewrite H14 in H2. rewrite cp_eqns_union in H2.
-      cases; eauto. destruct b; clear_trivial_eqs.
+      cases; eauto. clear_trivial_eqs.
       exploit H4; eauto.
       eapply eqn_sound_entails_monotone; eauto.
       eapply entails_bot. cset_tac.
@@ -974,13 +967,6 @@ Proof.
       * rewrite cp_eqns_freeVars. eapply incl_right.
       * rewrite eqns_freeVars_singleton. simpl.
         eauto with cset.
-    + cases.
-      * rewrite cp_eqns_freeVars. reflexivity.
-      * rewrite eqns_freeVars_singleton. simpl.
-        eauto with cset.
-    + cases.
-      * cases; reflexivity.
-      * eapply entails_bot; eauto.
 Qed.
 
 Require Import CMap.

@@ -224,7 +224,7 @@ Proof.
             eapply entails_monotone. reflexivity.
             cset_tac.
          -- eapply cp_moreDefined; eauto.
-         -- rewrite rename_op_freeVars; eauto. rewrite H0; eauto.
+(*         -- rewrite rename_op_freeVars; eauto. rewrite H0; eauto. *)
     + econstructor.
       * eapply eqn_sound_entails_monotone; eauto.
         eapply IHRA; eauto.
@@ -260,7 +260,7 @@ Proof.
     econstructor; eauto with len.
     + erewrite (EQE _ _ H1). eapply entails_empty.
     + eapply cp_moreDefinedArgs; eauto.
-  - eapply EqnFun with (Γ2:=map (cp_eqn ϱ) D) (ΓF:= List.map (fun _=> ∅) F);
+  - eapply EqnFun with (ΓF:= List.map (fun _=> ∅) F);
       eauto with len.
     + intros; inv_get; eauto.
     + intros; inv_get. exploit H0; eauto.
@@ -301,6 +301,4 @@ Proof.
       * pe_rewrite. reflexivity.
     + intros; inv_get.
       eapply incl_empty.
-    + rewrite cp_eqns_freeVars; eauto; reflexivity.
-    + reflexivity.
 Qed.
