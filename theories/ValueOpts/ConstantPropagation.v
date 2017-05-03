@@ -746,16 +746,14 @@ Proof.
   intro. eapply val_true_false_neq. eauto.
 Qed.
 
-Lemma cp_sound_eqn AE Cp Rch ZL GL ΓL s r (ang:ann (set var * set var))
+Lemma cp_sound_eqn AE Cp Rch ZL ΓL s r (ang:ann (set var * set var))
  (CP:cp_sound AE Cp Rch s r)
  (RA: renamedApart s ang)
  (LD: labelsDefined s (length ZL))
- (Len1: ❬ZL❭ = ❬GL❭)
  (Len2: ❬ZL❭ = ❬ΓL❭)
  (Len3: ❬ZL❭ = ❬Cp❭)
  (Len4: ❬ZL❭ = ❬Rch❭)
-  (LINV:(forall n aY Z G Γ Z' b, get ZL n Z
-                   -> get GL n G
+  (LINV:(forall n aY Z Γ Z' b, get ZL n Z
                    -> get ΓL n Γ
                    -> get Cp n (Z',aY)
                    -> get Rch n b
@@ -763,7 +761,7 @@ Lemma cp_sound_eqn AE Cp Rch ZL GL ΓL s r (ang:ann (set var * set var))
                              /\ Γ [=]
                                  if b then cp_eqns AE' (of_list Z)
                                  else singleton EqnBot) /\ Z' = Z))
-  :  eqn_sound ZL GL ΓL s (constantPropagate AE s)
+  :  eqn_sound ZL ΓL s (constantPropagate AE s)
                (if getAnn r then cp_eqns AE (fst (getAnn ang)) else singleton EqnBot) ang.
 Proof.
   general induction CP; invt renamedApart; invt labelsDefined; simpl.
@@ -885,19 +883,15 @@ Proof.
     edestruct LINV; eauto; dcr; simpl in *. subst.
     econstructor; eauto with len.
     + cases.
-      * rewrite H13. cases.
+      * rewrite H12. cases.
         eapply entails_cp_eqns_subst_choose; eauto.
-
-
-
       * eapply entails_bot; eauto. cset_tac.
     + cases.
       * eapply cp_choose_approx_list; eauto.
       * eapply entails_bot; eauto.
   - econstructor; cases; eauto using cp_choose_approx, entails_bot.
-  - assert (INV:forall (n : nat) aY (Z : params) (G : ⦃nat⦄) (Γ : ⦃eqn⦄) Z' b,
+  - assert (INV:forall (n : nat) aY (Z : params) (Γ : ⦃eqn⦄) Z' b,
                get (fst ⊝ F ++ ZL) n Z ->
-               get (tab D ‖F‖ ++ GL) n G ->
                get ((fun '(Z1, _) (x:ann bool) => if getAnn x then cp_eqns AE (of_list Z1) else
                     singleton EqnBot) ⊜ F rF ++ ΓL) n Γ ->
                get ((fun Zs : params * stmt => (fst Zs, lookup_list AE (fst Zs))) ⊝ F ++ Cp) n (Z', aY) ->
@@ -907,13 +901,12 @@ Proof.
       intros.
       eapply get_app_cases in H1. destruct H1; dcr.
       - inv_get. split; eauto. eexists; split; eauto.
-        rewrite get_app_lt in H11; eauto with len.
+        rewrite get_app_lt in H2; eauto with len.
         inv_get.
         destruct x; try reflexivity.
       - len_simpl.
         rewrite get_app_ge in H11; eauto with len.
         rewrite get_app_ge in H13; eauto with len.
-        rewrite get_app_ge in H14; eauto with len.
         rewrite get_app_ge in H2; eauto with len.
         edestruct LINV; dcr; eauto with len.
         rewrite rfLen. eauto with len.
@@ -934,7 +927,6 @@ Proof.
       exploit H4; eauto.
       eapply eqn_sound_entails_monotone; eauto.
       eapply entails_bot. cset_tac.
-
     + eapply eqn_sound_entails_monotone; eauto.
       * eapply IHCP; eauto; eauto with len.
       * cases; eauto.

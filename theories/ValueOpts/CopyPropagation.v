@@ -176,14 +176,13 @@ Proof.
 Qed.
 
 
-Lemma copyPropagate_sound_eqn ZL (Delta:〔⦃nat⦄〕) ΓL s ang ϱ
+Lemma copyPropagate_sound_eqn ZL Delta s ang ϱ
       (RA:renamedApart s ang)
       (Incl: lookup_set ϱ (fst (getAnn ang)) ⊆ (fst (getAnn ang)))
 (LD: labelsDefined s (length ZL))
-(EQE: (forall n a, get ΓL n a -> a [=] ∅))
+(EQE: (forall n a, get Delta n a -> a [=] ∅))
  (Len1: ❬ZL❭ = ❬Delta❭)
- (Len2: ❬ZL❭ = ❬ΓL❭)
-  : eqn_sound ZL Delta ΓL
+  : eqn_sound ZL Delta
               s (copyPropagate ϱ s)
               (map (cp_eqn ϱ) (fst (getAnn ang)))
               ang.
@@ -224,7 +223,6 @@ Proof.
             eapply entails_monotone. reflexivity.
             cset_tac.
          -- eapply cp_moreDefined; eauto.
-(*         -- rewrite rename_op_freeVars; eauto. rewrite H0; eauto. *)
     + econstructor.
       * eapply eqn_sound_entails_monotone; eauto.
         eapply IHRA; eauto.
@@ -277,26 +275,25 @@ Proof.
         -- inv_get; eauto.
         -- eapply EQE; eauto.
       * eauto with len.
-      * eauto with len.
       * edestruct H2; eauto; dcr; simpl in *.
         rewrite H9.
         rewrite map_app; eauto.
         rewrite (@cp_eqns_agree (ϱ [Z <-- Z]) ϱ D).
-        eapply entails_union'.
-        reflexivity.
-        eapply entails_monotone.
-        eapply entails_cp_eqns_trivial. eapply incl_left.
-        eapply entails_monotone. reflexivity. eapply incl_right.
-        assert (D [=] D \ of_list Z). revert H15.
-        clear_all; cset_tac.
-        rewrite H12. eapply update_with_list_agree_minus; eauto.
+        -- eapply entails_union'.
+           ++ reflexivity.
+           ++ eapply entails_monotone.
+             eapply entails_cp_eqns_trivial. eapply incl_left.
+           ++ eapply entails_monotone. reflexivity. eapply incl_right.
+        -- assert (EQ:D [=] D \ of_list Z). {
+             revert H15. clear_all; cset_tac.
+           }
+           rewrite EQ. eapply update_with_list_agree_minus; eauto.
     + eapply eqn_sound_entails_monotone; eauto.
       eapply IHRA; simpl; eauto.
       * pe_rewrite; eauto.
       * intros ? ? GET. eapply get_app_cases in GET. destruct GET; dcr.
         -- inv_get; eauto.
         -- eapply EQE; eauto.
-      * eauto with len.
       * eauto with len.
       * pe_rewrite. reflexivity.
     + intros; inv_get.
