@@ -18,7 +18,6 @@ Inductive eqn_sound : list params -> list (set var) -> list eqns  (*params*set v
   : eqn_sound ZL Δ Γ s s' {EqnEq (Var x) e ; Gamma } ang
     (* make sure the rest conforms to the new assignment *)
     -> entails Gamma {EqnApx e e'}
-    -> True (* Op.freeVars e' ⊆ G *)
     -> eqn_sound ZL Δ Γ (stmtLet x (Operation e) s) (stmtLet x (Operation e') s') Gamma
                 (ann1 (G,G') ang)
 | EqnIf ZL Δ Γ e e' s s' t t' Gamma G G' ang1 ang2
@@ -54,8 +53,6 @@ Inductive eqn_sound : list params -> list (set var) -> list eqns  (*params*set v
                                                     (ΓF ++Γ)  s s' (EqS ∪ Gamma) angn)
          (Indt:eqn_sound (List.map fst F ++ ZL) ((List.map (fun _ => G) F) ++ Δ) (ΓF ++Γ)  t t' Gamma angb)
          (EqnFVF: forall n EqS Zs, get F n Zs -> get ΓF n EqS -> eqns_freeVars EqS ⊆ G ∪ of_list (fst Zs))
-(*         (EqnFV:eqns_freeVars Γ2  ⊆ G) *)
-(*         (Ent: entails Gamma Γ2) *)
   : eqn_sound ZL Δ Γ (stmtFun F t) (stmtFun F' t') Gamma
               (annF (G,G') angs angb)
 | EqnUnsat ZL Δ Γ s s' Gamma ang
@@ -344,7 +341,7 @@ Proof.
             (try now (eapply EqnUnsat; eauto using unsatisfiable_monotone)); invt renamedApart; eauto.
   - constructor; eauto.
     eapply IHeqn_sound; eauto.
-    + rewrite H3; reflexivity.
+    + rewrite H2; reflexivity.
     + eapply entails_monotone; eauto.
   - econstructor; intros; eauto using entails_monotone.
     eapply IHeqn_sound1; eauto. rewrite H1; reflexivity.
@@ -379,7 +376,8 @@ Proof.
             (try now (eapply EqnUnsat; eauto using unsatisfiable_entails_monotone));
             invt renamedApart; eauto.
   - econstructor; eauto.
-    eapply IHeqn_sound; eauto. rewrite <- H3. reflexivity.
+    eapply IHeqn_sound; eauto.
+    rewrite <- H2. reflexivity.
     + etransitivity; eauto.
   - econstructor; intros; eauto using entails_transitive.
     + eapply IHeqn_sound1; eauto.
@@ -511,7 +509,7 @@ Proof.
   general induction EQN; (try (now exfalso; eapply H; eauto))
   ; simpl; invt renamedApart; simpl in * |- *.
   - exploit H; eauto.
-    exploit H1; eauto; [cset_tac|].
+    exploit H0; eauto; [cset_tac|].
     eapply (sim_let_op_apx il_statetype_F).
     + etransitivity; eauto.
     + intros. left. eapply IHEQN; eauto.
@@ -519,22 +517,11 @@ Proof.
           eauto using satisfies_EqnEq_on_update.
         }
         rewrite !satisfiesAll_add; split; eauto.
-(*         -- revert H4. simpl. lud; [|isabsurd]. intros.
-            assert (satisfiesAll (V [x <- ⎣ v ⎦]) Gamma). {
-              eapply satisfiesAll_agree; eauto.
-              symmetry.
-              eapply agree_on_update_dead; eauto.
-            }
-            eapply H in H5. simpl in *.
-            eapply satisfies_single' in H5. simpl in H5.
-            revert H4 H5. clear. intros. inv H4.
-            rewrite <- H0 in *. inv H5.
-            econstructor. reflexivity.*)
          -- eapply satisfiesAll_agree; eauto.
             symmetry.
             eapply agree_on_update_dead; eauto.
       * pe_rewrite. rewrite! eqns_freeVars_add. simpl.
-        rewrite H8, FV. clear. cset_tac.
+        rewrite H7, FV. clear. cset_tac.
       * eapply agree_on_onvLe; eauto.
       * intros. exploit EEQ; dcr; eauto.
         pe_rewrite. do 2 try split; eauto with cset.

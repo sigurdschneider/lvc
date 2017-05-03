@@ -266,11 +266,6 @@ Fixpoint zip2Ann X Y Z (f:X->Y->Z) (a:ann X) (b:ann Y) z : ann Z :=
     | _, _ => z
   end.
 
-(*
-Lemma zip2Ann_get X Y Z f a b
-: getAnn (zip2Ann f a b) = f (getAnn a) (getAnn b).
-*)
-
 Definition cp_eqns_ann (a:ann (onv (withTop val))) (b:ann (set var)) : ann eqns :=
   zip2Ann cp_eqns a b (ann0 ∅).
 
@@ -683,21 +678,6 @@ Proof.
   - rewrite H1 in H. inv H.
 Qed.
 
-(*
-Lemma aval2bool_none AE e lv (FV:Op.freeVars e [<=] lv)
-  : aval2bool (op_eval AE e) = None
-    -> forall E, satisfiesAll E (cp_eqns AE lv) -> Op.op_eval E e = None.
-Proof.
-  intros.
-  case_eq (op_eval AE e); intros.
-  - rewrite H1 in H; eauto.
-    simpl in *. destruct w; isabsurd.
-    exploit op_eval_same; eauto; dcr.
-    clear_trivial_eqs. eauto.
-  - rewrite H1 in H. inv H.
-Qed.
- *)
-
 Lemma satisfies_BinOpEq_inv_true E e e'
   : satisfies E (EqnEq (UnOp UnOpToBool (BinOp BinOpEq e e')) (Con val_true))
     -> satisfies E (EqnEq e e').
@@ -811,8 +791,6 @@ Proof.
       * cases.
         -- eapply cp_choose_approx; eauto.
         -- eapply entails_bot; eauto.
-      * eauto.
-(*      * eapply cp_choose_exp_freeVars; eauto. *)
     + econstructor. set_simpl.
       * eapply eqn_sound_entails_monotone; eauto.
          repeat cases; pe_rewrite; eauto using entails_empty.
