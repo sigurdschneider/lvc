@@ -154,74 +154,6 @@ Definition eqns_freeVars (Gamma:eqns) := fold union (map freeVars Gamma) ∅.
 Definition entails Gamma Γ' := forall E, satisfiesAll E Gamma -> satisfiesAll E Γ'.
 
 
-Definition onvLe X (E E':onv X)
-:= forall x v, E x = Some v -> E' x = Some v.
-
-(*Definition models Gamma gamma := forall E, satisfiesAll E Gamma -> satisfies E gamma.*)
-
-Lemma exp_eval_onvLe e E E' v
-: onvLe E E'
-  -> op_eval E e = Some v
-  -> op_eval E' e = Some v.
-Proof.
-  intros. general induction e; simpl in * |- *; eauto.
-  - monad_inv H0.
-    erewrite IHe; eauto.
-  - monad_inv H0.
-    erewrite IHe1, IHe2; eauto.
-Qed.
-
-Definition list_EqnApx Y Y' :=
-  of_list (zip (fun e e' => EqnApx e e') Y Y').
-
-Definition subst_eqn (ϱ : env op) (gamma: eqn) :=
-  match gamma with
-    | EqnEq e e' => EqnEq (subst_op ϱ e) (subst_op ϱ e')
-    | EqnApx e e' => EqnApx (subst_op ϱ e) (subst_op ϱ e')
-    | EqnBot => EqnBot
-  end.
-
-Definition subst_eqns (ϱ : env op) (G:eqns) : eqns :=
-  map (subst_eqn ϱ) G.
-
-Definition sid := fun x => Var x.
-
-
-Definition unsatisfiable (gamma:eqn) :=
-  forall E, ~ satisfies E gamma.
-
-Definition unsatisfiables (Gamma:eqns) :=
-  forall E, ~ satisfiesAll E Gamma.
-
-Lemma satisfiesAll_add E gamma Gamma
-  : satisfiesAll E {gamma ; Gamma}
-    <-> satisfies E gamma /\ satisfiesAll E Gamma.
-Proof.
-  split.
-  - intros H; split; hnf; intros; eapply H; cset_tac.
-  - intros [A B]; hnf; intros. cset_tac'.
-    destruct H0; dcr; subst; eauto.
-Qed.
-
-Lemma unsatisfiable_add_left gamma Gamma
-  : (forall E, satisfiesAll E Gamma -> ~ satisfies E gamma)
-    -> unsatisfiables {gamma; Gamma}.
-Proof.
-  intros; hnf; intros.
-  intro. eapply satisfiesAll_add in H0; dcr.
-  eapply H; eauto with cset.
-Qed.
-
-Lemma unsatisfiable_monotone Gamma Γ'
-: unsatisfiables Gamma
-  -> Gamma ⊆ Γ'
-  -> unsatisfiables Γ'.
-Proof.
-  intros. hnf; intros. intro. eapply H.
-  eapply satisfiesAll_monotone; eauto.
-Qed.
-
-
 Instance entails_entails_morphism_impl
 : Proper (flip entails ==> entails ==> impl) entails.
 Proof.
@@ -310,23 +242,6 @@ Proof.
     + eapply H0; cset_tac.
     + eapply H; eauto.
 Qed.
-
-Instance satisfiesAll_Subset_morphism
-  : Proper (eq ==> Subset ==> flip impl) satisfiesAll.
-Proof.
-  unfold Proper, respectful, flip, impl; intros; subst.
-  hnf; intros. eapply H1. cset_tac.
-Qed.
-
-Instance satisfiesAll_Equal_morphism
-  : Proper (eq ==> Equal ==> iff) satisfiesAll.
-Proof.
-  unfold Proper, respectful; intros; subst.
-  intuition.
-  - rewrite <- H0; eauto.
-  - rewrite H0; eauto.
-Qed.
-
 
 Lemma entails_monotone Γ1 Γ2 Γ1'
 : entails Γ1 Γ2
@@ -421,6 +336,117 @@ Proof.
   cset_tac'. rewrite <- H0.
   reflexivity.
 Qed.
+
+Lemma entails_incl Γ Γ' : Γ' ⊆ Γ -> entails Γ Γ'.
+Proof.
+  intros. rewrite H. reflexivity.
+Qed.
+
+
+Definition onvLe X (E E':onv X)
+:= forall x v, E x = Some v -> E' x = Some v.
+
+(*Definition models Gamma gamma := forall E, satisfiesAll E Gamma -> satisfies E gamma.*)
+
+Lemma exp_eval_onvLe e E E' v
+: onvLe E E'
+  -> op_eval E e = Some v
+  -> op_eval E' e = Some v.
+Proof.
+  intros. general induction e; simpl in * |- *; eauto.
+  - monad_inv H0.
+    erewrite IHe; eauto.
+  - monad_inv H0.
+    erewrite IHe1, IHe2; eauto.
+Qed.
+
+Definition list_EqnApx Y Y' :=
+  of_list (zip (fun e e' => EqnApx e e') Y Y').
+
+Definition subst_eqn (ϱ : env op) (gamma: eqn) :=
+  match gamma with
+    | EqnEq e e' => EqnEq (subst_op ϱ e) (subst_op ϱ e')
+    | EqnApx e e' => EqnApx (subst_op ϱ e) (subst_op ϱ e')
+    | EqnBot => EqnBot
+  end.
+
+Definition subst_eqns (ϱ : env op) (G:eqns) : eqns :=
+  map (subst_eqn ϱ) G.
+
+Lemma subst_eqns_empty ϱ
+  : subst_eqns ϱ {} = {}.
+Proof.
+  reflexivity.
+Qed.
+
+Instance subst_eqn_proper ϱ
+  : Proper (_eq ==> _eq) (subst_eqn ϱ).
+Proof.
+  intuition.
+Qed.
+
+Lemma subst_eqns_add ϱ gamma Gamma
+  : subst_eqns ϱ {gamma; Gamma} [=] {subst_eqn ϱ gamma; subst_eqns ϱ Gamma}.
+Proof.
+  unfold subst_eqns. eapply map_add. eauto with typeclass_instances.
+Qed.
+
+Definition sid := fun x => Var x.
+
+
+Definition unsatisfiable (gamma:eqn) :=
+  forall E, ~ satisfies E gamma.
+
+Definition unsatisfiables (Gamma:eqns) :=
+  forall E, ~ satisfiesAll E Gamma.
+
+Lemma satisfiesAll_add E gamma Gamma
+  : satisfiesAll E {gamma ; Gamma}
+    <-> satisfies E gamma /\ satisfiesAll E Gamma.
+Proof.
+  split.
+  - intros H; split; hnf; intros; eapply H; cset_tac.
+  - intros [A B]; hnf; intros. cset_tac'.
+    destruct H0; dcr; subst; eauto.
+Qed.
+
+Lemma unsatisfiable_add_left gamma Gamma
+  : (forall E, satisfiesAll E Gamma -> ~ satisfies E gamma)
+    -> unsatisfiables {gamma; Gamma}.
+Proof.
+  intros; hnf; intros.
+  intro. eapply satisfiesAll_add in H0; dcr.
+  eapply H; eauto with cset.
+Qed.
+
+Lemma unsatisfiable_monotone Gamma Γ'
+: unsatisfiables Gamma
+  -> Gamma ⊆ Γ'
+  -> unsatisfiables Γ'.
+Proof.
+  intros. hnf; intros. intro. eapply H.
+  eapply satisfiesAll_monotone; eauto.
+Qed.
+
+
+
+Instance satisfiesAll_Subset_morphism
+  : Proper (eq ==> Subset ==> flip impl) satisfiesAll.
+Proof.
+  unfold Proper, respectful, flip, impl; intros; subst.
+  hnf; intros. eapply H1. cset_tac.
+Qed.
+
+Instance satisfiesAll_Equal_morphism
+  : Proper (eq ==> Equal ==> iff) satisfiesAll.
+Proof.
+  unfold Proper, respectful; intros; subst.
+  intuition.
+  - rewrite <- H0; eauto.
+  - rewrite H0; eauto.
+Qed.
+
+
 
 Lemma satisfiesAll_union E Gamma Γ'
   : satisfiesAll E (Gamma ∪ Γ')

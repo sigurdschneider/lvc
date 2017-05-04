@@ -154,70 +154,22 @@ Proof.
   * reflexivity.
 Qed.
 
-Lemma satisfiesAll_subst V Gamma Z EqS Y y bE
-:  length Z = length Y
-   -> entails Gamma (subst_eqns (sid [Z <-- Y]) EqS)
-   -> satisfiesAll V Gamma
+Lemma satisfiesAll_subst V Z EqS Y y bE
+:  omap (op_eval V) Y = ⎣y⎦
    -> agree_on eq (eqns_freeVars EqS \ of_list Z) V bE
-   -> omap (op_eval V) Y = ⎣y⎦
-   -> satisfiesAll (bE [Z <-- List.map Some y]) EqS.
+   -> length Z = length Y
+   -> satisfiesAll V (subst_eqns (sid [Z <-- Y]) EqS) <-> satisfiesAll (bE [Z <-- List.map Some y]) EqS.
 Proof.
   revert_except EqS. pattern EqS. eapply set_induction; intros.
   - hnf; intros. eapply empty_is_empty_1 in H.
-    exfalso. cset_tac.
-  - hnf; intros.
-    assert (LEN:❬Y❭ = ❬y❭). {
-      eapply omap_length; eauto.
-    }
-    eapply Add_Equal in H1. rewrite H1 in *.
-    eapply add_iff in H7. destruct H7.
-    + hnf in H7; subst.
-      specialize (H3 V H4 (subst_eqn (sid [Z <-- Y]) gamma)).
-      exploit H3 as SAT.
-      * eapply in_subst_eqns; eauto. cset_tac.
-      * eapply satisfies_subst; eauto.
-        eapply agree_on_incl; eauto.
-        rewrite eqns_freeVars_add.
-        clear; cset_tac.
-    + eapply H; try eapply H7; eauto.
-      * etransitivity; eauto.
-        setoid_rewrite <- incl_add'; eauto. reflexivity.
-      * setoid_rewrite <- incl_add' in H5; eauto.
-Qed.
-
-Lemma eqn_sound_monotone ZL Δ Γ Γ' s s' ang
-  : renamedApart s ang
-    -> eqn_sound ZL Δ s s' Γ ang
-    -> Γ ⊆ Γ'
-    -> eqn_sound ZL Δ s s' Γ' ang.
-Proof.
-  intros. general induction H0;
-            (try now (eapply EqnUnsat; eauto using unsatisfiable_monotone)); invt renamedApart; eauto.
-  - constructor; eauto.
-    eapply IHeqn_sound; eauto.
-    + rewrite H2; reflexivity.
-    + eapply entails_monotone; eauto.
-  - econstructor; intros; eauto using entails_monotone.
-    eapply IHeqn_sound1; eauto. rewrite H1; reflexivity.
-    eapply IHeqn_sound2; eauto. rewrite H1. reflexivity.
-  - econstructor; eauto using entails_monotone.
-    eapply entails_monotone; eauto. cset_tac.
-  - econstructor; eauto using entails_monotone.
-  - econstructor; eauto using entails_monotone.
-    eapply IHeqn_sound; eauto.
-    cset_tac.
-  - econstructor; eauto.
-    + intros.
-      exploit H10; eauto.
-      eapply H; eauto.
-      rewrite <- H2; eauto.
-Qed.
-
-Lemma entails_incl Γ Γ'
-  : Γ' ⊆ Γ
-    -> entails Γ Γ'.
-Proof.
-  intros. rewrite H. reflexivity.
+    rewrite H. rewrite subst_eqns_empty.
+    unfold satisfiesAll; split; intros; cset_tac.
+  - eapply Add_Equal in H1. rewrite H1 in *.
+    rewrite subst_eqns_add.
+    rewrite !satisfiesAll_add.
+    rewrite eqns_freeVars_add in H3.
+    rewrite satisfies_subst; eauto with len;[|eauto with cset].
+    rewrite H; eauto with cset. reflexivity.
 Qed.
 
 Lemma eqn_sound_entails_monotone ZL Δ Γ1 Γ1' s s' ang
@@ -258,16 +210,26 @@ Proof.
       eapply entails_incl. eauto with cset.
 Qed.
 
+Lemma eqn_sound_monotone ZL Δ Γ Γ' s s' ang
+  : renamedApart s ang
+    -> eqn_sound ZL Δ s s' Γ ang
+    -> Γ ⊆ Γ'
+    -> eqn_sound ZL Δ s s' Γ' ang.
+Proof.
+  intros. eapply eqn_sound_entails_monotone; eauto.
+  eapply entails_incl; eauto.
+Qed.
+
 Hint Resolve satisfies_fstNoneOrR_apx onvLe_fstNoneOrR_apx.
 
 Instance PR : PointwiseProofRelationF (params*eqns):=
   {
-    ArgRelFP := fun E E' '(Z,Γ2) VL VL'
+    ArgRelFP := fun E E' '(Z,Γf) VL VL'
                => length Z = length VL /\ VL = VL'
                  /\ exists Γ Y V, entails (of_list ((fun y : op => EqnEq y y) ⊝ Y) ∪ Γ)
-                                    (subst_eqns (sid [Z <-- Y]) Γ2)
+                                    (subst_eqns (sid [Z <-- Y]) Γf)
                             /\ satisfiesAll V Γ /\ omap (op_eval V) Y = Some VL
-                            /\ agree_on eq (eqns_freeVars Γ2 \ of_list Z) V E;
+                            /\ agree_on eq (eqns_freeVars Γf \ of_list Z) V E;
     ParamRelFP := fun '(Z,_) Z' Zb => Z = Z' /\ Zb = Z'
   }.
 
@@ -279,14 +241,13 @@ Lemma sim_vopt r L L' V s s' ZL Δ Gamma ang
     -> eqns_freeVars Gamma ⊆ fst (getAnn ang)
     -> (forall n b Γf, get L n b ->
                 get Δ n Γf ->
-                exists G, G ⊆ fst (getAnn ang) /\
-                eqns_freeVars Γf ⊆ G ∪ of_list (block_Z b) /\
-                agree_on eq G (F.block_E b) V)
+                eqns_freeVars Γf ⊆ fst (getAnn ang) ∪ of_list (block_Z b) /\
+                agree_on eq (eqns_freeVars Γf \ of_list (block_Z b)) (F.block_E b) V)
     -> sim r Sim  (L,V, s) (L',V, s').
 Proof.
   intros SAT EQN SIML REAPT FV EEQ.
-  general induction EQN; (try (now exfalso; eapply H; eauto))
-  ; simpl; invt renamedApart; simpl in * |- *.
+  general induction EQN; (try (now exfalso; eapply H; eauto));
+    simpl; invt renamedApart; simpl in * |- *.
   - exploit H; eauto.
     exploit H0; eauto; [cset_tac|].
     eapply (sim_let_op_apx il_statetype_F).
@@ -302,9 +263,11 @@ Proof.
       * pe_rewrite. rewrite! eqns_freeVars_add. simpl.
         rewrite H7, FV. clear. cset_tac.
       * intros. exploit EEQ; dcr; eauto.
-        pe_rewrite. exists x0. do 2 try split; eauto with cset.
-        symmetry. eapply agree_on_update_dead; eauto.
-        symmetry; eauto.
+        pe_rewrite. rewrite H11 at 1. split.
+        -- clear_all. cset_tac.
+        -- symmetry. eapply agree_on_update_dead; eauto.
+           rewrite H11. revert H6; clear_all; cset_tac.
+           symmetry. eauto.
   -  exploit H; eauto.  exploit H0; eauto; [cset_tac|].
      eapply (sim_cond_op_apx il_statetype_F).
      + eauto.
@@ -319,7 +282,7 @@ Proof.
   - eapply labenv_sim_app; eauto using zip_get; simpl.
     intros; split; intros; eauto.
     assert (EV:omap (op_eval V) Y' = ⎣ Yv ⎦). {
-      exploit H4; eauto. eapply omap_satisfies_list_EqnApx; eauto.
+      eapply omap_satisfies_list_EqnApx; eauto.
     }
     simpl in *; dcr; subst.
     exists Yv; repeat split; eauto using omap_exp_eval_onvLe.
@@ -327,7 +290,6 @@ Proof.
     exploit EEQ; eauto; dcr. simpl in *.
     repeat split; eauto.
     + symmetry; eapply agree_on_incl; eauto.
-      rewrite H11; eauto. clear; cset_tac.
   - eapply (sim_return_apx il_statetype_F).
     exploit H; eauto.
   - exploit H; eauto. eapply (sim_let_call_apx il_statetype_F); eauto; simpl.
@@ -339,9 +301,10 @@ Proof.
       * pe_rewrite. rewrite eqns_freeVars_add. simpl.
         rewrite FV.  clear_all. cset_tac.
       * intros. exploit EEQ; dcr; eauto.
-        pe_rewrite. eexists x0. do 2 try split; eauto with cset.
-        symmetry. eapply agree_on_update_dead; eauto.
-        symmetry; eauto.
+        pe_rewrite. split.
+        rewrite H6. clear_all; cset_tac.
+        symmetry. eapply agree_on_update_dead; try symmetry; eauto.
+        rewrite H6. revert H8. clear_all. cset_tac.
   - pone_step. left. eapply IHEQN; eauto.
     + rewrite zip_app; eauto with len.
       eapply labenv_sim_extension_ptw; eauto with len.
@@ -352,9 +315,8 @@ Proof.
         -- rewrite satisfiesAll_union; split.
            ++ exploit EqnFVF; eauto.
              edestruct H8; eauto; dcr. simpl in *.
-             eapply satisfiesAll_subst; eauto.
-             eauto with len.
-             eauto with cset.
+             rewrite <- satisfiesAll_subst; eauto with len.
+             eapply H16.
              eapply satisfiesAll_union; split; eauto.
              hnf; intros.
              eapply of_list_get_first in H20; dcr. invc H25.
@@ -374,27 +336,29 @@ Proof.
         -- intros ? ? ? Get1 Get2. eapply get_app_cases in Get1. destruct Get1.
            ++ inv_get.
              edestruct H8; try eapply H5; eauto; dcr. simpl in *.
-             eexists G. rewrite H18. split; eauto with cset.
-             exploit EqnFVF; eauto. split; eauto.
-             eapply agree_on_update_list_dead; eauto with len.
+             rewrite H18. split.
+             ** rewrite EqnFVF; eauto. clear_all; cset_tac.
+             ** eapply agree_on_update_list_dead; eauto with len.
+                rewrite EqnFVF; eauto.
+                eapply disj_2_incl; eauto. clear_all; cset_tac.
            ++ dcr; simpl in *. len_simpl.
              rewrite get_app_ge in Get2; eauto with len.
              rewrite Len1 in *. inv_get.
              exploit EEQ; eauto; dcr.
              edestruct H8; try eapply H5; eauto; dcr.
-             eexists x3.
-             rewrite H15. simpl. split. eauto with cset.
-             simpl in *. split; eauto.
+             rewrite H15. simpl. split. rewrite H21.
+             clear_all; cset_tac.
+             simpl in *.
              eapply agree_on_update_list_dead; eauto.
-             rewrite H22. eauto. omega.
+             eapply disj_2_incl; eauto. rewrite H21.
+             clear_all; cset_tac. omega.
       * hnf. intros. simpl in *. subst. inv_get. exploit ParamEq; dcr; eauto.
     + pe_rewrite. eauto.
     + intros ? ? ? Get1 Get2. eapply get_app_cases in Get1. destruct Get1.
-      ++ inv_get. pe_rewrite. eexists G; split; eauto.
+      ++ inv_get. pe_rewrite. split; eauto.
       ++ dcr; simpl in *. len_simpl.
         rewrite get_app_ge in Get2; eauto with len.
         rewrite Len1 in *.
         exploit EEQ; eauto; dcr.
-        eexists x. split; eauto. pe_rewrite. eauto.
-        omega.
+        split; eauto. pe_rewrite. eauto. omega.
 Qed.
