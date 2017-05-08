@@ -757,10 +757,10 @@ Lemma cp_sound_eqn AE Cp Rch ZL ΓL s r (ang:ann (set var * set var))
                    -> get ΓL n Γ
                    -> get Cp n (Z',aY)
                    -> get Rch n b
-                   -> (exists AE', aY = lookup_list AE' Z
-                             /\ Γ [=]
-                                 if b then cp_eqns AE' (of_list Z)
-                                 else singleton EqnBot) /\ Z' = Z))
+                   -> aY = lookup_list AE Z /\ Z' = Z
+                     /\ Γ [=]
+                         if b then cp_eqns AE (of_list Z)
+                         else singleton EqnBot))
   :  eqn_sound ZL ΓL s (constantPropagate AE s)
                (if getAnn r then cp_eqns AE (fst (getAnn ang)) else singleton EqnBot) ang.
 Proof.
@@ -772,17 +772,17 @@ Proof.
         repeat cases; pe_rewrite; eauto using entails_empty.
         -- rewrite cp_eqns_add.
            eapply entails_union; split.
-           unfold cp_eqn.
-           case_eq (AE x); intros; eauto using entails_empty.
-           ++ rewrite H1 in H. exploit H; eauto. inv H2.
-             repeat cases; eauto using entails_empty.
-             eapply op_eval_entails; eauto.
-           ++ simpl in *. hnf; intros.
-             exfalso. exploit H2.
-             instantiate (1:=EqnEq (Var x) e). cset_tac.
-             rewrite H1 in H. simpl in *.
-             erewrite op_eval_None in H3; eauto.
-             inv H3. hnf; intros. eapply H2. cset_tac.
+           ++ unfold cp_eqn.
+             case_eq (AE x); intros; eauto using entails_empty.
+             ** rewrite H1 in H. exploit H; eauto. inv H2.
+                repeat cases; eauto using entails_empty.
+                eapply op_eval_entails; eauto.
+             ** simpl in *. hnf; intros.
+                exfalso. exploit H2.
+                instantiate (1:=EqnEq (Var x) e). cset_tac.
+                rewrite H1 in H. simpl in *.
+                erewrite op_eval_None in H3; eauto.
+                inv H3. hnf; intros. eapply H2. cset_tac.
            ++ eapply entails_subset. cset_tac.
         -- eapply entails_bot. cset_tac.
         -- eapply entails_bot. cset_tac.
@@ -883,7 +883,7 @@ Proof.
     edestruct LINV; eauto; dcr; simpl in *. subst.
     econstructor; eauto with len.
     + cases.
-      * rewrite H12. cases.
+      * rewrite H11. cases.
         eapply entails_cp_eqns_subst_choose; eauto.
       * eapply entails_bot; eauto. cset_tac.
     + cases.
@@ -896,26 +896,29 @@ Proof.
                     singleton EqnBot) ⊜ F rF ++ ΓL) n Γ ->
                get ((fun Zs : params * stmt => (fst Zs, lookup_list AE (fst Zs))) ⊝ F ++ Cp) n (Z', aY) ->
                get (getAnn ⊝ rF ++ Rch) n b ->
-               (exists AE', aY = lookup_list AE' Z /\
-                       Γ [=] if b then cp_eqns AE' (of_list Z) else singleton EqnBot) /\ Z' = Z). {
+               (aY = lookup_list AE Z /\ Z' = Z /\
+                       Γ [=] if b then cp_eqns AE (of_list Z) else singleton EqnBot)). {
       intros.
       eapply get_app_cases in H1. destruct H1; dcr.
-      - inv_get. split; eauto. eexists; split; eauto.
+      - inv_get. split; eauto. split; eauto.
         rewrite get_app_lt in H2; eauto with len.
         inv_get.
         destruct x; try reflexivity.
       - len_simpl.
-        rewrite get_app_ge in H11; eauto with len.
-        rewrite get_app_ge in H13; eauto with len.
-        rewrite get_app_ge in H2; eauto with len.
-        edestruct LINV; dcr; eauto with len.
-        rewrite rfLen. eauto with len.
-        len_simpl. rewrite <- rfLen. eauto.
+        rewrite get_app_ge in H11;[| eauto with len].
+        rewrite get_app_ge in H13;[| eauto with len].
+        rewrite get_app_ge in H2;[| eauto with len].
+        len_simpl. rewrite rfLen in *.
+        edestruct LINV; dcr; eauto.
+        len_simpl. rewrite <- rfLen. eauto with len.
     }
-    eapply EqnFun with (ΓF:=(fun '(Z1, _) (x:ann bool) => if getAnn x then cp_eqns AE (of_list Z1) else singleton EqnBot) ⊜ F rF); eauto with len.
+    eapply EqnFun with (ΓF:=(fun '(Z1, _) (x:ann bool) => if getAnn x then cp_eqns AE (of_list Z1) else singleton EqnBot) ⊜ F rF); eauto.
+    + eauto with len.
+    + eauto with len.
     + intros; inv_get; eauto.
-    + intros; inv_get; eauto.
-      exploit H0; eauto; eauto with len.
+    + intros; inv_get; eauto. len_simpl.
+      exploit H0; eauto. eauto with len.
+      eauto with len. eauto with len.
       repeat cases in H2; pe_rewrite; eauto.
       edestruct H5; eauto; dcr; eauto with len.
       simpl in *.
