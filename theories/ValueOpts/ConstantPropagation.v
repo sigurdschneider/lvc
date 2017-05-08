@@ -90,33 +90,33 @@ Proof.
   destruct v; try destruct w; simpl; intros; inv H; eauto.
 Qed.
 
-Inductive cp_sound : onv (withTop val)
-                     -> list (params*list aval)
+Inductive cp_sound (AE:onv (withTop val)) :
+                     list (params*list aval)
                      -> list bool
                      -> stmt
                      -> ann bool
                      -> Prop :=
-| CPOpr AE (x:var) Cp Rch (b:bool) r e s
+| CPOpr (x:var) Cp Rch (b:bool) r e s
   : cp_sound AE Cp Rch s r
     -> (b -> exp_eval AE e = AE x)
     -> (b -> getAnn r)
     -> cp_sound AE Cp Rch (stmtLet x e s) (ann1 b r)
-| CPIf AE Cp Rch e (b:bool) s1 s2 (r1 r2:ann bool)
+| CPIf Cp Rch e (b:bool) s1 s2 (r1 r2:ann bool)
        (Cond1:cp_sound AE Cp Rch s1 r1)
        (Cond2:cp_sound AE Cp Rch s2 r2)
        (Reach1:b -> op_eval AE e <> None -> aval2bool (op_eval AE e) <> Some false -> getAnn r1)
        (Reach2:b -> poLe (Some (wTA val_false)) (op_eval AE e) -> getAnn r2)
   : cp_sound AE Cp Rch (stmtIf e s1 s2) (ann2 b r1 r2)
-| CPGoto AE l Y Cp Rch Z aY (b bf:bool)
+| CPGoto l Y Cp Rch Z aY (b bf:bool)
   : get Cp (counted l) (Z,aY)
     -> get Rch (counted l) bf
     -> length Z = length Y
     -> (b -> PIR2 poLe (List.map (op_eval AE) Y) aY)
     -> (b -> bf)
     -> cp_sound AE Cp Rch (stmtApp l Y) (ann0 b)
-| CPReturn AE Cp Rch e b
+| CPReturn Cp Rch e b
   : cp_sound AE Cp Rch (stmtReturn e) (ann0 b)
-| CPLet AE Cp Rch F t (b:bool) (rF:list (ann bool)) (r:ann bool) (rfLen:❬F❭=❬rF❭)
+| CPLet Cp Rch F t (b:bool) (rF:list (ann bool)) (r:ann bool) (rfLen:❬F❭=❬rF❭)
    (Reach1:b -> getAnn r)
   : (forall n Zs r,
         get F n Zs ->
