@@ -3,20 +3,21 @@ Require Import CSet Le Var.
 Require Import Plus Util AllInRel Map CSet OptionR MoreList.
 Require Import Val Var Env IL Annotation Infra.Lattice.
 Require Import DecSolve Analysis Filter Terminating.
-Require Import Analysis AnalysisForward FiniteFixpointIteration.
+Require Import Analysis AnalysisForwardSSA FiniteFixpointIteration.
 Require Import Reachability ReachabilityAnalysis Subterm.
 
 Set Implicit Arguments.
 
 Local Arguments proj1_sig {A} {P} e.
 Local Arguments length {A} e.
-Local Arguments forward {sT} {Dom} {H} {H0} {H1} ftransform ZL st ST d a.
+Local Arguments forward {sT} {Dom} ftransform ZL ZLIncl st ST d anr.
 
 Opaque poLe.
 
 (* Coq can't figure out the instantiation (fun _ => bool) via unification,
    so we have to add this specialized lemma *)
-Lemma forward_length_ass_UC
+
+(*Lemma forward_length_ass_UC
       (sT : stmt)
       (f : forall sT0 : stmt,
           〔params〕 ->
@@ -28,21 +29,23 @@ Lemma forward_length_ass_UC
 Qed.
 
 Hint Resolve forward_length_ass_UC.
+ *)
 
-Definition reachability_sound sT ZL BL s d a (ST:subTerm s sT)
-  : poEq (fst (forward reachability_transform ZL s ST d a)) a
-    -> annotation s a
+Definition reachability_sound sT ZL BL s d a (ST:subTerm s sT) ZLIncl
+  : poEq (fst (forward reachability_transform ZL ZLIncl s ST d (snd a))) a
+    -> annotation s (snd a)
     -> labelsDefined s (length ZL)
     -> labelsDefined s (length BL)
-    -> poLe (snd (@forward sT _ _ _ _ reachability_transform ZL s ST d a)) BL
-    -> reachability cop2bool Sound BL s a.
+    -> poLe (snd (@forward sT _ reachability_transform ZL ZLIncl s ST d (snd a))) BL
+    -> reachability cop2bool Sound BL s (snd a).
 Proof.
   intros EQ Ann DefZL DefBL.
   general induction Ann; simpl in *; inv DefZL; inv DefBL;
     repeat let_case_eq; repeat simpl_pair_eqs; subst; simpl in *.
   - inv EQ.
-    pose proof (ann_R_get H7); simpl in *.
+    pose proof (ann_R_get H1); simpl in *. subst.
     econstructor; eauto.
+    eapply IHAnn; eauto.
     simpl_forward_setTopAnn; eauto.
   - assert (forall d d', ❬snd (forward reachability_transform ZL s (subTerm_EQ_If1 eq_refl ST) d sa)❭ =
             ❬snd (forward reachability_transform ZL t (subTerm_EQ_If2 eq_refl ST) d' ta)❭). {

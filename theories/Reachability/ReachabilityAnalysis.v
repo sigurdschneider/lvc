@@ -2,7 +2,7 @@ Require Import CSet Le Var.
 
 Require Import Plus Util AllInRel Map CSet ListUpdateAt.
 Require Import Val Var Env IL Annotation Infra.Lattice DecSolve Filter.
-Require Import Analysis AnalysisForward FiniteFixpointIteration Terminating Subterm.
+Require Import Analysis AnalysisForwardSSA FiniteFixpointIteration Terminating Subterm.
 
 Remove Hints trans_eq_bool.
 
@@ -11,33 +11,67 @@ Set Implicit Arguments.
 Definition reachability_transform (sT:stmt)
            (ZL:list params)
            (st:stmt) (ST:subTerm st sT)
+           (ZLIncl:list_union (of_list ⊝ ZL) [<=] occurVars sT) (u:unit)
            (d:bool)
-  : anni bool :=
+  : anni unit st :=
   match st with
-  | stmtLet x e s => anni1 d
   | stmtIf e s t =>
-    anni2 (if [op2bool e = Some false] then false else d)
-          (if [op2bool e = Some true] then false else d)
-  | stmtApp f Y => anni1 d
-  | stmtReturn e => anni1 d
-  | _ => anni1 d
+    (if [op2bool e = Some false] then false else d,
+     if [op2bool e = Some true] then false else d, u)
+  | _ => u
   end.
+
+Instance PO_unit : PartialOrder unit.
+Proof.
+  econstructor; eauto.
+  - intros; hnf; intros. left. destruct d, d'; reflexivity.
+  - intros; hnf; intros. left. destruct d, d'; reflexivity.
+  - hnf; intros; eauto.
+Defined.
+
+Instance JSL_unit : JoinSemiLattice unit :=
+  {
+    join x y := tt
+  }.
+Proof.
+  - intros; destruct a; reflexivity.
+  - intros; hnf; intros. reflexivity.
+  - reflexivity.
+  - intros; destruct a; reflexivity.
+Defined.
+
+Instance LB_unit : LowerBounded unit :=
+  {
+    bottom := tt
+  }.
+Proof.
+  - intros; destruct a; reflexivity.
+Defined.
+
+Instance Terminating_unit : Terminating unit poLt.
+Proof.
+  hnf; intros.
+  econstructor; intros. destruct H.
+  exfalso. eapply H0. destruct x,y; reflexivity.
+Qed.
 
 
 Lemma reachability_transform_monotone (sT s : stmt) (ST : subTerm s sT)
-      (ZL : 〔params〕) (a b : bool)
+      (ZL : 〔params〕) (ZLIncl : list_union (of_list ⊝ ZL) [<=] occurVars sT) (a b : unit)
   : a ⊑ b
-    -> reachability_transform ZL ST a ⊑ reachability_transform ZL ST b.
+    ->  forall r r' : bool,
+      r ⊑ r'
+      -> reachability_transform ZL ST ZLIncl a r ⊑ reachability_transform ZL ST ZLIncl b r'.
 Proof.
   intros; destruct s; simpl; try econstructor; simpl; eauto;
     repeat cases; simpl in *; eauto.
 Qed.
 
 Definition reachability_analysis s :=
-  makeForwardAnalysis (fun s => bool ) _ _ _
+  makeForwardAnalysis (fun s => unit ) _ _
                       reachability_transform
                       reachability_transform_monotone
-                      (fun s => terminating_bool) s true.
+                      (fun s => Terminating_unit) s.
 
 Definition reachabilityAnalysis s :=
-  proj1_sig (proj1_sig (safeFixpoint (reachability_analysis s))).
+  proj1_sig (safeFixpoint (reachability_analysis s)).

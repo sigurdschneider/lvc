@@ -4,7 +4,7 @@ Require Import CMap CMapDomain CMapPartialOrder CMapJoinSemiLattice.
 Require Import Analysis AnalysisForwardSSA Subterm CSet MapAgreement RenamedApart.
 Require Import Infra.PartialOrder Infra.Lattice Infra.WithTop.
 Require Import LabelsDefined Annotation.
-Require Import ConstantPropagation ConstantPropagationAnalysis.
+Require Import Reachability ConstantPropagation ConstantPropagationAnalysis.
 
 Local Arguments proj1_sig {A} {P} e.
 Local Arguments length {A} e.
@@ -1075,7 +1075,7 @@ Proof.
 Qed.
 
 
-Definition cp_sound sT AE AE' RCH AV ZL s (ST:subTerm s sT) ZLIncl ra anr
+Definition cp_sound sT AE AE' AV ZL s (ST:subTerm s sT) ZLIncl ra anr
   : let X := @forward sT _ (@cp_trans_dep) ZL ZLIncl s ST AE anr in
     renamedApart s ra
     -> annotation s anr
@@ -1086,11 +1086,10 @@ Definition cp_sound sT AE AE' RCH AV ZL s (ST:subTerm s sT) ZLIncl ra anr
     -> ❬ZL❭ = ❬AV❭
     -> paramsMatch s (length ⊝ ZL)
     -> PIR2 eq AV (List.map (fun Z => lookup_list (domenv (proj1_sig AE')) Z) ZL)
-    -> PIR2 poLe (snd X) RCH
     -> (forall n Z, get ZL n Z -> NoDupA eq Z)
-    -> cp_sound (domenv (proj1_sig AE')) (zip pair ZL AV) RCH s anr.
+    -> cp_sound (domenv (proj1_sig AE')) (zip pair ZL AV) s anr.
 Proof.
-  intros LET RA ANN LD EQ1 EQ2 DISJ LEN PM AVREL RCHREL NODUP. subst LET.
+  intros LET RA ANN LD EQ1 EQ2 DISJ LEN PM AVREL NODUP. subst LET.
   general induction LD; invt @renamedApart;
     try invt @annotation; simpl in *; simpl; invt @paramsMatch;
       simpl in *; dcr;
@@ -1200,17 +1199,18 @@ Proof.
              revert i DISJ H4.
              clear_all; cset_tac.
            } destruct H15; dcr.
-           ++ exploit (H7 x). cset_tac.
+           ++ exploit (H7 x).
+             revert H17 H18 H3 i; clear_all. cset_tac.
              unfold domenv in H15.
              etransitivity; eauto.
            ++ etransitivity; eauto.
              eapply poLe_antisymmetric.
-             eapply H14. cset_tac.
+             eapply H14. revert H22; clear_all; cset_tac.
              etransitivity.
-             eapply H1. cset_tac.
+             eapply H1. revert H21; clear_all; cset_tac.
              exploit (H x).
              rewrite <- H15. unfold domenv. reflexivity.
-        -- exploit (H0 x). cset_tac.
+        -- exploit (H0 x). revert n; clear_all. cset_tac.
            rewrite H7.
            etransitivity. eapply EQ2.
            symmetry. exploit (H x).
@@ -1240,9 +1240,6 @@ Proof.
       * eauto.
       * eauto.
       * eauto.
-      * etransitivity; eauto.
-        eapply PIR2_impb_orb_right.
-        eauto with len. reflexivity.
       * eauto.
     + eapply IHLD2; eauto.
       * eapply setTopAnn_annotation. eauto.
@@ -1256,29 +1253,6 @@ Proof.
         pe_rewrite. set_simpl.
         eapply disj_incl. eapply DISJ.
         reflexivity. eauto with cset.
-      * etransitivity; eauto.
-        eapply PIR2_impb_orb_left.
-        eauto with len. reflexivity.
-    + intros.
-      rewrite getAnn_setTopAnn; eauto.
-      repeat cases; eauto.
-      * eapply H1.
-        exploit eqMap_op_eval; try eapply EQ2.
-        eapply option_R_inv in H14. rewrite H14.
-        rewrite COND. reflexivity.
-      * exploit eqMap_op_eval; try eapply EQ2.
-        eapply option_R_inv in H14. rewrite H14 in H7.
-        rewrite COND in H7. simpl in H7.
-        unfold val2bool in H7. cases in H7.
-    + intros.
-      rewrite getAnn_setTopAnn; eauto.
-      repeat cases; eauto.
-      * exploit eqMap_op_eval; try eapply EQ2.
-        eapply option_R_inv in H7. rewrite H7 in H1.
-        rewrite COND in H1. inv H1.
-      * exploit eqMap_op_eval; try eapply EQ2.
-        eapply option_R_inv in H7. rewrite H7 in H1.
-        rewrite COND in H1. clear_trivial_eqs.
   - econstructor.
   - clear_trivial_eqs. set_simpl.
     edestruct get_in_range; eauto.
@@ -1290,21 +1264,18 @@ Proof.
       eapply PIR2_get.
       * rewrite lookup_list_map.
         intros; inv_get.
-        exploit (H0 x2) as EQA. unfold domenv.
-        exploit (EQ2 x2) as EQB. rewrite <- EQA in EQB.
+        exploit (H0 x1) as EQA. unfold domenv.
+        exploit (EQ2 x1) as EQB. rewrite <- EQA in EQB.
         rewrite EQB.
         cases.
-        exploit domupd_list_get; [|eapply H8| eapply map_get_1; eapply H7|].
+        exploit domupd_list_get; [|eapply H6| eapply map_get_1; try eapply H5|].
         -- exploit NODUP; eauto.
-        -- instantiate (2:=proj1_sig AE) in H9.
-           instantiate (1:=op_eval (domenv (proj1_sig AE))) in H9.
-           etransitivity; eauto.
+        -- etransitivity;[| eapply H7].
            exploit eqMap_op_eval; try eapply EQ2.
-           unfold domenv in H10.
-           eapply option_R_inv in H10.
-           rewrite  H10. reflexivity.
+           eapply option_R_inv in H8.
+           unfold domenv in H8.
+           rewrite H8. reflexivity.
       * rewrite map_length. rewrite lookup_list_length; eauto.
-    + destruct a, x1; isabsurd; eauto.
   -
     assert (ZipEq:((fun Zs0 : params * stmt => (fst Zs0, lookup_list (domenv (proj1_sig AE')) (fst Zs0))) ⊝ F ++ pair ⊜ ZL AV) = (zip pair (fst ⊝ F ++ ZL) ((fun Zs => lookup_list (domenv (proj1_sig AE')) (fst Zs)) ⊝ F ++ AV))). {
       clear_all. general induction F; simpl; eauto.
@@ -1400,51 +1371,6 @@ Proof.
         eapply PIR2_get; intros; inv_get. reflexivity.
         clear_all.
         eauto with len.
-      * rewrite (take_eta (❬F❭)) at 1.
-        eapply PIR2_app.
-        -- eapply PIR2_get in H23.
-           ++ eapply PIR2_ann_R_get in H23.
-             eapply PIR2_eq in H23.
-             rewrite <- H23.
-             rewrite getAnn_setTopAnn_zip.
-             ** rewrite forwardF_length, zip_length.
-                rewrite forward_length, app_length, map_length.
-                assert (LEQ:Init.Nat.min ❬F❭ (Init.Nat.min ❬sa❭ (❬F❭ + ❬ZL❭))
-                        = ❬F❭). {
-                  rewrite H9.
-                  clear_all; intros; eauto with len.
-                }
-                rewrite LEQ. rewrite min_l.
-                eapply PIR2_take.
-                destruct H14.
-                rewrite (@forwardF_ext sT DDom _
-                                       (@forward _ _ (@cp_trans_dep) (fst ⊝ F ++ ZL) (@ZLIncl_ext sT (stmtFun F t) F t ZL (@eq_refl stmt (stmtFun F t)) ST
-                   ZLIncl)) (@forward _ _ (@cp_trans_dep) (fst ⊝ F ++ ZL) (@ZLIncl_ext sT (stmtFun F t) F t ZL (@eq_refl stmt (stmtFun F t)) ST
-                   ZLIncl)));
-                  try eapply e; intros; try reflexivity.
-                eauto.
-                --- eapply forward_ext; eauto.
-                    eapply transf_ext.
-                --- erewrite forwardF_snd_length;[| | reflexivity].
-                    rewrite forward_length. clear; len_simpl. omega.
-                    intros. clear. eauto with len.
-           ++ revert H9.
-             clear_all. intros.
-             len_simpl; [| | reflexivity].
-             rewrite H9.
-             repeat rewrite min_l; eauto with len.
-             intros; eauto with len.
-        -- etransitivity; eauto.
-           eapply PIR2_drop.
-           destruct H14.
-           rewrite (@forwardF_ext sT DDom _
-                                  (@forward _ _ (@cp_trans_dep) (fst ⊝ F ++ ZL) (@ZLIncl_ext sT (stmtFun F t) F t ZL (@eq_refl stmt (stmtFun F t)) ST
-                                                                                            ZLIncl)) (@forward _ _ (@cp_trans_dep) (fst ⊝ F ++ ZL) (@ZLIncl_ext sT (stmtFun F t) F t ZL (@eq_refl stmt (stmtFun F t)) ST
-                                                                                                                                                               ZLIncl)));
-             try eapply e; intros; try reflexivity.
-           eauto.
-           --- eapply forward_ext; eauto.
-               eapply transf_ext.
       * intros ? ? GET2. eapply get_app_cases in GET2. destruct GET2.
         inv_get. edestruct H5; eauto.
         dcr. inv_get. eapply NODUP; eauto.
@@ -1464,32 +1390,6 @@ Proof.
         eapply PIR2_get; intros; inv_get. reflexivity.
         clear.
         eauto with len.
-      * eapply PIR2_get in H23;
-          [|revert H9; clear; intros; len_simpl; try reflexivity;
-            eauto with len; repeat rewrite min_l; eauto with len; omega].
-        rewrite (take_eta (❬F❭)) at 1.
-        eapply PIR2_app.
-        -- eapply PIR2_ann_R_get in H23.
-
-           eapply PIR2_R_eq; eauto.
-           rewrite getAnn_setTopAnn_zip.
-           ** rewrite forwardF_length, zip_length.
-              rewrite forward_length, app_length, map_length.
-              assert (LEQ:Init.Nat.min ❬F❭ (Init.Nat.min ❬sa❭ (❬F❭ + ❬ZL❭))
-                          = ❬F❭). {
-                rewrite H9.
-                clear_all; intros; eauto with len.
-              }
-              rewrite LEQ. rewrite min_l.
-              eapply PIR2_take.
-              eapply forwardF_mon. clear; eauto with len.
-              erewrite forwardF_snd_length;[| | reflexivity].
-              rewrite forward_length. clear; len_simpl. omega.
-              intros. clear. eauto with len.
-        -- etransitivity; eauto.
-           eapply PIR2_drop.
-           eapply forwardF_mon.
-           clear; len_simpl. reflexivity.
       * intros ? ? GET. eapply get_app_cases in GET. destruct GET.
         inv_get. edestruct H5; eauto.
         dcr. inv_get. eapply NODUP; eauto.
