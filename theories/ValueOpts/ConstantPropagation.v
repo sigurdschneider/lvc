@@ -157,3 +157,15 @@ Proof.
         lookup_list AE (fst Zs0))) ⊝ F ++ ZL) (snd Zs) r) F); eauto.
     intros. eapply IH; eauto. destruct H; dec_solve.
 Defined.
+
+Definition cop2bool AE e := aval2bool (op_eval AE e).
+
+Lemma op_eval_cop2bool_not_none AE e
+  : op_eval AE e <> ⎣⎦
+    -> cop2bool AE e <> ⎣⎦.
+Proof.
+  unfold cop2bool, aval2bool; repeat cases; intros; eauto;
+    try congruence.
+Qed.
+
+Hint Resolve op_eval_cop2bool_not_none.

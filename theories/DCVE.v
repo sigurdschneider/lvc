@@ -88,7 +88,7 @@ Lemma DCVE_correct_I (ili:IL.stmt) (E:onv val) ra
 Proof.
   intros. subst. unfold DCVE.
   simpl in *.
-  assert (reachability op2bool SoundAndComplete nil ili
+  assert (reachability cop2bool SoundAndComplete nil ili
                                            (reachabilityAnalysis ili)). {
     eapply correct; eauto.
   }
@@ -117,7 +117,7 @@ Lemma DCVE_correct_F (ilf:IL.stmt) (E:onv val) ra
 Proof.
   intros. subst. unfold DCVE.
   simpl in *.
-  assert (reachability op2bool SoundAndComplete nil ilf
+  assert (reachability cop2bool SoundAndComplete nil ilf
                                            (reachabilityAnalysis ilf)). {
     eapply correct; eauto.
   }

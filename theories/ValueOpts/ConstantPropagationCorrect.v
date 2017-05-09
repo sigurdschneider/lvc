@@ -576,18 +576,6 @@ Proof.
   intro. eapply val_true_false_neq. eauto.
 Qed.
 
-Definition cop2bool AE e := aval2bool (op_eval AE e).
-
-Lemma op_eval_cop2bool_not_none AE e
-  : op_eval AE e <> ⎣⎦
-    -> cop2bool AE e <> ⎣⎦.
-Proof.
-  unfold cop2bool, aval2bool; repeat cases; intros; eauto;
-    try congruence.
-Qed.
-
-Hint Resolve op_eval_cop2bool_not_none.
-
 Lemma impb_lift (b b':bool)
   : (b -> b')
     -> impb b b'.
