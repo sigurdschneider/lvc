@@ -8,7 +8,7 @@ Require Import Reachability ConstantPropagation ConstantPropagationAnalysis.
 
 Local Arguments proj1_sig {A} {P} e.
 Local Arguments length {A} e.
-Local Arguments forward {sT} {Dom} ftransform ZL ZLIncl st.
+Local Arguments forward {sT} {Dom} ftransform reach_transf ZL ZLIncl st.
 
 Lemma option_R_inv x y
   : @OptionR.option_R (withTop Val.val) (withTop Val.val)
@@ -271,7 +271,7 @@ Qed.
 Notation "'getAE' X" := (proj1_sig (fst (fst X))) (at level 10, X at level 0).
 
 Local Arguments exist {A} {P} x _.
-Local Arguments forward {sT} {Dom} ftransform ZL {ZLIncl} st {ST}.
+Local Arguments forward {sT} {Dom} ftransform reach_transf ZL {ZLIncl} st {ST}.
 Local Arguments cp_trans_dep {sT} ZL st {ST} {ZLIncl}.
 Local Arguments cp_trans_domain {sT} ZL st {ST} {ZLIncl} a b.
 
@@ -422,22 +422,22 @@ Lemma cp_forwardF_agree (sT:stmt) BL G (F:list (params * stmt)) ans anF ZL'
                      (G \ (snd (getAnn a) ∪ list_union (of_list ⊝ ZL)))
                      (domenv (proj1_sig AE))
                      (domenv (getAE
-                                (@forward sT _ (@cp_trans_dep) ZL ZLIncl (snd Zs)
+                                (@forward sT _ (@cp_trans_dep) (@cp_trans_reach) ZL ZLIncl (snd Zs)
                                           ST AE anr))) /\
             agree_on (fstNoneOrR (withTop_le (R:=int_eq))) (G \ snd (getAnn a))
                      (domenv (proj1_sig AE))
                      (domenv (getAE
-                                (@forward sT _ (@cp_trans_dep) ZL ZLIncl (snd Zs)
+                                (@forward sT _ (@cp_trans_dep) (@cp_trans_reach) ZL ZLIncl (snd Zs)
                                           ST AE anr))))
   : agree_on (option_R (withTop_eq (R:=int_eq)))
              (G \ (list_union (defVars ⊜ F ans) ∪ list_union (of_list ⊝ ZL')))
              (domenv (proj1_sig AE))
-             (domenv (getAE (forwardF BL (@forward sT _ (@cp_trans_dep) _ ZL'Incl)
+             (domenv (getAE (forwardF BL (@forward sT _ (@cp_trans_dep) (@cp_trans_reach) _ ZL'Incl)
                                       F anF AE ST))) /\
     agree_on (fstNoneOrR (withTop_le (R:=int_eq)))
              (G \ (list_union (snd ⊝ getAnn ⊝ ans)))
              (domenv (proj1_sig AE))
-             (domenv (getAE (forwardF BL (@forward sT _ (@cp_trans_dep) _ ZL'Incl)
+             (domenv (getAE (forwardF BL (@forward sT _ (@cp_trans_dep) (@cp_trans_reach) _ ZL'Incl)
                                       F anF AE ST))).
 Proof.
   general induction Len1; destruct anF; inv Len2. simpl.
@@ -481,12 +481,12 @@ Lemma cp_forward_agree sT ZL (AE:DDom sT) G s (ST:subTerm s sT) ra ZLIncl anr
   : agree_on poEq (G \ (snd (getAnn ra) ∪ list_union (of_list ⊝ ZL)))
              (domenv (proj1_sig AE))
              (domenv (proj1_sig
-                        (fst (fst (@forward _ _ (@cp_trans_dep) ZL ZLIncl
+                        (fst (fst (@forward _ _ (@cp_trans_dep) (@cp_trans_reach) ZL ZLIncl
                                             s ST AE anr))))) /\
     agree_on poLe (G \ (snd (getAnn ra)))
              (domenv (proj1_sig AE))
              (domenv (proj1_sig
-                        (fst (fst (@forward _ _ (@cp_trans_dep) ZL ZLIncl
+                        (fst (fst (@forward _ _ (@cp_trans_dep) (@cp_trans_reach) ZL ZLIncl
                                             s ST AE anr))))).
 Proof.
   general induction RA; invt @annotation; simpl in *;
@@ -604,11 +604,11 @@ Lemma eqMap_forwardF_t
       (ta : ann bool) AE' tra (RAt:renamedApart t tra) (AN:annotation t ta)
       (EQM : eqMap
                (getAE (forwardF BL
-                    (@forward _ _ (@cp_trans_dep) ZL ZLIncl) F
+                    (@forward _ _ (@cp_trans_dep) (@cp_trans_reach) ZL ZLIncl) F
                     sa
                     AE'
                     STF)) (proj1_sig AE))
-      (EQ: eqMap (getAE (@forward _ _ (@cp_trans_dep) ZL ZLIncl t STt AE ta)) (proj1_sig AE'))
+      (EQ: eqMap (getAE (@forward _ _ (@cp_trans_dep) (@cp_trans_reach) ZL ZLIncl t STt AE ta)) (proj1_sig AE'))
       (Disj1:disj (snd (getAnn tra)) (list_union (of_list ⊝ ZL)))
       (Disj2:disj (snd (getAnn tra)) (list_union (snd ⊝ getAnn ⊝ ra)))
       (Disj3:disj (list_union (of_list ⊝ ZL)) (list_union (snd ⊝ getAnn ⊝ ra)))
@@ -620,11 +620,11 @@ Lemma eqMap_forwardF_t
          get sa n sa' -> get F n s' -> annotation (snd s') sa')
       (RA : forall (n : nat) (Zs : params * stmt) (a : ann (⦃nat⦄ * ⦃nat⦄)),
        get F n Zs -> get ra n a -> renamedApart (snd Zs) a)
-  : eqMap (getAE (@forward _ _ (@cp_trans_dep) ZL ZLIncl t STt AE ta)) (proj1_sig AE)
+  : eqMap (getAE (@forward _ _ (@cp_trans_dep) (@cp_trans_reach) ZL ZLIncl t STt AE ta)) (proj1_sig AE)
     /\  forall n Zs r (ST : subTerm (snd Zs) sT),
       get F n Zs ->
       get sa n r ->
-      fst (fst (@forward _ _ (@cp_trans_dep) ZL ZLIncl (snd Zs) ST AE r)) ≣ AE.
+      fst (fst (@forward _ _ (@cp_trans_dep) (@cp_trans_reach) ZL ZLIncl (snd Zs) ST AE r)) ≣ AE.
 Proof.
   general induction Len1; simpl in *; eauto.
   - split; isabsurd. etransitivity; eauto.
@@ -639,7 +639,8 @@ Proof.
     eauto with len.
     intros. inv_get.
     eapply cp_forward_agree; eauto using get.
-    instantiate (3:=(fst (fst (forward (@cp_trans_dep) ZL (snd x) AE' y)))) in H4.
+    instantiate (3:=(fst (fst (forward (@cp_trans_dep)
+                                       (@cp_trans_reach) ZL (snd x) AE' y)))) in H4.
     instantiate (1:=(fun (n : nat) (s : params * stmt) (H : get XL n s) =>
                      STF (S n) s (getLS x H))) in H4.
     unfold domenv in *.
@@ -685,22 +686,24 @@ Proof.
       { hnf; intros.
         rewrite <- EQ. rewrite H. reflexivity.
       }
-      assert (EQF:forwardF BL (@forward _ _ (@cp_trans_dep) ZL ZLIncl) XL YL
-                       (fst (fst (@forward _ _ (@cp_trans_dep) ZL ZLIncl (snd Zs) (STF 0 Zs (@getLB (params * stmt) XL Zs)) AE' r)))
+      assert (EQF:forwardF BL (@forward _ _ (@cp_trans_dep) (@cp_trans_reach) ZL ZLIncl) XL YL
+                       (fst (fst (@forward _ _ (@cp_trans_dep) (@cp_trans_reach) ZL ZLIncl (snd Zs) (STF 0 Zs (@getLB (params * stmt) XL Zs)) AE' r)))
                        (fun (n : nat) (s : params * stmt) (H : get XL n s) =>
                           STF (S n) s (getLS Zs H)) ===
-                       forwardF BL (@forward _ _ (@cp_trans_dep) ZL ZLIncl) XL YL
-                       (fst (fst (@forward _ _ (@cp_trans_dep) ZL ZLIncl (snd Zs) ST AE r)))
+                       forwardF BL (@forward _ _ (@cp_trans_dep) (@cp_trans_reach) ZL ZLIncl) XL YL
+                       (fst (fst (@forward _ _ (@cp_trans_dep) (@cp_trans_reach) ZL ZLIncl (snd Zs) ST AE r)))
                        (fun (n : nat) (s : params * stmt) (H : get XL n s) =>
                           STF (S n) s (getLS Zs H))
              ). {
         eapply forwardF_ext; eauto.
         intros. eapply forward_ext; eauto.
         intros. eapply transf_ext; eauto.
+        eapply cp_trans_reach_ext; eauto.
         assert ((STF 0 Zs (@getLB (params * stmt) XL Zs)) = ST) by eapply subTerm_PI.
         subst.
         eapply forward_ext; eauto.
         eapply transf_ext; eauto.
+        eapply cp_trans_reach_ext; eauto.
         symmetry; eauto.
       }
        hnf; intros z.
@@ -754,7 +757,8 @@ Lemma cp_forward_agree_def sT ZL AE G s (ST:subTerm s sT) ra ZLIncl anr pf
   : agree_on poEq (G \ (snd (getAnn ra) ∪ list_union (of_list ⊝ ZL)))
              (domenv AE)
              (domenv (proj1_sig
-                        (fst (fst (@forward _ _ (@cp_trans_dep) ZL ZLIncl
+                        (fst (fst (@forward _ _ (@cp_trans_dep) (@cp_trans_reach)
+                                            ZL ZLIncl
                                             s ST (exist AE pf) anr))))).
 Proof.
   edestruct cp_forward_agree with (AE:=exist AE pf); dcr; eauto.
@@ -812,12 +816,12 @@ Qed.
 
 Ltac simpl_forward_setTopAnn :=
   repeat match goal with
-         | [H : ann_R _ (snd (fst (@forward ?sT ?Dom ?f ?ZL ?ZLIncl
+         | [H : ann_R _ (snd (fst (@forward ?sT ?Dom ?f ?fr ?ZL ?ZLIncl
                                             ?s ?ST ?a ?sa))) ?sa' |- _ ] =>
            let X := fresh "HEQ" in
            match goal with
            | [ H' : getAnn sa = getAnn sa' |- _ ] => fail 1
-           | _ => exploit (@forward_getAnn sT Dom f ZL ZLIncl s ST a sa sa' H) as X;
+           | _ => exploit (@forward_getAnn sT Dom f fr ZL ZLIncl s ST a sa sa' H) as X;
                  subst
            end
          end; subst; try eassumption;
@@ -946,10 +950,12 @@ Lemma snd_forwarF_inv sT BL ZL ZLIncl F sa AE STF
       (Len1:❬F❭ = ❬sa❭) (Len2:❬F❭ <= ❬BL❭) (Len3:❬ZL❭ = ❬BL❭)
       (P1:PIR2 (ann_R eq)
                (setTopAnn (A:=bool)
-                          ⊜ (snd (fst (forwardF BL (@forward sT _ (@cp_trans_dep) ZL ZLIncl) F
+                          ⊜ (snd (fst (forwardF BL (@forward sT _ (@cp_trans_dep)
+                                                             (@cp_trans_reach) ZL ZLIncl) F
                                                 (joinTopAnn (A:=bool) ⊜ sa BL) AE STF)))
                           (snd (forwardF BL
-                                         (@forward _ _ (@cp_trans_dep) ZL ZLIncl) F
+                                         (@forward _ _ (@cp_trans_dep)
+                                                   (@cp_trans_reach) ZL ZLIncl) F
                                          (joinTopAnn (A:=bool) ⊜ sa BL) AE STF))) sa)
   : PIR2 (ann_R eq) (joinTopAnn (A:=bool) ⊜ sa BL) sa.
 Proof.
@@ -959,16 +965,16 @@ Proof.
   eapply H; clear H.
   etransitivity.
   eapply PIR2_take.
-  eapply (@forwardF_mon sT _ (@cp_trans_dep) ZL ZLIncl BL ltac:(omega) F (joinTopAnn (A:=bool) ⊜ sa BL) AE STF).
+  eapply (@forwardF_mon sT _ (@cp_trans_dep) (@cp_trans_reach) ZL ZLIncl BL ltac:(omega) F (joinTopAnn (A:=bool) ⊜ sa BL) AE STF).
   etransitivity. Focus 2.
   eapply PIR2_R_impl; try eapply P1; eauto.
   assert (❬sa❭ = (Init.Nat.min
           ❬snd
              (fst
-                (forwardF BL (@forward _ _ (@cp_trans_dep) ZL ZLIncl) F
+                (forwardF BL (@forward _ _ (@cp_trans_dep) (@cp_trans_reach) ZL ZLIncl) F
                    (joinTopAnn (A:=bool) ⊜ sa BL) AE STF))❭
           ❬snd
-             (forwardF BL (@forward _ _ (@cp_trans_dep) ZL ZLIncl) F (joinTopAnn (A:=bool) ⊜ sa BL)
+             (forwardF BL (@forward _ _ (@cp_trans_dep) (@cp_trans_reach) ZL ZLIncl) F (joinTopAnn (A:=bool) ⊜ sa BL)
                        AE STF)❭)). {
     clear P1.
     rewrite forwardF_length.
@@ -984,17 +990,17 @@ Lemma snd_forwarF_inv' sT BL ZL ZLIncl F sa AE STF
       (Len1:❬F❭ = ❬sa❭) (Len2:❬F❭ <= ❬BL❭) (Len3:❬ZL❭ = ❬BL❭)
       (P1:PIR2 (ann_R eq)
                (setTopAnn (A:=bool)
-                          ⊜ (snd (fst (forwardF BL (@forward sT _ (@cp_trans_dep) ZL ZLIncl) F
+                          ⊜ (snd (fst (forwardF BL (@forward sT _ (@cp_trans_dep) (@cp_trans_reach) ZL ZLIncl) F
                                                 (joinTopAnn (A:=bool) ⊜ sa BL) AE STF)))
                           (snd (forwardF BL
-                                         (@forward _ _ (@cp_trans_dep) ZL ZLIncl) F
+                                         (@forward _ _ (@cp_trans_dep) (@cp_trans_reach) ZL ZLIncl) F
                                          (joinTopAnn (A:=bool) ⊜ sa BL) AE STF))) sa)
   : PIR2 (ann_R eq)
-              (snd (fst (forwardF BL (@forward sT _ (@cp_trans_dep) ZL ZLIncl) F
+              (snd (fst (forwardF BL (@forward sT _ (@cp_trans_dep) (@cp_trans_reach) ZL ZLIncl) F
                                                 (joinTopAnn (A:=bool) ⊜ sa BL) AE STF))) sa.
 Proof.
   assert (P2:PIR2 poLe (Take.take ❬sa❭
-                               (snd (forwardF BL (@forward _ _ (@cp_trans_dep) ZL ZLIncl) F
+                               (snd (forwardF BL (@forward _ _ (@cp_trans_dep) (@cp_trans_reach) ZL ZLIncl) F
                                               (joinTopAnn (A:=bool) ⊜ sa BL) AE
                                               STF))) (getAnn ⊝ sa)). {
     eapply PIR2_ann_R_get in P1.
@@ -1004,10 +1010,10 @@ Proof.
     assert (❬sa❭ = (Init.Nat.min
                       ❬snd
                          (fst
-                            (forwardF BL (@forward _ _ (@cp_trans_dep) ZL ZLIncl) F
+                            (forwardF BL (@forward _ _ (@cp_trans_dep) (@cp_trans_reach) ZL ZLIncl) F
                                       (joinTopAnn (A:=bool) ⊜ sa BL) AE STF))❭
                       ❬snd
-                         (forwardF BL (@forward _ _ (@cp_trans_dep) ZL ZLIncl) F (joinTopAnn (A:=bool) ⊜ sa BL)
+                         (forwardF BL (@forward _ _ (@cp_trans_dep) (@cp_trans_reach) ZL ZLIncl) F (joinTopAnn (A:=bool) ⊜ sa BL)
                                    AE STF)❭)). {
       clear P1.
       rewrite forwardF_length.
@@ -1023,7 +1029,7 @@ Proof.
     eapply H; clear H.
     etransitivity.
     eapply PIR2_take.
-    eapply (@forwardF_mon sT _ (@cp_trans_dep) ZL ZLIncl BL ltac:(omega) F (joinTopAnn (A:=bool) ⊜ sa BL) AE STF). eauto.
+    eapply (@forwardF_mon sT _ (@cp_trans_dep) (@cp_trans_reach) ZL ZLIncl BL ltac:(omega) F (joinTopAnn (A:=bool) ⊜ sa BL) AE STF). eauto.
   }
   etransitivity; try eapply P1.
   symmetry.
@@ -1047,19 +1053,20 @@ Qed.
 Lemma snd_forwarF_inv_get sT BL ZL ZLIncl F sa AE STF
       (Len1:❬F❭ = ❬sa❭) (Len2:❬F❭ <= ❬BL❭) (Len3:❬ZL❭ = ❬BL❭)
       (P1:PIR2 (ann_R eq)
-              (snd (fst (forwardF BL (@forward sT _ (@cp_trans_dep) ZL ZLIncl) F
+              (snd (fst (forwardF BL (@forward sT _ (@cp_trans_dep) (@cp_trans_reach) ZL ZLIncl) F
                                   (joinTopAnn (A:=bool) ⊜ sa BL) AE STF))) sa)
       (P2:PIR2 (ann_R eq) (joinTopAnn (A:=bool) ⊜ sa BL) sa)
       n r Zs (Getsa:get sa n r)
       (GetF:get F n Zs) STZs
       (EQ: forall n Zs r ST, get F n Zs -> get sa n r ->
-                        poEq (fst (fst (@forward sT _ (@cp_trans_dep)  ZL ZLIncl (snd Zs) ST AE r))) AE)
+                        poEq (fst (fst (@forward sT _ (@cp_trans_dep) (@cp_trans_reach) ZL ZLIncl (snd Zs) ST AE r))) AE)
 
-  : ann_R eq (snd (fst (@forward _ _ (@cp_trans_dep) ZL ZLIncl (snd Zs) STZs AE r))) r.
+  : ann_R eq (snd (fst (@forward _ _ (@cp_trans_dep) (@cp_trans_reach) ZL ZLIncl (snd Zs) STZs AE r))) r.
 Proof.
   rewrite forwardF_ext in P1; try eapply P2; try reflexivity.
   Focus 2. intros. eapply forward_ext; eauto.
-  eapply transf_ext; eauto. clear Len3 P2.
+  eapply transf_ext; eauto. eapply cp_trans_reach_ext.
+  clear Len3 P2.
   general induction Len1; simpl in *.
   destruct BL; isabsurd; simpl in *. inv Getsa; inv GetF.
   - inv P1.
@@ -1071,12 +1078,13 @@ Proof.
     Focus 2.
     rewrite forwardF_ext; eauto.
     intros. eapply forward_ext; eauto. eapply transf_ext; eauto.
+    eapply cp_trans_reach_ext; eauto.
     symmetry. eapply EQ; eauto using get. reflexivity. simpl. omega.
 Qed.
 
 
 Definition cp_sound sT AE AE' AV ZL s (ST:subTerm s sT) ZLIncl ra anr
-  : let X := @forward sT _ (@cp_trans_dep) ZL ZLIncl s ST AE anr in
+  : let X := @forward sT _ (@cp_trans_dep) (@cp_trans_reach) ZL ZLIncl s ST AE anr in
     renamedApart s ra
     -> annotation s anr
     -> labelsDefined s (length ZL)
@@ -1172,7 +1180,7 @@ Proof.
       * pe_rewrite. set_simpl.
         eapply disj_incl; eauto with cset.
   - assert (MEQ: eqMap (proj1_sig AE')
-    (getAE (@forward sT DDom (@cp_trans_dep) ZL ZLIncl s (subTerm_EQ_If1 eq_refl ST)
+    (getAE (@forward sT DDom (@cp_trans_dep) (@cp_trans_reach) ZL ZLIncl s (subTerm_EQ_If1 eq_refl ST)
               (exist (proj1_sig AE) (@cp_trans_domain sT ZL (stmtIf e s t) ST ZLIncl AE a))
               (setTopAnn sa
                  (if [op_eval (domenv (proj1_sig AE)) e = ⎣⎦] then false else if [
@@ -1180,7 +1188,7 @@ Proof.
         hnf; intros.
         edestruct (@cp_forward_agree sT ZL (fst
                      (fst
-                        (@forward sT DDom (@cp_trans_dep) ZL ZLIncl s
+                        (@forward sT DDom (@cp_trans_dep) (@cp_trans_reach) ZL ZLIncl s
                                   (subTerm_EQ_If1 eq_refl ST)
                            (exist (proj1_sig AE)
                               (@cp_trans_domain sT ZL (stmtIf e s t) ST ZLIncl AE a))
@@ -1282,7 +1290,7 @@ Proof.
       f_equal. eapply IHF.
     }
     simpl_forward_setTopAnn. subst. repeat rewrite setTopAnn_eta' in *.
-    assert (joinTopAnn (A:=bool) ⊜ sa (snd (@forward _ _ (@cp_trans_dep) (fst ⊝ F ++ ZL) (ZLIncl_ext ZL eq_refl ST ZLIncl) t (subTerm_EQ_Fun1 eq_refl ST) AE ta)) = sa). {
+    assert (joinTopAnn (A:=bool) ⊜ sa (snd (@forward _ _ (@cp_trans_dep) (@cp_trans_reach) (fst ⊝ F ++ ZL) (ZLIncl_ext ZL eq_refl ST ZLIncl) t (subTerm_EQ_Fun1 eq_refl ST) AE ta)) = sa). {
       eapply PIR2_eq.
       eapply PIR2_R_impl. intros.
       eapply ann_R_eq. eapply H2.
@@ -1311,12 +1319,12 @@ Proof.
     + intros; inv_get.
       setoid_rewrite ZipEq.
       pose proof H16 as GET.
-      assert (FWDP:forall STZs, PIR2 impb (snd (@forward _ _ (@cp_trans_dep) (fst ⊝ F ++ ZL) (ZLIncl_ext ZL eq_refl ST ZLIncl) (snd Zs) STZs AE r))
+      assert (FWDP:forall STZs, PIR2 impb (snd (@forward _ _ (@cp_trans_dep) (@cp_trans_reach) (fst ⊝ F ++ ZL) (ZLIncl_ext ZL eq_refl ST ZLIncl) (snd Zs) STZs AE r))
                                 (snd
-                                   (forwardF (snd (@forward _ _ (@cp_trans_dep) (fst ⊝ F ++ ZL) (ZLIncl_ext ZL eq_refl ST ZLIncl) t ((subTerm_EQ_Fun1 eq_refl ST)) AE ta))
-                                             (@forward _ _ (@cp_trans_dep) (fst ⊝ F ++ ZL) (ZLIncl_ext ZL eq_refl ST ZLIncl)) F
+                                   (forwardF (snd (@forward _ _ (@cp_trans_dep) (@cp_trans_reach) (fst ⊝ F ++ ZL) (ZLIncl_ext ZL eq_refl ST ZLIncl) t ((subTerm_EQ_Fun1 eq_refl ST)) AE ta))
+                                             (@forward _ _ (@cp_trans_dep) (@cp_trans_reach) (fst ⊝ F ++ ZL) (ZLIncl_ext ZL eq_refl ST ZLIncl)) F
                                              (joinTopAnn (A:=bool) ⊜ sa
-                                                         (snd (@forward _ _ (@cp_trans_dep) (fst ⊝ F ++ ZL) (ZLIncl_ext ZL eq_refl ST ZLIncl) t ((subTerm_EQ_Fun1 eq_refl ST)) AE ta)))
+                                                         (snd (@forward _ _ (@cp_trans_dep) (@cp_trans_reach) (fst ⊝ F ++ ZL) (ZLIncl_ext ZL eq_refl ST ZLIncl) t ((subTerm_EQ_Fun1 eq_refl ST)) AE ta)))
                                              AE
                                              (subTerm_EQ_Fun2 eq_refl ST)))). {
         intros.
@@ -1330,6 +1338,7 @@ Proof.
            eapply H26; eauto.
            eapply zip_get; eauto.
         +++ eapply transf_ext.
+        +++ eapply cp_trans_reach_ext.
         +++ rewrite H2. eauto.
         +++ eauto.
       }
@@ -1348,8 +1357,8 @@ Proof.
            clear; eauto with len.
            destruct H14.
            rewrite (@forwardF_ext sT DDom _
-                                  (@forward _ _ (@cp_trans_dep) (fst ⊝ F ++ ZL) (@ZLIncl_ext sT (stmtFun F t) F t ZL (@eq_refl stmt (stmtFun F t)) ST
-                                                                                            ZLIncl)) (@forward _ _ (@cp_trans_dep) (fst ⊝ F ++ ZL) (@ZLIncl_ext sT (stmtFun F t) F t ZL (@eq_refl stmt (stmtFun F t)) ST
+                                  (@forward _ _ (@cp_trans_dep) (@cp_trans_reach) (fst ⊝ F ++ ZL) (@ZLIncl_ext sT (stmtFun F t) F t ZL (@eq_refl stmt (stmtFun F t)) ST
+                                                                                            ZLIncl)) (@forward _ _ (@cp_trans_dep) (@cp_trans_reach) (fst ⊝ F ++ ZL) (@ZLIncl_ext sT (stmtFun F t) F t ZL (@eq_refl stmt (stmtFun F t)) ST
                    ZLIncl))) in H20;
              try eapply e; intros; try reflexivity.
            eapply snd_forwarF_inv_get; try eapply H20; eauto.
@@ -1361,6 +1370,7 @@ Proof.
            rewrite ann_R_eq in H27. subst. eauto.
            eapply forward_ext; eauto.
            eapply transf_ext; eauto.
+           eapply cp_trans_reach_ext; eauto.
       * set_simpl. eauto.
         eapply disj_2_incl.
         eapply funConstr_disj_ZL_getAnn; eauto.

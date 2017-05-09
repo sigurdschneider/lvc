@@ -234,22 +234,15 @@ Qed.
 
 Definition constant_propagation_transform sT ZL st (ST:subTerm st sT)
            (a:Dom) (b:bool)
-  : anni Dom st :=
-  match st as st', a return anni Dom st'  with
+  : Dom :=
+  match st as st', a return Dom with
   | stmtLet x (Operation e) s as st, d =>
     let d' := domupd d x (op_eval (domenv d) e) in
     d'
   | stmtLet x (Call f Y) s as st, d =>
     (* we assume renamed apart here, and dont zero x *)
     domupd d x (Some Top)
-  | stmtIf e s t as st, d =>
-    (if [op_eval (domenv d) e = None] then false
-     else if [op_eval (domenv d) e = Some (wTA val_false)] then
-            false else b,
-     if [op_eval (domenv d) e = None] then false
-     else if [op_eval (domenv d) e = Some (wTA val_true)] then
-            false else b,
-     d)
+  | stmtIf e s t as st, d => d
   | stmtApp f Y as st, d =>
     let Z := nth (counted f) ZL (nil:list var) in
     let Yc := List.map (op_eval (domenv d)) Y in
@@ -278,17 +271,6 @@ Proof.
     + eapply domupd_le; eauto.
       eapply (leMap_op_eval e); eauto.
     + hnf; intros. mlud; eauto.
-  - exploit (leMap_op_eval e); eauto.
-    repeat (cases; try split; eauto using @fstNoneOrR); simpl;
-      try congruence;
-    repeat (match goal with
-           | [ H : _ = None |- _ ] => rewrite H in *
-           | [ H : _ = Some _ |- _ ] => rewrite H in *
-            end; clear_trivial_eqs; try inv H1; try congruence).
-    + clear_trivial_eqs. rewrite <- H2 in *.
-      exfalso; eapply NOTCOND0. reflexivity.
-    + clear_trivial_eqs. rewrite <- H2 in *.
-      exfalso. eapply NOTCOND1. reflexivity.
   - destruct (get_dec ZL l); dcr.
     + erewrite get_nth; eauto; simpl.
       repeat cases; isabsurd; eauto;
@@ -322,15 +304,9 @@ Proof.
 Qed.
 
 
-Definition anni_dom sT (a:anni Dom sT) : set var.
-  destruct sT; simpl in *;
-    try eapply (domain a).
-  - eapply (domain (snd a)).
-Defined.
-
 Lemma cp_trans_domain  sT (ZL:list params) st (ST:subTerm st sT)
        (ZLIncl: list_union (of_list ⊝ ZL) ⊆ occurVars sT) (a:DDom sT) b
-  : anni_dom _ (constant_propagation_transform ZL ST (proj1_sig a) b) ⊆ occurVars sT.
+  : domain (constant_propagation_transform ZL ST (proj1_sig a) b) ⊆ occurVars sT.
 Proof.
   pose proof (subTerm_occurVars ST) as Incl. destruct a; simpl in *.
   destruct st; simpl in *; eauto.
@@ -349,13 +325,11 @@ Qed.
 
 Definition cp_trans_dep sT (ZL:list params) st (ST:subTerm st sT)
            (ZLIncl: list_union (of_list ⊝ ZL) ⊆ occurVars sT) (a:DDom sT) (b:bool)
-  : anni (DDom sT) st.
+  : DDom sT.
 Proof.
   set (res:=(@constant_propagation_transform sT ZL st ST (proj1_sig a) b)).
   set (pf:=cp_trans_domain ZL ST ZLIncl a b).
   destruct st; try eapply (exist _ res pf).
-  simpl.
-  eapply (fst (fst res), snd (fst res), exist _ (snd res) pf).
 Defined.
 
 
@@ -382,13 +356,6 @@ Proof.
     + eapply domupd_eq; eauto.
       eapply eqMap_op_eval; eauto.
     + hnf; intros. mlud; eauto.
-  - pose proof(eqMap_op_eval e H).  hnf in H1.
-    cases; inv H1; simpl.
-    repeat split; eauto.
-    repeat cases; try congruence.
-    exfalso; eauto.
-    repeat cases; repeat split; eauto.
-    exfalso; eauto.
   - repeat cases; eauto.
     destruct (get_dec ZL l); dcr.
     + erewrite get_nth; eauto.
@@ -471,6 +438,53 @@ Proof.
       inv H2. inv H3. inv H2. exfalso; eauto.
 Qed.
 
+Definition cp_trans_reach (sT : stmt) (e : op)
+           (Incl:Op.freeVars e [<=] occurVars sT) (d:DDom sT) (b:bool) : bool * bool :=
+  (if [op_eval (domenv (proj1_sig d)) e = None] then false
+     else if [op_eval (domenv (proj1_sig d)) e = Some (wTA val_false)] then
+            false else b,
+     if [op_eval (domenv (proj1_sig d)) e = None] then false
+     else if [op_eval (domenv (proj1_sig d)) e = Some (wTA val_true)] then
+            false else b).
+
+Lemma cp_trans_reach_mon
+  : forall (sT : stmt) (e : op) (s : stmt),
+    subTerm s sT ->
+    forall (FVIncl : Op.freeVars e [<=] occurVars sT) (a a' : DDom sT),
+      a ⊑ a' ->
+      forall b b' : bool,
+        b ⊑ b' -> cp_trans_reach e FVIncl a b ⊑ cp_trans_reach e FVIncl a' b'.
+Proof.
+  intros. exploit (leMap_op_eval e); eauto. eapply H0.
+  unfold cp_trans_reach.
+  set (X:=op_eval (domenv (proj1_sig a)) e) in *.
+  set (Y:=op_eval (domenv (proj1_sig a')) e) in *. clearbody X Y.
+  repeat cases; split; simpl fst; simpl snd; eauto.
+  inv H2; clear_trivial_eqs.
+  inv H2; clear_trivial_eqs.
+  inv H2; clear_trivial_eqs.
+  exfalso; eauto.
+  inv H2; clear_trivial_eqs.
+  exfalso; eauto.
+Qed.
+
+Lemma cp_trans_reach_ext
+  : forall sT (e : op) (s : stmt),
+    subTerm s sT ->
+    forall (FVIncl : Op.freeVars e [<=] occurVars sT) (a0 a' : DDom sT),
+      a0 ≣ a' ->
+      forall b b' : bool,
+        b ≣ b' -> cp_trans_reach e FVIncl a0 b ≣ cp_trans_reach e FVIncl a' b'.
+Proof.
+  intros. exploit (eqMap_op_eval e); eauto. eapply H0.
+  unfold cp_trans_reach.
+  set (X:=op_eval (domenv (proj1_sig a0)) e) in *.
+  set (Y:=op_eval (domenv (proj1_sig a')) e) in *. clearbody X Y.
+  repeat cases; split; simpl fst; simpl snd; eauto; clear_trivial_eqs;
+  inv H2; clear_trivial_eqs; exfalso; eauto.
+Qed.
+
 Definition constant_propagation_analysis :=
-  makeForwardAnalysis DDom _ _ cp_trans_dep transf_mon_dep
+  makeForwardAnalysis DDom _ _ cp_trans_dep cp_trans_reach
+                      transf_mon_dep cp_trans_reach_mon
                       (fun s => (@terminating_Dom var _ _ _ (occurVars s) _)).

@@ -32,20 +32,20 @@ Hint Resolve forward_length_ass_UC.
  *)
 
 Definition reachability_sound sT ZL BL s d a (ST:subTerm s sT) ZLIncl
-  : poEq (fst (forward reachability_transform ZL ZLIncl s ST d (snd a))) a
-    -> annotation s (snd a)
+  : poEq (fst (forward reachability_transform ZL ZLIncl s ST d a)) (tt,a)
+    -> annotation s a
     -> labelsDefined s (length ZL)
     -> labelsDefined s (length BL)
-    -> poLe (snd (@forward sT _ reachability_transform ZL ZLIncl s ST d (snd a))) BL
-    -> reachability cop2bool Sound BL s (snd a).
+    -> poLe (snd (@forward sT _ reachability_transform ZL ZLIncl s ST d a)) BL
+    -> reachability cop2bool Sound BL s a.
 Proof.
   intros EQ Ann DefZL DefBL.
   general induction Ann; simpl in *; inv DefZL; inv DefBL;
     repeat let_case_eq; repeat simpl_pair_eqs; subst; simpl in *.
-  - inv EQ.
-    pose proof (ann_R_get H1); simpl in *. subst.
+  - inv EQ. inv H1.
+    pose proof (ann_R_get H9); simpl in *.
     econstructor; eauto.
-    eapply IHAnn; eauto.
+    eapply IHAnn; eauto. split; eauto.
     simpl_forward_setTopAnn; eauto.
   - assert (forall d d', ❬snd (forward reachability_transform ZL s (subTerm_EQ_If1 eq_refl ST) d sa)❭ =
             ❬snd (forward reachability_transform ZL t (subTerm_EQ_If2 eq_refl ST) d' ta)❭). {

@@ -21,41 +21,6 @@ Definition reachability_transform (sT:stmt)
   | _ => u
   end.
 
-Instance PO_unit : PartialOrder unit.
-Proof.
-  econstructor; eauto.
-  - intros; hnf; intros. left. destruct d, d'; reflexivity.
-  - intros; hnf; intros. left. destruct d, d'; reflexivity.
-  - hnf; intros; eauto.
-Defined.
-
-Instance JSL_unit : JoinSemiLattice unit :=
-  {
-    join x y := tt
-  }.
-Proof.
-  - intros; destruct a; reflexivity.
-  - intros; hnf; intros. reflexivity.
-  - reflexivity.
-  - intros; destruct a; reflexivity.
-Defined.
-
-Instance LB_unit : LowerBounded unit :=
-  {
-    bottom := tt
-  }.
-Proof.
-  - intros; destruct a; reflexivity.
-Defined.
-
-Instance Terminating_unit : Terminating unit poLt.
-Proof.
-  hnf; intros.
-  econstructor; intros. destruct H.
-  exfalso. eapply H0. destruct x,y; reflexivity.
-Qed.
-
-
 Lemma reachability_transform_monotone (sT s : stmt) (ST : subTerm s sT)
       (ZL : 〔params〕) (ZLIncl : list_union (of_list ⊝ ZL) [<=] occurVars sT) (a b : unit)
   : a ⊑ b
