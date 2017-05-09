@@ -35,7 +35,7 @@ Definition reachability_sound sT ZL BL s d a (ST:subTerm s sT)
     -> labelsDefined s (length ZL)
     -> labelsDefined s (length BL)
     -> poLe (snd (@forward sT _ _ _ _ reachability_transform ZL s ST d a)) BL
-    -> reachability Sound BL s a.
+    -> reachability op2bool Sound BL s a.
 Proof.
   intros EQ Ann DefZL DefBL.
   general induction Ann; simpl in *; inv DefZL; inv DefBL;
@@ -149,7 +149,7 @@ Proof.
 Qed.
 
 Lemma forward_snd_poLe sT BL ZL s (ST:subTerm s sT) n a b c
-  : reachability Complete BL s a
+  : reachability op2bool Complete BL s a
     -> poLe (getAnn a) c
     -> get (snd (forward reachability_transform ZL s ST c a)) n b
     -> poLe b c.
@@ -194,8 +194,8 @@ Local Hint Extern 0 => first [ erewrite (@forward_getAnn' _ (fun _ => bool))
 
 Lemma reachability_analysis_complete_setTopAnn BL s a b
       (LE:poLe (getAnn a) b)
-  : reachability Complete BL s a
-    -> reachability Complete BL s (setTopAnn a b).
+  : reachability op2bool Complete BL s a
+    -> reachability op2bool Complete BL s (setTopAnn a b).
 Proof.
   intros RCH; general induction RCH; simpl in *;
     eauto using reachability.
@@ -260,7 +260,7 @@ end.
 
 Lemma reachability_analysis_complete_isCalled sT ZL BL s a b
       (ST:subTerm s sT)
-  : reachability Complete BL s a
+  : reachability op2bool Complete BL s a
     -> forall n, get (snd (forward reachability_transform ZL s ST b a)) n true
            -> poLe (getAnn a) b
            -> isCalled true s (LabI n).
@@ -309,8 +309,8 @@ Qed.
 
 Lemma reachability_sTA_inv (BL : 〔bool〕)
          (s : stmt) (a : ann bool)
-  : reachability Complete BL s (setTopAnn a (getAnn a)) ->
-    reachability Complete BL s a.
+  : reachability op2bool Complete BL s (setTopAnn a (getAnn a)) ->
+    reachability op2bool Complete BL s a.
 Proof.
   intros. rewrite setTopAnn_eta in H; eauto.
 Qed.
@@ -320,8 +320,8 @@ Lemma reachability_analysis_complete sT ZL BL BL' (Len:❬BL❭ = ❬BL'❭) s a
       (EQ:(fst (forward reachability_transform ZL s ST b a)) = c)
       (LE:poLe a (setTopAnn c b'))
       (LEb: poLe (getAnn c) b')
-  : reachability Complete BL s a
-    -> reachability Complete BL' s (setTopAnn c b').
+  : reachability op2bool Complete BL s a
+    -> reachability op2bool Complete BL' s (setTopAnn c b').
 Proof.
   subst c.
   intros RCH.
@@ -392,7 +392,7 @@ Qed.
 
 Lemma reachability_complete_bottom BL s
   : labelsDefined s ❬BL❭
-    -> reachability Complete BL s (setAnn bottom s).
+    -> reachability op2bool Complete BL s (setAnn bottom s).
 Proof.
   revert BL.
   sind s; intros; destruct s; invt labelsDefined; simpl; eauto 10 using reachability.
@@ -410,7 +410,7 @@ Qed.
 
 Lemma reachability_complete s
   : labelsDefined s ❬nil:list params❭
-    -> reachability Complete nil s (reachabilityAnalysis s).
+    -> reachability op2bool Complete nil s (reachabilityAnalysis s).
 Proof.
   unfold reachabilityAnalysis. destr_sig.
   destruct e as [n [Iter _]]. subst.
@@ -425,7 +425,7 @@ Qed.
 
 Lemma correct s
   : labelsDefined s 0
-    -> reachability SoundAndComplete nil s (reachabilityAnalysis s).
+    -> reachability op2bool SoundAndComplete nil s (reachabilityAnalysis s).
 Proof.
   intros.
   eapply reachability_sound_and_complete.

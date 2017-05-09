@@ -269,7 +269,7 @@ Proof.
 Qed.
 
 Lemma sim_I RL r L L' V s (a:ann bool) (Ann:getAnn a)
- (RCH: reachability Sound RL s a)
+ (RCH: reachability op2bool Sound RL s a)
  (LSIM:labenv_sim Bisim (sim r) SR RL L L')
   : sim r Bisim (L,V, s) (L',V, compile RL s a).
 Proof.
@@ -297,7 +297,7 @@ Proof.
 Qed.
 
 Lemma sim_UCE V s a
-  : reachability Sound nil s a
+  : reachability op2bool Sound nil s a
     -> getAnn a
     -> @sim I.state _ I.state _ bot3 Bisim (nil,V, s) (nil,V, compile nil s a).
 Proof.
@@ -385,7 +385,7 @@ Proof.
 Qed.
 
 Lemma sim_F RL r L L' V s (a:ann bool) (Ann:getAnn a)
- (UC: reachability Sound RL s a)
+ (UC: reachability op2bool Sound RL s a)
  (LSIM:labenv_sim Bisim (sim r) SR RL L L')
   : sim r Bisim (L,V, s) (L',V, compile RL s a).
 Proof.
@@ -413,7 +413,7 @@ Proof.
 Qed.
 
 Lemma sim_UCE V s a
-  : reachability Sound nil s a
+  : reachability op2bool Sound nil s a
     -> getAnn a
     -> @sim F.state _ F.state _ bot3 Bisim (nil,V, s) (nil,V, compile nil s a).
 Proof.
@@ -427,7 +427,7 @@ End F.
 (** ** UCE respects parameter/argument matching *)
 
 Lemma UCE_paramsMatch PL RL s lv
-  : reachability Sound RL s lv
+  : reachability op2bool Sound RL s lv
     -> getAnn lv
     -> paramsMatch s PL
     -> paramsMatch (compile RL s lv) (filter_by (fun b => b) RL PL).
@@ -486,7 +486,7 @@ Fixpoint compile_live (s:stmt) (a:ann (set var)) (b:ann bool) : ann (set var) :=
 
 Lemma compile_live_incl i uci ZL LV RL s lv uc
   : true_live_sound i ZL LV s lv
-    -> reachability uci RL s uc
+    -> reachability op2bool uci RL s uc
     -> getAnn (compile_live s lv uc) ⊆ getAnn lv.
 Proof.
   intros LS UC.
@@ -500,7 +500,7 @@ Proof.
 Qed.
 
 Lemma UCE_live i ZL LV RL s uc lv
-  : reachability Sound RL s uc
+  : reachability op2bool Sound RL s uc
     -> getAnn uc
     -> true_live_sound i ZL LV s lv
     -> true_live_sound i (filter_by (fun b => b) RL ZL)
@@ -577,7 +577,7 @@ Qed.
 
 Lemma trueIsCalled_compileF_not_nil
       (s : stmt) (slv : ann bool) k F als RL x
-  : reachability Sound (getAnn ⊝ als ++ RL) s slv
+  : reachability op2bool Sound (getAnn ⊝ als ++ RL) s slv
     -> getAnn slv
     -> isCalled true s (LabI k)
     -> get als k x
@@ -602,17 +602,17 @@ Lemma UCE_callChain RL F als t alt l' k ZsEnd aEnd n
       (IH : forall k Zs,
           get F k Zs ->
        forall (RL : 〔bool〕) (lv : ann bool) (n : nat),
-       reachability SoundAndComplete RL (snd Zs) lv ->
+       reachability op2bool SoundAndComplete RL (snd Zs) lv ->
        (isCalled true) (snd Zs) (LabI n) ->
        getAnn lv ->
        (isCalled true) (compile RL (snd Zs) lv)
                 (LabI (countTrue (take n RL))))
-  (UC:reachability SoundAndComplete (getAnn ⊝ als ++ RL) t alt)
+  (UC:reachability op2bool SoundAndComplete (getAnn ⊝ als ++ RL) t alt)
   (LEN: ❬F❭ = ❬als❭)
   (UCF:forall (n : nat) (Zs : params * stmt) (a : ann bool),
        get F n Zs ->
        get als n a ->
-       reachability SoundAndComplete (getAnn ⊝ als ++ RL) (snd Zs) a)
+       reachability op2bool SoundAndComplete (getAnn ⊝ als ++ RL) (snd Zs) a)
   (Ann: getAnn alt)
   (IC: isCalled true t (LabI l'))
   (CC: callChain (isCalled true) F (LabI l') (LabI k))
@@ -654,7 +654,7 @@ Lemma UCE_callChain' RL F als l' k
       (IH : forall k Zs,
           get F k Zs ->
        forall (RL : 〔bool〕) (lv : ann bool) (n : nat),
-       reachability SoundAndComplete RL (snd Zs) lv ->
+       reachability op2bool SoundAndComplete RL (snd Zs) lv ->
        (isCalled true) (snd Zs) (LabI n) ->
        getAnn lv ->
        (isCalled true) (compile RL (snd Zs) lv)
@@ -663,7 +663,7 @@ Lemma UCE_callChain' RL F als l' k
   (UCF:forall (n : nat) (Zs : params * stmt) (a : ann bool),
        get F n Zs ->
        get als n a ->
-       reachability SoundAndComplete (getAnn ⊝ als ++ RL) (snd Zs) a)
+       reachability op2bool SoundAndComplete (getAnn ⊝ als ++ RL) (snd Zs) a)
   (Ann: get (getAnn ⊝ als ++ RL) l' true)
   (CC: callChain (isCalled true) F (LabI l') (LabI k))
 : callChain (isCalled true)
@@ -685,7 +685,7 @@ Proof.
 Qed.
 
 Lemma UCE_trueIsCalled RL s lv n
-  : reachability SoundAndComplete RL s lv
+  : reachability op2bool SoundAndComplete RL s lv
     -> isCalled true s (LabI n)
     -> getAnn lv
     -> isCalled true (compile RL s lv) (LabI (countTrue (take n RL))).
@@ -729,8 +729,8 @@ Lemma UCE_isCalledFrom RL F als t alt n (Len:❬F❭ = ❬als❭)
   : (forall (n : nat) (Zs : params * stmt) (a : ann bool),
        get F n Zs ->
        get als n a ->
-       reachability SoundAndComplete (getAnn ⊝ als ++ RL) (snd Zs) a)
-    -> reachability SoundAndComplete (getAnn ⊝ als ++ RL) t alt
+       reachability op2bool SoundAndComplete (getAnn ⊝ als ++ RL) (snd Zs) a)
+    -> reachability op2bool SoundAndComplete (getAnn ⊝ als ++ RL) t alt
     -> getAnn alt
     -> isCalledFrom (isCalled true) F t (LabI n)
     -> n < ❬F❭
@@ -751,7 +751,7 @@ Proof.
 Qed.
 
 Lemma UCE_noUnreachableCode RL s lv
-  : reachability SoundAndComplete RL s lv
+  : reachability op2bool SoundAndComplete RL s lv
     -> getAnn lv
     -> noUnreachableCode (isCalled true) (compile RL s lv).
 Proof.
@@ -818,7 +818,7 @@ Fixpoint compile_renamedApart (s:stmt) (a:ann (set var * set var)) (b:ann bool)
 
 Lemma compile_renamedApart_pes RL s an al
   : renamedApart s an
-    -> reachability Sound RL s al
+    -> reachability op2bool Sound RL s al
     -> prod_eq Equal Subset (getAnn (compile_renamedApart s an al)) (getAnn an).
 Proof.
   intros RA RCH.
@@ -847,7 +847,7 @@ Qed.
 
 Lemma UCE_renamedApart RL s lv G
   : renamedApart s G
-    -> reachability Sound RL s lv
+    -> reachability op2bool Sound RL s lv
     -> renamedApart (compile RL s lv) (compile_renamedApart s G lv).
 Proof.
   intros RA RCH.
@@ -918,7 +918,7 @@ Require Import VarP.
 
 Lemma UCE_var_P (P:nat -> Prop) RL (s:stmt) a
       (VP:var_P P s)
-      (RCH: reachability Sound RL s a)
+      (RCH: reachability op2bool Sound RL s a)
   : var_P P (compile RL s a).
 Proof.
   general induction VP; invt reachability; simpl;
