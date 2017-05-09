@@ -35,7 +35,7 @@ Definition reachability_sound sT ZL BL s d a (ST:subTerm s sT)
     -> labelsDefined s (length ZL)
     -> labelsDefined s (length BL)
     -> poLe (snd (@forward sT _ _ _ _ reachability_transform ZL s ST d a)) BL
-    -> reachability op2bool Sound BL s a.
+    -> reachability cop2bool Sound BL s a.
 Proof.
   intros EQ Ann DefZL DefBL.
   general induction Ann; simpl in *; inv DefZL; inv DefBL;
@@ -52,6 +52,10 @@ Proof.
     repeat simpl_forward_setTopAnn;
     econstructor; intros; try solve [congruence];
       eauto using @PIR2_zip_join_inv_left, @PIR2_zip_join_inv_right; simpl; eauto.
+    exfalso. eapply H3.
+    rewrite op2bool_cop2bool in COND; eauto. rewrite COND. reflexivity.
+    exfalso. eapply H3.
+    rewrite op2bool_cop2bool in COND; eauto. rewrite COND. reflexivity.
   - edestruct get_in_range; eauto.
     edestruct get_in_range; try eapply H4; eauto.
     Transparent poLe. hnf in H.
@@ -144,12 +148,25 @@ Proof.
         eauto. reflexivity.
         clear_all. intros. inv_get.
         subst FWt. eauto with len.
-    + simpl; eauto.
-    + simpl; eauto.
 Qed.
 
+Lemma impl_poLe (a b:bool)
+  : (a -> b) <-> (poLe a b).
+Proof.
+  destruct a, b; simpl; firstorder.
+Qed.
+
+Lemma orb_poLe_struct a b c
+  : a ⊑ c -> b ⊑ c -> a || b ⊑ c.
+Proof.
+  destruct a, b; simpl; eauto.
+Qed.
+
+Opaque poLe.
+
+
 Lemma forward_snd_poLe sT BL ZL s (ST:subTerm s sT) n a b c
-  : reachability op2bool Complete BL s a
+  : reachability cop2bool Complete BL s a
     -> poLe (getAnn a) c
     -> get (snd (forward reachability_transform ZL s ST c a)) n b
     -> poLe b c.
@@ -161,50 +178,59 @@ Proof.
       try solve [ destruct a; simpl; eauto | destruct a1; simpl; eauto ].
   - eapply IH in H1; eauto.
   - cases in H6; cases in H1; try congruence.
-    + specialize (H10 NOTCOND). specialize (H13 COND).
+    + assert (cop2bool e = ⎣ wTA false ⎦). {
+        rewrite op2bool_cop2bool in COND; eauto.
+      }
+      assert (~ cop2bool e ⊑ ⎣ wTA true ⎦). {
+        rewrite H2. clear_all. intro. clear_trivial_eqs.
+      }
+      specialize (H10 ltac:(eauto)).
       eapply IH in H1; eauto.
-      destruct x, x0, c; simpl in *; eauto.
+      eapply orb_poLe_struct; eauto.
+      rewrite <- H0. rewrite <- H10.
       eapply IH in H6; simpl in *; eauto.
-      rewrite H13; eauto.
-    + specialize (H9 NOTCOND). specialize (H14 COND).
+      rewrite H6. eauto.
+      rewrite H13; eauto. rewrite H2; eauto.
+    + assert (cop2bool e = ⎣ wTA true ⎦). {
+        rewrite op2bool_cop2bool in COND; eauto.
+      }
+      assert (~ cop2bool e ⊑ ⎣ wTA false ⎦). {
+        rewrite H2. clear_all. intro. clear_trivial_eqs.
+      }
+      specialize (H9 ltac:(eauto)).
       eapply IH in H6; eauto.
-      destruct x, x0, c; simpl in *; eauto.
+      eapply orb_poLe_struct; eauto.
       eapply IH in H1; simpl in *; eauto.
-      rewrite H14; eauto.
-    + specialize (H9 NOTCOND). specialize (H10 NOTCOND0).
+      rewrite H1; eauto.
+      rewrite H14; eauto. rewrite H2; eauto.
+    + assert (~ cop2bool e ⊑ ⎣ wTA true ⎦). {
+        eauto using op2bool_cop2bool_not_some.
+      }
+      assert (~ cop2bool e ⊑ ⎣ wTA false ⎦). {
+        eauto using op2bool_cop2bool_not_some.
+      }
+      specialize (H9 ltac:(eauto)).
+      specialize (H10 ltac:(eauto)).
       eapply IH in H1; eauto.
-      destruct x, x0, c; simpl in *; eauto.
       eapply IH in H6; simpl in *; eauto.
+      eapply orb_poLe_struct; eauto.
   - decide (labN l = n); subst.
     + eapply ListUpdateAt.list_update_at_get_2 in H1; eauto; subst.
-      reflexivity.
     + eapply ListUpdateAt.list_update_at_get_1 in H1; eauto; subst.
-      inv_get. hnf. destruct c; simpl; eauto.
+      inv_get. eauto.
   - destruct b; [| destruct c; simpl; eauto].
     eapply fold_left_zip_orb_inv in H1. destruct H1.
     + eapply IH in H1; eauto.
     + dcr. inv_get.
       eapply IH in H4; eauto.
-      exploit H13; eauto. etransitivity; eauto.
+      exploit H13; eauto.
 Qed.
 
 Local Hint Extern 0 => first [ erewrite (@forward_getAnn' _ (fun _ => bool))
                             | erewrite getAnn_setTopAnn
                             | rewrite getAnn_setAnn ].
 
-Lemma reachability_analysis_complete_setTopAnn BL s a b
-      (LE:poLe (getAnn a) b)
-  : reachability op2bool Complete BL s a
-    -> reachability op2bool Complete BL s (setTopAnn a b).
-Proof.
-  intros RCH; general induction RCH; simpl in *;
-    eauto using reachability.
-  - econstructor; intros; eauto.
-    + specialize (H H3). eauto.
-    + specialize (H0 H3). eauto.
-  - econstructor; simpl; intros; eauto.
-    exploit H4; eauto.
-Qed.
+Transparent poLe.
 
 Lemma fold_left_forward_mono sT F t ZL als als' alt alt' b b'
       (STF:forall n s, get F n s -> subTerm (snd s) sT)
@@ -247,6 +273,11 @@ Proof.
     eapply reachability_transform_monotone.
 Qed.
 
+Lemma impl_impb (a b: bool)
+  : (a -> b) -> impb a b.
+Proof.
+  destruct a, b; firstorder.
+Qed.
 
 Local Hint Extern 0 =>
 match goal with
@@ -258,9 +289,11 @@ match goal with
     specialize (H' H''); subst
 end.
 
+Opaque poLe.
+
 Lemma reachability_analysis_complete_isCalled sT ZL BL s a b
       (ST:subTerm s sT)
-  : reachability op2bool Complete BL s a
+  : reachability cop2bool Complete BL s a
     -> forall n, get (snd (forward reachability_transform ZL s ST b a)) n true
            -> poLe (getAnn a) b
            -> isCalled true s (LabI n).
@@ -269,22 +302,35 @@ Proof.
   general induction H; simpl in *;
     repeat let_case_eq; repeat simpl_pair_eqs; subst;
       simpl in *; eauto using isCalled.
-  - inv_get.
-    cases in H7; cases in H5; try congruence;
-      destruct x,x0;
-      try solve [
-            inv EQ
-          | eapply IsCalledIf2;
-            [ eapply IHreachability2; eauto
-            | congruence ]
-          | eapply IsCalledIf1;
-            [ eapply IHreachability1; eauto
-            | congruence ]
-          ].
-    + eapply H3 in COND.
-      eapply forward_snd_poLe in H7; eauto. inv H7.
-    + eapply H4 in COND.
-      eapply forward_snd_poLe in H5; eauto. inv H5.
+  - inv_get. cases in H7; try congruence.
+    + eapply forward_snd_poLe in H7; eauto; clear_trivial_eqs.
+      * destruct x; isabsurd. simpl in *; subst.
+        eapply IsCalledIf2; eauto.
+        eapply IHreachability2; eauto.
+        cases in H5; eauto.
+        rewrite H0; eauto.
+        eapply op2bool_cop2bool_not_some; eauto.
+      * rewrite H3; eauto.
+        rewrite op2bool_cop2bool in COND. rewrite COND. reflexivity.
+    + cases in H5; try congruence.
+      eapply forward_snd_poLe in H5; eauto; clear_trivial_eqs.
+      * destruct x0; isabsurd.
+        eapply orb_prop in EQ. destruct EQ; subst; isabsurd.
+        eapply IsCalledIf1; eauto.
+        eapply IHreachability1; eauto.
+        rewrite H; eauto.
+        eapply op2bool_cop2bool_not_some; eauto.
+      * rewrite H4; eauto.
+        rewrite op2bool_cop2bool in COND. rewrite COND. reflexivity.
+      * eapply orb_prop in EQ. destruct EQ; subst; isabsurd.
+        -- eapply IsCalledIf1; eauto.
+           eapply IHreachability1; eauto.
+           rewrite H; eauto.
+           eapply op2bool_cop2bool_not_some; eauto.
+        -- eapply IsCalledIf2; eauto.
+           eapply IHreachability2; eauto.
+           rewrite H0; eauto.
+           eapply op2bool_cop2bool_not_some; eauto.
   - decide (labN l = n); subst.
     + eapply ListUpdateAt.list_update_at_get_2 in H1; eauto; subst.
       destruct l; simpl. econstructor.
@@ -295,7 +341,6 @@ Proof.
     eapply fold_left_zip_orb_inv in Get.
     destruct Get as [Get|[? [? [GetFwd Get]]]]; dcr.
     + exploit forward_snd_poLe; try eapply Get; eauto.
-      etransitivity; eauto.
       exploit IHreachability; eauto.
       eapply IsCalledLet; eauto.
       econstructor 1.
@@ -307,21 +352,13 @@ Proof.
       econstructor; eauto.
 Qed.
 
-Lemma reachability_sTA_inv (BL : 〔bool〕)
-         (s : stmt) (a : ann bool)
-  : reachability op2bool Complete BL s (setTopAnn a (getAnn a)) ->
-    reachability op2bool Complete BL s a.
-Proof.
-  intros. rewrite setTopAnn_eta in H; eauto.
-Qed.
-
 Lemma reachability_analysis_complete sT ZL BL BL' (Len:❬BL❭ = ❬BL'❭) s a (ST:subTerm s sT) b b' c
       (LDEF:labelsDefined s (length ZL))
       (EQ:(fst (forward reachability_transform ZL s ST b a)) = c)
       (LE:poLe a (setTopAnn c b'))
       (LEb: poLe (getAnn c) b')
-  : reachability op2bool Complete BL s a
-    -> reachability op2bool Complete BL' s (setTopAnn c b').
+  : reachability cop2bool Complete BL s a
+    -> reachability cop2bool Complete BL' s (setTopAnn c b').
 Proof.
   subst c.
   intros RCH.
@@ -332,7 +369,8 @@ Proof.
     eapply IHRCH; eauto.
     rewrite setTopAnn_eta; eauto.
     repeat rewrite (@forward_getAnn' _ (fun _ => bool)). eauto.
-  - econstructor; intros; cases; simpl; eauto using reachability_sTA_inv, ann_R_setTopAnn_left.
+  - econstructor; intros; cases; simpl;
+      eauto using reachability_sTA_inv, ann_R_setTopAnn_left.
     + eapply reachability_sTA_inv. eapply IHRCH1; eauto.
       rewrite setTopAnn_eta; eauto.
     + eapply reachability_sTA_inv. eapply IHRCH1; eauto.
@@ -341,6 +379,10 @@ Proof.
       rewrite setTopAnn_eta; eauto.
     + eapply reachability_sTA_inv. eapply IHRCH2; eauto.
       rewrite setTopAnn_eta; eauto.
+    + intros. exfalso.
+      eapply op2bool_cop2bool_not_some in NOTCOND; eauto.
+    + intros. exfalso.
+      eapply op2bool_cop2bool_not_some in NOTCOND; eauto.
   - inv_get. econstructor; eauto.
   - econstructor; eauto.
   - econstructor; simpl; eauto using reachability_sTA_inv, ann_R_setTopAnn_left.
@@ -361,7 +403,9 @@ Proof.
       eapply ann_R_get in H8. rewrite getAnn_setTopAnn in H8.
       eauto.
       etransitivity; eauto.
-      rewrite (setTopAnn_eta _ eq_refl). eauto.
+      rewrite (setTopAnn_eta _ eq_refl).
+      Transparent poLe.
+      eapply H8.
       pose proof (@poLe_setTopAnn bool _ x0 x0).
       eapply H10; eauto. assert (x = x6) by eapply subTerm_PI.
       subst. rewrite setTopAnn_eta. reflexivity. eauto.
@@ -392,11 +436,10 @@ Qed.
 
 Lemma reachability_complete_bottom BL s
   : labelsDefined s ❬BL❭
-    -> reachability op2bool Complete BL s (setAnn bottom s).
+    -> reachability cop2bool Complete BL s (setAnn bottom s).
 Proof.
   revert BL.
   sind s; intros; destruct s; invt labelsDefined; simpl; eauto 10 using reachability.
-  - econstructor; simpl; eauto.
   - edestruct get_in_range; eauto.
     econstructor; simpl; eauto.
   - econstructor; simpl; eauto with len.
@@ -410,7 +453,7 @@ Qed.
 
 Lemma reachability_complete s
   : labelsDefined s ❬nil:list params❭
-    -> reachability op2bool Complete nil s (reachabilityAnalysis s).
+    -> reachability cop2bool Complete nil s (reachabilityAnalysis s).
 Proof.
   unfold reachabilityAnalysis. destr_sig.
   destruct e as [n [Iter _]]. subst.
@@ -425,7 +468,7 @@ Qed.
 
 Lemma correct s
   : labelsDefined s 0
-    -> reachability op2bool SoundAndComplete nil s (reachabilityAnalysis s).
+    -> reachability cop2bool SoundAndComplete nil s (reachabilityAnalysis s).
 Proof.
   intros.
   eapply reachability_sound_and_complete.

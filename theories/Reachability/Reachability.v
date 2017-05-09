@@ -1,6 +1,6 @@
 Require Import AllInRel List Map Env DecSolve.
 Require Import IL Annotation AutoIndTac Exp SetOperations.
-Require Export Filter LabelsDefined OUnion WithTop.
+Require Export Filter LabelsDefined OUnion Infra.PartialOrder WithTop.
 
 Set Implicit Arguments.
 
@@ -31,15 +31,15 @@ Definition isSound (s:sc) :=
 
 Definition uceq (i:sc) (a b:bool) :=
   match i with
-  | Sound => a -> b
-  | Complete => b -> a
-  | SoundAndComplete => a <-> b
+  | Sound => poLe a b
+  | Complete => poLe b a
+  | SoundAndComplete => a = b
   end.
 
 Lemma uceq_refl i a
   : uceq i a a.
 Proof.
-  destruct i; simpl; eauto. reflexivity.
+  destruct i; simpl; eauto.
 Qed.
 
 Lemma eq_uceq i (a b:bool)
@@ -68,14 +68,14 @@ Lemma uceq_soundandcomplete_sound a b
   :  uceq SoundAndComplete a b
      -> uceq Sound a b.
 Proof.
-  simpl; firstorder.
+  destruct a, b; firstorder.
 Qed.
 
 Lemma uceq_soundandcomplete_complete a b
   :  uceq SoundAndComplete a b
      -> uceq Complete a b.
 Proof.
-  simpl; firstorder.
+  destruct a, b; firstorder.
 Qed.
 
 Lemma uceq_sound_complete_soundandcomplete a b
@@ -83,7 +83,7 @@ Lemma uceq_sound_complete_soundandcomplete a b
     -> uceq Complete a b
     -> uceq SoundAndComplete a b.
 Proof.
-  simpl; firstorder.
+  destruct a, b; firstorder.
 Qed.
 
 Hint Immediate uceq_soundandcomplete_sound
@@ -99,16 +99,16 @@ Inductive reachability (ceval:op -> option (withTop bool)) (i:sc)
      -> uceq i b (getAnn al)
      -> reachability ceval i BL (stmtLet x e s) (ann1 b al)
 | UCPIf BL e b1 b2 b al1 al2
-  :  (ceval e <> None -> ceval e <> Some (wTA false) -> uceq i b (getAnn al1))
-     -> (ceval e <> None -> ceval e <> Some (wTA true) -> uceq i b (getAnn al2))
+  :  (~ poLe (ceval e) (Some (wTA false)) -> uceq i b (getAnn al1))
+     -> (~ poLe (ceval e) (Some (wTA true)) -> uceq i b (getAnn al2))
      -> reachability ceval i BL b1 al1
      -> reachability ceval i BL b2 al2
-     -> (if isComplete i then ceval e = ⎣ wTA false ⎦ -> getAnn al1 = false else True)
-     -> (if isComplete i then ceval e = ⎣ wTA true ⎦ -> getAnn al2 = false else True)
+     -> (if isComplete i then poLe (ceval e) (Some (wTA false)) -> getAnn al1 = false else True)
+     -> (if isComplete i then poLe (ceval e) (Some (wTA true)) -> getAnn al2 = false else True)
      -> reachability ceval i BL (stmtIf e b1 b2) (ann2 b al1 al2)
 | UCPGoto BL l Y b a
   : get BL (counted l) b
-    -> (if isSound i then impb a b else True)
+    -> (if isSound i then poLe a b else True)
     -> reachability ceval i BL (stmtApp l Y) (ann0 a)
 | UCReturn BL e b
   : reachability ceval i BL (stmtReturn e) (ann0 b)
@@ -123,7 +123,7 @@ Inductive reachability (ceval:op -> option (withTop bool)) (i:sc)
                                 get als n a ->
                                 getAnn a ->
                                 isCalledFrom (isCalled true) F t (LabI n)) else True)
-    -> (if isComplete i then forall n a, get als n a -> impb (getAnn a) b else True)
+    -> (if isComplete i then forall n a, get als n a -> poLe (getAnn a) b else True)
     -> reachability ceval i BL (stmtFun F t) (annF b als alt).
 
 Ltac simpl_isComplete :=
@@ -184,9 +184,18 @@ Hint Resolve op2bool_not_none.
 
 Lemma op2bool_cop2bool_not_some e b
   : op2bool e <> ⎣ b ⎦
-    -> cop2bool e <> ⎣ wTA b ⎦.
+    -> ~ cop2bool e ⊑ ⎣ wTA b ⎦.
 Proof.
-  unfold op2bool, cop2bool; intros; cases; simpl in *; congruence.
+  unfold op2bool, cop2bool; intros.
+  cases; simpl in *; intro; clear_trivial_eqs.
+Qed.
+
+Lemma op2bool_cop2bool e b
+  : op2bool e = ⎣ b ⎦
+    <-> cop2bool e = ⎣ wTA b ⎦.
+Proof.
+  unfold op2bool, cop2bool; intros; cases; simpl in *;
+    split; intros; congruence.
 Qed.
 
 Transparent uceq.
@@ -203,31 +212,58 @@ Ltac std_ind_dcr :=
     edestruct (H s ltac:(eauto)); eauto; dcr
   end.
 
+Opaque poLe.
+
 Lemma reachability_trueIsCalled Lv s slv l
   : reachability cop2bool Sound Lv s slv
     -> isCalled true s l
-    -> exists b, get Lv (counted l) b /\ ((getAnn slv) -> b).
+    -> exists b, get Lv (counted l) b /\ (poLe (getAnn slv) b).
 Proof.
   destruct l; simpl.
   revert Lv slv n.
   sind s; destruct s; intros Lv slv n UC IC; inv UC; inv IC;
     simpl in *; subst; simpl in *; try std_ind_dcr;
       eauto 20 using op2bool_cop2bool_not_some.
-  - edestruct (IH s1); dcr; eauto 20 using op2bool_cop2bool_not_some.
-  - edestruct (IH s2); dcr; eauto 20 using op2bool_cop2bool_not_some.
-  - eexists; split; eauto. revert H4; clear_all; destruct a; firstorder.
+  - edestruct (IH s1); dcr; eauto 20.
+    setoid_rewrite H2; eauto using op2bool_cop2bool_not_some.
+  - edestruct (IH s2); dcr; eauto 20.
+    setoid_rewrite H3; eauto using op2bool_cop2bool_not_some.
   - destruct l'.
     exploit (IH s); eauto; dcr.
-    assert ( exists b0 : bool, get Lv n b0 /\ (x -> b0)). {
-      clear H3 H10 UC H9 H1 alt.
-      general induction H5.
-      - inv_get. eexists; split; eauto.
-      - inv_get.
-        exploit H4; eauto.
-        eapply IH in H3; eauto.
-        dcr. inv_get.
-        edestruct IHcallChain; try eapply H8; eauto; dcr.
-        eexists x1; split; eauto.
-    }
-    dcr; eexists; split; eauto.
+    setoid_rewrite H3. setoid_rewrite H10.
+    clear H3 H10 UC H9 H1 alt.
+    general induction H5.
+    + inv_get. eexists; split; eauto.
+    + inv_get.
+      exploit H4; eauto.
+      eapply IH in H3; eauto.
+      dcr. inv_get.
+      edestruct IHcallChain; try eapply H8; eauto; dcr.
+      eexists x1; split; eauto.
+Qed.
+
+
+Lemma reachability_analysis_complete_setTopAnn ceval BL s a b
+      (LE:poLe (getAnn a) b)
+  : reachability ceval Complete BL s a
+    -> reachability ceval Complete BL s (setTopAnn a b).
+Proof.
+  intros RCH; general induction RCH; simpl in *;
+    eauto using reachability.
+  - econstructor; intros; eauto. simpl.
+    + intros. destruct b, b0; eauto.
+  - econstructor; simpl; intros; eauto.
+    + exploit H; eauto.
+    + exploit H0; eauto.
+  - econstructor; simpl; intros; eauto.
+    + exploit H4; eauto.
+Qed.
+
+
+Lemma reachability_sTA_inv (BL : 〔bool〕)
+         (s : stmt) (a : ann bool)
+  : reachability cop2bool Complete BL s (setTopAnn a (getAnn a)) ->
+    reachability cop2bool Complete BL s a.
+Proof.
+  intros. rewrite setTopAnn_eta in H; eauto.
 Qed.

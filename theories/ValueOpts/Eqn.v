@@ -342,6 +342,14 @@ Proof.
   intros. rewrite H. reflexivity.
 Qed.
 
+Lemma entails_bot Γ Γ'
+  : EqnBot ∈ Γ
+    -> entails Γ Γ'.
+Proof.
+  intros. hnf; intros.
+  exfalso. exploit H0; eauto.
+Qed.
+
 
 Definition onvLe X (E E':onv X)
 := forall x v, E x = Some v -> E' x = Some v.
