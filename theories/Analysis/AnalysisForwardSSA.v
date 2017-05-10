@@ -197,6 +197,13 @@ Proof.
   rewrite forward_fst_snd_getAnn in H. eauto.
 Qed.
 
+
+Lemma setTopAnn_eta' A (a:ann A)
+  : (setTopAnn a (getAnn a)) = a.
+Proof.
+  destruct a; simpl; eauto.
+Qed.
+
 Smpl Add 100
      match goal with
      | [ H : context [ ❬snd (@forward ?sT ?Dom ?f ?fr ?ZL ?ZLIncl ?s ?ST ?d ?r)❭ ] |- _ ] =>
@@ -857,3 +864,169 @@ Proof.
     eapply (forward_monotone Dom f fr (fMon s) (frMon s)); eauto.
     eapply H. eapply H.
 Defined.
+
+
+
+Lemma PIR2_setTopAnn_zip_left X (R:X->X->Prop) `{Reflexive _ R} (A:list (ann X)) B
+  : PIR2 R (Take.take ❬A❭ B) (getAnn ⊝ A)
+    -> PIR2 (ann_R R) (@setTopAnn _ ⊜ A B) A.
+Proof.
+  intros P. general induction P; destruct A, B; isabsurd; eauto using PIR2.
+  simpl in *. clear_trivial_eqs.
+  econstructor; eauto.
+  eapply ann_R_setTopAnn_left; eauto.
+Qed.
+
+Lemma PIR2_joinTopAnn_zip_left X `{JoinSemiLattice X} (A:list (ann X)) B
+  : PIR2 poLe (Take.take ❬A❭ B) (getAnn ⊝ A)
+    -> PIR2 poEq (@joinTopAnn _ _ _ ⊜ A B) A.
+Proof.
+  intros P. general induction P; destruct A,B; isabsurd; eauto using PIR2.
+  simpl in *. clear_trivial_eqs.
+  econstructor; eauto.
+  eapply ann_R_setTopAnn_left; eauto.
+  eapply poLe_antisymmetric. rewrite pf.
+  rewrite join_idempotent. eauto.
+  eapply join_poLe.
+Qed.
+
+Lemma snd_forwardF_inv Dom sT f fr BL ZL ZLIncl F sa AE STF
+      (P1:PIR2 (ann_R eq)
+               (setTopAnn (A:=bool)
+                          ⊜ (snd (fst (forwardF BL (@forward sT Dom f fr ZL ZLIncl) F
+                                                (joinTopAnn (A:=bool) ⊜ sa BL) AE STF)))
+                          (snd (forwardF BL
+                                         (@forward _ _ f fr ZL ZLIncl) F
+                                         (joinTopAnn (A:=bool) ⊜ sa BL) AE STF))) sa)
+      (Len1:❬F❭ = ❬sa❭) (Len2:❬F❭ <= ❬BL❭) (Len3:❬ZL❭ = ❬BL❭)
+  : PIR2 (ann_R eq) (joinTopAnn (A:=bool) ⊜ sa BL) sa.
+Proof.
+  eapply PIR2_ann_R_get in P1.
+  rewrite getAnn_setTopAnn_zip in P1.
+  pose proof (PIR2_joinTopAnn_zip_left sa BL).
+  eapply H; clear H.
+  etransitivity.
+  eapply PIR2_take.
+  eapply (@forwardF_mon sT _ f fr ZL ZLIncl BL ltac:(omega) F (joinTopAnn (A:=bool) ⊜ sa BL) AE STF).
+  etransitivity. Focus 2.
+  eapply PIR2_R_impl; try eapply P1; eauto.
+  assert (❬sa❭ = (Init.Nat.min
+          ❬snd
+             (fst
+                (forwardF BL (@forward _ _ f fr ZL ZLIncl) F
+                   (joinTopAnn (A:=bool) ⊜ sa BL) AE STF))❭
+          ❬snd
+             (forwardF BL (@forward _ _ f fr ZL ZLIncl) F (joinTopAnn (A:=bool) ⊜ sa BL)
+                       AE STF)❭)). {
+    clear P1.
+    rewrite forwardF_length.
+    erewrite forwardF_snd_length; try reflexivity.
+    + repeat rewrite min_l; eauto; len_simpl;
+        rewrite Len1; rewrite min_l; omega.
+    + intros; len_simpl; eauto.
+  }
+  rewrite H. reflexivity.
+Qed.
+
+Lemma snd_forwardF_inv' Dom sT f fr BL ZL ZLIncl F sa AE STF
+      (P1:PIR2 (ann_R eq)
+               (setTopAnn (A:=bool)
+                          ⊜ (snd (fst (forwardF BL (@forward Dom sT f fr ZL ZLIncl) F
+                                                (joinTopAnn (A:=bool) ⊜ sa BL) AE STF)))
+                          (snd (forwardF BL
+                                         (@forward _ _ f fr ZL ZLIncl) F
+                                         (joinTopAnn (A:=bool) ⊜ sa BL) AE STF))) sa)
+      (Len1:❬F❭ = ❬sa❭) (Len2:❬F❭ <= ❬BL❭) (Len3:❬ZL❭ = ❬BL❭)
+  : PIR2 (ann_R eq)
+              (snd (fst (forwardF BL (@forward Dom sT f fr ZL ZLIncl) F
+                                                (joinTopAnn (A:=bool) ⊜ sa BL) AE STF))) sa.
+Proof.
+  assert (P2:PIR2 poLe (Take.take ❬sa❭
+                               (snd (forwardF BL (@forward _ _ f fr ZL ZLIncl) F
+                                              (joinTopAnn (A:=bool) ⊜ sa BL) AE
+                                              STF))) (getAnn ⊝ sa)). {
+    eapply PIR2_ann_R_get in P1.
+    rewrite getAnn_setTopAnn_zip in P1.
+     etransitivity. Focus 2.
+    eapply PIR2_R_impl; try eapply P1; eauto.
+    assert (❬sa❭ = (Init.Nat.min
+                      ❬snd
+                         (fst
+                            (forwardF BL (@forward _ _ f fr ZL ZLIncl) F
+                                      (joinTopAnn (A:=bool) ⊜ sa BL) AE STF))❭
+                      ❬snd
+                         (forwardF BL (@forward _ _ f fr ZL ZLIncl) F (joinTopAnn (A:=bool) ⊜ sa BL)
+                                   AE STF)❭)). {
+      clear P1.
+      rewrite forwardF_length.
+      erewrite forwardF_snd_length; try reflexivity.
+      + repeat rewrite min_l; eauto; len_simpl;
+          rewrite Len1; rewrite min_l; omega.
+      + intros; len_simpl; eauto.
+    }
+    rewrite H. reflexivity.
+  }
+  assert (PIR2 (ann_R eq) (joinTopAnn (A:=bool) ⊜ sa BL) sa). {
+    pose proof (PIR2_joinTopAnn_zip_left sa BL).
+    eapply H; clear H.
+    etransitivity.
+    eapply PIR2_take.
+    eapply (@forwardF_mon Dom sT f fr ZL ZLIncl BL ltac:(omega) F (joinTopAnn (A:=bool) ⊜ sa BL) AE STF). eauto.
+  }
+  etransitivity; try eapply P1.
+  symmetry.
+  eapply (PIR2_setTopAnn_zip_left); eauto.
+  rewrite <- forwardF_mon';[|len_simpl; rewrite min_l; eauto; omega].
+  - len_simpl. rewrite min_r, min_l; eauto; try rewrite Len1; try rewrite min_l; try omega.
+    eapply PIR2_ann_R_get in H.
+    rewrite H.
+    eapply PIR2_ann_R_get in P1.
+    etransitivity; try eapply P1.
+    eapply PIR2_get; intros; inv_get.
+    rewrite getAnn_setTopAnn; eauto.
+    len_simpl;[| | reflexivity].
+    rewrite min_r; try omega.
+    repeat rewrite min_l; try omega.
+    intros; eauto with len.
+Qed.
+
+
+
+Lemma snd_forwardF_inv_get (Dom:stmt -> Type) sT `{PartialOrder (Dom sT)} f fr BL ZL ZLIncl F sa AE STF
+      (Len1:❬F❭ = ❬sa❭) (Len2:❬F❭ <= ❬BL❭) (Len3:❬ZL❭ = ❬BL❭)
+      (P1:PIR2 (ann_R eq)
+               (snd (fst (forwardF BL (@forward sT Dom f fr ZL ZLIncl) F
+                                  (joinTopAnn (A:=bool) ⊜ sa BL) AE STF))) sa)
+      (P2:PIR2 (ann_R eq) (joinTopAnn (A:=bool) ⊜ sa BL) sa)
+      (EQ: forall n Zs r ST, get F n Zs -> get sa n r ->
+                        poEq (fst (fst (@forward sT Dom f fr ZL ZLIncl (snd Zs) ST AE r))) AE)
+      (fExt: forall (s : stmt) (ST0 : subTerm s sT) (ZL0 : 〔params〕)
+               (ZLIncl0 : list_union (of_list ⊝ ZL0) [<=] occurVars sT)
+               (a a' : Dom sT),
+          a ≣ a' ->
+          forall b b' : bool,
+            b ≣ b' -> f sT ZL0 s ST0 ZLIncl0 a b ≣ f sT ZL0 s ST0 ZLIncl0 a' b')
+      (frExt:  forall (e : op) (s : stmt),
+          subTerm s sT ->
+          forall (FVIncl : Op.freeVars e [<=] occurVars sT) (a a' : Dom sT),
+            a ≣ a' -> forall b b' : bool, b ≣ b' -> fr sT e FVIncl a b ≣ fr sT e FVIncl a' b')
+      n r Zs (Getsa:get sa n r)
+      (GetF:get F n Zs) STZs
+  : ann_R eq (snd (fst (@forward _ _ f fr ZL ZLIncl (snd Zs) STZs AE r))) r.
+Proof.
+  rewrite forwardF_ext in P1; try eapply P2; try reflexivity.
+  Focus 2. intros. eapply forward_ext; eauto.
+  clear Len3 P2.
+  general induction Len1; simpl in *.
+  destruct BL; isabsurd; simpl in *. inv Getsa; inv GetF.
+  - inv P1.
+    assert((STF 0 Zs (@getLB (params * stmt) XL Zs)) = STZs).
+    eapply subTerm_PI. rewrite <- H0.
+    eapply pf.
+  - inv P1.
+    eapply IHLen1; eauto using get.
+    Focus 2.
+    rewrite forwardF_ext; eauto.
+    intros. eapply forward_ext; eauto.
+    symmetry. eapply EQ; eauto using get. reflexivity. simpl. omega.
+Qed.

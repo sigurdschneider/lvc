@@ -965,3 +965,11 @@ Smpl Add
               (@OT_Equivalence _ (@SOT_as_OT _ (@eq nat) nat_OrderedType))
               ?x ?y |- _ ] => hnf in H; clear_trivial_eqs
     end : cset.
+
+Lemma disj_union_inv X `{OrderedType X} (x:X) (s t:set X)
+  : disj s t
+    -> x ∈ s ∪ t
+    -> (x ∈ s /\ x ∉ t) \/ (x ∈ t /\ x ∉ s).
+Proof.
+  cset_tac.
+Qed.

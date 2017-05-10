@@ -472,3 +472,28 @@ Smpl Add
      match goal with
      | [ H : @equiv (@ann _) _ _ ?A ?B |- _ ] => inv_if_one_ctor H A B
      end : inv_trivial.
+
+Lemma ann_R_setTopAnn_right (A B : Type) (R : A -> B -> Prop) (b : B)
+      (an : ann A) (bn : ann B)
+  : R (getAnn an) b -> ann_R R an bn -> ann_R R an (setTopAnn bn b).
+Proof.
+  intros. inv H0; simpl; eauto using @ann_R.
+Qed.
+
+
+Lemma PIR2_ann_R_get X Y (R:X->Y->Prop) A B
+  : PIR2 (ann_R R) A B
+    -> PIR2 R (getAnn ⊝ A) (getAnn ⊝ B).
+Proof.
+  intros. general induction H; simpl; eauto using PIR2.
+  econstructor; eauto.
+  eapply ann_R_get in pf; eauto.
+Qed.
+
+
+Lemma getAnn_setTopAnn_zip X A (B:list X)
+  : getAnn ⊝ (@setTopAnn _ ⊜ A B) = Take.take (min ❬A❭ ❬B❭) B.
+Proof.
+  general induction A; destruct B; isabsurd; simpl in *; eauto.
+  rewrite getAnn_setTopAnn; f_equal; eauto.
+Qed.

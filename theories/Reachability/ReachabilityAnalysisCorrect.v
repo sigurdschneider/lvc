@@ -4,13 +4,13 @@ Require Import Plus Util AllInRel Map CSet OptionR MoreList.
 Require Import Val Var Env IL Annotation Infra.Lattice.
 Require Import DecSolve Analysis Filter Terminating.
 Require Import Analysis AnalysisForwardSSA FiniteFixpointIteration.
-Require Import Reachability ReachabilityAnalysis Subterm.
+Require Import Reachability Subterm.
 
 Set Implicit Arguments.
 
 Local Arguments proj1_sig {A} {P} e.
 Local Arguments length {A} e.
-Local Arguments forward {sT} {Dom} ftransform ZL ZLIncl st ST d anr.
+Local Arguments forward {sT} {Dom} ftransform reach_transf ZL ZLIncl st ST d anr.
 
 Opaque poLe.
 
@@ -31,126 +31,247 @@ Qed.
 Hint Resolve forward_length_ass_UC.
  *)
 
-Definition reachability_sound sT ZL BL s d a (ST:subTerm s sT) ZLIncl
-  : poEq (fst (forward reachability_transform ZL ZLIncl s ST d a)) (tt,a)
-    -> annotation s a
+Lemma poEq_pair_inv A `{PartialOrder A} B `{PartialOrder B} (x y:A * B)
+  : poEq x y <-> poEq (fst x) (fst y) /\ poEq (snd x) (snd y).
+Proof.
+  firstorder.
+Qed.
+
+Smpl Add 120
+     match goal with
+     | [ H : poEq (_,_) (_,_) |- _ ] =>
+       rewrite poEq_pair_inv in H; simpl fst in H; simpl snd in H;
+         let H' := fresh H in destruct H as [H H']
+     | [H : poEq ?x ?x |- _ ] => clear H
+     end : inv_trivial.
+
+
+Ltac is_in_context X :=
+  match goal with
+  | [ H : ?Y  |- _ ] =>
+    unify X Y
+  end.
+
+Smpl Add 120 match goal with
+         | [ H : ?x = getAnn ?y, I : context [ setTopAnn ?y ?x ] |- _ ] =>
+           rewrite (@setTopAnn_eta _ _ _ (eq_sym H)) in I
+         | [ H : getAnn ?y = ?x, I : context [ setTopAnn ?y ?x ] |- _ ] =>
+           rewrite (@setTopAnn_eta _ _ _ H) in I
+         end : inv_trivial.
+
+Ltac simpl_forward_setTopAnn :=
+  match goal with
+  | [H : ann_R _ (snd (fst (@forward ?sT ?Dom ?f ?fr ?ZL ?ZLIncl
+                                     ?s ?ST ?a ?sa))) ?sa' |- _ ] =>
+    let X := fresh "HEQ" in
+    match goal with
+    | [ H' : getAnn sa = getAnn sa' |- _ ] => fail 1
+    | _ => first
+            [ unify sa sa'; fail 1
+            | exploit (@forward_getAnn sT Dom f fr ZL ZLIncl s ST a sa sa' H) as X;
+              subst]
+    end
+  end; subst; try eassumption;
+  try rewrite getAnn_setTopAnn in *;
+  repeat rewrite setTopAnn_eta' in *.
+
+Smpl Add 130 simpl_forward_setTopAnn : inv_trivial.
+
+
+Opaque poEq.
+Opaque poLe.
+
+Lemma getAnn_joinTopAnn A `{JoinSemiLattice A} an (a:A)
+  : (getAnn (joinTopAnn an a)) = (join (getAnn an) a).
+Proof.
+  destruct an; simpl; reflexivity.
+Qed.
+
+Lemma getAnn_map_joinTopAnn A `{JoinSemiLattice A} an a
+  : getAnn ⊝ (@joinTopAnn A _ _ ⊜ an a) = join ⊜ (getAnn ⊝ an) a.
+Proof.
+  general induction an; simpl; eauto.
+  destruct a0; simpl; eauto.
+  rewrite IHan. rewrite getAnn_joinTopAnn. reflexivity.
+Qed.
+
+Lemma getAnn_map_setTopAnn A an a
+  : getAnn ⊝ (@setTopAnn A ⊜ an a) = Take.take ❬an❭ a.
+Proof.
+  general induction an; simpl; eauto.
+  destruct a0; simpl; eauto.
+  rewrite getAnn_setTopAnn. f_equal.
+  erewrite IHan; eauto.
+Qed.
+
+Lemma setTopAnn_map_inv X A B
+  : setTopAnn (A:=X) ⊜ A B = A
+    -> Take.take ❬A❭ B = getAnn ⊝ A.
+Proof.
+  intros. general induction A; destruct B; simpl; eauto.
+  - exfalso. inv H.
+  - simpl in *. inv H.
+    rewrite <- ann_R_eq in H1.
+    eapply setTopAnn_inv in H1. subst.
+    rewrite getAnn_setTopAnn. f_equal.
+    rewrite zip_length. rewrite min_l; try omega.
+    erewrite IHA; eauto; try omega.
+    erewrite getAnn_map_setTopAnn; eauto.
+    erewrite IHA; eauto.
+    rewrite <- H2. len_simpl.
+    decide (length A <= length B).
+    rewrite min_l; eauto.
+    rewrite min_r; eauto. omega.
+Qed.
+
+Lemma joinTopAnn_inv (A : Type) `{JoinSemiLattice A} (an : ann A) (a : A)
+  : poEq (joinTopAnn an a) an -> poLe a (getAnn an).
+Proof.
+  intros.
+  rewrite <- H1. rewrite getAnn_joinTopAnn.
+  rewrite join_commutative. eapply join_poLe.
+Qed.
+
+Lemma ann_R_joinTopAnn_inv (A : Type) `{JoinSemiLattice A} (an : ann A) (a : A)
+  : ann_R poEq (joinTopAnn an a) an -> poLe a (getAnn an).
+Proof.
+  intros.
+  eapply joinTopAnn_inv. eapply H1.
+Qed.
+
+Lemma joinTopAnn_map_inv X `{JoinSemiLattice X} A B
+  : PIR2 poEq (joinTopAnn (A:=X) ⊜ A B) A
+    -> PIR2 poLe (Take.take ❬A❭ B) (getAnn ⊝ A).
+Proof.
+  intros. general induction A; destruct B; simpl; eauto.
+  - exfalso. inv H1.
+  - simpl in *. inv H1.
+    eapply joinTopAnn_inv in pf.
+    econstructor; eauto.
+Qed.
+
+Definition reachability_sound (Dom:stmt->Type) sT `{PartialOrder (Dom sT)}
+           f fr pr ZL BL s (d:Dom sT) r (ST:subTerm s sT) ZLIncl
+  : (fst (forward f fr ZL ZLIncl s ST d r)) ≣ (d,r)
+    -> annotation s r
     -> labelsDefined s (length ZL)
     -> labelsDefined s (length BL)
-    -> poLe (snd (@forward sT _ reachability_transform ZL ZLIncl s ST d a)) BL
-    -> reachability cop2bool Sound BL s a.
+    -> poLe (snd (@forward sT _ f fr ZL ZLIncl s ST d r)) BL
+    -> (forall (s0 : stmt) (ST0 : subTerm s0 sT) (ZL0 : 〔params〕)
+         (ZLIncl0 : list_union (of_list ⊝ ZL0) [<=] occurVars sT)
+         (a a' : Dom sT),
+          a ≣ a' ->
+          forall b b' : bool,
+            b ≣ b' -> f sT ZL0 s0 ST0 ZLIncl0 a b ≣ f sT ZL0 s0 ST0 ZLIncl0 a' b')
+    -> (forall (e : op) (s0 : stmt),
+          subTerm s0 sT ->
+          forall (FVIncl : Op.freeVars e [<=] occurVars sT) (a a' : Dom sT),
+            a ≣ a' -> forall b b' : bool, b ≣ b' -> fr sT e FVIncl a b ≣ fr sT e FVIncl a' b')
+    -> reachability pr Sound BL s r.
 Proof.
-  intros EQ Ann DefZL DefBL.
+  intros EQ Ann DefZL DefBL BL_le fExt frExt.
   general induction Ann; simpl in *; inv DefZL; inv DefBL;
-    repeat let_case_eq; repeat simpl_pair_eqs; subst; simpl in *.
-  - inv EQ. inv H1.
-    pose proof (ann_R_get H9); simpl in *.
+    repeat let_case_eq; repeat simpl_pair_eqs; subst; simpl in *;
+      simpl in *.
+  - clear_trivial_eqs. repeat simpl_forward_setTopAnn.
     econstructor; eauto.
-    eapply IHAnn; eauto. split; eauto.
-    simpl_forward_setTopAnn; eauto.
-  - assert (forall d d', ❬snd (forward reachability_transform ZL s (subTerm_EQ_If1 eq_refl ST) d sa)❭ =
-            ❬snd (forward reachability_transform ZL t (subTerm_EQ_If2 eq_refl ST) d' ta)❭). {
-      eauto with len.
-    }
-    repeat cases in EQ; simpl in *; try solve [congruence]; inv EQ;
-    repeat simpl_forward_setTopAnn;
-    econstructor; intros; try solve [congruence];
-      eauto using @PIR2_zip_join_inv_left, @PIR2_zip_join_inv_right; simpl; eauto.
-    exfalso. eapply H3.
-    rewrite op2bool_cop2bool in COND; eauto. rewrite COND. reflexivity.
-    exfalso. eapply H3.
-    rewrite op2bool_cop2bool in COND; eauto. rewrite COND. reflexivity.
+    eapply IHAnn; eauto. split; simpl; eauto.
+    rewrite EQ.
+  - clear_trivial_eqs.
+    econstructor; eauto.
+    + admit.
+    + admit.
+    + eapply IHAnn1; eauto using @PIR2_zip_join_inv_left, @PIR2_zip_join_inv_right with len.
+      split; eauto. simpl. reflexivity.
+    + eapply IHAnn2; eauto using @PIR2_zip_join_inv_left, @PIR2_zip_join_inv_right with len.
+      split; eauto.
   - edestruct get_in_range; eauto.
     edestruct get_in_range; try eapply H4; eauto.
-    Transparent poLe. hnf in H.
+    Transparent poLe. hnf in BL_le.
     edestruct PIR2_nth; eauto using ListUpdateAt.list_update_at_get_3; dcr.
     econstructor; simpl; eauto.
   - econstructor.
-  - invc EQ. simpl_forward_setTopAnn.
-    revert H2 H16 H16 H15.
-    set (FWt:=(forward reachability_transform (fst ⊝ s ++ ZL) t
-                       (subTerm_EQ_Fun1 eq_refl ST) (getAnn ta) ta)).
-    set (FWF:=forwardF (forward reachability_transform) (fst ⊝ s ++ ZL) s sa
-                       (subTerm_EQ_Fun2 eq_refl ST)).
+  - clear_trivial_eqs.
+    set (FWt:=(forward f fr (fst ⊝ s ++ ZL) (ZLIncl_ext ZL eq_refl ST ZLIncl) t
+                       (subTerm_EQ_Fun1 eq_refl ST) d ta)) in *.
+    set (FWF:=forwardF (snd FWt) (forward f fr (fst ⊝ s ++ ZL) (ZLIncl_ext ZL eq_refl ST ZLIncl)) s (joinTopAnn (A:=bool) ⊜ sa (snd FWt)) (fst (fst FWt)) (subTerm_EQ_Fun2 eq_refl ST)) in *.
     intros.
+    eapply PIR2_get in H15; eauto with len.
+    exploit (snd_forwardF_inv _ _ _ _ _ _ _ _ H15); eauto.
+    subst FWt. len_simpl. omega.
+    subst FWt. len_simpl. omega.
+    exploit (snd_forwardF_inv' _ _ _ _ _ _ _ _ H15); eauto.
+    subst FWt. len_simpl. omega.
+    subst FWt. len_simpl. omega.
+    assert (forall (n : nat) (r : ann bool) (Zs : params * stmt),
+       get sa n r ->
+       get s n Zs ->
+       forall STZs : subTerm (snd Zs) sT,
+       ann_R eq
+         (snd
+            (fst
+               (forward f fr (fst ⊝ s ++ ZL) (ZLIncl_ext ZL eq_refl ST ZLIncl)
+                        (snd Zs) STZs (fst (fst FWt)) r))) r).
+    eapply (@snd_forwardF_inv_get); eauto.
+    subst FWt. len_simpl.  omega.
+    subst FWt. len_simpl. omega.
+    intros. admit.
+    Ltac PIR2_eq_simpl :=
+      match goal with
+      | [ H : PIR2 (ann_R eq) _ _ |- _ ] =>
+        eapply PIR2_R_impl with (R':=eq) in H;
+        [|intros ? ?; rewrite <- ann_R_eq; let A := fresh "A" in intros A; apply A]
+      | [ H : PIR2 eq _ _ |- _ ] =>
+        eapply PIR2_eq in H
+      | [ H : ann_R eq _ _ |- _ ] => rewrite ann_R_eq in H
+      end.
+    Transparent poEq. simpl in *.
+    repeat PIR2_eq_simpl.
+    subst FWF FWt.
+    rewrite H3 in *.
+    rewrite H4 in *.
+    set (FWt:=(forward f fr (fst ⊝ s ++ ZL) (ZLIncl_ext ZL eq_refl ST ZLIncl) t
+                       (subTerm_EQ_Fun1 eq_refl ST) d ta)) in *.
+    set (FWF:=forwardF (snd FWt) (forward f fr (fst ⊝ s ++ ZL) (ZLIncl_ext ZL eq_refl ST ZLIncl)) s sa (fst (fst FWt)) (subTerm_EQ_Fun2 eq_refl ST)) in *.
     econstructor; eauto.
     + eapply IHAnn; eauto.
-      erewrite (take_eta ❬s❭) at 1. eapply PIR2_app; eauto.
-      * eapply PIR2_get; eauto with len. intros. inv_get.
-        edestruct (get_forwardF (fun _ => bool) (forward reachability_transform)
-                                (fst ⊝ s ++ ZL) (subTerm_EQ_Fun2 eq_refl ST) H11 H8).
-        edestruct (@get_union_union_b bool _ _).
-        eapply H4; eauto with len.
-        Focus 2. dcr.
-        exploit H15. eapply zip_get. eapply map_get_1; eauto.
-        eapply H12. eauto. eapply ann_R_get in H3. rewrite <- H3.
-        rewrite getAnn_setTopAnn. eauto.
-        intros. inv_get.
-        edestruct (@forwardF_get _ _ _ _ _ _ _ _ _ _ _ H3); dcr; subst;
-          eauto with len.
-      * etransitivity; eauto. eapply PIR2_drop.
-        eapply PIR2_fold_zip_join_inv. reflexivity.
-        intros.
-        inv_get.
-        edestruct (@forwardF_get _ _ _ _ _ _ _ _ _ _ _ H4). dcr. subst.
-        eauto with len.
+      * split; eauto. simpl. reflexivity.
+        simpl. Transparent poEq. rewrite <- H16 at 2.
+        unfold FWt. reflexivity.
+      * erewrite (take_eta ❬s❭) at 1. eapply PIR2_app; eauto.
+        -- change (PIR2 impb) with (@poLe (list bool) _).
+           assert (PIR2 impb (Take.take ❬s❭ (snd FWt)) (getAnn ⊝ sa)). {
+             change (PIR2 impb) with (PIR2 (@poLe bool _)).
+             rewrite H.
+             eapply (@joinTopAnn_map_inv).
+             rewrite <- H3 at 2. reflexivity.
+           }
+           rewrite <- H4. subst FWF.
+           subst FWt.
+           rewrite H10.
+           rewrite <- (@forwardF_mon' sT Dom f fr); eauto.
+        -- rewrite <- BL_le.
+           eapply PIR2_drop.
+           etransitivity;[|
+                          eapply forwardF_mon; eauto].
+           reflexivity.
+           subst FWt. eauto with len.
     + intros.
-      assert (n < ❬snd FWt❭). {
-        subst FWt.
-        repeat rewrite (@forward_length sT (fun _ => bool)). rewrite app_length. rewrite map_length.
-        eapply get_range in H8. omega.
-      }
-      edestruct get_in_range; eauto.
-      edestruct (get_forwardF (fun _ => bool) (forward reachability_transform)
-                              (fst ⊝ s ++ ZL) (subTerm_EQ_Fun2 eq_refl ST) H4 H8).
-      eapply H1 with (ST:=x0); eauto.
-      eapply H15; eauto.
-      *
-        assert (n <
-                ❬snd (
-                     forward reachability_transform (fst ⊝ s ++ ZL) (snd Zs) x0 (getAnn a) a)❭). {
-          erewrite (@forward_length sT (fun _ => bool)). rewrite app_length,map_length.
-          eapply get_range in H8. omega.
-        }
-        edestruct get_in_range; eauto.
-        exploit (@get_union_union_A bool _ _).
-        eapply map_get_1. apply g0. instantiate (3:=snd). eauto.
-        Focus 2.
-        destruct H12; dcr.
-        eapply zip_get_eq. eapply map_get_1. eauto.  eauto.
-        exploit H15.
-        eapply zip_get.
-        eapply map_get_1. eauto. eapply H13. eauto.
-        exploit (setTopAnn_inv _ _ H12); eauto; subst.
-        rewrite setTopAnn_eta; eauto.
-        eapply (@forward_getAnn' sT (fun _ => bool)).
+      eapply H1; eauto.
+      -- split; eauto. simpl. reflexivity.
+      -- rewrite (take_eta ❬sa❭) at 1.
+         eapply PIR2_app; eauto.
+         ++ eapply setTopAnn_map_inv in H15.
+           rewrite <- H15. eapply PIR2_take.
+           change (PIR2 impb) with (@poLe (list bool) _).
+           eapply forwardF_PIR2; eauto.
+           subst FWt. clear_all. eauto with len.
 
-        clear_all. intros. inv_get.
-        subst FWt.
-        len_simpl. eauto with len.
-
-      * rewrite (take_eta ❬sa❭) at 1.
-        eapply PIR2_app.
-        protect g0.
-        eapply PIR2_get; intros; inv_get.
-        exploit (@get_union_union_A bool _ _).
-        eapply map_get_1. apply g0. instantiate (3:=snd). eauto.
-        Focus 2. dcr.
-        edestruct (get_forwardF (fun _ => bool) (forward reachability_transform)
-                                (fst ⊝ s ++ ZL) (subTerm_EQ_Fun2 eq_refl ST) H17 H12).
-        exploit H15; eauto.
-        eapply zip_get. eapply map_get_1. subst FWF. eauto. eauto.
-        eapply ann_R_get in H3. rewrite getAnn_setTopAnn in H3. rewrite <- H3.
-        eauto.
-        clear_all. intros. inv_get.
-        subst FWt. eauto with len.
-        rewrite Take.take_length_le; eauto with len.
-        etransitivity; eauto.
-        rewrite H. eapply PIR2_drop.
-        subst FWF.
-        pose proof (@PIR2_fold_zip_join_left bool _ _). eapply H11.
-        eauto. reflexivity.
-        clear_all. intros. inv_get.
-        subst FWt. eauto with len.
+         ++ etransitivity; eauto.
+           rewrite H. eapply PIR2_drop.
+           eapply forwardF_PIR2; eauto.
+           subst FWt. eauto with len.
+           admit.
 Qed.
 
 Lemma impl_poLe (a b:bool)

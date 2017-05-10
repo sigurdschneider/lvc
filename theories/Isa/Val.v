@@ -346,3 +346,14 @@ Smpl Add match goal with
          | [ H : val_true === val_false |- _ ] => inv H
          | [ H : val_false === val_true |- _ ] => inv H
          end : inv_trivial.
+
+
+Instance int_eq_trans : Transitive (int_eq).
+Proof.
+  hnf; intros. rewrite H ;eauto.
+Qed.
+
+Instance int_eq_sym : Symmetric (int_eq).
+Proof.
+  hnf; intros. rewrite H ;eauto. reflexivity.
+Qed.

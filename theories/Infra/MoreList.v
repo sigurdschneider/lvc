@@ -781,3 +781,10 @@ Proof.
     edestruct IHL with (L':=L'); eauto; subst; try dec_solve.
   - right; intro; subst. eauto.
 Qed.
+
+Lemma take_ge A (L:list A) n
+  : ❬L❭ <= n -> Take.take n L = L.
+Proof.
+  general induction L; destruct n; isabsurd; simpl; eauto.
+  f_equal; eauto. eapply IHL. simpl in *. omega.
+Qed.

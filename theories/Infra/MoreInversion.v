@@ -92,6 +92,20 @@ Ltac invts ty :=
       | h: ty _ _ _ _ _ _ _ _ _ |- _ => invs h
   end.
 
+Ltac invtc ty :=
+  match goal with
+      | h: ty |- _ => invc h
+      | h: ty _ |- _ => invc h
+      | h: ty _ _ |- _ => invc h
+      | h: ty _ _ _ |- _ => invc h
+      | h: ty _ _ _ _ |- _ => invc h
+      | h: ty _ _ _ _ _ |- _ => invc h
+      | h: ty _ _ _ _ _ _ |- _ => invc h
+      | h: ty _ _ _ _ _ _ _ |- _ => invc h
+      | h: ty _ _ _ _ _ _ _ _ |- _ => invc h
+      | h: ty _ _ _ _ _ _ _ _ _ |- _ => invc h
+  end.
+
 Smpl Add 100
      match goal with
      | [ H : true -> false |- _ ] =>

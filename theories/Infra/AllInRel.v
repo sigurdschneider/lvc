@@ -177,3 +177,27 @@ match goal with
 end.
 
 Hint Extern 20 (PIR2 _ ?a ?a') => progress (first [has_evar a | has_evar a' | reflexivity]).
+
+
+Lemma PIR2_eq X (A:list X) (B:list X)
+  : PIR2 eq A B
+    -> A = B.
+Proof.
+  intros. general induction H; simpl; eauto.
+Qed.
+
+Lemma PIR2_R_eq X Y (R:X->Y->Prop) A B B'
+  : PIR2 eq B' B
+    -> PIR2 R A B'
+    -> PIR2 R A B.
+Proof.
+  intros P1 P2; general induction P1; inv P2; econstructor; eauto.
+Qed.
+
+
+Lemma PIR2_R_impl X Y (R R':X -> Y -> Prop) (L:list X) (L':list Y)
+  : (forall x y, R x y -> R' x y) -> PIR2 R L L' -> PIR2 R' L L'.
+Proof.
+  intros EQ P.
+  general induction P; eauto using @PIR2.
+Qed.

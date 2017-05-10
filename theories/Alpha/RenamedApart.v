@@ -474,3 +474,82 @@ Proof.
 Qed.
 
 Hint Resolve ans_incl_D_union | 0 : cset .
+
+
+Lemma list_union_defVars_decomp F ans (Len:❬F❭ = ❬ans❭)
+  : list_union (defVars ⊜ F ans) [=]
+               list_union (of_list ⊝ fst ⊝ F) ∪ list_union (snd ⊝ getAnn ⊝ ans).
+Proof.
+  general induction Len; simpl; eauto.
+  - cset_tac.
+  - norm_lunion. rewrite IHLen.
+    unfold defVars at 1.
+    clear_all; cset_tac.
+Qed.
+
+
+
+Lemma funConstr_disj_Dt D Dt F ans (Len:❬F❭=❬ans❭)
+  : Indexwise.indexwise_R (funConstr D Dt) F ans
+    -> disj (list_union (of_list ⊝ fst ⊝ F)) Dt.
+Proof.
+  hnf; intros IW.
+  hnf; intros x IN1 IN2.
+  eapply list_union_get in IN1.
+  destruct IN1; dcr; inv_get; [|cset_tac].
+  edestruct IW; eauto; dcr.
+  cset_tac.
+Qed.
+
+
+
+Lemma funConstr_disj_ZL_getAnn ZL (D Dt : ⦃nat⦄)  (F : 〔params * stmt〕)
+      (ans : 〔ann (⦃nat⦄ * ⦃nat⦄)〕)
+  : Indexwise.indexwise_R (funConstr D Dt) F ans
+    -> PairwiseDisjoint.pairwise_ne disj (defVars ⊜ F ans)
+    -> disj (list_union (of_list ⊝ ZL)) (list_union (defVars ⊜ F ans) ∪ Dt)
+    -> (forall (n : nat) (Zs : params * stmt) (a : ann (⦃nat⦄ * ⦃nat⦄)),
+          get F n Zs -> get ans n a -> renamedApart (snd Zs) a)
+    -> ❬F❭ = ❬ans❭
+    -> disj (list_union (of_list ⊝ (fst ⊝ F ++ ZL))) (list_union (snd ⊝ getAnn ⊝ ans)).
+Proof.
+  intros. rewrite List.map_app, list_union_app.
+  rewrite list_union_defVars_decomp in *; eauto.
+  eapply disj_union_left; symmetry.
+  - hnf; intros.
+    eapply list_union_get in H4. destruct H4; dcr; [|cset_tac].
+    eapply list_union_get in H5. destruct H5; dcr; [|cset_tac].
+    decide (x0=x2).
+    + subst. inv_get. edestruct H; eauto; dcr.
+      exploit H2; eauto. eapply renamedApart_disj in H9.
+      rewrite H8 in *. eapply H9; eauto. cset_tac.
+    + inv_get. exploit H0; eauto using zip_get.
+      eapply (H10 x); unfold defVars. cset_tac. cset_tac.
+  - eapply disj_2_incl; eauto. cset_tac.
+Qed.
+
+Lemma funConstr_disj_Dt' ZL (D Dt : ⦃nat⦄)  (F : 〔params * stmt〕)
+      (ans : 〔ann (⦃nat⦄ * ⦃nat⦄)〕)
+  : Indexwise.indexwise_R (funConstr D Dt) F ans
+    -> disj (list_union (of_list ⊝ ZL)) (list_union (defVars ⊜ F ans) ∪ Dt)
+    -> ❬F❭ = ❬ans❭
+    -> disj Dt (list_union (of_list ⊝ (fst ⊝ F ++ ZL))).
+Proof.
+  intros. rewrite List.map_app, list_union_app.
+  eapply disj_union_right; symmetry.
+  - eauto using funConstr_disj_Dt.
+  - eapply disj_2_incl; eauto.
+Qed.
+
+Lemma disj_Dt_getAnn (D Dt : ⦃nat⦄) (F : 〔params * stmt〕) (ans : 〔ann (⦃nat⦄ * ⦃nat⦄)〕)
+  : Indexwise.indexwise_R (funConstr D Dt) F ans
+    -> ❬F❭ = ❬ans❭
+    -> disj Dt (list_union (snd ⊝ getAnn ⊝ ans)).
+Proof.
+  intros. hnf; intros.
+  eapply list_union_get in H2.
+  destruct H2. dcr; inv_get.
+  - edestruct H; eauto; dcr.
+    eapply H10; eauto. cset_tac.
+  - cset_tac.
+Qed.
