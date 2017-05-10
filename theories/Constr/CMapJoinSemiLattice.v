@@ -129,17 +129,6 @@ Proof.
 Qed.
 
 
-Lemma leMap_remove X `{OrderedType X} Y `{PartialOrder Y} (m m':Map [X, Y]) x
-  : leMap m m'
-    -> leMap (remove x m) (remove x m').
-Proof.
-  unfold leMap; intros LE y.
-  specialize (LE y).
-  decide (x === y).
-  - rewrite !MapFacts.remove_eq_o; eauto.
-  - rewrite !MapFacts.remove_neq_o; eauto.
-Qed.
-
 Lemma domain_join X `{OrderedType X} Y `{JoinSemiLattice Y} (d d':Map[X,Y])
 : domain (map2 join d d') [=] domain d ∪ domain d'.
 Proof.

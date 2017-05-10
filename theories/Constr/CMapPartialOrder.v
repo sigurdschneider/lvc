@@ -178,3 +178,14 @@ Proof.
   - rewrite !MapFacts.remove_eq_o; eauto.
   - rewrite !MapFacts.remove_neq_o; eauto.
 Qed.
+
+Lemma eqMap_remove X `{OrderedType X} Y `{PartialOrder Y} (m m':Map [X, Y]) x
+  : eqMap m m'
+    -> eqMap (remove x m) (remove x m').
+Proof.
+  unfold eqMap; intros LE y.
+  specialize (LE y).
+  decide (x === y).
+  - rewrite !MapFacts.remove_eq_o; eauto.
+  - rewrite !MapFacts.remove_neq_o; eauto.
+Qed.

@@ -168,14 +168,6 @@ Proof.
   - mlud; eauto.
 Qed.
 
-Lemma join_struct T `{JoinSemiLattice T} (a b a' b':T)
-  : a ≣ a'
-    -> b ≣ b'
-    -> a ⊔ b ≣ (a' ⊔ b').
-Proof.
-  intros A B. rewrite A, B. reflexivity.
-Qed.
-
 Lemma domupd_list_eq a b Z Y
   : eqMap a b
     -> eqMap (domupd_list a Z (op_eval (domenv a) ⊝ Y))

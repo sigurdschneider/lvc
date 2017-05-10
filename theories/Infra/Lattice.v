@@ -123,3 +123,12 @@ Lemma join_struct T `{JoinSemiLattice T} (a b a' b':T)
 Proof.
   intros A B. rewrite A, B. reflexivity.
 Qed.
+
+
+Lemma join_struct_eq T `{JoinSemiLattice T} (a b a' b':T)
+  : a ≣ a'
+    -> b ≣ b'
+    -> a ⊔ b ≣ (a' ⊔ b').
+Proof.
+  intros A B. rewrite A, B. reflexivity.
+Qed.
