@@ -1,6 +1,6 @@
 Require Import Util IL InRel4 RenamedApart LabelsDefined OptionR.
 Require Import Annotation Liveness.Liveness Restrict SetOperations Coherence.
-Require Import Sim SimTactics.
+Require Import Sim SimTactics SimCompanion.
 
 Set Implicit Arguments.
 Unset Printing Records.
@@ -120,76 +120,99 @@ Qed.
 
 (** The bisimulation is indeed a bisimulation *)
 
+Ltac cone_step :=  eapply SimSilent; [ eapply plus2O; single_step
+                          | eapply plus2O; single_step
+                          | ].
+
+Ltac cno_step := eapply SimTerm;
+          [ | eapply star2_refl | eapply star2_refl | | ];
+          [ repeat get_functional; try reflexivity
+          | repeat get_functional; stuck2
+          | repeat get_functional; stuck2 ].
+
+Ltac cextern_step :=
+  let STEP := fresh "STEP" in
+  eapply SimExtern;
+  [ eapply star2_refl
+  | eapply star2_refl
+  | try step_activated
+  | try step_activated
+  | intros ? ? STEP; inv STEP; eexists; split; [econstructor; eauto | ]
+  | intros ? ? STEP; inv STEP; eexists; split; [econstructor; eauto | ]
+  ].
+
+Require Import LivenessCorrect.
+
+Lemma liveSimI_sim ZL Lv (E E':onv val) L s lv
+  (LS:live_sound Imperative ZL Lv s lv)
+  (AG:agree_on eq (getAnn lv) E E')
+  : simc bot3 Bisim (L, E, s) (L, E', s).
+
+Admitted.
+
+Lemma liveSimF_sim ZL Lv (E E':onv val) (L:F.labenv) s lv
+  (LS:live_sound Imperative ZL Lv s lv)
+  (AG:agree_on eq (getAnn lv) E E')
+  : simc bot3 Bisim (L, E, s) (L, E', s).
+
+Admitted.
+
 Lemma srdSim_sim ZL AL Lv L L'
-      (E EI:onv val) s a
+      (E:onv val) s a
   (SRD:srd AL s a)
   (RA:rd_agree AL L E)
   (A: inRel approx ZL ZL AL Lv L L')
-  (AG:agree_on eq (getAnn a) E EI)
   (LV:live_sound Imperative ZL Lv s a)
   (ER:PIR2 (ifFstR Equal) AL (Lv \\ ZL))
-  : sim bot3 Bisim (L, E, s) (L', EI,s).
+  : simc bot3 Bisim (L, E, s) (L', E, s).
 Proof.
-  revert_all. pcofix srdSim_sim; intros.
+  unfold simc.
+  revert_all. eapply tower_ind.
+  hnf; intros. hnf; intros. eauto.
+  intros.
   inv SRD; inv LV; simpl in *.
   - invt live_exp_sound.
     + case_eq (op_eval E e0); intros.
-      * pone_step.
-        instantiate (1:=v). erewrite <- op_eval_live; eauto.
-        right; eapply srdSim_sim; eauto using rd_agree_update.
+      * cone_step.
+        eapply H; eauto using rd_agree_update.
         -- eapply inRel_map_A3; eauto using approx_restrict.
-        -- eapply agree_on_update_same; eauto with cset.
         -- eauto using restrict_ifFstR.
-      * pno_step.
-        erewrite <- op_eval_live in def; eauto. congruence.
-    + case_eq (omap (op_eval E) Y); intros;
-        exploit omap_op_eval_live_agree; try eassumption.
-      * pextern_step; assert (vl = l) by congruence; subst; eauto.
-        -- right; eapply srdSim_sim; eauto using rd_agree_update, PIR2_length.
+      * cno_step.
+    + case_eq (omap (op_eval E) Y); intros.
+      * cextern_step; assert (vl = l) by congruence; subst; eauto.
+        -- eapply H; eauto using rd_agree_update, PIR2_length.
            ++ eapply inRel_map_A3; eauto. eapply approx_restrict; eauto.
-           ++ eapply agree_on_update_same. reflexivity.
-           eapply agree_on_incl; eauto.
            ++ eauto using restrict_ifFstR; eauto.
-        -- symmetry in AG.
-           exploit omap_op_eval_live_agree; eauto.
-           right; eapply srdSim_sim; eauto using rd_agree_update, PIR2_length.
+        -- eapply H; eauto using rd_agree_update, PIR2_length.
            ++ eapply inRel_map_A3; eauto. eapply approx_restrict; eauto.
-           ++ eapply agree_on_update_same. reflexivity.
-             eapply agree_on_incl; eauto. symmetry; eauto.
            ++ eauto using restrict_ifFstR; eauto.
-      * pno_step.
-  - case_eq (op_eval E e); intros;
-      exploit op_eval_live_agree; try eassumption.
-    + case_eq (val2bool v); intros.
-      pone_step.
-      right; eapply srdSim_sim; eauto using agree_on_incl.
-      pone_step.
-      right; eapply srdSim_sim; eauto using agree_on_incl.
-    + pno_step.
-  - pno_step. simpl. eapply op_eval_live; eauto.
+      * cno_step.
+  - case_eq (op_eval E e); intros.
+    + case_eq (val2bool v); intros;
+      cone_step; eauto using agree_on_incl.
+    + cno_step.
+  - cno_step.
   - decide (length Z = length Y).
-    case_eq (omap (op_eval E) Y); intros;
-      exploit omap_op_eval_live_agree; try eassumption.
+    case_eq (omap (op_eval E) Y); intros.
     + inRel_invs. inv H11. simpl in *.
       exploit H2; try reflexivity; dcr.
-      pone_step; simpl.
+      cone_step; simpl.
       exploit RA; eauto; simpl in *.
-      right; eapply srdSim_sim; eauto.
-      * eapply rd_agree_update_list; eauto with len.
-      * eapply inRel_map_A3; eauto using approx_restrict.
-      * rewrite H15. eapply update_with_list_agree; eauto with len.
-        etransitivity; eapply agree_on_incl; eauto.
-        symmetry; eauto. clear_all; cset_tac.
-        PIR2_inv. inv_get. rewrite H21. rewrite <- H7.
-        clear_all; cset_tac.
-      * rewrite <- drop_zip.
-        eapply restrict_ifFstR; eauto.
-        eapply PIR2_drop; eauto.
-    + exploit omap_op_eval_live_agree; try eassumption.
-      pno_step.
-    + pno_step.
-  - pone_step.
-    right; eapply srdSim_sim;
+      eapply simc_trans; swap 1 2.
+      * eapply H; eauto.
+        -- eapply rd_agree_update_list; eauto with len.
+        -- eapply inRel_map_A3; eauto using approx_restrict.
+        -- rewrite <- drop_zip.
+           eapply restrict_ifFstR; eauto.
+           eapply PIR2_drop; eauto.
+      * eapply liveSimF_sim; eauto.
+        rewrite H15. eapply update_with_list_agree; eauto with len.
+        symmetry. eapply agree_on_incl; eauto.
+        clear_all. cset_tac.
+    + cno_step.
+    + cno_step.
+  - cone_step.
+    eapply H;
       eauto using agree_on_incl, PIR2_app, rd_agree_extend.
     * econstructor; eauto.
       eapply mutual_approx; simpl;
@@ -199,8 +222,8 @@ Proof.
       econstructor; eauto 20 with len.
       intros ? EQ. invc EQ. simpl.
       split. clear_all; cset_tac; intuition.
-      eexists x. split.
-      exploit H12; eauto; dcr; simpl in *; eauto with cset.
+      eexists x0. split.
+      exploit H13; eauto; dcr; simpl in *; eauto with cset.
       split. exploit H0; eauto.
       exploit H11; eauto.
     * rewrite zip_app; eauto with len.
