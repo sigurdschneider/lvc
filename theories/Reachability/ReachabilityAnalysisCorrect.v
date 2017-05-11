@@ -78,9 +78,24 @@ Ltac simpl_forward_setTopAnn :=
 Smpl Add 130 simpl_forward_setTopAnn : inv_trivial.
 
 
+
+Lemma domupdd_eq (D : Type) `{PartialOrder D} (U : ⦃nat⦄) (d:VDom U D) x v pf
+  : MapInterface.find x (proj1_sig d) === v
+    -> d ≣ @domupdd _ _ d x v pf.
+Proof.
+  eapply eqMap_domupd; eauto.
+Qed.
+
+Lemma vdom_upd_inv sT (D : Type) `{JoinSemiLattice D} (d d':VDom (occurVars sT) D) f fr x ZL ZLIncl s (ST:subTerm s sT) r (RA:RenamedApart.renamedApart s ra)
+  (EQ:fst (fst (forward f fr ZL ZLIncl s ST d' r)) ≣ d)
+  :  MapInterface.find x (proj1_sig d) === MapInterface.find x (proj1_sig d').
+Proof.
+  exploit (@forward_agree sT _ _ _ f fr ZL d (singleton x) s ST); eauto; dcr.
+  pose proof (
+Qed.
+
 Opaque poEq.
 Opaque poLe.
-
 
 Definition reachability_sound (sT:stmt) D `{JoinSemiLattice D}
            f fr pr ZL BL s (d:VDom (occurVars sT) D) r (ST:subTerm s sT) ZLIncl
@@ -101,6 +116,10 @@ Proof.
     econstructor; eauto.
     eapply IHAnn; eauto. split; simpl; eauto.
     rewrite EQ.
+    eapply domupdd_eq.
+
+
+    rewrite forward_agree_def in EQ.
   - clear_trivial_eqs.
     econstructor; eauto.
     + admit.

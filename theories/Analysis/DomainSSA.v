@@ -403,7 +403,7 @@ Proof.
 Qed.
 
 
-Lemma eqMap_domupd D `{JoinSemiLattice D} (R:relation (option D)) `{Reflexive _ R}
+Lemma eqMap_domupd D `{PartialOrder D}
       (m:Dom D) x v
   : find x m === v
     -> eqMap m (domupd m x v).
