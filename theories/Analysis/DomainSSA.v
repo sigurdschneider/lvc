@@ -123,3 +123,108 @@ Proof.
     rewrite <- e, <- Heq; eauto.
     eapply IHZ.
 Qed.
+
+
+Lemma domain_join_sig X `{OrderedType X} Y `{JoinSemiLattice Y}  U
+  (x y : {m : Map [X, Y] | domain m [<=] U})
+  : domain (proj1_sig x ⊔ proj1_sig y) [<=] U.
+Proof.
+  destruct x,y; simpl.
+  unfold joinMap. rewrite domain_join. cset_tac.
+Qed.
+
+Definition joinsig X `{OrderedType X} Y `{JoinSemiLattice Y}  U
+           (x y : {m : Map [X, Y] | domain m ⊆ U}) :=
+  exist (fun m => domain m ⊆ U) (join (proj1_sig x) (proj1_sig y)) (domain_join_sig x y).
+
+Definition joinsig_idem X `{OrderedType X} Y `{JoinSemiLattice Y}  U
+  : forall a : {m : Map [X, Y] | domain m [<=] U}, joinsig a a ≣ a.
+Proof.
+  - hnf; intros [a ?]. simpl. eapply joinDom_idem.
+Qed.
+
+Definition joinsig_sym X `{OrderedType X} Y `{JoinSemiLattice Y}  U
+  : forall a b : {m : Map [X, Y] | domain m [<=] U}, joinsig a b ≣ joinsig b a.
+Proof.
+  - hnf; intros [a ?] [b ?]. eapply joinDom_sym.
+Qed.
+
+Definition joinsig_assoc X `{OrderedType X} Y `{JoinSemiLattice Y}  U
+  : forall a b c : {m : Map [X, Y] | domain m [<=] U}, joinsig (joinsig a b) c ≣ joinsig a (joinsig b c).
+Proof.
+  hnf; intros [a ?] [b ?] [c ?]. eapply joinDom_assoc.
+Qed.
+
+Definition joinsig_exp X `{OrderedType X} Y `{JoinSemiLattice Y}  U
+  : forall a b : {m : Map [X, Y] | domain m [<=] U}, a ⊑ joinsig a b.
+Proof.
+  hnf; intros [a ?] [b ?]; simpl. eapply joinDom_exp.
+Qed.
+
+
+Instance map_sig_semilattice_bound X `{OrderedType X} Y `{JoinSemiLattice Y}  U
+  : JoinSemiLattice ({ m : Map [X, Y] | domain m ⊆ U}) := {
+  join x y := joinsig x y
+}.
+Proof.
+  - eapply joinsig_idem.
+  - eapply joinsig_sym.
+  - eapply joinsig_assoc.
+  - eapply joinsig_exp.
+  - simpl. unfold Proper, respectful; intros. destruct x,y,x0,y0; simpl in * |- *.
+    rewrite H2, H3. reflexivity.
+  - simpl. unfold Proper, respectful; intros. destruct x,y,x0,y0; simpl in * |- *.
+    rewrite H3, H2. reflexivity.
+Defined.
+
+Instance map_sig_lower_bounded X `{OrderedType X} Y `{JoinSemiLattice Y} U
+  : LowerBounded { m : Map [X, Y] | domain m ⊆ U} :=
+  {
+    bottom := exist _ (empty _) (incl_empty _ _)
+  }.
+Proof.
+  intros [a b]; simpl.
+  eapply empty_bottom; eauto.
+Defined.
+
+Definition VDom U D := { m : Map [var, D] | domain m ⊆ U}.
+
+Lemma domain_domupd_incl  D (m:Dom D) x v
+  : domain (domupd m x v) ⊆ {x; domain m}.
+Proof.
+  unfold domupd; cases.
+  - rewrite domain_add. reflexivity.
+  - rewrite domain_remove. cset_tac.
+Qed.
+
+Lemma domain_domjoin_list_incl D `{JoinSemiLattice D} (m:Dom D) x v
+  : domain (domjoin_list m x v) ⊆ of_list x ∪ domain m.
+Proof.
+  general induction x; destruct v; simpl.
+  - cset_tac.
+  - cset_tac.
+  - cset_tac.
+  - rewrite domain_domupd_incl.
+    rewrite IHx; eauto. cset_tac.
+Qed.
+
+Lemma domupdd_dom D U (d:VDom U D) x v
+  : x \In U -> domain (domupd (proj1_sig d) x v) [<=] U.
+Proof.
+  destruct d; simpl.
+  rewrite domain_domupd_incl. intros. cset_tac.
+Qed.
+
+Lemma domjoin_list_dom D `{JoinSemiLattice D} U  (d:VDom U D) Z Y
+  : of_list Z ⊆ U -> domain (domjoin_list (proj1_sig d) Z Y) [<=] U.
+Proof.
+  destruct d; simpl.
+  rewrite domain_domjoin_list_incl. intros. cset_tac.
+Qed.
+
+Definition domupdd D U (d:VDom U D) x (v:option D) (IN:x ∈ U) : VDom U D :=
+  (exist _ (domupd (proj1_sig d) x v) (domupdd_dom d v IN)).
+
+Definition domjoin_listd D `{JoinSemiLattice D}
+           U (d:VDom U D) Z Y (IN:of_list Z ⊆ U) : VDom U D :=
+  (exist _ (domjoin_list (proj1_sig d) Z Y) (domjoin_list_dom d Z Y IN)).

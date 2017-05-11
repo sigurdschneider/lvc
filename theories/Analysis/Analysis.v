@@ -192,18 +192,6 @@ Proof.
   rewrite pf, pf1. reflexivity.
 Qed.
 
-Lemma PIR2_zip_setTopAnnO X `{JoinSemiLattice X} (A A':list (ann X)) (B B':list X)
-  : poLe A A'
-    -> poLe B B'
-    -> poLe ((@setTopAnn _) ⊜ A B) (@setTopAnn _ ⊜ A' B').
-Proof.
-  intros; simpl in *.
-  general induction H1; inv H2; simpl; eauto using PIR2.
-  - econstructor; eauto.
-    eauto using ann_R_setTopAnn.
-Qed.
-
-
 Lemma tab_false_impb Dom `{PartialOrder Dom} AL AL'
   : poLe AL AL'
     -> PIR2 impb (tab false ‖AL‖) (tab false ‖AL'‖).

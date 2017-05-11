@@ -227,3 +227,18 @@ Proof.
   sTE. intros.
   eapply subTermIndF_occurVars; eauto.
 Qed.
+
+Lemma subTerm_EQ_If_freeVars_e
+  : forall (sT st : stmt) (e : op) (s t : stmt),
+    st = stmtIf e s t -> subTerm st sT -> Op.freeVars e ⊆ occurVars sT.
+Proof.
+  intros; subst.
+  eapply subTerm_occurVars in H0. simpl in *.
+  cset_tac.
+Qed.
+
+Lemma subTerm_EQ_Let_x (sT st : stmt) (x : nat) (e : exp) (s : stmt)
+  : st = stmtLet x e s -> subTerm st sT -> x ∈ occurVars sT.
+Proof.
+  intros; subst. eapply subTerm_occurVars in H0; simpl in *. cset_tac.
+Qed.

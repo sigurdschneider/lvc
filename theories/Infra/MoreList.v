@@ -699,6 +699,17 @@ Proof.
   intros. rewrite H; eauto using get.
 Qed.
 
+Lemma fold_list_length' A B (f:list B -> (list A) -> list B) (a:list (list A)) (b: list B)
+  : (forall n aa, get a n aa -> ❬b❭ <= ❬aa❭)
+    -> (forall aa b, ❬b❭ <= ❬aa❭ -> ❬f b aa❭ = ❬b❭)
+    -> length (fold_left f a b) = ❬b❭.
+Proof.
+  intros LEN.
+  general induction a; simpl; eauto.
+  erewrite IHa; eauto 10 using get with len.
+  intros. rewrite H; eauto using get.
+Qed.
+
 Lemma mapi_app X Y (f:nat -> X -> Y) n L L'
 : mapi_impl f n (L++L') = mapi_impl f n L ++ mapi_impl f (n+length L) L'.
 Proof.
@@ -787,4 +798,14 @@ Lemma take_ge A (L:list A) n
 Proof.
   general induction L; destruct n; isabsurd; simpl; eauto.
   f_equal; eauto. eapply IHL. simpl in *. omega.
+Qed.
+
+
+Lemma PIR2_eq_zip X Y Z (f:X -> Y -> Z) l1 l2 l1' l2'
+  : PIR2 eq l1 l1'
+    -> PIR2 eq l2 l2'
+    -> PIR2 eq (zip f l1 l2) (zip f l1' l2').
+Proof.
+  intros P1 P2.
+  general induction P1; inv P2; simpl; econstructor; eauto.
 Qed.

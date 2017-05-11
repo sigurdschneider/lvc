@@ -7,8 +7,8 @@ Updated to accomodate non-extensional equalities
 *)
 
 Require Export Containers.OrderedType Setoid Coq.Classes.Morphisms Computable.
-Require Export PartialOrder.
-Require Import EqDec DecSolve.
+Require Export Util Get MoreList PartialOrder.
+Require Import EqDec DecSolve List AllInRel.
 
 Class JoinSemiLattice (A : Type) `{PartialOrder A} :=
   {
@@ -131,4 +131,25 @@ Lemma join_struct_eq T `{JoinSemiLattice T} (a b a' b':T)
     -> a ⊔ b ≣ (a' ⊔ b').
 Proof.
   intros A B. rewrite A, B. reflexivity.
+Qed.
+
+
+Lemma fold_left_join_struct T `{JoinSemiLattice T} (A A':list T) (b b':T)
+  : PIR2 poLe A A'
+    -> b ⊑ b'
+    -> fold_left join A b ⊑ fold_left join A' b'.
+Proof.
+  intros pir. revert b b'.
+  induction pir; simpl; eauto.
+  intros. eapply IHpir.
+  eapply join_struct; eauto.
+Qed.
+
+
+Lemma PIR2_bottom_least A B `{LowerBounded A} (ZL:list B) (l:list A)
+  : ❬ZL❭ = ❬l❭
+    -> PIR2 poLe (tab (⊥) ‖ZL‖) l.
+Proof.
+  intros. eapply PIR2_get; intros; inv_get; eauto with len.
+  eapply bottom_least.
 Qed.

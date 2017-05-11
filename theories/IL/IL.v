@@ -1,6 +1,7 @@
 Require Import List.
-Require Export Util Get Drop Var Val Op Exp Env Map CSet AutoIndTac MoreList OptionMap.
-Require Export Events SizeInduction SmallStepRelations StateType.
+Require Export Util Get Drop Var Val Isa.Op IL.Exp
+        Env Map CSet AutoIndTac MoreList OptionMap.
+Require Export IL.Events SizeInduction SmallStepRelations StateType.
 Require Import SetOperations.
 
 Set Implicit Arguments.

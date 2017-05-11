@@ -497,3 +497,9 @@ Proof.
   general induction A; destruct B; isabsurd; simpl in *; eauto.
   rewrite getAnn_setTopAnn; f_equal; eauto.
 Qed.
+
+Lemma setTopAnn_eta' A (a:ann A)
+  : (setTopAnn a (getAnn a)) = a.
+Proof.
+  destruct a; simpl; eauto.
+Qed.
