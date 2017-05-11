@@ -2,10 +2,16 @@ Require Import CSet Le ListUpdateAt Coq.Classes.RelationClasses.
 
 Require Import Plus Util AllInRel Map Terminating MoreInversion.
 Require Import Val Var Env IL Annotation Infra.Lattice AnnotationLattice.
-Require Import DecSolve LengthEq MoreList Status AllInRel OptionR.
+Require Import DecSolve LengthEq MoreList Status AllInRel OptionR MapDefined.
 Require Import Keep Subterm Analysis CMapPartialOrder DomainSSA CMapTerminating.
 
 Set Implicit Arguments.
+
+Lemma option_eq_option_R X (R:relation X) x y
+  : option_eq R x y <-> option_R R x y.
+Proof.
+  split; inversion 1; econstructor; eauto.
+Qed.
 
 Definition forwardF (sT:stmt) (Dom:stmt->Type) (BL:list bool)
            (forward: forall s (ST:subTerm s sT) (d:Dom sT) (anr:ann bool), Dom sT * ann bool * list bool)
@@ -789,4 +795,368 @@ Proof.
     intros. eapply forward_ext; eauto.
     symmetry. eapply EQ; eauto using get. reflexivity.
     simpl. omega.
+Qed.
+
+
+
+Lemma agree_on_option_R_fstNoneOrR  (X : Type) `{OrderedType X} (Y : Type)
+      (R R':Y -> Y -> Prop) (D:set X) (f g h:X -> option Y)
+  : agree_on (option_R R) D f g
+    -> agree_on (fstNoneOrR R') D g h
+    -> (forall a b c, R a b -> R' b c -> R' a c)
+    -> agree_on (fstNoneOrR R') D f h.
+Proof.
+  intros AGR1 AGR2 Trans; hnf; intros.
+  exploit AGR1 as EQ1; eauto.
+  exploit AGR2 as EQ2; eauto.
+  inv EQ1; inv EQ2; clear_trivial_eqs; try econstructor; try congruence.
+  assert (x0 = b) by congruence; subst.
+  eauto.
+Qed.
+
+Lemma defined_on_agree_fstNoneOrR (X : Type) `{H : OrderedType X}
+      (Y : Type) (R : relation Y) (D : ⦃X⦄) (f g : X -> ؟ Y)
+  : defined_on D f -> agree_on (fstNoneOrR R) D f g -> defined_on D g.
+Proof.
+  intros Def Agr.
+  hnf; intros. edestruct Def; eauto.
+  exploit Agr; eauto. rewrite H1 in H2. inv H2; eauto.
+Qed.
+
+Local Notation "'getD' X" := (proj1_sig (fst (fst X))) (at level 10, X at level 0).
+
+Require Import RenamedApart.
+
+Lemma forwardF_agree (sT:stmt) D `{JoinSemiLattice D}
+      BL G (F:list (params * stmt)) f fr ans anF ZL'
+      (ZL'Incl: list_union (of_list ⊝ ZL') [<=] occurVars sT)
+      (Len1: ❬F❭ = ❬ans❭) (Len2:❬F❭ = ❬anF❭)
+      (AN:forall (n : nat) (Zs : params * stmt) sa,
+          get anF n sa -> get F n Zs -> annotation (snd Zs) sa)
+      AE
+      (ST: forall (n : nat) (s : params * stmt), get F n s -> subTerm (snd s) sT)
+      (IH:forall (n : nat) (Zs : params * stmt) (a : ann (⦃nat⦄ * ⦃nat⦄)),
+          get F n Zs ->
+          get ans n a ->
+          forall (sT : stmt) (ZL : 〔params〕) AE (G : ⦃nat⦄)
+            (ST : subTerm (snd Zs) sT)
+            (ZLIncl : list_union (of_list ⊝ ZL) [<=] occurVars sT)
+            (anr : ann bool),
+            annotation (snd Zs) anr ->
+            agree_on (option_R poEq)
+                     (G \ (snd (getAnn a) ∪ list_union (of_list ⊝ ZL)))
+                     (domenv (proj1_sig AE))
+                     (domenv (getD
+                                (forward f fr ZL ZLIncl ST AE anr))) /\
+            agree_on (fstNoneOrR poLe) (G \ snd (getAnn a))
+                     (domenv (proj1_sig AE))
+                     (domenv (getD
+                                (forward f fr ZL ZLIncl ST AE anr))))
+  : agree_on (option_R poEq)
+             (G \ (list_union (defVars ⊜ F ans) ∪ list_union (of_list ⊝ ZL')))
+             (domenv (proj1_sig AE))
+             (domenv (getD (@forwardF sT (sTDom D) BL (forward f fr _ ZL'Incl)
+                                      F anF AE ST))) /\
+    agree_on (fstNoneOrR poLe)
+             (G \ (list_union (snd ⊝ getAnn ⊝ ans)))
+             (domenv (proj1_sig AE))
+             (domenv (getD (@forwardF sT (sTDom D) BL (forward f fr _ ZL'Incl)
+                                      F anF AE ST))).
+Proof.
+  general induction Len1; destruct anF; inv Len2. simpl.
+  - split; reflexivity.
+  - edestruct (IHLen1 sT D _ _ BL G f fr anF ZL');
+      edestruct (IH 0 x y ltac:(eauto using get) ltac:(eauto using get) sT ZL' AE G ltac:(eauto using get) ZL'Incl a); eauto using get.
+    simpl; split; etransitivity; eapply agree_on_incl; eauto.
+    + norm_lunion. clear_all. unfold defVars at 1. cset_tac.
+    + norm_lunion. clear_all. cset_tac.
+    + norm_lunion. clear_all. cset_tac.
+    + norm_lunion. unfold defVars. clear_all. cset_tac.
+Qed.
+
+
+Lemma forward_agree sT D `{JoinSemiLattice D} f fr
+      ZL AE G s (ST:subTerm s sT) ra ZLIncl anr
+      (RA:renamedApart s ra) (AN:annotation s anr)
+  : agree_on poEq (G \ (snd (getAnn ra) ∪ list_union (of_list ⊝ ZL)))
+             (domenv (proj1_sig AE))
+             (domenv (proj1_sig
+                        (fst (fst (forward f fr ZL ZLIncl
+                                            ST AE anr))))) /\
+    agree_on poLe (G \ (snd (getAnn ra)))
+             (domenv (proj1_sig AE))
+             (domenv (proj1_sig
+                        (fst (fst (forward f fr ZL ZLIncl
+                                            ST AE anr))))).
+Proof.
+  general induction RA; invt @annotation; simpl in *;
+    try now (split; reflexivity); simpl.
+  - destruct e;
+      repeat let_pair_case_eq; repeat simpl_pair_eqs; subst; simpl;
+        pe_rewrite; set_simpl.
+    + edestruct @IHRA; clear IHRA; dcr; try split.
+      * instantiate (1:=(setTopAnn sa a)).
+        eapply setTopAnn_annotation; eauto.
+      * etransitivity; [|eapply agree_on_incl; eauto]; simpl.
+        eapply domupd_dead. cset_tac.
+        cset_tac.
+        cset_tac.
+      * simpl in *.
+        eapply agree_on_option_R_fstNoneOrR with (R:=poLe); [|eapply agree_on_incl; eauto|].
+        -- eapply domupd_dead; eauto. cset_tac.
+        -- cset_tac.
+        -- intros. etransitivity; eauto.
+    + edestruct @IHRA; clear IHRA; dcr; try split.
+      * instantiate (1:=(setTopAnn sa a)).
+        eapply setTopAnn_annotation; eauto.
+      * etransitivity; [|eapply agree_on_incl; eauto]; simpl.
+        simpl in *.
+        eapply domupd_dead. cset_tac.
+        cset_tac. cset_tac.
+      * simpl in *.
+        eapply agree_on_option_R_fstNoneOrR with (R:=poLe); [|eapply agree_on_incl; eauto|].
+        eapply domupd_dead. cset_tac. cset_tac. cset_tac.
+        intros. etransitivity; eauto.
+  - repeat let_pair_case_eq; repeat simpl_pair_eqs; subst; simpl;
+      pe_rewrite; set_simpl.
+    split.
+    + symmetry; etransitivity; symmetry.
+      * eapply agree_on_incl.
+        -- eapply IHRA2; eauto.
+           eapply setTopAnn_annotation; eauto.
+        -- cset_tac.
+      * symmetry; etransitivity; symmetry.
+        -- eapply agree_on_incl. eapply IHRA1; eauto.
+           eapply setTopAnn_annotation; eauto.
+           cset_tac.
+        -- simpl. reflexivity.
+    +
+      edestruct @IHRA1 with (ZL:=ZL)
+                              (G:=G)
+                              (ST:= (@subTerm_EQ_If1 sT (stmtIf e s t) e s t
+                                                     (@eq_refl stmt
+                                                               (stmtIf e s t)) ST)) (ZLIncl:=ZLIncl);
+        [|etransitivity;[ eapply agree_on_incl; eauto |eapply agree_on_incl;[eapply IHRA2|]]];
+        try eapply setTopAnn_annotation; eauto; cset_tac.
+  - set_simpl. unfold domjoin_listd.
+    destruct (get_dec ZL (Var.labN f)); dcr.
+    + cases; eauto; simpl.
+      * erewrite get_nth; eauto.
+        split.
+        eapply agree_on_incl.
+        eapply domupd_list_agree; eauto. hnf; reflexivity.
+        -- rewrite <- incl_list_union; eauto.
+           cset_tac. reflexivity.
+        -- eapply agree_on_incl.
+           eapply domupd_list_agree_poLe; eauto. reflexivity.
+      * split; reflexivity.
+    + cases; try (split; reflexivity).
+      simpl.
+      rewrite !not_get_nth_default; eauto.
+      split; simpl; reflexivity.
+  - repeat let_pair_case_eq; repeat simpl_pair_eqs; subst; simpl;
+      pe_rewrite; set_simpl.
+    edestruct IHRA with (ZL:=fst ⊝ F ++ ZL) (anr:=(setTopAnn ta a)); eauto using setTopAnn_annotation.
+    split.
+    + etransitivity.
+      * eapply agree_on_incl. eapply H5.
+        rewrite list_union_defVars_decomp; eauto.
+        rewrite List.map_app.
+        rewrite list_union_app; eauto.
+        clear_all; cset_tac.
+      * eapply agree_on_incl.
+        eapply forwardF_agree with (ZL':=fst ⊝ F ++ ZL); eauto.
+        -- len_simpl. rewrite H10. eauto with len.
+        -- intros. inv_get.
+           eapply setTopAnn_annotation; eauto.
+        -- rewrite List.map_app. rewrite list_union_app; eauto.
+           rewrite list_union_defVars_decomp; eauto with len.
+           clear_all. cset_tac.
+    + etransitivity.
+      * eapply agree_on_incl. eapply H8.
+        cset_tac.
+      * eapply agree_on_incl.
+        eapply forwardF_agree with (ZL':=fst ⊝ F ++ ZL);
+          intros; eauto.
+        -- len_simpl. rewrite H10. eauto with len.
+        -- inv_get. eapply setTopAnn_annotation; eauto.
+        -- rewrite list_union_defVars_decomp; eauto.
+           clear_all; cset_tac.
+Qed.
+
+Definition delete_me := True.
+
+Lemma eqMap_forwardF_t (sT:stmt) D `{JoinSemiLattice D} f fr
+      (F : 〔params * stmt〕)
+      (t : stmt)
+      (ZL : 〔params〕)
+      (ra : 〔ann (⦃nat⦄ * ⦃nat⦄)〕)
+      (AE AE': VDom (occurVars sT) D) BL
+      STF
+      (ZLIncl : list_union (of_list ⊝ ZL) [<=] occurVars sT)
+      (LenZL:❬ZL❭ >= ❬F❭)
+      (sa : 〔ann bool〕)
+      (ta : ann bool)  tra
+      (RAt:renamedApart t tra) (AN:annotation t ta)
+      (EQM : eqMap
+               (getD (@forwardF sT (sTDom D) BL
+                    (forward f fr ZL ZLIncl) F
+                    sa
+                    AE'
+                    STF)) (proj1_sig AE))
+      (STt:subTerm t sT)
+      (EQ: eqMap (getD (forward f fr ZL ZLIncl STt AE ta)) (proj1_sig AE'))
+      (Disj1:disj (snd (getAnn tra)) (list_union (of_list ⊝ ZL)))
+      (Disj2:disj (snd (getAnn tra)) (list_union (snd ⊝ getAnn ⊝ ra)))
+      (Disj3:disj (list_union (of_list ⊝ ZL)) (list_union (snd ⊝ getAnn ⊝ ra)))
+      (Disj5:disj (list_union (of_list ⊝ fst ⊝ F)) (list_union (snd ⊝ getAnn ⊝ ra)))
+      (Disj6:PairwiseDisjoint.pairwise_ne disj (defVars ⊜ F ra))
+      (Len2 : ❬F❭ = ❬ra❭)
+      (Len1 : ❬F❭ = ❬sa❭)
+      (AnnF : forall (n : nat) (s' : params * stmt) (sa' : ann bool),
+         get sa n sa' -> get F n s' -> annotation (snd s') sa')
+      (RA : forall (n : nat) (Zs : params * stmt) (a : ann (⦃nat⦄ * ⦃nat⦄)),
+          get F n Zs -> get ra n a -> renamedApart (snd Zs) a)
+      (fExt:forall (U : ⦃nat⦄) (e : exp) (a0 a' : VDom U D),
+          a0 ≣ a' -> forall b b' : bool, b ≣ b' -> f U b a0 e ≣ f U b' a' e)
+      (frExt:forall (U : ⦃nat⦄) (e : op) (a0 a' : VDom U D),
+          a0 ≣ a' -> forall b b' : bool, b ≣ b' -> fr U b a0 e ≣ fr U b' a' e)
+  : eqMap (getD (forward f fr ZL ZLIncl STt AE ta)) (proj1_sig AE)
+    /\  forall n Zs r (ST : subTerm (snd Zs) sT),
+      get F n Zs ->
+      get sa n r ->
+      fst (fst (forward f fr ZL ZLIncl ST AE r)) ≣ AE.
+Proof.
+  general induction Len1; simpl in *; eauto.
+  - split; isabsurd. etransitivity; eauto.
+  - destruct ra; simpl in *; isabsurd.
+    revert Disj2 Disj3 Disj5. norm_lunion. intros Disj2 Disj3 Disj5.
+    edestruct (IHLen1 sT _ _ _ f fr t ZL); eauto using get. omega.
+    hnf; intros z.
+    exploit (@forward_agree sT _ _ _ f fr ZL AE (singleton z) t STt tra ZLIncl); eauto; dcr.
+    exploit (@forward_agree sT _ _ _ f fr ZL AE' (singleton z) (snd x) (STF 0 x (getLB XL x)) a ZLIncl); eauto using get; dcr.
+    exploit (@forwardF_agree sT _ _ _ BL (singleton z) XL f fr ra YL ZL ZLIncl);
+      eauto using get; dcr.
+    eauto with len.
+    intros. inv_get.
+    eapply forward_agree; eauto using get.
+    instantiate (3:=(fst (fst (forward f fr ZL ZLIncl (STF 0 x (getLB _ _)) AE' y)))) in H6.
+    instantiate (1:=(fun (n : nat) (s : params * stmt) (H : get XL n s) =>
+                     STF (S n) s (getLS x H))) in H6.
+    unfold domenv in *.
+    decide (z ∈ snd (getAnn tra) ∪ list_union (of_list ⊝ ZL)).
+    + eapply disj_union_inv in i. destruct i; dcr.
+      * rewrite EQ.
+        eapply H4.
+        revert H8 H9 Disj2. clear.
+        intros. cset_tac.
+      * eapply poLe_antisymmetric.
+        -- rewrite EQ.
+           eapply H5.
+           revert H8 Disj3; clear_all. intros. cset_tac.
+        -- etransitivity; [| eapply H3].
+           rewrite <- EQM.
+           eapply H7.
+           revert H8 Disj3. clear_all; intros.
+           cset_tac.
+           revert H9; clear_all; cset_tac.
+      * eapply disj_2_incl; try eapply Disj1; eauto.
+    + decide (z ∈ (list_union (defVars ⊜ XL ra))).
+      * clear H7 H6.
+        rewrite EQ. eapply H4.
+        eapply (@defVars_drop_disj (x::XL) (a::ra) 0) in Disj6;
+          eauto using get. simpl in *.
+        unfold defVars in Disj6 at 1.
+        rewrite list_union_defVars_decomp in *; eauto.
+        revert n i Disj5 Disj6. clear_all.
+        intros. cset_tac.
+      * exploit (H2 z). revert n; clear_all; cset_tac.
+        rewrite <- H1.
+        rewrite <- EQM. symmetry. eapply H6.
+        revert n n0; clear_all; cset_tac.
+    + eapply disj_2_incl; eauto.
+    + eapply disj_2_incl. eapply Disj3. clear_all; cset_tac.
+    + eapply disj_incl. eapply Disj5.
+      clear_all; cset_tac.
+      clear_all; cset_tac.
+    + hnf; intros. eapply Disj6; [|eauto using get|eauto using get]. omega.
+    + intros; split; eauto.
+      intros. inv H3; inv H4; eauto using get.
+      assert (AEQ:AE === AE').
+      { hnf; intros.
+        rewrite <- EQ. rewrite H1. reflexivity.
+      }
+      assert (EQF:@forwardF sT (sTDom D) BL (forward f fr ZL ZLIncl) XL YL
+                       (fst (fst (forward f fr ZL ZLIncl (STF 0 Zs (@getLB (params * stmt) XL Zs)) AE' r)))
+                       (fun (n : nat) (s : params * stmt) (H : get XL n s) =>
+                          STF (S n) s (getLS Zs H)) ===
+                       forwardF BL (forward f fr ZL ZLIncl) XL YL
+                       (fst (fst (forward f fr ZL ZLIncl ST AE r)))
+                       (fun (n : nat) (s : params * stmt) (H : get XL n s) =>
+                          STF (S n) s (getLS Zs H))
+             ). {
+        eapply forwardF_ext; eauto.
+        intros. eapply forward_ext; eauto.
+        assert ((STF 0 Zs (@getLB (params * stmt) XL Zs)) = ST) by eapply subTerm_PI.
+        subst.
+        eapply forward_ext; eauto.
+        symmetry; eauto.
+      }
+       hnf; intros z.
+    exploit (@forward_agree sT _ _ _ f fr ZL AE (singleton z) (snd Zs) ST a ZLIncl); eauto using get; dcr.
+    exploit (@forwardF_agree sT _ _ _  BL (singleton z) XL f fr ra YL ZL ZLIncl);
+      eauto using get; dcr.
+    eauto with len.
+    intros. inv_get.
+    eapply forward_agree; eauto using get.
+    unfold domenv in *.
+    decide (z ∈ snd (getAnn tra) ∪ list_union (of_list ⊝ ZL)).
+    * eapply disj_union_inv in i. destruct i; dcr.
+      -- symmetry.
+         eapply (H6 z).
+         revert H10 H11 Disj2. clear.
+         intros. cset_tac.
+      -- eapply poLe_antisymmetric.
+         ++ etransitivity.
+           eapply H9.
+           revert H10 Disj3; clear_all. intros. cset_tac.
+           rewrite <- EQM.
+           hnf in EQF. dcr.
+           hnf in H5. dcr.
+           specialize (H13 z).
+           rewrite H13. reflexivity.
+         ++ eapply H7.
+           revert H10 H11 Disj3; clear_all. intros. cset_tac.
+      -- eauto.
+    * decide (z ∈ (list_union (defVars ⊜ XL ra))).
+      -- symmetry.
+         eapply H6.
+         eapply (@defVars_drop_disj (Zs::XL) (a::ra) 0) in Disj6;
+           eauto using get. simpl in *.
+        unfold defVars in Disj6 at 1.
+        rewrite list_union_defVars_decomp in Disj6; eauto.
+        rewrite list_union_defVars_decomp in i; eauto.
+        revert n i Disj5 Disj6. clear_all.
+        intros. cset_tac.
+      -- rewrite (H8 z).
+         rewrite <- EQM.
+         hnf in EQF. dcr.
+         hnf in H5. dcr.
+         specialize (H11 z).
+         rewrite H11. reflexivity.
+         revert n n0; clear_all; cset_tac.
+Qed.
+
+
+Lemma forward_agree_def sT D `{JoinSemiLattice D} ZL AE G s f fr
+      (ST:subTerm s sT) ra ZLIncl anr pf
+  (RA:renamedApart s ra) (AN:annotation s anr)
+  : agree_on poEq (G \ (snd (getAnn ra) ∪ list_union (of_list ⊝ ZL)))
+             (domenv AE)
+             (domenv (proj1_sig
+                        (fst (fst (forward f fr
+                                            ZL ZLIncl
+                                            ST (exist _ AE pf) anr))))).
+Proof.
+  edestruct forward_agree with (AE:=exist _ AE pf); dcr; eauto.
 Qed.

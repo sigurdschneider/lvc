@@ -228,3 +228,228 @@ Definition domupdd D U (d:VDom U D) x (v:option D) (IN:x ∈ U) : VDom U D :=
 Definition domjoin_listd D `{JoinSemiLattice D}
            U (d:VDom U D) Z Y (IN:of_list Z ⊆ U) : VDom U D :=
   (exist _ (domjoin_list (proj1_sig d) Z Y) (domjoin_list_dom d Z Y IN)).
+
+
+Lemma option_R_inv x y
+  : @OptionR.option_R (withTop Val.val) (withTop Val.val)
+         (@poEq (withTop Val.val)
+                (@withTop_PO Val.val Val.int_eq Val.Equivalence_eq_int' Val.int_eq_dec)) x y
+    -> x = y.
+Proof.
+  intros. inv H; eauto.
+  inv H0; eauto.
+  do 2 f_equal. eauto.
+Qed.
+
+Lemma add_dead D (G:set var) (R:D->D->Prop) `{Reflexive _ R} (AE:Dom D) x v (NOTIN:x ∉ G)
+  : agree_on (@OptionR.option_R _ _ R) G (domenv AE)
+             (domenv (add x v AE)).
+Proof.
+  hnf; intros. unfold domenv.
+  mlud. cset_tac. reflexivity.
+Qed.
+
+Lemma remove_dead D (G:set var) (R:D->D->Prop) `{Reflexive _ R} (AE:Dom D) x (NOTIN:x ∉ G)
+  : agree_on (@OptionR.option_R _ _ R) G (domenv AE)
+             (domenv (remove x AE)).
+Proof.
+  hnf; intros. unfold domenv.
+  mlud. cset_tac. reflexivity.
+Qed.
+
+Lemma domupd_dead D (G:set var) (R:D->D->Prop) `{Reflexive _ R} x AE v (NOTIN:x ∉ G)
+  : agree_on (OptionR.option_R R) G (domenv AE)
+             (domenv (domupd AE x v)).
+Proof.
+  unfold domupd; cases.
+  + eapply add_dead; eauto.
+  + eapply remove_dead; eauto.
+Qed.
+
+Instance Dom_JRLB D `{JoinSemiLattice D}
+  : JoinRespectsLowerBound (Dom D).
+Proof.
+  econstructor.
+  intros. hnf; intros.
+  simpl. unfold joinMap.
+  rewrite MapFacts.map2_1bis; eauto.
+  rewrite MapFacts.empty_o. simpl.
+  cases; reflexivity.
+Qed.
+
+Instance DDom_JRLB D `{JoinSemiLattice D} U
+  : JoinRespectsLowerBound (VDom U D).
+Proof.
+  econstructor.
+  intros. hnf; intros.
+  simpl. unfold joinMap.
+  rewrite MapFacts.map2_1bis; eauto.
+  rewrite MapFacts.empty_o. simpl.
+  cases; reflexivity.
+Qed.
+
+
+Lemma agree_domenv_join_bot U D `{JoinSemiLattice D} (G:set var) (a b:VDom U D) c
+      : a === bottom
+        -> agree_on poEq G (domenv (proj1_sig b)) (domenv c)
+        -> agree_on poEq G (domenv (proj1_sig (join a b))) (domenv c).
+Proof.
+  destruct a,b;
+    unfold domenv, poEq at 1; simpl proj1_sig.
+  intros A B.
+  hnf; intros z IN.
+  unfold joinMap.
+  rewrite MapFacts.map2_1bis; eauto.
+  specialize (B z IN). cbv beta in *.
+  rewrite B.
+  hnf in A. simpl proj1_sig in *.
+  rewrite A, <- B.
+  setoid_rewrite <- bottom_neutral at 3.
+  simpl join at 2. unfold joinMap.
+  rewrite MapFacts.map2_1bis; eauto.
+Qed.
+
+Lemma agree_domenv_join_bot2 U D `{JoinSemiLattice D} (G:set var) (a b:VDom U D) c
+      : agree_on poEq G (domenv (proj1_sig a)) (domenv c)
+        -> b === bottom
+        -> agree_on poEq G (domenv (proj1_sig (join a b))) (domenv c).
+Proof.
+  destruct a,b;
+    unfold domenv, poEq at 2; simpl proj1_sig.
+  intros A B.
+  hnf; intros z IN.
+  unfold joinMap.
+  rewrite MapFacts.map2_1bis; eauto.
+  specialize (A z IN). cbv beta in *.
+  rewrite A.
+  hnf in B. simpl proj1_sig in *.
+  rewrite <- A, B.
+  setoid_rewrite <- bottom_neutral at 3.
+  simpl join at 2. unfold joinMap.
+  rewrite MapFacts.map2_1bis; eauto.
+  rewrite join_commutative. eauto.
+Qed.
+
+
+Lemma domupd_poLe (m m' : Map [nat, withTop val]) a v
+  : poLe (find a m) v
+    -> leMap m m'
+    -> leMap m (domupd m' a v).
+Proof.
+  intros. hnf; intros.
+  unfold domupd; cases.
+  - mlud; eauto. rewrite <- e. eauto.
+  - mlud; eauto. rewrite <- e. eauto.
+Qed.
+
+
+Lemma domupd_var_eq D (m:Dom D) x y a
+  : x === y
+    -> find x (domupd m y a) = a.
+Proof.
+  unfold domupd; cases; intros; mlud; eauto.
+  - exfalso; eauto.
+  - exfalso; eauto.
+Qed.
+
+Lemma domupd_var_ne D (m:Dom D) x y a
+  : x =/= y
+    -> find x (domupd m y a) = find x m.
+Proof.
+  unfold domupd; cases; intros; mlud; eauto.
+Qed.
+
+Lemma domupd_list_ne D `{JoinSemiLattice D} (m:Dom D) x Z Y
+  : ~ InA eq x Z
+    -> find x (domjoin_list m Z Y) === find x m.
+Proof.
+  intros NI.
+  general induction Z; destruct Y; simpl; eauto.
+  rewrite domupd_var_ne; eauto. eapply IHZ; eauto.
+  intro; eapply NI; econstructor. eapply H1.
+Qed.
+
+Lemma domupd_list_get D `{JoinSemiLattice D} (m:Dom D) Z Y x n y
+  : NoDupA eq Z
+    -> get Z n x
+    -> get Y n y
+    -> poLe y (find x (domjoin_list m Z Y)).
+Proof.
+  intros ND GetZ GetY.
+  general induction n; simpl domjoin_list.
+  - rewrite domupd_var_eq; eauto.
+    unfold ojoin; repeat cases; eauto; try constructor.
+    rewrite join_commutative. eapply join_poLe.
+  - inv GetZ; inv GetY.
+    simpl domjoin_list.
+    rewrite domupd_var_ne; eauto.
+    inv ND. intro. eapply H5.
+    rewrite <- H1. eapply get_InA; eauto.
+Qed.
+
+
+Lemma domupd_list_agree D `{JoinSemiLattice D} (R:relation (option D)) `{Reflexive _ R} G (AE:Dom D) Z Y
+  : agree_on R (G \ of_list Z)
+             (domenv AE)
+             (domenv (domjoin_list AE Z Y)).
+
+Proof.
+  general induction Z; destruct Y; simpl; try reflexivity.
+  hnf; intros. cset_tac'.
+  unfold domenv.
+  rewrite domupd_var_ne; [|symmetry; eauto].
+  exploit IHZ; eauto.
+  exploit H4; eauto. cset_tac.
+Qed.
+
+
+Lemma eqMap_domupd D `{JoinSemiLattice D} (R:relation (option D)) `{Reflexive _ R}
+      (m:Dom D) x v
+  : find x m === v
+    -> eqMap m (domupd m x v).
+Proof.
+  intros. hnf; intros; unfold domupd; cases; mlud; eauto;
+  rewrite <- e; eauto.
+Qed.
+
+Lemma domenv_proper G
+  : Proper (poEq ==> agree_on poEq G) (@domenv _).
+Proof.
+  unfold Proper, respectful, domenv, agree_on; intros.
+  eauto.
+Qed.
+
+Lemma agree_domenv_join U D `{JoinSemiLattice D} (G:set var) (a b:VDom U D) c
+      : agree_on poEq G (domenv (proj1_sig a)) (domenv c)
+        -> agree_on poEq G (domenv (proj1_sig b)) (domenv c)
+        -> agree_on poEq G (domenv (proj1_sig (join a b))) (domenv c).
+Proof.
+  destruct a,b;
+    unfold domenv; simpl proj1_sig.
+  intros A B.
+  hnf; intros z IN.
+  unfold joinMap.
+  rewrite MapFacts.map2_1bis; eauto.
+  specialize (A z IN).
+  specialize (B z IN). cbv beta in *.
+  rewrite A, B. rewrite join_idempotent. reflexivity.
+Qed.
+
+Lemma domupd_list_agree_poLe D `{JoinSemiLattice D} G (AE:Dom D) Z Y
+  : agree_on (fstNoneOrR poLe) G
+             (domenv AE)
+             (domenv (domjoin_list AE Z Y)).
+
+Proof.
+  hnf; intros. decide (x ∈ of_list Z).
+  - general induction Z; destruct Y; simpl; try reflexivity.
+    simpl in *. decide (x = a); subst.
+    + unfold domenv.
+      rewrite domupd_var_eq; [|symmetry; eauto].
+      unfold ojoin; repeat cases; try econstructor; eauto.
+      eapply join_poLe.
+    + unfold domenv.
+      rewrite domupd_var_ne; [|intro; eauto].
+      eapply IHZ; eauto. cset_tac.
+  - eapply domupd_list_agree; eauto. hnf; reflexivity. cset_tac.
+Qed.

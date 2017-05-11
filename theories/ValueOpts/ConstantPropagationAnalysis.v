@@ -183,23 +183,6 @@ Proof.
     eapply (eqMap_op_eval o); eauto.
 Qed.
 
-Lemma domupd_ne m x y a
-  : x =/= y
-    -> find x (domupd m y a) = find x m.
-Proof.
-  unfold domupd; cases; intros; mlud; eauto.
-Qed.
-
-Lemma domupd_list_ne m x Z Y
-  : ~ InA eq x Z
-    -> find x (domupd_list m Z Y) === find x m.
-Proof.
-  intros NI.
-  general induction Z; destruct Y; simpl; eauto.
-  rewrite domupd_ne; eauto.
-  intro; eapply NI; econstructor. eapply H.
-Qed.
-
 Lemma domupd_list_exp m Z Y
   : leMap m (domupd_list m Z Y).
 Proof.

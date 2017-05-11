@@ -153,3 +153,28 @@ Proof.
   intros. eapply PIR2_get; intros; inv_get; eauto with len.
   eapply bottom_least.
 Qed.
+
+
+Lemma fold_left_join_start_swap X `{JoinSemiLattice X} (a b:X) A
+  : poEq (fold_left join A (join a b)) (join b (fold_left join A a)).
+Proof.
+  general induction A; simpl.
+  - simpl. rewrite join_commutative. reflexivity.
+  - rewrite !IHA.
+    rewrite <- !join_associative.
+    setoid_rewrite join_commutative at 2.
+    reflexivity.
+Qed.
+
+
+Lemma proj1_sig_poEq X `{PartialOrder X} P (a b:{ x : X | P x })
+  : poEq a b -> poEq (proj1_sig a) (proj1_sig b).
+Proof.
+  destruct a,b; eauto.
+Qed.
+
+
+Class JoinRespectsLowerBound (A : Type) `{JoinSemiLattice A} `{@LowerBounded A H} :=
+  {
+    bottom_neutral : forall (a:A), poEq (join bottom a) a
+  }.

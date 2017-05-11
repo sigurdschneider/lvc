@@ -121,3 +121,72 @@ Proof.
   rewrite join_idempotent. eauto.
   eapply join_poLe.
 Qed.
+
+Lemma getAnn_joinTopAnn A `{JoinSemiLattice A} an (a:A)
+  : (getAnn (joinTopAnn an a)) = (join (getAnn an) a).
+Proof.
+  destruct an; simpl; reflexivity.
+Qed.
+
+Lemma getAnn_map_joinTopAnn A `{JoinSemiLattice A} an a
+  : getAnn ⊝ (@joinTopAnn A _ _ ⊜ an a) = join ⊜ (getAnn ⊝ an) a.
+Proof.
+  general induction an; simpl; eauto.
+  destruct a0; simpl; eauto.
+  rewrite IHan. rewrite getAnn_joinTopAnn. reflexivity.
+Qed.
+
+Lemma getAnn_map_setTopAnn A an a
+  : getAnn ⊝ (@setTopAnn A ⊜ an a) = Take.take ❬an❭ a.
+Proof.
+  general induction an; simpl; eauto.
+  destruct a0; simpl; eauto.
+  rewrite getAnn_setTopAnn. f_equal.
+  erewrite IHan; eauto.
+Qed.
+
+Lemma setTopAnn_map_inv X A B
+  : setTopAnn (A:=X) ⊜ A B = A
+    -> Take.take ❬A❭ B = getAnn ⊝ A.
+Proof.
+  intros. general induction A; destruct B; simpl; eauto.
+  - exfalso. inv H.
+  - simpl in *. inv H.
+    rewrite <- ann_R_eq in H1.
+    eapply setTopAnn_inv in H1. subst.
+    rewrite getAnn_setTopAnn. f_equal.
+    rewrite zip_length. rewrite min_l; try omega.
+    erewrite IHA; eauto; try omega.
+    erewrite getAnn_map_setTopAnn; eauto.
+    erewrite IHA; eauto.
+    rewrite <- H2. len_simpl.
+    decide (length A <= length B).
+    rewrite min_l; eauto.
+    rewrite min_r; eauto. omega.
+Qed.
+
+Lemma joinTopAnn_inv (A : Type) `{JoinSemiLattice A} (an : ann A) (a : A)
+  : poEq (joinTopAnn an a) an -> poLe a (getAnn an).
+Proof.
+  intros.
+  rewrite <- H1. rewrite getAnn_joinTopAnn.
+  rewrite join_commutative. eapply join_poLe.
+Qed.
+
+Lemma ann_R_joinTopAnn_inv (A : Type) `{JoinSemiLattice A} (an : ann A) (a : A)
+  : ann_R poEq (joinTopAnn an a) an -> poLe a (getAnn an).
+Proof.
+  intros.
+  eapply joinTopAnn_inv. eapply H1.
+Qed.
+
+Lemma joinTopAnn_map_inv X `{JoinSemiLattice X} A B
+  : PIR2 poEq (joinTopAnn (A:=X) ⊜ A B) A
+    -> PIR2 poLe (Take.take ❬A❭ B) (getAnn ⊝ A).
+Proof.
+  intros. general induction A; destruct B; simpl; eauto.
+  - exfalso. inv H1.
+  - simpl in *. inv H1.
+    eapply joinTopAnn_inv in pf.
+    econstructor; eauto.
+Qed.

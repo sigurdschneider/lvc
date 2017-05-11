@@ -4,13 +4,13 @@ Require Import Plus Util AllInRel Map CSet OptionR MoreList.
 Require Import Val Var Env IL Annotation Infra.Lattice.
 Require Import DecSolve Analysis Filter Terminating.
 Require Import Analysis AnalysisForwardSSA FiniteFixpointIteration.
-Require Import Reachability Subterm.
+Require Import Reachability Subterm AnnotationLattice DomainSSA.
 
 Set Implicit Arguments.
 
 Local Arguments proj1_sig {A} {P} e.
 Local Arguments length {A} e.
-Local Arguments forward {sT} {Dom} ftransform reach_transf ZL ZLIncl st ST d anr.
+Local Arguments forward {sT} {D} {H} {H0} exp_transf reach_transf ZL ZLIncl st ST d anr.
 
 Opaque poLe.
 
@@ -61,14 +61,14 @@ Smpl Add 120 match goal with
 
 Ltac simpl_forward_setTopAnn :=
   match goal with
-  | [H : ann_R _ (snd (fst (@forward ?sT ?Dom ?f ?fr ?ZL ?ZLIncl
-                                     ?s ?ST ?a ?sa))) ?sa' |- _ ] =>
+  | [H : ann_R _ (snd (fst (@forward ?sT ?D ?PO ?JSL ?f ?fr ?ZL ?ZLIncl
+                                     ?s ?ST ?d ?r))) ?r' |- _ ] =>
     let X := fresh "HEQ" in
     match goal with
-    | [ H' : getAnn sa = getAnn sa' |- _ ] => fail 1
+    | [ H' : getAnn r = getAnn r' |- _ ] => fail 1
     | _ => first
-            [ unify sa sa'; fail 1
-            | exploit (@forward_getAnn sT Dom f fr ZL ZLIncl s ST a sa sa' H) as X;
+            [ unify r r'; fail 1
+            | exploit (@forward_getAnn sT D PO JSL f fr ZL ZLIncl s ST d r r' H) as X;
               subst]
     end
   end; subst; try eassumption;
@@ -81,99 +81,23 @@ Smpl Add 130 simpl_forward_setTopAnn : inv_trivial.
 Opaque poEq.
 Opaque poLe.
 
-Lemma getAnn_joinTopAnn A `{JoinSemiLattice A} an (a:A)
-  : (getAnn (joinTopAnn an a)) = (join (getAnn an) a).
-Proof.
-  destruct an; simpl; reflexivity.
-Qed.
 
-Lemma getAnn_map_joinTopAnn A `{JoinSemiLattice A} an a
-  : getAnn ⊝ (@joinTopAnn A _ _ ⊜ an a) = join ⊜ (getAnn ⊝ an) a.
+Definition reachability_sound (sT:stmt) D `{JoinSemiLattice D}
+           f fr pr ZL BL s (d:VDom (occurVars sT) D) r (ST:subTerm s sT) ZLIncl
+           (EQ:(fst (forward f fr ZL ZLIncl s ST d r)) ≣ (d,r))
+    (Ann: annotation s r)
+    (DefZL: labelsDefined s (length ZL))
+    (DefBL: labelsDefined s (length BL))
+    (BL_le: poLe (snd (forward f fr ZL ZLIncl s ST d r)) BL)
+    (fExt: forall U e (a a':VDom U D), a ≣ a' -> forall b b', b ≣ b' -> f _ b a e ≣ f _ b' a' e)
+    (frExt:forall U e (a a':VDom U D),
+        a ≣ a' -> forall b b', b ≣ b' -> fr _ b a e ≣ fr _ b' a' e)
+  : reachability pr Sound BL s r.
 Proof.
-  general induction an; simpl; eauto.
-  destruct a0; simpl; eauto.
-  rewrite IHan. rewrite getAnn_joinTopAnn. reflexivity.
-Qed.
-
-Lemma getAnn_map_setTopAnn A an a
-  : getAnn ⊝ (@setTopAnn A ⊜ an a) = Take.take ❬an❭ a.
-Proof.
-  general induction an; simpl; eauto.
-  destruct a0; simpl; eauto.
-  rewrite getAnn_setTopAnn. f_equal.
-  erewrite IHan; eauto.
-Qed.
-
-Lemma setTopAnn_map_inv X A B
-  : setTopAnn (A:=X) ⊜ A B = A
-    -> Take.take ❬A❭ B = getAnn ⊝ A.
-Proof.
-  intros. general induction A; destruct B; simpl; eauto.
-  - exfalso. inv H.
-  - simpl in *. inv H.
-    rewrite <- ann_R_eq in H1.
-    eapply setTopAnn_inv in H1. subst.
-    rewrite getAnn_setTopAnn. f_equal.
-    rewrite zip_length. rewrite min_l; try omega.
-    erewrite IHA; eauto; try omega.
-    erewrite getAnn_map_setTopAnn; eauto.
-    erewrite IHA; eauto.
-    rewrite <- H2. len_simpl.
-    decide (length A <= length B).
-    rewrite min_l; eauto.
-    rewrite min_r; eauto. omega.
-Qed.
-
-Lemma joinTopAnn_inv (A : Type) `{JoinSemiLattice A} (an : ann A) (a : A)
-  : poEq (joinTopAnn an a) an -> poLe a (getAnn an).
-Proof.
-  intros.
-  rewrite <- H1. rewrite getAnn_joinTopAnn.
-  rewrite join_commutative. eapply join_poLe.
-Qed.
-
-Lemma ann_R_joinTopAnn_inv (A : Type) `{JoinSemiLattice A} (an : ann A) (a : A)
-  : ann_R poEq (joinTopAnn an a) an -> poLe a (getAnn an).
-Proof.
-  intros.
-  eapply joinTopAnn_inv. eapply H1.
-Qed.
-
-Lemma joinTopAnn_map_inv X `{JoinSemiLattice X} A B
-  : PIR2 poEq (joinTopAnn (A:=X) ⊜ A B) A
-    -> PIR2 poLe (Take.take ❬A❭ B) (getAnn ⊝ A).
-Proof.
-  intros. general induction A; destruct B; simpl; eauto.
-  - exfalso. inv H1.
-  - simpl in *. inv H1.
-    eapply joinTopAnn_inv in pf.
-    econstructor; eauto.
-Qed.
-
-Definition reachability_sound (Dom:stmt->Type) sT `{PartialOrder (Dom sT)}
-           f fr pr ZL BL s (d:Dom sT) r (ST:subTerm s sT) ZLIncl
-  : (fst (forward f fr ZL ZLIncl s ST d r)) ≣ (d,r)
-    -> annotation s r
-    -> labelsDefined s (length ZL)
-    -> labelsDefined s (length BL)
-    -> poLe (snd (@forward sT _ f fr ZL ZLIncl s ST d r)) BL
-    -> (forall (s0 : stmt) (ST0 : subTerm s0 sT) (ZL0 : 〔params〕)
-         (ZLIncl0 : list_union (of_list ⊝ ZL0) [<=] occurVars sT)
-         (a a' : Dom sT),
-          a ≣ a' ->
-          forall b b' : bool,
-            b ≣ b' -> f sT ZL0 s0 ST0 ZLIncl0 a b ≣ f sT ZL0 s0 ST0 ZLIncl0 a' b')
-    -> (forall (e : op) (s0 : stmt),
-          subTerm s0 sT ->
-          forall (FVIncl : Op.freeVars e [<=] occurVars sT) (a a' : Dom sT),
-            a ≣ a' -> forall b b' : bool, b ≣ b' -> fr sT e FVIncl a b ≣ fr sT e FVIncl a' b')
-    -> reachability pr Sound BL s r.
-Proof.
-  intros EQ Ann DefZL DefBL BL_le fExt frExt.
   general induction Ann; simpl in *; inv DefZL; inv DefBL;
     repeat let_case_eq; repeat simpl_pair_eqs; subst; simpl in *;
       simpl in *.
-  - clear_trivial_eqs. repeat simpl_forward_setTopAnn.
+  - clear_trivial_eqs.
     econstructor; eauto.
     eapply IHAnn; eauto. split; simpl; eauto.
     rewrite EQ.

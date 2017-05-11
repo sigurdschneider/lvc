@@ -278,3 +278,28 @@ Lemma agree_on_empty X `{OrderedType X} Y D (f g:X->Y) R
 Proof.
   unfold agree_on; intros; exfalso; cset_tac.
 Qed.
+
+Lemma agree_on_R_impl  (X : Type) `{OrderedType X} (Y : Type)
+      (R R':Y -> Y -> Prop) (D:set X) (f g:X -> Y)
+  : agree_on R D f g
+    -> (forall x, x ∈ D -> R (f x) (g x) -> R' (f x) (g x))
+    -> agree_on R' D f g.
+Proof.
+  intros; hnf; intros; eauto.
+Qed.
+
+
+
+Instance agree_inst (X : Type) `{H : OrderedType X} (Y : Type) (R : relation Y)
+  : Proper (SetInterface.Equal ==> eq ==> eq ==> iff) (agree_on R).
+Proof.
+  unfold Proper, respectful; intros; subst.
+  split; intros; hnf; intros; eauto; cset_tac.
+Qed.
+
+Instance agree_inst_impl (X : Type) `{H : OrderedType X} (Y : Type) (R : relation Y)
+  : Proper (SetInterface.Subset ==> eq ==> eq ==> flip impl) (agree_on R).
+Proof.
+  unfold Proper, respectful, flip, impl; intros; subst.
+  intros; hnf; intros; eauto.
+Qed.
