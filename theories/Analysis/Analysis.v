@@ -203,7 +203,7 @@ Qed.
 Lemma zip_orb_impb Dom `{PartialOrder Dom} AL AL' BL BL'
   : poLe AL AL'
     -> poLe BL BL'
-    -> PIR2 impb (orb ⊜ AL BL) (orb ⊜ AL' BL').
+    -> poLe (orb ⊜ AL BL) (orb ⊜ AL' BL').
 Proof.
   unfold poLe; simpl.
   intros A B.
@@ -211,6 +211,8 @@ Proof.
   - econstructor; eauto.
     unfold impb. destruct x, x0, y, y0; simpl in *; eauto.
 Qed.
+
+Hint Resolve zip_orb_impb.
 
 Lemma update_at_impb Dom `{PartialOrder Dom} AL AL' n
   : poLe AL AL'

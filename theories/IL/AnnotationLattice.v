@@ -18,7 +18,7 @@ Definition joinTopAnn A `{JoinSemiLattice A} (a:ann A) (b:A) :=
   setTopAnn a (join (getAnn a) b).
 
 
-Lemma PIR2_zip_setTopAnnO X `{PartialOrder X} (A A':list (ann X)) (B B':list X)
+Lemma poLe_zip_setTopAnnO X `{PartialOrder X} (A A':list (ann X)) (B B':list X)
   : poLe A A'
     -> poLe B B'
     -> poLe ((@setTopAnn _) ⊜ A B) (@setTopAnn _ ⊜ A' B').
@@ -31,8 +31,8 @@ Qed.
 
 Lemma ann_poLe_joinTopAnn A `{JoinSemiLattice A} (a:A) (b:A) an bn
   : poLe a b
-    -> ann_R poLe an bn
-    -> ann_R poLe (joinTopAnn an a) (joinTopAnn bn b).
+    -> poLe an bn
+    -> poLe (joinTopAnn an a) (joinTopAnn bn b).
 Proof.
   intros.
   inv H2; simpl; econstructor; try eapply join_struct; eauto.
@@ -40,13 +40,15 @@ Qed.
 
 Lemma ann_poEq_joinTopAnn A `{JoinSemiLattice A} (a:A) (b:A) an bn
   : poEq a b
-    -> ann_R poEq an bn
-    -> ann_R poEq (joinTopAnn an a) (joinTopAnn bn b).
+    -> poEq an bn
+    -> poEq (joinTopAnn an a) (joinTopAnn bn b).
 Proof.
   intros.
   inv H2; simpl; econstructor; eauto;
     rewrite H1, H3; reflexivity.
 Qed.
+
+Hint Resolve ann_poEq_joinTopAnn ann_poLe_joinTopAnn poLe_zip_setTopAnnO.
 
 
 Lemma PIR2_zip_joinTopAnnO X `{JoinSemiLattice X} (A A':list (ann X)) (B B':list X)
@@ -54,10 +56,10 @@ Lemma PIR2_zip_joinTopAnnO X `{JoinSemiLattice X} (A A':list (ann X)) (B B':list
     -> poLe B B'
     -> poLe ((@joinTopAnn _ _ _) ⊜ A B) (@joinTopAnn _ _ _ ⊜ A' B').
 Proof.
-  intros LE_A LE_B; simpl in *.
+  intros LE_A LE_B. simpl in *.
+  hnf in LE_A.
   general induction LE_A; inv LE_B; simpl; eauto using PIR2.
-  - econstructor; eauto.
-    eauto using ann_poLe_joinTopAnn.
+  econstructor; eauto. eapply ann_poLe_joinTopAnn; eauto.
 Qed.
 
 Lemma PIR2_poEq_zip_setTopAnnO X `{PartialOrder X} (A A':list (ann X)) (B B':list X)
@@ -78,9 +80,10 @@ Lemma PIR2_poEq_zip_joinTopAnnO X `{JoinSemiLattice X} (A A':list (ann X)) (B B'
 Proof.
   intros LE_A LE_B; simpl in *.
   general induction LE_A; inv LE_B; simpl; eauto using PIR2.
-  - econstructor; eauto.
-    eauto using ann_poEq_joinTopAnn.
+  econstructor; eauto. eapply ann_poEq_joinTopAnn; eauto.
 Qed.
+
+Hint Resolve PIR2_zip_joinTopAnnO PIR2_poEq_zip_setTopAnnO PIR2_poEq_zip_joinTopAnnO.
 
 
 Instance LowerBounded_ann (s:stmt) A `{LowerBounded A}
@@ -121,6 +124,8 @@ Proof.
   rewrite join_idempotent. eauto.
   eapply join_poLe.
 Qed.
+
+Hint Resolve PIR2_joinTopAnn_zip_left.
 
 Lemma getAnn_joinTopAnn A `{JoinSemiLattice A} an (a:A)
   : (getAnn (joinTopAnn an a)) = (join (getAnn an) a).
@@ -173,6 +178,8 @@ Proof.
   rewrite join_commutative. eapply join_poLe.
 Qed.
 
+Hint Resolve joinTopAnn_inv.
+
 Lemma ann_R_joinTopAnn_inv (A : Type) `{JoinSemiLattice A} (an : ann A) (a : A)
   : ann_R poEq (joinTopAnn an a) an -> poLe a (getAnn an).
 Proof.
@@ -190,3 +197,122 @@ Proof.
     eapply joinTopAnn_inv in pf.
     econstructor; eauto.
 Qed.
+
+
+Lemma ann_R_setTopAnn_poEq (A : Type) `{PartialOrder A} (a : A) (b : A)
+         (an : ann A) (bn : ann A)
+  : poEq a b -> poEq an bn -> poEq (setTopAnn an a) (setTopAnn bn b).
+Proof.
+  intros. eapply ann_R_setTopAnn; eauto.
+Qed.
+
+Lemma ann0_poEq A `{PartialOrder A} a b
+  : poEq a b
+    -> poEq (ann0 a) (ann0 b).
+Proof.
+  intros. econstructor; eauto.
+Qed.
+
+Lemma ann1_poEq A `{PartialOrder A} a b an1 bn1
+  : poEq a b
+    -> poEq an1 bn1
+    -> poEq (ann1 a an1) (ann1 b bn1).
+Proof.
+  intros. econstructor; eauto.
+Qed.
+
+Lemma ann2_poEq A `{PartialOrder A} a b an1 bn1 an2 bn2
+  : poEq a b
+    -> poEq an1 bn1
+    -> poEq an2 bn2
+    -> poEq (ann2 a an1 an2) (ann2 b bn1 bn2).
+Proof.
+  intros. econstructor; eauto.
+Qed.
+
+Lemma annF_poEq A `{PartialOrder A} a b an1 bn1 an2 bn2
+  : poEq a b
+    -> poEq an1 bn1
+    -> poEq an2 bn2
+    -> poEq (annF a an1 an2) (annF b bn1 bn2).
+Proof.
+  intros. econstructor; eauto.
+  - eapply PIR2_length in H1; eauto.
+  - eapply get_PIR2; eauto.
+Qed.
+
+Hint Resolve ann0_poEq ann1_poEq ann2_poEq annF_poEq ann_R_setTopAnn_poEq.
+
+
+Lemma ann_R_setTopAnn_poLe (A : Type) `{PartialOrder A} (a : A) (b : A)
+         (an : ann A) (bn : ann A)
+  : poLe a b -> poLe an bn -> poLe (setTopAnn an a) (setTopAnn bn b).
+Proof.
+  intros. eapply ann_R_setTopAnn; eauto.
+Qed.
+
+Lemma ann0_poLe A `{PartialOrder A} a b
+  : poLe a b
+    -> poLe (ann0 a) (ann0 b).
+Proof.
+  intros. econstructor; eauto.
+Qed.
+
+Lemma ann1_poLe A `{PartialOrder A} a b an1 bn1
+  : poLe a b
+    -> poLe an1 bn1
+    -> poLe (ann1 a an1) (ann1 b bn1).
+Proof.
+  intros. econstructor; eauto.
+Qed.
+
+Lemma ann2_poLe A `{PartialOrder A} a b an1 bn1 an2 bn2
+  : poLe a b
+    -> poLe an1 bn1
+    -> poLe an2 bn2
+    -> poLe (ann2 a an1 an2) (ann2 b bn1 bn2).
+Proof.
+  intros. econstructor; eauto.
+Qed.
+
+Lemma annF_poLe A `{PartialOrder A} a b an1 bn1 an2 bn2
+  : poLe a b
+    -> poLe an1 bn1
+    -> poLe an2 bn2
+    -> poLe (annF a an1 an2) (annF b bn1 bn2).
+Proof.
+  intros. econstructor; eauto.
+  - eapply PIR2_length in H1; eauto.
+  - eapply get_PIR2; eauto.
+Qed.
+
+Hint Resolve ann0_poLe ann1_poLe ann2_poLe annF_poLe ann_R_setTopAnn_poLe.
+
+
+Lemma PIR2_poEq_zip (X Y Z : Type) `{PartialOrder X} `{PartialOrder Y}  `{PartialOrder Z}
+      (f : X -> Y -> Z) (l1 : 〔X〕) (l2 : 〔Y〕)
+      (l1' : 〔X〕) (l2' : 〔Y〕)
+      `{Proper _ (poEq ==> poEq ==> poEq) f}
+  : poEq l1 l1' -> poEq l2 l2' -> poEq (f ⊜ l1 l2) (f ⊜ l1' l2').
+Proof.
+  intros P1 P2. hnf in P1.
+  general induction P1; inv P2; simpl; econstructor; eauto.
+  - eapply H2; eauto.
+  - eapply IHP1; eauto.
+Qed.
+
+Lemma poEq_drop A `{PartialOrder A} a b n
+  : poEq a b
+    -> drop n a ≣ drop n b.
+Proof.
+  intros. eapply PIR2_drop. eauto.
+Qed.
+
+Lemma poLe_drop A `{PartialOrder A} a b n
+  : poLe a b
+    -> drop n a ⊑ drop n b.
+Proof.
+  intros. eapply PIR2_drop. eauto.
+Qed.
+
+Hint Resolve PIR2_poEq_zip poEq_drop poLe_drop.

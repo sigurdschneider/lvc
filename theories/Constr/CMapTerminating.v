@@ -91,7 +91,7 @@ Proof.
     + instantiate (1:=RD'). split; simpl; eauto.
 Qed.
 
-Lemma terminating_Dom_eq_add X `{OrderedType X} Y `{PartialOrder Y} U x (NIN:x ∉ U)
+Instance terminating_Dom_eq_add X `{OrderedType X} Y `{PartialOrder Y} U x (NIN:x ∉ U)
       (TRM:Terminating Y poLt)
       (T:Terminating ({ X : Map [X, Y] | domain X ⊆ U }) poLt)
   : Terminating ({ X : Map [X, Y] | domain X ⊆ {x; U} }) poLt.
@@ -118,7 +118,7 @@ Proof.
   split; eauto.
 Qed.
 
-Lemma terminating_bound_inv X `{OrderedType X} Y `{PartialOrder Y} (P P':Map [X, Y] -> Prop)
+Instance terminating_bound_inv X `{OrderedType X} Y `{PartialOrder Y} (P P':Map [X, Y] -> Prop)
       (IMPL: forall x, P' x -> P x )
   : Terminating ({ x : Map [X, Y] | P x }) poLt
     -> Terminating ({ x : Map [X, Y] | P' x }) poLt.
@@ -129,7 +129,7 @@ Proof.
 Qed.
 
 
-Lemma terminating_Dom X `{OrderedType X} Y `{PartialOrder Y} U
+Instance terminating_Dom X `{OrderedType X} Y `{PartialOrder Y} U
       (TRM:Terminating Y poLt)
   : Terminating ({ X : Map [X, Y] | domain X ⊆ U }) poLt.
 Proof.

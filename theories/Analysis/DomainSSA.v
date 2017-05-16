@@ -37,20 +37,20 @@ Qed.
 Hint Resolve poLe_option_None.
 
 Lemma domupd_le D `{PartialOrder D} (a b: Dom D) v v' x
-  : leMap a b
+  : poLe a b
     -> poLe v v'
-    -> leMap (domupd a x v) (domupd b x v').
+    -> poLe (domupd a x v) (domupd b x v').
 Proof.
   unfold leMap, domupd; intros.
   inv H1.
-  - repeat cases; clear_trivial_eqs; mlud; eauto.
-  - mlud; eauto.
+  - repeat cases; clear_trivial_eqs; hnf; intros; mlud; eauto.
+  - hnf; intros; mlud; eauto.
 Qed.
 
 Lemma domjoin_list_le D `{JoinSemiLattice D} (a b: Dom D) Z Y Y'
-  : leMap a b
+  : poLe a b
     -> poLe Y Y'
-    -> leMap (domjoin_list a Z Y)
+    -> poLe (domjoin_list a Z Y)
             (domjoin_list b Z Y').
 Proof.
   general induction Z; simpl domjoin_list; eauto.
@@ -61,21 +61,22 @@ Proof.
 Qed.
 
 Lemma domupd_eq D `{PartialOrder D} (a b: Dom D) v v' x
-  : eqMap a b
+  : poEq a b
     -> poEq v v'
-    -> eqMap (domupd a x v) (domupd b x v').
+    -> poEq (domupd a x v) (domupd b x v').
 Proof.
   unfold eqMap, domupd; intros.
   inv H1.
   - eapply eqMap_remove; eauto.
-  - repeat cases; clear_trivial_eqs. mlud; eauto.
+  - repeat cases; clear_trivial_eqs.
+    hnf; intros. mlud; eauto.
     econstructor. eauto.
 Qed.
 
 Lemma domjoin_list_eq  D `{JoinSemiLattice D} (a b: Dom D) Z Y Y'
-  : eqMap a b
+  : poEq a b
     -> poEq Y Y'
-    -> eqMap (domjoin_list a Z Y)
+    -> poEq (domjoin_list a Z Y)
             (domjoin_list b Z Y').
 Proof.
   general induction Z; simpl domjoin_list; eauto.
@@ -103,7 +104,7 @@ Proof.
 Qed.
 
 Lemma domjoin_list_exp  D `{JoinSemiLattice D} (m:Dom D) Z Y
-  : leMap m (domjoin_list m Z Y).
+  : poLe m (domjoin_list m Z Y).
 Proof.
   general induction Z; destruct Y; simpl domjoin_list; eauto;
     try reflexivity.
@@ -403,10 +404,10 @@ Proof.
 Qed.
 
 
-Lemma eqMap_domupd D `{PartialOrder D}
+Lemma poEq_domupd D `{PartialOrder D}
       (m:Dom D) x v
   : find x m === v
-    -> eqMap m (domupd m x v).
+    -> poEq m (domupd m x v).
 Proof.
   intros. hnf; intros; unfold domupd; cases; mlud; eauto;
   rewrite <- e; eauto.

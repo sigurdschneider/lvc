@@ -80,22 +80,136 @@ Smpl Add 130 simpl_forward_setTopAnn : inv_trivial.
 
 
 Lemma domupdd_eq (D : Type) `{PartialOrder D} (U : ⦃nat⦄) (d:VDom U D) x v pf
-  : MapInterface.find x (proj1_sig d) === v
+  : domenv (proj1_sig d) x === v
     -> d ≣ @domupdd _ _ d x v pf.
 Proof.
   eapply eqMap_domupd; eauto.
 Qed.
 
-Lemma vdom_upd_inv sT (D : Type) `{JoinSemiLattice D} (d d':VDom (occurVars sT) D) f fr x ZL ZLIncl s (ST:subTerm s sT) r (RA:RenamedApart.renamedApart s ra)
-  (EQ:fst (fst (forward f fr ZL ZLIncl s ST d' r)) ≣ d)
-  :  MapInterface.find x (proj1_sig d) === MapInterface.find x (proj1_sig d').
-Proof.
-  exploit (@forward_agree sT _ _ _ f fr ZL d (singleton x) s ST); eauto; dcr.
-  pose proof (
-Qed.
+Opaque poEq.
 
+(*
+Lemma vdom_upd_inv sT (D : Type) `{JoinSemiLattice D} (d d':VDom (occurVars sT) D) f fr ZL ZLIncl s (ST:subTerm s sT) r (AN:annotation s r)
+      (EQ: fst (forward f fr ZL ZLIncl s ST d' r) ≣ (d,r))
+      (fExt: forall U e (a a':VDom U D), a ≣ a' -> forall b b', b ≣ b' -> f _ b a e ≣ f _ b' a' e)
+      (frExt:forall U e (a a':VDom U D),
+          a ≣ a' -> forall b b', b ≣ b' -> fr _ b a e ≣ fr _ b' a' e)
+  :  d === d'.
+Proof.
+  general induction AN; subst; simpl in *; dcr;
+    repeat let_pair_case_eq; repeat let_case_eq; repeat simpl_pair_eqs; subst; simpl in *;
+      simpl in *; clear_trivial_eqs.
+  - eapply IHAN; eauto.
+    split; simpl.
+    + etransitivity; eauto.
+      eapply forward_ext; eauto.
+      admit.
+    + Transparent poEq.
+      etransitivity; eauto.
+      eapply forward_ext; eauto.
+      eapply domupdd_eq.
+      exploit (@forward_agree sT _ _ _ f fr ZL (domupdd d' (f (occurVars sT) (getAnn sa) d' e) (subTerm_EQ_Let_x eq_refl ST)) (singleton x) s (subTerm_EQ_Let eq_refl ST) ZLIncl); eauto; dcr.
+      etransitivity. symmetry. eapply
+      eapply H2. admit.
+
+Qed.
+*)
 Opaque poEq.
 Opaque poLe.
+
+
+Ltac PIR2_eq_simpl :=
+  match goal with
+  | [ H : PIR2 (ann_R eq) _ _ |- _ ] =>
+    eapply PIR2_R_impl with (R':=eq) in H;
+    [|intros ? ?; rewrite <- ann_R_eq; let A := fresh "A" in intros A; apply A]
+  | [ H : PIR2 eq _ _ |- _ ] =>
+    eapply PIR2_eq in H
+  | [ H : ann_R eq _ _ |- _ ] => rewrite ann_R_eq in H
+  end.
+
+Definition reachability_sound_indep (sT:stmt) D `{JoinSemiLattice D}
+           f fr pr ZL BL s (d:VDom (occurVars sT) D) r (ST:subTerm s sT) ZLIncl
+           (EQ:snd (fst (forward f fr ZL ZLIncl s ST d r)) ≣ r)
+           (Ann: annotation s r)
+           (DefZL: labelsDefined s (length ZL))
+           (DefBL: labelsDefined s (length BL))
+           (BL_le: poLe (snd (forward f fr ZL ZLIncl s ST d r)) BL)
+           (fExt:forall (U : ⦃nat⦄) (e : exp) (a0 a' : VDom U D),
+               a0 ≣ a' -> forall b b' : bool, b ≣ b' -> f U b a0 e ≣ f U b' a' e)
+           (frIndep:forall U e (a a':VDom U D),
+               forall b b', b ≣ b' -> fr _ b a e ≣ fr _ b' a' e)
+  : reachability pr Sound BL s r.
+Proof.
+  general induction Ann; simpl in *; inv DefZL; inv DefBL;
+    repeat let_case_eq; repeat simpl_pair_eqs; subst; simpl in *;
+      simpl in *; clear_trivial_eqs.
+  Transparent poEq.
+  - econstructor; eauto.
+  - econstructor; eauto.
+    + rewrite <- HEQ0. admit.
+    + rewrite <- HEQ. admit.
+    + eapply IHAnn1; eauto.
+      eapply @PIR2_zip_join_inv_left. eauto.
+      eauto with len.
+    + eapply IHAnn2; eauto.
+      eapply @PIR2_zip_join_inv_right. eauto.
+      eauto with len.
+  - edestruct get_in_range; eauto.
+    edestruct get_in_range; try eapply H4; eauto.
+    Transparent poLe. hnf in BL_le.
+    edestruct PIR2_nth; eauto using ListUpdateAt.list_update_at_get_3; dcr.
+    econstructor; simpl; eauto.
+  - econstructor; eauto.
+  - set (FWt:=(forward f fr (fst ⊝ s ++ ZL) (ZLIncl_ext ZL eq_refl ST ZLIncl) t
+                       (subTerm_EQ_Fun1 eq_refl ST) d ta)) in *.
+    set (FWF:=@forwardF sT (sTDom D) (snd FWt) (forward f fr (fst ⊝ s ++ ZL) (ZLIncl_ext ZL eq_refl ST ZLIncl)) s (joinTopAnn (A:=bool) ⊜ sa (snd FWt)) (fst (fst FWt)) (subTerm_EQ_Fun2 eq_refl ST)) in *.
+    eapply PIR2_get in H16; eauto with len.
+    assert (LenA:❬s❭ <= ❬snd FWt❭). {
+      subst FWt. len_simpl. omega.
+    }
+
+    assert (LenB:❬fst ⊝ s ++ ZL❭ = ❬snd FWt❭). {
+      subst FWt. len_simpl. omega.
+    }
+    econstructor; eauto.
+    + eapply IHAnn; eauto.
+      * erewrite (take_eta ❬s❭) at 1. eapply PIR2_app; eauto.
+        -- change (PIR2 impb) with (@poLe (list bool) _).
+           assert (PIR2 impb (Take.take ❬s❭ (snd FWt)) (getAnn ⊝ sa)). {
+             change (PIR2 impb) with (PIR2 (@poLe bool _)).
+             rewrite H.
+             exploit (snd_forwardF_inv _ _ _ _ _ _ _ H16); eauto.
+             eapply (@joinTopAnn_map_inv); eauto.
+           }
+           rewrite <- H4. subst FWF.
+           subst FWt. reflexivity.
+        -- rewrite <- BL_le.
+           eapply PIR2_drop.
+           etransitivity;[| eapply forwardF_mon; eauto].
+           reflexivity.
+           subst FWt.
+           eauto with len.
+    + intros.
+      exploit (snd_forwardF_inv _ _ _ _ _ _ _ H16); eauto.
+      exploit (snd_forwardF_inv' _ _ _ _ _ _ _ H16); eauto.
+      exploit (@joinTopAnn_map_inv bool). eapply H9.
+      eapply H1; eauto.
+      * eapply (@snd_forwardF_inv_get); eauto.
+        intros. admit.
+      * erewrite (take_eta ❬s❭) at 1. eapply PIR2_app; eauto.
+        -- rewrite H. etransitivity; eauto. unfold FWt.
+           admit.
+        -- etransitivity; eauto.
+          eapply PIR2_drop.
+          eapply forwardF_PIR2; eauto.
+           ++ eapply @PIR2_length in H9. rewrite H9. eauto.
+           ++ admit.
+           ++ repeat PIR2_eq_simpl. rewrite H9. eauto.
+Qed.
+
+
+
 
 Definition reachability_sound (sT:stmt) D `{JoinSemiLattice D}
            f fr pr ZL BL s (d:VDom (occurVars sT) D) r (ST:subTerm s sT) ZLIncl
@@ -104,9 +218,8 @@ Definition reachability_sound (sT:stmt) D `{JoinSemiLattice D}
     (DefZL: labelsDefined s (length ZL))
     (DefBL: labelsDefined s (length BL))
     (BL_le: poLe (snd (forward f fr ZL ZLIncl s ST d r)) BL)
-    (fExt: forall U e (a a':VDom U D), a ≣ a' -> forall b b', b ≣ b' -> f _ b a e ≣ f _ b' a' e)
-    (frExt:forall U e (a a':VDom U D),
-        a ≣ a' -> forall b b', b ≣ b' -> fr _ b a e ≣ fr _ b' a' e)
+    (frIndep:forall U e (a a':VDom U D),
+        forall b b', b ≣ b' -> fr _ b a e ≣ fr _ b' a' e)
   : reachability pr Sound BL s r.
 Proof.
   general induction Ann; simpl in *; inv DefZL; inv DefBL;
@@ -115,9 +228,15 @@ Proof.
   - clear_trivial_eqs.
     econstructor; eauto.
     eapply IHAnn; eauto. split; simpl; eauto.
+    exploit (@forward_agree sT _ _ _ f fr ZL (domupdd d (f (occurVars sT) (getAnn sa) d e) (subTerm_EQ_Let_x eq_refl ST)) (singleton x) s (subTerm_EQ_Let eq_refl ST) ZLIncl); eauto; dcr.
+    exploit (H2 x). admit.
     rewrite EQ.
     eapply domupdd_eq.
-
+    exploit (EQ x).
+    rewrite H4 in H1.
+    rewrite <- H1. symmetry.
+    unfold domenv, domupdd; simpl.
+    rewrite domupd_var_eq. reflexivity. reflexivity.
 
     rewrite forward_agree_def in EQ.
   - clear_trivial_eqs.
@@ -159,15 +278,6 @@ Proof.
     subst FWt. len_simpl.  omega.
     subst FWt. len_simpl. omega.
     intros. admit.
-    Ltac PIR2_eq_simpl :=
-      match goal with
-      | [ H : PIR2 (ann_R eq) _ _ |- _ ] =>
-        eapply PIR2_R_impl with (R':=eq) in H;
-        [|intros ? ?; rewrite <- ann_R_eq; let A := fresh "A" in intros A; apply A]
-      | [ H : PIR2 eq _ _ |- _ ] =>
-        eapply PIR2_eq in H
-      | [ H : ann_R eq _ _ |- _ ] => rewrite ann_R_eq in H
-      end.
     Transparent poEq. simpl in *.
     repeat PIR2_eq_simpl.
     subst FWF FWt.

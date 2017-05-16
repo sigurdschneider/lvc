@@ -349,7 +349,7 @@ Proof.
   rewrite <- map_map. reflexivity.
 Qed.
 
-Lemma terminating_ann Dom `{PO:PartialOrder Dom}
+Instance terminating_ann Dom `{PO:PartialOrder Dom}
   : Terminating Dom poLt
     -> Terminating (ann Dom) poLt.
 Proof.

@@ -142,11 +142,11 @@ Fixpoint forward (sT:stmt) (D: Type) `{JoinSemiLattice D}
           let Yc := List.map (Operation ∘ exp_transf _ b d) Y in
           (* we assume renamed apart here, so it's ok to leave definitions
        in d[X <-- Yc] that are /not/ defined at the point where f is defined *)
-          let AL := ((fun _ => false) ⊝ ZL) in
+          let AL := ((fun _ => bottom) ⊝ ZL) in
           (if b then domjoin_listd d Z Yc (ZLIncl_App_Z (counted f) ZLIncl) else d, ann0 b, list_update_at AL (counted f) b)
       | stmtReturn x as st, ann0 b =>
         fun EQ =>
-          (d, ann0 b, ((fun _ => false) ⊝ ZL))
+          (d, ann0 b, ((fun _ => bottom) ⊝ ZL))
       | stmtFun F t as st, annF b rF r =>
         fun EQ =>
           let ZL' := List.map fst F ++ ZL in
@@ -157,7 +157,7 @@ Fixpoint forward (sT:stmt) (D: Type) `{JoinSemiLattice D}
                                           F (zip (@joinTopAnn _ _ _) rF AL)
                                           a'(subTerm_EQ_Fun2 EQ ST)  in
           (a'', annF b (zip (@setTopAnn _) rF' AL') r', drop (length F) AL')
-      | _, _ => fun _ => (d, anr, ((fun _ => false) ⊝ ZL))
+      | _, _ => fun _ => (d, anr, ((fun _ => bottom) ⊝ ZL))
       end eq_refl).
 Defined.
 
@@ -243,6 +243,65 @@ Ltac fold_po :=
 
 Require Import FiniteFixpointIteration.
 
+
+Lemma poLe_list_struct A `{PartialOrder A} (a1 a2:A) b1 b2
+  : poLe a1 a2 -> poLe b1 b2  -> poLe (a1::b1) (a2::b2).
+  intros; econstructor; eauto.
+Qed.
+
+Lemma poEq_list_struct A `{PartialOrder A} (a1 a2:A) b1 b2
+  : poEq a1 a2 -> poEq b1 b2  -> poEq (a1::b1) (a2::b2).
+  intros; econstructor; eauto.
+Qed.
+
+Hint Resolve poLe_list_struct poEq_list_struct.
+
+
+Lemma poLe_vdom_struct D U `{PartialOrder D} (x x':Dom D) pf pf'
+  : x ⊑ x'
+    -> exist (fun m => CMapDomain.domain m [<=] U) x pf
+            ⊑ exist (fun m => CMapDomain.domain m [<=] U)  x' pf'.
+Proof.
+  intros. simpl. eapply H0.
+Qed.
+
+Lemma poEq_vdom_struct D U `{PartialOrder D} (x x':Dom D) pf pf'
+  : x ≣ x'
+    -> exist (fun m => CMapDomain.domain m [<=] U) x pf
+            ≣ exist (fun m => CMapDomain.domain m [<=] U)  x' pf'.
+Proof.
+  intros. simpl. eapply H0.
+Qed.
+
+Opaque poLe poEq bottom.
+
+Lemma poLe_domupdd D `{PartialOrder D} U d d' v v' x IN IN'
+  : d ⊑ d'
+    -> v ⊑ v'
+    -> @domupdd D U d x v IN ⊑ @domupdd D U d' x v' IN'.
+Proof.
+  intros. eapply poLe_vdom_struct.
+  eapply domupd_le; eauto.
+Qed.
+
+Lemma poEq_domupdd D `{PartialOrder D} U d d' v v' x IN IN'
+  : d ≣ d'
+    -> v ≣ v'
+    -> @domupdd D U d x v IN ≣ @domupdd D U d' x v' IN'.
+Proof.
+  intros. eapply poEq_vdom_struct.
+  eapply domupd_eq; eauto.
+Qed.
+
+Hint Resolve poLe_domupdd poEq_domupdd.
+
+Instance orb_poEq_proper : Proper (poEq ==> poEq ==> poEq) orb.
+Proof.
+  intuition.
+Qed.
+
+Hint Resolve orb_poEq_proper.
+
 Lemma forwardF_monotone (sT:stmt) (Dom : stmt -> Type) `{PartialOrder (Dom sT)}
       (forward forward' : forall s : stmt,
           subTerm s sT -> Dom sT -> ann bool -> Dom sT * ann bool * 〔bool〕) F
@@ -263,17 +322,7 @@ Lemma forwardF_monotone (sT:stmt) (Dom : stmt -> Type) `{PartialOrder (Dom sT)}
                    ⊑  forwardF BL' forward' F rF' d' ST.
 Proof.
   intros ST d d' LE_d rF rF' LE_rf.
-  general induction F; inv LE_rf; simpl;
-    try now (econstructor; simpl; eauto using @ann_R, @PIR2).
-  split; [split|].
-  - eapply IHF; eauto using get.
-    eapply fwdMon; eauto using get.
-  - econstructor; eauto.
-    eapply fwdMon; eauto using get.
-    eapply IHF; eauto using get. eapply fwdMon; eauto using get.
-  - eapply PIR2_impb_orb; eauto with len.
-    eapply fwdMon; eauto using get.
-    eapply IHF; eauto using get. eapply fwdMon; eauto using get.
+  general induction F; intros; inv LE_rf; simpl; eauto 100 using get.
 Qed.
 
 Lemma forwardF_ext (sT:stmt) (Dom : stmt -> Type) `{PartialOrder (Dom sT)}
@@ -296,18 +345,9 @@ Lemma forwardF_ext (sT:stmt) (Dom : stmt -> Type) `{PartialOrder (Dom sT)}
                (forwardF BL' forward' F rF' d' ST).
 Proof.
   intros ST d d' LE_d rF rF' LE_rf.
-  general induction F; inv LE_rf; simpl;
-    try now (econstructor; simpl; eauto using @ann_R, @PIR2).
-  split; [split|].
-  - eapply IHF; eauto using get.
-    eapply fwdMon; eauto using get.
-  - econstructor; eauto.
-    eapply fwdMon; eauto using get.
-    eapply IHF; eauto using get. eapply fwdMon; eauto using get.
-  - eapply PIR2_eq_zip; eauto with len.
-    eapply fwdMon; eauto using get.
-    eapply IHF; eauto using get. eapply fwdMon; eauto using get.
+  general induction F; intros; inv LE_rf; simpl; eauto 100 using get.
 Qed.
+
 
 Lemma forward_monotone sT D `{JoinSemiLattice D}
       (f: forall U : ⦃nat⦄, bool -> VDom U D -> exp -> ؟ D)
@@ -323,96 +363,23 @@ Proof with eauto using poLe_setTopAnn, poLe_getAnni.
   intros s.
   sind s; destruct s; intros ST ZL ZLIncl d d' LE_d r r'  LE_r;
     destruct r; inv LE_r;
-      simpl forward; repeat let_pair_case_eq; subst;
-        eauto 10 using @ann_R;
-        try now (econstructor; simpl; eauto using @ann_R).
-  - unfold domupdd. simpl. pose proof (fMon _ e  _ _ LE_d _ _ H3); eauto.
-    simpl in *. split; dcr; eauto; [split; eauto|]; simpl;
-                  eauto 20 using domupd_le, ann_R_setTopAnn, ann_R.
-    + eapply IH; eauto using domupd_le, ann_R_setTopAnn.
-    + econstructor; eauto. eapply IH; eauto using domupd_le.
-      eauto using ann_R_setTopAnn.
-    + eapply IH; eauto using domupd_le, ann_R_setTopAnn.
-  - pose proof (fMon _ (Operation e) _ _ LE_d) as LE_f.
-    pose proof (frMon _ e _ _ LE_d) as LE_fr.
-    pose proof (IH s1 ltac:(eauto) (subTerm_EQ_If1 eq_refl ST) ZL ZLIncl) as LE1; eauto.
-    pose proof (IH s2 ltac:(eauto) (subTerm_EQ_If2 eq_refl ST) ZL ZLIncl) as LE2; eauto.
-    split; [split|];simpl.
-    + eapply LE2; eauto. eapply LE1; eauto.
-      eapply ann_R_setTopAnn; eauto. eapply LE_fr; eauto.
-      eapply ann_R_setTopAnn; eauto. eapply LE_fr; eauto.
-    + econstructor; eauto.
-      eapply LE1; eauto.
-      eapply ann_R_setTopAnn; eauto. eapply LE_fr; eauto.
-      eapply LE2; eauto. eapply LE1; eauto.
-      eapply ann_R_setTopAnn; eauto. eapply LE_fr; eauto.
-      eapply ann_R_setTopAnn; eauto. eapply LE_fr; eauto.
-    + eapply PIR2_impb_orb; eauto with len.
-      * eapply LE1; eauto.
-        eapply ann_R_setTopAnn; eauto. eapply LE_fr; eauto.
-      * eapply LE2; eauto. eapply LE1; eauto.
-        eapply ann_R_setTopAnn; eauto. eapply LE_fr; eauto.
-        eapply ann_R_setTopAnn; eauto. eapply LE_fr; eauto.
-  - split; [split|]; simpl.
-    + repeat (cases; eauto; simpl in *).
+      simpl forward; repeat let_pair_case_eq; subst; eauto.
+  - eauto 100.
+  - eauto 100.
+  - eapply poLe_struct.
+    + eapply poLe_struct; eauto.
+      repeat (cases; eauto; simpl in *).
+      eapply poLe_vdom_struct.
       eapply domjoin_list_le; eauto.
       revert fMon LE_d.
       clear_all; intros.
-      * general induction Y; eauto.
-        simpl List.map. econstructor.
-        eapply fMon; eauto.
-        eapply IHY; eauto.
-      * etransitivity; eauto using domjoin_list_exp.
-   + econstructor; eauto.
-   + pose proof (@update_at_poLe bool _ _ _ ZL l _ _ H2).
-     simpl in *. eauto.
-  - split; [split|]; simpl.
-    + pose proof (@forwardF_monotone sT (sTDom D) _); eauto.
-      eapply H1; eauto.
-      eapply IH; eauto.
-      eapply ann_R_setTopAnn; eauto.
-      eapply PIR2_zip_joinTopAnnO; eauto.
-      hnf. eapply PIR2_get; eauto.
-      eapply IH; eauto.
-      eapply ann_R_setTopAnn; eauto.
-      eapply IH; eauto.
-      eapply ann_R_setTopAnn; eauto.
-    + econstructor; eauto.
-      * len_simpl; try reflexivity;
-        eauto with len.
-      * eapply get_PIR2.
-        eapply (@PIR2_zip_setTopAnnO bool PartialOrder_bool).
-        pose proof (@forwardF_monotone sT (sTDom D) _); eauto.
-        eapply H1; eauto.
-        eapply IH; eauto.
-        eapply ann_R_setTopAnn; eauto.
-        eapply (@PIR2_zip_joinTopAnnO bool PartialOrder_bool); eauto.
-        eapply PIR2_get; eauto.
-        eapply IH; eauto.
-        eapply ann_R_setTopAnn; eauto.
-        eapply IH; eauto.
-        eapply ann_R_setTopAnn; eauto.
-        eapply forwardF_monotone; eauto.
-        eapply IH; eauto.
-        eapply ann_R_setTopAnn; eauto.
-        eapply (@PIR2_zip_joinTopAnnO bool PartialOrder_bool); eauto.
-        eapply PIR2_get; eauto.
-        eapply IH; eauto.
-        eapply ann_R_setTopAnn; eauto.
-        eapply IH; eauto.
-        eapply ann_R_setTopAnn; eauto.
-      * eapply IH; eauto.
-        eapply ann_R_setTopAnn; eauto.
-    + eapply PIR2_drop.
-      eapply forwardF_monotone; eauto.
-      eapply IH; eauto.
-      eapply ann_R_setTopAnn; eauto.
-      eapply PIR2_zip_joinTopAnnO; eauto.
-      hnf. eapply PIR2_get; eauto.
-      eapply IH; eauto.
-      eapply ann_R_setTopAnn; eauto.
-      eapply IH; eauto.
-      eapply ann_R_setTopAnn; eauto.
+      * general induction Y; simpl; eauto.
+      * etransitivity; eauto.
+        destruct d'; eapply poLe_vdom_struct; simpl.
+        eapply domjoin_list_exp.
+    + eapply update_at_poLe; eauto.
+  - eapply PIR2_get in H7; eauto.
+    eauto 100 using forwardF_monotone.
 Qed.
 
 Lemma forward_ext sT D `{JoinSemiLattice D}
@@ -430,92 +397,19 @@ Proof with eauto using poLe_setTopAnn, poLe_getAnni.
   sind s; destruct s; intros ST ZL ZLIncl d d' LE_d r r'  LE_r;
     destruct r; inv LE_r;
       simpl forward; repeat let_pair_case_eq; subst;
-        eauto 10 using @ann_R;
-        try now (econstructor; simpl; eauto using @ann_R).
-  - unfold domupdd. simpl. pose proof (fMon _ e  _ _ LE_d _ _ H3); eauto.
-    simpl in *. split; dcr; eauto; [split; eauto|]; simpl;
-                  eauto 20 using domupd_le, ann_R_setTopAnn, ann_R.
-    + eapply IH; eauto using domupd_eq, ann_R_setTopAnn.
-    + econstructor; eauto. eapply IH; eauto using domupd_eq.
-      eauto using ann_R_setTopAnn.
-    + eapply IH; eauto using domupd_eq, ann_R_setTopAnn.
-  - pose proof (fMon _ (Operation e) _ _ LE_d) as LE_f.
-    pose proof (frMon _ e _ _ LE_d) as LE_fr.
-    pose proof (IH s1 ltac:(eauto) (subTerm_EQ_If1 eq_refl ST) ZL ZLIncl) as LE1; eauto.
-    pose proof (IH s2 ltac:(eauto) (subTerm_EQ_If2 eq_refl ST) ZL ZLIncl) as LE2; eauto.
-    split; [split|];simpl.
-    + eapply LE2; eauto. eapply LE1; eauto.
-      eapply ann_R_setTopAnn; eauto. eapply LE_fr; eauto.
-      eapply ann_R_setTopAnn; eauto. eapply LE_fr; eauto.
-    + econstructor; eauto.
-      eapply LE1; eauto.
-      eapply ann_R_setTopAnn; eauto. eapply LE_fr; eauto.
-      eapply LE2; eauto. eapply LE1; eauto.
-      eapply ann_R_setTopAnn; eauto. eapply LE_fr; eauto.
-      eapply ann_R_setTopAnn; eauto. eapply LE_fr; eauto.
-    + eapply PIR2_eq_zip; eauto.
-      * eapply LE1; eauto.
-        eapply ann_R_setTopAnn; eauto. eapply LE_fr; eauto.
-      * eapply LE2; eauto. eapply LE1; eauto.
-        eapply ann_R_setTopAnn; eauto. eapply LE_fr; eauto.
-        eapply ann_R_setTopAnn; eauto. eapply LE_fr; eauto.
-  - split; [split|]; simpl.
+        eauto 10.
+  - eauto 100.
+  - eauto 100 using orb_poEq_proper.
+  - split; [split|]; simpl; eauto 20.
     + repeat (cases; eauto; simpl in *).
+      eapply poEq_vdom_struct.
       eapply domjoin_list_eq; eauto.
       revert fMon LE_d.
       clear_all; intros.
-      * general induction Y; eauto.
-        simpl List.map. econstructor.
-        eapply fMon; eauto.
-        eapply IHY; eauto.
-   + econstructor; eauto.
+      * general induction Y; simpl; eauto 20.
    + inv H2. reflexivity.
-  - split; [split|]; simpl.
-    + pose proof (@forwardF_ext sT (sTDom D) _); eauto.
-      eapply H1; eauto.
-      eapply IH; eauto.
-      eapply ann_R_setTopAnn; eauto.
-      eapply PIR2_poEq_zip_joinTopAnnO; eauto.
-      hnf. eapply PIR2_get; eauto.
-      eapply IH; eauto.
-      eapply ann_R_setTopAnn; eauto.
-      eapply IH; eauto.
-      eapply ann_R_setTopAnn; eauto.
-    + econstructor; eauto.
-      * len_simpl; try reflexivity;
-        eauto with len.
-      * eapply get_PIR2.
-        eapply (@PIR2_poEq_zip_setTopAnnO bool PartialOrder_bool).
-        eapply forwardF_ext; eauto.
-        eapply IH; eauto.
-        eapply ann_R_setTopAnn; eauto.
-        eapply (@PIR2_poEq_zip_joinTopAnnO bool PartialOrder_bool); eauto.
-        eapply PIR2_get; eauto.
-        eapply IH; eauto.
-        eapply ann_R_setTopAnn; eauto.
-        eapply IH; eauto.
-        eapply ann_R_setTopAnn; eauto.
-        eapply forwardF_ext; eauto.
-        eapply IH; eauto.
-        eapply ann_R_setTopAnn; eauto.
-        eapply (@PIR2_poEq_zip_joinTopAnnO bool PartialOrder_bool); eauto.
-        eapply PIR2_get; eauto.
-        eapply IH; eauto.
-        eapply ann_R_setTopAnn; eauto.
-        eapply IH; eauto.
-        eapply ann_R_setTopAnn; eauto.
-      * eapply IH; eauto.
-        eapply ann_R_setTopAnn; eauto.
-    + eapply PIR2_drop.
-      eapply forwardF_ext; eauto.
-      eapply IH; eauto.
-      eapply ann_R_setTopAnn; eauto.
-      eapply PIR2_poEq_zip_joinTopAnnO; eauto.
-      hnf. eapply PIR2_get; eauto.
-      eapply IH; eauto.
-      eapply ann_R_setTopAnn; eauto.
-      eapply IH; eauto.
-      eapply ann_R_setTopAnn; eauto.
+  - eapply PIR2_get in H7; eauto.
+    eauto 100 using forwardF_ext.
 Qed.
 
 
@@ -649,14 +543,9 @@ Proof.
     eapply forward_annotation; eauto.
     eapply (proj2_sig (snd dr)).
   - eapply bottom_least.
-  - eapply terminating_pair; eauto.
-    + eapply terminating_Dom; eauto.
-    + eapply terminating_sig; eauto.
-      eapply terminating_ann.
-      eapply terminating_bool.
-  - hnf; intros.
+  - Transparent poLe. hnf; intros. simpl.
     eapply (forward_monotone f fr fMon frMon); eauto.
-    eapply H. eapply H.
+    eapply H.
 Defined.
 
 Lemma snd_forwardF_inv (sT:stmt) D `{JoinSemiLattice D} f fr BL ZL ZLIncl F sa AE STF
@@ -763,6 +652,7 @@ Proof.
 Qed.
 
 
+Transparent poEq poLe.
 
 Lemma snd_forwardF_inv_get sT D `{JoinSemiLattice D} f fr BL ZL ZLIncl F sa AE STF
       (Len1:❬F❭ = ❬sa❭) (Len2:❬F❭ <= ❬BL❭) (Len3:❬ZL❭ = ❬BL❭)
@@ -775,6 +665,39 @@ Lemma snd_forwardF_inv_get sT D `{JoinSemiLattice D} f fr BL ZL ZLIncl F sa AE S
       (fExt: forall U e (a a':VDom U D), a ≣ a' -> forall b b', b ≣ b' -> f _ b a e ≣ f _ b' a' e)
       (frExt:forall U e (a a':VDom U D),
           a ≣ a' -> forall b b', b ≣ b' -> fr _ b a e ≣ fr _ b' a' e)
+      n r Zs (Getsa:get sa n r)
+      (GetF:get F n Zs) (STZs:subTerm (snd Zs) sT)
+  : ann_R eq (snd (fst (forward f fr ZL ZLIncl STZs AE r))) r.
+Proof.
+  rewrite forwardF_ext in P1;try eapply P2; try reflexivity.
+  Focus 2. intros. eapply forward_ext; eauto.
+  clear Len3 P2.
+  general induction Len1; simpl in *.
+  destruct BL; isabsurd; simpl in *. inv Getsa; inv GetF.
+  - inv P1.
+    assert((STF 0 Zs (@getLB (params * stmt) XL Zs)) = STZs).
+    eapply subTerm_PI. rewrite <- H1.
+    eapply pf.
+  - inv P1.
+    eapply IHLen1; eauto using get.
+    Focus 2.
+    rewrite forwardF_ext; eauto.
+    intros. eapply forward_ext; eauto.
+    symmetry. eapply EQ; eauto using get. reflexivity.
+    simpl. omega.
+Qed.
+
+Lemma snd_forwardF_inv_get_indep sT D `{JoinSemiLattice D} f fr BL ZL ZLIncl F sa AE STF
+      (Len1:❬F❭ = ❬sa❭) (Len2:❬F❭ <= ❬BL❭) (Len3:❬ZL❭ = ❬BL❭)
+      (P1:PIR2 (ann_R eq)
+               (snd (fst (@forwardF sT (sTDom D)  BL (forward f fr ZL ZLIncl) F
+                                  (joinTopAnn (A:=bool) ⊜ sa BL) AE STF))) sa)
+      (P2:PIR2 (ann_R eq) (joinTopAnn (A:=bool) ⊜ sa BL) sa)
+      (EQ: forall n Zs r (ST:subTerm (snd Zs) sT), get F n Zs -> get sa n r ->
+                        poEq (fst (fst (forward f fr ZL ZLIncl ST AE r))) AE)
+      (fExt: forall U e (a a':VDom U D), a ≣ a' -> forall b b', b ≣ b' -> f _ b a e ≣ f _ b' a' e)
+      (frIndep:forall U e (a a':VDom U D),
+          forall b b', b ≣ b' -> fr _ b a e ≣ fr _ b' a' e)
       n r Zs (Getsa:get sa n r)
       (GetF:get F n Zs) (STZs:subTerm (snd Zs) sT)
   : ann_R eq (snd (fst (forward f fr ZL ZLIncl STZs AE r))) r.
@@ -793,9 +716,10 @@ Proof.
     Focus 2.
     rewrite forwardF_ext; eauto.
     intros. eapply forward_ext; eauto.
-    symmetry. eapply EQ; eauto using get. reflexivity.
+    symmetry. eapply frIndep; eauto using get. reflexivity.
     simpl. omega.
 Qed.
+
 
 
 
@@ -825,7 +749,6 @@ Qed.
 
 Local Notation "'getD' X" := (proj1_sig (fst (fst X))) (at level 10, X at level 0).
 
-Require Import RenamedApart.
 
 Definition defVars' ( Zs:params*stmt) := of_list (fst Zs) ∪ definedVars (snd Zs).
 
@@ -845,7 +768,7 @@ Lemma forwardF_agree (sT:stmt) D `{JoinSemiLattice D}
             (anr : ann bool),
             annotation (snd Zs) anr ->
             agree_on (option_R poEq)
-                     (G \ definedVars (snd Zs) ∪ list_union (of_list ⊝ ZL))
+                     (G \ (definedVars (snd Zs) ∪ list_union (of_list ⊝ ZL)))
                      (domenv (proj1_sig AE))
                      (domenv (getD
                                 (forward f fr ZL ZLIncl ST AE anr))) /\
@@ -874,6 +797,24 @@ Proof.
     + norm_lunion. clear_all. cset_tac.
     + norm_lunion. unfold defVars'. clear_all. cset_tac.
 Qed.
+
+Lemma list_union_definedVars F
+  : list_union ((fun f0 : params * stmt => definedVars (snd f0) ∪ of_list (fst f0)) ⊝ F)
+               [=] list_union (of_list ⊝ fst ⊝ F) ∪ list_union (definedVars ⊝ snd ⊝ F).
+Proof.
+  general induction F; simpl; eauto with cset.
+  norm_lunion. rewrite IHF; clear IHF. cset_tac.
+Qed.
+
+Lemma list_union_definedVars' F
+  : list_union (defVars' ⊝ F)
+               [=] list_union (of_list ⊝ fst ⊝ F) ∪ list_union (definedVars ⊝ snd ⊝ F).
+Proof.
+  general induction F; simpl; eauto with cset.
+  norm_lunion. rewrite IHF; clear IHF. unfold defVars' at 1.
+  cset_tac.
+Qed.
+
 
 Lemma forward_agree sT D `{JoinSemiLattice D} f fr
       ZL AE G s (ST:subTerm s sT) ZLIncl anr
@@ -956,42 +897,37 @@ Proof.
   - repeat let_pair_case_eq; repeat simpl_pair_eqs; subst; simpl;
       pe_rewrite; set_simpl.
     edestruct (IH s ltac:(eauto)) with (ZL:=fst ⊝ F ++ ZL) (anr:=(setTopAnn ta a)); eauto using setTopAnn_annotation.
+    rewrite List.map_app in *.
+    rewrite list_union_app in *; eauto.
+    rewrite list_union_definedVars.
     split.
     + etransitivity.
-      * eapply agree_on_incl. eapply H1.
-        rewrite List.map_app.
-        rewrite list_union_app; eauto.
-        instantiate (1:=G).
-        assert (
-            list_union (of_list ⊝ fst ⊝ F)
-                       ⊆ list_union ((fun f0 : params * stmt => definedVars (snd f0) ∪ of_list (fst f0)) ⊝ F)). {
-          admit.
-        }
-        rewrite H5; eauto. clear_all; cset_tac.
+      * eapply agree_on_incl; eauto.
+        clear_all; cset_tac.
       * eapply agree_on_incl.
         eapply forwardF_agree with (ZL':=fst ⊝ F ++ ZL); eauto.
         -- len_simpl. rewrite H3. eauto with len.
         -- intros. inv_get.
            eapply setTopAnn_annotation; eauto.
-        -- intros.
-           pose proof (IH (snd Zs) ltac:(eauto) anr AE0 G0 ST0 ZL0 ZLIncl0).
-           eapply H8.
-          rewrite List.map_app. rewrite list_union_app; eauto.
-           rewrite list_union_defVars_decomp; eauto with len.
-           clear_all. cset_tac.
+        -- rewrite List.map_app.
+           rewrite list_union_app; eauto.
+           instantiate (1:=G).
+           rewrite list_union_definedVars'.
+           clear_all; cset_tac.
     + etransitivity.
-      * eapply agree_on_incl. eapply H8.
-        cset_tac.
+      * eapply agree_on_incl; eauto.
+        clear_all; cset_tac.
       * eapply agree_on_incl.
-        eapply forwardF_agree with (ZL':=fst ⊝ F ++ ZL);
-          intros; eauto.
-        -- len_simpl. rewrite H10. eauto with len.
-        -- inv_get. eapply setTopAnn_annotation; eauto.
-        -- rewrite list_union_defVars_decomp; eauto.
+        eapply forwardF_agree with (ZL':=fst ⊝ F ++ ZL); eauto.
+        -- len_simpl. rewrite H3. eauto with len.
+        -- intros. inv_get.
+           eapply setTopAnn_annotation; eauto.
+        -- instantiate (1:=G).
            clear_all; cset_tac.
 Qed.
 
-Lemma forward_agree sT D `{JoinSemiLattice D} f fr
+
+Lemma forward_agree_ren sT D `{JoinSemiLattice D} f fr
       ZL AE G s (ST:subTerm s sT) ra ZLIncl anr
       (RA:renamedApart s ra) (AN:annotation s anr)
   : agree_on poEq (G \ (snd (getAnn ra) ∪ list_union (of_list ⊝ ZL)))
@@ -1005,103 +941,37 @@ Lemma forward_agree sT D `{JoinSemiLattice D} f fr
                         (fst (fst (forward f fr ZL ZLIncl
                                             ST AE anr))))).
 Proof.
-  general induction RA; invt @annotation; simpl in *;
-    try now (split; reflexivity); simpl.
-  - destruct e;
-      repeat let_pair_case_eq; repeat simpl_pair_eqs; subst; simpl;
-        pe_rewrite; set_simpl.
-    + edestruct @IHRA; clear IHRA; dcr; try split.
-      * instantiate (1:=(setTopAnn sa a)).
-        eapply setTopAnn_annotation; eauto.
-      * etransitivity; [|eapply agree_on_incl; eauto]; simpl.
-        eapply domupd_dead. cset_tac.
-        cset_tac.
-        cset_tac.
-      * simpl in *.
-        eapply agree_on_option_R_fstNoneOrR with (R:=poLe); [|eapply agree_on_incl; eauto|].
-        -- eapply domupd_dead; eauto. cset_tac.
-        -- cset_tac.
-        -- intros. etransitivity; eauto.
-    + edestruct @IHRA; clear IHRA; dcr; try split.
-      * instantiate (1:=(setTopAnn sa a)).
-        eapply setTopAnn_annotation; eauto.
-      * etransitivity; [|eapply agree_on_incl; eauto]; simpl.
-        simpl in *.
-        eapply domupd_dead. cset_tac.
-        cset_tac. cset_tac.
-      * simpl in *.
-        eapply agree_on_option_R_fstNoneOrR with (R:=poLe); [|eapply agree_on_incl; eauto|].
-        eapply domupd_dead. cset_tac. cset_tac. cset_tac.
-        intros. etransitivity; eauto.
-  - repeat let_pair_case_eq; repeat simpl_pair_eqs; subst; simpl;
-      pe_rewrite; set_simpl.
-    split.
-    + symmetry; etransitivity; symmetry.
-      * eapply agree_on_incl.
-        -- eapply IHRA2; eauto.
-           eapply setTopAnn_annotation; eauto.
-        -- cset_tac.
-      * symmetry; etransitivity; symmetry.
-        -- eapply agree_on_incl. eapply IHRA1; eauto.
-           eapply setTopAnn_annotation; eauto.
-           cset_tac.
-        -- simpl. reflexivity.
-    +
-      edestruct @IHRA1 with (ZL:=ZL)
-                              (G:=G)
-                              (ST:= (@subTerm_EQ_If1 sT (stmtIf e s t) e s t
-                                                     (@eq_refl stmt
-                                                               (stmtIf e s t)) ST)) (ZLIncl:=ZLIncl);
-        [|etransitivity;[ eapply agree_on_incl; eauto |eapply agree_on_incl;[eapply IHRA2|]]];
-        try eapply setTopAnn_annotation; eauto; cset_tac.
-  - set_simpl. unfold domjoin_listd.
-    destruct (get_dec ZL (Var.labN f)); dcr.
-    + cases; eauto; simpl.
-      * erewrite get_nth; eauto.
-        split.
-        eapply agree_on_incl.
-        eapply domupd_list_agree; eauto. hnf; reflexivity.
-        -- rewrite <- incl_list_union; eauto.
-           cset_tac. reflexivity.
-        -- eapply agree_on_incl.
-           eapply domupd_list_agree_poLe; eauto. reflexivity.
-      * split; reflexivity.
-    + cases; try (split; reflexivity).
-      simpl.
-      rewrite !not_get_nth_default; eauto.
-      split; simpl; reflexivity.
-  - repeat let_pair_case_eq; repeat simpl_pair_eqs; subst; simpl;
-      pe_rewrite; set_simpl.
-    edestruct IHRA with (ZL:=fst ⊝ F ++ ZL) (anr:=(setTopAnn ta a)); eauto using setTopAnn_annotation.
-    split.
-    + etransitivity.
-      * eapply agree_on_incl. eapply H5.
-        rewrite list_union_defVars_decomp; eauto.
-        rewrite List.map_app.
-        rewrite list_union_app; eauto.
-        clear_all; cset_tac.
-      * eapply agree_on_incl.
-        eapply forwardF_agree with (ZL':=fst ⊝ F ++ ZL); eauto.
-        -- len_simpl. rewrite H10. eauto with len.
-        -- intros. inv_get.
-           eapply setTopAnn_annotation; eauto.
-        -- rewrite List.map_app. rewrite list_union_app; eauto.
-           rewrite list_union_defVars_decomp; eauto with len.
-           clear_all. cset_tac.
-    + etransitivity.
-      * eapply agree_on_incl. eapply H8.
-        cset_tac.
-      * eapply agree_on_incl.
-        eapply forwardF_agree with (ZL':=fst ⊝ F ++ ZL);
-          intros; eauto.
-        -- len_simpl. rewrite H10. eauto with len.
-        -- inv_get. eapply setTopAnn_annotation; eauto.
-        -- rewrite list_union_defVars_decomp; eauto.
-           clear_all; cset_tac.
+  rewrite <- renamedApart_occurVars; eauto.
+  eapply forward_agree; eauto.
 Qed.
 
-Definition delete_me := True.
+Lemma forward_agree_def_ren sT D `{JoinSemiLattice D} ZL AE G s f fr
+      (ST:subTerm s sT) ra ZLIncl anr pf
+  (RA:renamedApart s ra) (AN:annotation s anr)
+  : agree_on poEq (G \ (snd (getAnn ra) ∪ list_union (of_list ⊝ ZL)))
+             (domenv AE)
+             (domenv (proj1_sig
+                        (fst (fst (forward f fr
+                                            ZL ZLIncl
+                                            ST (exist _ AE pf) anr))))).
+Proof.
+  edestruct forward_agree_ren with (AE:=exist _ AE pf); dcr; eauto.
+Qed.
 
+Lemma forward_agree_def sT D `{JoinSemiLattice D} ZL AE G s f fr
+      (ST:subTerm s sT) ra ZLIncl anr pf
+  (RA:renamedApart s ra) (AN:annotation s anr)
+  : agree_on poEq (G \ (definedVars s ∪ list_union (of_list ⊝ ZL)))
+             (domenv AE)
+             (domenv (proj1_sig
+                        (fst (fst (forward f fr
+                                            ZL ZLIncl
+                                            ST (exist _ AE pf) anr))))).
+Proof.
+  edestruct forward_agree with (AE:=exist _ AE pf); dcr; eauto.
+Qed.
+
+(*
 Lemma eqMap_forwardF_t (sT:stmt) D `{JoinSemiLattice D} f fr
       (F : 〔params * stmt〕)
       (t : stmt)
@@ -1149,13 +1019,13 @@ Proof.
     revert Disj2 Disj3 Disj5. norm_lunion. intros Disj2 Disj3 Disj5.
     edestruct (IHLen1 sT _ _ _ f fr t ZL); eauto using get. omega.
     hnf; intros z.
-    exploit (@forward_agree sT _ _ _ f fr ZL AE (singleton z) t STt tra ZLIncl); eauto; dcr.
-    exploit (@forward_agree sT _ _ _ f fr ZL AE' (singleton z) (snd x) (STF 0 x (getLB XL x)) a ZLIncl); eauto using get; dcr.
-    exploit (@forwardF_agree sT _ _ _ BL (singleton z) XL f fr ra YL ZL ZLIncl);
+    exploit (@forward_agree_ren sT _ _ _ f fr ZL AE (singleton z) t STt tra ZLIncl); eauto; dcr.
+    exploit (@forward_agree_ren sT _ _ _ f fr ZL AE' (singleton z) (snd x) (STF 0 x (getLB XL x)) a ZLIncl); eauto using get; dcr.
+    exploit (@forwardF_agree_ren sT _ _ _ BL (singleton z) XL f fr ra YL ZL ZLIncl);
       eauto using get; dcr.
     eauto with len.
     intros. inv_get.
-    eapply forward_agree; eauto using get.
+    eapply forward_agree_ren; eauto using get.
     instantiate (3:=(fst (fst (forward f fr ZL ZLIncl (STF 0 x (getLB _ _)) AE' y)))) in H6.
     instantiate (1:=(fun (n : nat) (s : params * stmt) (H : get XL n s) =>
                      STF (S n) s (getLS x H))) in H6.
@@ -1262,17 +1132,4 @@ Proof.
          rewrite H11. reflexivity.
          revert n n0; clear_all; cset_tac.
 Qed.
-
-
-Lemma forward_agree_def sT D `{JoinSemiLattice D} ZL AE G s f fr
-      (ST:subTerm s sT) ra ZLIncl anr pf
-  (RA:renamedApart s ra) (AN:annotation s anr)
-  : agree_on poEq (G \ (snd (getAnn ra) ∪ list_union (of_list ⊝ ZL)))
-             (domenv AE)
-             (domenv (proj1_sig
-                        (fst (fst (forward f fr
-                                            ZL ZLIncl
-                                            ST (exist _ AE pf) anr))))).
-Proof.
-  edestruct forward_agree with (AE:=exist _ AE pf); dcr; eauto.
-Qed.
+*)

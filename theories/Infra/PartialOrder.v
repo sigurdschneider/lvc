@@ -43,7 +43,7 @@ Proof.
   exfalso; eapply H1; eapply poLe_refl; symmetry; eauto.
 Qed.
 
-Hint Resolve poLt_intro poLt_poLe poLe_refl poLe_antisymmetric.
+Hint Resolve poLt_intro poLt_poLe poLe_refl poLe_antisymmetric | 100.
 
 Notation "s '⊑' t" := (poLe s t) (at level 70, no associativity).
 Notation "s '⊏' t" := (poLt s t) (at level 70, no associativity).
@@ -65,6 +65,39 @@ Proof.
   - hnf; intros; dcr; split; etransitivity; eauto.
   - hnf; intros; dcr; split; eapply poLe_antisymmetric; eauto.
 Defined.
+
+
+Lemma poEq_fst A `{PartialOrder A} B `{PartialOrder B} (a b:A * B)
+  : poEq a b -> poEq (fst a) (fst b).
+  firstorder.
+Qed.
+
+Lemma poEq_snd A `{PartialOrder A} B `{PartialOrder B} (a b:A * B)
+  : poEq a b -> poEq (snd a) (snd b).
+  firstorder.
+Qed.
+
+Lemma poEq_struct A `{PartialOrder A} B `{PartialOrder B} (a1 a2:A) (b1 b2:B)
+  : poEq a1 a2 -> poEq b1 b2  -> poEq (a1,b1) (a2,b2).
+  firstorder.
+Qed.
+
+Lemma poLe_fst A `{PartialOrder A} B `{PartialOrder B} (a b:A * B)
+  : poLe a b -> poLe (fst a) (fst b).
+  firstorder.
+Qed.
+
+Lemma poLe_snd A `{PartialOrder A} B `{PartialOrder B} (a b:A * B)
+  : poLe a b -> poLe (snd a) (snd b).
+  firstorder.
+Qed.
+
+Lemma poLe_struct A `{PartialOrder A} B `{PartialOrder B} (a1 a2:A) (b1 b2:B)
+  : poLe a1 a2 -> poLe b1 b2  -> poLe (a1,b1) (a2,b2).
+  firstorder.
+Qed.
+
+Hint Resolve poEq_fst poEq_snd poEq_struct poLe_fst poLe_snd poLe_struct.
 
 Instance PartialOrder_list_instance X `{PartialOrder X}
 : PartialOrder (list X) := {

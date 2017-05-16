@@ -88,7 +88,7 @@ Proof.
         intros ? ? Get; inv Get; eauto using get.
 Qed.
 
-Lemma terminating_sig Dom `{PO:PartialOrder Dom}
+Instance terminating_sig Dom `{PO:PartialOrder Dom}
   : Terminating Dom poLt
     -> forall P, Terminating { x : Dom | P x } poLt.
 Proof.
@@ -100,7 +100,7 @@ Proof.
   eapply H0. split; eauto.
 Qed.
 
-Lemma terminating_pair Dom `{PO:PartialOrder Dom} Dom' `{PO':PartialOrder Dom'}
+Instance terminating_pair Dom `{PO:PartialOrder Dom} Dom' `{PO':PartialOrder Dom'}
   : Terminating Dom poLt
     -> Terminating Dom' poLt
     -> Terminating (Dom * Dom') poLt.
@@ -123,7 +123,7 @@ Proof.
   + eapply H0; eauto.
 Qed.
 
-Lemma terminating_bool
+Instance terminating_bool
   : Terminating bool poLt.
 Proof.
   intros x.
