@@ -220,6 +220,12 @@ Ltac refold_PIR2_PO :=
     change (PIR2 (@poLe D PO)) with (@poLe (list D) _)
   | [ |- context [ PIR2 (@poEq ?D ?PO) ] ] =>
     change (PIR2 (@poEq D PO)) with (@poEq (list D) _)
+(*  | [ H : context [ PIR2 (@poEq _ _) ] |- _ ] =>
+    let EQ := fresh "PIR2_EQ" in
+    assert (EQ:forall X (PO : PartialOrder X) x y,
+               PIR2 (@poEq X PO) x y = @poEq (list X) (@PartialOrder_list X PO) x y) by
+        (intros; reflexivity);
+    setoid_rewrite EQ in H*)
   end.
 
 Smpl Add refold_PIR2_PO : inversion_cleanup.
@@ -413,10 +419,7 @@ Lemma PIR2_zip_join_inv_right X `{JoinSemiLattice X} A B C
     -> poLe B C.
 Proof.
   intros.
-  general induction H2; inv H1; simpl in *; clear_trivial_eqs; eauto using PIR2.
-  (* todo: refolding does not work *)
-  specialize (IHlength_eq H H0). inv_cleanup.
-  eauto using join_poLe_right_inv.
+  general induction H2; inv H1; clear_trivial_eqs; eauto using join_poLe_right_inv.
 Qed.
 
 Lemma PIR2_poLe_zip_join_left X `{JoinSemiLattice X} A B
