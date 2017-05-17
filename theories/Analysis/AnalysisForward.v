@@ -294,8 +294,8 @@ Proof with eauto using poLe_setTopAnn, poLe_getAnni.
   sind s; destruct s; intros ST ZL d d' a b LE_d LE; simpl forward; inv LE;
     simpl forward; repeat let_pair_case_eq; subst; eauto 10 using @ann_R;
       try now (econstructor; simpl; eauto using @ann_R).
-  - econstructor; simpl; eauto; fold_po.
-    + econstructor; eauto; fold_po.
+  - econstructor; simpl; eauto; inv_cleanup.
+    + econstructor; eauto; inv_cleanup.
       eapply IH; eauto using poLe_getAnni.
     + eapply IH; eauto using poLe_getAnni.
   - econstructor; simpl; eauto.
@@ -348,14 +348,13 @@ Proof with eauto using poLe_setTopAnn, poLe_getAnni.
         eapply ann_R_setTopAnn; eauto.
         eapply H9.
       * eapply IH; eauto.
-    + eapply PIR2_drop. eapply PIR2_fold_zip_join.
+    + eapply PIR2_drop; eauto. eapply PIR2_fold_zip_join; eauto.
       * eapply PIR2_get; eauto.
         intros. inv_map H7. inv_map H8.
-        exploit H6; eauto. eapply H11.
+        exploit H6; eauto.
         repeat rewrite map_length.
         repeat rewrite forwardF_length.
         repeat rewrite forward_length. rewrite H3; reflexivity.
-      * eapply IH; eauto.
 Qed.
 
 Require Import FiniteFixpointIteration.
@@ -386,8 +385,6 @@ Proof.
   - simpl. eapply ann_bottom.
     eapply forward_annotation; eauto.
     eapply setAnn_annotation.
-  - intros. eapply terminating_sig.
-    eapply terminating_ann. eauto.
   - intros [a Ann] [b Bnn] LE; simpl in *.
     eapply (forward_monotone Dom f (fMon s)); eauto.
 Defined.
