@@ -1,7 +1,7 @@
 Require Import CSet Le ListUpdateAt Coq.Classes.RelationClasses.
 
 Require Import Plus Util AllInRel Map Terminating.
-Require Import Val Var IL.Env IL Annotation Infra.Lattice.
+Require Import Val Var IL.Env IL Annotation Infra.Lattice AnnotationLattice.
 Require Import DecSolve LengthEq MoreList Status AllInRel OptionR.
 Require Import Keep Subterm Analysis.
 
@@ -174,7 +174,7 @@ Lemma backward_monotone (sT:stmt) (Dom : stmt -> Type) `{PartialOrder (Dom sT)}
 Proof.
   intros s.
   sind s; destruct s; intros ST ZL AL AL' ALLE d d' Ann LE; simpl backward; inv LE; inv Ann;
-    simpl backward; eauto 10 using @ann_R, tab_false_impb, update_at_impb, zip_orb_impb.
+    simpl backward; eauto 10 using @ann_R, tab_false_impb, update_at_impb.
   - econstructor; eauto.
     + eapply fMon; eauto.
       econstructor.
@@ -188,8 +188,6 @@ Proof.
       eapply (IH s2); eauto.
     + eapply IH; eauto.
     + eapply IH; eauto.
-  - econstructor; eauto.
-  - econstructor; simpl; eauto.
   - assert (AL'LE:getAnn ⊝ ans ++ AL ⊑ getAnn ⊝ bns ++ AL'). {
       eapply PIR2_app; eauto.
       eapply PIR2_get; intros; inv_get.
@@ -201,22 +199,21 @@ Proof.
               ⊑ getAnn
               ⊝ backwardF (backward Dom f) (fst ⊝ F ++ ZL) (getAnn ⊝ bns ++ AL') F bns
               (subTerm_EQ_Fun2 eq_refl ST) ++ AL'). {
-      eapply PIR2_app; eauto.
-      eapply PIR2_get; eauto 20 with len; intros; inv_get.
-      eapply getAnn_poLe.
-      assert (x5 = x11) by eapply subTerm_PI; subst.
-      eapply IH; eauto.
-      exploit H2; eauto.
+      eapply PIR2_app; eauto. inv_cleanup.
+      eapply PIR2_get; intros; inv_get.
+      - eapply getAnn_poLe.
+        assert (x5 = x11) by eapply subTerm_PI; subst.
+        eapply IH; eauto.
+      - eauto with len.
     }
     econstructor; eauto.
     + eapply fMon; eauto.
       econstructor; eauto.
       eapply getAnn_poLe. eapply IH; eauto.
-    + eauto 30 with len.
+    + len_simpl. eauto with len.
     + intros; inv_get.
       assert (x9 = x3) by eapply subTerm_PI; subst.
       eapply IH; eauto.
-      eapply H2; eauto.
     + eapply IH; eauto.
 Qed.
 
@@ -231,7 +228,7 @@ Lemma backward_ext (sT:stmt) (Dom : stmt -> Type) `{PartialOrder (Dom sT)}
 Proof.
   intros s.
   sind s; destruct s; intros ST ZL AL AL' ALLE d d' Ann LE; simpl backward; inv LE; inv Ann;
-    simpl backward; eauto 10 using @ann_R, tab_false_impb, update_at_impb, zip_orb_impb.
+    simpl backward; eauto 10 using @ann_R, tab_false_impb, update_at_impb.
   - econstructor; eauto.
     + eapply fMon; eauto.
       econstructor.
@@ -245,8 +242,6 @@ Proof.
       eapply (IH s2); eauto.
     + eapply IH; eauto.
     + eapply IH; eauto.
-  - econstructor; eauto.
-  - econstructor; simpl; eauto.
   - assert (AL'LE:getAnn ⊝ ans ++ AL ≣ getAnn ⊝ bns ++ AL'). {
       eapply PIR2_app; eauto.
       eapply PIR2_get; intros; inv_get.
@@ -259,21 +254,20 @@ Proof.
               ⊝ backwardF (backward Dom f) (fst ⊝ F ++ ZL) (getAnn ⊝ bns ++ AL') F bns
               (subTerm_EQ_Fun2 eq_refl ST) ++ AL'). {
       eapply PIR2_app; eauto.
-      eapply PIR2_get; eauto 20 with len; intros; inv_get.
-      eapply getAnn_poEq.
-      assert (x5 = x11) by eapply subTerm_PI; subst.
-      eapply IH; eauto.
-      exploit H2; eauto.
+      eapply PIR2_get; intros; inv_get.
+      - eapply getAnn_poEq.
+        assert (x5 = x11) by eapply subTerm_PI; subst.
+        eapply IH; eauto.
+      - eauto with len.
     }
     econstructor; eauto.
     + eapply fMon; eauto.
       econstructor; eauto.
       eapply getAnn_poEq. eapply IH; eauto.
-    + eauto 30 with len.
+    + eauto with len.
     + intros; inv_get.
       assert (x9 = x3) by eapply subTerm_PI; subst.
       eapply IH; eauto.
-      eapply H2; eauto.
     + eapply IH; eauto.
 Qed.
 
@@ -316,8 +310,6 @@ Proof.
   - simpl. eapply ann_bottom.
     eapply backward_annotation; eauto.
     eapply setAnn_annotation.
-  - intros. eapply terminating_sig.
-    eapply terminating_ann. eauto.
   - intros [a Ann] [b Bnn] LE; simpl in *.
     eapply (backward_monotone Dom f (fMon s)); eauto.
 Defined.
