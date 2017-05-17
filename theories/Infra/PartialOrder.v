@@ -169,7 +169,7 @@ Proof.
   unfold poLt. rewrite H0, H1. reflexivity.
 Qed.
 
-Instance PartialOrder_ann Dom `{PartialOrder Dom}
+Instance PartialOrder_list Dom `{PartialOrder Dom}
 : PartialOrder (list Dom) := {
   poLe := PIR2 poLe;
   poLe_dec := @PIR2_computable _ _ poLe poLe_dec;

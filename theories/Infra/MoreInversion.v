@@ -17,6 +17,7 @@ Ltac inv_eqs :=
 
 
 Smpl Create inv_trivial [progress].
+Smpl Create inversion_cleanup.
 
 Ltac inv_if_ctor H A B :=
   let A' := eval hnf in A in
@@ -56,13 +57,18 @@ Ltac inv_trivial_base :=
 
 Smpl Add inv_trivial_base : inv_trivial.
 
-Ltac clear_trivial_eqs :=
-  repeat (smpl inv_trivial; repeat clear_dup_fast).
+Ltac inv_cleanup :=
+  repeat (smpl inversion_cleanup).
 
-Tactic Notation "inv" hyp(A) := inversion A; subst.
-Tactic Notation "invc" hyp(A) := inversion A; subst; (try clear A).
-Tactic Notation "invs" hyp(A) := inversion A; subst; clear_trivial_eqs.
-Tactic Notation "invcs" hyp(A) := inversion A; subst; (try clear A); clear_trivial_eqs.
+Ltac clear_trivial_eqs :=
+  repeat (smpl inv_trivial; repeat clear_dup_fast); inv_cleanup.
+
+
+Tactic Notation "inv" hyp(A) := inversion A; subst; inv_cleanup.
+Tactic Notation "invc" hyp(A) := inversion A; subst; (try clear A); inv_cleanup.
+Tactic Notation "invs" hyp(A) := inversion A; subst; clear_trivial_eqs; inv_cleanup.
+Tactic Notation "invcs" hyp(A) := inversion A; subst; (try clear A); clear_trivial_eqs;
+                                 inv_cleanup.
 
 Ltac invt ty :=
   match goal with

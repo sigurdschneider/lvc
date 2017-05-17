@@ -200,20 +200,6 @@ Proof.
   general induction H0; simpl; unfold impb; eauto using @PIR2.
 Qed.
 
-Lemma zip_orb_impb Dom `{PartialOrder Dom} AL AL' BL BL'
-  : poLe AL AL'
-    -> poLe BL BL'
-    -> poLe (orb ⊜ AL BL) (orb ⊜ AL' BL').
-Proof.
-  unfold poLe; simpl.
-  intros A B.
-  general induction A; inv B; simpl; eauto using PIR2.
-  - econstructor; eauto.
-    unfold impb. destruct x, x0, y, y0; simpl in *; eauto.
-Qed.
-
-Hint Resolve zip_orb_impb.
-
 Lemma update_at_impb Dom `{PartialOrder Dom} AL AL' n
   : poLe AL AL'
     ->  PIR2 impb (list_update_at (tab false ‖AL‖) n true)
@@ -224,38 +210,171 @@ Proof.
   - unfold impb. destruct n; simpl; eauto using @PIR2, tab_false_impb.
 Qed.
 
+Ltac refold_PIR2_PO :=
+  match goal with
+  | [ H : context [ PIR2 (@poLe ?D _) ] |- _ ] =>
+    change (PIR2 (@poLe D _)) with (@poLe (list D) _) in H
+  | [ H : context [ PIR2 (@poEq ?D _) ] |- _ ] =>
+    change (PIR2 (@poLe D _)) with (@poLe (list D) _) in H
+  | [ |- context [ PIR2 (@poLe ?D ?PO) ] ] =>
+    change (PIR2 (@poLe D PO)) with (@poLe (list D) _)
+  | [ |- context [ PIR2 (@poEq ?D ?PO) ] ] =>
+    change (PIR2 (@poEq D PO)) with (@poEq (list D) _)
+  end.
+
+Smpl Add refold_PIR2_PO : inversion_cleanup.
+
+Ltac refold_ann_PO :=
+  match goal with
+  | [ H : context [ @ann_R ?A ?A (@poLe ?A ?I) ] |- _ ] =>
+    change (@ann_R A A (@poLe A I)) with (@poLe (@ann A) _) in H
+  | [ |- context [ ann_R poLe ?x ?y ] ] =>
+    change (ann_R poLe x y) with (poLe x y)
+  | [ H : context [ @ann_R ?A ?A (@poEq ?A ?I) ] |- _ ] =>
+    change (@ann_R A A (@poEq A I)) with (@poEq (@ann A) _) in H
+  | [ |- context [ ann_R poEq ?x ?y ] ] =>
+    change (ann_R poEq x y) with (poEq x y)
+  end.
+
+Smpl Add refold_ann_PO : inversion_cleanup.
+
+Lemma poLe_list_struct A `{PartialOrder A} (a1 a2:A) b1 b2
+  : poLe a1 a2 -> poLe b1 b2  -> poLe (a1::b1) (a2::b2).
+  intros; econstructor; eauto.
+Qed.
+
+Lemma poEq_list_struct A `{PartialOrder A} (a1 a2:A) b1 b2
+  : poEq a1 a2 -> poEq b1 b2  -> poEq (a1::b1) (a2::b2).
+  intros; econstructor; eauto.
+Qed.
+
+Hint Resolve poLe_list_struct poEq_list_struct.
+
+Hint Resolve join_struct join_struct_eq.
+
+Lemma PIR2_poLe_join X `{JoinSemiLattice X} (A A' B B':list X)
+  : poLe A A'
+    -> poLe B B'
+    -> poLe (join ⊜ A B) (join ⊜ A' B').
+Proof.
+  intros AA BB.
+  general induction AA; simpl; inv BB; eauto.
+Qed.
+
+Hint Resolve PIR2_poLe_join.
+
 Lemma PIR2_impb_orb A A' B B'
   : PIR2 impb A A'
     -> PIR2 impb B B'
     -> PIR2 impb (orb ⊜ A B) (orb ⊜ A' B').
 Proof.
-  intros AA BB. general induction AA; inv BB; simpl; eauto using @PIR2.
-  econstructor; eauto.
-  destruct x, x0, y, y0; inv pf0; simpl; eauto.
+  intros. pose proof (@PIR2_poLe_join bool _ _).
+  eapply H1; eauto.
 Qed.
 
-Lemma PIR2_impb_orb_right A A' B
+Smpl Add 10 match goal with
+         | [ H : _ < _  |- _ ] => simpl in H
+         | [ H :  _ <= _  |- _ ] => simpl in H
+         end : inv_trivial.
+
+Smpl Add match goal with
+         | [ H : S _ < 0 |- _ ] => exfalso; inv H
+         | [ H : S _ <=  0 |- _ ] => exfalso; inv H
+         end : inv_trivial.
+
+Hint Resolve join_poLe.
+
+Lemma join_poLe_left X `{JoinSemiLattice X} x y z
+  : poLe x y -> poLe x (join y z).
+Proof.
+  intros LE. rewrite LE. eauto.
+Qed.
+
+Lemma join_poLe_right X `{JoinSemiLattice X} x y z
+  : poLe x y -> poLe x (join z y).
+Proof.
+  intros LE. rewrite LE. rewrite join_commutative. eauto.
+Qed.
+
+Hint Resolve join_poLe_left join_poLe_right | 50.
+
+Lemma join_poLe_left_inv X `{JoinSemiLattice X} x y z
+  : poLe (join y z) x -> poLe y x.
+Proof.
+  intros LE. rewrite <- LE. eauto.
+Qed.
+
+Lemma join_poLe_right_inv X `{JoinSemiLattice X} x y z
+  : poLe (join z y) x -> poLe y x.
+Proof.
+  intros LE. rewrite <- LE. eauto.
+Qed.
+
+Hint Resolve le_S_n | 100.
+
+Lemma PIR2_poLe_join_right X `{JoinSemiLattice X} A A' B
   : length A <= length B
-    -> PIR2 impb A A'
-    -> PIR2 impb A (orb ⊜ A' B).
+    -> poLe A A'
+    -> poLe A (join ⊜ A' B).
 Proof.
   intros LEN AA.
-  general induction AA; destruct B; simpl in *; isabsurd; eauto using @PIR2.
-  econstructor; eauto.
-  destruct x, y, b; inv pf; simpl; eauto.
-  eapply IHAA; eauto. omega.
+  general induction AA; destruct B; simpl in *; clear_trivial_eqs; eauto.
 Qed.
 
-Lemma PIR2_impb_orb_left A B B'
-  : length B <= length A
-    -> PIR2 impb B B'
-    -> PIR2 impb B (orb ⊜ A B').
+Lemma PIR2_poLe_join_left X `{JoinSemiLattice X} A A' B
+  : length A <= length B
+    -> poLe A A'
+    -> poLe A (join ⊜ B A').
 Proof.
   intros LEN AA.
-  general induction AA; destruct A; simpl in *; isabsurd; eauto using @PIR2.
-  econstructor; eauto.
-  destruct x, y, b; inv pf; simpl; eauto.
-  eapply IHAA; eauto. omega.
+  general induction AA; destruct B; simpl in *; clear_trivial_eqs; eauto.
+Qed.
+
+Hint Resolve PIR2_poLe_join_right PIR2_poLe_join_left | 50.
+
+Smpl Add 50 match goal with
+            | [ H : context [ impb ] |- _ ] =>
+              change impb with (@poLe bool PartialOrder_bool) in H
+            | [ |- context [ impb ] ] =>
+              change impb with (@poLe bool PartialOrder_bool)
+         end : inversion_cleanup.
+
+Smpl Add 50 match goal with
+            | [ H : context [ orb ] |- _ ] =>
+              change orb with (@join bool _ bool_joinsemilattice) in H
+            | [ |- context [ orb ] ] =>
+              change orb with (@join bool _ bool_joinsemilattice)
+            end : inversion_cleanup.
+
+Lemma poLe_length X `{PartialOrder X} A B
+  : poLe A B
+    -> ❬A❭ <= ❬B❭.
+Proof.
+  intros. hnf in H0. erewrite PIR2_length; eauto.
+Qed.
+
+Lemma poLe_length_eq X `{PartialOrder X} A B
+  : poLe A B
+    -> ❬A❭ = ❬B❭.
+Proof.
+  intros. hnf in H0. erewrite PIR2_length; eauto.
+Qed.
+
+Hint Resolve poLe_length : len.
+Hint Resolve poLe_length_eq : len.
+
+Instance poLe_length_proper X `{PartialOrder X}
+  : Proper (poLe ==> eq) (@length X).
+Proof.
+  unfold Proper, respectful; intros.
+  eauto with len.
+Qed.
+
+Instance poEq_length_proper X `{PartialOrder X}
+  : Proper (poEq ==> eq) (@length X).
+Proof.
+  unfold Proper, respectful; intros.
+  eauto with len.
 Qed.
 
 Lemma PIR2_impb_fold (A A':list (list bool * bool)) (B B':list bool)
@@ -265,15 +384,16 @@ Lemma PIR2_impb_fold (A A':list (list bool * bool)) (B B':list bool)
     -> poLe (fold_left (fun a (b:list bool * bool) => if snd b then orb ⊜ a (fst b) else a) A B)
            (fold_left (fun a (b:list bool * bool) => if snd b then orb ⊜ a (fst b) else a) A' B').
 Proof.
-  intros. simpl in *.
-  general induction H; simpl; eauto.
+  intros.
+  general induction H; simpl; inv_cleanup; eauto.
   eapply IHPIR2; eauto using PIR2_impb_orb.
-  dcr. hnf in H2.
-  repeat cases; try congruence; isabsurd; eauto using PIR2_impb_orb, PIR2_impb_orb_right.
-  eapply PIR2_impb_orb_right; eauto using get.
-  rewrite <- (PIR2_length H2); eauto. eauto using get.
-  intros. cases; eauto using get.
-  rewrite zip_length3; eauto using get.
+  - exploit H1; eauto using get.
+    inv pf.
+    repeat cases; eauto.
+    eapply PIR2_poLe_join_right; eauto using get.
+    rewrite <- H3; eauto.
+  - intros. cases; eauto using get.
+    rewrite zip_length3; eauto using get.
 Qed.
 
 
@@ -282,10 +402,9 @@ Lemma PIR2_zip_join_inv_left X `{JoinSemiLattice X} A B C
     -> length A = length B
     -> poLe A C.
 Proof.
-  intros. length_equify. hnf in H1.
-  general induction H1; inv H2; simpl in *; eauto using PIR2; try solve [ congruence ].
-  - inv Heql; econstructor; eauto.
-    + rewrite <- pf. eapply join_poLe.
+  intros. length_equify.
+  general induction H1; inv H2; simpl in *; clear_trivial_eqs;
+    eauto using join_poLe_left_inv.
 Qed.
 
 Lemma PIR2_zip_join_inv_right X `{JoinSemiLattice X} A B C
@@ -293,19 +412,19 @@ Lemma PIR2_zip_join_inv_right X `{JoinSemiLattice X} A B C
     -> length A = length B
     -> poLe B C.
 Proof.
-  intros. length_equify. hnf in H1.
-  general induction H1; inv H2; simpl in *; eauto using PIR2; try solve [ congruence ].
-  - inv Heql; econstructor; eauto.
-    + rewrite <- pf. rewrite join_commutative. eapply join_poLe.
+  intros.
+  general induction H2; inv H1; simpl in *; clear_trivial_eqs; eauto using PIR2.
+  (* todo: refolding does not work *)
+  specialize (IHlength_eq H H0). inv_cleanup.
+  eauto using join_poLe_right_inv.
 Qed.
 
 Lemma PIR2_poLe_zip_join_left X `{JoinSemiLattice X} A B
   : length A = length B
     -> poLe A (join ⊜ A B).
 Proof.
-  intros. length_equify.
+  intros.
   general induction H1; simpl in *; eauto using PIR2; try solve [ congruence ].
-  - econstructor; eauto using join_poLe.
 Qed.
 
 Lemma PIR2_zip_join_commutative X `{JoinSemiLattice X} A B
@@ -379,8 +498,7 @@ Proof.
     exploit (zip_get join GETb GETa).
     + exploit IHA; try eapply GET; eauto.
       rewrite zip_length2; eauto using get with len.
-      edestruct H3; dcr; subst. eexists; split; eauto.
-      rewrite <- H8; eauto. eapply join_poLe.
+      edestruct H3; dcr; subst. eexists; split; eauto using join_poLe_left_inv.
 Qed.
 
 Lemma get_fold_zip_join X (f: X-> X-> X) (A:list (list X)) (b:list X) n
@@ -409,9 +527,8 @@ Proof.
     exploit (zip_get join GETb GETa).
     exploit (@get_union_union_b _ _ _ A); eauto.
     rewrite zip_length2; eauto using get with len.
-    destruct H3; dcr; subst. eexists; split; eauto.
-    rewrite <- H5; eauto. rewrite join_commutative.
-    eapply join_poLe.
+    destruct H3; dcr; subst.
+    eexists; split; eauto using join_poLe_right_inv.
   - exploit IHA; eauto.
     rewrite zip_length2; eauto using get.
     symmetry; eauto using get.
@@ -434,9 +551,8 @@ Lemma fold_left_mono A A' b b'
     -> poLe (fold_left (zip orb) A b) (fold_left (zip orb) A' b').
 Proof.
   intros.
-  hnf in H. general induction H; simpl; eauto.
+  hnf in H. general induction H; simpl; eauto. inv_cleanup.
   - eapply IHPIR2; eauto.
-    eapply (@zip_orb_impb (list bool)); eauto with typeclass_instances.
 Qed.
 
 

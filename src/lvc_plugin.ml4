@@ -28,6 +28,21 @@ TACTIC EXTEND is_param
      ]
 END
 
+let rec is_inductive c =
+      match kind_of_term c with
+      | Ind _ -> true
+      | App (c, args) -> is_inductive c
+      | _ -> false
+
+TACTIC EXTEND is_inductive
+  | [ "is_inductive" constr(c) ] ->
+     [
+       if is_inductive c
+       then Proofview.tclUNIT ()
+       else Tacticals.New.tclFAIL 0 (str "not an inductive")
+     ]
+END
+
 let rec is_constructor_app c =
       match kind_of_term c with
       | Construct _ -> true

@@ -116,10 +116,15 @@ Ltac inductify H :=
   | length _ = length _ => eapply length_length_eq in H
   end.
 
+Ltac expose_inductive H :=
+  first [ is_inductive H | hnf in H ].
+
 Tactic Notation "general" "induction" hyp(H) :=
   (try inductify H);
+  expose_inductive H;
   remember_arguments H; revert_except H;
-  induction H; intros; (try clear_trivial_eqs).
+  induction H; intros; (try clear_trivial_eqs);
+  repeat (smpl inversion_cleanup).
 
 Tactic Notation "indros" :=
   intros; (try inv_eqs); (try clear_trivial_eqs).
