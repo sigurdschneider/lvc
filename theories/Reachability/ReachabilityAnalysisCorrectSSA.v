@@ -213,6 +213,80 @@ Qed.
 
 Transparent poEq.
 
+Lemma agree_comp_inv A `{OrderedType A} B (R:B->B->Prop) `{Transitive _ R} (f g : (A -> B) -> (A -> B)) Gf Gg
+      (AGRf: forall d, agree_on R Gf d (f d))
+      (AGRg: forall d, agree_on R Gg d (g d))
+  : forall d, agree_on R (Gf ∩ Gg) d (f (g d)).
+Proof.
+  intros d. hnf; intros x IN.
+  cset_tac'.
+  rewrite <- (AGRf (g d) x); eauto.
+  eapply AGRg; eauto.
+Qed.
+
+Lemma agree_comp_inv' A `{OrderedType A} B (R:B->B->Prop) `{Transitive _ R} (f g : (A -> B) -> (A -> B)) d D Gf Gg (disj: disj Gf Gg)
+      (AGR:forall x, R (f (g d) x) (d x))
+      (AGRf: forall d, agree_on R (D \ Gf) d (f d))
+      (AGRg: forall d, agree_on R (D \ Gg) (g d) d)
+  : agree_on R D (g d) d.
+Proof.
+  intros x IN.
+  decide (x ∈ Gg).
+  - assert (x ∉ Gf). cset_tac.
+    specialize (AGRf (g d) x ).
+    etransitivity. eapply AGRf. cset_tac.
+    eapply AGR.
+  - eapply AGRg. cset_tac.
+Qed.
+
+Lemma agree_comp_inv'' A `{OrderedType A} B (R:B->B->Prop) `{Transitive _ R}
+      X (r : X -> (A -> B))
+      (f g : X -> X) (d:X) D Gf Gg (disj: disj Gf Gg)
+      (AGR:forall x, R (r (f (g d)) x) (r d x))
+      (AGRf: forall d, agree_on R (D \ Gf) (r d) (r (f d)))
+      (AGRg: forall d, agree_on R (D \ Gg) (r (g d)) (r d))
+  : agree_on R D (r (g d)) (r d).
+Proof.
+  intros x IN.
+  decide (x ∈ Gg).
+  - assert (x ∉ Gf). cset_tac.
+    specialize (AGRf (g d) x ).
+    etransitivity. eapply AGRf. cset_tac.
+    eapply AGR.
+  - eapply AGRg. cset_tac.
+Qed.
+
+Lemma poEq_VDom D `{PartialOrder D} U (d d':VDom U D)
+  : (forall G, agree_on poEq G (domenv (proj1_sig d)) (domenv (proj1_sig d')))
+         <-> d ≣ d'.
+Proof.
+  intros. split; intros.
+  - hnf; intros.
+    eapply (H0 (singleton x)). cset_tac.
+  - hnf; intros. eapply H0.
+Qed.
+
+(*
+  eapply poEq_VDom; intros.
+  decide (disj G (list_union (of_list ⊝ ZL))).
+  - symmetry in disj1.
+    eapply agree_comp_inv'' with
+    (r:=fun d => domenv (proj1_sig d))
+      (f:=fun d => fst (fst (forward f fr ZL ZLIncl t STt d ta)))
+      (g:=fun d => fst (fst (forward f fr ZL ZLIncl s STs d sa))); try eapply disj1; eauto.
+    hnf; intros. rewrite H1. eauto.
+    + intros.
+      eapply agree_on_incl.
+      eapply forward_agree; eauto.
+      instantiate (1:=G). revert d0. clear; cset_tac.
+    + intros. symmetry.
+      intros.
+      eapply agree_on_incl.
+      eapply forward_agree; eauto.
+      instantiate (1:=G). revert d0. clear; cset_tac.
+  -
+ *)
+
 Lemma forward_if_inv (sT:stmt) D `{JoinSemiLattice D}
       f fr ZL s t (d:VDom (occurVars sT) D) STt STs ZLIncl sa ta
       (ANs:annotation s sa) (ANt:annotation t ta)
@@ -221,7 +295,7 @@ Lemma forward_if_inv (sT:stmt) D `{JoinSemiLattice D}
       (disj2:disj (definedVars s ∪ definedVars t) (list_union (of_list ⊝ ZL)))
   : (fst (fst (forward f fr ZL ZLIncl s STs d sa))) ≣ d.
 Proof.
-  hnf; intro x.
+  hnf; intros x.
   exploit (@forward_agree sT _ _ _ f fr ZL d (singleton x) s STs ZLIncl); eauto; dcr.
   decide (x ∈ (definedVars s ∪ list_union (of_list ⊝ ZL))).
   - specialize (EQ x).
@@ -285,6 +359,18 @@ Proof.
   edestruct forward_agree with (AE:=exist _ AE pf); dcr; eauto.
 Qed.
 
+Lemma list_union_definedVars_renamedApart (F:list (params * stmt)) ra
+      (RA:forall n Zs a,
+          get F n Zs -> get ra n a -> renamedApart (snd Zs) a)
+      (Len:❬F❭ = ❬ra❭)
+  : list_union (snd ⊝ getAnn ⊝ ra) [=] list_union (definedVars ⊝ snd ⊝ F).
+Proof.
+  general induction Len; simpl; eauto.
+  norm_lunion. rewrite IHLen; eauto using get.
+  rewrite renamedApart_occurVars; eauto using get.
+  reflexivity.
+Qed.
+
 Lemma forwardF_agree_get (sT:stmt) D `{JoinSemiLattice D} f fr
       (F : 〔params * stmt〕)
       (t : stmt)
@@ -342,41 +428,48 @@ Proof.
         eapply renamedApart_occurVars in H9; eauto.
         rewrite H9.
         eapply forward_agree_ren; eauto using get.
-      * (*
-(*    instantiate (3:=(fst (fst (forward f fr ZL ZLIncl (STF 0 x (getLB _ _)) AE' y)))) in H6.
+      * specialize (EQ z). specialize (EQM z).
+    instantiate (3:=(fst (fst (forward f fr ZL ZLIncl (snd x) (STF 0 x (getLB _ _)) AE' y)))) in H6.
     instantiate (1:=(fun (n : nat) (s : params * stmt) (H : get XL n s) =>
-                     STF (S n) s (getLS x H))) in H6.*)
-    unfold domenv in *.
-    decide (z ∈ snd (getAnn tra) ∪ list_union (of_list ⊝ ZL)).
-    + eapply disj_union_inv in i. destruct i; dcr.
-      * rewrite EQ.
-        eapply H4.
-        revert H8 H9 Disj2. clear.
-        intros. cset_tac.
-      * eapply poLe_antisymmetric.
-        -- rewrite EQ.
-           eapply H5.
-           revert H8 Disj3; clear_all. intros. cset_tac.
-        -- etransitivity; [| eapply H3].
-           rewrite <- EQM.
-           eapply H7.
-           revert H8 Disj3. clear_all; intros.
-           cset_tac.
-           revert H9; clear_all; cset_tac.
-      * eapply disj_2_incl; try eapply Disj1; eauto.
-    + decide (z ∈ (list_union (defVars ⊜ XL ra))).
-      * clear H7 H6.
-        rewrite EQ. eapply H4.
-        eapply (@defVars_drop_disj (x::XL) (a::ra) 0) in Disj6;
-          eauto using get. simpl in *.
-        unfold defVars in Disj6 at 1.
-        rewrite list_union_defVars_decomp in *; eauto.
-        revert n i Disj5 Disj6. clear_all.
-        intros. cset_tac.
-      * exploit (H2 z). revert n; clear_all; cset_tac.
-        rewrite <- H1.
-        rewrite <- EQM. symmetry. eapply H6.
-        revert n n0; clear_all; cset_tac.
+                       STF (S n) s (getLS x H))) in H6.
+        {
+          decide (z ∈ snd (getAnn tra) ∪ list_union (of_list ⊝ ZL)).
+          + eapply disj_union_inv in i. destruct i; dcr.
+            * rewrite EQ.
+              eapply H4.
+              revert H8 H9 Disj2. clear.
+              intros. cset_tac.
+            * eapply poLe_antisymmetric.
+              -- rewrite EQ.
+                 eapply H5.
+                 revert H8 Disj3; clear_all. intros. cset_tac.
+              -- etransitivity; [| eapply H3].
+                 rewrite <- EQM. specialize (H7 z).
+                 eapply H7.
+                 revert H8 Disj3.
+                 rewrite list_union_definedVars_renamedApart; eauto using get.
+                 clear_all; intros. cset_tac.
+                 intros.
+                 revert H9; clear_all; cset_tac.
+            * eapply disj_2_incl; try eapply Disj1; eauto.
+          + decide (z ∈ (list_union (defVars ⊜ XL ra))).
+            * clear H7 H6.
+              rewrite EQ. eapply H4.
+              eapply (@defVars_drop_disj (x::XL) (a::ra) 0) in Disj6;
+                eauto using get. simpl in *.
+              unfold defVars in Disj6 at 1.
+              rewrite list_union_defVars_decomp in *; eauto.
+              revert n i Disj5 Disj6. clear_all.
+              intros. cset_tac.
+            * exploit (H2 z). revert n; clear_all; cset_tac.
+              rewrite <- H1.
+              rewrite <- EQM. symmetry. eapply H6.
+              revert n n0.
+              rewrite list_union_definedVars'; eauto.
+              rewrite list_union_defVars_decomp; eauto.
+              rewrite list_union_definedVars_renamedApart; eauto using get.
+              clear_all; cset_tac.
+        }
     + eapply disj_2_incl; eauto.
     + eapply disj_2_incl. eapply Disj3. clear_all; cset_tac.
     + eapply disj_incl. eapply Disj5.
@@ -387,16 +480,17 @@ Proof.
       intros. inv H3; inv H4; eauto using get.
       assert (AEQ:AE === AE').
       { hnf; intros.
+        specialize (EQ x). specialize (H1 x).
         rewrite <- EQ. rewrite H1. reflexivity.
       }
       assert (EQF:@forwardF sT (sTDom D) BL (forward f fr ZL ZLIncl) XL YL
-                       (fst (fst (forward f fr ZL ZLIncl (STF 0 Zs (@getLB (params * stmt) XL Zs)) AE' r)))
-                       (fun (n : nat) (s : params * stmt) (H : get XL n s) =>
-                          STF (S n) s (getLS Zs H)) ===
-                       forwardF BL (forward f fr ZL ZLIncl) XL YL
-                       (fst (fst (forward f fr ZL ZLIncl ST AE r)))
-                       (fun (n : nat) (s : params * stmt) (H : get XL n s) =>
-                          STF (S n) s (getLS Zs H))
+                            (fst (fst (forward f fr ZL ZLIncl _ (STF 0 Zs (@getLB (params * stmt) XL Zs)) AE' r)))
+                            (fun (n : nat) (s : params * stmt) (H : get XL n s) =>
+                               STF (S n) s (getLS Zs H)) ===
+                            forwardF BL (forward f fr ZL ZLIncl) XL YL
+                            (fst (fst (forward f fr ZL ZLIncl _ ST AE r)))
+                            (fun (n : nat) (s : params * stmt) (H : get XL n s) =>
+                               STF (S n) s (getLS Zs H))
              ). {
         eapply forwardF_ext; eauto.
         intros. eapply forward_ext; eauto.
@@ -405,54 +499,87 @@ Proof.
         eapply forward_ext; eauto.
         symmetry; eauto.
       }
-       hnf; intros z.
-    exploit (@forward_agree sT _ _ _ f fr ZL AE (singleton z) (snd Zs) ST a ZLIncl); eauto using get; dcr.
-    exploit (@forwardF_agree sT _ _ _  BL (singleton z) XL f fr ra YL ZL ZLIncl);
-      eauto using get; dcr.
-    eauto with len.
-    intros. inv_get.
-    eapply forward_agree; eauto using get.
-    unfold domenv in *.
-    decide (z ∈ snd (getAnn tra) ∪ list_union (of_list ⊝ ZL)).
-    * eapply disj_union_inv in i. destruct i; dcr.
-      -- symmetry.
-         eapply (H6 z).
-         revert H10 H11 Disj2. clear.
-         intros. cset_tac.
-      -- eapply poLe_antisymmetric.
-         ++ etransitivity.
-           eapply H9.
-           revert H10 Disj3; clear_all. intros. cset_tac.
-           rewrite <- EQM.
+      hnf; intros z.
+      exploit (@forward_agree sT _ _ _ f fr ZL AE (singleton z) (snd Zs) ST ZLIncl); eauto using get; dcr.
+      exploit (@forwardF_agree sT _ _ _  BL (singleton z) XL f fr YL ZL ZLIncl);
+        eauto using get; dcr.
+      eauto with len.
+      intros. inv_get.
+      eapply forward_agree; eauto using get.
+      unfold domenv in *.
+      instantiate (2:=(fst (fst (forward f fr ZL ZLIncl (snd Zs) ST AE r)))) in H9.
+      decide (z ∈ snd (getAnn tra) ∪ list_union (of_list ⊝ ZL)).
+      * eapply disj_union_inv in i. destruct i; dcr.
+        -- symmetry.
+           eapply (H6 z).
+           revert H10 H11 Disj2.
+           rewrite list_union_definedVars_renamedApart; eauto using get.
+           rewrite renamedApart_occurVars; eauto using get.
+           clear. intros. cset_tac.
+        -- eapply poLe_antisymmetric.
+           ++ etransitivity. Transparent poLe.
+             eapply (H9 z).
+             revert H10 Disj3.
+             rewrite list_union_definedVars_renamedApart; eauto using get.
+             clear_all. intros; cset_tac.
+             rewrite <- (EQM z).
+             hnf in EQF. dcr.
+             hnf in H5. dcr.
+             specialize (H13 z).
+             rewrite H13. reflexivity.
+           ++ eapply H7.
+             rewrite renamedApart_occurVars; eauto using get.
+             revert H10 H11 Disj3; clear_all. intros. cset_tac.
+        -- eauto.
+      * decide (z ∈ (list_union (defVars ⊜ XL ra))).
+        -- symmetry.
+           eapply H6.
+           eapply (@defVars_drop_disj (Zs::XL) (a::ra) 0) in Disj6;
+             eauto using get. simpl in *.
+           unfold defVars in Disj6 at 1.
+           rewrite list_union_defVars_decomp in Disj6; eauto.
+           rewrite list_union_defVars_decomp in i; eauto.
+           revert n i Disj5 Disj6.
+           rewrite renamedApart_occurVars; eauto using get.
+           clear_all. intros. cset_tac.
+        -- rewrite (H8 z).
+           rewrite <- (EQM z).
            hnf in EQF. dcr.
            hnf in H5. dcr.
-           specialize (H13 z).
-           rewrite H13. reflexivity.
-         ++ eapply H7.
-           revert H10 H11 Disj3; clear_all. intros. cset_tac.
-      -- eauto.
-    * decide (z ∈ (list_union (defVars ⊜ XL ra))).
-      -- symmetry.
-         eapply H6.
-         eapply (@defVars_drop_disj (Zs::XL) (a::ra) 0) in Disj6;
-           eauto using get. simpl in *.
-        unfold defVars in Disj6 at 1.
-        rewrite list_union_defVars_decomp in Disj6; eauto.
-        rewrite list_union_defVars_decomp in i; eauto.
-        revert n i Disj5 Disj6. clear_all.
-        intros. cset_tac.
-      -- rewrite (H8 z).
-         rewrite <- EQM.
-         hnf in EQF. dcr.
-         hnf in H5. dcr.
-         specialize (H11 z).
-         rewrite H11. reflexivity.
-         revert n n0; clear_all; cset_tac.
+           specialize (H11 z).
+           rewrite H11. reflexivity.
+           revert n n0.
+           rewrite list_union_defVars_decomp; eauto.
+           rewrite list_union_definedVars_renamedApart; eauto using get.
+           rewrite list_union_definedVars'; eauto.
+           clear_all; cset_tac.
 Qed.
-         *)
-Admitted.
+
+
+
 Opaque poEq.
 
+
+
+Lemma forward_domupdd_eq (sT:stmt) D `{JoinSemiLattice D} ZL ZLIncl s f fr sa v x IN
+      (d:VDom (occurVars sT) D) STs (AN:annotation s sa)
+      (NOTIN:x ∉ definedVars s ∪ list_union (of_list ⊝ ZL))
+      (EQ : fst (fst (forward f fr ZL ZLIncl s STs (@domupdd _ _ d x v IN) sa)) ≣ d)
+
+  : fst (fst (forward f fr ZL ZLIncl s STs (@domupdd _ _ d x v IN) sa))
+        ≣ domupdd d v IN.
+Proof.
+  exploit (@forward_agree sT _ _ _ f fr ZL (domupdd d v IN) (singleton x) s STs ZLIncl); eauto; dcr.
+  exploit (H2 x).
+  - cset_tac.
+  - rewrite EQ.
+    eapply domupdd_eq.
+    exploit (EQ x).
+    rewrite H4 in H1.
+    rewrite <- H1. symmetry.
+    unfold domenv, domupdd; simpl.
+    rewrite domupd_var_eq. reflexivity. reflexivity.
+Qed.
 
 
 Definition reachability_sound (sT:stmt) D `{JoinSemiLattice D}
@@ -472,20 +599,13 @@ Proof.
       simpl in *; inv_cleanup.
   - clear_trivial_eqs.
     econstructor; eauto.
-    eapply IHAnn; eauto. split; simpl; eauto.
-    exploit (@forward_agree sT _ _ _ f fr ZL (domupdd d (f (occurVars sT) (getAnn sa) d e) (subTerm_EQ_Let_x eq_refl ST)) (singleton x) s (subTerm_EQ_Let eq_refl ST) ZLIncl); eauto; dcr.
-    exploit (H2 x).
-    rewrite renamedApart_occurVars; eauto. pe_rewrite. set_simpl.
-    eapply renamedApart_disj in H6. pe_rewrite. revert H6 Disj.
-    clear_all. cset_tac.
-    rewrite EQ.
-    eapply domupdd_eq.
-    exploit (EQ x).
-    rewrite H7 in H1.
-    rewrite <- H1. symmetry.
-    unfold domenv, domupdd; simpl.
-    rewrite domupd_var_eq. reflexivity. reflexivity.
-    pe_rewrite. eapply disj_2_incl; eauto. cset_tac.
+    eapply IHAnn; eauto.
+    + split; simpl; eauto.
+      eapply forward_domupdd_eq; eauto.
+      rewrite renamedApart_occurVars; eauto. pe_rewrite.
+      set_simpl. eapply renamedApart_disj in H6; eauto.
+      pe_rewrite. revert Disj H6; clear_all; cset_tac.
+    + pe_rewrite. eapply disj_2_incl; eauto. cset_tac.
   - clear_trivial_eqs.
     set_simpl.
     econstructor; eauto.
@@ -524,6 +644,21 @@ Proof.
     exploit (snd_forwardF_inv' _ _ _ _ _ _ _ H23); eauto.
     subst FWt. len_simpl. omega.
     subst FWt. len_simpl. omega.
+    assert ( forall (n : nat) (Zs : params * stmt) (r : ann bool) (ST0 : subTerm (snd Zs) sT),
+               get s n Zs ->
+               get sa n r ->
+               fst
+                 (fst
+                    (forward f fr (fst ⊝ s ++ ZL) (ZLIncl_ext ZL eq_refl ST ZLIncl) (snd Zs) ST0 (fst (fst FWt)) r))
+                 ≣ (fst (fst FWt))). {
+      eapply forwardF_agree_get; eauto.
+      subst FWt. len_simpl.  omega.
+      rewrite <- EQ.
+      unfold FWF.
+      repeat PIR2_eq_simpl. rewrite H4.
+      reflexivity. unfold FWt. reflexivity.
+      admit. admit. admit. admit. admit.
+    }
     assert (forall (n : nat) (r : ann bool) (Zs : params * stmt),
        get sa n r ->
        get s n Zs ->
@@ -532,13 +667,16 @@ Proof.
          (snd
             (fst
                (forward f fr (fst ⊝ s ++ ZL) (ZLIncl_ext ZL eq_refl ST ZLIncl)
-                        (snd Zs) STZs (fst (fst FWt)) r))) r).
-    eapply (@snd_forwardF_inv_get); eauto.
-    subst FWt. len_simpl.  omega.
-    subst FWt. len_simpl. omega.
-    intros. admit. admit.
-    Transparent poEq.
-    repeat PIR2_eq_simpl.
+                        (snd Zs) STZs (fst (fst FWt)) r))) r). {
+      eapply (@snd_forwardF_inv_get); eauto.
+      subst FWt. len_simpl. omega.
+      subst FWt. len_simpl. omega.
+      admit. admit.
+    }
+      eapply EQ.
+      intros. admit. admit.
+      Transparent poEq.
+      repeat PIR2_eq_simpl.
     subst FWF FWt.
     rewrite H23 in *.
     rewrite H4 in *.
@@ -547,7 +685,6 @@ Proof.
                        (subTerm_EQ_Fun1 eq_refl ST) d ta)) in *.
     set (FWF:=forwardF (snd FWt) (forward f fr (fst ⊝ s ++ ZL) (ZLIncl_ext ZL eq_refl ST ZLIncl)) s sa (fst (fst FWt)) (subTerm_EQ_Fun2 eq_refl ST)) in *.
     Opaque poEq. inv_cleanup.
-
     econstructor; eauto.
     + eapply IHAnn; eauto.
       * split; eauto. simpl.
@@ -575,24 +712,27 @@ Proof.
     + intros. inv_get. exploit H7; eauto.
       eapply H1; eauto.
       -- subst FWF FWt.
-
-         exploit  forwardF_agree_get; eauto.
-         len_simpl. omega.
-
-        split; simpl; eauto. simpl. reflexivity.
+         (*exploit  forwardF_agree_get; eauto.
+         len_simpl. omega.*)
+         admit.
+         (*split; simpl; eauto. simpl. reflexivity.*)
       -- rewrite (take_eta ❬sa❭) at 1.
          eapply PIR2_app; eauto.
-         ++ eapply setTopAnn_map_inv in H15.
-           rewrite <- H15. eapply PIR2_take.
+         ++ Transparent poEq.
+           unfold poEq in H23. simpl in *.
+           repeat PIR2_eq_simpl.
+           eapply setTopAnn_map_inv in H23.
+           rewrite <- H23. eapply PIR2_take.
            change (PIR2 impb) with (@poLe (list bool) _).
            eapply forwardF_PIR2; eauto.
            subst FWt. clear_all. eauto with len.
-
+           admit. admit. admit.
          ++ etransitivity; eauto.
            rewrite H. eapply PIR2_drop.
            eapply forwardF_PIR2; eauto.
            subst FWt. eauto with len.
-           admit.
+           admit. admit.
+      -- admit.
 Qed.
 
 Lemma impl_poLe (a b:bool)
