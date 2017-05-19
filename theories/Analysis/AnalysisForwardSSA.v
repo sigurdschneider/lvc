@@ -4,8 +4,14 @@ Require Import Plus Util AllInRel Map Terminating MoreInversion.
 Require Import Val Var Env IL Annotation Infra.Lattice AnnotationLattice.
 Require Import DecSolve LengthEq MoreList Status AllInRel OptionR MapDefined.
 Require Import Keep Subterm Analysis CMapPartialOrder DomainSSA CMapTerminating.
+Require Import RenamedApart.
 
 Set Implicit Arguments.
+
+Arguments poLe : simpl never.
+Arguments poEq : simpl never.
+Arguments bottom : simpl never.
+Arguments comp X Y Z f g / x.
 
 Lemma option_eq_option_R X (R:relation X) x y
   : option_eq R x y <-> option_R R x y.
@@ -208,7 +214,7 @@ Proof.
   rewrite forward_fst_snd_getAnn in H1. eauto.
 Qed.
 
-Opaque poLe.
+
 
 Lemma forwardF_mon sT (D:Type) `{JoinSemiLattice D} f fr ZL ZLIncl BL
       (Len:❬BL❭ <= ❬ZL❭)
@@ -219,7 +225,6 @@ Proof.
   induction F; intros; destruct rF; simpl; inv_cleanup; eauto with len.
 Qed.
 
-Opaque poEq.
 
 Lemma forwardF_mon' sT (D:Type) `{JoinSemiLattice D}
       f fr ZL ZLIncl (F:list (params * stmt)) rF BL STF
@@ -237,30 +242,79 @@ Qed.
 Require Import FiniteFixpointIteration.
 
 
-Lemma poLe_vdom_struct D U `{PartialOrder D} (x x':Dom D) pf pf'
+Lemma poLe_sig_struct D `{PartialOrder D} (P: D -> Prop) (x x':D)  pf pf'
   : x ⊑ x'
-    -> exist (fun m => CMapDomain.domain m [<=] U) x pf
-            ⊑ exist (fun m => CMapDomain.domain m [<=] U)  x' pf'.
+    -> @poLe _ (@PartialOrder_sig D _ P) (exist P x pf) (exist P x' pf').
 Proof.
   intros. simpl. eapply H0.
 Qed.
 
-Lemma poEq_vdom_struct D U `{PartialOrder D} (x x':Dom D) pf pf'
+Lemma poLe_sig_struct' D `{PartialOrder D} (P: D -> Prop) (x x':{x : D | P x})
+  : proj1_sig x ⊑ proj1_sig x'
+    -> x ⊑ x'.
+Proof.
+  intros. simpl. eapply H0.
+Qed.
+
+Lemma poEq_sig_struct D `{PartialOrder D} (P: D -> Prop) (x x':D)  pf pf'
   : x ≣ x'
-    -> exist (fun m => CMapDomain.domain m [<=] U) x pf
-            ≣ exist (fun m => CMapDomain.domain m [<=] U)  x' pf'.
+    -> @poEq _ (@PartialOrder_sig D _ P) (exist P x pf) (exist P x' pf').
 Proof.
   intros. simpl. eapply H0.
 Qed.
 
-Opaque poLe poEq bottom.
+Lemma poLe_sig_destruct D `{PartialOrder D} (P: D -> Prop) (x x':{x : D | P x})
+  : x ⊑ x'
+    -> proj1_sig x ⊑ proj1_sig x'.
+Proof.
+  intros. eapply H0.
+Qed.
+
+Lemma poEq_sig_destruct D `{PartialOrder D} (P: D -> Prop) (x x':{x : D | P x})
+  : x ≣ x'
+    -> proj1_sig x ≣ proj1_sig x'.
+Proof.
+  intros. eapply H0.
+Qed.
+
+Hint Resolve poLe_sig_destruct poEq_sig_destruct.
+
+Lemma poLe_map D `{PartialOrder D} D' `{PartialOrder D'} (f g:D -> D') (L L':list D)
+      (LEf:forall a b, poLe a b -> poLe (f a) (g b))
+      (LE: poLe L L')
+  : poLe (f ⊝ L) (g ⊝ L').
+Proof.
+  general induction LE; simpl; eauto.
+Qed.
+
+Lemma poLe_map_nd D D' `{PartialOrder D'} (f g:D -> D') (L:list D)
+      (LEf:forall a, poLe (f a) (g a))
+  : poLe (f ⊝ L) (g ⊝ L).
+Proof.
+  general induction L; simpl; eauto.
+Qed.
+
+Lemma poEq_map D `{PartialOrder D} D' `{PartialOrder D'} (f g:D -> D') (L L':list D)
+      (LEf:forall a b, poEq a b -> poEq (f a) (g b))
+      (LE: poEq L L')
+  : poLe (f ⊝ L) (g ⊝ L').
+Proof.
+  general induction LE; simpl; eauto.
+Qed.
+
+Lemma poEq_map_nd D D' `{PartialOrder D'} (f g:D -> D') (L:list D)
+      (LEf:forall a, poEq (f a) (g a))
+  : poEq (f ⊝ L) (g ⊝ L).
+Proof.
+  general induction L; simpl; eauto.
+Qed.
 
 Lemma poLe_domupdd D `{PartialOrder D} U d d' v v' x IN IN'
   : d ⊑ d'
     -> v ⊑ v'
     -> @domupdd D U d x v IN ⊑ @domupdd D U d' x v' IN'.
 Proof.
-  intros. eapply poLe_vdom_struct.
+  intros. eapply poLe_sig_struct.
   eapply domupd_le; eauto.
 Qed.
 
@@ -269,7 +323,7 @@ Lemma poEq_domupdd D `{PartialOrder D} U d d' v v' x IN IN'
     -> v ≣ v'
     -> @domupdd D U d x v IN ≣ @domupdd D U d' x v' IN'.
 Proof.
-  intros. eapply poEq_vdom_struct.
+  intros. eapply poEq_sig_struct.
   eapply domupd_eq; eauto.
 Qed.
 
@@ -350,13 +404,10 @@ Proof with eauto using poLe_setTopAnn, poLe_getAnni.
   - eapply poLe_struct.
     + eapply poLe_struct; eauto.
       repeat (cases; eauto; simpl in *).
-      eapply poLe_vdom_struct.
-      eapply domjoin_list_le; eauto.
-      revert fMon LE_d.
-      clear_all; intros.
-      * general induction Y; simpl; eauto.
+      * eapply poLe_sig_struct.
+        eapply domjoin_list_le; eauto.
+        eapply poLe_map_nd; eauto.
       * etransitivity; eauto.
-        destruct d'; eapply poLe_vdom_struct; simpl.
         eapply domjoin_list_exp.
     + eapply update_at_poLe; eauto.
   - eapply PIR2_get in H7; eauto.
@@ -383,11 +434,9 @@ Proof with eauto using poLe_setTopAnn, poLe_getAnni.
   - eauto 100 using orb_poEq_proper.
   - split; [split|]; simpl; eauto 20.
     + repeat (cases; eauto; simpl in *).
-      eapply poEq_vdom_struct.
+      eapply poEq_sig_struct.
       eapply domjoin_list_eq; eauto.
-      revert fMon LE_d.
-      clear_all; intros.
-      * general induction Y; simpl; eauto 20.
+      eapply poEq_map_nd; eauto.
    + inv H2. reflexivity.
   - eapply PIR2_get in H7; eauto.
     eauto 100 using forwardF_ext.
@@ -516,40 +565,70 @@ Proof.
       eapply setTopAnn_annotation; eauto.
 Qed.
 
-
-Instance makeForwardAnalysis D
-         {PO:PartialOrder D}
-         (BSL:JoinSemiLattice D)
-         (f: forall U : ⦃nat⦄, bool -> VDom U D -> exp -> ؟ D)
-         (fr: forall U : ⦃nat⦄, bool -> VDom U D -> op -> bool * bool)
-         (fMon: forall U e (a a':VDom U D), a ⊑ a' -> forall b b', b ⊑ b' -> f _ b a e ⊑ f _ b' a' e)
-         (frMon:forall U e (a a':VDom U D),
-             a ⊑ a' -> forall b b', b ⊑ b' -> fr _ b a e ⊑ fr _ b' a' e)
-         (Trm: Terminating D poLt)
-
-  : forall s, Iteration (VDom (occurVars s) D * { a : ann bool | annotation s a }) :=
+Class UpperBounded (A : Type) `{PartialOrder A} :=
   {
-    step := fun dr =>
-             let a := forward f fr nil (incl_empty _ (occurVars s)) (subTerm_refl s)
-                             (fst dr) (proj1_sig (snd dr)) in
-             (fst (fst a), exist (fun a => annotation s a) (snd (fst a)) _);
+    top : A;
+    top_greatest : forall a, poLe a top;
   }.
+
+Arguments UpperBounded A {H}.
+
+Arguments to_list : simpl never.
+
+Instance poLe_find_proper D `{PartialOrder D}
+  : Proper (_eq ==> @poLe (Dom D) _ ==> poLe) (@MapInterface.find nat _ _ D).
 Proof.
-  - subst a.
-    eapply forward_annotation; eauto.
-    eapply (proj2_sig (snd dr)).
-  - refine (domjoin_listd bottom (to_list (freeVars s))
-                          ((fun _ => Some Top) ⊝ (to_list (freeVars s))) _,
-            exist _ (@setTopAnn bool (setAnn false s) true) _).
-    + rewrite of_list_3.
-      rewrite occurVars_freeVars_definedVars. eauto with cset.
-    + eapply setTopAnn_annotation. eapply setAnn_annotation.
-  - simpl. split; hnf; simpl.
-    eapply bottom_least.
-  - Transparent poLe. hnf; intros. simpl.
-    eapply (forward_monotone f fr fMon frMon); eauto.
-    eapply H.
-Defined.
+  unfold Proper, respectful; intros. invc H0.
+  eapply H1.
+Qed.
+
+Instance poEq_find_proper D `{PartialOrder D}
+  : Proper (_eq ==> @poEq (Dom D) _ ==> poEq) (@MapInterface.find nat _ _ D).
+Proof.
+  unfold Proper, respectful; intros. invc H0.
+  eapply H1.
+Qed.
+
+Instance poLe_domenv_proper D `{PartialOrder D}
+  : Proper (@poLe (Dom D) _ ==> _eq ==> poLe) (@domenv D).
+Proof.
+  unfold Proper, respectful; intros. invc H1.
+  eapply H0.
+Qed.
+
+Instance poEq_domenv_proper D `{PartialOrder D}
+  : Proper (@poEq (Dom D) _ ==> _eq ==> poEq) (@domenv D).
+Proof.
+  unfold Proper, respectful; intros. invc H1.
+  eapply H0.
+Qed.
+
+Lemma domupd_poLe_left D `{PartialOrder D} d d' x v
+  : d ⊑ d'
+    -> v ⊑ domenv d x
+    -> domupd d x v ⊑ d'.
+Proof.
+  intros.
+  hnf; intros y.
+  decide (y === x); eauto; subst.
+  - invc e.
+    rewrite domupd_var_eq; eauto.
+    rewrite <- H0. eauto.
+  - rewrite domupd_var_ne; eauto.
+Qed.
+
+Arguments join : simpl never.
+
+Lemma domjoin_list_poLe_left D `{JoinSemiLattice D} d d' Z Y
+  : d ⊑ d'
+    -> (forall n x y, get Z n x -> get Y n y -> y ⊑ domenv d' x)
+    -> domjoin_list d Z Y ⊑ d'.
+Proof.
+  general induction Z; destruct Y; eauto.
+  simpl. eapply domupd_poLe_left; eauto using get.
+  exploit H2; eauto using get.
+  rewrite H3. admit.
+Admitted.
 
 Lemma snd_forwardF_inv (sT:stmt) D `{JoinSemiLattice D} f fr BL ZL ZLIncl F sa AE STF
       (P1: (setTopAnn (A:=bool)
@@ -561,7 +640,6 @@ Lemma snd_forwardF_inv (sT:stmt) D `{JoinSemiLattice D} f fr BL ZL ZLIncl F sa A
       (Len1:❬F❭ = ❬sa❭) (Len2:❬F❭ <= ❬BL❭) (Len3:❬ZL❭ = ❬BL❭)
   : (joinTopAnn (A:=bool) ⊜ sa BL) ≣ sa.
 Proof.
-  Transparent poEq.
   eapply PIR2_ann_R_get in P1.
   rewrite getAnn_setTopAnn_zip in P1.
   pose proof (PIR2_joinTopAnn_zip_left sa BL).
@@ -652,8 +730,6 @@ Proof.
     intros; eauto with len.
 Qed.
 
-
-Transparent poEq poLe.
 
 Lemma snd_forwardF_inv_get sT D `{JoinSemiLattice D} f fr BL ZL ZLIncl F sa AE STF
       (Len1:❬F❭ = ❬sa❭) (Len2:❬F❭ <= ❬BL❭) (Len3:❬ZL❭ = ❬BL❭)
@@ -842,7 +918,7 @@ Proof.
       * erewrite get_nth; eauto.
         split.
         eapply agree_on_incl.
-        eapply domupd_list_agree; eauto. hnf; reflexivity.
+        eapply domupd_list_agree; eauto.
         -- rewrite <- incl_list_union; eauto.
            cset_tac. reflexivity.
         -- eapply agree_on_incl.
@@ -884,3 +960,48 @@ Proof.
         -- instantiate (1:=G).
            clear_all; cset_tac.
 Qed.
+
+Instance makeForwardAnalysis D
+         {PO:PartialOrder D}
+         (BSL:JoinSemiLattice D) (UB:UpperBounded D)
+         (f: forall U : ⦃nat⦄, bool -> VDom U D -> exp -> ؟ D)
+         (fr: forall U : ⦃nat⦄, bool -> VDom U D -> op -> bool * bool)
+         (fMon: forall U e (a a':VDom U D), a ⊑ a' -> forall b b', b ⊑ b' -> f _ b a e ⊑ f _ b' a' e)
+         (frMon:forall U e (a a':VDom U D),
+             a ⊑ a' -> forall b b', b ⊑ b' -> fr _ b a e ⊑ fr _ b' a' e)
+         (Trm: Terminating D poLt)
+         (s : stmt) ra (RA:renamedApart s ra)
+  : Iteration (VDom (occurVars s) D * { a : ann bool | annotation s a }) :=
+  {
+    step := fun dr =>
+             let a := forward f fr nil (incl_empty _ (occurVars s)) (subTerm_refl s)
+                             (fst dr) (proj1_sig (snd dr)) in
+             (fst (fst a), exist (fun a => annotation s a) (snd (fst a)) _);
+  }.
+Proof.
+  - subst a.
+    eapply forward_annotation; eauto.
+    eapply (proj2_sig (snd dr)).
+  - refine (domjoin_listd bottom (to_list (freeVars s))
+                          ((fun _ => Some top) ⊝ (to_list (freeVars s))) _,
+            exist _ (@setTopAnn bool (setAnn bottom s) true) _).
+    + abstract (rewrite of_list_3;
+      rewrite occurVars_freeVars_definedVars; eauto with cset).
+    + abstract (eapply setTopAnn_annotation; eapply setAnn_annotation).
+  - simpl. split; simpl.
+    + eapply domjoin_list_poLe_left.
+      * eapply poLe_sig_destruct.
+        eapply bottom_least.
+      * intros. inv_get.
+        edestruct forward_agree with (G:=singleton x); eauto. admit.
+        rewrite <- (H1 x); eauto. simpl.
+
+    + eapply poLe_sig_struct.
+      eapply ann_R_setTopAnn_left.
+      * rewrite forward_fst_snd_getAnn.
+        rewrite getAnn_setTopAnn. reflexivity.
+      * eapply ann_bottom. eapply forward_annotation.
+        eapply setTopAnn_annotation; eapply setAnn_annotation.
+  - hnf; intros. simpl.
+    eapply (forward_monotone f fr fMon frMon); eauto.
+Defined.
