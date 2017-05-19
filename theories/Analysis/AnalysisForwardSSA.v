@@ -520,7 +520,6 @@ Qed.
 Instance makeForwardAnalysis D
          {PO:PartialOrder D}
          (BSL:JoinSemiLattice D)
-         (LB:LowerBounded D)
          (f: forall U : ⦃nat⦄, bool -> VDom U D -> exp -> ؟ D)
          (fr: forall U : ⦃nat⦄, bool -> VDom U D -> op -> bool * bool)
          (fMon: forall U e (a a':VDom U D), a ⊑ a' -> forall b b', b ⊑ b' -> f _ b a e ⊑ f _ b' a' e)
@@ -534,14 +533,19 @@ Instance makeForwardAnalysis D
              let a := forward f fr nil (incl_empty _ (occurVars s)) (subTerm_refl s)
                              (fst dr) (proj1_sig (snd dr)) in
              (fst (fst a), exist (fun a => annotation s a) (snd (fst a)) _);
-    initial_value := bottom
   }.
-
 Proof.
   - subst a.
     eapply forward_annotation; eauto.
     eapply (proj2_sig (snd dr)).
-  - eapply bottom_least.
+  - refine (domjoin_listd bottom (to_list (freeVars s))
+                          ((fun _ => Some Top) ⊝ (to_list (freeVars s))) _,
+            exist _ (@setTopAnn bool (setAnn false s) true) _).
+    + rewrite of_list_3.
+      rewrite occurVars_freeVars_definedVars. eauto with cset.
+    + eapply setTopAnn_annotation. eapply setAnn_annotation.
+  - simpl. split; hnf; simpl.
+    eapply bottom_least.
   - Transparent poLe. hnf; intros. simpl.
     eapply (forward_monotone f fr fMon frMon); eauto.
     eapply H.

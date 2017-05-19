@@ -86,7 +86,7 @@ Proof.
     + eapply ojoin_poEq; eauto.
 Qed.
 
-Lemma domjoin_ne D `{JoinSemiLattice D} (m:Dom D) x y a
+Lemma domjoin_ne D (m:Dom D) x y a
   : x =/= y
     -> find x (domupd m y a) = find x m.
 Proof.

@@ -4,7 +4,8 @@ Require Import CMap CMapDomain CMapPartialOrder CMapJoinSemiLattice.
 Require Import Analysis AnalysisForwardSSA Subterm CSet MapAgreement RenamedApart.
 Require Import Infra.PartialOrder Infra.Lattice Infra.WithTop.
 Require Import LabelsDefined Annotation.
-Require Import Reachability ConstantPropagation ConstantPropagationAnalysis.
+Require Import Reachability ReachabilityAnalysisCorrectSSA.
+Require Import ConstantPropagation ConstantPropagationAnalysis.
 
 Local Arguments proj1_sig {A} {P} e.
 Local Arguments length {A} e.
