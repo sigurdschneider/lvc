@@ -201,7 +201,7 @@ Proof.
 Qed.
 
 Lemma forward_getAnn sT D `{JoinSemiLattice D} f fr ZL ZLIncl s (ST:subTerm s sT) b r r'
-  : ann_R poEq (snd (fst (forward f fr ZL ZLIncl ST b r))) r'
+  : (snd (fst (forward f fr ZL ZLIncl ST b r))) ≣ r'
     -> getAnn r = getAnn r'.
 Proof.
   intros. eapply ann_R_get in H1.
@@ -393,6 +393,25 @@ Proof with eauto using poLe_setTopAnn, poLe_getAnni.
     eauto 100 using forwardF_ext.
 Qed.
 
+Lemma forwardF_ext' sT D `{JoinSemiLattice D} (f:forall U : ⦃nat⦄, bool -> VDom U D -> exp -> ؟ D)
+      (fr:forall U : ⦃nat⦄, bool -> VDom U D -> op -> bool * bool) F ZL ZLIncl
+      (fMon: forall U e (a a':VDom U D), a ≣ a' -> forall b b', b ≣ b' -> f U b a e ≣ f U b' a' e)
+      (frMon:forall U e (a a':VDom U D),
+          a ≣ a' -> forall b b', b ≣ b' -> fr U b a e ≣ fr U b' a' e)
+  : forall (ST:forall (n : nat) (s : params * stmt), get F n s -> subTerm (snd s) sT)
+      (d d':VDom (occurVars sT) D), poEq d d'
+                       -> forall (rF rF':list (ann bool)),
+                    poEq rF rF'
+                    -> forall (BL BL':list bool),
+                      poEq BL BL'
+                      -> poEq (@forwardF sT (sTDom D) BL (forward f fr ZL ZLIncl) F rF d ST)
+                             (forwardF BL' (forward f fr ZL ZLIncl) F rF' d' ST).
+Proof.
+  intros.
+  eapply forwardF_ext; eauto.
+  intros.
+  eapply forward_ext; eauto.
+Qed.
 
 Lemma forwardF_PIR2 sT D `{JoinSemiLattice D} BL ZL ZLIncl
       (F:list (params * stmt)) sa a (Len1:❬F❭ = ❬sa❭)
@@ -529,16 +548,16 @@ Proof.
 Defined.
 
 Lemma snd_forwardF_inv (sT:stmt) D `{JoinSemiLattice D} f fr BL ZL ZLIncl F sa AE STF
-      (P1:PIR2 (ann_R eq)
-               (setTopAnn (A:=bool)
-                          ⊜ (snd (fst (@forwardF sT (sTDom D) BL (forward f fr ZL ZLIncl) F
-                                                (joinTopAnn (A:=bool) ⊜ sa BL) AE STF)))
-                          (snd (forwardF BL
-                                         (forward f fr ZL ZLIncl) F
-                                         (joinTopAnn (A:=bool) ⊜ sa BL) AE STF))) sa)
+      (P1: (setTopAnn (A:=bool)
+                      ⊜ (snd (fst (@forwardF sT (sTDom D) BL (forward f fr ZL ZLIncl) F
+                                             (joinTopAnn (A:=bool) ⊜ sa BL) AE STF)))
+                      (snd (forwardF BL
+                                     (forward f fr ZL ZLIncl) F
+                                     (joinTopAnn (A:=bool) ⊜ sa BL) AE STF))) ≣ sa)
       (Len1:❬F❭ = ❬sa❭) (Len2:❬F❭ <= ❬BL❭) (Len3:❬ZL❭ = ❬BL❭)
-  : PIR2 (ann_R eq) (joinTopAnn (A:=bool) ⊜ sa BL) sa.
+  : (joinTopAnn (A:=bool) ⊜ sa BL) ≣ sa.
 Proof.
+  Transparent poEq.
   eapply PIR2_ann_R_get in P1.
   rewrite getAnn_setTopAnn_zip in P1.
   pose proof (PIR2_joinTopAnn_zip_left sa BL).
@@ -570,25 +589,23 @@ Lemma snd_forwardF_inv' sT D `{JoinSemiLattice D}
       (f: forall U : ⦃nat⦄, bool -> VDom U D -> exp -> ؟ D)
       (fr: forall U : ⦃nat⦄, bool -> VDom U D -> op -> bool * bool)
       BL ZL ZLIncl F sa AE STF
-      (P1:PIR2 (ann_R eq)
-               (setTopAnn (A:=bool)
-                          ⊜ (snd (fst (forwardF BL (forward f fr ZL ZLIncl) F
-                                                (joinTopAnn (A:=bool) ⊜ sa BL) AE STF)))
-                          (snd (forwardF BL
-                                         (forward f fr ZL ZLIncl) F
-                                         (joinTopAnn (A:=bool) ⊜ sa BL) AE STF))) sa)
+      (P1: (setTopAnn (A:=bool)
+                      ⊜ (snd (fst (forwardF BL (forward f fr ZL ZLIncl) F
+                                            (joinTopAnn (A:=bool) ⊜ sa BL) AE STF)))
+                      (snd (forwardF BL
+                                     (forward f fr ZL ZLIncl) F
+                                     (joinTopAnn (A:=bool) ⊜ sa BL) AE STF))) ≣ sa)
       (Len1:❬F❭ = ❬sa❭) (Len2:❬F❭ <= ❬BL❭) (Len3:❬ZL❭ = ❬BL❭)
-  : PIR2 (ann_R eq)
-              (snd (fst (@forwardF sT (sTDom D) BL (forward f fr ZL ZLIncl) F
-                                   (joinTopAnn (A:=bool) ⊜ sa BL) AE STF))) sa.
+  : (snd (fst (@forwardF sT (sTDom D) BL (forward f fr ZL ZLIncl) F
+                         (joinTopAnn (A:=bool) ⊜ sa BL) AE STF))) ≣ sa.
 Proof.
   assert (P2:PIR2 poLe (Take.take ❬sa❭
-                               (snd (forwardF BL (forward f fr ZL ZLIncl) F
-                                              (joinTopAnn (A:=bool) ⊜ sa BL) AE
-                                              STF))) (getAnn ⊝ sa)). {
+                                  (snd (forwardF BL (forward f fr ZL ZLIncl) F
+                                                 (joinTopAnn (A:=bool) ⊜ sa BL) AE
+                                                 STF))) (getAnn ⊝ sa)). {
     eapply PIR2_ann_R_get in P1.
     rewrite getAnn_setTopAnn_zip in P1.
-     etransitivity. Focus 2.
+    etransitivity. Focus 2.
     eapply PIR2_R_impl; try eapply P1; eauto.
     assert (❬sa❭ = (Init.Nat.min
                       ❬snd
@@ -636,10 +653,8 @@ Transparent poEq poLe.
 
 Lemma snd_forwardF_inv_get sT D `{JoinSemiLattice D} f fr BL ZL ZLIncl F sa AE STF
       (Len1:❬F❭ = ❬sa❭) (Len2:❬F❭ <= ❬BL❭) (Len3:❬ZL❭ = ❬BL❭)
-      (P1:PIR2 (ann_R eq)
-               (snd (fst (@forwardF sT (sTDom D)  BL (forward f fr ZL ZLIncl) F
-                                  (joinTopAnn (A:=bool) ⊜ sa BL) AE STF))) sa)
-      (P2:PIR2 (ann_R eq) (joinTopAnn (A:=bool) ⊜ sa BL) sa)
+      (P1:(snd (fst (@forwardF sT (sTDom D)  BL (forward f fr ZL ZLIncl) F
+                               sa AE STF))) ≣ sa)
       (EQ: forall n Zs r (ST:subTerm (snd Zs) sT), get F n Zs -> get sa n r ->
                         poEq (fst (fst (forward f fr ZL ZLIncl ST AE r))) AE)
       (fExt: forall U e (a a':VDom U D), a ≣ a' -> forall b b', b ≣ b' -> f _ b a e ≣ f _ b' a' e)
@@ -647,27 +662,21 @@ Lemma snd_forwardF_inv_get sT D `{JoinSemiLattice D} f fr BL ZL ZLIncl F sa AE S
           a ≣ a' -> forall b b', b ≣ b' -> fr _ b a e ≣ fr _ b' a' e)
       n r Zs (Getsa:get sa n r)
       (GetF:get F n Zs) (STZs:subTerm (snd Zs) sT)
-  : ann_R eq (snd (fst (forward f fr ZL ZLIncl STZs AE r))) r.
+  : (snd (fst (forward f fr ZL ZLIncl STZs AE r))) ≣ r.
 Proof.
-  rewrite forwardF_ext in P1;try eapply P2; try reflexivity.
-  Focus 2. intros. eapply forward_ext; eauto.
-  clear Len3 P2.
   general induction Len1; simpl in *.
   destruct BL; isabsurd; simpl in *. inv Getsa; inv GetF.
-  - inv P1.
-    assert((STF 0 Zs (@getLB (params * stmt) XL Zs)) = STZs).
+  - assert((STF 0 Zs (@getLB (params * stmt) XL Zs)) = STZs).
     eapply subTerm_PI. rewrite <- H1.
     eapply pf.
-  - inv P1.
-    eapply IHLen1; try eassumption.
+  - eapply IHLen1; try eassumption.
     Focus 3.
-    rewrite forwardF_ext; eauto.
-    intros. eapply forward_ext; eauto.
+    rewrite forwardF_ext'; eauto.
     symmetry. eapply EQ; eauto using get. reflexivity.
     simpl. omega.
     eauto using get.
+    eauto using get.
 Qed.
-
 
 Lemma agree_on_option_R_fstNoneOrR  (X : Type) `{OrderedType X} (Y : Type)
       (R R':Y -> Y -> Prop) (D:set X) (f g h:X -> option Y)
@@ -871,6 +880,3 @@ Proof.
         -- instantiate (1:=G).
            clear_all; cset_tac.
 Qed.
-
-(*
- *)
