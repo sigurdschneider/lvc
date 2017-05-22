@@ -605,7 +605,7 @@ Qed.
 
 Lemma domupd_poLe_left D `{PartialOrder D} d d' x v
   : d ⊑ d'
-    -> v ⊑ domenv d x
+    -> v ⊑ domenv d' x
     -> domupd d x v ⊑ d'.
 Proof.
   intros.
@@ -613,22 +613,8 @@ Proof.
   decide (y === x); eauto; subst.
   - invc e.
     rewrite domupd_var_eq; eauto.
-    rewrite <- H0. eauto.
   - rewrite domupd_var_ne; eauto.
 Qed.
-
-Arguments join : simpl never.
-
-Lemma domjoin_list_poLe_left D `{JoinSemiLattice D} d d' Z Y
-  : d ⊑ d'
-    -> (forall n x y, get Z n x -> get Y n y -> y ⊑ domenv d' x)
-    -> domjoin_list d Z Y ⊑ d'.
-Proof.
-  general induction Z; destruct Y; eauto.
-  simpl. eapply domupd_poLe_left; eauto using get.
-  exploit H2; eauto using get.
-  rewrite H3. admit.
-Admitted.
 
 Lemma snd_forwardF_inv (sT:stmt) D `{JoinSemiLattice D} f fr BL ZL ZLIncl F sa AE STF
       (P1: (setTopAnn (A:=bool)
@@ -961,6 +947,59 @@ Proof.
            clear_all; cset_tac.
 Qed.
 
+
+Arguments join : simpl never.
+
+Lemma domjoin_list_notin D `{JoinSemiLattice D} x d Z Y
+  : x ∉ of_list Z
+    -> MapInterface.find x (domjoin_list d Z Y) = MapInterface.find x d.
+Proof.
+  intros. general induction Z; destruct Y; simpl in *; eauto.
+  rewrite domupd_var_ne.
+  rewrite IHZ; eauto. cset_tac. cset_tac.
+Qed.
+
+Lemma domjoin_list_get D `{JoinSemiLattice D} x (y y':option D) n d Z Y
+  : get Z n x
+    -> get Y n y'
+    -> y ≣ y'
+    -> NoDupA eq Z
+    -> domenv (domjoin_list d Z Y) x ≣ ((domenv d x) ⊔ y).
+Proof.
+  intros. general induction n; simpl in *; eauto.
+  - unfold domenv. rewrite domupd_var_eq; eauto.
+    rewrite H3; eauto.
+  - inv H1; inv H2. simpl.
+    inv H4.
+    eapply NoDupA_get_neq' in H4; [|eauto|eauto| instantiate (2:=0) |eauto using get| eauto using get];
+      try omega.
+    rewrite <- IHn; eauto using get.
+    unfold domenv.
+    rewrite domupd_var_ne; eauto. intro. eapply H4. invc H5; eauto.
+Qed.
+
+
+Lemma join_poLe_left (X : Type) (H : PartialOrder X) (H0 : JoinSemiLattice X)
+      (x y z : X)
+  : x ⊑ z -> y ⊑ z -> x ⊔ y ⊑ z.
+Proof.
+  intros.
+  rewrite H1, H2.
+  rewrite (join_idempotent z).
+  reflexivity.
+Qed.
+
+Lemma domjoin_list_poLe_left D `{JoinSemiLattice D} d d' Z Y
+  : d ⊑ d'
+    -> (forall n x y, get Z n x -> get Y n y -> y ⊑ domenv d' x)
+    -> domjoin_list d Z Y ⊑ d'.
+Proof.
+  general induction Z; destruct Y; eauto.
+  simpl. eapply domupd_poLe_left; eauto using get.
+  exploit H2; eauto using get.
+  eapply join_poLe_left; eauto.
+Qed.
+
 Instance makeForwardAnalysis D
          {PO:PartialOrder D}
          (BSL:JoinSemiLattice D) (UB:UpperBounded D)
@@ -993,9 +1032,17 @@ Proof.
       * eapply poLe_sig_destruct.
         eapply bottom_least.
       * intros. inv_get.
-        edestruct forward_agree with (G:=singleton x); eauto. admit.
-        rewrite <- (H1 x); eauto. simpl.
-
+        edestruct forward_agree with (G:=singleton x); eauto.
+        Focus 2.
+        -- rewrite <- (H1 x); eauto. simpl.
+           rewrite domjoin_list_get; eauto.
+           instantiate (1:=Some top). rewrite join_idempotent. reflexivity.
+           eapply nodup_to_list_eq.
+           rewrite renamedApart_occurVars; eauto.
+           eapply get_elements_in in H.
+           rewrite renamedApart_freeVars in H; eauto.
+           eapply renamedApart_disj in RA. cset_tac.
+        -- abstract (eapply setTopAnn_annotation; eapply setAnn_annotation).
     + eapply poLe_sig_struct.
       eapply ann_R_setTopAnn_left.
       * rewrite forward_fst_snd_getAnn.
