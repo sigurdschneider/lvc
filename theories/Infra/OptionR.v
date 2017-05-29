@@ -174,3 +174,30 @@ Smpl Add 100
      | [ H : @ifSndR _ _ _ _ ?B |- _ ] =>
        is_constructor_app B; invc H
      end : inv_trivial.
+
+
+Lemma poEq_None_inv (T : Type) (H : PartialOrder T) a
+  : a ≣ None -> a = None.
+Proof.
+  intros. invc H0. reflexivity.
+Qed.
+
+Smpl Add
+     match goal with
+     | [ H : ?Y ≣ ⎣⎦ |- _ ] => eapply poEq_None_inv in H; try subst Y
+     | [ H : ⎣⎦ ≣ ?Y |- _ ] => symmetry in H; eapply poEq_None_inv in H; try subst Y
+     end : inv_trivial.
+
+Lemma poEq_Some_inv (T : Type) (H : PartialOrder T) a b
+  : a ≣ Some b -> exists a', a = Some a' /\ poEq a' b.
+Proof.
+  intros. invc H0. eauto.
+Qed.
+
+Smpl Add
+     match goal with
+     | [ H : ?Y ≣ Some _ |- _ ] => eapply poEq_Some_inv in H;
+                                   destruct H as [? [? H]]; try subst Y
+     | [ H : Some _ ≣ ?Y |- _ ] => symmetry in H; eapply poEq_Some_inv in H;
+                                   destruct H as [? [? H]]; try subst Y
+     end : inv_trivial.

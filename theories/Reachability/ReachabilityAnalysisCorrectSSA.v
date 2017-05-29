@@ -637,7 +637,11 @@ Proof.
       -- split; simpl; eauto.
       -- rewrite (take_eta ❬sa❭) at 1.
          eapply PIR2_app; eauto.
-         ++ eapply setTopAnn_map_inv in H23.
+         ++ Transparent poEq.
+           unfold poEq in H23. simpl in H23.
+           unfold poEq in H23. simpl in H23.
+           repeat PIR2_eq_simpl.
+           eapply setTopAnn_map_inv in H23.
            rewrite <- H23. eapply PIR2_take.
            change (PIR2 poLe) with (@poLe (list bool) _).
            unfold FWF.
