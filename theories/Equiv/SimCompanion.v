@@ -1,161 +1,16 @@
 Require Import Util Option AllInRel Get Setoid.
-Require Export paco3 SmallStepRelations StateType Sim.
-Require Import Coq.Logic.FunctionalExtensionality ClassicalFacts.
-
-Axiom propositional_extensionality : prop_extensionality.
-
-Notation "p =3= q" :=
-  (forall x0 x1 x2, p x0 x1 x2 <-> (q x0 x1 x2:Prop))
-    (at level 50, no associativity).
-
-
-Lemma pred3_extensionality A B C (R R' : A -> B -> C -> Prop)
-  : R =3= R' -> R = R'.
-Proof.
-  intros.
-  do 3 (eapply functional_extensionality; intros).
-  eapply propositional_extensionality. eauto.
-Qed.
-
-Set Implicit Arguments.
-
-Section Tower.
-  Variables A B C : Type.
-  Variable f : (A -> B -> C -> Prop) -> (A -> B -> C -> Prop).
-
-  Definition inf I (F: I -> A -> B -> C -> Prop) : A -> B -> C -> Prop :=
-    fun a b c => forall i:I, F i a b c.
-
-  Inductive T : (A -> B -> C -> Prop) -> Prop :=
-  | T_step R : T R -> T (f R)
-  | T_lim I (F : I -> A -> B -> C -> Prop)
-    : (forall i, T (F i)) -> T (inf F).
-
-  Definition companion (R : A -> B -> C -> Prop) : A -> B -> C -> Prop :=
-    fun a b c => forall S, T S -> R <3= S -> S a b c.
-
-  Notation "'㚘'" := companion (at level 0).
-
-  Lemma T_companion x : T (companion x).
-    repeat (eapply T_lim; intros).
-    eauto.
-  Qed.
-
-  Lemma companion_monotone : monotone3 companion.
-    hnf; intros. hnf; intros.
-    eapply IN; eauto.
-  Qed.
-
-  Lemma companion_inc R : R <3= companion R.
-    intros; hnf; eauto.
-  Qed.
-
-  Lemma companion_idem x : companion (companion x) = companion x.
-    eapply pred3_extensionality; split.
-    - intros H; eapply H; eauto using T_companion.
-    - eapply companion_inc.
-  Qed.
-
-
-  Lemma companion_img x : T x -> companion x = x.
-    intros. eapply pred3_extensionality.
-    split; intros; eauto using companion_inc.
-    - eapply H0; eauto.
-  Qed.
-
-  Definition inf_closed (P: (A -> B -> C -> Prop) -> Prop) :=
-    forall I (F : I -> A -> B -> C -> Prop),
-      (forall i, P (F i)) -> P (inf F).
-
-
-  Theorem tower_ind P
-    : inf_closed P ->
-      (forall x, P (companion x) -> P (f (companion x))) ->
-      forall x, P (companion x).
-  Proof.
-    intros.
-    do 3 (eapply H; intros).
-    clear x i1.
-    induction i0; eauto.
-    rewrite <- (companion_img i0).
-    eapply H0. rewrite companion_img; eauto.
-  Qed.
-
-  Lemma companion_fold R
-    : monotone3 f -> f (companion R) <3= companion R.
-  Proof.
-    intro.
-    eapply tower_ind.
-    - hnf; intros. hnf; intros. eauto.
-    - intros. eapply H; eauto.
-  Qed.
-
-  Lemma companion_unfold
-    : companion bot3 <3= f (companion bot3).
-  Proof.
-    intros. eapply PR; intros.
-    - econstructor 1. eapply T_companion.
-    - isabsurd.
-  Qed.
-
-  Section UptoLemma.
-    Variable g : (A -> B -> C -> Prop) -> (A -> B -> C -> Prop).
-    Hypothesis gP : monotone3 g.
-
-    Lemma upto :
-      (forall x, g (companion x) <3= companion x -> g (f (companion x)) <3= f (companion x)) ->
-      (forall x, g (companion x) <3= companion x).
-    Proof.
-      intros H1 H2.
-      eapply tower_ind.
-      - intros; hnf; intros; eauto.
-        hnf; eauto.
-      - intros; eauto.
-    Qed.
-
-    Lemma upto_below :
-      (forall x, g (companion x) <3= companion x) -> g <4= companion.
-    Proof.
-      intros H1 r; intros.
-      eapply H1. eapply gP; eauto.
-      eapply companion_inc.
-    Qed.
-
-    Lemma upto_char :
-      monotone3 f ->
-      g <4= companion ->
-      forall x, g (companion x) <3= companion x -> g (f (companion x)) <3= f (companion x).
-    Proof.
-      intros gM H1 r H2; intros.
-      eapply H1; eauto.
-      econstructor 1. eapply T_companion.
-    Qed.
-  End UptoLemma.
-
-    Lemma companion_unfold_r r
-    : monotone3 f -> companion r <3= f (companion r \3/ r).
-  Proof.
-    intros. hnf in PR. eapply PR.
-    - econstructor 1. admit.
-    - intros.
-      eapply H; try left; eauto.
-      (* eapply PR. *)
-
-  Admitted.
-
-End Tower.
-
-
+Require Export paco3 SmallStepRelations StateType Sim SimLockStep.
+Require Import Tower3 Tower2.
 
 Definition simc {S} `{StateType S} {S'} `{StateType S'} r t (σ1:S) (σ2:S')
-  := companion (@sim_gen S _ S' _) r t σ1 σ2.
+  := companion3 (@sim_gen S _ S' _) r t σ1 σ2.
 
 Theorem simc_sim {S} `{StateType S} {S'} `{StateType S'} r t (σ1:S) (σ2:S')
   : simc bot3 t σ1 σ2 -> sim r t σ1 σ2.
 Proof.
   intros. revert t σ1 σ2 H1.
   pcofix CIH; intros.
-  pfold. eapply companion_unfold in H2.
+  pfold. eapply companion3_unfold in H2.
   eapply sim_gen_mon; eauto.
 Qed.
 
@@ -165,7 +20,7 @@ Theorem sim_simc {S} `{StateType S} {S'} `{StateType S'} r t (σ1:S) (σ2:S')
 Proof.
   intros. revert t σ1 σ2 H1.
   unfold simc.
-  eapply tower_ind; intros.
+  eapply tower_ind3; intros.
   - hnf; intros; hnf; intros. eauto.
   - punfold H2.
     eapply sim_gen_mon; eauto; intros.
@@ -192,7 +47,7 @@ Lemma expc_upto {S} `{StateType S} {S'} `{StateType S'}
   : (forall r, @expc S _ S' _ (simc r) <3= simc r).
 Proof.
   intros H1 H2.
-  eapply upto.
+  eapply upto3.
   - unfold expc; hnf; intros.
     destruct IN as [? [? [? [? ?]]]].
     do  2eexists; split; eauto.
@@ -383,9 +238,21 @@ Ltac fold_conv :=
     => eapply sconv_closed in H; [ clear I | eapply  I | eapply star2_refl]
   end.
 
+Definition sim_lockc {S} `{StateType S} {S'} `{StateType S'} r (σ1:S) (σ2:S')
+  := companion2 (@sim_gen_lock S _ S' _) r σ1 σ2.
+
+Lemma simc_trans_r_right {S} `{StateType S} {S'} `{StateType S'} r t
+       (σ1:S) (σ2a σ2b:S) (σ3:S')
+  : sim_lockc bot2 σ1 σ2a
+    -> (star2 step σ2a nil σ2b \/ star2 step σ2b nil σ2a)
+    -> simc r t σ2b σ3
+    -> simc r t σ1 σ3.
+Proof.
 
 
+Qed.
 
+(*
 Definition g {S} `{StateType S} {S'} `{StateType S'}
            (r:(simtype -> S -> S' -> Prop)) : simtype -> S -> S' -> Prop :=
   fun t σ σ' => exists σ1 σ2, simc bot3 t σ σ1 /\
@@ -402,7 +269,7 @@ Lemma g_upto {S} `{StateType S} {S'} `{StateType S'}
         do 2 eexists; split; eauto.
       - unfold g; intros.
         destruct PR as [? [? [? [? ?]]]].
-        eapply companion_unfold in H4.
+        eapply companion3_unfold in H4.
         + { inv H6.
           - econstructor 1. eauto. eauto.
             eapply H3; eauto.
@@ -507,6 +374,7 @@ Lemma g_upto {S} `{StateType S} {S'} `{StateType S'}
           }
 
     Qed.
+*)
 
 Lemma simc_trans_r_right {S} `{StateType S} {S'} `{StateType S'} r t
        (σ1:S) (σ2a σ2b:S) (σ3:S')
@@ -530,5 +398,5 @@ Proof.
   intros.
   assert (sim r t σ2b σ3). admit.
   eapply simc_sim in H4.
-  eapply companion_fold; eauto using sim_gen_mon.
+  eapply companion3_fold; eauto using sim_gen_mon.
   destruct H4.
