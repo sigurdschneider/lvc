@@ -587,7 +587,7 @@ Local Hint Resolve impb_lift.
 
 Lemma cp_sound_eqn AE Cp Rch ZL ΓL s r (ang:ann (set var * set var))
       (CP:cp_sound AE Cp s r)
-      (RCH: reachability (cop2bool AE) Sound Rch s r)
+      (RCH: reachability (ConstantPropagation.cop2bool AE) Sound Rch s r)
       (RA: renamedApart s ang)
       (LD: labelsDefined s (length ZL))
       (Len2: ❬ZL❭ = ❬ΓL❭)
@@ -624,6 +624,7 @@ Proof.
                 erewrite op_eval_None in H2; eauto.
                 inv H2. hnf; intros. eapply H1. cset_tac.
            ++ eapply entails_subset. cset_tac.
+        -- isabsurd.
         -- eapply entails_bot. cset_tac.
         -- eapply entails_bot. cset_tac.
       * cases.
@@ -640,6 +641,7 @@ Proof.
            repeat cases; eauto using entails_empty.
            simpl in *. exploit H; eauto. congruence.
         -- eapply entails_subset. cset_tac.
+        -- isabsurd.
         -- eapply entails_bot. cset_tac.
         -- eapply entails_bot. cset_tac.
       * cases.
@@ -675,9 +677,17 @@ Proof.
                  inv H0.
                  hnf; intros. eapply H. cset_tac.
             * eapply eqn_sound_entails_monotone; eauto.
-              exploit H15; eauto. simpl in *.
-              cases. pe_rewrite. eapply entails_add''. reflexivity.
-              simpl in *. exfalso; eauto.
+              exploit H15; eauto.
+              -- unfold ConstantPropagation.cop2bool.
+                 intro. inv H.
+                 ++ eapply n0. unfold aval2bool in H1.
+                   destruct (op_eval AE e); isabsurd.
+                   destruct w; isabsurd.
+                 ++ clear_trivial_eqs. eapply n.
+                   rewrite <- H0. invc H13. reflexivity.
+              -- cases. pe_rewrite.
+                 eapply entails_add''. reflexivity.
+                 simpl in *. exfalso; eauto.
         - eapply eqn_sound_entails_monotone; eauto.
           eapply entails_bot. cset_tac.
       }
@@ -703,9 +713,16 @@ Proof.
                  inv H0.
                  hnf; intros. eapply H. cset_tac.
             * eapply eqn_sound_entails_monotone; eauto.
-              exploit H16; eauto. simpl in *.
-              cases. pe_rewrite. eapply entails_add''. reflexivity.
-              simpl in *. exfalso; eauto.
+              exploit H16; eauto.
+               -- unfold ConstantPropagation.cop2bool.
+                 intro. inv H.
+                 ++ eapply n0. unfold aval2bool in H1.
+                   destruct (op_eval AE e); isabsurd.
+                   destruct w; isabsurd.
+                 ++ clear_trivial_eqs. eapply n.
+                   rewrite <- H0. invc H13. reflexivity.
+               -- simpl in *.
+                  cases. pe_rewrite. eapply entails_add''. reflexivity.
         - eapply eqn_sound_entails_monotone; eauto.
           eapply entails_bot. cset_tac.
       }

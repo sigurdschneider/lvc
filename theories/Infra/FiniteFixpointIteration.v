@@ -29,7 +29,7 @@ Section FixpointAlgorithm.
   Fixpoint safeFirst (d:Dom) (mon:poLe d (step d)) (trm:terminates poLt d)
     : { d' : Dom | exists n : nat, d' = iter n d step /\ poEq (step d') d' }.
     decide (poLe (step d) d).
-    - eexists (step d), 1; simpl.
+    - eexists d, 0; simpl.
       split; eauto.
       eapply poLe_antisymmetric; eauto.
     - destruct (safeFirst (step d)) as [d' H]; [ eauto | |].

@@ -28,8 +28,9 @@ Proof with eauto.
       eapply is_live...
   - eapply bisim_sim.
     eapply bisim_sym.
-    eapply (@srdSim_sim nil nil nil nil nil);
-      [ | isabsurd | econstructor | reflexivity | | econstructor ].
+    eapply SimCompanion.simc_sim.
+    eapply (@srdSim_sim nil nil nil);
+      [ | isabsurd | econstructor | isabsurd | | econstructor | reflexivity ].
     + eapply trs_srd; eauto.
       eapply is_trs...
     + eapply (@live_sound_compile nil nil nil)...

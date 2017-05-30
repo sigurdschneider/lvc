@@ -3,7 +3,7 @@ Require Import Util AllInRel MapDefined IL Sim Status Annotation LabelsDefined.
 Require Import Rename RenameApart RenamedApart RenameApart_Liveness.
 Require Import Liveness.Liveness ParallelMove.
 Require Import Coherence Invariance.
-Require Import Allocation AllocationAlgo AllocationAlgoCorrect.
+Require Import Coherence.Allocation AllocationAlgo AllocationAlgoCorrect.
 Require Import Alpha AppExpFree.
 Require Import Slot InfinitePartition.
 (* Require CopyPropagation ConstantPropagation ConstantPropagationAnalysis.*)
@@ -92,15 +92,17 @@ Proof.
   with (σ2:=(nil, E, rename (CMap.findt x 0) s):I.state).
   {
     eapply bisim_sim.
+    eapply SimCompanion.simc_sim.
     eapply Invariance.srdSim_sim.
     - eapply Allocation.rename_renamedApart_srd; simpl;
         eauto using Liveness.live_sound_overapproximation_I.
       simpl; eauto.
     - simpl. isabsurd.
     - econstructor.
-    - reflexivity.
+    - isabsurd.
     - eauto using Liveness.live_sound_overapproximation_I.
     - econstructor.
+    - eauto with len.
   }
   exploit (@ParallelMove.correct p nil nil nil); eauto using Liveness.live_sound_overapproximation_I;
     eauto using @InRel.LPM_nil.

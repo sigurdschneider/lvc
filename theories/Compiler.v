@@ -6,7 +6,7 @@ Require Liveness.Liveness LivenessValidators ParallelMove ILN ILN_IL.
 Require TrueLiveness LivenessAnalysis LivenessAnalysisCorrect.
 Require Coherence Invariance.
 Require Delocation DelocationAlgo DelocationCorrect DelocationValidator.
-Require Allocation AllocationAlgo AllocationAlgoCorrect.
+Require Coherence.Allocation AllocationAlgo AllocationAlgoCorrect.
 Require UCE DVE EAE Alpha.
 Require ReachabilityAnalysis ReachabilityAnalysisCorrect.
 Require Import DCVE Slot InfinitePartition RegAssign ExpVarsBounded.
@@ -278,13 +278,13 @@ Proof.
         rewrite of_list_3; eauto.
   }
   eapply sim_trans with (σ2:=(nil, E', fst sra):I.state). {
-     eapply bisim_sim.
-     eapply Invariance.srdSim_sim; simpl; eauto using PIR2.
+     eapply bisim_sim. eapply SimCompanion.simc_sim.
+     eapply Invariance.srdSim_sim with (AL:=nil) (Lv:=nil); simpl; eauto using PIR2.
      - eapply renamedApart_coherent with (DL:=nil); simpl; eauto.
      - hnf; intros; isabsurd.
      - econstructor.
+     - intros. inv H.
      - eapply renamedApart_live; simpl; eauto.
-     - econstructor.
   }
   eapply sim_trans with (σ2:=(nil, E', co_s dcve):I.state). {
     eapply DCVE_correct_I; eauto.
