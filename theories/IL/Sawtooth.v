@@ -78,6 +78,15 @@ Proof.
       rewrite drop_app; eauto.
 Qed.
 
+Lemma sawtooth_drop' {B} `{BlockType B} L f b n
+: sawtooth L
+  -> get L f b
+  -> n = block_n b
+  -> sawtooth (drop (f - n) L).
+Proof.
+  intros; subst. eapply sawtooth_drop; eauto.
+Qed.
+
 Lemma sawtooth_get {B} `{BlockType B} L f b
   : sawtooth L
     -> get L f b

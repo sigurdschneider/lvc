@@ -1,4 +1,4 @@
-Require Import Util IL InRel4 RenamedApart LabelsDefined OptionR.
+Require Import Util IL Sawtooth RenamedApart LabelsDefined OptionR.
 Require Import Annotation Liveness.Liveness Restrict SetOperations Coherence.
 Require Import Sim SimTactics SimCompanion.
 
@@ -48,45 +48,39 @@ Proof.
   symmetry. eauto using agree_on_incl.
 Qed.
 
-(** ** Context coherence for IL/F contexts: [approxF] *)
-
-Inductive approx
-  : list params -> list params -> list (؟ (set var)) -> list (set var) -> list F.block -> list I.block ->
-    params -> params -> option (set var) -> set var -> F.block -> I.block -> Prop :=
-  approxI ZL AL Lv o Z E s n lv L1 L2 a
-  :  (forall G, o = Some G -> of_list Z ∩ G [=] ∅ /\
-                        getAnn a [=] (G ∪ of_list Z)
-                        /\ srd (restr G ⊝ AL) s a)
-     -> live_sound Imperative ZL Lv s a
-     -> getAnn a = lv
-     -> length AL = length ZL
-     -> length ZL = length Lv
-     -> approx ZL ZL AL Lv L1 L2 Z Z o lv (F.blockI E Z s n) (I.blockI Z s n).
-
-(** Stability under restriction *)
-
-Lemma approx_restrict G
-  : forall (AL1 AL2 : 〔params〕) (AL3 : 〔؟ ⦃var⦄〕) (AL4 : 〔⦃var⦄〕) (L1 : 〔F.block〕)
-     (L2 : 〔I.block〕) (a1 a2 : params) (a3 : ؟ ⦃var⦄) (a4 : ⦃var⦄) (b1 : F.block)
-     (b2 : I.block),
-   approx AL1 AL2 AL3 AL4 L1 L2 a1 a2 a3 a4 b1 b2 ->
-   approx AL1 AL2 (restr G ⊝ AL3) AL4 L1 L2 a1 a2 (restr G a3) a4 b1 b2.
-Proof.
-  intros. inv H. econstructor; eauto with len.
-  intros. destruct a3; simpl in *; isabsurd.
-  cases in H2; [| inv H2].
-  exploit H0; eauto.
-  rewrite restrict_idem; eauto.
-Qed.
-
 (** ** Main Theorem about Coherence *)
 
 (** [strip] removes the environment from a closure  *)
 
 Definition strip (b:F.block) : I.block :=
-  match b with
-    | F.blockI E Z s n => I.blockI Z s n
-  end.
+  I.blockI (F.block_Z b) (F.block_s b) (F.block_n b).
+
+Lemma sawtooth_strip L
+  : sawtooth L -> sawtooth (strip ⊝ L).
+Proof.
+  intros. general induction H; simpl; eauto using @sawtooth.
+  - rewrite map_app. econstructor; eauto.
+    revert H0; clear_all. generalize 0.
+    intros.
+    general induction H0; simpl; eauto using @tooth.
+Qed.
+
+Hint Resolve sawtooth_strip.
+
+Lemma block_Z_strip L
+  : I.block_Z ⊝ strip ⊝ L = F.block_Z ⊝ L.
+Proof.
+  intros. general induction L; simpl; eauto.
+  f_equal; eauto.
+Qed.
+
+Lemma mkBlock_strip F L E
+  : mapi I.mkBlock F ++ strip ⊝ L = strip ⊝ (mapi (F.mkBlock E) F ++ L).
+Proof.
+  unfold mapi. generalize 0.
+  general induction F; simpl; eauto.
+  f_equal. erewrite IHF; eauto.
+Qed.
 
 (** The Bisimulation candidate. *)
 
@@ -144,77 +138,86 @@ Ltac cextern_step :=
 
 Require Import LivenessCorrect.
 
-Smpl Add
-     match goal with
-     | [ H : ❬nil❭ = ❬?L❭ |- _ ] => destruct L; [|exfalso; inv H]
-     | [ H : ❬_ :: _❭ = ❬?L❭ |- _ ] => is_var L; destruct L; [ inv H|]
-     end : inv_trivial.
-
-Lemma mutual_block_impl {A1 A2 A3 A4} {A1' A2' A3' A4'}
-      {B} `{BlockType B} {C} `{BlockType C}
-      {B'} `{BlockType B'} {C'} `{BlockType C'}
-      (R:A1->A2->A3->A4->B->C->Prop)
-      (R':A1'->A2'->A3'->A4'->B'->C'->Prop)
-      n AL1 AL2 AL3 AL4 L1 L2
-(MB:mutual_block R n AL1 AL2 AL3 AL4 L1 L2)
-      AL1' AL2' AL3' AL4' L1' L2'
-      (Len1:❬AL1❭ = ❬AL1'❭)
-      (Len2:❬AL2❭ = ❬AL2'❭)
-      (Len3:❬AL3❭ = ❬AL3'❭)
-      (Len4:❬AL4❭ = ❬AL4'❭)
-      (Len5:❬L1❭ = ❬L1'❭)
-      (Len6:❬L2❭ = ❬L2'❭)
-:  (forall n a1 a2 a3 a4 b c a1' a2' a3' a4' b' c',
-         get AL1 n a1 ->
-         get AL2 n a2 ->
-         get AL3 n a3 ->
-         get AL4 n a4 ->
-         get L1 n b ->
-         get L2 n c ->
-         get AL1' n a1' ->
-         get AL2' n a2' ->
-         get AL3' n a3' ->
-         get AL4' n a4' ->
-         get L1' n b' ->
-         get L2' n c' ->
-         R a1 a2 a3 a4 b c -> R' a1' a2' a3' a4' b' c' /\ block_n b = block_n b' /\ block_n c = block_n c')
-  ->  mutual_block R' n AL1' AL2' AL3' AL4' L1' L2'.
+Lemma ZL_mapi_F F L E
+  : F.block_Z ⊝ (mapi (F.mkBlock E) F ++ L) = fst ⊝ F ++ F.block_Z ⊝ L.
 Proof.
-  intros. general induction MB.
-  - repeat match goal with
-    | [ H : ❬nil❭ = ❬?L❭ |- _ ] => is_var L; destruct L; [ |exfalso; inv H]
-           end. econstructor.
-  - repeat match goal with
-    | [ H : ❬_ :: _❭ = ❬?L❭ |- _ ] => is_var L; destruct L; [ inv H|]
-           end.
-    exploit H6; eauto using get; dcr.
-    econstructor; eauto.
-    eapply IHMB; eauto 200 using get. omega.
+  unfold mapi. generalize 0.
+  general induction F; simpl; f_equal; eauto.
 Qed.
 
-Lemma length_app_inv X Y (A B: list X) (C:list Y)
-  : ❬A ++ B❭ = ❬C❭
-    -> exists C1 C2, C1 ++ C2 = C /\ ❬C1❭ = ❬A❭ /\ ❬C2❭ = ❬B❭.
+(** ** Context coherence for IL/F contexts: [approxF] *)
+
+(** Stability under restriction *)
+
+Inductive approx Lv AL L f blv o b : Prop :=
+| ApproxI lv
+  : live_sound Imperative
+               (drop (f - block_n b) (block_Z ⊝ L))
+               (drop (f - block_n b) Lv) (F.block_s b) lv
+    -> getAnn lv [=] blv
+    ->  (forall G, o = Some G -> of_list (block_Z b) ∩ G [=] ∅ /\
+                          getAnn lv [=] (G ∪ of_list (block_Z b))
+                          /\ srd (restr G ⊝ (drop (f - block_n b) AL)) (F.block_s b) lv)
+    -> approx Lv AL L f blv o b.
+
+
+Lemma approx_restrict G Lv AL L f blv o b
+  : approx Lv AL L f blv o b
+    -> approx Lv (restr G ⊝ AL) L f blv (restr G o) b.
 Proof.
-  intros.
-  general induction A; simpl in *; eauto.
-  - eexists nil, C; simpl; eauto.
-  - destruct C; isabsurd. simpl in *.
-    exploit (IHA Y B C); eauto; dcr; subst.
-    eexists (y::x), x0. simpl; eauto.
+  intros. invc H. econstructor; eauto with len.
+  intros. eapply restr_iff in H; dcr; subst.
+  specialize (H2 G0 eq_refl); eauto; dcr.
+  rewrite drop_map in *. rewrite restrict_idem; eauto.
+Qed.
+
+Lemma approx_drop Lv AL L blv s g f fb gb
+      (ST:sawtooth L) (Getg:get L f fb) (Getf:get L (f - F.block_n fb + g) gb)
+  : approx Lv AL L (f - F.block_n fb + g) blv s gb
+    -> approx (drop (f - F.block_n fb) Lv)
+             (drop (f - F.block_n fb) AL)
+             (drop (f - F.block_n fb) L) g blv s gb.
+Proof.
+  intros. invc H.
+  econstructor; eauto.
+  sawtooth; eauto.
+  intros. specialize (H2 _ H). dcr; subst.
+  split; eauto. split; eauto.
+  sawtooth. rewrite <- drop_map. eauto.
+Qed.
+
+Lemma approx_extend Lv AL L f E F o b blv AL' Lv'
+      (ST:sawtooth L) (GETf: get L (f - ❬F❭) b)
+      (GE: f >= ❬F❭)
+      (Len1:❬F❭ = ❬AL'❭)
+      (Len2:❬F❭ = ❬Lv'❭)
+  : approx Lv AL L (f - ❬F❭) blv o b
+    -> approx (Lv' ++ Lv) (AL' ++ AL)
+             (mapi (F.mkBlock E) F ++ L) f blv o b.
+Proof.
+  intros. invc H. econstructor; eauto.
+  rewrite ZL_mapi_F.
+  sawtooth. eauto.
+  intros; subst. specialize (H2 _ eq_refl); dcr.
+  split; eauto. split; eauto.
+  sawtooth. rewrite map_app.
+  sawtooth. rewrite drop_map in *. eauto.
 Qed.
 
 
-
-
-Lemma srdSim_sim ZL AL Lv L L'
-      (E:onv val) s a
-  (SRD:srd AL s a)
+Lemma srdSim_sim AL Lv L
+      (E:onv val) s lv
+  (SRD:srd AL s lv)
   (RA:rd_agree AL L E)
-  (A: inRel approx ZL ZL AL Lv L L')
-  (LV:live_sound Imperative ZL Lv s a)
-  (ER:PIR2 (ifFstR Equal) AL (Lv \\ ZL))
-  : simc bot3 Bisim (L, E, s) (L', E, s).
+  (ST:sawtooth L)
+  (LA: forall f b blv o, get L f b ->
+                  get Lv f blv ->
+                  get AL f o ->
+                  approx Lv AL L f blv o b)
+  (LV:live_sound Imperative (block_Z ⊝ L) Lv s lv)
+  (ER:PIR2 (ifFstR Equal) AL (Lv \\ (block_Z ⊝ L)))
+  (Len: ❬Lv❭ = ❬AL❭)
+  : simc bot3 Bisim (L, E, s) (strip ⊝ L, E, s).
 Proof.
   unfold simc.
   revert_all. eapply Tower3.tower_ind3.
@@ -225,17 +228,15 @@ Proof.
     + case_eq (op_eval E e0); intros.
       * cone_step.
         eapply H; eauto using rd_agree_update.
-        -- eapply inRel_map_A3; eauto using approx_restrict.
+        -- intros. inv_get. eapply approx_restrict; eauto.
         -- eauto using restrict_ifFstR.
       * cno_step.
     + case_eq (omap (op_eval E) Y); intros.
       * cextern_step; assert (vl = l) by congruence; subst; eauto.
-        -- eapply H; eauto using rd_agree_update, PIR2_length.
-           ++ eapply inRel_map_A3; eauto. eapply approx_restrict; eauto.
-           ++ eauto using restrict_ifFstR; eauto.
-        -- eapply H; eauto using rd_agree_update, PIR2_length.
-           ++ eapply inRel_map_A3; eauto. eapply approx_restrict; eauto.
-           ++ eauto using restrict_ifFstR; eauto.
+        -- eapply H; eauto using rd_agree_update, PIR2_length, restrict_ifFstR.
+           ++ intros; inv_get. eapply approx_restrict; eauto.
+        -- eapply H; eauto using rd_agree_update, PIR2_length, restrict_ifFstR.
+           ++ intros; inv_get. eapply approx_restrict; eauto.
       * cno_step.
   - case_eq (op_eval E e); intros.
     + case_eq (val2bool v); intros;
@@ -244,49 +245,47 @@ Proof.
   - cno_step.
   - decide (length Z = length Y).
     case_eq (omap (op_eval E) Y); intros.
-    + inRel_invs. inv H11. simpl in *.
-      exploit H2; try reflexivity; dcr.
-      cone_step; simpl.
+    + inv_get. exploit LA; eauto. invc H2. simpl in *.
+      specialize (H7 G' eq_refl). dcr. rewrite <- drop_map in *.
+      cone_step; simpl. eauto with len.
       exploit RA; eauto; simpl in *.
       eapply simc_trans_r_left; swap 1 2.
-      * eapply H; eauto.
+      * eapply H; eauto with len.
         -- eapply rd_agree_update_list; eauto with len.
-        -- eapply inRel_map_A3; eauto using approx_restrict.
-        -- rewrite <- drop_zip.
+        -- intros. inv_get. eapply approx_restrict.
+           exploit LA; try eapply H11; eauto using approx_drop.
+        -- setoid_rewrite drop_map at 2.
+           rewrite <- drop_zip.
            eapply restrict_ifFstR; eauto.
            eapply PIR2_drop; eauto.
       * eapply sim_lock_simc.
-        eapply liveSimI_sim; eauto.
-        -- rewrite map_drop.
-          eapply inRel_drop with (R:=approxI) in H7. eapply H7.
-           revert A. clear_all. intros.
-           general induction A; eauto using @inRel.
-           econstructor; eauto.
-           eapply (mutual_block_impl _ H); eauto with len.
-           admit. admit. admit. intros. inv H12.
-           simpl. inv_get. simpl. repeat split; eauto.
-        -- rewrite H15. eapply update_with_list_agree; eauto with len.
+        rewrite drop_map in *.
+        eapply liveSimI_sim; try rewrite !drop_map; try rewrite block_Z_strip; eauto.
+        -- eapply (sawtooth_drop'); eauto.
+        -- intros; inv_get. sawtooth.
+           exploit LA; eauto. invc H16. eauto.
+        -- rewrite H12. eapply update_with_list_agree; eauto with len.
            symmetry. eapply agree_on_incl; eauto.
            clear_all. cset_tac.
     + cno_step.
     + cno_step.
-  - cone_step.
-    eapply H;
+  - cone_step. erewrite mkBlock_strip.
+    eapply H; try rewrite ZL_mapi; try rewrite ZL_mapi_F;
       eauto using agree_on_incl, PIR2_app, rd_agree_extend.
-    * econstructor; eauto.
-      eapply mutual_approx; simpl;
-        eauto 30 using mkBlock_I_i, mkBlock_F_i with len.
-      intros; inv_get.
-      edestruct @inRel_length; eauto; dcr.
-      econstructor; eauto 20 with len.
-      intros ? EQ. invc EQ. simpl.
-      split. clear_all; cset_tac; intuition.
-      eexists x0. split.
-      exploit H13; eauto; dcr; simpl in *; eauto with cset.
-      split. exploit H0; eauto.
-      exploit H11; eauto.
+    * intros; inv_get. sawtooth.
+      -- econstructor; simpl; eauto; try rewrite ZL_mapi_F; try reflexivity.
+         sawtooth. eauto. intros. invc H4.
+         split. clear_all; cset_tac; intuition.
+         split.
+         exploit H13; eauto; dcr; simpl in *; eauto with cset.
+         exploit H1; eauto. sawtooth. eauto.
+      -- eapply get_app_ge in H5; eauto; len_simpl; try omega.
+         rewrite <- H0 in *. inv_get.
+         exploit LA; eauto.
+         eapply approx_extend; eauto with len.
     * rewrite zip_app; eauto with len.
       eapply PIR2_app; eauto using PIR2_ifFstR_refl.
+    * eauto with len.
 Qed.
 
 (** ** Coherence implies invariance *)
@@ -294,6 +293,8 @@ Qed.
 Lemma srd_implies_invariance s a
 : live_sound Imperative nil nil s a -> srd nil s a -> invariant s.
 Proof.
-  intros. hnf; intros. eapply srdSim_sim; eauto.
-  isabsurd. econstructor. econstructor.
+  intros. hnf; intros.
+  eapply simc_sim.
+  eapply srdSim_sim with (L:=nil); eauto.
+  isabsurd. econstructor. isabsurd. econstructor.
 Qed.
