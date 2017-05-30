@@ -1,6 +1,6 @@
 Require Import AllInRel List Map Env Exp Rename SetOperations OptionMap.
-Require Import IL Annotation AutoIndTac Liveness.Liveness InRel4.
-Require Import Sim SimTactics.
+Require Import IL Annotation AutoIndTac Liveness.Liveness Sawtooth.
+Require Import SimLockStep SimTactics.
 
 Set Implicit Arguments.
 
@@ -40,7 +40,7 @@ Inductive freeVarSimF : F.state -> F.state -> Prop :=
   : freeVarSimF (L, E, s) (L', E', s).
 
 Lemma freeVarSimF_sim σ1 σ2
-  : freeVarSimF σ1 σ2 -> sim bot3 Bisim σ1 σ2.
+  : freeVarSimF σ1 σ2 -> sim_lock bot2 σ1 σ2.
 Proof.
   revert σ1 σ2. pcofix freeVarSimF_sim; intros.
   destruct H0; destruct s; simpl; simpl in *.
@@ -98,26 +98,46 @@ Proof.
     eapply PIR2_app; eauto. eapply mkBlocks_approxF; eauto.
 Qed.
 
+Lemma liveSimF_sim ZL Lv (E E':onv val) (L:F.labenv) s lv
+  (LS:live_sound Functional ZL Lv s lv)
+  (AG:agree_on eq (getAnn lv) E E')
+  : sim_lock bot2 (L, E, s) (L, E', s).
+Proof.
+  eapply freeVarSimF_sim.
+  econstructor.
+  - eapply PIR2_refl.
+    hnf. intros. destruct x. econstructor. reflexivity.
+  - rewrite freeVars_live; eauto.
+Qed.
+
 (** ** Live variables contain all variables significant to an IL/I program *)
 
-Inductive approxI
-  : list params -> list params -> list params -> list (set var) -> list I.block -> list I.block ->
-    params -> params -> params -> set var -> I.block -> I.block -> Prop :=
-  approxII ZL Lv Z s lv n L L'
-  : live_sound Imperative ZL Lv s lv
-    ->  approxI ZL ZL ZL Lv L L' Z Z Z (getAnn lv) (I.blockI Z s n) (I.blockI Z s n).
+Smpl Add
+     match goal with
+     | [ GE : ?k >= ?x, EQ: ?x = ❬?y❭, GET: get (?f ⊝ ?y ++ ?L) ?k ?b |- _ ] =>
+       eapply get_app_ge in GET;
+         [ rewrite (map_length f y) in GET; rewrite <- EQ in GET
+         | rewrite (map_length f y), <- EQ; eapply GE]
+     end : inv_get.
 
-Lemma liveSimI_sim ZL Lv (E E':onv val) L s lv
-  (LS:live_sound Imperative ZL Lv s lv)
-  (LA:inRel approxI ZL ZL ZL Lv L L)
-  (AG:agree_on eq (getAnn lv) E E')
-  : sim bot3 Bisim (L, E, s) (L, E', s).
+Lemma liveSimI_sim Lv (E E':onv val) L s lv
+      (LS:live_sound Imperative (I.block_Z ⊝ L) Lv s lv)
+      (ST:sawtooth L)
+      (LA: forall f b blv, get L f b ->
+                  get Lv f blv ->
+                  exists lv, live_sound Imperative
+                             (drop (f - block_n b) (I.block_Z ⊝ L))
+                             (drop (f - block_n b) Lv) (I.block_s b) lv
+                        /\ getAnn lv [=] blv)
+      (AG:agree_on eq (getAnn lv) E E')
+  : sim_lock bot2 (L, E, s) (L, E', s).
 Proof.
   revert_all. pcofix liveSimI_sim; intros.
   inv LS; simpl; simpl in *.
   - invt live_exp_sound.
     + case_eq (op_eval E e0); intros.
-      * pone_step; eauto using op_eval_live_agree.
+      *
+        pone_step; eauto using op_eval_live_agree.
         right; eapply liveSimI_sim; eauto.
         eapply agree_on_update_same; eauto using agree_on_incl.
       * pno_step; eauto.
@@ -138,18 +158,22 @@ Proof.
       * pone_step; eauto using op_eval_live_agree.
         right; eapply liveSimI_sim; eauto using agree_on_incl.
     + pno_step; eauto.
-  - inRel_invs. inv H8; simpl in *.
+  - inv_get. destruct x as [Z s]. edestruct LA; eauto; dcr. simpl in *.
     case_eq (omap (op_eval E) Y); intros.
     + exploit omap_op_eval_live_agree; try eassumption.
       pone_step; simpl; try congruence.
       right; eapply liveSimI_sim; eauto.
-      eapply update_with_list_agree; eauto using agree_on_incl with len.
+      * rewrite drop_map. eauto.
+      * intros. inv_get. exploit LA as LAf; eauto.
+        sawtooth. eauto.
+      * rewrite H6.
+        eapply update_with_list_agree; eauto using agree_on_incl with len.
     + exploit omap_op_eval_live_agree; try eassumption.
       pno_step.
   - pno_step. simpl. eapply op_eval_live; eauto.
   - pone_step.
     right; eapply liveSimI_sim; eauto using agree_on_incl.
-    + econstructor; eauto using agree_on_incl.
-      eapply mutual_approx; eauto using mkBlock_I_i, mkBlock_F_i with len.
-      intros; inv_get. econstructor; eauto.
+    + intros.
+      sawtooth. exploit H1; eauto.
+      exploit LA; eauto.
 Qed.

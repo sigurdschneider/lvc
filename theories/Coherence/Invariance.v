@@ -53,11 +53,12 @@ Qed.
 Inductive approx
   : list params -> list params -> list (؟ (set var)) -> list (set var) -> list F.block -> list I.block ->
     params -> params -> option (set var) -> set var -> F.block -> I.block -> Prop :=
-  approxI ZL AL Lv o Z E s n lv L1 L2
+  approxI ZL AL Lv o Z E s n lv L1 L2 a
   :  (forall G, o = Some G -> of_list Z ∩ G [=] ∅ /\
-           exists a, getAnn a [=] (G ∪ of_list Z)
-                /\ srd (restr G ⊝ AL) s a
-                /\ live_sound Imperative ZL Lv s a)
+                        getAnn a [=] (G ∪ of_list Z)
+                        /\ srd (restr G ⊝ AL) s a)
+     -> live_sound Imperative ZL Lv s a
+     -> getAnn a = lv
      -> length AL = length ZL
      -> length ZL = length Lv
      -> approx ZL ZL AL Lv L1 L2 Z Z o lv (F.blockI E Z s n) (I.blockI Z s n).
@@ -73,7 +74,7 @@ Lemma approx_restrict G
 Proof.
   intros. inv H. econstructor; eauto with len.
   intros. destruct a3; simpl in *; isabsurd.
-  cases in H3; [| inv H3].
+  cases in H2; [| inv H2].
   exploit H0; eauto.
   rewrite restrict_idem; eauto.
 Qed.
@@ -143,19 +144,68 @@ Ltac cextern_step :=
 
 Require Import LivenessCorrect.
 
-Lemma liveSimI_sim ZL Lv (E E':onv val) L s lv
-  (LS:live_sound Imperative ZL Lv s lv)
-  (AG:agree_on eq (getAnn lv) E E')
-  : simc bot3 Bisim (L, E, s) (L, E', s).
+Smpl Add
+     match goal with
+     | [ H : ❬nil❭ = ❬?L❭ |- _ ] => destruct L; [|exfalso; inv H]
+     | [ H : ❬_ :: _❭ = ❬?L❭ |- _ ] => is_var L; destruct L; [ inv H|]
+     end : inv_trivial.
 
-Admitted.
+Lemma mutual_block_impl {A1 A2 A3 A4} {A1' A2' A3' A4'}
+      {B} `{BlockType B} {C} `{BlockType C}
+      {B'} `{BlockType B'} {C'} `{BlockType C'}
+      (R:A1->A2->A3->A4->B->C->Prop)
+      (R':A1'->A2'->A3'->A4'->B'->C'->Prop)
+      n AL1 AL2 AL3 AL4 L1 L2
+(MB:mutual_block R n AL1 AL2 AL3 AL4 L1 L2)
+      AL1' AL2' AL3' AL4' L1' L2'
+      (Len1:❬AL1❭ = ❬AL1'❭)
+      (Len2:❬AL2❭ = ❬AL2'❭)
+      (Len3:❬AL3❭ = ❬AL3'❭)
+      (Len4:❬AL4❭ = ❬AL4'❭)
+      (Len5:❬L1❭ = ❬L1'❭)
+      (Len6:❬L2❭ = ❬L2'❭)
+:  (forall n a1 a2 a3 a4 b c a1' a2' a3' a4' b' c',
+         get AL1 n a1 ->
+         get AL2 n a2 ->
+         get AL3 n a3 ->
+         get AL4 n a4 ->
+         get L1 n b ->
+         get L2 n c ->
+         get AL1' n a1' ->
+         get AL2' n a2' ->
+         get AL3' n a3' ->
+         get AL4' n a4' ->
+         get L1' n b' ->
+         get L2' n c' ->
+         R a1 a2 a3 a4 b c -> R' a1' a2' a3' a4' b' c' /\ block_n b = block_n b' /\ block_n c = block_n c')
+  ->  mutual_block R' n AL1' AL2' AL3' AL4' L1' L2'.
+Proof.
+  intros. general induction MB.
+  - repeat match goal with
+    | [ H : ❬nil❭ = ❬?L❭ |- _ ] => is_var L; destruct L; [ |exfalso; inv H]
+           end. econstructor.
+  - repeat match goal with
+    | [ H : ❬_ :: _❭ = ❬?L❭ |- _ ] => is_var L; destruct L; [ inv H|]
+           end.
+    exploit H6; eauto using get; dcr.
+    econstructor; eauto.
+    eapply IHMB; eauto 200 using get. omega.
+Qed.
 
-Lemma liveSimF_sim ZL Lv (E E':onv val) (L:F.labenv) s lv
-  (LS:live_sound Imperative ZL Lv s lv)
-  (AG:agree_on eq (getAnn lv) E E')
-  : simc bot3 Bisim (L, E, s) (L, E', s).
+Lemma length_app_inv X Y (A B: list X) (C:list Y)
+  : ❬A ++ B❭ = ❬C❭
+    -> exists C1 C2, C1 ++ C2 = C /\ ❬C1❭ = ❬A❭ /\ ❬C2❭ = ❬B❭.
+Proof.
+  intros.
+  general induction A; simpl in *; eauto.
+  - eexists nil, C; simpl; eauto.
+  - destruct C; isabsurd. simpl in *.
+    exploit (IHA Y B C); eauto; dcr; subst.
+    eexists (y::x), x0. simpl; eauto.
+Qed.
 
-Admitted.
+
+
 
 Lemma srdSim_sim ZL AL Lv L L'
       (E:onv val) s a
@@ -167,7 +217,7 @@ Lemma srdSim_sim ZL AL Lv L L'
   : simc bot3 Bisim (L, E, s) (L', E, s).
 Proof.
   unfold simc.
-  revert_all. eapply tower_ind.
+  revert_all. eapply Tower3.tower_ind3.
   hnf; intros. hnf; intros. eauto.
   intros.
   inv SRD; inv LV; simpl in *.
@@ -198,17 +248,26 @@ Proof.
       exploit H2; try reflexivity; dcr.
       cone_step; simpl.
       exploit RA; eauto; simpl in *.
-      eapply simc_trans; swap 1 2.
+      eapply simc_trans_r_left; swap 1 2.
       * eapply H; eauto.
         -- eapply rd_agree_update_list; eauto with len.
         -- eapply inRel_map_A3; eauto using approx_restrict.
         -- rewrite <- drop_zip.
            eapply restrict_ifFstR; eauto.
            eapply PIR2_drop; eauto.
-      * eapply liveSimF_sim; eauto.
-        rewrite H15. eapply update_with_list_agree; eauto with len.
-        symmetry. eapply agree_on_incl; eauto.
-        clear_all. cset_tac.
+      * eapply sim_lock_simc.
+        eapply liveSimI_sim; eauto.
+        -- rewrite map_drop.
+          eapply inRel_drop with (R:=approxI) in H7. eapply H7.
+           revert A. clear_all. intros.
+           general induction A; eauto using @inRel.
+           econstructor; eauto.
+           eapply (mutual_block_impl _ H); eauto with len.
+           admit. admit. admit. intros. inv H12.
+           simpl. inv_get. simpl. repeat split; eauto.
+        -- rewrite H15. eapply update_with_list_agree; eauto with len.
+           symmetry. eapply agree_on_incl; eauto.
+           clear_all. cset_tac.
     + cno_step.
     + cno_step.
   - cone_step.

@@ -1,4 +1,5 @@
-Require Import AllInRel Util Map Env Exp IL DecSolve MoreList InRel Sublist.
+Require Import AllInRel Util Map Env Exp IL DecSolve MoreList Sublist.
+Require Export BlockType.
 
 Set Implicit Arguments.
 Unset Printing Records.
@@ -157,24 +158,6 @@ Proof.
   econstructor; eauto using tooth_F_mkBlocks.
 Qed.
 
-Lemma mutual_block_tooth {A} {B} `{BlockType B} {C} `{BlockType C} R
-      (AL:list A) (L:list B) (L':list C) n
-  : mutual_block R n AL L L'
-    -> tooth n L /\ tooth n L'.
-Proof.
-  intros. general induction H1; eauto using @tooth.
-Qed.
-
-Lemma inRel_sawtooth {A} {B} `{BlockType B} {C} `{BlockType C} R
-      (AL:list A) (L:list B) (L':list C)
-  : inRel R AL L L'
-    -> sawtooth L /\ sawtooth L'.
-Proof.
-  intros. general induction H1; eauto using @sawtooth.
-  - eapply mutual_block_tooth in H2.
-    split; econstructor; eauto.
-Qed.
-
 Lemma sawtooth_app B `{BlockType B} L L'
   : sawtooth L -> sawtooth L' -> sawtooth (L ++ L').
 Proof.
@@ -231,3 +214,92 @@ Proof.
   intros; subst. orewrite (length L = length L + 0) . eapply drop_app.
 Qed.
 *)
+
+
+Hint Resolve sawtooth_drop sawtooth_I_mkBlocks sawtooth_F_mkBlocks.
+
+Hint Extern 10 =>
+match goal with
+  [ GET : get ?L ?f ?b, ST: sawtooth ?L |- sawtooth (drop (?f - ?n) ?L) ] =>
+  change (sawtooth (drop (f - (block_n b)) L));
+    eapply (sawtooth_drop ST GET)
+end.
+
+Lemma sawtooth_drop_eq B `{BlockType B} (L:list B) g f b c
+      (ST:sawtooth L)
+      (GETf : get L (g - block_n c + f) b)
+      (GETg : get L g c)
+  : f - (block_n b) + (g - block_n c) =  g - block_n c + f - (block_n b).
+Proof.
+  exploit (sawtooth_smaller ST); eauto. simpl in *.
+  exploit (sawtooth_smaller ST GETf); eauto. simpl in *.
+  exploit (sawtooth_resetting ST); eauto. omega.
+Qed.
+
+Smpl Create sawtooth.
+
+Smpl Add
+  match goal with
+  | [ |- context [ _ ⊝ drop _ _ ] ] => rewrite !drop_map
+  | [ |- context [ drop _ (drop _ _) ] ] => rewrite drop_drop
+  end : sawtooth.
+
+Smpl Add
+     match goal with
+       [ ST: sawtooth ?L,
+             GETf : get ?L (?g - ?m + ?f) ?b,
+                    GETg : get ?L ?g ?c
+         |- context [ ?f - ?n + (?g - ?m) ] ] =>
+       let REQ := fresh "REQ" in
+       change (n) with (BlockType.block_n b);
+         change (m) with (BlockType.block_n c);
+         rewrite (@sawtooth_drop_eq _ _ L g f b c ST GETf GETg);
+         simpl BlockType.block_n
+     end : sawtooth.
+
+Ltac sawtooth := repeat smpl sawtooth.
+
+
+Lemma sawtooth_drop_app B `{BlockType B} f n b (L:list B) C (L' L'':list C)
+      (ST:sawtooth L)
+      (GETf: get L (f - n) b)
+      (Len2: n = ❬L'❭)
+      (GE: f >= n)
+  : drop (f - block_n b) (L' ++ L'') = drop (f - ❬L'❭ - block_n b) L''.
+Proof.
+  pose proof (sawtooth_smaller ST GETf) as SMALLER.
+  rewrite !drop_app_gen; try len_simpl.
+  f_equal. omega. omega.
+Qed.
+
+
+Smpl Add
+     match goal with
+       [ H : sawtooth ?L, GET : get (?L' ++ ?L) ?f ?b |- _ ] =>
+       let GE := fresh "GE" in
+       eapply get_app_cases in GET; destruct GET as [GET|[GET GE]];
+         try len_simpl; inv_get;
+           simpl BlockType.block_n in *;
+           simpl I.block_n in *;
+           simpl F.block_n in *;
+           try rewrite ZL_mapi
+     end : sawtooth.
+
+Smpl Add
+     match goal with
+       [ |- context [drop (?f - ?f) _ ] ] => orewrite (f - f = 0); simpl drop
+     end : sawtooth.
+
+Smpl Add match goal with
+           [ ST: sawtooth ?L, GETf: get ?L (?f - ?n') ?b, GE : ?f >= ?n'
+             |- context [ drop (?f - ?n) (?A ++ ?B) ] ] =>
+           let EQLen := fresh "EQLen" in
+           assert (EQLen:❬A❭ = n') by eauto with len;
+             let EQ := fresh "EQ" in
+             pose proof (@sawtooth_drop_app _ _ _ _ _ _ _ A B ST GETf
+                                            ltac:(eauto with len) GE) as EQ;
+               simpl BlockType.block_n in *;
+               simpl I.block_n in *;
+               simpl F.block_n in *;
+               rewrite !EQ; rewrite EQLen
+         end : sawtooth.

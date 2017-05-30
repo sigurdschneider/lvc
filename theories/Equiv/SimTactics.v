@@ -1,14 +1,20 @@
 Require NonParametricBiSim.
-Require Import Sim IL paco3 OptionR.
+Require Import Sim SimLockStep IL paco3 OptionR.
 Require Export ILStateType.
 
 (** * Admissible Rules and Tactics *)
 
 (** ** Tactics *)
 
-Ltac pone_step := pfold; eapply SimSilent; [ eapply plus2O; single_step
-                              | eapply plus2O; single_step
-                              | ].
+Ltac pone_step := pfold;
+                 first [
+                     eapply SimSilent; [ eapply plus2O; single_step
+                                     | eapply plus2O; single_step
+                                     | ]
+                   | eapply SimLockSilent; [ single_step
+                                         | single_step
+                                         | ]
+                   ].
 
 Ltac pone_step_left :=
   eapply sim_expansion_closed; [ | eapply star2_silent; single_step | eapply star2_refl ].
@@ -17,11 +23,16 @@ Ltac pone_step_right :=
   eapply sim_expansion_closed; [ | eapply star2_refl | eapply star2_silent; single_step ].
 
 Ltac pno_step :=
-  pfold; eapply SimTerm;
-  [ | eapply star2_refl | eapply star2_refl | | ];
-  [ repeat get_functional; try reflexivity
-  | repeat get_functional; stuck2
-  | repeat get_functional; stuck2 ].
+  pfold; first [eapply SimTerm;
+                [ | eapply star2_refl | eapply star2_refl | | ];
+                [ repeat get_functional; try reflexivity
+                | repeat get_functional; stuck2
+                | repeat get_functional; stuck2 ]
+               |eapply SimLockTerm; swap 1 3;
+                [ repeat get_functional; stuck2
+                | repeat get_functional; stuck2
+                | repeat get_functional; try reflexivity ]
+               ] .
 
 Ltac step_activated :=
   match goal with
@@ -32,18 +43,25 @@ Ltac step_activated :=
 
 Ltac pextern_step :=
   let STEP := fresh "STEP" in
-  pfold; eapply SimExtern;
-  [ eapply star2_refl
-  | eapply star2_refl
-  | try step_activated
-  | try step_activated
-  | intros ? ? STEP; inv STEP; eexists; split; [econstructor; eauto | ]
-  | intros ? ? STEP; inv STEP; eexists; split; [econstructor; eauto | ]
-  ].
+  pfold;
+  first [ eapply SimExtern ;
+          [ eapply star2_refl
+          | eapply star2_refl
+          | try step_activated
+          | try step_activated
+          | intros ? ? STEP; inv STEP; eexists; split; [econstructor; eauto | ]
+          | intros ? ? STEP; inv STEP; eexists; split; [econstructor; eauto | ]
+          ]
+        | eapply SimLockExtern ;
+          [ try step_activated
+          | try step_activated
+          | intros ? ? STEP; inv STEP; eexists; split; [econstructor; eauto | ]
+          | intros ? ? STEP; inv STEP; eexists; split; [econstructor; eauto | ]
+          ]
+        ].
 
 Ltac pno_step_left :=
   pfold; econstructor 3; [ | eapply star2_refl|]; [ reflexivity | ]; stuck2.
-
 
 Ltac perr :=
   pfold; eapply SimErr;

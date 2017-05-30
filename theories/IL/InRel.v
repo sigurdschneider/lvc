@@ -1,4 +1,4 @@
-Require Import Util EqDec LengthEq AllInRel Map Env IL AutoIndTac MoreList.
+Require Import Util EqDec LengthEq AllInRel Map Env IL AutoIndTac MoreList Sawtooth.
 Require Export DecSolve BlockType.
 
 Set Implicit Arguments.
@@ -237,3 +237,21 @@ match goal with
     edestruct (inRel_nthC H H') as [? [? [? [G InR]]]]; (try eassumption); dcr; inversion InR; try subst;
     repeat get_functional; (try subst)
 end.
+
+Lemma mutual_block_tooth {A} {B} `{BlockType B} {C} `{BlockType C} R
+      (AL:list A) (L:list B) (L':list C) n
+  : mutual_block R n AL L L'
+    -> tooth n L /\ tooth n L'.
+Proof.
+  intros. general induction H1; eauto using @tooth.
+Qed.
+
+Lemma inRel_sawtooth {A} {B} `{BlockType B} {C} `{BlockType C} R
+      (AL:list A) (L:list B) (L':list C)
+  : inRel R AL L L'
+    -> sawtooth L /\ sawtooth L'.
+Proof.
+  intros. general induction H1; eauto using @sawtooth.
+  - eapply mutual_block_tooth in H2.
+    split; econstructor; eauto.
+Qed.

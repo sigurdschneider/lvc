@@ -241,15 +241,226 @@ Ltac fold_conv :=
 Definition sim_lockc {S} `{StateType S} {S'} `{StateType S'} r (σ1:S) (σ2:S')
   := companion2 (@sim_gen_lock S _ S' _) r σ1 σ2.
 
+Theorem sim_lockc_sim {S} `{StateType S} {S'} `{StateType S'} r (σ1:S) (σ2:S')
+  : sim_lockc bot2 σ1 σ2 -> sim_lock r σ1 σ2.
+Proof.
+  intros. revert σ1 σ2 H1.
+  pcofix CIH; intros.
+  pfold. eapply companion2_unfold in H2.
+  eapply sim_gen_lock_mon; eauto.
+Qed.
+
+Theorem sim_lock_simc {S} `{StateType S} {S'} `{StateType S'} r (σ1:S) (σ2:S')
+  : sim_lock bot2 σ1 σ2 -> sim_lockc r σ1 σ2.
+Proof.
+  intros. revert σ1 σ2 H1.
+  unfold sim_lockc.
+  eapply tower_ind2; intros.
+  - hnf; intros; hnf; intros. eauto.
+  - punfold H2.
+    eapply sim_gen_lock_mon; eauto; intros.
+    destruct PR; isabsurd.
+    eapply H1. eauto.
+Qed.
+
+Lemma no_activated_plus_step (S : Type) `{StateType S} (σ σ' : S)
+  : activated σ -> plus2 step σ nil σ' -> False.
+Proof.
+  intros. inv H1; destruct y; isabsurd;
+    eapply no_activated_tau_step; eauto.
+Qed.
+
+(*
+Lemma sim_reduction_closed_2 {S} `{StateType S}
+      (σ1:S) {S'} `{StateType S'} (σ2 σ2':S')
+  : sim_lockc bot2 σ1 σ2
+    -> star2 step σ2 nil σ2'
+    -> sim_lockc bot2 σ1 σ2'.
+Proof.
+  intros. general induction H2.
+  - eauto.
+  - destruct y, yl; isabsurd.
+    eapply companion2_unfold in H3. invc H3; relsimpl.
+    + eapply IHstar2; eauto.
+
+    + eapply H1; try eapply H9. omega.
+      eapply sim_expansion_closed. eapply H6.
+      eauto using plus2_star2. eapply star2_refl.
+  - eapply star2n_star2 in H3. eapply activated_star_reach in H3; eauto.
+  - pfold. eauto.
+  - pfold. eapply star2n_star2 in H3.
+    eapply star2_reach_normal in H3; eauto. eapply H0.
+Qed.
+ *)
+
+Lemma sim_lock_terminate_1 {S1} `{StateType S1} (σ2 σ2':S1)
+      {S2} `{StateType S2} (σ1:S2)
+: star2 step σ2 nil σ2'
+  -> normal2 step σ2'
+  -> sim_lockc bot2 σ2 σ1
+  -> exists σ1', star2 step σ1 nil σ1' /\ normal2 step σ1' /\
+           result σ1' = result σ2'.
+Proof.
+  intros. general induction H1.
+  - eapply companion2_unfold in H3. inv H3.
+    + exfalso. eapply H2. do 2 eexists; eauto.
+    + exfalso.
+      eapply (activated_normal _ H1); eauto.
+    + eexists σ1; split; eauto. eapply star2_refl.
+  - relsimpl.
+    eapply companion2_unfold in H4. invc H4; relsimpl.
+    edestruct IHstar2; eauto; dcr.
+    eexists; split; eauto. eapply star2_silent; eauto.
+Qed.
+
+Lemma sim_lock_terminate_2 {S1} `{StateType S1} (σ2 σ2':S1)
+      {S2} `{StateType S2} (σ1:S2)
+: star2 step σ2 nil σ2'
+  -> normal2 step σ2'
+  -> sim_lockc bot2 σ1 σ2
+  -> exists σ1', star2 step σ1 nil σ1' /\ normal2 step σ1' /\
+           result σ1' = result σ2'.
+Proof.
+  intros. general induction H1.
+  - eapply companion2_unfold in H3. inv H3.
+    + exfalso. eapply H2. do 2 eexists; eauto.
+    + exfalso.
+      eapply (activated_normal _ H4); eauto.
+    + eexists σ1; split; eauto. eapply star2_refl.
+  - relsimpl.
+    eapply companion2_unfold in H4. invc H4; relsimpl.
+    edestruct IHstar2; eauto; dcr.
+    eexists; split; eauto. eapply star2_silent; eauto.
+Qed.
+
+Lemma sim_lock_activated_1 {S1} `{StateType S1} (σ1 σ1':S1)
+      {S2} `{StateType S2} (σ2:S2)
+  : star2 step σ1 nil σ1'
+    -> activated σ1'
+  -> sim_lockc bot2 σ1 σ2
+  -> exists σ2', star2 step σ2 nil σ2' /\
+           (activated σ2' /\
+           ( forall (evt : event) (σ1'' : S1),
+               step σ1' evt σ1'' ->
+               exists σ2'' : S2,
+                 step σ2' evt σ2'' /\ (sim_lockc bot2 σ1'' σ2''))
+           /\
+           ( forall (evt : event) (σ2'' : S2),
+               step σ2' evt σ2'' ->
+               exists σ1'' : S1,
+                 step σ1' evt σ1'' /\ (sim_lockc bot2 σ1'' σ2''))).
+Proof.
+  intros. general induction H1.
+  - eapply companion2_unfold in H3. inv H3; relsimpl.
+    eexists σ2; split; eauto using star2_refl.
+  - relsimpl.
+    eapply companion2_unfold in H4. inv H4; relsimpl.
+    eapply IHstar2 in H7; eauto; dcr.
+    eexists x0; split; eauto. eapply star2_silent; eauto.
+Qed.
+
+Lemma sim_lock_activated_2 {S1} `{StateType S1} (σ1 σ1':S1)
+      {S2} `{StateType S2} (σ2:S2)
+  : star2 step σ1 nil σ1'
+    -> activated σ1'
+  -> sim_lockc bot2 σ2 σ1
+  -> exists σ2', star2 step σ2 nil σ2' /\
+           (activated σ2' /\
+           ( forall (evt : event) (σ1'' : S1),
+               step σ1' evt σ1'' ->
+               exists σ2'' : S2,
+                 step σ2' evt σ2'' /\ (sim_lockc bot2 σ2'' σ1''))
+           /\
+           ( forall (evt : event) (σ2'' : S2),
+               step σ2' evt σ2'' ->
+               exists σ1'' : S1,
+                 step σ1' evt σ1'' /\ (sim_lockc bot2 σ2'' σ1''))).
+Proof.
+  intros. general induction H1.
+  - eapply companion2_unfold in H3. inv H3; relsimpl.
+    eexists σ2; split; eauto using star2_refl.
+  - relsimpl.
+    eapply companion2_unfold in H4. inv H4; relsimpl.
+    eapply IHstar2 in H7; eauto; dcr.
+    eexists x0; split; eauto. eapply star2_silent; eauto.
+Qed.
+
 Lemma simc_trans_r_right {S} `{StateType S} {S'} `{StateType S'} r t
-       (σ1:S) (σ2a σ2b:S) (σ3:S')
-  : sim_lockc bot2 σ1 σ2a
-    -> (star2 step σ2a nil σ2b \/ star2 step σ2b nil σ2a)
-    -> simc r t σ2b σ3
+       (σ1:S) (σ2:S) (σ3:S')
+  : sim_lockc bot2 σ1 σ2
+    -> simc r t σ2 σ3
     -> simc r t σ1 σ3.
 Proof.
+  revert σ1 σ2 σ3. unfold simc.
+  eapply tower_ind3.
+  - hnf; intros. hnf; intros; eauto.
+  - intros.
+    eapply companion2_unfold in H2.
+    invc H2; invc H3; zzsimpl.
+    + econstructor 1. econstructor 1; eauto. eauto.
+      eapply H1. eauto. eapply expc_simc. eapply H8.
+      eauto. eapply star2_refl.
+    + eapply sim_lock_activated_2 in H6; eauto; dcr.
+      econstructor 2. eapply star2_silent; eauto.
+      eauto. eauto. eauto.
+      * intros. edestruct H15; dcr; eauto. edestruct H10; dcr; eauto.
+      * intros. edestruct H11; dcr; eauto. edestruct H13; dcr; eauto.
+    + eapply sim_lock_terminate_2 in H6; eauto; dcr.
+      econstructor 3. rewrite H11; eauto.
+      eapply star2_silent; eauto. eauto.
+    + eapply sim_lock_terminate_2 in H6; eauto; dcr.
+      econstructor 4. rewrite H13; eauto.
+      eapply star2_silent; eauto. eauto. eauto. eauto.
+    + exfalso.
+      eapply (no_activated_plus_step _ _ _ H5 H2).
+    + econstructor 2. eapply star2_refl. eauto. eauto. eauto.
+      * intros. edestruct H6; eauto; dcr.
+        edestruct H11; eauto; dcr. eauto.
+      * intros. edestruct H12; eauto; dcr.
+        edestruct H7; eauto; dcr. eauto.
+    + exfalso; eauto using plus_not_normal.
+    + econstructor 3. rewrite H4. eauto.
+      eapply star2_refl. eauto.
+    + econstructor 4. rewrite H4. eauto.
+      eapply star2_refl. eauto. eauto. eauto.
+Qed.
 
-
+Lemma simc_trans_r_left {S} `{StateType S} {S'} `{StateType S'} r t
+       (σ3:S) (σ2:S) (σ1:S')
+  : sim_lockc bot2 σ2 σ3
+    -> simc r t σ1 σ2
+    -> simc r t σ1 σ3.
+Proof.
+  revert σ1 σ2 σ3. unfold simc.
+  eapply tower_ind3.
+  - hnf; intros. hnf; intros; eauto.
+  - intros.
+    eapply companion2_unfold in H2.
+    invc H2; invc H3; zzsimpl; relsimpl.
+    + econstructor 1. eauto. econstructor 1; eauto.
+      eapply H1. eauto. eapply expc_simc. eapply H8.
+      eapply star2_refl. eauto.
+    + eapply sim_lock_activated_1 in H6; eauto; dcr.
+      econstructor 2. eauto. eapply star2_silent; eauto.
+      eauto. eauto.
+      * intros. edestruct H10; dcr; eauto. edestruct H13; dcr; eauto.
+      * intros. edestruct H15; dcr; eauto. edestruct H11; dcr; eauto.
+    + econstructor 3; eauto.
+    + eapply sim_lock_terminate_1 in H6; eauto; dcr.
+      econstructor 4. rewrite H13; eauto. eauto.
+      eapply star2_silent; eauto. eauto. eauto.
+    + exfalso.
+      eapply (no_activated_plus_step _ _ _ H4 H8).
+    + econstructor 2. eauto. eapply star2_refl. eauto. eauto.
+      * intros. edestruct H11; eauto; dcr.
+        edestruct H6; eauto; dcr. eauto.
+      * intros. edestruct H7; eauto; dcr.
+        edestruct H12; eauto; dcr. eauto.
+    + econstructor 3; eauto.
+    + exfalso; eauto using plus_not_normal.
+    + econstructor 3; eauto.
+    + econstructor 4. rewrite H2. eauto. eauto.
+      eapply star2_refl. eauto. eauto.
 Qed.
 
 (*
@@ -374,7 +585,9 @@ Lemma g_upto {S} `{StateType S} {S'} `{StateType S'}
           }
 
     Qed.
-*)
+ *)
+
+(*
 
 Lemma simc_trans_r_right {S} `{StateType S} {S'} `{StateType S'} r t
        (σ1:S) (σ2a σ2b:S) (σ3:S')
@@ -400,3 +613,4 @@ Proof.
   eapply simc_sim in H4.
   eapply companion3_fold; eauto using sim_gen_mon.
   destruct H4.
+*)
