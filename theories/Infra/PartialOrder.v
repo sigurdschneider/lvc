@@ -4,6 +4,8 @@ Require Import Containers.OrderedType Setoid Coq.Classes.Morphisms Computable
 Require Import Containers.OrderedTypeEx DecSolve MoreList OrderedTypeEx.
 Require Import AllInRel.
 
+Create HintDb po discriminated.
+
 Class PartialOrder (Dom:Type) := {
   poLe : Dom -> Dom -> Prop;
   poLe_dec :> forall d d', Computable (poLe d d');
@@ -20,12 +22,14 @@ Proof.
   hnf; intros. eapply poLe_refl. reflexivity.
 Qed.
 
-Definition poLt {Dom} `{PartialOrder Dom} x y := poLe x y /\ ~ poEq x y.
+Hint Resolve poLe_refl poLe_antisymmetric | 100 : po.
+
+Definition poLt {Dom} `{PartialOrder Dom} x y := poLe x y /\ ~ poLe y x.
 
 Lemma poLt_intro Dom `{PartialOrder Dom} x y
   : poLe x y -> ~ poEq x y -> poLt x y.
 Proof.
-  firstorder.
+  firstorder using poLe_antisymmetric.
 Qed.
 
 Lemma poLt_poLe Dom `{PartialOrder Dom} x y
@@ -34,13 +38,26 @@ Proof.
   firstorder.
 Qed.
 
+Lemma poLt_not_poLe Dom `{PartialOrder Dom} x y
+  : poLt x y -> ~ poLe y x.
+Proof.
+  firstorder.
+Qed.
+
+Hint Resolve poLt_intro poLt_poLe poLt_not_poLe | 100 : po.
+
+Lemma poLt_not_poEq Dom `{PartialOrder Dom} x y
+  : poLt x y -> ~ poEq y x.
+Proof.
+  firstorder with po.
+Qed.
+
 Lemma poLe_poLt Dom `{PartialOrder Dom} d d'
   : poLe d d'
     -> ~ poLe d' d
     -> poLt d d'.
 Proof.
-  split; eauto. decide (poEq d d'); eauto.
-  exfalso; eapply H1; eapply poLe_refl; symmetry; eauto.
+  firstorder.
 Qed.
 
 Hint Resolve poLt_intro poLt_poLe poLe_refl poLe_antisymmetric | 100.
@@ -99,6 +116,8 @@ Qed.
 
 Hint Resolve poEq_fst poEq_snd poEq_struct poLe_fst poLe_snd poLe_struct.
 
+Hint Resolve poEq_fst poEq_snd poEq_struct poLe_fst poLe_snd poLe_struct : po.
+
 Instance PartialOrder_list_instance X `{PartialOrder X}
 : PartialOrder (list X) := {
   poLe := list_eq poLe;
@@ -147,8 +166,8 @@ Proof.
   unfold Proper, respectful, flip, impl; intros.
   destruct H2. split; intros.
   - etransitivity; eauto. etransitivity; eauto.
-  - intro. eapply H3. eapply poLe_antisymmetric; eauto.
-    etransitivity; eauto. rewrite <- H4. eauto.
+  - intro. eapply H3.
+    etransitivity; eauto. rewrite H4. eauto.
 Qed.
 
 Instance poLt_poLe_flip_impl Dom `{PartialOrder Dom}
@@ -157,8 +176,8 @@ Proof.
   unfold Proper, respectful, flip, impl; intros.
   destruct H2. split; intros.
   - etransitivity; eauto. etransitivity; eauto.
-  - intro. eapply H3. eapply poLe_antisymmetric; eauto.
-    etransitivity; eauto. rewrite <- H4. eauto.
+  - intro. eapply H3.
+    etransitivity; eauto. rewrite H4. eauto.
 Qed.
 
 
@@ -180,6 +199,13 @@ Proof.
   - intros. general induction H0; eauto using @PIR2, poLe_refl.
   - intros ? ? A B. general induction A; inv B; eauto 20 using @PIR2, poLe_antisymmetric.
 Defined.
+
+Instance poEq_cons X `{PartialOrder X}
+  : Proper (poEq ==> poEq ==> poEq) cons.
+Proof.
+  unfold Proper, respectful; intros.
+  econstructor; eauto.
+Qed.
 
 Instance poLt_poLe_PIR2_flip_impl Dom `{PartialOrder Dom}
   : (Proper (PIR2 poLe ==> flip poLe ==> flip impl) poLt).
@@ -287,8 +313,9 @@ Proof.
   eapply poLe_antisymmetric; eauto.
   decide_goal; eauto.
   exfalso. eapply H0. split; eauto.
-  intro. eapply n. rewrite H2. eauto.
 Qed.
+
+Hint Resolve not_poLt_poLe_poEq : po.
 
 Smpl Add 200
      match goal with

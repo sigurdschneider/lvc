@@ -17,9 +17,9 @@ Proof.
   intros. hnf; intros.
   assert (LE:poLe x x) by reflexivity.
   revert LE. generalize x at 2 3.
-  induction x; intros.
+  induction x; intros; clear_trivial_eqs.
   - inv LE. econstructor. intros ? [A B].
-    inv A. exfalso. eapply B. reflexivity.
+    inv A. exfalso. eauto.
   - invc LE.
     specialize (H a).
     revert y pf YL H3.
@@ -30,10 +30,14 @@ Proof.
     econstructor. intros ? [A B]; inv A.
     decide (poEq YL YL0).
     + decide (poEq y y1).
-      exfalso; apply B; econstructor; eauto.
-      eapply (H0 y1); eauto.
+      * exfalso; apply B.
+        rewrite p, p0. reflexivity.
+      * eapply (H0 y1); eauto.
     + eapply (H2 YL0); eauto.
-      rewrite H3. split; eauto.
+      split; eauto.
+      rewrite H3, H7. reflexivity.
+      intro. eapply n.
+      eapply poLe_antisymmetric; eauto.
 Qed.
 
 Lemma terminates_get_list Dom `{PO:PartialOrder Dom} L
@@ -75,11 +79,15 @@ Proof.
     econstructor. intros ? [A B]; inv A.
     decide (poEq YL YL0).
     + decide (poEq y y1).
-      exfalso; eapply B; econstructor; eauto.
+      exfalso; eapply B.
+      rewrite p, p0; eauto.
       eapply (H1 y1); eauto.
       intros ? ? Get; inv Get; eauto using get.
     + assert (poLe x0 YL0) by (etransitivity; eauto).
-      assert (poLt x0 YL0) by (rewrite H4; split; eauto).
+      assert (poLt x0 YL0). {
+        split; eauto. intro. eapply n.
+        eapply poLe_antisymmetric; eauto.
+      }
       eapply H3; eauto.
       * intros ? ? Get. inv Get; eauto using get.
         exploit H2 as Trm; eauto using get.
@@ -118,7 +126,8 @@ Proof.
   intros [z z'] [[LE1 LE2] NEQ]; simpl in *.
   decide (poEq x1 z).
   + decide (poEq y z').
-    exfalso; eapply NEQ; eauto.
+    exfalso; eapply NEQ; split; eauto.
+    rewrite p. reflexivity. rewrite p0; eauto.
     eapply (H2 z'); eauto.
   + eapply H0; eauto.
 Qed.

@@ -376,6 +376,7 @@ Proof.
     decide (poEq bn bn0).
     + decide (poEq x1 b).
       exfalso; eapply B; econstructor; eauto.
+      rewrite p0; eauto. rewrite p. reflexivity.
       eapply FST; eauto.
     + eapply (SND bn0); eauto.
   - clear H A1 A2 ans ant a.
@@ -396,6 +397,7 @@ Proof.
     + decide (poEq bns bns0).
       * decide (poEq bnt bnt0).
         exfalso; apply B; econstructor; eauto.
+        rewrite p; eauto. rewrite p0; eauto. rewrite p1; eauto.
         eapply (H4 bnt0); eauto.
       * eapply (H2 bns0); eauto.
     + eapply (H0 b0); eauto.
@@ -422,10 +424,12 @@ Proof.
     decide (poEq b b0).
     + decide (poEq bns bns0).
       * decide (poEq bnt bnt0).
-        exfalso; apply B; eauto. econstructor; eauto.
-        intros. eapply PIR2_nth in p0; eauto.
-        dcr. get_functional. eauto.
-        eapply (H2 bnt0); eauto.
+        -- exfalso; apply B; eauto. econstructor; eauto.
+           rewrite p; eauto.
+           intros. eapply PIR2_nth in p0; eauto.
+           dcr. get_functional. rewrite H16. reflexivity.
+           rewrite p1. reflexivity.
+        -- eapply (H2 bnt0); eauto.
       * eapply PIR2_get in H14; eauto.
         eapply (H4 bns0); eauto.
     + eapply PIR2_get in H14; eauto.

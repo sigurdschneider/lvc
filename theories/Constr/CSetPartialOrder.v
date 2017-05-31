@@ -76,12 +76,11 @@ Proof.
     cset_tac.
   - intros. econstructor. intros [y ?] [A B]; simpl in *.
     eapply IHn.
-    assert (~ y ⊆ s) by (intro; eapply B; split; eauto).
     edestruct not_incl_element; eauto; dcr.
     rewrite cardinal_difference'; eauto.
     rewrite cardinal_difference' in Le; eauto.
     erewrite (@cardinal_2 _ _ _ _ (y \ singleton x) y); eauto;
       [|cset_tac| rewrite Add_Equal; cset_tac; decide (x === a); eauto].
     assert (s ⊆ y \ singleton x) by cset_tac.
-    eapply cardinal_morph in H1. omega.
+    eapply cardinal_morph in H0. omega.
 Qed.

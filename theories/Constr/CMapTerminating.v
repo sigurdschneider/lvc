@@ -38,9 +38,10 @@ Proof.
       eapply not_poLt_poLe_poEq in n; eauto.
       eapply LE2.
       hnf; intros.
-      decide (x1 === x). rewrite e. eauto.
-      specialize (H5 x1). lud.
-      rewrite !MapFacts.remove_neq_o in H5; eauto.
+      decide (x1 === x).
+      * rewrite e. symmetry in n; eauto.
+      * specialize (H5 x1). lud.
+        rewrite !MapFacts.remove_neq_o in H5; eauto.
     + specialize (LE1 x).
       rewrite FEQ in *.
       inv LE1.  econstructor.
@@ -140,7 +141,7 @@ Proof.
     econstructor; intros [m' d'] [LE1 LE2].
     simpl in *.
     exfalso. eapply LE2. hnf; intros.
-    eapply eq_domain_find; intros.
+    rewrite eq_domain_find; intros. reflexivity.
     cset_tac.
   - eapply terminating_bound_inv.
     instantiate (1:=fun x0 => domain x0 ⊆ {x; s}); simpl.
