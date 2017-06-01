@@ -10,7 +10,7 @@ Set Implicit Arguments.
 
 Local Arguments proj1_sig {A} {P} e.
 Local Arguments length {A} e.
-Local Arguments forward {sT} {Dom} {H} {H0} {H1} ftransform ZL st ST d a.
+Local Arguments forward {sT} {Dom} {H} {H0} {H1} ftransform ZL st ST a.
 
 Opaque poLe.
 
@@ -22,28 +22,56 @@ Lemma forward_length_ass_UC
           〔params〕 ->
           forall s : stmt, subTerm s sT0 -> bool -> anni bool)
       (s : stmt) (ST : subTerm s sT) (ZL : 〔params〕)
-      k d (a : ann bool)
-  : ❬ZL❭ = k -> ❬snd (forward f ZL s ST d a)❭ = k.
+      k (a : ann bool)
+  : ❬ZL❭ = k -> ❬snd (forward f ZL s ST a)❭ = k.
   eapply (@forward_length_ass _ (fun _ => bool)).
 Qed.
 
 Hint Resolve forward_length_ass_UC.
 
+Lemma forward_getAnn (sT:stmt) (Dom : stmt -> Type)
+      `{JoinSemiLattice (Dom sT)} `{@LowerBounded (Dom sT) H}
+      (f: forall sT, list params ->
+                forall s, subTerm s sT -> Dom sT -> anni (Dom sT)) s (ST:subTerm s sT) ZL a an
+  : poEq (fst (@forward sT Dom _ _ _ f ZL s ST (setTopAnn an a))) an
+    -> getAnn an ≣ a.
+Proof.
+  intros. eapply ann_R_get in H2.
+  rewrite forward_getAnn' in H2. rewrite getAnn_setTopAnn in H2.
+  symmetry; eauto.
+Qed.
+
+Lemma forward_setTopAnn_inv (sT:stmt) (Dom : stmt -> Type)
+      `{JoinSemiLattice (Dom sT)} `{@LowerBounded (Dom sT) H}
+      (f: forall sT, list params ->
+                forall s, subTerm s sT -> Dom sT -> anni (Dom sT)) s (ST:subTerm s sT) ZL a an
+  : poEq (fst (@forward sT Dom _ _ _ f ZL s ST (setTopAnn an a))) an
+    -> poEq (fst (@forward sT Dom _ _ _ f ZL s ST an)) an /\ getAnn an ≣ a.
+Proof.
+  intros. split; eauto using forward_getAnn.
+  rewrite <- H2 at 2.
+  eapply ann_R_get in H2.
+  rewrite forward_getAnn' in H2. rewrite getAnn_setTopAnn in H2.
+  symmetry; eauto.
+Qed.
+
 Opaque poEq.
 
-Definition reachability_sound sT ZL BL s d a (ST:subTerm s sT)
-  : poEq (fst (forward reachability_transform ZL s ST d a)) a
+
+Definition reachability_sound sT ZL BL s a (ST:subTerm s sT)
+  : poEq (fst (forward reachability_transform ZL s ST a)) a
     -> annotation s a
     -> labelsDefined s (length ZL)
     -> labelsDefined s (length BL)
-    -> poLe (snd (@forward sT _ _ _ _ reachability_transform ZL s ST d a)) BL
+    -> poLe (snd (@forward sT _ _ _ _ reachability_transform ZL s ST a)) BL
     -> reachability cop2bool Sound BL s a.
 Proof.
   intros EQ Ann DefZL DefBL.
   general induction Ann; simpl in *; inv DefZL; inv DefBL;
     repeat let_case_eq; repeat simpl_pair_eqs; subst; simpl in *;
       clear_trivial_eqs.
-  - clear_trivial_eqs. econstructor; eauto.
+  - econstructor; eauto.
+
   - assert (forall d d', ❬snd (forward reachability_transform ZL s (subTerm_EQ_If1 eq_refl ST) d sa)❭ =
             ❬snd (forward reachability_transform ZL t (subTerm_EQ_If2 eq_refl ST) d' ta)❭). {
       eauto with len.

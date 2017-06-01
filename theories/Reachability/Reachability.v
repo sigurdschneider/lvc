@@ -188,6 +188,7 @@ Lemma op2bool_cop2bool_not_some e b
 Proof.
   unfold op2bool, cop2bool; intros.
   cases; simpl in *; intro; clear_trivial_eqs.
+  eapply H; f_equal; eauto.
 Qed.
 
 Lemma op2bool_cop2bool e b

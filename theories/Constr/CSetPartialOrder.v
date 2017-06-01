@@ -43,13 +43,16 @@ Instance set_var_semilattice_bound X `{OrderedType X} U : JoinSemiLattice ({ s :
 }.
 Proof.
   - destruct x,y; simpl. cset_tac.
-  - hnf; intros [a ?] [b ?]. simpl. intros. rewrite H0, union_idem. reflexivity.
+  - hnf; intros [a ?] [b ?]. simpl.
+    unfold poLe; simpl. intros. rewrite H0, union_idem. reflexivity.
   - hnf; intros [a ?] [b ?]. eapply union_comm.
   - hnf; intros [a ?] [b ?] [c ?]. eapply union_assoc.
   - hnf; intros [a ?] [b ?]; simpl. eapply incl_left.
-  - simpl. unfold Proper, respectful; intros. destruct x,y,x0,y0; simpl in * |- *.
+  - simpl. unfold Proper, respectful; intros.
+    destruct x,y,x0,y0; unfold poEq in *; simpl in * |- *.
     rewrite H0, H1. reflexivity.
-  - simpl. unfold Proper, respectful; intros. destruct x,y,x0,y0; simpl in * |- *.
+  - simpl. unfold Proper, respectful; intros.
+    destruct x,y,x0,y0; unfold poLe in *; simpl in * |- *.
     rewrite H0, H1. reflexivity.
 Defined.
 
@@ -59,7 +62,7 @@ Instance set_var_lower_bounded X `{OrderedType X} U : LowerBounded { s : set X |
   }.
 Proof.
   - cset_tac.
-  - simpl; intros []. cset_tac.
+  - simpl; intros []. hnf. cset_tac.
 Defined.
 
 
@@ -73,9 +76,10 @@ Proof.
     exfalso. eapply B. assert (cardinal (U \ s) = 0) by omega.
     rewrite <- cardinal_Empty in H0.
     eapply empty_is_empty_1 in H0. eapply diff_subset_equal' in H0.
+    unfold poLe in *; simpl in *.
     cset_tac.
   - intros. econstructor. intros [y ?] [A B]; simpl in *.
-    eapply IHn.
+    eapply IHn. unfold poLe in *; simpl in *.
     edestruct not_incl_element; eauto; dcr.
     rewrite cardinal_difference'; eauto.
     rewrite cardinal_difference' in Le; eauto.

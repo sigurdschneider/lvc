@@ -28,26 +28,6 @@ Smpl Add 100 match goal with
 
 Require Import MapNotations ListUpdateAt Subterm.
 
-Lemma WithTopLe_refl A R `{EqDec A R} (a b : A)
-  : R a b
-    -> poLe (wTA a) (wTA b).
-Proof.
-  econstructor; eauto.
-Qed.
-
-Lemma poLe_Some_struct A `{PartialOrder A} (a b : A)
-  : poLe a b
-    -> poLe (Some a) (Some b).
-Proof.
-  econstructor; eauto.
-Qed.
-
-Lemma poLe_withTopLe_top A R `{EqDec A R} (x:withTop A)
-  : poLe x Top.
-Proof.
-  econstructor 2.
-Qed.
-
 
 Lemma leMap_op_eval e a b
   : poLe a b

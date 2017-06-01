@@ -122,7 +122,7 @@ Instance ojoin_poLe A `{JoinSemiLattice A}
 Proof.
   unfold Proper, respectful.
   intros ? [y|] EQ ? [y'|] EQ'; inversion EQ; inversion EQ'; subst; simpl;
-    eauto using fstNoneOrR.
+    eauto.
   - econstructor. rewrite H5. rewrite join_commutative. eapply join_poLe.
   - econstructor. rewrite H3. eapply join_poLe.
   - econstructor. rewrite H3. rewrite H6. reflexivity.
@@ -134,10 +134,10 @@ Instance option_boundedsemilattice A `{JoinSemiLattice A}
 }.
 Proof.
   - intros [a|] [b|]; simpl; intros; clear_trivial_eqs;
-      eauto using fstNoneOrR, option_R, join_bound.
-  - intros [a|] [b|]; simpl; eauto using option_R, join_commutative.
-  - intros [a1|] [b1|] [c1|]; simpl; eauto using option_R, join_associative.
-  - intros [a|] [b|]; simpl; eauto using fstNoneOrR, join_poLe.
+      econstructor; eauto using join_bound.
+  - intros [a|] [b|]; simpl; econstructor; eauto using join_commutative.
+  - intros [a1|] [b1|] [c1|]; simpl; econstructor; eauto using join_associative.
+  - intros [a|] [b|]; simpl; econstructor; eauto using fstNoneOrR, join_poLe.
 Defined.
 
 Lemma join_struct T `{JoinSemiLattice T} (a b a' b':T)

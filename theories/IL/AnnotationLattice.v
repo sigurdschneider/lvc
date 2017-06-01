@@ -10,7 +10,7 @@ Lemma option_map_mon T `{PartialOrder T}  U `{PartialOrder U} (a a':option T) (f
     -> option_map f a ⊑ option_map f' a'.
 Proof.
   intros A; inv A; simpl;
-    clear_trivial_eqs; simpl; eauto using fstNoneOrR.
+    clear_trivial_eqs; simpl; eauto.
 Qed.
 
 
@@ -26,7 +26,8 @@ Proof.
   intros LE_A LE_B; simpl in *.
   general induction LE_A; inv LE_B; simpl; eauto using PIR2.
   - econstructor; eauto.
-    eauto using ann_R_setTopAnn.
+    eapply ann_R_setTopAnn; eauto.
+    eapply IHLE_A; eauto.
 Qed.
 
 Lemma ann_poLe_joinTopAnn A `{JoinSemiLattice A} (a:A) (b:A) an bn
@@ -59,7 +60,6 @@ Proof.
   intros LE_A LE_B. simpl in *.
   hnf in LE_A.
   general induction LE_A; inv LE_B; simpl; eauto using PIR2.
-  econstructor; eauto. eapply ann_poLe_joinTopAnn; eauto.
 Qed.
 
 Lemma PIR2_poEq_zip_setTopAnnO X `{PartialOrder X} (A A':list (ann X)) (B B':list X)
@@ -70,7 +70,8 @@ Proof.
   intros LE_A LE_B; simpl in *.
   general induction LE_A; inv LE_B; simpl; eauto using PIR2.
   - econstructor; eauto.
-    eauto using ann_R_setTopAnn.
+    eapply ann_R_setTopAnn; eauto.
+    eapply IHLE_A; eauto.
 Qed.
 
 Lemma PIR2_poEq_zip_joinTopAnnO X `{JoinSemiLattice X} (A A':list (ann X)) (B B':list X)
@@ -80,23 +81,22 @@ Lemma PIR2_poEq_zip_joinTopAnnO X `{JoinSemiLattice X} (A A':list (ann X)) (B B'
 Proof.
   intros LE_A LE_B; simpl in *.
   general induction LE_A; inv LE_B; simpl; eauto using PIR2.
-  econstructor; eauto. eapply ann_poEq_joinTopAnn; eauto.
 Qed.
 
 Hint Resolve PIR2_zip_joinTopAnnO PIR2_poEq_zip_setTopAnnO PIR2_poEq_zip_joinTopAnnO.
 
 
 Instance LowerBounded_ann (s:stmt) A `{LowerBounded A}
-  : LowerBounded ({ a : ann bool | annotation s a }) :=
+  : LowerBounded ({ a : ann A | annotation s a }) :=
   {
     bottom := exist _ (setAnn bottom s) _
   }.
 Proof.
   - eapply setAnn_annotation.
-  - intros []. simpl.
-    general induction a; simpl; eauto using @ann_R.
-    + econstructor; eauto with len.
-      intros; inv_get. exploit H1; eauto.
+  - intros []. hnf. simpl.
+    general induction a; simpl;
+      econstructor; eauto using bottom_least with len.
+    + intros; inv_get. exploit H1; eauto.
 Defined.
 
 

@@ -17,6 +17,9 @@ Class PartialOrder (Dom:Type) := {
   poLe_antisymmetric :> Antisymmetric _ poEq poLe;
 }.
 
+Arguments poLe : simpl never.
+Arguments poEq : simpl never.
+
 Instance PartialOrder_poLe_refl Dom `{PartialOrder Dom} : Reflexive poLe.
 Proof.
   hnf; intros. eapply poLe_refl. reflexivity.
@@ -365,3 +368,85 @@ Smpl Add match goal with
          | [ H : _ ⊑ false |- _ ] => eapply poLe_false in H; try subst
          | [ H : false ⊑ _ |- _ ] => eapply poLe_false in H; try subst
          end : inv_trivial.
+
+
+Lemma poLe_sig_struct D `{PartialOrder D} (P: D -> Prop) (x x':D)  pf pf'
+  : x ⊑ x'
+    -> @poLe _ (@PartialOrder_sig D _ P) (exist P x pf) (exist P x' pf').
+Proof.
+  intros. simpl. eapply H0.
+Qed.
+
+Lemma poLe_sig_struct' D `{PartialOrder D} (P: D -> Prop) (x x':{x : D | P x})
+  : proj1_sig x ⊑ proj1_sig x'
+    -> x ⊑ x'.
+Proof.
+  intros. simpl. eapply H0.
+Qed.
+
+Lemma poEq_sig_struct D `{PartialOrder D} (P: D -> Prop) (x x':D)  pf pf'
+  : x ≣ x'
+    -> @poEq _ (@PartialOrder_sig D _ P) (exist P x pf) (exist P x' pf').
+Proof.
+  intros. simpl. eapply H0.
+Qed.
+
+Lemma poLe_sig_destruct D `{PartialOrder D} (P: D -> Prop) (x x':{x : D | P x})
+  : x ⊑ x'
+    -> proj1_sig x ⊑ proj1_sig x'.
+Proof.
+  intros. eapply H0.
+Qed.
+
+Lemma poEq_sig_destruct D `{PartialOrder D} (P: D -> Prop) (x x':{x : D | P x})
+  : x ≣ x'
+    -> proj1_sig x ≣ proj1_sig x'.
+Proof.
+  intros. eapply H0.
+Qed.
+
+Hint Resolve poLe_sig_destruct poEq_sig_destruct.
+
+
+
+Lemma poLe_list_struct A `{PartialOrder A} (a1 a2:A) b1 b2
+  : poLe a1 a2 -> poLe b1 b2  -> poLe (a1::b1) (a2::b2).
+  intros; econstructor; eauto.
+Qed.
+
+Lemma poEq_list_struct A `{PartialOrder A} (a1 a2:A) b1 b2
+  : poEq a1 a2 -> poEq b1 b2  -> poEq (a1::b1) (a2::b2).
+  intros; econstructor; eauto.
+Qed.
+
+Hint Resolve poLe_list_struct poEq_list_struct.
+
+Lemma poLe_map D `{PartialOrder D} D' `{PartialOrder D'} (f g:D -> D') (L L':list D)
+      (LEf:forall a b, poLe a b -> poLe (f a) (g b))
+      (LE: poLe L L')
+  : poLe (f ⊝ L) (g ⊝ L').
+Proof.
+  general induction LE; simpl; eauto.
+Qed.
+
+Lemma poLe_map_nd D D' `{PartialOrder D'} (f g:D -> D') (L:list D)
+      (LEf:forall a, poLe (f a) (g a))
+  : poLe (f ⊝ L) (g ⊝ L).
+Proof.
+  general induction L; simpl; eauto.
+Qed.
+
+Lemma poEq_map D `{PartialOrder D} D' `{PartialOrder D'} (f g:D -> D') (L L':list D)
+      (LEf:forall a b, poEq a b -> poEq (f a) (g b))
+      (LE: poEq L L')
+  : poLe (f ⊝ L) (g ⊝ L').
+Proof.
+  general induction LE; simpl; eauto.
+Qed.
+
+Lemma poEq_map_nd D D' `{PartialOrder D'} (f g:D -> D') (L:list D)
+      (LEf:forall a, poEq (f a) (g a))
+  : poEq (f ⊝ L) (g ⊝ L).
+Proof.
+  general induction L; simpl; eauto.
+Qed.

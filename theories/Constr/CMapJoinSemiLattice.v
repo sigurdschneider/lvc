@@ -21,8 +21,8 @@ Proof.
     case_eq (find z y'); case_eq (find z x'); intros; simpl in *;
       clear_trivial_eqs; simpl; repeat cases; try reflexivity;
         eauto using fstNoneOrR, join_struct, join_poLe.
-  - econstructor. rewrite H8. eapply join_poLe.
-  - econstructor. rewrite H8. rewrite join_commutative. eapply join_poLe.
+  - econstructor. rewrite LE1. eapply join_poLe.
+  - econstructor. rewrite LE2. rewrite join_commutative. eapply join_poLe.
 Qed.
 
 Lemma empty_bottom X `{OrderedType X} Y `{JoinSemiLattice Y}

@@ -201,3 +201,20 @@ Smpl Add
      | [ H : Some _ ≣ ?Y |- _ ] => symmetry in H; eapply poEq_Some_inv in H;
                                    destruct H as [? [? H]]; try subst Y
      end : inv_trivial.
+
+Lemma poLe_option_None X `{PartialOrder X} (x:option X)
+  :  None ⊑ x.
+Proof.
+  econstructor.
+Qed.
+
+Hint Resolve poLe_option_None.
+
+Lemma poLe_Some_struct A `{PartialOrder A} (a b : A)
+  : poLe a b
+    -> poLe (Some a) (Some b).
+Proof.
+  econstructor; eauto.
+Qed.
+
+Hint Resolve poLe_Some_struct.

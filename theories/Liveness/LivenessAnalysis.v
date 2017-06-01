@@ -77,44 +77,50 @@ Lemma liveness_transform_dep_monotone (i:overapproximation) (sT s : stmt) (ST : 
       a ⊑ b
       -> liveness_transform_dep i ZL AL ST a ⊑ liveness_transform_dep i ZL AL' ST b.
 Proof.
-  intros.
+  intros. unfold poLe; simpl.
   time (inv H0; destruct s; simpl in * |- *; try reflexivity;
             repeat match goal with
                    | [ x : { x : set var | x ⊆ occurVars sT } |- _ ] =>
                      destruct x as [? ?]
-                   end; simpl in * |- *; dcr).
+                   end; simpl in * |- *; dcr; clear_trivial_eqs); eauto.
   - eapply incl_union_lr.
     + cases; eauto.
       destruct (get_dec AL (counted l)) as [[[D PD] GetDL]|].
       * erewrite get_nth; eauto using map_get_1; simpl in *.
+        hnf in H.
         PIR2_inv. destruct x. simpl in *; dcr.
         erewrite (@get_nth _ (_ ⊝ AL') ); eauto using map_get_1; simpl in *.
-        rewrite H1; eauto.
+        unfold poLe in H0. simpl in *.
+        rewrite H0; eauto.
       * rewrite not_get_nth_default; simpl; intros; inv_get; eauto.
         cset_tac.
     + eapply list_union_incl; eauto with cset.
       intros; inv_get.
       destruct (get_dec AL (counted l)) as [[[D PD] GetDL]|].
-      * cases in H3.
+      * cases in H2.
         erewrite get_nth in COND; eauto; simpl in *.
-        PIR2_inv. destruct x1. simpl in *.
+        hnf in H.
+        PIR2_inv. destruct x1. unfold poLe in *. simpl in *.
         exploit get_filter_by. Focus 4.
         eapply incl_list_union. eapply map_get_1.
-        eapply H7. reflexivity. eauto. eauto.
+        eapply H6. reflexivity. eauto. eauto.
         simpl. cases; eauto.
         erewrite get_nth in NOTCOND; [| eauto using map_get_1].
         eapply NOTCOND. simpl. eauto.
-      * rewrite not_get_nth_default in H3. simpl in *.
-        cases in H3; cset_tac.
+      * simpl in *. rewrite not_get_nth_default in H2. simpl in *.
+        cases in H2; cset_tac.
         intros; inv_get; eauto.
-  - rewrite H1 at 1. repeat cases; eauto; cset_tac.
-  - cases; [| rewrite H1; reflexivity].
+  - unfold poLe in *; simpl in *.
+    rewrite H1 at 1. repeat cases; eauto; cset_tac.
+  - unfold poLe; simpl. unfold poLe in H1; simpl in *.
+    cases; [| rewrite H1; reflexivity].
     eapply incl_union_lr; eauto.
     eapply list_union_incl; eauto with cset.
-    intros; inv_get. PIR2_inv.
+    intros; inv_get. hnf in H. PIR2_inv.
     eapply incl_list_union; eauto using get_take, zip_get.
-    eapply sig_R_proj1_sig in H4; eauto with cset.
+    eapply sig_R_proj1_sig in H3; eauto with cset.
   - repeat cases; try (now congruence); eauto.
+    unfold poLe in *; simpl in *.
     cset_tac.
 Qed.
 
@@ -125,45 +131,49 @@ Lemma liveness_transform_dep_ext (i:overapproximation) (sT s : stmt) (ST : subTe
       a ≣ b
       -> liveness_transform_dep i ZL AL ST a ≣ liveness_transform_dep i ZL AL' ST b.
 Proof.
-  intros.
+  intros. unfold poEq; simpl.
   time (destruct s; eauto with cset; simpl; inv H0; simpl; try reflexivity;
             repeat match goal with
                    | [ x : { x : set var | x ⊆ occurVars sT } |- _ ] =>
                      destruct x as [? ?]
-                   end; simpl in * |- *; dcr).
-  - rewrite H1 at 1.
+                   end; simpl in * |- *; dcr; clear_trivial_eqs).
+  - unfold poEq in H1; simpl in *. rewrite H1 at 1.
     repeat cases; try reflexivity.
     exfalso. eapply NOTCOND. destruct COND; eauto.
     left. rewrite <- H1. eauto.
     exfalso. eapply NOTCOND. destruct COND; eauto.
     left. rewrite H1. eauto.
   - repeat cases; try (now congruence); eauto.
+    unfold poEq in H1,H2; simpl in *.
     rewrite H1, H2. reflexivity.
   - eapply eq_union_lr.
     + destruct (get_dec AL (counted l)) as [[[D PD] GetDL]|].
       * erewrite get_nth; eauto using map_get_1; simpl in *.
+        hnf in H.
         PIR2_inv. destruct x. simpl in *; dcr.
         erewrite (@get_nth _ (_ ⊝ AL') ); eauto using map_get_1; simpl in *.
         cases; eauto.
-        rewrite H1. reflexivity.
+        unfold poEq in H0; simpl in *.
+        rewrite H0. reflexivity.
       * rewrite not_get_nth_default; simpl; intros; inv_get; eauto.
         destruct (get_dec AL' (counted l)) as [[[D PD] GetDL]|].
-        exfalso. edestruct PIR2_nth_2; eauto; dcr. eauto.
+        exfalso. hnf in H. edestruct PIR2_nth_2; eauto; dcr.  eauto.
         rewrite (@not_get_nth_default _ (_ ⊝ AL')); simpl; intros; inv_get; eauto.
     + erewrite filter_by_ext; [reflexivity| eauto with len |].
-      * intros; inv_get.
+      * intros; inv_get. hnf in H.
         destruct (get_dec AL (counted l)) as [[[D PD] GetDL]|]; PIR2_inv.
         erewrite get_nth; [| eauto using map_get_1].
         destruct x. simpl in *.
         erewrite get_nth; [| eauto using map_get_1]. simpl.
-        repeat cases; eauto; exfalso; rewrite H2 in *; eauto.
+        unfold poEq in H1; simpl in *.
+        repeat cases; eauto; exfalso; rewrite H1 in *; eauto.
         repeat erewrite not_get_nth_default; intros; inv_get; eauto.
   - cases; eauto.
     eapply eq_union_lr; eauto.
     eapply list_union_eq; eauto.
     + eapply PIR2_length in H. eauto with len.
-    + intros; inv_get. PIR2_inv.
-      eapply sig_R_proj1_sig in H2; rewrite H2; eauto.
+    + intros; inv_get. hnf in H. PIR2_inv.
+      rewrite H0. reflexivity.
 Qed.
 
 Definition liveness_analysis i :=

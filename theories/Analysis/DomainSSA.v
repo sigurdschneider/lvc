@@ -28,14 +28,6 @@ Fixpoint domjoin_list D `{JoinSemiLattice D} (m:Dom D) (A:list var) (B:list (opt
 Definition domenv D (d:Dom D) (x:var) : option D :=
   find x d.
 
-Lemma poLe_option_None X `{PartialOrder X} (x:option X)
-  :  ⎣⎦ ⊑ x.
-Proof.
-  econstructor.
-Qed.
-
-Hint Resolve poLe_option_None.
-
 Lemma domupd_le D `{PartialOrder D} (a b: Dom D) v v' x
   : poLe a b
     -> poLe v v'
@@ -99,7 +91,7 @@ Lemma domjoin_list_ne D `{JoinSemiLattice D} (m:Dom D) x Z Y
 Proof.
   intros NI.
   general induction Z; destruct Y; simpl; eauto.
-  erewrite domjoin_ne; eauto. eapply IHZ; eauto.
+  erewrite domjoin_ne; eauto.
   intro; eapply NI; econstructor. eapply H1.
 Qed.
 
@@ -172,9 +164,11 @@ Proof.
   - eapply joinsig_sym.
   - eapply joinsig_assoc.
   - eapply joinsig_exp.
-  - simpl. unfold Proper, respectful; intros. destruct x,y,x0,y0; simpl in * |- *.
+  - simpl. unfold Proper, respectful; intros.
+    destruct x,y,x0,y0; unfold poEq in *; simpl in * |- *.
     rewrite H2, H3. reflexivity.
-  - simpl. unfold Proper, respectful; intros. destruct x,y,x0,y0; simpl in * |- *.
+  - simpl. unfold Proper, respectful; intros.
+    destruct x,y,x0,y0; unfold poLe in *; simpl in * |- *.
     rewrite H3, H2. reflexivity.
 Defined.
 
@@ -340,7 +334,7 @@ Lemma domupd_list_ne D `{JoinSemiLattice D} (m:Dom D) x Z Y
 Proof.
   intros NI.
   general induction Z; destruct Y; simpl; eauto.
-  rewrite domupd_var_ne; eauto. eapply IHZ; eauto.
+  rewrite domupd_var_ne; eauto.
   intro; eapply NI; econstructor. eapply H1.
 Qed.
 

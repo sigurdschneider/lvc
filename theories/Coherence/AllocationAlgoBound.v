@@ -2,7 +2,7 @@ Require Import CSet Le Arith.Compare_dec.
 
 Require Import Plus Util Map CMap Status Take Subset1 ListMax.
 Require Import Val Var Env IL Annotation Liveness.Liveness Fresh MoreList SetOperations AnnP.
-Require Import Coherence Allocation RenamedApart AllocationAlgo.
+Require Import Coherence Coherence.Allocation RenamedApart AllocationAlgo.
 Require Import RenamedApart_Liveness LabelsDefined Restrict InfinitePartition MapSep.
 Require Import RenameApart_Partition.
 
@@ -160,7 +160,9 @@ Proof.
           try eapply EQ0; simpl; eauto using live_sound. pe_rewrite.
         instantiate (1:=D ∪ Ds) in AGR.
         eapply locally_sep_ext; eauto.
-        pe_rewrite. eauto with cset.
+        pe_rewrite.
+        eapply renamedApart_disj in H15; pe_rewrite.
+        revert H12 H15. clear_all. cset_tac.
   - econstructor; eauto.
   - econstructor; eauto.
   - exploit regAssign_renamedApart_agreeF as Agr1;

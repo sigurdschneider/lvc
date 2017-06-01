@@ -54,7 +54,6 @@ Proof.
       split. econstructor; eauto.
       intro. eapply H2. inv H; eauto.
       exploit IHx; eauto. split; eauto.
-      econstructor; eauto. eapply H.
       intro. eapply H. inv H0; eauto.
     * eapply list_update_at_get_3; eauto.
 Qed.
@@ -126,9 +125,9 @@ Proof.
   intros [z z'] [[LE1 LE2] NEQ]; simpl in *.
   decide (poEq x1 z).
   + decide (poEq y z').
-    exfalso; eapply NEQ; split; eauto.
-    rewrite p. reflexivity. rewrite p0; eauto.
-    eapply (H2 z'); eauto.
+    * exfalso; eapply NEQ; split; simpl; eauto.
+      rewrite p. reflexivity. rewrite p0; eauto.
+    * eapply (H2 z'); eauto.
   + eapply H0; eauto.
 Qed.
 

@@ -146,27 +146,46 @@ Lemma withTop_generic_join_assoc A R `{EqDec A R}
     withTop_generic_join (withTop_generic_join a b) c
                          ≣ withTop_generic_join a (withTop_generic_join b c).
 Proof.
-  intros [] [] []; simpl; repeat (cases; simpl); eauto using @withTop_eq.
-  - reflexivity.
+  intros [] [] []; simpl; repeat (cases; simpl); eauto.
   - exfalso. eapply NOTCOND. rewrite <- COND. eauto.
   - exfalso. eapply NOTCOND. rewrite COND. eauto.
   - exfalso. eapply NOTCOND. eauto.
 Qed.
 
+Lemma poLe_withTopLe_refl A R `{EqDec A R} (a b : A)
+  : R a b
+    -> poLe (wTA a) (wTA b).
+Proof.
+  econstructor; eauto.
+Qed.
+
+Lemma poEq_withTopEq_refl A R `{EqDec A R} (a b : A)
+  : R a b
+    -> poEq (wTA a) (wTA b).
+Proof.
+  econstructor; eauto.
+Qed.
+
+Lemma poLe_withTopLe_top A R `{EqDec A R} (x:withTop A)
+  : poLe x Top.
+Proof.
+  econstructor 2.
+Qed.
+
+Hint Resolve poEq_withTopEq_refl poLe_withTopLe_refl poLe_withTopLe_top.
+
 Lemma withTop_generic_join_exp A R  `{EqDec A R}
   : forall a b : withTop A, a ⊑ withTop_generic_join a b.
 Proof.
-  intros [] []; simpl; repeat (cases; simpl); eauto using withTop_le.
-  reflexivity.
+  intros [] []; simpl; repeat (cases; simpl); eauto.
 Qed.
-
 
 Instance withTop_generic_join_poEq A R `{EqDec A R}
   : Proper (poEq ==> poEq ==> poEq) (withTop_generic_join (A:=A) (R:=R)).
 Proof.
   unfold Proper, respectful; intros.
-  destruct x,y,x0,y0; simpl; eauto using withTop_eq;
-    repeat (cases; simpl); eauto using withTop_eq;
+  destruct x,y,x0,y0; simpl;
+    repeat (cases; simpl); eauto;
       clear_trivial_eqs.
   - exfalso. eapply NOTCOND.
     rewrite <- H3, <- H4. eauto.

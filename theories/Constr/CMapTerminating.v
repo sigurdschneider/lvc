@@ -25,7 +25,7 @@ Proof.
   - rewrite FEQ in p. destruct p as [p1 p2]. inv p1.
     eapply H2; eauto.
     split; eauto. rewrite <- H6 in *. clear_trivial_eqs.
-    intro; eapply p2; eauto. econstructor; eauto.
+    intro; eapply p2; eauto.
     rewrite H6; eauto.
   - assert (RD':domain (remove x m') ⊆ U). {
       rewrite domain_remove; eauto. cset_tac.
@@ -40,7 +40,7 @@ Proof.
       hnf; intros.
       decide (x1 === x).
       * rewrite e. symmetry in n; eauto.
-      * specialize (H5 x1). lud.
+      * specialize (H5 x1). simpl in *. lud.
         rewrite !MapFacts.remove_neq_o in H5; eauto.
     + specialize (LE1 x).
       rewrite FEQ in *.

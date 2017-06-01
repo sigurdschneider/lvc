@@ -32,7 +32,6 @@ Proof.
     + pose proof H2. eapply find_domain' in H2.
     exploit DEQ; eauto. cset_tac. simpl in *.
     rewrite H3 in H4. eauto.
-    + econstructor.
 Qed.
 
 Instance leMap_proper X `{OrderedType X} Y `{PartialOrder Y} (d d':Map [X, Y])
@@ -94,7 +93,6 @@ Proof.
     + pose proof H2. eapply find_domain' in H2.
     exploit DEQ; eauto. cset_tac. simpl in *.
     rewrite H3 in H4. eauto.
-    + econstructor.
 Qed.
 
 Instance eqDom_dec X `{OrderedType X} Y `{PartialOrder Y}

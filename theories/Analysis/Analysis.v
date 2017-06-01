@@ -1,5 +1,6 @@
 Require Import Util EqDec LengthEq Get Coq.Classes.RelationClasses MoreList AllInRel ListUpdateAt.
-Require Import SizeInduction Infra.Lattice OptionR DecSolve Annotation.
+Require Import SizeInduction Infra.Lattice OptionR DecSolve.
+Require Import Annotation AnnotationLattice.
 
 Set Implicit Arguments.
 
@@ -105,6 +106,8 @@ Proof.
   intros LE LE'; inv LE'; simpl; eauto.
 Qed.
 
+Hint Resolve poLe_getAnni.
+
 Definition getAnniLeft A (a:A) (an:anni A) :=
   match an with
   | anni2 a _ => a
@@ -118,6 +121,8 @@ Lemma poLe_getAnniLeft A `{PartialOrder A} (a a':A) an an'
 Proof.
   intros LE LE'; inv LE'; simpl; eauto.
 Qed.
+
+Hint Resolve poLe_getAnniLeft.
 
 Definition getAnniRight A (a:A) (an:anni A) :=
   match an with
@@ -133,15 +138,13 @@ Proof.
   intros LE LE'; inv LE'; simpl; eauto.
 Qed.
 
+Hint Resolve poLe_getAnniRight.
+
 Lemma ann_bottom s' (Dom:Type) `{LowerBounded Dom}
   :  forall (d : ann Dom), annotation s' d -> setAnn bottom s' ⊑ d.
 Proof.
-  sind s'; destruct s'; simpl; intros d' Ann; inv Ann; simpl; eauto using @ann_R, bottom_least.
-  - econstructor; eauto using bottom_least.
-    eapply (IH s'); eauto.
-  - econstructor; eauto using bottom_least.
-    eapply IH; eauto.
-    eapply IH; eauto.
+  sind s'; destruct s'; simpl; intros d' Ann; inv Ann; simpl;
+    eauto using bottom_least.
   - econstructor; eauto using bottom_least with len.
     + intros; inv_get. eapply IH; eauto.
     + eapply IH; eauto.
@@ -157,12 +160,14 @@ Definition setTopAnnO {A} `{LowerBounded A} a (al:option A) :=
 Lemma PIR2_ojoin_zip A `{JoinSemiLattice A} (a:list A) a' b b'
   : poLe a a'
     -> poLe b b'
-    -> PIR2 poLe (join ⊜ a b) (join ⊜ a' b').
+    -> poLe (join ⊜ a b) (join ⊜ a' b').
 Proof.
   intros. hnf in H1,H2. general induction H1; inv H2; simpl; eauto using PIR2.
   econstructor; eauto.
-  rewrite pf, pf0. reflexivity.
+  rewrite pf, pf0. reflexivity. eapply IHPIR2; eauto.
 Qed.
+
+Hint Resolve PIR2_ojoin_zip.
 
 Lemma update_at_poLe A `{LowerBounded A} B (L:list B) n (a:A) b
   : poLe a b
@@ -172,8 +177,6 @@ Proof.
   intros.
   general induction L; simpl; eauto using PIR2.
   - destruct n; simpl; eauto using @PIR2.
-    econstructor; eauto.
-    eapply IHL; eauto.
 Qed.
 
 
@@ -185,29 +188,25 @@ Lemma PIR2_fold_zip_join X `{JoinSemiLattice X} (A A':list (list X)) (B B':list 
 Proof.
   intros. simpl in *.
   general induction H1; simpl; eauto.
-  eapply IHPIR2; eauto.
-  clear IHPIR2 H1.
-  general induction pf; inv H2; simpl; eauto using PIR2.
-  econstructor; eauto.
-  rewrite pf, pf1. reflexivity.
 Qed.
+
+Hint Resolve PIR2_fold_zip_join.
 
 Lemma tab_false_impb Dom `{PartialOrder Dom} AL AL'
   : poLe AL AL'
-    -> PIR2 impb (tab false ‖AL‖) (tab false ‖AL'‖).
+    -> poLe (tab false ‖AL‖) (tab false ‖AL'‖).
 Proof.
   intros. hnf in H0.
-  general induction H0; simpl; unfold impb; eauto using @PIR2.
+  general induction H0; simpl; unfold impb; eauto.
 Qed.
 
 Lemma update_at_impb Dom `{PartialOrder Dom} AL AL' n
   : poLe AL AL'
-    ->  PIR2 impb (list_update_at (tab false ‖AL‖) n true)
+    ->  poLe (list_update_at (tab false ‖AL‖) n true)
             (list_update_at (tab false ‖AL'‖) n true).
 Proof.
-  unfold poLe; simpl.
-  intros A. general induction A; simpl; eauto using PIR2.
-  - unfold impb. destruct n; simpl; eauto using @PIR2, tab_false_impb.
+  intros A. general induction A; simpl; eauto.
+  - destruct n; simpl; eauto using @PIR2, tab_false_impb.
 Qed.
 
 Ltac refold_PIR2_PO :=
@@ -243,18 +242,6 @@ Ltac refold_ann_PO :=
   end.
 
 Smpl Add refold_ann_PO : inversion_cleanup.
-
-Lemma poLe_list_struct A `{PartialOrder A} (a1 a2:A) b1 b2
-  : poLe a1 a2 -> poLe b1 b2  -> poLe (a1::b1) (a2::b2).
-  intros; econstructor; eauto.
-Qed.
-
-Lemma poEq_list_struct A `{PartialOrder A} (a1 a2:A) b1 b2
-  : poEq a1 a2 -> poEq b1 b2  -> poEq (a1::b1) (a2::b2).
-  intros; econstructor; eauto.
-Qed.
-
-Hint Resolve poLe_list_struct poEq_list_struct.
 
 Hint Resolve join_struct join_struct_eq.
 
@@ -434,8 +421,8 @@ Lemma PIR2_zip_join_commutative X `{JoinSemiLattice X} A B
   : poLe (join ⊜ B A) (join ⊜ A B).
 Proof.
   intros.
-  general induction A; destruct B; simpl in *; eauto using PIR2.
-  econstructor; eauto. rewrite join_commutative; eauto.
+  general induction A; destruct B; simpl in *; eauto.
+  eauto using join_commutative.
 Qed.
 
 Lemma PIR2_poLe_zip_join_right X `{JoinSemiLattice X} A B
@@ -454,7 +441,7 @@ Proof.
   intros.
   general induction A; simpl in *; eauto.
   eapply IHA; eauto using get.
-  etransitivity; eauto.
+  rewrite <- H1. eauto.
   eapply PIR2_fold_zip_join; eauto.
   eapply PIR2_poLe_zip_join_left.
   symmetry. eauto using get.
