@@ -160,22 +160,43 @@ Smpl Add inv_get_step_analysis_forward : inv_get.
 Arguments poLe : simpl never.
 
 Lemma forwardF_monotone' (sT:stmt) (Dom : stmt -> Type)
-      `{JoinSemiLattice (Dom sT)} `{@LowerBounded (Dom sT) H}
+      `{JoinSemiLattice (Dom sT)}
       (forward:〔params〕 ->
                forall s (ST:subTerm s sT) (a:ann (Dom sT)),
                  ann (Dom sT) * list (Dom sT))
-      (forward_mon:forall (s : stmt) (ST:subTerm s sT) (ZL:list params),
+      F
+      (forward_mon: forall n Zs, get F n Zs -> forall (ST:subTerm (snd Zs) sT) (ZL:list params),
           forall (a b : ann (Dom sT)), a ⊑ b ->
                                   forward ZL _ ST a ⊑ forward ZL _ ST b)
       (f: forall sT, list params ->
                 forall s, subTerm s sT -> Dom sT -> anni (Dom sT))
       (fMon:forall s (ST:subTerm s sT) ZL,
           forall a b, a ⊑ b -> f sT ZL s ST a ⊑ f sT ZL s ST b)
-  : forall F ST (ZL:list params),
+  : forall ST (ZL:list params),
     forall anF bnF, anF ⊑ bnF ->
                forwardF forward ZL F anF ST ⊑ forwardF forward ZL F bnF ST.
 Proof.
-  intros. general induction H2; destruct F; simpl; eauto.
+  intros. general induction H1; destruct F; simpl; eauto 20 using get.
+Qed.
+
+Lemma forwardF_ext' (sT:stmt) (Dom : stmt -> Type)
+      `{JoinSemiLattice (Dom sT)}
+      (forward:〔params〕 ->
+               forall s (ST:subTerm s sT) (a:ann (Dom sT)),
+                 ann (Dom sT) * list (Dom sT))
+      F
+      (forward_ext: forall n Zs, get F n Zs -> forall (ST:subTerm (snd Zs) sT) (ZL:list params),
+          forall (a b : ann (Dom sT)), a ≣ b ->
+                                  forward ZL _ ST a ≣ forward ZL _ ST b)
+      (f: forall sT, list params ->
+                forall s, subTerm s sT -> Dom sT -> anni (Dom sT))
+      (fMon:forall s (ST:subTerm s sT) ZL,
+          forall a b, a ≣ b -> f sT ZL s ST a ≣ f sT ZL s ST b)
+  : forall ST (ZL:list params),
+    forall anF bnF, anF ≣ bnF ->
+               forwardF forward ZL F anF ST ≣ forwardF forward ZL F bnF ST.
+Proof.
+  intros. general induction H1; destruct F; simpl; eauto 20 using get.
 Qed.
 
 Lemma forward_length (sT:stmt) (Dom : stmt -> Type) `{JoinSemiLattice (Dom sT)}
@@ -322,8 +343,6 @@ Ltac PI_simpl :=
   end.
 
 
-Opaque poLe.
-
 Lemma forward_monotone (sT:stmt) (Dom : stmt -> Type)
       `{JoinSemiLattice (Dom sT)} `{@LowerBounded (Dom sT) H}
       (f: forall sT, list params ->
@@ -335,62 +354,48 @@ Lemma forward_monotone (sT:stmt) (Dom : stmt -> Type)
                             forward Dom f ZL ST a ⊑ forward Dom f ZL ST b.
 Proof with eauto using poLe_setTopAnn, poLe_getAnni.
   intros s.
-  sind s; destruct s; intros ST ZL a b LE; simpl forward; inv LE;
+  induction s using stmt_ind'; intros ST ZL a b LE; simpl forward; inv LE;
     simpl forward; repeat let_pair_case_eq; subst; eauto.
   - eauto 100.
   - eauto 100.
-  - eauto using update_at_poLe.
   - eapply PIR2_get in H4; [|eauto with len]. inv_cleanup.
-(*    assert (forall (n : nat) (x x' : ann (Dom sT) * 〔Dom sT〕),
-               get (forwardF (forward Dom f) (fst ⊝ F ++ ZL) F ans
-                             (subTerm_EQ_Fun2 eq_refl ST)) n x ->
-               get (forwardF (forward Dom f) (fst ⊝ F ++ ZL) F bns
-                             (subTerm_EQ_Fun2 eq_refl ST)) n x' ->
-               x ⊑ x'). {
-      intros; inv_get; dcr; eauto.
-      PI_simpl.
-      eapply IH; eauto.
-    }*)
     eapply poLe_struct; eauto.
     + eapply annF_poLe; eauto.
       eapply poLe_zip_setTopAnnO; eauto.
-      eapply
-      admit.
+      * eapply poLe_map; eauto.
+        eapply forwardF_monotone'; eauto.
+      * eapply PIR2_fold_zip_join; eauto.
+        eapply poLe_map; eauto.
+        eapply forwardF_monotone'; eauto.
+    + eapply poLe_drop; eauto.
       eapply PIR2_fold_zip_join; eauto.
-      * repeat rewrite zip_length.
-        repeat rewrite map_length.
-        repeat rewrite forwardF_length.
-        repeat rewrite fold_list_length'.
-        repeat rewrite forward_length. eauto with len.
-        intros; inv_get; eauto with len.
-        intros; rewrite zip_length; eauto with len.
-        intros; inv_get; eauto with len.
-        intros; rewrite zip_length; eauto with len.
-      * intros.
-        inv_zip H7; clear H7. inv_map H9; clear H9.
-        inv_zip H8; clear H8. inv_map H9; clear H9.
-        exploit H6; eauto.
-        Transparent poLe.
-        exploit get_PIR2; [ eapply PIR2_fold_zip_join | eapply H10 | eapply H11 | ].
-        eapply PIR2_get. intros. inv_map H13; clear H13. inv_map H12; clear H12.
-        eapply H6; eauto.
-        repeat rewrite map_length.
-        repeat rewrite forwardF_length.
-        repeat rewrite forward_length. rewrite H3; reflexivity.
-        eapply IH; eauto.
-        eapply ann_R_setTopAnn; eauto.
-        eapply H9.
-      * eapply IH; eauto.
-    + eapply PIR2_drop; eauto. eapply PIR2_fold_zip_join; eauto.
-      * eapply PIR2_get; eauto.
-        intros. inv_map H7. inv_map H8.
-        exploit H6; eauto.
-        repeat rewrite map_length.
-        repeat rewrite forwardF_length.
-        repeat rewrite forward_length. rewrite H3; reflexivity.
+      eapply poLe_map; eauto.
+      eapply forwardF_monotone'; eauto.
 Qed.
 
+Hint Resolve ann_R_setTopAnn_poEq.
 
+Lemma forward_ext (sT:stmt) (Dom : stmt -> Type)
+      `{JoinSemiLattice (Dom sT)} `{@LowerBounded (Dom sT) H}
+      (f: forall sT, list params ->
+                forall s, subTerm s sT -> Dom sT -> anni (Dom sT))
+      (fMon:forall s (ST:subTerm s sT) ZL,
+          forall a b, a ≣ b -> f sT ZL s ST a ≣ f sT ZL s ST b)
+  : forall (s : stmt) (ST:subTerm s sT) (ZL:list params),
+    forall (a b : ann (Dom sT)), a ≣ b ->
+                            forward Dom f ZL ST a ≣ forward Dom f ZL ST b.
+Proof with eauto using poLe_setTopAnn, poLe_getAnni.
+  intros s.
+  induction s using stmt_ind'; intros ST ZL a b LE; simpl forward; inv LE;
+    simpl forward; repeat let_pair_case_eq; subst; eauto.
+  - eauto 100.
+  - eauto 100.
+  - eapply PIR2_get in H4; [|eauto with len]. inv_cleanup.
+    eapply poEq_struct; eauto.
+    + eapply annF_poEq; eauto 100.
+      eapply PIR2_poEq_zip_setTopAnnO; eauto 100 using poEq_map, forwardF_ext'.
+    + eapply poEq_drop; eauto 100 using poEq_map, forwardF_ext'.
+Qed.
 
 Instance makeForwardAnalysis (Dom:stmt -> Type)
          (PO:forall s, PartialOrder (Dom s))
@@ -415,9 +420,8 @@ Instance makeForwardAnalysis (Dom:stmt -> Type)
   }.
 Proof.
   - destruct X; eauto.
-  - simpl.
-    eapply ann_R_setTopAnn_left.
-    + rewrite forward_getAnn'. rewrite getAnn_setTopAnn. reflexivity.
+  - eapply ann_R_setTopAnn_left.
+    + simpl. rewrite forward_getAnn'. rewrite getAnn_setTopAnn. reflexivity.
     + eapply ann_bottom.
       eapply forward_annotation; eauto.
       eapply setTopAnn_annotation.

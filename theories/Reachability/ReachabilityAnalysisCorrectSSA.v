@@ -347,7 +347,6 @@ Proof.
         assert ((STF 0 Zs (@getLB (params * stmt) XL Zs)) = ST) by eapply subTerm_PI.
         subst.
         eapply forward_ext; eauto.
-        symmetry; eauto.
       }
       hnf; intros z.
       exploit (@forward_agree sT _ _ _ f fr ZL AE (singleton z) (snd Zs) ST ZLIncl); eauto using get; dcr.
@@ -494,7 +493,8 @@ Proof.
     set_simpl. eapply renamedApart_disj in H6; eauto.
     pe_rewrite. revert Disj H6; clear_all; cset_tac.
     rewrite EQ in H1. symmetry in H1.
-    rewrite forward_ext in *; eauto; try reflexivity.
+    eapply forward_ext in H1; try reflexivity; eauto.
+    rewrite H1 in *.
     eapply IHAnn; eauto.
     + split; simpl; eauto.
     + pe_rewrite. eapply disj_2_incl; eauto. cset_tac.

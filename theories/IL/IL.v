@@ -26,6 +26,18 @@ Inductive stmt : Type :=
 
 Instance Stmt_size : Size stmt. gen_Size. Defined.
 
+Lemma stmt_ind'
+  : forall P : stmt -> Prop,
+       (forall (x : nat) (e : exp) (s : stmt), P s -> P (stmtLet x e s)) ->
+       (forall (e : op) (s : stmt), P s -> forall t : stmt, P t -> P (stmtIf e s t)) ->
+       (forall (l : lab) (Y : args), P (stmtApp l Y)) ->
+       (forall e : op, P (stmtReturn e)) ->
+       (forall (F : 〔params * stmt〕) (t : stmt),
+           P t -> (forall n Zs, get F n Zs -> P (snd Zs)) -> P (stmtFun F t)) -> forall s : stmt, P s.
+Proof.
+  intros. sind s; destruct s; eauto.
+Qed.
+
 (** *** Free, Defined and Occuring Variables *)
 
 Fixpoint freeVars (s:stmt) : set var :=

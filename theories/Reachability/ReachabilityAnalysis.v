@@ -33,6 +33,17 @@ Proof.
     repeat cases; simpl in *; eauto.
 Qed.
 
+Lemma reachability_transform_ext (sT s : stmt) (ST : subTerm s sT)
+      (ZL : 〔params〕) (a b : bool)
+  : a ≣ b
+    -> reachability_transform ZL ST a ≣ reachability_transform ZL ST b.
+Proof.
+  intros; destruct s; simpl; try econstructor; simpl; eauto;
+    repeat cases; simpl in *; eauto.
+Qed.
+
+Hint Resolve reachability_transform_monotone reachability_transform_ext.
+
 Definition reachability_analysis s :=
   makeForwardAnalysis (fun s => bool ) _ _ _
                       reachability_transform

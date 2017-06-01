@@ -1,5 +1,5 @@
 Require Import Util CSet SetOperations Infra.Lattice SigR CSetPartialOrder Filter Take.
-Require Import IL Annotation Analysis AnalysisBackward Terminating Subterm.
+Require Import IL Annotation Analysis AnalysisBackward Terminating Subterm Infra.PartialOrder.
 Require Import Liveness.Liveness.
 
 Remove Hints trans_eq_bool.
@@ -70,6 +70,16 @@ Proof.
     intros; inv_get. destruct x1; simpl in *. rewrite <- s1. eauto with cset.
 Defined.
 
+Smpl Add 90
+     match goal with
+     | [ H : exist _ ?x _ ⊑ ?x' |- _ ] => is_var x'; destruct x'; simpl proj1_sig in *
+     | [ H : ?x' ⊑ exist _ ?x _ |- _ ] => is_var x'; destruct x'; simpl proj1_sig in *
+     | [ H : exist _ ?x _ ⊑ exist _ ?x' _ |- _ ] => change (poLe x x') in H
+     | [ H : exist _ ?x _ ≣ ?x' |- _ ] => is_var x'; destruct x'; simpl proj1_sig in *
+     | [ H : ?x' ≣ exist _ ?x _ |- _ ] => is_var x'; destruct x'; simpl proj1_sig in *
+     | [ H : exist _ ?x _ ≣ exist _ ?x' _ |- _ ] => change (poEq x x') in H
+     end : inv_trivial.
+
 Lemma liveness_transform_dep_monotone (i:overapproximation) (sT s : stmt) (ST : subTerm s sT)
       (ZL : 〔params〕) (AL AL' : 〔{x : ⦃var⦄ | x ⊆ occurVars sT}〕)
   : AL ⊑ AL' ->
@@ -88,7 +98,7 @@ Proof.
       destruct (get_dec AL (counted l)) as [[[D PD] GetDL]|].
       * erewrite get_nth; eauto using map_get_1; simpl in *.
         hnf in H.
-        PIR2_inv. destruct x. simpl in *; dcr.
+        PIR2_inv; clear_trivial_eqs.
         erewrite (@get_nth _ (_ ⊝ AL') ); eauto using map_get_1; simpl in *.
         unfold poLe in H0. simpl in *.
         rewrite H0; eauto.
@@ -100,7 +110,7 @@ Proof.
       * cases in H2.
         erewrite get_nth in COND; eauto; simpl in *.
         hnf in H.
-        PIR2_inv. destruct x1. unfold poLe in *. simpl in *.
+        PIR2_inv; clear_trivial_eqs.
         exploit get_filter_by. Focus 4.
         eapply incl_list_union. eapply map_get_1.
         eapply H6. reflexivity. eauto. eauto.
@@ -112,7 +122,7 @@ Proof.
         intros; inv_get; eauto.
   - unfold poLe in *; simpl in *.
     rewrite H1 at 1. repeat cases; eauto; cset_tac.
-  - unfold poLe; simpl. unfold poLe in H1; simpl in *.
+  - unfold poLe in H1; simpl in *.
     cases; [| rewrite H1; reflexivity].
     eapply incl_union_lr; eauto.
     eapply list_union_incl; eauto with cset.

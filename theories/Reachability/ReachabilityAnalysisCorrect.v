@@ -1,7 +1,7 @@
 Require Import CSet Le Var.
 
 Require Import Plus Util AllInRel Map CSet OptionR MoreList.
-Require Import Val Var Env IL Annotation Infra.Lattice.
+Require Import Val Var Env IL Annotation AnnotationLattice Infra.Lattice.
 Require Import DecSolve Analysis Filter Terminating.
 Require Import Analysis AnalysisForward FiniteFixpointIteration.
 Require Import Reachability ReachabilityAnalysis Subterm.
@@ -44,7 +44,10 @@ Qed.
 Lemma forward_setTopAnn_inv (sT:stmt) (Dom : stmt -> Type)
       `{JoinSemiLattice (Dom sT)} `{@LowerBounded (Dom sT) H}
       (f: forall sT, list params ->
-                forall s, subTerm s sT -> Dom sT -> anni (Dom sT)) s (ST:subTerm s sT) ZL a an
+                forall s, subTerm s sT -> Dom sT -> anni (Dom sT))
+      (fExt:forall (s0 : stmt) (ST0 : subTerm s0 sT) (ZL0 : 〔params〕) (a0 b : Dom sT),
+          a0 ≣ b -> f sT ZL0 s0 ST0 a0 ≣ f sT ZL0 s0 ST0 b)
+      s (ST:subTerm s sT) ZL a an
   : poEq (fst (@forward sT Dom _ _ _ f ZL s ST (setTopAnn an a))) an
     -> poEq (fst (@forward sT Dom _ _ _ f ZL s ST an)) an /\ getAnn an ≣ a.
 Proof.
@@ -52,11 +55,45 @@ Proof.
   rewrite <- H2 at 2.
   eapply ann_R_get in H2.
   rewrite forward_getAnn' in H2. rewrite getAnn_setTopAnn in H2.
-  symmetry; eauto.
+  eapply forward_ext; eauto.
+  rewrite setTopAnn_eta_poEq; eauto.
 Qed.
 
 Opaque poEq.
 
+Ltac forward_setTopAnn_inv :=
+  match goal with
+  | [ H: poEq (fst (@forward ?sT ?Dom _ _ _ ?f ?ZL ?s ?ST (setTopAnn ?an ?a))) ?an |- _ ]
+    => eapply (@forward_setTopAnn_inv sT Dom _ _ _ f ltac:(eauto)) in H;
+      destruct H
+  end.
+
+Smpl Add forward_setTopAnn_inv : inv_trivial.
+
+Lemma forward_setTopAnn_inv_snd (sT:stmt) (Dom : stmt -> Type)
+      `{JoinSemiLattice (Dom sT)} `{@LowerBounded (Dom sT) H}
+      (f: forall sT, list params ->
+                forall s, subTerm s sT -> Dom sT -> anni (Dom sT))
+      (fExt:forall (s0 : stmt) (ST0 : subTerm s0 sT) (ZL0 : 〔params〕) (a0 b : Dom sT),
+          a0 ≣ b -> f sT ZL0 s0 ST0 a0 ≣ f sT ZL0 s0 ST0 b)
+      a an (EQ:getAnn an ≣ a)
+      s (ST:subTerm s sT) ZL  BL
+  : poLe (snd (@forward sT Dom _ _ _ f ZL s ST (setTopAnn an a))) BL
+    -> poLe (snd (@forward sT Dom _ _ _ f ZL s ST an)) BL.
+Proof.
+  intros. rewrite <- H2.
+  rewrite forward_ext; eauto. reflexivity.
+  rewrite setTopAnn_eta_poEq; eauto.
+Qed.
+
+Ltac forward_setTopAnn_inv_snd :=
+  match goal with
+  | [ H : poLe (snd (@forward ?sT ?Dom _ _ _ ?f ?ZL ?s ?ST (setTopAnn ?an ?a))) _,
+      I : getAnn ?an ≣ ?a |- _ ]
+    => eapply (@forward_setTopAnn_inv_snd sT Dom _ _ _ f ltac:(eauto) _ _ I) in H
+  end.
+
+Smpl Add forward_setTopAnn_inv_snd : inv_trivial.
 
 Definition reachability_sound sT ZL BL s a (ST:subTerm s sT)
   : poEq (fst (forward reachability_transform ZL s ST a)) a
@@ -69,17 +106,11 @@ Proof.
   intros EQ Ann DefZL DefBL.
   general induction Ann; simpl in *; inv DefZL; inv DefBL;
     repeat let_case_eq; repeat simpl_pair_eqs; subst; simpl in *;
-      clear_trivial_eqs.
+      repeat clear_trivial_eqs.
   - econstructor; eauto.
-
-  - assert (forall d d', ❬snd (forward reachability_transform ZL s (subTerm_EQ_If1 eq_refl ST) d sa)❭ =
-            ❬snd (forward reachability_transform ZL t (subTerm_EQ_If2 eq_refl ST) d' ta)❭). {
-      eauto with len.
-    }
-    repeat cases in H; simpl in *; try solve [congruence];
-    repeat simpl_forward_setTopAnn;
-    econstructor; intros; try solve [congruence];
-      eauto using @PIR2_zip_join_inv_left, @PIR2_zip_join_inv_right; simpl; eauto.
+  - repeat cases in H; try solve [congruence].
+    econstructor; eauto using @PIR2_zip_join_inv_left, @PIR2_zip_join_inv_right.
+    admit. eapply IHAnn1; eauto.
     exfalso. eapply H3.
     rewrite op2bool_cop2bool in COND; eauto. rewrite COND. reflexivity.
     exfalso. eapply H3.

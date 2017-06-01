@@ -126,7 +126,6 @@ Proof.
   decide (poEq x1 z).
   + decide (poEq y z').
     * exfalso; eapply NEQ; split; simpl; eauto.
-      rewrite p. reflexivity. rewrite p0; eauto.
     * eapply (H2 z'); eauto.
   + eapply H0; eauto.
 Qed.

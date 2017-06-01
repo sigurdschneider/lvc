@@ -106,7 +106,15 @@ Proof.
   intros LE LE'; inv LE'; simpl; eauto.
 Qed.
 
-Hint Resolve poLe_getAnni.
+Lemma poEq_getAnni A `{PartialOrder A} (a a':A) an an'
+  : poEq a a'
+    -> poEq an an'
+    -> poEq (getAnni a an) (getAnni a' an').
+Proof.
+  intros LE LE'; inv LE'; simpl; eauto.
+Qed.
+
+Hint Resolve poLe_getAnni poEq_getAnni.
 
 Definition getAnniLeft A (a:A) (an:anni A) :=
   match an with
@@ -122,7 +130,15 @@ Proof.
   intros LE LE'; inv LE'; simpl; eauto.
 Qed.
 
-Hint Resolve poLe_getAnniLeft.
+Lemma poEq_getAnniLeft A `{PartialOrder A} (a a':A) an an'
+  : poEq a a'
+    -> poEq an an'
+    -> poEq (getAnniLeft a an) (getAnniLeft a' an').
+Proof.
+  intros LE LE'; inv LE'; simpl; eauto.
+Qed.
+
+Hint Resolve poLe_getAnniLeft poEq_getAnniLeft.
 
 Definition getAnniRight A (a:A) (an:anni A) :=
   match an with
@@ -138,7 +154,15 @@ Proof.
   intros LE LE'; inv LE'; simpl; eauto.
 Qed.
 
-Hint Resolve poLe_getAnniRight.
+Lemma poEq_getAnniRight A `{PartialOrder A} (a a':A) an an'
+  : poEq a a'
+    -> poEq an an'
+    -> poEq (getAnniRight a an) (getAnniRight a' an').
+Proof.
+  intros LE LE'; inv LE'; simpl; eauto.
+Qed.
+
+Hint Resolve poLe_getAnniRight poEq_getAnniRight.
 
 Lemma ann_bottom s' (Dom:Type) `{LowerBounded Dom}
   :  forall (d : ann Dom), annotation s' d -> setAnn bottom s' ⊑ d.
@@ -167,7 +191,17 @@ Proof.
   rewrite pf, pf0. reflexivity. eapply IHPIR2; eauto.
 Qed.
 
-Hint Resolve PIR2_ojoin_zip.
+Lemma poEq_join_zip A `{JoinSemiLattice A} (a:list A) a' b b'
+  : poEq a a'
+    -> poEq b b'
+    -> poEq (join ⊜ a b) (join ⊜ a' b').
+Proof.
+  intros. hnf in H1,H2. general induction H1; inv H2; simpl; eauto using PIR2.
+  econstructor; eauto.
+  rewrite pf, pf0. reflexivity. eapply IHPIR2; eauto.
+Qed.
+
+Hint Resolve PIR2_ojoin_zip poEq_join_zip.
 
 Lemma update_at_poLe A `{LowerBounded A} B (L:list B) n (a:A) b
   : poLe a b
@@ -179,6 +213,17 @@ Proof.
   - destruct n; simpl; eauto using @PIR2.
 Qed.
 
+Lemma update_at_poEq A `{LowerBounded A} B (L:list B) n (a:A) b
+  : poEq a b
+    -> poEq (list_update_at (tab bottom ‖L‖) n a)
+            (list_update_at (tab bottom ‖L‖) n b).
+Proof.
+  intros.
+  general induction L; simpl; eauto using PIR2.
+  - destruct n; simpl; eauto using @PIR2.
+Qed.
+
+Hint Resolve update_at_poLe update_at_poEq.
 
 Lemma PIR2_fold_zip_join X `{JoinSemiLattice X} (A A':list (list X)) (B B':list X)
   : poLe A A'
@@ -190,7 +235,17 @@ Proof.
   general induction H1; simpl; eauto.
 Qed.
 
-Hint Resolve PIR2_fold_zip_join.
+Lemma PIR2_fold_zip_join_poEq X `{JoinSemiLattice X} (A A':list (list X)) (B B':list X)
+  : poEq A A'
+    -> poEq B B'
+    -> poEq (fold_left (zip join) A B)
+           (fold_left (zip join) A' B').
+Proof.
+  intros. simpl in *.
+  general induction H1; simpl; eauto.
+Qed.
+
+Hint Resolve PIR2_fold_zip_join PIR2_fold_zip_join_poEq.
 
 Lemma tab_false_impb Dom `{PartialOrder Dom} AL AL'
   : poLe AL AL'

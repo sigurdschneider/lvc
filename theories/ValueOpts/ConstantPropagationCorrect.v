@@ -624,7 +624,6 @@ Proof.
                 erewrite op_eval_None in H2; eauto.
                 inv H2. hnf; intros. eapply H1. cset_tac.
            ++ eapply entails_subset. cset_tac.
-        -- isabsurd.
         -- eapply entails_bot. cset_tac.
         -- eapply entails_bot. cset_tac.
       * cases.
@@ -641,7 +640,6 @@ Proof.
            repeat cases; eauto using entails_empty.
            simpl in *. exploit H; eauto. congruence.
         -- eapply entails_subset. cset_tac.
-        -- isabsurd.
         -- eapply entails_bot. cset_tac.
         -- eapply entails_bot. cset_tac.
       * cases.
@@ -736,7 +734,6 @@ Proof.
     + cases.
       * rewrite H11. cases.
         eapply entails_cp_eqns_subst_choose; eauto.
-        isabsurd.
       * eapply entails_bot; eauto. cset_tac.
     + cases.
       * eapply cp_choose_approx_list; eauto.

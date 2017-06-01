@@ -11,6 +11,11 @@ Local Arguments proj1_sig {A} {P} e.
 Local Arguments length {A} e.
 Local Arguments backward {sT} {Dom} btransform ZL AL st {ST} a.
 
+Smpl Add
+     match goal with
+     | [ H : liveness_transform_dep ?i ?ZL ?LV ?ST _ ≣ exist _ _ _ |- _ ] => unfold poEq in H; simpl in H
+     end : inv_trivial.
+
 Definition liveness_analysis_correct (i:overapproximation) sT ZL LV s a (ST:subTerm s sT)
   : ann_R poEq (@backward _ _ (liveness_transform_dep i) ZL LV s ST a) a
     -> annotation s a
@@ -21,40 +26,38 @@ Definition liveness_analysis_correct (i:overapproximation) sT ZL LV s a (ST:subT
                       (mapAnn proj1_sig a).
 Proof.
   intros EQ Ann DefZL DefLV PM.
-  general induction Ann; simpl in *; inv DefZL; inv DefLV; inv PM; destruct a.
-  - inv EQ.
-    pose proof (ann_R_get H7); simpl in *.
+  general induction Ann; simpl in *; inv DefZL; inv DefLV; inv PM; destruct a;
+    clear_trivial_eqs.
+  - pose proof (ann_R_get H7); simpl in *.
     econstructor.
-    eapply IHAnn; eauto.
-    + intros. simpl in *.
+    + eapply IHAnn; eauto.
+    + intros.
       rewrite getAnn_mapAnn in H0.
       rewrite <- H in H0.
       cases in H2.
       eapply live_exp_sound_incl; [eapply Exp.live_freeVars|].
       rewrite <- H2. eapply incl_right.
-    + intros. rewrite <- H2.
+    + intros.
+      rewrite <- H2.
       simpl. rewrite getAnn_mapAnn.
       eapply incl_union_left.
       rewrite H. reflexivity.
-  - inv EQ.
-    simpl in *.
-    econstructor; intros.
+  - econstructor; intros.
     + eapply IHAnn1; eauto.
     + eapply IHAnn2; eauto.
     + repeat cases in H9; try congruence.
       eapply live_op_sound_incl; [eapply Op.live_freeVars|].
-      rewrite <- H9. eauto with cset.
-    + rewrite getAnn_mapAnn.
+      simpl. rewrite <- H9. eauto with cset.
+    + rewrite getAnn_mapAnn. simpl.
       rewrite <- H9.
       eapply ann_R_get in H12. rewrite <- H12.
       cases. reflexivity.
       cases. congruence. eauto with cset.
-    + rewrite getAnn_mapAnn.
+    + rewrite getAnn_mapAnn. simpl.
       rewrite <- H9. cases. congruence.
       eapply ann_R_get in H13. rewrite <- H13.
       cases. reflexivity. eauto with cset.
-  - inv EQ. simpl in *.
-    edestruct (get_in_range _ H2) as [Z ?]; eauto.
+  - edestruct (get_in_range _ H2) as [Z ?]; eauto.
     edestruct (get_in_range _ H3) as [[Lv ?] ?]; eauto.
     econstructor; eauto.
     + simpl. cases; eauto. rewrite <- H4.
@@ -67,10 +70,9 @@ Proof.
       inv_get; eauto.
       rewrite <- H4; eauto with cset.
     + inv_get; eauto.
-  - inv EQ. econstructor.
+  - econstructor.
     simpl in *. rewrite <- H1. eapply Op.live_freeVars.
-  - inv EQ.
-    simpl in *.
+  - simpl in *.
     econstructor.
     + rewrite map_map.
       erewrite map_ext with (l:=sa);[| intros; rewrite getAnn_mapAnn; reflexivity].

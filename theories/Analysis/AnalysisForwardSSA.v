@@ -328,7 +328,7 @@ Lemma forward_monotone sT D `{JoinSemiLattice D}
       -> forward f fr ZL ZLIncl ST d r ⊑ forward f fr ZL ZLIncl ST d' r'.
 Proof with eauto using poLe_setTopAnn, poLe_getAnni.
   intros s.
-  sind s; destruct s; intros ST ZL ZLIncl d d' LE_d r r'  LE_r;
+  induction s using stmt_ind'; intros ST ZL ZLIncl d d' LE_d r r'  LE_r;
     destruct r; inv LE_r;
       simpl forward; repeat let_pair_case_eq; subst; eauto; inv_cleanup.
   - eauto 100.
@@ -342,7 +342,7 @@ Proof with eauto using poLe_setTopAnn, poLe_getAnni.
       * etransitivity; eauto.
         eapply domjoin_list_exp.
     + eapply update_at_poLe; eauto.
-  - eapply PIR2_get in H7; eauto.
+  - eapply PIR2_get in H8; eauto.
     eauto 100 using forwardF_monotone.
 Qed.
 
@@ -358,7 +358,7 @@ Lemma forward_ext sT D `{JoinSemiLattice D}
       -> forward f fr ZL ZLIncl ST d r ≣ forward f fr ZL ZLIncl ST d' r'.
 Proof with eauto using poLe_setTopAnn, poLe_getAnni.
   intros s.
-  sind s; destruct s; intros ST ZL ZLIncl d d' LE_d r r'  LE_r;
+  induction s using stmt_ind'; intros ST ZL ZLIncl d d' LE_d r r'  LE_r;
     destruct r; inv LE_r;
       simpl forward; repeat let_pair_case_eq; subst; inv_cleanup;
         eauto 10.
@@ -369,8 +369,7 @@ Proof with eauto using poLe_setTopAnn, poLe_getAnni.
       eapply poEq_sig_struct.
       eapply domjoin_list_eq; eauto.
       eapply poEq_map_nd; eauto.
-   + inv H2. reflexivity.
-  - eapply PIR2_get in H7; eauto.
+  - eapply PIR2_get in H8; eauto.
     eauto 100 using forwardF_ext.
 Qed.
 
@@ -900,7 +899,6 @@ Lemma domjoin_list_get D `{JoinSemiLattice D} x (y y':option D) n d Z Y
 Proof.
   intros. general induction n; simpl in *; eauto.
   - unfold domenv. rewrite domupd_var_eq; eauto.
-    rewrite H3; eauto.
   - inv H1; inv H2. simpl.
     inv H4.
     eapply NoDupA_get_neq' in H4; [|eauto|eauto| instantiate (2:=0) |eauto using get| eauto using get];

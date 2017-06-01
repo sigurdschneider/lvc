@@ -20,6 +20,14 @@ Class PartialOrder (Dom:Type) := {
 Arguments poLe : simpl never.
 Arguments poEq : simpl never.
 
+Lemma poEq_sym A `{PartialOrder A} x y
+  : poEq x y -> poEq y x.
+Proof.
+  symmetry; eauto.
+Qed.
+
+Hint Immediate poEq_sym.
+
 Instance PartialOrder_poLe_refl Dom `{PartialOrder Dom} : Reflexive poLe.
 Proof.
   hnf; intros. eapply poLe_refl. reflexivity.
@@ -391,6 +399,20 @@ Proof.
   intros. simpl. eapply H0.
 Qed.
 
+Lemma poEq_sig_struct' D `{PartialOrder D} (P: D -> Prop) (x x':D)  pf pf'
+  : @poEq _ (@PartialOrder_sig D _ P) (exist P x pf) (exist P x' pf')
+    -> x ≣ x'.
+Proof.
+  intros. eapply H0.
+Qed.
+
+Lemma poLe_sig_struct'' D `{PartialOrder D} (P: D -> Prop) (x x':D)  pf pf'
+  : @poLe _ (@PartialOrder_sig D _ P) (exist P x pf) (exist P x' pf')
+    -> x ⊑ x'.
+Proof.
+  intros. eapply H0.
+Qed.
+
 Lemma poLe_sig_destruct D `{PartialOrder D} (P: D -> Prop) (x x':{x : D | P x})
   : x ⊑ x'
     -> proj1_sig x ⊑ proj1_sig x'.
@@ -439,7 +461,7 @@ Qed.
 Lemma poEq_map D `{PartialOrder D} D' `{PartialOrder D'} (f g:D -> D') (L L':list D)
       (LEf:forall a b, poEq a b -> poEq (f a) (g b))
       (LE: poEq L L')
-  : poLe (f ⊝ L) (g ⊝ L').
+  : poEq (f ⊝ L) (g ⊝ L').
 Proof.
   general induction LE; simpl; eauto.
 Qed.
