@@ -14,7 +14,7 @@ Class JoinSemiLattice (A : Type) `{PartialOrder A} :=
   {
       join : A -> A -> A;
 
-      join_idempotent : forall a, poEq (join a a) a;
+      join_bound : forall a b, poLe a b -> poLe (join a b) b;
       join_commutative : forall a b, poEq (join a b) (join b a);
       join_associative : forall a b c, poEq (join (join a b) c) (join a (join b c));
       join_poLe : forall a b, poLe a (join a b);
@@ -22,6 +22,28 @@ Class JoinSemiLattice (A : Type) `{PartialOrder A} :=
       join_respects_eq :> Proper (poEq ==> poEq ==> poEq) join;
       join_respects_le :> Proper (poLe ==> poLe ==> poLe) join
   }.
+
+Lemma join_wellbehaved
+  : forall A `{JoinSemiLattice A} x y, poEq x (join x y) <-> poLe y x.
+  split.
+  - intros. rewrite H1. rewrite join_commutative. eapply join_poLe.
+  - intros. eapply poLe_antisymmetric. eapply join_poLe.
+    rewrite join_commutative.
+    rewrite join_bound; eauto.
+Qed.
+
+Lemma join_idempotent
+  :  forall A `{JoinSemiLattice A} x, poEq (join x x) x.
+Proof.
+  intros. symmetry. rewrite join_wellbehaved. reflexivity.
+Qed.
+
+Lemma join_idempotent'
+  :  forall A `{JoinSemiLattice A} x y, poLe x y -> poEq (join x y) y.
+Proof.
+  intros. symmetry. rewrite join_commutative.
+  eapply join_wellbehaved. eauto.
+Qed.
 
 Class LowerBounded (A : Type) `{PartialOrder A} :=
   {
@@ -37,7 +59,8 @@ Instance pair_semilattice A B `{JoinSemiLattice A} `{JoinSemiLattice B}
   join x y := (join (fst x) (fst y), join (snd x) (snd y))
 }.
 Proof.
-  - intros [a b]; split; simpl; eapply join_idempotent.
+  - intros [a1 b2] [b1 b3]; split; simpl; clear_trivial_eqs;
+      eapply join_bound; eauto.
   - intros [a1 a2] [b1 b2]; split; simpl; eapply join_commutative.
   - intros [a1 a2] [b1 b2] [c1 c2]; split; simpl; eapply join_associative.
   - intros [a1 a2] [b1 b2]; split; simpl; eapply join_poLe.
@@ -110,7 +133,8 @@ Instance option_boundedsemilattice A `{JoinSemiLattice A}
   join := ojoin _ join
 }.
 Proof.
-  - intros [a|]; simpl; eauto using option_R, join_idempotent.
+  - intros [a|] [b|]; simpl; intros; clear_trivial_eqs;
+      eauto using fstNoneOrR, option_R, join_bound.
   - intros [a|] [b|]; simpl; eauto using option_R, join_commutative.
   - intros [a1|] [b1|] [c1|]; simpl; eauto using option_R, join_associative.
   - intros [a|] [b|]; simpl; eauto using fstNoneOrR, join_poLe.
@@ -174,7 +198,20 @@ Proof.
 Qed.
 
 
-Class JoinRespectsLowerBound (A : Type) `{JoinSemiLattice A} `{@LowerBounded A H} :=
-  {
-    bottom_neutral : forall (a:A), poEq (join bottom a) a
-  }.
+Lemma join_false_left x
+  : false ⊔ x = x.
+Proof.
+  destruct x; reflexivity.
+Qed.
+
+Lemma join_false_right x
+  : x ⊔ false = x.
+Proof.
+  destruct x; reflexivity.
+Qed.
+
+
+Smpl Add match goal with
+         | [ H : context [false ⊔ _] |- _ ] => rewrite join_false_left in H
+         | [ H : context [_ ⊔ false] |- _ ] => rewrite join_false_right in H
+         end : inv_trivial.

@@ -29,6 +29,8 @@ Qed.
 
 Hint Resolve forward_length_ass_UC.
 
+Opaque poEq.
+
 Definition reachability_sound sT ZL BL s d a (ST:subTerm s sT)
   : poEq (fst (forward reachability_transform ZL s ST d a)) a
     -> annotation s a
@@ -39,16 +41,14 @@ Definition reachability_sound sT ZL BL s d a (ST:subTerm s sT)
 Proof.
   intros EQ Ann DefZL DefBL.
   general induction Ann; simpl in *; inv DefZL; inv DefBL;
-    repeat let_case_eq; repeat simpl_pair_eqs; subst; simpl in *.
-  - inv EQ.
-    pose proof (ann_R_get H7); simpl in *.
-    econstructor; eauto.
-    simpl_forward_setTopAnn; eauto.
+    repeat let_case_eq; repeat simpl_pair_eqs; subst; simpl in *;
+      clear_trivial_eqs.
+  - clear_trivial_eqs. econstructor; eauto.
   - assert (forall d d', ❬snd (forward reachability_transform ZL s (subTerm_EQ_If1 eq_refl ST) d sa)❭ =
             ❬snd (forward reachability_transform ZL t (subTerm_EQ_If2 eq_refl ST) d' ta)❭). {
       eauto with len.
     }
-    repeat cases in EQ; simpl in *; try solve [congruence]; inv EQ;
+    repeat cases in H; simpl in *; try solve [congruence];
     repeat simpl_forward_setTopAnn;
     econstructor; intros; try solve [congruence];
       eauto using @PIR2_zip_join_inv_left, @PIR2_zip_join_inv_right; simpl; eauto.
@@ -57,12 +57,12 @@ Proof.
     exfalso. eapply H3.
     rewrite op2bool_cop2bool in COND; eauto. rewrite COND. reflexivity.
   - edestruct get_in_range; eauto.
-    edestruct get_in_range; try eapply H4; eauto.
+    edestruct get_in_range; try eapply H3; eauto.
     Transparent poLe. hnf in H.
     edestruct PIR2_nth; eauto using ListUpdateAt.list_update_at_get_3; dcr.
     econstructor; simpl; eauto.
   - econstructor.
-  - invc EQ. simpl_forward_setTopAnn.
+  - simpl_forward_setTopAnn.
     revert H2 H16 H16 H15.
     set (FWt:=(forward reachability_transform (fst ⊝ s ++ ZL) t
                        (subTerm_EQ_Fun1 eq_refl ST) (getAnn ta) ta)).
@@ -79,7 +79,9 @@ Proof.
         eapply H4; eauto with len.
         Focus 2. dcr.
         exploit H15. eapply zip_get. eapply map_get_1; eauto.
-        eapply H12. eauto. eapply ann_R_get in H3. rewrite <- H3.
+        eapply H12. eauto.
+        Transparent poEq.
+        eapply ann_R_get in H3. rewrite <- H3.
         rewrite getAnn_setTopAnn. eauto.
         intros. inv_get.
         edestruct (@forwardF_get _ _ _ _ _ _ _ _ _ _ _ H3); dcr; subst;
@@ -304,8 +306,7 @@ Proof.
       simpl in *; eauto using isCalled.
   - inv_get. cases in H7; try congruence.
     + eapply forward_snd_poLe in H7; eauto; clear_trivial_eqs.
-      * destruct x; isabsurd. simpl in *; subst.
-        eapply IsCalledIf2; eauto.
+      * eapply IsCalledIf2; eauto.
         eapply IHreachability2; eauto.
         cases in H5; eauto.
         rewrite H0; eauto.
@@ -314,9 +315,7 @@ Proof.
         rewrite op2bool_cop2bool in COND. rewrite COND. reflexivity.
     + cases in H5; try congruence.
       eapply forward_snd_poLe in H5; eauto; clear_trivial_eqs.
-      * destruct x0; isabsurd.
-        eapply orb_prop in EQ. destruct EQ; subst; isabsurd.
-        eapply IsCalledIf1; eauto.
+      * eapply IsCalledIf1; eauto.
         eapply IHreachability1; eauto.
         rewrite H; eauto.
         eapply op2bool_cop2bool_not_some; eauto.
@@ -383,7 +382,7 @@ Proof.
       eapply op2bool_cop2bool_not_some in NOTCOND; eauto.
     + intros. exfalso.
       eapply op2bool_cop2bool_not_some in NOTCOND; eauto.
-  - inv_get. econstructor; eauto.
+  - inv_get. econstructor; eauto. simpl; eauto.
   - econstructor; eauto.
   - econstructor; simpl; eauto using reachability_sTA_inv, ann_R_setTopAnn_left.
     + eapply reachability_sTA_inv. eapply IHRCH; eauto.
@@ -462,8 +461,8 @@ Proof.
   - intros.
     eapply reachability_sTA_inv.
     eapply (@reachability_analysis_complete s nil); eauto.
-    reflexivity.
-    erewrite (setTopAnn_eta _ eq_refl); eauto.
+    + reflexivity.
+    + erewrite (setTopAnn_eta _ eq_refl); eauto.
 Qed.
 
 Lemma correct s
@@ -488,6 +487,5 @@ Lemma reachabilityAnalysis_getAnn s
 Proof.
   unfold reachabilityAnalysis.
   destr_sig. destruct e as [n [H1 H2]]. subst x.
-  simpl in *; simpl_forward_setTopAnn; destr_sig; simpl in *.
-  rewrite H. eauto.
+  destr_sig; simpl in *. rewrite <- H2. eauto.
 Qed.

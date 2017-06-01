@@ -31,13 +31,13 @@ Proof.
   intros. econstructor.
 Qed.
 
-Lemma joinDom_idem X `{OrderedType X} Y `{JoinSemiLattice Y}
-  : forall a : Map [X, Y], joinMap a a ≣ a.
+Lemma joinDom_bound X `{OrderedType X} Y `{JoinSemiLattice Y}
+  : forall a b : Map [X, Y], poLe a b -> poLe (joinMap a b) b.
 Proof.
   unfold joinMap. intros.
   hnf; intros.
   rewrite MapFacts.map2_1bis; eauto.
-  rewrite join_idempotent; eauto.
+  rewrite join_bound; eauto.
 Qed.
 
 Lemma joinDom_sym X `{OrderedType X} Y `{JoinSemiLattice Y}
@@ -87,7 +87,7 @@ Instance map_semilattice X `{OrderedType X} Y `{JoinSemiLattice Y}
   join := @joinMap X _ Y _ _
                                                     }.
 
-- eapply joinDom_idem.
+- eapply joinDom_bound.
 - eapply joinDom_sym.
 - eapply joinDom_assoc.
 - eapply joinDom_exp.

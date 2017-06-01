@@ -20,7 +20,7 @@ Instance set_var_semilattice X `{OrderedType X} : JoinSemiLattice (set X) := {
   join := union
 }.
 Proof.
-  - hnf; intros. eapply union_idem.
+  - hnf; intros. rewrite H0. rewrite union_idem. reflexivity.
   - hnf; intros. eapply union_comm.
   - hnf; intros. eapply union_assoc.
   - hnf; intros. eapply incl_left.
@@ -43,7 +43,7 @@ Instance set_var_semilattice_bound X `{OrderedType X} U : JoinSemiLattice ({ s :
 }.
 Proof.
   - destruct x,y; simpl. cset_tac.
-  - hnf; intros [a ?]. eapply union_idem.
+  - hnf; intros [a ?] [b ?]. simpl. intros. rewrite H0, union_idem. reflexivity.
   - hnf; intros [a ?] [b ?]. eapply union_comm.
   - hnf; intros [a ?] [b ?] [c ?]. eapply union_assoc.
   - hnf; intros [a ?] [b ?]; simpl. eapply incl_left.

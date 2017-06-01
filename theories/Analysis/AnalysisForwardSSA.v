@@ -985,7 +985,7 @@ Lemma join_poLe_left (X : Type) (H : PartialOrder X) (H0 : JoinSemiLattice X)
 Proof.
   intros.
   rewrite H1, H2.
-  rewrite (join_idempotent z).
+  rewrite (join_idempotent _ z).
   reflexivity.
 Qed.
 

@@ -507,3 +507,10 @@ Lemma setTopAnn_eta' A (a:ann A)
 Proof.
   destruct a; simpl; eauto.
 Qed.
+
+Smpl Add 120 match goal with
+         | [ H : ?x = getAnn ?y, I : context [ setTopAnn ?y ?x ] |- _ ] =>
+           rewrite (@setTopAnn_eta _ _ _ (eq_sym H)) in I
+         | [ H : getAnn ?y = ?x, I : context [ setTopAnn ?y ?x ] |- _ ] =>
+           rewrite (@setTopAnn_eta _ _ _ H) in I
+         end : inv_trivial.

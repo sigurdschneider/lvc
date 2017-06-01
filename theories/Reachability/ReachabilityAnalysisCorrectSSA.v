@@ -14,34 +14,6 @@ Local Arguments forward {sT} {D} {H} {H0} exp_transf reach_transf ZL ZLIncl st S
 
 Opaque poLe.
 
-Lemma poEq_pair_inv A `{PartialOrder A} B `{PartialOrder B} (x y:A * B)
-  : poEq x y <-> poEq (fst x) (fst y) /\ poEq (snd x) (snd y).
-Proof.
-  firstorder.
-Qed.
-
-Smpl Add 120
-     match goal with
-     | [ H : poEq (_,_) (_,_) |- _ ] =>
-       rewrite poEq_pair_inv in H; simpl fst in H; simpl snd in H;
-         let H' := fresh H in destruct H as [H H']
-     | [H : poEq ?x ?x |- _ ] => clear H
-     end : inv_trivial.
-
-
-Ltac is_in_context X :=
-  match goal with
-  | [ H : ?Y  |- _ ] =>
-    unify X Y
-  end.
-
-Smpl Add 120 match goal with
-         | [ H : ?x = getAnn ?y, I : context [ setTopAnn ?y ?x ] |- _ ] =>
-           rewrite (@setTopAnn_eta _ _ _ (eq_sym H)) in I
-         | [ H : getAnn ?y = ?x, I : context [ setTopAnn ?y ?x ] |- _ ] =>
-           rewrite (@setTopAnn_eta _ _ _ H) in I
-         end : inv_trivial.
-
 Ltac simpl_forward_setTopAnn :=
   match goal with
   | [H : ann_R _ (snd (fst (@forward ?sT ?D ?PO ?JSL ?f ?fr ?ZL ?ZLIncl

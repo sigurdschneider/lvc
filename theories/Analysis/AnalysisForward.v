@@ -254,7 +254,7 @@ Qed.
 
 Ltac simpl_forward_setTopAnn :=
   repeat match goal with
-         | [H : ann_R eq (fst (forward ?reachability_transform ?ZL
+         | [H : poEq (fst (forward ?reachability_transform ?ZL
                                        ?s ?ST ?a ?sa)) ?sa |- _ ] =>
            let X := fresh "H" in
            match goal with
@@ -262,6 +262,20 @@ Ltac simpl_forward_setTopAnn :=
            | _ => exploit (forward_getAnn _ _ _ _ _ H) as X
            end
          end; subst; try eassumption.
+
+Smpl Add 130
+    match goal with
+    | [H : poEq (fst (forward ?reachability_transform ?ZL
+                              ?s ?ST ?a ?sa)) ?sa |- _ ] =>
+      let X := fresh "H" in
+      match goal with
+      | [ H' : getAnn sa = a |- _ ] => fail 1
+      | _ =>
+        first [ unify a (getAnn sa); fail 1
+              | exploit (forward_getAnn _ _ _ _ _ H) as X; subst ]
+      end
+    end : inv_trivial.
+
 
 Ltac fold_po :=
   repeat match goal with

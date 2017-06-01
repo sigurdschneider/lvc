@@ -138,10 +138,10 @@ Definition joinsig X `{OrderedType X} Y `{JoinSemiLattice Y}  U
            (x y : {m : Map [X, Y] | domain m ⊆ U}) :=
   exist (fun m => domain m ⊆ U) (join (proj1_sig x) (proj1_sig y)) (domain_join_sig x y).
 
-Definition joinsig_idem X `{OrderedType X} Y `{JoinSemiLattice Y}  U
-  : forall a : {m : Map [X, Y] | domain m [<=] U}, joinsig a a ≣ a.
+Definition joinsig_bound X `{OrderedType X} Y `{JoinSemiLattice Y}  U
+  : forall a b: {m : Map [X, Y] | domain m [<=] U}, poLe a b -> poLe (joinsig a b) b.
 Proof.
-  - hnf; intros [a ?]. simpl. eapply joinDom_idem.
+  - hnf; intros [a ?] [b ?]. simpl. eapply joinDom_bound.
 Qed.
 
 Definition joinsig_sym X `{OrderedType X} Y `{JoinSemiLattice Y}  U
@@ -168,7 +168,7 @@ Instance map_sig_semilattice_bound X `{OrderedType X} Y `{JoinSemiLattice Y}  U
   join x y := joinsig x y
 }.
 Proof.
-  - eapply joinsig_idem.
+  - eapply joinsig_bound.
   - eapply joinsig_sym.
   - eapply joinsig_assoc.
   - eapply joinsig_exp.
@@ -267,29 +267,6 @@ Proof.
   + eapply remove_dead; eauto.
 Qed.
 
-Instance Dom_JRLB D `{JoinSemiLattice D}
-  : JoinRespectsLowerBound (Dom D).
-Proof.
-  econstructor.
-  intros. hnf; intros.
-  simpl. unfold joinMap.
-  rewrite MapFacts.map2_1bis; eauto.
-  rewrite MapFacts.empty_o. simpl.
-  cases; reflexivity.
-Qed.
-
-Instance DDom_JRLB D `{JoinSemiLattice D} U
-  : JoinRespectsLowerBound (VDom U D).
-Proof.
-  econstructor.
-  intros. hnf; intros.
-  simpl. unfold joinMap.
-  rewrite MapFacts.map2_1bis; eauto.
-  rewrite MapFacts.empty_o. simpl.
-  cases; reflexivity.
-Qed.
-
-
 Lemma agree_domenv_join_bot U D `{JoinSemiLattice D} (G:set var) (a b:VDom U D) c
       : a === bottom
         -> agree_on poEq G (domenv (proj1_sig b)) (domenv c)
@@ -305,9 +282,8 @@ Proof.
   rewrite B.
   hnf in A. simpl proj1_sig in *.
   rewrite A, <- B.
-  setoid_rewrite <- bottom_neutral at 3.
-  simpl join at 2. unfold joinMap.
-  rewrite MapFacts.map2_1bis; eauto.
+  rewrite join_idempotent'; eauto.
+  rewrite MapFacts.empty_o. eauto.
 Qed.
 
 Lemma agree_domenv_join_bot2 U D `{JoinSemiLattice D} (G:set var) (a b:VDom U D) c
@@ -324,11 +300,9 @@ Proof.
   specialize (A z IN). cbv beta in *.
   rewrite A.
   hnf in B. simpl proj1_sig in *.
-  rewrite <- A, B.
-  setoid_rewrite <- bottom_neutral at 3.
-  simpl join at 2. unfold joinMap.
-  rewrite MapFacts.map2_1bis; eauto.
-  rewrite join_commutative. eauto.
+  rewrite <- A, B. rewrite join_commutative.
+  rewrite join_idempotent'; eauto.
+  rewrite MapFacts.empty_o. eauto.
 Qed.
 
 

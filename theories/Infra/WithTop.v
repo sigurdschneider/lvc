@@ -127,10 +127,10 @@ Definition withTop_generic_join A R `{EqDec A R} (a b:withTop A) :=
   | wTA a, wTA b => if [ a === b ] then wTA a else Top
   end.
 
-Lemma withTop_generic_join_idem A R `{EqDec A R}
-  : forall a : withTop A, withTop_generic_join a a ≣ a.
+Lemma withTop_generic_join_bound A R `{EqDec A R}
+  : forall a b : withTop A, a ⊑ b -> withTop_generic_join a b ⊑ b.
 Proof.
-  intros []; simpl; repeat cases; econstructor; eauto.
+  intros []; simpl; intros; repeat cases; eauto; econstructor; eauto.
 Qed.
 
 Lemma withTop_generic_join_sym A R `{EqDec A R}
@@ -187,7 +187,7 @@ Instance withTop_JSL A R `{EqDec A R} : JoinSemiLattice (withTop A) :=
     join := @withTop_generic_join A R _ _
   }.
 Proof.
-  - eapply withTop_generic_join_idem.
+  - eapply withTop_generic_join_bound.
   - eapply withTop_generic_join_sym.
   - eapply withTop_generic_join_assoc.
   - eapply withTop_generic_join_exp.

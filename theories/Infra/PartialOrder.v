@@ -324,3 +324,44 @@ Smpl Add 200
      | [ H : @poLe _ _ ?A ?B |- _ ] => inv_if_ctor H A B; clear H
      | [ H : ~ ?a === ?a |- _ ] => exfalso; eapply H; reflexivity
      end : inv_trivial.
+
+
+
+Lemma poEq_pair_inv A `{PartialOrder A} B `{PartialOrder B} (x y:A * B)
+  : poEq x y <-> poEq (fst x) (fst y) /\ poEq (snd x) (snd y).
+Proof.
+  firstorder.
+Qed.
+
+Smpl Add 120
+     match goal with
+     | [ H : poEq (_,_) (_,_) |- _ ] =>
+       rewrite poEq_pair_inv in H; simpl fst in H; simpl snd in H;
+         let H' := fresh H in destruct H as [H H']
+     | [H : poEq ?x ?x |- _ ] => clear H
+     end : inv_trivial.
+
+
+Ltac is_in_context X :=
+  match goal with
+  | [ H : ?Y  |- _ ] =>
+    unify X Y
+  end.
+
+
+Lemma poLe_false x
+  : x ⊑ false -> x = false.
+Proof.
+  destruct x; inversion 1; eauto.
+Qed.
+
+Lemma poLe_true x
+  : true ⊑ x -> x = true.
+Proof.
+  destruct x; inversion 1; eauto.
+Qed.
+
+Smpl Add match goal with
+         | [ H : _ ⊑ false |- _ ] => eapply poLe_false in H; try subst
+         | [ H : false ⊑ _ |- _ ] => eapply poLe_false in H; try subst
+         end : inv_trivial.

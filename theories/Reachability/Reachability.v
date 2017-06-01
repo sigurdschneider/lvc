@@ -214,6 +214,11 @@ Ltac std_ind_dcr :=
 
 Opaque poLe.
 
+Smpl Add
+     match goal with
+     | [ H : True |- _ ] => clear H
+     end : inv_trivial.
+
 Lemma reachability_trueIsCalled Lv s slv l
   : reachability cop2bool Sound Lv s slv
     -> isCalled true s l
@@ -229,19 +234,18 @@ Proof.
   - edestruct (IH s2); dcr; eauto 20.
     setoid_rewrite H3; eauto using op2bool_cop2bool_not_some.
   - destruct l'.
+    clear_trivial_eqs.
     exploit (IH s); eauto; dcr.
-    setoid_rewrite H3. setoid_rewrite H10.
-    clear H3 H10 UC H9 H1 alt.
+    setoid_rewrite H3. setoid_rewrite H7.
+    clear H3 H7 UC H9 H1 alt b.
     general induction H5.
     + inv_get. eexists; split; eauto.
     + inv_get.
-      exploit H4; eauto.
-      eapply IH in H3; eauto.
+      exploit H4; try eassumption.
+      eapply IH in H3; [|eauto|eauto].
       dcr. inv_get.
-      edestruct IHcallChain; try eapply H8; eauto; dcr.
-      eexists x1; split; eauto.
+      edestruct IHcallChain; clear IHcallChain; try eapply H8; dcr; eauto.
 Qed.
-
 
 Lemma reachability_analysis_complete_setTopAnn ceval BL s a b
       (LE:poLe (getAnn a) b)
