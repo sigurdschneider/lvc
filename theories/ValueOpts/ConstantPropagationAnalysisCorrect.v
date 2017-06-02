@@ -87,14 +87,14 @@ Proof.
       pe_rewrite; eauto with cset.
     repeat rewrite renamedApart_occurVars; eauto;
       pe_rewrite; eauto with cset.
-    rewrite forward_ext in EQ1; eauto using cp_reach_ext, cp_trans_ext; try reflexivity.
+    rewrite forward_ext in EQ1; try eapply H; try reflexivity; eauto using cp_reach_ext, cp_trans_ext; try reflexivity.
     econstructor; eauto.
     + eapply IHLD1; eauto.
       split; eauto. pe_rewrite. eauto with cset.
     + eapply IHLD2; eauto.
       split; eauto.
       rewrite forward_ext; eauto using cp_reach_ext, cp_trans_ext. symmetry; eauto.
-      pe_rewrite. eapply disj_2_incl; eauto with cset.
+      pe_rewrite. symmetry. eapply disj_2_incl; eauto with cset.
   - econstructor; eauto.
   - inv_get.
     econstructor; eauto using zip_get_eq.

@@ -10,9 +10,7 @@ Set Implicit Arguments.
 
 
 Definition forwardF (sT:stmt) (Dom:stmt->Type) `{JoinSemiLattice (Dom sT)}
-           (forward:〔params〕 ->
-                    forall s (ST:subTerm s sT) (a:ann (Dom sT)), ann (Dom sT) * 〔Dom sT〕)
-           (ZL:list params)
+           (forward:forall s (ST:subTerm s sT) (a:ann (Dom sT)), ann (Dom sT) * 〔Dom sT〕)
            (F:list (params * stmt)) (anF:list (ann (Dom sT)))
            (ST:forall n s, get F n s -> subTerm (snd s) sT)
   : list (ann (Dom sT) * 〔Dom sT〕).
@@ -23,36 +21,35 @@ Definition forwardF (sT:stmt) (Dom:stmt->Type) `{JoinSemiLattice (Dom sT)}
   - destruct anF as [|a anF'].
     + eapply nil.
     + econstructor 2.
-      * refine (forward ZL (snd Zs) _ a).
+      * refine (forward (snd Zs) _ a).
         eapply (ST 0 Zs); eauto using get.
       * eapply (g F' anF').
         eauto using get.
 Defined.
 
-Arguments forwardF [sT] [Dom] {H} {H0} forward ZL F anF ST.
+Arguments forwardF [sT] [Dom] {H} {H0} forward F anF ST.
 
 Fixpoint forwardF_length (sT:stmt) (Dom:stmt->Type) `{JoinSemiLattice (Dom sT)} forward
-           (ZL:list params)
            (F:list (params * stmt)) (anF:list (ann (Dom sT)))
            (ST:forall n s, get F n s -> subTerm (snd s) sT) {struct F}
-  : length (forwardF forward ZL F anF ST) = min (length F) (length anF).
+  : length (forwardF forward F anF ST) = min (length F) (length anF).
 Proof.
   destruct F as [|Zs F'], anF; simpl; eauto.
 Qed.
 
 Smpl Add
      match goal with
-     | [ |- context [ ❬@forwardF ?sT ?Dom ?H ?BSL ?f ?ZL ?F ?anF ?ST❭ ] ] =>
-       rewrite (@forwardF_length sT Dom H BSL f ZL F anF ST)
-     | [ H : context [ ❬@forwardF ?sT ?Dom ?H ?BSL ?f ?ZL ?F ?anF ?ST❭ ] |- _ ] =>
-       rewrite (@forwardF_length sT Dom H BSL f ZL F anF ST) in H
+     | [ |- context [ ❬@forwardF ?sT ?Dom ?H ?BSL ?f ?F ?anF ?ST❭ ] ] =>
+       rewrite (@forwardF_length sT Dom H BSL f F anF ST)
+     | [ H : context [ ❬@forwardF ?sT ?Dom ?H ?BSL ?f ?F ?anF ?ST❭ ] |- _ ] =>
+       rewrite (@forwardF_length sT Dom H BSL f F anF ST) in H
      end : len.
 
 Lemma forwardF_length_ass (sT:stmt) (Dom:stmt->Type) `{JoinSemiLattice (Dom sT)}
-      forward ZL F anF ST k
+      forward F anF ST k
   : length F = k
     -> length F = length anF
-    -> length (forwardF forward ZL F anF ST) = k.
+    -> length (forwardF forward F anF ST) = k.
 Proof.
   intros. rewrite forwardF_length, <- H2.
   repeat rewrite Nat.min_idempotent; eauto.
@@ -99,7 +96,7 @@ Fixpoint forward (sT:stmt) (Dom: stmt -> Type)
         let ZL' := List.map fst F ++ ZL in
         let (ant', ALt) := forward Dom ftransform ZL' (subTerm_EQ_Fun1 EQ ST)
                                   (setTopAnn ant d) in
-        let anF' := forwardF (forward Dom ftransform) ZL' F anF
+        let anF' := forwardF (forward Dom ftransform ZL') F anF
                             (subTerm_EQ_Fun2 EQ ST) in
         let AL' := fold_left (zip join) (snd ⊝ anF') ALt in
         (annF d (zip (@setTopAnn _) (fst ⊝ anF') AL') ant',
@@ -108,17 +105,15 @@ Fixpoint forward (sT:stmt) (Dom: stmt -> Type)
   end eq_refl.
 
 Lemma forwardF_get  (sT:stmt) (Dom:stmt->Type) `{JoinSemiLattice (Dom sT)}
-           (forward:〔params〕 ->
-                     forall s (ST:subTerm s sT) (a:ann (Dom sT)),
+           (forward: forall s (ST:subTerm s sT) (a:ann (Dom sT)),
                        ann (Dom sT) * list (Dom sT))
-           (ZL:list params)
            (F:list (params * stmt)) (anF:list (ann (Dom sT)))
            (ST:forall n s, get F n s -> subTerm (snd s) sT) aa n
-           (GetBW:get (forwardF forward ZL F anF ST) n aa)
+           (GetBW:get (forwardF forward F anF ST) n aa)
       :
         { Zs : params * stmt & {GetF : get F n Zs &
         { a : ann (Dom sT) & { getAnF : get anF n a &
-        { ST' : subTerm (snd Zs) sT | aa = forward ZL (snd Zs) ST' a
+        { ST' : subTerm (snd Zs) sT | aa = forward (snd Zs) ST' a
         } } } } }.
 Proof.
   eapply get_getT in GetBW.
@@ -129,15 +124,13 @@ Proof.
 Qed.
 
 Lemma get_forwardF  (sT:stmt) (Dom:stmt->Type) `{JoinSemiLattice (Dom sT)}
-           (forward:〔params〕 ->
-                     forall s (ST:subTerm s sT) (a:ann (Dom sT)),
+           (forward: forall s (ST:subTerm s sT) (a:ann (Dom sT)),
                        ann (Dom sT) * list (Dom sT))
-           (ZL:list params)
            (F:list (params * stmt)) (anF:list (ann (Dom sT)))
            (ST:forall n s, get F n s -> subTerm (snd s) sT) n Zs a
   :get F n Zs
    -> get anF n a
-   -> { ST' | get (forwardF forward ZL F anF ST) n (forward ZL (snd Zs) ST' a) }.
+   -> { ST' | get (forwardF forward F anF ST) n (forward (snd Zs) ST' a) }.
 Proof.
   intros GetF GetAnF.
   eapply get_getT in GetF.
@@ -150,8 +143,8 @@ Qed.
 
 Ltac inv_get_step_analysis_forward :=
   match goal with
-  | [ H: get (@forwardF ?sT ?Dom ?PO ?BSL ?f ?ZL ?F ?anF ?ST) ?n ?x |- _ ]
-    => eapply (@forwardF_get sT Dom PO BSL f ZL F anF ST x n) in H;
+  | [ H: get (@forwardF ?sT ?Dom ?PO ?BSL ?f ?F ?anF ?ST) ?n ?x |- _ ]
+    => eapply (@forwardF_get sT Dom PO BSL f F anF ST x n) in H;
       destruct H as [? [? [? [? [? ]]]]]
   end.
 
@@ -161,40 +154,31 @@ Arguments poLe : simpl never.
 
 Lemma forwardF_monotone' (sT:stmt) (Dom : stmt -> Type)
       `{JoinSemiLattice (Dom sT)}
-      (forward:〔params〕 ->
-               forall s (ST:subTerm s sT) (a:ann (Dom sT)),
+      (forward:forall s (ST:subTerm s sT) (a:ann (Dom sT)),
                  ann (Dom sT) * list (Dom sT))
       F
-      (forward_mon: forall n Zs, get F n Zs -> forall (ST:subTerm (snd Zs) sT) (ZL:list params),
+      (forward_mon: forall n Zs, get F n Zs -> forall (ST:subTerm (snd Zs) sT),
           forall (a b : ann (Dom sT)), a ⊑ b ->
-                                  forward ZL _ ST a ⊑ forward ZL _ ST b)
-      (f: forall sT, list params ->
-                forall s, subTerm s sT -> Dom sT -> anni (Dom sT))
-      (fMon:forall s (ST:subTerm s sT) ZL,
-          forall a b, a ⊑ b -> f sT ZL s ST a ⊑ f sT ZL s ST b)
-  : forall ST (ZL:list params),
+                                  forward _ ST a ⊑ forward _ ST b)
+  : forall ST,
     forall anF bnF, anF ⊑ bnF ->
-               forwardF forward ZL F anF ST ⊑ forwardF forward ZL F bnF ST.
+               forwardF forward F anF ST ⊑ forwardF forward F bnF ST.
 Proof.
   intros. general induction H1; destruct F; simpl; eauto 20 using get.
 Qed.
 
 Lemma forwardF_ext' (sT:stmt) (Dom : stmt -> Type)
       `{JoinSemiLattice (Dom sT)}
-      (forward:〔params〕 ->
+      (forward:
                forall s (ST:subTerm s sT) (a:ann (Dom sT)),
                  ann (Dom sT) * list (Dom sT))
       F
-      (forward_ext: forall n Zs, get F n Zs -> forall (ST:subTerm (snd Zs) sT) (ZL:list params),
+      (forward_ext: forall n Zs, get F n Zs -> forall (ST:subTerm (snd Zs) sT),
           forall (a b : ann (Dom sT)), a ≣ b ->
-                                  forward ZL _ ST a ≣ forward ZL _ ST b)
-      (f: forall sT, list params ->
-                forall s, subTerm s sT -> Dom sT -> anni (Dom sT))
-      (fMon:forall s (ST:subTerm s sT) ZL,
-          forall a b, a ≣ b -> f sT ZL s ST a ≣ f sT ZL s ST b)
-  : forall ST (ZL:list params),
+                                  forward _ ST a ≣ forward _ ST b)
+  : forall ST,
     forall anF bnF, anF ≣ bnF ->
-               forwardF forward ZL F anF ST ≣ forwardF forward ZL F bnF ST.
+               forwardF forward F anF ST ≣ forwardF forward F bnF ST.
 Proof.
   intros. general induction H1; destruct F; simpl; eauto 20 using get.
 Qed.
@@ -374,6 +358,22 @@ Proof with eauto using poLe_setTopAnn, poLe_getAnni.
 Qed.
 
 Hint Resolve ann_R_setTopAnn_poEq.
+
+Lemma forwardF_monotone (sT:stmt) (Dom : stmt -> Type)
+      `{PartialOrder (Dom sT)}
+      `{@JoinSemiLattice (Dom sT) H} `{@LowerBounded (Dom sT) H}
+      (f: forall sT, list params ->
+                forall s, subTerm s sT -> Dom sT -> anni (Dom sT))
+      (fMon:forall s (ST:subTerm s sT) ZL,
+          forall a b, a ⊑ b -> f sT ZL s ST a ⊑ f sT ZL s ST b)
+      F
+  : forall ST (ZL:list params),
+    forall anF bnF, anF ⊑ bnF ->
+               forwardF (@forward sT Dom _ _ _ f ZL) F anF ST
+                        ⊑ forwardF (@forward sT Dom _ _ _ f ZL) F bnF ST.
+Proof.
+  intros. general induction H2; destruct F; simpl; eauto 20 using get, forward_monotone.
+Qed.
 
 Lemma forward_ext (sT:stmt) (Dom : stmt -> Type)
       `{JoinSemiLattice (Dom sT)} `{@LowerBounded (Dom sT) H}

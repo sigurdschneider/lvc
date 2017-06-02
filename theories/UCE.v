@@ -407,7 +407,9 @@ Proof.
   - destruct e.
     + eapply (sim_let_op il_statetype_F); eauto.
     + eapply (sim_let_call il_statetype_F); eauto.
-  - eapply (sim_if_elim il_statetype_F); intros; eauto 20 using op2bool_cop2bool_not_some.
+  - eapply (sim_if_elim il_statetype_F); intros; eauto.
+    + eapply IH; eauto. rewrite <- H2; eauto using op2bool_cop2bool_not_some.
+    + eapply IH; eauto. rewrite <- H3; eauto using op2bool_cop2bool_not_some.
   - assert (b=true). destruct a0, b; isabsurd; eauto. subst.
     eapply labenv_sim_app; eauto.
     + hnf; simpl. split; eauto using zip_get.

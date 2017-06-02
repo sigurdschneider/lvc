@@ -12,8 +12,6 @@ Local Arguments proj1_sig {A} {P} e.
 Local Arguments length {A} e.
 Local Arguments forward {sT} {Dom} {H} {H0} {H1} ftransform ZL st ST a.
 
-Opaque poLe.
-
 (* Coq can't figure out the instantiation (fun _ => bool) via unification,
    so we have to add this specialized lemma *)
 Lemma forward_length_ass_UC
@@ -59,8 +57,6 @@ Proof.
   rewrite setTopAnn_eta_poEq; eauto.
 Qed.
 
-Opaque poEq.
-
 Ltac forward_setTopAnn_inv :=
   match goal with
   | [ H: poEq (fst (@forward ?sT ?Dom _ _ _ ?f ?ZL ?s ?ST (setTopAnn ?an ?a))) ?an |- _ ]
@@ -77,23 +73,117 @@ Lemma forward_setTopAnn_inv_snd (sT:stmt) (Dom : stmt -> Type)
       (fExt:forall (s0 : stmt) (ST0 : subTerm s0 sT) (ZL0 : 〔params〕) (a0 b : Dom sT),
           a0 ≣ b -> f sT ZL0 s0 ST0 a0 ≣ f sT ZL0 s0 ST0 b)
       a an (EQ:getAnn an ≣ a)
-      s (ST:subTerm s sT) ZL  BL
-  : poLe (snd (@forward sT Dom _ _ _ f ZL s ST (setTopAnn an a))) BL
-    -> poLe (snd (@forward sT Dom _ _ _ f ZL s ST an)) BL.
+      s (ST:subTerm s sT) ZL
+  : poEq (snd (@forward sT Dom _ _ _ f ZL s ST (setTopAnn an a)))
+         (snd (@forward sT Dom _ _ _ f ZL s ST an)).
 Proof.
-  intros. rewrite <- H2.
-  rewrite forward_ext; eauto. reflexivity.
+  intros.
+  eapply forward_ext; eauto.
   rewrite setTopAnn_eta_poEq; eauto.
 Qed.
 
 Ltac forward_setTopAnn_inv_snd :=
   match goal with
-  | [ H : poLe (snd (@forward ?sT ?Dom _ _ _ ?f ?ZL ?s ?ST (setTopAnn ?an ?a))) _,
+  | [ H : context [ snd (@forward ?sT ?Dom ?PO ?JSL ?LB ?f ?ZL ?s ?ST (setTopAnn ?an ?a)) ],
       I : getAnn ?an ≣ ?a |- _ ]
-    => eapply (@forward_setTopAnn_inv_snd sT Dom _ _ _ f ltac:(eauto) _ _ I) in H
+    => rewrite (@forward_setTopAnn_inv_snd sT Dom PO JSL LB f ltac:(eauto) _ _ I s ST ZL) in H
   end.
 
-Smpl Add forward_setTopAnn_inv_snd : inv_trivial.
+(* Smpl Add forward_setTopAnn_inv_snd : inv_trivial. *)
+
+Instance zip_join_proper_poEq X `{JoinSemiLattice X}
+  : Proper (poEq ==> poEq ==> poEq) (zip join).
+Proof.
+  unfold Proper, respectful; intros.
+  eapply poEq_join_zip; eauto.
+Qed.
+
+Instance zip_join_proper_poLe' X `{JoinSemiLattice X}
+  : Proper (poLe ==> poLe ==> poLe) (zip join).
+Proof.
+  unfold Proper, respectful; intros.
+  eauto.
+Qed.
+
+Instance drop_proper_poEq X `{PartialOrder X} n
+  : Proper (poEq ==> poEq) (drop n).
+Proof.
+  unfold Proper, respectful; intros.
+  eapply poEq_drop; eauto.
+Qed.
+
+Instance drop_proper_poLe X `{PartialOrder X} n
+  : Proper (poLe ==> poLe) (drop n).
+Proof.
+  unfold Proper, respectful; intros.
+  eapply poLe_drop; eauto.
+Qed.
+
+Instance fold_left_zip_join_proper_poEq X `{JoinSemiLattice X}
+  : Proper (poEq ==> poEq ==> poEq) (fold_left (zip join)).
+Proof.
+  unfold Proper, respectful; intros.
+  eauto.
+Qed.
+
+Instance fold_left_zip_join_proper_poLe X `{JoinSemiLattice X}
+  : Proper (poLe ==> poLe ==> poLe) (fold_left (zip join)).
+Proof.
+  unfold Proper, respectful; intros.
+  eauto.
+Qed.
+
+Instance setTopAnn_proper_poEq X `{PartialOrder X}
+  : Proper (poEq ==> poEq ==> poEq) (@setTopAnn X).
+Proof.
+  unfold Proper, respectful; intros. eauto.
+Qed.
+
+Instance setTopAnn_proper_poLe X `{PartialOrder X}
+  : Proper (poLe ==> poLe ==> poLe) (@setTopAnn X).
+Proof.
+  unfold Proper, respectful; intros. eauto.
+Qed.
+
+Instance zip_setTopAnn_proper_poEq X `{PartialOrder X}
+  : Proper (poEq ==> poEq ==> poEq) (zip (@setTopAnn X)).
+Proof.
+  unfold Proper, respectful; intros. eauto.
+Qed.
+
+Instance zip_setTopAnn_proper_poLe X `{PartialOrder X}
+  : Proper (poLe ==> poLe ==> poLe) (zip (@setTopAnn X)).
+Proof.
+  unfold Proper, respectful; intros. eauto.
+Qed.
+
+Instance map_getAnn_proper_poEq X `{PartialOrder X}
+  : Proper (poEq ==> poEq) (List.map getAnn).
+Proof.
+  unfold Proper, respectful; intros.
+  eapply poEq_map; eauto.
+  intros. rewrite H1; eauto.
+Qed.
+
+Instance map_getAnn_proper_poLe X `{PartialOrder X}
+  : Proper (poLe ==> poLe) (List.map getAnn).
+Proof.
+  unfold Proper, respectful; intros.
+  eapply poLe_map; eauto.
+  intros. rewrite H1; eauto.
+Qed.
+
+
+Lemma setTopAnn_map_inv_poEq X `{PartialOrder X} A B
+  : setTopAnn (A:=X) ⊜ A B ≣ A
+    -> Take.take ❬A❭ B ≣ getAnn ⊝ A.
+Proof.
+  intros. general induction A; destruct B; simpl; eauto.
+  - exfalso. inv H0.
+  - simpl in *. inv H0; inv_cleanup.
+    eapply poEq_list_struct; eauto.
+    rewrite <- pf. rewrite getAnn_setTopAnn. reflexivity.
+Qed.
 
 Definition reachability_sound sT ZL BL s a (ST:subTerm s sT)
   : poEq (fst (forward reachability_transform ZL s ST a)) a
@@ -107,65 +197,58 @@ Proof.
   general induction Ann; simpl in *; inv DefZL; inv DefBL;
     repeat let_case_eq; repeat simpl_pair_eqs; subst; simpl in *;
       repeat clear_trivial_eqs.
-  - econstructor; eauto.
-  - repeat cases in H; try solve [congruence].
-    econstructor; eauto using @PIR2_zip_join_inv_left, @PIR2_zip_join_inv_right.
-    admit. eapply IHAnn1; eauto.
-    exfalso. eapply H3.
-    rewrite op2bool_cop2bool in COND; eauto. rewrite COND. reflexivity.
-    exfalso. eapply H3.
-    rewrite op2bool_cop2bool in COND; eauto. rewrite COND. reflexivity.
+  - forward_setTopAnn_inv_snd.
+    econstructor; eauto.
+  - repeat forward_setTopAnn_inv_snd.
+    econstructor; eauto using @PIR2_zip_join_inv_left, @PIR2_zip_join_inv_right with len.
+    + rewrite H3. unfold cop2bool, op2bool. simpl.
+      cases; eauto.
+      monad_inv COND. rewrite EQ. intros. exfalso; eauto.
+    + rewrite H1. unfold cop2bool, op2bool. simpl.
+      cases; eauto.
+      monad_inv COND. rewrite EQ. intros. exfalso; eauto.
   - edestruct get_in_range; eauto.
     edestruct get_in_range; try eapply H3; eauto.
     Transparent poLe. hnf in H.
     edestruct PIR2_nth; eauto using ListUpdateAt.list_update_at_get_3; dcr.
     econstructor; simpl; eauto.
   - econstructor.
-  - simpl_forward_setTopAnn.
-    revert H2 H16 H16 H15.
+  - eapply PIR2_get in H15; eauto; clear H14.
+    change (PIR2 poEq) with (@poEq (list (ann bool)) _) in H15.
+    repeat forward_setTopAnn_inv_snd.
     set (FWt:=(forward reachability_transform (fst ⊝ s ++ ZL) t
-                       (subTerm_EQ_Fun1 eq_refl ST) (getAnn ta) ta)).
-    set (FWF:=forwardF (forward reachability_transform) (fst ⊝ s ++ ZL) s sa
-                       (subTerm_EQ_Fun2 eq_refl ST)).
-    intros.
+                       (subTerm_EQ_Fun1 eq_refl ST) ta)) in *.
+    set (FWF:=forwardF (forward reachability_transform (fst ⊝ s ++ ZL)) s sa
+                       (subTerm_EQ_Fun2 eq_refl ST)) in *.
     econstructor; eauto.
     + eapply IHAnn; eauto.
       erewrite (take_eta ❬s❭) at 1. eapply PIR2_app; eauto.
-      * eapply PIR2_get; eauto with len. intros. inv_get.
-        edestruct (get_forwardF (fun _ => bool) (forward reachability_transform)
-                                (fst ⊝ s ++ ZL) (subTerm_EQ_Fun2 eq_refl ST) H11 H8).
-        edestruct (@get_union_union_b bool _ _).
-        eapply H4; eauto with len.
-        Focus 2. dcr.
-        exploit H15. eapply zip_get. eapply map_get_1; eauto.
-        eapply H12. eauto.
-        Transparent poEq.
-        eapply ann_R_get in H3. rewrite <- H3.
-        rewrite getAnn_setTopAnn. eauto.
-        intros. inv_get.
-        edestruct (@forwardF_get _ _ _ _ _ _ _ _ _ _ _ H3); dcr; subst;
-          eauto with len.
-      * etransitivity; eauto. eapply PIR2_drop.
-        eapply PIR2_fold_zip_join_inv. reflexivity.
-        intros.
-        inv_get.
-        edestruct (@forwardF_get _ _ _ _ _ _ _ _ _ _ _ H4). dcr. subst.
-        eauto with len.
+      * change (PIR2 poLe) with (@poLe (list bool) _).
+        rewrite <- H15.
+        rewrite getAnn_map_setTopAnn.
+        unfold FWF at 1. len_simpl.
+        eapply PIR2_take.
+        change (PIR2 poLe) with (@poLe (list bool) _).
+        eapply PIR2_fold_zip_join_right; try reflexivity.
+        unfold FWF; intros; inv_get.
+        subst FWt. eauto with len.
+      * rewrite <- H2. eapply poLe_drop.
+        eapply PIR2_fold_zip_join_right; try reflexivity.
+        unfold FWF; intros; inv_get.
+        subst FWt. eauto with len.
     + intros.
       assert (n < ❬snd FWt❭). {
-        subst FWt.
-        repeat rewrite (@forward_length sT (fun _ => bool)). rewrite app_length. rewrite map_length.
+        subst FWt. len_simpl.
         eapply get_range in H8. omega.
       }
       edestruct get_in_range; eauto.
-      edestruct (get_forwardF (fun _ => bool) (forward reachability_transform)
-                              (fst ⊝ s ++ ZL) (subTerm_EQ_Fun2 eq_refl ST) H4 H8).
-      eapply H1 with (ST:=x0); eauto.
-      eapply H15; eauto.
-      *
+      edestruct (get_forwardF (fun _ => bool) (forward reachability_transform (fst ⊝ s ++ ZL))
+                              (subTerm_EQ_Fun2 eq_refl ST) H8 H10).
+      eapply H1 with (ZL:=(fst ⊝ s ++ ZL)) (ST:=x0); eauto.
+      * subst FWt FWF.
         assert (n <
                 ❬snd (
-                     forward reachability_transform (fst ⊝ s ++ ZL) (snd Zs) x0 (getAnn a) a)❭). {
+                     forward reachability_transform (fst ⊝ s ++ ZL) (snd Zs) x0 a0)❭). {
           erewrite (@forward_length sT (fun _ => bool)). rewrite app_length,map_length.
           eapply get_range in H8. omega.
         }
@@ -173,42 +256,33 @@ Proof.
         exploit (@get_union_union_A bool _ _).
         eapply map_get_1. apply g0. instantiate (3:=snd). eauto.
         Focus 2.
-        destruct H12; dcr.
-        eapply zip_get_eq. eapply map_get_1. eauto.  eauto.
-        exploit H15.
-        eapply zip_get.
-        eapply map_get_1. eauto. eapply H13. eauto.
-        exploit (setTopAnn_inv _ _ H12); eauto; subst.
+        destruct H13; dcr.
+        eapply PIR2_nth in H15; eauto; dcr.
+        Focus 2.
+        eapply zip_get_eq. eapply map_get_1. eauto.  eauto. reflexivity.
+        exploit (setTopAnn_inv _ _ H18); eauto; subst.
+        inv_get. rewrite <- H18 at 2.
         rewrite setTopAnn_eta; eauto.
         eapply (@forward_getAnn' sT (fun _ => bool)).
-
         clear_all. intros. inv_get.
-        subst FWt.
         len_simpl. eauto with len.
-
       * rewrite (take_eta ❬sa❭) at 1.
         eapply PIR2_app.
-        protect g0.
-        eapply PIR2_get; intros; inv_get.
-        exploit (@get_union_union_A bool _ _).
-        eapply map_get_1. apply g0. instantiate (3:=snd). eauto.
-        Focus 2. dcr.
-        edestruct (get_forwardF (fun _ => bool) (forward reachability_transform)
-                                (fst ⊝ s ++ ZL) (subTerm_EQ_Fun2 eq_refl ST) H17 H12).
-        exploit H15; eauto.
-        eapply zip_get. eapply map_get_1. subst FWF. eauto. eauto.
-        eapply ann_R_get in H3. rewrite getAnn_setTopAnn in H3. rewrite <- H3.
-        eauto.
-        clear_all. intros. inv_get.
-        subst FWt. eauto with len.
-        rewrite Take.take_length_le; eauto with len.
-        etransitivity; eauto.
-        rewrite H. eapply PIR2_drop.
-        subst FWF.
-        pose proof (@PIR2_fold_zip_join_left bool _ _). eapply H11.
-        eauto. reflexivity.
-        clear_all. intros. inv_get.
-        subst FWt. eauto with len.
+        -- change (PIR2 poLe) with (@poLe (list bool) _).
+           rewrite <- H15 at 2.
+           rewrite getAnn_map_setTopAnn.
+           unfold FWF at 1. len_simpl. rewrite H.
+           eapply PIR2_take.
+           change (PIR2 poLe) with (@poLe (list bool) _).
+           eapply PIR2_fold_zip_join_left; eauto using map_get_1.
+           unfold FWF; intros; inv_get.
+           subst FWt. eauto with len.
+        -- etransitivity; eauto.
+           rewrite H. eapply poLe_drop.
+           eapply PIR2_fold_zip_join_left; eauto using map_get_1.
+           unfold FWF; intros; inv_get.
+           subst FWt. eauto with len.
+           Grab Existential Variables.
 Qed.
 
 Lemma impl_poLe (a b:bool)
@@ -223,13 +297,11 @@ Proof.
   destruct a, b; simpl; eauto.
 Qed.
 
-Opaque poLe.
-
 
 Lemma forward_snd_poLe sT BL ZL s (ST:subTerm s sT) n a b c
   : reachability cop2bool Complete BL s a
     -> poLe (getAnn a) c
-    -> get (snd (forward reachability_transform ZL s ST c a)) n b
+    -> get (snd (forward reachability_transform ZL s ST (setTopAnn a c))) n b
     -> poLe b c.
 Proof.
   revert ZL BL ST n a b c.
@@ -238,7 +310,7 @@ Proof.
       inv_get;
       try solve [ destruct a; simpl; eauto | destruct a1; simpl; eauto ].
   - eapply IH in H1; eauto.
-  - cases in H6; cases in H1; try congruence.
+  - cases in H6; cases in H1; clear_trivial_eqs; try congruence.
     + assert (cop2bool e = ⎣ wTA false ⎦). {
         rewrite op2bool_cop2bool in COND; eauto.
       }
@@ -249,8 +321,8 @@ Proof.
       eapply IH in H1; eauto.
       eapply orb_poLe_struct; eauto.
       rewrite <- H0. rewrite <- H10.
-      eapply IH in H6; simpl in *; eauto.
-      rewrite H6. eauto.
+      eapply IH in H6; simpl in *; eauto; clear_trivial_eqs.
+      eauto.
       rewrite H13; eauto. rewrite H2; eauto.
     + assert (cop2bool e = ⎣ wTA true ⎦). {
         rewrite op2bool_cop2bool in COND; eauto.
@@ -283,6 +355,7 @@ Proof.
     eapply fold_left_zip_orb_inv in H1. destruct H1.
     + eapply IH in H1; eauto.
     + dcr. inv_get.
+      rewrite <- (setTopAnn_eta x3 eq_refl) in H4.
       eapply IH in H4; eauto.
       exploit H13; eauto.
 Qed.
@@ -293,7 +366,7 @@ Local Hint Extern 0 => first [ erewrite (@forward_getAnn' _ (fun _ => bool))
 
 Transparent poLe.
 
-Lemma fold_left_forward_mono sT F t ZL als als' alt alt' b b'
+Lemma fold_left_forward_mono sT F t ZL als als' alt alt'
       (STF:forall n s, get F n s -> subTerm (snd s) sT)
       (ST:subTerm t sT)
   : length F = length als
@@ -301,37 +374,22 @@ Lemma fold_left_forward_mono sT F t ZL als als' alt alt' b b'
     -> (forall n Zs a, get F n Zs -> get als n a -> annotation (snd Zs) a)
     -> poLe als als'
     -> poLe alt alt'
-    -> poLe b b'
     -> poLe (fold_left
             (zip orb)
-            (snd ⊝ forwardF (forward reachability_transform)
-                 (fst ⊝ F ++ ZL) F als STF)
+            (snd ⊝ forwardF (forward reachability_transform (fst ⊝ F ++ ZL)) F als STF)
             (snd (forward reachability_transform (fst ⊝ F ++ ZL)
-                          t ST
-                          b alt)))
+                          t ST alt)))
          (fold_left
             (zip orb)
-            (snd ⊝ forwardF (forward reachability_transform)
-                 (fst ⊝ F ++ ZL) F als' STF)
+            (snd ⊝ forwardF (forward reachability_transform (fst ⊝ F ++ ZL)) F als' STF)
             (snd (forward reachability_transform (fst ⊝ F ++ ZL)
-                          t ST
-                          b' alt'))).
+                          t ST alt'))).
 Proof.
-  intros LEN Ant AnF LE1 LE2 LE3.
+  intros LEN Ant AnF LE1 LE2.
   eapply fold_left_mono.
-  - eapply PIR2_get; intros; inv_get.
-    + PI_simpl.
-      eapply (@forward_monotone sT (fun _ => bool) _ _ _ reachability_transform ); eauto.
-      eapply reachability_transform_monotone; eauto.
-      eapply ann_R_get.
-      eapply get_PIR2; eauto.
-      eapply get_PIR2; eauto.
-    + rewrite !map_length.
-      rewrite !(@forwardF_length _ (fun _ => bool)).
-      rewrite (PIR2_length LE1). reflexivity.
-  - exploit (@forward_monotone sT (fun _ => bool) _ _ _ reachability_transform );
-      try eapply H; eauto.
-    eapply reachability_transform_monotone.
+  - eapply poLe_map; eauto.
+    eapply (@forwardF_monotone sT (fun _ => bool)); eauto.
+  - eapply (@forward_monotone sT (fun _ => bool)); eauto.
 Qed.
 
 Lemma impl_impb (a b: bool)
@@ -350,12 +408,10 @@ match goal with
     specialize (H' H''); subst
 end.
 
-Opaque poLe.
-
 Lemma reachability_analysis_complete_isCalled sT ZL BL s a b
       (ST:subTerm s sT)
   : reachability cop2bool Complete BL s a
-    -> forall n, get (snd (forward reachability_transform ZL s ST b a)) n true
+    -> forall n, get (snd (forward reachability_transform ZL s ST (setTopAnn a b))) n true
            -> poLe (getAnn a) b
            -> isCalled true s (LabI n).
 Proof.
@@ -404,6 +460,7 @@ Proof.
       econstructor 1.
     + inv_get.
       exploit H2; eauto.
+      rewrite <- (setTopAnn_eta x3 eq_refl) in Get.
       exploit forward_snd_poLe; try eapply Get; eauto.
       exploit H3; eauto; dcr.
       edestruct isCalledFrom_extend; eauto; dcr.
@@ -412,7 +469,7 @@ Qed.
 
 Lemma reachability_analysis_complete sT ZL BL BL' (Len:❬BL❭ = ❬BL'❭) s a (ST:subTerm s sT) b b' c
       (LDEF:labelsDefined s (length ZL))
-      (EQ:(fst (forward reachability_transform ZL s ST b a)) = c)
+      (EQ:(fst (forward reachability_transform ZL s ST (setTopAnn a b))) = c)
       (LE:poLe a (setTopAnn c b'))
       (LEb: poLe (getAnn c) b')
   : reachability cop2bool Complete BL s a
@@ -454,19 +511,15 @@ Proof.
       edestruct (@get_forwardF sT (fun _ => bool)); eauto.
       exploit H15. eauto.
       eapply zip_get_eq. eauto. eauto. reflexivity.
-      eapply H2. eauto. rewrite setTopAnn_eta. eauto.
-      eauto.
+      eapply H2. eauto. eauto. len_simpl.
+      rewrite H14. len_simpl. omega.
       eauto with len.
-      eauto. Transparent poLe.
       eapply ann_R_get in H8. rewrite getAnn_setTopAnn in H8.
       eauto.
       etransitivity; eauto.
       rewrite (setTopAnn_eta _ eq_refl).
-      Transparent poLe.
-      eapply H8.
-      pose proof (@poLe_setTopAnn bool _ x0 x0).
-      eapply H10; eauto. assert (x = x6) by eapply subTerm_PI.
-      subst. rewrite setTopAnn_eta. reflexivity. eauto.
+      assert (x = x6) by eapply subTerm_PI.
+      subst. reflexivity.
     + intros. inv_get.
       rewrite getAnn_setTopAnn in H6.
       destruct x0; isabsurd.
@@ -474,8 +527,10 @@ Proof.
       * eapply reachability_analysis_complete_isCalled in H5; eauto.
         econstructor; split; eauto. econstructor 1.
         eapply ann_R_get in H16.
-        rewrite (@forward_getAnn' _ (fun _ => bool)) in H16. eauto.
+        rewrite (@forward_getAnn' _ (fun _ => bool)) in H16.
+        rewrite getAnn_setTopAnn in H16. eauto.
       * dcr. inv_get.
+        rewrite <- (setTopAnn_eta x8 eq_refl) in H11.
         exploit forward_snd_poLe; try eapply H11; eauto.
         eapply reachability_analysis_complete_isCalled in H11; eauto.
         exploit H3; eauto.
@@ -488,8 +543,9 @@ Proof.
       eapply fold_left_zip_orb_inv in H5. destruct H5.
       * eapply forward_snd_poLe in H5; eauto.
       * dcr. inv_get.
+        rewrite <- (setTopAnn_eta x8 eq_refl) in H11.
         eapply forward_snd_poLe in H11; eauto.
-        exploit H4; eauto. destruct (getAnn x8); isabsurd.
+        exploit H4; eauto.
 Qed.
 
 Lemma reachability_complete_bottom BL s
@@ -509,6 +565,27 @@ Proof.
       unfold comp. eauto.
 Qed.
 
+Lemma reachability_complete_initial BL s
+  : labelsDefined s ❬BL❭
+    -> reachability cop2bool Complete BL s (setTopAnn (setAnn bottom s) true).
+Proof.
+  revert BL. Opaque bottom.
+  intros.
+  destruct s; inv H; simpl setAnn; simpl setTopAnn;
+    try now (econstructor; eauto using reachability_complete_bottom;
+             try rewrite getAnn_setAnn; simpl; eauto).
+  - edestruct get_in_range; eauto.
+    econstructor; simpl; eauto.
+  - econstructor; simpl; eauto using reachability_complete_bottom with len.
+    + intros; inv_get; eauto.
+      eapply reachability_complete_bottom; eauto.
+      len_simpl; eauto.
+    + intros; inv_get; eauto.
+      unfold comp in H1. rewrite getAnn_setAnn in H1. intuition.
+    + intros; inv_get; eauto.
+      unfold comp. eauto.
+Qed.
+
 Lemma reachability_complete s
   : labelsDefined s ❬nil:list params❭
     -> reachability cop2bool Complete nil s (reachabilityAnalysis s).
@@ -516,12 +593,12 @@ Proof.
   unfold reachabilityAnalysis. destr_sig.
   destruct e as [n [Iter _]]. subst.
   intros. eapply safeFixpoint_induction.
-  - eapply reachability_complete_bottom; eauto.
-  - intros.
-    eapply reachability_sTA_inv.
+  - unfold initial_value. simpl.
+    eapply reachability_complete_initial; eauto.
+  - intros. rewrite <- (setTopAnn_eta _ eq_refl).
     eapply (@reachability_analysis_complete s nil); eauto.
-    + reflexivity.
-    + erewrite (setTopAnn_eta _ eq_refl); eauto.
+    + rewrite setTopAnn_eta; reflexivity.
+    + simpl. erewrite !(setTopAnn_eta _ eq_refl); eauto.
 Qed.
 
 Lemma correct s
@@ -534,17 +611,20 @@ Proof.
   - unfold reachabilityAnalysis.
     destr_sig. destr_sig. dcr.
     eapply (@reachability_sound s nil); simpl; eauto.
-    + simpl in *. simpl_forward_setTopAnn.
-    + assert (❬snd (forward reachability_transform nil s (subTerm_refl s) true x)❭ = 0).
+    + eapply H2.
+    + assert (❬snd (forward reachability_transform nil s (subTerm_refl s) x)❭ = 0).
       rewrite (@forward_length _ (fun _ => bool)); eauto.
-      destruct (snd (forward reachability_transform nil s (subTerm_refl s) true x)); isabsurd.
+      destruct (snd (forward reachability_transform nil s (subTerm_refl s) x)); isabsurd.
       eauto using PIR2.
 Qed.
 
 Lemma reachabilityAnalysis_getAnn s
   : getAnn (ReachabilityAnalysis.reachabilityAnalysis s).
 Proof.
-  unfold reachabilityAnalysis.
-  destr_sig. destruct e as [n [H1 H2]]. subst x.
-  destr_sig; simpl in *. rewrite <- H2. eauto.
+  unfold reachabilityAnalysis. destr_sig.
+  destruct e as [n [Iter _]]. subst.
+  intros. eapply safeFixpoint_induction.
+  - simpl. rewrite getAnn_setTopAnn; eauto.
+  - intros. simpl.
+    rewrite (@forward_getAnn' s (fun _ => bool)); eauto.
 Qed.

@@ -505,7 +505,7 @@ Proof.
       pe_rewrite; eauto with cset.
     repeat rewrite renamedApart_occurVars; eauto;
       pe_rewrite; eauto with cset.
-    rewrite forward_ext in EQ; eauto; try reflexivity.
+    rewrite forward_ext in EQ; try eapply H1; try reflexivity; eauto.
     econstructor; eauto.
     + rewrite <- HEQ0. eapply frSound1.
     + rewrite <- HEQ. eapply frSound2.
@@ -516,12 +516,11 @@ Proof.
     + eapply IHAnn2;
         eauto using @PIR2_zip_join_inv_left, @PIR2_zip_join_inv_right with len.
       * split; simpl; eauto.
-        rewrite forward_ext; eauto. symmetry; eauto.
+        rewrite forward_ext; eauto.
       * eapply PIR2_zip_join_inv_right.
         rewrite <- BL_le. eapply PIR2_ojoin_zip. reflexivity.
         eapply poLe_refl. eapply forward_ext; eauto.
         symmetry; eauto with len.
-        eauto with len.
       * pe_rewrite. eapply disj_2_incl; eauto.
   - edestruct get_in_range; eauto.
     edestruct get_in_range; try eapply H7; eauto.
@@ -574,7 +573,6 @@ Proof.
       subst FWt; eauto with len.
       rewrite <- H5 at 2. unfold FWF.
       rewrite forwardF_ext'; try reflexivity; eauto.
-      symmetry; eauto.
     }
     econstructor; eauto.
     + eapply IHAnn; eauto.
@@ -625,6 +623,9 @@ Proof.
            change (PIR2 poLe) with (@poLe (list bool) _).
            unfold FWF.
            rewrite forwardF_ext'; eauto; try reflexivity.
+           unfold poEq in H23. simpl in H23.
+           unfold poEq in H23. simpl in H23.
+           repeat PIR2_eq_simpl.
            eapply forwardF_PIR2; eauto.
            subst FWt. clear_all. eauto with len.
       -- set_simpl.
