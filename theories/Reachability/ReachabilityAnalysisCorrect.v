@@ -467,17 +467,26 @@ Proof.
       econstructor; eauto.
 Qed.
 
+Lemma reachability_analysis_complete_isCalled' BL s a b
+  : reachability cop2bool Complete BL s a
+    -> forall n, get BL n true
+           -> poLe (getAnn a) b
+           -> isCalled true s (LabI n).
+Proof.
+Admitted.
+
 Lemma reachability_analysis_complete sT ZL BL BL' (Len:❬BL❭ = ❬BL'❭) s a (ST:subTerm s sT) b b' c
       (LDEF:labelsDefined s (length ZL))
       (EQ:(fst (forward reachability_transform ZL s ST (setTopAnn a b))) = c)
       (LE:poLe a (setTopAnn c b'))
-      (LEb: poLe (getAnn c) b')
+      (LEb: poLe b b')
   : reachability cop2bool Complete BL s a
     -> reachability cop2bool Complete BL' s (setTopAnn c b').
 Proof.
   subst c.
   intros RCH.
   general induction RCH; simpl in *; repeat let_pair_case_eq; repeat let_case_eq; repeat simpl_pair_eqs; subst; simpl in *; invt labelsDefined; try inv LE;
+    clear_trivial_eqs;
     eauto using reachability, subTerm, reachability_sTA_inv,
     ann_R_setTopAnn_left.
   - econstructor. eapply reachability_sTA_inv.
@@ -514,12 +523,9 @@ Proof.
       eapply H2. eauto. eauto. len_simpl.
       rewrite H14. len_simpl. omega.
       eauto with len.
-      eapply ann_R_get in H8. rewrite getAnn_setTopAnn in H8.
-      eauto.
-      etransitivity; eauto.
       rewrite (setTopAnn_eta _ eq_refl).
-      assert (x = x6) by eapply subTerm_PI.
-      subst. reflexivity.
+      assert (x = x6) by eapply subTerm_PI. subst. eauto.
+      rewrite H8. rewrite getAnn_setTopAnn; eauto.
     + intros. inv_get.
       rewrite getAnn_setTopAnn in H6.
       destruct x0; isabsurd.
@@ -599,6 +605,7 @@ Proof.
     eapply (@reachability_analysis_complete s nil); eauto.
     + rewrite setTopAnn_eta; reflexivity.
     + simpl. erewrite !(setTopAnn_eta _ eq_refl); eauto.
+    + simpl. rewrite (@forward_getAnn' s (fun _ => bool)); eauto.
 Qed.
 
 Lemma correct s
