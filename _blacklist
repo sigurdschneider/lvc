@@ -4,3 +4,4 @@ theories/DCE.v
 theories/POUnit.v
 theories/Test*
 RISC-V/*
+theories/Lowering/ToLinear.v
