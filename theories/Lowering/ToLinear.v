@@ -38,82 +38,133 @@ Section ToLinear.
     | (22%nat) => R26
     | (23%nat) => R27
     | (24%nat) => R28
-    | _ => R29 (* reserve R30 & R31 for operations (this is not optimal) *)
-    end.
+    | (25%nat) => R29
+    | (26%nat) => R30
+    | _ => R31 (* *)
+    end.            
 
+  Inductive simplOp : op -> Prop :=
+  | SCon v : simplOp (Con v)
+  | SVar x : simplOp (Var x)
+  | SNeg x : simplOp (UnOp UnOpNeg (Var x))
+  | SBinOp bop x y : simplOp (BinOp bop (Var x) (Var y))
+  .
+
+  Definition simplExp e := match e with
+                              | Operation e' => simplOp e'
+                              | _ => True
+                              end.
+
+  Definition sop := {e:op | simplOp e}.
+
+  Definition sexp := {e:exp | simplExp e}.
+  
   Inductive letKind :=
-  | LetLoad (reg:var) (slot:var)
-  | LetStore (slot:var) (reg:var)
-  | LetOpr (i:instruction) (srcs:list mreg).
+  | LetLoad (src:Z) (dst:mreg)
+  | LetStore (src:mreg) (dst:Z)
+  | LetOpr (o:Op.operation) (srcs:list mreg) (dst:mreg)
+  | LetError.
 
-  Definition tmp1 := 26%nat.
-  Definition tmp2 := 27%nat.
-    
-(* TODO to binary *)
-  Fixpoint toLinearInstrOp x (e:op) {struct e} : list instruction :=
+  Definition isReg x := even x.
+
+  Definition getLetOp (r:mreg) (e:op) : letKind :=
     match e with
-     | Con v => Lop (Op.Ointconst v) nil (toReg x) :: nil
-     | UnOp e0 e1 =>
-       match e0 with
-       | UnOpToBool => toLinearInstrOp x e1 (* this might fail *)
-       | UnOpNeg => toLinearInstrOp tmp1 e1 ++ Lop Op.Onot (toReg tmp1 :: nil) (toReg x) :: nil
+     | Con v => LetOpr (Op.Ointconst v) nil r
+     | UnOp o (Var y) =>
+       match o with
+       | UnOpToBool => LetError
+       | UnOpNeg => LetOpr Op.Onot (toReg y :: nil) r
        end
-     | BinOp e0 e1 e2 =>
-       toLinearInstrOp tmp1 e1 ++ toLinearInstrOp tmp2 e2 ++
-                       match e0 with
-                       | BinOpAdd =>  Lop Op.Oadd
-                       | BinOpSub => Lop Op.Osub
-                       | BinOpMul => Lop Op.Omul
-                       | BinOpDiv => Lop Op.Odiv
-                       | BinOpEq  => Lop Op.Onxor
-                       | BinOpLt => Lop (Op.Ocmp (Op.Ccomp Clt))
-                       end (toReg tmp1 :: toReg tmp2 :: nil) (toReg x) :: nil
+     | BinOp o (Var y1) (Var y2) =>
+       match o with
+       | BinOpAdd => LetOpr Op.Oadd
+       | BinOpSub => LetOpr Op.Osub
+       | BinOpMul => LetOpr Op.Omul
+       | BinOpDiv => LetOpr Op.Odiv
+       | BinOpEq  => (fun _ _ => LetError) (*PROBLEM! there is only Oxor & Onot: we 2 instructions here.*)
+       | BinOpLt  => LetOpr (Op.Ocmp (Op.Ccomp Clt))
+       end (toReg y1 :: toReg y2 :: nil) r
      | Var y =>
-       (*if part_1 p x then
-         if part_1 p y then*)
-           Lop (Op.Oaddimm Int.zero) (toReg y::nil) (toReg x) :: nil
-        (* else
-           Lgetstack Local (Ptrofs.repr (offset_local (idx_of_slot y))) Tint (toReg x)
-       else
-         Lsetstack (toReg y) (Ptrofs.repr (offset_local (idx_of_slot x)))*)
-    end.
+       if isReg y
+       then LetOpr Op.Omove (toReg y :: nil) r
+       else LetError
+     | _ => LetError
+    end
+  .
+  
+  Definition getLetKind (x:var) (e:op) : letKind
+    := if isReg x
+       then let dst := toReg x in
+            match e with
+            | Var y => if isReg y
+                      then LetOpr (Op.Omove) (toReg y :: nil) dst
+                      else LetLoad (Z.of_nat y) dst
+            | _ => getLetOp dst e
+            end
+       else match e with
+            | Var y => if isReg y
+                      then LetStore (toReg y) (Z.of_nat x)
+                      else LetError
+            | _ => LetError
+            end
+  .
 
-  Definition toLinearCond (l:label) (e:op) : list instruction :=
+  Definition dummyinstr := Lop Op.Omove (R3::nil) R3.
+  
+  Definition toLinearCond (l:label) (e:op) : instruction :=
     match e with
-    | BinOp BinOpLt e1 e2 =>
-      toLinearInstrOp tmp1 e1 ++ toLinearInstrOp tmp2 e2 ++
-                      Lcond (Op.Ccomp Clt) (toReg tmp1 :: toReg tmp2 :: nil) l :: nil
-    | _ => nil
+    | Var y => Lcond (Op.Ccompimm Cne Int.zero) (toReg y :: nil) l
+    | BinOp BinOpLt (Var y1) (Var y2) => Lcond (Op.Ccomp Clt) (toReg y1 :: toReg y2 :: nil) l
+    | _ => dummyinstr
     end
   .
 
   Fixpoint toLinear
+           (Λ:list label)
            (l:label) (* the biggest label used so far *)
            (s:stmt)
     : code * label :=
     match s with
     | stmtLet x (Operation e) s =>
-      let (c', l') := toLinear l s in
-      (toLinearInstrOp x e ++ c', l')
+      let (c', l') := toLinear Λ l s in
+      (
+        match getLetKind x e with
+        | LetLoad  src dst => Lgetstack Local src Tint dst
+        | LetStore src dst => Lsetstack src Local dst Tint
+        | LetOpr o srcs r => Lop o srcs r
+        | _ => dummyinstr
+        end :: c',
+        l'
+      )
     | stmtLet x (Call e Y) s =>
-      toLinear l s (* this is incorrect *)
+      toLinear Λ l s (* this is incorrect *)
     | stmtIf e s t =>
       let l' := Pos.succ l in
-      let (cs, ls) := toLinear l' s in
-      let (ct, lt) := toLinear ls t in
-      (toLinearCond l' e ++ ct ++ Llabel l' :: cs, lt) (* missing jump & label *)
-    | stmtApp f Y => (* *)
-      let l' := Pos.succ l in
-      (Lgoto l' :: nil, l')
+      let (csq, lc) := toLinear Λ l' s in
+      let (alt, la) := toLinear Λ lc t in
+      (toLinearCond l' e
+                    :: alt (* we don't need to jump out, 
+                              because alt's last intstruction is either Lreturn or Lgoto *)
+                    ++ Llabel l' :: csq,
+       la) (* missing jump & label *)
+    | stmtApp f Y =>
+      let l' := nth (counted f) Λ xH in
+      (Lgoto l' :: nil, l)
     | stmtReturn (Var x) =>
       (Lreturn::nil, l)
-    | stmtReturn _ => (nil, l) (* why ? *)
+    | stmtReturn _ => (Lreturn :: nil, l)
     | stmtFun F t =>
-      let (ct, lt) := toLinear l t in
-      fold_left (fun (cl : code * label) ps => let (c,l)  := cl in
-                                            let (c',l'):= toLinear l (snd ps) in
-                                            (c ++ c', l'))
-                F (nil, lt)
+      let (l', Λ') := fold_left (fun (lΛ:label * list label) ps => let (l, Λ) := lΛ in
+                                                       let l' := Pos.succ l in
+                                                       (l', Λ ++ l' :: nil))
+                                F (l, Λ) in
+      let (ct, lt) := toLinear Λ' l' t in
+      fold_left (fun (cl : code * label) ps =>
+                   let (c, l)  := cl in
+                   let l' := Pos.succ l in
+                   let (c',l'') := toLinear Λ' l' (snd ps) in
+                   (c ++ Llabel l' :: c', l''))
+                F (ct, lt)
     end.
 
 End ToLinear.
@@ -245,11 +296,11 @@ Instance LinearStateType G : StateType Linear.state :=
                               | ].
           
 
-  Qed.
+  Admitted.
 
 
 
-
+(*
 Definition transf_program (s:stmt) : Linear.program :=
   let sig := mksignature (Tint::Tint::nil) (Some Tint)
                         (mkcallconv false false false) in
@@ -279,7 +330,7 @@ Definition semantics (s: stmt) :=
 
 
 Lemma transf_initial_states s:
-  exists st2, Linear.initial_state (transf_program s) st2.
+  exists st2, Linear.initial_state (transf_program s) st2. 
 Proof.
   intros.
   exploit Genv.init_mem_exists; eauto.
@@ -301,3 +352,5 @@ Proof.
   - admit.
   - admit.
 Admitted.
+
+*)
