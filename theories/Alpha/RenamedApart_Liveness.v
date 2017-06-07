@@ -168,7 +168,7 @@ Lemma incl_minus_disj X `{OrderedType X} s t Ds x
     -> disj s {x; Ds}
     -> s ⊆ t \ singleton x.
 Proof.
-  intros. eauto with cset.
+  intros. cset_tac.
 Qed.
 
 Hint Immediate incl_minus_disj renamedApart_disj_F : cset.
@@ -240,17 +240,16 @@ Proof.
   general induction CC.
   - destruct l; simpl in *.
     do 2 eexists; split; [| split]; eauto with cset.
-  - inv_get. exploit (IH k Zs); eauto.
+  - inv_get. exploit (IH k Zs); only 1-6: eauto.
     + rewrite zip_app, List.map_app; [| eauto with len].
       eapply disjoint_app. split.
-      eapply funConstr_disjoint_fun_defs; eauto.
-      eapply renamedApart_disj. eauto.
-      eapply disjoint_incl; eauto.
-      eapply incl_union_left.
-      eapply incl_list_union; eauto using zip_get.
-      unfold defVars. eapply incl_right.
+      eapply funConstr_disjoint_fun_defs; only 1-8: eauto using renamedApart_disj.
+      * eapply disjoint_incl; eauto.
+        eapply incl_union_left.
+        eapply incl_list_union; eauto using zip_get.
+        unfold defVars. eapply incl_right.
     + dcr.
-      exploit IHCC; eauto. dcr.
+      exploit IHCC; only 1-12: eauto. dcr.
       do 2 eexists; split; [| split ]; eauto.
       rewrite <- H7, <- H10.
       simpl in *.
@@ -261,8 +260,8 @@ Proof.
       }
       eapply get_app_cases in H8. destruct H8; dcr; inv_get.
       * eapply not_incl_minus; [ reflexivity | ].
-        exploit Sub; eauto. eapply ann_R_get in H6.
-        edestruct IW; eauto; dcr.
+        exploit Sub; try eassumption. eapply ann_R_get in H6.
+        edestruct IW; try eassumption. dcr.
         rewrite H6.
         eapply (disj_incl Disj); eauto with cset.
       * assert (LEQ:❬getAnn ⊝ als❭ = ❬fst ⊝ F❭) by eauto with len.
@@ -363,9 +362,9 @@ Lemma renamedApart_live_imperative_is_functional b s ang ZL Lv alv
     -> live_sound FunctionalAndImperative ZL Lv s alv.
 Proof.
   intros RA NUC LS AR DISJ.
-  general induction LS; invt noUnreachableCode; invt renamedApart; invt (@ann_R);
-    set_simpl;
-    eauto 50 using live_sound, disjoint_let, disjoint_if1, disjoint_if2.
+  time (general induction LS; invt noUnreachableCode; invt renamedApart; invt (@ann_R);
+        set_simpl;
+        only 1-4: eauto 50 using live_sound, disjoint_let, disjoint_if1, disjoint_if2).
   - econstructor; simpl; eauto.
     + eapply IHLS; eauto using disjoint_funF1.
       eapply disjoint_funF1; eauto.
@@ -475,7 +474,7 @@ Proof.
   intros RA NUC LS AR DISJ.
   general induction LS; invt noUnreachableCode; invt renamedApart; invt (@ann_R);
     set_simpl;
-    eauto 50 using true_live_sound, disjoint_let, disjoint_if1, disjoint_if2.
+    only 1-4: eauto 50 using true_live_sound, disjoint_let, disjoint_if1, disjoint_if2.
   - econstructor; simpl; eauto.
     + eapply IHLS; eauto using disjoint_funF1.
       eapply disjoint_funF1; eauto.

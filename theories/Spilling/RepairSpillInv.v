@@ -24,7 +24,7 @@ Proof.
   - econstructor; eauto; [| | |eapply IHspillKill]; try rewrite <-Req; try rewrite <-Meq; eauto; eauto.
 Qed.
 
-  
+
 
 
 
@@ -76,8 +76,8 @@ Proof.
 Qed.
 
 
-   
-   
+
+
 Lemma repair_spill_inv k ZL Λ Λ' s lv sl R M G ra rlv VD
   : renamedApart s ra
     -> rlive_min k ZL Λ G s sl rlv
@@ -98,8 +98,8 @@ Proof.
   intros rena rliveMin rliveSnd rm_ra sub_R liveSnd liveMin spillSnd cardRf sl_ra spillLv Λeq.
 (*  assert (spillSnd':=spillSnd).*)
   eapply spill_sound_spill_max_kill with (R':=R) (M:=M) in spillSnd; eauto.
-  general induction rliveSnd; invc liveSnd; invc spillSnd; invc rliveMin; invc rena;
-    invc liveMin; invc spillLv; invc sl_ra. (*; invc spillSnd'. *)
+  time (general induction rliveSnd; invc liveSnd; invc spillSnd; invc rliveMin; invc rena;
+    invc liveMin; invc spillLv; invc sl_ra). (*; invc spillSnd'. *)
   - cbn in sub_R.
     assert (Sp ∩ R [=] Sp) as Speq by (apply inter_subset_equal; eauto).
     assert (L ∩ (Sp ∩ R ∪ M) [=] L) as Leq
@@ -134,7 +134,7 @@ Proof.
       symmetry. rewrite union_subset_equal; eauto. rewrite <-Keq.
       apply spill_max_kill_spill_sound in H21 as spillSnd.
       eapply live_min_incl_R in H26; eauto; [|clear;cset_tac]. rewrite H26.
-      rewrite <-Kxeq. 
+      rewrite <-Kxeq.
       assert (K0 ∪ Kx [=] (R ∪ L) ∩ (K0 ∪ Kx)) as seteq.
       { symmetry. rewrite meet_comm. apply inter_subset_equal. subst K0 Kx. clear; cset_tac. }
       rewrite seteq.
@@ -156,7 +156,7 @@ Proof.
     + eapply spill_max_kill_ext; eauto; [|rewrite Speq';eauto]. rewrite Keq, Kxeq, Leq'. eauto.
   - cbn in sub_R.
     assert (Sp ∩ R [=] Sp) as Speq.
-    { apply inter_subset_equal. rewrite H19. eauto. } 
+    { apply inter_subset_equal. rewrite H19. eauto. }
      assert (L ∩ (Sp ∩ R ∪ M) [=] L) as Leq
         by (apply inter_subset_equal in H23; rewrite Speq, H23; eauto).
     set (L' := pick_load k R M Sp L (Op.freeVars e)).
@@ -186,7 +186,7 @@ Proof.
       { symmetry. rewrite meet_comm. apply inter_subset_equal. subst K. clear; cset_tac. }
       rewrite seteq.
       rewrite H23. clear. cset_tac.
-    } 
+    }
     econstructor; [econstructor| |]; eauto; [econstructor | |]; eauto;
       subst L' K' Sp';
       set (L' := pick_load k R M Sp L (Op.freeVars e)) in *;
@@ -206,13 +206,13 @@ Proof.
         rewrite <-Keq, <-Leq'. eauto.
   - cbn in sub_R.
     assert (Sp ∩ R [=] Sp) as Speq.
-    { apply inter_subset_equal. rewrite H20. eauto. } 
+    { apply inter_subset_equal. rewrite H20. eauto. }
      assert (L ∩ (Sp ∩ R ∪ M) [=] L) as Leq
         by (apply inter_subset_equal in H21; rewrite Speq, H21; eauto).
     inv_get.
     set (R_f':= fst (nth (counted l) Λ' (∅,∅))) in *.
     set (M_f':= snd (nth (counted l) Λ' (∅,∅))) in *.
-    set (L' := pick_load k R M Sp L (R_f' \ of_list Z)).     
+    set (L' := pick_load k R M Sp L (R_f' \ of_list Z)).
     set (K' := pick_kill k R L' (R_f' \ of_list Z) (list_union (Op.freeVars ⊝ Y) \ M')).
     set (Sp':= ((list_union (Op.freeVars ⊝ Y) ∩ K') ∪ (M_f' \ of_list Z)) \ M ∪ (Sp ∩ R)).
     assert (R_f = fst (nth (counted l) Λ ({}, {}))) as Rfeq.
@@ -277,10 +277,10 @@ Proof.
     + rewrite subset_cardinal; eauto. clear - H12; cset_tac.
   - rename als into rlvF. rename alb into rlv_t. rename als0 into lvF. rename alb0 into lv_t.
     assert (Sp ∩ R [=] Sp) as Speq.
-    { apply inter_subset_equal. rewrite H24. eauto. } 
+    { apply inter_subset_equal. rewrite H24. eauto. }
      assert (L ∩ (Sp ∩ R ∪ M) [=] L) as Leq
         by (apply inter_subset_equal in H25; rewrite Speq, H25; eauto).
-    set (L' := pick_load k R M Sp L ∅).     
+    set (L' := pick_load k R M Sp L ∅).
     set (K' := pick_kill k R L' ∅ (getAnn rlv_t)).
     set (Sp':= ((getAnn lv_t) ∩ K' \ M) ∪ (Sp ∩ R)).
     assert (L [=] L') as Leq'.
@@ -317,7 +317,7 @@ Proof.
         eapply rlive_min_incl_R in H6; eauto.
       - exploit H3; eauto.
     }
-    cbn. 
+    cbn.
     econstructor; eauto;
       subst L' Sp' K';
       set (L' := pick_load k R M Sp L ∅) in *;
@@ -329,7 +329,7 @@ Proof.
     + intros. inv_get.
       exploit H36; eauto. exploit H17; eauto. exploit H30; eauto.
       eapply H2 with (Λ0:=pair ⊜ (getAnn ⊝ rlvF) (snd ⊝ rms) ++ Λ); eauto.
-      * eapply rlive_min_ext; eauto. eapply PIR2_app; eauto. 
+      * eapply rlive_min_ext; eauto. eapply PIR2_app; eauto.
       * rewrite map_app. rewrite fst_zip_pair. reflexivity. eauto with len.
       * edestruct H13; eauto. dcr. rewrite H49. rewrite <-H35. cbn.
         apply incl_union_right. eapply incl_list_union; eauto.
@@ -347,8 +347,8 @@ Proof.
            rewrite rlive_min_incl_R with (R:=Rf); eauto; cbn; eauto.
            eapply get_PIR2; eauto.
            ++ apply PIR2_Equal_Subset; eauto.
-           ++ eapply map_get_eq; eauto.   
-      * eapply live_min_ext; eauto. eapply PIR2_app; eauto. 
+           ++ eapply map_get_eq; eauto.
+      * eapply live_min_ext; eauto. eapply PIR2_app; eauto.
       * intros. decide (n0 >= length rms).
         -- eapply cardRf; eauto. eapply get_app_right_ge; [|eapply H49].
            assert (length rms = length (pair ⊜ (getAnn ⊝ rlvF) (snd ⊝ rms))) by eauto with len.
@@ -364,10 +364,10 @@ Proof.
               omega.
       * eapply PIR2_app; eauto.
         eapply PIR2_get. intros. inv_get.
-        -- exploit H17; eauto. 
+        -- exploit H17; eauto.
            eapply get_PIR2 in rms_eq; [|eauto|eauto]. destruct x' as [x'1 x'2].
            split; [| rewrite surjective_pairing in rms_eq at 1; invc rms_eq; eauto].
-           apply incl_eq; destruct x2 as [x21 x22]. 
+           apply incl_eq; destruct x2 as [x21 x22].
            ++ invc rms_eq. rewrite <-H60. exploit H3; eauto.
            ++ exploit H30; eauto.
               eapply spill_max_kill_spill_sound in H57.
@@ -380,7 +380,7 @@ Proof.
         -- eapply spill_max_kill_ext; eauto;
              eapply get_PIR2 in rms_eq; eauto; rewrite <-rms_eq; cbn; eauto.
     + eapply IHrliveSnd with (Λ0:=pair ⊜ (getAnn ⊝ rlvF) (snd ⊝ rms) ++ Λ); eauto.
-      * eapply rlive_min_ext; eauto. eapply PIR2_app; eauto. 
+      * eapply rlive_min_ext; eauto. eapply PIR2_app; eauto.
       * rewrite map_app. rewrite fst_zip_pair. reflexivity. eauto with len.
       * rewrite <-Leq', <-Speq', <-Keq. rewrite H25, H24.
         cbn in rm_ra. pe_rewrite. clear - rm_ra. cset_tac.
@@ -395,7 +395,7 @@ Proof.
            clear - H6 H5 H34. eapply get_PIR2; eauto.
            ++ apply PIR2_Equal_Subset; eauto.
            ++ eapply map_get_eq; eauto.
-      * eapply live_min_ext; eauto. eapply PIR2_app; eauto. 
+      * eapply live_min_ext; eauto. eapply PIR2_app; eauto.
       * intros. decide (n >= length rms).
         -- eapply cardRf; eauto. eapply get_app_right_ge; [|eapply H5].
            assert (length rms = length (pair ⊜ (getAnn ⊝ rlvF) (snd ⊝ rms))) by eauto with len.
@@ -411,10 +411,10 @@ Proof.
               omega.
       * eapply PIR2_app; eauto.
         eapply PIR2_get. intros. inv_get.
-        -- exploit H17; eauto. 
+        -- exploit H17; eauto.
            eapply get_PIR2 in rms_eq; [|eauto|eauto]. destruct x' as [x'1 x'2].
            split; [| rewrite surjective_pairing in rms_eq at 1; invc rms_eq; eauto].
-           apply incl_eq; destruct x as [x21 x22]. 
+           apply incl_eq; destruct x as [x21 x22].
            ++ invc rms_eq. rewrite <-H50. exploit H3; eauto.
            ++ exploit H30; eauto.
               eapply spill_max_kill_spill_sound in H47.

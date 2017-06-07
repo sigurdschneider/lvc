@@ -68,3 +68,14 @@ Proof.
   refine (exist _ (@proj1_sig A P ⊝ X) _).
   intros. inv_get. destruct x. eauto.
 Defined.
+
+
+Smpl Add 90
+     match goal with
+     | [ H : exist _ ?x _ ⊑ ?x' |- _ ] => is_var x'; destruct x'; simpl proj1_sig in *
+     | [ H : ?x' ⊑ exist _ ?x _ |- _ ] => is_var x'; destruct x'; simpl proj1_sig in *
+     | [ H : exist _ ?x _ ⊑ exist _ ?x' _ |- _ ] => change (poLe x x') in H
+     | [ H : exist _ ?x _ ≣ ?x' |- _ ] => is_var x'; destruct x'; simpl proj1_sig in *
+     | [ H : ?x' ≣ exist _ ?x _ |- _ ] => is_var x'; destruct x'; simpl proj1_sig in *
+     | [ H : exist _ ?x _ ≣ exist _ ?x' _ |- _ ] => change (poEq x x') in H
+     end : inv_trivial.

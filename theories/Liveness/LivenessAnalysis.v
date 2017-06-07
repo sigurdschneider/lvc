@@ -70,14 +70,9 @@ Proof.
     intros; inv_get. destruct x1; simpl in *. rewrite <- s1. eauto with cset.
 Defined.
 
-Smpl Add 90
+Smpl Add
      match goal with
-     | [ H : exist _ ?x _ ⊑ ?x' |- _ ] => is_var x'; destruct x'; simpl proj1_sig in *
-     | [ H : ?x' ⊑ exist _ ?x _ |- _ ] => is_var x'; destruct x'; simpl proj1_sig in *
-     | [ H : exist _ ?x _ ⊑ exist _ ?x' _ |- _ ] => change (poLe x x') in H
-     | [ H : exist _ ?x _ ≣ ?x' |- _ ] => is_var x'; destruct x'; simpl proj1_sig in *
-     | [ H : ?x' ≣ exist _ ?x _ |- _ ] => is_var x'; destruct x'; simpl proj1_sig in *
-     | [ H : exist _ ?x _ ≣ exist _ ?x' _ |- _ ] => change (poEq x x') in H
+     | [ H : liveness_transform_dep ?i ?ZL ?LV ?ST _ ≣ exist _ _ _ |- _ ] => unfold poEq in H; simpl in H
      end : inv_trivial.
 
 Lemma liveness_transform_dep_monotone (i:overapproximation) (sT s : stmt) (ST : subTerm s sT)
@@ -113,7 +108,7 @@ Proof.
         PIR2_inv; clear_trivial_eqs.
         exploit get_filter_by. Focus 4.
         eapply incl_list_union. eapply map_get_1.
-        eapply H6. reflexivity. eauto. eauto.
+        eapply H2. reflexivity. eauto. eauto.
         simpl. cases; eauto.
         erewrite get_nth in NOTCOND; [| eauto using map_get_1].
         eapply NOTCOND. simpl. eauto.

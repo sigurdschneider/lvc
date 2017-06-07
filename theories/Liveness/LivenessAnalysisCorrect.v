@@ -11,11 +11,6 @@ Local Arguments proj1_sig {A} {P} e.
 Local Arguments length {A} e.
 Local Arguments backward {sT} {Dom} btransform ZL AL st {ST} a.
 
-Smpl Add
-     match goal with
-     | [ H : liveness_transform_dep ?i ?ZL ?LV ?ST _ ≣ exist _ _ _ |- _ ] => unfold poEq in H; simpl in H
-     end : inv_trivial.
-
 Definition liveness_analysis_correct (i:overapproximation) sT ZL LV s a (ST:subTerm s sT)
   : ann_R poEq (@backward _ _ (liveness_transform_dep i) ZL LV s ST a) a
     -> annotation s a

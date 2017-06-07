@@ -19,6 +19,11 @@ Ltac inv_eqs :=
 Smpl Create inv_trivial [progress].
 Smpl Create inversion_cleanup.
 
+Smpl Add
+     match goal with
+     | [ H : True |- _ ] => clear H
+     end : inv_trivial.
+
 Ltac inv_if_ctor H A B :=
   let A' := eval hnf in A in
       let B' := eval hnf in B in

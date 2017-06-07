@@ -234,11 +234,6 @@ Ltac std_ind_dcr :=
 
 Opaque poLe.
 
-Smpl Add
-     match goal with
-     | [ H : True |- _ ] => clear H
-     end : inv_trivial.
-
 Lemma reachability_trueIsCalled Lv s slv l
   : reachability cop2bool Sound Lv s slv
     -> isCalled true s l

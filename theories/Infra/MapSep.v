@@ -98,6 +98,9 @@ Lemma sep_update_part p ϱ lv x G
   : sep p lv (ϱ [x <- least_fresh_part p G x]).
 Proof.
   unfold sep in SEP; dcr.
-  hnf; split; intros; lud; cset_tac';
-    eauto using least_fresh_part_1,least_fresh_part_2.
+  hnf; split; intros; lud.
+  - invc e. eauto using least_fresh_part_1,least_fresh_part_2.
+  - cset_tac.
+  - invc e. eauto using least_fresh_part_1,least_fresh_part_2.
+  - cset_tac.
 Qed.
