@@ -218,3 +218,8 @@ Proof.
 Qed.
 
 Hint Resolve poLe_Some_struct.
+
+Smpl Add match goal with
+         | [ H : poLe _ None |- _ ] => invc H
+         | [ H : ⎣ ?x ⎦ <> ⎣ ?x ⎦ |- _ ] => exfalso; apply H; reflexivity
+         end : inv_trivial.

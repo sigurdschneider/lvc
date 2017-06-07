@@ -57,11 +57,28 @@ Proof.
   rewrite setTopAnn_eta_poEq; eauto.
 Qed.
 
+Lemma forward_setTopAnn_inv_poLe (sT:stmt) (Dom : stmt -> Type)
+      `{JoinSemiLattice (Dom sT)} `{@LowerBounded (Dom sT) H}
+      (f: forall sT, list params ->
+                forall s, subTerm s sT -> Dom sT -> anni (Dom sT))
+      s (ST:subTerm s sT) ZL a an
+  : poLe an (fst (@forward sT Dom _ _ _ f ZL s ST (setTopAnn an a)))
+    -> getAnn an ⊑ a.
+Proof.
+  intros.
+  eapply ann_R_get in H2.
+  rewrite (@forward_getAnn' sT Dom) in H2.
+  rewrite getAnn_setTopAnn in H2. eauto.
+Qed.
+
 Ltac forward_setTopAnn_inv :=
   match goal with
   | [ H: poEq (fst (@forward ?sT ?Dom _ _ _ ?f ?ZL ?s ?ST (setTopAnn ?an ?a))) ?an |- _ ]
     => eapply (@forward_setTopAnn_inv sT Dom _ _ _ f ltac:(eauto)) in H;
       destruct H
+(*  | [ H: poLe ?an (fst (@forward ?sT ?Dom _ _ _ ?f ?ZL ?s ?ST (setTopAnn ?an ?a))) |- _ ]
+    => eapply (@forward_setTopAnn_inv sT Dom _ _ _ f) in H;
+      destruct H*)
   end.
 
 Smpl Add forward_setTopAnn_inv : inv_trivial.
@@ -305,11 +322,10 @@ Lemma forward_snd_poLe sT BL ZL s (ST:subTerm s sT) n a b c
     -> poLe b c.
 Proof.
   revert ZL BL ST n a b c.
-  sind s; intros; destruct s; destruct a; invt reachability;
+  induction s using stmt_ind'; intros; destruct a; invt reachability;
     simpl in *; repeat let_case_eq; repeat simpl_pair_eqs; simpl in *;
       inv_get;
       try solve [ destruct a; simpl; eauto | destruct a1; simpl; eauto ].
-  - eapply IH in H1; eauto.
   - cases in H6; cases in H1; clear_trivial_eqs; try congruence.
     + assert (cop2bool e = ⎣ wTA false ⎦). {
         rewrite op2bool_cop2bool in COND; eauto.
@@ -318,10 +334,10 @@ Proof.
         rewrite H2. clear_all. intro. clear_trivial_eqs.
       }
       specialize (H10 ltac:(eauto)).
-      eapply IH in H1; eauto.
+      eapply IHs2 in H1; eauto.
       eapply orb_poLe_struct; eauto.
       rewrite <- H0. rewrite <- H10.
-      eapply IH in H6; simpl in *; eauto; clear_trivial_eqs.
+      eapply IHs1 in H6; simpl in *; eauto; clear_trivial_eqs.
       eauto.
       rewrite H13; eauto. rewrite H2; eauto.
     + assert (cop2bool e = ⎣ wTA true ⎦). {
@@ -331,9 +347,9 @@ Proof.
         rewrite H2. clear_all. intro. clear_trivial_eqs.
       }
       specialize (H9 ltac:(eauto)).
-      eapply IH in H6; eauto.
-      eapply orb_poLe_struct; eauto.
-      eapply IH in H1; simpl in *; eauto.
+      eapply IHs1 in H6; [|eauto|eauto].
+      eapply orb_poLe_struct; [eauto|].
+      eapply IHs2 in H1; simpl in *; [ | eauto | ].
       rewrite H1; eauto.
       rewrite H14; eauto. rewrite H2; eauto.
     + assert (~ cop2bool e ⊑ ⎣ wTA true ⎦). {
@@ -344,20 +360,17 @@ Proof.
       }
       specialize (H9 ltac:(eauto)).
       specialize (H10 ltac:(eauto)).
-      eapply IH in H1; eauto.
-      eapply IH in H6; simpl in *; eauto.
-      eapply orb_poLe_struct; eauto.
+      eauto using orb_poLe_struct.
   - decide (labN l = n); subst.
     + eapply ListUpdateAt.list_update_at_get_2 in H1; eauto; subst.
     + eapply ListUpdateAt.list_update_at_get_1 in H1; eauto; subst.
       inv_get. eauto.
   - destruct b; [| destruct c; simpl; eauto].
-    eapply fold_left_zip_orb_inv in H1. destruct H1.
-    + eapply IH in H1; eauto.
+    eapply fold_left_zip_orb_inv in H2. destruct H2; eauto.
     + dcr. inv_get.
-      rewrite <- (setTopAnn_eta x3 eq_refl) in H4.
-      eapply IH in H4; eauto.
-      exploit H13; eauto.
+      rewrite <- (setTopAnn_eta x3 eq_refl) in H5.
+      exploit H14; eauto.
+      eapply H in H5; eauto.
 Qed.
 
 Local Hint Extern 0 => first [ erewrite (@forward_getAnn' _ (fun _ => bool))
@@ -467,13 +480,40 @@ Proof.
       econstructor; eauto.
 Qed.
 
-Lemma reachability_analysis_complete_isCalled' BL s a b
-  : reachability cop2bool Complete BL s a
-    -> forall n, get BL n true
-           -> poLe (getAnn a) b
-           -> isCalled true s (LabI n).
+Lemma poLe_nth X `{PartialOrder X} (L : 〔X〕) (L' : 〔X〕) (n : nat) (x : X)
+  : poLe L L'
+    -> get L n x
+    -> exists x', get L' n x' /\ poLe x x'.
 Proof.
-Admitted.
+  intros. eapply PIR2_nth; eauto.
+Qed.
+
+Lemma poLe_app X `{PartialOrder X} (L1 L2 : 〔X〕) (L1' L2' : 〔X〕)
+  : poLe L1 L1' -> poLe L2 L2' -> poLe (L1 ++ L2) (L1' ++ L2').
+Proof.
+  intros. eapply PIR2_app; eauto.
+Qed.
+
+Hint Resolve poLe_app.
+
+Smpl Add match goal with
+         | [ H : poLe ?L ?L', Get : get ?L ?n ?x |- _ ] =>
+           match goal with
+           | [ Get' : get L' n _ |- _ ] => fail 1
+           | _ => edestruct (@poLe_nth _ _ L L' n x H Get) as [? [? ?]]
+           end
+         end : inv_trivial.
+
+Lemma reachability_monotone (ceval : op -> ؟ (withTop bool))
+      (BL BL' : 〔bool〕) (s : stmt) (a : ann bool) p
+  : poLe BL BL' ->
+    reachability ceval p BL s a ->
+    reachability ceval p BL' s a.
+Proof.
+  intros. general induction H0; eauto 10 using reachability.
+  - econstructor; eauto.
+    cases; eauto.
+Qed.
 
 Lemma reachability_analysis_complete sT ZL BL BL' (Len:❬BL❭ = ❬BL'❭) s a (ST:subTerm s sT) b b' c
       (LDEF:labelsDefined s (length ZL))

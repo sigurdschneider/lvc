@@ -67,11 +67,6 @@ Hint Resolve leMap_op_eval eqMap_op_eval.
 
 Definition DDom (sT:stmt) := { m : Map [var, withTop val] | domain m ⊆ occurVars sT}.
 
-Smpl Add match goal with
-         | [ H : poLe _ None |- _ ] => invc H
-         | [ H : ⎣ ?x ⎦ <> ⎣ ?x ⎦ |- _ ] => exfalso; apply H; reflexivity
-         end : inv_trivial.
-
 Definition cp_reach (U : ⦃nat⦄) (b:bool) (d: VDom U (withTop val)) (e:op) : bool * bool :=
   (if [op_eval (domenv (proj1_sig d)) e = None] then false
      else if [op_eval (domenv (proj1_sig d)) e = Some (wTA val_false)] then

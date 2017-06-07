@@ -308,7 +308,7 @@ Proof.
   intros. hnf; intros.
   unfold domupd; cases.
   - mlud; eauto. rewrite <- e. eauto.
-  - mlud; eauto. rewrite <- e. eauto.
+  - mlud; eauto. rewrite H2, <- e. eauto.
 Qed.
 
 
