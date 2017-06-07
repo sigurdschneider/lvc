@@ -635,13 +635,15 @@ Proof.
       split. eapply nodup_flt; eauto.
       split. eapply disj_2_incl; eauto. rewrite of_list_flt.
       eapply disj_1_incl; eauto. cset_tac.
-      erewrite fst_getAnn_renamedApart, !snd_getAnn_renamedApart; eauto.
+      erewrite fst_getAnn_renamedApart, !snd_getAnn_renamedApart; only 2-7: eauto.
       pe_rewrite. rewrite of_list_flt. eapply disj_1_incl; eauto.
       clear; cset_tac.
     * hnf; intros. inv_get.
-      unfold defVars; simpl. exploit H9; try eapply H4; eauto using zip_get.
-      unfold defVars in*. rewrite !snd_getAnn_renamedApart; eauto.
-      rewrite !of_list_flt; eauto.
+      unfold defVars; simpl.
+      exploit H9; try eapply H4; only 1-2: eauto using zip_get.
+      unfold defVars in*.
+      rewrite !snd_getAnn_renamedApart; only 2-5: eauto.
+      rewrite !of_list_flt.
       eapply disj_incl; eauto.
       clear; cset_tac.
       clear; cset_tac.
@@ -667,8 +669,9 @@ Proof.
   - cset_tac.
   - rewrite H0; eauto.
   - rewrite H2; eauto.
-  - exploit Op.freeVars_live; eauto with cset.
-    rewrite H0, H2; eauto with cset.
+  - exploit Op.freeVars_live; eauto.
+    rewrite H0, H2; eauto. rewrite H4, H5, H6; eauto.
+    clear; cset_tac.
   - erewrite get_nth; eauto using zip_get; simpl.
     eapply list_union_incl; intros; inv_get; eauto with cset.
     edestruct get_flt; eauto; dcr.
@@ -757,42 +760,51 @@ Lemma DVE_live_incl i (FNC:isFunctional i) ZL LV s ra (RA:renamedApart s ra) lv 
           (compile_live s lv G)
           (compile_renamedApart s lv ra D).
 Proof.
-  general induction AN; invt true_live_sound; invt renamedApart; simpl in *; set_simpl;
-    try econstructor; eauto with cset len.
-  - cases; simpl in *; try econstructor; eauto with cset.
-    + eapply IHAN; eauto. cset_tac. pe_rewrite. cset_tac.
+  time (general induction AN; invt true_live_sound; invt renamedApart; simpl in *;
+        set_simpl).
+  - econstructor; eauto with cset len.
+  - econstructor; eauto with cset len.
+  - cases; simpl in *.
+    + econstructor; eauto with cset.
+      eapply IHAN; eauto. cset_tac. pe_rewrite. cset_tac.
       cset_tac.
     + eapply IHAN; eauto. cset_tac. pe_rewrite. cset_tac.
-  - repeat cases; simpl in *; try econstructor; eauto with cset.
+  - repeat cases; simpl in *.
     + eapply IHAN1; eauto. rewrite H9; eauto. pe_rewrite. eauto.
     + eapply IHAN2; eauto. rewrite H10; eauto. pe_rewrite; eauto.
-    + eapply IHAN1; eauto with cset. rewrite H9; eauto with cset.
-      pe_rewrite; eauto.
-    + eapply IHAN2; eauto with cset. rewrite H10; eauto.
-      pe_rewrite; eauto.
-  - intros; inv_get.
-    eapply ann_R_setTopAnn_left; eauto; simpl.
-    + rewrite fst_getAnn_renamedApart';eauto.
-      rewrite compile_live_incl_empty; eauto. rewrite of_list_flt.
-      exploit H12; eauto.
-      cases in H3. rewrite Incl1 in H3.
-      rewrite <- H3. clear; cset_tac.
-    + exploit H1; eauto.
-      eapply ann_R_get in H3.
-      edestruct H15; dcr; eauto.
-      rewrite H9 in H3.
-      exploit H14; eauto.
-      exploit H12; eauto. cases in H21.
-      rewrite Incl1 in H21.
-      eapply H2; eauto with cset.
-      * rewrite of_list_flt.
-        rewrite <- H21.
-        clear; cset_tac.
-      * rewrite of_list_flt.
-        rewrite H9. rewrite <- Incl3.
-        clear; cset_tac.
-  - eapply IHAN; eauto with cset.
-    pe_rewrite; eauto.
+    + econstructor. simpl. rewrite Incl1, Incl2; clear_all; cset_tac.
+      * eapply IHAN1; eauto with cset. rewrite H9; eauto with cset.
+        pe_rewrite; eauto.
+      * eapply IHAN2; eauto with cset. rewrite H10; eauto.
+        pe_rewrite; eauto.
+  - econstructor; simpl; eauto.
+    + rewrite Incl1, Incl2; clear; cset_tac.
+    + eauto with len.
+    + intros; inv_get.
+      eapply ann_R_setTopAnn_left; eauto; simpl.
+      * rewrite fst_getAnn_renamedApart';eauto.
+        rewrite compile_live_incl_empty; eauto. rewrite of_list_flt.
+        exploit H12; eauto.
+        cases in H3. rewrite Incl1 in H3.
+        rewrite <- H3. clear; cset_tac.
+      * exploit H1; eauto.
+        eapply ann_R_get in H3.
+        edestruct H15; dcr; eauto.
+        rewrite H9 in H3.
+        exploit H14; try eassumption.
+        exploit H12; try eassumption. simpl in *.
+        cases in H21.
+        rewrite Incl1 in H21.
+        eapply H2; eauto.
+        -- rewrite of_list_flt.
+           rewrite <- H21.
+           clear; cset_tac.
+        -- rewrite of_list_flt.
+           rewrite H9. rewrite <- Incl3.
+           clear; cset_tac.
+        -- eauto with cset.
+    + eapply IHAN; eauto. eauto with cset.
+      pe_rewrite. eauto with cset. eauto with cset.
 Qed.
 
 Require Import VarP.
