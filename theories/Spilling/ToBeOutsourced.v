@@ -1,5 +1,5 @@
 Require Import List Map Env AllInRel Exp AppExpFree RenameApart RenamedApart.
-Require Import IL Annotation InRel AutoIndTac.
+Require Import IL Annotation AutoIndTac.
 Require Import Liveness.Liveness LabelsDefined SetUtil.
 
 

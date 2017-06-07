@@ -199,6 +199,25 @@ Proof.
     split; intros; congruence.
 Qed.
 
+Lemma op2bool_cop2bool_not_some' e
+  : op2bool e = ⎣ true ⎦
+    -> ~ cop2bool e ⊑ ⎣ wTA false ⎦.
+Proof.
+  intros A B.
+  eapply op2bool_cop2bool_not_some; eauto. congruence.
+Qed.
+
+Lemma op2bool_cop2bool_not_some'' e
+  : op2bool e = ⎣ false ⎦
+    -> ~ cop2bool e ⊑ ⎣ wTA true ⎦.
+Proof.
+  intros A B.
+  eapply op2bool_cop2bool_not_some; eauto. congruence.
+Qed.
+
+Hint Resolve op2bool_cop2bool_not_some
+     op2bool_cop2bool_not_some' op2bool_cop2bool_not_some''.
+
 Transparent uceq.
 
 Ltac std_ind_inst :=

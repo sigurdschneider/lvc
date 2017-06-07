@@ -1,4 +1,4 @@
-Require Import Util LengthEq IL InRel RenamedApart LabelsDefined OptionR.
+Require Import Util LengthEq IL RenamedApart LabelsDefined OptionR.
 Require Import Keep Drop Take Restrict SetOperations OUnion.
 Require Import Annotation Liveness.Liveness Coherence Delocation.
 Require Import AddParam AddAdd MoreListSet DelocationAlgo DelocationAlgoIsCalled.

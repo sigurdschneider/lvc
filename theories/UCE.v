@@ -457,10 +457,7 @@ Proof.
     rewrite COND. intro. clear_trivial_eqs.
   - rewrite op2bool_cop2bool in COND.
     eapply IHUC2; eauto. exploit H0; eauto.
-    rewrite COND. intro. clear_trivial_eqs.
-  - eapply op2bool_cop2bool_not_some in NOTCOND.
-    eapply op2bool_cop2bool_not_some in NOTCOND0.
-    exploit H; eauto. exploit H0; eauto.
+  - exploit H; eauto. exploit H0; eauto.
     econstructor; eauto.
   - simpl in *.
     exploit (get_filter_by (fun b => b) H H3). destruct a,b; isabsurd; eauto.
@@ -539,9 +536,9 @@ Proof.
   - econstructor; eauto using compile_live_incl with cset.
     intros. eapply H. destruct H1; eauto.
     left. eapply compile_live_incl; eauto.
-  - repeat cases; eauto.
-    + eapply H0; eauto.
-      exploit H9; eauto.
+  - repeat cases.
+    + eapply H0; [eauto| eauto | ].
+      rewrite <- H9; [eauto|].
       rewrite op2bool_cop2bool in COND; eauto.
       rewrite COND. intro. clear_trivial_eqs.
     + eapply op2bool_cop2bool_not_some in NOTCOND.
@@ -944,9 +941,12 @@ Proof.
         edestruct (compileF_get_inv _ _ _ H15); eauto; dcr; subst.
         edestruct (compileF_get_inv _ _ _ H16); eauto; dcr; subst.
         rewrite map_take in *.
-        rewrite posOfTrue_countTrue in *; eauto using map_get_eq.
+        assert (GET:get (getAnn ⊝ als) x10 true) by eauto using map_get_eq.
+        rewrite (posOfTrue_countTrue GET) in *.
+        assert (GET2:get (getAnn ⊝ als) x3 true) by eauto using map_get_eq.
+        rewrite (posOfTrue_countTrue GET2) in *.
         repeat get_functional. simpl.
-        exploit (H10 x10 x3); eauto using zip_get.
+        exploit (H10 x10 x3); only 2-3: eauto using zip_get.
         intro; subst. rewrite map_take in *. congruence.
         unfold defVars in *; simpl.
         rewrite !compile_renamedApart_pes; eauto.

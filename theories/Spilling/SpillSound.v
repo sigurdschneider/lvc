@@ -1,5 +1,5 @@
 Require Import List Map Env AllInRel Exp.
-Require Import IL Annotation AnnP InRel AutoIndTac Liveness.Liveness LabelsDefined.
+Require Import IL Annotation AnnP AutoIndTac Liveness.Liveness LabelsDefined.
 Require Import ExpVarsBounded.
 Require Export SpillUtil.
 

@@ -1,6 +1,6 @@
 Require Import List.
 Require Import Util Var Val Exp Env Map CSet AutoIndTac IL.
-Require Import Sim SimTactics Infra.Status Position ILN InRel Sawtooth.
+Require Import Sim SimTactics Infra.Status Position ILN Sawtooth.
 
 Set Implicit Arguments.
 Unset Printing Records.
@@ -76,7 +76,7 @@ Proof.
     * eapply (pos_sub 1); eauto.
 Qed.
 
-Require Import InRel Sawtooth.
+Require Import Sawtooth.
 
 Lemma mkBlocks_I_less
       : forall F' L F (n k : nat) (b : I.block),

@@ -1,5 +1,5 @@
 Require Import List Map Env AllInRel Exp AppExpFree RenamedApart.
-Require Import IL Annotation InRel AutoIndTac.
+Require Import IL Annotation AutoIndTac.
 Require Import Liveness.Liveness LabelsDefined.
 Require Import SpillSound DoSpill DoSpillRm SpillUtil ReconstrLive.
 Require Import ReconstrLiveSmall ReconstrLiveSound SetUtil InVD.

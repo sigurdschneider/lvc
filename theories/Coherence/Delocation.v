@@ -1,4 +1,4 @@
-Require Import Util LengthEq IL InRel RenamedApart LabelsDefined AppExpFree.
+Require Import Util LengthEq IL RenamedApart LabelsDefined AppExpFree.
 Require Import Restrict SetOperations OUnion OptionR.
 Require Import Annotation Liveness.Liveness Coherence.
 

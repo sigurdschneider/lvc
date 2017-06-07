@@ -1,5 +1,5 @@
 Require Import List Map CSet Env AllInRel Exp AppExpFree.
-Require Import IL Annotation InRel AutoIndTac Liveness.Liveness LabelsDefined.
+Require Import IL Annotation AutoIndTac Liveness.Liveness LabelsDefined.
 
 Notation "'spilling'"
   := (ann (⦃var⦄ * ⦃var⦄ * list (⦃var⦄ * ⦃var⦄))).

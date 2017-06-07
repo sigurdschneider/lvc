@@ -1,5 +1,5 @@
 Require Import List Map Env AllInRel Exp Rename.
-Require Import IL Annotation InRel AutoIndTac MoreListSet.
+Require Import IL Annotation AutoIndTac MoreListSet.
 
 Export MoreListSet.
 

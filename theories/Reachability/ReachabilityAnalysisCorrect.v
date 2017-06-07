@@ -438,7 +438,6 @@ Proof.
         eapply IHreachability2; eauto.
         cases in H5; eauto.
         rewrite H0; eauto.
-        eapply op2bool_cop2bool_not_some; eauto.
       * rewrite H3; eauto.
         rewrite op2bool_cop2bool in COND. rewrite COND. reflexivity.
     + cases in H5; try congruence.
@@ -446,18 +445,15 @@ Proof.
       * eapply IsCalledIf1; eauto.
         eapply IHreachability1; eauto.
         rewrite H; eauto.
-        eapply op2bool_cop2bool_not_some; eauto.
       * rewrite H4; eauto.
         rewrite op2bool_cop2bool in COND. rewrite COND. reflexivity.
       * eapply orb_prop in EQ. destruct EQ; subst; isabsurd.
         -- eapply IsCalledIf1; eauto.
            eapply IHreachability1; eauto.
            rewrite H; eauto.
-           eapply op2bool_cop2bool_not_some; eauto.
         -- eapply IsCalledIf2; eauto.
            eapply IHreachability2; eauto.
            rewrite H0; eauto.
-           eapply op2bool_cop2bool_not_some; eauto.
   - decide (labN l = n); subst.
     + eapply ListUpdateAt.list_update_at_get_2 in H1; eauto; subst.
       destruct l; simpl. econstructor.

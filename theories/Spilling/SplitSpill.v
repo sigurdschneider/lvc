@@ -1,5 +1,5 @@
 Require Import List Map Env AllInRel Exp MoreList.
-Require Import IL Annotation AnnP InRel AutoIndTac.
+Require Import IL Annotation AnnP AutoIndTac.
 Require Import Liveness.Liveness LabelsDefined.
 Require Import SimI.
 Require Import ExpVarsBounded SpillSound ReconstrLive.
