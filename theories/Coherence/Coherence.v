@@ -128,6 +128,7 @@ Proof.
         rewrite H14. eapply get_bounded.
         intros. inv_get. edestruct H2; eauto; dcr.
         rewrite getAnn_mapAnn. rewrite H10.
+        eapply incl_union_right.
         eauto with cset.
         rewrite H14. rewrite <- incl_right; eauto.
       * eapply srd_monotone. eapply H14.
@@ -345,7 +346,8 @@ Proof.
     + intros. exploit H12; eauto; dcr.
       simpl; split; eauto.
       exploit H6; eauto using get_range.
-      edestruct srd_globals_live_From as [lv' [Z' ?]]; eauto with len; dcr.
+      len_simpl.
+      edestruct srd_globals_live_From as [lv' [Z' ?]]; eauto; dcr.
       inv_get.
       rewrite <- H13, <- H20. eauto.
 Qed.

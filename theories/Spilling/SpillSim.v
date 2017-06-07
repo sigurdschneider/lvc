@@ -65,11 +65,9 @@ Proof.
   rewrite do_spill_extract_writes.
   exploit L_sub_SpM; eauto.
   exploit Sp_sub_R; eauto.
-  eapply (@sim_write_moves (R ∪ map slot M ∪ map slot (getSp sl) ∪ map slot (getL sl))); try rewrite ?of_list_map, of_list_elements;
-    eauto with len.
+  eapply (@sim_write_moves (R ∪ map slot M ∪ map slot (getSp sl) ∪ map slot (getL sl))); try rewrite ?of_list_map, of_list_elements; eauto with len.
   intros ? Agr3.
-  eapply (@sim_write_moves (R ∪ map slot M ∪ map slot (getSp sl) ∪ getL sl)); try rewrite ?of_list_map, of_list_elements;
-    eauto with len.
+  eapply (@sim_write_moves (R ∪ map slot M ∪ map slot (getSp sl) ∪ getL sl)); try rewrite ?of_list_map, of_list_elements; eauto with len.
   intros ? Agr4.
   - rewrite update_with_list_agree in Agr4; eauto with len;
       [| symmetry; eapply agree_on_incl; eauto; clear; rewrite of_list_elements; cset_tac].
@@ -597,12 +595,12 @@ Proof.
       * pe_rewrite. rewrite <- RAincl, <- H25. clear; cset_tac.
     + intros. hnf; intros; simpl in *; dcr. subst.
       inv_get.
-      exploit H12 as SPS'; eauto.
-      exploit H20 as LS'; eauto.
-      exploit H15 as SL'; eauto. destruct x as (R_f,M_f).
-      exploit H14 as In'; eauto; simpl in *; destruct In' as [In1 In2].
-      exploit H2 as RA'; eauto.
-      exploit (get_PIR2 H7) as EQ; eauto.
+      exploit H12 as SPS'; try eassumption.
+      exploit H20 as LS'; try eassumption.
+      exploit H15 as SL'; try eassumption. destruct x as (R_f,M_f).
+      exploit H14 as In'; try eassumption; simpl in *; destruct In' as [In1 In2].
+      exploit H2 as RA'; try eassumption.
+      exploit (get_PIR2 H7) as EQ; only 1-2: eauto.
       exploit H21 as In3; eauto. destruct In3 as [In3 _].
       unfold merge in EQ. simpl in *.
       rewrite <- zip_app; [| eauto with len].
@@ -653,7 +651,6 @@ Proof.
       inv_get; simpl; eauto.
     + eauto with len.
     + eauto with len.
-      Grab Existential Variables. eapply 0.
 Qed.
 
 End Correctness.

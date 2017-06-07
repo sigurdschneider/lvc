@@ -168,7 +168,7 @@ decide (cardinal (t \ s) - (k - cardinal s) <= cardinal (s \ t)).
 - apply not_le in n. subst K.
   rewrite kill_oracle_idem; eauto.
   rewrite minus_minus.
-  assert (EQ:s ∩ t ∪ t \ s [=] t) by cset_tac.
+  assert (EQ:s ∩ t ∪ t \ s [=] t) by (clear; cset_tac).
   rewrite EQ; eauto.
 Qed.
 
@@ -480,7 +480,6 @@ general induction lvSound;
       -- apply take_of_list_cardinal.
       -- rewrite take_set_incl at 1.
          clear; eauto with cset.
-         Grab Existential Variables. eauto. eauto.
 Qed.
 
 

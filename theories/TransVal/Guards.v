@@ -69,7 +69,7 @@ Lemma freeVars_undef e
   : freeVars (undef e) ⊆ Op.freeVars e.
 Proof.
   intros. general induction e; simpl in * |- *; eauto with cset.
-  - unfold combine in *. repeat cases; eauto with cset.
+  - unfold combine in *. repeat cases ; eauto with cset.
 Qed.
 
 Lemma freeVars_undefLift el

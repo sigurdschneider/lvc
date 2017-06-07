@@ -275,8 +275,8 @@ Hint Extern 20 => match goal with
                  | [ H: ?x === ?x -> False |- _ ] => exfalso; eapply H; reflexivity
                  end.
 
-Hint Resolve incl_union_left incl_union_right incl_add_right in_add_left
-     union_left union_right get_list_union_map : cset.
+Hint Resolve in_add_left union_left union_right get_list_union_map : cset.
+
 Hint Resolve prod_eq_intro : cset.
 Hint Resolve incl_singleton: cset.
 Hint Resolve incl_empty : cset.
@@ -288,8 +288,9 @@ Hint Resolve not_incl_minus : cset.
 (* general hints *)
 
 Hint Resolve equal_minus_empty incl_minus_empty incl_minus_change incl_minus_union
-     incl_union_lr incl_union_left incl_union_right incl_singleton union_incl_split
-     : cset.
+     incl_singleton union_incl_split : cset.
+
+Hint Resolve incl_union_lr incl_union_left incl_union_right incl_add_right | 20 : cset.
 
 Hint Resolve incl_empty : auto.
 

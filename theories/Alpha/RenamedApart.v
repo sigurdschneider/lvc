@@ -436,7 +436,7 @@ Lemma ra_incl3 X `{OrderedType X} (D Ds Dt VD:set X)
   cset_tac.
 Qed.
 
-Hint Resolve ra_incl1 ra_incl2 ra_incl3 : cset.
+Hint Resolve ra_incl1 ra_incl2 ra_incl3 | 60 : cset.
 
 Lemma ra_incl4 X `{OrderedType X} (D Ds VD:set X) x
   :  {x; D} ∪ Ds [<=] D ∪ {x; Ds}.
