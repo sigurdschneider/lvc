@@ -1,5 +1,6 @@
 Require Import Util LengthEq Map Env Exp IL AllInRel Computable Annotation.
 Require Import Rename RenamedApart Alpha ILDB SetOperations Status Position.
+Require Import Take Drop.
 Import F.
 
 Set Implicit Arguments.
@@ -103,15 +104,15 @@ Proof.
   - eapply agree_on_incl.
     + eapply IHRA.
       symmetry. instantiate (1:=D0 \ singleton x).
-      eapply agree_on_update_dead; [ cset_tac | ].
-      symmetry. eapply agree_on_incl; cset_tac.
-    + cset_tac.
+      eapply agree_on_update_dead; [ clear; cset_tac | ].
+      symmetry. eapply agree_on_incl; eauto.
+      clear_all; cset_tac.
+    + clear. cset_tac.
   - eapply agree_on_incl. eapply (IHRA2 (D0 \ Ds)).
     eapply agree_on_incl. eapply (IHRA1 (D0 \ Dt)).
     eapply agree_on_incl; eauto with cset.
     eauto with cset. eauto with cset.
-  - pe_rewrite. simpl in *.
-    eapply agree_on_incl. eapply IHRA.
+  - eapply agree_on_incl. eapply IHRA.
     eapply agree_on_incl. eapply alpha_rho_agree_F; eauto.
     eapply agree_on_incl; eauto.
     + instantiate (1:=D0 \ Dt); eauto with cset.
@@ -149,7 +150,8 @@ Proof.
       unfold defVars at 2. simpl.
       exploit (RA 0); eauto using get.
       rewrite renamedApart_occurVars; eauto.
-      cset_tac; intuition. exploit LENF; eauto using get.
+      clear_all. cset_tac.
+      exploit LENF; eauto using get.
 Qed.
 
 
@@ -172,8 +174,9 @@ Lemma alpha_rho_agrees_snd2 s u ang ϱ ϱ' D ρ ρ'
 Proof.
   intros RA ALPHA.
   general induction RA; invt alpha; simpl in *;
-  eauto using agree_on_incl, agree_on_update_same with cset.
-  - eapply IHRA; eauto. eapply alpha_rho_agrees_snd2_F; eauto using agree_on_incl.
+  only 1-4: eauto using agree_on_incl, agree_on_update_same with cset.
+  - eapply IHRA; eauto.
+    eapply alpha_rho_agrees_snd2_F; eauto.
     + eapply agree_on_incl; eauto.
       unfold defVars.
       rewrite renamedApart_occurVars; eauto.
@@ -194,8 +197,6 @@ Proof.
   rewrite <- list_union_disjunct; intros; inv_get.
   edestruct H0; dcr; eauto.
 Qed.
-
-Require Import Take Drop.
 
 Lemma alpha_rho_agree_F_get D F F' ans ϱ ϱ' n Z Z' u u'
   : (forall (n : nat) (Zs : params * stmt) (a : ann (set var * set var)),
@@ -283,7 +284,7 @@ Proof.
       eapply agree_on_incl. eapply alpha_rho_agree; eauto.
       instantiate (1:=D ∪ Ds). pe_rewrite.
       eapply renamedApart_disj in H7. pe_rewrite.
-      cset_tac; intuition.
+      eauto with cset.
     + erewrite rename_agree; eauto.
       rewrite occurVars_freeVars_definedVars.
       rewrite renamedApart_freeVars; eauto.

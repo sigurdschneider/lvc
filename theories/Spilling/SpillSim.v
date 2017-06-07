@@ -17,10 +17,6 @@ Proof.
   eapply H in H0. inv H0; eauto; simpl in *; congruence.
 Qed.
 
-Section Correctness.
-
-  Variable slot : var -> var.
-
 Lemma sim_write_moves D r L V s L' V' s' xl yl (Len:❬xl❭ = ❬yl❭)
   : (forall (V'':onv val), agree_on eq D (V'[xl <-- lookup_list V' yl]) V''
                         -> paco3 (sim_gen (S':=I.state)) r Sim (L, V, s) (L', V'', s'))
@@ -48,7 +44,7 @@ Proof.
     + eapply disj_incl; eauto with cset.
 Qed.
 
-Lemma sim_I_moves k Λ ZL r L L' V V' R M s sl ib
+Lemma sim_I_moves (slot : var -> var) k Λ ZL r L L' V V' R M s sl ib
   : spill_sound k ZL Λ (R,M) s sl
     -> injective_on (getSp sl ∪ getL sl) slot
     -> disj (getSp sl ∪ getL sl) (map slot (getSp sl ∪ getL sl))
@@ -65,12 +61,14 @@ Proof.
   rewrite do_spill_extract_writes.
   exploit L_sub_SpM; eauto.
   exploit Sp_sub_R; eauto.
-  eapply (@sim_write_moves (R ∪ map slot M ∪ map slot (getSp sl) ∪ map slot (getL sl))); try rewrite ?of_list_map, of_list_elements; eauto with len.
+  eapply (@sim_write_moves (R ∪ map slot M ∪ map slot (getSp sl) ∪ map slot (getL sl)));
+    try rewrite ?of_list_map, of_list_elements; eauto. eauto with len.
   intros ? Agr3.
-  eapply (@sim_write_moves (R ∪ map slot M ∪ map slot (getSp sl) ∪ getL sl)); try rewrite ?of_list_map, of_list_elements; eauto with len.
+  eapply (@sim_write_moves (R ∪ map slot M ∪ map slot (getSp sl) ∪ getL sl)); try rewrite ?of_list_map, of_list_elements; eauto. eauto with len.
   intros ? Agr4.
-  - rewrite update_with_list_agree in Agr4; eauto with len;
-      [| symmetry; eapply agree_on_incl; eauto; clear; rewrite of_list_elements; cset_tac].
+  - rewrite update_with_list_agree in Agr4; eauto;
+      [| symmetry; eapply agree_on_incl; eauto; clear; rewrite of_list_elements; cset_tac
+       |eauto with len].
     erewrite <- (lookup_list_agree) in Agr4.
     eapply SIM; eauto.
     rewrite of_list_map, of_list_elements; eauto.
@@ -91,12 +89,12 @@ Proof.
       rewrite lookup_set_update_not_in_Z; eauto.
       eapply Def; eauto with cset.
       rewrite of_list_map, of_list_elements; eauto.
-      cset_tac.
+      revert H1; clear_all; cset_tac.
   - eapply disj_incl; eauto with cset.
   - eapply elements_3w.
   - eauto using defined_on_incl with cset.
   - symmetry.
-    eapply disj_incl; eauto with cset.
+     eapply disj_incl; eauto with cset.
   - eapply injective_nodup_map; eauto.
     rewrite of_list_elements. eauto using injective_on_incl with cset.
     eapply elements_3w.
@@ -118,7 +116,7 @@ Proof.
   intuition.
 Qed.
 
-Lemma load_agree_after_spill_load (V V':var->option val) VD R M Sp L0
+Lemma load_agree_after_spill_load (slot : var -> var) (V V':var->option val) VD R M Sp L0
       (Inj : injective_on VD slot)
       (Agr1 : agree_on eq R V V')
       (Agr2 : agree_on eq M V (fun x : var => V' (slot x)))
@@ -149,7 +147,7 @@ Proof.
     rewrite of_list_elements. hnf; intros; cset_tac.
 Qed.
 
-Lemma regs_untouched_after_spill_load (V V' V'':var->option val) VD R M K Sp L0
+Lemma regs_untouched_after_spill_load (slot : var -> var) (V V' V'':var->option val) VD R M K Sp L0
       (Agr3 : agree_on eq (R ∪ map slot M ∪ map slot Sp ∪ L0)
                        (V' [slot ⊝ elements Sp <-- V' ⊝ elements Sp]
                            [elements L0 <-- V' [slot ⊝ elements Sp <-- V' ⊝ elements Sp]
@@ -169,7 +167,7 @@ Proof.
   rewrite of_list_elements. clear; hnf; intros; cset_tac.
 Qed.
 
-Lemma regs_agree_after_spill_load (V V' V'':var -> option val) VD R M K Sp L0
+Lemma regs_agree_after_spill_load (slot : var -> var) (V V' V'':var -> option val) VD R M K Sp L0
       (Agr3 : agree_on eq (R ∪ map slot M ∪ map slot Sp ∪ L0)
                        (V' [slot ⊝ elements Sp <-- V' ⊝ elements Sp]
                            [elements L0 <-- V' [slot ⊝ elements Sp <-- V' ⊝ elements Sp]
@@ -188,7 +186,7 @@ Proof.
      reflexivity.
 Qed.
 
-Lemma spills_agree_after_spill_load (V V' V'':var->option val) VD R M Sp L0
+Lemma spills_agree_after_spill_load (slot : var -> var) (V V' V'':var->option val) VD R M Sp L0
       (Inj : injective_on VD slot) (Disj : disj VD (map slot VD)) (Incl : R ∪ M [<=] VD)
       (Agr1 : agree_on eq R V V')
       (Agr2 : agree_on eq M V (fun x : var => V' (slot x)))
@@ -199,7 +197,7 @@ Lemma spills_agree_after_spill_load (V V' V'':var->option val) VD R M Sp L0
                                      ⊝ slot ⊝ elements L0]) V'')
   : agree_on eq Sp V (fun x : var => V'' (slot x)).
 Proof.
-  eapply agree_on_comp; eauto; [ symmetry; eapply agree_on_incl; eauto with cset | ].
+  eapply agree_on_comp; eauto; [ symmetry; eapply agree_on_incl; eauto; clear_all; cset_tac | ].
   etransitivity; [eapply agree_on_incl; [eapply Agr1| eauto with cset]|].
   eapply agree_on_update_list_dead_slot; eauto.
   etransitivity; [| eapply agree_on_eq_oval, agree_on_update_list_map];
@@ -213,7 +211,7 @@ Proof.
   rewrite of_list_elements, <- Incl, LSpM, <- SpR; reflexivity.
 Qed.
 
-Lemma mem_untouched_after_spill_load (V V' V'':var->option val) VD R M Sp L0
+Lemma mem_untouched_after_spill_load (slot : var -> var) (V V' V'':var->option val) VD R M Sp L0
       (Inj : injective_on VD slot) (Disj : disj VD (map slot VD)) (Incl : R ∪ M [<=] VD)
       (Agr1 : agree_on eq R V V')
       (Agr2 : agree_on eq M V (fun x : var => V' (slot x)))
@@ -226,20 +224,22 @@ Lemma mem_untouched_after_spill_load (V V' V'':var->option val) VD R M Sp L0
 Proof.
   etransitivity; [eapply agree_on_incl; [eapply Agr2| eauto with cset ]|].
   eapply agree_on_comp_both; eauto using proper_onv.
-  etransitivity; [| eapply agree_on_incl; [eapply Agr3| eauto with cset]].
-  eapply agree_on_update_list_dead.
-  eapply agree_on_update_list_dead. reflexivity.
-  rewrite of_list_map, of_list_elements; eauto.
-  intros.
-  eapply injective_disj; eauto.
-  hnf; intros; cset_tac.
-  eapply injective_on_incl; eauto. rewrite <- Incl. cset_tac.
-  rewrite of_list_elements.
-  eapply disj_incl; eauto.
-  rewrite <- Incl, LSpM, <- SpR. eauto. eauto with cset.
+  etransitivity; [| eapply agree_on_incl; [eapply Agr3| eauto]].
+  - eapply agree_on_update_list_dead.
+    eapply agree_on_update_list_dead. reflexivity.
+    rewrite of_list_map, of_list_elements; eauto.
+    intros.
+    eapply injective_disj; eauto.
+    hnf; intros; cset_tac.
+    eapply injective_on_incl; eauto. rewrite <- Incl. rewrite SpR at 1.
+    cset_tac.
+    rewrite of_list_elements.
+    eapply disj_incl; eauto.
+    rewrite <- Incl, LSpM, <- SpR. eauto. eauto with cset.
+  - rewrite minus_incl. clear. cset_tac.
 Qed.
 
-Lemma mem_agrees_after_spill_load (V V' V'':var->option val) VD R M Sp L0
+Lemma mem_agrees_after_spill_load (slot : var -> var) (V V' V'':var->option val) VD R M Sp L0
       (Agr3 : agree_on eq (R ∪ map slot M ∪ map slot Sp ∪ L0)
                        (V' [slot ⊝ elements Sp <-- V' ⊝ elements Sp]
                            [elements L0 <-- V' [slot ⊝ elements Sp <-- V' ⊝ elements Sp]
@@ -257,7 +257,7 @@ Proof.
 Qed.
 
 
-Lemma mem_agrees_after_spill_load_update (V V' V'':var->option val) VD R M Sp L0 x v
+Lemma mem_agrees_after_spill_load_update (slot : var -> var) (V V' V'':var->option val) VD R M Sp L0 x v
       (Agr5 : agree_on eq (Sp ∪ M) V (fun x : var => V'' (slot x)))
       (Disj : disj VD (map slot VD)) (Incl : R ∪ M [<=] VD) (NotIn: x ∉ Sp ∪ M)
       (xIn:x ∈ VD)
@@ -271,7 +271,7 @@ Lemma mem_agrees_after_spill_load_update (V V' V'':var->option val) VD R M Sp L0
   : agree_on eq (Sp ∪ M) (V [x <- ⎣ v ⎦]) (fun x0 : var => (V'' [x <- ⎣ v ⎦]) (slot x0)).
 Proof.
   eapply agree_on_update_dead_both_comp_right; eauto.
-  eapply disj_incl; eauto with cset.
+  eapply disj_incl; eauto. rewrite SpR, Incl. revert xIn; clear. cset_tac.
   rewrite SpR, Incl. cset_tac.
 Qed.
 
@@ -283,7 +283,7 @@ Qed.
 
 Hint Resolve RKL_incl | 0: cset.
 
-Lemma defined_on_after_spill_load (V V' V'':var->option val) VD R M Sp L0  K
+Lemma defined_on_after_spill_load (slot : var -> var) (V V' V'':var->option val) VD R M Sp L0  K
       (Agr5 : agree_on eq (Sp ∪ M) V (fun x : var => V'' (slot x)))
       (Disj : disj VD (map slot VD)) (Incl : R ∪ M [<=] VD)
       (Agr1 : agree_on eq R V V') (Def : defined_on (R ∪ map slot M) V')
@@ -329,7 +329,7 @@ Proof.
      rewrite of_list_elements. clear; hnf; intros; cset_tac.
 Qed.
 
-Lemma omap_slotlift (V V'':onv val) xl Yv ib (Len:❬xl❭=❬ib❭) Sl R K L0 Sp M
+Lemma omap_slotlift (slot : var -> var) (V V'':onv val) xl Yv ib (Len:❬xl❭=❬ib❭) Sl R K L0 Sp M
       (Agr4 : agree_on eq (R \ K ∪ L0) V V'')
       (Agr5 : agree_on eq (Sp ∪ M) V (fun x : var => V'' (slot x)))
       (FVincl: of_list xl [<=] Sl ∪ (R \ K ∪ L0))
@@ -357,7 +357,7 @@ Proof.
     revert NOTCOND H. clear; cset_tac.
 Qed.
 
-Lemma slot_lift_params_agree X (E:onv X) E' R M Z VL (Len:❬Z❭=❬VL❭)
+Lemma slot_lift_params_agree (slot : var -> var) X (E:onv X) E' R M Z VL (Len:❬Z❭=❬VL❭)
       (Agr2:agree_on eq (R \ of_list Z) E E')
       (Disj:disj (R ∪ of_list Z) (map slot (R ∪ of_list Z)))
       (Incl:of_list Z [<=] R ∪ M)
@@ -387,7 +387,7 @@ Proof.
     revert n H0; clear; cset_tac.
 Qed.
 
-Lemma update_with_list_lookup_in_list_first_slot' A (E:onv A) n (R M:set var)
+Lemma update_with_list_lookup_in_list_first_slot' (slot : var -> var) A (E:onv A) n (R M:set var)
       Z (Y:list A) z
 : length Z = length Y
   -> get Z n z
@@ -428,7 +428,7 @@ Proof.
         -- exfalso. eapply H2. eapply Inj; eauto with cset.
 Qed.
 
-Lemma slot_lift_params_agree_slot X (E:onv X) E' R M Z VL (Len:❬Z❭=❬VL❭)
+Lemma slot_lift_params_agree_slot (slot : var -> var) X (E:onv X) E' R M Z VL (Len:❬Z❭=❬VL❭)
       (Agr2:agree_on eq (M \ of_list Z) E (fun x => E' (slot x)))
       (Disj:disj (of_list Z ∪ R ∪ M) (map slot (of_list Z ∪ R ∪ M)))
       (Inj:injective_on (of_list Z ∪ R ∪ M) slot)
@@ -458,7 +458,8 @@ Proof.
       cset_tac.
 Qed.
 
-Instance SR (VD:set var) : PointwiseProofRelationI (((set var) * (set var)) * params) := {
+Instance SR (slot : var -> var) (VD:set var)
+  : PointwiseProofRelationI (((set var) * (set var)) * params) := {
    ParamRelIP RMZ Z Z' := Z' = slot_lift_params slot (fst RMZ) Z /\ Z = snd RMZ;
    ArgRelIP V V' RMZ VL VL' :=
      VL' = extend_args VL (mark_elements (snd RMZ) (fst (fst RMZ) ∩ snd (fst RMZ))) /\
@@ -471,7 +472,7 @@ Instance SR (VD:set var) : PointwiseProofRelationI (((set var) * (set var)) * pa
 
 Require Import AppExpFree Subset1.
 
-Lemma sim_I k Λ ZL LV VD r L L' V V' R M s lv sl ra
+Lemma sim_I (slot : var -> var) k Λ ZL LV VD r L L' V V' R M s lv sl ra
   : agree_on eq R V V'
     -> agree_on eq M V (fun x => V' (slot x))
     -> live_sound Imperative ZL LV s lv
@@ -481,7 +482,7 @@ Lemma sim_I k Λ ZL LV VD r L L' V V' R M s lv sl ra
     -> disj VD (map slot VD)
     -> defined_on (R ∪ map slot M) V'
     -> R ∪ M ⊆ fst (getAnn ra)
-    -> labenv_sim Sim (sim r) (SR VD) (zip pair Λ ZL) L L'
+    -> labenv_sim Sim (sim r) (SR slot VD) (zip pair Λ ZL) L L'
     -> (fst (getAnn ra) ∪ snd (getAnn ra)) ⊆ VD
     -> renamedApart s ra
     -> app_expfree s
@@ -511,7 +512,7 @@ Proof.
   rewrite map_union; eauto. clear; cset_tac.
   rewrite !lookup_list_map. intros ? Agr3.
   time (destruct s; invt spill_sound; invt spill_live; invt live_sound;
-        invt renamedApart; invt app_expfree; try invt (@ann_R _ _ Subset1));
+        invt renamedApart; invt app_expfree; try invtc (@ann_R _ _ Subset1));
     exploit regs_agree_after_spill_load as Agr4; eauto;
       exploit mem_agrees_after_spill_load as Agr5; eauto;
         simpl in *; rewrite !elements_empty; simpl.
@@ -605,14 +606,14 @@ Proof.
       unfold merge in EQ. simpl in *.
       rewrite <- zip_app; [| eauto with len].
       eapply IH; eauto.
-      * eapply slot_lift_params_agree; eauto.
+      * eapply slot_lift_params_agree; only 1-2: eauto.
         -- eapply disj_incl; eauto.
            ++ rewrite In3, <- EQ, In1, In2.
              clear; eauto with cset.
            ++ rewrite In3, <- EQ, In1, In2.
              clear; eauto with cset.
         -- rewrite EQ; eauto.
-      * eapply slot_lift_params_agree_slot; eauto.
+      * eapply slot_lift_params_agree_slot; only 1-2: eauto.
         -- eapply disj_incl; eauto.
            rewrite In3, <- EQ, In1, In2. clear; cset_tac.
            eapply map_incl; eauto.
@@ -652,5 +653,3 @@ Proof.
     + eauto with len.
     + eauto with len.
 Qed.
-
-End Correctness.

@@ -90,8 +90,8 @@ Lemma renamedApart_ext s an an'
   -> renamedApart s an'.
 Proof.
   intros.
-  general induction H0; simpl; invt (ann_R (@pe var _));
-  invt (@pe var _); eauto using renamedApart.
+  general induction H0; simpl; invtc (ann_R (@pe var _));
+  invtc (@pe var _); eauto using renamedApart.
   - econstructor; try srewrite c; try srewrite d; eauto.
     rewrite <- (ann_R_get H9). eauto.
   - econstructor; try srewrite c; try srewrite d; eauto.
@@ -103,18 +103,17 @@ Proof.
     { eapply zip_ext_PIR2; eauto; try congruence.
       intros. get_functional.
       exploit H14; eauto. unfold defVars.
-      rewrite H13. reflexivity.
+      rewrite H10. reflexivity.
     }
-    econstructor; try srewrite c; try srewrite d; eauto with len.
-    + intros. edestruct (get_length_eq _ H13 (eq_sym H12)).
-      eapply H1; eauto.
+    econstructor; eauto with len.
+    + intros; inv_get; eauto.
     + instantiate (1:=Dt).
-      hnf; intros. rewrite <- H10. inv_get.
-      exploit H14; eauto. rewrite <- H18.
+      hnf; intros. inv_get.
+      exploit H14; eauto. rewrite <- H9, <- H16.
       eapply H2; eauto.
     + eapply pairwise_disj_PIR2; eauto. symmetry; eauto.
-    + rewrite <- H15; eauto.
-    + rewrite H8. eauto.
+    + rewrite <- H9, <- H15; eauto.
+    + rewrite <- H13, H7. eauto.
 Qed.
 
 Instance renamedApart_morphism
