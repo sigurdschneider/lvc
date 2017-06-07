@@ -166,7 +166,7 @@ Proof.
   eapply agree_on_update_list_dead.
   eapply agree_on_update_list_dead. reflexivity.
   rewrite of_list_map, of_list_elements; eauto.
-  symmetry. eapply disj_incl; eauto with cset.
+  symmetry. eapply disj_incl; eauto; only 2: eauto with cset.
   rewrite <- Incl. clear; cset_tac.
   rewrite of_list_elements. clear; hnf; intros; cset_tac.
 Qed.
@@ -237,8 +237,8 @@ Proof.
   hnf; intros; cset_tac.
   eapply injective_on_incl; eauto. rewrite <- Incl. cset_tac.
   rewrite of_list_elements.
-  eapply disj_incl; eauto with cset.
-  rewrite <- Incl, LSpM, <- SpR. eauto.
+  eapply disj_incl; eauto.
+  rewrite <- Incl, LSpM, <- SpR. eauto. eauto with cset.
 Qed.
 
 Lemma mem_agrees_after_spill_load (V V' V'':var->option val) VD R M Sp L0
