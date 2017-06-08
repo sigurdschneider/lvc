@@ -78,12 +78,10 @@ Proof.
       ensure (x ∈ getAnn slv \/ isCall e -> live_exp_sound e a); dec_solve.
   - ensure (op2bool e = None -> live_op_sound e a);
       ensure (op2bool e <> Some false -> getAnn slv1 ⊆ a);
-      ensure (op2bool e <> Some true -> getAnn slv2 ⊆ a);
-      case_eq (op2bool e); [ intros [] EQ| intros EQ ].
-    + edestruct (IH s1); eauto; [ dec_solve | dec_right].
-    + edestruct (IH s2); eauto; [ dec_solve | dec_right].
-    + edestruct (IH s1); eauto; [| dec_right];
-        edestruct (IH s2); eauto; [ dec_solve | dec_right].
+      ensure (op2bool e <> Some true -> getAnn slv2 ⊆ a).
+    edestruct (IH s1); eauto; [ | dec_right].
+    edestruct (IH s2); eauto; [ | dec_right].
+    dec_solve.
   - destruct (get_dec ZL (counted l)) as [[Z ?]|?]; [| dec_right];
     destruct (get_dec Lv (counted l)) as [[blv ?]|?]; [| dec_right];
     ensure (argsLive a blv Y Z).

@@ -112,8 +112,8 @@ Inductive true_live_sound (i:overapproximation)
      -> (getAnn al\ singleton x) ⊆ lv
      -> true_live_sound i ZL Lv (stmtLet x e b) (ann1 lv al)
 | TLIf ZL Lv e b1 b2 lv al1 al2
-  :  (op2bool e <> Some false -> true_live_sound i ZL Lv b1 al1)
-     -> (op2bool e <> Some true -> true_live_sound i ZL Lv b2 al2)
+  :  true_live_sound i ZL Lv b1 al1
+     -> true_live_sound i ZL Lv b2 al2
      -> (op2bool e = None -> live_op_sound e lv)
      -> (op2bool e <> Some false -> getAnn al1 ⊆ lv)
      -> (op2bool e <> Some true -> getAnn al2 ⊆ lv)

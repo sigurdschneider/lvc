@@ -515,8 +515,8 @@ Proof.
   intros LS UC.
   general induction LS; inv UC; simpl; eauto.
   - repeat cases; simpl; eauto.
-    + rewrite H0; eauto.
-    + rewrite H2; eauto.
+    + rewrite IHLS1; eauto.
+    + rewrite IHLS2; eauto.
   - cases.
     + rewrite IHLS; eauto.
     + rewrite Heq. simpl; eauto.
@@ -537,19 +537,19 @@ Proof.
     intros. eapply H. destruct H1; eauto.
     left. eapply compile_live_incl; eauto.
   - repeat cases.
-    + eapply H0; [eauto| eauto | ].
-      rewrite <- H9; [eauto|].
+    + eapply IHLS1; [eauto| ].
+      rewrite <- H5; [eauto|].
       rewrite op2bool_cop2bool in COND; eauto.
       rewrite COND. intro. clear_trivial_eqs.
     + eapply op2bool_cop2bool_not_some in NOTCOND.
-      eapply H2; eauto.
-      exploit H10; eauto.
-    + exploit H9; eauto using op2bool_cop2bool_not_some.
-      exploit H10; eauto using op2bool_cop2bool_not_some.
+      eapply IHLS2; eauto.
+      exploit H6; eauto.
+    + exploit H5; eauto using op2bool_cop2bool_not_some.
+      exploit H6; eauto using op2bool_cop2bool_not_some.
       econstructor; intros; eauto; try congruence.
       rewrite compile_live_incl; eauto.
       rewrite compile_live_incl; eauto.
-  - repeat get_functional. simpl in *.
+  - simpl in *.
     assert (❬take (labN l) RL❭ = ❬take (labN l) ZL❭).
     eapply get_range in H. eapply get_range in H7.
     repeat rewrite take_length_le; eauto. omega. omega.

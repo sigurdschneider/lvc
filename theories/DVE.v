@@ -340,8 +340,8 @@ Proof.
   - cases; simpl; try reflexivity.
     rewrite IHtrue_live_sound. rewrite <- H1. cset_tac; intuition.
   - repeat cases; simpl; try reflexivity.
-    + etransitivity; eauto. rewrite H4; eauto.
-    + etransitivity; eauto. rewrite <- H5; eauto.
+    + etransitivity; eauto. rewrite H2; eauto.
+    + etransitivity; eauto. rewrite <- H3; eauto.
 Qed.
 
 Lemma compile_live_incl_empty i ZL LV s lv
@@ -557,9 +557,9 @@ Proof.
   general induction TLS; invt renamedApart; simpl; repeat cases; simpl; srewrite D'; eauto.
   - rewrite IHTLS; eauto. rewrite H9; eauto.
   - rewrite IHTLS; eauto. rewrite H9; eauto with cset.
-  - rewrite H0; eauto. rewrite H15; eauto with cset.
-  - rewrite H2; eauto. rewrite H16; eauto with cset.
-  - rewrite H0, H2; eauto. rewrite H15, H16; eauto.
+  - rewrite IHTLS1; eauto. pe_rewrite. eauto with cset.
+  - rewrite IHTLS2; eauto. pe_rewrite; eauto with cset.
+  - rewrite IHTLS1, IHTLS2; eauto. pe_rewrite; eauto.
   - rewrite IHTLS, H11; eauto.
     eapply incl_union_lr; eauto.
     eapply list_union_incl; intros; inv_get; simpl.
@@ -599,19 +599,17 @@ Proof.
     + eapply IHTLS; eauto.
       * rewrite H9; simpl; cset_tac.
   - repeat cases; eauto.
-    + exploit H4; eauto.
-      eapply H0; eauto with cset pe.
-    + exploit H5; eauto.
-      eapply H2; eauto with cset pe.
+    + eapply IHTLS1; eauto with cset pe.
+    + eapply IHTLS2; eauto with cset pe.
     + simpl in *.
       econstructor; try reflexivity; eauto.
       * rewrite <- inclD. eauto with cset.
-      * rewrite !snd_getAnn_renamedApart, H15, H16; eauto.
-      * exploit H4; eauto.
-        eapply H0; pe_rewrite; eauto with cset.
+      * rewrite !snd_getAnn_renamedApart, H11, H12; eauto.
+      * exploit IHTLS1; eauto.
+        pe_rewrite; eauto with cset.
         rewrite <- inclD; eauto with cset.
-      * exploit H5; eauto.
-        eapply H2; pe_rewrite; eauto with cset.
+      * exploit IHTLS2; eauto.
+        pe_rewrite; eauto with cset.
         rewrite <- inclD; eauto with cset.
       * eapply pe_eta_split; econstructor; simpl; eauto.
       * eapply pe_eta_split; econstructor; simpl; eauto.
@@ -667,10 +665,10 @@ Proof.
     eauto using Op.freeVars_live; set_simpl.
   - exploit Exp.freeVars_live; eauto with cset.
   - cset_tac.
-  - rewrite H0; eauto.
-  - rewrite H2; eauto.
+  - rewrite IHLS1; eauto.
+  - rewrite IHLS2; eauto.
   - exploit Op.freeVars_live; eauto.
-    rewrite H0, H2; eauto. rewrite H4, H5, H6; eauto.
+    rewrite IHLS1, IHLS2; eauto. rewrite H0, H1, H2; eauto.
     clear; cset_tac.
   - erewrite get_nth; eauto using zip_get; simpl.
     eapply list_union_incl; intros; inv_get; eauto with cset.
@@ -697,9 +695,9 @@ Proof.
       exploit DVE_freeVars_live; eauto.
     }
     cset_tac.
-  - rewrite H0; eauto with cset.
-  - rewrite H2; eauto with cset.
-  - rewrite H0, H2; eauto with cset.
+  - rewrite IHLS1; eauto with cset.
+  - rewrite IHLS2; eauto with cset.
+  - rewrite IHLS1, IHLS2; eauto with cset.
   - erewrite get_nth; eauto using zip_get; simpl.
     eapply list_union_incl; intros; inv_get; eauto with cset.
     eapply get_flt in H4; eauto; dcr.
@@ -765,9 +763,10 @@ Proof.
   - econstructor; eauto with cset len.
   - econstructor; eauto with cset len.
   - cases; simpl in *.
-    + econstructor; eauto with cset.
-      eapply IHAN; eauto. cset_tac. pe_rewrite. cset_tac.
-      cset_tac.
+    + econstructor. eauto with cset.
+      eapply IHAN; try eassumption.
+      eauto with cset. pe_rewrite. eauto with cset.
+      eauto with cset.
     + eapply IHAN; eauto. cset_tac. pe_rewrite. cset_tac.
   - repeat cases; simpl in *.
     + eapply IHAN1; eauto. rewrite H9; eauto. pe_rewrite. eauto.
