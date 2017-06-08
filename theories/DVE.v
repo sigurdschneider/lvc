@@ -137,11 +137,6 @@ Fixpoint compile (LV:list ((set var) * params)) (s:stmt) (a:ann (set var)) :=
       then stmtLet x e (compile LV s an)
       else compile LV s an
     | stmtIf e s t, ann2 _ ans ant =>
-      if [op2bool e = Some true] then
-        (compile LV s ans)
-      else if [ op2bool e = Some false ] then
-        (compile LV t ant)
-      else
         stmtIf e (compile LV s ans) (compile LV t ant)
     | stmtApp f Y, ann0 _ =>
       let lvZ := nth (counted f) LV (∅, nil) in
@@ -191,7 +186,7 @@ Proof.
     + cases. exploit H9; eauto. inv H2.
       * eapply (sim_let_call il_statetype_I); eauto 10 using agree_on_update_same, agree_on_incl.
         erewrite <- omap_op_eval_live_agree; eauto. eapply agree_on_sym; eauto.
-  - eapply (sim_if_elim il_statetype_I); intros; eauto 20 using op_eval_live, agree_on_incl.
+  - eapply (sim_cond il_statetype_I); intros; eauto 20 using op_eval_live, agree_on_incl.
   - eapply labenv_sim_app; eauto using zip_get.
     + intros; simpl in *; dcr; subst.
       split; [|split]; intros.
@@ -265,7 +260,7 @@ Proof.
     + cases. exploit H9; eauto. inv H2.
       * eapply (sim_let_call il_statetype_F); eauto 10 using agree_on_update_same, agree_on_incl.
         erewrite <- omap_op_eval_live_agree; eauto. eapply agree_on_sym; eauto.
-  - eapply (sim_if_elim il_statetype_F); intros; eauto 20 using op_eval_live, agree_on_incl.
+  - eapply (sim_cond il_statetype_F); intros; eauto 20 using op_eval_live, agree_on_incl.
   - eapply labenv_sim_app; eauto using zip_get.
     + intros; simpl in *; dcr; subst.
       split; [|split]; intros.
@@ -316,12 +311,7 @@ Fixpoint compile_live (s:stmt) (a:ann (set var)) (G:set var) : ann (set var) :=
       if [x ∈ getAnn an \/ isCall e] then ann1 (G ∪ lv) (compile_live s an {x})
                          else compile_live s an G
     | stmtIf e s t, ann2 lv ans ant =>
-      if [op2bool e = Some true] then
-        compile_live s ans G
-      else if [op2bool e = Some false ] then
-        compile_live t ant G
-      else
-        ann2 (G ∪ lv) (compile_live s ans ∅) (compile_live t ant ∅)
+      ann2 (G ∪ lv) (compile_live s ans ∅) (compile_live t ant ∅)
     | stmtApp f Y, ann0 lv => ann0 (G ∪ lv)
     | stmtReturn x, ann0 lv => ann0 (G ∪ lv)
     | stmtFun F t, annF lv ans ant =>
@@ -339,9 +329,6 @@ Proof.
   intros. general induction H; simpl; eauto.
   - cases; simpl; try reflexivity.
     rewrite IHtrue_live_sound. rewrite <- H1. cset_tac; intuition.
-  - repeat cases; simpl; try reflexivity.
-    + etransitivity; eauto. rewrite H2; eauto.
-    + etransitivity; eauto. rewrite <- H3; eauto.
 Qed.
 
 Lemma compile_live_incl_empty i ZL LV s lv
@@ -359,7 +346,6 @@ Lemma incl_compile_live G i ZL LV s lv
 Proof.
   intros. general induction H; simpl; eauto.
   - cases; simpl; eauto with cset.
-  - repeat cases; simpl; eauto.
 Qed.
 
 Lemma dve_live i ZL LV s lv G
@@ -508,11 +494,7 @@ Fixpoint compile_renamedApart (s:stmt) (lv:ann (set var)) (a:ann (set var * set 
   | stmtIf e s t, ann2 lv ans ant, ann2 (_,_) bns bnt =>
     let bns' := compile_renamedApart s ans bns D in
     let bnt' := compile_renamedApart t ant bnt D in
-      if [op2bool e = Some true] then bns'
-      else if [op2bool e = Some false ] then bnt'
-           else ann2 (D,
-                      snd (getAnn bns') ∪ snd (getAnn bnt'))
-                     bns' bnt'
+    ann2 (D, snd (getAnn bns') ∪ snd (getAnn bnt')) bns' bnt'
     | stmtApp f Y, ann0 lv, ann0 _ => ann0 (D, ∅)
     | stmtReturn x, ann0 lv, ann0 _ => ann0 (D, ∅)
     | stmtFun F t, annF lv anF ant, annF (_, _) bnF bnt =>
@@ -557,8 +539,6 @@ Proof.
   general induction TLS; invt renamedApart; simpl; repeat cases; simpl; srewrite D'; eauto.
   - rewrite IHTLS; eauto. rewrite H9; eauto.
   - rewrite IHTLS; eauto. rewrite H9; eauto with cset.
-  - rewrite IHTLS1; eauto. pe_rewrite. eauto with cset.
-  - rewrite IHTLS2; eauto. pe_rewrite; eauto with cset.
   - rewrite IHTLS1, IHTLS2; eauto. pe_rewrite; eauto.
   - rewrite IHTLS, H11; eauto.
     eapply incl_union_lr; eauto.
@@ -598,21 +578,17 @@ Proof.
       * eapply pe_eta_split; econstructor; simpl; eauto.
     + eapply IHTLS; eauto.
       * rewrite H9; simpl; cset_tac.
-  - repeat cases; eauto.
-    + eapply IHTLS1; eauto with cset pe.
-    + eapply IHTLS2; eauto with cset pe.
-    + simpl in *.
-      econstructor; try reflexivity; eauto.
-      * rewrite <- inclD. eauto with cset.
-      * rewrite !snd_getAnn_renamedApart, H11, H12; eauto.
-      * exploit IHTLS1; eauto.
-        pe_rewrite; eauto with cset.
-        rewrite <- inclD; eauto with cset.
-      * exploit IHTLS2; eauto.
-        pe_rewrite; eauto with cset.
-        rewrite <- inclD; eauto with cset.
-      * eapply pe_eta_split; econstructor; simpl; eauto.
-      * eapply pe_eta_split; econstructor; simpl; eauto.
+  - econstructor; try reflexivity; eauto.
+    + rewrite <- inclD. eauto with cset.
+    + rewrite !snd_getAnn_renamedApart, H11, H12; eauto.
+    + exploit IHTLS1; eauto.
+      pe_rewrite; eauto with cset.
+      rewrite <- inclD; eauto with cset.
+    + exploit IHTLS2; eauto.
+      pe_rewrite; eauto with cset.
+      rewrite <- inclD; eauto with cset.
+    + eapply pe_eta_split; econstructor; simpl; eauto.
+    + eapply pe_eta_split; econstructor; simpl; eauto.
   - econstructor; eauto with len; (try eapply eq_union_lr); eauto.
     * intros; inv_get. simpl in *.
       rewrite <- zip_app;[| eauto with len].
@@ -665,8 +641,6 @@ Proof.
     eauto using Op.freeVars_live; set_simpl.
   - exploit Exp.freeVars_live; eauto with cset.
   - cset_tac.
-  - rewrite IHLS1; eauto.
-  - rewrite IHLS2; eauto.
   - exploit Op.freeVars_live; eauto.
     rewrite IHLS1, IHLS2; eauto. rewrite H0, H1, H2; eauto.
     clear; cset_tac.
@@ -695,8 +669,6 @@ Proof.
       exploit DVE_freeVars_live; eauto.
     }
     cset_tac.
-  - rewrite IHLS1; eauto with cset.
-  - rewrite IHLS2; eauto with cset.
   - rewrite IHLS1, IHLS2; eauto with cset.
   - erewrite get_nth; eauto using zip_get; simpl.
     eapply list_union_incl; intros; inv_get; eauto with cset.
@@ -768,14 +740,9 @@ Proof.
       eauto with cset. pe_rewrite. eauto with cset.
       eauto with cset.
     + eapply IHAN; eauto. cset_tac. pe_rewrite. cset_tac.
-  - repeat cases; simpl in *.
-    + eapply IHAN1; eauto. rewrite H9; eauto. pe_rewrite. eauto.
-    + eapply IHAN2; eauto. rewrite H10; eauto. pe_rewrite; eauto.
-    + econstructor. simpl. rewrite Incl1, Incl2; clear_all; cset_tac.
-      * eapply IHAN1; eauto with cset. rewrite H9; eauto with cset.
-        pe_rewrite; eauto.
-      * eapply IHAN2; eauto with cset. rewrite H10; eauto.
-        pe_rewrite; eauto.
+  - econstructor. simpl. rewrite Incl1, Incl2; clear_all; cset_tac.
+    + eapply IHAN1; eauto with cset. pe_rewrite. eauto with cset.
+    + eapply IHAN2; eauto with cset. pe_rewrite. eauto.
   - econstructor; simpl; eauto.
     + rewrite Incl1, Incl2; clear; cset_tac.
     + eauto with len.

@@ -14,14 +14,7 @@ Definition liveness_transform (i:overapproximation)
   match st, a with
   | stmtLet x e s, anni1 d =>
     d \ singleton x ∪ (if [x ∈ d \/ isCall e] then Exp.freeVars e else ∅)
-  | stmtIf e s t, anni2 ds dt =>
-    if [op2bool e = Some true] then
-      ds
-    else
-      if [ op2bool e = Some false ] then
-        dt
-      else
-        Op.freeVars e ∪ (ds) ∪ (dt)
+  | stmtIf e s t, anni2 ds dt => Op.freeVars e ∪ (ds) ∪ (dt)
   | stmtApp f Y, anni0 =>
     let lv := nth (counted f) DL ∅ in
     let Z :=  nth (counted f) ZL nil in

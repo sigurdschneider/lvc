@@ -46,12 +46,11 @@ Proof.
     + rewrite getAnn_mapAnn. simpl.
       rewrite <- H9.
       eapply ann_R_get in H12. rewrite <- H12.
-      cases. reflexivity.
-      cases. congruence. eauto with cset.
+      eauto with cset.
     + rewrite getAnn_mapAnn. simpl.
-      rewrite <- H9. cases. congruence.
+      rewrite <- H9.
       eapply ann_R_get in H13. rewrite <- H13.
-      cases. reflexivity. eauto with cset.
+      eauto with cset.
   - edestruct (get_in_range _ H2) as [Z ?]; eauto.
     edestruct (get_in_range _ H3) as [[Lv ?] ?]; eauto.
     econstructor; eauto.

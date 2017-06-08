@@ -76,9 +76,9 @@ Proof.
   - edestruct (IH s); eauto; [| dec_right ];
       ensure (getAnn slv \ singleton x ⊆ a);
       ensure (x ∈ getAnn slv \/ isCall e -> live_exp_sound e a); dec_solve.
-  - ensure (op2bool e = None -> live_op_sound e a);
-      ensure (op2bool e <> Some false -> getAnn slv1 ⊆ a);
-      ensure (op2bool e <> Some true -> getAnn slv2 ⊆ a).
+  - ensure (live_op_sound e a);
+      ensure (getAnn slv1 ⊆ a);
+      ensure (getAnn slv2 ⊆ a).
     edestruct (IH s1); eauto; [ | dec_right].
     edestruct (IH s2); eauto; [ | dec_right].
     dec_solve.

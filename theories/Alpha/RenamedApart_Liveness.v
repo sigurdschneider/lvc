@@ -415,7 +415,6 @@ Proof.
   - edestruct (IH s1); dcr; eauto using disjoint_if1.
     do 2 eexists; split; [| split]; eauto. rewrite <- H13; eauto.
   - edestruct (IH s2); dcr; eauto using disjoint_if2 with cset.
-    do 2 eexists; split; [| split]; eauto. rewrite <- H14; eauto.
   - eauto.
   - clear H H1. eapply renamedApart_disj in H0. simpl in *.
     exploit (IH s); eauto.

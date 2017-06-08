@@ -114,9 +114,9 @@ Inductive true_live_sound (i:overapproximation)
 | TLIf ZL Lv e b1 b2 lv al1 al2
   :  true_live_sound i ZL Lv b1 al1
      -> true_live_sound i ZL Lv b2 al2
-     -> (op2bool e = None -> live_op_sound e lv)
-     -> (op2bool e <> Some false -> getAnn al1 ⊆ lv)
-     -> (op2bool e <> Some true -> getAnn al2 ⊆ lv)
+     -> live_op_sound e lv
+     -> getAnn al1 ⊆ lv
+     -> getAnn al2 ⊆ lv
      -> true_live_sound i ZL Lv (stmtIf e b1 b2) (ann2 lv al1 al2)
 | TLGoto ZL Lv l Y lv blv Z
   : get ZL (counted l) Z
