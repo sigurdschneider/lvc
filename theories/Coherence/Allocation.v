@@ -273,16 +273,16 @@ Proof.
              rewrite lookup_set_minus_incl; eauto with cset.
              rewrite lookup_set_singleton'; eauto.
              rewrite meet_comm. eapply meet_minus.
-           ++ assert (getAnn al [=] getAnn al ∪ singleton x) by cset_tac.
+           ++ assert (getAnn al [=] getAnn al ∪ singleton x) by
+                 (revert H11; clear_all; cset_tac).
              rewrite <- H1. eauto using locally_injective.
-        -- cset_tac.
+        -- revert H4; clear_all; cset_tac.
   - econstructor. simpl in *.
     + eapply srd_monotone.
-      eapply IHRI1; eauto using Subset_trans, lookup_set_incl; eauto;
-      try (now eapply Subset_trans; eauto); pe_rewrite.
-      etransitivity; eauto.
-      eauto using bounded_incl.
-      eapply list_eq_fstNoneOrR_incl; eauto.
+      eapply IHRI1; eauto.
+      * pe_rewrite. rewrite H12; eauto.
+      * pe_rewrite. eauto using bounded_incl.
+      * eapply list_eq_fstNoneOrR_incl; eauto.
     + eapply srd_monotone.
       eapply IHRI2; eauto; pe_rewrite; eauto with cset.
       eapply list_eq_fstNoneOrR_incl; eauto.
@@ -355,7 +355,7 @@ Proof.
   eapply renamedApart_live_imperative_is_functional in H4; eauto using bounded_disjoint, renamedApart_disj, meet1_Subset1, live_sound_annotation, renamedApart_annotation.
   eapply rename_renamedApart_srd in H4; eauto using locally_inj_subset, meet1_Subset, live_sound_annotation, renamedApart_annotation.
   erewrite getAnn_mapAnn2; eauto using live_sound_annotation, renamedApart_annotation.
-  cset_tac; intuition.
+  cset_tac.
 Qed.
 
 (** ** Theorem 6 from the paper. *)
@@ -593,7 +593,7 @@ Proof.
     eapply locally_inj_morphism; eauto.
     eapply inverse_on_update_minus; eauto using inverse_on_incl, locally_injective.
     eapply injective_on_incl. eapply locally_injective, H4.
-    cset_tac; intuition.
+    revert H1; clear_all; cset_tac.
     pe_rewrite; simpl in *. rewrite <- incl_add'; eauto.
   - econstructor; eauto. eapply alpha_op_rename_injective.
     eapply inverse_on_incl. eapply Op.freeVars_live; eauto. eauto.
@@ -622,25 +622,25 @@ Proof.
         simpl. edestruct H2; eauto; simpl in *. eauto with cset.
         eapply inverse_on_incl; try eassumption. simpl.
         exploit H19; eauto using get_range.
-        edestruct renamedApart_globals_live_From; eauto; dcr.
-        pe_rewrite. eauto with cset.
-        eapply renamedApart_disj in RA. eauto.
-        eapply bounded_disjoint; eauto. simpl.
-        eapply renamedApart_disj in RA. eauto.
-        simpl in *. inv_get. rewrite H29; eauto.
-      * {
-          edestruct H8; eauto; dcr. rewrite H5.
-          rewrite zip_app; eauto with len.
-          rewrite List.map_app.
-          rewrite bounded_app; split; eauto using bounded_incl with cset.
-          eapply live_globals_bounded; intros. inv_get.
-          edestruct H8; eauto; dcr.
-          exploit H23 as AnnR'; eauto. eapply ann_R_get in AnnR'.
-          exploit H2; eauto. simpl in *; dcr.
-          split; eauto.
-          rewrite AnnR', H30.
-          clear_all; cset_tac; intuition.
-        }
+        edestruct renamedApart_globals_live_From; try eassumption; dcr.
+        -- pe_rewrite. eauto with cset.
+        -- eapply renamedApart_disj in RA. eauto.
+        -- eapply bounded_disjoint; try eassumption. simpl.
+           eapply renamedApart_disj in RA. eauto.
+        -- simpl in *. inv_get. rewrite H29; eauto.
+      * edestruct H8; try eassumption; dcr. rewrite H5.
+        rewrite zip_app; [| eauto with len].
+        rewrite List.map_app.
+        rewrite bounded_app; split; [| eauto using bounded_incl with cset].
+        eapply live_globals_bounded; intros. inv_get.
+        edestruct H8; try eassumption; dcr.
+        exploit H23 as AnnR'; try eassumption.
+        eapply ann_R_get in AnnR'.
+        exploit H2; try eassumption. simpl in *; dcr.
+        split; eauto.
+        rewrite AnnR', H30.
+        clear_all; cset_tac; intuition.
+
     + eapply IHLS; eauto using inverse_on_incl.
       pe_rewrite.
       rewrite zip_app; eauto with len.
