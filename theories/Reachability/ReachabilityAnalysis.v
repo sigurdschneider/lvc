@@ -1,7 +1,7 @@
 Require Import CSet Le Var.
 
 Require Import Plus Util AllInRel Map CSet ListUpdateAt.
-Require Import Val Var Env IL Annotation Infra.Lattice DecSolve Filter.
+Require Import Val Var Env IL Annotation Infra.Lattice DecSolve Filter ContextMap.
 Require Import Analysis AnalysisForward FiniteFixpointIteration Terminating Subterm.
 
 Remove Hints trans_eq_bool.
@@ -9,7 +9,7 @@ Remove Hints trans_eq_bool.
 Set Implicit Arguments.
 
 Definition reachability_transform (sT:stmt)
-           (ZL:list params)
+           (ZL:ctxmap params)
            (st:stmt) (ST:subTerm st sT)
            (d:bool)
   : anni bool :=
@@ -25,7 +25,7 @@ Definition reachability_transform (sT:stmt)
 
 
 Lemma reachability_transform_monotone (sT s : stmt) (ST : subTerm s sT)
-      (ZL : 〔params〕) (a b : bool)
+      (ZL : ctxmap params) (a b : bool)
   : a ⊑ b
     -> reachability_transform ZL ST a ⊑ reachability_transform ZL ST b.
 Proof.
@@ -34,7 +34,7 @@ Proof.
 Qed.
 
 Lemma reachability_transform_ext (sT s : stmt) (ST : subTerm s sT)
-      (ZL : 〔params〕) (a b : bool)
+      (ZL : ctxmap params) (a b : bool)
   : a ≣ b
     -> reachability_transform ZL ST a ≣ reachability_transform ZL ST b.
 Proof.

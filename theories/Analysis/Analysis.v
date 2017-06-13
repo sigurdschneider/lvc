@@ -180,6 +180,66 @@ Definition setTopAnnO {A} `{LowerBounded A} a (al:option A) :=
   | Some al' => setTopAnn a al'
   end.
 
+Lemma setTopAnnO_annotation A `{LowerBounded A} a (al:option A) s
+  : annotation s a -> annotation s (setTopAnnO a al).
+Proof.
+  intros. unfold setTopAnnO; cases; eauto using setTopAnn_annotation.
+Qed.
+
+Lemma ann_R_setTopAnnO_poLe (A : Type) `{PartialOrder A} `{LowerBounded A} a b
+         (an : ann A) (bn : ann A)
+  : poLe a b -> poLe an bn -> poLe (setTopAnnO an a) (setTopAnnO bn b).
+Proof.
+  intros. unfold setTopAnnO; repeat cases; eauto.
+   eapply ann_R_setTopAnn; eauto. eapply bottom_least.
+Qed.
+
+Lemma ann_R_setTopAnnO_poEq (A : Type) `{PartialOrder A} `{LowerBounded A} a b
+         (an : ann A) (bn : ann A)
+  : poEq a b -> poEq an bn -> poEq (setTopAnnO an a) (setTopAnnO bn b).
+Proof.
+  intros. unfold setTopAnnO; repeat cases; eapply ann_R_setTopAnn; eauto.
+Qed.
+
+Hint Resolve ann_R_setTopAnnO_poLe ann_R_setTopAnnO_poEq.
+
+(*
+Lemma poLe_zip_setTopAnnO X `{PartialOrder X} (A A':list (ann X)) (B B':list X)
+  : poLe A A'
+    -> poLe B B'
+    -> poLe ((@setTopAnnO _) ⊜ A B) (@setTopAnnO _ ⊜ A' B').
+Proof.
+  intros LE_A LE_B; simpl in *.
+  general induction LE_A; inv LE_B; simpl; eauto using PIR2.
+  - econstructor; eauto.
+    eapply ann_R_setTopAnnO; eauto.
+    eapply IHLE_A; eauto.
+Qed.
+
+Lemma PIR2_poEq_zip_setTopAnnO X `{PartialOrder X} (A A':list (ann X)) (B B':list X)
+  : poEq A A'
+    -> poEq B B'
+    -> poEq ((@setTopAnnO _) ⊜ A B) (@setTopAnnO _ ⊜ A' B').
+Proof.
+  intros LE_A LE_B; simpl in *.
+  general induction LE_A; inv LE_B; simpl; eauto using PIR2.
+  - econstructor; eauto.
+    eapply ann_R_setTopAnnO; eauto.
+    eapply IHLE_A; eauto.
+Qed.
+
+Lemma PIR2_setTopAnnO_zip_left X (R:X->X->Prop) `{Reflexive _ R} (A:list (ann X)) B
+  : PIR2 R (Take.take ❬A❭ B) (getAnn ⊝ A)
+    -> PIR2 (ann_R R) (@setTopAnnO _ ⊜ A B) A.
+Proof.
+  intros P. general induction P; destruct A, B; isabsurd; eauto using PIR2.
+  simpl in *. clear_trivial_eqs.
+  econstructor; eauto.
+  eapply ann_R_setTopAnnO_left; eauto.
+Qed.
+*)
+
+
 
 Lemma PIR2_ojoin_zip A `{JoinSemiLattice A} (a:list A) a' b b'
   : poLe a a'

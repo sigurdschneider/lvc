@@ -1,6 +1,6 @@
 Require Import CSet Le ListUpdateAt Coq.Classes.RelationClasses.
 
-Require Import Plus Util AllInRel Map Terminating.
+Require Import Plus Util AllInRel Map Terminating ContextMap.
 Require Import Val Var Env IL Annotation AnnotationLattice.
 Require Import Infra.Lattice DecSolve LengthEq MoreList Status AllInRel OptionR.
 Require Import Keep Subterm Analysis.
@@ -8,48 +8,47 @@ Require Import FiniteFixpointIteration.
 
 Set Implicit Arguments.
 
-
 Definition forwardF (sT:stmt) (Dom:stmt->Type) `{JoinSemiLattice (Dom sT)}
-           (forward:forall s (ST:subTerm s sT) (a:ann (Dom sT)), ann (Dom sT) * 〔Dom sT〕)
+           (forward: ctxmap (Dom sT) -> forall s (ST:subTerm s sT)
+                      (a:ann (Dom sT)), ann (Dom sT) * ctxmap (Dom sT))
+           (AL:ctxmap (Dom sT))
            (F:list (params * stmt)) (anF:list (ann (Dom sT)))
            (ST:forall n s, get F n s -> subTerm (snd s) sT)
-  : list (ann (Dom sT) * 〔Dom sT〕).
-  revert F anF ST.
-  fix g 1. intros.
+  : list (ann (Dom sT)) * ctxmap (Dom sT).
+  revert AL F anF ST.
+  fix g 2. intros.
   destruct F as [|Zs F'].
-  - eapply nil.
+  - eapply (nil, AL).
   - destruct anF as [|a anF'].
-    + eapply nil.
-    + econstructor 2.
-      * refine (forward (snd Zs) _ a).
-        eapply (ST 0 Zs); eauto using get.
-      * eapply (g F' anF').
-        eauto using get.
+    + eapply (nil, AL).
+    + pose proof (forward AL (snd Zs) (ST 0 Zs ltac:(eauto using get)) a).
+      pose proof (g (snd X) F' anF' ltac:(eauto using get)).
+      eapply (fst X :: fst X0, snd X0).
 Defined.
 
-Arguments forwardF [sT] [Dom] {H} {H0} forward F anF ST.
+Arguments forwardF [sT] [Dom] {H} {H0} forward AL F anF ST.
 
-Fixpoint forwardF_length (sT:stmt) (Dom:stmt->Type) `{JoinSemiLattice (Dom sT)} forward
+Fixpoint forwardF_length (sT:stmt) (Dom:stmt->Type) `{JoinSemiLattice (Dom sT)} forward AL
            (F:list (params * stmt)) (anF:list (ann (Dom sT)))
            (ST:forall n s, get F n s -> subTerm (snd s) sT) {struct F}
-  : length (forwardF forward F anF ST) = min (length F) (length anF).
+  : length (fst (forwardF forward AL F anF ST)) = min (length F) (length anF).
 Proof.
   destruct F as [|Zs F'], anF; simpl; eauto.
 Qed.
 
 Smpl Add
      match goal with
-     | [ |- context [ ❬@forwardF ?sT ?Dom ?H ?BSL ?f ?F ?anF ?ST❭ ] ] =>
-       rewrite (@forwardF_length sT Dom H BSL f F anF ST)
-     | [ H : context [ ❬@forwardF ?sT ?Dom ?H ?BSL ?f ?F ?anF ?ST❭ ] |- _ ] =>
-       rewrite (@forwardF_length sT Dom H BSL f F anF ST) in H
+     | [ |- context [ ❬fst (@forwardF ?sT ?Dom ?H ?BSL ?f ?AL ?F ?anF ?ST)❭ ] ] =>
+       rewrite (@forwardF_length sT Dom H BSL f AL F anF ST)
+     | [ H : context [ ❬fst (@forwardF ?sT ?Dom ?H ?BSL ?f ?AL ?F ?anF ?ST)❭ ] |- _ ] =>
+       rewrite (@forwardF_length sT Dom H BSL f AL F anF ST) in H
      end : len.
 
 Lemma forwardF_length_ass (sT:stmt) (Dom:stmt->Type) `{JoinSemiLattice (Dom sT)}
-      forward F anF ST k
+      forward AL F anF ST k
   : length F = k
     -> length F = length anF
-    -> length (forwardF forward F anF ST) = k.
+    -> length (fst (forwardF forward AL F anF ST)) = k.
 Proof.
   intros. rewrite forwardF_length, <- H2.
   repeat rewrite Nat.min_idempotent; eauto.
@@ -57,63 +56,67 @@ Qed.
 
 Hint Resolve @forwardF_length_ass : len.
 
+
+
 Fixpoint forward (sT:stmt) (Dom: stmt -> Type)
          `{JoinSemiLattice (Dom sT)}
          `{@LowerBounded (Dom sT) H}
            (ftransform :
-              forall sT, list params ->
+              forall sT, ctxmap params ->
                     forall s, subTerm s sT -> Dom sT -> anni (Dom sT))
-           (ZL:list (params)) (st:stmt) (ST:subTerm st sT) (a:ann (Dom sT)) {struct st}
-  :  ann (Dom sT) * list (Dom sT)
-  := match st as st', a return st = st' -> ann (Dom sT) * list (Dom sT) with
+           (ZL:ctxmap params) (AL:ctxmap (Dom sT))
+           (st:stmt) (ST:subTerm st sT) (a:ann (Dom sT)) {struct st}
+  :  ann (Dom sT) * ctxmap (Dom sT)
+  := match st as st', a return st = st' -> ann (Dom sT) * ctxmap (Dom sT) with
     | stmtLet x e s as st, ann1 d ans =>
       fun EQ =>
         let d' := getAnni d (ftransform sT ZL st ST d) in
-        let (ans', AL) := forward Dom ftransform ZL (subTerm_EQ_Let EQ ST)
+        let (ans', AL) := forward Dom ftransform ZL AL (subTerm_EQ_Let EQ ST)
                                  (setTopAnn ans d') in
         (ann1 d ans', AL)
+
     | stmtIf x s t, ann2 d ans ant =>
       fun EQ =>
         let an := ftransform sT ZL st ST d in
         let d1 := (getAnniLeft d an) in
         let d2 := (getAnniRight d an) in
-        let (ans', AL) := forward Dom ftransform ZL (subTerm_EQ_If1 EQ ST)
+        let (ans', AL') := forward Dom ftransform ZL AL (subTerm_EQ_If1 EQ ST)
                                   (setTopAnn ans d1) in
-        let (ant', AL') := forward Dom ftransform ZL (subTerm_EQ_If2 EQ ST)
+        let (ant', AL'') := forward Dom ftransform ZL AL' (subTerm_EQ_If2 EQ ST)
                                   (setTopAnn ant d2) in
-        (ann2 d ans' ant', zip join AL AL')
+        (ann2 d ans' ant', AL'')
+
     | stmtApp f Y as st, ann0 d as an =>
       fun EQ =>
         let an := ftransform sT ZL st ST d in
-        (ann0 d, list_update_at ((fun _ => bottom) ⊝ ZL) (counted f) (getAnni d an))
-
+        (ann0 d, ctxmap_join_at AL (counted f) (getAnni d an))
 
     | stmtReturn x as st, ann0 d as an =>
-      fun EQ => (ann0 d, (fun _ => bottom) ⊝ ZL)
+      fun EQ => (ann0 d, AL)
 
     | stmtFun F t as st, annF d anF ant =>
       fun EQ =>
-        let ZL' := List.map fst F ++ ZL in
-        let (ant', ALt) := forward Dom ftransform ZL' (subTerm_EQ_Fun1 EQ ST)
+        let ZL' := ctxmap_app ZL (List.map fst F) in
+        let AL' := ctxmap_extend AL (length F) in
+        let (ant', ALt) := forward Dom ftransform ZL' AL' (subTerm_EQ_Fun1 EQ ST)
                                   (setTopAnn ant d) in
-        let anF' := forwardF (forward Dom ftransform ZL') F anF
-                            (subTerm_EQ_Fun2 EQ ST) in
-        let AL' := fold_left (zip join) (snd ⊝ anF') ALt in
-        (annF d (zip (@setTopAnn _) (fst ⊝ anF') AL') ant',
-         drop ❬F❭ AL')
-    | _, an => fun EQ => (an, (fun _ => bottom) ⊝ ZL)
+        let (anF', AL'') := forwardF (forward Dom ftransform ZL') AL' F anF
+                                   (subTerm_EQ_Fun2 EQ ST) in
+        (annF d (MoreList.mapi (fun i a => setTopAnnO a (ctxmap_at AL'' i)) anF') ant',
+         ctxmap_drop ❬F❭ AL'')
+    | _, an => fun EQ => (an, AL)
   end eq_refl.
 
+(*
 Lemma forwardF_get  (sT:stmt) (Dom:stmt->Type) `{JoinSemiLattice (Dom sT)}
-           (forward: forall s (ST:subTerm s sT) (a:ann (Dom sT)),
-                       ann (Dom sT) * list (Dom sT))
-           (F:list (params * stmt)) (anF:list (ann (Dom sT)))
+      forward
+           (F:list (params * stmt)) (anF:list (ann (Dom sT))) AL
            (ST:forall n s, get F n s -> subTerm (snd s) sT) aa n
-           (GetBW:get (forwardF forward F anF ST) n aa)
+           (GetBW:get (fst (forwardF forward AL F anF ST)) n aa)
       :
         { Zs : params * stmt & {GetF : get F n Zs &
         { a : ann (Dom sT) & { getAnF : get anF n a &
-        { ST' : subTerm (snd Zs) sT | aa = forward (snd Zs) ST' a
+        { ST' : subTerm (snd Zs) sT | aa = fst (forward AL (snd Zs) ST' a)
         } } } } }.
 Proof.
   eapply get_getT in GetBW.
@@ -149,40 +152,52 @@ Ltac inv_get_step_analysis_forward :=
   end.
 
 Smpl Add inv_get_step_analysis_forward : inv_get.
+ *)
 
-Arguments poLe : simpl never.
 
 Lemma forwardF_monotone' (sT:stmt) (Dom : stmt -> Type)
       `{JoinSemiLattice (Dom sT)}
-      (forward:forall s (ST:subTerm s sT) (a:ann (Dom sT)),
-                 ann (Dom sT) * list (Dom sT))
+      (forward:ctxmap (Dom sT) -> forall s (ST:subTerm s sT) (a:ann (Dom sT)),
+                 ann (Dom sT) * ctxmap (Dom sT))
       F
-      (forward_mon: forall n Zs, get F n Zs -> forall (ST:subTerm (snd Zs) sT),
+      (forward_mon: forall AL AL', poLe AL AL' -> forall n Zs, get F n Zs -> forall (ST:subTerm (snd Zs) sT),
           forall (a b : ann (Dom sT)), a ⊑ b ->
-                                  forward _ ST a ⊑ forward _ ST b)
-  : forall ST,
+                                  forward AL _ ST a ⊑ forward AL' _ ST b)
+  : forall AL AL', poLe AL AL' -> forall ST,
     forall anF bnF, anF ⊑ bnF ->
-               forwardF forward F anF ST ⊑ forwardF forward F bnF ST.
+               forwardF forward AL F anF ST ⊑ forwardF forward AL' F bnF ST.
 Proof.
-  intros. general induction H1; destruct F; simpl; eauto 20 using get.
+  intros. general induction H2; destruct F; simpl; eauto 20 using get.
+Qed.
+
+Lemma snd_forwardF_exp' (sT:stmt) (Dom : stmt -> Type)
+      `{JoinSemiLattice (Dom sT)}
+      (forward:ctxmap (Dom sT) -> forall s (ST:subTerm s sT) (a:ann (Dom sT)),
+                 ann (Dom sT) * ctxmap (Dom sT))
+      F
+      (forward_mon: forall AL AL' n Zs, get F n Zs -> forall (ST:subTerm (snd Zs) sT),
+          forall (a : ann (Dom sT)), AL ⊑ AL' -> AL ⊑ snd (forward AL' _ ST a))
+  : forall AL AL' ST anF, AL ⊑ AL' -> AL ⊑ snd (forwardF forward AL' F anF ST).
+Proof.
+  intros. general induction anF; destruct F; simpl; eauto using get.
 Qed.
 
 Lemma forwardF_ext' (sT:stmt) (Dom : stmt -> Type)
       `{JoinSemiLattice (Dom sT)}
-      (forward:
-               forall s (ST:subTerm s sT) (a:ann (Dom sT)),
-                 ann (Dom sT) * list (Dom sT))
+      (forward:ctxmap (Dom sT) -> forall s (ST:subTerm s sT) (a:ann (Dom sT)),
+           ann (Dom sT) * ctxmap (Dom sT))
       F
-      (forward_ext: forall n Zs, get F n Zs -> forall (ST:subTerm (snd Zs) sT),
-          forall (a b : ann (Dom sT)), a ≣ b ->
-                                  forward _ ST a ≣ forward _ ST b)
-  : forall ST,
+      (forward_mon: forall AL AL', AL ≣ AL' -> forall n Zs, get F n Zs -> forall (ST:subTerm (snd Zs) sT),
+              forall (a b : ann (Dom sT)), a ≣ b ->
+                                      forward AL _ ST a ≣ forward AL' _ ST b)
+  : forall AL AL', AL ≣ AL' -> forall ST,
     forall anF bnF, anF ≣ bnF ->
-               forwardF forward F anF ST ≣ forwardF forward F bnF ST.
+               forwardF forward AL F anF ST ≣ forwardF forward AL' F bnF ST.
 Proof.
-  intros. general induction H1; destruct F; simpl; eauto 20 using get.
+  intros. general induction H2; destruct F; simpl; eauto 20 using get.
 Qed.
 
+(*
 Lemma forward_length (sT:stmt) (Dom : stmt -> Type) `{JoinSemiLattice (Dom sT)}
       `{@LowerBounded (Dom sT) H}
       (f: forall sT, list params ->
@@ -201,6 +216,7 @@ Proof.
     + intros. rewrite zip_length; eauto.
       eapply min_l; eauto.
 Qed.
+
 
 
 Smpl Add
@@ -243,28 +259,46 @@ Qed.
 
 
 Hint Resolve @forward_length_ass forward_length_le_ass forward_length_le_ass_right : len.
+ *)
+
+Lemma forwardF_ann  (sT:stmt) (Dom:stmt->Type) `{JoinSemiLattice (Dom sT)}
+      (forward:ctxmap (Dom sT) -> forall s (ST:subTerm s sT) (a:ann (Dom sT)),
+           ann (Dom sT) * ctxmap (Dom sT))
+           (F:list (params * stmt)) (anF:list (ann (Dom sT))) AL
+           (ST:forall n s, get F n s -> subTerm (snd s) sT) aa n
+           (GetBW:get (fst (forwardF forward AL F anF ST)) n aa) Zs
+           (Get: get F n Zs)
+           (IH: forall AL Zs ST  a, get F n Zs -> get anF n a ->
+                             annotation (snd Zs) (fst (forward AL (snd Zs) ST a)))
+      : annotation (snd Zs) aa.
+Proof.
+  eapply get_getT in GetBW.
+  general induction anF; destruct F as [|[Z s] F']; inv GetBW.
+  - inv_get. simpl. exploit IH; eauto using get.
+  - eapply IHanF; eauto using get.
+Qed.
 
 Lemma forward_annotation sT (Dom:stmt->Type)
       `{JoinSemiLattice (Dom sT)} s `{@LowerBounded (Dom sT) H}
-      (f: forall sT, list params ->
+      (f: forall sT, ctxmap params ->
                 forall s, subTerm s sT -> Dom sT -> anni (Dom sT))
-  : forall ZL a (ST:subTerm s sT), annotation s a
-               -> annotation s (fst (forward Dom f ZL ST a)).
+  : forall AL ZL a (ST:subTerm s sT), annotation s a
+               -> annotation s (fst (forward Dom f AL ZL ST a)).
 Proof.
-  sind s; intros ZL a ST Ann; destruct s; inv Ann; simpl;
+  induction s using stmt_ind'; intros AL ZL a ST Ann; inv Ann; simpl;
     repeat let_pair_case_eq; subst; eauto 20 using @annotation, setTopAnn_annotation.
   - econstructor; eauto using setTopAnn_annotation.
-    + len_simpl.
-      rewrite fold_list_length'; intros; inv_get; eauto with len.
+    + len_simpl; eauto.
     + intros. inv_get.
-      eauto using setTopAnn_annotation, setAnn_annotation.
+      eapply forwardF_ann in H3; eauto.
+      * eauto using setTopAnnO_annotation, setAnn_annotation.
 Qed.
 
 Lemma forward_getAnn' (sT:stmt) (Dom : stmt -> Type)
       `{JoinSemiLattice (Dom sT)} `{@LowerBounded (Dom sT) H}
-      (f: forall sT, list params ->
-                forall s, subTerm s sT -> Dom sT -> anni (Dom sT)) s (ST:subTerm s sT) ZL an
-  : getAnn (fst (@forward sT Dom _ _ _ f ZL s ST an)) = getAnn an.
+      (f: forall sT, ctxmap params ->
+                forall s, subTerm s sT -> Dom sT -> anni (Dom sT)) s (ST:subTerm s sT) ZL AL an
+  : getAnn (fst (@forward sT Dom _ _ _ f AL ZL s ST an)) = getAnn an.
 Proof.
   intros. destruct s, an; simpl in *; eauto;
   repeat let_pair_case_eq; simpl; eauto.
@@ -327,33 +361,71 @@ Ltac PI_simpl :=
   end.
 
 
+Lemma poLe_mapi D `{PartialOrder D} D' `{PartialOrder D'} (f g:nat -> D -> D') (L L':list D)
+      (LEf:forall i a b, poLe a b -> poLe (f i a) (g i b))
+      (LE: poLe L L') n
+  : poLe (mapi_impl f n L) (mapi_impl g n L').
+Proof.
+  general induction LE; simpl; eauto.
+Qed.
+
+Lemma poEq_mapi D `{PartialOrder D} D' `{PartialOrder D'} (f g:nat -> D -> D') (L L':list D)
+      (LEf:forall i a b, poEq a b -> poEq (f i a) (g i b))
+      (LE: poEq L L') n
+  : poEq (mapi_impl f n L) (mapi_impl g n L').
+Proof.
+  general induction LE; simpl; eauto.
+Qed.
+
 Lemma forward_monotone (sT:stmt) (Dom : stmt -> Type)
       `{JoinSemiLattice (Dom sT)} `{@LowerBounded (Dom sT) H}
-      (f: forall sT, list params ->
+      (f: forall sT, ctxmap params ->
                 forall s, subTerm s sT -> Dom sT -> anni (Dom sT))
       (fMon:forall s (ST:subTerm s sT) ZL,
           forall a b, a ⊑ b -> f sT ZL s ST a ⊑ f sT ZL s ST b)
-  : forall (s : stmt) (ST:subTerm s sT) (ZL:list params),
-    forall (a b : ann (Dom sT)), a ⊑ b ->
-                            forward Dom f ZL ST a ⊑ forward Dom f ZL ST b.
+  : forall (s : stmt) (ST:subTerm s sT) ZL,
+    forall AL AL', poLe AL AL' ->
+        forall (a b : ann (Dom sT)), a ⊑ b ->
+                                forward Dom f ZL AL ST a ⊑ forward Dom f ZL AL' ST b.
 Proof with eauto using poLe_setTopAnn, poLe_getAnni.
   intros s.
-  induction s using stmt_ind'; intros ST ZL a b LE; simpl forward; inv LE;
+  induction s using stmt_ind'; intros ST ZL AL AL' ALLE a b LE; simpl forward; inv LE;
     simpl forward; repeat let_pair_case_eq; subst; eauto.
   - eauto 100.
   - eauto 100.
-  - eapply PIR2_get in H4; [|eauto with len]. inv_cleanup.
+  - clear_trivial_eqs. eapply PIR2_get in H5; eauto.
     eapply poLe_struct; eauto.
     + eapply annF_poLe; eauto.
-      eapply poLe_zip_setTopAnnO; eauto.
-      * eapply poLe_map; eauto.
+      * eapply poLe_mapi; eauto using forwardF_monotone'.
+        intros. eapply ann_R_setTopAnnO_poLe; eauto using forwardF_monotone'.
+        eapply ctxmap_at_poLe.
         eapply forwardF_monotone'; eauto.
-      * eapply PIR2_fold_zip_join; eauto.
-        eapply poLe_map; eauto.
+    + eapply ctxmap_drop_poLe.
+      eapply forwardF_monotone'; eauto.
+Qed.
+
+Lemma forward_exp (sT:stmt) (Dom : stmt -> Type)
+      `{JoinSemiLattice (Dom sT)} `{@LowerBounded (Dom sT) H}
+      (f: forall sT, ctxmap params ->
+                forall s, subTerm s sT -> Dom sT -> anni (Dom sT))
+      (fMon:forall s (ST:subTerm s sT) ZL,
+          forall a b, a ⊑ b -> f sT ZL s ST a ⊑ f sT ZL s ST b)
+  : forall (s : stmt) (ST:subTerm s sT) ZL,
+    forall AL AL', poLe AL AL' ->
+        forall a, AL ⊑ snd (forward Dom f ZL AL' ST a).
+Proof with eauto using poLe_setTopAnn, poLe_getAnni.
+  intros s.
+  induction s using stmt_ind'; intros ST ZL AL AL' ALLE a; destruct a; simpl forward;
+    simpl forward; repeat let_pair_case_eq; subst; eauto.
+  - simpl. admit.
+  - simpl. etransitivity; eauto.
+    eapply poLe_struct; eauto.
+    + eapply annF_poLe; eauto.
+      * eapply poLe_mapi; eauto using forwardF_monotone'.
+        intros. eapply ann_R_setTopAnnO_poLe; eauto using forwardF_monotone'.
+        eapply ctxmap_at_poLe.
         eapply forwardF_monotone'; eauto.
-    + eapply poLe_drop; eauto.
-      eapply PIR2_fold_zip_join; eauto.
-      eapply poLe_map; eauto.
+    + eapply ctxmap_drop_poLe.
       eapply forwardF_monotone'; eauto.
 Qed.
 
@@ -362,46 +434,52 @@ Hint Resolve ann_R_setTopAnn_poEq.
 Lemma forwardF_monotone (sT:stmt) (Dom : stmt -> Type)
       `{PartialOrder (Dom sT)}
       `{@JoinSemiLattice (Dom sT) H} `{@LowerBounded (Dom sT) H}
-      (f: forall sT, list params ->
+      (f: forall sT, ctxmap params ->
                 forall s, subTerm s sT -> Dom sT -> anni (Dom sT))
       (fMon:forall s (ST:subTerm s sT) ZL,
           forall a b, a ⊑ b -> f sT ZL s ST a ⊑ f sT ZL s ST b)
       F
-  : forall ST (ZL:list params),
+  : forall AL AL', poLe AL AL' -> forall ST ZL,
     forall anF bnF, anF ⊑ bnF ->
-               forwardF (@forward sT Dom _ _ _ f ZL) F anF ST
-                        ⊑ forwardF (@forward sT Dom _ _ _ f ZL) F bnF ST.
+               forwardF (@forward sT Dom _ _ _ f ZL) AL F anF ST
+                        ⊑ forwardF (@forward sT Dom _ _ _ f ZL) AL' F bnF ST.
 Proof.
-  intros. general induction H2; destruct F; simpl; eauto 20 using get, forward_monotone.
+  intros.
+  general induction H3; destruct F; simpl; eauto 20 using get, forward_monotone.
 Qed.
 
 Lemma forward_ext (sT:stmt) (Dom : stmt -> Type)
       `{JoinSemiLattice (Dom sT)} `{@LowerBounded (Dom sT) H}
-      (f: forall sT, list params ->
+      (f: forall sT, ctxmap params ->
                 forall s, subTerm s sT -> Dom sT -> anni (Dom sT))
       (fMon:forall s (ST:subTerm s sT) ZL,
           forall a b, a ≣ b -> f sT ZL s ST a ≣ f sT ZL s ST b)
-  : forall (s : stmt) (ST:subTerm s sT) (ZL:list params),
+  : forall (s : stmt) (ST:subTerm s sT) ZL,
+    forall AL AL', poEq AL AL' ->
     forall (a b : ann (Dom sT)), a ≣ b ->
-                            forward Dom f ZL ST a ≣ forward Dom f ZL ST b.
+                            forward Dom f ZL AL ST a ≣ forward Dom f ZL AL' ST b.
 Proof with eauto using poLe_setTopAnn, poLe_getAnni.
   intros s.
-  induction s using stmt_ind'; intros ST ZL a b LE; simpl forward; inv LE;
+  induction s using stmt_ind'; intros ST ZL AL AL' ALLE a b LE; simpl forward; inv LE;
     simpl forward; repeat let_pair_case_eq; subst; eauto.
   - eauto 100.
   - eauto 100.
-  - eapply PIR2_get in H4; [|eauto with len]. inv_cleanup.
+  - clear_trivial_eqs. eapply PIR2_get in H5; eauto.
     eapply poEq_struct; eauto.
-    + eapply annF_poEq; eauto 100.
-      eapply PIR2_poEq_zip_setTopAnnO; eauto 100 using poEq_map, forwardF_ext'.
-    + eapply poEq_drop; eauto 100 using poEq_map, forwardF_ext'.
+    + eapply annF_poEq; eauto.
+      * eapply poEq_mapi; eauto using forwardF_ext'.
+        intros. eapply ann_R_setTopAnnO_poEq; eauto using forwardF_monotone'.
+        eapply ctxmap_at_poEq.
+        eapply forwardF_ext'; eauto.
+    + eapply ctxmap_drop_poEq.
+      eapply forwardF_ext'; eauto.
 Qed.
 
 Instance makeForwardAnalysis (Dom:stmt -> Type)
          (PO:forall s, PartialOrder (Dom s))
          (BSL:forall s, JoinSemiLattice (Dom s))
          (LB:forall s, @LowerBounded (Dom s) (PO s))
-         (f: forall sT, list params ->
+         (f: forall sT, ctxmap params ->
                    forall s, subTerm s sT -> Dom sT -> anni (Dom sT))
          (fMon:forall sT s (ST:subTerm s sT) ZL,
              forall a b, a ⊑ b -> f sT ZL s ST a ⊑ f sT ZL s ST b)
@@ -411,8 +489,9 @@ Instance makeForwardAnalysis (Dom:stmt -> Type)
   {
     step := fun X : {a : ann (Dom s) | annotation s a} =>
                       exist (fun a0 : ann (Dom s) => annotation s a0)
-                            (fst (forward Dom f nil (subTerm_refl _) (proj1_sig X)))
-                                 (forward_annotation Dom f nil (subTerm_refl _) _);
+                            (fst (forward Dom f (ctxmap_emp _) (ctxmap_emp _)
+                                          (subTerm_refl _) (proj1_sig X)))
+                                 (forward_annotation Dom f (ctxmap_emp _) (ctxmap_emp _) (subTerm_refl _) _);
     initial_value :=
       exist (fun a : ann (Dom s) => annotation s a)
             (setTopAnn (setAnn bottom s) i)

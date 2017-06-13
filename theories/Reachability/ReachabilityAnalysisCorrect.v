@@ -2,7 +2,7 @@ Require Import CSet Le Var.
 
 Require Import Plus Util AllInRel Map CSet OptionR MoreList.
 Require Import Val Var Env IL Annotation AnnotationLattice Infra.Lattice.
-Require Import DecSolve Analysis Filter Terminating.
+Require Import DecSolve Analysis Filter Terminating ContextMap.
 Require Import Analysis AnalysisForward FiniteFixpointIteration.
 Require Import Reachability ReachabilityAnalysis Subterm.
 
@@ -10,8 +10,9 @@ Set Implicit Arguments.
 
 Local Arguments proj1_sig {A} {P} e.
 Local Arguments length {A} e.
-Local Arguments forward {sT} {Dom} {H} {H0} {H1} ftransform ZL st ST a.
+Local Arguments forward {sT} {Dom} {H} {H0} {H1} ftransform ZL AL st ST a.
 
+(*
 (* Coq can't figure out the instantiation (fun _ => bool) via unification,
    so we have to add this specialized lemma *)
 Lemma forward_length_ass_UC
@@ -25,13 +26,16 @@ Lemma forward_length_ass_UC
   eapply (@forward_length_ass _ (fun _ => bool)).
 Qed.
 
+
 Hint Resolve forward_length_ass_UC.
+ *)
 
 Lemma forward_getAnn (sT:stmt) (Dom : stmt -> Type)
       `{JoinSemiLattice (Dom sT)} `{@LowerBounded (Dom sT) H}
-      (f: forall sT, list params ->
+      (f: forall sT, ctxmap params ->
                 forall s, subTerm s sT -> Dom sT -> anni (Dom sT)) s (ST:subTerm s sT) ZL a an
-  : poEq (fst (@forward sT Dom _ _ _ f ZL s ST (setTopAnn an a))) an
+      AL
+  : poEq (fst (@forward sT Dom _ _ _ f ZL AL s ST (setTopAnn an a))) an
     -> getAnn an ≣ a.
 Proof.
   intros. eapply ann_R_get in H2.
@@ -41,13 +45,13 @@ Qed.
 
 Lemma forward_setTopAnn_inv (sT:stmt) (Dom : stmt -> Type)
       `{JoinSemiLattice (Dom sT)} `{@LowerBounded (Dom sT) H}
-      (f: forall sT, list params ->
+      (f: forall sT, ctxmap params ->
                 forall s, subTerm s sT -> Dom sT -> anni (Dom sT))
-      (fExt:forall (s0 : stmt) (ST0 : subTerm s0 sT) (ZL0 : 〔params〕) (a0 b : Dom sT),
+      (fExt:forall (s0 : stmt) (ST0 : subTerm s0 sT) ZL0 (a0 b : Dom sT),
           a0 ≣ b -> f sT ZL0 s0 ST0 a0 ≣ f sT ZL0 s0 ST0 b)
-      s (ST:subTerm s sT) ZL a an
-  : poEq (fst (@forward sT Dom _ _ _ f ZL s ST (setTopAnn an a))) an
-    -> poEq (fst (@forward sT Dom _ _ _ f ZL s ST an)) an /\ getAnn an ≣ a.
+      s (ST:subTerm s sT) ZL AL a an
+  : poEq (fst (@forward sT Dom _ _ _ f ZL AL s ST (setTopAnn an a))) an
+    -> poEq (fst (@forward sT Dom _ _ _ f ZL AL s ST an)) an /\ getAnn an ≣ a.
 Proof.
   intros. split; eauto using forward_getAnn.
   rewrite <- H2 at 2.
@@ -59,10 +63,10 @@ Qed.
 
 Lemma forward_setTopAnn_inv_poLe (sT:stmt) (Dom : stmt -> Type)
       `{JoinSemiLattice (Dom sT)} `{@LowerBounded (Dom sT) H}
-      (f: forall sT, list params ->
+      (f: forall sT, ctxmap params ->
                 forall s, subTerm s sT -> Dom sT -> anni (Dom sT))
-      s (ST:subTerm s sT) ZL a an
-  : poLe an (fst (@forward sT Dom _ _ _ f ZL s ST (setTopAnn an a)))
+      s (ST:subTerm s sT) ZL a an AL
+  : poLe an (fst (@forward sT Dom _ _ _ f ZL AL s ST (setTopAnn an a)))
     -> getAnn an ⊑ a.
 Proof.
   intros.
@@ -73,7 +77,7 @@ Qed.
 
 Ltac forward_setTopAnn_inv :=
   match goal with
-  | [ H: poEq (fst (@forward ?sT ?Dom _ _ _ ?f ?ZL ?s ?ST (setTopAnn ?an ?a))) ?an |- _ ]
+  | [ H: poEq (fst (@forward ?sT ?Dom _ _ _ ?f ?ZL ?AL ?s ?ST (setTopAnn ?an ?a))) ?an |- _ ]
     => eapply (@forward_setTopAnn_inv sT Dom _ _ _ f ltac:(eauto)) in H;
       destruct H
 (*  | [ H: poLe ?an (fst (@forward ?sT ?Dom _ _ _ ?f ?ZL ?s ?ST (setTopAnn ?an ?a))) |- _ ]
@@ -85,14 +89,14 @@ Smpl Add forward_setTopAnn_inv : inv_trivial.
 
 Lemma forward_setTopAnn_inv_snd (sT:stmt) (Dom : stmt -> Type)
       `{JoinSemiLattice (Dom sT)} `{@LowerBounded (Dom sT) H}
-      (f: forall sT, list params ->
+      (f: forall sT, ctxmap params ->
                 forall s, subTerm s sT -> Dom sT -> anni (Dom sT))
-      (fExt:forall (s0 : stmt) (ST0 : subTerm s0 sT) (ZL0 : 〔params〕) (a0 b : Dom sT),
+      (fExt:forall (s0 : stmt) (ST0 : subTerm s0 sT) ZL0 (a0 b : Dom sT),
           a0 ≣ b -> f sT ZL0 s0 ST0 a0 ≣ f sT ZL0 s0 ST0 b)
       a an (EQ:getAnn an ≣ a)
-      s (ST:subTerm s sT) ZL
-  : poEq (snd (@forward sT Dom _ _ _ f ZL s ST (setTopAnn an a)))
-         (snd (@forward sT Dom _ _ _ f ZL s ST an)).
+      s (ST:subTerm s sT) ZL AL
+  : poEq (snd (@forward sT Dom _ _ _ f ZL AL s ST (setTopAnn an a)))
+         (snd (@forward sT Dom _ _ _ f ZL AL s ST an)).
 Proof.
   intros.
   eapply forward_ext; eauto.
@@ -101,9 +105,10 @@ Qed.
 
 Ltac forward_setTopAnn_inv_snd :=
   match goal with
-  | [ H : context [ snd (@forward ?sT ?Dom ?PO ?JSL ?LB ?f ?ZL ?s ?ST (setTopAnn ?an ?a)) ],
+  | [ H : context [ snd (@forward ?sT ?Dom ?PO ?JSL ?LB ?f ?ZL ?AL ?s ?ST (setTopAnn ?an ?a)) ],
       I : getAnn ?an ≣ ?a |- _ ]
-    => rewrite (@forward_setTopAnn_inv_snd sT Dom PO JSL LB f ltac:(eauto) _ _ I s ST ZL) in H
+    => setoid_rewrite (@forward_setTopAnn_inv_snd sT Dom PO JSL LB f
+                                          ltac:(eauto) _ _ I s ST ZL AL) in H
   end.
 
 (* Smpl Add forward_setTopAnn_inv_snd : inv_trivial. *)
@@ -202,12 +207,111 @@ Proof.
     rewrite <- pf. rewrite getAnn_setTopAnn. reflexivity.
 Qed.
 
-Definition reachability_sound sT ZL BL s a (ST:subTerm s sT)
-  : poEq (fst (forward reachability_transform ZL s ST a)) a
+Inductive sndR X Y (R:X -> Y -> Prop) : X -> option Y -> Prop :=
+| SndR_R x y : R x y -> sndR R x (Some y).
+
+Instance sndR_poEq_proper_impl X `{PartialOrder X}
+  : Proper (poEq ==> poEq ==> impl) (@sndR X X poLe).
+Proof.
+  unfold Proper, respectful, impl; intros.
+  inv H2; clear_trivial_eqs. econstructor.
+  rewrite <- H0, H1; eauto.
+Qed.
+
+Instance sndR_poEq_proper_flip_impl X `{PartialOrder X}
+  : Proper (poEq ==> poEq ==> flip impl) (@sndR X X poLe).
+Proof.
+  unfold Proper, respectful, impl, flip; intros.
+  inv H2; clear_trivial_eqs. econstructor.
+  rewrite H0, H1; eauto.
+Qed.
+
+Instance sndR_poEq_proper_flip_impl' X `{PartialOrder X}
+  : Proper (poEq ==> poEq ==> flip impl) (@sndR X X (flip poLe)).
+Proof.
+  unfold Proper, respectful, impl, flip; intros.
+  inv H2; clear_trivial_eqs. econstructor.
+  rewrite H0, H1; eauto.
+Qed.
+
+Instance sndR_poEq_proper X `{PartialOrder X}
+  : Proper (poEq ==> poEq ==> iff) (@sndR X X poLe).
+Proof.
+  unfold Proper, respectful, impl; intros.
+  split; rewrite H0, H1; eauto.
+Qed.
+
+
+Definition ctxRel A B (R:A -> B -> Prop) (AL:list A) (m:ctxmap B) :=
+  length AL = ctxmap_len m
+  /\ forall n a, get AL n a -> sndR R a (ctxmap_at m n).
+
+Instance ctxmap_len_proper X `{PartialOrder X}
+  : Proper (poEq ==> eq) (@ctxmap_len X).
+Proof.
+  unfold Proper, respectful; intros.
+  inv H0; eauto.
+Qed.
+
+Instance ctxmap_len_proper_poLe X `{PartialOrder X}
+  : Proper (poLe ==> eq) (@ctxmap_len X).
+Proof.
+  unfold Proper, respectful; intros.
+  inv H0; eauto.
+Qed.
+
+Smpl Add
+       match goal with
+  | [ H : ?x ≣ ?y, Get : get ?y ?n ?a |- _ ] =>
+    match goal with
+    | [ Get' : get x n _ |- _ ] => fail 1
+    | _ => edestruct (PIR2_nth_2 H Get) as [? [? ?]]
+    end
+  end : inv_get.
+
+
+Instance ctxRel_proper A `{PartialOrder A}
+  : Proper (poEq ==> poEq ==> impl) (@ctxRel A A poLe).
+Proof.
+  unfold Proper, respectful, impl; intros.
+  destruct H2. split; eauto.
+  rewrite <- H0, <- H1. eauto.
+  intros. rewrite ctxmap_at_poEq; eauto.
+  inv_get. rewrite <- H6. eauto.
+Qed.
+
+Instance ctxRel_proper_flip A `{PartialOrder A}
+  : Proper (poEq ==> poEq ==> flip impl) (@ctxRel A A poLe).
+Proof.
+  unfold Proper, respectful, flip, impl; intros.
+  eapply ctxRel_proper; eauto.
+Qed.
+
+Instance ctxRel_proper_iff A `{PartialOrder A}
+  : Proper (poEq ==> poEq ==> iff) (@ctxRel A A poLe).
+Proof.
+  unfold Proper, respectful, impl; intros.
+  split; intros.
+  rewrite <- H1. rewrite <- H0. eauto.
+  rewrite H1, H0. eauto.
+Qed.
+
+Instance ctxRel_proper' A `{PartialOrder A}
+  : Proper (poEq ==> poEq ==> impl) (@ctxRel A A (flip poLe)).
+Proof.
+  unfold Proper, respectful, impl; intros.
+  destruct H2. split; eauto.
+  rewrite <- H0, <- H1. eauto.
+  intros. rewrite ctxmap_at_poEq; eauto.
+  inv_get. rewrite <- H6. eauto.
+Qed.
+
+Definition reachability_sound sT ZL BL s a (ST:subTerm s sT) AL
+  : poEq (fst (forward reachability_transform ZL AL s ST a)) a
     -> annotation s a
-    -> labelsDefined s (length ZL)
+    -> labelsDefined s (ctxmap_len ZL)
     -> labelsDefined s (length BL)
-    -> poLe (snd (@forward sT _ _ _ _ reachability_transform ZL s ST a)) BL
+    -> ctxRel (flip poLe) BL (snd (@forward sT _ _ _ _ reachability_transform ZL AL s ST a))
     -> reachability cop2bool Sound BL s a.
 Proof.
   intros EQ Ann DefZL DefBL.
@@ -216,14 +320,22 @@ Proof.
       repeat clear_trivial_eqs.
   - forward_setTopAnn_inv_snd.
     econstructor; eauto.
-  - repeat forward_setTopAnn_inv_snd.
-    econstructor; eauto using @PIR2_zip_join_inv_left, @PIR2_zip_join_inv_right with len.
+  - forward_setTopAnn_inv_snd.
+    rewrite forward_ext in H0;
+      [| | eapply (@forward_setTopAnn_inv_snd sT (fun _ => bool) _ _ _); eauto|];
+      try reflexivity; eauto.
+    rewrite forward_ext in H;
+      [| | eapply (@forward_setTopAnn_inv_snd sT (fun _ => bool) _ _ _); eauto|];
+      try reflexivity; eauto.
+    econstructor; eauto with len.
     + rewrite H3. unfold cop2bool, op2bool. simpl.
       cases; eauto.
       monad_inv COND. rewrite EQ. intros. exfalso; eauto.
     + rewrite H1. unfold cop2bool, op2bool. simpl.
       cases; eauto.
       monad_inv COND. rewrite EQ. intros. exfalso; eauto.
+    + eapply IHAnn1; eauto.
+
   - edestruct get_in_range; eauto.
     edestruct get_in_range; try eapply H3; eauto.
     Transparent poLe. hnf in H.

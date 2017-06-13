@@ -18,7 +18,7 @@ Definition joinTopAnn A `{JoinSemiLattice A} (a:ann A) (b:A) :=
   setTopAnn a (join (getAnn a) b).
 
 
-Lemma poLe_zip_setTopAnnO X `{PartialOrder X} (A A':list (ann X)) (B B':list X)
+Lemma poLe_zip_setTopAnn X `{PartialOrder X} (A A':list (ann X)) (B B':list X)
   : poLe A A'
     -> poLe B B'
     -> poLe ((@setTopAnn _) ⊜ A B) (@setTopAnn _ ⊜ A' B').
@@ -49,10 +49,10 @@ Proof.
     rewrite H1, H3; reflexivity.
 Qed.
 
-Hint Resolve ann_poEq_joinTopAnn ann_poLe_joinTopAnn poLe_zip_setTopAnnO.
+Hint Resolve ann_poEq_joinTopAnn ann_poLe_joinTopAnn poLe_zip_setTopAnn.
 
 
-Lemma PIR2_zip_joinTopAnnO X `{JoinSemiLattice X} (A A':list (ann X)) (B B':list X)
+Lemma PIR2_zip_joinTopAnn X `{JoinSemiLattice X} (A A':list (ann X)) (B B':list X)
   : poLe A A'
     -> poLe B B'
     -> poLe ((@joinTopAnn _ _ _) ⊜ A B) (@joinTopAnn _ _ _ ⊜ A' B').
@@ -62,7 +62,7 @@ Proof.
   general induction LE_A; inv LE_B; simpl; eauto using PIR2.
 Qed.
 
-Lemma PIR2_poEq_zip_setTopAnnO X `{PartialOrder X} (A A':list (ann X)) (B B':list X)
+Lemma PIR2_poEq_zip_setTopAnn X `{PartialOrder X} (A A':list (ann X)) (B B':list X)
   : poEq A A'
     -> poEq B B'
     -> poEq ((@setTopAnn _) ⊜ A B) (@setTopAnn _ ⊜ A' B').
@@ -74,7 +74,7 @@ Proof.
     eapply IHLE_A; eauto.
 Qed.
 
-Lemma PIR2_poEq_zip_joinTopAnnO X `{JoinSemiLattice X} (A A':list (ann X)) (B B':list X)
+Lemma PIR2_poEq_zip_joinTopAnn X `{JoinSemiLattice X} (A A':list (ann X)) (B B':list X)
   : poEq A A'
     -> poEq B B'
     -> poEq ((@joinTopAnn _ _ _) ⊜ A B) (@joinTopAnn _ _ _ ⊜ A' B').
@@ -83,7 +83,7 @@ Proof.
   general induction LE_A; inv LE_B; simpl; eauto using PIR2.
 Qed.
 
-Hint Resolve PIR2_zip_joinTopAnnO PIR2_poEq_zip_setTopAnnO PIR2_poEq_zip_joinTopAnnO.
+Hint Resolve PIR2_zip_joinTopAnn PIR2_poEq_zip_setTopAnn PIR2_poEq_zip_joinTopAnn.
 
 
 Instance LowerBounded_ann (s:stmt) A `{LowerBounded A}
