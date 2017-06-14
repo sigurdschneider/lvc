@@ -347,8 +347,7 @@ Proof.
   intros ND GetZ GetY.
   general induction n; simpl domjoin_list.
   - rewrite domupd_var_eq; eauto.
-    unfold ojoin; repeat cases; eauto; try constructor.
-    rewrite join_commutative. eapply join_poLe.
+    unfold ojoin; repeat cases; eauto.
   - inv GetZ; inv GetY.
     simpl domjoin_list.
     rewrite domupd_var_ne; eauto.

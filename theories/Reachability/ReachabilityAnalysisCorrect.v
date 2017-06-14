@@ -10,7 +10,7 @@ Set Implicit Arguments.
 
 Local Arguments proj1_sig {A} {P} e.
 Local Arguments length {A} e.
-Local Arguments forward {sT} {Dom} {H} {H0} {H1} ftransform ZL AL st ST a.
+Local Arguments forward {sT} {Dom} {H} {H0} {H1} ftransform ZL st ST AL a.
 
 (*
 (* Coq can't figure out the instantiation (fun _ => bool) via unification,
@@ -35,7 +35,7 @@ Lemma forward_getAnn (sT:stmt) (Dom : stmt -> Type)
       (f: forall sT, ctxmap params ->
                 forall s, subTerm s sT -> Dom sT -> anni (Dom sT)) s (ST:subTerm s sT) ZL a an
       AL
-  : poEq (fst (@forward sT Dom _ _ _ f ZL AL s ST (setTopAnn an a))) an
+  : poEq (fst (@forward sT Dom _ _ _ f ZL s ST AL (setTopAnn an a))) an
     -> getAnn an ≣ a.
 Proof.
   intros. eapply ann_R_get in H2.
@@ -50,8 +50,8 @@ Lemma forward_setTopAnn_inv (sT:stmt) (Dom : stmt -> Type)
       (fExt:forall (s0 : stmt) (ST0 : subTerm s0 sT) ZL0 (a0 b : Dom sT),
           a0 ≣ b -> f sT ZL0 s0 ST0 a0 ≣ f sT ZL0 s0 ST0 b)
       s (ST:subTerm s sT) ZL AL a an
-  : poEq (fst (@forward sT Dom _ _ _ f ZL AL s ST (setTopAnn an a))) an
-    -> poEq (fst (@forward sT Dom _ _ _ f ZL AL s ST an)) an /\ getAnn an ≣ a.
+  : poEq (fst (@forward sT Dom _ _ _ f ZL s ST AL (setTopAnn an a))) an
+    -> poEq (fst (@forward sT Dom _ _ _ f ZL s ST AL an)) an /\ getAnn an ≣ a.
 Proof.
   intros. split; eauto using forward_getAnn.
   rewrite <- H2 at 2.
@@ -66,7 +66,7 @@ Lemma forward_setTopAnn_inv_poLe (sT:stmt) (Dom : stmt -> Type)
       (f: forall sT, ctxmap params ->
                 forall s, subTerm s sT -> Dom sT -> anni (Dom sT))
       s (ST:subTerm s sT) ZL a an AL
-  : poLe an (fst (@forward sT Dom _ _ _ f ZL AL s ST (setTopAnn an a)))
+  : poLe an (fst (@forward sT Dom _ _ _ f ZL s ST AL (setTopAnn an a)))
     -> getAnn an ⊑ a.
 Proof.
   intros.
@@ -95,8 +95,8 @@ Lemma forward_setTopAnn_inv_snd (sT:stmt) (Dom : stmt -> Type)
           a0 ≣ b -> f sT ZL0 s0 ST0 a0 ≣ f sT ZL0 s0 ST0 b)
       a an (EQ:getAnn an ≣ a)
       s (ST:subTerm s sT) ZL AL
-  : poEq (snd (@forward sT Dom _ _ _ f ZL AL s ST (setTopAnn an a)))
-         (snd (@forward sT Dom _ _ _ f ZL AL s ST an)).
+  : poEq (@forward sT Dom _ _ _ f ZL s ST AL (setTopAnn an a))
+         (@forward sT Dom _ _ _ f ZL s ST AL an).
 Proof.
   intros.
   eapply forward_ext; eauto.
@@ -105,7 +105,8 @@ Qed.
 
 Ltac forward_setTopAnn_inv_snd :=
   match goal with
-  | [ H : context [ snd (@forward ?sT ?Dom ?PO ?JSL ?LB ?f ?ZL ?AL ?s ?ST (setTopAnn ?an ?a)) ],
+  | [ H : context [ @forward ?sT ?Dom ?PO ?JSL ?LB ?f ?ZL ?s ?ST ?AL
+                             (setTopAnn ?an ?a) ],
       I : getAnn ?an ≣ ?a |- _ ]
     => setoid_rewrite (@forward_setTopAnn_inv_snd sT Dom PO JSL LB f
                                           ltac:(eauto) _ _ I s ST ZL AL) in H
@@ -234,6 +235,22 @@ Proof.
   rewrite H0, H1; eauto.
 Qed.
 
+Instance sndR_poEq_proper_impl' X `{PartialOrder X}
+  : Proper (poLe ==> poEq ==> impl) (@sndR X X (flip poLe)).
+Proof.
+  unfold Proper, respectful, impl, flip; intros.
+  inv H2; clear_trivial_eqs. econstructor.
+  rewrite H1, <- H0. eauto.
+Qed.
+
+Instance sndR_poEq_proper_impl'' X `{PartialOrder X}
+  : Proper (flip poLe ==> poEq ==> flip impl) (@sndR X X (flip poLe)).
+Proof.
+  unfold Proper, respectful, impl, flip; intros.
+  inv H2; clear_trivial_eqs. econstructor.
+  rewrite H1, <- H0. eauto.
+Qed.
+
 Instance sndR_poEq_proper X `{PartialOrder X}
   : Proper (poEq ==> poEq ==> iff) (@sndR X X poLe).
 Proof.
@@ -246,28 +263,30 @@ Definition ctxRel A B (R:A -> B -> Prop) (AL:list A) (m:ctxmap B) :=
   length AL = ctxmap_len m
   /\ forall n a, get AL n a -> sndR R a (ctxmap_at m n).
 
-Instance ctxmap_len_proper X `{PartialOrder X}
-  : Proper (poEq ==> eq) (@ctxmap_len X).
-Proof.
-  unfold Proper, respectful; intros.
-  inv H0; eauto.
-Qed.
-
-Instance ctxmap_len_proper_poLe X `{PartialOrder X}
-  : Proper (poLe ==> eq) (@ctxmap_len X).
-Proof.
-  unfold Proper, respectful; intros.
-  inv H0; eauto.
-Qed.
 
 Smpl Add
+     match goal with
+     | [ H : ?x ≣ ?y, Get : get ?y ?n ?a |- _ ] =>
        match goal with
-  | [ H : ?x ≣ ?y, Get : get ?y ?n ?a |- _ ] =>
-    match goal with
-    | [ Get' : get x n _ |- _ ] => fail 1
-    | _ => edestruct (PIR2_nth_2 H Get) as [? [? ?]]
-    end
-  end : inv_get.
+       | [ Get' : get x n _ |- _ ] => fail 1
+       | _ => edestruct (PIR2_nth_2 H Get) as [? [? ?]]
+       end
+     | [ H : ?y ≣ ?x, Get : get ?y ?n ?a |- _ ] =>
+       match goal with
+       | [ Get' : get x n _ |- _ ] => fail 1
+       | _ => edestruct (PIR2_nth H Get) as [? [? ?]]
+       end
+     | [ H : ?x ⊑ ?y, Get : get ?y ?n ?a |- _ ] =>
+       match goal with
+       | [ Get' : get x n _ |- _ ] => fail 1
+       | _ => edestruct (PIR2_nth_2 H Get) as [? [? ?]]
+       end
+     | [ H : ?y ⊑ ?x, Get : get ?y ?n ?a |- _ ] =>
+       match goal with
+       | [ Get' : get x n _ |- _ ] => fail 1
+       | _ => edestruct (PIR2_nth H Get) as [? [? ?]]
+       end
+     end : inv_get.
 
 
 Instance ctxRel_proper A `{PartialOrder A}
@@ -306,12 +325,131 @@ Proof.
   inv_get. rewrite <- H6. eauto.
 Qed.
 
+
+Lemma poLe_app X `{PartialOrder X} (L1 L2 : 〔X〕) (L1' L2' : 〔X〕)
+  : poLe L1 L1' -> poLe L2 L2' -> poLe (L1 ++ L2) (L1' ++ L2').
+Proof.
+  intros. eapply PIR2_app; eauto.
+Qed.
+
+Hint Resolve poLe_app.
+
+Lemma reachability_monotone (ceval : op -> ؟ (withTop bool))
+      (BL BL' : 〔bool〕) (s : stmt) (a : ann bool) p
+  : poLe BL BL' ->
+    reachability ceval p BL s a ->
+    reachability ceval p BL' s a.
+Proof.
+  intros. general induction H0; eauto 10 using reachability.
+  - inv_get. econstructor; eauto.
+    cases; eauto.
+Qed.
+
+Instance reachability_mon_proper ceval p
+  : Proper (poLe ==> eq ==> eq ==> impl) (reachability ceval p).
+Proof.
+  unfold Proper, respectful, impl; intros; subst.
+  eapply reachability_monotone; eauto.
+Qed.
+
+
+(*
+Instance ctxRel_proper'' A `{PartialOrder A}
+  : Proper (poEq ==> poLe ==> flip impl) (@ctxRel A A (flip poLe)).
+Proof.
+  unfold Proper, respectful, impl; intros. hnf; intros.
+  destruct H2. split; eauto.
+  rewrite H0, H1. eauto.
+  intros. inv_get. eapply H3 in H5.
+  rewrite H6.
+  eapply sndR_poEq_proper_impl''; eauto. rewrite H6. reflexivity.
+  rewrite H6.
+Qed.
+ *)
+
+Instance forwardF_proper (sT:stmt) ZL F ST
+  : Proper (poEq ==> poEq ==> poEq)
+           (forwardF (@forward sT _ _ _ _ reachability_transform ZL) F ST).
+Proof.
+  unfold Proper, respectful.
+  intros. eapply (@forwardF_ext sT (fun _ => bool)); eauto.
+Qed.
+
+Lemma labelsDefined_app' (A : Type)
+      (L : 〔A〕) (L':ctxmap A) (k : nat) (t : stmt)
+  : labelsDefined t (k + ctxmap_len L') -> ❬L❭ = k -> labelsDefined t (ctxmap_len (L +|+ L')).
+Proof.
+  intros. len_simpl. subst. eauto.
+Qed.
+
+Hint Resolve labelsDefined_app'.
+
+Lemma ctxmap_drop_zero X (m:ctxmap X)
+  : ctxmap_drop 0 m = m.
+Proof.
+  destruct m; unfold ctxmap_drop; simpl.
+  orewrite (ctxmap_len - 0 = ctxmap_len). reflexivity.
+Qed.
+
+Instance tl_poEq_proper X `{PartialOrder X}
+  : Proper (poEq ==> poEq) (@tl X).
+Proof.
+  unfold Proper, respectful; intros.
+  inv H0; eauto.
+Qed.
+
+Instance tl_poLe_proper X `{PartialOrder X}
+  : Proper (poLe ==> poLe) (@tl X).
+Proof.
+  unfold Proper, respectful; intros.
+  inv H0; eauto.
+Qed.
+
+Lemma range_get k d n x
+  : get (range k d) n x
+    -> x = k + n.
+Proof.
+  intros. general induction d; simpl in *; isabsurd.
+  inv H. omega. eapply IHd in H4. omega.
+Qed.
+
+Ltac range_get_simpl :=
+  match goal with
+  | [H : get (range ?k ?d) ?n ?x |- _ ] =>
+    eapply range_get in H; try (is_var x; subst x)
+  end.
+
+Smpl Add range_get_simpl : inv_get.
+
+Unset Printing Records.
+Lemma ctxmap_to_list_drop X `{LowerBounded X} (m:ctxmap X) k
+  : ctxmap_to_list (ctxmap_drop k m) ≣ drop k (ctxmap_to_list m).
+Proof.
+  destruct m as [M l]; simpl.
+  general induction l; simpl.
+  - unfold ctxmap_to_list; simpl. rewrite drop_nil. reflexivity.
+  -unfold ctxmap_drop. simpl ctxmap_len. simpl ctxmap_M.
+   destruct k.
+   + reflexivity.
+   + simpl. pose proof (IHl X _ _ M k).
+     unfold ctxmap_drop in H1. simpl in *. rewrite H1.
+     unfold ctxmap_to_list. simpl.
+     eapply poEq_drop.
+     clear_all.
+     generalize 0.
+     intros. eapply PIR2_get; eauto with len.
+     intros. inv_get.
+     unfold ctxmap_at_def.
+     unfold ctxmap_to_idx; simpl.
+     repeat cases; eauto; try omega.
+Qed.
+
 Definition reachability_sound sT ZL BL s a (ST:subTerm s sT) AL
-  : poEq (fst (forward reachability_transform ZL AL s ST a)) a
+  : poEq (fst (forward reachability_transform ZL s ST AL a)) a
     -> annotation s a
     -> labelsDefined s (ctxmap_len ZL)
     -> labelsDefined s (length BL)
-    -> ctxRel (flip poLe) BL (snd (@forward sT _ _ _ _ reachability_transform ZL AL s ST a))
+    -> poLe (ctxmap_to_list (snd (@forward sT _ _ _ _ reachability_transform ZL s ST AL a))) BL
     -> reachability cop2bool Sound BL s a.
 Proof.
   intros EQ Ann DefZL DefBL.
@@ -334,37 +472,45 @@ Proof.
     + rewrite H1. unfold cop2bool, op2bool. simpl.
       cases; eauto.
       monad_inv COND. rewrite EQ. intros. exfalso; eauto.
-    + eapply IHAnn1; eauto.
-
+    + time (rewrite <- (@forward_exp sT (fun _ => bool)) in H; eauto).
   - edestruct get_in_range; eauto.
-    edestruct get_in_range; try eapply H3; eauto.
     Transparent poLe. hnf in H.
     edestruct PIR2_nth; eauto using ListUpdateAt.list_update_at_get_3; dcr.
-    econstructor; simpl; eauto.
+    eapply map_get_1. admit.
+    econstructor; simpl; eauto. admit.
   - econstructor.
   - eapply PIR2_get in H15; eauto; clear H14.
     change (PIR2 poEq) with (@poEq (list (ann bool)) _) in H15.
-    repeat forward_setTopAnn_inv_snd.
-    set (FWt:=(forward reachability_transform (fst ⊝ s ++ ZL) t
-                       (subTerm_EQ_Fun1 eq_refl ST) ta)) in *.
-    set (FWF:=forwardF (forward reachability_transform (fst ⊝ s ++ ZL)) s sa
-                       (subTerm_EQ_Fun2 eq_refl ST)) in *.
+    set (FWt:=(forward reachability_transform (fst ⊝ s +|+ ZL)%ctxmap
+                       t (subTerm_EQ_Fun1 eq_refl ST)
+                       (ctxmap_extend AL ❬s❭) (setTopAnn ta a))) in *.
+    set (FWF:=forwardF (forward reachability_transform (fst ⊝ s +|+ ZL)%ctxmap) s
+                       (subTerm_EQ_Fun2 eq_refl ST) (snd FWt) sa) in *.
+    assert (FWtEQ:FWt ≣ FWt) by reflexivity.
+    unfold FWt in FWtEQ at 2. clearbody FWt.
+    assert (FWFEQ:FWF ≣ FWF) by reflexivity.
+    unfold FWF in FWFEQ at 2. clearbody FWF.
+    forward_setTopAnn_inv_snd.
     econstructor; eauto.
     + eapply IHAnn; eauto.
-      erewrite (take_eta ❬s❭) at 1. eapply PIR2_app; eauto.
-      * change (PIR2 poLe) with (@poLe (list bool) _).
-        rewrite <- H15.
-        rewrite getAnn_map_setTopAnn.
+      eapply labelsDefined_app'; eauto with len.
+      erewrite (take_eta ❬s❭) at 1.
+      eapply poLe_app; eauto.
+      * rewrite <- H15. admit.
+        (*rewrite getAnn_map_setTopAnn.
         unfold FWF at 1. len_simpl.
         eapply PIR2_take.
         change (PIR2 poLe) with (@poLe (list bool) _).
         eapply PIR2_fold_zip_join_right; try reflexivity.
         unfold FWF; intros; inv_get.
-        subst FWt. eauto with len.
-      * rewrite <- H2. eapply poLe_drop.
-        eapply PIR2_fold_zip_join_right; try reflexivity.
-        unfold FWF; intros; inv_get.
-        subst FWt. eauto with len.
+        subst FWt. eauto with len.*)
+      * rewrite <- H2.
+        rewrite ctxmap_to_list_drop.
+        eapply poLe_drop.
+        rewrite FWFEQ.
+        rewrite (@snd_forwardF_exp' sT (fun _ => bool)). reflexivity.
+        intros. eapply (@forward_exp sT (fun _ => bool)); eauto.
+        rewrite FWtEQ. reflexivity.
     + intros.
       assert (n < ❬snd FWt❭). {
         subst FWt. len_simpl.
@@ -596,13 +742,6 @@ Proof.
   intros. eapply PIR2_nth; eauto.
 Qed.
 
-Lemma poLe_app X `{PartialOrder X} (L1 L2 : 〔X〕) (L1' L2' : 〔X〕)
-  : poLe L1 L1' -> poLe L2 L2' -> poLe (L1 ++ L2) (L1' ++ L2').
-Proof.
-  intros. eapply PIR2_app; eauto.
-Qed.
-
-Hint Resolve poLe_app.
 
 Smpl Add match goal with
          | [ H : poLe ?L ?L', Get : get ?L ?n ?x |- _ ] =>
@@ -611,17 +750,6 @@ Smpl Add match goal with
            | _ => edestruct (@poLe_nth _ _ L L' n x H Get) as [? [? ?]]
            end
          end : inv_trivial.
-
-Lemma reachability_monotone (ceval : op -> ؟ (withTop bool))
-      (BL BL' : 〔bool〕) (s : stmt) (a : ann bool) p
-  : poLe BL BL' ->
-    reachability ceval p BL s a ->
-    reachability ceval p BL' s a.
-Proof.
-  intros. general induction H0; eauto 10 using reachability.
-  - econstructor; eauto.
-    cases; eauto.
-Qed.
 
 Lemma reachability_analysis_complete sT ZL BL BL' (Len:❬BL❭ = ❬BL'❭) s a (ST:subTerm s sT) b b' c
       (LDEF:labelsDefined s (length ZL))

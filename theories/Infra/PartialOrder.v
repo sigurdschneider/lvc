@@ -20,6 +20,12 @@ Class PartialOrder (Dom:Type) := {
 Arguments poLe : simpl never.
 Arguments poEq : simpl never.
 
+Instance poLe_RR X `{PartialOrder X}
+  : RewriteRelation (@poLe X _).
+
+Instance poEq_RR X `{PartialOrder X}
+  : RewriteRelation (@poEq X _).
+
 Lemma poEq_sym A `{PartialOrder A} x y
   : poEq x y -> poEq y x.
 Proof.
@@ -128,6 +134,20 @@ Qed.
 Hint Resolve poEq_fst poEq_snd poEq_struct poLe_fst poLe_snd poLe_struct.
 
 Hint Resolve poEq_fst poEq_snd poEq_struct poLe_fst poLe_snd poLe_struct : po.
+
+Instance poEq_pair_proper X `{PartialOrder X} Y `{PartialOrder Y}
+  : Proper (poEq ==> poEq ==> poEq) (@pair X Y).
+Proof.
+  unfold Proper, respectful; intros.
+  eapply poEq_struct; eauto.
+Qed.
+
+Instance poLe_pair_proper X `{PartialOrder X} Y `{PartialOrder Y}
+  : Proper (poLe ==> poLe ==> poLe) (@pair X Y).
+Proof.
+  unfold Proper, respectful; intros.
+  eapply poLe_struct; eauto.
+Qed.
 
 Instance PartialOrder_list_instance X `{PartialOrder X}
 : PartialOrder (list X) := {
@@ -471,4 +491,19 @@ Lemma poEq_map_nd D D' `{PartialOrder D'} (f g:D -> D') (L:list D)
   : poEq (f ⊝ L) (g ⊝ L).
 Proof.
   general induction L; simpl; eauto.
+Qed.
+
+
+Instance poLe_poLe_impl (Dom : Type) (H : PartialOrder Dom)
+  : Proper (poLe --> poLe ==> impl) poLe.
+Proof.
+  unfold Proper, respectful , flip, impl; intros.
+  eauto.
+Qed.
+
+Instance poLe_poLe_flip_impl (Dom : Type) (H : PartialOrder Dom)
+  : Proper (poLe ==> flip poLe ==> flip impl) poLe.
+Proof.
+  unfold Proper, respectful, flip, impl; intros ? ? A ? ? B C.
+  eauto.
 Qed.

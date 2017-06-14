@@ -32,6 +32,15 @@ Lemma join_wellbehaved
     rewrite join_bound; eauto.
 Qed.
 
+
+Lemma join_poLe_right X `{JoinSemiLattice X} x y
+  : poLe y (join x y).
+Proof.
+  rewrite join_commutative. eapply join_poLe.
+Qed.
+
+Hint Immediate join_poLe_right.
+
 Lemma join_idempotent
   :  forall A `{JoinSemiLattice A} x, poEq (join x x) x.
 Proof.
@@ -211,7 +220,10 @@ Proof.
 Qed.
 
 
-Smpl Add match goal with
-         | [ H : context [false ⊔ _] |- _ ] => rewrite join_false_left in H
-         | [ H : context [_ ⊔ false] |- _ ] => rewrite join_false_right in H
-         end : inv_trivial.
+Ltac clear_join_false :=
+  match goal with
+  | [ H : context [false ⊔ _] |- _ ] => rewrite join_false_left in H
+  | [ H : context [_ ⊔ false] |- _ ] => rewrite join_false_right in H
+  end.
+
+Smpl Add clear_join_false : inv_trivial.

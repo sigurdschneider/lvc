@@ -31,7 +31,7 @@ Fixpoint range (n d:nat) :=
   | S d => n::range (S n) d
   end.
 
-Definition ctxmap_app X (m:ctxmap X) (L:list X)
+Definition ctxmap_app X (L:list X) (m:ctxmap X)
   := let l := length L in
     Build_ctxmap ((ctxmap_M m)[-range (ctxmap_len m) l <-- L -]) (ctxmap_len m + l).
 
@@ -49,6 +49,51 @@ Definition ctxmap_extend X (m:ctxmap X) (n:nat) :=
 Definition ctxmap_at X m n : option X
   := if [n >= ctxmap_len m] then None
     else MapInterface.find (ctxmap_to_idx m n) (ctxmap_M m).
+
+Definition ctxmap_at_def X `{LowerBounded X} m n : X
+  := if [n >= ctxmap_len m] then bottom
+    else match MapInterface.find (ctxmap_to_idx m n) (ctxmap_M m) with
+         | Some x => x
+         | None => bottom
+         end.
+
+Definition ctxmap_to_list X  `{LowerBounded X} (m:ctxmap X) : list X :=
+  map (@ctxmap_at_def X _ _ m) (range 0 (ctxmap_len m)).
+
+
+Lemma range_len k n
+  : ❬range k n❭ = n.
+Proof.
+  general induction n; simpl; eauto.
+Qed.
+
+Smpl Add rewrite range_len : len.
+
+Lemma ctxmap_to_list_len X `{LowerBounded X} (m:ctxmap X)
+  : ❬ctxmap_to_list m❭ = ctxmap_len m.
+Proof.
+  unfold ctxmap_to_list. len_simpl; eauto.
+Qed.
+
+Lemma ctxmap_len_app (X:Type) A (B:ctxmap X)
+  : ctxmap_len (ctxmap_app A B) = ❬A❭ + ctxmap_len B.
+Proof.
+  general induction A; simpl; omega.
+Qed.
+
+Ltac ctxmap_len_simpl :=
+  match goal with
+  | [ H : context [ ❬@ctxmap_to_list ?X ?PO ?LB ?m❭ ] |- _ ] =>
+    rewrite (@ctxmap_to_list_len X PO LB m) in H
+  | [ |- context [ ❬@ctxmap_to_list ?X ?PO ?LB ?m❭ ] ] =>
+    rewrite (@ctxmap_to_list_len X PO LB m)
+  | [ H : context [ ctxmap_len (@ctxmap_app ?X ?L ?m) ] |- _ ] =>
+    rewrite (@ctxmap_len_app X L m) in H
+  | [ |- context [ ctxmap_len (@ctxmap_app ?X ?L ?m) ] ] =>
+    rewrite (@ctxmap_len_app X L m)
+  end.
+
+Smpl Add ctxmap_len_simpl : len.
 
 Lemma ctxmap_at_gt X m x
   : x >= ctxmap_len m ->  @ctxmap_at X m x = None.
@@ -198,6 +243,7 @@ Proof.
   eapply H1. omega.
 Qed.
 
+
 Lemma ctxmap_at_poEq X `{PartialOrder X} m m' x
   : m ≣ m'
     -> ctxmap_at m x ≣ ctxmap_at m' x.
@@ -210,6 +256,70 @@ Proof.
 Qed.
 
 Hint Resolve ctxmap_at_poLe ctxmap_at_poEq.
+
+Lemma ctxmap_at_def_poLe X `{LowerBounded X} m m' x
+  : m ⊑ m'
+    -> ctxmap_at_def m x ⊑ ctxmap_at_def m' x.
+Proof.
+  intros. destruct H1.
+  decide (x < ctxmap_len m).
+  - exploit (H2 (ctxmap_to_idx m x)). unfold ctxmap_to_idx. omega.
+    unfold ctxmap_at_def,ctxmap_to_idx in *; rewrite H1 in *;
+      repeat cases; try rewrite H1; eauto;
+        try now (exfalso; omega). eapply bottom_least; eauto.
+  - unfold ctxmap_at_def,ctxmap_to_idx in *; rewrite H1 in *;
+      repeat cases; try rewrite H1; eauto;
+        try now (exfalso; omega).
+Qed.
+
+Lemma ctxmap_at_def_poEq X `{LowerBounded X} m m' x
+  : m ≣ m'
+    -> ctxmap_at_def m x ≣ ctxmap_at_def m' x.
+Proof.
+  intros. destruct H1.
+  decide (x < ctxmap_len m).
+  - exploit (H2 (ctxmap_to_idx m x)). unfold ctxmap_to_idx. omega.
+    unfold ctxmap_at_def,ctxmap_to_idx in *; rewrite H1 in *;
+      repeat cases; try rewrite H1; eauto;
+        try now (exfalso; omega).
+  - unfold ctxmap_at_def,ctxmap_to_idx in *; rewrite H1 in *;
+      repeat cases; try rewrite H1; eauto;
+        try now (exfalso; omega).
+Qed.
+
+Hint Resolve ctxmap_at_def_poLe ctxmap_at_def_poEq.
+
+Instance ctxmap_len_proper X `{PartialOrder X}
+  : Proper (poEq ==> eq) (@ctxmap_len X).
+Proof.
+  unfold Proper, respectful; intros.
+  inv H0; eauto.
+Qed.
+
+Instance ctxmap_len_proper_poLe X `{PartialOrder X}
+  : Proper (poLe ==> eq) (@ctxmap_len X).
+Proof.
+  unfold Proper, respectful; intros.
+  inv H0; eauto.
+Qed.
+
+Instance ctxmap_to_list_proper_poLe X `{LowerBounded X}
+  : Proper (poLe ==> poLe) (@ctxmap_to_list X _ _).
+Proof.
+  unfold Proper, respectful; intros.
+  unfold ctxmap_to_list. rewrite H1 at 2.
+  eapply poLe_map_nd.
+  - intros. eapply ctxmap_at_def_poLe. eauto.
+Qed.
+
+Instance ctxmap_to_list_proper_poEq X `{LowerBounded X}
+  : Proper (poEq ==> poEq) (@ctxmap_to_list X _ _).
+Proof.
+  unfold Proper, respectful; intros.
+  unfold ctxmap_to_list. rewrite H1 at 2.
+  eapply poEq_map_nd.
+  - intros. eapply ctxmap_at_def_poEq. eauto.
+Qed.
 
 Lemma ctxmap_update_at_poLe X `{PartialOrder X} m m' v v' x
   : m ⊑ m'
@@ -402,6 +512,15 @@ Proof.
       cset_tac'. eapply IHn. omega.
 Qed.
 
+Lemma in_range_x x k n
+  : x ∈ of_list (range k n) -> x >= k /\ k+n > x.
+Proof.
+  general induction n; simpl in *; dcr.
+  - cset_tac.
+  - decide (x = k); subst; try omega.
+    cset_tac'; eapply IHn in H0; omega.
+Qed.
+
 Lemma ctxmap_extend_poLe X `{PartialOrder X} n m m'
   : m ⊑ m'
     -> ctxmap_extend m n ⊑ ctxmap_extend m' n.
@@ -431,3 +550,54 @@ Proof.
 Qed.
 
 Hint Resolve ctxmap_extend_poLe ctxmap_extend_poEq.
+
+Lemma ctxmap_erase_find X `{PartialOrder X} m Z x
+  : x ∉ of_list Z
+    -> MapInterface.find x (ctxmap_erase m Z) ≣ MapInterface.find x m.
+Proof.
+  intros. general induction Z; simpl in *; eauto.
+  decide (x = a); subst.
+  - mlud; cset_tac.
+  - mlud. cset_tac.
+    rewrite IHZ; eauto. cset_tac.
+Qed.
+
+Lemma ctxmap_drop_eta X `{PartialOrder X} m n
+  : ctxmap_drop n (ctxmap_extend m n) ≣ m.
+Proof.
+  hnf; intros. split; eauto.
+  - simpl. omega.
+  - intros. simpl in *.
+    rewrite ctxmap_erase_find; eauto.
+    intro. eapply in_range_x in H1. omega.
+Qed.
+
+Lemma ctxmap_join_at_exp X `{JoinSemiLattice X} m x v
+  : m ⊑ ctxmap_join_at m x v.
+Proof.
+  hnf; intros; simpl; split; eauto.
+  intros. mlud; eauto.
+  rewrite <- e.
+  cases; eauto.
+Qed.
+
+Hint Resolve ctxmap_join_at_exp.
+
+Infix "+|+" := (@ctxmap_app _) (right associativity, at level 60) : ctxmap_scope.
+Delimit Scope ctxmap_scope with ctxmap.
+Bind Scope ctxmap_scope with ctxmap.
+
+
+Instance ctxmap_drop_proper n X `{PartialOrder X}
+  : Proper (poEq ==> poEq) (@ctxmap_drop n X).
+Proof.
+  unfold Proper, respectful; intros.
+  eapply ctxmap_drop_poEq; eauto.
+Qed.
+
+Instance ctxmap_drop_proper' n X `{PartialOrder X}
+  : Proper (poLe ==> poLe) (@ctxmap_drop n X).
+Proof.
+  unfold Proper, respectful; intros.
+  eapply ctxmap_drop_poLe; eauto.
+Qed.
