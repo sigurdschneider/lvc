@@ -55,14 +55,18 @@ let main () =
       let file_chan = open_in !infile in
       let lexbuf = Lexing.from_channel  file_chan in
       let ilin = Parser.program Lexer.token lexbuf in
-      let _ =  Printf.printf "Input (functions named):\n%s\n\n" (print_nstmt false !ids 0 ilin) in
+      let _ =  Printf.printf "Input (functions named):\n";
+	       print_nstmt stdout false !ids 0 ilin;
+               Printf.printf "\n\n" in
       let ili = (match Compiler.toDeBruijn ilin with
 		 | Success ili -> ili
 		 | Error e -> raise (Compiler_error "Converting to de bruijn failed (did you define all functions?)"))
 		 in
       let s_dce =
 	(match fromILF ili with
-	 | Success x -> Printf.printf "after reg alloc (functions de-bruijn, regs lowercase, slots uppercase):\n%s\n\n" (print_stmt true !ids 0 x);
+	 | Success x -> Printf.printf "after reg alloc (functions de-bruijn, regs lowercase, slots uppercase):\n";
+			print_stmt stdout true !ids 0 x;
+			Printf.printf "\n\n";
 	   x
 	 | Error e -> raise (Compiler_error "reg alloc failed")
 	)
