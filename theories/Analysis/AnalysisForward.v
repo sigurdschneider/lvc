@@ -200,33 +200,6 @@ Proof.
 Qed.
 
 (*
-Lemma forward_length (sT:stmt) (Dom : stmt -> Type) `{JoinSemiLattice (Dom sT)}
-      `{@LowerBounded (Dom sT) H}
-      (f: forall sT, list params ->
-                forall s, subTerm s sT -> Dom sT -> anni (Dom sT))
-  : forall (s : stmt) (ST:subTerm s sT) (ZL:list params),
-    forall (a : ann (Dom sT)), ❬snd (forward Dom f ZL ST a)❭ = ❬ZL❭.
-Proof.
-  sind s; destruct s; destruct a; simpl; eauto with len;
-    repeat let_pair_case_eq; subst; simpl in *; eauto.
-  - rewrite zip_length2; eauto. rewrite IH; eauto; symmetry; eauto.
-  - rewrite list_update_at_length; eauto with len.
-  - rewrite length_drop_minus.
-    rewrite fold_list_length'.
-    + rewrite IH; eauto. rewrite app_length, map_length. omega.
-    + intros. inv_get. repeat rewrite IH; eauto.
-    + intros. rewrite zip_length; eauto.
-      eapply min_l; eauto.
-Qed.
-
-
-
-Smpl Add
-     match goal with
-     | [ |- context [ ❬snd (@forward ?sT ?Dom ?H ?BSL ?LB ?f ?ZL ?s ?ST ?a)❭ ] ] =>
-       rewrite (@forward_length sT Dom H BSL LB f s ST ZL a)
-     end : len.
-
 Lemma forward_length_ass
       (sT:stmt) (Dom : stmt -> Type) `{JoinSemiLattice (Dom sT)} `{@LowerBounded (Dom sT) H}
       (f: forall sT, list params ->
@@ -408,8 +381,6 @@ Lemma forward_exp (sT:stmt) (Dom : stmt -> Type)
       `{JoinSemiLattice (Dom sT)} `{@LowerBounded (Dom sT) H}
       (f: forall sT, ctxmap params ->
                 forall s, subTerm s sT -> Dom sT -> anni (Dom sT))
-      (fMon:forall s (ST:subTerm s sT) ZL,
-          forall a b, a ⊑ b -> f sT ZL s ST a ⊑ f sT ZL s ST b)
   : forall (s : stmt) (ST:subTerm s sT) ZL,
     forall AL AL', poLe AL AL' ->
         forall a, AL ⊑ snd (forward Dom f ZL ST AL' a).
@@ -422,6 +393,15 @@ Proof with eauto using poLe_setTopAnn, poLe_getAnni.
     rewrite <- ctxmap_drop_eta at 1.
     eapply ctxmap_drop_poLe.
     eapply snd_forwardF_exp'; eauto.
+Qed.
+
+Lemma snd_forwardF_exp (sT:stmt) (Dom : stmt -> Type)
+      `{JoinSemiLattice (Dom sT)} `{@LowerBounded (Dom sT) H}
+      f ZL F
+  : forall AL ST anF, AL ⊑ snd (forwardF (@forward sT Dom _ _ _ f ZL) F ST AL anF).
+Proof.
+  intros. eapply snd_forwardF_exp'; eauto.
+  intros. eapply forward_exp; eauto.
 Qed.
 
 Hint Resolve ann_R_setTopAnn_poEq.
@@ -508,6 +488,52 @@ Proof.
   unfold Proper, respectful.
   intros. eapply forwardF_monotone; eauto.
 Qed.
+
+
+Lemma forward_length (sT:stmt) (Dom : stmt -> Type) `{JoinSemiLattice (Dom sT)}
+      `{@LowerBounded (Dom sT) H}
+      (f: forall sT, ctxmap params ->
+                forall s, subTerm s sT -> Dom sT -> anni (Dom sT))
+  : forall (s : stmt) (ST:subTerm s sT) ZL AL
+    (a : ann (Dom sT)), ctxmap_len (snd (forward Dom f ZL ST AL a)) = ctxmap_len AL.
+Proof.
+  induction s using stmt_ind'; destruct a; simpl; eauto with len;
+    repeat let_pair_case_eq; subst; simpl in *; eauto.
+  - setoid_rewrite IHs2.
+    setoid_rewrite IHs1. reflexivity.
+  - rewrite <- snd_forwardF_exp'; eauto; try reflexivity.
+    rewrite IHs.
+    + len_simpl. omega.
+    + intros. eapply forward_exp; eauto.
+Qed.
+
+Smpl Add
+     match goal with
+     | [ |- context [ ctxmap_len (snd (@forward ?sT ?Dom ?H ?JSL ?LB ?f ?ZL ?s ?ST ?AL ?a)) ] ] =>
+       setoid_rewrite (@forward_length sT Dom H JSL LB f s ST ZL AL a)
+     end : len.
+
+Lemma snd_forwardF_length (sT:stmt) (Dom : stmt -> Type) `{JoinSemiLattice (Dom sT)}
+      `{@LowerBounded (Dom sT) H}
+      (f: forall sT, ctxmap params ->
+                forall s, subTerm s sT -> Dom sT -> anni (Dom sT))
+  : forall ZL F ST AL anF,
+    ctxmap_len (snd (forwardF (@forward sT Dom H _ _ f ZL) F ST AL anF))
+    = ctxmap_len AL.
+Proof.
+  intros.
+  general induction F; destruct anF; simpl; eauto.
+  rewrite IHF. eauto with len.
+Qed.
+
+Smpl Add
+     match goal with
+     | [ |- context [ ctxmap_len (snd
+                                   (@forwardF ?sT ?Dom ?H ?JSL
+                                              (@forward ?sT ?Dom ?H ?JSL ?LB ?f ?ZL)
+                                              ?F ?ST ?AL ?anF)) ] ] =>
+       setoid_rewrite (@snd_forwardF_length sT Dom H JSL LB f ZL F ST AL anF)
+     end : len.
 
 Instance makeForwardAnalysis (Dom:stmt -> Type)
          (PO:forall s, PartialOrder (Dom s))

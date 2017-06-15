@@ -81,20 +81,6 @@ Proof.
   general induction A; simpl; omega.
 Qed.
 
-Ltac ctxmap_len_simpl :=
-  match goal with
-  | [ H : context [ ❬@ctxmap_to_list ?X ?PO ?LB ?m❭ ] |- _ ] =>
-    rewrite (@ctxmap_to_list_len X PO LB m) in H
-  | [ |- context [ ❬@ctxmap_to_list ?X ?PO ?LB ?m❭ ] ] =>
-    rewrite (@ctxmap_to_list_len X PO LB m)
-  | [ H : context [ ctxmap_len (@ctxmap_app ?X ?L ?m) ] |- _ ] =>
-    rewrite (@ctxmap_len_app X L m) in H
-  | [ |- context [ ctxmap_len (@ctxmap_app ?X ?L ?m) ] ] =>
-    rewrite (@ctxmap_len_app X L m)
-  end.
-
-Smpl Add ctxmap_len_simpl : len.
-
 Lemma ctxmap_at_gt X m x
   : x >= ctxmap_len m ->  @ctxmap_at X m x = None.
 Proof.
@@ -272,6 +258,20 @@ Proof.
         try now (exfalso; omega).
 Qed.
 
+Instance ctxmap_at_def_proper X `{LowerBounded X}
+  : Proper (poLe ==> _eq ==> poLe) (@ctxmap_at_def X _ _).
+Proof.
+  unfold Proper, respectful; simpl; intros; subst.
+  eapply ctxmap_at_def_poLe; eauto.
+Qed.
+
+Instance ctxmap_at_def_proper' X `{LowerBounded X}
+  : Proper (flip poLe ==> _eq ==> flip poLe) (@ctxmap_at_def X _ _).
+Proof.
+  unfold Proper, respectful; simpl; intros; subst.
+  eapply ctxmap_at_def_poLe; eauto.
+Qed.
+
 Lemma ctxmap_at_def_poEq X `{LowerBounded X} m m' x
   : m ≣ m'
     -> ctxmap_at_def m x ≣ ctxmap_at_def m' x.
@@ -285,6 +285,13 @@ Proof.
   - unfold ctxmap_at_def,ctxmap_to_idx in *; rewrite H1 in *;
       repeat cases; try rewrite H1; eauto;
         try now (exfalso; omega).
+Qed.
+
+Instance ctxmap_at_def_proper_poEq X `{LowerBounded X}
+  : Proper (poEq ==> _eq ==> poEq) (@ctxmap_at_def X _ _).
+Proof.
+  unfold Proper, respectful; simpl; intros; subst.
+  eapply ctxmap_at_def_poEq; eauto.
 Qed.
 
 Hint Resolve ctxmap_at_def_poLe ctxmap_at_def_poEq.
@@ -310,6 +317,13 @@ Proof.
   unfold ctxmap_to_list. rewrite H1 at 2.
   eapply poLe_map_nd.
   - intros. eapply ctxmap_at_def_poLe. eauto.
+Qed.
+
+Instance ctxmap_to_list_proper_poLe' X `{LowerBounded X}
+  : Proper (flip poLe ==> flip poLe) (@ctxmap_to_list X _ _).
+Proof.
+  unfold Proper, respectful, flip; intros.
+  rewrite H1. reflexivity.
 Qed.
 
 Instance ctxmap_to_list_proper_poEq X `{LowerBounded X}
@@ -572,16 +586,6 @@ Proof.
     intro. eapply in_range_x in H1. omega.
 Qed.
 
-Lemma ctxmap_join_at_exp X `{JoinSemiLattice X} m x v
-  : m ⊑ ctxmap_join_at m x v.
-Proof.
-  hnf; intros; simpl; split; eauto.
-  intros. mlud; eauto.
-  rewrite <- e.
-  cases; eauto.
-Qed.
-
-Hint Resolve ctxmap_join_at_exp.
 
 Infix "+|+" := (@ctxmap_app _) (right associativity, at level 60) : ctxmap_scope.
 Delimit Scope ctxmap_scope with ctxmap.
@@ -601,3 +605,66 @@ Proof.
   unfold Proper, respectful; intros.
   eapply ctxmap_drop_poLe; eauto.
 Qed.
+
+
+Lemma ctxmap_join_at_exp X `{JoinSemiLattice X} m x v
+  : m ⊑ ctxmap_join_at m x v.
+Proof.
+  hnf; intros; simpl; split; eauto.
+  intros. mlud; eauto.
+  rewrite <- e.
+  cases; eauto.
+Qed.
+
+Hint Resolve ctxmap_join_at_exp.
+
+Lemma ctxmap_len_join_at X `{JoinSemiLattice X} AL l a
+  : ctxmap_len (ctxmap_join_at AL l a) = ctxmap_len AL.
+Proof.
+  rewrite <- ctxmap_join_at_exp. reflexivity.
+Qed.
+
+Lemma ctxmap_len_extend X (m:ctxmap X) n
+  : ctxmap_len (ctxmap_extend m n) = ctxmap_len m + n.
+Proof.
+  reflexivity.
+Qed.
+
+Lemma ctxmap_drop_zero X (m:ctxmap X)
+  : ctxmap_drop 0 m = m.
+Proof.
+  destruct m; unfold ctxmap_drop; simpl.
+  orewrite (ctxmap_len0 - 0 = ctxmap_len0). reflexivity.
+Qed.
+
+Lemma ctxmap_len_drop X (m:ctxmap X) n
+  : ctxmap_len (ctxmap_drop n m) = ctxmap_len m - n.
+Proof.
+  reflexivity.
+Qed.
+
+Ltac ctxmap_len_simpl :=
+  match goal with
+  | [ H : context [ ❬@ctxmap_to_list ?X ?PO ?LB ?m❭ ] |- _ ] =>
+    rewrite (@ctxmap_to_list_len X PO LB m) in H
+  | [ |- context [ ❬@ctxmap_to_list ?X ?PO ?LB ?m❭ ] ] =>
+    rewrite (@ctxmap_to_list_len X PO LB m)
+  | [ H : context [ ctxmap_len (@ctxmap_app ?X ?L ?m) ] |- _ ] =>
+    rewrite (@ctxmap_len_app X L m) in H
+  | [ |- context [ ctxmap_len (@ctxmap_app ?X ?L ?m) ] ] =>
+    rewrite (@ctxmap_len_app X L m)
+  | [ H : context [ ctxmap_len (@ctxmap_join_at ?X ?PO ?JSL ?m ?n ?x) ] |- _ ] =>
+    rewrite (@ctxmap_len_join_at X PO JSL m n x) in H
+  | [ |- context [ ctxmap_len (@ctxmap_join_at ?X ?PO ?JSL ?m ?n ?x) ] ] =>
+    rewrite (@ctxmap_len_join_at X PO JSL m n x)
+  | [ H : context [ ctxmap_len (@ctxmap_extend ?X ?m ?n) ] |- _ ] =>
+    rewrite (@ctxmap_len_extend X m n) in H
+  | [ |- context [ ctxmap_len (@ctxmap_extend ?X ?m ?n) ] ] =>
+    rewrite (@ctxmap_len_extend X m n)
+  | [ H : context [ ctxmap_len (@ctxmap_drop ?n ?X ?m) ] |- _ ] =>
+    rewrite (@ctxmap_len_drop X m n) in H
+  | [ |- context [ ctxmap_len (@ctxmap_drop ?n ?X ?m) ] ] =>
+    rewrite (@ctxmap_len_drop X m n)
+  end.
+
+Smpl Add ctxmap_len_simpl : len.
