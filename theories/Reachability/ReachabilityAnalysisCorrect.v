@@ -833,31 +833,37 @@ Proof.
   general induction RCH; simpl in *; invc EQ; eauto;
     repeat let_case_eq; repeat simpl_pair_eqs; subst; simpl in *.
   - edestruct IHRCH; eauto using isCalled.
-  - repeat cases in DEF; try congruence.
-    + edestruct IHRCH2; eauto using isCalled.
-      * rewrite <- LE.
-        eapply H0. eauto using op2bool_cop2bool_not_some.
-      * exploit H1.
-        rewrite op2bool_cop2bool in COND. rewrite COND. reflexivity.
-        rewrite forward_snd_poLe in H3; eauto.
-        destruct (ctxmap_at_def AL n); eauto.
-        left. rewrite H4 in H3. instantiate (1:=false) in H3. inv H3.
-        eapply ann_R_setTopAnn_poEq; eauto. rewrite H4. reflexivity.
-    + exploit H2.
-      rewrite op2bool_cop2bool in COND. rewrite COND. reflexivity.
-      rewrite forward_snd_poLe in DEF; eauto. instantiate (1:=false) in DEF.
-      rewrite H3 in *.
-      eapply IHRCH1 in DEF; eauto.
+  - cases in DEF.
+    + exploit H1; eauto.
+      eapply op2bool_cop2bool in COND; rewrite COND; eauto.
+      eapply IHRCH2 in DEF; only 2: (rewrite H9; reflexivity).
       * destruct DEF; eauto using isCalled.
-      * rewrite <- LE; eauto.
-      * eapply ann_R_setTopAnn_poEq; eauto. rewrite H3. reflexivity.
-    + admit.
+        rewrite forward_snd_poLe in H4; eauto.
+        instantiate (1:=false) in H4. rewrite H3 in *. right; eauto.
+        rewrite H3, H8; reflexivity.
+      * cases; try congruence.
+        rewrite op2bool_cop2bool in COND. rewrite COND in *.
+        rewrite H0; eauto. rewrite H7; eauto. intro. clear_trivial_eqs.
+    + cases in DEF.
+      * exploit H2; eauto.
+        eapply op2bool_cop2bool in COND; rewrite COND; eauto.
+        rewrite forward_snd_poLe in DEF; eauto.
+        instantiate (1:=false) in DEF. rewrite H3 in *.
+        eapply IHRCH1 in DEF; eauto using isCalled.
+        destruct DEF; eauto. left. econstructor; eauto.
+        rewrite H; eauto. rewrite H3, H9; eauto.
+      * eapply IHRCH2 in DEF; only 2: (rewrite H9; reflexivity).
+        -- destruct DEF; eauto using isCalled.
+           eapply IHRCH1 in H3; eauto using isCalled.
+           destruct H3; eauto. left. econstructor; eauto.
+           rewrite H; eauto.
+        -- rewrite H0; eauto. rewrite H7; eauto.
   - decide (labN l = n); subst; eauto using isCalled.
     + destruct l. left. econstructor.
     + right. rewrite ctxmap_at_def_join_at_ne in *; eauto.
   - rewrite ctxmap_at_def_drop_shift in DEF.
 
-Admitted.
+Qed.
 
 
 (*
@@ -1017,6 +1023,7 @@ Proof.
         eapply reachability_analysis_complete_isCalled in H11; eauto.
         exploit H3; eauto.
         eapply isCalledFrom_extend; eauto.*)
+      admit.
     + intros. inv_get. rewrite getAnn_setTopAnn.
       eapply PIR2_nth_2 in H15; eauto using mapi_get_1; dcr; simpl in *.
       eapply ann_R_get in H10. rewrite getAnn_setTopAnn in H10.
@@ -1036,7 +1043,7 @@ Proof.
         inv_get. eapply Get.get_range in H13. eauto.
         rewrite H16.
         rewrite (@forward_getAnn' _ (fun _ => bool)). rewrite getAnn_setTopAnn. eauto.
-Qed.
+Admitted.
 
 Lemma reachability_complete_bottom BL s
   : labelsDefined s ❬BL❭
@@ -1086,7 +1093,7 @@ Proof.
   - unfold initial_value. simpl.
     eapply reachability_complete_initial; eauto.
   - intros. rewrite <- (setTopAnn_eta _ eq_refl).
-    eapply (@reachability_analysis_complete s nil); eauto.
+    eapply (@reachability_analysis_complete s (ctxmap_emp _)); eauto.
     + rewrite setTopAnn_eta; reflexivity.
     + simpl. erewrite !(setTopAnn_eta _ eq_refl); eauto.
     + simpl. rewrite (@forward_getAnn' s (fun _ => bool)); eauto.
@@ -1101,12 +1108,13 @@ Proof.
   - eapply reachability_complete; eauto.
   - unfold reachabilityAnalysis.
     destr_sig. destr_sig. dcr.
-    eapply (@reachability_sound s nil); simpl; eauto.
+    eapply (@reachability_sound s (ctxmap_emp _)); simpl; eauto.
     + eapply H2.
-    + assert (❬snd (forward reachability_transform nil s (subTerm_refl s) x)❭ = 0).
-      rewrite (@forward_length _ (fun _ => bool)); eauto.
-      destruct (snd (forward reachability_transform nil s (subTerm_refl s) x)); isabsurd.
-      eauto using PIR2.
+    + assert (ctxmap_len (snd (forward reachability_transform (ctxmap_emp _) s (subTerm_refl s) (ctxmap_emp _) x)) = 0). {
+        rewrite (@forward_length _ (fun _ => bool)); eauto.
+      }
+      destruct (snd (forward reachability_transform (ctxmap_emp _) s (subTerm_refl s) (ctxmap_emp _) x)); isabsurd.
+      destruct ctxmap_len; isabsurd. reflexivity.
 Qed.
 
 Lemma reachabilityAnalysis_getAnn s
