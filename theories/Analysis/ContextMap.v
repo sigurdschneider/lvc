@@ -17,19 +17,38 @@ Definition ctxmap_update_at X (m:ctxmap X) (n:nat) (x:X)
   := if [n >= ctxmap_len m] then m
     else Build_ctxmap (add (ctxmap_to_idx m n) x (ctxmap_M m)) (ctxmap_len m).
 
-Definition ctxmap_join_at X `{JoinSemiLattice X} (m:ctxmap X) (n:nat) (x:X)
-  := let k := ctxmap_to_idx m n in
-    let v := match MapInterface.find k (ctxmap_M m) with
-            | Some y => join x y
-            | None => x
-            end in
-    Build_ctxmap (add k v (ctxmap_M m)) (ctxmap_len m).
-
 Fixpoint range (n d:nat) :=
   match d with
   | 0 => nil
   | S d => n::range (S n) d
   end.
+
+Lemma range_get k d n x
+  : get (range k d) n x
+    -> x = k + n.
+Proof.
+  intros. general induction d; simpl in *; isabsurd.
+  inv H. omega. eapply IHd in H4. omega.
+Qed.
+
+Lemma get_range k d n x
+  : x = k + n
+    -> n < d
+    -> get (range k d) n x.
+Proof.
+  intros. general induction d; simpl in *; isabsurd.
+  destruct n.
+  - orewrite (k + 0 = k). eauto using get.
+  - econstructor. eapply IHd; eauto. omega. omega.
+Qed.
+
+Ltac range_get_simpl :=
+  match goal with
+  | [H : get (range ?k ?d) ?n ?x |- _ ] =>
+    eapply range_get in H; try (is_var x; subst x)
+  end.
+
+Smpl Add range_get_simpl : inv_get.
 
 Definition ctxmap_app X (L:list X) (m:ctxmap X)
   := let l := length L in
@@ -56,6 +75,16 @@ Definition ctxmap_at_def X `{LowerBounded X} m n : X
          | Some x => x
          | None => bottom
          end.
+
+
+Definition ctxmap_join_at X `{JoinSemiLattice X} (m:ctxmap X) (n:nat) (x:X)
+  := if [n >= ctxmap_len m] then m else
+    let k := ctxmap_to_idx m n in
+    let v := match MapInterface.find k (ctxmap_M m) with
+            | Some y => join x y
+            | None => x
+            end in
+    Build_ctxmap (add k v (ctxmap_M m)) (ctxmap_len m).
 
 Definition ctxmap_to_list X  `{LowerBounded X} (m:ctxmap X) : list X :=
   map (@ctxmap_at_def X _ _ m) (range 0 (ctxmap_len m)).
@@ -380,6 +409,33 @@ Qed.
 
 Hint Resolve ctxmap_update_at_poEq.
 
+Instance poEq_Some X `{PartialOrder X}
+  : Proper (poEq ==> poEq) Some.
+Proof.
+  unfold Proper, respectful; intros.
+  econstructor; eauto.
+Qed.
+
+Instance poLe_Some X `{PartialOrder X}
+  : Proper (poLe ==> poLe) Some.
+Proof.
+  unfold Proper, respectful; intros.
+  econstructor; eauto.
+Qed.
+
+Lemma poEq_Some_struct X `{PartialOrder X} x y
+  : poEq x y -> poEq (Some x) (Some y).
+Proof.
+  intros EQ; rewrite EQ; eauto.
+Qed.
+
+Lemma poLe_Some_struct X `{PartialOrder X} x y
+  : poLe x y -> poLe (Some x) (Some y).
+Proof.
+  intros EQ; rewrite EQ; eauto.
+Qed.
+
+Hint Resolve poEq_Some_struct poLe_Some_struct.
 
 Lemma ctxmap_join_at_poLe X `{JoinSemiLattice X} (m m':ctxmap X) v v' x
   : m ⊑ m'
@@ -389,16 +445,13 @@ Proof.
   intros.
   unfold poLe; simpl. destruct H1.
   unfold ctxmap_join_at, ctxmap_poLe, ctxmap_at, ctxmap_to_idx; simpl.
-  split; eauto.
-  intros.
-  mlud; eauto.
-  + exploit (H3 (ctxmap_len m - S x)). omega.
-    rewrite <- H1 in *.
-    revert H5; repeat cases; simpl; intros; clear_trivial_eqs; eauto.
-    econstructor. rewrite H5, H2. reflexivity.
-    econstructor. rewrite H2. eapply join_poLe.
-  + exfalso. rewrite H1 in *. eauto.
-  + exfalso. rewrite H1 in *. eauto.
+  rewrite H1.
+  cases; simpl; split; eauto; intros; mlud; eauto;
+    exploit (H3 (ctxmap_len m' - S x)); try omega.
+  + repeat cases; eauto.
+    rewrite H2, H5; eauto.
+    rewrite H2. rewrite <- join_poLe. eauto.
+  + eapply H3. omega.
 Qed.
 
 Lemma ctxmap_join_at_poEq X `{JoinSemiLattice X} m m' v v' x
@@ -409,16 +462,12 @@ Proof.
   intros.
   unfold poEq; simpl. destruct H1.
   unfold ctxmap_join_at, ctxmap_poEq, ctxmap_at, ctxmap_to_idx; simpl.
-  split; eauto.
-  intros.
-  mlud; eauto.
-  + exploit (H3 (ctxmap_len m - S x)). omega.
-    rewrite <- H1 in *.
-    revert H5; repeat cases; simpl; intros; clear_trivial_eqs; eauto.
-    econstructor. rewrite H5, H2. reflexivity.
-    econstructor. rewrite H2. eauto.
-  + exfalso. rewrite H1 in *. eauto.
-  + exfalso. rewrite H1 in *. eauto.
+  rewrite H1.
+  cases; simpl; split; eauto; intros; mlud; eauto;
+    exploit (H3 (ctxmap_len m' - S x)); try omega.
+  + repeat cases; eauto.
+    rewrite H2, H5; eauto.
+  + eapply H3. omega.
 Qed.
 
 Hint Resolve ctxmap_join_at_poLe ctxmap_join_at_poEq.
@@ -505,6 +554,17 @@ Proof.
     + rewrite !remove_erase. eapply IHZ. eauto.
 Qed.
 
+Lemma ctxmap_erase_in X Z (m:Map[nat, X]) x
+  : x ∈ of_list Z
+    -> MapInterface.find x (ctxmap_erase m Z) = None.
+Proof.
+  intros. general induction Z; simpl in *; eauto.
+  - simpl in *. cset_tac.
+  - decide (x = a); subst.
+    + mlud; eauto. exfalso; eauto.
+    + rewrite MapFacts.remove_neq_o; eauto.
+      eapply IHZ. cset_tac. inversion 1; eauto.
+Qed.
 
 Lemma x_notin_range x k n
   : x ∉ of_list (range k n)
@@ -565,9 +625,9 @@ Qed.
 
 Hint Resolve ctxmap_extend_poLe ctxmap_extend_poEq.
 
-Lemma ctxmap_erase_find X `{PartialOrder X} m Z x
+Lemma ctxmap_erase_find X (m:Map[nat, X]) Z (x:nat)
   : x ∉ of_list Z
-    -> MapInterface.find x (ctxmap_erase m Z) ≣ MapInterface.find x m.
+    -> MapInterface.find x (ctxmap_erase m Z) = MapInterface.find x m.
 Proof.
   intros. general induction Z; simpl in *; eauto.
   decide (x = a); subst.
@@ -610,6 +670,7 @@ Qed.
 Lemma ctxmap_join_at_exp X `{JoinSemiLattice X} m x v
   : m ⊑ ctxmap_join_at m x v.
 Proof.
+  unfold ctxmap_join_at; cases; simpl; eauto.
   hnf; intros; simpl; split; eauto.
   intros. mlud; eauto.
   rewrite <- e.
@@ -668,3 +729,96 @@ Ltac ctxmap_len_simpl :=
   end.
 
 Smpl Add ctxmap_len_simpl : len.
+
+
+
+Lemma ctxmap_at_def_join_at X `{JoinSemiLattice X} `{@LowerBounded X H} m n x
+  : n < ctxmap_len m
+    -> ctxmap_at_def (ctxmap_join_at m n x) n ≣ join x (ctxmap_at_def m n).
+Proof.
+  intros.
+  unfold ctxmap_at_def, ctxmap_join_at, ctxmap_to_idx; simpl.
+  repeat cases; try omega; simpl in *;
+    rewrite MapFacts.add_eq_o in Heq; eauto; clear_trivial_eqs; eauto.
+  eapply join_wellbehaved. eapply bottom_least.
+Qed.
+
+Lemma ctxmap_at_def_join_at_ne X `{JoinSemiLattice X} `{@LowerBounded X H} m n n' x
+  : n <> n'
+    -> ctxmap_at_def (ctxmap_join_at m n x) n' ≣ ctxmap_at_def m n'.
+Proof.
+  intros.
+  unfold ctxmap_at_def, ctxmap_join_at, ctxmap_to_idx; simpl.
+  repeat cases; simpl in *; try omega; eauto.
+  - cases in COND. omega.
+  - rewrite MapFacts.add_neq_o in Heq; eauto.
+    assert (x0 = x1) by congruence; subst; eauto.
+    simpl in *. inversion 1. omega.
+  - rewrite MapFacts.add_neq_o in Heq; eauto. congruence.
+    simpl in *. inversion 1. omega.
+  - rewrite MapFacts.add_neq_o in Heq; eauto. congruence.
+    simpl in *. inversion 1. omega.
+Qed.
+
+
+Lemma ctxmap_at_def_drop_shift X `{LowerBounded X} (m:ctxmap X) k n
+  : ctxmap_at_def (ctxmap_drop k m) n = ctxmap_at_def m (n + k).
+Proof.
+  unfold ctxmap_at_def, ctxmap_drop, ctxmap_to_idx; simpl;
+    repeat cases; try omega; eauto.
+  - orewrite (ctxmap_len m - k - S n = ctxmap_len m - S (n + k)) in Heq.
+    congruence.
+  - orewrite (ctxmap_len m - k - S n = ctxmap_len m - S (n + k)) in Heq.
+    congruence.
+  - orewrite (ctxmap_len m - k - S n = ctxmap_len m - S (n + k)) in Heq.
+    congruence.
+Qed.
+
+
+Lemma take_range k n d
+  : Take.take k (range n d) = range n (min k d).
+Proof.
+  general induction k; simpl; eauto.
+  repeat cases; eauto.
+  simpl in *. f_equal; eauto.
+Qed.
+
+Lemma ctxmap_at_def_extend_shift X `{LowerBounded X} (m:ctxmap X) k n
+  : ctxmap_at_def (ctxmap_extend m k) (n + k) = ctxmap_at_def m n.
+Proof.
+  unfold ctxmap_at_def, ctxmap_drop, ctxmap_to_idx; simpl;
+    repeat cases; try omega; eauto.
+  - rewrite ctxmap_erase_find in Heq.
+    + orewrite (ctxmap_len m + k - S (n + k) = ctxmap_len m - S n) in Heq.
+      congruence.
+    + intro. eapply in_range_x in H1 as [? ?]. omega.
+  - orewrite (ctxmap_len m + k - S (n + k) = ctxmap_len m - S n) in Heq.
+    rewrite ctxmap_erase_find in Heq.
+    + congruence.
+    + intro. eapply in_range_x in H1 as [? ?]. omega.
+  - orewrite (ctxmap_len m + k - S (n + k) = ctxmap_len m - S n) in Heq.
+    rewrite ctxmap_erase_find in Heq.
+    + congruence.
+    + intro. eapply in_range_x in H1 as [? ?]. omega.
+Qed.
+
+Lemma ctxmap_at_def_join X
+      `{H:PartialOrder X} `{@JoinSemiLattice X H} `{@LowerBounded X H}
+      (m:ctxmap X) n a
+      (LT:n < ctxmap_len m)
+  : poLe a (ctxmap_at_def (ctxmap_join_at m n a) n).
+Proof.
+  rewrite ctxmap_at_def_join_at; eauto.
+  eapply join_poLe.
+Qed.
+
+Lemma ctxmap_at_def_extend_at X `{LowerBounded X} (m:ctxmap X) k n
+  : n < k
+    -> ctxmap_at_def (ctxmap_extend m k) n = bottom.
+Proof.
+  intros.
+  unfold ctxmap_at_def, ctxmap_extend, ctxmap_to_idx;
+    simpl; cases; eauto.
+  rewrite ctxmap_erase_in; eauto.
+  eapply x_in_range; split; omega.
+Qed.

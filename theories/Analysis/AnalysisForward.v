@@ -110,24 +110,6 @@ Fixpoint forward (sT:stmt) (Dom: stmt -> Type)
   end eq_refl.
 
 (*
-Lemma forwardF_get  (sT:stmt) (Dom:stmt->Type) `{JoinSemiLattice (Dom sT)}
-      forward
-           (F:list (params * stmt)) (anF:list (ann (Dom sT))) AL
-           (ST:forall n s, get F n s -> subTerm (snd s) sT) aa n
-           (GetBW:get (fst (forwardF forward AL F anF ST)) n aa)
-      :
-        { Zs : params * stmt & {GetF : get F n Zs &
-        { a : ann (Dom sT) & { getAnF : get anF n a &
-        { ST' : subTerm (snd Zs) sT | aa = fst (forward AL (snd Zs) ST' a)
-        } } } } }.
-Proof.
-  eapply get_getT in GetBW.
-  general induction anF; destruct F as [|[Z s] F']; inv GetBW.
-  - exists (Z, s). simpl. do 4 (eexists; eauto 20 using get).
-  - edestruct IHanF as [Zs [? [? [? ]]]]; eauto; dcr; subst.
-    exists Zs. do 4 (eexists; eauto 20 using get).
-Qed.
-
 Lemma get_forwardF  (sT:stmt) (Dom:stmt->Type) `{JoinSemiLattice (Dom sT)}
            (forward: forall s (ST:subTerm s sT) (a:ann (Dom sT)),
                        ann (Dom sT) * list (Dom sT))
@@ -534,6 +516,28 @@ Smpl Add
                                               ?F ?ST ?AL ?anF)) ] ] =>
        setoid_rewrite (@snd_forwardF_length sT Dom H JSL LB f ZL F ST AL anF)
      end : len.
+
+Lemma forwardF_get  (sT:stmt) (Dom:stmt->Type) `{JoinSemiLattice (Dom sT)}
+      `{@LowerBounded (Dom sT) H}
+           (F:list (params * stmt)) (anF:list (ann (Dom sT))) AL
+           (ST:forall n s, get F n s -> subTerm (snd s) sT) aa n f ZL
+           (GetBW:get (fst (forwardF (@forward sT Dom H _ _ f ZL) F ST AL anF)) n aa)
+      :
+        { Zs : params * stmt & {GetF : get F n Zs &
+        { a : ann (Dom sT) & { getAnF : get anF n a & { AL' : ctxmap (Dom sT) |
+        { ST' : subTerm (snd Zs) sT |
+          fst (@forward sT Dom H _ _ f ZL (snd Zs) ST' AL' a) = aa
+          /\ poLe (snd (@forward sT Dom H _ _ f ZL (snd Zs) ST' AL'  a))
+                 (snd (forwardF (@forward sT Dom H _ _ f ZL) F ST AL anF))
+        } } } } } }.
+Proof.
+  eapply get_getT in GetBW.
+  general induction anF; destruct F as [|[Z s] F']; inv GetBW.
+  - exists (Z, s). simpl. do 5 (eexists; eauto 20 using get).
+    split. reflexivity. eapply snd_forwardF_exp.
+  - edestruct IHanF as [Zs [? [? [? ]]]]; eauto; dcr; subst.
+    exists Zs. do 5 (eexists; eauto 20 using get).
+Qed.
 
 Instance makeForwardAnalysis (Dom:stmt -> Type)
          (PO:forall s, PartialOrder (Dom s))
