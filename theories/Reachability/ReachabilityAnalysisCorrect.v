@@ -820,6 +820,46 @@ match goal with
     specialize (H' H''); subst
 end.
 
+
+Lemma reachability_analysis_complete_isCalled
+      sT BL ZL s (ST:subTerm s sT) n a c AL b
+  : reachability cop2bool Complete BL s a
+    -> poEq b (setTopAnn a c)
+    -> poLe (getAnn a) c
+    -> ctxmap_at_def (snd (forward reachability_transform ZL s ST AL b)) n
+    -> isCalled true s (LabI n) \/ ctxmap_at_def AL n.
+Proof.
+  intros RCH EQ LE DEF.
+  general induction RCH; simpl in *; invc EQ; eauto;
+    repeat let_case_eq; repeat simpl_pair_eqs; subst; simpl in *.
+  - edestruct IHRCH; eauto using isCalled.
+  - repeat cases in DEF; try congruence.
+    + edestruct IHRCH2; eauto using isCalled.
+      * rewrite <- LE.
+        eapply H0. eauto using op2bool_cop2bool_not_some.
+      * exploit H1.
+        rewrite op2bool_cop2bool in COND. rewrite COND. reflexivity.
+        rewrite forward_snd_poLe in H3; eauto.
+        destruct (ctxmap_at_def AL n); eauto.
+        left. rewrite H4 in H3. instantiate (1:=false) in H3. inv H3.
+        eapply ann_R_setTopAnn_poEq; eauto. rewrite H4. reflexivity.
+    + exploit H2.
+      rewrite op2bool_cop2bool in COND. rewrite COND. reflexivity.
+      rewrite forward_snd_poLe in DEF; eauto. instantiate (1:=false) in DEF.
+      rewrite H3 in *.
+      eapply IHRCH1 in DEF; eauto.
+      * destruct DEF; eauto using isCalled.
+      * rewrite <- LE; eauto.
+      * eapply ann_R_setTopAnn_poEq; eauto. rewrite H3. reflexivity.
+    + admit.
+  - decide (labN l = n); subst; eauto using isCalled.
+    + destruct l. left. econstructor.
+    + right. rewrite ctxmap_at_def_join_at_ne in *; eauto.
+  - rewrite ctxmap_at_def_drop_shift in DEF.
+
+Admitted.
+
+
 (*
 Lemma reachability_analysis_complete_isCalled sT ZL BL s a b
       (ST:subTerm s sT)
@@ -946,21 +986,23 @@ Proof.
     + subst FWt. eauto.
     + intros. inv_get.
       unfold mapi. rewrite getAnn_mapi_setTopAnn.
-      admit.
-      (*edestruct (@get_forwardF sT (fun _ => bool)); eauto.
-      exploit H15. eauto.
-      eapply zip_get_eq. eauto. eauto. reflexivity.
-      eapply H2. eauto. eauto. len_simpl.
-      rewrite H14. len_simpl. omega.
-      eauto with len.
-      rewrite (setTopAnn_eta _ eq_refl).
-      assert (x = x6) by eapply subTerm_PI. subst. eauto.
-      rewrite H8. rewrite getAnn_setTopAnn; eauto.*)
+      subst FWF.
+      edestruct (@forwardF_get sT (fun _ => bool) _ _ _ _ _ _ _ _ _ _ _ H6) as [? [? [? [? [? [? ]]]]]]; dcr;
+        subst. protect H15. inv_get.
+      rewrite <- (setTopAnn_eta x0 eq_refl).
+      eapply H2; eauto.  len_simpl. omega. len_simpl. eauto.
+      * unprotect H15. eapply PIR2_nth in H15; eauto; dcr. inv_get.
+        etransitivity. eapply H14.
+        eapply poLe_setTopAnn. reflexivity.
+        rewrite setTopAnn_eta. reflexivity. eauto.
+      * unprotect H15. eapply PIR2_nth in H15; eauto; dcr. inv_get.
+        rewrite H14. rewrite getAnn_setTopAnn. reflexivity.
     + intros. inv_get. rewrite getAnn_setTopAnn in *.
       subst FWF.
-      eapply (@forwardF_get sT (fun _ => bool)) in H5 as [? [? [? [? [? [? ]]]]]];
+      edestruct (@forwardF_get sT (fun _ => bool) _ _ _ _ _ _ _ _ _ _ _ H5) as [? [? [? [? [? [? ]]]]]];
         eauto; dcr. subst.
-      admit.
+
+
       (*rewrite getAnn_setTopAnn in H6.
       destruct x0; isabsurd.
       eapply fold_left_zip_orb_inv in H5. destruct H5.
