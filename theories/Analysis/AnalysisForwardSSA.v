@@ -966,7 +966,6 @@ Proof.
         Focus 2.
         -- rewrite <- (H1 x); eauto. simpl.
            rewrite domjoin_list_get; eauto.
-           instantiate (1:=Some top). rewrite join_idempotent. reflexivity.
            eapply nodup_to_list_eq.
            rewrite renamedApart_occurVars; eauto.
            eapply get_elements_in in H.
