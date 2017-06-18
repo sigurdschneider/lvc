@@ -820,6 +820,38 @@ match goal with
     specialize (H' H''); subst
 end.
 
+Lemma reachability_analysis_complete_isCalledF' BL
+      sT ZL F ST AL ans n
+      (IH: forall k a Zs ST, get F k Zs ->
+                      get ans k a ->
+                      forall AL,
+                        ctxmap_at_def (snd (forward (sT:=sT) reachability_transform ZL (snd Zs) ST AL a)) n
+                        -> isCalled true (snd Zs) (LabI n) \/ ctxmap_at_def AL n)
+      (RCH: forall k Zs a, get F k Zs -> get ans k a ->
+                         reachability cop2bool Complete BL (snd Zs) a)
+  : ctxmap_at_def (snd (forwardF (forward (sT:=sT) reachability_transform ZL) F ST AL ans)) n
+    -> (exists k Zs a, get F k Zs /\ isCalled true (snd Zs) (LabI n) /\ get ans k a /\ getAnn a) \/ ctxmap_at_def AL n.
+Proof.
+  intros. general induction F; destruct ans; simpl in *; eauto.
+  edestruct IHF as [[? [? [? [? [? [? ?]]]]]]|]; try eapply H; eauto 20 using get.
+  - exploit IH; eauto using get.
+    rewrite forward_snd_poLe in H0; only 4: (rewrite setTopAnn_eta; reflexivity);
+      try reflexivity.
+    decide (ctxmap_at_def AL n).
+    destruct H1; eauto 20 using get. destruct (ctxmap_at_def AL n); isabsurd.
+    destruct H1; isabsurd. rewrite join_false_right in *.
+    eauto 20 using get. eauto 20 using get.
+Qed.
+
+Lemma callChain_step_right (isCalled: stmt -> lab -> Prop) F k Zs f g
+  : get F k Zs
+    -> isCalled (snd Zs) g
+    -> callChain isCalled F f (LabI k)
+    -> callChain isCalled F f g.
+Proof.
+  intros. destruct g.
+  general induction H1; eauto using callChain.
+Qed.
 
 Lemma reachability_analysis_complete_isCalled
       sT BL ZL s (ST:subTerm s sT) n a c AL b
@@ -862,7 +894,45 @@ Proof.
     + destruct l. left. econstructor.
     + right. rewrite ctxmap_at_def_join_at_ne in *; eauto.
   - rewrite ctxmap_at_def_drop_shift in DEF.
+    eapply reachability_analysis_complete_isCalledF' in DEF.
+    + destruct DEF as [[? [? [? [? [? [? ?]]]]]]|]; inv_get.
+      * exploit H4; eauto.
+        exploit H3; eauto. rewrite <- H11; eauto.
+        left. destruct H15 as [? [? ?]].
+        econstructor; eauto. simpl.
+        eapply callChain_step_right; eauto.
+        rewrite plus_comm; eauto.
+      * eapply IHRCH in H5; try rewrite H12; eauto.
+        rewrite ctxmap_at_def_extend_shift in H5; eauto.
+        destruct H5; eauto.
+        left. econstructor; eauto. simpl.
+        rewrite plus_comm.
+        econstructor 1.
+    + intros. inv_get. eapply H2; try eapply H7; eauto.
+      instantiate (1:=false). rewrite setTopAnn_eta; eauto.
+      rewrite join_false_right; eauto.
+    + intros; inv_get; eauto using get.
+      assert (a0 = x). {
+        rewrite <- ann_R_eq. change eq with (@poEq bool _).
+        eapply H11; eauto.
+      }
+      subst.
+      eapply H1; eauto.
+Qed.
 
+Lemma reachability_analysis_complete_isCalledF BL
+      sT ZL F ST AL ans n
+      (RCH: forall k Zs a, get F k Zs -> get ans k a ->
+                         reachability cop2bool Complete BL (snd Zs) a)
+  : ctxmap_at_def (snd (forwardF (forward (sT:=sT) reachability_transform ZL) F ST AL ans)) n
+    -> (exists k Zs a, get F k Zs /\ isCalled true (snd Zs) (LabI n) /\ get ans k a /\ getAnn a) \/ ctxmap_at_def AL n.
+Proof.
+  intros.
+  eapply reachability_analysis_complete_isCalledF'; eauto.
+  intros.
+  eapply reachability_analysis_complete_isCalled; try eapply H2; eauto.
+  instantiate (1:=false). rewrite setTopAnn_eta; eauto.
+  rewrite join_false_right; eauto.
 Qed.
 
 
@@ -1007,23 +1077,17 @@ Proof.
       subst FWF.
       edestruct (@forwardF_get sT (fun _ => bool) _ _ _ _ _ _ _ _ _ _ _ H5) as [? [? [? [? [? [? ]]]]]];
         eauto; dcr. subst.
-
-
-      (*rewrite getAnn_setTopAnn in H6.
-      destruct x0; isabsurd.
-      eapply fold_left_zip_orb_inv in H5. destruct H5.
-      * eapply reachability_analysis_complete_isCalled in H5; eauto.
-        econstructor; split; eauto. econstructor 1.
-        eapply ann_R_get in H16.
-        rewrite (@forward_getAnn' _ (fun _ => bool)) in H16.
-        rewrite getAnn_setTopAnn in H16. eauto.
-      * dcr. inv_get.
-        rewrite <- (setTopAnn_eta x8 eq_refl) in H11.
-        exploit forward_snd_poLe; try eapply H11; eauto.
-        eapply reachability_analysis_complete_isCalled in H11; eauto.
-        exploit H3; eauto.
-        eapply isCalledFrom_extend; eauto.*)
-      admit.
+      eapply reachability_analysis_complete_isCalledF in H6; eauto.
+      destruct H6.
+      * destruct H6 as [? [? [? [? [? [? ?]]]]]].
+        exploit H4; eauto.
+        eapply isCalledFrom_extend; eauto.
+      * subst FWt.
+        eapply reachability_analysis_complete_isCalled in H6; try reflexivity; eauto.
+        -- destruct H6.
+           ++ econstructor; eauto using callChain.
+           ++ rewrite ctxmap_at_def_extend_at in H6; eauto using Get.get_range.
+        -- rewrite H16. eauto.
     + intros. inv_get. rewrite getAnn_setTopAnn.
       eapply PIR2_nth_2 in H15; eauto using mapi_get_1; dcr; simpl in *.
       eapply ann_R_get in H10. rewrite getAnn_setTopAnn in H10.
@@ -1043,7 +1107,7 @@ Proof.
         inv_get. eapply Get.get_range in H13. eauto.
         rewrite H16.
         rewrite (@forward_getAnn' _ (fun _ => bool)). rewrite getAnn_setTopAnn. eauto.
-Admitted.
+Qed.
 
 Lemma reachability_complete_bottom BL s
   : labelsDefined s ❬BL❭
