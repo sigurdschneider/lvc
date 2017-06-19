@@ -13,7 +13,7 @@ Lemma bnd_update_list p ϱ k lv Z G
       (incl2 : map ϱ (lv \ of_list Z) ⊆ G)
       (UNIQ:NoDupA eq Z)
   : part_bounded (part_1 p) k
-    (lookup_set ϱ (lv \ of_list Z) ∪ of_list (fresh_list_stable (stable_fresh_part p) G Z)).
+    (lookup_set ϱ (lv \ of_list Z) ∪ of_list (fst (fresh_list_stable (stable_fresh_part p) G Z))).
 Proof.
   unfold part_bounded, lookup_set in *.
   rewrite filter_union; eauto.
@@ -40,7 +40,7 @@ Qed.
 Lemma sep_update_list p ϱ (Z:list nat) (lv:set nat) G
       (ND:NoDupA eq Z) (SEP:sep p (lv \ of_list Z) ϱ) (incl:of_list Z [<=] lv)
   : sep p lv
-        (ϱ [Z <-- fresh_list_stable (stable_fresh_part p) G Z]).
+        (ϱ [Z <-- fst (fresh_list_stable (stable_fresh_part p) G Z)]).
 Proof.
   hnf; split; intros; decide (x ∈ of_list Z).
   - edestruct update_with_list_lookup_in_list; try eapply i; dcr.

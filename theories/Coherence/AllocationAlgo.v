@@ -28,7 +28,7 @@ Definition regAssignF p
   match F, ans with
     | Zs::F, a::ans =>
       let Z := fst Zs in let s := snd Zs in
-      let Z' := fresh_list_stable (stable_fresh_part p) (SetConstructs.map (findt ϱ 0) (getAnn a\of_list Z)) Z in
+      let Z' := fst (fresh_list_stable (stable_fresh_part p) (SetConstructs.map (findt ϱ 0) (getAnn a\of_list Z)) Z) in
       sdo ϱ' <- regAssign s a (ϱ[- Z <-- Z'-]);
         regAssignF ϱ' F ans
 
@@ -151,9 +151,9 @@ Lemma regAssignF_get p G F ans alv n Zs a ϱ ϱ' an ZL Lv i D Dt lv
   -> exists ϱ1 ϱ2, regAssign p (snd Zs) a ϱ1 = Success ϱ2
              /\ regAssignF p (regAssign p) ϱ2 (drop (S n) F) (drop (S n) alv) = Success ϱ'
              /\ agree_on eq (G \ list_union (zip defVars (take n F) (take n ans)))
-                        (findt (ϱ[-fst Zs <-- fresh_list_stable (stable_fresh_part p)
+                        (findt (ϱ[-fst Zs <-- fst (fresh_list_stable (stable_fresh_part p)
                                       (SetConstructs.map (findt ϱ 0) (getAnn a \ of_list (fst Zs)))
-                                      (fst Zs)-]) 0)
+                                      (fst Zs))-]) 0)
                         (findt ϱ1 0).
 
 Proof.

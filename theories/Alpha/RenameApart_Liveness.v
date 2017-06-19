@@ -37,7 +37,7 @@ Definition renameApartF_live (fresh:StableFresh)
   (fix f (N:set var) (F:list (params*stmt)) (anF:list (ann (set var))) :=
      match F, anF with
      | Zs::F, a::anF =>
-       let Y := fresh_list_stable fresh (N ∪ G) (fst Zs) in
+       let Y := fst (fresh_list_stable fresh (N ∪ G) (fst Zs)) in
        let ϱZ := ϱ [ fst Zs <-- Y ] in
        let (N', alv') := renameApart_live fresh ϱZ (G ∪ N ∪ of_list Y) (snd Zs) a in
        let (anF', N'') := f (N' ∪ of_list Y ∪ N) F anF in
@@ -74,7 +74,7 @@ Proof.
   intros LS; inv LS; simpl; repeat let_pair_case_eq; simpl; subst; eauto.
 Qed.
 
-
+(*
 Lemma snd_renameApartF_live fresh als L X G ϱ F (Len:❬F❭ = ❬als❭)
       (IH:forall n Zs a, get F n Zs -> get als n a ->
                     forall (ϱ : env var) (G : ⦃var⦄),
@@ -470,3 +470,4 @@ Proof.
          erewrite fst_renameApart_live; eauto.
     + erewrite getAnn_snd_renameApart_live; eauto with cset.
 Qed.
+*)

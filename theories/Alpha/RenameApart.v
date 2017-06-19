@@ -10,66 +10,115 @@ Set Implicit Arguments.
     a variable fresh for G at every binder, records the choice in ϱ,
     and renames all variables according to ϱ *)
 
-Definition renameApartFStep (fresh:StableFresh)
-           (renameApart': StableFresh -> env var -> set var -> stmt -> set var * stmt)
-           G ϱ :=
-  (fun Ys'G (Zs:params*stmt) =>
-     let Y := fresh_list_stable fresh (snd Ys'G ∪ G) (fst Zs) in
+Inductive FreshInfo :=
+  {
+    domain : set var
+  }.
+
+Inductive FreshGen :=
+  {
+    fresh :> var -> var * FreshGen;
+    fresh_list : list var -> list var * FreshGen;
+    domain' : set var
+  }.
+
+Inductive FreshGenSpec (FG:FreshGen) : Prop :=
+  {
+    fresh_spec : forall x, x ∈ domain' FG -> x = fst (fresh FG x);
+    fresh_spec_inv : forall x, FreshGenSpec (snd (fresh FG x));
+    fresh_list_len : forall Z, ❬fst (fresh_list FG Z)❭ = ❬Z❭;
+    fresh_list_spec_inv : forall Z, FreshGenSpec (snd (fresh_list FG Z))
+  }.
+
+Create HintDb fresh discriminated.
+
+Hint Resolve fresh_spec_inv fresh_list_spec_inv : fresh.
+
+
+
+Definition renameApartFStep
+           (renameApart': FreshGen -> env var -> stmt -> set var * FreshGen * stmt)
+           ϱ :=
+  (fun YLfreshG (Zs:params*stmt) =>
+     let '(YL, fresh, G) := YLfreshG in
+     let (Y, fresh) := fresh_list fresh (fst Zs) in
      let ϱZ := ϱ [ fst Zs <-- Y ] in
-     let (G', s1') := renameApart' fresh ϱZ (G ∪ snd Ys'G ∪ of_list Y) (snd Zs) in
-     ((Y, s1')::fst Ys'G, G' ∪ of_list Y ∪ snd Ys'G)).
+     let '(G'', fresh, s1') := renameApart' fresh ϱZ (snd Zs) in
+     ((Y, s1')::YL,
+      fresh,
+      G ∪ of_list Y ∪ G)).
 
-Definition renameApartF (fresh:StableFresh)
-           (renameApart':StableFresh -> env var -> set var -> stmt -> set var * stmt) G ϱ
-           := fold_left (renameApartFStep fresh renameApart' G ϱ).
+Lemma renameApartFStep_exp renameApart YG F ϱ
+  : snd YG ⊆ snd (renameApartFStep renameApart ϱ YG F).
+Proof.
+  unfold renameApartFStep.
+  repeat let_pair_case_eq; repeat simpl_pair_eqs; simpl; subst; eauto with cset.
+Qed.
 
-Definition renameApartFRight (fresh:StableFresh)
-           (renameApart':StableFresh -> env var -> set var -> stmt -> set var * stmt) G ϱ
-           := fold_right (fun x y => renameApartFStep fresh renameApart' G ϱ y x).
+Definition renameApartF
+           (renameApart':FreshGen -> env var -> stmt -> set var * FreshGen * stmt) ϱ
+           := fold_left (renameApartFStep renameApart' ϱ).
 
-Lemma renameApartFRight_corr (fresh:StableFresh) renameApart' G ϱ s F
-: renameApartFRight fresh renameApart' G ϱ s (rev F) =
-  renameApartF fresh renameApart' G ϱ F s.
+Lemma renameApartF_exp renameApart YG F ϱ
+  : snd YG ⊆ snd (renameApartF renameApart ϱ F YG).
+Proof.
+  general induction F; simpl; eauto.
+  rewrite <- IHF.
+  eapply renameApartFStep_exp.
+Qed.
+
+Definition renameApartFRight renameApart' ϱ
+           := fold_right (fun x y => renameApartFStep renameApart' ϱ y x).
+
+Lemma renameApartFRight_corr renameApart' ϱ s F
+: renameApartFRight renameApart' ϱ s (rev F) =
+  renameApartF renameApart' ϱ F s.
 Proof.
   unfold renameApartF, renameApartFRight.
   erewrite <- fold_left_rev_right; eauto.
 Qed.
 
-Fixpoint renameApart' (fresh:StableFresh) (ϱ:env var) (G:set var) (s:stmt) : set var * stmt:=
+Fixpoint renameApart' (fresh:FreshGen) (ϱ:env var) (s:stmt) : set var * FreshGen * stmt:=
 match s with
    | stmtLet x e s0 =>
-     let y := fresh G x in
+     let (y, fresh) := fresh x in
      let ϱ' := ϱ[x <- y] in
-     let (G', s') := renameApart' fresh ϱ' {y; G} s0 in
-       ({y; G'}, stmtLet y (rename_exp ϱ e) s')
+     let '(G', fresh, s') := renameApart' fresh ϱ' s0 in
+       ({y; G'}, fresh, stmtLet y (rename_exp ϱ e) s')
    | stmtIf e s1 s2 =>
-     let (G', s1') := renameApart' fresh ϱ G s1 in
-     let (G'', s2') := renameApart' fresh ϱ (G ∪ G') s2 in
-      (G' ∪ G'', stmtIf (rename_op ϱ e) s1' s2')
-   | stmtApp l Y => (∅, stmtApp l (List.map (rename_op ϱ) Y))
-   | stmtReturn e => (∅, stmtReturn (rename_op ϱ e))
+     let '(G', fresh, s1') := renameApart' fresh ϱ s1 in
+     let '(G'', fresh, s2') := renameApart' fresh ϱ s2 in
+      (G' ∪ G'', fresh, stmtIf (rename_op ϱ e) s1' s2')
+   | stmtApp l Y => (∅, fresh, stmtApp l (List.map (rename_op ϱ) Y))
+   | stmtReturn e => (∅, fresh, stmtReturn (rename_op ϱ e))
    | stmtFun F s2 =>
-     let (F', G') := renameApartF fresh renameApart' G ϱ F (nil, ∅) in
-     let (G'', s2') := renameApart' fresh ϱ (G ∪ G') s2 in
-     (G' ∪ G'', stmtFun (rev F')  s2')
+     let '(F', fresh, G') := renameApartF renameApart' ϱ F (nil,fresh, ∅) in
+     let '(G'', fresh, s2') := renameApart' fresh ϱ s2 in
+     (G' ∪ G'', fresh, stmtFun (rev F')  s2')
    end.
 
+(*
 Lemma renameApartF_disj (fresh:StableFresh) renameApart' G ϱ F
-: (forall ϱ G n Zs, get F n Zs -> disj G (fst (renameApart' fresh ϱ G (snd Zs))))
-  -> forall Ys G', disj G G' -> disj G (snd (renameApartF fresh renameApart' G ϱ F (Ys, G'))).
+  : (forall ϱ G G' n Zs, get F n Zs -> G ⊆ G' ->
+                    disj G (fst (renameApart' fresh ϱ G' (snd Zs))))
+  -> forall Ys G', G ⊆ G' -> disj G (snd (renameApartF fresh renameApart' ϱ F (Ys, G'))).
 Proof.
   general induction F; simpl; eauto.
   - unfold renameApartFStep.
-    let_pair_case_eq; simpl_pair_eqs.
+    let_pair_case_eq; simpl_pair_eqs; simpl in *.
     eapply IHF; eauto using get.
     rewrite disj_app; split; eauto.
     rewrite disj_app; split; eauto.
-    + subst. eapply disj_1_incl; eauto using get with cset.
+    + subst. eapply H; eauto using get.
+      eapply disj_2_incl; eauto using get with cset. simpl.
+      simpl. eauto
     + symmetry. eapply disj_2_incl.
       eapply fresh_list_stable_spec; eauto with cset.
       eauto with cset.
 Qed.
+ *)
 
+(*
 Lemma renameApart'_disj fresh ϱ G s
   : disj G (fst (renameApart' fresh ϱ G s)).
 Proof.
@@ -86,11 +135,14 @@ Proof.
       eauto using renameApartF_disj.
     + eapply disj_subset_subset_flip_impl; [| reflexivity | eapply (IH s)]; eauto with cset.
 Qed.
+ *)
 
+(*
 Definition renamedApartAnnF (renameApartAnn:stmt -> set var -> ann (set var * set var)) G
-           := fold_right (fun (Zs:params*stmt) anFG =>
+           := fold_right (fun (Zs:params*stmt) anFGG =>
                         let ans := renameApartAnn (snd Zs) (G ∪ of_list (fst Zs)) in
-                        (ans::fst anFG, snd (getAnn ans) ∪ of_list (fst Zs) ∪ snd anFG)).
+                        (ans::fst (fst anFGG),
+                         snd (getAnn ans) ∪ of_list (fst Zs) ∪ snd anFG)).
 
 Fixpoint renamedApartAnn (s:stmt) (G:set var) : ann (set var * set var) :=
   match s with
@@ -106,7 +158,7 @@ Fixpoint renamedApartAnn (s:stmt) (G:set var) : ann (set var * set var) :=
     | stmtApp f Y =>
       ann0 (G, ∅)
     | stmtFun F t =>
-      let (ans, G') := renamedApartAnnF renamedApartAnn G (nil, {}) F in
+      let '(ans, _, G') := renamedApartAnnF renamedApartAnn G (nil, G, {}) F in
       let ant := renamedApartAnn t G in
       annF (G, G' ∪ (snd (getAnn ant))) ans ant
   end.
@@ -118,23 +170,27 @@ Proof.
   - simpl. let_pair_case_eq. simpl; eauto.
 Qed.
 
-Lemma snd_renamedApartAnnF_fst fresh G G' G'' s ϱ L L' G'''
-: (forall n Zs G ϱ G',
+Lemma snd_renamedApartAnnF_fst fresh G' G'' s ϱ L L' G'''
+: (forall n Zs ϱ G' fresh,
      get s n Zs ->
-     snd (getAnn (renamedApartAnn (snd (renameApart' fresh ϱ G (snd Zs))) G')) = fst (renameApart' fresh ϱ G (snd Zs)))
+     snd (getAnn (renamedApartAnn (snd (renameApart' fresh ϱ (snd Zs))) G'))
+     = fst (fst (renameApart' fresh ϱ (snd Zs))))
   -> snd (renamedApartAnnF renamedApartAnn G' (L', G''') L) = G''
   ->
    snd
      (renamedApartAnnF renamedApartAnn
-        G' (L', G''') (fst (renameApartFRight fresh renameApart' G ϱ (L, G'') s))) =
-   snd (renameApartFRight fresh renameApart' G ϱ (L, G'') s).
+        G' (L', G''') (fst (fst (renameApartFRight renameApart' ϱ (L, fresh, G'') s)))) =
+   snd (renameApartFRight renameApart' ϱ (L, fresh, G'') s).
 Proof.
   intros.
-  revert_except s. induction s; intros; simpl.
+  revert_except s. general induction s; intros; simpl.
   - eauto.
   - unfold renameApartFStep.
     repeat (let_pair_case_eq). simpl in *.
-    erewrite <- IHs; intros; [ | eauto using get | eauto using get].
+    erewrite <- IHs in *; intros; [ | eauto using get | eauto using get].
+    rewrite H1 in *. subst YL. rewrite H10.
+    f_equal. f_equal. rewrite <- H10.
+    eapply eq_union_lr.
     + subst. erewrite H; eauto using get.
 Qed.
 
@@ -145,32 +201,33 @@ Lemma definedVars_renameApartF fresh G ϱ F
       (List.map
          (fun f : params * stmt =>
             (definedVars (snd f) ∪ of_list (fst f))%set)
-         (fst (renameApartF fresh renameApart' G ϱ F (nil, {}))))[=]
-      snd (renameApartF fresh renameApart' G ϱ F (nil, {})).
+         (fst (renameApartF fresh renameApart' ϱ F (nil, G)))) ∪ G [=]
+      snd (renameApartF fresh renameApart' ϱ F (nil, G)).
 Proof.
   rewrite <- renameApartFRight_corr.
   remember (rev F).
   assert (forall n Zs, get l n Zs -> exists n', get F n' Zs).
   intros. subst. eapply get_rev in H. eauto. clear Heql.
   general induction l.
-  - reflexivity.
+  - simpl. cset_tac.
   - simpl.
     unfold renameApartFStep. let_pair_case_eq.
     simpl_pair_eqs. subst. simpl.
-    simpl. rewrite list_union_start_swap.
-    simpl.
-    eapply union_eq_decomp; eauto.
-    + edestruct H; eauto using get.
-      rewrite H0; eauto.
-      rewrite empty_neutral_union. reflexivity.
-    + eapply IHl; eauto using get.
+    rewrite list_union_start_swap.
+    rewrite empty_neutral_union.
+    rewrite union_assoc.
+    rewrite IHl; eauto using get.
+    edestruct H; eauto using get.
+    rewrite H0; eauto.
 Qed.
 
 Lemma definedVars_renamedApart' fresh ϱ G s
-: definedVars (snd (renameApart' fresh ϱ G s)) [=] fst (renameApart' fresh ϱ G s).
+: definedVars (snd (renameApart' fresh ϱ G s)) [=] fst (renameApart' fresh ϱ G s) \ G.
 Proof.
   revert ϱ G.
-  sind s; destruct s; intros; simpl; repeat let_pair_case_eq; simpl in * |- *;
+  induction s using stmt_ind'; intros; simpl in *;
+    repeat let_pair_case_eq; simpl in * |- *; subst.
+  - rewrite IHs.
   subst; eauto;
   repeat rewrite lookup_set_union; try rewrite freeVars_renameExp; eauto;
   repeat rewrite IH; eauto; try reflexivity.
@@ -208,48 +265,96 @@ Proof.
   - edestruct IHF as [? [? [? [? ?]]]]; eauto.
     do 2 eexists; split; eauto using get.
 Qed.
+ *)
 
-Lemma get_fst_renameApartF fresh G ϱ F n ans
-:  get (fst (renameApartF fresh renameApart' G ϱ F (nil, {}))) n ans
-   -> exists ϱ' Zs G', get F (length F - S n) Zs
-                 /\ snd ans = snd (renameApart' fresh ϱ' G' (snd Zs))
-                 /\ G ⊆ G'
-                 /\ of_list (fst ans) ⊆ G'
-                 /\ agree_on eq (freeVars (snd Zs) ∪ of_list (fst Zs)) (ϱ [fst Zs <-- fst ans]) ϱ'
-                 /\ length (fst Zs) = length (fst ans)
+Inductive FreshGenInv (FG:FreshGen) (P:FreshGen -> Prop) : Prop :=
+  {
+    fresh_spec_inv : P FG -> forall x, P (snd (fresh FG x));
+    fresh_list_spec_inv : P FG -> forall Z, (snd (fresh_list FG Z))
+  }.
+
+
+Lemma renameApartFRight_inv'  fresh `{FreshGenSpec fresh} G ϱ F
+      (IH:forall fresh ϱ n Zs, get F n Zs
+                          -> FreshGenSpec fresh
+                          -> FreshGenSpec (snd (fst (renameApart' fresh ϱ (snd Zs)))))
+  : FreshGenSpec fresh
+    -> FreshGenSpec (snd (fst (renameApartFRight renameApart' ϱ (nil, fresh, G) F))).
+Proof.
+  general induction F; simpl; eauto.
+  unfold renameApartFStep;
+    repeat let_pair_case_eq; repeat simpl_pair_eqs; subst; simpl;
+      eauto 100 using get with fresh.
+Qed.
+
+Lemma renamedApart_inv fresh ϱ s
+  : FreshGenSpec fresh
+    -> FreshGenSpec (snd (fst (renameApart' fresh ϱ s))).
+Proof.
+  revert fresh ϱ.
+  induction s using stmt_ind'; intros; simpl;
+    repeat let_pair_case_eq; repeat simpl_pair_eqs; subst; simpl;
+      eauto with fresh.
+  - eapply IHs.
+    rewrite <- renameApartFRight_corr.
+    eapply renameApartFRight_inv'; eauto.
+    intros. inv_get. eapply H; eauto.
+Qed.
+
+Lemma renameApartFRight_inv fresh `{FreshGenSpec fresh} G ϱ F
+  : FreshGenSpec fresh
+    -> FreshGenSpec (snd (fst (renameApartFRight renameApart' ϱ (nil, fresh, G) F))).
+Proof.
+  general induction F; simpl; eauto.
+  unfold renameApartFStep;
+    repeat let_pair_case_eq; repeat simpl_pair_eqs; subst; simpl;
+      eauto 100 using get, renamedApart_inv with fresh.
+Qed.
+
+Lemma renameApartF_inv fresh `{FreshGenSpec fresh} G ϱ F
+  : FreshGenSpec fresh
+    -> FreshGenSpec (snd (fst (renameApartF renameApart' ϱ F (nil, fresh, G)))).
+Proof.
+  intros. rewrite <- renameApartFRight_corr; eauto.
+  eapply renameApartFRight_inv; eauto.
+Qed.
+
+Hint Resolve renamedApart_inv renameApartFRight_inv renameApartF_inv : fresh.
+
+Lemma get_fst_renameApartF fresh `{FreshGenSpec fresh} G ϱ F n ans
+:  get (fst (fst (renameApartF renameApart' ϱ F (nil, fresh, G)))) n ans
+   -> exists ϱ' Zs fresh' G', get F (length F - S n) Zs
+                 /\ snd ans = snd (renameApart' fresh' ϱ' (snd Zs))
+                 /\ ϱ' = ϱ [fst Zs <-- fst ans]
+                 /\ fst ans = fst (fresh_list (snd (fst (renameApartFRight renameApart' ϱ (nil, fresh, G') (drop (S n) (rev F))))) (fst Zs))
+                 /\ FreshGenSpec fresh'.
+(*                 /\ length (fst Zs) = length (fst ans)
                  /\ disj G (of_list (fst ans))
-                 /\ NoDupA _eq (fst ans)
-                 /\ G' = (G ∪ snd (renameApartFRight fresh renameApart' G ϱ (nil, {}) (drop (S n) (rev F)))) ∪ (of_list (fst ans))
-                 /\ fst ans = fresh_list_stable fresh (snd (renameApartFRight fresh renameApart' G ϱ (nil, {}) (drop (S n) (rev F))) ∪ G) (fst Zs)
-                 /\ ϱ' = ϱ [fst Zs <-- fst ans].
+                 /\ NoDupA _eq (fst ans).*)
+                          (*
+                 /\ G' = (G ∪ snd (renameApartFRight renameApart' ϱ (nil, fresh, {}) (drop (S n) (rev F)))) ∪ (of_list (fst ans))
+                 /\ fst ans = fst (fresh_list (fst (snd (renameApartFRight renameApart' ϱ (nil, fresh, G') (drop (S n) (rev F)))) (fst Zs))
+                 /\ ϱ' = ϱ [fst Zs <-- fst ans]. *)
 Proof.
   rewrite <- renameApartFRight_corr.
   remember (rev F).
   general induction l; simpl in * |- *; [ isabsurd |].
   - unfold renameApartFStep in *.
-    revert H; let_pair_case_eq; simpl_pair_eqs. subst.
-    intros.
+    revert H; repeat let_pair_case_eq; repeat simpl_pair_eqs. subst.
+    intros. simpl in *.
     inv H; subst.
-    + do 3 eexists; split; eauto using get.
-      eapply get_rev. rewrite <- Heql. econstructor.
-      simpl. split. reflexivity.
-      split. cset_tac; intuition.
-      split. cset_tac.
-      split. eauto.
-      split.
-      rewrite fresh_list_stable_length; eauto.
-      split.
-      symmetry. eapply disj_2_incl.
-      eapply fresh_list_stable_spec; eauto. eauto.
-      split.
-      eapply fresh_list_stable_nodup; eauto.
-      eauto.
-    + edestruct IHl as [? [? [? [? ?]]]]; eauto.
-      instantiate (1:=rev (tl (rev F))). rewrite <- Heql. simpl. rewrite rev_involutive; eauto.
+    + do 4 eexists; eauto using get. split.
+      * eapply get_rev. rewrite <- Heql. econstructor.
+      * inv_get. simpl. split. reflexivity.
+        split. reflexivity. split. reflexivity.
+        eauto with fresh.
+    + edestruct IHl as [? [? [? [? [? ?]]]]]; eauto.
+      instantiate (1:=rev (tl (rev F))).
+      rewrite <- Heql. simpl. rewrite rev_involutive; eauto.
       rewrite <- Heql in *. simpl in *.
       assert (S (length (rev l)) = length (rev F)).
       rewrite <- Heql. simpl. rewrite rev_length; eauto.
-      do 3 eexists; split; eauto using get.
+      do 4 eexists; split; eauto using get.
       assert (length F = S (length (rev l))).
       rewrite rev_length.
       rewrite <- rev_length. rewrite <- Heql. eauto.
@@ -258,6 +363,9 @@ Proof.
       rewrite H3. simpl. eauto.
 Qed.
 
+
+
+(*
 Lemma snd_renameApartAnn_fst fresh s G ϱ G'
 : snd (getAnn (renamedApartAnn (snd (renameApart' fresh ϱ G s)) G')) [=] fst (renameApart' fresh ϱ G s).
 Proof.
@@ -278,8 +386,9 @@ Proof.
       setoid_rewrite H3. rewrite definedVars_renamedApart'.
       eapply IH; eauto.
 Qed.
+*)
 
-
+(*
 Lemma snd_renamedApartAnn s G
  : snd (getAnn (renamedApartAnn s G)) [=] definedVars s.
 Proof.
@@ -389,22 +498,35 @@ Proof.
   eauto. intros. eapply definedVars_renamedApart'.
 Qed.
 
-Lemma renameApartF_length' fresh G ϱ F x
-: length (fst (renameApartF fresh renameApart' G ϱ F x)) = length (fst x) + length F.
+ *)
+
+Lemma renameApartF_length' ϱ F x
+: length (fst (fst (renameApartF renameApart' ϱ F x))) = length (fst (fst x)) + length F.
 Proof.
   general induction F; simpl; eauto.
-  unfold renameApartFStep. simpl. let_pair_case_eq.
-  simpl_pair_eqs. subst.
+  unfold renameApartFStep. simpl.
+  repeat let_pair_case_eq; repeat simpl_pair_eqs; subst.
   rewrite IHF.
   simpl. omega.
 Qed.
 
-Lemma renameApartF_length fresh G ϱ F
-  : length (fst (renameApartF fresh renameApart' G ϱ F (nil, ∅))) = length F.
+Lemma renameApartF_length ϱ F G fresh
+  : length (fst (fst (renameApartF renameApart' ϱ F (nil, fresh, G)))) = length F.
 Proof.
   rewrite renameApartF_length'. eauto.
 Qed.
 
+Ltac renameApartF_len_simpl :=
+  match goal with
+  | [ H : context [ ❬fst (fst (renameApartF ?f ?ϱ ?F _))❭ ] |- _ ] =>
+    rewrite (@renameApartF_length ϱ F) in H
+  | [ |- context [ ❬fst (fst (renameApartF ?f ?ϱ ?F _))❭ ] ] =>
+    rewrite (@renameApartF_length ϱ F)
+  end.
+
+Smpl Add renameApartF_len_simpl : len.
+
+(*
 Lemma fst_renamedApartAnnF_app G F F'
   : fst (renamedApartAnnF renamedApartAnn G (nil, {}) (F ++ F'))
     = fst (renamedApartAnnF renamedApartAnn G (nil, {}) F)
@@ -763,14 +885,7 @@ Proof.
   intro. eapply lookup_set_spec in H2. destruct H2; dcr.
   specialize (H0 x0 y).
  *)
-
-
-Smpl Add match goal with
-         | [ H : context [ ❬fst (renameApartF ?fresh _ ?G ?ϱ ?F ?p)❭ ] |- _ ] =>
-           rewrite (@renameApartF_length fresh G ϱ F) in H
-         | [ |- context [ ❬fst (renameApartF ?fresh _ ?G ?ϱ ?F ?p)❭ ] ] =>
-           rewrite (@renameApartF_length fresh G ϱ F)
-         end : len.
+*)
 
 Lemma get_list_eq X (R:relation X) (L L':list X) (Len:❬L❭ = ❬L'❭)
   : (forall n x y, get L n x -> get L' n y -> R x y)
@@ -779,58 +894,64 @@ Proof.
   general induction Len; eauto 20 using @list_eq, get.
 Qed.
 
-Lemma fst_renameApartF_length fresh G ϱ F
+
+Lemma fst_renameApartF_length fresh (FGS: FreshGenSpec fresh) ϱ F
   : ((length (A:=nat) ⊝ fst ⊝ F
-      = length (A:=nat) ⊝ fst ⊝ rev (fst (renameApartF fresh renameApart' G ϱ F (nil, {}))))).
+      = length (A:=nat) ⊝ fst ⊝ rev (fst (fst (renameApartF renameApart' ϱ F (nil, fresh, {})))))).
 Proof.
   eapply list_eq_eq.
-  eapply get_list_eq; intros. eauto with len.
-  inv_get.
-  eapply get_fst_renameApartF in H0. simpl in *.
-  destruct H0 as [? [? [? ?]]]; dcr; subst.
-  rewrite H10.
-  rewrite fresh_list_stable_length. eauto.
-  len_simpl.
-  assert (n < ❬F❭) by eauto with len.
-  orewrite (❬F❭ - S (❬F❭ - S n) = n) in H1. get_functional. eauto.
+  eapply get_list_eq; intros.
+  - eauto with len.
+  - inv_get.
+    eapply get_fst_renameApartF in H0 as [? [? [? [? [? [? [? [? ?]]]]]]]]; subst; eauto.
+    simpl in *.
+    rewrite H3. len_simpl.
+    rewrite fresh_list_len; eauto.
+    assert (n < ❬F❭) by eauto with len.
+    orewrite (❬F❭ - S (❬F❭ - S n) = n) in H0.
+    get_functional. eauto.
+    eauto 100 with fresh.
 Qed.
 
-Lemma labelsDefined_paramsMatch fresh L s ϱ G
+Lemma labelsDefined_paramsMatch fresh (FGS:FreshGenSpec fresh) L s ϱ
 : paramsMatch s L
-  -> paramsMatch (snd (renameApart' fresh ϱ G s)) L.
+  -> paramsMatch (snd (renameApart' fresh ϱ s)) L.
 Proof.
   intros.
-  general induction H; simpl; repeat (let_pair_case_eq; simpl); try now econstructor; eauto; simpl_pair_eqs; instantiate; subst; eauto; subst.
-  - subst. exploit IHparamsMatch; eauto. econstructor. eapply H0.
-  - subst. eauto using paramsMatch.
-  - subst. econstructor; eauto.
-    len_simpl; eauto.
-  - subst. econstructor.
+  general induction H; simpl;
+    repeat (let_pair_case_eq); simpl; repeat simpl_pair_eqs; subst; simpl;
+      eauto using paramsMatch with fresh len.
+  - econstructor.
     + intros. inv_get.
-      eapply get_fst_renameApartF in H2. simpl in *.
-      destruct H2 as [? [? [? ?]]]; dcr.
+      eapply get_fst_renameApartF in H2 as [? [? [? [? [? [? [? [? ?]]]]]]]];
+        subst; eauto.
+      simpl in *.
+      rewrite H3. len_simpl.
+      simpl in *. subst.
       rewrite H5.
       exploit H0; eauto. eqassumption.
       erewrite <- fst_renameApartF_length; eauto.
-    + exploit IHparamsMatch; eauto.
+    + exploit IHparamsMatch; swap 1 2.
       eqassumption.
-      erewrite <- fst_renameApartF_length; eauto.
+      * erewrite <- fst_renameApartF_length; eauto.
+      * eauto with fresh.
 Qed.
 
 Require Import AppExpFree.
 
-Lemma app_expfree_rename_apart fresh s ϱ G
+Lemma app_expfree_rename_apart fresh (FGS:FreshGenSpec fresh) s ϱ
 : app_expfree s
-  -> app_expfree (snd (renameApart' fresh ϱ G s)).
+  -> app_expfree (snd (renameApart' fresh ϱ s)).
 Proof.
   intros AEF.
   general induction AEF; simpl;
     repeat let_pair_case_eq; repeat simpl_pair_eqs; subst; simpl;
-      eauto using app_expfree.
+      eauto using app_expfree with fresh.
   - econstructor. intros; inv_get. exploit H; eauto.
     inv H1; simpl; eauto using isVar.
-  - econstructor; intros; inv_get; eauto.
-    edestruct get_fst_renameApartF as [? [? ?]]; eauto; dcr; subst.
-    setoid_rewrite H3.
-    eapply H0; eauto.
+  - econstructor; intros; inv_get; eauto with fresh.
+    eapply get_fst_renameApartF in H1 as [? [? [? [? [? [? [? [? ?]]]]]]]];
+      subst; eauto.
+    setoid_rewrite H2.
+    + eapply H0; eauto.
 Qed.

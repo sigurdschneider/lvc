@@ -192,7 +192,8 @@ Defined.
 
 Lemma least_fresh_list_part_ext p n G G'
   : G [=] G'
-    -> fresh_list_stable (stable_fresh_part p) G n = fresh_list_stable (stable_fresh_part p) G' n.
+    -> fst (fresh_list_stable (stable_fresh_part p) G n)
+      = fst (fresh_list_stable (stable_fresh_part p) G' n).
 Proof.
   eapply fresh_list_stable_ext.
   intros. eapply least_fresh_part_ext; eauto.
@@ -200,18 +201,20 @@ Qed.
 
 Lemma fresh_list_stable_P_ext p G L L'
   : ❬L❭ = ❬L'❭
-    -> of_list (fresh_list_stable (stable_fresh_P p) G L)
-              ⊆ of_list (fresh_list_stable (stable_fresh_P p) G L').
+    -> of_list (fst (fresh_list_stable (stable_fresh_P p) G L))
+              ⊆ of_list (fst (fresh_list_stable (stable_fresh_P p) G L')).
 Proof.
   intros. hnf; intros ? In.
-  general induction H; simpl in *; eauto.
+  general induction H; simpl in *.
   - cset_tac.
+  - revert In. repeat let_pair_case_eq; repeat simpl_pair_eqs; subst; simpl; eauto.
+    cset_tac.
 Qed.
 
 Lemma fresh_list_stable_P_ext_eq p G L L'
   : ❬L❭ = ❬L'❭
-    -> of_list (fresh_list_stable (stable_fresh_P p) G L)
-              [=] of_list (fresh_list_stable (stable_fresh_P p) G L').
+    -> of_list (fst (fresh_list_stable (stable_fresh_P p) G L))
+              [=] of_list (fst (fresh_list_stable (stable_fresh_P p) G L')).
 Proof.
   split; intros.
   - eapply fresh_list_stable_P_ext; eauto.
@@ -242,12 +245,13 @@ Qed.
 Lemma cardinal_filter_part p G Z
       (UNIQ:NoDupA eq Z)
   : cardinal (filter (part_1 p)
-                     (of_list (fresh_list_stable (stable_fresh_part p) G Z)))
+                     (of_list (fst (fresh_list_stable (stable_fresh_part p) G Z))))
     = cardinal (filter (part_1 p) (of_list Z)).
 Proof.
   general induction Z; simpl.
   - reflexivity.
-  - decide (part_1 p a).
+  -  repeat let_pair_case_eq; repeat simpl_pair_eqs; subst; simpl.
+    decide (part_1 p a).
     + rewrite filter_add_in; eauto using least_fresh_part_1.
       rewrite filter_add_in; eauto.
       rewrite !add_cardinal_2; eauto.

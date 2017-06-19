@@ -2,24 +2,38 @@ Require Import Util CSet Var.
 Require Import StableFresh.
 Require Import IL VarP RenameApart.
 
-Lemma renameApart_var_P (fresh:StableFresh) (P:var -> Prop) (ϱ:env var) G s
-      (freshP:forall x G, P (fresh G x))
+
+Inductive FreshGenVarProp (P:var -> Prop) (FG:FreshGen) : Prop :=
+  {
+    fresh_var_inv : forall x, P (fst (fresh FG x));
+    fresh_var_list_inv : forall Z x, x ∈ of_list (fst (fresh_list FG Z)) -> P x;
+    fresh_inv : forall x, FreshGenVarProp P (snd (fresh FG x));
+    fresh_list_inv : forall Z, FreshGenVarProp P (snd (fresh_list FG Z));
+  }.
+
+Local Hint Resolve fresh_inv fresh_list_inv.
+
+Lemma renameApart_var_P (fresh:FreshGen) (P:var -> Prop) (ϱ:env var) s
+      (FGVP:FreshGenVarProp P fresh) (FGI:FreshGenVarProp P fresh)
       (ren:forall x, x ∈ freeVars s -> P (ϱ x))
-  : var_P P (snd (renameApart' fresh ϱ G s)).
+  : var_P P (snd (renameApart' fresh ϱ s)).
 Proof.
-  revert ϱ G ren.
-  sind s; intros; destruct s; simpl;
+  revert ϱ ren fresh fresh FGVP FGI.
+  induction s using stmt_ind'; intros; simpl;
     repeat let_pair_case_eq; repeat simpl_pair_eqs; subst; simpl in *.
   - econstructor; eauto.
-    + eapply IH; eauto.
-      intros; lud; eauto. eapply ren. cset_tac.
+    + eapply IHs; eauto.
+      * intros; lud; eauto using fresh_var_inv. eapply fresh_var_inv. eauto.
+        eapply ren. cset_tac.
+    + eapply fresh_var_inv; eauto.
     + rewrite freeVars_renameExp. unfold lookup_set.
       hnf; intros. cset_tac.
   - econstructor; eauto.
     + rewrite rename_op_freeVars; eauto. unfold lookup_set.
       hnf; intros. cset_tac.
-    + eapply IH; eauto. cset_tac.
-    + eapply IH; eauto. cset_tac.
+    + eapply IHs1; eauto. cset_tac.
+    + eapply IHs2; eauto. cset_tac.
+
   - econstructor.
     rewrite freeVars_rename_op_list. unfold lookup_set.
     hnf; intros. cset_tac.

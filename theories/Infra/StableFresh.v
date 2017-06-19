@@ -13,44 +13,45 @@ Section FreshListStable.
 
   Variable fresh : StableFresh.
 
-  Fixpoint fresh_list_stable (G:set nat) (xl:list nat) : list nat :=
+  Fixpoint fresh_list_stable (G:set nat) (xl:list nat) : list nat * set nat :=
     match xl with
-      | nil => nil
-      | x::xl => let y := fresh G x in y::fresh_list_stable {y;G} xl
+      | nil => (nil, G)
+      | x::xl => let y := fresh G x in
+                let (Y,G') := fresh_list_stable {y;G} xl in
+                (y::Y,G')
     end.
 
   Lemma fresh_list_stable_length (G:set nat) xl
-  : length (fresh_list_stable G xl) = length xl.
+  : length (fst (fresh_list_stable G xl)) = length xl.
   Proof.
-    general induction xl; eauto. simpl. f_equal; eauto.
+    general induction xl; simpl; repeat let_pair_case_eq; subst; simpl; eauto.
   Qed.
 
-  Definition fresh_set_stable (G:set nat) L : set nat :=
-    of_list (fresh_list_stable G L).
-
   Lemma fresh_list_stable_spec
-    : forall (G:set nat) L, disj (of_list (fresh_list_stable G L)) G.
+    : forall (G:set nat) L, disj (of_list (fst (fresh_list_stable G L))) G.
   Proof.
-    intros. general induction L; simpl; intros; eauto.
+    intros. general induction L; simpl; repeat let_pair_case_eq; subst; simpl; intros; eauto.
     - hnf; intros. cset_tac'.
       + eapply stable_fresh_spec in H0; eauto.
       + eapply IHL; eauto; cset_tac.
   Qed.
 
-  Lemma fresh_set_stable_spec
-  : forall (G:set nat) L, disj (fresh_set_stable G L) G.
-  Proof.
-    eapply fresh_list_stable_spec.
-  Qed.
-
   Lemma fresh_list_stable_nodup (G: set nat) L
-    : NoDupA eq (fresh_list_stable G L).
+    : NoDupA eq (fst (fresh_list_stable G L)).
   Proof.
-    general induction L; simpl; eauto.
+    general induction L; simpl; repeat let_pair_case_eq; subst; eauto.
     econstructor; eauto. intro.
     eapply fresh_list_stable_spec.
     eapply InA_in. eapply H.
     cset_tac; eauto.
+  Qed.
+
+  Lemma fresh_list_stable_G G L
+    : snd (fresh_list_stable G L) [=] of_list (fst (fresh_list_stable G L)) ∪ G.
+  Proof.
+    general induction L; simpl; repeat let_pair_case_eq; subst; simpl;
+      eauto with cset.
+    rewrite IHL. cset_tac.
   Qed.
 
 End FreshListStable.
@@ -58,23 +59,25 @@ End FreshListStable.
 Lemma fresh_list_stable_ext n G G' (f:StableFresh)
   : (forall x G G', G [=] G' -> f G x = f G' x)
     -> G [=] G'
-    -> fresh_list_stable f G n = fresh_list_stable f G' n.
+    -> fst (fresh_list_stable f G n) = fst (fresh_list_stable f G' n).
 Proof.
   intros EXT EQ. general induction n; simpl.
   - reflexivity.
-  - f_equal; eauto.
+  - repeat let_pair_case_eq; subst; simpl; eauto.
+    f_equal; eauto.
     eapply IHn; eauto.
     erewrite EXT, EQ; eauto; reflexivity.
 Qed.
 
 Lemma fresh_list_stable_get (fresh : StableFresh) (G: set nat) L x n
-  : get (fresh_list_stable fresh G L) n x
+  : get (fst (fresh_list_stable fresh G L)) n x
     -> exists y, get L n y /\
-           x = fresh (of_list (take n (fresh_list_stable fresh G L)) ∪ G) y.
+           x = fresh (of_list (take n (fst (fresh_list_stable fresh G L))) ∪ G) y.
 Proof.
   intros Get. general induction L; simpl in *.
   - isabsurd.
-  - inv Get.
+  - revert Get. let_pair_case_eq; simpl_pair_eqs; subst. intros Get.
+    inv Get.
     + simpl. erewrite stable_fresh_ext; eauto.
       eexists; split; eauto with get. clear; cset_tac.
     + edestruct IHL; eauto; dcr; subst.
@@ -83,7 +86,7 @@ Proof.
 Qed.
 
 Lemma fresh_list_stable_In (fresh : StableFresh) (G: set nat) L x
-  : x ∈ of_list (fresh_list_stable fresh G L)
+  : x ∈ of_list (fst (fresh_list_stable fresh G L))
     -> exists y G', y ∈ of_list L /\
            x = fresh G' y /\ G ⊆ G'.
 Proof.
