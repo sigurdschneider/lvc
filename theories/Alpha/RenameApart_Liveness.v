@@ -74,7 +74,7 @@ Proof.
   intros LS; inv LS; simpl; repeat let_pair_case_eq; simpl; subst; eauto.
 Qed.
 
-(*
+
 Lemma snd_renameApartF_live fresh als L X G ϱ F (Len:❬F❭ = ❬als❭)
       (IH:forall n Zs a, get F n Zs -> get als n a ->
                     forall (ϱ : env var) (G : ⦃var⦄),
