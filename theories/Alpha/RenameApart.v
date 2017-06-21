@@ -12,30 +12,25 @@ Set Implicit Arguments.
     a variable fresh for G at every binder, records the choice in ϱ,
     and renames all variables according to ϱ *)
 
-Record FreshInfo :=
-  {
-    FreshInfoType :> Type;
-    domain : FreshInfoType -> set var
-  }.
-
-Inductive FreshGen (Fi : FreshInfo) :=
+Inductive FreshGen (Fi : Type) :=
   {
     fresh :> Fi -> var -> var * Fi;
     fresh_list : Fi -> list var -> list var * Fi;
+    domain : Fi -> set var;
     domain_add : Fi -> set var -> Fi
   }.
 
 Inductive FreshGenSpec Fi (FG:FreshGen Fi) : Prop :=
   {
-    fresh_spec : forall i x, fst (fresh FG i x) ∉ domain _ i;
-    fresh_domain_spec : forall i x, domain _ (snd (fresh FG i x))
-                                      [=] {fst (fresh FG i x); (domain _ i)};
-    fresh_list_disj : forall i Z, disj (domain _ i) (of_list (fst (fresh_list FG i Z)));
-    fresh_list_domain_spec : forall i Z, domain _ (snd (fresh_list FG i Z))
-                                           [=] of_list (fst (fresh_list FG i Z)) ∪ domain _ i;
+    fresh_spec : forall i x, fst (fresh FG i x) ∉ domain FG i;
+    fresh_domain_spec : forall i x, domain FG (snd (fresh FG i x))
+                                      [=] {fst (fresh FG i x); (domain FG i)};
+    fresh_list_disj : forall i Z, disj (domain FG i) (of_list (fst (fresh_list FG i Z)));
+    fresh_list_domain_spec : forall i Z, domain FG (snd (fresh_list FG i Z))
+                                           [=] of_list (fst (fresh_list FG i Z)) ∪ domain FG i;
     fresh_list_nodup : forall i Z, NoDupA eq (fst (fresh_list FG i Z));
     fresh_list_len : forall i Z, ❬fst (fresh_list FG i Z)❭ = ❬Z❭;
-    domain_add_spec : forall i G, domain _ (domain_add FG i G) [=] G ∪ domain _ i
+    domain_add_spec : forall i G, G ∪ domain FG i ⊆ domain FG (domain_add FG i G)
   }.
 
 Create HintDb fresh discriminated.
@@ -565,10 +560,10 @@ Lemma renameApartF_domain'Right {Fi} (FG:FreshGen Fi) (FGS:FreshGenSpec FG) G fi
       (IH:forall (n : nat) (Zs : params * stmt),
           get F n Zs ->
           forall (ϱ : env nat) (fi : Fi),
-            domain Fi (snd (fst (renameApart' FG fi ϱ (snd Zs))))
-                   [=] domain Fi fi ∪ fst (fst (renameApart' FG fi ϱ (snd Zs))))
-  : G ∪ domain Fi (snd (fst (renameApartFRight FG renameApart' ϱ (nil, fi, G) F)))
-      [=] snd (renameApartFRight FG renameApart' ϱ (nil, fi, G) F) ∪ domain Fi fi.
+            domain FG (snd (fst (renameApart' FG fi ϱ (snd Zs))))
+                   [=] domain FG fi ∪ fst (fst (renameApart' FG fi ϱ (snd Zs))))
+  : G ∪ domain FG (snd (fst (renameApartFRight FG renameApart' ϱ (nil, fi, G) F)))
+      [=] snd (renameApartFRight FG renameApart' ϱ (nil, fi, G) F) ∪ domain FG fi.
 Proof.
   general induction F; simpl; eauto.
   unfold renameApartFStep; repeat let_pair_case_eq; subst; simpl.
@@ -585,10 +580,10 @@ Lemma renameApartF_domain' {Fi} (FG:FreshGen Fi) (FGS:FreshGenSpec FG) fi ϱ F G
       (IH:forall (n : nat) (Zs : params * stmt),
           get F n Zs ->
           forall (ϱ : env nat) (fi : Fi),
-            domain Fi (snd (fst (renameApart' FG fi ϱ (snd Zs))))
-                   [=] domain Fi fi ∪ fst (fst (renameApart' FG fi ϱ (snd Zs))))
-  : G ∪ domain Fi (snd (fst (renameApartF FG renameApart' ϱ F (nil, fi, G))))
-      [=] snd (renameApartF FG renameApart' ϱ F (nil, fi, G)) ∪ domain Fi fi.
+            domain FG (snd (fst (renameApart' FG fi ϱ (snd Zs))))
+                   [=] domain FG fi ∪ fst (fst (renameApart' FG fi ϱ (snd Zs))))
+  : G ∪ domain FG (snd (fst (renameApartF FG renameApart' ϱ F (nil, fi, G))))
+      [=] snd (renameApartF FG renameApart' ϱ F (nil, fi, G)) ∪ domain FG fi.
 Proof.
   rewrite <- renameApartFRight_corr.
   eapply renameApartF_domain'Right; eauto.
@@ -597,8 +592,8 @@ Qed.
 
 
 Lemma renameApart'_domain {Fi} (FG:FreshGen Fi) (FGS:FreshGenSpec FG) fi ϱ s
-  : domain Fi (snd (fst (renameApart' FG fi ϱ s))) [=]
-           domain _ fi ∪ (fst (fst (renameApart' FG fi ϱ s))).
+  : domain FG (snd (fst (renameApart' FG fi ϱ s))) [=]
+           domain FG fi ∪ (fst (fst (renameApart' FG fi ϱ s))).
 Proof.
   revert ϱ fi.
   induction s using stmt_ind'; intros; simpl;
@@ -617,24 +612,24 @@ Proof.
 Qed.
 
 Lemma domain_incl_renameApartFRight {Fi} (FG:FreshGen Fi) (FGS:FreshGenSpec FG) fi ϱ F
-  : domain Fi fi
-           ⊆ domain Fi (snd (fst (renameApartFRight FG renameApart' ϱ (nil, fi, {}) F))).
+  : domain FG fi
+           ⊆ domain FG (snd (fst (renameApartFRight FG renameApart' ϱ (nil, fi, {}) F))).
 Proof.
   setoid_rewrite eq_empty at 2.
   rewrite renameApartF_domain'Right; eauto using renameApart'_domain.
 Qed.
 
 Lemma domain_incl_renameApartF {Fi} (FG:FreshGen Fi) (FGS:FreshGenSpec FG) fi ϱ F
-  : domain Fi fi
-           ⊆ domain Fi (snd (fst (renameApartF FG renameApart' ϱ F (nil, fi, {})))).
+  : domain FG fi
+           ⊆ domain FG (snd (fst (renameApartF FG renameApart' ϱ F (nil, fi, {})))).
 Proof.
   rewrite <- renameApartFRight_corr.
   rewrite <- domain_incl_renameApartFRight; eauto.
 Qed.
 
 Lemma renameApartFRight_domain {Fi} (FG:FreshGen Fi) (FGS:FreshGenSpec FG) fi ϱ F
-  : domain Fi (snd (fst (renameApartFRight FG renameApart' ϱ (nil, fi, {}) F)))
-      [=] snd (renameApartFRight FG renameApart' ϱ (nil, fi, {}) F) ∪ domain Fi fi.
+  : domain FG (snd (fst (renameApartFRight FG renameApart' ϱ (nil, fi, {}) F)))
+      [=] snd (renameApartFRight FG renameApart' ϱ (nil, fi, {}) F) ∪ domain FG fi.
 Proof.
   exploit (renameApartF_domain'Right FGS {}); swap 1 2.
   rewrite <- eq_empty in H. rewrite H. reflexivity.
@@ -643,7 +638,7 @@ Qed.
 
 
 Lemma freeVars_renamedApart' {Fi} (FG:FreshGen Fi) (FGS:FreshGenSpec FG) fi ϱ s
-: lookup_set ϱ (freeVars s) ⊆ domain _ fi
+: lookup_set ϱ (freeVars s) ⊆ domain FG fi
   -> freeVars (snd (renameApart' FG fi ϱ s)) [=] lookup_set ϱ (freeVars s).
 Proof.
   revert fi ϱ.
@@ -748,7 +743,7 @@ Smpl Add
 Lemma renameApart'_renamedApart G {Fi} (FG:FreshGen Fi) (FGS:FreshGenSpec FG) fi
       (s:stmt) ϱ
   : lookup_set ϱ (freeVars s) ⊆ G
-    -> G ⊆ domain _ fi
+    -> G ⊆ domain FG fi
   -> renamedApart (snd (renameApart' FG fi ϱ s))
                  (renamedApartAnn (snd (renameApart' FG fi ϱ s)) G).
 Proof.

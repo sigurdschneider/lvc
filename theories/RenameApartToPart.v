@@ -1,6 +1,59 @@
 Require Import Util CSet IL Annotation StableFresh InfinitePartition VarP.
-Require Import RenameApart RenamedApartAnn RenameApart_VarP.
+Require Import RenameApart RenamedApartAnn RenameApart_VarP Fresh Range Setoid.
 
+
+Definition FG_fast : FreshGen nat :=
+  @Build_FreshGen nat
+                  (fun n _ => (n, S n))
+                  (fun n Z => (range n ❬Z❭, n + ❬Z❭))
+                  nats_up_to
+                  (fun n s => max n (S (fold Init.Nat.max s 0))).
+
+Lemma nats_up_to_in x i
+  : x < i <-> x ∈ nats_up_to i.
+Proof.
+  induction i; simpl.
+  - split. omega. cset_tac.
+  - decide (x = i); subst.
+    + split. cset_tac. omega.
+    + split; intros.
+      -- cset_tac'. eapply H0. omega.
+      -- cset_tac'.
+Qed.
+
+Lemma range_nodup i d
+  : NoDupA eq (range i d).
+Proof.
+  general induction d; simpl; eauto using NoDupA.
+  econstructor; eauto.
+  intro. eapply InA_eq_of_list in H.
+  eapply in_range_x in H. omega.
+Qed.
+
+
+Lemma FGS_fast : FreshGenSpec FG_fast.
+  econstructor; simpl.
+  - intros. rewrite <- nats_up_to_in. omega.
+  - reflexivity.
+  - intros; hnf; intros.
+    eapply nats_up_to_in in H.
+    eapply in_range_x in H0 as [? ?]. omega.
+  - intros. cset_tac'.
+    + rewrite <- nats_up_to_in in *.
+      eapply x_notin_range in n. omega.
+    + rewrite <- nats_up_to_in in *.
+      eapply in_range_x in H0. omega.
+    + rewrite <- nats_up_to_in in *. omega.
+  - intros. eapply range_nodup.
+  - eauto with len.
+  - simpl. cset_tac'.
+    eapply nats_up_to_in.
+    + rewrite <- Max.le_max_r.
+      eapply fresh_spec' in H0. omega.
+    + eapply nats_up_to_in in H0.
+      eapply nats_up_to_in.
+      rewrite <- Max.le_max_l. eauto.
+Qed.
 
 Definition rename_apart_to_part {Fi} (FG:FreshGen Fi) (FGS:FreshGenSpec FG) fi (s:stmt) :=
   let (xl, fi) := (fresh_list FG fi (to_list (freeVars s))) in

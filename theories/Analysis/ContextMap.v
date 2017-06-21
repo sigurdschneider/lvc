@@ -1,4 +1,4 @@
-Require Import Max Nat CMap Infra.Lattice Infra.PartialOrder CMapPartialOrder.
+Require Import Max Nat CMap Infra.Lattice Infra.PartialOrder CMapPartialOrder Range.
 
 Set Implicit Arguments.
 
@@ -17,38 +17,6 @@ Definition ctxmap_update_at X (m:ctxmap X) (n:nat) (x:X)
   := if [n >= ctxmap_len m] then m
     else Build_ctxmap (add (ctxmap_to_idx m n) x (ctxmap_M m)) (ctxmap_len m).
 
-Fixpoint range (n d:nat) :=
-  match d with
-  | 0 => nil
-  | S d => n::range (S n) d
-  end.
-
-Lemma range_get k d n x
-  : get (range k d) n x
-    -> x = k + n.
-Proof.
-  intros. general induction d; simpl in *; isabsurd.
-  inv H. omega. eapply IHd in H4. omega.
-Qed.
-
-Lemma get_range k d n x
-  : x = k + n
-    -> n < d
-    -> get (range k d) n x.
-Proof.
-  intros. general induction d; simpl in *; isabsurd.
-  destruct n.
-  - orewrite (k + 0 = k). eauto using get.
-  - econstructor. eapply IHd; eauto. omega. omega.
-Qed.
-
-Ltac range_get_simpl :=
-  match goal with
-  | [H : get (range ?k ?d) ?n ?x |- _ ] =>
-    eapply range_get in H; try (is_var x; subst x)
-  end.
-
-Smpl Add range_get_simpl : inv_get.
 
 Definition ctxmap_app X (L:list X) (m:ctxmap X)
   := let l := length L in
@@ -88,15 +56,6 @@ Definition ctxmap_join_at X `{JoinSemiLattice X} (m:ctxmap X) (n:nat) (x:X)
 
 Definition ctxmap_to_list X  `{LowerBounded X} (m:ctxmap X) : list X :=
   map (@ctxmap_at_def X _ _ m) (range 0 (ctxmap_len m)).
-
-
-Lemma range_len k n
-  : ❬range k n❭ = n.
-Proof.
-  general induction n; simpl; eauto.
-Qed.
-
-Smpl Add rewrite range_len : len.
 
 Lemma ctxmap_to_list_len X `{LowerBounded X} (m:ctxmap X)
   : ❬ctxmap_to_list m❭ = ctxmap_len m.
@@ -566,34 +525,6 @@ Proof.
       eapply IHZ. cset_tac. inversion 1; eauto.
 Qed.
 
-Lemma x_notin_range x k n
-  : x ∉ of_list (range k n)
-    -> x < k \/ k+n <= x.
-Proof.
-  general induction n; simpl in *.
-  - decide (x < k); omega.
-  - decide (x = k); subst;
-      cset_tac'. eapply IHn in H1. destruct H1.
-    omega. omega.
-Qed.
-
-Lemma x_in_range x k n
-  : x >= k /\ k+n > x -> x ∈ of_list (range k n).
-Proof.
-  general induction n; simpl in *; dcr.
-  - exfalso; omega.
-  - decide (x = k); subst;
-      cset_tac'. eapply IHn. omega.
-Qed.
-
-Lemma in_range_x x k n
-  : x ∈ of_list (range k n) -> x >= k /\ k+n > x.
-Proof.
-  general induction n; simpl in *; dcr.
-  - cset_tac.
-  - decide (x = k); subst; try omega.
-    cset_tac'; eapply IHn in H0; omega.
-Qed.
 
 Lemma ctxmap_extend_poLe X `{PartialOrder X} n m m'
   : m ⊑ m'
@@ -774,14 +705,6 @@ Proof.
     congruence.
 Qed.
 
-
-Lemma take_range k n d
-  : Take.take k (range n d) = range n (min k d).
-Proof.
-  general induction k; simpl; eauto.
-  repeat cases; eauto.
-  simpl in *. f_equal; eauto.
-Qed.
 
 Lemma ctxmap_at_def_extend_shift X `{LowerBounded X} (m:ctxmap X) k n
   : ctxmap_at_def (ctxmap_extend m k) (n + k) = ctxmap_at_def m n.
