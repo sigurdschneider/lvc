@@ -81,7 +81,6 @@ Proof.
       eapply PIR2_get; eauto with len.
       intros; inv_get.
       exploit H16; eauto.
-      eapply ann_R_get in H11. symmetry; eauto.
     + rewrite map_length. eauto.
     + intros. inv_get.
       rewrite map_map.

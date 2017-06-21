@@ -507,3 +507,42 @@ Proof.
   unfold Proper, respectful, flip, impl; intros ? ? A ? ? B C.
   eauto.
 Qed.
+
+
+Lemma poLe_app X `{PartialOrder X} (L1 L2 : 〔X〕) (L1' L2' : 〔X〕)
+  : poLe L1 L1' -> poLe L2 L2' -> poLe (L1 ++ L2) (L1' ++ L2').
+Proof.
+  intros. eapply PIR2_app; eauto.
+Qed.
+
+Lemma poEq_app X `{PartialOrder X} (L1 L2 : 〔X〕) (L1' L2' : 〔X〕)
+  : poEq L1 L1' -> poEq L2 L2' -> poEq (L1 ++ L2) (L1' ++ L2').
+Proof.
+  intros. eapply PIR2_app; eauto.
+Qed.
+
+Hint Resolve poLe_app poEq_app.
+
+Lemma poLe_app_proper X `{PartialOrder X}
+  : Proper (poLe ==> poLe ==> poLe) (@List.app X).
+Proof.
+  unfold Proper, respectful; intros; eauto.
+Qed.
+
+Lemma poLe_app_proper_funny X `{PartialOrder X} L
+  : Proper (flip poLe ==> flip poLe) (@List.app X L).
+Proof.
+  unfold Proper, respectful, flip; intros; eauto.
+Qed.
+
+Lemma poLe_app_proper' X `{PartialOrder X}
+  : Proper (flip poLe ==> flip poLe ==> flip poLe) (@List.app X).
+Proof.
+  unfold Proper, respectful, flip; intros; eauto.
+Qed.
+
+Lemma poLe_app_proper_poEq X `{PartialOrder X}
+  : Proper (poEq ==> poEq ==> poEq) (@List.app X).
+Proof.
+  unfold Proper, respectful; intros; eauto.
+Qed.

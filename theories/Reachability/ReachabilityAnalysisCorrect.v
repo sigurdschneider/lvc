@@ -206,7 +206,6 @@ Instance map_getAnn_proper_poEq X `{PartialOrder X}
 Proof.
   unfold Proper, respectful; intros.
   eapply poEq_map; eauto.
-  intros. rewrite H1; eauto.
 Qed.
 
 Instance map_getAnn_proper_poLe X `{PartialOrder X}
@@ -214,7 +213,6 @@ Instance map_getAnn_proper_poLe X `{PartialOrder X}
 Proof.
   unfold Proper, respectful; intros.
   eapply poLe_map; eauto.
-  intros. rewrite H1; eauto.
 Qed.
 
 
@@ -346,44 +344,6 @@ Proof.
   inv_get. rewrite <- H6. eauto.
 Qed.
 
-
-Lemma poLe_app X `{PartialOrder X} (L1 L2 : 〔X〕) (L1' L2' : 〔X〕)
-  : poLe L1 L1' -> poLe L2 L2' -> poLe (L1 ++ L2) (L1' ++ L2').
-Proof.
-  intros. eapply PIR2_app; eauto.
-Qed.
-
-Lemma poEq_app X `{PartialOrder X} (L1 L2 : 〔X〕) (L1' L2' : 〔X〕)
-  : poEq L1 L1' -> poEq L2 L2' -> poEq (L1 ++ L2) (L1' ++ L2').
-Proof.
-  intros. eapply PIR2_app; eauto.
-Qed.
-
-Hint Resolve poLe_app poEq_app.
-
-Lemma poLe_app_proper X `{PartialOrder X}
-  : Proper (poLe ==> poLe ==> poLe) (@List.app X).
-Proof.
-  unfold Proper, respectful; intros; eauto.
-Qed.
-
-Lemma poLe_app_proper_funny X `{PartialOrder X} L
-  : Proper (flip poLe ==> flip poLe) (@List.app X L).
-Proof.
-  unfold Proper, respectful, flip; intros; eauto.
-Qed.
-
-Lemma poLe_app_proper' X `{PartialOrder X}
-  : Proper (flip poLe ==> flip poLe ==> flip poLe) (@List.app X).
-Proof.
-  unfold Proper, respectful, flip; intros; eauto.
-Qed.
-
-Lemma poLe_app_proper_poEq X `{PartialOrder X}
-  : Proper (poEq ==> poEq ==> poEq) (@List.app X).
-Proof.
-  unfold Proper, respectful; intros; eauto.
-Qed.
 
 Lemma reachability_monotone (ceval : op -> ؟ (withTop bool))
       (BL BL' : 〔bool〕) (s : stmt) (a : ann bool) p
@@ -745,9 +705,9 @@ Proof.
         rewrite H8. rewrite LE. eauto.
     + intros. inv_get.
       rewrite H. reflexivity. eauto. eapply H9; eauto.
-      eapply H12 in H2; eauto. rewrite H2; eauto.
-      eapply H12 in H2; eauto. rewrite H2; eauto.
-      rewrite setTopAnn_eta. reflexivity. reflexivity.
+      eapply H12 in H2; eauto.
+      rewrite H12; eauto.
+      rewrite setTopAnn_eta; reflexivity.
 Qed.
 
 Lemma forwardF_snd_poLe sT ZL F ST n AL anF BL
@@ -840,6 +800,7 @@ Proof.
     decide (ctxmap_at_def AL n).
     destruct H1; eauto 20 using get. destruct (ctxmap_at_def AL n); isabsurd.
     destruct H1; isabsurd. rewrite join_false_right in *.
+    left.
     eauto 20 using get. eauto 20 using get.
 Qed.
 
@@ -1158,9 +1119,8 @@ Proof.
     eapply reachability_complete_initial; eauto.
   - intros. rewrite <- (setTopAnn_eta _ eq_refl).
     eapply (@reachability_analysis_complete s (ctxmap_emp _)); eauto.
-    + rewrite setTopAnn_eta; reflexivity.
     + simpl. erewrite !(setTopAnn_eta _ eq_refl); eauto.
-    + simpl. rewrite (@forward_getAnn' s (fun _ => bool)); eauto.
+    + rewrite setTopAnn_eta; eauto.
 Qed.
 
 Lemma correct s

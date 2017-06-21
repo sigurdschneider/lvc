@@ -522,13 +522,22 @@ Qed.
 Notation "f ⊜ L1 L2" := (zip f L1 L2) (at level 40, L1 at level 0, L2 at level 0).
 
 
+Lemma get_rev' (X : Type) (L : 〔X〕) (n : nat) (x : X)
+  : get (rev L) n x -> get L (❬L❭ - S n) x /\ n < ❬L❭.
+Proof.
+  split.
+  - eauto using get_rev.
+  - eapply get_range in H. rewrite rev_length in H. eauto.
+Qed.
+
 Create HintDb inv_get discriminated.
 Smpl Create inv_get [progress].
 
 Ltac inv_get_step_basic :=
   match goal with
   | [ H : get (take _ ?L) ?n ?x |- _ ] => eapply take_get in H; destruct H
-  | [ H : get (rev ?L) ?n ?x |- _ ] => eapply get_rev in H
+  | [ H : get (rev ?L) ?n ?x |- _ ] =>
+    let LEN := fresh "rLen" in eapply get_rev' in H as [H LEN]
   | [ H : get (drop _ ?L) ?n ?x |- _ ] => eapply get_drop in H
   | [ H : get (zip ?f ?L ?L') ?n ?x  |- _ ] =>
     let X := fresh "X" in

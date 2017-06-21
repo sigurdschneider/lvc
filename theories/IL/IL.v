@@ -50,14 +50,20 @@ Fixpoint freeVars (s:stmt) : set var :=
       list_union (List.map (fun f => (freeVars (snd f) \ of_list (fst f))) s) ∪ freeVars t
   end.
 
+Definition defVarsZs (definedVars:stmt -> set var) (Zs:params*stmt) :=
+  of_list (fst Zs) ∪ definedVars (snd Zs).
+
+Definition definedVarsF (definedVars:stmt -> set var)
+           (F:list (params*stmt)) :=
+  list_union (List.map (defVarsZs definedVars) F).
+
 Fixpoint definedVars (s:stmt) : set var :=
   match s with
     | stmtLet x e s0 => {x; definedVars s0}
     | stmtIf e s1 s2 => definedVars s1 ∪ definedVars s2
     | stmtApp l Y => ∅
     | stmtReturn e => ∅
-    | stmtFun s t =>
-      list_union (List.map (fun f => (definedVars (snd f) ∪ of_list (fst f))) s) ∪ definedVars t
+    | stmtFun F t => (definedVarsF definedVars F) ∪ definedVars t
   end.
 
 Fixpoint occurVars (s:stmt) : set var :=
@@ -90,7 +96,7 @@ Proof.
     clear_all; cset_tac.
   - cset_tac.
   - cset_tac.
-  - rewrite IH; eauto.
+  - rewrite IH; eauto. unfold definedVarsF, defVarsZs.
     repeat setoid_rewrite union_assoc at 1.
     setoid_rewrite union_comm at 5.
     repeat setoid_rewrite <- union_assoc.
@@ -104,7 +110,8 @@ Lemma definedVars_occurVars s
 : definedVars s ⊆ occurVars s.
 Proof.
   sind s; destruct s; simpl in * |- *; eauto with cset.
-  - rewrite IH, list_union_f_incl; eauto.
+  - unfold definedVarsF, defVarsZs.
+    rewrite IH, list_union_f_incl; eauto.
     + reflexivity.
     + intros. destruct y; simpl. rewrite IH; cset_tac.
 Qed.

@@ -1,14 +1,11 @@
 Require Import Util CSet IL Annotation StableFresh InfinitePartition VarP.
-Require Import RenameApart RenameApart_VarP.
+Require Import RenameApart RenamedApartAnn RenameApart_VarP.
 
 
-Definition rename_apart_to_part (s:stmt) :=
-  let xl := (fresh_list_stable (stable_fresh_P even_inf_subset)
-                              ∅
-                              (to_list (freeVars s))) in
-  let s' := (renameApart' (stable_fresh_P even_inf_subset)
+Definition rename_apart_to_part {Fi} (FG:FreshGen Fi) (FGS:FreshGenSpec FG) fi (s:stmt) :=
+  let (xl, fi) := (fresh_list FG fi (to_list (freeVars s))) in
+  let s' := (renameApart' FG fi
                        (id [to_list (freeVars s) <-- xl])
-                       (of_list xl)
                        s) in
   (snd s', renamedApartAnn (snd s') (of_list xl)).
 

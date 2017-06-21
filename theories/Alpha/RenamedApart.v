@@ -164,8 +164,8 @@ Proof.
   - set_simpl.
     eapply eq_union_lr; eauto.
     eapply list_union_eq; eauto with len.
-    intros; inv_get.
-    rewrite H1; eauto. unfold defVars. eauto with cset.
+    intros; inv_get. unfold defVarsZs.
+    rewrite H1; eauto. unfold defVars. reflexivity.
 Qed.
 
 (* TODO(sigurd) find a home for this definition *)

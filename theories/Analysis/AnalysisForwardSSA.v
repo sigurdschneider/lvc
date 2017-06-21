@@ -751,9 +751,10 @@ Proof.
 Qed.
 
 Lemma list_union_definedVars F
-  : list_union ((fun f0 : params * stmt => definedVars (snd f0) ∪ of_list (fst f0)) ⊝ F)
-               [=] list_union (of_list ⊝ fst ⊝ F) ∪ list_union (definedVars ⊝ snd ⊝ F).
+  : definedVarsF definedVars F
+                 [=] list_union (of_list ⊝ fst ⊝ F) ∪ list_union (definedVars ⊝ snd ⊝ F).
 Proof.
+  unfold definedVarsF, defVarsZs.
   general induction F; simpl; eauto with cset.
   norm_lunion. rewrite IHF; clear IHF. cset_tac.
 Qed.

@@ -328,19 +328,33 @@ Proof.
   intros. eapply ann_R_setTopAnn; eauto.
 Qed.
 
-Instance getAnn_poLe Dom `{PartialOrder Dom}
+Instance getAnn_poLe_proper Dom `{PartialOrder Dom}
   : Proper (poLe ==> poLe) getAnn.
 Proof.
   unfold Proper, respectful; intros.
   inv H0; simpl; eauto.
 Qed.
 
-Instance getAnn_poEq Dom `{PartialOrder Dom}
+Instance getAnn_poEq_proper Dom `{PartialOrder Dom}
   : Proper (poEq ==> poEq) getAnn.
 Proof.
   unfold Proper, respectful; intros.
   inv H0; simpl; eauto.
 Qed.
+
+Lemma getAnn_poEq Dom `{PartialOrder Dom} x y
+  : poEq x y -> poEq (getAnn x) (getAnn y).
+Proof.
+  intros. rewrite H0. reflexivity.
+Qed.
+
+Lemma getAnn_poLe Dom `{PartialOrder Dom} x y
+  : poLe x y -> poLe (getAnn x) (getAnn y).
+Proof.
+  intros. rewrite H0. reflexivity.
+Qed.
+
+Hint Resolve getAnn_poLe getAnn_poEq.
 
 Lemma getAnn_mapAnn_map (A B:Type) (f:A->B) L
   : getAnn ⊝ mapAnn f ⊝ L = f ⊝ getAnn ⊝ L.

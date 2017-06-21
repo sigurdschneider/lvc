@@ -30,17 +30,15 @@ Proof.
     rewrite rename_op_freeVars; eauto. unfold lookup_set.
     hnf; intros. cset_tac.
   - econstructor; eauto.
-    + intros. inv_get.
-      edestruct get_fst_renameApartF as [? [? ?]]; eauto; dcr; subst.
-      destruct Zs as [Z s']; simpl in *; subst.
+    + intros. inv_get; len_simpl; inv_get.
       eapply H; eauto.
       intros. decide (x ∈ of_list (fst x0)).
-      * edestruct update_with_list_lookup_in_list; try eapply i; dcr.
+      * edestruct update_with_list_lookup_in_list as [? [? [? [? [? [? ?]]]]]]; try eapply i.
         Focus 2.
-        rewrite H6.
-        eapply get_in_of_list in H5.
+        rewrite H4.
+        eapply get_in_of_list in H3.
         eapply Pfresh_list; eauto.
-        eauto with len.
+        rewrite fresh_list_len; eauto.
       * rewrite lookup_set_update_not_in_Z; eauto.
         eapply ren.
         eapply incl_left.
@@ -48,8 +46,6 @@ Proof.
         cset_tac.
     + intros.
       intros. inv_get.
-      edestruct get_fst_renameApartF as [? [? ?]]; eauto; dcr; subst.
-      destruct Zs as [Z s']; simpl in *; subst.
       hnf; intros.
       eapply Pfresh_list; eauto.
     + eapply IHs; eauto.

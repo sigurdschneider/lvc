@@ -29,7 +29,7 @@ Qed.
 
 Lemma lookup_set_update_in_union {X} `{OrderedType X} {Y} `{OrderedType Y}
  f D x y `{Proper _ (_eq ==> _eq) f}
-  : lookup_set (f[x <- y]) D ⊆ lookup_set f (D \ {{x}}) ∪ {{y}}.
+  : lookup_set (f[x <- y]) D ⊆ {y; lookup_set f (D \ singleton x)}.
 Proof.
   hnf; intros. eapply lookup_set_spec in H2; destruct H2; dcr; eauto.
   lud.

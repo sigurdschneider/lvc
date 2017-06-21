@@ -16,7 +16,8 @@ Lemma lv_ra_lv_bnd ZL Lv lv ra VD s
 Proof.
   general induction aIncl; invt live_sound; invt renamedApart;
     econstructor; simpl in *;
-      try (rewrite <- Incl; eauto with cset); pe_rewrite; set_simpl.
+      only 1-3,5,8: (rewrite <- Incl; eauto with cset);
+      pe_rewrite; set_simpl.
   - eapply IHaIncl; eauto.
     rewrite <- Incl. clear; cset_tac.
   - eapply IHaIncl1; eauto.

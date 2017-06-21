@@ -209,7 +209,6 @@ Proof.
     econstructor; eauto.
     + eapply fMon; eauto.
       econstructor; eauto.
-      eapply getAnn_poLe. eapply IH; eauto.
     + len_simpl. eauto with len.
     + intros; inv_get.
       assert (x9 = x3) by eapply subTerm_PI; subst.
@@ -263,7 +262,6 @@ Proof.
     econstructor; eauto.
     + eapply fMon; eauto.
       econstructor; eauto.
-      eapply getAnn_poEq. eapply IH; eauto.
     + eauto with len.
     + intros; inv_get.
       assert (x9 = x3) by eapply subTerm_PI; subst.
