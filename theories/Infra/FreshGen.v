@@ -9,7 +9,8 @@ Inductive FreshGen (Fi : Type) :=
     fresh :> Fi -> nat -> nat * Fi;
     fresh_list : Fi -> list nat -> list nat * Fi;
     domain : Fi -> set nat;
-    domain_add : Fi -> set nat -> Fi
+    domain_add : Fi -> set nat -> Fi;
+    empty_domain : Fi
   }.
 
 Inductive FreshGenSpec Fi (FG:FreshGen Fi) : Prop :=
@@ -33,7 +34,8 @@ Definition FG_fast : FreshGen nat :=
                   (fun n _ => (n, S n))
                   (fun n Z => (range n ❬Z❭, n + ❬Z❭))
                   nats_up_to
-                  (fun n s => max n (S (fold Init.Nat.max s 0))).
+                  (fun n s => max n (S (fold Init.Nat.max s 0)))
+                  0.
 
 
 Lemma FGS_fast : FreshGenSpec FG_fast.
@@ -111,12 +113,14 @@ Definition FG_even_fast : FreshGen {n | even n}.
                      (plus (proj1_sig n) ⊝ mult 2 ⊝ range 0 ❬Z❭, exist _ (proj1_sig n + z) _))
                   (fun n => nats_up_to (proj1_sig n))
                   (fun n s =>
-                     exist _ (max (proj1_sig n) (next_even (S (fold Init.Nat.max s 0)))) _)).
+                     exist _ (max (proj1_sig n) (next_even (S (fold Init.Nat.max s 0)))) _)
+                  (exist _ 0 _)).
   - simpl. destruct n. eauto.
   - destruct n. subst z.
     eapply even_add; eauto.
     eapply even_mult2.
   - destruct n. eapply even_max; eauto using next_even_even.
+  - simpl. eauto.
 Defined.
 
 Lemma NoDup_inj A `{OrderedType A} B `{OrderedType B} (L:list A) (f:A -> B)

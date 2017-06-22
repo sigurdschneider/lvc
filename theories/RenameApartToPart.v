@@ -3,8 +3,8 @@ Require Import RenameApart RenamedApartAnn RenameApart_VarP FreshGen Range Setoi
 
 Set Implicit Arguments.
 
-Definition rename_apart_to_part {Fi} (FG:FreshGen Fi) (FGS:FreshGenSpec FG) fi (s:stmt) :=
-  let xlfi := (fresh_list FG fi (to_list (freeVars s))) in
+Definition rename_apart_to_part {Fi} (FG:FreshGen Fi) (FGS:FreshGenSpec FG) (s:stmt) :=
+  let xlfi := (fresh_list FG (empty_domain FG) (to_list (freeVars s))) in
   let s' := (renameApart' FG (snd xlfi)
                        (id [to_list (freeVars s) <-- fst xlfi])
                        s) in
@@ -12,9 +12,9 @@ Definition rename_apart_to_part {Fi} (FG:FreshGen Fi) (FGS:FreshGenSpec FG) fi (
 
 Opaque to_list.
 
-Lemma rename_apart_to_part_renamedApart {Fi} (FG:FreshGen Fi) (FGS:FreshGenSpec FG) fi s
-  : RenamedApart.renamedApart (fst (rename_apart_to_part FGS fi s))
-                              (snd (rename_apart_to_part FGS fi s)).
+Lemma rename_apart_to_part_renamedApart {Fi} (FG:FreshGen Fi) (FGS:FreshGenSpec FG) s
+  : RenamedApart.renamedApart (fst (rename_apart_to_part FGS s))
+                              (snd (rename_apart_to_part FGS s)).
 Proof.
   unfold rename_apart_to_part. simpl.
   eapply renameApart'_renamedApart; eauto.
@@ -25,10 +25,10 @@ Proof.
 Qed.
 
 
-Lemma rename_apart_to_part_occurVars {Fi} (FG:FreshGen Fi) (FGS:FreshGenSpec FG) fi s
-  : fst (getAnn (snd (rename_apart_to_part FGS fi s)))
-        ∪ snd (getAnn (snd (rename_apart_to_part FGS fi s)))
-        [=] occurVars (fst (rename_apart_to_part FGS fi s)).
+Lemma rename_apart_to_part_occurVars {Fi} (FG:FreshGen Fi) (FGS:FreshGenSpec FG) s
+  : fst (getAnn (snd (rename_apart_to_part FGS s)))
+        ∪ snd (getAnn (snd (rename_apart_to_part FGS s)))
+        [=] occurVars (fst (rename_apart_to_part FGS s)).
 Proof.
   unfold rename_apart_to_part; simpl.
   rewrite occurVars_freeVars_definedVars.
@@ -65,9 +65,9 @@ Proof.
   eapply even_add; eauto. eapply even_mult2.
 Qed.
 
-Lemma rename_to_subset_even fi s
+Lemma rename_to_subset_even s
   : For_all (inf_subset_P even_inf_subset)
-            (occurVars (fst (rename_apart_to_part FGS_even_fast fi s))).
+            (occurVars (fst (rename_apart_to_part FGS_even_fast s))).
 Proof.
   eapply var_P_occurVars.
   eapply renameApart_var_P; eauto using FGS_even_fast.
@@ -75,7 +75,7 @@ Proof.
   - intros.
     eapply even_fast_list_even; eauto.
   - intros. rewrite <- of_list_3 in H.
-    eapply (update_with_list_lookup_in_list id _ (fst (fresh_list FG_even_fast fi (to_list (freeVars s))))) in H; dcr.
+    eapply (update_with_list_lookup_in_list id _ (fst (fresh_list FG_even_fast (empty_domain FG_even_fast) (to_list (freeVars s))))) in H; dcr.
     + rewrite H2.
       eapply even_fast_list_even.
       eapply get_in_of_list; eauto.

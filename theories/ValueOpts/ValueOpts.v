@@ -233,6 +233,43 @@ Instance PR : PointwiseProofRelationF (params*eqns):=
     ParamRelFP := fun '(Z,_) Z' Zb => Z = Z' /\ Zb = Z'
   }.
 
+(*
+Instance prod_eq_fst_morphism X `{OrderedType X}
+: Proper (@pe X _ ==> Equal) fst.
+Proof.
+  unfold Proper, respectful; intros.
+  inversion H0; simpl; eauto.
+Qed.
+
+Instance prod_eq_snd_morphism X `{OrderedType X}
+: Proper (@pe X _ ==> Equal) snd.
+Proof.
+  unfold Proper, respectful; intros.
+  inversion H0; simpl; eauto.
+Qed.
+
+Instance add_s_m_flip A `{OrderedType A}
+  : Proper (Equal ==> Equal ==> iff) Subset.
+Proof.
+  unfold Proper, respectful, flip; intros.
+  rewrite H0, H1. reflexivity.
+Qed.
+
+Instance add_s_m_flip' A `{OrderedType A}
+  : Proper (Equal ==> Equal ==> impl) Subset.
+Proof.
+  unfold Proper, respectful, flip; intros.
+  rewrite H0, H1. reflexivity.
+Qed.
+
+Instance add_s_m_flip'' A `{OrderedType A}
+  : Proper (Equal ==> Equal ==> flip impl) Subset.
+Proof.
+  unfold Proper, respectful, flip; intros.
+  rewrite H0, H1. reflexivity.
+Qed.
+*)
+
 Lemma sim_vopt r L L' V s s' ZL Δ Gamma ang
   : satisfiesAll V Gamma
     -> eqn_sound ZL Δ s s' Gamma ang
@@ -247,7 +284,7 @@ Lemma sim_vopt r L L' V s s' ZL Δ Gamma ang
 Proof.
   intros SAT EQN SIML REAPT FV EEQ.
   general induction EQN; (try (now exfalso; eapply H; eauto));
-    simpl; invt renamedApart; simpl in * |- *.
+    simpl; invtc renamedApart; simpl in * |- *.
   - exploit H; eauto.
     exploit H0; eauto; [cset_tac|].
     eapply (sim_let_op_apx il_statetype_F).

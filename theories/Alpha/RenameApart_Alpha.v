@@ -16,7 +16,7 @@ Proof.
   - econstructor. eapply alpha_exp_sym. eapply alpha_exp_rename_injective.
     eapply inverse_on_incl; try eassumption. eauto with cset.
     eapply IHs; eauto.
-    + rewrite fresh_domain_spec; eauto.
+    + rewrite <- fresh_domain_spec; eauto.
       rewrite <- H. rewrite lookup_set_update_in_union; eauto.
       rewrite <- lookup_set_union_incl; eauto; try reflexivity.
       cset_tac.
@@ -35,7 +35,7 @@ Proof.
       * eapply inverse_on_incl; try eassumption.
         rewrite union_assoc, union_comm. eapply incl_right.
     + eapply IHs2; eauto.
-      * rewrite renameApart'_domain; eauto.
+      * rewrite <- renameApart'_domain; eauto.
         rewrite <- H. repeat rewrite lookup_set_union; cset_tac; intuition.
       * eapply inverse_on_incl; try eassumption.
         cset_tac; intuition.
@@ -54,7 +54,7 @@ Proof.
     + intros. inv_get; len_simpl. inv_get.
       * eapply H; eauto.
         -- rewrite lookup_set_update_with_list_in_union_length; eauto.
-           rewrite fresh_list_domain_spec; eauto.
+           rewrite <- fresh_list_domain_spec; eauto.
            rewrite union_comm. eapply incl_union_lr; eauto.
            rewrite <- domain_incl_renameApartFRight; eauto.
            rewrite <- H0.

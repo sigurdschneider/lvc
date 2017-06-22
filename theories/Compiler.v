@@ -1,6 +1,6 @@
 Require Import List CSet.
 Require Import Util AllInRel MapDefined IL Sim Status Annotation VarP.
-Require Import Rename RenameApart RenameApart_Liveness RenameApart_VarP.
+Require Import Rename RenameApart RenamedApartAnn RenameApart_Liveness RenameApart_VarP.
 Require CMap.
 Require Liveness.Liveness LivenessValidators ParallelMove ILN ILN_IL.
 Require TrueLiveness LivenessAnalysis LivenessAnalysisCorrect.
@@ -12,7 +12,7 @@ Require ReachabilityAnalysis ReachabilityAnalysisCorrect.
 Require Import DCVE Slot InfinitePartition RegAssign ExpVarsBounded.
 (* Require CopyPropagation ConstantPropagation ConstantPropagationAnalysis.*)
 
-Require Import RenameApartToPart StableFresh.
+Require Import RenameApartToPart FreshGen.
 
 Require String.
 
@@ -106,16 +106,17 @@ Require Import RegAssign.
 
 Definition fromILF (s:stmt) :=
   let s_eae := EAE.compile s in
-  let sra := rename_apart_to_part s_eae in
+  let sra := rename_apart_to_part FGS_even_fast s_eae in
   let dcve := DCVE Liveness.Imperative (fst sra) (snd sra) in
   let fvl := to_list (getAnn (co_lv dcve)) in
   let k := exp_vars_bound (co_s dcve) in
   let spilled := spill k S (co_s dcve) (co_lv dcve) in
-  let ren2 := snd (renameApart' (stable_fresh_part even_part)
-                               id (getAnn (snd (spilled))) (fst spilled)) in
+  let rdom := (domain_add FG_even_fast (empty_domain FG_even_fast) (getAnn (snd (spilled)))) in
+  let ren2 := snd (renameApart' FG_even_fast rdom id (fst spilled)) in
   let ras := rassign even_part ren2
-                    (snd (renameApart_live (stable_fresh_part even_part)
-                                           id (getAnn (snd (spilled)))
+                    (snd (renameApart_live FG_even_fast
+                                           rdom
+                                           id
                                            (fst (spilled))
                                            (snd (spilled)))) in
   ras.
@@ -128,7 +129,7 @@ Require Import MoreTac Alpha RenameApart_Alpha RenameApart_Liveness
 
 Definition slotted_vars (s:stmt) :=
   let s_eae := EAE.compile s in
-  let sra := rename_apart_to_part s_eae in
+  let sra := rename_apart_to_part FGS_even_fast s_eae in
   let dcve := DCVE Liveness.Imperative (fst sra) (snd sra) in
   let k := exp_vars_bound (co_s dcve) in
   drop k (to_list (getAnn (co_lv dcve))).
@@ -137,7 +138,7 @@ Definition fromILF_fvl (s:stmt) :=
            to_list (freeVars (EAE.compile s)).
 
 Definition fromILF_fvl_ren (s:stmt) :=
-  fresh_list_stable (stable_fresh_P even_inf_subset) ∅ (to_list (freeVars (EAE.compile s))).
+  (fun m : nat => m) ⊝ (fun m : nat => m + (m + 0)) ⊝ range 0 ❬to_list (freeVars s)❭.
 
 Hint Resolve Liveness.live_sound_overapproximation_I Liveness.live_sound_overapproximation_F.
 
@@ -153,20 +154,18 @@ Qed.
 
 Opaque to_list.
 
-Lemma rename_apart_to_part_freeVars s
-  : fst (getAnn (snd (rename_apart_to_part s)))
+Lemma rename_apart_to_part_freeVars (s:stmt)
+  : fst (getAnn (snd (rename_apart_to_part FGS_even_fast s)))
         [=] of_list (fromILF_fvl_ren s).
 Proof.
   unfold rename_apart_to_part; simpl.
   rewrite fst_renamedApartAnn.
-  unfold fromILF_fvl_ren.
-  eapply fresh_list_stable_P_ext_eq.
-  eapply length_to_list_morphism.
-  rewrite <- EAE.EAE_freeVars; eauto.
+  reflexivity.
 Qed.
 
 Opaque to_list.
 
+(*
 Lemma fromILF_fvl_ren_EAE s
   : of_list (fromILF_fvl_ren (EAE.compile s)) [=] of_list (fromILF_fvl_ren s).
 Proof.
@@ -175,7 +174,9 @@ Proof.
   eapply length_to_list_morphism.
   rewrite EAE.EAE_freeVars; eauto.
 Qed.
+ *)
 
+Hint Immediate FGS_even_fast.
 
 Lemma fromILF_correct (s s':stmt) E (PM:LabelsDefined.paramsMatch s nil)
       (OK:fromILF s = Success s')
@@ -251,9 +252,10 @@ Proof.
     eapply Alpha.alphaSim_sim. econstructor; eauto using PIR2.
     - eapply rename_apart_alpha'; eauto.
       rewrite update_with_list_lookup_set_incl; eauto with len.
+      rewrite <- fresh_list_domain_spec; eauto.
+      rewrite fresh_list_len; eauto.
       rewrite of_list_3; eauto.
-      instantiate (1:=id[fresh_list_stable (stable_fresh_P even_inf_subset)
-                                           ∅ (to_list (freeVars s_eae)) <--to_list (freeVars s_eae)]).
+      instantiate (1:=id[fst (fresh_list FG_even_fast (empty_domain FG_even_fast) (to_list (freeVars s_eae))) <--to_list (freeVars s_eae)]).
       hnf; intros.
       rewrite <- of_list_3 in H.
       edestruct (of_list_get_first _ H) as [n]; eauto; dcr. hnf in H1. subst x0.
@@ -261,21 +263,22 @@ Proof.
       rewrite H3.
       edestruct update_with_list_lookup_in_list_first; dcr.
       Focus 4. rewrite H5. hnf. instantiate (1:=n) in H4. get_functional.
-      symmetry; eauto. eauto with len. eauto.
+      symmetry; eauto. rewrite fresh_list_len; eauto. eauto.
       intros.
       eapply NoDupA_get_neq'; [ eauto | eauto | | | eapply H4 | eapply H1 ].
-      eapply fresh_list_stable_nodup. eauto.
+      eapply fresh_list_nodup; eauto.
       eauto with len.
-      eauto.
+      rewrite fresh_list_len; eauto. eauto.
     - hnf; intros.
       decide (y ∈ freeVars s_eae).
       + unfold E'.
         unfold comp. unfold fromILF_fvl, fromILF_fvl_ren.
-        subst s_eae.
-        rewrite H. eauto.
-      + rewrite lookup_set_update_not_in_Z in H0; eauto.
-        subst; reflexivity.
-        rewrite of_list_3; eauto.
+        subst s_eae. cbn in H. admit.
+        (* rewrite H. eauto. *)
+      + rewrite lookup_set_update_not_in_Z in H0.
+        subst x. subst E'. unfold fromILF_fvl_ren, fromILF_fvl.
+        admit. (*
+        rewrite of_list_3; eauto.*) admit.
   }
   eapply sim_trans with (σ2:=(nil, E', fst sra):I.state). {
      eapply bisim_sim. eapply SimCompanion.simc_sim.
@@ -299,14 +302,10 @@ Proof.
     assert (VP:var_P (inf_subset_P even_inf_subset) (co_s dcve)). {
       eapply DCVE_var_P; eauto.
       eapply renameApart_var_P.
-      - intros. eapply least_fresh_P_full_spec.
-      - intros.
-        edestruct update_with_list_lookup_in_list.
-        Focus 3. destruct H0 as [? [? [? [? [? ?]]]]].
-        rewrite H2. hnf in H3. subst.
-        exploit fresh_list_stable_get; eauto; dcr; subst.
-        eapply least_fresh_P_full_spec.
-        eauto with len. rewrite of_list_3; eauto.
+      - eauto.
+      - intros. eapply FG_even_fast_inf_subset.
+      - intros. eapply even_fast_list_even; eauto.
+      - admit.
     }
     eapply spill_correct with (k:=k) (slt:=slt);
         eauto using DCVE_live, DCVE_renamedApart, DCVE_live_incl,
@@ -326,30 +325,32 @@ Proof.
       Opaque to_list.
       rewrite EAE.EAE_freeVars in H1.
       eapply Def in H1. eauto.
-      unfold fromILF_fvl_ren, fromILF_fvl.
-      eauto with len.
-      rewrite <- fromILF_fvl_ren_EAE. eauto.
+      unfold fromILF_fvl_ren, fromILF_fvl. len_simpl.
+      admit.
+      (* rewrite <- fromILF_fvl_ren_EAE. eauto. *) admit.
   }
   eapply sim_trans with (σ2:=(nil, E'',ren2):F.state). {
     eapply bisim_sim. eapply bisim_sym.
     eapply Alpha.alphaSim_sim. econstructor; eauto using PIR2.
     - eapply rename_apart_alpha'; eauto.
       rewrite lookup_set_on_id; [|reflexivity].
-      eapply Liveness.freeVars_live; eauto.
+      subst rdom. rewrite <- domain_add_spec; eauto.
+      rewrite <- Liveness.freeVars_live; eauto with cset.
       eapply inverse_on_id.
     - eapply envCorr_idOn_refl.
   }
   eapply rassign_correct; eauto.
   - eapply labelsDefined_paramsMatch; eauto.
   - eapply renameApart'_renamedApart.
+    + eauto.
     + rewrite lookup_set_on_id; [|reflexivity].
       instantiate (1:=(getAnn (snd spilled))).
       eapply Liveness.freeVars_live; eauto.
-    + reflexivity.
-  - eapply app_expfree_rename_apart.
+    + subst rdom. rewrite <- domain_add_spec; eauto.
+  - eapply app_expfree_rename_apart; eauto.
     eapply spill_app_expfree; eauto.
   - unfold rename_apart.
-    eapply (@renameApart_live_sound_srd _ _ Liveness.FunctionalAndImperative
+    eapply (@renameApart_live_sound_srd _ _ _ _ _ Liveness.FunctionalAndImperative
                                         nil nil nil nil nil); eauto using PIR2.
     + isabsurd.
     + eapply spill_srd with (k:=k) (slt:=slt);
@@ -359,13 +360,14 @@ Proof.
         eauto using DCVE_live, DCVE_renamedApart,
         DCVE_live_incl, DCVE_paramsMatch.
     + rewrite lookup_set_on_id; try reflexivity.
+      subst rdom. rewrite <- domain_add_spec; eauto.
   - erewrite getAnn_snd_renameApart_live; eauto.
     rewrite fst_renamedApartAnn.
     exploit (@DCVE_live_incl Liveness.Imperative) as INCL; eauto.
     eapply ann_R_get in INCL; eauto.
     rewrite lookup_set_on_id; [|reflexivity].
     reflexivity.
-Qed.
+Admitted.
 
 
 

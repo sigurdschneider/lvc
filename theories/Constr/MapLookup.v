@@ -69,7 +69,7 @@ Proof.
 Qed.
 
 
-Global Instance lookup_set_morphism {X} `{OrderedType X} {Y} `{OrderedType Y} {f:X->Y}
+Instance lookup_set_morphism {X} `{OrderedType X} {Y} `{OrderedType Y} {f:X->Y}
  `{Proper _ (_eq ==> _eq) f}
   : Proper (Subset ==> Subset) (lookup_set f).
 Proof.
@@ -77,7 +77,15 @@ Proof.
   lset_tac.
 Qed.
 
-Global Instance lookup_set_morphism_eq {X} `{OrderedType X} {Y} `{OrderedType Y} {f:X->Y}
+Instance lookup_set_morphism_flip {X} `{OrderedType X} {Y} `{OrderedType Y} {f:X->Y}
+ `{Proper _ (_eq ==> _eq) f}
+  : Proper (flip Subset ==> flip Subset) (lookup_set f).
+Proof.
+  unfold Proper, respectful, flip, Subset; intros.
+  lset_tac.
+Qed.
+
+Instance lookup_set_morphism_eq {X} `{OrderedType X} {Y} `{OrderedType Y} {f:X->Y}
  `{Proper _ (_eq ==> _eq) f}
   : Proper (Equal ==> Equal) (lookup_set f).
 Proof.

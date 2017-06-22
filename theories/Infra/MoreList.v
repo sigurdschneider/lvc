@@ -827,7 +827,7 @@ Proof.
   omega.
 Qed.
 
-Smpl Add
+Smpl Add 90
      match goal with
        [ H : get _ (?k - S (?k - S ?n)) _, LE : ?n < ?k |- _ ] =>
        rewrite (@get_rev_range k n LE) in H
@@ -838,7 +838,7 @@ Lemma get_index_rev k n
   omega.
 Qed.
 
-Smpl Add
+Smpl Add 90
      match goal with
        [ H : get _ (?k - S (?k - S (?k - S ?n))) _ |- _ ] =>
        rewrite (get_index_rev k n) in H

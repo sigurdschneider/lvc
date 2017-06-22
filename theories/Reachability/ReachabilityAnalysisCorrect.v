@@ -1015,11 +1015,12 @@ Proof.
                        (subTerm_EQ_Fun2 eq_refl ST) (snd FWt) als) in *.
     econstructor; simpl; repeat rewrite (@forward_getAnn' _ (fun _ => bool)).
     + eapply reachability_sTA_inv. eapply IHRCH; eauto.
-      * eauto with len.
+      * subst FWF. eauto with len.
       * len_simpl. eauto.
       * rewrite setTopAnn_eta; eauto.
       * subst FWt; eauto.
-    + subst FWF FWt. eauto with len.
+    + subst FWF FWt. rewrite mapi_length.
+      eauto with len.
     + subst FWt. eauto.
     + intros. inv_get.
       unfold mapi. rewrite getAnn_mapi_setTopAnn.

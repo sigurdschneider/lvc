@@ -2,6 +2,36 @@ Require Export Setoid Coq.Classes.Morphisms.
 Require Import EqDec CSetNotation Util.
 Require Export Sets SetInterface SetConstructs SetProperties Get.
 
+Instance SubSet_flip_impl X `{OrderedType X}
+  : Proper (Equal ==> Equal ==> flip impl) Subset | 20.
+Proof.
+  unfold Proper, respectful, flip, impl; intros.
+  rewrite H0. rewrite H1. eauto.
+Qed.
+
+Instance SubSet_Equal_impl X `{OrderedType X}
+  : Proper (Equal ==> Equal ==> impl) Subset | 20.
+Proof.
+  unfold Proper, respectful, flip, impl; intros.
+  rewrite <- H0. rewrite <- H1. eauto.
+Qed.
+
+Existing Instance add_m | 0.
+
+Instance add_s_m_flip A `{OrderedType A}
+  : Proper (_eq ==> flip Subset ==> flip Subset) add | 20.
+Proof.
+  unfold Proper, respectful, flip; intros.
+  rewrite H0, H1. reflexivity.
+Qed.
+
+Instance union_s_m_flip (A : Type) (HA : OrderedType A) (F : FSet)
+  : FSetSpecs F -> Proper (flip Subset ==> flip Subset ==> flip Subset) union.
+Proof.
+  unfold Proper, respectful, flip. intros.
+  rewrite H0, H1. reflexivity.
+Qed.
+
 Create HintDb cset discriminated.
 
 Lemma In_add_empty {X} `{OrderedType X} x y

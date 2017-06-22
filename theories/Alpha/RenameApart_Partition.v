@@ -2,7 +2,7 @@ Require Import CSet Util Map SetOperations.
 Require Import Env IL Alpha Fresh Annotation OptionR.
 Require Import Liveness.Liveness Coherence Restrict RenamedApart RenameApart_Liveness.
 Require Import LabelsDefined PairwiseDisjoint AppExpFree.
-Require Import InfinitePartition MapSep AnnP.
+Require Import InfinitePartition MapSep AnnP FreshGen.
 
 Set Implicit Arguments.
 
@@ -61,15 +61,16 @@ Proof.
     eapply SEP; cset_tac.
 Qed.
 
-Lemma renameApart_sep o ZL LV DL p ϱ k lv G s (isFnc:isFunctional o)
+(*
+Lemma renameApart_sep o ZL LV DL p ϱ k lv fi s (isFnc:isFunctional o)
   (AN:ann_P (part_bounded (part_1 p) k) lv)
   (LS: live_sound o ZL LV s lv)
   (SEP: sep p (getAnn lv) ϱ)
   (SRD:srd DL s lv)
   (iEQ:PIR2 (ifFstR Equal) DL (LV \\ ZL))
-  (Incl:map ϱ (getAnn lv) ⊆ G)
+  (Incl:map ϱ (getAnn lv) ⊆ domain FG_even_fast fi)
   : ann_P (part_bounded (part_1 p) k)
-          (snd (renameApart_live (stable_fresh_part p) ϱ G s lv)).
+          (snd (renameApart_live FG_even_fast fi ϱ s lv)).
 Proof.
   general induction LS; invt ann_P; invt srd; simpl;
     repeat let_pair_case_eq; repeat simpl_pair_eqs; subst; simpl in *.
@@ -125,4 +126,4 @@ Proof.
     unfold defVars.
     edestruct H2; eauto; dcr.
     rewrite H7. clear; cset_tac.
-Qed.
+Qed.*)

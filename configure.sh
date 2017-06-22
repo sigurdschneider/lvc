@@ -18,8 +18,8 @@ while [ $# != 0 ]; do
   shift
 done
 
-if ! [[ $(ruby -v) =~ ^ruby\ 2.1 ]]; then
-	echo "Ruby 2.1 not in path, disabling timing"
+if ! [[ $(ruby -v) =~ ^ruby\ 2.2 ]]; then
+	echo "Ruby 2.2 not in path, disabling timing"
 	TIMING=no
 fi
 
