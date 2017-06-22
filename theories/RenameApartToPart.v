@@ -5,7 +5,7 @@ Set Implicit Arguments.
 
 Definition rename_apart_to_part {Fi} (FG:FreshGen Fi) (FGS:FreshGenSpec FG) (s:stmt) :=
   let xlfi := (fresh_list FG (empty_domain FG) (to_list (freeVars s))) in
-  let s' := (renameApart' FG (snd xlfi)
+  let s' := (renameApart FG (snd xlfi)
                        (id [to_list (freeVars s) <-- fst xlfi])
                        s) in
   (snd s', renamedApartAnn (snd s') (of_list (fst xlfi))).

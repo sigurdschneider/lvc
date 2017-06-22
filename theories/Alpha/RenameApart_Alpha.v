@@ -7,7 +7,7 @@ Set Implicit Arguments.
 Lemma rename_apart_alpha' {Fi} (FG:FreshGen Fi) (FGS:FreshGenSpec FG) fi ϱ ϱ' s
   : lookup_set ϱ (freeVars s) ⊆ domain FG fi
   -> inverse_on (freeVars s) ϱ ϱ'
-  -> alpha ϱ' ϱ (snd (renameApart' FG fi ϱ s)) s.
+  -> alpha ϱ' ϱ (snd (renameApart FG fi ϱ s)) s.
 Proof.
   revert fi ϱ ϱ'.
   induction s using stmt_ind'; simpl; intros; repeat let_pair_case_eq; subst;
@@ -35,7 +35,7 @@ Proof.
       * eapply inverse_on_incl; try eassumption.
         rewrite union_assoc, union_comm. eapply incl_right.
     + eapply IHs2; eauto.
-      * rewrite <- renameApart'_domain; eauto.
+      * rewrite <- domain_incl_renameApart; eauto.
         rewrite <- H. repeat rewrite lookup_set_union; cset_tac; intuition.
       * eapply inverse_on_incl; try eassumption.
         cset_tac; intuition.

@@ -7,7 +7,7 @@ Lemma renameApart_var_P Fi (FG:FreshGen Fi) (FGS:FreshGenSpec FG) fi (P:var -> P
       (Pfresh:forall fi x, P (fst (fresh FG fi x)))
       (Pfresh_list:forall fi Z, forall (x:var), x ∈ of_list (fst (fresh_list FG fi Z)) -> P x)
       (ren:forall x, x ∈ freeVars s -> P (ϱ x))
-  : var_P P (snd (renameApart' FG fi ϱ s)).
+  : var_P P (snd (renameApart FG fi ϱ s)).
 Proof.
   revert ϱ ren fi.
   induction s using stmt_ind'; intros; simpl;

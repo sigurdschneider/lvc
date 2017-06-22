@@ -79,13 +79,13 @@ Proof.
 Qed.
 
 
-Lemma snd_renameApartF_live' {Fi} (FG:FreshGen Fi) fi als L X ϱ F (Len:❬F❭ = ❬als❭)
+Lemma snd_renameApartF_live' {Fi} (FG:FreshGen Fi) fi als L ϱ F (Len:❬F❭ = ❬als❭)
       (IH:forall n Zs a fi, get F n Zs -> get als n a ->
-                    forall (ϱ : env var) (G : ⦃var⦄),
+                    forall (ϱ : env var),
                       fst (renameApart_live FG fi ϱ (snd Zs) a) =
-                      snd (fst (renameApart' FG fi ϱ (snd Zs))))
+                      fst (renameApart FG fi ϱ (snd Zs)))
   : snd (renameApartF_live FG renameApart_live ϱ fi F als) =
-    snd (fst (renameApartF FG renameApart' ϱ F (L, fi, X))).
+    snd (renameApartF FG renameApart ϱ F (L, fi)).
 Proof.
   length_equify.
   general induction Len.
@@ -98,7 +98,7 @@ Qed.
 
 Lemma fst_renameApart_live {Fi} (FG:FreshGen Fi) fi o ZL LV ϱ s lv
   : live_sound o ZL LV s lv
-    -> fst (renameApart_live FG fi ϱ s lv) = snd (fst (renameApart' FG fi ϱ s)).
+    -> fst (renameApart_live FG fi ϱ s lv) = fst (renameApart FG fi ϱ s).
 Proof.
   intros LS.
   general induction LS; simpl; repeat let_pair_case_eq; simpl; subst; eauto.
@@ -106,12 +106,12 @@ Proof.
   - erewrite snd_renameApartF_live'; eauto.
 Qed.
 
-Lemma snd_renameApartF_live {Fi} (FG:FreshGen Fi) fi als L X ϱ F (Len:❬F❭ = ❬als❭) ZL Lv i
+Lemma snd_renameApartF_live {Fi} (FG:FreshGen Fi) fi als L ϱ F (Len:❬F❭ = ❬als❭) ZL Lv i
       (LS:forall (n : nat) (Zs : params * stmt) (a : ann ⦃nat⦄),
             get F n Zs ->
             get als n a -> live_sound i ZL Lv (snd Zs) a)
   : snd (renameApartF_live FG renameApart_live ϱ fi F als) =
-    snd (fst (renameApartF FG renameApart' ϱ F (L, fi, X))).
+    snd (renameApartF FG renameApart ϱ F (L, fi)).
 Proof.
   eapply snd_renameApartF_live'; eauto.
   intros.
@@ -172,7 +172,7 @@ Lemma renameApart_live_sound {Fi} (FG:FreshGen Fi) (FGS:FreshGenSpec FG)
       (ParamLen:forall n Z Z', get ZL n Z -> get ZL' n Z' -> ❬Z❭ = ❬Z'❭)
   : live_sound Functional ZL LV s lv
     -> live_sound Functional ZL' LV'
-                 (snd (renameApart' FG fi ϱ s))
+                 (snd (renameApart FG fi ϱ s))
                  (snd (renameApart_live FG fi ϱ s lv)).
 Proof.
   intros LS.
@@ -251,7 +251,7 @@ Lemma renameApart_live_sound_srd b {Fi} (FG:FreshGen Fi) (FGS:FreshGenSpec FG) f
   (NUC:noUnreachableCode (isCalled b) s)
   (LenZL:❬ZL❭ = ❬ZL'❭) (LenLV:❬LV❭=❬LV'❭) (LenDL:❬DL❭=❬ZL❭) (LenLV2:❬LV❭=❬ZL❭)
   (Incl:map ϱ (getAnn lv) ⊆ domain FG fi) (isImp:isImperative o)
-  : live_sound o ZL' LV' (snd (renameApart' FG fi ϱ s))
+  : live_sound o ZL' LV' (snd (renameApart FG fi ϱ s))
                (snd (renameApart_live FG fi ϱ s lv)).
 Proof.
   general induction LS; invt srd; invt noUnreachableCode; simpl;
@@ -277,7 +277,7 @@ Proof.
     + eapply IHLS1; eauto with cset.
     + erewrite fst_renameApart_live; eauto.
       eapply IHLS2; eauto.
-      rewrite <- renameApart'_domain; eauto.
+      rewrite <- domain_incl_renameApart; eauto.
       rewrite <- Incl. eauto with cset.
     + erewrite getAnn_snd_renameApart_live; eauto with cset.
     + erewrite getAnn_snd_renameApart_live; eauto with cset.

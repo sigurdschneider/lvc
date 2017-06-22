@@ -112,7 +112,7 @@ Definition fromILF (s:stmt) :=
   let k := exp_vars_bound (co_s dcve) in
   let spilled := spill k S (co_s dcve) (co_lv dcve) in
   let rdom := (domain_add FG_even_fast (empty_domain FG_even_fast) (getAnn (snd (spilled)))) in
-  let ren2 := snd (renameApart' FG_even_fast rdom id (fst spilled)) in
+  let ren2 := snd (renameApart FG_even_fast rdom id (fst spilled)) in
   let ras := rassign even_part ren2
                     (snd (renameApart_live FG_even_fast
                                            rdom
