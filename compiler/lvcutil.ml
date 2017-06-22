@@ -67,7 +67,7 @@ let rec print_list2 oc p l s =
 
 let rec print_indent oc (i:int) : unit =
   if i <= 0 then ()
-  else (output_string oc " "; print_indent oc (i-1))
+  else Printf.fprintf oc "%*s" i ""
 
 let print_ext_exp oc has_slots ids e =
   match e with
