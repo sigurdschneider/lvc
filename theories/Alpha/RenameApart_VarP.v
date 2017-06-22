@@ -1,6 +1,6 @@
 Require Import Util CSet Var.
 Require Import StableFresh.
-Require Import IL VarP RenameApart.
+Require Import IL VarP RenameApart FreshGen.
 
 
 Lemma renameApart_var_P Fi (FG:FreshGen Fi) (FGS:FreshGenSpec FG) fi (P:var -> Prop) (ϱ:env var) s

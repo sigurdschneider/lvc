@@ -39,7 +39,13 @@ Proof.
   general induction n; simpl; eauto.
 Qed.
 
-Smpl Add rewrite range_len : len.
+Ltac range_len_simpl :=
+  match goal with
+  | [ H : context [ ❬range ?k ?d❭ ] |- _ ] => rewrite (@range_len k d) in H
+  | [ |- context [ ❬range ?k ?d❭ ] ] => rewrite (@range_len k d)
+  end.
+
+Smpl Add range_len_simpl : len.
 
 Lemma x_notin_range x k n
   : x ∉ of_list (range k n)
@@ -77,4 +83,14 @@ Proof.
   general induction k; simpl; eauto.
   repeat cases; eauto.
   simpl in *. f_equal; eauto.
+Qed.
+
+
+Lemma range_nodup i d
+  : NoDupA eq (range i d).
+Proof.
+  general induction d; simpl; eauto using NoDupA.
+  econstructor; eauto.
+  intro. eapply InA_eq_of_list in H.
+  eapply in_range_x in H. omega.
 Qed.

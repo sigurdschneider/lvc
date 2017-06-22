@@ -117,16 +117,6 @@ Smpl Add
           rewrite length_fst_renamedApartAnnF in GET
       end : inv_get.
 
-Lemma get_index_rev k n
-  : k - S (k - S (k - S n)) = k - S n.
-  omega.
-Qed.
-
-Smpl Add
-     match goal with
-       [ H : get _ (?k - S (?k - S (?k - S ?n))) _ |- _ ] =>
-       rewrite (get_index_rev k n) in H
-     end : inv_get.
 
 Lemma snd_renamedApartAnn s G
 : snd (getAnn (renamedApartAnn s G)) = definedVars s.

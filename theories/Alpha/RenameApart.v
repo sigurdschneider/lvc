@@ -2,7 +2,7 @@ Require Import CSet Util Map.
 Require Import Env IL Alpha StableFresh Annotation RenamedApart SetOperations.
 Require Import LabelsDefined PairwiseDisjoint AppExpFree.
 Require Import RenamedApart RenamedApartAnn.
-Require Import Infra.PartialOrder CSetPartialOrder AnnotationLattice.
+Require Import Infra.PartialOrder CSetPartialOrder AnnotationLattice FreshGen.
 
 Export RenamedApart.
 
@@ -11,29 +11,6 @@ Set Implicit Arguments.
 (** We first define [rename_apart' ϱ G s], a function that chooses
     a variable fresh for G at every binder, records the choice in ϱ,
     and renames all variables according to ϱ *)
-
-Inductive FreshGen (Fi : Type) :=
-  {
-    fresh :> Fi -> var -> var * Fi;
-    fresh_list : Fi -> list var -> list var * Fi;
-    domain : Fi -> set var;
-    domain_add : Fi -> set var -> Fi
-  }.
-
-Inductive FreshGenSpec Fi (FG:FreshGen Fi) : Prop :=
-  {
-    fresh_spec : forall i x, fst (fresh FG i x) ∉ domain FG i;
-    fresh_domain_spec : forall i x, domain FG (snd (fresh FG i x))
-                                      [=] {fst (fresh FG i x); (domain FG i)};
-    fresh_list_disj : forall i Z, disj (domain FG i) (of_list (fst (fresh_list FG i Z)));
-    fresh_list_domain_spec : forall i Z, domain FG (snd (fresh_list FG i Z))
-                                           [=] of_list (fst (fresh_list FG i Z)) ∪ domain FG i;
-    fresh_list_nodup : forall i Z, NoDupA eq (fst (fresh_list FG i Z));
-    fresh_list_len : forall i Z, ❬fst (fresh_list FG i Z)❭ = ❬Z❭;
-    domain_add_spec : forall i G, G ∪ domain FG i ⊆ domain FG (domain_add FG i G)
-  }.
-
-Create HintDb fresh discriminated.
 
 Definition renameApartFStep {Fi} (FG:FreshGen Fi)
            (renameApart': FreshGen Fi -> Fi -> env var -> stmt -> set var * Fi * stmt)
@@ -560,30 +537,29 @@ Lemma renameApartF_domain'Right {Fi} (FG:FreshGen Fi) (FGS:FreshGenSpec FG) G fi
       (IH:forall (n : nat) (Zs : params * stmt),
           get F n Zs ->
           forall (ϱ : env nat) (fi : Fi),
-            domain FG (snd (fst (renameApart' FG fi ϱ (snd Zs))))
-                   [=] domain FG fi ∪ fst (fst (renameApart' FG fi ϱ (snd Zs))))
-  : G ∪ domain FG (snd (fst (renameApartFRight FG renameApart' ϱ (nil, fi, G) F)))
-      [=] snd (renameApartFRight FG renameApart' ϱ (nil, fi, G) F) ∪ domain FG fi.
+            domain FG fi ∪ fst (fst (renameApart' FG fi ϱ (snd Zs))) ⊆
+                   domain FG (snd (fst (renameApart' FG fi ϱ (snd Zs)))))
+  : snd (renameApartFRight FG renameApart' ϱ (nil, fi, G) F) ∪ domain FG fi ⊆ G ∪ domain FG (snd (fst (renameApartFRight FG renameApart' ϱ (nil, fi, G) F))).
 Proof.
   general induction F; simpl; eauto.
   unfold renameApartFStep; repeat let_pair_case_eq; subst; simpl.
-  rewrite IH; eauto using get.
-  rewrite !fresh_list_domain_spec; eauto.
+  rewrite <- IH; eauto using get.
+  rewrite <- !fresh_list_domain_spec; eauto.
   rewrite <- !union_assoc.
-  setoid_rewrite union_comm at 3.
-  setoid_rewrite union_assoc at 2. rewrite IHF; eauto using get.
-  clear. rewrite union_comm. rewrite <- !union_assoc.
-  eapply eq_union_lr; eauto.
+  setoid_rewrite union_comm at 6.
+  setoid_rewrite union_assoc at 4. rewrite <- IHF; eauto using get.
+  clear. setoid_rewrite union_comm at 4. rewrite <- !union_assoc.
+  eapply incl_union_lr; eauto.
 Qed.
 
 Lemma renameApartF_domain' {Fi} (FG:FreshGen Fi) (FGS:FreshGenSpec FG) fi ϱ F G
       (IH:forall (n : nat) (Zs : params * stmt),
           get F n Zs ->
           forall (ϱ : env nat) (fi : Fi),
-            domain FG (snd (fst (renameApart' FG fi ϱ (snd Zs))))
-                   [=] domain FG fi ∪ fst (fst (renameApart' FG fi ϱ (snd Zs))))
-  : G ∪ domain FG (snd (fst (renameApartF FG renameApart' ϱ F (nil, fi, G))))
-      [=] snd (renameApartF FG renameApart' ϱ F (nil, fi, G)) ∪ domain FG fi.
+            domain FG fi ∪ fst (fst (renameApart' FG fi ϱ (snd Zs))) ⊆
+                   domain FG (snd (fst (renameApart' FG fi ϱ (snd Zs)))))
+  : snd (renameApartF FG renameApart' ϱ F (nil, fi, G)) ∪ domain FG fi ⊆
+        G ∪ domain FG (snd (fst (renameApartF FG renameApart' ϱ F (nil, fi, G)))).
 Proof.
   rewrite <- renameApartFRight_corr.
   eapply renameApartF_domain'Right; eauto.
@@ -592,22 +568,22 @@ Qed.
 
 
 Lemma renameApart'_domain {Fi} (FG:FreshGen Fi) (FGS:FreshGenSpec FG) fi ϱ s
-  : domain FG (snd (fst (renameApart' FG fi ϱ s))) [=]
-           domain FG fi ∪ (fst (fst (renameApart' FG fi ϱ s))).
+  : domain FG fi ∪ (fst (fst (renameApart' FG fi ϱ s))) ⊆
+           domain FG (snd (fst (renameApart' FG fi ϱ s))).
 Proof.
   revert ϱ fi.
   induction s using stmt_ind'; intros; simpl;
     repeat let_pair_case_eq; subst; simpl.
-  - rewrite IHs. rewrite fresh_domain_spec; eauto.
+  - rewrite <- IHs. rewrite <- fresh_domain_spec; eauto.
     clear.
     cset_tac.
-  - rewrite IHs2. rewrite IHs1. clear. cset_tac.
+  - rewrite <- IHs2. rewrite <- IHs1. clear. cset_tac.
   - cset_tac.
   - cset_tac.
-  - rewrite IHs.
-    rewrite <- union_assoc.
-    setoid_rewrite union_comm at 3.
-    rewrite <- renameApartF_domain' with (G:=∅); eauto.
+  - rewrite <- IHs.
+    setoid_rewrite <- union_assoc at 1.
+    setoid_rewrite union_comm at 2.
+    rewrite renameApartF_domain' with (G:=∅); eauto.
     cset_tac.
 Qed.
 
@@ -616,7 +592,7 @@ Lemma domain_incl_renameApartFRight {Fi} (FG:FreshGen Fi) (FGS:FreshGenSpec FG) 
            ⊆ domain FG (snd (fst (renameApartFRight FG renameApart' ϱ (nil, fi, {}) F))).
 Proof.
   setoid_rewrite eq_empty at 2.
-  rewrite renameApartF_domain'Right; eauto using renameApart'_domain.
+  rewrite <- renameApartF_domain'Right; eauto using renameApart'_domain.
 Qed.
 
 Lemma domain_incl_renameApartF {Fi} (FG:FreshGen Fi) (FGS:FreshGenSpec FG) fi ϱ F
@@ -628,8 +604,8 @@ Proof.
 Qed.
 
 Lemma renameApartFRight_domain {Fi} (FG:FreshGen Fi) (FGS:FreshGenSpec FG) fi ϱ F
-  : domain FG (snd (fst (renameApartFRight FG renameApart' ϱ (nil, fi, {}) F)))
-      [=] snd (renameApartFRight FG renameApart' ϱ (nil, fi, {}) F) ∪ domain FG fi.
+  : snd (renameApartFRight FG renameApart' ϱ (nil, fi, {}) F) ∪ domain FG fi
+        ⊆ domain FG (snd (fst (renameApartFRight FG renameApart' ϱ (nil, fi, {}) F))).
 Proof.
   exploit (renameApartF_domain'Right FGS {}); swap 1 2.
   rewrite <- eq_empty in H. rewrite H. reflexivity.
@@ -655,11 +631,11 @@ Proof.
       }
       cset_tac.
     + rewrite lookup_set_update_in_union; eauto.
-      rewrite fresh_domain_spec; eauto.
+      rewrite <- fresh_domain_spec; eauto.
       rewrite <- H. rewrite !lookup_set_union; eauto.
       clear. cset_tac.
   - rewrite IHs1; eauto. rewrite IHs2; eauto.
-    + rewrite renameApart'_domain; eauto.
+    + rewrite <- renameApart'_domain; eauto.
       rewrite <- H. repeat rewrite lookup_set_union; eauto.
       clear. cset_tac.
     + rewrite <- H at 1. repeat rewrite lookup_set_union; eauto.
@@ -668,9 +644,8 @@ Proof.
   - eapply union_eq_decomp; eauto.
     + rewrite lookup_set_list_union; eauto; try reflexivity.
       rewrite map_map.
-      eapply list_union_indexwise_ext; eauto with len.
+      eapply list_union_indexwise_ext; only 1: eauto with len.
       intros. inv_get. len_simpl.
-      exploit get_range; try eapply H2.
       orewrite (length F - S (length F - S n) = n) in H1. get_functional.
       rewrite H; eauto.
       * rewrite lookup_set_update_union_minus_list; eauto with len.
@@ -683,7 +658,7 @@ Proof.
            eapply incl_list_union; eauto.
         -- rewrite fresh_list_len; eauto.
       * rewrite lookup_set_update_with_list_in_union_length; eauto with len.
-        rewrite fresh_list_domain_spec; eauto.
+        rewrite <- fresh_list_domain_spec; eauto.
         rewrite union_comm. eapply union_incl_split;[eauto with cset|].
         rewrite <- domain_incl_renameApartFRight; eauto.
         rewrite <- H0.
@@ -726,20 +701,6 @@ Proof.
             destruct a, b; inv H0; simpl in *; econstructor; eauto.
 Qed.
 
-
-Lemma get_rev_range k n
-  : n < k
-    -> k - S (k - S n) = n.
-Proof.
-  omega.
-Qed.
-
-Smpl Add
-     match goal with
-       [ H : get _ (?k - S (?k - S ?n)) _, LE : ?n < ?k |- _ ] =>
-       rewrite (@get_rev_range k n LE) in H
-     end : inv_get.
-
 Lemma renameApart'_renamedApart G {Fi} (FG:FreshGen Fi) (FGS:FreshGenSpec FG) fi
       (s:stmt) ϱ
   : lookup_set ϱ (freeVars s) ⊆ G
@@ -758,7 +719,7 @@ Proof.
       * rewrite lookup_set_update_in_union; eauto.
         rewrite <- H. rewrite lookup_set_union; eauto.
         clear. cset_tac.
-      * rewrite fresh_domain_spec; eauto. rewrite H0. reflexivity.
+      * rewrite <- fresh_domain_spec; eauto. rewrite H0. reflexivity.
     + reflexivity.
     + rewrite renamedApartAnn_decomp; reflexivity.
   - rewrite !snd_renamedApartAnn.
@@ -767,7 +728,7 @@ Proof.
       only 3: (eapply IHs2; eauto with cset).
     + rewrite <- H. rewrite rename_op_freeVars; eauto using lookup_set_union_incl.
     + admit.
-    + rewrite renameApart'_domain; eauto. rewrite H0; eauto with cset.
+    + rewrite <- renameApart'_domain; eauto. rewrite H0; eauto with cset.
     + rewrite renamedApartAnn_decomp, snd_renamedApartAnn. reflexivity.
     + rewrite renamedApartAnn_decomp, snd_renamedApartAnn. reflexivity.
   - econstructor; [| reflexivity].
@@ -791,7 +752,7 @@ Proof.
            eapply incl_union_left.
            eapply incl_list_union; eauto using map_get_1.
         -- rewrite fresh_list_len; eauto.
-      * rewrite fresh_list_domain_spec; eauto.
+      * rewrite <- fresh_list_domain_spec; eauto.
         rewrite <- domain_incl_renameApartFRight; eauto.
         rewrite H1. rewrite union_comm; eauto.
     + hnf; intros; inv_get.
@@ -804,7 +765,7 @@ Proof.
       rewrite <- domain_incl_renameApartFRight; eauto.
       eapply disj_union_left.
       -- eapply disj_1_incl. eapply fresh_list_disj; eauto.
-         rewrite renameApartFRight_domain; eauto.
+         rewrite <- renameApartFRight_domain; eauto.
          rewrite <- drop_tl.
          rewrite drop_rev. len_simpl. rewrite rev_rev.
          admit.

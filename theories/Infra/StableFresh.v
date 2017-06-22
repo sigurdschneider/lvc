@@ -1,5 +1,7 @@
 Require Import Nat CSet Take.
 
+Set Implicit Arguments.
+
 Record StableFresh :=
   {
     stable_fresh :> set nat -> nat -> nat;

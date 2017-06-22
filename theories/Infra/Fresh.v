@@ -285,3 +285,15 @@ Proof.
   eapply fresh_list_nodup, fresh_spec. eauto with len.
   eapply fresh_list_spec, fresh_spec.
 Qed.
+
+Lemma nats_up_to_in x i
+  : x < i <-> x ∈ nats_up_to i.
+Proof.
+  induction i; simpl.
+  - split. omega. cset_tac.
+  - decide (x = i); subst.
+    + split. cset_tac. omega.
+    + split; intros.
+      -- cset_tac'. eapply H0. omega.
+      -- cset_tac'.
+Qed.

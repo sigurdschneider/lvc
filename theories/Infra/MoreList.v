@@ -818,3 +818,28 @@ Proof.
   intros P1 P2.
   general induction P1; inv P2; simpl; econstructor; eauto.
 Qed.
+
+
+Lemma get_rev_range k n
+  : n < k
+    -> k - S (k - S n) = n.
+Proof.
+  omega.
+Qed.
+
+Smpl Add
+     match goal with
+       [ H : get _ (?k - S (?k - S ?n)) _, LE : ?n < ?k |- _ ] =>
+       rewrite (@get_rev_range k n LE) in H
+     end : inv_get.
+
+Lemma get_index_rev k n
+  : k - S (k - S (k - S n)) = k - S n.
+  omega.
+Qed.
+
+Smpl Add
+     match goal with
+       [ H : get _ (?k - S (?k - S (?k - S ?n))) _ |- _ ] =>
+       rewrite (get_index_rev k n) in H
+     end : inv_get.
