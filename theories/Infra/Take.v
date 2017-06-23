@@ -134,3 +134,30 @@ Proof.
     rewrite !take_app_le. reflexivity.
     rewrite rev_length. omega.
 Qed.
+
+
+Lemma take_take_lt X (L:list X) n m
+  : n < m
+    -> take n L = take n (take m L).
+Proof.
+  intros. general induction n; destruct L, m; simpl; eauto.
+  - omega.
+  - erewrite IHn; eauto. omega.
+Qed.
+Lemma take_take_app X (L:list X) n m
+  : n < m
+    -> take m L = take n L ++ take (m - n) (drop n L).
+Proof.
+  intros. general induction n; destruct L, m; simpl; eauto; try omega.
+  - rewrite drop_nil, take_nil; eauto.
+  - rewrite IHn; eauto. omega.
+Qed.
+
+Lemma take_one X (L:list X) x k
+  : k > 0
+    -> take k (x::L) = x :: take (k - 1) L.
+Proof.
+  intros; destruct k; simpl.
+  - omega.
+  - f_equal. f_equal. omega.
+Qed.

@@ -36,7 +36,6 @@ Proof.
     + rewrite restrict_comp_meet.
       assert (SEQ:lv ∩ (lv \ singleton x) [=] lv \ singleton x) by cset_tac.
       rewrite SEQ. eapply restrict_zip_ominus'; eauto with len.
-
       eapply PIR2_not_in; [ eapply computeParameters_AP_LV; eauto with len
                           | eauto with len].
   - econstructor.

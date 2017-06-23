@@ -81,8 +81,8 @@ Proof.
       * eapply inverse_on_incl; try eassumption. eauto.
 Qed.
 
-Lemma rename_apart_alpha {Fi} (FG:FreshGen Fi) (FGS:FreshGenSpec FG) fi s
-  : alpha id id (rename_apart FG (domain_add FG fi (freeVars s)) s) s.
+Lemma rename_apart_alpha {Fi} (FG:FreshGen Fi) (FGS:FreshGenSpec FG) s
+  : alpha id id (rename_apart FG s) s.
 Proof.
   eapply rename_apart_alpha'; eauto.
   + eapply lookup_set_on_id. rewrite <- domain_add_spec; eauto with cset.

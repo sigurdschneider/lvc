@@ -138,12 +138,12 @@ Definition fromILF_fvl (s:stmt) :=
            to_list (freeVars (EAE.compile s)).
 
 Definition fromILF_fvl_ren (s:stmt) :=
-  (fun m : nat => m) ⊝ (fun m : nat => m + (m + 0)) ⊝ range 0 ❬to_list (freeVars s)❭.
+  (fun m : nat => m) ⊝ (fun m : nat => m + (m + 0)) ⊝ range 0 ❬to_list (freeVars (EAE.compile s))❭.
 
 Hint Resolve Liveness.live_sound_overapproximation_I Liveness.live_sound_overapproximation_F.
 
-Instance length_to_list_morphism X `{OrderedType X}
-  : Proper (Equal ==> eq) (fun x => ❬(@to_list X _ _ _ x)❭).
+Lemma length_to_list X `{OrderedType X}
+  : forall x y : ⦃X⦄, x [=] y -> ❬to_list x❭ = ❬to_list y❭.
 Proof.
   Transparent to_list.
   unfold to_list.
@@ -154,27 +154,32 @@ Qed.
 
 Opaque to_list.
 
+
+Opaque to_list.
+
+
+Lemma fromILF_fvl_ren_EAE X `{OrderedType X} s t
+  : s [=] t
+    -> (fun m : nat => m)
+        ⊝ (fun m : nat => m + (m + 0)) ⊝ range 0 ❬to_list s❭ =
+      (fun m : nat => m)
+        ⊝ (fun m : nat => m + (m + 0)) ⊝ range 0 ❬to_list t❭.
+Proof.
+  unfold fromILF_fvl_ren. intros.
+  f_equal. f_equal. f_equal.
+  erewrite length_to_list; eauto.
+Qed.
+
 Lemma rename_apart_to_part_freeVars (s:stmt)
   : fst (getAnn (snd (rename_apart_to_part FGS_even_fast s)))
-        [=] of_list (fromILF_fvl_ren s).
+        [=]  of_list ((fun m : nat => m)
+        ⊝ (fun m : nat => m + (m + 0)) ⊝ range 0 ❬to_list (freeVars s)❭).
 Proof.
   unfold rename_apart_to_part; simpl.
   rewrite fst_renamedApartAnn.
   reflexivity.
 Qed.
 
-Opaque to_list.
-
-(*
-Lemma fromILF_fvl_ren_EAE s
-  : of_list (fromILF_fvl_ren (EAE.compile s)) [=] of_list (fromILF_fvl_ren s).
-Proof.
-  unfold fromILF_fvl_ren.
-  eapply fresh_list_stable_P_ext_eq.
-  eapply length_to_list_morphism.
-  rewrite EAE.EAE_freeVars; eauto.
-Qed.
- *)
 
 Hint Immediate FGS_even_fast.
 
@@ -255,7 +260,7 @@ Proof.
       rewrite <- fresh_list_domain_spec; eauto.
       rewrite fresh_list_len; eauto.
       rewrite of_list_3; eauto.
-      instantiate (1:=id[fst (fresh_list FG_even_fast (empty_domain FG_even_fast) (to_list (freeVars s_eae))) <--to_list (freeVars s_eae)]).
+      instantiate (1:=id[fst (fresh_list FG_even_fast (empty_domain FG_even_fast) (to_list (freeVars s_eae))) <-- to_list (freeVars s_eae)]).
       hnf; intros.
       rewrite <- of_list_3 in H.
       edestruct (of_list_get_first _ H) as [n]; eauto; dcr. hnf in H1. subst x0.
@@ -271,14 +276,15 @@ Proof.
       rewrite fresh_list_len; eauto. eauto.
     - hnf; intros.
       decide (y ∈ freeVars s_eae).
-      + unfold E'.
-        unfold comp. unfold fromILF_fvl, fromILF_fvl_ren.
-        subst s_eae. cbn in H. admit.
-        (* rewrite H. eauto. *)
-      + rewrite lookup_set_update_not_in_Z in H0.
-        subst x. subst E'. unfold fromILF_fvl_ren, fromILF_fvl.
-        admit. (*
-        rewrite of_list_3; eauto.*) admit.
+      + unfold E'. simpl in H, H0.
+        unfold fromILF_fvl_ren, fromILF_fvl. subst s_eae.
+        unfold comp. rewrite H. reflexivity.
+      + simpl in H,H0.
+        rewrite lookup_set_update_not_in_Z in H0; [|rewrite of_list_3;eauto].
+        unfold id in H0; subst x.
+        subst E'.
+        unfold fromILF_fvl_ren, fromILF_fvl. unfold comp; simpl.
+        erewrite fromILF_fvl_ren_EAE; eauto using EAE.EAE_freeVars.
   }
   eapply sim_trans with (σ2:=(nil, E', fst sra):I.state). {
      eapply bisim_sim. eapply SimCompanion.simc_sim.
@@ -305,7 +311,7 @@ Proof.
       - eauto.
       - intros. eapply FG_even_fast_inf_subset.
       - intros. eapply even_fast_list_even; eauto.
-      - admit.
+      - eapply even_fast_update_even; eauto.
     }
     eapply spill_correct with (k:=k) (slt:=slt);
         eauto using DCVE_live, DCVE_renamedApart, DCVE_live_incl,
@@ -326,8 +332,7 @@ Proof.
       rewrite EAE.EAE_freeVars in H1.
       eapply Def in H1. eauto.
       unfold fromILF_fvl_ren, fromILF_fvl. len_simpl.
-      admit.
-      (* rewrite <- fromILF_fvl_ren_EAE. eauto. *) admit.
+      reflexivity. eauto.
   }
   eapply sim_trans with (σ2:=(nil, E'',ren2):F.state). {
     eapply bisim_sim. eapply bisim_sym.
@@ -367,7 +372,9 @@ Proof.
     eapply ann_R_get in INCL; eauto.
     rewrite lookup_set_on_id; [|reflexivity].
     reflexivity.
-Admitted.
+    Grab Existential Variables.
+    eauto.
+Qed.
 
 
 
