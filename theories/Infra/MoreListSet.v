@@ -2,7 +2,7 @@ Require Import Util CSet LengthEq List Get Computable DecSolve AllInRel Omega.
 Require Import Keep OptionR MoreList OUnion Annotation.
 
 
-Lemma PIR2_ifSndR_keep n (AP:〔⦃nat⦄〕)
+Lemma PIR2_ifSndR_keep X `{OrderedType X} n (AP:〔⦃X⦄〕)
   :  PIR2 (ifSndR Subset) AP (keep n AP).
 Proof.
   unfold keep, mapi. generalize 0.
@@ -113,41 +113,47 @@ Proof.
     eapply IHA; eauto using get with len.
 Qed.
 
-Definition ominus' (s : set nat) (t : option (set nat)) := mdo t' <- t; ⎣s \ t' ⎦.
-Definition minuso (s : set nat) (t : option (set nat)) := ⎣s \ oget t ⎦.
+Definition ominus' {X} `{OrderedType X} (s : set X) (t : option (set X))
+  := mdo t' <- t; ⎣s \ t' ⎦.
 
-Lemma zip_ominus_contra DL b b'
+Definition minuso {X} `{OrderedType X}
+           (s : set X) (t : option (set X)) := ⎣s \ oget t ⎦.
+
+Lemma zip_ominus_contra {X} `{OrderedType X} DL b b'
   : PIR2 (fstNoneOrR Subset) b b'
     -> zip ominus' DL b ≿ zip ominus' DL b'.
 Proof.
   intros.
-  general induction H; destruct DL; simpl; eauto using PIR2.
+  general induction H0; destruct DL; simpl; eauto using PIR2.
   - econstructor; eauto.
     + inv pf; simpl; econstructor.
-      unfold flip. rewrite H0. eauto.
+      unfold flip. rewrite H1. eauto.
 Qed.
 
 
-Lemma PIR2_combineParams (A:list (ann (list (list nat)) * list (option (set nat))))
-      (B C:list (option (set nat)))
+Lemma PIR2_combineParams {X} `{OrderedType X}
+      (A:list (ann (list (list X)) * list (option (set X))))
+      (B C:list (option (set X)))
   : (forall n a, get A n a -> length (snd a) = length B)
     -> PIR2 ≼ B C
     -> PIR2 ≼ B (olist_union (List.map snd A) C).
 Proof.
   general induction B; invt PIR2.
-  - clear H. general induction A; eauto.
+  - clear H0. general induction A; eauto.
   - general induction A.
     + econstructor; eauto.
-    + exploit H; eauto using get.
+    + exploit H0; eauto using get.
       destruct a. destruct l; isabsurd. simpl in *.
       assert (length YL = length l). {
-        eapply PIR2_length in H0. simpl in *. omega.
+        eapply PIR2_length in H1. simpl in *. omega.
       }
-      eapply IHA; eauto 10 using fstNoneOrR_ounion_left, PIR2_ounion_left, get, @PIR2 with len.
+      eapply IHA; eauto 10 using fstNoneOrR_ounion_left,
+                  PIR2_ounion_left, get, @PIR2 with len.
 Qed.
 
-Lemma PIR2_combineParams_get (A:list (ann (list (list nat)) * list (option (set nat))))
-      (B C:list (option (set nat))) n a
+Lemma PIR2_combineParams_get {X} `{OrderedType X}
+      (A:list (ann (list (list X)) * list (option (set X))))
+      (B C:list (option (set X))) n a
   : (forall n a, get A n a -> length (snd a) = length B)
     -> length B = length C
     -> get A n a
@@ -171,7 +177,7 @@ Proof.
       eapply length_eq_length in LEN2. omega.
 Qed.
 
-Lemma PIR2_ominus_minuso A B B'
+Lemma PIR2_ominus_minuso {X} `{OrderedType X} A B B'
   : PIR2 (fstNoneOrR Subset) B B'
     -> ominus' ⊜ A B ≿ minuso ⊜ A B'.
 Proof.
@@ -179,20 +185,21 @@ Proof.
   general induction EQ; destruct A; simpl; eauto.
   econstructor; eauto.
   inv pf; simpl; econstructor.
-  simpl. unfold flip. rewrite H. reflexivity.
+  simpl. unfold flip. rewrite H0. reflexivity.
 Qed.
 
 Notation "DL \\ ZL" := (zip (fun s L => s \ of_list L) DL ZL) (at level 50).
 
-Lemma ominus'_Some_oto_list A B C1 C2
+Lemma ominus'_Some_oto_list {X} `{OrderedType X} A B C1 C2
   : PIR2 ≼ C1 C2
-    -> ominus' ⊜ (A \\ B) C1 ≿ Some ⊝ A \\ app (A:=nat) ⊜ B (oto_list ⊝ C2).
+    -> ominus' ⊜ (A \\ B) C1 ≿ Some ⊝ A \\ app (A:=X) ⊜ B (oto_list ⊝ C2).
 Proof.
-  intros. general induction H; simpl; destruct A, B; try reflexivity.
+  intros.
+  general induction H0; simpl; destruct A, B; try reflexivity.
   - simpl; econstructor; eauto.
     + inv pf; simpl ominus'. econstructor.
       econstructor. unfold flip, oto_list.
       rewrite of_list_app. rewrite of_list_3.
       unfold flip in H0. rewrite <- minus_union.
-      rewrite H0. reflexivity.
+      rewrite H1. reflexivity.
 Qed.

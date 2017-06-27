@@ -203,7 +203,7 @@ Proof.
 Qed.
 
 Lemma renamedApart_globals_live_F (isCalled : stmt -> lab -> Prop)
-      (live_sound : overapproximation -> 〔params〕 -> 〔⦃nat⦄〕 -> stmt -> ann ⦃nat⦄ -> Prop)
+      (live_sound : overapproximation -> 〔params〕 -> 〔⦃var⦄〕 -> stmt -> ann ⦃var⦄ -> Prop)
       ZL Lv F ans als D Dt f lv' Z' l'
       (LEN1 : ❬F❭ = ❬als❭)
       (LEN2 : ❬F❭ = ❬ans❭)

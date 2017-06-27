@@ -1,4 +1,4 @@
-Require Import List Omega.
+Require Import List Omega ZArith.Int.
 Require Import Util EqDec.
 Require Import OrderedTypeEx.
 
@@ -17,8 +17,27 @@ Class Counted (A : Type) := {
 (** ** Variables *)
 (* We take naturals directly as variables *)
 Notation "'var'" := nat (only parsing).
+Definition default_var : var := 0.
+Instance var_dec (x y:var) : Computable (x = y).
+Proof.
+  eapply Nat.eq_dec.
+Qed.
+
+(*
+Definition var_to_nat (v:var) := v.
+
+Coercion var_to_nat : nat >-> nat.
+*)
+
+Lemma var_eq_eq (x y : var)
+  : _eq x y -> x = y.
+Proof.
+  inversion 1; eauto.
+Qed.
+
 (*Definition var : Type := nat.
-Definition default_var : var := 0%nat.
+
+
 
 Global Instance inst_defaulted_var : Defaulted var := Build_Defaulted default_var.
 Global Instance inst_eq_dec_var : EqDec var eq := nat_eq_eqdec.

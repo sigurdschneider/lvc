@@ -317,8 +317,8 @@ Qed.
 
 
 Lemma forward_monotone sT D `{JoinSemiLattice D}
-      (f: forall U : ⦃nat⦄, bool -> VDom U D -> exp -> ؟ D)
-      (fr: forall U : ⦃nat⦄, bool -> VDom U D -> op -> bool * bool)
+      (f: forall U : ⦃var⦄, bool -> VDom U D -> exp -> ؟ D)
+      (fr: forall U : ⦃var⦄, bool -> VDom U D -> op -> bool * bool)
       (fMon: forall U e (a a':VDom U D), a ⊑ a' -> forall b b', b ⊑ b' -> f _ b a e ⊑ f _ b' a' e)
       (frMon:forall U e (a a':VDom U D),
             a ⊑ a' -> forall b b', b ⊑ b' -> fr _ b a e ⊑ fr _ b' a' e)
@@ -347,8 +347,8 @@ Proof with eauto using poLe_setTopAnn, poLe_getAnni.
 Qed.
 
 Lemma forward_ext sT D `{JoinSemiLattice D}
-      (f: forall U : ⦃nat⦄, bool -> VDom U D -> exp -> ؟ D)
-      (fr: forall U : ⦃nat⦄, bool -> VDom U D -> op -> bool * bool)
+      (f: forall U : ⦃var⦄, bool -> VDom U D -> exp -> ؟ D)
+      (fr: forall U : ⦃var⦄, bool -> VDom U D -> op -> bool * bool)
       (fMon: forall U e (a a':VDom U D), a ≣ a' -> forall b b', b ≣ b' -> f _ b a e ≣ f _ b' a' e)
       (frMon:forall U e (a a':VDom U D),
             a ≣ a' -> forall b b', b ≣ b' -> fr _ b a e ≣ fr _ b' a' e)
@@ -373,8 +373,9 @@ Proof with eauto using poLe_setTopAnn, poLe_getAnni.
     eauto 100 using forwardF_ext.
 Qed.
 
-Lemma forwardF_ext' sT D `{JoinSemiLattice D} (f:forall U : ⦃nat⦄, bool -> VDom U D -> exp -> ؟ D)
-      (fr:forall U : ⦃nat⦄, bool -> VDom U D -> op -> bool * bool) F ZL ZLIncl
+Lemma forwardF_ext' sT D `{JoinSemiLattice D}
+      (f:forall U : ⦃var⦄, bool -> VDom U D -> exp -> ؟ D)
+      (fr:forall U : ⦃var⦄, bool -> VDom U D -> op -> bool * bool) F ZL ZLIncl
       (fMon: forall U e (a a':VDom U D), a ≣ a' -> forall b b', b ≣ b' -> f U b a e ≣ f U b' a' e)
       (frMon:forall U e (a a':VDom U D),
           a ≣ a' -> forall b b', b ≣ b' -> fr U b a e ≣ fr U b' a' e)
@@ -396,8 +397,8 @@ Qed.
 Lemma forwardF_PIR2 sT D `{JoinSemiLattice D} BL ZL ZLIncl
       (F:list (params * stmt)) sa a (Len1:❬F❭ = ❬sa❭)
       (Len2:❬BL❭ = ❬ZL❭)
-      (f: forall U : ⦃nat⦄, bool -> VDom U D -> exp -> ؟ D)
-      (fr: forall U : ⦃nat⦄, bool -> VDom U D -> op -> bool * bool)
+      (f: forall U : ⦃var⦄, bool -> VDom U D -> exp -> ؟ D)
+      (fr: forall U : ⦃var⦄, bool -> VDom U D -> op -> bool * bool)
       (EQ: forall n Zs r (ST:subTerm (snd Zs) sT), get F n Zs -> get sa n r ->
                         poEq (fst (fst (forward f fr ZL ZLIncl ST a r))) a)
       (fExt: forall U e (a a':VDom U D), a ≣ a' -> forall b b', b ≣ b' -> f _ b a e ≣ f _ b' a' e)
@@ -507,14 +508,14 @@ Arguments UpperBounded A {H}.
 Arguments to_list : simpl never.
 
 Instance poLe_find_proper D `{PartialOrder D}
-  : Proper (_eq ==> @poLe (Dom D) _ ==> poLe) (@MapInterface.find nat _ _ D).
+  : Proper (_eq ==> @poLe (Dom D) _ ==> poLe) (@MapInterface.find var _ _ D).
 Proof.
   unfold Proper, respectful; intros. invc H0.
   eapply H1.
 Qed.
 
 Instance poEq_find_proper D `{PartialOrder D}
-  : Proper (_eq ==> @poEq (Dom D) _ ==> poEq) (@MapInterface.find nat _ _ D).
+  : Proper (_eq ==> @poEq (Dom D) _ ==> poEq) (@MapInterface.find var _ _ D).
 Proof.
   unfold Proper, respectful; intros. invc H0.
   eapply H1.
@@ -585,8 +586,8 @@ Proof.
 Qed.
 
 Lemma snd_forwardF_inv' sT D `{JoinSemiLattice D}
-      (f: forall U : ⦃nat⦄, bool -> VDom U D -> exp -> ؟ D)
-      (fr: forall U : ⦃nat⦄, bool -> VDom U D -> op -> bool * bool)
+      (f: forall U : ⦃var⦄, bool -> VDom U D -> exp -> ؟ D)
+      (fr: forall U : ⦃var⦄, bool -> VDom U D -> op -> bool * bool)
       BL ZL ZLIncl F sa AE STF
       (P1: (setTopAnn (A:=bool)
                       ⊜ (snd (fst (forwardF BL (forward f fr ZL ZLIncl) F
@@ -714,7 +715,7 @@ Lemma forwardF_agree (sT:stmt) D `{JoinSemiLattice D}
       (ST: forall (n : nat) (s : params * stmt), get F n s -> subTerm (snd s) sT)
       (IH:forall (n : nat) (Zs : params * stmt),
           get F n Zs ->
-          forall (ZL : 〔params〕) AE (G : ⦃nat⦄)
+          forall (ZL : 〔params〕) AE (G : ⦃var⦄)
             (ST : subTerm (snd Zs) sT)
             (ZLIncl : list_union (of_list ⊝ ZL) [<=] occurVars sT)
             (anr : ann bool),
@@ -934,8 +935,8 @@ Qed.
 Instance makeForwardAnalysis D
          {PO:PartialOrder D}
          (BSL:JoinSemiLattice D) (UB:UpperBounded D)
-         (f: forall U : ⦃nat⦄, bool -> VDom U D -> exp -> ؟ D)
-         (fr: forall U : ⦃nat⦄, bool -> VDom U D -> op -> bool * bool)
+         (f: forall U : ⦃var⦄, bool -> VDom U D -> exp -> ؟ D)
+         (fr: forall U : ⦃var⦄, bool -> VDom U D -> op -> bool * bool)
          (fMon: forall U e (a a':VDom U D), a ⊑ a' -> forall b b', b ⊑ b' -> f _ b a e ⊑ f _ b' a' e)
          (frMon:forall U e (a a':VDom U D),
              a ⊑ a' -> forall b b', b ⊑ b' -> fr _ b a e ⊑ fr _ b' a' e)

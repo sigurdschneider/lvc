@@ -3,7 +3,7 @@ Require Import StableFresh.
 Require Import IL VarP RenameApart FreshGen.
 
 
-Lemma renameApart_var_P Fi (FG:FreshGen Fi) (FGS:FreshGenSpec FG) fi (P:var -> Prop) (ϱ:env var) s
+Lemma renameApart_var_P Fi (FG:FreshGen var Fi) (FGS:FreshGenSpec FG) fi (P:var -> Prop) (ϱ:env var) s
       (Pfresh:forall fi x, P (fst (fresh FG fi x)))
       (Pfresh_list:forall fi Z, forall (x:var), x ∈ of_list (fst (fresh_list FG fi Z)) -> P x)
       (ren:forall x, x ∈ freeVars s -> P (ϱ x))

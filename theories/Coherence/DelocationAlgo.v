@@ -4,7 +4,6 @@ Require Import Annotation Liveness.Liveness Coherence Delocation.
 Require Import AddParam AddAdd MoreListSet.
 
 Set Implicit Arguments.
-Unset Printing Abstraction Types.
 
 Fixpoint computeParameters (DL: list (set var)) (ZL:list (list var)) (AP:list (set var))
          (s:stmt) (an:ann (set var)) {struct s}

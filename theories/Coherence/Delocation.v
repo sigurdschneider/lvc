@@ -4,7 +4,6 @@ Require Import Annotation Liveness.Liveness Coherence.
 
 Set Implicit Arguments.
 Unset Printing Records.
-Unset Printing Abstraction Types.
 
 (** Correctness predicate for  *)
 
@@ -296,8 +295,8 @@ Proof.
 Qed.
 
 Lemma compileF_map_length ZL F Za' Za ans (Len1:❬F❭=❬Za❭) (Len2:❬F❭=❬ans❭)
-  : length (A:=nat) ⊝ fst ⊝ compileF compile ZL F Za Za' ans =
-    (fun (Z : 〔nat〕) (n0 : nat) => n0 + ❬Z❭) ⊜ Za (length (A:=nat) ⊝ fst ⊝ F).
+  : length (A:=var) ⊝ fst ⊝ compileF compile ZL F Za Za' ans =
+    (fun Z (n0 : nat) => n0 + ❬Z❭) ⊜ Za (length (A:=var) ⊝ fst ⊝ F).
 Proof.
   unfold compileF. rewrite map_map.
   general induction Len1; destruct ans; isabsurd; simpl; eauto.

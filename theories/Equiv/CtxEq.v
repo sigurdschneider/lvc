@@ -271,7 +271,7 @@ Proof.
         eapply H3. rewrite H2. eapply star2_silent. single_step; simpl; eauto.
         eapply star2_refl.
       * split.
-        -- hnf; intros. lud; eqs; eauto.
+        -- hnf; intros. lud; eauto.
            eapply H3; eauto. rewrite H1 in H5. cset_tac.
         -- eapply agree_on_update_dead. rewrite H1. cset_tac; intuition.
            eapply agree_on_incl; eauto. eapply H3; eauto.

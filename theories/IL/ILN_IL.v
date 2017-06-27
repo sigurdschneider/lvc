@@ -186,10 +186,9 @@ Proof.
       eapply get_drop. rewrite H3.
       eapply get_app. eapply (map_get_1 (fst ∘ fst) H6).
     }
-    + pone_step. orewrite (l + 0 = l). eauto. simpl.
+    + pone_step. try orewrite (l + 0 = l); simpl; eauto.
+      inv_get. orewrite (i = i - f + f). eauto. simpl.
       eapply get_drop in D1; eauto.
-      orewrite (i - f + f = i) in D1. eauto.
-      simpl. congruence.
       right. eapply labIndicesSim_sim.
       econstructor; eauto. simpl.
       * eapply lab_approx_drop; eauto.

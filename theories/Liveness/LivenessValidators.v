@@ -4,9 +4,9 @@ Instance argsLive_dec Caller Callee Y Z
       : Computable (argsLive Caller Callee Y Z).
 Proof.
   decide(length Y = length Z).
-  - general induction Y; destruct Z; isabsurd.
+  - general induction Y; destruct Z as [|v Z]; isabsurd.
     + left; econstructor.
-    + decide (n ∈ Callee -> live_op_sound a Caller);
+    + decide (v ∈ Callee -> live_op_sound a Caller);
       edestruct (IHY Caller Callee); try dec_solve; try eassumption;
       try inv an; eauto; try tauto.
   - right; intro. eapply argsLive_length in H. congruence.

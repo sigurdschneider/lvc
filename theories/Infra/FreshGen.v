@@ -1,19 +1,21 @@
-Require Import CSet Le Arith.Compare_dec.
-Require Import Plus Util Map Get Take LengthEq SafeFirst.
+Require Import CSet Le Arith.Compare_dec Var.
+Require Import Plus Util Map Get Take LengthEq SafeFirst .
 Require Export StableFresh Fresh Range InfinitePartition.
 
 Set Implicit Arguments.
 
-Inductive FreshGen (Fi : Type) :=
+Inductive FreshGen (V:Type) `{OrderedType V} (Fi : Type) :=
   {
-    fresh :> Fi -> nat -> nat * Fi;
-    fresh_list : Fi -> list nat -> list nat * Fi;
-    domain : Fi -> set nat;
-    domain_add : Fi -> set nat -> Fi;
+    fresh :> Fi -> V -> V * Fi;
+    fresh_list : Fi -> list V -> list V * Fi;
+    domain : Fi -> set V;
+    domain_add : Fi -> set V -> Fi;
     empty_domain : Fi
   }.
 
-Inductive FreshGenSpec Fi (FG:FreshGen Fi) : Prop :=
+Arguments FreshGen V {H} Fi.
+
+Inductive FreshGenSpec V `{OrderedType V} Fi (FG:FreshGen V Fi) : Prop :=
   {
     fresh_spec : forall i x, fst (fresh FG i x) ∉ domain FG i;
     fresh_domain_spec : forall i x, {fst (fresh FG i x); (domain FG i)}
@@ -29,10 +31,10 @@ Inductive FreshGenSpec Fi (FG:FreshGen Fi) : Prop :=
 Create HintDb fresh discriminated.
 
 
-Definition FG_fast : FreshGen nat :=
-  @Build_FreshGen nat
+Definition FG_fast : FreshGen nat nat :=
+  @Build_FreshGen nat _ nat
                   (fun n _ => (n, S n))
-                  (fun n Z => (range n ❬Z❭, n + ❬Z❭))
+                  (fun n Z => (range n ❬Z❭, (n + ❬Z❭)))
                   nats_up_to
                   (fun n s => max n (S (fold Init.Nat.max s 0)))
                   0.
@@ -105,9 +107,9 @@ Proof.
   - simpl in H0. setoid_rewrite plus_comm in H0 at 2. simpl in *. eauto.
 Qed.
 
-Definition FG_even_fast : FreshGen {n | even n}.
+Definition FG_even_fast : FreshGen nat {n | even n}.
   refine
-    (@Build_FreshGen {n | even n}
+    (@Build_FreshGen nat _ {n | even n}
                   (fun n _ => (proj1_sig n, exist _ (S (S (proj1_sig n))) _))
                   (fun n Z => let z := 2 * ❬Z❭ in
                      (plus (proj1_sig n) ⊝ mult 2 ⊝ range 0 ❬Z❭, exist _ (proj1_sig n + z) _))
@@ -160,7 +162,7 @@ Lemma FGS_even_fast : FreshGenSpec FG_even_fast.
     eapply range_nodup.
     hnf; intros. invc H1. hnf. omega.
     eauto.
-  - eauto with len.
+  - intros. len_simpl. eauto with len.
   - simpl. cset_tac'.
     eapply nats_up_to_in.
     + rewrite <- Max.le_max_r. unfold next_even.

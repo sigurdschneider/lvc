@@ -8,8 +8,6 @@ Require compcert.lib.Parmov.
 Set Implicit Arguments.
 Unset Printing Records.
 
-Let nat_dec := @equiv_computable nat (@SOT_as_OT nat (@eq nat) nat_OrderedType).
-
 (** * Parallel Moves
 
    This code is based on the ril-cv-12 repo and the validator
@@ -85,9 +83,9 @@ Section ParmovSourceSet.
   Qed.
 
   Lemma parmove_src_set t mu
-    : moves_source_set (parmove nat nat_dec t mu) ⊆ of_list (fst ⊝ mu).
+    : moves_source_set (parmove var var_dec t mu) ⊆ of_list (fst ⊝ mu).
   Proof.
-    pose proof (parmove_aux_transitions _ nat_dec t (State _ mu nil nil)).
+    pose proof (parmove_aux_transitions _ var_dec t (State _ mu nil nil)).
     eapply dtransitions_source_set in H.
     simpl in *. revert H; stsmpl.
     unfold parmove. cset_tac.
@@ -102,20 +100,14 @@ Proof.
   firstorder.
 Qed.
 
-Lemma nat_dec_if_eq (x y:nat) X (A B:X)
-  : (if [x === y] then A else B) = (if [ y === x] then A else B).
-Proof.
-  repeat cases; eauto; isabsurd.
-Qed.
-
-Notation "f [ // p ]" := (@Parmov.exec_seq nat nat_dec _ p f) (at level 29, left associativity).
+Notation "f [ // p ]" := (@Parmov.exec_seq var var_dec _ p f) (at level 29, left associativity).
 
 Lemma Parmov_update_eq M x y
-  : Parmov.update nat nat_dec (؟ val) x y M = M [x <- y].
+  : Parmov.update var var_dec (؟ val) x y M = M [x <- y].
 Proof.
   unfold Parmov.update, update.
   eapply FunctionalExtensionality.functional_extensionality.
-  intros. eapply nat_dec_if_eq.
+  intros. repeat cases; eauto. eapply var_eq_eq in COND. exfalso; eauto.
 Qed.
 
 Section GlueCode.
@@ -144,7 +136,7 @@ Section GlueCode.
   Qed.
 
   Lemma exec_par_eq p (E:onv val)
-    : Parmov.exec_par nat nat_dec _ p E =
+    : Parmov.exec_par var var_dec _ p E =
       E [ snd ⊝ p <-- lookup_list E (fst ⊝ p) ].
   Proof.
     general induction p; simpl; eauto.
@@ -155,7 +147,7 @@ Section GlueCode.
 
   Lemma NoDup_is_mill m
     : NoDupA eq (snd ⊝ m)
-      -> Parmov.is_mill nat m.
+      -> Parmov.is_mill var m.
   Proof.
     intros ND. hnf. unfold Parmov.dests.
     general induction m; invt NoDupA; simpl;
@@ -167,13 +159,13 @@ Section GlueCode.
 
   Lemma list_to_stmt_correct' D (m:Parmov.moves var) (M M':onv val) x
         (ND:NoDupA eq (snd ⊝ m))
-        (NOTIN : Parmov.move_no_temp nat (fun _ : nat => x) m)
+        (NOTIN : Parmov.move_no_temp var (fun _ => x) m)
     : agree_on eq (D \ singleton x)
-               (M[ // Parmov.parmove nat nat_dec (fun _ => x) m])
+               (M[ // Parmov.parmove var var_dec (fun _ => x) m])
                (M [ snd ⊝ m <-- lookup_list M (fst ⊝ m) ]).
   Proof.
     intros.
-    exploit (@Parmov.parmove_correctness nat nat_dec (fun _ => x) (option val) m).
+    exploit (@Parmov.parmove_correctness var var_dec (fun _ => x) (option val) m).
     - eauto.
     - eapply NoDup_is_mill; eauto.
     - rewrite <- exec_par_eq.
@@ -260,7 +252,7 @@ Qed.
 Hint Resolve onlyVars_length : len.
 
 
-Fixpoint lower (p:inf_partition) (DL:〔⦃nat⦄ * params〕) s (an:ann (set var))
+Fixpoint lower (p:inf_partition var) (DL:〔⦃var⦄ * params〕) s (an:ann (set var))
   : stmt :=
   match s, an with
     | stmtLet x e s, ann1 lv ans => stmtLet x e (lower p DL s ans)
@@ -268,7 +260,7 @@ Fixpoint lower (p:inf_partition) (DL:〔⦃nat⦄ * params〕) s (an:ann (set va
     | stmtApp l Y, ann0 lv  =>
       let '(lv', Z) := nth_default (∅, nil) DL (counted l) in
       let x := least_fresh_P (part_2 p) (lv' ∪ lv) in
-      let mvs := Parmov.parmove2 var nat_dec (fun _ => x) (onlyVars Y) Z in
+      let mvs := Parmov.parmove2 var var_dec (fun _ => x) (onlyVars Y) Z in
       list_to_stmt mvs (stmtApp l nil)
     | stmtReturn x, ann0 lv => stmtReturn x
     | stmtFun F t, annF lv ans ant =>
@@ -329,7 +321,7 @@ Proof.
       destruct Eq as [SrcEq DstEq]. unfold Parmov.srcs, Parmov.dests in *.
       exploit omap_op_eval_live_agree; try eassumption.
       exploit (@list_to_stmt_correct
-                 (Parmov.parmove2 nat nat_dec (fun _ : nat => least_fresh_P (part_2 p) (blv ∪ lv)) (onlyVars Y) Z0)
+                 (Parmov.parmove2 var var_dec (fun _ => least_fresh_P (part_2 p) (blv ∪ lv)) (onlyVars Y) Z0)
                  (stmtApp l nil) E' L').
 
       unfold Parmov.parmove2.

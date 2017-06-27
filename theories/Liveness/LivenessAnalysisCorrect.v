@@ -133,12 +133,12 @@ Require Import RenamedApart.
 Lemma extend_incl sT ZL LV D Dt s ans sa
       (IFC:Indexwise.indexwise_R (funConstr D Dt) s ans)
       (Len: ❬s❭ = ❬sa❭) (Len2 : ❬s❭ = ❬ans❭)
-      (LE:forall (n : nat) (a : ann ⦃nat⦄) (b : ann (⦃nat⦄ * ⦃nat⦄)),
+      (LE:forall (n : nat) (a : ann ⦃var⦄) (b : ann (⦃var⦄ * ⦃var⦄)),
           get (mapAnn proj1_sig ⊝ sa) n a ->
-          get ans n b -> ann_R (fun (x : ⦃nat⦄) (y : ⦃nat⦄ * ⦃nat⦄) => x ⊆ fst y) a b)
-      (BND : forall (n : nat) (lv : {X : ⦃nat⦄ | X ⊆ occurVars sT}) (Z : params),
+          get ans n b -> ann_R (fun (x : ⦃var⦄) (y : ⦃var⦄ * ⦃var⦄) => x ⊆ fst y) a b)
+      (BND : forall (n : nat) (lv : {X : ⦃var⦄ | X ⊆ occurVars sT}) (Z : params),
           get ZL n Z -> get LV n lv -> proj1_sig lv \ of_list Z ⊆ D)
-  : forall n x0 x2, get sa n x2 -> get ans n x0 -> forall (n0 : nat) (lv : {X : ⦃nat⦄ | X ⊆ occurVars sT}) (Z : params),
+  : forall n x0 x2, get sa n x2 -> get ans n x0 -> forall (n0 : nat) (lv : {X : ⦃var⦄ | X ⊆ occurVars sT}) (Z : params),
                    get (fst ⊝ s ++ ZL) n0 Z -> get (getAnn ⊝ sa ++ LV) n0 lv
                    -> proj1_sig lv \ of_list Z ⊆ fst (getAnn x0).
   intros ? ? ? Get1 Get2 ? ? ? Get4 Get5.
@@ -160,29 +160,29 @@ Qed.
 Lemma extend_incl' i sT s t (ST:subTerm (stmtFun s t) sT) ZL LV D Dt ans sa
       (IFC:Indexwise.indexwise_R (funConstr D Dt) s ans)
       (Len: ❬s❭ = ❬sa❭) (Len2 : ❬s❭ = ❬ans❭)
-      (LE:forall (n : nat) (a : ann ⦃nat⦄) (b : ann (⦃nat⦄ * ⦃nat⦄)),
+      (LE:forall (n : nat) (a : ann ⦃var⦄) (b : ann (⦃var⦄ * ⦃var⦄)),
           get (mapAnn proj1_sig ⊝ sa) n a ->
-          get ans n b -> ann_R (fun (x : ⦃nat⦄) (y : ⦃nat⦄ * ⦃nat⦄) => x ⊆ fst y) a b)
-      (BND : forall (n : nat) (lv : {X : ⦃nat⦄ | X ⊆ occurVars sT}) (Z : params),
+          get ans n b -> ann_R (fun (x : ⦃var⦄) (y : ⦃var⦄ * ⦃var⦄) => x ⊆ fst y) a b)
+      (BND : forall (n : nat) (lv : {X : ⦃var⦄ | X ⊆ occurVars sT}) (Z : params),
           get ZL n Z -> get LV n lv -> proj1_sig lv \ of_list Z ⊆ D)
-      (RA: forall (n : nat) (Zs : params * stmt) (a : ann (⦃nat⦄ * ⦃nat⦄)),
+      (RA: forall (n : nat) (Zs : params * stmt) (a : ann (⦃var⦄ * ⦃var⦄)),
           get s n Zs -> get ans n a -> renamedApart (snd Zs) a)
-      (IH:forall (n : nat) (s' : params * stmt) (sa' : ann {X : ⦃nat⦄ | X ⊆ occurVars sT}),
+      (IH:forall (n : nat) (s' : params * stmt) (sa' : ann {X : ⦃var⦄ | X ⊆ occurVars sT}),
           get sa n sa' ->
           get s n s' ->
-          forall (i : overapproximation) (ZL : 〔params〕) (LV : 〔{X : ⦃nat⦄ | X ⊆ occurVars sT}〕)
-            (ST : subTerm (snd s') sT) (ra : ann (⦃nat⦄ * ⦃nat⦄)),
+          forall (i : overapproximation) (ZL : 〔params〕) (LV : 〔{X : ⦃var⦄ | X ⊆ occurVars sT}〕)
+            (ST : subTerm (snd s') sT) (ra : ann (⦃var⦄ * ⦃var⦄)),
             renamedApart (snd s') ra ->
             labelsDefined (snd s') ❬ZL❭ ->
             labelsDefined (snd s') ❬LV❭ ->
-            (forall (n0 : nat) (lv : {X : ⦃nat⦄ | X ⊆ occurVars sT}) (Z : params),
+            (forall (n0 : nat) (lv : {X : ⦃var⦄ | X ⊆ occurVars sT}) (Z : params),
                 get ZL n0 Z -> get LV n0 lv -> proj1_sig lv \ of_list Z ⊆ fst (getAnn ra)) ->
-            ann_R (fun (x : ⦃nat⦄) (y : ⦃nat⦄ * ⦃nat⦄) => x ⊆ fst y) (mapAnn proj1_sig sa') ra ->
-            ann_R (fun (x : ⦃nat⦄) (y : ⦃nat⦄ * ⦃nat⦄) => x ⊆ fst y)
+            ann_R (fun (x : ⦃var⦄) (y : ⦃var⦄ * ⦃var⦄) => x ⊆ fst y) (mapAnn proj1_sig sa') ra ->
+            ann_R (fun (x : ⦃var⦄) (y : ⦃var⦄ * ⦃var⦄) => x ⊆ fst y)
                   (mapAnn proj1_sig (@backward _ _ (liveness_transform_dep i) ZL LV (snd s') ST sa')) ra)
       (LDef:forall (n : nat) (Zs : params * stmt), get s n Zs -> labelsDefined (snd Zs) (❬s❭ + ❬ZL❭))
       (LDef':forall (n : nat) (Zs : params * stmt), get s n Zs -> labelsDefined (snd Zs) (❬s❭ + ❬LV❭))
-  :forall (n : nat) (lv : {X : ⦃nat⦄ | X ⊆ occurVars sT}) (Z : params),
+  :forall (n : nat) (lv : {X : ⦃var⦄ | X ⊆ occurVars sT}) (Z : params),
     get (fst ⊝ s ++ ZL) n Z ->
     get
       (getAnn
@@ -210,8 +210,8 @@ Lemma live_ann_incl_ra  (i:overapproximation) sT ZL LV s a (ST:subTerm s sT) ra
       (DefZL:labelsDefined s (length ZL))
       (DefLV:labelsDefined s (length LV))
       (BND:forall n lv Z, get ZL n Z -> get LV n lv -> proj1_sig lv \ of_list Z ⊆ fst (getAnn ra))
-      (LE:ann_R (fun (x : ⦃nat⦄) (y : ⦃nat⦄ * ⦃nat⦄) => x ⊆ fst y) (mapAnn proj1_sig a) ra)
-  : ann_R (fun (x : ⦃nat⦄) (y : ⦃nat⦄ * ⦃nat⦄) => x ⊆ fst y) (mapAnn proj1_sig (@backward _ _ (liveness_transform_dep i) ZL LV s ST a)) ra.
+      (LE:ann_R (fun (x : ⦃var⦄) (y : ⦃var⦄ * ⦃var⦄) => x ⊆ fst y) (mapAnn proj1_sig a) ra)
+  : ann_R (fun (x : ⦃var⦄) (y : ⦃var⦄ * ⦃var⦄) => x ⊆ fst y) (mapAnn proj1_sig (@backward _ _ (liveness_transform_dep i) ZL LV s ST a)) ra.
 Proof.
   general induction Ann; invt renamedApart;
     invt @ann_R; inv DefZL; inv DefLV; simpl; econstructor; simpl; eauto;
@@ -283,7 +283,7 @@ Qed.
 
 Lemma livenessAnalysis_renamedApart_incl i s ra
       (RA:renamedApart s ra) (LD:labelsDefined s 0)
-  : ann_R (fun (x : ⦃nat⦄) (y : ⦃nat⦄ * ⦃nat⦄) => x ⊆ fst y) (livenessAnalysis i s) ra.
+  : ann_R (fun (x : ⦃var⦄) (y : ⦃var⦄ * ⦃var⦄) => x ⊆ fst y) (livenessAnalysis i s) ra.
 Proof.
   unfold livenessAnalysis. destr_sig.
   destruct e as [n [Iter _]]. subst.

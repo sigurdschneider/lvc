@@ -8,31 +8,31 @@ Require Import RenameApart_Partition.
 
 Set Implicit Arguments.
 
-Inductive locally_sep (p:inf_partition) (rho:env var)
+Inductive locally_sep (p:inf_partition var) (rho:env var)
   : ann (set var) -> Prop :=
 | RNOpr lv (al:ann (set var))
   :  locally_sep p rho al
-     -> sep p lv rho
+     -> sep var p lv rho
      -> locally_sep p rho (ann1 lv al)
 | RNIf lv (alv1 alv2:ann (set var))
-  :  sep p lv rho
+  :  sep var p lv rho
      -> locally_sep p rho alv1
      -> locally_sep p rho alv2
      -> locally_sep p rho (ann2 lv alv1 alv2)
 | RNGoto lv
-  : sep p lv rho
+  : sep var p lv rho
     -> locally_sep p rho (ann0 lv)
 | RNReturn lv
-  : sep p lv rho
+  : sep var p lv rho
     -> locally_sep p rho (ann0 lv)
 | RNLet lv alvs alvb
   : (forall n alv, get alvs n alv -> locally_sep p rho alv)
     -> locally_sep p rho alvb
-    -> sep p lv rho
+    -> sep var p lv rho
     -> locally_sep p rho (annF lv alvs alvb).
 
 Lemma locally_separate p ϱ lv
-  : locally_sep p ϱ lv -> sep p (getAnn lv) ϱ.
+  : locally_sep p ϱ lv -> sep var p (getAnn lv) ϱ.
 Proof.
   inversion 1; eauto.
 Qed.
@@ -96,9 +96,9 @@ Proof.
 Qed.
 
 Lemma sep_part_bounded p k lv ϱ
-      (AN:ann_P (part_bounded (part_1 p) k) lv)
+      (AN:ann_P (part_bounded var (part_1 p) k) lv)
       (LS:locally_sep p ϱ lv)
-  : ann_P (part_bounded (part_1 p) k) (mapAnn (lookup_set ϱ) lv).
+  : ann_P (part_bounded var (part_1 p) k) (mapAnn (lookup_set ϱ) lv).
 Proof.
   general induction AN; invt locally_sep;
     simpl in *; econstructor; eauto using part_bounded_sep.
@@ -106,25 +106,37 @@ Proof.
 Qed.
 
 Instance sep_agree_morph_impl p lv
-  : Proper (agree_on eq lv ==> impl) (sep p lv).
+  : Proper (agree_on eq lv ==> impl) (sep var p lv).
 Proof.
   unfold Proper, respectful, impl.
   eauto using sep_agree.
 Qed.
 
 Instance sep_agree_morph_iff p lv
-  : Proper (agree_on eq lv ==> iff) (sep p lv).
+  : Proper (agree_on eq lv ==> iff) (sep var p lv).
 Proof.
   unfold Proper, respectful; split.
   eauto using sep_agree.
   symmetry in H. eauto using sep_agree.
 Qed.
 
+Lemma sep_update_part p ϱ lv x G
+      (SEP:sep var p (lv \ singleton x) ϱ)
+  : sep var p lv (ϱ [x <- least_fresh_part p G x]).
+Proof.
+  unfold sep in SEP; dcr.
+  hnf; split; intros; lud.
+  - invc e. eauto using least_fresh_part_1,least_fresh_part_2.
+  - cset_tac.
+  - invc e. eauto using least_fresh_part_1,least_fresh_part_2.
+  - cset_tac.
+Qed.
+
 Lemma regAssign_sep p (ϱ:Map [var,var]) ZL Lv s alv ϱ' ra
       (allocOK:regAssign p s alv ϱ = Success ϱ')
       (LS:live_sound FunctionalAndImperative ZL Lv s alv)
       (inj:injective_on (getAnn alv) (findt ϱ 0))
-      (Sep:sep p (getAnn alv) (findt ϱ 0))
+      (Sep:sep var p (getAnn alv) (findt ϱ 0))
       (sd:renamedApart s ra)
       (incl:ann_R (fun x y => x ⊆ fst y) alv ra)
 : locally_sep p (findt ϱ' 0) alv.

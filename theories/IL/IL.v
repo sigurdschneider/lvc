@@ -28,7 +28,7 @@ Instance Stmt_size : Size stmt. gen_Size. Defined.
 
 Lemma stmt_ind'
   : forall P : stmt -> Prop,
-       (forall (x : nat) (e : exp) (s : stmt), P s -> P (stmtLet x e s)) ->
+       (forall (x : var) (e : exp) (s : stmt), P s -> P (stmtLet x e s)) ->
        (forall (e : op) (s : stmt), P s -> forall t : stmt, P t -> P (stmtIf e s t)) ->
        (forall (l : lab) (Y : args), P (stmtApp l Y)) ->
        (forall e : op, P (stmtReturn e)) ->

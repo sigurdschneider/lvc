@@ -1,51 +1,52 @@
 Require Import Util CSet InfinitePartition MapAgreement.
 
-Definition sep (p:inf_partition) (G:set nat) (ϱ:nat -> nat) :=
+
+Definition sep X `{OrderedType X} (p:inf_partition X) (G:set X) (ϱ:X -> X) :=
   (forall x, x ∈ G -> part_1 p x -> part_1 p (ϱ x))
   /\ (forall x, x ∈ G -> part_2 p x -> part_2 p (ϱ x)).
 
-Instance sep_morphism_impl
-  : Proper (eq ==> Equal ==> eq ==> impl) sep.
+Instance sep_morphism_impl X `{OrderedType X}
+  : Proper (eq ==> Equal ==> eq ==> impl) (sep X).
 Proof.
   unfold Proper, respectful, impl. intros ? p ? x ? EQ ? ϱ ? SEP; subst.
   destruct SEP; split; intros.
-  - eapply H; eauto. rewrite EQ; eauto.
   - eapply H0; eauto. rewrite EQ; eauto.
+  - eapply H1; eauto. rewrite EQ; eauto.
 Qed.
 
-Instance sep_morphism_iff
-  : Proper (eq ==> Equal ==> eq ==> iff) sep.
+Instance sep_morphism_iff X `{OrderedType X}
+  : Proper (eq ==> Equal ==> eq ==> iff) (sep X).
 Proof.
   unfold Proper, respectful; intros; subst.
-  split; rewrite H0; eauto.
+  split; rewrite H1; eauto.
 Qed.
 
-Instance sep_morphism_Subset_impl
-  : Proper (eq ==> Subset ==> eq ==> flip impl) sep.
+Instance sep_morphism_Subset_impl X `{OrderedType X}
+  : Proper (eq ==> Subset ==> eq ==> flip impl) (sep X).
 Proof.
   unfold Proper, respectful, flip, impl; intros; subst.
-  destruct H2; split; intros; eauto.
+  destruct H3; split; intros; eauto.
 Qed.
 
-Instance sep_morphism_Subset_impl'
-  : Proper (eq ==> flip Subset ==> eq ==> impl) sep.
+Instance sep_morphism_Subset_impl' X `{OrderedType X}
+  : Proper (eq ==> flip Subset ==> eq ==> impl) (sep X).
 Proof.
   unfold Proper, respectful, flip, impl; intros; subst.
-  destruct H2; split; intros; eauto.
+  destruct H3; split; intros; eauto.
 Qed.
 
-Lemma sep_incl p lv lv' ϱ
-  : sep p lv ϱ
+Lemma sep_incl X `{OrderedType X} p lv lv' ϱ
+  : sep X p lv ϱ
     -> lv' ⊆ lv
-    -> sep p lv' ϱ.
+    -> sep X p lv' ϱ.
 Proof.
   intros A B. rewrite B; eauto.
 Qed.
 
-Lemma sep_agree p D ϱ ϱ'
+Lemma sep_agree X `{OrderedType X} p D ϱ ϱ'
   : agree_on eq D ϱ ϱ'
-    -> sep p D ϱ
-    -> sep p D ϱ'.
+    -> sep X p D ϱ
+    -> sep X p D ϱ'.
 Proof.
   intros AGR [GT LE]; split; intros.
   - rewrite <- AGR; eauto.
@@ -55,52 +56,48 @@ Qed.
 
 Hint Resolve sep_incl sep_agree.
 
-Lemma sep_filter_map_comm p (ϱ:nat -> nat) lv
-  : sep p lv ϱ
+Lemma sep_filter_map_comm X `{OrderedType X} p (ϱ:X -> X)
+      `{Proper _ (_eq ==> _eq) ϱ} lv
+  : sep X p lv ϱ
     -> map ϱ (filter (part_1 p) lv) [=] filter (part_1 p) (map ϱ lv).
 Proof.
-  intros [GT LE]. cset_tac'.
+  intros [GT LE].
+  assert (Proper (_eq ==> eq) (part_1 p)) by eapply (part_1 p).
+  cset_tac'.
   - eexists x; cset_tac'.
     pose proof (part_dich p x).
     pose proof (part_disj p (ϱ x)).
+    rewrite H3 in H4.
     cset_tac.
 Qed.
 
-Definition part_bounded (p:inf_subset) (k:nat) : ⦃nat⦄ -> Prop
+Definition part_bounded X `{OrderedType X} (p:inf_subset X) (k:nat) : ⦃X⦄ -> Prop
   := fun a => cardinal (filter p a) <= k.
 
-Instance part_bounded_impl p k
-  : Proper (flip Subset ==> impl) (part_bounded p k).
+Instance filter_params
+  : Params filter 1.
+
+Instance part_bounded_impl X `{OrderedType X} p k
+  : Proper (flip Subset ==> impl) (part_bounded X p k).
 Proof.
   unfold Proper, respectful, impl, flip, part_bounded; intros.
-  rewrite H. eauto.
+  rewrite H0. eauto.
 Qed.
 
-Instance part_bounded_iff p k
-  : Proper (Equal ==> iff) (part_bounded p k).
+Instance part_bounded_iff X `{OrderedType X} p k
+  : Proper (Equal ==> iff) (part_bounded X p k).
 Proof.
   unfold Proper, respectful, impl, flip, part_bounded; split;
-  rewrite H; eauto.
+  rewrite H0; eauto.
 Qed.
 
-Lemma part_bounded_sep p ϱ k lv
-  (BND:part_bounded (part_1 p) k lv)
-  (SEP:sep p lv ϱ)
-  : part_bounded (part_1 p) k (lookup_set ϱ lv).
+Lemma part_bounded_sep X `{OrderedType X} p ϱ
+      `{Proper _ (_eq ==> _eq) ϱ} k lv
+  (BND:part_bounded X (part_1 p) k lv)
+  (SEP:sep X p lv ϱ)
+  : part_bounded X (part_1 p) k (lookup_set ϱ lv).
 Proof.
   unfold part_bounded in *.
   unfold lookup_set. rewrite <- sep_filter_map_comm; eauto.
   rewrite cardinal_map; eauto.
-Qed.
-
-Lemma sep_update_part p ϱ lv x G
-      (SEP:sep p (lv \ singleton x) ϱ)
-  : sep p lv (ϱ [x <- least_fresh_part p G x]).
-Proof.
-  unfold sep in SEP; dcr.
-  hnf; split; intros; lud.
-  - invc e. eauto using least_fresh_part_1,least_fresh_part_2.
-  - cset_tac.
-  - invc e. eauto using least_fresh_part_1,least_fresh_part_2.
-  - cset_tac.
 Qed.

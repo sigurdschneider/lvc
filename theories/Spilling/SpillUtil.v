@@ -158,7 +158,7 @@ Lemma of_list_tl_hd
       (L : list var)
   :
     L <> nil
-    ->  of_list L [=] of_list (tl L) ∪ singleton (hd 0 L)
+    ->  of_list L [=] of_list (tl L) ∪ singleton (hd default_var L)
 .
 Proof.
   intro N.
@@ -171,7 +171,7 @@ Qed.
 Lemma tl_hd_set_incl
       (s t : ⦃var⦄)
   :
-    s \ of_list (tl (elements t)) ⊆ s \ t ∪ singleton (hd 0 (elements t))
+    s \ of_list (tl (elements t)) ⊆ s \ t ∪ singleton (hd default_var (elements t))
 .
 Proof.
   hnf.

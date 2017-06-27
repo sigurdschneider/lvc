@@ -169,7 +169,7 @@ Proof.
 Qed.
 
 Definition cop2bool e :=
-  match op_eval (fun _ : nat => ⎣⎦) e with
+  match op_eval (fun _ : _ => ⎣⎦) e with
   | Some v => ⎣ wTA (val2bool v) ⎦
   | None => Some Top
   end.

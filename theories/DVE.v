@@ -107,7 +107,7 @@ Proof.
     + inv H1; eauto with cset.
 Qed.
 
-Lemma agree_on_update_flt Y `{Equivalence (option Y)} (lv:set nat) (V V':nat -> option Y) (Z:list nat) VL
+Lemma agree_on_update_flt Y `{Equivalence (option Y)} (lv:set var) (V V':env (option Y)) (Z:params) VL
 
 : length Z = length VL
   -> agree_on R (lv \ of_list Z) V V'
@@ -722,11 +722,11 @@ Qed.
 
 Lemma DVE_live_incl i (FNC:isFunctional i) ZL LV s ra (RA:renamedApart s ra) lv (G D:set var)
       (TLS:true_live_sound i ZL LV s lv)
-      (AN:ann_R (fun (x : ⦃nat⦄) (y : ⦃nat⦄ * ⦃nat⦄) => x ⊆ fst y) lv ra)
+      (AN:ann_R (fun x y => x ⊆ fst y) lv ra)
       (Incl1:getAnn lv ⊆ D)
       (Incl3:D ⊆ fst (getAnn ra))
       (Incl2:G ⊆ D)
-  : ann_R (fun (x : ⦃nat⦄) (y : ⦃nat⦄ * ⦃nat⦄) => x ⊆ fst y)
+  : ann_R (fun x y => x ⊆ fst y)
           (compile_live s lv G)
           (compile_renamedApart s lv ra D).
 Proof.
@@ -775,7 +775,7 @@ Qed.
 
 Require Import VarP.
 
-Lemma DVE_var_P o (P:nat -> Prop) LV ZL (s:stmt) lv
+Lemma DVE_var_P o (P:var -> Prop) LV ZL (s:stmt) lv
       (VP:var_P P s)
       (TLS:true_live_sound o ZL LV s lv)
   : var_P P (compile (zip pair LV ZL) s lv).

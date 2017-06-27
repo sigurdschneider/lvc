@@ -34,8 +34,8 @@ Proof.
     rewrite <- Incl. clear; cset_tac.
 Qed.
 
-Definition renameApartF_live {Fi} (FG:FreshGen Fi)
-           (renameApart_live: FreshGen Fi -> Fi -> env var -> stmt -> ann (set var) -> Fi * ann (set var))
+Definition renameApartF_live {Fi} (FG:FreshGen var Fi)
+           (renameApart_live: FreshGen var Fi -> Fi -> env var -> stmt -> ann (set var) -> Fi * ann (set var))
            ϱ :=
   (fix f fi (F:list (params*stmt)) (anF:list (ann (set var))) :=
      match F, anF with
@@ -49,7 +49,7 @@ Definition renameApartF_live {Fi} (FG:FreshGen Fi)
      end).
 
 
-Fixpoint renameApart_live {Fi} (FG:FreshGen Fi) fi
+Fixpoint renameApart_live {Fi} (FG:FreshGen var Fi) fi
          (ϱ:env var) (s:stmt) (alv:ann (set var))
   : Fi * ann (set var) :=
   match s, alv with
@@ -71,7 +71,7 @@ Fixpoint renameApart_live {Fi} (FG:FreshGen Fi) fi
   | _ , _ => (fi, alv)
   end.
 
-Lemma getAnn_snd_renameApart_live {Fi} (FG:FreshGen Fi) fi o ZL LV ϱ s lv
+Lemma getAnn_snd_renameApart_live {Fi} (FG:FreshGen var Fi) fi o ZL LV ϱ s lv
   : live_sound o ZL LV s lv
     -> getAnn (snd (renameApart_live FG fi ϱ s lv)) = lookup_set ϱ (getAnn lv).
 Proof.
@@ -79,7 +79,7 @@ Proof.
 Qed.
 
 
-Lemma snd_renameApartF_live' {Fi} (FG:FreshGen Fi) fi als L ϱ F (Len:❬F❭ = ❬als❭)
+Lemma snd_renameApartF_live' {Fi} (FG:FreshGen var Fi) fi als L ϱ F (Len:❬F❭ = ❬als❭)
       (IH:forall n Zs a fi, get F n Zs -> get als n a ->
                     forall (ϱ : env var),
                       fst (renameApart_live FG fi ϱ (snd Zs) a) =
@@ -96,7 +96,7 @@ Proof.
 Qed.
 
 
-Lemma fst_renameApart_live {Fi} (FG:FreshGen Fi) fi o ZL LV ϱ s lv
+Lemma fst_renameApart_live {Fi} (FG:FreshGen var Fi) fi o ZL LV ϱ s lv
   : live_sound o ZL LV s lv
     -> fst (renameApart_live FG fi ϱ s lv) = fst (renameApart FG fi ϱ s).
 Proof.
@@ -106,8 +106,8 @@ Proof.
   - erewrite snd_renameApartF_live'; eauto.
 Qed.
 
-Lemma snd_renameApartF_live {Fi} (FG:FreshGen Fi) fi als L ϱ F (Len:❬F❭ = ❬als❭) ZL Lv i
-      (LS:forall (n : nat) (Zs : params * stmt) (a : ann ⦃nat⦄),
+Lemma snd_renameApartF_live {Fi} (FG:FreshGen var Fi) fi als L ϱ F (Len:❬F❭ = ❬als❭) ZL Lv i
+      (LS:forall (n : nat) (Zs : params * stmt) (a : ann ⦃var⦄),
             get F n Zs ->
             get als n a -> live_sound i ZL Lv (snd Zs) a)
   : snd (renameApartF_live FG renameApart_live ϱ fi F als) =
@@ -119,7 +119,7 @@ Proof.
 Qed.
 
 
-Lemma renameApartF_live_length {Fi} (FG:FreshGen Fi) fi ϱ F anF (Len:❬F❭ = ❬anF❭)
+Lemma renameApartF_live_length {Fi} (FG:FreshGen var Fi) fi ϱ F anF (Len:❬F❭ = ❬anF❭)
 : length (fst (renameApartF_live FG renameApart_live ϱ fi F anF)) = length F.
 Proof.
   general induction Len; simpl; repeat let_pair_case_eq; simpl; subst; eauto.
@@ -132,7 +132,7 @@ Smpl Add match goal with
            rewrite (@renameApartF_live_length _ FG fi ϱ F anF)
          end : len.
 
-Lemma get_fst_renameApartF_live {Fi} (FG:FreshGen Fi) fi  ϱ F n anF ans
+Lemma get_fst_renameApartF_live {Fi} (FG:FreshGen var Fi) fi  ϱ F n anF ans
   (Get: get (fst (renameApartF_live FG renameApart_live ϱ fi F anF)) n ans)
   (Len:❬F❭=❬anF❭)
   :  exists Zs a Yfi ans',
@@ -166,7 +166,7 @@ Smpl Add
 Tactic Notation "orewrite" constr(A) "in *" :=
   let X := fresh "OX" in assert A as X by omega; rewrite X in *; clear X.
 
-Lemma renameApart_live_sound {Fi} (FG:FreshGen Fi) (FGS:FreshGenSpec FG)
+Lemma renameApart_live_sound {Fi} (FG:FreshGen var Fi) (FGS:FreshGenSpec FG)
       fi ZL LV ZL' LV' s lv ϱ
       (LenZL:❬ZL❭ = ❬ZL'❭) (LenLV:❬LV❭=❬LV'❭)
       (ParamLen:forall n Z Z', get ZL n Z -> get ZL' n Z' -> ❬Z❭ = ❬Z'❭)
@@ -242,7 +242,7 @@ Proof.
     + erewrite getAnn_snd_renameApart_live; eauto with cset.
 Qed.
 
-Lemma renameApart_live_sound_srd b {Fi} (FG:FreshGen Fi) (FGS:FreshGenSpec FG) fi o DL ZL LV (ZL':list params) LV' s lv ϱ
+Lemma renameApart_live_sound_srd b {Fi} (FG:FreshGen var Fi) (FGS:FreshGenSpec FG) fi o DL ZL LV (ZL':list params) LV' s lv ϱ
       (ParamLen:forall n Z Z', get ZL n Z -> get ZL' n Z' -> ❬Z❭ = ❬Z'❭)
   (LS: live_sound o ZL LV s lv)
   (SRD:srd DL s lv)

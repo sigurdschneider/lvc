@@ -34,7 +34,7 @@ Smpl Add 130 simpl_forward_setTopAnn : inv_trivial.
 
 
 
-Lemma domupdd_eq (D : Type) `{PartialOrder D} (U : ⦃nat⦄) (d:VDom U D) x v pf
+Lemma domupdd_eq (D : Type) `{PartialOrder D} (U : ⦃var⦄) (d:VDom U D) x v pf
   : domenv (proj1_sig d) x === v
     -> d ≣ @domupdd _ _ d x v pf.
 Proof.
@@ -226,7 +226,7 @@ Lemma forwardF_agree_get (sT:stmt) D `{JoinSemiLattice D} f fr
       (F : 〔params * stmt〕)
       (t : stmt)
       (ZL : 〔params〕)
-      (ra : 〔ann (⦃nat⦄ * ⦃nat⦄)〕)
+      (ra : 〔ann (⦃var⦄ * ⦃var⦄)〕)
       (AE AE': VDom (occurVars sT) D) BL
       STF
       (ZLIncl : list_union (of_list ⊝ ZL) [<=] occurVars sT)
@@ -250,11 +250,11 @@ Lemma forwardF_agree_get (sT:stmt) D `{JoinSemiLattice D} f fr
       (Len1 : ❬F❭ = ❬sa❭)
       (AnnF : forall (n : nat) (s' : params * stmt) (sa' : ann bool),
          get sa n sa' -> get F n s' -> annotation (snd s') sa')
-      (RA : forall (n : nat) (Zs : params * stmt) (a : ann (⦃nat⦄ * ⦃nat⦄)),
+      (RA : forall (n : nat) (Zs : params * stmt) (a : ann (⦃var⦄ * ⦃var⦄)),
           get F n Zs -> get ra n a -> renamedApart (snd Zs) a)
-      (fExt:forall (U : ⦃nat⦄) (e : exp) (a0 a' : VDom U D),
+      (fExt:forall (U : ⦃var⦄) (e : exp) (a0 a' : VDom U D),
           a0 ≣ a' -> forall b b' : bool, b ≣ b' -> f U b a0 e ≣ f U b' a' e)
-      (frExt:forall (U : ⦃nat⦄) (e : op) (a0 a' : VDom U D),
+      (frExt:forall (U : ⦃var⦄) (e : op) (a0 a' : VDom U D),
           a0 ≣ a' -> forall b b' : bool, b ≣ b' -> fr U b a0 e ≣ fr U b' a' e)
   : (fst (fst (forward f fr ZL ZLIncl t STt AE ta)) ≣ AE)
     /\  forall n Zs r (ST : subTerm (snd Zs) sT),
@@ -475,7 +475,7 @@ Definition reachability_sound (sT:stmt) D `{JoinSemiLattice D}
     (Disj:disj (list_union (of_list ⊝ ZL)) (snd (getAnn ra)))
     (frExt:forall U e (a a':VDom U D), a ≣ a' ->
         forall b b', b ≣ b' -> fr _ b a e ≣ fr _ b' a' e)
-    (fExt:forall (U : ⦃nat⦄) (e : exp) (a a' : VDom U D),
+    (fExt:forall (U : ⦃var⦄) (e : exp) (a a' : VDom U D),
         a ≣ a' -> forall b b' : bool, b ≣ b' -> f U b a e ≣ f U b' a' e)
     (frSound1: forall e d r,
         ~ pr d e ⊑ ⎣ wTA false ⎦ -> uceq Sound r (fst (fr (occurVars sT) r d e)))

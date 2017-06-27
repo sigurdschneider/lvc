@@ -294,7 +294,7 @@ Hint Resolve poEq_rev.
 Lemma renamedApartAnnF_ext G G' F L1 L2 G1 G2
   (IH: forall (n : nat) (Zs : params * stmt),
       get F n Zs ->
-      forall G G' : ⦃nat⦄,
+      forall G G' : ⦃var⦄,
       G ≣ G' -> renamedApartAnn (snd Zs) G ≣ renamedApartAnn (snd Zs) G')
   : G ≣ G'
     -> L1 ≣ L2

@@ -237,7 +237,7 @@ Proof.
   cset_tac.
 Qed.
 
-Lemma subTerm_EQ_Let_x (sT st : stmt) (x : nat) (e : exp) (s : stmt)
+Lemma subTerm_EQ_Let_x (sT st : stmt) (x : var) (e : exp) (s : stmt)
   : st = stmtLet x e s -> subTerm st sT -> x ∈ occurVars sT.
 Proof.
   intros; subst. eapply subTerm_occurVars in H0; simpl in *. cset_tac.

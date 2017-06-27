@@ -51,7 +51,7 @@ Inductive rlive_sound
 
 
 Lemma rlive_sound_monotone
-  : forall (ZL : 〔params〕) (LV LV' : 〔⦃nat⦄〕) (s : stmt) (sl : spilling) (rlv : ann ⦃nat⦄),
+  : forall (ZL : 〔params〕) (LV LV' : 〔⦃var⦄〕) (s : stmt) (sl : spilling) (rlv : ann ⦃var⦄),
     rlive_sound ZL LV s sl rlv -> PIR2 Subset LV' LV -> rlive_sound ZL LV' s sl rlv.
 Proof.
   intros ? ? ? ? ? ? rlvSnd pir2.
@@ -65,4 +65,3 @@ Proof.
     + eapply IHrlvSnd. apply PIR2_app; [apply PIR2_refl|]; eauto.
     + intros; inv_get. eapply H2; eauto. apply PIR2_app; [apply PIR2_refl|]; eauto.
 Qed.
-

@@ -83,7 +83,6 @@ Proof.
   - rewrite IHs; eauto. clear. cset_tac.
 Qed.
 
-
 Lemma reg_live_G
       (Lv : list (set var))
       (ZL : list (params))

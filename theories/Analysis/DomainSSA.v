@@ -300,7 +300,7 @@ Proof.
 Qed.
 
 
-Lemma domupd_poLe (m m' : Map [nat, withTop val]) a v
+Lemma domupd_poLe (m m' : Map [var, withTop val]) a v
   : poLe (find a m) v
     -> leMap m m'
     -> leMap m (domupd m' a v).

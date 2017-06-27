@@ -4,7 +4,7 @@ Require Import LabelsDefined PairwiseDisjoint RenameApart FreshGen.
 
 Set Implicit Arguments.
 
-Lemma rename_apart_alpha' {Fi} (FG:FreshGen Fi) (FGS:FreshGenSpec FG) fi ϱ ϱ' s
+Lemma rename_apart_alpha' {Fi} (FG:FreshGen var Fi) (FGS:FreshGenSpec FG) fi ϱ ϱ' s
   : lookup_set ϱ (freeVars s) ⊆ domain FG fi
   -> inverse_on (freeVars s) ϱ ϱ'
   -> alpha ϱ' ϱ (snd (renameApart FG fi ϱ s)) s.
@@ -81,7 +81,7 @@ Proof.
       * eapply inverse_on_incl; try eassumption. eauto.
 Qed.
 
-Lemma rename_apart_alpha {Fi} (FG:FreshGen Fi) (FGS:FreshGenSpec FG) s
+Lemma rename_apart_alpha {Fi} (FG:FreshGen var Fi) (FGS:FreshGenSpec FG) s
   : alpha id id (rename_apart FG s) s.
 Proof.
   eapply rename_apart_alpha'; eauto.

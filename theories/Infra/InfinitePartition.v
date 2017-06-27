@@ -2,28 +2,41 @@ Require Import Util CSet Fresh.
 
 Set Implicit Arguments.
 
-Record inf_subset :=
+Record inf_subset X `{OrderedType X}  :=
   {
-    inf_subset_P :> nat -> bool;
-    inf_subset_inf : forall x, exists y, inf_subset_P y /\ y > x
+    inf_subset_P :> X -> bool;
+    inf_subset_inf : forall x, exists y, inf_subset_P y /\ _lt x y;
+    inf_subset_proper :> Proper (_eq ==> eq) inf_subset_P
   }.
 
 Hint Resolve inf_subset_inf.
 
-Record inf_partition :=
+Record inf_partition  X `{OrderedType X}  :=
   { part_1 : inf_subset;
     part_2 : inf_subset;
     part_disj : forall x, part_1 x -> part_2 x -> False;
     part_cover : forall x, part_1 x + part_2 x;
   }.
 
-Lemma part_dich (p:inf_partition) x
+
+Arguments inf_subset X {H}.
+Arguments inf_partition X {H}.
+
+
+Instance inf_subset_X X `{OrderedType X} (p : inf_subset X)
+  :  Proper (_eq ==> eq) p.
+Proof.
+  eapply p.
+Qed.
+
+Hint Resolve inf_subset_X.
+
+Lemma part_dich  X `{OrderedType X}  (p:inf_partition X) x
   : (part_1 p x /\ (part_2 p x -> False)) \/ (part_2 p x /\ (part_1 p x -> False)).
 Proof.
   destruct (part_cover p x);
     pose proof (part_disj p x); cset_tac.
 Qed.
-
 
 Fixpoint even (n:nat) : bool :=
   match n with
@@ -39,11 +52,10 @@ Proof.
   destruct IHx; eauto.
 Qed.
 
-Definition even_inf_subset : inf_subset.
+Definition even_inf_subset : inf_subset nat.
 Proof.
-  refine (Build_inf_subset even _).
-  - intros. destruct (even_or_successor (S x)); eauto.
-    eexists (2+x); simpl; split; eauto.
+  refine (@Build_inf_subset _ _ even _ _).
+  - intros. cbn. destruct (even_or_successor (S x)); eauto.
 Defined.
 
 Definition odd := (fun x => negb (even x)).
@@ -56,10 +68,10 @@ Proof.
     destruct (even x); destruct (even (S x)); simpl in *; intuition.
 Qed.
 
-Definition odd_inf_subset : inf_subset.
+Definition odd_inf_subset : inf_subset nat.
 Proof.
-  refine (Build_inf_subset odd _).
-  - unfold odd. intros.
+  refine (@Build_inf_subset _ _ odd _ _).
+  - cbn. unfold odd. intros.
     destruct (even_or_successor x); eauto.
     + eexists (S x). rewrite <- even_not_even.
       split; eauto.
@@ -67,7 +79,7 @@ Proof.
       rewrite even_not_even in H. eauto.
 Defined.
 
-Definition even_part : inf_partition.
+Definition even_part : inf_partition nat.
 Proof.
   refine (Build_inf_partition even_inf_subset odd_inf_subset _ _).
   - intros.
@@ -81,7 +93,7 @@ Qed.
 
 Require Import SafeFirst.
 
-Lemma fresh_variable_always_exists_in_inf_subset (lv:set nat) (p:inf_subset) n
+Lemma fresh_variable_always_exists_in_inf_subset (lv:set nat) (p:inf_subset nat) n
 : safe (fun x => x ∉ lv /\ p x) n.
 Proof.
   - decide (n > SetInterface.fold max lv 0).
@@ -89,7 +101,7 @@ Proof.
       * econstructor. split; eauto.
         intro. exploit fresh_spec'; eauto.
         intros. omega.
-      * edestruct (inf_subset_inf p n); dcr.
+      * edestruct (inf_subset_inf p n); dcr. cbn in *.
         eapply (@safe_antitone _ _ x);[|omega].
         econstructor; split; eauto.
         intro. exploit fresh_spec'; eauto. omega.
@@ -100,12 +112,13 @@ Proof.
         omega.
       * edestruct (inf_subset_inf p (S (SetInterface.fold Init.Nat.max lv 0)));
           dcr.
+        cbn in *.
         eapply (@safe_antitone _ _ x);[|omega].
         econstructor; split; eauto.
         intro. exploit fresh_spec'; eauto. omega.
 Qed.
 
-Definition least_fresh_P (p:inf_subset) (lv:set nat) : nat.
+Definition least_fresh_P (p:inf_subset nat) (lv:set nat) : nat.
   refine (@safe_first (fun x => x ∉ lv /\ p x) _ 0 _).
   - eapply fresh_variable_always_exists_in_inf_subset.
 Defined.
@@ -137,7 +150,7 @@ Proof.
   eapply safe_first_ext. intros. rewrite H. reflexivity.
 Qed.
 
-Definition stable_fresh_P (isub:inf_subset) : StableFresh.
+Definition stable_fresh_P (isub:inf_subset nat) : StableFresh nat.
   refine (Build_StableFresh (fun lv _ => least_fresh_P isub lv) _ _).
   - intros. eapply least_fresh_P_full_spec.
   - intros. eapply least_fresh_P_ext; eauto.
@@ -149,7 +162,7 @@ Proof.
   decide Q; clear H; intros; intuition.
 Qed.
 
-Definition least_fresh_part (p:inf_partition) (G:set nat) x :=
+Definition least_fresh_part (p:inf_partition nat) (G:set nat) x :=
   if part_1 p x then least_fresh_P (part_1 p) G
   else least_fresh_P (part_2 p) G.
 
@@ -161,7 +174,7 @@ Proof.
   - eapply least_fresh_P_full_spec.
 Qed.
 
-Lemma least_fresh_part_1 (p:inf_partition) G x
+Lemma least_fresh_part_1 (p:inf_partition nat) G x
   : part_1 p x
     -> part_1 p (least_fresh_part p G x).
 Proof.
@@ -169,12 +182,12 @@ Proof.
   eapply least_fresh_P_full_spec.
 Qed.
 
-Lemma least_fresh_part_2 (p:inf_partition) G x
+Lemma least_fresh_part_2 (p:inf_partition nat) G x
   : part_2 p x
     -> part_2 p (least_fresh_part p G x).
 Proof.
   unfold least_fresh_part; intros. cases.
-  - exfalso. eapply part_disj; eauto.
+  - exfalso. eapply (part_disj p); eauto.
   - eapply least_fresh_P_full_spec.
 Qed.
 
@@ -184,7 +197,7 @@ Proof.
   intros. unfold least_fresh_part; cases; eauto using least_fresh_P_ext.
 Qed.
 
-Definition stable_fresh_part (p:inf_partition) : StableFresh.
+Definition stable_fresh_part (p:inf_partition nat) : StableFresh nat.
   refine (Build_StableFresh (least_fresh_part p) _ _).
   - intros. eapply least_fresh_part_fresh.
   - intros. eapply least_fresh_part_ext; eauto.
@@ -222,7 +235,7 @@ Proof.
 Qed.
 
 
-Lemma least_fresh_part_1_back (p:inf_partition) G x
+Lemma least_fresh_part_1_back (p:inf_partition nat) G x
   : part_1 p (least_fresh_part p G x) -> part_1 p x.
 Proof.
   intros.
@@ -232,7 +245,7 @@ Proof.
   edestruct (part_disj p); eauto.
 Qed.
 
-Lemma least_fresh_part_2_back (p:inf_partition) G x
+Lemma least_fresh_part_2_back (p:inf_partition nat) G x
   : part_2 p (least_fresh_part p G x) -> part_2 p x.
 Proof.
   intros.

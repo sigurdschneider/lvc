@@ -10,7 +10,7 @@ Require Import Slot InfinitePartition.
 
 Arguments sim S {H} S' {H0} r t _ _.
 
-Definition rassign (p:inf_partition)
+Definition rassign (p:inf_partition var)
            (s:stmt) (lv: ann (set var)) :=
   let fvl := to_list (getAnn lv) in
   let ϱ := CMap.update_map_with_list fvl fvl (@MapInterface.empty var _ _ _) in

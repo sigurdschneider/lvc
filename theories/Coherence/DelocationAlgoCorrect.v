@@ -63,7 +63,7 @@ Proof.
         eauto with len.
     }
     assert (LenHelp2:
-              forall (n : nat) (aa : 〔؟ ⦃nat⦄〕),
+              forall (n : nat) (aa : 〔؟ ⦃var⦄〕),
                 get (snd ⊝ computeParametersF F als Lv ZL AP) n aa ->
                 ❬aa❭ =
                 ❬snd

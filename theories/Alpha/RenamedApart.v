@@ -502,12 +502,12 @@ Qed.
 
 
 
-Lemma funConstr_disj_ZL_getAnn ZL (D Dt : ⦃nat⦄)  (F : 〔params * stmt〕)
-      (ans : 〔ann (⦃nat⦄ * ⦃nat⦄)〕)
+Lemma funConstr_disj_ZL_getAnn ZL (D Dt : ⦃var⦄)  (F : 〔params * stmt〕)
+      (ans : 〔ann (⦃var⦄ * ⦃var⦄)〕)
   : Indexwise.indexwise_R (funConstr D Dt) F ans
     -> PairwiseDisjoint.pairwise_ne disj (defVars ⊜ F ans)
     -> disj (list_union (of_list ⊝ ZL)) (list_union (defVars ⊜ F ans) ∪ Dt)
-    -> (forall (n : nat) (Zs : params * stmt) (a : ann (⦃nat⦄ * ⦃nat⦄)),
+    -> (forall (n : nat) (Zs : params * stmt) (a : ann (⦃var⦄ * ⦃var⦄)),
           get F n Zs -> get ans n a -> renamedApart (snd Zs) a)
     -> ❬F❭ = ❬ans❭
     -> disj (list_union (of_list ⊝ (fst ⊝ F ++ ZL))) (list_union (snd ⊝ getAnn ⊝ ans)).
@@ -527,8 +527,8 @@ Proof.
   - eapply disj_2_incl; eauto. cset_tac.
 Qed.
 
-Lemma funConstr_disj_Dt' ZL (D Dt : ⦃nat⦄)  (F : 〔params * stmt〕)
-      (ans : 〔ann (⦃nat⦄ * ⦃nat⦄)〕)
+Lemma funConstr_disj_Dt' ZL (D Dt : ⦃var⦄)  (F : 〔params * stmt〕)
+      (ans : 〔ann (⦃var⦄ * ⦃var⦄)〕)
   : Indexwise.indexwise_R (funConstr D Dt) F ans
     -> disj (list_union (of_list ⊝ ZL)) (list_union (defVars ⊜ F ans) ∪ Dt)
     -> ❬F❭ = ❬ans❭
@@ -540,7 +540,7 @@ Proof.
   - eapply disj_2_incl; eauto.
 Qed.
 
-Lemma disj_Dt_getAnn (D Dt : ⦃nat⦄) (F : 〔params * stmt〕) (ans : 〔ann (⦃nat⦄ * ⦃nat⦄)〕)
+Lemma disj_Dt_getAnn (D Dt : ⦃var⦄) (F : 〔params * stmt〕) (ans : 〔ann (⦃var⦄ * ⦃var⦄)〕)
   : Indexwise.indexwise_R (funConstr D Dt) F ans
     -> ❬F❭ = ❬ans❭
     -> disj Dt (list_union (snd ⊝ getAnn ⊝ ans)).

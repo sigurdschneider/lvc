@@ -3,7 +3,7 @@ Require Import RenameApart RenamedApartAnn RenameApart_VarP FreshGen Range Setoi
 
 Set Implicit Arguments.
 
-Definition rename_apart_to_part {Fi} (FG:FreshGen Fi) (FGS:FreshGenSpec FG) (s:stmt) :=
+Definition rename_apart_to_part {Fi} (FG:FreshGen var Fi) (FGS:FreshGenSpec FG) (s:stmt) :=
   let xlfi := (fresh_list FG (empty_domain FG) (to_list (freeVars s))) in
   let s' := (renameApart FG (snd xlfi)
                        (id [to_list (freeVars s) <-- fst xlfi])
@@ -12,7 +12,7 @@ Definition rename_apart_to_part {Fi} (FG:FreshGen Fi) (FGS:FreshGenSpec FG) (s:s
 
 Opaque to_list.
 
-Lemma rename_apart_to_part_renamedApart {Fi} (FG:FreshGen Fi) (FGS:FreshGenSpec FG) s
+Lemma rename_apart_to_part_renamedApart {Fi} (FG:FreshGen var Fi) (FGS:FreshGenSpec FG) s
   : RenamedApart.renamedApart (fst (rename_apart_to_part FGS s))
                               (snd (rename_apart_to_part FGS s)).
 Proof.
@@ -25,7 +25,7 @@ Proof.
 Qed.
 
 
-Lemma rename_apart_to_part_occurVars {Fi} (FG:FreshGen Fi) (FGS:FreshGenSpec FG) s
+Lemma rename_apart_to_part_occurVars {Fi} (FG:FreshGen var Fi) (FGS:FreshGenSpec FG) s
   : fst (getAnn (snd (rename_apart_to_part FGS s)))
         ∪ snd (getAnn (snd (rename_apart_to_part FGS s)))
         [=] occurVars (fst (rename_apart_to_part FGS s)).

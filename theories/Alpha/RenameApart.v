@@ -12,8 +12,8 @@ Set Implicit Arguments.
     a variable fresh for G at every binder, records the choice in ϱ,
     and renames all variables according to ϱ *)
 
-Definition renameApartFStep {Fi} (FG:FreshGen Fi)
-           (renameApart': FreshGen Fi -> Fi -> env var -> stmt -> Fi * stmt)
+Definition renameApartFStep {Fi} (FG:@FreshGen var _ Fi)
+           (renameApart': @FreshGen var _ Fi -> Fi -> env var -> stmt -> Fi * stmt)
            ϱ :=
   (fun YLfresh (Zs:params*stmt) =>
      let '(YL, fi) := YLfresh in
@@ -23,16 +23,16 @@ Definition renameApartFStep {Fi} (FG:FreshGen Fi)
      ((Y, s1')::YL,
       fresh)).
 
-Definition renameApartF Fi (FG:FreshGen Fi)
+Definition renameApartF Fi (FG:FreshGen var Fi)
            renameApart'
            ϱ
            := fold_left (renameApartFStep FG renameApart' ϱ).
 
-Definition renameApartFRight  Fi (FG:FreshGen Fi)
+Definition renameApartFRight  Fi (FG:FreshGen var Fi)
            renameApart' ϱ
            := fold_right (fun x y => renameApartFStep FG renameApart' ϱ y x).
 
-Lemma renameApartFRight_corr  Fi (FG:FreshGen Fi)
+Lemma renameApartFRight_corr  Fi (FG:FreshGen var Fi)
       renameApart' ϱ s F
 : renameApartFRight FG renameApart' ϱ s (rev F) =
   renameApartF FG renameApart' ϱ F s.
@@ -41,7 +41,8 @@ Proof.
   erewrite <- fold_left_rev_right; eauto.
 Qed.
 
-Fixpoint renameApart {Fi} (FG:FreshGen Fi) (fi:Fi) (ϱ:env var) (s:stmt) : Fi * stmt:=
+Fixpoint renameApart {Fi} (FG:FreshGen var Fi) (fi:Fi)
+         (ϱ:env var) (s:stmt) : Fi * stmt:=
 match s with
    | stmtLet x e s0 =>
      let (y, fi) := fresh FG fi x in
@@ -73,10 +74,10 @@ Proof.
     eqassumption. omega.
 Qed.
 
-Lemma domain_renameApartFRight' {Fi} (FG:FreshGen Fi) (FGS:FreshGenSpec FG) fi ϱ F
+Lemma domain_renameApartFRight' {Fi} (FG:FreshGen var Fi) (FGS:FreshGenSpec FG) fi ϱ F
       (IH:forall (n : nat) (Zs : params * stmt),
           get F n Zs ->
-          forall (ϱ : env nat) (fi : Fi),
+          forall (ϱ : env var) (fi : Fi),
             domain FG fi ∪ definedVars (snd (renameApart FG fi ϱ (snd Zs)))
                    ⊆ domain FG (fst (renameApart FG fi ϱ (snd Zs))))
   : domain FG fi ∪ definedVarsF definedVars (fst (renameApartFRight FG renameApart ϱ (nil, fi) F)) ⊆ domain FG (snd (renameApartFRight FG renameApart ϱ (nil, fi) F)).
@@ -91,10 +92,10 @@ Proof.
     norm_lunion. unfold defVarsZs at 1. simpl. clear. cset_tac.
 Qed.
 
-Lemma domain_renameApartF' {Fi} (FG:FreshGen Fi) (FGS:FreshGenSpec FG) fi ϱ F
+Lemma domain_renameApartF' {Fi} (FG:FreshGen var Fi) (FGS:FreshGenSpec FG) fi ϱ F
       (IH:forall (n : nat) (Zs : params * stmt),
           get F n Zs ->
-          forall (ϱ : env nat) (fi : Fi),
+          forall (ϱ : env var) (fi : Fi),
             domain FG fi ∪ definedVars (snd (renameApart FG fi ϱ (snd Zs)))
                    ⊆ domain FG (fst (renameApart FG fi ϱ (snd Zs))))
   : domain FG fi ∪ definedVarsF definedVars (fst (renameApartF FG renameApart ϱ F (nil, fi))) ⊆ domain FG (snd (renameApartF FG renameApart ϱ F (nil, fi))).
@@ -110,7 +111,7 @@ Proof.
   unfold definedVarsF. rewrite map_rev, <- list_union_rev. reflexivity.
 Qed.
 
-Lemma domain_renameApart {Fi} (FG:FreshGen Fi) (FGS:FreshGenSpec FG) fi ϱ s
+Lemma domain_renameApart {Fi} (FG:FreshGen var Fi) (FGS:FreshGenSpec FG) fi ϱ s
   : domain FG fi ∪ definedVars (snd (renameApart FG fi ϱ s))
            ⊆ domain FG (fst (renameApart FG fi ϱ s)).
 Proof.
@@ -128,23 +129,23 @@ Proof.
     rewrite definedVarsF_rev. rewrite union_assoc. reflexivity.
 Qed.
 
-Lemma domain_renameApartFRight {Fi} (FG:FreshGen Fi) (FGS:FreshGenSpec FG) fi ϱ F
+Lemma domain_renameApartFRight {Fi} (FG:FreshGen var Fi) (FGS:FreshGenSpec FG) fi ϱ F
   : domain FG fi ∪ definedVarsF definedVars (fst (renameApartFRight FG renameApart ϱ (nil, fi) F)) ⊆ domain FG (snd (renameApartFRight FG renameApart ϱ (nil, fi) F)).
 Proof.
   eapply domain_renameApartFRight'; eauto using domain_renameApart.
 Qed.
 
-Lemma domain_renameApartF {Fi} (FG:FreshGen Fi) (FGS:FreshGenSpec FG) fi ϱ F
+Lemma domain_renameApartF {Fi} (FG:FreshGen var Fi) (FGS:FreshGenSpec FG) fi ϱ F
   : domain FG fi ∪ definedVarsF definedVars (fst (renameApartF FG renameApart ϱ F (nil, fi)))
            ⊆ domain FG (snd (renameApartF FG renameApart ϱ F (nil, fi))).
 Proof.
   eapply domain_renameApartF'; eauto using domain_renameApart.
 Qed.
 
-Lemma domain_incl_renameApartFRight' {Fi} (FG:FreshGen Fi) (FGS:FreshGenSpec FG) fi ϱ F
+Lemma domain_incl_renameApartFRight' {Fi} (FG:FreshGen var Fi) (FGS:FreshGenSpec FG) fi ϱ F
       (IH:forall (n : nat) (Zs : params * stmt),
           get F n Zs ->
-          forall (ϱ : env nat) (fi : Fi),
+          forall (ϱ : env var) (fi : Fi),
             domain FG fi ⊆ domain FG (fst (renameApart FG fi ϱ (snd Zs))))
   : domain FG fi ⊆ domain FG (snd (renameApartFRight FG renameApart ϱ (nil, fi) F)).
 Proof.
@@ -155,10 +156,10 @@ Proof.
   rewrite IHF; eauto using get. cset_tac.
 Qed.
 
-Lemma domain_incl_renameApartF' {Fi} (FG:FreshGen Fi) (FGS:FreshGenSpec FG) fi ϱ F
+Lemma domain_incl_renameApartF' {Fi} (FG:FreshGen var Fi) (FGS:FreshGenSpec FG) fi ϱ F
       (IH:forall (n : nat) (Zs : params * stmt),
           get F n Zs ->
-          forall (ϱ : env nat) (fi : Fi),
+          forall (ϱ : env var) (fi : Fi),
             domain FG fi ⊆ domain FG (fst (renameApart FG fi ϱ (snd Zs))))
   : domain FG fi ⊆ domain FG (snd (renameApartF FG renameApart ϱ F (nil, fi))).
 Proof.
@@ -167,7 +168,7 @@ Proof.
   intros; inv_get; eauto.
 Qed.
 
-Lemma domain_incl_renameApart {Fi} (FG:FreshGen Fi) (FGS:FreshGenSpec FG) fi ϱ s
+Lemma domain_incl_renameApart {Fi} (FG:FreshGen var Fi) (FGS:FreshGenSpec FG) fi ϱ s
   : domain FG fi ⊆ domain FG (fst (renameApart FG fi ϱ s)).
 Proof.
   revert ϱ fi.
@@ -183,7 +184,7 @@ Proof.
     rewrite <- domain_incl_renameApartF'; eauto.
 Qed.
 
-Lemma domain_incl_renameApartF {Fi} (FG:FreshGen Fi) (FGS:FreshGenSpec FG) fi ϱ F
+Lemma domain_incl_renameApartF {Fi} (FG:FreshGen var Fi) (FGS:FreshGenSpec FG) fi ϱ F
   : domain FG fi
            ⊆ domain FG (snd (renameApartF FG renameApart ϱ F (nil, fi))).
 Proof.
@@ -192,7 +193,7 @@ Proof.
   intros; inv_get; eauto using domain_incl_renameApart.
 Qed.
 
-Lemma domain_incl_renameApartFRight {Fi} (FG:FreshGen Fi) (FGS:FreshGenSpec FG) fi ϱ F
+Lemma domain_incl_renameApartFRight {Fi} (FG:FreshGen var Fi) (FGS:FreshGenSpec FG) fi ϱ F
   : domain FG fi
            ⊆ domain FG (snd (renameApartFRight FG renameApart ϱ (nil, fi) F)).
 Proof.
@@ -200,7 +201,7 @@ Proof.
   intros; inv_get; eauto using domain_incl_renameApart.
 Qed.
 
-Lemma renameApartF_length'  {Fi} (FG:FreshGen Fi)
+Lemma renameApartF_length'  {Fi} (FG:FreshGen var Fi)
       ϱ F x
 : length (fst (renameApartF FG renameApart ϱ F x)) = length (fst x) + length F.
 Proof.
@@ -211,7 +212,7 @@ Proof.
   simpl. omega.
 Qed.
 
-Lemma renameApartF_length  {Fi} (FG:FreshGen Fi)
+Lemma renameApartF_length  {Fi} (FG:FreshGen var Fi)
       ϱ F fresh
   : length (fst (renameApartF FG renameApart ϱ F (nil, fresh))) = length F.
 Proof.
@@ -228,7 +229,7 @@ Ltac renameApartF_len_simpl :=
 
 Smpl Add renameApartF_len_simpl : len.
 
-Lemma get_fst_renameApartF Fi (FG:FreshGen Fi) (FGS:FreshGenSpec FG) ϱ F n ans fi
+Lemma get_fst_renameApartF Fi (FG:FreshGen var Fi) (FGS:FreshGenSpec FG) ϱ F n ans fi
 :  get (fst (renameApartF FG renameApart ϱ F (nil, fi))) n ans
    -> exists ϱ' Zs FL, get F (length F - S n) Zs
                  /\ snd ans = snd (renameApart FG (snd FL) ϱ' (snd Zs))
@@ -300,7 +301,7 @@ Smpl Add 150
 
 
 
-Lemma freeVars_renamedApart' {Fi} (FG:FreshGen Fi) (FGS:FreshGenSpec FG) fi ϱ s
+Lemma freeVars_renamedApart' {Fi} (FG:FreshGen var Fi) (FGS:FreshGenSpec FG) fi ϱ s
 : lookup_set ϱ (freeVars s) ⊆ domain FG fi
   -> freeVars (snd (renameApart FG fi ϱ s)) [=] lookup_set ϱ (freeVars s).
 Proof.
@@ -313,7 +314,7 @@ Proof.
     + rewrite lookup_set_update_union_minus_single; eauto.
       assert (fst (FG fi x) ∉ lookup_set ϱ (freeVars s \ singleton x)). {
         intro. eapply lookup_set_incl in H0; eauto.
-        eapply H in H0. eapply fresh_spec; eauto.
+        eapply H in H0. eapply (fresh_spec FGS); eauto.
         cset_tac.
       }
       cset_tac.
@@ -359,10 +360,10 @@ Proof.
       rewrite <- H0. eauto with cset.
 Qed.
 
-Lemma renameApartFRight_disj' {Fi} (FG:FreshGen Fi) (FGS:FreshGenSpec FG) fi F ϱ
+Lemma renameApartFRight_disj' {Fi} (FG:FreshGen var Fi) (FGS:FreshGenSpec FG) fi F ϱ
   (IH : forall (n : nat) (Zs : params * stmt),
       get F n Zs ->
-      forall (ϱ : env nat) (fi : Fi),
+      forall (ϱ : env var) (fi : Fi),
         disj (domain FG fi) (definedVars (snd (renameApart FG fi ϱ (snd Zs)))))
   : disj (domain FG fi)
          (definedVarsF definedVars (fst (renameApartFRight FG renameApart ϱ (nil, fi) F))).
@@ -382,10 +383,10 @@ Proof.
       rewrite <- domain_incl_renameApartFRight; eauto.
 Qed.
 
-Lemma renameApartF_disj' {Fi} (FG:FreshGen Fi) (FGS:FreshGenSpec FG) fi F ϱ
+Lemma renameApartF_disj' {Fi} (FG:FreshGen var Fi) (FGS:FreshGenSpec FG) fi F ϱ
   (IH : forall (n : nat) (Zs : params * stmt),
       get F n Zs ->
-      forall (ϱ : env nat) (fi : Fi),
+      forall (ϱ : env var) (fi : Fi),
         disj (domain FG fi) (definedVars (snd (renameApart FG fi ϱ (snd Zs)))))
   : disj (domain FG fi)
          (definedVarsF definedVars (fst (renameApartF FG renameApart ϱ F (nil, fi)))).
@@ -395,7 +396,7 @@ Proof.
   intros; inv_get; eauto.
 Qed.
 
-Lemma renameApart_disj {Fi} (FG:FreshGen Fi) (FGS:FreshGenSpec FG) (fi:Fi) ϱ s
+Lemma renameApart_disj {Fi} (FG:FreshGen var Fi) (FGS:FreshGenSpec FG) (fi:Fi) ϱ s
   : disj (domain FG fi) (definedVars (snd (renameApart FG fi ϱ s))).
 Proof.
   revert ϱ fi.
@@ -457,7 +458,7 @@ Proof.
   exploit (H0 m n); eauto. omega.
 Qed.
 
-Lemma renameApartF_swap {Fi} (FG:FreshGen Fi) (fi:Fi) ϱ F L
+Lemma renameApartF_swap {Fi} (FG:FreshGen var Fi) (fi:Fi) ϱ F L
   : renameApartF FG renameApart ϱ F (L, fi)
 = (fst (renameApartF FG renameApart ϱ F (nil, fi)) ++ L,
    snd (renameApartF FG renameApart ϱ F (nil, fi))).
@@ -481,7 +482,7 @@ Ltac renameApartF_swap_normal :=
            end
          end.
 
-Lemma renameApartF_app {Fi} (FG:FreshGen Fi) (fi:Fi) ϱ F F' L
+Lemma renameApartF_app {Fi} (FG:FreshGen var Fi) (fi:Fi) ϱ F F' L
   : renameApartF FG renameApart ϱ (F ++ F') (L, fi)
     = (fst (renameApartF FG renameApart ϱ F' (nil, snd ((renameApartF FG renameApart ϱ F (nil, fi)))))
            ++ fst (renameApartF FG renameApart ϱ F (L, fi)),
@@ -507,7 +508,7 @@ Proof.
   erewrite fst_renamedApartAnnF_eq; eauto.
 Qed.
 
-Lemma renameApart'_renamedApart G {Fi} (FG:FreshGen Fi) (FGS:FreshGenSpec FG) fi
+Lemma renameApart'_renamedApart G {Fi} (FG:FreshGen var Fi) (FGS:FreshGenSpec FG) fi
       (s:stmt) ϱ
   : lookup_set ϱ (freeVars s) ⊆ G
     -> G ⊆ domain FG fi
@@ -629,7 +630,7 @@ Proof.
 Qed.
 
 
-Lemma renameApartF_agree {Fi} (FG:FreshGen Fi) (FGS:FreshGenSpec FG) fi F f g
+Lemma renameApartF_agree {Fi} (FG:FreshGen var Fi) (FGS:FreshGenSpec FG) fi F f g
 : (forall n Zs, get F n Zs ->
            forall f g fi, agree_on eq (freeVars (snd Zs)) f g
              -> renameApart FG fi f (snd Zs) = renameApart FG fi g (snd Zs))
@@ -653,7 +654,7 @@ Proof.
   rewrite fresh_list_len; eauto.
 Qed.
 
-Lemma renameApart'_agree {Fi} (FG:FreshGen Fi) (FGS:FreshGenSpec FG) fi s f g
+Lemma renameApart'_agree {Fi} (FG:FreshGen var Fi) (FGS:FreshGenSpec FG) fi s f g
 : agree_on eq (freeVars s) f g
   -> renameApart FG fi f s = renameApart FG fi g s.
 Proof.
@@ -677,10 +678,10 @@ Qed.
     and keeps free variables the same *)
 
 
-Definition rename_apart {Fi} (FG:FreshGen Fi) s :=
+Definition rename_apart {Fi} (FG:FreshGen var Fi) s :=
   snd (renameApart FG (domain_add FG (empty_domain FG) (freeVars s)) id s).
 
-Lemma rename_apart_renamedApart {Fi} (FG:FreshGen Fi) (FGS:FreshGenSpec FG) (s:stmt)
+Lemma rename_apart_renamedApart {Fi} (FG:FreshGen var Fi) (FGS:FreshGenSpec FG) (s:stmt)
 : renamedApart (rename_apart FG s)
                (renamedApartAnn (rename_apart FG s) (freeVars s)).
   eapply renameApart'_renamedApart; eauto. eapply lookup_set_on_id; eauto.
@@ -695,10 +696,10 @@ Proof.
 Qed.
 
 
-Lemma fst_renameApartF_length  {Fi} (FG:FreshGen Fi) (FGS: FreshGenSpec FG)
+Lemma fst_renameApartF_length  {Fi} (FG:FreshGen var Fi) (FGS: FreshGenSpec FG)
       fi  ϱ F
-  : ((length (A:=nat) ⊝ fst ⊝ F
-      = length (A:=nat) ⊝ fst ⊝ rev (fst (renameApartF FG renameApart ϱ F (nil, fi))))).
+  : ((length (A:=var) ⊝ fst ⊝ F
+      = length (A:=var) ⊝ fst ⊝ rev (fst (renameApartF FG renameApart ϱ F (nil, fi))))).
 Proof.
   eapply list_eq_eq.
   eapply get_list_eq; intros.
@@ -707,7 +708,7 @@ Proof.
     rewrite fresh_list_len; eauto.
 Qed.
 
-Lemma labelsDefined_paramsMatch  {Fi} (FG:FreshGen Fi) (FGS: FreshGenSpec FG) fi L s ϱ
+Lemma labelsDefined_paramsMatch  {Fi} (FG:FreshGen var Fi) (FGS: FreshGenSpec FG) fi L s ϱ
 : paramsMatch s L
   -> paramsMatch (snd (renameApart FG fi ϱ s)) L.
 Proof.
@@ -727,7 +728,7 @@ Qed.
 
 
 
-Lemma app_expfree_rename_apart {Fi} (FG:FreshGen Fi) (FGS: FreshGenSpec FG) fi s ϱ
+Lemma app_expfree_rename_apart {Fi} (FG:FreshGen var Fi) (FGS: FreshGenSpec FG) fi s ϱ
 : app_expfree s
   -> app_expfree (snd (renameApart FG fi ϱ s)).
 Proof.

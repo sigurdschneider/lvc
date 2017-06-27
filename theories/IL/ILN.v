@@ -34,7 +34,8 @@ Module F.
         block_E : onv val;
         block_F : list (var * params * nstmt);
         block_f : nat;
-        block_Z := snd (fst (nth block_f block_F (0, nil, nstmtReturn (Con val_true))))
+        block_Z := snd (fst (nth block_f block_F
+                                (default_var, nil, nstmtReturn (Con val_true))))
       }.
 
   Definition labenv := onv block.
@@ -109,8 +110,8 @@ Module F.
         * decide (l = l'); subst.
           decide (length Z = length Y).
           case_eq (omap (op_eval V) Y); intros; [| right; stuck2].
-          left. eexists EvtTau. econstructor. econstructor; eauto.
-          orewrite (l' + 0=l'). eauto.
+          left. eexists EvtTau. econstructor.
+          econstructor; try eapply H; try eapply g; eauto.
           right; stuck2. rewrite Ldef in H. inv H. get_functional; subst. congruence.
           right; stuck2. rewrite Ldef in H. inv H. get_functional; subst.
         * right; stuck2. rewrite Ldef in H. inv H. eauto.
@@ -130,7 +131,7 @@ Module I.
         block_L : onv block;
         block_F : list (var * params * nstmt);
         block_f : nat;
-        block_Z := snd (fst (nth block_f block_F (0, nil, nstmtReturn (Con val_true))))
+        block_Z := snd (fst (nth block_f block_F (default_var, nil, nstmtReturn (Con val_true))))
       }.
 
   Definition labenv := onv block.

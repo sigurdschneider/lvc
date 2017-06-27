@@ -22,7 +22,7 @@ Defined.
 Definition getVar (e:op) :=
   match e with
   | Var y => y
-  | _ => 0
+  | _ => default_var
   end.
 
 Instance inst_eq_dec_op : EqDec op eq.
@@ -30,7 +30,7 @@ Proof.
   hnf; intros. change ({x = y} + {x <> y}).
   decide equality.
   - eapply inst_eq_dec_val.
-  - eapply nat_eq_eqdec.
+  - eapply var_dec.
   - eapply inst_eq_dec_unop.
   - eapply inst_eq_dec_binop.
 Defined.
@@ -76,8 +76,9 @@ Qed.
 Instance live_op_sound_dec e lv
   : Computable (live_op_sound e lv).
 Proof.
-  induction e; try dec_solve.
-  - decide (n ∈ lv); try dec_solve.
+  induction e as [c|v| |].
+  - dec_solve.
+  - decide (v ∈ lv); try dec_solve.
   - edestruct IHe; dec_solve.
   - edestruct IHe1, IHe2; dec_solve.
 Defined.
@@ -161,9 +162,7 @@ Qed.
 Lemma rename_op_ext
   : forall e (ϱ ϱ':env var), feq (R:=eq) ϱ ϱ' -> rename_op ϱ e = rename_op ϱ' e.
 Proof.
-  intros. general induction e; simpl; eauto.
-  - f_equal; eauto.
-  - f_equal; eauto.
+  intros. general induction e; simpl; f_equal; eauto.
 Qed.
 
 Lemma rename_op_agree ϱ ϱ' e
@@ -265,7 +264,8 @@ Lemma alpha_op_inverse_on
 Proof.
   intros. general induction H.
   + isabsurd.
-  + simpl. hnf; intros; cset_tac.
+  + simpl. hnf; intros. rewrite <- H in H0.
+    cset_tac.
   + simpl; eauto.
   + simpl. eapply inverse_on_union; eauto.
 Qed.
@@ -392,15 +392,17 @@ Instance OrderedType_op : OrderedType op :=
   { _eq := eq;
     _lt := opLt;
     _cmp := op_cmp}.
-intros.
-general induction x; destruct y; simpl; try now (econstructor; eauto using opLt).
-pose proof (_compare_spec v v0).
-- inv H.
+Proof.
+  intros. revert y.
+  induction x as [|v| |]; destruct y as [|v'| |];
+    simpl; try now (econstructor; eauto using opLt).
+- pose proof (_compare_spec v v0).
+  inv H.
   + econstructor. eauto using opLt.
-  + econstructor. f_equal. eapply compare_spec_int_eq; eauto.
+  + econstructor. f_equal. eauto.
   + econstructor; eauto using opLt.
-- pose proof (_compare_spec n n0).
-  inv H; now (econstructor; eauto using opLt).
+- pose proof (_compare_spec v v').
+  inv H; (econstructor; eauto using opLt).
 - pose proof (_compare_spec u u0).
   specialize (IHx y).
   inv H; try now (econstructor; eauto using opLt).
@@ -568,9 +570,9 @@ Proof.
   intros. general induction Y.
   - eexists nil; eauto.
   - exploit H; eauto using get.
-    destruct a; try now (exfalso; inv H0).
+    destruct a as [|v| |]; try now (exfalso; inv H0).
     edestruct IHY; eauto using get; subst.
-    exists (n::x); eauto.
+    exists (v::x); eauto.
 Qed.
 
 Lemma of_list_freeVars_vars xl

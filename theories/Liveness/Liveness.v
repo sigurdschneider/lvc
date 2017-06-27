@@ -154,11 +154,11 @@ Proof.
 Qed.
 
 Lemma adapt_premise F als lv
-: (forall (n : nat) (Zs : params * stmt) (a : ann ⦃nat⦄),
+: (forall (n : nat) (Zs : params * stmt) (a : ann ⦃var⦄),
    get F n Zs ->
    get als n a ->
    of_list (fst Zs) ⊆ getAnn a /\ NoDupA eq (fst Zs) /\ getAnn a \ of_list (fst Zs) ⊆ lv)
-  -> forall (n0 : nat) (Zs0 : params * stmt) (a : ann ⦃nat⦄),
+  -> forall (n0 : nat) (Zs0 : params * stmt) (a : ann ⦃var⦄),
     get F n0 Zs0 -> get als n0 a -> of_list (fst Zs0) ⊆ getAnn a /\ getAnn a \ of_list (fst Zs0) ⊆ lv.
 Proof.
   intros A; intros; edestruct A; dcr; eauto.

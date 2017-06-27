@@ -964,7 +964,7 @@ Qed.
 
 Require Import VarP.
 
-Lemma UCE_var_P (P:nat -> Prop) RL (s:stmt) a
+Lemma UCE_var_P (P:var -> Prop) RL (s:stmt) a
       (VP:var_P P s)
       (RCH: reachability cop2bool Sound RL s a)
   : var_P P (compile RL s a).

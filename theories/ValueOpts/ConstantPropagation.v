@@ -68,7 +68,7 @@ Defined.
 Definition getEqCmpVar (e:op) :=
   match e with
     | BinOp BinOpEq (Var x) (Con c) => x
-    | _ => 0
+    | _ => default_var
   end.
 
 Definition getEqCmpCon (e:op) :=

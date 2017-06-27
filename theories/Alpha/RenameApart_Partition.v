@@ -7,13 +7,14 @@ Require Import InfinitePartition MapSep AnnP FreshGen.
 Set Implicit Arguments.
 
 Lemma bnd_update_list p ϱ k lv Z G
-      (BDN:part_bounded (part_1 p) k lv)
+      (BDN:part_bounded var (part_1 p) k lv)
       (incl: of_list Z ⊆ lv)
-      (SEP:sep p (lv \ of_list Z) ϱ)
+      (SEP:sep var p (lv \ of_list Z) ϱ)
       (incl2 : map ϱ (lv \ of_list Z) ⊆ G)
       (UNIQ:NoDupA eq Z)
-  : part_bounded (part_1 p) k
-    (lookup_set ϱ (lv \ of_list Z) ∪ of_list (fst (fresh_list_stable (stable_fresh_part p) G Z))).
+  : part_bounded var (part_1 p) k
+                 (lookup_set ϱ (lv \ of_list Z)
+                             ∪ of_list (fst (fresh_list_stable (stable_fresh_part p) G Z))).
 Proof.
   unfold part_bounded, lookup_set in *.
   rewrite filter_union; eauto.
@@ -32,21 +33,21 @@ Proof.
     + rewrite incl; eauto.
   - eapply empty_is_empty_2.
     eapply disj_intersection.
-    hnf; intros. eapply fresh_list_stable_spec.
+    hnf; intros. eapply (@fresh_list_stable_spec var _).
     cset_tac.
     rewrite <- incl2. cset_tac.
 Qed.
 
-Lemma sep_update_list p ϱ (Z:list nat) (lv:set nat) G
-      (ND:NoDupA eq Z) (SEP:sep p (lv \ of_list Z) ϱ) (incl:of_list Z [<=] lv)
-  : sep p lv
+Lemma sep_update_list p ϱ (Z:list var) (lv:set var) G
+      (ND:NoDupA eq Z) (SEP:sep nat p (lv \ of_list Z) ϱ) (incl:of_list Z [<=] lv)
+  : sep nat p lv
         (ϱ [Z <-- fst (fresh_list_stable (stable_fresh_part p) G Z)]).
 Proof.
   hnf; split; intros; decide (x ∈ of_list Z).
   - edestruct update_with_list_lookup_in_list; try eapply i; dcr.
     Focus 2.
     rewrite H4. cset_tac'.
-    exploit fresh_list_stable_get; try eapply H3; eauto; dcr.
+    exploit (@fresh_list_stable_get var _); try eapply H3; eauto; dcr.
     subst. get_functional. eapply least_fresh_part_1; eauto.
     eauto with len.
   - rewrite lookup_set_update_not_in_Z; eauto.
@@ -54,7 +55,7 @@ Proof.
   - edestruct update_with_list_lookup_in_list; try eapply i; dcr.
     Focus 2.
     rewrite H4. cset_tac'.
-    exploit fresh_list_stable_get; try eapply H3; eauto; dcr.
+    exploit (@fresh_list_stable_get var _); try eapply H3; eauto; dcr.
     dcr. subst. get_functional. eapply least_fresh_part_2; eauto.
     eauto with len.
   - rewrite lookup_set_update_not_in_Z; eauto.

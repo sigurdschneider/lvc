@@ -199,7 +199,7 @@ Definition envCorr ra ira (E E':onv val) :=
 Lemma envCorr_idOn_refl (E:onv val)
   : envCorr id id E E.
 Proof.
-  hnf; intros; firstorder.
+  hnf; unfold id; intros; subst; eauto.
 Qed.
 
 Inductive approx : F.block -> F.block ->  Prop :=
@@ -213,8 +213,9 @@ Lemma approx_refl b
   : approx b b.
 Proof.
   destruct b. econstructor; eauto.
-  rewrite update_with_list_id. eapply alpha_refl.
-  firstorder.
+  rewrite update_with_list_id.
+  - eapply alpha_refl.
+  - eapply envCorr_idOn_refl.
 Qed.
 
 Lemma envCorr_update ra ira x y v E E'
