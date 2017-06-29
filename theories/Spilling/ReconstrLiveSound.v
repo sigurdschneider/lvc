@@ -211,33 +211,9 @@ Proof.
       erewrite !nth_zip; eauto.
       erewrite !get_nth in H; eauto.
       erewrite !get_nth; eauto using map_get_1. simpl.
-      edestruct slot_lift_args_get; eauto; dcr; subst.
-      exploit H5 as is_var; eauto.
-      invc is_var.
-      unfold choose_y; repeat cases; simpl in *.
-      * eapply live_op_sound_incl; [ eapply Op.live_freeVars |]; simpl.
-      * rewrite choose_y_freeVars.
-      apply live_op_sound_incl
-      with (lv':= match slot_lift_args slot (R_f,M_f) (R', M') Y Z with
-                  | Var v => singleton v
-                  | _ => ∅
-                  end
-           );
-        unfold slot_lift_args;
-        simpl.
-      * decide (v ∈ M');
-          econstructor;
-          eauto with cset.
-      * repeat apply incl_union_left.
-        decide (v ∈ M');
-          unfold slot_lift_args;
-          simpl;
-          [ change (singleton (slot v)) with (Op.freeVars (Var (slot v)))
-          | change (singleton v) with (Op.freeVars (Var v)) ];
-          eapply get_list_union_map; eauto;
-          eapply map_get_eq; eauto;
-          simpl;
-          decide (v ∈ M'); simpl; eauto.*)
+      eapply live_op_sound_incl. eapply Op.live_freeVars.
+      eapply get_list_union_map with (f:=Op.freeVars) in H.
+      rewrite <- H. cset_tac.
   - rewrite do_spill_empty by apply count_clear_zero.
     unfold do_spill_rec.
     rewrite do_spill_rm_empty by apply count_clear_zero.
