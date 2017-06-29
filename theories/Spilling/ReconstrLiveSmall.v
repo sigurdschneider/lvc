@@ -384,6 +384,7 @@ Proof.
   - repeat apply union_incl_split.
     + apply incl_union_left.
       rewrite lifted_args_in_RL_slot_SpM; eauto. reflexivity.
+      rewrite H20; eauto.
     + rewrite nth_rfmf; eauto.
       erewrite nth_zip; eauto.
       exploit Z_VD as Z_VD'; eauto.
