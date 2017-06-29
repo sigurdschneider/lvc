@@ -90,3 +90,16 @@ Lemma incl_minus_union (X:Type) `{OrderedType X} (s t u : ⦃X⦄) :
 Proof.
   intros; cset_tac.
 Qed.
+
+
+Lemma cap_special_in X `{OrderedType X} G
+  : forall x D, x ∈ D -> {x; G} ∩ D [=] {x; G ∩ D}.
+Proof.
+  cset_tac.
+Qed.
+
+Lemma cap_special_notin X `{OrderedType X} G
+  : forall x D, x ∉ D -> {x; G} ∩ D [=] G ∩ D.
+Proof.
+  cset_tac.
+Qed.

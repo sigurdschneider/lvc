@@ -33,19 +33,17 @@ Proof.
   intros. rewrite zip_app; eauto with len.
 Qed.
 
-Lemma slot_lift_params_length (slot:var -> var) R_f M_f Z
+Lemma slot_lift_params_length (slot:var -> var) RM Z
       (NoDup:NoDupA eq Z)
-  : ❬slot_lift_params slot (R_f, M_f) Z❭ = ❬Z❭ + cardinal (of_list Z ∩ (R_f ∩ M_f)).
+  : ❬slot_lift_params slot RM Z❭ = ❬Z❭ + cardinal (of_list Z ∩ (fst RM ∩ snd RM)).
 Proof.
   general induction NoDup; simpl.
-  - assert ({} ∩ (R_f ∩ M_f) [=] {}) by (clear; cset_tac).
+  - assert ({} ∩ (fst RM ∩ snd RM) [=] {}) by (clear; cset_tac).
     rewrite H. eauto.
   - cases; simpl.
-    + assert (forall D, x ∈ D -> {x; of_list l} ∩ D [=] {x; of_list l ∩ D}) as EQ by (cset_tac).
-      rewrite EQ; eauto. rewrite IHNoDup; eauto.
+    + rewrite cap_special_in; eauto. rewrite IHNoDup; eauto.
       rewrite add_cardinal_2; eauto. cset_tac.
-    + assert (forall D, x ∉ D -> {x; of_list l} ∩ D [=] of_list l ∩ D) as EQ by (cset_tac).
-      cases; simpl; rewrite EQ; eauto.
+    + cases; simpl; rewrite cap_special_notin; eauto.
 Qed.
 
 Lemma of_list_slot_lift_params (slot:var -> var) R M (Z:params)
@@ -56,11 +54,12 @@ Lemma of_list_slot_lift_params (slot:var -> var) R M (Z:params)
 Proof.
   intros. general induction Z; simpl in *.
   - cset_tac.
-  - assert (of_list Z [<=] R ∪ M /\ a ∈ R ∪ M) by cset_tac.
+  - assert (of_list Z [<=] R ∪ M /\ a ∈ R ∪ M) by (revert Incl; clear_all; cset_tac).
     cases; simpl.
     + rewrite IHZ; eauto; clear IHZ Incl.
       assert (a ∉ R \ M) by cset_tac.
-      assert ({a; of_list Z} \ (R \ M) [=] {a; of_list Z \ (R \ M)}) by cset_tac.
+      assert ({a; of_list Z} \ (R \ M) [=] {a; of_list Z \ (R \ M)})
+        by (revert H0; clear_all; cset_tac).
       rewrite H1. clear H1. rewrite map_add; eauto.
       clear H. cset_tac.
     + cases; simpl; rewrite IHZ; eauto; clear IHZ.
@@ -183,9 +182,10 @@ Proof.
             as demo by (clear; cset_tac).
           rewrite demo. apply union_incl_split.
           - reflexivity.
-          - rewrite <- map_singleton.
+          - rewrite <- map_singleton; eauto.
             rewrite <- injective_on_map_inter; eauto.
-            + assert (t ∩ singleton a [=] ∅) as ta_empty by cset_tac.
+            + assert (t ∩ singleton a [=] ∅) as ta_empty
+                  by (revert an_tZ; clear_all; cset_tac).
               rewrite ta_empty.
               rewrite map_empty; eauto.
               clear; cset_tac.
@@ -222,5 +222,5 @@ Lemma slp_union_minus_incl
 Proof.
   intros.
   rewrite <- slp_union_incl with (s:=s); eauto.
-  unfold lookup_set. cset_tac'; eauto 20 with cset.
+  unfold lookup_set. cset_tac.
 Qed.

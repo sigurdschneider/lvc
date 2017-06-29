@@ -196,30 +196,6 @@ Proof.
     cset_tac.
 Qed.
 
-Lemma map_singleton
-      (f : var -> var)
-      (x : var)
-  :
-    map f (singleton x) [=] singleton (f x)
-.
-Proof.
-  apply set_incl.
-  - hnf.
-    intros a a_in_f.
-    rewrite singleton_iff in a_in_f.
-    rewrite <- a_in_f.
-    apply map_1; eauto.
-  - hnf.
-    intros a a_in_map.
-    apply map_2 in a_in_map; eauto.
-    destruct a_in_map as [a' [in_x a_eq]].
-    rewrite singleton_iff in in_x.
-    rewrite <- in_x in a_eq.
-    rewrite a_eq.
-    cset_tac.
-Qed.
-
-
 
 Lemma nth_zip
       (X Y Z : Type)

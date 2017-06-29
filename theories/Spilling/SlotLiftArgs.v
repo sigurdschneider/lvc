@@ -1,7 +1,7 @@
 Require Import List Map Env AllInRel Exp AppExpFree Filter LengthEq.
 Require Import IL Annotation AutoIndTac Liveness.Liveness LabelsDefined.
-Require Import SpillSound SpillUtil.
-Require Import ToBeOutsourced Slot.
+
+Require Import ToBeOutsourced Slot SetUtil.
 
 Definition choose_y (slot : var -> var)
            (X : ⦃var⦄) (x:var)
@@ -49,13 +49,10 @@ Proof.
   general induction Len; simpl; eauto.
   inv NoDup.
   repeat cases; simpl; rewrite IHLen; eauto.
-  - assert (forall D, y ∈ D -> {y; of_list YL} ∩ D [=] {y; of_list YL ∩ D}) as EQ by (cset_tac).
-    rewrite EQ; eauto.
+  - rewrite cap_special_in; eauto.
     rewrite add_cardinal_2; eauto. cset_tac.
-  - assert (forall D, y ∉ D -> {y; of_list YL} ∩ D [=] of_list YL ∩ D) as EQ by (cset_tac).
-    rewrite EQ; eauto.
-  - assert (forall D, y ∉ D -> {y; of_list YL} ∩ D [=] of_list YL ∩ D) as EQ by (cset_tac).
-    rewrite EQ; eauto.
+  - rewrite cap_special_notin; eauto.
+  - rewrite cap_special_notin; eauto.
 Qed.
 
 Smpl Add match goal with
@@ -121,16 +118,25 @@ Proof.
   }
   unfold choose_y; repeat cases; simpl in *.
   - rewrite R'_incl in COND0. revert COND0; clear. intros. cset_tac.
-  - rewrite <- map_singleton.
+  - rewrite <- map_singleton; eauto.
     apply incl_union_right.
     apply lookup_set_incl; eauto.
     cset_tac.
-  - rewrite <- map_singleton.
+  - rewrite <- map_singleton; eauto.
     apply incl_union_right.
     apply lookup_set_incl; eauto.
     cset_tac.
   - assert (v ∈ R') by cset_tac.
     rewrite R'_incl in H3. revert H3; clear. intros. cset_tac.
+Qed.
+
+
+Lemma slot_lift_args_app_expfree (slot:var -> var) RM RMapp Y Z f
+  (IV : forall (n : nat) (y : op), get Y n y -> isVar y)
+  : app_expfree (stmtApp f (slot_lift_args slot RM RMapp Y Z)).
+Proof.
+  econstructor.
+  intros; inv_get; eauto using slot_lift_args_isVar.
 Qed.
 
 (*

@@ -200,3 +200,13 @@ Proof.
   - rewrite lookup_set_update_not_in_Z; eauto.
     eapply H1; cset_tac.
 Qed.
+
+Lemma map_singleton X `{OrderedType X}
+      (f : X -> X)  `{Proper _ (_eq ==> _eq) f} (x : X)
+  : map f (singleton x) [=] singleton (f x)
+.
+Proof.
+  apply set_incl.
+  - cset_tac.
+  - cset_tac.
+Qed.

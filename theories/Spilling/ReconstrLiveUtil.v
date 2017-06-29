@@ -187,7 +187,7 @@ Proof.
       as slot_a_in. {
       intro a_in.
       apply in_singleton.
-      rewrite <- map_singleton.
+      rewrite <- map_singleton; eauto.
       apply lookup_set_incl; eauto.
       apply incl_singleton; eauto.
     }
@@ -230,81 +230,20 @@ Proof.
 Qed.
 
 
-
-
-
 Lemma sla_extargs_slp_length
       (slot : var -> var)
-      (R_f M_f Sl : ⦃var⦄)
+      RM RMapp
       (ZL : list params)
       (Z : params)
       (l : lab)
       (Λ : list (⦃var⦄ * ⦃var⦄))
       (Y : args)
+      (NoDup: NoDupA eq Z)
   :
-    length Y = length Z
-    -> ❬slot_lift_args slot Sl
-                      ⊝ extend_args Y
-                      (mark_elements Z ((fun RM : ⦃var⦄ * ⦃var⦄ => fst RM ∩ snd RM) (R_f,M_f)))❭
-      = ❬slot_lift_params slot (R_f, M_f) Z❭
-.
+    length Y = length Z ->
+    ❬slot_lift_args slot RM RMapp Y Z❭ = ❬slot_lift_params slot RM Z❭ .
 Proof.
   intros H2.
-  unfold slot_lift_params.
-  rewrite !map_length.
-  general induction Z; inv H2;
-    simpl; eauto.
-  - apply length_zero_iff_nil in H2.
-    rewrite H2.
-    eauto with len.
-  - fold slot_lift_params.
-    fold slot_lift_params in IHZ.
-    destruct Y; isabsurd.
-    simpl.
-    decide (a ∈ R_f ∩ M_f);
-      unfold extend_args;
-      simpl; eauto.
-    decide (a ∈ R_f);
-      simpl; eauto.
-Qed.
-
-
-Lemma get_Y_from_extargs
-      (Y : args)
-      (ib : list bool)
-      (y : op)
-      (n : nat)
-  :
-    get (extend_args Y ib) n y
-    -> exists n', get Y n' y
-.
-Proof.
-  intros get_ext.
-
-  general induction get_ext;
-    destruct Y;
-    destruct ib;
-    simpl; isabsurd; eauto.
-  - exists 0.
-    invc Heql.
-    econstructor; eauto.
-  - exists 0.
-    invc Heql.
-    destruct b; simpl in H0; invc H0;
-      econstructor; eauto.
-  - exists (S n).
-    invc Heql.
-    econstructor; eauto.
-  - destruct b; simpl in *.
-    + specialize (IHget_ext (o :: Y) (false :: ib)).
-      simpl in IHget_ext.
-      invc Heql.
-      apply IHget_ext; eauto.
-    + specialize (IHget_ext Y ib).
-      invc Heql.
-      assert (extend_args Y ib = extend_args Y ib)
-        as refl by reflexivity.
-      apply IHget_ext in refl as [n0 get_x].
-      exists (S n0).
-      econstructor; eauto.
+  rewrite slot_lift_params_length; eauto.
+  rewrite slot_lift_args_length; eauto.
 Qed.

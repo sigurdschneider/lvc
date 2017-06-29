@@ -35,7 +35,7 @@ Proof.
     + assert ({x; of_list l} ∩ D [=] {x; of_list l ∩ D}) as EQ by (cset_tac).
       rewrite EQ. rewrite IHNoDup; eauto.
       rewrite add_cardinal_2; eauto. clear IHNoDup.
-      cset_tac.
+      revert H. clear_all. cset_tac.
     + assert ({x; of_list l} ∩ D [=] of_list l ∩ D) as EQ by (cset_tac).
       rewrite EQ. rewrite IHNoDup; eauto.
 Qed.
@@ -315,15 +315,6 @@ Proof.
   general induction xl; destruct xl'; simpl; eauto using app_expfree.
 Qed.
 
-Lemma extend_args_app_expfree (slot:var -> var) RM RMapp Y Z f
-  (IV : forall (n : nat) (y : op), get Y n y -> isVar y)
-  : app_expfree (stmtApp f (slot_lift_args slot RM RMapp Y Z)).
-Proof.
-  econstructor.
-  intros; inv_get; eauto using slot_lift_args_isVar.
-
-Qed.
-
 Lemma do_spill_app_expfree (slot:var -> var) s spl ZL RML
   : app_expfree s
     -> app_expfree (do_spill slot s spl ZL RML).
@@ -336,14 +327,14 @@ Proof.
   - destruct l;
      do 2 apply write_moves_app_expfree;
         repeat cases; clear_trivial_eqs;
-          eauto using app_expfree, extend_args_app_expfree.
+          eauto using app_expfree, slot_lift_args_app_expfree.
   - do 2 apply write_moves_app_expfree;
       repeat cases; clear_trivial_eqs;
-        eauto using app_expfree, extend_args_app_expfree.
+        eauto using app_expfree, slot_lift_args_app_expfree.
     econstructor; intros; inv_get; simpl; eauto.
   - do 2 apply write_moves_app_expfree;
         repeat cases; clear_trivial_eqs;
-          eauto using app_expfree, extend_args_app_expfree.
+          eauto using app_expfree, slot_lift_args_app_expfree.
     + econstructor; intros; inv_get; simpl; eauto.
     + econstructor; intros; inv_get; simpl; eauto.
 Qed.
