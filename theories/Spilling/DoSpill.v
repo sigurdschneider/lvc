@@ -146,22 +146,94 @@ Proof.
 Qed.
 
 
-Definition slot_lift_args
-           (slot : var -> var)
-           (M : set var)
-  : op -> op
-  := (fun y => match y with
-            | Var v => if [v ∈ M] then Var (slot v) else Var v
-            | _ => y
-            end) .
+Definition choose_y (slot : var -> var)
+           (X : ⦃var⦄) (x:var)
+           (RMapp : ⦃var⦄ * ⦃var⦄)
+           (y:var) :=
+  if [x ∈ X] then (* reg prefered *)
+    if [y ∈ fst RMapp] then Var y
+    else Var (slot y)
+  else (* slot prefered *)
+    if [y ∈ snd RMapp] then Var (slot y)
+    else Var y.
 
-Lemma slot_lift_args_isVar (slot:var -> var) (M:set var) op
-  : isVar op
-    -> isVar (slot_lift_args slot M op).
+
+Fixpoint slot_lift_args
+           (slot : var -> var)
+           (RM : ⦃var⦄ * ⦃var⦄)
+           (RMapp : ⦃var⦄ * ⦃var⦄)
+           (Y: list op) (Z : params)
+  : list op
+  :=
+    match Y, Z with
+    | e::Y, z::Z => let y := getVar e in
+      if [z ∈ fst RM ∩ snd RM]
+      then choose_y slot (fst RM) z RMapp y::
+                    choose_y slot (snd RM) z RMapp y::
+                    slot_lift_args slot RM RMapp Y Z
+      else if [z ∈ fst RM]
+           then choose_y slot (fst RM) z RMapp y::slot_lift_args slot RM RMapp Y Z
+           else choose_y slot (snd RM) z RMapp y::slot_lift_args slot RM RMapp Y Z
+    | _, _ => nil
+    end.
+
+(*
+Lemma extend_args_get slot RM RMapp Y Z n x
+  : get (slot_lift_args slot RM RMapp Y Z) n x
+    -> exists n y z, get Y n y /\ get Z n z.
 Proof.
-  intros []; simpl; cases; eauto using isVar.
+  intros.
+  general induction H; destruct Y, Z; try destruct o; simpl in *;
+    clear_trivial_eqs; isabsurd;
+      eauto using get.
+Qed.
+ *)
+
+
+Lemma slot_lift_args_length slot RM RMapp Y Z (Len:❬Y❭=❬Z❭)
+      (NoDup:NoDupA eq Z)
+  : ❬slot_lift_args slot RM RMapp Y Z❭ =
+    ❬Z❭ + cardinal (of_list Z ∩ (fst RM ∩ snd RM)).
+Proof.
+  general induction Len; simpl; eauto.
+  inv NoDup.
+  repeat cases; simpl; rewrite IHLen; eauto.
+  - assert (forall D, y ∈ D -> {y; of_list YL} ∩ D [=] {y; of_list YL ∩ D}) as EQ by (cset_tac).
+    rewrite EQ; eauto.
+    rewrite add_cardinal_2; eauto. cset_tac.
+  - assert (forall D, y ∉ D -> {y; of_list YL} ∩ D [=] of_list YL ∩ D) as EQ by (cset_tac).
+    rewrite EQ; eauto.
+  - assert (forall D, y ∉ D -> {y; of_list YL} ∩ D [=] of_list YL ∩ D) as EQ by (cset_tac).
+    rewrite EQ; eauto.
 Qed.
 
+Smpl Add match goal with
+         | [ H : context [ ❬slot_lift_args ?slot ?RM ?RMapp ?Y ?Z❭ ],
+             Len : ❬?Y❭ = ❬?Z❭, NoDup : NoDupA eq ?Z |- _ ]
+           => rewrite (@slot_lift_args_length slot RM RMapp Y Z Len NoDup) in H
+         | [ Len : ❬?Y❭ = ❬?Z❭, NoDup : NoDupA eq ?Z |-
+             context [ ❬slot_lift_args ?slot ?RM ?RMapp ?Y ?Z❭ ] ]
+           => rewrite (@slot_lift_args_length slot RM RMapp Y Z Len NoDup)
+         end : len.
+
+Lemma choose_y_isVar slot X y RMapp v
+  :  isVar (choose_y slot X y RMapp v).
+Proof.
+  unfold choose_y; repeat cases; eauto using isVar.
+Qed.
+
+Lemma slot_lift_args_isVar (slot:var -> var) RM RMapp Y Z
+  : (forall (n : nat) (y : op), get Y n y -> isVar y)
+    -> forall (n : nat) (y : op), get (slot_lift_args slot RM RMapp Y Z) n y -> isVar y.
+Proof.
+  intros.
+  general induction Y; destruct Z; simpl in *; isabsurd.
+  exploit H; eauto using get. inv H1; simpl in *.
+  repeat cases in H0; inv H0; eauto using get, choose_y_isVar.
+  inv H6; eauto using get, choose_y_isVar.
+Qed.
+
+(*
 Lemma slot_lift_args_elem_eq_ext
       (slot : var -> var)
       (Sl : ⦃var⦄)
@@ -202,52 +274,9 @@ Proof.
     + rewrite <- H.
       eauto with cset.
 Qed.
+ *)
 
-Fixpoint extend_args {X}
-         (Y : list X)
-         (ib : list bool)
-  : list X
-  := match Y with
-     | nil => nil
-     | y :: Y => match ib with
-                 | nil => y :: Y
-                 | true  :: ib => y :: y :: extend_args Y ib
-                 | false :: ib => y :: extend_args Y ib
-                end
-     end.
-
-Lemma extend_args_get X (Y : list X) (ib : list bool) n x
-  : get (extend_args Y ib) n x
-    -> exists n, get Y n x.
-Proof.
-  intros.
-  general induction H; destruct Y, ib; simpl in *;
-    clear_trivial_eqs; isabsurd;
-      eauto using get.
-  - cases in Heql; clear_trivial_eqs; eauto using get.
-  - cases in Heql; clear_trivial_eqs; eauto using get.
-    + edestruct (IHget (x0::Y) (false::ib)); eauto.
-    + edestruct IHget; eauto using get.
-Qed.
-
-
-Lemma extend_args_length X (L:list X) ib (Len:❬L❭=❬ib❭)
-  : ❬extend_args L ib❭ = ❬L❭ + countTrue ib.
-Proof.
-  length_equify.
-  general induction Len; simpl; eauto.
-  cases; simpl.
-  - rewrite IHLen. omega.
-  - rewrite IHLen; eauto.
-Qed.
-
-Smpl Add match goal with
-         | [ H : context [ ❬extend_args ?L ?ib❭ ] |- _ ]
-           => rewrite (@extend_args_length _ L ib) in H
-         | [ |- context [ ❬extend_args ?L ?ib❭ ] ]
-           => rewrite (@extend_args_length _ L ib)
-         end : len.
-
+(*
 Lemma extend_args_elem_eq_ext
       (Y : args)
       (ib : list bool)
@@ -263,6 +292,7 @@ Proof.
   rewrite !add_union_singleton.
   cset_tac.
 Qed.
+ *)
 
 Fixpoint write_moves
            (Z Z' : params)
@@ -283,26 +313,6 @@ Definition mark_elements
   : list bool
   := (fun x => if [x ∈ s] then true else false) ⊝ L.
 
-Definition compute_ib
-           (Z : params)
-           (RM : ⦃var⦄ * ⦃var⦄)
-  : list bool
-  :=
-    mark_elements Z (fst RM ∩ snd RM).
-
-Lemma compute_ib_length Z RM
-  : ❬compute_ib Z RM❭ = ❬Z❭.
-Proof.
-  unfold compute_ib, mark_elements; eauto with len.
-Qed.
-
-Smpl Add match goal with
-         | [ H : context [ ❬compute_ib ?Z ?RM❭ ] |- _ ]
-           => rewrite (@compute_ib_length Z RM) in H
-         | [ |- context [ ❬compute_ib ?Z ?RM❭ ] ]
-           => rewrite (@compute_ib_length Z RM)
-         end : len.
-
 Lemma countTrue_mark_elements Z D
       (NoDup:NoDupA eq Z)
   : countTrue (mark_elements Z D) = cardinal (of_list Z ∩ D).
@@ -319,7 +329,7 @@ Proof.
       rewrite EQ. rewrite IHNoDup; eauto.
 Qed.
 
-
+(*
 Lemma update_with_list_lookup_in_list_first_slot (slot:var->var)
       A (E:onv A) n (R M:set var)
       Z (Y:list A) z
@@ -328,8 +338,9 @@ Lemma update_with_list_lookup_in_list_first_slot (slot:var->var)
   -> z ∈ R
   -> disj (of_list Z) (map slot (of_list Z))
   -> (forall n' z', n' < n -> get Z n' z' -> z' =/= z)
-  -> exists y, get Y n y /\ E [slot_lift_params slot (R, M) Z <--
-                  Some ⊝ extend_args Y (mark_elements Z (R ∩ M))] z = Some y.
+  -> exists y, get Y n y
+         /\ E [slot_lift_params slot (R, M) Z <--
+                               Some ⊝ extend_args Y (mark_elements Z (R ∩ M))] z = Some y.
 Proof.
   intros Len Get In Disj First. length_equify.
   general induction Len; simpl in *; isabsurd.
@@ -359,39 +370,42 @@ Proof.
            eapply map_iff; eauto. eexists x; split; eauto with cset.
         -- eauto.
 Qed.
+ *)
 
 Definition do_spill_rec
            (slot : var -> var)
            (s : stmt)
            (sl : spilling)
-           (IB : list (list bool))
+           (ZL : list params)
+           (RML : list (set var * set var))
            (do_spill' : forall (s' : stmt)
                           (sl' : spilling)
-                          (IB' : list (list bool)),
+                          (ZL : list params)
+                          (RML : list (set var * set var)),
                             stmt)
   : stmt
   :=
     match s,sl with
     | stmtLet x e s, ann1 _ sl1
-      => stmtLet x e (do_spill' s sl1 IB)
+      => stmtLet x e (do_spill' s sl1 ZL RML)
 
     | stmtIf e s1 s2, ann2 _ sl1 sl2
-      => stmtIf e (do_spill' s1 sl1 IB) (do_spill' s2 sl2 IB)
+      => stmtIf e (do_spill' s1 sl1 ZL RML) (do_spill' s2 sl2 ZL RML)
 
     | stmtFun F t, annF (_,_, rms) sl_F sl_t
-      => let IB' := compute_ib ⊜ (fst ⊝ F) rms ++ IB in
+      => let RML' := rms ++ RML in
+        let ZL' := fst ⊝ F ++ ZL in
       stmtFun
           (pair ⊜
                 (slot_lift_params slot ⊜ rms (fst ⊝ F))
                 ((fun (Zs : params * stmt) (sl_s : spilling)
-                  => do_spill' (snd Zs) sl_s IB') ⊜ F sl_F)
+                  => do_spill' (snd Zs) sl_s ZL' RML') ⊜ F sl_F)
   (* we can't write "(do_spill' ⊜ (snd ⊝ F) sl_F)" because termination wouldn't be obvious *)
           )
-          (do_spill' t sl_t IB')
+          (do_spill' t sl_t ZL' RML')
 
-    | stmtApp f Y, ann0 (_,_, (R,M)::nil)
-      => stmtApp f (slot_lift_args slot M
-                                  ⊝ (extend_args Y (nth f IB nil)))
+    | stmtApp f Y, ann0 (_,_, (RMapp)::nil)
+      => stmtApp f (slot_lift_args slot (nth f RML (∅,∅)) RMapp Y (nth f ZL nil))
 
     | _,_
       => s
@@ -403,14 +417,15 @@ Fixpoint do_spill
            (slot : var -> var)
            (s : stmt)
            (sl : spilling)
-           (IB : list (list bool))
+           (ZL : list params)
+           (RML : list (set var * set var))
            {struct s}
   : stmt
   := let sp := elements (getSp sl) in
     let ld := elements (getL sl) in
     write_moves (slot ⊝ sp) sp (
         write_moves ld (slot ⊝ ld) (
-            do_spill_rec slot s sl IB (do_spill slot)
+            do_spill_rec slot s sl ZL RML (do_spill slot)
         )
      )
 .
@@ -440,11 +455,12 @@ Lemma do_spill_empty
       (slot : var -> var)
       (s : stmt)
       (sl : spilling)
-      (IB : list (list bool))
+      (ZL : list params)
+      (RML : list (set var * set var))
   :
     count sl = 0
-    -> do_spill slot s sl IB
-      = do_spill_rec slot s sl IB (do_spill slot)
+    -> do_spill slot s sl ZL RML
+      = do_spill_rec slot s sl ZL RML (do_spill slot)
 .
 Proof.
   intros count_zero.
@@ -464,12 +480,13 @@ Lemma do_spill_empty_Sp
       (slot : var -> var)
       (s : stmt)
       (sl : spilling)
-      (IB : list (list bool))
+      (ZL : list params)
+      (RML : list (set var * set var))
   :
     cardinal (getSp sl) = 0
-    -> do_spill slot s sl IB
+    -> do_spill slot s sl ZL RML
       = write_moves (elements (getL sl)) (slot ⊝ elements (getL sl))
-                    (do_spill_rec slot s sl IB (do_spill slot))
+                    (do_spill_rec slot s sl ZL RML (do_spill slot))
 .
 Proof.
   intros card_zero.
@@ -487,12 +504,13 @@ Lemma do_spill_extract_writes
       (slot : var -> var)
       (s : stmt)
       (sl : spilling)
-      (IB : list (list bool))
+      (ZL : list params)
+      (RML : list (set var * set var))
   :
-    do_spill slot s sl IB
+    do_spill slot s sl ZL RML
     = write_moves (slot ⊝ elements (getSp sl)) (elements (getSp sl))
          (write_moves (elements (getL sl)) (slot ⊝ elements (getL sl))
-             (do_spill slot s (setTopAnn sl (∅,∅,snd (getAnn sl))) IB))
+             (do_spill slot s (setTopAnn sl (∅,∅,snd (getAnn sl))) ZL RML))
 .
 Proof.
   symmetry.
@@ -518,11 +536,12 @@ Lemma do_spill_extract_spill_writes
       (slot : var -> var)
       (s : stmt)
       (sl : spilling)
-      (IB : list (list bool))
+      (ZL : list params)
+      (RML : list (set var * set var))
   :
-    do_spill slot s sl IB
+    do_spill slot s sl ZL RML
     = write_moves (slot ⊝ (elements (getSp sl))) (elements (getSp sl))
-                   (do_spill slot s (clear_Sp sl) IB)
+                   (do_spill slot s (clear_Sp sl) ZL RML)
 .
 Proof.
   unfold clear_Sp.
@@ -548,13 +567,14 @@ Lemma do_spill_sub_empty_invariant
       (Sp' L': ⦃ var ⦄)
       (s : stmt)
       (sl : spilling)
-      (IB : list (list bool))
+      (ZL : list params)
+      (RML : list (set var * set var))
   :
     count sl = 0
     -> Sp' [=] ∅
     -> L' [=] ∅
-    ->  do_spill slot s sl IB
-       = do_spill slot s (setTopAnn sl (Sp',L',snd (getAnn sl))) IB
+    ->  do_spill slot s sl ZL RML
+       = do_spill slot s (setTopAnn sl (Sp',L',snd (getAnn sl))) ZL RML
 .
 Proof.
   intros count_zero Sp_empty L_empty.
@@ -584,38 +604,37 @@ Proof.
   general induction xl; destruct xl'; simpl; eauto using app_expfree.
 Qed.
 
-Lemma extend_args_app_expfree (slot:var -> var) Y s l f
+Lemma extend_args_app_expfree (slot:var -> var) RM RMapp Y Z f
   (IV : forall (n : nat) (y : op), get Y n y -> isVar y)
-  : app_expfree (stmtApp f (slot_lift_args slot s ⊝ extend_args Y l)).
+  : app_expfree (stmtApp f (slot_lift_args slot RM RMapp Y Z)).
 Proof.
   econstructor.
-  intros; inv_get.
-  edestruct extend_args_get; eauto using slot_lift_args_isVar.
+  intros; inv_get; eauto using slot_lift_args_isVar.
+
 Qed.
 
-Lemma do_spill_app_expfree (slot:var -> var) s spl ib
+Lemma do_spill_app_expfree (slot:var -> var) s spl ZL RML
   : app_expfree s
-    -> app_expfree (do_spill slot s spl ib).
+    -> app_expfree (do_spill slot s spl ZL RML).
 Proof.
   intros AEF.
   general induction AEF;
-    destruct spl, ib; simpl;
+    destruct spl; try destruct a; try destruct l; simpl;
       repeat let_pair_case_eq; subst; simpl;
-          eauto using app_expfree, write_moves_app_expfree.
-  - do 2 apply write_moves_app_expfree;
-      repeat cases; clear_trivial_eqs;
-        eauto using app_expfree, extend_args_app_expfree.
-  - do 2 apply write_moves_app_expfree;
-      repeat cases; clear_trivial_eqs;
-        eauto using app_expfree, extend_args_app_expfree.
-  - do 2 apply write_moves_app_expfree;
-      repeat cases; clear_trivial_eqs;
-        eauto using app_expfree, extend_args_app_expfree.
-    econstructor; intros; inv_get; simpl; eauto.
+        eauto using app_expfree, write_moves_app_expfree.
+  - destruct l;
+     do 2 apply write_moves_app_expfree;
+        repeat cases; clear_trivial_eqs;
+          eauto using app_expfree, extend_args_app_expfree.
   - do 2 apply write_moves_app_expfree;
       repeat cases; clear_trivial_eqs;
         eauto using app_expfree, extend_args_app_expfree.
     econstructor; intros; inv_get; simpl; eauto.
+  - do 2 apply write_moves_app_expfree;
+        repeat cases; clear_trivial_eqs;
+          eauto using app_expfree, extend_args_app_expfree.
+    + econstructor; intros; inv_get; simpl; eauto.
+    + econstructor; intros; inv_get; simpl; eauto.
 Qed.
 
 Lemma write_moves_labels_defined xl xl' s n
@@ -637,7 +656,7 @@ Qed.
 Lemma do_spill_labels_defined (slot:var -> var) k RM ZL Λ spl s n
   : labelsDefined s n
     -> spill_sound k ZL Λ RM s spl
-    -> labelsDefined (do_spill slot s spl (compute_ib ⊜ ZL Λ)) n.
+    -> labelsDefined (do_spill slot s spl ZL Λ) n.
 Proof.
   intros.
   general induction H; invt spill_sound; simpl;
@@ -646,8 +665,8 @@ Proof.
   - do 2 eapply write_moves_labels_defined.
     econstructor; intros; inv_get; simpl; len_simpl; eauto using labelsDefined.
     + exploit H16; eauto.
-      rewrite <- H9. rewrite <- zip_app; eauto with len.
-    + rewrite <- H9, <- zip_app; eauto with len.
+      rewrite <- H9. eauto with len.
+    + rewrite <- H9; eauto with len.
 Qed.
 
 Lemma zip_map_fst_f X Y (L:list X) (L':list Y) Z (f:X -> Z)
@@ -674,26 +693,24 @@ Lemma do_spill_paramsMatch (slot:var -> var) k RM ZL Λ spl s ra
     -> spill_sound k ZL Λ RM s spl
     -> RenamedApart.renamedApart  s ra
     -> (forall n Z, get ZL n Z -> NoDupA eq Z)
-    -> paramsMatch (do_spill slot s spl (compute_ib ⊜ ZL Λ))
+    -> app_expfree s
+    -> paramsMatch (do_spill slot s spl ZL Λ)
                                    (@length _ ⊝ (slot_lift_params slot) ⊜ Λ ZL).
 Proof.
-  intros.
-  general induction H; invt spill_sound; invt RenamedApart.renamedApart; simpl;
-    repeat cases; simpl; clear_trivial_eqs;
+  intros PM SPS RA NDUP AEF.
+  general induction PM; invt spill_sound; invt RenamedApart.renamedApart; invtc app_expfree;
+    simpl; repeat cases; simpl; clear_trivial_eqs;
       eauto 20 using paramsMatch, write_moves_paramsMatch.
   - do 2 eapply write_moves_paramsMatch. inv_get.
-    econstructor; eauto.
-    erewrite get_nth; eauto using zip_get.
-    len_simpl; eauto.
+    erewrite !get_nth; eauto using zip_get.
+    econstructor; try reflexivity.
     eapply map_get_eq; eauto using zip_get.
-    exploit H3; eauto.
+    eapply op_eval_var in H1 as [? ?]; subst Y.
     rewrite slot_lift_params_length; eauto.
-    unfold compute_ib. rewrite countTrue_mark_elements; simpl; eauto.
-    omega.
+    rewrite slot_lift_args_length; eauto.
   - do 2 eapply write_moves_paramsMatch.
     econstructor; intros; inv_get; simpl; try len_simpl; eauto using paramsMatch.
-    + rewrite <- !zip_app; eauto with len.
-      exploit H0; eauto.
+    + exploit H0; eauto.
       * rewrite List.map_app; eauto.
       * eapply ZL_NoDupA_ext; eauto.
       * eqassumption.
@@ -701,8 +718,7 @@ Proof.
            rewrite !zip_app; eauto with len. f_equal.
            rewrite zip_map_fst_f; eauto with len.
            rewrite map_zip; eauto.
-    + rewrite <- !zip_app; eauto with len.
-      exploit IHparamsMatch; eauto.
+    + exploit IHPM; eauto.
       * rewrite List.map_app; eauto.
       * eapply ZL_NoDupA_ext; eauto.
       * eqassumption.
@@ -734,7 +750,7 @@ Lemma do_spill_callChain b (slot: var -> var) k ZL Λ F sl_F rms f l'
          (sl_t : spilling) (f : lab),
        spill_sound k ZL Λ RM (snd Zs) sl_t ->
        isCalled b (snd Zs) f
-       -> isCalled b (do_spill slot (snd Zs) sl_t (compute_ib ⊜ ZL Λ)) f)
+       -> isCalled b (do_spill slot (snd Zs) sl_t ZL Λ) f)
   (Len1: ❬F❭ = ❬sl_F❭)
   (Len2: ❬F❭ = ❬rms❭)
   (SPS: forall (n : nat) (Zs : params * stmt) (rm : ⦃var⦄ * ⦃var⦄) (sl_s : spilling),
@@ -745,7 +761,7 @@ Lemma do_spill_callChain b (slot: var -> var) k ZL Λ F sl_F rms f l'
   : callChain (isCalled b)
     (pair ⊜ (slot_lift_params slot ⊜ rms (fst ⊝ F))
      ((fun (Zs : params * stmt) (sl_s : spilling) =>
-       do_spill slot (snd Zs) sl_s (compute_ib ⊜ (fst ⊝ F ++ ZL) (rms ++ Λ))) ⊜ F
+       do_spill slot (snd Zs) sl_s (fst ⊝ F ++ ZL) (rms ++ Λ)) ⊜ F
       sl_F)) l' f.
 Proof.
   general induction CC.
@@ -759,14 +775,13 @@ Qed.
 Lemma do_spill_isCalled b (slot: var -> var) k ZL Λ RM t sl_t f
   (SPS : spill_sound k ZL Λ RM t sl_t)
   (IC : isCalled b t f)
-  : isCalled b (do_spill slot t sl_t (compute_ib ⊜ ZL Λ)) f.
+  : isCalled b (do_spill slot t sl_t ZL Λ) f.
 Proof.
   move t before k.
   revert_until t.
   sind t; intros; invt spill_sound; invt isCalled; simpl;
     eauto using write_moves_isCalled, isCalled.
   - do 2 eapply write_moves_isCalled.
-    rewrite <- zip_app; eauto with len.
     econstructor; eauto.
     len_simpl. rewrite <- H3; eauto using do_spill_callChain.
 Qed.
@@ -774,7 +789,7 @@ Qed.
 Lemma do_spill_no_unreachable_code b (slot:var -> var) k RM ZL Λ spl s
   : noUnreachableCode (isCalled b) s
     -> spill_sound k ZL Λ RM s spl
-    -> noUnreachableCode (isCalled b) (do_spill slot s spl (compute_ib ⊜ ZL Λ)).
+    -> noUnreachableCode (isCalled b) (do_spill slot s spl ZL Λ).
 Proof.
   intros.
   general induction H; invt spill_sound; simpl;
@@ -784,7 +799,6 @@ Proof.
   - eauto 20 using noUnreachableCode, write_moves_no_unreachable_code.
   - eauto 20 using noUnreachableCode, write_moves_no_unreachable_code.
   - do 2 eapply write_moves_no_unreachable_code.
-    rewrite <- zip_app; eauto with len.
     econstructor; intros; inv_get; simpl; eauto using noUnreachableCode.
     + len_simpl. rewrite <- H10 in H4. exploit H2; eauto.
       destruct H5; dcr.
