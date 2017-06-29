@@ -68,7 +68,6 @@ Lemma reconstr_live_small_L
       (slot : var -> var)
       (s : stmt)
       (Λ : list (⦃var⦄ * ⦃var⦄))
-      (IB : list (list bool))
   :
     disj VD (map slot VD)
     -> R ⊆ VD
@@ -80,7 +79,7 @@ Lemma reconstr_live_small_L
            (slot_merge slot Λ)
            (slot_lift_params slot ⊜ Λ ZL)
             G'
-           (do_spill slot s (clear_SpL sl) IB)
+           (do_spill slot s (clear_SpL sl) ZL Λ)
            (do_spill_rm slot (clear_SpL sl)))
         ⊆ R ∪ getL sl ∪ map slot (getSp sl ∪ M) ∪ G')
     -> getAnn
@@ -88,7 +87,7 @@ Lemma reconstr_live_small_L
            (slot_merge slot Λ)
            (slot_lift_params slot ⊜ Λ ZL)
             G
-           (do_spill slot s (clear_Sp sl) IB)
+           (do_spill slot s (clear_Sp sl) ZL Λ)
            (do_spill_rm slot (clear_Sp sl)))
         ⊆ R ∪ map slot (getSp sl ∪ M) ∪ G
 .
@@ -173,7 +172,7 @@ Proof.
         rewrite <- setsub.
         rewrite disj_minus_eq; eauto.
         eapply disj_incl; eauto.
-        rewrite <- map_singleton.
+        rewrite <- map_singleton; eauto.
         eauto with cset.
       * clear; cset_tac.
     + clear; cset_tac.
@@ -194,7 +193,6 @@ Lemma reconstr_live_small_Sp
       (slot : var -> var)
       (s : stmt)
       (Λ : list (⦃var⦄ * ⦃var⦄))
-      (IB : list (list bool))
   :
     disj VD (map slot VD)
     -> R ⊆ VD
@@ -204,7 +202,7 @@ Lemma reconstr_live_small_Sp
            (slot_merge slot Λ)
            (slot_lift_params slot ⊜ Λ ZL)
             G'
-           (do_spill slot s (clear_Sp sl) IB)
+           (do_spill slot s (clear_Sp sl) ZL Λ)
            (do_spill_rm slot (clear_Sp sl)))
         ⊆ R ∪ map slot (getSp sl ∪ M) ∪ G')
     -> getAnn
@@ -212,7 +210,7 @@ Lemma reconstr_live_small_Sp
            (slot_merge slot Λ)
            (slot_lift_params slot ⊜ Λ ZL)
             G
-           (do_spill slot s sl IB)
+           (do_spill slot s sl  ZL Λ)
            (do_spill_rm slot sl))
         ⊆ R ∪ map slot M ∪ G
 .
@@ -242,7 +240,6 @@ Lemma reconstr_live_small_s
       (slot : var -> var)
       (s : stmt)
       (Λ : list (⦃var⦄ * ⦃var⦄))
-      (IB : list (list bool))
   :
     disj VD (map slot VD)
     -> R ⊆ VD
@@ -254,7 +251,7 @@ Lemma reconstr_live_small_s
            (slot_merge slot Λ)
            (slot_lift_params slot ⊜ Λ ZL)
             G'
-           (do_spill slot s (clear_SpL sl) IB)
+           (do_spill slot s (clear_SpL sl)  ZL Λ)
            (do_spill_rm slot (clear_SpL sl)))
         ⊆ R ∪ getL sl ∪ map slot (getSp sl ∪ M) ∪ G')
     -> getAnn
@@ -262,7 +259,7 @@ Lemma reconstr_live_small_s
            (slot_merge slot Λ)
            (slot_lift_params slot ⊜ Λ ZL)
             G
-           (do_spill slot s sl IB)
+           (do_spill slot s sl ZL Λ)
            (do_spill_rm slot sl))
         ⊆ R ∪ map slot M ∪ G
 .
@@ -309,13 +306,12 @@ Lemma reconstr_live_small o
            (slot_merge slot Λ)
            (slot_lift_params slot ⊜ Λ ZL)
             G
-            (do_spill slot s sl (compute_ib ⊜ ZL Λ))
+            (do_spill slot s sl ZL Λ)
            (do_spill_rm slot sl))
         ⊆ R ∪ map slot M ∪ G
 .
 Proof.
   intros R_VD M_VD ra_VD inj_VD VD_disj rena pir2 Z_VD aeFree lvSnd spillSnd spilli.
-  unfold compute_ib.
   unfold union_fs in ra_VD.
   assert (injective_on (getSp sl) slot)
     as inj_Sp.
@@ -387,8 +383,7 @@ Proof.
       reflexivity.
   - repeat apply union_incl_split.
     + apply incl_union_left.
-      rewrite <- sla_list_union_EQ_extended_args.
-      eapply lifted_args_in_RL_slot_SpM; eauto.
+      rewrite lifted_args_in_RL_slot_SpM; eauto. reflexivity.
     + rewrite nth_rfmf; eauto.
       erewrite nth_zip; eauto.
       exploit Z_VD as Z_VD'; eauto.
@@ -397,7 +392,7 @@ Proof.
       assert (M_f ⊆ VD) as Mf_VD
           by (eapply Mf_VD with (R:=R) (M:=M); eauto).
       erewrite slp_union_minus_incl with (VD:=VD); eauto.
-      rewrite H18.
+      rewrite H16.
       rewrite <- lookup_set_minus_eq; eauto; swap 1 2.
       {
         eapply injective_on_incl with (D:=VD); eauto.
@@ -413,7 +408,6 @@ Proof.
   - rewrite fst_zip_pair; eauto with len.
     rewrite slot_merge_app.
     rewrite slot_lift_params_app; eauto with len.
-    rewrite <- zip_app; eauto with len.
     apply union_incl_split.
     assert (R \ K ∪ L ⊆ VD) as R'_VD
         by (eapply R'_VD with (R:=R) (M:=M); eauto).

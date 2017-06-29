@@ -2,7 +2,7 @@ Require Import List Map Env AllInRel Exp AppExpFree RenamedApart.
 Require Import IL Annotation AutoIndTac.
 Require Import Liveness.Liveness LabelsDefined.
 Require Import SpillSound DoSpill DoSpillRm SpillUtil ReconstrLive.
-Require Import ReconstrLiveSmall ReconstrLiveSound SetUtil InVD.
+Require Import SetUtil InVD.
 Require Import ToBeOutsourced.
 
 (** * VarInRegister *)
@@ -77,7 +77,7 @@ Proof.
   - intros N.
     eapply disj_VD; eauto.
     apply in_singleton.
-    rewrite <- map_singleton.
+    rewrite <- map_singleton; eauto.
     apply lookup_set_incl; eauto.
 Qed.
 
@@ -150,7 +150,7 @@ Lemma var_in_register_sound
     -> live_sound Imperative ZL Lv s al
     -> spill_live VD sl al
     -> spill_sound k ZL Λ (R,M) s sl
-    -> var_in_register VD (do_spill slot s sl (compute_ib ⊜ ZL Λ))
+    -> var_in_register VD (do_spill slot s sl ZL Λ)
 .
 Proof.
   intros R_VD M_VD disj_VD ra_VD rena lvSnd spilli spillSnd.
@@ -189,11 +189,10 @@ Proof.
   - econstructor; simpl; eauto.
     rewrite H8, H7, H6, R_VD, M_VD; clear; cset_tac.
   - destruct rena as [renaF rena2].
-    econstructor; simpl; eauto.
+    econstructor; simpl.
     + intros.
       inv_get.
       simpl.
-      rewrite <- zip_app; [| eauto with len].
       exploit H24 as spillSnd'; try eassumption.
       exploit renaF as renaF'; try eassumption.
       exploit H2 as H2'; try eassumption.
@@ -203,8 +202,7 @@ Proof.
       rewrite pair_eta with (p:=x0) in spillSnd'.
       eapply H1 with (R:=fst x0) (M:=snd x0); eauto.
       rewrite renaF', <- ra_VD; eauto.
-    + rewrite <- zip_app; [| eauto with len].
-      eapply IHlvSnd with (R:=R\K ∪ L) (M:=Sp ∪ M); eauto.
+    + eapply IHlvSnd with (R:=R\K ∪ L) (M:=Sp ∪ M); eauto.
       * eapply R'_VD with (VD:=VD) (M:=M); eauto.
       * rewrite H18, R_VD, M_VD; clear; cset_tac.
       * rewrite rena2, <- ra_VD; eauto.

@@ -238,12 +238,11 @@ Lemma sla_extargs_slp_length
       (l : lab)
       (Λ : list (⦃var⦄ * ⦃var⦄))
       (Y : args)
-      (NoDup: NoDupA eq Z)
   :
     length Y = length Z ->
     ❬slot_lift_args slot RM RMapp Y Z❭ = ❬slot_lift_params slot RM Z❭ .
 Proof.
-  intros H2.
-  rewrite slot_lift_params_length; eauto.
-  rewrite slot_lift_args_length; eauto.
+  intros Len.
+  general induction Len; simpl; eauto.
+  repeat cases; simpl; eauto.
 Qed.

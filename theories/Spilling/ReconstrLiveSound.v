@@ -11,24 +11,23 @@ Set Implicit Arguments.
 
 Lemma reconstr_live_sound_s
       (slot : var -> var) o
-      (ZL : list params)
+      (ZL' ZL : list params)
       (G : ⦃var⦄)
       (Λ : list (⦃var⦄ * ⦃var⦄))
       (Lv : list ⦃var⦄)
       (s : stmt)
       (sl : spilling)
-      (IB : list (list bool))
   :
     (forall G',
-        live_sound o ZL Lv
-                   (do_spill slot s (clear_SpL sl) IB)
-                   (reconstr_live (slot_merge slot Λ) ZL G'
-                                  (do_spill slot s (clear_SpL sl) IB)
+        live_sound o ZL' Lv
+                   (do_spill slot s (clear_SpL sl) ZL Λ)
+                   (reconstr_live (slot_merge slot Λ) ZL' G'
+                                  (do_spill slot s (clear_SpL sl) ZL Λ)
                                   (do_spill_rm slot (clear_SpL sl))))
-   -> live_sound o ZL Lv
-                (do_spill slot s sl IB)
-                (reconstr_live (slot_merge slot Λ) ZL G
-                               (do_spill slot s sl IB)
+   -> live_sound o ZL' Lv
+                (do_spill slot s sl ZL Λ)
+                (reconstr_live (slot_merge slot Λ) ZL' G
+                               (do_spill slot s sl ZL Λ)
                                (do_spill_rm slot sl)).
 Proof.
   intros sls.
@@ -118,11 +117,11 @@ Lemma reconstr_live_sound
     -> live_sound Imperative
                  ((slot_lift_params slot) ⊜ Λ ZL)
                  (slot_merge slot Λ)
-                 (do_spill slot s sl (compute_ib ⊜ ZL Λ))
+                 (do_spill slot s sl ZL Λ)
                  (reconstr_live (slot_merge slot Λ)
                                 ((slot_lift_params slot) ⊜ Λ ZL)
                                  G
-                                 (do_spill slot s sl (compute_ib ⊜ ZL Λ))
+                                 (do_spill slot s sl ZL Λ)
                                 (do_spill_rm slot sl))
 .
 Proof.
@@ -166,7 +165,7 @@ Proof.
         by (eapply R'_VD with (R:=R) (M:=M); eauto).
     assert (Sp ∪ M ⊆ VD) as M'_VD
         by (eapply M'_VD with (R:=R) (M:=M); eauto).
-    econstructor; eauto.
+    econstructor.
     + eapply IHlvSnd1 with (ra:=ans) (R:=R\K ∪ L); eauto.
       rewrite rena1. eauto.
     + eapply IHlvSnd2 with (ra:=ant) (R:=R\K ∪ L); eauto.
@@ -184,7 +183,7 @@ Proof.
     eapply get_get_eq in H; eauto.
     subst Z0.
 
-    econstructor; eauto.
+    econstructor.
     + eapply zip_get; eauto.
     + simpl.
       unfold slot_merge.
@@ -206,18 +205,20 @@ Proof.
         as nth_slp by (erewrite nth_zip; eauto; simpl; reflexivity).
       rewrite nth_slp.
       clear; cset_tac.
-    + unfold compute_ib.
-      erewrite nth_zip; eauto.
+    + erewrite !get_nth; try eassumption.
       apply sla_extargs_slp_length; eauto.
     + intros; inv_get.
-      erewrite nth_zip; eauto.
-      erewrite nth_zip in H; eauto.
-      assert (get_x := H).
-      eapply get_Y_from_extargs in get_x as [n' get_x].
+      erewrite !nth_zip; eauto.
+      erewrite !get_nth in H; eauto.
+      erewrite !get_nth; eauto using map_get_1. simpl.
+      edestruct slot_lift_args_get; eauto; dcr; subst.
       exploit H5 as is_var; eauto.
       invc is_var.
+      unfold choose_y; repeat cases; simpl in *.
+      * eapply live_op_sound_incl; [ eapply Op.live_freeVars |]; simpl.
+      * rewrite choose_y_freeVars.
       apply live_op_sound_incl
-      with (lv':= match slot_lift_args slot M' (Var v) with
+      with (lv':= match slot_lift_args slot (R_f,M_f) (R', M') Y Z with
                   | Var v => singleton v
                   | _ => ∅
                   end
@@ -236,7 +237,7 @@ Proof.
           eapply get_list_union_map; eauto;
           eapply map_get_eq; eauto;
           simpl;
-          decide (v ∈ M'); simpl; eauto.
+          decide (v ∈ M'); simpl; eauto.*)
   - rewrite do_spill_empty by apply count_clear_zero.
     unfold do_spill_rec.
     rewrite do_spill_rm_empty by apply count_clear_zero.
@@ -260,14 +261,12 @@ Proof.
       rewrite slot_lift_params_app; eauto with len.
 
       apply live_sound_monotone with (LV:= slot_merge slot (rms ++ Λ)).
-      * rewrite <- zip_app.
-        eapply IHlvSnd with (ra:=ant) (R:=R\K ∪ L) (M:=Sp ∪ M); eauto.
+      * eapply IHlvSnd with (ra:=ant) (R:=R\K ∪ L) (M:=Sp ∪ M); eauto.
         -- eapply R'_VD with (R:=R) (M:=M); eauto.
         -- eapply M'_VD with (R:=R) (M:=M); eauto.
         -- rewrite rena2; eauto.
         -- eapply getAnn_als_EQ_merge_rms; eauto.
         -- eapply get_ofl_VD; eauto.
-        -- eauto with len.
       * rewrite <- slot_merge_app.
         apply PIR2_app with (L2:=slot_merge slot Λ);
           swap 1 2.
@@ -275,8 +274,7 @@ Proof.
           apply PIR2_refl; eauto.
         }
         apply PIR2_get.
-        -- rewrite <- zip_app.
-           intros n x x' H4 H5.
+        -- intros n x x' H4 H5.
            unfold slot_merge in H5.
            inv_get; simpl.
            rename x into Zs.
@@ -316,15 +314,8 @@ Proof.
            ++ rewrite renaF'; eauto.
            ++ eapply getAnn_als_EQ_merge_rms; eauto.
            ++ eapply get_ofl_VD; eauto.
-           ++ eauto with len.
 
-        -- rewrite <- zip_app.
-           rewrite map_length.
-           ++ rewrite zip_length2.
-              ** rewrite zip_length2; eauto with len.
-              ** rewrite zip_length2, map_length;
-                   eauto with len.
-           ++ eauto with len.
+        -- len_simpl. unfold slot_merge. rewrite map_length. reflexivity.
     + symmetry.
       apply zip_length2.
       repeat rewrite length_map.
@@ -337,8 +328,7 @@ Proof.
       rewrite slot_lift_params_app; eauto with len.
 
       apply live_sound_monotone with (LV:= slot_merge slot (rms ++ Λ)).
-      * rewrite <- zip_app; eauto with len.
-        assert ((fst x2, snd x2) = x2)
+      * assert ((fst x2, snd x2) = x2)
           by (destruct x2; simpl; reflexivity).
         rewrite <- H4 in H30.
         exploit H23; eauto.
@@ -358,7 +348,6 @@ Proof.
            unfold slot_merge in H5.
            inv_get; simpl.
            rewrite slot_merge_app.
-           rewrite <- zip_app; eauto with len.
            exploit H19; eauto.
            exploit H23; eauto.
            exploit H9; eauto.
