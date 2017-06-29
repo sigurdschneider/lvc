@@ -64,7 +64,8 @@ Inductive spill_sound7 (k:nat) :
       (getΛ : get Λ (counted f) (R_f,M_f))
       (Rf_sub : R_f \ of_list Z ⊆ R)
       (Mf_sub : M_f \ of_list Z ⊆ M)
-      (inVar : list_union (Op.freeVars ⊝ Y) ⊆ R ∪ M')
+      (inVar : list_union (Op.freeVars ⊝ Y) ⊆ R' ∪ M')
+      (R_sub : R' ⊆ R)
       (M_sub : M' ⊆ M)
       : spill_sound7 k ZL Λ (R,M) (stmtApp f Y)
                      (ann0 (Sp,L, (R', M')::nil))
@@ -280,7 +281,6 @@ Proof.
   - eapply SpillSound.SpillApp;
       set_simpl; eauto with cset.
     + set_simpl; eauto.
-    + set_simpl; eauto.
   - eapply SpillSound.SpillFun;
       set_simpl; eauto with cset.
     + instantiate (1:={}). set_simpl. eauto.
@@ -307,6 +307,3 @@ Proof.
     econstructor; eauto.
   intros. exploit H4; eauto.
 Qed.
-
-                                                                            
-      
