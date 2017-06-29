@@ -35,10 +35,10 @@ Fixpoint reg_live
         let lv2 := reg_live ZL Lv ∅ s2 sl2 in
         ann2 (G ∪ Sp ∪ ((getAnn lv1 ∪ getAnn lv2 ∪ Op.freeVars e) \ L)) lv1 lv2
 
-    | stmtApp f Y, ann0 (Sp, L, (_,Sl)::nil)
+    | stmtApp f Y, ann0 (Sp, L, (R',M')::nil)
       => let blv := nth (counted f) Lv ∅ in
         let Z   := nth (counted f) ZL nil in
-        ann0 (G ∪ Sp ∪ (((list_union (Op.freeVars ⊝ Y) \ Sl) ∪ blv \ of_list Z) \ L))
+        ann0 (G ∪ Sp ∪ (((list_union (Op.freeVars ⊝ Y) ∩ R') ∪ blv \ of_list Z) \ L))
 
     | stmtFun F t, annF (Sp, L, rms) sl_F sl_t
       => let lv_t := reg_live (fst ⊝ F ++ ZL) (fst ⊝ rms ++ Lv) ∅ t sl_t in
@@ -113,7 +113,7 @@ Proof.
   - rewrite H1, H. clear; cset_tac.
   - rewrite H, H1, IHspillSnd1, IHspillSnd2; simpl; eauto. clear; cset_tac.
   - eapply PIR2_nth_2 in pir2 as [Rl [get_Rl Rl_sub]].
-    + erewrite !get_nth; eauto. simpl. rewrite Rl_sub, H, H4, H6. clear; cset_tac.
+    + erewrite !get_nth; eauto. simpl. rewrite Rl_sub, H, H4, H6, H7. clear; cset_tac.
     + eapply map_get_eq; eauto.
   - rewrite reg_live_G_eq. rewrite H, IHspillSnd; eauto.
     + simpl; clear; cset_tac.
@@ -140,9 +140,9 @@ Proof.
   - eapply PIR2_nth_2 with (blk:=R_f) in pir2 as [Rl [get_Rl Rl_sub]]; [|eapply map_get_eq;eauto].
     erewrite !get_nth; eauto.
     econstructor; eauto. unfold is_rlive_min.
-    intros. rewrite Rl_sub. invc H8. eapply get_get_eq with (x:=Z) in H22;eauto. subst Z0.
-    eapply get_get_eq with (x':=(R_f,M_f)) in H23; eauto. invc H23.
-    rewrite H17, H24, H26. clear; cset_tac.
+    intros. rewrite Rl_sub. invc H9. eapply get_get_eq with (x:=Z) in H23;eauto. subst Z0.
+    eapply get_get_eq with (x':=(R_f,M_f)) in H24; eauto. invc H24.
+    rewrite H18, H25, H27, H28. clear; cset_tac.
   - econstructor; eauto.
     + intros. inv_get.
       eapply rlive_min_G_anti.
@@ -191,17 +191,22 @@ Proof.
       * setoid_rewrite <-incl_right at 4. clear; cset_tac.
     + setoid_rewrite <-incl_right at 2. clear; cset_tac.
     + setoid_rewrite <-incl_right at 2. clear; cset_tac.
-  - assert (pir2' := pir2). eapply PIR2_flip in pir2'. eapply PIR2_nth in pir2'.
-    destruct pir2', H8.
+  - assert (pir2' := pir2). eapply PIR2_flip in pir2'. eapply PIR2_nth in pir2'; eauto.
+    destruct pir2', H9.
     econstructor; eauto.
     + clear; cset_tac.
     + simpl. erewrite !get_nth; eauto. clear; cset_tac.
     + intros. inv_get.
       apply live_op_sound_incl with (lv':=Op.freeVars y).
       * apply Op.live_freeVars.
-      * erewrite !get_nth; eauto.
-        erewrite <-incl_list_union with (s:=Op.freeVars y); eauto; clear; cset_tac.
-    + eauto.
+      * erewrite <-incl_list_union with (s:=Op.freeVars y); eauto.
+        rewrite set_decomp with (s:= Op.freeVars y) (t:= M').
+        apply union_incl_split.
+        -- clear; cset_tac.
+        -- eapply get_live_op_sound in H6; eauto. apply Op.freeVars_live in H6.
+           rewrite <-inter_subset_equal with (s':= R' ∪ M'); [|clear - H6; cset_tac].
+           clear; cset_tac.
+    + rewrite H7 at 1. erewrite !get_nth; eauto. 
   - simpl.
     econstructor.
     + setoid_rewrite <-incl_right at 3. clear; cset_tac.

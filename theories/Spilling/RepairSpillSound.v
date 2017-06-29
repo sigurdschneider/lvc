@@ -179,18 +179,20 @@ Proof.
         rewrite  <-minus_union, minus_minus. rewrite incl_minus_union; [|clear; cset_tac].
         subst L'. rewrite <-incl_pick_load. rewrite <-H9. clear. cset_tac.
       * subst Sp'. rewrite <-H11. clear; cset_tac.
-      * setoid_rewrite set_decomp with (t:=R \ K' ∪ L') at 1.
+      * setoid_rewrite set_decomp with (t:=R' ∩ (R \ K' ∪ L')) at 1.
         apply union_incl_split;[clear;cset_tac|].
         setoid_rewrite <-incl_right at 2. setoid_rewrite <-incl_left at 2.
-        enough (list_union (Op.freeVars ⊝ Y) \ (R \ K' ∪ L') ⊆ Sp' ∪ M) as inSpM
+        enough (list_union (Op.freeVars ⊝ Y) \ (R' ∩ (R \ K' ∪ L')) ⊆ Sp' ∪ M) as inSpM
             by (clear - inSpM; cset_tac).
         setoid_rewrite <-inter_subset_equal with (s':=list_union (Op.freeVars ⊝ Y)) at 2;
           [|clear;cset_tac].
         setoid_rewrite H3 at 2. rewrite lv_RM. rewrite union_meet_distr_l.
         rewrite minus_dist_union. apply union_incl_split.
-        -- rewrite minus_dist_intersection. setoid_rewrite <-minus_union at 2. rewrite minus_minus.
-           subst Sp'. clear; cset_tac.
+        -- rewrite minus_dist_intersection. admit. (*
+           setoid_rewrite <-minus_union at 2. rewrite minus_minus.
+           subst Sp'. clear; cset_tac.*)
         -- clear; cset_tac.
+      * clear; cset_tac. 
       * rewrite lv_RM in *. subst K'.
         rewrite pick_kill_incl at 1. clear; cset_tac.
     + repeat rewrite (not_get_nth_default _ f); eauto. simpl.
@@ -230,20 +232,22 @@ Proof.
         rewrite  <-minus_union, minus_minus. rewrite incl_minus_union; [|clear; cset_tac].
         subst L'. rewrite <-incl_pick_load. rewrite <-H9. clear. cset_tac.
       * subst Sp'. rewrite <-H11. clear; cset_tac.
-      * setoid_rewrite set_decomp with (t:=R \ K' ∪ L') at 1.
+      * setoid_rewrite set_decomp with (t:=∅ ∩ (R \ K' ∪ L')) at 1.
         apply union_incl_split;[clear;cset_tac|].
         setoid_rewrite <-incl_right at 2. setoid_rewrite <-incl_left at 2.
-        enough (list_union (Op.freeVars ⊝ Y) \ (R \ K' ∪ L') ⊆ Sp' ∪ M) as inSpM
+        enough (list_union (Op.freeVars ⊝ Y) \ (∅ ∩ (R \ K' ∪ L')) ⊆ Sp' ∪ M) as inSpM
             by (clear - inSpM; cset_tac).
         setoid_rewrite <-inter_subset_equal with (s':=list_union (Op.freeVars ⊝ Y)) at 2;
           [|clear;cset_tac].
         setoid_rewrite H3 at 2. rewrite lv_RM. rewrite union_meet_distr_l.
         rewrite minus_dist_union. apply union_incl_split.
-        -- rewrite minus_dist_intersection. setoid_rewrite <-minus_union at 2. rewrite minus_minus.
-           subst Sp'. clear; cset_tac.
+        -- rewrite minus_dist_intersection. admit.
+           (*setoid_rewrite <-minus_union at 2. rewrite minus_minus.
+           subst Sp'. clear; cset_tac. *)
         -- clear; cset_tac.
-      * rewrite lv_RM in *. subst K'.
-        rewrite pick_kill_incl at 1. clear; cset_tac.
+      * rewrite lv_RM in *. rewrite meet_incl; clear; cset_tac. (*subst K'
+        rewrite pick_kill_incl at 1. clear; cset_tac.*)
+      * clear ; cset_tac.
   - destruct a. destruct p as [Sp L]. cbn in *.
     set (L' := pick_load k R M Sp L (Op.freeVars e)) in *.
     econstructor; eauto.
@@ -321,4 +325,5 @@ Proof.
       * eapply PIR2_app; eauto.
       * rewrite map_app. eapply PIR2_app; eauto.
         apply stretch_rms_lv. eauto with len.
-Qed.
+        
+eQed.

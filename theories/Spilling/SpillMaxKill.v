@@ -78,7 +78,7 @@ Inductive spill_max_kill (k:nat) :
       (f : lab)
       (Z : params)
       (Y : args)
-    : let K := R \ (list_union (Op.freeVars ⊝ Y) \ M' ∪  (R_f \ of_list Z)) ∪ (R ∩ L) in
+    : let K := R \ (R' ∪ (R_f \ of_list Z)) ∪ (R ∩ L) in
       Sp ⊆ R
       -> L ⊆ Sp ∪ M
       -> cardinal (R\K ∪ L) <= k
@@ -86,7 +86,8 @@ Inductive spill_max_kill (k:nat) :
       -> get Λ (counted f) (R_f,M_f)
       -> R_f \ of_list Z ⊆ R\K ∪ L
       -> M_f \ of_list Z ⊆ Sp ∪ M
-      -> list_union (Op.freeVars ⊝ Y) ⊆ (R\K ∪ L) ∪ M'
+      -> list_union (Op.freeVars ⊝ Y) ⊆ R' ∪ M'
+      -> R' ⊆ R\K ∪ L
       -> M' ⊆ Sp ∪ M
       -> spill_max_kill k ZL Λ (R,M) (stmtApp f Y) (ann0 Rlv) (ann0 (Sp,L, (R', M')::nil))
 
@@ -211,6 +212,8 @@ Proof.
         subst K'. rewrite <-minus_union, minus_minus.
         setoid_rewrite <-rlv_sub' at 1. apply not_incl_minus; [clear; cset_tac|].
         subst Kx'. clear; cset_tac.
+      (* (*rewrite Rincl. subst Kx'. subst K'. rewrite <-minus_union, minus_minus, minus_minus.*)
+        admit.        *)
     + subst K'. rewrite <-minus_union. rewrite incl_minus_union;[|clear;cset_tac].
       rewrite minus_minus, <-rlv_sub'.
       apply Exp.freeVars_live in H16. clear - H16; cset_tac.
@@ -250,6 +253,9 @@ Proof.
         rewrite H13. clear - R_sub. cbn. cset_tac.
       * rewrite <-inter_subset_equal with (s':=getAnn al1); [|clear;cset_tac]. setoid_rewrite H17 at 1.
         rewrite <-minus_union, minus_minus. setoid_rewrite rlv_sub' at 1. clear; cset_tac.
+      (* rewrite Rincl. rewrite <-minus_union, minus_minus.
+        setoid_rewrite incl_minus_union at 2; [|clear;cset_tac]. 
+        admit.*)
     + eapply IHspillSnd2; eauto.
       * cbn in R_sub.
         rewrite <-minus_union, minus_minus, H6, H17, H18, rlv_sub', H12.
@@ -257,27 +263,20 @@ Proof.
         rewrite H19. clear - R_sub. cbn. cset_tac.
       * rewrite <-inter_subset_equal with (s':=getAnn al2); [|clear;cset_tac]. setoid_rewrite H18 at 1.
         rewrite <-minus_union, minus_minus. setoid_rewrite rlv_sub' at 1. clear; cset_tac.
+      (* admit.*)
   - inv_get. cbn in *.
     econstructor; eauto;
-      set (K':= R'0 \ (list_union (Op.freeVars ⊝ Y) \ M' ∪ R_f) ∪ (R'0 ∩ of_list Z) ∪ (R'0 ∩ L)) in *.
-    + rewrite H16; eauto.
+      set (K':= R'0 \ (R' ∪ (R_f \ of_list Z)) ∪ (R'0 ∩ L)) in *.
+    + rewrite H17; eauto.
     + rewrite subset_cardinal; eauto.
-      subst K'. setoid_rewrite union_comm at 4. rewrite <-minus_union, minus_minus.
-      rewrite H6. rewrite H4. clear - H4 H6. cset_tac.
+      subst K'. rewrite H7. rewrite union_assoc. rewrite H4. clear; cset_tac.
     + subst K'. rewrite <-minus_union, minus_minus.
-      setoid_rewrite <-rlv_sub' at 1.
-      rewrite <-inter_subset_equal with (s':=R_f \ of_list Z);[|clear;cset_tac].
-      setoid_rewrite H20 at 2. clear. cset_tac.
+      rewrite <-inter_subset_equal with (s':=lv ∪ L); eauto.
+      setoid_rewrite <-rlv_sub' at 1. clear; cset_tac.
     + subst K'. rewrite <-minus_union, minus_minus.
       rewrite incl_minus_union; [|clear; cset_tac].
-      setoid_rewrite <-inter_subset_equal with (s':=list_union (Op.freeVars ⊝ Y)) at 1;
-        [|clear;cset_tac].
-      setoid_rewrite list_union_incl at 1; eauto.
-      * instantiate(1:=R'0 ∪ L ∪ M').
-        clear;cset_tac.
-      * intros. inv_get. exploit H21; eauto. apply Op.freeVars_live in H9. rewrite H9, <-rlv_sub'.
-        clear; cset_tac.
-      * clear; cset_tac.
+      setoid_rewrite <-inter_subset_equal with (s':=lv ∪ L) at 1; eauto.
+      rewrite <-rlv_sub'. clear; cset_tac.
   - econstructor; eauto.
     + rewrite <-rlv_sub'. eauto.
     + rewrite <-minus_union, minus_minus. eapply rlive_min_incl_R in spillSnd; eauto;
@@ -332,10 +331,10 @@ Proof.
   - econstructor; eauto.
   - eapply PIR2_nth_2 in Λeq as [[R_f' M_f'] [get_blk' blk'_eq]]; eauto. cbn in *. invc blk'_eq.
     eapply SpillMKApp with (R_f:=R_f') (M_f:=M_f'); eauto.
-    + rewrite subset_cardinal; eauto. rewrite H11. cset_tac.
-    + rewrite H11. cset_tac.
-    + rewrite H13. cset_tac.
-    + rewrite H11. cset_tac.
+    + rewrite subset_cardinal; eauto. rewrite H12. cset_tac.
+    + rewrite H12. cset_tac.
+    + rewrite H14. cset_tac.
+    + rewrite H12. cset_tac.
   - econstructor; eauto.
     + intros. inv_get. eapply H6; eauto.
       * apply PIR2_app; eauto. 

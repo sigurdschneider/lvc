@@ -27,6 +27,7 @@ Inductive rlive_sound
     -> get Lv (counted l) blv
     -> (blv \ of_list Z) ⊆ lv ∪ L
     -> (forall n y, get Y n y -> live_op_sound y (lv ∪ M' ∪ L))
+    -> R' ⊆ lv ∪ L
     -> rlive_sound ZL Lv (stmtApp l Y) (ann0 (Sp,L,(R',M')::nil)) (ann0 lv)
 | RLiveReturn ZL Lv e Sp L lv
   : Sp ⊆ lv
