@@ -3,6 +3,7 @@ Require Import IL Annotation AutoIndTac.
 Require Import Liveness.Liveness LabelsDefined.
 Require Import SpillSound DoSpill DoSpillRm SpillUtil ReconstrLive AnnP InVD SetUtil.
 Require Import ToBeOutsourced.
+Require Export SlotLiftParams.
 
 
 Set Implicit Arguments.
@@ -21,88 +22,10 @@ Definition reconstr_live_do_spill
     reconstr_live (slot_merge slot Λ)
                   ((slot_lift_params slot) ⊜ Λ ZL)
                   G
-                  (do_spill slot s sl (compute_ib ⊜ ZL Λ))
+                  (do_spill slot s sl ZL Λ)
                   (do_spill_rm slot sl)
 .
 
-Lemma slp_union_incl
-      (s t VD : ⦃var⦄)
-      (Z : params)
-      (slot : var -> var)
-  :
-    injective_on VD slot
-    -> s ⊆ VD
-    -> t ⊆ VD
-    -> of_list Z ⊆ VD
-    -> (s ∩ of_list Z) ∪ (map slot t ∩ map slot (of_list Z))
-                      ⊆ of_list (slot_lift_params slot (s,t) Z)
-.
-Proof.
-  intros inj_VD s_VD t_VD Z_VD.
-  induction Z; simpl in *; eauto.
-  - rewrite map_empty; eauto. cset_tac.
-  - apply add_incl in Z_VD as [a_VD Z_VD].
-    specialize (IHZ Z_VD).
-    decide (a ∈ s ∩ t).
-    + apply inter_iff in i as [a_s a_t].
-      apply union_incl_split; simpl; eauto.
-      * rewrite <- IHZ.
-        clear; cset_tac.
-      * rewrite lookup_set_add; eauto.
-        rewrite <- IHZ. unfold lookup_set.
-        clear; cset_tac.
-    + decide (a ∈ s).
-      * assert (a ∉ t ∩ {a; of_list Z}) as an_tZ by cset_tac.
-        assert (map slot t ∩ map slot {a; of_list Z}
-                    ⊆ map slot t ∩ map slot (of_list Z)) as elim_a. {
-          rewrite lookup_set_add; eauto.
-          unfold lookup_set.
-          assert (forall (u v : ⦃var⦄) (x : var),
-                     u ∩ {x; v} ⊆ (u ∩ v) ∪ (u ∩ singleton x))
-            as demo by (clear; cset_tac).
-          rewrite demo. apply union_incl_split.
-          - reflexivity.
-          - rewrite <- map_singleton.
-            rewrite <- injective_on_map_inter; eauto.
-            + assert (t ∩ singleton a [=] ∅) as ta_empty by cset_tac.
-              rewrite ta_empty.
-              rewrite map_empty; eauto.
-              clear; cset_tac.
-            + clear - a_VD; cset_tac.
-        }
-        rewrite elim_a.
-        simpl.
-        rewrite <- IHZ.
-        clear; cset_tac.
-      * assert (a ∉ s ∩ {a; of_list Z}) as an_sZ by cset_tac.
-        assert (s ∩ {a; of_list Z} ⊆ s ∩ (of_list Z)) as elim_a. {
-          hnf; intros. decide (a0 = a).
-          + subst a0. contradiction.
-          + cset_tac'. destruct H1; eauto.
-        }
-        rewrite elim_a; simpl.
-        rewrite <- IHZ.
-        rewrite lookup_set_add; eauto. unfold lookup_set.
-        clear; cset_tac.
-Qed.
-
-
-Lemma slp_union_minus_incl
-      (s t VD : ⦃var⦄)
-      (Z : params)
-      (slot : var -> var)
-  : injective_on VD slot
-    -> s ⊆ VD
-    -> t ⊆ VD
-    -> of_list Z ⊆ VD
-    -> (s ∪ map slot t) \ of_list (slot_lift_params slot (s,t) Z)
-               ⊆ s \ of_list Z ∪ map slot t \ map slot (of_list Z)
-.
-Proof.
-  intros.
-  rewrite <- slp_union_incl with (s:=s); eauto.
-  unfold lookup_set. cset_tac'; eauto 20 with cset.
-Qed.
 
 
 
@@ -158,37 +81,6 @@ Proof.
      eapply get_app_right_ge with (L':=ZL) in n0; eauto.
 Qed.
 
-Lemma lifted_args_in_RL_slot_SpM
-      (Y : args)
-      (R M : ⦃var⦄)
-      (slot : var -> var)
-      (H5 : forall (n : nat) (y : op), get Y n y -> isVar y)
-      (Sp L K M' : ⦃var⦄)
-      (H21 : list_union (Op.freeVars ⊝ Y) ⊆ (R \ K ∪ L) ∪ M')
-      (H22 : M' ⊆ Sp ∪ M)
-  : list_union (Op.freeVars ⊝ slot_lift_args slot M' ⊝ Y) ⊆ R ∪ L ∪ map slot (Sp ∪ M) .
-Proof.
-  apply list_union_incl.
-  intros; inv_get.
-  unfold slot_lift_args.
-  exploit H5; eauto.
-  destruct x0;
-    isabsurd.
-  * decide (n0 ∈ M'); simpl.
-    -- rewrite <- map_singleton.
-       apply incl_union_right.
-       apply lookup_set_incl; eauto.
-       revert H22. revert i.
-       clear; cset_tac.
-    -- apply incl_singleton.
-       eapply get_live_op_sound in H21; eauto.
-       inv H21.
-       revert H2. revert n1.
-       clear; cset_tac.
-  * clear; cset_tac.
-Qed.
-
-
 Lemma nth_rfmf
       (l : lab)
       (Λ : 〔⦃var⦄ * ⦃var⦄〕)
@@ -229,21 +121,6 @@ Proof.
   reflexivity.
 Qed.
 
-Lemma sla_list_union_EQ_extended_args
-      (slot : var -> var)
-      (Sl : ⦃var⦄)
-      (Y : args)
-      (ib : list bool)
-
-  : list_union (Op.freeVars ⊝ slot_lift_args slot Sl ⊝ Y)
-               [=] list_union (Op.freeVars ⊝ slot_lift_args slot Sl
-                                           ⊝ (extend_args Y ib)).
-Proof.
-  apply list_union_elem_eq_ext.
-  eapply elem_eq_map. intuition.
-  apply slot_lift_args_elem_eq_ext.
-  apply extend_args_elem_eq_ext.
-Qed.
 
 
 
