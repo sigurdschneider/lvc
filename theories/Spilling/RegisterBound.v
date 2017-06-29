@@ -43,15 +43,13 @@ Proof.
   destruct s, an;
     simpl;
     try destruct a;
-    simpl; eauto;
+    simpl; try eassumption;
       invc base;
-      econstructor;
-      eauto;
+      econstructor; try eassumption;
       clear biG';
-  erewrite subset_cardinal; eauto;
-  repeat rewrite union_meet_distr_l;
-  rewrite Gincl;
-  clear; cset_tac.
+      erewrite subset_cardinal; try eassumption;
+        repeat rewrite union_meet_distr_l;
+        rewrite Gincl; try reflexivity.
 Qed.
 
 
@@ -112,7 +110,7 @@ Proof.
     + rewrite disj_empty_cut; eauto.
       * clear; cset_tac.
       * rewrite xs_R, R_VD; clear; cset_tac.
-    + rewrite <- map_singleton.
+    + rewrite <- map_singleton; eauto.
       rewrite disj_empty_cut; eauto.
       * clear; cset_tac.
       * rewrite a_R, R_VD; clear; cset_tac.
@@ -183,13 +181,13 @@ Proof.
     + rewrite a_R'.
       clear; cset_tac.
   - eapply IHxs with (R:=R) ; eauto.
-    rewrite <- map_singleton.
+    rewrite <- map_singleton; eauto.
     rewrite disj_empty_cut; eauto.
     + clear; cset_tac.
     + rewrite a_R', R'_VD.
       reflexivity.
     + eapply bounded_in_incl; eauto.
-      rewrite <- map_singleton.
+      rewrite <- map_singleton; eauto.
       rewrite disj_empty_cut; eauto.
       * clear; cset_tac.
       * rewrite a_R', R'_VD.
@@ -298,7 +296,7 @@ Proof.
       * clear - R_VD; cset_tac.
       * rewrite disj_empty_cut; eauto.
         clear; cset_tac.
-      * rewrite <- map_singleton.
+      * rewrite <- map_singleton; eauto.
         rewrite disj_empty_cut; eauto.
         clear; cset_tac.
       * rewrite G_R.
@@ -333,63 +331,49 @@ Proof.
               clear; cset_tac.
 Qed.
 
-Lemma Op_freeVars_sla
-      (slot : var -> var)
-      (y : op)
-      (Sl : ⦃var⦄)
-  :
-    isVar y
-    -> Op.freeVars (slot_lift_args slot Sl y)
-                ⊆ Op.freeVars y \ Sl ∪ map slot (Op.freeVars y)
-.
-Proof.
-  intros isvar.
-  destruct y; isabsurd; simpl; eauto.
-  decide (n ∈ Sl); simpl.
-  eauto with cset.
-  cset_tac.
-Qed.
-
-
-Lemma list_union_sla_extract
+Lemma slot_lift_args_RMapp_incl
       (slot : var -> var)
       (Y : args)
-      (Sl : ⦃var⦄)
+      RM RMapp Z
   :
     (forall (n : nat) (y : op), get Y n y -> isVar y)
-    -> list_union (Op.freeVars ⊝ slot_lift_args slot Sl ⊝ Y)
-               ⊆ list_union (Op.freeVars ⊝ Y) \ Sl
-               ∪ map slot (list_union (Op.freeVars ⊝ Y))
-.
+    -> (list_union (Op.freeVars ⊝ Y) ⊆ fst RMapp ∪ snd RMapp)
+    -> list_union (Op.freeVars ⊝ slot_lift_args slot RM RMapp Y Z)
+                 ⊆ fst RMapp ∪ map slot (snd RMapp).
 Proof.
-  intros aeFree.
-  general induction Y;
-    simpl; eauto.
-  { clear; cset_tac. }
-  rewrite union_comm.
-  rewrite list_union_start_swap.
-  setoid_rewrite union_comm at 4.
-  setoid_rewrite list_union_start_swap at 2.
-  setoid_rewrite union_comm at 6.
-  setoid_rewrite list_union_start_swap at 3.
-  rewrite IHY.
-  enough (Op.freeVars (slot_lift_args slot Sl a)
-                      ⊆ Op.freeVars a \ Sl ∪ map slot (Op.freeVars a))
-    as enouf.
-  {
-    rewrite !map_app; eauto.
-    rewrite map_empty; eauto.
-    rewrite enouf.
-    clear; cset_tac.
-  }
-  apply Op_freeVars_sla.
-  eapply aeFree; eauto.
-  econstructor; eauto.
-  intros; inv_get.
-  eapply aeFree; eauto.
-  econstructor; eauto.
+  general induction Y; destruct Z; simpl in *; only 1,2,3: eauto with cset.
+  revert H0.
+  exploit H as IV; eauto using get. invc IV. simpl.
+  repeat cases; simpl; norm_lunion; intro;
+    rewrite IHY; eauto using get; intros; clear IHY H.
+  - assert (v ∈ fst RMapp ∪ snd RMapp). cset_tac.
+    unfold choose_y; simpl; repeat cases; simpl.
+    + revert COND1. clear_all. cset_tac.
+    + revert COND1 COND2. clear_all. cset_tac.
+    + revert COND1. clear_all. cset_tac.
+    + revert H NOTCOND. clear_all. cset_tac.
+    + revert COND1. clear_all. cset_tac.
+    + exfalso. cset_tac.
+    + revert COND0 COND2. clear_all. cset_tac.
+    + revert COND0. clear_all. cset_tac.
+    + revert COND0. clear_all. cset_tac.
+    + revert COND1. clear_all. cset_tac.
+    + exfalso. revert H NOTCOND0 NOTCOND1. cset_tac.
+    + revert NOTCOND0 H. clear_all. cset_tac.
+  - rewrite <- H0. cset_tac.
+  - assert (v ∈ fst RMapp ∪ snd RMapp). cset_tac.
+    unfold choose_y; simpl; repeat cases; simpl.
+    + revert COND1. clear_all. cset_tac.
+    + revert NOTCOND0 H. clear_all. cset_tac.
+  - rewrite <- H0. cset_tac.
+  - assert (v ∈ fst RMapp ∪ snd RMapp). cset_tac.
+    unfold choose_y; simpl; repeat cases; simpl.
+    + revert COND0. clear_all. cset_tac.
+    + revert NOTCOND1 H. clear_all. cset_tac.
+    + revert COND. clear_all. cset_tac.
+    + revert NOTCOND2 H. clear_all. cset_tac.
+  - rewrite <- H0. cset_tac.
 Qed.
-
 
 
 
@@ -421,6 +405,10 @@ Lemma register_bounded
     -> (forall (Z : params) n,
           get ZL n Z
           -> of_list Z ⊆ VD)
+    -> (forall (n : nat) Z blv,
+          get ZL n Z ->
+          get Lv n blv ->
+          of_list Z [<=] blv)
     -> VD ∩ G ⊆ R
     -> ann_P (bounded_in VD k)
             (reconstr_live_do_spill slot Λ ZL G s sl)
@@ -428,7 +416,7 @@ Lemma register_bounded
 Proof.
   intros card_R inj_VD disj_VD R_VD M_VD ra_VD
          aeFree rena spillSnd spilli lvSnd
-         H16 Z_VD G_R.
+         H16 Z_VD Z_LV G_R.
   unfold reconstr_live_do_spill.
   general induction lvSnd;
     invc aeFree;
@@ -588,75 +576,51 @@ Proof.
     + erewrite nth_zip; eauto.
       unfold bounded_in.
       rewrite subset_cardinal; eauto.
-      rewrite <- sla_list_union_EQ_extended_args.
-      erewrite nth_zip; eauto.
-      rewrite nth_rfmf; eauto.
-      rewrite list_union_sla_extract; eauto.
-      rewrite slp_union_minus_incl; eauto.
-      * rewrite H20, H22.
-        rewrite lookup_set_union; eauto.
-        rewrite of_list_elements. unfold lookup_set.
-        rewrite empty_neutral_union_r.
-        repeat rewrite union_meet_distr_l.
-        assert (VD ∩ lookup_set slot M' ⊆ R \ K ∪ L)
-          as Sl_in.
-        {
-          rewrite disj_empty_cut; eauto.
-          - clear; cset_tac.
-          - rewrite H23, H12, R_VD, M_VD; clear; cset_tac.
-        }
-        assert (VD ∩ lookup_set slot (R \ K ∪ L) ⊆ R \ K ∪ L)
-          as rkl_in.
-        {
-          rewrite disj_empty_cut; eauto.
-          - clear; cset_tac.
-          - rewrite H13, H12, R_VD, M_VD; clear; cset_tac.
-        }
-        assert (VD ∩ map slot M_f \ map slot (of_list Z0) ⊆ R \ K ∪ L)
-          as mfZ_in.
-        {
-          rewrite minus_incl.
-          rewrite disj_empty_cut; eauto.
-          - clear; cset_tac.
-          - rewrite Mf_VD with (R:=R) (M:=M) (VD:=VD); eauto.
-        }
-        repeat apply union_incl_split; eauto; clear; cset_tac.
-      * rewrite Rf_VD with (R:=R) (M:=M) (VD:=VD) (L:=L); eauto.
-      * rewrite Mf_VD with (R:=R) (M:=M) (VD:=VD); eauto.
+      erewrite !get_nth; eauto using map_get_1. simpl.
+      rewrite slot_lift_args_RMapp_incl; simpl; eauto; [|rewrite H22; reflexivity].
+      rewrite of_list_elements.
+      eapply PIR2_nth in H16; eauto; dcr. inv_get. unfold merge in H8. simpl in *.
+      rewrite of_list_slot_lift_params; [|rewrite Z_LV; eauto; rewrite H8; reflexivity].
+      unfold union_fs in ra_VD. simpl in *.
+      rewrite H9 in *; clear H9 D'.
+      rewrite H23.
+      assert (M'VD:M' [<=] VD). {
+        rewrite H24, H12, R_VD, M_VD. eauto with cset.
+      }
+      assert (M_fVD:M_f ⊆ VD). {
+        rewrite Mf_VD with (R:=R) (M:=M) (VD:=VD); eauto.
+      }
+      rewrite empty_neutral_union_r.
+      repeat rewrite union_meet_distr_l.
+      rewrite (@disj_empty_cut VD); eauto.
+      rewrite minus_dist_union.
+      repeat rewrite union_meet_distr_l.
+      rewrite (@incl_minus _ _ (map slot M_f)).
+      rewrite (@disj_empty_cut VD); eauto.
+      rewrite empty_neutral_union_r.
+      assert (of_list Z ∩ R_f ⊆ of_list Z \ (M_f \ R_f) ∪ map slot (of_list Z \ (R_f \ M_f))). {
+        clear_all. cset_tac.
+      }
+      rewrite <- H4.
+      revert H20. clear_all. cset_tac.
     + erewrite nth_zip; eauto.
-      rewrite <- sla_list_union_EQ_extended_args.
-      erewrite nth_zip; eauto.
-      rewrite nth_rfmf; eauto.
-      rewrite list_union_sla_extract; eauto.
-      rewrite slp_union_minus_incl; eauto.
-      * rewrite H20, H22.
-        rewrite lookup_set_union; eauto.
-        rewrite of_list_elements.
+      rewrite slot_lift_args_RMapp_incl; eauto; simpl; [|rewrite H22; reflexivity].
+      erewrite !get_nth; eauto using map_get_1.
+      rewrite of_list_elements.
+      rewrite slp_union_minus_incl; eauto; simpl.
+      assert (M'VD:M' [<=] VD). {
+        rewrite H24, H12, R_VD, M_VD. eauto with cset.
+      }
+      assert (M_fVD:M_f ⊆ VD). {
+        rewrite Mf_VD with (R:=R) (M:=M) (VD:=VD); eauto.
+      }
+      * rewrite H20, H23.
         rewrite empty_neutral_union_r.
         repeat rewrite union_meet_distr_l.
-        assert (VD ∩ lookup_set slot M' ⊆ R ∪ L)
-          as Sl_in.
-        {
-          rewrite disj_empty_cut; eauto.
-          - clear; cset_tac.
-          - rewrite H23, H12, R_VD, M_VD; clear; cset_tac.
-        }
-        assert (VD ∩ lookup_set slot (R \ K ∪ L) ⊆ R ∪ L)
-          as rkl_in.
-        {
-          rewrite disj_empty_cut; eauto.
-          - clear; cset_tac.
-          - rewrite H13, H12, R_VD, M_VD; clear; cset_tac.
-        }
-        assert (VD ∩ map slot M_f \ map slot (of_list Z0) ⊆ R ∪ L)
-          as mfZ_in.
-        {
-          rewrite minus_incl.
-          rewrite disj_empty_cut; eauto.
-          - clear; cset_tac.
-          - rewrite Mf_VD with (R:=R) (M:=M) (VD:=VD); eauto.
-        }
-        repeat apply union_incl_split; eauto; clear; cset_tac.
+        rewrite (@disj_empty_cut VD); eauto.
+        rewrite minus_incl with (t:=map slot (of_list Z0)).
+        rewrite (@disj_empty_cut VD); eauto.
+        clear_all. cset_tac.
       * rewrite Rf_VD with (R:=R) (M:=M) (VD:=VD) (L:=L); eauto.
       * rewrite Mf_VD with (R:=R) (M:=M) (VD:=VD); eauto.
     + intros G' R'' G'_R' L_R' al_R' bound_R'.
@@ -687,7 +651,6 @@ Proof.
       clear; cset_tac.
 
   - destruct rena as [renaF rena2].
-    rewrite <- zip_app; eauto with len.
     eapply register_bound_s with (VD:=VD) (R:=R); simpl; eauto.
     + rewrite of_list_elements; assumption.
     + rewrite of_list_elements, H29, H28, R_VD, M_VD; clear; cset_tac.
@@ -763,6 +726,12 @@ Proof.
         -- eapply getAnn_als_EQ_merge_rms; eauto.
         -- intros.
            eapply get_ofl_VD; eauto.
+        -- intros.
+           eapply get_app_cases in H4 as [?|[? ?]]; inv_get.
+           edestruct H2; eauto. len_simpl.
+           eapply get_app_ge in H14. len_simpl.
+           rewrite <- H in *.
+           eapply Z_LV; eauto. len_simpl. rewrite <- H. eauto.
         -- setoid_rewrite pair_eta with (p:=x2) at 1.
            rewrite pair_eta with (p:=x2) in H22.
            eapply al_sub_RfMf in H22; eauto.
@@ -781,5 +750,11 @@ Proof.
         -- apply getAnn_als_EQ_merge_rms; eauto.
         -- intros.
            eapply get_ofl_VD; eauto.
+        -- intros.
+           eapply get_app_cases in H4 as [?|[? ?]]; inv_get.
+           edestruct H2; eauto. len_simpl.
+           eapply get_app_ge in H5. len_simpl.
+           rewrite <- H in *.
+           eapply Z_LV; eauto. len_simpl. rewrite <- H. eauto.
         -- clear; cset_tac.
 Qed.
