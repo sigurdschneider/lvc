@@ -74,7 +74,7 @@ Inductive spill_sound (k:nat) :
       -> get Λ (counted f) (R_f,M_f)
       -> R_f \ of_list Z ⊆ R\K ∪ L
       -> M_f \ of_list Z ⊆ Sp ∪ M
-      -> list_union (Op.freeVars ⊝ Y) ⊆ R' ∪ M'
+      -> list_union (Op.freeVars ⊝ Y) [=] R' ∪ M'
       -> R' ⊆ R\K ∪ L
       -> M' ⊆ Sp ∪ M
       -> spill_sound k ZL Λ (R,M) (stmtApp f Y)

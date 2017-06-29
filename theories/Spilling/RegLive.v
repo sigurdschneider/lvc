@@ -203,10 +203,11 @@ Proof.
         rewrite set_decomp with (s:= Op.freeVars y) (t:= M').
         apply union_incl_split.
         -- clear; cset_tac.
-        -- eapply get_live_op_sound in H6; eauto. apply Op.freeVars_live in H6.
+        -- apply incl_set_left in H6.
+           eapply get_live_op_sound in H6; eauto. apply Op.freeVars_live in H6.
            rewrite <-inter_subset_equal with (s':= R' ∪ M'); [|clear - H6; cset_tac].
            clear; cset_tac.
-    + rewrite H7 at 1. erewrite !get_nth; eauto. 
+    + erewrite !get_nth; eauto. rewrite H6. clear; cset_tac.
   - simpl.
     econstructor.
     + setoid_rewrite <-incl_right at 3. clear; cset_tac.

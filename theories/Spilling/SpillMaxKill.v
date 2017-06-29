@@ -86,7 +86,7 @@ Inductive spill_max_kill (k:nat) :
       -> get Λ (counted f) (R_f,M_f)
       -> R_f \ of_list Z ⊆ R\K ∪ L
       -> M_f \ of_list Z ⊆ Sp ∪ M
-      -> list_union (Op.freeVars ⊝ Y) ⊆ R' ∪ M'
+      -> list_union (Op.freeVars ⊝ Y) [=] R' ∪ M'
       -> R' ⊆ R\K ∪ L
       -> M' ⊆ Sp ∪ M
       -> spill_max_kill k ZL Λ (R,M) (stmtApp f Y) (ann0 Rlv) (ann0 (Sp,L, (R', M')::nil))
@@ -212,8 +212,6 @@ Proof.
         subst K'. rewrite <-minus_union, minus_minus.
         setoid_rewrite <-rlv_sub' at 1. apply not_incl_minus; [clear; cset_tac|].
         subst Kx'. clear; cset_tac.
-      (* (*rewrite Rincl. subst Kx'. subst K'. rewrite <-minus_union, minus_minus, minus_minus.*)
-        admit.        *)
     + subst K'. rewrite <-minus_union. rewrite incl_minus_union;[|clear;cset_tac].
       rewrite minus_minus, <-rlv_sub'.
       apply Exp.freeVars_live in H16. clear - H16; cset_tac.
@@ -253,9 +251,6 @@ Proof.
         rewrite H13. clear - R_sub. cbn. cset_tac.
       * rewrite <-inter_subset_equal with (s':=getAnn al1); [|clear;cset_tac]. setoid_rewrite H17 at 1.
         rewrite <-minus_union, minus_minus. setoid_rewrite rlv_sub' at 1. clear; cset_tac.
-      (* rewrite Rincl. rewrite <-minus_union, minus_minus.
-        setoid_rewrite incl_minus_union at 2; [|clear;cset_tac]. 
-        admit.*)
     + eapply IHspillSnd2; eauto.
       * cbn in R_sub.
         rewrite <-minus_union, minus_minus, H6, H17, H18, rlv_sub', H12.
@@ -263,7 +258,6 @@ Proof.
         rewrite H19. clear - R_sub. cbn. cset_tac.
       * rewrite <-inter_subset_equal with (s':=getAnn al2); [|clear;cset_tac]. setoid_rewrite H18 at 1.
         rewrite <-minus_union, minus_minus. setoid_rewrite rlv_sub' at 1. clear; cset_tac.
-      (* admit.*)
   - inv_get. cbn in *.
     econstructor; eauto;
       set (K':= R'0 \ (R' ∪ (R_f \ of_list Z)) ∪ (R'0 ∩ L)) in *.
