@@ -72,9 +72,12 @@ Fixpoint splitSpillKO
        let Z   := nth (counted f) ZL nil in
        let L   := R_f \ R \ of_list Z in
        let K    := kill_oracle (cardinal L - (k - cardinal R)) (R \ R_f) in
-       let Sp   := M_f \ M \ of_list Z ∪ (((list_union (Op.freeVars ⊝ Y) \ M) ∩ K)) in
-
-       ann0 (Sp,L, (R \ K ∪ L, list_union (Op.freeVars ⊝ Y) \ (R \ K ∪ L))::nil)
+       let fvY  := list_union (Op.freeVars ⊝ Y) in
+       let Sp   := M_f \ M \ of_list Z ∪ (((fvY \ M) ∩ K)) in
+       let R'   := R \ K ∪ L in
+       let Rapp := fvY ∩ R' in
+       let Mapp := fvY \ R' in
+       ann0 (Sp,L, (Rapp,Mapp)::nil)
 
   | stmtFun F t, annF LV als lv_t
     =>
@@ -425,6 +428,7 @@ general induction lvSound;
                                       (t:=of_list Z) (t':=of_list Z).
     * subst K. eapply kill_oracle_incl2.
     * eauto.
+  + clearbody K. clear_all. cset_tac.
   + clearbody K. clear_all. cset_tac.
   + subst K.
     assert (forall (s t : ⦃var⦄), s ⊆ s \ t ∪ t) by (clear; cset_tac).
