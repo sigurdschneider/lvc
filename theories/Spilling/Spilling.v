@@ -24,7 +24,7 @@ Definition spill (k:nat) (slot:var -> var)
   let fvl := to_list (getAnn lv) in
   let (R,M) := (of_list (take k fvl), of_list (drop k fvl)) in
   let spl := @splitSpill k nil nil R M s lv in
-  let s_spilled := do_spill slot s spl nil in
+  let s_spilled := do_spill slot s spl nil nil in
   let lv_spilled := reconstr_live nil nil ∅ s_spilled (do_spill_rm slot spl) in
   let s_fun := addParams s_spilled lv_spilled in
   (s_fun, lv_spilled).
