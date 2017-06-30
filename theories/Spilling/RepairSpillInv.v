@@ -206,15 +206,17 @@ Proof.
         rewrite <-Keq, <-Leq'. eauto.
   - cbn in sub_R.
     assert (Sp ∩ R [=] Sp) as Speq.
-    { apply inter_subset_equal. rewrite H20. eauto. }
+    { apply inter_subset_equal. rewrite H19. eauto. }
      assert (L ∩ (Sp ∩ R ∪ M) [=] L) as Leq
-        by (apply inter_subset_equal in H21; rewrite Speq, H21; eauto).
+        by (apply inter_subset_equal in H22; rewrite Speq; eauto).
     inv_get.
     set (R_f':= fst (nth (counted l) Λ' (∅,∅))) in *.
     set (M_f':= snd (nth (counted l) Λ' (∅,∅))) in *.
     set (L' := pick_load k R M Sp L (R_f' \ of_list Z)).
-    set (K' := pick_kill k R L' (R_f' \ of_list Z) (list_union (Op.freeVars ⊝ Y) \ M')).
-    set (Sp':= ((list_union (Op.freeVars ⊝ Y) ∩ K') ∪ (M_f' \ of_list Z)) \ M ∪ (Sp ∩ R)).
+    set (K' := pick_kill k R L' (R_f' \ of_list Z) (list_union (Op.freeVars ⊝ Y) ∩ R')).
+    set (R'':= (R' ∩ (R \ K' ∪ L')) ∩ list_union (Op.freeVars ⊝ Y)).
+    set (M'':= (list_union (Op.freeVars ⊝ Y) \ R'') ∪ (M' ∩ list_union (Op.freeVars ⊝ Y))).
+    set (Sp':= ((M'' ∪ (M_f' \ of_list Z)) ∩ (R \ M)) ∪ (Sp ∩ R)).
     assert (R_f = fst (nth (counted l) Λ ({}, {}))) as Rfeq.
     { erewrite get_nth; eauto; cbn; eauto. }
     assert (M_f = snd (nth (counted l) Λ ({}, {}))) as Mfeq.
@@ -223,33 +225,44 @@ Proof.
     {
       subst R_f R_f'.
       eapply PIR2_nth in Λeq as Λeq'; eauto.
-      destruct Λeq' as [[Rf' Mf'] [get_rmf rmf_eq]]. invc rmf_eq. rewrite H6.
+      destruct Λeq' as [[Rf' Mf'] [get_rmf rmf_eq]]. invc rmf_eq. rewrite H7.
       erewrite get_nth; eauto; cbn; eauto.
     }
     assert (M_f' [=] M_f) as Mfeq'.
     {
       subst M_f M_f'.
       eapply PIR2_nth in Λeq as Λeq'; eauto.
-      destruct Λeq' as [[Rf' Mf'] [get_rmf rmf_eq]]. invc rmf_eq. rewrite H15.
+      destruct Λeq' as [[Rf' Mf'] [get_rmf rmf_eq]]. invc rmf_eq. rewrite H16.
       erewrite get_nth; eauto; cbn; eauto.
     }
     assert (L [=] L') as Leq'.
     {
       symmetry. subst L'. eapply pick_load_eq; eauto; rewrite Rfeq'.
-      - clear - H25; cset_tac.
-      - rewrite subset_cardinal; eauto. clear - H25; cset_tac.
+      - clear - H26; cset_tac.
+      - rewrite subset_cardinal; eauto. clear - H26; cset_tac.
     }
+    assert (R' ⊆ list_union (Op.freeVars ⊝ Y)) as R'sub by (clear - H28; cset_tac).
     assert (K [=] K') as Keq.
     {
       symmetry. subst K K'. rewrite pick_kill_eq; rewrite Rfeq'.
-      - rewrite Leq'. clear; cset_tac.
+      - rewrite Leq'. clear - R'sub. cset_tac.
       - rewrite <-Leq'. rewrite subset_cardinal; eauto. clear; cset_tac.
+    }
+    assert (R' [=] R'') as R'eq.
+    {
+      subst R''. symmetry. rewrite meet_assoc. apply inter_subset_equal. clear - R'sub H29 Leq' Keq.
+      cset_tac.
+    }
+    assert (M' ⊆ list_union (Op.freeVars ⊝ Y)) as M'sub by (clear - H28; cset_tac).
+    assert (M' [=] M'') as M'eq.
+    {
+      subst M''. symmetry. rewrite H28. rewrite <-R'eq. clear; cset_tac.
     }
     assert (Sp [=] Sp') as Speq'.
     {
       subst Sp'. rewrite union_comm. setoid_rewrite Speq at 1. rewrite union_comm.
-      symmetry. rewrite union_subset_equal; eauto. rewrite <-Keq.
-      subst K. rewrite Mfeq'. rewrite H26, H21, H28. clear; cset_tac.
+      symmetry. rewrite union_subset_equal; eauto. subst M''. rewrite Mfeq', H27.
+      rewrite <-R'eq. rewrite H28 at 1. rewrite  H30. clear. cset_tac. 
     }
     assert (Z = nth (counted l) ZL nil) as Zeq.
     { erewrite get_nth; eauto; cbn; eauto. }
@@ -257,15 +270,11 @@ Proof.
       set (R_f':= fst (nth (counted l) Λ' (∅,∅))) in *;
       set (M_f':= snd (nth (counted l) Λ' (∅,∅))) in *;
       econstructor; eauto; [econstructor|];
-      [| |econstructor]; eauto; [|reflexivity]; econstructor.
+        [| |econstructor]; eauto; [|reflexivity]; econstructor.
     + erewrite get_nth; eauto. instantiate (1:=(R',M')); eauto.
       econstructor.
-    + subst Sp' K' L'. rewrite <-Speq', <-Keq, <-Leq'. erewrite get_nth; eauto.
-      * instantiate (1:=(R',M')). unfold snd.
-        assert (M' ∩ (Sp ∪ M) [=] M') as M'eq.
-        { apply inter_subset_equal; eauto. }
-        rewrite M'eq. symmetry. apply union_subset_equal. rewrite H27. clear; cset_tac.
-      * econstructor.
+    + erewrite get_nth; eauto. instantiate (1:=(R',M')); eauto.
+      econstructor.
   - cbn in sub_R.
     assert (Sp ∩ R [=] Sp) as Speq.
     { apply inter_subset_equal. rewrite H; eauto. }
