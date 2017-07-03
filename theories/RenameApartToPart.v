@@ -8,13 +8,21 @@ Definition rename_apart_to_part {Fi} (FG:FreshGen var Fi) (FGS:FreshGenSpec FG) 
   let s' := (renameApart FG (snd xlfi)
                        (id [to_list (freeVars s) <-- fst xlfi])
                        s) in
-  (snd s', renamedApartAnn (snd s') (of_list (fst xlfi))).
+  (snd s', xlfi).
+
+
+Definition rename_apart_to_part_ra {Fi} (FG:FreshGen var Fi) (FGS:FreshGenSpec FG) (s:stmt) :=
+   let xlfi := (fresh_list FG (empty_domain FG) (to_list (freeVars s))) in
+   let s' := (renameApart FG (snd xlfi)
+                         (id [to_list (freeVars s) <-- fst xlfi])
+                         s) in
+   renamedApartAnn (snd s') (of_list (fst xlfi)).
 
 Opaque to_list.
 
 Lemma rename_apart_to_part_renamedApart {Fi} (FG:FreshGen var Fi) (FGS:FreshGenSpec FG) s
   : RenamedApart.renamedApart (fst (rename_apart_to_part FGS s))
-                              (snd (rename_apart_to_part FGS s)).
+                              (rename_apart_to_part_ra FGS s).
 Proof.
   unfold rename_apart_to_part. simpl.
   eapply renameApart'_renamedApart; eauto.
@@ -26,11 +34,11 @@ Qed.
 
 
 Lemma rename_apart_to_part_occurVars {Fi} (FG:FreshGen var Fi) (FGS:FreshGenSpec FG) s
-  : fst (getAnn (snd (rename_apart_to_part FGS s)))
-        ∪ snd (getAnn (snd (rename_apart_to_part FGS s)))
+  : fst (getAnn (rename_apart_to_part_ra FGS s))
+        ∪ snd (getAnn (rename_apart_to_part_ra FGS s))
         [=] occurVars (fst (rename_apart_to_part FGS s)).
 Proof.
-  unfold rename_apart_to_part; simpl.
+  unfold rename_apart_to_part, rename_apart_to_part_ra; simpl.
   rewrite occurVars_freeVars_definedVars.
   rewrite snd_renamedApartAnn.
   eapply eq_union_lr; eauto.

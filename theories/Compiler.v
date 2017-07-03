@@ -107,10 +107,10 @@ Require Import RegAssign.
 Definition fromILF (s:stmt) :=
   let s_eae := EAE.compile s in
   let sra := rename_apart_to_part FGS_even_fast s_eae in
-  let dcve := DCVE Liveness.Imperative (fst sra) (snd sra) in
-  let fvl := to_list (getAnn (co_lv dcve)) in
-  let k := exp_vars_bound (co_s dcve) in
-  let spilled := spill k S (co_s dcve) (co_lv dcve) in
+  let dcve := DCVE Liveness.Imperative (fst sra) in
+  let fvl := to_list (getAnn (snd dcve)) in
+  let k := exp_vars_bound (fst dcve) in
+  let spilled := spill k S (fst dcve) (snd dcve) in
   let rdom := (domain_add FG_even_fast (empty_domain FG_even_fast) (getAnn (snd (spilled)))) in
   let ren2 := snd (renameApart FG_even_fast rdom id (fst spilled)) in
   let ras := rassign even_part ren2
@@ -130,9 +130,9 @@ Require Import MoreTac Alpha RenameApart_Alpha RenameApart_Liveness
 Definition slotted_vars (s:stmt) :=
   let s_eae := EAE.compile s in
   let sra := rename_apart_to_part FGS_even_fast s_eae in
-  let dcve := DCVE Liveness.Imperative (fst sra) (snd sra) in
-  let k := exp_vars_bound (co_s dcve) in
-  drop k (to_list (getAnn (co_lv dcve))).
+  let dcve := DCVE Liveness.Imperative (fst sra) in
+  let k := exp_vars_bound (fst dcve) in
+  drop k (to_list (getAnn (snd dcve))).
 
 Definition fromILF_fvl (s:stmt) :=
            to_list (freeVars (EAE.compile s)).
@@ -170,12 +170,13 @@ Proof.
   erewrite length_to_list; eauto.
 Qed.
 
+
 Lemma rename_apart_to_part_freeVars (s:stmt)
-  : fst (getAnn (snd (rename_apart_to_part FGS_even_fast s)))
+  : fst (getAnn (rename_apart_to_part_ra FGS_even_fast s))
         [=]  of_list ((fun m : nat => m)
         ⊝ (fun m : nat => m + (m + 0)) ⊝ range 0 ❬to_list (freeVars s)❭).
 Proof.
-  unfold rename_apart_to_part; simpl.
+  unfold rename_apart_to_part_ra; simpl.
   rewrite fst_renamedApartAnn.
   reflexivity.
 Qed.
@@ -205,15 +206,15 @@ Proof.
   assert (AEF2:AppExpFree.app_expfree (fst sra)). {
     eapply app_expfree_rename_apart; eauto.
   }
-  assert (AEF3:AppExpFree.app_expfree (co_s dcve)). {
+  assert (AEF3:AppExpFree.app_expfree (fst dcve)). {
     eapply DCVE_app_expfree; eauto.
   }
 
-  assert (RA:RenamedApart.renamedApart (fst sra) (snd sra)). {
+  assert (RA:RenamedApart.renamedApart (fst sra) (rename_apart_to_part_ra FGS_even_fast s_eae)). {
     eapply rename_apart_to_part_renamedApart.
   }
 
-  assert (EVB:exp_vars_bounded k (co_s dcve)). {
+  assert (EVB:exp_vars_bounded k (fst dcve)). {
     eapply exp_vars_bound_sound.
   }
 
@@ -222,13 +223,15 @@ Proof.
   assert (PM2:LabelsDefined.paramsMatch (fst sra) nil). {
     eapply labelsDefined_paramsMatch; eauto.
   }
-  assert (PM3:LabelsDefined.paramsMatch (co_s dcve) nil). {
+  assert (PM3:LabelsDefined.paramsMatch (fst dcve) nil). {
     eapply DCVE_paramsMatch; eauto.
   }
 
   assert (EV:For_all (fun n : nat => even n)
-                     (fst (getAnn (snd (DCVE Liveness.Imperative (fst sra) (snd sra))))
-                          ∪ snd (getAnn (snd (DCVE Liveness.Imperative (fst sra) (snd sra)))))). {
+                     (fst (getAnn (DCVEra Liveness.Imperative (fst sra)
+                                          (rename_apart_to_part_ra FGS_even_fast s_eae)))
+                          ∪ snd (getAnn (DCVEra Liveness.Imperative (fst sra)
+                                                (rename_apart_to_part_ra FGS_even_fast s_eae))))). {
     pose proof (rename_to_subset_even s_eae) as HY1.
     rewrite DCVE_ra_fst; eauto.
     rewrite DCVE_ra_snd; eauto.
@@ -237,12 +240,12 @@ Proof.
   }
   pose (@slt _ EV) as slt.
 
-  assert (NOC1:LabelsDefined.noUnreachableCode (LabelsDefined.isCalled true) (co_s dcve)). {
+  assert (NOC1:LabelsDefined.noUnreachableCode (LabelsDefined.isCalled true) (fst dcve)). {
     eapply DCVE_noUC; eauto.
   }
 
-  assert (Incl1:getAnn (co_lv dcve)
-         ⊆ fst (getAnn (snd (DCVE Liveness.Imperative (fst sra) (snd sra))))). {
+  assert (Incl1:getAnn (snd dcve)
+         ⊆ fst (getAnn (DCVEra Liveness.Imperative (fst sra) (rename_apart_to_part_ra FGS_even_fast s_eae)))). {
     exploit DCVE_live_incl as INCL; eauto.
     eapply ann_R_get in INCL; eauto.
   }
@@ -295,7 +298,7 @@ Proof.
      - intros. inv H.
      - eapply renamedApart_live; simpl; eauto.
   }
-  eapply sim_trans with (σ2:=(nil, E', co_s dcve):I.state). {
+  eapply sim_trans with (σ2:=(nil, E', fst dcve):I.state). {
     eapply DCVE_correct_I; eauto.
   }
 
@@ -305,7 +308,7 @@ Proof.
       DCVE_live_incl, DCVE_paramsMatch.
   }
   eapply sim_trans with (σ2:=(nil, E'', fst spilled):F.state). {
-    assert (VP:var_P (inf_subset_P even_inf_subset) (co_s dcve)). {
+    assert (VP:var_P (inf_subset_P even_inf_subset) (fst dcve)). {
       eapply DCVE_var_P; eauto.
       eapply renameApart_var_P.
       - eauto.
