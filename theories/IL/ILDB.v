@@ -1,5 +1,5 @@
 Require Import Util LengthEq Map CSet AllInRel MoreList.
-Require Import Var Val Exp Env IL.
+Require Import Var Val Exp Env IL PidgeonHole.
 Require Import Sim SimTactics Infra.Status Position.
 
 Set Implicit Arguments.
@@ -14,7 +14,7 @@ Inductive bstmt : Type :=
 Fixpoint op_eval (E:list val) (e:op) : option val :=
   match e with
     | Con v => Some v
-    | Var x => nth_error E x
+    | Var x => nth_error E (asNat x)
     | UnOp o e => mdo v <- op_eval E e;
         unop_eval o v
     | BinOp o e1 e2 => mdo v1 <- op_eval E e1;
@@ -117,7 +117,7 @@ Fixpoint exp_idx (symb:list var) (e:op) : status op :=
   match e with
     | Con v => Success (Con v)
     | Var x => sdo x <- option2status (pos symb x 0) "labIndices: Undeclared variable";
-        Success (Var x)
+        Success (Var (ofNat x))
     | UnOp o e => sdo e <- exp_idx symb e;
         Success (UnOp o e)
     | BinOp o e1 e2 => sdo e1 <- exp_idx symb e1;
@@ -174,6 +174,7 @@ Proof.
   - eapply option2status_inv in EQ0. simpl.
     exploit Eagr; eauto. dcr.
     rewrite H2. erewrite get_nth_error; eauto.
+    rewrite asNat_ofNat. eauto.
   - erewrite IHe; eauto. reflexivity.
   - erewrite IHe1; eauto. erewrite IHe2; eauto. reflexivity.
 Qed.

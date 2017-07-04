@@ -99,23 +99,23 @@ Proof.
   - decide (n > SetInterface.fold max lv 0).
     + decide (p n).
       * econstructor. split; eauto.
-        intro. exploit fresh_spec'; eauto.
+        intro. exploit LeastFreshNat.fresh_spec'; eauto.
         intros. omega.
       * edestruct (inf_subset_inf p n); dcr. cbn in *.
         eapply (@safe_antitone _ _ x);[|omega].
         econstructor; split; eauto.
-        intro. exploit fresh_spec'; eauto. omega.
+        intro. exploit LeastFreshNat.fresh_spec'; eauto. omega.
     + decide (p (S (SetInterface.fold max lv 0))).
       * eapply safe_antitone. instantiate (1:=S (SetInterface.fold max lv 0)).
         econstructor. split; eauto. intro.
-        exploit fresh_spec'; eauto. omega.
+        exploit LeastFreshNat.fresh_spec'; eauto. omega.
         omega.
       * edestruct (inf_subset_inf p (S (SetInterface.fold Init.Nat.max lv 0)));
           dcr.
         cbn in *.
         eapply (@safe_antitone _ _ x);[|omega].
         econstructor; split; eauto.
-        intro. exploit fresh_spec'; eauto. omega.
+        intro. exploit LeastFreshNat.fresh_spec'; eauto. omega.
 Qed.
 
 Definition least_fresh_P (p:inf_subset nat) (lv:set nat) : nat.

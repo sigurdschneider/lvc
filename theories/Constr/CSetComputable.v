@@ -134,11 +134,24 @@ Proof.
         eapply Add_Equal in H4. eapply n, H6.
         rewrite H4. cset_tac; intuition.
       * unfold Proper, respectful, flip; intros; subst.
-        decide (P y); decide (P x0); intros; eauto.
+        decide (P y); decide (P x0); intros.
+        -- reflexivity.
         -- exfalso. rewrite H7 in n; eauto.
         -- exfalso. rewrite H7 in p. eauto.
+        -- reflexivity.
       * unfold transpose, flip; intros.
         decide (P y); decide (P x0); intros; eauto.
 Defined.
 
 Arguments set_quant_computable [X] {H} s P {H0} {H1}.
+
+
+Instance ordered_type_lt_dec A `{OrderedType A} (a b: A)
+  : Computable (_lt a b).
+Proof.
+pose proof (_compare_spec a b).
+destruct (_cmp a b).
+right; inv H0. hnf; intros. eapply (lt_not_eq H2 H1).
+left. inv H0; eauto.
+right; inv H0. intro. eapply (lt_not_gt H1 H2).
+Defined.

@@ -16,11 +16,11 @@ Class Counted (A : Type) := {
 
 (** ** Variables *)
 (* We take naturals directly as variables *)
-Notation "'var'" := nat (only parsing).
-Definition default_var : var := 0.
+Notation "'var'" := positive (only parsing).
+Definition default_var : var := 1%positive.
 Instance var_dec (x y:var) : Computable (x = y).
 Proof.
-  eapply Nat.eq_dec.
+  eapply Pos.eq_dec.
 Qed.
 
 (*

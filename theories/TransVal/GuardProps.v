@@ -108,9 +108,9 @@ Lemma undef_models F E e
     -> op_eval E e = None
     -> ~ models F (to_total E) (undef e).
 Proof.
-  intros;  hnf;  intros.
-  general induction e; simpl in *; try isabsurd.
-  - specialize (H n); destruct H; cset_tac; eauto; isabsurd.
+  intros; hnf; intros.
+  general induction e; simpl in *; try now isabsurd.
+  - edestruct H; cset_tac; eauto; isabsurd.
   - monad_inv H0.
     + eapply IHe; eauto.
     + destruct u; isabsurd.

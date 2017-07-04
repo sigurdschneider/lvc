@@ -28,7 +28,7 @@ Inductive renamedApartGood : stmt -> Prop :=
       -> renamedApartGood (stmtFun F t).
 
 Lemma defVars_ra_defVarsZs F ans (Len:❬F❭=❬ans❭)
-  (RA:forall (n : nat) (Zs : params * stmt) (a : ann (⦃nat⦄ * ⦃nat⦄)),
+  (RA:forall (n : nat) (Zs : params * stmt) (a : ann (⦃var⦄ * ⦃var⦄)),
       get F n Zs -> get ans n a -> renamedApart (snd Zs) a)
   : list_union (defVars ⊜ F ans) [=] list_union (defVarsZs definedVars ⊝ F).
 Proof.
@@ -41,7 +41,7 @@ Proof.
 Qed.
 
 Lemma pw_defVars_defVarsZs F ans (Len:❬F❭ = ❬ans❭)
-      (RA: forall (n : nat) (Zs : params * stmt) (a : ann (⦃nat⦄ * ⦃nat⦄)),
+      (RA: forall (n : nat) (Zs : params * stmt) (a : ann (⦃var⦄ * ⦃var⦄)),
           get F n Zs -> get ans n a -> renamedApart (snd Zs) a)
       (PW:  pairwise_ne disj (defVars ⊜ F ans))
   :  pairwise_ne disj (defVarsZs definedVars ⊝ F).
@@ -53,7 +53,7 @@ Proof.
 Qed.
 
 Lemma disj_definedVars_t F ans (Len:❬F❭ = ❬ans❭) D Dt ant t
-  (RA: forall (n : nat) (Zs : params * stmt) (a : ann (⦃nat⦄ * ⦃nat⦄)),
+  (RA: forall (n : nat) (Zs : params * stmt) (a : ann (⦃var⦄ * ⦃var⦄)),
       get F n Zs -> get ans n a -> renamedApart (snd Zs) a)
   (IW:Indexwise.indexwise_R (funConstr D Dt) F ans)
   (RAt:renamedApart t ant)

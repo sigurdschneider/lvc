@@ -264,8 +264,9 @@ Lemma alpha_op_inverse_on
 Proof.
   intros. general induction H.
   + isabsurd.
-  + simpl. hnf; intros. rewrite <- H in H0.
-    cset_tac.
+  + simpl. hnf; intros.
+    eapply In_single in H0.
+    rewrite <- H0 at 1. rewrite H. eapply H0.
   + simpl; eauto.
   + simpl. eapply inverse_on_union; eauto.
 Qed.
@@ -288,7 +289,7 @@ Lemma op_rename_renamedApart_all_alpha e e' ϱ ϱ'
   : alpha_op ϱ ϱ' e e'
     -> rename_op ϱ e = e'.
 Proof.
-  intros. general induction H; simpl; eauto.
+  intros. general induction H; simpl; f_equal; eauto.
 Qed.
 
 Lemma alpha_op_morph
@@ -402,7 +403,7 @@ Proof.
   + econstructor. f_equal. eauto.
   + econstructor; eauto using opLt.
 - pose proof (_compare_spec v v').
-  inv H; (econstructor; eauto using opLt).
+  inv H; (econstructor; eauto using opLt); f_equal; eauto.
 - pose proof (_compare_spec u u0).
   specialize (IHx y).
   inv H; try now (econstructor; eauto using opLt).

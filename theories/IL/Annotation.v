@@ -222,16 +222,6 @@ Proof.
   edestruct @list_eq_get; eauto; dcr. get_functional. eauto.
 Qed.
 
-
-Instance ordered_type_lt_dec A `{OrderedType A} (a b: A)
-: Computable (_lt a b).
-pose proof (_compare_spec a b).
-destruct (_cmp a b).
-right; inv H0. hnf; intros. eapply (lt_not_eq H2 H1).
-left. inv H0; eauto.
-right; inv H0. intro. eapply (lt_not_gt H1 H2).
-Defined.
-
 Instance ann_R_dec A B (R:A->B->Prop)
          `{forall a b, Computable (R a b)} (a:ann A) (b:ann B) :
   Computable (ann_R R a b).
