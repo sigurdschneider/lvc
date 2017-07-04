@@ -39,8 +39,8 @@ Proof.
 Qed.
 
 Lemma sep_update_list p ϱ (Z:list var) (lv:set var) G
-      (ND:NoDupA eq Z) (SEP:sep nat p (lv \ of_list Z) ϱ) (incl:of_list Z [<=] lv)
-  : sep nat p lv
+      (ND:NoDupA eq Z) (SEP:sep var p (lv \ of_list Z) ϱ) (incl:of_list Z [<=] lv)
+  : sep var p lv
         (ϱ [Z <-- fst (fresh_list_stable (stable_fresh_part p) G Z)]).
 Proof.
   hnf; split; intros; decide (x ∈ of_list Z).

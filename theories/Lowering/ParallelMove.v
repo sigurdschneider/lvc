@@ -175,13 +175,6 @@ Section GlueCode.
       + hnf; cset_tac.
   Qed.
 
-
-
-  Hypothesis parallel_move : var -> list var -> list var -> (list(var * var)).
-
-  Definition linearize_parallel_assignment (vars:set var) (l1 l2:list var) :=
-    parallel_move (least_fresh vars) l1 l2.
-
 End GlueCode.
 
 Section Implementation.

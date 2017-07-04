@@ -81,7 +81,9 @@ Fixpoint compile s {struct s}
     | stmtIf x s t => stmtIf x (compile s) (compile t)
     | stmtApp l Y  =>
       let Y' := List.filter NotVar Y in
-      let xl := fresh_list fresh (list_union (List.map Op.freeVars Y)) (length Y') in
+      let xl := @fresh_list var _
+                           (@fresh var _ _ _ _)
+                           (list_union (List.map Op.freeVars Y)) (length Y') in
       list_to_stmt xl Y' (stmtApp l (replace_if NotVar Y (Var ⊝ xl)))
     | stmtReturn x => stmtReturn x
     | stmtFun F t => stmtFun (List.map (fun Zs => (fst Zs, compile (snd Zs))) F) (compile t)
@@ -201,14 +203,19 @@ Proof.
                     eapply list_union_incl; intros; eauto with cset.
                     inv_get.
                     eapply incl_list_union; eauto using map_get_1.
+                    eapply fresh_list_nodup; eauto using fresh_spec.
                 --- erewrite omap_op_eval_agree; [ eapply H1 | | ].
                     Focus 2.
-                    rewrite omap_lookup_vars; eauto using fresh_list_nodup, fresh_spec with len.
+                    rewrite omap_lookup_vars;
+                      eauto using fresh_list_nodup, fresh_spec with len.
+                    eapply fresh_list_nodup; eauto using fresh_spec.
                     rewrite <-  update_with_list_agree';
                       eauto using fresh_spec, fresh_list_nodup,
                       fresh_list_spec with len. reflexivity.
+                    eapply fresh_list_nodup; eauto using fresh_spec.
              ** exfalso. eapply omap_filter_none in H4. congruence.
            ++ eauto with len.
+           ++ eapply fresh_list_nodup; eauto using fresh_spec.
            ++ eapply disj_2_incl.
              eapply fresh_list_spec; eauto using fresh_spec.
              eapply list_union_incl; intros; eauto with cset.

@@ -202,7 +202,7 @@ Proof.
 Qed.
 
 Lemma DCVE_live_incl i s ra (RA:renamedApart s ra) (PM:LabelsDefined.paramsMatch s nil)
-  : ann_R (fun (x : ⦃nat⦄) (y : ⦃nat⦄ * ⦃nat⦄) => x ⊆ fst y)
+  : ann_R (fun (x : ⦃var⦄) (y : ⦃var⦄ * ⦃var⦄) => x ⊆ fst y)
           (snd (DCVE i s)) (DCVEra i s ra).
 Proof.
   unfold DCVE; simpl.
@@ -256,7 +256,7 @@ Proof.
   + rewrite H. reflexivity.
 Qed.
 
-Lemma DCVE_var_P i (P:nat -> Prop) (s:stmt) (PM:LabelsDefined.paramsMatch s nil)
+Lemma DCVE_var_P i (P:var -> Prop) (s:stmt) (PM:LabelsDefined.paramsMatch s nil)
   (VP:var_P P s)
   : var_P P (fst (DCVE i s)).
 Proof.

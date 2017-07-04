@@ -14,11 +14,11 @@ Definition rassign (p:inf_partition var)
            (s:stmt) (lv: ann (set var)) :=
   let fvl := to_list (getAnn lv) in
   let ϱ := CMap.update_map_with_list fvl fvl (@MapInterface.empty var _ _ _) in
-  sdo ϱ' <- regAssign even_part s lv ϱ;
-    let s_allocated := rename (CMap.findt ϱ' 0) s in
+  sdo ϱ' <- regAssign p s lv ϱ;
+    let s_allocated := rename (CMap.findt ϱ' default_var) s in
     let s_lowered := ParallelMove.lower p nil
                                        s_allocated
-                                       (mapAnn (lookup_set (CMap.findt ϱ' 0)) lv) in
+                                       (mapAnn (lookup_set (CMap.findt ϱ' default_var)) lv) in
     Success s_lowered.
 
 Opaque to_list.
@@ -45,14 +45,14 @@ Proof.
     eauto using Liveness.live_sound_overapproximation_I.
   simpl in *.
   eapply sim_trans
-  with (σ2:=(nil, E, rename (CMap.findt x 0) s):F.state).
+  with (σ2:=(nil, E, rename (CMap.findt x default_var) s):F.state).
   {
     eapply bisim_sim.
     - eapply alphaSim_sim.
       eapply alphaSimI with (ra:=id) (ira:=id); eauto using PIR2, envCorr_idOn_refl.
       exploit regAssign_renamedApart_agree as AGR; eauto.
       rewrite <- map_update_list_update_agree in AGR; eauto with len.
-      assert (AGR2:agree_on _eq (freeVars s) id (findt x 0)). {
+      assert (AGR2:agree_on _eq (freeVars s) id (findt x default_var)). {
         exploit renamedApart_freeVars as Incl2; eauto.
         pose proof (freeVars_live (live_sound_overapproximation_F LV)) as Incl3.
         etransitivity; eauto using agree_on_incl.
@@ -64,7 +64,7 @@ Proof.
       exploit renamedApart_freeVars as Incl2; eauto.
       pose proof (freeVars_live (live_sound_overapproximation_F LV)) as Incl3.
       assert (AGR3:agree_on _eq (getAnn lv) id
-                            (findt (empty nat) 0 [to_list (getAnn lv) <--
+                            (findt (empty var) default_var [to_list (getAnn lv) <--
                                                         to_list (getAnn lv)])). {
         hnf; intros ? IN.
         edestruct update_with_list_lookup_in_list; eauto.
@@ -75,7 +75,7 @@ Proof.
       eapply alpha_agree_on_morph.
       + eapply renamedApart_locally_inj_alpha;
           eauto using live_sound_overapproximation_F.
-        instantiate (1:=(findt (empty nat) 0
+        instantiate (1:=(findt (empty var) default_var
                                [to_list (getAnn lv) <-- to_list (getAnn lv)])).
         hnf; intros ? IN.
         rewrite <- AGR; eauto.
@@ -89,7 +89,7 @@ Proof.
       + eauto.
   }
   eapply sim_trans
-  with (σ2:=(nil, E, rename (CMap.findt x 0) s):I.state).
+  with (σ2:=(nil, E, rename (CMap.findt x default_var) s):I.state).
   {
     eapply bisim_sim.
     eapply SimCompanion.simc_sim.

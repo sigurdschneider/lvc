@@ -8,10 +8,10 @@ Set Implicit Arguments.
 
 (** * SSA-based register assignment formulated for IL *)
 
-Lemma injective_on_update_cmap_fresh p lv x (ϱ:Map[var, var])
-      (inj : injective_on (lv \ singleton x) (findt ϱ 0))
+Lemma injective_on_update_cmap_fresh (p:inf_partition var) lv x (ϱ:Map[var, var])
+      (inj : injective_on (lv \ singleton x) (findt ϱ default_var))
   : injective_on lv
-                 (findt (ϱ [-x <- least_fresh_part p (lookup_set (findt ϱ 0) (lv \ singleton x)) x -]) 0).
+                 (findt (ϱ [-x <- least_fresh_part p (lookup_set (findt ϱ default_var) (lv \ singleton x)) x -]) default_var).
 Proof.
   eapply injective_on_agree; [| eapply map_update_update_agree].
   eapply injective_on_incl.
@@ -28,7 +28,7 @@ Definition regAssignF p
   match F, ans with
     | Zs::F, a::ans =>
       let Z := fst Zs in let s := snd Zs in
-      let Z' := fst (fresh_list_stable (stable_fresh_part p) (SetConstructs.map (findt ϱ 0) (getAnn a\of_list Z)) Z) in
+      let Z' := fst (fresh_list_stable (stable_fresh_part p) (SetConstructs.map (findt ϱ default_var) (getAnn a\of_list Z)) Z) in
       sdo ϱ' <- regAssign s a (ϱ[- Z <-- Z'-]);
         regAssignF ϱ' F ans
 
@@ -39,7 +39,7 @@ Fixpoint regAssign p (st:stmt) (an: ann (set var)) (ϱ:Map [var, var])
   : status (Map [var, var]) :=
  match st, an with
     | stmtLet x e s, ann1 lv ans =>
-      let xv := least_fresh_part p (SetConstructs.map (findt ϱ 0) (getAnn ans\ singleton x)) x
+      let xv := least_fresh_part p (SetConstructs.map (findt ϱ default_var) (getAnn ans\ singleton x)) x
       in regAssign p s ans (ϱ[- x <- xv -])
     | stmtIf _ s t, ann2 lv ans ant =>
       sdo ϱ' <- regAssign p s ans ϱ;
@@ -67,10 +67,10 @@ Lemma regAssign_renamedApart_agreeF c G F ans als ϱ ϱ'
                (G0 : set var),
                renamedApart (snd Zs) al ->
                regAssign c (snd Zs) a ϱ0 = Success ϱ'0 ->
-               agree_on eq (G0 \ snd (getAnn al)) (findt ϱ0 0) (findt ϱ'0 0)))
+               agree_on eq (G0 \ snd (getAnn al)) (findt ϱ0 default_var) (findt ϱ'0 default_var)))
 : forall G' : set var,
     list_union zip defVars F ans[<=]G' ->
-    agree_on eq (G \ G') (findt ϱ 0) (findt ϱ' 0).
+    agree_on eq (G \ G') (findt ϱ default_var) (findt ϱ' default_var).
 Proof.
  intros G' INCL.
  length_equify. general induction LEN1; simpl in * |- *; try monadS_inv allocOK; eauto.
@@ -92,7 +92,7 @@ Lemma regAssign_renamedApart_agree' c i s al ϱ ϱ' ZL Lv alv G
       (allocOK:regAssign c s alv ϱ = Success ϱ')
       (sd:renamedApart s al)
       (LS:live_sound i ZL Lv s alv)
-: agree_on eq (G \ snd (getAnn al)) (findt ϱ 0) (findt ϱ' 0).
+: agree_on eq (G \ snd (getAnn al)) (findt ϱ default_var) (findt ϱ' default_var).
 Proof.
   general induction LS; inv sd; simpl in * |- *; try monadS_inv allocOK; eauto.
   - exploit IHLS; eauto.
@@ -121,7 +121,7 @@ Lemma regAssign_renamedApart_agree c i s al ϱ ϱ' ZL Lv alv
       (allocOK:regAssign c s alv ϱ = Success ϱ')
       (sd:renamedApart s al)
       (LS:live_sound i ZL Lv s alv)
-: agree_on eq (fst (getAnn al)) (findt ϱ 0) (findt ϱ' 0).
+: agree_on eq (fst (getAnn al)) (findt ϱ default_var) (findt ϱ' default_var).
 Proof.
   eapply agree_on_incl.
   eapply regAssign_renamedApart_agree'; eauto.
@@ -152,9 +152,9 @@ Lemma regAssignF_get p G F ans alv n Zs a ϱ ϱ' an ZL Lv i D Dt lv
              /\ regAssignF p (regAssign p) ϱ2 (drop (S n) F) (drop (S n) alv) = Success ϱ'
              /\ agree_on eq (G \ list_union (zip defVars (take n F) (take n ans)))
                         (findt (ϱ[-fst Zs <-- fst (fresh_list_stable (stable_fresh_part p)
-                                      (SetConstructs.map (findt ϱ 0) (getAnn a \ of_list (fst Zs)))
-                                      (fst Zs))-]) 0)
-                        (findt ϱ1 0).
+                                      (SetConstructs.map (findt ϱ default_var) (getAnn a \ of_list (fst Zs)))
+                                      (fst Zs))-]) default_var)
+                        (findt ϱ1 default_var).
 
 Proof.
   intros EQ REN LV LVINC DDISJ FUNC PWDISJ GET1 GET2 GET3 incl.

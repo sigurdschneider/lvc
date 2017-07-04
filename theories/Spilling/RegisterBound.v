@@ -254,7 +254,7 @@ Proof.
     cset_tac.
   }
   rewrite add_anns_add.
-  destruct ys.
+  destruct ys as [|v ?].
   - simpl in *.
     apply register_bound_spills with (R:=R); eauto.
       rewrite add_anns_zero.
@@ -303,7 +303,7 @@ Proof.
         clear - R_VD; cset_tac.
     + eapply register_bound_loads
       with (R:=VD ∩ getAnn (reconstr_live Lv ZL ∅ s an)
-                  ∪ {n; of_list ys}); eauto.
+                  ∪ {v; of_list ys}); eauto.
       * rewrite add_union_singleton, v_VD, ys_VD.
         clear; cset_tac.
       * clear; cset_tac.

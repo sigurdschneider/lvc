@@ -100,7 +100,7 @@ Qed.
 
 Instance proper_onv (ϱ:var -> option val)
   : (@Proper (forall _ : var, option val)
-             (@respectful var (option val) (@_eq var (@SOT_as_OT var (@eq nat) nat_OrderedType))
+             (@respectful var (option val) (@_eq var (@SOT_as_OT var (@eq var) _))
                           (@eq (option val))) ϱ) | 0.
 Proof.
   intuition.
@@ -108,7 +108,7 @@ Qed.
 
 Instance proper_onv' (ϱ:var -> option val)
   : @Proper (forall _ : var, option val)
-            (@respectful var (option val) (@_eq var (@SOT_as_OT var (@eq nat) nat_OrderedType))
+            (@respectful var (option val) (@_eq var (@SOT_as_OT var (@eq var) _))
                          (@_eq (option val) (@option_OrderedType val OrderedType_int))) ϱ | 0.
 Proof.
   intuition.

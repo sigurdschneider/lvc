@@ -11,13 +11,14 @@ Set Implicit Arguments.
 
 Arguments sim S {H} S' {H0} r t _ _.
 
-Definition Slot_p (VD:set var) n (EQ:n = S (fold max VD 0)): Slot VD.
+(*Definition Slot_p (VD:set var) n (EQ:n = S (fold max VD 0)): Slot VD.
   refine (@Build_Slot VD (fun x => x + n) _ _).
   - hnf; intros. cset_tac'.
     exploit Fresh.fresh_spec'; try eapply H; eauto.
     unfold max in H1. omega.
   - hnf; intros. cset_tac'. omega.
 Qed.
+ *)
 
 Definition spill (k:nat) (slot:var -> var)
            (s:stmt) (lv:ann (set var)) : stmt * ann (set var) :=

@@ -20,7 +20,7 @@ Fixpoint extend_list X (L:list X) (Z:params) (RM : ⦃var⦄ * ⦃var⦄)
 
 (** * SpillSim *)
 
-Lemma extend_list_length X (L:list X) (RM : ⦃nat⦄ * ⦃nat⦄) (Z : params)
+Lemma extend_list_length X (L:list X) (RM : ⦃var⦄ * ⦃var⦄) (Z : params)
       (NoDup:NoDupA eq Z) (Len:❬L❭ = ❬Z❭)
   : ❬extend_list L Z RM❭ = ❬Z❭ + cardinal (of_list Z ∩ (fst RM ∩ snd RM)).
 Proof.

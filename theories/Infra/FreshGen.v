@@ -56,7 +56,8 @@ Lemma FGS_fast : FreshGenSpec FG_fast.
   - simpl. cset_tac'.
     eapply nats_up_to_in.
     + rewrite <- Max.le_max_r.
-      eapply LeastFreshNat.fresh_spec' in H0. omega.
+      eapply (@fold_max_lt nat _ _ _ _) in H0.
+      unfold ofNat in *. simpl in *. omega.
     + eapply nats_up_to_in in H0.
       eapply nats_up_to_in.
       rewrite <- Max.le_max_l. eauto.
@@ -166,9 +167,9 @@ Lemma FGS_even_fast : FreshGenSpec FG_even_fast.
   - simpl. cset_tac'.
     eapply nats_up_to_in.
     + rewrite <- Max.le_max_r. unfold next_even.
-      simpl in *.
-      eapply LeastFreshNat.fresh_spec' in H0.
-      cases; eauto. omega. omega.
+      eapply (@fold_max_lt nat _ _ _ _) in H0.
+      unfold ofNat in *. simpl in *.
+      cases; eauto.
     + eapply nats_up_to_in in H0.
       eapply nats_up_to_in.
       rewrite <- Max.le_max_l. eauto.

@@ -67,7 +67,7 @@ Hint Resolve leMap_op_eval eqMap_op_eval.
 
 Definition DDom (sT:stmt) := { m : Map [var, withTop val] | domain m ⊆ occurVars sT}.
 
-Definition cp_reach (U : ⦃nat⦄) (b:bool) (d: VDom U (withTop val)) (e:op) : bool * bool :=
+Definition cp_reach (U : ⦃var⦄) (b:bool) (d: VDom U (withTop val)) (e:op) : bool * bool :=
   (if [op_eval (domenv (proj1_sig d)) e = None] then false
      else if [op_eval (domenv (proj1_sig d)) e = Some (wTA val_false)] then
             false else b,
@@ -75,7 +75,7 @@ Definition cp_reach (U : ⦃nat⦄) (b:bool) (d: VDom U (withTop val)) (e:op) : 
      else if [op_eval (domenv (proj1_sig d)) e = Some (wTA val_true)] then
             false else b).
 
-Lemma cp_reach_mon (U : ⦃nat⦄) (e : op) (a a' : VDom U (withTop val))
+Lemma cp_reach_mon (U : ⦃var⦄) (e : op) (a a' : VDom U (withTop val))
   : a ⊑ a' -> forall b b' : bool, b ⊑ b' -> cp_reach b a e ⊑ cp_reach b' a' e.
 Proof.
   unfold cp_reach.
@@ -89,7 +89,7 @@ Proof.
   inv H1; clear_trivial_eqs.
 Qed.
 
-Lemma cp_reach_ext (U : ⦃nat⦄) (e : op) (a a' : VDom U (withTop val))
+Lemma cp_reach_ext (U : ⦃var⦄) (e : op) (a a' : VDom U (withTop val))
   : a ≣ a' -> forall b b' : bool, b ≣ b' -> cp_reach b a e ≣ cp_reach b' a' e.
 Proof.
   unfold cp_reach.
@@ -101,19 +101,19 @@ Proof.
   repeat cases; split; simpl fst; simpl snd; eauto; clear_trivial_eqs.
 Qed.
 
-Definition cp_trans (U : ⦃nat⦄) (b:bool) (d: VDom U (withTop val)) (e:exp) : ؟ (withTop val) :=
+Definition cp_trans (U : ⦃var⦄) (b:bool) (d: VDom U (withTop val)) (e:exp) : ؟ (withTop val) :=
   match e with
   | Operation e => op_eval (domenv (proj1_sig d)) e
   | _ => Some Top
   end.
 
-Lemma cp_trans_mon (U : ⦃nat⦄) (e : exp) (a a' : VDom U (withTop val))
+Lemma cp_trans_mon (U : ⦃var⦄) (e : exp) (a a' : VDom U (withTop val))
   : a ⊑ a' -> forall b b' : bool, b ⊑ b' -> @cp_trans U b a e ⊑ @cp_trans U b' a' e.
 Proof.
   intros. destruct e; simpl; eauto.
 Qed.
 
-Lemma cp_trans_ext (U : ⦃nat⦄) (e : exp) (a a' : VDom U (withTop val))
+Lemma cp_trans_ext (U : ⦃var⦄) (e : exp) (a a' : VDom U (withTop val))
   : a ≣ a' -> forall b b' : bool, b ≣ b' -> @cp_trans U b a e ≣ @cp_trans U b' a' e.
 Proof.
   intros. destruct e; simpl; eauto.

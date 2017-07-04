@@ -2,7 +2,7 @@ Require Import CMap MapNotations CSet Le Arith.Compare_dec.
 
 Require Import Plus Util Status Take Subset1 Filter.
 Require Import Val Var Env IL Annotation Liveness.Liveness Fresh MoreList SetOperations.
-Require Import Coherence Allocation RenamedApart AllocationAlgo InfinitePartition.
+Require Import Coherence Coherence.Allocation RenamedApart AllocationAlgo InfinitePartition.
 
 Set Implicit Arguments.
 
@@ -150,10 +150,10 @@ Qed.
 Lemma regAssign_correct p (ϱ:Map [var,var]) ZL Lv s alv ϱ' ra
       (allocOK:regAssign p s alv ϱ = Success ϱ')
       (LS:live_sound FunctionalAndImperative ZL Lv s alv)
-      (inj:injective_on (getAnn alv) (findt ϱ 0))
+      (inj:injective_on (getAnn alv) (findt ϱ default_var))
       (sd:renamedApart s ra)
       (incl:getAnn alv ⊆ fst (getAnn ra))
-: locally_inj (findt ϱ' 0) s alv.
+: locally_inj (findt ϱ' default_var) s alv.
 Proof.
   intros.
   general induction LS; simpl in *;
@@ -180,7 +180,7 @@ Proof.
     + pe_rewrite. eauto with cset.
     + econstructor; eauto.
       * exploit regAssign_renamedApart_agree; eauto. pe_rewrite.
-        assert (agree_on eq D (findt ϱ 0) (findt ϱ' 0)). {
+        assert (agree_on eq D (findt ϱ default_var) (findt ϱ' default_var)). {
           etransitivity; eauto.
         }
         eapply injective_on_agree; eauto using agree_on_incl.
@@ -196,7 +196,7 @@ Proof.
     exploit regAssign_renamedApart_agree;
       try eapply EQ0; simpl; eauto using live_sound.
     instantiate (1:=D) in H4.
-    assert (AGR:agree_on _eq lv (findt ϱ 0) (findt x 0)). {
+    assert (AGR:agree_on _eq lv (findt ϱ default_var) (findt x default_var)). {
       eapply agree_on_incl; eauto.
       rewrite disj_minus_eq; eauto using disj_D_defVars.
     }
@@ -271,9 +271,9 @@ Lemma regAssign_correct' b p s ang ϱ ϱ' (alv:ann (set var)) ZL Lv
   -> bounded (Some ⊝ Lv \\ ZL) (fst (getAnn ang))
   -> ann_R Subset1 alv ang
   -> noUnreachableCode (isCalled b) s
-  -> injective_on (getAnn alv) (findt ϱ 0)
+  -> injective_on (getAnn alv) (findt ϱ default_var)
   -> regAssign p s alv ϱ = Success ϱ'
-  -> locally_inj (findt ϱ' 0) s alv.
+  -> locally_inj (findt ϱ' default_var) s alv.
 Proof.
   intros.
   eapply renamedApart_live_imperative_is_functional in H0; eauto using bounded_disjoint, renamedApart_disj, meet1_Subset1, live_sound_annotation, renamedApart_annotation.

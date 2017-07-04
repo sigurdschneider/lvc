@@ -93,64 +93,95 @@ Qed.
 
 Require Import SafeFirst.
 
-Lemma fresh_variable_always_exists_in_inf_subset (lv:set nat) (p:inf_subset nat) n
+Lemma fresh_variable_always_exists_in_inf_subset X `{NaturalRepresentationSucc X}
+      `{@NaturalRepresentationMax X H H0}
+      (lv:set X) (p:inf_subset X) n
 : safe (fun x => x ∉ lv /\ p x) n.
 Proof.
-  - decide (n > SetInterface.fold max lv 0).
+  - decide (_lt (SetInterface.fold max lv (ofNat 0)) n).
     + decide (p n).
       * econstructor. split; eauto.
-        intro. exploit LeastFreshNat.fresh_spec'; eauto.
-        intros. omega.
+        intro. cset_tac'.
+        eapply (@fold_max_lt X _ _ _ _) in H5; eauto.
+        simpl in *. exfalso. nr. simpl in *. omega.
+        eapply (@fold_max_lt X _ _ _ _) in H5; eauto.
+        simpl in *. exfalso. nr. simpl in *. omega.
       * edestruct (inf_subset_inf p n); dcr. cbn in *.
-        eapply (@safe_antitone _ _ x);[|omega].
+        eapply (@safe_antitone _ _ _ _ _ _ _ x).
         econstructor; split; eauto.
-        intro. exploit LeastFreshNat.fresh_spec'; eauto. omega.
-    + decide (p (S (SetInterface.fold max lv 0))).
-      * eapply safe_antitone. instantiate (1:=S (SetInterface.fold max lv 0)).
+        intro. cset_tac'.
+        eapply (@fold_max_lt X _ _ _ _) in H7; eauto.
+        simpl in *. exfalso. nr. simpl in *. omega.
+        eapply (@fold_max_lt X _ _ _ _) in H7; eauto.
+        simpl in *. exfalso. nr. simpl in *. omega. eauto.
+    + decide (p (succ (SetInterface.fold max lv (ofNat 0)))).
+      * eapply safe_antitone. eauto.
+        instantiate (1:=succ (SetInterface.fold max lv (ofNat 0))).
         econstructor. split; eauto. intro.
-        exploit LeastFreshNat.fresh_spec'; eauto. omega.
-        omega.
-      * edestruct (inf_subset_inf p (S (SetInterface.fold Init.Nat.max lv 0)));
+        cset_tac'.
+        eapply (@fold_max_lt X _ _ _ _) in H5; eauto.
+        simpl in *. exfalso. nr. simpl in *. omega.
+        eapply (@fold_max_lt X _ _ _ _) in H5; eauto.
+        simpl in *. exfalso. nr. simpl in *. omega.
+        simpl in *. nr. omega.
+      * edestruct (inf_subset_inf p (succ (fold max lv (ofNat 0))));
           dcr.
-        cbn in *.
-        eapply (@safe_antitone _ _ x);[|omega].
+        eapply (@safe_antitone _ _ _ _ _ _ _ x).
         econstructor; split; eauto.
-        intro. exploit LeastFreshNat.fresh_spec'; eauto. omega.
+        cset_tac'.
+        eapply (@fold_max_lt X _ _ _ _) in H7; eauto.
+        simpl in *. exfalso. nr. omega.
+        eapply (@fold_max_lt X _ _ _ _) in H7; eauto.
+        simpl in *. exfalso. nr. omega.
+        simpl in *. nr. omega.
+        Grab Existential Variables. eauto. eauto.
 Qed.
 
-Definition least_fresh_P (p:inf_subset nat) (lv:set nat) : nat.
-  refine (@safe_first (fun x => x ∉ lv /\ p x) _ 0 _).
-  - eapply fresh_variable_always_exists_in_inf_subset.
+Definition least_fresh_P X `{NaturalRepresentationSucc X}
+           `{@NaturalRepresentationMax X H H0}
+           (p:inf_subset X) (lv:set X) : X.
+  refine (@safe_first _ _ _ _ (fun x => x ∉ lv /\ p x) _ (ofNat 0) _).
+  - eapply fresh_variable_always_exists_in_inf_subset; eauto.
 Defined.
 
-Lemma least_fresh_P_full_spec p G
+Lemma least_fresh_P_full_spec X `{NaturalRepresentationSucc X}
+      `{@NaturalRepresentationMax X H H0}
+      p (G:set X)
   : least_fresh_P p G ∉ G
-    /\ (forall m, p m ->  m < least_fresh_P p G -> m ∈ filter p G)
+    /\ (forall m, p m ->  _lt m (least_fresh_P p G) -> m ∈ filter p G)
     /\ p (least_fresh_P p G).
 Proof.
   unfold least_fresh_P.
   eapply safe_first_spec with
-  (I:= fun n => forall m, p m -> m < n -> m ∈ filter p G).
-  - intros; dcr. rewrite de_morgan_dec, <- in_dneg in H0.
-    destruct H0; dcr.
-    + decide (m = n); subst; eauto.
+  (I:= fun n => forall m, p m -> _lt m n -> m ∈ filter p G).
+  - intros. rewrite de_morgan_dec, <- in_dneg in H4.
+    destruct H4.
+    + decide (m === n); subst; eauto.
       * cset_tac.
-      * exploit (H m); eauto. omega.
-    + decide (m = n); subst; eauto.
-      * cset_tac.
-      * exploit (H m); eauto. omega.
+      * exploit (H3 m); eauto.
+        assert (asNat m <> asNat n). intro. eapply n0.
+        eapply asNat_inj; eauto.
+        nr. omega.
+    + decide (m === n); subst; eauto.
+      * exfalso. eapply H4. rewrite <- e. eauto.
+      * exploit (H3 m); eauto.
+        assert (asNat m <> asNat n). intro. eapply n0.
+        eapply asNat_inj; eauto.
+        nr. omega.
   - intros. cset_tac.
-  - intros; omega.
+  - intros. exfalso. nr. omega.
 Qed.
 
-Lemma least_fresh_P_ext p (G G' : ⦃nat⦄)
+Lemma least_fresh_P_ext  X `{NaturalRepresentationSucc X}
+           `{@NaturalRepresentationMax X H H0} p (G G' : ⦃X⦄)
   : G [=] G' -> least_fresh_P p G = least_fresh_P p G'.
 Proof.
   intros. unfold least_fresh_P; eauto.
-  eapply safe_first_ext. intros. rewrite H. reflexivity.
+  eapply safe_first_ext. intros. rewrite H3. reflexivity.
 Qed.
 
-Definition stable_fresh_P (isub:inf_subset nat) : StableFresh nat.
+Definition stable_fresh_P  X `{NaturalRepresentationSucc X}
+           `{@NaturalRepresentationMax X H H0} (isub:inf_subset X) : StableFresh X.
   refine (Build_StableFresh (fun lv _ => least_fresh_P isub lv) _ _).
   - intros. eapply least_fresh_P_full_spec.
   - intros. eapply least_fresh_P_ext; eauto.
@@ -162,11 +193,13 @@ Proof.
   decide Q; clear H; intros; intuition.
 Qed.
 
-Definition least_fresh_part (p:inf_partition nat) (G:set nat) x :=
+Definition least_fresh_part X `{NaturalRepresentationSucc X}
+           `{@NaturalRepresentationMax X H H0} (p:inf_partition X) (G:set X) x :=
   if part_1 p x then least_fresh_P (part_1 p) G
   else least_fresh_P (part_2 p) G.
 
-Lemma least_fresh_part_fresh p G x
+Lemma least_fresh_part_fresh X `{NaturalRepresentationSucc X}
+           `{@NaturalRepresentationMax X H H0} p G x
   : least_fresh_part p G x ∉ G.
 Proof.
   unfold least_fresh_part; cases; eauto.
@@ -174,7 +207,8 @@ Proof.
   - eapply least_fresh_P_full_spec.
 Qed.
 
-Lemma least_fresh_part_1 (p:inf_partition nat) G x
+Lemma least_fresh_part_1 X `{NaturalRepresentationSucc X}
+           `{@NaturalRepresentationMax X H H0} (p:inf_partition X) G x
   : part_1 p x
     -> part_1 p (least_fresh_part p G x).
 Proof.
@@ -182,7 +216,8 @@ Proof.
   eapply least_fresh_P_full_spec.
 Qed.
 
-Lemma least_fresh_part_2 (p:inf_partition nat) G x
+Lemma least_fresh_part_2  X `{NaturalRepresentationSucc X}
+           `{@NaturalRepresentationMax X H H0} (p:inf_partition X) G x
   : part_2 p x
     -> part_2 p (least_fresh_part p G x).
 Proof.
@@ -191,19 +226,22 @@ Proof.
   - eapply least_fresh_P_full_spec.
 Qed.
 
-Lemma least_fresh_part_ext p (G G' : ⦃nat⦄) x
+Lemma least_fresh_part_ext  X `{NaturalRepresentationSucc X}
+           `{@NaturalRepresentationMax X H H0} p (G G' : ⦃X⦄) x
   : G [=] G' -> least_fresh_part p G x = least_fresh_part p G' x.
 Proof.
   intros. unfold least_fresh_part; cases; eauto using least_fresh_P_ext.
 Qed.
 
-Definition stable_fresh_part (p:inf_partition nat) : StableFresh nat.
+Definition stable_fresh_part  X `{NaturalRepresentationSucc X}
+           `{@NaturalRepresentationMax X H H0} (p:inf_partition X) : StableFresh X.
   refine (Build_StableFresh (least_fresh_part p) _ _).
   - intros. eapply least_fresh_part_fresh.
   - intros. eapply least_fresh_part_ext; eauto.
 Defined.
 
-Lemma least_fresh_list_part_ext p n G G'
+Lemma least_fresh_list_part_ext  X `{NaturalRepresentationSucc X}
+           `{@NaturalRepresentationMax X H H0} p n G G'
   : G [=] G'
     -> fst (fresh_list_stable (stable_fresh_part p) G n)
       = fst (fresh_list_stable (stable_fresh_part p) G' n).
@@ -212,19 +250,21 @@ Proof.
   intros. eapply least_fresh_part_ext; eauto.
 Qed.
 
-Lemma fresh_list_stable_P_ext p G L L'
+Lemma fresh_list_stable_P_ext  X `{NaturalRepresentationSucc X}
+           `{@NaturalRepresentationMax X H H0} p G L L'
   : ❬L❭ = ❬L'❭
     -> of_list (fst (fresh_list_stable (stable_fresh_P p) G L))
               ⊆ of_list (fst (fresh_list_stable (stable_fresh_P p) G L')).
 Proof.
   intros. hnf; intros ? In.
-  general induction H; simpl in *.
+  general induction H3; simpl in *.
   - cset_tac.
   - revert In. repeat let_pair_case_eq; repeat simpl_pair_eqs; subst; simpl; eauto.
     cset_tac.
 Qed.
 
-Lemma fresh_list_stable_P_ext_eq p G L L'
+Lemma fresh_list_stable_P_ext_eq  X `{NaturalRepresentationSucc X}
+           `{@NaturalRepresentationMax X H H0} p G L L'
   : ❬L❭ = ❬L'❭
     -> of_list (fst (fresh_list_stable (stable_fresh_P p) G L))
               [=] of_list (fst (fresh_list_stable (stable_fresh_P p) G L')).
@@ -235,7 +275,8 @@ Proof.
 Qed.
 
 
-Lemma least_fresh_part_1_back (p:inf_partition nat) G x
+Lemma least_fresh_part_1_back  X `{NaturalRepresentationSucc X}
+           `{@NaturalRepresentationMax X H H0} (p:inf_partition X) G x
   : part_1 p (least_fresh_part p G x) -> part_1 p x.
 Proof.
   intros.
@@ -245,7 +286,8 @@ Proof.
   edestruct (part_disj p); eauto.
 Qed.
 
-Lemma least_fresh_part_2_back (p:inf_partition nat) G x
+Lemma least_fresh_part_2_back  X `{NaturalRepresentationSucc X}
+           `{@NaturalRepresentationMax X H H0} (p:inf_partition X) G x
   : part_2 p (least_fresh_part p G x) -> part_2 p x.
 Proof.
   intros.
@@ -255,8 +297,9 @@ Proof.
   edestruct (part_disj p); eauto.
 Qed.
 
-Lemma cardinal_filter_part p G Z
-      (UNIQ:NoDupA eq Z)
+Lemma cardinal_filter_part  X `{NaturalRepresentationSucc X}
+           `{@NaturalRepresentationMax X H H0} p G Z
+      (UNIQ:NoDupA _eq Z)
   : cardinal (filter (part_1 p)
                      (of_list (fst (fresh_list_stable (stable_fresh_part p) G Z))))
     = cardinal (filter (part_1 p) (of_list Z)).
@@ -268,11 +311,11 @@ Proof.
     + rewrite filter_add_in; eauto using least_fresh_part_1.
       rewrite filter_add_in; eauto.
       rewrite !add_cardinal_2; eauto.
-      * intro. inv UNIQ. cset_tac'.
+      * intro. inv UNIQ. cset_tac.
       * exploit (fresh_list_stable_spec (stable_fresh_part p));
         eauto using least_fresh_part_fresh.
         cset_tac'.
-        eapply H; cset_tac.
+        eapply H3; cset_tac.
     + rewrite filter_add_notin; eauto.
       rewrite filter_add_notin; eauto.
       eauto using least_fresh_part_1_back.

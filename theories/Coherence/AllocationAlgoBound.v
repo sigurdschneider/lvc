@@ -135,11 +135,11 @@ Qed.
 Lemma regAssign_sep p (ϱ:Map [var,var]) ZL Lv s alv ϱ' ra
       (allocOK:regAssign p s alv ϱ = Success ϱ')
       (LS:live_sound FunctionalAndImperative ZL Lv s alv)
-      (inj:injective_on (getAnn alv) (findt ϱ 0))
-      (Sep:sep var p (getAnn alv) (findt ϱ 0))
+      (inj:injective_on (getAnn alv) (findt ϱ default_var))
+      (Sep:sep var p (getAnn alv) (findt ϱ default_var))
       (sd:renamedApart s ra)
       (incl:ann_R (fun x y => x ⊆ fst y) alv ra)
-: locally_sep p (findt ϱ' 0) alv.
+: locally_sep p (findt ϱ' default_var) alv.
 Proof.
   intros.
   general induction LS; simpl in *;
@@ -164,7 +164,7 @@ Proof.
       eapply injective_on_agree; eauto using agree_on_incl.
     + exploit regAssign_renamedApart_agree; eauto. pe_rewrite.
       econstructor; eauto.
-      * assert (agree_on eq lv (findt ϱ 0) (findt ϱ' 0)). {
+      * assert (agree_on eq lv (findt ϱ default_var) (findt ϱ' default_var)). {
           etransitivity; eauto using agree_on_incl.
         }
         rewrite <- H9; eauto.
@@ -182,7 +182,7 @@ Proof.
     instantiate (1:=D) in Agr1.
     exploit regAssign_renamedApart_agree as Agr2;
       try eapply EQ0; simpl; eauto using live_sound.
-    assert (AGR:agree_on _eq lv (findt ϱ 0) (findt x 0)). {
+    assert (AGR:agree_on _eq lv (findt ϱ default_var) (findt x default_var)). {
       eapply agree_on_incl; eauto.
       rewrite disj_minus_eq; eauto using disj_D_defVars.
     }
