@@ -4,7 +4,7 @@ Require Import Plus Util AllInRel Map Indexwise.
 Require Import CSet Val Var Env IL Sim Fresh Annotation LabelsDefined DecSolve OptionR.
 
 Require Import RenamedApart SetOperations Eqn ValueOpts Infra.Lattice WithTop.
-Require Import ConstantPropagation Reachability.
+Require Import ConstantPropagation ConstantPropagationSound Reachability.
 
 Set Implicit Arguments.
 Unset Printing Records.
@@ -81,65 +81,6 @@ Proof.
   intros. hnf; intro. unfold cp_eqns.
   setoid_rewrite map_agree; try eapply cp_eqn_eq; try reflexivity.
   eapply cp_eqn_agree. symmetry; eauto.
-Qed.
-
-Inductive same_shape (A B:Type) : ann B -> ann A -> Prop :=
-| SameShape0 a b
-  : same_shape (ann0 a) (ann0 b)
-| SameShape1 a b an bn
-  : same_shape an bn
-    -> same_shape (ann1 a an) (ann1 b bn)
-| SameShape2 a b an bn an' bn'
-  : same_shape an bn
-    -> same_shape an' bn'
-    -> same_shape (ann2 a an an') (ann2 b bn bn').
-
-
-Fixpoint zip2Ann X Y Z (f:X->Y->Z) (a:ann X) (b:ann Y) z : ann Z :=
-  match a, b with
-    | ann1 a an, ann1 a' an' => ann1 (f a a') (zip2Ann f an an' z)
-    | ann2 a an1 an2, ann2 a' an1' an2' => ann2 (f a a')
-                                               (zip2Ann f an1 an1' z)
-                                               (zip2Ann f an2 an2' z)
-    | ann0 a, ann0 b => ann0 (f a b)
-    | _, _ => z
-  end.
-
-Definition cp_eqns_ann (a:ann (onv (withTop val))) (b:ann (set var)) : ann eqns :=
-  zip2Ann cp_eqns a b (ann0 ∅).
-
-Definition cp_choose_op E e :=
-  match op_eval E e with
-    | Some (wTA c) => Con c
-    | _ => e
-  end.
-
-
-Fixpoint constantPropagate (AE:onv (withTop val)) s {struct s} : stmt :=
-  match s with
-    | stmtLet x (Operation e) s =>
-      stmtLet x (Operation (cp_choose_op AE e)) (constantPropagate AE s)
-    | stmtLet x (Call f Y) s =>
-      stmtLet x (Call f (List.map (cp_choose_op AE) Y))
-              (constantPropagate AE s)
-    | stmtIf e s t =>
-      stmtIf (cp_choose_op AE e)
-             (constantPropagate AE s)
-             (constantPropagate AE t)
-    | stmtApp f Y =>
-      stmtApp f (List.map (cp_choose_op AE) Y)
-    | stmtReturn e => stmtReturn (cp_choose_op AE e)
-    | stmtFun F t =>
-      stmtFun (List.map (fun Zs => (fst Zs, constantPropagate AE (snd Zs))) F)
-              (constantPropagate AE t)
-  end.
-
-Lemma zip2Ann_get X Y Z (f:X->Y->Z) a b z
-:
-  same_shape a b
-  -> getAnn (zip2Ann f a b z) = f (getAnn a) (getAnn b).
-Proof.
-  intros. general induction H; simpl; eauto.
 Qed.
 
 Lemma in_or_not X `{OrderedType X} x s
@@ -587,7 +528,7 @@ Local Hint Resolve impb_lift.
 
 Lemma cp_sound_eqn AE Cp Rch ZL ΓL s r (ang:ann (set var * set var))
       (CP:cp_sound AE Cp s r)
-      (RCH: reachability (ConstantPropagation.cop2bool AE) Sound Rch s r)
+      (RCH: reachability (ConstantPropagationSound.cop2bool AE) Sound Rch s r)
       (RA: renamedApart s ang)
       (LD: labelsDefined s (length ZL))
       (Len2: ❬ZL❭ = ❬ΓL❭)
@@ -676,7 +617,7 @@ Proof.
                  hnf; intros. eapply H. cset_tac.
             * eapply eqn_sound_entails_monotone; eauto.
               exploit H15; eauto.
-              -- unfold ConstantPropagation.cop2bool.
+              -- unfold ConstantPropagationSound.cop2bool.
                  intro. inv H.
                  ++ eapply n0. unfold aval2bool in H1.
                    destruct (op_eval AE e); isabsurd.
@@ -712,7 +653,7 @@ Proof.
                  hnf; intros. eapply H. cset_tac.
             * eapply eqn_sound_entails_monotone; eauto.
               exploit H16; eauto.
-               -- unfold ConstantPropagation.cop2bool.
+               -- unfold ConstantPropagationSound.cop2bool.
                  intro. inv H.
                  ++ eapply n0. unfold aval2bool in H1.
                    destruct (op_eval AE e); isabsurd.

@@ -359,3 +359,11 @@ Smpl Add
      | [ |- context [iter _ _ (@succ ?V ?H ?NR ?NRS)] ] =>
        setoid_rewrite (@asNat_iter_plus V H NR NRS)
      end : nr.
+
+Lemma succ_inj V `{NaturalRepresentationSucc V} (x y:V)
+  : succ x === succ y
+    -> x === y.
+Proof.
+  intros.
+  nr. omega.
+Qed.

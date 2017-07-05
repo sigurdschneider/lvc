@@ -136,4 +136,10 @@ Instance withTop_UB A R `{EqDec A R}
 Defined.
 
 Definition constant_propagation_analysis :=
-  makeForwardAnalysis _ _ _ cp_trans cp_reach cp_trans_mon cp_reach_mon.
+  makeForwardAnalysis _ _ _ cp_trans cp_reach cp_trans_mon cp_reach_mon
+                      _.
+
+Require Import FiniteFixpointIteration.
+
+Definition constantPropagationAnalysis s ra (RA:RenamedApart.renamedApart s ra) :=
+  proj1_sig (safeFixpoint (constant_propagation_analysis RA)).

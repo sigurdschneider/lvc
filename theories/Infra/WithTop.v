@@ -1,4 +1,4 @@
-Require Import Util MapBasics Infra.Lattice Infra.PartialOrder DecSolve .
+Require Import Util MapBasics Infra.Lattice Infra.PartialOrder DecSolve Terminating.
 
 Set Implicit Arguments.
 
@@ -373,4 +373,18 @@ Instance withBot_lower_bounded A `{PartialOrder A} : LowerBounded (withBot A) :=
   }.
 Proof.
   intros. destruct a; econstructor.
+Qed.
+
+Instance terminating_withTop X R `{EqDec X R}
+  : Terminating (withTop X) poLt.
+Proof.
+  hnf; intros.
+  destruct x.
+  - econstructor; intros. exfalso.
+    destruct H0; clear_trivial_eqs. eauto.
+  - econstructor; intros.
+    destruct H0. invc H0.
+    + exfalso. eapply H1. econstructor. symmetry. eauto.
+    + econstructor; intros. exfalso.
+      destruct H0; clear_trivial_eqs. eauto.
 Qed.

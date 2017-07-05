@@ -10,7 +10,8 @@ Require Coherence.Allocation AllocationAlgo AllocationAlgoCorrect.
 Require UCE DVE EAE Alpha.
 Require ReachabilityAnalysis ReachabilityAnalysisCorrect.
 Require Import DCVE Slot InfinitePartition RegAssign ExpVarsBounded.
-(* Require CopyPropagation ConstantPropagation ConstantPropagationAnalysis.*)
+Require CopyPropagation ConstantPropagation ConstantPropagationAnalysis.
+Require ConstantPropagationAnalysisCorrect.
 
 Require Import RenameApartToPart FreshGen.
 
@@ -19,9 +20,6 @@ Require String.
 Set Implicit Arguments.
 
 Section Compiler.
-
-(*Definition constantPropagationAnalysis :=
-Analysis.fixpoint ConstantPropagationAnalysis.constant_propagation_analysis first. *)
 
 Definition ensure_f P `{Computable P} (s: String.string) {A} (cont:status A) : status A :=
 if [P] then cont else Error s.
@@ -71,33 +69,23 @@ Proof with eauto using DCVE_live, DCVE_noUC.
   eauto using defined_on_incl, DCVE_occurVars.
 Qed.
 
-(*
-Definition optimize (s':stmt) : status stmt :=
-  let s := rename_apart s' in
-  sdo ALAE <- constantPropagationAnalysis s;
-  match ALAE with
-    | (AL, AEc) =>
-      let AE := (fun x => MapInterface.find x AEc) in
-      ensure (ConstantPropagation.cp_sound AE nil s)
-             "Constant propagation unsound";
-      ensure (forall x, x ∈ freeVars s' -> AE x = None)
-             "Constant propagation makes no assumptions on free vars";
-      let s := ConstantPropagation.constantPropagate AE s in
-      sdo lv <- livenessAnalysis s;
-      ensure (TrueLiveness.true_live_sound Liveness.Functional nil s lv) "Liveness unsound (2)";
-      Success (DVE.compile nil s lv)
-  end.
-*)
 
-Print all.
+Definition optimize (s':stmt) :=
+  let s := rename_apart FG_even_fast_pos s' in
+  let an := @ConstantPropagationAnalysis.constantPropagationAnalysis
+                 s
+                 (renamedApartAnn s (freeVars s'))
+                 (rename_apart_renamedApart FGS_even_fast_pos s')
+  in
+  let s_cp := ConstantPropagation.constantPropagate (DomainSSA.domenv (proj1_sig (fst an))) s in
+  s_cp.
 
-
-Lemma succ_inj V `{NaturalRepresentationSucc V} (x y:V)
-  : succ x === succ y
-    -> x === y.
+Lemma optimize_correct E s
+  : @sim _ IL.statetype_F _ _ bot3 Bisim
+           (nil, E, s)
+           (nil:list F.block, E, optimize s).
 Proof.
-  intros.
-  nr. omega.
+  unfold optimize.
 Qed.
 
 Definition slt (D:set var) (EV:For_all (fun x => even (asNat x)) D)

@@ -5,7 +5,7 @@ Require Import Analysis AnalysisForwardSSA Subterm CSet MapAgreement RenamedApar
 Require Import Infra.PartialOrder Infra.Lattice Infra.WithTop.
 Require Import LabelsDefined Annotation.
 Require Import Reachability ReachabilityAnalysisCorrectSSA.
-Require Import ConstantPropagation ConstantPropagationAnalysis DomainSSA.
+Require Import ConstantPropagation ConstantPropagationSound ConstantPropagationAnalysis DomainSSA.
 
 Local Arguments proj1_sig {A} {P} e.
 Local Arguments length {A} e.
