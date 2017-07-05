@@ -7,3 +7,6 @@
 [submodule "CompCert"]
 	path = CompCert
 	url = git@github.com:sigurdschneider/CompCert.git
+[submodule "FlameGraph"]
+	path = FlameGraph
+	url = https://github.com/brendangregg/FlameGraph
