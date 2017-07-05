@@ -17,12 +17,18 @@ let rec discard_dead lv m =
 let rec first f x =
   if f x then x else first f (x + 1)
 
-let print_var oc has_slots ids (v:int) =
+let print_var' oc has_slots ids (v:int) =
   let is_slot = v mod 2 == 1 && has_slots in
   try
     let c = (IntMap.find v ids) in
     output_string oc (if is_slot then String.uppercase_ascii c else c)
   with Not_found -> output_string oc ("?" ^ (string_of_int v))
+
+let print_var oc has_slots ids v =
+  print_var' oc has_slots ids (P.to_int v)
+
+let print_fvar oc has_slots ids v =
+  print_var' oc has_slots ids (Nat.to_int v)
 
 let rec print_binop oc op =
   match op with
@@ -42,7 +48,7 @@ let rec print_unop oc op =
 let rec print_sexpr oc has_slots ids e =
   match e with
     | Op.Con x -> output_string oc (string_of_int (Z.to_int x))
-    | Op.Var x -> print_var oc has_slots ids (Nat.to_int x)
+    | Op.Var x -> print_var oc has_slots ids x
     | Op.UnOp (op, e1) -> print_unop oc op; output_string oc " ";
 			  print_sexpr oc has_slots ids e1
     | Op.BinOp (op, e1, e2) -> print_sexpr oc has_slots ids e1;
@@ -73,7 +79,7 @@ let print_ext_exp oc has_slots ids e =
   match e with
   | Exp.Call (f, y) ->
      output_string oc "extern ";
-     print_var oc has_slots ids (Nat.to_int f);
+     print_fvar oc has_slots ids f;
      output_string oc " (";
      print_list oc (print_sexpr oc has_slots ids) y;
      output_string oc ")"
@@ -83,17 +89,18 @@ let print_ext_exp oc has_slots ids e =
 
 let rec print_nstmt oc has_slots ids indent s =
   (let print_sexpr = print_sexpr oc has_slots ids in
-  let print_var = print_var oc has_slots ids in
+   let print_var = print_var oc has_slots ids in
+   let print_fvar = print_fvar oc has_slots ids in
   let print_nstmt = print_nstmt oc has_slots ids in
   let print_string = output_string oc in
   match s with
     | ILN.Coq_nstmtReturn e -> print_sexpr e
     | ILN.Coq_nstmtApp (f, y) ->
-       print_var (Nat.to_int f);
+       print_var f;
        print_string "("; print_list oc print_sexpr y; print_string ")"
     | ILN.Coq_nstmtLet (x, e, s) ->
        print_string "let ";
-       print_var (Nat.to_int x);
+       print_var x;
        print_string " = ";
        print_ext_exp oc has_slots ids e;
        print_string " in\n";
@@ -122,9 +129,9 @@ let rec print_nstmt oc has_slots ids indent s =
 and print_body oc has_slots ids indent fZs =
   match fZs with
   | ((f, y), s) ->
-     print_var oc has_slots ids (Nat.to_int f);
+     print_var oc has_slots ids f;
      output_string oc "(";
-     print_list oc (print_var oc has_slots ids) (List.map Nat.to_int y);
+     print_list oc (print_var oc has_slots ids) y;
      output_string oc ") = \n";
      print_indent oc (indent+2);
      print_nstmt oc has_slots ids (indent+2) s;
@@ -146,7 +153,7 @@ let rec print_stmt oc has_slots ids indent s =
        print_string ")"
     | IL.Coq_stmtLet (x, e, s) ->
        print_string "let ";
-       print_var (Nat.to_int x);
+       print_var x;
        print_string " = ";
        print_ext_exp oc has_slots ids e;
        print_string " in\n";
@@ -176,7 +183,7 @@ and print_body oc has_slots ids indent fZs =
   match fZs with
   | (y, s) ->
      print_string "_ (";
-     print_list oc (print_var oc has_slots ids) (List.map Nat.to_int y);
+     print_list oc (print_var oc has_slots ids) y;
      print_string ") = \n";
      print_indent oc (indent+2);
      print_stmt oc has_slots ids (indent+2) s;
@@ -187,7 +194,7 @@ SetAVL.fold
   (OrderedType.coq_SOT_as_OT OrderedTypeEx.nat_OrderedType)
   (fun x (s:string) ->
    output_string oc s;
-   print_var oc has_slots ids (Nat.to_int x);
+   print_fvar oc has_slots ids x;
    output_string oc " "; "")
   x
   " "

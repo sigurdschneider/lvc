@@ -60,6 +60,12 @@ Defined.
 
 Definition odd := (fun x => negb (even x)).
 
+Lemma even_or_odd (x:nat)
+  : even x + odd x.
+Proof.
+  unfold odd. destruct (even x); eauto.
+Qed.
+
 Lemma even_not_even x
   : even x = negb (even (S x)).
 Proof.
@@ -89,6 +95,47 @@ Proof.
   - intros.
     unfold even_inf_subset, odd_inf_subset, odd, negb; simpl.
     cases; eauto.
+Qed.
+
+
+Definition even_inf_subset_pos : inf_subset positive.
+Proof.
+  refine (@Build_inf_subset _ _ (fun x => even (asNat x)) _ _).
+  - intros. cbn. destruct (even_or_successor (S (asNat x))); eauto.
+    + exists (ofNat (S (asNat x))). nr. split; eauto.
+      change (_lt x (ofNat (S (asNat x)))).
+      rewrite <- (@order_respecting' positive _). nr. omega.
+    + exists (ofNat (S (S (asNat x)))). nr. split; eauto.
+      change (_lt x (ofNat (S (S (asNat x))))).
+      rewrite <- (@order_respecting' positive _). nr. omega.
+Defined.
+
+Definition odd_inf_subset_pos : inf_subset positive.
+Proof.
+  refine (@Build_inf_subset _ _ (fun x => odd (asNat x)) _ _).
+  - cbn. unfold odd. intros.
+    destruct (even_or_successor (asNat x)); eauto.
+    + eexists (ofNat (S (asNat x))). nr. rewrite <- even_not_even.
+      split; eauto. change (_lt x (ofNat (S (asNat x)))).
+      eapply order_respecting'.
+      nr. omega.
+    + eexists (ofNat (S (S (asNat x)))); simpl.
+      rewrite even_not_even in H. nr.  split; eauto.
+      change (_lt x (ofNat (S (S (asNat x))))).
+      eapply order_respecting'. nr. omega.
+Defined.
+
+
+Definition even_part_pos : inf_partition positive.
+Proof.
+  refine (Build_inf_partition even_inf_subset_pos odd_inf_subset_pos _ _).
+  - intros.
+    unfold even_inf_subset in H. simpl in H.
+    unfold odd_inf_subset in H0. simpl in H0.
+    unfold odd in H0. unfold negb in H0. cases in H0; eauto.
+  - intros.
+    unfold even_inf_subset, odd_inf_subset, odd, negb; simpl.
+    eapply even_or_odd.
 Qed.
 
 Require Import SafeFirst.

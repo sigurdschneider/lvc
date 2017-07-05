@@ -109,12 +109,10 @@ Section LeastFresh.
       assert (IN:n ∈ G) by cset_tac. clear NOTIN.
       split.
       + eapply all_in_lv_cardinal.
-        intros. decide (x === n); try rewrite e in *; eauto.
-        eapply B. nr. assert (asNat x <> asNat n).
-        intro. eapply asNat_inj in H4; eauto. omega.
-      + intros. decide (m === n); try rewrite e in *; eauto.
-        eapply B. nr. assert (asNat m <> asNat n).
-        intro. eapply asNat_inj in H4; eauto. omega.
+        intros. decide (x === n); try rewrite e in *; eauto; nr.
+        eapply B. omega.
+      + intros. decide (m === n); try rewrite e in *; eauto; nr.
+        eapply B. omega.
     - intuition.
     - split; intros; nr; omega.
   Qed.
@@ -346,4 +344,4 @@ Proof.
   eapply fresh_list_nodup, fresh_spec. eauto with len.
   eapply fresh_list_spec, fresh_spec.
 Qed.
-*)
+ *)

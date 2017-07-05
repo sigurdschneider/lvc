@@ -574,7 +574,8 @@ Proof.
         rewrite ?fst_renamedApartAnn;
         rewrite ?snd_renamedApartAnn. simpl.
       split. rewrite union_comm; eauto.
-      split. eapply fresh_list_nodup; eauto.
+      split. change eq with (@_eq var _).
+      eapply fresh_list_nodup; eauto.
       split. symmetry. eapply disj_1_incl; try eapply fresh_list_disj; eauto.
       rewrite <- domain_incl_renameApartF; eauto.
       eapply disj_union_left.

@@ -235,6 +235,14 @@ Smpl Add
        setoid_rewrite (@asNat_ofNat V _ NR)
      end : nr.
 
+Smpl Add
+     match goal with
+     | [ LT : context [ @ofNat ?V _ ?NR (@asNat ?V _ _ _) ] |- _ ] =>
+       setoid_rewrite (@ofNat_asNat V _ NR) in LT
+     | [ |- context [ @ofNat ?V _ ?NR (@asNat ?V _ _ _) ] ] =>
+       setoid_rewrite (@ofNat_asNat V _ NR)
+     end : nr.
+
 
 Ltac nr := repeat smpl nr.
 
@@ -296,3 +304,58 @@ Instance NaturalRepresentationMaxPositive : NaturalRepresentationMax positive :=
 Proof.
   - intros. eapply Posmax_asNat.
 Defined.
+
+
+Lemma asNat_ofNat_swap N `{NaturalRepresentation N} k m
+  : k = asNat m <-> ofNat k === m.
+Proof.
+  split; intros; subst.
+  - rewrite ofNat_asNat. reflexivity.
+  - rewrite <- H1. rewrite asNat_ofNat. reflexivity.
+Qed.
+
+Lemma asNat_inj N `{NaturalRepresentation N} m n
+  : asNat m = asNat n -> m === n.
+Proof.
+  intros.
+  decide (_lt m n); eauto.
+  - nr. omega.
+  - decide (_lt n m); eauto.
+    + nr. omega.
+    + eapply lt_trans_eq; eauto.
+Qed.
+
+Lemma asNat_iff N `{NaturalRepresentation N} m n
+  : asNat m = asNat n <-> m === n.
+Proof.
+  split; eauto using asNat_inj, asNat_proper.
+Qed.
+
+(* Smpl Add match goal with
+         | [ LT : context [ @asNat ?V ?H ?NR _ = asNat _ ] |- _ ] =>
+           rewrite (@asNat_iff V H NR) in LT
+         end : nr.*)
+
+Smpl Add match goal with
+         | [ EQ : context [ @equiv ?V (@_eq ?V ?H) _ _ _ ],
+                  NR : @NaturalRepresentation ?V ?H |- _ ] =>
+           rewrite <- (@asNat_iff V H NR) in EQ
+         | [ NR : @NaturalRepresentation ?V ?H |- context [ @equiv ?V (@_eq ?V ?H) _ _ _ ] ] =>
+           rewrite <- (@asNat_iff V H NR)
+         end : nr.
+
+
+Lemma asNat_iter_plus N `{NaturalRepresentationSucc N} n i
+  : asNat (iter n i succ) = n + asNat i.
+Proof.
+  general induction n; simpl; eauto.
+  rewrite IHn. nr. omega.
+Qed.
+
+Smpl Add
+     match goal with
+     | [ H : context [iter _ _ (@succ ?V ?H ?NR ?NRS)] |- _ ] =>
+       setoid_rewrite (@asNat_iter_plus V H NR NRS) in H
+     | [ |- context [iter _ _ (@succ ?V ?H ?NR ?NRS)] ] =>
+       setoid_rewrite (@asNat_iter_plus V H NR NRS)
+     end : nr.

@@ -2,35 +2,6 @@ Require Import CSet Util PidgeonHole OrderedTypeMax.
 
 Set Implicit Arguments.
 
-Lemma asNat_ofNat_swap N `{NaturalRepresentation N} k m
-  : k = asNat m <-> ofNat k === m.
-Proof.
-  split; intros; subst.
-  - rewrite ofNat_asNat. reflexivity.
-  - rewrite <- H1. rewrite asNat_ofNat. reflexivity.
-Qed.
-
-Lemma asNat_inj N `{NaturalRepresentationSucc N} m n
-  : asNat m = asNat n -> m === n.
-Proof.
-  intros.
-  remember (asNat m) as k.
-  general induction k.
-  - decide (m <<< n); eauto.
-    + exfalso. eapply order_respecting' in l.
-      instantiate (1:=H0) in l. omega.
-    + decide (n <<< m); eauto.
-      * exfalso. eapply order_respecting' in l.
-        instantiate (1:=H0) in l. omega.
-      * eapply lt_trans_eq; eauto.
-  - eapply asNat_ofNat_swap in Heqk.
-    eapply asNat_ofNat_swap in H2.
-    rewrite <- succ_ofNat in Heqk.
-    rewrite <- succ_ofNat in H2.
-    rewrite <- Heqk. rewrite <- H2.
-    reflexivity.
-Qed.
-
 Section SafeFirst.
   Variable N : Type.
   Context `{NaturalRepresentationSucc N}.

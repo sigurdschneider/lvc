@@ -8,6 +8,8 @@
     big_int_of_a *)
 
   let parse_neg_integer a = parse_integer ("-"^a)
+  (* shift vars by one *)
+  let parse_var v = P.of_int (1+v)
 
 %}
 
@@ -46,7 +48,7 @@ integer_constant:
   | IL_minus IL_integer_constant { Op.Con (Z.of_sint (parse_neg_integer $2)) }
 
 primary_expression:
-  | IL_ident { Op.Var (Nat.of_int $1)}
+  | IL_ident { Op.Var (parse_var $1)}
   | integer_constant {$1}
 
   | IL_lparen expression IL_rparen { $2 }
@@ -100,10 +102,14 @@ fun_list:
 | fun_def IL_and fun_list { $1::$3 }
 
 expr :
-| IL_let IL_ident IL_equal ext_expression IL_in expr { Coq_nstmtLet (Nat.of_int $2, $4, $6) }
-| IL_letrec fun_list IL_in expr { Coq_nstmtFun (List.map (fun ((a,b),c) -> ((Nat.of_int a, List.map Nat.of_int b), c)) $2, $4) }
+| IL_let IL_ident IL_equal ext_expression IL_in expr { Coq_nstmtLet (parse_var $2, $4, $6) }
+| IL_letrec fun_list IL_in expr {
+	      Coq_nstmtFun (List.map (fun ((a,b),c) ->
+				      ((parse_var a,
+					List.map parse_var b), c)) $2, $4)
+	    }
 | IL_if expression IL_then expr IL_else expr { Coq_nstmtIf ($2,$4,$6) }
-| IL_ident option_arglist { Coq_nstmtApp (Nat.of_int $1,$2) }
+| IL_ident option_arglist { Coq_nstmtApp (parse_var $1,$2) }
 | expression { Coq_nstmtReturn ($1) }
 
 program:

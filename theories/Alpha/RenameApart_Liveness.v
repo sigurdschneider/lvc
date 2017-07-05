@@ -233,7 +233,7 @@ Proof.
       split.
       rewrite getAnn_setTopAnn. eauto with cset.
       rewrite getAnn_setTopAnn.
-      split.
+      split. change eq with (@_eq var _).
       eapply fresh_list_nodup; eauto. simpl in *.
       rewrite lookup_set_update_with_list_in_union_length; eauto.
       rewrite <- H8. clear. cset_tac.
@@ -433,7 +433,8 @@ Proof.
       split.
       -- rewrite getAnn_setTopAnn. eauto with cset.
       -- split.
-         ++ eapply fresh_list_nodup; eauto.
+         ++ change eq with (@_eq var _).
+           eapply fresh_list_nodup; eauto.
          ++ rewrite getAnn_setTopAnn. cases; eauto.
            rewrite lookup_set_update_with_list_in_union_length; eauto.
            rewrite H13. clear. cset_tac.

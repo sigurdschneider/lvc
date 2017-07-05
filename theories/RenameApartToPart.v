@@ -55,45 +55,48 @@ Proof.
     + rewrite of_list_3; eauto.
 Qed.
 
-Lemma FG_even_fast_inf_subset fi x
-  :  even_inf_subset (fst (FG_even_fast fi x)).
+Lemma FG_even_fast_inf_subset fi (x:var)
+  :  even_inf_subset_pos (fst (FG_even_fast_pos fi x)).
 Proof.
   hnf. simpl. destruct fi; simpl. cases; eauto.
 Qed.
 
+Local Arguments succ : simpl never.
+
 Lemma even_fast_list_even fi
-  :  forall Z x, x \In of_list (fst (fresh_list FG_even_fast fi Z)) ->
-            even_inf_subset x.
+  :  forall Z (x:var), x \In of_list (fst (fresh_list FG_even_fast_pos fi Z)) ->
+            even_inf_subset_pos x.
 Proof.
   intros.
-  unfold fresh_list in H. simpl in *.
-  eapply of_list_map in H; eauto. cset_tac'.
-  eapply of_list_map in H; eauto. cset_tac'.
-  eapply in_range_x in H as [? ?]. destruct fi; simpl in *.
+  destruct fi.
+  eapply of_list_get_first in H; dcr. invc H1.
+  simpl in *.
+  inv_get.
+  rewrite asNat_iter_plus_plus.
   eapply even_add; eauto. eapply even_mult2.
 Qed.
 
-Lemma even_fast_update_even E fi (s:set nat) t
+Lemma even_fast_update_even E fi (s:set var) t
       (Len:❬to_list s❭ = ❬t❭)
-  : forall x : nat,
+  : forall x : var,
     x \In s ->
-    even_inf_subset ((E [to_list s <-- fst (fresh_list FG_even_fast fi t)]) x).
+    even_inf_subset_pos ((E [to_list s <-- fst (fresh_list FG_even_fast_pos fi t)]) x).
 Proof.
   intros.
   rewrite <- of_list_3 in H.
-  eapply (update_with_list_lookup_in_list E _ (fst (fresh_list FG_even_fast fi t))) in H; dcr.
+  eapply (update_with_list_lookup_in_list E _ (fst (fresh_list FG_even_fast_pos fi t))) in H; dcr.
     + rewrite H2.
       eapply even_fast_list_even.
       eapply get_in_of_list; eauto.
-    + rewrite fresh_list_len; eauto using FGS_even_fast.
+    + rewrite fresh_list_len; eauto using FGS_even_fast_pos.
 Qed.
 
 Lemma rename_to_subset_even s
-  : For_all (inf_subset_P even_inf_subset)
-            (occurVars (fst (rename_apart_to_part FGS_even_fast s))).
+  : For_all (inf_subset_P even_inf_subset_pos)
+            (occurVars (fst (rename_apart_to_part FGS_even_fast_pos s))).
 Proof.
   eapply var_P_occurVars.
-  eapply renameApart_var_P; eauto using FGS_even_fast.
+  eapply renameApart_var_P; eauto using FGS_even_fast_pos.
   - intros. eapply FG_even_fast_inf_subset.
   - intros.
     eapply even_fast_list_even; eauto.

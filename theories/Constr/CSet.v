@@ -977,3 +977,21 @@ Lemma disj_union_inv X `{OrderedType X} (x:X) (s t:set X)
 Proof.
   cset_tac.
 Qed.
+
+
+Lemma le_trans X `{OrderedType X} x y z
+  : ~ _lt x y -> ~ _lt y z -> ~ _lt x z.
+Proof.
+  intros. decide (x === y).
+  - rewrite e . eauto.
+  - eapply le_neq in n; eauto.
+    intro. eapply H1. etransitivity; eauto.
+Qed.
+
+Lemma lt_trans_eq X `{OrderedType X} x y
+  : ~ _lt x y -> ~ _lt y x -> _eq x y.
+Proof.
+  intros. decide (x === y); eauto.
+  - eapply le_neq in n; eauto.
+    exfalso. eauto.
+Qed.

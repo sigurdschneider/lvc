@@ -92,29 +92,37 @@ Definition optimize (s':stmt) : status stmt :=
 Print all.
 
 
-Definition slt (D:set var) (EV:For_all even D)
+Lemma succ_inj V `{NaturalRepresentationSucc V} (x y:V)
+  : succ x === succ y
+    -> x === y.
+Proof.
+  intros.
+  nr. omega.
+Qed.
+
+Definition slt (D:set var) (EV:For_all (fun x => even (asNat x)) D)
   : Slot D.
-  refine (@Build_Slot _ S _ _).
+  refine (@Build_Slot _ succ _ _).
   - hnf; intros.
     eapply EV in H.
     cset_tac'. eapply EV in H0.
-    rewrite even_not_even in H. cset_tac.
-  - hnf; intros. cset_tac.
+    rewrite even_not_even in H. nr. cset_tac.
+  - hnf; intros. eapply succ_inj; eauto.
 Defined.
 
 Require Import RegAssign.
 
 Definition fromILF (s:stmt) :=
   let s_eae := EAE.compile s in
-  let sra := rename_apart_to_part FGS_even_fast s_eae in
+  let sra := rename_apart_to_part FGS_even_fast_pos s_eae in
   let dcve := DCVE Liveness.Imperative (fst sra) in
   let fvl := to_list (getAnn (snd dcve)) in
   let k := exp_vars_bound (fst dcve) in
-  let spilled := spill k S (fst dcve) (snd dcve) in
-  let rdom := (domain_add FG_even_fast (empty_domain FG_even_fast) (getAnn (snd (spilled)))) in
-  let ren2 := snd (renameApart FG_even_fast rdom id (fst spilled)) in
-  let ras := rassign even_part ren2
-                    (snd (renameApart_live FG_even_fast
+  let spilled := spill k succ (fst dcve) (snd dcve) in
+  let rdom := (domain_add FG_even_fast_pos (empty_domain FG_even_fast_pos) (getAnn (snd (spilled)))) in
+  let ren2 := snd (renameApart FG_even_fast_pos rdom id (fst spilled)) in
+  let ras := rassign even_part_pos ren2
+                    (snd (renameApart_live FG_even_fast_pos
                                            rdom
                                            id
                                            (fst (spilled))
@@ -129,7 +137,7 @@ Require Import MoreTac Alpha RenameApart_Alpha RenameApart_Liveness
 
 Definition slotted_vars (s:stmt) :=
   let s_eae := EAE.compile s in
-  let sra := rename_apart_to_part FGS_even_fast s_eae in
+  let sra := rename_apart_to_part FGS_even_fast_pos s_eae in
   let dcve := DCVE Liveness.Imperative (fst sra) in
   let k := exp_vars_bound (fst dcve) in
   drop k (to_list (getAnn (snd dcve))).
@@ -137,8 +145,8 @@ Definition slotted_vars (s:stmt) :=
 Definition fromILF_fvl (s:stmt) :=
            to_list (freeVars (EAE.compile s)).
 
-Definition fromILF_fvl_ren (s:stmt) :=
-  (fun m : nat => m) ⊝ (fun m : nat => m + (m + 0)) ⊝ range 0 ❬to_list (freeVars (EAE.compile s))❭.
+Definition fromILF_fvl_ren (s:stmt) : list var :=
+  range (fun x => succ (succ x)) (ofNat 0) ❬to_list (freeVars (EAE.compile s))❭.
 
 Hint Resolve Liveness.live_sound_overapproximation_I Liveness.live_sound_overapproximation_F.
 
@@ -158,23 +166,20 @@ Opaque to_list.
 Opaque to_list.
 
 
-Lemma fromILF_fvl_ren_EAE X `{OrderedType X} s t
+Lemma fromILF_fvl_ren_EAE X `{OrderedType X} Y s t (f:Y->Y) x
   : s [=] t
-    -> (fun m : nat => m)
-        ⊝ (fun m : nat => m + (m + 0)) ⊝ range 0 ❬to_list s❭ =
-      (fun m : nat => m)
-        ⊝ (fun m : nat => m + (m + 0)) ⊝ range 0 ❬to_list t❭.
+    -> range f x ❬to_list s❭ =
+      range f x ❬to_list t❭.
 Proof.
   unfold fromILF_fvl_ren. intros.
-  f_equal. f_equal. f_equal.
+  f_equal.
   erewrite length_to_list; eauto.
 Qed.
 
 
 Lemma rename_apart_to_part_freeVars (s:stmt)
-  : fst (getAnn (rename_apart_to_part_ra FGS_even_fast s))
-        [=]  of_list ((fun m : nat => m)
-        ⊝ (fun m : nat => m + (m + 0)) ⊝ range 0 ❬to_list (freeVars s)❭).
+  : fst (getAnn (rename_apart_to_part_ra FGS_even_fast_pos s))
+        [=]  of_list (range (fun x => succ (succ x)) (ofNat 0) ❬to_list (freeVars s)❭).
 Proof.
   unfold rename_apart_to_part_ra; simpl.
   rewrite fst_renamedApartAnn.
@@ -182,19 +187,19 @@ Proof.
 Qed.
 
 
-Hint Immediate FGS_even_fast.
+Hint Immediate FGS_even_fast_pos.
 
 Lemma fromILF_correct (s s':stmt) E (PM:LabelsDefined.paramsMatch s nil)
       (OK:fromILF s = Success s')
       (Def:defined_on (freeVars s) E)
   : sim F.state I.state bot3 Sim (nil, E, s)
         (nil, (id [fromILF_fvl_ren s <-- fromILF_fvl s] ∘ E)
-                 [S ⊝ slotted_vars s <-- lookup_list (id [fromILF_fvl_ren s <-- fromILF_fvl s] ∘ E)
+                 [succ ⊝ slotted_vars s <-- lookup_list (id [fromILF_fvl_ren s <-- fromILF_fvl s] ∘ E)
                     (slotted_vars s)], s').
 Proof.
   set (E':= id [fromILF_fvl_ren s <-- fromILF_fvl s] ∘ E).
   set (E'':= (id [fromILF_fvl_ren s <-- fromILF_fvl s] ∘ E)
-              [S ⊝ slotted_vars s <-- lookup_list (id [fromILF_fvl_ren s <-- fromILF_fvl s] ∘ E)
+              [succ ⊝ slotted_vars s <-- lookup_list (id [fromILF_fvl_ren s <-- fromILF_fvl s] ∘ E)
                  (slotted_vars s)]).
   let_unfold' fromILF OK. subst ras.
   eapply sim_trans with (S2:=F.state). {
@@ -210,7 +215,7 @@ Proof.
     eapply DCVE_app_expfree; eauto.
   }
 
-  assert (RA:RenamedApart.renamedApart (fst sra) (rename_apart_to_part_ra FGS_even_fast s_eae)). {
+  assert (RA:RenamedApart.renamedApart (fst sra) (rename_apart_to_part_ra FGS_even_fast_pos s_eae)). {
     eapply rename_apart_to_part_renamedApart.
   }
 
@@ -227,11 +232,11 @@ Proof.
     eapply DCVE_paramsMatch; eauto.
   }
 
-  assert (EV:For_all (fun n : nat => even n)
+  assert (EV:For_all (fun n : var => even (asNat n))
                      (fst (getAnn (DCVEra Liveness.Imperative (fst sra)
-                                          (rename_apart_to_part_ra FGS_even_fast s_eae)))
+                                          (rename_apart_to_part_ra FGS_even_fast_pos s_eae)))
                           ∪ snd (getAnn (DCVEra Liveness.Imperative (fst sra)
-                                                (rename_apart_to_part_ra FGS_even_fast s_eae))))). {
+                                                (rename_apart_to_part_ra FGS_even_fast_pos s_eae))))). {
     pose proof (rename_to_subset_even s_eae) as HY1.
     rewrite DCVE_ra_fst; eauto.
     rewrite DCVE_ra_snd; eauto.
@@ -245,7 +250,7 @@ Proof.
   }
 
   assert (Incl1:getAnn (snd dcve)
-         ⊆ fst (getAnn (DCVEra Liveness.Imperative (fst sra) (rename_apart_to_part_ra FGS_even_fast s_eae)))). {
+         ⊆ fst (getAnn (DCVEra Liveness.Imperative (fst sra) (rename_apart_to_part_ra FGS_even_fast_pos s_eae)))). {
     exploit DCVE_live_incl as INCL; eauto.
     eapply ann_R_get in INCL; eauto.
   }
@@ -263,7 +268,10 @@ Proof.
       rewrite <- fresh_list_domain_spec; eauto.
       rewrite fresh_list_len; eauto.
       rewrite of_list_3; eauto.
-      instantiate (1:=id[fst (fresh_list FG_even_fast (empty_domain FG_even_fast) (to_list (freeVars s_eae))) <-- to_list (freeVars s_eae)]).
+      instantiate (1:=id[fst (fresh_list FG_even_fast_pos
+                                         (empty_domain FG_even_fast_pos)
+                                         (to_list (freeVars s_eae)))
+                             <-- to_list (freeVars s_eae)]).
       hnf; intros.
       rewrite <- of_list_3 in H.
       edestruct (of_list_get_first _ H) as [n]; eauto; dcr. hnf in H1. subst x0.
@@ -281,13 +289,13 @@ Proof.
       decide (y ∈ freeVars s_eae).
       + unfold E'. simpl in H, H0.
         unfold fromILF_fvl_ren, fromILF_fvl. subst s_eae.
-        unfold comp. rewrite H. reflexivity.
+        unfold comp. simpl. rewrite H. reflexivity.
       + simpl in H,H0.
         rewrite lookup_set_update_not_in_Z in H0; [|rewrite of_list_3;eauto].
         unfold id in H0; subst x.
         subst E'.
         unfold fromILF_fvl_ren, fromILF_fvl. unfold comp; simpl.
-        erewrite fromILF_fvl_ren_EAE; eauto using EAE.EAE_freeVars.
+        subst s_eae. rewrite H; eauto.
   }
   eapply sim_trans with (σ2:=(nil, E', fst sra):I.state). {
      eapply bisim_sim. eapply SimCompanion.simc_sim.
@@ -308,7 +316,7 @@ Proof.
       DCVE_live_incl, DCVE_paramsMatch.
   }
   eapply sim_trans with (σ2:=(nil, E'', fst spilled):F.state). {
-    assert (VP:var_P (inf_subset_P even_inf_subset) (fst dcve)). {
+    assert (VP:var_P (inf_subset_P even_inf_subset_pos) (fst dcve)). {
       eapply DCVE_var_P; eauto.
       eapply renameApart_var_P.
       - eauto.
