@@ -52,7 +52,7 @@ Arguments sim S {H} S' {H0} r t _ _.
 
 Require Import AddParams Spilling.
 
-(*
+
 Definition toILF (s:IL.stmt) : IL.stmt :=
   let (s_dcve, lv) := DCVE Liveness.Imperative s in
   addParams s_dcve lv.
@@ -64,12 +64,12 @@ Lemma toILF_correct (ili:IL.stmt) (E:onv val)
 Proof with eauto using DCVE_live, DCVE_noUC.
   intros. subst. unfold toILF.
   eapply sim_trans with (S2:=I.state).
-  eapply DCVE_correct_I; eauto. let_pair_case_eq; simpl_pair_eqs; subst.
+  eapply DCVE_correct_I; eauto.
+  let_pair_case_eq; simpl_pair_eqs; subst.
   unfold fst at 1.
-  eapply addParams_correct...
+  eapply (@addParams_correct true)...
   eauto using defined_on_incl, DCVE_occurVars.
 Qed.
- *)
 
 (*
 Definition optimize (s':stmt) : status stmt :=
