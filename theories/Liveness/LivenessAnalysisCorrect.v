@@ -78,9 +78,10 @@ Proof.
                             (liveness_transform_dep i)
                             (@liveness_transform_dep_ext i sT) _ _ _ _ _ _ _ _ _ _); eauto.
       eapply PIR2_app; eauto.
-      eapply PIR2_get; eauto with len.
-      intros; inv_get.
-      exploit H16; eauto.
+      eapply PIR2_get.
+      * intros; inv_get.
+        exploit H16; eauto.
+      * len_simpl; eauto.
     + rewrite map_length. eauto.
     + intros. inv_get.
       rewrite map_map.
@@ -229,8 +230,8 @@ Proof.
       exploit (IHAnn2 i ZL LV) as IH2; eauto.
       * intros. pe_rewrite. rewrite BND; eauto with cset.
       * eapply ann_R_get in IH2. rewrite getAnn_mapAnn in IH2.
-        repeat cases; try rewrite IH1; try rewrite IH2; pe_rewrite; eauto.
-        cset_tac.
+        rewrite H2, IH1, IH2. pe_rewrite.
+        clear_all. cset_tac.
   - eapply IHAnn1; eauto.
     + intros. pe_rewrite. rewrite BND; eauto with cset.
   - eapply IHAnn2; eauto.
@@ -238,19 +239,19 @@ Proof.
   - edestruct (get_in_range _ H5) as [Z ?]; eauto.
     edestruct (get_in_range _ H6) as [[Lv ?] ?]; eauto.
     repeat erewrite get_nth; eauto.
-    rewrite list_union_incl with (s':=D); eauto with cset.
-    cases; eauto with cset.
-    intros; inv_get. rewrite <- H1.
-    eapply incl_list_union; eauto using get.
+    rewrite list_union_incl with (s':=D); only 3: eauto with cset.
+    + cases; eauto with cset.
+    + intros; inv_get. rewrite <- H1.
+      eapply incl_list_union; eauto using get.
   - exploit (IHAnn i) as IH; try eapply H8; try assumption. eauto.
     Focus 3.
     eapply ann_R_get in IH. rewrite getAnn_mapAnn in IH.
     rewrite IH.
-    pe_rewrite. cases; eauto with cset.
+    pe_rewrite. cases; [| eauto with cset].
     eapply union_incl_split; eauto.
-    eapply list_union_incl; eauto with cset; intros; inv_get.
+    eapply list_union_incl; only 2: eauto with cset; intros; inv_get.
 
-    rewrite get_app_lt in H3; eauto with len.
+    rewrite get_app_lt in H3; [| eauto with len].
     inv_get.
 
     edestruct (@backwardF_get sT _ (@backward _ (fun s0 : stmt => {x1 : ⦃var⦄ | x1 ⊆ occurVars s0})
@@ -285,9 +286,8 @@ Lemma livenessAnalysis_renamedApart_incl i s ra
       (RA:renamedApart s ra) (LD:labelsDefined s 0)
   : ann_R (fun (x : ⦃var⦄) (y : ⦃var⦄ * ⦃var⦄) => x ⊆ fst y) (livenessAnalysis i s) ra.
 Proof.
-  unfold livenessAnalysis. destr_sig.
-  destruct e as [n [Iter _]]. subst.
-  intros. eapply safeFixpoint_induction.
+  unfold livenessAnalysis.
+  eapply safeFixpoint_induction; intros.
   - clear LD.
     unfold initial_value. simpl.
     generalize (occurVars s).

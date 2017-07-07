@@ -4,7 +4,7 @@ Require Import Plus Util AllInRel Map Terminating MoreInversion.
 Require Import Val Var Env IL Annotation Infra.Lattice AnnotationLattice.
 Require Import DecSolve LengthEq MoreList Status AllInRel OptionR MapDefined.
 Require Import Keep Subterm Analysis CMapPartialOrder DomainSSA CMapTerminating.
-Require Import RenamedApart.
+Require Import RenamedApart Take WithTop.
 
 Set Implicit Arguments.
 
@@ -12,12 +12,6 @@ Arguments poLe : simpl never.
 Arguments poEq : simpl never.
 Arguments bottom : simpl never.
 Arguments comp X Y Z f g / x.
-
-Lemma option_eq_option_R X (R:relation X) x y
-  : option_eq R x y <-> option_R R x y.
-Proof.
-  split; inversion 1; econstructor; eauto.
-Qed.
 
 Definition forwardF (sT:stmt) (Dom:stmt->Type) (BL:list bool)
            (forward: forall s (ST:subTerm s sT) (d:Dom sT) (anr:ann bool), Dom sT * ann bool * list bool)
@@ -86,34 +80,6 @@ Smpl Add
      | [ H : context [ ❬snd (@forwardF ?sT ?Dom ?BL ?f ?F ?rF ?a ?ST)❭ ] |- _ ] =>
        erewrite (@forwardF_snd_length sT Dom BL f F rF a ST) in H
      end : len.
-
-Lemma ZLIncl_ext sT st F t (ZL:list params)
-    (EQ:st = stmtFun F t) (ST:subTerm st sT)
-    (ZLIncl:list_union (of_list ⊝ ZL) [<=] occurVars sT)
-  : list_union (of_list ⊝ (fst ⊝ F ++ ZL)) [<=] occurVars sT.
-Proof.
-  subst.
-  rewrite List.map_app.
-  rewrite list_union_app. eapply union_incl_split; eauto.
-  pose proof (subTerm_occurVars ST). simpl in *.
-  rewrite <- H.
-  eapply incl_union_left. eapply list_union_incl; intros; eauto with cset.
-  inv_get. eapply incl_list_union. eapply map_get_1; eauto.
-  cset_tac.
-Qed.
-
-Lemma ZLIncl_App_Z sT ZL n
-      (Incl:list_union (of_list ⊝ ZL) [<=] occurVars sT)
-  : of_list (nth n ZL (nil : params)) [<=] occurVars sT.
-Proof.
-  destruct (get_dec ZL n); dcr.
-  - erewrite get_nth; eauto. rewrite <- Incl.
-    eapply incl_list_union; eauto using zip_get.
-  - rewrite not_get_nth_default; eauto.
-    simpl. cset_tac.
-Qed.
-
-Arguments ZLIncl_App_Z {sT} {ZL} n Incl.
 
 Definition sTDom D sT := VDom (occurVars sT) D.
 
@@ -240,33 +206,6 @@ Proof.
 Qed.
 
 Require Import FiniteFixpointIteration.
-
-Lemma poLe_domupdd D `{PartialOrder D} U d d' v v' x IN IN'
-  : d ⊑ d'
-    -> v ⊑ v'
-    -> @domupdd D U d x v IN ⊑ @domupdd D U d' x v' IN'.
-Proof.
-  intros. eapply poLe_sig_struct.
-  eapply domupd_le; eauto.
-Qed.
-
-Lemma poEq_domupdd D `{PartialOrder D} U d d' v v' x IN IN'
-  : d ≣ d'
-    -> v ≣ v'
-    -> @domupdd D U d x v IN ≣ @domupdd D U d' x v' IN'.
-Proof.
-  intros. eapply poEq_sig_struct.
-  eapply domupd_eq; eauto.
-Qed.
-
-Hint Resolve poLe_domupdd poEq_domupdd.
-
-Instance orb_poEq_proper : Proper (poEq ==> poEq ==> poEq) orb.
-Proof.
-  intuition.
-Qed.
-
-Hint Resolve orb_poEq_proper.
 
 Lemma forwardF_monotone (sT:stmt) (Dom : stmt -> Type) `{PartialOrder (Dom sT)}
       (forward forward' : forall s : stmt,
@@ -429,9 +368,6 @@ Proof.
       reflexivity.
 Qed.
 
-
-
-Require Import Take.
 Lemma forwardF_get  (sT:stmt) D `{JoinSemiLattice D} BL ZL
       (F:list (params * stmt)) rF a ZLIncl
       f fr
@@ -504,49 +440,6 @@ Class UpperBounded (A : Type) `{PartialOrder A} :=
   }.
 
 Arguments UpperBounded A {H}.
-
-Arguments to_list : simpl never.
-
-Instance poLe_find_proper D `{PartialOrder D}
-  : Proper (_eq ==> @poLe (Dom D) _ ==> poLe) (@MapInterface.find var _ _ D).
-Proof.
-  unfold Proper, respectful; intros. invc H0.
-  eapply H1.
-Qed.
-
-Instance poEq_find_proper D `{PartialOrder D}
-  : Proper (_eq ==> @poEq (Dom D) _ ==> poEq) (@MapInterface.find var _ _ D).
-Proof.
-  unfold Proper, respectful; intros. invc H0.
-  eapply H1.
-Qed.
-
-Instance poLe_domenv_proper D `{PartialOrder D}
-  : Proper (@poLe (Dom D) _ ==> _eq ==> poLe) (@domenv D).
-Proof.
-  unfold Proper, respectful; intros. invc H1.
-  eapply H0.
-Qed.
-
-Instance poEq_domenv_proper D `{PartialOrder D}
-  : Proper (@poEq (Dom D) _ ==> _eq ==> poEq) (@domenv D).
-Proof.
-  unfold Proper, respectful; intros. invc H1.
-  eapply H0.
-Qed.
-
-Lemma domupd_poLe_left D `{PartialOrder D} d d' x v
-  : d ⊑ d'
-    -> v ⊑ domenv d' x
-    -> domupd d x v ⊑ d'.
-Proof.
-  intros.
-  hnf; intros y.
-  decide (y === x); eauto; subst.
-  - invc e.
-    rewrite domupd_var_eq; eauto.
-  - rewrite domupd_var_ne; eauto.
-Qed.
 
 Lemma snd_forwardF_inv (sT:stmt) D `{JoinSemiLattice D} f fr BL ZL ZLIncl F sa AE STF
       (P1: (setTopAnn (A:=bool)
@@ -676,34 +569,8 @@ Proof.
     eauto using get.
 Qed.
 
-Lemma agree_on_option_R_fstNoneOrR  (X : Type) `{OrderedType X} (Y : Type)
-      (R R':Y -> Y -> Prop) (D:set X) (f g h:X -> option Y)
-  : agree_on (option_R R) D f g
-    -> agree_on (fstNoneOrR R') D g h
-    -> (forall a b c, R a b -> R' b c -> R' a c)
-    -> agree_on (fstNoneOrR R') D f h.
-Proof.
-  intros AGR1 AGR2 Trans; hnf; intros.
-  exploit AGR1 as EQ1; eauto.
-  exploit AGR2 as EQ2; eauto.
-  inv EQ1; inv EQ2; clear_trivial_eqs; try econstructor; try congruence.
-  assert (x0 = b) by congruence; subst.
-  eauto.
-Qed.
-
-Lemma defined_on_agree_fstNoneOrR (X : Type) `{H : OrderedType X}
-      (Y : Type) (R : relation Y) (D : ⦃X⦄) (f g : X -> ؟ Y)
-  : defined_on D f -> agree_on (fstNoneOrR R) D f g -> defined_on D g.
-Proof.
-  intros Def Agr.
-  hnf; intros. edestruct Def; eauto.
-  exploit Agr; eauto. rewrite H1 in H2. inv H2; eauto.
-Qed.
-
 Local Notation "'getD' X" := (proj1_sig (fst (fst X))) (at level 10, X at level 0).
 
-
-Definition defVars' ( Zs:params*stmt) := of_list (fst Zs) ∪ definedVars (snd Zs).
 
 Lemma forwardF_agree (sT:stmt) D `{JoinSemiLattice D}
       (BL:list bool) (G:set var) (F:list (params * stmt)) f fr anF ZL'
@@ -749,24 +616,6 @@ Proof.
     + norm_lunion. clear_all. cset_tac.
     + norm_lunion. clear_all. cset_tac.
     + norm_lunion. unfold defVars'. clear_all. cset_tac.
-Qed.
-
-Lemma list_union_definedVars F
-  : definedVarsF definedVars F
-                 [=] list_union (of_list ⊝ fst ⊝ F) ∪ list_union (definedVars ⊝ snd ⊝ F).
-Proof.
-  unfold definedVarsF, defVarsZs.
-  general induction F; simpl; eauto with cset.
-  norm_lunion. rewrite IHF; clear IHF. cset_tac.
-Qed.
-
-Lemma list_union_definedVars' F
-  : list_union (defVars' ⊝ F)
-               [=] list_union (of_list ⊝ fst ⊝ F) ∪ list_union (definedVars ⊝ snd ⊝ F).
-Proof.
-  general induction F; simpl; eauto with cset.
-  norm_lunion. rewrite IHF; clear IHF. unfold defVars' at 1.
-  cset_tac.
 Qed.
 
 
@@ -881,56 +730,6 @@ Proof.
 Qed.
 
 
-Arguments join : simpl never.
-
-Lemma domjoin_list_notin D `{JoinSemiLattice D} x d Z Y
-  : x ∉ of_list Z
-    -> MapInterface.find x (domjoin_list d Z Y) = MapInterface.find x d.
-Proof.
-  intros. general induction Z; destruct Y; simpl in *; eauto.
-  rewrite domupd_var_ne.
-  rewrite IHZ; eauto. cset_tac. cset_tac.
-Qed.
-
-Lemma domjoin_list_get D `{JoinSemiLattice D} x (y y':option D) n d Z Y
-  : get Z n x
-    -> get Y n y'
-    -> y ≣ y'
-    -> NoDupA eq Z
-    -> domenv (domjoin_list d Z Y) x ≣ ((domenv d x) ⊔ y).
-Proof.
-  intros. general induction n; simpl in *; eauto.
-  - unfold domenv. rewrite domupd_var_eq; eauto.
-  - inv H1; inv H2. simpl.
-    inv H4.
-    eapply NoDupA_get_neq' in H4; [|eauto|eauto| instantiate (2:=0) |eauto using get| eauto using get];
-      try omega.
-    rewrite <- IHn; eauto using get.
-    unfold domenv.
-    rewrite domupd_var_ne; eauto. intro. eapply H4. invc H5; eauto.
-Qed.
-
-
-Lemma join_poLe_left (X : Type) (H : PartialOrder X) (H0 : JoinSemiLattice X)
-      (x y z : X)
-  : x ⊑ z -> y ⊑ z -> x ⊔ y ⊑ z.
-Proof.
-  intros.
-  rewrite H1, H2.
-  rewrite (join_idempotent _ z).
-  reflexivity.
-Qed.
-
-Lemma domjoin_list_poLe_left D `{JoinSemiLattice D} d d' Z Y
-  : d ⊑ d'
-    -> (forall n x y, get Z n x -> get Y n y -> y ⊑ domenv d' x)
-    -> domjoin_list d Z Y ⊑ d'.
-Proof.
-  general induction Z; destruct Y; eauto.
-  simpl. eapply domupd_poLe_left; eauto using get.
-  exploit H2; eauto using get.
-  eapply join_poLe_left; eauto.
-Qed.
 
 Instance makeForwardAnalysis D
          {PO:PartialOrder D}
@@ -983,3 +782,51 @@ Proof.
   - hnf; intros. simpl.
     eapply (forward_monotone f fr fMon frMon); eauto.
 Defined.
+
+
+Lemma makeForwardAnalysisSSA_init_env D
+         {PO:PartialOrder D}
+         (BSL:JoinSemiLattice D) (UB:UpperBounded D)
+         (f: forall U : ⦃var⦄, bool -> VDom U D -> exp -> ؟ D)
+         (fr: forall U : ⦃var⦄, bool -> VDom U D -> op -> bool * bool)
+         (fMon: forall U e (a a':VDom U D), a ⊑ a' -> forall b b', b ⊑ b' -> f _ b a e ⊑ f _ b' a' e)
+         (frMon:forall U e (a a':VDom U D),
+             a ⊑ a' -> forall b b', b ⊑ b' -> fr _ b a e ⊑ fr _ b' a' e)
+         (Trm: Terminating D poLt)
+         (s : stmt) ra (RA:renamedApart s ra)
+      (x : var)
+      (IN : x \In freeVars s)
+  : MapInterface.find x
+         (proj1_sig
+            (fst
+               (proj1_sig
+                  (safeFixpoint
+                     (makeForwardAnalysis D _ _
+                                           f fr fMon frMon
+                                          Trm s ra RA))))) ===
+         ⎣ top ⎦.
+Proof.
+  eapply safeFixpoint_induction.
+  - simpl.
+    rewrite <- of_list_3 in IN.
+    eapply of_list_get_first in IN; dcr.
+    rewrite H0 in *. clear H0.
+    exploit (@domupd_list_get_first D _ _ bottom _ (tab ⎣ top ⎦ ‖to_list (freeVars s)‖) _ _ (Some top) H).
+    + eapply map_get_eq; eauto.
+    + eauto.
+    + eapply poLe_antisymmetric; eauto.
+      hnf in H0. inv H0. setoid_rewrite <- H3.
+      econstructor. eapply top_greatest.
+  - intros. destruct a as [? [? ?]].
+    simpl.
+    edestruct (@forward_agree s D _ _ f fr nil v (singleton x));
+      eauto.
+    unfold domenv in *.
+    exploit (H1 x).
+    + exploit renamedApart_disj; eauto.
+      rewrite <- renamedApart_occurVars in H3; eauto.
+      rewrite <- renamedApart_freeVars in H3; eauto. simpl.
+      revert H3 IN. clear_all. cset_tac.
+    + simpl in *.
+      setoid_rewrite H0 in H3. symmetry; eauto.
+Qed.

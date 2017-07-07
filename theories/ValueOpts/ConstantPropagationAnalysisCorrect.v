@@ -5,7 +5,8 @@ Require Import Analysis AnalysisForwardSSA Subterm CSet MapAgreement RenamedApar
 Require Import Infra.PartialOrder Infra.Lattice Infra.WithTop.
 Require Import LabelsDefined Annotation.
 Require Import Reachability ReachabilityAnalysisCorrectSSA.
-Require Import ConstantPropagation ConstantPropagationSound ConstantPropagationAnalysis DomainSSA.
+Require Import ConstantPropagation ConstantPropagationSound ConstantPropagationAnalysis.
+Require Import DomainSSA FiniteFixpointIteration.
 
 Local Arguments proj1_sig {A} {P} e.
 Local Arguments length {A} e.
@@ -42,7 +43,7 @@ Proof.
       eapply get_InA in H2. eauto.
 Qed.
 
-Definition cp_sound sT AE ZL s (ST:subTerm s sT) ZLIncl ra anr
+Lemma cp_sound sT AE ZL s (ST:subTerm s sT) ZLIncl ra anr
   : let X := @forward sT _ _ _ (@cp_trans) (@cp_reach) ZL ZLIncl s ST AE anr in
     renamedApart s ra
     -> annotation s anr
@@ -71,7 +72,7 @@ Proof.
         rewrite <- H10 at 2.
         eapply forward_ext; eauto using cp_trans_ext, cp_reach_ext.
         rewrite <- EQ3. symmetry; eauto.
-        pe_rewrite. eauto with cset.
+        pe_rewrite. eapply disj_2_incl; eauto with cset.
         intros.
         rewrite EQ1 in EQ3.
         specialize (EQ3 x). unfold domenv.
@@ -84,13 +85,13 @@ Proof.
     set_simpl.
     exploit (forward_if_inv _ _ _ _ _ _ EQ1); eauto.
     repeat rewrite renamedApart_occurVars; eauto;
-      pe_rewrite; eauto with cset.
+      pe_rewrite; eauto.
     repeat rewrite renamedApart_occurVars; eauto;
       pe_rewrite; eauto with cset.
     rewrite forward_ext in EQ1; try eapply H; try reflexivity; eauto using cp_reach_ext, cp_trans_ext; try reflexivity.
     econstructor; eauto.
     + eapply IHLD1; eauto.
-      split; eauto. pe_rewrite. eauto with cset.
+      split; eauto. pe_rewrite. eapply disj_2_incl; eauto.
     + eapply IHLD2; eauto.
       split; eauto.
       rewrite forward_ext; eauto using cp_reach_ext, cp_trans_ext. symmetry; eauto.
@@ -128,18 +129,20 @@ Proof.
                    (forward cp_trans cp_reach (fst ⊝ F ++ ZL) (ZLIncl_ext ZL eq_refl ST ZLIncl) (snd Zs) ST0 AE r))
                 ≣ AE). {
       pe_rewrite. set_simpl.
-      eapply forwardF_agree_get; eauto. eauto with len.
-      rewrite <- EQ1. unfold FWF. reflexivity.
-      unfold FWt. reflexivity.
-      pe_rewrite. eauto with ren.
-      pe_rewrite.
-      eapply disj_Dt_getAnn; eauto.
-      eapply funConstr_disj_ZL_getAnn; eauto.
-      eapply disj_1_incl.
-      eapply funConstr_disj_ZL_getAnn; eauto.
-      rewrite List.map_app. rewrite list_union_app.
-      clear_all. cset_tac.
-      eapply cp_trans_ext. eapply cp_reach_ext.
+      eapply forwardF_agree_get; try eassumption.
+      - eauto with len.
+      - rewrite <- EQ1. unfold FWF. reflexivity.
+      - unfold FWt. reflexivity.
+      - pe_rewrite. eauto with ren.
+      - pe_rewrite.
+        eapply disj_Dt_getAnn; eauto.
+      - eapply funConstr_disj_ZL_getAnn; eauto.
+      - eapply disj_1_incl.
+        eapply funConstr_disj_ZL_getAnn; eauto.
+        rewrite List.map_app. rewrite list_union_app.
+        clear_all. cset_tac.
+      - eapply cp_trans_ext.
+      - eapply cp_reach_ext.
     } dcr.
 
     assert (forall (n : nat) (r : ann bool) (Zs : params * stmt),
@@ -174,13 +177,16 @@ Proof.
         clear_all. general induction F; simpl; f_equal; eauto.
       }
       rewrite EQ.
-      eapply H0; eauto.
+      eapply H0; try eassumption.
+      -- eauto.
+      -- eauto.
       -- eauto with len.
       -- split; simpl; eauto.
       -- set_simpl.
          eapply disj_2_incl.
          eapply funConstr_disj_ZL_getAnn; eauto with ren.
          eapply incl_list_union; eauto using zip_get.
+      -- eauto.
       -- intros ? ? GET2. eapply get_app_cases in GET2. destruct GET2.
          inv_get. edestruct H5; eauto.
          dcr. inv_get. eapply NODUP; eauto.
@@ -231,4 +237,85 @@ Proof.
     + exfalso. eapply H. rewrite COND; simpl. eauto.
     + exfalso. eapply H. rewrite COND0; simpl. eauto.
     + exfalso. eapply H. rewrite COND; simpl. eauto.
+Qed.
+
+Lemma cp_sound_reorga s (a:ann bool) ra (RA:renamedApart s ra)
+      (AE : VDom (occurVars s) (withTop val)) an
+      (EQ : @step _ (constant_propagation_analysis RA) (AE, @exist _ _ a an)
+                  ≣ (AE, @exist _ _ a an))
+  : fst
+      (forward cp_trans cp_reach nil (incl_empty positive (occurVars s)) s (subTerm_refl s) AE a)
+      ≣ (AE, a).
+Proof.
+  rewrite pair_eta at 1.
+  eapply poEq_struct.
+  - eapply poEq_fst in EQ. simpl fst at 2 in EQ.
+    etransitivity; eauto.
+  - eapply poEq_snd in EQ. simpl snd at 2 in EQ.
+    revert EQ.
+    case_eq (snd (@step _ (constant_propagation_analysis RA) (AE, exist a an))); intros.
+    etransitivity; eauto; swap 1 2.
+    + eapply poEq_sig_struct'. eauto.
+    + unfold step in H. simpl in H.
+      eapply poEq_sig_struct'. rewrite H. rewrite EQ. reflexivity.
+Qed.
+
+Lemma cp_sound_nil s (AEanr:VDom (occurVars s) (withTop val) * {a : ann bool | annotation s a})
+      ra
+      (RA:renamedApart s ra)
+  : poEq (@step _ (constant_propagation_analysis RA) (AEanr)) (AEanr)
+    -> paramsMatch s nil
+    -> ConstantPropagationSound.cp_sound (domenv (proj1_sig (fst AEanr)))
+                                        nil s (proj1_sig (snd AEanr)).
+Proof.
+  intros. destruct AEanr as [AE [anr an]].
+  eapply cp_sound with (ZL:=nil) (ST:=@subTerm_refl _); eauto.
+  - eapply cp_sound_reorga. eauto.
+  - simpl. cset_tac.
+  - isabsurd.
+Qed.
+
+Definition cp_reachability_sound_nil s
+           (AEanr:VDom (occurVars s) (withTop val) * {a : ann bool | annotation s a})
+           ra
+           (RA:renamedApart s ra)
+  : poEq (@step _ (constant_propagation_analysis RA) (AEanr)) (AEanr)
+    -> paramsMatch s nil
+    -> reachability (cop2bool (domenv (proj1_sig (fst AEanr))))
+                   Sound nil s (proj1_sig (snd AEanr)).
+Proof.
+  intros. destruct AEanr as [AE [anr an]].
+  eapply cp_reachability_sound with (BL:=nil) (ZL:=nil); eauto.
+  - eapply cp_sound_reorga. eapply H.
+  - assert (❬snd
+    (forward cp_trans cp_reach nil (incl_empty positive (occurVars s)) s
+             (subTerm_refl s) (fst (AE, exist anr an)) (proj1_sig (snd (AE, exist anr an))))❭ = 0).
+    eauto with len.
+    destruct (snd
+    (forward cp_trans cp_reach nil (incl_empty positive (occurVars s)) s
+             (subTerm_refl s) (fst (AE, exist anr an)) (proj1_sig (snd (AE, exist anr an)))));
+      eauto. isabsurd.
+  - simpl. cset_tac.
+Qed.
+
+Lemma constantPropagationAnalysis_getAnn s ra
+      (RA:renamedApart s ra)
+  :  getAnn
+       (proj1_sig (snd (constantPropagationAnalysis RA))) = true.
+Proof.
+  unfold constantPropagationAnalysis.
+  eapply safeFixpoint_induction.
+  - simpl. rewrite getAnn_setTopAnn. reflexivity.
+  - intros. simpl.
+    rewrite forward_fst_snd_getAnn. eauto.
+Qed.
+
+Lemma constantPropagation_init_inv s ra (RA:renamedApart s ra)
+  : forall x : var,
+    x \In freeVars s ->
+    (DomainSSA.domenv
+       (proj1_sig (fst (constantPropagationAnalysis RA)))) x === ⎣Top⎦.
+Proof.
+  intros. unfold constantPropagationAnalysis, domenv, constant_propagation_analysis.
+  eapply makeForwardAnalysisSSA_init_env. eauto.
 Qed.

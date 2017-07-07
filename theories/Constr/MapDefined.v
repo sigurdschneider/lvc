@@ -1,6 +1,6 @@
 Require Export Setoid Coq.Classes.Morphisms.
 Require Import EqDec Computable Util AutoIndTac.
-Require Export CSet  Containers.SetDecide MoreList.
+Require Export CSet  Containers.SetDecide MoreList OptionR.
 Require Export LengthEq MapBasics MapLookup MapUpdate MapComposition.
 
 Set Implicit Arguments.
@@ -156,4 +156,15 @@ Proof.
   - lud.
     + exfalso. eapply H1; eauto. simpl. cset_tac.
     + eapply IHZ; eauto with cset.
+Qed.
+
+
+
+Lemma defined_on_agree_fstNoneOrR (X : Type) `{H : OrderedType X}
+      (Y : Type) (R : relation Y) (D : ⦃X⦄) (f g : X -> ؟ Y)
+  : defined_on D f -> agree_on (fstNoneOrR R) D f g -> defined_on D g.
+Proof.
+  intros Def Agr.
+  hnf; intros. edestruct Def; eauto.
+  exploit Agr; eauto. rewrite H1 in H2. inv H2; eauto.
 Qed.

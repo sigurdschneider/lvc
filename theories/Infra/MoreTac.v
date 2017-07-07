@@ -1,7 +1,8 @@
 Ltac let_unfold id :=
   cbv beta delta [id];
   repeat match goal with
-         | [ |- context [ let s := ?e in _ ] ] => set (s:=e) in *
+         | [ |- context [ let s := ?e in _ ] ] =>
+           let s := fresh s in set (s:=e) in *
          | [ |- context [let (a, b) := ?e in _] ] =>
            let a := fresh a in let b := fresh b in case_eq e; intros b a ?
          | [ H : ?x = (?s, ?t) |- _ ] =>

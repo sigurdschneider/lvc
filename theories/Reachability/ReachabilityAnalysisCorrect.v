@@ -1113,9 +1113,8 @@ Lemma reachability_complete s
   : labelsDefined s ❬nil:list params❭
     -> reachability cop2bool Complete nil s (reachabilityAnalysis s).
 Proof.
-  unfold reachabilityAnalysis. destr_sig.
-  destruct e as [n [Iter _]]. subst.
-  intros. eapply safeFixpoint_induction.
+  unfold reachabilityAnalysis.
+  eapply safeFixpoint_induction; intros.
   - unfold initial_value. simpl.
     eapply reachability_complete_initial; eauto.
   - intros. rewrite <- (setTopAnn_eta _ eq_refl).
@@ -1145,9 +1144,8 @@ Qed.
 Lemma reachabilityAnalysis_getAnn s
   : getAnn (ReachabilityAnalysis.reachabilityAnalysis s).
 Proof.
-  unfold reachabilityAnalysis. destr_sig.
-  destruct e as [n [Iter _]]. subst.
-  intros. eapply safeFixpoint_induction.
+  unfold reachabilityAnalysis.
+  eapply safeFixpoint_induction.
   - simpl. rewrite getAnn_setTopAnn; eauto.
   - intros. simpl.
     rewrite (@forward_getAnn' s (fun _ => bool)); eauto.

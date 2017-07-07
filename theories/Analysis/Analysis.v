@@ -1,8 +1,16 @@
-Require Import Util EqDec LengthEq Get Coq.Classes.RelationClasses MoreList AllInRel ListUpdateAt.
+Require Import CSet Util IL EqDec LengthEq Get.
+Require Import Coq.Classes.RelationClasses MoreList AllInRel ListUpdateAt.
 Require Import SizeInduction Infra.Lattice OptionR DecSolve.
-Require Import Annotation AnnotationLattice.
+Require Import Annotation AnnotationLattice Subterm.
 
 Set Implicit Arguments.
+
+Lemma option_eq_option_R X (R:relation X) x y
+  : option_eq R x y <-> option_R R x y.
+Proof.
+  split; inversion 1; econstructor; eauto.
+Qed.
+
 
 Inductive anni (A:Type) : Type :=
 | anni0 : anni A
@@ -88,7 +96,9 @@ Instance PartialOrder_anni Dom `{PartialOrder Dom}
 }.
 Proof.
   - intros. inv H0; eauto 20 using @anni_R, poLe_refl.
-    econstructor; eapply (@poLe_refl _ (PartialOrder_option Dom)); eauto.
+    econstructor; eauto.
+    inv H1; econstructor; eauto.
+    inv H2; econstructor; eauto.
 Defined.
 
 
@@ -656,8 +666,7 @@ Lemma fold_left_mono A A' b b'
     -> poLe (fold_left (zip orb) A b) (fold_left (zip orb) A' b').
 Proof.
   intros.
-  hnf in H. general induction H; simpl; eauto. inv_cleanup.
-  - eapply IHPIR2; eauto.
+  hnf in H. general induction H; simpl; eauto.
 Qed.
 
 
@@ -681,4 +690,48 @@ Proof.
   general induction a; simpl; eauto.
   erewrite IHa; eauto 10 using get with len.
   intros. rewrite H; eauto using get.
+Qed.
+
+
+Lemma ZLIncl_ext sT st F t (ZL:list params)
+    (EQ:st = stmtFun F t) (ST:subTerm st sT)
+    (ZLIncl:list_union (of_list ⊝ ZL) ⊆ occurVars sT)
+  : list_union (of_list ⊝ (fst ⊝ F ++ ZL)) [<=] occurVars sT.
+Proof.
+  subst.
+  rewrite List.map_app.
+  rewrite list_union_app. eapply union_incl_split; eauto.
+  pose proof (subTerm_occurVars ST). simpl in *.
+  rewrite <- H.
+  eapply incl_union_left. eapply list_union_incl; intros; eauto with cset.
+  inv_get. eapply incl_list_union. eapply map_get_1; eauto.
+  cset_tac.
+Qed.
+
+Lemma ZLIncl_App_Z sT ZL n
+      (Incl:list_union (of_list ⊝ ZL) [<=] occurVars sT)
+  : of_list (nth n ZL (nil : params)) [<=] occurVars sT.
+Proof.
+  destruct (get_dec ZL n); dcr.
+  - erewrite get_nth; eauto. rewrite <- Incl.
+    eapply incl_list_union; eauto using zip_get.
+  - rewrite not_get_nth_default; eauto.
+    simpl. cset_tac.
+Qed.
+
+Arguments ZLIncl_App_Z {sT} {ZL} n Incl.
+
+Lemma agree_on_option_R_fstNoneOrR  (X : Type) `{OrderedType X} (Y : Type)
+      (R R':Y -> Y -> Prop) (D:set X) (f g h:X -> option Y)
+  : agree_on (option_R R) D f g
+    -> agree_on (fstNoneOrR R') D g h
+    -> (forall a b c, R a b -> R' b c -> R' a c)
+    -> agree_on (fstNoneOrR R') D f h.
+Proof.
+  intros AGR1 AGR2 Trans; hnf; intros.
+  exploit AGR1 as EQ1; eauto.
+  exploit AGR2 as EQ2; eauto.
+  inv EQ1; inv EQ2; clear_trivial_eqs; try econstructor; try congruence.
+  assert (x0 = b) by congruence; subst.
+  eauto.
 Qed.

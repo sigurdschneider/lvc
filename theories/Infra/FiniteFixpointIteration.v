@@ -56,7 +56,7 @@ Section FixpointAlgorithm.
       eapply step_monotone. eauto.
   Qed.
 
-  Lemma safeFixpoint_induction (P:Dom -> Prop) n
+  Lemma iter_induction (P:Dom -> Prop) n
     : P initial_value
       -> (forall a, poLe a (step a) -> P a -> P (step a))
       -> P (iter n initial_value step).
@@ -67,4 +67,19 @@ Section FixpointAlgorithm.
     - eapply IHn; eauto.
   Qed.
 
+  Lemma safeFixpoint_induction (P:Dom -> Prop)
+    : P initial_value
+      -> (forall a, poLe a (step a) -> P a -> P (step a))
+      -> P (proj1_sig safeFixpoint).
+  Proof.
+    intros. destr_sig.
+    destruct e as [? [? ?]]; subst.
+    eapply iter_induction; eauto.
+  Qed.
+
 End FixpointAlgorithm.
+
+Lemma safeFixpoint_fixpoint Dom (I:Iteration Dom)
+  : poEq (@step _ I (proj1_sig (safeFixpoint I))) (proj1_sig (safeFixpoint I)).
+  destr_sig. dcr. eauto.
+Qed.

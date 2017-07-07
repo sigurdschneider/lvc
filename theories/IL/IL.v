@@ -117,6 +117,29 @@ Proof.
 Qed.
 
 
+
+Definition defVars' ( Zs:params*stmt) := of_list (fst Zs) ∪ definedVars (snd Zs).
+
+Lemma list_union_definedVars F
+  : definedVarsF definedVars F
+                 [=] list_union (of_list ⊝ fst ⊝ F) ∪ list_union (definedVars ⊝ snd ⊝ F).
+Proof.
+  unfold definedVarsF, defVarsZs.
+  general induction F; simpl; eauto with cset.
+  norm_lunion. rewrite IHF; clear IHF. cset_tac.
+Qed.
+
+Lemma list_union_definedVars' F
+  : list_union (defVars' ⊝ F)
+               [=] list_union (of_list ⊝ fst ⊝ F) ∪ list_union (definedVars ⊝ snd ⊝ F).
+Proof.
+  general induction F; simpl; eauto with cset.
+  norm_lunion. rewrite IHF; clear IHF. unfold defVars' at 1.
+  cset_tac.
+Qed.
+
+
+
 (** ** Semantics *)
 
 (** *** Functional Semantics *)

@@ -21,11 +21,9 @@ Proof.
     case_eq (find z y'); case_eq (find z x'); intros; simpl in *;
       clear_trivial_eqs; simpl; repeat cases; try reflexivity;
         eauto using fstNoneOrR, join_struct, join_poLe.
-  - econstructor. rewrite LE1. eapply join_poLe.
-  - econstructor. rewrite LE2. rewrite join_commutative. eapply join_poLe.
 Qed.
 
-Lemma empty_bottom X `{OrderedType X} Y `{JoinSemiLattice Y}
+Lemma empty_bottom X `{OrderedType X} Y `{PartialOrder Y}
   :  forall a : Map [X, Y], @empty _ _ _ _ ⊑ a.
 Proof.
   intros. econstructor.
@@ -94,7 +92,7 @@ Instance map_semilattice X `{OrderedType X} Y `{JoinSemiLattice Y}
 Defined.
 
 
-Instance map_lower_bounded X `{OrderedType X} Y `{JoinSemiLattice Y}
+Instance map_lower_bounded X `{OrderedType X} Y `{PartialOrder Y}
   : LowerBounded (Map [X, Y]) :=
   {
     bottom := (@empty X _ _ Y)

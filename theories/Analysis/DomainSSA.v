@@ -95,26 +95,24 @@ Proof.
   intro; eapply NI; econstructor. eapply H1.
 Qed.
 
+Lemma domupd_poLe D `{PartialOrder D} (m m' : Map [var, D]) a v
+  : poLe (find a m) v
+    -> poLe m m'
+    -> poLe m (domupd m' a v).
+Proof.
+  intros. hnf; intros.
+  unfold domupd; cases.
+  - mlud; eauto. rewrite <- e. eauto.
+  - mlud; eauto. rewrite H3, <- e. eauto.
+Qed.
+
 Lemma domjoin_list_exp  D `{JoinSemiLattice D} (m:Dom D) Z Y
   : poLe m (domjoin_list m Z Y).
 Proof.
   general induction Z; destruct Y; simpl domjoin_list; eauto;
     try reflexivity.
-  unfold ojoin; repeat cases; simpl domupd; eauto.
-  - hnf; intros. mlud.
-    + rewrite <- e, <- Heq.
-      econstructor.
-      eapply join_poLe.
-    + eapply IHZ.
-  - hnf; intros; mlud.
-    rewrite Heq, e; eauto.
-    eapply IHZ.
-  - hnf; intros; mlud.
-    rewrite <- e, <- Heq; eauto.
-    eapply IHZ.
-  - hnf; intros; mlud.
-    rewrite <- e, <- Heq; eauto.
-    eapply IHZ.
+  eapply domupd_poLe; eauto.
+  eapply join_poLe.
 Qed.
 
 
@@ -123,6 +121,7 @@ Lemma domain_join_sig X `{OrderedType X} Y `{JoinSemiLattice Y}  U
   : domain (proj1_sig x ⊔ proj1_sig y) [<=] U.
 Proof.
   destruct x,y; simpl.
+  unfold join; simpl.
   unfold joinMap. rewrite domain_join. cset_tac.
 Qed.
 
@@ -175,7 +174,7 @@ Defined.
 Instance map_sig_lower_bounded X `{OrderedType X} Y `{JoinSemiLattice Y} U
   : LowerBounded { m : Map [X, Y] | domain m ⊆ U} :=
   {
-    bottom := exist _ (empty _) (incl_empty _ _)
+    bottom := exist _ (@bottom (Map [X,Y]) _ _) (incl_empty _ _)
   }.
 Proof.
   intros [a b]; simpl.
@@ -261,6 +260,22 @@ Proof.
   + eapply remove_dead; eauto.
 Qed.
 
+
+
+Lemma bottom_join_left D `{JoinSemiLattice D} `{@LowerBounded D H} (x:D)
+  : poEq (⊥ ⊔ x) x.
+Proof.
+  symmetry. rewrite join_commutative.
+  eapply join_wellbehaved. eapply bottom_least.
+Qed.
+
+Lemma bottom_join_right D `{JoinSemiLattice D} `{@LowerBounded D H} (x:D)
+  : poEq (x ⊔ ⊥) x.
+Proof.
+  symmetry.
+  eapply join_wellbehaved. eapply bottom_least.
+Qed.
+
 Lemma agree_domenv_join_bot U D `{JoinSemiLattice D} (G:set var) (a b:VDom U D) c
       : a === bottom
         -> agree_on poEq G (domenv (proj1_sig b)) (domenv c)
@@ -270,14 +285,9 @@ Proof.
     unfold domenv, poEq at 1; simpl proj1_sig.
   intros A B.
   hnf; intros z IN.
-  unfold joinMap.
-  rewrite MapFacts.map2_1bis; eauto.
-  specialize (B z IN). cbv beta in *.
-  rewrite B.
-  hnf in A. simpl proj1_sig in *.
-  rewrite A, <- B.
-  rewrite join_idempotent'; eauto.
-  rewrite MapFacts.empty_o. eauto.
+  eapply poEq_sig_struct' in A.
+  rewrite A. rewrite bottom_join_left.
+  eapply B. eauto.
 Qed.
 
 Lemma agree_domenv_join_bot2 U D `{JoinSemiLattice D} (G:set var) (a b:VDom U D) c
@@ -289,27 +299,12 @@ Proof.
     unfold domenv, poEq at 2; simpl proj1_sig.
   intros A B.
   hnf; intros z IN.
-  unfold joinMap.
-  rewrite MapFacts.map2_1bis; eauto.
-  specialize (A z IN). cbv beta in *.
-  rewrite A.
-  hnf in B. simpl proj1_sig in *.
-  rewrite <- A, B. rewrite join_commutative.
-  rewrite join_idempotent'; eauto.
-  rewrite MapFacts.empty_o. eauto.
+  eapply poEq_sig_struct' in B.
+  rewrite B. rewrite bottom_join_right.
+  eapply A. eauto.
 Qed.
 
 
-Lemma domupd_poLe (m m' : Map [var, withTop val]) a v
-  : poLe (find a m) v
-    -> leMap m m'
-    -> leMap m (domupd m' a v).
-Proof.
-  intros. hnf; intros.
-  unfold domupd; cases.
-  - mlud; eauto. rewrite <- e. eauto.
-  - mlud; eauto. rewrite H2, <- e. eauto.
-Qed.
 
 
 Lemma domupd_var_eq D (m:Dom D) x y a
@@ -347,7 +342,6 @@ Proof.
   intros ND GetZ GetY.
   general induction n; simpl domjoin_list.
   - rewrite domupd_var_eq; eauto.
-    unfold ojoin; repeat cases; eauto.
   - inv GetZ; inv GetY.
     simpl domjoin_list.
     rewrite domupd_var_ne; eauto.
@@ -387,6 +381,15 @@ Proof.
   eauto.
 Qed.
 
+Lemma find_mapjoin_dist X `{OrderedType X} D `{JoinSemiLattice D} (m m':Map [X, D]) z
+  : find z (m ⊔ m') === ((find z m) ⊔ (find z m')).
+Proof.
+  unfold join; simpl.
+  unfold join at 1; simpl.
+  unfold joinMap.
+  rewrite MapFacts.map2_1bis; eauto.
+Qed.
+
 Lemma agree_domenv_join U D `{JoinSemiLattice D} (G:set var) (a b:VDom U D) c
       : agree_on poEq G (domenv (proj1_sig a)) (domenv c)
         -> agree_on poEq G (domenv (proj1_sig b)) (domenv c)
@@ -396,15 +399,14 @@ Proof.
     unfold domenv; simpl proj1_sig.
   intros A B.
   hnf; intros z IN.
-  unfold joinMap.
-  rewrite MapFacts.map2_1bis; eauto.
+  rewrite find_mapjoin_dist.
   specialize (A z IN).
   specialize (B z IN). cbv beta in *.
   rewrite A, B. rewrite join_idempotent. reflexivity.
 Qed.
 
 Lemma domupd_list_agree_poLe D `{JoinSemiLattice D} G (AE:Dom D) Z Y
-  : agree_on (fstNoneOrR poLe) G
+  : agree_on poLe G
              (domenv AE)
              (domenv (domjoin_list AE Z Y)).
 
@@ -419,5 +421,128 @@ Proof.
     + unfold domenv.
       rewrite domupd_var_ne; [|intro; eauto].
       eapply IHZ; eauto. cset_tac.
-  - eapply domupd_list_agree; eauto. hnf; reflexivity. cset_tac.
+  - eapply domupd_list_agree; eauto. cset_tac.
+Qed.
+
+
+Lemma domupd_list_get_first D `{JoinSemiLattice D} (m:Dom D) Z Y x n y
+  : get Z n x
+    -> get Y n y
+    -> (forall (n' : nat) (z' : var),
+          n' < n -> get Z n' z' -> z' =/= x)
+    -> poLe y (find x (domjoin_list m Z Y)).
+Proof.
+  intros GetZ GetY LEAST.
+  general induction n; simpl domjoin_list.
+  - rewrite domupd_var_eq; eauto.
+  - inv GetZ; inv GetY.
+    simpl domjoin_list.
+    rewrite domupd_var_ne; eauto using get.
+    + eapply IHn; intros; eauto using get.
+      eapply (LEAST (S n')); eauto using get. omega.
+    + symmetry. eapply (LEAST 0); eauto using get. omega.
+Qed.
+
+Lemma poLe_domupdd D `{PartialOrder D} U d d' v v' x IN IN'
+  : d ⊑ d'
+    -> v ⊑ v'
+    -> @domupdd D U d x v IN ⊑ @domupdd D U d' x v' IN'.
+Proof.
+  intros. eapply poLe_sig_struct.
+  eapply domupd_le; eauto.
+Qed.
+
+Lemma poEq_domupdd D `{PartialOrder D} U d d' v v' x IN IN'
+  : d ≣ d'
+    -> v ≣ v'
+    -> @domupdd D U d x v IN ≣ @domupdd D U d' x v' IN'.
+Proof.
+  intros. eapply poEq_sig_struct.
+  eapply domupd_eq; eauto.
+Qed.
+
+Hint Resolve poLe_domupdd poEq_domupdd.
+
+Lemma domupd_poLe_left D `{PartialOrder D} d d' x v
+  : d ⊑ d'
+    -> v ⊑ domenv d' x
+    -> domupd d x v ⊑ d'.
+Proof.
+  intros.
+  hnf; intros y.
+  decide (y === x); eauto; subst.
+  - invc e.
+    rewrite domupd_var_eq; eauto.
+  - rewrite domupd_var_ne; eauto.
+Qed.
+
+Lemma domjoin_list_poLe_left D `{JoinSemiLattice D} d d' Z Y
+  : d ⊑ d'
+    -> (forall n x y, get Z n x -> get Y n y -> y ⊑ domenv d' x)
+    -> domjoin_list d Z Y ⊑ d'.
+Proof.
+  general induction Z; destruct Y; eauto.
+  simpl. eapply domupd_poLe_left; eauto using get.
+  exploit H2; eauto using get.
+  eapply join_poLe_left; eauto.
+Qed.
+
+
+Lemma domjoin_list_notin D `{JoinSemiLattice D} x d Z Y
+  : x ∉ of_list Z
+    -> MapInterface.find x (domjoin_list d Z Y) = MapInterface.find x d.
+Proof.
+  intros. general induction Z; destruct Y; simpl in *; eauto.
+  rewrite domupd_var_ne.
+  rewrite IHZ; eauto. cset_tac. cset_tac.
+Qed.
+
+Lemma domjoin_list_get D `{JoinSemiLattice D} x (y y':option D) n d Z Y
+  : get Z n x
+    -> get Y n y'
+    -> y ≣ y'
+    -> NoDupA eq Z
+    -> domenv (domjoin_list d Z Y) x ≣ ((domenv d x) ⊔ y).
+Proof.
+  intros. general induction n; simpl in *; eauto.
+  - unfold domenv. rewrite domupd_var_eq; eauto.
+    rewrite H3. reflexivity.
+  - inv H1; inv H2. simpl.
+    inv H4.
+    eapply NoDupA_get_neq' in H4; [|eauto|eauto| instantiate (2:=0) |eauto using get| eauto using get];
+      try omega.
+    rewrite <- IHn; eauto using get.
+    unfold domenv.
+    rewrite domupd_var_ne; eauto. intro. eapply H4. invc H5; eauto.
+Qed.
+
+
+Arguments to_list : simpl never.
+
+Instance poLe_find_proper D `{PartialOrder D}
+  : Proper (_eq ==> @poLe (Dom D) _ ==> poLe) (@MapInterface.find var _ _ D).
+Proof.
+  unfold Proper, respectful; intros. invc H0.
+  eapply H1.
+Qed.
+
+Instance poEq_find_proper D `{PartialOrder D}
+  : Proper (_eq ==> @poEq (Dom D) _ ==> poEq) (@MapInterface.find var _ _ D).
+Proof.
+  unfold Proper, respectful; intros. invc H0.
+  eapply H1.
+Qed.
+
+Instance poLe_domenv_proper D `{PartialOrder D}
+  : Proper (@poLe (Dom D) _ ==> _eq ==> poLe) (@domenv D).
+Proof.
+  unfold Proper, respectful; intros. invc H1.
+  eapply H0.
+Qed.
+
+Instance poEq_domenv_proper D `{PartialOrder D}
+  : Proper (@poEq (Dom D) _ ==> _eq ==> poEq) (@domenv D).
+Proof.
+  unfold Proper, respectful; intros. invc H1.
+  eapply H0.
 Qed.

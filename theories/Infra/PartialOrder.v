@@ -546,3 +546,10 @@ Lemma poLe_app_proper_poEq X `{PartialOrder X}
 Proof.
   unfold Proper, respectful; intros; eauto.
 Qed.
+
+Instance orb_poEq_proper : Proper (poEq ==> poEq ==> poEq) orb.
+Proof.
+  intuition.
+Qed.
+
+Hint Resolve orb_poEq_proper.

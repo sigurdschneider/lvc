@@ -11,13 +11,19 @@ Require UCE DVE EAE Alpha.
 Require ReachabilityAnalysis ReachabilityAnalysisCorrect.
 Require Import DCVE Slot InfinitePartition RegAssign ExpVarsBounded.
 Require CopyPropagation ConstantPropagation ConstantPropagationAnalysis.
-Require ConstantPropagationAnalysisCorrect.
+Require ConstantPropagationCorrect ConstantPropagationAnalysisCorrect.
+
+Require Import RegAssign.
+Require Import MoreTac Alpha RenameApart_Alpha RenameApart_Liveness
+        RenamedApart_Liveness Coherence Invariance.
 
 Require Import RenameApartToPart FreshGen.
 
 Require String.
 
 Set Implicit Arguments.
+
+Hint Immediate FGS_even_fast_pos.
 
 Section Compiler.
 
@@ -80,12 +86,76 @@ Definition optimize (s':stmt) :=
   let s_cp := ConstantPropagation.constantPropagate (DomainSSA.domenv (proj1_sig (fst an))) s in
   s_cp.
 
-Lemma optimize_correct E s
-  : @sim _ IL.statetype_F _ _ bot3 Bisim
+Lemma renamedApartAnn_annotation s G
+  : annotation s (renamedApartAnn s G).
+Proof.
+  revert G.
+  induction s using stmt_ind';
+    simpl; intros; repeat let_pair_case_eq; subst;
+      eauto using @annotation.
+  - econstructor; intros; inv_get; try len_simpl; inv_get; eauto with len.
+Qed.
+
+Import FiniteFixpointIteration Infra.PartialOrder.
+
+Lemma optimize_correct E s (PM:LabelsDefined.paramsMatch s nil)
+  : @sim _ IL.statetype_F _ _ bot3 Sim
            (nil, E, s)
            (nil:list F.block, E, optimize s).
 Proof.
-  unfold optimize.
+  cbv beta delta [optimize].
+  repeat match goal with
+         | [ |- context f [ let s := ?e in @?t s ] ] =>
+           let s := fresh s in
+           set (s:=e) in *;
+             let s := eval cbv beta in (t s) in
+                 let x := context f[s] in
+                 change x
+         end.
+  eapply sim_trans with (σ2:=(nil, E, s0):F.state). {
+    eapply bisim_sim. eapply bisim_sym.
+    eapply Alpha.alphaSim_sim. econstructor; eauto using PIR2.
+    - eapply rename_apart_alpha'; eauto.
+      rewrite lookup_set_on_id; [|reflexivity].
+      rewrite <- domain_add_spec; eauto.
+      eapply inverse_on_id.
+    - eapply envCorr_idOn_refl.
+  }
+  set (RA:= (rename_apart_renamedApart FGS_even_fast_pos s)) in *.
+  set (ra:=(renamedApartAnn (rename_apart FG_even_fast_pos s) (freeVars s))) in *.
+  assert (LD:LabelsDefined.labelsDefined s0 0). {
+    eapply LabelsDefined.paramsMatch_labelsDefined with (L:=nil).
+    eapply labelsDefined_paramsMatch; eauto.
+  }
+  eapply (@ValueOpts.sim_vopt bot3 nil nil)
+    with (ZL:=nil) (Δ := nil); eauto using SimF.labenv_sim_nil; only 4:isabsurd;
+                                                  swap 1 2.
+  - eapply ConstantPropagationCorrect.cp_sound_eqn
+      with (Cp:=nil) (Rch:=nil) (ZL:=nil) (ΓL:=nil) (r:=proj1_sig (snd an));
+      eauto; only 3:isabsurd.
+    + eapply ConstantPropagationAnalysisCorrect.cp_sound_nil; eauto.
+      * eapply (@safeFixpoint_fixpoint _
+                                       (ConstantPropagationAnalysis.constant_propagation_analysis RA)).
+      * eapply labelsDefined_paramsMatch; eauto.
+    + eapply ConstantPropagationAnalysisCorrect.cp_reachability_sound_nil; eauto.
+      * eapply (@safeFixpoint_fixpoint _
+                                       (ConstantPropagationAnalysis.constant_propagation_analysis RA)).
+      * eapply labelsDefined_paramsMatch; eauto.
+  - subst an.
+    rewrite ConstantPropagationAnalysisCorrect.constantPropagationAnalysis_getAnn.
+    unfold DomainSSA.domenv.
+    rewrite ConstantPropagationCorrect.cp_eqns_no_assumption.
+    + hnf; intros. cset_tac.
+    + intros.
+      rewrite <- ConstantPropagationAnalysisCorrect.constantPropagation_init_inv;
+        eauto.
+      unfold DomainSSA.domenv.
+      reflexivity.
+  - cases.
+    * rewrite ConstantPropagationCorrect.cp_eqns_freeVars.
+      rewrite renamedApart_freeVars; eauto. reflexivity.
+    * rewrite ConstantPropagationCorrect.eqns_freeVars_singleton.
+      simpl. clear_all. cset_tac.
 Qed.
 
 Definition slt (D:set var) (EV:For_all (fun x => even (asNat x)) D)
@@ -97,8 +167,6 @@ Definition slt (D:set var) (EV:For_all (fun x => even (asNat x)) D)
     rewrite even_not_even in H. nr. cset_tac.
   - hnf; intros. eapply succ_inj; eauto.
 Defined.
-
-Require Import RegAssign.
 
 Definition fromILF (s:stmt) :=
   let s_eae := EAE.compile s in
@@ -120,8 +188,6 @@ Definition fromILF (s:stmt) :=
 Opaque LivenessValidators.live_sound_dec.
 Opaque DelocationValidator.trs_dec.
 
-Require Import MoreTac Alpha RenameApart_Alpha RenameApart_Liveness
-        RenamedApart_Liveness Coherence Invariance.
 
 Definition slotted_vars (s:stmt) :=
   let s_eae := EAE.compile s in
@@ -174,8 +240,6 @@ Proof.
   reflexivity.
 Qed.
 
-
-Hint Immediate FGS_even_fast_pos.
 
 Lemma fromILF_correct (s s':stmt) E (PM:LabelsDefined.paramsMatch s nil)
       (OK:fromILF s = Success s')

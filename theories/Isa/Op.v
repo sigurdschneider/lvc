@@ -341,12 +341,18 @@ Inductive opLt : op -> op -> Prop :=
   : opLt e2 e2'
     -> opLt (BinOp o e1 e2) (BinOp o e1 e2').
 
+Lemma _lt_antirefl X `{OrderedType X} x
+  : _lt x x -> False.
+Proof.
+  eapply lt_antirefl.
+Qed.
+
 Instance opLt_irr : Irreflexive opLt.
 hnf; intros; unfold complement.
-- induction x; inversion 1; subst;
-    try now eauto using StrictOrder_Irreflexive with typeclass_instances.
-  * eapply StrictOrder_Irreflexive in H2; eauto.
-  * eapply StrictOrder_Irreflexive in H2; eauto.
+- induction x; inversion 1; subst; eauto using @_lt_antirefl.
+  eapply lt_antirefl in H2; eauto.
+  eapply lt_antirefl in H1; eauto.
+  eapply lt_antirefl in H1; eauto.
 Qed.
 
 Instance opLt_trans : Transitive opLt.
