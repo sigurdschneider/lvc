@@ -11,6 +11,7 @@ open DCVE
 open Liveness
 open Compiler
 open Parmov
+open Str
 
 let explode s =
   let rec exp i l =
@@ -21,7 +22,7 @@ let implode l =
   let res = Bytes.create (List.length l) in
   let rec imp i = function
     | [] -> res
-    | c :: l -> res.[i] <- c; imp (i + 1) l in
+    | c :: l -> Bytes.set res i c; imp (i + 1) l in
   imp 0 l;;
 
 let main () =
@@ -30,6 +31,7 @@ let main () =
   let _ = register_name "i" in
   let _ = register_name "n" in
   let debug = false in
+  let verbose = ref false in
   let infile = ref "" in
   let outfile = ref "a.s" in
   let do_addParams = ref false in
@@ -41,6 +43,7 @@ let main () =
     ("-o", Arg.Set_string outfile, "<file> Place the output into <file>");
     (*    ("-1", Arg.Bool set_DCE, "<bool> DCE on IL/I input (default is true)"); *)
     ("-c", Arg.Bool set_addParams, "<bool> Translate to IL/F (default is false)");
+    ("-v", Arg.Set verbose, "Print compilation phases (default is false)");
     (*    ("-3", Arg.Bool set_toILI, "<bool> Enable IL/F to IL/I phase (default is false)") *)
   ] in
   (*let print_string a s = Printf.eprintf "%s" (camlstring_of_coqstring s); a in
@@ -49,36 +52,45 @@ let main () =
   let toString_ann s p a = explode (print_ann (fun s -> implode (p s)) 0 a) in
   let toString_set s = explode (print_set !ids s) in
   let toString_list s = explode (print_list (fun x -> print_var !ids x) "," s) in *)
-    Arg.parse speclist set_infile ("usage: lvcc [options]");
+  Arg.parse speclist set_infile ("usage: lvcc [options]");
+  let filename = Str.replace_first (Str.regexp "^.*[\\/]") "" !infile in
+  let basename = Str.replace_first (Str.regexp "(\\.[^.]*)$") "" filename in
+  let dump_oc suffix =
+    let name = (basename ^ "." ^ suffix) in
+    if !verbose then Printf.printf "phase %s\n" name else ();
+    open_out name in
+  let dump suffix prg = let oc = dump_oc suffix in print_stmt oc true !ids 0 prg in
     try
       (* Printf.printf "Compiling"; *)
       let file_chan = open_in !infile in
       let lexbuf = Lexing.from_channel  file_chan in
       let ilin = Parser.program Lexer.token lexbuf in
-      let _ =  Printf.printf "Input (functions named):\n";
-	       print_nstmt stdout false !ids 0 ilin;
-               Printf.printf "\n\n" in
+      let readout = (dump_oc "read") in
+      let _ =  print_nstmt readout false !ids 0 ilin in
+      let _ = close_out readout in
       let ili = (match Compiler.toDeBruijn ilin with
 		 | Success ili -> ili
 		 | Error e -> raise (Compiler_error "Converting to de bruijn failed (did you define all functions?)"))
-		 in
-      let s_dce =
+      in
+      let s_toILF = toILF ili in
+      let _ = dump "10_toILF" s_toILF in
+      let s_opt = optimize s_toILF in
+      let _ = dump "20_opt" s_opt in
+      let s_fromILF =
 	(match fromILF ili with
-	 | Success x -> Printf.printf "after reg alloc (functions de-bruijn, regs lowercase, slots uppercase):\n";
-			print_stmt stdout true !ids 0 x;
-			Printf.printf "\n\n";
-	   x
+	 | Success x -> x
 	 | Error e -> raise (Compiler_error "reg alloc failed")
 	)
       in
+      let _ = dump "30_fromILF" s_fromILF in
       let ilf =
 (*	if !do_addParams then
 	  let x = Compiler.addParams s_dce lv_dce in
 	  Printf.printf "as IL/F program (functions de-bruijn):\n%s\n\n" (print_stmt !ids 0 x);
 	  x
 	else *)
-	  (Printf.printf "to IL/F program translation disabled, enable with argument -c true\n";
-	  s_dce)
+	((*Printf.printf "to IL/F program translation disabled, enable with argument -c true\n";*)
+	  s_fromILF)
 (*      in
       let sopt =
 	if !optimize then

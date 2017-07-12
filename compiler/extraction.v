@@ -23,4 +23,4 @@ Extraction Inline PidgeonHole.succ PidgeonHole.max.
 
 Cd "compiler/extraction".
 
-Separate Extraction AddParams.addParams DCVE toILF fromILF (* AllocationAlgo.regAssign optimize *) toDeBruijn OrderedType.SOT_as_OT parmove2.
+Separate Extraction AddParams.addParams DCVE toILF fromILF AllocationAlgo.regAssign optimize  toDeBruijn OrderedType.SOT_as_OT parmove2.
