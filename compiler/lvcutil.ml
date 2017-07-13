@@ -64,11 +64,11 @@ let rec print_list oc p l =
     | x::[] -> p x
     | x::l -> p x; output_string oc ", "; print_list oc p l
 
-let rec print_list2 oc p l s =
+let rec print_list2 p l s =
   match l with
   | [] -> ()
   | x::[] -> p x
-  | x::l -> p x; s (); print_list oc p l
+  | x::l -> p x; s (); print_list2 p l s
 
 
 let rec print_indent oc (i:int) : unit =
@@ -120,7 +120,7 @@ let rec print_nstmt oc has_slots ids indent s =
        print_string "\n"
     | ILN.Coq_nstmtFun (sl, t) ->
        print_string "fun ";
-       print_list2 oc (print_body oc has_slots ids indent) sl
+       print_list2 (print_body oc has_slots ids indent) sl
 		   (fun () -> print_indent oc indent; print_string "and ");
        print_indent oc indent;
        print_string "in \n";
@@ -139,7 +139,7 @@ and print_body oc has_slots ids indent fZs =
 
 
 let rec print_stmt oc has_slots ids indent s =
-  (let print_sexpr = print_sexpr oc has_slots ids in
+  let print_sexpr = print_sexpr oc has_slots ids in
   let print_var = print_var oc has_slots ids in
   let print_stmt = print_stmt oc has_slots ids in
   let print_string = output_string oc in
@@ -169,17 +169,17 @@ let rec print_stmt oc has_slots ids indent s =
        print_indent oc indent;
        print_string "else\n";
        print_indent oc (indent+2);
-       print_stmt (indent+2) t;
-       print_string "\n"
+       print_stmt (indent+2) t
     | IL.Coq_stmtFun (sl, t) ->
        print_string "fun ";
-       print_list2 oc (print_body oc has_slots ids indent) sl
+       print_list2 (print_body oc has_slots ids indent) sl
 		   (fun () -> print_indent oc indent; print_string "and ");
        print_indent oc indent;
        print_string "in \n";
        print_indent oc (indent+2);
-       print_stmt (indent+2) t)
+       print_stmt (indent+2) t
 and print_body oc has_slots ids indent fZs =
+  let print_string = output_string oc in
   match fZs with
   | (y, s) ->
      print_string "_ (";

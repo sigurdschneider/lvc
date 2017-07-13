@@ -59,7 +59,7 @@ let main () =
     let name = (basename ^ "." ^ suffix) in
     if !verbose then Printf.printf "phase %s\n" name else ();
     open_out name in
-  let dump suffix prg = let oc = dump_oc suffix in print_stmt oc true !ids 0 prg in
+  let dump suffix prg = let oc = dump_oc suffix in print_stmt oc true !ids 0 prg; Printf.fprintf oc "\n"; close_out oc in
     try
       (* Printf.printf "Compiling"; *)
       let file_chan = open_in !infile in
