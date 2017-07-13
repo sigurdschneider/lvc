@@ -28,8 +28,11 @@ compiler/lvc.mli
 compiler/_build
 compiler/extraction/*
 compiler/STAMP
+compiler/*.im
 Makefile.coq
 doc*
 pkg*
 .timing
 *.tgz
+theories/Test*.v
+loc.tex

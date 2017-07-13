@@ -56,7 +56,7 @@ let main () =
   let filename = Str.replace_first (Str.regexp "^.*[\\/]") "" !infile in
   let basename = Str.replace_first (Str.regexp "(\\.[^.]*)$") "" filename in
   let dump_oc suffix =
-    let name = (basename ^ "." ^ suffix) in
+    let name = (basename ^ "." ^ suffix ^ ".im") in
     if !verbose then Printf.printf "phase %s\n" name else ();
     open_out name in
   let dump suffix prg = let oc = dump_oc suffix in print_stmt oc true !ids 0 prg; Printf.fprintf oc "\n"; close_out oc in
