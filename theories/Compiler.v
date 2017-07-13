@@ -17,13 +17,13 @@ Require Import RegAssign.
 Require Import MoreTac Alpha RenameApart_Alpha RenameApart_Liveness
         RenamedApart_Liveness Coherence Invariance.
 
-Require Import RenameApartToPart FreshGen.
+Require Import RenameApartToPart FreshGenInst FreshGen.
 
 Require String.
 
 Set Implicit Arguments.
 
-Hint Immediate FGS_even_fast_pos.
+Hint Immediate FGS_even_fast_pos FGS_fast_pres.
 
 Section Compiler.
 
@@ -175,10 +175,11 @@ Definition fromILF (s:stmt) :=
   let fvl := to_list (getAnn (snd dcve)) in
   let k := exp_vars_bound (fst dcve) in
   let spilled := spill k succ (fst dcve) (snd dcve) in
-  let rdom := (domain_add FG_even_fast_pos (empty_domain FG_even_fast_pos) (getAnn (snd (spilled)))) in
-  let ren2 := snd (renameApart FG_even_fast_pos rdom id (fst spilled)) in
+  let rdom := (domain_add FG_fast_pres (empty_domain FG_fast_pres)
+                         (getAnn (snd (spilled)))) in
+  let ren2 := snd (renameApart FG_fast_pres rdom id (fst spilled)) in
   let ras := rassign even_part_pos ren2
-                    (snd (renameApart_live FG_even_fast_pos
+                    (snd (renameApart_live FG_fast_pres
                                            rdom
                                            id
                                            (fst (spilled))
