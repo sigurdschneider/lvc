@@ -608,6 +608,7 @@ Qed.
 Lemma diff_subset_equal' X `{OrderedType X} s s'
   : s \ s' [=] {} -> s ⊆ s'.
 Proof.
+  intros. hnf; intros. exploit (H0 a).
   cset_tac.
 Qed.
 
@@ -755,6 +756,12 @@ Qed.
 
 Lemma meet_union_distr_l (X : Type) `{OrderedType X} (s t u : ⦃X⦄)
   : s ∪ (t ∩ u) [=] (s ∪ t) ∩ (s ∪ u).
+Proof.
+  cset_tac.
+Qed.
+
+Lemma minus_minus_add X `{OrderedType X} (s t:set X) x
+  : s \ {x;t} [=] s \ t \ singleton x.
 Proof.
   cset_tac.
 Qed.

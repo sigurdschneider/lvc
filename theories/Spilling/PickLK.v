@@ -1,4 +1,4 @@
-Require Import List Map Env AllInRel Exp MoreList.
+Require Import List Map Env AllInRel MoreList.
 Require Import Take TakeSet.
 
 Set Implicit Arguments.
@@ -53,7 +53,7 @@ Proof.
       * rewrite elements_length. omega.
   - intros. rewrite set_take_incl. cset_tac.
 Qed.
-  
+
 
 Lemma pick_eq (X:Type) `{OrderedType X} k (s t : ⦃X⦄)
   : cardinal s + cardinal (t \ s) <= k -> pick k s t [=] s ∪ t
@@ -79,7 +79,7 @@ Qed.
 
 
 (* pick_kill *)
-             
+
 Definition pick_kill (X:Type) `{OrderedType X} (k:nat) (s t u v : ⦃X⦄) : ⦃X⦄
   := pick (cardinal s + cardinal t - k) ((s \ (u ∪ v)) ∪ (s ∩ t)) (s ∩ v \ u)
 .
@@ -112,7 +112,7 @@ Qed.
 
 
 Lemma pick_kill_eq (X:Type) `{OrderedType X} (k:nat) (s t u v : ⦃X⦄) :
-  let w := s \ (u ∪ v) ∪ (s ∩ t) in 
+  let w := s \ (u ∪ v) ∪ (s ∩ t) in
   cardinal (s \ w ∪ t) <= k
   -> pick_kill k s t u v [=] s \ (u ∪ v) ∪ (s ∩ t)
 .
@@ -200,15 +200,15 @@ Proof.
       * clear. intros. intro N. cset_tac.
     + clear. intros. intro N. cset_tac.
 Qed.
-      
-     
+
+
 
 (*
 Lemma pick_load_card (X:Type) `{OrderedType X} (k:nat) (r m sp l fv : ⦃X⦄) :
   cardinal (pick_load k r m sp l fv) <= k
 .
-                                                                              
-  *)         
+
+  *)
 
 
 Lemma pick_load_incl (X:Type) `{OrderedType X} (k:nat) (r m sp l fv : ⦃X⦄) :
@@ -224,7 +224,7 @@ Lemma pick_load_card (X:Type) `{OrderedType X} (k:nat) (r m sp l fv : ⦃X⦄) :
 Proof.
   assert (fv ∩ r \ (l ∩ (sp ∪ m)) [=] (fv ∩ r) \ (l ∩ (sp ∩ r ∪ m))) as seteq by (clear; cset_tac).
   intros card. unfold pick_load. rewrite union_cardinal.
-  - rewrite pick_card'; eauto. 
+  - rewrite pick_card'; eauto.
     + apply Nat.le_add_le_sub_r. setoid_rewrite plus_comm at 2. rewrite <-plus_assoc.
       rewrite seteq.
       rewrite <-union_cardinal; [|clear;intros;intro N;cset_tac].
@@ -234,7 +234,5 @@ Proof.
       omega.
     + apply Nat.le_add_le_sub_r. rewrite <-union_cardinal; [|clear;cset_tac].
       rewrite union_comm, <-set_decomp. eauto.
-  - clear. intros. intro N. dcr. rewrite pick_incl in H1. cset_tac. 
+  - clear. intros. intro N. dcr. rewrite pick_incl in H1. cset_tac.
 Qed.
-
-  

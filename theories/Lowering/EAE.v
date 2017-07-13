@@ -1,78 +1,11 @@
 Require Import Util LengthEq AllInRel Map SetOperations.
-Require Import Val EqDec Computable Var Env IL Annotation AppExpFree.
+Require Import Var Val EqDec Computable Var Env IL Annotation AppExpFree.
 Require Import Liveness.Liveness LabelsDefined.
-Require Import SimF Fresh Filter.
+Require Import SimF Fresh Filter ReplaceIf ListToStmt.
 
 Set Implicit Arguments.
 Unset Printing Records.
 
-Fixpoint list_to_stmt (xl: list var) (Y : list op) (s : stmt) : stmt :=
-  match xl, Y with
-  | x::xl, e :: Y => stmtLet x  (Operation e) (list_to_stmt xl Y s)
-  | _, _ => s
-  end.
-
-Lemma list_to_stmt_correct L E s xl Y vl
-: length xl = length Y
-  -> omap (op_eval E) Y = Some vl
-  -> NoDupA _eq xl
-  -> disj (of_list xl) (list_union (List.map Op.freeVars Y))
-  -> star2 F.step (L, E, list_to_stmt xl Y s) nil
-          (L, update_with_list' xl (List.map Some vl) E, s).
-Proof.
-  intros Len Eq Uni Disj.
-  length_equify.
-  general induction Len; simpl in * |- *; eauto using star2_refl.
-  - simpl in *. monad_inv Eq.
-    eapply star2_silent.
-    econstructor; eauto.
-    rewrite list_union_start_swap in Disj.
-    eapply IHLen; eauto.
-    eapply omap_op_eval_agree; eauto.
-    symmetry. eapply agree_on_update_dead; [|reflexivity].
-    eauto with cset.
-    eapply disj_incl; eauto with cset.
-Qed.
-
-Lemma list_to_stmt_crash L E xl Y s
-: length xl = length Y
-  -> omap (op_eval E) Y = None
-  -> NoDupA _eq xl
-  -> disj (of_list xl) (list_union (List.map Op.freeVars Y))
-  -> exists σ, star2 F.step (L, E, list_to_stmt xl Y s) nil σ
-         /\ state_result σ = None
-         /\ normal2 F.step σ.
-Proof.
-  intros. eapply length_length_eq in H.
-  general induction H; simpl in * |- *.
-  - monad_inv H0.
-    + eexists. split. eapply star2_refl.
-      split; eauto. stuck2.
-    + rewrite list_union_start_swap in H2.
-      edestruct (IHlength_eq L (E [x <- Some x0])); eauto.
-      * eapply omap_op_eval_agree; eauto. symmetry.
-        eapply agree_on_update_dead; [|reflexivity].
-        intro. eapply (H2 x); eauto with cset.
-      * eapply disj_incl; eauto with cset.
-      * dcr. eexists. split; eauto.
-        eapply star2_silent.
-        econstructor; eauto. eauto.
-Qed.
-
-Fixpoint replace_if X (p:X -> bool) (L:list X) (L':list X) :=
-  match L with
-  | x::L => if p x then
-              match L' with
-              | y::L' => y::replace_if p L L'
-              | _ => nil
-              end
-            else
-              x::replace_if p L L'
-  | _ => nil
-  end.
-
-Local Notation "'IsVar'" := (fun e => B[isVar e]).
-Local Notation "'NotVar'" := (fun e => B[~ isVar e]).
 
 Fixpoint compile s {struct s}
   : stmt  :=
@@ -89,77 +22,10 @@ Fixpoint compile s {struct s}
     | stmtFun F t => stmtFun (List.map (fun Zs => (fst Zs, compile (snd Zs))) F) (compile t)
   end.
 
-Lemma omap_lookup_vars V xl vl
-  : length xl = length vl
-    -> NoDupA _eq xl
-    -> omap (op_eval (V[xl <-- List.map Some vl])) (List.map Var xl) = Some vl.
-Proof.
-  intros. eapply length_length_eq in H.
-  general induction H; simpl; eauto.
-  lud; isabsurd; simpl.
-  erewrite omap_op_eval_agree; try eapply IHlength_eq; eauto; simpl in *; intuition.
-  instantiate (1:= V [x <- Some y]).
-  eapply update_nodup_commute_eq; eauto; simpl; intuition.
-Qed.
-
-Fixpoint merge_cond (Y:Type) (K:list bool) (L:list Y) (L':list Y) :=
-  match K, L, L' with
-  | true::K, x::L, L' => x::merge_cond K L L'
-  | false::K, L, y::L' => y::merge_cond K L L'
-  | _, _, _ => nil
-  end.
-
-Lemma omap_filter_none X Y (f:X->option Y) (p:X->bool) (L:list X)
-  : omap f (List.filter p L) = None
-    -> omap f L = None.
-Proof.
-  general induction L; intros; simpl in *.
-  cases in H; simpl in *; try monad_inv H.
-  - rewrite H0; simpl; eauto.
-  - rewrite EQ; simpl. erewrite IHL; eauto.
-  - destruct (f a); simpl; eauto.
-    erewrite IHL; eauto.
-Qed.
-
-Lemma omap_filter_partitions X Y (f:X->option Y) (p q:X->bool) (L:list X) vl1 vl2
-  : omap f (List.filter p L) = Some vl1
-    -> omap f (List.filter q L) = Some vl2
-    -> (forall n x, get L n x -> negb (p x) = q x)
-    -> omap f L = Some (merge_cond (p ⊝ L) vl1 vl2).
-Proof.
-  general induction L; intros; simpl in *; eauto.
-  cases in H; simpl in *; try monad_inv H.
-  - erewrite <- H1 in H0; eauto using get.
-    rewrite <- Heq in H0. simpl in *.
-    rewrite EQ. simpl.
-    rewrite (IHL _ _ _ _ _ _ EQ1 H0); eauto using get.
-  - erewrite <- H1 in H0; eauto using get.
-    rewrite <- Heq in H0. simpl in *.
-    monad_inv H0. rewrite EQ. simpl.
-    rewrite (IHL _ _ _ _ _ _ H EQ1); eauto using get.
-Qed.
-
-Lemma omap_replace_if V Y Y' vl0 vl1
-  :  omap (op_eval V) (List.filter IsVar Y) = ⎣ vl1 ⎦
-     -> omap (op_eval V) Y' = ⎣ vl0 ⎦
-     -> omap
-         (op_eval V)
-         (replace_if NotVar Y Y') = ⎣ merge_cond (IsVar ⊝ Y) vl1 vl0 ⎦.
-Proof.
-  general induction Y; simpl; eauto.
-  simpl in *. cases in H; cases; isabsurd; simpl in *.
-  - monad_inv H. rewrite EQ. simpl. erewrite IHY; eauto. eauto.
-  - destruct Y'; simpl in *.
-    + inv H0; eauto.
-    + monad_inv H0. rewrite EQ. simpl.
-      erewrite IHY; eauto. simpl; eauto.
-Qed.
-
 Instance SR : PointwiseProofRelationF params := {
    ParamRelFP G VL VL' :=   VL = VL' /\ length VL = length G;
    ArgRelFP E E' G Z Z' := Z = Z' /\ length Z = length G
 }.
-
 
 Lemma sim_EAE' r L L' V s
   : labenv_sim Sim (sim r) SR (block_Z ⊝ L) L L'
@@ -242,50 +108,16 @@ Proof.
   eapply labenv_sim_nil.
 Qed.
 
-Lemma list_to_stmt_app_expfree  ZL Y Y' l
-  : (forall n e, get Y' n e -> isVar e)
-    -> app_expfree (list_to_stmt ZL Y (stmtApp l Y')).
-Proof.
-  general induction Y; destruct ZL; destruct Y'; simpl;
-    econstructor; intros; inv_get; isabsurd; eauto using isVar.
-Qed.
-
-Lemma replace_if_get_inv X (p:X -> bool) L L' n x
-  : get (replace_if p L L') n x
-    -> exists l , get L n l /\
-            ((p l /\ exists l' n', get L' n' l' /\ x = l')
-              \/ (~ p l /\ x = l)).
-Proof.
-  intros; general induction L; destruct L'; simpl in *; isabsurd.
-  - cases in H; isabsurd. inv H.
-    + exists x; split; eauto using get.
-      right; split; eauto. rewrite <- Heq. eauto.
-    + edestruct IHL; eauto; dcr.
-      eexists; split; eauto using get.
-  - cases in H; isabsurd.
-    + inv H.
-      * eexists; split; eauto using get.
-        left. rewrite <- Heq; eauto using get.
-      * edestruct IHL; eauto using get; dcr.
-        eexists; split; eauto using get.
-        destruct H2; dcr; isabsurd. left; eauto 20 using get.
-        right; eauto using get.
-    + inv H.
-      * eexists; split; eauto using get.
-        right. rewrite <- Heq; eauto using get.
-      * edestruct IHL; eauto; dcr.
-        eexists; split; eauto using get.
-Qed.
-
 Lemma EAE_app_expfree s
   : app_expfree (compile s).
 Proof.
   sind s; destruct s; simpl; eauto using app_expfree.
   - eapply list_to_stmt_app_expfree.
     intros.
-    eapply replace_if_get_inv in H; dcr.
-    destruct H2; dcr; cases in H0; isabsurd; inv_get; eauto using isVar.
-    destruct x; eauto using isVar; exfalso; eapply NOTCOND; intro; isabsurd.
+    eapply replace_if_get_inv in H as [A [B [[C D]|[C D]]]].
+    + dcr; subst; inv_get; eauto using isVar.
+    + subst. cases in C; isabsurd. decide (isVar A); eauto.
+      exfalso; eauto.
   - econstructor; intros; inv_get; eauto using app_expfree.
 Qed.
 
@@ -357,19 +189,6 @@ Proof.
   - econstructor; intros; inv_get; rewrite !map_map in *; simpl; eauto.
 Qed.
 
-Lemma list_to_stmt_freeVars xl Y s (Len:❬xl❭ = ❬Y❭)
-      (Disj:disj (of_list xl) (list_union (Op.freeVars ⊝ Y)))
-  : freeVars (list_to_stmt xl Y s) [=] list_union (Op.freeVars ⊝ Y) ∪ (freeVars s \ of_list xl).
-Proof.
-  general induction Len; simpl in *.
-  - cset_tac.
-  - setoid_rewrite list_union_start_swap.
-    setoid_rewrite list_union_start_swap in Disj.
-    rewrite IHLen.
-    clear IHLen. cset_tac.
-    eapply disj_incl; eauto with cset.
-Qed.
-
 Lemma freeVars_filter_Var Y
   : list_union (Op.freeVars ⊝ Y) [=]
                list_union (Op.freeVars ⊝ List.filter NotVar Y)
@@ -377,8 +196,9 @@ Lemma freeVars_filter_Var Y
 Proof.
   general induction Y; simpl; norm_lunion; eauto with cset.
   - repeat cases; simpl; norm_lunion; try now (exfalso; eauto).
-    + rewrite IHY. clear; cset_tac.
-    + rewrite IHY. clear IHY n. cset_tac.
+    + rewrite IHY. rewrite !union_assoc. reflexivity.
+    + rewrite IHY. clear IHY n.
+      cset_tac.
 Qed.
 
 Ltac norm_lunion :=
@@ -400,13 +220,6 @@ Ltac clr_prtct :=
                | [ H : protected_setin_fnc _ _ |- _ ] => clear H
                | [ H : protected _ |- _ ] => clear H
                end.
-
-
-Lemma minus_minus_add X `{OrderedType X} (s t:set X) x
-  : s \ {x;t} [=] s \ t \ singleton x.
-Proof.
-  cset_tac.
-Qed.
 
 Lemma freeVars_replaceIf Y (xl:list var) (Len:❬List.filter NotVar Y❭ = ❬xl❭)
       (Disj:disj (of_list xl) (list_union (Op.freeVars ⊝ Y)))

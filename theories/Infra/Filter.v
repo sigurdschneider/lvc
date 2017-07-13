@@ -318,3 +318,42 @@ Proof.
     rewrite H4 in *.  edestruct get_filter; eauto.
     eapply get_in_of_list; eauto.
 Qed.
+
+
+Lemma omap_filter_none X Y (f:X->option Y) (p:X->bool) (L:list X)
+  : omap f (List.filter p L) = None
+    -> omap f L = None.
+Proof.
+  general induction L; intros; simpl in *.
+  cases in H; simpl in *; try monad_inv H.
+  - rewrite H0; simpl; eauto.
+  - rewrite EQ; simpl. erewrite IHL; eauto.
+  - destruct (f a); simpl; eauto.
+    erewrite IHL; eauto.
+Qed.
+
+
+Fixpoint merge_cond (Y:Type) (K:list bool) (L:list Y) (L':list Y) :=
+  match K, L, L' with
+  | true::K, x::L, L' => x::merge_cond K L L'
+  | false::K, L, y::L' => y::merge_cond K L L'
+  | _, _, _ => nil
+  end.
+
+Lemma omap_filter_partitions X Y (f:X->option Y) (p q:X->bool) (L:list X) vl1 vl2
+  : omap f (List.filter p L) = Some vl1
+    -> omap f (List.filter q L) = Some vl2
+    -> (forall n x, get L n x -> negb (p x) = q x)
+    -> omap f L = Some (merge_cond (p ⊝ L) vl1 vl2).
+Proof.
+  general induction L; intros; simpl in *; eauto.
+  cases in H; simpl in *; try monad_inv H.
+  - erewrite <- H1 in H0; eauto using get.
+    rewrite <- Heq in H0. simpl in *.
+    rewrite EQ. simpl.
+    rewrite (IHL _ _ _ _ _ _ EQ1 H0); eauto using get.
+  - erewrite <- H1 in H0; eauto using get.
+    rewrite <- Heq in H0. simpl in *.
+    monad_inv H0. rewrite EQ. simpl.
+    rewrite (IHL _ _ _ _ _ _ H EQ1); eauto using get.
+Qed.

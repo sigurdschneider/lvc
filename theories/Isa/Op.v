@@ -1,5 +1,5 @@
 Require Import Util EqDec DecSolve Val CSet Map Env Option Get MapDefined SetOperations.
-Require Import MoreList Option OptionR OptionMap.
+Require Import MoreList Option OptionR OptionMap ReplaceIf Filter.
 
 Set Implicit Arguments.
 
@@ -18,6 +18,9 @@ Instance isVar_dec e : Computable (isVar e).
 Proof.
   destruct e; try dec_solve.
 Defined.
+
+Notation "'IsVar'" := (fun e => B[isVar e]) (at level 0).
+Notation "'NotVar'" := (fun e => B[~ isVar e]) (at level 0).
 
 Definition getVar (e:op) :=
   match e with
@@ -587,4 +590,34 @@ Lemma of_list_freeVars_vars xl
 Proof.
   general induction xl; simpl; eauto. rewrite list_union_start_swap.
   rewrite IHxl; eauto. cset_tac.
+Qed.
+
+
+Lemma omap_lookup_vars V xl vl
+  : length xl = length vl
+    -> NoDupA _eq xl
+    -> omap (op_eval (V[xl <-- List.map Some vl])) (List.map Var xl) = Some vl.
+Proof.
+  intros. eapply length_length_eq in H.
+  general induction H; simpl; eauto.
+  lud; isabsurd; simpl.
+  erewrite omap_op_eval_agree; try eapply IHlength_eq; eauto; simpl in *; intuition.
+  instantiate (1:= V [x <- Some y]).
+  eapply update_nodup_commute_eq; eauto; simpl; intuition.
+Qed.
+
+Lemma omap_replace_if V Y Y' vl0 vl1
+  :  omap (op_eval V) (List.filter IsVar Y) = ⎣ vl1 ⎦
+     -> omap (op_eval V) Y' = ⎣ vl0 ⎦
+     -> omap
+         (op_eval V)
+         (replace_if NotVar Y Y') = ⎣ merge_cond (IsVar ⊝ Y) vl1 vl0 ⎦.
+Proof.
+  general induction Y; simpl; eauto.
+  simpl in *. cases in H; cases; isabsurd; simpl in *.
+  - monad_inv H. rewrite EQ. simpl. erewrite IHY; eauto. eauto.
+  - destruct Y'; simpl in *.
+    + inv H0; eauto.
+    + monad_inv H0. rewrite EQ. simpl.
+      erewrite IHY; eauto. simpl; eauto.
 Qed.
