@@ -26,7 +26,7 @@ Proof.
 Qed.
 
 Instance union_s_m_flip (A : Type) (HA : OrderedType A) (F : FSet)
-  : FSetSpecs F -> Proper (flip Subset ==> flip Subset ==> flip Subset) union.
+  : FSetSpecs F -> Proper (flip Subset ==> flip Subset ==> flip Subset) union | 40.
 Proof.
   unfold Proper, respectful, flip. intros.
   rewrite H0, H1. reflexivity.

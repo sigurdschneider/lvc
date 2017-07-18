@@ -86,6 +86,7 @@ Proof.
     cset_tac.
 Qed.
 
+Hint Resolve cq_eqn_proper.
 
 Lemma cp_eqns_agree_incl E E' lv
 : agree_on eq lv E E'

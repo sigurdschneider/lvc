@@ -138,6 +138,16 @@ Proof.
   cset_tac.
 Qed.
 
+Lemma list_union_definedVarsF_decomp F
+  : list_union (defVarsZs definedVars ⊝ F)
+               [=] list_union (of_list ⊝ fst ⊝ F) ∪ list_union (definedVars ⊝ snd ⊝ F).
+Proof.
+  general induction F; simpl.
+  - cset_tac.
+  - norm_lunion. rewrite IHF.
+    unfold defVarsZs at 1. clear.
+    cset_tac.
+Qed.
 
 
 (** ** Semantics *)

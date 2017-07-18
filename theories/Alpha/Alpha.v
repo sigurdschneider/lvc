@@ -113,12 +113,12 @@ Lemma alpha_inverse_on_agree f g ϱ ϱ' s t
 Proof.
   intros. eapply alpha_agree_on_morph; eauto.
   symmetry in H1.
-  eapply inverse_on_agree_on_2; eauto.
-  - eapply inverse_on_agree_on; eauto.
+  eapply inverse_on_agree_on_2; try eassumption; eauto.
+  - eapply inverse_on_agree_on; try eassumption; eauto.
     eapply agree_on_sym; eauto.
   - eapply alpha_inverse_on in H.
     eapply inverse_on_agree_on; try eassumption; eauto.
-    eapply inverse_on_agree_on_2; eauto.
+    eapply inverse_on_agree_on_2; try eassumption; eauto.
     eapply agree_on_sym; eauto.
 Qed.
 
@@ -179,16 +179,16 @@ Proof.
       * eapply alpha_inverse_on_agree. eauto.
         {
           - eapply alpha_inverse_on in H14; eauto.
-            eapply inverse_on_agree_on; eauto.
-            eapply inverse_on_comp_list; eauto.
+            eapply inverse_on_agree_on; try eassumption; eauto.
+            eapply inverse_on_comp_list; try eassumption; eauto.
             eapply inverse_on_sym in H14.
-            eapply inverse_on_comp_list; eauto.
+            eapply inverse_on_comp_list; try eassumption; eauto.
             unfold comp; intuition.
             unfold comp; intuition.
         }
         symmetry.
-        eapply inverse_on_comp_list; eauto.
-        eapply alpha_inverse_on; eauto.
+        eapply inverse_on_comp_list; only 7:
+        eapply alpha_inverse_on; try eassumption; eauto.
 Qed.
 
 (** ** Soundness wrt. equivalence *)

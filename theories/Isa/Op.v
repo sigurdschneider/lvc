@@ -191,7 +191,6 @@ Proof.
   intros. general induction H; simpl; eauto using live_op_sound with cset.
 Qed.
 
-
 Fixpoint subst_op (ϱ:env op) (s:op) : op :=
   match s with
   | Con v => Con v

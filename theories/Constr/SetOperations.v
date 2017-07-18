@@ -28,7 +28,6 @@ Proof.
   pattern s. eapply set_induction; intros.
   - exfalso. eapply H0; eauto.
   - rewrite fold_2; [
-    | eapply Equal_ST
     | eapply union_m
     | eapply transpose_union
     | eapply H1
@@ -43,9 +42,8 @@ Lemma fold_union_incl_start X `{OrderedType.OrderedType X} s u (x:X)
 Proof.
   revert_except s.
   pattern s. eapply set_induction; intros.
-  - rewrite fold_1; eauto using Equal_ST.
+  - rewrite fold_1; eauto.
   - rewrite fold_2; [
-    | eapply Equal_ST
     | eapply union_m
     | eapply transpose_union
     | eapply H1
@@ -62,7 +60,6 @@ Proof.
   - repeat rewrite fold_1; eauto.
     rewrite <- H1; eauto.
   - rewrite fold_2; [
-    | eapply Equal_ST
     | eapply union_m
     | eapply transpose_union
     | eapply H1
@@ -72,7 +69,6 @@ Proof.
     eapply Add_Equal in H2.
     symmetry.
     rewrite fold_2; [
-    | eapply Equal_ST
     | eapply union_m
     | eapply transpose_union
     | eapply H1

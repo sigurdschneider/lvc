@@ -115,8 +115,8 @@ Proof.
         rewrite <- H6; eauto.
       * unfold Proper, respectful, flip; intros; subst.
         repeat cases; eauto.
-        exfalso. rewrite H7 in NOTCOND; eauto.
-        exfalso. rewrite H7 in COND; eauto.
+        exfalso. rewrite <- H7 in NOTCOND; eauto.
+        exfalso. rewrite <- H7 in COND; eauto.
       * unfold transpose, flip; intros.
         repeat cases; eauto.
   - right.
@@ -135,7 +135,7 @@ Proof.
         rewrite H4. cset_tac; intuition.
       * unfold Proper, respectful, flip; intros; subst.
         decide (P y); decide (P x0); intros.
-        -- reflexivity.
+        -- order.
         -- exfalso. rewrite H7 in n; eauto.
         -- exfalso. rewrite H7 in p. eauto.
         -- reflexivity.

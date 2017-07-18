@@ -1,5 +1,5 @@
 Require Import CSet Util Map.
-Require Import Env IL Alpha StableFresh Annotation RenamedApart SetOperations.
+Require Import Env IL StableFresh Annotation RenamedApart SetOperations.
 Require Import LabelsDefined PairwiseDisjoint AppExpFree.
 Require Import RenamedApart RenamedApartAnn.
 Require Import Infra.PartialOrder CSetPartialOrder AnnotationLattice FreshGen.
@@ -421,29 +421,6 @@ Lemma poEq_ann_R_pe X `{OrderedType X} x y
 Proof.
   intros. general induction H0; econstructor; eauto;
             destruct a, b; inv H0; simpl in *; econstructor; eauto.
-Qed.
-
-Lemma renamedApartAnnF_snd_getAnn F G G'
-  : list_union (snd ⊝ getAnn ⊝ fst (renamedApartAnnF renamedApartAnn G F (nil, G')))
-               [=] list_union (definedVars ⊝ snd ⊝ F).
-Proof.
-  general induction F; simpl; eauto.
-  norm_lunion.
-  rewrite fst_renamedApartAnnF_swap. rewrite !List.map_app. simpl.
-  rewrite list_union_app.
-  rewrite IHF. rewrite snd_renamedApartAnn. simpl. cset_tac.
-Qed.
-
-
-Lemma list_union_definedVarsF_decomp F
-  : list_union (defVarsZs definedVars ⊝ F)
-               [=] list_union (of_list ⊝ fst ⊝ F) ∪ list_union (definedVars ⊝ snd ⊝ F).
-Proof.
-  general induction F; simpl.
-  - cset_tac.
-  - norm_lunion. rewrite IHF.
-    unfold defVarsZs at 1. clear.
-    cset_tac.
 Qed.
 
 Definition pairwise_ne' {X} (P:X->X->Prop) (L:list X) :=

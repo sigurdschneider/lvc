@@ -61,10 +61,26 @@ Qed.
 
 Arguments lookup_set {X} {H} {Y} {H0} m s.
 
+(*
+Instance In_morph_Subset_flip (Y : Type) (H : OrderedType Y)
+  : Proper (_eq ==> flip Subset ==> flip impl) In.
+Proof.
+  unfold Proper, respectful, flip, impl; intros.
+  rewrite <- H1, H0. eauto.
+Qed.
+
+Instance In_morph_Subset_flip' (Y : Type) (H : OrderedType Y)
+  : Proper (equiv ==> flip Subset ==> flip impl) In.
+Proof.
+  unfold Proper, respectful, flip, impl; intros.
+  rewrite <- H1, H0. eauto.
+Qed.
+ *)
+
+
 Lemma lookup_set_on_id {X} `{OrderedType X} (s t : set X)
   : s ⊆ t -> (lookup_set (fun x => x) s) ⊆ t.
 Proof.
-  intros. rewrite <- H0.
   lset_tac.
 Qed.
 
