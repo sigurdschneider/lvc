@@ -1,10 +1,12 @@
 (*i camlp4deps: "parsing/grammar.cma" i*)
 (*i camlp4use: "pa_extend.cmp" i*)
 
+open API
+open Grammar_API
 open Term
 open Declarations
 open Pp
-open Constrarg
+open Stdarg
 open Extraargs
 
 DECLARE PLUGIN "lvc_plugin"
@@ -13,48 +15,54 @@ let num_params ind =
       let (mind, ibody) = Global.lookup_inductive ind in
       mind.mind_nparams
 
-let rec is_param c n =
-      match kind_of_term c with
+let rec is_param sigma c n =
+      match EConstr.kind sigma c with
       | Ind (ind, _) -> n < num_params ind
-      | App (c, args) -> is_param c (n + Array.length args)
+      | App (c, args) -> is_param sigma c (n + Array.length args)
       | _ -> false
 
 TACTIC EXTEND is_param
   | [ "is_param" constr(c) natural(n) ] ->
      [
-       if is_param c n
-       then Proofview.tclUNIT ()
-       else Tacticals.New.tclFAIL 0 (str "not a parameter")
+       Proofview.Goal.enter begin fun gl ->
+				  if is_param (Proofview.Goal.sigma gl) c n
+				  then Proofview.tclUNIT ()
+				  else Tacticals.New.tclFAIL 0 (str "not a parameter")
+			    end
      ]
 END
 
-let rec is_inductive c =
-      match kind_of_term c with
+let rec is_inductive sigma c =
+      match EConstr.kind sigma c with
       | Ind _ -> true
-      | App (c, args) -> is_inductive c
+      | App (c, args) -> is_inductive sigma c
       | _ -> false
 
 TACTIC EXTEND is_inductive
   | [ "is_inductive" constr(c) ] ->
      [
-       if is_inductive c
-       then Proofview.tclUNIT ()
-       else Tacticals.New.tclFAIL 0 (str "not an inductive")
+        Proofview.Goal.enter begin fun gl ->
+				   if is_inductive (Proofview.Goal.sigma gl) c
+				   then Proofview.tclUNIT ()
+				   else Tacticals.New.tclFAIL 0 (str "not an inductive")
+			     end
      ]
 END
 
-let rec is_constructor_app c =
-      match kind_of_term c with
+let rec is_constructor_app sigma c =
+      match EConstr.kind sigma c with
       | Construct _ -> true
-      | App (c, args) -> is_constructor_app c
+      | App (c, args) -> is_constructor_app sigma c
       | _ -> false
 
 TACTIC EXTEND is_constructor_app
   | [ "is_constructor_app" constr(c) ] ->
      [
-       if is_constructor_app c
-       then Proofview.tclUNIT ()
-       else Tacticals.New.tclFAIL 0 (str "not a constructor app")
+       Proofview.Goal.enter begin fun gl ->
+				  if is_constructor_app (Proofview.Goal.sigma gl) c
+				  then Proofview.tclUNIT ()
+				  else Tacticals.New.tclFAIL 0 (str "not a constructor app")
+			    end
      ]
 END
 
