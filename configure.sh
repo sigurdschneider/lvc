@@ -46,10 +46,10 @@ RM=$(for pat in $(cat _blacklist); do echo "$SOURCES" | grep -e $pat ; done | so
 FILTERSOURCES=$(comm -23 <(echo "$SOURCES") <(echo "$RM"))
 echo "Removed due to blacklist:"
 echo "$RM"
-cat _CoqProject > Make
-echo >> Make
-echo "src/lvc_plugin.mlpack" >> Make
-echo "src/lvc_tacs.ml4" >> Make
-echo >> Make
-echo $FILTERSOURCES  >> Make
+cat Make > _CoqProject
+echo >> _CoqProject
+echo "src/lvc_plugin.mlpack" >> _CoqProject
+echo "src/lvc_tacs.ml4" >> _CoqProject
+echo >> _CoqProject
+printf '%s\n' "${FILTERSOURCES[@]}"  >> _CoqProject
 echo "Make generated."

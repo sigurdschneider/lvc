@@ -36,3 +36,4 @@ pkg*
 *.tgz
 theories/Test*.v
 loc.tex
+Makefile.coq.conf

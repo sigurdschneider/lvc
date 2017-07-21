@@ -1,4 +1,4 @@
-DOC := doc/
+GDOC := doc/
 DOCIND := doc-ind/
 DOCSPILL := doc-spill/
 PKGIND := pkg-lvc-ind/
@@ -39,11 +39,11 @@ depmakefiles:
 	+$(MAKE) -C paco Makefile.coq
 	+$(MAKE) -C ContainersPlugin Makefile.coq
 
-CompCert/Makefile.config: 
-	cd CompCert && ./configure $(COMPCERTCFG) 
+CompCert/Makefile.config:
+	cd CompCert && ./configure $(COMPCERTCFG)
 
 compcert: CompCert/Makefile.config
-	-+$(MAKE) -C CompCert 
+	-+$(MAKE) -C CompCert
 
 dep: compcert
 	+$(MAKE) -C paco all TIMECMD=
@@ -133,8 +133,7 @@ clean: clean-doc
 	rm -f $(COQMAKEFILE)
 
 $(COQMAKEFILE): Makefile depmakefiles $(VS)
-	$(COQBIN)coq_makefile -f Make -o Makefile.coq
-	sed -i s/TIMECMD=/TIMECMD?=/ Makefile.coq
+	$(COQBIN)coq_makefile -f _CoqProject -o Makefile.coq
 #	./configure.sh
 #	coq_makefile -f _CoqProject $(VS) -o $(COQMAKEFILE)
 
