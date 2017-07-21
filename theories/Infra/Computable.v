@@ -10,6 +10,7 @@
 
   Furthermore there are two tactics dleft, dright which correspond
   to classical_left and classical_right. *)
+Require Extraction.
 Require Import Coq.Program.Tactics.
 Require Export Bool.
 

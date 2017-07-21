@@ -1,3 +1,4 @@
+Require Extraction.
 Require Import List Coq.Classes.Equivalence Containers.OrderedTypeEx MoreInversion.
 
 (** Cast option in the framework of Monad. The code in this file is taken from CompCert. *)

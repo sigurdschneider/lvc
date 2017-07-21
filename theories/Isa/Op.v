@@ -307,7 +307,6 @@ Proof.
   + rewrite <- H2; eauto.
 Qed.
 
-
 Inductive opLt : op -> op -> Prop :=
 | OpLtCon c c'
   : _lt c c'

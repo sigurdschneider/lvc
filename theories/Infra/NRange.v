@@ -59,12 +59,13 @@ Qed.
 Lemma x_in_range V `{NaturalRepresentationSucc V} (x:V) k n
   : asNat x >= asNat k /\ asNat k+n > asNat x -> x ∈ of_list (range succ k n).
 Proof.
-  general induction n; simpl in *; dcr.
+  revert x k.
+  induction n; intros; simpl in *.
   - exfalso; omega.
   - decide (asNat x = asNat k); subst; cset_tac'.
-    * setoid_rewrite <- asNat_iff in n0. omega.
-    * setoid_rewrite <- asNat_iff in n1.
-      eapply IHn. nr. omega.
+    * rewrite <- asNat_iff in n0. exfalso; eauto.
+    * rewrite asNat_iff in n0; eauto.
+      eapply IHn; eauto. nr. omega.
 Qed.
 
 Lemma in_range_x  V `{NaturalRepresentationSucc V} x k n
