@@ -146,7 +146,7 @@ compiler/STAMP: theories/Compiler.vo compiler/extraction.v
 	mkdir -p compiler/extraction
 	rm -f theories/extraction.vo
 	rm -f compiler/extraction/*
-	coqtop $(shell cat _CoqProject) -batch -load-vernac-source compiler/extraction.v
+	coqtop $(shell cat Make) -batch -load-vernac-source compiler/extraction.v
 	touch compiler/STAMP
 
 %.vo:: $(COQMAKEFILE)
