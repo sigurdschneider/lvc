@@ -40,7 +40,7 @@ depmakefiles:
 	+$(MAKE) -C ContainersPlugin Makefile.coq
 
 CompCert/Makefile.config:
-	cd CompCert && ./configure $(COMPCERTCFG)
+	-cd CompCert && ./configure $(COMPCERTCFG) -ignore-coq-version
 
 compcert: CompCert/Makefile.config
 	-+$(MAKE) -C CompCert
