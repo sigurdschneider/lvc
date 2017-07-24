@@ -101,3 +101,29 @@ TACTIC EXTEND warntime
 		   (print_time ((float_of_int n) /. 1000.0) s)
      ]
 END
+
+
+let print_goal_as_lemma () =
+  Proofview.Goal.nf_enter
+    begin fun gl ->
+	  let sigma = Tacmach.New.project gl in
+	  let concl = Tacmach.New.pf_concl gl in
+	  let hyps  = Tacmach.New.pf_hyps_types gl in
+	  let _ = Feedback.msg_info (str "Lemma unnamed ") in
+	  let phyps = List.map
+			(fun (id, ty) ->
+			 Feedback.msg_info @@
+			   str "(" ++
+			     (Names.Id.print id) ++ str ":" ++
+			     (Termops.print_constr ty) ++ str ")")
+			(List.rev hyps) in
+	  let _ = Feedback.msg_info ( str " : " ++ Termops.print_constr concl) in
+	  tclUNIT ()
+    end
+
+TACTIC EXTEND goal_as_lemma
+  | [ "goal_as_lemma" ] ->
+     [
+	print_goal_as_lemma ()
+     ]
+END
