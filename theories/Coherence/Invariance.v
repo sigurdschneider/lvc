@@ -84,7 +84,7 @@ Qed.
 
 (** The Bisimulation candidate. *)
 
-Hint Extern 5 =>
+Local Hint Extern 5 =>
 match goal with
 | [ H : ?m >= ?k, H' : ?k = ?n |- context [ ?n + (?m - ?n) ] ] =>
   let H := fresh "H" in
