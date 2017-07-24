@@ -1,4 +1,4 @@
-Require Import Util IL Sawtooth RenamedApart LabelsDefined OptionR.
+Require Import Util IL Sawtooth LabelsDefined OptionR.
 Require Import Annotation Liveness.Liveness Restrict SetOperations Coherence.
 Require Import Sim SimTactics SimCompanion.
 

@@ -1,8 +1,7 @@
-Require Import Util IL RenamedApart LabelsDefined OptionR.
+Require Import Util IL LabelsDefined OptionR.
 Require Import Annotation Exp SetOperations Liveness.Liveness Restrict Coherence.
 
 Set Implicit Arguments.
-
 
 (** *** In a coherent program, the globals of every function that can eventually be called are live *)
 
