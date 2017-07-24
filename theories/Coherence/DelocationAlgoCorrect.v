@@ -5,10 +5,10 @@ Require Import AddParam AddAdd MoreListSet DelocationAlgo DelocationAlgoIsCalled
 
 Set Implicit Arguments.
 
-Hint Extern 10 (forall _ _, get (snd ⊝ computeParametersF ?DL ?ZL ?AP ?F ?als) _ _ -> ❬?LVb❭ = ❬_❭)
+Local Hint Extern 10 (forall _ _, get (snd ⊝ computeParametersF ?DL ?ZL ?AP ?F ?als) _ _ -> ❬?LVb❭ = ❬_❭)
 => eapply computeParametersF_length : len.
 
-Hint Extern 1 =>
+Local Hint Extern 1 =>
 match goal with
   [ |- context [ ❬snd (computeParameters _ _ _ _ _)❭ ] ] =>
   rewrite computeParameters_length; eauto with len
