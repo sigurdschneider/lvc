@@ -227,15 +227,15 @@ Proof.
   - invt live_exp_sound.
     + case_eq (op_eval E e0); intros.
       * cone_step.
-        eapply H; eauto using rd_agree_update.
+        eapply H; eauto using rd_agree_update with len.
         -- intros. inv_get. eapply approx_restrict; eauto.
         -- eauto using restrict_ifFstR.
       * cno_step.
     + case_eq (omap (op_eval E) Y); intros.
       * cextern_step; assert (vl = l) by congruence; subst; eauto.
-        -- eapply H; eauto using rd_agree_update, PIR2_length, restrict_ifFstR.
+        -- eapply H; eauto using rd_agree_update, PIR2_length, restrict_ifFstR with len.
            ++ intros; inv_get. eapply approx_restrict; eauto.
-        -- eapply H; eauto using rd_agree_update, PIR2_length, restrict_ifFstR.
+        -- eapply H; eauto using rd_agree_update, PIR2_length, restrict_ifFstR with len.
            ++ intros; inv_get. eapply approx_restrict; eauto.
       * cno_step.
   - case_eq (op_eval E e); intros.

@@ -4,7 +4,7 @@ Require Import Rename RenameApart RenamedApartAnn RenameApart_Liveness RenameApa
 Require CMap.
 Require Liveness.Liveness LivenessValidators ParallelMove ILN ILN_IL.
 Require TrueLiveness LivenessAnalysis LivenessAnalysisCorrect.
-Require Coherence Invariance.
+Require Import Coherence Coherence_RenamedApart Invariance.
 Require Delocation DelocationAlgo DelocationCorrect DelocationValidator.
 Require Coherence.Allocation AllocationAlgo AllocationAlgoCorrect.
 Require UCE DVE EAE Alpha.

@@ -155,9 +155,10 @@ Proof.
       edestruct (IH s) with (AP:=tab {} ‖F‖ ++ AP); eauto.
       eauto with len. eauto with len.
       eapply get_app_right; eauto using map_get_1.
-      orewrite (n+0 = n); eauto.
+      eauto with len.
       eapply get_app_right; eauto using map_get_1.
-      rewrite map_length; eauto. dcr; subst.
+      eauto with len.
+      dcr; subst.
       edestruct (@get_olist_union_b _ _ (snd ⊝ computeParametersF F als Lv ZL AP))
         as [? [? ?]]; try eapply GETpF.
       eapply computeParametersF_length; eauto.
@@ -193,7 +194,7 @@ Proof.
       clear H8 H13 LS GETps. setoid_rewrite H10. clear H7 H10.
       eapply computeParameters_isCalled_Some_F'; eauto.
       intros. eapply (IH (snd Zs0)); eauto.
-      eapply get_app_right; eauto. orewrite (n + 0 = n); eauto.
+      eapply get_app_right; eauto. eauto with len.
       eapply get_app_right; eauto. eauto with len.
       intros; edestruct H6; eauto.
 Qed.

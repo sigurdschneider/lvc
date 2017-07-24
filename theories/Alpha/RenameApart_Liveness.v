@@ -1,8 +1,8 @@
 Require Import Util CSet Map LengthEq.
 Require Import Env IL StableFresh Subset1 OptionR.
 Require Import Annotation AnnP RenamedApart RenameApart SetOperations Take.
-Require Import LabelsDefined PairwiseDisjoint Liveness.Liveness Restrict Coherence.
-Require Import FreshGen.
+Require Import LabelsDefined PairwiseDisjoint FreshGen.
+Require Import Liveness.Liveness Restrict Coherence Coherence_Liveness.
 
 Set Implicit Arguments.
 

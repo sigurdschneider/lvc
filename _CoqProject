@@ -44,6 +44,8 @@ theories/Coherence/AllocationAlgoCorrect.v
 theories/Coherence/AllocationAlgo.v
 theories/Coherence/Allocation.v
 theories/Coherence/AllocationValidator.v
+theories/Coherence/Coherence_Liveness.v
+theories/Coherence/Coherence_RenamedApart.v
 theories/Coherence/Coherence.v
 theories/Coherence/DelocationAlgoCorrect.v
 theories/Coherence/DelocationAlgoIsCalled.v
