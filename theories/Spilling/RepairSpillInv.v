@@ -24,16 +24,11 @@ Proof.
   - econstructor; eauto; [| | |eapply IHspillKill]; try rewrite <-Req; try rewrite <-Meq; eauto; eauto.
 Qed.
 
-
-
-
-
 Lemma stretch_rms_inv  F rms k lvF :
   length F = length rms
   -> (forall n rm, get rms n rm -> cardinal (fst rm) <= k)
   -> PIR2 Equal (merge ⊝ rms) lvF
-  -> PIR2 _eq rms (stretch_rms k F rms lvF)
-.
+  -> PIR2 _eq rms (stretch_rms k F rms lvF).
 Proof.
   intros lenF card pir2.
   general induction rms; destruct F; isabsurd; destruct lvF; isabsurd.
@@ -56,10 +51,9 @@ Proof.
       econstructor; eauto.
 Qed.
 
-Lemma PIR2_eq (X:Type) `{OrderedType X} (L L' : list X)  :
-  PIR2 _eq L L'
-  -> _eq L L'
-.
+Lemma PIR2_eq (X:Type) `{OrderedType X} (L L' : list X)
+  : PIR2 _eq L L'
+    -> _eq L L'.
 Proof.
   intros. general induction H0; eauto.
   econstructor; eauto.
@@ -67,16 +61,12 @@ Qed.
 
 
 Lemma PIR2_Equal_Subset (X:Type) `{OrderedType X} (L L' : list ⦃X⦄) :
-  PIR2 Equal L L' -> PIR2 Subset L L'
-.
+  PIR2 Equal L L' -> PIR2 Subset L L'.
 Proof.
   intros pir2. eapply PIR2_get; eauto.
   - intros. apply incl_set_left. eapply get_PIR2; eauto.
   - eapply PIR2_length; eauto.
 Qed.
-
-
-
 
 Lemma repair_spill_inv k ZL Λ Λ' s lv sl R M G ra rlv VD
   : renamedApart s ra
@@ -91,9 +81,7 @@ Lemma repair_spill_inv k ZL Λ Λ' s lv sl R M G ra rlv VD
     -> ann_R (fun x (y : ⦃var⦄ * ⦃var⦄) => (list_union (merge ⊝ snd x)) ⊆ fst y) sl ra
     -> spill_live VD sl lv
     -> PIR2 _eq Λ Λ'
-(*    -> R ∪ M ⊆ getAnn lv*)
-    -> sl === repair_spill k ZL Λ' R M s rlv lv sl
-.
+    -> sl === repair_spill k ZL Λ' R M s rlv lv sl.
 Proof.
   intros rena rliveMin rliveSnd rm_ra sub_R liveSnd liveMin spillSnd cardRf sl_ra spillLv Λeq.
 (*  assert (spillSnd':=spillSnd).*)
@@ -262,7 +250,7 @@ Proof.
     {
       subst Sp'. rewrite union_comm. setoid_rewrite Speq at 1. rewrite union_comm.
       symmetry. rewrite union_subset_equal; eauto. subst M''. rewrite Mfeq', H27.
-      rewrite <-R'eq. rewrite H28 at 1. rewrite  H30. clear. cset_tac. 
+      rewrite <-R'eq. rewrite H28 at 1. rewrite  H30. clear. cset_tac.
     }
     assert (Z = nth (counted l) ZL nil) as Zeq.
     { erewrite get_nth; eauto; cbn; eauto. }

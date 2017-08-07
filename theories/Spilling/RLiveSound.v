@@ -3,7 +3,6 @@ Require Import IL Annotation.
 Require Import Liveness.Liveness.
 Require Import ExpVarsBounded SpillSound SpillUtil.
 
-
 Inductive rlive_sound
   : list params -> list (set var) -> stmt -> spilling -> ann (set var) -> Prop :=
 | RLiveLet ZL Lv x e s Sp L sl lv (al:ann (set var))
@@ -48,8 +47,6 @@ Inductive rlive_sound
     -> getAnn alb ⊆ lv ∪ L
     -> rlive_sound ZL Lv (stmtFun F t) (annF (Sp,L,rms) sl_F sl_t) (annF lv als alb)
 .
-
-
 
 Lemma rlive_sound_monotone
   : forall (ZL : 〔params〕) (LV LV' : 〔⦃var⦄〕) (s : stmt) (sl : spilling) (rlv : ann ⦃var⦄),

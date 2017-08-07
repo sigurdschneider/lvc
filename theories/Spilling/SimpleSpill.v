@@ -31,10 +31,7 @@ Fixpoint simpleSpill
 
     | _,_ => ann0 (∅, ∅, nil)
 
-    end
-.
-
-
+    end.
 
 Lemma simpleSpill_sat_spillSound
       (k:nat)
@@ -44,14 +41,12 @@ Lemma simpleSpill_sat_spillSound
       (Lv : list ⦃var⦄)
       (ZL : list params)
       (alv : ann ⦃var⦄)
-  :
-    R [=] R'
+  : R [=] R'
     -> getAnn alv ⊆ R ∪ M
     -> exp_vars_bounded k s
     -> live_sound Imperative ZL Lv s alv
     -> PIR2 (fun RMf G => fst RMf [=] ∅ /\ snd RMf [=] G) Λ Lv
-    -> spill_sound k ZL Λ (R,M) s (simpleSpill R' s alv)
-.
+    -> spill_sound k ZL Λ (R,M) s (simpleSpill R' s alv).
 Proof.
   intros ReqR' fvRM fvBound lvSound pir2.
   general induction lvSound;

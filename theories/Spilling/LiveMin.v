@@ -2,17 +2,11 @@ Require Import List Map Env AllInRel Exp MoreList.
 Require Import IL Annotation.
 Require Import ExpVarsBounded SpillSound SpillUtil.
 
-
-
 Set Implicit Arguments.
-
-
 
 Definition is_live_min k ZL Λ s sl LV
   := forall R M, spill_sound k ZL Λ (R,M) s sl
-                 -> LV ⊆ R ∪ M
-.
-
+                 -> LV ⊆ R ∪ M.
 
 Inductive live_min (k:nat)
   : list params -> list (⦃var⦄ * ⦃var⦄) -> ⦃var⦄ -> stmt -> spilling -> ann ⦃var⦄ -> Prop :=
@@ -52,9 +46,6 @@ Proof.
   general induction RLM; econstructor; intros; eauto;
     hnf; intros; rewrite <- Incl; eauto.
 Qed.
-
-
-
 
 Lemma live_min_getAnn k ZL Λ s sl lv R M :
   live_min k ZL Λ ∅ s sl lv
@@ -100,7 +91,6 @@ Proof.
   intros. eapply spill_sound_ext in H0; eauto. apply PIR2_sym; eauto.
 Qed.
 
-
 Lemma live_min_ext Λ Λ' k ZL G s sl lv :
   PIR2 _eq Λ Λ'
   -> live_min k ZL Λ  G s sl lv
@@ -113,7 +103,6 @@ Proof.
   - apply IHlvMin; eauto using PIR2_app.
 Qed.
 
-
 Lemma is_live_min_monotone Λ Λ' k ZL s sl LV :
   PIR2 (fun x y => fst x ⊆ fst y /\ snd x ⊆ snd y) Λ Λ'
   -> is_live_min k ZL Λ  s sl LV
@@ -123,7 +112,6 @@ Proof.
   intros pir2 H. unfold is_live_min in *.
   intros. eapply spill_sound_monotone in H0; eauto.
 Qed.
-
 
 Lemma live_min_monotone Λ Λ' k ZL G s sl lv :
   PIR2 (fun x y => fst x ⊆ fst y /\ snd x ⊆ snd y) Λ Λ'

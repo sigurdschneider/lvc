@@ -98,8 +98,7 @@ Fixpoint repair_spill
 .
 
 Lemma stretch_rms_length alv rms k F :
-  length F = length alv -> length (stretch_rms k F rms alv) = length F
-.
+  length F = length alv -> length (stretch_rms k F rms alv) = length F .
 Proof.
   intros lenF. general induction F; destruct rms; destruct alv; isabsurd; cbn; eauto.
   destruct p as [Rf Mf]. cbn. rewrite IHF; eauto.
@@ -108,8 +107,7 @@ Qed.
 
 Lemma stretch_rms_cardinal k F rms lvs n rm :
   get (stretch_rms k F rms lvs) n rm
-  -> cardinal (fst rm) <= k
-.
+  -> cardinal (fst rm) <= k.
 Proof.
   intros gett. general induction gett; destruct F; cbn; eauto; isabsurd.
   - cbn in *. destruct rms, lvs; isabsurd.
@@ -126,8 +124,7 @@ Qed.
 
 Lemma stretch_rms_lv k F rms lvs :
   length F = length lvs
-  -> PIR2 Equal lvs (merge ⊝ stretch_rms k F rms lvs)
-.
+  -> PIR2 Equal lvs (merge ⊝ stretch_rms k F rms lvs).
 Proof.
   intros lenF. general induction F; destruct lvs; isabsurd; cbn in lenF; eauto.
   apply eq_add_S in lenF. destruct rms; cbn.

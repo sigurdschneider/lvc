@@ -5,83 +5,12 @@ Require Import ToBeOutsourced Slot.
 Require Export SlotLiftParams SlotLiftArgs.
 
 
-Fixpoint write_moves
-           (Z Z' : params)
-           (s : stmt)
-  : stmt
-  := match Z, Z' with
+Fixpoint write_moves (Z Z' : params) (s : stmt) : stmt :=
+  match Z, Z' with
     | x::Z, x'::Z' =>
       stmtLet x (Operation (Var x')) (write_moves Z Z' s)
     | _, _ => s
     end.
-
-
-Definition mark_elements
-           (*(X : Type)
-           `{OrderedType X}*)
-           (L : list var)
-           (s : ⦃var⦄)
-  : list bool
-  := (fun x => if [x ∈ s] then true else false) ⊝ L.
-
-Lemma countTrue_mark_elements Z D
-      (NoDup:NoDupA eq Z)
-  : countTrue (mark_elements Z D) = cardinal (of_list Z ∩ D).
-Proof.
-  general induction NoDup; simpl.
-  - assert ({} ∩ D [=] {}) by (clear; cset_tac).
-    rewrite H. eauto.
-  - cases.
-    + assert ({x; of_list l} ∩ D [=] {x; of_list l ∩ D}) as EQ by (cset_tac).
-      rewrite EQ. rewrite IHNoDup; eauto.
-      rewrite add_cardinal_2; eauto. clear IHNoDup.
-      revert H. clear_all. cset_tac.
-    + assert ({x; of_list l} ∩ D [=] of_list l ∩ D) as EQ by (cset_tac).
-      rewrite EQ. rewrite IHNoDup; eauto.
-Qed.
-
-(*
-Lemma update_with_list_lookup_in_list_first_slot (slot:var->var)
-      A (E:onv A) n (R M:set var)
-      Z (Y:list A) z
-: length Z = length Y
-  -> get Z n z
-  -> z ∈ R
-  -> disj (of_list Z) (map slot (of_list Z))
-  -> (forall n' z', n' < n -> get Z n' z' -> z' =/= z)
-  -> exists y, get Y n y
-         /\ E [slot_lift_params slot (R, M) Z <--
-                               Some ⊝ extend_args Y (mark_elements Z (R ∩ M))] z = Some y.
-Proof.
-  intros Len Get In Disj First. length_equify.
-  general induction Len; simpl in *; isabsurd.
-  inv Get.
-  - exists y; repeat split; eauto using get.
-    cases; simpl.
-    + lud; eauto using get.
-    + cases; simpl.
-      * lud; eauto using get.
-  - edestruct (IHLen slot E n0) as [? [? ]]; eauto using get; dcr.
-    + eapply disj_incl; eauto with cset.
-    + intros. eapply (First (S n')); eauto using get. omega.
-    + exists x0. eexists; repeat split; eauto using get.
-      exploit (First 0); eauto using get; try omega.
-      cases; simpl.
-      * rewrite lookup_nequiv; eauto.
-        rewrite lookup_nequiv; eauto.
-        intro.
-        eapply (Disj z). eapply get_in_of_list in H3.
-        cset_tac. rewrite <- H2.
-        eapply map_iff; eauto. eexists x; split; eauto with cset.
-      * cases; simpl; lud.
-        -- rewrite lookup_nequiv; eauto.
-        -- exfalso.
-           eapply (Disj (slot x)). eapply get_in_of_list in H3.
-           rewrite <- H5. cset_tac.
-           eapply map_iff; eauto. eexists x; split; eauto with cset.
-        -- eauto.
-Qed.
- *)
 
 Definition do_spill_rec
            (slot : var -> var)
@@ -120,17 +49,11 @@ Definition do_spill_rec
 
     | _,_
       => s
-    end
-.
+    end.
 
 
-Fixpoint do_spill
-           (slot : var -> var)
-           (s : stmt)
-           (sl : spilling)
-           (ZL : list params)
-           (RML : list (set var * set var))
-           {struct s}
+Fixpoint do_spill (slot : var -> var) (s : stmt) (sl : spilling)
+           (ZL : list params) (RML : list (set var * set var)) {struct s}
   : stmt
   := let sp := elements (getSp sl) in
     let ld := elements (getL sl) in
@@ -138,18 +61,13 @@ Fixpoint do_spill
         write_moves ld (slot ⊝ ld) (
             do_spill_rec slot s sl ZL RML (do_spill slot)
         )
-     )
-.
+     ).
 
 
 
-Lemma do_spill_rec_s
-      (slot : var -> var)
-      (Sp' L': ⦃ var ⦄)
-      (s : stmt)
-      (sl : spilling)
-  :
-    do_spill_rec slot s sl
+Lemma do_spill_rec_s (slot : var -> var) (Sp' L': ⦃ var ⦄)
+      (s : stmt) (sl : spilling)
+  : do_spill_rec slot s sl
     = do_spill_rec slot s (setTopAnn sl (Sp',L',snd (getAnn sl)))
 .
 Proof.
@@ -168,11 +86,9 @@ Lemma do_spill_empty
       (sl : spilling)
       (ZL : list params)
       (RML : list (set var * set var))
-  :
-    count sl = 0
+  : count sl = 0
     -> do_spill slot s sl ZL RML
-      = do_spill_rec slot s sl ZL RML (do_spill slot)
-.
+      = do_spill_rec slot s sl ZL RML (do_spill slot).
 Proof.
   intros count_zero.
   apply count_zero_Empty_Sp in count_zero as Empty_Sp.
@@ -193,12 +109,10 @@ Lemma do_spill_empty_Sp
       (sl : spilling)
       (ZL : list params)
       (RML : list (set var * set var))
-  :
-    cardinal (getSp sl) = 0
+  : cardinal (getSp sl) = 0
     -> do_spill slot s sl ZL RML
       = write_moves (elements (getL sl)) (slot ⊝ elements (getL sl))
-                    (do_spill_rec slot s sl ZL RML (do_spill slot))
-.
+                    (do_spill_rec slot s sl ZL RML (do_spill slot)).
 Proof.
   intros card_zero.
   unfold do_spill.
@@ -217,12 +131,10 @@ Lemma do_spill_extract_writes
       (sl : spilling)
       (ZL : list params)
       (RML : list (set var * set var))
-  :
-    do_spill slot s sl ZL RML
+  : do_spill slot s sl ZL RML
     = write_moves (slot ⊝ elements (getSp sl)) (elements (getSp sl))
          (write_moves (elements (getL sl)) (slot ⊝ elements (getL sl))
-             (do_spill slot s (setTopAnn sl (∅,∅,snd (getAnn sl))) ZL RML))
-.
+             (do_spill slot s (setTopAnn sl (∅,∅,snd (getAnn sl))) ZL RML)).
 Proof.
   symmetry.
   rewrite do_spill_empty.
@@ -249,11 +161,9 @@ Lemma do_spill_extract_spill_writes
       (sl : spilling)
       (ZL : list params)
       (RML : list (set var * set var))
-  :
-    do_spill slot s sl ZL RML
+  : do_spill slot s sl ZL RML
     = write_moves (slot ⊝ (elements (getSp sl))) (elements (getSp sl))
-                   (do_spill slot s (clear_Sp sl) ZL RML)
-.
+                   (do_spill slot s (clear_Sp sl) ZL RML).
 Proof.
   unfold clear_Sp.
   symmetry.
@@ -280,13 +190,11 @@ Lemma do_spill_sub_empty_invariant
       (sl : spilling)
       (ZL : list params)
       (RML : list (set var * set var))
-  :
-    count sl = 0
+  : count sl = 0
     -> Sp' [=] ∅
     -> L' [=] ∅
     ->  do_spill slot s sl ZL RML
-       = do_spill slot s (setTopAnn sl (Sp',L',snd (getAnn sl))) ZL RML
-.
+       = do_spill slot s (setTopAnn sl (Sp',L',snd (getAnn sl))) ZL RML.
 Proof.
   intros count_zero Sp_empty L_empty.
   rewrite do_spill_empty; eauto.

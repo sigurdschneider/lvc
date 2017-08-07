@@ -103,6 +103,7 @@ theories/Equiv/TraceEquiv.v
 theories/Equiv/WFBisim.v
 theories/IL/AnnotationLattice.v
 theories/IL/Annotation.v
+theories/IL/AnnP.v
 theories/IL/AppExpFree.v
 theories/IL/BlockType.v
 theories/IL/Env.v
@@ -128,6 +129,7 @@ theories/IL/Var.v
 theories/Infra/AllInRel.v
 theories/Infra/AutoIndTac.v
 theories/Infra/BoundedBelow.v
+theories/Infra/BoundedIn.v
 theories/Infra/Computable.v
 theories/Infra/DecSolve.v
 theories/Infra/Drop.v
@@ -197,8 +199,6 @@ theories/Reachability/ReachabilityAnalysis.v
 theories/Reachability/Reachability.v
 theories/RegAssign.v
 theories/RenameApartToPart.v
-theories/Spilling/AnnP.v
-theories/Spilling/BoundedIn.v
 theories/Spilling/DoSpillRm.v
 theories/Spilling/DoSpill.v
 theories/Spilling/ExpVarsBounded.v

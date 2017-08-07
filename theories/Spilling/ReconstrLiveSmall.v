@@ -17,8 +17,7 @@ Lemma reconstr_live_write_loads
       (s : stmt)
       (an : lvness_fragment)
       (VD G : ⦃var⦄)
-  :
-    of_list xs ⊆ VD
+  : of_list xs ⊆ VD
     -> disj VD (map slot VD)
     -> getAnn (
           reconstr_live Lv ZL G
@@ -26,8 +25,7 @@ Lemma reconstr_live_write_loads
                         (add_anns ⎣⎦ (length xs) an))
              [=]
              getAnn (reconstr_live Lv ZL ∅ s an)
-             \ of_list xs ∪ map slot (of_list xs) ∪ G
-.
+             \ of_list xs ∪ map slot (of_list xs) ∪ G.
 Proof.
   intros xs_VD disj_VD.
   general induction xs;
@@ -58,8 +56,6 @@ Proof.
     + clear; cset_tac.
 Qed.
 
-
-
 (* this will be generalized by reconstr_live_write_loads *)
 Lemma reconstr_live_small_L
       (sl : spilling)
@@ -68,8 +64,7 @@ Lemma reconstr_live_small_L
       (slot : var -> var)
       (s : stmt)
       (Λ : list (⦃var⦄ * ⦃var⦄))
-  :
-    disj VD (map slot VD)
+  : disj VD (map slot VD)
     -> R ⊆ VD
     -> M ⊆ VD
     -> getSp sl ⊆ R
@@ -89,8 +84,7 @@ Lemma reconstr_live_small_L
             G
            (do_spill slot s (clear_Sp sl) ZL Λ)
            (do_spill_rm slot (clear_Sp sl)))
-        ⊆ R ∪ map slot (getSp sl ∪ M) ∪ G
-.
+        ⊆ R ∪ map slot (getSp sl ∪ M) ∪ G.
 Proof.
   intros disj_VD R_VD M_VD Sp_R L_SpM base.
 
@@ -118,14 +112,6 @@ Proof.
   clear; cset_tac.
 Qed.
 
-
-
-(* maybe I will need a lemma :
-  x ∈  s
-  ->   reconstr_live Lv ZL ∅ s an \ s
-   [=] reconstr_live Lv ZL (singleton x) s an \ s
- *)
-
 Lemma reconstr_live_write_spills
       (Lv : list ⦃var⦄)
       (ZL : list params)
@@ -134,8 +120,7 @@ Lemma reconstr_live_write_spills
       (s : stmt)
       (an : lvness_fragment)
       (VD G : ⦃var⦄)
-   :
-    disj VD (map slot VD)
+   : disj VD (map slot VD)
     -> of_list xs ⊆ VD
     -> getAnn (
           reconstr_live Lv ZL G
@@ -145,8 +130,7 @@ Lemma reconstr_live_write_spills
                reconstr_live Lv ZL ∅ s an)
              \ map slot (of_list xs)
              ∪ of_list xs
-             ∪ G
-.
+             ∪ G.
 Proof.
   intros disj_VD xs_VD.
   general induction xs;
@@ -178,13 +162,6 @@ Proof.
     + clear; cset_tac.
 Qed.
 
-
-
-
-
-
-
-
 (* this will be generalized by reconstr_live_write_spills *)
 Lemma reconstr_live_small_Sp
       (sl : spilling)
@@ -193,8 +170,7 @@ Lemma reconstr_live_small_Sp
       (slot : var -> var)
       (s : stmt)
       (Λ : list (⦃var⦄ * ⦃var⦄))
-  :
-    disj VD (map slot VD)
+  : disj VD (map slot VD)
     -> R ⊆ VD
     -> getSp sl ⊆ R
     -> (forall G', getAnn
@@ -212,8 +188,7 @@ Lemma reconstr_live_small_Sp
             G
            (do_spill slot s sl  ZL Λ)
            (do_spill_rm slot sl))
-        ⊆ R ∪ map slot M ∪ G
-.
+        ⊆ R ∪ map slot M ∪ G.
 Proof.
   intros disj_VD R_VD Sp_R base.
 
@@ -240,8 +215,7 @@ Lemma reconstr_live_small_s
       (slot : var -> var)
       (s : stmt)
       (Λ : list (⦃var⦄ * ⦃var⦄))
-  :
-    disj VD (map slot VD)
+  : disj VD (map slot VD)
     -> R ⊆ VD
     -> M ⊆ VD
     -> getSp sl ⊆ R
@@ -261,20 +235,13 @@ Lemma reconstr_live_small_s
             G
            (do_spill slot s sl ZL Λ)
            (do_spill_rm slot sl))
-        ⊆ R ∪ map slot M ∪ G
-.
+        ⊆ R ∪ map slot M ∪ G.
 Proof.
   intros disj_VD R_VD M_VD Sp_R L_SpM base.
   eapply reconstr_live_small_Sp; eauto.
   intros G''.
   eapply reconstr_live_small_L; eauto.
 Qed.
-
-
-
-
-
-
 
 Lemma reconstr_live_small o
       (ZL : list params)
@@ -308,8 +275,7 @@ Lemma reconstr_live_small o
             G
             (do_spill slot s sl ZL Λ)
            (do_spill_rm slot sl))
-        ⊆ R ∪ map slot M ∪ G
-.
+        ⊆ R ∪ map slot M ∪ G.
 Proof.
   intros R_VD M_VD ra_VD inj_VD VD_disj rena pir2 Z_VD aeFree lvSnd spillSnd spilli.
   unfold union_fs in ra_VD.

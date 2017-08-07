@@ -3,17 +3,11 @@ Require Import IL Annotation.
 Require Import Liveness.Liveness.
 Require Import ExpVarsBounded SpillSound SpillUtil.
 
-
-
 Set Implicit Arguments.
-
-
 
 Definition is_rlive_min k ZL Λ s sl Rlv
   := forall R M, spill_sound k ZL Λ (R,M) s sl
-                 -> Rlv ⊆ R
-.
-
+                 -> Rlv ⊆ R.
 
 Inductive rlive_min (k:nat)
   : list params -> list (⦃var⦄ * ⦃var⦄) -> ⦃var⦄ -> stmt -> spilling -> ann ⦃var⦄ -> Prop :=
@@ -41,8 +35,7 @@ Inductive rlive_min (k:nat)
         -> rlive_min k (fst ⊝ F ++ ZL) (rms ++ Λ) (fst rm) (snd Zs) sl_s rlv_s)
     -> rlive_min k (fst ⊝ F ++ ZL) (rms ++ Λ) ∅ t sl_t rlv_t
     -> is_rlive_min k ZL Λ (stmtFun F t) (annF (spl, rms) sl_F sl_t) (Rlv \ G)
-    -> rlive_min k ZL Λ G (stmtFun F t) (annF (spl, rms) sl_F sl_t) (annF Rlv rlv_F rlv_t)
-.
+    -> rlive_min k ZL Λ G (stmtFun F t) (annF (spl, rms) sl_F sl_t) (annF Rlv rlv_F rlv_t).
 
 Lemma rlive_min_G_anti k ZL Λ G G' s sl rlv
   : rlive_min k ZL Λ G s sl rlv
@@ -54,36 +47,30 @@ Proof.
     hnf; intros; rewrite <- Incl; eauto.
 Qed.
 
-
-
-
-Lemma rlive_min_getAnn k ZL Λ s sl rlv R M :
-  rlive_min k ZL Λ ∅ s sl rlv
-  -> spill_sound k ZL Λ (R,M) s sl
-  -> getAnn rlv ⊆ R
-.
+Lemma rlive_min_getAnn k ZL Λ s sl rlv R M
+  : rlive_min k ZL Λ ∅ s sl rlv
+    -> spill_sound k ZL Λ (R,M) s sl
+    -> getAnn rlv ⊆ R.
 Proof.
   intros rliveMin spillSnd. general induction rliveMin; cbn; unfold is_rlive_min in H;
                               rewrite <-minus_empty; try eapply H; eauto.
 Qed.
 
-Lemma rlive_min_getAnn_G k ZL Λ G s sl rlv :
-  rlive_min k ZL Λ G s sl rlv
-  -> (forall R M, spill_sound k ZL Λ (R,M) s sl -> getAnn rlv ⊆ R)
-  -> rlive_min k ZL Λ ∅ s sl rlv
-.
+Lemma rlive_min_getAnn_G k ZL Λ G s sl rlv
+  : rlive_min k ZL Λ G s sl rlv
+    -> (forall R M, spill_sound k ZL Λ (R,M) s sl -> getAnn rlv ⊆ R)
+    -> rlive_min k ZL Λ ∅ s sl rlv.
 Proof.
   intros rliveMin isMin.
   general induction rliveMin; econstructor; cbn in *; eauto;
     unfold is_rlive_min; intros; rewrite minus_empty; eapply isMin; eauto.
 Qed.
 
-Lemma rlive_min_incl_R k ZL Λ s sl rlv R M G :
-  G ⊆ R
-  -> spill_sound k ZL Λ (R, M) s sl
-  -> rlive_min k ZL Λ G s sl rlv
-  -> getAnn rlv ⊆ R
-.
+Lemma rlive_min_incl_R k ZL Λ s sl rlv R M G
+  : G ⊆ R
+    -> spill_sound k ZL Λ (R, M) s sl
+    -> rlive_min k ZL Λ G s sl rlv
+    -> getAnn rlv ⊆ R.
 Proof.
   intros Geq spillSnd rlive.
   general induction rlive; cbn;
@@ -91,23 +78,19 @@ Proof.
       apply incl_minus_incl_union; [| | | |eapply H1;eauto]; eapply H; eauto.
 Qed.
 
-
-Lemma is_rlive_min_ext Λ Λ' k ZL s sl LV :
-  PIR2 _eq Λ Λ'
-  -> is_rlive_min k ZL Λ  s sl LV
-  -> is_rlive_min k ZL Λ' s sl LV
-.
+Lemma is_rlive_min_ext Λ Λ' k ZL s sl LV
+  : PIR2 _eq Λ Λ'
+    -> is_rlive_min k ZL Λ  s sl LV
+    -> is_rlive_min k ZL Λ' s sl LV.
 Proof.
   intros pir2 H. unfold is_rlive_min in *.
   intros. eapply spill_sound_ext in H0; eauto. apply PIR2_sym; eauto.
 Qed.
 
-
-Lemma rlive_min_ext Λ Λ' k ZL G s sl lv :
-  PIR2 _eq Λ Λ'
-  -> rlive_min k ZL Λ  G s sl lv
-  -> rlive_min k ZL Λ' G s sl lv
-.
+Lemma rlive_min_ext Λ Λ' k ZL G s sl lv
+  : PIR2 _eq Λ Λ'
+    -> rlive_min k ZL Λ  G s sl lv
+    -> rlive_min k ZL Λ' G s sl lv.
 Proof.
   intros Λeq lvMin. general induction lvMin; unfold is_rlive_min;
                       econstructor; eauto using is_rlive_min_ext.
@@ -115,28 +98,22 @@ Proof.
   - apply IHlvMin; eauto using PIR2_app.
 Qed.
 
-
-
-Lemma is_rlive_min_monotone Λ Λ' k ZL s sl LV :
-  PIR2 (fun x y => fst x ⊆ fst y /\ snd x ⊆ snd y) Λ Λ'
-  -> is_rlive_min k ZL Λ  s sl LV
-  -> is_rlive_min k ZL Λ' s sl LV
-.
+Lemma is_rlive_min_monotone Λ Λ' k ZL s sl LV
+  : PIR2 (fun x y => fst x ⊆ fst y /\ snd x ⊆ snd y) Λ Λ'
+    -> is_rlive_min k ZL Λ  s sl LV
+    -> is_rlive_min k ZL Λ' s sl LV.
 Proof.
   intros pir2 H. unfold is_rlive_min in *.
   intros. eapply spill_sound_monotone in H0; eauto.
 Qed.
 
-
-Lemma rlive_min_monotone Λ Λ' k ZL G s sl lv :
-  PIR2 (fun x y => fst x ⊆ fst y /\ snd x ⊆ snd y) Λ Λ'
-  -> rlive_min k ZL Λ  G s sl lv
-  -> rlive_min k ZL Λ' G s sl lv
-.
+Lemma rlive_min_monotone Λ Λ' k ZL G s sl lv
+  : PIR2 (fun x y => fst x ⊆ fst y /\ snd x ⊆ snd y) Λ Λ'
+    -> rlive_min k ZL Λ  G s sl lv
+    -> rlive_min k ZL Λ' G s sl lv.
 Proof.
   intros Λeq lvMin. general induction lvMin; unfold is_rlive_min;
                       econstructor; eauto using is_rlive_min_monotone.
   - intros. eapply H0; eauto. eapply PIR2_app; eauto. eapply PIR2_refl. split; reflexivity.
   - apply IHlvMin; eauto. eapply PIR2_app; eauto. eapply PIR2_refl. split; reflexivity.
 Qed.
-  

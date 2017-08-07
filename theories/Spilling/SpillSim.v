@@ -355,7 +355,7 @@ Proof.
     eapply defined_on_incl.
     eapply defined_on_after_spill_load; eauto. instantiate (1:=K).
     rewrite H8, H11. reflexivity.
-    unfold mark_elements. len_simpl. rewrite <- H17. eauto with len.
+    len_simpl. rewrite <- H17. eauto with len.
     simpl. eapply agree_on_incl; eauto.
     simpl. eapply agree_on_incl; eauto. simpl.
     rewrite <- H12. eapply of_list_freeVars_vars.

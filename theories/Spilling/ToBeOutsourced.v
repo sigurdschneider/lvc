@@ -2,15 +2,7 @@ Require Import List Map Env AllInRel Exp AppExpFree RenameApart RenamedApart.
 Require Import IL Annotation AutoIndTac.
 Require Import Liveness.Liveness LabelsDefined SetUtil.
 
-
 (** * ToBeOutsourced *)
-
-(* move somewhere to of_list or maybe generalize to symmetric relations ? *)
-
-
-(* move somewhere to Op.freeVars *)
-
-
 
 (* move somewhere to renamedApart *)
 Lemma renamedApart_incl
@@ -37,12 +29,6 @@ Proof.
   invc H; simpl; unfold union_fs; eauto; set_simpl; pe_rewrite; repeat split;
     intros; inv_get; eauto with cset.
 Qed.
-
-(* to be moved to list_union *)
-
-
-
-
 
 (* to be moved to lookup_set / map *)
 Lemma injective_on_map_inter

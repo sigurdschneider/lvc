@@ -126,17 +126,9 @@ Qed.
 
 
 
-Lemma L_sub_SpM
-      (ZL : list params)
-      (k : nat)
-      (Λ : list (⦃var⦄ * ⦃var⦄))
-      (R M : ⦃var⦄)
-      (s : stmt)
-      (sl : spilling)
-  :
-    spill_sound k ZL Λ (R,M) s sl
-    -> getL sl ⊆ getSp sl ∪ M
-.
+Lemma L_sub_SpM (ZL : list params) (k : nat) (Λ : list (⦃var⦄ * ⦃var⦄))
+      (R M : ⦃var⦄) (s : stmt) (sl : spilling)
+  : spill_sound k ZL Λ (R,M) s sl -> getL sl ⊆ getSp sl ∪ M .
 Proof.
   intros spillSnd.
   invc spillSnd; cset_tac.
@@ -172,11 +164,10 @@ Inductive spill_live
 .
 
 
-Lemma spill_sound_ext Λ Λ' k ZL R M s sl :
-  PIR2 _eq Λ Λ'
-  -> spill_sound k ZL Λ  (R,M) s sl
-  -> spill_sound k ZL Λ' (R,M) s sl
-.
+Lemma spill_sound_ext Λ Λ' k ZL R M s sl
+  : PIR2 _eq Λ Λ'
+    -> spill_sound k ZL Λ  (R,M) s sl
+    -> spill_sound k ZL Λ' (R,M) s sl .
 Proof.
   intros Λeq spillSnd. general induction spillSnd.
   - econstructor; eauto.
@@ -195,11 +186,10 @@ Proof.
 Qed.
 
 
-Lemma spill_sound_monotone Λ Λ' k ZL R M s sl :
-  PIR2 (fun x y => fst x ⊆ fst y /\ snd x ⊆ snd y) Λ' Λ
-  -> spill_sound k ZL Λ  (R,M) s sl
-  -> spill_sound k ZL Λ' (R,M) s sl
-.
+Lemma spill_sound_monotone Λ Λ' k ZL R M s sl
+  : PIR2 (fun x y => fst x ⊆ fst y /\ snd x ⊆ snd y) Λ' Λ
+    -> spill_sound k ZL Λ  (R,M) s sl
+    -> spill_sound k ZL Λ' (R,M) s sl.
 Proof.
   intros Λeq spillSnd. general induction spillSnd.
   - econstructor; eauto.
@@ -218,25 +208,19 @@ Proof.
 Qed.
 
 Lemma list_eq_PIR2 X `{OrderedType X} (L L':list X)
-  : L === L'
-    -> PIR2 _eq L L'.
+  : L === L' -> PIR2 _eq L L'.
 Proof.
   intros. general induction H0; eauto using PIR2.
 Qed.
 
-Lemma spill_sound_ext2
-      (k : nat)
-      (ZL : list params) s
-      (Λ Λ2 : list (⦃var⦄ * ⦃var⦄))
-      (R R2 M M2 : ⦃var⦄)
-      (sl sl2 : spilling)
+Lemma spill_sound_ext2 (k : nat) (ZL : list params) s (Λ Λ2 : list (⦃var⦄ * ⦃var⦄))
+      (R R2 M M2 : ⦃var⦄) (sl sl2 : spilling)
   :
     PIR2 _eq Λ Λ2
     -> R [=] R2
     -> M [=] M2
     -> sl === sl2
-    -> spill_sound k ZL Λ (R,M) s sl -> spill_sound k ZL Λ2 (R2,M2) s sl2
-.
+    -> spill_sound k ZL Λ (R,M) s sl -> spill_sound k ZL Λ2 (R2,M2) s sl2.
 Proof.
   intros Λeq Req Meq sleq H.
   general induction H; simpl; eauto.
@@ -340,8 +324,6 @@ Proof.
   - eapply spill_sound_ext2; try eapply H0; try reflexivity.
     rewrite H2; eauto. rewrite H3; eauto. symmetry; eauto.
 Qed.
-
-
 
 Lemma spill_sound_spill_ext k ZL Λ (R0 M0:set var) s sl
   (SPS: spill_sound k ZL Λ (R0, getSp sl ∪ M0) s (clear_Sp sl))

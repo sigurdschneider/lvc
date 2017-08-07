@@ -210,26 +210,6 @@ Proof.
         clear - a_in; cset_tac.
 Qed.
 
-Lemma nth_mark_elements
-      (l : lab)
-      (ZL : list params)
-      (Λ : list (⦃var⦄ * ⦃var⦄))
-      (rm : ⦃var⦄ * ⦃var⦄)
-      (Z : params)
-  :
-    get ZL l Z
-    -> get Λ l rm
-    -> nth l (mark_elements ⊜ ZL ((fun RM : ⦃var⦄ * ⦃var⦄ => fst RM ∩ snd RM) ⊝ Λ)) nil
-      = mark_elements Z ((fun RM : ⦃var⦄ * ⦃var⦄ => fst RM ∩ snd RM) rm)
-.
-Proof.
-  intros get_Z get_rm.
-  apply get_nth.
-  eapply zip_get; eauto.
-  eapply map_get_eq; eauto.
-Qed.
-
-
 Lemma sla_extargs_slp_length
       (slot : var -> var)
       RM RMapp

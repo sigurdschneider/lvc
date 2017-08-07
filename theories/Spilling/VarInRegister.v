@@ -1,7 +1,7 @@
 Require Import List Map Env AllInRel Exp AppExpFree RenamedApart.
 Require Import IL Annotation AutoIndTac.
 Require Import Liveness.Liveness LabelsDefined.
-Require Import SpillSound DoSpill DoSpillRm SpillUtil ReconstrLive.
+Require Import SpillSound DoSpill DoSpillRm SpillUtil.
 Require Import SetUtil InVD.
 Require Import ToBeOutsourced.
 
@@ -56,18 +56,11 @@ Inductive var_in_register
       -> var_in_register VD (stmtFun F t)
 .
 
-
-Lemma var_in_register_loads
-      (VD : ⦃var⦄)
-      (slot : var -> var)
-      (xs : list var)
-      (s : stmt)
-  :
-    of_list xs ⊆ VD
+Lemma var_in_register_loads (VD : ⦃var⦄) (slot : var -> var) (xs : list var) (s : stmt)
+  : of_list xs ⊆ VD
     -> disj VD (map slot VD)
     -> var_in_register VD s
-    -> var_in_register VD (write_moves xs (slot ⊝ xs) s)
-.
+    -> var_in_register VD (write_moves xs (slot ⊝ xs) s) .
 Proof.
   intros xs_VD disj_VD vir_s.
   general induction xs; simpl in *; eauto.
@@ -81,16 +74,10 @@ Proof.
     apply lookup_set_incl; eauto.
 Qed.
 
-Lemma var_in_register_spills
-      (VD : ⦃var⦄)
-      (slot : var -> var)
-      (xs : list var)
-      (s : stmt)
-  :
-    of_list xs ⊆ VD
+Lemma var_in_register_spills (VD : ⦃var⦄) (slot : var -> var) (xs : list var) (s : stmt)
+  : of_list xs ⊆ VD
     -> var_in_register VD s
-    -> var_in_register VD (write_moves (slot ⊝ xs) xs s)
-.
+    -> var_in_register VD (write_moves (slot ⊝ xs) xs s).
 Proof.
   intros xs_VD vir_s.
   general induction xs;
@@ -100,35 +87,26 @@ Proof.
   econstructor 2; simpl; eauto.
 Qed.
 
-
-Lemma ofl_el_Sp_VD
-  :
-    forall (Sp R VD : ⦃var⦄),
-      R ⊆ VD
-      -> Sp ⊆ R
-      -> of_list (elements Sp) ⊆ VD
-.
+Lemma ofl_el_Sp_VD (Sp R VD : ⦃var⦄)
+  : R ⊆ VD
+    -> Sp ⊆ R
+    -> of_list (elements Sp) ⊆ VD.
 Proof.
-  intros Sp R VD R_VD Sp_sub.
-  rewrite of_list_elements, Sp_sub; assumption.
+  intros Sp_sub.
+  rewrite of_list_elements, Sp_sub; eauto.
 Qed.
-Lemma ofl_el_L_VD
-  :
-    forall (L Sp R M VD : ⦃var⦄),
-      R ⊆ VD
-      -> M ⊆ VD
 
-      -> L ⊆ Sp ∪ M
-      -> Sp ⊆ R
-      -> of_list (elements L) ⊆ VD
-.
+Lemma ofl_el_L_VD (L Sp R M VD : ⦃var⦄)
+  : R ⊆ VD
+    -> M ⊆ VD
+    -> L ⊆ Sp ∪ M
+    -> Sp ⊆ R
+    -> of_list (elements L) ⊆ VD.
 Proof.
-  intros L Sp R M VD R_VD M_VD L_SpM Sp_R.
+  intros R_VD M_VD L_SpM Sp_R.
   rewrite of_list_elements, L_SpM, Sp_R, R_VD, M_VD.
   clear ; cset_tac.
 Qed.
-
-
 
 Lemma var_in_register_sound
       (k : nat)
@@ -141,7 +119,6 @@ Lemma var_in_register_sound
       (al : ann ⦃var⦄)
       (Lv : list ⦃var⦄)
       (ra : ann (⦃var⦄ * ⦃var⦄))
-
   : R ⊆ VD
     -> M ⊆ VD
     -> disj VD (map slot VD)
@@ -173,7 +150,6 @@ Proof.
       * rewrite H12, R_VD, M_VD.
         clear; cset_tac.
       * rewrite rena, <- ra_VD; eauto.
-
   - destruct rena as [rena1 rena2].
     econstructor; eauto.
     + rewrite H16, H15, H14, R_VD, M_VD; clear; cset_tac.

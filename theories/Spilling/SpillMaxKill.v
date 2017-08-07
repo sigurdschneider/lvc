@@ -4,13 +4,7 @@ Require Import Liveness.Liveness RenamedApart.
 Require Import ExpVarsBounded SpillSound OneOrEmpty RLiveMin RLiveSound.
 Require Import Take TakeSet SetUtil.
 
-
-
 Set Implicit Arguments.
-
-
-
-
 
 Inductive spill_max_kill (k:nat) :
   (list params)
@@ -21,7 +15,6 @@ Inductive spill_max_kill (k:nat) :
   -> spilling
   -> Prop
   :=
-
   | SpillMKLet
       (ZL : list params)
       (Λ : list (⦃var⦄ * ⦃var⦄))
@@ -120,70 +113,62 @@ Inductive spill_max_kill (k:nat) :
       -> spill_max_kill k ZL Λ (R,M) (stmtFun F t) (annF Rlv rlv_F rlv_t) (annF (Sp,L,rms) sl_F sl_t)
 .
 
-Lemma Sp_sub_rlv k ZL Λ R M s sl rlv :
-  spill_sound k ZL Λ (R,M) s sl
-  -> rlive_sound ZL (fst ⊝ Λ) s sl rlv
-  -> getSp sl ⊆ getAnn rlv
-.
+Lemma Sp_sub_rlv k ZL Λ R M s sl rlv
+  : spill_sound k ZL Λ (R,M) s sl
+    -> rlive_sound ZL (fst ⊝ Λ) s sl rlv
+    -> getSp sl ⊆ getAnn rlv.
 Proof.
   intros spillSnd rlive. general induction spillSnd; invc rlive; simpl; eauto.
 Qed.
 
-Lemma card_diff (X:Type) `{OrderedType X} (s t : ⦃X⦄) :
-  cardinal (s \ t) = cardinal s - cardinal (s ∩ t)
-.
+Lemma card_diff (X:Type) `{OrderedType X} (s t : ⦃X⦄)
+  : cardinal (s \ t) = cardinal s - cardinal (s ∩ t).
 Proof.
   setoid_rewrite <-diff_inter_cardinal with (s':=t) at 2. omega.
 Qed.
 
-Lemma card_RKL (X:Type) `{OrderedType X} k (s t u : ⦃X⦄) :
-  t ⊆ s
-  -> cardinal u <= k
-  -> cardinal t = cardinal s + cardinal u - k
-  -> cardinal (s \ t ∪ u) <= k
-.
+Lemma card_RKL (X:Type) `{OrderedType X} k (s t u : ⦃X⦄)
+  : t ⊆ s
+    -> cardinal u <= k
+    -> cardinal t = cardinal s + cardinal u - k
+    -> cardinal (s \ t ∪ u) <= k.
 Proof.
   intros sub ucard card.
   rewrite union_cardinal_inter. rewrite card_diff. rewrite meet_comm, inter_subset_equal; eauto.
   rewrite card. omega.
 Qed.
 
-
-Lemma rkl'_incl_rkl (X:Type) `{OrderedType X} (s s' t t1 t2 u v w : ⦃X⦄) (x : X) :
-  let t' := s' \ (t1 ∪ t2) ∪ (s' ∩ v) in
-  t1 ⊆ s \ t ∪ v
-  -> t2 ⊆ {x; (s \ t ∪ v) \ w}
-  -> s' ⊆ u
-  -> x ∉ u
-  -> s' \ t' ∪ v ⊆ s \ t ∪ v
-.
+Lemma rkl'_incl_rkl (X:Type) `{OrderedType X} (s s' t t1 t2 u v w : ⦃X⦄) (x : X)
+  : let t' := s' \ (t1 ∪ t2) ∪ (s' ∩ v) in
+    t1 ⊆ s \ t ∪ v
+    -> t2 ⊆ {x; (s \ t ∪ v) \ w}
+    -> s' ⊆ u
+    -> x ∉ u
+    -> s' \ t' ∪ v ⊆ s \ t ∪ v.
 Proof.
   intros t' t1_incl t2_incl s'_incl x_nin.
   subst t'.
   cset_tac.
 Qed.
 
-Lemma spill_max_kill_spill_sound k ZL Λ R M s sl rlv :
-  spill_max_kill k ZL Λ (R,M) s rlv sl
-  -> spill_sound k ZL Λ (R,M) s sl
-.
+Lemma spill_max_kill_spill_sound k ZL Λ R M s sl rlv
+  : spill_max_kill k ZL Λ (R,M) s rlv sl
+    -> spill_sound k ZL Λ (R,M) s sl.
 Proof.
   intros spillSnd. general induction spillSnd; econstructor; eauto.
   intros. inv_get. eapply H6; eauto. apply surjective_pairing.
 Qed.
 
-
-Lemma spill_sound_spill_max_kill k ZL Λ R R' M G s sl rlv ra :
-  renamedApart s ra
-  -> spill_sound k ZL Λ (R,M) s sl
-  -> rlive_min k ZL Λ G s sl rlv
-  -> rlive_sound ZL (fst ⊝ Λ) s sl rlv
-  -> R' ∪ M ⊆ fst (getAnn ra)
-  -> getAnn rlv ⊆ R'
-  -> (forall Rf Mf n, get Λ n (Rf,Mf) -> cardinal Rf <= k)
-  -> ann_R (fun x (y : ⦃var⦄ * ⦃var⦄) => (list_union (merge ⊝ snd x)) ⊆ fst y) sl ra
-  -> spill_max_kill k ZL Λ (R',M) s rlv sl
-.
+Lemma spill_sound_spill_max_kill k ZL Λ R R' M G s sl rlv ra
+  : renamedApart s ra
+    -> spill_sound k ZL Λ (R,M) s sl
+    -> rlive_min k ZL Λ G s sl rlv
+    -> rlive_sound ZL (fst ⊝ Λ) s sl rlv
+    -> R' ∪ M ⊆ fst (getAnn ra)
+    -> getAnn rlv ⊆ R'
+    -> (forall Rf Mf n, get Λ n (Rf,Mf) -> cardinal Rf <= k)
+    -> ann_R (fun x (y : ⦃var⦄ * ⦃var⦄) => (list_union (merge ⊝ snd x)) ⊆ fst y) sl ra
+    -> spill_max_kill k ZL Λ (R',M) s rlv sl.
 Proof.
   intros rena spillSnd rliveMin rlive R_sub rlv_sub' card_Rf annIncl.
   general induction spillSnd; invc rlive; invc rena; invc rliveMin; invc annIncl;
@@ -313,11 +298,10 @@ Proof.
 Qed.
 
 
-Lemma spill_max_kill_ext' ZL Λ Λ' s rlv RM sl k :        
-  PIR2 _eq Λ' Λ
-  -> spill_max_kill k ZL Λ  RM  s rlv sl
-  -> spill_max_kill k ZL Λ' RM  s rlv sl
-.
+Lemma spill_max_kill_ext' ZL Λ Λ' s rlv RM sl k
+  : PIR2 _eq Λ' Λ
+    -> spill_max_kill k ZL Λ  RM  s rlv sl
+    -> spill_max_kill k ZL Λ' RM  s rlv sl.
 Proof.
   intros Λeq spillSnd. general induction spillSnd.
   - econstructor; eauto.
@@ -331,16 +315,15 @@ Proof.
     + rewrite H12. cset_tac.
   - econstructor; eauto.
     + intros. inv_get. eapply H6; eauto.
-      * apply PIR2_app; eauto. 
+      * apply PIR2_app; eauto.
     + eapply IHspillSnd; eauto.
-      apply PIR2_app; eauto. 
+      apply PIR2_app; eauto.
 Qed.
 
-Lemma spill_max_kill_monotone ZL Λ Λ' s rlv RM sl k :        
-  PIR2 (fun x y => fst x ⊆ fst y /\ snd x ⊆ snd y) Λ' Λ
-  -> spill_max_kill k ZL Λ  RM  s rlv sl
-  -> spill_max_kill k ZL Λ' RM  s rlv sl
-.
+Lemma spill_max_kill_monotone ZL Λ Λ' s rlv RM sl k
+  : PIR2 (fun x y => fst x ⊆ fst y /\ snd x ⊆ snd y) Λ' Λ
+    -> spill_max_kill k ZL Λ  RM  s rlv sl
+    -> spill_max_kill k ZL Λ' RM  s rlv sl.
 Proof.
   intros Λeq spillSnd. general induction spillSnd.
   - econstructor; eauto.
