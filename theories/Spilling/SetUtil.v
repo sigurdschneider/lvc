@@ -26,9 +26,6 @@ Proof.
     cset_tac.
 Qed.
 
-Definition union_fs (X : Type) `{OrderedType X} (a : ⦃X⦄ * ⦃X⦄) : ⦃X⦄
-  := fst a ∪ snd a.
-
 Lemma in_singleton (X : Type) `{OrderedType X} (x : X) (s : ⦃X⦄)
   : singleton x ⊆ s -> x ∈ s.
 Proof.

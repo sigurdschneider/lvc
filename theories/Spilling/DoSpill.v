@@ -1,8 +1,7 @@
 Require Import List Map Env AllInRel Exp AppExpFree Filter LengthEq.
 Require Import IL Annotation AutoIndTac Liveness.Liveness LabelsDefined.
 Require Import SpillSound SpillUtil.
-Require Import ToBeOutsourced Slot.
-Require Export SlotLiftParams SlotLiftArgs.
+Require Import Slot SlotLiftParams SlotLiftArgs.
 
 
 Fixpoint write_moves (Z Z' : params) (s : stmt) : stmt :=

@@ -399,3 +399,27 @@ Proof.
       eapply H3;[| eauto using get]. omega. dcr.
       eapply H8; eauto. omega.
 Qed.
+
+
+Lemma injective_on_map_inter
+      (X : Type)
+      `{OrderedType X}
+      (D s t : ⦃X⦄)
+      (f : X -> X)
+  :
+    Proper (_eq ==> _eq) f
+    -> injective_on D f
+    -> s ⊆ D
+    -> t ⊆ D
+    -> map f (s ∩ t) [=] map f s ∩ map f t
+.
+Proof.
+  intros.
+  apply incl_eq.
+  - hnf; intros.
+    cset_tac'.
+    exploit (H1 x x0); eauto. eqs.
+    rewrite H10 in *. eauto.
+  - hnf; intros.
+    cset_tac.
+Qed.

@@ -3,7 +3,7 @@ Require Import IL Annotation AutoIndTac.
 Require Import Liveness.Liveness LabelsDefined.
 Require Import SpillSound DoSpill DoSpillRm SpillUtil ReconstrLive.
 Require Import ReconstrLiveSmall ReconstrLiveSound InVD AnnP ReconstrLiveUtil SetUtil.
-Require Import ReconstrLiveG ToBeOutsourced BoundedIn.
+Require Import ReconstrLiveG BoundedIn.
 
 
 Set Implicit Arguments.
@@ -395,7 +395,7 @@ Lemma register_bounded
     -> disj VD (map slot VD)
     -> R ⊆ VD
     -> M ⊆ VD
-    -> union_fs (getAnn ra) ⊆ VD
+    -> fst (getAnn ra) ∪ snd (getAnn ra) ⊆ VD
     -> app_expfree s
     -> renamedApart s ra
     -> spill_sound k ZL Λ (R,M) s sl
@@ -581,7 +581,7 @@ Proof.
       rewrite of_list_elements.
       eapply PIR2_nth in H16; eauto; dcr. inv_get. unfold merge in H8. simpl in *.
       rewrite of_list_slot_lift_params; [|rewrite Z_LV; eauto; rewrite H8; reflexivity].
-      unfold union_fs in ra_VD. simpl in *.
+      simpl in *.
       rewrite H9 in *; clear H9 D'.
       rewrite H23.
       assert (M'VD:M' [<=] VD). {

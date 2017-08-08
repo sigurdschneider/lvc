@@ -232,7 +232,6 @@ theories/Spilling/SpillSoundSeven.v
 theories/Spilling/SpillSound.v
 theories/Spilling/SpillUtil.v
 theories/Spilling/SplitSpill.v
-theories/Spilling/ToBeOutsourced.v
 theories/Spilling/VarInRegister.v
 theories/TransVal/CombineEnv.v
 theories/TransVal/ComputeProps.v

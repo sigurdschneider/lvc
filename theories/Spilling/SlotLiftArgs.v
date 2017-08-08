@@ -1,7 +1,7 @@
 Require Import List Map Env AllInRel Exp AppExpFree Filter LengthEq.
 Require Import IL Annotation AutoIndTac Liveness.Liveness LabelsDefined.
 
-Require Import ToBeOutsourced Slot SetUtil.
+Require Import Slot SetUtil.
 
 Definition choose_y (slot : var -> var)
            (X : ⦃var⦄) (x:var)

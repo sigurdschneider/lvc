@@ -486,8 +486,6 @@ Proof.
     clear_all; cset_tac.
 Qed.
 
-
-
 Lemma funConstr_disj_Dt D Dt F ans (Len:❬F❭=❬ans❭)
   : Indexwise.indexwise_R (funConstr D Dt) F ans
     -> disj (list_union (of_list ⊝ fst ⊝ F)) Dt.
@@ -499,8 +497,6 @@ Proof.
   edestruct IW; eauto; dcr.
   cset_tac.
 Qed.
-
-
 
 Lemma funConstr_disj_ZL_getAnn ZL (D Dt : ⦃var⦄)  (F : 〔params * stmt〕)
       (ans : 〔ann (⦃var⦄ * ⦃var⦄)〕)
@@ -551,4 +547,29 @@ Proof.
   - edestruct H; eauto; dcr.
     eapply H10; eauto. cset_tac.
   - cset_tac.
+Qed.
+
+Lemma renamedApart_incl
+      (s : stmt)
+      (ra : ann (⦃var⦄ * ⦃var⦄))
+  :
+    renamedApart s ra
+    -> match ra with
+      | ann1 (D, D') an
+        => fst (getAnn an) ∪ snd (getAnn an) ⊆ D ∪ D'
+      | ann2 (D, D') ans ant
+        => fst (getAnn ans) ∪ snd (getAnn ans) ⊆ D ∪ D'
+          /\ fst (getAnn ant) ∪ snd (getAnn ant) ⊆ D ∪ D'
+      | annF (D, D') anF ant
+        => (forall (ans : ann (⦃var⦄ * ⦃var⦄)) n,
+              get anF n ans
+              -> fst (getAnn ans) ∪ snd (getAnn ans) ⊆ D ∪ D')
+          /\ fst (getAnn ant) ∪ snd (getAnn ant) ⊆ D ∪ D'
+      | _ => True
+      end
+.
+Proof.
+  intros.
+  invc H; simpl; eauto; set_simpl; pe_rewrite; repeat split;
+    intros; inv_get; eauto with cset.
 Qed.

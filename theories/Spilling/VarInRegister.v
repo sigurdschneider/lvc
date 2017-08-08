@@ -3,7 +3,6 @@ Require Import IL Annotation AutoIndTac.
 Require Import Liveness.Liveness LabelsDefined.
 Require Import SpillSound DoSpill DoSpillRm SpillUtil.
 Require Import SetUtil InVD.
-Require Import ToBeOutsourced.
 
 (** * VarInRegister *)
 
@@ -122,7 +121,7 @@ Lemma var_in_register_sound
   : R ⊆ VD
     -> M ⊆ VD
     -> disj VD (map slot VD)
-    -> union_fs (getAnn ra) ⊆ VD
+    -> fst (getAnn ra) ∪ snd (getAnn ra) ⊆ VD
     -> renamedApart s ra
     -> live_sound Imperative ZL Lv s al
     -> spill_live VD sl al

@@ -3,7 +3,7 @@ Require Import IL Annotation AutoIndTac Liveness.Liveness LabelsDefined.
 Require Import SpillSound DoSpill DoSpillRm.
 Require Import SpillUtil ReconstrLive ReconstrLiveSmall.
 Require Import ReconstrLiveG SetUtil InVD ReconstrLiveUtil.
-Require Import ToBeOutsourced Slot.
+Require Import Slot.
 
 Set Implicit Arguments.
 
@@ -104,7 +104,7 @@ Lemma reconstr_live_sound
       (ra : ann (⦃var⦄ * ⦃var⦄))
   : R ⊆ VD
     -> M ⊆ VD
-    -> union_fs (getAnn ra) ⊆ VD
+    -> fst (getAnn ra) ∪ snd (getAnn ra) ⊆ VD
     -> app_expfree s
     -> renamedApart s ra
     -> spill_sound k ZL Λ (R,M) s sl
@@ -352,7 +352,7 @@ Proof.
            destruct x2. eapply NoDupA_slot_lift_params; eauto.
            unfold merge in H33.
            exploit H23; eauto; dcr. eauto with cset.
-           rewrite <- M_VD. unfold union_fs. simpl.
+           rewrite <- M_VD. simpl.
            rewrite <- H27.
            rewrite <- incl_list_union; eauto using zip_get; [|reflexivity].
            unfold defVars. clear; cset_tac.

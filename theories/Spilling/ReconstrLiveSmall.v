@@ -3,7 +3,6 @@ Require Import IL Annotation AutoIndTac.
 Require Import Liveness.Liveness LabelsDefined.
 Require Import SpillSound DoSpill DoSpillRm SpillUtil ReconstrLive AnnP InVD SetUtil.
 Require Import ReconstrLiveUtil ReconstrLiveG.
-Require Import ToBeOutsourced.
 
 Set Implicit Arguments.
 
@@ -256,7 +255,7 @@ Lemma reconstr_live_small o
       (ra : ann (⦃var⦄ * ⦃var⦄))
   : R ⊆ VD
     -> M ⊆ VD
-    -> union_fs (getAnn ra) ⊆ VD
+    -> fst (getAnn ra) ∪ snd (getAnn ra) ⊆ VD
     -> injective_on VD slot
     -> disj VD (map slot VD)
     -> renamedApart s ra
@@ -278,7 +277,6 @@ Lemma reconstr_live_small o
         ⊆ R ∪ map slot M ∪ G.
 Proof.
   intros R_VD M_VD ra_VD inj_VD VD_disj rena pir2 Z_VD aeFree lvSnd spillSnd spilli.
-  unfold union_fs in ra_VD.
   assert (injective_on (getSp sl) slot)
     as inj_Sp.
   {

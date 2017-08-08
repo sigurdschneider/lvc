@@ -2,9 +2,7 @@ Require Import List Map Env AllInRel Exp AppExpFree RenamedApart.
 Require Import IL Annotation AutoIndTac.
 Require Import Liveness.Liveness LabelsDefined.
 Require Import SpillSound DoSpill DoSpillRm SpillUtil ReconstrLive AnnP InVD SetUtil.
-Require Import ToBeOutsourced.
-Require Export SlotLiftParams.
-
+Require Export SlotLiftParams SlotLiftArgs.
 
 Set Implicit Arguments.
 
@@ -18,17 +16,11 @@ Definition reconstr_live_do_spill
            (s : stmt)
            (sl : spilling)
   : ann ⦃var⦄
-  :=
-    reconstr_live (slot_merge slot Λ)
+  := reconstr_live (slot_merge slot Λ)
                   ((slot_lift_params slot) ⊜ Λ ZL)
                   G
                   (do_spill slot s sl ZL Λ)
-                  (do_spill_rm slot sl)
-.
-
-
-
-
+                  (do_spill_rm slot sl).
 
 (* this should be generalized *)
 Lemma get_ofl_VD
@@ -121,12 +113,7 @@ Proof.
   reflexivity.
 Qed.
 
-
-
-
 (* utils for reconstr_live_sound *)
-
-
 
 Lemma al_sub_RfMf
       (als : list (ann ⦃var⦄))
@@ -163,7 +150,6 @@ Proof.
     try invc get_al; invc H16;
       simpl in *; eauto.
 Qed.
-
 
 Lemma ofl_slp_sub_rm
       (al : ann ⦃var⦄)
@@ -218,9 +204,8 @@ Lemma sla_extargs_slp_length
       (l : lab)
       (Λ : list (⦃var⦄ * ⦃var⦄))
       (Y : args)
-  :
-    length Y = length Z ->
-    ❬slot_lift_args slot RM RMapp Y Z❭ = ❬slot_lift_params slot RM Z❭ .
+  : length Y = length Z ->
+    ❬slot_lift_args slot RM RMapp Y Z❭ = ❬slot_lift_params slot RM Z❭.
 Proof.
   intros Len.
   general induction Len; simpl; eauto.
