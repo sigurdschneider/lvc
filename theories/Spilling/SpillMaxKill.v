@@ -2,7 +2,7 @@ Require Import List Map Env AllInRel Exp MoreList.
 Require Import IL Annotation.
 Require Import Liveness.Liveness RenamedApart.
 Require Import ExpVarsBounded SpillSound OneOrEmpty RLiveMin RLiveSound.
-Require Import Take TakeSet SetUtil.
+Require Import Take TakeSet.
 
 Set Implicit Arguments.
 
@@ -13,8 +13,7 @@ Inductive spill_max_kill (k:nat) :
   -> stmt
   -> ann ⦃var⦄
   -> spilling
-  -> Prop
-  :=
+  -> Prop :=
   | SpillMKLet
       (ZL : list params)
       (Λ : list (⦃var⦄ * ⦃var⦄))
@@ -34,7 +33,6 @@ Inductive spill_max_kill (k:nat) :
       -> cardinal (R\K ∪ L) <= k
       -> cardinal {x; (R\K ∪ L) \ Kx} <= k
       -> spill_max_kill k ZL Λ (R,M) (stmtLet x e s) (ann1 Rlv rlv) (ann1 (Sp,L,nil) sl)
-
   | SpillMKReturn
       (ZL : list (params))
       (Λ : list (⦃var⦄ * ⦃var⦄))
@@ -46,7 +44,6 @@ Inductive spill_max_kill (k:nat) :
       -> Op.freeVars e ⊆ R\K ∪ L
       -> cardinal (R\K ∪ L) <= k
       -> spill_max_kill k ZL Λ (R,M) (stmtReturn e) (ann0 Rlv) (ann0 (Sp,L,nil))
-
   | SpillMKIf
       (ZL : list (params))
       (Λ : list (⦃var⦄ * ⦃var⦄))
@@ -63,7 +60,6 @@ Inductive spill_max_kill (k:nat) :
       -> spill_max_kill k ZL Λ (R \ K ∪ L, Sp ∪ M) s rlv1 sl_s
       -> spill_max_kill k ZL Λ (R \ K ∪ L, Sp ∪ M) t rlv2 sl_t
       -> spill_max_kill k ZL Λ (R,M) (stmtIf e s t) (ann2 Rlv rlv1 rlv2) (ann2 (Sp,L,nil) sl_s sl_t)
-
   | SpillMKApp
       (ZL : list params)
       (Λ : list (⦃var⦄ * ⦃var⦄))
@@ -83,7 +79,6 @@ Inductive spill_max_kill (k:nat) :
       -> R' ⊆ R\K ∪ L
       -> M' ⊆ Sp ∪ M
       -> spill_max_kill k ZL Λ (R,M) (stmtApp f Y) (ann0 Rlv) (ann0 (Sp,L, (R', M')::nil))
-
   | SpillMKFun
       (ZL : list params)
       (Λ rms : list (⦃var⦄ * ⦃var⦄))
@@ -110,8 +105,7 @@ Inductive spill_max_kill (k:nat) :
         )
       -> spill_max_kill k ((fst ⊝ F) ++ ZL) (rms ++ Λ) (R\K ∪ L, Sp ∪ M) t rlv_t sl_t
       -> length F = length rlv_F
-      -> spill_max_kill k ZL Λ (R,M) (stmtFun F t) (annF Rlv rlv_F rlv_t) (annF (Sp,L,rms) sl_F sl_t)
-.
+      -> spill_max_kill k ZL Λ (R,M) (stmtFun F t) (annF Rlv rlv_F rlv_t) (annF (Sp,L,rms) sl_F sl_t).
 
 Lemma Sp_sub_rlv k ZL Λ R M s sl rlv
   : spill_sound k ZL Λ (R,M) s sl
@@ -197,7 +191,8 @@ Proof.
         subst K'. rewrite <-minus_union, minus_minus.
         setoid_rewrite <-rlv_sub' at 1. apply not_incl_minus; [clear; cset_tac|].
         subst Kx'. clear; cset_tac.
-    + subst K'. rewrite <-minus_union. rewrite incl_minus_union;[|clear;cset_tac].
+    + subst K'. rewrite <-minus_union.
+      rewrite incl_minus_union';[|clear;cset_tac].
       rewrite minus_minus, <-rlv_sub'.
       apply Exp.freeVars_live in H16. clear - H16; cset_tac.
     + rewrite subset_cardinal with (s':=R0 \ K ∪ L); eauto.
@@ -210,20 +205,23 @@ Proof.
   - econstructor; eauto.
     + rewrite H8; eauto.
     + rewrite <-minus_union.
-      rewrite incl_minus_union;[|clear;cset_tac].
+      rewrite incl_minus_union';[|clear;cset_tac].
       rewrite minus_minus, <-rlv_sub'.
       apply Op.freeVars_live in H10. clear - H10. cset_tac.
-    + rewrite <-minus_union. rewrite incl_minus_union;[|clear;cset_tac].
+    + rewrite <-minus_union.
+      rewrite incl_minus_union';[|clear;cset_tac].
       rewrite minus_minus. rewrite H1. rewrite subset_cardinal with (s':=R0 \ K ∪ L); eauto.
       clear; cset_tac.
   - eapply rlive_min_incl_R with (G:=∅) in spillSnd1 as spillSnd1'; [|clear;cset_tac|eauto].
     eapply rlive_min_incl_R with (G:=∅) in spillSnd2 as spillSnd2'; [|clear;cset_tac|eauto].
     econstructor; eauto.
     + rewrite H12; eauto.
-    + rewrite <-minus_union. rewrite incl_minus_union;[|clear;cset_tac].
+    + rewrite <-minus_union.
+      rewrite incl_minus_union';[|clear;cset_tac].
       rewrite minus_minus, <-rlv_sub'.
       apply Op.freeVars_live in H16. clear - H16; cset_tac.
-    + rewrite <-minus_union. rewrite incl_minus_union;[|clear;cset_tac].
+    + rewrite <-minus_union.
+      rewrite incl_minus_union';[|clear;cset_tac].
       rewrite minus_minus. rewrite H1.
       rewrite spillSnd1'. cbn.
       rewrite spillSnd2'. cbn.
@@ -253,7 +251,7 @@ Proof.
       rewrite <-inter_subset_equal with (s':=lv ∪ L); eauto.
       setoid_rewrite <-rlv_sub' at 1. clear; cset_tac.
     + subst K'. rewrite <-minus_union, minus_minus.
-      rewrite incl_minus_union; [|clear; cset_tac].
+      rewrite incl_minus_union'; [|clear; cset_tac].
       setoid_rewrite <-inter_subset_equal with (s':=lv ∪ L) at 1; eauto.
       rewrite <-rlv_sub'. clear; cset_tac.
   - econstructor; eauto.
@@ -296,7 +294,6 @@ Proof.
         -- replace Rf with (fst (Rf,Mf)); eauto. eapply H4; eauto.
            eapply get_app_lt_1; swap 1 2. eauto. omega.
 Qed.
-
 
 Lemma spill_max_kill_ext' ZL Λ Λ' s rlv RM sl k
   : PIR2 _eq Λ' Λ

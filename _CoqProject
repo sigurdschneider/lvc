@@ -219,7 +219,6 @@ theories/Spilling/RepairSpillSound.v
 theories/Spilling/RepairSpill.v
 theories/Spilling/RLiveMin.v
 theories/Spilling/RLiveSound.v
-theories/Spilling/SetUtil.v
 theories/Spilling/SimpleSpill.v
 theories/Spilling/SlotLiftArgs.v
 theories/Spilling/SlotLiftParams.v

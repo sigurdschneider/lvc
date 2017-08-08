@@ -1,7 +1,7 @@
 Require Import RepairSpill ExpVarsBounded.
 Require Import SpillSound Annotation Liveness.Liveness RenamedApart.
 Require Import List Map IL.
-Require Import Take TakeSet PickLK SetUtil AllInRel.
+Require Import Take TakeSet PickLK AllInRel.
 
 Set Implicit Arguments.
 
@@ -84,7 +84,7 @@ Proof.
       setoid_rewrite set_decomp with (t:=M) at 1; cset_tac.
     + subst K'. rewrite pick_kill_incl.
       setoid_rewrite union_comm at 2. rewrite <-minus_union, minus_minus.
-      rewrite incl_minus_union; [|clear;cset_tac].
+      rewrite incl_minus_union'; [|clear;cset_tac].
       subst L'. rewrite <-incl_pick_load. clear; cset_tac.
     + decide (x ∈ (R \ K' ∪ L') \ Kx').
       * rewrite add_cardinal_1; eauto. rewrite cardinal_difference'; [| apply pick_killx_incl].
@@ -112,7 +112,7 @@ Proof.
       cbn in *. apply Op.freeVars_live in H. rewrite H. clear - lv_RM. cset_tac.
     + instantiate (1:=K'). subst K'. rewrite pick_kill_incl.
       setoid_rewrite union_comm at 2. rewrite <-minus_union, minus_minus.
-      rewrite incl_minus_union; [|clear;cset_tac].
+      rewrite incl_minus_union'; [|clear;cset_tac].
       subst L'. rewrite <-incl_pick_load. clear; cset_tac.
     + rewrite union_cardinal; eauto.
       rewrite cardinal_difference'; eauto.
@@ -146,7 +146,7 @@ Proof.
       repeat erewrite get_nth; eauto using get; simpl.
       destruct p as [Sp L]. unfold fst, snd in *.
       set (L':=pick_load k R M Sp L (Rf \ of_list Z)).
-      set (K':=pick_kill k R L' (Rf \ of_list Z) (list_union (Op.freeVars ⊝ Y) ∩ R')).      
+      set (K':=pick_kill k R L' (Rf \ of_list Z) (list_union (Op.freeVars ⊝ Y) ∩ R')).
       set (R'':= R' ∩ (R \ K' ∪ L') ∩ list_union (Op.freeVars ⊝ Y)).
       set (M'':= (list_union (Op.freeVars ⊝ Y) \ R'') ∪ (M' ∩ list_union (Op.freeVars ⊝ Y))).
       set (Sp':= (M'' ∪ (Mf \ of_list Z)) ∩ (R \ M) ∪ (Sp ∩ R)).
@@ -155,7 +155,7 @@ Proof.
       cbn in H1, lv_RM. unfold merge in H8. cbn in H8. rewrite H8 in H1.
       rewrite <-H9, <-H11 in H1.
       econstructor; eauto.
-      * subst Sp'. clear; cset_tac. 
+      * subst Sp'. clear; cset_tac.
       * subst L'. rewrite pick_load_incl at 1.
         rewrite lv_RM in *. revert H1. cbn. subst Sp'.
         clear_all; cset_tac.
@@ -175,11 +175,12 @@ Proof.
            ++ rewrite subset_cardinal; eauto; clear; cset_tac.
         -- clear. subst K'. rewrite <-incl_pick_kill. cset_tac.
       * subst K'. rewrite pick_kill_incl. setoid_rewrite union_comm at 2.
-        rewrite  <-minus_union, minus_minus. rewrite incl_minus_union; [|clear; cset_tac].
+        rewrite  <-minus_union, minus_minus.
+        rewrite incl_minus_union'; [|clear; cset_tac].
         subst L'. rewrite <-incl_pick_load. rewrite <-H9. clear. cset_tac.
       * subst Sp'. rewrite <-H11. inv_get. rewrite lv_RM in *. clear - H1; cset_tac.
-      * subst R'' M''. clear; cset_tac. 
-      * subst R''. clear; cset_tac. 
+      * subst R'' M''. clear; cset_tac.
+      * subst R''. clear; cset_tac.
       * rewrite lv_RM in *. subst Sp'. rewrite set_decomp with (s:=M'') (t:=M) at 1.
         apply union_incl_split; [clear;cset_tac|]. subst M''.
         rewrite <-inter_subset_equal with (s:=list_union (Op.freeVars ⊝ Y)) (s':=R ∪ M) at 1 2; eauto.
@@ -218,12 +219,13 @@ Proof.
            ++ rewrite subset_cardinal; eauto; clear; cset_tac.
         -- clear. subst K'. rewrite <-incl_pick_kill. cset_tac.
       * subst K'. rewrite pick_kill_incl. setoid_rewrite union_comm at 2.
-        rewrite  <-minus_union, minus_minus. rewrite incl_minus_union; [|clear; cset_tac].
+        rewrite  <-minus_union, minus_minus.
+        rewrite incl_minus_union'; [|clear; cset_tac].
         subst L'. rewrite <-incl_pick_load. rewrite <-H9. clear. cset_tac.
       * subst Sp'. rewrite <-H11. inv_get. rewrite lv_RM in *. clear - H1; cset_tac.
-      * clear; cset_tac. 
+      * clear; cset_tac.
       * rewrite lv_RM in *. rewrite meet_incl; clear; cset_tac.
-      * rewrite lv_RM in *. subst Sp'. 
+      * rewrite lv_RM in *. subst Sp'.
         rewrite <-inter_subset_equal with (s:=list_union (Op.freeVars ⊝ Y)) (s':=R ∪ M) at 1 2; eauto.
         clear; cset_tac.
   - destruct a. destruct p as [Sp L]. cbn in *.
@@ -233,7 +235,7 @@ Proof.
     + subst L'. rewrite pick_load_incl.
       apply Op.freeVars_live in H. rewrite H. clear - lv_RM. cset_tac.
     + instantiate (1:=(R \ Op.freeVars e) ∪ (R ∩ L')). rewrite <-minus_union.
-      rewrite incl_minus_union; [|clear;cset_tac]. rewrite minus_minus.
+      rewrite incl_minus_union'; [|clear;cset_tac]. rewrite minus_minus.
       subst L'. setoid_rewrite <-incl_pick_load. clear; cset_tac'.
     + rewrite <-minus_union.
       rewrite union_cardinal; [| clear; cset_tac].

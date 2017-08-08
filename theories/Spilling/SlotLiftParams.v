@@ -1,7 +1,7 @@
 Require Import List Map Env AllInRel Exp AppExpFree Filter LengthEq.
 Require Import IL Annotation AutoIndTac Liveness.Liveness LabelsDefined.
 Require Import SpillSound SpillUtil.
-Require Import Slot SetUtil.
+Require Import Slot.
 
 
 (** * DoSpill *)

@@ -2,29 +2,17 @@ Require Import List Map Env AllInRel Exp AppExpFree RenamedApart.
 Require Import IL Annotation AutoIndTac.
 Require Import Liveness.Liveness LabelsDefined.
 Require Import SpillSound DoSpill DoSpillRm SpillUtil ReconstrLive.
-Require Import ReconstrLiveSmall ReconstrLiveSound InVD AnnP ReconstrLiveUtil SetUtil.
+Require Import ReconstrLiveSmall ReconstrLiveSound InVD AnnP ReconstrLiveUtil.
 Require Import ReconstrLiveG BoundedIn.
-
 
 Set Implicit Arguments.
 
-
 (** * RegisterBound *)
 
-(***************************************************************************)
-
-Lemma bounded_in_incl
-      (VD G G' : ⦃var⦄)
-      (k : nat)
-      (Lv : list ⦃var⦄)
-      (ZL : list (list var))
-      (s : stmt)
-      (an :  (ann (option (list ⦃var⦄))))
-  :
-    VD ∩ G' ⊆ VD ∩ G
+Lemma bounded_in_incl VD G G' k Lv ZL s (an :  (ann (option (list ⦃var⦄))))
+  : VD ∩ G' ⊆ VD ∩ G
     -> ann_P (bounded_in VD k) (reconstr_live Lv ZL G s an)
-    -> ann_P (bounded_in VD k) (reconstr_live Lv ZL G' s an)
-.
+    -> ann_P (bounded_in VD k) (reconstr_live Lv ZL G' s an).
 Proof.
   intros Gincl base.
   assert (bounded_in VD k G') as biG'.
@@ -52,7 +40,6 @@ Proof.
         rewrite Gincl; try reflexivity.
 Qed.
 
-
 Lemma register_bound_loads
       (k : nat)
       (ZL : list params)
@@ -63,8 +50,7 @@ Lemma register_bound_loads
       (xs : list var)
       (an : lvness_fragment)
       (x : var)
-  :
-    disj VD (map slot VD)
+  : disj VD (map slot VD)
     -> R ⊆ VD
     -> singleton x ⊆ R
     -> of_list xs ⊆ R
@@ -83,8 +69,7 @@ Lemma register_bound_loads
                            (singleton x)
                            (write_moves xs (slot ⊝ xs) s)
                            (add_anns ⎣⎦ (length xs) an)
-            )
-.
+            ).
 Proof.
   intros disj_VD R_VD x_R xs_R
          bound_R H  base.
@@ -123,12 +108,6 @@ Proof.
     clear; cset_tac.
 Qed.
 
-
-(*
-Lemma register_bound_empty
- *)
-
-
 Lemma register_bound_spills
       (k : nat)
       (ZL : list params)
@@ -152,8 +131,7 @@ Lemma register_bound_spills
                            G
                            (write_moves (slot ⊝ xs) xs s)
                            (add_anns ⎣⎦ (length xs) an)
-                 )
-.
+                 ).
 Proof.
   intros disj_VD R'_VD xs_R'
          bound_G G_rkl H base.
@@ -194,32 +172,14 @@ Proof.
         reflexivity.
 Qed.
 
-
-Lemma meet_minus_assoc
-      (X : Type)
-      `{OrderedType X}
-      (s t u : ⦃X⦄)
-  :
-    (s ∩ t) \ u [=] s ∩ (t \ u)
-.
+Lemma meet_minus_assoc (X : Type) `{OrderedType X} (s t u : ⦃X⦄)
+  : (s ∩ t) \ u [=] s ∩ (t \ u) .
 Proof.
   cset_tac.
 Qed.
 
-
-
-
-Lemma register_bound_s
-      (k : nat)
-      (ZL : list params)
-      (Lv : list ⦃var⦄)
-      (VD R G : ⦃var⦄)
-      (s : stmt)
-      (slot : var -> var)
-      (xs ys : list var)
-      (an : lvness_fragment)
-  :
-    disj VD (map slot VD)
+Lemma register_bound_s k ZL Lv VD R G s slot xs ys (an : lvness_fragment)
+  : disj VD (map slot VD)
     -> R ⊆ VD
     -> of_list xs ⊆ R
     -> of_list ys ⊆ VD
@@ -242,8 +202,7 @@ Lemma register_bound_s
                                          (write_moves ys (slot ⊝ ys) s)
                            )
                            (add_anns ⎣⎦ (length xs + length ys) an)
-            )
-.
+            ).
 Proof.
   intros disj_VD R_VD xs_R ys_VD bound_R2 bound_al_L G_R al_R base.
   assert (bounded_in VD k R) as bound_R.
@@ -331,12 +290,8 @@ Proof.
               clear; cset_tac.
 Qed.
 
-Lemma slot_lift_args_RMapp_incl
-      (slot : var -> var)
-      (Y : args)
-      RM RMapp Z
-  :
-    (forall (n : nat) (y : op), get Y n y -> isVar y)
+Lemma slot_lift_args_RMapp_incl (slot : var -> var) (Y : args) RM RMapp Z
+  : (forall (n : nat) (y : op), get Y n y -> isVar y)
     -> (list_union (Op.freeVars ⊝ Y) ⊆ fst RMapp ∪ snd RMapp)
     -> list_union (Op.freeVars ⊝ slot_lift_args slot RM RMapp Y Z)
                  ⊆ fst RMapp ∪ map slot (snd RMapp).
@@ -375,22 +330,8 @@ Proof.
   - rewrite <- H0. cset_tac.
 Qed.
 
-
-
-Lemma register_bounded
-      (k : nat)
-      (slot : var -> var)
-      (ZL : list params)
-      (G : ⦃var⦄)
-      (Λ : list (⦃var⦄ * ⦃var⦄))
-      (R M VD : ⦃var⦄)
-      (s : stmt)
-      (Lv : list ⦃var⦄)
-      (sl : spilling)
-      (al : ann ⦃var⦄)
-      (ra : ann (⦃var⦄ * ⦃var⦄))
-  :
-    cardinal R <= k
+Lemma register_bounded k (slot : var -> var) ZL G Λ R M VD s Lv sl al ra
+  : cardinal R <= k
     -> injective_on VD slot
     -> disj VD (map slot VD)
     -> R ⊆ VD
@@ -411,8 +352,7 @@ Lemma register_bounded
           of_list Z [<=] blv)
     -> VD ∩ G ⊆ R
     -> ann_P (bounded_in VD k)
-            (reconstr_live_do_spill slot Λ ZL G s sl)
-.
+            (reconstr_live_do_spill slot Λ ZL G s sl).
 Proof.
   intros card_R inj_VD disj_VD R_VD M_VD ra_VD
          aeFree rena spillSnd spilli lvSnd
