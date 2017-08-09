@@ -45,23 +45,39 @@ class Metrics
   end
 
   def +(o)
-    return Metrics.new(@tloc+o.tloc, @sloc+o.sloc, @ploc+o.ploc, @count+o.count, @lcnt+o.lcnt, @dcnt+o.dcnt, @tactics+o.tactics, @fixpoints+o.fixpoints)
+    r = Metrics.new()
+    r.increment(self)
+    r.increment(o)
+    return r
+  end
+
+  def increment(o)
+    @tloc += o.tloc
+    @sloc += o.sloc
+    @ploc += o.ploc
+    @count += o.count
+    @lcnt += o.lcnt
+    @dcnt += o.dcnt
+    @tactics += o.tactics
+    @fixpoints += o.fixpoints
+    return self
   end
 
   def write_tex(file, name)
-    file.write("\\newcommand{\\#{name.gsub(/\s+/,"")}}{#{@tloc}}\n");
-    file.write("\\newcommand{\\#{name.gsub(/\s+/,"")}Spec}{#{@sloc}}\n");
-    file.write("\\newcommand{\\#{name.gsub(/\s+/,"")}Proof}{#{@ploc}}\n");
-    file.write("\\newcommand{\\#{name.gsub(/\s+/,"")}Files}{#{@count}}\n");
-    file.write("\\newcommand{\\#{name.gsub(/\s+/,"")}Lemmas}{#{@lcnt}}\n");
-    file.write("\\newcommand{\\#{name.gsub(/\s+/,"")}Definitions}{#{@dcnt}}\n");
-    file.write("\\newcommand{\\#{name.gsub(/\s+/,"")}Tactics}{#{@tactics}}\n");
-    file.write("\\newcommand{\\#{name.gsub(/\s+/,"")}Fixpoints}{#{@fixpoints}}\n");
+    k = "\\#{name.gsub(/\s+/,"")}"
+    file.write("\\newcommand{#{k}}{#{@tloc}}\n");
+    file.write("\\newcommand{#{k}Spec}{#{@sloc}}\n");
+    file.write("\\newcommand{#{k}Proof}{#{@ploc}}\n");
+    file.write("\\newcommand{#{k}Files}{#{@count}}\n");
+    file.write("\\newcommand{#{k}Lemmas}{#{@lcnt}}\n");
+    file.write("\\newcommand{#{k}Definitions}{#{@dcnt}}\n");
+    file.write("\\newcommand{#{k}Tactics}{#{@tactics}}\n");
+    file.write("\\newcommand{#{k}Fixpoints}{#{@fixpoints}}\n");
+    l = "\\mkSep#{k}"
+    file.write("\\newcommand{#{k}Data}{#{l}Spec&#{l}Proof&#{l}Lemmas&#{l}Definitions&#{l}Tactics}\n");
   end
 
 end
-
-@total = Metrics.new()
 
 def loc(paths, exts=Set.new([".v"]))
   mt = Metrics.new()
@@ -96,37 +112,51 @@ end
 
 @texcmds = File.open("loc.tex", 'w')
 
-def comp(name, paths, exts=Set.new([".v"]), silent=false)
+def comp(total, name, paths, exts=Set.new([".v"]), silent=false)
   mt = loc(paths, exts)
-  @total += mt
+  total.increment(mt)
   if not silent then print mt.to_s, " ", name, "\n" end
   mt.write_tex(@texcmds, name)
 end
 
-comp("paco", ["paco/*"], [".v", ".ml4"], true)
-comp("containers", ["ContainersPlugin/"], [".v", ".ml4"], true)
-ext=@total
-@total = Metrics.new()
-comp("Sets and Maps", ["theories/Constr"])
-comp("Utilities and Tactics", ["theories/Infra"])
-comp("Semantics", ["theories/IL", "theories/Isa"])
-comp("Equivalence", ["theories/Equiv"])
-comp("Coherence", ["theories/Coherence/Coherence.v", "theories/Coherence/Restrict.v", "theories/Coherence/Coherence_*.v"])
-comp("Analyses", ["theories/Analysis", "theories/Liveness", "theories/Reachability"])
-comp("Value Optimizations", ["theories/ValueOpts"])
-comp("Dead Code Elimination", ["theories/DVE.v", "theories/UCE.v", "theories/DCVE.v", "theories/DCE.v"])
-comp("Register Assignment", ["theories/Coherence/Allocation*", "theories/RegAssign.v", "theories/RenameApartToPart.v"])
-comp("Spilling", ["theories/Spilling"])
-comp("Lowering", ["theories/Lowering"])
-comp("Alpha Equivalence", ["theories/Alpha"])
-comp("SMT Translation Validation", ["theories/TransVal"])
-comp("SSA Construction", ["theories/Coherence/AddParam.v", "theories/Coherence/Delocation*", "theories/Coherence/Invariance.v",
-                          "theories/Coherence/AddParams.v", "theories/Coherence/AddAdd.v"])
-comp("OCaml Integration", ["compiler/*.ml", "compiler/*.mll", "compiler/*.v", "compiler/*.mly", "theories/Compiler.v"], [".ml", ".v", ".mll", ",mly"])
-comp("Coq Plugin", ["src/*.ml4"], [".ml4"])
+ext = Metrics.new()
+comp(ext, "paco", ["paco/*"], [".v", ".ml4"], true)
+comp(ext, "containers", ["ContainersPlugin/"], [".v", ".ml4"], true)
 
+fund = Metrics.new()
+comp(fund, "Sets and Maps", ["theories/Constr"])
+comp(fund, "Utilities and Tactics", ["theories/Infra"])
+
+il = Metrics.new()
+comp(il, "Semantics", ["theories/IL", "theories/Isa"])
+comp(il, "Equivalence", ["theories/Equiv"])
+comp(il, "Coherence", ["theories/Coherence/Coherence.v", "theories/Coherence/Restrict.v", "theories/Coherence/Coherence_*.v"])
+comp(il, "Alpha Equivalence", ["theories/Alpha"])
+
+regalloc = Metrics.new()
+comp(regalloc, "Register Assignment", ["theories/Coherence/Allocation*", "theories/RegAssign.v", "theories/RenameApartToPart.v"])
+comp(regalloc, "Spilling", ["theories/Spilling"])
+
+@total = Metrics.new()
+comp(@total, "Analyses", ["theories/Analysis", "theories/Liveness", "theories/Reachability"])
+comp(@total, "Value Optimizations", ["theories/ValueOpts"])
+comp(@total, "Dead Code Elimination", ["theories/DVE.v", "theories/UCE.v", "theories/DCVE.v", "theories/DCE.v"])
+comp(@total, "Lowering", ["theories/Lowering"])
+comp(@total, "SMT Translation Validation", ["theories/TransVal"])
+comp(@total, "SSA Construction", ["theories/Coherence/AddParam.v", "theories/Coherence/Delocation*", "theories/Coherence/Invariance.v",
+                                  "theories/Coherence/AddParams.v", "theories/Coherence/AddAdd.v"])
+comp(@total, "OCaml Integration", ["compiler/*.ml", "compiler/*.mll", "compiler/*.v", "compiler/*.mly", "theories/Compiler.v"], [".ml", ".v", ".mll", ",mly"])
+comp(@total, "Coq Plugin", ["src/*.ml4"], [".ml4"])
+
+@total += fund + il + regalloc
 print @total.to_s, " in LVC in total\n"
+@total.write_tex(@texcmds, "Total")
 print ext.to_s, " in external dependencies\n"
+ext.write_tex(@texcmds, "External")
+fund.write_tex(@texcmds, "Foundations")
+il.write_tex(@texcmds, "IntermediateLanguage")
+regalloc.write_tex(@texcmds, "RegisterAllocation")
+
 
 Find.find("theories/") do |path|
   if File.extname(path) == ".v" then
