@@ -79,31 +79,34 @@ class Metrics
 
 end
 
-def loc(paths, exts=Set.new([".v"]))
+def loc(paths, exts=Set.new([".v"]), onlynew=false)
   mt = Metrics.new()
   paths.each { |path|
     Find.find(*Dir.glob("#{path}")) do |path|
       if exts.include?(File.extname(path)) then
-        loc, _ = `wc -l #{path}`.strip.split(" ")
-        coqspec = `coqwc -s #{path}`
-        coqproof = `coqwc -r #{path}`
-        lemmas = `grep -e 'Lemma\\|Theorem\\|Corollary\\|Instance' #{path} | wc -l`
-        defs = `grep -e 'Definition\\|Inductive\\|Record\\|Class\\|Fixpoint' #{path} | wc -l`
-        fixpoints = `grep -e 'Fixpoint' #{path} | wc -l`
-        tactics = `grep -e 'Smpl\\|Ltac\\|Tactic' #{path} | wc -l`
-        if File.extname(path) == ".v" then
-          mt.tloc += coqspec.to_i + coqproof.to_i
-          mt.sloc += coqspec.to_i
-          mt.ploc += coqproof.to_i
-          mt.lcnt += lemmas.to_i
-          mt.dcnt += defs.to_i
-          mt.tactics += tactics.to_i
-          mt.fixpoints += fixpoints.to_i
-        else
-          mt.tloc += loc.to_i
+        if @acc[path] == 0 or not onlynew then
+          loc, _ = `wc -l #{path}`.strip.split(" ")
+          coqspec = `coqwc -s #{path}`
+          coqproof = `coqwc -r #{path}`
+          lemmas = `grep -e 'Lemma\\|Theorem\\|Corollary\\|Instance' #{path} | wc -l`
+          defs = `grep -e 'Definition\\|Inductive\\|Record\\|Class\\|Fixpoint' #{path} | wc -l`
+          fixpoints = `grep -e 'Fixpoint' #{path} | wc -l`
+          tactics = `grep -e 'Smpl\\|Ltac\\|Tactic' #{path} | wc -l`
+          if File.extname(path) == ".v" then
+            mt.tloc += coqspec.to_i + coqproof.to_i
+            mt.sloc += coqspec.to_i
+            mt.ploc += coqproof.to_i
+            mt.lcnt += lemmas.to_i
+            mt.dcnt += defs.to_i
+            mt.tactics += tactics.to_i
+            mt.fixpoints += fixpoints.to_i
+          else
+            mt.tloc += loc.to_i
+          end
+          mt.count += 1
+          print "   #{path}\n", mt.to_s,"\n"
+          @acc[path] += 1
         end
-        mt.count += 1
-        @acc[path] += 1
       end
     end
   }
@@ -112,8 +115,8 @@ end
 
 @texcmds = File.open("loc.tex", 'w')
 
-def comp(total, name, paths, exts=Set.new([".v"]), silent=false)
-  mt = loc(paths, exts)
+def comp(total, name, paths, exts=Set.new([".v"]), silent=false, onlynew=false)
+  mt = loc(paths, exts, onlynew)
   total.increment(mt)
   if not silent then print mt.to_s, " ", name, "\n" end
   mt.write_tex(@texcmds, name)
@@ -135,7 +138,11 @@ comp(il, "Alpha Equivalence", ["theories/Alpha"])
 
 regalloc = Metrics.new()
 comp(regalloc, "Register Assignment", ["theories/Coherence/Allocation*", "theories/RegAssign.v", "theories/RenameApartToPart.v"])
-comp(regalloc, "Spilling", ["theories/Spilling"])
+comp(regalloc, "TVRepair", ["theories/Spilling/Repair*", "theories/Spilling/Pick*", "theories/Spilling/LiveMin*", "theories/Spilling/SpillMaxKill*",
+                            "theories/Spilling/RLive*", "theories/Spilling/RegLive*"])
+comp(regalloc, "ReconstrLive", ["theories/Spilling/Reconstr*"])
+comp(regalloc, "Spilling", ["theories/Spilling"], Set.new([".v"]), false, true)
+
 
 @total = Metrics.new()
 comp(@total, "Analyses", ["theories/Analysis", "theories/Liveness", "theories/Reachability"])

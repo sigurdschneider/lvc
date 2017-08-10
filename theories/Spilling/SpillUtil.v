@@ -42,39 +42,6 @@ Definition sub_spill (sl' sl : spilling) :=
 Function count (sl : spilling)
   := cardinal (fst (fst (getAnn sl))) + cardinal (snd (fst (getAnn sl))).
 
-Lemma count_reduce_L (sl : spilling) (n m : nat)
-  : count sl = S n
-    -> cardinal (snd (fst (getAnn sl))) = S m
-    -> count (setTopAnn sl (fst (fst (getAnn sl)),
-                           of_list (tl (elements (snd (fst (getAnn sl))))),
-                           snd (getAnn sl))) = n.
-Proof.
-  intros count_sl card_L.
-  unfold count in *.
-  rewrite getAnn_setTopAnn.
-  simpl.
-  rewrite cardinal_set_tl with (n:=m).
-  - omega.
-  - rewrite of_list_elements. assumption.
-Qed.
-
-(* the name should be changed *)
-Lemma count_reduce_Sp (sl : spilling) (n m : nat)
-  : count sl = S n
-    -> cardinal (fst (fst (getAnn sl))) = S m
-    -> count (setTopAnn sl (of_list (tl (elements (fst (fst (getAnn sl))))),
-                           snd (fst (getAnn sl)),
-                           snd (getAnn sl))) = n.
-Proof.
-  intros count_sl card_Sp.
-  unfold count in *.
-  rewrite getAnn_setTopAnn.
-  simpl.
-  rewrite cardinal_set_tl with (n:=m).
-  - omega.
-  - rewrite of_list_elements. assumption.
-Qed.
-
 (* TODO move somewhere *)
 Lemma get_get_eq (X : Type) (L : list X) (n : nat) (x x' : X)
   : get L n x -> get L n x' -> x = x' .
@@ -145,27 +112,6 @@ Proof.
       inv get_x;
       inv get_x'.
   - simpl. apply IHn; eauto.
-Qed.
-
-(* not needed anymore *)
-Lemma injective_ann (X : Type) (a b : ann X)
-  : a = b
-    -> match a,b with
-      | ann0 an, ann0 bn => an = bn
-      | ann1 an a', ann1 bn b' => an = bn /\ a' = b'
-      | ann2 an a1 a2, ann2 bn b1 b2 => an = bn /\ a1 = b1 /\ a2 = b2
-      | annF an aF a', annF bn bF b' => an = bn /\ aF = bF /\ a' = b'
-      | _,_ => True
-      end .
-Proof.
-  revert b;
-    induction a;
-    intros b eq_ab;
-    induction b;
-    eauto;
-    try split;
-    inversion eq_ab;
-    eauto.
 Qed.
 
 Lemma count_zero_Empty_Sp (sl : spilling)
