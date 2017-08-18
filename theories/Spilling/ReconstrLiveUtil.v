@@ -16,7 +16,7 @@ Definition reconstr_live_do_spill
            (s : stmt)
            (sl : spilling)
   : ann ⦃var⦄
-  := reconstr_live (slot_merge slot Λ)
+  := reconstr_live (slot_merge slot ⊝ Λ)
                   ((slot_lift_params slot) ⊜ Λ ZL)
                   G
                   (do_spill slot s sl ZL Λ)
@@ -79,7 +79,7 @@ Lemma nth_rfmf
       (slot : var -> var)
       (R_f M_f : ⦃var⦄)
       (H15 : get Λ (counted l) (R_f, M_f))
-  : nth (counted l) (slot_merge slot Λ) ∅ [=] R_f ∪ map slot M_f .
+  : nth (counted l) (slot_merge slot ⊝ Λ) ∅ [=] R_f ∪ map slot M_f .
 Proof.
   eapply get_nth with (d:=(∅,∅)) in H15 as H15'.
   simpl in H15'.

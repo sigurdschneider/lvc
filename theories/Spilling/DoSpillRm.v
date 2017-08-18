@@ -46,10 +46,8 @@ Qed.
 
 Definition slot_merge
            (slot : var -> var)
-  : list (⦃var⦄ * ⦃var⦄) -> list ⦃var⦄
-  := List.map (fun (RM : set var * set var)
-               => fst RM ∪ map slot (snd RM))
-.
+           (RM : set var * set var)
+  := fst RM ∪ map slot (snd RM).
 
 
 Lemma add_anns_add
@@ -74,8 +72,8 @@ Lemma slot_merge_app
       (L1 L2: list (set var * set var))
       (slot : var -> var)
   :
-    slot_merge slot L1 ++ slot_merge slot L2
-      = slot_merge slot (L1 ++ L2)
+    slot_merge slot ⊝ L1 ++ slot_merge slot ⊝ L2
+      = slot_merge slot ⊝ (L1 ++ L2)
 .
 Proof.
   intros.
@@ -100,7 +98,7 @@ Fixpoint do_spill_rm
                 => ann2 ∅ (do_spill_rm slot sl1) (do_spill_rm slot sl2)
 
               | annF a slF sl2
-                => annF ∅ (@setTopAnn _ ⊜ (do_spill_rm slot ⊝ slF) (slot_merge slot (snd a)))
+                => annF ∅ (@setTopAnn _ ⊜ (do_spill_rm slot ⊝ slF) (slot_merge slot ⊝ (snd a)))
                        (do_spill_rm slot sl2)
               end
              )
@@ -166,7 +164,7 @@ Lemma do_spill_rm_empty
                   (do_spill_rm slot sl1)
                   (do_spill_rm slot sl2)
         | annF a slF sl2
-          => annF ∅ (@setTopAnn _ ⊜ (do_spill_rm slot ⊝ slF) (slot_merge slot (snd a)))
+          => annF ∅ (@setTopAnn _ ⊜ (do_spill_rm slot ⊝ slF) (slot_merge slot ⊝ (snd a)))
                        (do_spill_rm slot sl2)
         end
 .

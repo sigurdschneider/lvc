@@ -70,7 +70,7 @@ Lemma reconstr_live_small_L
     -> getL sl ⊆ getSp sl ∪ M
     -> (forall G', getAnn
         (reconstr_live
-           (slot_merge slot Λ)
+           (slot_merge slot ⊝ Λ)
            (slot_lift_params slot ⊜ Λ ZL)
             G'
            (do_spill slot s (clear_SpL sl) ZL Λ)
@@ -78,7 +78,7 @@ Lemma reconstr_live_small_L
         ⊆ R ∪ getL sl ∪ map slot (getSp sl ∪ M) ∪ G')
     -> getAnn
         (reconstr_live
-           (slot_merge slot Λ)
+           (slot_merge slot ⊝ Λ)
            (slot_lift_params slot ⊜ Λ ZL)
             G
            (do_spill slot s (clear_Sp sl) ZL Λ)
@@ -174,7 +174,7 @@ Lemma reconstr_live_small_Sp
     -> getSp sl ⊆ R
     -> (forall G', getAnn
         (reconstr_live
-           (slot_merge slot Λ)
+           (slot_merge slot ⊝ Λ)
            (slot_lift_params slot ⊜ Λ ZL)
             G'
            (do_spill slot s (clear_Sp sl) ZL Λ)
@@ -182,7 +182,7 @@ Lemma reconstr_live_small_Sp
         ⊆ R ∪ map slot (getSp sl ∪ M) ∪ G')
     -> getAnn
         (reconstr_live
-           (slot_merge slot Λ)
+           (slot_merge slot ⊝ Λ)
            (slot_lift_params slot ⊜ Λ ZL)
             G
            (do_spill slot s sl  ZL Λ)
@@ -221,7 +221,7 @@ Lemma reconstr_live_small_s
     -> getL sl ⊆ getSp sl ∪ M
     -> (forall G', getAnn
         (reconstr_live
-           (slot_merge slot Λ)
+           (slot_merge slot ⊝ Λ)
            (slot_lift_params slot ⊜ Λ ZL)
             G'
            (do_spill slot s (clear_SpL sl)  ZL Λ)
@@ -229,7 +229,7 @@ Lemma reconstr_live_small_s
         ⊆ R ∪ getL sl ∪ map slot (getSp sl ∪ M) ∪ G')
     -> getAnn
         (reconstr_live
-           (slot_merge slot Λ)
+           (slot_merge slot ⊝ Λ)
            (slot_lift_params slot ⊜ Λ ZL)
             G
            (do_spill slot s sl ZL Λ)
@@ -269,7 +269,7 @@ Lemma reconstr_live_small o
     -> spill_live VD sl al
     -> getAnn
         (reconstr_live
-           (slot_merge slot Λ)
+           (slot_merge slot ⊝ Λ)
            (slot_lift_params slot ⊜ Λ ZL)
             G
             (do_spill slot s sl ZL Λ)

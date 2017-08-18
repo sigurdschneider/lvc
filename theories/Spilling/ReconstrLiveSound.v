@@ -22,12 +22,12 @@ Lemma reconstr_live_sound_s
     (forall G',
         live_sound o ZL' Lv
                    (do_spill slot s (clear_SpL sl) ZL Λ)
-                   (reconstr_live (slot_merge slot Λ) ZL' G'
+                   (reconstr_live (slot_merge slot ⊝ Λ) ZL' G'
                                   (do_spill slot s (clear_SpL sl) ZL Λ)
                                   (do_spill_rm slot (clear_SpL sl))))
    -> live_sound o ZL' Lv
                 (do_spill slot s sl ZL Λ)
-                (reconstr_live (slot_merge slot Λ) ZL' G
+                (reconstr_live (slot_merge slot ⊝ Λ) ZL' G
                                (do_spill slot s sl ZL Λ)
                                (do_spill_rm slot sl)).
 Proof.
@@ -117,9 +117,9 @@ Lemma reconstr_live_sound
     -> live_sound Imperative ZL Lv s alv
     -> live_sound Imperative
                  ((slot_lift_params slot) ⊜ Λ ZL)
-                 (slot_merge slot Λ)
+                 (slot_merge slot ⊝ Λ)
                  (do_spill slot s sl ZL Λ)
-                 (reconstr_live (slot_merge slot Λ)
+                 (reconstr_live (slot_merge slot ⊝ Λ)
                                 ((slot_lift_params slot) ⊜ Λ ZL)
                                  G
                                  (do_spill slot s sl ZL Λ)
@@ -190,7 +190,7 @@ Proof.
       unfold slot_merge.
       eapply map_get_eq; eauto.
     + simpl.
-      assert (nth (labN l) (slot_merge slot Λ) ∅ [=] R_f ∪ map slot M_f)
+      assert (nth (labN l) (slot_merge slot ⊝ Λ) ∅ [=] R_f ∪ map slot M_f)
         as nth_EQ.
       {
         unfold slot_merge.
@@ -237,9 +237,9 @@ Proof.
       rewrite slot_lift_params_app; eauto with len.
       rewrite getAnn_map_setTopAnn.
       rewrite Take.take_eq_ge;
-        [|unfold slot_merge; len_simpl; rewrite <- H13, <- H16; omega].
+        [|len_simpl; rewrite <- H13, <- H16; omega].
       rewrite slot_merge_app.
-      apply live_sound_monotone with (LV:= slot_merge slot (rms ++ Λ)).
+      apply live_sound_monotone with (LV:= slot_merge slot ⊝ (rms ++ Λ)).
       * eapply IHlvSnd with (ra:=ant) (R:=R\K ∪ L) (M:=Sp ∪ M); eauto.
         -- eapply R'_VD with (R:=R) (M:=M); eauto.
         -- eapply M'_VD with (R:=R) (M:=M); eauto.
@@ -247,14 +247,13 @@ Proof.
         -- eapply getAnn_als_EQ_merge_rms; eauto.
         -- eapply get_ofl_VD; eauto.
       * rewrite <- slot_merge_app.
-        apply PIR2_app with (L2:=slot_merge slot Λ);
+        apply PIR2_app with (L2:=slot_merge slot ⊝ Λ);
           swap 1 2.
         {
           apply PIR2_refl; eauto.
         }
         apply PIR2_get.
         -- intros n x x' H4 H5.
-           unfold slot_merge in H5.
            inv_get; simpl.
            rename x into Zs.
            rename x0 into rm.
@@ -278,7 +277,6 @@ Proof.
            destruct H15' as [A [B [C E]]].
            assert (rm = (fst rm, snd rm)) as rm_eta by apply pair_eta.
            rewrite rm_eta in H24'.
-           unfold slot_merge in H4. inv_get.
            rewrite <- reconstr_live_setTopAnn.
            erewrite reconstr_live_small with (VD:=VD)
                                              (ra:=a)
@@ -288,7 +286,7 @@ Proof.
              clear - rm_eta H2' get_al get_a get_sls get_rm get_Zs H15.
              rewrite rm_eta in get_rm.
              eapply al_sub_RfMf in get_rm; eauto.
-             rewrite rm_eta.
+             rewrite rm_eta. unfold slot_merge; simpl.
               repeat apply union_incl_split;
                 [clear; cset_tac | clear; cset_tac
                  | eapply ofl_slp_sub_rm; eauto ].
@@ -296,7 +294,7 @@ Proof.
            ++ eapply getAnn_als_EQ_merge_rms; eauto.
            ++ eapply get_ofl_VD; eauto.
 
-        -- len_simpl. unfold slot_merge. eauto with len.
+        -- eauto with len.
     + symmetry.
       apply zip_length2.
       repeat rewrite length_map.
@@ -305,14 +303,13 @@ Proof.
     + intros; inv_get.
       simpl.
       rewrite fst_zip_pair by eauto with len.
-      unfold slot_merge in H5. inv_get.
       rewrite getAnn_map_setTopAnn.
       rewrite Take.take_eq_ge;
         [|unfold slot_merge; len_simpl; rewrite <- H13, <- H16; omega].
       rewrite slot_merge_app.
       rewrite slot_lift_params_app; eauto with len.
       rewrite <- reconstr_live_setTopAnn.
-      apply live_sound_monotone with (LV:= slot_merge slot (rms ++ Λ)).
+      apply live_sound_monotone with (LV:= slot_merge slot ⊝ (rms ++ Λ)).
       * assert ((fst x3, snd x3) = x3)
           by (destruct x3; simpl; reflexivity).
         rewrite <- H4 in H31.
@@ -323,7 +320,7 @@ Proof.
         -- eapply getAnn_als_EQ_merge_rms; eauto.
         -- eapply get_ofl_VD; eauto.
       * rewrite <- slot_merge_app.
-        apply PIR2_app with (L2:=slot_merge slot Λ);
+        apply PIR2_app with (L2:=slot_merge slot ⊝ Λ);
           swap 1 2.
         {
           apply PIR2_refl; eauto.

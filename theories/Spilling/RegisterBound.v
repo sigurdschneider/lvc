@@ -532,6 +532,7 @@ Proof.
       rewrite empty_neutral_union_r.
       repeat rewrite union_meet_distr_l.
       rewrite (@disj_empty_cut VD); eauto.
+      unfold slot_merge. simpl.
       rewrite minus_dist_union.
       repeat rewrite union_meet_distr_l.
       rewrite (@incl_minus _ _ (map slot M_f)).
@@ -545,7 +546,7 @@ Proof.
     + erewrite nth_zip; eauto.
       rewrite slot_lift_args_RMapp_incl; eauto; simpl; [|rewrite H22; reflexivity].
       erewrite !get_nth; eauto using map_get_1.
-      rewrite of_list_elements.
+      rewrite of_list_elements. unfold slot_merge; simpl.
       rewrite slp_union_minus_incl; eauto; simpl.
       assert (M'VD:M' [<=] VD). {
         rewrite H24, H12, R_VD, M_VD. eauto with cset.
@@ -679,11 +680,11 @@ Proof.
         -- intros.
            eapply get_ofl_VD; eauto.
         -- intros.
-           eapply get_app_cases in H18 as [?|[? ?]]; inv_get.
+           eapply get_app_cases in H4 as [?|[? ?]]; inv_get.
            edestruct H2; eauto. len_simpl.
            eapply get_app_ge in H14. len_simpl.
            rewrite <- H in *.
-           eapply Z_LV; eauto. len_simpl. rewrite H. eauto.
+           eapply Z_LV; eauto. len_simpl. rewrite <- H. eauto.
         -- setoid_rewrite pair_eta with (p:=x3) at 1.
            rewrite pair_eta with (p:=x3) in H23.
            eapply al_sub_RfMf in H23; eauto.
