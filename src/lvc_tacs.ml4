@@ -1,8 +1,6 @@
 (*i camlp4deps: "parsing/grammar.cma" i*)
 (*i camlp4use: "pa_extend.cmp" i*)
 
-open API
-open Grammar_API
 open Term
 open Declarations
 open Pp
