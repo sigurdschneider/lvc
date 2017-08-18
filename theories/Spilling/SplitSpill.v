@@ -437,11 +437,12 @@ general induction lvSound;
                              ∪ (R_f \ R') \ of_list Z)).
     * revert i. clear_all. cset_tac.
     * revert n. clear_all. cset_tac.
-  + edestruct @list_eq_get; eauto; dcr.
-    destruct x as [R_f' M_f']; invc H6.
+  + hnf in ΛeqΛ'. PIR2_inv.
+    destruct x as [R_f' M_f']; clear_trivial_eqs.
+    unfold PartialOrder.poEq in *; simpl in *.
     rewrite <- pir2_R2 in H1.
     exploit Op.freeVars_live_list; eauto.
-    revert H1 H4 fvRM. rewrite ReqR'. rewrite MeqM'.
+    revert H1 H5 fvRM. rewrite ReqR'. rewrite MeqM'.
     clear. clearbody K. cset_tac.
 - assert (InclR':R' ∩ lv ⊆ R) by (rewrite ReqR'; clear; cset_tac).
   eapply spill_sound_incl_R with (R:=R' ∩ lv); [ | |rewrite ReqR'];eauto.

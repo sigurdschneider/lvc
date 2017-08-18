@@ -14,14 +14,14 @@ Lemma reconstr_live_write_loads
       (slot : var -> var)
       (xs : params)
       (s : stmt)
-      (an : lvness_fragment)
+      (an : ann (set var))
       (VD G : ⦃var⦄)
   : of_list xs ⊆ VD
     -> disj VD (map slot VD)
     -> getAnn (
           reconstr_live Lv ZL G
                         (write_moves xs (slot ⊝ xs) s)
-                        (add_anns ⎣⎦ (length xs) an))
+                        (add_anns ∅ (length xs) an))
              [=]
              getAnn (reconstr_live Lv ZL ∅ s an)
              \ of_list xs ∪ map slot (of_list xs) ∪ G.
@@ -117,14 +117,14 @@ Lemma reconstr_live_write_spills
       (slot : var -> var)
       (xs: params)
       (s : stmt)
-      (an : lvness_fragment)
+      (an : ann (set var))
       (VD G : ⦃var⦄)
    : disj VD (map slot VD)
     -> of_list xs ⊆ VD
     -> getAnn (
           reconstr_live Lv ZL G
                         (write_moves (slot ⊝ xs) xs s)
-                        (add_anns ⎣⎦ (length xs) an))
+                        (add_anns ∅ (length xs) an))
              [=] getAnn (
                reconstr_live Lv ZL ∅ s an)
              \ map slot (of_list xs)
@@ -371,6 +371,10 @@ Proof.
   - rewrite H9.
     clear; cset_tac.
   - rewrite fst_zip_pair; eauto with len.
+    rewrite map_zip.
+    erewrite zip_map_eq_ext with (f':=id);
+      [|eauto with len| intros; destruct x; reflexivity].
+    unfold id; rewrite map_id.
     rewrite slot_merge_app.
     rewrite slot_lift_params_app; eauto with len.
     apply union_incl_split.

@@ -1,5 +1,5 @@
 Require Import List Map Env AllInRel Exp AppExpFree RenamedApart.
-Require Import IL Annotation AutoIndTac.
+Require Import IL Annotation AutoIndTac AnnotationLattice.
 Require Import Liveness.Liveness LabelsDefined.
 Require Import SpillSound DoSpill DoSpillRm SpillUtil ReconstrLive.
 Require Import ReconstrLiveSmall ReconstrLiveSound InVD AnnP ReconstrLiveUtil.
@@ -9,7 +9,7 @@ Set Implicit Arguments.
 
 (** * RegisterBound *)
 
-Lemma bounded_in_incl VD G G' k Lv ZL s (an :  (ann (option (list ⦃var⦄))))
+Lemma bounded_in_incl VD G G' k Lv ZL s (an :  (ann ⦃var⦄))
   : VD ∩ G' ⊆ VD ∩ G
     -> ann_P (bounded_in VD k) (reconstr_live Lv ZL G s an)
     -> ann_P (bounded_in VD k) (reconstr_live Lv ZL G' s an).
@@ -48,7 +48,7 @@ Lemma register_bound_loads
       (s : stmt)
       (slot : var -> var)
       (xs : list var)
-      (an : lvness_fragment)
+      (an : ann ⦃var⦄)
       (x : var)
   : disj VD (map slot VD)
     -> R ⊆ VD
@@ -68,7 +68,7 @@ Lemma register_bound_loads
             (reconstr_live Lv ZL
                            (singleton x)
                            (write_moves xs (slot ⊝ xs) s)
-                           (add_anns ⎣⎦ (length xs) an)
+                           (add_anns ∅ (length xs) an)
             ).
 Proof.
   intros disj_VD R_VD x_R xs_R
@@ -116,7 +116,7 @@ Lemma register_bound_spills
       (s : stmt)
       (slot : var -> var)
       (xs : list var)
-      (an : lvness_fragment)
+      (an : ann ⦃var⦄)
   :
     disj VD (map slot VD)
     -> R ⊆ VD
@@ -130,7 +130,7 @@ Lemma register_bound_spills
             (reconstr_live Lv ZL
                            G
                            (write_moves (slot ⊝ xs) xs s)
-                           (add_anns ⎣⎦ (length xs) an)
+                           (add_anns ∅ (length xs) an)
                  ).
 Proof.
   intros disj_VD R'_VD xs_R'
@@ -178,7 +178,7 @@ Proof.
   cset_tac.
 Qed.
 
-Lemma register_bound_s k ZL Lv VD R G s slot xs ys (an : lvness_fragment)
+Lemma register_bound_s k ZL Lv VD R G s slot xs ys (an : ann ⦃var⦄)
   : disj VD (map slot VD)
     -> R ⊆ VD
     -> of_list xs ⊆ R
@@ -201,7 +201,7 @@ Lemma register_bound_s k ZL Lv VD R G s slot xs ys (an : lvness_fragment)
                            (write_moves (slot ⊝ xs) xs
                                          (write_moves ys (slot ⊝ ys) s)
                            )
-                           (add_anns ⎣⎦ (length xs + length ys) an)
+                           (add_anns ∅ (length xs + length ys) an)
             ).
 Proof.
   intros disj_VD R_VD xs_R ys_VD bound_R2 bound_al_L G_R al_R base.
@@ -434,13 +434,12 @@ Proof.
            rewrite al_R'.
            clear; cset_tac.
       * eapply IHlvSnd with (R:={x; (R\K ∪ L) \ Kx})
-                              (M:=Sp ∪ M); eauto;
-          eauto using M'_VD.
+                            (M:=Sp ∪ M); try eassumption.
         -- eapply Rx_VD with (VD:=VD) (M:=M); eauto.
            eapply x_VD; eauto.
+        -- eauto using M'_VD.
         -- rewrite rena, <- ra_VD; eauto.
         -- clear; cset_tac.
-
   - destruct rena as [rena1 rena2].
     eapply register_bound_s with (VD:=VD) (R:=R); simpl; eauto.
     + rewrite of_list_elements; assumption.
@@ -597,6 +596,9 @@ Proof.
     + unfold bounded_in.
       rewrite fst_zip_pair; eauto with len.
       rewrite slot_lift_params_app; eauto with len.
+      rewrite getAnn_map_setTopAnn.
+      rewrite Take.take_eq_ge;
+        [|unfold slot_merge; len_simpl; rewrite <- H31, <- H32; omega].
       rewrite slot_merge_app.
       rewrite subset_cardinal; eauto.
       rewrite reconstr_live_small with (VD:=VD) (R:=R\K∪L) (M:=Sp ∪ M); eauto.
@@ -617,6 +619,9 @@ Proof.
         eapply get_ofl_VD; eauto.
     + rewrite fst_zip_pair; eauto with len.
       rewrite slot_lift_params_app; eauto with len.
+      rewrite getAnn_map_setTopAnn.
+      rewrite Take.take_eq_ge;
+        [|unfold slot_merge; len_simpl; rewrite <- H31, <- H32; omega].
       rewrite slot_merge_app.
       rewrite reconstr_live_small with (VD:=VD) (R:=R\K∪L) (M:=Sp ∪ M); eauto.
       * rewrite of_list_elements, !empty_neutral_union_r.
@@ -636,10 +641,16 @@ Proof.
     + intros G' R' G'_R' L_R' al_R' bound_R'.
       rewrite fst_zip_pair; eauto with len.
       rewrite slot_lift_params_app; eauto with len.
+      rewrite getAnn_map_setTopAnn.
+      rewrite Take.take_eq_ge;
+        [|unfold slot_merge; len_simpl; rewrite <- H31, <- H32; omega].
       rewrite slot_merge_app.
 
       rewrite fst_zip_pair in al_R'; eauto with len.
       rewrite slot_lift_params_app in al_R'; eauto with len.
+      rewrite getAnn_map_setTopAnn in al_R'.
+      rewrite Take.take_eq_ge in al_R';
+        [|unfold slot_merge; len_simpl; rewrite <- H31, <- H32; omega].
       rewrite slot_merge_app in al_R'.
 
       econstructor.
@@ -650,31 +661,32 @@ Proof.
         rewrite G'_R', al_R'.
         clear; cset_tac.
       * intros; inv_get.
+        rewrite <- reconstr_live_setTopAnn.
         exploit H10 as funConstr; eauto.
         exploit renaF as renaF'; eauto.
         exploit H34 as spillSnd'; eauto.
         exploit H20 as rm_VD; eauto.
-        destruct rm_VD as [f_x2_VD s_x2_VD]; eauto.
-        rewrite pair_eta with (p:=x2) in spillSnd'.
+        destruct rm_VD as [f_x3_VD s_x3_VD]; eauto.
+        rewrite pair_eta with (p:=x3) in spillSnd'.
         destruct funConstr as [funConstr _].
         apply incl_from_union_eq in funConstr as funConstr1.
         rewrite union_comm in funConstr.
         apply incl_from_union_eq in funConstr as funConstr2.
         simpl.
-        eapply H1 with (R:=fst x2) (M:=snd x2); eauto.
+        eapply H1 with (R:=fst x3) (M:=snd x3); eauto.
         -- rewrite renaF', <- ra_VD; eauto.
         -- eapply getAnn_als_EQ_merge_rms; eauto.
         -- intros.
            eapply get_ofl_VD; eauto.
         -- intros.
-           eapply get_app_cases in H4 as [?|[? ?]]; inv_get.
+           eapply get_app_cases in H18 as [?|[? ?]]; inv_get.
            edestruct H2; eauto. len_simpl.
            eapply get_app_ge in H14. len_simpl.
            rewrite <- H in *.
-           eapply Z_LV; eauto. len_simpl. rewrite <- H. eauto.
-        -- setoid_rewrite pair_eta with (p:=x2) at 1.
-           rewrite pair_eta with (p:=x2) in H22.
-           eapply al_sub_RfMf in H22; eauto.
+           eapply Z_LV; eauto. len_simpl. rewrite H. eauto.
+        -- setoid_rewrite pair_eta with (p:=x3) at 1.
+           rewrite pair_eta with (p:=x3) in H23.
+           eapply al_sub_RfMf in H23; eauto.
            rewrite ofl_slp_sub_rm; eauto.
            ++ rewrite union_meet_distr_l.
               apply union_incl_split.

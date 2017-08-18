@@ -11,7 +11,7 @@ Fixpoint reconstr_live
          (ZL : list (params))
          (G : set var)
          (s : stmt)
-         (rm : ann (option (list (set var))))
+         (rm : ann (set var))
          {struct s}
   : ann (set var)
   :=
@@ -33,8 +33,9 @@ Fixpoint reconstr_live
         let Z   := nth (counted f) ZL nil in
         ann0 (list_union (Op.freeVars ⊝ Y) ∪ blv \ of_list Z ∪ G)
 
-    | stmtFun F t, annF (Some rms) rm_F rm_t
-      => let lv_t := reconstr_live (rms ++ Lv) (fst ⊝ F ++ ZL) ∅ t rm_t in
+    | stmtFun F t, annF _ rm_F rm_t
+      => let rms := getAnn ⊝ rm_F in
+        let lv_t := reconstr_live (rms ++ Lv) (fst ⊝ F ++ ZL) ∅ t rm_t in
         let lv_F := (fun ps rm_s => reconstr_live (rms ++ Lv)
                                                (fst ⊝ F ++ ZL)
                                                (of_list (fst ps))
@@ -135,17 +136,15 @@ Proof.
     + apply not_le in n.
       rewrite nth_overflow; eauto with cset.
       omega.
-  - destruct a; simpl; econstructor.
-    exploit (IH s). eauto. Focus 2.
-    rewrite (ann_R_get H0); eauto. reflexivity.
+  - eapply incl_union_lr; eauto.
+    eapply ann_R_get.
+    eapply (IH s); eauto.
     eapply PIR2_app; eauto with len.
-    repeat rewrite zip_length; eauto.
-    intros; inv_get.
+  - eauto with len.
+  - intros; inv_get; eauto with len.
     eapply IH; eauto.
     eapply PIR2_app; eauto with len.
-    eapply IH; eauto.
-    eapply PIR2_app; eauto with len.
-    reflexivity.
+  - eapply PIR2_app; eauto with len.
 Qed.
 
 Lemma reconstr_live_equal Lv Lv' ZL G s sl
@@ -182,17 +181,15 @@ Proof.
       rewrite Lv_len in n.
       rewrite nth_overflow; eauto with cset.
       omega.
-  - destruct a; simpl; econstructor.
-    exploit (IH s). eauto. Focus 2.
-    rewrite (ann_R_get H0); eauto. reflexivity.
+  - eapply eq_union_lr; eauto.
+    eapply ann_R_get.
+    eapply (IH s); eauto.
     eapply PIR2_app; eauto with len.
-    repeat rewrite zip_length; eauto.
-    intros; inv_get.
+  - eauto with len.
+  - intros; inv_get; eauto with len.
     eapply IH; eauto.
     eapply PIR2_app; eauto with len.
-    eapply IH; eauto.
-    eapply PIR2_app; eauto with len.
-    reflexivity.
+  - eapply PIR2_app; eauto with len.
 Qed.
 
 Lemma injective_map_minus
@@ -213,4 +210,48 @@ Proof.
   apply lookup_set_minus_eq; eauto.
   apply injective_on_incl with (D:=D); eauto.
   cset_tac.
+Qed.
+
+Require Import Infra.PartialOrder AnnotationLattice CSetPartialOrder.
+
+Lemma reconstr_live_setTopAnn ZL Lv s alv G a
+  : reconstr_live Lv ZL G s alv = reconstr_live Lv ZL G s (setTopAnn alv a).
+Proof.
+  destruct s, alv; simpl; eauto.
+Qed.
+
+Lemma reconstr_live_incl ZL Lv s alv G
+  : live_sound Imperative ZL Lv s alv
+    -> G ⊆ getAnn alv
+    -> poLe (reconstr_live Lv ZL
+                          G
+                          s
+                          alv)
+           alv.
+Proof.
+  intros LS.
+  general induction LS; simpl in *.
+  - eapply ann1_poLe; eauto with cset.
+    + rewrite H2, IHLS; eauto 20 using Exp.freeVars_live with cset.
+      rewrite Exp.freeVars_live; eauto.
+      unfold poLe; simpl. cset_tac.
+  - eapply ann2_poLe; eauto with cset.
+    rewrite IHLS1, IHLS2; eauto 20 with cset.
+    rewrite Op.freeVars_live; eauto.
+    unfold poLe; simpl. cset_tac.
+  - eapply ann0_poLe; eauto with cset.
+    erewrite !get_nth; eauto.
+    unfold poLe; simpl.
+    rewrite Op.freeVars_live_list; eauto.
+    cset_tac.
+  - eapply ann0_poLe; eauto with cset.
+    rewrite Op.freeVars_live; eauto.
+    unfold poLe; simpl. cset_tac.
+  - eapply annF_poLe; eauto with cset.
+    + rewrite IHLS; eauto with cset.
+      unfold poLe; simpl. cset_tac.
+    + eapply PIR2_get; eauto with len.
+      intros; inv_get.
+      rewrite H1; eauto.
+      exploit H2; eauto.
 Qed.

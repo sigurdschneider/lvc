@@ -6,7 +6,7 @@ Require Import SpillSound DoSpill DoSpillRm SpillUtil ReconstrLive AnnP InVD.
 (** * ReconstrLiveG *)
 
 Lemma reconstr_live_G_eq (G : ⦃var⦄) (Lv : list ⦃var⦄)
-      (ZL : list params) (s : stmt) (a : lvness_fragment)
+      (ZL : list params) (s : stmt) a
   : getAnn (reconstr_live Lv ZL G s a) [=] getAnn (reconstr_live Lv ZL ∅ s a) ∪ G .
 Proof.
   general induction s;
@@ -26,7 +26,6 @@ Lemma reconstr_live_G Lv ZL G s a
   : G ⊆ getAnn (reconstr_live Lv ZL G s a).
 Proof.
   induction s,a; simpl; eauto with cset.
-  - destruct a; simpl; eauto.
 Qed.
 
 Fixpoint reconstr_G (G : ⦃var⦄) (s : stmt) {struct s} : ann ⦃var⦄

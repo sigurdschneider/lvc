@@ -5,8 +5,6 @@ Require Import SpillSound SpillUtil.
 Set Implicit Arguments.
 
 (** * DoSpillRm *)
-Notation "'lvness_fragment'" := (ann (option (list ⦃var⦄))).
-
 
 Definition add_anns
            (X : Type)
@@ -88,22 +86,22 @@ Qed.
 Fixpoint do_spill_rm
          (slot : var -> var)
          (sl : spilling)
-  : lvness_fragment
   :=
-    add_anns None (count sl)
+    add_anns ∅ (count sl)
              (
               match sl with
               | ann0 _
-                => ann0 None
+                => ann0 ∅
 
               | ann1 _ sl0
-                => ann1 None (do_spill_rm slot sl0)
+                => ann1 ∅ (do_spill_rm slot sl0)
 
               | ann2 _ sl1 sl2
-                => ann2 None (do_spill_rm slot sl1) (do_spill_rm slot sl2)
+                => ann2 ∅ (do_spill_rm slot sl1) (do_spill_rm slot sl2)
 
               | annF a slF sl2
-                => annF (Some (slot_merge slot (snd a))) (do_spill_rm slot ⊝ slF) (do_spill_rm slot sl2)
+                => annF ∅ (@setTopAnn _ ⊜ (do_spill_rm slot ⊝ slF) (slot_merge slot (snd a)))
+                       (do_spill_rm slot sl2)
               end
              )
 .
@@ -113,7 +111,7 @@ Lemma do_spill_rm_s
       (sl : spilling)
   :
     do_spill_rm slot sl
-    = add_anns None (count sl) (do_spill_rm slot (setTopAnn sl (∅,∅,snd (getAnn sl))))
+    = add_anns ∅ (count sl) (do_spill_rm slot (setTopAnn sl (∅,∅,snd (getAnn sl))))
 .
 Proof.
   unfold do_spill_rm.
@@ -130,7 +128,7 @@ Lemma do_spill_rm_s_Sp
       (sl : spilling)
   :
     do_spill_rm slot sl
-    = add_anns None (cardinal (getSp sl)) (do_spill_rm slot (clear_Sp sl))
+    = add_anns ∅ (cardinal (getSp sl)) (do_spill_rm slot (clear_Sp sl))
 .
 Proof.
   rewrite <- count_clearL.
@@ -149,10 +147,6 @@ Proof.
     eauto.
 Qed.
 
-
-
-
-
 Lemma do_spill_rm_empty
       (slot : var -> var)
       (sl : spilling)
@@ -161,20 +155,19 @@ Lemma do_spill_rm_empty
     -> do_spill_rm slot sl
       = match sl with
         | ann0 _
-          => ann0 None
+          => ann0 ∅
 
         | ann1 _ sl1
-          => ann1 None
+          => ann1 ∅
                   (do_spill_rm slot sl1)
 
         | ann2 _ sl1 sl2
-          => ann2 None
+          => ann2 ∅
                   (do_spill_rm slot sl1)
                   (do_spill_rm slot sl2)
         | annF a slF sl2
-          => annF (Some (slot_merge slot (snd a)))
-                  ((do_spill_rm slot) ⊝ slF)
-                  ( do_spill_rm slot sl2)
+          => annF ∅ (@setTopAnn _ ⊜ (do_spill_rm slot ⊝ slF) (slot_merge slot (snd a)))
+                       (do_spill_rm slot sl2)
         end
 .
 Proof.

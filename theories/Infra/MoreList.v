@@ -843,3 +843,11 @@ Smpl Add 90
        [ H : get _ (?k - S (?k - S (?k - S ?n))) _ |- _ ] =>
        rewrite (get_index_rev k n) in H
      end : inv_get.
+
+Lemma zip_map_eq_ext X Y Z (f : X -> Y -> Z : Type) L L' (Len: ❬L❭ = ❬L'❭) f'
+      (EXTEQ: forall n x x', get L n x -> get L' n x' -> f x x' = f' x')
+  : zip f L L' = List.map f' L'.
+Proof.
+  general induction Len; simpl; eauto.
+  f_equal; eauto using get.
+Qed.

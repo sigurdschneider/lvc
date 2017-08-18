@@ -1,5 +1,6 @@
 Require Import List Map Env AllInRel Exp AppExpFree RenamedApart.
-Require Import IL Annotation AutoIndTac Liveness.Liveness LabelsDefined.
+Require Import IL Annotation AnnotationLattice.
+Require Import AutoIndTac Liveness.Liveness LabelsDefined.
 Require Import SpillSound DoSpill DoSpillRm.
 Require Import SpillUtil ReconstrLive ReconstrLiveSmall.
 Require Import ReconstrLiveG InVD ReconstrLiveUtil.
@@ -233,9 +234,11 @@ Proof.
     rewrite fst_zip_pair by eauto with len.
     econstructor; simpl; eauto.
     + rewrite fst_zip_pair by eauto with len.
-      rewrite slot_merge_app.
       rewrite slot_lift_params_app; eauto with len.
-
+      rewrite getAnn_map_setTopAnn.
+      rewrite Take.take_eq_ge;
+        [|unfold slot_merge; len_simpl; rewrite <- H13, <- H16; omega].
+      rewrite slot_merge_app.
       apply live_sound_monotone with (LV:= slot_merge slot (rms ++ Λ)).
       * eapply IHlvSnd with (ra:=ant) (R:=R\K ∪ L) (M:=Sp ∪ M); eauto.
         -- eapply R'_VD with (R:=R) (M:=M); eauto.
@@ -255,13 +258,13 @@ Proof.
            inv_get; simpl.
            rename x into Zs.
            rename x0 into rm.
-           rename x4 into sl_s.
+           rename x5 into sl_s.
            rename x1 into a.
            rename x2 into al.
-           rename H32 into get_al.
-           rename H31 into get_a.
+           rename H33 into get_al.
+           rename H32 into get_a.
            rename H26 into get_sls.
-           rename H29 into get_Zs.
+           rename H30 into get_Zs.
            rename H5 into get_rm.
 
            rewrite slot_merge_app.
@@ -275,6 +278,8 @@ Proof.
            destruct H15' as [A [B [C E]]].
            assert (rm = (fst rm, snd rm)) as rm_eta by apply pair_eta.
            rewrite rm_eta in H24'.
+           unfold slot_merge in H4. inv_get.
+           rewrite <- reconstr_live_setTopAnn.
            erewrite reconstr_live_small with (VD:=VD)
                                              (ra:=a)
                                              (R:=fst rm)
@@ -291,7 +296,7 @@ Proof.
            ++ eapply getAnn_als_EQ_merge_rms; eauto.
            ++ eapply get_ofl_VD; eauto.
 
-        -- len_simpl. unfold slot_merge. rewrite map_length. reflexivity.
+        -- len_simpl. unfold slot_merge. eauto with len.
     + symmetry.
       apply zip_length2.
       repeat rewrite length_map.
@@ -300,15 +305,19 @@ Proof.
     + intros; inv_get.
       simpl.
       rewrite fst_zip_pair by eauto with len.
+      unfold slot_merge in H5. inv_get.
+      rewrite getAnn_map_setTopAnn.
+      rewrite Take.take_eq_ge;
+        [|unfold slot_merge; len_simpl; rewrite <- H13, <- H16; omega].
       rewrite slot_merge_app.
       rewrite slot_lift_params_app; eauto with len.
-
+      rewrite <- reconstr_live_setTopAnn.
       apply live_sound_monotone with (LV:= slot_merge slot (rms ++ Λ)).
-      * assert ((fst x2, snd x2) = x2)
-          by (destruct x2; simpl; reflexivity).
-        rewrite <- H4 in H30.
+      * assert ((fst x3, snd x3) = x3)
+          by (destruct x3; simpl; reflexivity).
+        rewrite <- H4 in H31.
         exploit H23; eauto.
-        eapply H1 with (ra:=x0) (R:=fst x2) (M:=snd x2); eauto.
+        eapply H1 with (ra:=x0) (R:=fst x3) (M:=snd x3); eauto.
         -- exploit renaF as renaF'; eauto.
            rewrite renaF'; eauto.
         -- eapply getAnn_als_EQ_merge_rms; eauto.
@@ -328,6 +337,7 @@ Proof.
            exploit H23; eauto.
            exploit H9; eauto.
            destruct x5 as [R_f M_f].
+           rewrite <- reconstr_live_setTopAnn.
            erewrite reconstr_live_small with (ra:=x6)
                                              (VD:=VD)
                                              (R:=R_f)
@@ -349,7 +359,7 @@ Proof.
       * split; eauto.
         -- exploit H2; eauto; dcr.
            eapply PIR2_nth in H15; eauto; dcr.
-           destruct x2. eapply NoDupA_slot_lift_params; eauto.
+           destruct x3. eapply NoDupA_slot_lift_params; eauto.
            unfold merge in H33.
            exploit H23; eauto; dcr. eauto with cset.
            rewrite <- M_VD. simpl.
