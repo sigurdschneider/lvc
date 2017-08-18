@@ -104,7 +104,7 @@ def loc(paths, exts=Set.new([".v"]), onlynew=false)
             mt.tloc += loc.to_i
           end
           mt.count += 1
-          print "   #{path}\n", mt.to_s,"\n"
+#          print "   #{path}\n", mt.to_s,"\n"
           @acc[path] += 1
         end
       end
@@ -137,12 +137,13 @@ comp(il, "Coherence", ["theories/Coherence/Coherence.v", "theories/Coherence/Res
 comp(il, "Alpha Equivalence", ["theories/Alpha"])
 
 regalloc = Metrics.new()
+spilling = Metrics.new()
 comp(regalloc, "Register Assignment", ["theories/Coherence/Allocation*", "theories/RegAssign.v", "theories/RenameApartToPart.v"])
-comp(regalloc, "TVRepair", ["theories/Spilling/Repair*", "theories/Spilling/Pick*", "theories/Spilling/LiveMin*", "theories/Spilling/SpillMaxKill*",
+comp(spilling, "TVRepair", ["theories/Spilling/Repair*", "theories/Spilling/Pick*", "theories/Spilling/LiveMin*", "theories/Spilling/SpillMaxKill*",
                             "theories/Spilling/RLive*", "theories/Spilling/RegLive*"])
-comp(regalloc, "ReconstrLive", ["theories/Spilling/Reconstr*"])
-comp(regalloc, "Spilling", ["theories/Spilling"], Set.new([".v"]), false, true)
-
+comp(spilling, "ReconstrLive", ["theories/Spilling/Reconstr*"])
+comp(spilling, "Spilling", ["theories/Spilling"], Set.new([".v"]), false, true)
+regalloc += spilling
 
 @total = Metrics.new()
 comp(@total, "Analyses", ["theories/Analysis", "theories/Liveness", "theories/Reachability"])
@@ -163,7 +164,7 @@ ext.write_tex(@texcmds, "External")
 fund.write_tex(@texcmds, "Foundations")
 il.write_tex(@texcmds, "IntermediateLanguage")
 regalloc.write_tex(@texcmds, "RegisterAllocation")
-
+spilling.write_tex(@texcmds, "SpillingAll")
 
 Find.find("theories/") do |path|
   if File.extname(path) == ".v" then
