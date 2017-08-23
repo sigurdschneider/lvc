@@ -121,52 +121,22 @@ Proof.
       * stuck. inv H2. simpl in *. inv def. simpl in *. inv_get.
 Qed.
 
-
-Lemma whileToILI_correct_while r L E e s p (t:stmt)
-      (IH:forall q (L:IL.I.labenv) E r cont, sawtooth L -> (forall E, (sim r \3/ r) Bisim
-                    (E, q) (L, E, stmtApp (LabI cont) nil))
-                          -> sim r Bisim (E, s ++ q) (L, E, whileToILI s cont))
-      (CONT:forall E, upaco3 (sim_gen (S:=state) (S':=〔IL.I.block〕 * onv val * stmt)) r
-                        Bisim
-                        (E, p)
-                        (IL.I.mkBlock 0 (nil, stmtIf e (whileToILI s 0) t) :: L, E, t))
-      (SM:sawtooth L)
-  :  sim r Bisim (E, WhileWhile e s :: p)
-         (IL.I.mkBlock 0 (nil, stmtIf e (whileToILI s 0) t) :: L,
-          E, stmtApp (LabI 0) nil).
-Proof.
-  revert_all. pcofix CIH. intros.
-  pone_step_right; simpl; eauto using get; simpl.
-  case_eq (op_eval E e); intros.
-  - case_eq (val2bool v); intros.
-    + pfold; eapply SimSilent; [ eapply plus2O; try eapply StepWhileT; eauto
-                               | eapply plus2O; single_step; eauto
-                               | ].
-      left.
-      eapply (IH (WhileWhile e s :: p)).
-      * intros.
-        eapply (sawtooth_I_mkBlocks ((nil, stmtIf e (whileToILI s 0) t)::nil)); eauto.
-      * intros. right. eauto.
-    + pone_step.
-      edestruct CONT; eauto. left. eapply paco3_mon; eauto.
-  - pno_step.
-Qed.
-
 Lemma whileToILI_correct_while' r (L:list IL.I.block) E e s p (t:stmt)
       (IH:forall q (L:IL.I.labenv) E r,
           (exists v, op_eval E e = Some v /\ val2bool v = true) ->
           sawtooth L ->
           (forall E, sim r Bisim
                       (E, q) (L, E, stmtApp (LabI 0) nil))
-          -> sim r Bisim (E, s ++ q) (L, E, stmtIf e (whileToILI s 0) t))
+          -> sim r Bisim (E, s ++ q) (L, E, whileToILI s 0))
       (SM:sawtooth L)
       v (EV:op_eval E e = Some v)
       (TR:val2bool v = true)
-      (CONT:forall E0, upaco3 (sim_gen (S:=state) (S':=IL.I.labenv * onv val * stmt)) r Bisim
+      (CONT:forall E0,
+          sim r Bisim
                    (E0, p) (IL.I.mkBlock 0 (nil, stmtIf e (whileToILI s 0) t) :: L, E0, t))
   :  sim r Bisim (E, s ++ WhileWhile e s :: p)
          (IL.I.mkBlock 0 (nil, stmtIf e (whileToILI s 0) t) :: L, E,
-          stmtIf e (whileToILI s 0) t).
+          whileToILI s 0).
 Proof.
   revert_all. pcofix CIH. intros.
   eapply (IH (WhileWhile e s :: p)); eauto.
@@ -175,15 +145,14 @@ Proof.
   - intros. dcr.
     + case_eq (op_eval E0 e); intros.
       * case_eq (val2bool v0); intros.
-        -- pfold; eapply SimSilent; [ eapply plus2O; try eapply StepWhileT; eauto
+        -- pone_step_right; simpl; eauto using get. simpl.
+           pfold; eapply SimSilent; [ eapply plus2O; try eapply StepWhileT; eauto
                                     | eapply plus2O; single_step; eauto using get
                                     | ].
-           reflexivity. simpl.
            right. eapply CIH; eauto.
         -- pone_step_right; simpl; eauto using get. simpl.
            pone_step; simpl; eauto using get.
-           edestruct CONT; hnf; eauto.
-           left; eapply paco3_mon; eauto.
+           left. eapply paco3_mon. eapply CONT. eauto.
       * pone_step_right; simpl; eauto using get; simpl.
         pno_step.
 Qed.
@@ -226,14 +195,14 @@ Proof.
     pone_step_right.
     + case_eq (op_eval E e); intros.
       * case_eq (val2bool v); intros.
-        -- pfold; eapply SimSilent;
+        -- pone_step_right; simpl; eauto using get. simpl.
+           pfold; eapply SimSilent;
              [ eapply plus2O; try eapply StepWhileT; eauto
              | eapply plus2O; single_step; simpl; eauto using get
              | ]. simpl.
            left.
            eapply whileToILI_correct_while'; eauto.
-           ++ intros. dcr. pone_step_right. eapply IH; eauto.
-           ++ intros. left. eapply IH; eauto.
+           ++ intros. eapply IH; eauto.
              eapply (sawtooth_I_mkBlocks ((nil, stmtIf e (whileToILI s 0) _)::nil)); eauto.
              intros.
              eapply stmtApp_sim_tl; eauto.
