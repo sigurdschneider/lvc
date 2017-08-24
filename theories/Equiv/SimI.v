@@ -422,3 +422,25 @@ Proof.
   eapply ISIM.
   eapply bodies_r_app_r; eauto.
 Qed.
+
+Lemma stmtApp_sim_tl S `{StateType S} (σ:S) r L E cont C
+  : sim r Bisim σ (L, E, stmtApp (LabI cont) nil)
+    -> smaller L
+    -> sim r Bisim σ (C :: L, E, stmtApp (LabI (1 + cont)) nil).
+Proof.
+  intros.
+  destruct (get_dec L cont) as [[? ?]|].
+  - decide (length (block_Z x) = 0).
+    + eapply sim_Y_right; eauto; swap 1 2.
+      * econstructor; eauto using get. reflexivity.
+      * exploit H1; eauto. change (LabI (1 + cont):nat) with (1 + cont).
+        simpl in H2.
+        orewrite (1 + cont - I.block_n x = 1 + (cont - I.block_n x)).
+        simpl. econstructor; eauto. reflexivity. reflexivity.
+    + eapply (sim_stuck_exchange _ H0); eauto.
+      * stuck. inv H2. simpl in *. inv def. simpl in *. inv_get. congruence.
+      * stuck. inv H2. simpl in *. inv def. simpl in *. repeat inv_get. congruence.
+  - eapply (sim_stuck_exchange _ H0); eauto.
+      * stuck. inv H2. simpl in *. inv def. simpl in *. inv_get.
+      * stuck. inv H2. simpl in *. inv def. simpl in *. inv_get.
+Qed.

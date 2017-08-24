@@ -1,4 +1,4 @@
-Require Import Util Option AllInRel Get.
+Require Import Util Option AllInRel Get OptionR.
 Require Export paco3 SmallStepRelations StateType.
 
 Set Implicit Arguments.
@@ -640,4 +640,30 @@ Lemma sim_trans t {S1} `{StateType S1}
   : sim bot3 t σ1 σ2 -> sim bot3 t σ2 σ3 -> sim bot3 t σ1 σ3.
 Proof.
   intros. eauto using (sim_zigzag (S1:=S1) (S2:=S2) (S3:=S3)), star2_refl.
+Qed.
+
+Lemma sim_normal_inv S `{StateType S} (σ:S) S' `{StateType S'} (σ':S') r t
+  : sim r t σ σ'
+    -> normal2 StateType.step σ'
+    -> exists σ'', star2 StateType.step σ nil σ'' /\ normal2 StateType.step σ''
+             /\ fstNoneOrR eq (result σ'') (result σ') .
+Proof.
+  intros. pdestruct H1; subst; relsimpl; eauto.
+  - exfalso. eapply H2. hnf. inv H3; eauto.
+  - eexists; split; eauto. split; eauto. rewrite H1; eauto. econstructor.
+  - eexists; split; eauto. split; eauto. rewrite H1; eauto. reflexivity.
+Qed.
+
+Lemma sim_stuck_exchange S `{StateType S} (σ:S) S' `{StateType S'} (σ':S')
+      S'' `{StateType S''} (σ'':S'') r t r'
+  : sim r t σ σ'
+    -> normal2 StateType.step σ'
+    -> result σ' = None
+    -> normal2 StateType.step σ''
+    -> result σ'' = None
+    -> sim r' t σ σ''.
+Proof.
+  intros. eapply sim_normal_inv in H2; eauto; dcr.
+  pfold. econstructor 4; try eassumption; eauto using star2_refl.
+  rewrite H4 in *. inv H10. congruence.
 Qed.

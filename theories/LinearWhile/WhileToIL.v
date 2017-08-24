@@ -3,7 +3,7 @@ Require Export Util Get Drop Var Val Isa.Op IL.Exp
         Env Map CSet AutoIndTac MoreList OptionMap.
 Require Export IL.Events SizeInduction SmallStepRelations StateType.
 Require Import SetOperations While IL.
-Require Import Sim SimTactics Infra.Status Position ILN Sawtooth Program.Tactics.
+Require Import Sim SimTactics SimI Infra.Status Position ILN Sawtooth Program.Tactics.
 
 
 Program Fixpoint whileToILI (s:list statement) (cont:nat) {measure (size s)} : stmt :=
@@ -69,56 +69,6 @@ Proof.
   unfold whileToILI at 1. unfold whileToILI_func.
   WfExtensionality.unfold_sub whileToILI (whileToILI (WhileWhile e s::p) cont).
    reflexivity.
-Qed.
-
-Require Import OptionR.
-
-Lemma sim_normal_inv S `{StateType S} (σ:S) S' `{StateType S'} (σ':S') r t
-  : sim r t σ σ'
-    -> normal2 StateType.step σ'
-    -> exists σ'', star2 StateType.step σ nil σ'' /\ normal2 StateType.step σ''
-             /\ fstNoneOrR eq (result σ'') (result σ') .
-Proof.
-  intros. pdestruct H1; subst; relsimpl; eauto.
-  - exfalso. eapply H2. hnf. inv H3; eauto.
-  - eexists; split; eauto. split; eauto. rewrite H1; eauto. econstructor.
-  - eexists; split; eauto. split; eauto. rewrite H1; eauto. reflexivity.
-Qed.
-
-Lemma sim_stuck_exchange S `{StateType S} (σ:S) S' `{StateType S'} (σ':S')
-      S'' `{StateType S''} (σ'':S'') r t r'
-  : sim r t σ σ'
-    -> normal2 StateType.step σ'
-    -> result σ' = None
-    -> normal2 StateType.step σ''
-    -> result σ'' = None
-    -> sim r' t σ σ''.
-Proof.
-  intros. eapply sim_normal_inv in H2; eauto; dcr.
-  pfold. econstructor 4; try eassumption; eauto using star2_refl.
-  rewrite H4 in *. inv H10. congruence.
-Qed.
-
-Lemma stmtApp_sim_tl S `{StateType S} (σ:S) r L E cont C
-  : sim r Bisim σ (L, E, stmtApp (LabI cont) nil)
-    -> smaller L
-    -> sim r Bisim σ (C :: L, E, stmtApp (LabI (1 + cont)) nil).
-Proof.
-  intros.
-  destruct (get_dec L cont) as [[? ?]|].
-  - decide (length (block_Z x) = 0).
-    + eapply sim_Y_right; eauto; swap 1 2.
-      * econstructor; eauto using get. reflexivity.
-      * exploit H1; eauto. change (LabI (1 + cont):nat) with (1 + cont).
-        simpl in H2.
-        orewrite (1 + cont - I.block_n x = 1 + (cont - I.block_n x)).
-        simpl. econstructor; eauto. reflexivity. reflexivity.
-    + eapply (sim_stuck_exchange _ _ _ _ _ _ _ _ _ H0); eauto.
-      * stuck. inv H2. simpl in *. inv def. simpl in *. inv_get. congruence.
-      * stuck. inv H2. simpl in *. inv def. simpl in *. repeat inv_get. congruence.
-  - eapply (sim_stuck_exchange _ _ _ _ _ _ _ _ _ H0); eauto.
-      * stuck. inv H2. simpl in *. inv def. simpl in *. inv_get.
-      * stuck. inv H2. simpl in *. inv def. simpl in *. inv_get.
 Qed.
 
 Lemma whileToILI_correct_while' r (L:list IL.I.block) E e s p (t:stmt)
