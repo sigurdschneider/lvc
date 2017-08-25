@@ -16,9 +16,7 @@ Inductive approx
               (RD:forall G, o = Some G ->
                        live_sound Imperative (@List.app _ ⊜ ZL ZAL) Lv (compile ZAL s ans) ans_lv'
                        /\ trs (restr G ⊝ DL) ZAL s ans_lv ans)
-  : length DL = length ZL
-  -> length ZL = length Lv
-  -> approx ZL Lv DL ZAL L1 L2 Z' (getAnn ans_lv') o Za (I.blockI Z' s n) (I.blockI (Z'++Za) (compile ZAL s ans) n).
+  : approx ZL Lv DL ZAL L1 L2 Z' (getAnn ans_lv') o Za (I.blockI Z' s n) (I.blockI (Z'++Za) (compile ZAL s ans) n).
 
 Lemma approx_restrict ZL Lv DL ZAL L L' G
   : inRel approx ZL Lv DL ZAL L L'
@@ -27,7 +25,7 @@ Proof.
   eapply inRel_map_A3.
   intros. inv H. econstructor; eauto with len.
   intros. destruct a3; simpl in *; isabsurd.
-  cases in H2; isabsurd.
+  cases in H0; isabsurd.
   exploit RD; eauto; dcr.
   split; eauto.
   rewrite restrict_idem; eauto.
@@ -39,8 +37,6 @@ Lemma delocation_sim DL ZL ZAL L L' (E E':onv val) s ans Lv' ans_lv ans_lv'
   (EQ: (@feq _ _ eq) E E')
   (LV': live_sound Imperative (app (A:=var) ⊜ ZL ZAL) Lv' (compile ZAL s ans) ans_lv')
   (EDEF: defined_on (getAnn ans_lv') E')
-  (LEN1: length DL = length ZL)
-  (LEN2: length ZL = length Lv')
   : sim bot3 Bisim (L, E, s) (L', E', compile ZAL s ans).
 Proof.
   revert_all. pcofix delocation_sim; intros.
@@ -85,15 +81,15 @@ Proof.
       inRel_invs. inv H12; simpl in *.
       edestruct (omap_var_defined_on Za); eauto.
       eapply get_in_incl. intros.
-      exploit H10; eauto using get_app_right. inv H14; eauto.
+      exploit H10; eauto using get_app_right. inv H7; eauto.
       pone_step. rewrite omap_app.
       erewrite omap_agree with (g:=op_eval E). rewrite H1.
-      simpl. rewrite H9. reflexivity. intros. rewrite EQ; eauto.
+      simpl. rewrite H6. reflexivity. intros. rewrite EQ; eauto.
       simpl. exploit RD0; eauto; dcr.
       right; eapply delocation_sim; eauto using approx_restrict with len.
       * rewrite EQ. rewrite List.map_app.
         rewrite update_with_list_app; eauto with len.
-        rewrite (omap_self_update _ _ H9); reflexivity.
+        rewrite (omap_self_update _ _ H6); reflexivity.
       * eapply defined_on_update_list; eauto with len.
         eapply defined_on_incl; eauto.
     + pno_step.
@@ -112,7 +108,7 @@ Proof.
       * intros; inv_get.
         exploit H8; eauto.
         unfold I.mkBlock. unfold compileF in H15. inv_get. simpl in *.
-        eapply blk_approxI; eauto 20 with len.
+        eapply blk_approxI. eauto 20 with len.
         intros. invc H10. split; eauto.
         rewrite fst_compileF_eq in H5; eauto with len.
         rewrite <- zip_app in H5; eauto with len.
