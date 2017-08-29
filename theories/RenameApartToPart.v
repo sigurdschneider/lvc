@@ -59,7 +59,9 @@ Qed.
 Lemma FG_even_fast_inf_subset fi (x:var)
   :  even_inf_subset_pos (fst (FG_even_fast_pos fi x)).
 Proof.
-  hnf. simpl. destruct fi; simpl. cases; eauto.
+  hnf. simpl. destruct fi; simpl.
+  rewrite <- Even.even_pos_fast_correct.
+  cases; eauto.
 Qed.
 
 Local Arguments succ : simpl never.
@@ -73,8 +75,9 @@ Proof.
   eapply of_list_get_first in H; dcr. invc H1.
   simpl in *.
   inv_get.
+  rewrite <- Even.even_pos_fast_correct.
   rewrite asNat_iter_plus_plus.
-  eapply even_add; eauto. eapply even_mult2.
+  eapply Even.even_add; eauto. eapply Even.even_mult2.
 Qed.
 
 Lemma even_fast_update_even E fi (s:set var) t

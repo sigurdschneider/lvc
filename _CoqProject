@@ -134,6 +134,7 @@ theories/Infra/Computable.v
 theories/Infra/DecSolve.v
 theories/Infra/Drop.v
 theories/Infra/EqDec.v
+theories/Infra/Even.v
 theories/Infra/Filter.v
 theories/Infra/FiniteFixpointIteration.v
 theories/Infra/FreshGenInst.v

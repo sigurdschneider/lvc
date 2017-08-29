@@ -7,41 +7,41 @@ Require Import SimI.
 Section ToLinear.
 
   Parameter (fe: frame_env).
-  Parameter (p:inf_partition).
+  Parameter (p:inf_partition var).
 
   Definition offset_local (x: Z) := fe.(fe_ofs_local) + 4 * x.
-  Definition idx_of_slot (x:var) := Z.of_nat (((x-1)/2)%nat).
+  Definition idx_of_slot (x:var) := Zpos (Pos.div2 (x-1)%positive)%positive.
   Definition toReg (x:var) :=
-    match ((x/2)%nat) with
-    | (0%nat) => R3
-    | (1%nat) => R4
-    | (2%nat) => R5
-    | (3%nat) => R6
-    | (4%nat) => R7
-    | (5%nat) => R8
-    | (6%nat) => R9
-    | (7%nat) => R10
-    | (8%nat) => R11
-    | (9%nat) => R12
-    | (10%nat) => R14
-    | (11%nat) => R15
-    | (12%nat) => R16
-    | (13%nat) => R17
-    | (14%nat) => R18
-    | (15%nat) => R19
-    | (16%nat) => R20
-    | (17%nat) => R21
-    | (18%nat) => R22
-    | (19%nat) => R23
-    | (20%nat) => R24
-    | (21%nat) => R25
-    | (22%nat) => R26
-    | (23%nat) => R27
-    | (24%nat) => R28
-    | (25%nat) => R29
-    | (26%nat) => R30
+    match Pos.div2 x with
+    | (1%positive) => R3
+    | (2%positive) => R4
+    | (3%positive) => R5
+    | (4%positive) => R6
+    | (5%positive) => R7
+    | (6%positive) => R8
+    | (7%positive) => R9
+    | (8%positive) => R10
+    | (9%positive) => R11
+    | (10%positive) => R12
+    | (11%positive) => R14
+    | (12%positive) => R15
+    | (13%positive) => R16
+    | (14%positive) => R17
+    | (15%positive) => R18
+    | (16%positive) => R19
+    | (17%positive) => R20
+    | (18%positive) => R21
+    | (19%positive) => R22
+    | (20%positive) => R23
+    | (21%positive) => R24
+    | (22%positive) => R25
+    | (23%positive) => R26
+    | (24%positive) => R27
+    | (25%positive) => R28
+    | (26%positive) => R29
+    | (27%positive) => R30
     | _ => R31 (* *)
-    end.            
+    end.
 
   Inductive simplOp : op -> Prop :=
   | SCon v : simplOp (Con v)
@@ -58,14 +58,14 @@ Section ToLinear.
   Definition sop := {e:op | simplOp e}.
 
   Definition sexp := {e:exp | simplExp e}.
-  
+
   Inductive letKind :=
   | LetLoad (src:Z) (dst:mreg)
   | LetStore (src:mreg) (dst:Z)
   | LetOpr (o:Op.operation) (srcs:list mreg) (dst:mreg)
   | LetError.
 
-  Definition isReg x := even x.
+  Definition isReg x := Even.even_pos_fast x.
 
   Definition getLetOp (r:mreg) (e:op) : letKind :=
     match e with
@@ -85,32 +85,32 @@ Section ToLinear.
        | BinOpLt  => LetOpr (Op.Ocmp (Op.Ccomp Clt))
        end (toReg y1 :: toReg y2 :: nil) r
      | Var y =>
-       if isReg y
+       if [ isReg y ]
        then LetOpr Op.Omove (toReg y :: nil) r
        else LetError
      | _ => LetError
     end
   .
-  
+
   Definition getLetKind (x:var) (e:op) : letKind
-    := if isReg x
+    := if [ isReg x ]
        then let dst := toReg x in
             match e with
-            | Var y => if isReg y
+            | Var y => if [ isReg y ]
                       then LetOpr (Op.Omove) (toReg y :: nil) dst
-                      else LetLoad (Z.of_nat y) dst
+                      else LetLoad (Zpos y) dst
             | _ => getLetOp dst e
             end
        else match e with
-            | Var y => if isReg y
-                      then LetStore (toReg y) (Z.of_nat x)
+            | Var y => if [ isReg y ]
+                      then LetStore (toReg y) (Zpos x)
                       else LetError
             | _ => LetError
             end
   .
 
   Definition dummyinstr := Lop Op.Omove (R3::nil) R3.
-  
+
   Definition toLinearCond (l:label) (e:op) : instruction :=
     match e with
     | Var y => Lcond (Op.Ccompimm Cne Int.zero) (toReg y :: nil) l
@@ -143,7 +143,7 @@ Section ToLinear.
       let (csq, lc) := toLinear Λ l' s in
       let (alt, la) := toLinear Λ lc t in
       (toLinearCond l' e
-                    :: alt (* we don't need to jump out, 
+                    :: alt (* we don't need to jump out,
                               because alt's last intstruction is either Lreturn or Lgoto *)
                     ++ Llabel l' :: csq,
        la) (* missing jump & label *)
@@ -265,7 +265,7 @@ Proof.
   hnf; intros.
   inv H; inv H0; eauto.
   - inv H1; inv H2; congr; clear_trivial_eqs; try now (split; eauto; congr; try congruence).
-    
+
   - inv H1; inv H2; exfalso; repeat (congr; clear_trivial_eqs).
 Qed.
 
@@ -283,20 +283,94 @@ Instance LinearStateType G : StateType Linear.state :=
   @Build_StateType _ (linear_step_adapter G) linear_result (linear_reddec2 G)
                    (linear_int_det G) (linear_ext_det G).
 
-  Lemma toLinear_correct r (L:I.labenv) I (V:onv val) s bv vv rs m G
-    : @sim _ _ Linear.state (LinearStateType G) r Sim (L, V, s)
-           ((State nil bv vv (fst (toLinear I s)) rs m):Linear.state).
-  Proof.
-    destruct s; simpl.
-    - destruct e; simpl.
-      + let_pair_case_eq. simpl_pair_eqs. subst.
-        case_eq (op_eval V e); intros.
-        * pfold; eapply SimSilent; [ eapply plus2O; single_step
-                              | 
-                              | ].
-          
-
-  Admitted.
+Lemma toLinear_correct r (L:I.labenv) I l (V:onv val) s bv vv rs m G
+  : @sim _ _ Linear.state (LinearStateType G) r Sim (L, V, s)
+         ((State nil bv vv (fst (toLinear I l s)) rs m):Linear.state).
+Proof.
+  revert L I l V s vv rs m r. pcofix CIH; intros.
+  destruct s; simpl.
+  - assert (SE:simplExp e) by admit.
+    hnf in SE.
+    destruct e; simpl.
+    + let_pair_case_eq. simpl_pair_eqs. subst.
+      case_eq (op_eval V e); intros.
+      * inv SE; simpl; unfold getLetKind; simpl; cases; simpl.
+        -- pfold; eapply SimSilent; [ eapply plus2O; single_step
+                                    | eapply plus2O; [ | eauto ]
+                                    | ].
+           econstructor. econstructor. reflexivity.
+           reflexivity.
+           right. eapply CIH.
+        -- pfold; eapply SimSilent; [ eapply plus2O; single_step
+                                    | eapply plus2O; [ | eauto ]
+                                    | ].
+           econstructor. econstructor. reflexivity.
+           reflexivity.
+           right. eapply CIH.
+        -- cases.
+           pfold; eapply SimSilent; [ eapply plus2O; single_step
+                                    | eapply plus2O; [ | eauto ]
+                                    | ].
+           econstructor. econstructor. reflexivity. reflexivity.
+           right. eapply CIH.
+           pfold; eapply SimSilent; [ eapply plus2O; single_step
+                                    | eapply plus2O; [ | eauto ]
+                                    | ].
+           econstructor. econstructor. reflexivity.
+           right. eapply CIH.
+        -- cases.
+           pfold; eapply SimSilent; [ eapply plus2O; single_step
+                                    | eapply plus2O; [ | eauto ]
+                                    | ].
+           econstructor. econstructor. reflexivity.
+           right. eapply CIH.
+           pfold; eapply SimSilent; [ eapply plus2O; single_step
+                                    | eapply plus2O; [ | eauto ]
+                                    | ].
+           econstructor. econstructor. reflexivity. reflexivity.
+           right. eapply CIH.
+        -- pfold; eapply SimSilent; [ eapply plus2O; single_step
+                                    | eapply plus2O; [ | eauto ]
+                                    | ].
+           econstructor. econstructor. reflexivity. reflexivity.
+           right. eapply CIH.
+        -- pfold; eapply SimSilent; [ eapply plus2O; single_step
+                                    | eapply plus2O; [ | eauto ]
+                                    | ].
+           econstructor. econstructor. reflexivity. reflexivity.
+           right. eapply CIH.
+        -- destruct bop;
+           try (pfold; eapply SimSilent; [ eapply plus2O; single_step
+                                    | eapply plus2O; [ econstructor; econstructor; reflexivity | eauto ]
+                                    | ];
+                right; eapply CIH).
+           pfold; eapply SimSilent; [ eapply plus2O; single_step
+                                    | eapply plus2O; [ | eauto ]
+                                    | ].
+           econstructor. econstructor. simpl.
+           simpl in *. monad_inv H.
+           admit. reflexivity.
+           right; eapply CIH.
+        -- pfold; eapply SimSilent; [ eapply plus2O; single_step
+                                    | eapply plus2O; [ | eauto ]
+                                    | ].
+           econstructor. econstructor. reflexivity.
+           reflexivity.
+           right. eapply CIH.
+      * admit.
+    + admit.
+  - repeat (let_pair_case_eq; simpl_pair_eqs); subst. simpl.
+    case_eq (op_eval V e); intros.
+    + case_eq (val2bool v); intros.
+      admit.
+      admit.
+    + admit.
+  - admit.
+  - admit.
+  - let_pair_case_eq; simpl_pair_eqs; subst.
+    let_pair_case_eq; simpl_pair_eqs; subst.
+    admit.
+Qed.
 
 
 
@@ -330,7 +404,7 @@ Definition semantics (s: stmt) :=
 
 
 Lemma transf_initial_states s:
-  exists st2, Linear.initial_state (transf_program s) st2. 
+  exists st2, Linear.initial_state (transf_program s) st2.
 Proof.
   intros.
   exploit Genv.init_mem_exists; eauto.

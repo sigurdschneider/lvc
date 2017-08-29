@@ -1,4 +1,4 @@
-Require Import Util CSet NaturalRep FreshNR StableFresh.
+Require Import Util CSet NaturalRep FreshNR StableFresh Even.
 
 Set Implicit Arguments.
 
@@ -38,41 +38,11 @@ Proof.
     pose proof (part_disj p x); cset_tac.
 Qed.
 
-Fixpoint even (n:nat) : bool :=
-  match n with
-  | 0 => true
-  | S 0 => false
-  | S (S n) => even n
-  end.
-
-Lemma even_or_successor x
-  : even x \/ even (1 + x).
-Proof.
-  induction x; eauto.
-  destruct IHx; eauto.
-Qed.
-
 Definition even_inf_subset : inf_subset nat.
 Proof.
   refine (@Build_inf_subset _ _ even _ _).
   - intros. cbn. destruct (even_or_successor (S x)); eauto.
 Defined.
-
-Definition odd := (fun x => negb (even x)).
-
-Lemma even_or_odd (x:nat)
-  : even x + odd x.
-Proof.
-  unfold odd. destruct (even x); eauto.
-Qed.
-
-Lemma even_not_even x
-  : even x = negb (even (S x)).
-Proof.
-  general induction x; eauto.
-  - simpl even at 2.
-    destruct (even x); destruct (even (S x)); simpl in *; intuition.
-Qed.
 
 Definition odd_inf_subset : inf_subset nat.
 Proof.
@@ -99,27 +69,32 @@ Qed.
 
 Definition even_inf_subset_pos : inf_subset positive.
 Proof.
-  refine (@Build_inf_subset _ _ (fun x => even (asNat x)) _ _).
+  refine (@Build_inf_subset _ _ even_pos_fast _ _).
   - intros. cbn. destruct (even_or_successor (S (asNat x))); eauto.
     + exists (ofNat (S (asNat x))). nr. split; eauto.
+      rewrite <- even_pos_fast_correct.
+      nr. eauto.
       unfold ofNat, asNat. simpl. nr. omega.
     + exists (ofNat (S (S (asNat x)))). nr. split; eauto.
+      rewrite <- even_pos_fast_correct.
+      nr. eauto.
       unfold ofNat, asNat. simpl. nr. omega.
 Defined.
 
 Definition odd_inf_subset_pos : inf_subset positive.
 Proof.
-  refine (@Build_inf_subset _ _ (fun x => odd (asNat x)) _ _).
+  refine (@Build_inf_subset _ _ (fun x => negb (even_pos_fast x)) _ _).
   - cbn. unfold odd. intros.
     destruct (even_or_successor (asNat x)); eauto.
-    + eexists (ofNat (S (asNat x))). nr. rewrite <- even_not_even.
-      split; eauto.
+    + eexists (ofNat (S (asNat x))). nr.
+      rewrite <- even_pos_fast_correct. nr. split.
+      rewrite <- even_not_even. eauto.
       unfold ofNat, asNat. simpl. nr. omega.
     + eexists (ofNat (S (S (asNat x)))); simpl.
-      rewrite even_not_even in H. nr.  split; eauto.
+      rewrite even_not_even in H. nr. split; eauto.
+      rewrite <- even_pos_fast_correct. nr. eauto.
       unfold ofNat, asNat. simpl. nr. omega.
 Defined.
-
 
 Definition even_part_pos : inf_partition positive.
 Proof.
@@ -130,6 +105,7 @@ Proof.
     unfold odd in H0. unfold negb in H0. cases in H0; eauto.
   - intros.
     unfold even_inf_subset, odd_inf_subset, odd, negb; simpl.
+    rewrite <- even_pos_fast_correct.
     eapply even_or_odd.
 Qed.
 

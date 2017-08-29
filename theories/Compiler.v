@@ -158,13 +158,14 @@ Proof.
       simpl. clear_all. cset_tac.
 Qed.
 
-Definition slt (D:set var) (EV:For_all (fun x => even (asNat x)) D)
+Definition slt (D:set var) (EV:For_all Even.even_pos_fast D)
   : Slot D.
   refine (@Build_Slot _ succ _ _).
   - hnf; intros.
     eapply EV in H.
     cset_tac'. eapply EV in H0.
-    rewrite even_not_even in H. nr. cset_tac.
+    rewrite <- Even.even_pos_fast_correct in *.
+    rewrite Even.even_not_even in H. nr. cset_tac.
   - hnf; intros. eapply succ_inj; eauto.
 Defined.
 
@@ -285,7 +286,7 @@ Proof.
     eapply DCVE_paramsMatch; eauto.
   }
 
-  assert (EV:For_all (fun n : var => even (asNat n))
+  assert (EV:For_all Even.even_pos_fast
                      (fst (getAnn (DCVEra Liveness.Imperative (fst sra)
                                           (rename_apart_to_part_ra FGS_even_fast_pos s_eae)))
                           ∪ snd (getAnn (DCVEra Liveness.Imperative (fst sra)
