@@ -1,78 +1,94 @@
-Require Import CSet Le Arith.Compare_dec.
-Require Import Plus Util Map Get Take LengthEq SafeFirst.
-Require Export PidgeonHole StableFresh OrderedTypeMax.
+Require Import CSet Var.
+Require Import Util Map Get Take LengthEq SafeFirst.
+Require Export StableFresh VarsUpTo LeastFresh FreshList NaturalRep PidgeonHole.
 
 Set Implicit Arguments.
 
-Section LeastFresh.
-  Variable V : Type.
-  Context `{NaturalRepresentationSucc V}.
-  Context `{@NaturalRepresentationMax V H H0}.
-
-  Definition fresh (s : set V) : V :=
-    succ (fold max s (ofNat 0)).
-
-  Lemma max_transpose
-    : transpose _eq max.
-  Proof.
-    hnf; intros.
-    rewrite !max_asNat.
-    rewrite !asNat_ofNat.
-    rewrite Max.max_comm. rewrite <- Max.max_assoc.
-    setoid_rewrite Max.max_comm at 2. reflexivity.
-  Qed.
-
-  Lemma fold_max_lt (G:set V)
-    : forall (x:V), x ∈ G -> _lt x (succ (fold max G (ofNat 0))).
-  Proof.
-    pattern G. pattern (fold max G (ofNat 0)). eapply fold_rec.
-    - cset_tac.
-    - intros ? ? ? ? IN NOTIN ADD LT y yIn.
-      eapply ADD in yIn. destruct yIn.
-      + rewrite fold_2; eauto.
-        * rewrite <- H3.
-          nr.
-          eapply Peano.le_n_S.
-          eapply Nat.max_le_iff. left. reflexivity.
-        * eapply max_proper.
-        * eapply max_transpose.
-      + rewrite fold_2; eauto.
-        * exploit LT; eauto.
-          nr.
-          eapply Peano.le_n_S.
-          rewrite Nat.max_le_iff. right. omega.
-        * eapply max_proper.
-        * eapply max_transpose.
-  Qed.
-
-  Lemma fresh_spec G : fresh G ∉ G.
-  Proof.
-    intro A. unfold fresh in A.
-    pose proof (fold_max_lt A) as B.
-    eapply lt_antirefl in B; eauto.
-  Qed.
-
-  Lemma fresh_variable_always_exists (lv:set V) n
-    : safe (fun x => x ∉ lv) n.
-  Proof.
-    - decide (_lt (fold max lv (ofNat 0)) n).
-      + econstructor; intro.
-        exploit fold_max_lt. cset_tac.
-        nr.
+Lemma all_in_lv_cardinal (lv:set var) n
+  : (forall m, _lt m n -> m \In lv) -> cardinal lv >= pred (Pos.to_nat n).
+Proof.
+  revert lv.
+  induction n using Pos.peano_ind; simpl; intros.
+  - omega.
+  - exploit (IHn (lv \ singleton n)).
+    + intros. cset_tac'.
+      * eapply H. etransitivity; eauto. nr.
         omega.
-      + eapply safe_antitone with (n:=succ (fold max lv (ofNat 0))).
-        * unfold Proper, respectful. intros. rewrite H3. reflexivity.
-        * econstructor. intro. exploit fold_max_lt; eauto.
-          cset_tac. nr. omega.
-        * nr. omega.
-  Qed.
+      * eapply OrderedType.StrictOrder_Irreflexive in H0. eauto.
+    + assert (EQ:lv [=] {n; lv \ singleton n }). {
+        exploit (H n); eauto. nr. omega.
+        cset_tac.
+      }
+      rewrite EQ.
+      assert (n ∉ lv \ singleton n) by cset_tac.
+      erewrite cardinal_2; eauto. nr. omega.
+Qed.
 
-  Definition least_fresh_gen (lv:set V) : V.
-    refine (@safe_first _ _ _ _ (fun x => x ∉ lv) _ (ofNat 0) _).
-    - eapply fresh_variable_always_exists.
-  Defined.
+Definition fresh (s : set var) : var :=
+  Pos.succ (fold Pos.max s 1%positive).
 
-  (*
+Lemma max_transpose
+  : transpose _eq Pos.max.
+Proof.
+  hnf; intros. hnf.
+  rewrite Pos.max_comm.
+  rewrite <- Pos.max_assoc.
+  setoid_rewrite Pos.max_comm at 2. reflexivity.
+Qed.
+
+Lemma fold_max_lt (G:set var)
+  : forall (x:var), x ∈ G -> _lt x (Pos.succ (fold Pos.max G 1%positive)).
+Proof.
+  pattern G. pattern (fold Pos.max G 1%positive). eapply fold_rec.
+  - cset_tac.
+  - intros ? ? ? ? IN NOTIN ADD LT y yIn.
+    eapply ADD in yIn. destruct yIn.
+    + rewrite fold_2; eauto.
+      * rewrite <- H.
+        eapply inj_lt. nr.
+        decide ((Pos.to_nat x) < (Pos.to_nat (fold Pos.max s' 1%positive))).
+        -- rewrite Max.max_r; eauto. omega.
+        -- rewrite Max.max_l; eauto. omega.
+      * intuition.
+      * eapply max_transpose.
+    + rewrite fold_2; eauto using max_transpose.
+      * exploit LT; eauto.
+        eapply inj_lt. eapply inj_lt in H0. nr.
+        decide ((Pos.to_nat x) <= (Pos.to_nat (fold Pos.max s' 1%positive))).
+        rewrite Max.max_r; eauto.
+        rewrite Max.max_l; omega.
+      * intuition.
+Qed.
+
+Lemma fresh_spec G : fresh G ∉ G.
+Proof.
+  intro A. unfold fresh in A.
+  pose proof (fold_max_lt A) as B.
+  eapply lt_antirefl in B; eauto.
+Qed.
+
+Lemma fresh_variable_always_exists (lv:set var) n
+  : safe (fun x => x ∉ lv) n.
+Proof.
+  - decide (_lt (fold Pos.max lv (Pos.of_succ_nat 0)) n).
+    + econstructor; intro.
+      exploit fold_max_lt. cset_tac.
+      exfalso. simpl in *. nr.
+      omega.
+    + eapply safe_antitone with (n:=Pos.succ (fold Pos.max lv (Pos.of_succ_nat 0))).
+      * unfold Proper, respectful. intros. rewrite H. reflexivity.
+      * econstructor. intro. exploit fold_max_lt; eauto.
+        cset_tac.
+        exfalso. simpl in *. nr. omega.
+      * simpl in *. nr. omega.
+Qed.
+
+Definition least_fresh_gen (lv:set var) : var.
+  refine (@safe_first _ _ _ _ (fun x => x ∉ lv) _ (Pos.of_succ_nat 0) _).
+  - eapply fresh_variable_always_exists.
+Defined.
+
+(*
   Lemma all_in_lv_cardinal (lv:set nat) n
     : (forall m : nat, m < n -> m \In lv) -> cardinal lv >= n.
   Proof.
@@ -95,143 +111,48 @@ Section LeastFresh.
     intros. exploit (@all_in_lv_cardinal lv (S (cardinal lv))).
     intros; eapply H; eauto. omega. omega.
   Qed.
-   *)
+ *)
 
-  Lemma least_fresh_full_spec G
-    : least_fresh_gen G ∉ G
-      /\ asNat (least_fresh_gen G) <= cardinal G
-      /\ forall m, _lt m (least_fresh_gen G) -> m ∈ G.
-  Proof.
-    unfold least_fresh_gen.
-    eapply safe_first_spec
-      with (I:= fun n => le (asNat n) (cardinal G) /\ forall m, _lt m n -> m ∈ G).
-    - intros ? [A B] NOTIN.
-      assert (IN:n ∈ G) by cset_tac. clear NOTIN.
-      split.
-      + eapply all_in_lv_cardinal.
-        intros. decide (x === n); try rewrite e in *; eauto; nr.
-        eapply B. omega.
-      + intros. decide (m === n); try rewrite e in *; eauto; nr.
-        eapply B. omega.
-    - intuition.
-    - split; intros; nr; omega.
-  Qed.
-
-  Lemma least_fresh_gen_ext (G G':set V)
-    : G [=] G'
-      -> least_fresh_gen G = least_fresh_gen G'.
-  Proof.
-    intros. unfold least_fresh_gen.
-    eapply safe_first_ext; eauto.
-    split; intros.
-    - rewrite <- H3; eauto.
-    - rewrite H3; eauto.
-  Qed.
-
-End LeastFresh.
-
-Require LeastFresh.
-
-
-(*
-Lemma least_fresh_spec G
-: least_fresh G ∉ G.
+Lemma least_fresh_full_spec G
+  : least_fresh_gen G ∉ G
+    /\ pred (Pos.to_nat (least_fresh_gen G)) <= cardinal G
+    /\ forall m, _lt m (least_fresh_gen G) -> m ∈ G.
 Proof.
-  eapply least_fresh_full_spec.
+  unfold least_fresh_gen.
+  eapply safe_first_spec
+    with (I:= fun n => le (pred (Pos.to_nat n)) (cardinal G) /\ forall m, _lt m n -> m ∈ G).
+  - intros ? [A B] NOTIN.
+    assert (IN:n ∈ G) by cset_tac. clear NOTIN.
+    split.
+    + eapply all_in_lv_cardinal.
+      intros. decide (Pos.to_nat m = Pos.to_nat n); try rewrite e in *; eauto.
+      * eapply Pos2Nat.inj in e. subst; eauto.
+      * unfold NaturalRep.succ in *. simpl in *.
+        eapply B. nr. omega.
+    + intros. decide (Pos.to_nat m = Pos.to_nat n); try rewrite e in *; eauto.
+      * eapply Pos2Nat.inj in e. subst; eauto.
+      * unfold NaturalRep.succ in *. simpl in *.
+        eapply B. nr. omega.
+  - intuition.
+  - split; intros; simpl in *. omega.
+    exfalso.
+    eapply Pos.nlt_1_r in H; eauto.
 Qed.
 
-Lemma least_fresh_small (G:set nat)
-: least_fresh G <= cardinal G.
+Lemma least_fresh_gen_ext (G G':set var)
+  : G [=] G'
+    -> least_fresh_gen G = least_fresh_gen G'.
 Proof.
-  unfold least_fresh. simpl.
-  eapply LeastFreshNat.least_fresh_full_spec.
+  intros. unfold least_fresh_gen.
+  eapply safe_first_ext; eauto.
+  split; intros.
+  - rewrite <- H; eauto.
+  - rewrite H; eauto.
 Qed.
 
-Lemma least_fresh_smallest G
-: forall m, m < least_fresh G -> m ∈ G.
-Proof.
-  eapply least_fresh_full_spec.
-Qed.
-
-Definition fresh_stable (lv:set nat) (x:nat) : nat :=
-  if [x ∉ lv] then x else fresh lv.
-
-Lemma fresh_stable_spec G x
-      : fresh_stable G x ∉ G.
-Proof.
-  unfold fresh_stable. cases; eauto using fresh_spec.
-Qed.
-*)
-
-Section FreshList.
-  Variable V : Type.
-  Context `{OrderedType V}.
-  Variable fresh : set V -> V.
-
-  Fixpoint fresh_list (G:set V) (n:nat) : list V :=
-    match n with
-      | 0 => nil
-      | (S n) => let y := fresh G in y::fresh_list {y;G} n
-    end.
-
-  Lemma fresh_list_length (G:set V) n
-  : length (fresh_list G n) = n.
-  Proof.
-    general induction n; eauto. simpl. f_equal; eauto.
-  Qed.
-
-  Hypothesis fresh_spec : forall G, fresh G ∉ G.
-
-  Definition fresh_set (G:set V) L : set V :=
-    of_list (fresh_list G L).
-
-  Lemma fresh_list_spec : forall (G:set V) n, disj (of_list (fresh_list G n)) G.
-  Proof.
-    intros. general induction n; simpl; intros; eauto.
-    - hnf; intros. cset_tac'.
-      + rewrite <- H2 in H1. eauto.
-      + specialize (H0 ({fresh G; G})).
-        eapply H0; eauto.
-        cset_tac.
-  Qed.
-
-  Lemma fresh_set_spec
-  : forall (G:set V) L, disj (fresh_set G L) G.
-  Proof.
-    unfold fresh_set. eapply fresh_list_spec.
-  Qed.
-
-  Lemma fresh_list_nodup (G: set V) n
-    : NoDupA eq (fresh_list G n).
-  Proof.
-    general induction n; simpl; eauto.
-    econstructor; eauto. intro.
-    eapply fresh_list_spec.
-    eapply InA_eq_of_list; eauto.
-    cset_tac.
-  Qed.
-
-  Lemma fresh_list_ext n G G'
-    : (forall G G', G [=] G' -> fresh G = fresh G')
-      -> G [=] G'
-      -> fresh_list G n = fresh_list G' n.
-  Proof.
-    intros EXT EQ. general induction n; simpl.
-    - reflexivity.
-    - f_equal. eauto.
-      eapply IHn; eauto.
-      erewrite EXT, EQ; eauto; reflexivity.
-  Qed.
-
-End FreshList.
-
-Hint Resolve fresh_list_length : len.
-
-Require Import LeastFresh.
-
-Instance LeastFreshNat : LeastFresh.LeastFresh nat :=
+Instance LeastFreshNat : LeastFresh.LeastFresh var :=
   {
-    least_fresh := @least_fresh_gen nat _ NaturalRepresentationNat _ _
+    least_fresh := @least_fresh_gen
   }.
 Proof.
   - intros. eapply least_fresh_full_spec.
@@ -240,18 +161,17 @@ Proof.
 Qed.
 
 
-
-Lemma least_fresh_list_small X `{LeastFresh X} (G:set X) n
-: forall i x, get (fresh_list least_fresh G n) i x -> asNat x < cardinal G + n.
+Lemma least_fresh_list_small (G:set var) n
+  : forall i x, get (fresh_list least_fresh G n) i x -> pred (Pos.to_nat x) < cardinal G + n.
 Proof.
   general induction n; simpl in *; isabsurd.
-  - invc H2.
+  - invc H.
     + clear IHn.
       pose proof (least_fresh_least G).
-      eapply all_in_lv_cardinal in H2.
+      eapply all_in_lv_cardinal in H.
       omega.
     + exploit IHn; eauto.
-      erewrite cardinal_2 with (s:=G) in H2. omega.
+      erewrite cardinal_2 with (s:=G) in H. omega.
       eapply (least_fresh_spec). cset_tac.
 Qed.
 
@@ -265,72 +185,16 @@ Proof.
   eapply least_fresh_ext.
 Qed.
 
-Fixpoint nats_up_to (n:nat) :=
-  match n with
-    | S n => {n; nats_up_to n}
-    | 0 => ∅
-  end.
-
-Lemma in_nats_up_to n m
-: n < m -> n ∈ nats_up_to m.
-Proof.
-  intros. general induction H.
-  - simpl. cset_tac; intuition.
-  - inv H; simpl in * |- *; cset_tac; intuition.
-Qed.
-
-Lemma in_nats_up_to' n m
-: n <= m -> n ∈ nats_up_to (m + 1).
-Proof.
-  intros. eapply in_nats_up_to. omega.
-Qed.
-
-Lemma nats_up_to_incl n m
-: n <= m -> nats_up_to n ⊆ nats_up_to m.
-Proof.
-  intros. general induction H; eauto.
-  simpl. rewrite IHle. cset_tac; intuition.
-Qed.
-
-Lemma least_fresh_list_small_nats_up_to G n
-: of_list (fresh_list least_fresh G n) ⊆ nats_up_to (cardinal G + n).
+Lemma least_fresh_list_small_vars_up_to (G:set var) (n:nat)
+  : of_list (fresh_list least_fresh G n) ⊆ vars_up_to (Pos.of_succ_nat (cardinal G + n)).
 Proof.
   eapply get_in_incl; intros.
-  eapply in_nats_up_to.
+  eapply in_vars_up_to.
   eapply least_fresh_list_small in H; eauto.
-Qed.
-
-Lemma nats_up_to_max n m
-: nats_up_to (max n m) [=] nats_up_to n ∪ nats_up_to m.
-Proof.
-  general induction n; unfold max; simpl.
-  - cset_tac.
-  - destruct m; simpl.
-    + clear_all; cset_tac.
-    + rewrite IHn.
-      decide (n < m).
-      * rewrite max_r; eauto; try omega.
-        assert (n ∈ nats_up_to m); eauto using in_nats_up_to.
-        cset_tac.
-      * assert (m <= n) by omega.
-        rewrite max_l; eauto.
-        cset_tac'. exfalso.
-        assert (n <> a). intro. eapply n1; subst; eauto.
-        idtac "improve".
-        exploit (@in_nats_up_to a n); eauto.
-        omega.
-Qed.
-
-Lemma nats_up_to_in x i
-  : x < i <-> x ∈ nats_up_to i.
-Proof.
-  induction i; simpl.
-  - split. omega. cset_tac.
-  - decide (x = i); subst.
-    + split. cset_tac. omega.
-    + split; intros.
-      -- cset_tac'. eapply H0. omega.
-      -- cset_tac'.
+  rewrite <- Pos.succ_of_nat.
+  - eapply inj_lt.
+    rewrite Pos2Nat.inj_succ. rewrite Nat2Pos.id. omega. omega.
+  - omega.
 Qed.
 
 

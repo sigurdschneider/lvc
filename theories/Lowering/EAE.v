@@ -15,7 +15,7 @@ Fixpoint compile s {struct s}
     | stmtApp l Y  =>
       let Y' := List.filter NotVar Y in
       let xl := @fresh_list var _
-                           (@fresh var _ _ _ _)
+                           fresh
                            (list_union (List.map Op.freeVars Y)) (length Y') in
       list_to_stmt xl Y' (stmtApp l (replace_if NotVar Y (Var ⊝ xl)))
     | stmtReturn x => stmtReturn x

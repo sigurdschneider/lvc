@@ -1,4 +1,4 @@
-Require Import Util CSet Fresh.
+Require Import Util CSet NaturalRep FreshNR StableFresh.
 
 Set Implicit Arguments.
 
@@ -97,17 +97,14 @@ Proof.
     cases; eauto.
 Qed.
 
-
 Definition even_inf_subset_pos : inf_subset positive.
 Proof.
   refine (@Build_inf_subset _ _ (fun x => even (asNat x)) _ _).
   - intros. cbn. destruct (even_or_successor (S (asNat x))); eauto.
     + exists (ofNat (S (asNat x))). nr. split; eauto.
-      change (_lt x (ofNat (S (asNat x)))).
-      rewrite <- (@order_respecting' positive _). nr. omega.
+      unfold ofNat, asNat. simpl. nr. omega.
     + exists (ofNat (S (S (asNat x)))). nr. split; eauto.
-      change (_lt x (ofNat (S (S (asNat x))))).
-      rewrite <- (@order_respecting' positive _). nr. omega.
+      unfold ofNat, asNat. simpl. nr. omega.
 Defined.
 
 Definition odd_inf_subset_pos : inf_subset positive.
@@ -116,13 +113,11 @@ Proof.
   - cbn. unfold odd. intros.
     destruct (even_or_successor (asNat x)); eauto.
     + eexists (ofNat (S (asNat x))). nr. rewrite <- even_not_even.
-      split; eauto. change (_lt x (ofNat (S (asNat x)))).
-      eapply order_respecting'.
-      nr. omega.
+      split; eauto.
+      unfold ofNat, asNat. simpl. nr. omega.
     + eexists (ofNat (S (S (asNat x)))); simpl.
       rewrite even_not_even in H. nr.  split; eauto.
-      change (_lt x (ofNat (S (S (asNat x))))).
-      eapply order_respecting'. nr. omega.
+      unfold ofNat, asNat. simpl. nr. omega.
 Defined.
 
 

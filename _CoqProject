@@ -138,6 +138,8 @@ theories/Infra/Filter.v
 theories/Infra/FiniteFixpointIteration.v
 theories/Infra/FreshGenInst.v
 theories/Infra/FreshGen.v
+theories/Infra/FreshList.v
+theories/Infra/FreshNR.v
 theories/Infra/Fresh.v
 theories/Infra/Get.v
 theories/Infra/Indexwise.v
@@ -155,6 +157,7 @@ theories/Infra/MoreInversion.v
 theories/Infra/MoreListSet.v
 theories/Infra/MoreList.v
 theories/Infra/MoreTac.v
+theories/Infra/NaturalRep.v
 theories/Infra/NRange.v
 theories/Infra/OptionMap.v
 theories/Infra/OptionPO.v
@@ -179,11 +182,14 @@ theories/Infra/TakeSet.v
 theories/Infra/Take.v
 theories/Infra/Terminating.v
 theories/Infra/Util.v
+theories/Infra/VarsUpTo.v
 theories/Infra/WithTop.v
 theories/Isa/BitVector.v
 theories/Isa/Op.v
 theories/Isa/OrderedBitVector.v
 theories/Isa/Val.v
+theories/LinearWhile/WhileToIL.v
+theories/LinearWhile/While.v
 theories/Liveness/LivenessAnalysisCorrect.v
 theories/Liveness/LivenessAnalysis.v
 theories/Liveness/LivenessCorrect.v

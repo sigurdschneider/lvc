@@ -2,7 +2,7 @@ Require Import ExtrOcamlBasic ExtrOcamlString.
 (*Require Import ExtrOcamlZInt.
 Require Import ExtrOcamlNatInt.*)
 Require Import Compiler OrderedType Parmov Infra.Lattice Status CSetPartialOrder.
-Require AnalysisBackward AnnotationLattice LivenessAnalysis PidgeonHole.
+Require AnalysisBackward AnnotationLattice LivenessAnalysis NaturalRep InfinitePartition.
 (* Unset Extraction AccessOpaque. *)
 
 Definition foo := True.
@@ -19,7 +19,14 @@ Extraction Inline LivenessAnalysis.liveness_transform_dep set_var_lower_bounded.
 
 Extraction Blacklist List String Int.
 
-Extraction Inline PidgeonHole.succ PidgeonHole.max.
+Extraction Inline NaturalRep.succ NaturalRep.max InfinitePartition.stable_fresh_part InfinitePartition.least_fresh_part InfinitePartition.least_fresh_P NaturalRep.ofNat NaturalRep.asNat.
+
+Extraction Inline InfinitePartition.inf_subset_P.
+
+Extraction Inline NaturalRep.NaturalRepresentationPositive
+           NaturalRep.NaturalRepresentationSuccPositive.
+
+Extraction Implicit SafeFirst.safe_first [ H H0 ].
 
 Cd "compiler/extraction".
 

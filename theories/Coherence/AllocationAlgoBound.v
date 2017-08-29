@@ -4,7 +4,7 @@ Require Import Plus Util Map CMap Status Take Subset1 ListMax.
 Require Import Val Var Env IL Annotation Liveness.Liveness Fresh MoreList SetOperations AnnP.
 Require Import Coherence Coherence.Allocation RenamedApart AllocationAlgo.
 Require Import RenamedApart_Liveness LabelsDefined Restrict InfinitePartition MapSep.
-Require Import RenameApart_Partition.
+Require Import RenameApart_Partition Filter.
 
 Set Implicit Arguments.
 
@@ -247,6 +247,7 @@ Proof.
         etransitivity; eapply agree_on_incl; eauto.
 Qed.
 
+
 (*
 (** ** Bound on the number of registers used *)
 
@@ -280,36 +281,37 @@ Proof.
   rewrite cardinal_filter; eauto.
 Qed.
 
-Require Import AllocationAlgoCorrect AnnP.
+Require Import AllocationAlgoCorrect AnnP BoundedIn.
 
-Lemma regAssign_assignment_small n k c (LE:k < c) (ϱ:Map [var,var]) ZL Lv s alv ϱ' al
+Lemma regAssign_assignment_small n k p VD (ϱ:Map [var,var]) ZL Lv s alv ϱ' al
       (LS:live_sound FunctionalAndImperative ZL Lv s alv)
-      (inj:injective_on (getAnn alv) (findt ϱ 0))
-      (SEP:sep c (getAnn alv) (findt ϱ 0))
-      (allocOK:regAssign c s alv ϱ = Success ϱ')
+      (inj:injective_on (getAnn alv) (findt ϱ default_var))
+      (SEP:sep var p (getAnn alv) (findt ϱ default_var))
+      (allocOK:regAssign p s alv ϱ = Success ϱ')
       (incl:getAnn alv ⊆ fst (getAnn al))
       (sd:renamedApart s al)
-      (BND:ann_P (bounded_in c k) alv)
-      (up:lookup_set (findt ϱ 0) (filter (fun x => B[x <= c]) (fst (getAnn al)))
+      (BND:ann_P (bounded_in VD k) alv)
+      (up:lookup_set (findt ϱ default_var) (filter (part_1 p) (fst (getAnn al)))
                      ⊆ vars_up_to n)
-  : lookup_set (findt ϱ' 0) (filter (fun x => B[x <= c]) (snd (getAnn al)))
-               ⊆ vars_up_to (max (size_of_largest_live_set c alv) n).
+  : lookup_set (findt ϱ' default_var) (filter (part_1 p) (snd (getAnn al)))
+               ⊆ vars_up_to (Pos.max (ofNat (size_of_largest_live_set (part_1 p) alv)) n).
 Proof.
   exploit regAssign_renamedApart_agree; eauto using live_sound.
-  rewrite lookup_set_agree in up; eauto. Focus 2.
-  eapply agree_on_incl; eauto. eapply filter_incl. intuition.
+  rewrite lookup_set_agree in up; swap 1 4.
+  eapply agree_on_incl; eauto; swap 1 2. eapply filter_incl. intuition.
+  eauto. eauto.
   clear H.
   general induction LS; invt renamedApart; simpl in * |- *.
-  - assert (x <= c -> singleton (findt ϱ' 0 x)
-                              ⊆ vars_up_to (size_of_largest_live_set c al)). {
+  - assert (singleton (findt ϱ' default_var x)
+                      ⊆ vars_up_to (ofNat (size_of_largest_live_set (part_1 p) al))). {
       intros.
       eapply regAssign_renamedApart_agree in allocOK; eauto.
       rewrite <- allocOK; [|pe_rewrite; eauto with cset].
       unfold findt at 1. rewrite MapFacts.add_eq_o; eauto.
       eapply incl_singleton. eapply in_vars_up_to.
-      unfold least_fresh_P. cases.
-      rewrite (@least_fresh_filter_small c).
-      rewrite <- size_of_largest_live_set_live_set.
+      unfold least_fresh_part. cases.
+      admit.
+      (*rewrite <- size_of_largest_live_set_live_set.
       rewrite <- sep_filter_map_comm.
       rewrite filter_difference; eauto.
       rewrite cardinal_map; eauto.
@@ -328,9 +330,12 @@ Proof.
       rewrite <- (add_minus_single_eq H1).
       rewrite filter_add_in; try cases; eauto.
       cset_tac.
-
+       *)
+      admit.
     }
     exploit IHLS; eauto.
+    + admit.
+    + admit.
     + pe_rewrite.
       rewrite <- incl. eauto with cset.
     + pe_rewrite.

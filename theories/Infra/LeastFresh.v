@@ -5,7 +5,7 @@ Require Export PidgeonHole StableFresh OrderedTypeMax.
 Set Implicit Arguments.
 
 
-Class LeastFresh V `{NaturalRepresentation V} :=
+Class LeastFresh V `{OrderedType V} :=
   {
     least_fresh :> set V -> V;
     least_fresh_spec : forall G, least_fresh G ∉ G;
@@ -13,4 +13,4 @@ Class LeastFresh V `{NaturalRepresentation V} :=
     least_fresh_ext : forall G G', G [=] G' -> least_fresh G = least_fresh G'
   }.
 
-Arguments LeastFresh V {H} {H0}.
+Arguments LeastFresh V {H}.

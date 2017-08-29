@@ -1,4 +1,4 @@
-Require Import CSet Util MoreList Take MoreInversion LengthEq PidgeonHole.
+Require Import CSet Util MoreList Take MoreInversion LengthEq NaturalRep.
 
 Set Implicit Arguments.
 

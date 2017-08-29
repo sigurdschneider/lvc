@@ -1,4 +1,4 @@
-Require Import CSet Util PidgeonHole OrderedTypeMax.
+Require Import CSet Util NaturalRep PidgeonHole OrderedTypeMax.
 
 Set Implicit Arguments.
 
