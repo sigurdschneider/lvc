@@ -49,9 +49,27 @@ Fixpoint reconstr_live
     end.
 
 
+Lemma reconstr_live_G_eq (G : ⦃var⦄) (Lv : list ⦃var⦄)
+      (ZL : list params) (s : stmt) a
+  : getAnn (reconstr_live Lv ZL G s a) [=] getAnn (reconstr_live Lv ZL ∅ s a) ∪ G .
+Proof.
+  general induction s;
+    destruct a;
+    try destruct a;
+    simpl; eauto; cset_tac.
+Qed.
 
+Lemma reconstr_live_remove_G Lv ZL G s sl G'
+  : getAnn (reconstr_live Lv ZL G s sl) \ G ⊆ getAnn (reconstr_live Lv ZL G' s sl) .
+Proof.
+  destruct s, sl, a; simpl; cset_tac.
+Qed.
 
-
+Lemma reconstr_live_G Lv ZL G s a
+  : G ⊆ getAnn (reconstr_live Lv ZL G s a).
+Proof.
+  induction s,a; simpl; eauto with cset.
+Qed.
 
 Lemma live_sound_ann_ext ZL Lv s lv lv'
   :
@@ -223,11 +241,7 @@ Qed.
 Lemma reconstr_live_incl ZL Lv s alv G
   : live_sound Imperative ZL Lv s alv
     -> G ⊆ getAnn alv
-    -> poLe (reconstr_live Lv ZL
-                          G
-                          s
-                          alv)
-           alv.
+    -> poLe (reconstr_live Lv ZL G s alv) alv.
 Proof.
   intros LS.
   general induction LS; simpl in *.
@@ -254,4 +268,59 @@ Proof.
       intros; inv_get.
       rewrite H1; eauto.
       exploit H2; eauto.
+Qed.
+
+Lemma reconstr_live_sound ZL Lv s alv G
+  : live_sound Imperative ZL Lv s alv
+    -> G ⊆ getAnn alv
+    -> live_sound Imperative ZL Lv s (reconstr_live Lv ZL G s alv).
+Proof.
+  intros LS.
+  general induction LS; simpl in *.
+  - econstructor; eauto with cset.
+    + eapply live_exp_sound_incl.
+      * eapply live_freeVars.
+      * clear. cset_tac.
+    + rewrite <- reconstr_live_G; eauto with cset.
+  - econstructor; eauto with cset.
+    + eapply live_op_sound_incl.
+      * eapply Op.live_freeVars.
+      * clear. cset_tac.
+  - econstructor; simpl; eauto.
+    + erewrite !get_nth; eauto.
+      clear. cset_tac.
+    + intros.
+      erewrite !get_nth; eauto.
+      eapply live_op_sound_incl.
+      * eapply Op.live_freeVars.
+      * do 2 eapply incl_union_left.
+        eapply incl_list_union; eauto using map_get_1.
+  - econstructor; eauto.
+    + eapply live_op_sound_incl.
+      * eapply Op.live_freeVars.
+      * clear. cset_tac.
+  - econstructor; intros; inv_get; eauto with len.
+    + eapply live_sound_monotone.
+      * eapply IHLS; eauto with cset.
+      * eapply PIR2_get; intros; eauto with len.
+        eapply get_app_cases in H6 as [? |[? ?]]; inv_get.
+        -- rewrite get_app_lt in H5; eauto with len.
+           inv_get.
+           rewrite reconstr_live_incl; eauto.
+           exploit H2; eauto; dcr.
+        -- rewrite get_app_ge in H5; len_simpl;
+             rewrite H in *; inv_get; eauto.
+    + eapply live_sound_monotone.
+      * eapply H1; eauto with cset.
+        exploit H2; eauto; dcr.
+      * eapply PIR2_get; intros; eauto with len.
+        eapply get_app_cases in H7 as [? |[? ?]]; inv_get.
+        -- rewrite reconstr_live_incl; eauto.
+           exploit H2; eauto; dcr.
+        -- rewrite get_app_ge in H8; len_simpl;
+             rewrite H in *; inv_get; eauto.
+    + simpl.
+      exploit H2; eauto; dcr.
+      split; eauto.
+      rewrite <- reconstr_live_G; eauto.
 Qed.
