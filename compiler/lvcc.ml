@@ -60,6 +60,7 @@ let main () =
     if !verbose then Printf.printf "phase %s\n" name else ();
     open_out name in
   let dump suffix prg = let oc = dump_oc suffix in print_stmt oc true !ids 0 prg; Printf.fprintf oc "\n"; close_out oc in
+  let dumpn suffix prg = let oc = dump_oc suffix in print_nstmt oc true !ids 0 prg; Printf.fprintf oc "\n"; close_out oc in
     try
       (* Printf.printf "Compiling"; *)
       let file_chan = open_in !infile in
@@ -68,16 +69,18 @@ let main () =
       let readout = (dump_oc "read") in
       let _ =  print_nstmt readout false !ids 0 ilin in
       let _ = close_out readout in
+      let _ = dumpn "0_in" ilin in
       let ili = (match Compiler.toDeBruijn ilin with
 		 | Success ili -> ili
 		 | Error e -> raise (Compiler_error "Converting to de bruijn failed (did you define all functions?)"))
       in
+      let _ = dump "1_in_db" ili in
       let s_toILF = toILF ili in
       let _ = dump "10_toILF" s_toILF in
       let s_opt = optimize s_toILF in
       let _ = dump "20_opt" s_opt in
       let s_fromILF =
-	(match fromILF ili with
+	(match fromILF s_opt with
 	 | Success x -> x
 	 | Error e -> raise (Compiler_error "reg alloc failed")
 	)

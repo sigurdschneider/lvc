@@ -49,13 +49,19 @@ let rec print_sexpr oc has_slots ids e =
   match e with
     | Op.Con x -> output_string oc (string_of_int (Z.to_int x))
     | Op.Var x -> print_var oc has_slots ids x
-    | Op.UnOp (op, e1) -> print_unop oc op; output_string oc " ";
-			  print_sexpr oc has_slots ids e1
-    | Op.BinOp (op, e1, e2) -> print_sexpr oc has_slots ids e1;
-			       output_string oc " ";
-			       print_binop oc op;
-			       output_string oc " ";
-			       print_sexpr oc has_slots ids e2
+    | Op.UnOp (op, e1) ->
+       output_string oc "(";
+       print_unop oc op; output_string oc " ";
+       print_sexpr oc has_slots ids e1;
+       output_string oc ")"
+    | Op.BinOp (op, e1, e2) ->
+       output_string oc "(";
+       print_sexpr oc has_slots ids e1;
+       output_string oc " ";
+       print_binop oc op;
+       output_string oc " ";
+       print_sexpr oc has_slots ids e2;
+       output_string oc ")"
 
 
 let rec print_list oc p l =
