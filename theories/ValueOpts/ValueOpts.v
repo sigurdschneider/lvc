@@ -28,7 +28,7 @@ Inductive eqn_sound : list params -> list eqns  (*params*set var*eqns*)
 | EqnApp (l:lab) Y Y' ZL Δ Gamma Z Γf G G'
   : get ZL  l Z -> get Δ l Γf
     -> length Y = length Y'
-    -> entails (of_list ((fun y => EqnEq y y) ⊝ Y') ∪ Gamma) (subst_eqns (sid [Z <-- Y']) Γf)
+    -> entails (of_list ((fun y => EqnEq y y) ⊝ Y) ∪ Gamma) (subst_eqns (sid [Z <-- Y']) Γf)
     -> entails Gamma (list_EqnApx Y Y')
     -> eqn_sound ZL Δ (stmtApp l Y) (stmtApp l Y') Gamma (ann0 (G,G'))
 | EqnReturn ZL Δ e e' Gamma G G'
@@ -268,7 +268,35 @@ Proof.
   unfold Proper, respectful, flip; intros.
   rewrite H0, H1. reflexivity.
 Qed.
-*)
+ *)
+
+Lemma satisfiesAll_EqnEq_omap E Y
+  : satisfiesAll E (of_list ((fun y : op => EqnEq y y) ⊝ Y))
+    <-> exists vl, omap (op_eval E) Y = Some vl.
+Proof.
+  general induction Y; simpl.
+  - split; hnf; intros; eauto. hnf; intros. cset_tac.
+  - rewrite satisfiesAll_add.
+    simpl. case_eq (op_eval E a); intros; simpl.
+    rewrite IHY.
+    + split; intros; dcr. rewrite H3. simpl. eauto.
+      split; eauto. econstructor; eauto. monad_inv H1. eauto.
+    + split; intros; dcr; clear_trivial_eqs.
+Qed.
+
+Lemma satisfiesAll_EqnApx_omap E Y Y' (LEN:❬Y❭=❬Y'❭) vl
+  : satisfiesAll E (list_EqnApx Y Y')
+    -> omap (op_eval E) Y = Some vl
+    -> omap (op_eval E) Y' = Some vl.
+Proof.
+  unfold list_EqnApx.
+  general induction LEN; simpl in *; eauto.
+  - monad_inv H0.
+    rewrite satisfiesAll_add in H; dcr.
+    hnf in H0. rewrite EQ in *. inv H0.
+    simpl. eapply IHLEN in H1; eauto.
+    rewrite H1. reflexivity.
+Qed.
 
 Lemma sim_vopt r L L' V s s' ZL Δ Gamma ang
   : satisfiesAll V Gamma
@@ -323,9 +351,16 @@ Proof.
     }
     simpl in *; dcr; subst.
     exists Yv; repeat split; eauto using omap_exp_eval_onvLe.
-    exists Gamma, Y', V.
+    exists Gamma, Y, V.
     exploit EEQ; eauto; dcr. simpl in *.
     repeat split; eauto.
+    + hnf; intros.
+      exploit H2; eauto.
+      eapply satisfiesAll_union in H6; dcr.
+      eapply satisfiesAll_EqnEq_omap in H14; dcr.
+      eapply satisfiesAll_subst; eauto. reflexivity. eauto with len.
+      exploit satisfiesAll_EqnApx_omap; eauto.
+      eapply satisfiesAll_subst; eauto with len.
     + symmetry; eapply agree_on_incl; eauto.
   - eapply (sim_return_apx il_statetype_F).
     exploit H; eauto.

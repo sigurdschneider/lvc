@@ -9,6 +9,7 @@ Require Import ConstantPropagation ConstantPropagationSound Reachability.
 Set Implicit Arguments.
 Unset Printing Records.
 
+
 Definition cp_eqn (E:onv (withTop val)) x :=
   match E x with
   | Some (wTA c) => singleton (EqnEq (Var x) (Con c))
@@ -202,6 +203,38 @@ Proof.
     + erewrite IHe1; eauto. cset_tac.
 Qed.
 
+(*Lemma op_eval_choose_None e AE
+:   op_eval AE e = op_eval AE (cp_choose_op AE e).
+Proof.
+  intros.
+  general induction e; simpl in * |- *; eauto.
+  - repeat cases; simpl; eauto.
+  - exploit (IHe AE); eauto.
+    rewrite H.
+    repeat cases; eauto; simpl in *; clear_trivial_eqs;
+      try rewrite <- Heq; try rewrite <- Heq0; eauto.
+    exfalso.
+
+    exploit cp_eqns_satisfies_env_none; eauto.
+    + cset_tac.
+  - revert H0. case_eq (op_eval AE e); intros.
+    + destruct w. clear_trivial_eqs.
+      exploit op_eval_same; eauto.
+      revert H2.
+      case_eq (unop_eval u a); intros. clear_trivial_eqs.
+
+    +
+    + erewrite op_eval_None; eauto; dcr; subst.
+    + erewrite IHe; eauto; dcr.
+  - repeat imatch.
+    + erewrite !op_eval_same; eauto; cset_tac.
+    + erewrite op_eval_same; eauto.
+      erewrite IHe2; eauto.
+      cset_tac. cset_tac.
+    + erewrite IHe1; eauto. cset_tac.
+Qed.
+ *)
+
 Lemma op_eval_entails AE e v x lv
 : Op.freeVars e ⊆ lv
   -> op_eval AE e = Some (wTA v)
@@ -244,13 +277,38 @@ Lemma cp_choose_approx AE e lv
 : Op.freeVars e ⊆ lv
   -> entails (cp_eqns AE lv) {EqnApx e (cp_choose_op AE e)}.
 Proof.
-  unfold cp_choose_op. case_eq (op_eval AE e); try destruct w; intros.
+  general induction e; simpl in *.
   - eapply entails_eqns_apx_refl.
-  - hnf; intros.
-    eapply op_eval_same in H; eauto.
-    hnf; intros. cset_tac'. rewrite <- H2; simpl.
-    rewrite H.  reflexivity.
-  - eapply entails_eqns_apx_refl.
+  - repeat cases; eauto using entails_eqns_apx_refl.
+    hnf; intros.
+    eapply cp_eqns_satisfies_env in H0; eauto; [|cset_tac].
+    eapply satisfies_single.
+    hnf; simpl. rewrite H0. reflexivity.
+  - exploit (IHe AE); eauto.
+    hnf; intros.
+    eapply satisfies_single. simpl.
+    eapply H0 in H1.
+    eapply satisfies_single' in H1. hnf in H1.
+    revert H1;
+      case_eq (cp_choose_op AE e); intros; simpl in *; clear_trivial_eqs;
+        try cases; simpl; invt fstNoneOrR; simpl; eauto using fstNoneOrR;
+          try reflexivity.
+    + rewrite <- Heq; reflexivity.
+    + rewrite <- Heq; constructor.
+  - exploit (IHe1 AE lv); eauto; [cset_tac|].
+    exploit (IHe2 AE lv); eauto; [cset_tac|].
+    hnf; intros.
+    pose proof (H0 _ H2). eapply H1 in H2. clear H0 H1 H IHe1 IHe2.
+    eapply satisfies_single. simpl.
+    eapply satisfies_single' in H2. hnf in H2.
+    eapply satisfies_single' in H3. hnf in H3.
+    revert H2 H3;
+      case_eq (cp_choose_op AE e1); case_eq (cp_choose_op AE e2);
+        intros; simpl in *; clear_trivial_eqs;
+          try cases; simpl; inv H2; inv H3; simpl; eauto using fstNoneOrR;
+            try reflexivity.
+    + rewrite <- Heq; reflexivity.
+    + rewrite <- Heq; constructor.
 Qed.
 
 Lemma cp_choose_approx_list AE Y lv
@@ -273,25 +331,52 @@ Lemma cp_choose_exp_freeVars AE e D
 : Op.freeVars e ⊆ D
   -> Op.freeVars (cp_choose_op AE e) ⊆ D.
 Proof.
-  intros.
-  unfold cp_choose_op.
-  case_eq (op_eval AE e); try destruct w; intros; eauto using incl_empty.
-Qed.
-
-Lemma cp_choose_exp_live_sound_exp AE e lv
-:  Op.freeVars e ⊆ lv
-   -> Op.freeVars (cp_choose_op AE e) ⊆ lv.
-Proof.
-  intros. unfold cp_choose_op.
-  destruct (op_eval AE e); intros; try destruct w; eauto.
-  simpl; eapply incl_empty.
+  intro.
+  induction e; simpl in *.
+  - eauto.
+  - repeat cases; simpl in *; eauto using incl_empty.
+  - specialize (IHe H); clear H.
+    repeat cases; eauto.
+  - exploit IHe1; eauto. cset_tac.
+    exploit IHe2; eauto. cset_tac.
+    clear H IHe1 IHe2.
+    repeat cases; eauto; simpl in *; cset_tac.
 Qed.
 
 Lemma cp_choose_exp_eval_exp AE e v
 : op_eval AE e = Some (wTA v)
   -> op_eval AE (cp_choose_op AE e) = Some (wTA v).
 Proof.
-  intros. unfold cp_choose_op. rewrite H; eauto.
+  revert v. induction e; simpl; intros; eauto.
+  - rewrite H. reflexivity.
+  - revert H IHe.
+    case_eq (op_eval AE e); intro w; simpl in *.
+    + destruct w; [intros; isabsurd|].
+      cases; intros; clear_trivial_eqs.
+      exploit IHe; eauto.
+      cases; eauto; simpl in *;
+        try rewrite H1; simpl; eauto;
+        try rewrite <- Heq; simpl; eauto;
+          try rewrite H1; simpl; eauto.
+    + isabsurd.
+  - revert H IHe1 IHe2.
+    case_eq (op_eval AE e1); intro w1; simpl in *.
+    + case_eq (op_eval AE e2); intro w2; simpl in *.
+      * destruct w1; [intros; isabsurd|].
+        destruct w2; [intros; isabsurd|].
+        cases; intros; clear_trivial_eqs.
+        exploit IHe1; eauto;
+          exploit IHe2; eauto.
+        repeat cases; eauto; simpl in *;
+              try rewrite <- Heq; simpl; eauto;
+                clear_trivial_eqs;
+                try rewrite H2; simpl; eauto;
+                  try rewrite H3; simpl; eauto;
+                    try rewrite <- Heq; simpl; eauto;
+                    try congruence.
+      * destruct w1; [intros; isabsurd|].
+        isabsurd.
+    + isabsurd.
 Qed.
 
 Lemma subst_eqns_in gamma ϱ Gamma
@@ -377,11 +462,12 @@ Proof.
     eexists x0, x2; repeat split; eauto.
 Qed.
 
+
 Lemma entails_cp_eqns_subst_choose AE AE' D Z Y
 : length Z = length Y
   -> PIR2 poLe (List.map (op_eval AE) Y) (lookup_list AE' Z)
   -> list_union (List.map Op.freeVars Y)[<=]D
-  -> entails (of_list ((fun y => EqnEq y y) ⊝ cp_choose_op AE ⊝ Y) ∪ cp_eqns AE D)
+  -> entails (of_list ((fun y => EqnEq y y) ⊝ Y) ∪ cp_eqns AE D)
             (subst_eqns (sid [Z <-- List.map (cp_choose_op AE) Y])
                         (cp_eqns AE' (of_list Z))).
 Proof.
@@ -393,26 +479,36 @@ Proof.
     edestruct PIR2_nth_2; eauto; dcr.
     + rewrite lookup_list_map.
       eapply map_get_1. eauto.
-    + rewrite H4 in *; simpl in *.
-      clear_trivial_eqs. inv_get.
-      exploit H. instantiate (1:=EqnEq (cp_choose_op AE x2) (cp_choose_op AE x2)).
-      eapply incl_left. eapply get_in_of_list.
-      eapply map_get_eq; eauto. inv H1; subst.
-      inv H5; clear_trivial_eqs.
-      * exfalso. exploit op_eval_None; eauto.
-        instantiate (1:=D).
-        erewrite <- INCL.
-        eapply incl_list_union. eapply map_get_1; eauto. reflexivity.
-        hnf; intros. eapply H. cset_tac. unfold cp_choose_op in H2. rewrite <- H9 in H2.
-        congruence.
+    + rewrite H4 in *.
+      inv_get.
+      exploit H.
+      { eapply incl_left.
+        eapply get_in_of_list.
+        eapply map_get_eq; eauto. }
+      invc H1; clear_trivial_eqs.
+      invc H5; clear_trivial_eqs.
+      * simpl. rewrite <- EQ.
+        exfalso. exploit op_eval_None; eauto.
+        -- instantiate (1:=D).
+           erewrite <- INCL.
+           eapply incl_list_union. eapply map_get_1; eauto. reflexivity.
+        -- hnf; intros. eapply H. cset_tac.
+        -- congruence.
       * exploit op_eval_same; eauto; dcr.
         -- instantiate (1:=D).
            rewrite <- INCL.
            eapply incl_list_union. eapply map_get_1; eauto. reflexivity.
         -- hnf; intros. eapply H. cset_tac.
-        -- rewrite <- EQ.
-           unfold cp_choose_op. rewrite <- H7. simpl.
-           econstructor; eauto.
+        -- simpl. rewrite <- EQ.
+           exploit (@cp_choose_approx AE x2 D).
+           ++ rewrite <- INCL.
+             eapply incl_list_union. eapply map_get_1; eauto. reflexivity.
+           ++ exploit H7.
+             ** eapply satisfiesAll_Subset_morphism; try eapply H; try reflexivity.
+                eauto with cset.
+             ** eapply satisfies_single' in H8. hnf in H8.
+                rewrite H5 in *. clear_trivial_eqs.
+                econstructor. reflexivity.
   - simpl. inv_get.
     simpl in *.
     edestruct PIR2_nth_2; eauto; dcr.
@@ -421,16 +517,18 @@ Proof.
     + rewrite H3 in *. inv H6.
       inv_get.
       exploit H.
-      instantiate (1:=EqnEq (cp_choose_op AE x1) (cp_choose_op AE x1)).
-      eapply incl_left. eapply get_in_of_list.
-      eapply map_get_eq; eauto. inv H1; subst.
+      { eapply incl_left.
+        eapply get_in_of_list.
+        eapply map_get_eq; eauto. }
+      invc H1; clear_trivial_eqs.
       exploit op_eval_None; eauto.
-      instantiate (1:=D).
-      erewrite <- INCL.
-      eapply incl_list_union. eapply map_get_1; eauto. reflexivity.
-      hnf; intros. eapply H. cset_tac. unfold cp_choose_op in H6.
-      rewrite <- H2 in *. congruence.
+      * instantiate (1:=D).
+        erewrite <- INCL.
+        eapply incl_list_union. eapply map_get_1; eauto. reflexivity.
+      * hnf; intros. eapply H. cset_tac.
+      * congruence.
 Qed.
+
 
 Lemma cp_eqns_update D x c AE
 : x ∈ D
