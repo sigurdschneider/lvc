@@ -183,3 +183,50 @@ Proof.
   eapply PIR2_app; eauto.
   eapply PIR2_get; try (intros ? ? ? GET; inv_map GET); eauto with cset len.
 Qed.
+
+Lemma live_sound_ann_ext ZL Lv s lv lv'
+  : ann_R Equal lv lv'
+    -> live_sound Imperative ZL Lv s lv
+    -> live_sound Imperative ZL Lv s lv'.
+Proof.
+  intros annR lvSnd.
+  general induction lvSnd; inversion_clear annR.
+  - econstructor; eauto; apply ann_R_get in H3.
+    + apply live_exp_sound_incl with (lv':=lv); eauto.
+      rewrite H2. reflexivity.
+    + rewrite <- H3. rewrite <- H2. eauto.
+    + rewrite <- H3. eauto.
+  - econstructor; eauto;
+      apply ann_R_get in H3;
+      apply ann_R_get in H4;
+      try rewrite <- H2;
+      try rewrite <- H3;
+      try rewrite <- H4;
+      eauto.
+  - econstructor; simpl; intros; eauto;
+      try rewrite <- H4; eauto.
+  - econstructor; simpl; intros; eauto;
+      try rewrite <- H0; eauto.
+  - apply ann_R_get in H7 as H7'.
+    assert (PIR2 Subset (getAnn ⊝ bns ++ Lv) (getAnn ⊝ als ++ Lv))
+      as pir2_als_bns.
+    { apply PIR2_app.
+      - apply PIR2_get; eauto with len.
+        intros; inv_get.
+        exploit H6 as EQ; eauto.
+        eapply ann_R_get in EQ. rewrite EQ. reflexivity.
+      - apply PIR2_refl; eauto.
+    }
+    econstructor; simpl; eauto;
+      try rewrite <- H0; eauto.
+    + apply live_sound_monotone with (LV:=getAnn ⊝ als ++ Lv); eauto.
+    + rewrite <- H5. eauto.
+    + intros. inv_get.
+      apply live_sound_monotone with (LV:=getAnn ⊝ als ++ Lv); eauto.
+    + intros. simpl in H2. inv_get.
+      exploit H6 as EQ; eauto.
+      apply ann_R_get in EQ.
+      rewrite <- EQ.
+      apply H2 with (n:=n); eauto.
+    + rewrite <- H4. rewrite <- H7'. eauto.
+Qed.

@@ -423,3 +423,23 @@ Proof.
   - hnf; intros.
     cset_tac.
 Qed.
+
+Lemma injective_map_minus
+      (X Y : Type)
+      `{OrderedType X}
+      `{OrderedType Y}
+      (f : X -> Y)
+      (s t D : ⦃X⦄)
+  :
+    Proper (_eq ==> _eq) f
+    -> s ⊆ D
+    -> t ⊆ D
+    -> injective_on D f
+    -> map f (s \ t) [=] map f s \ map f t
+.
+Proof.
+  intros H1 sD tD inj.
+  apply lookup_set_minus_eq; eauto.
+  apply injective_on_incl with (D:=D); eauto.
+  cset_tac.
+Qed.

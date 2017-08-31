@@ -1,6 +1,7 @@
 Require Import List Map Env AllInRel Exp AppExpFree.
 Require Import IL Annotation AutoIndTac Liveness.Liveness LabelsDefined.
 Require Import SpillSound SpillUtil.
+Require Import Infra.PartialOrder AnnotationLattice CSetPartialOrder.
 
 Set Implicit Arguments.
 
@@ -71,63 +72,9 @@ Proof.
   induction s,a; simpl; eauto with cset.
 Qed.
 
-Lemma live_sound_ann_ext ZL Lv s lv lv'
-  :
-    ann_R Equal lv lv'
-    -> live_sound Imperative ZL Lv s lv
-    -> live_sound Imperative ZL Lv s lv'
-.
-Proof.
-  intros annR lvSnd.
-  general induction lvSnd; inversion_clear annR.
-  - econstructor; eauto; apply ann_R_get in H3.
-    + apply live_exp_sound_incl with (lv':=lv); eauto.
-      rewrite H2. reflexivity.
-    + rewrite <- H3. rewrite <- H2. eauto.
-    + rewrite <- H3. eauto.
-  - econstructor; eauto;
-      apply ann_R_get in H3;
-      apply ann_R_get in H4;
-      try rewrite <- H2;
-      try rewrite <- H3;
-      try rewrite <- H4;
-      eauto.
-  - econstructor; simpl; intros; eauto;
-      try rewrite <- H4; eauto.
-  - econstructor; simpl; intros; eauto;
-      try rewrite <- H0; eauto.
-  - apply ann_R_get in H7 as H7'.
-    assert (PIR2 Subset (getAnn ⊝ bns ++ Lv) (getAnn ⊝ als ++ Lv))
-      as pir2_als_bns.
-    { apply PIR2_app.
-      - apply PIR2_get; eauto with len.
-        intros; inv_get.
-        exploit H6 as EQ; eauto.
-        eapply ann_R_get in EQ. rewrite EQ. reflexivity.
-      - apply PIR2_refl; eauto.
-    }
-    econstructor; simpl; eauto;
-      try rewrite <- H0; eauto.
-    + apply live_sound_monotone with (LV:=getAnn ⊝ als ++ Lv); eauto.
-    + rewrite <- H5. eauto.
-    + intros. inv_get.
-      apply live_sound_monotone with (LV:=getAnn ⊝ als ++ Lv); eauto.
-    + intros. simpl in H2. inv_get.
-      exploit H6 as EQ; eauto.
-      apply ann_R_get in EQ.
-      rewrite <- EQ.
-      apply H2 with (n:=n); eauto.
-    + rewrite <- H4. rewrite <- H7'. eauto.
-Qed.
-
-
-
 Lemma reconstr_live_subset Lv Lv' ZL G s sl
-  :
-    PIR2 Subset Lv Lv'
-    -> ann_R Subset
-            (reconstr_live Lv  ZL G s sl)
-            (reconstr_live Lv' ZL G s sl).
+  : PIR2 Subset Lv Lv'
+    -> ann_R Subset (reconstr_live Lv  ZL G s sl) (reconstr_live Lv' ZL G s sl).
 Proof.
   intros H.
   revert Lv Lv' H ZL G sl.
@@ -167,9 +114,7 @@ Qed.
 
 Lemma reconstr_live_equal Lv Lv' ZL G s sl
   : PIR2 Equal Lv Lv'
-    -> ann_R Equal
-            (reconstr_live Lv  ZL G s sl)
-            (reconstr_live Lv' ZL G s sl).
+    -> ann_R Equal (reconstr_live Lv  ZL G s sl) (reconstr_live Lv' ZL G s sl).
 Proof.
   intros H.
   revert Lv Lv' H ZL G sl.
@@ -210,27 +155,7 @@ Proof.
   - eapply PIR2_app; eauto with len.
 Qed.
 
-Lemma injective_map_minus
-      (X Y : Type)
-      `{OrderedType X}
-      `{OrderedType Y}
-      (f : X -> Y)
-      (s t D : ⦃X⦄)
-  :
-    Proper (_eq ==> _eq) f
-    -> s ⊆ D
-    -> t ⊆ D
-    -> injective_on D f
-    -> map f (s \ t) [=] map f s \ map f t
-.
-Proof.
-  intros H1 sD tD inj.
-  apply lookup_set_minus_eq; eauto.
-  apply injective_on_incl with (D:=D); eauto.
-  cset_tac.
-Qed.
 
-Require Import Infra.PartialOrder AnnotationLattice CSetPartialOrder.
 
 Lemma reconstr_live_setTopAnn ZL Lv s alv G a
   : reconstr_live Lv ZL G s alv = reconstr_live Lv ZL G s (setTopAnn alv a).
