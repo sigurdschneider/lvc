@@ -86,8 +86,9 @@ theories/Constr/MapUpdate.v
 theories/Constr/Map.v
 theories/Constr/PairwiseDisjoint.v
 theories/Constr/SetOperations.v
-theories/DCVE.v
-theories/DVE.v
+theories/DeadCodeElimination/DCE.v
+theories/DeadCodeElimination/DVE.v
+theories/DeadCodeElimination/UCE.v
 theories/Equiv/CtxEq.v
 theories/Equiv/NonParametricBiSim.v
 theories/Equiv/SimCompanion.v
@@ -246,7 +247,6 @@ theories/TransVal/ILFtoSMT.v
 theories/TransVal/NoFun.v
 theories/TransVal/SMT.v
 theories/TransVal/TransValSound.v
-theories/UCE.v
 theories/ValueOpts/ConstantPropagationAnalysisCorrect.v
 theories/ValueOpts/ConstantPropagationAnalysis.v
 theories/ValueOpts/ConstantPropagationCorrect.v

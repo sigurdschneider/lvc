@@ -1,6 +1,5 @@
 theories/ValueOpts/GVN*
 theories/Lowering/ToMach.v
-theories/DCE.v
 theories/POUnit.v
 theories/Test*
 RISC-V/*

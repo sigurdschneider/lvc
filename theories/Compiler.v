@@ -9,7 +9,7 @@ Require Delocation DelocationAlgo DelocationCorrect DelocationValidator.
 Require Coherence.Allocation AllocationAlgo AllocationAlgoCorrect.
 Require UCE DVE EAE Alpha.
 Require ReachabilityAnalysis ReachabilityAnalysisCorrect.
-Require Import DCVE Slot InfinitePartition RegAssign ExpVarsBounded.
+Require Import DCE Slot InfinitePartition RegAssign ExpVarsBounded.
 Require CopyPropagation ConstantPropagation ConstantPropagationAnalysis.
 Require ConstantPropagationCorrect ConstantPropagationAnalysisCorrect.
 
@@ -58,21 +58,21 @@ Require Import AddParams Spilling.
 
 
 Definition toILF (s:IL.stmt) : IL.stmt :=
-  let (s_dcve, lv) := DCVE Liveness.Imperative s in
+  let (s_dcve, lv) := DCE Liveness.Imperative s in
   addParams s_dcve lv.
 
 Lemma toILF_correct (ili:IL.stmt) (E:onv val)
   (PM:LabelsDefined.paramsMatch ili nil)
   : defined_on (IL.occurVars ili) E
     -> sim I.state F.state bot3 Sim (nil, E, ili) (nil:list F.block, E, toILF ili).
-Proof with eauto using DCVE_live, DCVE_noUC.
+Proof with eauto using DCE_live, DCE_noUC.
   intros. subst. unfold toILF.
   eapply sim_trans with (S2:=I.state).
-  eapply DCVE_correct_I; eauto.
+  eapply DCE_correct_I; eauto.
   let_pair_case_eq; simpl_pair_eqs; subst.
   unfold fst at 1.
   eapply (@addParams_correct true)...
-  eauto using defined_on_incl, DCVE_occurVars.
+  eauto using defined_on_incl, DCE_occurVars.
 Qed.
 
 
@@ -172,7 +172,7 @@ Defined.
 Definition fromILF (s:stmt) :=
   let s_eae := EAE.compile s in
   let sra := rename_apart_to_part FGS_even_fast_pos s_eae in
-  let dcve := DCVE Liveness.Imperative (fst sra) in
+  let dcve := DCE Liveness.Imperative (fst sra) in
   let fvl := to_list (getAnn (snd dcve)) in
   let k := exp_vars_bound (fst dcve) in
   let spilled := spill k succ (fst dcve) (snd dcve) in
@@ -194,7 +194,7 @@ Opaque DelocationValidator.trs_dec.
 Definition slotted_vars (s:stmt) :=
   let s_eae := EAE.compile s in
   let sra := rename_apart_to_part FGS_even_fast_pos s_eae in
-  let dcve := DCVE Liveness.Imperative (fst sra) in
+  let dcve := DCE Liveness.Imperative (fst sra) in
   let k := exp_vars_bound (fst dcve) in
   drop k (to_list (getAnn (snd dcve))).
 
@@ -266,7 +266,7 @@ Proof.
     eapply app_expfree_rename_apart; eauto.
   }
   assert (AEF3:AppExpFree.app_expfree (fst dcve)). {
-    eapply DCVE_app_expfree; eauto.
+    eapply DCE_app_expfree; eauto.
   }
 
   assert (RA:RenamedApart.renamedApart (fst sra) (rename_apart_to_part_ra FGS_even_fast_pos s_eae)). {
@@ -283,35 +283,35 @@ Proof.
     eapply labelsDefined_paramsMatch; eauto.
   }
   assert (PM3:LabelsDefined.paramsMatch (fst dcve) nil). {
-    eapply DCVE_paramsMatch; eauto.
+    eapply DCE_paramsMatch; eauto.
   }
 
   assert (EV:For_all Even.even_pos_fast
-                     (fst (getAnn (DCVEra Liveness.Imperative (fst sra)
+                     (fst (getAnn (DCEra Liveness.Imperative (fst sra)
                                           (rename_apart_to_part_ra FGS_even_fast_pos s_eae)))
-                          ∪ snd (getAnn (DCVEra Liveness.Imperative (fst sra)
+                          ∪ snd (getAnn (DCEra Liveness.Imperative (fst sra)
                                                 (rename_apart_to_part_ra FGS_even_fast_pos s_eae))))). {
     pose proof (rename_to_subset_even s_eae) as HY1.
-    rewrite DCVE_ra_fst; eauto.
-    rewrite DCVE_ra_snd; eauto.
+    rewrite DCE_ra_fst; eauto.
+    rewrite DCE_ra_snd; eauto.
     subst sra. rewrite rename_apart_to_part_occurVars.
     eapply rename_to_subset_even.
   }
   pose (@slt _ EV) as slt.
 
   assert (NOC1:LabelsDefined.noUnreachableCode (LabelsDefined.isCalled true) (fst dcve)). {
-    eapply DCVE_noUC; eauto.
+    eapply DCE_noUC; eauto.
   }
 
   assert (Incl1:getAnn (snd dcve)
-         ⊆ fst (getAnn (DCVEra Liveness.Imperative (fst sra) (rename_apart_to_part_ra FGS_even_fast_pos s_eae)))). {
-    exploit DCVE_live_incl as INCL; eauto.
+         ⊆ fst (getAnn (DCEra Liveness.Imperative (fst sra) (rename_apart_to_part_ra FGS_even_fast_pos s_eae)))). {
+    exploit DCE_live_incl as INCL; eauto.
     eapply ann_R_get in INCL; eauto.
   }
 
   assert (PM4:LabelsDefined.paramsMatch (fst spilled) nil). {
     eapply spill_paramsMatch with (slt:=slt);
-      eauto using DCVE_live, DCVE_renamedApart, DCVE_live_incl, DCVE_paramsMatch.
+      eauto using DCE_live, DCE_renamedApart, DCE_live_incl, DCE_paramsMatch.
   }
 
   eapply sim_trans with (σ2:=(nil, E', fst sra):F.state). {
@@ -361,17 +361,17 @@ Proof.
      - eapply renamedApart_live; simpl; eauto.
   }
   eapply sim_trans with (σ2:=(nil, E', fst dcve):I.state). {
-    eapply DCVE_correct_I; eauto.
+    eapply DCE_correct_I; eauto.
   }
 
   assert (LS1:Liveness.live_sound Liveness.FunctionalAndImperative nil nil (fst spilled) (snd spilled)). {
     eapply spill_live with (k:=k) (slt:=slt);
-      eauto using DCVE_live, DCVE_renamedApart,
-      DCVE_live_incl, DCVE_paramsMatch.
+      eauto using DCE_live, DCE_renamedApart,
+      DCE_live_incl, DCE_paramsMatch.
   }
   eapply sim_trans with (σ2:=(nil, E'', fst spilled):F.state). {
     assert (VP:var_P (inf_subset_P even_inf_subset_pos) (fst dcve)). {
-      eapply DCVE_var_P; eauto.
+      eapply DCE_var_P; eauto.
       eapply renameApart_var_P.
       - eauto.
       - intros. eapply FG_even_fast_inf_subset.
@@ -379,12 +379,12 @@ Proof.
       - eapply even_fast_update_even; eauto.
     }
     eapply spill_correct with (k:=k) (slt:=slt);
-        eauto using DCVE_live, DCVE_renamedApart, DCVE_live_incl,
-        DCVE_paramsMatch.
+        eauto using DCE_live, DCE_renamedApart, DCE_live_incl,
+        DCE_paramsMatch.
     - hnf; intros.
       unfold dcve, sra, s_eae in Incl1.
       rewrite Incl1 in H.
-      rewrite DCVE_ra_fst in H; eauto.
+      rewrite DCE_ra_fst in H; eauto.
       rewrite rename_apart_to_part_freeVars in H.
       edestruct update_with_list_lookup_in_list.
       Focus 3.
@@ -424,16 +424,16 @@ Proof.
                                         nil nil nil nil nil); eauto using PIR2.
     + isabsurd.
     + eapply spill_srd with (k:=k) (slt:=slt);
-        eauto using DCVE_live, DCVE_renamedApart,
-        DCVE_live_incl, DCVE_paramsMatch.
+        eauto using DCE_live, DCE_renamedApart,
+        DCE_live_incl, DCE_paramsMatch.
     + eapply spill_noUnreachableCode with (k:=k) (slt:=slt);
-        eauto using DCVE_live, DCVE_renamedApart,
-        DCVE_live_incl, DCVE_paramsMatch.
+        eauto using DCE_live, DCE_renamedApart,
+        DCE_live_incl, DCE_paramsMatch.
     + rewrite lookup_set_on_id; try reflexivity.
       subst rdom. rewrite <- domain_add_spec; eauto.
   - erewrite getAnn_snd_renameApart_live; eauto.
     rewrite fst_renamedApartAnn.
-    exploit (@DCVE_live_incl Liveness.Imperative) as INCL; eauto.
+    exploit (@DCE_live_incl Liveness.Imperative) as INCL; eauto.
     eapply ann_R_get in INCL; eauto.
     rewrite lookup_set_on_id; [|reflexivity].
     reflexivity.
