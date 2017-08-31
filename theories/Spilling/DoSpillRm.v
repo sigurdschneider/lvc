@@ -1,6 +1,6 @@
 Require Import List Map Env AllInRel Exp AppExpFree.
 Require Import IL Annotation AutoIndTac Liveness.Liveness LabelsDefined.
-Require Import SpillSound SpillUtil.
+Require Import SpillUtil.
 
 Set Implicit Arguments.
 
@@ -44,12 +44,6 @@ Proof.
     simpl; eauto.
 Qed.
 
-Definition slot_merge
-           (slot : var -> var)
-           (RM : set var * set var)
-  := fst RM ∪ map slot (snd RM).
-
-
 Lemma add_anns_add
       (X : Type)
       (n m : nat)
@@ -66,20 +60,6 @@ Proof.
   reflexivity.
 Qed.
 
-
-
-Lemma slot_merge_app
-      (L1 L2: list (set var * set var))
-      (slot : var -> var)
-  :
-    slot_merge slot ⊝ L1 ++ slot_merge slot ⊝ L2
-      = slot_merge slot ⊝ (L1 ++ L2)
-.
-Proof.
-  intros.
-  unfold slot_merge.
-  rewrite List.map_app; eauto.
-Qed.
 
 Fixpoint do_spill_rm
          (slot : var -> var)

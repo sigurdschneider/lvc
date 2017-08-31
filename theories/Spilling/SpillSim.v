@@ -2,8 +2,10 @@ Require Import CSet Util Fresh Filter Take MoreList OUnion AllInRel MapDefined M
 Require Import IL Annotation LabelsDefined.
 Require Import Liveness.Liveness TrueLiveness SimI.
 Require Import RenamedApart.
-Require Import SpillSound ReconstrLive DoSpill ReconstrLiveUtil.
+Require Import SpillSound ReconstrLive DoSpill.
+Require Import SlotLiftArgs SlotLiftParams.
 Require Export SpillMovesAgree.
+
 
 Set Implicit Arguments.
 Unset Printing Records.
@@ -260,7 +262,7 @@ Lemma sim_I (slot : var -> var) k Λ ZL LV VD r L L' V V' R M s lv sl ra
     -> ann_R Subset1 lv ra
     -> sim r Sim (L, V, s) (L', V', do_spill slot s sl ZL Λ).
 Proof.
-  simpl. unfold reconstr_live_do_spill. unfold sim.
+  simpl. unfold sim.
   move VD before k. move s before VD. revert_until s.
   sind s.
   intros ? ? ? ? ? ? ? ? ? ? ? ? ?

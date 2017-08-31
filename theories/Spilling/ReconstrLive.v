@@ -1,6 +1,5 @@
 Require Import List Map Env AllInRel Exp AppExpFree.
 Require Import IL Annotation AutoIndTac Liveness.Liveness LabelsDefined.
-Require Import SpillSound SpillUtil.
 Require Import Infra.PartialOrder AnnotationLattice CSetPartialOrder.
 
 Set Implicit Arguments.

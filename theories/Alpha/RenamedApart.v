@@ -573,3 +573,19 @@ Proof.
   invc H; simpl; eauto; set_simpl; pe_rewrite; repeat split;
     intros; inv_get; eauto with cset.
 Qed.
+
+
+Lemma get_ofl_VD ZL F VD
+      (Z_VD : forall (Z : params) (n : nat), get ZL n Z -> of_list Z ⊆ VD)
+      D D' Dt ans
+      (LEN : ❬F❭ = ❬ans❭)
+      (EQ : list_union (defVars ⊜ F ans) ∪ Dt [=] D')
+      (ra_VD : D ∪ D' ⊆ VD)
+  : forall (Z : params) (n : nat), get (fst ⊝ F ++ ZL) n Z -> of_list Z ⊆ VD.
+Proof.
+  intros.
+  eapply get_app_cases in H as [?|[? ?]]; inv_get; eauto.
+  rewrite <- ra_VD. rewrite <- EQ.
+  rewrite <- incl_list_union; eauto using zip_get; try reflexivity.
+  unfold defVars. cset_tac.
+Qed.

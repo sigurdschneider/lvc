@@ -13,12 +13,6 @@ Notation "'getRm' sl" := (snd (getAnn sl)) (at level 40, only parsing).
 (** * SpillUtil *)
 
 (* move somewhere *)
-Lemma setTopAnn_setTopAnn (X : Type) (x x' : X) (a : ann X)
-  : setTopAnn (setTopAnn a x') x = setTopAnn a x.
-Proof.
-  induction a; simpl; eauto.
-Qed.
-
 Lemma tl_list_incl (X : Type) `{OrderedType X} (L : list X)
   : of_list (tl L) ⊆ of_list L.
 Proof.
@@ -192,6 +186,103 @@ Lemma getAnn_als_EQ_merge_rms
 Proof.
   rewrite List.map_app. apply PIR2_app; eauto.
 Qed.
+
+Lemma al_sub_RfMf
+      (als : list (ann ⦃var⦄))
+      (rms : list (⦃var⦄ * ⦃var⦄))
+      (al : ann ⦃var⦄)
+      (R M : ⦃var⦄)
+      (n : nat)
+  : get rms n (R,M)
+    -> get als n al
+    -> PIR2 Equal (merge ⊝ rms) (getAnn ⊝ als)
+    -> getAnn al ⊆ R ∪ M.
+Proof.
+  intros get_rm get_al H16.
+  general induction get_rm;
+    try invc get_al; invc H16;
+      unfold merge in *; simpl in *; eauto.
+  rewrite pf; eauto.
+Qed.
+
+Lemma al_eq_RfMf
+
+      (als : list (ann ⦃var⦄))
+      (rms : list (⦃var⦄ * ⦃var⦄))
+      (al : ann ⦃var⦄)
+      (R M : ⦃var⦄)
+      (n : nat)
+  : get rms n (R,M)
+    -> get als n al
+    -> merge ⊝ rms = getAnn ⊝ als
+    -> getAnn al [=] R ∪ M .
+Proof.
+  intros get_rm get_al H16.
+  general induction get_rm;
+    try invc get_al; invc H16;
+      simpl in *; eauto.
+Qed.
+
+
+Definition slot_merge
+           (slot : var -> var)
+           (RM : set var * set var)
+  := fst RM ∪ map slot (snd RM).
+
+
+Lemma slot_merge_app
+      (L1 L2: list (set var * set var))
+      (slot : var -> var)
+  :
+    slot_merge slot ⊝ L1 ++ slot_merge slot ⊝ L2
+      = slot_merge slot ⊝ (L1 ++ L2)
+.
+Proof.
+  intros.
+  unfold slot_merge.
+  rewrite List.map_app; eauto.
+Qed.
+
+Lemma nth_rfmf
+      (l : lab)
+      (Λ : 〔⦃var⦄ * ⦃var⦄〕)
+      (slot : var -> var)
+      (R_f M_f : ⦃var⦄)
+      (H15 : get Λ (counted l) (R_f, M_f))
+  : nth (counted l) (slot_merge slot ⊝ Λ) ∅ [=] R_f ∪ map slot M_f .
+Proof.
+  eapply get_nth with (d:=(∅,∅)) in H15 as H15'.
+  simpl in H15'.
+  assert ((fun RM
+           => fst RM ∪ map slot (snd RM)) (nth l Λ (∅,∅))
+          = (fun RM
+             => fst RM ∪ map slot (snd RM)) (R_f,M_f))
+    as H_sms. {
+    f_equal; simpl; [ | f_equal];
+      rewrite H15'; simpl; eauto.
+  }
+  unfold slot_merge.
+  rewrite <- map_nth in H_sms.
+  simpl in H_sms.
+  assert (l < length ((fun RM : ⦃var⦄ * ⦃var⦄
+                       => fst RM ∪ map slot (snd RM)) ⊝ Λ))
+    as l_len. {
+    apply get_length in H15.
+    clear - H15; eauto with len.
+  }
+  assert (nth l ((fun RM : ⦃var⦄ * ⦃var⦄
+                  => fst RM ∪ map slot (snd RM)) ⊝ Λ) ∅
+          = R_f ∪ map slot M_f)
+    as H_sms'. {
+    rewrite nth_indep with (d':=∅ ∪ map slot ∅).
+    * exact H_sms.
+    * eauto with len.
+  }
+  simpl.
+  rewrite H_sms'.
+  reflexivity.
+Qed.
+
 
 
 (* the following lemmata & definitions could be extracted *)

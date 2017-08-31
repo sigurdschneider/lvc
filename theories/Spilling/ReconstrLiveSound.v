@@ -1,14 +1,30 @@
 Require Import List Map Env AllInRel Exp AppExpFree RenamedApart.
 Require Import IL Annotation AnnotationLattice.
 Require Import AutoIndTac Liveness.Liveness LabelsDefined.
-Require Import SpillSound DoSpill DoSpillRm.
-Require Import SpillUtil ReconstrLive ReconstrLiveSmall.
-Require Import InVD ReconstrLiveUtil.
-Require Import Slot.
+Require Import DoSpill DoSpillRm.
+Require Import SpillSound SpillUtil ReconstrLive ReconstrLiveSmall.
+Require Import InVD Slot.
+Require Import SlotLiftArgs SlotLiftParams.
 
 Set Implicit Arguments.
 
 (** * ReconstrLiveSound *)
+
+Lemma sla_extargs_slp_length
+      (slot : var -> var)
+      RM RMapp
+      (ZL : list params)
+      (Z : params)
+      (l : lab)
+      (Λ : list (⦃var⦄ * ⦃var⦄))
+      (Y : args)
+  : length Y = length Z ->
+    ❬slot_lift_args slot RM RMapp Y Z❭ = ❬slot_lift_params slot RM Z❭.
+Proof.
+  intros Len.
+  general induction Len; simpl; eauto.
+  repeat cases; simpl; eauto.
+Qed.
 
 Lemma reconstr_live_sound_s
       (slot : var -> var) o
@@ -88,8 +104,6 @@ Proof.
     * apply reconstr_live_G.
       cset_tac.
 Qed.
-
-
 
 Lemma reconstr_live_sound
       (k : nat) VD

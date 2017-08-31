@@ -1,12 +1,27 @@
 Require Import List Map Env AllInRel Exp AppExpFree RenamedApart.
 Require Import IL Annotation AutoIndTac.
 Require Import Liveness.Liveness LabelsDefined.
-Require Import SpillSound DoSpill DoSpillRm SpillUtil ReconstrLive AnnP InVD.
-Require Import ReconstrLiveUtil.
+Require Import SpillSound SpillUtil.
+Require Import DoSpill DoSpillRm ReconstrLive AnnP InVD.
+Require Import SlotLiftParams SlotLiftArgs.
 
 Set Implicit Arguments.
 
 (** * ReconstrLiveSmall *)
+
+Definition reconstr_live_do_spill
+           (slot : var -> var)
+           (Λ : list (⦃var⦄ * ⦃var⦄))
+           (ZL : list params)
+           (G : ⦃var⦄)
+           (s : stmt)
+           (sl : spilling)
+  : ann ⦃var⦄
+  := reconstr_live (slot_merge slot ⊝ Λ)
+                  ((slot_lift_params slot) ⊜ Λ ZL)
+                  G
+                  (do_spill slot s sl ZL Λ)
+                  (do_spill_rm slot sl).
 
 Lemma reconstr_live_write_loads
       (Lv : list ⦃var⦄)

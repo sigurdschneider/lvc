@@ -224,3 +224,49 @@ Proof.
   rewrite <- slp_union_incl with (s:=s); eauto.
   unfold lookup_set. cset_tac.
 Qed.
+
+
+Lemma ofl_slp_sub_rm
+      (al : ann ⦃var⦄)
+      (R M : ⦃var⦄)
+      (Z : params)
+      (slot : var -> var)
+  : getAnn al ⊆ R ∪ M
+    -> of_list Z ⊆ getAnn al
+    -> of_list (slot_lift_params slot (R,M) Z) ⊆ R ∪ map slot M .
+Proof.
+  intros ofl_in_rm H2'.
+  rewrite <- H2' in ofl_in_rm.
+  induction Z;
+    simpl in *; eauto.
+  - clear; cset_tac.
+  - assert (of_list Z ⊆ getAnn al) as ofl_al
+        by (rewrite <- H2'; clear; cset_tac).
+    assert (of_list Z ⊆ R ∪ M) as ofl_rm
+        by (rewrite <- ofl_in_rm; clear; cset_tac).
+    assert (a ∈ M -> slot a ∈ map slot M)
+      as slot_a_in. {
+      intro a_in.
+      apply in_singleton.
+      rewrite <- map_singleton; eauto.
+      apply lookup_set_incl; eauto.
+      apply incl_singleton; eauto.
+    }
+    specialize (IHZ ofl_rm ofl_al).
+    decide (a ∈ R ∩ M); simpl.
+    + apply inter_iff in i as [a_fst a_snd].
+      rewrite IHZ.
+      apply slot_a_in in a_snd.
+      clear - a_fst a_snd; cset_tac.
+    + decide (a ∈ R); simpl.
+      * rewrite IHZ.
+        clear - i; cset_tac.
+      * rewrite add_union_singleton in ofl_in_rm.
+        eapply union_incl_split2 in ofl_in_rm as [ofl_in_rm _].
+        eapply in_singleton in ofl_in_rm.
+        assert (a ∈ M) as a_in
+            by (clear - ofl_in_rm n0; cset_tac).
+        apply slot_a_in in a_in.
+        rewrite IHZ.
+        clear - a_in; cset_tac.
+Qed.

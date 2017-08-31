@@ -2,8 +2,8 @@ Require Import List Map Env AllInRel Exp AppExpFree RenamedApart.
 Require Import IL Annotation AutoIndTac AnnotationLattice.
 Require Import Liveness.Liveness LabelsDefined.
 Require Import SpillSound DoSpill DoSpillRm SpillUtil ReconstrLive.
-Require Import ReconstrLiveSmall ReconstrLiveSound InVD AnnP ReconstrLiveUtil.
-Require Import BoundedIn.
+Require Import ReconstrLiveSmall ReconstrLiveSound InVD AnnP.
+Require Import BoundedIn SlotLiftArgs SlotLiftParams.
 
 Set Implicit Arguments.
 

@@ -431,3 +431,9 @@ Smpl Add 120 match goal with
          | [ H : getAnn ?y = ?x, I : context [ setTopAnn ?y ?x ] |- _ ] =>
            rewrite (@setTopAnn_eta _ _ _ H) in I
          end : inv_trivial.
+
+Lemma setTopAnn_setTopAnn (X : Type) (x x' : X) (a : ann X)
+  : setTopAnn (setTopAnn a x') x = setTopAnn a x.
+Proof.
+  destruct a; simpl; eauto.
+Qed.
