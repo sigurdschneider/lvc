@@ -7,7 +7,6 @@ Require Import SetOperations Liveness.Liveness Eqn OptionR.
 
 Set Implicit Arguments.
 Unset Printing Records.
-Print Coercions.
 
 Inductive eqn_sound : list params -> list eqns  (*params*set var*eqns*)
                       -> stmt -> stmt
