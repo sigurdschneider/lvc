@@ -1,6 +1,6 @@
 Require Import Util LengthEq IL RenamedApart LabelsDefined OptionR.
 Require Import Keep Drop Take Restrict SetOperations OUnion.
-Require Import Annotation Liveness.Liveness.
+Require Import Annotation Liveness.Liveness PartialOrder.
 
 Set Implicit Arguments.
 
@@ -37,14 +37,14 @@ Proof.
 Qed.
 
 Lemma addParam_Subset x DL AP
-: PIR2 Subset AP DL
-  -> PIR2 Subset (addParam x DL AP) DL.
+: AP ⊑ DL
+  -> addParam x DL AP ⊑ DL.
 Proof.
   intros. general induction H; simpl.
   - constructor.
   - econstructor. cases; eauto.
-    + cset_tac.
-    + eauto.
+    + hnf. cset_tac.
+    + eapply IHPIR2.
 Qed.
 
 Lemma addParam_x DL AP x n ap' dl

@@ -534,12 +534,7 @@ Proof.
   intros UC Ann LS.
   general induction LS; inv UC; simpl in *; eauto using true_live_sound.
   - econstructor; eauto using compile_live_incl with cset.
-    cases; eauto.
-    rewrite compile_live_incl in *; eauto. cases in H; eauto.
-    cases in H; eauto.
-    rewrite compile_live_incl in NOTCOND; eauto. cases in H; eauto.
-    intros. eapply H. destruct H1; eauto.
-    left. eapply compile_live_incl; eauto.
+    rewrite compile_live_incl in *; eauto.
   - repeat cases.
     + eapply IHLS1; [eauto| ].
       rewrite <- H5; [eauto|].

@@ -1,11 +1,9 @@
 Require Import List Map Env AllInRel Exp.
 Require Import IL Annotation AnnP AutoIndTac Liveness.Liveness LabelsDefined.
-Require Import ExpVarsBounded.
+Require Import ExpVarsBounded PartialOrder.
 Require Export SpillUtil.
 
-
 (** * Correctness Predicate with 5 inference rules *)
-
 Inductive spill_sound (k:nat) :
   (list params)
   -> (list (⦃var⦄ * ⦃var⦄))
@@ -14,7 +12,6 @@ Inductive spill_sound (k:nat) :
   -> spilling
   -> Prop
   :=
-
   | SpillLet
       (ZL : list params)
       (Λ : list (⦃var⦄ * ⦃var⦄))
@@ -31,7 +28,6 @@ Inductive spill_sound (k:nat) :
       -> cardinal (R\K ∪ L) <= k
       -> cardinal ({x;((R\K) ∪ L)\Kx }) <= k
       -> spill_sound k ZL Λ (R,M) (stmtLet x e s) (ann1 (Sp,L,nil) sl)
-
   | SpillReturn
       (ZL : list (params))
       (Λ : list (⦃var⦄ * ⦃var⦄))
@@ -43,7 +39,6 @@ Inductive spill_sound (k:nat) :
       -> cardinal ((R\K) ∪ L) <= k
       -> spill_sound k ZL Λ (R,M) (stmtReturn e)
                     (ann0 (Sp,L,nil))
-
   | SpillIf
       (ZL : list (params))
       (Λ : list (⦃var⦄ * ⦃var⦄))
@@ -51,7 +46,6 @@ Inductive spill_sound (k:nat) :
       (e : op)
       (s t : stmt)
       (sl_s sl_t : spilling)
-
     : Sp ⊆ R
       -> L ⊆ Sp ∪ M
       -> Op.freeVars e ⊆ R\K ∪ L
@@ -59,7 +53,6 @@ Inductive spill_sound (k:nat) :
       -> spill_sound k ZL Λ (R\K ∪ L, Sp ∪ M) s sl_s
       -> spill_sound k ZL Λ (R\K ∪ L, Sp ∪ M) t sl_t
       -> spill_sound k ZL Λ (R,M) (stmtIf e s t) (ann2 (Sp,L,nil) sl_s sl_t)
-
   | SpillApp
       (ZL : list params)
       (Λ : list (⦃var⦄ * ⦃var⦄))
@@ -79,7 +72,6 @@ Inductive spill_sound (k:nat) :
       -> M' ⊆ Sp ∪ M
       -> spill_sound k ZL Λ (R,M) (stmtApp f Y)
                      (ann0 (Sp,L, (R', M')::nil))
-
   | SpillFun
       (ZL : list params)
       (Λ rms : list (⦃var⦄ * ⦃var⦄))
@@ -106,7 +98,6 @@ Inductive spill_sound (k:nat) :
 .
 
 
-
 Lemma Sp_sub_R
       (ZL : list params)
       (k : nat)
@@ -125,7 +116,6 @@ Proof.
 Qed.
 
 
-
 Lemma L_sub_SpM (ZL : list params) (k : nat) (Λ : list (⦃var⦄ * ⦃var⦄))
       (R M : ⦃var⦄) (s : stmt) (sl : spilling)
   : spill_sound k ZL Λ (R,M) s sl -> getL sl ⊆ getSp sl ∪ M .
@@ -133,7 +123,6 @@ Proof.
   intros spillSnd.
   invc spillSnd; cset_tac.
 Qed.
-
 Inductive spill_live
           (VD : ⦃var⦄)
   :
@@ -163,7 +152,6 @@ Inductive spill_live
                               (annF b lv_F lv_t)
 .
 
-
 Lemma spill_sound_ext Λ Λ' k ZL R M s sl
   : PIR2 _eq Λ Λ'
     -> spill_sound k ZL Λ  (R,M) s sl
@@ -184,7 +172,6 @@ Proof.
     + eapply IHspillSnd; eauto.
       apply PIR2_app; eauto.
 Qed.
-
 
 Lemma spill_sound_monotone Λ Λ' k ZL R M s sl
   : PIR2 (fun x y => fst x ⊆ fst y /\ snd x ⊆ snd y) Λ' Λ
@@ -213,10 +200,15 @@ Proof.
   intros. general induction H0; eauto using PIR2.
 Qed.
 
+Smpl Add match goal with
+         | [ H : S _ < 0 |- _ ] => exfalso; inv H
+         | [ H : S _ <=  0 |- _ ] => exfalso; inv H
+         end : inv_trivial.
+
 Lemma spill_sound_ext2 (k : nat) (ZL : list params) s (Λ Λ2 : list (⦃var⦄ * ⦃var⦄))
       (R R2 M M2 : ⦃var⦄) (sl sl2 : spilling)
   :
-    PIR2 _eq Λ Λ2
+    Λ === Λ2
     -> R [=] R2
     -> M [=] M2
     -> sl === sl2
@@ -225,68 +217,76 @@ Proof.
   intros Λeq Req Meq sleq H.
   general induction H; simpl; eauto.
     destruct sl2; isabsurd;
-      destruct a as [[Sp' L'] rm'].
-  - destruct rm'; [|clear - sleq; invc sleq; invc H2; isabsurd].
-    eapply SpillLet with (K:=K) (Kx:=Kx); simpl; eauto; invc sleq; invc H9; invc H10.
+      destruct a as [[Sp' L'] rm'];
+      clear_trivial_eqs.
+  - eapply SpillLet with (K:=K) (Kx:=Kx); simpl; eauto with cset.
     + rewrite <-Req, <-H9. assumption.
-    + rewrite <-Meq, <-H14, <-H9. assumption.
+    + rewrite <-Meq, <-H7, <-H9. assumption.
     + eapply IHspill_sound; eauto.
-      * rewrite Req, H14; clear; cset_tac.
+      * rewrite Req, H7; clear; cset_tac.
       * rewrite H9, Meq; clear; cset_tac.
-    + rewrite <-Req, <-H14; assumption.
-    + rewrite <-Req, <-H14; assumption.
-    + rewrite <-Req, <-H14; assumption.
-  - invc sleq. invc H4.
-    inv H8. inv H6. econstructor; eauto.
-    rewrite <- H5. rewrite <- Req. eauto.
-    rewrite <- H5, <- H9. rewrite <- Meq. eauto.
-    rewrite <- H9. rewrite <- Req. eauto.
-    rewrite <- Req, <- H9. eauto.
-  - inv sleq. inv H8. inv H7; invc H12.
+    + rewrite <-Req, <-H7; assumption.
+    + rewrite <-Req, <-H7; assumption.
+    + rewrite <-Req, <-H7; assumption.
+  - invc sleq. destruct b as [[? ?] ?]. clear_trivial_eqs.
+    econstructor; eauto.
+    + rewrite <- H4. rewrite <- Req. eauto.
+    + rewrite <- H4, <- H5. rewrite <- Meq. eauto.
+    + rewrite <- H5. rewrite <- Req. eauto.
+    + rewrite <- Req, <- H5. eauto.
+  - invc sleq.
+    destruct b as [[? ?] ?]. clear_trivial_eqs.
     eapply SpillIf with (K:=K).
-    + rewrite <-H9, <-Req. assumption.
-    + rewrite <-Meq, <-H9, <-H14; assumption.
-    + rewrite <-Req, <-H14; assumption.
-    + rewrite <-Req, <-H14; assumption.
+    + rewrite <-H8, <-Req. assumption.
+    + rewrite <-Meq, <-H8, <-H6; assumption.
+    + rewrite <-Req, <-H6; assumption.
+    + rewrite <-Req, <-H6; assumption.
     + eapply IHspill_sound1; eauto.
-      * rewrite Req, H14; clear; cset_tac.
-      * rewrite Meq, H9; clear; cset_tac.
+      * rewrite Req, H6; clear; cset_tac.
+      * rewrite Meq, H8; clear; cset_tac.
     + eapply IHspill_sound2; eauto.
-      * rewrite Req, H14; clear; cset_tac.
-      * rewrite Meq, H9; clear; cset_tac.
-  - PIR2_inv.
-    invc sleq. invc H11. invc H17. invc H18.
-    invc H15. invc H13.
-    eapply SpillApp with (K:=K); eauto.
-    + rewrite <- H16, <- Req; eauto.
-    + rewrite <- H16, <- H18, <- Meq; eauto.
-    + rewrite <- H18, <- Req; eauto.
-    + rewrite <- H12, <- Req, <- H18; eauto.
-    + rewrite <- H16, <- Meq, <-H14; eauto.
-    + rewrite <- H19, <- H15; eauto.
-    + rewrite <- H18, <- Req, <- H15; eauto.
-    + rewrite <- H19, <- Meq, <- H16; eauto.
-  - invc sleq. invc H11. invc H10.
+      * rewrite Req, H6; clear; cset_tac.
+      * rewrite Meq, H8; clear; cset_tac.
+  - hnf in Λeq. PIR2_inv.
+    invc sleq.
+    destruct b as [[? ?] ?]. destruct x. simpl in *.
+    clear_trivial_eqs.
+    destruct y. simpl in *.
+    invc H16.
+    eapply SpillApp with (K:=K); eauto;
+      try rewrite <- H13;
+      try rewrite <- H14;
+      try rewrite <- Req;
+      try rewrite <- Req;
+      try rewrite <- Λeq0;
+      try rewrite <- Λeq2;
+      try rewrite <- H10;
+      try rewrite <- H11;
+      try rewrite <- Meq; eauto.
+  - invc sleq.
+    destruct b as [[? ?] ?]. clear_trivial_eqs.
     eapply SpillFun with (K:=K); eauto.
     + rewrite <- H11, <- Req; eauto.
-    + rewrite <- H11, <- H17, <- Meq; eauto.
-    + rewrite <- H17, <- Req. eauto.
+    + rewrite <- H9, <- H11, <- Meq; eauto.
+    + rewrite <- H9, <- Req. eauto.
     + eauto with len.
-    + hnf in H16. eapply list_eq_length in H16. eauto with len.
-    + intros. symmetry in H16.
-      edestruct @list_eq_get; try eapply H16; eauto; dcr.
-      exploit H4; eauto. rewrite H13. eauto.
+    + hnf in H8. eapply PIR2_length in H8. eauto with len.
+    + intros. hnf in H8. inv_get.
+      edestruct @PIR2_nth_2; try eapply H8; eauto; dcr.
+      exploit H4; eauto.
+      rewrite <- H17. eauto.
     + intros. inv_get.
-      exploit H14; eauto.
-      edestruct @list_eq_get; try eapply H16; eauto; dcr.
-      inv_get. invc H22.
+      exploit H7; eauto.
+      edestruct @PIR2_nth_2; try eapply H8; eauto; dcr.
+      inv_get. destruct x,rm; clear_trivial_eqs.
       eapply H6; eauto.
-      * eapply PIR2_app; eauto using list_eq_PIR2.
-      * eapply H20.
-      * eapply H21.
+      * eapply PIR2_app; eauto.
+      * eauto.
+      * eauto.
+      * eapply H14; eauto.
     + eapply IHspill_sound; eauto.
-      * eapply PIR2_app; eauto using list_eq_PIR2.
-      * rewrite <- Req, <- H17. eauto.
+      * eapply PIR2_app; eauto.
+      * rewrite <- Req, <- H9. eauto.
       * rewrite <- H11. rewrite <- Meq. eauto.
 Qed.
 
@@ -404,7 +404,7 @@ Proof.
   - eapply SpillReturn with (K:=Ka).
     + rewrite SpE. eauto with cset.
     + rewrite L_sub. eauto with cset.
-    + rewrite H9. set_simpl. cset_tac.
+    + rewrite H9. cset_tac.
     + eauto.
   - econstructor; eauto.
     + rewrite SpE. eauto with cset.
@@ -414,8 +414,9 @@ Proof.
   - econstructor; eauto.
     + rewrite SpE. eauto with cset.
     + rewrite L_sub. eauto with cset.
-    + set_simpl. instantiate (1:=K ∪ Kx).
+    + instantiate (1:=K ∪ Kx).
       rewrite <- minus_union. eauto.
+      revert H10; clear. set_simpl. eauto.
     + rewrite H11. clear; cset_tac.
     + rewrite <- H14.
       eapply subset_cardinal.

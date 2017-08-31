@@ -75,9 +75,7 @@ Proof.
     try solve [right; intro A; inversion A].
   - edestruct (IH s); eauto; [| dec_right ];
       ensure (getAnn slv \ singleton x ⊆ a);
-      ensure (if [x ∈ getAnn slv \/ isCall e]
-              then live_exp_sound e a
-              else a ⊆ getAnn slv \ singleton x); dec_solve.
+      ensure (x ∈ getAnn slv \/ isCall e -> live_exp_sound e a); dec_solve.
   - ensure (live_op_sound e a);
       ensure (getAnn slv1 ⊆ a);
       ensure (getAnn slv2 ⊆ a).

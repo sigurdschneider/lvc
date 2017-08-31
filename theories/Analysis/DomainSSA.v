@@ -103,7 +103,7 @@ Proof.
   intros. hnf; intros.
   unfold domupd; cases.
   - mlud; eauto. rewrite <- e. eauto.
-  - mlud; eauto. rewrite H3, <- e. eauto.
+  - mlud; eauto. rewrite <- e, <- H3. eauto.
 Qed.
 
 Lemma domjoin_list_exp  D `{JoinSemiLattice D} (m:Dom D) Z Y

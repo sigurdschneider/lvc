@@ -1,7 +1,7 @@
 Require Import Util LengthEq IL RenamedApart LabelsDefined OptionR.
 Require Import Keep Drop Take Restrict SetOperations OUnion.
 Require Import Annotation Liveness.Liveness Coherence Delocation.
-Require Import AddParam AddAdd MoreListSet.
+Require Import AddParam AddAdd MoreListSet PartialOrder.
 
 Set Implicit Arguments.
 
@@ -167,7 +167,7 @@ Lemma computeParameters_LV_DL ZL Lv AP s lv
 : live_sound Imperative ZL Lv s lv
   -> length AP = length Lv
   -> length Lv = length ZL
-  -> PIR2 Subset AP (Lv \\ ZL)
+  -> AP ⊑ (Lv \\ ZL)
   -> PIR2 (ifFstR Subset) (snd (computeParameters (Lv \\ ZL) ZL AP s lv)) (Lv \\ ZL).
 Proof.
   intros LS Len1 Len2 LEQ.

@@ -108,9 +108,7 @@ Inductive true_live_sound (i:overapproximation)
   : list params -> list (set var) -> stmt -> ann (set var) -> Prop :=
 | TLOpr ZL Lv x b lv e al
   :  true_live_sound i ZL Lv b al
-     -> (if [ x ∈ getAnn al \/ isCall e ]
-        then live_exp_sound e lv
-        else lv ⊆ getAnn al\ singleton x)
+     -> (x ∈ getAnn al \/ isCall e ->live_exp_sound e lv)
      -> (getAnn al\ singleton x) ⊆ lv
      -> true_live_sound i ZL Lv (stmtLet x e b) (ann1 lv al)
 | TLIf ZL Lv e b1 b2 lv al1 al2

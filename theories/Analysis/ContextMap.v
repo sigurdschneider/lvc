@@ -407,10 +407,10 @@ Proof.
   rewrite H1.
   cases; simpl; split; eauto; intros; mlud; eauto;
     exploit (H3 (ctxmap_len m' - S x)); try omega.
-  + repeat cases; eauto.
-    rewrite H2, H5; eauto.
-    rewrite H2. rewrite <- join_poLe. eauto.
-  + eapply H3. omega.
+  - repeat cases; eauto.
+    + rewrite H5, H2; eauto.
+    + rewrite H2. rewrite <- join_poLe. eauto.
+  - eapply H3. omega.
 Qed.
 
 Lemma ctxmap_join_at_poEq X `{JoinSemiLattice X} m m' v v' x

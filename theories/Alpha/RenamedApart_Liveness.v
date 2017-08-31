@@ -638,6 +638,7 @@ Proof.
         erewrite getAnn_mapAnn2; eauto using live_sound_annotation,
                                  renamedApart_annotation.
         edestruct H2; eauto; dcr.
+        unfold PartialOrder.poLe; simpl.
         eauto with cset.
       * rewrite zip_app; eauto with len.
         rewrite List.map_app.
@@ -655,6 +656,7 @@ Proof.
         eapply PIR2_get; [intros; inv_get; simpl | eauto 20 with len].
         erewrite getAnn_mapAnn2;
           eauto using live_sound_annotation, renamedApart_annotation.
+        unfold PartialOrder.poLe; simpl.
         eauto with cset.
       * rewrite zip_app; eauto with len.
         rewrite List.map_app.

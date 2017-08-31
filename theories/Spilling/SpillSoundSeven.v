@@ -1,6 +1,7 @@
 Require Import List Map Env AllInRel Exp.
 Require Import IL Annotation AnnP InRel.
 Require Import LabelsDefined SpillSound SpillUtil.
+Require Import PartialOrder AnnotationLattice.
 
 
 (** * Correctness Predicate with 7 inference rules *)
@@ -122,33 +123,19 @@ Smpl Add
 
 
 Instance clear_Sp_morph
-  : Proper (@equiv _ (ann_R _eq) _ ==> equiv) clear_Sp.
+  : Proper (poEq ==> equiv) clear_Sp.
 Proof.
   unfold Proper, respectful; intros.
-  destruct x; clear_trivial_eqs; simpl; econstructor; eauto.
-  * econstructor; eauto;
-      rewrite H1; reflexivity.
-  * econstructor; eauto;
-      rewrite H2; reflexivity.
-  * econstructor; eauto;
-      rewrite H3; reflexivity.
-  * econstructor; eauto;
-      rewrite H3; reflexivity.
+  eapply ann_R_setTopAnn_poEq; eauto.
+  rewrite H. reflexivity.
 Qed.
 
 Instance clear_L_morph
-  : Proper (@equiv _ (ann_R _eq) _ ==> equiv) clear_L.
+  : Proper (poEq ==> equiv) clear_L.
 Proof.
   unfold Proper, respectful; intros.
-  destruct x; clear_trivial_eqs; simpl; econstructor; eauto.
-  * econstructor; eauto;
-      rewrite H1; reflexivity.
-  * econstructor; eauto;
-      rewrite H2; reflexivity.
-  * econstructor; eauto;
-      rewrite H3; reflexivity.
-  * econstructor; eauto;
-      rewrite H3; reflexivity.
+  eapply ann_R_setTopAnn_poEq; eauto.
+  rewrite H. reflexivity.
 Qed.
 
 Lemma spill_sound7_ext'
@@ -158,50 +145,61 @@ Lemma spill_sound7_ext'
       (R R2 M M2 : ⦃var⦄)
       (sl sl2 : spilling)
   :
-    PIR2 _eq Λ Λ2
+    poEq Λ Λ2
     -> R [=] R2
     -> M [=] M2
-    -> sl === sl2
+    -> poEq sl sl2
     -> spill_sound7 k ZL Λ (R,M) s sl -> spill_sound7 k ZL Λ2 (R2,M2) s sl2
 .
 Proof.
   intros Λeq Req Meq sleq H.
-  general induction H; simpl; eauto; clear_trivial_eqs.
-  - eapply SpillLet with (Kx:=Kx); simpl; eauto.
-    + rewrite <-H2. assumption.
-    + rewrite <-H7. assumption.
+  general induction H; simpl in *; eauto; clear_trivial_eqs.
+  - destruct b as [[? ?] ?]; simpl in *; clear_trivial_eqs.
+    eapply SpillLet with (Kx:=Kx); simpl; eauto.
+    + rewrite <- Sp_empty; try symmetry; eauto.
+    + rewrite <- L_empty; try symmetry; eauto.
     + eapply IHspill_sound7; eauto.
       rewrite Req. reflexivity.
+    + rewrite <- Req; eauto.
     + rewrite <- Req. eauto.
-    + rewrite <- Req. eauto.
-  - econstructor; eauto;
-      try rewrite <- H1; try rewrite <- H5; try rewrite <- Req; eauto.
-  - eapply SpillIf; try eapply IHspill_sound71; try eapply IHspill_sound72; eauto;
-      try rewrite <- H4; try rewrite <- H9; try rewrite <- Req; eauto.
-  - PIR2_inv.
-    eapply SpillApp; eauto;
-      (try rewrite <- H1); (try rewrite <- H5); (try rewrite <- H3);
-        (try rewrite <- H4); (try rewrite <- H8); (try rewrite <- Req);
-          try rewrite <- Req0; try rewrite <- H7;
-          (try rewrite <- Meq); eauto.
-  - eapply SpillFun; eauto.
-    + rewrite <- H4; eauto.
-    + rewrite <- H10; eauto.
-    + eauto with len.
-    + eapply list_eq_length in H9. eauto with len.
-    + intros. symmetry in H9.
-      edestruct @list_eq_get; try eapply H9; eauto; dcr. inv H6.
-      exploit card; eauto. rewrite H12; eauto.
+  - destruct b as [[? ?] ?]; simpl in *; clear_trivial_eqs.
+    econstructor; eauto.
+    + rewrite <- Sp_empty; try symmetry; eauto.
+    + rewrite <- L_empty; try symmetry; eauto.
+    + rewrite <- Req; eauto.
+  - destruct b as [[? ?] ?]; simpl in *; clear_trivial_eqs.
+    eapply SpillIf; try eapply IHspill_sound71; try eapply IHspill_sound72; eauto.
+    try rewrite <- H4; try rewrite <- H9; try rewrite <- Req; eauto.
+    + rewrite <- Sp_empty; try symmetry; eauto.
+    + rewrite <- L_empty; try symmetry; eauto.
+    + rewrite <- Req; eauto.
+  - destruct b as [[? ?] [|?]]; simpl in *;
+      clear_trivial_eqs.
+    destruct p; simpl in *; clear_trivial_eqs.
+    invc H3.
+    hnf in  Λeq. PIR2_inv. destruct x. simpl in *. clear_trivial_eqs.
+    eapply SpillApp; eauto.
+    + rewrite <- Sp_empty; try symmetry; eauto.
+    + rewrite <- L_empty; try symmetry; eauto.
+    + rewrite <- Λeq0, <- Req; eauto.
+    + rewrite <- Λeq2, <- Meq; eauto.
+    + rewrite inVar. rewrite H1, H2; eauto.
+    + rewrite <- H1, R_sub, Req; eauto.
+    + rewrite <- H2, M_sub, Meq; eauto.
+  - destruct b as [[? ?]]; simpl in *;
+      clear_trivial_eqs.
+    eapply SpillFun; eauto.
+    + rewrite <- Sp_empty; try symmetry; eauto.
+    + rewrite <- L_empty; try symmetry; eauto.
+    + rewrite <- H5. eauto with len.
+    + rewrite <- H2. eauto with len.
+    + intros. hnf in H2. PIR2_inv.
+      destruct x; simpl in *. rewrite <- H10.
+      eapply card; eauto.
     + intros. inv_get.
       exploit H7; eauto.
-      edestruct @list_eq_get; try eapply H9; eauto; dcr.
-      inv_get.
-      eapply H; eauto.
-      * eapply PIR2_app; eauto using list_eq_PIR2.
-      * assumption.
-      * assumption.
-    + eapply IHspill_sound7; eauto.
-      * eapply PIR2_app; eauto using list_eq_PIR2.
+      hnf in H2. PIR2_inv. destruct x; simpl in *; clear_trivial_eqs.
+      eapply H; eauto; try eassumption.
   - eapply SpillLoad; eauto.
     + rewrite <- sleq; eauto.
     + rewrite <- sleq, <- Meq; eauto.

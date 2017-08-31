@@ -2,6 +2,7 @@ Require Import Util LengthEq IL RenamedApart LabelsDefined OptionR.
 Require Import Keep Drop Take Restrict SetOperations OUnion.
 Require Import Annotation Liveness.Liveness Coherence Delocation.
 Require Import AddParam AddAdd MoreListSet DelocationAlgo DelocationAlgoIsCalled.
+Require Import PartialOrder.
 
 Set Implicit Arguments.
 
@@ -18,7 +19,7 @@ end : len.
 Lemma computeParameters_trs b ZL Lv AP s lv
 : live_sound Imperative ZL Lv s lv
   -> noUnreachableCode (isCalled b) s
-  -> PIR2 Subset AP (Lv \\ ZL)
+  -> poLe AP (Lv \\ ZL)
   -> length Lv = length ZL
   -> length ZL = length AP
   -> trs (restr (getAnn lv) ⊝ (zip ominus' (Lv \\ ZL)
@@ -228,6 +229,6 @@ Proof.
     exploit computeParameters_AP_LV; eauto.
     inv H1; eauto.
   }
-  exploit computeParameters_trs; eauto using @PIR2.
+  exploit computeParameters_trs; eauto; try reflexivity.
   simpl in *. rewrite H1 in H2. eauto.
 Qed.

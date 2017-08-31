@@ -116,7 +116,7 @@ Proof.
     eapply list_union_incl; eauto with cset.
     intros; inv_get. hnf in H. PIR2_inv.
     eapply incl_list_union; eauto using get_take, zip_get.
-    eapply sig_R_proj1_sig in H3; eauto with cset.
+    rewrite H3; reflexivity.
   - repeat cases; try (now congruence); eauto.
     unfold poLe in *; simpl in *.
     cset_tac.

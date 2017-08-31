@@ -33,6 +33,11 @@ Ltac inv_if_one_ctor H A B :=
   first [ is_constructor_app A; inversion H; subst; clear H
         | is_constructor_app B; inversion H; subst; clear H ].
 
+Ltac inv_if_one_ctor_and_var H A B :=
+  first [ is_constructor_app A; is_var B; inversion H; subst; clear H
+        | is_constructor_app B; is_var A; inversion H; subst; clear H
+        | inv_if_ctor H A B ].
+
 Ltac inv_trivial_base :=
   match goal with
   | [ H : @eq _ ?x ?x |- _ ] => clear H

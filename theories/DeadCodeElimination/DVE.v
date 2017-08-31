@@ -310,7 +310,7 @@ Fixpoint compile_live (s:stmt) (a:ann (set var)) (G:set var) : ann (set var) :=
   match s, a with
     | stmtLet x e s, ann1 lv an as a =>
       if [x ∈ getAnn an \/ isCall e] then ann1 (G ∪ lv) (compile_live s an {x})
-                         else compile_live s an G
+                         else compile_live s an (G ∪ lv)
     | stmtIf e s t, ann2 lv ans ant =>
       ann2 (G ∪ lv) (compile_live s ans ∅) (compile_live t ant ∅)
     | stmtApp f Y, ann0 lv => ann0 (G ∪ lv)
@@ -328,7 +328,8 @@ Lemma compile_live_incl G i ZL LV s lv
 Proof.
   intros. general induction H; simpl; eauto.
   - cases; simpl; try reflexivity.
-    rewrite IHtrue_live_sound. rewrite <- H1. cset_tac; intuition.
+    rewrite IHtrue_live_sound.
+    cset_tac.
 Qed.
 
 Lemma compile_live_incl_empty i ZL LV s lv
@@ -346,6 +347,8 @@ Lemma incl_compile_live G i ZL LV s lv
 Proof.
   intros. general induction H; simpl; eauto.
   - cases; simpl; eauto with cset.
+    rewrite <- IHtrue_live_sound.
+    cset_tac.
 Qed.
 
 Lemma incl_compile_live' G i ZL LV s lv
@@ -354,8 +357,7 @@ Lemma incl_compile_live' G i ZL LV s lv
 Proof.
   intros. general induction H; simpl; eauto.
   - cases; simpl; eauto with cset.
-    rewrite H0. rewrite <- IHtrue_live_sound.
-    eauto with cset.
+    rewrite <- incl_compile_live; eauto.
 Qed.
 
 Lemma dve_live i ZL LV s lv G
@@ -423,157 +425,6 @@ Proof.
 Qed.
 
 Require Import ReconstrLive.
-
-Fixpoint compile_live' (s:stmt) (a:ann (set var)) : ann (set var) :=
-  match s, a with
-    | stmtLet x e s, ann1 lv an as a =>
-      if [x ∈ getAnn an \/ isCall e] then ann1 lv (compile_live' s an)
-                         else compile_live' s an
-    | stmtIf e s t, ann2 lv ans ant =>
-      ann2 lv (compile_live' s ans) (compile_live' t ant)
-    | stmtFun F t, annF lv ans ant =>
-      let ans' := zip (fun Zs a => compile_live' (snd Zs) a) F ans
-      in annF lv ans' (compile_live' t ant)
-    | _, a => a
-  end.
-
-Lemma compile_live_eq i ZL LV s lv
-      (TL:true_live_sound i ZL LV s lv)
-  : getAnn (compile_live' s lv) ≣ getAnn lv.
-Proof.
-  general induction TL; simpl; eauto.
-  cases; eauto.
-  rewrite IHTL.
-  eapply incl_eq.
-  - rewrite H. eauto with cset.
-  - cset_tac.
-Qed.
-
-Lemma dve_true_live i ZL LV s lv
-  : true_live_sound i ZL LV s lv
-    -> true_live_sound i ((fun Z lv => flt lv Z Z) ⊜ ZL LV)
-                     LV (compile (zip pair LV ZL) s lv) (compile_live' s lv).
-Proof.
-   intros. general induction H; simpl; eauto using live_sound, compile_live_incl.
-   - cases; eauto. econstructor; eauto.
-     + cases; eauto. exfalso. rewrite compile_live_eq in *; eauto.
-     + rewrite compile_live_eq in *; eauto.
-   - econstructor; eauto; rewrite compile_live_eq in *; eauto.
-   - erewrite !get_nth; eauto using zip_get.
-     econstructor; eauto using zip_get.
-     + cases; eauto. rewrite of_list_flt. cset_tac.
-     + simpl.
-       eapply live_exp_sound_argsLive; eauto with len.
-       intros; inv_get.
-       edestruct get_flt; eauto; dcr.
-       edestruct get_flt; try eapply H4; eauto; dcr.
-       eapply live_op_sound_incl.
-       eapply argsLive_live_exp_sound; eauto. eauto with cset.
-   - econstructor; eauto.
-   - econstructor; eauto with len.
-     + eapply true_live_sound_monotone.
-       rewrite map_zip. simpl.
-       do 2 rewrite zip_app in IHtrue_live_sound; eauto with len.
-       rewrite zip_map_l, zip_map_r in IHtrue_live_sound.
-       eapply IHtrue_live_sound.
-       eapply PIR2_app; eauto.
-       eapply PIR2_get; eauto 30 with len.
-       intros; inv_get. simpl.
-       rewrite compile_live_eq; eauto.
-     + intros; inv_get.
-       eapply true_live_sound_monotone.
-       rewrite map_zip. simpl.
-       do 2 rewrite zip_app in H2; eauto with len.
-       rewrite zip_map_l, zip_map_r in H2.
-       eapply H2; eauto.
-       eapply PIR2_app; eauto.
-       eapply PIR2_get; eauto 30 with len.
-       intros; inv_get. simpl.
-       rewrite compile_live_eq; eauto.
-     + intros; inv_get; cases; eauto; simpl.
-       rewrite compile_live_eq; eauto.
-       rewrite of_list_flt.
-       rewrite <- H3; eauto.
-       clear. cset_tac.
-     + rewrite compile_live_eq; eauto.
-Qed.
-
-(*
-Lemma dve_live' i ZL LV s lv G
-  : true_live_sound i ZL LV s lv
-    -> live_sound i ((fun Z lv => flt lv Z Z) ⊜ ZL LV) LV
-                 (compile (zip pair LV ZL) s lv)
-                 (reconstr_live LV ((fun Z lv => flt lv Z Z) ⊜ ZL LV) G
-                                (compile (zip pair LV ZL) s lv)
-                                (compile_live' s lv)).
-Proof.
-  intros. general induction H; simpl; eauto using live_sound.
-  - cases; eauto; simpl.
-    + econstructor; eauto.
-      * eauto using live_exp_sound_incl, live_freeVars with cset.
-      * eauto with cset.
-      * rewrite <- reconstr_live_G. eauto with cset.
-  - econstructor; eauto.
-    + eapply live_op_sound_incl; try eapply Op.live_freeVars; eauto with cset.
-    + cset_tac.
-    + cset_tac.
-  - econstructor; eauto using zip_get.
-    + simpl. cases; eauto.
-      erewrite !get_nth; eauto using zip_get. simpl.
-      rewrite of_list_flt. cset_tac.
-    + erewrite get_nth; eauto using zip_get.
-      simpl. eauto with len.
-    + intros ? ?.
-      erewrite !get_nth; eauto using zip_get. simpl in *.
-      intros GET.
-      edestruct get_flt; eauto; dcr.
-      eapply live_op_sound_incl; try eapply Op.live_freeVars; eauto with cset.
-  - econstructor; eauto.
-      eapply live_op_sound_incl; try eapply Op.live_freeVars; eauto with cset.
-  - econstructor; simpl in *; eauto with len.
-    + eapply live_sound_monotone.
-      rewrite map_zip. simpl.
-      rewrite reconstr_live_equal.
-      * do 2 rewrite zip_app in IHtrue_live_sound; eauto with len.
-        rewrite zip_map_l, zip_map_r in IHtrue_live_sound.
-        eapply IHtrue_live_sound.
-      * rewrite map_zip.
-        eapply poEq_app; eauto.
-        eapply PIR2_get; eauto with len; intros; inv_get.
-        rewrite compile_live_eq; eauto.
-      * eapply poLe_app; eauto.
-        eapply PIR2_get; eauto with len; intros; inv_get.
-        rewrite reconstr_live_incl.
-        -- rewrite compile_live_eq; eauto.
-        -- eapply live_sound_monotone.
-           eapply dve_true_live.
-    + intros; inv_get. simpl.
-      eapply live_sound_monotone.
-      rewrite map_zip. simpl.
-      rewrite reconstr_live_equal.
-      * do 2 rewrite zip_app in H2; eauto with len.
-        rewrite zip_map_l, zip_map_r in H2.
-        eapply H2; eauto.
-      * rewrite map_zip.
-        eapply poEq_app; eauto.
-        eapply PIR2_get; eauto with len; intros; inv_get.
-        rewrite compile_live_eq; eauto.
-      * eapply poLe_app; eauto.
-        eapply PIR2_get; eauto with len; intros; inv_get.
-
-    + intros; inv_get.
-      repeat rewrite getAnn_setTopAnn; simpl.
-      split; eauto.
-      rewrite <- reconstr_live_G; eauto.
-      exploit H3; eauto.
-      split. eapply nodup_flt'.
-      cases; eauto.
-      rewrite reconstr_live_remove_G.
-      clear_all; cset_tac.
-      split. eapply nodup_flt'. eauto.
-    + rewrite compile_live_incl; eauto with cset.
-Qed.
-*)
 
 (** ** DVE and Unreachable Code *)
 (** We show that DVE does not introduce unreachable code. *)
@@ -903,6 +754,7 @@ Proof.
       eauto with cset. pe_rewrite. eauto with cset.
       eauto with cset.
     + eapply IHAN; eauto. cset_tac. pe_rewrite. cset_tac.
+      cset_tac.
   - econstructor. simpl. rewrite Incl1, Incl2; clear_all; cset_tac.
     + eapply IHAN1; eauto with cset. pe_rewrite. eauto with cset.
     + eapply IHAN2; eauto with cset. pe_rewrite. eauto.
@@ -910,28 +762,22 @@ Proof.
     + rewrite Incl1, Incl2; clear; cset_tac.
     + eauto with len.
     + intros; inv_get.
-      eapply ann_R_setTopAnn_left; eauto; simpl.
-      * rewrite fst_getAnn_renamedApart';eauto.
-        rewrite compile_live_incl_empty; eauto. rewrite of_list_flt.
-        exploit H12; eauto.
-        cases in H3. rewrite Incl1 in H3.
-        rewrite <- H3. clear; cset_tac.
-      * exploit H1; eauto.
-        eapply ann_R_get in H3.
-        edestruct H15; dcr; eauto.
-        rewrite H9 in H3.
-        exploit H14; try eassumption.
-        exploit H12; try eassumption. simpl in *.
-        cases in H21.
-        rewrite Incl1 in H21.
-        eapply H2; eauto.
-        -- rewrite of_list_flt.
-           rewrite <- H21.
-           clear; cset_tac.
-        -- rewrite of_list_flt.
-           rewrite H9. rewrite <- Incl3.
-           clear; cset_tac.
-        -- eauto with cset.
+      exploit H1; eauto.
+      eapply ann_R_get in H3.
+      edestruct H15; dcr; eauto.
+      rewrite H9 in H3.
+      exploit H14; try eassumption.
+      exploit H12; try eassumption. simpl in *.
+      cases in H21.
+      rewrite Incl1 in H21.
+      eapply H2; eauto.
+      -- rewrite of_list_flt.
+         rewrite <- H21.
+         clear; cset_tac.
+      -- rewrite of_list_flt.
+         rewrite H9. rewrite <- Incl3.
+         clear; cset_tac.
+      -- eauto with cset.
     + eapply IHAN; eauto. eauto with cset.
       pe_rewrite. eauto with cset. eauto with cset.
 Qed.

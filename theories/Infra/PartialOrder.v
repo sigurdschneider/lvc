@@ -351,8 +351,8 @@ Hint Resolve not_poLt_poLe_poEq : po.
 Smpl Add 200
      match goal with
      | [ H : ?A === ?B |- _ ] => inv_if_ctor H A B; clear H
-     | [ H : @poEq _ _ ?A ?B |- _ ] => inv_if_ctor H A B; clear H
-     | [ H : @poLe _ _ ?A ?B |- _ ] => inv_if_ctor H A B; clear H
+     | [ H : @poEq _ _ ?A ?B |- _ ] => inv_if_one_ctor_and_var H A B; clear H
+     | [ H : @poLe _ _ ?A ?B |- _ ] => inv_if_one_ctor_and_var H A B; clear H
      | [ H : ~ ?a === ?a |- _ ] => exfalso; eapply H; reflexivity
      end : inv_trivial.
 
@@ -364,12 +364,22 @@ Proof.
   firstorder.
 Qed.
 
+Lemma poLe_pair_inv A `{PartialOrder A} B `{PartialOrder B} (x y:A * B)
+  : poLe x y <-> poLe (fst x) (fst y) /\ poLe (snd x) (snd y).
+Proof.
+  firstorder.
+Qed.
+
 Smpl Add 120
      match goal with
      | [ H : poEq (_,_) (_,_) |- _ ] =>
        rewrite poEq_pair_inv in H; simpl fst in H; simpl snd in H;
          let H' := fresh H in destruct H as [H H']
+     | [ H : poLe (_,_) (_,_) |- _ ] =>
+       rewrite poLe_pair_inv in H; simpl fst in H; simpl snd in H;
+         let H' := fresh H in destruct H as [H H']
      | [H : poEq ?x ?x |- _ ] => clear H
+     | [H : poLe ?x ?x |- _ ] => clear H
      end : inv_trivial.
 
 
@@ -553,3 +563,17 @@ Proof.
 Qed.
 
 Hint Resolve orb_poEq_proper.
+
+Instance poLe_length_proper X `{PartialOrder X}
+  : Proper (poLe ==> eq) (@length X).
+Proof.
+  unfold Proper, respectful; intros.
+  hnf in H0. eapply PIR2_length in H0. eauto.
+Qed.
+
+Instance poEq_length_proper X `{PartialOrder X}
+  : Proper (poEq ==> eq) (@length X).
+Proof.
+  unfold Proper, respectful; intros.
+  hnf in H0. eapply PIR2_length in H0. eauto.
+Qed.

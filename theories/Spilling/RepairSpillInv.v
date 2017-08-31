@@ -1,6 +1,7 @@
 Require Import RepairSpill RLiveMin RLiveSound LiveMin SpillMaxKill.
 Require Import SpillSound Annotation Liveness.Liveness RenamedApart.
 Require Import List Map IL Take TakeSet OneOrEmpty AllInRel PickLK.
+Require Import PartialOrder AnnotationLattice.
 
 Set Implicit Arguments.
 
@@ -27,8 +28,8 @@ Qed.
 Lemma stretch_rms_inv  F rms k lvF :
   length F = length rms
   -> (forall n rm, get rms n rm -> cardinal (fst rm) <= k)
-  -> PIR2 Equal (merge ⊝ rms) lvF
-  -> PIR2 _eq rms (stretch_rms k F rms lvF).
+  -> poEq (merge ⊝ rms) lvF
+  -> poEq rms (stretch_rms k F rms lvF).
 Proof.
   intros lenF card pir2.
   general induction rms; destruct F; isabsurd; destruct lvF; isabsurd.
@@ -43,9 +44,9 @@ Proof.
     cbn in pir2. invc pir2. unfold merge in pf. cbn in pf.
     econstructor; [econstructor|].
     + rewrite set_take_eq; eauto. clear - pf.
-      symmetry. apply inter_subset_equal. cset_tac.
+      symmetry. apply inter_subset_equal. simpl. rewrite <- pf. cset_tac.
     + rewrite set_take_eq; eauto.
-      clear - pf. rewrite <- pf. apply incl_eq; cset_tac.
+      clear - pf. rewrite <- pf. simpl. apply incl_eq; cset_tac.
       (* shouldn't cset_tac try this by itself? *)
     + apply IHrms; eauto. intros. inv_get. exploit card; eauto. instantiate (1:=S n).
       econstructor; eauto.
@@ -80,7 +81,7 @@ Lemma repair_spill_inv k ZL Λ Λ' s lv sl R M G ra rlv VD
     -> (forall Rf Mf n, get Λ n (Rf,Mf) -> cardinal Rf <= k)
     -> ann_R (fun x (y : ⦃var⦄ * ⦃var⦄) => (list_union (merge ⊝ snd x)) ⊆ fst y) sl ra
     -> spill_live VD sl lv
-    -> PIR2 _eq Λ Λ'
+    -> poEq Λ Λ'
     -> sl === repair_spill k ZL Λ' R M s rlv lv sl.
 Proof.
   intros rena rliveMin rliveSnd rm_ra sub_R liveSnd liveMin spillSnd cardRf sl_ra spillLv Λeq.
@@ -130,7 +131,8 @@ Proof.
       { subst K0 Kx. clear - H2. cset_tac. }
       rewrite H20. rewrite H20 in x_nin. clear - x_nin. cset_tac.
     }
-    econstructor; [econstructor| ]; eauto; [econstructor | ]; eauto.
+    simpl.
+    econstructor; [econstructor| ]; eauto.
     subst K' Kx' L' Sp'.
     eapply IHrliveSnd; eauto;
       set (L' := pick_load k R M Sp L (Exp.freeVars e)) in *;
@@ -175,7 +177,7 @@ Proof.
       rewrite seteq.
       rewrite H23. clear. cset_tac.
     }
-    econstructor; [econstructor| |]; eauto; [econstructor | |]; eauto;
+    econstructor; [econstructor| |]; eauto.
       subst L' K' Sp';
       set (L' := pick_load k R M Sp L (Op.freeVars e)) in *;
       set (K' := pick_kill k R L' (Op.freeVars e) (getAnn al1 ∪ getAnn al2)) in *;
@@ -187,7 +189,7 @@ Proof.
       * eapply spill_max_kill_ext; eauto; [|rewrite Speq';eauto].
         rewrite <-Keq, <-Leq'. eauto.
     + eapply IHrliveSnd2; eauto.
-      * rewrite <-Speq', <-Leq', <-Keq. invc H20. cbn in *. rewrite H21, H23, H19.
+      * invc H20. cbn in *. simpl. rewrite H21.
         clear - rm_ra. cset_tac.
       * rewrite <-Keq, <-Leq'. rewrite <-sub_R. subst K. clear - H2; cset_tac.
       * eapply spill_max_kill_ext; eauto; [|rewrite Speq';eauto].

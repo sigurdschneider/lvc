@@ -488,13 +488,6 @@ Proof.
   eauto with len.
 Qed.
 
-Instance poEq_length_proper X `{PartialOrder X}
-  : Proper (poEq ==> eq) (@length X).
-Proof.
-  unfold Proper, respectful; intros.
-  eauto with len.
-Qed.
-
 Lemma PIR2_impb_fold (A A':list (list bool * bool)) (B B':list bool)
   : poLe A A'
     -> poLe B B'

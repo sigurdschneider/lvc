@@ -85,8 +85,6 @@ Proof.
   set (Y:=op_eval (domenv (proj1_sig a')) e) in *. clearbody X Y.
   unfold val in *.
   repeat cases; split; simpl fst; simpl snd; eauto; clear_trivial_eqs.
-  inv H1; clear_trivial_eqs.
-  inv H1; clear_trivial_eqs.
 Qed.
 
 Lemma cp_reach_ext (U : ⦃var⦄) (e : op) (a a' : VDom U (withTop val))

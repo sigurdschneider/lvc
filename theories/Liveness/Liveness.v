@@ -219,32 +219,29 @@ Lemma live_sound_ann_ext o ZL Lv s lv lv'
     -> live_sound o ZL Lv s lv'.
 Proof.
   intros annR lvSnd.
-  general induction lvSnd; inversion_clear annR.
-  - econstructor; eauto; apply ann_R_get in H3.
+  general induction lvSnd.
+  - econstructor; eauto; apply ann_R_get in H6.
     + apply live_exp_sound_incl with (lv':=lv); eauto.
-      rewrite H2; reflexivity.
+      rewrite H4; reflexivity.
     + poLe_set.
-      rewrite <- H2, <- H3; eauto.
-    + rewrite <- H3. eauto.
-  - econstructor; eauto;
-      apply ann_R_get in H3;
-      apply ann_R_get in H4;
-      try rewrite <- H2;
-      try rewrite <- H3;
-      try rewrite <- H4;
-      eauto.
+      rewrite <- H4, <- H6; eauto.
+    + rewrite <- H6. eauto.
+  - econstructor; eauto.
+    + rewrite <- H5; eauto.
+    + rewrite <- H7, <- H5; eauto.
+    + rewrite <- H8, <- H5; eauto.
   - econstructor; simpl; intros; eauto;
       try cases;
-      try rewrite <- H4; eauto.
+      try rewrite <- H5; eauto.
   - econstructor; simpl; intros; eauto;
-      try rewrite <- H0; eauto.
-  - apply ann_R_get in H7 as H7'.
+      try rewrite <- H1; eauto.
+  - apply ann_R_get in H11 as H7'.
     assert ((getAnn ⊝ bns ++ Lv) ≣ (getAnn ⊝ als ++ Lv))
       as pir2_als_bns.
-    { apply PIR2_app.
+    { apply poEq_app.
       - apply PIR2_get; eauto with len.
         intros; inv_get.
-        exploit H6 as EQ; eauto.
+        exploit H10 as EQ; eauto.
       - reflexivity.
     }
     econstructor; simpl; eauto with len.
@@ -252,14 +249,14 @@ Proof.
     + intros. inv_get.
       apply live_sound_monotone with (LV:=getAnn ⊝ als ++ Lv); eauto.
       eapply H1; eauto.
-      eapply H6; eauto.
+      eapply H10; eauto.
     + intros. simpl in H2. inv_get.
-      exploit H6 as EQ; eauto.
+      exploit H10 as EQ; eauto.
       apply ann_R_get in EQ.
       edestruct H2; eauto; dcr.
       cases; repeat split; try rewrite <- EQ; eauto.
-      etransitivity; eauto. rewrite H4; eauto.
-    + rewrite <- H4. rewrite <- H7'. eauto.
+      etransitivity; eauto. rewrite H7; eauto.
+    + rewrite <- H7. rewrite <- H7'. eauto.
 Qed.
 
 Instance live_sound_ann_Equal

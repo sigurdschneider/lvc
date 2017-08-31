@@ -18,10 +18,9 @@ Proof.
   assert (LE:poLe x x) by reflexivity.
   revert LE. generalize x at 2 3.
   induction x; intros; clear_trivial_eqs.
-  - inv LE. econstructor. intros ? [A B].
+  - econstructor. intros ? [A B].
     inv A. exfalso. eauto.
-  - invc LE.
-    specialize (H a).
+  - specialize (H a).
     revert y pf YL H3.
     induction H; intros.
     assert (poLe x x) by reflexivity.
