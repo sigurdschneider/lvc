@@ -38,6 +38,16 @@ Definition aval2bool (v:aval) :=
   | _ => None
   end.
 
+Instance aval2bool_poLe
+  : Proper (poLe ==> poLe) aval2bool.
+Proof.
+  unfold Proper, respectful; intros.
+  inv H; simpl; eauto.
+  inv H0; simpl; eauto.
+  - eapply int_eq_eq in H1; subst. reflexivity.
+  - destruct x0; eauto.
+Qed.
+
 Lemma oval2bool_some v b
 : aval2bool v = Some (wTA b) ->
   exists v', v = (Some (wTA v')) /\ val2bool v' = b.
@@ -123,3 +133,10 @@ Proof.
 Qed.
 
 Hint Resolve op_eval_cop2bool_not_none.
+
+Lemma op_eval_aval2bool AE e
+  : aval2bool (op_eval AE (UnOp UnOpToBool e)) = aval2bool (op_eval AE e).
+Proof.
+  simpl; repeat cases; eauto.
+  simpl. case_eq (val2bool a); simpl; intros; reflexivity.
+Qed.
