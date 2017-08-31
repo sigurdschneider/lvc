@@ -213,7 +213,6 @@ theories/Spilling/InVD.v
 theories/Spilling/LiveMin.v
 theories/Spilling/OneOrEmpty.v
 theories/Spilling/PickLK.v
-theories/Spilling/ReconstrLiveG.v
 theories/Spilling/ReconstrLiveSmall.v
 theories/Spilling/ReconstrLiveSound.v
 theories/Spilling/ReconstrLiveUtil.v

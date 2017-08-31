@@ -3,7 +3,7 @@ Require Import IL Annotation AnnotationLattice.
 Require Import AutoIndTac Liveness.Liveness LabelsDefined.
 Require Import SpillSound DoSpill DoSpillRm.
 Require Import SpillUtil ReconstrLive ReconstrLiveSmall.
-Require Import ReconstrLiveG InVD ReconstrLiveUtil.
+Require Import InVD ReconstrLiveUtil.
 Require Import Slot.
 
 Set Implicit Arguments.
