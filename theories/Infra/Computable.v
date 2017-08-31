@@ -116,3 +116,9 @@ Notation "'if' [ P ] 'then' s 'else' t" :=
   "'if'  [ P ]  'then'  s  'else'  t").
 
 Extraction Inline decision_procedure.
+
+Instance computable_if (A B C:Prop) `{Computable A} `{Computable B} `{Computable C}
+  : Computable (if [A] then B else C).
+Proof.
+  destruct (@decision_procedure A _); eauto.
+Qed.

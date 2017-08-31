@@ -1,5 +1,6 @@
 Require Import List Map Env AllInRel Exp Rename.
 Require Import IL Annotation AutoIndTac MoreListSet.
+Require Import PartialOrder CSetPartialOrder AnnotationLattice.
 
 Export MoreListSet.
 
@@ -114,11 +115,11 @@ Hint Resolve incl_minus_lr : cset.
 
 Lemma live_sound_monotone i ZL LV LV' s lv
 : live_sound i ZL LV s lv
-  -> PIR2 Subset LV' LV
+  -> poLe LV' LV
   -> live_sound i ZL LV' s lv.
 Proof.
   intros. general induction H; simpl; eauto using live_sound.
-  - PIR2_inv.
+  - hnf in H4. PIR2_inv.
     econstructor; eauto.
     cases; eauto with cset.
   - econstructor; eauto using PIR2_app.
@@ -174,27 +175,56 @@ Proof with eauto with len.
 Qed.
 
 Lemma PIR2_Subset_tab_extend AP DL ZL (F:list (params*stmt)) als
-  : PIR2 Subset AP (DL \\ ZL)
+  : AP ⊑ (DL \\ ZL)
     -> ❬F❭ = ❬als❭
-    -> PIR2 Subset (tab {} ‖F‖ ++ AP) ((getAnn ⊝ als ++ DL) \\ (fst ⊝ F ++ ZL)).
+    -> (tab {} ‖F‖ ++ AP) ⊑ ((getAnn ⊝ als ++ DL) \\ (fst ⊝ F ++ ZL)).
 Proof.
   intros P LEN.
   rewrite zip_app; eauto using PIR2_length with len.
   eapply PIR2_app; eauto.
-  eapply PIR2_get; try (intros ? ? ? GET; inv_map GET); eauto with cset len.
+  eapply PIR2_get; eauto with len.
+  intros; inv_get. eapply incl_empty.
 Qed.
 
-Lemma live_sound_ann_ext ZL Lv s lv lv'
-  : ann_R Equal lv lv'
-    -> live_sound Imperative ZL Lv s lv
-    -> live_sound Imperative ZL Lv s lv'.
+Instance subrelation_poLe_subset  X `{OrderedType X} :
+  subrelation poLe Subset.
+Proof.
+  intuition.
+Qed.
+
+Instance subrelation_poLe_subset' X `{OrderedType X} :
+  subrelation Subset poLe.
+Proof.
+  intuition.
+Qed.
+
+Instance subrelation_poLe_subset''  X `{OrderedType X} :
+  subrelation poEq Subset.
+Proof.
+  hnf; intros. rewrite H0. reflexivity.
+Qed.
+
+Ltac poLe_set :=
+  repeat
+    match goal with
+    | [ H : context [ (@poLe (set ?X) _ _ _) ] |- _ ] =>
+      change (@poLe (set X) _) with (@Subset X _ _) in H
+    | [ |- context [ (@poLe (set ?X) _ _ _) ] ] =>
+      change (@poLe (set X) _) with (@Subset X _ _)
+    end.
+
+Lemma live_sound_ann_ext o ZL Lv s lv lv'
+  : lv ≣ lv'
+    -> live_sound o ZL Lv s lv
+    -> live_sound o ZL Lv s lv'.
 Proof.
   intros annR lvSnd.
   general induction lvSnd; inversion_clear annR.
   - econstructor; eauto; apply ann_R_get in H3.
     + apply live_exp_sound_incl with (lv':=lv); eauto.
-      rewrite H2. reflexivity.
-    + rewrite <- H3. rewrite <- H2. eauto.
+      rewrite H2; reflexivity.
+    + poLe_set.
+      rewrite <- H2, <- H3; eauto.
     + rewrite <- H3. eauto.
   - econstructor; eauto;
       apply ann_R_get in H3;
@@ -204,29 +234,38 @@ Proof.
       try rewrite <- H4;
       eauto.
   - econstructor; simpl; intros; eauto;
+      try cases;
       try rewrite <- H4; eauto.
   - econstructor; simpl; intros; eauto;
       try rewrite <- H0; eauto.
   - apply ann_R_get in H7 as H7'.
-    assert (PIR2 Subset (getAnn ⊝ bns ++ Lv) (getAnn ⊝ als ++ Lv))
+    assert ((getAnn ⊝ bns ++ Lv) ≣ (getAnn ⊝ als ++ Lv))
       as pir2_als_bns.
     { apply PIR2_app.
       - apply PIR2_get; eauto with len.
         intros; inv_get.
         exploit H6 as EQ; eauto.
-        eapply ann_R_get in EQ. rewrite EQ. reflexivity.
-      - apply PIR2_refl; eauto.
+      - reflexivity.
     }
-    econstructor; simpl; eauto;
-      try rewrite <- H0; eauto.
+    econstructor; simpl; eauto with len.
     + apply live_sound_monotone with (LV:=getAnn ⊝ als ++ Lv); eauto.
-    + rewrite <- H5. eauto.
     + intros. inv_get.
       apply live_sound_monotone with (LV:=getAnn ⊝ als ++ Lv); eauto.
+      eapply H1; eauto.
+      eapply H6; eauto.
     + intros. simpl in H2. inv_get.
       exploit H6 as EQ; eauto.
       apply ann_R_get in EQ.
-      rewrite <- EQ.
-      apply H2 with (n:=n); eauto.
+      edestruct H2; eauto; dcr.
+      cases; repeat split; try rewrite <- EQ; eauto.
+      etransitivity; eauto. rewrite H4; eauto.
     + rewrite <- H4. rewrite <- H7'. eauto.
+Qed.
+
+Instance live_sound_ann_Equal
+  : Proper (eq ==> eq ==> poEq ==> eq ==> poEq ==> iff) live_sound.
+Proof.
+  unfold Proper, respectful; intros; subst; split; intros;
+    eapply live_sound_ann_ext;
+    try eapply live_sound_monotone; eauto.
 Qed.

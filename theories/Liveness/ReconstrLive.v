@@ -36,11 +36,12 @@ Fixpoint reconstr_live
     | stmtFun F t, annF _ rm_F rm_t
       => let rms := getAnn ⊝ rm_F in
         let lv_t := reconstr_live (rms ++ Lv) (fst ⊝ F ++ ZL) ∅ t rm_t in
-        let lv_F := (fun ps rm_s => reconstr_live (rms ++ Lv)
-                                               (fst ⊝ F ++ ZL)
-                                               (of_list (fst ps))
-                                               (snd ps)
-                                               rm_s
+        let lv_F := (fun ps rm_s =>
+                      reconstr_live (rms ++ Lv)
+                                    (fst ⊝ F ++ ZL)
+                                    (of_list (fst ps))
+                                    (snd ps)
+                                    rm_s
                     ) ⊜ F rm_F in
         annF (getAnn lv_t ∪ G) lv_F lv_t
 
@@ -72,8 +73,8 @@ Proof.
 Qed.
 
 Lemma reconstr_live_subset Lv Lv' ZL G s sl
-  : PIR2 Subset Lv Lv'
-    -> ann_R Subset (reconstr_live Lv  ZL G s sl) (reconstr_live Lv' ZL G s sl).
+  : Lv ⊑ Lv'
+    -> reconstr_live Lv  ZL G s sl ⊑ reconstr_live Lv' ZL G s sl.
 Proof.
   intros H.
   revert Lv Lv' H ZL G sl.
@@ -103,17 +104,14 @@ Proof.
   - eapply incl_union_lr; eauto.
     eapply ann_R_get.
     eapply (IH s); eauto.
-    eapply PIR2_app; eauto with len.
   - eauto with len.
   - intros; inv_get; eauto with len.
     eapply IH; eauto.
-    eapply PIR2_app; eauto with len.
-  - eapply PIR2_app; eauto with len.
 Qed.
 
 Lemma reconstr_live_equal Lv Lv' ZL G s sl
-  : PIR2 Equal Lv Lv'
-    -> ann_R Equal (reconstr_live Lv  ZL G s sl) (reconstr_live Lv' ZL G s sl).
+  : Lv ≣ Lv'
+    -> reconstr_live Lv  ZL G s sl ≣ reconstr_live Lv' ZL G s sl.
 Proof.
   intros H.
   revert Lv Lv' H ZL G sl.
@@ -146,12 +144,9 @@ Proof.
   - eapply eq_union_lr; eauto.
     eapply ann_R_get.
     eapply (IH s); eauto.
-    eapply PIR2_app; eauto with len.
   - eauto with len.
   - intros; inv_get; eauto with len.
     eapply IH; eauto.
-    eapply PIR2_app; eauto with len.
-  - eapply PIR2_app; eauto with len.
 Qed.
 
 

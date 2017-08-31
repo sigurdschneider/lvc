@@ -197,6 +197,7 @@ theories/Liveness/LivenessAnalysis.v
 theories/Liveness/LivenessCorrect.v
 theories/Liveness/Liveness.v
 theories/Liveness/LivenessValidators.v
+theories/Liveness/ReconstrLive.v
 theories/Liveness/TrueLiveness.v
 theories/Lowering/EAE.v
 theories/Lowering/ParallelMove.v
@@ -216,7 +217,6 @@ theories/Spilling/OneOrEmpty.v
 theories/Spilling/PickLK.v
 theories/Spilling/ReconstrLiveSmall.v
 theories/Spilling/ReconstrLiveSound.v
-theories/Spilling/ReconstrLive.v
 theories/Spilling/RegisterBound.v
 theories/Spilling/RegLive.v
 theories/Spilling/RepairSpillIdem.v
