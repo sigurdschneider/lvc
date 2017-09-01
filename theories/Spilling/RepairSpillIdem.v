@@ -1,7 +1,7 @@
 Require Import RepairSpill RLiveMin RLiveSound LiveMin SpillMaxKill.
 Require Import SpillSound Annotation Liveness.Liveness RenamedApart.
 Require Import List Map IL Take TakeSet OneOrEmpty AllInRel PickLK.
-Require Import RepairSpillInv RegLive.
+Require Import RepairSpillInv RegLive PartialOrder.
 
 Set Implicit Arguments.
 
@@ -19,7 +19,7 @@ Corollary repair_spill_idem k ZL Λ Λ' s lv sl R M G ra VD
     -> (forall Rf Mf n, get Λ n (Rf,Mf) -> cardinal Rf <= k)
     -> ann_R (fun x (y : ⦃var⦄ * ⦃var⦄) => (list_union (merge ⊝ snd x)) ⊆ fst y) sl ra
     -> spill_live VD sl lv
-    -> PIR2 _eq Λ Λ'
+    -> poEq Λ Λ'
     -> sl === repair_spill k ZL Λ' R M s rlv lv sl
 .
 Proof.
@@ -29,9 +29,3 @@ Proof.
     eapply reg_live_anno; eauto.
   - eapply reg_live_sound; eauto.
 Qed.
-
-   
-
-  
-
-

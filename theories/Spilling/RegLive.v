@@ -1,5 +1,5 @@
 Require Import List Map Env AllInRel Exp MoreList.
-Require Import IL Annotation.
+Require Import IL Annotation PartialOrder.
 Require Import Liveness.Liveness.
 Require Import ExpVarsBounded SpillSound SpillUtil.
 Require Import RLiveMin RLiveSound.
@@ -56,42 +56,29 @@ Fixpoint reg_live
     end
 .
 
-Lemma reg_live_G_eq
-      (G : ⦃var⦄)
-      (Lv : list ⦃var⦄)
-      (ZL : list params)
-      (s : stmt)
-      (sl : spilling)
-  :
-    getAnn (reg_live ZL Lv G s sl)
-           [=]
-           getAnn (reg_live ZL Lv ∅ s sl) ∪ G
-.
+Lemma reg_live_G_eq ZL Lv G s sl
+  : getAnn (reg_live ZL Lv G s sl) [=] getAnn (reg_live ZL Lv ∅ s sl) ∪ G .
 Proof.
   general induction s;
     destruct sl;
     try destruct a;
     try destruct p;
     simpl; eauto with cset.
-  - rewrite IHs. clear. cset_tac.
+  - rewrite IHs. clear.
+    set (X:=(getAnn (reg_live ZL Lv {} s sl) ∪ singleton x) \ singleton x ∪ Exp.freeVars e);
+      clearbody X.
+    cset_tac.
   - rewrite IHs1; rewrite IHs2.
     clear. cset_tac.
-  - induction l0; simpl; eauto with cset.
+  - destruct l0; simpl; eauto with cset.
     + let_pair_case_eq; subst; simpl in *; cases; simpl; eauto with cset.
       clear. cset_tac.
   - cset_tac.
   - rewrite IHs; eauto. clear. cset_tac.
 Qed.
 
-Lemma reg_live_G
-      (Lv : list (set var))
-      (ZL : list (params))
-      (G : set var)
-      (s : stmt)
-      (sl : spilling)
-  :
-    G ⊆ getAnn (reg_live ZL Lv G s sl)
-.
+Lemma reg_live_G ZL Lv G s sl
+  : G ⊆ getAnn (reg_live ZL Lv G s sl) .
 Proof.
   induction s,sl; destruct a,p;
     simpl; eauto with cset.
@@ -99,11 +86,9 @@ Proof.
     destruct a,l0; simpl; cset_tac.
 Qed.
 
-
-
 Lemma reg_live_R k ZL Λ RM  s sl rLv :
     spill_sound k ZL Λ RM s sl
-    -> PIR2 Subset rLv (fst ⊝ Λ)
+    -> poLe rLv (fst ⊝ Λ)
     -> getAnn (reg_live ZL rLv (∅:⦃var⦄) s sl) ⊆ fst RM
 .
 Proof.
@@ -124,7 +109,7 @@ Qed.
 Lemma reg_live_rlive_min k G ZL Λ RM s sl rLv :
   let rlv := reg_live ZL rLv G s sl in
   spill_sound k ZL Λ RM s sl
-  -> PIR2 Subset rLv (fst ⊝ Λ)
+  -> poLe rLv (fst ⊝ Λ)
   -> annotation s rlv
   -> rlive_min k ZL Λ G s sl rlv
 .
@@ -162,7 +147,7 @@ Qed.
 
 Lemma reg_live_sound k ZL Λ rlv (R M : ⦃var⦄) G s sl
   : spill_sound k ZL Λ (R,M) s sl
-    -> PIR2 Subset rlv (fst ⊝ Λ)
+    -> poLe rlv (fst ⊝ Λ)
     -> rlive_sound ZL rlv s sl (reg_live ZL rlv G s sl)
 .
 Proof.
@@ -218,7 +203,7 @@ Proof.
      * apply PIR2_app; [|apply PIR2_refl;eauto].
        apply PIR2_get. intros; inv_get.
        -- subst fix1. simpl. rewrite reg_live_G_eq. rewrite reg_live_R.
-          ++ instantiate (1:=x0). clear; cset_tac.
+          ++ instantiate (1:=x0). poLe_set. clear; cset_tac.
           ++ eauto.
           ++ rewrite List.map_app. apply PIR2_app; eauto.
        -- eauto with len.
@@ -229,7 +214,7 @@ Proof.
       * apply PIR2_app; [|apply PIR2_refl;eauto].
         apply PIR2_get. intros; inv_get.
         -- rewrite reg_live_G_eq, reg_live_R; eauto.
-           ++ clear; cset_tac.
+           ++ clear; poLe_set; cset_tac.
            ++ rewrite List.map_app. apply PIR2_app; [apply PIR2_refl|]; eauto.
         -- eauto with len.
     + intros; inv_get. rewrite <-reg_live_G. clear; cset_tac.
@@ -245,6 +230,7 @@ Proof.
   intros spillSnd.
   general induction spillSnd; cbn;try econstructor; eauto.
   - eauto with len.
-  - intros. inv_get. rewrite <-List.map_app. eapply H6; eauto. rewrite <-surjective_pairing. reflexivity.
+  - intros. inv_get. rewrite <-List.map_app. eapply H6; eauto.
+    rewrite <-surjective_pairing. reflexivity.
   - rewrite <-List.map_app. eapply IHspillSnd; eauto.
 Qed.

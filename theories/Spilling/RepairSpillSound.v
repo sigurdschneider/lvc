@@ -2,6 +2,7 @@ Require Import RepairSpill ExpVarsBounded.
 Require Import SpillSound Annotation Liveness.Liveness RenamedApart.
 Require Import List Map IL.
 Require Import Take TakeSet PickLK AllInRel.
+Require Import PartialOrder.
 
 Set Implicit Arguments.
 
@@ -33,7 +34,7 @@ Lemma repair_spill_sound k ZL Λ Λ' Lv R M s rlv lv sl (*ra*)
     -> getAnn lv ⊆ R ∪ M
     -> exp_vars_bounded k s
     -> (forall n Rf Mf, get Λ n (Rf,Mf) -> cardinal Rf <= k)
-    -> PIR2 _eq Λ Λ'
+    -> poEq Λ Λ'
     -> PIR2 Equal Lv (merge ⊝ Λ')
     -> spill_sound k ZL Λ' (R,M) s (repair_spill k ZL Λ R M s rlv lv sl)
 .
@@ -153,7 +154,7 @@ Proof.
       assert (K' ⊆ R) as KsubR.
       { subst K'. rewrite pick_kill_incl. clear; cset_tac. }
       cbn in H1, lv_RM. unfold merge in H8. cbn in H8. rewrite H8 in H1.
-      rewrite <-H9, <-H11 in H1.
+      rewrite <-H4, <-H5 in H1.
       econstructor; eauto.
       * subst Sp'. clear; cset_tac.
       * subst L'. rewrite pick_load_incl at 1.
@@ -177,8 +178,8 @@ Proof.
       * subst K'. rewrite pick_kill_incl. setoid_rewrite union_comm at 2.
         rewrite  <-minus_union, minus_minus.
         rewrite incl_minus_union'; [|clear; cset_tac].
-        subst L'. rewrite <-incl_pick_load. rewrite <-H9. clear. cset_tac.
-      * subst Sp'. rewrite <-H11. inv_get. rewrite lv_RM in *. clear - H1; cset_tac.
+        subst L'. rewrite <- incl_pick_load. rewrite <- H4. clear. cset_tac.
+      * subst Sp'. rewrite <-H5. inv_get. rewrite lv_RM in *. clear - H1; cset_tac.
       * subst R'' M''. clear; cset_tac.
       * subst R''. clear; cset_tac.
       * rewrite lv_RM in *. subst Sp'. rewrite set_decomp with (s:=M'') (t:=M) at 1.
@@ -195,7 +196,8 @@ Proof.
       set (Sp':= (list_union (Op.freeVars ⊝ Y) ∩ K' ∪ Mf \ of_list Z) \ M ∪ (Sp ∩ R)).
       assert (K' ⊆ R) as KsubR.
       { subst K'. rewrite pick_kill_incl. clear; cset_tac. }
-      cbn in H1, lv_RM. unfold merge in H8. cbn in H8. rewrite H8 in H1. rewrite <-H9, <-H11 in H1.
+      cbn in H1, lv_RM. unfold merge in H8. cbn in H8. rewrite H8 in H1.
+      rewrite <-H4, <-H5 in H1.
       econstructor; eauto.
       * subst K' Sp'. rewrite pick_kill_incl.
         rewrite H3 at 1. rewrite lv_RM in *.
@@ -221,8 +223,8 @@ Proof.
       * subst K'. rewrite pick_kill_incl. setoid_rewrite union_comm at 2.
         rewrite  <-minus_union, minus_minus.
         rewrite incl_minus_union'; [|clear; cset_tac].
-        subst L'. rewrite <-incl_pick_load. rewrite <-H9. clear. cset_tac.
-      * subst Sp'. rewrite <-H11. inv_get. rewrite lv_RM in *. clear - H1; cset_tac.
+        subst L'. rewrite <-incl_pick_load. rewrite <-H4. clear. cset_tac.
+      * subst Sp'. rewrite <-H5. inv_get. rewrite lv_RM in *. clear - H1; cset_tac.
       * clear; cset_tac.
       * rewrite lv_RM in *. rewrite meet_incl; clear; cset_tac.
       * rewrite lv_RM in *. subst Sp'.
@@ -292,7 +294,6 @@ Proof.
       * intros. eapply get_app_cases in H17. destruct H17.
         -- replace Rf with (fst (Rf,Mf)). eapply stretch_rms_cardinal; eauto. cbn. eauto.
         -- destruct H17. eapply cardRf; eauto.
-      * eapply PIR2_app; eauto.
       * rewrite map_app. eapply PIR2_app; eauto.
         apply stretch_rms_lv. eauto with len.
     + eapply IHlvSnd; eauto.
@@ -302,7 +303,6 @@ Proof.
       * intros. eapply get_app_cases in H6. destruct H6.
         -- replace Rf with (fst (Rf,Mf)). eapply stretch_rms_cardinal; eauto. cbn. eauto.
         -- destruct H6. eapply cardRf; eauto.
-      * eapply PIR2_app; eauto.
       * rewrite map_app. eapply PIR2_app; eauto.
         apply stretch_rms_lv. eauto with len.
 Qed.

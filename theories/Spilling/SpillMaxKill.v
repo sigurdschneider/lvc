@@ -3,6 +3,7 @@ Require Import IL Annotation.
 Require Import Liveness.Liveness RenamedApart.
 Require Import ExpVarsBounded SpillSound OneOrEmpty RLiveMin RLiveSound.
 Require Import Take TakeSet.
+Require Import PartialOrder.
 
 Set Implicit Arguments.
 
@@ -263,7 +264,7 @@ Proof.
       * rewrite List.map_app.
         eapply rlive_sound_monotone; eauto.
         eapply PIR2_app; eauto.
-        eapply PIR2_get; intros; inv_get; eauto with len.
+        eapply PIR2_get; intros; inv_get; poLe_set; eauto with len.
       * simpl in *.
         edestruct H11; eauto; dcr.
         rewrite H26. rewrite <- H25.
@@ -279,7 +280,7 @@ Proof.
       * rewrite List.map_app.
         eapply rlive_sound_monotone; eauto.
         eapply PIR2_app; eauto.
-        eapply PIR2_get; intros; inv_get; eauto with len.
+        eapply PIR2_get; intros; inv_get; poLe_set; eauto with len.
       * pe_rewrite. simpl in *.
         assert (Sp ⊆ R'). {
           rewrite H16. rewrite rlv_sub'. reflexivity.
@@ -295,8 +296,8 @@ Proof.
            eapply get_app_lt_1; swap 1 2. eauto. omega.
 Qed.
 
-Lemma spill_max_kill_ext' ZL Λ Λ' s rlv RM sl k
-  : PIR2 _eq Λ' Λ
+Lemma spill_max_kill_monotone ZL Λ Λ' s rlv RM sl k
+  : poLe Λ' Λ
     -> spill_max_kill k ZL Λ  RM  s rlv sl
     -> spill_max_kill k ZL Λ' RM  s rlv sl.
 Proof.
@@ -304,37 +305,25 @@ Proof.
   - econstructor; eauto.
   - econstructor; eauto.
   - econstructor; eauto.
-  - eapply PIR2_nth_2 in Λeq as [[R_f' M_f'] [get_blk' blk'_eq]]; eauto. cbn in *. invc blk'_eq.
+  - eapply PIR2_nth_2 in Λeq as [[R_f' M_f'] [get_blk' blk'_eq]]; eauto.
+    cbn in *. clear_trivial_eqs. poLe_set.
     eapply SpillMKApp with (R_f:=R_f') (M_f:=M_f'); eauto.
-    + rewrite subset_cardinal; eauto. rewrite H12. cset_tac.
-    + rewrite H12. cset_tac.
-    + rewrite H14. cset_tac.
-    + rewrite H12. cset_tac.
+    + rewrite subset_cardinal; eauto.
+      rewrite blk'_eq, H7, H4.
+      clear. clearbody K. cset_tac'.
+    + revert H4 blk'_eq H7.
+      clear. cset_tac.
+    + rewrite <- H5.
+      revert blk'_eq0. clear. cset_tac.
+    + subst K; revert H7. clear. cset_tac.
   - econstructor; eauto.
-    + intros. inv_get. eapply H6; eauto.
-      * apply PIR2_app; eauto.
-    + eapply IHspillSnd; eauto.
-      apply PIR2_app; eauto.
 Qed.
 
-Lemma spill_max_kill_monotone ZL Λ Λ' s rlv RM sl k
-  : PIR2 (fun x y => fst x ⊆ fst y /\ snd x ⊆ snd y) Λ' Λ
+Lemma spill_max_kill_ext' ZL Λ Λ' s rlv RM sl k
+  : poEq Λ' Λ
     -> spill_max_kill k ZL Λ  RM  s rlv sl
     -> spill_max_kill k ZL Λ' RM  s rlv sl.
 Proof.
-  intros Λeq spillSnd. general induction spillSnd.
-  - econstructor; eauto.
-  - econstructor; eauto.
-  - econstructor; eauto.
-  - eapply PIR2_nth_2 in Λeq as [[R_f' M_f'] [get_blk' blk'_eq]]; eauto. cbn in *. invc blk'_eq.
-    eapply SpillMKApp with (R_f:=R_f') (M_f:=M_f'); eauto.
-    + rewrite subset_cardinal; eauto. cset_tac.
-    + cset_tac.
-    + cset_tac.
-    + cset_tac.
-  - econstructor; eauto.
-    + intros. inv_get. eapply H6; eauto.
-      * apply PIR2_app; eauto. eapply PIR2_refl. split; reflexivity.
-    + eapply IHspillSnd; eauto.
-      apply PIR2_app; eauto. eapply PIR2_refl. split; reflexivity.
+  intros; eapply spill_max_kill_monotone; try eassumption.
+  eauto.
 Qed.

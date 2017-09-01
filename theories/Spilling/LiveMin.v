@@ -1,6 +1,7 @@
 Require Import List Map Env AllInRel Exp MoreList.
 Require Import IL Annotation.
 Require Import ExpVarsBounded SpillSound SpillUtil.
+Require Import PartialOrder.
 
 Set Implicit Arguments.
 
@@ -82,29 +83,27 @@ Proof.
 Qed.
 
 Lemma is_live_min_ext Λ Λ' k ZL s sl LV :
-  PIR2 _eq Λ Λ'
+  poEq Λ Λ'
   -> is_live_min k ZL Λ  s sl LV
   -> is_live_min k ZL Λ' s sl LV
 .
 Proof.
   intros pir2 H. unfold is_live_min in *.
-  intros. eapply spill_sound_ext in H0; eauto. apply PIR2_sym; eauto.
+  intros. eapply spill_sound_ext in H0; eauto.
 Qed.
 
 Lemma live_min_ext Λ Λ' k ZL G s sl lv :
-  PIR2 _eq Λ Λ'
+  poEq Λ Λ'
   -> live_min k ZL Λ  G s sl lv
   -> live_min k ZL Λ' G s sl lv
 .
 Proof.
   intros Λeq lvMin. general induction lvMin; unfold is_live_min;
                       econstructor; eauto using is_live_min_ext.
-  - intros. eapply H0; eauto using PIR2_app.
-  - apply IHlvMin; eauto using PIR2_app.
 Qed.
 
 Lemma is_live_min_monotone Λ Λ' k ZL s sl LV :
-  PIR2 (fun x y => fst x ⊆ fst y /\ snd x ⊆ snd y) Λ Λ'
+  poLe Λ Λ'
   -> is_live_min k ZL Λ  s sl LV
   -> is_live_min k ZL Λ' s sl LV
 .
@@ -114,15 +113,11 @@ Proof.
 Qed.
 
 Lemma live_min_monotone Λ Λ' k ZL G s sl lv :
-  PIR2 (fun x y => fst x ⊆ fst y /\ snd x ⊆ snd y) Λ Λ'
+  poLe Λ Λ'
   -> live_min k ZL Λ  G s sl lv
   -> live_min k ZL Λ' G s sl lv
 .
 Proof.
   intros Λeq lvMin. general induction lvMin; unfold is_live_min;
                       econstructor; eauto using is_live_min_monotone.
-  - intros. eapply H0; eauto. eapply PIR2_app; eauto. eapply PIR2_refl.
-    split; reflexivity.
-  - apply IHlvMin; eauto. eapply PIR2_app; eauto. eapply PIR2_refl.
-    split; reflexivity.
 Qed.

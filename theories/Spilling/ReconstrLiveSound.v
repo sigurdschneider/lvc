@@ -5,6 +5,7 @@ Require Import DoSpill DoSpillRm.
 Require Import SpillSound SpillUtil ReconstrLive ReconstrLiveSmall.
 Require Import InVD Slot.
 Require Import SlotLiftArgs SlotLiftParams.
+Require Import PartialOrder AnnotationLattice.
 
 Set Implicit Arguments.
 
@@ -355,8 +356,8 @@ Proof.
                                              (M:=M_f); eauto.
            ++ exploit H2 as H2'; eauto; dcr; simpl in *.
 
-             rewrite ofl_slp_sub_rm; eauto. simpl.
-             clear; cset_tac.
+             rewrite ofl_slp_sub_rm; eauto.
+             poLe_set. clear; cset_tac.
              eapply al_sub_RfMf; eauto.
            ++ rewrite renaF; eauto.
            ++ eapply getAnn_als_EQ_merge_rms; eauto.

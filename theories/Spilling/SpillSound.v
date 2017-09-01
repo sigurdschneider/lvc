@@ -153,7 +153,7 @@ Inductive spill_live
 .
 
 Lemma spill_sound_ext Λ Λ' k ZL R M s sl
-  : PIR2 _eq Λ Λ'
+  : poEq Λ Λ'
     -> spill_sound k ZL Λ  (R,M) s sl
     -> spill_sound k ZL Λ' (R,M) s sl .
 Proof.
@@ -161,20 +161,18 @@ Proof.
   - econstructor; eauto.
   - econstructor; eauto.
   - econstructor; eauto.
-  - eapply PIR2_nth in Λeq as [[R_f' M_f'] [get_blk' blk'_eq]]; eauto. invc blk'_eq.
-    econstructor; eauto. clear - H12 H14 H4 H5.
-    + rewrite <-H12. eauto.
-    + rewrite <-H14. eauto.
+  - eapply PIR2_nth in Λeq as [[R_f' M_f'] [get_blk' blk'_eq]]; eauto.
+    invc blk'_eq; simpl in *.
+    econstructor; eauto.
+    + rewrite <- H4, H9. reflexivity.
+    + rewrite <- H10, H5. eauto.
   - econstructor; eauto.
     + intros. inv_get. eapply H6; eauto.
-      * apply PIR2_app; eauto.
       * apply surjective_pairing.
-    + eapply IHspillSnd; eauto.
-      apply PIR2_app; eauto.
 Qed.
 
 Lemma spill_sound_monotone Λ Λ' k ZL R M s sl
-  : PIR2 (fun x y => fst x ⊆ fst y /\ snd x ⊆ snd y) Λ' Λ
+  : poLe Λ' Λ
     -> spill_sound k ZL Λ  (R,M) s sl
     -> spill_sound k ZL Λ' (R,M) s sl.
 Proof.
@@ -188,10 +186,7 @@ Proof.
     + rewrite H10. eauto.
   - econstructor; eauto.
     + intros. inv_get. eapply H6; eauto.
-      * apply PIR2_app; eauto. eapply PIR2_refl. split; reflexivity.
       * apply surjective_pairing.
-    + eapply IHspillSnd; eauto.
-      apply PIR2_app; eauto. eapply PIR2_refl. split; reflexivity.
 Qed.
 
 Lemma list_eq_PIR2 X `{OrderedType X} (L L':list X)

@@ -1,5 +1,5 @@
 Require Import List Map Env AllInRel Exp MoreList.
-Require Import IL Annotation.
+Require Import IL Annotation PartialOrder.
 Require Import Liveness.Liveness.
 Require Import ExpVarsBounded SpillSound SpillUtil.
 
@@ -50,7 +50,7 @@ Inductive rlive_sound
 
 Lemma rlive_sound_monotone
   : forall (ZL : 〔params〕) (LV LV' : 〔⦃var⦄〕) (s : stmt) (sl : spilling) (rlv : ann ⦃var⦄),
-    rlive_sound ZL LV s sl rlv -> PIR2 Subset LV' LV -> rlive_sound ZL LV' s sl rlv.
+    rlive_sound ZL LV s sl rlv -> poLe LV' LV -> rlive_sound ZL LV' s sl rlv.
 Proof.
   intros ? ? ? ? ? ? rlvSnd pir2.
   general induction rlvSnd.
@@ -60,6 +60,4 @@ Proof.
     econstructor; eauto. rewrite lv'_sub. eauto.
   - econstructor; eauto.
   - econstructor; eauto.
-    + eapply IHrlvSnd. apply PIR2_app; [apply PIR2_refl|]; eauto.
-    + intros; inv_get. eapply H2; eauto. apply PIR2_app; [apply PIR2_refl|]; eauto.
 Qed.
