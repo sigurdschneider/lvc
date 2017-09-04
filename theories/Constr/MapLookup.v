@@ -134,6 +134,15 @@ Proof.
   intros. rewrite <- H3. lset_tac.
 Qed.
 
+Lemma lookup_set_single' X `{OrderedType X} Y `{OrderedType Y} (ϱ:X->Y)
+      `{Proper _ (_eq ==> _eq) ϱ} D D' v
+: v ∈ D
+  -> lookup_set ϱ D ⊆ D'
+  -> singleton (ϱ v) ⊆ D'.
+Proof.
+  intros. rewrite <- H3. lset_tac.
+Qed.
+
 Lemma lookup_set_add X `{OrderedType X} Y `{OrderedType Y} x s (m:X -> Y) `{Proper _ (_eq ==> _eq) m}
 : (lookup_set m {x; s}) [=] {m x; lookup_set m s}.
 Proof.

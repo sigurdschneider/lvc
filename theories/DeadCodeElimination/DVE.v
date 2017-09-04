@@ -308,9 +308,11 @@ End F.
 
 Fixpoint compile_live (s:stmt) (a:ann (set var)) (G:set var) : ann (set var) :=
   match s, a with
-    | stmtLet x e s, ann1 lv an as a =>
-      if [x ∈ getAnn an \/ isCall e] then ann1 (G ∪ lv) (compile_live s an {x})
-                         else compile_live s an (G ∪ lv)
+    | stmtLet x (Operation e) s, ann1 lv an as a =>
+      if [x ∈ getAnn an] then ann1 (G ∪ lv) (compile_live s an ∅)
+      else compile_live s an (G ∪ lv)
+    | stmtLet x (Call f Y) s, ann1 lv an as a =>
+      ann1 (G ∪ lv) (compile_live s an {x})
     | stmtIf e s t, ann2 lv ans ant =>
       ann2 (G ∪ lv) (compile_live s ans ∅) (compile_live t ant ∅)
     | stmtApp f Y, ann0 lv => ann0 (G ∪ lv)
@@ -327,7 +329,7 @@ Lemma compile_live_incl G i ZL LV s lv
     -> getAnn (compile_live s lv G) ⊆ G ∪ getAnn lv.
 Proof.
   intros. general induction H; simpl; eauto.
-  - cases; simpl; try reflexivity.
+  - repeat cases; simpl; try reflexivity.
     rewrite IHtrue_live_sound.
     cset_tac.
 Qed.
@@ -346,7 +348,7 @@ Lemma incl_compile_live G i ZL LV s lv
     -> G ⊆ getAnn (compile_live s lv G).
 Proof.
   intros. general induction H; simpl; eauto.
-  - cases; simpl; eauto with cset.
+  - repeat cases; simpl; eauto with cset.
     rewrite <- IHtrue_live_sound.
     cset_tac.
 Qed.
@@ -356,8 +358,18 @@ Lemma incl_compile_live' G i ZL LV s lv
     -> getAnn lv  ⊆ getAnn (compile_live s lv G).
 Proof.
   intros. general induction H; simpl; eauto.
-  - cases; simpl; eauto with cset.
+  - repeat cases; simpl; eauto with cset.
     rewrite <- incl_compile_live; eauto.
+Qed.
+
+Lemma incl_compile_live'' G i ZL LV s lv
+  : true_live_sound i ZL LV s lv
+    -> G ∪ getAnn lv [=] getAnn (compile_live s lv G).
+Proof.
+  intros. general induction H; simpl; eauto.
+  - repeat cases; simpl; eauto with cset.
+    rewrite <- IHtrue_live_sound.
+    cset_tac.
 Qed.
 
 Lemma dve_live i ZL LV s lv G
@@ -365,11 +377,20 @@ Lemma dve_live i ZL LV s lv G
     -> live_sound i ((fun Z lv => flt lv Z Z) ⊜ ZL LV) LV (compile (zip pair LV ZL) s lv) (compile_live s lv G).
 Proof.
   intros. general induction H; simpl; eauto using live_sound, compile_live_incl.
-  - cases; eauto. econstructor; eauto.
-    + eapply live_exp_sound_incl; eauto.
-    + rewrite compile_live_incl; eauto.
-      rewrite <- H1. cset_tac; intuition.
-    + eapply incl_compile_live; eauto.
+  - destruct e; simpl.
+    + repeat cases; eauto; [| exfalso; cset_tac|exfalso; cset_tac].
+      econstructor; eauto.
+      * eapply live_exp_sound_incl; eauto.
+      * rewrite compile_live_incl; eauto.
+        rewrite <- H1. cset_tac; intuition.
+      * rewrite <- incl_compile_live''; eauto.
+    + repeat cases; eauto.
+      econstructor; eauto.
+      * eapply live_exp_sound_incl; eauto.
+      * rewrite compile_live_incl; eauto.
+        rewrite <- H1. cset_tac; intuition.
+      * rewrite <- incl_compile_live''; eauto.
+        eauto with cset.
   - repeat cases; eauto.
     + econstructor; eauto.
       eapply live_op_sound_incl; eauto.
@@ -748,13 +769,19 @@ Proof.
         set_simpl).
   - econstructor; eauto with cset len.
   - econstructor; eauto with cset len.
-  - cases; simpl in *.
-    + econstructor. eauto with cset.
-      eapply IHAN; try eassumption.
-      eauto with cset. pe_rewrite. eauto with cset.
-      eauto with cset.
-    + eapply IHAN; eauto. cset_tac. pe_rewrite. cset_tac.
-      cset_tac.
+  - destruct e.
+    + repeat cases; simpl in *; [|exfalso; cset_tac|].
+      * econstructor. eauto with cset.
+        eapply IHAN; try eassumption.
+        eauto with cset. pe_rewrite. eauto with cset.
+        eauto with cset.
+      * eapply IHAN; eauto. cset_tac. pe_rewrite. cset_tac.
+        cset_tac.
+    + repeat cases; simpl in *.
+      * econstructor. eauto with cset.
+        eapply IHAN; try eassumption.
+        eauto with cset. pe_rewrite. eauto with cset.
+        eauto with cset.
   - econstructor. simpl. rewrite Incl1, Incl2; clear_all; cset_tac.
     + eapply IHAN1; eauto with cset. pe_rewrite. eauto with cset.
     + eapply IHAN2; eauto with cset. pe_rewrite. eauto.
