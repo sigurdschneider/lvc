@@ -69,7 +69,7 @@ Proof.
   general induction ND; simpl in *; eauto using NoDupA.
   econstructor; eauto using injective_on_incl with cset.
   intro. eapply InA_in in H3.
-  eapply H0. eapply of_list_map in H3; eauto. cset_tac'.
+  eapply H1. eapply of_list_map in H3; eauto. cset_tac'.
   eapply INJ in H4; eauto with cset.
 Qed.
 

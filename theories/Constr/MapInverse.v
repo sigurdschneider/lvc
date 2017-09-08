@@ -254,25 +254,26 @@ Lemma inverse_on_update_fresh X `{OrderedType X} (D:set X) (Z Z':list X) (ϱ ϱ'
 Proof.
   intros. eapply length_length_eq in H3.
   hnf; intros. lud. decide(x ∈ of_list Z).
-  general induction H3; simpl in *; eauto; dcr. cset_tac; exfalso; eauto.
-  lud. eapply add_iff in i. destruct i; eauto.
-  assert (y ∈ of_list YL). rewrite e.
-  eapply update_with_list_lookup_in; eauto using length_eq_length.
-  exfalso. eapply NoDupA_decons_notin; eauto.
-  exfalso; eauto.
-  eapply add_iff in i; destruct i; isabsurd.
-  eapply IHlength_eq; try eassumption.
-  hnf; intros. exfalso; cset_tac; eauto. eauto.
-  hnf; intros. eapply lookup_set_spec in H12; dcr.
-  cset_tac; intuition. intuition.
-
-  erewrite update_with_list_no_update; eauto.
-  erewrite update_with_list_no_update; eauto.
-  eapply H1; eauto. cset_tac ; eauto.
-  erewrite update_with_list_no_update; eauto. intro.
-  specialize (H4 (ϱ x)). cset_tac'.
-  eapply H7.
-  eapply lookup_set_spec; cset_tac.
+  general induction H3; simpl in *; eauto; dcr.
+  - lud. eapply add_iff in i. destruct i; eauto.
+    assert (y ∈ of_list YL). {
+      rewrite e.
+      eapply update_with_list_lookup_in; eauto using length_eq_length.
+    }
+    exfalso. eapply NoDupA_decons_notin; eauto.
+    exfalso; eauto.
+    eapply add_iff in i; destruct i; isabsurd.
+    eapply IHlength_eq; try eassumption.
+    hnf; intros. exfalso; cset_tac; eauto. eauto.
+    hnf; intros. eapply lookup_set_spec in H12; dcr; eauto.
+    cset_tac.
+  - erewrite update_with_list_no_update; eauto.
+    erewrite update_with_list_no_update; eauto.
+    eapply H1; eauto. cset_tac ; eauto.
+    erewrite update_with_list_no_update; eauto. intro.
+    specialize (H4 (ϱ x)). cset_tac'.
+    eapply H7.
+    eapply lookup_set_spec; cset_tac.
 Qed.
 
 Lemma inverse_on_dead_update X `{OrderedType X} Y `{OrderedType Y} (ra:X->Y) ira (x:X) (y:Y) s

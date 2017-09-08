@@ -507,7 +507,6 @@ Lemma ctxmap_erase_poEq X `{PartialOrder X} Z m m' x
                         ≣  MapInterface.find x (ctxmap_erase m' Z).
 Proof.
   intros. general induction Z; simpl in *; eauto.
-  - simpl in *. cset_tac.
   - cset_tac'.
     + mlud; eauto. exfalso; eauto.
     + rewrite !remove_erase. eapply IHZ. eauto.
@@ -518,7 +517,6 @@ Lemma ctxmap_erase_in X Z (m:Map[nat, X]) x
     -> MapInterface.find x (ctxmap_erase m Z) = None.
 Proof.
   intros. general induction Z; simpl in *; eauto.
-  - simpl in *. cset_tac.
   - decide (x = a); subst.
     + mlud; eauto. exfalso; eauto.
     + rewrite MapFacts.remove_neq_o; eauto.

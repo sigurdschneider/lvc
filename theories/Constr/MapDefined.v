@@ -34,7 +34,6 @@ Proof.
   decide (x ∈ of_list Z).
   - length_equify. clear H1.
     general induction H0; simpl in * |- *.
-    + exfalso. cset_tac.
     + lud; eauto.
       eapply IHlength_eq; eauto; cset_tac; intuition.
   - edestruct H1; eauto. cset_tac.

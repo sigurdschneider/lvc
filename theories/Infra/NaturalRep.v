@@ -95,6 +95,16 @@ Class NaturalRepresentationMax V `{NaturalRepresentation V} :=
 
 Arguments NaturalRepresentationMax V {H} {H0}.
 
+Ltac norevert_NaturalRepresentation H :=
+  match type of H with
+  | @NaturalRepresentation _ _ => idtac
+  | @NaturalRepresentationSucc _ _ _ => idtac
+  | @NaturalRepresentation _ _ _ => idtac
+  end.
+
+Smpl Add norevert_NaturalRepresentation : norevert.
+
+
 Smpl Create nr.
 
 Smpl Add

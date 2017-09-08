@@ -8,12 +8,16 @@ Set Implicit Arguments.
    hypothesis, see documentation on match goal and fail
    This tactic is a variation of Tobias Tebbi's revert_except_until *)
 
+Smpl Create norevert.
+
+Ltac OK_to_revert H := smpl norevert H.
+
 Ltac revert_except E :=
   repeat match goal with
            [H : _ |- _] =>
            match H with
              | E => fail 1
-             | _ => revert H
+             | _ => first [ OK_to_revert H | revert H ]
                end
          end.
 

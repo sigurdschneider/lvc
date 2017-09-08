@@ -736,3 +736,17 @@ Smpl Add
     end
 *)
      end : cset.
+
+
+Ltac norevert_OrderedType H :=
+  match type of H with
+  | OrderedType _ => idtac
+  end.
+
+Smpl Add norevert_OrderedType : norevert.
+
+Smpl Add match goal with
+         | [ H : _ ∈ ∅ |- _ ] => eapply not_in_empty in H; exfalso; eapply H
+         | [ H : _ ∈ of_list nil |- _ ] => eapply not_in_empty in H; exfalso; eapply H
+         | [ H: Empty ?s, H' : ?a ∈ ?s |- _ ] => destruct (H a H')
+         end : inv_trivial.

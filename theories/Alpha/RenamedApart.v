@@ -493,7 +493,7 @@ Proof.
   hnf; intros IW.
   hnf; intros x IN1 IN2.
   eapply list_union_get in IN1.
-  destruct IN1; dcr; inv_get; [|cset_tac].
+  destruct IN1; dcr; inv_get.
   edestruct IW; eauto; dcr.
   cset_tac.
 Qed.

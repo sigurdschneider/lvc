@@ -270,13 +270,15 @@ Lemma of_list_get_first X `{OrderedType X} (Z:list X) z
 : z ∈ of_list Z
   -> exists n z', get Z n z' /\ z === z' /\ (forall n' z', n' < n -> get Z n' z' -> z' =/= z).
 Proof.
-  intros. general induction Z; simpl in *. cset_tac; intuition.
+  intros. general induction Z; simpl in *.
   decide (z === a).
   - eexists 0, a; repeat split; eauto using get.
     + intros. exfalso. omega.
-  - cset_tac'; intuition. edestruct IHZ; eauto. dcr.
-    eexists (S x), x0; repeat split; eauto using get.
-    + intros. inv H4; intro; eauto. eapply H5; eauto. omega.
+  - eapply add_iff in H0 as [|].
+    + exfalso. cset_tac.
+    + edestruct IHZ; eauto. dcr.
+      eexists (S x), x0; repeat split; eauto using get.
+      * intros. inv H4; intro; eauto. eapply H5; eauto. omega.
 Qed.
 
 

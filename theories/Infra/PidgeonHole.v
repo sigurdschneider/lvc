@@ -5,7 +5,7 @@ Lemma all_in_lv_cardinal' X `{NaturalRepresentation X} (lv:set X) (n:nat)
 Proof.
   general induction n; simpl.
   - omega.
-  - exploit (IHn _ _ _ (lv \ singleton (ofNat n))).
+  - exploit (IHn (lv \ singleton (ofNat n))).
     + intros. cset_tac'.
       * eapply H1. etransitivity; eauto.
         eapply order_respecting. omega.

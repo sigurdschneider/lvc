@@ -74,7 +74,7 @@ Proof.
   unfold respectful, Proper; intros. subst.
   general induction y; simpl; eauto.
   destruct y0; eauto. hnf; intros.
-  specialize (IHy H Y H0 y2 x1 y1 H3).
+  specialize (IHy y2 x1 y1 H3).
   eapply update_inst; eauto.
 Qed.
 

@@ -51,7 +51,6 @@ Section MapUpdate.
     -> (update_list m f L) x === f x.
   Proof.
     intros. general induction L; simpl; eauto.
-    + simpl in *; cset_tac; firstorder.
     + lud.
       - rewrite e; eauto.
       - eapply IHL; eauto. eapply zadd_3; eauto.
@@ -194,11 +193,11 @@ Lemma update_with_list_lookup_in_list X `{OrderedType X} B E
   -> exists n y z', get Z n z' /\ get Y n y /\ E [Z <-- Y] z === y /\ z === z'.
 Proof.
   intros. eapply length_length_eq in H0.
-  general induction H0; simpl in *; [ isabsurd |].
+  general induction H0; simpl in *.
   decide (z === x).
   - exists 0, y, x; repeat split; eauto using get. lud.
   - cset_tac'.
-    edestruct (IHlength_eq _ E z) as [? [? ]]; eauto; dcr.
+    edestruct (IHlength_eq E z) as [? [? ]]; eauto; dcr.
     exists (S x0), x1, x2. eexists; repeat split; eauto using get.
     lud. exfalso; eauto.
 Qed.
@@ -234,7 +233,7 @@ Lemma update_with_list_lookup_in {X} `{OrderedType X} {Y} `{OrderedType Y} (f:X-
   -> f [ Z <-- Z' ] x ∈ of_list Z'.
 Proof.
   intros L. eapply length_length_eq in L.
-  general induction L; simpl in * |- *. exfalso; cset_tac; firstorder.
+  general induction L; simpl in * |- *.
   eapply add_iff in H1. destruct H1.
   lud; try eapply add_1; eauto.
   lud. eapply add_1; eauto.
@@ -346,7 +345,7 @@ Lemma lookup_update_same X `{OrderedType X} x Z (ϱ:X->X)
 : x ∈ of_list Z
   -> ϱ [Z <-- Z] x === x.
 Proof.
-  general induction Z; simpl; [isabsurd|].
+  general induction Z; simpl.
   lud; eauto.
   eapply IHZ. simpl in *. cset_tac.
 Qed.
@@ -442,7 +441,7 @@ Proof.
   - destruct y; simpl; eauto.
   - destruct y; simpl; eauto.
     hnf; intros. lud.
-    inv H; eauto.
+    inv H1; eauto.
     eapply IHlist_eq; eauto.
 Qed.
 
@@ -479,7 +478,7 @@ Proof.
   general induction H0; simpl in *; isabsurd.
   inv H1.
   - exists y; repeat split; eauto using get. lud. exfalso; eauto.
-  - edestruct (IHlength_eq _ E n0 z) as [? [? ]]; eauto using get; dcr.
+  - edestruct (IHlength_eq E n0 z) as [? [? ]]; eauto using get; dcr.
     + intros. eapply (H2 (S n')); eauto using get. omega.
     + exists x0. eexists; repeat split; eauto using get.
       exploit (H2 0); eauto using get; try omega.
@@ -497,7 +496,7 @@ Proof.
   general induction H0; simpl in *; isabsurd. decide (x0 === x).
   - exists 0, y; repeat split; eauto using get. lud. intros; exfalso; omega.
   - cset_tac'.
-    edestruct (IHlength_eq _ E x0) as [? [? ]]; eauto using get; dcr.
+    edestruct (IHlength_eq E x0) as [? [? ]]; eauto using get; dcr.
     + exists (S x1), x2. repeat split; eauto using get. lud; intuition.
       intros. inv H4. intro; intuition. eapply H6; eauto. omega.
 Qed.
@@ -513,7 +512,6 @@ Proof.
   lset_tac.
   length_equify.
   general induction H4; simpl.
-  - exfalso. simpl in *. cset_tac.
   - simpl in *. cset_tac'.
     + eexists x. lud; split; eauto.
     + edestruct IHlength_eq; eauto; dcr.

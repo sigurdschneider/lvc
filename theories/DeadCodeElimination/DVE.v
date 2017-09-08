@@ -821,7 +821,7 @@ Proof.
   - econstructor; eauto.
     erewrite get_nth; eauto using zip_get. simpl.
     hnf; intros.
-    eapply list_union_get in H0; destruct H0; dcr; inv_get; [|cset_tac].
+    eapply list_union_get in H0; destruct H0; dcr; inv_get.
     eapply get_flt in H0; dcr.
     eapply H; eauto. eapply incl_list_union; eauto using zip_get.
     reflexivity.

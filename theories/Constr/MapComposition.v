@@ -72,7 +72,7 @@ XL YL ZL D :
 Proof.
   intros LEN1 LEN2 INV. length_equify.
   general induction LEN1; simpl in *; eauto.
-  specialize (IHLEN1 _ _ _ _ _ _ _ _ _ _ _ _ YL0 (D\ singleton x) X0).
+  specialize (IHLEN1 _ _ _ _ _ _ _ _ YL0 (D\ singleton x) X0).
   assert (D ⊆ (D \ singleton x) ∪ singleton x) by eauto with cset.
   eapply agree_on_incl; eauto. eapply agree_on_union.
   - hnf; intros. clear H6.
