@@ -44,7 +44,7 @@ Proof.
   general induction term_s.
   - exists smtTrue; simpl; cset_tac.
   - exploit nc_step_agree as AGR1; eauto using star_step.
-    destruct H; simpl in *.
+    destruct H; simpl in *. hnf in H.
     invt noFun; invt renamedApart; invt F.step; invt notApp;
       exploit nc_step_agree' as AGR2; eauto; simpl in *.
     + exploit IHterm_s; try reflexivity; eauto.

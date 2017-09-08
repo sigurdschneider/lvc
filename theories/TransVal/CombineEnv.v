@@ -70,7 +70,7 @@ Proof.
   intros Star nf_s ssa_s.
   general induction Star.
   - rewrite renamedApart_freeVars; eauto; eauto with cset.
-  - destruct H; simpl in *.
+  - destruct H; simpl in *. hnf in H.
     invt noFun; invt renamedApart; try invt F.step; simpl;
       rewrite IHStar; eauto; pe_rewrite.
     + rewrite H9. clear; cset_tac.

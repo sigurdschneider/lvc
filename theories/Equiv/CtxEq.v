@@ -53,8 +53,8 @@ Proof.
   - split. hnf; intros; simpl in *; inv_get; eauto.
     hnf; intros; simpl in *. destruct f, f'; simpl in *; subst.
     get_functional; dcr; subst; inv_get.
-    pone_step; simpl; eauto with len. left.
-    eapply sim_refl.
+    pone_step; simpl; eauto with len.
+    left. eapply sim_refl.
 Qed.
 
 Lemma labenv_sim_sym L L'
@@ -267,9 +267,12 @@ Proof.
       intros. specialize (H3 E). destruct H3 as[EC' ?]; eauto.
       eexists (EC'[x<-E' x]). intros. rewrite fill_fillC.
       split.
-      * simpl. eapply (@star2_trans _ _ _ _ _ nil nil).
-        eapply H3. rewrite H2. eapply star2_silent. single_step; simpl; eauto.
-        eapply star2_refl.
+      * simpl.
+        eapply (@star2_trans _ _ _ _ _ nil nil).
+        -- eapply H3.
+        -- rewrite H2. eapply star2_silent.
+           single_step; simpl; eauto.
+           eapply star2_refl.
       * split.
         -- hnf; intros. lud; eauto.
            ++ rewrite e. reflexivity.

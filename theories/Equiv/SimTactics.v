@@ -6,10 +6,10 @@ Require Export ILStateType.
 
 (** ** Tactics *)
 
-Ltac pone_step := pfold;
+Ltac pone_step := (try pfold);
                  first [
-                     eapply SimSilent; [ eapply plus2O; single_step
-                                     | eapply plus2O; single_step
+                     eapply SimSilent; [ eapply plus2O; [ single_step | eauto ]
+                                     | eapply plus2O; [ single_step | eauto ]
                                      | ]
                    | eapply SimLockSilent; [ single_step
                                          | single_step
@@ -17,13 +17,15 @@ Ltac pone_step := pfold;
                    ].
 
 Ltac pone_step_left :=
-  eapply sim_expansion_closed; [ | eapply star2_silent; single_step | eapply star2_refl ].
+  eapply sim_expansion_closed; [ | eapply star2_silent; [ single_step | eapply star2_refl ]
+                                 | eapply star2_refl ].
 
 Ltac pone_step_right :=
-  eapply sim_expansion_closed; [ | eapply star2_refl | eapply star2_silent; single_step ].
+  eapply sim_expansion_closed; [ | eapply star2_refl
+                                 | eapply star2_silent; [ single_step | eapply star2_refl ] ].
 
 Ltac pno_step :=
-  pfold; first [eapply SimTerm;
+  (try pfold); first [eapply SimTerm;
                 [ | eapply star2_refl | eapply star2_refl | | ];
                 [ repeat get_functional; try reflexivity
                 | repeat get_functional; stuck2
@@ -43,7 +45,7 @@ Ltac step_activated :=
 
 Ltac pextern_step :=
   let STEP := fresh "STEP" in
-  pfold;
+  (try pfold);
   first [ eapply SimExtern ;
           [ eapply star2_refl
           | eapply star2_refl

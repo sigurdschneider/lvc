@@ -64,6 +64,7 @@ Proof.
   intros RA NF Trm.
   general induction Trm; eauto using agree_on_refl.
   destruct x' as [[L'' E''] s'']. destruct H; simpl in *.
+  hnf in H.
   invt renamedApart; try invt F.step;try invt noFun; simpl; eauto.
   - exploit IHTrm; [ | | reflexivity | reflexivity |]; eauto.
     pe_rewrite.
@@ -93,6 +94,7 @@ Proof.
   intros RA NF Trm.
   general induction Trm; eauto using agree_on_refl.
   destruct x' as [[L'' E''] s'']. destruct H; simpl in *.
+  hnf in H.
   invt renamedApart; try invt F.step;try invt noFun; simpl; eauto.
   - exploit IHTrm; [ | | reflexivity | reflexivity |]; eauto.
     pe_rewrite.
@@ -195,6 +197,7 @@ Lemma nc_step_renamedApart D (L:F.labenv) E s E' s'
 Proof.
   intros NF RA STAR. general induction STAR; eauto.
   destruct x' as [[L'' E''] s'']. destruct H; simpl in *.
+  hnf in H.
   invt renamedApart; invt noFun; invt notApp; try invt F.step; simpl.
   - edestruct (IHSTAR an L'' (E[x<-Some v]) s'' ); eauto; dcr.
     pe_rewrite. simpl. eexists; split; eauto.

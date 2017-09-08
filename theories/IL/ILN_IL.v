@@ -140,6 +140,28 @@ Proof.
 Qed.
 
 
+Ltac single_step_ILN :=
+  match goal with
+  | [ H : agree_on _ ?E ?E', I : val2bool (?E ?x) = true |- step (_, ?E', nstmtIf ?x _ _) _ ] =>
+    econstructor; eauto; rewrite <- H; eauto; cset_tac; intuition
+  | [ H : agree_on _ ?E ?E', I : val2bool (?E ?x) = false |- step (_, ?E', nstmtIf ?x _ _) _ ] =>
+    econstructor 3; eauto; rewrite <- H; eauto; cset_tac; intuition
+  | [ H : val2bool _ = false |- @StateType.step _ ILN.statetype_I _ _ _ ] =>
+    econstructor 4; try eassumption; try reflexivity
+  | [ H : val2bool _ = true |- @StateType.step _ ILN.statetype_I _ _ _ ] =>
+    econstructor 3; try eassumption; try reflexivity
+  | [ H : step (?L, _ , nstmtApp ?l _) _, H': get ?L (labN ?l) _ |- _] =>
+    econstructor; try eapply H'; eauto
+  | [ |- @StateType.step _ _ (?L, _ , nstmtApp _ _) _ _] =>
+    econstructor; eauto
+  | [ |- @StateType.step _ _ (_, ?E, nstmtLet _ (Operation ?e) _) _ _] =>
+    econstructor; eauto
+  | [ |- @StateType.step _ _ (_, ?E, nstmtFun _ _) _ _] =>
+    econstructor; eauto
+  end.
+
+Smpl Add single_step_ILN : single_step.
+
 
 Inductive labIndicesSim : I.state -> IL.I.state -> Prop :=
   | labIndicesSimI (L:env (option I.block)) L' E s s' symb LB
@@ -167,7 +189,8 @@ Proof.
       * pno_step.
 
   - case_eq (op_eval E e); intros.
-    case_eq (val2bool v); intros; pone_step; right; eapply labIndicesSim_sim; econstructor; eauto.
+    case_eq (val2bool v); intros;
+    pone_step; right; eapply labIndicesSim_sim; econstructor; eauto.
     pno_step.
   - eapply option2status_inv in EQ0.
     edestruct EX as [[Lb F f]]; eauto. intros.

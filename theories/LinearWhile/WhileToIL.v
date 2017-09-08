@@ -71,6 +71,22 @@ Proof.
    reflexivity.
 Qed.
 
+Ltac single_step_while :=
+  match goal with
+  | [ H : val2bool _ = false |- @StateType.step _ statetype_While _ _ _ ] =>
+    econstructor 4; try eassumption; try reflexivity
+  | [ H : val2bool _ = true |- @StateType.step _ statetype_While _ _ _ ] =>
+    econstructor 3; try eassumption; try reflexivity
+  | [ H : val2bool _ = false |- @StateType.step _ statetype_While _ _ _ ] =>
+    econstructor 5; try eassumption; try reflexivity
+  | [ H : val2bool _ = true |- @StateType.step _ statetype_While _ _ _ ] =>
+    econstructor 6; try eassumption; try reflexivity
+  | [ |- @StateType.step _ statetype_While _ _ _ ] =>
+    econstructor; eauto
+  end.
+
+Smpl Add single_step_while : single_step.
+
 Lemma whileToILI_correct_while' r (L:list IL.I.block) E e s p (t:stmt)
       (IH:forall q (L:IL.I.labenv) E r,
           (exists v, op_eval E e = Some v /\ val2bool v = true) ->
@@ -95,15 +111,13 @@ Proof.
   - intros. dcr.
     + case_eq (op_eval E0 e); intros.
       * case_eq (val2bool v0); intros.
-        -- pone_step_right; simpl; eauto using get. simpl.
-           pfold; eapply SimSilent; [ eapply plus2O; try eapply StepWhileT; eauto
-                                    | eapply plus2O; single_step; eauto using get
-                                    | ].
+        -- pone_step_right.
+           pone_step.
            right. eapply CIH; eauto.
-        -- pone_step_right; simpl; eauto using get. simpl.
-           pone_step; simpl; eauto using get.
+        -- pone_step_right.
+           pone_step.
            left. eapply paco3_mon. eapply CONT. eauto.
-      * pone_step_right; simpl; eauto using get; simpl.
+      * pone_step_right.
         pno_step.
 Qed.
 
@@ -121,20 +135,16 @@ Proof.
     pone_step_right.
     case_eq (op_eval E e); intros.
     + case_eq (val2bool v); intros.
-      * pfold; eapply SimSilent; [ eapply plus2O; econstructor; eauto
-                                 | eapply plus2O; econstructor; eauto
-                                 | ].
+      * pone_step.
         left. eapply IH; eauto; intros.
-        pone_step_right; [ | econstructor | reflexivity| reflexivity].
+        pone_step_right.
         eapply IH; eauto. eapply sawtooth_I_mkBlocks; eauto.
         intros.
         eapply stmtApp_sim_tl; eauto.
         eapply sawtooth_smaller; eauto.
-      * pfold; eapply SimSilent; [ eapply plus2O; try eapply StepIfF; eauto
-                                 | eapply plus2O; single_step; eauto
-                                 | ].
+      * pone_step.
         left. eapply IH; eauto. intros.
-        pone_step_right; [ | econstructor | reflexivity| reflexivity].
+        pone_step_right.
         eapply IH; eauto. eapply sawtooth_I_mkBlocks; eauto.
         intros.
         eapply stmtApp_sim_tl; eauto.
@@ -145,11 +155,8 @@ Proof.
     pone_step_right.
     + case_eq (op_eval E e); intros.
       * case_eq (val2bool v); intros.
-        -- pone_step_right; simpl; eauto using get. simpl.
-           pfold; eapply SimSilent;
-             [ eapply plus2O; try eapply StepWhileT; eauto
-             | eapply plus2O; single_step; simpl; eauto using get
-             | ]. simpl.
+        -- pone_step_right.
+           pone_step. simpl.
            left.
            eapply whileToILI_correct_while'; eauto.
            ++ intros. eapply IH; eauto.
@@ -158,35 +165,29 @@ Proof.
              eapply stmtApp_sim_tl; eauto.
              eapply sawtooth_smaller; eauto.
         -- intros.
-           pone_step_right; simpl; eauto using get. simpl.
-           pone_step; simpl; eauto using get.
+           pone_step_right.
+           pone_step.
            left. eapply IH; eauto.
            eapply (sawtooth_I_mkBlocks ((nil, stmtIf e (whileToILI s 0) _)::nil)); eauto.
            intros. eapply stmtApp_sim_tl; eauto.
            eapply sawtooth_smaller; eauto.
-      * pone_step_right; simpl; eauto using get. simpl.
+      * pone_step_right. simpl.
         pno_step.
   - rewrite whileToILI_let.
     destruct e.
     + case_eq (op_eval E e); intros.
-      * pfold; eapply SimSilent; [ eapply plus2O; econstructor
-                                 | eapply plus2O; econstructor
-                                 | ]; eauto.
+      * pone_step.
         left. eapply IH; eauto.
       * pno_step.
     + case_eq (omap (op_eval E) Y); intros.
       * pextern_step.
-        -- econstructor; eauto. eexists. econstructor; eauto.
+        -- econstructor; eauto. eexists. single_step.
         -- left. eapply IH; eauto.
         -- assert (l = vl) by congruence; subst.
            left. eapply IH; eauto.
       * pno_step.
   - rewrite whileToILI_return.
-    pfold; eapply SimTerm; [
-    | eapply star2_refl
-    | eapply star2_refl
-    | stuck
-    | stuck ]. reflexivity.
+    pno_step.
     Grab Existential Variables.
     eapply default_val.
 Qed.

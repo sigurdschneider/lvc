@@ -188,7 +188,7 @@ Proof.
     rewrite mapi_length in GetFL'; eauto.
     eapply get_app_lt_1 in GetL'; [| rewrite mapi_length; eauto ].
     inv_get. destruct x0 as [Z s], x as [Z' s']. simpl in *. clear EQ0 EQ.
-    pone_step; simpl; eauto using get_app, get_mapi; simpl; eauto with len.
+    pone_step. simpl.
     orewrite (f-f=0). orewrite (f'-f'=0). simpl.
     exploit SIM; eauto.
   - intros. exploit Ige; eauto. rewrite mapi_length in GE; eauto.

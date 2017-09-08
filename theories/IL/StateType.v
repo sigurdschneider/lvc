@@ -1,5 +1,5 @@
 Require Import List.
-Require Export Events.
+Require Export IL.Events.
 
 Set Implicit Arguments.
 
@@ -26,6 +26,12 @@ Class StateType S := {
   step_externally_determined : externally_determined step
 }.
 
+Arguments step : simpl never.
+
 Definition stateType S (ST:StateType S) := S.
 
 Coercion stateType : StateType >-> Sortclass.
+
+Smpl Create single_step [progress].
+
+Ltac single_step := smpl single_step.

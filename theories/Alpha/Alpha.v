@@ -295,7 +295,7 @@ Proof.
     case_eq (omap (op_eval E) X); intros.
     + edestruct PIR2_nth; eauto; dcr. inv H4.
       simpl in *.
-      pone_step; simpl; try congruence; eauto.
+      pone_step; eauto.
       erewrite omap_agree_2; eauto. intros. symmetry.
       eapply alpha_op_eval. eapply H0; eauto; eauto. hnf; intros; eauto.
       simpl. right; eapply alphaSim_sim; econstructor; eauto using PIR2_drop.
@@ -313,10 +313,11 @@ Proof.
       * pno_step.
         erewrite alpha_op_eval in H2; eauto. congruence.
     + remember (omap (op_eval E) Y); intros. symmetry in Heqo.
-      assert (omap (op_eval E') Y' = o).
-      erewrite omap_agree_2; eauto.
-      intros. symmetry.
-      eapply alpha_op_eval; eauto.
+      assert (omap (op_eval E') Y' = o). {
+        erewrite omap_agree_2; eauto.
+        intros. symmetry.
+        eapply alpha_op_eval; eauto.
+      }
       destruct o.
       * pextern_step; try congruence.
         -- right; eapply alphaSim_sim; econstructor; eauto using envCorr_update.

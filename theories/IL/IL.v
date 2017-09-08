@@ -390,21 +390,44 @@ Instance statetype_I : StateType I.state := {
   step_externally_determined := I.step_externally_determined
 }.
 
-Ltac single_step :=
+Ltac single_step_IL :=
   match goal with
   | [ H : agree_on _ ?E ?E', I : val2bool (?E ?x) = true |- step (_, ?E', stmtIf ?x _ _) _ ] =>
     econstructor; eauto; rewrite <- H; eauto; cset_tac; intuition
   | [ H : agree_on _ ?E ?E', I : val2bool (?E ?x) = false |- step (_, ?E', stmtIf ?x _ _) _ ] =>
     econstructor 3; eauto; rewrite <- H; eauto; cset_tac; intuition
-  | [ H : val2bool _ = false |- _ ] => econstructor 4; try eassumption; try reflexivity
-  | [ H : val2bool _ = true |- _ ] => econstructor 3; try eassumption; try reflexivity
-  | [ H : step (?L, _ , stmtApp ?l _) _, H': get ?L (counted ?l) _ |- _] =>
+  | [ H : val2bool _ = false |- @StateType.step _ statetype_I _ _ _ ] =>
+    econstructor 4; try eassumption; try reflexivity
+  | [ H : val2bool _ = false |- @StateType.step _ statetype_F _ _ _ ] =>
+    econstructor 4; try eassumption; try reflexivity
+  | [ H : val2bool _ = true |- @StateType.step _ statetype_I _ _ _ ] =>
+    econstructor 3; try eassumption; try reflexivity
+  | [ H : val2bool _ = true |- @StateType.step _ statetype_F _ _ _ ] =>
+    econstructor 3; try eassumption; try reflexivity
+  | [ H : step (?L, _ , stmtApp ?l _) _, H': get ?L (labN ?l) _ |- _] =>
     econstructor; try eapply H'; eauto
-  | [ H': get ?L (counted ?l) _ |- step (?L, _ , stmtApp ?l _) _] =>
-    econstructor; try eapply H'; eauto
-  | _ => econstructor; eauto
+(*  | [ H': get ?L ?n _ |- @StateType.step _ _ (?L, _ , stmtApp (LabI ?n) _) _ _] =>
+    econstructor; [ eapply H'
+                  | simpl; eauto with len
+                  | try eassumption
+                  | reflexivity]*)
+  | [ H': get ?F (labN ?l) _ |- @StateType.step _ _ (mapi _ ?F ++ _, _, stmtApp ?l _) _ _] =>
+    econstructor; [ try solve [simpl; eauto using get_app, get_mapi]
+                  | simpl; eauto with len
+                  | try eassumption; eauto; try reflexivity
+                  | reflexivity]
+  | [ |- @StateType.step _ _ (?L, _ , stmtApp _ _) _ _] =>
+    econstructor; [ try eassumption; try solve [simpl; eauto using get]
+                  | simpl; eauto with len
+                  | try eassumption; eauto; try reflexivity
+                  | reflexivity]
+  | [ |- @StateType.step _ _ (_, ?E, stmtLet _ (Operation ?e) _) _ _] =>
+    econstructor; eauto
+  | [ |- @StateType.step _ _ (_, ?E, stmtFun _ _) _ _] =>
+    econstructor; eauto
   end.
 
+Smpl Add single_step_IL : single_step.
 
 Lemma ZL_mapi F L
   : I.block_Z ⊝ (mapi I.mkBlock F ++ L) = fst ⊝ F ++ I.block_Z ⊝ L.

@@ -164,6 +164,36 @@ Instance statetype_F : StateType F.state := {
   step_externally_determined := F.step_externally_determined
 }.
 
+Ltac single_step_ILDB :=
+  match goal with
+  | [ H : agree_on _ ?E ?E', I : val2bool (?E ?x) = true |- step (_, ?E', bstmtIf ?x _ _) _ ] =>
+    econstructor; eauto; rewrite <- H; eauto; cset_tac; intuition
+  | [ H : agree_on _ ?E ?E', I : val2bool (?E ?x) = false |- step (_, ?E', bstmtIf ?x _ _) _ ] =>
+    econstructor 3; eauto; rewrite <- H; eauto; cset_tac; intuition
+  | [ H : val2bool _ = false |- @StateType.step _ statetype_F _ _ _ ] =>
+    econstructor 4; try eassumption; try reflexivity
+  | [ H : val2bool _ = true |- @StateType.step _ statetype_F _ _ _ ] =>
+    econstructor 3; try eassumption; try reflexivity
+  | [ H : step (?L, _ , bstmtApp ?l _) _, H': get ?L (labN ?l) _ |- _] =>
+    econstructor; try eapply H'; eauto
+  | [ H': get ?F (labN ?l) _ |- @StateType.step _ _ (mapi _ ?F ++ _, _, bstmtApp ?l _) _ _] =>
+    econstructor; [ try solve [simpl; eauto using get_app, get_mapi]
+                  | simpl; eauto with len
+                  | try eassumption; eauto; try reflexivity
+                  | reflexivity]
+  | [ |- @StateType.step _ _ (?L, _ , bstmtApp _ _) _ _] =>
+    econstructor; [ try eassumption; try solve [simpl; eauto using get]
+                  | simpl; eauto with len
+                  | try eassumption; eauto; try reflexivity
+                  | reflexivity]
+  | [ |- @StateType.step _ _ (_, ?E, bstmtLet (Operation ?e) _) _ _] =>
+    econstructor; eauto
+  | [ |- @StateType.step _ _ (_, ?E, bstmtFun _ _) _ _] =>
+    econstructor; eauto
+  end.
+
+Smpl Add single_step_ILDB : single_step.
+
 Lemma exp_idx_ok E E' e e' (symb:list var)
       (Edef:forall x v, E x = Some v -> exists n, get symb n x)
       (Eagr:forall x n, pos symb x 0 = Some n -> exists v, get E' n v /\ E x = Some v)

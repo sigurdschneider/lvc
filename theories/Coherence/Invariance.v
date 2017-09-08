@@ -115,27 +115,6 @@ Qed.
 
 (** The bisimulation is indeed a bisimulation *)
 
-Ltac cone_step :=  eapply SimSilent; [ eapply plus2O; single_step
-                          | eapply plus2O; single_step
-                          | ].
-
-Ltac cno_step := eapply SimTerm;
-          [ | eapply star2_refl | eapply star2_refl | | ];
-          [ repeat get_functional; try reflexivity
-          | repeat get_functional; stuck2
-          | repeat get_functional; stuck2 ].
-
-Ltac cextern_step :=
-  let STEP := fresh "STEP" in
-  eapply SimExtern;
-  [ eapply star2_refl
-  | eapply star2_refl
-  | try step_activated
-  | try step_activated
-  | intros ? ? STEP; inv STEP; eexists; split; [econstructor; eauto | ]
-  | intros ? ? STEP; inv STEP; eexists; split; [econstructor; eauto | ]
-  ].
-
 Require Import LivenessCorrect.
 
 Lemma ZL_mapi_F F L E
@@ -226,28 +205,28 @@ Proof.
   inv SRD; inv LV; simpl in *.
   - invt live_exp_sound.
     + case_eq (op_eval E e0); intros.
-      * cone_step.
+      * pone_step.
         eapply H; eauto using rd_agree_update with len.
         -- intros. inv_get. eapply approx_restrict; eauto.
         -- eauto using restrict_ifFstR.
-      * cno_step.
+      * pno_step.
     + case_eq (omap (op_eval E) Y); intros.
-      * cextern_step; assert (vl = l) by congruence; subst; eauto.
+      * pextern_step; assert (vl = l) by congruence; subst; eauto.
         -- eapply H; eauto using rd_agree_update, PIR2_length, restrict_ifFstR with len.
            ++ intros; inv_get. eapply approx_restrict; eauto.
         -- eapply H; eauto using rd_agree_update, PIR2_length, restrict_ifFstR with len.
            ++ intros; inv_get. eapply approx_restrict; eauto.
-      * cno_step.
+      * pno_step.
   - case_eq (op_eval E e); intros.
     + case_eq (val2bool v); intros;
-      cone_step; eauto using agree_on_incl.
-    + cno_step.
-  - cno_step.
+      pone_step; eauto using agree_on_incl.
+    + pno_step.
+  - pno_step.
   - decide (length Z = length Y).
     case_eq (omap (op_eval E) Y); intros.
     + inv_get. exploit LA; eauto. invc H2. simpl in *.
       specialize (H7 G' eq_refl). dcr. rewrite <- drop_map in *.
-      cone_step; simpl. eauto with len.
+      pone_step; simpl. eauto with len.
       exploit RA; eauto; simpl in *.
       eapply simc_trans_r_left; swap 1 2.
       * eapply H; eauto with len.
@@ -267,9 +246,9 @@ Proof.
         -- rewrite H12. eapply update_with_list_agree; eauto with len.
            symmetry. eapply agree_on_incl; eauto.
            clear_all. cset_tac.
-    + cno_step.
-    + cno_step.
-  - cone_step. erewrite mkBlock_strip.
+    + pno_step.
+    + pno_step.
+  - pone_step. erewrite mkBlock_strip.
     eapply H; try rewrite ZL_mapi; try rewrite ZL_mapi_F;
       eauto using agree_on_incl, PIR2_app, rd_agree_extend.
     * intros; inv_get. sawtooth.
