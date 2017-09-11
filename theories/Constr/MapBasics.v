@@ -116,22 +116,22 @@ Notation "f [ w <- x ]" := (update f w x) (at level 29, left associativity).
 
 Ltac lookup_eq_tac :=
   match goal with
-    | [H : ?x === ?x' |- context[update ?f ?x ?y ?x'] ]
-      => rewrite (lookup_equiv f x y x' H)
-    | [H : ?x === ?x', H' : context[update ?f ?x ?y ?x'] |- _ ]
-      => rewrite (lookup_equiv f x y x' H) in H'
+    | [H : ?x === ?x' |- context[@update ?X ?Y ?OT ?f ?x ?y ?x'] ]
+      => rewrite (@lookup_equiv X Y OT f x y x' H)
+    | [H : ?x === ?x', H' : context[@update ?X ?Y ?OT ?f ?x ?y ?x'] |- _ ]
+      => rewrite (@lookup_equiv X Y OT f x y x' H) in H'
   end.
 
 Ltac lookup_neq_tac :=
   match goal with
-    | [H : ?x =/= ?x' |- context[update ?f ?x ?y ?x'] ]
-      => rewrite (lookup_nequiv f y H)
-    | [H : ?x =/= ?x', H' : context[update ?f ?x ?y ?x'] |- _ ]
-      => rewrite (lookup_nequiv f y H) in H'
-    | [H : ?x === ?x' -> False |- context[update ?f ?x ?y ?x'] ]
-      => rewrite (lookup_nequiv f y H)
-    | [H : ?x === ?x' -> False, H' : context[update ?f ?x ?y ?x'] |- _ ]
-      => rewrite (lookup_nequiv f y H) in H'
+    | [H : ?x =/= ?x' |- context[@update ?X ?Y ?OT ?f ?x ?y ?x'] ]
+      => rewrite (@lookup_nequiv X Y OT f x y x' H)
+    | [H : ?x =/= ?x', H' : context[@update ?X ?Y ?OT ?f ?x ?y ?x'] |- _ ]
+      => rewrite (@lookup_nequiv X Y OT f x y x' H) in H'
+    | [H : ?x === ?x' -> False |- context[@update ?X ?Y ?OT ?f ?x ?y ?x'] ]
+      => rewrite (@lookup_nequiv X Y OT f x y x' H)
+    | [H : ?x === ?x' -> False, H' : context[@update ?X ?Y ?OT ?f ?x ?y ?x'] |- _ ]
+      => rewrite (@lookup_nequiv X Y OT f x y x' H) in H'
   end.
 
 (* from Ralf's thesis *)
@@ -170,6 +170,7 @@ Section UpdateFacts.
     x =/= x' -> m[x <- y][x' <- y'] [-] m[x' <- y'][x <- y].
   Proof.
     intros ? x''; lud.
+
   Qed.
 
   Lemma update_shadow (m : X -> Y) (x : X) (y y' : Y) :

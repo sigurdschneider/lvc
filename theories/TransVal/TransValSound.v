@@ -34,25 +34,26 @@ Lemma unsat_extension L D E E' s s' pol P Q:
 (forall F E, models F (to_total E) Q -> ~ models F (to_total E) (smtAnd (translateStmt s pol) P))
 -> renamedApart s D
 -> noFun s
+-> noCall s
 -> star nc_step (L, E, s) (L, E', s')
 -> exists Q', (forall F, models F (to_total E')  Q' ) /\
               freeVars Q' ⊆  snd(getAnn D) ∪ fst(getAnn D) /\
               (forall F E, models F (to_total E) (smtAnd Q Q')
                            -> ~ models F (to_total E) (smtAnd (translateStmt s' pol) P)).
 Proof.
-  intros Q_impl_mod RA noFun_s term_s.
+  intros Q_impl_mod RA noFun_s noCall_s term_s.
   general induction term_s.
   - exists smtTrue; simpl; cset_tac.
   - exploit nc_step_agree as AGR1; eauto using star_step.
     destruct H; simpl in *. hnf in H.
-    invt noFun; invt renamedApart; invt F.step; invt notApp;
+    invt noFun; invt renamedApart; invt F.step; invt notApp; invt noCall;
       exploit nc_step_agree' as AGR2; eauto; simpl in *.
     + exploit IHterm_s; try reflexivity; eauto.
       * intros; intro.
         eapply Q_impl_mod. eauto. simpl.
-        instantiate (1:=(smtAnd P (guardGen (undef e) source (constr (Var x) e))))
-          in H3; simpl in *; dcr.
-        rewrite models_guardGen_source in H12.
+        instantiate (1:=(smtAnd P (guardGen (undef e0) source (constr (Var x) e0))))
+          in H4; simpl in *; dcr.
+        rewrite models_guardGen_source in H13.
         destruct pol.
         -- rewrite models_guardGen_source. simpl in *; dcr.
            repeat (split; eauto).
@@ -60,27 +61,27 @@ Proof.
            repeat (split; eauto).
       * destruct H2 as [P' ?]; simpl in *; dcr.
         pe_rewrite.
-        eexists (smtAnd P' (guardGen (undef e) source (constr (Var x) e)));
+        eexists (smtAnd P' (guardGen (undef e0) source (constr (Var x) e0)));
           repeat split; eauto.
         -- rewrite models_guardGen_source; simpl; split.
           ** eapply guard_true_if_eval.
              eauto using op_eval_agree with cset.
           ** eapply smt_eval_var; eauto with cset.
         -- simpl. rewrite freeVars_guardGen, freeVars_undef, !H6; simpl.
-          rewrite H6, H8, H9. pe_rewrite. clear; cset_tac.
+           rewrite H6, H11, H9. clear; cset_tac.
         -- intros; intro. simpl in *.
-           eapply H11; dcr; simpl; eauto.
+           eapply H12; dcr; simpl; eauto.
     + exploit IHterm_s; try reflexivity; eauto.
       * intros; intro.
         eapply Q_impl_mod. eauto. simpl.
         instantiate (1:=(smtAnd P (guardGen (undef e) source (ite e (smtTrue) (smtFalse))))) in H4; simpl in *; dcr.
-        rewrite models_guardGen_source in H15.
+        rewrite models_guardGen_source in H17.
         destruct pol.
         -- rewrite models_guardGen_source. simpl in *; dcr.
-           cases in H11; [|isabsurd].
+           cases in H15; [|isabsurd].
            repeat (split; eauto).
         -- rewrite models_guardGen_target. simpl in *; dcr.
-           cases in H11; [|isabsurd].
+           cases in H15; [|isabsurd].
            repeat (split; eauto).
       * destruct H3 as [P' ?]; simpl in *; dcr.
         pe_rewrite.
@@ -92,20 +93,20 @@ Proof.
           ** erewrite smt_eval_op; eauto with cset.
              rewrite condTrue; eauto.
         -- simpl. rewrite freeVars_guardGen, freeVars_undef, !H6; simpl.
-          rewrite H11, <- H8, H6. clear; cset_tac.
+           rewrite H15, <- H8, H6. clear; cset_tac.
         -- intros; intro. simpl in *.
-           eapply H14; dcr; simpl; eauto.
+           eapply H16; dcr; simpl; eauto.
     + exploit IHterm_s; try reflexivity; eauto.
       * intros; intro.
         eapply Q_impl_mod. eauto. simpl.
         instantiate (1:=(smtAnd P (guardGen (undef e) source (ite e (smtFalse) (smtTrue))))) in H4; simpl in *; dcr.
-        rewrite models_guardGen_source in H15.
+        rewrite models_guardGen_source in H17.
         destruct pol.
         -- rewrite models_guardGen_source. simpl in *; dcr.
-           cases in H11; [isabsurd|].
+           cases in H15; [isabsurd|].
            repeat (split; eauto).
         -- rewrite models_guardGen_target. simpl in *; dcr.
-           cases in H11; [isabsurd|].
+           cases in H15; [isabsurd|].
            repeat (split; eauto).
       * destruct H3 as [P' ?]; simpl in *; dcr.
         pe_rewrite.
@@ -117,9 +118,9 @@ Proof.
           ** erewrite smt_eval_op; eauto with cset.
              rewrite condFalse; eauto.
         -- simpl. rewrite freeVars_guardGen, freeVars_undef, !H6; simpl.
-          rewrite H11, <- H8, H6. clear; cset_tac.
+          rewrite H15, <- H8, H6. clear; cset_tac.
         -- intros; intro. simpl in *.
-           eapply H14; dcr; simpl; eauto.
+           eapply H16; dcr; simpl; eauto.
 Qed.
 
 Lemma predeval_uneq_ret E et es e e' P
@@ -192,8 +193,8 @@ Lemma tval_term_sound L D D' E Es Et s s' t t'
     (* Every variable gets defined only once in s and t*)
     -> renamedApart s D
     -> renamedApart t D'
-    -> noFun s (* disallow function definitions and external function calls *)
-    -> noFun t (* same*)
+    -> noFun s /\ noCall s (* disallow function definitions and external function calls *)
+    -> noFun t /\ noCall t(* same*)
     (* Free Variables must be defined *)
     -> (forall x, x ∈ (fst(getAnn D)) -> exists v, E x = Some v)
     -> Terminates (L,E,s) (L,Es,s')
@@ -201,7 +202,7 @@ Lemma tval_term_sound L D D' E Es Et s s' t t'
     -> @sim _ statetype_F _ statetype_F bot3 Sim (L, E, s) (L, E, t).
 
 Proof.
-  intros Unsat_check Eq_FVars RenApart ssa_s ssa_t nf_s nf_t val_def
+  intros Unsat_check Eq_FVars RenApart ssa_s ssa_t [nf_s nc_s] [nf_t nc_t] val_def
          [star_s trm_s] [star_t trm_t].
   unfold smtCheck in Unsat_check.
   pose proof (extend_not_models _ smtTrue Unsat_check) as extend_mod.
@@ -212,7 +213,7 @@ Proof.
       by (intros F E0 mod_true;specialize (extend_mod F (to_total E0) mod_true); auto).
   pose proof (unsat_extension L D E Es s s' source (translateStmt t target) smtTrue)
     as extend1.
-  specialize (extend1 extend_mod_partial ssa_s nf_s star_s).
+  specialize (extend1 extend_mod_partial ssa_s nf_s nc_s star_s).
   destruct extend1 as [Q [mod_Q [fv_Q Unsat_check2]]].
   pose proof (unsat_extension L D' E Et t t' target (translateStmt s' source) (smtAnd smtTrue Q))
     as extend2.
@@ -226,7 +227,7 @@ Proof.
   - specialize (extend2 sat_Q).
     (** Clean up **)
     clear sat_Q Unsat_check Unsat_check2.
-    specialize (extend2 ssa_t nf_t star_t).
+    specialize (extend2 ssa_t nf_t nc_t star_t).
     destruct extend2 as [Q' [mod_Q' [fv_Q' Unsat_st]]].
     (** Construct model for assumption: TODO: Make this a lemma**)
     assert (forall F,
@@ -421,17 +422,17 @@ Lemma tval_sound L D D' E s t:
   (* Every variable gets defined only once in s and t*)
   -> renamedApart s D
   -> renamedApart t D'
-  -> noFun s (* disallow function definitions and external function calls *)
-  -> noFun t (* same*)
+  -> noFun s /\ noCall s(* disallow function definitions and external function calls *)
+  -> noFun t /\ noCall t(* same*)
   (* Free Variables must be defined *)
   -> (forall x, x ∈ (fst(getAnn D)) -> exists v, E x = Some v)
   -> @sim _ statetype_F _ statetype_F bot3 Sim (L, E, s) (L, E, t).
 
 Proof.
-  intros Unsat_check Eq_FVars RenApart ssa_s ssa_t nf_s nf_t val_def.
-  pose proof (@noFun_impl_term_crash E s nf_s) as term_crash_s.
+  intros Unsat_check Eq_FVars RenApart ssa_s ssa_t [nf_s nc_s] [nf_t nc_t] val_def.
+  pose proof (@noFun_impl_term_crash E s nf_s nc_s) as term_crash_s.
   destruct term_crash_s as [Es [s' term_crash_s]].
-  pose proof (@noFun_impl_term_crash E t nf_t) as term_crash_t.
+  pose proof (@noFun_impl_term_crash E t nf_t nc_t) as term_crash_t.
   destruct term_crash_t as [Et [t' term_crash_t]].
   specialize (term_crash_s L); specialize (term_crash_t L).
   (** Case Split for Termination of s and t **)
@@ -448,7 +449,7 @@ Proof.
       * intros x in_fst.
         apply (val_def x); eauto.
         rewrite Eq_FVars; auto.
-      * pose proof (crash_impl_models L L D' t E Et t' ssa_t fv_def nf_t crash_t (fun _ => fun _ => true)).
+      * pose proof (crash_impl_models L L D' t E Et t' ssa_t fv_def nf_t nc_t crash_t (fun _ => fun _ => true)).
         pose proof (combineEnv_agree (fst (getAnn D) ∪ snd(getAnn D)) Es Et)
           as agree_combineEnv.
         specialize (Unsat_check (fun _ => fun _ => true) (to_total (combineEnv (fst (getAnn D) ∪ snd(getAnn D)) Es Et))).

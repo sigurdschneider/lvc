@@ -53,18 +53,19 @@ Lemma crash_impl_models L L' D s E Es s'
   : renamedApart s D
     -> defined_on (fst (getAnn D)) E
     -> noFun s
+    -> noCall s
     -> Crash (L, E, s) (L', Es, s')
     -> forall F, models F (to_total Es) (translateStmt s target).
 
 Proof.
-  intros RA DEF NF [Star Crsh] F.
+  intros RA DEF NF NC [Star Crsh] F.
   general induction Star; simpl.
   - invt nc_stuck.
     + eapply models_guardGen_target.
       simpl; intros.
       eapply (undefList_models F Es Y); eauto.
       inv RA; simpl in *. eauto using defined_on_incl.
-    + inv RA; invt noFun; invt notApp; simpl;
+    + inv RA; invt noFun; invt notApp; invt noCall; simpl;
         eapply models_guardGen_target; simpl in *; intros.
       * exploit nostep_let; eauto.
         exfalso. eapply undef_models; eauto using defined_on_incl with cset.
@@ -74,7 +75,7 @@ Proof.
   - exploit nc_step_agree as AGR1; eauto using star_step.
     destruct H; simpl in *.
     inversion H; intros; subst; try isabsurd;
-    invt renamedApart; invt noFun; subst; simpl;
+    invt renamedApart; invt noFun; invt noCall; subst; simpl;
       eapply models_guardGen_target; simpl in *; intros;
         exploit nc_step_agree' as AGR2; eauto; simpl in *; pe_rewrite.
     + split; eauto.

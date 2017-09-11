@@ -403,3 +403,19 @@ Proof.
       rewrite DROP. simpl.
       rewrite <- egalize_funs_length2. f_equal. f_equal. omega.
 Qed.
+
+
+Lemma egalize_noFun D n s
+  : noFun (fst (egalize D n s)).
+Proof.
+  general induction s; simpl;
+    repeat let_pair_case_eq; subst; simpl;
+      eauto using noFun.
+Qed.
+
+
+
+Inductive topFun : stmt -> Prop :=
+| TopFun F s (NFs:noFun s)
+         (NFF:forall n Zs, get F n Zs -> noFun (snd Zs))
+  : topFun (stmtFun F s).

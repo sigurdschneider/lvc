@@ -448,7 +448,7 @@ end.
 Inductive noFun : stmt->Prop :=
 | NoFunLet x e s :
    noFun s
-   -> noFun (stmtLet x (Operation e) s)
+   -> noFun (stmtLet x e s)
 | NoFunIf e s t :
    noFun s
    -> noFun t
@@ -458,8 +458,25 @@ Inductive noFun : stmt->Prop :=
 | NoFunExp e :
    noFun (stmtReturn e).
 
+Inductive noCall : stmt->Prop :=
+| NoCallLet x e s :
+   noCall s
+   -> noCall (stmtLet x (Operation e) s)
+| NoCallIf e s t :
+   noCall s
+   -> noCall t
+   -> noCall (stmtIf e s t)
+| NoCallApp l Y :
+   noCall (stmtApp l Y)
+| NoCallExp e :
+    noCall (stmtReturn e)
+| NoAppCall F t
+  : (forall n Zs, get F n Zs -> noCall (snd Zs))
+    -> noCall t
+    -> noCall (stmtFun F t).
+
 Inductive notApp : stmt -> Prop :=
 | NotAppLet x e s : notApp (stmtLet x e s)
 | NotAppIf e s t : notApp (stmtIf e s t)
 | NotAppReturn e : notApp (stmtReturn e)
-| NotFun F t : notApp (stmtFun F t).
+| NotAppFun F t : notApp (stmtFun F t).

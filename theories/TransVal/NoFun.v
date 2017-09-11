@@ -142,26 +142,27 @@ Definition Crash σ σ' :=
 
 Lemma noFun_impl_term_crash' E s
   : noFun s
+    -> noCall s
     ->  exists E' s', forall L, star nc_step (L, E, s) (L, E', s') /\ nc_final (L, E', s').
 Proof.
-  intros. general induction s; invt noFun.
+  intros. general induction s; invt noFun; invt noCall.
   - case_eq (op_eval E e0); intros.
     + edestruct IHs; eauto; dcr.
-      do 2 eexists; split; [| eapply H3]; eauto using star.
+      do 2 eexists; split; [| eapply H5]; eauto using star.
       eapply star_step. split; simpl; eauto. single_step.
-      eapply H3; eauto.
+      eapply H5; eauto.
     + do 2 eexists; split; [ eapply star_refl|].
       right; eauto using nc_stuck. econstructor; eauto. stuck.
   - case_eq (op_eval E e); intros.
     + case_eq (val2bool v); intros.
       * edestruct IHs1; eauto; dcr.
-        do 2 eexists; split; [| eapply H5].
+        do 2 eexists; split; [| eapply H8].
         eapply star_step. split; simpl; eauto. single_step.
-        eapply H5; eauto.
+        eapply H8; eauto.
       * edestruct IHs2; eauto; dcr.
-        do 2 eexists; split; [| eapply H5].
+        do 2 eexists; split; [| eapply H8].
         eapply star_step. split; simpl; eauto. single_step.
-        eapply H5; eauto.
+        eapply H8; eauto.
     + do 2 eexists; split; [ eapply star_refl|].
       right. econstructor; eauto. stuck.
   - case_eq (omap (op_eval E) Y); intros.
@@ -177,12 +178,13 @@ Proof.
 Qed.
 
 Lemma noFun_impl_term_crash E s
-: noFun s
+  : noFun s
+    -> noCall s
   ->  exists E' s', forall L, Terminates (L, E, s)(L, E', s') \/ Crash (L, E, s) (L, E', s').
 Proof.
   intros.
   edestruct noFun_impl_term_crash'; eauto; dcr.
-  eexists x, x0; intros L. destruct (H1 L) as [A [B|B]].
+  eexists x, x0; intros L. destruct (H2 L) as [A [B|B]].
   - left; split; eauto.
   - right; split; eauto.
 Qed.

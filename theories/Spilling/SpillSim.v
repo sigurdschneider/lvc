@@ -119,11 +119,11 @@ Proof.
         cset_tac. rewrite <- H2.
         eapply map_iff; eauto. eexists x; split; eauto with cset.
       * cases; simpl; lud.
-        -- rewrite lookup_nequiv; eauto.
+        -- eauto.
         -- exfalso.
-           eapply (Disj (slot x)). eapply get_in_of_list in H3.
-           rewrite <- H5. cset_tac.
-           eapply map_iff; eauto. eexists x; split; eauto with cset.
+           eapply (Disj (slot x)).
+           ++ eapply get_in_of_list in H3. rewrite <- H5. cset_tac.
+           ++ eapply map_iff; eauto. eexists x; split; eauto with cset.
         -- eauto.
 Qed.
 
