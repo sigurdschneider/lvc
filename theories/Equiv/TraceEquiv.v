@@ -380,6 +380,16 @@ Proof.
   eapply coproduces_reduction_closed_step; eauto.
 Qed.
 
+Lemma coproduces_expansion_closed_step S `{StateType S} (σ σ':S) L
+: coproduces σ' L -> step σ EvtTau σ'  -> coproduces σ L.
+Proof.
+  intros. inv H0.
+  - econstructor; eauto.
+    eapply star2_trans_silent; eauto using star2_silent, star2_refl.
+  - econstructor; eauto. econstructor; eauto.
+  - econstructor; eauto using star2_silent, star2_refl.
+Qed.
+
 
 (** ** Bisimilarity is sound for maximal traces *)
 Lemma bisim_coproduces S `{StateType S} S' `{StateType S'} (sigma:S) (σ':S')
@@ -431,27 +441,134 @@ Proof.
   split; eapply produces_coproduces'; eauto. symmetry; eauto.
 Qed.
 
-
 (** ** Bisimilarity is complete for prefix trace equivalence. *)
 
-Require Import Classical_Prop.
+Require Import Classical_Prop Coq.Logic.Epsilon.
+
+Lemma neither_diverges S `{StateType S} (σ:S)
+  (H0 : ~ (exists σ' : S, star2 step σ nil σ' /\ normal2 step σ'))
+  (H1 : ~ (exists σ' : S, star2 step σ nil σ' /\ activated σ'))
+  : diverges σ.
+Proof.
+  revert σ H0 H1. cofix f.
+  intros. destruct (@step_dec _ H σ).
+  - inv H2; dcr.
+    destruct x.
+    + exfalso. eapply H1; eexists σ; split; eauto using star2_refl.
+      do 2 eexists; eauto.
+    + econstructor. eauto. eapply f; intro; dcr.
+      * eapply H0; eexists; split; eauto. eapply star2_silent; eauto.
+      * eapply H1; eexists; split; eauto. eapply star2_silent; eauto.
+  - exfalso. eapply H0; eexists σ; split; eauto using star2_refl.
+Qed.
 
 Lemma three_possibilities S `{StateType S} (σ:S)
 : (exists σ', star2 step σ nil σ' /\ normal2 step σ')
   \/ (exists σ', star2 step σ nil σ' /\ activated σ')
   \/ diverges σ.
 Proof.
-  destruct (classic (exists σ' : S, star2 step σ nil σ' /\ normal2 step σ')); intuition; right.
-  destruct (classic (exists σ' : S, star2 step σ nil σ' /\ activated σ')); intuition; right.
-  revert σ H0 H1. cofix f.
-  intros. destruct (@step_dec _ H σ). inv H2; dcr.
-  destruct x.
-  - exfalso. eapply H1; eexists σ; intuition.
-    econstructor. do 2 eexists; eauto.
-  - econstructor. eauto. eapply f; intros; dcr.
-    eapply H0; eexists; split; eauto. eapply star2_silent; eauto.
-    eapply H1; eexists; split; eauto. eapply star2_silent; eauto.
-  - exfalso. eapply H0; eexists σ; intuition. econstructor.
+  destruct (classic (exists σ' : S, star2 step σ nil σ' /\ normal2 step σ')); eauto; right.
+  destruct (classic (exists σ' : S, star2 step σ nil σ' /\ activated σ')); eauto; right.
+  eapply neither_diverges; eauto.
+Qed.
+
+Require Import Coq.Logic.ClassicalDescription.
+
+Lemma three_possibilities_strong S `{StateType S} (σ:S)
+: { σ' : S | star2 step σ nil σ' /\ normal2 step σ' }
+  + { σ' : S & { p : star2 step σ nil σ' &
+                     { ext : extern & { σ'' : S | step σ' (EvtExtern ext) σ'' } } } }
+  + diverges σ.
+Proof.
+  destruct (excluded_middle_informative (exists σ' : S, star2 step σ nil σ' /\ normal2 step σ')); eauto.
+  - eapply constructive_indefinite_description in e. eauto.
+  - destruct (excluded_middle_informative (exists σ' : S, star2 step σ nil σ' /\ activated σ')).
+    + eapply constructive_indefinite_description in e.
+      left; right. destruct e. eexists x; eauto. dcr; eauto.
+      eapply constructive_indefinite_description in H1. destruct H1.
+      eapply constructive_indefinite_description in e. destruct e.
+      eauto.
+    + right. revert σ n n0. cofix f.
+      intros. destruct (@step_dec _ H σ).
+      * inv H0; dcr.
+        destruct x.
+        -- exfalso. eapply n0; eexists σ; split; eauto using star2_refl.
+           do 2 eexists; eauto.
+        -- econstructor. eauto. eapply f; intro; dcr.
+           ++ eapply n; eexists; split; eauto. eapply star2_silent; eauto.
+           ++ eapply n0; eexists; split; eauto. eapply star2_silent; eauto.
+      * exfalso. eapply n; eexists σ; split; eauto using star2_refl.
+Qed.
+
+CoFixpoint tr S `{StateType S} (σ:S) : stream extevent.
+Proof.
+  destruct (three_possibilities_strong σ) as [[|]|].
+  - destruct s.
+    eapply (sons (EEvtTerminate (result x)) sil).
+  - destruct s as [? [? ?]]. destruct s. destruct s.
+    eapply (sons (EEvtExtern (EvtExtern x1)) (tr S H x2)).
+  - eapply sil.
+Defined.
+
+Definition stream_match A (s:stream A) :=
+  match s with
+  | sil => sil
+  | sons a b => sons a b
+  end.
+
+Lemma stream_id A (s:stream A)
+  : s = stream_match s.
+Proof.
+  destruct s. reflexivity. reflexivity.
+Qed.
+
+Lemma coproduces_total S `{StateType S} (σ:S)
+  : coproduces σ (tr σ).
+Proof.
+  revert σ.
+  cofix f; intros.
+  rewrite stream_id. simpl.
+  destruct (three_possibilities_strong σ) as [[|]|].
+  - destruct s. econstructor. reflexivity. eauto. eauto.
+  - destruct s. destruct s. destruct s. destruct s.
+    econstructor; eauto.
+    do 2 eexists; eauto.
+  - econstructor; eauto.
+Qed.
+
+Lemma coproduces_prefix S `{StateType S} S' `{StateType S'} (σ:S) (σ':S')
+  : (forall T, coproduces σ T -> coproduces σ' T)
+      -> forall L, prefix σ L -> prefix σ' L.
+Proof.
+  intros. general induction H2.
+  - eapply IHprefix; eauto using coproduces_expansion_closed_step.
+  - assert (coproduces σ (sons (EEvtExtern evt) (tr σ'))). {
+      econstructor 1; eauto using star2_silent, star2_refl.
+      eapply coproduces_total.
+    }
+    eapply H4 in H5. inv H5.
+    eapply prefix_star_activated; eauto.
+    eapply IHprefix.
+    intros.
+    assert (coproduces σ (sons (EEvtExtern evt) T)). {
+      econstructor 1; eauto using star2_silent, star2_refl.
+    }
+    eapply H4 in H7. inv H7.
+    relsimpl.
+    exploit (step_externally_determined _ _ _ _ H11 H17). subst. eauto.
+  - assert (coproduces σ (sons (EEvtTerminate (result σ')) sil)). {
+      econstructor; eauto.
+    }
+    eapply H4 in H0. inv H0.
+    econstructor 3; eauto.
+  - econstructor 4.
+Qed.
+
+Lemma coproduces_prefix_iff S `{StateType S} S' `{StateType S'} (σ:S) (σ':S')
+  : (forall T, coproduces σ T <-> coproduces σ' T)
+    -> forall L, prefix σ L <-> prefix σ' L.
+Proof.
+  split; eapply coproduces_prefix; firstorder.
 Qed.
 
 Lemma prefix_bisim S `{StateType S} S' `{StateType S'} (σ:S) (σ':S')
@@ -461,8 +578,10 @@ Proof.
   revert σ σ'.
   cofix f; intros.
   destruct (three_possibilities σ) as [A|[A|A]].
-  - dcr. assert (prefix σ (EEvtTerminate (result x)::nil)).
-    econstructor 3; eauto.
+  - dcr.
+    assert (prefix σ (EEvtTerminate (result x)::nil)). {
+      econstructor 3; eauto.
+    }
     eapply H1 in H2.
     eapply prefix_terminates in H2. dcr.
     econstructor 3; eauto.
@@ -495,4 +614,45 @@ Proof.
   - assert (diverges σ').
     eapply (produces_diverges H1); eauto.
     eapply bisim_complete_diverges; eauto.
+Qed.
+
+Lemma coproduces_terminates S `{StateType S} (σ:S) r T
+:  coproduces σ (sons (EEvtTerminate r) T)
+   -> exists σ', star2 step σ nil σ' /\ normal2 step σ' /\ result σ' = r /\ T = sil.
+Proof.
+  intros. inv H0.
+  - eexists; intuition; eauto.
+Qed.
+
+Lemma diverges_coproduces_only_sil S `{StateType S} S' `{StateType S'} (σ:S)
+: diverges σ -> (forall T, coproduces σ T -> T = sil).
+Proof.
+  intros. inv H2.
+  - exfalso.
+    eapply diverges_reduction_closed in H1; eauto.
+    eapply @diverges_never_activated in H1; eauto.
+  - reflexivity.
+  - exfalso.
+    eapply diverges_reduction_closed in H1; eauto.
+    eapply @diverges_never_terminates in H1; eauto.
+Qed.
+
+Lemma coproduces_diverges S `{StateType S} S' `{StateType S'} (σ:S) (σ':S')
+: (forall L, coproduces σ L <-> coproduces σ' L)
+  -> diverges σ -> diverges σ'.
+Proof.
+  intros.
+  assert (coproduces σ sil). {
+    econstructor; eauto.
+  }
+  eapply H1 in H3.
+  inv H3. eauto.
+Qed.
+
+Lemma coproduced_bisim S `{StateType S} S' `{StateType S'} (σ:S) (σ':S')
+: (forall L, coproduces σ L <-> coproduces σ' L)
+  -> bisim σ σ'.
+Proof.
+  intros. eapply prefix_bisim.
+  eapply coproduces_prefix_iff. eauto.
 Qed.
