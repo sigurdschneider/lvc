@@ -21,6 +21,7 @@
 %token IL_div
 %token IL_star
 %token IL_less_than
+%token IL_greater_than
 %token IL_equal
 %token IL_semicolon
 %token IL_if
@@ -65,6 +66,7 @@ additive_expression:
 
 expression:
   | expression IL_less_than additive_expression { Op.BinOp (Val.BinOpLt,$1,$3)}
+  | expression IL_greater_than additive_expression { Op.BinOp (Val.BinOpLt,$3,$1)}
   | additive_expression { $1 }
 
 ext_expression:

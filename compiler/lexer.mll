@@ -23,6 +23,7 @@
     | "/" { IL_div }
     | "*" { IL_star }
     | "<" { IL_less_than }
+    | ">" { IL_greater_than }
     | "=" { IL_equal }
     | "," { IL_comma }
     | identifier {
