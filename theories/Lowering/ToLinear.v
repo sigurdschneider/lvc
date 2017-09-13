@@ -390,6 +390,15 @@ Section ToLinear.
                 F (ct, lt)
     end.
 
+  Definition cc := mkcallconv false false false.
+  Definition sig := mksignature (Tint::Tint::Tint::nil) (Some Tint) cc.
+  Definition fnc s c := mkfunction sig s c.
+  Definition fundef s c := (Internal (fnc s c)).
+  Definition prg id s c : Linear.program
+    := mkprogram ((id, Gfun (fundef s c))::nil) (id::nil) (1%positive).
+
+
+
 End ToLinear.
 
 Definition not_contains_label C l :=
