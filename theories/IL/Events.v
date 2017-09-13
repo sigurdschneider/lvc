@@ -44,3 +44,7 @@ Proof.
 Qed.
 
 Hint Extern 5 (nil = filter_tau _ nil) => apply filter_tau_nil_eq.
+
+Inductive extevent :=
+  | EEvtExtern (evt:event)
+  | EEvtTerminate (res:option val).

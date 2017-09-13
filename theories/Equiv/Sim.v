@@ -165,9 +165,6 @@ Proof.
     eauto using sim_gen, star2_plus2_plus2_silent, star2_trans_silent.
 Qed.
 
-Tactic Notation "size" "induction" hyp(n) :=
-  pattern n; eapply size_induction with (f:=id); intros; unfold id in *.
-
 Lemma sim_reduction_closed_1 t {S} `{StateType S}
       (σ1 σ1':S) {S'} `{StateType S'} (σ2:S')
   : sim bot3 t σ1 σ2

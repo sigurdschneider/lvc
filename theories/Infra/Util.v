@@ -586,6 +586,9 @@ Proof.
   apply A. intros z C. apply IHn. omega.
 Qed.
 
+Tactic Notation "size" "induction" hyp(n) :=
+  pattern n; eapply size_induction with (f:=id); intros; unfold id in *.
+
 Definition size_recursion (X : Type) (f : X -> nat) (p: X -> Type) (x : X)
   : (forall x, (forall y, f y  < f x -> p y) -> p x) -> p x.
 Proof.

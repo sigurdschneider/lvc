@@ -1,6 +1,7 @@
 Require Import List.
-Require Export Util Var Val Exp Env Map CSet AutoIndTac IL AllInRel.
-Require Export SmallStepRelations StateType NonParametricBiSim Sim TraceEquiv.
+Require Import Util Var Val Exp Env Map CSet AutoIndTac IL AllInRel.
+Require Import SmallStepRelations StateType StateTypeProperties.
+Require Import Sim Divergence TraceEquiv.
 
 Set Implicit Arguments.
 Unset Printing Records.

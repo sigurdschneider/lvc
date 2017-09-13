@@ -1,6 +1,6 @@
 Require Import List paco2.
 Require Import Util IL.
-Require Export SmallStepRelations StateType Sim.
+Require Import SmallStepRelations StateType.
 
 Set Implicit Arguments.
 Unset Printing Records.
@@ -57,44 +57,6 @@ Proof.
   - eapply BisimTerm; eauto using star2_refl.
 Qed.
 
-(** ** Relationship of bisimulation to the parametric definition *)
-
-Lemma bisim_simp t {S} `{StateType S} {S'} `{StateType S'}
-  : forall (σ:S) (σ':S'), bisim σ σ' -> sim bot3 t σ σ'.
-Proof.
-  pcofix CIH; intros. invt bisim; pfold; eauto using sim_gen.
-  - unfold upaco3. econstructor 2; eauto.
-    + intros. edestruct H6; eauto; dcr; eauto.
-    + intros. edestruct H7; eauto; dcr; eauto.
-Qed.
-
-Lemma simp_bisim {S} `{StateType S} {S'} `{StateType S'}
-  : forall (σ:S) (σ':S'), sim bot3 Bisim σ σ' -> bisim σ σ'.
-Proof.
-  cofix CIH; intros.
-  assert (sim_gen (upaco3 (sim_gen (S:=S) (S':=S')) bot3) Bisim σ σ').
-  punfold H1.
-  inv H2; pclearbot.
-  - econstructor 1; eauto.
-  - econstructor 2; eauto.
-    + intros. edestruct H7; eauto; dcr; pclearbot; eauto.
-    + intros. edestruct H8; eauto; dcr; pclearbot; eauto.
-  - econstructor 3; eauto.
-Qed.
-
-(** *** Transitivity *)
-
-Lemma bisim_trans {S1} `{StateType S1}
-      (σ1:S1) {S2} `{StateType S2} (σ2:S2) {S3} `{StateType S3} (σ3:S3)
-  : bisim σ1 σ2
-    -> bisim σ2 σ3
-    -> bisim σ1 σ3.
-Proof.
-  intros. eapply simp_bisim.
-  eapply bisim_simp in H2.
-  eapply bisim_simp in H3.
-  eapply (Sim.sim_trans H2 H3).
-Qed.
 
 (** ** Simulation *)
 
@@ -139,47 +101,6 @@ Proof.
   - eapply SimTerm; eauto using star2_refl.
 Qed.
 
-(** ** Relationship of simulation to the parametric definition *)
-
-Lemma sim_simp {S} `{StateType S} {S'} `{StateType S'}
-  : forall (σ:S) (σ':S'), sim σ σ' -> Sim.sim bot3 Sim σ σ'.
-Proof.
-  pcofix CIH; intros. inv H2; pfold; eauto using sim_gen.
-  - econstructor 2; eauto.
-    + intros. edestruct H6; eauto; dcr; eauto 10.
-    + intros. edestruct H7; eauto; dcr; eauto 10.
-Qed.
-
-Lemma simp_sim t {S} `{StateType S} {S'} `{StateType S'}
-  : forall (σ:S) (σ':S'), Sim.sim bot3 t σ σ' -> sim σ σ'.
-Proof.
-  cofix CIH; intros.
-  assert (sim_gen (upaco3 (sim_gen (S:=S) (S':=S')) bot3) t σ σ').
-  punfold H1.
-  inversion H2; pclearbot.
-  - econstructor 1; eauto.
-  - econstructor 2; eauto.
-    + intros. edestruct H7; eauto; dcr; pclearbot; eauto.
-    + intros. edestruct H8; eauto; dcr; pclearbot; eauto.
-  - econstructor 4; eauto.
-  - econstructor 3; eauto.
-Qed.
-
-(** *** Transitivity *)
-
-Lemma sim_trans {S1} `{StateType S1}
-      (σ1:S1) {S2} `{StateType S2} (σ2:S2) {S3} `{StateType S3} (σ3:S3)
-  : sim σ1 σ2
-    -> sim σ2 σ3
-    -> sim σ1 σ3.
-Proof.
-  intros. eapply simp_sim.
-  eapply sim_simp in H2.
-  eapply sim_simp in H3.
-  eapply (Sim.sim_trans H2 H3).
-Qed.
-
-Arguments sim_trans [S1] {H} σ1 [S2] {H0} σ2 [S3] {H1} σ3 _ _.
 
 
 (** Receptive and determinate according to CompCertTSO (Sevcík 2013) *)
@@ -219,4 +140,99 @@ Proof.
       instantiate (2:=σ2') in H8. rewrite H8. eapply H14.
       eauto. eauto.
     + exfalso. exploit step_internally_deterministic; eauto; dcr. congruence.
+Qed.
+
+Lemma bisim_expansion_closed {S} `{StateType S}
+      (σ1 σ1':S) {S'} `{StateType S'} (σ2 σ2':S')
+  : bisim σ1' σ2'
+    -> star2 step σ1 nil σ1'
+    -> star2 step σ2 nil σ2'
+    -> bisim σ1 σ2.
+Proof.
+  intros SIM ? ?.
+  inversion SIM; subst;
+    eauto using bisim, star2_plus2_plus2_silent, star2_trans_silent.
+Qed.
+
+Lemma bisim_reduction_closed {S} `{StateType S}
+      (σ1 σ1':S) {S'} `{StateType S'} (σ2:S')
+  : bisim σ1 σ2
+    -> star2 step σ1 nil σ1'
+    -> bisim σ1' σ2.
+Proof.
+  intros Sim Star. eapply star2_star2n in Star. destruct Star as [n StarN].
+  revert σ1 σ1' σ2 Sim StarN.
+  size induction n.
+  inv Sim.
+  - invc StarN; eauto; relsimpl.
+    eapply star2_star2n in H2. destruct H2 as [n' H2].
+    edestruct (star2n_reach H9 H2); eauto. eapply H.
+    + eapply bisim_expansion_closed; eauto using star2n_star2, plus2_star2.
+    + eapply H1; try eapply H9. omega.
+      eapply bisim_expansion_closed;
+        eauto using star2n_star2, plus2_star2.
+  - eapply star2n_star2 in StarN; relsimpl; eauto using bisim.
+  - eapply star2n_star2 in StarN; relsimpl; eauto using bisim.
+Qed.
+
+Lemma bisim_reduction_closed_both {S} `{StateType S}
+      (σ1 σ1':S) {S'} `{StateType S'} (σ2 σ2':S')
+  : bisim σ1 σ2
+    -> star2 step σ1 nil σ1'
+    -> star2 step σ2 nil σ2'
+    -> bisim σ1' σ2'.
+Proof.
+  intros. eapply bisim_reduction_closed; eauto.
+  eapply bisim_sym. eapply bisim_reduction_closed; eauto.
+  eapply bisim_sym. eauto.
+Qed.
+
+
+Lemma bisim_terminate {S1} `{StateType S1} (σ1 σ1':S1)
+      {S2} `{StateType S2} (σ2:S2)
+: star2 step σ1 nil σ1'
+  -> normal2 step σ1'
+  -> bisim σ1 σ2
+  -> exists σ2', star2 step σ2 nil σ2' /\ normal2 step σ2' /\ result σ1' = result σ2'.
+Proof.
+  intros. general induction H1.
+  - inv H3; subst.
+    + exfalso. eapply H2. inv H1; do 2 eexists; eauto.
+    + exfalso. eapply star2_normal in H1; eauto. subst.
+      eapply (activated_normal _ H5); eauto.
+    + eapply star2_normal in H4; eauto; subst.
+      eexists; split; eauto.
+  - destruct y; isabsurd. simpl.
+    eapply IHstar2; eauto.
+    eapply bisim_reduction_closed; eauto using star2, star2_silent.
+Qed.
+
+Lemma bisim_activated {S1} `{StateType S1} (σ1:S1)
+      {S2} `{StateType S2} (σ2:S2)
+: activated σ1
+  -> bisim σ1 σ2
+  -> exists σ2', star2 step σ2 nil σ2' /\ activated σ2' /\
+           ( forall (evt : event) (σ1'' : S1),
+               step σ1 evt σ1'' ->
+               exists σ2'' : S2,
+                 step σ2' evt σ2'' /\
+                 (bisim σ1'' σ2''))
+           /\
+           ( forall (evt : event) (σ2'' : S2),
+               step σ2' evt σ2'' ->
+               exists σ1' : S1,
+                 step σ1 evt σ1' /\
+                 (bisim σ1' σ2'')).
+Proof.
+  intros.
+  inv H2; subst.
+  -  exfalso. edestruct (plus2_destr_nil H3); dcr.
+     destruct H1 as [? []].
+     exploit (step_internally_deterministic _ _ _ _ H7 H1); dcr; congruence.
+  - assert (σ1 = σ0). {
+      eapply activated_star_eq; eauto.
+    }
+    subst σ1.
+    eexists σ3; split; eauto.
+  - exfalso. refine (activated_normal_star _ H1 _ _); eauto using star2.
 Qed.
