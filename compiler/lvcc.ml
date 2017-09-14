@@ -7,7 +7,7 @@ open Names
 open Pmove
 open Camlcoq
 open Status
-open DCVE
+open DCE
 open Liveness
 open Compiler
 open Parmov
@@ -55,6 +55,7 @@ let main () =
   Arg.parse speclist set_infile ("usage: lvcc [options]");
   let filename = Str.replace_first (Str.regexp "^.*[\\/]") "" !infile in
   let basename = Str.replace_first (Str.regexp "(\\.[^.]*)$") "" filename in
+  let asmname = basename ^ ".s" in
   let dump_oc suffix =
     let name = (basename ^ "." ^ suffix ^ ".im") in
     if !verbose then Printf.printf "phase %s\n" name else ();
@@ -116,7 +117,21 @@ let main () =
 	  )
 	else
 	sopt*)
-      in ()
+      in
+      let linear = ToLinear.coq_ILItoLinear (Camlcoq.P.of_int 1) s_fromILF in
+      let asm =
+	match Compiler0.apply_partial
+		(LinearToAsm.transf_linear_program linear)
+		Asmexpand.expand_program with
+	| Errors.OK asm ->
+           asm
+	| Errors.Error msg ->
+           Printf.eprintf "%s: %a" filename Driveraux.print_error msg;
+           exit 2 in
+      (* Print Asm in text form *)
+      let oc = open_out asmname in
+      PrintAsm.print_program oc asm;
+      close_out oc
     with Parsing.Parse_error -> Printf.eprintf "A parsing error occured \n"
       | Sys_error s-> Printf.eprintf "%s\n" s
       | Compiler_error e -> Printf.eprintf "\nCompilation failed:\n%s\n" e

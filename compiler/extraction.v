@@ -5,6 +5,10 @@ Require Import Compiler OrderedType Parmov Infra.Lattice Status CSetPartialOrder
 Require AnalysisBackward AnnotationLattice LivenessAnalysis NaturalRep InfinitePartition.
 (* Unset Extraction AccessOpaque. *)
 
+Require ToLinear LinearToAsm.
+Require compcert.driver.Compiler.
+Require compcert.lib.Floats.
+
 Definition foo := True.
 
 Extraction Inline Status.bind Option.bind Computable.inst_not_cm bottom
@@ -30,4 +34,24 @@ Extraction Implicit SafeFirst.safe_first [ H H0 ].
 
 Cd "compiler/extraction".
 
-Separate Extraction AddParams.addParams DCVE toILF fromILF AllocationAlgo.regAssign optimize  toDeBruijn OrderedType.SOT_as_OT parmove2.
+Separate Extraction
+         AddParams.addParams
+         DCE
+         toILF
+         fromILF
+         AllocationAlgo.regAssign
+         optimize
+         toDeBruijn
+         OrderedType.SOT_as_OT
+         parmove2
+         LinearToAsm.transf_linear_program
+         ToLinear.ILItoLinear
+         compcert.driver.Compiler.apply_partial
+         AST.signature_main
+         (* For Camlcoq.ml *)
+         Integers.Ptrofs.signed
+         Floats.Float.of_bits
+         Floats.Float.to_bits
+         Floats.Float32.of_bits
+         Floats.Float32.to_bits
+.

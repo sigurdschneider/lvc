@@ -4,4 +4,3 @@ theories/POUnit.v
 theories/LinearWhile/While2*.v
 theories/Test*
 RISC-V/*
-theories/Lowering/ToLinear.v

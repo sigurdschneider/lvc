@@ -401,6 +401,9 @@ Section ToLinear.
 
 End ToLinear.
 
+Definition ILItoLinear id s :=
+  prg id (20%Z) (fst (toLinear nil 1%positive s)).
+
 Definition not_contains_label C l :=
   forall n l', get C n (Llabel l') -> l' <> l.
 
@@ -477,7 +480,7 @@ Proof.
   - let_pair_case_eq; simpl_pair_eqs; subst.
     let_pair_case_eq; simpl_pair_eqs; subst.
     admit.
-Qed.
+Admitted.
 
 
 

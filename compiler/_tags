@@ -1,2 +1,9 @@
 <extraction> : include
+<CompCert/powerpc> : include
+<CompCert/backend> : include
+<CompCert/driver> : include
+<CompCert/lib> : include
+<CompCert/debug> : include
+<CompCert/cparser> : include
+<CompCert/common> : include
 <*> : use_str
