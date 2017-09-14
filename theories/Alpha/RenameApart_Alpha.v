@@ -1,5 +1,5 @@
 Require Import CSet Util Map.
-Require Import Env IL Alpha Annotation RenamedApart SetOperations.
+Require Import Envs IL Alpha Annotation RenamedApart SetOperations.
 Require Import LabelsDefined PairwiseDisjoint RenameApart FreshGen.
 
 Set Implicit Arguments.

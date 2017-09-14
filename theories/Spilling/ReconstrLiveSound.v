@@ -1,4 +1,4 @@
-Require Import List Map Env AllInRel Exp AppExpFree RenamedApart.
+Require Import List Map Envs AllInRel Exp AppExpFree RenamedApart.
 Require Import IL Annotation AnnotationLattice.
 Require Import AutoIndTac Liveness.Liveness LabelsDefined.
 Require Import DoSpill DoSpillRm.

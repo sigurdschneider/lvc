@@ -1,5 +1,5 @@
 Require Import List.
-Require Import Util Var Val Exp Env Map CSet AutoIndTac IL AllInRel.
+Require Import Util Var Val Exp Envs Map CSet AutoIndTac IL AllInRel.
 Require Import SmallStepRelations StateType StateTypeProperties.
 Require Import NonParametricBiSim Divergence TraceEquiv.
 

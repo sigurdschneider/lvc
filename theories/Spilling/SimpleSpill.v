@@ -1,4 +1,4 @@
-Require Import List Map Env AllInRel Exp.
+Require Import List Map Envs AllInRel Exp.
 Require Import IL Annotation AutoIndTac Liveness.Liveness LabelsDefined.
 Require Import ExpVarsBounded SpillSound.
 

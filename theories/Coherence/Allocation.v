@@ -1,7 +1,7 @@
 Require Import CSet Le.
 
 Require Import Plus Util Map DecSolve AllInRel OptionR Subset1 PairwiseDisjoint.
-Require Import Env IL Annotation Liveness.Liveness Coherence Alpha Restrict RenamedApart.
+Require Import Envs IL Annotation Liveness.Liveness Coherence Alpha Restrict RenamedApart.
 Require Import Rename RenamedApart_Liveness.
 
 Set Implicit Arguments.

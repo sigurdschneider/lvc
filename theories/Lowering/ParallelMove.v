@@ -1,7 +1,7 @@
 Require Import CSet Le.
 
 Require Import Plus Util AllInRel InRel Map MapUpdate MapDefined.
-Require Import Val Var Env IL Annotation SimI Fresh.
+Require Import Val Var Envs IL Annotation SimI Fresh.
 Require Import Liveness.Liveness Status InfinitePartition AppExpFree.
 Require compcert.lib.Parmov.
 
