@@ -36,7 +36,8 @@ Extraction Inline NaturalRep.NaturalRepresentationPositive
 
 Extraction Implicit SafeFirst.safe_first [ H H0 ].
 
-Extract Constant Compopts.debug => "fun _ -> false".
+Extract Constant Compopts.debug =>
+  "fun _ -> !Clflags.option_g".
 Extract Constant Compiler.print_Mach => "PrintMach.print_if".
 
 Cd "compiler/extraction".

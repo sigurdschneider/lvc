@@ -44,6 +44,7 @@ echo "Found Coq version $coq_ver."
 SOURCES=$(find theories -name \*.v -print | grep -v /\.# | sed -e 's%^\./%%g' | sort)
 RM=$(for pat in $(cat _blacklist); do echo "$SOURCES" | grep -e $pat ; done | sort)
 FILTERSOURCES=$(comm -23 <(echo "$SOURCES") <(echo "$RM"))
+printf '%s\n' "${FILTERSOURCES[@]}"  >> .VSOURCES
 echo "Removed due to blacklist:"
 echo "$RM"
 cat Make > _CoqProject
@@ -53,3 +54,4 @@ echo "src/lvc_tacs.ml4" >> _CoqProject
 echo >> _CoqProject
 printf '%s\n' "${FILTERSOURCES[@]}"  >> _CoqProject
 echo "Make generated."
+

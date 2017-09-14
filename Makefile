@@ -139,12 +139,11 @@ $(COQMAKEFILE): Makefile depmakefiles $(VS)
 
 Make: ;
 
-extraction: theories/Compiler.vo compiler/extraction.v compiler/STAMP
+extraction: compiler/STAMP
 	+$(MAKE) -C compiler all
 
 compiler/STAMP: theories/Compiler.vo compiler/extraction.v
 	mkdir -p compiler/extraction
-	rm -f theories/extraction.vo
 	rm -f compiler/extraction/*
 	coqtop $(shell cat Make) -batch -load-vernac-source compiler/extraction.v
 	touch compiler/STAMP

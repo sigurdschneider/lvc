@@ -7,6 +7,7 @@ Require Import SimI.
 
 Require Import Smallstep Globalenvs common.Events.
 
+Set Implicit Arguments.
 
 Inductive linear_step_adapter (G:Globalenvs.Genv.t fundef unit)
   :  Linear.state -> Events.event -> Linear.state -> Prop :=
@@ -117,7 +118,7 @@ Qed.
 
 Instance LinearStateType G : StateType Linear.state :=
   @Build_StateType _ (linear_step_adapter G) linear_result (linear_reddec2 G)
-                   (linear_int_det G) (linear_ext_det G).
+                   (@linear_int_det G) (@linear_ext_det G).
 
 Section ToLinear.
 
@@ -350,9 +351,32 @@ Section ToLinear.
   | SimplCondLt x y (RG1:isReg x) (RG2:isReg y)
     : simplCond (BinOp BinOpLt (Var x) (Var y)).
 
+  Definition ret_reg_name := 2%positive.
+
+  Fixpoint mkVars X (L:list X) (f:var) : var * list var :=
+    match L with
+    | nil => (f, nil)
+    | _::L => let f' := Pos.succ f in
+             let (f'', xl) := mkVars L f' in
+             (f'', f::xl)
+    end.
+
+
+  Definition toLinearFun
+             (toLinear:forall (Λ:list label) (l:label) (s:stmt), code * label)
+             (Λ':list label) :=
+             fix r l (F:〔params* stmt〕) (Λ:list var) {struct F} : code * label :=
+    match F, Λ with
+    | Zs::F, g::Lambda =>
+      let (cs, l') := toLinear Λ' l (snd Zs) in
+      let (cF, l'') := r l' F Λ in
+      (Llabel g :: cs ++ cF , l'')
+    | _, _ => (nil, l)
+    end.
+
   Fixpoint toLinear
            (Λ:list label)
-           (l:label) (* the biggest label used so far *)
+           (l:label) (* the next unused label *)
            (s:stmt)
     : code * label :=
     match s with
@@ -363,32 +387,26 @@ Section ToLinear.
       toLinear Λ l s (* this is incorrect *)
     | stmtIf e s t =>
       let l' := Pos.succ l in
-      let (csq, lc) := toLinear Λ l' s in
-      let (alt, la) := toLinear Λ lc t in
-      (toLinearCond l' e
+      let (csq, l'') := toLinear Λ l' s in
+      let (alt, l''') := toLinear Λ l'' t in
+      (toLinearCond l e
                     :: alt (* we don't need to jump out,
                               because alt's last intstruction is either Lreturn or Lgoto *)
-                    ++ Llabel l' :: csq,
-       la) (* missing jump & label *)
+                    ++ Llabel l :: csq,
+       l''') (* missing jump & label *)
     | stmtApp f Y =>
       let l' := nth (counted f) Λ xH in
       (Lgoto l' :: nil, l)
-    | stmtReturn (Var x) =>
-      (Lreturn::nil, l)
-    | stmtReturn _ => (Lreturn :: nil, l)
+    | stmtReturn e =>
+      (translateLetOp ret_reg_name e ++ Lreturn::nil, l)
     | stmtFun F t =>
-      let (l', Λ') := fold_left (fun (lΛ:label * list label) ps => let (l, Λ) := lΛ in
-                                                       let l' := Pos.succ l in
-                                                       (l', Λ ++ l' :: nil))
-                                F (l, Λ) in
-      let (ct, lt) := toLinear Λ' l' t in
-      fold_left (fun (cl : code * label) ps =>
-                   let (c, l)  := cl in
-                   let l' := Pos.succ l in
-                   let (c',l'') := toLinear Λ' l' (snd ps) in
-                   (c ++ Llabel l' :: c', l''))
-                F (ct, lt)
+      let (l', ΛF) := mkVars F l in
+      let Λ' := Λ ++ ΛF in
+      let (ct, l'') := toLinear Λ' l' t in
+      let (cF, l''') := toLinearFun toLinear Λ' l'' F ΛF in
+      (ct ++ cF, l'')
     end.
+
 
   Definition cc := mkcallconv false false false.
   Definition sig := mksignature (Tint::Tint::Tint::nil) (Some Tint) cc.
@@ -397,12 +415,9 @@ Section ToLinear.
   Definition prg id s c : Linear.program
     := mkprogram ((id, Gfun (fundef s c))::nil) (id::nil) (1%positive).
 
-
-
 End ToLinear.
 
-Definition ILItoLinear id s :=
-  prg id (20%Z) (fst (toLinear nil 1%positive s)).
+Definition ILItoLinear id s := prg id (0%Z) (fst (toLinear nil default_var s)).
 
 Definition not_contains_label C l :=
   forall n l', get C n (Llabel l') -> l' <> l.
@@ -420,27 +435,45 @@ Proof.
   - rewrite IHC; eauto. hnf; eauto using get.
 Qed.
 
-Lemma toLinear_correct r (L:I.labenv) I l (V:onv val) s bv vv rs m G C
-      (MR:mrel V rs)
-      (ML:not_contains_label C (Pos.succ l))
-      (CODE:fn_code bv = C ++ (fst (toLinear I l s)))
-  : @sim _ _ Linear.state (LinearStateType G) r Sim (L, V, s)
-         ((State nil bv vv (fst (toLinear I l s)) rs m):Linear.state).
+Lemma find_label_first C C' l c
+  : find_label l C = Some c
+  -> find_label l (C ++ C') = Some (c ++ C').
 Proof.
-  revert C L I l V s vv rs m r MR CODE ML. pcofix CIH; intros.
+  general induction C; simpl in *; eauto.
+  cases; eauto.
+Qed.
+
+Lemma toLinear_correct r (L:I.labenv) I l (V:onv val) s bv vv rs m G C C'
+      (MR:mrel V rs)
+      (ML:not_contains_label C l)
+      (CODE:fn_code bv = C ++ (fst (toLinear I l s)) ++ C')
+      (ILEN:❬I❭=❬L❭)
+      (IINV:forall n i b,
+          get L n b -> get I n i ->
+          exists C C' l, fn_code bv =
+                    C ++ (Llabel i::fst (toLinear (drop (n - block_n b) I) l (I.block_s b)))
+                      ++ C'
+                    /\ not_contains_label C i)
+  : @sim _ _ Linear.state (LinearStateType G) r Sim (L, V, s)
+         ((State nil bv vv (fst (toLinear I l s) ++ C') rs m):Linear.state).
+Proof.
+  revert C C' L I l V s vv rs m r MR CODE ML ILEN IINV. pcofix CIH; intros.
   destruct s; simpl in *.
   - cases.
-    + revert CODE. let_pair_case_eq. simpl_pair_eqs. subst. intros.
-      eapply translateLet_correct; eauto.
+    + revert CODE. let_pair_case_eq. simpl_pair_eqs. subst. simpl.
+      rewrite <- !app_assoc. intros.
+      eapply  translateLet_correct; eauto.
       * admit.
       * intros.
-        right. eapply CIH. eauto.
+        right.
         simpl in *.
         rewrite app_assoc in CODE. eauto.
+        eapply CIH; eauto.
         admit.
     + admit.
   - revert CODE.
     repeat (let_pair_case_eq; simpl_pair_eqs); subst. simpl. intros.
+    rewrite <- !app_assoc in *.
     case_eq (op_eval V e); intros.
     + case_eq (val2bool v); intros.
       * assert (simplCond e) by admit.
@@ -456,29 +489,53 @@ Proof.
            ++ rewrite CODE. rewrite find_label_app; eauto.
              simpl.
              rewrite find_label_app. simpl. cases. reflexivity.
-             simpl. admit.
+             admit.
         -- reflexivity.
         -- right.
            simpl in *.
            eapply CIH; eauto.
            instantiate (
-               1:=C++Lcond (Op.Ccompimm Cne Int.zero) (toReg x :: nil) (Pos.succ l)
+               1:=C++Lcond (Op.Ccompimm Cne Int.zero) (toReg x :: nil) l
                      :: fst (toLinear I (snd (toLinear I (Pos.succ l) s1)) s2) ++
-                     Llabel (Pos.succ l)::nil). simpl.
+                     Llabel l::nil). simpl.
            rewrite CODE. rewrite <- !app_assoc. simpl.
            rewrite <- !app_assoc. simpl. reflexivity.
            admit.
         -- admit.
       * admit.
     + pno_step_left.
+  - destruct (get_dec L (counted l0)) as [[[Zb sb nb]]|]; [| pno_step_left].
+    + decide (length Zb = length Y); [|pno_step_left].
+      assert (Y=nil) by admit. subst.
+      destruct Zb; simpl in *; clear_trivial_eqs.
+      inv_get. erewrite get_nth; eauto.
+      edestruct IINV as [? [? [? ?]]]; eauto. simpl in *; dcr.
+      pfold. eapply SimSilent; try eapply plus2O; eauto.
+      -- single_step.
+      -- econstructor. econstructor.
+         rewrite H1.
+         rewrite find_label_app; eauto.
+         simpl. cases; eauto.
+      -- simpl.
+         right.
+         eapply CIH. eauto.
+         rewrite H1. rewrite cons_app. rewrite app_assoc. reflexivity.
+         ++ (* revert H2; clear_all; unfold not_contains_label; intros.
+           eapply get_app_cases in H as [?|[? ?]]; eauto. *)
+           admit.
+         ++ eauto with len.
+         ++ intros; inv_get.
+           edestruct IINV as [? [? [? [? ?]]]]; eauto.
+           do 3 eexists. rewrite H4. split.
+           rewrite drop_drop. (* the old sawtooth invariant *)
+           admit.  eauto.
   - admit.
-  - (*pfold. econstructor 4; [| eapply star2_refl | | stuck2 | ]; swap 1 2.
+  - revert CODE; repeat let_pair_case_eq; subst; simpl; intros.
+
+    (*pfold. econstructor 4; [| eapply star2_refl | | stuck2 | ]; swap 1 2.
     eapply star2_silent; try eapply star2_refl.
     destruct e; simpl; econstructor.
     econstructor.*)
-    admit.
-  - let_pair_case_eq; simpl_pair_eqs; subst.
-    let_pair_case_eq; simpl_pair_eqs; subst.
     admit.
 Admitted.
 

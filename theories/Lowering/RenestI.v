@@ -1,4 +1,5 @@
-Require Import paco2 AllInRel Util Map Envs Exp IL SimI DecSolve MoreList Sawtooth Sublist.
+Require Import paco2 AllInRel Util Map Envs Exp.
+Require Import ILN IL SimI DecSolve MoreList Sawtooth Sublist.
 
 Set Implicit Arguments.
 Unset Printing Records.
@@ -10,34 +11,49 @@ Unset Printing Records.
     yields the transformed statement and the global definitions
 *)
 
-Definition egalize_funs (egalize:list nat -> nat -> stmt -> stmt * list (params * stmt))
-           (D':list nat) (n:nat) (F:list (params * stmt)) :=
+Definition egalize_funs
+           (egalize:list var -> var -> stmt -> stmt * var * list (var * params * stmt))
+           (D:list var)
+           := fix r (D':list var) (f:var) (F:list (params * stmt)) {struct F} :=
+               match F, D' with
+               | Zs::F, g::D' =>
+                 let (s, f', F) := egalize D f (snd Zs) in
+                 let (f', F') := r D' f'
+
+               | _, _ => nil
+                     end.
+
   fold_right (fun f nF' =>
-                       let '(n, F1, F2) := nF' in
-                       let (s, F'') := egalize D' n (snd f) in
-                       let n' := n + length F'' in
-                       (n', (fst f, s)::F1, F2 ++ F'')) (n, nil, nil) F.
+                let '(n, F1, F2) := nF' in
+                let (s, F'') := egalize D' n (snd f) in
+                let n' := n + length F'' in
+                (n', (fst f, s)::F1, F2 ++ F'')) (n, nil, nil) F.
 
-Definition plus' n i (Z:params * stmt) := n + i.
-Definition extend n (F:list (params * stmt)) D := mapi (fun i _ => i+n) F ++ D.
+Fixpoint mkVars X (L:list X) (f:var) : var * list var :=
+  match L with
+  | nil => (f, nil)
+  | _::L => let f' := Pos.succ f in
+           let (f'', xl) := mkVars L f' in
+           (f'', f::xl)
+  end.
 
-Fixpoint egalize (D:list nat) (n:nat) (s:stmt) : stmt * list (params * stmt) :=
+Fixpoint egalize (D:list var) (f:var) (s:stmt) : nstmt * var * list (var * params * stmt) :=
   match s with
     | stmtLet x e s =>
-      let (s', F) := egalize D n s in
-      (stmtLet x e s', F)
+      let (s', f', F) := egalize D f s in
+      (nstmtLet x e s', f', F)
     | stmtIf x s1 s2 =>
-      let (s1', F1) := egalize D n s1 in
-      let (s2', F2) := egalize D (n + length F1) s2 in
-      (stmtIf x s1' s2', F1 ++ F2)
-    | stmtApp l Y => (stmtApp (LabI (nth (counted l) D 0)) Y, nil)
-    | stmtReturn x => (stmtReturn x, nil)
+      let (s1', f1, F1) := egalize D f s1 in
+      let (s2', f2, F2) := egalize D f1 s2 in
+      (nstmtIf x s1' s2', f2, F1 ++ F2)
+    | stmtApp l Y => (nstmtApp (nth (counted l) D default_var) Y, f, nil)
+    | stmtReturn x => (nstmtReturn x, f, nil)
     | stmtFun F s =>
       (* entries for definitions in F: they are put to the bottom of the stack *)
-      let D' := mapi (plus' n) F ++  D in
-      let '(n', F1, F2) := egalize_funs egalize D' (length F + n) F in
+      let (f', D') := mkVars F f in
+      let '(n', F1) := egalize_funs egalize  F in
       let (s', F'') := egalize D' n' s in
-      (s', F1 ++ F2 ++ F'')
+      (s', F1 ++ F'')
   end.
 
 Lemma egalize_funs_length1 f D n F

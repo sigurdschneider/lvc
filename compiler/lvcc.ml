@@ -30,7 +30,8 @@ let main () =
      heuristic to pick them. *)
   let _ = register_name "i" in
   let _ = register_name "n" in
-  let debug = false in
+  let debug = true in
+  let _ = Clflags.option_g := debug in
   let verbose = ref false in
   let infile = ref "" in
   let outfile = ref "a.s" in
@@ -56,6 +57,7 @@ let main () =
   let filename = Str.replace_first (Str.regexp "^.*[\\/]") "" !infile in
   let basename = Str.replace_first (Str.regexp "(\\.[^.]*)$") "" filename in
   let asmname = basename ^ ".s" in
+  let machname = basename ^ ".mach" in
   let dump_oc suffix =
     let name = (basename ^ "." ^ suffix ^ ".im") in
     if !verbose then Printf.printf "phase %s\n" name else ();
@@ -119,6 +121,7 @@ let main () =
 	sopt*)
       in
       let linear = ToLinear.coq_ILItoLinear (Camlcoq.P.of_int 2) s_fromILF in
+      let _ = PrintMach.destination := Some machname in
       let asm =
 	match Compiler0.apply_partial
 		(LinearToAsm.transf_linear_program linear)
