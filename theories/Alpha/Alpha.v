@@ -90,7 +90,7 @@ Lemma alpha_inverse_on  ϱ ϱ' s t
 Proof.
   intros A. general induction A; simpl; eauto using alpha_op_inverse_on, alpha_exp_inverse_on.
   + hnf; intros.
-    edestruct (list_union_get (List.map Op.freeVars X)) as [[? []]|]; eauto; dcr.
+    edestruct (list_union_get (List.map Ops.freeVars X)) as [[? []]|]; eauto; dcr.
     edestruct map_get_4; eauto; dcr.
     edestruct get_length_eq; eauto. subst.
     eapply alpha_op_inverse_on; eauto.

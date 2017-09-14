@@ -213,7 +213,7 @@ Section ToLinear.
        then let dst := toReg x in
             match e with
             | Var y => if [ isReg y ]
-                      then Lop (Op.Omove) (toReg y :: nil) dst
+                      then Lop (Ops.Omove) (toReg y :: nil) dst
                       else Lgetstack Local (Zpos y) Tint dst
             | _ => translateLetOp dst e
             end

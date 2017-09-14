@@ -15,14 +15,14 @@ Fixpoint simpleSpill
       => ann1 (R, Exp.freeVars e, nil) (simpleSpill (singleton x) t lv)
 
     | stmtReturn e, _
-      => ann0 (R, Op.freeVars e, nil)
+      => ann0 (R, Ops.freeVars e, nil)
 
     | stmtIf e t v, ann2 LV lv_s lv_t
-      => ann2 (R, Op.freeVars e, nil) (simpleSpill (Op.freeVars e) t lv_s)
-                                       (simpleSpill (Op.freeVars e) v lv_t)
+      => ann2 (R, Ops.freeVars e, nil) (simpleSpill (Ops.freeVars e) t lv_s)
+                                       (simpleSpill (Ops.freeVars e) v lv_t)
 
     | stmtApp f Y, _
-      => ann0 (R, ∅, (∅, list_union (Op.freeVars ⊝ Y))::nil)
+      => ann0 (R, ∅, (∅, list_union (Ops.freeVars ⊝ Y))::nil)
 
     | stmtFun F t, annF LV als lv_t
       => annF (R, ∅, ((fun lv => (∅, lv)) ⊝ getAnn ⊝ als))
@@ -78,8 +78,8 @@ Proof.
   - eapply SpillIf with (K:= R);
       [ rewrite <- ReqR' | rewrite <- ReqR' | | | | ]; eauto.
     + rewrite <- fvRM.
-      apply Op.freeVars_live; eauto.
-    + assert (seteq : R\R ∪ Op.freeVars e [=] Op.freeVars e).
+      apply Ops.freeVars_live; eauto.
+    + assert (seteq : R\R ∪ Ops.freeVars e [=] Ops.freeVars e).
       { cset_tac. }
       rewrite seteq. rewrite fvBcard. trivial.
     + eapply IHlvSound1; eauto with cset.
@@ -100,12 +100,12 @@ Proof.
     + rewrite pir2_R. clear. cset_tac.
     + rewrite pir2_M. rewrite H1. eauto.
     + cset_tac.
-    + rewrite Op.freeVars_live_list; eauto.
+    + rewrite Ops.freeVars_live_list; eauto.
   - eapply SpillReturn with (K:= R);
       [ rewrite <- ReqR' | rewrite <- ReqR' | | ]; eauto with cset.
     + rewrite <- fvRM.
-      apply Op.freeVars_live; eauto.
-    + assert (seteq : R\R ∪ Op.freeVars e [=] Op.freeVars e) by cset_tac.
+      apply Ops.freeVars_live; eauto.
+    + assert (seteq : R\R ∪ Ops.freeVars e [=] Ops.freeVars e) by cset_tac.
       rewrite seteq. rewrite fvBcard. trivial.
   - eapply SpillFun with (K:=R);
     [ rewrite <- ReqR' | rewrite <- ReqR' | | | | | | ];

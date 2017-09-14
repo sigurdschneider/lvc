@@ -38,13 +38,13 @@ Fixpoint getVars (f:smt) : (set var) :=
       | smtNeg f'
         => getVars f'
       | ite e f1 f2
-        => Op.freeVars e ∪ getVars f1 ∪ getVars f2
+        => Ops.freeVars e ∪ getVars f1 ∪ getVars f2
       | smtImp f1 f2
         => getVars f1 ∪ getVars f2
       | constr e1 e2
-        => Op.freeVars e1 ∪ Op.freeVars e2
+        => Ops.freeVars e1 ∪ Ops.freeVars e2
       | funcApp f el
-        => list_union (List.map Op.freeVars el)
+        => list_union (List.map Ops.freeVars el)
       | smtFalse
         => {}
       | smtTrue

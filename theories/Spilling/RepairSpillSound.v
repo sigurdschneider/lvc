@@ -96,8 +96,8 @@ Proof.
         -- omega.
         -- setoid_rewrite union_comm at 2. rewrite <-set_decomp. omega.
   - destruct a. destruct p as (Sp, L). cbn in *. rename sa0 into rlv1. rename ta0 into rlv2.
-    set (L' := pick_load k R M Sp L (Op.freeVars e)) in *.
-    set (K' := pick_kill k R L' (Op.freeVars e) (getAnn rlv1 ∪ getAnn rlv2)) in *.
+    set (L' := pick_load k R M Sp L (Ops.freeVars e)) in *.
+    set (K' := pick_kill k R L' (Ops.freeVars e) (getAnn rlv1 ∪ getAnn rlv2)) in *.
     set (Sp':= ((getAnn al1 ∪ getAnn al2) ∩ K' \ M) ∪ (Sp ∩ R)) in *.
     assert (Sp ∩ R ⊆ Sp') as Spincl.
     { subst Sp'. clear; cset_tac. }
@@ -110,7 +110,7 @@ Proof.
       setoid_rewrite minus_incl at 2 3.
       rewrite H0, H1. rewrite lv_RM. clear; cset_tac.
     + subst L'. rewrite pick_load_incl. rewrite <-Spincl.
-      cbn in *. apply Op.freeVars_live in H. rewrite H. clear - lv_RM. cset_tac.
+      cbn in *. apply Ops.freeVars_live in H. rewrite H. clear - lv_RM. cset_tac.
     + instantiate (1:=K'). subst K'. rewrite pick_kill_incl.
       setoid_rewrite union_comm at 2. rewrite <-minus_union, minus_minus.
       rewrite incl_minus_union'; [|clear;cset_tac].
@@ -140,16 +140,16 @@ Proof.
       apply union_incl_split; [cset_tac|].
       clear; cset_tac.
   - repeat let_pair_case_eq; subst. inv_get.
-    eapply Op.freeVars_live_list in H3.
+    eapply Ops.freeVars_live_list in H3.
     destruct (get_dec (snd a) 0) as [[[R' M'] ?]|].
     + eapply PIR2_nth in H5; eauto. dcr. inv_get. destruct x0 as [Rf' Mf'].
       eapply PIR2_nth_2 in H4; eauto. destruct H4 as [[Rf Mf] [getrfmf rfmf_eq]]. invc rfmf_eq.
       repeat erewrite get_nth; eauto using get; simpl.
       destruct p as [Sp L]. unfold fst, snd in *.
       set (L':=pick_load k R M Sp L (Rf \ of_list Z)).
-      set (K':=pick_kill k R L' (Rf \ of_list Z) (list_union (Op.freeVars ⊝ Y) ∩ R')).
-      set (R'':= R' ∩ (R \ K' ∪ L') ∩ list_union (Op.freeVars ⊝ Y)).
-      set (M'':= (list_union (Op.freeVars ⊝ Y) \ R'') ∪ (M' ∩ list_union (Op.freeVars ⊝ Y))).
+      set (K':=pick_kill k R L' (Rf \ of_list Z) (list_union (Ops.freeVars ⊝ Y) ∩ R')).
+      set (R'':= R' ∩ (R \ K' ∪ L') ∩ list_union (Ops.freeVars ⊝ Y)).
+      set (M'':= (list_union (Ops.freeVars ⊝ Y) \ R'') ∪ (M' ∩ list_union (Ops.freeVars ⊝ Y))).
       set (Sp':= (M'' ∪ (Mf \ of_list Z)) ∩ (R \ M) ∪ (Sp ∩ R)).
       assert (K' ⊆ R) as KsubR.
       { subst K'. rewrite pick_kill_incl. clear; cset_tac. }
@@ -184,7 +184,7 @@ Proof.
       * subst R''. clear; cset_tac.
       * rewrite lv_RM in *. subst Sp'. rewrite set_decomp with (s:=M'') (t:=M) at 1.
         apply union_incl_split; [clear;cset_tac|]. subst M''.
-        rewrite <-inter_subset_equal with (s:=list_union (Op.freeVars ⊝ Y)) (s':=R ∪ M) at 1 2; eauto.
+        rewrite <-inter_subset_equal with (s:=list_union (Ops.freeVars ⊝ Y)) (s':=R ∪ M) at 1 2; eauto.
         clear; cset_tac.
     + repeat rewrite (not_get_nth_default _ f); eauto. simpl.
       eapply PIR2_nth in H5; eauto. dcr. inv_get. destruct x0 as [Rf' Mf'].
@@ -192,8 +192,8 @@ Proof.
       repeat erewrite get_nth; eauto using get; simpl.
       destruct a as [[Sp L] RMappL]. unfold fst, snd in *.
       set (L':=pick_load k R M Sp L (Rf \ of_list Z)).
-      set (K':=pick_kill k R L' (Rf \ of_list Z) (list_union (Op.freeVars ⊝ Y) ∩ ∅)).
-      set (Sp':= (list_union (Op.freeVars ⊝ Y) ∩ K' ∪ Mf \ of_list Z) \ M ∪ (Sp ∩ R)).
+      set (K':=pick_kill k R L' (Rf \ of_list Z) (list_union (Ops.freeVars ⊝ Y) ∩ ∅)).
+      set (Sp':= (list_union (Ops.freeVars ⊝ Y) ∩ K' ∪ Mf \ of_list Z) \ M ∪ (Sp ∩ R)).
       assert (K' ⊆ R) as KsubR.
       { subst K'. rewrite pick_kill_incl. clear; cset_tac. }
       cbn in H1, lv_RM. unfold merge in H8. cbn in H8. rewrite H8 in H1.
@@ -228,15 +228,15 @@ Proof.
       * clear; cset_tac.
       * rewrite lv_RM in *. rewrite meet_incl; clear; cset_tac.
       * rewrite lv_RM in *. subst Sp'.
-        rewrite <-inter_subset_equal with (s:=list_union (Op.freeVars ⊝ Y)) (s':=R ∪ M) at 1 2; eauto.
+        rewrite <-inter_subset_equal with (s:=list_union (Ops.freeVars ⊝ Y)) (s':=R ∪ M) at 1 2; eauto.
         clear; cset_tac.
   - destruct a. destruct p as [Sp L]. cbn in *.
-    set (L' := pick_load k R M Sp L (Op.freeVars e)) in *.
+    set (L' := pick_load k R M Sp L (Ops.freeVars e)) in *.
     econstructor; eauto.
     + cset_tac.
     + subst L'. rewrite pick_load_incl.
-      apply Op.freeVars_live in H. rewrite H. clear - lv_RM. cset_tac.
-    + instantiate (1:=(R \ Op.freeVars e) ∪ (R ∩ L')). rewrite <-minus_union.
+      apply Ops.freeVars_live in H. rewrite H. clear - lv_RM. cset_tac.
+    + instantiate (1:=(R \ Ops.freeVars e) ∪ (R ∩ L')). rewrite <-minus_union.
       rewrite incl_minus_union'; [|clear;cset_tac]. rewrite minus_minus.
       subst L'. setoid_rewrite <-incl_pick_load. clear; cset_tac'.
     + rewrite <-minus_union.

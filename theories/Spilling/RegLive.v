@@ -28,17 +28,17 @@ Fixpoint reg_live
         ann1 (G ∪ Sp ∪ (((getAnn lv_s) \ singleton x ∪ Exp.freeVars e) \ L)) lv_s
 
     | stmtReturn e, ann0 (Sp, L, _)
-      => ann0 (G ∪ Sp ∪ (Op.freeVars e \ L))
+      => ann0 (G ∪ Sp ∪ (Ops.freeVars e \ L))
 
     | stmtIf e s1 s2, ann2 (Sp, L, _) sl1 sl2
       => let lv1 := reg_live ZL Lv ∅ s1 sl1 in
         let lv2 := reg_live ZL Lv ∅ s2 sl2 in
-        ann2 (G ∪ Sp ∪ ((getAnn lv1 ∪ getAnn lv2 ∪ Op.freeVars e) \ L)) lv1 lv2
+        ann2 (G ∪ Sp ∪ ((getAnn lv1 ∪ getAnn lv2 ∪ Ops.freeVars e) \ L)) lv1 lv2
 
     | stmtApp f Y, ann0 (Sp, L, (R',M')::nil)
       => let blv := nth (counted f) Lv ∅ in
         let Z   := nth (counted f) ZL nil in
-        ann0 (G ∪ Sp ∪ (((list_union (Op.freeVars ⊝ Y) ∩ R') ∪ blv \ of_list Z) \ L))
+        ann0 (G ∪ Sp ∪ (((list_union (Ops.freeVars ⊝ Y) ∩ R') ∪ blv \ of_list Z) \ L))
 
     | stmtFun F t, annF (Sp, L, rms) sl_F sl_t
       => let lv_t := reg_live (fst ⊝ F ++ ZL) (fst ⊝ rms ++ Lv) ∅ t sl_t in
@@ -164,15 +164,15 @@ Proof.
     + apply reg_live_G. clear; cset_tac.
   - econstructor.
     + clear; cset_tac.
-    + apply live_op_sound_incl with (lv':=Op.freeVars e).
-      * apply Op.live_freeVars.
+    + apply live_op_sound_incl with (lv':=Ops.freeVars e).
+      * apply Ops.live_freeVars.
       * clear; cset_tac.
   - econstructor.
     + setoid_rewrite <-incl_right at 3. clear; cset_tac.
      + eapply IHspillSnd1; eauto.
     + eapply IHspillSnd2; eauto.
-    + apply live_op_sound_incl with (lv':=Op.freeVars e).
-      * apply Op.live_freeVars.
+    + apply live_op_sound_incl with (lv':=Ops.freeVars e).
+      * apply Ops.live_freeVars.
       * setoid_rewrite <-incl_right at 4. clear; cset_tac.
     + setoid_rewrite <-incl_right at 2. clear; cset_tac.
     + setoid_rewrite <-incl_right at 2. clear; cset_tac.
@@ -182,14 +182,14 @@ Proof.
     + clear; cset_tac.
     + simpl. erewrite !get_nth; eauto. clear; cset_tac.
     + intros. inv_get.
-      apply live_op_sound_incl with (lv':=Op.freeVars y).
-      * apply Op.live_freeVars.
-      * erewrite <-incl_list_union with (s:=Op.freeVars y); eauto.
-        rewrite set_decomp with (s:= Op.freeVars y) (t:= M').
+      apply live_op_sound_incl with (lv':=Ops.freeVars y).
+      * apply Ops.live_freeVars.
+      * erewrite <-incl_list_union with (s:=Ops.freeVars y); eauto.
+        rewrite set_decomp with (s:= Ops.freeVars y) (t:= M').
         apply union_incl_split.
         -- clear; cset_tac.
         -- apply incl_set_left in H6.
-           eapply get_live_op_sound in H6; eauto. apply Op.freeVars_live in H6.
+           eapply get_live_op_sound in H6; eauto. apply Ops.freeVars_live in H6.
            rewrite <-inter_subset_equal with (s':= R' ∪ M'); [|clear - H6; cset_tac].
            clear; cset_tac.
     + erewrite !get_nth; eauto. rewrite H6. clear; cset_tac.

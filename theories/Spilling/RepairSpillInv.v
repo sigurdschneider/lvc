@@ -7,7 +7,7 @@ Set Implicit Arguments.
 
 (** * Invariance on correct spillings *)
 
-Lemma spill_max_kill_ext k ZL Λ R R' M M' s rlv sl :
+Lemma spill_max_kill_ext k ZL Λ R M R' M' s rlv sl :
   R [=] R'
   -> M [=] M'
   -> spill_max_kill k ZL Λ (R , M ) s rlv sl
@@ -149,8 +149,8 @@ Proof.
     { apply inter_subset_equal. rewrite H19. eauto. }
      assert (L ∩ (Sp ∩ R ∪ M) [=] L) as Leq
         by (apply inter_subset_equal in H23; rewrite Speq, H23; eauto).
-    set (L' := pick_load k R M Sp L (Op.freeVars e)).
-    set (K' := pick_kill k R L' (Op.freeVars e) (getAnn al1 ∪ getAnn al2)).
+    set (L' := pick_load k R M Sp L (Ops.freeVars e)).
+    set (K' := pick_kill k R L' (Ops.freeVars e) (getAnn al1 ∪ getAnn al2)).
     set (Sp':= (getAnn al0 ∪ getAnn al3 ∩ K' \ M ∪ (Sp ∩ R))).
     assert (L [=] L') as Leq'.
     {
@@ -179,8 +179,8 @@ Proof.
     }
     econstructor; [econstructor| |]; eauto.
       subst L' K' Sp';
-      set (L' := pick_load k R M Sp L (Op.freeVars e)) in *;
-      set (K' := pick_kill k R L' (Op.freeVars e) (getAnn al1 ∪ getAnn al2)) in *;
+      set (L' := pick_load k R M Sp L (Ops.freeVars e)) in *;
+      set (K' := pick_kill k R L' (Ops.freeVars e) (getAnn al1 ∪ getAnn al2)) in *;
       set (Sp':= (getAnn al0 ∪ getAnn al3 ∩ K' \ M ∪ (Sp ∩ R))) in *.
     + eapply IHrliveSnd1; eauto.
       * rewrite <-Speq', <-Leq', <-Keq. invc H18. cbn in *. rewrite H21, H23, H19.
@@ -191,20 +191,20 @@ Proof.
     + eapply IHrliveSnd2; eauto.
       * invc H20. cbn in *. simpl. rewrite H21.
         subst L' K'.
-        set (L':=pick_load k R M Sp L (Op.freeVars e)) in *.
-        set (K':=pick_kill k R L' (Op.freeVars e) (getAnn al1 ∪ getAnn al2)) in *.
+        set (L':=pick_load k R M Sp L (Ops.freeVars e)) in *.
+        set (K':=pick_kill k R L' (Ops.freeVars e) (getAnn al1 ∪ getAnn al2)) in *.
         clearbody L' K'.
         rewrite <- Keq. subst K.
         rewrite <- Leq'. rewrite <- Leq.
         clear - rm_ra. cset_tac'.
       * simpl. subst L' K'.
-        set (L':=pick_load k R M Sp L (Op.freeVars e)) in *.
-        set (K':=pick_kill k R L' (Op.freeVars e) (getAnn al1 ∪ getAnn al2)) in *.
+        set (L':=pick_load k R M Sp L (Ops.freeVars e)) in *.
+        set (K':=pick_kill k R L' (Ops.freeVars e) (getAnn al1 ∪ getAnn al2)) in *.
         rewrite <-Keq, <-Leq'. rewrite <-sub_R. subst K. clear - H2; cset_tac.
       * refold.
         subst L' K' Sp'.
-        set (L':=pick_load k R M Sp L (Op.freeVars e)) in *.
-        set (K':=pick_kill k R L' (Op.freeVars e) (getAnn al1 ∪ getAnn al2)) in *.
+        set (L':=pick_load k R M Sp L (Ops.freeVars e)) in *.
+        set (K':=pick_kill k R L' (Ops.freeVars e) (getAnn al1 ∪ getAnn al2)) in *.
         set (Sp':=getAnn al0 ∪ getAnn al3 ∩ K' \ M ∪ (Sp ∩ R)) in *.
         eapply spill_max_kill_ext; eauto; [|rewrite Speq';eauto].
         rewrite <-Keq, <-Leq'. eauto.
@@ -217,9 +217,9 @@ Proof.
     set (R_f':= fst (nth (counted l) Λ' (∅,∅))) in *.
     set (M_f':= snd (nth (counted l) Λ' (∅,∅))) in *.
     set (L' := pick_load k R M Sp L (R_f' \ of_list Z)).
-    set (K' := pick_kill k R L' (R_f' \ of_list Z) (list_union (Op.freeVars ⊝ Y) ∩ R')).
-    set (R'':= (R' ∩ (R \ K' ∪ L')) ∩ list_union (Op.freeVars ⊝ Y)).
-    set (M'':= (list_union (Op.freeVars ⊝ Y) \ R'') ∪ (M' ∩ list_union (Op.freeVars ⊝ Y))).
+    set (K' := pick_kill k R L' (R_f' \ of_list Z) (list_union (Ops.freeVars ⊝ Y) ∩ R')).
+    set (R'':= (R' ∩ (R \ K' ∪ L')) ∩ list_union (Ops.freeVars ⊝ Y)).
+    set (M'':= (list_union (Ops.freeVars ⊝ Y) \ R'') ∪ (M' ∩ list_union (Ops.freeVars ⊝ Y))).
     set (Sp':= ((M'' ∪ (M_f' \ of_list Z)) ∩ (R \ M)) ∪ (Sp ∩ R)).
     assert (R_f = fst (nth (counted l) Λ ({}, {}))) as Rfeq.
     { erewrite get_nth; eauto; cbn; eauto. }
@@ -245,7 +245,7 @@ Proof.
       - clear - H26; cset_tac.
       - rewrite subset_cardinal; eauto. clear - H26; cset_tac.
     }
-    assert (R' ⊆ list_union (Op.freeVars ⊝ Y)) as R'sub by (clear - H28; cset_tac).
+    assert (R' ⊆ list_union (Ops.freeVars ⊝ Y)) as R'sub by (clear - H28; cset_tac).
     assert (K [=] K') as Keq.
     {
       symmetry. subst K K'. rewrite pick_kill_eq; rewrite Rfeq'.
@@ -257,7 +257,7 @@ Proof.
       subst R''. symmetry. rewrite meet_assoc. apply inter_subset_equal. clear - R'sub H29 Leq' Keq.
       cset_tac.
     }
-    assert (M' ⊆ list_union (Op.freeVars ⊝ Y)) as M'sub by (clear - H28; cset_tac).
+    assert (M' ⊆ list_union (Ops.freeVars ⊝ Y)) as M'sub by (clear - H28; cset_tac).
     assert (M' [=] M'') as M'eq.
     {
       subst M''. symmetry. rewrite H28. rewrite <-R'eq. clear; cset_tac.

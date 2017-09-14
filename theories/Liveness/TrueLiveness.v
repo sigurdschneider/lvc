@@ -86,7 +86,7 @@ Qed.
 
 Lemma filter_by_incl_argsLive lv blv Y Z
   : ❬Y❭ = ❬Z❭
-    -> list_union (Op.freeVars ⊝ filter_by (fun x => if [x \In blv] then true else false) Z Y) ⊆ lv
+    -> list_union (Ops.freeVars ⊝ filter_by (fun x => if [x \In blv] then true else false) Z Y) ⊆ lv
     -> argsLive lv blv Y Z.
 Proof.
   intros LEN INCL. length_equify.
@@ -98,7 +98,7 @@ Proof.
     + intros. cases in INCL.
       simpl List.map in INCL.
       rewrite list_union_cons in INCL.
-      eapply live_op_sound_incl;[eapply Op.live_freeVars|].
+      eapply live_op_sound_incl;[eapply Ops.live_freeVars|].
       rewrite <- INCL. eauto with cset.
 Qed.
 

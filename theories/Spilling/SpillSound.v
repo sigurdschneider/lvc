@@ -35,7 +35,7 @@ Inductive spill_sound (k:nat) :
       (e : op)
     : Sp ⊆ R
       -> L ⊆ Sp ∪ M
-      -> Op.freeVars e ⊆ R\K ∪ L
+      -> Ops.freeVars e ⊆ R\K ∪ L
       -> cardinal ((R\K) ∪ L) <= k
       -> spill_sound k ZL Λ (R,M) (stmtReturn e)
                     (ann0 (Sp,L,nil))
@@ -48,7 +48,7 @@ Inductive spill_sound (k:nat) :
       (sl_s sl_t : spilling)
     : Sp ⊆ R
       -> L ⊆ Sp ∪ M
-      -> Op.freeVars e ⊆ R\K ∪ L
+      -> Ops.freeVars e ⊆ R\K ∪ L
       -> cardinal (R\K ∪ L) <= k
       -> spill_sound k ZL Λ (R\K ∪ L, Sp ∪ M) s sl_s
       -> spill_sound k ZL Λ (R\K ∪ L, Sp ∪ M) t sl_t
@@ -67,7 +67,7 @@ Inductive spill_sound (k:nat) :
       -> get Λ (counted f) (R_f,M_f)
       -> R_f \ of_list Z ⊆ R\K ∪ L
       -> M_f \ of_list Z ⊆ Sp ∪ M
-      -> list_union (Op.freeVars ⊝ Y) [=] R' ∪ M'
+      -> list_union (Ops.freeVars ⊝ Y) [=] R' ∪ M'
       -> R' ⊆ R\K ∪ L
       -> M' ⊆ Sp ∪ M
       -> spill_sound k ZL Λ (R,M) (stmtApp f Y)

@@ -22,9 +22,9 @@ Proof.
   intros. general induction H; invt paramsMatch; simpl; set_simpl.
   - eauto 9 using @live_sound, live_exp_sound_incl, live_freeVars
             with ann pe cset.
-  - eauto 9 using @live_sound, live_op_sound_incl, Op.live_freeVars
+  - eauto 9 using @live_sound, live_op_sound_incl, Ops.live_freeVars
     with ann pe cset.
-  - eauto using live_sound, live_op_sound_incl, Op.live_freeVars.
+  - eauto using live_sound, live_op_sound_incl, Ops.live_freeVars.
   - inv_get.
     econstructor; simpl; eauto using get_live_op_sound.
   - econstructor; eauto with len.
@@ -65,8 +65,8 @@ Lemma renamedApart_live s ang ZL Lv i
 Proof.
   intros. general induction H; invt paramsMatch; simpl in * |- *; pe_rewrite; set_simpl.
   - econstructor; eauto using live_exp_sound_incl, live_freeVars with cset pe ann.
-  - econstructor; eauto using live_op_sound_incl, Op.live_freeVars with cset pe ann.
-  - econstructor; eauto using live_op_sound_incl, Op.live_freeVars with cset.
+  - econstructor; eauto using live_op_sound_incl, Ops.live_freeVars with cset pe ann.
+  - econstructor; eauto using live_op_sound_incl, Ops.live_freeVars with cset.
   - inv_get.
     econstructor; simpl; eauto using get_live_op_sound.
     + cases; eauto.
@@ -517,13 +517,13 @@ Proof.
 Qed.
 
 Lemma live_op_sound_meet e D lv
-  : Op.freeVars e ⊆ D
+  : Ops.freeVars e ⊆ D
    -> live_op_sound e lv
    -> live_op_sound e (lv ∩ D).
 Proof.
   intros.
-  eapply Op.freeVars_live in H0.
-  eapply live_op_sound_incl; eauto using Op.live_freeVars.
+  eapply Ops.freeVars_live in H0.
+  eapply live_op_sound_incl; eauto using Ops.live_freeVars.
   rewrite <- H, <- H0. cset_tac; intuition.
 Qed.
 

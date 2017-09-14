@@ -44,7 +44,7 @@ Proof.
 Qed.
 
 Lemma combineEnv_omap_exp_eval_left el D Es Et
-  : list_union (List.map Op.freeVars el) ⊆ D
+  : list_union (List.map Ops.freeVars el) ⊆ D
     -> omap (op_eval (combineEnv D Es Et)) el = omap (op_eval Es) el.
 Proof.
   intros.
@@ -53,7 +53,7 @@ Proof.
 Qed.
 
 Lemma combineEnv_omap_exp_eval_right el D Es Et
-  : agree_on eq (list_union (List.map Op.freeVars el) ∩ D) Es Et
+  : agree_on eq (list_union (List.map Ops.freeVars el) ∩ D) Es Et
     -> omap (op_eval (combineEnv D Es Et)) el = omap (op_eval Et) el.
 Proof.
   intros.
@@ -88,8 +88,8 @@ Lemma nc_step_agree_combine D D' L E s t Es Et es et
     -> noFun t
     -> star nc_step (L, E, s) (L, Es, stmtReturn es)
     -> star nc_step (L, E, t) (L, Et, stmtReturn et)
-    -> (agree_on eq (Op.freeVars et) Et (combineEnv (fst(getAnn D) ∪ snd(getAnn D)) Es Et)
-       /\ agree_on eq (Op.freeVars es) Es (combineEnv (fst(getAnn D) ∪ snd(getAnn D)) Es Et)).
+    -> (agree_on eq (Ops.freeVars et) Et (combineEnv (fst(getAnn D) ∪ snd(getAnn D)) Es Et)
+       /\ agree_on eq (Ops.freeVars es) Es (combineEnv (fst(getAnn D) ∪ snd(getAnn D)) Es Et)).
 Proof.
   intros ssa_s ssa_t agree_fv disj_dv nf_s nf_t sterm tterm.
   split.

@@ -144,8 +144,8 @@ Qed.
 
 Definition freeVars (gamma:eqn) :=
   match gamma with
-    | EqnEq e e' => Op.freeVars e ∪ Op.freeVars e'
-    | EqnApx e e' => Op.freeVars e ∪ Op.freeVars e'
+    | EqnEq e e' => Ops.freeVars e ∪ Ops.freeVars e'
+    | EqnApx e e' => Ops.freeVars e ∪ Ops.freeVars e'
     | EqnBot => ∅
   end.
 
@@ -627,12 +627,12 @@ Proof with simpl; eauto using @fstNoneOrR, @onvLe_op_eval_some.
 Qed.
 
 Lemma satisfies_EqnEq_on_update   (x:var) e V v:
-  op_eval V e = ⎣ v ⎦   -> x ∉ Op.freeVars e  ->satisfies (V [x <- ⎣ v ⎦]) (EqnEq(Var x) e).
+  op_eval V e = ⎣ v ⎦   -> x ∉ Ops.freeVars e  ->satisfies (V [x <- ⎣ v ⎦]) (EqnEq(Var x) e).
 Proof.
   intros. unfold satisfies. simpl. lud; eauto.
     erewrite op_eval_live.
     - rewrite H. econstructor; eauto.
-    - eapply Op.live_freeVars.
+    - eapply Ops.live_freeVars.
     - eapply agree_on_update_dead; eauto.
 Qed.
 

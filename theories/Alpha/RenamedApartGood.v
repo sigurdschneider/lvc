@@ -7,7 +7,7 @@ Inductive renamedApartGood : stmt -> Prop :=
       -> renamedApartGood s
       -> renamedApartGood (stmtLet x e s)
   | renamedApartGoodIf e s t
-    : disj (Op.freeVars e ∪ freeVars s ∪ freeVars t) (definedVars s ∪ definedVars t)
+    : disj (Ops.freeVars e ∪ freeVars s ∪ freeVars t) (definedVars s ∪ definedVars t)
       -> disj (definedVars s) (definedVars t)
       -> renamedApartGood s
       -> renamedApartGood t

@@ -36,7 +36,7 @@ Inductive eqn_sound : list params -> list eqns  (*params*set var*eqns*)
 | EqnExtern x f ZL Δ s s' Y Y' Gamma G G' ang
   : eqn_sound ZL Δ s s' {EqnEq (Var x) (Var x) ; Gamma} ang
     -> entails Gamma (list_EqnApx Y Y')
-    -> list_union (List.map Op.freeVars Y') ⊆ G
+    -> list_union (List.map Ops.freeVars Y') ⊆ G
     -> length Y = length Y'
     -> eqn_sound ZL Δ (stmtLet x (Call f Y) s) (stmtLet x (Call f Y') s') Gamma
                 (ann1 (G,G') ang)

@@ -473,18 +473,18 @@ Proof.
     eapply injective_on_incl. eapply locally_injective, H11.
     cset_tac; intuition.
   - econstructor; eauto. eapply alpha_op_rename_injective.
-    eapply inverse_on_incl. eapply Op.freeVars_live; eauto. eauto.
+    eapply inverse_on_incl. eapply Ops.freeVars_live; eauto. eauto.
     now eapply IHrenamedApart1; eauto using inverse_on_incl.
     now eapply IHrenamedApart2; eauto using inverse_on_incl.
 
   - econstructor; eauto. eapply alpha_op_rename_injective.
-    eapply inverse_on_incl. eapply Op.freeVars_live; eauto. eauto.
+    eapply inverse_on_incl. eapply Ops.freeVars_live; eauto. eauto.
 
   - econstructor; eauto. rewrite map_length. eauto.
     intros. edestruct map_get_4; eauto; dcr; subst.
     get_functional; eauto; subst.
     eapply alpha_op_rename_injective.
-    eapply inverse_on_incl. eapply Op.freeVars_live; eauto. eauto.
+    eapply inverse_on_incl. eapply Ops.freeVars_live; eauto. eauto.
 
   - constructor.
     + rewrite map_length; eauto.
@@ -596,7 +596,7 @@ Proof.
     revert H1; clear_all; cset_tac.
     pe_rewrite; simpl in *. rewrite <- incl_add'; eauto.
   - econstructor; eauto. eapply alpha_op_rename_injective.
-    eapply inverse_on_incl. eapply Op.freeVars_live; eauto. eauto.
+    eapply inverse_on_incl. eapply Ops.freeVars_live; eauto. eauto.
     eapply IHLS1; eauto using inverse_on_incl.
     pe_rewrite; eauto.
     eapply IHLS2; eauto using inverse_on_incl.
@@ -605,10 +605,10 @@ Proof.
   - econstructor; eauto with len.
     intros. inv_get.
     eapply alpha_op_rename_injective.
-    eapply inverse_on_incl. eapply Op.freeVars_live; eauto. eauto.
+    eapply inverse_on_incl. eapply Ops.freeVars_live; eauto. eauto.
 
   - econstructor; eauto. eapply alpha_op_rename_injective.
-    eapply inverse_on_incl. eapply Op.freeVars_live; eauto. eauto.
+    eapply inverse_on_incl. eapply Ops.freeVars_live; eauto. eauto.
 
   - constructor.
     + eauto with len.

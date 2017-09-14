@@ -41,7 +41,7 @@ Proof.
     + eapply IHAnn1; eauto.
     + eapply IHAnn2; eauto.
     + repeat cases in H9; try congruence.
-      eapply live_op_sound_incl; [eapply Op.live_freeVars|].
+      eapply live_op_sound_incl; [eapply Ops.live_freeVars|].
       simpl. rewrite <- H9. eauto with cset.
     + rewrite getAnn_mapAnn. simpl.
       rewrite <- H9.
@@ -65,7 +65,7 @@ Proof.
       rewrite <- H4; eauto with cset.
     + inv_get; eauto.
   - econstructor.
-    simpl in *. rewrite <- H1. eapply Op.live_freeVars.
+    simpl in *. rewrite <- H1. eapply Ops.live_freeVars.
   - simpl in *.
     econstructor.
     + rewrite map_map.

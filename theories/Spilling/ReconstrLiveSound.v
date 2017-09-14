@@ -186,8 +186,8 @@ Proof.
       rewrite rena1. eauto.
     + eapply IHlvSnd2 with (ra:=ant) (R:=R\K ∪ L); eauto.
       rewrite rena2; eauto.
-    + apply live_op_sound_incl with (lv':=Op.freeVars e).
-      * apply Op.live_freeVars.
+    + apply live_op_sound_incl with (lv':=Ops.freeVars e).
+      * apply Ops.live_freeVars.
       * clear; cset_tac.
     + clear; cset_tac.
     + clear; cset_tac.
@@ -227,8 +227,8 @@ Proof.
       erewrite !nth_zip; eauto.
       erewrite !get_nth in H; eauto.
       erewrite !get_nth; eauto using map_get_1. simpl.
-      eapply live_op_sound_incl. eapply Op.live_freeVars.
-      eapply get_list_union_map with (f:=Op.freeVars) in H.
+      eapply live_op_sound_incl. eapply Ops.live_freeVars.
+      eapply get_list_union_map with (f:=Ops.freeVars) in H.
       rewrite <- H. cset_tac.
   - rewrite do_spill_empty by apply count_clear_zero.
     unfold do_spill_rec.
@@ -236,8 +236,8 @@ Proof.
     simpl.
 
     econstructor; simpl; eauto.
-    + apply live_op_sound_incl with (lv':=Op.freeVars e).
-      * apply Op.live_freeVars.
+    + apply live_op_sound_incl with (lv':=Ops.freeVars e).
+      * apply Ops.live_freeVars.
       * clear; cset_tac.
 
   - rewrite do_spill_empty by apply count_clear_zero.

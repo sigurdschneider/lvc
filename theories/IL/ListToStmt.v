@@ -11,7 +11,7 @@ Lemma list_to_stmt_correct L E s xl Y vl
 : length xl = length Y
   -> omap (op_eval E) Y = Some vl
   -> NoDupA _eq xl
-  -> disj (of_list xl) (list_union (List.map Op.freeVars Y))
+  -> disj (of_list xl) (list_union (List.map Ops.freeVars Y))
   -> star2 F.step (L, E, list_to_stmt xl Y s) nil
           (L, update_with_list' xl (List.map Some vl) E, s).
 Proof.
@@ -33,7 +33,7 @@ Lemma list_to_stmt_crash L E xl Y s
 : length xl = length Y
   -> omap (op_eval E) Y = None
   -> NoDupA _eq xl
-  -> disj (of_list xl) (list_union (List.map Op.freeVars Y))
+  -> disj (of_list xl) (list_union (List.map Ops.freeVars Y))
   -> exists σ, star2 F.step (L, E, list_to_stmt xl Y s) nil σ
          /\ state_result σ = None
          /\ normal2 F.step σ.
@@ -64,8 +64,8 @@ Qed.
 
 
 Lemma list_to_stmt_freeVars xl Y s (Len:❬xl❭ = ❬Y❭)
-      (Disj:disj (of_list xl) (list_union (Op.freeVars ⊝ Y)))
-  : freeVars (list_to_stmt xl Y s) [=] list_union (Op.freeVars ⊝ Y) ∪ (freeVars s \ of_list xl).
+      (Disj:disj (of_list xl) (list_union (Ops.freeVars ⊝ Y)))
+  : freeVars (list_to_stmt xl Y s) [=] list_union (Ops.freeVars ⊝ Y) ∪ (freeVars s \ of_list xl).
 Proof.
   general induction Len; simpl in *.
   - cset_tac.

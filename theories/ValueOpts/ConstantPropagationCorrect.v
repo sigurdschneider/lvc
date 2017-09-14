@@ -166,10 +166,10 @@ Ltac dmatch :=
 Ltac imatch := try dmatch; try smatch; try clear_trivial_eqs; isabsurd.
 
 Lemma op_eval_same e lv AE E v
-:   Op.freeVars e ⊆ lv
+:   Ops.freeVars e ⊆ lv
     -> op_eval AE e = Some (wTA v)
     -> satisfiesAll E (cp_eqns AE lv)
-    -> Op.op_eval E e = Some v.
+    -> Ops.op_eval E e = Some v.
 Proof.
   intros. general induction e; simpl in * |- *; eauto 20 using @option_eq.
   - exploit cp_eqns_satisfies_env; eauto using @option_eq.
@@ -183,10 +183,10 @@ Proof.
 Qed.
 
 Lemma op_eval_None e lv AE E
-:   Op.freeVars e ⊆ lv
+:   Ops.freeVars e ⊆ lv
     -> op_eval AE e = None
     -> satisfiesAll E (cp_eqns AE lv)
-    -> Op.op_eval E e = None.
+    -> Ops.op_eval E e = None.
 Proof.
   intros. general induction e; simpl in * |- *; eauto 20 using @option_eq.
   - exploit cp_eqns_satisfies_env_none; eauto using @option_eq.
@@ -203,7 +203,7 @@ Proof.
 Qed.
 
 Lemma op_eval_entails AE e v x lv
-: Op.freeVars e ⊆ lv
+: Ops.freeVars e ⊆ lv
   -> op_eval AE e = Some (wTA v)
   -> entails ({EqnEq (Var x) e ; cp_eqns AE lv }) (singleton (EqnEq (Var x) (Con v))).
 Proof.
@@ -218,7 +218,7 @@ Qed.
 
 Lemma op_eval_entails' AE e v x
 : op_eval AE e = Some (wTA v)
-  -> entails ({EqnEq (Var x) e ; cp_eqns AE (Op.freeVars e) }) (singleton (EqnEq (Var x) (Con v))).
+  -> entails ({EqnEq (Var x) e ; cp_eqns AE (Ops.freeVars e) }) (singleton (EqnEq (Var x) (Con v))).
 Proof.
   intros.
   unfold entails; intros.
@@ -259,7 +259,7 @@ Qed.
 
 Lemma op_eval_entails_eqns AE e x
 : op_eval AE e = AE x
-  -> entails {EqnEq (Var x) e; cp_eqns AE (Op.freeVars e)} (cp_eqns AE {x}).
+  -> entails {EqnEq (Var x) e; cp_eqns AE (Ops.freeVars e)} (cp_eqns AE {x}).
 Proof.
   intros EQ.
   rewrite cp_eqns_single'.
@@ -298,7 +298,7 @@ Proof.
 Qed.
 
 Lemma cp_choose_approx AE e lv
-: Op.freeVars e ⊆ lv
+: Ops.freeVars e ⊆ lv
   -> entails (cp_eqns AE lv) {EqnApx e (cp_choose_op AE e)}.
 Proof.
   general induction e; simpl in *.
@@ -336,7 +336,7 @@ Proof.
 Qed.
 
 Lemma cp_choose_approx_list AE Y lv
-: list_union (List.map Op.freeVars Y) ⊆ lv
+: list_union (List.map Ops.freeVars Y) ⊆ lv
   ->  entails (cp_eqns AE lv) (list_EqnApx Y (List.map (cp_choose_op AE) Y)).
 Proof.
   intros. general induction Y; simpl.
@@ -352,8 +352,8 @@ Proof.
 Qed.
 
 Lemma cp_choose_exp_freeVars AE e D
-: Op.freeVars e ⊆ D
-  -> Op.freeVars (cp_choose_op AE e) ⊆ D.
+: Ops.freeVars e ⊆ D
+  -> Ops.freeVars (cp_choose_op AE e) ⊆ D.
 Proof.
   intro.
   induction e; simpl in *.
@@ -490,7 +490,7 @@ Qed.
 Lemma entails_cp_eqns_subst_choose AE AE' D Z Y
 : length Z = length Y
   -> PIR2 poLe (List.map (op_eval AE) Y) (lookup_list AE' Z)
-  -> list_union (List.map Op.freeVars Y)[<=]D
+  -> list_union (List.map Ops.freeVars Y)[<=]D
   -> entails (of_list ((fun y => EqnEq y y) ⊝ Y) ∪ cp_eqns AE D)
             (subst_eqns (sid [Z <-- List.map (cp_choose_op AE) Y])
                         (cp_eqns AE' (of_list Z))).
@@ -569,19 +569,19 @@ Proof.
 Qed.
 
 Lemma unsat_bool_eq_val E e v
-  : (forall w, Op.op_eval E e = Some w -> bool2val (val2bool w) <> v)
+  : (forall w, Ops.op_eval E e = Some w -> bool2val (val2bool w) <> v)
     -> ~ satisfies E (EqnEq (UnOp UnOpToBool e) (Con v)).
 Proof.
   intros NE SAT. hnf in SAT. simpl in *.
-  case_eq (Op.op_eval E e); intros.
+  case_eq (Ops.op_eval E e); intros.
   - rewrite H in SAT; simpl in *. inv SAT.
     eapply NE; eauto.
   - rewrite H in SAT; isabsurd.
 Qed.
 
-Lemma aval2bool_inv_val b AE e lv (FV:Op.freeVars e [<=] lv)
+Lemma aval2bool_inv_val b AE e lv (FV:Ops.freeVars e [<=] lv)
   : aval2bool (op_eval AE e) = ⎣ wTA b ⎦
-    -> forall E, satisfiesAll E (cp_eqns AE lv) -> exists v, Op.op_eval E e = Some v /\
+    -> forall E, satisfiesAll E (cp_eqns AE lv) -> exists v, Ops.op_eval E e = Some v /\
              bool2val (val2bool v) = bool2val b.
 Proof.
   intros.
@@ -598,8 +598,8 @@ Lemma satisfies_BinOpEq_inv_true E e e'
     -> satisfies E (EqnEq e e').
 Proof.
   intros. hnf in H. simpl in *.
-  destruct (Op.op_eval E e); isabsurd.
-  destruct (Op.op_eval E e'); isabsurd.
+  destruct (Ops.op_eval E e); isabsurd.
+  destruct (Ops.op_eval E e'); isabsurd.
   simpl in *. inv H.
   pose proof (Integers.Int.eq_spec v v0).
   destruct (Integers.Int.eq v v0); intros; isabsurd.
@@ -611,7 +611,7 @@ Lemma satisfies_UnOpToBool_inv_false E e
     -> satisfies E (EqnEq e (Con default_val)).
 Proof.
   intros. hnf in H. simpl in *.
-  destruct (Op.op_eval E e); isabsurd.
+  destruct (Ops.op_eval E e); isabsurd.
   simpl in *. inv H.
   unfold val2bool in H2. cases in H2.
   - econstructor. reflexivity.
@@ -645,7 +645,7 @@ Local Hint Resolve impb_lift.
 
 
 Lemma eqn_sound_EqnEq ZL ΓL AE s s' e ans Γ v
-      (ΓINCL: cp_eqns AE (Op.freeVars e) ⊆ Γ)
+      (ΓINCL: cp_eqns AE (Ops.freeVars e) ⊆ Γ)
       (HEQ:Some (wTA v) ⊑ op_eval AE e ->
            eqn_sound ZL ΓL s s' {EqnEq e (Con v); Γ} ans)
   : eqn_sound ZL ΓL s s' {EqnEq e (Con v); Γ} ans.
@@ -654,7 +654,7 @@ Proof.
   eapply EqnUnsat.
   intros E SAT.
   exploit SAT; [ cset_tac |].
-  assert (satisfiesAll E (cp_eqns AE (Op.freeVars e))). {
+  assert (satisfiesAll E (cp_eqns AE (Ops.freeVars e))). {
     rewrite <- incl_add' in SAT.
     rewrite <- ΓINCL in SAT. eauto.
   }

@@ -46,16 +46,16 @@ Fixpoint repair_spill
       ann1 (Sp',L',nil) (repair_spill k ZL Λ {x; R_e \ K_x} (Sp' ∪ M) s rlv' lv' sl')
 
   | stmtReturn e, _, _, ann0 (Sp,L,_)
-    => let Fv_e := Op.freeVars e in
+    => let Fv_e := Ops.freeVars e in
       let L'   := pick_load k R M Sp L Fv_e in
       let Sp'  := Sp ∩ R in
       ann0 (Sp',L',nil)
 
   | stmtIf e s1 s2, ann2 _ rlv1 rlv2, ann2 _ lv1 lv2, ann2 (Sp,L,_) sl1 sl2
-    => let Fv_e := Op.freeVars e in
+    => let Fv_e := Ops.freeVars e in
       let L'   := pick_load k R M Sp L Fv_e in
       (* here is the second use of register liveness *)
-      let K    := pick_kill k R L' (Op.freeVars e) (getAnn rlv1 ∪ getAnn rlv2) in
+      let K    := pick_kill k R L' (Ops.freeVars e) (getAnn rlv1 ∪ getAnn rlv2) in
       let Sp'  := ((getAnn lv1 ∪ getAnn lv2) ∩ K \ M) ∪ (Sp ∩ R) in
       ann2 (Sp',L',nil)
            (repair_spill k ZL Λ (R \ K ∪ L') (Sp' ∪ M) s1 rlv1 lv1 sl1)
@@ -63,13 +63,13 @@ Fixpoint repair_spill
 
   | stmtApp f Y, _, _, ann0 (Sp,L,RMappL)
     => let RMapp := nth 0 RMappL (∅,∅) in
-      let fv_Y:= list_union (Op.freeVars ⊝ Y) in
+      let fv_Y:= list_union (Ops.freeVars ⊝ Y) in
       let R_f := fst (nth (counted f) Λ (∅,∅)) in
       let M_f := snd (nth (counted f) Λ (∅,∅)) in
       let Z   := nth (counted f) ZL nil in
       let L'  := pick_load k R M Sp L (R_f \ of_list Z) in
       let K   := pick_kill k R L' (R_f \ of_list Z)
-                           (list_union (Op.freeVars ⊝ Y) ∩ fst RMapp) in
+                           (list_union (Ops.freeVars ⊝ Y) ∩ fst RMapp) in
       let R'' := fst RMapp ∩ (R \ K ∪ L') ∩ fv_Y in
       let M'' := (fv_Y \ R'') ∪ (snd RMapp ∩ fv_Y) in
       let Sp' := ((M'' ∪ (M_f \ of_list Z)) ∩ (R \ M)) ∪ (Sp ∩ R) in

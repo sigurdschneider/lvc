@@ -36,21 +36,21 @@ Section ToMach.
 
   Definition toMachInstrOp x (e:op) :=
     match e with
-    | Con v => Mop (Op.Ointconst v) nil (toReg x)
+    | Con v => Mop (Ops.Ointconst v) nil (toReg x)
     | Var y =>
       if part_1 p x then
         if part_1 p y then
-          Mop (Op.Oaddimm Int.zero) (toReg y::nil) (toReg x)
+          Mop (Ops.Oaddimm Int.zero) (toReg y::nil) (toReg x)
         else
           Mgetstack (Ptrofs.repr (offset_local (idx_of_slot y))) Tint (toReg x)
       else
         Msetstack (toReg y) (Ptrofs.repr (offset_local (idx_of_slot x))) Tint
-    | _ => Mop (Op.Ointconst Int.zero) nil (toReg x)
+    | _ => Mop (Ops.Ointconst Int.zero) nil (toReg x)
     end.
 
   Definition toMachCond l (e:op) :=
     match e with
-    | _ => Mcond (Op.Ccomp Ceq) nil l
+    | _ => Mcond (Ops.Ccomp Ceq) nil l
     end.
 
   Fixpoint new_labs (l:label) (n:nat) :=
@@ -88,7 +88,7 @@ Section ToMach.
     | stmtApp f Y =>
       (Mgoto (nth_default (xH) L f)::nil, l)
     | stmtReturn (Var x) =>
-      (Mop (Op.Oaddimm Int.zero) (R0::nil) (toReg x)::Mreturn::nil, l)
+      (Mop (Ops.Oaddimm Int.zero) (R0::nil) (toReg x)::Mreturn::nil, l)
     | stmtReturn _ => (nil, l)
     | stmtFun F t =>
       let (L', l') := new_labs l (length F) in

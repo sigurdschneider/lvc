@@ -292,8 +292,8 @@ Qed.
 
 Lemma slot_lift_args_RMapp_incl (slot : var -> var) (Y : args) RM RMapp Z
   : (forall (n : nat) (y : op), get Y n y -> isVar y)
-    -> (list_union (Op.freeVars ⊝ Y) ⊆ fst RMapp ∪ snd RMapp)
-    -> list_union (Op.freeVars ⊝ slot_lift_args slot RM RMapp Y Z)
+    -> (list_union (Ops.freeVars ⊝ Y) ⊆ fst RMapp ∪ snd RMapp)
+    -> list_union (Ops.freeVars ⊝ slot_lift_args slot RM RMapp Y Z)
                  ⊆ fst RMapp ∪ map slot (snd RMapp).
 Proof.
   general induction Y; destruct Z; simpl in *; only 1,2,3: eauto with cset.

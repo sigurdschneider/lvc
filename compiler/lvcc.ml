@@ -118,7 +118,7 @@ let main () =
 	else
 	sopt*)
       in
-      let linear = ToLinear.coq_ILItoLinear (Camlcoq.P.of_int 1) s_fromILF in
+      let linear = ToLinear.coq_ILItoLinear (Camlcoq.P.of_int 2) s_fromILF in
       let asm =
 	match Compiler0.apply_partial
 		(LinearToAsm.transf_linear_program linear)

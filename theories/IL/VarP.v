@@ -8,15 +8,15 @@ Inductive var_P (P:var -> Prop)
      -> For_all P (Exp.freeVars e)
      -> var_P P (stmtLet x e b)
 | VarPIf e b1 b2
-  :  For_all P (Op.freeVars e)
+  :  For_all P (Ops.freeVars e)
      -> var_P P b1
      -> var_P P b2
      -> var_P P (stmtIf e b1 b2)
 | VarPGoto l Y
-  : For_all P (list_union (Op.freeVars ⊝ Y))
+  : For_all P (list_union (Ops.freeVars ⊝ Y))
     -> var_P P (stmtApp l Y)
 | VarPReturn e
-  : For_all P (Op.freeVars e)
+  : For_all P (Ops.freeVars e)
     -> var_P P (stmtReturn e)
 | VarPLet F b
   : (forall n Zs, get F n Zs -> var_P P (snd Zs))

@@ -45,7 +45,7 @@ Fixpoint splitSpillKO
       ann1 (Sp,L,nil) (splitSpillKO k ZL Λ R_s (Sp ∪ M) s lvs)
 
   | stmtReturn e, ann0 lv
-    => let Fv_e := Op.freeVars e in
+    => let Fv_e := Ops.freeVars e in
       let R := R ∩ lv in
        let L    := Fv_e \ R in
        let K    := kill_oracle (cardinal L - (k - cardinal R)) (R \ Fv_e) in
@@ -55,7 +55,7 @@ Fixpoint splitSpillKO
        ann0 (Sp,L,nil)
 
   | stmtIf e s1 s2, ann2 lv lv1 lv2
-    => let Fv_e := Op.freeVars e in
+    => let Fv_e := Ops.freeVars e in
       let R := R ∩ lv in
        let L    := Fv_e \ R in
        let K    := kill_oracle (cardinal L - (k - cardinal R)) (R \ Fv_e) in
@@ -72,7 +72,7 @@ Fixpoint splitSpillKO
        let Z   := nth (counted f) ZL nil in
        let L   := R_f \ R \ of_list Z in
        let K    := kill_oracle (cardinal L - (k - cardinal R)) (R \ R_f) in
-       let fvY  := list_union (Op.freeVars ⊝ Y) in
+       let fvY  := list_union (Ops.freeVars ⊝ Y) in
        let Sp   := M_f \ M \ of_list Z ∪ (((fvY \ M) ∩ K)) in
        let R'   := R \ K ∪ L in
        let Rapp := fvY ∩ R' in
@@ -376,8 +376,8 @@ general induction lvSound;
   assert (Incl:R' ∩ lv ⊆ R) by (rewrite ReqR'; clear; cset_tac).
   assert (Card:cardinal (R' ∩ lv) <= k) by (rewrite Incl; eauto).
   eapply spill_sound_incl_R with (R:=R' ∩ lv); eauto.
-  set (K := kill_oracle (cardinal (Op.freeVars e \ (R' ∩ lv)) - (k - cardinal (R' ∩ lv)))
-                       ((R' ∩ lv) \ Op.freeVars e)) in *.
+  set (K := kill_oracle (cardinal (Ops.freeVars e \ (R' ∩ lv)) - (k - cardinal (R' ∩ lv)))
+                       ((R' ∩ lv) \ Ops.freeVars e)) in *.
   eapply SpillIf with (K:= K);
   [  |  | apply kill_oracle_incl2
   | apply rke; eauto
@@ -386,15 +386,15 @@ general induction lvSound;
     try rewrite ReqR'; try rewrite MeqM';
       try eapply rke; eauto.
   + subst K. rewrite kill_oracle_incl. clear; cset_tac.
-  + rewrite Op.freeVars_live; eauto.
+  + rewrite Ops.freeVars_live; eauto.
     simpl in *. revert fvRM. rewrite ReqR', MeqM'.
     clear; cset_tac.
   + subst K.
-    rewrite (@al_in_rkl (R' ∩ lv) (Op.freeVars e) M' _ k) at 1.
+    rewrite (@al_in_rkl (R' ∩ lv) (Ops.freeVars e) M' _ k) at 1.
     clear. cset_tac. revert fvRM H0; simpl; rewrite ReqR', MeqM'.
     clear. cset_tac.
   + subst K.
-    rewrite (@al_in_rkl (R' ∩ lv) (Op.freeVars e) M' _ k) at 1.
+    rewrite (@al_in_rkl (R' ∩ lv) (Ops.freeVars e) M' _ k) at 1.
     clear. cset_tac. revert fvRM H1; simpl; rewrite ReqR', MeqM'.
     clear. cset_tac.
 - assert (InclR':R' ∩ lv ⊆ R) by (rewrite ReqR'; clear; cset_tac).
@@ -410,7 +410,7 @@ general induction lvSound;
              ((R' ∩ lv) \ R_f)) in *.
   eapply SpillApp with (K:= K); try rewrite ReqR'; try rewrite MeqM'; eauto.
   + subst K.
-    rewrite Op.freeVars_live_list; eauto.
+    rewrite Ops.freeVars_live_list; eauto.
     rewrite (@kill_oracle_incl _ kos).
     rewrite H1 in Incl.
     revert fvRM Incl.
@@ -441,17 +441,17 @@ general induction lvSound;
     destruct x as [R_f' M_f']; clear_trivial_eqs.
     unfold PartialOrder.poEq in *; simpl in *.
     rewrite <- pir2_R2 in H1.
-    exploit Op.freeVars_live_list; eauto.
+    exploit Ops.freeVars_live_list; eauto.
     revert H1 H5 fvRM. rewrite ReqR'. rewrite MeqM'.
     clear. clearbody K. cset_tac.
 - assert (InclR':R' ∩ lv ⊆ R) by (rewrite ReqR'; clear; cset_tac).
   eapply spill_sound_incl_R with (R:=R' ∩ lv); [ | |rewrite ReqR'];eauto.
 
-  set (K := kill_oracle (cardinal (Op.freeVars e \ (R' ∩ lv)) - (k - cardinal (R' ∩ lv)))
-                       ((R' ∩ lv)\ Op.freeVars e)) in *.
+  set (K := kill_oracle (cardinal (Ops.freeVars e \ (R' ∩ lv)) - (k - cardinal (R' ∩ lv)))
+                       ((R' ∩ lv)\ Ops.freeVars e)) in *.
   eapply SpillReturn with (K:= K); try rewrite ReqR'; eauto.
   + clear_all. cset_tac.
-  + rewrite Op.freeVars_live; eauto.
+  + rewrite Ops.freeVars_live; eauto.
     rewrite <- ReqR'. revert fvRM. simpl. clear. cset_tac.
   + apply kill_oracle_incl2.
   + apply rke; eauto. rewrite <- RleqK.

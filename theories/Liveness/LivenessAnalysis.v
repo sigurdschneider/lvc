@@ -14,15 +14,15 @@ Definition liveness_transform (i:overapproximation)
   match st, a with
   | stmtLet x e s, anni1 d =>
     d \ singleton x ∪ (if [x ∈ d \/ isCall e] then Exp.freeVars e else ∅)
-  | stmtIf e s t, anni2 ds dt => Op.freeVars e ∪ (ds) ∪ (dt)
+  | stmtIf e s t, anni2 ds dt => Ops.freeVars e ∪ (ds) ∪ (dt)
   | stmtApp f Y, anni0 =>
     let lv := nth (counted f) DL ∅ in
     let Z :=  nth (counted f) ZL nil in
     (if isImperative i then lv \ of_list Z else ∅) ∪
-       list_union (List.map Op.freeVars
+       list_union (List.map Ops.freeVars
                             (filter_by (fun x => B[x ∈ lv]) Z Y))
   | stmtReturn e, anni0 =>
-    Op.freeVars e
+    Ops.freeVars e
   | stmtFun F t, anni1 dt =>
     (if isFunctional i then list_union ((take ❬F❭ DL) \\ (take ❬F❭ ZL)) else ∅) ∪ dt
   | _, _ => ∅

@@ -16,7 +16,7 @@ Fixpoint compile s {struct s}
       let Y' := List.filter NotVar Y in
       let xl := @fresh_list var _
                            fresh
-                           (list_union (List.map Op.freeVars Y)) (length Y') in
+                           (list_union (List.map Ops.freeVars Y)) (length Y') in
       list_to_stmt xl Y' (stmtApp l (replace_if NotVar Y (Var ⊝ xl)))
     | stmtReturn x => stmtReturn x
     | stmtFun F t => stmtFun (List.map (fun Zs => (fst Zs, compile (snd Zs))) F) (compile t)
@@ -123,8 +123,8 @@ Qed.
 
 Lemma EAE_paramsMatch_app Y'' L f Y Y'
   :  get L (counted f) (❬Y''❭ + ❬Y❭)
-     -> disj (of_list Y') (list_union (Op.freeVars ⊝ Y)
-                                     ∪ list_union (Op.freeVars ⊝ Y''))
+     -> disj (of_list Y') (list_union (Ops.freeVars ⊝ Y)
+                                     ∪ list_union (Ops.freeVars ⊝ Y''))
      -> NoDupA _eq Y'
      -> ❬Y'❭ = ❬List.filter NotVar Y❭
      -> paramsMatch
@@ -190,9 +190,9 @@ Proof.
 Qed.
 
 Lemma freeVars_filter_Var Y
-  : list_union (Op.freeVars ⊝ Y) [=]
-               list_union (Op.freeVars ⊝ List.filter NotVar Y)
-               ∪ list_union (Op.freeVars ⊝ List.filter IsVar Y).
+  : list_union (Ops.freeVars ⊝ Y) [=]
+               list_union (Ops.freeVars ⊝ List.filter NotVar Y)
+               ∪ list_union (Ops.freeVars ⊝ List.filter IsVar Y).
 Proof.
   general induction Y; simpl; norm_lunion; eauto with cset.
   - repeat cases; simpl; norm_lunion; try now (exfalso; eauto).
@@ -222,9 +222,9 @@ Ltac clr_prtct :=
                end.
 
 Lemma freeVars_replaceIf Y (xl:list var) (Len:❬List.filter NotVar Y❭ = ❬xl❭)
-      (Disj:disj (of_list xl) (list_union (Op.freeVars ⊝ Y)))
-  : list_union (Op.freeVars ⊝ replace_if NotVar Y (Var ⊝ xl)) \ of_list xl
-               [=] list_union (Op.freeVars ⊝ List.filter IsVar Y).
+      (Disj:disj (of_list xl) (list_union (Ops.freeVars ⊝ Y)))
+  : list_union (Ops.freeVars ⊝ replace_if NotVar Y (Var ⊝ xl)) \ of_list xl
+               [=] list_union (Ops.freeVars ⊝ List.filter IsVar Y).
 
 Proof.
   rewrite freeVars_filter_Var in Disj.
@@ -283,8 +283,8 @@ Fixpoint compile_live (LV:list (set var)) (s:stmt) (a:ann (set var)) : ann (set 
     ann2 (getAnn ans' ∪ getAnn ant') ans' ant'
   | stmtApp f Y, ann0 lv =>
     let lv := nth (counted f) LV ∅ in
-    ann0 (list_union (Op.freeVars ⊝ Y) ∪ lv)
-  | stmtReturn e, ann0 lv => ann0 (Op.freeVars e)
+    ann0 (list_union (Ops.freeVars ⊝ Y) ∪ lv)
+  | stmtReturn e, ann0 lv => ann0 (Ops.freeVars e)
   | stmtFun F t, annF lv ans ant =>
     let ans' := zip (fun Zs a => compile_live (getAnn ⊝ ans ++ LV) (snd Zs) a) F ans in
     annF lv ans' (compile_live (getAnn ⊝ ans ++ LV) t ant)
@@ -297,7 +297,7 @@ Fixpoint live_for_stmts (Y:list op) (xl:list var) (lv:set var) : ann (set var) :
   match Y, xl with
   | e::Y, x::xl =>
     let an' := live_for_stmts Y xl lv in
-    ann1 (Op.freeVars e ∪ (getAnn an' \ singleton x)) an'
+    ann1 (Ops.freeVars e ∪ (getAnn an' \ singleton x)) an'
   | _, _ => ann0 lv
   end.
 
@@ -309,8 +309,8 @@ Fixpoint compile_live (LV:list (set var)) (s:stmt) (a:ann (set var)) : ann (set 
   | stmtApp f Y, ann0 lv =>
     let lv_f := nth (counted f) LV ∅ in
     let Y' := (List.filter NotVar Y) in
-    let xl := (fresh_list fresh (list_union (List.map Op.freeVars Y)) (length Y')) in
-    let lv' := list_union (Op.freeVars ⊝ (List.filter IsVar Y)) ∪ of_list xl ∪ lv_f in
+    let xl := (fresh_list fresh (list_union (List.map Ops.freeVars Y)) (length Y')) in
+    let lv' := list_union (Ops.freeVars ⊝ (List.filter IsVar Y)) ∪ of_list xl ∪ lv_f in
     setTopAnn (live_for_stmts Y' xl lv') lv
   | stmtReturn e, ann0 lv => ann0 lv
   | stmtFun F t, annF lv ans ant =>

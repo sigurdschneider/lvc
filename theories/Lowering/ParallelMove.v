@@ -333,7 +333,7 @@ Proof.
            eapply (@list_to_stmt_correct' (getAnn al)); eauto.
            ++ rewrite DstEq. eauto.
            ++ assert (of_list (onlyVars Y) ⊆ lv). {
-               eapply Op.freeVars_live_list in H3.
+               eapply Ops.freeVars_live_list in H3.
                rewrite <- H3. rewrite (onlyVars_eq H5) at 2.
                rewrite of_list_freeVars_vars. reflexivity.
              }

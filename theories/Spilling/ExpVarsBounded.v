@@ -9,10 +9,10 @@ Inductive exp_vars_bounded : nat -> stmt -> Prop :=
     -> k > 0
     -> exp_vars_bounded k (stmtLet x e s)
 | BoundReturn k e
-  : cardinal (Op.freeVars e) <= k
+  : cardinal (Ops.freeVars e) <= k
     -> exp_vars_bounded k (stmtReturn e)
 | BoundIf k e s t
-  : cardinal (Op.freeVars e) <= k
+  : cardinal (Ops.freeVars e) <= k
     -> exp_vars_bounded k s
     -> exp_vars_bounded k t
     -> exp_vars_bounded k (stmtIf e s t)
@@ -36,9 +36,9 @@ Fixpoint exp_vars_bound (s:stmt) : nat :=
   match s with
   | stmtLet x e s0 =>
     max (max (cardinal (Exp.freeVars e)) (exp_vars_bound s0)) 1
-  | stmtIf e s1 s2 => max (cardinal (Op.freeVars e)) (max (exp_vars_bound s1) (exp_vars_bound s2))
+  | stmtIf e s1 s2 => max (cardinal (Ops.freeVars e)) (max (exp_vars_bound s1) (exp_vars_bound s2))
   | stmtApp l Y => 0
-  | stmtReturn e => cardinal (Op.freeVars e)
+  | stmtReturn e => cardinal (Ops.freeVars e)
   | stmtFun F t =>
     max (list_max ((fun Zs => exp_vars_bound (snd Zs)) ⊝ F))
         (exp_vars_bound t)

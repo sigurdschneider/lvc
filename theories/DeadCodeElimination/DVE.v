@@ -673,17 +673,17 @@ Lemma DVE_freeVars_live ZL LV s lv
   : freeVars (compile (zip pair LV ZL) s lv) ⊆ getAnn lv.
 Proof.
   general induction LS; simpl; repeat cases; simpl;
-    eauto using Op.freeVars_live; set_simpl.
+    eauto using Ops.freeVars_live; set_simpl.
   - exploit Exp.freeVars_live; eauto with cset.
   - cset_tac.
-  - exploit Op.freeVars_live; eauto.
+  - exploit Ops.freeVars_live; eauto.
     rewrite IHLS1, IHLS2; eauto. rewrite H0, H1, H2; eauto.
     clear; cset_tac.
   - erewrite get_nth; eauto using zip_get; simpl.
     eapply list_union_incl; intros; inv_get; eauto with cset.
     edestruct get_flt; eauto; dcr.
     exploit argsLive_live_exp_sound; eauto.
-    exploit Op.freeVars_live; eauto with cset.
+    exploit Ops.freeVars_live; eauto with cset.
   - rewrite <- zip_app; eauto with len.
     rewrite IHLS; eauto.
     eapply union_incl_split; eauto.

@@ -39,10 +39,10 @@ Inductive spill_max_kill (k:nat) :
       (Λ : list (⦃var⦄ * ⦃var⦄))
       (R M Sp L Rlv: ⦃var⦄)
       (e : op)
-    : let K := (R \ (Op.freeVars e)) ∪ (R ∩ L) in
+    : let K := (R \ (Ops.freeVars e)) ∪ (R ∩ L) in
       Sp ⊆ R
       -> L ⊆ Sp ∪ M
-      -> Op.freeVars e ⊆ R\K ∪ L
+      -> Ops.freeVars e ⊆ R\K ∪ L
       -> cardinal (R\K ∪ L) <= k
       -> spill_max_kill k ZL Λ (R,M) (stmtReturn e) (ann0 Rlv) (ann0 (Sp,L,nil))
   | SpillMKIf
@@ -53,10 +53,10 @@ Inductive spill_max_kill (k:nat) :
       (s t : stmt)
       (sl_s sl_t : spilling)
       (rlv1 rlv2 : ann ⦃var⦄)
-    : let K := (R \ (Op.freeVars e ∪ getAnn rlv1 ∪ getAnn rlv2)) ∪ (R ∩ L) in
+    : let K := (R \ (Ops.freeVars e ∪ getAnn rlv1 ∪ getAnn rlv2)) ∪ (R ∩ L) in
       Sp ⊆ R
       -> L ⊆ Sp ∪ M
-      -> Op.freeVars e ⊆ R\K ∪ L
+      -> Ops.freeVars e ⊆ R\K ∪ L
       -> cardinal (R\K ∪ L) <= k
       -> spill_max_kill k ZL Λ (R \ K ∪ L, Sp ∪ M) s rlv1 sl_s
       -> spill_max_kill k ZL Λ (R \ K ∪ L, Sp ∪ M) t rlv2 sl_t
@@ -76,7 +76,7 @@ Inductive spill_max_kill (k:nat) :
       -> get Λ (counted f) (R_f,M_f)
       -> R_f \ of_list Z ⊆ R\K ∪ L
       -> M_f \ of_list Z ⊆ Sp ∪ M
-      -> list_union (Op.freeVars ⊝ Y) [=] R' ∪ M'
+      -> list_union (Ops.freeVars ⊝ Y) [=] R' ∪ M'
       -> R' ⊆ R\K ∪ L
       -> M' ⊆ Sp ∪ M
       -> spill_max_kill k ZL Λ (R,M) (stmtApp f Y) (ann0 Rlv) (ann0 (Sp,L, (R', M')::nil))
@@ -208,7 +208,7 @@ Proof.
     + rewrite <-minus_union.
       rewrite incl_minus_union';[|clear;cset_tac].
       rewrite minus_minus, <-rlv_sub'.
-      apply Op.freeVars_live in H10. clear - H10. cset_tac.
+      apply Ops.freeVars_live in H10. clear - H10. cset_tac.
     + rewrite <-minus_union.
       rewrite incl_minus_union';[|clear;cset_tac].
       rewrite minus_minus. rewrite H1. rewrite subset_cardinal with (s':=R0 \ K ∪ L); eauto.
@@ -220,7 +220,7 @@ Proof.
     + rewrite <-minus_union.
       rewrite incl_minus_union';[|clear;cset_tac].
       rewrite minus_minus, <-rlv_sub'.
-      apply Op.freeVars_live in H16. clear - H16; cset_tac.
+      apply Ops.freeVars_live in H16. clear - H16; cset_tac.
     + rewrite <-minus_union.
       rewrite incl_minus_union';[|clear;cset_tac].
       rewrite minus_minus. rewrite H1.

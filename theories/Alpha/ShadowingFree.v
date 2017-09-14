@@ -14,15 +14,15 @@ Inductive shadowingFree : set var -> stmt -> Prop :=
       -> shadowingFree {x; D} s
       -> shadowingFree D (stmtLet x e s)
   | shadowingFreeIf D e s t
-    : Op.freeVars e ⊆ D
+    : Ops.freeVars e ⊆ D
     -> shadowingFree D s
     -> shadowingFree D t
     -> shadowingFree D (stmtIf e s t)
   | shadowingFreeRet D e
-    : Op.freeVars e ⊆ D
+    : Ops.freeVars e ⊆ D
     -> shadowingFree D (stmtReturn e)
   | shadowingFreeGoto D f Y
-    : list_union (List.map Op.freeVars Y) ⊆ D
+    : list_union (List.map Ops.freeVars Y) ⊆ D
     -> shadowingFree D (stmtApp f Y)
   | shadowingFreeLet D F t
     : (forall n Zs, get F n Zs -> shadowingFree (of_list (fst Zs) ∪ D) (snd Zs))

@@ -230,7 +230,7 @@ Qed.
 
 Lemma subTerm_EQ_If_freeVars_e
   : forall (sT st : stmt) (e : op) (s t : stmt),
-    st = stmtIf e s t -> subTerm st sT -> Op.freeVars e ⊆ occurVars sT.
+    st = stmtIf e s t -> subTerm st sT -> Ops.freeVars e ⊆ occurVars sT.
 Proof.
   intros; subst.
   eapply subTerm_occurVars in H0. simpl in *.

@@ -45,28 +45,28 @@
 /* Integer literals, can be integer_literal or - integer_literal */
 
 integer_constant:
-  | IL_integer_constant { Op.Con (Z.of_sint (int_of_string $1)) }
-  | IL_minus IL_integer_constant { Op.Con (Z.of_sint (parse_neg_integer $2)) }
+  | IL_integer_constant { Ops.Con (Z.of_sint (int_of_string $1)) }
+  | IL_minus IL_integer_constant { Ops.Con (Z.of_sint (parse_neg_integer $2)) }
 
 primary_expression:
-  | IL_ident { Op.Var (parse_var $1)}
+  | IL_ident { Ops.Var (parse_var $1)}
   | integer_constant {$1}
 
   | IL_lparen expression IL_rparen { $2 }
 
 multiplicative_expression:
-  | multiplicative_expression IL_star primary_expression { Op.BinOp (Val.BinOpMul, $1, $3) }
-  | multiplicative_expression IL_div primary_expression { Op.BinOp (Val.BinOpDiv, $1, $3) }
+  | multiplicative_expression IL_star primary_expression { Ops.BinOp (Val.BinOpMul, $1, $3) }
+  | multiplicative_expression IL_div primary_expression { Ops.BinOp (Val.BinOpDiv, $1, $3) }
   | primary_expression { $1 }
 
 additive_expression:
-  | additive_expression IL_plus multiplicative_expression { Op.BinOp (Val.BinOpAdd,$1, $3) }
-  | additive_expression IL_minus multiplicative_expression { Op.BinOp (Val.BinOpSub,$1,$3) }
+  | additive_expression IL_plus multiplicative_expression { Ops.BinOp (Val.BinOpAdd,$1, $3) }
+  | additive_expression IL_minus multiplicative_expression { Ops.BinOp (Val.BinOpSub,$1,$3) }
   | multiplicative_expression { $1 }
 
 expression:
-  | expression IL_less_than additive_expression { Op.BinOp (Val.BinOpLt,$1,$3)}
-  | expression IL_greater_than additive_expression { Op.BinOp (Val.BinOpLt,$3,$1)}
+  | expression IL_less_than additive_expression { Ops.BinOp (Val.BinOpLt,$1,$3)}
+  | expression IL_greater_than additive_expression { Ops.BinOp (Val.BinOpLt,$3,$1)}
   | additive_expression { $1 }
 
 ext_expression:

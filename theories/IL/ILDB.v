@@ -198,7 +198,7 @@ Lemma exp_idx_ok E E' e e' (symb:list var)
       (Edef:forall x v, E x = Some v -> exists n, get symb n x)
       (Eagr:forall x n, pos symb x 0 = Some n -> exists v, get E' n v /\ E x = Some v)
       (EQ:exp_idx symb e = Success e')
-: Op.op_eval E e = op_eval E' e'.
+: Ops.op_eval E e = op_eval E' e'.
 Proof.
   general induction e; eauto; simpl in * |- *; try monadS_inv EQ.
   - eapply option2status_inv in EQ0. simpl.
@@ -279,12 +279,12 @@ Proof.
   revert σ1 σ2. pcofix stmt_idx_sim; intros.
   destruct H0; destruct s; simpl in *; try monadS_inv EQ.
   - destruct e; monadS_inv EQ.
-    + case_eq (Op.op_eval E e); intros.
+    + case_eq (Ops.op_eval E e); intros.
       * pone_step. erewrite <- exp_idx_ok; eauto.
         right.
         eapply stmt_idx_sim; econstructor; eauto using vars_exist_update, defs_agree_update.
       * pno_step. erewrite <- exp_idx_ok in def; eauto. congruence.
-    + case_eq (omap (Op.op_eval E) Y); intros.
+    + case_eq (omap (Ops.op_eval E) Y); intros.
       assert (omap (op_eval E') x0 = ⎣l ⎦).
       erewrite omap_agree_2; try eapply H; eauto using smap_length.
       intros. exploit (smap_spec _ EQ0); eauto. dcr. get_functional; subst.
@@ -299,12 +299,12 @@ Proof.
         -- right. eapply stmt_idx_sim; econstructor; eauto using vars_exist_update, defs_agree_update.
       * pno_step.
         pose proof (smap_spec _ EQ0).
-        assert (omap (Op.op_eval E) Y = Some vl).
+        assert (omap (Ops.op_eval E) Y = Some vl).
         erewrite omap_agree_2; eauto using smap_length.
         intros. eapply exp_idx_ok; eauto. edestruct H0; eauto; dcr.
         get_functional; subst; eauto. symmetry; eapply smap_length; eauto.
         congruence.
-  - case_eq (Op.op_eval E e); intros.
+  - case_eq (Ops.op_eval E e); intros.
     * case_eq (val2bool v); intros; pone_step; eauto.
       erewrite <- exp_idx_ok; eauto.
       right. eapply stmt_idx_sim; econstructor; eauto.
@@ -316,7 +316,7 @@ Proof.
   - destruct (get_dec L (counted l)) as [[blk A]|?].
     edestruct PIR2_nth; eauto; dcr.
     decide (length (IL.F.block_Z blk) = length Y).
-    case_eq (omap (Op.op_eval E) Y); intros.
+    case_eq (omap (Ops.op_eval E) Y); intros.
     + assert (omap (op_eval E') x = ⎣l0 ⎦).
       erewrite omap_agree_2; try eapply H; eauto using smap_length.
       intros. exploit (smap_spec _ EQ0); eauto. dcr. get_functional; subst.
@@ -329,7 +329,7 @@ Proof.
       eauto using PIR2_drop, vars_exist_update_list, defs_agree_update_list.
     + pno_step.
       pose proof (smap_spec _ EQ0).
-      assert (omap (Op.op_eval E) Y = Some vl).
+      assert (omap (Ops.op_eval E) Y = Some vl).
       erewrite omap_agree_2; eauto using smap_length.
       intros. eapply exp_idx_ok; eauto. edestruct H2; eauto; dcr.
       get_functional; subst; eauto. symmetry; eapply smap_length; eauto.

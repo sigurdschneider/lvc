@@ -36,7 +36,7 @@ Proof.
 Qed.
 
 Lemma cp_moreDefined ϱ D e
-  : Op.freeVars e[<=]D
+  : Ops.freeVars e[<=]D
     -> entails (map (cp_eqn ϱ) D) {EqnApx e (rename_op ϱ e)}.
 Proof.
   general induction e; simpl.
@@ -65,12 +65,12 @@ Qed.
 
 
 Lemma cp_moreDefinedArgs ϱ D Y
-  : list_union (List.map Op.freeVars Y) [<=]D
+  : list_union (List.map Ops.freeVars Y) [<=]D
     -> entails (map (cp_eqn ϱ) D) (list_EqnApx Y (List.map (rename_op ϱ) Y)).
 Proof.
   general induction Y; simpl.
   - eapply entails_empty.
-  - assert (Op.freeVars a ⊆ D). {
+  - assert (Ops.freeVars a ⊆ D). {
       rewrite <- H. eapply incl_list_union.
       - simpl; econstructor.
       - reflexivity.
@@ -197,8 +197,8 @@ Qed.
 
 Lemma lookup_set_rename_op_incl e ϱ (D:set var)
       (Incl:lookup_set ϱ D [<=] D)
-      (FV:Op.freeVars e [<=] D)
-  : Op.freeVars (rename_op ϱ e) [<=] D.
+      (FV:Ops.freeVars e [<=] D)
+  : Ops.freeVars (rename_op ϱ e) [<=] D.
 Proof.
   rewrite rename_op_freeVars; eauto.
   rewrite <- Incl. eapply lookup_set_incl; eauto.
@@ -207,8 +207,8 @@ Qed.
 
 Lemma lookup_set_rename_op_list_incl Y ϱ (D:set var)
       (Incl:lookup_set ϱ D [<=] D)
-      (FV:list_union (Op.freeVars ⊝ Y) [<=] D)
-  : list_union (Op.freeVars ⊝ rename_op ϱ ⊝ Y) ⊆ D.
+      (FV:list_union (Ops.freeVars ⊝ Y) [<=] D)
+  : list_union (Ops.freeVars ⊝ rename_op ϱ ⊝ Y) ⊆ D.
 Proof.
   rewrite rename_op_list_freeVars; eauto.
   rewrite <- Incl. eapply lookup_set_incl; eauto.

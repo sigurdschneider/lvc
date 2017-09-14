@@ -28,14 +28,14 @@ Inductive var_in_register
 
   | ViRReturn
       (e : op)
-    : Op.freeVars e ⊆ VD
+    : Ops.freeVars e ⊆ VD
       -> var_in_register VD (stmtReturn e)
 
   | ViRIf
       (e : op)
       (s : stmt)
       (t : stmt)
-    : Op.freeVars e ⊆ VD
+    : Ops.freeVars e ⊆ VD
       -> var_in_register VD s
       -> var_in_register VD t
       -> var_in_register VD (stmtIf e s t)

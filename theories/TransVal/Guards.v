@@ -66,14 +66,14 @@ Proof.
 Qed.
 
 Lemma freeVars_undef e
-  : freeVars (undef e) ⊆ Op.freeVars e.
+  : freeVars (undef e) ⊆ Ops.freeVars e.
 Proof.
   intros. general induction e; simpl in * |- *; eauto with cset.
   - unfold combine in *. repeat cases ; eauto with cset.
 Qed.
 
 Lemma freeVars_undefLift el
-  : freeVars (undefLift el) ⊆ list_union (List.map Op.freeVars el).
+  : freeVars (undefLift el) ⊆ list_union (List.map Ops.freeVars el).
 Proof.
   general induction el; simpl in * |- *; eauto.
   - rewrite list_union_start_swap.

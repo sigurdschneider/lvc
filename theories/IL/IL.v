@@ -43,9 +43,9 @@ Qed.
 Fixpoint freeVars (s:stmt) : set var :=
   match s with
     | stmtLet x e s0 => (freeVars s0 \ singleton x) ∪ Exp.freeVars e
-    | stmtIf e s1 s2 => freeVars s1 ∪ freeVars s2 ∪ Op.freeVars e
-    | stmtApp l Y => list_union (List.map Op.freeVars Y)
-    | stmtReturn e => Op.freeVars e
+    | stmtIf e s1 s2 => freeVars s1 ∪ freeVars s2 ∪ Ops.freeVars e
+    | stmtApp l Y => list_union (List.map Ops.freeVars Y)
+    | stmtReturn e => Ops.freeVars e
     | stmtFun s t =>
       list_union (List.map (fun f => (freeVars (snd f) \ of_list (fst f))) s) ∪ freeVars t
   end.
@@ -69,9 +69,9 @@ Fixpoint definedVars (s:stmt) : set var :=
 Fixpoint occurVars (s:stmt) : set var :=
   match s with
     | stmtLet x e s0 => {x; occurVars s0} ∪ Exp.freeVars e
-    | stmtIf e s1 s2 => occurVars s1 ∪ occurVars s2 ∪ Op.freeVars e
-    | stmtApp l Y => list_union (List.map Op.freeVars Y)
-    | stmtReturn e => Op.freeVars e
+    | stmtIf e s1 s2 => occurVars s1 ∪ occurVars s2 ∪ Ops.freeVars e
+    | stmtApp l Y => list_union (List.map Ops.freeVars Y)
+    | stmtReturn e => Ops.freeVars e
     | stmtFun s t =>
       list_union (List.map (fun f => (occurVars (snd f) ∪ of_list (fst f))) s) ∪ occurVars t
   end.

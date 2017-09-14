@@ -188,7 +188,7 @@ Qed.
 Lemma smt_eval_op D E E' e v
   : op_eval E e = Some v
     -> agree_on eq D E E'
-    -> Op.freeVars e ⊆ D
+    -> Ops.freeVars e ⊆ D
     -> smt_eval (to_total E') e = v.
 Proof.
   intros.
@@ -201,7 +201,7 @@ Lemma smt_eval_var D1 D2 E1 E2 E' x e v
     -> agree_on eq D1 (E1 [x <- Some v]) E'
     -> agree_on eq D2 E2 E'
     -> singleton x ⊆ D1
-    -> Op.freeVars e ⊆ D2
+    -> Ops.freeVars e ⊆ D2
     -> smt_eval (to_total E') (Var x) = smt_eval (to_total E') e.
 Proof.
   intros.
@@ -262,15 +262,15 @@ Qed.
 
 Fixpoint freeVars (s:smt) :=
 match s with
-| funcApp f x => list_union (List.map (Op.freeVars) x)
+| funcApp f x => list_union (List.map (Ops.freeVars) x)
 | smtAnd a b => freeVars a ∪ freeVars b
 | smtOr a b => freeVars a ∪ freeVars b
 | smtNeg a => freeVars a
-| ite c t f => freeVars t ∪ freeVars f ∪ Op.freeVars c
+| ite c t f => freeVars t ∪ freeVars f ∪ Ops.freeVars c
 | smtImp a b => freeVars a ∪ freeVars b
 | smtFalse => {}
 | smtTrue =>  {}
-|constr e1 e2 => Op.freeVars e1 ∪ Op.freeVars e2
+|constr e1 e2 => Ops.freeVars e1 ∪ Ops.freeVars e2
 end.
 
 Lemma models_agree F E E' s:
@@ -282,7 +282,7 @@ intros agree; general  induction s; simpl in *; try reflexivity.
 - rewrite (IHs1 F E E'), (IHs2 F E E'); eauto with cset. reflexivity.
 - rewrite (IHs1 F E E'), (IHs2 F E E'); eauto with cset. reflexivity.
 - rewrite (IHs F E E'); eauto with cset. reflexivity.
-- assert (agree_on eq (Op.freeVars o) E E') by eauto with cset.
+- assert (agree_on eq (Ops.freeVars o) E E') by eauto with cset.
   assert (op_eval (to_partial E) o = op_eval (to_partial E') o). {
     eapply op_eval_agree; symmetry; eauto.
     eapply agree_on_partial; eauto.
@@ -318,15 +318,15 @@ intros agree; general  induction s; simpl in *; try reflexivity.
       rewrite H; eauto.
       eapply agree_on_partial.
       simpl in agree.
-      eapply (agree_on_incl (bv:=Op.freeVars a)
-                            (lv:=list_union (Op.freeVars a ::
-                                                          List.map Op.freeVars l))); eauto.
+      eapply (agree_on_incl (bv:=Ops.freeVars a)
+                            (lv:=list_union (Ops.freeVars a ::
+                                                          List.map Ops.freeVars l))); eauto.
       cset_tac'; simpl.
       eapply list_union_start_swap.
       cset_tac. }
       { rewrite H. f_equal. eapply IHl; eauto.
-        eapply (agree_on_incl (bv:=list_union (List.map Op.freeVars l))
-                              (lv:=list_union (List.map Op.freeVars (a::l)))); eauto.
+        eapply (agree_on_incl (bv:=list_union (List.map Ops.freeVars l))
+                              (lv:=list_union (List.map Ops.freeVars (a::l)))); eauto.
         simpl in *. setoid_rewrite list_union_start_swap at 2. cset_tac.
       }
   + rewrite H.  split; eauto.

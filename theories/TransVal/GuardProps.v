@@ -43,7 +43,7 @@ Qed.
 
 (** Lemma 8 **)
 Lemma guard_models_impl_eval F E e
-  : defined_on (Op.freeVars e) E
+  : defined_on (Ops.freeVars e) E
     -> models F (to_total E) (undef e)
     -> exists v, op_eval E e = Some v.
 Proof.
@@ -65,7 +65,7 @@ Qed.
 
 (*  Lemma 8 lifted to lists**)
 Lemma guardlist_impl_eval F E el
-  : defined_on (list_union (List.map Op.freeVars el)) E
+  : defined_on (list_union (List.map Ops.freeVars el)) E
     -> models F (to_total E) (undefLift el)
     -> exists v, omap (op_eval E) el = Some v.
 Proof.
@@ -104,7 +104,7 @@ Qed.
 
 (** Lemma 11 in the Thesis **)
 Lemma undef_models F E e
-  : defined_on (Op.freeVars e) E
+  : defined_on (Ops.freeVars e) E
     -> op_eval E e = None
     -> ~ models F (to_total E) (undef e).
 Proof.
@@ -130,7 +130,7 @@ Proof.
 Qed.
 
 Lemma undefList_models F E el
-  : defined_on (list_union (List.map Op.freeVars el)) E
+  : defined_on (list_union (List.map Ops.freeVars el)) E
     -> omap (op_eval E) el = None
     -> ~ models F (to_total E) (undefLift el).
 Proof.
@@ -148,7 +148,7 @@ Proof.
 Qed.
 
 Lemma undef_vars_subset e:
-  freeVars (undef e) ⊆ Op.freeVars e.
+  freeVars (undef e) ⊆ Ops.freeVars e.
 Proof.
   cset_tac'.
   induction e; simpl in *; try isabsurd; eauto.

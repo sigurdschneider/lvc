@@ -56,7 +56,7 @@ Inductive renamedApart : stmt -> ann (set var * set var) -> Prop :=
       -> pe (getAnn an) ({x; D}, Ds)
       -> renamedApart (stmtLet x e s) (ann1 (D, D') an)
   | renamedApartIf  D D' Ds Dt e s t ans ant
-    : Op.freeVars e ⊆ D
+    : Ops.freeVars e ⊆ D
       -> disj Ds Dt
       -> Ds ∪ Dt [=] D'
       -> renamedApart s ans
@@ -65,11 +65,11 @@ Inductive renamedApart : stmt -> ann (set var * set var) -> Prop :=
       -> pe (getAnn ant) (D, Dt)
       -> renamedApart (stmtIf e s t) (ann2 (D, D') ans ant)
   | renamedApartRet D D' e
-    : Op.freeVars e ⊆ D
+    : Ops.freeVars e ⊆ D
       -> D' [=] ∅
       -> renamedApart (stmtReturn e) (ann0 (D, D'))
   | renamedApartGoto D D' f Y
-    : list_union (List.map Op.freeVars Y) ⊆ D
+    : list_union (List.map Ops.freeVars Y) ⊆ D
       -> D' [=] ∅
       -> renamedApart (stmtApp f Y) (ann0 (D, D'))
   | renamedApartLet D D' F t Dt ans ant

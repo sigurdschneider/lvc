@@ -21,17 +21,17 @@ Fixpoint reconstr_live
         ann1 ((getAnn lv_t) \ singleton x ∪ Exp.freeVars e ∪ G) lv_t
 
     | stmtReturn e, ann0 _
-      => ann0 (Op.freeVars e ∪ G)
+      => ann0 (Ops.freeVars e ∪ G)
 
     | stmtIf e t v, ann2 _ rm_t rm_v
       => let lv_t := reconstr_live Lv ZL ∅ t rm_t in
         let lv_v := reconstr_live Lv ZL ∅ v rm_v in
-        ann2 (getAnn lv_t ∪ getAnn lv_v ∪ Op.freeVars e ∪ G) lv_t lv_v
+        ann2 (getAnn lv_t ∪ getAnn lv_v ∪ Ops.freeVars e ∪ G) lv_t lv_v
 
     | stmtApp f Y, ann0 _
       => let blv := nth (counted f) Lv ∅ in
         let Z   := nth (counted f) ZL nil in
-        ann0 (list_union (Op.freeVars ⊝ Y) ∪ blv \ of_list Z ∪ G)
+        ann0 (list_union (Ops.freeVars ⊝ Y) ∪ blv \ of_list Z ∪ G)
 
     | stmtFun F t, annF _ rm_F rm_t
       => let rms := getAnn ⊝ rm_F in
@@ -170,15 +170,15 @@ Proof.
       unfold poLe; simpl. cset_tac.
   - eapply ann2_poLe; eauto with cset.
     rewrite IHLS1, IHLS2; eauto 20 with cset.
-    rewrite Op.freeVars_live; eauto.
+    rewrite Ops.freeVars_live; eauto.
     unfold poLe; simpl. cset_tac.
   - eapply ann0_poLe; eauto with cset.
     erewrite !get_nth; eauto.
     unfold poLe; simpl.
-    rewrite Op.freeVars_live_list; eauto.
+    rewrite Ops.freeVars_live_list; eauto.
     cset_tac.
   - eapply ann0_poLe; eauto with cset.
-    rewrite Op.freeVars_live; eauto.
+    rewrite Ops.freeVars_live; eauto.
     unfold poLe; simpl. cset_tac.
   - eapply annF_poLe; eauto with cset.
     + rewrite IHLS; eauto with cset.
@@ -203,7 +203,7 @@ Proof.
     + rewrite <- reconstr_live_G; eauto with cset.
   - econstructor; eauto with cset.
     + eapply live_op_sound_incl.
-      * eapply Op.live_freeVars.
+      * eapply Ops.live_freeVars.
       * clear. cset_tac.
   - econstructor; simpl; eauto.
     + erewrite !get_nth; eauto.
@@ -211,12 +211,12 @@ Proof.
     + intros.
       erewrite !get_nth; eauto.
       eapply live_op_sound_incl.
-      * eapply Op.live_freeVars.
+      * eapply Ops.live_freeVars.
       * do 2 eapply incl_union_left.
         eapply incl_list_union; eauto using map_get_1.
   - econstructor; eauto.
     + eapply live_op_sound_incl.
-      * eapply Op.live_freeVars.
+      * eapply Ops.live_freeVars.
       * clear. cset_tac.
   - econstructor; intros; inv_get; eauto with len.
     + eapply live_sound_monotone.

@@ -28,8 +28,8 @@ Defined.
 
 Definition freeVars (e:exp) :=
   match e with
-  | Operation e => Op.freeVars e
-  | Call f Y => list_union (List.map Op.freeVars Y)
+  | Operation e => Ops.freeVars e
+  | Call f Y => list_union (List.map Ops.freeVars Y)
   end.
 
 (** ** Renaming *)
@@ -129,7 +129,7 @@ Qed.
 Lemma freeVars_live e lv
   : live_exp_sound e lv -> freeVars e ⊆ lv.
 Proof.
-  intros. general induction H; simpl; eauto using Op.freeVars_live, Op.freeVars_live_list.
+  intros. general induction H; simpl; eauto using Ops.freeVars_live, Ops.freeVars_live_list.
 Qed.
 
 Lemma freeVars_live_list Y lv
@@ -151,9 +151,9 @@ Lemma live_freeVars
   : forall e, live_exp_sound e (freeVars e).
 Proof.
   intros. general induction e; simpl; econstructor;
-            eauto using Op.live_freeVars with cset.
+            eauto using Ops.live_freeVars with cset.
   intros. eapply live_op_sound_incl.
-  eapply Op.live_freeVars.
+  eapply Ops.live_freeVars.
   eapply incl_list_union; eauto using map_get_1.
 Qed.
 
@@ -170,7 +170,7 @@ Inductive alpha_exp : env var -> env var -> exp -> exp -> Prop :=
 
 Lemma alpha_exp_rename_injective
   : forall e ϱ ϱ',
-    inverse_on (Exp.freeVars e) ϱ ϱ'
+    inverse_on (freeVars e) ϱ ϱ'
     -> alpha_exp ϱ ϱ' e (rename_exp ϱ e).
 Proof.
   intros. induction e; simpl; eauto using alpha_exp, alpha_op_rename_injective.
@@ -206,7 +206,7 @@ Qed.
 Unset Regular Subst Tactic.
 
 Lemma alpha_exp_inverse_on
-  : forall ϱ ϱ' s t, alpha_exp ϱ ϱ' s t -> inverse_on (Exp.freeVars s) ϱ ϱ'.
+  : forall ϱ ϱ' s t, alpha_exp ϱ ϱ' s t -> inverse_on (freeVars s) ϱ ϱ'.
 Proof.
   intros. general induction H; simpl; eauto using alpha_op_inverse_on.
   + eapply inverse_on_list_union; eauto.
@@ -216,8 +216,8 @@ Qed.
 Lemma alpha_exp_agree_on_morph
   : forall f g ϱ ϱ' s t,
     alpha_exp ϱ ϱ' s t
-    -> agree_on _eq (lookup_set ϱ (Exp.freeVars s)) g ϱ'
-    -> agree_on _eq (Exp.freeVars s) f ϱ
+    -> agree_on _eq (lookup_set ϱ (freeVars s)) g ϱ'
+    -> agree_on _eq (freeVars s) f ϱ
     -> alpha_exp f g s t.
 Proof.
   intros.
@@ -251,7 +251,7 @@ Proof.
 Qed.
 
 Lemma freeVars_renameExp ϱ e
-  : Exp.freeVars (rename_exp ϱ e) [=] lookup_set ϱ (Exp.freeVars e).
+  : freeVars (rename_exp ϱ e) [=] lookup_set ϱ (freeVars e).
 Proof.
   general induction e; simpl;
     eauto using freeVars_rename_op_list, freeVars_renameOp.

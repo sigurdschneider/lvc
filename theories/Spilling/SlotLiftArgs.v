@@ -15,7 +15,7 @@ Definition choose_y (slot : var -> var)
 
 
 Lemma choose_y_freeVars slot X x RM y
-  : Op.freeVars (choose_y slot X x RM y) ⊆ {y; singleton (slot y)}.
+  : Ops.freeVars (choose_y slot X x RM y) ⊆ {y; singleton (slot y)}.
 Proof.
   unfold choose_y; repeat cases; simpl; cset_tac.
 Qed.
@@ -103,9 +103,9 @@ Lemma lifted_args_in_RL_slot_SpM
       (slot : var -> var)
       (H5 : forall (n : nat) (y : op), get Y n y -> isVar y)
       (Sp L K M' R' : ⦃var⦄)
-      (Cover : list_union (Op.freeVars ⊝ Y) ⊆ R' ∪ M')
+      (Cover : list_union (Ops.freeVars ⊝ Y) ⊆ R' ∪ M')
       (M'_incl: M' ⊆ Sp ∪ M) (R'_incl : R' ⊆ (R \ K ∪ L)) Z
-  : list_union (Op.freeVars ⊝ slot_lift_args slot RM (R',M') Y Z) ⊆ R ∪ L ∪ map slot (Sp ∪ M) .
+  : list_union (Ops.freeVars ⊝ slot_lift_args slot RM (R',M') Y Z) ⊆ R ∪ L ∪ map slot (Sp ∪ M) .
 Proof.
   apply list_union_incl; [|eauto with cset].
   intros; inv_get.

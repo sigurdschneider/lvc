@@ -17,9 +17,9 @@ Instance NStmt_size : Size nstmt. gen_Size. Defined.
 Fixpoint freeVars (s:nstmt) : set var :=
   match s with
     | nstmtLet x e s0 => (freeVars s0 \ singleton x) ∪ Exp.freeVars e
-    | nstmtIf e s1 s2 => freeVars s1 ∪ freeVars s2 ∪ Op.freeVars e
-    | nstmtApp l Y => list_union (List.map Op.freeVars Y)
-    | nstmtReturn e => Op.freeVars e
+    | nstmtIf e s1 s2 => freeVars s1 ∪ freeVars s2 ∪ Ops.freeVars e
+    | nstmtApp l Y => list_union (List.map Ops.freeVars Y)
+    | nstmtReturn e => Ops.freeVars e
     | nstmtFun F s2 =>
       list_union (List.map (fun f => (freeVars (snd f) \ of_list (snd (fst f)))) F)
                  ∪ freeVars s2

@@ -47,14 +47,14 @@ let rec print_unop oc op =
 
 let rec print_sexpr oc has_slots ids e =
   match e with
-    | Op.Con x -> output_string oc (string_of_int (Z.to_int x))
-    | Op.Var x -> print_var oc has_slots ids x
-    | Op.UnOp (op, e1) ->
+    | Ops.Con x -> output_string oc (string_of_int (Z.to_int x))
+    | Ops.Var x -> print_var oc has_slots ids x
+    | Ops.UnOp (op, e1) ->
        output_string oc "(";
        print_unop oc op; output_string oc " ";
        print_sexpr oc has_slots ids e1;
        output_string oc ")"
-    | Op.BinOp (op, e1, e2) ->
+    | Ops.BinOp (op, e1, e2) ->
        output_string oc "(";
        print_sexpr oc has_slots ids e1;
        output_string oc " ";
