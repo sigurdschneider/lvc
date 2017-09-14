@@ -191,7 +191,7 @@ theories/Infra/Util.v
 theories/Infra/VarsUpTo.v
 theories/Infra/WithTop.v
 theories/Isa/BitVector.v
-theories/Isa/Op.v
+theories/Isa/Ops.v
 theories/Isa/OrderedBitVector.v
 theories/Isa/Val.v
 theories/LinearWhile/WhileToIL.v
