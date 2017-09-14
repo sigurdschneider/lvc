@@ -8,6 +8,10 @@ Require AnalysisBackward AnnotationLattice LivenessAnalysis NaturalRep InfiniteP
 Require ToLinear LinearToAsm.
 Require compcert.driver.Compiler.
 Require compcert.lib.Floats.
+Require compcert.common.Values.
+Require compcert.cfrontend.Ctyping.
+
+Load extractionMachdep.
 
 Definition foo := True.
 
@@ -32,6 +36,9 @@ Extraction Inline NaturalRep.NaturalRepresentationPositive
 
 Extraction Implicit SafeFirst.safe_first [ H H0 ].
 
+Extract Constant Compopts.debug => "fun _ -> false".
+Extract Constant Compiler.print_Mach => "PrintMach.print_if".
+
 Cd "compiler/extraction".
 
 Separate Extraction
@@ -52,6 +59,48 @@ Separate Extraction
          Integers.Ptrofs.signed
          Floats.Float.of_bits
          Floats.Float.to_bits
+         Floats.Float.from_parsed
          Floats.Float32.of_bits
          Floats.Float32.to_bits
+         Floats.Float32.from_parsed
+         Memdata.size_chunk
+         Ctypes.composite_env
+         Ctypes.noattr
+         compcert.common.Values.Vzero
+         Csyntax.expr
+         Csyntax.statement
+         Csyntax.function
+         Csyntax.type_of_function
+         Initializers.transl_init
+         Ctypes.type_int32s
+         Ctypes.composite_definition
+         Ctypes.typlist_of_typelist
+         Ctypes.signature_of_type
+         Ctyping.size_t
+         Ctyping.econst_single
+         Ctyping.econst_int
+         Ctyping.econst_long
+         Ctyping.econst_float
+         Ctyping.esizeof
+         Ctyping.ealignof
+         Ctyping.retype_expr
+         Ctyping.retype_stmt
+         Ctyping.eunop
+         Ctyping.ebinop
+         Ctyping.eaddrof
+         Ctyping.epreincr
+         Ctyping.epredecr
+         Ctyping.epostincr
+         Ctyping.epostdecr
+         Ctyping.evalof
+         Ctypes.fundef
+         Ctypes.make_program
+         Ctypes.build_composite_env
+         Conventions1.callee_save_type Conventions1.is_float_reg
+         Conventions1.int_caller_save_regs Conventions1.float_caller_save_regs
+         Conventions1.int_callee_save_regs Conventions1.float_callee_save_regs
+         Conventions1.dummy_int_reg Conventions1.dummy_float_reg
+         powerpc.Op.condition
+         powerpc.Asmgen.transl_cond
+         powerpc.Asmgen.transf_program
 .

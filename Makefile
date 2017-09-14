@@ -43,7 +43,7 @@ CompCert/Makefile.config:
 	-cd CompCert && ./configure $(COMPCERTCFG) -ignore-coq-version
 
 compcert: CompCert/Makefile.config
-	-+$(MAKE) -C CompCert
+	-+$(MAKE) -C CompCert extraction
 
 dep: compcert
 	+$(MAKE) -C paco all TIMECMD=

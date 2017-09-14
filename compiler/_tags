@@ -6,4 +6,5 @@
 <CompCert/debug> : include
 <CompCert/cparser> : include
 <CompCert/common> : include
-<*> : use_str
+<CompCert/cfrontend> : include
+<*> : use_str, use_unix

@@ -111,7 +111,7 @@ theories/IL/Annotation.v
 theories/IL/AnnP.v
 theories/IL/AppExpFree.v
 theories/IL/BlockType.v
-theories/IL/Env.v
+theories/IL/Envs.v
 theories/IL/Events.v
 theories/IL/Exp.v
 theories/IL/ILDB.v
