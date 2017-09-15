@@ -1,6 +1,6 @@
 Require Import Coqlib Errors AST Integers Linear.
 Require Import Bounds Conventions Locations Stacklayout.
-Require Import IL.
+Require Import IL Sawtooth.
 Require Import InfinitePartition.
 Require Import SimI.
 
@@ -8,6 +8,43 @@ Require Import SimI.
 Require Import Smallstep Globalenvs common.Events.
 
 Set Implicit Arguments.
+
+
+
+Fixpoint mkVars X (L:list X) (f:var) : var * list var :=
+  match L with
+  | nil => (f, nil)
+  | _::L => let f' := Pos.succ f in
+           let (f'', xl) := mkVars L f' in
+           (f'', f::xl)
+  end.
+
+Lemma mkVars_length X (L:list X) f
+  : ❬snd (mkVars L f)❭ = ❬L❭.
+Proof.
+  general induction L; simpl; repeat let_pair_case_eq; eauto; subst; simpl.
+  rewrite IHL; eauto.
+Qed.
+
+Smpl Add match goal with
+         | [ H : context [ ❬snd (@mkVars ?X ?L ?f)❭ ] |- _ ]
+           => setoid_rewrite (@mkVars_length X L f) in H
+         | [ |- context [ ❬snd (@mkVars ?X ?L ?f)❭ ] ]
+           => setoid_rewrite (@mkVars_length X L f)
+         end : len.
+
+(*
+Lemma mkVars_get_inv X (L:list X) f n i
+  :  get (snd (mkVars L f)) n i
+     -> i = (f+Pos.of_nat n)%positive.
+Proof.
+  intros GET.
+  general induction L; simpl in *.
+  - isabsurd.
+  - revert GET; let_pair_case_eq; simpl_pair_eqs; subst; simpl.
+    intros GET. inv GET.
+Qed.
+ *)
 
 Inductive linear_step_adapter (G:Globalenvs.Genv.t fundef unit)
   :  Linear.state -> Events.event -> Linear.state -> Prop :=
@@ -353,13 +390,6 @@ Section ToLinear.
 
   Definition ret_reg_name := 2%positive.
 
-  Fixpoint mkVars X (L:list X) (f:var) : var * list var :=
-    match L with
-    | nil => (f, nil)
-    | _::L => let f' := Pos.succ f in
-             let (f'', xl) := mkVars L f' in
-             (f'', f::xl)
-    end.
 
 
   Definition toLinearFun
@@ -400,11 +430,11 @@ Section ToLinear.
     | stmtReturn e =>
       (translateLetOp ret_reg_name e ++ Lreturn::nil, l)
     | stmtFun F t =>
-      let (l', ΛF) := mkVars F l in
-      let Λ' := Λ ++ ΛF in
+      let (l', ΛF) := mkVars F (Pos.succ l) in
+      let Λ' := ΛF ++ Λ in
       let (ct, l'') := toLinear Λ' l' t in
       let (cF, l''') := toLinearFun toLinear Λ' l'' F ΛF in
-      (ct ++ cF, l'')
+      (Llabel l :: ct ++ cF, l'')
     end.
 
 
@@ -443,11 +473,55 @@ Proof.
   cases; eauto.
 Qed.
 
+Inductive isLinearizable : stmt->Prop :=
+| IsLinLet x e s
+    (LinIH:isLinearizable s)
+    (SimplLet:simplLet x e)
+    : isLinearizable (stmtLet x (Operation e) s)
+| IsLinIf e s t
+          (SimplCond:simplCond e)
+          (LinIH1:isLinearizable s)
+          (LinIH2:isLinearizable t)
+  : isLinearizable (stmtIf e s t)
+| IsLinApp l Y :
+   isLinearizable (stmtApp l Y)
+| IsLinExp e :
+    isLinearizable (stmtReturn e)
+| IsLinCall F t
+  : (forall n Zs, get F n Zs -> isLinearizable (snd Zs))
+    -> isLinearizable t
+    -> isLinearizable (stmtFun F t).
+
+Inductive noParams : stmt->Prop :=
+| NoParamsLet
+    x e s
+    (NoParamsIH:noParams s)
+    : noParams (stmtLet x e s)
+| NoParamsIf
+    e s t
+    (NoParamsIH1:noParams s)
+    (NoParamsIH2:noParams t)
+  : noParams (stmtIf e s t)
+| NoParamsApp l :
+   noParams (stmtApp l nil)
+| NoParamsExp e :
+    noParams (stmtReturn e)
+| NoParamsCall F t
+  (NoParamsIHF:forall n Zs, get F n Zs -> noParams (snd Zs))
+  (NoParamsF:forall n Zs, get F n Zs -> fst Zs = nil)
+  (NoParamsIHt:noParams t)
+  : noParams (stmtFun F t).
+
+
+
 Lemma toLinear_correct r (L:I.labenv) I l (V:onv val) s bv vv rs m G C C'
       (MR:mrel V rs)
       (ML:not_contains_label C l)
       (CODE:fn_code bv = C ++ (fst (toLinear I l s)) ++ C')
       (ILEN:❬I❭=❬L❭)
+      (IsLin:isLinearizable s)
+      (NoParams:noParams s)
+      (ST:sawtooth L)
       (IINV:forall n i b,
           get L n b -> get I n i ->
           exists C C' l, fn_code bv =
@@ -457,35 +531,32 @@ Lemma toLinear_correct r (L:I.labenv) I l (V:onv val) s bv vv rs m G C C'
   : @sim _ _ Linear.state (LinearStateType G) r Sim (L, V, s)
          ((State nil bv vv (fst (toLinear I l s) ++ C') rs m):Linear.state).
 Proof.
-  revert C C' L I l V s vv rs m r MR CODE ML ILEN IINV. pcofix CIH; intros.
-  destruct s; simpl in *.
-  - cases.
-    + revert CODE. let_pair_case_eq. simpl_pair_eqs. subst. simpl.
-      rewrite <- !app_assoc. intros.
-      eapply  translateLet_correct; eauto.
-      * admit.
-      * intros.
-        right.
-        simpl in *.
-        rewrite app_assoc in CODE. eauto.
-        eapply CIH; eauto.
-        admit.
-    + admit.
+  revert C C' L I l V s vv rs m r MR CODE ML ILEN IINV IsLin NoParams ST.
+  pcofix CIH; intros.
+  destruct s; invt isLinearizable; invt noParams; simpl in *.
+  - revert CODE. let_pair_case_eq. simpl_pair_eqs. subst. simpl.
+    rewrite <- !app_assoc. intros.
+    eapply  translateLet_correct; eauto.
+    * intros.
+      right.
+      simpl in *.
+      rewrite app_assoc in CODE. eauto.
+      eapply CIH; eauto.
+      admit.
   - revert CODE.
     repeat (let_pair_case_eq; simpl_pair_eqs); subst. simpl. intros.
     rewrite <- !app_assoc in *.
     case_eq (op_eval V e); intros.
     + case_eq (val2bool v); intros.
-      * assert (simplCond e) by admit.
-        inv H1. simpl.
+      * invt simplCond. simpl.
         pfold.
         econstructor 1; try eapply plus2O.
         -- single_step.
         -- reflexivity.
         -- econstructor. econstructor; only 2: reflexivity.
            ++ simpl. simpl in *.
-             exploit MR; eauto. cases in H2. unfold Locmap.get in H2.
-             rewrite H2. simpl. admit.
+             exploit MR as LMEQ; eauto. cases in LMEQ. unfold Locmap.get in LMEQ.
+             rewrite LMEQ. simpl. admit.
            ++ rewrite CODE. rewrite find_label_app; eauto.
              simpl.
              rewrite find_label_app. simpl. cases. reflexivity.
@@ -504,10 +575,10 @@ Proof.
         -- admit.
       * admit.
     + pno_step_left.
-  - destruct (get_dec L (counted l0)) as [[[Zb sb nb]]|]; [| pno_step_left].
-    + decide (length Zb = length Y); [|pno_step_left].
-      assert (Y=nil) by admit. subst.
-      destruct Zb; simpl in *; clear_trivial_eqs.
+  - destruct (get_dec L (counted l0)) as [[? ?]|]; [| pno_step_left].
+    + decide (length (block_Z x) = ❬@nil var❭); [|pno_step_left].
+      case_eq (block_Z x); simpl in *;
+        [|intros ? ? EQ; rewrite EQ in *; clear_trivial_eqs].
       inv_get. erewrite get_nth; eauto.
       edestruct IINV as [? [? [? ?]]]; eauto. simpl in *; dcr.
       pfold. eapply SimSilent; try eapply plus2O; eauto.
@@ -527,16 +598,33 @@ Proof.
          ++ intros; inv_get.
            edestruct IINV as [? [? [? [? ?]]]]; eauto.
            do 3 eexists. rewrite H4. split.
-           rewrite drop_drop. (* the old sawtooth invariant *)
+           rewrite drop_drop.
+           rewrite sawtooth_drop_eq.
+           (* the old sawtooth invariant *)
+
            admit.  eauto.
+         ++
   - admit.
   - revert CODE; repeat let_pair_case_eq; subst; simpl; intros.
-
-    (*pfold. econstructor 4; [| eapply star2_refl | | stuck2 | ]; swap 1 2.
-    eapply star2_silent; try eapply star2_refl.
-    destruct e; simpl; econstructor.
-    econstructor.*)
-    admit.
+    pfold. econstructor; try eapply plus2O; eauto.
+    single_step.
+    econstructor; econstructor; eauto.
+    right.
+    rewrite <- app_assoc in *.
+    eapply CIH; eauto.
+    + rewrite CODE. rewrite cons_app. rewrite app_assoc. reflexivity.
+    + admit.
+    + len_simpl. rewrite app_length. len_simpl. eauto.
+    + intros.
+      eapply get_app_cases in H as [?|[? ?]]; inv_get.
+      * rewrite get_app_lt in H0; [|eauto with len].
+        rewrite CODE. admit.
+      * len_simpl.
+        edestruct IINV as [? [? [? [? ?]]]]; eauto.
+        setoid_rewrite H3.
+        rewrite drop_app_gen; len_simpl.
+        -- admit.
+        -- admit.
 Admitted.
 
 

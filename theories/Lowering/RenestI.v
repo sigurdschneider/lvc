@@ -12,22 +12,16 @@ Unset Printing Records.
 *)
 
 Definition egalize_funs
-           (egalize:list var -> var -> stmt -> stmt * var * list (var * params * stmt))
+           (egalize:list var -> var -> stmt -> nstmt * var * list (var * params * nstmt))
            (D:list var)
            := fix r (D':list var) (f:var) (F:list (params * stmt)) {struct F} :=
                match F, D' with
                | Zs::F, g::D' =>
-                 let (s, f', F) := egalize D f (snd Zs) in
-                 let (f', F') := r D' f'
-
-               | _, _ => nil
-                     end.
-
-  fold_right (fun f nF' =>
-                let '(n, F1, F2) := nF' in
-                let (s, F'') := egalize D' n (snd f) in
-                let n' := n + length F'' in
-                (n', (fst f, s)::F1, F2 ++ F'')) (n, nil, nil) F.
+                 let '(s, f', Fs) := egalize D f (snd Zs) in
+                 let (f'', F') := r D' f' F in
+                 (f'', (g, fst Zs, s)::Fs++F')
+               | _, _ => (f, nil)
+               end.
 
 Fixpoint mkVars X (L:list X) (f:var) : var * list var :=
   match L with
@@ -37,85 +31,24 @@ Fixpoint mkVars X (L:list X) (f:var) : var * list var :=
            (f'', f::xl)
   end.
 
-Fixpoint egalize (D:list var) (f:var) (s:stmt) : nstmt * var * list (var * params * stmt) :=
+Fixpoint egalize (D:list var) (f:var) (s:stmt) : nstmt * var * list (var * params * nstmt) :=
   match s with
     | stmtLet x e s =>
-      let (s', f', F) := egalize D f s in
+      let '(s', f', F) := egalize D f s in
       (nstmtLet x e s', f', F)
     | stmtIf x s1 s2 =>
-      let (s1', f1, F1) := egalize D f s1 in
-      let (s2', f2, F2) := egalize D f1 s2 in
+      let '(s1', f1, F1) := egalize D f s1 in
+      let '(s2', f2, F2) := egalize D f1 s2 in
       (nstmtIf x s1' s2', f2, F1 ++ F2)
     | stmtApp l Y => (nstmtApp (nth (counted l) D default_var) Y, f, nil)
     | stmtReturn x => (nstmtReturn x, f, nil)
     | stmtFun F s =>
       (* entries for definitions in F: they are put to the bottom of the stack *)
-      let (f', D') := mkVars F f in
-      let '(n', F1) := egalize_funs egalize  F in
-      let (s', F'') := egalize D' n' s in
-      (s', F1 ++ F'')
+      let (f', D') := mkVars F (Pos.succ f) in
+      let '(s', f'', F'') := egalize D' f' s in
+      let '(f''', F1) := egalize_funs egalize (D' ++ D) D' f'' F in
+      (s', f''', F'' ++ F1)
   end.
-
-Lemma egalize_funs_length1 f D n F
-      : length (snd (fst (egalize_funs f D n F))) = length F.
-Proof.
-  induction F; intros; simpl; eauto.
-  erewrite <- IHF. unfold egalize_funs.
-  repeat let_pair_case_eq; subst; simpl.
-  repeat f_equal.
-Qed.
-
-Lemma egalize_funs_length2 f D n F
-      : length (snd (egalize_funs f  D n F)) + n = fst (fst (egalize_funs f  D n F)).
-Proof.
-  revert n. induction F; intros; simpl; eauto.
-  repeat let_pair_case_eq; subst; simpl.
-  rewrite app_length. rewrite <- IHF. omega.
-Qed.
-
-Lemma egalize_funs_get F f Zb sb n D s p
-: get F f (Zb, sb)
--> get (snd (fst (egalize_funs egalize D n F))) f (p, s)
--> let nF := egalize_funs egalize D n (drop (f+1) F) in
-    fst (egalize D (fst (fst nF)) sb) = s /\ p = Zb.
-Proof.
-  intros GetF GetE nF.
-  general induction F.
-  - simpl in *. subst nF. inv GetF.
-    + simpl in *.
-      repeat let_case_eq. subst. simpl in *. inv GetE. rewrite eq1; eauto.
-    + inv GetE. simpl. eapply IHF; eauto.
-      repeat let_case_eq; subst; simpl in *; eauto.
-      inv H; eauto.
-Qed.
-
-Lemma egalize_funs_get2 D n' F L' f Zb sb
-  : get F f (Zb, sb)
-    -> exists L'',
-      let h := egalize_funs egalize D n' in
-      drop (length (snd (h (drop (f + 1) F))))
-           (mapi_impl I.mkBlock n' (snd (h F))
-                      ++ L') =
-      mapi_impl I.mkBlock (length (snd (h (drop (f + 1) F))) + n')
-                (snd (egalize D
-                              (length (snd (h (drop (f + 1) F))) + n') sb)) ++
-                L''.
-Proof.
-  intros. general induction f.
-  - simpl in *.
-    repeat let_pair_case_eq; subst; simpl.
-    rewrite <- egalize_funs_length2.
-    rewrite mapi_app.
-    simpl in *.
-    rewrite <- app_assoc.
-    erewrite (drop_app_eq). eexists. rewrite Plus.plus_comm. reflexivity.
-    rewrite mapi_impl_length; eauto.
-  - inv H; simpl in *.
-    repeat let_pair_case_eq; subst; simpl.
-    edestruct (IHf D) with (n':=n'); eauto.
-    eexists. rewrite mapi_app. rewrite <- app_assoc.
-    eapply H0.
-Qed.
 
 Definition indexwise_r t (r:irel) A (PR:ProofRelationI A) AL' F AL L L' :=
   forall n n' Z s Z' s' a i,
