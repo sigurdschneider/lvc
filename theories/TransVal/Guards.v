@@ -26,7 +26,9 @@ Fixpoint undef e :=
   | BinOp op a b
     => combine (combine (undef a) (undef b))
               (if [op = BinOpDiv]
-               then smtNeg (constr b (Con val_zero))
+               then smtAnd (smtNeg (constr b (Con Integers.Int.zero)))
+                           (smtNeg (smtAnd (constr a (Con (Integers.Int.repr Integers.Int.min_signed)))
+                                           (constr b (Con Integers.Int.mone))))
                else smtTrue)
   | UnOp n a => undef a
   | Con v => smtTrue
@@ -69,7 +71,19 @@ Lemma freeVars_undef e
   : freeVars (undef e) ⊆ Ops.freeVars e.
 Proof.
   intros. general induction e; simpl in * |- *; eauto with cset.
-  - unfold combine in *. repeat cases ; eauto with cset.
+  - unfold combine in *.
+    repeat cases; simpl;
+      only 1: repeat cases in COND.
+    + cset_tac.
+    + cset_tac.
+    + cset_tac.
+    + cset_tac.
+    + cset_tac.
+    + cset_tac.
+    + cset_tac.
+    + cset_tac.
+    + cset_tac.
+    + cset_tac.
 Qed.
 
 Lemma freeVars_undefLift el

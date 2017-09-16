@@ -22,9 +22,16 @@ intros. general induction e; simpl in *; eauto.
 - monad_inv H; cases.
    + repeat( erewrite models_combine; simpl).
      split; try split; intros; eauto.
-     unfold smt_eval in H; simpl in H.
-     erewrite !op_eval_partial_total in H; simpl; eauto.
-     eapply (binop_eval_div_zero x) in H; eauto.
+     * unfold smt_eval in H; simpl in H.
+       erewrite !op_eval_partial_total in H; simpl; eauto.
+       assert (binop_eval BinOpDiv x x0 = None).
+       eapply (binop_eval_div_zero x); eauto. congruence.
+     * dcr.
+       unfold smt_eval in H0; simpl in H0.
+       unfold smt_eval in H1; simpl in H1.
+       erewrite !op_eval_partial_total in *; simpl; eauto.
+       assert (binop_eval BinOpDiv x x0 = None).
+       eapply (binop_eval_div_zero x); eauto. congruence.
    + erewrite models_combine; simpl; erewrite models_combine; simpl.
      split; try split; eauto.
 Qed.
@@ -56,10 +63,16 @@ Proof.
     edestruct (IHe2 F); eauto using defined_on_incl with cset.
     rewrite H1, H4; simpl.
     cases in H2; simpl in H2.
-    + decide (x0 = val_zero).
-      * exfalso. eapply H2. unfold smt_eval; simpl.
-        erewrite op_eval_partial_total; eauto.
+    + dcr. decide (x0 = val_zero \/ x = Integers.Int.repr Integers.Int.min_signed
+                   /\ x0 = Integers.Int.mone).
+      * exfalso. destruct o; dcr.
+        -- eapply H5. unfold smt_eval; simpl.
+           erewrite !op_eval_partial_total; eauto.
+        -- eapply H6.
+           unfold smt_eval; simpl.
+           erewrite !op_eval_partial_total; eauto.
       * eapply binop_eval_div_nonzero; eauto.
+        revert n. clear_all. cset_tac.
    + eapply binop_eval_not_div; eauto.
 Qed.
 
@@ -122,9 +135,16 @@ Proof.
       * eauto using defined_on_incl with cset.
       * rewrite H4, H5 in *; simpl in *.
         cases in H3; simpl in H3.
-        -- eapply H3.
-           unfold smt_eval; erewrite op_eval_partial_total; simpl; eauto.
-           eapply binop_eval_div_zero in H0; subst; eauto.
+        -- dcr. decide (x = val_zero \/ x0 = Integers.Int.repr Integers.Int.min_signed
+                   /\ x = Integers.Int.mone).
+           ++ exfalso. destruct o; dcr.
+             ** eapply H6. unfold smt_eval; simpl.
+                erewrite !op_eval_partial_total; eauto.
+             ** eapply H7.
+                unfold smt_eval; simpl.
+                erewrite !op_eval_partial_total; eauto.
+           ++ edestruct binop_eval_div_nonzero; eauto.
+             revert n. clear_all. cset_tac. congruence.
         -- edestruct binop_eval_not_div in H0; eauto.
            rewrite H6 in H0; congruence.
 Qed.

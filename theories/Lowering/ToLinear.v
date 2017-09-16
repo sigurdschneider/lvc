@@ -1,6 +1,6 @@
 Require Import Coqlib Errors AST Integers Linear.
 Require Import Bounds Conventions Locations Stacklayout.
-Require Import IL Sawtooth.
+Require Import IL Sawtooth SmallStepRelations.
 Require Import InfinitePartition.
 Require Import SimI.
 
@@ -221,19 +221,20 @@ Section ToLinear.
     | _ => R31 (* *)
     end.
 
+
+  Definition isReg x := Even.even_pos_fast x.
+
   Inductive simplOp : op -> Prop :=
   | SCon v : simplOp (Con v)
   | SVar x : simplOp (Var x)
-  | SNeg x : simplOp (UnOp UnOpNeg (Var x))
-  | SBinOp bop x y : simplOp (BinOp bop (Var x) (Var y))
+  | SNeg x (RGa:isReg x) :  simplOp (UnOp UnOpNeg (Var x))
+  | SBinOp bop x y (RGa:isReg x) (RGb:isReg y) : simplOp (BinOp bop (Var x) (Var y))
   .
 
   Definition simplExp e := match e with
                               | Operation e' => simplOp e'
                               | _ => False
                               end.
-
-  Definition isReg x := Even.even_pos_fast x.
 
   Inductive simplLet x : op -> Prop :=
   | SimpleOp e (RG:isReg x) (SO:simplOp e) : simplLet x e
@@ -248,17 +249,16 @@ Section ToLinear.
      | UnOp o (Var y) =>
        match o with
        | UnOpToBool => nil
-       | UnOpNeg => Lop Op.Onot (toReg y :: nil) r::nil
+       | UnOpNeg => Lop (Op.Ocmp (Op.Ccompimm Ceq Int.zero)) (toReg y ::  nil) r::nil
        end
      | BinOp o (Var y1) (Var y2) =>
-       match o with
-       | BinOpAdd => Lop Op.Oadd
-       | BinOpSub => Lop Op.Osub
-       | BinOpMul => Lop Op.Omul
-       | BinOpDiv => Lop Op.Odiv
-       | BinOpEq  => (fun _ _ => dummyinstr)
-       (*PROBLEM! there is only Oxor & Onot: we 2 instructions here.*)
-       | BinOpLt  => Lop (Op.Ocmp (Op.Ccomp Clt))
+       Lop match o with
+       | BinOpAdd => Op.Oadd
+       | BinOpSub => Op.Osub
+       | BinOpMul => Op.Omul
+       | BinOpDiv => Op.Odiv
+       | BinOpEq  => (Op.Ocmp (Op.Ccomp Ceq))
+       | BinOpLt  => (Op.Ocmp (Op.Ccomp Clt))
        end (toReg y1 :: toReg y2 :: nil) r::nil
      | Var y =>
        match isReg x, isReg y with
@@ -322,10 +322,91 @@ Section ToLinear.
     unfold Locmap.get, Locmap.set; repeat cases; eauto.
   Qed.
 
+  Lemma locmap_get_set_SS v rs s y
+    : Locmap.get (S s y Tint) (Locmap.set (S s y Tint) (Values.Vint v) rs) = Values.Vint v.
+  Proof.
+    unfold Locmap.get, Locmap.set; repeat cases; eauto.
+  Qed.
+
   Local Hint Extern 1 =>
   match goal with
   | [ H : false = ?x, I : Is_true ?x |- _ ] => exfalso; rewrite <- H in I; inv I
   end.
+
+  Lemma translateLet_step (G:Genv.t fundef unit) V x e bv vv l rs m (SM:simplLet x e)
+         (MR:mrel V rs) v
+         (EV:op_eval V e = Some v)
+    :  plus2 (@StateType.step _ (LinearStateType G))
+             (State nil bv vv (translateLetOp x e ++ l) rs m)
+             nil
+             (State nil bv vv l (Locmap.set (if [isReg x] then R (toReg x) else
+                                               S Local (toSlot x) Tint)
+                                            (Values.Vint v) rs) m).
+  Proof.
+    unfold translateLetOp.
+    inv SM; simpl.
+    - inv SO; cases; only 2: repeat cases; simpl in *;
+        try monad_inv EV;
+        repeat match goal with
+               | [ H: V ?x = Some ?v' |- _ ] => eapply MR in H; repeat cases in H
+               end;
+        try (eapply SmallStepRelations.star2_plus2;
+             [ single_step; simpl in *; try reflexivity
+             | eapply star2_refl]; try f_equal; eauto).
+      + eapply SmallStepRelations.star2_plus2;
+          [ try single_step; simpl in *
+          | eapply star2_refl]; f_equal; eauto.
+      + rewrite <- Heq in *; isabsurd.
+      + eapply SmallStepRelations.star2_plus2;
+          [ try single_step; simpl in *
+          | ].
+        simpl in *.
+        unfold Locmap.get in EV. rewrite EV.
+        eapply star2_refl.
+      + eapply SmallStepRelations.star2_plus2;
+          [ try single_step; simpl in *
+          | eapply star2_refl ].
+        unfold Locmap.get in EQ. rewrite EQ. simpl.
+        unfold Int.notbool. cases; simpl; reflexivity.
+      + unfold Locmap.get in *.
+        cases; simpl;
+          (eapply SmallStepRelations.star2_plus2;
+           [ try single_step; simpl in *
+           | eapply star2_refl ]);
+          try now (try rewrite EQ; try rewrite EQ1; simpl; eauto;
+                   repeat cases; try reflexivity; intros; clear_trivial_eqs).
+        * revert EQ2. cases; intros; clear_trivial_eqs.
+          rewrite EQ, EQ1. simpl. cases; eauto.
+          exfalso. eapply NOTCOND.
+          eapply Is_true_eq_right in Heq.
+          eapply orb_prop_elim in Heq.
+          destruct Heq. left. pose proof (Int.eq_spec x2 Int.zero).
+          cases in H0; eauto.
+          eapply andb_prop_elim in H. destruct H.
+          right. split.
+          pose proof (Int.eq_spec x1 (Int.repr Int.min_signed)).
+          cases in H1; eauto.
+          pose proof (Int.eq_spec x2 Int.mone).
+          cases in H1; eauto.
+    - repeat cases.
+      + isabsurd.
+      + eapply SmallStepRelations.star2_plus2.
+        * single_step.
+        * eapply MR in EV. cases in EV.
+          unfold Locmap.get in EV. rewrite EV.
+          eapply star2_refl.
+  Qed.
+
+  Lemma toSlot_inj x y
+    : ~ isReg x -> ~ isReg y -> x <> y -> toSlot x <> toSlot y.
+  Proof.
+    intros. unfold toSlot. intro.
+    injection H2; intros. clear H2.
+    unfold Pos.div2 in H3.
+    unfold isReg in *. unfold Even.even_pos_fast in *.
+    destruct x, y; simpl in *; try congruence; isabsurd.
+    admit.
+  Admitted.
 
   Lemma  translateLet_correct r G L V x e s bv vv l rs m (SM:simplLet x e)
          (MR:mrel V rs)
@@ -336,69 +417,38 @@ Section ToLinear.
             (State nil bv vv (translateLetOp x e ++ l) rs m).
   Proof.
     case_eq (op_eval V e); intros.
-    - unfold translateLetOp.
-      inv SM; simpl.
-      + inv SO; repeat cases;
-          pone_step; try reflexivity;
-            try (eapply IH; hnf; eauto); try intros ? ?; try cases;
-              intros; simpl in *; try monad_inv H; lud; clear_trivial_eqs;
-                try solve [exfalso; eauto
-                          | rewrite locmap_get_set_RR; eauto;
-                            rewrite <- MR; eauto; cases; eauto; try exfalso; eauto
-                          | rewrite locmap_get_set_SR;
-                            rewrite <- MR; eauto; cases; eauto; try exfalso; eauto].
+    - pfold. eapply SimSilent; [eapply plus2O; [single_step | eauto]| |].
+      eapply translateLet_step; eauto.
+      eapply IH.
+      try intros ? ?.
+      intros; simpl in *; try monad_inv H; lud; clear_trivial_eqs.
+      + repeat cases;
+          try solve [exfalso; eauto
+                    | rewrite locmap_get_set_RR; eauto;
+                      rewrite <- MR; eauto; cases; eauto; try exfalso; eauto
+                    | rewrite locmap_get_set_SR;
+                      rewrite <- MR; eauto; cases; eauto; try exfalso; eauto
+                    | rewrite locmap_get_set_SS; eauto].
+      + repeat cases;
+          try solve [exfalso; eauto
+                    | rewrite locmap_get_set_RR; eauto;
+                      rewrite <- MR; eauto; cases; eauto; try exfalso; eauto
+                    | rewrite locmap_get_set_SR;
+                      rewrite <- MR; eauto; cases; eauto; try exfalso; eauto
+                    | rewrite locmap_get_set_RS;
+                      rewrite <- MR; eauto; cases; eauto; try exfalso; eauto
+                    | rewrite locmap_get_set_SS; eauto].
         * admit.
-        * admit.
-        * admit.
-        *
-          rewrite locmap_get_set_RR; eauto. simpl in *.
-          exploit MR as MRX; eauto; cases in MRX; unfold Locmap.get in MRX; eauto;
-            try rewrite MRX.
-          admit.
-          admit.
-        * admit.
-        * rewrite locmap_get_set_RR; eauto. simpl in *.
-          exploit MR as MRX; eauto; cases in MRX; unfold Locmap.get in MRX; eauto;
-            try rewrite MRX;
-          exploit (MR x0) as MRX'; eauto; cases in MRX'; unfold Locmap.get in MRX'; eauto;
-            try rewrite MRX';
-            simpl. invc H0. reflexivity.
-          admit. admit. admit.
-        * admit.
-        * rewrite locmap_get_set_RR; eauto. simpl in *.
-          admit.
-        * admit.
-        * admit.
-        * admit.
-        * admit.
-        * admit.
-        * admit.
-        * admit.
-        * rewrite locmap_get_set_RR; eauto. simpl in *.
-          admit.
-        * admit.
-      + repeat cases.
-        pone_step.
-        eapply IH. hnf; intros.
-        cases; lud; simpl in *; clear_trivial_eqs.
-        * invc e.
-          exfalso; eauto.
         * unfold Locmap.get, Locmap.set.
-          repeat cases.
-          rewrite <- MR; eauto. cases. reflexivity.
-        * invc e.
-          unfold Locmap.get, Locmap.set.
-          repeat cases. simpl. exploit MR; eauto. cases in H2.
-          unfold Locmap.get in H2. cases; eauto.
-          exfalso; eauto.
-          exfalso; eauto.
-        * unfold Locmap.get, Locmap.set.
-          repeat cases.
-          exfalso. invc e. admit.
-          rewrite <- MR; eauto. cases. exfalso; eauto. reflexivity.
-          exfalso. eapply n0. hnf. admit.
+          cases.
+          -- exfalso. eapply toSlot_inj. eapply NOTCOND. eauto. eauto.
+             symmetry. unfold toSlot. congruence.
+          -- cases. eapply MR in H0. cases in H0; eauto. exfalso; eauto.
+             exfalso. eapply n0. hnf. right. simpl. unfold toSlot.
+             exploit toSlot_inj. eapply NOTCOND. eauto. eauto.
+             unfold toSlot in H3. admit.
     - pno_step_left.
-  Admitted.
+  Qed.
 
   Definition toLinearCond (l:label) (e:op) : instruction :=
     match e with

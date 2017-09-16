@@ -254,23 +254,28 @@ Definition binop_eval (o:binop) :=
       | BinOpAdd => option_lift2 Int.add
       | BinOpSub => option_lift2 Int.sub
       | BinOpMul => option_lift2 Int.mul
-      | BinOpDiv => fun x y => if [ y = val_zero] then None else (Some (Int.divs x y))
+      | BinOpDiv => fun x y =>
+                     if [ y = val_zero \/
+                          (x = (Int.repr Int.min_signed) /\ y = Int.mone)]
+                     then None else (Some (Int.divs x y))
       | BinOpEq => option_lift2 (fun x y => bool2val(Int.eq x y))
       | BinOpLt => option_lift2 (fun x y => bool2val(Int.lt x y))
     end.
 
 Lemma binop_eval_div_zero x y
-  : y = val_zero
+  : y = val_zero \/ (x = (Int.repr Int.min_signed) /\ y = Int.mone)
     <-> binop_eval BinOpDiv x y = None.
 Proof.
-  intros; simpl; cases; split; intros; eauto; exfalso; congruence.
+  intros; simpl; cases; split; intros; eauto; exfalso; try congruence.
+  eapply NOTCOND. eauto.
 Qed.
 
 Lemma binop_eval_div_nonzero x y
-  : y <> val_zero
+  : (y <> val_zero /\ (x <> (Int.repr Int.min_signed) \/ y <> Int.mone))
     -> exists v, binop_eval BinOpDiv x y = Some v.
 Proof.
   intros; simpl; cases; eauto.
+  firstorder.
 Qed.
 
 Lemma binop_eval_not_div op x y
