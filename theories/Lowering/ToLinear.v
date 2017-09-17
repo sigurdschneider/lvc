@@ -2,7 +2,7 @@ Require Import Coqlib Errors AST Integers Linear.
 Require Import Bounds Conventions Locations Stacklayout.
 Require Import IL Sawtooth SmallStepRelations.
 Require Import InfinitePartition.
-Require Import SimI.
+Require Import SimI VarP.
 
 
 Require Import Smallstep Globalenvs common.Events.
@@ -93,11 +93,8 @@ Defined.
 Definition linear_result (σ:Linear.state) :=
   match σ with
   | Returnstate nil rs m =>
-    match loc_result signature_main with
-    | One r => match rs (R r) with
-              | Values.Vint retcode => Some retcode
-              | _ => None
-              end
+    match rs (R R3) with
+    | Values.Vint retcode => Some retcode
     | _ => None
     end
   | _ => None
@@ -182,47 +179,47 @@ Instance LinearStateType G : StateType Linear.state :=
   @Build_StateType _ (linear_step_adapter G) linear_result (linear_reddec2 G)
                    (@linear_int_det G) (@linear_ext_det G).
 
+Instance pos_lt_computable x y : Computable ((x < y)%positive).
+Proof.
+  hnf. unfold Pos.lt.
+  destruct ((x ?= y)%positive).
+  - right. congruence.
+  - left. reflexivity.
+  - right. congruence.
+Qed.
+
 Section ToLinear.
 
   Parameter (fe: frame_env).
   Parameter (p:inf_partition var).
 
   Definition offset_local (x: Z) := fe.(fe_ofs_local) + 4 * x.
-  Definition toSlot (x:var) := Zpos (Pos.div2 (x-1)%positive)%positive.
+  Definition toSlot (x:var) := Zpos (Pos.div2 x)%positive.
   Definition toReg (x:var) :=
-    match Pos.div2 x with
+    match x with
     | (1%positive) => R3
-    | (2%positive) => R4
-    | (3%positive) => R5
-    | (4%positive) => R6
-    | (5%positive) => R7
-    | (6%positive) => R8
-    | (7%positive) => R9
-    | (8%positive) => R10
-    | (9%positive) => R11
-    | (10%positive) => R12
-    | (11%positive) => R14
-    | (12%positive) => R15
-    | (13%positive) => R16
-    | (14%positive) => R17
-    | (15%positive) => R18
-    | (16%positive) => R19
-    | (17%positive) => R20
-    | (18%positive) => R21
-    | (19%positive) => R22
-    | (20%positive) => R23
-    | (21%positive) => R24
-    | (22%positive) => R25
-    | (23%positive) => R26
-    | (24%positive) => R27
-    | (25%positive) => R28
-    | (26%positive) => R29
-    | (27%positive) => R30
-    | _ => R31 (* *)
+    | (3%positive) => R4
+    | (5%positive) => R5
+    | (7%positive) => R6
+    | (9%positive) => R7
+    | (11%positive) => R8
+    | (13%positive) => R9
+    | (15%positive) => R10
+    | (17%positive) => R11
+    | (19%positive) => R12
+    | _ => R31 (*dummy *)
     end.
 
-
   Definition isReg x := Even.even_pos_fast x.
+
+  Lemma toReg_inj x y
+    : isReg x -> isReg y -> (x <= 20)%positive -> (y <= 20)%positive -> x <> y -> toReg x = toReg y ->
+      x = y.
+  Proof.
+    unfold isReg, Even.even_pos_fast, toReg, Pos.div2;
+      repeat cases; cbv; intros;
+        try solve [try destruct b1; try destruct b; isabsurd].
+  Qed.
 
   Inductive simplOp : op -> Prop :=
   | SCon v : simplOp (Con v)
@@ -292,8 +289,10 @@ Section ToLinear.
 
   Smpl Add single_step_linear : single_step.
 
+  Definition regbnd (x:positive) := isReg x -> (x <= 20)%positive.
+
   Definition mrel V rs :=
-    forall x v, V x = Some v ->
+    forall x v, V x = Some v -> regbnd x ->
            Locmap.get
              (if [isReg x] then R (toReg x) else S Local (toSlot x) Tint)
              rs = Values.Vint v.
@@ -336,6 +335,7 @@ Section ToLinear.
   Lemma translateLet_step (G:Genv.t fundef unit) V x e bv vv l rs m (SM:simplLet x e)
          (MR:mrel V rs) v
          (EV:op_eval V e = Some v)
+         (REGBOUND:For_all regbnd (Ops.freeVars e))
     :  plus2 (@StateType.step _ (LinearStateType G))
              (State nil bv vv (translateLetOp x e ++ l) rs m)
              nil
@@ -363,12 +363,16 @@ Section ToLinear.
         simpl in *.
         unfold Locmap.get in EV. rewrite EV.
         eapply star2_refl.
+        hnf in REGBOUND. cset_tac.
       + eapply SmallStepRelations.star2_plus2;
           [ try single_step; simpl in *
           | eapply star2_refl ].
         unfold Locmap.get in EQ. rewrite EQ. simpl.
         unfold Int.notbool. cases; simpl; reflexivity.
+        hnf in REGBOUND; cset_tac.
       + unfold Locmap.get in *.
+        exploit REGBOUND as RB1. cset_tac.
+        exploit (REGBOUND x0) as RB2. cset_tac.
         cases; simpl;
           (eapply SmallStepRelations.star2_plus2;
            [ try single_step; simpl in *
@@ -387,7 +391,7 @@ Section ToLinear.
           pose proof (Int.eq_spec x1 (Int.repr Int.min_signed)).
           cases in H1; eauto.
           pose proof (Int.eq_spec x2 Int.mone).
-          cases in H1; eauto.
+          cases in H1; eauto. eauto. eauto.
     - repeat cases.
       + isabsurd.
       + eapply SmallStepRelations.star2_plus2.
@@ -395,21 +399,23 @@ Section ToLinear.
         * eapply MR in EV. cases in EV.
           unfold Locmap.get in EV. rewrite EV.
           eapply star2_refl.
+          exploit REGBOUND; eauto. simpl. cset_tac.
   Qed.
 
   Lemma toSlot_inj x y
     : ~ isReg x -> ~ isReg y -> x <> y -> toSlot x <> toSlot y.
   Proof.
     intros. unfold toSlot. intro.
-    injection H2; intros. clear H2.
+    injection H2; intros; clear H2.
     unfold Pos.div2 in H3.
     unfold isReg in *. unfold Even.even_pos_fast in *.
     destruct x, y; simpl in *; try congruence; isabsurd.
-    admit.
-  Admitted.
+  Qed.
 
   Lemma  translateLet_correct r G L V x e s bv vv l rs m (SM:simplLet x e)
          (MR:mrel V rs)
+         (REGBOUND:For_all regbnd (Ops.freeVars e))
+         (REGBOUNDx:regbnd x)
          (IH:forall V rs,  mrel V rs ->
              upaco3 (@sim_gen IL.I.state _  Linear.state (LinearStateType G)) r Sim (L, V, s)
                     (State nil bv vv l rs m))
@@ -438,7 +444,11 @@ Section ToLinear.
                     | rewrite locmap_get_set_RS;
                       rewrite <- MR; eauto; cases; eauto; try exfalso; eauto
                     | rewrite locmap_get_set_SS; eauto].
-        * admit.
+        * unfold Locmap.get, Locmap.set.
+          repeat cases; eauto.
+          -- exfalso. exploit (@toReg_inj x0 x); eauto.
+          -- eapply MR in H0. cases in H0. eauto.
+          -- exfalso. eapply n0. hnf. congruence.
         * unfold Locmap.get, Locmap.set.
           cases.
           -- exfalso. eapply toSlot_inj. eapply NOTCOND. eauto. eauto.
@@ -446,7 +456,33 @@ Section ToLinear.
           -- cases. eapply MR in H0. cases in H0; eauto. exfalso; eauto.
              exfalso. eapply n0. hnf. right. simpl. unfold toSlot.
              exploit toSlot_inj. eapply NOTCOND. eauto. eauto.
-             unfold toSlot in H3. admit.
+             unfold toSlot in H4.
+             decide ((Pos.div2 x < Pos.div2 x0)%positive).
+             ++ left. hnf; intros H5.
+               eapply Zcompare_Gt_not_Lt in H5.
+               rewrite Pos.add_comm in H5.
+               rewrite Pos.add_1_l in H5.
+               rewrite Pos2Z.inj_succ in H5.
+               rewrite Z.add_comm in H5.
+               rewrite Z.add_1_l in H5.
+               rewrite Zcompare_succ_compat in H5.
+               rewrite <- Pos2Z.inj_compare in H5. eauto.
+             ++ right. hnf; intros H5.
+               eapply Zcompare_Gt_not_Lt in H5.
+               rewrite Pos.add_comm in H5.
+               rewrite Pos.add_1_l in H5.
+               rewrite Pos2Z.inj_succ in H5.
+               rewrite Z.add_comm in H5.
+               rewrite Z.add_1_l in H5.
+               rewrite Zcompare_succ_compat in H5.
+               rewrite <- Pos2Z.inj_compare in H5. eauto.
+               unfold Pos.lt in n1.
+               eapply Pos.compare_ge_iff in n1.
+               unfold Pos.le in n1.
+               eapply H4. f_equal.
+               hnf.
+               eapply Pos.compare_eq_iff.
+               destruct ((Pos.div2 x0 ?= Pos.div2 x)%positive); eauto; congruence.
     - pno_step_left.
   Qed.
 
@@ -463,7 +499,7 @@ Section ToLinear.
   | SimplCondLt x y (RG1:isReg x) (RG2:isReg y)
     : simplCond (BinOp BinOpLt (Var x) (Var y)).
 
-  Definition ret_reg_name := 2%positive.
+  Definition ret_reg_name := 1%positive.
 
 
 
@@ -822,8 +858,9 @@ Inductive isLinearizable : stmt->Prop :=
   : isLinearizable (stmtIf e s t)
 | IsLinApp l Y :
    isLinearizable (stmtApp l Y)
-| IsLinExp e :
-    isLinearizable (stmtReturn e)
+| IsLinExp e
+           (SimplReg:simplOp e)
+  : isLinearizable (stmtReturn e)
 | IsLinCall F t
   : (forall n Zs, get F n Zs -> isLinearizable (snd Zs))
     -> isLinearizable t
@@ -850,7 +887,6 @@ Inductive noParams : stmt->Prop :=
   : noParams (stmtFun F t).
 
 
-
 Lemma toLinear_correct r (L:I.labenv) I l (V:onv val) s bv vv rs m G C C'
       (MR:mrel V rs)
       (ML:all_labels_smaller C l)
@@ -859,6 +895,7 @@ Lemma toLinear_correct r (L:I.labenv) I l (V:onv val) s bv vv rs m G C C'
       (IsLin:isLinearizable s)
       (NoParams:noParams s)
       (ST:sawtooth L)
+      (REGBOUND:var_P regbnd s)
       (IINV:forall n i b,
           get L n b -> get I n i ->
           exists C C' l, fn_code bv =
@@ -868,13 +905,14 @@ Lemma toLinear_correct r (L:I.labenv) I l (V:onv val) s bv vv rs m G C C'
                     /\ all_labels_smaller C l
                     /\ isLinearizable (I.block_s b)
                     /\ noParams (I.block_s b)
-                    /\ (i < l)%positive)
+                    /\ (i < l)%positive
+                    /\ var_P regbnd (I.block_s b))
   : @sim _ _ Linear.state (LinearStateType G) r Sim (L, V, s)
          ((State nil bv vv (fst (toLinear I l s) ++ C') rs m):Linear.state).
 Proof.
-  revert C C' L I l V s vv rs m r MR CODE ML ILEN IINV IsLin NoParams ST.
+  revert C C' L I l V s vv rs m r MR CODE ML ILEN IINV IsLin NoParams ST REGBOUND.
   pcofix CIH; intros.
-  destruct s; invt isLinearizable; invt noParams; simpl in *.
+  destruct s; invt isLinearizable; invt noParams; invt var_P; simpl in *.
   - revert CODE. let_pair_case_eq. simpl_pair_eqs. subst. simpl.
     rewrite <- !app_assoc. intros.
     eapply  translateLet_correct; eauto.
@@ -939,19 +977,19 @@ Proof.
       pfold. eapply SimSilent; try eapply plus2O; eauto.
       -- single_step. rewrite EQ; eauto.
       -- econstructor. econstructor.
-         rewrite H1.
+         rewrite H2.
          rewrite find_label_app; eauto.
          simpl. cases; eauto.
       -- simpl. try rewrite EQ in *; eauto.
          right.
          eapply CIH. eauto.
-         ++ rewrite H1. rewrite cons_app. rewrite app_assoc. reflexivity.
+         ++ rewrite H2. rewrite cons_app. rewrite app_assoc. reflexivity.
          ++ eapply all_labels_smaller_app1; eauto.
            hnf; intros; inv_get. eauto.
          ++ eauto with len.
          ++ intros; inv_get.
            edestruct IINV as [? [? [? [? ?]]]]; eauto.
-           do 3 eexists. rewrite H8. split.
+           do 3 eexists. rewrite H10. split.
            ** rewrite drop_drop.
               change I.block_n with (@block_n I.block _).
               erewrite sawtooth_drop_eq; eauto.
@@ -959,7 +997,28 @@ Proof.
          ++ eauto.
          ++ eauto.
          ++ eauto.
-  - admit.
+         ++ eauto.
+  - case_eq (op_eval V e); intros.
+    + pfold.
+      assert (exists stk m', vv = (Values.Vptr stk Ptrofs.zero)
+                        /\   Memory.Mem.free m stk 0 (fn_stacksize bv) = Some m') by admit.
+      dcr. subst.
+      eapply SimTerm; swap 1 3.
+      * eapply star2_trans_silent.
+        -- eapply plus2_star2.
+           rewrite <- app_assoc.
+           eapply translateLet_step; eauto.
+           econstructor; eauto.
+        -- simpl. eapply star2_silent.
+           econstructor.
+           econstructor. eauto. eapply star2_refl.
+      * eapply star2_refl.
+      * simpl. unfold Locmap.set.
+        destruct (Loc.eq (R R3) (R R3)); eauto. congruence.
+      * stuck2.
+      * stuck2.
+    + pfold. eapply SimErr; try eapply star2_refl; eauto.
+      stuck2.
   - revert CODE; repeat let_pair_case_eq; subst; simpl; intros.
     pfold. econstructor; try eapply plus2O; eauto.
     single_step.
@@ -983,13 +1042,13 @@ Proof.
       * len_simpl. rewrite get_app_ge in H0; len_simpl; eauto.
         inv_get.
         edestruct IINV as [? [? [? [? ?]]]]; eauto.
-        setoid_rewrite H4.
+        setoid_rewrite H7.
         rewrite drop_app_gen; len_simpl.
         -- do 3 eexists; split; eauto.
            orewrite (n - I.block_n b - ❬F❭ = n - ❬F❭ - I.block_n b)%nat.
            reflexivity.
         -- exploit (sawtooth_smaller ST); eauto. simpl in *. omega.
-ed.
+Qed.
 
 
 
