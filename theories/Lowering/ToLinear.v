@@ -983,7 +983,9 @@ Lemma toLinearFun_get F l I n Zs f
                     F
                    (snd (mkVars F l))) =
     C ++ Llabel i :: fst (toLinear I l' (snd Zs)) ++ C'
-    /\ get (snd (mkVars F l)) n i.
+    /\ get (snd (mkVars F l)) n i
+    /\ (f <= l')%positive
+    /\ not_contains_label C i.
 Proof.
   general induction GetF; simpl.
   - repeat let_pair_case_eq; repeat simpl_pair_eqs; subst.
@@ -991,8 +993,9 @@ Proof.
     repeat let_pair_case_eq; repeat simpl_pair_eqs; subst.
     simpl.
     do 4 eexists.
-    instantiate (5:=nil). simpl. split. f_equal.
-    eauto using get.
+    instantiate (8:=nil). simpl. split. f_equal.
+    split. eauto using get.
+    split. reflexivity. hnf; intros; inv_get.
   - repeat let_pair_case_eq; repeat simpl_pair_eqs; subst.
     simpl.
     repeat let_pair_case_eq; repeat simpl_pair_eqs; subst.
@@ -1004,7 +1007,13 @@ Proof.
       rewrite cons_app.
       rewrite app_assoc.
       rewrite app_assoc. f_equal.
-    + eauto using get.
+    + split; eauto using get.
+      split.
+      rewrite <- toLinear_le in H2. eauto.
+      eapply not_contains_label_app1; eauto.
+      eapply not_contains_label_app1; eauto.
+      hnf; intros; inv_get. intro; subst. admit.
+      admit.
 Qed.
 
 Lemma toLinear_correct r (L:I.labenv) I l (V:onv val) s bv vv rs m G C C'
@@ -1023,9 +1032,9 @@ Lemma toLinear_correct r (L:I.labenv) I l (V:onv val) s bv vv rs m G C C'
                       ++ C'
                     /\ not_contains_label C i
                     /\ all_labels_smaller C l
+                    /\ (i < l)%positive
                     /\ isLinearizable (I.block_s b)
                     /\ noParams (I.block_s b)
-                    /\ (i < l)%positive
                     /\ var_P regbnd (I.block_s b))
   : @sim _ _ Linear.state (LinearStateType G) r Sim (L, V, s)
          ((State nil bv vv (fst (toLinear I l s) ++ C') rs m):Linear.state).
@@ -1169,12 +1178,56 @@ Proof.
       eapply get_app_cases in H as [?|[? ?]]; inv_get.
       * rewrite get_app_lt in H0; [|eauto with len].
         rewrite CODE.
-        edestruct toLinearFun_get as [? [? [? [? [? ?]]]]]; eauto.
+        edestruct toLinearFun_get as [? [? [? [? [? [? ?]]]]]]; eauto.
         instantiate (1:=Pos.succ l) in H7. get_functional.
         rewrite H6. simpl. orewrite (n - n = 0)%nat; simpl.
         eexists. exists (x1 ++ C'). exists x2.
         split.
-        --
+        -- instantiate (1:= C ++
+                              Llabel l
+                              :: fst (toLinear (snd (mkVars F (Pos.succ l)) ++ I) (fst (mkVars F (Pos.succ l))) s) ++ x0).
+           repeat (repeat rewrite <- !app_assoc; repeat rewrite !app_comm_cons).
+           f_equal.
+        -- assert (LI:(l < i)%positive). {
+             eapply mkVars_get_le in H0.
+             eapply Pos.lt_le_trans; eauto. eapply Plt_succ.
+           }
+           assert (LI':(i < x2)%positive). {
+             rewrite <- toLinear_le in H8.
+             eapply mkVars_get_lt in H0.
+             eapply Pos.lt_le_trans; eauto.
+           }
+          split; [|split; [|split]]; eauto 20.
+           ++ eapply not_contains_label_app1; eauto.
+             eapply all_not_labels.
+             eapply all_labels_smaller_le. eauto.
+             eapply Pos.lt_le_incl. eauto.
+             rewrite cons_app.
+             eapply not_contains_label_app1; eauto.
+             hnf; intros; inv_get.
+             intro. subst. eapply Pos.lt_irrefl; eauto.
+             eapply not_contains_label_app1; eauto.
+             eapply all_not_labels_ge.
+             eapply all_labels_ge_le.
+             eapply all_labels_ge_toLinear.
+             eapply mkVars_get_lt in H0.
+             eapply Pos.le_succ_l. eauto.
+             admit.
+           ++ eapply all_labels_smaller_app1; eauto.
+             eapply all_labels_smaller_le. eauto.
+             etransitivity; eauto.
+             rewrite <- toLinear_le. rewrite <- mkVars_le. eapply Ple_succ.
+             rewrite cons_app.
+             eapply all_labels_smaller_app1; eauto.
+             hnf; intros; inv_get.
+             eapply Pos.lt_le_trans; try eapply H8.
+             eapply Pos.lt_le_trans. eapply Plt_succ.
+             rewrite <- toLinear_le. rewrite <- mkVars_le. reflexivity.
+             eapply all_labels_smaller_app1; eauto.
+             eapply all_labels_smaller_le.
+             eapply all_labels_smaller_toLinear. eauto.
+             eapply mkVars_get_lt in H0.
+             admit.
       * len_simpl. rewrite get_app_ge in H0; len_simpl; eauto.
         inv_get.
         edestruct IINV as [? [? [? [? ?]]]]; eauto.
