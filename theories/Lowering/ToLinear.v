@@ -488,8 +488,8 @@ Section ToLinear.
 
   Definition toLinearCond (l:label) (e:op) : instruction :=
     match e with
-    | Var y => Lcond (Op.Ccompimm Cne Int.zero) (toReg y :: nil) l
-    | BinOp BinOpLt (Var y1) (Var y2) => Lcond (Op.Ccomp Clt) (toReg y1 :: toReg y2 :: nil) l
+    | Var y => Lcond (Op.Ccompimm Ceq Int.zero) (toReg y :: nil) l
+    | BinOp BinOpLt (Var y1) (Var y2) => Lcond (Op.Ccomp Cle) (toReg y2 :: toReg y1 :: nil) l
     | _ => dummyinstr
     end.
 
@@ -498,6 +498,80 @@ Section ToLinear.
     : simplCond (Var x)
   | SimplCondLt x y (RG1:isReg x) (RG2:isReg y)
     : simplCond (BinOp BinOpLt (Var x) (Var y)).
+
+
+  Lemma toLinearCond_step G V v l e bv vv rs m c
+        (EV:op_eval V e = Some v)
+        (TRUE:val2bool v = true) (SC:simplCond e)
+        (MR:mrel V rs) (REGBOUND:For_all regbnd (Ops.freeVars e))
+      : plus2 (@StateType.step _ (LinearStateType G))
+              (State nil bv vv (toLinearCond l e :: c) rs m) nil
+              (State nil bv vv c rs m).
+  Proof.
+    invt simplCond; simpl in *.
+    - exploit REGBOUND; eauto. cset_tac.
+      econstructor 1.
+      + econstructor. eapply exec_Lcond_false; only 2: reflexivity.
+        * simpl. simpl in *.
+          exploit MR as LMEQ; eauto. cases in LMEQ. unfold Locmap.get in LMEQ.
+          rewrite LMEQ. simpl.
+          unfold val2bool in TRUE. cases in TRUE.
+          unfold Int.eq. cases; eauto.
+          exfalso. eapply NOTCOND. eauto.
+      + reflexivity.
+    - exploit REGBOUND; eauto. cset_tac.
+      exploit (REGBOUND x); eauto. cset_tac.
+      econstructor 1.
+      + econstructor. eapply exec_Lcond_false; only 2: reflexivity.
+        * simpl. simpl in *.
+          monad_inv EV.
+          exploit MR as LMEQ1; eauto.
+          exploit MR as LMEQ2; try eapply EQ; eauto.
+          cases in LMEQ1. unfold Locmap.get in LMEQ1.
+          cases in LMEQ2. unfold Locmap.get in LMEQ2.
+          rewrite LMEQ1, LMEQ2. simpl.
+          unfold val2bool in TRUE. cases in TRUE.
+          revert NOTCOND. unfold Int.lt. cases; eauto. intros.
+          exfalso. eapply NOTCOND. unfold bool2val.
+          reflexivity.
+      + reflexivity.
+  Qed.
+
+    Lemma toLinearCond_step_false G V v l e bv vv rs m c c'
+        (EV:op_eval V e = Some v)
+        (TRUE:val2bool v = false) (SC:simplCond e)
+        (MR:mrel V rs) (REGBOUND:For_all regbnd (Ops.freeVars e))
+        (FIND:  find_label l (fn_code bv) = ⎣ c' ⎦)
+      : plus2 (@StateType.step _ (LinearStateType G))
+              (State nil bv vv (toLinearCond l e :: c) rs m) nil
+              (State nil bv vv c' rs m).
+  Proof.
+    invt simplCond; simpl in *.
+    - exploit REGBOUND; eauto. cset_tac.
+      econstructor 1.
+      + econstructor. eapply exec_Lcond_true; only 2: reflexivity.
+        * simpl. simpl in *.
+          exploit MR as LMEQ; eauto. cases in LMEQ. unfold Locmap.get in LMEQ.
+          rewrite LMEQ. simpl.
+          unfold val2bool in TRUE. cases in TRUE; eauto. isabsurd.
+        * eauto.
+      + reflexivity.
+    - exploit REGBOUND; eauto. cset_tac.
+      exploit (REGBOUND x); eauto. cset_tac.
+      econstructor 1.
+      + econstructor. eapply exec_Lcond_true; only 2: reflexivity; eauto.
+        * simpl. simpl in *.
+          monad_inv EV.
+          exploit MR as LMEQ1; eauto.
+          exploit MR as LMEQ2; try eapply EQ; eauto.
+          cases in LMEQ1. unfold Locmap.get in LMEQ1.
+          cases in LMEQ2. unfold Locmap.get in LMEQ2.
+          rewrite LMEQ1, LMEQ2. simpl.
+          unfold val2bool in TRUE. cases in TRUE; eauto; isabsurd.
+          revert COND0. unfold Int.lt. cases; eauto. intros.
+          inv COND0.
+      + reflexivity.
+  Qed.
 
   Definition ret_reg_name := 1%positive.
 
@@ -528,12 +602,12 @@ Section ToLinear.
       toLinear Λ l s (* this is incorrect *)
     | stmtIf e s t =>
       let l' := Pos.succ l in
-      let (alt, l'') := toLinear Λ l' t in
-      let (csq, l''') := toLinear Λ l'' s in
+      let (csq, l'') := toLinear Λ l' s in
+      let (alt, l''') := toLinear Λ l'' t in
       (toLinearCond l e
-                    :: alt (* we don't need to jump out,
+                    :: csq (* we don't need to jump out,
                               because alt's last intstruction is either Lreturn or Lgoto *)
-                    ++ Llabel l :: csq,
+                    ++ Llabel l :: alt,
        l''') (* missing jump & label *)
     | stmtApp f Y =>
       let l' := nth (counted f) Λ xH in
@@ -648,6 +722,20 @@ Proof.
     inv_get.
 Qed.
 
+Lemma all_labels_smaller_toLinearCond e l l'
+  : all_labels_smaller (toLinearCond l e::nil) l'.
+Proof.
+  unfold toLinearCond; repeat cases; hnf; intros;
+    inv_get.
+Qed.
+
+Lemma not_contains_label_toLinearCond e l l'
+  : not_contains_label (toLinearCond l e::nil) l'.
+Proof.
+  unfold toLinearCond; repeat cases; hnf; intros;
+    inv_get.
+Qed.
+
 Lemma all_labels_ge_translateOp x e l
   : all_labels_ge (translateLetOp x e) l.
 Proof.
@@ -693,8 +781,8 @@ Proof.
   revert I f.
   sind s; destruct s; intros;
     simpl; repeat cases; repeat simpl_pair_eqs; subst; simpl; try reflexivity; eauto.
-  - etransitivity; [|eapply (IH s1); eauto].
-    rewrite <- (IH s2); eauto. eapply Ple_succ.
+  - etransitivity; [|eapply (IH s2); eauto].
+    rewrite <- (IH s1); eauto. eapply Ple_succ.
   - rewrite <- toLinearFun_le'.
     + rewrite <- IH; eauto.
       rewrite <- mkVars_le. eapply Ple_succ.
@@ -746,13 +834,13 @@ Proof.
       destruct e2; simpl in *; isabsurd.
     + eapply all_labels_ge_app1; eauto.
       * eapply all_labels_ge_le.
-        eapply (IH s2); eauto.
+        eapply (IH s1); eauto.
         eapply Ple_succ.
       * rewrite cons_app.
         eapply all_labels_ge_app1; eauto.
         -- hnf; intros; inv_get; reflexivity.
         -- eapply all_labels_ge_le.
-           eapply (IH s1); eauto.
+           eapply (IH s2); eauto.
            rewrite <- toLinear_le.
            eapply Ple_succ.
   - hnf; intros; inv_get.
@@ -818,8 +906,9 @@ Proof.
       destruct e1; simpl in *; isabsurd.
       destruct e2; simpl in *; isabsurd.
     + eapply all_labels_smaller_app1; eauto.
-      * eapply all_labels_smaller_le; [|eapply toLinear_le].
+      * eapply all_labels_smaller_le.
         eapply IH; eauto.
+        setoid_rewrite <- toLinear_le at 2. reflexivity.
       * rewrite cons_app.
         eapply all_labels_smaller_app1; eauto.
         hnf; intros; inv_get.
@@ -886,6 +975,37 @@ Inductive noParams : stmt->Prop :=
   (NoParamsIHt:noParams t)
   : noParams (stmtFun F t).
 
+Lemma toLinearFun_get F l I n Zs f
+      (GetF:get F n Zs)
+  : exists C C' l' i,
+    fst
+      (toLinearFun toLinear I f
+                    F
+                   (snd (mkVars F l))) =
+    C ++ Llabel i :: fst (toLinear I l' (snd Zs)) ++ C'
+    /\ get (snd (mkVars F l)) n i.
+Proof.
+  general induction GetF; simpl.
+  - repeat let_pair_case_eq; repeat simpl_pair_eqs; subst.
+    simpl.
+    repeat let_pair_case_eq; repeat simpl_pair_eqs; subst.
+    simpl.
+    do 4 eexists.
+    instantiate (5:=nil). simpl. split. f_equal.
+    eauto using get.
+  - repeat let_pair_case_eq; repeat simpl_pair_eqs; subst.
+    simpl.
+    repeat let_pair_case_eq; repeat simpl_pair_eqs; subst.
+    simpl.
+    edestruct IHGetF; eauto; dcr.
+    do 2 eexists. exists x2, x3.
+    split.
+    + erewrite H1.
+      rewrite cons_app.
+      rewrite app_assoc.
+      rewrite app_assoc. f_equal.
+    + eauto using get.
+Qed.
 
 Lemma toLinear_correct r (L:I.labenv) I l (V:onv val) s bv vv rs m G C C'
       (MR:mrel V rs)
@@ -928,45 +1048,55 @@ Proof.
     rewrite <- !app_assoc in *.
     case_eq (op_eval V e); intros.
     + case_eq (val2bool v); intros.
-      * invt simplCond. simpl.
-        pfold.
-        econstructor 1; try eapply plus2O.
-        -- single_step.
-        -- reflexivity.
-        -- econstructor. econstructor; only 2: reflexivity.
-           ++ simpl. simpl in *.
-             exploit MR as LMEQ; eauto. cases in LMEQ. unfold Locmap.get in LMEQ.
-             rewrite LMEQ. simpl.
-             unfold val2bool in H0. cases in H0.
-             unfold Int.eq. cases; eauto.
-             exfalso. eapply NOTCOND. eauto.
-           ++ rewrite CODE. rewrite find_label_app; eauto.
-             simpl.
-             rewrite find_label_app. simpl. cases.
-             ** reflexivity.
-             ** eapply all_not_labels_ge.
-                eapply all_labels_ge_le.
-                eapply all_labels_ge_toLinear. reflexivity.
-        -- reflexivity.
+      * pfold.
+        econstructor 1.
+        -- eapply plus2O. single_step.
+           reflexivity.
+        -- rewrite !app_assoc. simpl.
+             eapply toLinearCond_step; eauto.
+        -- right.
+           simpl in *.
+           rewrite <- app_assoc.
+           eapply CIH; eauto.
+           ++ rewrite CODE.
+             rewrite cons_app.
+             rewrite app_assoc. f_equal.
+           ++ apply all_labels_smaller_app1.
+             eapply all_labels_smaller_le; eauto. eapply Ple_succ.
+             eapply all_labels_smaller_toLinearCond.
+      * pfold.
+        econstructor 1.
+        -- eapply plus2O. single_step.
+           reflexivity.
+        -- rewrite !app_assoc. simpl.
+           eapply toLinearCond_step_false; eauto.
+           rewrite CODE.
+           rewrite cons_app.
+           rewrite find_label_app; eauto.
+           rewrite find_label_app; eauto using not_contains_label_toLinearCond.
+           rewrite find_label_app; eauto.
+           simpl. cases; eauto.
+           eapply all_not_labels_ge.
+           eapply all_labels_ge_toLinear.
         -- right.
            simpl in *.
            eapply CIH; eauto.
-           instantiate (
-               1:=C++Lcond (Op.Ccompimm Cne Int.zero) (toReg x :: nil) l
-                     :: fst (toLinear I (Pos.succ l) s2) ++
-                     Llabel l::nil). simpl.
-           rewrite CODE. rewrite <- !app_assoc. simpl.
-           rewrite <- !app_assoc. simpl. reflexivity.
-           apply all_labels_smaller_app1.
-           eapply all_labels_smaller_le; eauto. rewrite <- toLinear_le. eapply Ple_succ.
-           rewrite cons_app. apply all_labels_smaller_app1.
-           clear_all; hnf; intros; inv_get.
-           apply all_labels_smaller_app1.
-           eapply all_labels_smaller_toLinear.
-           clear_all; hnf; intros; inv_get.
-           eapply Pos.lt_le_trans. eapply Plt_succ. eapply toLinear_le.
-        -- admit.
-      * admit.
+           ++ rewrite CODE.
+             rewrite cons_app.
+             rewrite app_assoc.
+             rewrite app_assoc.
+             setoid_rewrite cons_app at 2.
+             rewrite app_assoc.
+             f_equal.
+           ++ apply all_labels_smaller_app1.
+             apply all_labels_smaller_app1.
+             apply all_labels_smaller_app1.
+             eapply all_labels_smaller_le; eauto. rewrite <- toLinear_le. eapply Ple_succ.
+             eapply all_labels_smaller_toLinearCond.
+             eapply all_labels_smaller_toLinear.
+             hnf; intros; inv_get.
+             eapply Pos.lt_le_trans. eapply Plt_succ.
+             rewrite <- toLinear_le. reflexivity.
     + pno_step_left.
   - destruct (get_dec L (counted l0)) as [[? ?]|]; [| pno_step_left].
     + decide (length (block_Z x) = ❬@nil var❭); [|pno_step_left].
@@ -1038,7 +1168,13 @@ Proof.
     + intros.
       eapply get_app_cases in H as [?|[? ?]]; inv_get.
       * rewrite get_app_lt in H0; [|eauto with len].
-        rewrite CODE. admit.
+        rewrite CODE.
+        edestruct toLinearFun_get as [? [? [? [? [? ?]]]]]; eauto.
+        instantiate (1:=Pos.succ l) in H7. get_functional.
+        rewrite H6. simpl. orewrite (n - n = 0)%nat; simpl.
+        eexists. exists (x1 ++ C'). exists x2.
+        split.
+        --
       * len_simpl. rewrite get_app_ge in H0; len_simpl; eauto.
         inv_get.
         edestruct IINV as [? [? [? [? ?]]]]; eauto.
