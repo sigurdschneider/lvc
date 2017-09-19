@@ -975,8 +975,10 @@ Inductive noParams : stmt->Prop :=
   (NoParamsIHt:noParams t)
   : noParams (stmtFun F t).
 
-Lemma toLinearFun_get F l I n Zs f
+Lemma toLinearFun_get F l I f n Zs
       (GetF:get F n Zs)
+      (LT:forall n i, get I n i -> (i < (fst (mkVars F l)))%positive)
+      (GE:(fst (mkVars F l) <= f)%positive)
   : exists C C' l' i,
     fst
       (toLinearFun toLinear I f
@@ -985,7 +987,8 @@ Lemma toLinearFun_get F l I n Zs f
     C ++ Llabel i :: fst (toLinear I l' (snd Zs)) ++ C'
     /\ get (snd (mkVars F l)) n i
     /\ (f <= l')%positive
-    /\ not_contains_label C i.
+    /\ not_contains_label C i
+    /\ all_labels_smaller C l'.
 Proof.
   general induction GetF; simpl.
   - repeat let_pair_case_eq; repeat simpl_pair_eqs; subst.
@@ -993,14 +996,18 @@ Proof.
     repeat let_pair_case_eq; repeat simpl_pair_eqs; subst.
     simpl.
     do 4 eexists.
-    instantiate (8:=nil). simpl. split. f_equal.
+    instantiate (10:=nil). simpl. split. f_equal.
     split. eauto using get.
-    split. reflexivity. hnf; intros; inv_get.
-  - repeat let_pair_case_eq; repeat simpl_pair_eqs; subst.
-    simpl.
+    split. reflexivity.
+    split; hnf; intros; inv_get.
+  - revert LT GE; simpl.
     repeat let_pair_case_eq; repeat simpl_pair_eqs; subst.
     simpl.
-    edestruct IHGetF; eauto; dcr.
+    repeat let_pair_case_eq; repeat simpl_pair_eqs; subst.
+    simpl in *. intros.
+    edestruct (IHGetF (Pos.succ l) I (snd (toLinear I f (snd x')))); eauto using get; dcr.
+    rewrite GE. rewrite <- toLinear_le. reflexivity.
+    intros. simpl in *.
     do 2 eexists. exists x2, x3.
     split.
     + erewrite H1.
@@ -1010,10 +1017,27 @@ Proof.
     + split; eauto using get.
       split.
       rewrite <- toLinear_le in H2. eauto.
-      eapply not_contains_label_app1; eauto.
-      eapply not_contains_label_app1; eauto.
-      hnf; intros; inv_get. intro; subst. admit.
-      admit.
+      split.
+      * eapply not_contains_label_app1; eauto.
+        eapply not_contains_label_app1; eauto.
+        hnf; intros; inv_get. intro; subst.
+        eapply mkVars_get_le in H0.
+        eapply Pos.le_succ_l in H0.
+        eapply Pos.lt_irrefl in H0; eauto.
+        eapply all_not_labels_ge.
+        eapply all_labels_ge_le.
+        eapply all_labels_ge_toLinear.
+        eapply mkVars_get_lt in H0.
+        eapply Pos.le_succ_l.
+        eapply Pos.lt_le_trans; eauto.
+      * eapply all_labels_smaller_app1; eauto.
+        eapply all_labels_smaller_app1; eauto.
+        hnf; intros; inv_get.
+        eapply Pos.lt_le_trans. eapply Plt_succ.
+        rewrite <- H2. rewrite <- toLinear_le.
+        rewrite <- GE. rewrite <- mkVars_le. reflexivity.
+        eapply all_labels_smaller_le.
+        eapply all_labels_smaller_toLinear. eauto.
 Qed.
 
 Lemma toLinear_correct r (L:I.labenv) I l (V:onv val) s bv vv rs m G C C'
@@ -1024,12 +1048,14 @@ Lemma toLinear_correct r (L:I.labenv) I l (V:onv val) s bv vv rs m G C C'
       (IsLin:isLinearizable s)
       (NoParams:noParams s)
       (ST:sawtooth L)
+      (LTI:forall n i, get I n i -> (i < l)%positive)
       (REGBOUND:var_P regbnd s)
       (IINV:forall n i b,
           get L n b -> get I n i ->
           exists C C' l, fn_code bv =
                     C ++ (Llabel i::fst (toLinear (drop (n - block_n b) I) l (I.block_s b)))
                       ++ C'
+                    /\ (forall n' i, get (drop (n - block_n b) I) n' i -> (i < l)%positive)
                     /\ not_contains_label C i
                     /\ all_labels_smaller C l
                     /\ (i < l)%positive
@@ -1039,7 +1065,7 @@ Lemma toLinear_correct r (L:I.labenv) I l (V:onv val) s bv vv rs m G C C'
   : @sim _ _ Linear.state (LinearStateType G) r Sim (L, V, s)
          ((State nil bv vv (fst (toLinear I l s) ++ C') rs m):Linear.state).
 Proof.
-  revert C C' L I l V s vv rs m r MR CODE ML ILEN IINV IsLin NoParams ST REGBOUND.
+  revert C C' L I l V s vv rs m r MR CODE ML ILEN IINV IsLin NoParams ST REGBOUND LTI.
   pcofix CIH; intros.
   destruct s; invt isLinearizable; invt noParams; invt var_P; simpl in *.
   - revert CODE. let_pair_case_eq. simpl_pair_eqs. subst. simpl.
@@ -1073,6 +1099,8 @@ Proof.
            ++ apply all_labels_smaller_app1.
              eapply all_labels_smaller_le; eauto. eapply Ple_succ.
              eapply all_labels_smaller_toLinearCond.
+           ++ intros. eapply LTI in H1; eauto.
+             etransitivity; eauto. eapply Plt_succ.
       * pfold.
         econstructor 1.
         -- eapply plus2O. single_step.
@@ -1106,6 +1134,10 @@ Proof.
              hnf; intros; inv_get.
              eapply Pos.lt_le_trans. eapply Plt_succ.
              rewrite <- toLinear_le. reflexivity.
+           ++ intros. eapply LTI in H1.
+             etransitivity; eauto.
+             eapply Pos.lt_le_trans. eapply Plt_succ.
+             rewrite <- toLinear_le. reflexivity.
     + pno_step_left.
   - destruct (get_dec L (counted l0)) as [[? ?]|]; [| pno_step_left].
     + decide (length (block_Z x) = ❬@nil var❭); [|pno_step_left].
@@ -1127,12 +1159,19 @@ Proof.
            hnf; intros; inv_get. eauto.
          ++ eauto with len.
          ++ intros; inv_get.
-           edestruct IINV as [? [? [? [? ?]]]]; eauto.
-           do 3 eexists. rewrite H10. split.
-           ** rewrite drop_drop.
+           edestruct IINV as [? [? [? [? [? ?]]]]]; eauto.
+           do 3 eexists. rewrite H11. split; [|split].
+           ** repeat rewrite !drop_drop.
               change I.block_n with (@block_n I.block _).
               erewrite sawtooth_drop_eq; eauto.
+           ** intros. rewrite drop_drop in H14.
+              eapply get_drop in H14.
+              change I.block_n with (@block_n I.block _) in H14.
+              erewrite sawtooth_drop_eq in H14; eauto.
+              eapply H12.
+              eapply drop_get. eauto.
            ** eauto.
+         ++ eauto.
          ++ eauto.
          ++ eauto.
          ++ eauto.
@@ -1178,65 +1217,88 @@ Proof.
       eapply get_app_cases in H as [?|[? ?]]; inv_get.
       * rewrite get_app_lt in H0; [|eauto with len].
         rewrite CODE.
-        edestruct toLinearFun_get as [? [? [? [? [? [? ?]]]]]]; eauto.
-        instantiate (1:=Pos.succ l) in H7. get_functional.
-        rewrite H6. simpl. orewrite (n - n = 0)%nat; simpl.
-        eexists. exists (x1 ++ C'). exists x2.
-        split.
-        -- instantiate (1:= C ++
-                              Llabel l
-                              :: fst (toLinear (snd (mkVars F (Pos.succ l)) ++ I) (fst (mkVars F (Pos.succ l))) s) ++ x0).
+        edestruct (@toLinearFun_get F (Pos.succ l) ((snd (mkVars F (Pos.succ l)) ++ I))
+                                    (snd (toLinear (snd (mkVars F (Pos.succ l)) ++ I)
+                                                   (fst (mkVars F (Pos.succ l))) s)))
+          as [? [? [? [? [? [? [? ?]]]]]]]; eauto.
+        -- intros. eapply get_app_cases in H6 as [? |[? ?]].
+           eapply mkVars_get_lt in H6; eauto.
+           len_simpl. exploit LTI; eauto.
+           etransitivity; eauto.
+           eapply Pos.lt_le_trans; eauto. eapply Plt_succ.
+           rewrite <- mkVars_le. reflexivity.
+        -- rewrite <- toLinear_le. reflexivity.
+        -- inv_get.
+           rewrite H6. simpl. orewrite (n - n = 0)%nat; simpl.
+           eexists. exists (x1 ++ C'). exists x2.
+           split.
+           ++ instantiate (1:= C ++
+                                Llabel l
+                                :: fst (toLinear (snd (mkVars F (Pos.succ l)) ++ I)
+                                                 (fst (mkVars F (Pos.succ l))) s) ++ x0).
            repeat (repeat rewrite <- !app_assoc; repeat rewrite !app_comm_cons).
            f_equal.
-        -- assert (LI:(l < i)%positive). {
-             eapply mkVars_get_le in H0.
-             eapply Pos.lt_le_trans; eauto. eapply Plt_succ.
-           }
-           assert (LI':(i < x2)%positive). {
-             rewrite <- toLinear_le in H8.
-             eapply mkVars_get_lt in H0.
-             eapply Pos.lt_le_trans; eauto.
-           }
-          split; [|split; [|split]]; eauto 20.
-           ++ eapply not_contains_label_app1; eauto.
-             eapply all_not_labels.
-             eapply all_labels_smaller_le. eauto.
-             eapply Pos.lt_le_incl. eauto.
-             rewrite cons_app.
-             eapply not_contains_label_app1; eauto.
-             hnf; intros; inv_get.
-             intro. subst. eapply Pos.lt_irrefl; eauto.
-             eapply not_contains_label_app1; eauto.
-             eapply all_not_labels_ge.
-             eapply all_labels_ge_le.
-             eapply all_labels_ge_toLinear.
-             eapply mkVars_get_lt in H0.
-             eapply Pos.le_succ_l. eauto.
-             admit.
-           ++ eapply all_labels_smaller_app1; eauto.
-             eapply all_labels_smaller_le. eauto.
-             etransitivity; eauto.
-             rewrite <- toLinear_le. rewrite <- mkVars_le. eapply Ple_succ.
-             rewrite cons_app.
-             eapply all_labels_smaller_app1; eauto.
-             hnf; intros; inv_get.
-             eapply Pos.lt_le_trans; try eapply H8.
-             eapply Pos.lt_le_trans. eapply Plt_succ.
-             rewrite <- toLinear_le. rewrite <- mkVars_le. reflexivity.
-             eapply all_labels_smaller_app1; eauto.
-             eapply all_labels_smaller_le.
-             eapply all_labels_smaller_toLinear. eauto.
-             eapply mkVars_get_lt in H0.
-             admit.
+           ++ assert (LI:(l < i)%positive). {
+               eapply mkVars_get_le in H0.
+               eapply Pos.lt_le_trans; eauto. eapply Plt_succ.
+             }
+             assert (LI':(i < x2)%positive). {
+               rewrite <- toLinear_le in H8.
+               eapply mkVars_get_lt in H0.
+               eapply Pos.lt_le_trans; eauto.
+             }
+             split; [|split; [|split]]; eauto 20.
+             ** intros. eapply get_app_cases in H7 as [?|[? ?]].
+                --- eapply mkVars_get_lt in H7.
+                    eapply Pos.lt_le_trans; eauto.
+                    etransitivity; eauto.
+                    rewrite <- toLinear_le. reflexivity.
+                --- exploit LTI; eauto.
+                    repeat (etransitivity; eauto).
+             ** eapply not_contains_label_app1; eauto.
+                eapply all_not_labels.
+                eapply all_labels_smaller_le. eauto.
+                eapply Pos.lt_le_incl. eauto.
+                rewrite cons_app.
+                eapply not_contains_label_app1; eauto.
+                hnf; intros; inv_get.
+                intro. subst. eapply Pos.lt_irrefl; eauto.
+                eapply not_contains_label_app1; eauto.
+                eapply all_not_labels_ge.
+                eapply all_labels_ge_le.
+                eapply all_labels_ge_toLinear.
+                eapply mkVars_get_lt in H0.
+                eapply Pos.le_succ_l. eauto.
+             ** eapply all_labels_smaller_app1; eauto.
+                eapply all_labels_smaller_le. eauto.
+                eapply Pos.lt_le_incl.
+                etransitivity; eauto.
+                rewrite cons_app.
+                eapply all_labels_smaller_app1; eauto.
+                hnf; intros; inv_get.
+                eapply Pos.lt_le_trans; try eapply H8.
+                eapply Pos.lt_le_trans. eapply Plt_succ.
+                rewrite <- toLinear_le. rewrite <- mkVars_le. reflexivity.
+                eapply all_labels_smaller_app1; eauto.
+                eapply all_labels_smaller_le.
+                eapply all_labels_smaller_toLinear. eauto.
       * len_simpl. rewrite get_app_ge in H0; len_simpl; eauto.
         inv_get.
-        edestruct IINV as [? [? [? [? ?]]]]; eauto.
+        edestruct IINV as [? [? [? [? [? ?]]]]]; eauto.
         setoid_rewrite H7.
         rewrite drop_app_gen; len_simpl.
         -- do 3 eexists; split; eauto.
            orewrite (n - I.block_n b - ❬F❭ = n - ❬F❭ - I.block_n b)%nat.
            reflexivity.
+           split; eauto.
+           orewrite (n - I.block_n b - ❬F❭ = n - ❬F❭ - I.block_n b)%nat.
+           eauto.
         -- exploit (sawtooth_smaller ST); eauto. simpl in *. omega.
+    + intros. eapply get_app_cases in H as [?|[? ?]].
+      eapply mkVars_get_lt in H. eauto.
+      eapply LTI in H.
+      eapply Pos.lt_le_trans; eauto.
+      rewrite <- mkVars_le. eapply Ple_succ.
 Qed.
 
 
