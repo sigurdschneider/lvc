@@ -10,7 +10,7 @@
 -R theories Lvc
 -R ContainersPlugin/theories Containers
 -R paco Paco
--R smpl/theories Smpl
+-R smpl/theories smpl
 -I ContainersPlugin/src
 -I smpl/src
 -I src

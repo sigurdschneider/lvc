@@ -335,11 +335,11 @@ Section ToLinear.
   Lemma translateLet_step (G:Genv.t fundef unit) V x e bv vv l rs m (SM:simplLet x e)
          (MR:mrel V rs) v
          (EV:op_eval V e = Some v)
-         (REGBOUND:For_all regbnd (Ops.freeVars e))
+         (REGBOUND:For_all regbnd (Ops.freeVars e)) st
     :  plus2 (@StateType.step _ (LinearStateType G))
-             (State nil bv vv (translateLetOp x e ++ l) rs m)
+             (State st bv vv (translateLetOp x e ++ l) rs m)
              nil
-             (State nil bv vv l (Locmap.set (if [isReg x] then R (toReg x) else
+             (State st bv vv l (Locmap.set (if [isReg x] then R (toReg x) else
                                                S Local (toSlot x) Tint)
                                             (Values.Vint v) rs) m).
   Proof.
@@ -415,12 +415,12 @@ Section ToLinear.
   Lemma  translateLet_correct r G L V x e s bv vv l rs m (SM:simplLet x e)
          (MR:mrel V rs)
          (REGBOUND:For_all regbnd (Ops.freeVars e))
-         (REGBOUNDx:regbnd x)
+         (REGBOUNDx:regbnd x) st
          (IH:forall V rs,  mrel V rs ->
              upaco3 (@sim_gen IL.I.state _  Linear.state (LinearStateType G)) r Sim (L, V, s)
-                    (State nil bv vv l rs m))
+                    (State st bv vv l rs m))
     :  @sim _ _ Linear.state (LinearStateType G) r Sim (L, V, stmtLet x (Operation e) s)
-            (State nil bv vv (translateLetOp x e ++ l) rs m).
+            (State st bv vv (translateLetOp x e ++ l) rs m).
   Proof.
     case_eq (op_eval V e); intros.
     - pfold. eapply SimSilent; [eapply plus2O; [single_step | eauto]| |].
@@ -503,10 +503,10 @@ Section ToLinear.
   Lemma toLinearCond_step G V v l e bv vv rs m c
         (EV:op_eval V e = Some v)
         (TRUE:val2bool v = true) (SC:simplCond e)
-        (MR:mrel V rs) (REGBOUND:For_all regbnd (Ops.freeVars e))
+        (MR:mrel V rs) (REGBOUND:For_all regbnd (Ops.freeVars e)) st
       : plus2 (@StateType.step _ (LinearStateType G))
-              (State nil bv vv (toLinearCond l e :: c) rs m) nil
-              (State nil bv vv c rs m).
+              (State st bv vv (toLinearCond l e :: c) rs m) nil
+              (State st bv vv c rs m).
   Proof.
     invt simplCond; simpl in *.
     - exploit REGBOUND; eauto. cset_tac.
@@ -541,10 +541,10 @@ Section ToLinear.
         (EV:op_eval V e = Some v)
         (TRUE:val2bool v = false) (SC:simplCond e)
         (MR:mrel V rs) (REGBOUND:For_all regbnd (Ops.freeVars e))
-        (FIND:  find_label l (fn_code bv) = ⎣ c' ⎦)
+        (FIND:  find_label l (fn_code bv) = ⎣ c' ⎦) st
       : plus2 (@StateType.step _ (LinearStateType G))
-              (State nil bv vv (toLinearCond l e :: c) rs m) nil
-              (State nil bv vv c' rs m).
+              (State st bv vv (toLinearCond l e :: c) rs m) nil
+              (State st bv vv c' rs m).
   Proof.
     invt simplCond; simpl in *.
     - exploit REGBOUND; eauto. cset_tac.
@@ -1061,9 +1061,9 @@ Lemma toLinear_correct r (L:I.labenv) I l (V:onv val) s bv vv rs m G C C'
                     /\ (i < l)%positive
                     /\ isLinearizable (I.block_s b)
                     /\ noParams (I.block_s b)
-                    /\ var_P regbnd (I.block_s b))
+                    /\ var_P regbnd (I.block_s b)) st
   : @sim _ _ Linear.state (LinearStateType G) r Sim (L, V, s)
-         ((State nil bv vv (fst (toLinear I l s) ++ C') rs m):Linear.state).
+         ((State st bv vv (fst (toLinear I l s) ++ C') rs m):Linear.state).
 Proof.
   revert C C' L I l V s vv rs m r MR CODE ML ILEN IINV IsLin NoParams ST REGBOUND LTI.
   pcofix CIH; intros.
@@ -1088,7 +1088,7 @@ Proof.
         -- eapply plus2O. single_step.
            reflexivity.
         -- rewrite !app_assoc. simpl.
-             eapply toLinearCond_step; eauto.
+           eapply toLinearCond_step; eauto.
         -- right.
            simpl in *.
            rewrite <- app_assoc.
@@ -1192,9 +1192,10 @@ Proof.
            econstructor. eauto. eapply star2_refl.
       * eapply star2_refl.
       * simpl. unfold Locmap.set.
-        destruct (Loc.eq (R R3) (R R3)); eauto. congruence.
+        destruct (Loc.eq (R R3) (R R3)); eauto. admit.
+        admit.
       * stuck2.
-      * stuck2.
+      * stuck2. admit.
     + pfold. eapply SimErr; try eapply star2_refl; eauto.
       stuck2.
   - revert CODE; repeat let_pair_case_eq; subst; simpl; intros.

@@ -10,7 +10,7 @@
 -R theories Lvc
 -R ContainersPlugin/theories Containers
 -R paco Paco
--R smpl/theories Smpl
+-R smpl/theories smpl
 -I ContainersPlugin/src
 -I smpl/src
 -I src
@@ -194,8 +194,6 @@ theories/Isa/BitVector.v
 theories/Isa/Ops.v
 theories/Isa/OrderedBitVector.v
 theories/Isa/Val.v
-theories/LinearWhile/WhileToIL.v
-theories/LinearWhile/While.v
 theories/Liveness/LivenessAnalysisCorrect.v
 theories/Liveness/LivenessAnalysis.v
 theories/Liveness/LivenessCorrect.v
@@ -260,3 +258,5 @@ theories/ValueOpts/ConstantPropagation.v
 theories/ValueOpts/CopyPropagation.v
 theories/ValueOpts/Eqn.v
 theories/ValueOpts/ValueOpts.v
+theories/While/WhileToIL.v
+theories/While/While.v

@@ -1,6 +1,6 @@
 theories/ValueOpts/GVN*
 theories/Lowering/ToMach.v
 theories/POUnit.v
-theories/LinearWhile/While2*.v
+theories/While/While2*.v
 theories/Test*
 RISC-V/*
