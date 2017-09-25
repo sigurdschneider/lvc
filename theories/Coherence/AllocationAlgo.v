@@ -54,7 +54,7 @@ Fixpoint regAssign p (st:stmt) (an: ann (set var)) (ϱ:Map [var, var])
 
 (** The algorithm only changes bound variables in the mapping [ϱ] *)
 
-Lemma regAssign_renamedApart_agreeF c G F ans als ϱ ϱ'
+Lemma regAssign_renamedApart_agreeF' c G F ans als ϱ ϱ'
       (allocOK:regAssignF c (regAssign c) ϱ F als = Success ϱ')
       (REN:forall (n : nat) (Zs : params * stmt) (a : ann (set var * set var)),
              get F n Zs -> get ans n a -> renamedApart (snd Zs) a)
@@ -112,7 +112,7 @@ Proof.
     pe_rewrite.
     etransitivity; [| eapply agree_on_incl; try eapply H4].
     eapply agree_on_incl.
-    eapply regAssign_renamedApart_agreeF with (G':=D'); try eassumption; eauto.
+    eapply regAssign_renamedApart_agreeF' with (G':=D'); try eassumption; eauto.
     rewrite <- H13. cset_tac; intuition. reflexivity.
     eapply incl_minus_lr; try reflexivity. rewrite <- H13. eauto with cset.
 Qed.

@@ -191,7 +191,7 @@ Proof.
         eapply agree_on_incl; eauto with cset.
   - econstructor; eauto.
   - econstructor; eauto.
-  - exploit regAssign_renamedApart_agreeF;
+  - exploit regAssign_renamedApart_agreeF';
     eauto using regAssign_renamedApart_agree'. reflexivity.
     exploit regAssign_renamedApart_agree;
       try eapply EQ0; simpl; eauto using live_sound.
@@ -238,7 +238,7 @@ Proof.
           - eapply lv_incl_fst_ra; eauto.
 
           - eapply locally_inj_live_agree; try eapply H20; eauto.
-            eapply regAssign_renamedApart_agreeF in H17;
+            eapply regAssign_renamedApart_agreeF' in H17;
               eauto using get_drop, drop_length_stable; try reflexivity.
             + eapply regAssign_renamedApart_agree' in EQ0; simpl; eauto using live_sound.
               etransitivity; eapply agree_on_incl; try eassumption.

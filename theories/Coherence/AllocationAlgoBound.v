@@ -177,7 +177,7 @@ Proof.
         revert H12 H15. clear_all. cset_tac.
   - econstructor; eauto.
   - econstructor; eauto.
-  - exploit regAssign_renamedApart_agreeF as Agr1;
+  - exploit regAssign_renamedApart_agreeF' as Agr1;
       eauto using regAssign_renamedApart_agree'. reflexivity.
     instantiate (1:=D) in Agr1.
     exploit regAssign_renamedApart_agree as Agr2;
@@ -230,7 +230,7 @@ Proof.
           - eapply locally_sep_ext; eauto.
             reflexivity.
             pe_rewrite.
-            eapply regAssign_renamedApart_agreeF in H19;
+            eapply regAssign_renamedApart_agreeF' in H19;
               eauto using get_drop, drop_length_stable; try reflexivity.
             + eapply regAssign_renamedApart_agree' in EQ0; simpl; eauto using live_sound.
               etransitivity; eapply agree_on_incl; try eassumption.
@@ -248,7 +248,7 @@ Proof.
 Qed.
 
 
-(*
+
 (** ** Bound on the number of registers used *)
 
 Fixpoint largest_live_set (a:ann (set var)) : set var :=
@@ -281,25 +281,86 @@ Proof.
   rewrite cardinal_filter; eauto.
 Qed.
 
-Require Import AllocationAlgoCorrect AnnP BoundedIn.
+Require Import AllocationAlgoCorrect AnnP BoundedIn VarP.
 
-Lemma regAssign_assignment_small n k p VD (ϱ:Map [var,var]) ZL Lv s alv ϱ' al
+Definition regbnd p k (x:positive) := part_1 p x -> (x <= Pos.of_nat (2*k))%positive.
+
+
+Lemma regAssign_assignment_small k p VD (ϱ:Map [var,var]) ZL Lv s alv ϱ' ra
+      (LS:live_sound FunctionalAndImperative ZL Lv s alv)
+      (inj:injective_on (getAnn alv) (findt ϱ default_var))
+      (SEP:sep var p (getAnn alv) (findt ϱ default_var))
+      (RA:renamedApart s ra)
+      (INCL:ann_R Subset1 alv ra)
+      (allocOK:regAssign p s alv ϱ = Success ϱ')
+      (BND:ann_P (bounded_in VD k) alv)
+      (up:For_all (regbnd p k) (lookup_set (findt ϱ default_var) (getAnn alv)))
+  : ann_P (For_all (regbnd p k)) (mapAnn (lookup_set (findt ϱ' default_var)) alv).
+Proof.
+  general induction LS; invt ann_P; invt renamedApart; invt @ann_R; simpl in *.
+  - econstructor; eauto.
+    + exploit regAssign_renamedApart_agree; eauto using live_sound.
+      pe_rewrite.
+      admit.
+    + eapply IHLS; eauto.
+      * eapply injective_on_agree; [|eapply map_update_update_agree].
+        eapply injective_on_update_fresh; eauto using injective_on_incl.
+        eapply least_fresh_part_fresh.
+      * rewrite <- map_update_update_agree.
+        eapply sep_update_part.
+        eauto using sep_incl.
+      * admit.
+  - monadS_inv allocOK.
+    exploit regAssign_renamedApart_agree; eauto using live_sound. pe_rewrite.
+    exploit regAssign_renamedApart_agree; try eapply EQ; eauto using live_sound. pe_rewrite.
+    exploit regAssign_renamedApart_agree'; eauto. pe_rewrite.
+    econstructor; eauto.
+    + rewrite <- lookup_set_agree; eauto.
+      change _eq with (@eq var).
+      etransitivity; eauto using agree_on_incl.
+    + exploit IHLS1; eauto.
+      * eauto using injective_on_incl; eauto.
+      * rewrite H0. eauto.
+      * admit.
+    + exploit IHLS2; try eapply EQ0; eauto.
+      * eapply injective_on_agree; swap 1 2.
+        change _eq with (@eq var).
+        eapply agree_on_incl. eapply H3. etransitivity; eauto.
+        eauto using injective_on_incl; eauto.
+      * rewrite H1. eapply sep_agree. eauto using agree_on_incl.
+        eauto.
+      * rewrite <- lookup_set_agree; swap 1 4.
+        change _eq with (@eq var). eapply agree_on_incl; eauto. etransitivity; eauto.
+        eauto. eauto. rewrite H1. eauto.
+  - econstructor.
+    eauto.
+  - econstructor; eauto.
+  - monadS_inv allocOK.
+    exploit regAssign_renamedApart_agree; eauto using live_sound. pe_rewrite.
+    exploit regAssign_renamedApart_agreeF'; eauto using live_sound.
+    intros. eapply regAssign_renamedApart_agree'; eauto using live_sound.
+    reflexivity.
+    econstructor; eauto.
+    + admit.
+    + intros. inv_get.
+      admit.
+    + admit.
+Qed.
+
+Lemma regAssign_assignment_small k p VD (ϱ:Map [var,var]) ZL Lv s alv ϱ'
       (LS:live_sound FunctionalAndImperative ZL Lv s alv)
       (inj:injective_on (getAnn alv) (findt ϱ default_var))
       (SEP:sep var p (getAnn alv) (findt ϱ default_var))
       (allocOK:regAssign p s alv ϱ = Success ϱ')
-      (incl:getAnn alv ⊆ fst (getAnn al))
-      (sd:renamedApart s al)
       (BND:ann_P (bounded_in VD k) alv)
-      (up:lookup_set (findt ϱ default_var) (filter (part_1 p) (fst (getAnn al)))
-                     ⊆ vars_up_to n)
-  : lookup_set (findt ϱ' default_var) (filter (part_1 p) (snd (getAnn al)))
-               ⊆ vars_up_to (Pos.max (ofNat (size_of_largest_live_set (part_1 p) alv)) n).
+      (up:For_all (regbnd p k) (lookup_set (findt ϱ default_var) (getAnn alv)))
+  : ann_P (For_all (regbnd p k)) (mapAnn (lookup_set (findt ϱ default_var)) alv).
 Proof.
+
+
   exploit regAssign_renamedApart_agree; eauto using live_sound.
   rewrite lookup_set_agree in up; swap 1 4.
-  eapply agree_on_incl; eauto; swap 1 2. eapply filter_incl. intuition.
-  eauto. eauto.
+  eapply agree_on_incl; eauto; swap 1 2. eapply filter_incl. eauto. eauto. eauto.
   clear H.
   general induction LS; invt renamedApart; simpl in * |- *.
   - assert (singleton (findt ϱ' default_var x)
