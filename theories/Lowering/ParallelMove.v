@@ -1,7 +1,7 @@
 Require Import CSet Le.
 
 Require Import Plus Util AllInRel InRel Map MapUpdate MapDefined.
-Require Import Val Var Envs IL Annotation SimI Fresh.
+Require Import Val Var Envs IL NoParams Annotation SimI Fresh.
 Require Import Liveness.Liveness Status InfinitePartition AppExpFree.
 Require compcert.lib.Parmov.
 
@@ -384,3 +384,22 @@ Proof.
 Qed.
 
 End Implementation.
+
+Lemma list_to_stmt_noParams pm s
+      (NP:noParams s)
+  : noParams (list_to_stmt pm s).
+Proof.
+  general induction pm; simpl;
+    repeat let_pair_case_eq; eauto using noParams.
+Qed.
+
+Lemma pm_lower_noParams p ZL Lv s al
+      (LS:live_sound Imperative ZL Lv s al)
+  : noParams (lower p (zip pair Lv ZL) s al).
+Proof.
+  general induction LS; simpl;
+    repeat let_pair_case_eq; repeat simpl_pair_eqs; subst; eauto using noParams.
+  - eauto using list_to_stmt_noParams, noParams.
+  - econstructor; intros; inv_get; simpl;
+      try rewrite <- zip_app; eauto using noParams with len.
+Qed.

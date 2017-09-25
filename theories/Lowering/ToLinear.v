@@ -1,6 +1,6 @@
 Require Import Coqlib Errors AST Integers Linear.
 Require Import Bounds Conventions Locations Stacklayout.
-Require Import IL Sawtooth SmallStepRelations.
+Require Import IL NoParams Sawtooth SmallStepRelations.
 Require Import InfinitePartition.
 Require Import SimI VarP.
 
@@ -8,7 +8,6 @@ Require Import SimI VarP.
 Require Import Smallstep Globalenvs common.Events.
 
 Set Implicit Arguments.
-
 
 Fixpoint mkVars X (L:list X) (f:var) : var * list var :=
   match L with
@@ -26,7 +25,6 @@ Proof.
   rewrite IHL; eauto.
 Qed.
 
-
 Smpl Add match goal with
          | [ H : context [ ❬snd (@mkVars ?X ?L ?f)❭ ] |- _ ]
            => setoid_rewrite (@mkVars_length X L f) in H
@@ -42,7 +40,6 @@ Proof.
   - let_pair_case_eq; simpl_pair_eqs; subst; simpl.
     rewrite <- IHL. eapply Ple_succ.
 Qed.
-
 
 Lemma mkVars_get_le X (L:list X) f n i
   :  get (snd (mkVars L f)) n i
@@ -73,9 +70,9 @@ Qed.
 
 Inductive linear_step_adapter (G:Globalenvs.Genv.t fundef unit)
   :  Linear.state -> Events.event -> Linear.state -> Prop :=
-| StepAdapterTau σ σ'
-  : Linear.step G σ nil σ'
-    -> linear_step_adapter G σ EvtTau σ'
+| StepAdapterTau st bv vv code rs m σ'
+  : Linear.step G (State st bv vv code rs m) nil σ'
+    -> linear_step_adapter G (State st bv vv code rs m)  EvtTau σ'
 | StepAdapter σ σ' f arg res fnc
   : Linear.step G σ (Event_syscall f
                                (EVint ⊝ arg)
@@ -92,8 +89,8 @@ Defined.
 
 Definition linear_result (σ:Linear.state) :=
   match σ with
-  | Returnstate nil rs m =>
-    match rs (R R3) with
+  | Returnstate st rs m =>
+    match Locmap.get (R R3) rs with
     | Values.Vint retcode => Some retcode
     | _ => None
     end
@@ -160,7 +157,7 @@ Lemma linear_int_det G
 Proof.
   hnf; intros.
   inv H; inv H0; eauto.
-  - inv H1; inv H2; congr; clear_trivial_eqs; try now (split; eauto; congr; try congruence).
+  - inv H1; inv H10; congr; clear_trivial_eqs; try now (split; eauto; congr; try congruence).
 
   - inv H1; inv H2; exfalso; repeat (congr; clear_trivial_eqs).
 Qed.
@@ -170,7 +167,7 @@ Lemma linear_ext_det G
 Proof.
   hnf. intros.
   invc H; invc H0; eauto.
-  - inv H1; inv H; repeat (congr; clear_trivial_eqs);
+  - inv H1; inv H8; repeat (congr; clear_trivial_eqs);
       try now (split; eauto; congr; try congruence).
   - inv H1; inv H6; repeat (congr; clear_trivial_eqs); eauto.
 Qed.
@@ -955,26 +952,6 @@ Inductive isLinearizable : stmt->Prop :=
     -> isLinearizable t
     -> isLinearizable (stmtFun F t).
 
-Inductive noParams : stmt->Prop :=
-| NoParamsLet
-    x e s
-    (NoParamsIH:noParams s)
-    : noParams (stmtLet x e s)
-| NoParamsIf
-    e s t
-    (NoParamsIH1:noParams s)
-    (NoParamsIH2:noParams t)
-  : noParams (stmtIf e s t)
-| NoParamsApp l :
-   noParams (stmtApp l nil)
-| NoParamsExp e :
-    noParams (stmtReturn e)
-| NoParamsCall F t
-  (NoParamsIHF:forall n Zs, get F n Zs -> noParams (snd Zs))
-  (NoParamsF:forall n Zs, get F n Zs -> fst Zs = nil)
-  (NoParamsIHt:noParams t)
-  : noParams (stmtFun F t).
-
 Lemma toLinearFun_get F l I f n Zs
       (GetF:get F n Zs)
       (LT:forall n i, get I n i -> (i < (fst (mkVars F l)))%positive)
@@ -1049,7 +1026,9 @@ Lemma toLinear_correct r (L:I.labenv) I l (V:onv val) s bv vv rs m G C C'
       (NoParams:noParams s)
       (ST:sawtooth L)
       (LTI:forall n i, get I n i -> (i < l)%positive)
-      (REGBOUND:var_P regbnd s)
+      (REGBOUND:var_P regbnd s) stk
+      (STACKINV:vv = (Values.Vptr stk Ptrofs.zero)) m'
+      (STACKFREEOK:Memory.Mem.free m stk 0 (fn_stacksize bv) = Some m')
       (IINV:forall n i b,
           get L n b -> get I n i ->
           exists C C' l, fn_code bv =
@@ -1065,7 +1044,8 @@ Lemma toLinear_correct r (L:I.labenv) I l (V:onv val) s bv vv rs m G C C'
   : @sim _ _ Linear.state (LinearStateType G) r Sim (L, V, s)
          ((State st bv vv (fst (toLinear I l s) ++ C') rs m):Linear.state).
 Proof.
-  revert C C' L I l V s vv rs m r MR CODE ML ILEN IINV IsLin NoParams ST REGBOUND LTI.
+  revert C C' L I l V s vv rs m r MR CODE ML ILEN IINV IsLin NoParams ST REGBOUND LTI
+         STACKINV STACKFREEOK.
   pcofix CIH; intros.
   destruct s; invt isLinearizable; invt noParams; invt var_P; simpl in *.
   - revert CODE. let_pair_case_eq. simpl_pair_eqs. subst. simpl.
@@ -1176,10 +1156,10 @@ Proof.
          ++ eauto.
          ++ eauto.
          ++ eauto.
+         ++ reflexivity.
+         ++ eauto.
   - case_eq (op_eval V e); intros.
     + pfold.
-      assert (exists stk m', vv = (Values.Vptr stk Ptrofs.zero)
-                        /\   Memory.Mem.free m stk 0 (fn_stacksize bv) = Some m') by admit.
       dcr. subst.
       eapply SimTerm; swap 1 3.
       * eapply star2_trans_silent.
@@ -1191,11 +1171,13 @@ Proof.
            econstructor.
            econstructor. eauto. eapply star2_refl.
       * eapply star2_refl.
-      * simpl. unfold Locmap.set.
-        destruct (Loc.eq (R R3) (R R3)); eauto. admit.
-        admit.
+      * simpl.
+        unfold Locmap.get. simpl.
+        simpl. unfold Locmap.set.
+        destruct (Loc.eq (R R3) (R R3)); eauto.
+        isabsurd.
       * stuck2.
-      * stuck2. admit.
+      * stuck2.
     + pfold. eapply SimErr; try eapply star2_refl; eauto.
       stuck2.
   - revert CODE; repeat let_pair_case_eq; subst; simpl; intros.
@@ -1343,18 +1325,13 @@ Proof.
   econstructor; split.
   - eapply H.
     intros. isabsurd.
-    admit.
-Admitted.
+
 
 Theorem transf_program_correct (s:stmt)
   : forward_simulation (semantics s) (Linear.semantics (fun _ _ _ => False) (transf_program s)).
 Proof.
   eapply forward_simulation_plus.
   - simpl. intros. unfold Genv.globalenv, transf_program. simpl.
-    admit.
-  - intros. admit.
-  - admit.
-  - admit.
-Admitted.
+  - intros.
 
 *)
