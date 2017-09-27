@@ -283,8 +283,6 @@ Qed.
 
 Require Import AllocationAlgoCorrect AnnP BoundedIn VarP.
 
-Definition regbnd p k (x:positive) := part_1 p x -> (x <= Pos.of_nat (2*k))%positive.
-
 Instance ann_P_morph A (P:A->Prop) (R:A->A->Prop) (H:forall x y, R x y -> P x -> P y)
   : Proper (ann_R R ==> impl) (ann_P (A:=A) P).
 Proof.
@@ -332,6 +330,30 @@ Proof.
       clear; cset_tac.
 Qed.
 
+Definition regbnd p k (x:positive) := part_1 p x -> (x <= Pos.of_nat (2*k))%positive.
+
+Fixpoint nextk X `{OrderedType X} (p:inf_subset X) n (x:X) :=
+  match n with
+  | 0 => ∅
+  | S n =>
+    let y := proj1_sig (inf_subset_inf p x) in
+    {y ;nextk p n y}
+  end.
+
+Definition ksmallest X `{OrderedType X} (p:inf_subset X) n :=
+  nextk p n (proj1_sig (inf_subset_least p)).
+
+Lemma least_fresh_part_bounded X `{OrderedType X} k (lv:set X) x (p:inf_subset X) ϱ
+      (INCL:SetInterface.cardinal (lv ∩ ksmallest p k) < k)
+      (SEP:(forall x, x \In lv -> p x -> p (ϱ x)))
+  : least_fresh_P p (SetConstructs.map ϱ lv) ∈ ksmallest p k.
+Proof.
+  unfold least_fresh_part. cases.
+  edestruct (least_fresh_P_full_spec (part_1 p) (lv \ singleton x)); dcr.
+  hnf in BND. rewrite <- INCL in BND.
+Qed.
+admit.
+
 
 Lemma regAssign_assignment_small k p VD (ϱ:Map [var,var]) ZL Lv s alv ϱ' ra
       (LS:live_sound FunctionalAndImperative ZL Lv s alv)
@@ -375,21 +397,6 @@ Proof.
         -- rewrite lookup_set_singleton' in H2; eauto. eapply In_single in H2.
            invc H2. lud; [|isabsurd].
            hnf; intros. eapply ann_P_get in H5.
-
-           Lemma least_fresh_part_bounded VD k (lv:set var) x p ϱ
-                 (INCL:lv ⊆ VD)
-             (BND:bounded_in VD k lv)
-             (IN:x ∈ lv)
-             (SEP:sep positive p lv ϱ)
-             (P1:part_1 p x)
-             : (least_fresh_part p (SetConstructs.map ϱ (lv \ singleton x)) x <=
-                Pos.of_nat (2 * k))%positive.
-           Proof.
-             unfold least_fresh_part. cases.
-             edestruct (least_fresh_P_full_spec (part_1 p) (lv \ singleton x)); dcr.
-             hnf in BND.
-           Qed.
-           admit.
         -- eauto.
   - monadS_inv allocOK.
     exploit regAssign_renamedApart_agree; eauto using live_sound. pe_rewrite.
@@ -804,4 +811,3 @@ Proof.
   rewrite <- lookup_set_agree; eauto using regAssign_renamedApart_agree.
   rewrite H5. repeat rewrite vars_up_to_max. cset_tac.
 Qed.
-*)

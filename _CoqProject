@@ -123,6 +123,7 @@ theories/IL/InRel4.v
 theories/IL/InRel.v
 theories/IL/LabelsDefined.v
 theories/IL/ListToStmt.v
+theories/IL/NoParams.v
 theories/IL/Patterns.v
 theories/IL/Rename.v
 theories/IL/Sawtooth.v

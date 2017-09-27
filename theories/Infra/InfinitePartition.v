@@ -1,35 +1,16 @@
 Require Import Util CSet NaturalRep FreshNR StableFresh Even.
+Require Import InfiniteSubset SafeFirstInfiniteSubset.
 
 Set Implicit Arguments.
 
-Record inf_subset X `{OrderedType X}  :=
-  {
-    inf_subset_P :> X -> bool;
-    inf_subset_inf : forall x, exists y, inf_subset_P y /\ _lt x y;
-    inf_subset_proper :> Proper (_eq ==> eq) inf_subset_P
-  }.
-
-Hint Resolve inf_subset_inf.
-
 Record inf_partition  X `{OrderedType X}  :=
-  { part_1 : inf_subset;
-    part_2 : inf_subset;
+  { part_1 : inf_subset X;
+    part_2 : inf_subset X;
     part_disj : forall x, part_1 x -> part_2 x -> False;
     part_cover : forall x, part_1 x + part_2 x;
   }.
 
-
-Arguments inf_subset X {H}.
 Arguments inf_partition X {H}.
-
-
-Instance inf_subset_X X `{OrderedType X} (p : inf_subset X)
-  :  Proper (_eq ==> eq) p.
-Proof.
-  eapply p.
-Qed.
-
-Hint Resolve inf_subset_X.
 
 Lemma part_dich  X `{OrderedType X}  (p:inf_partition X) x
   : (part_1 p x /\ (part_2 p x -> False)) \/ (part_2 p x /\ (part_1 p x -> False)).
@@ -37,23 +18,6 @@ Proof.
   destruct (part_cover p x);
     pose proof (part_disj p x); cset_tac.
 Qed.
-
-Definition even_inf_subset : inf_subset nat.
-Proof.
-  refine (@Build_inf_subset _ _ even _ _).
-  - intros. cbn. destruct (even_or_successor (S x)); eauto.
-Defined.
-
-Definition odd_inf_subset : inf_subset nat.
-Proof.
-  refine (@Build_inf_subset _ _ odd _ _).
-  - cbn. unfold odd. intros.
-    destruct (even_or_successor x); eauto.
-    + eexists (S x). rewrite <- even_not_even.
-      split; eauto.
-    + eexists (S (S x)); simpl.
-      rewrite even_not_even in H. eauto.
-Defined.
 
 Definition even_part : inf_partition nat.
 Proof.
@@ -66,35 +30,6 @@ Proof.
     unfold even_inf_subset, odd_inf_subset, odd, negb; simpl.
     cases; eauto.
 Qed.
-
-Definition even_inf_subset_pos : inf_subset positive.
-Proof.
-  refine (@Build_inf_subset _ _ even_pos_fast _ _).
-  - intros. cbn. destruct (even_or_successor (S (asNat x))); eauto.
-    + exists (ofNat (S (asNat x))). nr. split; eauto.
-      rewrite <- even_pos_fast_correct.
-      nr. eauto.
-      unfold ofNat, asNat. simpl. nr. omega.
-    + exists (ofNat (S (S (asNat x)))). nr. split; eauto.
-      rewrite <- even_pos_fast_correct.
-      nr. eauto.
-      unfold ofNat, asNat. simpl. nr. omega.
-Defined.
-
-Definition odd_inf_subset_pos : inf_subset positive.
-Proof.
-  refine (@Build_inf_subset _ _ (fun x => negb (even_pos_fast x)) _ _).
-  - cbn. unfold odd. intros.
-    destruct (even_or_successor (asNat x)); eauto.
-    + eexists (ofNat (S (asNat x))). nr.
-      rewrite <- even_pos_fast_correct. nr. split.
-      rewrite <- even_not_even. eauto.
-      unfold ofNat, asNat. simpl. nr. omega.
-    + eexists (ofNat (S (S (asNat x)))); simpl.
-      rewrite even_not_even in H. nr. split; eauto.
-      rewrite <- even_pos_fast_correct. nr. eauto.
-      unfold ofNat, asNat. simpl. nr. omega.
-Defined.
 
 Definition even_part_pos : inf_partition positive.
 Proof.
@@ -125,13 +60,13 @@ Proof.
         eapply (@fold_max_lt X _ _ _ _) in H5; eauto.
         simpl in *. exfalso. nr. simpl in *. omega.
       * edestruct (inf_subset_inf p n); dcr. cbn in *.
-        eapply (@safe_antitone _ _ _ _ _ _ _ x).
+        eapply (@safe_antitone _ _ _ _ _ _ _ x); eauto.
         econstructor; split; eauto.
         intro. cset_tac'.
-        eapply (@fold_max_lt X _ _ _ _) in H7; eauto.
+        eapply (@fold_max_lt X _ _ _ _) in H8; eauto.
         simpl in *. exfalso. nr. simpl in *. omega.
-        eapply (@fold_max_lt X _ _ _ _) in H7; eauto.
-        simpl in *. exfalso. nr. simpl in *. omega. eauto.
+        eapply (@fold_max_lt X _ _ _ _) in H8; eauto.
+        simpl in *. exfalso. nr. simpl in *. omega.
     + decide (p (succ (SetInterface.fold max lv (ofNat 0)))).
       * eapply safe_antitone. eauto.
         instantiate (1:=succ (SetInterface.fold max lv (ofNat 0))).
@@ -147,18 +82,66 @@ Proof.
         eapply (@safe_antitone _ _ _ _ _ _ _ x).
         econstructor; split; eauto.
         cset_tac'.
-        eapply (@fold_max_lt X _ _ _ _) in H7; eauto.
+        eapply (@fold_max_lt X _ _ _ _) in H8; eauto.
         simpl in *. exfalso. nr. omega.
-        eapply (@fold_max_lt X _ _ _ _) in H7; eauto.
-        simpl in *. exfalso. nr. omega.
-        simpl in *. nr. omega.
+        eapply (@fold_max_lt X _ _ _ _) in H8; eauto.
+        simpl in *. exfalso. clear H6. nr. omega.
+        simpl in *. clear H6. nr. omega.
         Grab Existential Variables. eauto. eauto.
 Qed.
 
-Definition least_fresh_P X `{NaturalRepresentationSucc X}
-           `{@NaturalRepresentationMax X H H0}
+Lemma fresh_variable_always_exists_in_inf_subset' X `{OrderedType X}
+      (lv:set X) (p:inf_subset X) n
+: SafeFirstInfiniteSubset.safe p (fun x => x ∉ lv /\ p x) n.
+Proof.
+  - decide (_lt (SetInterface.fold OrderedTypeMax.nr_max lv (proj1_sig (inf_subset_least p))) n).
+    + decide (p n).
+      * econstructor; eauto. split; eauto.
+        -- destr_sig; dcr; eauto.
+        -- intro. cset_tac'.
+           ++ eapply (@fold_max_lt X _ _ _ _) in H0; eauto.
+             simpl in *. exfalso. nr. revert H0. destr_sig. dcr.
+             intro. exploit H4; swap 1 2.
+             etransitivity; [|eapply H3]; eauto.
+             admit.
+             simpl in *. omega.
+           eapply (@fold_max_lt X _ _ _ _) in H5; eauto.
+           simpl in *. exfalso. nr. simpl in *. omega.
+      * edestruct (inf_subset_inf p n); dcr. cbn in *.
+        eapply (@safe_antitone _ _ _ _ _ _ _ x); eauto.
+        econstructor; split; eauto.
+        intro. cset_tac'.
+        eapply (@fold_max_lt X _ _ _ _) in H8; eauto.
+        simpl in *. exfalso. nr. simpl in *. omega.
+        eapply (@fold_max_lt X _ _ _ _) in H8; eauto.
+        simpl in *. exfalso. nr. simpl in *. omega.
+    + decide (p (succ (SetInterface.fold max lv (ofNat 0)))).
+      * eapply safe_antitone. eauto.
+        instantiate (1:=succ (SetInterface.fold max lv (ofNat 0))).
+        econstructor. split; eauto. intro.
+        cset_tac'.
+        eapply (@fold_max_lt X _ _ _ _) in H5; eauto.
+        simpl in *. exfalso. nr. simpl in *. omega.
+        eapply (@fold_max_lt X _ _ _ _) in H5; eauto.
+        simpl in *. exfalso. nr. simpl in *. omega.
+        simpl in *. nr. omega.
+      * edestruct (inf_subset_inf p (succ (fold max lv (ofNat 0))));
+          dcr.
+        eapply (@safe_antitone _ _ _ _ _ _ _ x).
+        econstructor; split; eauto.
+        cset_tac'.
+        eapply (@fold_max_lt X _ _ _ _) in H8; eauto.
+        simpl in *. exfalso. nr. omega.
+        eapply (@fold_max_lt X _ _ _ _) in H8; eauto.
+        simpl in *. exfalso. clear H6. nr. omega.
+        simpl in *. clear H6. nr. omega.
+        Grab Existential Variables. eauto. eauto.
+Qed.
+
+Definition least_fresh_P X `{OrderedType X}
            (p:inf_subset X) (lv:set X) : X.
-  refine (@safe_first _ _ _ _ (fun x => x ∉ lv /\ p x) _ (ofNat 0) _).
+  refine (@SafeFirstInfiniteSubset.safe_first X H p (fun x => x ∉ lv /\ p x) _
+                                              (proj1_sig (inf_subset_least p)) _).
   - eapply fresh_variable_always_exists_in_inf_subset; eauto.
 Defined.
 
