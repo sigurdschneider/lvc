@@ -330,6 +330,8 @@ Proof.
       clear; cset_tac.
 Qed.
 
+Require Import InfiniteSubset.
+
 Definition regbnd p k (x:positive) := part_1 p x -> (x <= Pos.of_nat (2*k))%positive.
 
 Fixpoint nextk X `{OrderedType X} (p:inf_subset X) n (x:X) :=
@@ -343,13 +345,15 @@ Fixpoint nextk X `{OrderedType X} (p:inf_subset X) n (x:X) :=
 Definition ksmallest X `{OrderedType X} (p:inf_subset X) n :=
   nextk p n (proj1_sig (inf_subset_least p)).
 
-Lemma least_fresh_part_bounded X `{OrderedType X} k (lv:set X) x (p:inf_subset X) ϱ
+Lemma least_fresh_part_bounded X
+      `{NaturalRepresentationSucc X}
+      `{@NaturalRepresentationMax X H H0}
+      k (lv:set X) (p:inf_subset X) ϱ
       (INCL:SetInterface.cardinal (lv ∩ ksmallest p k) < k)
       (SEP:(forall x, x \In lv -> p x -> p (ϱ x)))
   : least_fresh_P p (SetConstructs.map ϱ lv) ∈ ksmallest p k.
 Proof.
-  unfold least_fresh_part. cases.
-  edestruct (least_fresh_P_full_spec (part_1 p) (lv \ singleton x)); dcr.
+  edestruct (least_fresh_P_full_spec p (lv)); dcr.
   hnf in BND. rewrite <- INCL in BND.
 Qed.
 admit.

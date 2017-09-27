@@ -1,4 +1,4 @@
-Require Import Util CSet InfinitePartition MapAgreement.
+Require Import Util CSet InfiniteSubset InfinitePartition MapAgreement.
 
 
 Definition sep X `{OrderedType X} (p:inf_partition X) (G:set X) (ϱ:X -> X) :=

@@ -1,4 +1,4 @@
-Require Import Util CSet IL Annotation AnnP MapSep InfinitePartition.
+Require Import Util CSet IL Annotation AnnP MapSep InfiniteSubset InfinitePartition.
 
 Set Implicit Arguments.
 

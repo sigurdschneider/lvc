@@ -90,6 +90,7 @@ Proof.
         Grab Existential Variables. eauto. eauto.
 Qed.
 
+(*
 Lemma fresh_variable_always_exists_in_inf_subset' X `{OrderedType X}
       (lv:set X) (p:inf_subset X) n
 : SafeFirstInfiniteSubset.safe p (fun x => x ∉ lv /\ p x) n.
@@ -137,13 +138,22 @@ Proof.
         simpl in *. clear H6. nr. omega.
         Grab Existential Variables. eauto. eauto.
 Qed.
+*)
 
-Definition least_fresh_P X `{OrderedType X}
+Definition least_fresh_P X `{NaturalRepresentationSucc X}
+      `{@NaturalRepresentationMax X H H0}
+           (p:inf_subset X) (lv:set X) : X.
+  refine (@safe_first X H _ _ (fun x => x ∉ lv /\ p x) _
+                                              (proj1_sig (inf_subset_least p)) _).
+  - eapply fresh_variable_always_exists_in_inf_subset; eauto.
+Defined.
+
+(*Definition least_fresh_P' X `{OrderedType X}
            (p:inf_subset X) (lv:set X) : X.
   refine (@SafeFirstInfiniteSubset.safe_first X H p (fun x => x ∉ lv /\ p x) _
                                               (proj1_sig (inf_subset_least p)) _).
   - eapply fresh_variable_always_exists_in_inf_subset; eauto.
-Defined.
+Defined.*)
 
 Lemma least_fresh_P_full_spec X `{NaturalRepresentationSucc X}
       `{@NaturalRepresentationMax X H H0}
@@ -170,7 +180,10 @@ Proof.
         eapply asNat_inj; eauto.
         nr. omega.
   - intros. cset_tac.
-  - intros. exfalso. nr. omega.
+  - intros. exfalso. nr.
+    revert H4. destr_sig. intros. destruct a.
+    nr. eapply H6 in H3.
+    destruct H3. omega. rewrite H3 in *. omega.
 Qed.
 
 Lemma least_fresh_P_ext  X `{NaturalRepresentationSucc X}
