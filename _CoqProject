@@ -151,6 +151,7 @@ theories/Infra/Fresh.v
 theories/Infra/Get.v
 theories/Infra/Indexwise.v
 theories/Infra/InfinitePartition.v
+theories/Infra/InfiniteSubset.v
 theories/Infra/Keep.v
 theories/Infra/Lattice.v
 theories/Infra/LeastFresh.v
@@ -178,6 +179,8 @@ theories/Infra/PidgeonHole.v
 theories/Infra/Position.v
 theories/Infra/Range.v
 theories/Infra/ReplaceIf.v
+theories/Infra/SafeFirstInfiniteSubset.v
+theories/Infra/SafeFirstInfPartition.v
 theories/Infra/SafeFirst.v
 theories/Infra/SigR.v
 theories/Infra/SizeInduction.v
