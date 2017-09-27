@@ -375,6 +375,20 @@ Proof.
         -- rewrite lookup_set_singleton' in H2; eauto. eapply In_single in H2.
            invc H2. lud; [|isabsurd].
            hnf; intros. eapply ann_P_get in H5.
+
+           Lemma least_fresh_part_bounded VD k (lv:set var) x p ϱ
+                 (INCL:lv ⊆ VD)
+             (BND:bounded_in VD k lv)
+             (IN:x ∈ lv)
+             (SEP:sep positive p lv ϱ)
+             (P1:part_1 p x)
+             : (least_fresh_part p (SetConstructs.map ϱ (lv \ singleton x)) x <=
+                Pos.of_nat (2 * k))%positive.
+           Proof.
+             unfold least_fresh_part. cases.
+             edestruct (least_fresh_P_full_spec (part_1 p) (lv \ singleton x)); dcr.
+             hnf in BND.
+           Qed.
            admit.
         -- eauto.
   - monadS_inv allocOK.
@@ -473,7 +487,15 @@ Proof.
            eapply mapAnn_renamedApart; eauto.
            eapply regAssign_renamedApart_agreeF' with (ans:=drop (S n ) ans) in H24;
              eauto; try reflexivity; intros; inv_get; eauto with len.
-           ++
+           ++ etransitivity. eapply agree_on_incl; eauto.
+             rewrite <- disj_eq_minus; swap 1 3.
+             eapply disj_fst_snd_ra; eauto. reflexivity. reflexivity.
+             eapply agree_on_incl.
+             eapply regAssign_renamedApart_agree'; try eapply EQ0; eauto.
+             pe_rewrite.
+             rewrite <- disj_eq_minus; swap 1 3; try reflexivity.
+             eapply disj_fst_snd_Dt; eauto.
+           ++ eapply regAssign_renamedApart_agree' in H30; eauto.
     + exploit IHLS; try eapply EQ0; eauto.
       * eapply injective_on_agree; swap 1 2.
         change _eq with (@eq var).
