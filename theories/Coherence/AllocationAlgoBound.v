@@ -452,6 +452,87 @@ Definition regbnd (p:inf_subset var) k (x:positive) := p x -> (x ∈ of_list (ks
 Definition part_bounded_in X `{OrderedType X} (p:inf_subset X) k a :=
   SetInterface.cardinal (filter p a) <= k.
 
+Lemma least_fresh_P_p X
+      `{NaturalRepresentationSucc X}
+      `{@NaturalRepresentationMax X H H0} (p:inf_subset X) G
+  : p (least_fresh_P p G).
+Proof.
+  eapply least_fresh_P_full_spec.
+Qed.
+
+Lemma nodup_filter A (R:A->A->Prop) L p
+      (PR:Proper (R ==> eq) p)
+  : NoDupA R L
+    -> NoDupA R (List.filter p L).
+Proof.
+  intros. general induction H; simpl; eauto using NoDupA.
+  cases; eauto using NoDupA.
+  econstructor; eauto. intro. eapply filter_InA in H1; eauto.
+Qed.
+
+Lemma take_InA A (R:A->A->Prop) L n x
+  : InA R x (take n L)
+    -> InA R x L.
+Proof.
+  general induction n; destruct L; simpl in *; isabsurd.
+  invt InA; eauto using InA.
+Qed.
+
+Lemma nodup_take A (R:A->A->Prop) L n
+  : NoDupA R L
+    -> NoDupA R (take n L).
+Proof.
+  intros. general induction n; invt NoDupA; simpl; eauto using NoDupA.
+  econstructor; eauto. intro. eapply take_InA in H2; eauto.
+Qed.
+
+Lemma filter_take_fresh p n Z G
+  : ❬List.filter (part_1 p) (take n (fst (fresh_list_stable (stable_fresh_part p) G Z)))❭
+    <= ❬List.filter (part_1 p) Z❭.
+Proof.
+  general induction Z; simpl; eauto.
+  - rewrite take_nil. simpl. omega.
+  - let_pair_case_eq; simpl_pair_eqs; subst; simpl.
+    unfold least_fresh_part. simpl. repeat cases.
+    + simpl. destruct n; simpl. omega. cases; simpl.
+      * rewrite IHZ. omega.
+      * exfalso.
+        eapply (part_disj p (least_fresh_P (part_1 p) G)).
+        eapply least_fresh_P_p.
+        edestruct part_cover; eauto. cset_tac.
+    + destruct n; simpl. omega.
+      cases; eauto.
+      exfalso.
+      eapply (part_disj p (least_fresh_P (part_2 p) G)).
+      edestruct part_cover; eauto.
+      eapply least_fresh_P_p.
+Qed.
+
+(*
+Lemma filter_take_fresh' p n Z G
+      (LT:n < ❬Z❭)
+  : ❬List.filter (part_1 p) (take n (fst (fresh_list_stable (stable_fresh_part p) G Z)))❭
+    < ❬List.filter (part_1 p) Z❭.
+Proof.
+  general induction Z; simpl in *.
+  - omega.
+  - let_pair_case_eq; simpl_pair_eqs; subst; simpl.
+    unfold least_fresh_part. cases; simpl.
+    + destruct n; simpl. omega.
+      cases. simpl. eapply lt_n_S. eapply IHZ. omega. omega.
+      exfalso.
+      eapply (part_disj p (least_fresh_P (part_1 p) G)).
+      eapply least_fresh_P_p.
+      edestruct part_cover; eauto. cset_tac.
+    + destruct n; simpl. omega.
+      cases. simpl. eapply lt_n_S. eapply IHZ. omega.
+      exfalso.
+      eapply (part_disj p (least_fresh_P (part_1 p) G)).
+      eapply least_fresh_P_p.
+      edestruct part_cover; eauto. cset_tac.
+Qed.
+*)
+
 Lemma regAssign_assignment_small k p (ϱ:Map [var,var]) ZL Lv s alv ϱ' ra
       (LS:live_sound FunctionalAndImperative ZL Lv s alv)
       (inj:injective_on (getAnn alv) (findt ϱ default_var))
@@ -500,9 +581,13 @@ Proof.
            rewrite <- H5. rewrite cardinal_map.
            eapply subset_cardinal_lt with (x0 := x).
            rewrite filter_difference. eauto with cset. eauto.
-           eapply zfilter_3; eauto.
-           admit. eauto. eauto. eapply sep_incl; eauto.
-           intros. admit.
+           eapply zfilter_3; eauto. rewrite filter_incl. clear. cset_tac.
+           eauto. eauto. eauto. eapply sep_incl; eauto.
+           intros.
+           enough ((part_2 p)
+                     (least_fresh_P (part_2 p) (SetConstructs.map (findt ϱ default_var) (getAnn al \ singleton x)))).
+           exfalso. eapply (part_disj p _ H2 H3).
+           eapply least_fresh_P_p; eauto.
         -- eauto.
   - monadS_inv allocOK.
     exploit regAssign_renamedApart_agree; eauto using live_sound. pe_rewrite.
@@ -595,10 +680,45 @@ Proof.
            eapply union_iff in H20; destruct H20.
            eapply up; eauto. rewrite <- Inclx2. eauto.
            hnf; intros.
-           edestruct fresh_list_stable_In; eauto; dcr. rewrite H29.
+           eapply of_list_get_first in H20; eauto; dcr. invc H29.
+           edestruct fresh_list_stable_get; eauto; dcr. subst.
            simpl.
            unfold least_fresh_part. cases.
            eapply least_fresh_part_bounded.
+           rewrite filter_union; eauto.
+           rewrite union_cardinal_le; eauto.
+           rewrite <- sep_filter_map_comm; eauto.
+           rewrite cardinal_map; eauto. rewrite filter_difference; eauto.
+           edestruct H2; dcr; eauto.
+           rewrite cardinal_difference'; eauto; [|rewrite H20; eauto].
+           exploit H8; eauto. eapply ann_P_get in H30. hnf in H30.
+           rewrite <- H30.
+           enough (SetInterface.cardinal
+                     (filter (part_1 p)
+                             (of_list
+                                (take x6
+                                      (fst
+                                         (fresh_list_stable (stable_fresh_part p)
+                                                            (SetConstructs.map (findt ϱ default_var) (getAnn x0 \ of_list (fst x2)))
+                                                            (fst x2)))))) < SetInterface.cardinal (filter (part_1 p) (of_list (fst x2)))).
+           enough (SetInterface.cardinal (filter (part_1 p) (of_list (fst x2))) <=
+                  SetInterface.cardinal (filter (part_1 p) (getAnn x0))).
+           omega.
+           rewrite H20. reflexivity.
+           exploit get_range; eauto.
+           rewrite <- of_list_filter_set; eauto.
+           rewrite cardinal_of_list_nodup; eauto.
+           rewrite <- of_list_filter_set; eauto.
+           rewrite cardinal_of_list_nodup; eauto.
+
+
+           eapply nodup_filter; eauto.
+           eapply nodup_filter; eauto.
+           eapply nodup_take. eapply fresh_list_stable_nodup.
+           simpl in H26.
+           unfold least_fresh_part in H26. cases in H26. congruence.
+           eapply part_disj in H26. inv H26.
+           eapply least_fresh_P_p.
         -- eapply ann_P_morph with (R:=SetInterface.Equal); eauto.
            intros. rewrite <- H26. eauto.
            eapply mapAnn_renamedApart; eauto.
