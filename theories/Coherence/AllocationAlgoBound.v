@@ -332,43 +332,136 @@ Qed.
 
 Require Import InfiniteSubset.
 
-Definition regbnd p k (x:positive) := part_1 p x -> (x <= Pos.of_nat (2*k))%positive.
-
 Fixpoint nextk X `{OrderedType X} (p:inf_subset X) n (x:X) :=
   match n with
-  | 0 => ∅
+  | 0 => nil
   | S n =>
     let y := proj1_sig (inf_subset_inf p x) in
-    {y ;nextk p n y}
+    x::nextk p n y
   end.
+
+Lemma nextk_length X `{OrderedType X} (p:inf_subset X) n x
+  : ❬nextk p n x❭ = n.
+Proof.
+  general induction n; simpl; eauto.
+Qed.
+
+Lemma nextk_p X `{OrderedType X} (p:inf_subset X) n x (P:p x)
+  : forall y, InA _eq y (nextk p n x) -> p y.
+Proof.
+  intros. general induction H0; destruct n; simpl in *; clear_trivial_eqs.
+  - rewrite H0 in *. eauto.
+  - revert H0; destr_sig; intros; dcr. simpl in *. dcr.
+    eapply IHInA. eauto. reflexivity.
+Qed.
+
 
 Definition ksmallest X `{OrderedType X} (p:inf_subset X) n :=
   nextk p n (proj1_sig (inf_subset_least p)).
 
+Lemma nextk_lt X `{OrderedType X} (p:inf_subset X) n x
+  : forall y, InA _eq y (nextk p n x) -> _lt x y \/ _eq x y.
+Proof.
+  intros.
+  general induction H0; destruct n; simpl in *; clear_trivial_eqs; eauto.
+  revert H0. destr_sig; dcr; eauto. simpl in *. dcr.
+  exploit IHInA; eauto.
+  intros. destruct H1; eauto.
+  - left. etransitivity; eauto.
+  - left. rewrite <- H1. eauto.
+Qed.
+
+Lemma nextk_nodup X `{OrderedType X} (p:inf_subset X) n x
+  : NoDupA _eq (nextk p n x).
+Proof.
+  general induction n; simpl; eauto using NoDupA.
+  econstructor; eauto.
+  intro. eapply nextk_lt in H0. revert H0. destr_sig.
+  intro. dcr.
+  destruct H0.
+  - rewrite H0 in H3.
+    eapply OrderedType.StrictOrder_Irreflexive in H3. cset_tac.
+  - rewrite H0 in *.
+    eapply OrderedType.StrictOrder_Irreflexive in H3. cset_tac.
+Qed.
+
+Lemma ksmallest_card X `{OrderedType X} (p:inf_subset X) k
+  : SetInterface.cardinal (of_list (ksmallest p k)) = k.
+Proof.
+  rewrite cardinal_of_list_nodup; eauto using nextk_nodup, nextk_length.
+Qed.
+
+Lemma nextk_greater X `{OrderedType X} (p:inf_subset X) k x z
+      (NOTIN:x ∉ of_list (nextk p k z))
+      (GR: _lt z x \/ _eq z x) (P:p z) (P':p x)
+  : forall y : X, y \In of_list (nextk p k z) -> _lt y x.
+Proof.
+  general induction k; simpl in *.
+  - cset_tac.
+  - revert H0. destr_sig. simpl in *; intros. dcr.
+    assert (_lt x0 x \/ _eq x0 x). {
+      destruct GR as [GR|GR].
+      - decide (_lt x x0); eauto.
+        + exploit H4. eapply P'. eauto. destruct H2.
+          exfalso. rewrite H2 in GR.
+          exfalso. eapply OrderedType.StrictOrder_Irreflexive in GR. cset_tac.
+          rewrite H2 in GR.
+          exfalso. eapply OrderedType.StrictOrder_Irreflexive in GR. cset_tac.
+        + decide (x0 === x); eauto.
+          left.
+          eapply le_neq. eapply n. cset_tac.
+      - rewrite GR in *. cset_tac.
+    }
+    cset_tac'.
+    + rewrite <- H0. rewrite <- H8. eauto.
+    + rewrite <- H0. rewrite <- H8. eauto.
+Qed.
+
 Lemma least_fresh_part_bounded X
       `{NaturalRepresentationSucc X}
       `{@NaturalRepresentationMax X H H0}
-      k (lv:set X) (p:inf_subset X) ϱ
-      (INCL:SetInterface.cardinal (lv ∩ ksmallest p k) < k)
-      (SEP:(forall x, x \In lv -> p x -> p (ϱ x)))
-  : least_fresh_P p (SetConstructs.map ϱ lv) ∈ ksmallest p k.
+      k (lv:set X) (p:inf_subset X)
+      (* (INCL1: of_list (ksmallest p k) ⊆ lv)*)
+      (INCL: SetInterface.cardinal (filter p lv) < k)
+  : least_fresh_P p lv ∈ of_list (ksmallest p k).
 Proof.
-  edestruct (least_fresh_P_full_spec p (lv)); dcr.
-  hnf in BND. rewrite <- INCL in BND.
+  edestruct (least_fresh_P_full_spec p lv); dcr.
+  decide (least_fresh_P p lv \In of_list (ksmallest p k)); eauto.
+  exfalso.
+  set (x:=least_fresh_P p lv) in *.
+  assert (forall y, y ∈ of_list (ksmallest p k) -> _lt y x /\ p y). {
+    intros. unfold ksmallest in *.
+    exploit nextk_greater; try eapply n; eauto.
+    - destruct k; simpl in *. cset_tac.
+      destr_sig; dcr. simpl in *. dcr.
+      edestruct (H8 x); eauto.
+    - destr_sig; eauto.
+    - split; eauto.
+      eapply InA_in in H4.
+      eapply nextk_p in H4. eauto. destr_sig; dcr; eauto.
+  }
+  assert (of_list (ksmallest p k) ⊆ filter p lv). {
+    hnf; intros.
+    eapply H4 in H7. eapply H5; eauto.
+  }
+  rewrite <- H7 in INCL.
+  rewrite ksmallest_card in INCL. omega.
 Qed.
-admit.
 
+Definition regbnd (p:inf_subset var) k (x:positive) := p x -> (x ∈ of_list (ksmallest p k)).
+Definition part_bounded_in X `{OrderedType X} (p:inf_subset X) k a :=
+  SetInterface.cardinal (filter p a) <= k.
 
-Lemma regAssign_assignment_small k p VD (ϱ:Map [var,var]) ZL Lv s alv ϱ' ra
+Lemma regAssign_assignment_small k p (ϱ:Map [var,var]) ZL Lv s alv ϱ' ra
       (LS:live_sound FunctionalAndImperative ZL Lv s alv)
       (inj:injective_on (getAnn alv) (findt ϱ default_var))
       (SEP:sep var p (getAnn alv) (findt ϱ default_var))
       (RA:renamedApart s ra)
       (INCL:ann_R Subset1 alv ra)
       (allocOK:regAssign p s alv ϱ = Success ϱ')
-      (BND:ann_P (bounded_in VD k) alv)
-      (up:For_all (regbnd p k) (lookup_set (findt ϱ default_var) (getAnn alv)))
-  : ann_P (For_all (regbnd p k)) (mapAnn (lookup_set (findt ϱ' default_var)) alv).
+      (BND:ann_P (part_bounded_in (part_1 p) k) alv)
+      (up:For_all (regbnd (part_1 p) k) (lookup_set (findt ϱ default_var) (getAnn alv)))
+  : ann_P (For_all (regbnd (part_1 p) k)) (mapAnn (lookup_set (findt ϱ' default_var)) alv).
 Proof.
   general induction LS; invt ann_P; invt renamedApart; invt @ann_R; simpl in *.
   - econstructor; eauto.
@@ -401,6 +494,15 @@ Proof.
         -- rewrite lookup_set_singleton' in H2; eauto. eapply In_single in H2.
            invc H2. lud; [|isabsurd].
            hnf; intros. eapply ann_P_get in H5.
+           revert H2. unfold least_fresh_part. cases. intros.
+           eapply least_fresh_part_bounded.
+           hnf in H5. rewrite <- sep_filter_map_comm.
+           rewrite <- H5. rewrite cardinal_map.
+           eapply subset_cardinal_lt with (x0 := x).
+           rewrite filter_difference. eauto with cset. eauto.
+           eapply zfilter_3; eauto.
+           admit. eauto. eauto. eapply sep_incl; eauto.
+           intros. admit.
         -- eauto.
   - monadS_inv allocOK.
     exploit regAssign_renamedApart_agree; eauto using live_sound. pe_rewrite.
@@ -492,7 +594,11 @@ Proof.
            rewrite lookup_set_update_with_list_in_union_length in H20; eauto with len.
            eapply union_iff in H20; destruct H20.
            eapply up; eauto. rewrite <- Inclx2. eauto.
-           hnf; intros. admit.
+           hnf; intros.
+           edestruct fresh_list_stable_In; eauto; dcr. rewrite H29.
+           simpl.
+           unfold least_fresh_part. cases.
+           eapply least_fresh_part_bounded.
         -- eapply ann_P_morph with (R:=SetInterface.Equal); eauto.
            intros. rewrite <- H26. eauto.
            eapply mapAnn_renamedApart; eauto.
