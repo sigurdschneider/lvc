@@ -1,4 +1,4 @@
-Require Import Util CSet IL Annotation StableFresh InfinitePartition VarP.
+Require Import Util CSet IL Annotation StableFresh InfiniteSubset InfinitePartition VarP.
 Require Import RenameApart RenamedApartAnn RenameApart_VarP Range Setoid.
 Require Import FreshGenInst FreshGen.
 

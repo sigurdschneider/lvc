@@ -9,7 +9,7 @@ Require Delocation DelocationAlgo DelocationCorrect DelocationValidator.
 Require Coherence.Allocation AllocationAlgo AllocationAlgoCorrect.
 Require UCE DVE EAE Alpha.
 Require ReachabilityAnalysis ReachabilityAnalysisCorrect.
-Require Import DCE Slot InfinitePartition RegAssign ExpVarsBounded.
+Require Import DCE Slot InfiniteSubset InfinitePartition RegAssign ExpVarsBounded.
 Require CopyPropagation ConstantPropagation ConstantPropagationAnalysis.
 Require ConstantPropagationCorrect ConstantPropagationAnalysisCorrect.
 

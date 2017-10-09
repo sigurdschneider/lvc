@@ -357,3 +357,13 @@ Proof.
     monad_inv H0. rewrite EQ. simpl.
     rewrite (IHL _ _ _ _ _ _ H EQ1); eauto using get.
 Qed.
+
+Lemma nodup_filter A (R:A->A->Prop) L p
+      (PR:Proper (R ==> eq) p)
+  : NoDupA R L
+    -> NoDupA R (List.filter p L).
+Proof.
+  intros. general induction H; simpl; eauto using NoDupA.
+  cases; eauto using NoDupA.
+  econstructor; eauto. intro. eapply filter_InA in H1; eauto.
+Qed.

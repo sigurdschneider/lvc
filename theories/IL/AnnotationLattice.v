@@ -1,8 +1,17 @@
 Require Import Util LengthEq Get Drop Map CSet MoreList DecSolve AllInRel.
 Require Import Var Val Exp Envs IL OptionR.
-Require Import Infra.PartialOrder Terminating Infra.Lattice Annotation.
+Require Import Infra.PartialOrder Terminating Infra.Lattice Annotation AnnP.
 
 Set Implicit Arguments.
+
+Instance ann_P_morph A (P:A->Prop) (R:A->A->Prop) (H:forall x y, R x y -> P x -> P y)
+  : Proper (ann_R R ==> impl) (ann_P (A:=A) P).
+Proof.
+  unfold Proper, respectful, impl.
+  intros.
+  general induction H0; invt ann_P; eauto using ann_P.
+  econstructor; intros; inv_get; eauto using ann_P.
+Qed.
 
 Lemma option_map_mon T `{PartialOrder T}  U `{PartialOrder U} (a a':option T) (f f': T -> U)
   : a ⊑ a'

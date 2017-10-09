@@ -810,3 +810,9 @@ Lemma cap_special_notin X `{OrderedType X} G
 Proof.
   cset_tac.
 Qed.
+
+Lemma For_all_union X `{OrderedType X} (P:X -> Prop) s t
+  : For_all P (s ∪ t) <-> For_all P s /\ For_all P t.
+Proof.
+  unfold For_all. cset_tac.
+Qed.

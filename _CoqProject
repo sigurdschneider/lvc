@@ -41,6 +41,7 @@ theories/Coherence/AddParams.v
 theories/Coherence/AddParam.v
 theories/Coherence/AllocationAlgoBound.v
 theories/Coherence/AllocationAlgoCorrect.v
+theories/Coherence/AllocationAlgoSep.v
 theories/Coherence/AllocationAlgo.v
 theories/Coherence/Allocation.v
 theories/Coherence/AllocationValidator.v
@@ -180,10 +181,10 @@ theories/Infra/Position.v
 theories/Infra/Range.v
 theories/Infra/ReplaceIf.v
 theories/Infra/SafeFirstInfiniteSubset.v
-theories/Infra/SafeFirstInfPartition.v
 theories/Infra/SafeFirst.v
 theories/Infra/SigR.v
 theories/Infra/SizeInduction.v
+theories/Infra/SmallestK.v
 theories/Infra/StableFresh.v
 theories/Infra/Status.v
 theories/Infra/Sublist.v

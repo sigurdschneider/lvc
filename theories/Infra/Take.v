@@ -161,3 +161,19 @@ Proof.
   - omega.
   - f_equal. f_equal. omega.
 Qed.
+
+Lemma take_InA A (R:A->A->Prop) L n x
+  : InA R x (take n L)
+    -> InA R x L.
+Proof.
+  general induction n; destruct L; simpl in *; isabsurd.
+  invt InA; eauto using InA.
+Qed.
+
+Lemma nodup_take A (R:A->A->Prop) L n
+  : NoDupA R L
+    -> NoDupA R (take n L).
+Proof.
+  intros. general induction n; invt NoDupA; simpl; eauto using NoDupA.
+  econstructor; eauto. intro. eapply take_InA in H2; eauto.
+Qed.

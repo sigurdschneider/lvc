@@ -1,5 +1,5 @@
 Require Import Util CSet NaturalRep FreshNR StableFresh Even.
-Require Import InfiniteSubset SafeFirstInfiniteSubset.
+Require Import InfiniteSubset SafeFirstInfiniteSubset Take TakeSet.
 
 Set Implicit Arguments.
 
@@ -83,7 +83,7 @@ Proof.
         econstructor; split; eauto.
         cset_tac'.
         eapply (@fold_max_lt X _ _ _ _) in H8; eauto.
-        simpl in *. exfalso. nr. omega.
+        simpl in *. exfalso. clear H6. nr. omega.
         eapply (@fold_max_lt X _ _ _ _) in H8; eauto.
         simpl in *. exfalso. clear H6. nr. omega.
         simpl in *. clear H6. nr. omega.
@@ -194,6 +194,14 @@ Proof.
   eapply safe_first_ext. intros. rewrite H3. reflexivity.
 Qed.
 
+Lemma least_fresh_P_p X
+      `{NaturalRepresentationSucc X}
+      `{@NaturalRepresentationMax X H H0} (p:inf_subset X) G
+  : p (least_fresh_P p G).
+Proof.
+  eapply least_fresh_P_full_spec.
+Qed.
+
 Definition stable_fresh_P  X `{NaturalRepresentationSucc X}
            `{@NaturalRepresentationMax X H H0} (isub:inf_subset X) : StableFresh X.
   refine (Build_StableFresh (fun lv _ => least_fresh_P isub lv) _ _).
@@ -238,6 +246,31 @@ Proof.
   unfold least_fresh_part; intros. cases.
   - exfalso. eapply (part_disj p); eauto.
   - eapply least_fresh_P_full_spec.
+Qed.
+
+
+Lemma least_fresh_part_p1 X `{OrderedType X}
+      (NR:NaturalRepresentation X)
+      (NRS:@NaturalRepresentationSucc X _ NR)
+      (NRM:@NaturalRepresentationMax X _ NR)
+      (p:inf_partition X) G x
+  : part_1 p (least_fresh_part p G x) -> part_1 p x.
+Proof.
+  intros. edestruct part_cover; eauto.
+  eapply least_fresh_part_2 in i.
+  exfalso. eapply part_disj in H0; eauto.
+Qed.
+
+Lemma least_fresh_part_p2 X `{OrderedType X}
+      (NR:NaturalRepresentation X)
+      (NRS:@NaturalRepresentationSucc X _ NR)
+      (NRM:@NaturalRepresentationMax X _ NR)
+      (p:inf_partition X) G x
+  : part_2 p (least_fresh_part p G x) -> part_2 p x.
+Proof.
+  intros. edestruct part_cover; eauto.
+  eapply least_fresh_part_1 in i.
+  exfalso. eapply part_disj in H0; eauto.
 Qed.
 
 Lemma least_fresh_part_ext  X `{NaturalRepresentationSucc X}
@@ -333,4 +366,39 @@ Proof.
     + rewrite filter_add_notin; eauto.
       rewrite filter_add_notin; eauto.
       eauto using least_fresh_part_1_back.
+Qed.
+
+Lemma cardinal_smaller  X `{NaturalRepresentationSucc X}
+           `{@NaturalRepresentationMax X H H0}
+      p n (G:set X) (Z:list X) x
+      (GET:get Z n x) (P1:part_1 p x) (ND: NoDupA _eq Z)
+  : SetInterface.cardinal
+    (filter (part_1 p)
+       (of_list
+          (take n
+             (fst
+                (fresh_list_stable (stable_fresh_part p) G Z)))))
+    < SetInterface.cardinal (filter (part_1 p) (of_list Z)).
+Proof.
+  general induction Z; simpl;
+    let_pair_case_eq; simpl_pair_eqs; subst; simpl; destruct n; simpl.
+  - inv GET.
+    + rewrite filter_incl; eauto. rewrite empty_cardinal.
+      rewrite filter_add_in; eauto.
+      rewrite add_cardinal_2. omega. inv ND.
+      rewrite filter_incl; eauto.
+  - inv GET.
+    + decide (part_1 p a).
+      * rewrite filter_add_in; eauto using least_fresh_part_1.
+        rewrite filter_add_in; eauto.
+        rewrite !add_cardinal_2.
+        -- eapply lt_n_S.
+           eapply IHZ; eauto.
+        -- rewrite filter_incl; eauto.
+        -- rewrite filter_incl, take_list_incl; eauto.
+           hnf; intro IN.
+           eapply fresh_list_stable_spec in IN. cset_tac.
+      * rewrite filter_add_notin; eauto using least_fresh_part_1.
+        rewrite filter_add_notin; eauto.
+        intro; eapply n0. eapply least_fresh_part_p1; eauto.
 Qed.
