@@ -1,7 +1,8 @@
 Require Import CSet Le Arith.Compare_dec.
 
 Require Import Plus Util Map CMap Status Take Subset1 ListMax.
-Require Import Val Var Envs IL Annotation Liveness.Liveness Fresh MoreList SetOperations AnnP.
+Require Import Val Var Envs IL Annotation Liveness.Liveness Fresh MoreList SetOperations.
+Require Import AnnotationLattice AnnP.
 Require Import Coherence Coherence.Allocation RenamedApart AllocationAlgo.
 Require Import RenamedApart_Liveness LabelsDefined Restrict InfiniteSubset InfinitePartition MapSep.
 Require Import RenameApart_Partition Filter AllocationAlgoSep.
@@ -87,7 +88,7 @@ Proof.
       rewrite <- map_update_update_agree in H2.
       eapply agree_on_update_inv in H2.
       rewrite <- lookup_set_agree; swap 1 4.
-      change _eq with (@eq var). eapply agree_on_incl; eauto. revert H10 H7; clear; cset_tac.
+      simpl. eapply agree_on_incl; eauto. revert H10 H7; clear; cset_tac.
       eauto. eauto. eauto.
     + eapply IHLS; eauto.
       * eapply injective_on_agree; [|eapply map_update_update_agree].
@@ -131,7 +132,7 @@ Proof.
     exploit regAssign_renamedApart_agree'; eauto. pe_rewrite.
     econstructor; eauto.
     + rewrite <- lookup_set_agree; eauto.
-      change _eq with (@eq var).
+      simpl.
       etransitivity; eauto using agree_on_incl.
     + exploit IHLS1; eauto.
       * eauto using injective_on_incl; eauto.
@@ -145,13 +146,13 @@ Proof.
         symmetry; eauto.
     + exploit IHLS2; try eapply EQ0; eauto.
       * eapply injective_on_agree; swap 1 2.
-        change _eq with (@eq var).
+        simpl.
         eapply agree_on_incl. eapply H3. etransitivity; eauto.
         eauto using injective_on_incl; eauto.
       * rewrite H1. eapply sep_agree. eauto using agree_on_incl.
         eauto.
       * rewrite <- lookup_set_agree; swap 1 4.
-        change _eq with (@eq var). eapply agree_on_incl; eauto. etransitivity; eauto.
+        simpl. eapply agree_on_incl; eauto. etransitivity; eauto.
         eauto. eauto. rewrite H1. eauto.
   - econstructor.
     eauto.
