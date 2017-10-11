@@ -1,4 +1,4 @@
-Require Import Util CSet NaturalRep FreshNR StableFresh Even.
+Require Import Util CSet StableFresh Even.
 Require Import InfiniteSubset SafeFirstInfiniteSubset Take TakeSet.
 
 Set Implicit Arguments.
@@ -44,6 +44,7 @@ Proof.
     eapply even_or_odd.
 Qed.
 
+(*
 Require Import SafeFirst.
 
 Lemma fresh_variable_always_exists_in_inf_subset X `{NaturalRepresentationSucc X}
@@ -89,63 +90,41 @@ Proof.
         simpl in *. clear H6. nr. omega.
         Grab Existential Variables. eauto. eauto.
 Qed.
-
-(*
-Lemma fresh_variable_always_exists_in_inf_subset' X `{OrderedType X}
-      (lv:set X) (p:inf_subset X) n
-: SafeFirstInfiniteSubset.safe p (fun x => x ∉ lv /\ p x) n.
-Proof.
-  - decide (_lt (SetInterface.fold OrderedTypeMax.nr_max lv (proj1_sig (inf_subset_least p))) n).
-    + decide (p n).
-      * econstructor; eauto. split; eauto.
-        -- destr_sig; dcr; eauto.
-        -- intro. cset_tac'.
-           ++ eapply (@fold_max_lt X _ _ _ _) in H0; eauto.
-             simpl in *. exfalso. nr. revert H0. destr_sig. dcr.
-             intro. exploit H4; swap 1 2.
-             etransitivity; [|eapply H3]; eauto.
-             admit.
-             simpl in *. omega.
-           eapply (@fold_max_lt X _ _ _ _) in H5; eauto.
-           simpl in *. exfalso. nr. simpl in *. omega.
-      * edestruct (inf_subset_inf p n); dcr. cbn in *.
-        eapply (@safe_antitone _ _ _ _ _ _ _ x); eauto.
-        econstructor; split; eauto.
-        intro. cset_tac'.
-        eapply (@fold_max_lt X _ _ _ _) in H8; eauto.
-        simpl in *. exfalso. nr. simpl in *. omega.
-        eapply (@fold_max_lt X _ _ _ _) in H8; eauto.
-        simpl in *. exfalso. nr. simpl in *. omega.
-    + decide (p (succ (SetInterface.fold max lv (ofNat 0)))).
-      * eapply safe_antitone. eauto.
-        instantiate (1:=succ (SetInterface.fold max lv (ofNat 0))).
-        econstructor. split; eauto. intro.
-        cset_tac'.
-        eapply (@fold_max_lt X _ _ _ _) in H5; eauto.
-        simpl in *. exfalso. nr. simpl in *. omega.
-        eapply (@fold_max_lt X _ _ _ _) in H5; eauto.
-        simpl in *. exfalso. nr. simpl in *. omega.
-        simpl in *. nr. omega.
-      * edestruct (inf_subset_inf p (succ (fold max lv (ofNat 0))));
-          dcr.
-        eapply (@safe_antitone _ _ _ _ _ _ _ x).
-        econstructor; split; eauto.
-        cset_tac'.
-        eapply (@fold_max_lt X _ _ _ _) in H8; eauto.
-        simpl in *. exfalso. nr. omega.
-        eapply (@fold_max_lt X _ _ _ _) in H8; eauto.
-        simpl in *. exfalso. clear H6. nr. omega.
-        simpl in *. clear H6. nr. omega.
-        Grab Existential Variables. eauto. eauto.
-Qed.
 *)
 
-Definition least_fresh_P X `{NaturalRepresentationSucc X}
-      `{@NaturalRepresentationMax X H H0}
+Lemma fresh_variable_always_exists_in_inf_subset X `{OrderedType X}
+      (lv:set X) (p:inf_subset X) k
+  : forall n, cardinal lv <= n ->
+         SafeFirstInfiniteSubset.safe p (fun x => x ∉ lv /\ p x) k.
+Proof.
+  intros. general induction n.
+  - exploit (@cardinal_inv_1 _ _ _ _ lv); try omega; eauto.
+    econstructor. intros.
+    econstructor; intros.
+    exfalso. revert H3. destr_sig. cset_tac.
+  - econstructor; intros. clear H1.
+    decide ((proj1_sig (inf_subset_inf p k)) ∈ lv).
+    + econstructor; intros.
+      eapply safe_impl'.
+      eapply (IHn (lv \ singleton (proj1_sig (inf_subset_inf p k))) p).
+      * rewrite cardinal_difference'; [|cset_tac].
+        rewrite singleton_cardinal. omega.
+      * revert i H1. repeat destr_sig. dcr. intros. cset_tac'.
+        -- rewrite H10 in *.
+           rewrite H3 in H12.
+           eapply StrictOrder_Irreflexive in H12; eauto.
+        -- rewrite H12 in *. rewrite H10 in *.
+           eapply StrictOrder_Irreflexive in H3; eauto.
+    + econstructor; intros.
+      exfalso. revert n0 H1.
+      destr_sig. cset_tac.
+      Grab Existential Variables. eauto. eauto.
+Qed.
+
+Definition least_fresh_P X `{OrderedType X}
            (p:inf_subset X) (lv:set X) : X.
-  refine (@safe_first X H _ _ (fun x => x ∉ lv /\ p x) _
-                                              (proj1_sig (inf_subset_least p)) _).
-  - eapply fresh_variable_always_exists_in_inf_subset; eauto.
+  refine (@safe_first X H p (fun x => x ∉ lv /\ p x) _ (proj1_sig (inf_subset_least p)) _).
+  eapply fresh_variable_always_exists_in_inf_subset. reflexivity.
 Defined.
 
 (*Definition least_fresh_P' X `{OrderedType X}
@@ -155,8 +134,7 @@ Defined.
   - eapply fresh_variable_always_exists_in_inf_subset; eauto.
 Defined.*)
 
-Lemma least_fresh_P_full_spec X `{NaturalRepresentationSucc X}
-      `{@NaturalRepresentationMax X H H0}
+Lemma least_fresh_P_full_spec X `{OrderedType X}
       p (G:set X)
   : least_fresh_P p G ∉ G
     /\ (forall m, p m ->  _lt m (least_fresh_P p G) -> m ∈ filter p G)
@@ -165,45 +143,43 @@ Proof.
   unfold least_fresh_P.
   eapply safe_first_spec with
   (I:= fun n => forall m, p m -> _lt m n -> m ∈ filter p G).
-  - intros. rewrite de_morgan_dec, <- in_dneg in H4.
-    destruct H4.
+  - intros. rewrite de_morgan_dec, <- in_dneg in H1.
+    destruct H1.
     + decide (m === n); subst; eauto.
       * cset_tac.
-      * exploit (H3 m); eauto.
-        assert (asNat m <> asNat n). intro. eapply n0.
-        eapply asNat_inj; eauto.
-        nr. omega.
+      * exploit (H0 m); eauto.
+        revert H3. destr_sig; dcr; intros.
+        edestruct (H6 m); eauto.
+        cset_tac.
     + decide (m === n); subst; eauto.
-      * exfalso. eapply H4. rewrite <- e. eauto.
-      * exploit (H3 m); eauto.
-        assert (asNat m <> asNat n). intro. eapply n0.
-        eapply asNat_inj; eauto.
-        nr. omega.
+      * exfalso. eapply H1. rewrite <- e. eauto.
+      * exploit (H0 m); eauto.
+        revert H3. destr_sig; dcr; intros.
+        edestruct (H6 m); eauto.
+        cset_tac.
   - intros. cset_tac.
-  - intros. exfalso. nr.
-    revert H4. destr_sig. intros. destruct a.
-    nr. eapply H6 in H3.
-    destruct H3. omega. rewrite H3 in *. omega.
+  - intros. exfalso.
+    revert H1. destr_sig; dcr; intros.
+    edestruct (H2 m); eauto; dcr.
+    + rewrite H4 in H3. eapply StrictOrder_Irreflexive in H3; eauto.
+    + rewrite H4 in H3. eapply StrictOrder_Irreflexive in H3; eauto.
+      Grab Existential Variables. eauto. eauto.
 Qed.
 
-Lemma least_fresh_P_ext  X `{NaturalRepresentationSucc X}
-           `{@NaturalRepresentationMax X H H0} p (G G' : ⦃X⦄)
+Lemma least_fresh_P_ext  X `{OrderedType X} p (G G' : ⦃X⦄)
   : G [=] G' -> least_fresh_P p G = least_fresh_P p G'.
 Proof.
   intros. unfold least_fresh_P; eauto.
-  eapply safe_first_ext. intros. rewrite H3. reflexivity.
+  eapply safe_first_ext. intros. rewrite H0. reflexivity.
 Qed.
 
-Lemma least_fresh_P_p X
-      `{NaturalRepresentationSucc X}
-      `{@NaturalRepresentationMax X H H0} (p:inf_subset X) G
+Lemma least_fresh_P_p X `{OrderedType X} (p:inf_subset X) G
   : p (least_fresh_P p G).
 Proof.
   eapply least_fresh_P_full_spec.
 Qed.
 
-Definition stable_fresh_P  X `{NaturalRepresentationSucc X}
-           `{@NaturalRepresentationMax X H H0} (isub:inf_subset X) : StableFresh X.
+Definition stable_fresh_P  X `{OrderedType X} (isub:inf_subset X) : StableFresh X.
   refine (Build_StableFresh (fun lv _ => least_fresh_P isub lv) _ _).
   - intros. eapply least_fresh_P_full_spec.
   - intros. eapply least_fresh_P_ext; eauto.
@@ -215,13 +191,11 @@ Proof.
   decide Q; clear H; intros; intuition.
 Qed.
 
-Definition least_fresh_part X `{NaturalRepresentationSucc X}
-           `{@NaturalRepresentationMax X H H0} (p:inf_partition X) (G:set X) x :=
+Definition least_fresh_part X `{OrderedType X} (p:inf_partition X) (G:set X) x :=
   if part_1 p x then least_fresh_P (part_1 p) G
   else least_fresh_P (part_2 p) G.
 
-Lemma least_fresh_part_fresh X `{NaturalRepresentationSucc X}
-           `{@NaturalRepresentationMax X H H0} p G x
+Lemma least_fresh_part_fresh X `{OrderedType X} p G x
   : least_fresh_part p G x ∉ G.
 Proof.
   unfold least_fresh_part; cases; eauto.
@@ -229,8 +203,7 @@ Proof.
   - eapply least_fresh_P_full_spec.
 Qed.
 
-Lemma least_fresh_part_1 X `{NaturalRepresentationSucc X}
-           `{@NaturalRepresentationMax X H H0} (p:inf_partition X) G x
+Lemma least_fresh_part_1 X `{OrderedType X} (p:inf_partition X) G x
   : part_1 p x
     -> part_1 p (least_fresh_part p G x).
 Proof.
@@ -238,8 +211,7 @@ Proof.
   eapply least_fresh_P_full_spec.
 Qed.
 
-Lemma least_fresh_part_2  X `{NaturalRepresentationSucc X}
-           `{@NaturalRepresentationMax X H H0} (p:inf_partition X) G x
+Lemma least_fresh_part_2  X `{OrderedType X} (p:inf_partition X) G x
   : part_2 p x
     -> part_2 p (least_fresh_part p G x).
 Proof.
@@ -250,9 +222,6 @@ Qed.
 
 
 Lemma least_fresh_part_p1 X `{OrderedType X}
-      (NR:NaturalRepresentation X)
-      (NRS:@NaturalRepresentationSucc X _ NR)
-      (NRM:@NaturalRepresentationMax X _ NR)
       (p:inf_partition X) G x
   : part_1 p (least_fresh_part p G x) -> part_1 p x.
 Proof.
@@ -262,9 +231,6 @@ Proof.
 Qed.
 
 Lemma least_fresh_part_p2 X `{OrderedType X}
-      (NR:NaturalRepresentation X)
-      (NRS:@NaturalRepresentationSucc X _ NR)
-      (NRM:@NaturalRepresentationMax X _ NR)
       (p:inf_partition X) G x
   : part_2 p (least_fresh_part p G x) -> part_2 p x.
 Proof.
@@ -273,22 +239,19 @@ Proof.
   exfalso. eapply part_disj in H0; eauto.
 Qed.
 
-Lemma least_fresh_part_ext  X `{NaturalRepresentationSucc X}
-           `{@NaturalRepresentationMax X H H0} p (G G' : ⦃X⦄) x
+Lemma least_fresh_part_ext  X `{OrderedType X} p (G G' : ⦃X⦄) x
   : G [=] G' -> least_fresh_part p G x = least_fresh_part p G' x.
 Proof.
   intros. unfold least_fresh_part; cases; eauto using least_fresh_P_ext.
 Qed.
 
-Definition stable_fresh_part  X `{NaturalRepresentationSucc X}
-           `{@NaturalRepresentationMax X H H0} (p:inf_partition X) : StableFresh X.
+Definition stable_fresh_part  X `{OrderedType X} (p:inf_partition X) : StableFresh X.
   refine (Build_StableFresh (least_fresh_part p) _ _).
   - intros. eapply least_fresh_part_fresh.
   - intros. eapply least_fresh_part_ext; eauto.
 Defined.
 
-Lemma least_fresh_list_part_ext  X `{NaturalRepresentationSucc X}
-           `{@NaturalRepresentationMax X H H0} p n G G'
+Lemma least_fresh_list_part_ext  X `{OrderedType X} p n G G'
   : G [=] G'
     -> fst (fresh_list_stable (stable_fresh_part p) G n)
       = fst (fresh_list_stable (stable_fresh_part p) G' n).
@@ -297,21 +260,19 @@ Proof.
   intros. eapply least_fresh_part_ext; eauto.
 Qed.
 
-Lemma fresh_list_stable_P_ext  X `{NaturalRepresentationSucc X}
-           `{@NaturalRepresentationMax X H H0} p G L L'
+Lemma fresh_list_stable_P_ext  X `{OrderedType X} p G L L'
   : ❬L❭ = ❬L'❭
     -> of_list (fst (fresh_list_stable (stable_fresh_P p) G L))
               ⊆ of_list (fst (fresh_list_stable (stable_fresh_P p) G L')).
 Proof.
   intros. hnf; intros ? In.
-  general induction H3; simpl in *.
+  general induction H0; simpl in *.
   - cset_tac.
   - revert In. repeat let_pair_case_eq; repeat simpl_pair_eqs; subst; simpl; eauto.
     cset_tac.
 Qed.
 
-Lemma fresh_list_stable_P_ext_eq  X `{NaturalRepresentationSucc X}
-           `{@NaturalRepresentationMax X H H0} p G L L'
+Lemma fresh_list_stable_P_ext_eq  X `{OrderedType X} p G L L'
   : ❬L❭ = ❬L'❭
     -> of_list (fst (fresh_list_stable (stable_fresh_P p) G L))
               [=] of_list (fst (fresh_list_stable (stable_fresh_P p) G L')).
@@ -322,8 +283,7 @@ Proof.
 Qed.
 
 
-Lemma least_fresh_part_1_back  X `{NaturalRepresentationSucc X}
-           `{@NaturalRepresentationMax X H H0} (p:inf_partition X) G x
+Lemma least_fresh_part_1_back  X `{OrderedType X} (p:inf_partition X) G x
   : part_1 p (least_fresh_part p G x) -> part_1 p x.
 Proof.
   intros.
@@ -333,8 +293,7 @@ Proof.
   edestruct (part_disj p); eauto.
 Qed.
 
-Lemma least_fresh_part_2_back  X `{NaturalRepresentationSucc X}
-           `{@NaturalRepresentationMax X H H0} (p:inf_partition X) G x
+Lemma least_fresh_part_2_back  X `{OrderedType X} (p:inf_partition X) G x
   : part_2 p (least_fresh_part p G x) -> part_2 p x.
 Proof.
   intros.
@@ -344,8 +303,7 @@ Proof.
   edestruct (part_disj p); eauto.
 Qed.
 
-Lemma cardinal_filter_part  X `{NaturalRepresentationSucc X}
-           `{@NaturalRepresentationMax X H H0} p G Z
+Lemma cardinal_filter_part  X `{OrderedType X} p G Z
       (UNIQ:NoDupA _eq Z)
   : cardinal (filter (part_1 p)
                      (of_list (fst (fresh_list_stable (stable_fresh_part p) G Z))))
@@ -362,14 +320,13 @@ Proof.
       * exploit (fresh_list_stable_spec (stable_fresh_part p));
         eauto using least_fresh_part_fresh.
         cset_tac'.
-        eapply H3; cset_tac.
+        eapply H0; cset_tac.
     + rewrite filter_add_notin; eauto.
       rewrite filter_add_notin; eauto.
       eauto using least_fresh_part_1_back.
 Qed.
 
-Lemma cardinal_smaller  X `{NaturalRepresentationSucc X}
-           `{@NaturalRepresentationMax X H H0}
+Lemma cardinal_smaller  X `{OrderedType X}
       p n (G:set X) (Z:list X) x
       (GET:get Z n x) (P1:part_1 p x) (ND: NoDupA _eq Z)
   : SetInterface.cardinal

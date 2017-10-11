@@ -1,4 +1,4 @@
-Require Import Util CSet MapInjectivity NaturalRep FreshGen FreshNR Even.
+Require Import Util CSet MapInjectivity FreshGen FreshNR Even.
 
 Set Implicit Arguments.
 

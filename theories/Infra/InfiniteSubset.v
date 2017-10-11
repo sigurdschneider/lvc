@@ -22,6 +22,29 @@ Qed.
 
 Hint Resolve inf_subset_X.
 
+Lemma inf_subset_inf_ext X `{OrderedType X} (p:inf_subset X) (x y:X)
+      (EQ:x === y)
+  : proj1_sig (inf_subset_inf p x) === proj1_sig (inf_subset_inf p y).
+Proof.
+  repeat destr_sig; dcr.
+  rewrite EQ in *.
+  setoid_rewrite EQ in H6.
+  clear x EQ.
+  decide (_lt x0 x1).
+  - exploit H3; eauto. destruct H4.
+    + exfalso. assert (_lt x0 x0) by (etransitivity; eauto).
+      eapply OrderedType.StrictOrder_Irreflexive in H7. eauto.
+    + rewrite H4 in *.
+      eapply OrderedType.StrictOrder_Irreflexive in H5. eauto.
+  - decide (_lt x1 x0); eauto.
+    + exploit H6. eapply H0. eauto. destruct H4.
+      * exfalso. assert (_lt x1 x1) by (etransitivity; eauto).
+        eapply OrderedType.StrictOrder_Irreflexive in H7. eauto.
+      * exfalso. rewrite H4 in *.
+        eapply OrderedType.StrictOrder_Irreflexive in H2. eauto.
+    + eapply lt_trans_eq in n; eauto.
+Qed.
+
 Definition even_inf_subset : inf_subset nat.
 Proof.
   refine (@Build_inf_subset _ _ even _ _ _).

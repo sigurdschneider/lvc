@@ -1,4 +1,4 @@
-Require Import CSet NaturalRep InfiniteSubset InfinitePartition.
+Require Import CSet InfiniteSubset InfinitePartition.
 
 Set Implicit Arguments.
 
@@ -88,8 +88,7 @@ Proof.
 Qed.
 
 Lemma least_fresh_part_bounded X
-      `{NaturalRepresentationSucc X}
-      `{@NaturalRepresentationMax X H H0}
+      `{OrderedType X}
       k (lv:set X) (p:inf_subset X)
       (* (INCL1: of_list (ksmallest p k) ⊆ lv)*)
       (INCL: SetInterface.cardinal (filter p lv) < k)
@@ -104,16 +103,16 @@ Proof.
     exploit nextk_greater; try eapply n; eauto.
     - destruct k; simpl in *. cset_tac.
       destr_sig; dcr. simpl in *. dcr.
-      edestruct (H8 x); eauto.
+      edestruct (H5 x); eauto.
     - destr_sig; eauto.
     - split; eauto.
-      eapply InA_in in H4.
-      eapply nextk_p in H4. eauto. destr_sig; dcr; eauto.
+      eapply InA_in in H1.
+      eapply nextk_p in H1. eauto. destr_sig; dcr; eauto.
   }
   assert (of_list (ksmallest p k) ⊆ filter p lv). {
     hnf; intros.
-    eapply H4 in H7. eapply H5; eauto.
+    eapply H1 in H4. eapply H2; eauto.
   }
-  rewrite <- H7 in INCL.
+  rewrite <- H4 in INCL.
   rewrite ksmallest_card in INCL. omega.
 Qed.
