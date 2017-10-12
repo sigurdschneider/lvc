@@ -1,4 +1,4 @@
-Require Import Util CSet Even NaturalRep.
+Require Import Util CSet Even.
 
 Set Implicit Arguments.
 
@@ -77,12 +77,12 @@ Proof.
     eapply Pos.lt_eq_cases.
     eapply Pos.le_1_l.
   - intros. cbn. destruct (next_even_pos' x); eauto; dcr.
-    exists x0. nr. repeat split; eauto.
+    exists x0. spos. repeat split; eauto.
     intros. exploit H2; eauto.
     eapply Pos2Nat.inj_le in H4.
     decide (Pos.to_nat z = Pos.to_nat x).
     * eapply Pos2Nat.inj in e. eauto.
-    * left. omega.
+    * left. spos. omega.
 Defined.
 
 Definition odd_inf_subset_pos : inf_subset positive.
@@ -92,14 +92,12 @@ Proof.
     intros. simpl.
     eapply Pos.lt_eq_cases.
     destruct z; simpl in *.
-    exfalso; eauto.
-    eapply Pos.le_1_l.
-    exfalso; eauto.
+    + exfalso; eauto.
+    + eapply Pos.le_1_l.
+    + exfalso; eauto.
   - intros. cbn. destruct (next_odd_pos' x); eauto; dcr.
-    exists x0. nr. repeat split; eauto.
-    destruct (even_pos_fast x0); eauto.
-    intros. eapply H2 in H3; eauto.
-    rewrite <- Pos2Nat.inj_lt.
-    eapply Pos.lt_eq_cases. eauto.
-    destruct (even_pos_fast z); eauto.
+    exists x0. spos. repeat split; eauto; spos; eauto.
+    intros; spos. eapply H2 in H3; eauto.
+    + rewrite <- Pos2Nat.inj_lt.
+      eapply Pos.lt_eq_cases; spos; eauto.
 Defined.

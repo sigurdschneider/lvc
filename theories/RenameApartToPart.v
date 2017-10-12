@@ -61,6 +61,7 @@ Lemma FG_even_fast_inf_subset fi (x:var)
 Proof.
   hnf. simpl. destruct fi; simpl.
   rewrite <- Even.even_pos_fast_correct.
+  unfold asNat in i; simpl in *.
   cases; eauto.
 Qed.
 
@@ -76,6 +77,8 @@ Proof.
   simpl in *.
   inv_get.
   rewrite <- Even.even_pos_fast_correct.
+  change (Init.Nat.pred (Pos.to_nat (iter x1 x0 (fun x : positive => succ (succ x)))))
+    with (@asNat positive _ _ (iter x1 x0 (fun x : positive => succ (succ x)))).
   rewrite asNat_iter_plus_plus.
   eapply Even.even_add; eauto. eapply Even.even_mult2.
 Qed.

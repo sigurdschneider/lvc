@@ -1,4 +1,4 @@
-Require Import Util CSet MapInjectivity FreshGen FreshNR Even.
+Require Import Util CSet MapInjectivity FreshGen Even.
 
 Set Implicit Arguments.
 
@@ -51,12 +51,12 @@ Lemma FGS_fast_pos : FreshGenSpec FG_fast_pos.
       nr.
       rewrite <- Max.le_max_r.
       eapply fold_max_lt in H0; eauto.
-      eapply order_respecting' in H0. nr. eauto.
+      eapply order_respecting' in H0.
+      change (Pos.succ) with (@succ positive _ _ _) in H0.
+      nr. eauto.
     + eapply vars_up_to_in in H0.
       eapply vars_up_to_in. nr.
       rewrite <- Max.le_max_l. eauto.
-      Grab Existential Variables.
-      eauto with typeclass_instances.
 Qed.
 
 Lemma NoDup_inj A `{OrderedType A} B `{OrderedType B} (L:list A) (f:A -> B)
@@ -119,7 +119,8 @@ Definition FG_even_fast_pos : FreshGen positive {n : positive | even (asNat n)}.
     rewrite asNat_iter_plus_plus.
     eapply even_add; eauto.
     eapply even_mult2.
-  - destruct n. nr. eapply even_max; eauto using next_even_pos_even.
+  - destruct n. nr. eapply even_max; eauto.
+    eapply next_even_pos_even.
   - simpl. eauto.
 Defined.
 
@@ -147,10 +148,12 @@ Lemma FGS_even_fast_pos : FreshGenSpec FG_even_fast_pos.
   - simpl. cset_tac'.
     + rewrite <- vars_up_to_in. nr.
       rewrite <- Max.le_max_r. unfold next_even_pos.
-      eapply (@fold_max_lt positive _ _ _ _) in H0.
+      eapply fold_max_lt in H0.
       cases; eauto.
       * eapply order_respecting' in H0. eauto.
-      * eapply order_respecting' in H0. nr. omega.
+      * eapply order_respecting' in H0.
+        change (Pos.succ) with (@succ positive _ _ _) in *.
+        nr. unfold ofNat, max; simpl. omega.
     + eapply vars_up_to_in in H0. destruct i; simpl in *.
       eapply vars_up_to_in.
       nr.
@@ -283,12 +286,12 @@ Lemma FGS_fast_pres' : FreshGenSingleSpec FG_fast_pres'.
       nr.
       rewrite <- Max.le_max_r.
       eapply fold_max_lt in H0; eauto.
-      eapply order_respecting' in H0. nr. eauto.
+      eapply order_respecting' in H0.
+      change (Pos.succ) with (@succ positive _ _ _) in H0.
+      nr. eauto.
     + eapply vars_up_to_in in H0.
       eapply vars_up_to_in. nr.
       rewrite <- Max.le_max_l. eauto.
-      Grab Existential Variables.
-      eauto with typeclass_instances.
 Qed.
 
 Definition FG_fast_pres := mkFreshGenFromSingle  FG_fast_pres'.

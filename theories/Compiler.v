@@ -165,7 +165,8 @@ Definition slt (D:set var) (EV:For_all Even.even_pos_fast D)
     eapply EV in H.
     cset_tac'. eapply EV in H0.
     rewrite <- Even.even_pos_fast_correct in *.
-    rewrite Even.even_not_even in H. nr. cset_tac.
+    rewrite Even.even_not_even in H.
+    simpl succ in H. Even.spos.
   - hnf; intros. eapply succ_inj; eauto.
 Defined.
 
