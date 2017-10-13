@@ -1,4 +1,4 @@
-Require Import Nat CSet Take.
+Require Import CSet Take.
 
 Set Implicit Arguments.
 
