@@ -1,6 +1,5 @@
 Require Import CSet Le Arith.Compare_dec Var.
-Require Import Plus Util Map Get Take LengthEq SafeFirst .
-Require Export StableFresh Fresh NRange InfinitePartition PidgeonHole.
+Require Import Plus Util Map Get Take LengthEq.
 
 Set Implicit Arguments.
 

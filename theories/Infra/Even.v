@@ -109,10 +109,32 @@ Proof.
   eapply H; eauto. unfold id. omega.
 Qed.
 
+Lemma even_add_even x y
+  : even (x + y) -> even x
+    ->  even y.
+Proof.
+  revert y. pattern x.
+  eapply size_induction with (f:=id); intros.
+  destruct x0; eauto.
+  destruct x0; eauto. simpl in *.
+  exploit (H x0); eauto. unfold id. omega.
+Qed.
+
 Lemma even_max x y
   : even x
     -> even y
     -> even (max x y).
+Proof.
+  intros.
+  decide (x < y).
+  - rewrite max_r; try omega; eauto.
+  - rewrite max_l; try omega; eauto.
+Qed.
+
+Lemma not_even_max x y
+  : ~ even x
+    -> ~ even y
+    -> ~ even (max x y).
 Proof.
   intros.
   decide (x < y).

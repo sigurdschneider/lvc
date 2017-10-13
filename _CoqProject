@@ -134,6 +134,7 @@ theories/IL/Subterm.v
 theories/IL/VarP.v
 theories/IL/Var.v
 theories/Infra/AllInRel.v
+theories/Infra/ARange.v
 theories/Infra/AutoIndTac.v
 theories/Infra/BoundedBelow.v
 theories/Infra/BoundedIn.v

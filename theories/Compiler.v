@@ -160,14 +160,14 @@ Qed.
 
 Definition slt (D:set var) (EV:For_all Even.even_pos_fast D)
   : Slot D.
-  refine (@Build_Slot _ succ _ _).
+  refine (@Build_Slot _ Pos.succ _ _).
   - hnf; intros.
     eapply EV in H.
     cset_tac'. eapply EV in H0.
     rewrite <- Even.even_pos_fast_correct in *.
     rewrite Even.even_not_even in H.
-    simpl succ in H. Even.spos.
-  - hnf; intros. eapply succ_inj; eauto.
+    Even.spos.
+  - hnf; intros. eapply Pos.succ_inj; eauto.
 Defined.
 
 Definition fromILF (s:stmt) :=
@@ -176,7 +176,7 @@ Definition fromILF (s:stmt) :=
   let dcve := DCE Liveness.Imperative (fst sra) in
   let fvl := to_list (getAnn (snd dcve)) in
   let k := exp_vars_bound (fst dcve) in
-  let spilled := spill k succ (fst dcve) (snd dcve) in
+  let spilled := spill k Pos.succ (fst dcve) (snd dcve) in
   let rdom := (domain_add FG_fast_pres (empty_domain FG_fast_pres)
                          (getAnn (snd (spilled)))) in
   let ren2 := snd (renameApart FG_fast_pres rdom id (fst spilled)) in
@@ -203,7 +203,7 @@ Definition fromILF_fvl (s:stmt) :=
            to_list (freeVars (EAE.compile s)).
 
 Definition fromILF_fvl_ren (s:stmt) : list var :=
-  range (fun x => succ (succ x)) (ofNat 0) ❬to_list (freeVars (EAE.compile s))❭.
+  ARange.range (fun x => Pos.succ (Pos.succ x)) (1%positive) ❬to_list (freeVars (EAE.compile s))❭.
 
 Hint Resolve Liveness.live_sound_overapproximation_I Liveness.live_sound_overapproximation_F.
 
@@ -225,8 +225,8 @@ Opaque to_list.
 
 Lemma fromILF_fvl_ren_EAE X `{OrderedType X} Y s t (f:Y->Y) x
   : s [=] t
-    -> range f x ❬to_list s❭ =
-      range f x ❬to_list t❭.
+    -> ARange.range f x ❬to_list s❭ =
+      ARange.range f x ❬to_list t❭.
 Proof.
   unfold fromILF_fvl_ren. intros.
   f_equal.
@@ -236,7 +236,7 @@ Qed.
 
 Lemma rename_apart_to_part_freeVars (s:stmt)
   : fst (getAnn (rename_apart_to_part_ra FGS_even_fast_pos s))
-        [=]  of_list (range (fun x => succ (succ x)) (ofNat 0) ❬to_list (freeVars s)❭).
+        [=]  of_list (ARange.range (fun x => Pos.succ (Pos.succ x)) (1%positive) ❬to_list (freeVars s)❭).
 Proof.
   unfold rename_apart_to_part_ra; simpl.
   rewrite fst_renamedApartAnn.
@@ -249,12 +249,13 @@ Lemma fromILF_correct (s s':stmt) E (PM:LabelsDefined.paramsMatch s nil)
       (Def:defined_on (freeVars s) E)
   : sim F.state I.state bot3 Sim (nil, E, s)
         (nil, (id [fromILF_fvl_ren s <-- fromILF_fvl s] ∘ E)
-                 [succ ⊝ slotted_vars s <-- lookup_list (id [fromILF_fvl_ren s <-- fromILF_fvl s] ∘ E)
-                    (slotted_vars s)], s').
+                [Pos.succ ⊝ slotted_vars s <--
+                          lookup_list (id [fromILF_fvl_ren s <-- fromILF_fvl s] ∘ E)
+                          (slotted_vars s)], s').
 Proof.
   set (E':= id [fromILF_fvl_ren s <-- fromILF_fvl s] ∘ E).
   set (E'':= (id [fromILF_fvl_ren s <-- fromILF_fvl s] ∘ E)
-              [succ ⊝ slotted_vars s <-- lookup_list (id [fromILF_fvl_ren s <-- fromILF_fvl s] ∘ E)
+              [Pos.succ ⊝ slotted_vars s <-- lookup_list (id [fromILF_fvl_ren s <-- fromILF_fvl s] ∘ E)
                  (slotted_vars s)]).
   let_unfold' fromILF OK. subst ras.
   eapply sim_trans with (S2:=F.state). {

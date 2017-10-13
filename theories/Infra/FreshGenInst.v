@@ -1,61 +1,130 @@
-Require Import Util CSet MapInjectivity FreshGen Even.
+Require Import Util CSet MapInjectivity FreshGen Even ARange VarsUpTo.
 
 Set Implicit Arguments.
 
 Definition FG_fast_pos : FreshGen positive positive :=
   @Build_FreshGen positive _ positive
-                  (fun n _ => (n,  succ n))
-                  (fun n Z => (range succ n ❬Z❭, (Util.iter ❬Z❭ n succ)))
+                  (fun n _ => (n,  Pos.succ n))
+                  (fun n Z => (range Pos.succ n ❬Z❭, (Util.iter ❬Z❭ n Pos.succ)))
                   (fun n => vars_up_to n)
-                  (fun n s => max n (succ (fold max s (ofNat 0))))
-                  (ofNat 0).
+                  (fun n s => Pos.max n (match SetInterface.max_elt s with
+                                        | Some x => Pos.succ x
+                                        | None => 1%positive
+                                        end))
+                  1%positive.
 
+Smpl Add 90
+     match goal with
+     | [ LT : context [ (_ > _)%positive ] |- _ ] =>
+       setoid_rewrite Pos2Nat.inj_gt in LT
+     | [ |- context [ (_ > _)%positive ] ] =>
+       setoid_rewrite Pos2Nat.inj_gt
+     | [ LT : context [ (_ >= _)%positive ] |- _ ] =>
+       setoid_rewrite Pos2Nat.inj_ge in LT
+     | [ |- context [ (_ >= _)%positive ] ] =>
+       setoid_rewrite Pos2Nat.inj_ge
+     end : spos.
 
-Local Arguments succ : simpl never.
-Local Arguments max : simpl never.
+Smpl Add 90
+     match goal with
+     | [ LT : context [ (_ > _)%nat ] |- _ ] =>
+       unfold Peano.gt in LT
+     | [ |- context [ (_ > _)%nat ] ] =>
+       unfold Peano.gt
+     | [ LT : context [ (_ >= _)%nat ] |- _ ] =>
+       unfold Peano.ge in LT
+     | [ |- context [ (_ >= _)%nat ] ] =>
+       unfold Peano.ge
+     end : spos.
 
-Lemma vars_up_to_in (x i:positive)
-  : (asNat x < asNat i) <-> x ∈ vars_up_to i.
+Smpl Add
+     match goal with
+     | [ LT : context [  Pos.to_nat (_ + _)%positive ] |- _ ] =>
+       rewrite Pos2Nat.inj_add in LT
+     | [ |- context [  Pos.to_nat (_ + _)%positive ] ] =>
+       rewrite Pos2Nat.inj_add
+     end : spos.
+
+Smpl Add
+     match goal with
+     | [ H : context [ Pos.of_nat (Pos.to_nat _) ] |- _ ] =>
+       rewrite Pos2Nat.id in H
+     | [ |- context [ Pos.of_nat (Pos.to_nat _) ] ] =>
+       rewrite Pos2Nat.id
+     end : spos.
+
+Lemma in_range_x_pos x k n
+  : x ∈ of_list (range Pos.succ k n) -> (x >= k)%positive /\ (Pos.of_nat (Pos.to_nat k+n) > x)%positive.
 Proof.
-  rewrite <- VarsUpTo.vars_up_to_in.
-  unfold asNat; simpl.
-  nr.
-  exploit (Pos2Nat.is_pos x).
-  exploit (Pos2Nat.is_pos i).
-  omega.
+  general induction n; dcr.
+  - simpl in *. cset_tac.
+  - simpl in H. decide (x === k).
+    + clear H. invc e; spos; split.
+      * reflexivity.
+      * rewrite Nat2Pos.id; omega.
+    + exploit (IHn x); eauto.
+      * cset_tac.
+      * dcr. spos. split.
+        -- omega.
+        -- rewrite Nat2Pos.id;[| omega].
+           rewrite Nat2Pos.id in H2;[| omega]. omega.
+Qed.
+
+Lemma iter_add_pos n i
+  : iter n i Pos.succ = Pos.of_nat (n + Pos.to_nat i).
+Proof.
+  general induction n; simpl iter; simpl plus; spos; eauto.
+  rewrite IHn. spos. f_equal. omega.
+Qed.
+
+Lemma range_nodup_pos i d
+  : NoDupA _eq (@range positive Pos.succ i d).
+Proof.
+  general induction d; simpl range; eauto using NoDupA.
+  econstructor; eauto.
+  intro.
+  rewrite InA_in in H.
+  eapply in_range_x_pos in H. spos. omega.
 Qed.
 
 Lemma FGS_fast_pos : FreshGenSpec FG_fast_pos.
   econstructor.
   - intros. simpl. cset_tac'.
-    rewrite <- vars_up_to_in in H. nr. omega.
+    rewrite <- vars_up_to_in in H. spos. omega.
   - simpl. intros. cset_tac'.
-    + rewrite <- vars_up_to_in. nr. omega.
-    + revert H0. setoid_rewrite <- vars_up_to_in. nr. omega.
+    + rewrite <- vars_up_to_in. spos. omega.
+    + revert H0. setoid_rewrite <- vars_up_to_in. spos. omega.
   - intros; hnf; intros.
-    eapply vars_up_to_in in H. nr.
-    eapply (@in_range_x positive _ _ NaturalRepresentationSuccPositive) in H0 as [? ?].
-    nr. omega.
+    eapply vars_up_to_in in H. spos.
+    unfold fresh_list in H0; simpl in H0.
+    eapply in_range_x_pos in H0 as [? ?]. spos.
+    omega.
   - simpl. intros. cset_tac'.
-    + eapply (@in_range_x positive _ _ NaturalRepresentationSuccPositive) in H0 as [? ?].
+    + eapply in_range_x_pos in H0 as [? ?].
       setoid_rewrite <- vars_up_to_in.
-      nr. omega.
+      rewrite iter_add_pos.
+      spos. rewrite plus_comm. omega.
     + rewrite <- vars_up_to_in in *.
-      nr. omega.
-  - intros. eapply range_nodup.
+      rewrite iter_add_pos. spos.
+      rewrite Nat2Pos.id; omega.
+  - intros. eapply range_nodup_pos.
   - intros.
     unfold fresh_list. simpl.
     eauto with len.
-  - simpl. cset_tac'.
-    + rewrite <- vars_up_to_in.
-      nr.
-      rewrite <- Max.le_max_r.
-      eapply fold_max_lt in H0; eauto.
-      eapply order_respecting' in H0.
-      change (Pos.succ) with (@succ positive _ _ _) in H0.
-      nr. eauto.
-    + eapply vars_up_to_in in H0.
-      eapply vars_up_to_in. nr.
+  - intros; hnf; intros; simpl in *.
+    eapply union_iff in H.
+    rewrite <-  vars_up_to_in in *.
+    spos.
+    cases; symmetry in Heq.
+    + destruct H.
+      * eapply zmax_elt_2 in H; eauto.
+        rewrite Pos2Nat.inj_max.
+        unfold lt_StrictOrder in H. simpl in *. spos.
+        rewrite <- Max.le_max_r. omega.
+      * rewrite Pos2Nat.inj_max.
+        rewrite <- Max.le_max_l. omega.
+    + exploit (@max_elt_3 _ _ _ _ G); eauto. cset_tac'.
+      rewrite Pos2Nat.inj_max.
       rewrite <- Max.le_max_l. eauto.
 Qed.
 
@@ -73,11 +142,37 @@ Proof.
   eapply INJ in H4; eauto with cset.
 Qed.
 
+Lemma iter_add2_pos n i
+  : iter n i (fun x => Pos.succ (Pos.succ x)) = Pos.of_nat (2 * n + Pos.to_nat i).
+Proof.
+  general induction n; simpl iter; simpl plus; spos; eauto.
+  rewrite IHn. spos. f_equal. omega.
+Qed.
+
+Lemma in_range2_x_pos x k n
+  : x ∈ of_list (range (fun x => Pos.succ (Pos.succ x)) k n)
+    -> (x >= k)%positive /\ (Pos.of_nat (Pos.to_nat k + 2 * n) > x)%positive.
+Proof.
+  general induction n; dcr.
+  - simpl in *. cset_tac.
+  - simpl in H. decide (x === k).
+    + clear H. invc e; spos; split.
+      * reflexivity.
+      * rewrite Nat2Pos.id; omega.
+    + exploit (IHn x); eauto.
+      * cset_tac.
+      * dcr. spos. split.
+        -- omega.
+        -- rewrite Nat2Pos.id;[| omega].
+           rewrite Nat2Pos.id in H2;[| omega]. omega.
+Qed.
+
+(*
 Lemma asNat_iter_plus_plus N `{NaturalRepresentationSucc N} n i
   : asNat (iter n i (fun x => succ (succ x))) = 2 * n + asNat i.
 Proof.
   general induction n; simpl; eauto.
-  rewrite IHn. nr. omega.
+  rewrite IHn. spos. omega.
 Qed.
 
 Lemma in_range_x  V `{NaturalRepresentationSucc V} x k n
@@ -87,40 +182,52 @@ Proof.
   general induction n; simpl in *; dcr.
   - cset_tac.
   - decide (x === k); subst; try omega;
-      cset_tac'; nr; try omega.
-    eapply IHn in H3; nr; omega.
-    eapply IHn in H3; nr; omega.
+      cset_tac'; spos; try omega.
+    eapply IHn in H3; spos; omega.
+    eapply IHn in H3; spos; omega.
 Qed.
 
-Lemma range_nodup V `{NaturalRepresentationSucc V} i d
-  : NoDupA _eq (range (fun x => succ (succ x)) i d).
+ *)
+
+Lemma range_nodup i d
+  : NoDupA _eq (range (fun x => Pos.succ (Pos.succ x)) i d).
 Proof.
-  general induction d; simpl; eauto using NoDupA.
+  general induction d; eauto using NoDupA.
   econstructor; eauto.
   intro.
-  rewrite InA_in in H2.
-  eapply in_range_x in H2. nr. omega.
+  rewrite InA_in in H.
+  eapply in_range2_x_pos in H. spos. omega.
 Qed.
 
 
-Definition FG_even_fast_pos : FreshGen positive {n : positive | even (asNat n)}.
+Definition FG_even_fast_pos : FreshGen positive {n : positive | even_pos_fast n}.
   refine
-    (@Build_FreshGen positive _ {n :positive| even (asNat n)}
-                  (fun n _ => (proj1_sig n, exist _ (succ (succ (proj1_sig n))) _))
+    (@Build_FreshGen positive _ {n :positive| even_pos_fast n}
+                  (fun n _ => (proj1_sig n, exist _ (Pos.succ (Pos.succ (proj1_sig n))) _))
                   (fun n Z => let z := ❬Z❭ in
-                             (range (fun x => succ (succ x)) (proj1_sig n)  ❬Z❭,
-                              exist _ (iter z (proj1_sig n) (fun x => succ (succ x))) _))
+                             (range (fun x => Pos.succ (Pos.succ x)) (proj1_sig n)  ❬Z❭,
+                              exist _ (iter z (proj1_sig n) (fun x => Pos.succ (Pos.succ x))) _))
                   (fun n => (vars_up_to (proj1_sig n)))
                   (fun n s =>
-                     exist _ (max (proj1_sig n) (next_even_pos (succ (fold max s (ofNat 0))))) _)
-                  (exist _ (ofNat 0) _)).
-  - simpl. nr. destruct n. eauto.
-  - destruct n. subst z.
-    rewrite asNat_iter_plus_plus.
-    eapply even_add; eauto.
-    eapply even_mult2.
-  - destruct n. nr. eapply even_max; eauto.
-    eapply next_even_pos_even.
+                     exist _ (Pos.max (proj1_sig n) (next_even_pos (match max_elt s with
+                                                                    | Some x => Pos.succ x
+                                                                    | None => 1%positive
+                                                                    end))) _)
+                  (exist _ 1%positive _)).
+  - simpl. destruct n; simpl. rewrite <- even_pos_fast_correct in *. spos. eauto.
+  - destruct n. subst z. simpl.
+    rewrite <- even_pos_fast_correct in *. spos.
+    rewrite iter_add2_pos.
+    rewrite Nat2Pos.id.
+    + intro. eapply i. eapply even_add_even; eauto.
+      eapply even_mult2.
+    + destruct (Pos.to_nat x); try omega.
+      simpl in i. cset_tac.
+  - destruct n. simpl.
+    rewrite <- even_pos_fast_correct in *. spos.
+    rewrite Pos2Nat.inj_max.
+    eapply not_even_max; eauto.
+    exploit next_even_pos_even. spos. eauto.
   - simpl. eauto.
 Defined.
 
@@ -128,35 +235,41 @@ Lemma FGS_even_fast_pos : FreshGenSpec FG_even_fast_pos.
   econstructor; simpl.
   - intros. destruct i.
     cset_tac'. simpl in *. rewrite <- vars_up_to_in in H.
-    omega.
-  - intros [] _; simpl. nr. cset_tac'.
-    + rewrite <- vars_up_to_in. nr. omega.
+    spos; omega.
+  - intros [] _; simpl. spos. cset_tac'.
+    + rewrite <- vars_up_to_in. spos. omega.
     + rewrite <- vars_up_to_in in H0.
-      rewrite <- vars_up_to_in. nr. omega.
+      rewrite <- vars_up_to_in. spos. omega.
   - intros; hnf; intros. cset_tac'.
     eapply vars_up_to_in in H. destruct i; simpl in *.
-    eapply in_range_x in H0. dcr. omega.
+    eapply in_range2_x_pos in H0. dcr. spos. omega.
   - intros. destruct i; simpl in *. cset_tac'.
-    + eapply in_range_x in H0. dcr.
-      eapply vars_up_to_in.
-      rewrite asNat_iter_plus_plus. omega.
+    + eapply in_range2_x_pos in H0. dcr.
+      eapply vars_up_to_in. spos.
+      rewrite iter_add2_pos.
+      rewrite plus_comm. omega.
     + rewrite <- vars_up_to_in in *.
-      rewrite asNat_iter_plus_plus. omega.
+      rewrite iter_add2_pos.
+      spos. rewrite Nat2Pos.id; try omega.
   - intros. change eq with (@_eq positive _).
     eapply range_nodup.
   - intros. eauto with len.
   - simpl. cset_tac'.
-    + rewrite <- vars_up_to_in. nr.
+    + rewrite <- vars_up_to_in. spos.
+      rewrite Pos2Nat.inj_max.
       rewrite <- Max.le_max_r. unfold next_even_pos.
-      eapply fold_max_lt in H0.
-      cases; eauto.
-      * eapply order_respecting' in H0. eauto.
-      * eapply order_respecting' in H0.
-        change (Pos.succ) with (@succ positive _ _ _) in *.
-        nr. unfold ofNat, max; simpl. omega.
-    + eapply vars_up_to_in in H0. destruct i; simpl in *.
-      eapply vars_up_to_in.
-      nr.
+      repeat cases; spos; eauto;
+        rewrite <- even_pos_fast_correct in *; spos.
+      * eapply zmax_elt_2 in H0; eauto.
+        unfold lt_StrictOrder in H0. simpl in *. spos.
+        omega.
+      * exploit (@max_elt_3 _ _ _ _ G); eauto. cset_tac'.
+      * eapply zmax_elt_2 in H0; eauto.
+        unfold lt_StrictOrder in H0. simpl in *. spos.
+        omega.
+      * exploit (@max_elt_3 _ _ _ _ G); eauto. cset_tac'.
+    + rewrite <- vars_up_to_in in *. destruct i; simpl in *.
+      spos. rewrite Pos2Nat.inj_max.
       rewrite <- Max.le_max_l. eauto.
 Qed.
 
@@ -263,34 +376,37 @@ Qed.
 Definition FG_fast_pres' : FreshGenSingle positive positive :=
   @Build_FreshGenSingle positive _ positive
                   (fun n x => if [ even_pos_fast x = even_pos_fast n ] then
-                               (n, succ n)
-                             else (succ n, succ (succ n)))
+                               (n, Pos.succ n)
+                             else (Pos.succ n, Pos.succ (Pos.succ n)))
                   (fun n => vars_up_to n)
-                  (fun n s => max n (succ (fold max s (ofNat 0))))
-                  (ofNat 0).
+                  (fun n s => Pos.max n (match max_elt s with
+                                      | Some x => Pos.succ x
+                                      | None => 1%positive
+                                      end))
+                  (1%positive).
 
 Lemma FGS_fast_pres' : FreshGenSingleSpec FG_fast_pres'.
   econstructor.
   - intros. simpl. cases.
-    + cset_tac'. simpl in *; subst. rewrite <- vars_up_to_in in H. nr. omega.
+    + cset_tac'. simpl in *; subst. rewrite <- vars_up_to_in in H. spos. omega.
     + simpl. cset_tac'. rewrite <- vars_up_to_in in H.
-      nr. omega.
+      spos. omega.
   - simpl. intros. cset_tac'.
     + cases; simpl.
-      * rewrite <- vars_up_to_in. nr. omega.
-      * rewrite <- vars_up_to_in. nr. omega.
+      * rewrite <- vars_up_to_in. spos. omega.
+      * rewrite <- vars_up_to_in. spos. omega.
     + revert H0. setoid_rewrite <- vars_up_to_in. intros.
-      cases; simpl; nr; eauto.
+      cases; simpl; spos; eauto.
   - simpl. cset_tac'.
     + rewrite <- vars_up_to_in.
-      nr.
-      rewrite <- Max.le_max_r.
-      eapply fold_max_lt in H0; eauto.
-      eapply order_respecting' in H0.
-      change (Pos.succ) with (@succ positive _ _ _) in H0.
-      nr. eauto.
-    + eapply vars_up_to_in in H0.
-      eapply vars_up_to_in. nr.
+      spos. cases.
+      * eapply zmax_elt_2 in H0; eauto.
+        unfold lt_StrictOrder in H0. simpl in *. spos.
+        rewrite Pos2Nat.inj_max.
+        rewrite <- Max.le_max_r. spos. omega.
+      * exploit (@max_elt_3 _ _ _ _ G); eauto. cset_tac'.
+    + rewrite <- vars_up_to_in in *. spos.
+      rewrite Pos2Nat.inj_max.
       rewrite <- Max.le_max_l. eauto.
 Qed.
 

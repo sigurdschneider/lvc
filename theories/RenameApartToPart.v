@@ -60,12 +60,8 @@ Lemma FG_even_fast_inf_subset fi (x:var)
   :  even_inf_subset_pos (fst (FG_even_fast_pos fi x)).
 Proof.
   hnf. simpl. destruct fi; simpl.
-  rewrite <- Even.even_pos_fast_correct.
-  unfold asNat in i; simpl in *.
   cases; eauto.
 Qed.
-
-Local Arguments succ : simpl never.
 
 Lemma even_fast_list_even fi
   :  forall Z (x:var), x \In of_list (fst (fresh_list FG_even_fast_pos fi Z)) ->
@@ -75,12 +71,18 @@ Proof.
   destruct fi.
   eapply of_list_get_first in H; dcr. invc H1.
   simpl in *.
-  inv_get.
-  rewrite <- Even.even_pos_fast_correct.
-  change (Init.Nat.pred (Pos.to_nat (iter x1 x0 (fun x : positive => succ (succ x)))))
-    with (@asNat positive _ _ (iter x1 x0 (fun x : positive => succ (succ x)))).
-  rewrite asNat_iter_plus_plus.
-  eapply Even.even_add; eauto. eapply Even.even_mult2.
+  inv_get; eauto.
+  rewrite iter_add2_pos.
+  rewrite <- Even.even_pos_fast_correct in *. Even.spos.
+  intro H; eapply i.
+  eapply Even.even_add_even; eauto.
+  rewrite Nat2Pos.id; try omega.
+  - rewrite <- plus_assoc.
+    eapply Even.even_add; eauto using Even.even_mult2.
+    orewrite (Pos.to_nat x0 + Pos.to_nat x0 = 2 * Pos.to_nat x0).
+    eapply Even.even_mult2.
+  - destruct (Pos.to_nat x0); try omega.
+    exfalso; eapply i; eauto.
 Qed.
 
 Lemma even_fast_update_even E fi (s:set var) t
