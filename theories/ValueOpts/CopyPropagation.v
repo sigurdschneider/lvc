@@ -1,7 +1,7 @@
 Require Import CSet Le.
 
 Require Import Plus Util AllInRel Map.
-Require Import Val Var Envs IL Sim Coherence Fresh Annotation DecSolve SetOperations LabelsDefined.
+Require Import Val Var Envs IL Sim Coherence Annotation DecSolve SetOperations LabelsDefined.
 
 Require Import Liveness.Liveness Eqn ValueOpts RenamedApart.
 

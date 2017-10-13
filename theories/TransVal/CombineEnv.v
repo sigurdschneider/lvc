@@ -1,5 +1,5 @@
 Require Import List Arith.
-Require Import IL Annotation AutoIndTac Exp RenamedApart Fresh Util.
+Require Import IL Annotation AutoIndTac Exp RenamedApart Util.
 Require Import SetOperations Sim Var.
 Require Import SMT NoFun.
 Require Import Guards ILFtoSMT GuardProps ComputeProps.

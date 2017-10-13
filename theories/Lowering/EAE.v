@@ -1,7 +1,7 @@
 Require Import Util LengthEq AllInRel Map SetOperations.
-Require Import Var Val EqDec Computable Var Envs IL Annotation AppExpFree.
+Require Import Var Val EqDec Computable Var Fresh Envs IL Annotation AppExpFree.
 Require Import Liveness.Liveness LabelsDefined.
-Require Import SimF Fresh Filter ReplaceIf ListToStmt.
+Require Import SimF Filter ReplaceIf ListToStmt.
 
 Set Implicit Arguments.
 Unset Printing Records.

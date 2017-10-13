@@ -1,7 +1,7 @@
 Require Import CMap MapNotations CSet Le Arith.Compare_dec.
 
 Require Import Plus Util Status Take Subset1 Filter.
-Require Import Val Var Envs IL Annotation Liveness.Liveness Fresh MoreList SetOperations.
+Require Import Val Var StableFresh Envs IL Annotation Liveness.Liveness MoreList SetOperations.
 Require Import Coherence Coherence.Allocation RenamedApart AllocationAlgo InfinitePartition.
 
 Set Implicit Arguments.

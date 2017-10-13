@@ -1,11 +1,11 @@
 Require Import CSet Le Arith.Compare_dec.
 
 Require Import Plus Util Map CMap Status Take Subset1 ListMax.
-Require Import Val Var Envs IL Annotation Liveness.Liveness Fresh MoreList SetOperations.
+Require Import Val Var Envs IL Annotation Liveness.Liveness MoreList SetOperations.
 Require Import AnnotationLattice AnnP.
 Require Import Coherence Coherence.Allocation RenamedApart AllocationAlgo.
 Require Import RenamedApart_Liveness LabelsDefined Restrict InfiniteSubset InfinitePartition MapSep.
-Require Import RenameApart_Partition Filter AllocationAlgoSep.
+Require Import RenameApart_Partition Filter AllocationAlgoSep StableFresh.
 
 Set Implicit Arguments.
 

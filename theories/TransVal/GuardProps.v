@@ -1,5 +1,5 @@
 Require Import List Arith MapDefined.
-Require Import IL Annotation AutoIndTac Exp Fresh Util.
+Require Import IL Annotation AutoIndTac Exp Util.
 Require Import SetOperations Sim Var.
 Require Import SMT NoFun.
 Require Import Guards ILFtoSMT.
