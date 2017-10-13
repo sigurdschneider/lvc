@@ -303,3 +303,25 @@ Proof.
   eapply live_sound_overapproximation_F in LS.
   exploit regAssign_assignment_small; eauto using locally_inj_subset, meet1_Subset, live_sound_annotation, renamedApart_annotation.
 Qed.
+
+Lemma ann_P_live_var_P i ZL Lv p k s lv
+  : ann_P (For_all (regbnd p k)) lv
+    -> live_sound i ZL Lv s lv
+    -> var_P (regbnd p k) s.
+Proof.
+  intros ANN LS.
+  general induction LS; invt ann_P; eauto using var_P, ann_P_get.
+  - econstructor; eauto.
+    + eapply ann_P_get in H5. eauto.
+    + rewrite Exp.freeVars_live; eauto.
+  - econstructor; eauto.
+    rewrite Ops.freeVars_live; eauto.
+  - econstructor; eauto.
+    rewrite Ops.freeVars_live_list; eauto.
+  - econstructor; eauto.
+    rewrite Ops.freeVars_live; eauto.
+  - econstructor; intros; inv_get; eauto.
+    edestruct H2; dcr; eauto.
+    exploit H8; eauto. eapply ann_P_get in H10.
+    rewrite H6; eauto.
+Qed.
