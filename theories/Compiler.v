@@ -76,15 +76,20 @@ Proof with eauto using DCE_live, DCE_noUC.
 Qed.
 
 
-Definition optimize (s':stmt) :=
-  let s := rename_apart FG_even_fast_pos s' in
-  let an := @ConstantPropagationAnalysis.constantPropagationAnalysis
-                 s
-                 (renamedApartAnn s (freeVars s'))
-                 (rename_apart_renamedApart FGS_even_fast_pos s')
-  in
-  let s_cp := ConstantPropagation.constantPropagate (DomainSSA.domenv (proj1_sig (fst an))) s in
-  s_cp.
+Definition optimize (s_in:stmt) : stmt.
+  refine
+    (let s_ra := rename_apart FG_even_fast_pos s_in in
+     let s_cpy := CopyPropagation.copyPropagate (fun x => x) s_ra in
+     let an := @ConstantPropagationAnalysis.constantPropagationAnalysis
+                s_cpy
+                (renamedApartAnn s_ra (freeVars s_in))
+                (CopyPropagation.copyPropagation_renamedApart
+                   (fun x => x) (rename_apart_renamedApart FGS_even_fast_pos s_in) _)
+     in
+     let s_cp := ConstantPropagation.constantPropagate (DomainSSA.domenv (proj1_sig (fst an))) s_cpy in
+     s_cp).
+  eapply lookup_set_on_id. reflexivity.
+Defined.
 
 Lemma renamedApartAnn_annotation s G
   : annotation s (renamedApartAnn s G).
@@ -112,7 +117,7 @@ Proof.
                  let x := context f[s] in
                  change x
          end.
-  eapply sim_trans with (σ2:=(nil, E, s0):F.state). {
+  eapply sim_trans with (σ2:=(nil, E, s_ra):F.state). {
     eapply bisim_sim. eapply bisim_sym.
     eapply Alpha.alphaSim_sim. econstructor; eauto using PIR2.
     - eapply rename_apart_alpha'; eauto.
@@ -122,10 +127,25 @@ Proof.
     - eapply envCorr_idOn_refl.
   }
   set (RA:= (rename_apart_renamedApart FGS_even_fast_pos s)) in *.
-  set (ra:=(renamedApartAnn (rename_apart FG_even_fast_pos s) (freeVars s))) in *.
-  assert (LD:LabelsDefined.labelsDefined s0 0). {
+    set (ra:=(renamedApartAnn (rename_apart FG_even_fast_pos s) (freeVars s))) in *.
+  set (RA':=(CopyPropagation.copyPropagation_renamedApart (fun x : positive => x) RA
+             (lookup_set_on_id (reflexivity (fst (getAnn ra)))))) in *.
+  assert (LD:LabelsDefined.labelsDefined s_ra 0). {
     eapply LabelsDefined.paramsMatch_labelsDefined with (L:=nil).
     eapply labelsDefined_paramsMatch; eauto.
+  }
+  eapply sim_trans with (σ2:=(nil, E, s_cpy):F.state). {
+    subst s_cpy.
+    eapply (@ValueOpts.sim_vopt bot3 nil nil)
+      with (ZL:=nil) (Δ := nil); eauto using SimF.labenv_sim_nil; only 4:isabsurd;
+      swap 1 2.
+    - eapply CopyPropagation.copyPropagate_sound_eqn; eauto.
+      + eapply lookup_set_on_id; reflexivity.
+      + isabsurd.
+    - hnf; intros. cset_tac'. invc H0.
+      simpl. reflexivity.
+    - rewrite CopyPropagation.cp_eqns_freeVars; eauto.
+      eapply lookup_set_on_id; reflexivity.
   }
   eapply (@ValueOpts.sim_vopt bot3 nil nil)
     with (ZL:=nil) (Δ := nil); eauto using SimF.labenv_sim_nil; only 4:isabsurd;
@@ -134,13 +154,21 @@ Proof.
       with (Cp:=nil) (Rch:=nil) (ZL:=nil) (ΓL:=nil) (r:=proj1_sig (snd an));
       eauto; only 3:isabsurd.
     + eapply ConstantPropagationAnalysisCorrect.cp_sound_nil; eauto.
-      * eapply (@safeFixpoint_fixpoint _
-                                       (ConstantPropagationAnalysis.constant_propagation_analysis RA)).
-      * eapply labelsDefined_paramsMatch; eauto.
+      * eapply (@safeFixpoint_fixpoint
+                  _
+                  (ConstantPropagationAnalysis.constant_propagation_analysis RA')).
+      * eapply CopyPropagation.copy_paramsMatch; eauto.
+        eapply labelsDefined_paramsMatch; eauto.
     + eapply ConstantPropagationAnalysisCorrect.cp_reachability_sound_nil; eauto.
-      * eapply (@safeFixpoint_fixpoint _
-                                       (ConstantPropagationAnalysis.constant_propagation_analysis RA)).
-      * eapply labelsDefined_paramsMatch; eauto.
+      * eapply (@safeFixpoint_fixpoint
+                  _
+                  (ConstantPropagationAnalysis.constant_propagation_analysis RA')).
+      * eapply CopyPropagation.copy_paramsMatch; eauto.
+        eapply labelsDefined_paramsMatch; eauto.
+    + eapply LabelsDefined.paramsMatch_labelsDefined_nil.
+      eapply CopyPropagation.copy_paramsMatch; eauto.
+      eapply labelsDefined_paramsMatch; eauto.
+    + isabsurd.
   - subst an.
     rewrite ConstantPropagationAnalysisCorrect.constantPropagationAnalysis_getAnn.
     unfold DomainSSA.domenv.

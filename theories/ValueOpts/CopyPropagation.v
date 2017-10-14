@@ -23,7 +23,7 @@ Fixpoint copyPropagate (ϱ:var -> var) (s:stmt) : stmt :=
    | stmtApp l Y => stmtApp l (List.map (rename_op ϱ) Y)
    | stmtReturn e => stmtReturn (rename_op ϱ e)
    | stmtFun F s2 =>
-     stmtFun (List.map (fun '(Z, s) => (Z, copyPropagate (ϱ[Z <-- Z]) s)) F) (copyPropagate ϱ s2)
+     stmtFun (List.map (fun Zs => (fst Zs, copyPropagate (ϱ[fst Zs <-- fst Zs]) (snd Zs))) F) (copyPropagate ϱ s2)
    end.
 
 Definition cp_eqn (ϱ:var -> var) (x:var) := EqnApx (Var x) (Var (ϱ x)).
@@ -358,4 +358,16 @@ Proof.
       eapply list_union_eq; eauto with len.
       intros; inv_get. destruct x.
       unfold defVars; simpl. reflexivity.
+Qed.
+
+Lemma copy_paramsMatch s L ϱ
+  : paramsMatch s L
+    -> paramsMatch (copyPropagate ϱ s) L.
+Proof.
+  intros PM; general induction PM; simpl; repeat cases;
+    eauto using paramsMatch.
+  - econstructor; eauto with len.
+  - econstructor; intros; inv_get; simpl; eauto with len.
+    + rewrite !map_map in *; simpl. eauto.
+    + rewrite !map_map in *; simpl. eauto.
 Qed.
