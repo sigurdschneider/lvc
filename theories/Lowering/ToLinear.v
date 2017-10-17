@@ -264,23 +264,6 @@ Section ToLinear.
      | _ => nil
     end
   .
-(*
-  Definition translateLet (x:var) (e:op)
-    := if [ isReg x ]
-       then let dst := toReg x in
-            match e with
-            | Var y => if [ isReg y ]
-                      then Lop (Ops.Omove) (toReg y :: nil) dst
-                      else Lgetstack Local (Zpos y) Tint dst
-            | _ => translateLetOp dst e
-            end
-       else match e with
-            | Var y => if [ isReg y ]
-                      then Lsetstack (toReg y) Local (Zpos x) Tint
-                      else dummyinstr
-            | _ => dummyinstr
-            end
-  .*)
 
   Ltac single_step_linear := econstructor; econstructor; eauto.
 
@@ -487,15 +470,16 @@ Section ToLinear.
     match e with
     | Var y => Lcond (Op.Ccompimm Ceq Int.zero) (toReg y :: nil) l
     | BinOp BinOpLt (Var y1) (Var y2) => Lcond (Op.Ccomp Cle) (toReg y2 :: toReg y1 :: nil) l
+    | BinOp BinOpEq (Var y1) (Var y2) => Lcond (Op.Ccomp Cne) (toReg y1 :: toReg y2 :: nil) l
     | _ => dummyinstr
     end.
 
   Inductive simplCond : op -> Prop :=
   | SimplCondVar x (RG:isReg x)
     : simplCond (Var x)
-  | SimplCondLt x y (RG1:isReg x) (RG2:isReg y)
-    : simplCond (BinOp BinOpLt (Var x) (Var y)).
-
+  | SimplCondLt x y (RG1:isReg x) (RG2:isReg y) op
+                (OP:op = BinOpLt \/ op = BinOpEq)
+    : simplCond (BinOp op (Var x) (Var y)).
 
   Lemma toLinearCond_step G V v l e bv vv rs m c
         (EV:op_eval V e = Some v)
@@ -518,10 +502,12 @@ Section ToLinear.
       + reflexivity.
     - exploit REGBOUND; eauto. cset_tac.
       exploit (REGBOUND x); eauto. cset_tac.
-      econstructor 1.
-      + econstructor. eapply exec_Lcond_false; only 2: reflexivity.
+      monad_inv EV.
+      econstructor 1; eauto.
+      econstructor.
+      destruct OP; subst.
+      + eapply exec_Lcond_false; only 2: reflexivity.
         * simpl. simpl in *.
-          monad_inv EV.
           exploit MR as LMEQ1; eauto.
           exploit MR as LMEQ2; try eapply EQ; eauto.
           cases in LMEQ1. unfold Locmap.get in LMEQ1.
@@ -531,7 +517,18 @@ Section ToLinear.
           revert NOTCOND. unfold Int.lt. cases; eauto. intros.
           exfalso. eapply NOTCOND. unfold bool2val.
           reflexivity.
-      + reflexivity.
+      + eapply exec_Lcond_false; only 2: reflexivity.
+        * simpl. simpl in *.
+          exploit MR as LMEQ1; eauto.
+          exploit MR as LMEQ2; try eapply EQ; eauto.
+          cases in LMEQ1. unfold Locmap.get in LMEQ1.
+          cases in LMEQ2. unfold Locmap.get in LMEQ2.
+          rewrite LMEQ1, LMEQ2. simpl.
+          unfold val2bool in TRUE. cases in TRUE.
+          revert NOTCOND. unfold Int.eq. cases; eauto.
+          -- intros.
+             exfalso. eapply NOTCOND. unfold bool2val.
+             reflexivity.
   Qed.
 
     Lemma toLinearCond_step_false G V v l e bv vv rs m c c'
@@ -555,19 +552,27 @@ Section ToLinear.
       + reflexivity.
     - exploit REGBOUND; eauto. cset_tac.
       exploit (REGBOUND x); eauto. cset_tac.
-      econstructor 1.
+      monad_inv EV.
+      exploit MR as LMEQ1; eauto.
+      exploit MR as LMEQ2; try eapply EQ; eauto.
+      cases in LMEQ1. unfold Locmap.get in LMEQ1.
+      cases in LMEQ2. unfold Locmap.get in LMEQ2.
+      econstructor 1; eauto.
+      destruct OP; subst.
       + econstructor. eapply exec_Lcond_true; only 2: reflexivity; eauto.
         * simpl. simpl in *.
-          monad_inv EV.
-          exploit MR as LMEQ1; eauto.
-          exploit MR as LMEQ2; try eapply EQ; eauto.
-          cases in LMEQ1. unfold Locmap.get in LMEQ1.
-          cases in LMEQ2. unfold Locmap.get in LMEQ2.
           rewrite LMEQ1, LMEQ2. simpl.
           unfold val2bool in TRUE. cases in TRUE; eauto; isabsurd.
-          revert COND0. unfold Int.lt. cases; eauto. intros.
-          inv COND0.
-      + reflexivity.
+          revert H2. unfold Int.lt. cases; eauto. intros.
+          rewrite H2 in *.
+          inv H1.
+      + econstructor. eapply exec_Lcond_true; only 2: reflexivity; eauto.
+        * simpl. simpl in *.
+          rewrite LMEQ1, LMEQ2. simpl.
+          unfold val2bool in TRUE. cases in TRUE; eauto; isabsurd.
+          revert H2. unfold Int.eq. cases; eauto. intros.
+          rewrite H2 in *.
+          inv H1.
   Qed.
 
   Definition ret_reg_name := 1%positive.
@@ -829,6 +834,8 @@ Proof.
       destruct b; simpl in *; isabsurd.
       destruct e1; simpl in *; isabsurd.
       destruct e2; simpl in *; isabsurd.
+      destruct e1; simpl in *; isabsurd.
+      destruct e2; simpl in *; isabsurd.
     + eapply all_labels_ge_app1; eauto.
       * eapply all_labels_ge_le.
         eapply (IH s1); eauto.
@@ -900,6 +907,8 @@ Proof.
     + hnf; intros; inv_get.
       destruct e; simpl in *; isabsurd.
       destruct b; simpl in *; isabsurd.
+      destruct e1; simpl in *; isabsurd.
+      destruct e2; simpl in *; isabsurd.
       destruct e1; simpl in *; isabsurd.
       destruct e2; simpl in *; isabsurd.
     + eapply all_labels_smaller_app1; eauto.
