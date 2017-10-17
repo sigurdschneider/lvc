@@ -1,13 +1,13 @@
-Require Import Util CSet Even.
+Require Import Util CSet OrderedTypeComputable OrderedTypeLe Even.
 
 Set Implicit Arguments.
 
 Record inf_subset X `{OrderedType X}  :=
   {
     inf_subset_P :> X -> bool;
-    inf_subset_least : {x : X | inf_subset_P x /\ forall z, inf_subset_P z -> _lt x z \/ _eq x z };
+    inf_subset_least : {x : X | inf_subset_P x /\ forall z, inf_subset_P z -> _le x z };
     inf_subset_inf : forall x, {y : X | inf_subset_P y /\ _lt x y /\
-                                   forall z, inf_subset_P z ->_lt z y -> _lt z x \/ _eq z x};
+                                   forall z, inf_subset_P z ->_lt z y -> _le z x};
     inf_subset_proper :> Proper (_eq ==> eq) inf_subset_P
   }.
 
@@ -31,17 +31,9 @@ Proof.
   setoid_rewrite EQ in H6.
   clear x EQ.
   decide (_lt x0 x1).
-  - exploit H3; eauto. destruct H4.
-    + exfalso. assert (_lt x0 x0) by (etransitivity; eauto).
-      eapply OrderedType.StrictOrder_Irreflexive in H7. eauto.
-    + rewrite H4 in *.
-      eapply OrderedType.StrictOrder_Irreflexive in H5. eauto.
+  - exploit H3; eauto.
   - decide (_lt x1 x0); eauto.
-    + exploit H6. eapply H0. eauto. destruct H4.
-      * exfalso. assert (_lt x1 x1) by (etransitivity; eauto).
-        eapply OrderedType.StrictOrder_Irreflexive in H7. eauto.
-      * exfalso. rewrite H4 in *.
-        eapply OrderedType.StrictOrder_Irreflexive in H2. eauto.
+    + exploit (H6 x1); eauto.
     + eapply lt_trans_eq in n; eauto.
 Qed.
 
@@ -49,11 +41,11 @@ Definition even_inf_subset : inf_subset nat.
 Proof.
   refine (@Build_inf_subset _ _ even _ _ _).
   - eexists 0. split; eauto.
-    intros. simpl. omega.
+    intros. hnf. simpl. omega.
   - intros. cbn.
     edestruct (next_even' x). dcr.
     eexists; repeat split; eauto.
-    intros. exploit H2; eauto. omega.
+    intros. exploit H2; eauto. hnf; simpl; omega.
 Defined.
 
 Definition odd_inf_subset : inf_subset nat.
@@ -61,11 +53,11 @@ Proof.
   refine (@Build_inf_subset _ _ odd _ _ _).
   - eexists 1. split; eauto.
     intros. simpl.
-    destruct z; simpl in *; omega.
+    destruct z; simpl in *; hnf; simpl; omega.
   - intros. cbn.
     destruct (next_odd' x). dcr.
     eexists; repeat split; eauto.
-    intros. exploit H2; eauto. omega.
+    intros. exploit H2; eauto. hnf; simpl; omega.
 Defined.
 
 
@@ -81,8 +73,8 @@ Proof.
     intros. exploit H2; eauto.
     eapply Pos2Nat.inj_le in H4.
     decide (Pos.to_nat z = Pos.to_nat x).
-    * eapply Pos2Nat.inj in e. eauto.
-    * left. spos. omega.
+    * eapply Pos2Nat.inj in e. subst. reflexivity.
+    * left. simpl. spos. omega.
 Defined.
 
 Definition odd_inf_subset_pos : inf_subset positive.
@@ -97,7 +89,7 @@ Proof.
     + exfalso; eauto.
   - intros. cbn. destruct (next_odd_pos' x); eauto; dcr.
     exists x0. spos. repeat split; eauto; spos; eauto.
-    intros; spos. eapply H2 in H3; eauto.
+    intros; hnf; simpl; spos. eapply H2 in H3; eauto.
     + rewrite <- Pos2Nat.inj_lt.
       eapply Pos.lt_eq_cases; spos; eauto.
 Defined.

@@ -350,10 +350,7 @@ Qed.
 
 Instance opLt_irr : Irreflexive opLt.
 hnf; intros; unfold complement.
-- induction x; inversion 1; subst; eauto using @_lt_antirefl.
-  eapply lt_antirefl in H2; eauto.
-  eapply lt_antirefl in H1; eauto.
-  eapply lt_antirefl in H1; eauto.
+- induction x; inversion 1; subst; eauto.
 Qed.
 
 Instance opLt_trans : Transitive opLt.

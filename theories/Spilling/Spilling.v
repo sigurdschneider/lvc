@@ -95,7 +95,7 @@ Proof.
     eapply of_list_get_first in H; dcr. cset_tac'.
     eapply of_list_get_first in H0; dcr; cset_tac'.
     inv_get.
-    refine (NoDupA_get_neq' _ _ H0 H _); eauto.
+    refine (@NoDupA_get_neq' _ _eq _ _ _ _ _ _ _ _ _ H0 H _); eauto.
     eapply (elements_3w (getAnn lv)).
     omega.
   }
@@ -199,7 +199,7 @@ Proof.
     eapply of_list_get_first in H; dcr. cset_tac'.
     eapply of_list_get_first in H0; dcr; cset_tac'.
     inv_get.
-    refine (NoDupA_get_neq' _ _ H0 H _); eauto.
+    refine (@NoDupA_get_neq' _ _eq _ _ _ _ _ _ _ _ _ H0 H _); eauto.
     eapply (elements_3w (getAnn lv)).
     omega.
   }
@@ -254,7 +254,7 @@ Proof.
     eapply of_list_get_first in H; dcr. cset_tac'.
     eapply of_list_get_first in H0; dcr; cset_tac'.
     inv_get.
-    refine (NoDupA_get_neq' _ _ H0 H _); eauto.
+    refine (@NoDupA_get_neq' _ _eq _ _ _ _ _ _ _ _ _ H0 H _); eauto.
     eapply (elements_3w (getAnn lv)).
     omega.
   }
@@ -307,7 +307,7 @@ Proof.
     eapply of_list_get_first in H; dcr. cset_tac'.
     eapply of_list_get_first in H0; dcr; cset_tac'.
     inv_get.
-    refine (NoDupA_get_neq' _ _ H0 H _); eauto.
+    refine (@NoDupA_get_neq' _ _eq _ _ _ _ _ _ _ _ _ H0 H _); eauto.
     eapply (elements_3w (getAnn lv)).
     omega.
   }
@@ -363,7 +363,7 @@ Proof.
     eapply of_list_get_first in H; dcr. cset_tac'.
     eapply of_list_get_first in H0; dcr; cset_tac'.
     inv_get.
-    refine (NoDupA_get_neq' _ _ H0 H _); eauto.
+    refine (@NoDupA_get_neq' _ _eq _ _ _ _ _ _ _ _ _ H0 H _); eauto.
     eapply (elements_3w (getAnn lv)).
     omega.
   }

@@ -85,6 +85,8 @@ theories/Constr/MapLookupList.v
 theories/Constr/MapLookup.v
 theories/Constr/MapUpdate.v
 theories/Constr/Map.v
+theories/Constr/OrderedTypeComputable.v
+theories/Constr/OrderedTypeLe.v
 theories/Constr/PairwiseDisjoint.v
 theories/Constr/SetOperations.v
 theories/DeadCodeElimination/DCE.v

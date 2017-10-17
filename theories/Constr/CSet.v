@@ -3,6 +3,7 @@ Require Export Sets SetInterface SetConstructs SetProperties.
 Require Export EqDec Computable Util Drop.
 Require Export CSetTac CSetBasic CSetCases CSetGet CSetComputable CSetDisjoint CSetNotation.
 Require Export ElemEq.
+Require Export OrderedTypeComputable OrderedTypeLe.
 
 Set Implicit Arguments.
 

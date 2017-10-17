@@ -92,6 +92,7 @@ Proof.
 Qed.
 *)
 
+
 Lemma fresh_variable_always_exists_in_inf_subset X `{OrderedType X}
       (lv:set X) (p:inf_subset X) k
   : forall n, cardinal lv <= n ->
@@ -110,15 +111,10 @@ Proof.
       * rewrite cardinal_difference'; [|cset_tac].
         rewrite singleton_cardinal. omega.
       * revert i H1. repeat destr_sig. dcr. intros. cset_tac'.
-        -- rewrite H10 in *.
-           rewrite H3 in H12.
-           eapply StrictOrder_Irreflexive in H12; eauto.
-        -- rewrite H12 in *. rewrite H10 in *.
-           eapply StrictOrder_Irreflexive in H3; eauto.
+        -- rewrite <- H10 in *. clear H10 x1. clear_trivial_eqs. eauto.
     + econstructor; intros.
       exfalso. revert n0 H1.
       destr_sig. cset_tac.
-      Grab Existential Variables. eauto. eauto.
 Qed.
 
 Definition least_fresh_P X `{OrderedType X}
@@ -160,10 +156,7 @@ Proof.
   - intros. cset_tac.
   - intros. exfalso.
     revert H1. destr_sig; dcr; intros.
-    edestruct (H2 m); eauto; dcr.
-    + rewrite H4 in H3. eapply StrictOrder_Irreflexive in H3; eauto.
-    + rewrite H4 in H3. eapply StrictOrder_Irreflexive in H3; eauto.
-      Grab Existential Variables. eauto. eauto.
+    edestruct (H2 m); eauto.
 Qed.
 
 Lemma least_fresh_P_ext  X `{OrderedType X} p (G G' : ⦃X⦄)

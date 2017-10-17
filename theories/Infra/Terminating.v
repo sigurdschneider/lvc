@@ -45,16 +45,16 @@ Lemma terminates_get_list Dom `{PO:PartialOrder Dom} L
 Proof.
   intro Trm.
   induction Trm; intros.
-  + econstructor; intros.
+  - econstructor; intros.
     eapply H0. instantiate (1:=list_update_at x n y).
-    * revert H1 H2. clear_all.
+    + revert H1 H2. clear_all.
       general induction x; simpl; isabsurd.
       inv H1.
-      split. econstructor; eauto.
-      intro. eapply H2. inv H; eauto.
-      exploit IHx; eauto. split; eauto.
-      intro. eapply H. inv H0; eauto.
-    * eapply list_update_at_get_3; eauto.
+      * split; eauto with po.
+        intro. eapply H2. inv H; eauto.
+      * exploit IHx; eauto. split; eauto.
+        intro. eapply H. inv H0; eauto.
+    + eapply list_update_at_get_3; eauto.
 Qed.
 
 Lemma terminates_list_get Dom `{PO:PartialOrder Dom} L

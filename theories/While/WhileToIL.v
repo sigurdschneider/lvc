@@ -22,7 +22,6 @@ Program Fixpoint whileToILI (s:list statement) (cont:nat) {measure (size s)} : s
   | nil => stmtApp (LabI cont) nil
   end.
 
-
 Require Import Program.Equality Program.Wf.
 
 Lemma whileToILI_nil cont

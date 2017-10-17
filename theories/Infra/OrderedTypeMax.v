@@ -18,8 +18,6 @@ Lemma nr_max_sym X `{OrderedType X} (x y:X)
   : nr_max x y === nr_max y x.
 Proof.
   unfold nr_max; repeat cases; eauto.
-  - exfalso. assert (_lt x x) by (etransitivity; eauto).
-    eapply OrderedType.StrictOrder_Irreflexive in H0; eauto.
   - eapply lt_trans_eq; eauto.
 Qed.
 

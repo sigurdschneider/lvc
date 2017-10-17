@@ -1,4 +1,4 @@
-Require Import CSet InfiniteSubset InfinitePartition.
+Require Import CSet OrderedTypeComputable OrderedTypeLe InfiniteSubset InfinitePartition.
 
 Set Implicit Arguments.
 
@@ -30,15 +30,15 @@ Definition ksmallest X `{OrderedType X} (p:inf_subset X) n :=
   nextk p n (proj1_sig (inf_subset_least p)).
 
 Lemma nextk_lt X `{OrderedType X} (p:inf_subset X) n x
-  : forall y, InA _eq y (nextk p n x) -> _lt x y \/ _eq x y.
+  : forall y, InA _eq y (nextk p n x) -> _le x y.
 Proof.
   intros.
   general induction H0; destruct n; simpl in *; clear_trivial_eqs; eauto.
-  revert H0. destr_sig; dcr; eauto. simpl in *. dcr.
-  exploit IHInA; eauto.
-  intros. destruct H1; eauto.
-  - left. etransitivity; eauto.
-  - left. rewrite <- H1. eauto.
+  - rewrite H0; reflexivity.
+  - revert H0. destr_sig; dcr; eauto. simpl in *. dcr.
+    exploit IHInA; eauto.
+    intros.
+    rewrite H2, H1. reflexivity.
 Qed.
 
 Lemma nextk_nodup X `{OrderedType X} (p:inf_subset X) n x
@@ -48,11 +48,7 @@ Proof.
   econstructor; eauto.
   intro. eapply nextk_lt in H0. revert H0. destr_sig.
   intro. dcr.
-  destruct H0.
-  - rewrite H0 in H3.
-    eapply OrderedType.StrictOrder_Irreflexive in H3. cset_tac.
-  - rewrite H0 in *.
-    eapply OrderedType.StrictOrder_Irreflexive in H3. cset_tac.
+  rewrite <- H0 in H3. eauto.
 Qed.
 
 Lemma ksmallest_card X `{OrderedType X} (p:inf_subset X) k
@@ -63,28 +59,25 @@ Qed.
 
 Lemma nextk_greater X `{OrderedType X} (p:inf_subset X) k x z
       (NOTIN:x ∉ of_list (nextk p k z))
-      (GR: _lt z x \/ _eq z x) (P:p z) (P':p x)
+      (GR: _le z x) (P:p z) (P':p x)
   : forall y : X, y \In of_list (nextk p k z) -> _lt y x.
 Proof.
   general induction k; simpl in *.
   - cset_tac.
   - revert H0. destr_sig. simpl in *; intros. dcr.
-    assert (_lt x0 x \/ _eq x0 x). {
+    assert (_le x0 x). {
       destruct GR as [GR|GR].
       - decide (_lt x x0); eauto.
         + exploit H4. eapply P'. eauto. destruct H2.
-          exfalso. rewrite H2 in GR.
-          exfalso. eapply OrderedType.StrictOrder_Irreflexive in GR. cset_tac.
-          rewrite H2 in GR.
-          exfalso. eapply OrderedType.StrictOrder_Irreflexive in GR. cset_tac.
+          * exfalso. rewrite H2 in GR. eauto.
+          * rewrite H2 in GR. eauto.
         + decide (x0 === x); eauto.
-          left.
-          eapply le_neq. eapply n. cset_tac.
+          rewrite e; reflexivity.
+          left. eapply le_neq. eapply n. cset_tac.
       - rewrite GR in *. cset_tac.
     }
-    cset_tac'.
-    + rewrite <- H0. rewrite <- H8. eauto.
-    + rewrite <- H0. rewrite <- H8. eauto.
+    cset_tac'. rewrite H7 in *.
+    destruct GR; eauto. exfalso; eauto.
 Qed.
 
 Lemma least_fresh_part_bounded X

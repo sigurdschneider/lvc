@@ -1,7 +1,7 @@
 Require Import Util LengthEq.
-Require Import Containers.OrderedType Setoid Coq.Classes.Morphisms Computable
-        Coq.Classes.RelationClasses.
-Require Import Containers.OrderedTypeEx DecSolve MoreList OrderedTypeEx.
+Require Import Containers.OrderedType Setoid Coq.Classes.Morphisms Computable Coq.Classes.RelationClasses.
+Require Import Containers.OrderedTypeEx DecSolve MoreList.
+Require Import OrderedTypeEx OrderedTypeComputable OrderedTypeLe.
 Require Import AllInRel.
 
 Create HintDb po discriminated.
@@ -64,7 +64,7 @@ Qed.
 Hint Resolve poLt_intro poLt_poLe poLt_not_poLe | 100 : po.
 
 Lemma poLt_not_poEq Dom `{PartialOrder Dom} x y
-  : poLt x y -> ~ poEq y x.
+  : poLt x y -> ~ poEq x y.
 Proof.
   firstorder with po.
 Qed.
@@ -577,3 +577,16 @@ Proof.
   unfold Proper, respectful; intros.
   hnf in H0. eapply PIR2_length in H0. eauto.
 Qed.
+
+Instance poLt_trans X `{PartialOrder X} : Transitive poLt.
+Proof.
+  hnf; intros.
+  unfold poLt in *.
+  destruct H0, H1; eauto.
+Qed.
+
+(* Explicit Instance *)
+Lemma ot_po X `{OrderedType X} : PartialOrder X.
+  eapply Build_PartialOrder with
+      (poLe := _le) (poEq := _eq); eauto using OT_le_refl with typeclass_instances.
+Defined.

@@ -1,4 +1,4 @@
-Require Import CSet Util InfiniteSubset.
+Require Import CSet Util InfiniteSubset OrderedTypeLe.
 
 Set Implicit Arguments.
 
@@ -87,12 +87,11 @@ Proof.
 Qed.
 
 Lemma safe_impl' X `{OrderedType X} (p:@inf_subset X H) (P Q: X -> Prop) n
-: safe p P n -> (forall x, _lt n x \/ _eq n x -> P x -> Q x) -> safe p Q n.
+: safe p P n -> (forall x, _le n x -> P x -> Q x) -> safe p Q n.
 Proof.
   intros. general induction H0; eauto.
   econstructor; intros. eapply H1; eauto.
   intros x. destr_sig. simpl in *. dcr. intros.
-  eapply H2; eauto. destruct H5.
-  - left; etransitivity; eauto.
-  - left; rewrite <- H5; eauto.
+  eapply H2; eauto.
+  rewrite <- H5. eauto.
 Qed.

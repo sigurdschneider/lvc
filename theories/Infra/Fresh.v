@@ -14,7 +14,6 @@ Proof.
     + intros. cset_tac'.
       * eapply H. etransitivity; eauto. nr.
         omega.
-      * eapply OrderedType.StrictOrder_Irreflexive in H0. eauto.
     + assert (EQ:lv [=] {n; lv \ singleton n }). {
         exploit (H n); eauto. nr. omega.
         cset_tac.
