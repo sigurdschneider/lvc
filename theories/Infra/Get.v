@@ -506,3 +506,9 @@ Proof.
   intros. general induction n; destruct L; simpl; eauto using get.
   exfalso; eauto using get.
 Qed.
+
+Lemma get_singleton X (x y:X) n
+  : get (x::nil) n y -> x = y.
+Proof.
+  intros. inv H; isabsurd; eauto.
+Qed.

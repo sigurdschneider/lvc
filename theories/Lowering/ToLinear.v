@@ -2,179 +2,11 @@ Require Import Coqlib Errors AST Integers Linear.
 Require Import Bounds Conventions Locations Stacklayout.
 Require Import IL NoParams Sawtooth SmallStepRelations.
 Require Import InfinitePartition.
-Require Import SimI VarP.
-
-
+Require Import SimI VarP MkVars.
 Require Import Smallstep Globalenvs common.Events.
+Require Import LinearStateType LabelRelations.
 
 Set Implicit Arguments.
-
-Fixpoint mkVars X (L:list X) (f:var) : var * list var :=
-  match L with
-  | nil => (f, nil)
-  | _::L => let f' := Pos.succ f in
-           let (f'', xl) := mkVars L f' in
-           (f'', f::xl)
-  end.
-
-
-Lemma mkVars_length X (L:list X) f
-  : ❬snd (mkVars L f)❭ = ❬L❭.
-Proof.
-  general induction L; simpl; repeat let_pair_case_eq; eauto; subst; simpl.
-  rewrite IHL; eauto.
-Qed.
-
-Smpl Add match goal with
-         | [ H : context [ ❬snd (@mkVars ?X ?L ?f)❭ ] |- _ ]
-           => setoid_rewrite (@mkVars_length X L f) in H
-         | [ |- context [ ❬snd (@mkVars ?X ?L ?f)❭ ] ]
-           => setoid_rewrite (@mkVars_length X L f)
-         end : len.
-
-Lemma mkVars_le X L f
-  : (f <= fst (@mkVars X L f))%positive.
-Proof.
-  general induction L; simpl.
-  - reflexivity.
-  - let_pair_case_eq; simpl_pair_eqs; subst; simpl.
-    rewrite <- IHL. eapply Ple_succ.
-Qed.
-
-Lemma mkVars_get_le X (L:list X) f n i
-  :  get (snd (mkVars L f)) n i
-     -> (f <= i)%positive.
-Proof.
-  intros GET.
-  general induction L; simpl in *.
-  - isabsurd.
-  - revert GET; let_pair_case_eq; simpl_pair_eqs; subst; simpl.
-    intros GET. inv GET.
-    + reflexivity.
-    + eapply IHL in H3. rewrite <- H3. eapply Ple_succ.
-Qed.
-
-Lemma mkVars_get_lt X (L:list X) f n i
-  :  get (snd (mkVars L f)) n i
-     -> (i < fst (mkVars L f))%positive.
-Proof.
-  intros GET.
-  general induction L; simpl in *.
-  - isabsurd.
-  - revert GET; let_pair_case_eq; simpl_pair_eqs; subst; simpl.
-    intros GET. inv GET.
-    + eapply Pos.lt_le_trans. eapply Plt_succ. rewrite <- mkVars_le. reflexivity.
-    + eapply IHL; eauto.
-Qed.
-
-
-Inductive linear_step_adapter (G:Globalenvs.Genv.t fundef unit)
-  :  Linear.state -> Events.event -> Linear.state -> Prop :=
-| StepAdapterTau st bv vv code rs m σ'
-  : Linear.step G (State st bv vv code rs m) nil σ'
-    -> linear_step_adapter G (State st bv vv code rs m)  EvtTau σ'
-| StepAdapter σ σ' f arg res fnc
-  : Linear.step G σ (Event_syscall f
-                               (EVint ⊝ arg)
-                               (EVint res)::nil) σ'
-    -> linear_step_adapter G σ (EvtExtern (ExternI fnc arg res)) σ'.
-
-Lemma linear_reddec2 G
-  : reddec2 (linear_step_adapter G).
-Proof.
-  hnf; intros.
-  unfold normal2.
-  eapply Coq.Logic.Classical_Prop.classic.
-Defined.
-
-Definition linear_result (σ:Linear.state) :=
-  match σ with
-  | Returnstate st rs m =>
-    match Locmap.get (R R3) rs with
-    | Values.Vint retcode => Some retcode
-    | _ => None
-    end
-  | _ => None
-  end.
-
-Lemma list_forall_det A B (R:A->B->Prop) L L1 L2
-      (Rdet: forall x y z, R x y -> R x z -> y = z)
-  : list_forall2 R L L1
-    -> list_forall2 R L L2
-    -> L1 = L2.
-Proof.
-  intros X Y.
-  general induction X; invt list_forall2; eauto.
-  f_equal; eauto.
-Qed.
-(*
-Lemma extcall_arg_det rs m sp l v v'
-  : extcall_arg rs m sp l v
-    -> extcall_arg rs m sp l v'
-    -> v = v'.
-Proof.
-  intros A B.
-  general induction A; invt extcall_arg; eauto.
-  congruence.
-Qed.
- *)
-(*
-Lemma extcall_arguments_det rs m sp ef a a'
-  : extcall_arguments rs m sp ef a
-    -> extcall_arguments rs m sp ef a'
-    -> a = a'.
-Proof.
-  eapply list_forall_det.
-  intros. general induction H; invt extcall_arg_pair; f_equal; eauto using extcall_arg_det.
-Qed.
-*)
-Local Ltac congr :=
-  repeat match goal with
-         | [ H : ?t = ?x, H' : ?t = ?y |- _ ] =>
-           assert (x = y) by congruence; subst; clear H' || clear H
-         | [ H : eval_builtin_args ?G ?rs ?sp ?m ?a ?vargs,
-                 H' :  eval_builtin_args ?G ?rs ?sp ?m ?a ?vargs' |- _ ]
-           => eapply eval_builtin_args_determ in H; eauto; subst
-(*         | [ H : extcall_arguments ?rs ?m ?sp ?ef ?a,
-               H' : extcall_arguments ?rs ?m ?sp ?ef ?a' |- _ ]
-         => eapply extcall_arguments_det in H; eauto; subst*)
-
-         | [ H :  external_call ?ef ?G ?vargs ?m ?t ?vres ?m',
-                  H' :   external_call ?ef ?G ?vargs ?m ?t' ?vres' ?m'' |- _ ]
-
-           =>  let A := fresh "A" in
-              let B := fresh "B" in
-              edestruct (external_call_determ _ _ _ _ _ _ _ _ _ _ H H') as [A B];
-              inv A; try (edestruct B; eauto; subst); clear H || clear H'
-         | [ s := _ |- _ ] => subst s
-         end.
-
-Definition rel3_functional {A B C} (R:A->B->C->Prop) :=
-  forall a b c c', R a b c -> R a b c' -> c = c'.
-
-Lemma linear_int_det G
-  : internally_deterministic (linear_step_adapter G).
-Proof.
-  hnf; intros.
-  inv H; inv H0; eauto.
-  - inv H1; inv H10; congr; clear_trivial_eqs; try now (split; eauto; congr; try congruence).
-
-  - inv H1; inv H2; exfalso; repeat (congr; clear_trivial_eqs).
-Qed.
-
-Lemma linear_ext_det G
-  : externally_determined (linear_step_adapter G).
-Proof.
-  hnf. intros.
-  invc H; invc H0; eauto.
-  - inv H1; inv H8; repeat (congr; clear_trivial_eqs);
-      try now (split; eauto; congr; try congruence).
-  - inv H1; inv H6; repeat (congr; clear_trivial_eqs); eauto.
-Qed.
-
-Instance LinearStateType G : StateType Linear.state :=
-  @Build_StateType _ (linear_step_adapter G) linear_result (linear_reddec2 G)
-                   (@linear_int_det G) (@linear_ext_det G).
 
 Instance pos_lt_computable x y : Computable ((x < y)%positive).
 Proof.
@@ -264,10 +96,6 @@ Section ToLinear.
      | _ => nil
     end
   .
-
-  Ltac single_step_linear := econstructor; econstructor; eauto.
-
-  Smpl Add single_step_linear : single_step.
 
   Definition regbnd (x:positive) := isReg x -> (x <= 20)%positive.
 
@@ -636,86 +464,6 @@ End ToLinear.
 
 Definition ILItoLinear id s := prg id (0%Z) (fst (toLinear nil default_var s)).
 
-Definition not_contains_label C l :=
-  forall n l', get C n (Llabel l') -> l' <> l.
-
-Definition all_labels_smaller C l :=
-  forall n l', get C n (Llabel l') -> (l' < l)%positive.
-
-Definition all_labels_ge C l :=
-  forall n l', get C n (Llabel l') -> (l <= l')%positive.
-
-Lemma all_not_labels C l
-  : all_labels_smaller C l
-    ->  not_contains_label C l.
-Proof.
-  intros. hnf; intros. exploit H; eauto.
-  intro. subst.
-  eapply Pos.lt_irrefl. eauto.
-Qed.
-
-Lemma all_not_labels_ge C l
-  : all_labels_ge C (Pos.succ l)
-    -> not_contains_label C l.
-Proof.
-  intros. hnf; intros. exploit H; eauto.
-  intro. subst.
-  eapply Pos.le_succ_l in H1.
-  eapply Pos.lt_irrefl. eauto.
-Qed.
-
-Hint Resolve all_not_labels.
-
-Lemma not_contains_label_app1 C C' l
-  : not_contains_label C l -> not_contains_label C' l -> not_contains_label (C ++ C') l.
-Proof.
-  intros; hnf; intros.
-  eapply get_app_cases in H1 as [? |[? ?]]; eauto.
-Qed.
-
-Lemma all_labels_smaller_app1 C C' l
-  : all_labels_smaller C l -> all_labels_smaller C' l -> all_labels_smaller (C ++ C') l.
-Proof.
-  intros; hnf; intros.
-  eapply get_app_cases in H1 as [? |[? ?]]; eauto.
-Qed.
-
-Lemma all_labels_ge_app1 C C' l
-  : all_labels_ge C l -> all_labels_ge C' l -> all_labels_ge (C ++ C') l.
-Proof.
-  intros; hnf; intros.
-  eapply get_app_cases in H1 as [? |[? ?]]; eauto.
-Qed.
-
-Lemma all_labels_smaller_le C l l'
-  : all_labels_smaller C l
-    -> (l <= l')%positive
-    -> all_labels_smaller C l'.
-Proof.
-  intros; hnf; intros.
-  eapply H in H1. eapply Pos.lt_le_trans; eauto.
-Qed.
-
-Lemma all_labels_ge_le C l l'
-  : all_labels_ge C l
-    -> (l' <= l)%positive
-    -> all_labels_ge C l'.
-Proof.
-  intros; hnf; intros.
-  eapply H in H1. etransitivity; eauto.
-Qed.
-
-Lemma get_singleton X (x y:X) n
-  : get (x::nil) n y -> x = y.
-Proof.
-  intros. inv H; isabsurd; eauto.
-Qed.
-
-Smpl Add match goal with
-         | [ H : get (?x::nil) _ ?y |- _ ] =>
-           eapply get_singleton in H;
-             try subst x; try subst y
-         end : inv_get.
 
 Lemma all_labels_smaller_translateOp x e l
   : all_labels_smaller (translateLetOp x e) l.
@@ -1026,6 +774,36 @@ Proof.
         eapply all_labels_smaller_toLinear. eauto.
 Qed.
 
+Lemma toLinearCond_correct G r L V s1 s2 st bv vv l e code1 code2 code rs m
+      (SC:simplCond e) (MR:mrel V rs) (RB: For_all regbnd (Ops.freeVars e))
+      (IH1:upaco3 (@sim_gen IL.I.state _  Linear.state (LinearStateType G)) r Sim (L, V, s1)
+             (State st bv vv (code1 ++ (Llabel l :: code2) ++ code) rs m))
+      (FL:find_label l (fn_code bv) = ⎣ code2 ++ code ⎦)
+      (IH2: upaco3 (@sim_gen IL.I.state _  Linear.state (LinearStateType G)) r Sim (L, V, s2)
+                          (State st bv vv (code2 ++ code) rs m))
+  : @sim _ _ Linear.state (LinearStateType G) r Sim (L, V, stmtIf e s1 s2)
+         (State st bv vv (toLinearCond l e :: code1 ++ (Llabel l :: code2) ++ code) rs m).
+Proof.
+  case_eq (op_eval V e); intros.
+  - case_eq (val2bool v); intros.
+    * pfold.
+      econstructor 1.
+      -- eapply plus2O. single_step.
+         reflexivity.
+      -- rewrite !app_assoc. simpl.
+         eapply toLinearCond_step; eauto.
+      -- rewrite <- !app_assoc.
+         eapply IH1.
+    * pfold.
+      econstructor 1.
+      -- eapply plus2O. single_step.
+         reflexivity.
+      -- rewrite !app_assoc. simpl.
+         eapply toLinearCond_step_false; eauto.
+      -- eapply IH2.
+  - pno_step_left.
+Qed.
+
 Lemma toLinear_correct r (L:I.labenv) I l (V:onv val) s bv vv rs m G C C'
       (MR:mrel V rs)
       (ML:all_labels_smaller C l)
@@ -1070,64 +848,45 @@ Proof.
   - revert CODE.
     repeat (let_pair_case_eq; simpl_pair_eqs); subst. simpl. intros.
     rewrite <- !app_assoc in *.
-    case_eq (op_eval V e); intros.
-    + case_eq (val2bool v); intros.
-      * pfold.
-        econstructor 1.
-        -- eapply plus2O. single_step.
-           reflexivity.
-        -- rewrite !app_assoc. simpl.
-           eapply toLinearCond_step; eauto.
-        -- right.
-           simpl in *.
-           rewrite <- app_assoc.
-           eapply CIH; eauto.
-           ++ rewrite CODE.
-             rewrite cons_app.
-             rewrite app_assoc. f_equal.
-           ++ apply all_labels_smaller_app1.
-             eapply all_labels_smaller_le; eauto. eapply Ple_succ.
-             eapply all_labels_smaller_toLinearCond.
-           ++ intros. eapply LTI in H1; eauto.
-             etransitivity; eauto. eapply Plt_succ.
-      * pfold.
-        econstructor 1.
-        -- eapply plus2O. single_step.
-           reflexivity.
-        -- rewrite !app_assoc. simpl.
-           eapply toLinearCond_step_false; eauto.
-           rewrite CODE.
-           rewrite cons_app.
-           rewrite find_label_app; eauto.
-           rewrite find_label_app; eauto using not_contains_label_toLinearCond.
-           rewrite find_label_app; eauto.
-           simpl. cases; eauto.
-           eapply all_not_labels_ge.
-           eapply all_labels_ge_toLinear.
-        -- right.
-           simpl in *.
-           eapply CIH; eauto.
-           ++ rewrite CODE.
-             rewrite cons_app.
-             rewrite app_assoc.
-             rewrite app_assoc.
-             setoid_rewrite cons_app at 2.
-             rewrite app_assoc.
-             f_equal.
-           ++ apply all_labels_smaller_app1.
-             apply all_labels_smaller_app1.
-             apply all_labels_smaller_app1.
-             eapply all_labels_smaller_le; eauto. rewrite <- toLinear_le. eapply Ple_succ.
-             eapply all_labels_smaller_toLinearCond.
-             eapply all_labels_smaller_toLinear.
-             hnf; intros; inv_get.
-             eapply Pos.lt_le_trans. eapply Plt_succ.
-             rewrite <- toLinear_le. reflexivity.
-           ++ intros. eapply LTI in H1.
-             etransitivity; eauto.
-             eapply Pos.lt_le_trans. eapply Plt_succ.
-             rewrite <- toLinear_le. reflexivity.
-    + pno_step_left.
+    eapply toLinearCond_correct; eauto.
+    + intros. right. eapply CIH; eauto.
+      ++ rewrite CODE.
+        rewrite cons_app.
+        rewrite app_assoc. f_equal.
+      ++ apply all_labels_smaller_app1.
+        eapply all_labels_smaller_le; eauto. eapply Ple_succ.
+        eapply all_labels_smaller_toLinearCond.
+      ++ intros. eapply LTI in H; eauto.
+        etransitivity; eauto. eapply Plt_succ.
+    + rewrite CODE.
+      rewrite cons_app.
+      rewrite find_label_app; eauto.
+      rewrite find_label_app; eauto using not_contains_label_toLinearCond.
+      rewrite find_label_app; eauto.
+      simpl. cases; eauto.
+      eapply all_not_labels_ge.
+      eapply all_labels_ge_toLinear.
+    + right. eapply CIH; eauto.
+      ++ rewrite CODE.
+        rewrite cons_app.
+        rewrite app_assoc.
+        rewrite app_assoc.
+        setoid_rewrite cons_app at 2.
+        rewrite app_assoc.
+        f_equal.
+      ++ apply all_labels_smaller_app1.
+        apply all_labels_smaller_app1.
+        apply all_labels_smaller_app1.
+        eapply all_labels_smaller_le; eauto. rewrite <- toLinear_le. eapply Ple_succ.
+        eapply all_labels_smaller_toLinearCond.
+        eapply all_labels_smaller_toLinear.
+        hnf; intros; inv_get.
+        eapply Pos.lt_le_trans. eapply Plt_succ.
+        rewrite <- toLinear_le. reflexivity.
+      ++ intros. eapply LTI in H.
+        etransitivity; eauto.
+        eapply Pos.lt_le_trans. eapply Plt_succ.
+        rewrite <- toLinear_le. reflexivity.
   - destruct (get_dec L (counted l0)) as [[? ?]|]; [| pno_step_left].
     + decide (length (block_Z x) = ❬@nil var❭); [|pno_step_left].
       case_eq (block_Z x); simpl in *;

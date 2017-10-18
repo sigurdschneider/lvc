@@ -851,3 +851,9 @@ Proof.
   general induction Len; simpl; eauto.
   f_equal; eauto using get.
 Qed.
+
+Smpl Add match goal with
+         | [ H : get (?x::nil) _ ?y |- _ ] =>
+           eapply get_singleton in H;
+             try subst x; try subst y
+         end : inv_get.
