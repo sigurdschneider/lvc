@@ -5,18 +5,18 @@ Require Import Liveness.Liveness ParallelMove.
 Require Import Coherence Invariance.
 Require Import Coherence.Allocation AllocationAlgo AllocationAlgoCorrect.
 Require Import Alpha AppExpFree.
-Require Import Slot InfinitePartition.
+Require Import Slot InfiniteSubset InfinitePartition.
 (* Require CopyPropagation ConstantPropagation ConstantPropagationAnalysis.*)
 
 Arguments sim S {H} S' {H0} r t _ _.
 
-Definition rassign (p:inf_partition var)
+Definition rassign (p:inf_partition var) max_reg
            (s:stmt) (lv: ann (set var)) :=
   let fvl := to_list (getAnn lv) in
   let ϱ := CMap.update_map_with_list fvl fvl (@MapInterface.empty var _ _ _) in
   sdo ϱ' <- regAssign p s lv ϱ;
     let s_allocated := rename (CMap.findt ϱ' default_var) s in
-    let s_lowered := ParallelMove.lower p nil
+    let s_lowered := ParallelMove.lower p max_reg nil
                                        s_allocated
                                        (mapAnn (lookup_set (CMap.findt ϱ' default_var)) lv) in
     Success s_lowered.
@@ -24,13 +24,15 @@ Definition rassign (p:inf_partition var)
 Opaque to_list.
 
 
-Lemma rassign_correct p (s:stmt) (lv:ann (set var)) s' ra
-      (SC: rassign p s lv = Success s') (PM:paramsMatch s nil)
+Lemma rassign_correct p max_reg (s:stmt) (lv:ann (set var)) s' ra
+      (SC: rassign p max_reg s lv = Success s') (PM:paramsMatch s nil)
       (RA: renamedApart s ra)
       (AEF: app_expfree s)
       (LV:live_sound FunctionalAndImperative nil nil s lv)
       (Incl:getAnn lv ⊆ fst (getAnn ra))
-  : forall E, sim F.state I.state bot3 Sim (nil, E, s) (nil, E, s').
+      (MREG:part_1 p max_reg)
+      E (DEF:defined_on (getAnn lv) E)
+  : sim F.state I.state bot3 Sim (nil, E, s) (nil, E, s').
 Proof.
   intros. unfold rassign in SC.
   monadS_inv SC.
@@ -104,7 +106,20 @@ Proof.
     - econstructor.
     - eauto with len.
   }
-  exploit (@ParallelMove.correct p nil nil nil); eauto using Liveness.live_sound_overapproximation_I;
+  exploit (@ParallelMove.correct p max_reg nil nil nil); eauto using Liveness.live_sound_overapproximation_I;
     eauto using @InRel.LPM_nil.
   - eapply rename_app_expfree; eauto.
+  - rewrite getAnn_mapAnn.
+    eapply defined_on_incl.
+    eapply defined_on_agree; eauto.
+    rewrite lookup_set_agree; swap 1 4.
+    rewrite Incl. symmetry.
+    eapply regAssign_renamedApart_agree; eauto.
+    eauto. eauto.
+    rewrite lookup_set_agree; swap 1 4.
+    symmetry. eapply  map_update_list_update_agree; eauto with len.
+    eauto. eauto.
+    rewrite update_with_list_lookup_set_incl; eauto with len.
+    rewrite of_list_3. reflexivity.
+    rewrite of_list_3. reflexivity.
 Qed.

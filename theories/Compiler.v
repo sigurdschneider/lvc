@@ -198,6 +198,8 @@ Definition slt (D:set var) (EV:For_all Even.even_pos_fast D)
   - hnf; intros. eapply Pos.succ_inj; eauto.
 Defined.
 
+Definition max_reg := 19%positive.
+
 Definition fromILF (s:stmt) :=
   let s_eae := EAE.compile s in
   let sra := rename_apart_to_part FGS_even_fast_pos s_eae in
@@ -208,7 +210,7 @@ Definition fromILF (s:stmt) :=
   let rdom := (domain_add FG_fast_pres (empty_domain FG_fast_pres)
                          (getAnn (snd (spilled)))) in
   let ren2 := snd (renameApart FG_fast_pres rdom id (fst spilled)) in
-  let ras := rassign even_part_pos ren2
+  let ras := rassign even_part_pos max_reg ren2
                     (snd (renameApart_live FG_fast_pres
                                            rdom
                                            id
@@ -395,7 +397,7 @@ Proof.
   }
 
   assert (LS1:Liveness.live_sound Liveness.FunctionalAndImperative nil nil (fst spilled) (snd spilled)). {
-    eapply spill_live with (k:=k) (slt:=slt);
+    eapply spill_spill_live with (k:=k) (slt:=slt);
       eauto using DCE_live, DCE_renamedApart,
       DCE_live_incl, DCE_paramsMatch.
   }
@@ -467,6 +469,13 @@ Proof.
     eapply ann_R_get in INCL; eauto.
     rewrite lookup_set_on_id; [|reflexivity].
     reflexivity.
+  - admit.
+  - erewrite getAnn_snd_renameApart_live; eauto.
+    rewrite lookup_set_on_id; [|reflexivity].
+    subst spilled.
+    eapply defined_on_incl; swap 1 2.
+    eapply getAnn_spill with (slt:=slt); eauto.
+    Focus 4.
     Grab Existential Variables.
     eauto.
 Qed.
