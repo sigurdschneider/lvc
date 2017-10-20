@@ -140,21 +140,17 @@ Proof.
   - assert (❬Z❭=❬Some ⊝ VL❭) by eauto with len.
     edestruct (of_list_get_first _ i) as [n]; eauto; dcr.
     edestruct update_with_list_lookup_in_list_first; eauto; dcr.
-    + intros; rewrite <- H2. eauto.
-    + rewrite H2. rewrite H6. inv_get. hnf in H2; subst.
+    + intros; rewrite H2. eauto.
+    + rewrite <- H2. rewrite H6. inv_get.
       edestruct update_with_list_lookup_in_list_first_slot;
         try eapply Len; try eapply H3; try eapply H; dcr.
-      Focus 3.
-      erewrite H6. get_functional. eauto.
-      eapply disj_incl; eauto with cset.
-      intros. eauto.
-  - rewrite lookup_set_update_not_in_Z; eauto.
-    rewrite lookup_set_update_not_in_Z; eauto.
-    eapply Agr2. cset_tac.
-    rewrite of_list_slot_lift_params; eauto.
-    intro. eapply (Disj x);
-    eauto with cset.
-    revert n H0; clear; cset_tac.
+      * eapply disj_incl; eauto with cset.
+      * intros; eauto.
+      * erewrite H7. inv_get. eauto.
+  - rewrite !lookup_set_update_not_in_Z; eauto.
+    + eapply Agr2. cset_tac.
+    + rewrite of_list_slot_lift_params; eauto.
+      clear - n Disj H; cset_tac.
 Qed.
 
 Lemma update_with_list_lookup_in_list_first_slot' (slot : var -> var) A (E:onv A) n (R M:set var)
@@ -215,19 +211,20 @@ Proof.
     edestruct (of_list_get_first _ i) as [n]; eauto; dcr. hnf in H2; subst.
     edestruct update_with_list_lookup_in_list_first; eauto; dcr.
     rewrite H4. inv_get.
-    edestruct update_with_list_lookup_in_list_first_slot'; try eapply Len; eauto; dcr.
+    edestruct (@update_with_list_lookup_in_list_first_slot' slot); try eapply Len; try eapply H5;
+      try eapply Disj;
+      eauto; dcr.
     rewrite H6. get_functional. eauto.
-  - rewrite lookup_set_update_not_in_Z; eauto.
-    rewrite lookup_set_update_not_in_Z; eauto.
-    eapply Agr2. cset_tac.
-    rewrite of_list_slot_lift_params; eauto.
-    intro. eapply union_iff in H0; destruct H0.
-    + eapply (Disj (slot x)). cset_tac. cset_tac.
-    + eapply (Disj x). cset_tac.
-      eapply map_iff in H0; eauto. dcr.
-      eapply Inj in H3; eauto with cset.
-      exfalso; cset_tac.
-      cset_tac.
+  - rewrite !lookup_set_update_not_in_Z; eauto.
+    + eapply Agr2. cset_tac.
+    + rewrite of_list_slot_lift_params; eauto.
+      intro. eapply union_iff in H0; destruct H0.
+      * eapply (Disj (slot x)). cset_tac. cset_tac.
+      * eapply (Disj x). cset_tac.
+        eapply map_iff in H0; eauto. dcr.
+        eapply Inj in H3; eauto with cset.
+        exfalso; cset_tac.
+        cset_tac.
 Qed.
 
 

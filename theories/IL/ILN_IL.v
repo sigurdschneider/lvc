@@ -58,7 +58,6 @@ Proof.
   general induction symb.
   unfold pos in H; fold pos in H.
   cases in H; simpl; eauto.
-  - inv COND; eauto.
   - destruct x.
     + exfalso. exploit (pos_ge _ _ _ H); eauto. omega.
     + simpl. erewrite IHsymb; eauto.

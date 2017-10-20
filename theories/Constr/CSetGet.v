@@ -268,7 +268,7 @@ Qed.
 
 Lemma of_list_get_first X `{OrderedType X} (Z:list X) z
 : z ∈ of_list Z
-  -> exists n z', get Z n z' /\ z === z' /\ (forall n' z', n' < n -> get Z n' z' -> z' =/= z).
+  -> exists n z', get Z n z' /\ z' === z /\ (forall n' z', n' < n -> get Z n' z' -> z' =/= z).
 Proof.
   intros. general induction Z; simpl in *.
   decide (z === a).

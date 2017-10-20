@@ -124,19 +124,21 @@ Proof.
   decide (x ∈ of_list L).
   - edestruct (of_list_get_first _ i) as [n]; eauto. dcr.
     edestruct update_with_list_lookup_in_list_first; eauto; dcr.
-    intros; intro. eapply H8; eauto. rewrite H9; eauto.
+    intros; intro. eapply H8; eauto.
     instantiate (1:=f ∘ V) in H9.
     pose proof (proper_update_with_list _ _ (f ∘ V) L L') as PEQ.
     unfold respectful, Proper, feq in PEQ.
-    rewrite PEQ; [| intros; unfold comp; rewrite H4; reflexivity | eapply H5]; clear PEQ.
+    rewrite PEQ; [| intros; unfold comp; rewrite H4; reflexivity | symmetry; eapply H5]; clear PEQ.
     rewrite H9.
-    setoid_rewrite H5 in H8.
+    setoid_rewrite <- H5 in H8.
     eapply injective_on_incl in Inj; [| eapply incl_right].
     edestruct (get_map_first Inj H6 H8); dcr.
-    edestruct update_with_list_lookup_in_list_first; try eapply H4; dcr.
-    Focus 3. rewrite H5. rewrite H13. inv_get.
-    rewrite EQ. reflexivity. eauto with len.
-    eauto.
+    edestruct update_with_list_lookup_in_list_first; try eapply H4; dcr;
+      swap 1 3.
+    + rewrite <- H5. rewrite H13. inv_get.
+      rewrite EQ. reflexivity.
+    + eauto.
+    + eauto with len.
   - rewrite lookup_set_update_not_in_Z; eauto.
     exploit (@injective_on_not_in_map _ _ _ _ f _ _ H1 n); eauto.
     eapply injective_on_incl; eauto.

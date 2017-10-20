@@ -30,7 +30,7 @@ Proof.
   destruct x2.
   eapply get_InA_R with (R:=eq_key_elt) in H0; eauto.
   rewrite <- MapFacts.elements_mapsto_iff in H0.
-  eapply MapFacts.find_mapsto_iff in H0. simpl in *. rewrite <- H1 in H0.
+  eapply MapFacts.find_mapsto_iff in H0. simpl in *. rewrite H1 in H0.
   eauto.
 Qed.
 

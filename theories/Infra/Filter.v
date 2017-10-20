@@ -311,11 +311,11 @@ Lemma of_list_filter_set X `{OrderedType X} (p:X->bool) `{Proper _ (_eq ==> eq) 
 Proof.
   cset_tac'.
   - eapply of_list_get_first in H1; dcr; cset_tac'; inv_get.
-    rewrite H3. eapply get_in_of_list; eauto.
+    rewrite <- H3. eapply get_in_of_list; eauto.
   - eapply of_list_get_first in H1; dcr; cset_tac'; inv_get.
-    rewrite H3. cset_tac'.
+    rewrite <- H3. cset_tac'.
   - eapply of_list_get_first in H2; dcr; cset_tac'; inv_get.
-    rewrite H4 in *.  edestruct get_filter; eauto.
+    rewrite <- H4 in *.  edestruct get_filter; eauto.
     eapply get_in_of_list; eauto.
 Qed.
 

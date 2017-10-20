@@ -96,13 +96,12 @@ Lemma fresh_list_stable_In V `{OrderedType V}
       (fresh : StableFresh V) (G: set V) L x
   : x ∈ of_list (fst (fresh_list_stable fresh G L))
     -> exists y G', y ∈ of_list L /\
-           x === fresh G' y /\ G ⊆ G'.
+              fresh G' y === x /\ G ⊆ G'.
 Proof.
   intros Get.
   eapply of_list_get_first in Get; eauto; dcr.
   eapply fresh_list_stable_get in H0; dcr; subst.
-  cset_tac'. do 2 eexists; split; eauto.
-  eapply get_in_of_list; eauto.
+  eauto 20 using get_in_of_list.
 Qed.
 
 Hint Resolve fresh_list_stable_length : len.

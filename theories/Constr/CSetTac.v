@@ -750,3 +750,16 @@ Smpl Add match goal with
          | [ H : _ ∈ of_list nil |- _ ] => eapply not_in_empty in H; exfalso; eapply H
          | [ H: Empty ?s, H' : ?a ∈ ?s |- _ ] => destruct (H a H')
          end : inv_trivial.
+
+Smpl Add match goal with
+           [ H : ?x === ?x |- _ ] => clear H
+         end : inversion_cleanup.
+
+Smpl Add
+     match goal with
+     | [ H : @Equivalence.equiv _
+                                (@_eq _ (@SOT_as_OT _ (@eq _) _))
+                                (@OT_Equivalence _ (@SOT_as_OT _ (@eq _) _))
+                                ?a ?b |- _ ] =>
+       is_var a; is_var b; invc H; clear_trivial_eqs
+     end : inv_trivial.

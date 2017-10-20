@@ -132,7 +132,7 @@ Proof.
   - hnf; intros.
     edestruct of_list_get_first; eauto; dcr.
     eapply defined_get; eauto.
-    rewrite H4. eapply map_get_1; eauto.
+    rewrite <- H4. eapply map_get_1; eauto.
 Qed.
 
 Lemma defined_on_comp X `{OrderedType X} Y (f:X->X) D (V:X -> option Y)
@@ -156,8 +156,6 @@ Proof.
     + exfalso. eapply H1; eauto. simpl. cset_tac.
     + eapply IHZ; eauto with cset.
 Qed.
-
-
 
 Lemma defined_on_agree_fstNoneOrR (X : Type) `{H : OrderedType X}
       (Y : Type) (R : relation Y) (D : ⦃X⦄) (f g : X -> ؟ Y)

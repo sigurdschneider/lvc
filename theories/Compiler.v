@@ -474,10 +474,12 @@ Proof.
     rewrite lookup_set_on_id; [|reflexivity].
     subst spilled.
     eapply defined_on_incl; swap 1 2.
-    eapply getAnn_spill with (slt:=slt); eauto.
-    Focus 4.
-    Grab Existential Variables.
-    eauto.
+    eapply getAnn_spill with (slt:=slt);
+      eauto using DCE_live, DCE_renamedApart,
+      DCE_live_incl, DCE_paramsMatch.
+    + eapply defined_on_union.
+      * eapply defined_on_update_list_disj.
+        subst E'.
 Qed.
 
 

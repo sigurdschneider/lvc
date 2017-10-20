@@ -114,14 +114,14 @@ Proof.
   - cset_tac'.
     + edestruct of_list_get_first; eauto; dcr. invc H2.
       inv_get.
-      exploit (H (fst x1) (snd x1)).
+      exploit (H (fst x0) (snd x0)).
       eapply get_in; eauto using combine_get; eauto.
       * eauto with typeclass_instances.
       * rewrite <- pair_eta; eauto.
       * dcr. eapply H2; eauto. eapply 1%positive.
     + edestruct of_list_get_first; eauto; dcr. invc H2.
       inv_get.
-      exploit (H (fst x1) (snd x1)).
+      exploit (H (fst x0) (snd x0)).
       eapply get_in; eauto using combine_get; eauto.
       * eauto with typeclass_instances.
       * rewrite <- pair_eta; eauto.
@@ -241,7 +241,7 @@ Lemma Parmov_update_eq M x y
 Proof.
   unfold Parmov.update, update.
   eapply FunctionalExtensionality.functional_extensionality.
-  intros. repeat cases; eauto. eapply var_eq_eq in COND. exfalso; eauto.
+  intros. repeat cases; eauto.
 Qed.
 
 Lemma exec_seq_agree G pm (E E':onv val)
@@ -605,6 +605,13 @@ Proof.
     + eapply IHpm. simpl in *. cset_tac.
 Qed.
 
+Smpl Add
+     match goal with
+     | [ H : get (repl ?Z ?x ?y) ?n ?z |- _ ] =>
+       unfold repl in H
+     end : inv_get.
+
+
 Lemma repl_lookup_ne2 lstmp (Z:params) Y (E:onv val) (reg x:var) (Len:❬Z❭ = ❬Y❭)
       (NE1:x =/= reg) (NE2:x =/= lstmp) (NOTIN:lstmp ∉ of_list Z)
   : (E [repl Z reg lstmp <-- Y]) x = (E [Z <-- Y]) x.
@@ -613,15 +620,15 @@ Proof.
   - eapply of_list_get_first in i; dcr. invc H0.
     exploit (@update_with_list_lookup_in_list_first _ _ _ E x0 Z Y); dcr;
     eauto with len.
-    exploit repl_get_ne; try eapply H; eauto.
+    exploit repl_get_ne; try eapply NE1; eauto.
     exploit (@update_with_list_lookup_in_list_first _ _ _ E x0 (repl Z reg lstmp) Y); dcr;
       eauto with len.
-    * intros. unfold repl in *. inv_get.
-      repeat cases; eauto. symmetry in COND; invc COND.
+    * intros. inv_get; subst.
+      repeat cases; eauto.
       eapply H2 in H5; eauto.
       intro. invc H0.
       eapply NOTIN. eauto using get_in_of_list.
-    * unfold repl in H3. inv_get.
+    * inv_get.
       repeat cases; eauto.
   - rewrite !lookup_set_update_not_in_Z; eauto.
     rewrite of_list_repl_incl; eauto. cset_tac.
@@ -659,20 +666,19 @@ Proof.
   - rewrite repl_lookup_left; eauto.
     lud; cases; eauto.
   - lud. invc H0; cases.
-    + eapply of_list_get_first in COND; dcr.
-      symmetry in H1; invc H1.
+    + eapply of_list_get_first in COND; dcr; clear_trivial_eqs.
       exploit (@update_with_list_lookup_in_list_first _ _ _ E x Z Y); dcr;
         eauto with len.
       rewrite H5.
       exploit repl_get_eq; try eapply H4; eauto.
       exploit (@update_with_list_lookup_in_list_first _ _ _ E x (repl Z reg lstmp) Y); dcr;
         eauto with len.
-      * intros. unfold repl in *. inv_get.
-        repeat cases; eauto. symmetry in COND; invc COND.
+      * intros. inv_get.
+        repeat cases; eauto.
         eapply H3 in H6; eauto.
         intro. invc H1.
         eapply NOTIN. eauto using get_in_of_list.
-      * unfold repl in H1, H8. inv_get.
+      * inv_get.
         repeat cases; eauto.
     + rewrite !lookup_set_update_not_in_Z; eauto.
       eapply of_list_repl_no; eauto.
