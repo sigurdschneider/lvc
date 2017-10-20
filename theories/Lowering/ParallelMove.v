@@ -515,6 +515,25 @@ Proof.
   - rewrite IHZ; cset_tac.
 Qed.
 
+Lemma of_list_repl_no (Z:params) x y
+      (NOTIN: x ∉ of_list Z) (NOTIN2: y ∉ of_list Z)
+  : y ∉ of_list (repl Z x y).
+Proof.
+  general induction Z; simpl; repeat cases; simpl in *; eauto.
+  - invc COND. cset_tac.
+  - cset_tac.
+Qed.
+
+Lemma of_list_repl_never (Z:params) (x y:var)
+      (NEQ:x =/= y)
+  : x ∉ of_list (repl Z x y).
+Proof.
+  general induction Z; simpl; repeat cases; simpl in *; eauto.
+  - cset_tac.
+  - invc COND. cset_tac.
+  - cset_tac.
+Qed.
+
 Lemma of_list_repl' Z x y
   : of_list Z \ singleton x ⊆ of_list (repl Z x y).
 Proof.
@@ -578,7 +597,154 @@ Proof.
     + eapply IHpm. simpl in *. cset_tac.
 Qed.
 
-Lemma parmov_repl_agree p lv (E:onv val) (pmtmp reg lstmp:var) (Y Z:params) (Len:❬Y❭=❬Z❭) (NEQ:reg =/= lstmp) (NEQ2:pmtmp =/= lstmp) (NEQ3:reg =/= pmtmp)
+Lemma repl_lookup_ne2 lstmp (Z:params) Y (E:onv val) (reg x:var) (Len:❬Z❭ = ❬Y❭)
+      (NE1:x =/= reg) (NE2:x =/= lstmp) (NOTIN:lstmp ∉ of_list Z)
+  : (E [repl Z reg lstmp <-- Y]) x = (E [Z <-- Y]) x.
+Proof.
+  decide (x ∈ of_list Z).
+  - eapply of_list_get_first in i; dcr. invc H0.
+    exploit (@update_with_list_lookup_in_list_first _ _ _ E x0 Z Y); dcr;
+    eauto with len.
+    exploit repl_get_ne; try eapply H; eauto.
+    exploit (@update_with_list_lookup_in_list_first _ _ _ E x0 (repl Z reg lstmp) Y); dcr;
+      eauto with len.
+    * intros. unfold repl in *. inv_get.
+      repeat cases; eauto. symmetry in COND; invc COND.
+      eapply H2 in H5; eauto.
+      intro. invc H0.
+      eapply NOTIN. eauto using get_in_of_list.
+    * unfold repl in H3. inv_get.
+      repeat cases; eauto.
+  - rewrite !lookup_set_update_not_in_Z; eauto.
+    rewrite of_list_repl_incl; eauto. cset_tac.
+Qed.
+
+Lemma repl_lookup_ne lstmp (Z:params) Y (E:onv val) (reg x:var) (Len:❬Z❭ = ❬Y❭)
+      (NE2:x =/= lstmp) (NOTIN:lstmp ∉ of_list Z)
+  : (E [repl Z reg lstmp <-- Y]) x = (E [Z <-- Y] [reg <- E reg]) x.
+Proof.
+  lud.
+  - invc H1.
+    rewrite !lookup_set_update_not_in_Z; eauto.
+    eapply of_list_repl_never; eauto.
+  - eapply repl_lookup_ne2; eauto.
+Qed.
+
+Lemma repl_lookup_left lstmp (Z:params) reg Y (E:onv val)
+      (Len:❬Z❭ = ❬Y❭) (ND:NoDupA eq Z) (NOTIN:lstmp ∉ of_list Z)
+      x (IN:x ∈ of_list Z)
+  : (E [repl Z reg lstmp <-- Y]) x = (E [Z <-- Y] [reg <- E reg] [lstmp <- E [Z <-- Y] reg]) x.
+Proof.
+  decide (x =/= lstmp).
+  - rewrite repl_lookup_ne; eauto. lud.
+  - lud; cset_tac.
+Qed.
+
+Lemma repl_agree G lstmp (Z:params) reg Y (E:onv val)
+      (Len:❬Z❭ = ❬Y❭) (ND:NoDupA eq Z) (NOTIN:lstmp ∉ of_list Z)
+  : agree_on eq G (E [repl Z reg lstmp <-- Y])
+             (E [Z <-- Y] [ reg <- E reg ]
+                [lstmp <- if [reg ∈ of_list Z ] then E [Z <-- Y] reg else E lstmp]).
+Proof.
+  hnf; intros.
+  decide (x ∈ of_list Z).
+  - rewrite repl_lookup_left; eauto.
+    lud; cases; eauto.
+  - lud. invc H0; cases.
+    + eapply of_list_get_first in COND; dcr.
+      symmetry in H1; invc H1.
+      exploit (@update_with_list_lookup_in_list_first _ _ _ E x Z Y); dcr;
+        eauto with len.
+      rewrite H5.
+      exploit repl_get_eq; try eapply H4; eauto.
+      exploit (@update_with_list_lookup_in_list_first _ _ _ E x (repl Z reg lstmp) Y); dcr;
+        eauto with len.
+      * intros. unfold repl in *. inv_get.
+        repeat cases; eauto. symmetry in COND; invc COND.
+        eapply H3 in H6; eauto.
+        intro. invc H1.
+        eapply NOTIN. eauto using get_in_of_list.
+      * unfold repl in H1, H8. inv_get.
+        repeat cases; eauto.
+    + rewrite !lookup_set_update_not_in_Z; eauto.
+      eapply of_list_repl_no; eauto.
+    + invc H3.
+      rewrite !lookup_set_update_not_in_Z; eauto.
+      eapply of_list_repl_never; eauto.
+    + rewrite !lookup_set_update_not_in_Z; eauto.
+      rewrite of_list_repl_incl; eauto. cset_tac.
+Qed.
+
+Lemma parmov_repl_agree1 p lv (E:onv val) (pmtmp reg lstmp:var) (Y Z:params) (Len:❬Y❭=❬Z❭) (NEQ:reg =/= lstmp) (NEQ2:pmtmp =/= lstmp) (NEQ3:reg =/= pmtmp)
+      (NDZ:NoDupA _eq Z) (NOTIN:lstmp ∉ of_list Y ∪ of_list Z) (NOTIN2: pmtmp ∉ of_list Y ∪ of_list Z)
+       (NOTIN3:reg ∉ of_list Y) (IN:reg ∈ of_list Z)
+  : agree_on eq (lv \ {lstmp; singleton pmtmp})
+             (E <||= Parmov.parmove2 positive var_dec (fun _ : positive => pmtmp) Y Z)
+             (E <||= (parmove_elim_mem2mem
+                        p reg
+                        (Parmov.parmove2 positive var_dec (fun _ => pmtmp) Y (repl Z reg lstmp))
+                ++ (lstmp, reg) :: nil)).
+Proof.
+  set (ZR:=repl Z reg lstmp) in *.
+  set (PM:=Parmov.parmove2 positive var_dec (fun _ : positive => pmtmp) Y (repl Z reg lstmp)) in *.
+  etransitivity. {
+    eapply agree_on_incl.
+    eapply parmov_update_with_list; eauto.
+    + rewrite snd_combine; eauto with len.
+    + rewrite fst_combine, snd_combine; eauto with len.
+    + cset_tac.
+  }
+  rewrite Parmov.exec_seq_app; simpl. rewrite !Parmov_update_eq.
+  symmetry. etransitivity. {
+    eapply agree_on_update_same. reflexivity.
+    eapply agree_on_incl.
+    eapply parmove_elim_mem2mem_agree.
+    unfold Parmov.parmove2.
+    rewrite fst_parmove. rewrite fst_combine; eauto with len.
+    cset_tac. cset_tac.
+  }
+  etransitivity. {
+    eapply agree_on_update_same. reflexivity.
+    eapply agree_on_incl.
+    eapply parmov_update_with_list; eauto.
+    + rewrite snd_combine; eauto with len.
+      eapply repl_nodup; eauto. cset_tac.
+    + rewrite fst_combine, snd_combine; eauto with len.
+      subst ZR. rewrite !of_list_repl_incl. cset_tac.
+    + cset_tac.
+  }
+  rewrite !snd_combine, !fst_combine; eauto with len.
+  erewrite parmove_elim_mem2mem_agree with (G:=singleton lstmp);
+    [|unfold Parmov.parmove2; rewrite fst_parmove; try rewrite fst_combine; eauto with len;
+      cset_tac
+     |cset_tac].
+  etransitivity. {
+    eapply agree_on_update_same. reflexivity.
+    eapply repl_agree; eauto with len. cset_tac.
+  }
+  cases.
+  unfold Parmov.parmove2.
+  erewrite parmov_update_with_list; eauto;
+      try rewrite snd_combine; try rewrite fst_combine; eauto with len.
+  - subst ZR. erewrite (@repl_agree (singleton lstmp)); eauto with len; [|cset_tac].
+    hnf; intros. cases; lud; invc e; eauto.
+    cset_tac.
+  - + eapply repl_nodup; eauto. cset_tac.
+  - subst ZR. rewrite !of_list_repl_incl. cset_tac.
+  - instantiate (1:=singleton lstmp). cset_tac.
+Qed.
+
+Lemma lookup_list_repl (E: onv val) (lstmp reg:var) Y
+      (NEQ:lstmp =/= reg) (NOTIN:lstmp ∉ of_list Y)
+  : lookup_list (E [lstmp <- E reg]) (repl Y reg lstmp) = lookup_list E Y.
+Proof.
+  general induction Y; simpl in *; eauto.
+  f_equal; eauto; try cset_tac.
+  cases; lud; eauto. invc H; eauto.
+  cset_tac.
+Qed.
+
+Lemma parmov_repl_agree2 p lv (E:onv val) (pmtmp reg lstmp:var) (Y Z:params) (Len:❬Y❭=❬Z❭) (NEQ:reg =/= lstmp) (NEQ2:pmtmp =/= lstmp) (NEQ3:reg =/= pmtmp)
       (NDZ:NoDupA _eq Z) (NOTIN:lstmp ∉ of_list Y ∪ of_list Z) (NOTIN2: pmtmp ∉ of_list Y ∪ of_list Z)
   : agree_on eq (lv \ {lstmp; singleton pmtmp})
              (E <||= Parmov.parmove2 positive var_dec (fun _ : positive => pmtmp) Y Z)
@@ -619,72 +785,40 @@ Proof.
       subst ZR YR. rewrite !of_list_repl_incl. cset_tac.
     + cset_tac.
   }
-  symmetry.
-  rewrite snd_combine, fst_combine; eauto with len.
+  rewrite !snd_combine, !fst_combine; eauto with len.
   erewrite parmove_elim_mem2mem_agree with (G:=singleton lstmp);
     [|unfold Parmov.parmove2; rewrite fst_parmove; try rewrite fst_combine; eauto with len;
       subst YR; rewrite of_list_repl; cset_tac
      |cset_tac].
-  hnf; intros. lud.
-  - unfold Parmov.parmove2.
-    erewrite parmov_update_with_list; eauto;
-      try rewrite snd_combine; try rewrite fst_combine; eauto with len.
-    + invc H3; clear e.
-      decide (reg ∈ of_list Z).
-      * eapply of_list_get_first in i; dcr. symmetry in H8; invc H8.
-        exploit (@update_with_list_lookup_in_list_first _ _ _ E x Z (lookup_list E Y)); dcr;
-          eauto with len.
-        rewrite H12. rewrite lookup_list_map in H11. inv_get. rewrite <- EQ.
-        exploit repl_get_eq; try eapply H3; eauto.
-        exploit (@update_with_list_lookup_in_list_first _ _ _ (E [lstmp <- E reg]) x ZR (lookup_list (E [lstmp <- E reg]) YR)); dcr;
-          eauto with len.
-        -- intros. intro. invc H7.
-           unfold ZR in H6. unfold repl in H6. inv_get. cases in EQ0.
-           ++ eapply H10. eauto. eauto. eauto.
-           ++ subst.
-             eapply get_in_of_list in H6. cset_tac.
-        -- rewrite H8.
-           rewrite lookup_list_map in H7. subst YR. unfold repl in H7.
-           inv_get. cases in H5.
-           ++ invc COND.
-             rewrite <- H5. lud. cset_tac.
-           ++ unfold repl in H4. inv_get.
-             cases in H4.
-             rewrite <- H5. lud. invc H7.
-             eapply get_in_of_list in H11. exfalso. cset_tac.
-      * rewrite !lookup_set_update_not_in_Z; eauto.
-        lud. cset_tac.
-        subst ZR. rewrite repl_not_in; eauto. cset_tac.
-    + eapply repl_nodup; eauto. cset_tac.
-    + subst ZR YR. rewrite !of_list_repl_incl. cset_tac.
-    + instantiate (1:=singleton lstmp). cset_tac.
-  - rewrite fst_combine, snd_combine; eauto with len.
-    decide (x ∈ of_list Z).
-    + eapply of_list_get_first in i; dcr. symmetry in H6; invc H6.
-      exploit (@update_with_list_lookup_in_list_first _ _ _ E x0 Z (lookup_list E Y)); dcr;
-        eauto with len.
-      rewrite H10.
-      rewrite lookup_list_map in H9. inv_get. rewrite <- EQ.
-      exploit repl_get_ne; try eapply H4; eauto.
-      exploit (@update_with_list_lookup_in_list_first _ _ _ (E [lstmp <- E reg]) x0 ZR (lookup_list (E [lstmp <- E reg]) YR)); dcr;
-        eauto with len.
-      * subst ZR. intros. unfold repl in *. inv_get.
-        repeat cases; eauto. invc COND.
-        intro. invc H6.
+  etransitivity. {
+    eapply agree_on_update_same. reflexivity.
+    eapply repl_agree; eauto with len. cset_tac.
+  }
+  unfold Parmov.parmove2.
+  erewrite parmov_update_with_list; eauto;
+    try rewrite snd_combine; try rewrite !fst_combine;
+      try rewrite !snd_combine; eauto with len.
+  - subst ZR.
+    erewrite (@repl_agree (singleton lstmp)); eauto with len; [|cset_tac].
+    hnf; intros; lud.
+    + invc H3.
+      cases; eauto.
+      * subst YR. rewrite lookup_list_repl; eauto.
+        eapply update_with_list_agree; eauto with len.
+        clear; hnf; intros; cset_tac.
         cset_tac.
-      * subst YR. rewrite lookup_list_map in H11.
-        unfold repl in H6, H11. inv_get.
-        repeat cases; eauto.
-        cases in H7.
-        -- invc COND.
-           rewrite <- H7. lud; eauto.
-        -- rewrite <- H7. lud; eauto. invc H11. clear e.
-           exfalso. clear - H9 NOTIN.
-           eapply get_in_of_list in H9.
-           cset_tac.
-    + rewrite !lookup_set_update_not_in_Z; eauto.
-      lud. cset_tac.
-      eapply repl_not_in'; eauto. cset_tac.
+      * rewrite !lookup_set_update_not_in_Z; eauto.
+    + cset_tac.
+    + cset_tac.
+    + decide (x ∈ of_list Z).
+      * subst YR.
+        rewrite lookup_list_repl; eauto; [|cset_tac].
+        eapply update_with_list_agree; eauto with len.
+        clear; hnf; intros; cset_tac.
+      * rewrite !lookup_set_update_not_in_Z; eauto. lud.
+  - eapply repl_nodup; eauto. cset_tac.
+  - subst ZR YR. rewrite !of_list_repl_incl. cset_tac.
+  - instantiate (1:=singleton lstmp). cset_tac.
 Qed.
 
 Local Arguments list_to_stmt : simpl never.
@@ -730,6 +864,14 @@ Proof.
         rewrite H5.
         eapply least_fresh_P_full_spec.
       }
+      assert (NEQ5:reg =/= pmtmp). {
+        subst reg pmtmp.
+        intro.
+        eapply (part_disj p (least_fresh_P (part_1 p) (blv ∪ lv))); eauto.
+        eapply least_fresh_P_full_spec.
+        rewrite H5.
+        eapply least_fresh_P_full_spec.
+      }
       assert (NEQ2: pmtmp =/= lstmp). {
         subst pmtmp lstmp. intro.
         eapply (least_fresh_P_full_spec (part_2 p) ({least_fresh_P (part_2 p) (blv ∪ lv); blv} ∪ lv)).
@@ -762,7 +904,7 @@ Proof.
         setoid_rewrite union_comm at 2.
         setoid_rewrite <- incl_add' at 2. eauto.
       }
-      assert (reg ∉ getAnn al). {
+      assert (reg ∉ blv ∪ lv). {
         intro.
         eapply (least_fresh_P_full_spec (part_1 p) (blv ∪ lv)).
         change (reg ∈ blv ∪ lv). clear - H7 INCL AL. cset_tac.
@@ -770,6 +912,8 @@ Proof.
       unfold Parmov.srcs, Parmov.dests in *.
       exploit omap_op_eval_live_agree; try eassumption.
       {
+        eapply Ops.freeVars_live_list in H3.
+        rewrite <- of_list_freeVars_vars in H3.
         repeat cases.
         - exploit (@list_to_stmt_correct
                      (parmove_elim_mem2mem p reg
@@ -780,7 +924,9 @@ Proof.
             rewrite moves_source_set_elim_mem2mem.
             rewrite !parmove_src_set. rewrite fst_combine; eauto with len.
             eapply omap_var_defined_on; eauto.
-            admit.
+            rewrite fst_parmove, snd_parmove, fst_combine, snd_combine; eauto.
+            rewrite <- AL in H5, H6.
+            clear - NEQ5 H3 H7 AL H1 INCL. cset_tac'.
           }
           pfold. eapply SimSilent.
           * eapply plus2O. econstructor; eauto with len. reflexivity.
@@ -792,7 +938,9 @@ Proof.
                eapply agree_on_incl.
                symmetry. etransitivity. {
                  eapply parmove_elim_mem2mem_agree.
-                 admit.
+                 unfold Parmov.parmove2.
+                 rewrite fst_parmove, fst_combine; eauto with len.
+                 clear - NEQ5 H3 H7 AL H1 INCL. cset_tac'.
                }
                eapply agree_on_incl.
                etransitivity.
@@ -800,9 +948,8 @@ Proof.
                  try rewrite eauto.
                ++ rewrite snd_combine; eauto.
                ++ assert (of_list Y' ⊆ lv). {
-                   eapply Ops.freeVars_live_list in H3.
                    rewrite <- H3.
-                   rewrite of_list_freeVars_vars. reflexivity.
+                   reflexivity.
                  }
                  rewrite fst_combine, snd_combine; eauto.
                  rewrite AL; eauto.
@@ -815,13 +962,46 @@ Proof.
                  rewrite H10. clear - H5. cset_tac.
                ++ instantiate (1:=getAnn al).
                  clear - H10 H5. cset_tac.
-               ++ clear - H7. cset_tac.
+               ++ clear - H7 H10. cset_tac.
             -- eapply defined_on_update_list; eauto with len.
                assert (getAnn al \ of_list Z0 ⊆ lv). {
                  rewrite <- H1. rewrite <- INCL. clear. cset_tac.
                }
                eauto using defined_on_incl.
-        - exploit (@list_to_stmt_correct
+        - assert (IN:reg2 ∈ of_list Z0). {
+            edestruct (least_fresh_P_full_spec (part_1 p) (lv)); dcr.
+            edestruct (least_fresh_P_full_spec (part_1 p) (blv ∪ lv)); dcr.
+            subst reg reg2.
+            set (reg:=least_fresh_P (part_1 p) (blv ∪ lv)) in *.
+            set (reg2:=least_fresh_P (part_1 p) lv) in *.
+            exploit (H14 reg2); eauto.
+            simpl.
+            eapply Pos.le_lt_trans; eauto.
+            eapply Pos.lt_nle. eauto. rewrite filter_incl in H13; eauto.
+            clear - H13 H9 AL H1. clearbody reg2. cset_tac'.
+            decide (reg2 ∈ of_list Z0); eauto. cset_tac.
+          }
+          assert (reg2NOTIN:reg2 ∉ of_list Y'). {
+            edestruct (least_fresh_P_full_spec (part_1 p) (lv)); dcr.
+            rewrite H3. eauto.
+          }
+          assert (reg1NEQ1:reg2 =/= lstmp). {
+            subst reg2 lstmp.
+            intro.
+            eapply (part_disj p (least_fresh_P (part_1 p) lv)); eauto.
+            eapply least_fresh_P_full_spec.
+            rewrite H9.
+            eapply least_fresh_P_full_spec.
+          }
+          assert (reg1NEQ2:reg2 =/= pmtmp). {
+            subst reg2 pmtmp.
+            intro.
+            eapply (part_disj p (least_fresh_P (part_1 p) lv)); eauto.
+            eapply least_fresh_P_full_spec.
+            rewrite H9.
+            eapply least_fresh_P_full_spec.
+          }
+          exploit (@list_to_stmt_correct
                      (parmove_elim_mem2mem
                         p reg2
                         (Parmov.parmove2 positive var_dec (fun _ => pmtmp) Y' (repl Z0 reg2 lstmp)) ++
@@ -829,25 +1009,6 @@ Proof.
                      (stmtApp l nil) E' L'). {
             unfold Parmov.parmove2.
             simpl. rewrite moves_source_set_app; simpl.
-            eapply Ops.freeVars_live_list in H3.
-            rewrite <- of_list_freeVars_vars in H3.
-            assert (IN:reg2 ∈ of_list Z0). {
-              edestruct (least_fresh_P_full_spec (part_1 p) (lv)); dcr.
-              edestruct (least_fresh_P_full_spec (part_1 p) (blv ∪ lv)); dcr.
-              subst reg reg2.
-              set (reg:=least_fresh_P (part_1 p) (blv ∪ lv)) in *.
-              set (reg2:=least_fresh_P (part_1 p) lv) in *.
-              exploit (H14 reg2); eauto.
-              simpl.
-              eapply Pos.le_lt_trans; eauto.
-              eapply Pos.lt_nle. eauto. rewrite filter_incl in H13; eauto.
-              clear - H13 H9 AL H1. clearbody reg2. cset_tac'.
-              decide (reg2 ∈ of_list Z0); eauto. cset_tac.
-            }
-            assert (reg2 ∉ of_list Y'). {
-              edestruct (least_fresh_P_full_spec (part_1 p) (lv)); dcr.
-              rewrite H3. eauto.
-            }
             rewrite !moves_source_set_elim_mem2mem.
             rewrite !parmove_src_set. simpl. rewrite fst_combine; eauto with len.
             eapply defined_on_incl.
@@ -860,7 +1021,7 @@ Proof.
             rewrite of_list_repl_eq; eauto. clear - NEQ2 H5 AL; cset_tac.
             - rewrite fst_parmove, snd_parmove, fst_combine, snd_combine; eauto with len.
               rewrite !of_list_repl.
-              admit.
+              clear - reg2NOTIN reg1NEQ1 reg1NEQ2. cset_tac'.
           }
            pfold. eapply SimSilent.
           * eapply plus2O. econstructor; eauto with len. reflexivity.
@@ -872,7 +1033,7 @@ Proof.
                symmetry. etransitivity. {
                  eapply agree_on_incl.
                  symmetry.
-                 eapply parmov_repl_agree; eauto.
+                 eapply parmov_repl_agree1; eauto.
                  rewrite AL. eauto. rewrite AL; eauto.
                  instantiate (1:=blv).
                  rewrite H10. clear - H5 H6. cset_tac.
@@ -883,9 +1044,8 @@ Proof.
                  try rewrite eauto.
                ++ rewrite snd_combine; eauto.
                ++ assert (of_list Y' ⊆ lv). {
-                   eapply Ops.freeVars_live_list in H3.
                    rewrite <- H3.
-                   rewrite of_list_freeVars_vars. reflexivity.
+                   reflexivity.
                  }
                  rewrite fst_combine, snd_combine; eauto.
                  rewrite AL; eauto.
@@ -902,7 +1062,6 @@ Proof.
                  rewrite <- H1. rewrite <- INCL. clear. cset_tac.
                }
                eauto using defined_on_incl.
-
         - exploit (@list_to_stmt_correct
                      ((proj1_sig lreg, lstmp)
                         :: parmove_elim_mem2mem p (proj1_sig lreg)
@@ -926,8 +1085,7 @@ Proof.
             - rewrite of_list_repl_incl.
               eapply defined_on_incl.
               eapply defined_on_agree_eq; eauto.
-              eapply Ops.freeVars_live_list in H3.
-              rewrite <- of_list_freeVars_vars in H3. rewrite H3.
+              rewrite H3.
               subst reg.
               assert (IN:proj1_sig lreg ∈ lv). {
                 rewrite filter_incl in H10; eauto.
@@ -947,7 +1105,7 @@ Proof.
                symmetry. etransitivity. {
                  eapply agree_on_incl.
                  symmetry.
-                 eapply parmov_repl_agree; eauto.
+                 eapply parmov_repl_agree2; eauto.
                  rewrite AL. eauto. rewrite AL; eauto.
                  instantiate (1:=blv).
                  rewrite H10. clear - H5 H6. cset_tac.
@@ -958,9 +1116,7 @@ Proof.
                  try rewrite eauto.
                ++ rewrite snd_combine; eauto.
                ++ assert (of_list Y' ⊆ lv). {
-                   eapply Ops.freeVars_live_list in H3.
-                   rewrite <- H3.
-                   rewrite of_list_freeVars_vars. reflexivity.
+                   rewrite <- H3. reflexivity.
                  }
                  rewrite fst_combine, snd_combine; eauto.
                  rewrite AL; eauto.
@@ -1013,7 +1169,7 @@ Lemma pm_lower_noParams p ZL Lv s al preg
 Proof.
   general induction LS; simpl;
     repeat let_pair_case_eq; repeat simpl_pair_eqs; subst; eauto using noParams.
-  - cases; eauto using list_to_stmt_noParams, noParams.
+  - repeat cases; eauto using list_to_stmt_noParams, noParams.
   - econstructor; intros; inv_get; simpl;
       try rewrite <- zip_app; eauto using noParams with len.
 Qed.
