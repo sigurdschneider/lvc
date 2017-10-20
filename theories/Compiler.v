@@ -233,7 +233,9 @@ Definition fromILF_fvl (s:stmt) :=
            to_list (freeVars (EAE.compile s)).
 
 Definition fromILF_fvl_ren (s:stmt) : list var :=
-  ARange.range (fun x => Pos.succ (Pos.succ x)) (1%positive) ❬to_list (freeVars (EAE.compile s))❭.
+  (fst
+     (fresh_list FG_even_fast_pos (empty_domain FG_even_fast_pos)
+                 (to_list (freeVars (EAE.compile s))))).
 
 Hint Resolve Liveness.live_sound_overapproximation_I Liveness.live_sound_overapproximation_F.
 
@@ -266,7 +268,9 @@ Qed.
 
 Lemma rename_apart_to_part_freeVars (s:stmt)
   : fst (getAnn (rename_apart_to_part_ra FGS_even_fast_pos s))
-        [=]  of_list (ARange.range (fun x => Pos.succ (Pos.succ x)) (1%positive) ❬to_list (freeVars s)❭).
+        [=]   of_list (fst
+                         (fresh_list FG_even_fast_pos (empty_domain FG_even_fast_pos)
+                                     (to_list (freeVars s)))).
 Proof.
   unfold rename_apart_to_part_ra; simpl.
   rewrite fst_renamedApartAnn.
@@ -286,7 +290,8 @@ Proof.
   set (E':= id [fromILF_fvl_ren s <-- fromILF_fvl s] ∘ E).
   set (E'':= (id [fromILF_fvl_ren s <-- fromILF_fvl s] ∘ E)
               [Pos.succ ⊝ slotted_vars s <-- lookup_list (id [fromILF_fvl_ren s <-- fromILF_fvl s] ∘ E)
-                 (slotted_vars s)]).
+                        (slotted_vars s)]).
+  unfold slotted_vars in *.
   let_unfold' fromILF OK. subst ras.
   eapply sim_trans with (S2:=F.state). {
     eapply EAE.sim_EAE.
@@ -414,7 +419,6 @@ Proof.
         eauto using DCE_live, DCE_renamedApart, DCE_live_incl,
         DCE_paramsMatch.
     - hnf; intros.
-      unfold dcve, sra, s_eae in Incl1.
       rewrite Incl1 in H.
       rewrite DCE_ra_fst in H; eauto.
       rewrite rename_apart_to_part_freeVars in H.
@@ -428,7 +432,7 @@ Proof.
       Opaque to_list.
       rewrite EAE.EAE_freeVars in H1.
       eapply Def in H1. eauto.
-      unfold fromILF_fvl_ren, fromILF_fvl. len_simpl.
+      unfold fromILF_fvl_ren, fromILF_fvl. simpl. len_simpl.
       reflexivity. eauto.
   }
   eapply sim_trans with (σ2:=(nil, E'',ren2):F.state). {
@@ -469,7 +473,6 @@ Proof.
     eapply ann_R_get in INCL; eauto.
     rewrite lookup_set_on_id; [|reflexivity].
     reflexivity.
-  - admit.
   - erewrite getAnn_snd_renameApart_live; eauto.
     rewrite lookup_set_on_id; [|reflexivity].
     subst spilled.
@@ -478,8 +481,59 @@ Proof.
       eauto using DCE_live, DCE_renamedApart,
       DCE_live_incl, DCE_paramsMatch.
     + eapply defined_on_union.
-      * eapply defined_on_update_list_disj.
-        subst E'.
+      * subst E'.
+        eapply defined_on_update_list_disj.
+        -- subst dcve. subst sra.
+           unfold rename_apart_to_part.
+           unfold fromILF_fvl_ren.
+           rewrite TakeSet.take_list_incl.
+           rewrite of_list_3.
+           rewrite DCE_snd_lv_fst_ra; eauto.
+           rewrite rename_apart_to_part_freeVars.
+           subst s_eae.
+           hnf; intros. eapply Def.
+           rewrite <- (@EAE.EAE_freeVars s).
+           unfold fromILF_fvl.
+           setoid_rewrite <- (of_list_3 (freeVars (EAE.compile s))) at 3.
+           eapply update_with_list_lookup_in. clear. rewrite fresh_list_len. reflexivity.
+           eauto. eauto.
+        -- subst fvl.
+           rewrite TakeSet.take_list_incl.
+           rewrite of_list_map; eauto.
+           rewrite of_list_drop_incl.
+           rewrite of_list_3.
+           rewrite Incl1.
+           rewrite DCE_ra_fst; eauto.
+           rewrite rename_apart_to_part_freeVars; eauto.
+           clear. hnf; intros.
+           eapply even_fast_list_even in H0.
+           cset_tac'.
+           eapply even_fast_list_even in H.
+           unfold even_inf_subset_pos in H. simpl in *.
+           rewrite Even.even_pos_fast_succ in *.
+           eapply negb_prop_elim in H0; eapply H0; eauto.
+      * rewrite <- of_list_map; eauto.
+        eapply defined_on_update_list'; eauto with len.
+        -- subst fvl.
+           change (Slot_slot slt) with Pos.succ.
+           hnf; intros. clear - H. cset_tac.
+        -- subst E'.
+           rewrite lookup_list_map; eauto.
+           rewrite <- defined_on_defined; eauto. subst fvl.
+           unfold fromILF_fvl_ren, fromILF_fvl.
+           rewrite of_list_drop_incl.
+           rewrite of_list_3.
+           rewrite Incl1.
+           rewrite DCE_ra_fst; eauto.
+           rewrite rename_apart_to_part_freeVars; eauto.
+           subst s_eae.
+           hnf; intros. eapply Def.
+                      rewrite <- (@EAE.EAE_freeVars s).
+           unfold fromILF_fvl.
+           setoid_rewrite <- (of_list_3 (freeVars (EAE.compile s))) at 3.
+           eapply update_with_list_lookup_in. clear. rewrite fresh_list_len. reflexivity.
+           eauto. eauto.
+           Grab Existential Variables. eauto.
 Qed.
 
 

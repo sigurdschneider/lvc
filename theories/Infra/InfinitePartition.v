@@ -29,7 +29,7 @@ Proof.
   - intros.
     unfold even_inf_subset, odd_inf_subset, odd, negb; simpl.
     cases; eauto.
-Qed.
+Defined.
 
 Definition even_part_pos : inf_partition positive.
 Proof.
@@ -42,7 +42,10 @@ Proof.
     unfold even_inf_subset, odd_inf_subset, odd, negb; simpl.
     rewrite <- even_pos_fast_correct.
     eapply even_or_odd.
-Qed.
+Defined.
+
+Arguments even_part_pos : simpl never.
+Arguments even_part : simpl never.
 
 (*
 Require Import SafeFirst.

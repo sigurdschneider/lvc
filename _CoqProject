@@ -212,7 +212,6 @@ theories/Liveness/TrueLiveness.v
 theories/Lowering/EAE.v
 theories/Lowering/LabelRelations.v
 theories/Lowering/LinearStateType.v
-theories/Lowering/LinearToAsm.v
 theories/Lowering/MkVars.v
 theories/Lowering/ParallelMove.v
 theories/Lowering/Renest.v

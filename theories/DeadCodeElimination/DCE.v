@@ -264,3 +264,18 @@ Proof.
   eapply (@DVE.DVE_var_P i _ nil nil); eauto.
   eapply (@UCE.UCE_var_P _ nil); eauto.
 Qed.
+
+Lemma DCE_snd_lv_fst_ra (s:stmt) ra
+      (PM:LabelsDefined.paramsMatch s nil) (RA:renamedApart s ra)
+  : getAnn (snd (DCE Liveness.Imperative s)) ⊆ fst (getAnn ra).
+Proof.
+  unfold DCE.
+  simpl.
+  rewrite DVE.compile_live_incl_empty; eauto.
+  exploit (@LivenessAnalysisCorrect.livenessAnalysis_renamedApart_incl
+           Imperative (UCE.compile nil s (reachabilityAnalysis s))); eauto using UCE.UCE_renamedApart.
+  eapply ann_R_get in H.
+  erewrite H.
+  exploit UCE.compile_renamedApart_pes; eauto.
+  invc H0. simpl. rewrite H3; eauto.
+Qed.

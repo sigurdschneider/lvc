@@ -128,7 +128,6 @@ Proof.
   rewrite getAnn_mapAnn. destr_sig; eauto.
 Qed.
 
-
 Require Import RenamedApart.
 
 Lemma extend_incl sT ZL LV D Dt s ans sa

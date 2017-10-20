@@ -413,6 +413,8 @@ Proof.
       eauto using noFun.
 Qed.
 
+
+(*
 Lemma egalize_noFun_snd D n s
   :  forall (i : nat) (Zs : params * stmt),
  get (snd (egalize D n s)) i Zs -> noFun (snd Zs).
@@ -438,11 +440,9 @@ Proof.
         eapply get_range in H.
         rewrite plus_n_O in H.
         simpl in*.
-        admit.
       }
-      admit.
-Admitted.
-
+      simpl.
+*)
 
 Inductive topFun : stmt -> Prop :=
 | TopFun F s (NFs:noFun s)
@@ -453,6 +453,7 @@ Definition renest (s:stmt) :=
   let (t, F) := egalize nil 0 s in
   stmtFun F t.
 
+(*
 Lemma renest_TopFun s
   : topFun (renest s).
 Proof.
@@ -461,3 +462,4 @@ Proof.
   - eauto using egalize_noFun.
   - intros; inv_get; eauto using egalize_noFun_snd.
 Qed.
+*)
