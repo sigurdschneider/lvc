@@ -244,6 +244,21 @@ Proof.
   intros. repeat cases; eauto. eapply var_eq_eq in COND. exfalso; eauto.
 Qed.
 
+Lemma exec_seq_agree G pm (E E':onv val)
+      (AGR: agree_on eq (G ∪ moves_source_set pm) E E')
+  : agree_on eq G (E <||= pm) (E' <||= pm).
+Proof.
+  general induction pm; simpl in *; eauto.
+  - eapply agree_on_incl; eauto.
+  - destruct a. rewrite !Parmov_update_eq.
+    eapply IHpm. simpl in *.
+    eapply agree_on_update_same.
+    eapply AGR; eauto.
+    cset_tac.
+    eapply agree_on_incl; eauto.
+    cset_tac.
+Qed.
+
 Section GlueCode.
   Fixpoint list_to_stmt (p : list (var * var)) (s : stmt) {struct p} : stmt :=
     match p with
@@ -309,14 +324,21 @@ Section GlueCode.
       + hnf; cset_tac.
   Qed.
 
+  Lemma list_to_stmt_noParams pm s
+        (NP:noParams s)
+    : noParams (list_to_stmt pm s).
+  Proof.
+    general induction pm; simpl;
+      repeat let_pair_case_eq; simpl; eauto using noParams.
+  Qed.
+
 End GlueCode.
 
-Section Implementation.
 Fixpoint onlyVars (Y:args) : params :=
   match Y with
-    | nil => nil
-    | (Var x)::Y => x::onlyVars Y
-    | _::Y => onlyVars Y
+  | nil => nil
+  | (Var x)::Y => x::onlyVars Y
+  | _::Y => onlyVars Y
   end.
 
 Lemma lookup_list_var_map (E:onv val) Y v
@@ -561,20 +583,6 @@ Proof.
   general induction Z; simpl in *; repeat cases in GET; inv GET; eauto using get.
 Qed.
 
-Lemma exec_seq_agree G pm (E E':onv val)
-      (AGR: agree_on eq (G ∪ moves_source_set pm) E E')
-  : agree_on eq G (E <||= pm) (E' <||= pm).
-Proof.
-  general induction pm; simpl in *; eauto.
-  - eapply agree_on_incl; eauto.
-  - destruct a. rewrite !Parmov_update_eq.
-    eapply IHpm. simpl in *.
-    eapply agree_on_update_same.
-    eapply AGR; eauto.
-    cset_tac.
-    eapply agree_on_incl; eauto.
-    cset_tac.
-Qed.
 
 
 Lemma parmove_elim_mem2mem_agree G (p:inf_partition var) (reg:var) (E':onv val) pm
@@ -1151,16 +1159,6 @@ Proof.
     + exploit H2; eauto.
     + eapply H2; eauto.
     + eauto using defined_on_incl; eauto.
-Qed.
-
-End Implementation.
-
-Lemma list_to_stmt_noParams pm s
-      (NP:noParams s)
-  : noParams (list_to_stmt pm s).
-Proof.
-  general induction pm; simpl;
-    repeat let_pair_case_eq; eauto using noParams.
 Qed.
 
 Lemma pm_lower_noParams p ZL Lv s al preg
