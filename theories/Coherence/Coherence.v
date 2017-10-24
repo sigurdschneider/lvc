@@ -37,7 +37,7 @@ Smpl Add inv_get_step_some_minus : inv_get.
 
 Inductive srd : list (option (set var)) -> stmt -> ann (set var) -> Prop :=
 | srdExp DL x e s lv al
-  : srd (restr (lv \ singleton x) ⊝ DL) s al
+  : srd (restr (getAnn al \ singleton x) ⊝ DL) s al
     -> srd DL (stmtLet x e s) (ann1 lv al)
 | srdIf DL e s t lv als alt
   : srd DL s als

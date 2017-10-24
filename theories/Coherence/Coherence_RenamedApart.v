@@ -17,7 +17,8 @@ Proof.
   - econstructor; eauto.
     eapply srd_monotone.
     eapply IHrenamedApart; eauto with cset.
-    erewrite bounded_restrict_eq; simpl; eauto. eauto with cset.
+    erewrite bounded_restrict_eq; simpl; eauto.
+    rewrite getAnn_mapAnn. pe_rewrite. clear - H; cset_tac.
   - econstructor; eauto.
   - econstructor.
   - edestruct get_in_range as [a ?]; eauto using map_get_1, srd.

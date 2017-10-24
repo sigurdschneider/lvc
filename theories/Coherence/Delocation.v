@@ -16,7 +16,7 @@ Inductive trs
                                 inside the program *)
     -> Prop :=
 | trsExp DL ZL x e s an an_lv lv
-  : trs (restr (lv\ singleton x) ⊝ DL) ZL  s an_lv an
+  : trs (restr (getAnn an_lv \ singleton x) ⊝ DL) ZL  s an_lv an
     -> trs DL ZL (stmtLet x e s) (ann1 lv an_lv) (ann1 nil an)
 | trsIf DL ZL e s t ans ant ans_lv ant_lv lv
   :  trs DL ZL s ans_lv ans

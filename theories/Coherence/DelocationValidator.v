@@ -17,7 +17,9 @@ Proof.
   sind s.
   time (destruct s; destruct ans; try solve [dec_right]; destruct ans_lv; try solve [dec_right]).
   + destruct a; [ | dec_right];
-      destruct (IH s (ltac:(eauto)) (restr (a0\ singleton x) ⊝  DL) ZL ans_lv ans); [| dec_right].
+      destruct (IH s (ltac:(eauto))
+                   (restr (getAnn ans_lv \ singleton x) ⊝  DL) ZL ans_lv ans);
+      [| dec_right].
     dec_solve.
   + destruct a; [| dec_right];
     destruct (IH s1 (ltac:(eauto)) DL ZL ans_lv1 ans1); [| dec_right];
