@@ -377,3 +377,41 @@ Proof.
     + econstructor 4. rewrite H2. eauto. eauto.
       eapply star2_refl. eauto. eauto.
 Qed.
+
+Lemma sim_lockc_trans_r_left {S} `{StateType S} {S'} `{StateType S'} r
+       (σ3:S) (σ2:S) (σ1:S')
+  : sim_lockc bot2 σ2 σ3
+    -> sim_lockc r σ1 σ2
+    -> sim_lockc r σ1 σ3.
+Proof.
+  revert σ1 σ2 σ3. unfold sim_lockc at 2 3.
+  eapply tower_ind2.
+  - hnf; intros. hnf; intros; eauto.
+  - intros.
+    eapply companion2_unfold in H2.
+    invc H2; invc H3; zzsimpl; relsimpl.
+    + eauto using sim_gen_lock.
+    + econstructor 2. eauto. eauto.
+      * intros. edestruct H9; dcr; eauto. edestruct H6; dcr; eauto.
+      * intros. edestruct H7; dcr; eauto. edestruct H10; dcr; eauto.
+    + econstructor 3; eauto. etransitivity; eauto.
+Qed.
+
+Lemma simc_lockc_trans_r_right {S} `{StateType S} {S'} `{StateType S'} r
+       (σ1:S) (σ2:S) (σ3:S')
+  : sim_lockc bot2 σ1 σ2
+    -> sim_lockc r σ2 σ3
+    -> sim_lockc r σ1 σ3.
+Proof.
+  revert σ1 σ2 σ3. unfold sim_lockc at 2 3.
+  eapply tower_ind2.
+  - hnf; intros. hnf; intros; eauto.
+  - intros.
+    eapply companion2_unfold in H2.
+    invc H2; invc H3; zzsimpl.
+    + econstructor 1; eauto.
+    + econstructor 2; eauto.
+      * intros. edestruct H6; dcr; eauto. edestruct H9; dcr; eauto.
+      * intros. edestruct H10; dcr; eauto. edestruct H7; dcr; eauto.
+    + econstructor 3; eauto. congruence.
+Qed.
