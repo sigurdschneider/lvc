@@ -18,7 +18,7 @@ Lemma computeParameters_isCalled_Some_F' b Lv ZL AP als D Z F s alb l
             isCalled b (snd Zs) (LabI n) ->
             get Lv n D ->
             get ZL n Z ->
-            get (snd (computeParameters (Lv \\ ZL) ZL AP (snd Zs) lv)) n p ->
+            get (snd (computeParameters (Lv \\ ZL) AP (snd Zs) lv)) n p ->
             exists Za : ⦃var⦄, p = ⎣ Za ⎦ /\ D \ of_list Z \ Za ⊆ getAnn lv)
       (LEN1 : ❬AP❭ = ❬Lv❭) (LEN2 : ❬Lv❭ = ❬ZL❭) (LEN3 : ❬F❭ = ❬als❭)
       (GetDL : get (getAnn ⊝ als ++ Lv) l D) (GetZL : get (fst ⊝ F ++ ZL) l Z)
@@ -46,7 +46,7 @@ Proof.
   general induction CC.
   - destruct (@get_in_range _ (snd
                                  (computeParameters ((getAnn ⊝ als ++ Lv) \\ (fst ⊝ F ++ ZL))
-                                                    (fst ⊝ F ++ ZL) (tab {} ‖F‖ ++ AP) (snd Zs) x1)) l0)
+                                                    (tab {} ‖F‖ ++ AP) (snd Zs) x1)) l0)
       as [pF GETpF].
     rewrite computeParameters_length; [ |eauto | eauto with len | eauto with len].
     eapply get_range in GetDL. eauto.
@@ -70,7 +70,7 @@ Proof.
     rewrite H5.
     destruct (@get_in_range _ (snd
                                  (computeParameters ((getAnn ⊝ als ++ Lv) \\ (fst ⊝ F ++ ZL))
-                                                    (fst ⊝ F ++ ZL) (tab {} ‖F‖ ++ AP) (snd Zs0) x1)) k'0)
+                                                    (tab {} ‖F‖ ++ AP) (snd Zs0) x1)) k'0)
       as [pF' GETpF'].
     rewrite computeParameters_length; [ |eauto | eauto with len | eauto with len].
     rewrite app_length, map_length. eapply get_range in H1. omega.
@@ -81,14 +81,14 @@ Proof.
                                                (snd
                                                   (computeParameters
                                                      ((getAnn ⊝ als ++ Lv) \\ (fst ⊝ F ++ ZL))
-                                                     (fst ⊝ F ++ ZL) (tab {} ‖F‖ ++ AP) s alb))))).
+                                                     (tab {} ‖F‖ ++ AP) s alb))))).
     {
       exploit (@get_olist_union_A _ _ (snd ⊝ computeParametersF F als Lv ZL AP));
         [| eapply GETpF' | | ]. instantiate (1:=k0).
       eapply map_get_1. eapply zip_get_eq; [| | reflexivity]. eauto. eauto.
       instantiate (1:=(snd
                          (computeParameters ((getAnn ⊝ als ++ Lv) \\ (fst ⊝ F ++ ZL))
-                                            (fst ⊝ F ++ ZL) (tab {} ‖F‖ ++ AP) s alb))).
+                                            (tab {} ‖F‖ ++ AP) s alb))).
       rewrite computeParameters_length; eauto.
       eapply computeParametersF_length; eauto with len.
       eauto with len. eauto with len.
@@ -111,7 +111,7 @@ Lemma computeParameters_isCalled_Some b ZL Lv AP s lv n D Z p
     -> isCalled b s (LabI n)
     -> get Lv n D
     -> get ZL n Z
-    -> get (snd (computeParameters (Lv \\ ZL) ZL AP s lv)) n p
+    -> get (snd (computeParameters (Lv \\ ZL) AP s lv)) n p
     -> exists Za, p = Some Za /\ D \ of_list Z \ Za ⊆ (getAnn lv).
 Proof.
   revert ZL Lv AP lv n D Z p.
@@ -149,7 +149,7 @@ Proof.
         [ eauto with len | eauto with len | ].
       assert (LE:❬F❭ + n < ❬snd
                            (computeParameters ((getAnn ⊝ als ++ Lv) \\ (fst ⊝ F ++ ZL))
-                                              (fst ⊝ F ++ ZL) (tab {} ‖F‖ ++ AP) s alb)❭).
+                                              (tab {} ‖F‖ ++ AP) s alb)❭).
       rewrite Len, app_length, map_length. exploit (get_range GetDL). omega.
       destruct (get_in_range _ LE) as [pF GETpF].
       edestruct (IH s) with (AP:=tab {} ‖F‖ ++ AP); eauto.
@@ -169,7 +169,7 @@ Proof.
     + inv_get.
       destruct (@get_in_range _ (snd
                                    (computeParameters ((getAnn ⊝ als ++ Lv) \\ (fst ⊝ F ++ ZL))
-                                                      (fst ⊝ F ++ ZL) (tab {} ‖F‖ ++ AP) s alb)) k)
+                                                      (tab {} ‖F‖ ++ AP) s alb)) k)
         as [ps GETps]; eauto.
       rewrite computeParameters_length; eauto with len.
       exploit (IH s); try eapply GETps; eauto using get_app, map_get_1 with len.
@@ -180,7 +180,7 @@ Proof.
                                                  (snd
                                                     (computeParameters
                                                        ((getAnn ⊝ als ++ Lv) \\ (fst ⊝ F ++ ZL))
-                                                       (fst ⊝ F ++ ZL) (tab {} ‖F‖ ++ AP) s alb))))
+                                                       (tab {} ‖F‖ ++ AP) s alb))))
                  ∪ list_union (fst ∘ of_list ⊝ F)). {
         exploit (@get_olist_union_b _ _ (snd ⊝ computeParametersF F als Lv ZL AP));
           try eapply GETps.
@@ -204,12 +204,12 @@ Lemma computeParameters_isCalled_get_Some b Lv ZL AP s lv n p A D Z
     -> length AP = length Lv
     -> length Lv = length ZL
     -> isCalled b s (LabI n)
-    -> n < ❬snd (computeParameters (Lv \\ ZL) ZL AP s lv)❭
+    -> n < ❬snd (computeParameters (Lv \\ ZL) AP s lv)❭
     -> get Lv n D
     -> get ZL n Z
-    -> get (olist_union A (snd (computeParameters (Lv \\ ZL) ZL AP s lv))) n p
+    -> get (olist_union A (snd (computeParameters (Lv \\ ZL) AP s lv))) n p
     -> (forall (n0 : nat) (a : 〔؟⦃var⦄〕),
-          get A n0 a -> ❬a❭ = ❬snd (computeParameters (Lv \\ ZL) ZL AP s lv)❭)
+          get A n0 a -> ❬a❭ = ❬snd (computeParameters (Lv \\ ZL) AP s lv)❭)
     -> exists Za, p = Some Za /\ D \ of_list Z \ Za ⊆ (getAnn lv).
 Proof.
   intros LS LEN1 LEN2 IC LE GETDL GETZL GET LEN3.
@@ -236,7 +236,7 @@ Lemma computeParameters_isCalledFrom_get_Some b Lv ZL AP F alv s lv p Da Zs l
     -> get F l Zs
     -> get (olist_union (snd ⊝ computeParametersF F alv Lv ZL AP)
                        (snd (computeParameters ((getAnn ⊝ alv ++ Lv) \\ (fst ⊝ F ++ ZL))
-                                               (fst ⊝ F ++ ZL) (tab {} ‖F‖ ++ AP)
+                                               (tab {} ‖F‖ ++ AP)
                                                s lv))) l p
     -> exists Za, p = Some Za /\ getAnn Da \ of_list (fst Zs) \ Za \
                                  list_union (oget ⊝ take ❬F❭ (olu F alv Lv ZL AP s lv))
@@ -246,7 +246,6 @@ Proof.
   exploit callChain_range' as LE; eauto using get_range. simpl in *.
   assert (NLE:n < ❬snd (computeParameters ((getAnn ⊝ alv ++ Lv)
                                      \\ (fst ⊝ F ++ ZL))
-                                  (fst ⊝ F ++ ZL)
                                   (tab {} ‖F‖ ++ AP) s lv)❭).
   rewrite computeParameters_length; eauto with len.
   destruct (get_in_range _ NLE); eauto.

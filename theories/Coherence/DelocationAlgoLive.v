@@ -40,8 +40,8 @@ Lemma computeParameters_live b ZL Lv AP s lv
   -> length Lv = length ZL
   -> length ZL = length AP
   -> noUnreachableCode (isCalled b) s
-  -> additionalParameters_live (oget ⊝ (snd (computeParameters (Lv \\ ZL) ZL AP s lv)))
-                              s lv (fst (computeParameters (Lv \\ ZL) ZL AP s lv)).
+  -> additionalParameters_live (oget ⊝ (snd (computeParameters (Lv \\ ZL) AP s lv)))
+                              s lv (fst (computeParameters (Lv \\ ZL) AP s lv)).
 Proof.
   intros LS SUB LEN1 LEN2 REACH.
   general induction LS; inv REACH; simpl in *; repeat let_pair_case_eq; repeat let_case_eq;
@@ -115,10 +115,10 @@ Qed.
 Lemma is_live b s lv
 : live_sound Imperative nil nil s lv
   -> noUnreachableCode (isCalled b) s
-  -> additionalParameters_live nil s lv (fst (computeParameters nil nil nil s lv)).
+  -> additionalParameters_live nil s lv (fst (computeParameters nil nil s lv)).
 Proof.
   intros.
-  assert (snd (computeParameters nil nil nil s lv) = nil). {
+  assert (snd (computeParameters nil nil s lv) = nil). {
     exploit computeParameters_AP_LV; eauto.
     inv H1; eauto.
   }

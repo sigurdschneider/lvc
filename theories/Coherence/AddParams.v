@@ -8,7 +8,7 @@ Require Import LabelsDefined.
 Arguments sim S {H} S' {H0} r t _ _.
 
 Definition addParams (s:IL.stmt) (lv:ann (set var)) : IL.stmt :=
-  let additional_params := fst (computeParameters nil nil nil s lv) in
+  let additional_params := fst (computeParameters nil nil s lv) in
   compile nil s additional_params.
 
 Lemma addParams_correct b (E:onv val) (ili:IL.stmt) lv
@@ -61,7 +61,7 @@ Proof.
   exploit (@computeParameters_trs b nil nil nil); eauto.
   exploit computeParameters_length; eauto.
   simpl in *.
-  destruct (snd (computeParameters nil nil nil s lv)); isabsurd.
+  destruct (snd (computeParameters nil nil s lv)); isabsurd.
   eauto.
 Qed.
 

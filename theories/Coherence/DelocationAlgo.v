@@ -5,28 +5,27 @@ Require Import AddParam AddAdd MoreListSet PartialOrder.
 
 Set Implicit Arguments.
 
-Fixpoint computeParameters (DL: list (set var)) (ZL:list (list var)) (AP:list (set var))
+Fixpoint computeParameters (DL: list (set var)) (AP:list (set var))
          (s:stmt) (an:ann (set var)) {struct s}
 : ann (list params) * list (option (set var)) :=
   match s, an with
     | stmtLet x e s, ann1 _ an =>
-      let (ar, r) := computeParameters DL ZL (addParam x DL AP) s an in
+      let (ar, r) := computeParameters DL (addParam x DL AP) s an in
       (ann1 nil ar, r)
     | stmtIf x s t, ann2 _ ans ant =>
-      let (ars, rs) := computeParameters DL ZL AP s ans in
-      let (art, rt) := computeParameters DL ZL AP t ant in
+      let (ars, rs) := computeParameters DL AP s ans in
+      let (art, rt) := computeParameters DL AP t ant in
       (ann2 nil ars art, zip ounion rs rt)
     | stmtApp f Y, ann0 lv => (ann0 nil, keep (counted f) AP)
     | stmtReturn x, ann0 _ => (ann0 nil, (List.map (fun _ => None) AP))
     | stmtFun F t, annF lv ans ant =>
       let DL' := (getAnn ⊝ ans) \\ (fst ⊝ F) in
-      let Z : list params := List.map fst F in
       let Zset := list_union (fst ∘ of_list ⊝ F) in
       let AP' := ((fun _ => ∅) ⊝ F ++ AP) in
       let ars_rF :=
-          zip (fun Zs a => computeParameters (DL' ++ DL) (Z ++ ZL) AP' (snd Zs) a)
+          zip (fun Zs a => computeParameters (DL' ++ DL) AP' (snd Zs) a)
               F ans in
-      let (art, rt) := computeParameters (DL' ++ DL) (Z ++ ZL) AP' t ant in
+      let (art, rt) := computeParameters (DL' ++ DL) AP' t ant in
       let rFt := fold_left (zip ounion) (List.map snd ars_rF) rt in
       let ZaF := list_union (oget ⊝ (take ❬F❭ rFt)) in
       let ur : list (option (set var)) :=
@@ -39,7 +38,6 @@ Fixpoint computeParameters (DL: list (set var)) (ZL:list (list var)) (AP:list (s
 Notation "'computeParametersF' F als DL ZL AP" :=
   ((fun Zs a0 => computeParameters
                 ((getAnn ⊝ als ++ DL) \\ ((fst ⊝ F) ++ ZL))
-                ((fst ⊝ F) ++ ZL)
                 (List.map (fun _ => ∅) F ++ AP)
                 (snd Zs) a0)
      ⊜ F als)
@@ -48,7 +46,7 @@ Notation "'computeParametersF' F als DL ZL AP" :=
 Notation "'olu' F als Lv ZL AP s alb" :=
   (olist_union (snd ⊝ computeParametersF F als Lv ZL AP)
                (snd (computeParameters ((getAnn ⊝ als ++ Lv) \\ (fst ⊝ F ++ ZL))
-                                       (fst ⊝ F ++ ZL) (tab {} ‖F‖ ++ AP) s alb)))
+                                       (tab {} ‖F‖ ++ AP) s alb)))
 (at level 50, als, Lv, ZL, AP, F, s, alb at level 0).
 
 Ltac lnorm :=
@@ -66,7 +64,7 @@ Lemma computeParameters_AP_LV Lv ZL AP s lv
 :live_sound Imperative ZL Lv s lv
   -> length AP = length Lv
   -> length Lv = length ZL
-  -> PIR2 (ifSndR Subset) AP (snd (computeParameters (Lv \\ ZL) ZL AP s lv)).
+  -> PIR2 (ifSndR Subset) AP (snd (computeParameters (Lv \\ ZL) AP s lv)).
 Proof.
   intros LS. revert AP.
   induction LS; simpl in * |- *; intros; repeat let_pair_case_eq; subst; simpl.
@@ -98,7 +96,7 @@ Corollary computeParameters_length AP s lv DL ZL
   : live_sound Imperative ZL DL s lv
     -> length AP = length DL
     -> length DL = length ZL
-    -> length (snd (computeParameters (DL \\ ZL) ZL AP s lv)) = length DL.
+    -> length (snd (computeParameters (DL \\ ZL) AP s lv)) = length DL.
 Proof.
   intros. exploit computeParameters_AP_LV; eauto.
   eapply PIR2_length in H2. eauto with len.
@@ -124,7 +122,7 @@ Lemma computeParameters_length' (F:list (params * stmt)) als Lv ZL AP t alb
       (LEN3 : ❬F❭ = ❬als❭)
   : ❬(getAnn ⊝ als ++ Lv) \\ (fst ⊝ F ++ ZL)❭ =
     ❬snd
-       (computeParameters ((getAnn ⊝ als ++ Lv) \\ (fst ⊝ F ++ ZL)) (fst ⊝ F ++ ZL)
+       (computeParameters ((getAnn ⊝ als ++ Lv) \\ (fst ⊝ F ++ ZL))
                           (tab {} ‖F‖ ++ AP) t alb)❭.
 Proof.
   len_simpl.
@@ -168,7 +166,7 @@ Lemma computeParameters_LV_DL ZL Lv AP s lv
   -> length AP = length Lv
   -> length Lv = length ZL
   -> AP ⊑ (Lv \\ ZL)
-  -> PIR2 (ifFstR Subset) (snd (computeParameters (Lv \\ ZL) ZL AP s lv)) (Lv \\ ZL).
+  -> PIR2 (ifFstR Subset) (snd (computeParameters (Lv \\ ZL) AP s lv)) (Lv \\ ZL).
 Proof.
   intros LS Len1 Len2 LEQ.
   general induction LS; simpl in * |- *; repeat let_pair_case_eq; subst; simpl.

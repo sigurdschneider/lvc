@@ -11,7 +11,7 @@ Local Hint Extern 10 (forall _ _, get (snd ⊝ computeParametersF ?DL ?ZL ?AP ?F
 
 Local Hint Extern 1 =>
 match goal with
-  [ |- context [ ❬snd (computeParameters _ _ _ _ _)❭ ] ] =>
+  [ |- context [ ❬snd (computeParameters _ _ _ _ )❭ ] ] =>
   rewrite computeParameters_length; eauto with len
 end : len.
 
@@ -23,10 +23,10 @@ Lemma computeParameters_trs b ZL Lv AP s lv
   -> length Lv = length ZL
   -> length ZL = length AP
   -> trs (restr (getAnn lv) ⊝ (zip ominus' (Lv \\ ZL)
-                                  (snd (computeParameters (Lv \\ ZL) ZL AP s lv))))
-        (List.map oto_list (snd (computeParameters (Lv \\ ZL) ZL AP s lv)))
+                                  (snd (computeParameters (Lv \\ ZL) AP s lv))))
+        (List.map oto_list (snd (computeParameters (Lv \\ ZL) AP s lv)))
         s lv
-        (fst (computeParameters (Lv \\ ZL) ZL AP s lv)).
+        (fst (computeParameters (Lv \\ ZL) AP s lv)).
 Proof.
   intros LIVE NOUR P LEN1 LEN2.
   revert_except LIVE.
@@ -59,7 +59,7 @@ Proof.
   - len_simpl.
     assert (LenHelp1:❬(getAnn ⊝ als ++ Lv) \\ (fst ⊝ F ++ ZL)❭ =
                      ❬snd
-                        (computeParameters ((getAnn ⊝ als ++ Lv) \\ (fst ⊝ F ++ ZL)) (fst ⊝ F ++ ZL)
+                        (computeParameters ((getAnn ⊝ als ++ Lv) \\ (fst ⊝ F ++ ZL))
                                            (tab {} ‖F‖ ++ AP) t alb)❭). {
       rewrite computeParameters_length; eauto; revert LEN1 LEN2 H; clear_all;
         eauto with len.
@@ -69,7 +69,7 @@ Proof.
                 get (snd ⊝ computeParametersF F als Lv ZL AP) n aa ->
                 ❬aa❭ =
                 ❬snd
-                   (computeParameters ((getAnn ⊝ als ++ Lv) \\ (fst ⊝ F ++ ZL)) (fst ⊝ F ++ ZL)
+                   (computeParameters ((getAnn ⊝ als ++ Lv) \\ (fst ⊝ F ++ ZL))
                                       (tab {} ‖F‖ ++ AP) t alb)❭). {
       eapply computeParametersF_length; eauto.
       rewrite <- LenHelp1. eauto with len. eauto with len.
@@ -146,7 +146,7 @@ Proof.
                                     (olist_union (snd ⊝ computeParametersF F als Lv ZL AP)
                                      (snd
                                         (computeParameters ((getAnn ⊝ als ++ Lv) \\ (fst ⊝ F ++ ZL))
-                                           (fst ⊝ F ++ ZL) (tab {} ‖F‖ ++ AP) t alb))))
+                                                           (tab {} ‖F‖ ++ AP) t alb))))
                                  ∪ list_union (fst ∘ of_list ⊝ F))).
 
             assert (lvsEQ:
@@ -223,10 +223,10 @@ Qed.
 Lemma is_trs b s lv
 : live_sound Imperative nil nil s lv
   -> noUnreachableCode (isCalled b) s
-  -> trs nil nil s lv (fst (computeParameters nil nil nil s lv)).
+  -> trs nil nil s lv (fst (computeParameters nil nil s lv)).
 Proof.
   intros.
-  assert (snd (computeParameters nil nil nil s lv) = nil). {
+  assert (snd (computeParameters nil nil s lv) = nil). {
     exploit computeParameters_AP_LV; eauto.
     inv H1; eauto.
   }
