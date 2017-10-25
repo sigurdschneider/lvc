@@ -17,6 +17,15 @@ Proof.
   - eapply H0; eauto. cset_tac; intuition.
 Qed.
 
+Lemma defined_on_update_some' X `{OrderedType X} Y (G:set X) (E:X -> option Y) x v
+  : defined_on (G \ singleton x) E
+    -> defined_on G (E [x <- Some v]).
+Proof.
+  unfold defined_on; intros. lud.
+  - eauto.
+  - eapply H0; eauto. cset_tac; intuition.
+Qed.
+
 Lemma defined_on_incl X `{OrderedType X} Y (G G':set X) (E:X -> option Y)
   : defined_on G E
     -> G' ⊆ G
