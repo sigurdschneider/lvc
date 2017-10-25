@@ -194,6 +194,7 @@ Inductive additionalParameters_live : list (set var)   (* additional params *)
     -> Za ⊆ lv
     -> additionalParameters_live ZL (stmtApp f Y) (ann0 lv) (ann0 nil)
 | additionalParameters_liveLet ZL F t (Za:〔〔var〕〕) ans ant lv ans_lv ant_lv
+                               (ZaLen:❬F❭ = ❬ans❭)
   : (forall Za' lv Zs n, get F n Zs -> get ans_lv n lv -> get Za n Za' ->
        of_list Za' ⊆ getAnn lv \ of_list (fst Zs) /\ NoDupA eq (fst Zs ++ Za'))
     -> (forall Zs lv a n, get F n Zs -> get ans_lv n lv -> get ans n a ->
@@ -202,38 +203,46 @@ Inductive additionalParameters_live : list (set var)   (* additional params *)
     -> length Za = length F
     -> additionalParameters_live ZL (stmtFun F t) (annF lv ans_lv ant_lv) (annF Za ans ant).
 
-Lemma live_sound_compile ZL ZAL Lv DL s ans_lv ans o
-  (RD:trs DL ZAL s ans_lv ans)
+Lemma live_sound_compile ZL ZAL Lv s ans_lv ans o (Len:❬ZL❭=❬ZAL❭)
   (LV:live_sound o ZL Lv s ans_lv)
   (APL: additionalParameters_live (of_list ⊝ ZAL) s ans_lv ans)
   : live_sound o (zip (@List.app _) ZL ZAL) Lv (compile ZAL s ans) ans_lv.
 Proof.
-  general induction LV; inv RD; inv APL; eauto using live_sound.
+  general induction LV; inv APL; inv_get; eauto using live_sound.
   - simpl. erewrite get_nth; eauto.
-    inv_get.
     econstructor; eauto using zip_get with len.
     + cases; eauto. rewrite <- H1. rewrite of_list_app. eauto with cset.
     + intros ? ? Get.
       eapply get_app_cases in Get. destruct Get; dcr; eauto.
       inv_get.
       econstructor. rewrite <- H10. eauto using get_in_of_list.
-  - simpl. rewrite <- List.map_app in H20.
-    rewrite <- List.map_app in H19.
-    econstructor; eauto with len.
+  - simpl. rewrite <- List.map_app in *.
+    econstructor; eauto.
     + rewrite fst_compileF_eq; eauto.
       rewrite <- zip_app; eauto with len.
-    + intros.
-      unfold compileF in H4. inv_get. simpl.
-      rewrite fst_compileF_eq; eauto. rewrite <- zip_app; eauto with len.
+    + eauto with len.
+    + unfold compileF; intros; inv_get; simpl.
+      exploit H2; eauto. exploit H12; eauto. dcr.
+      exploit H1; try eapply H9; eauto with len.
+      erewrite @list_get_eq at 1; eauto.
+      * len_simpl.
+        rewrite <- Len.
+        rewrite Nat.add_min_distr_r.
+        rewrite <- ZaLen; eauto with len.
+      * intros. inv_get. eapply get_app_cases in H19 as [?|?]; dcr; len_simpl.
+        -- inv_get. rewrite get_app_lt in H15; [|eauto with len]. inv_get.
+           reflexivity.
+        -- inv_get. rewrite get_app_ge in H15; [|eauto with len]. inv_get.
+           len_simpl.
+           rewrite <- ZaLen in *. rewrite H14 in *. len_simpl. inv_get.
+           rewrite get_app_ge in H18; rewrite H14 in *; eauto with len.
+           inv_get. reflexivity.
     + intros.
       unfold compileF in H4. inv_get; simpl.
-      exploit H2; eauto. exploit H13; eauto. dcr.
-      rewrite of_list_app at 1.
-      split.
-      * rewrite H10. rewrite H9 at 1. eauto with cset.
-      * cases; eauto. split; eauto.
-        rewrite of_list_app.
-        rewrite <- minus_union. rewrite <- H22. eauto with cset.
+      exploit H2; eauto. exploit H10; eauto. dcr.
+      repeat split; eauto.
+      * rewrite of_list_app. clear - H9 H11; cset_tac.
+      * cases; eauto. rewrite of_list_app. clear - H18; cset_tac.
 Qed.
 
 

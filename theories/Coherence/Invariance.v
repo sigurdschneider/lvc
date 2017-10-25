@@ -1,6 +1,6 @@
 Require Import Util IL Sawtooth LabelsDefined OptionR.
 Require Import Annotation Liveness.Liveness Restrict SetOperations Coherence.
-Require Import Sim SimTactics SimCompanion.
+Require Import Sim SimTactics  SimCompanion SimCompanionTactics.
 
 Set Implicit Arguments.
 Unset Printing Records.
@@ -204,23 +204,16 @@ Proof.
   intros.
   inv SRD; inv LV; simpl in *.
   - invt live_exp_sound.
-    + case_eq (op_eval E e0); intros.
-      * pone_step.
-        eapply H; eauto using rd_agree_update with len.
-        -- intros. inv_get. eapply approx_restrict; eauto.
-        -- eauto using restrict_ifFstR.
-      * pno_step.
-    + case_eq (omap (op_eval E) Y); intros.
-      * pextern_step; assert (vl = l) by congruence; subst; eauto.
-        -- eapply H; eauto using rd_agree_update, PIR2_length, restrict_ifFstR with len.
-           ++ intros; inv_get. eapply approx_restrict; eauto.
-        -- eapply H; eauto using rd_agree_update, PIR2_length, restrict_ifFstR with len.
-           ++ intros; inv_get. eapply approx_restrict; eauto.
-      * pno_step.
-  - case_eq (op_eval E e); intros.
-    + case_eq (val2bool v); intros;
-      pone_step; eauto using agree_on_incl.
-    + pno_step.
+    + eapply (@sim_let_op _ il_statetype_F _ il_statetype_I);
+        intros; eauto.
+      eapply H; eauto using rd_agree_update with len.
+      -- intros. inv_get. eapply approx_restrict; eauto.
+      -- eauto using restrict_ifFstR.
+    + eapply (@sim_let_call _ il_statetype_F _ il_statetype_I);
+        intros; eauto.
+      eapply H; eauto using rd_agree_update, PIR2_length, restrict_ifFstR with len.
+      ++ intros; inv_get. eapply approx_restrict; eauto.
+  - eapply (@sim_cond _ il_statetype_F _ il_statetype_I); eauto.
   - pno_step.
   - decide (length Z = length Y).
     case_eq (omap (op_eval E) Y); intros.

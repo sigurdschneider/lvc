@@ -61,6 +61,7 @@ Proof.
   - exploit computeParameters_length as Len1; eauto with len.
     lnorm.
     econstructor.
+    + eauto with len.
     + intros. inv_get.
       pose proof (H8 _ H10).
       edestruct computeParameters_isCalledFrom_get_Some; try eapply H9;
@@ -69,7 +70,8 @@ Proof.
       simpl. rewrite of_list_3.
       exploit (@computeParameters_LV_DL (fst ⊝ F ++ ZL) (getAnn ⊝ als ++ Lv) (tab {}  ‖F‖ ++ AP));
         eauto using PIR2_Subset_tab_extend with len.
-      exploit computeParametersF_LV_DL; try rewrite <- zip_app; eauto with len.
+      len_simpl.
+      exploit computeParametersF_LV_DL; eauto; eauto with len.
       eapply PIR2_nth in H13; eauto. dcr; inv_get.
       split.
       rewrite H15. clear_all; cset_tac.
@@ -81,7 +83,7 @@ Proof.
       rewrite InA_In_eq in H17. rewrite InA_in in H17.
       rewrite of_list_3 in H18.
       revert H15 H17 H18. clear_all. cset_tac.
-    + intros. inv_get.
+    + intros. inv_get. len_simpl.
       exploit H1; eauto using pair_eta, PIR2_Subset_tab_extend with len.
       eapply additionalParameters_live_monotone; try eapply H9; eauto.
       rewrite map_map.
