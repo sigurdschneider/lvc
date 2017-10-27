@@ -115,11 +115,23 @@ Proof.
     + simpl in *. eapply defined_on_incl; eauto.
 Qed.
 
-Lemma correct E s ans ans_lv ans_lv'
+Lemma correct' E s ans ans_lv ans_lv'
   (RD: trs nil nil s ans_lv ans)
   (LV': live_sound Imperative nil nil (compile nil s ans) ans_lv')
   (EDEF: defined_on (getAnn ans_lv') E)
   : sim bot3 Bisim (nil, E, s) (nil, E, compile nil s ans).
 Proof.
   eapply (@delocation_sim nil nil nil nil nil); eauto using @inRel; reflexivity.
+Qed.
+
+Lemma correct E s ans ans_lv
+  (RD: trs nil nil s ans_lv ans)
+  (LV': live_sound Imperative nil nil s ans_lv)
+  (EDEF: defined_on (getAnn ans_lv) E)
+  (APL:  additionalParameters_live nil s ans_lv ans)
+  : sim bot3 Bisim (nil, E, s) (nil, E, compile nil s ans).
+Proof.
+  eapply (@delocation_sim nil nil nil nil nil); eauto using @inRel.
+  - reflexivity.
+  - eapply live_sound_compile; eauto.
 Qed.
