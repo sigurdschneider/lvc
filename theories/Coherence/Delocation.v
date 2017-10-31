@@ -9,41 +9,36 @@ Unset Printing Records.
 
 Inductive trs
   : 〔؟⦃var⦄〕 (** globals *)
-    -> list (params)        (** additional parameters for functions in scope *)
     -> stmt                 (** the program *)
     -> ann (set var)        (** liveness information *)
     -> ann (list (list var)) (** annotation providing additional parameters for function definitions
                                 inside the program *)
     -> Prop :=
-| trsExp DL ZL x e s an an_lv lv
-  : trs (restr (getAnn an_lv \ singleton x) ⊝ DL) ZL  s an_lv an
-    -> trs DL ZL (stmtLet x e s) (ann1 lv an_lv) (ann1 nil an)
-| trsIf DL ZL e s t ans ant ans_lv ant_lv lv
-  :  trs DL ZL s ans_lv ans
-     -> trs DL ZL t ant_lv ant
-     -> trs DL ZL (stmtIf e s t) (ann2 lv ans_lv ant_lv) (ann2 nil ans ant)
-| trsRet e DL ZL lv
-  :  trs DL ZL (stmtReturn e) (ann0 lv) (ann0 nil)
-| trsGoto DL ZL G' f Za Y lv
+| trsExp DL x e s an an_lv lv
+  : trs (restr (getAnn an_lv \ singleton x) ⊝ DL) s an_lv an
+    -> trs DL (stmtLet x e s) (ann1 lv an_lv) (ann1 nil an)
+| trsIf DL e s t ans ant ans_lv ant_lv lv
+  :  trs DL s ans_lv ans
+     -> trs DL t ant_lv ant
+     -> trs DL (stmtIf e s t) (ann2 lv ans_lv ant_lv) (ann2 nil ans ant)
+| trsRet e DL lv
+  :  trs DL (stmtReturn e) (ann0 lv) (ann0 nil)
+| trsGoto DL G' f Y lv
   :  get DL (counted f) (Some G')
-     -> get ZL (counted f) (Za)
-     (*    -> G' ⊆ lv *)
-     (*    -> of_list Za ⊆ lv *)
-     -> trs DL ZL (stmtApp f Y) (ann0 lv) (ann0 nil)
-| trsLet (DL:list (option (set var))) ZL (F:list (params*stmt)) t Za ans ant lv ans_lv ant_lv
+     -> trs DL (stmtApp f Y) (ann0 lv) (ann0 nil)
+| trsLet (DL:list (option (set var))) (F:list (params*stmt)) t Za ans ant lv ans_lv ant_lv
   : length F = length ans_lv
     -> length F = length ans
     -> length F = length Za
     -> (forall n lvs Zs Za' ans',
           get ans_lv n lvs -> get F n Zs -> get Za n Za' -> get ans n ans'
-          -> trs (restr (getAnn lvs \ of_list (fst Zs++Za')) ⊝ (Some ⊝ (getAnn ⊝ ans_lv) \\ zip (@List.app _) (fst ⊝ F) Za ++ DL))
-                (Za++ZL) (snd Zs) lvs ans')
+          -> trs (restr (getAnn lvs \ of_list (fst Zs++Za')) ⊝ (Some ⊝ (getAnn ⊝ ans_lv) \\ zip (@List.app _) (fst ⊝ F) Za ++ DL)) (snd Zs) lvs ans')
     -> trs (Some ⊝ (getAnn ⊝ ans_lv) \\ zip (@List.app _) (fst ⊝ F) Za ++ DL)
-          (Za++ZL) t ant_lv ant
-    -> trs DL ZL (stmtFun F t) (annF lv ans_lv ant_lv) (annF Za ans ant).
+          t ant_lv ant
+    -> trs DL (stmtFun F t) (annF lv ans_lv ant_lv) (annF Za ans ant).
 
-Lemma trs_annotation DL ZL s lv Y
-      : trs DL ZL s lv Y -> annotation s lv /\ annotation s Y.
+Lemma trs_annotation DL s lv Y
+      : trs DL s lv Y -> annotation s lv /\ annotation s Y.
 Proof.
   intros. general induction H; split; dcr; econstructor; intros; eauto 20.
   - edestruct get_length_eq; try eapply H1; eauto.
@@ -55,70 +50,18 @@ Proof.
 Qed.
 
 
-Lemma trs_monotone_DL (DL DL' : list (option (set var))) ZL s lv a
- : trs DL ZL s lv a
+Lemma trs_monotone_DL (DL DL' : list (option (set var))) s lv a
+ : trs DL s lv a
    -> DL ≿ DL'
-   -> trs DL' ZL s lv a.
+   -> trs DL' s lv a.
 Proof.
   intros. general induction H; eauto 30 using trs, restrict_subset2.
-  - destruct (PIR2_nth H1 H); eauto; dcr. inv H4.
+  - destruct (PIR2_nth H0 H); eauto; dcr. inv H3.
     econstructor; eauto.
   - econstructor; eauto using restrict_subset2, PIR2_app.
 Qed.
 
 Opaque to_list.
-
-Lemma trs_AP_seteq (DL : list (option (set var))) AP AP' s lv a
- : trs DL AP s lv a
-   -> PIR2 elem_eq AP AP'
-   -> trs DL AP' s lv a.
-Proof.
-  intros. general induction H; eauto using trs.
-  - destruct (PIR2_nth H1 H0); eauto; dcr.
-    econstructor; eauto.
-  - econstructor; eauto using PIR2_app.
-Qed.
-
-Lemma trs_AP_incl (DL : list (option (set var))) AP AP' s lv a
- : trs DL AP s lv a
-   -> PIR2 elem_incl AP AP'
-   -> trs DL AP' s lv a.
-Proof.
-  intros. general induction H; eauto using trs.
-  - destruct (PIR2_nth H1 H0); eauto; dcr.
-    econstructor; eauto.
-  - econstructor; eauto using PIR2_app.
-Qed.
-
-Definition map_to_list {X} `{OrderedType X} (AP:list (option (set X)))
-  := List.map (fun a => match a with Some a => to_list a | None => nil end) AP.
-
-Lemma PIR2_Subset_of_list (AP AP': list (option (set var)))
-: PIR2 (fstNoneOrR Subset) AP AP'
-  -> PIR2 (flip elem_incl) (map_to_list AP') (map_to_list AP).
-Proof.
-  intros. general induction H; simpl; eauto using PIR2.
-  - econstructor; eauto.
-    destruct x, y; unfold flip, elem_incl; repeat rewrite of_list_3; simpl; inv pf; eauto with cset.
-Qed.
-
-Lemma trs_monotone_AP (DL : list (option (set var))) AP AP' s lv a
- : trs DL (List.map oto_list AP) s lv a
-   -> PIR2 (fstNoneOrR Subset) AP AP'
-   -> trs DL (List.map oto_list AP') s lv a.
-Proof.
-  intros. eapply trs_AP_incl; eauto. eapply PIR2_flip.
-  eapply PIR2_Subset_of_list; eauto.
-Qed.
-
-Lemma trs_monotone_DL_AP (DL DL' : list (option (set var))) AP AP' s lv a
-  : trs DL (List.map oto_list AP) s lv a
-   -> DL ≿ DL'
-   -> PIR2 (fstNoneOrR Subset) AP AP'
-   -> trs DL' (List.map oto_list AP') s lv a.
-Proof.
-  eauto using trs_monotone_AP, trs_monotone_DL.
-Qed.
 
 Definition compileF (compile : list (list var) -> stmt -> ann (list (list var)) -> stmt)
            (ZL:list (list var))
@@ -156,7 +99,7 @@ Qed.
 
 
 Lemma trs_srd AL ZL s ans_lv ans
-  (RD:trs AL ZL s ans_lv ans)
+  (RD:trs AL s ans_lv ans)
   : srd AL (compile ZL s ans) ans_lv.
 Proof.
   general induction RD; simpl; eauto using srd.
@@ -272,7 +215,7 @@ Proof.
 Qed.
 
 Lemma compile_isCalled b AL ZL s ans_lv ans n
-      (RD:trs AL ZL s ans_lv ans)
+      (RD:trs AL s ans_lv ans)
       (TIC: isCalled b s (LabI n))
   : isCalled b (compile ZL s ans) (LabI n).
 Proof.
@@ -287,7 +230,7 @@ Proof.
 Qed.
 
 Lemma compile_noUnreachableCode b AL ZL s ans_lv ans
-      (RD:trs AL ZL s ans_lv ans)
+      (RD:trs AL s ans_lv ans)
       (NUC: noUnreachableCode (isCalled b) s)
   : noUnreachableCode (isCalled b) (compile ZL s ans).
 Proof.
@@ -311,21 +254,23 @@ Proof.
   erewrite <- IHLen1; eauto.
 Qed.
 
-Lemma compile_paramsMatch DL ZAL s L lv ans
+Lemma compile_paramsMatch ZAL DL s L lv ans (Len:❬DL❭=❬ZAL❭)
       (PM:paramsMatch s L)
-      (TRS:trs DL ZAL s lv ans)
+      (TRS:trs DL s lv ans)
   : paramsMatch (compile ZAL s ans) ((fun Z n => n + ❬Z❭) ⊜ ZAL L).
 Proof.
-  general induction TRS; invt paramsMatch; simpl in *; eauto using paramsMatch.
-  - econstructor; eauto using zip_get.
+  general induction TRS; invt paramsMatch; simpl in *; eauto using paramsMatch with len.
+  - inv_get.
+    econstructor; eauto using zip_get.
     erewrite get_nth; eauto with len.
   - econstructor; eauto.
     + unfold compileF at 1; intros; inv_get; simpl.
-      exploit H3; eauto.
+      exploit H3; eauto. instantiate (1:=(Za ++ ZAL)). len_simpl. omega.
       eqassumption. rewrite zip_app; eauto with len.
       f_equal.
       eapply compileF_map_length; eauto with len.
     + exploit IHTRS; eauto.
+      instantiate (1:=(Za ++ ZAL)). len_simpl. omega.
       eqassumption. rewrite zip_app; eauto with len.
       f_equal.
       eapply compileF_map_length; eauto with len.

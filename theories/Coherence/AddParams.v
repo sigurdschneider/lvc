@@ -58,10 +58,6 @@ Proof.
   unfold addParams; simpl.
   eapply trs_srd.
   exploit (@computeParameters_trs b nil nil nil); eauto.
-  exploit computeParameters_length; eauto.
-  simpl in *.
-  destruct (snd (computeParameters nil nil s lv)); isabsurd.
-  eauto.
 Qed.
 
 Lemma addParams_paramsMatch b s lv

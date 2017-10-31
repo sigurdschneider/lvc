@@ -24,7 +24,6 @@ Lemma computeParameters_trs b ZL Lv AP s lv
   -> length ZL = length AP
   -> trs (restr (getAnn lv) ⊝ (zip ominus' (Lv \\ ZL)
                                   (snd (computeParameters (Lv \\ ZL) AP s lv))))
-        (List.map oto_list (snd (computeParameters (Lv \\ ZL) AP s lv)))
         s lv
         (fst (computeParameters (Lv \\ ZL) AP s lv)).
 Proof.
@@ -41,11 +40,10 @@ Proof.
       eapply PIR2_not_in; [ eapply computeParameters_AP_LV; eauto with len
                           | eauto with len].
   - econstructor.
-    + eapply trs_monotone_DL_AP; eauto.
+    + eapply trs_monotone_DL; eauto.
       eapply restrict_subset2; eauto.
       eapply zip_ominus_contra; eauto using PIR2_zip_ounion with len.
-      eapply PIR2_zip_ounion; eauto with len.
-    + eapply trs_monotone_DL_AP; eauto using PIR2_zip_ounion' with len.
+    + eapply trs_monotone_DL; eauto using PIR2_zip_ounion' with len.
       eapply restrict_subset2; eauto with len.
       eapply zip_ominus_contra; eauto using PIR2_zip_ounion' with len.
   - inv_get.
@@ -54,7 +52,6 @@ Proof.
       eapply zip_get_eq. eapply zip_get; eauto.
       eapply keep_Some; eauto. simpl. reflexivity.
       rewrite <- H1. eauto with cset.
-    + eapply map_get_1. eapply keep_Some; eauto.
   - econstructor.
   - len_simpl.
     assert (LenHelp1:❬(getAnn ⊝ als ++ Lv) \\ (fst ⊝ F ++ ZL)❭ =
@@ -81,8 +78,7 @@ Proof.
       rewrite zip_length2; [eauto 20 with len|].
       rewrite fold_zip_ounion_length; eauto.
     + intros. inv_get. simpl.
-      rewrite <- List.map_app. rewrite <- take_eta.
-      eapply trs_monotone_DL_AP.
+      eapply trs_monotone_DL.
       * eapply H1; eauto using PIR2_Subset_tab_extend with len.
       * { rewrite (take_eta (length F) (zip ominus' _ _)).
           do 2 rewrite List.map_app.
@@ -93,7 +89,7 @@ Proof.
               rewrite take_app_eq; [|eauto with len].
               rewrite take_app_eq; [|eauto with len].
               eapply ominus'_Some_oto_list.
-              eapply PIR2_take. eapply PIR2_addAdds'.
+              eapply PIR2_take. eapply PIR2_addAdds3.
               eauto with len.
               eapply PIR2_combineParams_get;
                 [ eapply computeParametersF_length_pair; eauto with len
@@ -170,7 +166,7 @@ Proof.
               repeat rewrite drop_length_ass; eauto with len.
               eapply zip_ominus_contra; eauto with len.
               eapply PIR2_drop; eauto.
-              eapply PIR2_addAdds'; eauto with len.
+              eapply PIR2_addAdds3; eauto with len.
               eapply PIR2_combineParams_get;
                 [ | eauto with len | eauto using zip_get_eq | reflexivity].
               eapply computeParametersF_length_pair; eauto with len.
@@ -189,12 +185,7 @@ Proof.
                 eapply get_take; eauto using get_range. reflexivity.
                 eauto.
         }
-      * eapply PIR2_addAdds'; eauto with len.
-        eapply PIR2_combineParams_get; [ | | | reflexivity].
-        eapply computeParametersF_length_pair; eauto with len.
-        eauto with len. eapply zip_get_eq; eauto.
-    + rewrite <- List.map_app. rewrite <- take_eta.
-      eapply trs_monotone_DL_AP.
+    + eapply trs_monotone_DL.
       eapply IHLIVE; eauto using PIR2_Subset_tab_extend with len.
       * { rewrite (take_eta (length F) (zip ominus' _ _)).
           rewrite List.map_app.
@@ -204,7 +195,7 @@ Proof.
             rewrite take_app_eq; [|eauto with len].
             rewrite take_app_eq; [|eauto with len].
             eapply ominus'_Some_oto_list.
-            eapply PIR2_take. eapply PIR2_addAdds'.
+            eapply PIR2_take. eapply PIR2_addAdds3.
             eauto with len.
             eapply PIR2_combineParams; [| reflexivity].
             eapply computeParametersF_length_pair; eauto with len.
@@ -213,20 +204,17 @@ Proof.
             repeat (rewrite drop_length_ass; [| eauto with len]).
             eapply zip_ominus_contra.
             eapply PIR2_drop; eauto.
-            eapply PIR2_addAdds'. eauto with len.
+            eapply PIR2_addAdds3. eauto with len.
             eapply PIR2_combineParams; [| reflexivity].
             eapply computeParametersF_length_pair; eauto with len.
         }
-      * eapply PIR2_addAdds'; eauto with len.
-        eapply PIR2_combineParams; [|reflexivity].
-        eapply computeParametersF_length_pair; eauto with len.
 Qed.
 
 
 Lemma is_trs b s lv
 : live_sound Imperative nil nil s lv
   -> noUnreachableCode (isCalled b) s
-  -> trs nil nil s lv (fst (computeParameters nil nil s lv)).
+  -> trs nil s lv (fst (computeParameters nil nil s lv)).
 Proof.
   intros.
   assert (snd (computeParameters nil nil s lv) = nil). {
@@ -234,5 +222,4 @@ Proof.
     inv H1; eauto.
   }
   exploit computeParameters_trs; eauto; try reflexivity.
-  simpl in *. rewrite H1 in H2. eauto.
 Qed.

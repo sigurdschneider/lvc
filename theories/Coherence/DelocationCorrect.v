@@ -15,7 +15,7 @@ Inductive approx
   blk_approxI o (Za Z':list var) ZL Lv DL ZAL s ans ans_lv ans_lv' n L1 L2
               (RD:forall G, o = Some G ->
                        live_sound Imperative (@List.app _ ⊜ ZL ZAL) Lv (compile ZAL s ans) ans_lv'
-                       /\ trs (restr G ⊝ DL) ZAL s ans_lv ans)
+                       /\ trs (restr G ⊝ DL) s ans_lv ans)
   : approx ZL Lv DL ZAL L1 L2 Z' (getAnn ans_lv') o Za (I.blockI Z' s n) (I.blockI (Z'++Za) (compile ZAL s ans) n).
 
 Lemma approx_restrict ZL Lv DL ZAL L L' G
@@ -32,7 +32,7 @@ Proof.
 Qed.
 
 Lemma delocation_sim DL ZL ZAL L L' (E E':onv val) s ans Lv' ans_lv ans_lv'
-  (RD: trs DL ZAL s ans_lv ans)
+  (RD: trs DL s ans_lv ans)
   (EA: inRel approx ZL Lv' DL ZAL L L')
   (EQ: (@feq _ _ eq) E E')
   (LV': live_sound Imperative (app (A:=var) ⊜ ZL ZAL) Lv' (compile ZAL s ans) ans_lv')
@@ -70,18 +70,17 @@ Proof.
     + pone_step. right; eapply delocation_sim; eauto using defined_on_incl.
     + pno_step.
   - pno_step. simpl. rewrite EQ; eauto.
-  - simpl counted in *.
+  - simpl counted in *. inv_get.
     erewrite get_nth in *; eauto.
     case_eq (omap (op_eval E) Y); intros.
     + inv_get.
       assert (❬Y❭ = ❬x❭). {
-        repeat rewrite app_length in H8.
-        rewrite map_length in H8. omega.
+        len_simpl. omega.
       }
       inRel_invs. inv H12; simpl in *.
-      edestruct (omap_var_defined_on Za); eauto.
+      edestruct (omap_var_defined_on x0); eauto.
       eapply get_in_incl. intros.
-      exploit H10; eauto using get_app_right. inv H7; eauto.
+      exploit H9; eauto using get_app_right. inv H8; eauto.
       pone_step. rewrite omap_app.
       erewrite omap_agree with (g:=op_eval E). rewrite H1.
       simpl. rewrite H6. reflexivity. intros. rewrite EQ; eauto.
@@ -116,7 +115,7 @@ Proof.
 Qed.
 
 Lemma correct' E s ans ans_lv ans_lv'
-  (RD: trs nil nil s ans_lv ans)
+  (RD: trs nil s ans_lv ans)
   (LV': live_sound Imperative nil nil (compile nil s ans) ans_lv')
   (EDEF: defined_on (getAnn ans_lv') E)
   : sim bot3 Bisim (nil, E, s) (nil, E, compile nil s ans).
@@ -125,7 +124,7 @@ Proof.
 Qed.
 
 Lemma correct E s ans ans_lv
-  (RD: trs nil nil s ans_lv ans)
+  (RD: trs nil s ans_lv ans)
   (LV': live_sound Imperative nil nil s ans_lv)
   (EDEF: defined_on (getAnn ans_lv) E)
   (APL:  additionalParameters_live nil s ans_lv ans)
