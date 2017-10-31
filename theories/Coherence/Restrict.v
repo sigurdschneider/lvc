@@ -162,29 +162,41 @@ Proof.
     + f_equal. eauto.
 Qed.
 
+Lemma restr_subset (x y: option (set var)) (G G':set var)
+  (R:fstNoneOrR (flip Subset) x y) (INCL:G ⊆ G')
+  : fstNoneOrR (flip Subset) (restr G x) (restr G' y).
+Proof.
+  unfold flip in *.
+  inv R; simpl in *.
+  + simpl. econstructor.
+  + unfold restr. repeat cases; try econstructor; eauto.
+    cset_tac.
+Qed.
+
 Lemma restrict_subset2 DL DL' G G'
 : PIR2 (fstNoneOrR (flip Subset)) DL DL'
   -> G ⊆ G'
   -> PIR2 (fstNoneOrR (flip Subset)) (restr G ⊝ DL) (restr G' ⊝ DL').
 Proof.
-  intros. induction H; simpl; econstructor; eauto.
-  - inv pf.
-    + simpl. econstructor.
-    + unfold restr. repeat cases; try econstructor; eauto.
-      exfalso. unfold flip in H1. rewrite H0 in COND. cset_tac.
+  intros. induction H; simpl; econstructor; eauto using restr_subset.
 Qed.
 
+Lemma restr_subset' (x y: option (set var)) (G G':set var)
+  (R:fstNoneOrR Equal x y) (INCL:G ⊆ G')
+  : fstNoneOrR Equal (restr G x) (restr G' y).
+Proof.
+  inv R.
+  + simpl. econstructor.
+  + unfold restr. repeat cases; try econstructor; eauto.
+    cset_tac.
+Qed.
 
 Lemma restrict_subset DL DL' G G'
 : PIR2 (fstNoneOrR Equal) DL DL'
   -> G ⊆ G'
   -> PIR2 (fstNoneOrR Equal) (restr G ⊝ DL) (restr G' ⊝ DL').
 Proof.
-   intros. induction H; simpl; econstructor; eauto.
-  - inv pf.
-    + simpl. econstructor.
-    + unfold restr. repeat cases; try econstructor; eauto.
-      cset_tac.
+   intros. induction H; simpl; eauto using PIR2, restr_subset'.
 Qed.
 
 Definition lookup_seto (ϱ:var->var) (x:option (set var)) : option (set var):=

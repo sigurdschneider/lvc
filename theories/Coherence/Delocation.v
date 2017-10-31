@@ -120,8 +120,6 @@ Proof.
   eauto using trs_monotone_AP, trs_monotone_DL.
 Qed.
 
-
-
 Definition compileF (compile : list (list var) -> stmt -> ann (list (list var)) -> stmt)
            (ZL:list (list var))
            (F:list (params*stmt))

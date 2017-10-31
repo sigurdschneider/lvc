@@ -106,13 +106,16 @@ Proof.
 
               pose proof (H10 _ H12).
               edestruct computeParameters_isCalledFrom_get_Some; try eapply H6;
-                eauto with len; dcr; subst.
-              intros; edestruct H2; eauto.
+                try eassumption;
+                [ intros; edestruct H2; eauto
+                | eauto with len
+                | dcr; subst ].
               pose proof (H10 _ H15).
               edestruct computeParameters_isCalledFrom_get_Some; try eapply H7;
-                eauto with len; dcr; subst.
-              intros; edestruct H2; eauto.
-
+                try eassumption;
+                [ intros; edestruct H2; eauto
+                | eauto with len
+                | dcr; subst ].
               simpl.
               repeat rewrite of_list_app.
               repeat rewrite of_list_3.
@@ -120,19 +123,19 @@ Proof.
               rewrite (meet_comm _ (getAnn lvs)) at 1.
               rewrite union_meet_distr_r. rewrite union_meet_distr_r.
               eapply union_incl_split.
-
               eapply incl_union_incl_minus. eapply incl_union_left.
               eapply incl_meet_split. eapply incl_union_right.
               eapply incl_list_union; [ eapply map_get_1; try eapply H5 | ].
               clear_all; cset_tac.
               clear_all; cset_tac.
               eapply incl_union_incl_minus. eapply incl_union_left.
-              revert H12 H6. clear_all. cset_tac'.
-              exfalso; eapply n0.
-              eapply incl_list_union.
-              eapply map_get_1. eapply get_take; eauto.
-              reflexivity. eauto.
-
+              assert (x0 ⊆ list_union (oget ⊝ take ❬F❭ (olu F als Lv ZL AP t alb))). {
+                eapply incl_list_union.
+                eapply map_get_1; eauto.
+                eapply get_take; try eapply H6; eauto. reflexivity.
+              }
+              clear - H17.
+              cset_tac.
           - rewrite restrict_comp_meet.
             pose proof (H10 _ H12).
             edestruct computeParameters_isCalledFrom_get_Some; try eapply H6;
