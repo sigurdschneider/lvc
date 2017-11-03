@@ -18,18 +18,17 @@ let rec first f x =
   if f x then x else first f (x + 1)
 
 let print_var' oc has_slots ids (v:int) =
-  let is_slot = v mod 2 == 0 && has_slots in
-  let v = if has_slots then v / 2 else v in
+  let is_slot = v mod 2 == 1 && has_slots in
   try
     let c = (IntMap.find v ids) in
     output_string oc (if is_slot then String.uppercase_ascii c else c)
   with Not_found -> output_string oc ("?" ^ (string_of_int v))
 
 let print_var oc has_slots ids v =
-  print_var' oc has_slots ids (P.to_int v)
+  print_var' oc has_slots ids (P.to_int v - 1)
 
 let print_fvar oc has_slots ids v =
-  print_var' oc has_slots ids (Nat.to_int v)
+  print_var' oc has_slots ids (Nat.to_int v - 1)
 
 let rec print_binop oc op =
   match op with

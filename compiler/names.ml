@@ -16,4 +16,13 @@ let register_name s =
   let _ = ids := IntMap.add id s !ids in
   names := StringMap.add s id !names; id
 
+let rec pragma_register_names l =
+  match l with
+  | [] -> ()
+  | x::l -> let _ = register_name x in pragma_register_names l
+
+
 let calls : (string Stack.t) ref = ref (Stack.create ())
+
+let print_nametable () =
+  StringMap.iter (fun s n -> Printf.printf "%d: %s\n" n s) !names

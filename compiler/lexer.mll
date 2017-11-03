@@ -9,6 +9,7 @@
   (** Identifiers *)
   let nondigit = ['_' 'a'-'z' 'A'-'Z']
   let identifier = nondigit ( nondigit | digit )*
+  let varcode = '$' integer_constant
 
   (** Whitespaces *)
   let whitespace = [' ' '\t' '\012']+
@@ -29,6 +30,8 @@
     | ">=" { IL_greater_eq }
     | "=" { IL_equal }
     | "," { IL_comma }
+    | ";" { IL_semicolon }
+    | "#" { IL_hash }
     | identifier {
         let s = (Lexing.lexeme lexbuf) in
           match s with
@@ -44,7 +47,8 @@
                 let id = StringMap.find s !names in
                   IL_ident id
 		 with Not_found -> IL_ident (register_name s)
-      }
+	}
+    | varcode { IL_varcode (Lexing.lexeme lexbuf) }
     | whitespace { token lexbuf }
     | newline { Lexing.new_line lexbuf; token lexbuf}
     | eof { IL_eof }

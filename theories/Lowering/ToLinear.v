@@ -56,6 +56,8 @@ Section ToLinear.
   | SNot x (RGa:isReg x) :  simplOp (UnOp UnOpNot (Var x))
   | SNeg x (RGa:isReg x) :  simplOp (UnOp UnOpNeg (Var x))
   | SBinOp bop x y (RGa:isReg x) (RGb:isReg y) : simplOp (BinOp bop (Var x) (Var y))
+  | SBinOpV1 bop x y (RGa:isReg x) (notDiv:bop <> BinOpDiv) : simplOp (BinOp bop (Var x) (Con y))
+  | SBinOpV2 bop x y (RGb:isReg y) (notDiv:bop <> BinOpDiv) : simplOp (BinOp bop (Con x) (Var y))
   .
 
   Definition simplExp e := match e with
@@ -81,13 +83,31 @@ Section ToLinear.
        end
      | BinOp o (Var y1) (Var y2) =>
        Lop match o with
-       | BinOpAdd => Op.Oadd
-       | BinOpSub => Op.Osub
-       | BinOpMul => Op.Omul
-       | BinOpDiv => Op.Odiv
-       | BinOpEq  => (Op.Ocmp (Op.Ccomp Ceq))
-       | BinOpLt  => (Op.Ocmp (Op.Ccomp Clt))
-       end (toReg y1 :: toReg y2 :: nil) r::nil
+           | BinOpAdd => Op.Oadd
+           | BinOpSub => Op.Osub
+           | BinOpMul => Op.Omul
+           | BinOpDiv => Op.Odiv
+           | BinOpEq  => (Op.Ocmp (Op.Ccomp Ceq))
+           | BinOpLt  => (Op.Ocmp (Op.Ccomp Clt))
+           end (toReg y1 :: toReg y2 :: nil) r::nil
+     | BinOp o (Var y1) (Con y2) =>
+       Lop match o with
+           | BinOpAdd => Op.Oaddimm y2
+           | BinOpSub => Op.Oaddimm (Int.neg y2)
+           | BinOpMul => Op.Omulimm y2
+           | BinOpDiv => Op.Odiv
+           | BinOpEq  => (Op.Ocmp (Op.Ccompimm Ceq y2))
+           | BinOpLt  => (Op.Ocmp (Op.Ccompimm Clt y2))
+           end (toReg y1 :: nil) r::nil
+     | BinOp o (Con y2) (Var y1)  =>
+       Lop match o with
+           | BinOpAdd => Op.Oaddimm y2
+           | BinOpSub => Op.Osubimm y2
+           | BinOpMul => Op.Omulimm y2
+           | BinOpDiv => Op.Odiv
+           | BinOpEq  => (Op.Ocmp (Op.Ccompimm Ceq y2))
+           | BinOpLt  => (Op.Ocmp (Op.Ccompimm Cgt y2))
+           end (toReg y1 :: nil) r::nil
      | Var y =>
        match isReg x, isReg y with
        | true, true => Lop Op.Omove (toReg y :: nil) r::nil
@@ -208,6 +228,30 @@ Section ToLinear.
           cases in H1; eauto.
           pose proof (Int.eq_spec x2 Int.mone).
           cases in H1; eauto. eauto. eauto.
+      + unfold Locmap.get in *.
+        exploit REGBOUND as RB1. cset_tac.
+        cases;
+        simpl;
+          (eapply SmallStepRelations.star2_plus2;
+           [ try single_step; simpl in *
+           | try eapply star2_refl ]);
+          rewrite EQ; eauto.
+        * rewrite Int.sub_add_opp. simpl. reflexivity.
+        * simpl; cases; eauto.
+        * simpl. cases; eauto.
+      + unfold Locmap.get in *.
+        exploit REGBOUND as RB1. cset_tac.
+         cases;
+        simpl;
+          (eapply SmallStepRelations.star2_plus2;
+           [ try single_step; simpl in *
+           | try eapply star2_refl ]);
+          rewrite EQ; eauto; simpl.
+        * rewrite Int.add_commut. reflexivity.
+        * rewrite Int.mul_commut. reflexivity.
+        * rewrite Int.eq_sym.
+          cases; eauto.
+        * cases; eauto.
     - repeat cases.
       + isabsurd.
       + eapply SmallStepRelations.star2_plus2.
@@ -302,11 +346,30 @@ Section ToLinear.
     - pno_step_left.
   Qed.
 
+
+
+
   Definition toLinearCond (l:label) (e:op) : instruction :=
     match e with
     | Var y => Lcond (Op.Ccompimm Ceq Int.zero) (toReg y :: nil) l
-    | BinOp BinOpLt (Var y1) (Var y2) => Lcond (Op.Ccomp Cle) (toReg y2 :: toReg y1 :: nil) l
-    | BinOp BinOpEq (Var y1) (Var y2) => Lcond (Op.Ccomp Cne) (toReg y1 :: toReg y2 :: nil) l
+    | BinOp bop (Var y1) (Var y2) =>
+      Lcond match bop with
+            | BinOpLt => Op.Ccomp Cle
+            | BinOpEq => Op.Ccomp Cne
+            | _ => Op.Ccomp Ceq
+            end (toReg y2 :: toReg y1 :: nil) l
+    | BinOp bop (Var y1) (Con y2) =>
+      Lcond match bop with
+            | BinOpLt => Op.Ccompimm Cge y2
+            | BinOpEq => Op.Ccompimm Cne y2
+            | _ => Op.Ccomp Ceq
+            end (toReg y1 :: nil) l
+    | BinOp bop (Con y1) (Var y2) =>
+      Lcond match bop with
+            | BinOpLt => Op.Ccompimm Cle y1
+            | BinOpEq => Op.Ccompimm Cne y1
+            | _ => Op.Ccomp Ceq
+            end (toReg y2 :: nil) l
     | _ => dummyinstr
     end.
 
@@ -315,7 +378,14 @@ Section ToLinear.
     : simplCond (Var x)
   | SimplCondLt x y (RG1:isReg x) (RG2:isReg y) op
                 (OP:op = BinOpLt \/ op = BinOpEq)
-    : simplCond (BinOp op (Var x) (Var y)).
+    : simplCond (BinOp op (Var x) (Var y))
+  | SimplCondLt1 x y (RG1:isReg x) op
+                (OP:op = BinOpLt \/ op = BinOpEq)
+    : simplCond (BinOp op (Var x) (Con y))
+  | SimplCondLt2 x y (RG2:isReg y) op
+                (OP:op = BinOpLt \/ op = BinOpEq)
+    : simplCond (BinOp op (Con x) (Var y)).
+
 
   Lemma toLinearCond_step G V v l e bv vv rs m c
         (EV:op_eval V e = Some v)
@@ -360,11 +430,66 @@ Section ToLinear.
           cases in LMEQ1. unfold Locmap.get in LMEQ1.
           cases in LMEQ2. unfold Locmap.get in LMEQ2.
           rewrite LMEQ1, LMEQ2. simpl.
+          rewrite Int.eq_sym.
           unfold val2bool in TRUE. cases in TRUE.
-          revert NOTCOND. unfold Int.eq. cases; eauto.
+          revert NOTCOND.
+          case_eq (Int.eq x0 x1); simpl; eauto.
           -- intros.
-             exfalso. eapply NOTCOND. unfold bool2val.
-             reflexivity.
+             exfalso. eapply NOTCOND. reflexivity.
+    - exploit REGBOUND; eauto. cset_tac.
+      exploit (REGBOUND x); eauto. cset_tac.
+      monad_inv EV.
+      econstructor 1; eauto.
+      econstructor.
+      destruct OP; subst.
+      + eapply exec_Lcond_false; only 2: reflexivity.
+        * simpl. simpl in *.
+          exploit MR as LMEQ1; eauto.
+          exploit MR as LMEQ2; try eapply EQ; eauto.
+          cases in LMEQ1. unfold Locmap.get in LMEQ1.
+          rewrite LMEQ1. simpl.
+          unfold val2bool in TRUE. cases in TRUE.
+          revert NOTCOND.
+          case_eq (Int.lt x0 y); intros; eauto.
+          exfalso. eapply NOTCOND. unfold bool2val.
+          reflexivity.
+      + eapply exec_Lcond_false; only 2: reflexivity.
+        * simpl. simpl in *.
+          exploit MR as LMEQ1; eauto.
+          cases in LMEQ1. unfold Locmap.get in LMEQ1.
+          rewrite LMEQ1. simpl.
+          rewrite Int.eq_sym.
+          unfold val2bool in TRUE. cases in TRUE.
+          revert NOTCOND. rewrite Int.eq_sym.
+          case_eq (Int.eq y x0); simpl; eauto.
+          -- intros.
+             exfalso. eapply NOTCOND. reflexivity.
+    - exploit REGBOUND; eauto. cset_tac.
+      monad_inv EV.
+      econstructor 1; eauto.
+      econstructor.
+      destruct OP; subst.
+      + eapply exec_Lcond_false; only 2: reflexivity.
+        * simpl. simpl in *.
+          exploit MR as LMEQ1; eauto.
+          cases in LMEQ1. unfold Locmap.get in LMEQ1.
+          rewrite LMEQ1. simpl.
+          unfold val2bool in TRUE. cases in TRUE.
+          revert NOTCOND.
+          case_eq (Int.lt x x0); intros; eauto.
+          exfalso. eapply NOTCOND. unfold bool2val.
+          reflexivity.
+      + eapply exec_Lcond_false; only 2: reflexivity.
+        * simpl. simpl in *.
+          exploit MR as LMEQ1; eauto.
+          cases in LMEQ1. unfold Locmap.get in LMEQ1.
+          rewrite LMEQ1. simpl.
+          rewrite Int.eq_sym.
+          unfold val2bool in TRUE. cases in TRUE.
+          revert NOTCOND. rewrite Int.eq_sym.
+          case_eq (Int.eq x0 x); simpl; eauto.
+          -- intros.
+             exfalso. eapply NOTCOND. reflexivity.
   Qed.
 
     Lemma toLinearCond_step_false G V v l e bv vv rs m c c'
@@ -406,8 +531,49 @@ Section ToLinear.
         * simpl. simpl in *.
           rewrite LMEQ1, LMEQ2. simpl.
           unfold val2bool in TRUE. cases in TRUE; eauto; isabsurd.
-          revert H2. unfold Int.eq. cases; eauto. intros.
+          revert H2. rewrite Int.eq_sym. unfold Int.eq. cases; eauto. intros.
           rewrite H2 in *.
+          inv H1.
+    - exploit REGBOUND; eauto. cset_tac.
+      monad_inv EV.
+      exploit MR as LMEQ1; eauto.
+      cases in LMEQ1. unfold Locmap.get in LMEQ1.
+      econstructor 1; eauto.
+      destruct OP; subst.
+      + econstructor. eapply exec_Lcond_true; only 2: reflexivity; eauto.
+        * simpl. simpl in *.
+          rewrite LMEQ1. simpl.
+          unfold val2bool in TRUE. cases in TRUE; eauto; isabsurd.
+          revert H1.
+          case_eq (Int.lt x0 y); intros; eauto.
+          inv H1.
+      + econstructor. eapply exec_Lcond_true; only 2: reflexivity; eauto.
+        * simpl. simpl in *.
+          rewrite LMEQ1. simpl.
+          unfold val2bool in TRUE. cases in TRUE; eauto; isabsurd.
+          revert H1.
+          case_eq (Int.eq x0 y); intros; eauto.
+          inv H1.
+    - exploit REGBOUND; eauto. cset_tac.
+      monad_inv EV.
+      exploit MR as LMEQ1; eauto.
+      cases in LMEQ1. unfold Locmap.get in LMEQ1.
+      econstructor 1; eauto.
+      destruct OP; subst.
+      + econstructor. eapply exec_Lcond_true; only 2: reflexivity; eauto.
+        * simpl. simpl in *.
+          rewrite LMEQ1. simpl.
+          unfold val2bool in TRUE. cases in TRUE; eauto; isabsurd.
+          revert H1.
+          case_eq (Int.lt x x0); intros; eauto.
+          inv H1.
+      + econstructor. eapply exec_Lcond_true; only 2: reflexivity; eauto.
+        * simpl. simpl in *.
+          rewrite LMEQ1. simpl.
+          unfold val2bool in TRUE. cases in TRUE; eauto; isabsurd.
+          revert H1.
+          rewrite Int.eq_sym.
+          case_eq (Int.eq x0 x); intros; eauto.
           inv H1.
   Qed.
 
@@ -451,7 +617,9 @@ Section ToLinear.
       let l' := nth (counted f) Λ xH in
       (Lgoto l' :: nil, l)
     | stmtReturn e =>
-      (translateLetOp ret_reg_name e ++ Lreturn::nil, l)
+      if [ e = (Var ret_reg_name)] then
+        (Lreturn::nil, l)
+      else (translateLetOp ret_reg_name e ++ Lreturn::nil, l)
     | stmtFun F t =>
       let (l', ΛF) := mkVars F (Pos.succ l) in
       let Λ' := ΛF ++ Λ in
@@ -587,11 +755,7 @@ Proof.
     eapply all_labels_ge_app1; eauto.
     + hnf; intros; inv_get.
       destruct e; simpl in *; isabsurd.
-      destruct b; simpl in *; isabsurd.
-      destruct e1; simpl in *; isabsurd.
-      destruct e2; simpl in *; isabsurd.
-      destruct e1; simpl in *; isabsurd.
-      destruct e2; simpl in *; isabsurd.
+      revert H; repeat cases; eauto; isabsurd.
     + eapply all_labels_ge_app1; eauto.
       * eapply all_labels_ge_le.
         eapply (IH s1); eauto.
@@ -603,6 +767,7 @@ Proof.
            eapply (IH s2); eauto.
            rewrite <- toLinear_le.
            eapply Ple_succ.
+  - hnf; intros; inv_get.
   - hnf; intros; inv_get.
   - eapply all_labels_ge_app1; eauto using all_labels_ge_translateOp.
     hnf; intros; inv_get.
@@ -662,11 +827,7 @@ Proof.
     eapply all_labels_smaller_app1; eauto.
     + hnf; intros; inv_get.
       destruct e; simpl in *; isabsurd.
-      destruct b; simpl in *; isabsurd.
-      destruct e1; simpl in *; isabsurd.
-      destruct e2; simpl in *; isabsurd.
-      destruct e1; simpl in *; isabsurd.
-      destruct e2; simpl in *; isabsurd.
+      revert H; repeat cases; isabsurd.
     + eapply all_labels_smaller_app1; eauto.
       * eapply all_labels_smaller_le.
         eapply IH; eauto.
@@ -676,6 +837,7 @@ Proof.
         hnf; intros; inv_get.
         eapply Pos.lt_le_trans. eapply Plt_succ.
         rewrite <- !toLinear_le. reflexivity.
+  - hnf; intros; inv_get.
   - hnf; intros; inv_get.
   - eapply all_labels_smaller_app1;
       eauto using all_labels_smaller_translateOp.
@@ -935,25 +1097,35 @@ Proof.
          ++ reflexivity.
          ++ eauto.
   - case_eq (op_eval V e); intros.
-    + pfold.
-      dcr. subst.
-      eapply SimTerm; swap 1 3.
-      * eapply star2_trans_silent.
-        -- eapply plus2_star2.
-           rewrite <- app_assoc.
-           eapply translateLet_step; eauto.
-           econstructor; eauto.
-        -- simpl. eapply star2_silent.
-           econstructor.
-           econstructor. eauto. eapply star2_refl.
-      * eapply star2_refl.
-      * simpl.
-        unfold Locmap.get. simpl.
-        simpl. unfold Locmap.set.
-        destruct (Loc.eq (R R3) (R R3)); eauto.
-        isabsurd.
-      * stuck2.
-      * stuck2.
+    + dcr. subst.
+      cases.
+      * { pone_step_right.
+          pno_step. simpl in *.
+          unfold Locmap.get. simpl.
+          simpl. unfold Locmap.set.
+          exploit MR; eauto. cases in H1.
+          simpl in H1. unfold Locmap.get in H1.
+          rewrite H1. eauto.
+        }
+      * { pfold.
+          eapply SimTerm; swap 1 3.
+          * eapply star2_trans_silent.
+            -- eapply plus2_star2.
+               simpl. rewrite <- app_assoc.
+               eapply translateLet_step; eauto.
+               econstructor; eauto.
+            -- simpl. eapply star2_silent.
+               econstructor.
+               econstructor. eauto. eapply star2_refl.
+          * eapply star2_refl.
+          * simpl.
+            unfold Locmap.get. simpl.
+            simpl. unfold Locmap.set.
+            destruct (Loc.eq (R R3) (R R3)); eauto.
+            isabsurd.
+          * stuck2.
+          * stuck2.
+        }
     + pfold. eapply SimErr; try eapply star2_refl; eauto.
       stuck2.
   - revert CODE; repeat let_pair_case_eq; subst; simpl; intros.

@@ -142,7 +142,7 @@ Make: ;
 extraction: compiler/STAMP
 	+$(MAKE) -C compiler all
 
-compiler/STAMP: theories/Compiler.vo compiler/extraction.v
+compiler/STAMP: theories/Compiler.vo compiler/extraction.v theories/Lowering/ToLinear.v theories/Lowering/LinearToAsm.v
 	mkdir -p compiler/extraction
 	rm -f compiler/extraction/*
 	coqtop $(shell cat Make) -batch -load-vernac-source compiler/extraction.v
