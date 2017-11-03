@@ -38,3 +38,5 @@ theories/Test*.v
 loc.tex
 Makefile.coq.conf
 .VSOURCES
+*.cmt
+*.cmti
