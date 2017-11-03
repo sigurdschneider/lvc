@@ -64,10 +64,10 @@ let main () =
     open_out name in
   let dump suffix prg = let oc = dump_oc suffix in print_stmt oc true !ids 0 prg; Printf.fprintf oc "\n"; close_out oc in
   let dumpn suffix prg = let oc = dump_oc suffix in print_nstmt oc true !ids 0 prg; Printf.fprintf oc "\n"; close_out oc in
+        let file_chan = open_in !infile in
+  let lexbuf = Lexing.from_channel  file_chan in
     try
       (* Printf.printf "Compiling"; *)
-      let file_chan = open_in !infile in
-      let lexbuf = Lexing.from_channel  file_chan in
       let ilin = Parser.program Lexer.token lexbuf in
       let readout = (dump_oc "read") in
       let _ =  print_nstmt readout false !ids 0 ilin in
@@ -138,6 +138,18 @@ let main () =
     with Parsing.Parse_error -> Printf.eprintf "A parsing error occured \n"
       | Sys_error s-> Printf.eprintf "%s\n" s
       | Compiler_error e -> Printf.eprintf "\nCompilation failed:\n%s\n" e
-      | Range_error e -> Printf.eprintf "The integer %s is not in range\n" e;;
+      | Range_error e -> Printf.eprintf "The integer %s is not in range\n" e
+      (*| Lexer.Error msg ->
+	 Printf.fprintf stderr "%s%!" msg*)
+      | Parser.Error ->
+ 	 let pos = lexbuf.Lexing.lex_curr_p in
+	 let tok = Lexing.lexeme lexbuf in
+	 let open Lexing in
+	 let line = pos.pos_lnum in
+	 let col = pos.pos_cnum - pos.pos_bol in
+	 Printf.fprintf stderr "At line %d:%d: syntax error: %s\n%!"
+			line col tok
+;;
+
 
 main ();

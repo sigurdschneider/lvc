@@ -36,6 +36,7 @@ Qed.
 
 Inductive unop : Type :=
 | UnOpToBool
+| UnOpNot
 | UnOpNeg.
 
 Instance inst_eq_dec_unop : EqDec unop eq.
@@ -289,7 +290,8 @@ Qed.
 Definition unop_eval (o:unop) :=
   match o with
   | UnOpToBool => option_lift1 (fun a => bool2val(val2bool a))
-  | UnOpNeg => option_lift1 Int.notbool
+  | UnOpNot => option_lift1 Int.notbool
+  | UnOpNeg => option_lift1 Int.neg
   end
 .
 Lemma unop_eval_total op x

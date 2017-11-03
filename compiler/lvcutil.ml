@@ -18,7 +18,8 @@ let rec first f x =
   if f x then x else first f (x + 1)
 
 let print_var' oc has_slots ids (v:int) =
-  let is_slot = v mod 2 == 1 && has_slots in
+  let is_slot = v mod 2 == 0 && has_slots in
+  let v = if has_slots then v / 2 else v in
   try
     let c = (IntMap.find v ids) in
     output_string oc (if is_slot then String.uppercase_ascii c else c)
@@ -42,7 +43,8 @@ let rec print_binop oc op =
 let rec print_unop oc op =
   match op with
     | UnOpToBool -> output_string oc "?"
-    | UnOpNeg -> output_string oc "!"
+    | UnOpNot -> output_string oc "!"
+    | UnOpNeg -> output_string oc "-"
 
 
 let rec print_sexpr oc has_slots ids e =
@@ -122,8 +124,7 @@ let rec print_nstmt oc has_slots ids indent s =
        print_indent oc indent;
        print_string "else\n";
        print_indent oc (indent+2);
-       print_nstmt (indent+2) t;
-       print_string "\n"
+       print_nstmt (indent+2) t
     | ILN.Coq_nstmtFun (sl, t) ->
        print_string "fun ";
        print_list2 (print_body oc has_slots ids indent) sl

@@ -7,4 +7,5 @@
 <CompCert/cparser> : include
 <CompCert/common> : include
 <CompCert/cfrontend> : include
-<*> : use_str, use_unix
+<*> : use_str, use_unix, use_menhir
+true: annot, bin_annot

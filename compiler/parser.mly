@@ -18,10 +18,13 @@
 %token IL_rparen
 %token IL_plus
 %token IL_minus
+%token IL_not
 %token IL_div
 %token IL_star
 %token IL_less_than
 %token IL_greater_than
+%token IL_less_eq
+%token IL_greater_eq
 %token IL_equal
 %token IL_semicolon
 %token IL_if
@@ -51,12 +54,13 @@ integer_constant:
 primary_expression:
   | IL_ident { Ops.Var (parse_var $1)}
   | integer_constant {$1}
-
   | IL_lparen expression IL_rparen { $2 }
 
 multiplicative_expression:
   | multiplicative_expression IL_star primary_expression { Ops.BinOp (Val.BinOpMul, $1, $3) }
   | multiplicative_expression IL_div primary_expression { Ops.BinOp (Val.BinOpDiv, $1, $3) }
+  | IL_minus primary_expression { Ops.UnOp (Val.UnOpNeg, $2) }
+  | IL_not primary_expression { Ops.UnOp (Val.UnOpNot, $2) }
   | primary_expression { $1 }
 
 additive_expression:
@@ -67,6 +71,7 @@ additive_expression:
 expression:
   | expression IL_less_than additive_expression { Ops.BinOp (Val.BinOpLt,$1,$3)}
   | expression IL_greater_than additive_expression { Ops.BinOp (Val.BinOpLt,$3,$1)}
+  | expression IL_equal additive_expression { Ops.BinOp (Val.BinOpEq,$3,$1)}
   | additive_expression { $1 }
 
 ext_expression:

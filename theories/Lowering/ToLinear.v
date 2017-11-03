@@ -53,6 +53,7 @@ Section ToLinear.
   Inductive simplOp : op -> Prop :=
   | SCon v : simplOp (Con v)
   | SVar x : simplOp (Var x)
+  | SNot x (RGa:isReg x) :  simplOp (UnOp UnOpNot (Var x))
   | SNeg x (RGa:isReg x) :  simplOp (UnOp UnOpNeg (Var x))
   | SBinOp bop x y (RGa:isReg x) (RGb:isReg y) : simplOp (BinOp bop (Var x) (Var y))
   .
@@ -75,7 +76,8 @@ Section ToLinear.
      | UnOp o (Var y) =>
        match o with
        | UnOpToBool => nil
-       | UnOpNeg => Lop (Op.Ocmp (Op.Ccompimm Ceq Int.zero)) (toReg y ::  nil) r::nil
+       | UnOpNot => Lop (Op.Ocmp (Op.Ccompimm Ceq Int.zero)) (toReg y ::  nil) r::nil
+       | UnOpNeg => Lop (Op.Osubimm val_zero) (toReg y ::  nil) r::nil
        end
      | BinOp o (Var y1) (Var y2) =>
        Lop match o with
@@ -177,6 +179,12 @@ Section ToLinear.
           | eapply star2_refl ].
         unfold Locmap.get in EQ. rewrite EQ. simpl.
         unfold Int.notbool. cases; simpl; reflexivity.
+        hnf in REGBOUND; cset_tac.
+      + eapply SmallStepRelations.star2_plus2;
+          [ try single_step; simpl in *
+          | eapply star2_refl ].
+        unfold Locmap.get in EQ. rewrite EQ. simpl.
+        reflexivity.
         hnf in REGBOUND; cset_tac.
       + unfold Locmap.get in *.
         exploit REGBOUND as RB1. cset_tac.

@@ -29,7 +29,7 @@ Extraction Blacklist List String Int.
 
 Extraction Inline NaturalRep.succ NaturalRep.max InfinitePartition.stable_fresh_part InfinitePartition.least_fresh_part InfinitePartition.least_fresh_P NaturalRep.ofNat NaturalRep.asNat.
 
-Extraction Inline InfinitePartition.inf_subset_P.
+Extraction Inline InfiniteSubset.inf_subset_P.
 
 Extraction Inline NaturalRep.NaturalRepresentationPositive
            NaturalRep.NaturalRepresentationSuccPositive.

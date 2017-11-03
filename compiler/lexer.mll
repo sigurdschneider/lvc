@@ -20,10 +20,13 @@
     | ")" { IL_rparen }
     | "+" { IL_plus }
     | "-" { IL_minus }
+    | "!" { IL_not }
     | "/" { IL_div }
     | "*" { IL_star }
     | "<" { IL_less_than }
     | ">" { IL_greater_than }
+    | "<=" { IL_less_eq }
+    | ">=" { IL_greater_eq }
     | "=" { IL_equal }
     | "," { IL_comma }
     | identifier {
@@ -43,5 +46,5 @@
 		 with Not_found -> IL_ident (register_name s)
       }
     | whitespace { token lexbuf }
-    | newline { token lexbuf}
+    | newline { Lexing.new_line lexbuf; token lexbuf}
     | eof { IL_eof }
