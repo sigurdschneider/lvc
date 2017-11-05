@@ -1,6 +1,6 @@
 # r3,R3,r4,Y,z,Z,w,W ;
 fun f () =
- if r3 > 0 then
+ if 0 < r3 then
   let r3 = r3 - 1 in
   let r4 = r4 + r4 in
   f (r3, r4, Z, W)

@@ -26,7 +26,10 @@ Inductive binop : Type :=
 | BinOpMul
 | BinOpDiv
 | BinOpEq
-| BinOpLt.
+| BinOpLt
+| BinOpLe
+| BinOpGt
+| BinOpGe.
 
 Instance inst_eq_dec_binop : EqDec binop eq.
 Proof.
@@ -261,6 +264,9 @@ Definition binop_eval (o:binop) :=
                      then None else (Some (Int.divs x y))
       | BinOpEq => option_lift2 (fun x y => bool2val(Int.eq x y))
       | BinOpLt => option_lift2 (fun x y => bool2val(Int.lt x y))
+      | BinOpLe => option_lift2 (fun x y => bool2val(negb (Int.lt y x)))
+      | BinOpGt => option_lift2 (fun x y => bool2val(Int.lt y x))
+      | BinOpGe => option_lift2 (fun x y => bool2val(negb (Int.lt x y)))
     end.
 
 Lemma binop_eval_div_zero x y

@@ -89,6 +89,9 @@ Section ToLinear.
            | BinOpDiv => Op.Odiv
            | BinOpEq  => (Op.Ocmp (Op.Ccomp Ceq))
            | BinOpLt  => (Op.Ocmp (Op.Ccomp Clt))
+           | BinOpLe  => (Op.Ocmp (Op.Ccomp Cle))
+           | BinOpGt  => (Op.Ocmp (Op.Ccomp Cgt))
+           | BinOpGe  => (Op.Ocmp (Op.Ccomp Cge))
            end (toReg y1 :: toReg y2 :: nil) r::nil
      | BinOp o (Var y1) (Con y2) =>
        Lop match o with
@@ -98,6 +101,9 @@ Section ToLinear.
            | BinOpDiv => Op.Odiv
            | BinOpEq  => (Op.Ocmp (Op.Ccompimm Ceq y2))
            | BinOpLt  => (Op.Ocmp (Op.Ccompimm Clt y2))
+           | BinOpLe  => (Op.Ocmp (Op.Ccompimm Cle y2))
+           | BinOpGt  => (Op.Ocmp (Op.Ccompimm Cgt y2))
+           | BinOpGe  => (Op.Ocmp (Op.Ccompimm Cge y2))
            end (toReg y1 :: nil) r::nil
      | BinOp o (Con y2) (Var y1)  =>
        Lop match o with
@@ -107,6 +113,9 @@ Section ToLinear.
            | BinOpDiv => Op.Odiv
            | BinOpEq  => (Op.Ocmp (Op.Ccompimm Ceq y2))
            | BinOpLt  => (Op.Ocmp (Op.Ccompimm Cgt y2))
+           | BinOpLe  => (Op.Ocmp (Op.Ccompimm Cge y2))
+           | BinOpGt  => (Op.Ocmp (Op.Ccompimm Clt y2))
+           | BinOpGe  => (Op.Ocmp (Op.Ccompimm Cle y2))
            end (toReg y1 :: nil) r::nil
      | Var y =>
        match isReg x, isReg y with
@@ -213,7 +222,8 @@ Section ToLinear.
           (eapply SmallStepRelations.star2_plus2;
            [ try single_step; simpl in *
            | eapply star2_refl ]);
-          try now (try rewrite EQ; try rewrite EQ1; simpl; eauto;
+          only 1-3,5,6:
+           try now (try rewrite EQ; try rewrite EQ1; simpl; eauto;
                    repeat cases; try reflexivity; intros; clear_trivial_eqs).
         * revert EQ2. cases; intros; clear_trivial_eqs.
           rewrite EQ, EQ1. simpl. cases; eauto.
@@ -228,6 +238,12 @@ Section ToLinear.
           cases in H1; eauto.
           pose proof (Int.eq_spec x2 Int.mone).
           cases in H1; eauto. eauto. eauto.
+        * rewrite EQ, EQ1; eauto; simpl;
+          case_eq (Int.lt x2 x1); simpl in *; intros; try reflexivity.
+        * rewrite EQ, EQ1; eauto; simpl.
+          case_eq (Int.lt x2 x1); simpl in *; intros; try reflexivity.
+        * rewrite EQ, EQ1; eauto; simpl.
+          case_eq (Int.lt x1 x2); simpl in *; intros; try reflexivity.
       + unfold Locmap.get in *.
         exploit REGBOUND as RB1. cset_tac.
         cases;
@@ -238,6 +254,9 @@ Section ToLinear.
           rewrite EQ; eauto.
         * rewrite Int.sub_add_opp. simpl. reflexivity.
         * simpl; cases; eauto.
+        * simpl. cases; eauto.
+        * simpl. cases; eauto.
+        * simpl. cases; eauto.
         * simpl. cases; eauto.
       + unfold Locmap.get in *.
         exploit REGBOUND as RB1. cset_tac.
@@ -251,6 +270,9 @@ Section ToLinear.
         * rewrite Int.mul_commut. reflexivity.
         * rewrite Int.eq_sym.
           cases; eauto.
+        * cases; eauto.
+        * cases; eauto.
+        * cases; eauto.
         * cases; eauto.
     - repeat cases.
       + isabsurd.

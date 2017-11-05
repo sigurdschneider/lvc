@@ -19,16 +19,9 @@
 %token <string> IL_varcode
 %token IL_lparen
 %token IL_rparen
-%token IL_plus
-%token IL_minus
+%token IL_plus IL_minus IL_star IL_div
+%token IL_less_than IL_greater_than IL_less_eq IL_greater_eq IL_equal
 %token IL_not
-%token IL_div
-%token IL_star
-%token IL_less_than
-%token IL_greater_than
-%token IL_less_eq
-%token IL_greater_eq
-%token IL_equal
 %token IL_semicolon
 %token IL_if
 %token IL_then
@@ -43,45 +36,46 @@
 %token IL_eof
 %token IL_hash
 
+%nonassoc IL_not
+%nonassoc IL_less_than IL_greater_than IL_less_eq IL_greater_eq IL_equal
+%left IL_plus IL_minus
+%left IL_star IL_div
+%nonassoc UMINUS
+%nonassoc NEGCONST
+
 %type <ILN.nstmt> expr
 %type <ILN.nstmt> program
+
+
 %start program
 
 %%
-
-
 
 varname:
   | IL_ident { parse_var $1 }
   | IL_varcode { parse_varcode $1 }
 
 /* Integer literals, can be integer_literal or - integer_literal */
-integer_constant:
-  | IL_integer_constant { Ops.Con (Z.of_sint (int_of_string $1)) }
-  | IL_minus IL_integer_constant { Ops.Con (Z.of_sint (parse_neg_integer $2)) }
 
-primary_expression:
-  | varname { Ops.Var ($1) }
-  | integer_constant {$1}
-  | IL_lparen expression IL_rparen { $2 }
-
-multiplicative_expression:
-  | multiplicative_expression IL_star primary_expression { Ops.BinOp (Val.BinOpMul, $1, $3) }
-  | multiplicative_expression IL_div primary_expression { Ops.BinOp (Val.BinOpDiv, $1, $3) }
-  | IL_minus primary_expression { Ops.UnOp (Val.UnOpNeg, $2) }
-  | IL_not primary_expression { Ops.UnOp (Val.UnOpNot, $2) }
-  | primary_expression { $1 }
-
-additive_expression:
-  | additive_expression IL_plus multiplicative_expression { Ops.BinOp (Val.BinOpAdd,$1, $3) }
-  | additive_expression IL_minus multiplicative_expression { Ops.BinOp (Val.BinOpSub,$1,$3) }
-  | multiplicative_expression { $1 }
+%inline binop:
+  | IL_less_than        {Val.BinOpLt}
+  | IL_greater_than     {Val.BinOpGt}
+  | IL_less_eq          {Val.BinOpLe}
+  | IL_greater_eq       {Val.BinOpGe}
+  | IL_equal            {Val.BinOpEq}
+  | IL_plus             {Val.BinOpAdd}
+  | IL_minus            {Val.BinOpSub}
+  | IL_star             {Val.BinOpMul}
+  | IL_div              {Val.BinOpDiv}
 
 expression:
-  | expression IL_less_than additive_expression { Ops.BinOp (Val.BinOpLt,$1,$3)}
-  | expression IL_greater_than additive_expression { Ops.BinOp (Val.BinOpLt,$3,$1)}
-  | expression IL_equal additive_expression { Ops.BinOp (Val.BinOpEq,$3,$1)}
-  | additive_expression { $1 }
+  | IL_not expression { Ops.UnOp (Val.UnOpNot, $2) }
+  | expression binop expression { Ops.BinOp ($2,$1,$3)}
+  | IL_minus expression %prec UMINUS { Ops.UnOp (Val.UnOpNeg, $2) }
+  | IL_lparen expression IL_rparen { $2 }
+  | varname { Ops.Var ($1) }
+  | IL_integer_constant { Ops.Con (Z.of_sint (int_of_string $1)) }
+  | IL_minus IL_integer_constant { Ops.Con (Z.of_sint (parse_neg_integer $2)) } %prec NEGCONST
 
 ext_expression:
   | IL_extern IL_ident option_arglist { Exp.Call (Nat.of_int $2, $3) }

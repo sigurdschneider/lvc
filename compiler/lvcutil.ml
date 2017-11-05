@@ -36,8 +36,12 @@ let rec print_binop oc op =
     | BinOpSub -> output_string oc "-"
     | BinOpMul -> output_string oc "*"
     | BinOpDiv -> output_string oc "/"
-    | BinOpEq -> output_string oc "=="
+    | BinOpEq -> output_string oc "="
     | BinOpLt -> output_string oc "<"
+    | BinOpLe -> output_string oc "<="
+    | BinOpGt -> output_string oc ">"
+    | BinOpGe -> output_string oc ">="
+
 
 let rec print_unop oc op =
   match op with
