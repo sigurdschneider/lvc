@@ -1,5 +1,5 @@
 Require Import List Omega ZArith.Int.
-Require Import Util EqDec.
+Require Import Util EqDec DecSolve.
 Require Import OrderedTypeEx.
 
 Set Implicit Arguments.
@@ -161,3 +161,28 @@ Hint Extern 20 (@Proper
                (@respectful _ _
                             (@_eq _ (@SOT_as_OT _ (@eq nat) nat_OrderedType))
                             (@_eq _ (@SOT_as_OT _ (@eq nat) nat_OrderedType))) ?ϱ) => eapply proper_var.
+
+Instance comparison_dec (x y: comparison) : Computable (x = y).
+Proof.
+  destruct x,y; dec_solve.
+Qed.
+
+Instance pos_lt_computable x y : Computable ((x < y)%positive).
+Proof.
+  unfold Pos.lt. eauto with typeclass_instances.
+Qed.
+
+Instance pos_le_computable x y : Computable ((x <= y)%positive).
+Proof.
+  unfold Pos.le. eauto with typeclass_instances.
+Qed.
+
+Instance pos_ge_computable x y : Computable ((x >= y)%positive).
+Proof.
+    unfold Pos.le. eauto with typeclass_instances.
+Qed.
+
+Instance pos_gt_computable x y : Computable ((x > y)%positive).
+Proof.
+    unfold Pos.le. eauto with typeclass_instances.
+Qed.

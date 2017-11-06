@@ -100,6 +100,7 @@ theories/Equiv/NPSimEquiv.v
 theories/Equiv/SimCompanionTactics.v
 theories/Equiv/SimCompanion.v
 theories/Equiv/SimF.v
+theories/Equiv/SimIBot.v
 theories/Equiv/SimI.v
 theories/Equiv/SimLockStep.v
 theories/Equiv/SimTactics.v
@@ -211,6 +212,7 @@ theories/Liveness/LivenessValidators.v
 theories/Liveness/ReconstrLive.v
 theories/Liveness/TrueLiveness.v
 theories/Lowering/EAE.v
+theories/Lowering/IsLinearizable.v
 theories/Lowering/LabelRelations.v
 theories/Lowering/LinearStateType.v
 theories/Lowering/LinearToAsm.v

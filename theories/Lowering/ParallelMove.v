@@ -368,15 +368,6 @@ Hint Resolve onlyVars_length : len.
 
 Definition repl (Z:params) x y := (fun z => if [x === z] then y else z) ⊝ Z.
 
-Instance pos_lt_computable x y : Computable ((x <= y)%positive).
-Proof.
-  hnf; intros. unfold Pos.le.
-  destruct (x ?= y)%positive.
-  - left; discriminate.
-  - left; discriminate.
-  - right; eauto.
-Qed.
-
 Fixpoint parmove_elim_mem2mem (p:inf_partition var) (r:var) (pm:〔var * var〕) :=
   match pm with
   | (x,y)::pm => if [part_2 p x /\ part_2 p y] then (x,r)::(r,y)::parmove_elim_mem2mem p r pm

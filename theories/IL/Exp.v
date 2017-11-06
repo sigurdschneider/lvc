@@ -56,7 +56,7 @@ Proof.
   - f_equal; eauto using rename_op_ext.
   - f_equal; eauto.
     abstract (eapply map_ext; eauto using rename_op_ext) using rename_op_list_ext.
-Qed exporting.
+Defined.
 
 Lemma rename_exp_agree ϱ ϱ' e
   : agree_on eq (freeVars e) ϱ ϱ'
@@ -69,7 +69,7 @@ Proof.
     eapply rename_op_agree;
     eapply agree_on_incl; eauto; eapply incl_list_union; eauto using map_get_1) using
         rename_op_list_agree.
-Qed exporting.
+Defined.
 
 Lemma rename_exp_freeVars
   : forall e ϱ `{Proper _ (_eq ==> _eq) ϱ},
@@ -82,7 +82,7 @@ Proof.
       intros; inv_get; rewrite lookup_set_list_union; eauto using lookup_set_empty;
       eapply incl_list_union; eauto using map_get_1, rename_op_freeVars)
              using rename_op_list_freeVars.
-Qed exporting.
+Defined.
 
 (** ** Liveness *)
 
@@ -230,7 +230,7 @@ Proof.
         eapply incl_list_union; eauto using map_get_1
       |  eauto with cset ])
     using alpha_op_list_agree_on_morph.
-Qed exporting.
+Defined.
 
 Lemma exp_rename_renamedApart_all_alpha e e' ϱ ϱ'
   : alpha_exp ϱ ϱ' e e'

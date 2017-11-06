@@ -5,7 +5,7 @@ Require Import Compiler OrderedType Parmov Infra.Lattice Status CSetPartialOrder
 Require AnalysisBackward AnnotationLattice LivenessAnalysis NaturalRep InfinitePartition.
 (* Unset Extraction AccessOpaque. *)
 
-Require ToLinear LinearToAsm.
+Require ToLinear LinearToAsm IsLinearizable.
 Require compcert.driver.Compiler.
 Require compcert.lib.Floats.
 Require compcert.common.Values.
@@ -54,6 +54,7 @@ Separate Extraction
          parmove2
          LinearToAsm.transf_linear_program
          ToLinear.ILItoLinear
+         IsLinearizable.isLinearizableStmt
          compcert.driver.Compiler.apply_partial
          AST.signature_main
          (* For Camlcoq.ml *)

@@ -117,7 +117,7 @@ Proof.
   - assert (SZ:size s < size (stmtFun F s)) by eauto.
     decide (❬F❭=❬sa❭); [|dec_solve].
     edestruct (IH s SZ AE (List.map (fun Zs => (fst Zs, lookup_list AE (fst Zs))) F ++ ZL) r); [|dec_solve].
-    exploit (@indexwise_R2_dec _ _ (fun Zs r => cp_sound AE ((fun Zs0 : params * stmt => (fst Zs0,
+    exploit (@indexwise_R_dec _ _ (fun Zs r => cp_sound AE ((fun Zs0 : params * stmt => (fst Zs0,
         lookup_list AE (fst Zs0))) ⊝ F ++ ZL) (snd Zs) r) F); eauto.
     intros. eapply IH; eauto. destruct H; dec_solve.
 Defined.

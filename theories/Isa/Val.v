@@ -252,6 +252,11 @@ Proof.
   cases; eauto.
 Qed.
 
+Lemma val2bool_bool2val b
+  : val2bool (bool2val b) = b.
+Proof.
+  destruct b; simpl; reflexivity.
+Qed.
 
 Definition binop_eval (o:binop) :=
   match o with

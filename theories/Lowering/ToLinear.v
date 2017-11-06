@@ -4,18 +4,9 @@ Require Import IL NoParams Sawtooth SmallStepRelations.
 Require Import InfinitePartition.
 Require Import SimI VarP MkVars.
 Require Import Smallstep Globalenvs common.Events.
-Require Import LinearStateType LabelRelations.
+Require Import LinearStateType LabelRelations IsLinearizable.
 
 Set Implicit Arguments.
-
-Instance pos_lt_computable x y : Computable ((x < y)%positive).
-Proof.
-  hnf. unfold Pos.lt.
-  destruct ((x ?= y)%positive).
-  - right. congruence.
-  - left. reflexivity.
-  - right. congruence.
-Qed.
 
 Section ToLinear.
 
@@ -39,7 +30,6 @@ Section ToLinear.
     | _ => R31 (*dummy *)
     end.
 
-  Definition isReg x := Even.even_pos_fast x.
 
   Lemma toReg_inj x y
     : isReg x -> isReg y -> (x <= 20)%positive -> (y <= 20)%positive -> x <> y -> toReg x = toReg y ->
@@ -49,25 +39,6 @@ Section ToLinear.
       repeat cases; cbv; intros;
         try solve [try destruct b1; try destruct b; isabsurd].
   Qed.
-
-  Inductive simplOp : op -> Prop :=
-  | SCon v : simplOp (Con v)
-  | SVar x : simplOp (Var x)
-  | SNot x (RGa:isReg x) :  simplOp (UnOp UnOpNot (Var x))
-  | SNeg x (RGa:isReg x) :  simplOp (UnOp UnOpNeg (Var x))
-  | SBinOp bop x y (RGa:isReg x) (RGb:isReg y) : simplOp (BinOp bop (Var x) (Var y))
-  | SBinOpV1 bop x y (RGa:isReg x) (notDiv:bop <> BinOpDiv) : simplOp (BinOp bop (Var x) (Con y))
-  | SBinOpV2 bop x y (RGb:isReg y) (notDiv:bop <> BinOpDiv) : simplOp (BinOp bop (Con x) (Var y))
-  .
-
-  Definition simplExp e := match e with
-                              | Operation e' => simplOp e'
-                              | _ => False
-                              end.
-
-  Inductive simplLet x : op -> Prop :=
-  | SimpleOp e (RG:isReg x) (SO:simplOp e) : simplLet x e
-  | SimpleStore y (RG: isReg y) (MM:~isReg x) : simplLet x (Var y).
 
   Definition dummyinstr := Lop Op.Omove (R3::nil) R3.
 
@@ -404,35 +375,6 @@ Section ToLinear.
     | _ => dummyinstr
     end.
 
-  Definition isComparision (bop:binop) :=
-    match bop with
-    | BinOpLt => true
-    | BinOpEq => true
-    | BinOpGe => true
-    | BinOpGt => true
-    | _ => false
-    end.
-
-  Inductive simplCond : op -> Prop :=
-  | SimplCondVar x (RG:isReg x)
-    : simplCond (Var x)
-  | SimplCondLt x y (RG1:isReg x) (RG2:isReg y) op
-                (OP:isComparision op)
-    : simplCond (BinOp op (Var x) (Var y))
-  | SimplCondLt1 x y (RG1:isReg x) op
-                 (OP:isComparision op)
-    : simplCond (BinOp op (Var x) (Con y))
-  | SimplCondLt2 x y (RG2:isReg y) op
-                 (OP:isComparision op)
-    : simplCond (BinOp op (Con x) (Var y)).
-
-
-  Lemma val2bool_bool2val b
-    : val2bool (bool2val b) = b.
-  Proof.
-    destruct b; simpl; reflexivity.
-  Qed.
-
   Lemma toLinearCond_step G V v l e bv vv rs m c
         (EV:op_eval V e = Some v)
         (TRUE:val2bool v = true) (SC:simplCond e)
@@ -560,8 +502,6 @@ Section ToLinear.
   Qed.
 
   Definition ret_reg_name := 1%positive.
-
-
 
   Definition toLinearFun
              (toLinear:forall (Λ:list label) (l:label) (s:stmt), code * label)
@@ -840,26 +780,6 @@ Proof.
         rewrite <- toLinear_le. reflexivity.
         eapply mkVars_get_lt; eauto.
 Qed.
-
-Inductive isLinearizable : stmt->Prop :=
-| IsLinLet x e s
-    (LinIH:isLinearizable s)
-    (SimplLet:simplLet x e)
-    : isLinearizable (stmtLet x (Operation e) s)
-| IsLinIf e s t
-          (SimplCond:simplCond e)
-          (LinIH1:isLinearizable s)
-          (LinIH2:isLinearizable t)
-  : isLinearizable (stmtIf e s t)
-| IsLinApp l Y :
-   isLinearizable (stmtApp l Y)
-| IsLinExp e
-           (SimplReg:simplOp e)
-  : isLinearizable (stmtReturn e)
-| IsLinCall F t
-  : (forall n Zs, get F n Zs -> isLinearizable (snd Zs))
-    -> isLinearizable t
-    -> isLinearizable (stmtFun F t).
 
 Lemma toLinearFun_get F l I f n Zs
       (GetF:get F n Zs)
