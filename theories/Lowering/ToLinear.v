@@ -30,9 +30,10 @@ Section ToLinear.
     | _ => R31 (*dummy *)
     end.
 
+  Definition max_reg := 20%positive.
 
   Lemma toReg_inj x y
-    : isReg x -> isReg y -> (x <= 20)%positive -> (y <= 20)%positive -> x <> y -> toReg x = toReg y ->
+    : isReg x -> isReg y -> (x <= max_reg)%positive -> (y <= max_reg)%positive -> x <> y -> toReg x = toReg y ->
       x = y.
   Proof.
     unfold isReg, Even.even_pos_fast, toReg, Pos.div2;
@@ -99,10 +100,8 @@ Section ToLinear.
     end
   .
 
-  Definition regbnd (x:positive) := isReg x -> (x <= 20)%positive.
-
   Definition mrel V rs :=
-    forall x v, V x = Some v -> regbnd x ->
+    forall x v, V x = Some v -> regbnd max_reg x ->
            Locmap.get
              (if [isReg x] then R (toReg x) else S Local (toSlot x) Tint)
              rs = Values.Vint v.
@@ -145,7 +144,7 @@ Section ToLinear.
   Lemma translateLet_step (G:Genv.t fundef unit) V x e bv vv l rs m (SM:simplLet x e)
          (MR:mrel V rs) v
          (EV:op_eval V e = Some v)
-         (REGBOUND:For_all regbnd (Ops.freeVars e)) st
+         (REGBOUND:For_all (regbnd max_reg) (Ops.freeVars e)) st
     :  plus2 (@StateType.step _ (LinearStateType G))
              (State st bv vv (translateLetOp x e ++ l) rs m)
              nil
@@ -267,8 +266,8 @@ Section ToLinear.
 
   Lemma  translateLet_correct r G L V x e s bv vv l rs m (SM:simplLet x e)
          (MR:mrel V rs)
-         (REGBOUND:For_all regbnd (Ops.freeVars e))
-         (REGBOUNDx:regbnd x) st
+         (REGBOUND:For_all (regbnd max_reg) (Ops.freeVars e))
+         (REGBOUNDx:regbnd max_reg x) st
          (IH:forall V rs,  mrel V rs ->
              upaco3 (@sim_gen IL.I.state _  Linear.state (LinearStateType G)) r Sim (L, V, s)
                     (State st bv vv l rs m))
@@ -378,7 +377,7 @@ Section ToLinear.
   Lemma toLinearCond_step G V v l e bv vv rs m c
         (EV:op_eval V e = Some v)
         (TRUE:val2bool v = true) (SC:simplCond e)
-        (MR:mrel V rs) (REGBOUND:For_all regbnd (Ops.freeVars e)) st
+        (MR:mrel V rs) (REGBOUND:For_all (regbnd max_reg) (Ops.freeVars e)) st
       : plus2 (@StateType.step _ (LinearStateType G))
               (State st bv vv (toLinearCond l e :: c) rs m) nil
               (State st bv vv c rs m).
@@ -439,7 +438,7 @@ Section ToLinear.
     Lemma toLinearCond_step_false G V v l e bv vv rs m c c'
         (EV:op_eval V e = Some v)
         (TRUE:val2bool v = false) (SC:simplCond e)
-        (MR:mrel V rs) (REGBOUND:For_all regbnd (Ops.freeVars e))
+        (MR:mrel V rs) (REGBOUND:For_all (regbnd max_reg) (Ops.freeVars e))
         (FIND:  find_label l (fn_code bv) = ⎣ c' ⎦) st
       : plus2 (@StateType.step _ (LinearStateType G))
               (State st bv vv (toLinearCond l e :: c) rs m) nil
@@ -847,7 +846,7 @@ Proof.
 Qed.
 
 Lemma toLinearCond_correct G r L V s1 s2 st bv vv l e code1 code2 code rs m
-      (SC:simplCond e) (MR:mrel V rs) (RB: For_all regbnd (Ops.freeVars e))
+      (SC:simplCond e) (MR:mrel V rs) (RB: For_all (regbnd max_reg) (Ops.freeVars e))
       (IH1:upaco3 (@sim_gen IL.I.state _  Linear.state (LinearStateType G)) r Sim (L, V, s1)
              (State st bv vv (code1 ++ (Llabel l :: code2) ++ code) rs m))
       (FL:find_label l (fn_code bv) = ⎣ code2 ++ code ⎦)
@@ -885,7 +884,7 @@ Lemma toLinear_correct r (L:I.labenv) I l (V:onv val) s bv vv rs m G C C'
       (NoParams:noParams s)
       (ST:sawtooth L)
       (LTI:forall n i, get I n i -> (i < l)%positive)
-      (REGBOUND:var_P regbnd s) stk
+      (REGBOUND:var_P (regbnd max_reg) s) stk
       (STACKINV:vv = (Values.Vptr stk Ptrofs.zero)) m'
       (STACKFREEOK:Memory.Mem.free m stk 0 (fn_stacksize bv) = Some m')
       (IINV:forall n i b,
@@ -899,7 +898,7 @@ Lemma toLinear_correct r (L:I.labenv) I l (V:onv val) s bv vv rs m G C C'
                     /\ (i < l)%positive
                     /\ isLinearizable (I.block_s b)
                     /\ noParams (I.block_s b)
-                    /\ var_P regbnd (I.block_s b)) st
+                    /\ var_P (regbnd max_reg) (I.block_s b)) st
   : @sim _ _ Linear.state (LinearStateType G) r Sim (L, V, s)
          ((State st bv vv (fst (toLinear I l s) ++ C') rs m):Linear.state).
 Proof.

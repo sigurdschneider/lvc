@@ -3,7 +3,7 @@ fun f () =
  if r3 > 0 then
   let r3 = r3 - 1 in
   let r4 = r4 + r4 in
-  f (r3, r4, Z, W)
+  f ()
  else
   if r3 = 0 then
    let r3 = Z in

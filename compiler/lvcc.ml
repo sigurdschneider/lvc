@@ -95,9 +95,11 @@ let main () =
 	else
 	  ili
       in
-      let _ = if not (IsLinearizable.isLinearizableStmt s_fromILF) then
-		raise (Compiler_error "The statement is not linearizable.\nThis can happen if the input program was not fully scheduled.\nI.e. there are let-bindings that do not correspond to instructions.\nIf -s was uses, it can also mean that some instructions used non-register arguments.")
-	      else () in
+      let _ =
+	match IsLinearizable.toLinearPreconditions ToLinear.max_reg s_fromILF with
+	| Success _ -> ()
+	| Error msg -> raise (Compiler_error (implode msg))
+      in
       let linear = ToLinear.coq_ILItoLinear (Camlcoq.P.of_int !num_registers) s_fromILF in
       let _ = PrintMach.destination := Some machname in
       let asm =

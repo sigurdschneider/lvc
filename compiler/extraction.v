@@ -54,7 +54,9 @@ Separate Extraction
          parmove2
          LinearToAsm.transf_linear_program
          ToLinear.ILItoLinear
+         ToLinear.max_reg
          IsLinearizable.isLinearizableStmt
+         IsLinearizable.toLinearPreconditions
          compcert.driver.Compiler.apply_partial
          AST.signature_main
          (* For Camlcoq.ml *)

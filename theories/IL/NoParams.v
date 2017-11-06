@@ -1,4 +1,4 @@
-Require Import IL.
+Require Import Util IL DecSolve Indexwise.
 
 Inductive noParams : stmt->Prop :=
 | NoParamsLet
@@ -19,3 +19,25 @@ Inductive noParams : stmt->Prop :=
   (NoParamsF:forall n Zs, get F n Zs -> fst Zs = nil)
   (NoParamsIHt:noParams t)
   : noParams (stmtFun F t).
+
+Instance noParams_computable s : Computable (noParams s).
+Proof.
+    sind s; destruct s.
+  - destruct (IH s); try dec_solve.
+  - destruct (IH s1); eauto; try dec_solve;
+      destruct (IH s2); eauto; try dec_solve.
+  - destruct Y; dec_solve.
+  - dec_solve.
+  - destruct (IH s); eauto; try dec_solve.
+    assert (Computable (forall n Zs, get F n Zs -> noParams (snd Zs))). {
+      eapply indexwise_P_dec.
+      intros.
+      destruct (IH (snd a)); eauto;
+        dec_solve.
+    }
+    assert (Computable (forall n Zs, get F n Zs -> fst Zs = nil)). {
+      eapply indexwise_P_dec. intros.
+      destruct (fst a); try dec_solve.
+    }
+    destruct H, H0; dec_solve.
+Qed.
