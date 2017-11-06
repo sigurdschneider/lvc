@@ -41,7 +41,6 @@
 %left IL_plus IL_minus
 %left IL_star IL_div
 %nonassoc UMINUS
-%nonassoc NEGCONST
 
 %type <ILN.nstmt> expr
 %type <ILN.nstmt> program
@@ -71,11 +70,16 @@ varname:
 expression:
   | IL_not expression { Ops.UnOp (Val.UnOpNot, $2) }
   | expression binop expression { Ops.BinOp ($2,$1,$3)}
-  | IL_minus expression %prec UMINUS { Ops.UnOp (Val.UnOpNeg, $2) }
+  | IL_minus expression %prec UMINUS
+    {
+      match $2 with
+      | Ops.Con c -> Ops.Con (Z.neg c)
+      | _ -> Ops.UnOp (Val.UnOpNeg, $2)
+    }
   | IL_lparen expression IL_rparen { $2 }
   | varname { Ops.Var ($1) }
   | IL_integer_constant { Ops.Con (Z.of_sint (int_of_string $1)) }
-  | IL_minus IL_integer_constant { Ops.Con (Z.of_sint (parse_neg_integer $2)) } %prec NEGCONST
+
 
 ext_expression:
   | IL_extern IL_ident option_arglist { Exp.Call (Nat.of_int $2, $3) }
