@@ -100,8 +100,9 @@ let main () =
 	| Success _ -> ()
 	| Error msg -> raise (Compiler_error (implode msg))
       in
-      let linear = ToLinear.coq_ILItoLinear (Camlcoq.P.of_int !num_registers) s_fromILF in
-      let _ = PrintMach.destination := Some machname in
+      let function_id = Camlcoq.intern_string "LVC" in
+      let linear = ToLinear.coq_ILItoLinear function_id s_fromILF in
+      PrintMach.destination := Some machname;
       let asm =
 	match Compiler0.apply_partial
 		(LinearToAsm.transf_linear_program linear)

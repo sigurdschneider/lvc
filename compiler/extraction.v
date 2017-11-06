@@ -39,8 +39,11 @@ Extraction Implicit SafeFirst.safe_first [ H H0 ].
 Extract Constant Compopts.debug =>
   "fun _ -> !Clflags.option_g".
 Extract Constant Compiler.print_Mach => "PrintMach.print_if".
+Extract Constant Compiler.print => "fun (f: 'a -> unit) (x: 'a) -> f x; x".
 
 Cd "compiler/extraction".
+
+Extraction Inline Compiler.apply_total Compiler.apply_partial.
 
 Separate Extraction
          AddParams.addParams
