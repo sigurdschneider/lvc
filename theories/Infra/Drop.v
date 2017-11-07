@@ -235,3 +235,21 @@ Proof.
   rewrite IHm; eauto. orewrite (n + S m = S (n + m)); eauto.
   destruct L; simpl; eauto. destruct (n + m); eauto.
 Qed.
+
+Lemma drop_le n X (L L':list X)
+      (LE:n <= ❬L❭)
+  : drop n (L ++ L') = drop n L ++ L'.
+Proof.
+  general induction L; simpl in *.
+  - invc LE. reflexivity.
+  - destruct n; simpl; eauto.
+    rewrite IHL; eauto. omega.
+Qed.
+
+Lemma drop_app_dist n X (L L':list X)
+  : drop n (L ++ L') = drop n L ++ drop (n - ❬L❭) L'.
+Proof.
+  general induction L; simpl in *.
+  - rewrite drop_nil. orewrite (n - 0 = n). reflexivity.
+  - destruct n; simpl; eauto.
+Qed.

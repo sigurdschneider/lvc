@@ -1,4 +1,4 @@
-Require Import CSet Var VarsUpTo.
+Require Import Util CSet Var VarsUpTo.
 
 Set Implicit Arguments.
 
@@ -65,3 +65,10 @@ Section FreshList.
 End FreshList.
 
 Hint Resolve fresh_list_length : len.
+
+Smpl Add match goal with
+          | [ H : context [ ❬@fresh_list ?V ?OT ?f ?G ?n❭ ] |- _ ] =>
+            rewrite (@fresh_list_length V OT f G n) in H
+          | [ |- context [ ❬@fresh_list ?V ?OT ?f ?G ?n❭ ] ] =>
+            rewrite (@fresh_list_length V OT f G n)
+          end : len.

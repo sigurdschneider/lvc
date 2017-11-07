@@ -115,7 +115,14 @@ Proof.
     + intros. destruct y; simpl. rewrite IH; cset_tac.
 Qed.
 
-
+Fixpoint externals (s:stmt) : set var :=
+  match s with
+  | stmtLet x e s0 => Exp.externals e ∪ externals s0
+  | stmtIf e s1 s2 => externals s1 ∪ externals s2
+  | stmtApp l Y => {}
+  | stmtReturn e => {}
+  | stmtFun F t => list_union ((fun Zs => externals (snd Zs)) ⊝ F) ∪ externals t
+  end.
 
 Definition defVars' ( Zs:params*stmt) := of_list (fst Zs) ∪ definedVars (snd Zs).
 

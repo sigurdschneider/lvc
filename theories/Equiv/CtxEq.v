@@ -6,13 +6,13 @@ Unset Printing Records.
 
 (** * Program Equivalence *)
 
-Instance SR : PointwiseProofRelationF (params) := {
-   ParamRelFP G Z Z' := Z = Z' /\ Z = G;
-   ArgRelFP E E' G VL VL' := VL = VL' /\ length VL = length G;
+Instance SR : PointwiseProofRelationF (nat) := {
+   ParamRelFP G Z Z' := ❬Z❭ = ❬Z'❭ /\ ❬Z❭ = G;
+   ArgRelFP E E' G VL VL' := VL = VL' /\ length VL = G;
 }.
 
 Definition bisimeq r t s s' :=
-    forall L L' E, labenv_sim t (sim r) SR (F.block_Z ⊝ L') L L'
+    forall L L' E, labenv_sim t (sim r) SR (@length _ ⊝ F.block_Z ⊝ L') L L'
             -> ❬L❭ = ❬L'❭
             -> sim r t (L:F.labenv, E, s) (L', E, s').
 
@@ -20,7 +20,7 @@ Definition bisimeq r t s s' :=
 
 Lemma bisimeq_refl s t
   : forall L L' E r,
-    labenv_sim t (sim r) SR (block_Z ⊝ L') L L'
+    labenv_sim t (sim r) SR (@length _ ⊝ block_Z ⊝ L') L L'
     -> sim r t (L, E, s) (L', E, s).
 Proof.
   sind s; destruct s; simpl in *; intros.
@@ -31,22 +31,22 @@ Proof.
   - edestruct (get_dec L' (counted l)) as [[b]|]; [ inv_get | ].
     + eapply labenv_sim_app; eauto.
       simpl.
-      intros; split; intros; dcr; inv_get; simpl in *; subst; try cases; eauto.
-    + pno_step. edestruct H; eauto. rewrite map_length in H0. inv_get.
+      intros; split; intros; dcr; inv_get; simpl in *; subst; try cases; eauto with len.
+    + pno_step. edestruct H; eauto. len_simpl. inv_get.
   - pno_step.
   - pone_step. left.
     eapply (IH s); eauto with len.
-    rewrite map_app. intros.
+    rewrite !map_app. intros.
     eapply labenv_sim_extension_ptw; eauto with len.
     + intros; hnf; intros; inv_get; eauto.
       simpl in *; dcr; subst. get_functional.
-      eapply IH; eauto with len. rewrite map_app; eauto.
+      eapply IH; eauto with len. rewrite !map_app; eauto.
     + hnf; intros; simpl in *; subst; inv_get; simpl; eauto.
 Qed.
 
 Lemma labenv_sim_refl t r L
   : smaller L
-    -> labenv_sim t (sim r) SR (List.map F.block_Z L) L L.
+    -> labenv_sim t (sim r) SR (@length _ ⊝ F.block_Z ⊝ L) L L.
 Proof.
   intros. hnf; dcr; do 4 try split; eauto with len.
   - intros [] []; intros; simpl in *; subst; inv_get; split; eauto.
@@ -58,8 +58,8 @@ Proof.
 Qed.
 
 Lemma labenv_sim_sym L L'
-  : labenv_sim Bisim (sim bot3) SR (List.map F.block_Z L') L L'
-    -> labenv_sim Bisim (sim bot3) SR (List.map F.block_Z L) L' L.
+  : labenv_sim Bisim (sim bot3) SR (@length _ ⊝ F.block_Z ⊝ L') L L'
+    -> labenv_sim Bisim (sim bot3) SR (@length _ ⊝ F.block_Z ⊝ L) L' L.
 Proof.
   intros []; intros; dcr; do 4 (try split; eauto with len).
   - hnf; intros. destruct f,f'; simpl in *; subst.
@@ -96,9 +96,9 @@ Proof.
 Qed.
 
 Lemma labenv_sim_trans t (L1 L2 L3:F.labenv)
-  : labenv_sim t (sim bot3) SR (List.map F.block_Z L2) L1 L2
-    -> labenv_sim t (sim bot3) SR (List.map F.block_Z L3) L2 L3
-    -> labenv_sim t (sim bot3) SR (List.map F.block_Z L3) L1 L3.
+  : labenv_sim t (sim bot3) SR (@length _ ⊝ F.block_Z ⊝ L2) L1 L2
+    -> labenv_sim t (sim bot3) SR (@length _ ⊝ F.block_Z ⊝ L3) L2 L3
+    -> labenv_sim t (sim bot3) SR (@length _ ⊝ F.block_Z ⊝ L3) L1 L3.
 Proof.
   intros.
   assert (❬L1❭ = ❬L2❭). {
@@ -115,6 +115,7 @@ Proof.
     destruct H as [_ [_ [_ [PA1 _]]]]. destruct H0 as [_ [_ [_ [PA2 _]]]].
     exploit (PA1 (LabI n0) (LabI n0)); eauto; simpl in *; dcr; subst.
     exploit (PA2 (LabI n0) (LabI n0)); eauto; simpl in *; dcr; subst.
+    split; omega.
   - split.
     + hnf; intros; simpl in *; inv_get; eauto.
     + hnf; intros; simpl in *. destruct f, f'; simpl in *; subst.
@@ -124,7 +125,7 @@ Proof.
       Focus 2.
       eapply labenv_sim_app; eauto.
       intros; simpl in *; dcr; repeat subst; repeat get_functional.
-      split; intros; eauto. cases; eauto.
+      split; intros; eauto with len. cases; split; eauto. congruence.
       intros; simpl in *; dcr. destruct x; simpl in *.
       repeat subst; repeat get_functional.
       split; intros; eauto. eexists; split; eauto. split; eauto with len.
@@ -184,22 +185,22 @@ Proof.
     + eapply IHctx; eauto.
   - pone_step. left.
     eapply bisimeq_refl; eauto 20 with len.
-    rewrite map_app. intros.
+    rewrite !map_app. intros.
     eapply labenv_sim_extension_ptw; simpl; eauto 20 with len.
     + intros; hnf; intros.
       { destruct (get_subst _ _ _ H5) as [? |[?|?]].
         - inv_get; simpl in *; dcr; subst.
           simpl; repeat split; eauto. inv_get.
           eapply bisimeq_refl; eauto 20 with len.
-          rewrite map_app. eauto.
+          rewrite !map_app. eauto.
         - simpl in *. dcr; subst. subst. invc H9.
           inv_get. simpl in *.
           eapply IHctx; eauto 20 with len.
-          rewrite map_app. intros; eauto.
+          rewrite !map_app. intros; eauto.
         - simpl in *; dcr; subst.
           inv_get. simpl in *.
           eapply bisimeq_refl; eauto 20 with len.
-          rewrite map_app; eauto.
+          rewrite !map_app; eauto.
       }
     + hnf; intros; simpl in *; subst; inv_get; simpl.
       destruct (get_subst _ _ _ H4) as [? |[?|?]].
@@ -208,11 +209,11 @@ Proof.
       * simpl in *; dcr; subst. inv_get; eauto.
   - pone_step. left.
     eapply IHctx; eauto with len.
-    rewrite map_app. intros.
+    rewrite !map_app. intros.
     eapply labenv_sim_extension_ptw; simpl; eauto 20 with len.
     + intros; hnf; simpl; intros; dcr; subst; inv_get. simpl in *.
       eapply bisimeq_refl; eauto 20 with len.
-      rewrite map_app; eauto.
+      rewrite !map_app; eauto.
     + hnf; simpl; intros; subst; inv_get; simpl; eauto.
   - eapply H; eauto.
 Qed.
@@ -226,10 +227,10 @@ Proof.
   hnf; intros.
   eapply sim_fun_ptw; eauto using labenv_sim_refl.
     + intros. left. eapply H; eauto with len.
-      intros. rewrite map_app. eauto.
+      intros. rewrite !map_app. eauto.
     + intros. hnf; intros. inv_get. simpl in *; subst; dcr; subst.
       exploit H0; eauto; dcr; subst.
-      eapply H11; eauto with len. rewrite map_app; eauto with len.
+      eapply H11; eauto with len. rewrite !map_app; eauto with len.
     + hnf; intros. simpl in *; subst. exploit H0; eauto; dcr; subst.
       inv_get; eauto.
     + eauto with len.

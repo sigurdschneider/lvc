@@ -15,6 +15,11 @@ Definition isCall e :=
   | Call _ _ => true
   end.
 
+Definition externals (e:exp) :=
+  match e with
+  | Operation _ => {}
+  | Call f _ => singleton f
+  end.
 
 Instance inst_eq_dec_exp : EqDec exp eq.
 Proof.

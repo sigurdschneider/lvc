@@ -405,3 +405,29 @@ Proof.
   - relsimpl. invc Star2; relsimpl; simpl; eauto.
     right. eapply (S_star2n _ _ H Star1).
 Qed.
+
+Lemma star2n_trans_silent (X : Type) (R : X -> event -> X -> Prop) n m x y z
+  : star2n R n x nil y
+    -> star2n R m y nil z
+    -> star2n R (n + m) x nil z.
+Proof.
+  intros A B.
+  general induction A; simpl; eauto.
+  econstructor; eauto.
+  destruct y, yl; isabsurd.
+  eapply IHA; eauto.
+Qed.
+
+Lemma star2n_decomp_right (X : Type) (R : X -> event -> X -> Prop) n x y
+  : star2n R (S n) x nil y
+    -> exists z, star2n R n x nil z /\ R z EvtTau y.
+Proof.
+  general induction n.
+  - repeat invtc star2n.
+    destruct y0; isabsurd.
+    eauto using star2n.
+  - invtc star2n.
+    destruct y0, yl; isabsurd.
+    eapply IHn in H4; dcr.
+    eauto using star2n.
+Qed.
