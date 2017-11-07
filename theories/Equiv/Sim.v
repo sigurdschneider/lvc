@@ -315,7 +315,7 @@ Lemma sim_activated_2 t {S1} `{StateType S1} (σ1:S1)
                step σ2' evt σ2'' ->
                exists σ1' : S1,
                  step σ1 evt σ1' /\ (sim bot3 t σ2'' σ1'))
-           \/ (normal2 step σ2' /\ result σ2' = None)).
+           \/ (normal2 step σ2' /\ result σ2' = None /\ t = Sim)).
 Proof.
   intros.
   pinversion H2; subst.
@@ -401,7 +401,7 @@ Ltac zzcases :=
   | [ H: sim bot3 _ ?σ1 ?σ2, H' : activated ?σ2 |- _ ] =>
     match goal with
     | [ H : activated σ1 |- _ ] => fail 1
-    | _ => destruct (sim_activated_2 H' H) as [? [? [[? [? ?]]| [? ?]]]]
+    | _ => destruct (sim_activated_2 H' H) as [? [? [[? [? ?]]| [? [? ?]]]]]
     end
   | [ H: sim bot3 _ ?σ1 ?σ2, H' : activated ?σ1 |- _ ] =>
     match goal with
@@ -447,11 +447,11 @@ Proof.
 Qed.
 
 Lemma sim_t_Sim_normal t S1 `{StateType S1}
-      (σ1:S1) S2 `{StateType S2} (σ2:S2)
+      (σ1:S1) S2 `{StateType S2} (σ2:S2) r
   : result σ1 = ⎣⎦
     -> normal2 step σ1
     -> normal2 step σ2
-    -> sim bot3 t σ1 σ2
+    -> sim r t σ1 σ2
     -> t = Sim \/ result σ2 = None.
 Proof.
   intros. pinversion H4; subst; eauto; relsimpl.
@@ -460,10 +460,10 @@ Proof.
 Qed.
 
 Lemma sim_t_Sim_normal_step t S1 `{StateType S1}
-      (σ1:S1) S2 `{StateType S2} (σ2:S2)
+      (σ1:S1) S2 `{StateType S2} (σ2:S2) r
   : result σ1 = ⎣⎦
     -> normal2 step σ1
-    -> sim bot3 t σ1 σ2
+    -> sim r t σ1 σ2
     -> t = Sim \/ exists σ2', star2 step σ2 nil σ2' /\ normal2 step σ2' /\ result σ2' = None.
 Proof.
   intros. pinversion H3; subst; eauto; relsimpl.
@@ -517,7 +517,7 @@ Proof.
         + pfold. zzsimpl.
           econstructor 4; eauto; eauto.
         + zzsimpl.
-          destruct (@sim_t_Sim_normal t _ _ _ _ _ _ H9 H8 H14 H7); eauto.
+          destruct (@sim_t_Sim_normal t _ _ _ _ _ _ _ H9 H8 H14 H7); eauto.
           * subst.
             pfold. econstructor 3; eauto using plus2_star2, star2_trans.
           * pfold. econstructor 4; eauto using plus2_star2, star2_trans.
@@ -546,7 +546,7 @@ Proof.
           econstructor 4; eauto. eauto.
         + zzsimpl.
           rewrite H4 in H10.
-          destruct (@sim_t_Sim_normal_step _ _ _ _ _ _ _ H10 H9 H15); eauto.
+          destruct (@sim_t_Sim_normal_step _ _ _ _ _ _ _ _ H10 H9 H15); eauto.
           * subst.
             pfold. econstructor 3; eauto. congruence.
           * destruct H2; dcr.
@@ -587,7 +587,7 @@ Proof.
         + pfold. zzsimpl.
           econstructor 4; eauto; eauto.
         + zzsimpl.
-          destruct (@sim_t_Sim_normal t _ _ _ _ _ _ H9 H8 H14 H7); eauto.
+          destruct (@sim_t_Sim_normal t _ _ _ _ _ _ _ H9 H8 H14 H7); eauto.
           * subst.
             pfold. econstructor 3; eauto using plus2_star2, star2_trans.
           * pfold. econstructor 4; eauto using plus2_star2, star2_trans.
@@ -616,7 +616,7 @@ Proof.
           econstructor 4; eauto; eauto.
         + zzsimpl.
           rewrite H4 in H10.
-          destruct (@sim_t_Sim_normal_step _ _ _ _ _ _ _ H10 H9 H15); eauto.
+          destruct (@sim_t_Sim_normal_step _ _ _ _ _ _ _ _ H10 H9 H15); eauto.
           * subst.
             pfold. econstructor 3; eauto. congruence.
           * destruct H2; dcr.

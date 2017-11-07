@@ -82,7 +82,7 @@ expression:
 
 
 ext_expression:
-  | IL_extern IL_ident option_arglist { Exp.Call (Nat.of_int $2, $3) }
+  | IL_extern IL_ident option_arglist { Exp.Call (P.of_int (1+$2), $3) }
   | expression {Exp.Operation $1}
 
 expression_list :

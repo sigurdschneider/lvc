@@ -90,7 +90,7 @@ let print_ext_exp oc has_slots ids e =
   match e with
   | Exp.Call (f, y) ->
      output_string oc "extern ";
-     print_fvar oc has_slots ids f;
+     print_var oc false ids f;
      output_string oc " (";
      print_list oc (print_sexpr oc has_slots ids) y;
      output_string oc ")"
@@ -101,7 +101,6 @@ let print_ext_exp oc has_slots ids e =
 let rec print_nstmt oc has_slots ids indent s =
   (let print_sexpr = print_sexpr oc has_slots ids in
    let print_var = print_var oc has_slots ids in
-   let print_fvar = print_fvar oc has_slots ids in
   let print_nstmt = print_nstmt oc has_slots ids in
   let print_string = output_string oc in
   match s with

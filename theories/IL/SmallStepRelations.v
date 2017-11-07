@@ -1,4 +1,4 @@
-Require Import Util Get Events StateType.
+Require Import Util Get Events StateType MoreList.
 
 Set Implicit Arguments.
 
@@ -36,7 +36,6 @@ Proof.
 Qed.
 
 Arguments activated_normal [S] [H] σ _ _.
-
 
 (** ** [plus2] - transitive closure for event-labeled relations *)
 
@@ -374,7 +373,7 @@ Ltac stuck2 :=
   let A := fresh "A" in
   let v := fresh "v" in
   let evt := fresh "evt" in
-  intros [v [evt A]]; inv A; repeat get_functional; isabsurd.
+  intros [v [evt A]]; inv A; repeat get_functional; inv_get; isabsurd.
 
 
 Ltac not_activated H :=
@@ -430,4 +429,21 @@ Proof.
     destruct y0, yl; isabsurd.
     eapply IHn in H4; dcr.
     eauto using star2n.
+Qed.
+
+
+Ltac uncount_star2 :=
+  repeat match goal with
+         | [ H : @star2n _ _ (S _) _ _ _ |- _ ] => eapply star2n_plus2 in H
+         | [ H : @star2n _ _ _ _ _ _ |- _ ] => eapply star2n_star2 in H
+         end.
+
+Lemma star2_cases (X : Type) (R : X -> event -> X -> Prop) σ σ'
+  : star2 R σ nil σ'
+    -> σ = σ' \/ plus2 R σ nil σ'.
+Proof.
+  intros.
+  inv H; eauto.
+  destruct y, yl; isabsurd; simpl.
+  right. eapply star2_plus2; eauto.
 Qed.

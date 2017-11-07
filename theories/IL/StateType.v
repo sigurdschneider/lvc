@@ -35,3 +35,12 @@ Coercion stateType : StateType >-> Sortclass.
 Smpl Create single_step [progress].
 
 Ltac single_step := smpl single_step.
+
+Ltac unpack_reducible :=
+  repeat match goal with
+         | [ H: @reducible2 _ _ _ _ |- _ ] =>
+           let ev := fresh "evt" in
+           let σ := fresh "σ" in
+           let STEP := fresh "step" in
+           destruct H as [ev [σ STEP]]; inv STEP
+         end.

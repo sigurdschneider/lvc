@@ -95,6 +95,7 @@ theories/DeadCodeElimination/UCE.v
 theories/Equiv/CoTraces.v
 theories/Equiv/CtxEq.v
 theories/Equiv/Divergence.v
+theories/Equiv/MoreCtxEq.v
 theories/Equiv/NonParametricBiSim.v
 theories/Equiv/NPSimEquiv.v
 theories/Equiv/SimCompanionTactics.v

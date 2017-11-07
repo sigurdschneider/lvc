@@ -512,3 +512,10 @@ Lemma get_singleton X (x y:X) n
 Proof.
   intros. inv H; isabsurd; eauto.
 Qed.
+
+Lemma map_eq_ext_get X (L L':list X) (Len:❬L❭=❬L'❭)
+      (EQ:forall n x x', get L n x -> get L' n x' -> x = x')
+  : L = L'.
+Proof.
+  general induction Len; f_equal; eauto using get.
+Qed.

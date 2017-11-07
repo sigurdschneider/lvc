@@ -1,6 +1,6 @@
 Require NonParametricBiSim.
 Require Import Sim SimLockStep IL paco3 OptionR.
-Require Export ILStateType.
+Require Export ILStateType BlockType ILProperties.
 
 (** * Admissible Rules and Tactics *)
 
@@ -266,4 +266,137 @@ Proof.
       | step_activated; eauto using step_let_call
       | step_activated; eauto using step_let_call | |];
       intros ? ? STEP; eapply let_call_inversion in STEP; dcr; subst; eexists; split; try eapply step_let_call; eauto; congruence.
+Qed.
+
+
+Lemma sim_app_shift_F r t (L1 L2 L L':F.labenv) E  E' f f' Y Y' (SM:smaller L) (SM':smaller L')
+  (SIM:sim r t (L, E, stmtApp (LabI f) Y) (L', E', stmtApp (LabI f') Y'))
+  : sim r t (L1 ++ L, E, stmtApp (LabI (❬L1❭ + f)) Y) (L2 ++ L', E', stmtApp (LabI (❬L2❭ + f')) Y').
+Proof.
+  destruct (step_dec (L, E, stmtApp (LabI f) Y)).
+  - destruct (step_dec (L', E', stmtApp (LabI f') Y')).
+    + unpack_reducible; simpl in *.
+      exploit SM; eauto.
+      exploit SM'; eauto.
+      eapply (@sim_Y_left F.state _ F.state _); simpl in *.
+      eapply (@sim_Y_right F.state _ F.state _); simpl in *.
+      eapply SIM.
+      Focus 2.
+      single_step. simpl. eapply get_app_right; eauto.
+      simpl. orewrite (❬L2❭ + f' - F.block_n blk = ❬L2❭ + (f' - F.block_n blk)).
+      rewrite drop_app. eapply (F.StepGoto _ (LabI f') _ Ldef); simpl; try omega; eauto.
+      Focus 2.
+      single_step. simpl. eapply get_app_right; eauto.
+      simpl. orewrite (❬L1❭ + f - F.block_n blk0 = ❬L1❭ + (f - F.block_n blk0)).
+      rewrite drop_app.
+      eapply (F.StepGoto _ (LabI f) _ Ldef0); simpl; try omega; eauto.
+    + eapply sim_normal_inv in SIM as [? ?]; eauto; dcr.
+      simpl in *.
+      eapply star2_cases in H2 as [?|?]; subst.
+      * pno_step; simpl in *; inv_get.
+      * eapply plus2_app_shift_F in H1; eauto. eapply plus2_star2 in H1.
+        pfold. eapply SimTerm; [|eapply H1|eapply star2_refl| | eauto].
+        -- simpl. invc H5; eauto.
+        -- eauto.
+        -- stuck2. simpl in *. inv_get.
+           eapply H0. do 2 eexists. single_step.
+  - edestruct (sim_t_Sim_normal_step); eauto; try reflexivity.
+    + subst. perr. simpl in *; inv_get.
+      eapply H. do 2 eexists. single_step.
+    + destruct H0 as [? [Steps ?]]; dcr.
+      eapply star2_cases in Steps as [?|?]; subst.
+      * pno_step; simpl in *; inv_get.
+        -- eapply H. do 2 eexists. single_step.
+        -- eapply H1. do 2 eexists. single_step.
+      * eapply plus2_app_shift_F in H0; eauto. eapply plus2_star2 in H0.
+        pfold. eapply SimTerm; [|eapply star2_refl|eapply H0 | |eauto].
+        -- rewrite H2; simpl; reflexivity.
+        -- stuck2. simpl in *. inv_get.
+           eapply H. do 2 eexists. single_step.
+Qed.
+
+Lemma sim_app_shift_I r t (L1 L2 L L':I.labenv) E  E' f f' Y Y' (SM:smaller L) (SM':smaller L')
+  (SIM:sim r t (L, E, stmtApp (LabI f) Y) (L', E', stmtApp (LabI f') Y'))
+  : sim r t (L1 ++ L, E, stmtApp (LabI (❬L1❭ + f)) Y) (L2 ++ L', E', stmtApp (LabI (❬L2❭ + f')) Y').
+Proof.
+  destruct (step_dec (L, E, stmtApp (LabI f) Y)).
+  - destruct (step_dec (L', E', stmtApp (LabI f') Y')).
+    + unpack_reducible; simpl in *.
+      exploit SM; eauto.
+      exploit SM'; eauto.
+      eapply (@sim_Y_left I.state _ I.state _); simpl in *.
+      eapply (@sim_Y_right I.state _ I.state _); simpl in *.
+      eapply SIM.
+      Focus 2.
+      single_step. simpl. eapply get_app_right; eauto.
+      simpl. orewrite (❬L2❭ + f' - I.block_n blk = ❬L2❭ + (f' - I.block_n blk)).
+      rewrite drop_app. eapply (I.StepGoto _ (LabI f') _ Ldef); simpl; try omega; eauto.
+      Focus 2.
+      single_step. simpl. eapply get_app_right; eauto.
+      simpl. orewrite (❬L1❭ + f - I.block_n blk0 = ❬L1❭ + (f - I.block_n blk0)).
+      rewrite drop_app.
+      eapply (I.StepGoto _ (LabI f) _ Ldef0); simpl; try omega; eauto.
+    + eapply sim_normal_inv in SIM as [? ?]; eauto; dcr.
+      simpl in *.
+      eapply star2_cases in H2 as [?|?]; subst.
+      * pno_step; simpl in *; inv_get.
+      * eapply plus2_app_shift_I in H1; eauto. eapply plus2_star2 in H1.
+        pfold. eapply SimTerm; [|eapply H1|eapply star2_refl| | eauto].
+        -- simpl. invc H5; eauto.
+        -- eauto.
+        -- stuck2. simpl in *. inv_get.
+           eapply H0. do 2 eexists. single_step.
+  - edestruct (sim_t_Sim_normal_step); eauto; try reflexivity.
+    + subst. perr. simpl in *; inv_get.
+      eapply H. do 2 eexists. single_step.
+    + destruct H0 as [? [Steps ?]]; dcr.
+      eapply star2_cases in Steps as [?|?]; subst.
+      * pno_step; simpl in *; inv_get.
+        -- eapply H. do 2 eexists. single_step.
+        -- eapply H1. do 2 eexists. single_step.
+      * eapply plus2_app_shift_I in H0; eauto. eapply plus2_star2 in H0.
+        pfold. eapply SimTerm; [|eapply star2_refl|eapply H0 | |eauto].
+        -- rewrite H2; simpl; reflexivity.
+        -- stuck2. simpl in *. inv_get.
+           eapply H. do 2 eexists. single_step.
+Qed.
+
+
+Lemma sim_call_inv_F r t (L L':F.labenv) E E' x x' f f' Y Y' s s'
+  : sim r t
+        (L, E, stmtLet x (Call f Y) s)
+        (L', E', stmtLet x' (Call f' Y') s')
+    -> (omap (op_eval E) Y = omap (op_eval E') Y' /\ f = f')
+      \/ (omap (op_eval E) Y = None /\ (t = Bisim -> omap (op_eval E) Y = omap (op_eval E') Y')).
+Proof.
+  intros.
+  pinversion H; subst.
+  - exfalso. inv H0; inv H3; isabsurd.
+  - invc H0; [|inv H7; isabsurd].
+    invc H1; [|inv H6; isabsurd].
+    case_eq (omap (op_eval E) Y); intros.
+    + edestruct H4; eauto; dcr. econstructor; eauto.
+      invt @step. rewrite def. eauto.
+    + case_eq (omap (op_eval E') Y'); intros; eauto.
+      edestruct H5; dcr; eauto. econstructor; eauto.
+      inv H7. congruence.
+  - case_eq (omap (op_eval E) Y); intros; eauto.
+    inv H1.
+    + exfalso. eapply H2; do 2 eexists. econstructor; eauto.
+    + inv H5; isabsurd.
+    + right; split; intros; eauto. congruence.
+  - case_eq (omap (op_eval E) Y); intros; eauto.
+    inv H1.
+    + exfalso. eapply H3; do 2 eexists. econstructor; eauto.
+    + inv H7; isabsurd.
+    + invc H1; [|inv H7; isabsurd].
+      invc H2; [|inv H6; isabsurd].
+      case_eq (omap (op_eval E') Y'); intros; eauto.
+      exfalso. eapply H4. do 2 eexists. econstructor; eauto.
+      Grab Existential Variables.
+      eapply default_val.
+      eapply default_val.
+      eapply default_val.
+      eapply default_val.
+      eapply default_val.
 Qed.

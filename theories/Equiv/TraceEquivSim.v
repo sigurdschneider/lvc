@@ -113,7 +113,7 @@ Proof.
     eapply star2_silent; eauto. eapply star2_refl.
   - destruct evt; [|exfalso; eapply (no_activated_tau_step _ H H1); eauto].
     eapply sim_activated_2 in H4; eauto.
-    destruct H4 as [? [? [[? [? ?]]|[? ?]]]].
+    destruct H4 as [? [? [[? [? ?]]|[? [? ?]]]]].
     + edestruct H6 as [? [? ?]]; eauto.
       eapply prefixSpec_star2_silent; eauto.
       econstructor 2; eauto.

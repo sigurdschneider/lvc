@@ -67,3 +67,11 @@ Proof.
   destruct H0; dcr; inv_get; simpl; eauto.
   exploit H; eauto; simpl in *. omega.
 Qed.
+
+Lemma smaller_app (B : Type) (H : BlockType B) (L L':list B)
+  : smaller L -> smaller L' -> smaller (L ++ L').
+Proof.
+  intros; hnf; intros.
+  eapply get_app_cases in H2 as [?|?]; dcr; eauto.
+  exploit H1; eauto. omega.
+Qed.
