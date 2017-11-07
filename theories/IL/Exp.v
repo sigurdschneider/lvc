@@ -23,7 +23,7 @@ Proof.
   - eapply inst_eq_dec_op.
   - eapply list_eq_dec.
     intros. eapply inst_eq_dec_op.
-  - eapply nat_eq_eqdec.
+  - eapply Pos.eq_dec.
 Defined.
 
 Definition freeVars (e:exp) :=

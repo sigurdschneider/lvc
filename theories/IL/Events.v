@@ -3,7 +3,7 @@ Require Export Util Val.
 
 Set Implicit Arguments.
 
-Definition external := nat.
+Definition external := positive.
 
 Inductive extern :=
   ExternI {

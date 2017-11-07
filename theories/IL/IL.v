@@ -20,7 +20,6 @@ Inductive stmt : Type :=
 | stmtIf     (e : op) (s : stmt) (t : stmt) : stmt
 | stmtApp    (l : lab) (Y:args) : stmt
 | stmtReturn (e : op) : stmt
-(*| stmtExtern (x : var) (f:external) (Y:args) (s:stmt)*)
 (* block f Z : rt = s in b *)
 | stmtFun    (F:list (params * stmt)) (t : stmt) : stmt.
 
