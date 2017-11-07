@@ -101,7 +101,6 @@ theories/Equiv/NPSimEquiv.v
 theories/Equiv/SimCompanionTactics.v
 theories/Equiv/SimCompanion.v
 theories/Equiv/SimF.v
-theories/Equiv/SimIBot.v
 theories/Equiv/SimI.v
 theories/Equiv/SimLockStep.v
 theories/Equiv/SimTactics.v
@@ -123,6 +122,7 @@ theories/IL/Exp.v
 theories/IL/ILDB.v
 theories/IL/ILN_IL.v
 theories/IL/ILN.v
+theories/IL/ILProperties.v
 theories/IL/ILStateType.v
 theories/IL/IL.v
 theories/IL/InRel4.v
