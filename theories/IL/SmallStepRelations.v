@@ -314,26 +314,6 @@ Inductive star2n (X : Type) (R : X -> event -> X -> Prop) : nat -> X -> list eve
                    -> star2n R n x' yl z
                    -> star2n R (S n) x (filter_tau y yl) z.
 
-Inductive plus2n (X : Type) (R : X -> event -> X -> Prop)
-: nat -> X -> list event -> X -> Prop :=
-  plus2nO x y x' el
-  : R x y x'
-    -> el = (filter_tau y nil)
-    -> plus2n R 0 x el x'
-| plus2nS n x y x' yl z el
-  : R x y x'
-    -> el = (filter_tau y yl)
-    -> plus2n R n x' yl z
-    -> plus2n R (S n)  x el z.
-
-Lemma plus2_plus2n X (R: X -> event -> X -> Prop) x A y
-: plus2 R x A y
-  -> exists n, plus2n R n x A y.
-Proof.
-  intros. general induction H.
-  - eexists; eauto using plus2n.
-  - destruct IHplus2; eexists; eauto using plus2n.
-Qed.
 
 Lemma star2n_star2 X (R: X -> event -> X -> Prop) x A y n
 : star2n R n x A y
@@ -342,19 +322,30 @@ Proof.
   intros. general induction H; eauto using star2.
 Qed.
 
-Lemma plus2n_star2n X (R: X -> event -> X -> Prop) x A y n
-: plus2n R n x A y
-  -> star2n R (S n) x A y.
-Proof.
-  intros. general induction H; eauto using star2n.
-Qed.
-
 Lemma star2_star2n X (R: X -> event -> X -> Prop) x A y
 : star2 R x A y
   -> exists n, star2n R n x A y.
 Proof.
   intros. general induction H; eauto using star2n.
   - destruct IHstar2; eexists; econstructor; eauto.
+Qed.
+
+Lemma star2n_plus2 X (R: X -> event -> X -> Prop) x A y n
+: star2n R (S n) x A y
+  -> plus2 R x A y.
+Proof.
+  general induction n.
+  - inv H. inv H2. econstructor; eauto.
+  - inv H.
+    econstructor 2; eauto.
+Qed.
+
+Lemma plus2_star2n X (R: X -> event -> X -> Prop) x A y
+: plus2 R x A y
+  -> exists n, star2n R (S n) x A y.
+Proof.
+  intros. general induction H; eauto using star2n.
+  - destruct IHplus2; eexists; econstructor; eauto.
 Qed.
 
 Lemma star2_normal X R (x y:X)

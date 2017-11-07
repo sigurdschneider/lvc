@@ -201,7 +201,7 @@ Proof.
   eapply size_induction with (f:=id); intros; unfold id in *; simpl in *.
   pinversion H2; subst.
   - inv H3; eauto.
-    eapply plus2_plus2n in H5. destruct H5. eapply plus2n_star2n in H5.
+    eapply plus2_star2n in H5. destruct H5.
     edestruct (star2n_reach H3 H5); eauto. eapply H0.
     + eapply sim_expansion_closed. eapply H6.
       eauto using plus2_star2. eauto using star2n_star2.
