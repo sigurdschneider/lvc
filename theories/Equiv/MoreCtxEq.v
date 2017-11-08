@@ -1,6 +1,6 @@
 Require Import Util MapDefined LengthEq Map CSet AutoIndTac AllInRel.
 Require Import Var Val Exp Envs IL Sawtooth.
-Require Import ILProperties SimTactics SimF CtxEq Fresh.
+Require Import ILProperties SimTactics SimF BisimEq Fresh.
 
 Set Implicit Arguments.
 Unset Printing Records.
@@ -538,21 +538,18 @@ Proof.
   destruct x0; simpl; eauto with len.
 Qed.
 
-Lemma key t E s s'
-  : (forall L L', ❬L❭=❬L'❭ -> labenv_sim t (sim bot3) SR (@length _ ⊝ block_Z ⊝ L') L L'
-             -> sim bot3 t (L:F.labenv, E, s) (L', E, s'))
-    -> forall r L L', ❬L❭=❬L'❭ -> labenv_sim t (sim r) SR (@length _ ⊝ block_Z ⊝ L') L L'
-             -> sim r t (L:F.labenv, E, s) (L', E, s').
+Lemma bisimeq_bot t s s'
+  : bisimeq bot3 t s s' -> forall r, bisimeq r t s s'.
 Proof.
   intros. hnf; intros.
   set (XF:=fresh_list fresh (externals s ∪ externals s') ❬L❭).
-  exploit (H (trivL ⊜ L XF) (trivL ⊜ L' XF)).
-  - eauto with len.
+  exploit (H (trivL ⊜ L XF) (trivL ⊜ L' XF) E).
   - rewrite <- trivL_Z_len.
-    eapply (triv_sat trivL_triv XF (ltac:(eauto with len)) H0 H1); eauto.
+    eapply (triv_sat trivL_triv XF (ltac:(eauto with len)) H1 H0); eauto.
     subst XF; eauto with len.
     rewrite fresh_list_length; eauto.
-  - eapply labenv_lift with (L1:=nil) (L2:=nil) (XF:=XF); eauto.
+  - eauto with len.
+  - eapply labenv_lift with (L1:=nil) (L2:=nil) (XF:=XF) (E:=E); simpl; eauto.
     + subst XF; eauto with len.
     + simpl.
       eapply disj_2_incl.

@@ -45,7 +45,7 @@ Definition indexwise_paramrel A (PR:ProofRelationF A) (F F':〔params * stmt〕)
     -> get AL' n a
     -> ParamRelF a Z Z'.
 
-Definition separates A (PR:ProofRelationF A) AL' AL (F F':〔params * stmt〕) :=
+Definition separates A (PR:ProofRelationF A) AL' AL X (F F':〔X〕) :=
   length AL' = length F
   /\ Image AL' = length F'
   /\ (forall n n', IndexRelF (AL' ++ AL) n n' -> n < length F -> n' < length F')
@@ -170,6 +170,25 @@ Proof.
   intros Idx LE; hnf; intros; eauto.
 Qed.
 
+Definition body_r t (r:frel) A (PR:ProofRelationF A) AL L L' :=
+  forall (f f':lab) a E Z s i E' Z' s' i',
+    IndexRelF AL f f'
+    -> get AL f a
+    -> get L f (F.blockI E Z s i)
+    -> get L' f' (F.blockI E' Z' s' i')
+    -> forall VL VL',
+        ArgRelF E E' a VL VL'
+        -> r t (L, E[Z <-- List.map Some VL], s)
+            (L', E'[Z' <-- List.map Some VL'], s').
+
+Lemma body_r_mon t (r r':frel) A (PR:ProofRelationF A) AL L L'
+  : body_r t r PR AL L L'
+    -> (forall t x y, r t x y -> r' t x y)
+    -> body_r t r' PR AL L L'.
+Proof.
+  intros Idx LE; hnf; intros; eauto.
+Qed.
+
 Hint Unfold separates.
 
 Lemma labenv_sim_extension' t r A (PR:ProofRelationF A) (AL AL':list A) E E' F F' L L'
@@ -213,6 +232,50 @@ Proof.
     erewrite <- Len3, Len2; eauto.
 Qed.
 
+(*
+Lemma labenv_sim_extension2 t r A (PR:ProofRelationF A) (AL AL':list A) L1 L2 L L'
+  : body_r t (sim r \3/ r) PR AL' L1 L2
+    -> paramrel PR AL' L1 L2
+    -> separates PR AL' AL L1 L2
+    -> labenv_sim t (sim r) PR AL L L'
+    -> labenv_sim t (sim r) PR (AL' ++ AL) (L1 ++ L) (L2 ++ L').
+Proof.
+  intros SIM IPR [Len2 [Img [Ilt Ige]]] [Len1 [STL [STL' [PAR [IE LSIM]]]]].
+  hnf; do 5 (try split);
+    eauto 20 using smaller_F_mkBlocks, complete_paramrel, complete_indexes_exists with len.
+  admit. admit. admit. admit.
+  intros f f' ? ? ? ? ? ? ? ? ? RN GetAL GetFL GetL'.
+  eapply get_app_cases in GetFL. destruct GetFL as [GetFL'| [GetFL GE]].
+  - exploit Ilt; eauto.
+    inv_get.
+    intros.
+    pone_step; simpl; eauto using get_app, get_mapi; simpl; eauto with len.
+    assert (i = f) by admit; subst.
+    assert (i' = f') by admit; subst.
+    orewrite (f-f=0). orewrite (f'-f'=0). simpl.
+    exploit SIM; eauto.
+    admit. admit.
+  - intros. exploit Ige; eauto. rewrite mapi_length in GE; eauto.
+    eapply get_app_right_ge in GetAL; [ | rewrite (Len3 E); eauto ].
+    eapply get_app_right_ge in GetL'; [ | rewrite mapi_length; eauto ].
+    rewrite mapi_length in *.
+    eapply IndexRelDrop in RN; eauto; [| rewrite (Len3 E); eauto].
+    exploit (LSIM (LabI  (f - ❬AL'❭)) (LabI (f' - Image AL'))) as SIMR; eauto.
+    rewrite Len2; eauto. rewrite Img; eauto.
+    eapply (@sim_Y_left F.state _ F.state _).
+    eapply (@sim_Y_right F.state _ F.state _).
+    rewrite Img in SIMR. rewrite Len2 in SIMR.
+    eapply paco3_mon; [| eauto].
+    eapply SIMR; eauto.
+    econstructor; simpl; eauto with len. simpl. eauto with len.
+    eapply F.StepGoto_mapi; simpl in *; eauto with len.
+    rewrite mapi_length. exploit STL; eauto; simpl in *; omega.
+    econstructor; simpl; eauto. simpl. eauto with len.
+    eapply F.StepGoto_mapi; simpl in *; eauto with len.
+    rewrite mapi_length. exploit STL'; eauto; simpl in *; omega.
+    erewrite <- Len3, Len2; eauto.
+Qed.
+*)
 (** ** Key Lemmata *)
 
 (** ***  Fix Compatibility *)
@@ -324,6 +387,22 @@ Proof.
     destruct SIML; dcr.
     hnf; destruct PR; simpl; repeat split; intros; omega.
   }
+  eapply labenv_sim_extension'; eauto.
+  eapply indexwise_r_mon.
+  eapply fix_compatible_separate; eauto. eauto.
+Qed.
+
+Lemma labenv_sim_extension_ptw' t A (PR:PointwiseProofRelationF A) (AL AL':list A) L1 L2 L L'
+  : (forall r ,
+        labenv_sim t (sim r) PR (AL' ++ AL) (L1 ++ L) (L2 ++ L')
+        -> body_r t (sim r) PR AL' L1 L2)
+    -> paramrel PR AL' L1 L2
+    -> length AL' = length L1
+    -> length L1 = length L2
+    -> forall r, labenv_sim t (sim r) PR AL L L'
+        -> labenv_sim t (sim r) PR (AL' ++ AL) (L1 ++ L) (L2 ++ L').
+Proof.
+  intros ISIM IP Len1 Len2 r SIML.
   eapply labenv_sim_extension'; eauto.
   eapply indexwise_r_mon.
   eapply fix_compatible_separate; eauto. eauto.
