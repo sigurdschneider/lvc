@@ -392,6 +392,7 @@ Proof.
   eapply fix_compatible_separate; eauto. eauto.
 Qed.
 
+(*
 Lemma labenv_sim_extension_ptw' t A (PR:PointwiseProofRelationF A) (AL AL':list A) L1 L2 L L'
   : (forall r ,
         labenv_sim t (sim r) PR (AL' ++ AL) (L1 ++ L) (L2 ++ L')
@@ -407,6 +408,7 @@ Proof.
   eapply indexwise_r_mon.
   eapply fix_compatible_separate; eauto. eauto.
 Qed.
+*)
 
 Lemma sim_fun_ptw t A (PR:PointwiseProofRelationF A) (AL AL':list A) F F' L L' E E' s s'
   : (forall r, labenv_sim t (sim r) PR (AL' ++ AL) (mapi (F.mkBlock E) F ++ L) (mapi (F.mkBlock E') F' ++ L')
