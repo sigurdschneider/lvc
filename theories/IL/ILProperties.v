@@ -87,3 +87,27 @@ Proof.
   inv H2; simpl in *; inv_get; eexists; try single_step.
   econstructor; eauto. exploit H0; eauto. rewrite H4. eauto.
 Qed.
+
+Lemma event_inversion_F (L:F.labenv) (E:onv val) xf (L':F.labenv) x1 Y1 s1 E' s' r
+  (SIM:forall evt σ1', step (L, E, stmtLet x1 (Call xf Y1) s1) evt σ1'
+                  -> exists σ2'', step (L', E', s') evt σ2'' /\ r σ1' σ2'') vl
+  (YEV:omap (op_eval E) Y1 = Some vl)
+  : exists x2 Y2 s2, s' = stmtLet x2 (Call xf Y2) s2
+                /\ omap (op_eval E') Y2 = omap (op_eval E) Y1.
+Proof.
+  edestruct SIM.
+  - hnf. eapply F.StepExtern with (v:=default_val); eauto.
+  - dcr. invt @step. do 3 eexists; split; eauto. congruence.
+Qed.
+
+Lemma event_inversion_I (L:I.labenv) (E:onv val) xf (L':I.labenv) x1 Y1 s1 E' s' r
+  (SIM:forall evt σ1', step (L, E, stmtLet x1 (Call xf Y1) s1) evt σ1'
+                  -> exists σ2'', step (L', E', s') evt σ2'' /\ r σ1' σ2'') vl
+  (YEV:omap (op_eval E) Y1 = Some vl)
+  : exists x2 Y2 s2, s' = stmtLet x2 (Call xf Y2) s2
+                /\ omap (op_eval E') Y2 = omap (op_eval E) Y1.
+Proof.
+  edestruct SIM.
+  - hnf. eapply I.StepExtern with (v:=default_val); eauto.
+  - dcr. invt @step. do 3 eexists; split; eauto. congruence.
+Qed.
