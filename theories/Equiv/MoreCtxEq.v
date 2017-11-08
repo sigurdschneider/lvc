@@ -5,6 +5,8 @@ Require Import ILProperties SimTactics SimF CtxEq Fresh.
 Set Implicit Arguments.
 Unset Printing Records.
 
+Definition bexternals (b:F.block) :=
+  externals (F.block_s b).
 
 Definition trivs (f:external) (Z:params) :=
   let Z := fresh_list fresh {} ❬Z❭ in
@@ -17,94 +19,119 @@ Definition trivL (b:F.block) (f:external) :=
     F.blockI E Z' (trivs f Z) n
   end.
 
-Lemma triv_sat t L L' XF r (Len:❬XF❭= ❬L❭) (Len2:❬L❭=❬L'❭)
-  : labenv_sim t (sim r) SR (@length _ ⊝ block_Z ⊝ L') L L'
-    -> labenv_sim t (sim bot3) SR (@length _ ⊝ block_Z ⊝ L') (trivL ⊜ L XF) (trivL ⊜ L' XF).
+Lemma trivL_star_inv (L:〔F.block〕) E xf σ n Z
+  :  star2n step n (L, E, trivs xf Z) nil σ
+     -> n = 0 /\ σ = (L, E, trivs xf Z).
+Proof.
+  intros. inv H; eauto.
+  exfalso. inv H1. isabsurd.
+Qed.
+
+Local Hint Extern 0 (NoDupA _eq (fresh_list fresh _ ❬_❭))
+=> eapply fresh_list_nodup; eauto using fresh_spec.
+
+Class Triv A (PR:ProofRelationF A) := {
+               triv1 :> F.block -> external -> F.block;
+               triv2 :> F.block -> external -> F.block;
+               triv1_block_n : forall b xf, F.block_n (triv1 b xf) = F.block_n b;
+               triv2_block_n : forall b xf, F.block_n (triv2 b xf) = F.block_n b;
+               triv1_block_Z : forall b xf, ❬F.block_Z (triv1 b xf)❭ = ❬F.block_Z b❭;
+               triv_star_inv:forall (L:F.labenv) E xf σ b n,
+                   star2n step n (L, E, F.block_s (triv1 b xf)) nil σ
+                   -> n = 0 /\ σ = (L, E, F.block_s (triv1 b xf));
+               triv_paramrel : forall AL L L' XF,
+                 paramrel PR AL L L'
+                 -> paramrel PR AL (triv1 ⊜ L XF) (triv2 ⊜ L' XF);
+               triv_app_r : forall t AL L L' XF,
+                 app_r t (sim bot3) PR AL (triv1 ⊜ L XF) (triv2 ⊜ L' XF)
+             }.
+
+Instance trivL_triv : Triv SR := {
+                               triv1 := trivL;
+                               triv2 := trivL
+                             }.
+Proof.
+  - intros; destruct b; eauto.
+  - intros; destruct b; eauto.
+  - intros; destruct b; simpl; eauto with len.
+  - intros. destruct b; eapply trivL_star_inv; eauto.
+  - intros; hnf; intros.
+    destruct f,f'; subst; simpl in *; clear_trivial_eqs.
+    inv_get.
+    destruct x,x1; simpl in *; clear_trivial_eqs.
+    exploit (H (LabI n0) (LabI n0)); eauto using map_get_1.
+    simpl in *; dcr.
+    eauto with len.
+  - intros; hnf; intros.
+    destruct f, f'; simpl in *. subst.
+    pone_step. inv_get. simpl.
+    destruct x,x1; simpl in *; clear_trivial_eqs. unfold trivs.
+    dcr; subst.
+    left. pextern_step; eauto.
+    hnf; intros. eexists; eauto. eexists. econstructor. rewrite omap_lookup_vars; eauto. eauto.
+    hnf; intros. eexists; eauto. eexists. econstructor. rewrite omap_lookup_vars; eauto.
+    rewrite omap_lookup_vars in *; eauto.
+    left. pno_step.
+    rewrite omap_lookup_vars in *; eauto.
+    left. pno_step.
+    Grab Existential Variables.
+    eapply default_val.
+    eapply default_val.
+Defined.
+
+(*
+Class PPRConstr A {PR:PointwiseProofRelationF A} :=
+  {
+    RelParamsF : A -> params -> params;
+    RelParamsF_correct : forall a Z, ParamRelFP a Z (RelParamsF a Z);
+    RelArgTest : A -> params -> stmt*stmt;
+    RelArgTest_correct :
+      forall t a Z L L' E E', sim bot3 t (L,E,fst (RelArgTest a Z)) (L',E',snd (RelArgTest a Z))
+                       -> ArgRelFP E E'
+
+  }.
+ *)
+
+Lemma triv_sat A PR (trivL:@Triv A PR) AL t L L' XF r (Len:❬XF❭= ❬L❭) (Len2:❬L❭=❬L'❭)
+  : labenv_sim t (sim r) PR AL L L'
+    -> labenv_sim t (sim bot3) PR AL (triv1 ⊜ L XF) (triv2 ⊜ L' XF).
 Proof.
   intros. hnf; intros.
   destruct H; dcr. len_simpl.
   split; eauto.
   split. {
     hnf; intros; inv_get. destruct x; simpl. exploit H1; eauto.
+    rewrite triv2_block_n. eauto.
   }
   split. {
     hnf; intros; inv_get. destruct x; simpl. exploit H3; eauto.
+    rewrite triv1_block_n. eauto.
   }
   split. {
-    hnf; intros; inv_get.
-    destruct f, f'; simpl in *.
-    destruct x,x1; simpl in *; clear_trivial_eqs. inv_get.
-    simpl.
-    exploit (H2 (LabI n0) (LabI n0)); eauto using map_get_1.
-    hnf in H0; dcr; subst; simpl in *.
-    split; eauto with len.
+    eapply triv_paramrel; eauto.
   }
-  split. hnf; intros; inv_get. edestruct H4; eauto. inv_get.
-  eexists; eapply zip_get; eauto.
-  hnf; intros. pone_step. inv_get. simpl.
-  destruct x,x1; simpl in *; clear_trivial_eqs. unfold trivs.
-  dcr; subst.
-  destruct f, f'; simpl in *. subst.
-  inv_get. simpl in *.
-  left. pextern_step; eauto.
-
-  hnf; intros. eexists; eauto. eexists. econstructor. rewrite omap_lookup_vars; eauto.
-  eapply fresh_list_nodup; eauto using fresh_spec.
-  hnf; intros. eexists; eauto. eexists. econstructor. rewrite omap_lookup_vars. reflexivity.
-  eauto with len.
-  eapply fresh_list_nodup; eauto using fresh_spec.
-  rewrite omap_lookup_vars in *; eauto.
-  eapply fresh_list_nodup; eauto using fresh_spec.
-  eapply fresh_list_nodup; eauto using fresh_spec.
-  eapply fresh_list_nodup; eauto using fresh_spec.
-  eapply fresh_list_nodup; eauto using fresh_spec.
-  left. pno_step.
-  rewrite omap_lookup_vars in *; eauto.
-  eapply fresh_list_nodup; eauto using fresh_spec.
-  eapply fresh_list_nodup; eauto using fresh_spec.
-  eapply fresh_list_nodup; eauto using fresh_spec.
-  eapply fresh_list_nodup; eauto using fresh_spec.
-  left. pno_step.
-  Grab Existential Variables.
-  eapply default_val.
-  eapply default_val.
+  split. {
+    hnf; intros; inv_get. edestruct H4; eauto. inv_get.
+    eexists; eapply zip_get; eauto.
+  }
+  eapply triv_app_r.
 Qed.
 
-Lemma trivL_step_tau_inv (L1:〔F.block〕) L XF E s σ
-  : step (L1 ++ trivL ⊜ L XF, E, s) EvtTau σ
-    -> (exists k L2 E' s', σ = (drop k (L2 ++ L1 ++ trivL ⊜ L XF), E', s') /\
-                     step (L1 ++ L, E, s) EvtTau (drop k (L2 ++ L1 ++ L), E', s')
-                     /\ k <= ❬L1❭ + ❬L2❭)
-      \/ exists f Y, s = stmtApp f Y /\ f >= ❬L1❭.
-Proof.
-  intros.
-  inv H;
-    try now (left; eexists 0, nil; do 2 eexists; (split; [try reflexivity|split;[try single_step|simpl; omega]])).
-  - eapply get_app_cases in Ldef as [|[? ?]].
-    + left. eexists (l - F.block_n blk), nil.
-      do 2 eexists; (split; [try reflexivity|split;[try single_step|simpl; try omega]]).
-      simpl. eauto using get_app.
-      eapply get_range in H0. omega.
-    + right. eauto.
-  - left. eexists 0, (mapi (F.mkBlock E) F). simpl.
-    do 2 eexists; (split; [try reflexivity|split;[try single_step|simpl; try omega]]).
-Qed.
-
-Definition bexternals (b:F.block) :=
-  externals (F.block_s b).
-
-Lemma trivL_step_tau_inv' (L1:〔F.block〕) L XF E s σ (STL1:sawtooth L1) (STL2: smaller L)
+Lemma trivL_step_tau_inv' A PR (trivL:@Triv A PR)
+      (L1:〔F.block〕) L XF E s σ (STL1:sawtooth L1) (STL2: smaller L)
       (DISJ:disj (of_list XF) (externals s ∪ list_union (bexternals ⊝ L1)))
-  : step (L1 ++ trivL ⊜ L XF, E, s) EvtTau σ
-    -> (exists L2 E' s', σ = (L2 ++ trivL ⊜ L XF, E', s') /\
+  : step (L1 ++ triv1 ⊜ L XF, E, s) EvtTau σ
+    -> (exists L2 E' s', σ = (L2 ++ triv1 ⊜ L XF, E', s') /\
                    step (L1 ++ L, E, s) EvtTau (L2 ++ L, E', s') /\ sawtooth L2 /\
                    disj (of_list XF) (externals s' ∪ list_union (bexternals ⊝ L2)))
       \/ exists f Y vl Z n s' xf E', s = stmtApp f Y /\ f >= ❬L1❭ /\
                       omap (op_eval E) Y = Some vl /\
                       get XF (f - ❬L1❭) xf  /\
                       get L (f - ❬L1❭) (F.blockI E' Z s' n) /\
-                      σ = (drop ((f - ❬L1❭)- n) (trivL ⊜ L XF),
-                           E'[fresh_list fresh {} ❬Z❭ <-- Some ⊝ vl], trivs xf Z) /\
+                      σ = (drop ((f - ❬L1❭)- n) (triv1 ⊜ L XF),
+                           (F.block_E (triv1 (F.blockI E' Z s' n) xf))
+                             [F.block_Z (triv1 (F.blockI E' Z s' n) xf) <-- Some ⊝ vl],
+                           F.block_s (triv1 (F.blockI E' Z s' n) xf)) /\
                  step (L1 ++ L, E, s) EvtTau (drop ((f - ❬L1❭) - n) L, E'[Z <-- Some ⊝ vl], s') /\
                  ❬Z❭ = ❬Y❭.
 Proof.
@@ -139,16 +166,18 @@ Proof.
       split; eauto. simpl.
       split; eauto. simpl.
       rewrite drop_app_gen.
+      rewrite !triv1_block_n; simpl.
       orewrite (l - n - ❬L1❭ = l - ❬L1❭ - n). reflexivity.
-      exploit STL2; eauto. simpl in *. omega.
+      exploit STL2; eauto. simpl in *. rewrite triv1_block_n. simpl. omega.
       split; eauto.
       orewrite (l - ❬L1❭ - n = l - n - ❬L1❭).
       rewrite <- drop_app_gen.
       eapply get_app_right with (L':=L1) (n':=l) in H2.
-      eapply (F.StepGoto _ _ _ H2); eauto with len. simpl in *. len_simpl. eauto.
+      eapply (F.StepGoto _ _ _ H2); eauto with len. simpl in *.
+      rewrite triv1_block_Z in len. simpl in *. eauto.
       omega.
       exploit STL2; eauto. simpl in *. omega.
-      simpl in *; eauto with len.
+      rewrite triv1_block_Z in len. simpl in *. eauto.
   - left. eexists (mapi (F.mkBlock E) F ++ L1). rewrite <- !app_assoc.
     do 2 eexists; (split; [try reflexivity|try single_step]).
     split; eauto. single_step. split; eauto.
@@ -164,20 +193,14 @@ Proof.
     eapply incl_list_union; eauto using map_get.
 Qed.
 
-Lemma trivs_star_inv (L:〔F.block〕) E xf σ n Z
-  :  star2n step n (L, E, trivs xf Z) nil σ
-     -> n = 0 /\ σ = (L, E, trivs xf Z).
-Proof.
-  intros. inv H; eauto.
-  exfalso. inv H1. isabsurd.
-Qed.
 
-Lemma trivL_plus_step_tau_inv L1 (L:〔F.block〕) XF E s σ n
-      (STEP:star2n step n (L1 ++ trivL ⊜ L XF, E, s) nil σ) (STL1:sawtooth L1) (STL2: smaller L)
+Lemma trivL_plus_step_tau_inv A PR (trivL : @Triv A PR)
+      L1 (L:〔F.block〕) XF E s σ n
+      (STEP:star2n step n (L1 ++ triv1 ⊜ L XF, E, s) nil σ) (STL1:sawtooth L1) (STL2: smaller L)
       (DISJ:disj (of_list XF) (externals s ∪ list_union (bexternals ⊝ L1)))
   : ((exists L2 E' s',
          star2n step n (L1 ++ L, E, s) nil (L2 ++ L, E', s') /\
-         sawtooth L2 /\ σ = (L2 ++ trivL ⊜ L XF, E', s') /\
+         sawtooth L2 /\ σ = (L2 ++ triv1 ⊜ L XF, E', s') /\
          disj (of_list XF) (externals s' ∪ list_union (bexternals ⊝ L2)))
      \/ ( exists E' f Y vl Z n' s' xf L2 m E'',
            star2n step m (L1 ++ L, E, s) nil (L2 ++ L, E', stmtApp (LabI (❬L2❭ + f)) Y) /\ n = S m /\
@@ -186,14 +209,17 @@ Lemma trivL_plus_step_tau_inv L1 (L:〔F.block〕) XF E s σ n
            omap (op_eval E') Y = Some vl /\
            get XF f xf  /\
            get L f (F.blockI E'' Z s' n') /\
-           σ = (drop (f - n') (trivL ⊜ L XF), E''[fresh_list fresh {} ❬Z❭ <-- Some ⊝ vl], trivs xf Z) /\
+           σ = (drop (f - n') (triv1 ⊜ L XF),
+                (F.block_E (triv1 (F.blockI E'' Z s' n') xf))
+                  [F.block_Z (triv1 (F.blockI E'' Z s' n') xf) <-- Some ⊝ vl],
+                F.block_s (triv1 (F.blockI E'' Z s' n') xf)) /\
            ❬Z❭ = ❬Y❭)).
 Proof.
   intros. general induction STEP.
   - left.
     eexists L1; do 2 eexists; eauto 20 using star2n.
   - destruct y, yl; isabsurd.
-    edestruct (@trivL_step_tau_inv' L1 L); eauto.
+    edestruct (@trivL_step_tau_inv' _ _ trivL0 L1 L); eauto.
     + dcr. subst. simpl in *; clear_trivial_eqs.
       exploit IHSTEP as IH; eauto.
       destruct IH as [[? ?]|[? ?]]; dcr; subst.
@@ -205,7 +231,7 @@ Proof.
         -- eapply S_star2n with (y:=EvtTau) (yl:=nil); eauto.
         -- eauto 20.
     + destruct H0; dcr; subst.
-      edestruct trivs_star_inv; try eapply STEP; eauto; subst.
+      edestruct (triv_star_inv _ _ STEP); eauto; subst.
       right. destruct x; simpl in *.
       assert (NEQ:n = ❬L1❭ + (n - ❬L1❭)) by omega.
       setoid_rewrite NEQ at 1.
@@ -216,18 +242,17 @@ Proof.
         rewrite <- NEQ. eauto.
 Qed.
 
-Lemma event_inversion (L:F.labenv) (E:onv val) xf (L':F.labenv) E' s' Z vl (Len:❬Z❭= ❬vl❭) r
+Lemma event_inversion' (L:F.labenv) (E:onv val) xf (L':F.labenv) E' s' Z vl (Len:❬Z❭= ❬vl❭) r
   : (forall evt σ1'', step (L, E[fresh_list fresh {} ❬Z❭ <-- Some ⊝ vl], trivs xf Z) evt σ1'' -> exists σ2'',
           step (L', E', s') evt σ2'' /\ r σ1'' σ2'')
     -> exists Y x s'', s' = stmtLet x (Call xf Y) s''
                  /\ omap (op_eval E') Y = Some vl.
 Proof.
   intros.
-  edestruct H.
-  - hnf. eapply F.StepExtern with (v:=default_val).
-    rewrite omap_lookup_vars; eauto with len.
-    eapply fresh_list_nodup; eauto using fresh_spec.
-  - dcr. inv H1. destruct Y; simpl in *; eauto.
+  edestruct event_inversion_F; eauto.
+  rewrite omap_lookup_vars; eauto with len.
+  dcr; subst.
+  setoid_rewrite omap_lookup_vars in H3; eauto with len.
 Qed.
 
 Lemma trivs_inversion (L:F.labenv) XF E s L' E' xf n s' x L2 Y'
@@ -266,7 +291,6 @@ Proof.
 Qed.
 
 
-
 Lemma labenv_lift r t XF L1 L2 L L' E E' s s'
       (Len:❬XF❭=❬L❭) (Len2:❬L❭=❬L'❭)
       (DISJ:disj (of_list XF) (externals s ∪ list_union (bexternals ⊝ L1)))
@@ -281,24 +305,24 @@ Proof.
   revert_all. pcofix CIH; intros.
   pinversion SIMbot; subst.
   - eapply plus2_star2n in H. eapply plus2_star2n in H0. dcr.
-    edestruct (trivL_plus_step_tau_inv _ H2); eauto; dcr; subst;
+    edestruct (trivL_plus_step_tau_inv trivL_triv _ H2); eauto; dcr; subst;
       try eapply LAB.
-    + edestruct (trivL_plus_step_tau_inv _ H0); eauto; dcr; subst;
+    + edestruct (trivL_plus_step_tau_inv trivL_triv _ H0); eauto; dcr; subst;
         try eapply LAB.
       * uncount_star2.
         pfold.
         econstructor 1; eauto.
       * eapply sim_activated in H1 as [? [? [? ?]]]; dcr.
         destruct x15 as [[? ?] ?].
-        eapply event_inversion in H13 as [? [? ?]]; dcr; subst. clear H15.
+        eapply event_inversion' in H13 as [? [? ?]]; dcr; subst. clear H15.
         eapply star2_star2n in H. dcr.
         eapply star2n_trans_silent in H12; eauto. simpl in *.
-        eapply trivL_plus_step_tau_inv in H12 as [|];
+        eapply (trivL_plus_step_tau_inv trivL_triv) in H12 as [|];
           dcr; subst; clear_trivial_eqs; simpl in *; eauto.
         -- exfalso. eapply H18. eapply get_in_of_list; eauto.
            clear. cset_tac.
         -- rewrite omap_lookup_vars in H17;
-             [ invc H17 | eauto with len | eapply fresh_list_nodup; eauto using fresh_spec ].
+             [ invc H17 | eauto with len | eauto ].
            uncount_star2.
            eapply sim_expansion_closed; try eassumption.
            eapply sim_app_shift_F; [eapply LAB | eapply LAB |].
@@ -317,21 +341,19 @@ Proof.
         -- eapply LAB.
         -- eauto with len.
         -- hnf. do 2 eexists; econstructor.
-           rewrite omap_lookup_vars. reflexivity.
-           eauto with len.
-           eapply fresh_list_nodup; eauto using fresh_spec.
+           rewrite omap_lookup_vars; eauto. eauto with len.
     + clear_trivial_eqs.
       eapply sim_activated_2 in H1 as [? [? [?|?]]]; dcr.
       * destruct x as [[? ?] ?].
-        eapply event_inversion in H10 as [? [? ?]]; dcr; subst. clear H12.
+        eapply event_inversion' in H10 as [? [? ?]]; dcr; subst. clear H12.
         eapply star2_star2n in H. dcr.
         eapply star2n_trans_silent in H1; eauto. simpl in *.
-        eapply trivL_plus_step_tau_inv in H1 as [|];
+        eapply (trivL_plus_step_tau_inv trivL_triv) in H1 as [|];
           dcr; subst; clear_trivial_eqs; simpl in *; eauto.
         -- exfalso. eapply H14. eapply get_in_of_list; eauto.
            clear. cset_tac.
         -- rewrite omap_lookup_vars in H13;
-             [ invc H13 | eauto with len | eapply fresh_list_nodup; eauto using fresh_spec ].
+             [ invc H13 | eauto with len | eauto ].
            uncount_star2.
            eapply sim_expansion_closed; try eassumption.
            eapply sim_app_shift_F; [eapply LAB | eapply LAB |].
@@ -352,7 +374,7 @@ Proof.
       * subst.
         eapply star2_star2n in H. dcr.
         eapply star2n_trans_silent in H1; eauto. simpl in *.
-        eapply trivL_plus_step_tau_inv in H1 as [|];
+        eapply (trivL_plus_step_tau_inv trivL_triv) in H1 as [|];
           dcr; subst; clear_trivial_eqs; simpl in *; eauto.
         -- uncount_star2.
            eapply plus2_star2 in H9.
@@ -362,16 +384,15 @@ Proof.
            eapply normal2_labenv_F; eauto using trivL_block_Z with len.
         -- exfalso.
            eapply H3. do 2 eexists.
-           econstructor. rewrite omap_lookup_vars. reflexivity.
-           eauto with len. eapply fresh_list_nodup; eauto using fresh_spec.
+           econstructor. rewrite omap_lookup_vars; eauto. eauto with len.
         -- eapply LAB.
       * do 2 eexists. econstructor. rewrite omap_lookup_vars. reflexivity.
         eauto with len. eapply fresh_list_nodup; eauto using fresh_spec.
   - eapply star2_star2n in H. dcr.
     eapply star2_star2n in H0. dcr.
-    edestruct (trivL_plus_step_tau_inv _ H5); eauto; dcr; subst;
+    edestruct (trivL_plus_step_tau_inv trivL_triv _ H5); eauto; dcr; subst;
       try eapply LAB.
-    + edestruct (trivL_plus_step_tau_inv _ H); eauto; dcr; subst;
+    + edestruct (trivL_plus_step_tau_inv trivL_triv _ H); eauto; dcr; subst;
         try eapply LAB.
       * uncount_star2.
         pfold.
@@ -416,12 +437,12 @@ Proof.
            eapply get_in_of_list; eauto. simpl. clear. cset_tac.
         -- destruct t.
            ++ specialize (H15 eq_refl).
-             rewrite H8 in H15. rewrite omap_lookup_vars in H15. congruence.
-             eauto with len. eapply fresh_list_nodup; eauto using fresh_spec.
+             rewrite H8 in H15. rewrite omap_lookup_vars in H15; eauto. congruence.
+             eauto with len.
            ++ pfold. eapply SimErr; try eapply H7.
              reflexivity.
              intros [? [? ?]]. inv H0. congruence.
-    + edestruct (trivL_plus_step_tau_inv _ H); eauto; dcr; subst;
+    + edestruct (trivL_plus_step_tau_inv trivL_triv _ H); eauto; dcr; subst;
         try eapply LAB.
       * uncount_star2. eapply plus2_star2 in H5.
         assert (SIMbot':paco3 (@sim_gen F.state _ F.state _) bot3 t
@@ -435,10 +456,10 @@ Proof.
            eapply get_in_of_list; eauto. simpl. clear. cset_tac.
         -- destruct t.
            ++ specialize (H15 eq_refl).
-             rewrite H13 in H15. rewrite omap_lookup_vars in H13. congruence.
-             eauto with len. eapply fresh_list_nodup; eauto using fresh_spec.
-           ++ rewrite omap_lookup_vars in H13. congruence.
-             eauto with len. eapply fresh_list_nodup; eauto using fresh_spec.
+             rewrite H13 in H15. rewrite omap_lookup_vars in H13; eauto. congruence.
+             eauto with len.
+           ++ rewrite omap_lookup_vars in H13; eauto. congruence.
+             eauto with len.
       * uncount_star2. eapply plus2_star2 in H.
         eapply plus2_star2 in H5.
         assert (SIMbot':paco3 (@sim_gen F.state _ F.state _) bot3 t
@@ -447,8 +468,7 @@ Proof.
         }
         eapply sim_reduction_closed in SIMbot'; eauto.
         eapply sim_call_inv_F in SIMbot' as [|]; dcr; subst.
-        -- rewrite !omap_lookup_vars in H6; only 2,4:eauto with len;
-             only 2-3: eapply fresh_list_nodup; eauto using fresh_spec.
+        -- rewrite !omap_lookup_vars in H6; only 2-5: eauto with len.
            clear_trivial_eqs.
           eapply sim_expansion_closed; eauto.
            eapply sim_app_shift_F; [eapply LAB | eapply LAB |].
@@ -466,25 +486,24 @@ Proof.
              hnf in H; dcr; simpl in *; eauto with len. eauto with len.
         -- destruct t.
            ++ specialize (H18 eq_refl).
-             rewrite H6 in H18. rewrite omap_lookup_vars in H18. congruence.
-             eauto with len. eapply fresh_list_nodup; eauto using fresh_spec.
-           ++ rewrite omap_lookup_vars in H6. congruence.
-             eauto with len. eapply fresh_list_nodup; eauto using fresh_spec.
+             rewrite H6 in H18. rewrite omap_lookup_vars in H18; eauto. congruence.
+             eauto with len.
+           ++ rewrite omap_lookup_vars in H6; eauto. congruence.
+             eauto with len.
   - eapply star2_star2n in H0. dcr.
-    edestruct (trivL_plus_step_tau_inv _ H2); eauto; dcr; subst; only 1: eapply LAB.
+    edestruct (trivL_plus_step_tau_inv trivL_triv _ H2); eauto; dcr; subst; only 1: eapply LAB.
     + eapply star2n_star2 in H4.
       pfold.
       eapply SimErr; try eapply H4; eauto.
       eapply normal2_labenv_F; eauto using trivL_block_Z with len.
     + exfalso. eapply H1.
       hnf. do 2 eexists. econstructor.
-      rewrite omap_lookup_vars. reflexivity.
+      rewrite omap_lookup_vars; eauto.
       eauto with len.
-      eapply fresh_list_nodup; eauto using fresh_spec.
   - eapply star2_star2n in H0. eapply star2_star2n in H1. dcr.
-    edestruct (trivL_plus_step_tau_inv _ H4); eauto; dcr; subst;
+    edestruct (trivL_plus_step_tau_inv trivL_triv _ H4); eauto; dcr; subst;
       only 1: eapply LAB.
-    + edestruct (trivL_plus_step_tau_inv _ H1); eauto; dcr; subst;
+    + edestruct (trivL_plus_step_tau_inv trivL_triv _ H1); eauto; dcr; subst;
         only 1: eapply LAB.
       * pfold.
         eapply star2n_star2 in H6. eapply star2n_star2 in H8.
@@ -530,7 +549,7 @@ Proof.
   exploit (H (trivL ⊜ L XF) (trivL ⊜ L' XF)).
   - eauto with len.
   - rewrite <- trivL_Z_len.
-    eapply (triv_sat XF (ltac:(eauto with len)) H0 H1); eauto.
+    eapply (triv_sat trivL_triv XF (ltac:(eauto with len)) H0 H1); eauto.
     subst XF; eauto with len.
     rewrite fresh_list_length; eauto.
   - eapply labenv_lift with (L1:=nil) (L2:=nil) (XF:=XF); eauto.
