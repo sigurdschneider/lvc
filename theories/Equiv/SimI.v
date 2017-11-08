@@ -198,17 +198,15 @@ Proof.
     eapply IndexRelDrop in RN; eauto; [| rewrite Len3; eauto].
     exploit (LSIM (LabI  (f - ❬AL'❭)) (LabI (f' - Image AL'))) as SIMR; eauto.
     rewrite Len3; eauto. rewrite Img; eauto.
-    eapply (@sim_Y_left I.state _ I.state _).
-    eapply (@sim_Y_right I.state _ I.state _).
-    rewrite Img in SIMR. rewrite Len3 in SIMR.
-    eapply paco3_mon; [| eauto].
-    eapply SIMR; eauto.
-    econstructor; simpl; eauto with len. simpl. eauto with len.
-    eapply I.StepGoto_mapi; simpl in *; eauto with len.
-    rewrite mapi_length. exploit STL; eauto. simpl in *. omega.
-    econstructor; simpl; eauto. simpl. eauto with len.
-    eapply I.StepGoto_mapi; simpl in *; eauto with len.
-    rewrite mapi_length. exploit STL'; eauto. simpl in *. omega.
+    assert (EQf:f=LabI (❬mapi I.mkBlock F❭+(f-❬mapi I.mkBlock F❭))). {
+      len_simpl. destruct f; f_equal. simpl in *. omega.
+    }
+    assert (EQf':f'=LabI (❬mapi I.mkBlock F'❭+(f'-❬mapi I.mkBlock F'❭))). {
+      len_simpl. destruct f'; f_equal. simpl in *. omega.
+    }
+    rewrite EQf, EQf'.
+    eapply sim_app_shift_I; eauto. len_simpl.
+    rewrite Img, Len3 in *. eauto.
 Qed.
 
 (** ** Key Lemmata *)
@@ -231,184 +229,6 @@ Proof.
   eapply labenv_sim_mon; eauto.
 Qed.
 
-
-(*Require Import TraceEquiv.
-
-Definition pfx' (t:simtype) (σ σ':I.state) := forall L, prefix σ L -> prefix σ' L.
-Definition pfx
-           (r:rel3 simtype (fun _ : simtype => I.state) (fun (_ : simtype) (_ : I.state) => I.state))
-           (t:simtype) := pfx'.
-
-
-Inductive prefix_n {S} `{StateType S} : nat -> S -> list extevent -> Prop :=
-  | producesPrefixSilent n (σ:S) (σ':S) L :
-      step σ EvtTau σ'
-      -> prefix_n n σ' L
-      -> prefix_n (1+ n) σ L
-  | producesPrefixExtern n (σ:S) (σ':S) evt L :
-      activated σ
-      -> step σ evt σ'
-      -> prefix_n n σ' L
-      -> prefix_n (1+ n) σ (EEvtExtern evt::L)
-  | producesPrefixTerm n (σ:S) (σ':S) r
-    : result σ' = r
-      -> star2 step σ nil σ'
-      -> normal2 step σ'
-      -> prefix_n n σ (EEvtTerminate r::nil)
-  | producesPrefixPrefix n (σ:S)
-    : prefix_n n σ nil.
-
-Definition preincl n
-           {S} `{StateType S} {S'} `{StateType S'} (σ:S) (σ':S') :=
-  forall L,  prefix_n n σ L -> prefix σ' L.
-
-Lemma prefix_prefix_n {S} `{StateType S} σ L
-  : prefix σ L -> exists n, prefix_n n σ L.
-Proof.
-  intros P.
-  general induction P; try destruct IHP.
-  - exists (1+x). eauto 20 using @prefix_n.
-  - exists (1+x). eauto 20 using @prefix_n.
-  - exists 0. eauto 20 using @prefix_n.
-  - eexists 0. eauto 20 using @prefix_n.
-Qed.
-
-Lemma prefix_n_prefix {S} `{StateType S} σ L n
-  : prefix_n n σ L -> prefix σ L.
-Proof.
-  intros P.
-  general induction P; eauto using @prefix.
-Qed.
-
-Lemma preincl_prefix_incl {S} `{StateType S} {S'} `{StateType S'} (σ:S) (σ':S')
-  : (forall n, preincl n σ σ') -> forall L, prefix σ L -> prefix σ' L.
-Proof.
-  intros. eapply prefix_prefix_n in H2 as [? ?]. eapply H1; eauto.
-Qed.
-
-Definition pic n {S} `{StateType S} {S'} `{StateType S'}
-           (t:simtype) (σ:S) (σ':S') := preincl n σ σ'.
-
-Lemma pic_silent_step t n {S} `{StateType S} {S'} `{StateType S'} (σ1 σ1':S) (σ2 σ2':S')
-  : pic n t σ1' σ2'
-    -> step σ1 EvtTau σ1'
-    -> step σ2 EvtTau σ2'
-    -> pic (1+ n) t σ1 σ2.
-Proof.
-  intros. hnf; intros.
-  inv H4. relsimpl. eapply H1 in H7.
-  econstructor; eauto.
-  relsimpl. relsimpl.
-  assert (prefix_n n σ1' (EEvtTerminate (result σ') :: nil)) by eauto using @prefix_n.
-  eapply H1 in H5. econstructor; eauto.
-  econstructor. eauto. econstructor 4.
-Qed.
-
-Lemma labenv_sim_extension'' n t A (PR:ProofRelationI A) (AL AL':list A) F F' L L'
-  : indexwise_r t (pic n) PR AL' F F' AL (mapi I.mkBlock F ++ L) (mapi I.mkBlock F' ++ L')
-    -> indexwise_paramrel PR F F' AL' AL
-    -> separates PR AL' AL F F'
-    -> labenv_sim t (pic n) PR AL L L'
-    -> labenv_sim t (pic (S n)) PR (AL' ++ AL) (mapi I.mkBlock F ++ L) (mapi I.mkBlock F' ++ L').
-Proof.
-  intros SIM IPR [Len2 [Img [Ilt Ige]]] [Len1 [STL [STL' [PAR [IE LSIM]]]]].
-  hnf; do 5 (try split);
-    eauto 20 using smaller_I_mkBlocks, complete_paramrel, complete_indexes_exists with len.
-  intros f f' ? ? ? ? ? ? ? RN GetAL GetFL GetL'.
-  assert (Len3:❬AL'❭ = ❬mapi I.mkBlock F❭) by eauto with len.
-  eapply get_app_cases in GetFL. destruct GetFL as [GetFL'| [GetFL GE]].
-  - exploit Ilt; eauto. eapply get_range in GetFL'.
-    rewrite mapi_length in GetFL'; eauto.
-    eapply get_app_lt_1 in GetL'; [| rewrite mapi_length; eauto ].
-    inv_get. destruct x0 as [Z s], x as [Z' s']. simpl in *. clear EQ0 EQ.
-    eapply pic_silent_step; only 2-3: single_step.
-    simpl.
-    orewrite (f-f=0). orewrite (f'-f'=0). simpl.
-    exploit SIM; eauto.
-  - intros. exploit Ige; eauto. rewrite mapi_length in GE; eauto.
-    eapply get_app_right_ge in GetAL; [ | rewrite Len3; eauto ].
-    eapply get_app_right_ge in GetL'; [ | rewrite mapi_length; eauto ].
-    rewrite mapi_length in *.
-    eapply IndexRelDrop in RN; eauto; [| rewrite Len3; eauto].
-    exploit (LSIM (LabI  (f - ❬AL'❭)) (LabI (f' - Image AL'))) as SIMR; eauto.
-    rewrite Len3; eauto. rewrite Img; eauto.
-    eapply pic_silent_step; only 2-3: single_step.
-    Focus 2. eapply get_app_right; eauto. len_simpl. omega.
-    Focus 3. eapply get_app_right; eauto. len_simpl. omega.
-    simpl.
-    admit.
-    simpl; eauto with len. simpl; eauto with len.
-    (*eapply (@sim_Y_left I.state _ I.state _).
-    eapply (@sim_Y_right I.state _ I.state _).
-    rewrite Img in SIMR. rewrite Len3 in SIMR.
-    eapply paco3_mon; [| eauto].
-    eapply SIMR; eauto.
-    econstructor; simpl; eauto with len. simpl. eauto with len.
-    eapply I.StepGoto_mapi; simpl in *; eauto with len.
-    rewrite mapi_length. exploit STL; eauto. simpl in *. omega.
-    econstructor; simpl; eauto. simpl. eauto with len.
-    eapply I.StepGoto_mapi; simpl in *; eauto with len.
-    rewrite mapi_length. exploit STL'; eauto. simpl in *. omega.*)
-Admitted.
-
-Definition pic' {S} `{StateType S} {S'} `{StateType S'}
-           (t:simtype) (σ:S) (σ':S') := forall L, prefix σ L -> prefix σ' L.
-
-Lemma pic_pic' t A (PR:ProofRelationI A) AL' AL F F' L L'
-  : (forall n, (labenv_sim t (pic n) PR AL L L' -> indexwise_r t (pic n) PR AL' F F' AL L L'))
-    -> labenv_sim t pic' PR AL L L' -> indexwise_r t pic' PR AL' F F' AL L L'.
-Proof.
-  intros. hnf; intros.
-  hnf; intros.
-  eapply prefix_prefix_n in H6 as [? ?].
-  eapply H; eauto.
-  hnf; intros. edestruct H0. dcr.
-  split; eauto. split; eauto. split; eauto. split; eauto.
-  split; eauto. hnf; intros. hnf; intros.
-  eapply H14; eauto. eapply prefix_n_prefix; eauto.
-Qed.
-
-(*
-
-Lemma pic'_pic t A (PR:ProofRelationI A) AL' AL F F' L L'
-  : (labenv_sim t pic' PR AL L L' -> indexwise_r t pic' PR AL' F F' AL L L')
-    -> (forall n, (labenv_sim t (pic n) PR AL L L' -> indexwise_r t (pic n) PR AL' F F' AL L L')).
-Proof.
-  intros. hnf; intros.
-  hnf; intros.
-  eapply prefix_n_prefix in H6.
-  eapply H; eauto.
-  hnf; intros. edestruct H0. dcr.
-  split; eauto. split; eauto. split; eauto. split; eauto.
-  split; eauto. hnf; intros. hnf; intros.
-  eapply H14; eauto. eapply prefix_prefix_n in H22 as [? ?]. eauto.
-Qed.
-*)
-
-
-
-Lemma fix_compatible_separate' t A (PR:ProofRelationI A) AL' AL F F' L L'
-  : (forall n, (labenv_sim t (pic n) PR (AL' ++ AL) (mapi I.mkBlock F ++ L) (mapi I.mkBlock F' ++ L')
-           -> indexwise_r t (pic n) PR AL' F F' AL (mapi I.mkBlock F ++ L) (mapi I.mkBlock F' ++ L')))
-    -> indexwise_paramrel PR F F' AL' AL
-    -> separates PR AL' AL F F'
-    -> (forall n, labenv_sim t (pic n) PR AL L L'
-    -> indexwise_r t (pic n) PR AL' F F' AL (mapi I.mkBlock F ++ L) (mapi I.mkBlock F' ++ L')).
-Proof.
-  intros ISIM LP SEP k SIML. general induction k.
-  - intros. hnf; intros. hnf; intros.
-    inv H4; eauto using @prefix.
-    eapply ISIM; eauto using @prefix.
-    admit.
-  - eapply ISIM; eauto.
-    eapply labenv_sim_extension''; eauto.
-    Focus 2.
-    eapply labenv_sim_mon; eauto. admit.
-    eapply IHk; eauto.
-    eapply labenv_sim_mon; eauto. admit.
-Admitted.
- *)
-
 (** *** Extension Lemma *)
 
 Lemma labenv_sim_extension t A (PR:ProofRelationI A) (AL AL':list A) F F'
@@ -428,24 +248,24 @@ Qed.
 
 (** *** Fun Compatibility *)
 
-(*
-Lemma sim_fun t A (PR:ProofRelationI A) (AL AL':list A) F F' L L' V V' s s'
-  : (forall r, labenv_sim t (sim r) PR (AL' ++ AL) (mapi I.mkBlock F ++ L) (mapi I.mkBlock F' ++ L')
-          -> (sim r \3/ r) t (mapi I.mkBlock F ++ L, V, s) (mapi I.mkBlock F' ++ L', V', s'))
-    -> (forall r,
+
+Lemma sim_fun t A (PR:ProofRelationI A) (AL AL':list A) F F' V V' s s'
+  : (forall r L L', labenv_sim t (sim r) PR (AL' ++ AL) (mapi I.mkBlock F ++ L) (mapi I.mkBlock F' ++ L')
+               -> (sim r \3/ r) t (mapi I.mkBlock F ++ L, V, s) (mapi I.mkBlock F' ++ L', V', s'))
+    -> (forall r L L',
           labenv_sim t (sim r) PR (AL' ++ AL) (mapi I.mkBlock F ++ L) (mapi I.mkBlock F' ++ L')
           -> indexwise_r t (sim r) PR AL' F F' AL (mapi I.mkBlock F ++ L) (mapi I.mkBlock F' ++ L'))
     -> indexwise_paramrel PR F F' AL' AL
     -> separates PR AL' AL F F'
-    -> forall r, labenv_sim t (sim r) PR AL L L'
-           -> sim r t (L, V, stmtFun F s) (L', V', stmtFun F' s').
+    -> forall r L L', labenv_sim t (sim r) PR AL L L'
+                -> sim r t (L, V, stmtFun F s) (L', V', stmtFun F' s').
 Proof.
-  intros SIM_s ISIM IP SEP r SIML.
+  intros SIM_s ISIM IP SEP r L L' SIML.
   pone_step.
   eapply SIM_s.
   eapply labenv_sim_extension; eauto.
 Qed.
- *)
+
 
 (** *** Specialized Version if function bindings are not changed *)
 
