@@ -224,11 +224,8 @@ Hint Resolve satisfies_fstNoneOrR_apx onvLe_fstNoneOrR_apx.
 Instance PR : PointwiseProofRelationF (params*eqns):=
   {
     ArgRelFP := fun E E' '(Z,Γf) VL VL'
-               => length Z = length VL /\ VL = VL'
-                 /\ exists Γ Y V, entails (of_list ((fun y : op => EqnEq y y) ⊝ Y) ∪ Γ)
-                                    (subst_eqns (sid [Z <-- Y]) Γf)
-                            /\ satisfiesAll V Γ /\ omap (op_eval V) Y = Some VL
-                            /\ agree_on eq (eqns_freeVars Γf \ of_list Z) V E;
+               => length Z = length VL /\ VL = VL' /\
+                 satisfiesAll (E [Z <-- Some ⊝ VL]) Γf;
     ParamRelFP := fun '(Z,_) Z' Zb => Z = Z' /\ Zb = Z'
   }.
 
@@ -350,17 +347,15 @@ Proof.
     }
     simpl in *; dcr; subst.
     exists Yv; repeat split; eauto using omap_exp_eval_onvLe.
-    exists Gamma, Y, V.
-    exploit EEQ; eauto; dcr. simpl in *.
-    repeat split; eauto.
-    + hnf; intros.
-      exploit H2; eauto.
-      eapply satisfiesAll_union in H6; dcr.
-      eapply satisfiesAll_EqnEq_omap in H14; dcr.
-      eapply satisfiesAll_subst; eauto. reflexivity. eauto with len.
-      exploit satisfiesAll_EqnApx_omap; eauto.
-      eapply satisfiesAll_subst; eauto with len.
-    + symmetry; eapply agree_on_incl; eauto.
+    exploit EEQ; eauto; dcr. clear H11. simpl in *. symmetry in H12.
+    rewrite <- satisfiesAll_subst; eauto with len.
+    eapply H2.
+    eapply satisfiesAll_union; split; eauto.
+    hnf; intros ? Get.
+    eapply of_list_get_first in Get; dcr.
+    inv_get. invc H11. simpl.
+    eapply omap_inversion in H8; eauto; dcr.
+    rewrite H15. econstructor; eauto.
   - eapply (sim_return_apx il_statetype_F).
     exploit H; eauto.
   - exploit H; eauto. eapply (sim_let_call_apx il_statetype_F); eauto; simpl.
@@ -385,29 +380,20 @@ Proof.
         eapply H; eauto.
         -- rewrite satisfiesAll_union; split.
            ++ exploit EqnFVF; eauto.
-             edestruct H8; eauto; dcr. simpl in *.
-             rewrite <- satisfiesAll_subst; eauto with len.
-             eapply H16.
-             eapply satisfiesAll_union; split; eauto.
-             hnf; intros.
-             eapply of_list_get_first in H20; dcr. invc H25.
-             inv_get. simpl.
-             eapply omap_inversion in H17; eauto; dcr.
-             rewrite H25. econstructor; eauto.
            ++ eapply satisfiesAll_agree; eauto.
              eapply agree_on_update_list_dead; eauto.
              ** edestruct H8; eauto; dcr.
                 rewrite FV. eauto.
         -- rewrite eqns_freeVars_union.
            rewrite FV. edestruct H8; eauto; dcr. simpl in *.
-           rewrite H15.
+           rewrite H14.
            exploit EqnFVF as EQ; eauto.
            rewrite EQ. simpl.
            clear; cset_tac.
         -- intros ? ? ? Get1 Get2. eapply get_app_cases in Get1. destruct Get1.
            ++ inv_get.
              edestruct H8; try eapply H5; eauto; dcr. simpl in *.
-             rewrite H18. split.
+             rewrite H15. split.
              ** rewrite EqnFVF; eauto. clear_all; cset_tac.
              ** eapply agree_on_update_list_dead; eauto with len.
                 rewrite EqnFVF; eauto.
@@ -416,12 +402,12 @@ Proof.
              rewrite get_app_ge in Get2; eauto with len.
              rewrite Len1 in *. inv_get.
              exploit EEQ; eauto; dcr.
-             edestruct H8; try eapply H5; eauto; dcr.
-             rewrite H15. simpl. split. rewrite H21.
+              edestruct H8; try eapply H5; eauto; dcr.
+             rewrite H14. simpl. split. rewrite H18.
              clear_all; cset_tac.
              simpl in *.
              eapply agree_on_update_list_dead; eauto.
-             eapply disj_2_incl; eauto. rewrite H21.
+             eapply disj_2_incl; eauto. rewrite H18.
              clear_all; cset_tac. omega.
       * hnf. intros. simpl in *. subst. inv_get. exploit ParamEq; dcr; eauto.
     + pe_rewrite. eauto.
