@@ -71,7 +71,6 @@ CoInductive sim {S} `{StateType S} {S'} `{StateType S'}  : S -> S' -> Prop :=
       -> star2 step pσ2 nil σ2
       -> activated σ1
       -> activated σ2
-      -> (forall evt σ1', step σ1 evt σ1' -> exists σ2', step σ2 evt σ2' /\ sim σ1' σ2')
       -> (forall evt σ2', step σ2 evt σ2' -> exists σ1', step σ1 evt σ1' /\ sim σ1' σ2')
       -> sim pσ1 pσ2
   | SimTerm (σ1 σ1':S) (σ2 σ2':S')

@@ -51,7 +51,7 @@ Ltac pextern_step :=
           | eapply star2_refl
           | try step_activated
           | try step_activated
-          | intros ? ? STEP; inv STEP; eexists; split; [econstructor; eauto | ]
+          | intros ? ? ? STEP; try subst; inv STEP; eexists; split; [econstructor; eauto | ]
           | intros ? ? STEP; inv STEP; eexists; split; [econstructor; eauto | ]
           ]
         | eapply SimLockExtern ;
@@ -106,8 +106,8 @@ Proof.
       [ eapply star2_refl
       | eapply star2_refl
       | step_activated; eauto using step_let_call
-      | step_activated; eauto using step_let_call | |];
-      intros ? ? STEP; eapply let_call_inversion in STEP; dcr; subst; eexists; split; try eapply step_let_call; eauto.
+      | step_activated; eauto using step_let_call | intros ? ? ? STEP; subst| intros ? ? STEP];
+    eapply let_call_inversion in STEP; dcr; subst; eexists; split; try eapply step_let_call; eauto.
     rewrite <- EQ; eauto.
     rewrite EQ; eauto.
   * pfold. eapply SimTerm; [| eapply star2_refl | eapply star2_refl | | ];
@@ -264,8 +264,8 @@ Proof.
       [ eapply star2_refl
       | eapply star2_refl
       | step_activated; eauto using step_let_call
-      | step_activated; eauto using step_let_call | |];
-      intros ? ? STEP; eapply let_call_inversion in STEP; dcr; subst; eexists; split; try eapply step_let_call; eauto; congruence.
+      | step_activated; eauto using step_let_call | intros ? ? ? STEP | intros ? ? STEP];
+      eapply let_call_inversion in STEP; dcr; subst; eexists; split; try eapply step_let_call; eauto; congruence.
 Qed.
 
 
@@ -375,8 +375,10 @@ Proof.
   - invc H0; [|inv H7; isabsurd].
     invc H1; [|inv H6; isabsurd].
     case_eq (omap (op_eval E) Y); intros.
-    + edestruct H4; eauto; dcr. econstructor; eauto.
-      invt @step. rewrite def. eauto.
+    + left. destruct H3 as [? [? ?]]; dcr.
+      inv H1.
+      edestruct H5; eauto; dcr. inv H6.
+      split; congruence.
     + case_eq (omap (op_eval E') Y'); intros; eauto.
       edestruct H5; dcr; eauto. econstructor; eauto.
       inv H7. congruence.
@@ -394,7 +396,6 @@ Proof.
       case_eq (omap (op_eval E') Y'); intros; eauto.
       exfalso. eapply H4. do 2 eexists. econstructor; eauto.
       Grab Existential Variables.
-      eapply default_val.
       eapply default_val.
       eapply default_val.
       eapply default_val.

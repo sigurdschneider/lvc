@@ -92,6 +92,7 @@ theories/Constr/SetOperations.v
 theories/DeadCodeElimination/DCE.v
 theories/DeadCodeElimination/DVE.v
 theories/DeadCodeElimination/UCE.v
+theories/Equiv/BisimEq.v
 theories/Equiv/CoTraces.v
 theories/Equiv/CtxEq.v
 theories/Equiv/Divergence.v

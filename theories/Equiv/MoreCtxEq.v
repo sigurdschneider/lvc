@@ -325,6 +325,18 @@ Proof.
   setoid_rewrite omap_lookup_vars in H3; eauto with len.
 Qed.
 
+Lemma event_inversion2 (L:F.labenv) (E:onv val) xf (L':F.labenv) E' s' Z vl (Len:❬Z❭= ❬vl❭) r
+  : (forall evt σ1'', step (L', E', s') evt σ1'' -> exists σ2'',
+          step (L, E[fresh_list fresh {} ❬Z❭ <-- Some ⊝ vl], trivs xf Z) evt σ2'' /\ r σ1'' σ2'')
+    -> activated (L', E', s')
+    -> exists Y x s'', s' = stmtLet x (Call xf Y) s''
+                 /\ omap (op_eval E') Y = Some vl.
+Proof.
+  intros SIM [? [? STEP]]; inv STEP.
+  edestruct SIM; eauto; dcr. inv H0.
+  rewrite omap_lookup_vars in *; eauto with len.
+Qed.
+
 Lemma trivs_inversion (L:F.labenv) XF E s L' E' xf n s' x L2 Y'
       (GET:get XF n xf) (Len:❬XF❭ = ❬L❭) (ND:NoDupA eq XF)
       (NOTIN1:xf ∉ externals s) (NOTIN2:xf ∉ list_union (bexternals ⊝ L2))
@@ -384,7 +396,7 @@ Proof.
         econstructor 1; eauto.
       * eapply sim_activated in H1 as [? [? [? ?]]]; dcr.
         destruct x15 as [[? ?] ?].
-        eapply event_inversion' in H13 as [? [? ?]]; dcr; subst. clear H15.
+        eapply event_inversion2 in H15 as [? [? ?]]; dcr; subst. clear H13.
         eapply star2_star2n in H. dcr.
         eapply star2n_trans_silent in H12; eauto. simpl in *.
         eapply (trivL_plus_step_tau_inv trivL_triv) in H12 as [|];
@@ -410,6 +422,7 @@ Proof.
              hnf in H; dcr; simpl in *; eauto with len. eauto with len.
         -- eapply sawtooth_smaller,LAB.
         -- eauto with len.
+        -- eauto.
         -- hnf. do 2 eexists; econstructor.
            rewrite omap_lookup_vars; eauto. eauto with len.
     + clear_trivial_eqs.
@@ -467,17 +480,17 @@ Proof.
       * uncount_star2.
         pfold.
         econstructor 2; eauto using activated_labenv_F.
-        -- intros.
+        -- intros. subst.
            exploit activated_inv_F; try eapply H1; dcr; subst.
            exploit activated_inv_F; try eapply H2; dcr; subst.
            destruct σ1' as [[? ?] ?].
-           edestruct (H3 evt (x1 ++ trivL ⊜ L XF, o, s0)); eauto.
-           inv H0. econstructor; eauto. dcr.
+           edestruct (H3 eq_refl evt (x1 ++ trivL ⊜ L XF, o, s0)); eauto.
+           inv H11. econstructor; eauto. dcr.
            destruct x6 as [[? ?] ?].
            eexists (x4 ++ L', o0, s1); split; eauto.
            inv H12. econstructor; eauto.
            right. destruct H14; [|isabsurd].
-           inv H0. inv H12.
+           inv H12. inv H11.
            eapply CIH; try eapply H14; eauto.
            simpl in *. eapply disj_2_incl; try eapply H10; eauto. eauto with cset.
            eapply disj_2_incl; eauto. eauto with cset.

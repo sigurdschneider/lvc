@@ -49,7 +49,7 @@ Inductive prefixSpec (b:bool) {S} `{StateType S} : S -> list extevent -> Prop :=
     : result σ' = None
       -> star2 step σ nil σ'
       -> normal2 step σ'
-      -> b
+      -> (~ b -> L = (EEvtTerminate None::nil))
       -> prefixSpec b σ L
   | producesPrefixSpecPrefixSpec (σ:S)
     : prefixSpec b σ nil.
@@ -81,8 +81,17 @@ Proof.
     + econstructor 5.
 Qed.
 
+
+Definition maximal (L:list extevent) :=
+  match L with
+  | EEvtTerminate None::nil => true
+  | _ => false
+  end.
+
+
+(*
 Lemma bisim_prefixSpec_maintain {S} `{StateType S} {S'} `{StateType S'} (σ:S) (σ':S')
-: sim bot3 Sim σ σ' -> forall L, prefixSpec false σ L -> prefixSpec false σ' L.
+: sim bot3 Sim σ σ' -> forall n, exists L, (❬L❭=n \/ maximal L) /\ prefixSpec false σ L /\ prefixSpec false σ' L.
 Proof.
   intros. general induction H2.
   - eapply IHprefixSpec.
@@ -92,8 +101,10 @@ Proof.
   - eapply sim_activated in H4; eauto.
     destruct H4 as [? [? [? []]]].
     destruct evt.
-    + edestruct H6 as [? [? ?]]; eauto.
+    + edestruct H5. dcr.
       eapply prefixSpec_star2_silent; eauto.
+      exploit H7; eauto; dcr.
+      eapply step_internally_deterministic in H11; eauto.
       econstructor 2; eauto.
     + exfalso; eapply (no_activated_tau_step _ H0 H1); eauto.
   - eapply sim_terminate in H4; eauto.
@@ -102,6 +113,7 @@ Proof.
   - isabsurd.
   - econstructor 5.
 Qed.
+*)
 
 Lemma bisim_prefixSpec_refine {S} `{StateType S} {S'} `{StateType S'} (σ:S) (σ':S')
 : sim bot3 Sim σ σ' -> forall L, prefixSpec true σ' L -> prefixSpec true σ L.
@@ -117,11 +129,11 @@ Proof.
     + edestruct H6 as [? [? ?]]; eauto.
       eapply prefixSpec_star2_silent; eauto.
       econstructor 2; eauto.
-    + econstructor 4; eauto.
+    + econstructor 4; eauto. isabsurd.
   - eapply sim_terminate_2 in H4; eauto.
     destruct H4 as [? [? []]]. destruct H6.
     + econstructor 3; [ | eauto | eauto]. congruence.
-    + econstructor 4; eauto.
+    + econstructor 4; eauto. isabsurd.
   - eapply sim_terminate_2 in H5; eauto.
     destruct H5 as [? [? []]]. destruct H7.
     + econstructor 4; eauto. congruence.
@@ -138,11 +150,24 @@ Proof.
   - edestruct IHprefixSpec. reflexivity.
     eexists x; dcr; subst. eauto using star2_silent.
   - eexists; intuition; eauto.
-  - isabsurd.
+  - exploit H3; eauto. clear_trivial_eqs.
+    eauto.
 Qed.
 
-Lemma prefixSpec_nil_div S `{StateType S} σ
-  : (forall L, prefixSpec true σ L -> L = nil) -> diverges σ.
+Lemma prefixSpec_terminates2 S `{StateType S} (σ:S) r L
+:  prefixSpec true σ (EEvtTerminate r::L)
+   -> exists σ', star2 step σ nil σ' /\ normal2 step σ'
+           /\ ((result σ' = r /\ L = nil) \/ result σ' = None).
+Proof.
+  intros. general induction H0.
+  - edestruct IHprefixSpec. reflexivity.
+    eexists x; dcr; subst. eauto using star2_silent.
+  - eexists; intuition; eauto.
+  - eexists; split; eauto.
+Qed.
+
+Lemma prefixSpec_nil_div S `{StateType S} σ b
+  : (forall L, prefixSpec b σ L -> L = nil) -> diverges σ.
 Proof.
   revert σ.
   cofix f. intros.
@@ -160,12 +185,12 @@ Proof.
     + exploit H0. econstructor 3; eauto.
       eapply star2_refl. congruence.
     + exploit H0. econstructor 4; eauto.
-      eapply star2_refl. instantiate (1:=EEvtTerminate None::nil) in H3.
+      eapply star2_refl.
       congruence.
 Qed.
 
 Lemma div_prefixSpec_nil S `{StateType S} σ
-  : diverges σ -> forall L, prefixSpec true σ L -> L = nil.
+  : diverges σ -> forall L b, prefixSpec b σ L -> L = nil.
 Proof.
   intros. general induction H1; eauto.
   - eapply IHprefixSpec.
@@ -190,6 +215,7 @@ Proof.
   eapply prefixSpec_nil_div.
   intros. eapply H3. eauto.
 Qed.
+
 
 Lemma sim_complete_diverges S `{StateType S} S' `{StateType S'} (σ:S) (σ':S') p r
 : diverges σ -> diverges σ' -> sim r p σ σ'.
@@ -226,7 +252,7 @@ Proof.
   - edestruct IHprefixSpec. reflexivity. dcr.
     eexists x; split; eauto using star2_silent.
   - eexists σ; eauto using star2.
-  - isabsurd.
+  - exploit H3; eauto; clear_trivial_eqs.
 Qed.
 
 Lemma prefixSpec_extevent' S `{StateType S} (σ:S) evt L
@@ -241,6 +267,21 @@ Proof.
     isabsurd.
   - do 2 eexists; eauto.
   - edestruct activated_normal_star; try eapply H1; eauto using star2.
+Qed.
+
+Lemma prefixSpec_extevent2 S `{StateType S} (σ:S) evt L
+  : prefixSpec true σ (EEvtExtern evt::L)
+    -> exists σ', star2 step σ nil σ'
+            /\ ((activated σ' /\ exists σ'', step σ' evt σ'' /\ prefixSpec true σ'' L)
+               \/ normal2 step σ' /\ result σ' = None).
+Proof.
+  intros.
+  general induction H0.
+  - edestruct IHprefixSpec as [? [? [|]]]; dcr; eauto.
+    + eexists; split; eauto using star2_silent.
+    + eexists; split; eauto using star2_silent.
+  - eexists; split; eauto using star2_refl.
+  - eexists; split; eauto using star2_refl.
 Qed.
 
 Lemma prefixSpec_silent_closed {S} `{StateType S}  S' `{StateType S'}
@@ -291,6 +332,43 @@ Proof.
     eapply prefixSpec_star2_silent; eauto.
 Qed.
 
+Lemma produces_diverges2 S `{StateType S} S' `{StateType S'} (σ:S) (σ':S')
+      (DIV:diverges σ)
+  : (forall L, prefixSpec false σ' L -> prefixSpec false σ L)
+    -> (forall L, prefixSpec true σ L -> prefixSpec true σ' L)
+  -> diverges σ'.
+Proof.
+  revert_all. cofix CIH.
+  intros. destruct DIV.
+  destruct (step_dec σ').
+  - destruct H4; dcr.
+    destruct x.
+    + exfalso.
+      exploit H1.
+      econstructor 2; eauto. eexists; eauto.
+      econstructor 5.
+      eapply prefixSpec_star2_silent' in H4;
+        try eapply star2_silent; eauto using star2_refl.
+      eapply div_prefixSpec_nil in DIV; eauto. congruence.
+    + econstructor. eauto.
+      eapply (CIH _ _ _ _ σ'0 x0 DIV).
+      eapply prefixSpec_silent_closed; eauto;
+        eapply star2_silent; eauto using star2_refl.
+      eapply prefixSpec_silent_closed; eauto;
+        eapply star2_silent; eauto using star2_refl.
+  - exfalso.
+    assert (prefixSpec false σ' (EEvtTerminate (result σ')::nil)). {
+      case_eq (result σ'); intros.
+      econstructor 3; eauto using star2_refl.
+      econstructor 4; eauto using star2_refl.
+    }
+    eapply H1 in H5.
+    eapply prefixSpec_star2_silent' in H5;
+      try eapply star2_silent; eauto using star2_refl.
+    eapply div_prefixSpec_nil in DIV; eauto. congruence.
+Qed.
+
+
 Lemma prefix_bisim S `{StateType S} S' `{StateType S'} (σ:S) (σ':S')
   : (forall L, prefixSpec false σ L -> prefixSpec false σ' L)
     -> (forall L, prefixSpec true σ' L -> prefixSpec true σ L)
@@ -299,48 +377,46 @@ Proof.
   revert σ σ'.
   pcofix CIH.
   intros σ σ' LIncl UIncl.
-  destruct (three_possibilities σ) as [A|[A|A]].
-  - dcr.
-    case_eq (result x); intros.
-    + assert (prefixSpec false σ (EEvtTerminate (Some v)::nil))
-             by (econstructor 3; eauto).
-      eapply LIncl in H4.
-      eapply prefixSpec_terminates in H4. dcr.
-      pfold.
-      econstructor 4; eauto. congruence.
-    + pfold. econstructor 3; eauto.
+  destruct (three_possibilities σ') as [A|[A|A]].
+  - clear LIncl.
+    dcr.
+    + assert (PS:prefixSpec true σ' (EEvtTerminate (result x)::nil)). {
+        case_eq (result x); intros.
+        - econstructor 3; eauto.
+        - econstructor 4; eauto.
+      }
+      eapply UIncl in PS.
+      eapply prefixSpec_terminates2 in PS as [? [? [? [[? ?]|?]]]].
+      * pfold.
+        econstructor 4; eauto.
+      * pfold.
+        econstructor 3; eauto.
   - dcr. inv H3; dcr.
-    assert (prefixSpec false x1 nil) by econstructor 5.
-    assert (prefixSpec false σ (EEvtExtern (EvtExtern x0)::nil)). {
+    assert (prefixSpec true x1 nil) by econstructor 5.
+    assert (prefixSpec true σ' (EEvtExtern (EvtExtern x0)::nil)). {
       eapply prefixSpec_star_activated; eauto.
     }
-    eapply LIncl in H5.
-    eapply prefixSpec_extevent in H5; dcr.
-    pose proof (prefixSpec_silent_closed H2 H7 LIncl).
-    pose proof (prefixSpec_silent_closed H7 H2 UIncl).
+    pose proof (prefixSpec_silent_closed H2 (star2_refl _ _) UIncl).
+    eapply prefixSpec_star2_silent' in H5; eauto.
+    eapply H6 in H5.
+    eapply prefixSpec_extevent2 in H5 as [? [? [|]]]; dcr.
     pfold. econstructor 2; eauto.
+    + intros. congruence.
     + intros.
-      assert (prefixSpec false x (EEvtExtern evt::nil)). {
+      assert (prefixSpec true x (EEvtExtern evt::nil)). {
         eapply prefixSpec_star_activated; eauto using star2, prefixSpec.
       }
-      eapply H5 in H12.
-      eapply prefixSpec_extevent in H12; dcr.
-      relsimpl.
+      eapply H6 in H10.
+      eapply prefixSpec_star2_silent' in H10; eauto.
+      eapply prefixSpec_extevent' in H10; dcr; eauto.
       eexists; split. eauto.
       right. eapply CIH.
-      eapply prefixSpec_event_closed; eauto.
-      eapply prefixSpec_event_closed; eauto.
-    + intros.
-      assert (prefixSpec true x2 (EEvtExtern evt::nil)). {
-        eapply prefixSpec_star_activated; eauto using star2, prefixSpec.
-      }
-      eapply H8 in H12.
-      eapply prefixSpec_extevent' in H12; dcr; eauto.
-      eexists; split. eauto.
-      right. eapply CIH.
-      eapply prefixSpec_event_closed; eauto.
-      eapply prefixSpec_event_closed; eauto.
-  - assert (diverges σ').
-    eapply (produces_diverges UIncl); eauto.
+      * eapply prefixSpec_event_closed; eauto.
+        eapply prefixSpec_silent_closed; eauto using star2_refl.
+      * eapply prefixSpec_event_closed; eauto.
+        eapply prefixSpec_silent_closed; eauto using star2_refl.
+    + pfold. econstructor 3; eauto.
+  - assert (diverges σ).
+    eapply (produces_diverges2 A); eauto.
     eapply sim_complete_diverges; eauto.
 Qed.

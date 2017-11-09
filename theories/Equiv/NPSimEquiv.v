@@ -48,8 +48,8 @@ Lemma sim_simp {S} `{StateType S} {S'} `{StateType S'}
 Proof.
   pcofix CIH; intros. inv H2; pfold; eauto using sim_gen.
   - econstructor 2; eauto.
+    + congruence.
     + intros. edestruct H6; eauto; dcr; eauto 10.
-    + intros. edestruct H7; eauto; dcr; eauto 10.
 Qed.
 
 Lemma simp_sim t {S} `{StateType S} {S'} `{StateType S'}
@@ -61,7 +61,6 @@ Proof.
   inversion H2; pclearbot.
   - econstructor 1; eauto.
   - econstructor 2; eauto.
-    + intros. edestruct H7; eauto; dcr; pclearbot; eauto.
     + intros. edestruct H8; eauto; dcr; pclearbot; eauto.
   - econstructor 4; eauto.
   - econstructor 3; eauto.

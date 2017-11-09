@@ -42,7 +42,8 @@ Proof.
       | step_activated; eauto 20 using step_let_call
       | step_activated; eauto 20 using step_let_call | |].
     eapply step_let_call; eauto.
-    intros ? ? STEP; eapply let_call_inversion in STEP; dcr; subst; eexists; split; try eapply step_let_call; eauto.
+    intros ? ? ? STEP; subst;
+      eapply let_call_inversion in STEP; dcr; subst; eexists; split; try eapply step_let_call; eauto.
     rewrite <- EQ; eauto.
     intros ? ? STEP; eapply let_call_inversion in STEP; dcr; subst; eexists; split; try eapply step_let_call; eauto.
     rewrite EQ; eauto.

@@ -16,6 +16,7 @@ Definition isBisim t :=
   | Bisim => true
   end.
 
+
 (** ** Generating Function *)
 
 Inductive sim_gen
@@ -30,7 +31,7 @@ Inductive sim_gen
       -> star2 step pσ2 nil σ2
       -> activated σ1
       -> activated σ2
-      -> (forall evt σ1', step σ1 evt σ1' -> exists σ2', step σ2 evt σ2' /\ r t σ1' σ2')
+      -> (t = Bisim -> forall evt σ1', step σ1 evt σ1' -> exists σ2', step σ2 evt σ2' /\ r t σ1' σ2')
       -> (forall evt σ2', step σ2 evt σ2' -> exists σ1', step σ1 evt σ1' /\ r t σ1' σ2')
       -> sim_gen r t pσ1 pσ2
   | SimErr (σ1 σ1':S) (σ2:S')
@@ -277,7 +278,7 @@ Lemma sim_activated t {S1} `{StateType S1} (σ1:S1)
 : activated σ1
   -> sim bot3 t σ1 σ2
   -> exists σ2', star2 step σ2 nil σ2' /\ activated σ2' /\
-           ( forall (evt : event) (σ1'' : S1),
+           ( t = Bisim -> forall (evt : event) (σ1'' : S1),
                step σ1 evt σ1'' ->
                exists σ2'' : S2,
                  step σ2' evt σ2'' /\ sim bot3 t σ1'' σ2'')
@@ -294,8 +295,8 @@ Proof.
      exploit (step_internally_deterministic _ _ _ _ H7 H1); dcr; congruence.
   - assert (σ1 = σ0). eapply activated_star_eq; eauto. subst σ1.
     eexists σ3; split; eauto. split; eauto. split.
-    intros. edestruct H7; eauto; dcr. destruct H12; eauto. inv H10.
-    intros. edestruct H8; eauto; dcr. destruct H12; eauto. inv H10.
+    + intros. edestruct H7; eauto; dcr. destruct H13; eauto. isabsurd.
+    + intros. edestruct H8; eauto; dcr. destruct H12; eauto. inv H10.
   - exfalso. refine (activated_normal_star _ H1 _ _); eauto using star2.
   - exfalso. refine (activated_normal_star _ H1 _ _); eauto using star2.
 Qed.
@@ -311,7 +312,7 @@ Lemma sim_activated_2 t {S1} `{StateType S1} (σ1:S1)
                exists σ2'' : S2,
                  step σ2' evt σ2'' /\ (sim bot3 t σ2'' σ1''))
            /\
-           ( forall (evt : event) (σ2'' : S2),
+           ( t = Bisim -> forall (evt : event) (σ2'' : S2),
                step σ2' evt σ2'' ->
                exists σ1' : S1,
                  step σ1 evt σ1' /\ (sim bot3 t σ2'' σ1'))
@@ -326,7 +327,7 @@ Proof.
     eexists σ0; split; eauto. left. split; eauto. split.
     + intros. edestruct H8; eauto; dcr. destruct H12; isabsurd.
       eexists; split; eauto.
-    + intros. edestruct H7; eauto; dcr. destruct H12; isabsurd.
+    + intros. edestruct H7; eauto; dcr. destruct H13; isabsurd.
       eexists; split; eauto.
   - eexists σ1'. split; eauto.
   - exfalso. refine (activated_normal_star _ H1 _ _); eauto using star2.
@@ -350,6 +351,7 @@ Qed.
 
 Ltac zsimpl_step :=
   match goal with
+  | [ H: ?t = Bisim, I : ?t = Bisim -> _ |- _ ] => specialize (I H)
   | [ SIM : sim bot3 ?t ?σ2 ?σ1, ACT : normal2 step ?σ2', STAR: star2 step ?σ2 nil ?σ2' |- _ ] =>
     eapply sim_reduction_closed_1 in SIM; [| eapply STAR]
   | [ SIM : paco3 (@sim_gen _ _ _ _) _ ?t ?σ2 ?σ1, ACT : normal2 step ?σ2', STAR: star2 step ?σ2 nil ?σ2' |- _ ] =>
@@ -500,8 +502,9 @@ Proof.
         pfold. zzsimpl.
         zzcases. zzsimpl.
         + econstructor 2; eauto using plus2_star2.
-          * intros. unfold upaco3 in *; zzsimpl; eauto 10 using star2_refl.
-          * intros. unfold upaco3 in *; zzsimpl; eauto 10 using star2_refl.
+          * intros. unfold upaco3 in *; zzsimpl; eauto 20 using star2_refl.
+          * intros.
+            unfold upaco3 in *; zzsimpl; eauto 10 using star2_refl.
         + zzsimpl. assert (t = Sim).
           eapply (@sim_t_Sim_activated t _ _ _ H10 H9 _ _ _ H7); eauto.
           subst.
@@ -527,13 +530,15 @@ Proof.
         zzcases. zzsimpl.
         + unfold upaco3 in *.
           econstructor 2; eauto using plus2_star2.
-          * intros. zzsimpl; eauto 10 using star2_refl.
+          * intros. specialize (H13 H15). specialize (H9 H15).
+            zzsimpl; eauto 10 using star2_refl.
           * intros. zzsimpl; eauto 10 using star2_refl.
       - (* activated <-> activated *)
         pfold. zzsimpl.
         unfold upaco3 in *.
         econstructor 2; eauto using plus2_star2.
-        * intros. zzsimpl; eauto 10 using star2_refl.
+        * intros. specialize (H18 H2). specialize (H9 H2).
+          zzsimpl; eauto 10 using star2_refl.
         * intros. zzsimpl; eauto 10 using star2_refl.
       - (* activated <-> err *)
         zzsimpl.
@@ -570,7 +575,8 @@ Proof.
         zzcases. zzsimpl.
         + unfold upaco3 in *.
           econstructor 2; eauto using plus2_star2.
-          * intros. zzsimpl; eauto 10 using star2_refl.
+          * intros. specialize (H15 H4). specialize (H17 H4).
+            zzsimpl; eauto 10 using star2_refl.
           * intros. zzsimpl; eauto 10 using star2_refl.
         + zzsimpl. assert (t = Sim).
           eapply (@sim_t_Sim_activated t _ _ _ H10 H9 _ _ _ H7); eauto.
@@ -597,13 +603,15 @@ Proof.
         zzcases. zzsimpl.
         + unfold upaco3 in *.
           econstructor 2; eauto using plus2_star2.
-          * intros. zzsimpl; eauto 10 using star2_refl.
+          * intros. specialize (H13 H15). specialize (H9 H15).
+            zzsimpl; eauto 10 using star2_refl.
           * intros. zzsimpl; eauto 10 using star2_refl.
       - (* activated <-> activated *)
         pfold. zzsimpl.
         unfold upaco3 in *.
         econstructor 2; eauto using plus2_star2.
-        * intros. zzsimpl; eauto 10 using star2_refl.
+        * intros. specialize (H9 H2). specialize (H18 H2).
+          zzsimpl; eauto 10 using star2_refl.
         * intros. zzsimpl; eauto 10 using star2_refl.
       - (* activated <-> err *)
         zzsimpl.
