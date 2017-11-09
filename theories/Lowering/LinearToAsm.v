@@ -134,8 +134,8 @@ Proof.
 Qed.
 
 
-Remark backward_simulation_identity:
-  forall sem, backward_simulation sem sem.
+Remark backward_simulation_identity p :
+  backward_simulation (Linear.semantics p) (Linear.semantics p).
 Proof.
   intros.
   eapply (Backward_simulation (fun (x y:unit) => False) (fun x => eq)).
@@ -144,11 +144,13 @@ Proof.
   - eauto.
   - firstorder. econstructor.
   - intros. subst. eexists; split; eauto. econstructor.
-  - intros. subst. admit.
+  - intros. subst. unfold final_state; simpl.
+    hnf in s2. hnf in H0.
+    eapply H0. constructor 1.
   - intros. subst. do 2 eexists; split; eauto. left. econstructor; eauto.
     econstructor. rewrite Events.E0_right. reflexivity.
   - intros. reflexivity.
-Admitted.
+Qed.
 
 Theorem linear_preservation:
   forall p tp,

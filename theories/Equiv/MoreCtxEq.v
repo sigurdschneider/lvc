@@ -92,6 +92,78 @@ Class PPRConstr A {PR:PointwiseProofRelationF A} :=
   }.
  *)
 
+Lemma drop_nil X (L:list X) k
+  : ❬L❭ <= k
+    -> drop k L = nil.
+Proof.
+  general induction k; destruct L; simpl in *; eauto; try omega.
+  rewrite drop_nil; eauto.
+  eapply IHk; eauto. omega.
+Qed.
+
+Lemma zip_app_first (X Y Z : Type) (f : X -> Y -> Z) L1 L2 L
+  :  ❬L2❭ <= ❬L1❭ -> zip f (L1 ++ L) L2 = zip f L1 L2.
+Proof.
+  intros. general induction L1; destruct L2; simpl in *; try omega; eauto.
+  - destruct L; eauto.
+  - f_equal; eauto. rewrite IHL1; eauto. omega.
+Qed.
+
+
+Lemma triv2_sawtooth A PR (trivL:@Triv A PR) L XF
+  : sawtooth L
+    -> sawtooth (triv2 ⊜ L XF).
+Proof.
+  intros H.
+  general induction H; simpl; eauto using @sawtooth.
+  erewrite (@take_eta ❬L❭ _ XF).
+  decide (❬XF❭ > ❬L❭).
+  - rewrite zip_app.
+    econstructor; eauto.
+    revert H0; clear. generalize 0; intros n T.
+    general induction T; destruct XF; simpl; eauto using @tooth.
+    econstructor; eauto.
+    rewrite triv2_block_n; eauto.
+    rewrite Take.take_length_le; eauto. omega.
+  - rewrite drop_nil; try omega.
+    rewrite zip_app_first.
+    rewrite app_nil_r.
+    rewrite <- app_nil_r.
+    econstructor 2; eauto using @sawtooth.
+    revert H0; clear. generalize 0; intros n T.
+    general induction T; destruct XF; simpl; eauto using @tooth.
+    econstructor; eauto.
+    rewrite triv2_block_n; eauto.
+    len_simpl. simpl. rewrite min_l; omega.
+Qed.
+
+Lemma triv1_sawtooth A PR (trivL:@Triv A PR) L XF
+  : sawtooth L
+    -> sawtooth (triv1 ⊜ L XF).
+Proof.
+    intros H.
+  general induction H; simpl; eauto using @sawtooth.
+  erewrite (@take_eta ❬L❭ _ XF).
+  decide (❬XF❭ > ❬L❭).
+  - rewrite zip_app.
+    econstructor; eauto.
+    revert H0; clear. generalize 0; intros n T.
+    general induction T; destruct XF; simpl; eauto using @tooth.
+    econstructor; eauto.
+    rewrite triv1_block_n; eauto.
+    rewrite Take.take_length_le; eauto. omega.
+  - rewrite drop_nil; try omega.
+    rewrite zip_app_first.
+    rewrite app_nil_r.
+    rewrite <- app_nil_r.
+    econstructor 2; eauto using @sawtooth.
+    revert H0; clear. generalize 0; intros n T.
+    general induction T; destruct XF; simpl; eauto using @tooth.
+    econstructor; eauto.
+    rewrite triv1_block_n; eauto.
+    len_simpl. simpl. rewrite min_l; omega.
+Qed.
+
 Lemma triv_sat A PR (trivL:@Triv A PR) AL t L L' XF r (Len:❬XF❭= ❬L❭) (Len2:❬L❭=❬L'❭)
   : labenv_sim t (sim r) PR AL L L'
     -> labenv_sim t (sim bot3) PR AL (triv1 ⊜ L XF) (triv2 ⊜ L' XF).
@@ -100,12 +172,10 @@ Proof.
   destruct H; dcr. len_simpl.
   split; eauto.
   split. {
-    hnf; intros; inv_get. destruct x; simpl. exploit H1; eauto.
-    rewrite triv2_block_n. eauto.
+    eapply triv2_sawtooth; eauto.
   }
   split. {
-    hnf; intros; inv_get. destruct x; simpl. exploit H3; eauto.
-    rewrite triv1_block_n. eauto.
+    eapply triv1_sawtooth; eauto.
   }
   split. {
     eapply triv_paramrel; eauto.
@@ -306,9 +376,9 @@ Proof.
   pinversion SIMbot; subst.
   - eapply plus2_star2n in H. eapply plus2_star2n in H0. dcr.
     edestruct (trivL_plus_step_tau_inv trivL_triv _ H2); eauto; dcr; subst;
-      try eapply LAB.
+      try eapply sawtooth_smaller,LAB.
     + edestruct (trivL_plus_step_tau_inv trivL_triv _ H0); eauto; dcr; subst;
-        try eapply LAB.
+        try eapply sawtooth_smaller,LAB.
       * uncount_star2.
         pfold.
         econstructor 1; eauto.
@@ -325,7 +395,7 @@ Proof.
              [ invc H17 | eauto with len | eauto ].
            uncount_star2.
            eapply sim_expansion_closed; try eassumption.
-           eapply sim_app_shift_F; [eapply LAB | eapply LAB |].
+           eapply sim_app_shift_F; [eapply sawtooth_smaller,LAB | eapply sawtooth_smaller,LAB |].
            edestruct LAB; dcr. rename H24 into APPR.
            hnf in APPR. len_simpl.
            assert (x5 = x20). {
@@ -338,7 +408,7 @@ Proof.
            hnf. simpl in *. split; eauto. eauto with len.
            exploit (APPR (LabI x20)); eauto using map_get_1;
              hnf in H; dcr; simpl in *; eauto with len. eauto with len.
-        -- eapply LAB.
+        -- eapply sawtooth_smaller,LAB.
         -- eauto with len.
         -- hnf. do 2 eexists; econstructor.
            rewrite omap_lookup_vars; eauto. eauto with len.
@@ -356,7 +426,7 @@ Proof.
              [ invc H13 | eauto with len | eauto ].
            uncount_star2.
            eapply sim_expansion_closed; try eassumption.
-           eapply sim_app_shift_F; [eapply LAB | eapply LAB |].
+           eapply sim_app_shift_F; [eapply sawtooth_smaller,LAB | eapply sawtooth_smaller,LAB |].
            edestruct LAB; dcr. rename H21 into APPR.
            hnf in APPR. len_simpl.
            assert (x2 = x16). {
@@ -369,7 +439,7 @@ Proof.
            hnf. simpl in *. split; eauto. eauto with len.
            exploit (APPR (LabI x16)); eauto using map_get_1;
              hnf in H; dcr; simpl in *; eauto with len. eauto with len.
-        -- eapply LAB.
+        -- eapply sawtooth_smaller,LAB.
         -- eauto with len.
       * subst.
         eapply star2_star2n in H. dcr.
@@ -385,15 +455,15 @@ Proof.
         -- exfalso.
            eapply H3. do 2 eexists.
            econstructor. rewrite omap_lookup_vars; eauto. eauto with len.
-        -- eapply LAB.
+        -- eapply sawtooth_smaller,LAB.
       * do 2 eexists. econstructor. rewrite omap_lookup_vars. reflexivity.
         eauto with len. eapply fresh_list_nodup; eauto using fresh_spec.
   - eapply star2_star2n in H. dcr.
     eapply star2_star2n in H0. dcr.
     edestruct (trivL_plus_step_tau_inv trivL_triv _ H5); eauto; dcr; subst;
-      try eapply LAB.
+      try eapply sawtooth_smaller,LAB.
     + edestruct (trivL_plus_step_tau_inv trivL_triv _ H); eauto; dcr; subst;
-        try eapply LAB.
+        try eapply sawtooth_smaller,LAB.
       * uncount_star2.
         pfold.
         econstructor 2; eauto using activated_labenv_F.
@@ -443,7 +513,7 @@ Proof.
              reflexivity.
              intros [? [? ?]]. inv H0. congruence.
     + edestruct (trivL_plus_step_tau_inv trivL_triv _ H); eauto; dcr; subst;
-        try eapply LAB.
+        try eapply sawtooth_smaller,LAB.
       * uncount_star2. eapply plus2_star2 in H5.
         assert (SIMbot':paco3 (@sim_gen F.state _ F.state _) bot3 t
                       (L1 ++ trivL ⊜ L XF, E, s) (L2 ++ trivL ⊜ L' XF, E', s')).
@@ -471,7 +541,7 @@ Proof.
         -- rewrite !omap_lookup_vars in H6; only 2-5: eauto with len.
            clear_trivial_eqs.
           eapply sim_expansion_closed; eauto.
-           eapply sim_app_shift_F; [eapply LAB | eapply LAB |].
+           eapply sim_app_shift_F; [eapply sawtooth_smaller,LAB | eapply sawtooth_smaller,LAB |].
            edestruct LAB; dcr. rename H24 into APPR.
            hnf in APPR. len_simpl.
            assert (x2 = x12). {
@@ -491,7 +561,7 @@ Proof.
            ++ rewrite omap_lookup_vars in H6; eauto. congruence.
              eauto with len.
   - eapply star2_star2n in H0. dcr.
-    edestruct (trivL_plus_step_tau_inv trivL_triv _ H2); eauto; dcr; subst; only 1: eapply LAB.
+    edestruct (trivL_plus_step_tau_inv trivL_triv _ H2); eauto; dcr; subst; only 1: eapply sawtooth_smaller,LAB.
     + eapply star2n_star2 in H4.
       pfold.
       eapply SimErr; try eapply H4; eauto.
@@ -502,9 +572,9 @@ Proof.
       eauto with len.
   - eapply star2_star2n in H0. eapply star2_star2n in H1. dcr.
     edestruct (trivL_plus_step_tau_inv trivL_triv _ H4); eauto; dcr; subst;
-      only 1: eapply LAB.
+      only 1: eapply sawtooth_smaller,LAB.
     + edestruct (trivL_plus_step_tau_inv trivL_triv _ H1); eauto; dcr; subst;
-        only 1: eapply LAB.
+        only 1: eapply sawtooth_smaller,LAB.
       * pfold.
         eapply star2n_star2 in H6. eapply star2n_star2 in H8.
         eapply SimTerm; try eapply H6; try eapply H8.

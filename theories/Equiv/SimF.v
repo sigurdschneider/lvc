@@ -1,6 +1,6 @@
 Require Import List paco2.
 Require Export Util Var Val Exp Envs Map CSet AutoIndTac IL AllInRel.
-Require Export Sim SimTactics IL BlockType.
+Require Export Sim SimTactics IL BlockType Sawtooth.
 
 Set Implicit Arguments.
 Unset Printing Records.
@@ -74,9 +74,32 @@ Proof.
     rewrite Len1; eauto. rewrite Img; rewrite mapi_length in *; eauto.
 Qed.
 
+Lemma paramrel_app A (PR:ProofRelationF A) AL' L1 L2 AL L L'
+  : paramrel PR (AL' ++ AL) L1 L2
+    -> paramrel PR AL L L'
+    -> separates PR AL' AL L1 L2
+    -> paramrel PR (AL' ++ AL) (L1 ++ L) (L2 ++ L').
+Proof.
+  intros IPR PAR [Len1 [Img [Ilt Ige]]].
+  hnf; intros ? ? ? ? ? ? ? ? ? ? ? RN GetAL GetFL GetL'.
+  eapply get_app_cases in GetFL; destruct GetFL as [GetFL'| [GetFL GE]].
+  - exploit Ilt; eauto.
+    eapply get_app_lt_1 in GetL'; [| eauto with len].
+    inv_get.
+    eapply IPR; eauto.
+    eapply get_app; eauto.
+  - exploit Ige; eauto.
+    eapply get_app_right_ge in GetAL; [ | rewrite Len1; eauto ].
+    eapply get_app_right_ge in GetL'; [ | eauto ].
+    eapply IndexRelDrop in RN; [| rewrite Len1; eauto].
+    exploit (PAR (LabI  (f - ❬AL'❭)) (LabI (f' - Image AL'))); eauto.
+    rewrite Len1; eauto. rewrite Img; eauto.
+Qed.
+
 Definition indexes_exists {A} (PR:ProofRelationF A) AL (L L' : F.labenv) :=
   forall n n' a b, IndexRelF AL n n' -> get AL n a -> get L n b -> exists b', get L' n' b'.
 
+(*
 Lemma complete_indexes_exists A (PR:ProofRelationF A) E E' F F' AL' AL L L'
   : indexes_exists PR AL L L'
     -> separates PR AL' AL F F'
@@ -95,6 +118,27 @@ Proof.
     edestruct IE; eauto. erewrite Len3. eauto.
     rewrite Img in H0. eexists.
     eapply get_app_right; eauto. rewrite mapi_length in *. omega.
+Qed.
+*)
+
+Lemma complete_indexes_exists A (PR:ProofRelationF A) L1 L2 AL' AL L L'
+  : indexes_exists PR AL L L'
+    -> separates PR AL' AL L1 L2
+    -> indexes_exists PR (AL' ++ AL) (L1 ++ L) (L2 ++ L').
+Proof.
+  intros IE [Len1 [Img [Ilt Ige]]].
+  hnf; intros ? ? ? ? RN GetAL GetF.
+  eapply get_app_cases in GetF. destruct GetF as [GetF| [GetFL GE]].
+  + inv_get. exploit Ilt; eauto using get_range.
+    edestruct get_in_range; eauto.
+    eexists; eapply get_app; eauto.
+  + eapply get_app_right_ge in GetAL; [ | omega ].
+    exploit Ige; eauto.
+    eapply IndexRelDrop in RN; [| omega ].
+    rewrite <- Len1 in *.
+    edestruct IE; eauto.
+    eexists.
+    eapply get_app_right; eauto. omega.
 Qed.
 
 (** ** Application Relation *)
@@ -127,8 +171,8 @@ Qed.
 Definition labenv_sim t (r:frel)
            {A} (PR:ProofRelationF A) (AL:list A) L L' :=
   length AL = length L /\
-  smaller L' /\
-  smaller L /\
+  sawtooth L' /\
+  sawtooth L /\
   paramrel PR AL L L' /\
   indexes_exists PR AL L L' /\
   app_r t r PR AL L L'.
@@ -136,7 +180,7 @@ Definition labenv_sim t (r:frel)
 Lemma labenv_sim_nil t r A PR
   : @labenv_sim t r A PR nil nil nil.
 Proof.
-  do 5 (try split); hnf; intros; isabsurd.
+  do 5 (try split); hnf; intros; isabsurd. econstructor. econstructor.
 Qed.
 
 Hint Immediate labenv_sim_nil.
@@ -170,6 +214,7 @@ Proof.
   intros Idx LE; hnf; intros; eauto.
 Qed.
 
+(*
 Definition body_r t (r:frel) A (PR:ProofRelationF A) AL L L' :=
   forall (f f':lab) a E Z s i E' Z' s' i',
     IndexRelF AL f f'
@@ -185,6 +230,26 @@ Lemma body_r_mon t (r r':frel) A (PR:ProofRelationF A) AL L L'
   : body_r t r PR AL L L'
     -> (forall t x y, r t x y -> r' t x y)
     -> body_r t r' PR AL L L'.
+Proof.
+  intros Idx LE; hnf; intros; eauto.
+Qed.
+ *)
+
+Definition bodies_r t (r:frel) A (PR:ProofRelationF A) AL (L1 L2 L L':F.labenv) :=
+  forall f f' E Z s i E' Z' s' i' a,
+    IndexRelF AL f f'
+    -> get L f (F.blockI E Z s i)
+    -> get L' f' (F.blockI E' Z' s' i')
+    -> get AL f a
+    -> forall VL VL',
+        ArgRelF E E' a VL VL'
+        -> r t (drop (f - i) L1, E[Z <-- List.map Some VL], s)
+            (drop (f' - i') L2, E'[Z' <-- List.map Some VL'], s').
+
+Lemma bodies_r_mon t (r r':frel) A (PR:ProofRelationF A) AL L1 L2 L L'
+  : bodies_r t r PR AL L1 L2 L L'
+    -> (forall t x y, r t x y -> r' t x y)
+    -> bodies_r t r' PR AL L1 L2 L L'.
 Proof.
   intros Idx LE; hnf; intros; eauto.
 Qed.
@@ -225,57 +290,45 @@ Proof.
     eapply SIMR; eauto.
     econstructor; simpl; eauto with len. simpl. eauto with len.
     eapply F.StepGoto_mapi; simpl in *; eauto with len.
-    rewrite mapi_length. exploit STL; eauto; simpl in *; omega.
+    rewrite mapi_length. exploit (sawtooth_smaller STL); eauto; simpl in *; omega.
     econstructor; simpl; eauto. simpl. eauto with len.
     eapply F.StepGoto_mapi; simpl in *; eauto with len.
-    rewrite mapi_length. exploit STL'; eauto; simpl in *; omega.
+    rewrite mapi_length. exploit (sawtooth_smaller STL'); eauto; simpl in *; omega.
     erewrite <- Len3, Len2; eauto.
 Qed.
 
-(*
+
 Lemma labenv_sim_extension2 t r A (PR:ProofRelationF A) (AL AL':list A) L1 L2 L L'
-  : body_r t (sim r \3/ r) PR AL' L1 L2
-    -> paramrel PR AL' L1 L2
+  : bodies_r t (sim r \3/ r) PR (AL' ++ AL) (L1 ++ L) (L2 ++ L') L1 L2
+    -> paramrel PR (AL' ++ AL) L1 L2
     -> separates PR AL' AL L1 L2
     -> labenv_sim t (sim r) PR AL L L'
+    -> sawtooth L1 -> sawtooth L2
     -> labenv_sim t (sim r) PR (AL' ++ AL) (L1 ++ L) (L2 ++ L').
 Proof.
-  intros SIM IPR [Len2 [Img [Ilt Ige]]] [Len1 [STL [STL' [PAR [IE LSIM]]]]].
+  intros SIM IPR [Len2 [Img [Ilt Ige]]] [Len1 [STL [STL' [PAR [IE LSIM]]]]] SM1 SM2.
   hnf; do 5 (try split);
-    eauto 20 using smaller_F_mkBlocks, complete_paramrel, complete_indexes_exists with len.
-  admit. admit. admit. admit.
+    eauto 20 using sawtooth_app, paramrel_app, complete_indexes_exists with len.
   intros f f' ? ? ? ? ? ? ? ? ? RN GetAL GetFL GetL'.
   eapply get_app_cases in GetFL. destruct GetFL as [GetFL'| [GetFL GE]].
   - exploit Ilt; eauto.
     inv_get.
     intros.
     pone_step; simpl; eauto using get_app, get_mapi; simpl; eauto with len.
-    assert (i = f) by admit; subst.
-    assert (i' = f') by admit; subst.
-    orewrite (f-f=0). orewrite (f'-f'=0). simpl.
-    exploit SIM; eauto.
-    admit. admit.
-  - intros. exploit Ige; eauto. rewrite mapi_length in GE; eauto.
-    eapply get_app_right_ge in GetAL; [ | rewrite (Len3 E); eauto ].
-    eapply get_app_right_ge in GetL'; [ | rewrite mapi_length; eauto ].
-    rewrite mapi_length in *.
-    eapply IndexRelDrop in RN; eauto; [| rewrite (Len3 E); eauto].
+    exploit SIM; eauto using IndexRelDrop, get_app.
+  - intros. exploit Ige; eauto.
+    eapply get_app_right_ge in GetAL; [ | rewrite Len2; eauto ].
+    eapply get_app_right_ge in GetL'; [ | eauto ].
+    eapply IndexRelDrop in RN; eauto; [| rewrite Len2; eauto].
     exploit (LSIM (LabI  (f - ❬AL'❭)) (LabI (f' - Image AL'))) as SIMR; eauto.
     rewrite Len2; eauto. rewrite Img; eauto.
-    eapply (@sim_Y_left F.state _ F.state _).
-    eapply (@sim_Y_right F.state _ F.state _).
-    rewrite Img in SIMR. rewrite Len2 in SIMR.
-    eapply paco3_mon; [| eauto].
-    eapply SIMR; eauto.
-    econstructor; simpl; eauto with len. simpl. eauto with len.
-    eapply F.StepGoto_mapi; simpl in *; eauto with len.
-    rewrite mapi_length. exploit STL; eauto; simpl in *; omega.
-    econstructor; simpl; eauto. simpl. eauto with len.
-    eapply F.StepGoto_mapi; simpl in *; eauto with len.
-    rewrite mapi_length. exploit STL'; eauto; simpl in *; omega.
-    erewrite <- Len3, Len2; eauto.
+    destruct f, f'; simpl in *.
+    orewrite (n = ❬L1❭ + (n - ❬L1❭)).
+    orewrite (n0 = ❬L2❭ + (n0 - ❬L2❭)).
+    eapply sim_app_shift_F; eauto using sawtooth_smaller.
+    rewrite Len2 in *; rewrite Img in *. eauto.
 Qed.
-*)
+
 (** ** Key Lemmata *)
 
 (** ***  Fix Compatibility *)
@@ -293,6 +346,23 @@ Proof.
   eapply ISIM.
   eapply labenv_sim_extension'; eauto.
   eauto using indexwise_r_mon; eauto.
+  eapply labenv_sim_mon; eauto.
+Qed.
+
+Lemma fix_compatible_separate2 t A (PR:ProofRelationF A) AL' AL L1 L2 L L'
+  : (forall r,
+        labenv_sim t (sim r) PR (AL' ++ AL) (L1 ++ L) (L2 ++ L')
+        -> bodies_r t (sim r) PR (AL' ++ AL) (L1 ++ L) (L2 ++ L') L1 L2)
+    -> paramrel PR (AL' ++ AL) L1 L2
+    -> separates PR AL' AL L1 L2
+    -> sawtooth L1 -> sawtooth L2
+    -> forall r, labenv_sim t (sim r) PR AL L L'
+           -> bodies_r t (sim r) PR (AL' ++ AL) (L1 ++ L) (L2 ++ L') L1 L2.
+Proof.
+  intros ISIM LP SEP r SIML SM1 SM2. pcofix CIH.
+  eapply ISIM.
+  eapply labenv_sim_extension2; eauto.
+  hnf. intros. right. eapply CIH; eauto.
   eapply labenv_sim_mon; eauto.
 Qed.
 
@@ -392,23 +462,28 @@ Proof.
   eapply fix_compatible_separate; eauto. eauto.
 Qed.
 
-(*
+
 Lemma labenv_sim_extension_ptw' t A (PR:PointwiseProofRelationF A) (AL AL':list A) L1 L2 L L'
   : (forall r ,
         labenv_sim t (sim r) PR (AL' ++ AL) (L1 ++ L) (L2 ++ L')
-        -> body_r t (sim r) PR AL' L1 L2)
-    -> paramrel PR AL' L1 L2
+        -> bodies_r t (sim r) PR (AL' ++ AL) (L1 ++ L) (L2 ++ L') L1 L2)
+    -> paramrel PR (AL' ++ AL) L1 L2
     -> length AL' = length L1
     -> length L1 = length L2
+    -> sawtooth L1 -> sawtooth L2
     -> forall r, labenv_sim t (sim r) PR AL L L'
         -> labenv_sim t (sim r) PR (AL' ++ AL) (L1 ++ L) (L2 ++ L').
 Proof.
-  intros ISIM IP Len1 Len2 r SIML.
-  eapply labenv_sim_extension'; eauto.
-  eapply indexwise_r_mon.
-  eapply fix_compatible_separate; eauto. eauto.
+  intros ISIM IP Len1 Len2 SM1 SM2 r SIML.
+  assert (separates PR AL' AL L1 L2). {
+    edestruct SIML; dcr.
+    hnf; destruct PR; simpl; repeat split; intros; omega.
+  }
+  eapply labenv_sim_extension2; eauto.
+  eapply bodies_r_mon.
+  eapply fix_compatible_separate2; eauto. eauto.
 Qed.
-*)
+
 
 Lemma sim_fun_ptw t A (PR:PointwiseProofRelationF A) (AL AL':list A) F F' L L' E E' s s'
   : (forall r, labenv_sim t (sim r) PR (AL' ++ AL) (mapi (F.mkBlock E) F ++ L) (mapi (F.mkBlock E') F' ++ L')
@@ -464,26 +539,6 @@ Proof.
 Qed.
 
 (** *** A small study on IL fixed-points in general *)
-
-Definition bodies_r t (r:frel) A (PR:ProofRelationF A) AL (L1 L2 L L':F.labenv) :=
-  forall f f' E Z s i E' Z' s' i' a,
-    IndexRelF AL f f'
-    -> get L f (F.blockI E Z s i)
-    -> get L' f' (F.blockI E' Z' s' i')
-    -> get AL f a
-    -> forall VL VL',
-        ArgRelF E E' a VL VL'
-        -> r t (drop (f - i) L1, E[Z <-- List.map Some VL], s)
-            (drop (f' - i') L2, E'[Z' <-- List.map Some VL'], s').
-
-Lemma bodies_r_mon t (r r':frel) A (PR:ProofRelationF A) AL L1 L2 L L'
-  : bodies_r t r PR AL L1 L2 L L'
-    -> (forall t x y, r t x y -> r' t x y)
-    -> bodies_r t r' PR AL L1 L2 L L'.
-Proof.
-  intros Idx LE; hnf; intros; eauto.
-Qed.
-
 
 Lemma bodies_r_app_r t A (PR:ProofRelationF A) AL L L' r
   : bodies_r t r PR AL L L' L L'
