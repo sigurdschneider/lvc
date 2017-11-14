@@ -250,6 +250,30 @@ Proof.
     eapply sim_reduction_closed_1; eauto using star2, star2_silent.
 Qed.
 
+Lemma sim_terminate' {S1} `{StateType S1} (σ1 σ1':S1)
+      {S2} `{StateType S2} (σ2:S2) v
+: star2 step σ1 nil σ1'
+  -> normal2 step σ1'
+  -> sim bot3 Sim σ1 σ2
+  -> result σ1' = Some v
+  -> exists σ2', star2 step σ2 nil σ2' /\ normal2 step σ2' /\ result σ2' = Some v.
+Proof.
+  intros. general induction H1.
+  - pinversion H3; subst.
+    + exfalso. eapply H2. inv H1; do 2 eexists; eauto.
+    + exfalso. eapply star2_normal in H1; eauto. subst.
+      eapply (activated_normal _ H6); eauto.
+    + eapply star2_normal in H5; eauto; subst.
+      eexists; repeat split; eauto; congruence.
+    + eapply normal_star_eq in H2; eauto. subst.
+      eexists σ2'.
+      eexists; repeat split; eauto. congruence.
+  - destruct y; isabsurd. simpl.
+    eapply IHstar2; eauto.
+    eapply sim_reduction_closed_1; eauto using star2, star2_silent.
+    Grab Existential Variables. eauto.
+Qed.
+
 
 Lemma sim_terminate_2 t {S1} `{StateType S1} (σ2 σ2':S1)
       {S2} `{StateType S2} (σ1:S2)

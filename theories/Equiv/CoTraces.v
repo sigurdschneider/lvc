@@ -14,6 +14,11 @@ CoInductive stream (A : Type) : Type :=
 
 Arguments sil [A].
 
+Infix ":+:" := sons (at level 60, right associativity) : stream_scope.
+Delimit Scope stream_scope with stream.
+
+Open Scope stream_scope.
+
 CoInductive coproduces {S} `{StateType S} : S -> stream extevent -> Prop :=
 | CoProducesExtern (σ σ' σ'':S) evt L :
     star2 step σ nil σ'
@@ -117,9 +122,6 @@ Qed.
 
 (** ** Bisimilarity is complete for prefix trace equivalence. *)
 
-Require Import Classical_Prop Coq.Logic.Epsilon.
-
-
 CoFixpoint tr S `{StateType S} (σ:S) : stream extevent.
 Proof.
   destruct (three_possibilities_strong σ) as [[|]|].
@@ -199,17 +201,30 @@ Proof.
   - eexists; intuition; eauto.
 Qed.
 
-Lemma diverges_coproduces_only_sil S `{StateType S} S' `{StateType S'} (σ:S)
+Lemma diverges_coproduces_only_sil S `{StateType S} (σ:S)
 : diverges σ -> (forall T, coproduces σ T -> T = sil).
 Proof.
-  intros. inv H2.
+  intros. inv H1.
   - exfalso.
-    eapply diverges_reduction_closed in H1; eauto.
-    eapply @diverges_never_activated in H1; eauto.
+    eapply diverges_reduction_closed in H0; eauto.
+    eapply @diverges_never_activated in H0; eauto.
   - reflexivity.
   - exfalso.
-    eapply diverges_reduction_closed in H1; eauto.
-    eapply @diverges_never_terminates in H1; eauto.
+    eapply diverges_reduction_closed in H0; eauto.
+    eapply @diverges_never_terminates in H0; eauto.
+Qed.
+
+Lemma coproduces_sil_diverges S `{StateType S} (σ:S)
+: coproduces σ sil -> diverges σ.
+Proof.
+  intros. inv H0. eauto.
+Qed.
+
+Lemma coproduces_one_trace_diverges S `{StateType S} S' `{StateType S'} (σ:S) (σ':S') T
+: coproduces σ T -> coproduces σ' T -> diverges σ -> diverges σ'.
+Proof.
+  intros. eapply diverges_coproduces_only_sil in H1; eauto. subst.
+  inv H2. eauto.
 Qed.
 
 Lemma coproduces_diverges S `{StateType S} S' `{StateType S'} (σ:S) (σ':S')

@@ -1,34 +1,10 @@
 Require Import List.
 Require Import Util Var Val Exp Envs Map CSet AutoIndTac IL AllInRel.
 Require Import SmallStepRelations StateType StateTypeProperties.
-Require Import Sim Divergence TraceEquiv.
+Require Import Sim Divergence TraceEquiv CoTraces.
 
 Set Implicit Arguments.
 Unset Printing Records.
-
-Lemma sim_terminate {S1} `{StateType S1} (σ1 σ1':S1)
-      {S2} `{StateType S2} (σ2:S2) v
-: star2 step σ1 nil σ1'
-  -> normal2 step σ1'
-  -> sim bot3 Sim σ1 σ2
-  -> result σ1' = Some v
-  -> exists σ2', star2 step σ2 nil σ2' /\ normal2 step σ2' /\ result σ2' = Some v.
-Proof.
-  intros. general induction H1.
-  - pinversion H3; subst.
-    + exfalso. eapply H2. inv H1; do 2 eexists; eauto.
-    + exfalso. eapply star2_normal in H1; eauto. subst.
-      eapply (activated_normal _ H6); eauto.
-    + eapply star2_normal in H5; eauto; subst.
-      eexists; repeat split; eauto; congruence.
-    + eapply normal_star_eq in H2; eauto. subst.
-      eexists σ2'.
-      eexists; repeat split; eauto. congruence.
-  - destruct y; isabsurd. simpl.
-    eapply IHstar2; eauto.
-    eapply sim_reduction_closed_1; eauto using star2, star2_silent.
-    Grab Existential Variables. eauto.
-Qed.
 
 Inductive prefixSpec (b:bool) {S} `{StateType S} : S -> list extevent -> Prop :=
   | producesPrefixSpecSilent (σ:S) (σ':S) L :
@@ -369,54 +345,204 @@ Proof.
 Qed.
 
 
-Lemma prefix_bisim S `{StateType S} S' `{StateType S'} (σ:S) (σ':S')
-  : (forall L, prefixSpec false σ L -> prefixSpec false σ' L)
-    -> (forall L, prefixSpec true σ' L -> prefixSpec true σ L)
-  -> sim bot3 Sim σ σ'.
+Lemma coprod_incl_sim S `{StateType S} S' `{StateType S'} (σ:S) (σ':S')
+  : (forall T, coproduces σ' T -> coproduces σ T)
+    -> sim bot3 Sim σ σ'.
 Proof.
   revert σ σ'.
   pcofix CIH.
-  intros σ σ' LIncl UIncl.
-  destruct (three_possibilities σ') as [A|[A|A]].
-  - clear LIncl.
-    dcr.
-    + assert (PS:prefixSpec true σ' (EEvtTerminate (result x)::nil)). {
-        case_eq (result x); intros.
-        - econstructor 3; eauto.
-        - econstructor 4; eauto.
+  intros σ σ' UIncl.
+  exploit (coproduces_total σ').
+  destruct H1; swap 1 3; swap 2 3.
+  - subst r0.
+    + assert (PS:coproduces σ0 (EEvtTerminate (result σ') :+: sil)). {
+        - econstructor 3; eauto using star2_refl.
       }
       eapply UIncl in PS.
-      eapply prefixSpec_terminates2 in PS as [? [? [? [[? ?]|?]]]].
+      eapply coproduces_terminates in PS as [? [? [? [? ?]]]].
       * pfold.
         econstructor 4; eauto.
-      * pfold.
-        econstructor 3; eauto.
-  - dcr. inv H3; dcr.
-    assert (prefixSpec true x1 nil) by econstructor 5.
-    assert (prefixSpec true σ' (EEvtExtern (EvtExtern x0)::nil)). {
-      eapply prefixSpec_star_activated; eauto.
+  - dcr. inv H2; dcr.
+    assert (coproduces σ0 (EEvtExtern (EvtExtern x):+:(tr x0))). {
+      econstructor 1; eauto.
+      eapply coproduces_total.
     }
-    pose proof (prefixSpec_silent_closed H2 (star2_refl _ _) UIncl).
-    eapply prefixSpec_star2_silent' in H5; eauto.
-    eapply H6 in H5.
-    eapply prefixSpec_extevent2 in H5 as [? [? [|]]]; dcr.
+    exploit UIncl; eauto. inv H7.
     pfold. econstructor 2; eauto.
     + intros. congruence.
     + intros.
-      assert (prefixSpec true x (EEvtExtern evt::nil)). {
-        eapply prefixSpec_star_activated; eauto using star2, prefixSpec.
+      assert (coproduces σ0 (EEvtExtern evt0:+:(tr σ2'))). {
+        econstructor 1; eauto.
+        eapply coproduces_total.
       }
-      eapply H6 in H10.
-      eapply prefixSpec_star2_silent' in H10; eauto.
-      eapply prefixSpec_extevent' in H10; dcr; eauto.
+      exploit UIncl; eauto.
+      inv H12. relsimpl.
       eexists; split. eauto.
       right. eapply CIH.
-      * eapply prefixSpec_event_closed; eauto.
-        eapply prefixSpec_silent_closed; eauto using star2_refl.
-      * eapply prefixSpec_event_closed; eauto.
-        eapply prefixSpec_silent_closed; eauto using star2_refl.
-    + pfold. econstructor 3; eauto.
-  - assert (diverges σ).
-    eapply (produces_diverges2 A); eauto.
+      * intros.
+        assert (coproduces σ0 (EEvtExtern evt0:+:T)). {
+          econstructor 1; eauto.
+        }
+        eapply UIncl in H15. inv H15. relsimpl.
+        eapply step_externally_determined in H20.
+        rewrite H20. eauto. eauto.
+  - assert (diverges σ). {
+      eapply coproduces_sil_diverges; eauto.
+      eapply UIncl. econstructor 2; eauto.
+    }
     eapply sim_complete_diverges; eauto.
+Qed.
+
+CoInductive cospecifies {S} `{StateType S} : S -> stream extevent -> Prop :=
+| CospecifiesExtern (σ σ' σ'':S) evt L :
+    star2 step σ nil σ'
+      -> activated σ'
+      -> step σ' evt σ''
+      -> cospecifies σ'' L
+      -> cospecifies σ (sons (EEvtExtern evt) L)
+| CospecifiesSilent (σ:S) :
+    diverges σ
+    -> cospecifies σ sil
+| CospecifiesTerm (σ:S) (σ':S) r
+  : result σ' = Some r
+    -> star2 step σ nil σ'
+    -> normal2 step σ'
+    -> cospecifies σ (sons (EEvtTerminate (Some r)) sil)
+| CospecifiesUndef (σ:S) (σ':S) T
+  : result σ' = None
+    -> star2 step σ nil σ'
+    -> normal2 step σ'
+    -> cospecifies σ T.
+
+Lemma cospec_incl_sim S `{StateType S} S' `{StateType S'} (σ:S) (σ':S')
+  : (forall T, coproduces σ' T -> cospecifies σ T)
+    -> sim bot3 Sim σ σ'.
+Proof.
+  revert σ σ'.
+  pcofix CIH.
+  intros σ σ' UIncl.
+  exploit (coproduces_total σ').
+  destruct H1; swap 1 3; swap 2 3.
+  - subst r0.
+    + assert (PS:coproduces σ0 (EEvtTerminate (result σ') :+: sil)). {
+        - econstructor 3; eauto using star2_refl.
+      }
+      eapply UIncl in PS.
+      inv PS.
+      * pfold.
+        econstructor 4; eauto. congruence.
+      * pfold.
+        econstructor 3; eauto.
+  - dcr. inv H2; dcr.
+    assert (coproduces σ0 (EEvtExtern (EvtExtern x):+:(tr x0))). {
+      econstructor 1; eauto.
+      eapply coproduces_total.
+    }
+    exploit UIncl; eauto. inv H7.
+    pfold. econstructor 2; eauto.
+    + intros. congruence.
+    + intros.
+      assert (coproduces σ0 (EEvtExtern evt0:+:(tr σ2'))). {
+        econstructor 1; eauto.
+        eapply coproduces_total.
+      }
+      exploit UIncl; eauto.
+      inv H12.
+      * relsimpl.
+        eexists; split. eauto.
+        right. eapply CIH.
+        -- intros.
+           assert (coproduces σ0 (EEvtExtern evt0:+:T)). {
+             econstructor 1; eauto.
+           }
+           eapply UIncl in H15. inv H15.
+           ++ relsimpl.
+             eapply step_externally_determined in H20.
+             rewrite H20. eauto. eauto.
+           ++ relsimpl.
+      * relsimpl.
+    + pfold.
+      econstructor 3; eauto.
+  - exploit CoProducesSilent; eauto.
+    eapply UIncl in H2. inv H2.
+    + eapply sim_complete_diverges; eauto.
+    + pfold. econstructor 3; eauto.
+Qed.
+
+
+Require Import paco1.
+
+Inductive div_gen S `{StateType S} (r:S -> Prop) : S -> Prop :=
+| DivergesI σ σ'
+  : step σ EvtTau σ'
+    -> r σ'
+    -> div_gen r σ.
+
+
+Definition div {S} `{StateType S} r (σ1:S)
+  := paco1 (@div_gen S _ ) r σ1.
+
+Hint Unfold div.
+
+Lemma div_diverges {S} `{StateType S} (σ:S)
+  : div bot1 σ <-> diverges σ.
+Proof.
+  split; intros.
+  - revert σ H0. cofix CIH. intros.
+    destruct H0. destruct SIM.
+    econstructor; eauto.
+    eapply CIH. edestruct LE; eauto. isabsurd.
+  - revert σ H0. pcofix CIH; intros.
+    destruct H1. pfold. econstructor; eauto.
+Qed.
+
+Lemma sim_diverge {S} `{StateType S} {S'} `{StateType S'} (σ:S) (σ':S')
+  : sim bot3 Sim σ σ'
+    -> div bot1 σ'
+    -> ~ (exists σ'', star2 step σ nil σ'' /\ normal2 step σ'' /\ result σ'' = None)
+    -> div bot1 σ.
+Proof.
+  revert σ σ'. pcofix CIH; intros.
+  pinversion H2; subst.
+  - eapply plus2_destr_nil in H1; dcr.
+    pfold. econstructor; eauto.
+    right. eapply CIH; eauto.
+    eapply sim_expansion_closed; eauto using plus2_star2.
+    intro; eapply H4; dcr; eexists; split; eauto.
+    eapply (star2_step EvtTau); eauto.
+  - eapply div_diverges in H3.
+    exfalso.
+    eapply diverges_never_activated in H7; eauto.
+    eapply diverges_reduction_closed; eauto using plus2_star2.
+  - exfalso. eapply H4.
+    eauto.
+  - eapply div_diverges in H3.
+    exfalso. eapply diverges_never_terminates; eauto.
+    eapply diverges_reduction_closed; eauto using plus2_star2.
+Qed.
+
+
+Require Import Classical_Prop.
+
+Lemma bisim_prefixSpec_maintain {S} `{StateType S} {S'} `{StateType S'} (σ:S) (σ':S')
+  : sim bot3 Sim σ σ'
+    -> (forall T, coproduces σ' T -> cospecifies σ T).
+Proof.
+  revert σ σ'. cofix CIH; intros.
+  destruct H2.
+  - eapply sim_reduction_closed in H1; eauto using star2_refl.
+    eapply sim_activated_2 in H1 as [? [? [?|?]]]; eauto; dcr.
+    + exploit H9; eauto; dcr.
+      econstructor 1; eauto.
+    + econstructor 4; eauto.
+  - destruct (classic (exists σ'', star2 step σ nil σ'' /\ normal2 step σ'' /\ result σ'' = None)).
+    + dcr. econstructor 4; eauto.
+    + econstructor 2. eapply div_diverges. eapply sim_diverge; eauto.
+      eapply div_diverges. eauto.
+  - eapply sim_terminate_2 in H1; eauto; dcr.
+    destruct r; destruct H8; try now congruence.
+    + econstructor 3; eauto. congruence.
+    + econstructor 4; eauto.
+    + econstructor 4; eauto. congruence.
+    + econstructor 4; eauto.
 Qed.
