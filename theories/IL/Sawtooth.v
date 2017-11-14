@@ -154,6 +154,16 @@ Proof.
   econstructor; eauto using tooth_I_mkBlocks.
 Qed.
 
+Lemma sawtooth_I_mkBlocks' F
+  : sawtooth (mapi I.mkBlock F).
+Proof.
+  rewrite <- app_nil_r.
+  econstructor; eauto using tooth_I_mkBlocks.
+  econstructor.
+Qed.
+
+Hint Resolve sawtooth_I_mkBlocks sawtooth_I_mkBlocks'.
+
 Lemma tooth_F_mkBlocks E n F
   : tooth n (mapi_impl (F.mkBlock E) n F).
 Proof.
@@ -166,6 +176,16 @@ Lemma sawtooth_F_mkBlocks E L F
 Proof.
   econstructor; eauto using tooth_F_mkBlocks.
 Qed.
+
+Lemma sawtooth_F_mkBlocks' E F
+  : sawtooth (mapi (F.mkBlock E) F).
+Proof.
+  rewrite <- app_nil_r.
+  econstructor; eauto using tooth_F_mkBlocks.
+  econstructor.
+Qed.
+
+Hint Resolve sawtooth_F_mkBlocks sawtooth_F_mkBlocks'.
 
 Lemma sawtooth_app B `{BlockType B} L L'
   : sawtooth L -> sawtooth L' -> sawtooth (L ++ L').

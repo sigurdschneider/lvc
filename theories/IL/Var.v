@@ -1,6 +1,6 @@
 Require Import List Omega ZArith.Int.
 Require Import Util EqDec DecSolve.
-Require Import OrderedTypeEx.
+Require Import OrderedTypeEx MoreList.
 
 Set Implicit Arguments.
 
@@ -100,6 +100,11 @@ Lemma labN_inj (x y : lab)
 Proof.
   destruct x,y; eauto.
 Qed.
+
+Smpl Add 50
+     match goal with
+     | [ H : labN ?x = labN ?y |- _ ] => eapply labN_inj in H; first [is_var x; subst x | is_var y; subst y| idtac ]
+     end : inv_get.
 
 Definition labInc (l:lab) (d:nat) := match l with LabI n => LabI (d + n) end.
 

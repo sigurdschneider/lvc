@@ -289,11 +289,6 @@ Proof.
         inv_get. simpl in *. eauto.
       - rewrite <- app_nil_r.
         econstructor 2; eauto using @sawtooth.
-        unfold mapi. revert H. generalize 0.
-        intros.
-        general induction H; simpl; eauto using @tooth.
-      - rewrite <- app_nil_r.
-        econstructor 2; eauto using @sawtooth.
     }
     destruct CTXT as [F TSIM].
     eexists (fillC IHCR (ctxLetT F ctxHole)).
