@@ -19,6 +19,9 @@ def rcoli(width, text)
   return rcol(width, text.to_s)
 end
 
+$asstotal = ARGV[0].to_i
+print "Assuming #{$asstotal} total LoC for % calculation."
+
 class Metrics
   attr_accessor :tloc
   attr_accessor :sloc
@@ -73,6 +76,7 @@ class Metrics
     file.write("\\newcommand{#{k}Definitions}{#{@dcnt}}\n");
     file.write("\\newcommand{#{k}Tactics}{#{@tactics}}\n");
     file.write("\\newcommand{#{k}Fixpoints}{#{@fixpoints}}\n");
+		file.write("\\newcommand{#{k}Percentage}{#{(@tloc.to_f*100/$asstotal.to_f).round(0)}}\n");
     l = "\\mkSep#{k}"
     file.write("\\newcommand{#{k}Data}{#{l}Spec&#{l}Proof&#{l}Lemmas&#{l}Definitions&#{l}Tactics}\n");
   end
@@ -157,6 +161,9 @@ comp(@total, "OCaml Integration", ["compiler/*.ml", "compiler/*.mll", "compiler/
 comp(@total, "Coq Plugin", ["src/*.ml4"], [".ml4"])
 
 @total += fund + il + regalloc
+if ($asstotal != @total) then
+	print "!!! Warning, assumed total LoC different from total Loc: #{@total.to_s}\n\n"
+end
 print @total.to_s, " in LVC in total\n"
 @total.write_tex(@texcmds, "Total")
 print ext.to_s, " in external dependencies\n"
