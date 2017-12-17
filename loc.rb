@@ -78,7 +78,7 @@ class Metrics
     file.write("\\newcommand{#{k}Fixpoints}{#{@fixpoints}}\n");
 		file.write("\\newcommand{#{k}Percentage}{#{(@tloc.to_f*100/$asstotal.to_f).round(0)}}\n");
     l = "\\mkSep#{k}"
-    file.write("\\newcommand{#{k}Data}{#{l}Spec&#{l}Proof&#{l}Lemmas&#{l}Definitions&#{l}Tactics}\n");
+    file.write("\\newcommand{#{k}Data}{#{l}Spec&#{l}Proof&#{l}Lemmas&#{l}Definitions&#{l}Tactics&#{l}Percentage}\n");
   end
 
 end
@@ -152,7 +152,7 @@ regalloc += spilling
 @total = Metrics.new()
 comp(@total, "Analyses", ["theories/Analysis", "theories/Liveness", "theories/Reachability"])
 comp(@total, "Value Optimizations", ["theories/ValueOpts"])
-comp(@total, "Dead Code Elimination", ["theories/DVE.v", "theories/UCE.v", "theories/DCVE.v", "theories/DCE.v"])
+comp(@total, "Dead Code Elimination", ["theories/DeadCodeElimination"])
 comp(@total, "Lowering", ["theories/Lowering"])
 comp(@total, "SMT Translation Validation", ["theories/TransVal"])
 comp(@total, "SSA Construction", ["theories/Coherence/AddParam.v", "theories/Coherence/Delocation*", "theories/Coherence/Invariance.v",
