@@ -32,6 +32,7 @@ let main () =
      heuristic to pick them. *)
   let debug = true in
   let _ = Clflags.option_g := debug in
+  let _ = Clflags.option_v := true in
   let verbose = ref false in
   let num_registers = ref 2 in
   let only_to_linear = ref false in
