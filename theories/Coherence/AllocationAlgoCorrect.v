@@ -6,146 +6,8 @@ Require Import Coherence Coherence.Allocation RenamedApart AllocationAlgo Infini
 
 Set Implicit Arguments.
 
-
-(*
-Lemma sep_lookup_set c p (G:set var) (ϱ:var -> var) x
-      (SEP:sep p G ϱ) (NotIn:x ∉ G)
-  : ~ x <= c -> x ∉ lookup_set ϱ G.
-Proof.
-  destruct SEP as [GT LE].
-  intros Gt. unfold lookup_set; intro In.
-  eapply map_iff in In; eauto.
-  destruct In as [y [In EQ]]. hnf in EQ; subst.
-  destruct (part_cover p y).
-  - exploit LE; eauto.
-  - exploit GT; eauto.
-Qed.
- *)
-
 Require Import MapNotations.
-(*
-Lemma sep_update c p lv (x:var) (ϱ:Map[var,var])
-      (SEP : sep c p (lv \ singleton x) (findt ϱ 0))
-      (CARD : cardinal (filter (fun x => B[x <= c]) (map (findt ϱ 0) (lv \ singleton x))) < c)
-  : sep c p lv (findt (ϱ [-x <- least_fresh_P c (map (findt ϱ 0) (lv \ singleton x)) x -]) 0).
-Proof.
-  destruct SEP as [GT LE].
-  split; intros.
-  - unfold findt.
-    decide (x === x0).
-    + rewrite MapFacts.add_eq_o; eauto.
-      rewrite least_fresh_P_gt.
-      hnf in e; subst. congruence.
-    + rewrite MapFacts.add_neq_o; eauto.
-      exploit GT; eauto. cset_tac.
-  - unfold findt.
-    decide (x === x0).
-    + rewrite MapFacts.add_eq_o; eauto.
-      rewrite least_fresh_P_le.
-      * rewrite (@least_fresh_filter_small c); eauto.
-        unfold findt in CARD. unfold var in *. omega.
-      * hnf in e; congruence.
-    + rewrite MapFacts.add_neq_o; eauto.
-      cases; try omega.
-      rewrite <- LE; eauto.
-      unfold findt. rewrite <- Heq; eauto.
-      cset_tac.
-Qed.
-
-Lemma sep_nd c G ϱ G'
-      (SEP:sep c G (findt ϱ 0)) (Disj: disj G' G)
-  : forall x : nat, x > c -> x ∈ G' -> x ∈ map (findt ϱ 0) G -> False.
-Proof.
-  intros. cset_tac'. destruct SEP as [GT LE].
-  decide (x0 <= c).
-  - exploit LE; eauto; try omega.
-  - exploit GT; eauto. cset_tac'.
-    eapply Disj; eauto; congruence.
-Qed.
-
-Lemma sep_lookup_list c (G s:set var) (ϱ:var -> var) x
-      (SEP:sep c (G \ s) ϱ)
-  : x > c -> x ∈ s -> x ∉ map ϱ (G \ s).
-Proof.
-  destruct SEP as [GT LE].
-  intros Gt. intros In InMap.
-  eapply map_iff in InMap; eauto.
-  destruct InMap as [y [In' EQ]]. hnf in EQ; subst.
-  decide (y <= c).
-  - exploit LE; eauto. omega.
-  - cset_tac.
-Qed.
-
-Lemma sep_update_list c ϱ lv Z
-      (AL:forall x, x > c -> x ∈ of_list Z -> x ∈ map (findt ϱ 0) (lv \ of_list Z) -> False)
-      (ND: NoDupA eq Z)
-      (Card: crd c (map (findt ϱ 0) (lv \ of_list Z)) Z)
-      (SEP:sep c (lv \ of_list Z) (findt ϱ 0))
-  : sep c lv (findt (ϱ [-Z <-- fresh_list_P c (map (findt ϱ 0) (lv \ of_list Z)) Z -]) 0).
-Proof.
-  destruct SEP as [GT LE].
-  eapply sep_agree.
-  setoid_rewrite <- map_update_list_update_agree'; eauto with len.
-  reflexivity.
-  split; intros.
-  - decide (x ∈ of_list Z).
-    + edestruct update_with_list_lookup_in_list; try eapply i; dcr.
-      Focus 2.
-      rewrite H4. cset_tac'.
-      edestruct fresh_list_get; try eapply H3; inv_get; eauto.
-      dcr. inv_get. exfalso; eauto.
-      eauto with len.
-    + rewrite lookup_set_update_not_in_Z; eauto.
-      eapply GT; eauto with cset. cset_tac.
-  - decide (x ∈ of_list Z).
-    + edestruct update_with_list_lookup_in_list; try eapply i; dcr.
-      Focus 2.
-      rewrite H4. cset_tac'.
-      edestruct fresh_list_get; try eapply H3; inv_get; eauto.
-      dcr. inv_get.
-      eauto with len.
-    + rewrite lookup_set_update_not_in_Z; eauto.
-      eapply LE; eauto with cset. cset_tac.
-Qed.
-*)
 (** ** the algorithm produces a locally injective renaming *)
-
-(*
-
-
-Lemma crd_of_list (c:var) k (LT:k < c) (lv:set var) Z ϱ
-      (SEP:sep c (lv \ of_list Z) ϱ)
-      (Card:cardinal (filter (fun x => B[x <= c]) lv) <= k)
-      (Incl: of_list Z ⊆ lv)
-  : crd c (map ϱ (lv \ of_list Z)) Z.
-Proof.
-  unfold crd. rewrite <- sep_filter_map_comm; eauto.
-  rewrite cardinal_map; eauto.
-  rewrite filter_difference; [|clear; intuition].
-  rewrite cardinal_difference'.
-  - unfold var in *.
-    assert (cardinal (filter (fun x => B[x <= c]) lv) >=
-            cardinal (filter (fun x => B[x <= c]) (of_list Z))). {
-      eapply subset_cardinal. eapply subset_filter. clear; intuition. eauto.
-    }
-    unfold var in *. rewrite of_list_filter_set. omega. clear; intuition.
-  - eapply subset_filter; eauto.
-Qed.
-
-Lemma sep_update_cmap k c (LE : k < c) x lv lv' (ϱ:Map[var,var])
-      (BND:bounded_below c k lv')
-      (SEP:sep c (lv \ singleton x) (findt ϱ 0))
-      (incl:lv \ singleton x ⊆ lv')
-  : sep c lv
-        (findt (ϱ [-x <- least_fresh_P c (map (findt ϱ 0)
-                                             (lv \ singleton x)) x -]) 0).
-  eapply sep_update; eauto.
-  hnf in BND. rewrite <- sep_filter_map_comm; eauto.
-  rewrite cardinal_map; eauto.
-  rewrite incl. unfold var in *. omega.
-Qed.
-
- *)
 
 Lemma regAssign_correct p (ϱ:Map [var,var]) ZL Lv s alv ϱ' ra
       (allocOK:regAssign p s alv ϱ = Success ϱ')
@@ -229,11 +91,9 @@ Proof.
             eapply injective_on_fresh_list; eauto with len.
             + eapply injective_on_incl; eauto.
               eapply H2; eauto.
-            + eapply disj_intersection.
-              eapply disj_2_incl.
+            + eapply disj_2_incl.
               eapply fresh_list_stable_spec.
               reflexivity.
-            + edestruct H8; eauto.
             + eapply fresh_list_stable_nodup; eauto using least_fresh_part_fresh.
           - eapply lv_incl_fst_ra; eauto.
 

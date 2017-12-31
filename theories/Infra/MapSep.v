@@ -1,4 +1,5 @@
-Require Import Util CSet InfiniteSubset InfinitePartition MapAgreement.
+Require Import Util CSet InfiniteSubset InfinitePartition MapAgreement
+        MapUpdate StableFresh.
 
 
 Definition sep X `{OrderedType X} (p:inf_partition X) (G:set X) (ϱ:X -> X) :=
@@ -100,4 +101,30 @@ Proof.
   unfold part_bounded in *.
   unfold lookup_set. rewrite <- sep_filter_map_comm; eauto.
   rewrite cardinal_map; eauto.
+Qed.
+
+Lemma sep_update_list X `{OrderedType X} p ϱ (Z:list X) (lv:set X) G
+      (SEP:sep X p (lv \ of_list Z) ϱ) (incl:of_list Z [<=] lv)
+  : sep X p lv
+        (ϱ [Z <-- fst (fresh_list_stable (stable_fresh_part p) G Z)]).
+Proof.
+  hnf; split; intros; decide (x ∈ of_list Z).
+  - edestruct update_with_list_lookup_in_list; try eapply i; dcr.
+    Focus 2.
+    rewrite H5. cset_tac'.
+    exploit (@fresh_list_stable_get X _); try eapply H3; eauto; dcr.
+    subst. get_functional. eapply least_fresh_part_1; eauto.
+    rewrite <- H7. eauto.
+    eauto with len.
+  - rewrite lookup_set_update_not_in_Z; eauto.
+    eapply SEP; cset_tac.
+  - edestruct update_with_list_lookup_in_list; try eapply i; dcr.
+    Focus 2.
+    rewrite H5. cset_tac'.
+    exploit (@fresh_list_stable_get X _); try eapply H3; eauto; dcr.
+    dcr. subst. get_functional. eapply least_fresh_part_2; eauto.
+    rewrite <- H7. eauto.
+    eauto with len.
+  - rewrite lookup_set_update_not_in_Z; eauto.
+    eapply SEP; cset_tac.
 Qed.

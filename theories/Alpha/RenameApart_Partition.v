@@ -38,30 +38,6 @@ Proof.
     rewrite <- incl2. cset_tac.
 Qed.
 
-Lemma sep_update_list p ϱ (Z:list var) (lv:set var) G
-      (ND:NoDupA eq Z) (SEP:sep var p (lv \ of_list Z) ϱ) (incl:of_list Z [<=] lv)
-  : sep var p lv
-        (ϱ [Z <-- fst (fresh_list_stable (stable_fresh_part p) G Z)]).
-Proof.
-  hnf; split; intros; decide (x ∈ of_list Z).
-  - edestruct update_with_list_lookup_in_list; try eapply i; dcr.
-    Focus 2.
-    rewrite H4. cset_tac'.
-    exploit (@fresh_list_stable_get var _); try eapply H3; eauto; dcr.
-    subst. get_functional. eapply least_fresh_part_1; eauto.
-    eauto with len.
-  - rewrite lookup_set_update_not_in_Z; eauto.
-    eapply SEP; cset_tac.
-  - edestruct update_with_list_lookup_in_list; try eapply i; dcr.
-    Focus 2.
-    rewrite H4. cset_tac'.
-    exploit (@fresh_list_stable_get var _); try eapply H3; eauto; dcr.
-    dcr. subst. get_functional. eapply least_fresh_part_2; eauto.
-    eauto with len.
-  - rewrite lookup_set_update_not_in_Z; eauto.
-    eapply SEP; cset_tac.
-Qed.
-
 (*
 Lemma renameApart_sep o ZL LV DL p ϱ k lv fi s (isFnc:isFunctional o)
   (AN:ann_P (part_bounded (part_1 p) k) lv)

@@ -200,9 +200,7 @@ Proof.
            rewrite DECOMP at 1.
            eapply injective_on_fresh_list. eauto.
            eapply injective_on_incl; eauto. eauto with len.
-           eapply disj_intersection.
-           eapply fresh_list_stable_spec. simpl.
-           edestruct H2; eauto.
+           eapply fresh_list_stable_spec.
            eapply fresh_list_stable_nodup.
         -- eapply sep_agree; eauto.
            eapply agree_on_incl; eauto.

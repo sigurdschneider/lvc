@@ -215,11 +215,9 @@ Proof.
             eapply injective_on_fresh_list; eauto with len.
             + eapply injective_on_incl; eauto.
               eapply H2; eauto.
-            + eapply disj_intersection.
-              eapply disj_2_incl.
+            + eapply disj_2_incl.
               eapply fresh_list_stable_spec.
               reflexivity.
-            + edestruct H2; eauto.
             + eapply fresh_list_stable_nodup; eauto using least_fresh_part_fresh.
           - exploit H2; eauto; dcr.
             eapply sep_agree. eapply agree_on_incl; eauto.

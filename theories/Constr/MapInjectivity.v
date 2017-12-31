@@ -307,27 +307,26 @@ Qed.
 Lemma injective_on_fresh_list X `{OrderedType X} Y `{OrderedType Y} XL YL (ϱ: X -> Y) `{Proper _ (_eq ==> _eq) ϱ} lv
 : injective_on lv ϱ
   -> length XL = length YL
-  -> (of_list YL) ∩ (lookup_set ϱ lv) [=] ∅
-  -> NoDupA _eq XL
+  -> disj (of_list YL) (lookup_set ϱ lv)
   -> NoDupA _eq YL
   -> injective_on (lv ∪ of_list XL) (ϱ [XL <-- YL]).
 Proof.
-  intros. eapply length_length_eq in H3.
-  general induction H3; simpl in * |- * ; eauto.
+  intros INJ LEN DISJ ND.
+  general induction LEN; simpl in * |- * ; eauto.
   - eapply injective_on_incl; eauto with cset.
-  - eapply injective_on_agree. instantiate (1:=ϱ [x <- y] [XL <-- YL]).
-    + assert (lv ∪ { x; of_list XL} [=] {x; lv} ∪ of_list XL) by (cset_tac; eauto).
-      rewrite H7. dcr.
-      eapply IHlength_eq; eauto.
-      * eapply injective_on_fresh; eauto.
-        eapply injective_on_incl; eauto. clear IHlength_eq.
-        clear H7. lset_tac. eapply (H4 y). lset_tac. lset_tac.
-      * inv H5; inv H6.
-        rewrite lookup_set_add; eauto. lud; eauto.
-        split; [| clear_all; cset_tac].
-        rewrite <- H4. clear H7. lset_tac.
-        lud; eauto.
-    + eapply update_nodup_commute; eauto using length_eq_length.
+  - assert (EQ:lv ∪ { x; of_list XL} [=] {x; lv ∪ of_list XL}) by (cset_tac; eauto).
+    rewrite EQ. eapply injective_on_fresh; eauto.
+    + eapply injective_on_incl.
+      eapply IHLEN; eauto with cset.
+      eauto with cset.
+    + clear IHLEN EQ.
+      intro. eapply map_spec in H2; eauto; dcr.
+      decide (x0 ∈ of_list XL).
+      * eapply update_with_list_lookup_in in i; eauto using length_eq_length.
+        rewrite <- H5 in i. inv ND; cset_tac.
+      * rewrite lookup_set_update_not_in_Z in H5; eauto.
+        eapply (DISJ y). cset_tac. eapply map_spec; eauto.
+        eexists x0; split; eauto. cset_tac.
 Qed.
 
 Lemma injective_nodup X `{OrderedType X} Y `{OrderedType Y} (f:X->Y) `{ Proper _ (_eq ==> _eq) f} xl
