@@ -201,3 +201,18 @@ ul.doclist {
 .novfile h2.vfile {
     display: none;
 }
+
+#searchform {
+    position:fixed;
+    width:80%;
+    margin-top:1em;
+    left:10%;
+}
+
+#searchbox {
+    width:100%;
+}
+
+#snip {
+    margin-top: 30px;
+}

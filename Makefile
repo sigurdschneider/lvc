@@ -1,4 +1,5 @@
 GDOC := doc/
+DOC := doc-all/
 DOCIND := doc-ind/
 DOCSPILL := doc-spill/
 PKGIND := pkg-lvc-ind/
@@ -63,14 +64,17 @@ distclean: clean depclean
 
 doc: clean-doc $(DOCS) dep $(COQMAKEFILE)
 	- mkdir -p $(DOC)
-	-make -f $(COQMAKEFILE) -j$(CORES) -k
-	coqdoc $(COQDOCFLAGS) -d $(DOC) $(shell cat _CoqProject | grep -v ^-I) $(shell find theories/ -iname '*.vo' | sed 's/\.vo/.v/')
+	make -f $(COQMAKEFILE) -j$(CORES) -k
+	coqdoc $(COQDOCFLAGS) -d $(DOC) $(shell cat _CoqProject | grep -v ^-I | grep -v mlpack | grep -v ml4)
 	cp $(EXTRA_DIR)/resources/* $(DOC)
-	cp $(EXTRA_DIR)/index.html $(DOC)/index.html
+	cp $(EXTRA_DIR)/index-all.html $(DOC)/index.html
 	cp $(EXTRA_DIR)/search-toc.html $(DOC)/search-toc.html
 
 doc-publish: doc
-	scp -r $(DOC) ps:public_html/LVC
+	scp -r $(DOC)/* ps:public_html/LVC/doc-all/
+
+doc-quick: 
+	scp -r $(DOC)/* ps:public_html/LVC/doc-all/
 
 doc-ind: clean-doc $(DOCS)
 	- mkdir -p $(DOCIND)
