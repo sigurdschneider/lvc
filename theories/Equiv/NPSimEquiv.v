@@ -24,6 +24,7 @@ Proof.
   - econstructor 2; eauto.
     + intros. edestruct H7; eauto; dcr; pclearbot; eauto.
     + intros. edestruct H8; eauto; dcr; pclearbot; eauto.
+  - exfalso; eauto.
   - econstructor 3; eauto.
 Qed.
 
@@ -48,7 +49,7 @@ Lemma sim_simp {S} `{StateType S} {S'} `{StateType S'}
 Proof.
   pcofix CIH; intros. inv H2; pfold; eauto using sim_gen.
   - econstructor 2; eauto.
-    + congruence.
+    + simpl. intros; exfalso; eauto.
     + intros. edestruct H6; eauto; dcr; eauto 10.
 Qed.
 

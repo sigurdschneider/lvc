@@ -64,7 +64,7 @@ Definition toILF (s:IL.stmt) : IL.stmt :=
 Lemma toILF_correct (ili:IL.stmt) (E:onv val)
   (PM:LabelsDefined.paramsMatch ili nil)
   : defined_on (IL.occurVars ili) E
-    -> sim I.state F.state bot3 Sim (nil, E, ili) (nil:list F.block, E, toILF ili).
+    -> sim I.state F.state bot3 SimExt (nil, E, ili) (nil:list F.block, E, toILF ili).
 Proof with eauto using DCE_live, DCE_noUC.
   intros. subst. unfold toILF.
   eapply sim_trans with (S2:=I.state).
@@ -104,7 +104,7 @@ Qed.
 Import FiniteFixpointIteration Infra.PartialOrder.
 
 Lemma optimize_correct E s (PM:LabelsDefined.paramsMatch s nil)
-  : @sim _ IL.statetype_F _ _ bot3 Sim
+  : @sim _ IL.statetype_F _ _ bot3 SimExt
            (nil, E, s)
            (nil:list F.block, E, optimize s).
 Proof.
@@ -281,7 +281,7 @@ Qed.
 Lemma fromILF_correct (s s':stmt) E (PM:LabelsDefined.paramsMatch s nil)
       (OK:fromILF s = Success s')
       (Def:defined_on (freeVars s) E)
-  : sim F.state I.state bot3 Sim (nil, E, s)
+  : sim F.state I.state bot3 SimExt (nil, E, s)
         (nil, (id [fromILF_fvl_ren s <-- fromILF_fvl s] ∘ E)
                 [Pos.succ ⊝ slotted_vars s <--
                           lookup_list (id [fromILF_fvl_ren s <-- fromILF_fvl s] ∘ E)

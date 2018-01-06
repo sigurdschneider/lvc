@@ -216,6 +216,7 @@ Proof.
       destruct t; simpl. split; eauto; intros.
       exploit omap_op_eval_agree; eauto using agree_on_incl. congruence.
       eauto.
+      eauto.
     + pno_step.
   - pno_step. simpl.
     erewrite op_eval_agree; symmetry; eauto using agree_on_incl with cset.
@@ -335,7 +336,6 @@ Proof.
     eapply sim_reduction_closed in H1; swap 1 3; eauto.
     rewrite app_nil_r in *.
     assert (LC2:labenv_sim t (sim bot3) SR (length (A:=positive) ⊝ block_Z ⊝ L2) L1' L2). {
-      destruct t; eauto.
       destruct LC1; dcr.
       repeat (split; eauto). hnf; intros.
       eapply bisim_sim; eauto.
@@ -362,7 +362,6 @@ Proof.
         eapply @bisim_sym.
         eapply (bisimeq_refl). eauto.
       }
-      destruct t; eauto.
       eapply bisim_sim; eauto.
   - hnf; intros.
     eapply simeq_contextual with (ctx:=C) in H.

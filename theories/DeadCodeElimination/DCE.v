@@ -101,7 +101,7 @@ Qed.
 
 Lemma DCE_correct_I (ili:IL.stmt) (E:onv val)
   (PM:LabelsDefined.paramsMatch ili nil)
-  : sim I.state I.state bot3 Sim (nil, E, ili) (nil, E, fst (DCE Liveness.Imperative ili)).
+  : sim I.state I.state bot3 SimExt (nil, E, ili) (nil, E, fst (DCE Liveness.Imperative ili)).
 Proof.
   intros. subst. unfold DCE.
   simpl in *.
@@ -130,7 +130,7 @@ Qed.
 Lemma DCE_correct_F (ilf:IL.stmt) (E:onv val)
   (PM:LabelsDefined.paramsMatch ilf nil)
   : defined_on (IL.occurVars ilf) E
-    -> sim F.state F.state bot3 Sim (nil, E, ilf) (nil, E, fst (DCE Liveness.Functional ilf)).
+    -> sim F.state F.state bot3 SimExt (nil, E, ilf) (nil, E, fst (DCE Liveness.Functional ilf)).
 Proof.
   intros. subst. unfold DCE.
   simpl in *.

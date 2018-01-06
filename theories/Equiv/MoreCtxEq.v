@@ -484,13 +484,13 @@ Proof.
            exploit activated_inv_F; try eapply H1; dcr; subst.
            exploit activated_inv_F; try eapply H2; dcr; subst.
            destruct σ1' as [[? ?] ?].
-           edestruct (H3 eq_refl evt (x1 ++ trivL ⊜ L XF, o, s0)); eauto.
+           edestruct (H3 ltac:(eauto) evt (x1 ++ trivL ⊜ L XF, o, s0)); eauto.
            inv H11. econstructor; eauto. dcr.
            destruct x6 as [[? ?] ?].
            eexists (x4 ++ L', o0, s1); split; eauto.
-           inv H12. econstructor; eauto.
-           right. destruct H14; [|isabsurd].
-           inv H12. inv H11.
+           inv H14. econstructor; eauto.
+           right. destruct H15; [|isabsurd].
+           inv H14. inv H11.
            eapply CIH; try eapply H14; eauto.
            simpl in *. eapply disj_2_incl; try eapply H10; eauto. eauto with cset.
            eapply disj_2_incl; eauto. eauto with cset.
@@ -524,7 +524,10 @@ Proof.
              eauto with len.
            ++ pfold. eapply SimErr; try eapply H7.
              reflexivity.
-             intros [? [? ?]]. inv H0. congruence.
+             intros [? [? ?]]. inv H0. congruence. eauto.
+           ++ pfold. eapply SimErr; try eapply H7.
+             reflexivity.
+             intros [? [? ?]]. inv H0. congruence. eauto.
     + edestruct (trivL_plus_step_tau_inv trivL_triv _ H); eauto; dcr; subst;
         try eapply sawtooth_smaller,LAB.
       * uncount_star2. eapply plus2_star2 in H5.
@@ -540,6 +543,8 @@ Proof.
         -- destruct t.
            ++ specialize (H15 eq_refl).
              rewrite H13 in H15. rewrite omap_lookup_vars in H13; eauto. congruence.
+             eauto with len.
+           ++ rewrite omap_lookup_vars in H13; eauto. congruence.
              eauto with len.
            ++ rewrite omap_lookup_vars in H13; eauto. congruence.
              eauto with len.
@@ -573,11 +578,13 @@ Proof.
              eauto with len.
            ++ rewrite omap_lookup_vars in H6; eauto. congruence.
              eauto with len.
+           ++ rewrite omap_lookup_vars in H6; eauto. congruence.
+             eauto with len.
   - eapply star2_star2n in H0. dcr.
-    edestruct (trivL_plus_step_tau_inv trivL_triv _ H2); eauto; dcr; subst; only 1: eapply sawtooth_smaller,LAB.
-    + eapply star2n_star2 in H4.
+    edestruct (trivL_plus_step_tau_inv trivL_triv _ H3); eauto; dcr; subst; only 1: eapply sawtooth_smaller,LAB.
+    + eapply star2n_star2 in H5.
       pfold.
-      eapply SimErr; try eapply H4; eauto.
+      eapply SimErr; try eapply H5; eauto.
       eapply normal2_labenv_F; eauto using trivL_block_Z with len.
     + exfalso. eapply H1.
       hnf. do 2 eexists. econstructor.

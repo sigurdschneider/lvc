@@ -199,7 +199,7 @@ Lemma tval_term_sound L D D' E Es Et s s' t t'
     -> (forall x, x ∈ (fst(getAnn D)) -> exists v, E x = Some v)
     -> Terminates (L,E,s) (L,Es,s')
     -> Terminates (L,E,t) (L,Et,t')
-    -> @sim _ statetype_F _ statetype_F bot3 Sim (L, E, s) (L, E, t).
+    -> @sim _ statetype_F _ statetype_F bot3 SimExt (L, E, s) (L, E, t).
 
 Proof.
   intros Unsat_check Eq_FVars RenApart ssa_s ssa_t [nf_s nc_s] [nf_t nc_t] val_def
@@ -426,7 +426,7 @@ Lemma tval_sound L D D' E s t:
   -> noFun t /\ noCall t(* same*)
   (* Free Variables must be defined *)
   -> (forall x, x ∈ (fst(getAnn D)) -> exists v, E x = Some v)
-  -> @sim _ statetype_F _ statetype_F bot3 Sim (L, E, s) (L, E, t).
+  -> @sim _ statetype_F _ statetype_F bot3 SimExt (L, E, s) (L, E, t).
 
 Proof.
   intros Unsat_check Eq_FVars RenApart ssa_s ssa_t [nf_s nc_s] [nf_t nc_t] val_def.

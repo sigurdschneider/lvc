@@ -8,13 +8,30 @@ Unset Printing Records.
 (** A characterization of simulation equivalence on states;
 works only for internally deterministic semantics *)
 
-Inductive simtype := Bisim | Sim.
+Inductive simtype := Bisim | Sim | SimExt.
 
 Definition isBisim t :=
   match t with
-  | Sim => false
   | Bisim => true
+  | _ => false
   end.
+
+Definition isSim t :=
+  match t with
+  | Bisim => false
+  | _ => true
+  end.
+
+Definition extBckwd t :=
+  match t with
+  | Sim => false
+  | _ => true
+  end.
+
+Hint Extern 0 =>
+match goal with
+| [ H : isSim Bisim |- _ ] => exfalso; eapply H
+end.
 
 
 (** ** Generating Function *)
@@ -31,14 +48,15 @@ Inductive sim_gen
       -> star2 step pσ2 nil σ2
       -> activated σ1
       -> activated σ2
-      -> (t = Bisim -> forall evt σ1', step σ1 evt σ1' -> exists σ2', step σ2 evt σ2' /\ r t σ1' σ2')
+      -> (extBckwd t -> forall evt σ1', step σ1 evt σ1' -> exists σ2', step σ2 evt σ2' /\ r t σ1' σ2')
       -> (forall evt σ2', step σ2 evt σ2' -> exists σ1', step σ1 evt σ1' /\ r t σ1' σ2')
       -> sim_gen r t pσ1 pσ2
-  | SimErr (σ1 σ1':S) (σ2:S')
+  | SimErr t (σ1 σ1':S) (σ2:S')
     : result σ1' = None
       -> star2 step σ1 nil σ1'
       -> normal2 step σ1'
-      -> sim_gen r Sim σ1 σ2
+      -> isSim t
+      -> sim_gen r t σ1 σ2
   | SimTerm t (σ1 σ1':S) (σ2 σ2':S')
     : result σ1' = result σ2'
       -> star2 step σ1 nil σ1'
@@ -82,8 +100,8 @@ Qed.
 
 Hint Resolve sim_mon.
 
-Lemma bisim_sim {S} `{StateType S} {S'} `{StateType S'} (σ:S) (σ':S')
-      : sim bot3 Bisim σ σ' -> sim bot3 Sim σ σ'.
+Lemma bisim_sim t {S} `{StateType S} {S'} `{StateType S'} (σ:S) (σ':S')
+      : sim bot3 Bisim σ σ' -> sim bot3 t σ σ'.
 Proof.
   revert σ σ'. pcofix CIH.
   intros. pinversion H2; subst.
@@ -91,6 +109,7 @@ Proof.
   - pfold. eapply SimExtern; intros; eauto using star2_refl.
     + edestruct H6; eauto; dcr; pclearbot; eauto 20.
     + edestruct H7; eauto; dcr; pclearbot; eauto 20.
+  - eauto.
   - pfold. eapply SimTerm; eauto using star2_refl.
 Qed.
 
@@ -117,6 +136,7 @@ Proof.
   - pfold. eapply SimExtern; intros; eauto using star2_refl.
     + edestruct H7; eauto; dcr; pclearbot; eauto 20.
     + edestruct H6; eauto; dcr; pclearbot; eauto 20.
+  - exfalso; eauto.
   - pfold. eapply SimTerm; eauto using star2_refl.
 Qed.
 
@@ -302,7 +322,7 @@ Lemma sim_activated t {S1} `{StateType S1} (σ1:S1)
 : activated σ1
   -> sim bot3 t σ1 σ2
   -> exists σ2', star2 step σ2 nil σ2' /\ activated σ2' /\
-           ( t = Bisim -> forall (evt : event) (σ1'' : S1),
+           ( extBckwd t -> forall (evt : event) (σ1'' : S1),
                step σ1 evt σ1'' ->
                exists σ2'' : S2,
                  step σ2' evt σ2'' /\ sim bot3 t σ1'' σ2'')
@@ -336,11 +356,11 @@ Lemma sim_activated_2 t {S1} `{StateType S1} (σ1:S1)
                exists σ2'' : S2,
                  step σ2' evt σ2'' /\ (sim bot3 t σ2'' σ1''))
            /\
-           ( t = Bisim -> forall (evt : event) (σ2'' : S2),
+           ( extBckwd t -> forall (evt : event) (σ2'' : S2),
                step σ2' evt σ2'' ->
                exists σ1' : S1,
                  step σ1 evt σ1' /\ (sim bot3 t σ2'' σ1'))
-           \/ (normal2 step σ2' /\ result σ2' = None /\ t = Sim)).
+           \/ (normal2 step σ2' /\ result σ2' = None /\ isSim t)).
 Proof.
   intros.
   pinversion H2; subst.
@@ -375,7 +395,7 @@ Qed.
 
 Ltac zsimpl_step :=
   match goal with
-  | [ H: ?t = Bisim, I : ?t = Bisim -> _ |- _ ] => specialize (I H)
+  | [ H: extBckwd ?t, I : extBckwd ?t -> _ |- _ ] => specialize (I H)
   | [ SIM : sim bot3 ?t ?σ2 ?σ1, ACT : normal2 step ?σ2', STAR: star2 step ?σ2 nil ?σ2' |- _ ] =>
     eapply sim_reduction_closed_1 in SIM; [| eapply STAR]
   | [ SIM : paco3 (@sim_gen _ _ _ _) _ ?t ?σ2 ?σ1, ACT : normal2 step ?σ2', STAR: star2 step ?σ2 nil ?σ2' |- _ ] =>
@@ -450,6 +470,14 @@ Ltac zzcases :=
       clear H
   end.
 
+Ltac det :=
+  match goal with
+    | [ Step1 : step ?x ?e ?y1, Step2: step ?x ?e ?y2 |- _ ] =>
+    assert (y1 = y2); [eapply (step_externally_determined _ _ _ _ Step1 Step2) |
+                       first [subst y1 | subst y2 | idtac] ]; clear_trivial_eqs
+  end.
+
+
 Lemma plus_not_normal X (R:X -> event -> X -> Prop) σ1 σ1'
   :  plus2 R σ1 nil σ1'
      -> normal2 R σ1
@@ -467,36 +495,33 @@ Lemma sim_t_Sim_activated t S1 `{StateType S1}
     -> forall S2 `{StateType S2} (σ2:S2),
         sim bot3 t σ1 σ2
         -> activated σ2
-        -> t = Sim.
+        -> isSim t.
 Proof.
   intros. pinversion H3; subst; eauto; exfalso; relsimpl; eauto using plus_not_normal.
 Qed.
-
 Lemma sim_t_Sim_normal t S1 `{StateType S1}
       (σ1:S1) S2 `{StateType S2} (σ2:S2) r
   : result σ1 = ⎣⎦
     -> normal2 step σ1
     -> normal2 step σ2
     -> sim r t σ1 σ2
-    -> t = Sim \/ result σ2 = None.
+    -> isSim t \/ result σ2 = None.
 Proof.
   intros. pinversion H4; subst; eauto; relsimpl.
   - exfalso; eauto using plus_not_normal.
-  - right. congruence.
+  - right; congruence.
 Qed.
-
 Lemma sim_t_Sim_normal_step t S1 `{StateType S1}
       (σ1:S1) S2 `{StateType S2} (σ2:S2) r
   : result σ1 = ⎣⎦
     -> normal2 step σ1
     -> sim r t σ1 σ2
-    -> t = Sim \/ exists σ2', star2 step σ2 nil σ2' /\ normal2 step σ2' /\ result σ2' = None.
+    -> isSim t \/ exists σ2', star2 step σ2 nil σ2' /\ normal2 step σ2' /\ result σ2' = None.
 Proof.
   intros. pinversion H3; subst; eauto; relsimpl.
   - exfalso; eauto using plus_not_normal.
   - right. eexists; split; eauto. split; congruence.
 Qed.
-
 Local Hint Extern 5 =>
 match goal with
 | [ H : result ?σ1 = result ?σ2, H' : result ?σ2 = None |-
@@ -506,9 +531,7 @@ match goal with
     result ?σ1 = result ?σ3 ] =>
   rewrite H; eapply H'
 end.
-
 Local Hint Resolve plus2_star2.
-
 Lemma sim_zigzag t {S1} `{StateType S1}
       (σ1:S1) {S2} `{StateType S2} (σ2a σ2b:S2) {S3} `{StateType S3} (σ3:S3)
   : sim bot3 t σ1 σ2a
@@ -526,11 +549,17 @@ Proof.
         pfold. zzsimpl.
         zzcases. zzsimpl.
         + econstructor 2; eauto using plus2_star2.
-          * intros. unfold upaco3 in *; zzsimpl; eauto 20 using star2_refl.
+          * intros.
+            edestruct H17; eauto; dcr.
+            edestruct H15; eauto; dcr.
+            unfold upaco3 in *.
+            zzsimpl. det.
+            eauto 20 using star2_refl.
           * intros.
             unfold upaco3 in *; zzsimpl; eauto 10 using star2_refl.
-        + zzsimpl. assert (t = Sim).
-          eapply (@sim_t_Sim_activated t _ _ _ H10 H9 _ _ _ H7); eauto.
+        + zzsimpl. assert (isSim t). {
+            eapply (@sim_t_Sim_activated t _ _ _ H10 H9 _ _ _ H7); eauto.
+          }
           subst.
           econstructor 3; eauto using plus2_star2, star2_trans.
       - (* plus step <-> err *)
@@ -545,8 +574,6 @@ Proof.
           econstructor 4; eauto; eauto.
         + zzsimpl.
           destruct (@sim_t_Sim_normal t _ _ _ _ _ _ _ H9 H8 H14 H7); eauto.
-          * subst.
-            pfold. econstructor 3; eauto using plus2_star2, star2_trans.
           * pfold. econstructor 4; eauto using plus2_star2, star2_trans.
             congruence.
       - (* activated <-> plus step *)
@@ -602,8 +629,9 @@ Proof.
           * intros. specialize (H15 H4). specialize (H17 H4).
             zzsimpl; eauto 10 using star2_refl.
           * intros. zzsimpl; eauto 10 using star2_refl.
-        + zzsimpl. assert (t = Sim).
-          eapply (@sim_t_Sim_activated t _ _ _ H10 H9 _ _ _ H7); eauto.
+        + zzsimpl. assert (isSim t). {
+            eapply (@sim_t_Sim_activated t _ _ _ H10 H9 _ _ _ H7); eauto.
+          }
           subst.
           econstructor 3; eauto using plus2_star2, star2_trans.
       - (* plus step <-> err *)
@@ -618,8 +646,6 @@ Proof.
           econstructor 4; eauto; eauto.
         + zzsimpl.
           destruct (@sim_t_Sim_normal t _ _ _ _ _ _ _ H9 H8 H14 H7); eauto.
-          * subst.
-            pfold. econstructor 3; eauto using plus2_star2, star2_trans.
           * pfold. econstructor 4; eauto using plus2_star2, star2_trans.
             congruence.
       - (* activated <-> plus step *)

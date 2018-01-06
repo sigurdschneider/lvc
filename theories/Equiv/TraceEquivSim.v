@@ -369,7 +369,7 @@ Proof.
     }
     exploit UIncl; eauto. inv H7.
     pfold. econstructor 2; eauto.
-    + intros. congruence.
+    + intros. exfalso; eauto.
     + intros.
       assert (coproduces σ0 (EEvtExtern evt0:+:(tr σ2'))). {
         econstructor 1; eauto.
@@ -440,7 +440,7 @@ Proof.
     }
     exploit UIncl; eauto. inv H7.
     pfold. econstructor 2; eauto.
-    + intros. congruence.
+    + intros. exfalso; eauto.
     + intros.
       assert (coproduces σ0 (EEvtExtern evt0:+:(tr σ2'))). {
         econstructor 1; eauto.

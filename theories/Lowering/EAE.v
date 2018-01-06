@@ -28,9 +28,9 @@ Instance SR : PointwiseProofRelationF params := {
 }.
 
 Lemma sim_EAE' r L L' V s
-  : labenv_sim Sim (sim r) SR (block_Z ⊝ L) L L'
+  : labenv_sim SimExt (sim r) SR (block_Z ⊝ L) L L'
     -> ❬L❭ = ❬L'❭
-    -> sim r Sim (L, V, s) (L',V, compile s).
+    -> sim r SimExt (L, V, s) (L',V, compile s).
 Proof.
   revert_except s.
   sind s; destruct s; simpl; intros; simpl in * |- *.
@@ -102,7 +102,7 @@ Proof.
 Qed.
 
 Lemma sim_EAE V s
-  : @sim _ statetype_F _ statetype_F bot3 Sim (nil, V, s) (nil,V, compile s).
+  : @sim _ statetype_F _ statetype_F bot3 SimExt (nil, V, s) (nil,V, compile s).
 Proof.
   eapply sim_EAE'; eauto.
   eapply labenv_sim_nil.

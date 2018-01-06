@@ -321,8 +321,8 @@ Proof.
       * intros. edestruct H15; dcr; eauto. edestruct H10; dcr; eauto.
       * intros. edestruct H11; dcr; eauto. edestruct H13; dcr; eauto.
     + eapply sim_lock_terminate_2 in H6; eauto; dcr.
-      econstructor 3. rewrite H11; eauto.
-      eapply star2_silent; eauto. eauto.
+      econstructor 3. rewrite H12; eauto.
+      eapply star2_silent; eauto. eauto. eauto.
     + eapply sim_lock_terminate_2 in H6; eauto; dcr.
       econstructor 4. rewrite H13; eauto.
       eapply star2_silent; eauto. eauto. eauto. eauto.
@@ -335,7 +335,7 @@ Proof.
         edestruct H7; eauto; dcr. eauto.
     + exfalso; eauto using plus_not_normal.
     + econstructor 3. rewrite H4. eauto.
-      eapply star2_refl. eauto.
+      eapply star2_refl. eauto. eauto.
     + econstructor 4. rewrite H4. eauto.
       eapply star2_refl. eauto. eauto. eauto.
 Qed.

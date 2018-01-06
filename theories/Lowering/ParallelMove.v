@@ -836,7 +836,7 @@ Lemma correct (p:inf_partition var) (preg:var) Lv L L' s (E E':onv val) (al: ann
       (LA:inRel (approx p preg) Lv L L')
       (EEQ:agree_on eq (getAnn al) E E')
       (DEF:defined_on (getAnn al) E) (PREG1: part_1 p preg)
-  : sim bot3 Sim (L,E,s) (L', E', lower p preg (zip pair Lv (I.block_Z ⊝ L))  s al).
+  : sim bot3 SimExt (L,E,s) (L', E', lower p preg (zip pair Lv (I.block_Z ⊝ L))  s al).
 Proof.
   revert_all. pcofix pmSim_sim; intros.
   inv LS; inv AEF; simpl in *.

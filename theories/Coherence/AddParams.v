@@ -15,7 +15,7 @@ Lemma addParams_correct b (E:onv val) (ili:IL.stmt) lv
   : defined_on (getAnn lv) E
     -> live_sound Imperative nil nil ili lv
     -> noUnreachableCode (isCalled b) ili
-    -> sim I.state F.state bot3 Sim
+    -> sim I.state F.state bot3 SimExt
           (nil, E, ili)
           (nil:list F.block, E, addParams ili lv).
 Proof with eauto.

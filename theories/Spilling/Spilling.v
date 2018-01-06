@@ -72,7 +72,7 @@ Lemma spill_correct b k (s:stmt) lv ra E
       (NUC:noUnreachableCode (isCalled b) s)
       (slt:Slot (fst (getAnn ra) ∪ snd (getAnn ra)))
       (aIncl:ann_R (fun (x : ⦃var⦄) (y : ⦃var⦄ * ⦃var⦄) => x ⊆ fst y) lv ra)
-  : sim I.state F.state bot3 Sim
+  : sim I.state F.state bot3 SimExt
         (nil, E, s)
         (nil, E [slt ⊝ drop k (to_list (getAnn lv)) <-- lookup_list E (drop k (to_list (getAnn lv)))], fst (spill k slt s lv )).
 Proof.

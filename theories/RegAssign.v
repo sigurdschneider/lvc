@@ -32,7 +32,7 @@ Lemma rassign_correct p max_reg (s:stmt) (lv:ann (set var)) s' ra
       (Incl:getAnn lv ⊆ fst (getAnn ra))
       (MREG:part_1 p max_reg)
       E (DEF:defined_on (getAnn lv) E)
-  : sim F.state I.state bot3 Sim (nil, E, s) (nil, E, s').
+  : sim F.state I.state bot3 SimExt (nil, E, s) (nil, E, s').
 Proof.
   intros. unfold rassign in SC.
   monadS_inv SC.

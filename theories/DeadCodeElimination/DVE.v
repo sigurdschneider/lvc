@@ -169,8 +169,8 @@ Instance SR : PointwiseProofRelationI ((set var) * params) := {
 Lemma sim_I ZL LV r L L' V V' s  lv
 : agree_on eq (getAnn lv) V V'
 -> true_live_sound Imperative ZL LV s lv
--> labenv_sim Sim (sim r) SR (zip pair LV ZL) L L'
--> sim r Sim (L,V, s) (L',V', compile (zip pair LV ZL) s lv).
+-> labenv_sim SimExt (sim r) SR (zip pair LV ZL) L L'
+-> sim r SimExt (L,V, s) (L',V', compile (zip pair LV ZL) s lv).
 Proof.
   unfold sim. revert_except s.
   sind s; destruct s; simpl; intros; invt true_live_sound; simpl in * |- *.
@@ -217,7 +217,7 @@ Qed.
 Lemma sim_DVE V V' s lv
 : agree_on eq (getAnn lv) V V'
 -> true_live_sound Imperative nil nil s lv
--> @sim I.state _ I.state _ bot3 Sim (nil,V, s) (nil,V', compile nil s lv).
+-> @sim I.state _ I.state _ bot3 SimExt (nil,V, s) (nil,V', compile nil s lv).
 Proof.
   intros.
   eapply (@sim_I nil nil); eauto.
@@ -243,8 +243,8 @@ Instance SR : PointwiseProofRelationF ((set var) * params) := {
 Lemma sim_F ZL LV r L L' V V' s  lv
 : agree_on eq (getAnn lv) V V'
 -> true_live_sound Functional ZL LV s lv
--> labenv_sim Sim (sim r) SR (zip pair LV ZL) L L'
--> sim r Sim (L,V, s) (L',V', compile (zip pair LV ZL) s lv).
+-> labenv_sim SimExt (sim r) SR (zip pair LV ZL) L L'
+-> sim r SimExt (L,V, s) (L',V', compile (zip pair LV ZL) s lv).
 Proof.
   unfold sim. revert_except s.
   sind s; destruct s; simpl; intros; invt true_live_sound; simpl in * |- *.
@@ -291,7 +291,7 @@ Qed.
 Lemma sim_DVE V V' s lv
 : agree_on eq (getAnn lv) V V'
 -> true_live_sound Functional nil nil s lv
--> @sim F.state _ F.state _ bot3 Sim (nil,V, s) (nil,V', compile nil s lv).
+-> @sim F.state _ F.state _ bot3 SimExt (nil,V, s) (nil,V', compile nil s lv).
 Proof.
   intros.
   eapply (@sim_F nil nil); eauto. eapply labenv_sim_nil.

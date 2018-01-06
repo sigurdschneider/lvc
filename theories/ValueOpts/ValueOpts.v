@@ -297,14 +297,14 @@ Qed.
 Lemma sim_vopt r L L' V s s' ZL Δ Gamma ang
   : satisfiesAll V Gamma
     -> eqn_sound ZL Δ s s' Gamma ang
-    -> labenv_sim Sim (sim r) PR (zip pair ZL Δ) L L'
+    -> labenv_sim SimExt (sim r) PR (zip pair ZL Δ) L L'
     -> renamedApart s ang
     -> eqns_freeVars Gamma ⊆ fst (getAnn ang)
     -> (forall n b Γf, get L n b ->
                 get Δ n Γf ->
                 eqns_freeVars Γf ⊆ fst (getAnn ang) ∪ of_list (block_Z b) /\
                 agree_on eq (eqns_freeVars Γf \ of_list (block_Z b)) (F.block_E b) V)
-    -> sim r Sim  (L,V, s) (L',V, s').
+    -> sim r SimExt  (L,V, s) (L',V, s').
 Proof.
   intros SAT EQN SIML REAPT FV EEQ.
   general induction EQN; (try (now exfalso; eapply H; eauto));
@@ -329,8 +329,10 @@ Proof.
         -- symmetry. eapply agree_on_update_dead; eauto.
            rewrite H11. revert H6; clear_all; cset_tac.
            symmetry. eauto.
+    + eauto.
   -  exploit H; eauto.  exploit H0; eauto; [cset_tac|].
      eapply (sim_cond_op_apx il_statetype_F).
+     + eauto.
      + eauto.
      + intros. left. eapply IHEQN1; clear IHEQN1 IHEQN2; eauto.
        * apply satisfiesAll_add. eauto using  op_eval_true_satisfies.
@@ -357,7 +359,7 @@ Proof.
     eapply omap_inversion in H8; eauto; dcr.
     rewrite H15. econstructor; eauto.
   - eapply (sim_return_apx il_statetype_F).
-    exploit H; eauto.
+    exploit H; eauto. eauto.
   - exploit H; eauto. eapply (sim_let_call_apx il_statetype_F); eauto; simpl.
     + case_eq (omap (op_eval V) Y); eauto using fstNoneOrR.
       intros.

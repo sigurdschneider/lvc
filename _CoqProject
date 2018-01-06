@@ -109,6 +109,7 @@ theories/Equiv/Sim.v
 theories/Equiv/StateTypeProperties.v
 theories/Equiv/Tower2.v
 theories/Equiv/Tower3.v
+theories/Equiv/TraceEquivSimExt.v
 theories/Equiv/TraceEquivSim.v
 theories/Equiv/TraceEquiv.v
 theories/Equiv/WFBisim.v

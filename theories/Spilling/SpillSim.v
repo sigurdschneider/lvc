@@ -252,12 +252,12 @@ Lemma sim_I (slot : var -> var) k Λ ZL LV VD r L L' V V' R M s lv sl ra
     -> disj VD (map slot VD)
     -> defined_on (R ∪ map slot M) V'
     -> R ∪ M ⊆ fst (getAnn ra)
-    -> labenv_sim Sim (sim r) (SR slot VD) (zip pair Λ ZL) L L'
+    -> labenv_sim SimExt (sim r) (SR slot VD) (zip pair Λ ZL) L L'
     -> (fst (getAnn ra) ∪ snd (getAnn ra)) ⊆ VD
     -> renamedApart s ra
     -> app_expfree s
     -> ann_R Subset1 lv ra
-    -> sim r Sim (L, V, s) (L', V', do_spill slot s sl ZL Λ).
+    -> sim r SimExt (L, V, s) (L', V', do_spill slot s sl ZL Λ).
 Proof.
   simpl. unfold sim.
   move VD before k. move s before VD. revert_until s.

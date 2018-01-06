@@ -457,8 +457,10 @@ Proof.
       * exploit H4; eauto.
         pno_step.
       * perr.
+      * perr.
   - destruct i; simpl in *; dcr.
     + exploit H3; eauto. pno_step.
+    + perr.
     + perr.
 Qed.
 

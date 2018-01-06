@@ -63,11 +63,11 @@ Ltac pextern_step :=
         ].
 
 Ltac pno_step_left :=
-  pfold; econstructor 3; [ | eapply star2_refl|]; [ reflexivity | ]; stuck2.
+  pfold; econstructor 3; [ | eapply star2_refl| |eauto]; [ reflexivity | ]; stuck2.
 
 Ltac perr :=
   pfold; eapply SimErr;
-  [ | eapply star2_refl | ];
+  [ | eapply star2_refl | |eauto];
   [ repeat get_functional; try reflexivity
   | repeat get_functional; stuck2 ].
 
@@ -193,36 +193,38 @@ Proof.
 Qed.
 
 
-Lemma sim_let_op_apx X (IST:ILStateType X) r (L L':X) V V' x x' e e' s s'
+Lemma sim_let_op_apx X (IST:ILStateType X) r t (L L':X) V V' x x' e e' s s'
       (EQ: fstNoneOrR eq (op_eval V e) (op_eval V' e'))
       (SIM: forall v, op_eval V e = Some v
-                 -> (sim r \3/ r) Sim (L, V [x <- ⎣ v ⎦], s) (L', V' [x' <- ⎣ v ⎦], s'))
-  : sim r Sim (L, V, stmtLet x (Operation e) s) (L', V', stmtLet x' (Operation e') s').
+                 -> (sim r \3/ r) t (L, V [x <- ⎣ v ⎦], s) (L', V' [x' <- ⎣ v ⎦], s'))
+      (ISSIM:isSim t)
+  : sim r t (L, V, stmtLet x (Operation e) s) (L', V', stmtLet x' (Operation e') s').
 Proof.
   inv EQ.
-  -  pfold ; eapply SimErr;
-       [ | eapply star2_refl | ].
+  - pfold ; eapply SimErr;
+      [ | eapply star2_refl | | ].
      + apply result_none.  inversion 1.
      + eapply let_op_normal. eauto.
+     + eauto.
   -  pfold; eapply SimSilent; [ eapply plus2O
                               | eapply plus2O
                               | ].
      eapply step_let_op; eauto. eauto.
-     eapply step_let_op.  eauto. eauto.
+     eapply step_let_op. eauto. eauto.
      eapply SIM; eauto.
 Qed.
 
-Lemma sim_cond_op_apx X (IST:ILStateType X) r (L L':X) V V' e e' s1 s1' s2 s2'
-      (EQ:  fstNoneOrR eq (op_eval V e) (op_eval V' e'))
+Lemma sim_cond_op_apx X (IST:ILStateType X) r t (L L':X) V V' e e' s1 s1' s2 s2'
+      (EQ:  fstNoneOrR eq (op_eval V e) (op_eval V' e')) (ISSIM:isSim t)
       (SIM1: forall v, op_eval V e = Some v -> val2bool v = true ->
-                  (sim r \3/ r) Sim (L, V, s1) (L', V', s1'))
+                  (sim r \3/ r) t (L, V, s1) (L', V', s1'))
       (SIM2: forall v, op_eval V e = Some v -> val2bool v = false ->
-                  (sim r \3/ r) Sim (L, V, s2) (L', V', s2'))
-  : sim r Sim (L, V, stmtIf e s1 s2) (L', V', stmtIf e' s1' s2').
+                  (sim r \3/ r) t (L, V, s2) (L', V', s2'))
+  : sim r t (L, V, stmtIf e s1 s2) (L', V', stmtIf e' s1' s2').
 Proof.
   inv EQ.
   - pfold; eapply SimErr;
-      [|eapply star2_refl|].
+      [|eapply star2_refl| |eauto].
     + apply result_none. inversion 1.
     + eapply cond_normal. eauto.
   -  case_eq (val2bool y); intros.
@@ -236,11 +238,13 @@ Proof.
        eapply step_cond_false; eauto.
 Qed.
 
-Lemma sim_return_apx X (IST:ILStateType X) r (L L':X) V V' e e'
-  :fstNoneOrR eq (op_eval V e) (op_eval V' e') -> sim r Sim (L, V, stmtReturn e) (L', V', stmtReturn e').
+Lemma sim_return_apx X (IST:ILStateType X) r t (L L':X) V V' e e'
+  :fstNoneOrR eq (op_eval V e) (op_eval V' e')
+   -> isSim t
+   -> sim r t (L, V, stmtReturn e) (L', V', stmtReturn e').
 Proof.
   intros. inv H.
-  - pfold; eapply SimErr; [|eapply star2_refl|].
+  - pfold; eapply SimErr; [|eapply star2_refl| |eauto].
     + rewrite result_return. eauto.
     + apply return_normal.
   - pfold; eapply SimTerm; [|eapply star2_refl|eapply star2_refl| | ].
@@ -250,13 +254,13 @@ Proof.
 Qed.
 
 
-Lemma sim_let_call_apx X (IST:ILStateType X) r (L L':X) V V' x x' f Y Y' s s'
-      (EQ: fstNoneOrR eq  (omap (op_eval V) Y)  (omap (op_eval V') Y'))
-      (SIM: forall v, (sim r \3/ r) Sim (L, V [x <- ⎣ v ⎦], s) (L', V' [x' <- ⎣ v ⎦], s'))
-  : sim r Sim (L, V, stmtLet x (Call f Y) s) (L', V', stmtLet x' (Call f Y') s').
+Lemma sim_let_call_apx X (IST:ILStateType X) r t (L L':X) V V' x x' f Y Y' s s'
+      (EQ: fstNoneOrR eq  (omap (op_eval V) Y)  (omap (op_eval V') Y')) (ISSIM:isSim t)
+      (SIM: forall v, (sim r \3/ r) t (L, V [x <- ⎣ v ⎦], s) (L', V' [x' <- ⎣ v ⎦], s'))
+  : sim r t (L, V, stmtLet x (Call f Y) s) (L', V', stmtLet x' (Call f Y') s').
 Proof.
   inv EQ.
-  - pfold. eapply SimErr; [|eapply star2_refl | ]; [ simpl  | ].
+  - pfold. eapply SimErr; [|eapply star2_refl | |eauto]; [ simpl  | ].
     + rewrite !result_none; isabsurd; eauto.
     + eapply let_call_normal; eauto.
   - symmetry in H0, H.
@@ -385,8 +389,8 @@ Proof.
   - case_eq (omap (op_eval E) Y); intros; eauto.
     inv H1.
     + exfalso. eapply H2; do 2 eexists. econstructor; eauto.
-    + inv H5; isabsurd.
-    + right; split; intros; eauto. congruence.
+    + inv H6; isabsurd.
+    + right; split; intros; eauto. subst; simpl in *; exfalso; eauto.
   - case_eq (omap (op_eval E) Y); intros; eauto.
     inv H1.
     + exfalso. eapply H3; do 2 eexists. econstructor; eauto.

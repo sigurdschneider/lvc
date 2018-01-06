@@ -17,11 +17,11 @@ Qed.
 
 Lemma sim_write_moves D r L V s L' V' s' xl yl (Len:❬xl❭ = ❬yl❭)
   : (forall (V'':onv val), agree_on eq D (V'[xl <-- lookup_list V' yl]) V''
-                        -> paco3 (sim_gen (S':=I.state)) r Sim (L, V, s) (L', V'', s'))
+                        -> paco3 (sim_gen (S':=I.state)) r SimExt (L, V, s) (L', V'', s'))
     -> defined_on (of_list yl) V'
     -> disj (of_list xl) (of_list yl)
     -> NoDupA _eq xl
-    -> paco3 (sim_gen (S':=I.state)) r Sim (L, V, s)
+    -> paco3 (sim_gen (S':=I.state)) r SimExt (L, V, s)
             (L', V', write_moves xl yl s').
 Proof.
   intros SIM Def Disj Uniq.
@@ -50,9 +50,9 @@ Lemma sim_I_moves (slot : var -> var) k Λ ZL r L L' V V' R M s sl RML
     -> (forall V'', agree_on eq (R ∪ map slot M ∪ map slot (getSp sl) ∪ getL sl)
                        (V' [slot ⊝ elements (getSp sl) <-- lookup_list V' (elements (getSp sl))]
                            [elements (getL sl) <-- lookup_list (V'[slot ⊝ elements (getSp sl) <-- lookup_list V' (elements (getSp sl))]) (slot ⊝ elements (getL sl))]) V''
-              -> paco3 (sim_gen (S':=I.state)) r Sim (L, V, s)
+              -> paco3 (sim_gen (S':=I.state)) r SimExt (L, V, s)
                       (L', V'', do_spill slot s (setTopAnn sl ({}, {}, snd (getAnn sl))) ZL RML))
-    -> sim r Sim (L, V, s) (L', V', do_spill slot s sl ZL RML).
+    -> sim r SimExt (L, V, s) (L', V', do_spill slot s sl ZL RML).
 Proof.
   simpl. unfold sim. revert_except s.
   intros ? ? ? ? ? ? ? ? ? ? ? ? ? SPS Inj Disj Def SIM.
