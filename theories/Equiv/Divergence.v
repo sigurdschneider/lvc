@@ -80,3 +80,28 @@ Proof.
   econstructor. econstructor; eauto. econstructor; eauto.
   eapply COH; eauto.
 Qed.
+
+Require Import paco1.
+
+Inductive div_gen S `{StateType S} (r:S -> Prop) : S -> Prop :=
+| DivergesIGen σ σ'
+  : step σ EvtTau σ'
+    -> r σ'
+    -> div_gen r σ.
+
+Definition div {S} `{StateType S} r (σ1:S)
+  := paco1 (@div_gen S _ ) r σ1.
+
+Hint Unfold div.
+
+Lemma div_diverges {S} `{StateType S} (σ:S)
+  : div bot1 σ <-> diverges σ.
+Proof.
+  split; intros.
+  - revert σ H0. cofix CIH. intros.
+    destruct H0. destruct SIM.
+    econstructor; eauto.
+    eapply CIH. edestruct LE; eauto. isabsurd.
+  - revert σ H0. pcofix CIH; intros.
+    destruct H1. pfold. econstructor; eauto.
+Qed.

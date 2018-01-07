@@ -1,57 +1,33 @@
 Require Import List.
 Require Import Util Var Val Exp Envs Map CSet AutoIndTac IL AllInRel.
 Require Import SmallStepRelations StateType StateTypeProperties.
-Require Import Sim Divergence TraceEquiv.
+Require Import Sim Divergence SimDivergence TraceEquiv.
 
 Set Implicit Arguments.
 Unset Printing Records.
 
-Lemma sim_terminate {S1} `{StateType S1} (σ1 σ1':S1)
-      {S2} `{StateType S2} (σ2:S2) v
-: star2 step σ1 nil σ1'
-  -> normal2 step σ1'
-  -> sim bot3 SimExt σ1 σ2
-  -> result σ1' = Some v
-  -> exists σ2', star2 step σ2 nil σ2' /\ normal2 step σ2' /\ result σ2' = Some v.
-Proof.
-  intros. general induction H1.
-  - pinversion H3; subst.
-    + exfalso. eapply H2. inv H1; do 2 eexists; eauto.
-    + exfalso. eapply star2_normal in H1; eauto. subst.
-      eapply (activated_normal _ H6); eauto.
-    + eapply star2_normal in H5; eauto; subst.
-      eexists; repeat split; eauto; congruence.
-    + eapply normal_star_eq in H2; eauto. subst.
-      eexists σ2'.
-      eexists; repeat split; eauto. congruence.
-  - destruct y; isabsurd. simpl.
-    eapply IHstar2; eauto.
-    eapply sim_reduction_closed_1; eauto using star2, star2_silent.
-    Grab Existential Variables. eauto.
-Qed.
-
 Inductive prefixSpec (b:bool) {S} `{StateType S} : S -> list extevent -> Prop :=
-  | producesPrefixSpecSilent (σ:S) (σ':S) L :
+  | prefixSpecSilent (σ:S) (σ':S) L :
       step σ EvtTau σ'
       -> prefixSpec b σ' L
       -> prefixSpec b σ  L
-  | producesPrefixSpecExtern (σ:S) (σ':S) evt L :
+  | prefixSpecExtern (σ:S) (σ':S) evt L :
       activated σ
       -> step σ evt σ'
       -> prefixSpec b σ' L
       -> prefixSpec b σ (EEvtExtern evt::L)
-  | producesPrefixSpecTerm (σ:S) (σ':S) r
+  | prefixSpecTerm (σ:S) (σ':S) r
     : result σ' = Some r
       -> star2 step σ nil σ'
       -> normal2 step σ'
       -> prefixSpec b σ (EEvtTerminate (Some r)::nil)
-  | producesPrefixSpecStuck (σ:S) (σ':S) L
+  | prefixSpecStuck (σ:S) (σ':S) L
     : result σ' = None
       -> star2 step σ nil σ'
       -> normal2 step σ'
       -> b
       -> prefixSpec b σ L
-  | producesPrefixSpecPrefixSpec (σ:S)
+  | prefixSpecPrefixSpec (σ:S)
     : prefixSpec b σ nil.
 
 Lemma prefixSpec_star2_silent b {S} `{StateType S} (σ σ':S) L
@@ -181,7 +157,7 @@ Proof.
     eapply diverges_reduction_closed; eauto.
 Qed.
 
-Lemma produces_diverges S `{StateType S} S' `{StateType S'} (σ:S) (σ':S')
+Lemma prefixSpec_diverges S `{StateType S} S' `{StateType S'} (σ:S) (σ':S')
 : (forall L, prefixSpec true σ' L -> prefixSpec true σ L)
   -> diverges σ -> diverges σ'.
 Proof.
@@ -189,18 +165,6 @@ Proof.
   pose proof (div_prefixSpec_nil H2).
   eapply prefixSpec_nil_div.
   intros. eapply H3. eauto.
-Qed.
-
-Lemma sim_complete_diverges S `{StateType S} S' `{StateType S'} (σ:S) (σ':S') p r
-: diverges σ -> diverges σ' -> sim r p σ σ'.
-Proof.
-  revert σ σ'. pcofix COH; intros.
-  inv H2; inv H3.
-  pfold.
-  econstructor.
-  - econstructor; eauto.
-  - econstructor; eauto.
-  - right. eapply COH; eauto.
 Qed.
 
 Lemma prefixSpec_star_activated S `{StateType S} b (σ1 σ1' σ1'':S) evt L
@@ -341,6 +305,6 @@ Proof.
       eapply prefixSpec_event_closed; eauto.
       eapply prefixSpec_event_closed; eauto.
   - assert (diverges σ').
-    eapply (produces_diverges UIncl); eauto.
+    eapply (prefixSpec_diverges UIncl); eauto.
     eapply sim_complete_diverges; eauto.
 Qed.
