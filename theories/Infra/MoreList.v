@@ -857,3 +857,11 @@ Smpl Add match goal with
            eapply get_singleton in H;
              try subst x; try subst y
          end : inv_get.
+
+Lemma zip_app_first (X Y Z : Type) (f : X -> Y -> Z) L1 L2 L
+  :  ❬L2❭ <= ❬L1❭ -> zip f (L1 ++ L) L2 = zip f L1 L2.
+Proof.
+  intros. general induction L1; destruct L2; simpl in *; try omega; eauto.
+  - destruct L; eauto.
+  - f_equal; eauto. rewrite IHL1; eauto. omega.
+Qed.

@@ -92,23 +92,6 @@ Class PPRConstr A {PR:PointwiseProofRelationF A} :=
   }.
  *)
 
-Lemma drop_nil X (L:list X) k
-  : ❬L❭ <= k
-    -> drop k L = nil.
-Proof.
-  general induction k; destruct L; simpl in *; eauto; try omega.
-  rewrite drop_nil; eauto.
-  eapply IHk; eauto. omega.
-Qed.
-
-Lemma zip_app_first (X Y Z : Type) (f : X -> Y -> Z) L1 L2 L
-  :  ❬L2❭ <= ❬L1❭ -> zip f (L1 ++ L) L2 = zip f L1 L2.
-Proof.
-  intros. general induction L1; destruct L2; simpl in *; try omega; eauto.
-  - destruct L; eauto.
-  - f_equal; eauto. rewrite IHL1; eauto. omega.
-Qed.
-
 
 Lemma triv2_sawtooth A PR (trivL:@Triv A PR) L XF
   : sawtooth L
@@ -125,7 +108,7 @@ Proof.
     econstructor; eauto.
     rewrite triv2_block_n; eauto.
     rewrite Take.take_length_le; eauto. omega.
-  - rewrite drop_nil; try omega.
+  - rewrite drop_nil'; try omega.
     rewrite zip_app_first.
     rewrite app_nil_r.
     rewrite <- app_nil_r.
@@ -152,7 +135,7 @@ Proof.
     econstructor; eauto.
     rewrite triv1_block_n; eauto.
     rewrite Take.take_length_le; eauto. omega.
-  - rewrite drop_nil; try omega.
+  - rewrite drop_nil'; try omega.
     rewrite zip_app_first.
     rewrite app_nil_r.
     rewrite <- app_nil_r.

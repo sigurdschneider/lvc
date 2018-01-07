@@ -253,3 +253,12 @@ Proof.
   - rewrite drop_nil. orewrite (n - 0 = n). reflexivity.
   - destruct n; simpl; eauto.
 Qed.
+
+Lemma drop_nil' X (L:list X) k
+  : ❬L❭ <= k
+    -> drop k L = nil.
+Proof.
+  general induction k; destruct L; simpl in *; eauto; try omega.
+  rewrite drop_nil; eauto.
+  eapply IHk; eauto. omega.
+Qed.
