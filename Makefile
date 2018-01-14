@@ -1,5 +1,6 @@
 GDOC := doc/
 DOC := doc-all/
+CONTAINERSDOC := doc-cont/
 DOCIND := doc-ind/
 DOCSPILL := doc-spill/
 PKGIND := pkg-lvc-ind/
@@ -7,8 +8,9 @@ PKGSPILL := pkg-lvc-spill/
 EXTRA_DIR := extra
 HEADER := $(EXTRA_DIR)/header.html
 FOOTER := $(EXTRA_DIR)/footer.html
-COQDOCFLAGS := \
-  --toc --toc-depth 2 --html --interpolate \
+COQDOCFLAGSX := \
+	--external 'https://www.ps.uni-saarland.de/~sdschn/LVC/doc-cont' Containers \
+  --toc --utf8 --toc-depth 3 --html --interpolate \
   --index indexpage --no-lib-name --parse-comments \
   --with-header $(HEADER) --with-footer $(FOOTER)
 COQMAKEFILE := Makefile.coq
@@ -65,13 +67,15 @@ distclean: clean depclean
 doc: clean-doc $(DOCS) dep $(COQMAKEFILE)
 	- mkdir -p $(DOC)
 	make -f $(COQMAKEFILE) -j$(CORES) -k
-	coqdoc $(COQDOCFLAGS) -d $(DOC) $(shell cat _CoqProject | grep -v ^-I | grep -v mlpack | grep -v ml4)
+	coqdoc $(COQDOCFLAGSX) -d $(DOC) $(shell cat _CoqProject | grep -v ^-I | grep -v mlpack | grep -v ml4)
 	cp $(EXTRA_DIR)/resources/* $(DOC)
 	cp $(EXTRA_DIR)/index-all.html $(DOC)/index.html
 	cp $(EXTRA_DIR)/search-toc.html $(DOC)/search-toc.html
 
 doc-publish: doc
 	scp -r $(DOC)/* ps:public_html/LVC/doc-all/
+	make -C ContainersPlugin doc
+	scp -r ContainersPlugin/html/* ps:public_html/LVC/doc-cont/
 
 doc-quick: 
 	scp -r $(DOC)/* ps:public_html/LVC/doc-all/

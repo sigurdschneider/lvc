@@ -79,11 +79,19 @@ Qed.
 
 Hint Resolve poLt_intro poLt_poLe poLe_refl poLe_antisymmetric | 100.
 
+Lemma poLe_poEq_rel Dom `{PartialOrder Dom} d d'
+  : poEq d d' <-> poLe d d' /\ poLe d' d.
+Proof.
+  split; intros.
+  - split; eapply poLe_refl; eauto.
+  - eapply poLe_antisymmetric; eauto.
+Qed.
+
 Notation "s '⊑' t" := (poLe s t) (at level 70, no associativity).
 Notation "s '⊏' t" := (poLt s t) (at level 70, no associativity).
 Notation "s '≣' t" := (poEq s t) (at level 70, no associativity).
 
-Instance PartialOrder_pair_instance X `{PartialOrder X} Y `{PartialOrder Y}
+Instance PartialOrder_prod_instance X `{PartialOrder X} Y `{PartialOrder Y}
 : PartialOrder (X * Y) := {
   poLe x y := poLe (fst x) (fst y) /\ poLe (snd x) (snd y);
   poLe_dec := _;
@@ -578,6 +586,11 @@ Proof.
   hnf in H0. eapply PIR2_length in H0. eauto.
 Qed.
 
+Instance poLt_irr X `{PartialOrder X} : Irreflexive poLt.
+Proof.
+  hnf. unfold complement. intros ? [? ?]. eauto.
+Qed.
+
 Instance poLt_trans X `{PartialOrder X} : Transitive poLt.
 Proof.
   hnf; intros.
@@ -590,3 +603,7 @@ Lemma ot_po X `{OrderedType X} : PartialOrder X.
   eapply Build_PartialOrder with
       (poLe := _le) (poEq := _eq); eauto using OT_le_refl with typeclass_instances.
 Defined.
+
+Lemma po_strict_order X `{PartialOrder X} : StrictOrder poLt.
+  econstructor; eauto with typeclass_instances.
+Qed.
