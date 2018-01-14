@@ -28,6 +28,21 @@ Inductive prefix {S} `{StateType S} : S -> list extevent -> Prop :=
   | producesPrefixPrefix (σ:S)
     : prefix σ nil.
 
+Definition prefix_eq {S} `{StateType S} {S'} `{StateType S'} (σ:S) (σ':S') :=
+  forall L, prefix σ L <-> prefix σ' L.
+
+(* Only prove it of one StateType *)
+Instance prefix_eq_Equivalence {S} `{StateType S}
+  : Equivalence prefix_eq.
+Proof.
+  econstructor.
+  - hnf. intros; hnf. split; eauto.
+  - split; intros.
+    + eapply H0; eauto.
+    + eapply H0; eauto.
+  - unfold Transitive, prefix_eq; firstorder.
+Qed.
+
 (** ***Closedness under silent reduction/expansion *)
 
 Lemma prefix_star2_silent {S} `{StateType S} (σ σ':S) L
@@ -125,6 +140,19 @@ Proof.
   - eexists; intuition; eauto.
 Qed.
 
+Lemma prefix_terminates_incl S `{StateType S} S' `{StateType S'} (σ σ1:S) (σ':S') r
+  :  star2 step σ nil σ1
+     -> normal2 step σ1
+     -> result σ1 = r
+     -> (forall L, prefix σ L -> prefix σ' L)
+     -> exists σ2, star2 step σ' nil σ2 /\ normal2 step σ2 /\ result σ2 = r.
+Proof.
+  intros.
+  edestruct prefix_terminates.
+  - eapply H4. econstructor 3; eauto.
+  - dcr; eauto.
+Qed.
+
 Lemma diverges_produces_only_nil S `{StateType S} S' `{StateType S'} (σ:S)
 : diverges σ -> (forall L, prefix σ L -> L = nil).
 Proof.
@@ -137,16 +165,24 @@ Proof.
     exfalso. eapply diverges_never_terminates; eauto using diverges_reduction_closed.
 Qed.
 
+Lemma diverges_iff_nil S `{StateType S} S' `{StateType S'} (σ:S)
+: diverges σ <-> (forall L, prefix σ L -> L = nil).
+Proof.
+  split.
+  - eapply diverges_produces_only_nil; eauto.
+  - eapply produces_only_nil_diverges; eauto.
+Qed.
+
 (** ** Prefix Equivalence is sound for divergence *)
 
 Lemma produces_diverges S `{StateType S} S' `{StateType S'} (σ:S) (σ':S')
-: (forall L, prefix σ L <-> prefix σ' L)
+: (forall L, prefix σ' L -> prefix σ L)
   -> diverges σ -> diverges σ'.
 Proof.
   intros.
   pose proof (diverges_produces_only_nil H2).
   eapply produces_only_nil_diverges.
-  intros. eapply H3. rewrite H1. eauto.
+  intros. eapply H3. eauto.
 Qed.
 
 (** ** Several closedness properties *)
@@ -252,6 +288,17 @@ Proof.
       * eexists; split. eauto. eapply f.
         eapply prefix_preserved; eauto.
   - assert (diverges σ').
-    eapply (produces_diverges H1); eauto.
+    eapply (produces_diverges ltac:(eapply H1)); eauto.
     eapply bisim_complete_diverges; eauto.
+Qed.
+
+Lemma bisim_prefix_iff S `{StateType S} S' `{StateType S'} (σ:S) (σ':S')
+  : prefix_eq σ σ'
+    <-> bisim σ σ'.
+Proof.
+  split; intros.
+  - eapply prefix_bisim; eauto.
+  - split.
+    + eapply bisim_prefix, bisim_sym; eauto.
+    + eapply bisim_prefix; eauto.
 Qed.

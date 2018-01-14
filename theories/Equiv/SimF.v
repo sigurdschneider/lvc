@@ -163,7 +163,7 @@ Proof.
   intros Idx LE; hnf; intros; eauto.
 Qed.
 
-Lemma labenv_sim_extension' t r A (PR:ProofRelationF A) (AL AL':list A) L1 L2 L L'
+Lemma labenv_sim_extension_cases t r A (PR:ProofRelationF A) (AL AL':list A) L1 L2 L L'
   : bodies_r t (sim r \3/ r) PR (AL' ++ AL) (L1 ++ L) (L2 ++ L') L1 L2
     -> paramrel PR (AL' ++ AL) L1 L2
     -> separates PR AL' AL L1 L2
@@ -244,7 +244,7 @@ Lemma fix_compatible_separate t A (PR:ProofRelationF A) AL' AL E E' F F' L L'
 Proof.
   intros ISIM LP SEP r SIML. pcofix CIH.
   eapply ISIM.
-  eapply labenv_sim_extension'; eauto.
+  eapply labenv_sim_extension_cases; eauto.
   eapply indexwise_r_bodies_r; eauto. eapply SEP.
   eauto using indexwise_r_mon; eauto.
   hnf; intros. len_simpl. eauto.
@@ -263,7 +263,7 @@ Lemma fix_compatible_separate2 t A (PR:ProofRelationF A) AL' AL L1 L2 L L'
 Proof.
   intros ISIM LP SEP r SIML SM1 SM2. pcofix CIH.
   eapply ISIM.
-  eapply labenv_sim_extension'; eauto.
+  eapply labenv_sim_extension_cases; eauto.
   hnf. intros. right. eapply CIH; eauto.
   eapply labenv_sim_mon; eauto.
 Qed.
@@ -301,7 +301,7 @@ Lemma labenv_sim_extension t A (PR:ProofRelationF A) (AL AL':list A) E E' F F' L
 Proof.
   intros ISIM IP SEP r SIML.
   eapply indexwise_paramrel_paramrel in IP; [| eapply SEP].
-  eapply labenv_sim_extension'; eauto.
+  eapply labenv_sim_extension_cases; eauto.
   eapply indexwise_r_bodies_r. eapply SEP.
   eapply indexwise_r_mon.
   eapply fix_compatible_separate; eauto.
@@ -403,7 +403,7 @@ Proof.
     edestruct SIML; dcr.
     hnf; destruct PR; simpl; repeat split; intros; omega.
   }
-  eapply labenv_sim_extension'; eauto.
+  eapply labenv_sim_extension_cases; eauto.
   eapply bodies_r_mon.
   eapply fix_compatible_separate2; eauto. eauto.
 Qed.

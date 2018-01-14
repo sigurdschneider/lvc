@@ -30,6 +30,21 @@ Inductive prefixSpec (b:bool) {S} `{StateType S} : S -> list extevent -> Prop :=
   | prefixSpecPrefixSpec (σ:S)
     : prefixSpec b σ nil.
 
+Lemma prefixSpec_bounds {S} `{StateType S} (σ:S)
+  : (forall L, prefixSpec false σ L -> prefix σ L)
+    /\ forall L, prefix σ L -> prefixSpec true σ L.
+Proof.
+  split.
+  - intros. general induction H0; eauto using @prefix.
+    isabsurd.
+  - intros. general induction H0; eauto using @prefixSpec.
+    case_eq (result σ'); intros; eauto using @prefixSpec.
+Qed.
+
+Definition impl_rel_ext {S} `{StateType S} {S'} `{StateType S'} (σ:S) (σ':S') :=
+  (forall L, prefixSpec false σ L -> prefixSpec false σ' L)
+  /\ (forall L, prefixSpec true σ' L -> prefixSpec true σ L).
+
 Lemma prefixSpec_star2_silent b {S} `{StateType S} (σ σ':S) L
  : star2 step σ nil σ' ->
    prefixSpec b σ' L -> prefixSpec b σ L.
@@ -256,10 +271,10 @@ Proof.
 Qed.
 
 Lemma prefix_bisim S `{StateType S} S' `{StateType S'} (σ:S) (σ':S')
-  : (forall L, prefixSpec false σ L -> prefixSpec false σ' L)
-    -> (forall L, prefixSpec true σ' L -> prefixSpec true σ L)
+  : impl_rel_ext σ σ'
   -> sim bot3 SimExt σ σ'.
 Proof.
+  unfold impl_rel_ext.
   revert σ σ'.
   pcofix CIH.
   intros σ σ' LIncl UIncl.
@@ -307,4 +322,15 @@ Proof.
   - assert (diverges σ').
     eapply (prefixSpec_diverges UIncl); eauto.
     eapply sim_complete_diverges; eauto.
+Qed.
+
+Lemma prefix_bisim_iff S `{StateType S} S' `{StateType S'} (σ:S) (σ':S')
+  : impl_rel_ext σ σ'
+    <-> sim bot3 SimExt σ σ'.
+Proof.
+  split.
+  - eapply prefix_bisim.
+  - split.
+    + eapply bisim_prefixSpec_maintain; eauto.
+    + eapply bisim_prefixSpec_refine; eauto.
 Qed.

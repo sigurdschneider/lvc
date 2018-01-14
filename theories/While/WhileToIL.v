@@ -86,7 +86,7 @@ Ltac single_step_while :=
 
 Smpl Add single_step_while : single_step.
 
-Lemma whileToILI_correct_while' r (L:list IL.I.block) E e s p (t:stmt)
+Lemma whileToILI_correct_while r (L:list IL.I.block) E e s p (t:stmt)
       (IH:forall q (L:IL.I.labenv) E r,
           (exists v, op_eval E e = Some v /\ val2bool v = true) ->
           sawtooth L ->
@@ -157,7 +157,7 @@ Proof.
         -- pone_step_right.
            pone_step. simpl.
            left.
-           eapply whileToILI_correct_while'; eauto.
+           eapply whileToILI_correct_while; eauto.
            ++ intros. eapply IH; eauto.
              eapply (sawtooth_I_mkBlocks ((nil, stmtIf e (whileToILI s 0) _)::nil)); eauto.
              intros.

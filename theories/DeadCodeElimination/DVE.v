@@ -362,7 +362,7 @@ Proof.
     rewrite <- incl_compile_live; eauto.
 Qed.
 
-Lemma incl_compile_live'' G i ZL LV s lv
+Lemma incl_compile_live_eq G i ZL LV s lv
   : true_live_sound i ZL LV s lv
     -> G ∪ getAnn lv [=] getAnn (compile_live s lv G).
 Proof.
@@ -383,13 +383,13 @@ Proof.
       * eapply live_exp_sound_incl; eauto.
       * rewrite compile_live_incl; eauto.
         rewrite <- H1. cset_tac; intuition.
-      * rewrite <- incl_compile_live''; eauto.
+      * rewrite <- incl_compile_live_eq; eauto.
     + repeat cases; eauto.
       econstructor; eauto.
       * eapply live_exp_sound_incl; eauto.
       * rewrite compile_live_incl; eauto.
         rewrite <- H1. cset_tac; intuition.
-      * rewrite <- incl_compile_live''; eauto.
+      * rewrite <- incl_compile_live_eq; eauto.
         eauto with cset.
   - repeat cases; eauto.
     + econstructor; eauto.

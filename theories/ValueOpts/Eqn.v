@@ -399,9 +399,6 @@ Proof.
   unfold subst_eqns. eapply map_add. eauto with typeclass_instances.
 Qed.
 
-Definition sid := fun x => Var x.
-
-
 Definition unsatisfiable (gamma:eqn) :=
   forall E, ~ satisfies E gamma.
 
@@ -914,4 +911,60 @@ Lemma satisfies_add_drop E gamma Gamma
     -> satisfiesAll E Gamma.
 Proof.
   intros. hnf; intros. eapply H. cset_tac.
+Qed.
+
+Lemma satisfies_subst V Z Y y bE gamma
+  (EVAL: omap (op_eval V) Y = ⎣ y ⎦)
+  (Len1 : ❬Y❭ = ❬y❭)
+  (Len2 : ❬Z❭ = ❬Y❭)
+  (AGR:agree_on eq (freeVars gamma \ of_list Z) V bE)
+  : satisfies V (subst_eqn (sid [Z <-- Y]) gamma) <-> satisfies (bE [Z <-- Some ⊝ y]) gamma.
+Proof.
+  destruct gamma; simpl in *.
+  * do 2 rewrite <- (eval_op_subst _ _ _ _ Len2 EVAL); eauto.
+    erewrite op_eval_agree; [| |reflexivity].
+    erewrite op_eval_agree with (e:=e'); [| |reflexivity].
+    reflexivity.
+    -- eapply update_with_list_agree; eauto with len.
+       symmetry.
+       eapply agree_on_incl; eauto. cset_tac.
+    -- eapply update_with_list_agree; eauto with len.
+       symmetry.
+       eapply agree_on_incl; eauto.
+       cset_tac.
+  * simpl in * |- *.
+    do 2 erewrite <- (eval_op_subst _ _ _ _ Len2 EVAL); eauto.
+    erewrite op_eval_agree; [| |reflexivity].
+    erewrite op_eval_agree with (e:=e'); [| |reflexivity]; eauto.
+    reflexivity.
+    -- eapply update_with_list_agree; eauto with len.
+       symmetry.
+       eapply agree_on_incl; eauto.
+       cset_tac.
+    -- eapply update_with_list_agree; eauto with len.
+       symmetry.
+       eapply agree_on_incl; eauto.
+       cset_tac.
+  * reflexivity.
+Qed.
+
+Lemma satisfiesAll_subst V Z EqS Y y bE
+:  omap (op_eval V) Y = ⎣y⎦
+   -> agree_on eq (eqns_freeVars EqS \ of_list Z) V bE
+   -> length Z = length Y
+   -> satisfiesAll V (subst_eqns (sid [Z <-- Y]) EqS) <-> satisfiesAll (bE [Z <-- List.map Some y]) EqS.
+Proof.
+  revert_except EqS. pattern EqS. eapply set_induction; intros.
+  - hnf; intros. eapply empty_is_empty_1 in H.
+    rewrite H. rewrite subst_eqns_empty.
+    unfold satisfiesAll; split; intros; cset_tac.
+  - eapply Add_Equal in H1. rewrite H1 in *.
+    rewrite subst_eqns_add.
+    rewrite !satisfiesAll_add.
+    rewrite eqns_freeVars_add in H3.
+    rewrite satisfies_subst; eauto with len;
+      [|eapply agree_on_incl; eauto].
+    rewrite H; eauto. reflexivity.
+    eapply agree_on_incl; eauto.
+    clear; cset_tac. clear; cset_tac.
 Qed.

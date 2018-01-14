@@ -69,6 +69,23 @@ Proof.
   - econstructor; eauto using star2_silent, star2_refl.
 Qed.
 
+Lemma coproduces_expansion_closed S `{StateType S} (σ σ':S) L
+: coproduces σ L -> star2 step σ' nil σ  -> coproduces σ' L.
+Proof.
+  intros. general induction H1; eauto using coproduces. eauto.
+  destruct yl, y; simpl in *; try congruence.
+  eapply coproduces_expansion_closed_step.
+  eapply IHstar2; eauto. eauto.
+Qed.
+
+Lemma silent_closed S `{StateType S} (σ σ':S)
+  : star2 step σ nil σ' -> forall L, coproduces σ L <-> coproduces σ' L.
+Proof.
+  split; intros.
+  - eapply coproduces_reduction_closed; eauto.
+  - eapply coproduces_expansion_closed; eauto.
+Qed.
+
 
 (** ** Bisimilarity is sound for maximal traces *)
 Lemma bisim_coproduces S `{StateType S} S' `{StateType S'} (sigma:S) (σ':S')
@@ -92,7 +109,7 @@ Qed.
 
 (** ** Prefix trace equivalence coincides with maximal trace equivalence. *)
 
-Lemma produces_coproduces' S `{StateType S} S' `{StateType S'} (σ:S) (σ':S')
+Lemma produces_coproduces S `{StateType S} S' `{StateType S'} (σ:S) (σ':S')
 : (forall L, prefix σ L <-> prefix σ' L)
   -> (forall T, coproduces σ T -> coproduces σ' T).
 Proof.
@@ -105,7 +122,7 @@ Proof.
     eapply prefix_extevent in H7. dcr.
     econstructor. eauto. eauto. eauto. eapply f; try eapply H6.
     eapply (prefix_preserved _ _ _ H1); eauto.
-  - exploit (produces_diverges H1 H3).
+  - exploit (produces_diverges ltac:(eapply H1) H3).
     econstructor. eauto.
   - assert (prefix σ (EEvtTerminate (result σ'0)::nil)).
     econstructor 3; eauto. eapply H1 in H3.
@@ -113,11 +130,11 @@ Proof.
     econstructor 3; eauto.
 Qed.
 
-Lemma produces_coproduces S `{StateType S} S' `{StateType S'} (σ:S) (σ':S')
+Lemma produces_coproduces_iff S `{StateType S} S' `{StateType S'} (σ:S) (σ':S')
 : (forall L, prefix σ L <-> prefix σ' L)
   -> (forall T, coproduces σ T <-> coproduces σ' T).
 Proof.
-  split; eapply produces_coproduces'; eauto. symmetry; eauto.
+  split; eapply produces_coproduces; eauto. symmetry; eauto.
 Qed.
 
 (** ** Bisimilarity is complete for prefix trace equivalence. *)
@@ -188,9 +205,11 @@ Qed.
 
 Lemma coproduces_prefix_iff S `{StateType S} S' `{StateType S'} (σ:S) (σ':S')
   : (forall T, coproduces σ T <-> coproduces σ' T)
-    -> forall L, prefix σ L <-> prefix σ' L.
+    <-> forall L, prefix σ L <-> prefix σ' L.
 Proof.
-  split; eapply coproduces_prefix; firstorder.
+  split; intros.
+  - split; eapply coproduces_prefix; firstorder.
+  - eapply produces_coproduces_iff. eauto.
 Qed.
 
 Lemma coproduces_terminates S `{StateType S} (σ:S) r T

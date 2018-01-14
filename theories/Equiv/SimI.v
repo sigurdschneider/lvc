@@ -171,7 +171,7 @@ Qed.
 
 Hint Unfold separates.
 
-Lemma labenv_sim_extension' t r A (PR:ProofRelationI A) (AL AL':list A) F F' L L'
+Lemma labenv_sim_extension_cases t r A (PR:ProofRelationI A) (AL AL':list A) F F' L L'
   : indexwise_r t (sim r \3/ r) PR AL' F F' AL (mapi I.mkBlock F ++ L) (mapi I.mkBlock F' ++ L')
     -> indexwise_paramrel PR F F' AL' AL
     -> separates PR AL' AL F F'
@@ -224,7 +224,7 @@ Lemma fix_compatible_separate t A (PR:ProofRelationI A) AL' AL F F'
 Proof.
   intros ISIM LP SEP r L L' SIML. pcofix CIH.
   eapply ISIM.
-  eapply labenv_sim_extension'; eauto.
+  eapply labenv_sim_extension_cases; eauto.
   eauto using indexwise_r_mon; eauto.
   eapply labenv_sim_mon; eauto.
 Qed.
@@ -241,7 +241,7 @@ Lemma labenv_sim_extension t A (PR:ProofRelationI A) (AL AL':list A) F F'
         -> labenv_sim t (sim r) PR (AL' ++ AL) (mapi I.mkBlock F ++ L) (mapi I.mkBlock F' ++ L').
 Proof.
   intros ISIM IP SEP r L L' SIML.
-  eapply labenv_sim_extension'; eauto.
+  eapply labenv_sim_extension_cases; eauto.
   eapply indexwise_r_mon.
   eapply fix_compatible_separate; eauto. eauto.
 Qed.
@@ -321,7 +321,7 @@ Proof.
     destruct SIML; dcr.
     hnf; destruct PR; simpl; repeat split; intros; omega.
   }
-  eapply labenv_sim_extension'; eauto.
+  eapply labenv_sim_extension_cases; eauto.
   eapply indexwise_r_mon.
   eapply fix_compatible_separate; eauto. eauto.
 Qed.

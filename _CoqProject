@@ -101,6 +101,7 @@ theories/Equiv/NonParametricBiSim.v
 theories/Equiv/NPSimEquiv.v
 theories/Equiv/SimCompanionTactics.v
 theories/Equiv/SimCompanion.v
+theories/Equiv/SimDivergence.v
 theories/Equiv/SimF.v
 theories/Equiv/SimI.v
 theories/Equiv/SimLockStep.v

@@ -616,3 +616,29 @@ Proof.
     + monad_inv H0. rewrite EQ. simpl.
       erewrite IHY; eauto. simpl; eauto.
 Qed.
+
+Definition sid := fun x => Var x.
+
+Instance subst_op_Proper Z Y
+  : Proper (_eq ==> _eq) (subst_op (sid [Z <-- Y])).
+Proof.
+  hnf; intros. inv H. clear H.
+  simpl. general induction y; simpl; eauto.
+Qed.
+
+Lemma eval_op_subst E y Y Z e
+: length Z = length Y
+  -> omap (op_eval E) Y = ⎣y ⎦
+  -> op_eval (E [Z <-- List.map Some y]) e =
+    op_eval E (subst_op (sid [Z <-- Y]) e).
+Proof.
+  intros.
+  general induction e; simpl; eauto.
+  - eapply length_length_eq in H.
+    general induction H; simpl in * |- *; eauto.
+    monad_inv H0. simpl.
+    lud; eauto.
+  - erewrite IHe; eauto.
+  - erewrite IHe1; eauto.
+    erewrite IHe2; eauto.
+Qed.
