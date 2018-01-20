@@ -276,14 +276,7 @@ Proof.
         rewrite H3. eauto.
 Qed.
 
-(** ** Theorem 8 from the paper. *)
-(** One could prove this theorem directly by induction, however, we exploit that
-    under the assumption of the theorem, the liveness information [alv] is also
-    sound for functional liveness and we can thus rely on theorem [regAssign_assignment_small]
-    above, which we did prove by induction. *)
-
-
-Lemma regAssign_assignment_small' k p (ϱ:Map [var,var]) ZL Lv s alv ϱ' ra
+Lemma regAssign_assignment_small_I k p (ϱ:Map [var,var]) ZL Lv s alv ϱ' ra
       (LS:live_sound Imperative ZL Lv s alv)
       (inj:injective_on (getAnn alv) (findt ϱ default_var))
       (SEP:sep var p (getAnn alv) (findt ϱ default_var))

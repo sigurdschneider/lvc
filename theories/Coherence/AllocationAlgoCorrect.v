@@ -119,13 +119,7 @@ Qed.
 
 Require Import Restrict RenamedApart_Liveness LabelsDefined.
 
-(** ** Theorem 8 from the paper. *)
-(** One could prove this theorem directly by induction, however, we exploit that
-    under the assumption of the theorem, the liveness information [alv] is also
-    sound for functional liveness and we can thus rely on theorem [regAssign_correct]
-    above, which we did prove by induction. *)
-
-Lemma regAssign_correct' b p s ang ϱ ϱ' (alv:ann (set var)) ZL Lv
+Lemma regAssign_correct_I b p s ang ϱ ϱ' (alv:ann (set var)) ZL Lv
   : renamedApart s ang
   -> live_sound Imperative ZL Lv s alv
   -> bounded (Some ⊝ Lv \\ ZL) (fst (getAnn ang))
