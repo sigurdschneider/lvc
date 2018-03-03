@@ -1,12 +1,12 @@
 [submodule "smpl"]
 	path = smpl
-	url = git@github.com:sigurdschneider/smpl.git
+	url = https://github.com/sigurdschneider/smpl.git
 [submodule "ContainersPlugin"]
 	path = ContainersPlugin
-	url = git@github.com:sigurdschneider/containers.git
+	url = https://github.com/sigurdschneider/containers.git
 [submodule "CompCert"]
 	path = CompCert
-	url = git@github.com:sigurdschneider/CompCert.git
+	url = https://github.com/sigurdschneider/CompCert.git
 [submodule "FlameGraph"]
 	path = FlameGraph
 	url = https://github.com/brendangregg/FlameGraph
