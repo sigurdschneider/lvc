@@ -1,5 +1,7 @@
 # LVC Compiler Project
-LVC stands for Linear Verified Compiler. The compiler is based on the linear first-order language IL [1,2].
+LVC stands for Linear Verified Compiler. The compiler is based on the linear first-order language IL [1,2]. The goal of the project is to show that functional SSA, i.e. using a functional style lexical variable binding provides for a viable semantic foundation for static single assignment (SSA).
+
+- CoqDoc documentation is available [here](https://sigurdschneider.github.io/lvc).
 
 ## Dependencies
 
