@@ -536,54 +536,8 @@ Proof.
            Grab Existential Variables. eauto.
 Qed.
 
-
-
-(*
-Lemma optimize_correct (E:onv val) s s'
-: optimize s = Success s'
-  -> LabelsDefined.labelsDefined s 0
-  -> sim (nil:list F.block, E, s) (nil:list F.block, E, s').
-Proof.
-  intros.
-  unfold optimize, ensure_f in *.
-  monadS_inv H. destruct x.
-  repeat (cases in EQ0; [| isabsurd]).
-  monadS_inv EQ0.
-  repeat (cases in EQ2; [| isabsurd]).
-  invc EQ2.
-
-  eapply sim_trans with (S2:=F.state).
-  eapply bisim_sim.
-  eapply Alpha.alphaSim_sim. econstructor; eauto using rename_apart_alpha, PIR2.
-  eapply Alpha.alpha_sym. eapply rename_apart_alpha. hnf; intros.
-  cbv in H, H1. instantiate (1:=E). congruence.
-  eapply sim_trans with (S2:=F.state).
-  Focus 2.
-  eapply DVE.sim_DVE; eauto. reflexivity.
-  eapply sim'_sim.
-  eapply ValueOpts.sim_vopt; eauto.
-  Focus 2.
-  eapply ConstantPropagation.cp_sound_eqn; eauto.
-  eapply rename_apart_renamedApart. instantiate (1:=nil). simpl.
-  eapply labelsDefined_rename_apart; eauto.
-  intros; isabsurd.
-  rewrite fst_renamedApartAnn.
-  intros. hnf; intros.
-  rewrite ConstantPropagation.cp_eqns_no_assumption in H. cset_tac; intuition. eassumption.
-  constructor.
-  eapply rename_apart_renamedApart.
-  rewrite fst_renamedApartAnn.
-  rewrite ConstantPropagation.cp_eqns_no_assumption. eapply incl_empty. eauto.
-  hnf; intuition.
-Qed.
-*)
-
 End Compiler.
 
-(*
-Print Assumptions toDeBruijn_correct.
 Print Assumptions fromILF_correct.
-*)
-
-(* Print Assumptions fromILF_correct.
-   Print Assumptions optimize_correct. *)
+Print Assumptions toILF_correct.
+Print Assumptions optimize_correct.
