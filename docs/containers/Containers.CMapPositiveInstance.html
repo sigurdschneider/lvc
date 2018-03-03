@@ -1,0 +1,182 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<link href="coqdoc.css" rel="stylesheet" type="text/css" />
+<title>Containers.CMapPositiveInstance</title>
+</head>
+
+<body>
+
+<div id="page">
+
+<div id="header">
+</div>
+
+<div id="main">
+
+<h1 class="libtitle">Containers.CMapPositiveInstance</h1>
+
+<div class="code">
+<span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <a class="idref" href="Containers.MapInterface.html#"><span class="id" title="library">MapInterface</span></a>.<br/>
+<span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <a class="idref" href="Containers.CMapPositive.html#"><span class="id" title="library">CMapPositive</span></a>.<br/>
+
+<br/>
+<span class="id" title="keyword">Generalizable</span> <span class="id" title="keyword">All</span> <span class="id" title="keyword">Variables</span>.<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+The file provides an instance of <span class="inlinecode"><a class="idref" href="Containers.MapInterface.html#FMap"><span class="id" title="record">FMap</span></a></span> for positives.
+   It also provides the corresponding instance of <span class="inlinecode"><a class="idref" href="Containers.MapInterface.html#FMapSpecs"><span class="id" title="record">FMapSpecs</span></a></span>, ie.
+   the proofs that the map operations respect their specification.
+   
+<div class="paragraph"> </div>
+
+<a name="lab219"></a><h1 class="section"><span class="inlinecode"><a class="idref" href="Containers.CMapPositiveInstance.html#CMapPositive_FMap"><span class="id" title="instance">CMapPositive_FMap</span></a></span> : an instance of <span class="inlinecode"><a class="idref" href="Containers.MapInterface.html#FMap"><span class="id" title="record">FMap</span></a></span> for positives</h1>
+
+</div>
+<div class="code">
+<span class="id" title="keyword">Instance</span> <a name="CMapPositive_FMap"><span class="id" title="instance">CMapPositive_FMap</span></a> : @<a class="idref" href="Containers.MapInterface.html#FMap"><span class="id" title="class">FMap</span></a> <span class="id" title="var">_</span><br/>
+&nbsp;&nbsp;(@<a class="idref" href="Containers.OrderedType.html#SOT_as_OT"><span class="id" title="instance">SOT_as_OT</span></a> <span class="id" title="var">_</span> <span class="id" title="var">_</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a class="idref" href="Containers.CMapPositive.html#PositiveOrderedTypeBitsInstance.positive_rev_OrderedType"><span class="id" title="instance">PositiveOrderedTypeBitsInstance.positive_rev_OrderedType</span></a>) := {<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#dict"><span class="id" title="method">dict</span></a> := @<a class="idref" href="Containers.CMapPositive.html#CPositiveMap.t"><span class="id" title="definition">CPositiveMap.t</span></a>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#MapsTo"><span class="id" title="method">MapsTo</span></a> := @<a class="idref" href="Containers.CMapPositive.html#CPositiveMap.MapsTo"><span class="id" title="definition">CPositiveMap.MapsTo</span></a>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#empty"><span class="id" title="method">empty</span></a> := @<a class="idref" href="Containers.CMapPositive.html#CPositiveMap.empty"><span class="id" title="definition">CPositiveMap.empty</span></a>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#is_empty"><span class="id" title="method">is_empty</span></a> := @<a class="idref" href="Containers.CMapPositive.html#CPositiveMap.is_empty"><span class="id" title="definition">CPositiveMap.is_empty</span></a>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#mem"><span class="id" title="method">mem</span></a> := @<a class="idref" href="Containers.CMapPositive.html#CPositiveMap.mem"><span class="id" title="definition">CPositiveMap.mem</span></a>;<br/>
+<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#add"><span class="id" title="method">add</span></a> := @<a class="idref" href="Containers.CMapPositive.html#CPositiveMap.add"><span class="id" title="definition">CPositiveMap.add</span></a>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#insert"><span class="id" title="method">insert</span></a> := @<a class="idref" href="Containers.CMapPositive.html#CPositiveMap.insert"><span class="id" title="definition">CPositiveMap.insert</span></a>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#adjust"><span class="id" title="method">adjust</span></a> := @<a class="idref" href="Containers.CMapPositive.html#CPositiveMap.adjust"><span class="id" title="definition">CPositiveMap.adjust</span></a>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#find"><span class="id" title="method">find</span></a> := @<a class="idref" href="Containers.CMapPositive.html#CPositiveMap.find"><span class="id" title="definition">CPositiveMap.find</span></a>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#remove"><span class="id" title="method">remove</span></a> := @<a class="idref" href="Containers.CMapPositive.html#CPositiveMap.remove"><span class="id" title="definition">CPositiveMap.remove</span></a>;<br/>
+<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#equal"><span class="id" title="method">equal</span></a> := @<a class="idref" href="Containers.CMapPositive.html#CPositiveMap.equal"><span class="id" title="definition">CPositiveMap.equal</span></a>;<br/>
+<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#map"><span class="id" title="method">map</span></a> := @<a class="idref" href="Containers.CMapPositive.html#CPositiveMap.map"><span class="id" title="definition">CPositiveMap.map</span></a>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#mapi"><span class="id" title="method">mapi</span></a> := @<a class="idref" href="Containers.CMapPositive.html#CPositiveMap.mapi"><span class="id" title="definition">CPositiveMap.mapi</span></a>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#map2"><span class="id" title="method">map2</span></a> := @<a class="idref" href="Containers.CMapPositive.html#CPositiveMap.map2"><span class="id" title="definition">CPositiveMap.map2</span></a>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#fold"><span class="id" title="method">fold</span></a> := @<a class="idref" href="Containers.CMapPositive.html#CPositiveMap.fold"><span class="id" title="definition">CPositiveMap.fold</span></a>;<br/>
+<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#cardinal"><span class="id" title="method">cardinal</span></a> := @<a class="idref" href="Containers.CMapPositive.html#CPositiveMap.cardinal"><span class="id" title="definition">CPositiveMap.cardinal</span></a>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#elements"><span class="id" title="method">elements</span></a> := @<a class="idref" href="Containers.CMapPositive.html#CPositiveMap.elements"><span class="id" title="definition">CPositiveMap.elements</span></a>;<br/>
+<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#FMap_OrderedType"><span class="id" title="method">FMap_OrderedType</span></a> := @<a class="idref" href="Containers.CMapPositive.html#CPositiveMap.Map_OrderedType"><span class="id" title="definition">CPositiveMap.Map_OrderedType</span></a><br/>
+}.<br/>
+
+<br/>
+<span class="id" title="keyword">Local Transparent</span> <a class="idref" href="Containers.MapInterface.html#map"><span class="id" title="method">map</span></a> <a class="idref" href="Containers.MapInterface.html#MapsTo"><span class="id" title="method">MapsTo</span></a> <a class="idref" href="Containers.MapInterface.html#dict"><span class="id" title="method">dict</span></a> <a class="idref" href="Containers.MapInterface.html#mem"><span class="id" title="method">mem</span></a> <a class="idref" href="Containers.MapInterface.html#empty"><span class="id" title="method">empty</span></a> <a class="idref" href="Containers.MapInterface.html#is_empty"><span class="id" title="method">is_empty</span></a> <a class="idref" href="Containers.MapInterface.html#add"><span class="id" title="method">add</span></a> <a class="idref" href="Containers.MapInterface.html#insert"><span class="id" title="method">insert</span></a><br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#adjust"><span class="id" title="method">adjust</span></a> <a class="idref" href="Containers.MapInterface.html#remove"><span class="id" title="method">remove</span></a> <a class="idref" href="Containers.MapInterface.html#find"><span class="id" title="method">find</span></a> <a class="idref" href="Containers.MapInterface.html#elements"><span class="id" title="method">elements</span></a> <a class="idref" href="Containers.MapInterface.html#cardinal"><span class="id" title="method">cardinal</span></a> <a class="idref" href="Containers.MapInterface.html#fold"><span class="id" title="method">fold</span></a> <a class="idref" href="Containers.MapInterface.html#equal"><span class="id" title="method">equal</span></a> <a class="idref" href="Containers.MapInterface.html#map"><span class="id" title="method">map</span></a> <a class="idref" href="Containers.MapInterface.html#mapi"><span class="id" title="method">mapi</span></a> <a class="idref" href="Containers.MapInterface.html#map2"><span class="id" title="method">map2</span></a>.<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+<a name="lab220"></a><h1 class="section"><span class="inlinecode"><a class="idref" href="Containers.CMapPositiveInstance.html#CMapPositive_FMapSpecs"><span class="id" title="instance">CMapPositive_FMapSpecs</span></a></span> : specifications for <span class="inlinecode"><a class="idref" href="Containers.CMapPositiveInstance.html#CMapPositive_FMap"><span class="id" title="instance">CMapPositive_FMap</span></a></span></h1>
+
+</div>
+<div class="code">
+<span class="id" title="keyword">Instance</span> <a name="CMapPositive_FMapSpecs_MapsTo"><span class="id" title="instance">CMapPositive_FMapSpecs_MapsTo</span></a> : <a class="idref" href="Containers.MapInterface.html#FMapSpecs_MapsTo"><span class="id" title="class">FMapSpecs_MapsTo</span></a> <a class="idref" href="Containers.CMapPositiveInstance.html#CMapPositive_FMap"><span class="id" title="instance">CMapPositive_FMap</span></a> := {<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#MapsTo_1"><span class="id" title="method">MapsTo_1</span></a> := <a class="idref" href="Containers.CMapPositive.html#CPositiveMap.MapsTo_1"><span class="id" title="lemma">CPositiveMap.MapsTo_1</span></a><br/>
+}.<br/>
+<span class="id" title="keyword">Instance</span> <a name="CMapPositive_FMapSpecs_mem"><span class="id" title="instance">CMapPositive_FMapSpecs_mem</span></a> : <a class="idref" href="Containers.MapInterface.html#FMapSpecs_mem"><span class="id" title="class">FMapSpecs_mem</span></a> <a class="idref" href="Containers.CMapPositiveInstance.html#CMapPositive_FMap"><span class="id" title="instance">CMapPositive_FMap</span></a> := {<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#mem_1"><span class="id" title="method">mem_1</span></a> := <a class="idref" href="Containers.CMapPositive.html#CPositiveMap.mem_1"><span class="id" title="lemma">CPositiveMap.mem_1</span></a>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#mem_2"><span class="id" title="method">mem_2</span></a> := <a class="idref" href="Containers.CMapPositive.html#CPositiveMap.mem_2"><span class="id" title="lemma">CPositiveMap.mem_2</span></a><br/>
+}.<br/>
+<span class="id" title="keyword">Instance</span> <a name="CMapPositive_FMapSpecs_empty"><span class="id" title="instance">CMapPositive_FMapSpecs_empty</span></a> : <a class="idref" href="Containers.MapInterface.html#FMapSpecs_empty"><span class="id" title="class">FMapSpecs_empty</span></a> <a class="idref" href="Containers.CMapPositiveInstance.html#CMapPositive_FMap"><span class="id" title="instance">CMapPositive_FMap</span></a> := {<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#empty_1"><span class="id" title="method">empty_1</span></a> := <a class="idref" href="Containers.CMapPositive.html#CPositiveMap.empty_1"><span class="id" title="lemma">CPositiveMap.empty_1</span></a><br/>
+}.<br/>
+<span class="id" title="keyword">Instance</span> <a name="CMapPositive_FMapSpecs_is_empty"><span class="id" title="instance">CMapPositive_FMapSpecs_is_empty</span></a> :<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#FMapSpecs_is_empty"><span class="id" title="class">FMapSpecs_is_empty</span></a> <a class="idref" href="Containers.CMapPositiveInstance.html#CMapPositive_FMap"><span class="id" title="instance">CMapPositive_FMap</span></a> := {<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#is_empty_1"><span class="id" title="method">is_empty_1</span></a> := <a class="idref" href="Containers.CMapPositive.html#CPositiveMap.is_empty_1"><span class="id" title="lemma">CPositiveMap.is_empty_1</span></a>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#is_empty_2"><span class="id" title="method">is_empty_2</span></a> := <a class="idref" href="Containers.CMapPositive.html#CPositiveMap.is_empty_2"><span class="id" title="lemma">CPositiveMap.is_empty_2</span></a><br/>
+}.<br/>
+<span class="id" title="keyword">Instance</span> <a name="CMapPositive_FMapSpecs_add"><span class="id" title="instance">CMapPositive_FMapSpecs_add</span></a> : <a class="idref" href="Containers.MapInterface.html#FMapSpecs_add"><span class="id" title="class">FMapSpecs_add</span></a> <a class="idref" href="Containers.CMapPositiveInstance.html#CMapPositive_FMap"><span class="id" title="instance">CMapPositive_FMap</span></a> := {<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#add_1"><span class="id" title="method">add_1</span></a> := <a class="idref" href="Containers.CMapPositive.html#CPositiveMap.add_1"><span class="id" title="lemma">CPositiveMap.add_1</span></a>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#add_2"><span class="id" title="method">add_2</span></a> := <a class="idref" href="Containers.CMapPositive.html#CPositiveMap.add_2"><span class="id" title="lemma">CPositiveMap.add_2</span></a>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#add_3"><span class="id" title="method">add_3</span></a> := <a class="idref" href="Containers.CMapPositive.html#CPositiveMap.add_3"><span class="id" title="lemma">CPositiveMap.add_3</span></a><br/>
+}.<br/>
+<span class="id" title="keyword">Instance</span> <a name="CMapPositive_FMapSpecs_insert"><span class="id" title="instance">CMapPositive_FMapSpecs_insert</span></a> : <a class="idref" href="Containers.MapInterface.html#FMapSpecs_insert"><span class="id" title="class">FMapSpecs_insert</span></a> <a class="idref" href="Containers.CMapPositiveInstance.html#CMapPositive_FMap"><span class="id" title="instance">CMapPositive_FMap</span></a> := {<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#insert_1"><span class="id" title="method">insert_1</span></a> := <a class="idref" href="Containers.CMapPositive.html#CPositiveMap.insert_1"><span class="id" title="lemma">CPositiveMap.insert_1</span></a>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#insert_2"><span class="id" title="method">insert_2</span></a> := <a class="idref" href="Containers.CMapPositive.html#CPositiveMap.insert_2"><span class="id" title="lemma">CPositiveMap.insert_2</span></a>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#insert_3"><span class="id" title="method">insert_3</span></a> := <a class="idref" href="Containers.CMapPositive.html#CPositiveMap.insert_3"><span class="id" title="lemma">CPositiveMap.insert_3</span></a>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#insert_4"><span class="id" title="method">insert_4</span></a> := <a class="idref" href="Containers.CMapPositive.html#CPositiveMap.insert_4"><span class="id" title="lemma">CPositiveMap.insert_4</span></a><br/>
+}.<br/>
+<span class="id" title="keyword">Instance</span> <a name="CMapPositive_FMapSpecs_adjust"><span class="id" title="instance">CMapPositive_FMapSpecs_adjust</span></a> : <a class="idref" href="Containers.MapInterface.html#FMapSpecs_adjust"><span class="id" title="class">FMapSpecs_adjust</span></a> <a class="idref" href="Containers.CMapPositiveInstance.html#CMapPositive_FMap"><span class="id" title="instance">CMapPositive_FMap</span></a> := {<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#adjust_1"><span class="id" title="method">adjust_1</span></a> := <a class="idref" href="Containers.CMapPositive.html#CPositiveMap.adjust_1"><span class="id" title="lemma">CPositiveMap.adjust_1</span></a>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#adjust_2"><span class="id" title="method">adjust_2</span></a> := <a class="idref" href="Containers.CMapPositive.html#CPositiveMap.adjust_2"><span class="id" title="lemma">CPositiveMap.adjust_2</span></a>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#adjust_3"><span class="id" title="method">adjust_3</span></a> := <a class="idref" href="Containers.CMapPositive.html#CPositiveMap.adjust_3"><span class="id" title="lemma">CPositiveMap.adjust_3</span></a><br/>
+}.<br/>
+<span class="id" title="keyword">Instance</span> <a name="CMapPositive_FMapSpecs_remove"><span class="id" title="instance">CMapPositive_FMapSpecs_remove</span></a> : <a class="idref" href="Containers.MapInterface.html#FMapSpecs_remove"><span class="id" title="class">FMapSpecs_remove</span></a> <a class="idref" href="Containers.CMapPositiveInstance.html#CMapPositive_FMap"><span class="id" title="instance">CMapPositive_FMap</span></a> := {<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#remove_1"><span class="id" title="method">remove_1</span></a> := <a class="idref" href="Containers.CMapPositive.html#CPositiveMap.remove_1"><span class="id" title="lemma">CPositiveMap.remove_1</span></a>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#remove_2"><span class="id" title="method">remove_2</span></a> := <a class="idref" href="Containers.CMapPositive.html#CPositiveMap.remove_2"><span class="id" title="lemma">CPositiveMap.remove_2</span></a>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#remove_3"><span class="id" title="method">remove_3</span></a> := <a class="idref" href="Containers.CMapPositive.html#CPositiveMap.remove_3"><span class="id" title="lemma">CPositiveMap.remove_3</span></a><br/>
+}.<br/>
+<span class="id" title="keyword">Instance</span> <a name="CMapPositive_FMapSpecs_find"><span class="id" title="instance">CMapPositive_FMapSpecs_find</span></a> : <a class="idref" href="Containers.MapInterface.html#FMapSpecs_find"><span class="id" title="class">FMapSpecs_find</span></a> <a class="idref" href="Containers.CMapPositiveInstance.html#CMapPositive_FMap"><span class="id" title="instance">CMapPositive_FMap</span></a> := {<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#find_1"><span class="id" title="method">find_1</span></a> := <a class="idref" href="Containers.CMapPositive.html#CPositiveMap.find_1"><span class="id" title="lemma">CPositiveMap.find_1</span></a>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#find_2"><span class="id" title="method">find_2</span></a> := <a class="idref" href="Containers.CMapPositive.html#CPositiveMap.find_2"><span class="id" title="lemma">CPositiveMap.find_2</span></a><br/>
+}.<br/>
+<span class="id" title="keyword">Instance</span> <a name="CMapPositive_FMapSpecs_elements"><span class="id" title="instance">CMapPositive_FMapSpecs_elements</span></a> :<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#FMapSpecs_elements"><span class="id" title="class">FMapSpecs_elements</span></a> <a class="idref" href="Containers.CMapPositiveInstance.html#CMapPositive_FMap"><span class="id" title="instance">CMapPositive_FMap</span></a> := {<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#elements_1"><span class="id" title="method">elements_1</span></a> := <a class="idref" href="Containers.CMapPositive.html#CPositiveMap.elements_1"><span class="id" title="lemma">CPositiveMap.elements_1</span></a>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#elements_2"><span class="id" title="method">elements_2</span></a> := <a class="idref" href="Containers.CMapPositive.html#CPositiveMap.elements_2"><span class="id" title="lemma">CPositiveMap.elements_2</span></a>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#elements_3"><span class="id" title="method">elements_3</span></a> := <a class="idref" href="Containers.CMapPositive.html#CPositiveMap.elements_3"><span class="id" title="lemma">CPositiveMap.elements_3</span></a>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#elements_3w"><span class="id" title="method">elements_3w</span></a> := <a class="idref" href="Containers.CMapPositive.html#CPositiveMap.elements_3w"><span class="id" title="lemma">CPositiveMap.elements_3w</span></a><br/>
+}.<br/>
+<span class="id" title="keyword">Instance</span> <a name="CMapPositive_FMapSpecs_cardinal"><span class="id" title="instance">CMapPositive_FMapSpecs_cardinal</span></a> :<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#FMapSpecs_cardinal"><span class="id" title="class">FMapSpecs_cardinal</span></a> <a class="idref" href="Containers.CMapPositiveInstance.html#CMapPositive_FMap"><span class="id" title="instance">CMapPositive_FMap</span></a> := {<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#cardinal_1"><span class="id" title="method">cardinal_1</span></a> := <a class="idref" href="Containers.CMapPositive.html#CPositiveMap.cardinal_1"><span class="id" title="lemma">CPositiveMap.cardinal_1</span></a><br/>
+}.<br/>
+<span class="id" title="keyword">Instance</span> <a name="CMapPositive_FMapSpecs_fold"><span class="id" title="instance">CMapPositive_FMapSpecs_fold</span></a> : <a class="idref" href="Containers.MapInterface.html#FMapSpecs_fold"><span class="id" title="class">FMapSpecs_fold</span></a> <a class="idref" href="Containers.CMapPositiveInstance.html#CMapPositive_FMap"><span class="id" title="instance">CMapPositive_FMap</span></a> := {<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#fold_1"><span class="id" title="method">fold_1</span></a> := <a class="idref" href="Containers.CMapPositive.html#CPositiveMap.fold_1"><span class="id" title="lemma">CPositiveMap.fold_1</span></a><br/>
+}.<br/>
+<span class="id" title="keyword">Instance</span> <a name="CMapPositive_FMapSpecs_equal"><span class="id" title="instance">CMapPositive_FMapSpecs_equal</span></a> : <a class="idref" href="Containers.MapInterface.html#FMapSpecs_equal"><span class="id" title="class">FMapSpecs_equal</span></a> <a class="idref" href="Containers.CMapPositiveInstance.html#CMapPositive_FMap"><span class="id" title="instance">CMapPositive_FMap</span></a> := {<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#equal_1"><span class="id" title="method">equal_1</span></a> := <a class="idref" href="Containers.CMapPositive.html#CPositiveMap.equal_1"><span class="id" title="lemma">CPositiveMap.equal_1</span></a>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#equal_2"><span class="id" title="method">equal_2</span></a> := <a class="idref" href="Containers.CMapPositive.html#CPositiveMap.equal_2"><span class="id" title="lemma">CPositiveMap.equal_2</span></a><br/>
+}.<br/>
+<span class="id" title="keyword">Instance</span> <a name="CMapPositive_FMapSpecs_map"><span class="id" title="instance">CMapPositive_FMapSpecs_map</span></a> : <a class="idref" href="Containers.MapInterface.html#FMapSpecs_map"><span class="id" title="class">FMapSpecs_map</span></a> <a class="idref" href="Containers.CMapPositiveInstance.html#CMapPositive_FMap"><span class="id" title="instance">CMapPositive_FMap</span></a> := {<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#map_1"><span class="id" title="method">map_1</span></a> := <a class="idref" href="Containers.CMapPositive.html#CPositiveMap.map_1"><span class="id" title="lemma">CPositiveMap.map_1</span></a>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#map_2"><span class="id" title="method">map_2</span></a> := <a class="idref" href="Containers.CMapPositive.html#CPositiveMap.map_2"><span class="id" title="lemma">CPositiveMap.map_2</span></a><br/>
+}.<br/>
+<span class="id" title="keyword">Instance</span> <a name="CMapPositive_FMapSpecs_mapi"><span class="id" title="instance">CMapPositive_FMapSpecs_mapi</span></a> : <a class="idref" href="Containers.MapInterface.html#FMapSpecs_mapi"><span class="id" title="class">FMapSpecs_mapi</span></a> <a class="idref" href="Containers.CMapPositiveInstance.html#CMapPositive_FMap"><span class="id" title="instance">CMapPositive_FMap</span></a> := {<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#mapi_1"><span class="id" title="method">mapi_1</span></a> := <a class="idref" href="Containers.CMapPositive.html#CPositiveMap.mapi_1"><span class="id" title="lemma">CPositiveMap.mapi_1</span></a>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#mapi_2"><span class="id" title="method">mapi_2</span></a> := <a class="idref" href="Containers.CMapPositive.html#CPositiveMap.mapi_2"><span class="id" title="lemma">CPositiveMap.mapi_2</span></a><br/>
+}.<br/>
+<span class="id" title="keyword">Instance</span> <a name="CMapPositive_FMapSpecs_map2"><span class="id" title="instance">CMapPositive_FMapSpecs_map2</span></a> : <a class="idref" href="Containers.MapInterface.html#FMapSpecs_map2"><span class="id" title="class">FMapSpecs_map2</span></a> <a class="idref" href="Containers.CMapPositiveInstance.html#CMapPositive_FMap"><span class="id" title="instance">CMapPositive_FMap</span></a> := {<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#map2_1"><span class="id" title="method">map2_1</span></a> := <a class="idref" href="Containers.CMapPositive.html#CPositiveMap.map2_1"><span class="id" title="lemma">CPositiveMap.map2_1</span></a>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#map2_2"><span class="id" title="method">map2_2</span></a> := <a class="idref" href="Containers.CMapPositive.html#CPositiveMap.map2_2"><span class="id" title="lemma">CPositiveMap.map2_2</span></a><br/>
+}.<br/>
+
+<br/>
+<span class="id" title="keyword">Instance</span> <a name="CMapPositive_FMapSpecs"><span class="id" title="instance">CMapPositive_FMapSpecs</span></a> : <a class="idref" href="Containers.MapInterface.html#FMapSpecs"><span class="id" title="class">FMapSpecs</span></a> <a class="idref" href="Containers.CMapPositiveInstance.html#CMapPositive_FMap"><span class="id" title="instance">CMapPositive_FMap</span></a> := {<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#FFMapSpecs_MapsTo"><span class="id" title="method">FFMapSpecs_MapsTo</span></a> := <a class="idref" href="Containers.CMapPositiveInstance.html#CMapPositive_FMapSpecs_MapsTo"><span class="id" title="instance">CMapPositive_FMapSpecs_MapsTo</span></a>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#FFMapSpecs_mem"><span class="id" title="method">FFMapSpecs_mem</span></a> := <a class="idref" href="Containers.CMapPositiveInstance.html#CMapPositive_FMapSpecs_mem"><span class="id" title="instance">CMapPositive_FMapSpecs_mem</span></a>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#FFMapSpecs_empty"><span class="id" title="method">FFMapSpecs_empty</span></a> := <a class="idref" href="Containers.CMapPositiveInstance.html#CMapPositive_FMapSpecs_empty"><span class="id" title="instance">CMapPositive_FMapSpecs_empty</span></a>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#FFMapSpecs_is_empty"><span class="id" title="method">FFMapSpecs_is_empty</span></a> := <a class="idref" href="Containers.CMapPositiveInstance.html#CMapPositive_FMapSpecs_is_empty"><span class="id" title="instance">CMapPositive_FMapSpecs_is_empty</span></a>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#FFMapSpecs_add"><span class="id" title="method">FFMapSpecs_add</span></a> := <a class="idref" href="Containers.CMapPositiveInstance.html#CMapPositive_FMapSpecs_add"><span class="id" title="instance">CMapPositive_FMapSpecs_add</span></a>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#FFMapSpecs_remove"><span class="id" title="method">FFMapSpecs_remove</span></a> := <a class="idref" href="Containers.CMapPositiveInstance.html#CMapPositive_FMapSpecs_remove"><span class="id" title="instance">CMapPositive_FMapSpecs_remove</span></a>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#FFMapSpecs_find"><span class="id" title="method">FFMapSpecs_find</span></a> := <a class="idref" href="Containers.CMapPositiveInstance.html#CMapPositive_FMapSpecs_find"><span class="id" title="instance">CMapPositive_FMapSpecs_find</span></a>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#FFMapSpecs_elements"><span class="id" title="method">FFMapSpecs_elements</span></a> := <a class="idref" href="Containers.CMapPositiveInstance.html#CMapPositive_FMapSpecs_elements"><span class="id" title="instance">CMapPositive_FMapSpecs_elements</span></a>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#FFMapSpecs_cardinal"><span class="id" title="method">FFMapSpecs_cardinal</span></a> := <a class="idref" href="Containers.CMapPositiveInstance.html#CMapPositive_FMapSpecs_cardinal"><span class="id" title="instance">CMapPositive_FMapSpecs_cardinal</span></a>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#FFMapSpecs_fold"><span class="id" title="method">FFMapSpecs_fold</span></a> := <a class="idref" href="Containers.CMapPositiveInstance.html#CMapPositive_FMapSpecs_fold"><span class="id" title="instance">CMapPositive_FMapSpecs_fold</span></a>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#FFMapSpecs_equal"><span class="id" title="method">FFMapSpecs_equal</span></a> := <a class="idref" href="Containers.CMapPositiveInstance.html#CMapPositive_FMapSpecs_equal"><span class="id" title="instance">CMapPositive_FMapSpecs_equal</span></a>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#FFMapSpecs_map"><span class="id" title="method">FFMapSpecs_map</span></a> := <a class="idref" href="Containers.CMapPositiveInstance.html#CMapPositive_FMapSpecs_map"><span class="id" title="instance">CMapPositive_FMapSpecs_map</span></a>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#FFMapSpecs_mapi"><span class="id" title="method">FFMapSpecs_mapi</span></a> := <a class="idref" href="Containers.CMapPositiveInstance.html#CMapPositive_FMapSpecs_mapi"><span class="id" title="instance">CMapPositive_FMapSpecs_mapi</span></a>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#FFMapSpecs_map2"><span class="id" title="method">FFMapSpecs_map2</span></a> := <a class="idref" href="Containers.CMapPositiveInstance.html#CMapPositive_FMapSpecs_map2"><span class="id" title="instance">CMapPositive_FMapSpecs_map2</span></a>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#FFMapSpecs_insert"><span class="id" title="method">FFMapSpecs_insert</span></a> := <a class="idref" href="Containers.CMapPositiveInstance.html#CMapPositive_FMapSpecs_insert"><span class="id" title="instance">CMapPositive_FMapSpecs_insert</span></a>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#FFMapSpecs_adjust"><span class="id" title="method">FFMapSpecs_adjust</span></a> := <a class="idref" href="Containers.CMapPositiveInstance.html#CMapPositive_FMapSpecs_adjust"><span class="id" title="instance">CMapPositive_FMapSpecs_adjust</span></a><br/>
+}.<br/>
+</div>
+</div>
+
+<div id="footer">
+<hr/><a href="indexpage.html">Index</a><hr/>This page has been generated by <a href="http://coq.inria.fr/">coqdoc</a>
+</div>
+
+</div>
+
+</body>
+</html>

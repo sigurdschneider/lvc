@@ -1,0 +1,199 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<link href="coqdoc.css" rel="stylesheet" type="text/css" />
+<title>Containers.MapAVLInstance</title>
+</head>
+
+<body>
+
+<div id="page">
+
+<div id="header">
+</div>
+
+<div id="main">
+
+<h1 class="libtitle">Containers.MapAVLInstance</h1>
+
+<div class="code">
+<span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <a class="idref" href="Containers.MapInterface.html#"><span class="id" title="library">MapInterface</span></a>.<br/>
+<span class="id" title="keyword">Require</span> <a class="idref" href="Containers.MapAVL.html#"><span class="id" title="library">MapAVL</span></a>.<br/>
+
+<br/>
+<span class="id" title="keyword">Generalizable</span> <span class="id" title="keyword">All</span> <span class="id" title="keyword">Variables</span>.<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+The file provides an instance of <span class="inlinecode"><a class="idref" href="Containers.MapInterface.html#FMap"><span class="id" title="record">FMap</span></a></span> based on AVL trees.
+   It also provides the corresponding instance of <span class="inlinecode"><a class="idref" href="Containers.MapInterface.html#FMapSpecs"><span class="id" title="record">FMapSpecs</span></a></span>, ie.
+   the proofs that the map operations respect their specification.
+   
+<div class="paragraph"> </div>
+
+<a name="lab213"></a><h1 class="section"><span class="inlinecode"><a class="idref" href="Containers.MapAVLInstance.html#MapAVL_FMap"><span class="id" title="instance">MapAVL_FMap</span></a></span> : an instance of <span class="inlinecode"><a class="idref" href="Containers.MapInterface.html#FMap"><span class="id" title="record">FMap</span></a></span> based on AVL trees</h1>
+
+</div>
+<div class="code">
+<span class="id" title="keyword">Instance</span> <a name="MapAVL_FMap"><span class="id" title="instance">MapAVL_FMap</span></a>  `{<span class="id" title="var">Hkey</span> : <a class="idref" href="Containers.OrderedType.html#OrderedType"><span class="id" title="class">OrderedType</span></a> <span class="id" title="var">key</span>} : <a class="idref" href="Containers.MapInterface.html#FMap"><span class="id" title="class">FMap</span></a> := {<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#dict"><span class="id" title="method">dict</span></a> := @<a class="idref" href="Containers.MapAVL.html#dict"><span class="id" title="record">MapAVL.dict</span></a> <span class="id" title="var">key</span> <span class="id" title="var">Hkey</span>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#MapsTo"><span class="id" title="method">MapsTo</span></a> := @<a class="idref" href="Containers.MapAVL.html#MapsTo"><span class="id" title="definition">MapAVL.MapsTo</span></a> <span class="id" title="var">key</span> <span class="id" title="var">Hkey</span>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#empty"><span class="id" title="method">empty</span></a> := @<a class="idref" href="Containers.MapAVL.html#empty"><span class="id" title="definition">MapAVL.empty</span></a> <span class="id" title="var">key</span> <span class="id" title="var">Hkey</span>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#is_empty"><span class="id" title="method">is_empty</span></a> := @<a class="idref" href="Containers.MapAVL.html#is_empty"><span class="id" title="definition">MapAVL.is_empty</span></a> <span class="id" title="var">key</span> <span class="id" title="var">Hkey</span>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#mem"><span class="id" title="method">mem</span></a> := @<a class="idref" href="Containers.MapAVL.html#mem"><span class="id" title="definition">MapAVL.mem</span></a> <span class="id" title="var">key</span> <span class="id" title="var">Hkey</span>;<br/>
+<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#add"><span class="id" title="method">add</span></a> := @<a class="idref" href="Containers.MapAVL.html#add"><span class="id" title="definition">MapAVL.add</span></a> <span class="id" title="var">key</span> <span class="id" title="var">Hkey</span>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#insert"><span class="id" title="method">insert</span></a> := @<a class="idref" href="Containers.MapAVL.html#insert"><span class="id" title="definition">MapAVL.insert</span></a> <span class="id" title="var">key</span> <span class="id" title="var">Hkey</span>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#adjust"><span class="id" title="method">adjust</span></a> := @<a class="idref" href="Containers.MapAVL.html#adjust"><span class="id" title="definition">MapAVL.adjust</span></a> <span class="id" title="var">key</span> <span class="id" title="var">Hkey</span>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#find"><span class="id" title="method">find</span></a> := @<a class="idref" href="Containers.MapAVL.html#find"><span class="id" title="definition">MapAVL.find</span></a> <span class="id" title="var">key</span> <span class="id" title="var">Hkey</span>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#remove"><span class="id" title="method">remove</span></a> := @<a class="idref" href="Containers.MapAVL.html#remove"><span class="id" title="definition">MapAVL.remove</span></a> <span class="id" title="var">key</span> <span class="id" title="var">Hkey</span>;<br/>
+<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#equal"><span class="id" title="method">equal</span></a> := @<a class="idref" href="Containers.MapAVL.html#equal"><span class="id" title="definition">MapAVL.equal</span></a> <span class="id" title="var">key</span> <span class="id" title="var">Hkey</span>;<br/>
+<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#map"><span class="id" title="method">map</span></a> := @<a class="idref" href="Containers.MapAVL.html#map"><span class="id" title="definition">MapAVL.map</span></a> <span class="id" title="var">key</span> <span class="id" title="var">Hkey</span>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#mapi"><span class="id" title="method">mapi</span></a> := @<a class="idref" href="Containers.MapAVL.html#mapi"><span class="id" title="definition">MapAVL.mapi</span></a> <span class="id" title="var">key</span> <span class="id" title="var">Hkey</span>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#map2"><span class="id" title="method">map2</span></a> := @<a class="idref" href="Containers.MapAVL.html#map2"><span class="id" title="definition">MapAVL.map2</span></a> <span class="id" title="var">key</span> <span class="id" title="var">Hkey</span>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#fold"><span class="id" title="method">fold</span></a> := @<a class="idref" href="Containers.MapAVL.html#fold"><span class="id" title="definition">MapAVL.fold</span></a> <span class="id" title="var">key</span> <span class="id" title="var">Hkey</span>;<br/>
+<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#cardinal"><span class="id" title="method">cardinal</span></a> := @<a class="idref" href="Containers.MapAVL.html#cardinal"><span class="id" title="definition">MapAVL.cardinal</span></a> <span class="id" title="var">key</span> <span class="id" title="var">Hkey</span>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#elements"><span class="id" title="method">elements</span></a> := @<a class="idref" href="Containers.MapAVL.html#elements"><span class="id" title="definition">MapAVL.elements</span></a> <span class="id" title="var">key</span> <span class="id" title="var">Hkey</span>;<br/>
+<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#FMap_OrderedType"><span class="id" title="method">FMap_OrderedType</span></a> := @<a class="idref" href="Containers.MapAVL.html#map_OrderedType"><span class="id" title="instance">MapAVL.map_OrderedType</span></a> <span class="id" title="var">key</span> <span class="id" title="var">Hkey</span><br/>
+}.<br/>
+
+<br/>
+<span class="id" title="keyword">Local Transparent</span> <a class="idref" href="Containers.MapInterface.html#map"><span class="id" title="method">map</span></a> <a class="idref" href="Containers.MapInterface.html#MapsTo"><span class="id" title="method">MapsTo</span></a> <a class="idref" href="Containers.MapInterface.html#dict"><span class="id" title="method">dict</span></a> <a class="idref" href="Containers.MapInterface.html#mem"><span class="id" title="method">mem</span></a> <a class="idref" href="Containers.MapInterface.html#empty"><span class="id" title="method">empty</span></a> <a class="idref" href="Containers.MapInterface.html#is_empty"><span class="id" title="method">is_empty</span></a> <a class="idref" href="Containers.MapInterface.html#add"><span class="id" title="method">add</span></a> <a class="idref" href="Containers.MapInterface.html#insert"><span class="id" title="method">insert</span></a><br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#adjust"><span class="id" title="method">adjust</span></a> <a class="idref" href="Containers.MapInterface.html#remove"><span class="id" title="method">remove</span></a> <a class="idref" href="Containers.MapInterface.html#find"><span class="id" title="method">find</span></a> <a class="idref" href="Containers.MapInterface.html#elements"><span class="id" title="method">elements</span></a> <a class="idref" href="Containers.MapInterface.html#cardinal"><span class="id" title="method">cardinal</span></a> <a class="idref" href="Containers.MapInterface.html#fold"><span class="id" title="method">fold</span></a> <a class="idref" href="Containers.MapInterface.html#equal"><span class="id" title="method">equal</span></a> <a class="idref" href="Containers.MapInterface.html#map"><span class="id" title="method">map</span></a> <a class="idref" href="Containers.MapInterface.html#mapi"><span class="id" title="method">mapi</span></a> <a class="idref" href="Containers.MapInterface.html#map2"><span class="id" title="method">map2</span></a>.<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+<a name="lab214"></a><h1 class="section"><span class="inlinecode"><a class="idref" href="Containers.MapAVLInstance.html#MapAVL_FMapSpecs"><span class="id" title="instance">MapAVL_FMapSpecs</span></a></span> : specifications for <span class="inlinecode"><a class="idref" href="Containers.MapAVLInstance.html#MapAVL_FMap"><span class="id" title="instance">MapAVL_FMap</span></a></span></h1>
+
+</div>
+<div class="code">
+<span class="id" title="keyword">Instance</span> <a name="MapAVL_FMapSpecs_MapsTo"><span class="id" title="instance">MapAVL_FMapSpecs_MapsTo</span></a> `{<span class="id" title="var">Hkey</span> : <a class="idref" href="Containers.OrderedType.html#OrderedType"><span class="id" title="class">OrderedType</span></a> <span class="id" title="var">key</span>} :<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#FMapSpecs_MapsTo"><span class="id" title="class">FMapSpecs_MapsTo</span></a> <a class="idref" href="Containers.MapAVLInstance.html#MapAVL_FMap"><span class="id" title="instance">MapAVL_FMap</span></a> := {<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#MapsTo_1"><span class="id" title="method">MapsTo_1</span></a> := @<a class="idref" href="Containers.MapAVL.html#MapsTo_1"><span class="id" title="lemma">MapAVL.MapsTo_1</span></a> <span class="id" title="var">_</span> <span class="id" title="var">_</span><br/>
+}.<br/>
+<span class="id" title="keyword">Instance</span> <a name="MapAVL_FMapSpecs_mem"><span class="id" title="instance">MapAVL_FMapSpecs_mem</span></a> `{<span class="id" title="var">Helt</span> : <a class="idref" href="Containers.OrderedType.html#OrderedType"><span class="id" title="class">OrderedType</span></a> <span class="id" title="var">elt</span>} :<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#FMapSpecs_mem"><span class="id" title="class">FMapSpecs_mem</span></a> <a class="idref" href="Containers.MapAVLInstance.html#MapAVL_FMap"><span class="id" title="instance">MapAVL_FMap</span></a> := {<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#mem_1"><span class="id" title="method">mem_1</span></a> := @<a class="idref" href="Containers.MapAVL.html#mem_1"><span class="id" title="lemma">MapAVL.mem_1</span></a> <span class="id" title="var">_</span> <span class="id" title="var">_</span>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#mem_2"><span class="id" title="method">mem_2</span></a> := @<a class="idref" href="Containers.MapAVL.html#mem_2"><span class="id" title="lemma">MapAVL.mem_2</span></a> <span class="id" title="var">_</span> <span class="id" title="var">_</span><br/>
+}.<br/>
+<span class="id" title="keyword">Instance</span> <a name="MapAVL_FMapSpecs_empty"><span class="id" title="instance">MapAVL_FMapSpecs_empty</span></a> `{<span class="id" title="var">Helt</span> : <a class="idref" href="Containers.OrderedType.html#OrderedType"><span class="id" title="class">OrderedType</span></a> <span class="id" title="var">elt</span>} :<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#FMapSpecs_empty"><span class="id" title="class">FMapSpecs_empty</span></a> <a class="idref" href="Containers.MapAVLInstance.html#MapAVL_FMap"><span class="id" title="instance">MapAVL_FMap</span></a> := {<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#empty_1"><span class="id" title="method">empty_1</span></a> := @<a class="idref" href="Containers.MapAVL.html#empty_1"><span class="id" title="lemma">MapAVL.empty_1</span></a> <span class="id" title="var">_</span> <span class="id" title="var">_</span><br/>
+}.<br/>
+<span class="id" title="keyword">Instance</span> <a name="MapAVL_FMapSpecs_is_empty"><span class="id" title="instance">MapAVL_FMapSpecs_is_empty</span></a> `{<span class="id" title="var">Helt</span> : <a class="idref" href="Containers.OrderedType.html#OrderedType"><span class="id" title="class">OrderedType</span></a> <span class="id" title="var">elt</span>} :<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#FMapSpecs_is_empty"><span class="id" title="class">FMapSpecs_is_empty</span></a> <a class="idref" href="Containers.MapAVLInstance.html#MapAVL_FMap"><span class="id" title="instance">MapAVL_FMap</span></a> := {<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#is_empty_1"><span class="id" title="method">is_empty_1</span></a> := @<a class="idref" href="Containers.MapAVL.html#is_empty_1"><span class="id" title="lemma">MapAVL.is_empty_1</span></a> <span class="id" title="var">_</span> <span class="id" title="var">_</span>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#is_empty_2"><span class="id" title="method">is_empty_2</span></a> := @<a class="idref" href="Containers.MapAVL.html#is_empty_2"><span class="id" title="lemma">MapAVL.is_empty_2</span></a> <span class="id" title="var">_</span> <span class="id" title="var">_</span><br/>
+}.<br/>
+<span class="id" title="keyword">Instance</span> <a name="MapAVL_FMapSpecs_add"><span class="id" title="instance">MapAVL_FMapSpecs_add</span></a> `{<span class="id" title="var">Helt</span> : <a class="idref" href="Containers.OrderedType.html#OrderedType"><span class="id" title="class">OrderedType</span></a> <span class="id" title="var">elt</span>} :<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#FMapSpecs_add"><span class="id" title="class">FMapSpecs_add</span></a> <a class="idref" href="Containers.MapAVLInstance.html#MapAVL_FMap"><span class="id" title="instance">MapAVL_FMap</span></a> := {<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#add_1"><span class="id" title="method">add_1</span></a> := @<a class="idref" href="Containers.MapAVL.html#add_1"><span class="id" title="lemma">MapAVL.add_1</span></a> <span class="id" title="var">_</span> <span class="id" title="var">_</span>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#add_2"><span class="id" title="method">add_2</span></a> := @<a class="idref" href="Containers.MapAVL.html#add_2"><span class="id" title="lemma">MapAVL.add_2</span></a> <span class="id" title="var">_</span> <span class="id" title="var">_</span>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#add_3"><span class="id" title="method">add_3</span></a> := @<a class="idref" href="Containers.MapAVL.html#add_3"><span class="id" title="lemma">MapAVL.add_3</span></a> <span class="id" title="var">_</span> <span class="id" title="var">_</span><br/>
+}.<br/>
+<span class="id" title="keyword">Instance</span> <a name="MapAVL_FMapSpecs_insert"><span class="id" title="instance">MapAVL_FMapSpecs_insert</span></a> `{<span class="id" title="var">Helt</span> : <a class="idref" href="Containers.OrderedType.html#OrderedType"><span class="id" title="class">OrderedType</span></a> <span class="id" title="var">elt</span>} :<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#FMapSpecs_insert"><span class="id" title="class">FMapSpecs_insert</span></a> <a class="idref" href="Containers.MapAVLInstance.html#MapAVL_FMap"><span class="id" title="instance">MapAVL_FMap</span></a> := {<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#insert_1"><span class="id" title="method">insert_1</span></a> := @<a class="idref" href="Containers.MapAVL.html#insert_1"><span class="id" title="lemma">MapAVL.insert_1</span></a> <span class="id" title="var">_</span> <span class="id" title="var">_</span>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#insert_2"><span class="id" title="method">insert_2</span></a> := @<a class="idref" href="Containers.MapAVL.html#insert_2"><span class="id" title="lemma">MapAVL.insert_2</span></a> <span class="id" title="var">_</span> <span class="id" title="var">_</span>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#insert_3"><span class="id" title="method">insert_3</span></a> := @<a class="idref" href="Containers.MapAVL.html#insert_3"><span class="id" title="lemma">MapAVL.insert_3</span></a> <span class="id" title="var">_</span> <span class="id" title="var">_</span>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#insert_4"><span class="id" title="method">insert_4</span></a> := @<a class="idref" href="Containers.MapAVL.html#insert_4"><span class="id" title="lemma">MapAVL.insert_4</span></a> <span class="id" title="var">_</span> <span class="id" title="var">_</span><br/>
+}.<br/>
+<span class="id" title="keyword">Instance</span> <a name="MapAVL_FMapSpecs_adjust"><span class="id" title="instance">MapAVL_FMapSpecs_adjust</span></a> `{<span class="id" title="var">Helt</span> : <a class="idref" href="Containers.OrderedType.html#OrderedType"><span class="id" title="class">OrderedType</span></a> <span class="id" title="var">elt</span>} :<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#FMapSpecs_adjust"><span class="id" title="class">FMapSpecs_adjust</span></a> <a class="idref" href="Containers.MapAVLInstance.html#MapAVL_FMap"><span class="id" title="instance">MapAVL_FMap</span></a> := {<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#adjust_1"><span class="id" title="method">adjust_1</span></a> := @<a class="idref" href="Containers.MapAVL.html#adjust_1"><span class="id" title="lemma">MapAVL.adjust_1</span></a> <span class="id" title="var">_</span> <span class="id" title="var">_</span>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#adjust_2"><span class="id" title="method">adjust_2</span></a> := @<a class="idref" href="Containers.MapAVL.html#adjust_2"><span class="id" title="lemma">MapAVL.adjust_2</span></a> <span class="id" title="var">_</span> <span class="id" title="var">_</span>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#adjust_3"><span class="id" title="method">adjust_3</span></a> := @<a class="idref" href="Containers.MapAVL.html#adjust_3"><span class="id" title="lemma">MapAVL.adjust_3</span></a> <span class="id" title="var">_</span> <span class="id" title="var">_</span><br/>
+}.<br/>
+<span class="id" title="keyword">Instance</span> <a name="MapAVL_FMapSpecs_remove"><span class="id" title="instance">MapAVL_FMapSpecs_remove</span></a> `{<span class="id" title="var">Helt</span> : <a class="idref" href="Containers.OrderedType.html#OrderedType"><span class="id" title="class">OrderedType</span></a> <span class="id" title="var">elt</span>} :<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#FMapSpecs_remove"><span class="id" title="class">FMapSpecs_remove</span></a> <a class="idref" href="Containers.MapAVLInstance.html#MapAVL_FMap"><span class="id" title="instance">MapAVL_FMap</span></a> := {<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#remove_1"><span class="id" title="method">remove_1</span></a> := @<a class="idref" href="Containers.MapAVL.html#remove_1"><span class="id" title="lemma">MapAVL.remove_1</span></a> <span class="id" title="var">_</span> <span class="id" title="var">_</span>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#remove_2"><span class="id" title="method">remove_2</span></a> := @<a class="idref" href="Containers.MapAVL.html#remove_2"><span class="id" title="lemma">MapAVL.remove_2</span></a> <span class="id" title="var">_</span> <span class="id" title="var">_</span>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#remove_3"><span class="id" title="method">remove_3</span></a> := @<a class="idref" href="Containers.MapAVL.html#remove_3"><span class="id" title="lemma">MapAVL.remove_3</span></a> <span class="id" title="var">_</span> <span class="id" title="var">_</span><br/>
+}.<br/>
+<span class="id" title="keyword">Instance</span> <a name="MapAVL_FMapSpecs_find"><span class="id" title="instance">MapAVL_FMapSpecs_find</span></a> `{<span class="id" title="var">Helt</span> : <a class="idref" href="Containers.OrderedType.html#OrderedType"><span class="id" title="class">OrderedType</span></a> <span class="id" title="var">elt</span>} :<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#FMapSpecs_find"><span class="id" title="class">FMapSpecs_find</span></a> <a class="idref" href="Containers.MapAVLInstance.html#MapAVL_FMap"><span class="id" title="instance">MapAVL_FMap</span></a> := {<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#find_1"><span class="id" title="method">find_1</span></a> := @<a class="idref" href="Containers.MapAVL.html#find_1"><span class="id" title="lemma">MapAVL.find_1</span></a> <span class="id" title="var">_</span> <span class="id" title="var">_</span>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#find_2"><span class="id" title="method">find_2</span></a> := @<a class="idref" href="Containers.MapAVL.html#find_2"><span class="id" title="lemma">MapAVL.find_2</span></a> <span class="id" title="var">_</span> <span class="id" title="var">_</span><br/>
+}.<br/>
+<span class="id" title="keyword">Instance</span> <a name="MapAVL_FMapSpecs_elements"><span class="id" title="instance">MapAVL_FMapSpecs_elements</span></a> `{<span class="id" title="var">Helt</span> : <a class="idref" href="Containers.OrderedType.html#OrderedType"><span class="id" title="class">OrderedType</span></a> <span class="id" title="var">elt</span>} :<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#FMapSpecs_elements"><span class="id" title="class">FMapSpecs_elements</span></a> <a class="idref" href="Containers.MapAVLInstance.html#MapAVL_FMap"><span class="id" title="instance">MapAVL_FMap</span></a> := {<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#elements_1"><span class="id" title="method">elements_1</span></a> := @<a class="idref" href="Containers.MapAVL.html#elements_1"><span class="id" title="lemma">MapAVL.elements_1</span></a> <span class="id" title="var">_</span> <span class="id" title="var">_</span>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#elements_2"><span class="id" title="method">elements_2</span></a> := @<a class="idref" href="Containers.MapAVL.html#elements_2"><span class="id" title="lemma">MapAVL.elements_2</span></a> <span class="id" title="var">_</span> <span class="id" title="var">_</span>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#elements_3"><span class="id" title="method">elements_3</span></a> := @<a class="idref" href="Containers.MapAVL.html#elements_3"><span class="id" title="lemma">MapAVL.elements_3</span></a> <span class="id" title="var">_</span> <span class="id" title="var">_</span>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#elements_3w"><span class="id" title="method">elements_3w</span></a> := @<a class="idref" href="Containers.MapAVL.html#elements_3w"><span class="id" title="lemma">MapAVL.elements_3w</span></a> <span class="id" title="var">_</span> <span class="id" title="var">_</span><br/>
+}.<br/>
+<span class="id" title="keyword">Instance</span> <a name="MapAVL_FMapSpecs_cardinal"><span class="id" title="instance">MapAVL_FMapSpecs_cardinal</span></a> `{<span class="id" title="var">Helt</span> : <a class="idref" href="Containers.OrderedType.html#OrderedType"><span class="id" title="class">OrderedType</span></a> <span class="id" title="var">elt</span>} :<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#FMapSpecs_cardinal"><span class="id" title="class">FMapSpecs_cardinal</span></a> <a class="idref" href="Containers.MapAVLInstance.html#MapAVL_FMap"><span class="id" title="instance">MapAVL_FMap</span></a> := {<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#cardinal_1"><span class="id" title="method">cardinal_1</span></a> := @<a class="idref" href="Containers.MapAVL.html#cardinal_1"><span class="id" title="lemma">MapAVL.cardinal_1</span></a> <span class="id" title="var">_</span> <span class="id" title="var">_</span><br/>
+}.<br/>
+<span class="id" title="keyword">Instance</span> <a name="MapAVL_FMapSpecs_fold"><span class="id" title="instance">MapAVL_FMapSpecs_fold</span></a> `{<span class="id" title="var">Helt</span> : <a class="idref" href="Containers.OrderedType.html#OrderedType"><span class="id" title="class">OrderedType</span></a> <span class="id" title="var">elt</span>} :<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#FMapSpecs_fold"><span class="id" title="class">FMapSpecs_fold</span></a> <a class="idref" href="Containers.MapAVLInstance.html#MapAVL_FMap"><span class="id" title="instance">MapAVL_FMap</span></a> := {<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#fold_1"><span class="id" title="method">fold_1</span></a> := @<a class="idref" href="Containers.MapAVL.html#fold_1"><span class="id" title="lemma">MapAVL.fold_1</span></a> <span class="id" title="var">_</span> <span class="id" title="var">_</span><br/>
+}.<br/>
+<span class="id" title="keyword">Instance</span> <a name="MapAVL_FMapSpecs_equal"><span class="id" title="instance">MapAVL_FMapSpecs_equal</span></a> `{<span class="id" title="var">Helt</span> : <a class="idref" href="Containers.OrderedType.html#OrderedType"><span class="id" title="class">OrderedType</span></a> <span class="id" title="var">elt</span>} :<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#FMapSpecs_equal"><span class="id" title="class">FMapSpecs_equal</span></a> <a class="idref" href="Containers.MapAVLInstance.html#MapAVL_FMap"><span class="id" title="instance">MapAVL_FMap</span></a> := {<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#equal_1"><span class="id" title="method">equal_1</span></a> := @<a class="idref" href="Containers.MapAVL.html#equal_1"><span class="id" title="lemma">MapAVL.equal_1</span></a> <span class="id" title="var">_</span> <span class="id" title="var">_</span>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#equal_2"><span class="id" title="method">equal_2</span></a> := @<a class="idref" href="Containers.MapAVL.html#equal_2"><span class="id" title="lemma">MapAVL.equal_2</span></a> <span class="id" title="var">_</span> <span class="id" title="var">_</span><br/>
+}.<br/>
+<span class="id" title="keyword">Instance</span> <a name="MapAVL_FMapSpecs_map"><span class="id" title="instance">MapAVL_FMapSpecs_map</span></a> `{<span class="id" title="var">Helt</span> : <a class="idref" href="Containers.OrderedType.html#OrderedType"><span class="id" title="class">OrderedType</span></a> <span class="id" title="var">elt</span>} :<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#FMapSpecs_map"><span class="id" title="class">FMapSpecs_map</span></a> <a class="idref" href="Containers.MapAVLInstance.html#MapAVL_FMap"><span class="id" title="instance">MapAVL_FMap</span></a> := {<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#map_1"><span class="id" title="method">map_1</span></a> := @<a class="idref" href="Containers.MapAVL.html#map_1"><span class="id" title="lemma">MapAVL.map_1</span></a> <span class="id" title="var">_</span> <span class="id" title="var">_</span>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#map_2"><span class="id" title="method">map_2</span></a> := @<a class="idref" href="Containers.MapAVL.html#map_2"><span class="id" title="lemma">MapAVL.map_2</span></a> <span class="id" title="var">_</span> <span class="id" title="var">_</span><br/>
+}.<br/>
+<span class="id" title="keyword">Instance</span> <a name="MapAVL_FMapSpecs_mapi"><span class="id" title="instance">MapAVL_FMapSpecs_mapi</span></a> `{<span class="id" title="var">Helt</span> : <a class="idref" href="Containers.OrderedType.html#OrderedType"><span class="id" title="class">OrderedType</span></a> <span class="id" title="var">elt</span>} :<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#FMapSpecs_mapi"><span class="id" title="class">FMapSpecs_mapi</span></a> <a class="idref" href="Containers.MapAVLInstance.html#MapAVL_FMap"><span class="id" title="instance">MapAVL_FMap</span></a> := {<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#mapi_1"><span class="id" title="method">mapi_1</span></a> := @<a class="idref" href="Containers.MapAVL.html#mapi_1"><span class="id" title="lemma">MapAVL.mapi_1</span></a> <span class="id" title="var">_</span> <span class="id" title="var">_</span>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#mapi_2"><span class="id" title="method">mapi_2</span></a> := @<a class="idref" href="Containers.MapAVL.html#mapi_2"><span class="id" title="lemma">MapAVL.mapi_2</span></a> <span class="id" title="var">_</span> <span class="id" title="var">_</span><br/>
+}.<br/>
+<span class="id" title="keyword">Instance</span> <a name="MapAVL_FMapSpecs_map2"><span class="id" title="instance">MapAVL_FMapSpecs_map2</span></a> `{<span class="id" title="var">Helt</span> : <a class="idref" href="Containers.OrderedType.html#OrderedType"><span class="id" title="class">OrderedType</span></a> <span class="id" title="var">elt</span>} :<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#FMapSpecs_map2"><span class="id" title="class">FMapSpecs_map2</span></a> <a class="idref" href="Containers.MapAVLInstance.html#MapAVL_FMap"><span class="id" title="instance">MapAVL_FMap</span></a> := {<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#map2_1"><span class="id" title="method">map2_1</span></a> := @<a class="idref" href="Containers.MapAVL.html#map2_1"><span class="id" title="lemma">MapAVL.map2_1</span></a> <span class="id" title="var">_</span> <span class="id" title="var">_</span>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#map2_2"><span class="id" title="method">map2_2</span></a> := @<a class="idref" href="Containers.MapAVL.html#map2_2"><span class="id" title="lemma">MapAVL.map2_2</span></a> <span class="id" title="var">_</span> <span class="id" title="var">_</span><br/>
+}.<br/>
+
+<br/>
+<span class="id" title="keyword">Instance</span> <a name="MapAVL_FMapSpecs"><span class="id" title="instance">MapAVL_FMapSpecs</span></a> `{<span class="id" title="var">Helt</span> : <a class="idref" href="Containers.OrderedType.html#OrderedType"><span class="id" title="class">OrderedType</span></a> <span class="id" title="var">elt</span>} :<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#FMapSpecs"><span class="id" title="class">FMapSpecs</span></a> <a class="idref" href="Containers.MapAVLInstance.html#MapAVL_FMap"><span class="id" title="instance">MapAVL_FMap</span></a> := {<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#FFMapSpecs_MapsTo"><span class="id" title="method">FFMapSpecs_MapsTo</span></a> := <a class="idref" href="Containers.MapAVLInstance.html#MapAVL_FMapSpecs_MapsTo"><span class="id" title="instance">MapAVL_FMapSpecs_MapsTo</span></a>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#FFMapSpecs_mem"><span class="id" title="method">FFMapSpecs_mem</span></a> := <a class="idref" href="Containers.MapAVLInstance.html#MapAVL_FMapSpecs_mem"><span class="id" title="instance">MapAVL_FMapSpecs_mem</span></a>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#FFMapSpecs_empty"><span class="id" title="method">FFMapSpecs_empty</span></a> := <a class="idref" href="Containers.MapAVLInstance.html#MapAVL_FMapSpecs_empty"><span class="id" title="instance">MapAVL_FMapSpecs_empty</span></a>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#FFMapSpecs_is_empty"><span class="id" title="method">FFMapSpecs_is_empty</span></a> := <a class="idref" href="Containers.MapAVLInstance.html#MapAVL_FMapSpecs_is_empty"><span class="id" title="instance">MapAVL_FMapSpecs_is_empty</span></a>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#FFMapSpecs_add"><span class="id" title="method">FFMapSpecs_add</span></a> := <a class="idref" href="Containers.MapAVLInstance.html#MapAVL_FMapSpecs_add"><span class="id" title="instance">MapAVL_FMapSpecs_add</span></a>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#FFMapSpecs_remove"><span class="id" title="method">FFMapSpecs_remove</span></a> := <a class="idref" href="Containers.MapAVLInstance.html#MapAVL_FMapSpecs_remove"><span class="id" title="instance">MapAVL_FMapSpecs_remove</span></a>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#FFMapSpecs_find"><span class="id" title="method">FFMapSpecs_find</span></a> := <a class="idref" href="Containers.MapAVLInstance.html#MapAVL_FMapSpecs_find"><span class="id" title="instance">MapAVL_FMapSpecs_find</span></a>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#FFMapSpecs_elements"><span class="id" title="method">FFMapSpecs_elements</span></a> := <a class="idref" href="Containers.MapAVLInstance.html#MapAVL_FMapSpecs_elements"><span class="id" title="instance">MapAVL_FMapSpecs_elements</span></a>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#FFMapSpecs_cardinal"><span class="id" title="method">FFMapSpecs_cardinal</span></a> := <a class="idref" href="Containers.MapAVLInstance.html#MapAVL_FMapSpecs_cardinal"><span class="id" title="instance">MapAVL_FMapSpecs_cardinal</span></a>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#FFMapSpecs_fold"><span class="id" title="method">FFMapSpecs_fold</span></a> := <a class="idref" href="Containers.MapAVLInstance.html#MapAVL_FMapSpecs_fold"><span class="id" title="instance">MapAVL_FMapSpecs_fold</span></a>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#FFMapSpecs_equal"><span class="id" title="method">FFMapSpecs_equal</span></a> := <a class="idref" href="Containers.MapAVLInstance.html#MapAVL_FMapSpecs_equal"><span class="id" title="instance">MapAVL_FMapSpecs_equal</span></a>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#FFMapSpecs_map"><span class="id" title="method">FFMapSpecs_map</span></a> := <a class="idref" href="Containers.MapAVLInstance.html#MapAVL_FMapSpecs_map"><span class="id" title="instance">MapAVL_FMapSpecs_map</span></a>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#FFMapSpecs_mapi"><span class="id" title="method">FFMapSpecs_mapi</span></a> := <a class="idref" href="Containers.MapAVLInstance.html#MapAVL_FMapSpecs_mapi"><span class="id" title="instance">MapAVL_FMapSpecs_mapi</span></a>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#FFMapSpecs_map2"><span class="id" title="method">FFMapSpecs_map2</span></a> := <a class="idref" href="Containers.MapAVLInstance.html#MapAVL_FMapSpecs_map2"><span class="id" title="instance">MapAVL_FMapSpecs_map2</span></a>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#FFMapSpecs_insert"><span class="id" title="method">FFMapSpecs_insert</span></a> := <a class="idref" href="Containers.MapAVLInstance.html#MapAVL_FMapSpecs_insert"><span class="id" title="instance">MapAVL_FMapSpecs_insert</span></a>;<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#FFMapSpecs_adjust"><span class="id" title="method">FFMapSpecs_adjust</span></a> := <a class="idref" href="Containers.MapAVLInstance.html#MapAVL_FMapSpecs_adjust"><span class="id" title="instance">MapAVL_FMapSpecs_adjust</span></a><br/>
+}.<br/>
+<span class="id" title="keyword">Instance</span> <a name="MapAVL_FMapSpecificOT"><span class="id" title="instance">MapAVL_FMapSpecificOT</span></a> `{<span class="id" title="var">Hkey</span> : <a class="idref" href="Containers.OrderedType.html#OrderedType"><span class="id" title="class">OrderedType</span></a> <span class="id" title="var">key</span>} :<br/>
+&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#FMapSpecs_SpecificOrderedType"><span class="id" title="class">FMapSpecs_SpecificOrderedType</span></a> <a class="idref" href="Containers.MapAVLInstance.html#MapAVL_FMap"><span class="id" title="instance">MapAVL_FMap</span></a> := {<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a class="idref" href="Containers.MapInterface.html#FMap_SpecificOrderedType"><span class="id" title="method">FMap_SpecificOrderedType</span></a> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;@<a class="idref" href="Containers.MapAVL.html#map_SpecificOrderedType"><span class="id" title="instance">MapAVL.map_SpecificOrderedType</span></a> <span class="id" title="var">key</span> <span class="id" title="var">Hkey</span><br/>
+}.<br/>
+</div>
+</div>
+
+<div id="footer">
+<hr/><a href="indexpage.html">Index</a><hr/>This page has been generated by <a href="http://coq.inria.fr/">coqdoc</a>
+</div>
+
+</div>
+
+</body>
+</html>
