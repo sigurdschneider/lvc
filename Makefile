@@ -9,7 +9,7 @@ EXTRA_DIR := extra
 HEADER := $(EXTRA_DIR)/header.html
 FOOTER := $(EXTRA_DIR)/footer.html
 COQDOCFLAGSX := \
-	--external 'https://www.ps.uni-saarland.de/~sdschn/LVC/doc-cont' Containers \
+	--external 'https://sigurdschneider.github.com/lvc/doc-cont' Containers \
   --toc --utf8 --toc-depth 3 --html --interpolate \
   --index indexpage --no-lib-name --parse-comments \
   --with-header $(HEADER) --with-footer $(FOOTER)
@@ -76,6 +76,12 @@ doc-publish: doc
 	scp -r $(DOC)/* ps:public_html/LVC/doc-all/
 	make -C ContainersPlugin doc
 	scp -r ContainersPlugin/html/* ps:public_html/LVC/doc-cont/
+
+update-docs: doc
+	- mkdir -p docs
+	cp -r $(DOC)/* docs/
+	- mkdir -p docs/doc-cont
+	cp -r ContainersPlugin/html/* docs/doc-cont/ 
 
 doc-quick: 
 	scp -r $(DOC)/* ps:public_html/LVC/doc-all/

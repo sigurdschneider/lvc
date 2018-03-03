@@ -1,0 +1,80 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<link href="coqdoc.css" rel="stylesheet" type="text/css" />
+<link href="coqdocjs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="config.js"></script>
+<script type="text/javascript" src="coqdocjs.js"></script>
+</head>
+
+<body onload="document.getElementById('content').focus()">
+  <div id="header">
+    <span class="left">
+      <span class="modulename"> <script> document.write(document.title) </script> </span>
+    </span>
+
+    <span class="button" id="toggle-proofs"></span>
+
+    <span class="right">
+      <a href="./">Intro Page</a>
+      <a href="./indexpage.html"> Index </a>
+      <a href="./search-toc.html"> Table of Contents </a>
+    </span>
+</div>
+    <div id="content" tabindex="-1" onblur="document.getElementById('content').focus()">
+    <div id="main">
+<h1 class="libtitle">Lvc.Infra.BoundedBelow</h1>
+
+<div class="code">
+<span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <a class="idref" href="Lvc.Infra.Util.html#"><span class="id" title="library">Util</span></a> <a class="idref" href="Lvc.Constr.CSet.html#"><span class="id" title="library">CSet</span></a> <a class="idref" href="Lvc.IL.AnnP.html#"><span class="id" title="library">AnnP</span></a>.<br/>
+
+<br/>
+<span class="id" title="keyword">Definition</span> <a name="bounded_below"><span class="id" title="definition">bounded_below</span></a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">c</span> : <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Datatypes.html#nat"><span class="id" title="inductive">nat</span></a>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">k</span> : <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Datatypes.html#nat"><span class="id" title="inductive">nat</span></a>)<br/>
+&nbsp;&nbsp;: <a class="idref" href="Lvc.Constr.CSetNotation.html#6a7b5161c2b7e36a03f4397275fb5e9b"><span class="id" title="notation">⦃</span></a><a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Datatypes.html#nat"><span class="id" title="inductive">nat</span></a><a class="idref" href="Lvc.Constr.CSetNotation.html#6a7b5161c2b7e36a03f4397275fb5e9b"><span class="id" title="notation">⦄</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#d43e996736952df71ebeeae74d10a287"><span class="id" title="notation">→</span></a> <span class="id" title="keyword">Prop</span><br/>
+&nbsp;&nbsp;:=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">fun</span> <span class="id" title="var">a</span> ⇒ <a class="idref" href="https://sigurdschneider.github.com/lvc/doc-cont/Containers.SetInterface.html#cardinal"><span class="id" title="method">cardinal</span></a> (<a class="idref" href="https://sigurdschneider.github.com/lvc/doc-cont/Containers.SetInterface.html#filter"><span class="id" title="method">filter</span></a> (<span class="id" title="keyword">fun</span> <span class="id" title="var">x</span> ⇒ <a class="idref" href="Lvc.Infra.EqDec.html#d2719f061136f91fa85e5af7354bc272"><span class="id" title="notation">B</span></a><a class="idref" href="Lvc.Infra.EqDec.html#d2719f061136f91fa85e5af7354bc272"><span class="id" title="notation">[</span></a><a class="idref" href="Lvc.Infra.BoundedBelow.html#x"><span class="id" title="variable">x</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Peano.html#9b077c369e19739ef880736ba34623ff"><span class="id" title="notation">≤</span></a> <a class="idref" href="Lvc.Infra.BoundedBelow.html#c"><span class="id" title="variable">c</span></a><a class="idref" href="Lvc.Infra.EqDec.html#d2719f061136f91fa85e5af7354bc272"><span class="id" title="notation">]</span></a>) <a class="idref" href="Lvc.Infra.BoundedBelow.html#a"><span class="id" title="variable">a</span></a>) <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Peano.html#9b077c369e19739ef880736ba34623ff"><span class="id" title="notation">≤</span></a> <a class="idref" href="Lvc.Infra.BoundedBelow.html#k"><span class="id" title="variable">k</span></a>.<br/>
+
+<br/>
+<span class="id" title="keyword">Instance</span> <a name="bounded_in_equal_morph"><span class="id" title="instance">bounded_in_equal_morph</span></a><br/>
+&nbsp;&nbsp;: <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Classes.Morphisms.html#Proper"><span class="id" title="class">Proper</span></a> (<a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#eq"><span class="id" title="inductive">eq</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Classes.Morphisms.html#5bcff5fca4c3a87e683dd8ca07bab63f"><span class="id" title="notation">==&gt;</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#eq"><span class="id" title="inductive">eq</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Classes.Morphisms.html#5bcff5fca4c3a87e683dd8ca07bab63f"><span class="id" title="notation">==&gt;</span></a> <a class="idref" href="https://sigurdschneider.github.com/lvc/doc-cont/Containers.SetInterface.html#Equal"><span class="id" title="definition">Equal</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Classes.Morphisms.html#5bcff5fca4c3a87e683dd8ca07bab63f"><span class="id" title="notation">==&gt;</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#iff"><span class="id" title="definition">iff</span></a>) <a class="idref" href="Lvc.Infra.BoundedBelow.html#bounded_below"><span class="id" title="definition">bounded_below</span></a>.<br/>
+<span class="id" title="keyword">Proof</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">unfold</span> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Classes.Morphisms.html#Proper"><span class="id" title="class">Proper</span></a>, <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Classes.Morphisms.html#respectful"><span class="id" title="definition">respectful</span></a>, <a class="idref" href="Lvc.Infra.BoundedBelow.html#bounded_below"><span class="id" title="definition">bounded_below</span></a>; <span class="id" title="tactic">intros</span>; <span class="id" title="tactic">subst</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">rewrite</span> <span class="id" title="var">H1</span>. <span class="id" title="tactic">reflexivity</span>.<br/>
+<span class="id" title="keyword">Qed</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Instance</span> <a name="bounded_in_subset_morph"><span class="id" title="instance">bounded_in_subset_morph</span></a><br/>
+&nbsp;&nbsp;: <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Classes.Morphisms.html#Proper"><span class="id" title="class">Proper</span></a> (<a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#eq"><span class="id" title="inductive">eq</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Classes.Morphisms.html#5bcff5fca4c3a87e683dd8ca07bab63f"><span class="id" title="notation">==&gt;</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#eq"><span class="id" title="inductive">eq</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Classes.Morphisms.html#5bcff5fca4c3a87e683dd8ca07bab63f"><span class="id" title="notation">==&gt;</span></a> <a class="idref" href="https://sigurdschneider.github.com/lvc/doc-cont/Containers.SetInterface.html#Equal"><span class="id" title="definition">Equal</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Classes.Morphisms.html#5bcff5fca4c3a87e683dd8ca07bab63f"><span class="id" title="notation">==&gt;</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Program.Basics.html#impl"><span class="id" title="definition">impl</span></a>) <a class="idref" href="Lvc.Infra.BoundedBelow.html#bounded_below"><span class="id" title="definition">bounded_below</span></a>.<br/>
+<span class="id" title="keyword">Proof</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">unfold</span> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Classes.Morphisms.html#Proper"><span class="id" title="class">Proper</span></a>, <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Classes.Morphisms.html#respectful"><span class="id" title="definition">respectful</span></a>, <a class="idref" href="Lvc.Infra.BoundedBelow.html#bounded_below"><span class="id" title="definition">bounded_below</span></a>, <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Program.Basics.html#impl"><span class="id" title="definition">impl</span></a>, <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Program.Basics.html#flip"><span class="id" title="definition">flip</span></a>; <span class="id" title="tactic">intros</span>; <span class="id" title="tactic">subst</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">rewrite</span> &lt;- <span class="id" title="var">H1</span>. <span class="id" title="tactic">rewrite</span> &lt;- <span class="id" title="var">H2</span>. <span class="id" title="tactic">reflexivity</span>.<br/>
+<span class="id" title="keyword">Qed</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Instance</span> <a name="bounded_in_equal_ptw"><span class="id" title="instance">bounded_in_equal_ptw</span></a><br/>
+&nbsp;&nbsp;: <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Classes.Morphisms.html#Proper"><span class="id" title="class">Proper</span></a> (<a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#eq"><span class="id" title="inductive">eq</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Classes.Morphisms.html#5bcff5fca4c3a87e683dd8ca07bab63f"><span class="id" title="notation">==&gt;</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#eq"><span class="id" title="inductive">eq</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Classes.Morphisms.html#5bcff5fca4c3a87e683dd8ca07bab63f"><span class="id" title="notation">==&gt;</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Classes.Morphisms.html#pointwise_relation"><span class="id" title="definition">pointwise_relation</span></a> <span class="id" title="var">_</span> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#iff"><span class="id" title="definition">iff</span></a>) <a class="idref" href="Lvc.Infra.BoundedBelow.html#bounded_below"><span class="id" title="definition">bounded_below</span></a>.<br/>
+<span class="id" title="keyword">Proof</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">unfold</span> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Classes.Morphisms.html#Proper"><span class="id" title="class">Proper</span></a>, <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Classes.Morphisms.html#respectful"><span class="id" title="definition">respectful</span></a>, <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Classes.Morphisms.html#pointwise_relation"><span class="id" title="definition">pointwise_relation</span></a>; <span class="id" title="tactic">intros</span>; <span class="id" title="tactic">subst</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">reflexivity</span>.<br/>
+<span class="id" title="keyword">Qed</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Instance</span> <a name="bounded_in_impl_ptw'"><span class="id" title="instance">bounded_in_impl_ptw'</span></a><br/>
+&nbsp;&nbsp;: <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Classes.Morphisms.html#Proper"><span class="id" title="class">Proper</span></a> (<a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#eq"><span class="id" title="inductive">eq</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Classes.Morphisms.html#5bcff5fca4c3a87e683dd8ca07bab63f"><span class="id" title="notation">==&gt;</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#eq"><span class="id" title="inductive">eq</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Classes.Morphisms.html#5bcff5fca4c3a87e683dd8ca07bab63f"><span class="id" title="notation">==&gt;</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Classes.Morphisms.html#pointwise_relation"><span class="id" title="definition">pointwise_relation</span></a> <span class="id" title="var">_</span> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Program.Basics.html#impl"><span class="id" title="definition">impl</span></a>) <a class="idref" href="Lvc.Infra.BoundedBelow.html#bounded_below"><span class="id" title="definition">bounded_below</span></a>.<br/>
+<span class="id" title="keyword">Proof</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">unfold</span> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Classes.Morphisms.html#Proper"><span class="id" title="class">Proper</span></a>, <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Classes.Morphisms.html#respectful"><span class="id" title="definition">respectful</span></a>, <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Classes.Morphisms.html#pointwise_relation"><span class="id" title="definition">pointwise_relation</span></a>, <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Program.Basics.html#impl"><span class="id" title="definition">impl</span></a>, <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Program.Basics.html#flip"><span class="id" title="definition">flip</span></a>; <span class="id" title="tactic">intros</span>; <span class="id" title="tactic">subst</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">eauto</span>.<br/>
+<span class="id" title="keyword">Qed</span>.<br/>
+</div>
+</div>
+<div id="footer">
+  Generated by <a href="http://coq.inria.fr/">coqdoc</a> and improved with <a href="https://github.com/tebbi/coqdocjs">CoqdocJS</a>
+</div>
+</div>
+</body>
+
+</html>

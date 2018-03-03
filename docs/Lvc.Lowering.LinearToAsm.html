@@ -1,0 +1,308 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<link href="coqdoc.css" rel="stylesheet" type="text/css" />
+<link href="coqdocjs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="config.js"></script>
+<script type="text/javascript" src="coqdocjs.js"></script>
+</head>
+
+<body onload="document.getElementById('content').focus()">
+  <div id="header">
+    <span class="left">
+      <span class="modulename"> <script> document.write(document.title) </script> </span>
+    </span>
+
+    <span class="button" id="toggle-proofs"></span>
+
+    <span class="right">
+      <a href="./">Intro Page</a>
+      <a href="./indexpage.html"> Index </a>
+      <a href="./search-toc.html"> Table of Contents </a>
+    </span>
+</div>
+    <div id="content" tabindex="-1" onblur="document.getElementById('content').focus()">
+    <div id="main">
+<h1 class="libtitle">Lvc.Lowering.LinearToAsm</h1>
+
+<div class="code">
+<span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <span class="id" title="library">compcert.lib.Coqlib</span> <span class="id" title="library">compcert.common.Errors</span>.<br/>
+<span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <span class="id" title="library">compcert.common.Linking</span> <span class="id" title="library">compcert.common.Smallstep</span>.<br/>
+<span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <span class="id" title="library">compcert.driver.Compiler</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Definition</span> <a name="transf_linear_program"><span class="id" title="definition">transf_linear_program</span></a> (<span class="id" title="var">f</span>: <span class="id" title="definition">Linear.program</span>) : <span class="id" title="inductive">res</span> <span class="id" title="definition">Asm.program</span> :=<br/>
+&nbsp;&nbsp;&nbsp;<span class="id" title="constructor">OK</span> <a class="idref" href="Lvc.Lowering.LinearToAsm.html#f"><span class="id" title="variable">f</span></a><br/>
+&nbsp;&nbsp;&nbsp;<span class="id" title="notation">@@</span> <span class="id" title="definition">time</span> "Label cleanup" <span class="id" title="definition">CleanupLabels.transf_program</span><br/>
+&nbsp;&nbsp;<span class="id" title="notation">@@@</span> <span class="id" title="definition">partial_if</span> <span class="id" title="axiom">Compopts.debug</span> (<span class="id" title="definition">time</span> "Debugging info for local variables" <span class="id" title="definition">Debugvar.transf_program</span>)<br/>
+&nbsp;&nbsp;<span class="id" title="notation">@@@</span> <span class="id" title="definition">time</span> "Mach generation" <span class="id" title="definition">Stacking.transf_program</span><br/>
+&nbsp;&nbsp;&nbsp;<span class="id" title="notation">@@</span> <span class="id" title="definition">print</span> <span class="id" title="axiom">print_Mach</span><br/>
+&nbsp;&nbsp;<span class="id" title="notation">@@@</span> <span class="id" title="definition">time</span> "Asm generation" <span class="id" title="definition">Asmgen.transf_program</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Local Open</span> <span class="id" title="keyword">Scope</span> <span class="id" title="var">linking_scope</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Definition</span> <a name="my_passes"><span class="id" title="definition">my_passes</span></a> :=<br/>
+&nbsp;&nbsp;<span class="id" title="constructor">mkpass</span> <span class="id" title="definition">CleanupLabelsproof.match_prog</span><br/>
+&nbsp;&nbsp;<span class="id" title="notation">:::</span> <span class="id" title="constructor">mkpass</span> (<span class="id" title="definition">match_if</span> <span class="id" title="axiom">Compopts.debug</span> <span class="id" title="definition">Debugvarproof.match_prog</span>)<br/>
+&nbsp;&nbsp;<span class="id" title="notation">:::</span> <span class="id" title="constructor">mkpass</span> <span class="id" title="definition">Stackingproof.match_prog</span><br/>
+&nbsp;&nbsp;<span class="id" title="notation">:::</span> <span class="id" title="constructor">mkpass</span> <span class="id" title="definition">Asmgenproof.match_prog</span><br/>
+&nbsp;&nbsp;<span class="id" title="notation">:::</span> <span class="id" title="constructor">pass_nil</span> <span class="id" title="var">_</span>.<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+Composing the <span class="inlinecode"><a class="idref" href="Lvc.Lowering.LinearToAsm.html#match_prog"><span class="id" title="definition">match_prog</span></a></span> relations above, we obtain the relation
+  between CompCert C sources and Asm code that characterize CompCert's
+  compilation. 
+</div>
+<div class="code">
+
+<br/>
+<span class="id" title="keyword">Definition</span> <a name="match_prog"><span class="id" title="definition">match_prog</span></a>: <span class="id" title="definition">Linear.program</span> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#d43e996736952df71ebeeae74d10a287"><span class="id" title="notation">→</span></a> <span class="id" title="definition">Asm.program</span> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#d43e996736952df71ebeeae74d10a287"><span class="id" title="notation">→</span></a> <span class="id" title="keyword">Prop</span> :=<br/>
+&nbsp;&nbsp;<span class="id" title="projection">pass_match</span> (<span class="id" title="definition">compose_passes</span> <a class="idref" href="Lvc.Lowering.LinearToAsm.html#my_passes"><span class="id" title="definition">my_passes</span></a>).<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+The <span class="inlinecode"><span class="id" title="var">transf_c_program</span></span> function, when successful, produces
+  assembly code that is in the <span class="inlinecode"><a class="idref" href="Lvc.Lowering.LinearToAsm.html#match_prog"><span class="id" title="definition">match_prog</span></a></span> relation with the source C program. 
+</div>
+<div class="code">
+
+<br/>
+<span class="id" title="keyword">Theorem</span> <a name="transf_linear_program_match"><span class="id" title="lemma">transf_linear_program_match</span></a>:<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">∀</span> <span class="id" title="var">p</span> <span class="id" title="var">tp</span>,<br/>
+&nbsp;&nbsp;<a class="idref" href="Lvc.Lowering.LinearToAsm.html#transf_linear_program"><span class="id" title="definition">transf_linear_program</span></a> <a class="idref" href="Lvc.Lowering.LinearToAsm.html#p"><span class="id" title="variable">p</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#1c39bf18749e5cc609e83c0a0ba5a372"><span class="id" title="notation">=</span></a> <span class="id" title="constructor">OK</span> <a class="idref" href="Lvc.Lowering.LinearToAsm.html#tp"><span class="id" title="variable">tp</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#d43e996736952df71ebeeae74d10a287"><span class="id" title="notation">→</span></a><br/>
+&nbsp;&nbsp;<a class="idref" href="Lvc.Lowering.LinearToAsm.html#match_prog"><span class="id" title="definition">match_prog</span></a> <a class="idref" href="Lvc.Lowering.LinearToAsm.html#p"><span class="id" title="variable">p</span></a> <a class="idref" href="Lvc.Lowering.LinearToAsm.html#tp"><span class="id" title="variable">tp</span></a>.<br/>
+<span class="id" title="keyword">Proof</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">intros</span> <span class="id" title="var">p</span> <span class="id" title="var">tp</span> <span class="id" title="var">T</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">unfold</span> <a class="idref" href="Lvc.Lowering.LinearToAsm.html#transf_linear_program"><span class="id" title="definition">transf_linear_program</span></a>, <span class="id" title="definition">time</span> <span class="id" title="tactic">in</span> <span class="id" title="var">T</span>. <span class="id" title="tactic">simpl</span> <span class="id" title="tactic">in</span> <span class="id" title="var">T</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">set</span> (<span class="id" title="var">p18</span> := <span class="id" title="definition">CleanupLabels.transf_program</span> <span class="id" title="var">p</span>) <span class="id" title="tactic">in</span> ×.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">destruct</span> (<span class="id" title="definition">partial_if</span> <span class="id" title="axiom">Compopts.debug</span> <span class="id" title="definition">Debugvar.transf_program</span> <span class="id" title="var">p18</span>) <span class="id" title="keyword">as</span> [<span class="id" title="var">p19</span>|<span class="id" title="var">e</span>] <span class="id" title="var">eqn</span>:<span class="id" title="var">P19</span>; <span class="id" title="tactic">simpl</span> <span class="id" title="tactic">in</span> <span class="id" title="var">T</span>; <span class="id" title="tactic">try</span> <span class="id" title="tactic">discriminate</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">destruct</span> (<span class="id" title="definition">Stacking.transf_program</span> <span class="id" title="var">p19</span>) <span class="id" title="keyword">as</span> [<span class="id" title="var">p20</span>|<span class="id" title="var">e</span>] <span class="id" title="var">eqn</span>:<span class="id" title="var">P20</span>; <span class="id" title="tactic">simpl</span> <span class="id" title="tactic">in</span> <span class="id" title="var">T</span>; <span class="id" title="tactic">try</span> <span class="id" title="tactic">discriminate</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">unfold</span> <a class="idref" href="Lvc.Lowering.LinearToAsm.html#match_prog"><span class="id" title="definition">match_prog</span></a>; <span class="id" title="tactic">simpl</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">∃</span> <span class="id" title="var">p18</span>; <span class="id" title="tactic">split</span>. <span class="id" title="tactic">apply</span> <span class="id" title="lemma">CleanupLabelsproof.transf_program_match</span>; <span class="id" title="tactic">auto</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">∃</span> <span class="id" title="var">p19</span>; <span class="id" title="tactic">split</span>. <span class="id" title="tactic">eapply</span> <span class="id" title="lemma">partial_if_match</span>; <span class="id" title="tactic">eauto</span>. <span class="id" title="tactic">apply</span> <span class="id" title="lemma">Debugvarproof.transf_program_match</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">∃</span> <span class="id" title="var">p20</span>; <span class="id" title="tactic">split</span>. <span class="id" title="tactic">apply</span> <span class="id" title="lemma">Stackingproof.transf_program_match</span>; <span class="id" title="tactic">auto</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">∃</span> <span class="id" title="var">tp</span>; <span class="id" title="tactic">split</span>. <span class="id" title="tactic">apply</span> <span class="id" title="lemma">Asmgenproof.transf_program_match</span>; <span class="id" title="tactic">auto</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">reflexivity</span>.<br/>
+<span class="id" title="keyword">Qed</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Lemma</span> <a name="semantics_strongly_receptive"><span class="id" title="lemma">semantics_strongly_receptive</span></a>:<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">∀</span> <span class="id" title="var">p</span>, <span class="id" title="record">strongly_receptive</span> (<span class="id" title="definition">Linear.semantics</span> <a class="idref" href="Lvc.Lowering.LinearToAsm.html#p"><span class="id" title="variable">p</span></a>).<br/>
+<span class="id" title="keyword">Proof</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">intros</span>. <span class="id" title="tactic">constructor</span>; <span class="id" title="tactic">simpl</span>; <span class="id" title="tactic">intros</span>.<br/>
+&nbsp;&nbsp;- <span class="comment">(*&nbsp;receptiveness&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">set</span> (<span class="id" title="var">ge</span> := <span class="id" title="definition">Globalenvs.Genv.globalenv</span> <span class="id" title="var">p</span>) <span class="id" title="tactic">in</span> ×.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">inversion</span> <span class="id" title="var">H</span>; <span class="id" title="tactic">subst</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;+ <span class="id" title="var">exploit</span> <span class="id" title="projection">Events.ec_trace_length</span>; <span class="id" title="tactic">eauto</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">eapply</span> <span class="id" title="lemma">Events.external_call_spec</span>. <span class="id" title="tactic">destruct</span> <span class="id" title="var">t1</span>; <span class="id" title="tactic">eauto</span>; <span class="id" title="tactic">simpl</span> <span class="id" title="tactic">in</span> *; <span class="id" title="tactic">try</span> <span class="id" title="tactic">omega</span>; <span class="id" title="tactic">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">eapply</span> <span class="id" title="definition">Events.external_call_receptive</span> <span class="id" title="keyword">with</span> (<span class="id" title="var">t2</span>:=<span class="id" title="var">ev2</span><a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Datatypes.html#0a8150c3c4df34d205c5ed9a427e2ed5"><span class="id" title="notation">::</span></a><a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Datatypes.html#nil"><span class="id" title="constructor">nil</span></a>) <span class="id" title="tactic">in</span> <span class="id" title="var">H2</span>; <span class="id" title="tactic">eauto</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">destruct</span> <span class="id" title="var">H2</span> <span class="id" title="keyword">as</span> [? [? ?]].<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">do</span> 2 <span class="id" title="tactic">eexists</span>; <span class="id" title="tactic">econstructor</span>; <span class="id" title="tactic">eauto</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;+ <span class="id" title="var">exploit</span> <span class="id" title="projection">Events.ec_trace_length</span>; <span class="id" title="tactic">eauto</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">eapply</span> <span class="id" title="lemma">Events.external_call_spec</span>. <span class="id" title="tactic">destruct</span> <span class="id" title="var">t1</span>; <span class="id" title="tactic">eauto</span>; <span class="id" title="tactic">simpl</span> <span class="id" title="tactic">in</span> *; <span class="id" title="tactic">try</span> <span class="id" title="tactic">omega</span>; <span class="id" title="tactic">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">eapply</span> <span class="id" title="definition">Events.external_call_receptive</span> <span class="id" title="keyword">with</span> (<span class="id" title="var">t2</span>:=<span class="id" title="var">ev2</span><a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Datatypes.html#0a8150c3c4df34d205c5ed9a427e2ed5"><span class="id" title="notation">::</span></a><a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Datatypes.html#nil"><span class="id" title="constructor">nil</span></a>) <span class="id" title="tactic">in</span> <span class="id" title="var">H2</span>; <span class="id" title="tactic">eauto</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">destruct</span> <span class="id" title="var">H2</span> <span class="id" title="keyword">as</span> [? [? ?]].<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">do</span> 2 <span class="id" title="tactic">eexists</span>; <span class="id" title="tactic">econstructor</span>; <span class="id" title="tactic">eauto</span>.<br/>
+&nbsp;&nbsp;- <span class="id" title="tactic">hnf</span>; <span class="id" title="tactic">intros</span>. <span class="id" title="var">inv</span> <span class="id" title="var">H</span>; <span class="id" title="tactic">simpl</span>; <span class="id" title="tactic">eauto</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;+ <span class="id" title="tactic">destruct</span> <span class="id" title="var">t</span>; <span class="id" title="tactic">eauto</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">assert</span> (<span class="id" title="var">t</span> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#1c39bf18749e5cc609e83c0a0ba5a372"><span class="id" title="notation">=</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Datatypes.html#nil"><span class="id" title="constructor">nil</span></a>). {<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">exploit</span> <span class="id" title="projection">Events.ec_trace_length</span>; <span class="id" title="tactic">eauto</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">eapply</span> <span class="id" title="lemma">Events.external_call_spec</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">destruct</span> <span class="id" title="var">t</span>; <span class="id" title="tactic">simpl</span> <span class="id" title="tactic">in</span> *; <span class="id" title="tactic">try</span> <span class="id" title="tactic">omega</span>; <span class="id" title="tactic">intros</span>; <span class="id" title="tactic">eauto</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;} <span class="id" title="tactic">subst</span>. <span class="id" title="tactic">simpl</span>; <span class="id" title="tactic">eauto</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;+ <span class="id" title="tactic">destruct</span> <span class="id" title="var">t</span>; <span class="id" title="tactic">eauto</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">assert</span> (<span class="id" title="var">t</span> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#1c39bf18749e5cc609e83c0a0ba5a372"><span class="id" title="notation">=</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Datatypes.html#nil"><span class="id" title="constructor">nil</span></a>). {<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">exploit</span> <span class="id" title="projection">Events.ec_trace_length</span>; <span class="id" title="tactic">eauto</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">eapply</span> <span class="id" title="lemma">Events.external_call_spec</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">destruct</span> <span class="id" title="var">t</span>; <span class="id" title="tactic">simpl</span> <span class="id" title="tactic">in</span> *; <span class="id" title="tactic">try</span> <span class="id" title="tactic">omega</span>; <span class="id" title="tactic">intros</span>; <span class="id" title="tactic">eauto</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;} <span class="id" title="tactic">subst</span>. <span class="id" title="tactic">simpl</span>; <span class="id" title="tactic">eauto</span>.<br/>
+<span class="id" title="keyword">Qed</span>.<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+<a name="lab168"></a><h1 class="section">Semantic preservation</h1>
+
+<div class="paragraph"> </div>
+
+ We now prove that the whole CompCert compiler (as characterized by the
+  <span class="inlinecode"><a class="idref" href="Lvc.Lowering.LinearToAsm.html#match_prog"><span class="id" title="definition">match_prog</span></a></span> relation) preserves semantics by constructing
+  the following simulations:
+<ul class="doclist">
+<li> Forward simulations from <span class="inlinecode"><span class="id" title="var">Cstrategy</span></span> to <span class="inlinecode"><span class="id" title="library">Asm</span></span>
+  (composition of the forward simulations for each pass).
+
+</li>
+<li> Backward simulations for the same languages
+  (derived from the forward simulation, using receptiveness of the source
+  language and determinacy of <span class="inlinecode"><span class="id" title="library">Asm</span></span>).
+
+</li>
+<li> Backward simulation from <span class="inlinecode"><span class="id" title="var">Csem</span></span> to <span class="inlinecode"><span class="id" title="library">Asm</span></span>
+  (composition of two backward simulations).
+
+</li>
+</ul>
+
+</div>
+<div class="code">
+
+<br/>
+<span class="id" title="keyword">Theorem</span> <a name="linear_semantic_preservation"><span class="id" title="lemma">linear_semantic_preservation</span></a>:<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">∀</span> <span class="id" title="var">p</span> <span class="id" title="var">tp</span>,<br/>
+&nbsp;&nbsp;<a class="idref" href="Lvc.Lowering.LinearToAsm.html#match_prog"><span class="id" title="definition">match_prog</span></a> <a class="idref" href="Lvc.Lowering.LinearToAsm.html#p"><span class="id" title="variable">p</span></a> <a class="idref" href="Lvc.Lowering.LinearToAsm.html#tp"><span class="id" title="variable">tp</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#d43e996736952df71ebeeae74d10a287"><span class="id" title="notation">→</span></a><br/>
+&nbsp;&nbsp;<span class="id" title="inductive">forward_simulation</span> (<span class="id" title="definition">Linear.semantics</span> <a class="idref" href="Lvc.Lowering.LinearToAsm.html#p"><span class="id" title="variable">p</span></a>) (<span class="id" title="definition">Asm.semantics</span> <a class="idref" href="Lvc.Lowering.LinearToAsm.html#tp"><span class="id" title="variable">tp</span></a>)<br/>
+&nbsp;&nbsp;<a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#d82a7d96d3659d805ffe732283716822"><span class="id" title="notation">∧</span></a> <span class="id" title="inductive">backward_simulation</span> (<span class="id" title="definition">atomic</span> (<span class="id" title="definition">Linear.semantics</span> <a class="idref" href="Lvc.Lowering.LinearToAsm.html#p"><span class="id" title="variable">p</span></a>)) (<span class="id" title="definition">Asm.semantics</span> <a class="idref" href="Lvc.Lowering.LinearToAsm.html#tp"><span class="id" title="variable">tp</span></a>).<br/>
+<span class="id" title="keyword">Proof</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">intros</span> <span class="id" title="var">p</span> <span class="id" title="var">tp</span> <span class="id" title="var">M</span>. <span class="id" title="tactic">unfold</span> <a class="idref" href="Lvc.Lowering.LinearToAsm.html#match_prog"><span class="id" title="definition">match_prog</span></a>, <span class="id" title="projection">pass_match</span> <span class="id" title="tactic">in</span> <span class="id" title="var">M</span>; <span class="id" title="tactic">simpl</span> <span class="id" title="tactic">in</span> <span class="id" title="var">M</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">repeat</span> <span class="id" title="var">DestructM</span>. <span class="id" title="tactic">subst</span> <span class="id" title="var">tp</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">assert</span> (<span class="id" title="var">F</span>: <span class="id" title="inductive">forward_simulation</span> (<span class="id" title="definition">Linear.semantics</span> <span class="id" title="var">p</span>) (<span class="id" title="definition">Asm.semantics</span> <span class="id" title="var">p4</span>)).<br/>
+&nbsp;&nbsp;{<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">eapply</span> <span class="id" title="lemma">compose_forward_simulations</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">eapply</span> <span class="id" title="lemma">CleanupLabelsproof.transf_program_correct</span>; <span class="id" title="var">eassumption</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">eapply</span> <span class="id" title="lemma">compose_forward_simulations</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">eapply</span> <span class="id" title="lemma">match_if_simulation</span>. <span class="id" title="var">eassumption</span>. <span class="id" title="tactic">exact</span> <span class="id" title="lemma">Debugvarproof.transf_program_correct</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">eapply</span> <span class="id" title="lemma">compose_forward_simulations</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">eapply</span> <span class="id" title="lemma">Stackingproof.transf_program_correct</span> <span class="id" title="keyword">with</span> (<span class="id" title="var">return_address_offset</span> := <span class="id" title="definition">Asmgenproof0.return_address_offset</span>).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">exact</span> <span class="id" title="lemma">Asmgenproof.return_address_exists</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">eassumption</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">eapply</span> <span class="id" title="lemma">Asmgenproof.transf_program_correct</span>; <span class="id" title="var">eassumption</span>.<br/>
+&nbsp;&nbsp;}<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">split</span>. <span class="id" title="tactic">auto</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">apply</span> <span class="id" title="lemma">forward_to_backward_simulation</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">apply</span> <span class="id" title="lemma">factor_forward_simulation</span>. <span class="id" title="tactic">auto</span>. <span class="id" title="tactic">eapply</span> <span class="id" title="projection">sd_traces</span>. <span class="id" title="tactic">eapply</span> <span class="id" title="lemma">Asm.semantics_determinate</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">apply</span> <span class="id" title="lemma">atomic_receptive</span>. <span class="id" title="tactic">apply</span> <a class="idref" href="Lvc.Lowering.LinearToAsm.html#semantics_strongly_receptive"><span class="id" title="lemma">semantics_strongly_receptive</span></a>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">apply</span> <span class="id" title="lemma">Asm.semantics_determinate</span>.<br/>
+<span class="id" title="keyword">Qed</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Lemma</span> <a name="linear_single_events"><span class="id" title="lemma">linear_single_events</span></a> <span class="id" title="var">p</span><br/>
+&nbsp;&nbsp;:  <span class="id" title="definition">single_events</span> (<span class="id" title="definition">Linear.semantics</span> <a class="idref" href="Lvc.Lowering.LinearToAsm.html#p"><span class="id" title="variable">p</span></a>).<br/>
+<span class="id" title="keyword">Proof</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">hnf</span>; <span class="id" title="tactic">intros</span>. <span class="id" title="var">inv</span> <span class="id" title="var">H</span>; <span class="id" title="tactic">simpl</span>; <span class="id" title="tactic">try</span> <span class="id" title="tactic">omega</span>.<br/>
+&nbsp;&nbsp;- <span class="id" title="var">exploit</span> <span class="id" title="projection">Events.ec_trace_length</span>; <span class="id" title="tactic">eauto</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">eapply</span> <span class="id" title="lemma">Events.external_call_spec</span>.<br/>
+&nbsp;&nbsp;- <span class="id" title="var">exploit</span> <span class="id" title="projection">Events.ec_trace_length</span>; <span class="id" title="tactic">eauto</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">eapply</span> <span class="id" title="lemma">Events.external_call_spec</span>.<br/>
+<span class="id" title="keyword">Qed</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Remark</span> <a name="backward_simulation_identity"><span class="id" title="lemma">backward_simulation_identity</span></a> <span class="id" title="var">p</span> :<br/>
+&nbsp;&nbsp;<span class="id" title="inductive">backward_simulation</span> (<span class="id" title="definition">Linear.semantics</span> <a class="idref" href="Lvc.Lowering.LinearToAsm.html#p"><span class="id" title="variable">p</span></a>) (<span class="id" title="definition">Linear.semantics</span> <a class="idref" href="Lvc.Lowering.LinearToAsm.html#p"><span class="id" title="variable">p</span></a>).<br/>
+<span class="id" title="keyword">Proof</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">eapply</span> (<span class="id" title="constructor">Backward_simulation</span> (<span class="id" title="keyword">fun</span> (<span class="id" title="var">x</span> <span class="id" title="var">y</span>:<a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Datatypes.html#unit"><span class="id" title="inductive">unit</span></a>) ⇒ <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#False"><span class="id" title="inductive">False</span></a>) (<span class="id" title="keyword">fun</span> <span class="id" title="var">x</span> ⇒ <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#eq"><span class="id" title="inductive">eq</span></a>)).<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">econstructor</span>.<br/>
+&nbsp;&nbsp;- <span class="id" title="tactic">hnf</span>; <span class="id" title="tactic">intros</span>. <span class="id" title="tactic">econstructor</span>. <span class="id" title="tactic">firstorder</span>.<br/>
+&nbsp;&nbsp;- <span class="id" title="tactic">eauto</span>.<br/>
+&nbsp;&nbsp;- <span class="id" title="tactic">firstorder</span>. <span class="id" title="tactic">econstructor</span>.<br/>
+&nbsp;&nbsp;- <span class="id" title="tactic">intros</span>. <span class="id" title="tactic">subst</span>. <span class="id" title="tactic">eexists</span>; <span class="id" title="tactic">split</span>; <span class="id" title="tactic">eauto</span>. <span class="id" title="tactic">econstructor</span>.<br/>
+&nbsp;&nbsp;- <span class="id" title="tactic">intros</span>. <span class="id" title="tactic">subst</span>. <span class="id" title="tactic">unfold</span> <span class="id" title="projection">final_state</span>; <span class="id" title="tactic">simpl</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">hnf</span> <span class="id" title="tactic">in</span> <span class="id" title="var">s2</span>. <span class="id" title="tactic">hnf</span> <span class="id" title="tactic">in</span> <span class="id" title="var">H0</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">eapply</span> <span class="id" title="var">H0</span>. <span class="id" title="tactic">constructor</span> 1.<br/>
+&nbsp;&nbsp;- <span class="id" title="tactic">intros</span>. <span class="id" title="tactic">subst</span>. <span class="id" title="tactic">do</span> 2 <span class="id" title="tactic">eexists</span>; <span class="id" title="tactic">split</span>; <span class="id" title="tactic">eauto</span>. <span class="id" title="tactic">left</span>. <span class="id" title="tactic">econstructor</span>; <span class="id" title="tactic">eauto</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">econstructor</span>. <span class="id" title="tactic">rewrite</span> <span class="id" title="lemma">Events.E0_right</span>. <span class="id" title="tactic">reflexivity</span>.<br/>
+&nbsp;&nbsp;- <span class="id" title="tactic">intros</span>. <span class="id" title="tactic">reflexivity</span>.<br/>
+<span class="id" title="keyword">Qed</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Theorem</span> <a name="linear_preservation"><span class="id" title="lemma">linear_preservation</span></a>:<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">∀</span> <span class="id" title="var">p</span> <span class="id" title="var">tp</span>,<br/>
+&nbsp;&nbsp;<a class="idref" href="Lvc.Lowering.LinearToAsm.html#match_prog"><span class="id" title="definition">match_prog</span></a> <a class="idref" href="Lvc.Lowering.LinearToAsm.html#p"><span class="id" title="variable">p</span></a> <a class="idref" href="Lvc.Lowering.LinearToAsm.html#tp"><span class="id" title="variable">tp</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#d43e996736952df71ebeeae74d10a287"><span class="id" title="notation">→</span></a><br/>
+&nbsp;&nbsp;<span class="id" title="inductive">backward_simulation</span> (<span class="id" title="definition">Linear.semantics</span> <a class="idref" href="Lvc.Lowering.LinearToAsm.html#p"><span class="id" title="variable">p</span></a>) (<span class="id" title="definition">Asm.semantics</span> <a class="idref" href="Lvc.Lowering.LinearToAsm.html#tp"><span class="id" title="variable">tp</span></a>).<br/>
+<span class="id" title="keyword">Proof</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">apply</span> <span class="id" title="lemma">compose_backward_simulation</span> <span class="id" title="keyword">with</span> (<span class="id" title="definition">atomic</span> (<span class="id" title="definition">Linear.semantics</span> <span class="id" title="var">p</span>)).<br/>
+&nbsp;&nbsp;- <span class="id" title="tactic">eapply</span> <span class="id" title="projection">sd_traces</span>; <span class="id" title="tactic">eapply</span> <span class="id" title="lemma">Asm.semantics_determinate</span>.<br/>
+&nbsp;&nbsp;- <span class="id" title="tactic">apply</span> <span class="id" title="lemma">factor_backward_simulation</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;+ <span class="id" title="tactic">eapply</span> <a class="idref" href="Lvc.Lowering.LinearToAsm.html#backward_simulation_identity"><span class="id" title="lemma">backward_simulation_identity</span></a>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;+ <span class="id" title="tactic">eapply</span> <a class="idref" href="Lvc.Lowering.LinearToAsm.html#linear_single_events"><span class="id" title="lemma">linear_single_events</span></a>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;+ <span class="id" title="tactic">eapply</span> <span class="id" title="projection">ssr_well_behaved</span>; <span class="id" title="tactic">eapply</span> <a class="idref" href="Lvc.Lowering.LinearToAsm.html#semantics_strongly_receptive"><span class="id" title="lemma">semantics_strongly_receptive</span></a>.<br/>
+&nbsp;&nbsp;- <span class="id" title="tactic">eapply</span> <a class="idref" href="Lvc.Lowering.LinearToAsm.html#linear_semantic_preservation"><span class="id" title="lemma">linear_semantic_preservation</span></a>; <span class="id" title="tactic">eauto</span>.<br/>
+<span class="id" title="keyword">Qed</span>.<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+<a name="lab169"></a><h1 class="section">Correctness of the CompCert compiler</h1>
+
+<div class="paragraph"> </div>
+
+ Combining the results above, we obtain semantic preservation for two
+  usage scenarios of CompCert: compilation of a single monolithic program,
+  and separate compilation of multiple source files followed by linking.
+
+<div class="paragraph"> </div>
+
+  In the monolithic case, we have a whole C program <span class="inlinecode"><a class="idref" href="Lvc.Lowering.ToLinear.html#p"><span class="id" title="axiom">p</span></a></span> that is
+  compiled in one run of CompCert to a whole Asm program <span class="inlinecode"><a class="idref" href="Lvc.Lowering.LinearToAsm.html#tp"><span class="id" title="variable">tp</span></a></span>.
+  Then, <span class="inlinecode"><a class="idref" href="Lvc.Lowering.LinearToAsm.html#tp"><span class="id" title="variable">tp</span></a></span> preserves the semantics of <span class="inlinecode"><a class="idref" href="Lvc.Lowering.ToLinear.html#p"><span class="id" title="axiom">p</span></a></span>, in the sense that there
+  exists a backward simulation of the dynamic semantics of <span class="inlinecode"><a class="idref" href="Lvc.Lowering.ToLinear.html#p"><span class="id" title="axiom">p</span></a></span>
+  by the dynamic semantics of <span class="inlinecode"><a class="idref" href="Lvc.Lowering.LinearToAsm.html#tp"><span class="id" title="variable">tp</span></a></span>. 
+</div>
+<div class="code">
+
+<br/>
+<span class="id" title="keyword">Theorem</span> <a name="transf_linear_program_correct"><span class="id" title="lemma">transf_linear_program_correct</span></a>:<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">∀</span> <span class="id" title="var">p</span> <span class="id" title="var">tp</span>,<br/>
+&nbsp;&nbsp;<a class="idref" href="Lvc.Lowering.LinearToAsm.html#transf_linear_program"><span class="id" title="definition">transf_linear_program</span></a> <a class="idref" href="Lvc.Lowering.LinearToAsm.html#p"><span class="id" title="variable">p</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#1c39bf18749e5cc609e83c0a0ba5a372"><span class="id" title="notation">=</span></a> <span class="id" title="constructor">OK</span> <a class="idref" href="Lvc.Lowering.LinearToAsm.html#tp"><span class="id" title="variable">tp</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#d43e996736952df71ebeeae74d10a287"><span class="id" title="notation">→</span></a><br/>
+&nbsp;&nbsp;<span class="id" title="inductive">backward_simulation</span> (<span class="id" title="definition">Linear.semantics</span> <a class="idref" href="Lvc.Lowering.LinearToAsm.html#p"><span class="id" title="variable">p</span></a>) (<span class="id" title="definition">Asm.semantics</span> <a class="idref" href="Lvc.Lowering.LinearToAsm.html#tp"><span class="id" title="variable">tp</span></a>).<br/>
+<span class="id" title="keyword">Proof</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">intros</span>. <span class="id" title="tactic">apply</span> <a class="idref" href="Lvc.Lowering.LinearToAsm.html#linear_preservation"><span class="id" title="lemma">linear_preservation</span></a>. <span class="id" title="tactic">apply</span> <a class="idref" href="Lvc.Lowering.LinearToAsm.html#transf_linear_program_match"><span class="id" title="lemma">transf_linear_program_match</span></a>; <span class="id" title="tactic">auto</span>.<br/>
+<span class="id" title="keyword">Qed</span>.<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+Here is the separate compilation case.  Consider a nonempty list <span class="inlinecode"><a class="idref" href="Lvc.Lowering.LinearToAsm.html#c_units"><span class="id" title="variable">c_units</span></a></span>
+  of C source files (compilation units), <span class="inlinecode"><a class="idref" href="Lvc.Infra.MoreListSet.html#C1"><span class="id" title="variable">C1</span></a></span> <span class="inlinecode">,,,</span> <span class="inlinecode"><span class="id" title="var">Cn</span></span>.  Assume that every
+  C compilation unit <span class="inlinecode"><span class="id" title="var">Ci</span></span> is successfully compiled by CompCert, obtaining
+  an Asm compilation unit <span class="inlinecode"><span class="id" title="var">Ai</span></span>.  Let <span class="inlinecode"><span class="id" title="var">asm_unit</span></span> be the nonempty list
+  <span class="inlinecode"><a class="idref" href="Lvc.IL.InRel4.html#A1"><span class="id" title="variable">A1</span></a></span> <span class="inlinecode">...</span> <span class="inlinecode"><span class="id" title="var">An</span></span>.  Further assume that the C units <span class="inlinecode"><a class="idref" href="Lvc.Infra.MoreListSet.html#C1"><span class="id" title="variable">C1</span></a></span> <span class="inlinecode">...</span> <span class="inlinecode"><span class="id" title="var">Cn</span></span> can be linked
+  together to produce a whole C program <span class="inlinecode"><a class="idref" href="Lvc.Lowering.LinearToAsm.html#c_program"><span class="id" title="variable">c_program</span></a></span>.  Then, the generated
+  Asm units can be linked together, producing a whole Asm program
+  <span class="inlinecode"><a class="idref" href="Lvc.Lowering.LinearToAsm.html#asm_program"><span class="id" title="variable">asm_program</span></a></span>.  Moreover, <span class="inlinecode"><a class="idref" href="Lvc.Lowering.LinearToAsm.html#asm_program"><span class="id" title="variable">asm_program</span></a></span> preserves the semantics of
+  <span class="inlinecode"><a class="idref" href="Lvc.Lowering.LinearToAsm.html#c_program"><span class="id" title="variable">c_program</span></a></span>, in the sense that there exists a backward simulation of
+  the dynamic semantics of <span class="inlinecode"><a class="idref" href="Lvc.Lowering.LinearToAsm.html#asm_program"><span class="id" title="variable">asm_program</span></a></span> by the dynamic semantics of <span class="inlinecode"><a class="idref" href="Lvc.Lowering.LinearToAsm.html#c_program"><span class="id" title="variable">c_program</span></a></span>.
+
+</div>
+<div class="code">
+
+<br/>
+<span class="id" title="keyword">Theorem</span> <a name="separate_transf_c_program_correct"><span class="id" title="lemma">separate_transf_c_program_correct</span></a>:<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">∀</span> <span class="id" title="var">c_units</span> <span class="id" title="var">asm_units</span> <span class="id" title="var">c_program</span>,<br/>
+&nbsp;&nbsp;<span class="id" title="inductive">nlist_forall2</span> (<span class="id" title="keyword">fun</span> <span class="id" title="var">cu</span> <span class="id" title="var">tcu</span> ⇒ <a class="idref" href="Lvc.Lowering.LinearToAsm.html#transf_linear_program"><span class="id" title="definition">transf_linear_program</span></a> <a class="idref" href="Lvc.Lowering.LinearToAsm.html#cu"><span class="id" title="variable">cu</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#1c39bf18749e5cc609e83c0a0ba5a372"><span class="id" title="notation">=</span></a> <span class="id" title="constructor">OK</span> <a class="idref" href="Lvc.Lowering.LinearToAsm.html#tcu"><span class="id" title="variable">tcu</span></a>) <a class="idref" href="Lvc.Lowering.LinearToAsm.html#c_units"><span class="id" title="variable">c_units</span></a> <a class="idref" href="Lvc.Lowering.LinearToAsm.html#asm_units"><span class="id" title="variable">asm_units</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#d43e996736952df71ebeeae74d10a287"><span class="id" title="notation">→</span></a><br/>
+&nbsp;&nbsp;<span class="id" title="definition">link_list</span> <a class="idref" href="Lvc.Lowering.LinearToAsm.html#c_units"><span class="id" title="variable">c_units</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#1c39bf18749e5cc609e83c0a0ba5a372"><span class="id" title="notation">=</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Datatypes.html#Some"><span class="id" title="constructor">Some</span></a> <a class="idref" href="Lvc.Lowering.LinearToAsm.html#c_program"><span class="id" title="variable">c_program</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#d43e996736952df71ebeeae74d10a287"><span class="id" title="notation">→</span></a><br/>
+&nbsp;&nbsp;<a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#84eb6d2849dbf3581b1c0c05add5f2d8"><span class="id" title="notation">∃</span></a> <span class="id" title="var">asm_program</span><a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#84eb6d2849dbf3581b1c0c05add5f2d8"><span class="id" title="notation">,</span></a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="definition">link_list</span> <a class="idref" href="Lvc.Lowering.LinearToAsm.html#asm_units"><span class="id" title="variable">asm_units</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#1c39bf18749e5cc609e83c0a0ba5a372"><span class="id" title="notation">=</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Datatypes.html#Some"><span class="id" title="constructor">Some</span></a> <a class="idref" href="Lvc.Lowering.LinearToAsm.html#asm_program"><span class="id" title="variable">asm_program</span></a><br/>
+&nbsp;&nbsp;&nbsp;<a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#d82a7d96d3659d805ffe732283716822"><span class="id" title="notation">∧</span></a> <span class="id" title="inductive">backward_simulation</span> (<span class="id" title="definition">Linear.semantics</span> <a class="idref" href="Lvc.Lowering.LinearToAsm.html#c_program"><span class="id" title="variable">c_program</span></a>) (<span class="id" title="definition">Asm.semantics</span> <a class="idref" href="Lvc.Lowering.LinearToAsm.html#asm_program"><span class="id" title="variable">asm_program</span></a>).<br/>
+<span class="id" title="keyword">Proof</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">assert</span> (<span class="id" title="inductive">nlist_forall2</span> <a class="idref" href="Lvc.Lowering.LinearToAsm.html#match_prog"><span class="id" title="definition">match_prog</span></a> <span class="id" title="var">c_units</span> <span class="id" title="var">asm_units</span>).<br/>
+&nbsp;&nbsp;{ <span class="id" title="tactic">eapply</span> <span class="id" title="lemma">nlist_forall2_imply</span>. <span class="id" title="tactic">eauto</span>. <span class="id" title="tactic">simpl</span>; <span class="id" title="tactic">intros</span>. <span class="id" title="tactic">apply</span> <a class="idref" href="Lvc.Lowering.LinearToAsm.html#transf_linear_program_match"><span class="id" title="lemma">transf_linear_program_match</span></a>; <span class="id" title="tactic">auto</span>. }<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">assert</span> (<a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#84eb6d2849dbf3581b1c0c05add5f2d8"><span class="id" title="notation">∃</span></a> <span class="id" title="var">asm_program</span><a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#84eb6d2849dbf3581b1c0c05add5f2d8"><span class="id" title="notation">,</span></a> <span class="id" title="definition">link_list</span> <span class="id" title="var">asm_units</span> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#1c39bf18749e5cc609e83c0a0ba5a372"><span class="id" title="notation">=</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Datatypes.html#Some"><span class="id" title="constructor">Some</span></a> <a class="idref" href="Lvc.Lowering.LinearToAsm.html#asm_program"><span class="id" title="variable">asm_program</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#d82a7d96d3659d805ffe732283716822"><span class="id" title="notation">∧</span></a> <a class="idref" href="Lvc.Lowering.LinearToAsm.html#match_prog"><span class="id" title="definition">match_prog</span></a> <span class="id" title="var">c_program</span> <a class="idref" href="Lvc.Lowering.LinearToAsm.html#asm_program"><span class="id" title="variable">asm_program</span></a>).<br/>
+&nbsp;&nbsp;{ <span class="id" title="tactic">eapply</span> <span class="id" title="lemma">link_list_compose_passes</span>; <span class="id" title="tactic">eauto</span>. }<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">destruct</span> <span class="id" title="var">H2</span> <span class="id" title="keyword">as</span> (<span class="id" title="var">asm_program</span> &amp; <span class="id" title="var">P</span> &amp; <span class="id" title="var">Q</span>).<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">∃</span> <span class="id" title="var">asm_program</span>; <span class="id" title="tactic">split</span>; <span class="id" title="tactic">auto</span>. <span class="id" title="tactic">apply</span> <a class="idref" href="Lvc.Lowering.LinearToAsm.html#linear_preservation"><span class="id" title="lemma">linear_preservation</span></a>; <span class="id" title="tactic">auto</span>.<br/>
+<span class="id" title="keyword">Qed</span>.<br/>
+</div>
+</div>
+<div id="footer">
+  Generated by <a href="http://coq.inria.fr/">coqdoc</a> and improved with <a href="https://github.com/tebbi/coqdocjs">CoqdocJS</a>
+</div>
+</div>
+</body>
+
+</html>

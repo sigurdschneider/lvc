@@ -1,0 +1,57 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<link href="coqdoc.css" rel="stylesheet" type="text/css" />
+<link href="coqdocjs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="config.js"></script>
+<script type="text/javascript" src="coqdocjs.js"></script>
+</head>
+
+<body onload="document.getElementById('content').focus()">
+  <div id="header">
+    <span class="left">
+      <span class="modulename"> <script> document.write(document.title) </script> </span>
+    </span>
+
+    <span class="button" id="toggle-proofs"></span>
+
+    <span class="right">
+      <a href="./">Intro Page</a>
+      <a href="./indexpage.html"> Index </a>
+      <a href="./search-toc.html"> Table of Contents </a>
+    </span>
+</div>
+    <div id="content" tabindex="-1" onblur="document.getElementById('content').focus()">
+    <div id="main">
+<h1 class="libtitle">Lvc.Infra.LeastFresh</h1>
+
+<div class="code">
+<span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <a class="idref" href="Lvc.Constr.CSet.html#"><span class="id" title="library">CSet</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Arith.Le.html#"><span class="id" title="library">Le</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Arith.Compare_dec.html#"><span class="id" title="library">Arith.Compare_dec</span></a>.<br/>
+<span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Arith.Plus.html#"><span class="id" title="library">Plus</span></a> <a class="idref" href="Lvc.Infra.Util.html#"><span class="id" title="library">Util</span></a> <a class="idref" href="Lvc.Constr.Map.html#"><span class="id" title="library">Map</span></a> <a class="idref" href="Lvc.Infra.Get.html#"><span class="id" title="library">Get</span></a> <a class="idref" href="Lvc.Infra.Take.html#"><span class="id" title="library">Take</span></a> <a class="idref" href="Lvc.Infra.LengthEq.html#"><span class="id" title="library">LengthEq</span></a> <a class="idref" href="Lvc.Infra.SafeFirst.html#"><span class="id" title="library">SafeFirst</span></a>.<br/>
+<span class="id" title="keyword">Require</span> <span class="id" title="keyword">Export</span> <a class="idref" href="Lvc.Infra.PidgeonHole.html#"><span class="id" title="library">PidgeonHole</span></a> <a class="idref" href="Lvc.Infra.StableFresh.html#"><span class="id" title="library">StableFresh</span></a> <a class="idref" href="Lvc.Infra.OrderedTypeMax.html#"><span class="id" title="library">OrderedTypeMax</span></a>.<br/>
+
+<br/>
+<span class="id" title="keyword">Set Implicit Arguments</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Class</span> <a name="LeastFresh"><span class="id" title="record">LeastFresh</span></a> <span class="id" title="var">V</span> `{<a class="idref" href="https://sigurdschneider.github.com/lvc/doc-cont/Containers.OrderedType.html#OrderedType"><span class="id" title="class">OrderedType</span></a> <a class="idref" href="Lvc.Infra.LeastFresh.html#V"><span class="id" title="variable">V</span></a>} :=<br/>
+&nbsp;&nbsp;{<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a name="least_fresh"><span class="id" title="projection">least_fresh</span></a> :&gt; <a class="idref" href="https://sigurdschneider.github.com/lvc/doc-cont/Containers.SetInterface.html#set"><span class="id" title="method">set</span></a> <a class="idref" href="Lvc.Infra.LeastFresh.html#V"><span class="id" title="variable">V</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#d43e996736952df71ebeeae74d10a287"><span class="id" title="notation">→</span></a> <a class="idref" href="Lvc.Infra.LeastFresh.html#V"><span class="id" title="variable">V</span></a>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a name="least_fresh_spec"><span class="id" title="projection">least_fresh_spec</span></a> : <span class="id" title="keyword">∀</span> <span class="id" title="var">G</span>, <a class="idref" href="Lvc.Infra.LeastFresh.html#least_fresh"><span class="id" title="method">least_fresh</span></a> <a class="idref" href="Lvc.Infra.LeastFresh.html#G"><span class="id" title="variable">G</span></a> <a class="idref" href="Lvc.Constr.CSetNotation.html#70af4975bb36b3a2b90d04afe05d3bdf"><span class="id" title="notation">∉</span></a> <a class="idref" href="Lvc.Infra.LeastFresh.html#G"><span class="id" title="variable">G</span></a>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a name="least_fresh_least"><span class="id" title="projection">least_fresh_least</span></a> : <span class="id" title="keyword">∀</span> <span class="id" title="var">G</span> <span class="id" title="var">y</span>, <a class="idref" href="https://sigurdschneider.github.com/lvc/doc-cont/Containers.OrderedType.html#_lt"><span class="id" title="method">_lt</span></a> <a class="idref" href="Lvc.Infra.LeastFresh.html#y"><span class="id" title="variable">y</span></a> (<a class="idref" href="Lvc.Infra.LeastFresh.html#least_fresh"><span class="id" title="method">least_fresh</span></a> <a class="idref" href="Lvc.Infra.LeastFresh.html#G"><span class="id" title="variable">G</span></a>) <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#d43e996736952df71ebeeae74d10a287"><span class="id" title="notation">→</span></a> <a class="idref" href="Lvc.Infra.LeastFresh.html#y"><span class="id" title="variable">y</span></a> <a class="idref" href="Lvc.Constr.CSetNotation.html#e99635907b5af20dcddb1cc3d001d869"><span class="id" title="notation">∈</span></a> <a class="idref" href="Lvc.Infra.LeastFresh.html#G"><span class="id" title="variable">G</span></a>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a name="least_fresh_ext"><span class="id" title="projection">least_fresh_ext</span></a> : <span class="id" title="keyword">∀</span> <span class="id" title="var">G</span> <span class="id" title="var">G'</span>, <a class="idref" href="Lvc.Infra.LeastFresh.html#G"><span class="id" title="variable">G</span></a> <a class="idref" href="https://sigurdschneider.github.com/lvc/doc-cont/Containers.SetInterface.html#2499d7a52e1fca683823149ce53018f0"><span class="id" title="notation">[=]</span></a> <a class="idref" href="Lvc.Infra.LeastFresh.html#G'"><span class="id" title="variable">G'</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#d43e996736952df71ebeeae74d10a287"><span class="id" title="notation">→</span></a> <a class="idref" href="Lvc.Infra.LeastFresh.html#least_fresh"><span class="id" title="method">least_fresh</span></a> <a class="idref" href="Lvc.Infra.LeastFresh.html#G"><span class="id" title="variable">G</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#1c39bf18749e5cc609e83c0a0ba5a372"><span class="id" title="notation">=</span></a> <a class="idref" href="Lvc.Infra.LeastFresh.html#least_fresh"><span class="id" title="method">least_fresh</span></a> <a class="idref" href="Lvc.Infra.LeastFresh.html#G'"><span class="id" title="variable">G'</span></a><br/>
+&nbsp;&nbsp;}.<br/>
+
+<br/>
+<span class="id" title="var">Arguments</span> <a class="idref" href="Lvc.Infra.LeastFresh.html#LeastFresh"><span class="id" title="class">LeastFresh</span></a> <span class="id" title="var">V</span> {<span class="id" title="var">H</span>}.<br/>
+</div>
+</div>
+<div id="footer">
+  Generated by <a href="http://coq.inria.fr/">coqdoc</a> and improved with <a href="https://github.com/tebbi/coqdocjs">CoqdocJS</a>
+</div>
+</div>
+</body>
+
+</html>

@@ -1,0 +1,84 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<link href="coqdoc.css" rel="stylesheet" type="text/css" />
+<link href="coqdocjs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="config.js"></script>
+<script type="text/javascript" src="coqdocjs.js"></script>
+</head>
+
+<body onload="document.getElementById('content').focus()">
+  <div id="header">
+    <span class="left">
+      <span class="modulename"> <script> document.write(document.title) </script> </span>
+    </span>
+
+    <span class="button" id="toggle-proofs"></span>
+
+    <span class="right">
+      <a href="./">Intro Page</a>
+      <a href="./indexpage.html"> Index </a>
+      <a href="./search-toc.html"> Table of Contents </a>
+    </span>
+</div>
+    <div id="content" tabindex="-1" onblur="document.getElementById('content').focus()">
+    <div id="main">
+<h1 class="libtitle">Lvc.IL.NoParams</h1>
+
+<div class="code">
+<span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <a class="idref" href="Lvc.Infra.Util.html#"><span class="id" title="library">Util</span></a> <a class="idref" href="Lvc.IL.IL.html#"><span class="id" title="library">IL</span></a> <a class="idref" href="Lvc.Infra.DecSolve.html#"><span class="id" title="library">DecSolve</span></a> <a class="idref" href="Lvc.Infra.Indexwise.html#"><span class="id" title="library">Indexwise</span></a>.<br/>
+
+<br/>
+<span class="id" title="keyword">Inductive</span> <a name="noParams"><span class="id" title="inductive">noParams</span></a> : <a class="idref" href="Lvc.IL.IL.html#stmt"><span class="id" title="inductive">stmt</span></a><a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#d43e996736952df71ebeeae74d10a287"><span class="id" title="notation">→</span></a><span class="id" title="keyword">Prop</span> :=<br/>
+| <a name="NoParamsLet"><span class="id" title="constructor">NoParamsLet</span></a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">x</span> <span class="id" title="var">e</span> <span class="id" title="var">s</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">NoParamsIH</span>:<a class="idref" href="Lvc.IL.NoParams.html#noParams"><span class="id" title="inductive">noParams</span></a> <a class="idref" href="Lvc.IL.NoParams.html#s"><span class="id" title="variable">s</span></a>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;: <a class="idref" href="Lvc.IL.NoParams.html#noParams"><span class="id" title="inductive">noParams</span></a> (<a class="idref" href="Lvc.IL.IL.html#stmtLet"><span class="id" title="constructor">stmtLet</span></a> <a class="idref" href="Lvc.IL.NoParams.html#x"><span class="id" title="variable">x</span></a> <a class="idref" href="Lvc.IL.NoParams.html#e"><span class="id" title="variable">e</span></a> <a class="idref" href="Lvc.IL.NoParams.html#s"><span class="id" title="variable">s</span></a>)<br/>
+| <a name="NoParamsIf"><span class="id" title="constructor">NoParamsIf</span></a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">e</span> <span class="id" title="var">s</span> <span class="id" title="var">t</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">NoParamsIH1</span>:<a class="idref" href="Lvc.IL.NoParams.html#noParams"><span class="id" title="inductive">noParams</span></a> <a class="idref" href="Lvc.IL.NoParams.html#s"><span class="id" title="variable">s</span></a>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">NoParamsIH2</span>:<a class="idref" href="Lvc.IL.NoParams.html#noParams"><span class="id" title="inductive">noParams</span></a> <a class="idref" href="Lvc.IL.NoParams.html#t"><span class="id" title="variable">t</span></a>)<br/>
+&nbsp;&nbsp;: <a class="idref" href="Lvc.IL.NoParams.html#noParams"><span class="id" title="inductive">noParams</span></a> (<a class="idref" href="Lvc.IL.IL.html#stmtIf"><span class="id" title="constructor">stmtIf</span></a> <a class="idref" href="Lvc.IL.NoParams.html#e"><span class="id" title="variable">e</span></a> <a class="idref" href="Lvc.IL.NoParams.html#s"><span class="id" title="variable">s</span></a> <a class="idref" href="Lvc.IL.NoParams.html#t"><span class="id" title="variable">t</span></a>)<br/>
+| <a name="NoParamsApp"><span class="id" title="constructor">NoParamsApp</span></a> <span class="id" title="var">l</span> :<br/>
+&nbsp;&nbsp;&nbsp;<a class="idref" href="Lvc.IL.NoParams.html#noParams"><span class="id" title="inductive">noParams</span></a> (<a class="idref" href="Lvc.IL.IL.html#stmtApp"><span class="id" title="constructor">stmtApp</span></a> <a class="idref" href="Lvc.IL.NoParams.html#l"><span class="id" title="variable">l</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Datatypes.html#nil"><span class="id" title="constructor">nil</span></a>)<br/>
+| <a name="NoParamsExp"><span class="id" title="constructor">NoParamsExp</span></a> <span class="id" title="var">e</span> :<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a class="idref" href="Lvc.IL.NoParams.html#noParams"><span class="id" title="inductive">noParams</span></a> (<a class="idref" href="Lvc.IL.IL.html#stmtReturn"><span class="id" title="constructor">stmtReturn</span></a> <a class="idref" href="Lvc.IL.NoParams.html#e"><span class="id" title="variable">e</span></a>)<br/>
+| <a name="NoParamsCall"><span class="id" title="constructor">NoParamsCall</span></a> <span class="id" title="var">F</span> <span class="id" title="var">t</span><br/>
+&nbsp;&nbsp;(<span class="id" title="var">NoParamsIHF</span>:<span class="id" title="keyword">∀</span> <span class="id" title="var">n</span> <span class="id" title="var">Zs</span>, <a class="idref" href="Lvc.Infra.Get.html#get"><span class="id" title="inductive">get</span></a> <a class="idref" href="Lvc.IL.NoParams.html#F"><span class="id" title="variable">F</span></a> <a class="idref" href="Lvc.IL.NoParams.html#n"><span class="id" title="variable">n</span></a> <a class="idref" href="Lvc.IL.NoParams.html#Zs"><span class="id" title="variable">Zs</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#d43e996736952df71ebeeae74d10a287"><span class="id" title="notation">→</span></a> <a class="idref" href="Lvc.IL.NoParams.html#noParams"><span class="id" title="inductive">noParams</span></a> (<a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Datatypes.html#snd"><span class="id" title="definition">snd</span></a> <a class="idref" href="Lvc.IL.NoParams.html#Zs"><span class="id" title="variable">Zs</span></a>))<br/>
+&nbsp;&nbsp;(<span class="id" title="var">NoParamsF</span>:<span class="id" title="keyword">∀</span> <span class="id" title="var">n</span> <span class="id" title="var">Zs</span>, <a class="idref" href="Lvc.Infra.Get.html#get"><span class="id" title="inductive">get</span></a> <a class="idref" href="Lvc.IL.NoParams.html#F"><span class="id" title="variable">F</span></a> <a class="idref" href="Lvc.IL.NoParams.html#n"><span class="id" title="variable">n</span></a> <a class="idref" href="Lvc.IL.NoParams.html#Zs"><span class="id" title="variable">Zs</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#d43e996736952df71ebeeae74d10a287"><span class="id" title="notation">→</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Datatypes.html#fst"><span class="id" title="definition">fst</span></a> <a class="idref" href="Lvc.IL.NoParams.html#Zs"><span class="id" title="variable">Zs</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#1c39bf18749e5cc609e83c0a0ba5a372"><span class="id" title="notation">=</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Datatypes.html#nil"><span class="id" title="constructor">nil</span></a>)<br/>
+&nbsp;&nbsp;(<span class="id" title="var">NoParamsIHt</span>:<a class="idref" href="Lvc.IL.NoParams.html#noParams"><span class="id" title="inductive">noParams</span></a> <a class="idref" href="Lvc.IL.NoParams.html#t"><span class="id" title="variable">t</span></a>)<br/>
+&nbsp;&nbsp;: <a class="idref" href="Lvc.IL.NoParams.html#noParams"><span class="id" title="inductive">noParams</span></a> (<a class="idref" href="Lvc.IL.IL.html#stmtFun"><span class="id" title="constructor">stmtFun</span></a> <a class="idref" href="Lvc.IL.NoParams.html#F"><span class="id" title="variable">F</span></a> <a class="idref" href="Lvc.IL.NoParams.html#t"><span class="id" title="variable">t</span></a>).<br/>
+
+<br/>
+<span class="id" title="keyword">Instance</span> <a name="noParams_computable"><span class="id" title="instance">noParams_computable</span></a> <span class="id" title="var">s</span> : <a class="idref" href="Lvc.Infra.Computable.html#Computable"><span class="id" title="class">Computable</span></a> (<a class="idref" href="Lvc.IL.NoParams.html#noParams"><span class="id" title="inductive">noParams</span></a> <a class="idref" href="Lvc.IL.NoParams.html#s"><span class="id" title="variable">s</span></a>).<br/>
+<span class="id" title="keyword">Proof</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">sind</span> <span class="id" title="var">s</span>; <span class="id" title="tactic">destruct</span> <span class="id" title="var">s</span>.<br/>
+&nbsp;&nbsp;- <span class="id" title="tactic">destruct</span> (<span class="id" title="var">IH</span> <span class="id" title="var">s</span>); <span class="id" title="tactic">try</span> <span class="id" title="var">dec_solve</span>.<br/>
+&nbsp;&nbsp;- <span class="id" title="tactic">destruct</span> (<span class="id" title="var">IH</span> <span class="id" title="var">s1</span>); <span class="id" title="tactic">eauto</span>; <span class="id" title="tactic">try</span> <span class="id" title="var">dec_solve</span>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">destruct</span> (<span class="id" title="var">IH</span> <span class="id" title="var">s2</span>); <span class="id" title="tactic">eauto</span>; <span class="id" title="tactic">try</span> <span class="id" title="var">dec_solve</span>.<br/>
+&nbsp;&nbsp;- <span class="id" title="tactic">destruct</span> <span class="id" title="var">Y</span>; <span class="id" title="var">dec_solve</span>.<br/>
+&nbsp;&nbsp;- <span class="id" title="var">dec_solve</span>.<br/>
+&nbsp;&nbsp;- <span class="id" title="tactic">destruct</span> (<span class="id" title="var">IH</span> <span class="id" title="var">s</span>); <span class="id" title="tactic">eauto</span>; <span class="id" title="tactic">try</span> <span class="id" title="var">dec_solve</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">assert</span> (<a class="idref" href="Lvc.Infra.Computable.html#Computable"><span class="id" title="class">Computable</span></a> (<span class="id" title="keyword">∀</span> <span class="id" title="var">n</span> <span class="id" title="var">Zs</span>, <a class="idref" href="Lvc.Infra.Get.html#get"><span class="id" title="inductive">get</span></a> <span class="id" title="var">F</span> <a class="idref" href="Lvc.IL.NoParams.html#n"><span class="id" title="variable">n</span></a> <a class="idref" href="Lvc.IL.NoParams.html#Zs"><span class="id" title="variable">Zs</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#d43e996736952df71ebeeae74d10a287"><span class="id" title="notation">→</span></a> <a class="idref" href="Lvc.IL.NoParams.html#noParams"><span class="id" title="inductive">noParams</span></a> (<a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Datatypes.html#snd"><span class="id" title="definition">snd</span></a> <a class="idref" href="Lvc.IL.NoParams.html#Zs"><span class="id" title="variable">Zs</span></a>))). {<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">eapply</span> <a class="idref" href="Lvc.Infra.Indexwise.html#indexwise_P_dec"><span class="id" title="definition">indexwise_P_dec</span></a>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">destruct</span> (<span class="id" title="var">IH</span> (<a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Datatypes.html#snd"><span class="id" title="definition">snd</span></a> <span class="id" title="var">a</span>)); <span class="id" title="tactic">eauto</span>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">dec_solve</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;}<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">assert</span> (<a class="idref" href="Lvc.Infra.Computable.html#Computable"><span class="id" title="class">Computable</span></a> (<span class="id" title="keyword">∀</span> <span class="id" title="var">n</span> <span class="id" title="var">Zs</span>, <a class="idref" href="Lvc.Infra.Get.html#get"><span class="id" title="inductive">get</span></a> <span class="id" title="var">F</span> <a class="idref" href="Lvc.IL.NoParams.html#n"><span class="id" title="variable">n</span></a> <a class="idref" href="Lvc.IL.NoParams.html#Zs"><span class="id" title="variable">Zs</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#d43e996736952df71ebeeae74d10a287"><span class="id" title="notation">→</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Datatypes.html#fst"><span class="id" title="definition">fst</span></a> <a class="idref" href="Lvc.IL.NoParams.html#Zs"><span class="id" title="variable">Zs</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#1c39bf18749e5cc609e83c0a0ba5a372"><span class="id" title="notation">=</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Datatypes.html#nil"><span class="id" title="constructor">nil</span></a>)). {<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">eapply</span> <a class="idref" href="Lvc.Infra.Indexwise.html#indexwise_P_dec"><span class="id" title="definition">indexwise_P_dec</span></a>. <span class="id" title="tactic">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">destruct</span> (<a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Datatypes.html#fst"><span class="id" title="definition">fst</span></a> <span class="id" title="var">a</span>); <span class="id" title="tactic">try</span> <span class="id" title="var">dec_solve</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;}<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">destruct</span> <span class="id" title="var">H</span>, <span class="id" title="var">H0</span>; <span class="id" title="var">dec_solve</span>.<br/>
+<span class="id" title="keyword">Qed</span>.<br/>
+</div>
+</div>
+<div id="footer">
+  Generated by <a href="http://coq.inria.fr/">coqdoc</a> and improved with <a href="https://github.com/tebbi/coqdocjs">CoqdocJS</a>
+</div>
+</div>
+</body>
+
+</html>

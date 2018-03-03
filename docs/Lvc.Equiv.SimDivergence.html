@@ -1,0 +1,85 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<link href="coqdoc.css" rel="stylesheet" type="text/css" />
+<link href="coqdocjs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="config.js"></script>
+<script type="text/javascript" src="coqdocjs.js"></script>
+</head>
+
+<body onload="document.getElementById('content').focus()">
+  <div id="header">
+    <span class="left">
+      <span class="modulename"> <script> document.write(document.title) </script> </span>
+    </span>
+
+    <span class="button" id="toggle-proofs"></span>
+
+    <span class="right">
+      <a href="./">Intro Page</a>
+      <a href="./indexpage.html"> Index </a>
+      <a href="./search-toc.html"> Table of Contents </a>
+    </span>
+</div>
+    <div id="content" tabindex="-1" onblur="document.getElementById('content').focus()">
+    <div id="main">
+<h1 class="libtitle">Lvc.Equiv.SimDivergence</h1>
+
+<div class="code">
+<span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Lists.List.html#"><span class="id" title="library">List</span></a>.<br/>
+<span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <a class="idref" href="Lvc.Infra.Util.html#"><span class="id" title="library">Util</span></a> <a class="idref" href="Lvc.IL.Var.html#"><span class="id" title="library">Var</span></a> <a class="idref" href="Lvc.Isa.Val.html#"><span class="id" title="library">Val</span></a> <a class="idref" href="Lvc.IL.Exp.html#"><span class="id" title="library">Exp</span></a> <a class="idref" href="Lvc.IL.Envs.html#"><span class="id" title="library">Envs</span></a> <a class="idref" href="Lvc.Constr.Map.html#"><span class="id" title="library">Map</span></a> <a class="idref" href="Lvc.Constr.CSet.html#"><span class="id" title="library">CSet</span></a> <a class="idref" href="Lvc.Infra.AutoIndTac.html#"><span class="id" title="library">AutoIndTac</span></a> <a class="idref" href="Lvc.IL.IL.html#"><span class="id" title="library">IL</span></a> <a class="idref" href="Lvc.Infra.AllInRel.html#"><span class="id" title="library">AllInRel</span></a>.<br/>
+<span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <a class="idref" href="Lvc.IL.SmallStepRelations.html#"><span class="id" title="library">SmallStepRelations</span></a> <a class="idref" href="Lvc.IL.StateType.html#"><span class="id" title="library">StateType</span></a> <a class="idref" href="Lvc.Equiv.Sim.html#"><span class="id" title="library">Sim</span></a> <a class="idref" href="Lvc.Equiv.Divergence.html#"><span class="id" title="library">Divergence</span></a>.<br/>
+
+<br/>
+<span class="id" title="keyword">Set Implicit Arguments</span>.<br/>
+<span class="id" title="keyword">Unset</span> <span class="id" title="keyword">Printing</span> <span class="id" title="var">Records</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Lemma</span> <a name="sim_diverge"><span class="id" title="lemma">sim_diverge</span></a> {<span class="id" title="var">S</span>} `{<a class="idref" href="Lvc.IL.StateType.html#StateType"><span class="id" title="class">StateType</span></a> <a class="idref" href="Lvc.Equiv.SimDivergence.html#S"><span class="id" title="variable">S</span></a>} {<span class="id" title="var">S'</span>} `{<a class="idref" href="Lvc.IL.StateType.html#StateType"><span class="id" title="class">StateType</span></a> <a class="idref" href="Lvc.Equiv.SimDivergence.html#S'"><span class="id" title="variable">S'</span></a>} (σ:<a class="idref" href="Lvc.Equiv.SimDivergence.html#S"><span class="id" title="variable">S</span></a>) (σ':<a class="idref" href="Lvc.Equiv.SimDivergence.html#S'"><span class="id" title="variable">S'</span></a>)<br/>
+&nbsp;&nbsp;: <a class="idref" href="Lvc.Equiv.Sim.html#sim"><span class="id" title="definition">sim</span></a> <span class="id" title="abbreviation">bot3</span> <a class="idref" href="Lvc.Equiv.Sim.html#Sim"><span class="id" title="constructor">Sim</span></a> <a class="idref" href="Lvc.Equiv.SimDivergence.html#3122c41ebe889f745cb9bbe1c92165c3"><span class="id" title="variable">σ</span></a> <a class="idref" href="Lvc.Equiv.SimDivergence.html#4394a2ef16b8915a5209b8b27258ea45"><span class="id" title="variable">σ'</span></a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#d43e996736952df71ebeeae74d10a287"><span class="id" title="notation">→</span></a> <a class="idref" href="Lvc.Equiv.Divergence.html#div"><span class="id" title="definition">div</span></a> <span class="id" title="abbreviation">bot1</span> <a class="idref" href="Lvc.Equiv.SimDivergence.html#4394a2ef16b8915a5209b8b27258ea45"><span class="id" title="variable">σ'</span></a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#d43e996736952df71ebeeae74d10a287"><span class="id" title="notation">→</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#611abc97cba304de784fa909dbdea1fa"><span class="id" title="notation">¬</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#611abc97cba304de784fa909dbdea1fa"><span class="id" title="notation">(</span></a><a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#84eb6d2849dbf3581b1c0c05add5f2d8"><span class="id" title="notation">∃</span></a> σ''<a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#84eb6d2849dbf3581b1c0c05add5f2d8"><span class="id" title="notation">,</span></a> <a class="idref" href="Lvc.IL.SmallStepRelations.html#star2"><span class="id" title="inductive">star2</span></a> <a class="idref" href="Lvc.IL.StateType.html#step"><span class="id" title="method">step</span></a> <a class="idref" href="Lvc.Equiv.SimDivergence.html#3122c41ebe889f745cb9bbe1c92165c3"><span class="id" title="variable">σ</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Datatypes.html#nil"><span class="id" title="constructor">nil</span></a> <a class="idref" href="Lvc.Equiv.SimDivergence.html#a49d85344ccba77780ffadf41997e575"><span class="id" title="variable">σ''</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#d82a7d96d3659d805ffe732283716822"><span class="id" title="notation">∧</span></a> <a class="idref" href="Lvc.IL.StateType.html#normal2"><span class="id" title="definition">normal2</span></a> <a class="idref" href="Lvc.IL.StateType.html#step"><span class="id" title="method">step</span></a> <a class="idref" href="Lvc.Equiv.SimDivergence.html#a49d85344ccba77780ffadf41997e575"><span class="id" title="variable">σ''</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#d82a7d96d3659d805ffe732283716822"><span class="id" title="notation">∧</span></a> <a class="idref" href="Lvc.IL.StateType.html#result"><span class="id" title="method">result</span></a> <a class="idref" href="Lvc.Equiv.SimDivergence.html#a49d85344ccba77780ffadf41997e575"><span class="id" title="variable">σ''</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#1c39bf18749e5cc609e83c0a0ba5a372"><span class="id" title="notation">=</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Datatypes.html#None"><span class="id" title="constructor">None</span></a><a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#611abc97cba304de784fa909dbdea1fa"><span class="id" title="notation">)</span></a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#d43e996736952df71ebeeae74d10a287"><span class="id" title="notation">→</span></a> <a class="idref" href="Lvc.Equiv.Divergence.html#div"><span class="id" title="definition">div</span></a> <span class="id" title="abbreviation">bot1</span> <a class="idref" href="Lvc.Equiv.SimDivergence.html#3122c41ebe889f745cb9bbe1c92165c3"><span class="id" title="variable">σ</span></a>.<br/>
+<span class="id" title="keyword">Proof</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="var">revert</span> σ σ'. <span class="id" title="var">pcofix</span> <span class="id" title="var">CIH</span>; <span class="id" title="tactic">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="var">pinversion</span> <span class="id" title="var">H2</span>; <span class="id" title="tactic">subst</span>.<br/>
+&nbsp;&nbsp;- <span class="id" title="tactic">eapply</span> <a class="idref" href="Lvc.IL.SmallStepRelations.html#plus2_destr_nil"><span class="id" title="lemma">plus2_destr_nil</span></a> <span class="id" title="tactic">in</span> <span class="id" title="var">H1</span>; <span class="id" title="var">dcr</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">pfold</span>. <span class="id" title="tactic">econstructor</span>; <span class="id" title="tactic">eauto</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">right</span>. <span class="id" title="tactic">eapply</span> <span class="id" title="var">CIH</span>; <span class="id" title="tactic">eauto</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">eapply</span> <a class="idref" href="Lvc.Equiv.Sim.html#sim_expansion_closed"><span class="id" title="lemma">sim_expansion_closed</span></a>; <span class="id" title="tactic">eauto</span> <span class="id" title="keyword">using</span> <a class="idref" href="Lvc.IL.SmallStepRelations.html#plus2_star2"><span class="id" title="lemma">plus2_star2</span></a>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">intro</span>; <span class="id" title="tactic">eapply</span> <span class="id" title="var">H4</span>; <span class="id" title="var">dcr</span>; <span class="id" title="tactic">eexists</span>; <span class="id" title="tactic">split</span>; <span class="id" title="tactic">eauto</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">eapply</span> (<a class="idref" href="Lvc.IL.SmallStepRelations.html#star2_step"><span class="id" title="constructor">star2_step</span></a> <a class="idref" href="Lvc.IL.Events.html#EvtTau"><span class="id" title="constructor">EvtTau</span></a>); <span class="id" title="tactic">eauto</span>.<br/>
+&nbsp;&nbsp;- <span class="id" title="tactic">eapply</span> <a class="idref" href="Lvc.Equiv.Divergence.html#div_diverges"><span class="id" title="lemma">div_diverges</span></a> <span class="id" title="tactic">in</span> <span class="id" title="var">H3</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">exfalso</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">eapply</span> <a class="idref" href="Lvc.Equiv.Divergence.html#diverges_never_activated"><span class="id" title="lemma">diverges_never_activated</span></a> <span class="id" title="tactic">in</span> <span class="id" title="var">H7</span>; <span class="id" title="tactic">eauto</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">eapply</span> <a class="idref" href="Lvc.Equiv.Divergence.html#diverges_reduction_closed"><span class="id" title="lemma">diverges_reduction_closed</span></a>; <span class="id" title="tactic">eauto</span> <span class="id" title="keyword">using</span> <a class="idref" href="Lvc.IL.SmallStepRelations.html#plus2_star2"><span class="id" title="lemma">plus2_star2</span></a>.<br/>
+&nbsp;&nbsp;- <span class="id" title="var">exfalso</span>. <span class="id" title="tactic">eapply</span> <span class="id" title="var">H4</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">eauto</span>.<br/>
+&nbsp;&nbsp;- <span class="id" title="tactic">eapply</span> <a class="idref" href="Lvc.Equiv.Divergence.html#div_diverges"><span class="id" title="lemma">div_diverges</span></a> <span class="id" title="tactic">in</span> <span class="id" title="var">H3</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">exfalso</span>. <span class="id" title="tactic">eapply</span> <a class="idref" href="Lvc.Equiv.Divergence.html#diverges_never_terminates"><span class="id" title="lemma">diverges_never_terminates</span></a>; <span class="id" title="tactic">eauto</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">eapply</span> <a class="idref" href="Lvc.Equiv.Divergence.html#diverges_reduction_closed"><span class="id" title="lemma">diverges_reduction_closed</span></a>; <span class="id" title="tactic">eauto</span> <span class="id" title="keyword">using</span> <a class="idref" href="Lvc.IL.SmallStepRelations.html#plus2_star2"><span class="id" title="lemma">plus2_star2</span></a>.<br/>
+<span class="id" title="keyword">Qed</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Lemma</span> <a name="sim_complete_diverges"><span class="id" title="lemma">sim_complete_diverges</span></a> <span class="id" title="var">S</span> `{<a class="idref" href="Lvc.IL.StateType.html#StateType"><span class="id" title="class">StateType</span></a> <a class="idref" href="Lvc.Equiv.SimDivergence.html#S"><span class="id" title="variable">S</span></a>} <span class="id" title="var">S'</span> `{<a class="idref" href="Lvc.IL.StateType.html#StateType"><span class="id" title="class">StateType</span></a> <a class="idref" href="Lvc.Equiv.SimDivergence.html#S'"><span class="id" title="variable">S'</span></a>} (σ:<a class="idref" href="Lvc.Equiv.SimDivergence.html#S"><span class="id" title="variable">S</span></a>) (σ':<a class="idref" href="Lvc.Equiv.SimDivergence.html#S'"><span class="id" title="variable">S'</span></a>) <span class="id" title="var">p</span> <span class="id" title="var">r</span><br/>
+: <a class="idref" href="Lvc.Equiv.Divergence.html#diverges"><span class="id" title="inductive">diverges</span></a> <a class="idref" href="Lvc.Equiv.SimDivergence.html#3122c41ebe889f745cb9bbe1c92165c3"><span class="id" title="variable">σ</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#d43e996736952df71ebeeae74d10a287"><span class="id" title="notation">→</span></a> <a class="idref" href="Lvc.Equiv.Divergence.html#diverges"><span class="id" title="inductive">diverges</span></a> <a class="idref" href="Lvc.Equiv.SimDivergence.html#4394a2ef16b8915a5209b8b27258ea45"><span class="id" title="variable">σ'</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#d43e996736952df71ebeeae74d10a287"><span class="id" title="notation">→</span></a> <a class="idref" href="Lvc.Equiv.Sim.html#sim"><span class="id" title="definition">sim</span></a> <a class="idref" href="Lvc.Equiv.SimDivergence.html#r"><span class="id" title="variable">r</span></a> <a class="idref" href="Lvc.Equiv.SimDivergence.html#p"><span class="id" title="variable">p</span></a> <a class="idref" href="Lvc.Equiv.SimDivergence.html#3122c41ebe889f745cb9bbe1c92165c3"><span class="id" title="variable">σ</span></a> <a class="idref" href="Lvc.Equiv.SimDivergence.html#4394a2ef16b8915a5209b8b27258ea45"><span class="id" title="variable">σ'</span></a>.<br/>
+<span class="id" title="keyword">Proof</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="var">revert</span> σ σ'. <span class="id" title="var">pcofix</span> <span class="id" title="var">COH</span>; <span class="id" title="tactic">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="var">inv</span> <span class="id" title="var">H2</span>; <span class="id" title="var">inv</span> <span class="id" title="var">H3</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="var">pfold</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">econstructor</span>.<br/>
+&nbsp;&nbsp;- <span class="id" title="tactic">econstructor</span>; <span class="id" title="tactic">eauto</span>.<br/>
+&nbsp;&nbsp;- <span class="id" title="tactic">econstructor</span>; <span class="id" title="tactic">eauto</span>.<br/>
+&nbsp;&nbsp;- <span class="id" title="tactic">right</span>. <span class="id" title="tactic">eapply</span> <span class="id" title="var">COH</span>; <span class="id" title="tactic">eauto</span>.<br/>
+<span class="id" title="keyword">Qed</span>.<br/>
+</div>
+</div>
+<div id="footer">
+  Generated by <a href="http://coq.inria.fr/">coqdoc</a> and improved with <a href="https://github.com/tebbi/coqdocjs">CoqdocJS</a>
+</div>
+</div>
+</body>
+
+</html>

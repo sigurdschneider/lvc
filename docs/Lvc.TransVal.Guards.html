@@ -1,0 +1,159 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<link href="coqdoc.css" rel="stylesheet" type="text/css" />
+<link href="coqdocjs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="config.js"></script>
+<script type="text/javascript" src="coqdocjs.js"></script>
+</head>
+
+<body onload="document.getElementById('content').focus()">
+  <div id="header">
+    <span class="left">
+      <span class="modulename"> <script> document.write(document.title) </script> </span>
+    </span>
+
+    <span class="button" id="toggle-proofs"></span>
+
+    <span class="right">
+      <a href="./">Intro Page</a>
+      <a href="./indexpage.html"> Index </a>
+      <a href="./search-toc.html"> Table of Contents </a>
+    </span>
+</div>
+    <div id="content" tabindex="-1" onblur="document.getElementById('content').focus()">
+    <div id="main">
+<h1 class="libtitle">Lvc.TransVal.Guards</h1>
+
+<div class="code">
+<span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Lists.List.html#"><span class="id" title="library">List</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Arith.EqNat.html#"><span class="id" title="library">EqNat</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Bool.Bool.html#"><span class="id" title="library">Bool</span></a> <a class="idref" href="Lvc.Constr.SetOperations.html#"><span class="id" title="library">SetOperations</span></a>.<br/>
+<span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <a class="idref" href="Lvc.IL.IL.html#"><span class="id" title="library">IL</span></a> <a class="idref" href="Lvc.IL.Exp.html#"><span class="id" title="library">Exp</span></a> <a class="idref" href="Lvc.Isa.Val.html#"><span class="id" title="library">Val</span></a> <a class="idref" href="Lvc.TransVal.SMT.html#"><span class="id" title="library">SMT</span></a>.<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+Helper function to merge SMT options 
+</div>
+<div class="code">
+<span class="id" title="keyword">Definition</span> <a name="combine"><span class="id" title="definition">combine</span></a> (<span class="id" title="var">o1</span>:<a class="idref" href="Lvc.TransVal.SMT.html#smt"><span class="id" title="inductive">smt</span></a>) (<span class="id" title="var">o2</span>: <a class="idref" href="Lvc.TransVal.SMT.html#smt"><span class="id" title="inductive">smt</span></a>) :<a class="idref" href="Lvc.TransVal.SMT.html#smt"><span class="id" title="inductive">smt</span></a> :=<br/>
+&nbsp;&nbsp;&nbsp;<a class="idref" href="Lvc.Infra.Computable.html#ec22a98a9a6a017dd844768c7ba5e9bf"><span class="id" title="notation">if</span></a> <a class="idref" href="Lvc.Infra.Computable.html#ec22a98a9a6a017dd844768c7ba5e9bf"><span class="id" title="notation">[</span></a><a class="idref" href="Lvc.TransVal.Guards.html#o1"><span class="id" title="variable">o1</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#1c39bf18749e5cc609e83c0a0ba5a372"><span class="id" title="notation">=</span></a> <a class="idref" href="Lvc.TransVal.SMT.html#smtTrue"><span class="id" title="constructor">smtTrue</span></a><a class="idref" href="Lvc.Infra.Computable.html#ec22a98a9a6a017dd844768c7ba5e9bf"><span class="id" title="notation">]</span></a> <a class="idref" href="Lvc.Infra.Computable.html#ec22a98a9a6a017dd844768c7ba5e9bf"><span class="id" title="notation">then</span></a> <a class="idref" href="Lvc.TransVal.Guards.html#o2"><span class="id" title="variable">o2</span></a> <a class="idref" href="Lvc.Infra.Computable.html#ec22a98a9a6a017dd844768c7ba5e9bf"><span class="id" title="notation">else</span></a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a class="idref" href="Lvc.Infra.Computable.html#ec22a98a9a6a017dd844768c7ba5e9bf"><span class="id" title="notation">if</span></a> <a class="idref" href="Lvc.Infra.Computable.html#ec22a98a9a6a017dd844768c7ba5e9bf"><span class="id" title="notation">[</span></a><a class="idref" href="Lvc.TransVal.Guards.html#o2"><span class="id" title="variable">o2</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#1c39bf18749e5cc609e83c0a0ba5a372"><span class="id" title="notation">=</span></a> <a class="idref" href="Lvc.TransVal.SMT.html#smtTrue"><span class="id" title="constructor">smtTrue</span></a><a class="idref" href="Lvc.Infra.Computable.html#ec22a98a9a6a017dd844768c7ba5e9bf"><span class="id" title="notation">]</span></a> <a class="idref" href="Lvc.Infra.Computable.html#ec22a98a9a6a017dd844768c7ba5e9bf"><span class="id" title="notation">then</span></a> <a class="idref" href="Lvc.TransVal.Guards.html#o1"><span class="id" title="variable">o1</span></a> <a class="idref" href="Lvc.Infra.Computable.html#ec22a98a9a6a017dd844768c7ba5e9bf"><span class="id" title="notation">else</span></a> <a class="idref" href="Lvc.TransVal.SMT.html#smtAnd"><span class="id" title="constructor">smtAnd</span></a> <a class="idref" href="Lvc.TransVal.Guards.html#o1"><span class="id" title="variable">o1</span></a> <a class="idref" href="Lvc.TransVal.Guards.html#o2"><span class="id" title="variable">o2</span></a>.<br/>
+
+<br/>
+<span class="id" title="keyword">Lemma</span> <a name="models_combine"><span class="id" title="lemma">models_combine</span></a> <span class="id" title="var">F</span> <span class="id" title="var">E</span> <span class="id" title="var">a</span> <span class="id" title="var">b</span><br/>
+: <a class="idref" href="Lvc.TransVal.SMT.html#models"><span class="id" title="definition">models</span></a> <a class="idref" href="Lvc.TransVal.Guards.html#F"><span class="id" title="variable">F</span></a> <a class="idref" href="Lvc.TransVal.Guards.html#E"><span class="id" title="variable">E</span></a> (<a class="idref" href="Lvc.TransVal.Guards.html#combine"><span class="id" title="definition">combine</span></a> <a class="idref" href="Lvc.TransVal.Guards.html#a"><span class="id" title="variable">a</span></a> <a class="idref" href="Lvc.TransVal.Guards.html#b"><span class="id" title="variable">b</span></a>) <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#df1ced36fc33ce188051218bca314374"><span class="id" title="notation">↔</span></a> <a class="idref" href="Lvc.TransVal.SMT.html#models"><span class="id" title="definition">models</span></a> <a class="idref" href="Lvc.TransVal.Guards.html#F"><span class="id" title="variable">F</span></a> <a class="idref" href="Lvc.TransVal.Guards.html#E"><span class="id" title="variable">E</span></a> (<a class="idref" href="Lvc.TransVal.SMT.html#smtAnd"><span class="id" title="constructor">smtAnd</span></a> <a class="idref" href="Lvc.TransVal.Guards.html#a"><span class="id" title="variable">a</span></a> <a class="idref" href="Lvc.TransVal.Guards.html#b"><span class="id" title="variable">b</span></a>).<br/>
+
+<br/>
+<span class="id" title="keyword">Proof</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">unfold</span> <a class="idref" href="Lvc.TransVal.Guards.html#combine"><span class="id" title="definition">combine</span></a>. <span class="id" title="tactic">repeat</span> (<span class="id" title="var">cases</span>; <span class="id" title="tactic">subst</span>); <span class="id" title="tactic">simpl</span>; <span class="id" title="tactic">intuition</span>.<br/>
+<span class="id" title="keyword">Qed</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Lemma</span> <a name="models_combine_vars"><span class="id" title="lemma">models_combine_vars</span></a> <span class="id" title="var">a</span> <span class="id" title="var">b</span>:<br/>
+&nbsp;&nbsp;<a class="idref" href="Lvc.TransVal.SMT.html#freeVars"><span class="id" title="definition">freeVars</span></a> (<a class="idref" href="Lvc.TransVal.Guards.html#combine"><span class="id" title="definition">combine</span></a> <a class="idref" href="Lvc.TransVal.Guards.html#a"><span class="id" title="variable">a</span></a> <a class="idref" href="Lvc.TransVal.Guards.html#b"><span class="id" title="variable">b</span></a>) <a class="idref" href="https://sigurdschneider.github.com/lvc/doc-cont/Containers.SetInterface.html#2499d7a52e1fca683823149ce53018f0"><span class="id" title="notation">[=]</span></a> <a class="idref" href="Lvc.TransVal.SMT.html#freeVars"><span class="id" title="definition">freeVars</span></a> (<a class="idref" href="Lvc.TransVal.SMT.html#smtAnd"><span class="id" title="constructor">smtAnd</span></a> <a class="idref" href="Lvc.TransVal.Guards.html#a"><span class="id" title="variable">a</span></a> <a class="idref" href="Lvc.TransVal.Guards.html#b"><span class="id" title="variable">b</span></a>).<br/>
+
+<br/>
+<span class="id" title="keyword">Proof</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">unfold</span> <a class="idref" href="Lvc.TransVal.Guards.html#combine"><span class="id" title="definition">combine</span></a>. <span class="id" title="tactic">repeat</span>(<span class="id" title="var">cases</span>; <span class="id" title="tactic">subst</span>); <span class="id" title="tactic">simpl</span>; <span class="id" title="var">cset_tac</span>.<br/>
+<span class="id" title="keyword">Qed</span>.<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+Function to generate the guard expression for one expression 
+</div>
+<div class="code">
+<span class="id" title="keyword">Fixpoint</span> <a name="undef"><span class="id" title="definition">undef</span></a> <span class="id" title="var">e</span> :=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">match</span> <a class="idref" href="Lvc.TransVal.Guards.html#e"><span class="id" title="variable">e</span></a> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;| <a class="idref" href="Lvc.Isa.Ops.html#BinOp"><span class="id" title="constructor">BinOp</span></a> <span class="id" title="var">op</span> <span class="id" title="var">a</span> <span class="id" title="var">b</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;⇒ <a class="idref" href="Lvc.TransVal.Guards.html#combine"><span class="id" title="definition">combine</span></a> (<a class="idref" href="Lvc.TransVal.Guards.html#combine"><span class="id" title="definition">combine</span></a> (<a class="idref" href="Lvc.TransVal.Guards.html#undef"><span class="id" title="definition">undef</span></a> <span class="id" title="var">a</span>) (<a class="idref" href="Lvc.TransVal.Guards.html#undef"><span class="id" title="definition">undef</span></a> <span class="id" title="var">b</span>))<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<a class="idref" href="Lvc.Infra.Computable.html#ec22a98a9a6a017dd844768c7ba5e9bf"><span class="id" title="notation">if</span></a> <a class="idref" href="Lvc.Infra.Computable.html#ec22a98a9a6a017dd844768c7ba5e9bf"><span class="id" title="notation">[</span></a><span class="id" title="var">op</span> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#1c39bf18749e5cc609e83c0a0ba5a372"><span class="id" title="notation">=</span></a> <a class="idref" href="Lvc.Isa.Val.html#BinOpDiv"><span class="id" title="constructor">BinOpDiv</span></a><a class="idref" href="Lvc.Infra.Computable.html#ec22a98a9a6a017dd844768c7ba5e9bf"><span class="id" title="notation">]</span></a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a class="idref" href="Lvc.Infra.Computable.html#ec22a98a9a6a017dd844768c7ba5e9bf"><span class="id" title="notation">then</span></a> <a class="idref" href="Lvc.TransVal.SMT.html#smtAnd"><span class="id" title="constructor">smtAnd</span></a> (<a class="idref" href="Lvc.TransVal.SMT.html#smtNeg"><span class="id" title="constructor">smtNeg</span></a> (<a class="idref" href="Lvc.TransVal.SMT.html#constr"><span class="id" title="constructor">constr</span></a> <span class="id" title="var">b</span> (<a class="idref" href="Lvc.Isa.Ops.html#Con"><span class="id" title="constructor">Con</span></a> <span class="id" title="definition">Integers.Int.zero</span>)))<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<a class="idref" href="Lvc.TransVal.SMT.html#smtNeg"><span class="id" title="constructor">smtNeg</span></a> (<a class="idref" href="Lvc.TransVal.SMT.html#smtAnd"><span class="id" title="constructor">smtAnd</span></a> (<a class="idref" href="Lvc.TransVal.SMT.html#constr"><span class="id" title="constructor">constr</span></a> <span class="id" title="var">a</span> (<a class="idref" href="Lvc.Isa.Ops.html#Con"><span class="id" title="constructor">Con</span></a> (<span class="id" title="definition">Integers.Int.repr</span> <span class="id" title="definition">Integers.Int.min_signed</span>)))<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<a class="idref" href="Lvc.TransVal.SMT.html#constr"><span class="id" title="constructor">constr</span></a> <span class="id" title="var">b</span> (<a class="idref" href="Lvc.Isa.Ops.html#Con"><span class="id" title="constructor">Con</span></a> <span class="id" title="definition">Integers.Int.mone</span>))))<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a class="idref" href="Lvc.Infra.Computable.html#ec22a98a9a6a017dd844768c7ba5e9bf"><span class="id" title="notation">else</span></a> <a class="idref" href="Lvc.TransVal.SMT.html#smtTrue"><span class="id" title="constructor">smtTrue</span></a>)<br/>
+&nbsp;&nbsp;| <a class="idref" href="Lvc.Isa.Ops.html#UnOp"><span class="id" title="constructor">UnOp</span></a> <span class="id" title="var">n</span> <span class="id" title="var">a</span> ⇒ <a class="idref" href="Lvc.TransVal.Guards.html#undef"><span class="id" title="definition">undef</span></a> <span class="id" title="var">a</span><br/>
+&nbsp;&nbsp;| <a class="idref" href="Lvc.Isa.Ops.html#Con"><span class="id" title="constructor">Con</span></a> <span class="id" title="var">v</span> ⇒ <a class="idref" href="Lvc.TransVal.SMT.html#smtTrue"><span class="id" title="constructor">smtTrue</span></a><br/>
+&nbsp;&nbsp;| <a class="idref" href="Lvc.Isa.Ops.html#Var"><span class="id" title="constructor">Var</span></a> <span class="id" title="var">v</span> ⇒ <a class="idref" href="Lvc.TransVal.SMT.html#smtTrue"><span class="id" title="constructor">smtTrue</span></a><br/>
+&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Fixpoint</span> <a name="undefLift"><span class="id" title="definition">undefLift</span></a> (<span class="id" title="var">el</span>: <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Datatypes.html#list"><span class="id" title="inductive">list</span></a> <a class="idref" href="Lvc.Isa.Ops.html#op"><span class="id" title="inductive">op</span></a>) :=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">match</span> <a class="idref" href="Lvc.TransVal.Guards.html#el"><span class="id" title="variable">el</span></a> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;| <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Datatypes.html#nil"><span class="id" title="constructor">nil</span></a> ⇒ <a class="idref" href="Lvc.TransVal.SMT.html#smtTrue"><span class="id" title="constructor">smtTrue</span></a><br/>
+&nbsp;&nbsp;| <span class="id" title="var">e</span><a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Datatypes.html#0a8150c3c4df34d205c5ed9a427e2ed5"><span class="id" title="notation">::</span></a><span class="id" title="var">el'</span> ⇒ <a class="idref" href="Lvc.TransVal.Guards.html#combine"><span class="id" title="definition">combine</span></a> (<a class="idref" href="Lvc.TransVal.Guards.html#undef"><span class="id" title="definition">undef</span></a> <span class="id" title="var">e</span>) (<a class="idref" href="Lvc.TransVal.Guards.html#undefLift"><span class="id" title="definition">undefLift</span></a> <span class="id" title="var">el'</span>)<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Definition</span> <a name="guardGen"><span class="id" title="definition">guardGen</span></a> <span class="id" title="var">s</span> <span class="id" title="var">p</span> <span class="id" title="var">cont</span> :=<br/>
+&nbsp;&nbsp;<a class="idref" href="Lvc.Infra.Computable.html#ec22a98a9a6a017dd844768c7ba5e9bf"><span class="id" title="notation">if</span></a> <a class="idref" href="Lvc.Infra.Computable.html#ec22a98a9a6a017dd844768c7ba5e9bf"><span class="id" title="notation">[</span></a><a class="idref" href="Lvc.TransVal.Guards.html#s"><span class="id" title="variable">s</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#1c39bf18749e5cc609e83c0a0ba5a372"><span class="id" title="notation">=</span></a> <a class="idref" href="Lvc.TransVal.SMT.html#smtTrue"><span class="id" title="constructor">smtTrue</span></a><a class="idref" href="Lvc.Infra.Computable.html#ec22a98a9a6a017dd844768c7ba5e9bf"><span class="id" title="notation">]</span></a> <a class="idref" href="Lvc.Infra.Computable.html#ec22a98a9a6a017dd844768c7ba5e9bf"><span class="id" title="notation">then</span></a> <a class="idref" href="Lvc.TransVal.Guards.html#cont"><span class="id" title="variable">cont</span></a> <a class="idref" href="Lvc.Infra.Computable.html#ec22a98a9a6a017dd844768c7ba5e9bf"><span class="id" title="notation">else</span></a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">match</span> <a class="idref" href="Lvc.TransVal.Guards.html#p"><span class="id" title="variable">p</span></a> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;| <a class="idref" href="Lvc.TransVal.SMT.html#source"><span class="id" title="constructor">source</span></a> ⇒ <a class="idref" href="Lvc.TransVal.SMT.html#smtAnd"><span class="id" title="constructor">smtAnd</span></a> <a class="idref" href="Lvc.TransVal.Guards.html#s"><span class="id" title="variable">s</span></a> <a class="idref" href="Lvc.TransVal.Guards.html#cont"><span class="id" title="variable">cont</span></a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;| <a class="idref" href="Lvc.TransVal.SMT.html#target"><span class="id" title="constructor">target</span></a> ⇒ <a class="idref" href="Lvc.TransVal.SMT.html#smtImp"><span class="id" title="constructor">smtImp</span></a> <a class="idref" href="Lvc.TransVal.Guards.html#s"><span class="id" title="variable">s</span></a> <a class="idref" href="Lvc.TransVal.Guards.html#cont"><span class="id" title="variable">cont</span></a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Lemma</span> <a name="freeVars_guardGen"><span class="id" title="lemma">freeVars_guardGen</span></a> <span class="id" title="var">s</span> <span class="id" title="var">p</span> <span class="id" title="var">t</span><br/>
+&nbsp;&nbsp;: <a class="idref" href="Lvc.TransVal.SMT.html#freeVars"><span class="id" title="definition">freeVars</span></a> (<a class="idref" href="Lvc.TransVal.Guards.html#guardGen"><span class="id" title="definition">guardGen</span></a> <a class="idref" href="Lvc.TransVal.Guards.html#s"><span class="id" title="variable">s</span></a> <a class="idref" href="Lvc.TransVal.Guards.html#p"><span class="id" title="variable">p</span></a> <a class="idref" href="Lvc.TransVal.Guards.html#t"><span class="id" title="variable">t</span></a>) <a class="idref" href="Lvc.Constr.CSetNotation.html#13e44eb3e71dc2ab3064158e1a971aba"><span class="id" title="notation">⊆</span></a> <a class="idref" href="Lvc.TransVal.SMT.html#freeVars"><span class="id" title="definition">freeVars</span></a> <a class="idref" href="Lvc.TransVal.Guards.html#s"><span class="id" title="variable">s</span></a> <a class="idref" href="Lvc.Constr.CSetNotation.html#03a8a39b3b9924c15eee8da338afbea7"><span class="id" title="notation">∪</span></a> <a class="idref" href="Lvc.TransVal.SMT.html#freeVars"><span class="id" title="definition">freeVars</span></a> <a class="idref" href="Lvc.TransVal.Guards.html#t"><span class="id" title="variable">t</span></a>.<br/>
+<span class="id" title="keyword">Proof</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">unfold</span> <a class="idref" href="Lvc.TransVal.Guards.html#guardGen"><span class="id" title="definition">guardGen</span></a>; <span class="id" title="tactic">repeat</span> <span class="id" title="var">cases</span>; <span class="id" title="tactic">eauto</span> <span class="id" title="keyword">with</span> <span class="id" title="var">cset</span>.<br/>
+<span class="id" title="keyword">Qed</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Lemma</span> <a name="models_guardGen_source"><span class="id" title="lemma">models_guardGen_source</span></a> <span class="id" title="var">F</span> <span class="id" title="var">E</span> <span class="id" title="var">s</span> <span class="id" title="var">cont</span><br/>
+: <a class="idref" href="Lvc.TransVal.SMT.html#models"><span class="id" title="definition">models</span></a> <a class="idref" href="Lvc.TransVal.Guards.html#F"><span class="id" title="variable">F</span></a> <a class="idref" href="Lvc.TransVal.Guards.html#E"><span class="id" title="variable">E</span></a> (<a class="idref" href="Lvc.TransVal.Guards.html#guardGen"><span class="id" title="definition">guardGen</span></a> <a class="idref" href="Lvc.TransVal.Guards.html#s"><span class="id" title="variable">s</span></a> <a class="idref" href="Lvc.TransVal.SMT.html#source"><span class="id" title="constructor">source</span></a> <a class="idref" href="Lvc.TransVal.Guards.html#cont"><span class="id" title="variable">cont</span></a>) <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#df1ced36fc33ce188051218bca314374"><span class="id" title="notation">↔</span></a> <a class="idref" href="Lvc.TransVal.SMT.html#models"><span class="id" title="definition">models</span></a> <a class="idref" href="Lvc.TransVal.Guards.html#F"><span class="id" title="variable">F</span></a> <a class="idref" href="Lvc.TransVal.Guards.html#E"><span class="id" title="variable">E</span></a> (<a class="idref" href="Lvc.TransVal.SMT.html#smtAnd"><span class="id" title="constructor">smtAnd</span></a> <a class="idref" href="Lvc.TransVal.Guards.html#s"><span class="id" title="variable">s</span></a> <a class="idref" href="Lvc.TransVal.Guards.html#cont"><span class="id" title="variable">cont</span></a>).<br/>
+
+<br/>
+<span class="id" title="keyword">Proof</span>.<br/>
+&nbsp;<span class="id" title="tactic">unfold</span> <a class="idref" href="Lvc.TransVal.Guards.html#guardGen"><span class="id" title="definition">guardGen</span></a>; <span class="id" title="var">cases</span>; <span class="id" title="tactic">subst</span>; <span class="id" title="tactic">simpl</span>; <span class="id" title="tactic">intuition</span>.<br/>
+<span class="id" title="keyword">Qed</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Lemma</span> <a name="models_guardGen_target"><span class="id" title="lemma">models_guardGen_target</span></a> <span class="id" title="var">F</span> <span class="id" title="var">E</span> <span class="id" title="var">s</span> <span class="id" title="var">cont</span><br/>
+: <a class="idref" href="Lvc.TransVal.SMT.html#models"><span class="id" title="definition">models</span></a> <a class="idref" href="Lvc.TransVal.Guards.html#F"><span class="id" title="variable">F</span></a> <a class="idref" href="Lvc.TransVal.Guards.html#E"><span class="id" title="variable">E</span></a> (<a class="idref" href="Lvc.TransVal.Guards.html#guardGen"><span class="id" title="definition">guardGen</span></a> <a class="idref" href="Lvc.TransVal.Guards.html#s"><span class="id" title="variable">s</span></a> <a class="idref" href="Lvc.TransVal.SMT.html#target"><span class="id" title="constructor">target</span></a> <a class="idref" href="Lvc.TransVal.Guards.html#cont"><span class="id" title="variable">cont</span></a>) <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#df1ced36fc33ce188051218bca314374"><span class="id" title="notation">↔</span></a> <a class="idref" href="Lvc.TransVal.SMT.html#models"><span class="id" title="definition">models</span></a> <a class="idref" href="Lvc.TransVal.Guards.html#F"><span class="id" title="variable">F</span></a> <a class="idref" href="Lvc.TransVal.Guards.html#E"><span class="id" title="variable">E</span></a> (<a class="idref" href="Lvc.TransVal.SMT.html#smtImp"><span class="id" title="constructor">smtImp</span></a> <a class="idref" href="Lvc.TransVal.Guards.html#s"><span class="id" title="variable">s</span></a> <a class="idref" href="Lvc.TransVal.Guards.html#cont"><span class="id" title="variable">cont</span></a>).<br/>
+<span class="id" title="keyword">Proof</span>.<br/>
+&nbsp;<span class="id" title="tactic">unfold</span> <a class="idref" href="Lvc.TransVal.Guards.html#guardGen"><span class="id" title="definition">guardGen</span></a>; <span class="id" title="var">cases</span>; <span class="id" title="tactic">subst</span>; <span class="id" title="tactic">simpl</span>; <span class="id" title="tactic">intuition</span>.<br/>
+<span class="id" title="keyword">Qed</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Lemma</span> <a name="freeVars_undef"><span class="id" title="lemma">freeVars_undef</span></a> <span class="id" title="var">e</span><br/>
+&nbsp;&nbsp;: <a class="idref" href="Lvc.TransVal.SMT.html#freeVars"><span class="id" title="definition">freeVars</span></a> (<a class="idref" href="Lvc.TransVal.Guards.html#undef"><span class="id" title="definition">undef</span></a> <a class="idref" href="Lvc.TransVal.Guards.html#e"><span class="id" title="variable">e</span></a>) <a class="idref" href="Lvc.Constr.CSetNotation.html#13e44eb3e71dc2ab3064158e1a971aba"><span class="id" title="notation">⊆</span></a> <a class="idref" href="Lvc.Isa.Ops.html#freeVars"><span class="id" title="definition">Ops.freeVars</span></a> <a class="idref" href="Lvc.TransVal.Guards.html#e"><span class="id" title="variable">e</span></a>.<br/>
+<span class="id" title="keyword">Proof</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">intros</span>. <span class="id" title="var">general</span> <span class="id" title="tactic">induction</span> <span class="id" title="var">e</span>; <span class="id" title="tactic">simpl</span> <span class="id" title="tactic">in</span> × |- *; <span class="id" title="tactic">eauto</span> <span class="id" title="keyword">with</span> <span class="id" title="var">cset</span>.<br/>
+&nbsp;&nbsp;- <span class="id" title="tactic">unfold</span> <a class="idref" href="Lvc.TransVal.Guards.html#combine"><span class="id" title="definition">combine</span></a> <span class="id" title="tactic">in</span> ×.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">repeat</span> <span class="id" title="var">cases</span>; <span class="id" title="tactic">simpl</span>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">only</span> 1: <span class="id" title="tactic">repeat</span> <span class="id" title="var">cases</span> <span class="id" title="tactic">in</span> <span class="id" title="var">COND</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;+ <span class="id" title="var">cset_tac</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;+ <span class="id" title="var">cset_tac</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;+ <span class="id" title="var">cset_tac</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;+ <span class="id" title="var">cset_tac</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;+ <span class="id" title="var">cset_tac</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;+ <span class="id" title="var">cset_tac</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;+ <span class="id" title="var">cset_tac</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;+ <span class="id" title="var">cset_tac</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;+ <span class="id" title="var">cset_tac</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;+ <span class="id" title="var">cset_tac</span>.<br/>
+<span class="id" title="keyword">Qed</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Lemma</span> <a name="freeVars_undefLift"><span class="id" title="lemma">freeVars_undefLift</span></a> <span class="id" title="var">el</span><br/>
+&nbsp;&nbsp;: <a class="idref" href="Lvc.TransVal.SMT.html#freeVars"><span class="id" title="definition">freeVars</span></a> (<a class="idref" href="Lvc.TransVal.Guards.html#undefLift"><span class="id" title="definition">undefLift</span></a> <a class="idref" href="Lvc.TransVal.Guards.html#el"><span class="id" title="variable">el</span></a>) <a class="idref" href="Lvc.Constr.CSetNotation.html#13e44eb3e71dc2ab3064158e1a971aba"><span class="id" title="notation">⊆</span></a> <a class="idref" href="Lvc.Constr.CSetGet.html#402369b465e27f3753ace043d4ac2fcb"><span class="id" title="notation">list_union</span></a> <a class="idref" href="Lvc.Constr.CSetGet.html#402369b465e27f3753ace043d4ac2fcb"><span class="id" title="notation">(</span></a><a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Lists.List.html#map"><span class="id" title="definition">List.map</span></a> <a class="idref" href="Lvc.Isa.Ops.html#freeVars"><span class="id" title="definition">Ops.freeVars</span></a> <a class="idref" href="Lvc.TransVal.Guards.html#el"><span class="id" title="variable">el</span></a><a class="idref" href="Lvc.Constr.CSetGet.html#402369b465e27f3753ace043d4ac2fcb"><span class="id" title="notation">)</span></a>.<br/>
+<span class="id" title="keyword">Proof</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="var">general</span> <span class="id" title="tactic">induction</span> <span class="id" title="var">el</span>; <span class="id" title="tactic">simpl</span> <span class="id" title="tactic">in</span> × |- *; <span class="id" title="tactic">eauto</span>.<br/>
+&nbsp;&nbsp;- <span class="id" title="tactic">rewrite</span> <a class="idref" href="Lvc.Constr.CSetGet.html#list_union_start_swap"><span class="id" title="lemma">list_union_start_swap</span></a>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">unfold</span> <a class="idref" href="Lvc.TransVal.Guards.html#combine"><span class="id" title="definition">combine</span></a>; <span class="id" title="tactic">repeat</span> <span class="id" title="var">cases</span>; <span class="id" title="tactic">simpl</span>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">try</span> <span class="id" title="tactic">rewrite</span> <span class="id" title="var">IHel</span>; <span class="id" title="tactic">try</span> <span class="id" title="tactic">rewrite</span> <a class="idref" href="Lvc.TransVal.Guards.html#freeVars_undef"><span class="id" title="lemma">freeVars_undef</span></a>; <span class="id" title="tactic">eauto</span> <span class="id" title="keyword">with</span> <span class="id" title="var">cset</span>.<br/>
+<span class="id" title="keyword">Qed</span>.<br/>
+</div>
+</div>
+<div id="footer">
+  Generated by <a href="http://coq.inria.fr/">coqdoc</a> and improved with <a href="https://github.com/tebbi/coqdocjs">CoqdocJS</a>
+</div>
+</div>
+</body>
+
+</html>

@@ -1,0 +1,147 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<link href="coqdoc.css" rel="stylesheet" type="text/css" />
+<link href="coqdocjs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="config.js"></script>
+<script type="text/javascript" src="coqdocjs.js"></script>
+</head>
+
+<body onload="document.getElementById('content').focus()">
+  <div id="header">
+    <span class="left">
+      <span class="modulename"> <script> document.write(document.title) </script> </span>
+    </span>
+
+    <span class="button" id="toggle-proofs"></span>
+
+    <span class="right">
+      <a href="./">Intro Page</a>
+      <a href="./indexpage.html"> Index </a>
+      <a href="./search-toc.html"> Table of Contents </a>
+    </span>
+</div>
+    <div id="content" tabindex="-1" onblur="document.getElementById('content').focus()">
+    <div id="main">
+<h1 class="libtitle">Lvc.Alpha.RenameApart_Partition</h1>
+
+<div class="code">
+<span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <a class="idref" href="Lvc.Constr.CSet.html#"><span class="id" title="library">CSet</span></a> <a class="idref" href="Lvc.Infra.Util.html#"><span class="id" title="library">Util</span></a> <a class="idref" href="Lvc.Constr.Map.html#"><span class="id" title="library">Map</span></a> <a class="idref" href="Lvc.Constr.SetOperations.html#"><span class="id" title="library">SetOperations</span></a>.<br/>
+<span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <a class="idref" href="Lvc.IL.Envs.html#"><span class="id" title="library">Envs</span></a> <a class="idref" href="Lvc.IL.IL.html#"><span class="id" title="library">IL</span></a> <a class="idref" href="Lvc.IL.Annotation.html#"><span class="id" title="library">Annotation</span></a> <a class="idref" href="Lvc.Infra.OptionR.html#"><span class="id" title="library">OptionR</span></a>.<br/>
+<span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <a class="idref" href="Lvc.Liveness.Liveness.html#"><span class="id" title="library">Liveness.Liveness</span></a> <a class="idref" href="Lvc.Coherence.Restrict.html#"><span class="id" title="library">Restrict</span></a> <a class="idref" href="Lvc.Alpha.RenamedApart.html#"><span class="id" title="library">RenamedApart</span></a> <a class="idref" href="Lvc.Alpha.RenameApart_Liveness.html#"><span class="id" title="library">RenameApart_Liveness</span></a>.<br/>
+<span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <a class="idref" href="Lvc.IL.LabelsDefined.html#"><span class="id" title="library">LabelsDefined</span></a> <a class="idref" href="Lvc.Constr.PairwiseDisjoint.html#"><span class="id" title="library">PairwiseDisjoint</span></a> <a class="idref" href="Lvc.IL.AppExpFree.html#"><span class="id" title="library">AppExpFree</span></a>.<br/>
+<span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <a class="idref" href="Lvc.Infra.InfiniteSubset.html#"><span class="id" title="library">InfiniteSubset</span></a> <a class="idref" href="Lvc.Infra.InfinitePartition.html#"><span class="id" title="library">InfinitePartition</span></a> <a class="idref" href="Lvc.Infra.MapSep.html#"><span class="id" title="library">MapSep</span></a> <a class="idref" href="Lvc.IL.AnnP.html#"><span class="id" title="library">AnnP</span></a> <a class="idref" href="Lvc.Infra.FreshGen.html#"><span class="id" title="library">FreshGen</span></a> <a class="idref" href="Lvc.Infra.StableFresh.html#"><span class="id" title="library">StableFresh</span></a>.<br/>
+
+<br/>
+<span class="id" title="keyword">Set Implicit Arguments</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Lemma</span> <a name="bnd_update_list"><span class="id" title="lemma">bnd_update_list</span></a> <span class="id" title="var">p</span> <span class="id" title="var">ϱ</span> <span class="id" title="var">k</span> <span class="id" title="var">lv</span> <span class="id" title="var">Z</span> <span class="id" title="var">G</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">BDN</span>:<a class="idref" href="Lvc.Infra.MapSep.html#part_bounded"><span class="id" title="definition">part_bounded</span></a> <a class="idref" href="Lvc.IL.Var.html#a8af51c5c54b0cdb656661aee5be6c5c"><span class="id" title="notation">var</span></a> (<a class="idref" href="Lvc.Infra.InfinitePartition.html#part_1"><span class="id" title="projection">part_1</span></a> <a class="idref" href="Lvc.Alpha.RenameApart_Partition.html#p"><span class="id" title="variable">p</span></a>) <a class="idref" href="Lvc.Alpha.RenameApart_Partition.html#k"><span class="id" title="variable">k</span></a> <a class="idref" href="Lvc.Alpha.RenameApart_Partition.html#lv"><span class="id" title="variable">lv</span></a>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">incl</span>: <a class="idref" href="https://sigurdschneider.github.com/lvc/doc-cont/Containers.SetProperties.html#of_list"><span class="id" title="definition">of_list</span></a> <a class="idref" href="Lvc.Alpha.RenameApart_Partition.html#Z"><span class="id" title="variable">Z</span></a> <a class="idref" href="Lvc.Constr.CSetNotation.html#13e44eb3e71dc2ab3064158e1a971aba"><span class="id" title="notation">⊆</span></a> <a class="idref" href="Lvc.Alpha.RenameApart_Partition.html#lv"><span class="id" title="variable">lv</span></a>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">SEP</span>:<a class="idref" href="Lvc.Infra.MapSep.html#sep"><span class="id" title="definition">sep</span></a> <a class="idref" href="Lvc.IL.Var.html#a8af51c5c54b0cdb656661aee5be6c5c"><span class="id" title="notation">var</span></a> <a class="idref" href="Lvc.Alpha.RenameApart_Partition.html#p"><span class="id" title="variable">p</span></a> (<a class="idref" href="Lvc.Alpha.RenameApart_Partition.html#lv"><span class="id" title="variable">lv</span></a> <a class="idref" href="https://sigurdschneider.github.com/lvc/doc-cont/Containers.SetInterface.html#b1f6afc653707171391a85756bee5608"><span class="id" title="notation">\</span></a> <a class="idref" href="https://sigurdschneider.github.com/lvc/doc-cont/Containers.SetProperties.html#of_list"><span class="id" title="definition">of_list</span></a> <a class="idref" href="Lvc.Alpha.RenameApart_Partition.html#Z"><span class="id" title="variable">Z</span></a>) <a class="idref" href="Lvc.Alpha.RenameApart_Partition.html#b263f8fc75bb2c408d782c0edfd76678"><span class="id" title="variable">ϱ</span></a>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">incl2</span> : <a class="idref" href="https://sigurdschneider.github.com/lvc/doc-cont/Containers.SetConstructs.html#map"><span class="id" title="definition">map</span></a> <a class="idref" href="Lvc.Alpha.RenameApart_Partition.html#b263f8fc75bb2c408d782c0edfd76678"><span class="id" title="variable">ϱ</span></a> (<a class="idref" href="Lvc.Alpha.RenameApart_Partition.html#lv"><span class="id" title="variable">lv</span></a> <a class="idref" href="https://sigurdschneider.github.com/lvc/doc-cont/Containers.SetInterface.html#b1f6afc653707171391a85756bee5608"><span class="id" title="notation">\</span></a> <a class="idref" href="https://sigurdschneider.github.com/lvc/doc-cont/Containers.SetProperties.html#of_list"><span class="id" title="definition">of_list</span></a> <a class="idref" href="Lvc.Alpha.RenameApart_Partition.html#Z"><span class="id" title="variable">Z</span></a>) <a class="idref" href="Lvc.Constr.CSetNotation.html#13e44eb3e71dc2ab3064158e1a971aba"><span class="id" title="notation">⊆</span></a> <a class="idref" href="Lvc.Alpha.RenameApart_Partition.html#G"><span class="id" title="variable">G</span></a>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">UNIQ</span>:<a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Lists.SetoidList.html#NoDupA"><span class="id" title="inductive">NoDupA</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#eq"><span class="id" title="inductive">eq</span></a> <a class="idref" href="Lvc.Alpha.RenameApart_Partition.html#Z"><span class="id" title="variable">Z</span></a>)<br/>
+&nbsp;&nbsp;: <a class="idref" href="Lvc.Infra.MapSep.html#part_bounded"><span class="id" title="definition">part_bounded</span></a> <a class="idref" href="Lvc.IL.Var.html#a8af51c5c54b0cdb656661aee5be6c5c"><span class="id" title="notation">var</span></a> (<a class="idref" href="Lvc.Infra.InfinitePartition.html#part_1"><span class="id" title="projection">part_1</span></a> <a class="idref" href="Lvc.Alpha.RenameApart_Partition.html#p"><span class="id" title="variable">p</span></a>) <a class="idref" href="Lvc.Alpha.RenameApart_Partition.html#k"><span class="id" title="variable">k</span></a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<a class="idref" href="Lvc.Constr.MapLookup.html#lookup_set"><span class="id" title="definition">lookup_set</span></a> <a class="idref" href="Lvc.Alpha.RenameApart_Partition.html#b263f8fc75bb2c408d782c0edfd76678"><span class="id" title="variable">ϱ</span></a> (<a class="idref" href="Lvc.Alpha.RenameApart_Partition.html#lv"><span class="id" title="variable">lv</span></a> <a class="idref" href="https://sigurdschneider.github.com/lvc/doc-cont/Containers.SetInterface.html#b1f6afc653707171391a85756bee5608"><span class="id" title="notation">\</span></a> <a class="idref" href="https://sigurdschneider.github.com/lvc/doc-cont/Containers.SetProperties.html#of_list"><span class="id" title="definition">of_list</span></a> <a class="idref" href="Lvc.Alpha.RenameApart_Partition.html#Z"><span class="id" title="variable">Z</span></a>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a class="idref" href="Lvc.Constr.CSetNotation.html#03a8a39b3b9924c15eee8da338afbea7"><span class="id" title="notation">∪</span></a> <a class="idref" href="https://sigurdschneider.github.com/lvc/doc-cont/Containers.SetProperties.html#of_list"><span class="id" title="definition">of_list</span></a> (<a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Datatypes.html#fst"><span class="id" title="definition">fst</span></a> (<a class="idref" href="Lvc.Infra.StableFresh.html#fresh_list_stable"><span class="id" title="definition">fresh_list_stable</span></a> (<a class="idref" href="Lvc.Infra.InfinitePartition.html#stable_fresh_part"><span class="id" title="definition">stable_fresh_part</span></a> <a class="idref" href="Lvc.Alpha.RenameApart_Partition.html#p"><span class="id" title="variable">p</span></a>) <a class="idref" href="Lvc.Alpha.RenameApart_Partition.html#G"><span class="id" title="variable">G</span></a> <a class="idref" href="Lvc.Alpha.RenameApart_Partition.html#Z"><span class="id" title="variable">Z</span></a>))).<br/>
+<span class="id" title="keyword">Proof</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">unfold</span> <a class="idref" href="Lvc.Infra.MapSep.html#part_bounded"><span class="id" title="definition">part_bounded</span></a>, <a class="idref" href="Lvc.Constr.MapLookup.html#lookup_set"><span class="id" title="definition">lookup_set</span></a> <span class="id" title="tactic">in</span> ×.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">rewrite</span> <a class="idref" href="Lvc.Constr.CSet.html#filter_union"><span class="id" title="lemma">filter_union</span></a>; <span class="id" title="tactic">eauto</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">rewrite</span> &lt;- <a class="idref" href="Lvc.Infra.MapSep.html#sep_filter_map_comm"><span class="id" title="lemma">sep_filter_map_comm</span></a>; <span class="id" title="tactic">eauto</span> <span class="id" title="keyword">using</span> <a class="idref" href="Lvc.Infra.MapSep.html#sep_incl"><span class="id" title="lemma">sep_incl</span></a> <span class="id" title="keyword">with</span> <span class="id" title="var">cset</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">rewrite</span> <a class="idref" href="Lvc.Constr.CSet.html#filter_difference"><span class="id" title="lemma">filter_difference</span></a>; <span class="id" title="tactic">eauto</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">rewrite</span> <a class="idref" href="https://sigurdschneider.github.com/lvc/doc-cont/Containers.SetProperties.html#union_cardinal_inter"><span class="id" title="lemma">union_cardinal_inter</span></a>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">rewrite</span> <a class="idref" href="Lvc.Infra.InfinitePartition.html#cardinal_filter_part"><span class="id" title="lemma">cardinal_filter_part</span></a>; <span class="id" title="tactic">eauto</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">setoid_rewrite</span> <a class="idref" href="https://sigurdschneider.github.com/lvc/doc-cont/Containers.SetProperties.html#cardinal_1"><span class="id" title="lemma">cardinal_1</span></a> <span class="id" title="tactic">at</span> 3.<br/>
+&nbsp;&nbsp;- <span class="id" title="tactic">pose</span> <span class="id" title="var">proof</span> (@<a class="idref" href="Lvc.Constr.CSet.html#cardinal_map"><span class="id" title="lemma">cardinal_map</span></a> <span class="id" title="var">_</span> <span class="id" title="var">_</span> <span class="id" title="var">_</span> <span class="id" title="var">_</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<a class="idref" href="https://sigurdschneider.github.com/lvc/doc-cont/Containers.SetInterface.html#filter"><span class="id" title="method">filter</span></a> (<a class="idref" href="Lvc.Infra.InfinitePartition.html#part_1"><span class="id" title="projection">part_1</span></a> <span class="id" title="var">p</span>) <span class="id" title="var">lv</span> <a class="idref" href="https://sigurdschneider.github.com/lvc/doc-cont/Containers.SetInterface.html#b1f6afc653707171391a85756bee5608"><span class="id" title="notation">\</span></a> <a class="idref" href="https://sigurdschneider.github.com/lvc/doc-cont/Containers.SetInterface.html#filter"><span class="id" title="method">filter</span></a> (<a class="idref" href="Lvc.Infra.InfinitePartition.html#part_1"><span class="id" title="projection">part_1</span></a> <span class="id" title="var">p</span>) (<a class="idref" href="https://sigurdschneider.github.com/lvc/doc-cont/Containers.SetProperties.html#of_list"><span class="id" title="definition">of_list</span></a> <span class="id" title="var">Z</span>)) <span class="id" title="var">ϱ</span> <span class="id" title="var">_</span>).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">rewrite</span> <a class="idref" href="Lvc.Constr.CSet.html#cardinal_difference'"><span class="id" title="lemma">cardinal_difference'</span></a> <span class="id" title="tactic">in</span> <span class="id" title="var">H</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;+ <span class="id" title="tactic">assert</span> (<a class="idref" href="https://sigurdschneider.github.com/lvc/doc-cont/Containers.SetInterface.html#cardinal"><span class="id" title="method">cardinal</span></a> (<a class="idref" href="https://sigurdschneider.github.com/lvc/doc-cont/Containers.SetInterface.html#filter"><span class="id" title="method">filter</span></a> (<a class="idref" href="Lvc.Infra.InfinitePartition.html#part_1"><span class="id" title="projection">part_1</span></a> <span class="id" title="var">p</span>) (<a class="idref" href="https://sigurdschneider.github.com/lvc/doc-cont/Containers.SetProperties.html#of_list"><span class="id" title="definition">of_list</span></a> <span class="id" title="var">Z</span>)) <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Peano.html#9b077c369e19739ef880736ba34623ff"><span class="id" title="notation">≤</span></a> <a class="idref" href="https://sigurdschneider.github.com/lvc/doc-cont/Containers.SetInterface.html#cardinal"><span class="id" title="method">cardinal</span></a> (<a class="idref" href="https://sigurdschneider.github.com/lvc/doc-cont/Containers.SetInterface.html#filter"><span class="id" title="method">filter</span></a> (<a class="idref" href="Lvc.Infra.InfinitePartition.html#part_1"><span class="id" title="projection">part_1</span></a> <span class="id" title="var">p</span>) <span class="id" title="var">lv</span>)). {<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">rewrite</span> <span class="id" title="var">incl</span>; <span class="id" title="tactic">eauto</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">omega</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;+ <span class="id" title="tactic">rewrite</span> <span class="id" title="var">incl</span>; <span class="id" title="tactic">eauto</span>.<br/>
+&nbsp;&nbsp;- <span class="id" title="tactic">eapply</span> <a class="idref" href="https://sigurdschneider.github.com/lvc/doc-cont/Containers.SetProperties.html#empty_is_empty_2"><span class="id" title="lemma">empty_is_empty_2</span></a>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">eapply</span> <a class="idref" href="Lvc.Constr.CSetDisjoint.html#disj_intersection"><span class="id" title="lemma">disj_intersection</span></a>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">hnf</span>; <span class="id" title="tactic">intros</span>. <span class="id" title="tactic">eapply</span> (@<a class="idref" href="Lvc.Infra.StableFresh.html#fresh_list_stable_spec"><span class="id" title="lemma">fresh_list_stable_spec</span></a> <a class="idref" href="Lvc.IL.Var.html#a8af51c5c54b0cdb656661aee5be6c5c"><span class="id" title="notation">var</span></a> <span class="id" title="var">_</span>).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">cset_tac</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">rewrite</span> &lt;- <span class="id" title="var">incl2</span>. <span class="id" title="var">cset_tac</span>.<br/>
+<span class="id" title="keyword">Qed</span>.<br/>
+
+<br/>
+<span class="comment">(*<br/>
+Lemma&nbsp;renameApart_sep&nbsp;o&nbsp;ZL&nbsp;LV&nbsp;DL&nbsp;p&nbsp;ϱ&nbsp;k&nbsp;lv&nbsp;fi&nbsp;s&nbsp;(isFnc:isFunctional&nbsp;o)<br/>
+&nbsp;&nbsp;(AN:ann_P&nbsp;(part_bounded&nbsp;(part_1&nbsp;p)&nbsp;k)&nbsp;lv)<br/>
+&nbsp;&nbsp;(LS:&nbsp;live_sound&nbsp;o&nbsp;ZL&nbsp;LV&nbsp;s&nbsp;lv)<br/>
+&nbsp;&nbsp;(SEP:&nbsp;sep&nbsp;p&nbsp;(getAnn&nbsp;lv)&nbsp;ϱ)<br/>
+&nbsp;&nbsp;(SRD:srd&nbsp;DL&nbsp;s&nbsp;lv)<br/>
+&nbsp;&nbsp;(iEQ:PIR2&nbsp;(ifFstR&nbsp;Equal)&nbsp;DL&nbsp;(LV&nbsp;\\&nbsp;ZL))<br/>
+&nbsp;&nbsp;(Incl:map&nbsp;ϱ&nbsp;(getAnn&nbsp;lv)&nbsp;⊆&nbsp;domain&nbsp;FG_even_fast&nbsp;fi)<br/>
+&nbsp;&nbsp;:&nbsp;ann_P&nbsp;(part_bounded&nbsp;(part_1&nbsp;p)&nbsp;k)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(snd&nbsp;(renameApart_live&nbsp;FG_even_fast&nbsp;fi&nbsp;ϱ&nbsp;s&nbsp;lv)).<br/>
+Proof.<br/>
+&nbsp;&nbsp;general&nbsp;induction&nbsp;LS;&nbsp;invt&nbsp;ann_P;&nbsp;invt&nbsp;srd;&nbsp;simpl;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;repeat&nbsp;let_pair_case_eq;&nbsp;repeat&nbsp;simpl_pair_eqs;&nbsp;subst;&nbsp;simpl&nbsp;in&nbsp;*.<br/>
+&nbsp;&nbsp;-&nbsp;econstructor;&nbsp;eauto&nbsp;using&nbsp;part_bounded_sep.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;eapply&nbsp;IHLS;&nbsp;eauto&nbsp;using&nbsp;restrict_ifFstR,&nbsp;sep_update_part&nbsp;with&nbsp;len.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;rewrite&nbsp;lookup_set_update_in_union;&nbsp;eauto.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;rewrite&nbsp;&lt;-&nbsp;Incl&nbsp;at&nbsp;3.&nbsp;rewrite&nbsp;&lt;-&nbsp;H0.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;unfold&nbsp;lookup_set.&nbsp;clear;&nbsp;cset_tac.<br/>
+&nbsp;&nbsp;-&nbsp;econstructor;&nbsp;eauto&nbsp;using&nbsp;part_bounded_sep&nbsp;with&nbsp;cset.<br/>
+&nbsp;&nbsp;-&nbsp;econstructor;&nbsp;eauto&nbsp;using&nbsp;part_bounded_sep.<br/>
+&nbsp;&nbsp;-&nbsp;econstructor;&nbsp;eauto&nbsp;using&nbsp;part_bounded_sep.<br/>
+&nbsp;&nbsp;-&nbsp;econstructor;&nbsp;eauto&nbsp;using&nbsp;part_bounded_sep.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;+&nbsp;intros;&nbsp;inv_get.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;edestruct&nbsp;(get_fst_renameApartF_live&nbsp;_&nbsp;_&nbsp;_&nbsp;_&nbsp;_&nbsp;_&nbsp;H4);&nbsp;eauto;&nbsp;dcr;&nbsp;subst.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;erewrite&nbsp;!getAnn_snd_renameApart_live&nbsp;in&nbsp;*;&nbsp;eauto.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;eapply&nbsp;ann_P_setTopAnn;&nbsp;eauto.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;eapply&nbsp;H1;&nbsp;eauto.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;--&nbsp;exploit&nbsp;H2;&nbsp;eauto;&nbsp;dcr.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;eapply&nbsp;sep_update_list;&nbsp;eauto.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;cases&nbsp;in&nbsp;H16.&nbsp;eauto.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;--&nbsp;rewrite&nbsp;!zip_app;&nbsp;eauto&nbsp;with&nbsp;len.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;eauto&nbsp;using&nbsp;PIR2_app,&nbsp;PIR2_ifFstR_refl,&nbsp;restrict_ifFstR.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;--&nbsp;exploit&nbsp;H2;&nbsp;eauto;&nbsp;dcr.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;cases&nbsp;in&nbsp;H16.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;rewrite&nbsp;lookup_set_update_with_list_in_union_length;&nbsp;eauto&nbsp;with&nbsp;len.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;rewrite&nbsp;H16.&nbsp;unfold&nbsp;lookup_set.&nbsp;rewrite&nbsp;Incl.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;clear;&nbsp;cset_tac.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;exploit&nbsp;H8;&nbsp;eauto.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;exploit&nbsp;H2;&nbsp;eauto;&nbsp;dcr.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;cases&nbsp;in&nbsp;H17.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;rewrite&nbsp;lookup_set_update_with_list_in_union_length;&nbsp;eauto&nbsp;with&nbsp;len.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;eapply&nbsp;ann_P_get&nbsp;in&nbsp;H5.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;rewrite&nbsp;union_comm.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;rewrite&nbsp;union_subset_equal;&nbsp;eauto&nbsp;with&nbsp;cset.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;eapply&nbsp;bnd_update_list;&nbsp;eauto.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;rewrite&nbsp;H17.&nbsp;rewrite&nbsp;Incl.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;clear;&nbsp;cset_tac.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;+&nbsp;eapply&nbsp;IHLS;&nbsp;eauto&nbsp;using&nbsp;restrict_ifFstR.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;rewrite&nbsp;zip_app;<span class="inlinecode">|</span> <span class="inlinecode"><span class="id" title="tactic">eauto</span></span> <span class="inlinecode"><span class="id" title="keyword">with</span></span> <span class="inlinecode"><span class="id" title="var">len</span></span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;eauto&nbsp;using&nbsp;PIR2_app,&nbsp;PIR2_ifFstR_refl.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;rewrite&nbsp;H3,&nbsp;Incl.&nbsp;eauto&nbsp;with&nbsp;cset.<br/>
+Qed.<br/>
+<br/>
+Lemma&nbsp;renamedApart_incl&nbsp;VD&nbsp;s&nbsp;ra<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(RA:renamedApart&nbsp;s&nbsp;ra)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(Incl:fst&nbsp;(getAnn&nbsp;ra)&nbsp;∪&nbsp;snd&nbsp;(getAnn&nbsp;ra)&nbsp;⊆&nbsp;VD)<br/>
+&nbsp;&nbsp;:&nbsp;ann_P&nbsp;(fun&nbsp;x&nbsp;=&gt;&nbsp;fst&nbsp;x&nbsp;∪&nbsp;snd&nbsp;x&nbsp;⊆&nbsp;VD)&nbsp;ra.<br/>
+Proof.<br/>
+&nbsp;&nbsp;general&nbsp;induction&nbsp;RA;&nbsp;simpl&nbsp;in&nbsp;*;&nbsp;econstructor;&nbsp;simpl;&nbsp;set_simpl;&nbsp;pe_rewrite;&nbsp;eauto&nbsp;with&nbsp;cset.<br/>
+&nbsp;&nbsp;-&nbsp;intros;&nbsp;inv_get.&nbsp;eapply&nbsp;H1;&nbsp;eauto.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;rewrite&nbsp;&lt;-&nbsp;Incl.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;rewrite&nbsp;&lt;-&nbsp;incl_list_union;&nbsp;eauto&nbsp;using&nbsp;zip_get;&nbsp;<span class="inlinecode">|<span class="id" title="tactic">reflexivity</span></span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;unfold&nbsp;defVars.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;edestruct&nbsp;H2;&nbsp;eauto;&nbsp;dcr.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;rewrite&nbsp;H7.&nbsp;clear;&nbsp;cset_tac.<br/>
+Qed.*)</span></div>
+</div>
+<div id="footer">
+  Generated by <a href="http://coq.inria.fr/">coqdoc</a> and improved with <a href="https://github.com/tebbi/coqdocjs">CoqdocJS</a>
+</div>
+</div>
+</body>
+
+</html>

@@ -1,0 +1,110 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<link href="coqdoc.css" rel="stylesheet" type="text/css" />
+<link href="coqdocjs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="config.js"></script>
+<script type="text/javascript" src="coqdocjs.js"></script>
+</head>
+
+<body onload="document.getElementById('content').focus()">
+  <div id="header">
+    <span class="left">
+      <span class="modulename"> <script> document.write(document.title) </script> </span>
+    </span>
+
+    <span class="button" id="toggle-proofs"></span>
+
+    <span class="right">
+      <a href="./">Intro Page</a>
+      <a href="./indexpage.html"> Index </a>
+      <a href="./search-toc.html"> Table of Contents </a>
+    </span>
+</div>
+    <div id="content" tabindex="-1" onblur="document.getElementById('content').focus()">
+    <div id="main">
+<h1 class="libtitle">Lvc.Infra.ARange</h1>
+
+<div class="code">
+<span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <a class="idref" href="Lvc.Infra.Util.html#"><span class="id" title="library">Util</span></a> <a class="idref" href="Lvc.Infra.Get.html#"><span class="id" title="library">Get</span></a> <a class="idref" href="Lvc.Infra.Len.html#"><span class="id" title="library">Len</span></a> <a class="idref" href="Lvc.Infra.MoreList.html#"><span class="id" title="library">MoreList</span></a>.<br/>
+
+<br/>
+<span class="id" title="keyword">Set Implicit Arguments</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Section</span> <a name="NRange"><span class="id" title="section">NRange</span></a>.<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Variable</span> <a name="NRange.V"><span class="id" title="variable">V</span></a>:<span class="id" title="keyword">Type</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Variable</span> <a name="NRange.f"><span class="id" title="variable">f</span></a> : <a class="idref" href="Lvc.Infra.ARange.html#NRange.V"><span class="id" title="variable">V</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#d43e996736952df71ebeeae74d10a287"><span class="id" title="notation">→</span></a> <a class="idref" href="Lvc.Infra.ARange.html#NRange.V"><span class="id" title="variable">V</span></a>.<br/>
+
+<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Fixpoint</span> <a name="range"><span class="id" title="definition">range</span></a> (<span class="id" title="var">n</span>:<a class="idref" href="Lvc.Infra.ARange.html#NRange.V"><span class="id" title="variable">V</span></a>) (<span class="id" title="var">d</span>:<a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Datatypes.html#nat"><span class="id" title="inductive">nat</span></a>) :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">match</span> <a class="idref" href="Lvc.Infra.ARange.html#d"><span class="id" title="variable">d</span></a> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;| 0 ⇒ <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Datatypes.html#nil"><span class="id" title="constructor">nil</span></a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;| <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Datatypes.html#S"><span class="id" title="constructor">S</span></a> <span class="id" title="var">d</span> ⇒ <a class="idref" href="Lvc.Infra.ARange.html#n"><span class="id" title="variable">n</span></a><a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Datatypes.html#0a8150c3c4df34d205c5ed9a427e2ed5"><span class="id" title="notation">::</span></a><a class="idref" href="Lvc.Infra.ARange.html#range"><span class="id" title="definition">range</span></a> (<a class="idref" href="Lvc.Infra.ARange.html#NRange.f"><span class="id" title="variable">f</span></a> <a class="idref" href="Lvc.Infra.ARange.html#n"><span class="id" title="variable">n</span></a>) <a class="idref" href="Lvc.Infra.ARange.html#d"><span class="id" title="variable">d</span></a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
+
+<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Lemma</span> <a name="range_get"><span class="id" title="lemma">range_get</span></a> <span class="id" title="var">k</span> <span class="id" title="var">d</span> <span class="id" title="var">n</span> <span class="id" title="var">x</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;: <a class="idref" href="Lvc.Infra.Get.html#get"><span class="id" title="inductive">get</span></a> (<a class="idref" href="Lvc.Infra.ARange.html#range"><span class="id" title="definition">range</span></a> <a class="idref" href="Lvc.Infra.ARange.html#k"><span class="id" title="variable">k</span></a> <a class="idref" href="Lvc.Infra.ARange.html#d"><span class="id" title="variable">d</span></a>) <a class="idref" href="Lvc.Infra.ARange.html#n"><span class="id" title="variable">n</span></a> <a class="idref" href="Lvc.Infra.ARange.html#x"><span class="id" title="variable">x</span></a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#d43e996736952df71ebeeae74d10a287"><span class="id" title="notation">→</span></a> <a class="idref" href="Lvc.Infra.ARange.html#x"><span class="id" title="variable">x</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#1c39bf18749e5cc609e83c0a0ba5a372"><span class="id" title="notation">=</span></a> <a class="idref" href="Lvc.Infra.Util.html#iter"><span class="id" title="definition">iter</span></a> <a class="idref" href="Lvc.Infra.ARange.html#n"><span class="id" title="variable">n</span></a> <a class="idref" href="Lvc.Infra.ARange.html#k"><span class="id" title="variable">k</span></a> <a class="idref" href="Lvc.Infra.ARange.html#NRange.f"><span class="id" title="variable">f</span></a>.<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Proof</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">intros</span>. <span class="id" title="var">general</span> <span class="id" title="tactic">induction</span> <span class="id" title="var">d</span>; <span class="id" title="tactic">simpl</span> <span class="id" title="tactic">in</span> *; <span class="id" title="var">isabsurd</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">invt</span> <a class="idref" href="Lvc.Infra.Get.html#get"><span class="id" title="inductive">get</span></a>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;- <span class="id" title="tactic">simpl</span>. <span class="id" title="tactic">reflexivity</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;- <span class="id" title="tactic">eapply</span> <span class="id" title="var">IHd</span> <span class="id" title="tactic">in</span> <span class="id" title="var">H4</span>; <span class="id" title="tactic">eauto</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Qed</span>.<br/>
+
+<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Lemma</span> <a name="get_range"><span class="id" title="lemma">get_range</span></a> <span class="id" title="var">k</span> <span class="id" title="var">d</span> <span class="id" title="var">n</span> <span class="id" title="var">x</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;: <a class="idref" href="Lvc.Infra.ARange.html#x"><span class="id" title="variable">x</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#1c39bf18749e5cc609e83c0a0ba5a372"><span class="id" title="notation">=</span></a> <a class="idref" href="Lvc.Infra.Util.html#iter"><span class="id" title="definition">iter</span></a> <a class="idref" href="Lvc.Infra.ARange.html#n"><span class="id" title="variable">n</span></a> <a class="idref" href="Lvc.Infra.ARange.html#k"><span class="id" title="variable">k</span></a> <a class="idref" href="Lvc.Infra.ARange.html#NRange.f"><span class="id" title="variable">f</span></a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#d43e996736952df71ebeeae74d10a287"><span class="id" title="notation">→</span></a> <a class="idref" href="Lvc.Infra.ARange.html#n"><span class="id" title="variable">n</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Peano.html#989c98e7ddd65d5bf37c334ff2076de8"><span class="id" title="notation">&lt;</span></a> <a class="idref" href="Lvc.Infra.ARange.html#d"><span class="id" title="variable">d</span></a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#d43e996736952df71ebeeae74d10a287"><span class="id" title="notation">→</span></a> <a class="idref" href="Lvc.Infra.Get.html#get"><span class="id" title="inductive">get</span></a> (<a class="idref" href="Lvc.Infra.ARange.html#range"><span class="id" title="definition">range</span></a> <a class="idref" href="Lvc.Infra.ARange.html#k"><span class="id" title="variable">k</span></a> <a class="idref" href="Lvc.Infra.ARange.html#d"><span class="id" title="variable">d</span></a>) <a class="idref" href="Lvc.Infra.ARange.html#n"><span class="id" title="variable">n</span></a> <a class="idref" href="Lvc.Infra.ARange.html#x"><span class="id" title="variable">x</span></a>.<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Proof</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">intros</span>. <span class="id" title="var">general</span> <span class="id" title="tactic">induction</span> <span class="id" title="var">d</span>; <span class="id" title="tactic">simpl</span> <span class="id" title="tactic">in</span> *; <span class="id" title="var">isabsurd</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">destruct</span> <span class="id" title="var">n</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;- <span class="id" title="tactic">eauto</span> <span class="id" title="keyword">using</span> <a class="idref" href="Lvc.Infra.Get.html#get"><span class="id" title="inductive">get</span></a>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;- <span class="id" title="tactic">econstructor</span>. <span class="id" title="tactic">eapply</span> <span class="id" title="var">IHd</span>; <span class="id" title="tactic">eauto</span>. <span class="id" title="tactic">omega</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Qed</span>.<br/>
+
+<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Lemma</span> <a name="range_len"><span class="id" title="lemma">range_len</span></a> <span class="id" title="var">k</span> <span class="id" title="var">n</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;: <a class="idref" href="Lvc.Infra.Util.html#5ba4ae6fbd1172842049cc41b9ef4720"><span class="id" title="notation">❬</span></a><a class="idref" href="Lvc.Infra.ARange.html#range"><span class="id" title="definition">range</span></a> <a class="idref" href="Lvc.Infra.ARange.html#k"><span class="id" title="variable">k</span></a> <a class="idref" href="Lvc.Infra.ARange.html#n"><span class="id" title="variable">n</span></a><a class="idref" href="Lvc.Infra.Util.html#5ba4ae6fbd1172842049cc41b9ef4720"><span class="id" title="notation">❭</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#1c39bf18749e5cc609e83c0a0ba5a372"><span class="id" title="notation">=</span></a> <a class="idref" href="Lvc.Infra.ARange.html#n"><span class="id" title="variable">n</span></a>.<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Proof</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">general</span> <span class="id" title="tactic">induction</span> <span class="id" title="var">n</span>; <span class="id" title="tactic">simpl</span>; <span class="id" title="tactic">eauto</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Qed</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">End</span> <a class="idref" href="Lvc.Infra.ARange.html#NRange"><span class="id" title="section">NRange</span></a>.<br/>
+
+<br/>
+<span class="id" title="keyword">Ltac</span> <span class="id" title="var">range_len_simpl</span> :=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="keyword">goal</span> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;| [ <span class="id" title="var">H</span> : <span class="id" title="keyword">context</span> [ <a class="idref" href="Lvc.Infra.Util.html#5ba4ae6fbd1172842049cc41b9ef4720"><span class="id" title="notation">❬</span></a>@<a class="idref" href="Lvc.Infra.ARange.html#range"><span class="id" title="definition">range</span></a> ?<span class="id" title="var">V</span> ?<span class="id" title="var">f</span> ?<span class="id" title="var">k</span> ?<span class="id" title="var">d</span><a class="idref" href="Lvc.Infra.Util.html#5ba4ae6fbd1172842049cc41b9ef4720"><span class="id" title="notation">❭</span></a> ] |- <span class="id" title="var">_</span> ] ⇒<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">rewrite</span> (@<a class="idref" href="Lvc.Infra.ARange.html#range_len"><span class="id" title="lemma">range_len</span></a> <span class="id" title="var">V</span> <span class="id" title="var">f</span> <span class="id" title="var">k</span> <span class="id" title="var">d</span>) <span class="id" title="tactic">in</span> <span class="id" title="var">H</span><br/>
+&nbsp;&nbsp;| [ |- <span class="id" title="keyword">context</span> [ <a class="idref" href="Lvc.Infra.Util.html#5ba4ae6fbd1172842049cc41b9ef4720"><span class="id" title="notation">❬</span></a>@<a class="idref" href="Lvc.Infra.ARange.html#range"><span class="id" title="definition">range</span></a> ?<span class="id" title="var">V</span> ?<span class="id" title="var">f</span> ?<span class="id" title="var">k</span> ?<span class="id" title="var">d</span><a class="idref" href="Lvc.Infra.Util.html#5ba4ae6fbd1172842049cc41b9ef4720"><span class="id" title="notation">❭</span></a> ] ] ⇒<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">rewrite</span> (@<a class="idref" href="Lvc.Infra.ARange.html#range_len"><span class="id" title="lemma">range_len</span></a> <span class="id" title="var">V</span> <span class="id" title="var">f</span> <span class="id" title="var">k</span> <span class="id" title="var">d</span>)<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
+
+<br/>
+<span class="id" title="var">Smpl</span> <span class="id" title="keyword">Add</span> <span class="id" title="var">range_len_simpl</span> : <span class="id" title="var">len</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Ltac</span> <span class="id" title="var">range_get_simpl</span> :=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="keyword">goal</span> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;| [<span class="id" title="var">H</span> : <a class="idref" href="Lvc.Infra.Get.html#get"><span class="id" title="inductive">get</span></a> (@<a class="idref" href="Lvc.Infra.ARange.html#range"><span class="id" title="definition">range</span></a> ?<span class="id" title="var">V</span> ?<span class="id" title="var">f</span> ?<span class="id" title="var">k</span> ?<span class="id" title="var">d</span>) ?<span class="id" title="var">n</span> ?<span class="id" title="var">x</span> |- <span class="id" title="var">_</span> ] ⇒<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">eapply</span> (@<a class="idref" href="Lvc.Infra.ARange.html#range_get"><span class="id" title="lemma">range_get</span></a> <span class="id" title="var">V</span> <span class="id" title="var">f</span> <span class="id" title="var">k</span> <span class="id" title="var">d</span>) <span class="id" title="tactic">in</span> <span class="id" title="var">H</span>; <span class="id" title="tactic">try</span> (<span class="id" title="var">is_var</span> <span class="id" title="var">x</span>; <span class="id" title="tactic">subst</span> <span class="id" title="var">x</span>)<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
+
+<br/>
+<span class="id" title="var">Smpl</span> <span class="id" title="keyword">Add</span> <span class="id" title="var">range_get_simpl</span> : <span class="id" title="var">inv_get</span>.<br/>
+</div>
+</div>
+<div id="footer">
+  Generated by <a href="http://coq.inria.fr/">coqdoc</a> and improved with <a href="https://github.com/tebbi/coqdocjs">CoqdocJS</a>
+</div>
+</div>
+</body>
+
+</html>

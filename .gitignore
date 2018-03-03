@@ -30,7 +30,7 @@ compiler/extraction/*
 compiler/STAMP
 compiler/*.im
 Makefile.coq
-doc*
+doc-*
 pkg*
 .timing
 *.tgz

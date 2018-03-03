@@ -1,0 +1,120 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<link href="coqdoc.css" rel="stylesheet" type="text/css" />
+<link href="coqdocjs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="config.js"></script>
+<script type="text/javascript" src="coqdocjs.js"></script>
+</head>
+
+<body onload="document.getElementById('content').focus()">
+  <div id="header">
+    <span class="left">
+      <span class="modulename"> <script> document.write(document.title) </script> </span>
+    </span>
+
+    <span class="button" id="toggle-proofs"></span>
+
+    <span class="right">
+      <a href="./">Intro Page</a>
+      <a href="./indexpage.html"> Index </a>
+      <a href="./search-toc.html"> Table of Contents </a>
+    </span>
+</div>
+    <div id="content" tabindex="-1" onblur="document.getElementById('content').focus()">
+    <div id="main">
+<h1 class="libtitle">Lvc.Lowering.LabelRelations</h1>
+
+<div class="code">
+<span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <a class="idref" href="Lvc.Infra.Util.html#"><span class="id" title="library">Util</span></a> <a class="idref" href="Lvc.Infra.Get.html#"><span class="id" title="library">Get</span></a> <span class="id" title="library">Linear</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Definition</span> <a name="not_contains_label"><span class="id" title="definition">not_contains_label</span></a> <span class="id" title="var">C</span> <span class="id" title="var">l</span> :=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">∀</span> <span class="id" title="var">n</span> <span class="id" title="var">l'</span>, <a class="idref" href="Lvc.Infra.Get.html#get"><span class="id" title="inductive">get</span></a> <a class="idref" href="Lvc.Lowering.LabelRelations.html#C"><span class="id" title="variable">C</span></a> <a class="idref" href="Lvc.Lowering.LabelRelations.html#n"><span class="id" title="variable">n</span></a> (<span class="id" title="constructor">Llabel</span> <a class="idref" href="Lvc.Lowering.LabelRelations.html#l'"><span class="id" title="variable">l'</span></a>) <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#d43e996736952df71ebeeae74d10a287"><span class="id" title="notation">→</span></a> <a class="idref" href="Lvc.Lowering.LabelRelations.html#l'"><span class="id" title="variable">l'</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#32263a1c8b01baecdff9deb038955bc9"><span class="id" title="notation">≠</span></a> <a class="idref" href="Lvc.Lowering.LabelRelations.html#l"><span class="id" title="variable">l</span></a>.<br/>
+
+<br/>
+<span class="id" title="keyword">Definition</span> <a name="all_labels_smaller"><span class="id" title="definition">all_labels_smaller</span></a> <span class="id" title="var">C</span> <span class="id" title="var">l</span> :=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">∀</span> <span class="id" title="var">n</span> <span class="id" title="var">l'</span>, <a class="idref" href="Lvc.Infra.Get.html#get"><span class="id" title="inductive">get</span></a> <a class="idref" href="Lvc.Lowering.LabelRelations.html#C"><span class="id" title="variable">C</span></a> <a class="idref" href="Lvc.Lowering.LabelRelations.html#n"><span class="id" title="variable">n</span></a> (<span class="id" title="constructor">Llabel</span> <a class="idref" href="Lvc.Lowering.LabelRelations.html#l'"><span class="id" title="variable">l'</span></a>) <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#d43e996736952df71ebeeae74d10a287"><span class="id" title="notation">→</span></a> (<a class="idref" href="Lvc.Lowering.LabelRelations.html#l'"><span class="id" title="variable">l'</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.PArith.BinPos.html#9f235fd01ea27a2b353f4859719f4038"><span class="id" title="notation">&lt;</span></a> <a class="idref" href="Lvc.Lowering.LabelRelations.html#l"><span class="id" title="variable">l</span></a>)%<span class="id" title="var">positive</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Definition</span> <a name="all_labels_ge"><span class="id" title="definition">all_labels_ge</span></a> <span class="id" title="var">C</span> <span class="id" title="var">l</span> :=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">∀</span> <span class="id" title="var">n</span> <span class="id" title="var">l'</span>, <a class="idref" href="Lvc.Infra.Get.html#get"><span class="id" title="inductive">get</span></a> <a class="idref" href="Lvc.Lowering.LabelRelations.html#C"><span class="id" title="variable">C</span></a> <a class="idref" href="Lvc.Lowering.LabelRelations.html#n"><span class="id" title="variable">n</span></a> (<span class="id" title="constructor">Llabel</span> <a class="idref" href="Lvc.Lowering.LabelRelations.html#l'"><span class="id" title="variable">l'</span></a>) <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#d43e996736952df71ebeeae74d10a287"><span class="id" title="notation">→</span></a> (<a class="idref" href="Lvc.Lowering.LabelRelations.html#l"><span class="id" title="variable">l</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.PArith.BinPos.html#0af097a55db0240a031a15b1e23ba4ca"><span class="id" title="notation">≤</span></a> <a class="idref" href="Lvc.Lowering.LabelRelations.html#l'"><span class="id" title="variable">l'</span></a>)%<span class="id" title="var">positive</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Lemma</span> <a name="all_not_labels"><span class="id" title="lemma">all_not_labels</span></a> <span class="id" title="var">C</span> <span class="id" title="var">l</span><br/>
+&nbsp;&nbsp;: <a class="idref" href="Lvc.Lowering.LabelRelations.html#all_labels_smaller"><span class="id" title="definition">all_labels_smaller</span></a> <a class="idref" href="Lvc.Lowering.LabelRelations.html#C"><span class="id" title="variable">C</span></a> <a class="idref" href="Lvc.Lowering.LabelRelations.html#l"><span class="id" title="variable">l</span></a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#d43e996736952df71ebeeae74d10a287"><span class="id" title="notation">→</span></a>  <a class="idref" href="Lvc.Lowering.LabelRelations.html#not_contains_label"><span class="id" title="definition">not_contains_label</span></a> <a class="idref" href="Lvc.Lowering.LabelRelations.html#C"><span class="id" title="variable">C</span></a> <a class="idref" href="Lvc.Lowering.LabelRelations.html#l"><span class="id" title="variable">l</span></a>.<br/>
+<span class="id" title="keyword">Proof</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">intros</span>. <span class="id" title="tactic">hnf</span>; <span class="id" title="tactic">intros</span>. <span class="id" title="var">exploit</span> <span class="id" title="var">H</span>; <span class="id" title="tactic">eauto</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">intro</span>. <span class="id" title="tactic">subst</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">eapply</span> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.PArith.BinPos.html#Pos.lt_irrefl"><span class="id" title="lemma">Pos.lt_irrefl</span></a>. <span class="id" title="tactic">eauto</span>.<br/>
+<span class="id" title="keyword">Qed</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Lemma</span> <a name="all_not_labels_ge"><span class="id" title="lemma">all_not_labels_ge</span></a> <span class="id" title="var">C</span> <span class="id" title="var">l</span><br/>
+&nbsp;&nbsp;: <a class="idref" href="Lvc.Lowering.LabelRelations.html#all_labels_ge"><span class="id" title="definition">all_labels_ge</span></a> <a class="idref" href="Lvc.Lowering.LabelRelations.html#C"><span class="id" title="variable">C</span></a> (<a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.PArith.BinPos.html#Pos.succ"><span class="id" title="definition">Pos.succ</span></a> <a class="idref" href="Lvc.Lowering.LabelRelations.html#l"><span class="id" title="variable">l</span></a>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#d43e996736952df71ebeeae74d10a287"><span class="id" title="notation">→</span></a> <a class="idref" href="Lvc.Lowering.LabelRelations.html#not_contains_label"><span class="id" title="definition">not_contains_label</span></a> <a class="idref" href="Lvc.Lowering.LabelRelations.html#C"><span class="id" title="variable">C</span></a> <a class="idref" href="Lvc.Lowering.LabelRelations.html#l"><span class="id" title="variable">l</span></a>.<br/>
+<span class="id" title="keyword">Proof</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">intros</span>. <span class="id" title="tactic">hnf</span>; <span class="id" title="tactic">intros</span>. <span class="id" title="var">exploit</span> <span class="id" title="var">H</span>; <span class="id" title="tactic">eauto</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">intro</span>. <span class="id" title="tactic">subst</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">eapply</span> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.PArith.BinPos.html#Pos.le_succ_l"><span class="id" title="lemma">Pos.le_succ_l</span></a> <span class="id" title="tactic">in</span> <span class="id" title="var">H1</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">eapply</span> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.PArith.BinPos.html#Pos.lt_irrefl"><span class="id" title="lemma">Pos.lt_irrefl</span></a>. <span class="id" title="tactic">eauto</span>.<br/>
+<span class="id" title="keyword">Qed</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Hint Resolve</span> <span class="id" title="var">all_not_labels</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Lemma</span> <a name="not_contains_label_app1"><span class="id" title="lemma">not_contains_label_app1</span></a> <span class="id" title="var">C</span> <span class="id" title="var">C'</span> <span class="id" title="var">l</span><br/>
+&nbsp;&nbsp;: <a class="idref" href="Lvc.Lowering.LabelRelations.html#not_contains_label"><span class="id" title="definition">not_contains_label</span></a> <a class="idref" href="Lvc.Lowering.LabelRelations.html#C"><span class="id" title="variable">C</span></a> <a class="idref" href="Lvc.Lowering.LabelRelations.html#l"><span class="id" title="variable">l</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#d43e996736952df71ebeeae74d10a287"><span class="id" title="notation">→</span></a> <a class="idref" href="Lvc.Lowering.LabelRelations.html#not_contains_label"><span class="id" title="definition">not_contains_label</span></a> <a class="idref" href="Lvc.Lowering.LabelRelations.html#C'"><span class="id" title="variable">C'</span></a> <a class="idref" href="Lvc.Lowering.LabelRelations.html#l"><span class="id" title="variable">l</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#d43e996736952df71ebeeae74d10a287"><span class="id" title="notation">→</span></a> <a class="idref" href="Lvc.Lowering.LabelRelations.html#not_contains_label"><span class="id" title="definition">not_contains_label</span></a> (<a class="idref" href="Lvc.Lowering.LabelRelations.html#C"><span class="id" title="variable">C</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Datatypes.html#5d35a99a6abff1d64bf70538feb70e36"><span class="id" title="notation">++</span></a> <a class="idref" href="Lvc.Lowering.LabelRelations.html#C'"><span class="id" title="variable">C'</span></a>) <a class="idref" href="Lvc.Lowering.LabelRelations.html#l"><span class="id" title="variable">l</span></a>.<br/>
+<span class="id" title="keyword">Proof</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">intros</span>; <span class="id" title="tactic">hnf</span>; <span class="id" title="tactic">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">eapply</span> <a class="idref" href="Lvc.Infra.Get.html#get_app_cases"><span class="id" title="lemma">get_app_cases</span></a> <span class="id" title="tactic">in</span> <span class="id" title="var">H1</span> <span class="id" title="keyword">as</span> [? |[? ?]]; <span class="id" title="tactic">eauto</span>.<br/>
+<span class="id" title="keyword">Qed</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Lemma</span> <a name="all_labels_smaller_app1"><span class="id" title="lemma">all_labels_smaller_app1</span></a> <span class="id" title="var">C</span> <span class="id" title="var">C'</span> <span class="id" title="var">l</span><br/>
+&nbsp;&nbsp;: <a class="idref" href="Lvc.Lowering.LabelRelations.html#all_labels_smaller"><span class="id" title="definition">all_labels_smaller</span></a> <a class="idref" href="Lvc.Lowering.LabelRelations.html#C"><span class="id" title="variable">C</span></a> <a class="idref" href="Lvc.Lowering.LabelRelations.html#l"><span class="id" title="variable">l</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#d43e996736952df71ebeeae74d10a287"><span class="id" title="notation">→</span></a> <a class="idref" href="Lvc.Lowering.LabelRelations.html#all_labels_smaller"><span class="id" title="definition">all_labels_smaller</span></a> <a class="idref" href="Lvc.Lowering.LabelRelations.html#C'"><span class="id" title="variable">C'</span></a> <a class="idref" href="Lvc.Lowering.LabelRelations.html#l"><span class="id" title="variable">l</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#d43e996736952df71ebeeae74d10a287"><span class="id" title="notation">→</span></a> <a class="idref" href="Lvc.Lowering.LabelRelations.html#all_labels_smaller"><span class="id" title="definition">all_labels_smaller</span></a> (<a class="idref" href="Lvc.Lowering.LabelRelations.html#C"><span class="id" title="variable">C</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Datatypes.html#5d35a99a6abff1d64bf70538feb70e36"><span class="id" title="notation">++</span></a> <a class="idref" href="Lvc.Lowering.LabelRelations.html#C'"><span class="id" title="variable">C'</span></a>) <a class="idref" href="Lvc.Lowering.LabelRelations.html#l"><span class="id" title="variable">l</span></a>.<br/>
+<span class="id" title="keyword">Proof</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">intros</span>; <span class="id" title="tactic">hnf</span>; <span class="id" title="tactic">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">eapply</span> <a class="idref" href="Lvc.Infra.Get.html#get_app_cases"><span class="id" title="lemma">get_app_cases</span></a> <span class="id" title="tactic">in</span> <span class="id" title="var">H1</span> <span class="id" title="keyword">as</span> [? |[? ?]]; <span class="id" title="tactic">eauto</span>.<br/>
+<span class="id" title="keyword">Qed</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Lemma</span> <a name="all_labels_ge_app1"><span class="id" title="lemma">all_labels_ge_app1</span></a> <span class="id" title="var">C</span> <span class="id" title="var">C'</span> <span class="id" title="var">l</span><br/>
+&nbsp;&nbsp;: <a class="idref" href="Lvc.Lowering.LabelRelations.html#all_labels_ge"><span class="id" title="definition">all_labels_ge</span></a> <a class="idref" href="Lvc.Lowering.LabelRelations.html#C"><span class="id" title="variable">C</span></a> <a class="idref" href="Lvc.Lowering.LabelRelations.html#l"><span class="id" title="variable">l</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#d43e996736952df71ebeeae74d10a287"><span class="id" title="notation">→</span></a> <a class="idref" href="Lvc.Lowering.LabelRelations.html#all_labels_ge"><span class="id" title="definition">all_labels_ge</span></a> <a class="idref" href="Lvc.Lowering.LabelRelations.html#C'"><span class="id" title="variable">C'</span></a> <a class="idref" href="Lvc.Lowering.LabelRelations.html#l"><span class="id" title="variable">l</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#d43e996736952df71ebeeae74d10a287"><span class="id" title="notation">→</span></a> <a class="idref" href="Lvc.Lowering.LabelRelations.html#all_labels_ge"><span class="id" title="definition">all_labels_ge</span></a> (<a class="idref" href="Lvc.Lowering.LabelRelations.html#C"><span class="id" title="variable">C</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Datatypes.html#5d35a99a6abff1d64bf70538feb70e36"><span class="id" title="notation">++</span></a> <a class="idref" href="Lvc.Lowering.LabelRelations.html#C'"><span class="id" title="variable">C'</span></a>) <a class="idref" href="Lvc.Lowering.LabelRelations.html#l"><span class="id" title="variable">l</span></a>.<br/>
+<span class="id" title="keyword">Proof</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">intros</span>; <span class="id" title="tactic">hnf</span>; <span class="id" title="tactic">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">eapply</span> <a class="idref" href="Lvc.Infra.Get.html#get_app_cases"><span class="id" title="lemma">get_app_cases</span></a> <span class="id" title="tactic">in</span> <span class="id" title="var">H1</span> <span class="id" title="keyword">as</span> [? |[? ?]]; <span class="id" title="tactic">eauto</span>.<br/>
+<span class="id" title="keyword">Qed</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Lemma</span> <a name="all_labels_smaller_le"><span class="id" title="lemma">all_labels_smaller_le</span></a> <span class="id" title="var">C</span> <span class="id" title="var">l</span> <span class="id" title="var">l'</span><br/>
+&nbsp;&nbsp;: <a class="idref" href="Lvc.Lowering.LabelRelations.html#all_labels_smaller"><span class="id" title="definition">all_labels_smaller</span></a> <a class="idref" href="Lvc.Lowering.LabelRelations.html#C"><span class="id" title="variable">C</span></a> <a class="idref" href="Lvc.Lowering.LabelRelations.html#l"><span class="id" title="variable">l</span></a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#d43e996736952df71ebeeae74d10a287"><span class="id" title="notation">→</span></a> (<a class="idref" href="Lvc.Lowering.LabelRelations.html#l"><span class="id" title="variable">l</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.PArith.BinPos.html#0af097a55db0240a031a15b1e23ba4ca"><span class="id" title="notation">≤</span></a> <a class="idref" href="Lvc.Lowering.LabelRelations.html#l'"><span class="id" title="variable">l'</span></a>)%<span class="id" title="var">positive</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#d43e996736952df71ebeeae74d10a287"><span class="id" title="notation">→</span></a> <a class="idref" href="Lvc.Lowering.LabelRelations.html#all_labels_smaller"><span class="id" title="definition">all_labels_smaller</span></a> <a class="idref" href="Lvc.Lowering.LabelRelations.html#C"><span class="id" title="variable">C</span></a> <a class="idref" href="Lvc.Lowering.LabelRelations.html#l'"><span class="id" title="variable">l'</span></a>.<br/>
+<span class="id" title="keyword">Proof</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">intros</span>; <span class="id" title="tactic">hnf</span>; <span class="id" title="tactic">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">eapply</span> <span class="id" title="var">H</span> <span class="id" title="tactic">in</span> <span class="id" title="var">H1</span>. <span class="id" title="tactic">eapply</span> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.PArith.BinPos.html#Pos.lt_le_trans"><span class="id" title="lemma">Pos.lt_le_trans</span></a>; <span class="id" title="tactic">eauto</span>.<br/>
+<span class="id" title="keyword">Qed</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Lemma</span> <a name="all_labels_ge_le"><span class="id" title="lemma">all_labels_ge_le</span></a> <span class="id" title="var">C</span> <span class="id" title="var">l</span> <span class="id" title="var">l'</span><br/>
+&nbsp;&nbsp;: <a class="idref" href="Lvc.Lowering.LabelRelations.html#all_labels_ge"><span class="id" title="definition">all_labels_ge</span></a> <a class="idref" href="Lvc.Lowering.LabelRelations.html#C"><span class="id" title="variable">C</span></a> <a class="idref" href="Lvc.Lowering.LabelRelations.html#l"><span class="id" title="variable">l</span></a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#d43e996736952df71ebeeae74d10a287"><span class="id" title="notation">→</span></a> (<a class="idref" href="Lvc.Lowering.LabelRelations.html#l'"><span class="id" title="variable">l'</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.PArith.BinPos.html#0af097a55db0240a031a15b1e23ba4ca"><span class="id" title="notation">≤</span></a> <a class="idref" href="Lvc.Lowering.LabelRelations.html#l"><span class="id" title="variable">l</span></a>)%<span class="id" title="var">positive</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#d43e996736952df71ebeeae74d10a287"><span class="id" title="notation">→</span></a> <a class="idref" href="Lvc.Lowering.LabelRelations.html#all_labels_ge"><span class="id" title="definition">all_labels_ge</span></a> <a class="idref" href="Lvc.Lowering.LabelRelations.html#C"><span class="id" title="variable">C</span></a> <a class="idref" href="Lvc.Lowering.LabelRelations.html#l'"><span class="id" title="variable">l'</span></a>.<br/>
+<span class="id" title="keyword">Proof</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">intros</span>; <span class="id" title="tactic">hnf</span>; <span class="id" title="tactic">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">eapply</span> <span class="id" title="var">H</span> <span class="id" title="tactic">in</span> <span class="id" title="var">H1</span>. <span class="id" title="var">etransitivity</span>; <span class="id" title="tactic">eauto</span>.<br/>
+<span class="id" title="keyword">Qed</span>.<br/>
+</div>
+</div>
+<div id="footer">
+  Generated by <a href="http://coq.inria.fr/">coqdoc</a> and improved with <a href="https://github.com/tebbi/coqdocjs">CoqdocJS</a>
+</div>
+</div>
+</body>
+
+</html>

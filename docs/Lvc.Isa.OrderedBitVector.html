@@ -1,0 +1,223 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<link href="coqdoc.css" rel="stylesheet" type="text/css" />
+<link href="coqdocjs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="config.js"></script>
+<script type="text/javascript" src="coqdocjs.js"></script>
+</head>
+
+<body onload="document.getElementById('content').focus()">
+  <div id="header">
+    <span class="left">
+      <span class="modulename"> <script> document.write(document.title) </script> </span>
+    </span>
+
+    <span class="button" id="toggle-proofs"></span>
+
+    <span class="right">
+      <a href="./">Intro Page</a>
+      <a href="./indexpage.html"> Index </a>
+      <a href="./search-toc.html"> Table of Contents </a>
+    </span>
+</div>
+    <div id="content" tabindex="-1" onblur="document.getElementById('content').focus()">
+    <div id="main">
+<h1 class="libtitle">Lvc.Isa.OrderedBitVector</h1>
+
+<div class="code">
+<span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <a class="idref" href="Lvc.Infra.Util.html#"><span class="id" title="library">Util</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Lists.List.html#"><span class="id" title="library">List</span></a> <a class="idref" href="https://sigurdschneider.github.com/lvc/doc-cont/Containers.OrderedType.html#"><span class="id" title="library">OrderedType</span></a>.<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+First define bits to be a binary type with the two constructors O and I.
+
+</div>
+<div class="code">
+<span class="id" title="keyword">Inductive</span> <a name="bit"><span class="id" title="inductive">bit</span></a>:<span class="id" title="keyword">Type</span> :=<br/>
+|<a name="O"><span class="id" title="constructor">O</span></a>:<a class="idref" href="Lvc.Isa.OrderedBitVector.html#bit"><span class="id" title="inductive">bit</span></a><br/>
+|<a name="I"><span class="id" title="constructor">I</span></a>:<a class="idref" href="Lvc.Isa.OrderedBitVector.html#bit"><span class="id" title="inductive">bit</span></a>.<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+A bitvector is now simply a list of bits. Convention: The LSB is always the first bit to ease
+recursive function definitions.
+
+</div>
+<div class="code">
+<span class="id" title="keyword">Definition</span> <a name="bitvec"><span class="id" title="definition">bitvec</span></a> := <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Datatypes.html#list"><span class="id" title="inductive">list</span></a> <a class="idref" href="Lvc.Isa.OrderedBitVector.html#bit"><span class="id" title="inductive">bit</span></a>.<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+Define the length of a bitvector k 
+</div>
+<div class="code">
+<span class="comment">(*Definition&nbsp;k:=&nbsp;32.*)</span><br/>
+<span class="id" title="keyword">Parameter</span> <a name="k"><span class="id" title="axiom">k</span></a>: <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Datatypes.html#nat"><span class="id" title="inductive">nat</span></a>.<br/>
+
+<br/>
+<span class="id" title="keyword">Axiom</span> <a name="K_ge1"><span class="id" title="axiom">K_ge1</span></a> : 1 <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Peano.html#9b077c369e19739ef880736ba34623ff"><span class="id" title="notation">≤</span></a> <a class="idref" href="Lvc.Isa.OrderedBitVector.html#k"><span class="id" title="axiom">k</span></a>.<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+Inductive lt predicate for bits 
+</div>
+<div class="code">
+<span class="id" title="keyword">Inductive</span> <a name="ltBit"><span class="id" title="inductive">ltBit</span></a> :<a class="idref" href="Lvc.Isa.OrderedBitVector.html#bit"><span class="id" title="inductive">bit</span></a><a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#d43e996736952df71ebeeae74d10a287"><span class="id" title="notation">→</span></a> <a class="idref" href="Lvc.Isa.OrderedBitVector.html#bit"><span class="id" title="inductive">bit</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#d43e996736952df71ebeeae74d10a287"><span class="id" title="notation">→</span></a> <span class="id" title="keyword">Prop</span> :=<br/>
+|<a name="ltBitO"><span class="id" title="constructor">ltBitO</span></a> :  <a class="idref" href="Lvc.Isa.OrderedBitVector.html#ltBit"><span class="id" title="inductive">ltBit</span></a> <a class="idref" href="Lvc.Isa.OrderedBitVector.html#O"><span class="id" title="constructor">O</span></a> <a class="idref" href="Lvc.Isa.OrderedBitVector.html#I"><span class="id" title="constructor">I</span></a>.<br/>
+
+<br/>
+<span class="id" title="keyword">Definition</span> <a name="bitCmp"><span class="id" title="definition">bitCmp</span></a> (<span class="id" title="var">b1</span>:<a class="idref" href="Lvc.Isa.OrderedBitVector.html#bit"><span class="id" title="inductive">bit</span></a>) (<span class="id" title="var">b2</span>:<a class="idref" href="Lvc.Isa.OrderedBitVector.html#bit"><span class="id" title="inductive">bit</span></a>) :=<br/>
+<span class="id" title="keyword">match</span> <a class="idref" href="Lvc.Isa.OrderedBitVector.html#b1"><span class="id" title="variable">b1</span></a>,<a class="idref" href="Lvc.Isa.OrderedBitVector.html#b2"><span class="id" title="variable">b2</span></a> <span class="id" title="keyword">with</span><br/>
+|<a class="idref" href="Lvc.Isa.OrderedBitVector.html#O"><span class="id" title="constructor">O</span></a>, <a class="idref" href="Lvc.Isa.OrderedBitVector.html#O"><span class="id" title="constructor">O</span></a> ⇒ <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Datatypes.html#Eq"><span class="id" title="constructor">Eq</span></a><br/>
+|<a class="idref" href="Lvc.Isa.OrderedBitVector.html#O"><span class="id" title="constructor">O</span></a>,<a class="idref" href="Lvc.Isa.OrderedBitVector.html#I"><span class="id" title="constructor">I</span></a> ⇒ <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Datatypes.html#Lt"><span class="id" title="constructor">Lt</span></a><br/>
+| <a class="idref" href="Lvc.Isa.OrderedBitVector.html#I"><span class="id" title="constructor">I</span></a>, <a class="idref" href="Lvc.Isa.OrderedBitVector.html#O"><span class="id" title="constructor">O</span></a> ⇒ <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Datatypes.html#Gt"><span class="id" title="constructor">Gt</span></a><br/>
+| <a class="idref" href="Lvc.Isa.OrderedBitVector.html#I"><span class="id" title="constructor">I</span></a>, <a class="idref" href="Lvc.Isa.OrderedBitVector.html#I"><span class="id" title="constructor">I</span></a> ⇒ <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Datatypes.html#Eq"><span class="id" title="constructor">Eq</span></a><br/>
+<span class="id" title="keyword">end</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Instance</span> <a name="ltBit_trans"><span class="id" title="instance">ltBit_trans</span></a>:<br/>
+<a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Classes.RelationClasses.html#Transitive"><span class="id" title="class">Transitive</span></a> <a class="idref" href="Lvc.Isa.OrderedBitVector.html#ltBit"><span class="id" title="inductive">ltBit</span></a>.<br/>
+
+<br/>
+<span class="id" title="tactic">unfold</span> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Classes.RelationClasses.html#Transitive"><span class="id" title="class">Transitive</span></a>. <span class="id" title="tactic">intros</span>. <span class="id" title="var">general</span> <span class="id" title="tactic">induction</span> <span class="id" title="var">H</span>.<br/>
+- <span class="id" title="var">general</span> <span class="id" title="tactic">induction</span> <span class="id" title="var">H0</span>.<br/>
+<span class="id" title="keyword">Defined</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Instance</span> <a name="ltBit_irrefl"><span class="id" title="instance">ltBit_irrefl</span></a>:<br/>
+<a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Classes.RelationClasses.html#Irreflexive"><span class="id" title="class">Irreflexive</span></a> <a class="idref" href="Lvc.Isa.OrderedBitVector.html#ltBit"><span class="id" title="inductive">ltBit</span></a>.<br/>
+
+<br/>
+<span class="id" title="tactic">hnf</span>; <span class="id" title="tactic">intros</span>. <span class="id" title="tactic">unfold</span> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Classes.RelationClasses.html#complement"><span class="id" title="definition">RelationClasses.complement</span></a>. <span class="id" title="tactic">induction</span> <span class="id" title="var">x</span>.<br/>
+- <span class="id" title="tactic">intros</span>. <span class="id" title="tactic">inversion</span> <span class="id" title="var">H</span>.<br/>
+- <span class="id" title="tactic">intros</span>. <span class="id" title="tactic">inversion</span> <span class="id" title="var">H</span>.<br/>
+<span class="id" title="keyword">Defined</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Instance</span>  <a name="rewrite_eqBit"><span class="id" title="instance">rewrite_eqBit</span></a>: <span class="id" title="keyword">∀</span> <span class="id" title="var">x</span>, <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Classes.Morphisms.html#Proper"><span class="id" title="class">Proper</span></a> (<a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#eq"><span class="id" title="inductive">eq</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Classes.Morphisms.html#5bcff5fca4c3a87e683dd8ca07bab63f"><span class="id" title="notation">==&gt;</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Program.Basics.html#flip"><span class="id" title="definition">flip</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Program.Basics.html#impl"><span class="id" title="definition">impl</span></a>) (<a class="idref" href="Lvc.Isa.OrderedBitVector.html#ltBit"><span class="id" title="inductive">ltBit</span></a> <a class="idref" href="Lvc.Isa.OrderedBitVector.html#x"><span class="id" title="variable">x</span></a>).<br/>
+<span class="id" title="tactic">unfold</span> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Classes.Morphisms.html#Proper"><span class="id" title="class">Proper</span></a>, <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Classes.Morphisms.html#respectful"><span class="id" title="definition">respectful</span></a>. <span class="id" title="tactic">intros</span>. <span class="id" title="tactic">unfold</span> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Program.Basics.html#flip"><span class="id" title="definition">flip</span></a>. <span class="id" title="tactic">unfold</span> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Program.Basics.html#impl"><span class="id" title="definition">impl</span></a>. <span class="id" title="tactic">intros</span>. <span class="id" title="var">general</span> <span class="id" title="tactic">induction</span> <span class="id" title="var">H0</span>.<br/>
+-  <span class="id" title="tactic">econstructor</span>.<br/>
+<span class="id" title="keyword">Defined</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Instance</span> <a name="lt_eq_bit_strict"><span class="id" title="instance">lt_eq_bit_strict</span></a>: <a class="idref" href="https://sigurdschneider.github.com/lvc/doc-cont/Containers.OrderedType.html#StrictOrder"><span class="id" title="class">OrderedType.StrictOrder</span></a> <a class="idref" href="Lvc.Isa.OrderedBitVector.html#ltBit"><span class="id" title="inductive">ltBit</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#eq"><span class="id" title="inductive">eq</span></a>.<br/>
+<span class="id" title="tactic">econstructor</span>.<br/>
+- <span class="id" title="tactic">exact</span> <a class="idref" href="Lvc.Isa.OrderedBitVector.html#ltBit_trans"><span class="id" title="instance">ltBit_trans</span></a>.<br/>
+- <span class="id" title="tactic">intros</span>. <span class="id" title="tactic">intro</span>. <span class="id" title="tactic">apply</span> (<a class="idref" href="Lvc.Isa.OrderedBitVector.html#ltBit_irrefl"><span class="id" title="instance">ltBit_irrefl</span></a> <span class="id" title="var">x</span>). <span class="id" title="tactic">rewrite</span> &lt;- <span class="id" title="var">H0</span> <span class="id" title="tactic">in</span> <span class="id" title="var">H</span>. <span class="id" title="tactic">assumption</span>.<br/>
+<span class="id" title="keyword">Defined</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Instance</span> <a name="OrderedType_bit"><span class="id" title="instance">OrderedType_bit</span></a> : <a class="idref" href="https://sigurdschneider.github.com/lvc/doc-cont/Containers.OrderedType.html#OrderedType"><span class="id" title="class">OrderedType</span></a> <a class="idref" href="Lvc.Isa.OrderedBitVector.html#bit"><span class="id" title="inductive">bit</span></a> :=<br/>
+{ <a class="idref" href="https://sigurdschneider.github.com/lvc/doc-cont/Containers.OrderedType.html#_eq"><span class="id" title="method">_eq</span></a> := <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#eq"><span class="id" title="inductive">eq</span></a>;<br/>
+&nbsp;&nbsp;<a class="idref" href="https://sigurdschneider.github.com/lvc/doc-cont/Containers.OrderedType.html#_lt"><span class="id" title="method">_lt</span></a> := <a class="idref" href="Lvc.Isa.OrderedBitVector.html#ltBit"><span class="id" title="inductive">ltBit</span></a>;<br/>
+&nbsp;&nbsp;<a class="idref" href="https://sigurdschneider.github.com/lvc/doc-cont/Containers.OrderedType.html#_cmp"><span class="id" title="method">_cmp</span></a> := <a class="idref" href="Lvc.Isa.OrderedBitVector.html#bitCmp"><span class="id" title="definition">bitCmp</span></a>}.<br/>
+<span class="id" title="tactic">intros</span>. <span class="id" title="var">general</span> <span class="id" title="tactic">induction</span> <span class="id" title="var">x</span>; <span class="id" title="tactic">destruct</span> <span class="id" title="var">y</span>; <span class="id" title="tactic">simpl</span>; <span class="id" title="tactic">try</span> <span class="id" title="var">now</span> (<span class="id" title="tactic">econstructor</span>; <span class="id" title="tactic">eauto</span> <span class="id" title="keyword">using</span> <a class="idref" href="Lvc.Isa.OrderedBitVector.html#ltBit"><span class="id" title="inductive">ltBit</span></a>).<br/>
+<span class="id" title="keyword">Defined</span>.<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+Inductive lt predicate for bitvectors 
+</div>
+<div class="code">
+<span class="id" title="keyword">Inductive</span> <a name="ltBitvec"><span class="id" title="inductive">ltBitvec</span></a> : <a class="idref" href="Lvc.Isa.OrderedBitVector.html#bitvec"><span class="id" title="definition">bitvec</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#d43e996736952df71ebeeae74d10a287"><span class="id" title="notation">→</span></a> <a class="idref" href="Lvc.Isa.OrderedBitVector.html#bitvec"><span class="id" title="definition">bitvec</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#d43e996736952df71ebeeae74d10a287"><span class="id" title="notation">→</span></a> <span class="id" title="keyword">Prop</span> :=<br/>
+|<a name="ltBitvecNil"><span class="id" title="constructor">ltBitvecNil</span></a> <span class="id" title="var">a</span> <span class="id" title="var">b</span>: <a class="idref" href="Lvc.Isa.OrderedBitVector.html#ltBitvec"><span class="id" title="inductive">ltBitvec</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Datatypes.html#nil"><span class="id" title="constructor">nil</span></a> (<a class="idref" href="Lvc.Isa.OrderedBitVector.html#a"><span class="id" title="variable">a</span></a><a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Datatypes.html#0a8150c3c4df34d205c5ed9a427e2ed5"><span class="id" title="notation">::</span></a><a class="idref" href="Lvc.Isa.OrderedBitVector.html#b"><span class="id" title="variable">b</span></a>)<br/>
+|<a name="ltBitvecCons"><span class="id" title="constructor">ltBitvecCons</span></a> <span class="id" title="var">a</span> <span class="id" title="var">b</span> <span class="id" title="var">c</span> <span class="id" title="var">d</span> : <a class="idref" href="https://sigurdschneider.github.com/lvc/doc-cont/Containers.OrderedType.html#_lt"><span class="id" title="method">_lt</span></a> <a class="idref" href="Lvc.Isa.OrderedBitVector.html#a"><span class="id" title="variable">a</span></a> <a class="idref" href="Lvc.Isa.OrderedBitVector.html#c"><span class="id" title="variable">c</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#d43e996736952df71ebeeae74d10a287"><span class="id" title="notation">→</span></a>  <a class="idref" href="Lvc.Isa.OrderedBitVector.html#ltBitvec"><span class="id" title="inductive">ltBitvec</span></a> (<a class="idref" href="Lvc.Isa.OrderedBitVector.html#a"><span class="id" title="variable">a</span></a><a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Datatypes.html#0a8150c3c4df34d205c5ed9a427e2ed5"><span class="id" title="notation">::</span></a><a class="idref" href="Lvc.Isa.OrderedBitVector.html#b"><span class="id" title="variable">b</span></a>) (<a class="idref" href="Lvc.Isa.OrderedBitVector.html#c"><span class="id" title="variable">c</span></a><a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Datatypes.html#0a8150c3c4df34d205c5ed9a427e2ed5"><span class="id" title="notation">::</span></a><a class="idref" href="Lvc.Isa.OrderedBitVector.html#d"><span class="id" title="variable">d</span></a>)<br/>
+|<a name="ltBitvecEq"><span class="id" title="constructor">ltBitvecEq</span></a> <span class="id" title="var">a</span> <span class="id" title="var">b</span> <span class="id" title="var">c</span> <span class="id" title="var">d</span>: <a class="idref" href="https://sigurdschneider.github.com/lvc/doc-cont/Containers.OrderedType.html#_eq"><span class="id" title="method">_eq</span></a> <a class="idref" href="Lvc.Isa.OrderedBitVector.html#a"><span class="id" title="variable">a</span></a> <a class="idref" href="Lvc.Isa.OrderedBitVector.html#c"><span class="id" title="variable">c</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#d43e996736952df71ebeeae74d10a287"><span class="id" title="notation">→</span></a> <a class="idref" href="Lvc.Isa.OrderedBitVector.html#ltBitvec"><span class="id" title="inductive">ltBitvec</span></a> <a class="idref" href="Lvc.Isa.OrderedBitVector.html#b"><span class="id" title="variable">b</span></a> <a class="idref" href="Lvc.Isa.OrderedBitVector.html#d"><span class="id" title="variable">d</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#d43e996736952df71ebeeae74d10a287"><span class="id" title="notation">→</span></a> <a class="idref" href="Lvc.Isa.OrderedBitVector.html#ltBitvec"><span class="id" title="inductive">ltBitvec</span></a> (<a class="idref" href="Lvc.Isa.OrderedBitVector.html#a"><span class="id" title="variable">a</span></a><a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Datatypes.html#0a8150c3c4df34d205c5ed9a427e2ed5"><span class="id" title="notation">::</span></a><a class="idref" href="Lvc.Isa.OrderedBitVector.html#b"><span class="id" title="variable">b</span></a>) (<a class="idref" href="Lvc.Isa.OrderedBitVector.html#c"><span class="id" title="variable">c</span></a><a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Datatypes.html#0a8150c3c4df34d205c5ed9a427e2ed5"><span class="id" title="notation">::</span></a><a class="idref" href="Lvc.Isa.OrderedBitVector.html#d"><span class="id" title="variable">d</span></a>).<br/>
+
+<br/>
+<span class="id" title="keyword">Fixpoint</span> <a name="bvCmp"><span class="id" title="definition">bvCmp</span></a>  (<span class="id" title="var">a</span>:<a class="idref" href="Lvc.Isa.OrderedBitVector.html#bitvec"><span class="id" title="definition">bitvec</span></a>) ( <span class="id" title="var">b</span>:<a class="idref" href="Lvc.Isa.OrderedBitVector.html#bitvec"><span class="id" title="definition">bitvec</span></a>) :=<br/>
+<span class="id" title="keyword">match</span> <a class="idref" href="Lvc.Isa.OrderedBitVector.html#a"><span class="id" title="variable">a</span></a>,<a class="idref" href="Lvc.Isa.OrderedBitVector.html#b"><span class="id" title="variable">b</span></a> <span class="id" title="keyword">with</span><br/>
+| <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Datatypes.html#nil"><span class="id" title="constructor">nil</span></a>, <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Datatypes.html#nil"><span class="id" title="constructor">nil</span></a> ⇒ <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Datatypes.html#Eq"><span class="id" title="constructor">Eq</span></a><br/>
+| <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Datatypes.html#nil"><span class="id" title="constructor">nil</span></a>, <span class="id" title="var">_</span> ⇒ <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Datatypes.html#Lt"><span class="id" title="constructor">Lt</span></a><br/>
+| <span class="id" title="var">_</span>, <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Datatypes.html#nil"><span class="id" title="constructor">nil</span></a> ⇒ <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Datatypes.html#Gt"><span class="id" title="constructor">Gt</span></a><br/>
+|<span class="id" title="var">a1</span><a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Datatypes.html#0a8150c3c4df34d205c5ed9a427e2ed5"><span class="id" title="notation">::</span></a><span class="id" title="var">a'</span> ,<span class="id" title="var">b1</span><a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Datatypes.html#0a8150c3c4df34d205c5ed9a427e2ed5"><span class="id" title="notation">::</span></a><span class="id" title="var">b'</span> ⇒ <span class="id" title="keyword">match</span>( <a class="idref" href="https://sigurdschneider.github.com/lvc/doc-cont/Containers.OrderedType.html#_cmp"><span class="id" title="method">_cmp</span></a> <span class="id" title="var">a1</span> <span class="id" title="var">b1</span> ) <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Datatypes.html#Eq"><span class="id" title="constructor">Eq</span></a> ⇒ <a class="idref" href="Lvc.Isa.OrderedBitVector.html#bvCmp"><span class="id" title="definition">bvCmp</span></a> <span class="id" title="var">a'</span> <span class="id" title="var">b'</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">z</span> ⇒ <span class="id" title="var">z</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">end</span><br/>
+<span class="id" title="keyword">end</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Instance</span> <a name="ltBitvec_trans"><span class="id" title="instance">ltBitvec_trans</span></a>:<br/>
+<a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Classes.RelationClasses.html#Transitive"><span class="id" title="class">Transitive</span></a> <a class="idref" href="Lvc.Isa.OrderedBitVector.html#ltBitvec"><span class="id" title="inductive">ltBitvec</span></a>.<br/>
+
+<br/>
+<span class="id" title="tactic">unfold</span> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Classes.RelationClasses.html#Transitive"><span class="id" title="class">Transitive</span></a>. <span class="id" title="tactic">intros</span>. <span class="id" title="var">general</span> <span class="id" title="tactic">induction</span> <span class="id" title="var">H</span>.<br/>
+- <span class="id" title="var">general</span> <span class="id" title="tactic">induction</span> <span class="id" title="var">H0</span>.<br/>
+&nbsp;&nbsp;+ <span class="id" title="tactic">econstructor</span>.<br/>
+&nbsp;&nbsp;+ <span class="id" title="tactic">econstructor</span>.<br/>
+-  <span class="id" title="var">general</span> <span class="id" title="tactic">induction</span> <span class="id" title="var">H0</span>.<br/>
+&nbsp;&nbsp;&nbsp;+  <span class="id" title="tactic">econstructor</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;× <span class="id" title="tactic">eapply</span> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Classes.RelationClasses.html#transitivity"><span class="id" title="definition">transitivity</span></a> <span class="id" title="keyword">with</span> <span class="id" title="var">c0</span>; <span class="id" title="tactic">eauto</span>.<br/>
+&nbsp;&nbsp;&nbsp;+ <span class="id" title="tactic">econstructor</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;× <span class="id" title="tactic">rewrite</span> &lt;- <span class="id" title="var">H</span>. <span class="id" title="tactic">assumption</span>.<br/>
+&nbsp;&nbsp;-  <span class="id" title="var">general</span> <span class="id" title="tactic">induction</span> <span class="id" title="var">H1</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+ <span class="id" title="tactic">econstructor</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;× <span class="id" title="tactic">rewrite</span> <span class="id" title="var">H0</span>. <span class="id" title="tactic">assumption</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+ <span class="id" title="tactic">specialize</span> (<span class="id" title="var">IHltBitvec0</span> <span class="id" title="var">d</span>). <span class="id" title="tactic">rewrite</span> <span class="id" title="var">H</span> <span class="id" title="tactic">in</span> <span class="id" title="var">H0</span>. <span class="id" title="tactic">exact</span> (<a class="idref" href="Lvc.Isa.OrderedBitVector.html#ltBitvecEq"><span class="id" title="constructor">ltBitvecEq</span></a> <span class="id" title="var">a0</span> <span class="id" title="var">b0</span> <span class="id" title="var">c</span> <span class="id" title="var">d</span> <span class="id" title="var">H0</span> (<span class="id" title="var">IHltBitvec0</span> <span class="id" title="var">H1</span>)).<br/>
+<span class="id" title="keyword">Defined</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Instance</span> <a name="ltBitvec_irrefl"><span class="id" title="instance">ltBitvec_irrefl</span></a>:<br/>
+<a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Classes.RelationClasses.html#Irreflexive"><span class="id" title="class">Irreflexive</span></a> <a class="idref" href="Lvc.Isa.OrderedBitVector.html#ltBitvec"><span class="id" title="inductive">ltBitvec</span></a>.<br/>
+<span class="id" title="tactic">hnf</span>; <span class="id" title="tactic">intros</span>. <span class="id" title="tactic">unfold</span> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Classes.RelationClasses.html#complement"><span class="id" title="definition">RelationClasses.complement</span></a>. <span class="id" title="tactic">induction</span> <span class="id" title="var">x</span>; <span class="id" title="tactic">inversion</span> 1; <span class="id" title="tactic">subst</span>; <span class="id" title="tactic">eauto</span> <span class="id" title="keyword">using</span> <a class="idref" href="https://sigurdschneider.github.com/lvc/doc-cont/Containers.OrderedType.html#StrictOrder_Irreflexive"><span class="id" title="method">StrictOrder_Irreflexive</span></a>.<br/>
+<span class="id" title="tactic">eapply</span> (<a class="idref" href="https://sigurdschneider.github.com/lvc/doc-cont/Containers.OrderedType.html#StrictOrder_Irreflexive"><span class="id" title="method">StrictOrder_Irreflexive</span></a> <span class="id" title="var">a</span> <span class="id" title="var">a</span> <span class="id" title="var">H1</span>). <span class="id" title="tactic">intuition</span>.<br/>
+<span class="id" title="keyword">Defined</span>.<br/>
+
+<br/>
+&nbsp;<span class="id" title="keyword">Instance</span> <a name="rewrite_equal_bitvec"><span class="id" title="instance">rewrite_equal_bitvec</span></a>: <span class="id" title="keyword">∀</span> <span class="id" title="var">x</span>, <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Classes.Morphisms.html#Proper"><span class="id" title="class">Proper</span></a> (<a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#eq"><span class="id" title="inductive">eq</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Classes.Morphisms.html#5bcff5fca4c3a87e683dd8ca07bab63f"><span class="id" title="notation">==&gt;</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Program.Basics.html#impl"><span class="id" title="definition">impl</span></a>) (<a class="idref" href="Lvc.Isa.OrderedBitVector.html#ltBitvec"><span class="id" title="inductive">ltBitvec</span></a> <a class="idref" href="Lvc.Isa.OrderedBitVector.html#x"><span class="id" title="variable">x</span></a>) .<br/>
+<span class="id" title="tactic">unfold</span> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Classes.Morphisms.html#Proper"><span class="id" title="class">Proper</span></a>, <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Classes.Morphisms.html#respectful"><span class="id" title="definition">respectful</span></a>. <span class="id" title="tactic">intros</span>. <span class="id" title="tactic">unfold</span> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Program.Basics.html#impl"><span class="id" title="definition">impl</span></a>. <span class="id" title="tactic">intros</span>. <span class="id" title="var">general</span> <span class="id" title="tactic">induction</span> <span class="id" title="var">H0</span>.<br/>
+-  <span class="id" title="tactic">econstructor</span>.<br/>
+- <span class="id" title="tactic">econstructor</span>. <span class="id" title="tactic">assumption</span>.<br/>
+- <span class="id" title="tactic">exact</span> (<a class="idref" href="Lvc.Isa.OrderedBitVector.html#ltBitvecEq"><span class="id" title="constructor">ltBitvecEq</span></a> <span class="id" title="var">a</span>  <span class="id" title="var">b</span> <span class="id" title="var">c</span> <span class="id" title="var">d</span> <span class="id" title="var">H</span> <span class="id" title="var">H0</span>).<br/>
+<span class="id" title="keyword">Defined</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Instance</span> <a name="lt_eq_strict"><span class="id" title="instance">lt_eq_strict</span></a> : <a class="idref" href="https://sigurdschneider.github.com/lvc/doc-cont/Containers.OrderedType.html#StrictOrder"><span class="id" title="class">OrderedType.StrictOrder</span></a> <a class="idref" href="Lvc.Isa.OrderedBitVector.html#ltBitvec"><span class="id" title="inductive">ltBitvec</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#eq"><span class="id" title="inductive">eq</span></a>.<br/>
+<span class="id" title="tactic">econstructor</span>.<br/>
+- <span class="id" title="tactic">exact</span> <a class="idref" href="Lvc.Isa.OrderedBitVector.html#ltBitvec_trans"><span class="id" title="instance">ltBitvec_trans</span></a>.<br/>
+- <span class="id" title="tactic">intros</span>. <span class="id" title="tactic">intro</span>. <span class="id" title="tactic">apply</span> (<a class="idref" href="Lvc.Isa.OrderedBitVector.html#ltBitvec_irrefl"><span class="id" title="instance">ltBitvec_irrefl</span></a> <span class="id" title="var">x</span>). <span class="id" title="tactic">rewrite</span> &lt;-  <span class="id" title="var">H0</span> <span class="id" title="tactic">in</span> <span class="id" title="var">H</span>. <span class="id" title="tactic">assumption</span>.<br/>
+<span class="id" title="keyword">Defined</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Instance</span> <a name="OrderedType_bitvec"><span class="id" title="instance">OrderedType_bitvec</span></a> : <a class="idref" href="https://sigurdschneider.github.com/lvc/doc-cont/Containers.OrderedType.html#OrderedType"><span class="id" title="class">OrderedType</span></a> <a class="idref" href="Lvc.Isa.OrderedBitVector.html#bitvec"><span class="id" title="definition">bitvec</span></a> :=<br/>
+&nbsp;&nbsp;{ <a class="idref" href="https://sigurdschneider.github.com/lvc/doc-cont/Containers.OrderedType.html#_eq"><span class="id" title="method">_eq</span></a> := <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#eq"><span class="id" title="inductive">eq</span></a>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a class="idref" href="https://sigurdschneider.github.com/lvc/doc-cont/Containers.OrderedType.html#_lt"><span class="id" title="method">_lt</span></a> := <a class="idref" href="Lvc.Isa.OrderedBitVector.html#ltBitvec"><span class="id" title="inductive">ltBitvec</span></a>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a class="idref" href="https://sigurdschneider.github.com/lvc/doc-cont/Containers.OrderedType.html#_cmp"><span class="id" title="method">_cmp</span></a> := <a class="idref" href="Lvc.Isa.OrderedBitVector.html#bvCmp"><span class="id" title="definition">bvCmp</span></a>}.<br/>
+<span class="id" title="tactic">intros</span>. <span class="id" title="var">general</span> <span class="id" title="tactic">induction</span> <span class="id" title="var">x</span>; <span class="id" title="tactic">destruct</span> <span class="id" title="var">y</span>; <span class="id" title="tactic">simpl</span>; <span class="id" title="tactic">try</span> <span class="id" title="var">now</span> (<span class="id" title="tactic">econstructor</span>; <span class="id" title="tactic">eauto</span> <span class="id" title="keyword">using</span> <a class="idref" href="Lvc.Isa.OrderedBitVector.html#ltBitvec"><span class="id" title="inductive">ltBitvec</span></a>).<br/>
+<span class="id" title="tactic">pose</span> <span class="id" title="var">proof</span> (<a class="idref" href="https://sigurdschneider.github.com/lvc/doc-cont/Containers.OrderedType.html#_compare_spec"><span class="id" title="method">_compare_spec</span></a> <span class="id" title="var">a</span> <span class="id" title="var">b</span>); <span class="id" title="tactic">destruct</span> (<span class="id" title="var">IHx</span> <span class="id" title="var">y</span>);<br/>
+<span class="id" title="var">inv</span> <span class="id" title="var">H</span>;  <span class="id" title="tactic">try</span> <span class="id" title="var">now</span> (<span class="id" title="tactic">econstructor</span>; <span class="id" title="tactic">eauto</span> <span class="id" title="keyword">using</span> <a class="idref" href="Lvc.Isa.OrderedBitVector.html#ltBitvec"><span class="id" title="inductive">ltBitvec</span></a>).<br/>
+-  <span class="id" title="tactic">econstructor</span>. <span class="id" title="tactic">f_equal</span>. <span class="id" title="tactic">rewrite</span> <span class="id" title="var">H2</span>. <span class="id" title="tactic">reflexivity</span>.<br/>
+<span class="id" title="keyword">Defined</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Instance</span> <a name="bitvec_eq_computable"><span class="id" title="instance">bitvec_eq_computable</span></a> (<span class="id" title="var">s</span> <span class="id" title="var">t</span> : <a class="idref" href="Lvc.Isa.OrderedBitVector.html#bitvec"><span class="id" title="definition">bitvec</span></a>) : <a class="idref" href="Lvc.Infra.Computable.html#Computable"><span class="id" title="class">Computable</span></a> (<a class="idref" href="Lvc.Isa.OrderedBitVector.html#s"><span class="id" title="variable">s</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#1c39bf18749e5cc609e83c0a0ba5a372"><span class="id" title="notation">=</span></a> <a class="idref" href="Lvc.Isa.OrderedBitVector.html#t"><span class="id" title="variable">t</span></a>).<br/>
+<span class="id" title="tactic">pose</span> <span class="id" title="var">proof</span> (<a class="idref" href="https://sigurdschneider.github.com/lvc/doc-cont/Containers.OrderedType.html#_compare_spec"><span class="id" title="method">_compare_spec</span></a> <span class="id" title="var">s</span> <span class="id" title="var">t</span>).<br/>
+<span class="id" title="tactic">destruct</span> (<a class="idref" href="https://sigurdschneider.github.com/lvc/doc-cont/Containers.OrderedType.html#_cmp"><span class="id" title="method">_cmp</span></a> <span class="id" title="var">s</span> <span class="id" title="var">t</span>); <span class="id" title="tactic">simpl</span> <span class="id" title="tactic">in</span> ×.<br/>
+- <span class="id" title="tactic">left</span>. <span class="id" title="var">inv</span> <span class="id" title="var">H</span>. <span class="id" title="tactic">eauto</span>.<br/>
+- <span class="id" title="tactic">right</span>. <span class="id" title="var">inv</span> <span class="id" title="var">H</span>. <span class="id" title="tactic">intro</span>; <span class="id" title="tactic">subst</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">eapply</span> <a class="idref" href="Lvc.Isa.OrderedBitVector.html#ltBitvec_irrefl"><span class="id" title="instance">ltBitvec_irrefl</span></a>. <span class="id" title="tactic">eapply</span> <span class="id" title="var">H0</span>.<br/>
+- <span class="id" title="tactic">right</span>. <span class="id" title="var">inv</span> <span class="id" title="var">H</span>. <span class="id" title="tactic">intro</span>; <span class="id" title="tactic">subst</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">eapply</span> <a class="idref" href="Lvc.Isa.OrderedBitVector.html#ltBitvec_irrefl"><span class="id" title="instance">ltBitvec_irrefl</span></a>. <span class="id" title="tactic">eapply</span> <span class="id" title="var">H0</span>.<br/>
+<span class="id" title="keyword">Defined</span>.<br/>
+</div>
+</div>
+<div id="footer">
+  Generated by <a href="http://coq.inria.fr/">coqdoc</a> and improved with <a href="https://github.com/tebbi/coqdocjs">CoqdocJS</a>
+</div>
+</div>
+</body>
+
+</html>
