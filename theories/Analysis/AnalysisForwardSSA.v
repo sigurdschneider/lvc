@@ -389,17 +389,15 @@ Proof.
     + isabsurd.
   - destruct F, rF; isabsurd. inv GetBW.
     edestruct IHn as [Zs [? [? [? [? [? ]]]]]]; eauto; subst. simpl in *. subst.
-    assert (STx:forall (n1 : nat) (s : params * stmt),
-               get (p::take n F) n1 s -> subTerm (snd s) sT). {
-      intros. inv H1; eauto using get.
-    }
-    assert (STEQ1:(ST 0 p (getLB F p) = (STx 0 p (getLB (take n F) p))))
-      by eapply subTerm_PI.
+    pose ((fun n1 s => match n1 with
+                       | 0 => fun GET => (@ST 0 s ltac:(inv GET; eauto using get))
+                       | S n => fun GET => (x3 n s ltac:(inv GET; eauto))
+                       end):forall (n1 : nat) (s : params * stmt),
+             get (p::take n F) n1 s -> subTerm (snd s) sT) as XX.
+    assert (STEQ1:(ST 0 p (getLB F p) = (XX 0 p (getLB (take n F) p)))) by reflexivity.
     assert (STEQ2:x3 =
             (fun (n' : nat) (Zs : params * stmt) (H1 : get (take n F) n' Zs) =>
-               STx (S n') Zs (getLS p H1)))
-      by eapply ProofIrrelevance.proof_irrelevance.
-
+               XX (S n') Zs (getLS p H1))) by reflexivity.
     do 6 (eexists; eauto using get).
     repeat f_equal. eapply STEQ1.
     eapply STEQ2.

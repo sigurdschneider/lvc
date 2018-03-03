@@ -150,7 +150,14 @@ Definition int_compare (x y : int) : Datatypes.comparison :=
 
 Unset Printing Records.
 
-Require Import ProofIrrelevance.
+Instance EqDecDatatypescomparison
+  : EqDec Datatypes.comparison eq.
+Proof.
+  hnf; intros.
+  destruct x,y;
+    try (now (left; reflexivity));
+    try now (right; hnf; intros H; inv H).
+Qed.
 
 Lemma compare_spec_int x y
   : compare_spec eq Int.ltu x y (int_compare x y).
@@ -159,13 +166,15 @@ Proof.
   case_eq (int_compare x y); intros EQ; econstructor; unfold int_compare in EQ;
     rewrite EQ in H; inv H; eauto.
   - destruct x,y; simpl in *; subst.
-    f_equal. eapply ProofIrrelevance.proof_irrelevance.
+    f_equal. destruct intrange, intrange0.
+    f_equal. Unset Printing Notations.
+    eapply dec_UIP. eauto with typeclass_instances.
+    eapply dec_UIP. eauto with typeclass_instances.
   - hnf. unfold Int.ltu.
     rewrite Coqlib.zlt_true; eauto.
   - hnf. unfold Int.ltu.
     rewrite Coqlib.zlt_true; eauto.
 Qed.
-
 
 Lemma compare_spec_int_eq x y
   : int_compare x y = Eq -> x = y.
@@ -174,7 +183,6 @@ Proof.
   pose proof (compare_spec_int x y). rewrite H in H0.
   inv H0. eauto.
 Qed.
-
 
 Instance int_eq_dec : EqDec val int_eq.
 hnf; intros. destruct x,y.
