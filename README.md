@@ -26,25 +26,33 @@ LVC stands for Linear Verified Compiler. The compiler is based on the linear fir
 
 ## Building LVC
 
-After installing the dependencies, you *can* (but do not have to) use
+Get the source code via 
+
+	git clone https://github.com/sigurdschneider/lvc
+	git submodule update --init --recursive
+
+After installing the dependencies, you *can* (but if you did not change anthring, you do not have to) use
 
 	./configure.sh
 
-to generate `_CoqProject` from the sources (use `configure.sh --vanilla` if you don't have ruby installed).
-As a failsafe, we also provide a `_CoqProject` in this distibuition. Then build LVC using
+to generate `_CoqProject` from the sources. This step is strictly optional, as we also provide a `_CoqProject`
+in this distribution. Then build LVC using
 
 	make
 	make extraction
 
-This will generate a binary, and the following symbolic link will point to it
+This will generate a OCaml bytecode, and the following symbolic link will point to it
 
-	extraction/lvcc.native
+	extraction/lvcc.byte
 
 There are some example files in extraction/examples. Run one by issuing the following command:
 
 	cd extraction
-	./lvcc.native examples/dve.il
-	./lvcc.native examples/dve+dce.il
+	./lvcc.byte examples/dve.il
+	./lvcc.byte examples/dve+dce.il
+
+The output after different compilation phases will be in files `example/dve.il.$PHASE` where $PHASE is the 
+compilation phase.
 
 ## Disclaimer
 
