@@ -7,7 +7,7 @@ LVC stands for Linear Verified Compiler. The compiler is based on the linear fir
 
 - **Coq**
 
-    Sources compile with Coq version 8.7+alpha (July 2017).
+    Sources compile with Coq version 8.7.2 (March 2018). Other versions might work.
 
 - **OCaml** (including ocamlbuild)
 
@@ -18,7 +18,7 @@ LVC stands for Linear Verified Compiler. The compiler is based on the linear fir
 
     A parser generator mostly compatible with ocamlyacc (but better at explaining conflicts):
     http://gallium.inria.fr/~fpottier/menhir/
-    Sources compile with version 20170712.
+    Sources compile with version 20171013. Other versions might work.
 
 - **ruby** [optional]
 
@@ -30,8 +30,8 @@ After installing the dependencies, you *can* (but do not have to) use
 
 	./configure.sh
 
-to generate _CoqProject from the sources (use `configure.sh --vanilla` if you don't have ruby installed).
-As a failsafe, we also provide a _CoqProject in this distibuition. Then build LVC using
+to generate `_CoqProject` from the sources (use `configure.sh --vanilla` if you don't have ruby installed).
+As a failsafe, we also provide a `_CoqProject` in this distibuition. Then build LVC using
 
 	make
 	make extraction
