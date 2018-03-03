@@ -9,7 +9,7 @@ EXTRA_DIR := extra
 HEADER := $(EXTRA_DIR)/header.html
 FOOTER := $(EXTRA_DIR)/footer.html
 COQDOCFLAGSX := \
-	--external 'https://sigurdschneider.github.com/lvc/doc-cont' Containers \
+	--external 'https://sigurdschneider.github.com/lvc/containers' Containers \
   --toc --utf8 --toc-depth 3 --html --interpolate \
   --index indexpage --no-lib-name --parse-comments \
   --with-header $(HEADER) --with-footer $(FOOTER)
@@ -65,7 +65,11 @@ depclean: clean
 distclean: clean depclean
 	find $(PKGIND)/ -type f -iname '*.vo' -o -iname '*.glob' -o -iname '*.v.d' | xargs rm -rf
 
-doc: clean-doc $(DOCS) dep $(COQMAKEFILE)
+doc-cont:
+	- rm -rf ContainersPlugin/html
+	make -C ContainersPlugin html
+
+doc: clean-doc $(DOCS) dep $(COQMAKEFILE) doc-cont
 	- mkdir -p $(DOC)
 	make -f $(COQMAKEFILE) -j$(CORES) -k
 	coqdoc $(COQDOCFLAGSX) -d $(DOC) $(shell cat _CoqProject | grep -v ^-I | grep -v mlpack | grep -v ml4)
@@ -79,10 +83,11 @@ doc-publish: doc
 	scp -r ContainersPlugin/html/* ps:public_html/LVC/doc-cont/
 
 update-docs: doc
+	- rm -rf docs/
 	- mkdir -p docs
 	cp -r $(DOC)/* docs/
-	- mkdir -p docs/doc-cont
-	cp -r ContainersPlugin/html/* docs/doc-cont/ 
+	- mkdir -p docs/containers
+	cp -r ContainersPlugin/html/* docs/containers/
 
 doc-quick: 
 	scp -r $(DOC)/* ps:public_html/LVC/doc-all/

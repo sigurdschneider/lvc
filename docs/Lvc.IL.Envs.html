@@ -28,7 +28,7 @@
 <h1 class="libtitle">Lvc.IL.Envs</h1>
 
 <div class="code">
-<span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Lists.List.html#"><span class="id" title="library">List</span></a>.<br/>
+<span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <a class="idref" href="http://coq.inria.fr/distrib/8.7.2/stdlib//Coq.Lists.List.html#"><span class="id" title="library">List</span></a>.<br/>
 <span class="id" title="keyword">Require</span> <span class="id" title="keyword">Export</span> <a class="idref" href="Lvc.Infra.Util.html#"><span class="id" title="library">Util</span></a> <a class="idref" href="Lvc.Infra.EqDec.html#"><span class="id" title="library">EqDec</span></a> <a class="idref" href="Lvc.Constr.Map.html#"><span class="id" title="library">Map</span></a> <a class="idref" href="Lvc.IL.Var.html#"><span class="id" title="library">Var</span></a> <a class="idref" href="Lvc.Isa.Val.html#"><span class="id" title="library">Val</span></a>.<br/>
 
 <br/>
@@ -43,7 +43,7 @@
  Type environments are functions from var to option X for some type type X 
 </div>
 <div class="code">
-<span class="id" title="keyword">Definition</span> <a name="onv"><span class="id" title="definition">onv</span></a> (<span class="id" title="var">X</span>:<span class="id" title="keyword">Type</span>) := <a class="idref" href="Lvc.IL.Var.html#a8af51c5c54b0cdb656661aee5be6c5c"><span class="id" title="notation">var</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#d43e996736952df71ebeeae74d10a287"><span class="id" title="notation">→</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Datatypes.html#option"><span class="id" title="inductive">option</span></a> <a class="idref" href="Lvc.IL.Envs.html#X"><span class="id" title="variable">X</span></a>.<br/>
+<span class="id" title="keyword">Definition</span> <a name="onv"><span class="id" title="definition">onv</span></a> (<span class="id" title="var">X</span>:<span class="id" title="keyword">Type</span>) := <a class="idref" href="Lvc.IL.Var.html#a8af51c5c54b0cdb656661aee5be6c5c"><span class="id" title="notation">var</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.2/stdlib//Coq.Init.Logic.html#d43e996736952df71ebeeae74d10a287"><span class="id" title="notation">→</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.2/stdlib//Coq.Init.Datatypes.html#option"><span class="id" title="inductive">option</span></a> <a class="idref" href="Lvc.IL.Envs.html#X"><span class="id" title="variable">X</span></a>.<br/>
 
 <br/>
 </div>
@@ -53,7 +53,7 @@
  Value environments are functions from var to a value type X. 
 </div>
 <div class="code">
-<span class="id" title="keyword">Definition</span> <a name="env"><span class="id" title="definition">env</span></a> (<span class="id" title="var">X</span>:<span class="id" title="keyword">Type</span>) := <a class="idref" href="Lvc.IL.Var.html#a8af51c5c54b0cdb656661aee5be6c5c"><span class="id" title="notation">var</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.0/stdlib//Coq.Init.Logic.html#d43e996736952df71ebeeae74d10a287"><span class="id" title="notation">→</span></a> <a class="idref" href="Lvc.IL.Envs.html#X"><span class="id" title="variable">X</span></a>.<br/>
+<span class="id" title="keyword">Definition</span> <a name="env"><span class="id" title="definition">env</span></a> (<span class="id" title="var">X</span>:<span class="id" title="keyword">Type</span>) := <a class="idref" href="Lvc.IL.Var.html#a8af51c5c54b0cdb656661aee5be6c5c"><span class="id" title="notation">var</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.2/stdlib//Coq.Init.Logic.html#d43e996736952df71ebeeae74d10a287"><span class="id" title="notation">→</span></a> <a class="idref" href="Lvc.IL.Envs.html#X"><span class="id" title="variable">X</span></a>.<br/>
 </div>
 </div>
 <div id="footer">
