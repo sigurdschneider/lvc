@@ -15,6 +15,7 @@ Instance inst_val_defaulted : Defaulted val := {
 }.
 
 Definition val_zero : val := Int.zero.
+Definition val_one : val := Int.one.
 
 Instance inst_eq_dec_val : EqDec val eq.
 hnf; intros. eapply Int.eq_dec.

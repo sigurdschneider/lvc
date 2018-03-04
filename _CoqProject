@@ -18,6 +18,7 @@
 src/lvc_plugin.mlpack
 src/lvc_tacs.ml4
 
+theories/Alpha/AlphaNotILI.v
 theories/Alpha/Alpha_RenamedApart.v
 theories/Alpha/Alpha.v
 theories/Alpha/RenameApart_Alpha.v
@@ -105,6 +106,7 @@ theories/Equiv/SimDivergence.v
 theories/Equiv/SimF.v
 theories/Equiv/SimI.v
 theories/Equiv/SimLockStep.v
+theories/Equiv/SimRel.v
 theories/Equiv/SimTactics.v
 theories/Equiv/Sim.v
 theories/Equiv/StateTypeProperties.v
