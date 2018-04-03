@@ -8,10 +8,11 @@ Set Implicit Arguments.
 
 (** * SSA-based register assignment formulated for IL *)
 
-Lemma injective_on_update_cmap_fresh (p:inf_partition var) lv x (ϱ:Map[var, var])
+Lemma injective_on_update_cmap_fresh (p:inf_partition var) o lv x (ϱ:Map[var, var])
       (inj : injective_on (lv \ singleton x) (findt ϱ default_var))
   : injective_on lv
-                 (findt (ϱ [-x <- least_fresh_part p (lookup_set (findt ϱ default_var) (lv \ singleton x)) x -]) default_var).
+                 (findt (ϱ [-x <- least_fresh_part p o
+                               (lookup_set (findt ϱ default_var) (lv \ singleton x)) x -]) default_var).
 Proof.
   eapply injective_on_agree; [| eapply map_update_update_agree].
   eapply injective_on_incl.
@@ -20,7 +21,7 @@ Proof.
   eauto with cset.
 Qed.
 
-Definition regAssignF p
+Definition regAssignF p (spill_oracle: var -> var)
            (regAssign : stmt -> ann (set var) -> Map [var, var] -> status (Map [var, var]))
   := fix regAssignF
            (ϱ:Map [var, var]) (F:list (list var * stmt)) (ans: list (ann (set var)))
@@ -28,34 +29,34 @@ Definition regAssignF p
   match F, ans with
     | Zs::F, a::ans =>
       let Z := fst Zs in let s := snd Zs in
-      let Z' := fst (fresh_list_stable (stable_fresh_part p) (SetConstructs.map (findt ϱ default_var) (getAnn a\of_list Z)) Z) in
+      let Z' := fst (fresh_list_stable (stable_fresh_part p spill_oracle) (SetConstructs.map (findt ϱ default_var) (getAnn a\of_list Z)) Z) in
       sdo ϱ' <- regAssign s a (ϱ[- Z <-- Z'-]);
         regAssignF ϱ' F ans
 
     | _, _ => Success ϱ
   end.
 
-Fixpoint regAssign p (st:stmt) (an: ann (set var)) (ϱ:Map [var, var])
+Fixpoint regAssign p (spill_oracle: var -> var) (st:stmt) (an: ann (set var)) (ϱ:Map [var, var])
   : status (Map [var, var]) :=
  match st, an with
     | stmtLet x e s, ann1 lv ans =>
-      let xv := least_fresh_part p (SetConstructs.map (findt ϱ default_var) (getAnn ans\ singleton x)) x
-      in regAssign p s ans (ϱ[- x <- xv -])
+      let xv := least_fresh_part p spill_oracle (SetConstructs.map (findt ϱ default_var) (getAnn ans\ singleton x)) x
+      in regAssign p spill_oracle s ans (ϱ[- x <- xv -])
     | stmtIf _ s t, ann2 lv ans ant =>
-      sdo ϱ' <- regAssign p s ans ϱ;
-        regAssign p t ant ϱ'
+      sdo ϱ' <- regAssign p spill_oracle s ans ϱ;
+        regAssign p spill_oracle t ant ϱ'
     | stmtApp _ _, ann0 _ => Success ϱ
     | stmtReturn _, ann0 _ => Success ϱ
     | stmtFun F t, annF _ ans ant =>
-      sdo ϱ' <- regAssignF p (regAssign p) ϱ F ans;
-        regAssign p t ant ϱ'
+      sdo ϱ' <- regAssignF p spill_oracle (regAssign p spill_oracle) ϱ F ans;
+        regAssign p spill_oracle t ant ϱ'
     | _, _ => Error "regAssign: Annotation mismatch"
  end.
 
 (** The algorithm only changes bound variables in the mapping [ϱ] *)
 
-Lemma regAssign_renamedApart_agreeF' c G F ans als ϱ ϱ'
-      (allocOK:regAssignF c (regAssign c) ϱ F als = Success ϱ')
+Lemma regAssign_renamedApart_agreeF' c o G F ans als ϱ ϱ'
+      (allocOK:regAssignF c o (regAssign c o) ϱ F als = Success ϱ')
       (REN:forall (n : nat) (Zs : params * stmt) (a : ann (set var * set var)),
              get F n Zs -> get ans n a -> renamedApart (snd Zs) a)
       (LEN1:length F = length als)
@@ -66,7 +67,7 @@ Lemma regAssign_renamedApart_agreeF' c G F ans als ϱ ϱ'
              forall (al : ann (set var * set var)) (ϱ0 ϱ'0 : Map  [var, var])
                (G0 : set var),
                renamedApart (snd Zs) al ->
-               regAssign c (snd Zs) a ϱ0 = Success ϱ'0 ->
+               regAssign c o (snd Zs) a ϱ0 = Success ϱ'0 ->
                agree_on eq (G0 \ snd (getAnn al)) (findt ϱ0 default_var) (findt ϱ'0 default_var)))
 : forall G' : set var,
     list_union zip defVars F ans[<=]G' ->
@@ -88,8 +89,8 @@ Proof.
 Qed.
 
 
-Lemma regAssign_renamedApart_agree' c i s al ϱ ϱ' ZL Lv alv G
-      (allocOK:regAssign c s alv ϱ = Success ϱ')
+Lemma regAssign_renamedApart_agree' c o i s al ϱ ϱ' ZL Lv alv G
+      (allocOK:regAssign c o s alv ϱ = Success ϱ')
       (sd:renamedApart s al)
       (LS:live_sound i ZL Lv s alv)
 : agree_on eq (G \ snd (getAnn al)) (findt ϱ default_var) (findt ϱ' default_var).
@@ -117,8 +118,8 @@ Proof.
     eapply incl_minus_lr; try reflexivity. rewrite <- H13. eauto with cset.
 Qed.
 
-Lemma regAssign_renamedApart_agree c i s al ϱ ϱ' ZL Lv alv
-      (allocOK:regAssign c s alv ϱ = Success ϱ')
+Lemma regAssign_renamedApart_agree c o i s al ϱ ϱ' ZL Lv alv
+      (allocOK:regAssign c o s alv ϱ = Success ϱ')
       (sd:renamedApart s al)
       (LS:live_sound i ZL Lv s alv)
 : agree_on eq (fst (getAnn al)) (findt ϱ default_var) (findt ϱ' default_var).
@@ -131,8 +132,8 @@ Proof.
   clear_all; cset_tac; intuition; eauto.
 Qed.
 
-Lemma regAssignF_get p G F ans alv n Zs a ϱ ϱ' an ZL Lv i D Dt lv
-: regAssignF p (regAssign p) ϱ F alv = Success ϱ'
+Lemma regAssignF_get p o G F ans alv n Zs a ϱ ϱ' an ZL Lv i D Dt lv
+: regAssignF p o (regAssign p o) ϱ F alv = Success ϱ'
   -> (forall n Zs a, get F n Zs -> get ans n a -> renamedApart (snd Zs) a)
   -> (forall n Zs a, get F n Zs ->
                get alv n a ->
@@ -148,10 +149,10 @@ Lemma regAssignF_get p G F ans alv n Zs a ϱ ϱ' an ZL Lv i D Dt lv
   -> get alv n a
   -> get ans n an
   -> lv ⊆ D
-  -> exists ϱ1 ϱ2, regAssign p (snd Zs) a ϱ1 = Success ϱ2
-             /\ regAssignF p (regAssign p) ϱ2 (drop (S n) F) (drop (S n) alv) = Success ϱ'
+  -> exists ϱ1 ϱ2, regAssign p o (snd Zs) a ϱ1 = Success ϱ2
+             /\ regAssignF p o (regAssign p o) ϱ2 (drop (S n) F) (drop (S n) alv) = Success ϱ'
              /\ agree_on eq (G \ list_union (zip defVars (take n F) (take n ans)))
-                        (findt (ϱ[-fst Zs <-- fst (fresh_list_stable (stable_fresh_part p)
+                        (findt (ϱ[-fst Zs <-- fst (fresh_list_stable (stable_fresh_part p o)
                                       (SetConstructs.map (findt ϱ default_var) (getAnn a \ of_list (fst Zs)))
                                       (fst Zs))-]) default_var)
                         (findt ϱ1 default_var).
@@ -159,7 +160,7 @@ Lemma regAssignF_get p G F ans alv n Zs a ϱ ϱ' an ZL Lv i D Dt lv
 Proof.
   intros EQ REN LV LVINC DDISJ FUNC PWDISJ GET1 GET2 GET3 incl.
   general induction GET1; try inv GET2; try inv GET3; simpl in * |- *; monadS_inv EQ; eauto.
-  - exploit (IHGET1 p G); hnf; intros; eauto using get; dcr.
+  - exploit (IHGET1 p o G); hnf; intros; eauto using get; dcr.
     do 2 eexists; split; eauto. split; eauto.
     etransitivity; eapply agree_on_incl; [ | reflexivity | eassumption | eauto ].
     + repeat rewrite <- map_update_list_update_agree; eauto with len.

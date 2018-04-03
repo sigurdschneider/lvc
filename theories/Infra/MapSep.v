@@ -103,10 +103,10 @@ Proof.
   rewrite cardinal_map; eauto.
 Qed.
 
-Lemma sep_update_list X `{OrderedType X} p ϱ (Z:list X) (lv:set X) G
+Lemma sep_update_list X `{OrderedType X} p ϱ (Z:list X) (lv:set X) G o2
       (SEP:sep X p (lv \ of_list Z) ϱ) (incl:of_list Z [<=] lv)
   : sep X p lv
-        (ϱ [Z <-- fst (fresh_list_stable (stable_fresh_part p) G Z)]).
+        (ϱ [Z <-- fst (fresh_list_stable (stable_fresh_part p o2) G Z)]).
 Proof.
   hnf; split; intros; decide (x ∈ of_list Z).
   - edestruct update_with_list_lookup_in_list; try eapply i; dcr.

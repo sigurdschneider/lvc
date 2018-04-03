@@ -3,14 +3,15 @@ Require Import CMap MapNotations CSet Le Arith.Compare_dec.
 Require Import Plus Util Status Take Subset1 Filter.
 Require Import Val Var StableFresh Envs IL Annotation Liveness.Liveness MoreList SetOperations.
 Require Import Coherence Coherence.Allocation RenamedApart AllocationAlgo InfinitePartition.
+Require Import Restrict RenamedApart_Liveness LabelsDefined.
 
 Set Implicit Arguments.
 
 Require Import MapNotations.
 (** ** the algorithm produces a locally injective renaming *)
 
-Lemma regAssign_correct p (ϱ:Map [var,var]) ZL Lv s alv ϱ' ra
-      (allocOK:regAssign p s alv ϱ = Success ϱ')
+Lemma regAssign_correct p o (ϱ:Map [var,var]) ZL Lv s alv ϱ' ra
+      (allocOK:regAssign p o s alv ϱ = Success ϱ')
       (LS:live_sound FunctionalAndImperative ZL Lv s alv)
       (inj:injective_on (getAnn alv) (findt ϱ default_var))
       (sd:renamedApart s ra)
@@ -73,7 +74,7 @@ Proof.
       econstructor; eauto.
       * {
           intros. edestruct get_length_eq; try eapply H6; eauto.
-          edestruct (regAssignF_get p (fst (getAnn x0) ∪ snd (getAnn x0)
+          edestruct (regAssignF_get p o (fst (getAnn x0) ∪ snd (getAnn x0)
                                            ∪ getAnn alv)); eauto; dcr.
           rewrite <- map_update_list_update_agree in H20; eauto.
           exploit (H1 _ _ _ H13 H14 p); try eapply H19; eauto.
@@ -117,16 +118,16 @@ Proof.
 Qed.
 
 
-Require Import Restrict RenamedApart_Liveness LabelsDefined.
 
-Lemma regAssign_correct_I b p s ang ϱ ϱ' (alv:ann (set var)) ZL Lv
+
+Lemma regAssign_correct_I b p o s ang ϱ ϱ' (alv:ann (set var)) ZL Lv
   : renamedApart s ang
   -> live_sound Imperative ZL Lv s alv
   -> bounded (Some ⊝ Lv \\ ZL) (fst (getAnn ang))
   -> ann_R Subset1 alv ang
   -> noUnreachableCode (isCalled b) s
   -> injective_on (getAnn alv) (findt ϱ default_var)
-  -> regAssign p s alv ϱ = Success ϱ'
+  -> regAssign p o s alv ϱ = Success ϱ'
   -> locally_inj (findt ϱ' default_var) s alv.
 Proof.
   intros.

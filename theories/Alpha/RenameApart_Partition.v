@@ -6,7 +6,7 @@ Require Import InfiniteSubset InfinitePartition MapSep AnnP FreshGen StableFresh
 
 Set Implicit Arguments.
 
-Lemma bnd_update_list p ϱ k lv Z G
+Lemma bnd_update_list p o ϱ k lv Z G
       (BDN:part_bounded var (part_1 p) k lv)
       (incl: of_list Z ⊆ lv)
       (SEP:sep var p (lv \ of_list Z) ϱ)
@@ -14,7 +14,7 @@ Lemma bnd_update_list p ϱ k lv Z G
       (UNIQ:NoDupA eq Z)
   : part_bounded var (part_1 p) k
                  (lookup_set ϱ (lv \ of_list Z)
-                             ∪ of_list (fst (fresh_list_stable (stable_fresh_part p) G Z))).
+                             ∪ of_list (fst (fresh_list_stable (stable_fresh_part p o) G Z))).
 Proof.
   unfold part_bounded, lookup_set in *.
   rewrite filter_union; eauto.

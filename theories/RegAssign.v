@@ -10,11 +10,11 @@ Require Import Slot InfiniteSubset InfinitePartition.
 
 Arguments sim S {H} S' {H0} r t _ _.
 
-Definition rassign (p:inf_partition var) max_reg
+Definition rassign (p:inf_partition var) o max_reg
            (s:stmt) (lv: ann (set var)) :=
   let fvl := to_list (getAnn lv) in
   let ϱ := CMap.update_map_with_list fvl fvl (@MapInterface.empty var _ _ _) in
-  sdo ϱ' <- regAssign p s lv ϱ;
+  sdo ϱ' <- regAssign p o s lv ϱ;
     let s_allocated := rename (CMap.findt ϱ' default_var) s in
     let s_lowered := ParallelMove.lower p max_reg nil
                                        s_allocated
@@ -24,8 +24,8 @@ Definition rassign (p:inf_partition var) max_reg
 Opaque to_list.
 
 
-Lemma rassign_correct p max_reg (s:stmt) (lv:ann (set var)) s' ra
-      (SC: rassign p max_reg s lv = Success s') (PM:paramsMatch s nil)
+Lemma rassign_correct p o max_reg (s:stmt) (lv:ann (set var)) s' ra
+      (SC: rassign p o max_reg s lv = Success s') (PM:paramsMatch s nil)
       (RA: renamedApart s ra)
       (AEF: app_expfree s)
       (LV:live_sound FunctionalAndImperative nil nil s lv)

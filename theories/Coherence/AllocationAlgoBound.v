@@ -48,13 +48,13 @@ Proof.
       clear; cset_tac.
 Qed.
 
-Lemma regAssign_assignment_small k p (ϱ:Map [var,var]) ZL Lv s alv ϱ' ra
+Lemma regAssign_assignment_small k p o (ϱ:Map [var,var]) ZL Lv s alv ϱ' ra
       (LS:live_sound Functional ZL Lv s alv)
       (inj:injective_on (getAnn alv) (findt ϱ default_var))
       (SEP:sep var p (getAnn alv) (findt ϱ default_var))
       (RA:renamedApart s ra)
       (INCL:ann_R Subset1 alv ra)
-      (allocOK:regAssign p s alv ϱ = Success ϱ')
+      (allocOK:regAssign p o s alv ϱ = Success ϱ')
       (BND:ann_P (part_size_bounded (part_1 p) k) alv)
       (up:For_all (part_vars_bounded (part_1 p) k) (lookup_set (findt ϱ default_var) (getAnn alv)))
   : ann_P (For_all (part_vars_bounded (part_1 p) k)) (mapAnn (lookup_set (findt ϱ' default_var)) alv).
@@ -234,13 +234,13 @@ Proof.
         rewrite H3. eauto.
 Qed.
 
-Lemma regAssign_assignment_small_I k p (ϱ:Map [var,var]) ZL Lv s alv ϱ' ra
+Lemma regAssign_assignment_small_I k p o (ϱ:Map [var,var]) ZL Lv s alv ϱ' ra
       (LS:live_sound Imperative ZL Lv s alv)
       (inj:injective_on (getAnn alv) (findt ϱ default_var))
       (SEP:sep var p (getAnn alv) (findt ϱ default_var))
       (RA:renamedApart s ra)
       (INCL:ann_R Subset1 alv ra)
-      (allocOK:regAssign p s alv ϱ = Success ϱ')
+      (allocOK:regAssign p o s alv ϱ = Success ϱ')
       (BND:ann_P (part_size_bounded (part_1 p) k) alv)
       (up:For_all (part_vars_bounded (part_1 p) k) (lookup_set (findt ϱ default_var) (getAnn alv)))
       (BOUND:bounded (Some ⊝ Lv \\ ZL) (fst (getAnn ra)))

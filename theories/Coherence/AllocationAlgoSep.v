@@ -120,9 +120,9 @@ Proof.
   symmetry in H. eauto using sep_agree.
 Qed.
 
-Lemma sep_update_part p ϱ lv x G
+Lemma sep_update_part p o ϱ lv x G
       (SEP:sep var p (lv \ singleton x) ϱ)
-  : sep var p lv (ϱ [x <- least_fresh_part p G x]).
+  : sep var p lv (ϱ [x <- least_fresh_part p o G x]).
 Proof.
   unfold sep in SEP; dcr.
   hnf; split; intros; lud.
@@ -132,8 +132,8 @@ Proof.
   - cset_tac.
 Qed.
 
-Lemma regAssign_sep p (ϱ:Map [var,var]) ZL Lv s alv ϱ' ra
-      (allocOK:regAssign p s alv ϱ = Success ϱ')
+Lemma regAssign_sep p o (ϱ:Map [var,var]) ZL Lv s alv ϱ' ra
+      (allocOK:regAssign p o s alv ϱ = Success ϱ')
       (LS:live_sound FunctionalAndImperative ZL Lv s alv)
       (inj:injective_on (getAnn alv) (findt ϱ default_var))
       (Sep:sep var p (getAnn alv) (findt ϱ default_var))
@@ -197,7 +197,7 @@ Proof.
       * {
           intros. edestruct get_length_eq; try eapply H6; eauto.
           inv_get. rename x1 into Zs.
-          edestruct (regAssignF_get p (fst (getAnn x0) ∪ snd (getAnn x0)
+          edestruct (regAssignF_get p o (fst (getAnn x0) ∪ snd (getAnn x0)
                                            ∪ getAnn alv)); eauto; dcr.
           rewrite <- map_update_list_update_agree in H22; eauto with len.
           exploit H1; eauto. pe_rewrite.

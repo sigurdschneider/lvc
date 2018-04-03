@@ -187,39 +187,51 @@ Proof.
   decide Q; clear H; intros; intuition.
 Qed.
 
-Definition least_fresh_part X `{OrderedType X} (p:inf_partition X) (G:set X) x :=
-  if part_1 p x then least_fresh_P (part_1 p) G
-  else least_fresh_P (part_2 p) G.
+Definition least_fresh_P_oracle X `{OrderedType X}
+           (p:inf_subset X) (lv:set X) (o:X->X) (x:X) :=
+  let y := o x in
+  if [p y /\ y ∉ lv]
+  then y
+  else least_fresh_P p lv.
 
-Lemma least_fresh_part_fresh X `{OrderedType X} p G x
-  : least_fresh_part p G x ∉ G.
+Definition least_fresh_part X `{OrderedType X} (p:inf_partition X) (o2:X -> X)
+           (G:set X) x :=
+  if part_1 p x then
+    least_fresh_P (part_1 p) G
+  else
+    least_fresh_P_oracle (part_2 p) G o2 x.
+
+Lemma least_fresh_part_fresh X `{OrderedType X} p G x o2
+  : least_fresh_part p o2 G x ∉ G.
 Proof.
   unfold least_fresh_part; cases; eauto.
   - eapply least_fresh_P_full_spec.
-  - eapply least_fresh_P_full_spec.
+  - unfold least_fresh_P_oracle. cases; dcr; eauto.
+    eapply least_fresh_P_full_spec.
 Qed.
 
-Lemma least_fresh_part_1 X `{OrderedType X} (p:inf_partition X) G x
+Lemma least_fresh_part_1 X `{OrderedType X} (p:inf_partition X) G x o2
   : part_1 p x
-    -> part_1 p (least_fresh_part p G x).
+    -> part_1 p (least_fresh_part p o2 G x).
 Proof.
   unfold least_fresh_part; intros; cases.
   eapply least_fresh_P_full_spec.
 Qed.
 
-Lemma least_fresh_part_2  X `{OrderedType X} (p:inf_partition X) G x
+Lemma least_fresh_part_2  X `{OrderedType X} (p:inf_partition X) G x o2
   : part_2 p x
-    -> part_2 p (least_fresh_part p G x).
+    -> part_2 p (least_fresh_part p o2 G x).
 Proof.
   unfold least_fresh_part; intros. cases.
   - exfalso. eapply (part_disj p); eauto.
-  - eapply least_fresh_P_full_spec.
+  - unfold least_fresh_P_oracle. cases; dcr; eauto.
+    eapply least_fresh_P_full_spec.
 Qed.
 
 
 Lemma least_fresh_part_p1 X `{OrderedType X}
-      (p:inf_partition X) G x
-  : part_1 p (least_fresh_part p G x) -> part_1 p x.
+      (p:inf_partition X) G x o2
+  : part_1 p (least_fresh_part p o2 G x) -> part_1 p x.
 Proof.
   intros. edestruct part_cover; eauto.
   eapply least_fresh_part_2 in i.
@@ -227,30 +239,32 @@ Proof.
 Qed.
 
 Lemma least_fresh_part_p2 X `{OrderedType X}
-      (p:inf_partition X) G x
-  : part_2 p (least_fresh_part p G x) -> part_2 p x.
+      (p:inf_partition X) G x o2
+  : part_2 p (least_fresh_part p o2 G x) -> part_2 p x.
 Proof.
   intros. edestruct part_cover; eauto.
   eapply least_fresh_part_1 in i.
   exfalso. eapply part_disj in H0; eauto.
 Qed.
 
-Lemma least_fresh_part_ext  X `{OrderedType X} p (G G' : ⦃X⦄) x
-  : G [=] G' -> least_fresh_part p G x = least_fresh_part p G' x.
+Lemma least_fresh_part_ext  X `{OrderedType X} p (G G' : ⦃X⦄) x o2
+  : G [=] G' -> least_fresh_part p o2 G x = least_fresh_part p o2 G' x.
 Proof.
-  intros. unfold least_fresh_part; cases; eauto using least_fresh_P_ext.
+  intros. unfold least_fresh_part, least_fresh_P_oracle; repeat cases; eauto using least_fresh_P_ext.
+  exfalso. cset_tac.
+  exfalso. cset_tac.
 Qed.
 
-Definition stable_fresh_part  X `{OrderedType X} (p:inf_partition X) : StableFresh X.
-  refine (Build_StableFresh (least_fresh_part p) _ _).
+Definition stable_fresh_part  X `{OrderedType X} (p:inf_partition X) (o2:X->X) : StableFresh X.
+  refine (Build_StableFresh (least_fresh_part p o2) _ _).
   - intros. eapply least_fresh_part_fresh.
   - intros. eapply least_fresh_part_ext; eauto.
 Defined.
 
-Lemma least_fresh_list_part_ext  X `{OrderedType X} p n G G'
+Lemma least_fresh_list_part_ext  X `{OrderedType X} p n G G' o2
   : G [=] G'
-    -> fst (fresh_list_stable (stable_fresh_part p) G n)
-      = fst (fresh_list_stable (stable_fresh_part p) G' n).
+    -> fst (fresh_list_stable (stable_fresh_part p o2) G n)
+      = fst (fresh_list_stable (stable_fresh_part p o2) G' n).
 Proof.
   eapply fresh_list_stable_ext.
   intros. eapply least_fresh_part_ext; eauto.
@@ -279,8 +293,8 @@ Proof.
 Qed.
 
 
-Lemma least_fresh_part_1_back  X `{OrderedType X} (p:inf_partition X) G x
-  : part_1 p (least_fresh_part p G x) -> part_1 p x.
+Lemma least_fresh_part_1_back  X `{OrderedType X} (p:inf_partition X) G x o2
+  : part_1 p (least_fresh_part p o2 G x ) -> part_1 p x.
 Proof.
   intros.
   decide (part_1 p x); eauto.
@@ -289,8 +303,8 @@ Proof.
   edestruct (part_disj p); eauto.
 Qed.
 
-Lemma least_fresh_part_2_back  X `{OrderedType X} (p:inf_partition X) G x
-  : part_2 p (least_fresh_part p G x) -> part_2 p x.
+Lemma least_fresh_part_2_back  X `{OrderedType X} (p:inf_partition X) G x o2
+  : part_2 p (least_fresh_part p o2 G x) -> part_2 p x.
 Proof.
   intros.
   decide (part_2 p x); eauto.
@@ -299,10 +313,10 @@ Proof.
   edestruct (part_disj p); eauto.
 Qed.
 
-Lemma cardinal_filter_part  X `{OrderedType X} p G Z
+Lemma cardinal_filter_part  X `{OrderedType X} p G Z o2
       (UNIQ:NoDupA _eq Z)
   : cardinal (filter (part_1 p)
-                     (of_list (fst (fresh_list_stable (stable_fresh_part p) G Z))))
+                     (of_list (fst (fresh_list_stable (stable_fresh_part p o2) G Z))))
     = cardinal (filter (part_1 p) (of_list Z)).
 Proof.
   general induction Z; simpl.
@@ -313,7 +327,7 @@ Proof.
       rewrite filter_add_in; eauto.
       rewrite !add_cardinal_2; eauto.
       * intro. inv UNIQ. cset_tac.
-      * exploit (fresh_list_stable_spec (stable_fresh_part p));
+      * exploit (fresh_list_stable_spec (stable_fresh_part p o2));
         eauto using least_fresh_part_fresh.
         cset_tac'.
         eapply H0; cset_tac.
@@ -323,14 +337,14 @@ Proof.
 Qed.
 
 Lemma cardinal_smaller  X `{OrderedType X}
-      p n (G:set X) (Z:list X) x
+      p n (G:set X) (Z:list X) x o2
       (GET:get Z n x) (P1:part_1 p x) (ND: NoDupA _eq Z)
   : SetInterface.cardinal
     (filter (part_1 p)
        (of_list
           (take n
              (fst
-                (fresh_list_stable (stable_fresh_part p) G Z)))))
+                (fresh_list_stable (stable_fresh_part p o2) G Z)))))
     < SetInterface.cardinal (filter (part_1 p) (of_list Z)).
 Proof.
   general induction Z; simpl;
