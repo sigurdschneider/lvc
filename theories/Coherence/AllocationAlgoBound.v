@@ -70,6 +70,41 @@ Proof.
     invc ND. eauto.
 Qed.
 
+Lemma least_fresh_part_small1 X `{OrderedType X} p G x k
+  : (part_1 p) (least_fresh_part p G x)
+    -> SetInterface.cardinal (filter (part_1 p) G) < k
+    -> least_fresh_part p G x \In of_list (ksmallest (part_1 p) k).
+Proof.
+  unfold least_fresh_part in *. cases.
+  + intros.
+    eapply least_fresh_part_bounded; eauto.
+  + intros.
+    pose proof (least_fresh_P_p (part_2 p) G).
+  exfalso. eapply (part_disj p _ H0 H2).
+Qed.
+
+
+Lemma fresh_list_stable_small (p:inf_partition positive) G k Z (ND:NoDupA eq Z)
+  (BNDk : SetInterface.cardinal (filter (part_1 p) G) +
+       SetInterface.cardinal (filter (part_1 p) (of_list Z)) <= k)
+  : For_all (regbnd (part_1 p) k)
+            (of_list (fst (fresh_list_stable (stable_fresh_part p) G Z))).
+Proof.
+  hnf; intros.
+  eapply of_list_get_first in H; eauto; dcr. invc H1.
+  edestruct fresh_list_stable_get; eauto; dcr. subst.
+  hnf; simpl. intros.
+  eapply least_fresh_part_small1.
+  --- eauto.
+  --- rewrite <- BNDk.
+      rewrite filter_union; eauto.
+      rewrite union_cardinal_le; eauto.
+      rewrite plus_comm.
+      eapply plus_lt_compat_l.
+      eapply cardinal_smaller; eauto.
+      eapply least_fresh_part_p1. eauto.
+Qed.
+
 Lemma regAssign_assignment_small k p (ϱ:Map [var,var]) ZL Lv s alv ϱ' ra
       (LS:live_sound Functional ZL Lv s alv)
       (inj:injective_on (getAnn alv) (findt ϱ default_var))
@@ -112,19 +147,15 @@ Proof.
         -- rewrite lookup_set_singleton' in H2; eauto. eapply In_single in H2.
            invc H2. lud; [|isabsurd].
            hnf; intros. eapply ann_P_get in H5.
-           revert H2. unfold least_fresh_part. cases. intros.
-           eapply least_fresh_part_bounded.
-           hnf in H5. rewrite <- sep_filter_map_comm.
+           eapply least_fresh_part_small1. eauto.
+           rewrite <- sep_filter_map_comm.
            rewrite <- H5. rewrite cardinal_map.
            eapply subset_cardinal_lt with (x0 := x).
            rewrite filter_difference. eauto with cset. eauto.
-           eapply zfilter_3; eauto. rewrite filter_incl. clear. cset_tac.
+           eapply zfilter_3; eauto.
+           eapply least_fresh_part_p1 in H2. eauto.
+           rewrite filter_incl. clear. cset_tac.
            eauto. eauto. eauto. eapply sep_incl; eauto.
-           intros.
-           enough ((part_2 p)
-                     (least_fresh_P (part_2 p) (SetConstructs.map (findt ϱ default_var) (getAnn al \ singleton x)))).
-           exfalso. eapply (part_disj p _ H2 H3).
-           eapply least_fresh_P_p; eauto.
         -- eauto.
   - monadS_inv allocOK.
     exploit regAssign_renamedApart_agree; eauto using live_sound. pe_rewrite.
@@ -216,33 +247,17 @@ Proof.
            clear. cset_tac.
            rewrite For_all_union; split.
            ++ rewrite Inclx2. eauto.
-           ++ rewrite update_with_list_lookup_list; eauto with len.
-             ** exploit H8 as BNDk; eauto. eapply ann_P_get in BNDk.
-                hnf in BNDk.
-                rewrite DECOMP in BNDk.
-                rewrite filter_union in BNDk; eauto.
-                rewrite union_cardinal in BNDk; eauto; swap 1 2.
-                rewrite !filter_incl; eauto.
-                rewrite <- cardinal_map with (f:=findt ϱ default_var) in BNDk; eauto.
-                hnf; intros.
-                eapply of_list_get_first in H20; eauto; dcr. invc H28.
-                edestruct fresh_list_stable_get; eauto; dcr. subst.
-                hnf; simpl. intros.
-                unfold least_fresh_part. cases.
-                --- eapply least_fresh_part_bounded.
-                    rewrite <- BNDk.
-                    rewrite filter_union; eauto.
-                    rewrite union_cardinal_le; eauto.
-                    rewrite <- sep_filter_map_comm; eauto.
-                    rewrite plus_comm.
-                    eapply plus_lt_compat_l.
-                    eapply cardinal_smaller; eauto.
-                    edestruct H2; eauto.
-                --- simpl in *.
-                    unfold least_fresh_part in H20. cases in H20. congruence.
-                    eapply part_disj in H20. inv H20.
-                    eapply least_fresh_P_p.
-             ** edestruct H2; dcr; eauto.
+           ++ edestruct H2; eauto; dcr.
+             rewrite update_with_list_lookup_list; eauto with len.
+             eapply fresh_list_stable_small; eauto.
+             exploit H8 as BNDk; eauto. eapply ann_P_get in BNDk.
+             hnf in BNDk.
+             rewrite DECOMP in BNDk.
+             rewrite filter_union in BNDk; eauto.
+             rewrite union_cardinal in BNDk; eauto; swap 1 2.
+             rewrite !filter_incl; eauto.
+             rewrite <- cardinal_map with (f:=findt ϱ default_var) in BNDk; eauto.
+             rewrite <- sep_filter_map_comm; eauto.
         -- eapply ann_P_morph with (R:=SetInterface.Equal); eauto.
            intros. rewrite <- H26. eauto.
            eapply mapAnn_renamedApart; eauto.
