@@ -48,63 +48,6 @@ Proof.
       clear; cset_tac.
 Qed.
 
-Definition regbnd (p:inf_subset var) k (x:positive) := p x -> (x ∈ of_list (ksmallest p k)).
-Definition part_bounded_in X `{OrderedType X} (p:inf_subset X) k a :=
-  SetInterface.cardinal (filter p a) <= k.
-
-Lemma cardinal_filter_incl X `{OrderedType X} Z i x (p:inf_subset X)
-  (GET:get Z i x) (P1:p x) (ND: NoDupA _eq Z)
-  : 0 < SetInterface.cardinal (filter p (of_list Z)).
-Proof.
-  general induction GET; simpl.
-  - rewrite filter_add_in; eauto.
-    rewrite add_cardinal_2. omega. inv ND.
-    rewrite filter_incl; eauto.
-  - rewrite add_union_singleton.
-    rewrite filter_union; eauto.
-    rewrite union_cardinal.
-    exploit IHGET; eauto. omega.
-    rewrite !filter_incl; eauto.
-    hnf. cset_tac'. rewrite <- H0 in H1.
-    eapply InA_in in H1; eauto.
-    invc ND. eauto.
-Qed.
-
-Lemma least_fresh_part_small1 X `{OrderedType X} p G x k
-  : (part_1 p) (least_fresh_part p G x)
-    -> SetInterface.cardinal (filter (part_1 p) G) < k
-    -> least_fresh_part p G x \In of_list (ksmallest (part_1 p) k).
-Proof.
-  unfold least_fresh_part in *. cases.
-  + intros.
-    eapply least_fresh_part_bounded; eauto.
-  + intros.
-    pose proof (least_fresh_P_p (part_2 p) G).
-  exfalso. eapply (part_disj p _ H0 H2).
-Qed.
-
-
-Lemma fresh_list_stable_small (p:inf_partition positive) G k Z (ND:NoDupA eq Z)
-  (BNDk : SetInterface.cardinal (filter (part_1 p) G) +
-       SetInterface.cardinal (filter (part_1 p) (of_list Z)) <= k)
-  : For_all (regbnd (part_1 p) k)
-            (of_list (fst (fresh_list_stable (stable_fresh_part p) G Z))).
-Proof.
-  hnf; intros.
-  eapply of_list_get_first in H; eauto; dcr. invc H1.
-  edestruct fresh_list_stable_get; eauto; dcr. subst.
-  hnf; simpl. intros.
-  eapply least_fresh_part_small1.
-  --- eauto.
-  --- rewrite <- BNDk.
-      rewrite filter_union; eauto.
-      rewrite union_cardinal_le; eauto.
-      rewrite plus_comm.
-      eapply plus_lt_compat_l.
-      eapply cardinal_smaller; eauto.
-      eapply least_fresh_part_p1. eauto.
-Qed.
-
 Lemma regAssign_assignment_small k p (ϱ:Map [var,var]) ZL Lv s alv ϱ' ra
       (LS:live_sound Functional ZL Lv s alv)
       (inj:injective_on (getAnn alv) (findt ϱ default_var))
@@ -112,9 +55,9 @@ Lemma regAssign_assignment_small k p (ϱ:Map [var,var]) ZL Lv s alv ϱ' ra
       (RA:renamedApart s ra)
       (INCL:ann_R Subset1 alv ra)
       (allocOK:regAssign p s alv ϱ = Success ϱ')
-      (BND:ann_P (part_bounded_in (part_1 p) k) alv)
-      (up:For_all (regbnd (part_1 p) k) (lookup_set (findt ϱ default_var) (getAnn alv)))
-  : ann_P (For_all (regbnd (part_1 p) k)) (mapAnn (lookup_set (findt ϱ' default_var)) alv).
+      (BND:ann_P (part_size_bounded (part_1 p) k) alv)
+      (up:For_all (part_vars_bounded (part_1 p) k) (lookup_set (findt ϱ default_var) (getAnn alv)))
+  : ann_P (For_all (part_vars_bounded (part_1 p) k)) (mapAnn (lookup_set (findt ϱ' default_var)) alv).
 Proof.
   general induction LS; invt ann_P; invt renamedApart; invt @ann_R; simpl in *.
   - econstructor; eauto.
@@ -298,11 +241,11 @@ Lemma regAssign_assignment_small_I k p (ϱ:Map [var,var]) ZL Lv s alv ϱ' ra
       (RA:renamedApart s ra)
       (INCL:ann_R Subset1 alv ra)
       (allocOK:regAssign p s alv ϱ = Success ϱ')
-      (BND:ann_P (part_bounded_in (part_1 p) k) alv)
-      (up:For_all (regbnd (part_1 p) k) (lookup_set (findt ϱ default_var) (getAnn alv)))
+      (BND:ann_P (part_size_bounded (part_1 p) k) alv)
+      (up:For_all (part_vars_bounded (part_1 p) k) (lookup_set (findt ϱ default_var) (getAnn alv)))
       (BOUND:bounded (Some ⊝ Lv \\ ZL) (fst (getAnn ra)))
       (NUC:noUnreachableCode (isCalled true) s)
-  : ann_P (For_all (regbnd (part_1 p) k)) (mapAnn (lookup_set (findt ϱ' default_var)) alv).
+  : ann_P (For_all (part_vars_bounded (part_1 p) k)) (mapAnn (lookup_set (findt ϱ' default_var)) alv).
 Proof.
   intros.
   eapply renamedApart_live_imperative_is_functional in LS; eauto using bounded_disjoint, renamedApart_disj, meet1_Subset1, live_sound_annotation, renamedApart_annotation.
@@ -311,9 +254,9 @@ Proof.
 Qed.
 
 Lemma ann_P_live_var_P i ZL Lv p k s lv
-  : ann_P (For_all (regbnd p k)) lv
+  : ann_P (For_all (part_vars_bounded p k)) lv
     -> live_sound i ZL Lv s lv
-    -> var_P (regbnd p k) s.
+    -> var_P (part_vars_bounded p k) s.
 Proof.
   intros ANN LS.
   general induction LS; invt ann_P; eauto using var_P, ann_P_get.

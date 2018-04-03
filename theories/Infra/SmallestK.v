@@ -1,4 +1,4 @@
-Require Import CSet OrderedTypeComputable OrderedTypeLe InfiniteSubset InfinitePartition.
+Require Import CSet OrderedTypeComputable OrderedTypeLe InfiniteSubset InfinitePartition StableFresh.
 
 Set Implicit Arguments.
 
@@ -108,4 +108,44 @@ Proof.
   }
   rewrite <- H4 in INCL.
   rewrite ksmallest_card in INCL. omega.
+Qed.
+
+
+Lemma least_fresh_part_small1 X `{OrderedType X} p G x k
+  : (part_1 p) (least_fresh_part p G x)
+    -> SetInterface.cardinal (filter (part_1 p) G) < k
+    -> least_fresh_part p G x \In of_list (ksmallest (part_1 p) k).
+Proof.
+  unfold least_fresh_part in *. cases.
+  + intros.
+    eapply least_fresh_part_bounded; eauto.
+  + intros.
+    pose proof (least_fresh_P_p (part_2 p) G).
+  exfalso. eapply (part_disj p _ H0 H2).
+Qed.
+
+Definition part_vars_bounded (p:inf_subset positive) k (x:positive) := p x -> (x ∈ of_list (ksmallest p k)).
+
+Definition part_size_bounded X `{OrderedType X} (p:inf_subset X) k a :=
+  SetInterface.cardinal (filter p a) <= k.
+
+Lemma fresh_list_stable_small (p:inf_partition positive) G k Z (ND:NoDupA eq Z)
+  (BNDk : SetInterface.cardinal (filter (part_1 p) G) +
+       SetInterface.cardinal (filter (part_1 p) (of_list Z)) <= k)
+  : For_all (part_vars_bounded (part_1 p) k)
+            (of_list (fst (fresh_list_stable (stable_fresh_part p) G Z))).
+Proof.
+  hnf; intros.
+  eapply of_list_get_first in H; eauto; dcr. invc H1.
+  edestruct fresh_list_stable_get; eauto; dcr. subst.
+  hnf; simpl. intros.
+  eapply least_fresh_part_small1.
+  --- eauto.
+  --- rewrite <- BNDk.
+      rewrite filter_union; eauto.
+      rewrite union_cardinal_le; eauto.
+      rewrite plus_comm.
+      eapply plus_lt_compat_l.
+      eapply cardinal_smaller; eauto.
+      eapply least_fresh_part_p1. eauto.
 Qed.

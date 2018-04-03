@@ -93,3 +93,21 @@ Proof.
     + rewrite <- Pos2Nat.inj_lt.
       eapply Pos.lt_eq_cases; spos; eauto.
 Defined.
+
+Lemma cardinal_filter_incl X `{OrderedType X} Z i x (p:inf_subset X)
+  (GET:get Z i x) (P1:p x) (ND: NoDupA _eq Z)
+  : 0 < SetInterface.cardinal (filter p (of_list Z)).
+Proof.
+  general induction GET; simpl.
+  - rewrite filter_add_in; eauto.
+    rewrite add_cardinal_2. omega. inv ND.
+    rewrite filter_incl; eauto.
+  - rewrite add_union_singleton.
+    rewrite filter_union; eauto.
+    rewrite union_cardinal.
+    exploit IHGET; eauto. omega.
+    rewrite !filter_incl; eauto.
+    hnf. cset_tac'. rewrite <- H0 in H1.
+    eapply InA_in in H1; eauto.
+    invc ND. eauto.
+Qed.
