@@ -13,7 +13,7 @@ Set Implicit Arguments.
 Class kill_oracle_spec (kill_oracle:nat -> set var -> set var) :=
   {
     kill_oracle_incl : forall k (X:set var), kill_oracle k X ⊆ X;
-    kill_oracle_card : forall k X, cardinal X >= k -> cardinal (kill_oracle k X) = k;
+    kill_oracle_card : forall k X, cardinal X >= k -> cardinal (kill_oracle k X) >= k;
     kill_oracle_idem : forall k X, cardinal X < k -> kill_oracle k X [=] X
   }.
 
@@ -84,8 +84,8 @@ Fixpoint splitSpillKO
     let rms:= (fun f al =>
                    let Lv  := getAnn al in (* liveness in fn body *)
                    let Z  := fst f in    (* params of fn *)
-                   let R_f := of_list (take k (elements Lv)) in
-                   let M_f := Lv \ R_f in
+                   let M_f  := kill_oracle (cardinal Lv - k) Lv in
+                   let R_f := Lv \ M_f in
                    (R_f, M_f)
                 ) ⊜ F als in
        let ZL':= (fun f => fst f) ⊝ F ++ ZL in
@@ -156,17 +156,24 @@ Lemma rke (s t: set var) (k : nat)
 Proof.
 set (K := kill_oracle (cardinal (t \ s)-(k - cardinal s)) (s \ t)) in *.
 decide (cardinal (t \ s) - (k - cardinal s) <= cardinal (s \ t)).
-- assert (cardinal K = cardinal (t \ s)-(k - cardinal s)) as crdKL.
-  { subst K. rewrite kill_oracle_card; eauto.
+- assert (cardinal K >= cardinal (t \ s)-(k - cardinal s)) as crdKL.
+  { subst K. pose proof (kill_oracle_card _ l); eauto.
   }
   rewrite union_cardinal_le. rewrite cardinal_difference'.
-  + rewrite crdKL.
-    decide (cardinal (t \ s) - (k - cardinal s) <= cardinal s).
-    * rewrite plus_comm.
-      intros. eapply omega_help1; eauto.
-    * rewrite not_le_minus_0.
-      -- simpl. rewrite cardinal_difference. eauto.
-      -- eauto.
+  + intros.
+    assert (cardinal s - (cardinal (t \ s) - (k - cardinal s)) + cardinal (t \ s) <= k). {
+      decide (cardinal (t \ s) - (k - cardinal s) <= cardinal s).
+      * rewrite plus_comm.
+        intros. eapply omega_help1; eauto.
+      * rewrite not_le_minus_0.
+        -- simpl. rewrite cardinal_difference. eauto.
+        -- eauto.
+    }
+    rewrite <- H1.
+    clearbody K.
+    revert crdKL; clear_all. intros.
+    set (XX:=cardinal (t \ s) - (k - cardinal s)) in *; clearbody XX.
+    omega.
   + subst K. rewrite kill_oracle_incl. eauto with cset.
 - apply not_le in n. subst K.
   rewrite kill_oracle_idem; eauto.
@@ -175,6 +182,7 @@ decide (cardinal (t \ s) - (k - cardinal s) <= cardinal (s \ t)).
   rewrite EQ; eauto.
 Qed.
 
+
 Lemma rke' (s t u: set var) (k : nat)
 : cardinal s <= k ->
   cardinal t <= k ->
@@ -182,19 +190,25 @@ Lemma rke' (s t u: set var) (k : nat)
 Proof.
 set (K := kill_oracle (cardinal (t \ s \ u) -(k - cardinal s) ) (s \ t)) in *.
 decide (cardinal (t \ s \ u) -(k - cardinal s) <= cardinal (s \ t)).
-- assert (cardinal K = cardinal (t \ s \ u) -(k - cardinal s)) as crdKL.
-  { subst K.
-    rewrite kill_oracle_card; eauto.
+- assert (cardinal K >= cardinal (t \ s \ u) -(k - cardinal s)) as crdKL.
+  {
+    subst K.
+    pose proof (kill_oracle_card _ l); eauto.
   }
   rewrite union_cardinal_le. rewrite cardinal_difference'.
-  + rewrite crdKL.
-    decide (cardinal (t \ s \ u) - (k - cardinal s) <= cardinal s).
-    * rewrite plus_comm.
-      intros. eapply omega_help1; eauto.
-    * rewrite not_le_minus_0.
-      -- simpl. intros.
-         rewrite !cardinal_difference. eauto.
-      -- intro. eauto.
+  + intros.
+    assert (cardinal s - (cardinal ((t \ s) \ u) - (k - cardinal s)) + cardinal ((t \ s) \ u) <= k). {
+      decide (cardinal (t \ s \ u) - (k - cardinal s) <= cardinal s).
+      * rewrite plus_comm.
+        intros. eapply omega_help1; eauto.
+      * rewrite not_le_minus_0.
+        -- simpl. intros.
+           rewrite !cardinal_difference. eauto.
+        -- intro. eauto.
+    }
+    rewrite <- H1. revert crdKL. clear_all. clearbody K. intros.
+    set (XX:=cardinal ((t \ s) \ u) - (k - cardinal s)) in *; clearbody XX.
+    omega.
   + subst K. rewrite kill_oracle_incl. eauto with cset.
 - apply not_le in n. subst K.
   rewrite kill_oracle_idem; eauto.
@@ -465,16 +479,33 @@ general induction lvSound;
     rewrite (seteq' R). rewrite ReqR'. apply RleqK.
   + eauto with len.
   + eauto with len.
-  + intros ; inv_get. simpl. apply take_of_list_cardinal.
+  + intros ; inv_get. simpl.
+    rewrite cardinal_difference'.
+    assert (cardinal (getAnn x0) - k <= cardinal (getAnn x0)) by omega.
+    pose proof (kill_oracle_card _ H6); eauto.
+    set (XX:=cardinal (kill_oracle (cardinal (getAnn x0) - k) (getAnn x0))) in *; clearbody XX.
+    omega.
+    rewrite kill_oracle_incl. reflexivity.
   + intros ; inv_get.
     eapply H1; eauto.
-    * simpl. apply take_of_list_cardinal.
+    * simpl.
+      rewrite cardinal_difference'.
+      assert (cardinal (getAnn x2) - k <= cardinal (getAnn x2)) by omega.
+      pose proof (kill_oracle_card _ H4); eauto.
+      set (XX:=cardinal (kill_oracle (cardinal (getAnn x2) - k) (getAnn x2))) in *; clearbody XX.
+      omega.
+      rewrite kill_oracle_incl. reflexivity.
     * clear. cset_tac.
     * eapply PIR2_app; eauto.
       eapply PIR2_get; eauto with len.
       intros ; inv_get. split.
-      -- apply take_of_list_cardinal.
-      -- rewrite take_set_incl at 1.
+      -- rewrite cardinal_difference'.
+         assert (cardinal (getAnn x1) - k <= cardinal (getAnn x1)) by omega.
+         pose proof (kill_oracle_card _ H7); eauto.
+         set (XX:=cardinal (kill_oracle (cardinal (getAnn x1) - k) (getAnn x1))) in *; clearbody XX.
+         omega.
+         rewrite kill_oracle_incl. reflexivity.
+      -- rewrite kill_oracle_incl at 2.
          clear; eauto with cset.
   + eapply IHlvSound; eauto.
     * rewrite ReqR'. clear. cset_tac.
@@ -482,8 +513,13 @@ general induction lvSound;
     * eapply PIR2_app; eauto.
       eapply PIR2_get; eauto with len.
       intros ; inv_get. split.
-      -- apply take_of_list_cardinal.
-      -- rewrite take_set_incl at 1.
+      -- rewrite cardinal_difference'.
+         assert (cardinal (getAnn x1) - k <= cardinal (getAnn x1)) by omega.
+         pose proof (kill_oracle_card _ H5); eauto.
+         set (XX:=cardinal (kill_oracle (cardinal (getAnn x1) - k) (getAnn x1))) in *; clearbody XX.
+         omega.
+         rewrite kill_oracle_incl. reflexivity.
+      -- rewrite kill_oracle_incl at 2.
          clear; eauto with cset.
 Qed.
 
@@ -500,11 +536,12 @@ Proof.
     eauto using spill_live.
   - econstructor; intros; inv_get; simpl in *; eauto using spill_live.
     + eapply PIR2_get; intros; inv_get; unfold merge; simpl; eauto with len.
-      rewrite union_comm. rewrite <- equiv_minus_union;
-                            eauto using take_set_incl with cset.
+      pose proof (kill_oracle_incl (cardinal (getAnn x0) - k) (getAnn x0)).
+      revert H; clear_all; cset_tac.
     + simpl.
       exploit H7; eauto. eapply ann_P_get in H4. rewrite <- H4.
-      rewrite take_set_incl at 1; simpl; eauto 20 with cset.
+      split. eauto with cset.
+      eapply kill_oracle_incl.
 Qed.
 
 
@@ -512,12 +549,34 @@ Instance taken_kos : kill_oracle_spec (@set_take var _).
 Proof.
   econstructor; intros;
     eauto using set_take_cardinal_eq, set_take_eq, set_take_incl.
-  eapply set_take_eq; eauto. omega.
+  - rewrite set_take_cardinal_eq; omega.
+  - rewrite set_take_eq; eauto. omega.
 Qed.
 
 End KO.
+
+Definition take_o (o:nat -> ⦃var⦄ -> ⦃var⦄) (n: nat) (G:⦃var⦄) : ⦃var⦄ :=
+  let sp := o n G in
+  if [sp ⊆ G /\ SetInterface.cardinal sp >= n]
+  then sp
+  else @set_take var _ n G.
+
+Instance take_o_kos (o:nat -> ⦃var⦄ -> ⦃var⦄) : kill_oracle_spec (take_o o).
+Proof.
+  econstructor; intros; unfold take_o; cases; dcr;
+    eauto using set_take_cardinal_eq, set_take_eq, set_take_incl.
+  - rewrite set_take_cardinal_eq; omega.
+  - pose proof (subset_cardinal H0). exfalso. omega.
+  - eapply set_take_eq; eauto. omega.
+Qed.
+
 
 Definition splitSpill := @splitSpillKO (@set_take var _).
 
 Definition splitSpill_sat_spillSound := @splitSpillKO_sat_spillSound _ taken_kos.
 Definition splitSpill_spill_live := @splitSpillKO_spill_live (@set_take var _).
+
+Definition splitSpillO o := @splitSpillKO (take_o o).
+
+Definition splitSpillO_sat_spillSound o := @splitSpillKO_sat_spillSound _ (take_o_kos o).
+Definition splitSpillO_spill_live o := @splitSpillKO_spill_live (@take_o o).

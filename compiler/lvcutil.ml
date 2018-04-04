@@ -14,6 +14,15 @@ let rec discard_dead lv m =
     | false::lv, _::m -> discard_dead lv m
     | _, _ -> []
 
+let emptyset = (SetAVLInstance.coq_SetAVL_FSet OrderedTypeEx.positive_OrderedType).empty
+
+let rec set_from_list l =
+      match l with
+      | [] -> emptyset
+      | a::l -> ((SetAVLInstance.coq_SetAVL_FSet OrderedTypeEx.positive_OrderedType).union)
+		  (((SetAVLInstance.coq_SetAVL_FSet OrderedTypeEx.positive_OrderedType).singleton) a)
+		  (set_from_list l)
+
 let rec first f x =
   if f x then x else first f (x + 1)
 
@@ -26,6 +35,10 @@ let print_var' oc has_slots ids (v:int) =
 
 let print_var oc has_slots ids v =
   print_var' oc has_slots ids (P.to_int v - 1)
+
+let print_var2 oc has_slots ids v =
+  print_var' oc has_slots ids (P.to_int v - 1);
+  output_string oc ("#" ^ (string_of_int (P.to_int v - 1)))
 
 let print_fvar oc has_slots ids v =
   print_var' oc has_slots ids (Nat.to_int v - 1)
@@ -199,14 +212,15 @@ and print_body oc has_slots ids indent fZs =
      print_string "\n"
 
 let rec print_set oc has_slots ids x =
-SetAVL.fold
-  (OrderedType.coq_SOT_as_OT OrderedTypeEx.nat_OrderedType)
-  (fun x (s:string) ->
-   output_string oc s;
-   print_fvar oc has_slots ids x;
-   output_string oc " "; "")
-  x
-  " "
+  SetInterface.fold
+    OrderedTypeEx.positive_OrderedType
+    (SetAVLInstance.coq_SetAVL_FSet OrderedTypeEx.positive_OrderedType)
+    (fun x (s:string) ->
+     output_string oc s;
+     print_var2 oc has_slots ids x;
+     output_string oc " "; "")
+    x
+    " "
 
 let rec print_list f sep l =
   match l with

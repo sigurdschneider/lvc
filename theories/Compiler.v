@@ -200,13 +200,13 @@ Defined.
 
 Definition max_reg := 19%positive.
 
-Definition fromILF (s:stmt) o :=
+Definition fromILF (s:stmt) o spo :=
   let s_eae := EAE.compile s in
   let sra := rename_apart_to_part FGS_even_fast_pos s_eae in
   let dcve := DCE Liveness.Imperative (fst sra) in
   let fvl := to_list (getAnn (snd dcve)) in
   let k := exp_vars_bound (fst dcve) in
-  let spilled := spill k Pos.succ (fst dcve) (snd dcve) in
+  let spilled := spill spo k Pos.succ (fst dcve) (snd dcve) in
   let rdom := (domain_add FG_fast_pres (empty_domain FG_fast_pres)
                          (getAnn (snd (spilled)))) in
   let ren2 := snd (renameApart FG_fast_pres rdom id (fst spilled)) in
@@ -216,7 +216,7 @@ Definition fromILF (s:stmt) o :=
                                            id
                                            (fst (spilled))
                                            (snd (spilled)))) in
-  ras.
+  (fst dcve, ren2, ras).
 
 Opaque LivenessValidators.live_sound_dec.
 Opaque DelocationValidator.trs_dec.
@@ -278,8 +278,8 @@ Proof.
 Qed.
 
 
-Lemma fromILF_correct (s s':stmt) E (PM:LabelsDefined.paramsMatch s nil) o
-      (OK:fromILF s o = Success s')
+Lemma fromILF_correct (s s':stmt) E (PM:LabelsDefined.paramsMatch s nil) o spo
+      (OK:snd (fromILF s o spo) = Success s')
       (Def:defined_on (freeVars s) E)
   : sim F.state I.state bot3 SimExt (nil, E, s)
         (nil, (id [fromILF_fvl_ren s <-- fromILF_fvl s] ∘ E)
@@ -537,6 +537,7 @@ Proof.
 Qed.
 
 End Compiler.
+
 
 Print Assumptions fromILF_correct.
 Print Assumptions toILF_correct.

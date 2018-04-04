@@ -100,14 +100,33 @@ let main () =
 	let _ = dump "10_toILF" s_toILF in
 	let s_opt = optimize s_toILF in
 	let _ = dump "20_opt" s_opt in
+	let spo_c = ref 0 in
 	let o = fun x -> find_def x map
 	in
-	let s_fromILF =
-	  (match fromILF s_opt o with
-	   | Success x -> x
-	   | Error e -> raise (Compiler_error "reg alloc failed")
+	let spo = fun (n:Datatypes.nat) (s:BinNums.positive SetInterface.set) ->
+	  (
+	    let _ = spo_c := !spo_c + 1 in
+	    let _ = Printf.printf "Spillrequest #%d for %d " !spo_c (Nat.to_int n) in
+	    let _ = print_set stdout true !ids s in
+	    let _ = Printf.printf " -> " in
+	    let kill = if !spo_c = 1 || !spo_c = 5
+		       then set_from_list [P.of_int 1; P.of_int 7]
+		       else if !spo_c = 4
+		       then set_from_list [P.of_int 23]
+		       else if !spo_c = 8
+		       then set_from_list [P.of_int 5]
+		       else emptyset in
+	    let _ = print_set stdout true !ids kill in
+	    let _ = Printf.printf "\n" in
+	    kill) in
+	let (s_prespill, s_prealloc, s_fromILF) =
+	  (match fromILF s_opt o spo with
+	   | ((presp, ren), Success x) -> (presp, ren, x)
+	   | (_, Error e) -> raise (Compiler_error "reg alloc failed")
 	  )
 	in
+	let _ = dump "23_prespill" s_prespill in
+	let _ = dump "25_prealloc" s_prealloc in
 	let _ = dump "30_fromILF" s_fromILF in
 	s_fromILF
       else

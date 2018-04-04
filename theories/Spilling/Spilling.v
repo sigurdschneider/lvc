@@ -20,20 +20,20 @@ Arguments sim S {H} S' {H0} r t _ _.
 Qed.
  *)
 
-Definition spill (k:nat) (slot:var -> var)
+Definition spill o (k:nat) (slot:var -> var)
            (s:stmt) (lv:ann (set var)) : stmt * ann (set var) :=
   let fvl := to_list (getAnn lv) in
   let (R,M) := (of_list (take k fvl), of_list (drop k fvl)) in
-  let spl := @splitSpill k nil nil R M s lv in
+  let spl := @splitSpillO o k nil nil R M s lv in
   let s_spilled := do_spill slot s spl nil nil in
   let lv_spilled := reconstr_live nil nil ∅ s_spilled (do_spill_rm slot spl) in
   let s_fun := addParams s_spilled lv_spilled in
   (s_fun, lv_spilled).
 
 
-Lemma spill_app_expfree k slot s lv
+Lemma spill_app_expfree o k slot s lv
       (AEF:app_expfree s)
-  : app_expfree (fst (spill k slot s lv)).
+  : app_expfree (fst (spill k slot o s lv)).
 Proof.
   simpl.
   eapply addParams_app_expfree.
@@ -61,7 +61,7 @@ Proof.
     cset_tac'. eapply H4 in H6; eauto; cset_tac.
 Qed.
 
-Lemma spill_correct b k (s:stmt) lv ra E
+Lemma spill_correct o b k (s:stmt) lv ra E
       (PM:paramsMatch s nil)
       (LV:Liveness.live_sound Liveness.Imperative nil nil s lv)
       (AEF:AppExpFree.app_expfree s)
@@ -74,19 +74,19 @@ Lemma spill_correct b k (s:stmt) lv ra E
       (aIncl:ann_R (fun (x : ⦃var⦄) (y : ⦃var⦄ * ⦃var⦄) => x ⊆ fst y) lv ra)
   : sim I.state F.state bot3 SimExt
         (nil, E, s)
-        (nil, E [slt ⊝ drop k (to_list (getAnn lv)) <-- lookup_list E (drop k (to_list (getAnn lv)))], fst (spill k slt s lv )).
+        (nil, E [slt ⊝ drop k (to_list (getAnn lv)) <-- lookup_list E (drop k (to_list (getAnn lv)))], fst (spill o k slt s lv )).
 Proof.
   unfold spill.
   set (R:=of_list (take k (to_list (getAnn lv)))).
   set (M:=of_list (drop k (to_list (getAnn lv)))).
-  set (spl:=(splitSpill k nil nil R M s lv)).
+  set (spl:=(splitSpillO o k nil nil R M s lv)).
   set (VD:=fst (getAnn ra) ∪ snd (getAnn ra)).
   assert (lvRM:getAnn lv [=] R ∪ M). {
     subst R M. rewrite <- of_list_app. rewrite <- take_eta.
     rewrite of_list_3. eauto.
   }
   assert (SPS:spill_sound k nil nil (R, M) s spl). {
-    eapply splitSpill_sat_spillSound; eauto using PIR2.
+    eapply splitSpillO_sat_spillSound; eauto using PIR2.
     subst R. rewrite TakeSet.take_of_list_cardinal; eauto.
     rewrite lvRM; eauto.
   }
@@ -127,7 +127,8 @@ Proof.
       clear; intuition.
   }
   assert (spl_lv:spill_live VD spl lv). {
-    eapply splitSpill_spill_live; eauto using lv_ra_lv_bnd.
+    eapply splitSpillO_spill_live; eauto using lv_ra_lv_bnd.
+    eapply take_o_kos.
   }
   eapply sim_trans with (S2:=I.state).
   - eapply sim_I with (slot:=slt) (k:=k) (R:=R) (M:=M) (sl:=spl) (Λ:=nil)
@@ -165,7 +166,7 @@ Proof.
     + eapply (@do_spill_no_unreachable_code _ _ _ _ nil nil); eauto.
 Qed.
 
-Lemma spill_spill_live b k (s:stmt) lv ra
+Lemma spill_spill_live o b k (s:stmt) lv ra
       (PM:paramsMatch s nil)
       (LV:Liveness.live_sound Liveness.Imperative nil nil s lv)
       (AEF:AppExpFree.app_expfree s)
@@ -178,19 +179,19 @@ Lemma spill_spill_live b k (s:stmt) lv ra
   : live_sound FunctionalAndImperative
                nil
                nil
-               (fst (spill k slt s lv)) (snd (spill k slt s lv)).
+               (fst (spill o k slt s lv)) (snd (spill o k slt s lv)).
 Proof.
     unfold spill.
   set (R:=of_list (take k (to_list (getAnn lv)))).
   set (M:=of_list (drop k (to_list (getAnn lv)))).
-  set (spl:=(splitSpill k nil nil R M s lv)).
+  set (spl:=(splitSpillO o k nil nil R M s lv)).
   set (VD:=fst (getAnn ra) ∪ snd (getAnn ra)).
   assert (lvRM:getAnn lv [=] R ∪ M). {
     subst R M. rewrite <- of_list_app. rewrite <- take_eta.
     rewrite of_list_3. eauto.
   }
   assert (SPS:spill_sound k nil nil (R, M) s spl). {
-    eapply splitSpill_sat_spillSound; eauto using PIR2.
+    eapply splitSpillO_sat_spillSound; eauto using PIR2.
     subst R. rewrite TakeSet.take_of_list_cardinal; eauto.
     rewrite lvRM; eauto.
   }
@@ -212,7 +213,8 @@ Proof.
     rewrite of_list_drop_elements_incl. eauto with cset.
   }
   assert (spl_lv:spill_live VD spl lv). {
-    eapply splitSpill_spill_live; eauto using lv_ra_lv_bnd.
+    eapply splitSpillO_spill_live; eauto using lv_ra_lv_bnd.
+    eapply take_o_kos.
   }
   eapply addParams_live.
   - eapply (@reconstr_live_sound k VD slt nil _ nil R M); eauto using PIR2.
@@ -223,7 +225,7 @@ Qed.
 
 Require Import MoreTac.
 
-Lemma spill_srd b k (s:stmt) lv ra
+Lemma spill_srd o b k (s:stmt) lv ra
       (PM:paramsMatch s nil)
       (LV:Liveness.live_sound Liveness.Imperative nil nil s lv)
       (AEF:AppExpFree.app_expfree s)
@@ -233,19 +235,19 @@ Lemma spill_srd b k (s:stmt) lv ra
       (NUC:noUnreachableCode (isCalled b) s)
       (slt:Slot (fst (getAnn ra) ∪ snd (getAnn ra)))
       (aIncl:ann_R (fun (x : ⦃var⦄) (y : ⦃var⦄ * ⦃var⦄) => x ⊆ fst y) lv ra)
-  : srd nil (fst (spill k slt s lv)) (snd (spill k slt s lv)).
+  : srd nil (fst (spill o k slt s lv)) (snd (spill o k slt s lv)).
 Proof.
   unfold spill.
   set (R:=of_list (take k (to_list (getAnn lv)))).
   set (M:=of_list (drop k (to_list (getAnn lv)))).
-  set (spl:=(splitSpill k nil nil R M s lv)).
+  set (spl:=(splitSpillO o k nil nil R M s lv)).
   set (VD:=fst (getAnn ra) ∪ snd (getAnn ra)).
   assert (lvRM:getAnn lv [=] R ∪ M). {
     subst R M. rewrite <- of_list_app. rewrite <- take_eta.
     rewrite of_list_3. eauto.
   }
   assert (SPS:spill_sound k nil nil (R, M) s spl). {
-    eapply splitSpill_sat_spillSound; eauto using PIR2.
+    eapply splitSpillO_sat_spillSound; eauto using PIR2.
     subst R. rewrite TakeSet.take_of_list_cardinal; eauto.
     rewrite lvRM; eauto.
   }
@@ -267,7 +269,8 @@ Proof.
     rewrite of_list_drop_elements_incl. eauto with cset.
   }
   assert (spl_lv:SpillSound.spill_live VD spl lv). {
-    eapply splitSpill_spill_live; eauto using lv_ra_lv_bnd.
+    eapply splitSpillO_spill_live; eauto using lv_ra_lv_bnd.
+    eapply take_o_kos.
   }
   eapply addParams_srd; eauto.
   - eapply (@reconstr_live_sound k _ slt nil _ nil R M); eauto using PIR2.
@@ -276,7 +279,7 @@ Proof.
   - eapply (@do_spill_no_unreachable_code _ _ _ _ nil nil); eauto.
 Qed.
 
-Lemma spill_paramsMatch b k (s:stmt) lv ra
+Lemma spill_paramsMatch o b k (s:stmt) lv ra
       (PM:paramsMatch s nil)
       (LV:Liveness.live_sound Liveness.Imperative nil nil s lv)
       (AEF:AppExpFree.app_expfree s)
@@ -286,19 +289,19 @@ Lemma spill_paramsMatch b k (s:stmt) lv ra
       (NUC:noUnreachableCode (isCalled b) s)
       (slt:Slot (fst (getAnn ra) ∪ snd (getAnn ra)))
       (aIncl:ann_R (fun (x : ⦃var⦄) (y : ⦃var⦄ * ⦃var⦄) => x ⊆ fst y) lv ra)
-  : paramsMatch (fst (spill k slt s lv)) nil.
+  : paramsMatch (fst (spill o k slt s lv)) nil.
 Proof.
   unfold spill; simpl.
   set (R:=of_list (take k (to_list (getAnn lv)))).
   set (M:=of_list (drop k (to_list (getAnn lv)))).
-  set (spl:=(splitSpill k nil nil R M s lv)).
+  set (spl:=(splitSpillO o k nil nil R M s lv)).
   set (VD:=fst (getAnn ra) ∪ snd (getAnn ra)).
   assert (lvRM:getAnn lv [=] R ∪ M). {
     subst R M. rewrite <- of_list_app. rewrite <- take_eta.
     rewrite of_list_3. eauto.
   }
   assert (SPS:spill_sound k nil nil (R, M) s spl). {
-    eapply splitSpill_sat_spillSound; eauto using PIR2.
+    eapply splitSpillO_sat_spillSound; eauto using PIR2.
     subst R. rewrite TakeSet.take_of_list_cardinal; eauto.
     rewrite lvRM; eauto.
   }
@@ -320,7 +323,8 @@ Proof.
     rewrite of_list_drop_elements_incl. eauto with cset.
   }
   assert (spl_lv:SpillSound.spill_live VD spl lv). {
-    eapply splitSpill_spill_live; eauto using lv_ra_lv_bnd.
+    eapply splitSpillO_spill_live; eauto using lv_ra_lv_bnd.
+    eapply take_o_kos.
   }
   eapply addParams_paramsMatch; eauto.
   - eapply (@do_spill_paramsMatch _ _ _ nil nil); eauto.
@@ -332,7 +336,7 @@ Proof.
 Qed.
 
 
-Lemma spill_noUnreachableCode b k (s:stmt) lv ra
+Lemma spill_noUnreachableCode o b k (s:stmt) lv ra
       (PM:paramsMatch s nil)
       (LV:Liveness.live_sound Liveness.Imperative nil nil s lv)
       (AEF:AppExpFree.app_expfree s)
@@ -342,19 +346,19 @@ Lemma spill_noUnreachableCode b k (s:stmt) lv ra
       (NUC:noUnreachableCode (isCalled b) s)
       (slt:Slot (fst (getAnn ra) ∪ snd (getAnn ra)))
       (aIncl:ann_R (fun (x : ⦃var⦄) (y : ⦃var⦄ * ⦃var⦄) => x ⊆ fst y) lv ra)
-  : noUnreachableCode (isCalled b) (fst (spill k slt s lv)).
+  : noUnreachableCode (isCalled b) (fst (spill o k slt s lv)).
 Proof.
   unfold spill; simpl.
   set (R:=of_list (take k (to_list (getAnn lv)))).
   set (M:=of_list (drop k (to_list (getAnn lv)))).
-  set (spl:=(splitSpill k nil nil R M s lv)).
+  set (spl:=(splitSpillO o k nil nil R M s lv)).
   set (VD:=fst (getAnn ra) ∪ snd (getAnn ra)).
   assert (lvRM:getAnn lv [=] R ∪ M). {
     subst R M. rewrite <- of_list_app. rewrite <- take_eta.
     rewrite of_list_3. eauto.
   }
   assert (SPS:spill_sound k nil nil (R, M) s spl). {
-    eapply splitSpill_sat_spillSound; eauto using PIR2.
+    eapply splitSpillO_sat_spillSound; eauto using PIR2.
     subst R. rewrite TakeSet.take_of_list_cardinal; eauto.
     rewrite lvRM; eauto.
   }
@@ -376,7 +380,8 @@ Proof.
     rewrite of_list_drop_elements_incl. eauto with cset.
   }
   assert (spl_lv:SpillSound.spill_live VD spl lv). {
-    eapply splitSpill_spill_live; eauto using lv_ra_lv_bnd.
+    eapply splitSpillO_spill_live; eauto using lv_ra_lv_bnd.
+    eapply take_o_kos.
   }
   eapply addParams_noUnreachableCode; eauto.
   - eapply (@do_spill_paramsMatch _ _ _ nil nil); eauto.
@@ -386,8 +391,7 @@ Proof.
     ** isabsurd.
   - eapply (do_spill_no_unreachable_code _ slt k (R,M) nil nil); eauto.
 Qed.
-
-Lemma getAnn_spill (s:stmt) lv ra k
+Lemma getAnn_spill o (s:stmt) lv ra k
       (LV:Liveness.live_sound Liveness.Imperative nil nil s lv)
       (AEF:AppExpFree.app_expfree s)
       (RA:RenamedApart.renamedApart s ra)
@@ -395,20 +399,20 @@ Lemma getAnn_spill (s:stmt) lv ra k
       (Incl:getAnn lv ⊆ fst (getAnn ra))
       (slt:Slot (fst (getAnn ra) ∪ snd (getAnn ra)))
       (aIncl:ann_R (fun (x : ⦃var⦄) (y : ⦃var⦄ * ⦃var⦄) => x ⊆ fst y) lv ra)
-  : getAnn (snd (spill k slt s lv)) ⊆ of_list (take k (to_list (getAnn lv)))
+  : getAnn (snd (spill o k slt s lv)) ⊆ of_list (take k (to_list (getAnn lv)))
            ∪ map slt (of_list (drop k (to_list (getAnn lv)))).
 Proof.
       unfold spill.
   set (R:=of_list (take k (to_list (getAnn lv)))).
   set (M:=of_list (drop k (to_list (getAnn lv)))).
-  set (spl:=(splitSpill k nil nil R M s lv)).
+  set (spl:=(splitSpillO o k nil nil R M s lv)).
   set (VD:=fst (getAnn ra) ∪ snd (getAnn ra)).
   assert (lvRM:getAnn lv [=] R ∪ M). {
     subst R M. rewrite <- of_list_app. rewrite <- take_eta.
     rewrite of_list_3. eauto.
   }
   assert (SPS:spill_sound k nil nil (R, M) s spl). {
-    eapply splitSpill_sat_spillSound; eauto using PIR2.
+    eapply splitSpillO_sat_spillSound; eauto using PIR2.
     subst R. rewrite TakeSet.take_of_list_cardinal; eauto.
     rewrite lvRM; eauto.
   }
@@ -430,7 +434,8 @@ Proof.
     rewrite of_list_drop_elements_incl. eauto with cset.
   }
   assert (spl_lv:spill_live VD spl lv). {
-    eapply splitSpill_spill_live; eauto using lv_ra_lv_bnd.
+    eapply splitSpillO_spill_live; eauto using lv_ra_lv_bnd.
+    eapply take_o_kos.
   }
 
   unfold spill; simpl.
