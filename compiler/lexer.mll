@@ -28,10 +28,12 @@
     | ">" { IL_greater_than }
     | "<=" { IL_less_eq }
     | ">=" { IL_greater_eq }
+    | "->" { VM_maps_to }
     | "=" { IL_equal }
     | "," { IL_comma }
     | ";" { IL_semicolon }
     | "#" { IL_hash }
+    | "%" { IL_percent }
     | identifier {
         let s = (Lexing.lexeme lexbuf) in
           match s with

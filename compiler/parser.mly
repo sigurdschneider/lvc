@@ -35,6 +35,9 @@
 %token <int> IL_ident
 %token IL_eof
 %token IL_hash
+%token IL_percent
+
+%token VM_maps_to
 
 %nonassoc IL_not
 %nonassoc IL_less_than IL_greater_than IL_less_eq IL_greater_eq IL_equal
@@ -43,7 +46,7 @@
 %nonassoc UMINUS
 
 %type <ILN.nstmt> expr
-%type <ILN.nstmt> program
+%type <((Camlcoq.P.t * Camlcoq.P.t) list ) * ILN.nstmt> program
 
 
 %start program
@@ -130,5 +133,12 @@ pragma :
 | /* empty */ { [] }
 | IL_hash ident_list IL_semicolon { $2 }
 
-program:
-| pragma expr IL_eof { $2 }
+program :
+| pragma varmapping expr IL_eof { ($2, $3) }
+
+varmap :
+| IL_percent varname VM_maps_to varname IL_semicolon { ($2, $4) }
+
+varmapping :
+| /* empty */ { [] }
+| varmap varmapping { $1::$2 }

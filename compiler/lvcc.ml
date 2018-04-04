@@ -25,6 +25,11 @@ let implode l =
     | c :: l -> Bytes.set res i c; imp (i + 1) l in
   imp 0 l;;
 
+let rec find_def x l =
+  match l with
+  | (y,z)::l' -> if x = y then z else find_def x l'
+  | nil -> BinNums.Coq_xH
+
 exception NotLinearizableException
 
 let main () =
@@ -60,77 +65,89 @@ let main () =
   let machname = basename ^ ".mach" in
   let dump_oc suffix =
     let name = (basename ^ "." ^ suffix ^ ".im") in
-    if !verbose then Printf.printf "phase %s\n" name else ();
+    if !verbose then Printf.printf ">>> phase %s\n" name else ();
     open_out name in
-  let dump suffix prg = let oc = dump_oc suffix in print_stmt oc true !ids 0 prg; Printf.fprintf oc "\n"; close_out oc in
-  let dumpn suffix prg = let oc = dump_oc suffix in print_nstmt oc true !ids 0 prg; Printf.fprintf oc "\n"; close_out oc in
-        let file_chan = open_in !infile in
+  let dump suffix prg =
+    let oc = dump_oc suffix in
+    print_stmt oc true !ids 0 prg;
+    Printf.fprintf oc "\n";
+    if !verbose then (print_stmt stdout true !ids 0 prg; Printf.printf "\n") else ();
+    close_out oc in
+  let dumpn suffix prg =
+    let oc = dump_oc suffix in
+    print_nstmt oc true !ids 0 prg;
+    Printf.fprintf oc "\n";
+    if !verbose then (print_nstmt stdout true !ids 0 prg; Printf.printf "\n") else ();
+    close_out oc in
+  let file_chan = open_in !infile in
   let lexbuf = Lexing.from_channel  file_chan in
-    try
-      (* Printf.printf "Compiling"; *)
-      let ilin = Parser.program Lexer.token lexbuf in
-      let _ = print_nametable () in
-      let readout = (dump_oc "read") in
-      let _ =  print_nstmt readout false !ids 0 ilin in
-      let _ = close_out readout in
-      let _ = dumpn "0_in" ilin in
-      let ili = (match Compiler.toDeBruijn ilin with
-		 | Success ili -> ili
-		 | Error e -> raise (Compiler_error "Converting to de bruijn failed (did you define all functions?)"))
-      in
-      let s_fromILF =
-	if not !only_to_linear then
-	  let _ = dump "1_in_db" ili in
-	  let s_toILF = toILF ili in
-	  let _ = dump "10_toILF" s_toILF in
-	  let s_opt = optimize s_toILF in
-	  let _ = dump "20_opt" s_opt in
-	  let s_fromILF =
-	    (match fromILF s_opt with
-	     | Success x -> x
-	     | Error e -> raise (Compiler_error "reg alloc failed")
-	    )
-	  in
-	  let _ = dump "30_fromILF" s_fromILF in
-	  s_fromILF
-	else
-	  ili
-      in
-      let _ =
-	match IsLinearizable.toLinearPreconditions ToLinear.max_reg s_fromILF with
-	| Success _ -> ()
-	| Error msg -> raise (Compiler_error (implode msg))
-      in
-      let function_id = Camlcoq.intern_string "LVC" in
-      let linear = ToLinear.coq_ILItoLinear function_id s_fromILF in
-      PrintMach.destination := Some machname;
-      let asm =
-	match Compiler0.apply_partial
-		(LinearToAsm.transf_linear_program linear)
-		Asmexpand.expand_program with
-	| Errors.OK asm ->
-           asm
-	| Errors.Error msg ->
-           Printf.eprintf "%s: %a" filename Driveraux.print_error msg;
-           exit 2 in
-      (* Print Asm in text form *)
-      let oc = open_out asmname in
-      PrintAsm.print_program oc asm;
-      close_out oc
-    with Sys_error s-> Printf.eprintf "%s\n" s
-      | Compiler_error e -> Printf.eprintf "\nCompilation failed:\n%s\n" e
-      | Range_error e -> Printf.eprintf "The integer %s is not in range\n" e
-      (*| Lexer.Error msg ->
+  try
+    (* Printf.printf "Compiling"; *)
+    let (map, ilin) = Parser.program Lexer.token lexbuf in
+    let _ = print_nametable () in
+    let readout = (dump_oc "read") in
+    let _ =  print_nstmt readout false !ids 0 ilin in
+    let _ = close_out readout in
+    let _ = dumpn "0_in" ilin in
+    let ili = (match Compiler.toDeBruijn ilin with
+	       | Success ili -> ili
+	       | Error e -> raise (Compiler_error "Converting to de bruijn failed (did you define all functions?)"))
+    in
+    let s_fromILF =
+      if not !only_to_linear then
+	let _ = dump "1_in_db" ili in
+	let s_toILF = toILF ili in
+	let _ = dump "10_toILF" s_toILF in
+	let s_opt = optimize s_toILF in
+	let _ = dump "20_opt" s_opt in
+	let o = fun x -> find_def x map
+	in
+	let s_fromILF =
+	  (match fromILF s_opt o with
+	   | Success x -> x
+	   | Error e -> raise (Compiler_error "reg alloc failed")
+	  )
+	in
+	let _ = dump "30_fromILF" s_fromILF in
+	s_fromILF
+      else
+	ili
+    in
+    let _ =
+      match IsLinearizable.toLinearPreconditions ToLinear.max_reg s_fromILF with
+      | Success _ -> ()
+      | Error msg -> raise (Compiler_error (implode msg))
+    in
+    let function_id = Camlcoq.intern_string "LVC" in
+    let linear = ToLinear.coq_ILItoLinear function_id s_fromILF in
+    PrintMach.destination := Some machname;
+    let asm =
+      match Compiler0.apply_partial
+	      (LinearToAsm.transf_linear_program linear)
+	      Asmexpand.expand_program with
+      | Errors.OK asm ->
+         asm
+      | Errors.Error msg ->
+         Printf.eprintf "%s: %a" filename Driveraux.print_error msg;
+         exit 2 in
+    (* Print Asm in text form *)
+    let oc = open_out asmname in
+    PrintAsm.print_program oc asm;
+    close_out oc
+  with Sys_error s-> Printf.eprintf "%s\n" s
+     | Compiler_error e -> Printf.eprintf "\nCompilation failed:\n%s\n" e
+     | Range_error e -> Printf.eprintf "The integer %s is not in range\n" e
+     (*| Lexer.Error msg ->
 	 Printf.fprintf stderr "%s%!" msg*)
-      | Parser.Error ->
- 	 let pos = lexbuf.Lexing.lex_curr_p in
-	 let tok = Lexing.lexeme lexbuf in
-	 let open Lexing in
-	 let line = pos.pos_lnum in
-	 let col = pos.pos_cnum - pos.pos_bol in
-	 Printf.fprintf stderr "At line %d:%d: syntax error: %s\n%!"
-			line col tok
+     | Parser.Error ->
+ 	let pos = lexbuf.Lexing.lex_curr_p in
+	let tok = Lexing.lexeme lexbuf in
+	let open Lexing in
+	let line = pos.pos_lnum in
+	let col = pos.pos_cnum - pos.pos_bol in
+	Printf.fprintf stderr "At line %d:%d: syntax error: %s\n%!"
+		       line col tok
 ;;
 
 
-main ();
+  main ();
