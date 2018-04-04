@@ -38,7 +38,7 @@ Fixpoint splitSpillKO
       let K    := kill_oracle (cardinal L - (k - cardinal R)) (R \ Fv_e) in
       let R_e  := R \ K ∪ L in
 
-      let K_x  := one_or_empty_if k R_e in
+      let K_x  := kill_oracle (S (cardinal R_e) - k) R_e in
       let Sp   := getAnn lvs ∩ (K ∪ K_x) \ M in
       let R_s  := {x; R_e \ K_x} in
 
@@ -220,26 +220,24 @@ Qed.
 
 Lemma rkk (s t  : set var) (k : nat) (x : var)
 : let K :=  kill_oracle (cardinal (t \ s) - (k - cardinal s)) (s \ t) in
-  let  K_x := one_or_empty_if k (s \ K ∪ t \ s) in
+  let  K_x := kill_oracle (S (cardinal (s \ K ∪ t \ s)) - k) (s \ K ∪ t \ s) in
    cardinal s <= k
 -> cardinal (t) <= k
 -> k > 0
--> cardinal (s \ K ∪ t \ s) >= k
+(*-> cardinal (s \ K ∪ t \ s) >= k*)
 -> cardinal {x; (s \ K ∪ t \ s) \ K_x} <= k.
 Proof.
-intros K K_x RleqK fvBcard kgeq1 sizeRL.
+intros K K_x RleqK fvBcard sizeRL.
 rewrite add_cardinal. rewrite cardinal_difference'.
-- subst K_x. rewrite one_or_empty_cardinal_ge.
+- subst K_x.
   assert (rke := @rke s t k RleqK fvBcard).
   remember (cardinal (s \ K ∪ t \ s)).
-  destruct n.
-  + omega. (*uses kgt0*)
-  + simpl.
-    enough (S n <= k). { omega. } rewrite Heqn. subst.
-    eapply rke.
-  + omega.
-  + eauto.
-- subst K_x. eapply one_or_empty_of_incl.
+  pose proof (@kill_oracle_card _ _ (S n - k) (s \ K ∪ t \ s)).
+  exploit H. omega.
+  set (XX:=cardinal (kill_oracle (S n - k) (s \ K ∪ t \ s))) in *.
+  omega.
+- subst K_x.
+  eapply kill_oracle_incl.
 Qed.
 
 Lemma al_in_rkl (s t u : set var) (al : ann (set var)) k :
@@ -316,7 +314,7 @@ R [=] R'
 
 Proof.
 intros ReqR' MeqM' ΛeqΛ' RleqK fvRM fvBound lvSound (*aeFree*) pir2.
-
+ Opaque minus.
 general induction lvSound;
   inversion_clear fvBound
     as [k0 x0 e0 s0 fvBcard fvBs
@@ -337,31 +335,23 @@ general induction lvSound;
        ) in *.
 
   { (*rename g into sizeRL.*)
-    set (K_x:=one_or_empty_if k ((R' ∩ lv) \ K ∪ Exp.freeVars e \ (R' ∩ lv))).
+    set (K_x:=kill_oracle (S (cardinal ((R' ∩ lv) \ K ∪ Exp.freeVars e \ (R' ∩ lv))) - k)
+                          ((R' ∩ lv) \ K ∪ Exp.freeVars e \ (R' ∩ lv))
+        ).
 
     assert (rkk := @rkk (R' ∩ lv) (Exp.freeVars e) k x).
     assert (cardinal {x; ((R' ∩ lv) \ K ∪ Exp.freeVars e \ (R' ∩ lv)) \ K_x} <= k). {
-      decide (cardinal
-                ((R' ∩ lv) \
-                           kill_oracle (cardinal (Exp.freeVars e \ (R' ∩ lv))
-                                        - (k - cardinal (R' ∩ lv)))
-                           ((R' ∩ lv) \ Exp.freeVars e) ∪ Exp.freeVars e \ (R' ∩ lv)) < k).
-      - subst K K_x. eauto.
-        rewrite one_or_empty_cardinal_lt; try omega.
-        rewrite add_cardinal.
-        rewrite minus_empty. omega.
-      - eapply rkk; eauto.
-        apply not_ge in n. omega.
+      eapply rkk; eauto.
     }
 
     assert (spill_sound k ZL Λ (R ∩ lv, M) (stmtLet x e s)
     (ann1 (getAnn al ∩ (K ∪ K_x) \ M', Exp.freeVars e \ (R' ∩ lv), nil)
        (splitSpillKO k ZL Λ {x; ((R' ∩ lv) \ K ∪ Exp.freeVars e \ (R' ∩ lv)) \ K_x}
-          (getAnn al ∩ (K ∪ K_x) \ M' ∪ M') s al))).
+          (getAnn al ∩ (K ∪ K_x) \ M' ∪ M') s al))). {
     eapply SpillLet with (K:= K) (Kx := K_x); eauto.
     + subst K K_x; simpl in *.
       rewrite kill_oracle_incl at 1.
-      rewrite one_or_empty_of_incl; eauto.
+      rewrite kill_oracle_incl.
       rewrite Exp.freeVars_live at 4; eauto.
       revert fvRM.
       rewrite ReqR', MeqM'.
@@ -379,8 +369,8 @@ general induction lvSound;
         clear. clearbody K K_x. cset_tac'.
     + rewrite ReqR'. apply kill_oracle_incl2.
     + rewrite ReqR'. apply rke.
-
     + rewrite ReqR'; eauto.
+    }
     + eapply spill_sound_incl_R; eauto.
       * clear; cset_tac.
       * rewrite ReqR'. eauto.

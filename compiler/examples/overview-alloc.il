@@ -1,5 +1,9 @@
 # a,A,b,B,c,C,d,D,e,E,f,F,g,G,h,H,i,I,j,J,k,K,l,L,m,M,n,N,o,O,p,P,q,Q,r,R,s,S,t,T,u,U,v,V,w,W,x,X,y,Y,z,Z;
-
+% L -> W;
+% O -> Z;
+% C -> Z;
+% D -> W;
+% I -> Y;
 fun f (x, y, z) =
  if x > 0 then
   f (x-1, y+y, z)
@@ -8,5 +12,5 @@ fun f (x, y, z) =
    let v = y + z in
    v + w
   else
-   f (-x, y, z-x)
+   f (z-x, y, -z)
 in f (-4, 2, 1)
