@@ -110,13 +110,11 @@ let main () =
 	    let _ = print_set stdout true !ids s in
 	    let _ = Printf.printf " -> " in
 	    let kill = if !spo_c = 1
-		       then set_from_list [P.of_int 1; P.of_int 7]
+		       then set_from_list [P.of_int 1; P.of_int 5]
 		       else if !spo_c = 2
 		       then set_from_list [P.of_int 1]
 		       else if !spo_c = 6
 		       then set_from_list [P.of_int 21]
-		       else if !spo_c = 8
-		       then set_from_list [P.of_int 23]
 		       else if !spo_c = 11
 		       then set_from_list [P.of_int 5]
 		       else if !spo_c = 12
