@@ -4,13 +4,13 @@
 % B -> Z;
 % C -> W;
 % H -> Y;
-fun f (x, z, y) =
+fun f (x, y, z) =
  if x > 0 then
-  f (x-1, z, y+y)
+  f (x-1, y, z+z)
  else
   if x = 0 then
-   let v = y + z in
+   let v = z + y in
    v + w
   else
-   f (z-x, -z, y)
-in f (-4, 1, 2)
+   f (y-x, -y, z)
+in f (-4, 2, 1)
