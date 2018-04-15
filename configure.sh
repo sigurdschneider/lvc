@@ -30,10 +30,7 @@ fi
 
 coq_ver=$(${COQBIN}coqc -v 2>/dev/null | sed -n -e 's/The Coq Proof Assistant, version \([^ ]*\).*$/\1/p')
 case "$coq_ver" in
-  8.7.0)
-		;;
   8.7*)
-    echo "Warning: LVC does not compile with Coq 8.7 yet, you are on your own."
 		;;
 	*)
     echo "Error: Need Coq 8.7"
