@@ -48,6 +48,8 @@ CompCert/Makefile.config:
 compcert: CompCert/Makefile.config
 	+$(MAKE) -C CompCert depend
 	+$(MAKE) -C CompCert proof driver/Version.ml
+	-rm CompCert/tools/*.o
+	-rm CompCert/tools/*.cm*
 
 dep: compcert
 	+$(MAKE) -C paco all TIMECMD=
